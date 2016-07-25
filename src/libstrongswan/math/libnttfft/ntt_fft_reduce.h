@@ -29,7 +29,7 @@
  * Montgomery, P. L. Modular multiplication without trial division.
  * Mathematics of Computation 44, 170 (1985), 519–521.
  */
-static inline uint32_t ntt_fft_mreduce(uint32_t x, ntt_fft_params_t *p)
+static inline uint32_t ntt_fft_mreduce(uint32_t x, const ntt_fft_params_t *p)
 {
 	uint32_t m, t;
 	

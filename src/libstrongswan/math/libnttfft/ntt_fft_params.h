@@ -48,68 +48,68 @@ struct ntt_fft_params_t {
 	/**
 	 * Square of Montgomery radix: r^2 mod q
 	 */
-	uint32_t r2;
+	const uint32_t r2;
 
 	/**
 	 * Montgomery radix mask: (1<<rlog) - 1
 	 */
-	uint32_t rmask;
+	const uint32_t rmask;
 
 	/**
 	 * Size of the FFT with the condition k * n = q-1
 	 */
-	uint16_t n;
+	const uint16_t n;
 
 	/**
 	 * Inverse of n mod q used for normalization of the FFT
 	 */
-	uint16_t n_inv;
+	const uint16_t n_inv;
 
 	/**
 	 * Number of FFT stages  stages = log2(n)
 	 */
-	uint16_t stages;
+	const uint16_t stages;
 
 	/**
 	 * FFT twiddle factors (n-th roots of unity) in Montgomery form
 	 */
-	uint16_t *wr;
+	const uint16_t *wr;
 
 	/**
 	 * FFT phase shift (2n-th roots of unity) in forward transform
 	 */
-	uint16_t *wf;
+	const uint16_t *wf;
 
 	/**
 	 * FFT phase shift (2n-th roots of unity) and scaling in inverse transform
 	 */
-	uint16_t *wi;
+	const uint16_t *wi;
 
 	/**
 	 * Subsampling of FFT twiddle factors table
 	 */
-	uint16_t s;
+	const uint16_t s;
 
 	/**
 	 * FFT bit reversal
 	 */
-	uint16_t *rev;
+	const uint16_t *rev;
 
 };
 
 /**
  * FFT parameters for q = 12289 and n = 1024
  */
-extern ntt_fft_params_t ntt_fft_12289_1024;
+extern const ntt_fft_params_t ntt_fft_12289_1024;
 
 /**
  * FFT parameters for q = 12289 and n = 512
  */
-extern ntt_fft_params_t ntt_fft_12289_512;
+extern const ntt_fft_params_t ntt_fft_12289_512;
 
 /**
  * FFT parameters for q = 17 and n = 8
  */
-extern ntt_fft_params_t ntt_fft_17_8;
+extern const ntt_fft_params_t ntt_fft_17_8;
 
 #endif /** NTT_FFT_PARAMS_H_ @}*/

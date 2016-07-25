@@ -20,7 +20,7 @@
 
 #include <time.h>
 
-static ntt_fft_params_t *fft_params[] = {
+static const ntt_fft_params_t *fft_params[] = {
 	&ntt_fft_17_8,
 	&ntt_fft_12289_512,
 	&ntt_fft_12289_1024

@@ -66,6 +66,12 @@ struct ntt_fft_t {
  *
  * @param params		FFT parameters
  */
-ntt_fft_t *ntt_fft_create(ntt_fft_params_t *params);
+ntt_fft_t *ntt_fft_create(const ntt_fft_params_t *params);
+
+/**
+ * Dummy libnttfft initialization function needed for integrity test
+ */
+void libnttfft_init(void);
+
 
 #endif /** NTT_FFT_H_ @}*/

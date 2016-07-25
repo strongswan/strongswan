@@ -18,7 +18,7 @@
 /**
  * FFT twiddle factors in Montgomery form for q = 12289 and n = 1024
  */
-static uint16_t wr_12289_1024[] = {
+static const uint16_t wr_12289_1024[] = {
 	 4075,  3051,  2031,  1207,  9987, 10092,  2948,  9273, 11973,  9094,
 	 3202,  9430,  7377,  5092,  3728, 10626,  4536,  1062,  2882,  6039,
 	  975, 10908,  6065,  2249, 11889,  4978, 10431,  7270, 12138,  4890,
@@ -137,7 +137,7 @@ static uint16_t wr_12289_1024[] = {
 /**
  * FFT phase shift in forward transform for q = 12289 and n = 1024
  */
-static uint16_t wf_12289_1024[] = {
+static const uint16_t wf_12289_1024[] = {
 	 3186, 10013,  8646, 11366,  5828,  3929,  2925,  8186,  8146,  7866,
 	 5906,  4475,  6747, 10362, 11089,  3889,  2645,  6226,  6715, 10138,
 	 9521,  5202, 11836,  9118,  2381,  4378,  6068,  5609,  2396,  4483,
@@ -256,7 +256,7 @@ static uint16_t wf_12289_1024[] = {
 /**
  * FFT phase shift and scaling inverse transform for q = 12289 and n = 1024
  */
-static uint16_t wi_12289_1024[] = {
+static const uint16_t wi_12289_1024[] = {
 	12277,  5265,  9530,  3117,  5712,   816, 10650,  3277,  9246,  4832,
 	 5957,   851, 10655, 10300,  3227,   461,  3577,   511,    73,  1766,
 	 5519,  2544,  2119,  7325,  2802,  5667, 11343,  3376,  5749,  6088,
@@ -375,7 +375,7 @@ static uint16_t wi_12289_1024[] = {
 /**
  * Bit-reversed indices for n = 1024
  */
-static uint16_t rev_1024[] = {
+static const uint16_t rev_1024[] = {
 	   0,  512,  256,  768,  128,  640,  384,  896,   64,  576,
 	 320,  832,  192,  704,  448,  960,   32,  544,  288,  800,
 	 160,  672,  416,  928,   96,  608,  352,  864,  224,  736,
@@ -491,7 +491,7 @@ static uint16_t rev_1024[] = {
 	 255,  767,  511, 1023
 };
 
-ntt_fft_params_t ntt_fft_12289_1024 = {
+const ntt_fft_params_t ntt_fft_12289_1024 = {
 	12289, 12287, 18, 3186, (1<<18)-1, 1024, 12277, 10,
 	wr_12289_1024, wf_12289_1024, wi_12289_1024, 1, rev_1024
 };
@@ -499,7 +499,7 @@ ntt_fft_params_t ntt_fft_12289_1024 = {
 /**
  * FFT phase shift and scaling inverse transform for q = 12289 and n = 512
  */
-static uint16_t wi_12289_512[] = {
+static const uint16_t wi_12289_512[] = {
 	12265,  6771, 11424,  9011,  6203, 11914,  9021,  6454,  7154,   146,
 	11038,  4238,  5604, 10397, 11498,  3495,  7846,  7684,  1160,  4538,
 	  845,  2776,  3317,  5836,  6389, 11667,  6508,  1136, 11309, 12269,
@@ -562,7 +562,7 @@ static uint16_t wi_12289_512[] = {
 /**
  * Bit-reversed indices for n = 512
  */
-static uint16_t rev_512[] = {
+static const uint16_t rev_512[] = {
 	  0, 256, 128, 384,  64, 320, 192, 448,  32, 288, 
 	160, 416,  96, 352, 224, 480,  16, 272, 144, 400,
 	 80, 336, 208, 464,  48, 304, 176, 432, 112, 368,
@@ -622,7 +622,7 @@ static uint16_t rev_512[] = {
 	255, 511
 };
 
-ntt_fft_params_t ntt_fft_12289_512 = {
+const ntt_fft_params_t ntt_fft_12289_512 = {
 	12289, 12287, 18, 3186, (1<<18)-1, 512, 12265, 9,
 	wr_12289_1024, wf_12289_1024, wi_12289_512, 2, rev_512
 };
@@ -630,23 +630,23 @@ ntt_fft_params_t ntt_fft_12289_512 = {
 /**
  * FFT twiddle factors in Montgomery form for q = 17 and n = 8
  */
-static uint16_t wr_17_8[] = { 15, 16, 8, 4, 2, 1, 9, 13, 15 };
+static const uint16_t wr_17_8[] = { 15, 16, 8, 4, 2, 1, 9, 13, 15 };
 
 /**
  * FFT phase shift in forward transform for q = 17 and n = 8
  */
-static uint16_t wf_17_8[] = { 4, 12, 2, 6, 1, 3, 9, 10 };
+static const uint16_t wf_17_8[] = { 4, 12, 2, 6, 1, 3, 9, 10 };
 
 /**
  * FFT phase shift and scaling inverse transform for q = 17 and n = 8
  */
-static uint16_t wi_17_8[] = { 15, 5, 13, 10, 9, 3, 1, 6 };
+static const uint16_t wi_17_8[] = { 15, 5, 13, 10, 9, 3, 1, 6 };
 
 /**
  * Bit-reversed indices for n = 8
  */
-static uint16_t rev_8[] = { 0, 4, 2, 6, 1, 5, 3, 7 };
+static const uint16_t rev_8[] = { 0, 4, 2, 6, 1, 5, 3, 7 };
 
-ntt_fft_params_t ntt_fft_17_8 = {
+const ntt_fft_params_t ntt_fft_17_8 = {
 	17, 15, 5, 4, (1<<5)-1, 8, 15, 3, wr_17_8, wf_17_8, wi_17_8, 1, rev_8
 };

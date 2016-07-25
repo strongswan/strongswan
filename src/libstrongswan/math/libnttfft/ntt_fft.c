@@ -16,6 +16,14 @@
 #include "ntt_fft.h"
 #include "ntt_fft_reduce.h"
 
+/**
+ * Described in header.
+ */
+void libnttfft_init(void)
+{
+	/* empty */
+}
+
 typedef struct private_ntt_fft_t private_ntt_fft_t;
 
 /**
@@ -31,7 +39,7 @@ struct private_ntt_fft_t {
 	/**
 	 * FFT parameter set used as constants
 	 */
-	ntt_fft_params_t *p;
+	const ntt_fft_params_t *p;
 
 };
 
@@ -181,7 +189,7 @@ METHOD(ntt_fft_t, destroy, void,
 /**
  * See header.
  */
-ntt_fft_t *ntt_fft_create(ntt_fft_params_t *params)
+ntt_fft_t *ntt_fft_create(const ntt_fft_params_t *params)
 {
 	private_ntt_fft_t *this;
 

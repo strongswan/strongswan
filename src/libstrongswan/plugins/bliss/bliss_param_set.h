@@ -93,7 +93,7 @@ struct bliss_param_set_t {
 	/**
 	 * FFT parameters
 	 */
-	ntt_fft_params_t *fft_params;
+	const ntt_fft_params_t *fft_params;
 
 	/**
 	 * Number of [-1, +1] secret key coefficients
