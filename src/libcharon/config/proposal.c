@@ -842,6 +842,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case NTRU_128_BIT:
 			case NTRU_192_BIT:
 			case NTRU_256_BIT:
+			case NH_128_BIT:
 				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
 				break;
 			default:

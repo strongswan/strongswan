@@ -601,6 +601,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_NEWHOPE
+  SUBDIRS += plugins/newhope
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/newhope/libstrongswan-newhope.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC

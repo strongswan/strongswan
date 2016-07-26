@@ -49,7 +49,9 @@ ENUM_NEXT(diffie_hellman_group_names, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
 	"NTRU_128",
 	"NTRU_192",
 	"NTRU_256");
-ENUM_NEXT(diffie_hellman_group_names, MODP_CUSTOM, MODP_CUSTOM, NTRU_256_BIT,
+ENUM_NEXT(diffie_hellman_group_names, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
+	"NEWHOPE_128");
+ENUM_NEXT(diffie_hellman_group_names, MODP_CUSTOM, MODP_CUSTOM, NH_128_BIT,
 	"MODP_CUSTOM");
 ENUM_END(diffie_hellman_group_names, MODP_CUSTOM);
 
@@ -554,6 +556,7 @@ bool diffie_hellman_verify_value(diffie_hellman_group_t group, chunk_t value)
 		case NTRU_128_BIT:
 		case NTRU_192_BIT:
 		case NTRU_256_BIT:
+		case NH_128_BIT:
 			/* verification currently not supported, do in plugin */
 			valid = FALSE;
 			break;

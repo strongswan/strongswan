@@ -167,5 +167,6 @@ ntru112,          DIFFIE_HELLMAN_GROUP, NTRU_112_BIT,              0
 ntru128,          DIFFIE_HELLMAN_GROUP, NTRU_128_BIT,              0
 ntru192,          DIFFIE_HELLMAN_GROUP, NTRU_192_BIT,              0
 ntru256,          DIFFIE_HELLMAN_GROUP, NTRU_256_BIT,              0
+newhope128,       DIFFIE_HELLMAN_GROUP, NH_128_BIT,                0
 noesn,            EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,   0
 esn,              EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS,      0
