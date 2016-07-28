@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2016 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -31,6 +32,7 @@ typedef struct crypto_factory_t crypto_factory_t;
 #include <crypto/hashers/hasher.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/rngs/rng.h>
+#include <crypto/xofs/xof.h>
 #include <crypto/nonce_gen.h>
 #include <crypto/diffie_hellman.h>
 #include <crypto/transform.h>
@@ -61,6 +63,11 @@ typedef hasher_t* (*hasher_constructor_t)(hash_algorithm_t algo);
  * Constructor function for pseudo random functions
  */
 typedef prf_t* (*prf_constructor_t)(pseudo_random_function_t algo);
+
+/**
+ * Constructor function for pseudo random functions
+ */
+typedef xof_t* (*xof_constructor_t)(ext_out_function_t algo);
 
 /**
  * Constructor function for source of randomness
@@ -131,6 +138,14 @@ struct crypto_factory_t {
 	 * @return				prf_t instance, NULL if not supported
 	 */
 	prf_t* (*create_prf)(crypto_factory_t *this, pseudo_random_function_t algo);
+
+	/**
+	 * Create an extended output function instance.
+	 *
+	 * @param algo			XOF algorithm to use
+	 * @return				xof_t instance, NULL if not supported
+	 */
+	xof_t* (*create_xof)(crypto_factory_t *this, ext_out_function_t algo);
 
 	/**
 	 * Create a source of randomness.
@@ -253,6 +268,24 @@ struct crypto_factory_t {
 	void (*remove_prf)(crypto_factory_t *this, prf_constructor_t create);
 
 	/**
+	 * Register an xof constructor.
+	 *
+	 * @param algo			algorithm to constructor
+	 * @param plugin_name	plugin that registered this algorithm
+	 * @param create		constructor function for that algorithm
+	 * @return				TRUE if registered, FALSE if test vector failed
+	 */
+	bool (*add_xof)(crypto_factory_t *this, ext_out_function_t algo,
+					const char *plugin_name, xof_constructor_t create);
+
+	/**
+	 * Unregister an xof constructor.
+	 *
+	 * @param create		constructor function to unregister
+	 */
+	void (*remove_xof)(crypto_factory_t *this, xof_constructor_t create);
+
+	/**
 	 * Register a source of randomness.
 	 *
 	 * @param quality		quality of randomness this RNG serves
@@ -340,6 +373,13 @@ struct crypto_factory_t {
 	 * @return				enumerator over pseudo_random_function_t, plugin
 	 */
 	enumerator_t* (*create_prf_enumerator)(crypto_factory_t *this);
+
+	/**
+	 * Create an enumerator over all registered XOFs.
+	 *
+	 * @return				enumerator over ext_out_function_t, plugin
+	 */
+	enumerator_t* (*create_xof_enumerator)(crypto_factory_t *this);
 
 	/**
 	 * Create an enumerator over all registered diffie hellman groups.

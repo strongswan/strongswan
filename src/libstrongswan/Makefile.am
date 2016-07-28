@@ -15,6 +15,7 @@ crypto/diffie_hellman.c crypto/aead.c crypto/transform.c \
 crypto/iv/iv_gen.c crypto/iv/iv_gen_rand.c crypto/iv/iv_gen_seq.c \
 crypto/iv/iv_gen_null.c \
 crypto/mgf1/mgf1.c crypto/mgf1/mgf1_bitspender.c \
+crypto/xofs/xof.h crypto/xofs/xof.c \
 credentials/credential_factory.c credentials/builder.c \
 credentials/cred_encoding.c credentials/keys/private_key.c \
 credentials/keys/public_key.c credentials/keys/shared_key.c \
