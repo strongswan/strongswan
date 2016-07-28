@@ -14,9 +14,10 @@
  */
 
 #include "sha3_plugin.h"
+#include "sha3_hasher.h"
+#include "sha3_shake.h"
 
 #include <library.h>
-#include "sha3_hasher.h"
 
 typedef struct private_sha3_plugin_t private_sha3_plugin_t;
 
@@ -46,6 +47,9 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(HASHER, HASH_SHA3_256),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA3_384),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA3_512),
+		PLUGIN_REGISTER(XOF, sha3_shake_create),
+			PLUGIN_PROVIDE(XOF, XOF_SHAKE_128),
+			PLUGIN_PROVIDE(XOF, XOF_SHAKE_256),
 	};
 	*features = f;
 	return countof(f);
