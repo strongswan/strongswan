@@ -503,7 +503,7 @@ static void free_child_data(child_data_t *data)
  */
 static bool parse_proposal(linked_list_t *list, protocol_id_t proto, chunk_t v)
 {
-	char buf[128];
+	char buf[BUF_LEN];
 	proposal_t *proposal;
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
@@ -566,7 +566,7 @@ CALLBACK(parse_ah_proposal, bool,
 CALLBACK(parse_ts, bool,
 	linked_list_t *out, chunk_t v)
 {
-	char buf[128], *protoport, *sep, *port = "", *end;
+	char buf[BUF_LEN], *protoport, *sep, *port = "", *end;
 	traffic_selector_t *ts = NULL;
 	struct protoent *protoent;
 	struct servent *svc;
@@ -720,7 +720,7 @@ typedef struct {
  */
 static bool parse_map(enum_map_t *map, int count, int *out, chunk_t v)
 {
-	char buf[128];
+	char buf[BUF_LEN];
 	int i;
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
@@ -1051,7 +1051,7 @@ CALLBACK(parse_auth, bool,
  */
 static bool parse_id(auth_cfg_t *cfg, auth_rule_t rule, chunk_t v)
 {
-	char buf[256];
+	char buf[BUF_LEN];
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
 	{
