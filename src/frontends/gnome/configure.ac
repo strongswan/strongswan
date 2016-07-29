@@ -78,6 +78,8 @@ AC_ARG_WITH(
 )
 nm_libexecdir=$($PKG_CONFIG --variable=libgnome_serverdir NetworkManager)
 AC_SUBST(nm_libexecdir)
+nm_plugindir=$($PKG_CONFIG --variable=plugindir NetworkManager)
+AC_SUBST(nm_plugindir)
 
 NM_COMPILER_WARNINGS
 

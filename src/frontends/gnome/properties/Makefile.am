@@ -1,5 +1,4 @@
-plugindir = $(libdir)/NetworkManager
-plugin_LTLIBRARIES = libnm-strongswan-properties.la
+nm_plugin_LTLIBRARIES = libnm-strongswan-properties.la
 
 libnm_strongswan_properties_la_SOURCES = \
 	nm-strongswan.c \
