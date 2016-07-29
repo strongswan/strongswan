@@ -89,6 +89,10 @@ if USE_CMD
   exes += $(DESTDIR)$(sbindir)/charon-cmd
 endif
 
+if USE_SYSTEMD
+  exes += $(DESTDIR)$(sbindir)/charon-systemd
+endif
+
 if USE_SCEPCLIENT
   exes += $(DESTDIR)$(ipsecdir)/scepclient
 endif
