@@ -15,12 +15,13 @@
 
 #include "xof.h"
 
-ENUM(ext_out_function_names, XOF_UNDEFINED, XOF_MGF1_SHA512,
+ENUM(ext_out_function_names, XOF_UNDEFINED, XOF_CHACHA20,
 	"XOF_UNDEFINED",
 	"XOF_SHAKE128",
 	"XOF_SHAKE256",
 	"XOF_MGF1_SHA1",
 	"XOF_MGF1_SHA256",
-	"XOF_MGF1_SHA512"
+	"XOF_MGF1_SHA512",
+	"XOF_CHACHA20"
 );
 

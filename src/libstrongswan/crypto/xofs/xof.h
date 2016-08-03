@@ -41,6 +41,8 @@ enum ext_out_function_t {
 	XOF_MGF1_SHA256,
 	/** RFC 2437 PKCS#1 */
 	XOF_MGF1_SHA512,
+	/** RFC 7539 ChaCha20 */
+	XOF_CHACHA20,
 };
 
 /**
