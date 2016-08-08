@@ -57,6 +57,7 @@ import android.os.ParcelFileDescriptor;
 import android.security.KeyChainException;
 import android.system.OsConstants;
 import android.util.Log;
+import android.widget.Toast;
 
 public class CharonVpnService extends VpnService implements Runnable
 {
@@ -594,6 +595,7 @@ public class CharonVpnService extends VpnService implements Runnable
                 ArrayList<String> allowedApplications = profile.getAllowedApplications();
                 for (String s : allowedApplications) {
                     try {
+						Toast.makeText(getApplicationContext(),allowedApplications.size() +s,Toast.LENGTH_LONG).show();
                         builder.addAllowedApplication(s);
                     } catch (PackageManager.NameNotFoundException ex) {
                         Log.w(TAG, "Failed to add packageName: " + s + " to allowed applications list for vpn profile: " + mName, ex);

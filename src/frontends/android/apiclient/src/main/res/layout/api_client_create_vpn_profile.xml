@@ -1,0 +1,75 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent">
+    <LinearLayout android:layout_width="fill_parent" android:layout_height="fill_parent"
+                  android:orientation="vertical" >
+            <EditText
+                    android:id="@+id/vpn_name_edit_text"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:hint="VPN name"/>
+            <EditText
+                    android:id="@+id/vpn_gateway_edit_text"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:hint="VPN gateway"/>
+            <EditText
+                    android:id="@+id/vpn_username_edit_text"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:hint="VPN username"/>
+            <EditText
+                    android:id="@+id/vpn_password_edit_text"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:hint="VPN password"/>
+            <Button
+                    android:id="@+id/vpn_type"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:text="VPN type"
+                    android:onClick="selectVpnTypeClick"/>
+            <CheckedTextView
+                    android:id="@+id/user_certificate"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:gravity="center_vertical"
+                    android:checkMark="?android:attr/listChoiceIndicatorMultiple"
+                    android:text="VPN user certificate"
+                    android:onClick="checkUserCertificateClick"/>
+            <EditText
+                    android:id="@+id/vpn_user_certificate_password_edit_text"
+                    android:enabled="false"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:hint="User certificate password"/>
+            <CheckedTextView
+                    android:id="@+id/ca_certificate"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:gravity="center_vertical"
+                    android:checkMark="?android:attr/listChoiceIndicatorMultiple"
+                    android:text="VPN CA certificate"
+                    android:onClick="checkCaCertificateClick"/>
+            <EditText
+                    android:id="@+id/package_name_edit_text"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:text="com.android.chrome"/>
+            <Button
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:text="Create VPN Profile"
+                    android:onClick="clickCreateVpnProfile"/>
+    </LinearLayout>
+</ScrollView>
