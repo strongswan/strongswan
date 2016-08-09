@@ -631,3 +631,7 @@ endif
 if USE_BLISS
   SUBDIRS += plugins/bliss/tests
 endif
+
+if USE_NEWHOPE
+  SUBDIRS += plugins/newhope/tests
+endif

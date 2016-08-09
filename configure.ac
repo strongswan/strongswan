@@ -1782,6 +1782,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/bliss/Makefile
 	src/libstrongswan/plugins/bliss/tests/Makefile
 	src/libstrongswan/plugins/newhope/Makefile
+	src/libstrongswan/plugins/newhope/tests/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libstrongswan/tests/Makefile
 	src/libipsec/Makefile
