@@ -1,0 +1,81 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent">
+    <LinearLayout android:layout_width="fill_parent" android:layout_height="fill_parent"
+                  android:orientation="vertical">
+        <RadioGroup
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+            <RadioButton
+                    android:id="@+id/service_radio_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Service"
+                    android:onClick="clickService"/>
+
+            <RadioButton
+                    android:id="@+id/messenger_radio_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Messenger"
+                    android:checked="true"
+                    android:onClick="clickMessenger"/>
+
+        </RadioGroup>
+
+        <Button
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Connect to strongSwan"
+                android:onClick="clickConnectToStrongSwan"/>
+
+        <Button
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Disconnect from strongSwan"
+                android:onClick="clickDisconnectFromStrongSwan"/>
+
+        <Button
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Create Vpn Profile"
+                android:onClick="clickCreateVpnProfile"/>
+
+        <Button
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Read VPN Profiles"
+                android:onClick="clickReadVpnProfiles"/>
+
+        <Button
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Delete VPN Profiles"
+                android:onClick="clickDeleteVpnProfiles"/>
+        <Button
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Delete VPN Profile with id"
+                android:onClick="clickDeleteVpnProfile"/>
+
+        <EditText
+                android:id="@+id/profile_id_edit_text"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal"
+                android:maxLength="10"
+                android:hint="VPN profile id"/>
+        <EditText
+                android:id="@+id/package_name_edit_text"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="com.android.chrome"/>
+        <Button
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:text="Create profile with selected values"
+                android:onClick="clickCreateVpnProfileActivity"/>
+    </LinearLayout>
+</ScrollView>
