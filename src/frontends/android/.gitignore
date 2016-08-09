@@ -2,9 +2,7 @@
 .idea/
 build/
 app/build/
-app/src/main/libs
-app/src/main/obj
-/gen
-/gen-external-apklibs
+api/build/
+apiclient/build/
 *.iml
 local.properties
