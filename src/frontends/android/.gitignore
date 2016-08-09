@@ -4,5 +4,7 @@ build/
 app/build/
 app/src/main/libs
 app/src/main/obj
+/gen
+/gen-external-apklibs
 *.iml
 local.properties
