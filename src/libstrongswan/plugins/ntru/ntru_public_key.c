@@ -37,7 +37,7 @@ struct private_ntru_public_key_t {
 	/**
 	 * NTRU Parameter Set
 	 */
-	ntru_param_set_t *params;
+	const ntru_param_set_t *params;
 
 	/**
 	 * Polynomial h which is the public key
@@ -320,7 +320,7 @@ METHOD(ntru_public_key_t, destroy, void,
  * Described in header.
  */
 ntru_public_key_t *ntru_public_key_create(ntru_drbg_t *drbg,
-										  ntru_param_set_t *params,
+										  const ntru_param_set_t *params,
 										  uint16_t *pubkey)
 {
 	private_ntru_public_key_t *this;
@@ -357,7 +357,7 @@ ntru_public_key_t *ntru_public_key_create_from_data(ntru_drbg_t *drbg,
 {
 	private_ntru_public_key_t *this;
 	size_t header_len, pubkey_packed_len;
-	ntru_param_set_t *params;
+	const ntru_param_set_t *params;
 
 	header_len = 2 + NTRU_OID_LEN;
 

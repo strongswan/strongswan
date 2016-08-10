@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,34 +13,44 @@
  * for more details.
  */
 
-#include "bliss_fft.h"
-
-typedef struct private_bliss_fft_t private_bliss_fft_t;
+#include "ntt_fft.h"
+#include "ntt_fft_reduce.h"
 
 /**
- * Private data structure for bliss_fft_t object
+ * Described in header.
  */
-struct private_bliss_fft_t {
+void libnttfft_init(void)
+{
+	/* empty */
+}
+
+typedef struct private_ntt_fft_t private_ntt_fft_t;
+
+/**
+ * Private data structure for ntt_fft_t object
+ */
+struct private_ntt_fft_t {
+
 	/**
 	 * Public interface.
 	 */
-	bliss_fft_t public;
+	ntt_fft_t public;
 
 	/**
 	 * FFT parameter set used as constants
 	 */
-	bliss_fft_params_t *p;
+	const ntt_fft_params_t *p;
 
 };
 
-METHOD(bliss_fft_t, get_size, uint16_t,
-	private_bliss_fft_t *this)
+METHOD(ntt_fft_t, get_size, uint16_t,
+	private_ntt_fft_t *this)
 {
 	return this->p->n;
 }
 
-METHOD(bliss_fft_t, get_modulus, uint16_t,
-	private_bliss_fft_t *this)
+METHOD(ntt_fft_t, get_modulus, uint16_t,
+	private_ntt_fft_t *this)
 {
 	return this->p->q;
 }
@@ -54,8 +64,7 @@ METHOD(bliss_fft_t, get_modulus, uint16_t,
  * x[i2] ---|-|--|*|-- x[i2]
  *
  */
-static void butterfly(private_bliss_fft_t *this, uint32_t *x, int i1,int i2,
-															  int iw)
+static void butterfly(private_ntt_fft_t *this, uint32_t *x, int i1,int i2, int iw)
 {
 	uint32_t xp, xm;
 
@@ -65,14 +74,14 @@ static void butterfly(private_bliss_fft_t *this, uint32_t *x, int i1,int i2,
 	{
 		xp -= this->p->q;
 	}
-	x[i1] =  xp;
-	x[i2] = (xm * this->p->w[iw]) % this->p->q;
+	x[i1] = xp;
+	x[i2] = ntt_fft_mreduce(xm * this->p->wr[iw], this->p);
 }
 
 /**
  * Trivial butterfly operation of last FFT stage
  */
-static void butterfly_last(private_bliss_fft_t *this, uint32_t *x, int i1)
+static void butterfly_last(private_ntt_fft_t *this, uint32_t *x, int i1)
 {
 	uint32_t xp, xm;
 	int i2 = i1 + 1;
@@ -91,23 +100,22 @@ static void butterfly_last(private_bliss_fft_t *this, uint32_t *x, int i1)
 	x[i2] = xm;
 }
 
-METHOD(bliss_fft_t, transform, void,
-	private_bliss_fft_t *this, uint32_t *a, uint32_t *b, bool inverse)
+METHOD(ntt_fft_t, transform, void,
+	private_ntt_fft_t *this, uint32_t *a, uint32_t *b, bool inverse)
 {
-	int stage, i, j, k, m, n, t, iw, i_rev;
-	uint16_t q;
+	int stage, i, j, k, m, n, s, t, iw, i_rev;
 	uint32_t tmp;
 
-	/* we are going to use the transform size n and the modulus q a lot */
+	/* we are going to use the transform size n a lot */
 	n = this->p->n;
-	q = this->p->q;
+	s = this->p->s;
 
 	if (!inverse)
 	{
 		/* apply linear phase needed for negative wrapped convolution */
 		for (i = 0; i < n; i++)
 		{
-			b[i] = (a[i] * this->p->w[i]) % q;
+			b[i] = ntt_fft_mreduce(a[i] * this->p->wf[s*i], this->p);
 		}
 	}
 	else if (a != b)
@@ -137,7 +145,7 @@ METHOD(bliss_fft_t, transform, void,
 			{
 				for (i = 0; i < m; i++)
 				{
-					iw = 2 * (inverse ? (n - i * k) : (i * k));
+					iw = s * (inverse ? (n - i * k) : (i * k));
 					butterfly(this, b, t + i, t + i + m, iw);
 				}				
 			}
@@ -167,13 +175,13 @@ METHOD(bliss_fft_t, transform, void,
 	{
 		for (i = 0; i < n; i++)
 		{
-			b[i] = (((b[i] * this->p->w[2*n - i]) % q) * this->p->n_inv) % q;
+			b[i] = ntt_fft_mreduce(b[i] * this->p->wi[i], this->p);
 		}
 	}
 }
 
-METHOD(bliss_fft_t, destroy, void,
-	private_bliss_fft_t *this)
+METHOD(ntt_fft_t, destroy, void,
+	private_ntt_fft_t *this)
 {
 	free(this);
 }
@@ -181,9 +189,9 @@ METHOD(bliss_fft_t, destroy, void,
 /**
  * See header.
  */
-bliss_fft_t *bliss_fft_create(bliss_fft_params_t *params)
+ntt_fft_t *ntt_fft_create(const ntt_fft_params_t *params)
 {
-	private_bliss_fft_t *this;
+	private_ntt_fft_t *this;
 
 	INIT(this,
 		.public = {

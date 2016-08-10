@@ -1072,6 +1072,7 @@ CALLBACK(get_algorithms, vici_message_t*,
 	integrity_algorithm_t integrity;
 	hash_algorithm_t hash;
 	pseudo_random_function_t prf;
+	ext_out_function_t xof;
 	diffie_hellman_group_t group;
 	rng_quality_t quality;
 	const char *plugin_name;
@@ -1119,6 +1120,15 @@ CALLBACK(get_algorithms, vici_message_t*,
 	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
 	{
 		add_algorithm(b, pseudo_random_function_names, prf, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	b->end_section(b);
+
+	b->begin_section(b, "xof");
+	enumerator = lib->crypto->create_xof_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &xof, &plugin_name))
+	{
+		add_algorithm(b, ext_out_function_names, xof, plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	b->end_section(b);

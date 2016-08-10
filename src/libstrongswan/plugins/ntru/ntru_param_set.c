@@ -41,7 +41,7 @@ ENUM(ntru_param_set_id_names, NTRU_EES401EP1, NTRU_EES743EP1,
 /**
  * NTRU encryption parameter set definitions
  */
-static ntru_param_set_t ntru_param_sets[] = {
+static const ntru_param_set_t ntru_param_sets[] = {
 
 	/* X9.98/IEEE 1363.1 parameter sets for best bandwidth (smallest size) */
     {
@@ -340,7 +340,7 @@ static ntru_param_set_t ntru_param_sets[] = {
 /**
  * See header.
  */
-ntru_param_set_t* ntru_param_set_get_by_id(ntru_param_set_id_t id)
+const ntru_param_set_t* ntru_param_set_get_by_id(ntru_param_set_id_t id)
 {
 	int i;
 
@@ -358,7 +358,7 @@ ntru_param_set_t* ntru_param_set_get_by_id(ntru_param_set_id_t id)
 /**
  * See header.
  */
-ntru_param_set_t* ntru_param_set_get_by_oid(uint8_t const *oid)
+const ntru_param_set_t* ntru_param_set_get_by_oid(uint8_t const *oid)
 {
 	int i;
 

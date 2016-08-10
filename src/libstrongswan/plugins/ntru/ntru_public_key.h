@@ -71,7 +71,7 @@ struct ntru_public_key_t {
  * @param pubkey		Coefficients of public key polynomial h
  */
 ntru_public_key_t *ntru_public_key_create(ntru_drbg_t *drbg,
-										  ntru_param_set_t *params,
+										  const ntru_param_set_t *params,
 										  uint16_t *pubkey);
 
 /**

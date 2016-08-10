@@ -15,6 +15,7 @@
 
 #include "chapoly_plugin.h"
 #include "chapoly_aead.h"
+#include "chapoly_xof.h"
 
 #include <library.h>
 
@@ -43,6 +44,8 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f[] = {
 		PLUGIN_REGISTER(AEAD, chapoly_aead_create),
 			PLUGIN_PROVIDE(AEAD, ENCR_CHACHA20_POLY1305, 32),
+		PLUGIN_REGISTER(XOF, chapoly_xof_create),
+			PLUGIN_PROVIDE(XOF, XOF_CHACHA20),
 	};
 	*features = f;
 	return countof(f);

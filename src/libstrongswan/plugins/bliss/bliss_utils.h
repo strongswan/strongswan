@@ -42,7 +42,8 @@ int32_t bliss_utils_scalar_product(int32_t *x, int32_t *y, int n);
  * @param x			input vector x of size n
  * @param xd		rounded vector x with d bits dropped
  */
-void bliss_utils_round_and_drop(bliss_param_set_t *set,	int32_t *x, int16_t *xd);
+void bliss_utils_round_and_drop(const bliss_param_set_t *set,
+								int32_t *x, int16_t *xd);
 
 /**
  * Generate the binary challenge vector c as an array of kappa indices
@@ -54,7 +55,7 @@ void bliss_utils_round_and_drop(bliss_param_set_t *set,	int32_t *x, int16_t *xd)
  * @param c_indices	indexes of non-zero challenge coefficients
  */
 bool bliss_utils_generate_c(hash_algorithm_t alg, chunk_t data_hash,
-							uint16_t *ud, bliss_param_set_t *set,
+							uint16_t *ud, const bliss_param_set_t *set,
 							uint16_t *c_indices);
 
 /**
@@ -65,6 +66,7 @@ bool bliss_utils_generate_c(hash_algorithm_t alg, chunk_t data_hash,
  * @param z2d	input vector
  * @result		TRUE if infinite and l2 norms do not exceed boundaries
  */
-bool bliss_utils_check_norms(bliss_param_set_t *set, int32_t *z1, int16_t *z2d);
+bool bliss_utils_check_norms(const bliss_param_set_t *set,
+							 int32_t *z1, int16_t *z2d);
 
 #endif /** BLISS_UTILS_H_ @}*/

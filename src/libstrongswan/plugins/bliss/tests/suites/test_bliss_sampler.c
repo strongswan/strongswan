@@ -22,7 +22,7 @@ static u_int key_size[] = { 1, 3, 4};
 START_TEST(test_bliss_sampler_gaussian)
 {
 	bliss_sampler_t *sampler;
-	bliss_param_set_t *set;
+	const bliss_param_set_t *set;
 	int i, k, count;
 	uint32_t hist[8], sign[3];
 	int32_t z;

@@ -44,6 +44,21 @@
 #define BITFIELD5(t, a, b, c, d, e,...)	struct { t e; t d; t c; t b; t a; __VA_ARGS__}
 #endif
 
+#ifndef le16toh
+# if BYTE_ORDER == BIG_ENDIAN
+#  define le16toh(x) __builtin_bswap16(x)
+# else
+#  define le16toh(x) (x)
+# endif
+#endif
+#ifndef htole16
+# if BYTE_ORDER == BIG_ENDIAN
+#  define htole16(x) __builtin_bswap16(x)
+# else
+#  define htole16(x) (x)
+# endif
+#endif
+
 #ifndef le32toh
 # if BYTE_ORDER == BIG_ENDIAN
 #  define le32toh(x) __builtin_bswap32(x)
@@ -174,6 +189,33 @@ static inline uint64_t untoh64(void *network)
 
 	memcpy(&tmp, unaligned, sizeof(tmp));
 	return be64toh(tmp);
+}
+
+/**
+ * Read a 16-bit value in little-endian order from unaligned address.
+ *
+ * @param p			unaligned address to read little endian value from
+ * @return			host order value
+ */
+static inline uint16_t uletoh16(void *p)
+{
+	uint16_t ret;
+
+	memcpy(&ret, p, sizeof(ret));
+	ret = le16toh(ret);
+	return ret;
+}
+
+/**
+ * Write a 16-bit value in little-endian to an unaligned address.
+ *
+ * @param p			host order 16-bit value
+ * @param v			unaligned address to write little endian value to
+ */
+static inline void htoule16(void *p, uint16_t v)
+{
+	v = htole16(v);
+	memcpy(p, &v, sizeof(v));
 }
 
 /**

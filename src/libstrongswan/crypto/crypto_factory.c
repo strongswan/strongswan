@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2013-2014 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2016 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -51,6 +52,7 @@ struct entry_t {
 		signer_constructor_t create_signer;
 		hasher_constructor_t create_hasher;
 		prf_constructor_t create_prf;
+		xof_constructor_t create_xof;
 		rng_constructor_t create_rng;
 		nonce_gen_constructor_t create_nonce_gen;
 		dh_constructor_t create_dh;
@@ -94,6 +96,11 @@ struct private_crypto_factory_t {
 	 * registered prfs, as entry_t
 	 */
 	linked_list_t *prfs;
+
+	/**
+	 * registered xofs, as entry_t
+	 */
+	linked_list_t *xofs;
 
 	/**
 	 * registered rngs, as entry_t
@@ -301,6 +308,38 @@ METHOD(crypto_factory_t, create_prf, prf_t*,
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 	return prf;
+}
+
+METHOD(crypto_factory_t, create_xof, xof_t*,
+	private_crypto_factory_t *this, ext_out_function_t algo)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	xof_t *xof = NULL;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->xofs->create_enumerator(this->xofs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->algo == algo)
+		{
+			if (this->test_on_create &&
+				!this->tester->test_xof(this->tester, algo,
+										entry->create_xof, NULL,
+										default_plugin_name))
+			{
+				continue;
+			}
+			xof = entry->create_xof(algo);
+			if (xof)
+			{
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+	return xof;
 }
 
 METHOD(crypto_factory_t, create_rng, rng_t*,
@@ -633,6 +672,43 @@ METHOD(crypto_factory_t, remove_prf, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(crypto_factory_t, add_xof, bool,
+	private_crypto_factory_t *this, ext_out_function_t algo,
+	const char *plugin_name, xof_constructor_t create)
+{
+	u_int speed = 0;
+
+	if (!this->test_on_add ||
+		this->tester->test_xof(this->tester, algo, create,
+							   this->bench ? &speed : NULL, plugin_name))
+	{
+		add_entry(this, this->xofs, algo, plugin_name, speed, create);
+		return TRUE;
+	}
+	this->test_failures++;
+	return FALSE;
+}
+
+METHOD(crypto_factory_t, remove_xof, void,
+	private_crypto_factory_t *this, xof_constructor_t create)
+{
+	entry_t *entry;
+	enumerator_t *enumerator;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->xofs->create_enumerator(this->xofs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->create_xof == create)
+		{
+			this->xofs->remove_at(this->xofs, enumerator);
+			free(entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+}
+
 METHOD(crypto_factory_t, add_rng, bool,
 	private_crypto_factory_t *this, rng_quality_t quality,
 	const char *plugin_name, rng_constructor_t create)
@@ -846,6 +922,23 @@ METHOD(crypto_factory_t, create_prf_enumerator, enumerator_t*,
 }
 
 /**
+ * Filter function to enumerate algorithm, not entry
+ */
+static bool xof_filter(void *n, entry_t **entry, ext_out_function_t *algo,
+					   void *i2, const char **plugin_name)
+{
+	*algo = (*entry)->algo;
+	*plugin_name = (*entry)->plugin_name;
+	return TRUE;
+}
+
+METHOD(crypto_factory_t, create_xof_enumerator, enumerator_t*,
+	private_crypto_factory_t *this)
+{
+	return create_enumerator(this, this->xofs, xof_filter);
+}
+
+/**
  * Filter function to enumerate group, not entry
  */
 static bool dh_filter(void *n, entry_t **entry, diffie_hellman_group_t *group,
@@ -909,6 +1002,8 @@ METHOD(crypto_factory_t, add_test_vector, void,
 			return this->tester->add_hasher_vector(this->tester, vector);
 		case PSEUDO_RANDOM_FUNCTION:
 			return this->tester->add_prf_vector(this->tester, vector);
+		case EXTENDED_OUTPUT_FUNCTION:
+			return this->tester->add_xof_vector(this->tester, vector);
 		case RANDOM_NUMBER_GENERATOR:
 			return this->tester->add_rng_vector(this->tester, vector);
 		case DIFFIE_HELLMAN_GROUP:
@@ -961,6 +1056,10 @@ METHOD(enumerator_t, verify_enumerate, bool,
 			*valid = this->tester->test_prf(this->tester, entry->algo,
 							entry->create_prf, NULL, entry->plugin_name);
 			break;
+		case EXTENDED_OUTPUT_FUNCTION:
+			*valid = this->tester->test_xof(this->tester, entry->algo,
+							entry->create_xof, NULL, entry->plugin_name);
+			break;
 		case RANDOM_NUMBER_GENERATOR:
 			*valid = this->tester->test_rng(this->tester, entry->algo,
 							entry->create_rng, NULL, entry->plugin_name);
@@ -1009,6 +1108,9 @@ METHOD(crypto_factory_t, create_verify_enumerator, enumerator_t*,
 		case PSEUDO_RANDOM_FUNCTION:
 			inner = this->prfs->create_enumerator(this->prfs);
 			break;
+		case EXTENDED_OUTPUT_FUNCTION:
+			inner = this->xofs->create_enumerator(this->xofs);
+			break;
 		case RANDOM_NUMBER_GENERATOR:
 			inner = this->rngs->create_enumerator(this->rngs);
 			break;
@@ -1040,6 +1142,7 @@ METHOD(crypto_factory_t, destroy, void,
 	this->signers->destroy(this->signers);
 	this->hashers->destroy(this->hashers);
 	this->prfs->destroy(this->prfs);
+	this->xofs->destroy(this->xofs);
 	this->rngs->destroy(this->rngs);
 	this->nonce_gens->destroy(this->nonce_gens);
 	this->dhs->destroy(this->dhs);
@@ -1062,6 +1165,7 @@ crypto_factory_t *crypto_factory_create()
 			.create_signer = _create_signer,
 			.create_hasher = _create_hasher,
 			.create_prf = _create_prf,
+			.create_xof = _create_xof,
 			.create_rng = _create_rng,
 			.create_nonce_gen = _create_nonce_gen,
 			.create_dh = _create_dh,
@@ -1075,6 +1179,8 @@ crypto_factory_t *crypto_factory_create()
 			.remove_hasher = _remove_hasher,
 			.add_prf = _add_prf,
 			.remove_prf = _remove_prf,
+			.add_xof = _add_xof,
+			.remove_xof = _remove_xof,
 			.add_rng = _add_rng,
 			.remove_rng = _remove_rng,
 			.add_nonce_gen = _add_nonce_gen,
@@ -1086,6 +1192,7 @@ crypto_factory_t *crypto_factory_create()
 			.create_signer_enumerator = _create_signer_enumerator,
 			.create_hasher_enumerator = _create_hasher_enumerator,
 			.create_prf_enumerator = _create_prf_enumerator,
+			.create_xof_enumerator = _create_xof_enumerator,
 			.create_dh_enumerator = _create_dh_enumerator,
 			.create_rng_enumerator = _create_rng_enumerator,
 			.create_nonce_gen_enumerator = _create_nonce_gen_enumerator,
@@ -1098,6 +1205,7 @@ crypto_factory_t *crypto_factory_create()
 		.signers = linked_list_create(),
 		.hashers = linked_list_create(),
 		.prfs = linked_list_create(),
+		.xofs = linked_list_create(),
 		.rngs = linked_list_create(),
 		.nonce_gens = linked_list_create(),
 		.dhs = linked_list_create(),

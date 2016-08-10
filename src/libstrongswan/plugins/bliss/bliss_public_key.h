@@ -61,7 +61,7 @@ bliss_public_key_t *bliss_public_key_load(key_type_t type, va_list args);
  * @param pubkey	coefficients of public key vector
  * @return			TRUE if parsing successful
  */
-bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
+bool bliss_public_key_from_asn1(chunk_t object, const bliss_param_set_t *set,
 								uint32_t **pubkey);
 
 /**
@@ -71,7 +71,7 @@ bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
  * @param set		BLISS parameter set for the public key vector
  * @result			ASN.1 encoded subjectPublicKey
  */
-chunk_t bliss_public_key_encode(uint32_t *pubkey, bliss_param_set_t *set);
+chunk_t bliss_public_key_encode(uint32_t *pubkey, const bliss_param_set_t *set);
 
 /**
  * Encode a BLISS subjectPublicKeyInfo record in ASN.1 DER format
@@ -82,7 +82,7 @@ chunk_t bliss_public_key_encode(uint32_t *pubkey, bliss_param_set_t *set);
  * @result			ASN.1 encoded subjectPublicKeyInfo record
  */
 chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey,
-									 bliss_param_set_t *set);
+									 const bliss_param_set_t *set);
 
 /**
  * Generate a BLISS public key fingerprint
@@ -95,7 +95,7 @@ chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey,
  * @result			TRUE if generation was successful
  */
 bool bliss_public_key_fingerprint(int oid, uint32_t *pubkey,
-								  bliss_param_set_t *set,
+								  const bliss_param_set_t *set,
 								  cred_encoding_type_t type, chunk_t *fp);
 
 #endif /** BLISS_PUBLIC_KEY_H_ @}*/

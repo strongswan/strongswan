@@ -15,6 +15,7 @@ crypto/diffie_hellman.c crypto/aead.c crypto/transform.c \
 crypto/iv/iv_gen.c crypto/iv/iv_gen_rand.c crypto/iv/iv_gen_seq.c \
 crypto/iv/iv_gen_null.c \
 crypto/mgf1/mgf1.c crypto/mgf1/mgf1_bitspender.c \
+crypto/xofs/xof.h crypto/xofs/xof.c \
 credentials/credential_factory.c credentials/builder.c \
 credentials/cred_encoding.c credentials/keys/private_key.c \
 credentials/keys/public_key.c credentials/keys/shared_key.c \
@@ -220,15 +221,21 @@ $(srcdir)/crypto/proposal/proposal_keywords_static.c:	$(srcdir)/crypto/proposal/
 		$(GPERF) -N proposal_get_token_static -m 10 -C -G -c -t -D < \
 												$(srcdir)/crypto/proposal/proposal_keywords_static.txt > $@
 
-
-# build plugins with their own Makefile
-#######################################
-
 if MONOLITHIC
 SUBDIRS =
 else
 SUBDIRS = .
 endif
+
+# build libnttfft used by some plugins
+######################################
+
+if USE_LIBNTTFFT
+  SUBDIRS += math/libnttfft
+endif
+
+# build plugins with their own Makefile
+#######################################
 
 if USE_AF_ALG
   SUBDIRS += plugins/af_alg
@@ -594,6 +601,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_NEWHOPE
+  SUBDIRS += plugins/newhope
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/newhope/libstrongswan-newhope.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC
@@ -604,7 +618,20 @@ endif
 if MONOLITHIC
   SUBDIRS += .
 endif
+
+# build unit tests
+##################
+
 SUBDIRS += tests
+
+if USE_LIBNTTFFT
+  SUBDIRS += math/libnttfft/tests
+endif
+
 if USE_BLISS
   SUBDIRS += plugins/bliss/tests
+endif
+
+if USE_NEWHOPE
+  SUBDIRS += plugins/newhope/tests
 endif
