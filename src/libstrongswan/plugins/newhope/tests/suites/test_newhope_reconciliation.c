@@ -22,8 +22,6 @@
 static const uint16_t n = 1024;
 static const uint16_t q = 12289;
 
-static const size_t seed_len = 32;
-
 static uint32_t r_v[] = {
 	 7832,  2714,  1942, 12135,  6869, 11272, 11601,  1783,  9639,  1465,
 	 4603,  8158,  1418,  6162,  3907,  6653,  1091,  3026,  4540,  4797,
