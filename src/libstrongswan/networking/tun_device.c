@@ -130,12 +130,13 @@ struct private_tun_device_t {
 	 * Name of the TUN device
 	 */
 	char if_name[IFNAMSIZ];
-#endif /* WIN32 */
+
 	/**
 	 * Socket used for ioctl() to set interface addr, ...
 	 */
 	int sock;
-
+#endif /* WIN32 */
+        
 	/**
 	 * The current MTU
 	 */
@@ -759,6 +760,8 @@ METHOD(tun_device_t, destroy, void,
 #ifdef WIN32
         /* close file handle, destroy interface */
         CloseHandle(this->tunhandle);
+        free(this->read_event_name);
+        free(this->write_event_name);
 #else
 	if (this->tunfd > 0)
 	{
@@ -1054,8 +1057,8 @@ tun_device_t *tun_device_create(const char *name_tmpl)
                 .tunhandle = NULL,
 #else
 		.tunfd = -1,
-#endif /* WIN32 */
 		.sock = -1,
+#endif /* WIN32 */
 	);
 
 	if (!init_tun(this, name_tmpl))
