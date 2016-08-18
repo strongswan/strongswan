@@ -154,6 +154,11 @@ struct private_child_cfg_t {
 	bool install_policy;
 
 	/**
+	 * Install outbound FWD policies
+	 */
+	bool fwd_out_policy;
+
+	/**
 	 * anti-replay window size
 	 */
 	uint32_t replay_window;
@@ -564,6 +569,12 @@ METHOD(child_cfg_t, install_policy, bool,
 	return this->install_policy;
 }
 
+METHOD(child_cfg_t, install_fwd_out_policy, bool,
+	private_child_cfg_t *this)
+{
+	return this->fwd_out_policy;
+}
+
 #define LT_PART_EQUALS(a, b) ({ a.life == b.life && a.rekey == b.rekey && a.jitter == b.jitter; })
 #define LIFETIME_EQUALS(a, b) ({ LT_PART_EQUALS(a.time, b.time) && LT_PART_EQUALS(a.bytes, b.bytes) && LT_PART_EQUALS(a.packets, b.packets); })
 
@@ -613,6 +624,7 @@ METHOD(child_cfg_t, equals, bool,
 		this->replay_window == other->replay_window &&
 		this->proxy_mode == other->proxy_mode &&
 		this->install_policy == other->install_policy &&
+		this->fwd_out_policy == other->fwd_out_policy &&
 		streq(this->updown, other->updown) &&
 		streq(this->interface, other->interface);
 }
@@ -673,6 +685,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.set_replay_window = _set_replay_window,
 			.use_proxy_mode = _use_proxy_mode,
 			.install_policy = _install_policy,
+			.install_fwd_out_policy = _install_fwd_out_policy,
 			.equals = _equals,
 			.get_ref = _get_ref,
 			.destroy = _destroy,
@@ -695,6 +708,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 		.manual_prio = data->priority,
 		.interface = strdupnull(data->interface),
 		.install_policy = !data->suppress_policies,
+		.fwd_out_policy = data->fwd_out_policies,
 		.refcount = 1,
 		.proposals = linked_list_create(),
 		.my_ts = linked_list_create(),

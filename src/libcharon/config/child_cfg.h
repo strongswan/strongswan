@@ -284,6 +284,14 @@ struct child_cfg_t {
 	bool (*install_policy)(child_cfg_t *this);
 
 	/**
+	 * Check whether outbound FWD IPsec policies should be installed.
+	 *
+	 * @return				TRUE, if outbound FWD policies should be installed
+	 *						FALSE, otherwise
+	 */
+	bool (*install_fwd_out_policy)(child_cfg_t *this);
+
+	/**
 	 * Check if two child_cfg objects are equal.
 	 *
 	 * @param other			candidate to check for equality against this
@@ -346,6 +354,8 @@ struct child_cfg_create_t {
 	bool hostaccess;
 	/** Don't install IPsec policies */
 	bool suppress_policies;
+	/** Install outbound FWD IPsec policies to bypass drop policies */
+	bool fwd_out_policies;
 };
 
 /**
