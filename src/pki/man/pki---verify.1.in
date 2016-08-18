@@ -1,4 +1,4 @@
-.TH "PKI \-\-VERIFY" 1 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-VERIFY" 1 "2016-08-19" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -9,6 +9,7 @@ pki \-\-verify \- Verify a certificate using a CA certificate
 .SY pki\ \-\-verify
 .OP \-\-in file
 .OP \-\-cacert file
+.OP \-\-crl file
 .OP \-\-debug level
 .OP \-\-online
 .YS
@@ -47,6 +48,9 @@ X.509 certificate to verify. If not given it is read from \fISTDIN\fR.
 .BI "\-c, \-\-cacert " file
 CA certificate to use for trustchain verification. If not given the certificate
 is assumed to be self\-signed.
+.TP
+.BI "\-l, \-\-crl " file
+Local CRL to use for trustchain verification. Implies \fB-o\fR.
 .TP
 .BI "\-o, \-\-online
 Enable online CRL/OCSP revocation checking.
