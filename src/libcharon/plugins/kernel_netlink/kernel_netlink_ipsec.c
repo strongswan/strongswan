@@ -2528,6 +2528,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			 id->dir, markstr, cur_priority, use_count);
 		return SUCCESS;
 	}
+	policy->reqid = assigned_sa->sa->cfg.reqid;
 
 	if (this->policy_update)
 	{
@@ -2720,6 +2721,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 			return SUCCESS;
 		}
 		current->used_by->get_first(current->used_by, (void**)&mapping);
+		current->reqid = mapping->sa->cfg.reqid;
 
 		DBG2(DBG_KNL, "updating policy %R === %R %N%s [priority %u, "
 			 "refcount %d]", id->src_ts, id->dst_ts, policy_dir_names, id->dir,
