@@ -1781,16 +1781,12 @@ METHOD(ike_sa_t, delete_, status_t,
 {
 	switch (this->state)
 	{
-		case IKE_REKEYING:
-			if (this->version == IKEV1)
-			{	/* SA has been reauthenticated, delete */
-				charon->bus->ike_updown(charon->bus, &this->public, FALSE);
-				break;
-			}
-			/* FALL */
 		case IKE_ESTABLISHED:
-			if (time_monotonic(NULL) >= this->stats[STAT_DELETE])
-			{	/* IKE_SA hard lifetime hit */
+		case IKE_REKEYING:
+			if (time_monotonic(NULL) >= this->stats[STAT_DELETE] &&
+				!(this->version == IKEV1 && this->state == IKE_REKEYING))
+			{	/* IKE_SA hard lifetime hit, ignored for reauthenticated
+				 * IKEv1 SAs */
 				charon->bus->alert(charon->bus, ALERT_IKE_SA_EXPIRED);
 			}
 			this->task_manager->queue_ike_delete(this->task_manager);
