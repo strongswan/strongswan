@@ -9,6 +9,7 @@ pluginstemplatedir = $(templatesdir)/plugins
 
 options = \
 	options/aikgen.opt \
+	options/aikpub2.opt \
 	options/attest.opt \
 	options/charon.opt \
 	options/charon-logging.opt \
