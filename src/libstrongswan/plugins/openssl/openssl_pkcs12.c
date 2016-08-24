@@ -23,7 +23,7 @@
 #include <library.h>
 #include <credentials/sets/mem_cred.h>
 
-#ifdef OPENSSL_IS_BORINGSSL
+#if defined(OPENSSL_IS_BORINGSSL) || defined(__APPLE__)
 #define EVP_PKEY_base_id(p) EVP_PKEY_type(p->type)
 #endif
 
