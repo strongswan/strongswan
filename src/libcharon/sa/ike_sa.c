@@ -921,6 +921,7 @@ METHOD(ike_sa_t, reset, void,
 							this->ike_sa_id->is_initiator(this->ike_sa_id));
 
 	this->task_manager->reset(this->task_manager, 0, 0);
+	this->task_manager->queue_ike(this->task_manager);
 }
 
 METHOD(ike_sa_t, get_keymat, keymat_t*,
@@ -1831,7 +1832,6 @@ METHOD(ike_sa_t, reauth, status_t,
 		DBG0(DBG_IKE, "reinitiating IKE_SA %s[%d]",
 			 get_name(this), this->unique_id);
 		reset(this);
-		this->task_manager->queue_ike(this->task_manager);
 		return this->task_manager->initiate(this->task_manager);
 	}
 	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
@@ -2335,7 +2335,6 @@ METHOD(ike_sa_t, retransmit, status_t,
 						 this->keyingtry + 1, tries);
 					reset(this);
 					resolve_hosts(this);
-					this->task_manager->queue_ike(this->task_manager);
 					return this->task_manager->initiate(this->task_manager);
 				}
 				DBG1(DBG_IKE, "establishing IKE_SA failed, peer not responding");
