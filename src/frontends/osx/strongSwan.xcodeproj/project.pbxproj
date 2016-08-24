@@ -10,6 +10,7 @@
 		5B04A712174558F100A13BDC /* icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 5B04A711174558F100A13BDC /* icon.png */; };
 		5B04A7211747800F00A13BDC /* icon-alt.png in Resources */ = {isa = PBXBuildFile; fileRef = 5B04A7201747800F00A13BDC /* icon-alt.png */; };
 		5B313F9A17A93D590055C86A /* icon-large.icns in Resources */ = {isa = PBXBuildFile; fileRef = 5B313F9917A93D590055C86A /* icon-large.icns */; };
+		5B3BD2561D6E144F002C4030 /* Application.m in Sources */ = {isa = PBXBuildFile; fileRef = 5B3BD2551D6E144F002C4030 /* Application.m */; };
 		5B74989217311B200041971E /* xpc_channels.c in Sources */ = {isa = PBXBuildFile; fileRef = 5B74989117311B200041971E /* xpc_channels.c */; };
 		5B7498B8173275D10041971E /* xpc_logger.c in Sources */ = {isa = PBXBuildFile; fileRef = 5B7498B7173275D10041971E /* xpc_logger.c */; };
 		5B7FA5A11754D5DB00264BAC /* LogController.m in Sources */ = {isa = PBXBuildFile; fileRef = 5B7FA59F1754D5DB00264BAC /* LogController.m */; };
@@ -66,6 +67,8 @@
 		5B04A711174558F100A13BDC /* icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon.png; sourceTree = "<group>"; };
 		5B04A7201747800F00A13BDC /* icon-alt.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon-alt.png"; sourceTree = "<group>"; };
 		5B313F9917A93D590055C86A /* icon-large.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = "icon-large.icns"; sourceTree = "<group>"; };
+		5B3BD2541D6E144F002C4030 /* Application.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Application.h; sourceTree = "<group>"; };
+		5B3BD2551D6E144F002C4030 /* Application.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Application.m; sourceTree = "<group>"; };
 		5B74984C172AA3550041971E /* xpc_dispatch.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xpc_dispatch.c; sourceTree = "<group>"; };
 		5B74984E172AA3670041971E /* xpc_dispatch.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xpc_dispatch.h; sourceTree = "<group>"; };
 		5B74989017311AFC0041971E /* xpc_channels.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xpc_channels.h; sourceTree = "<group>"; };
@@ -191,6 +194,8 @@
 				5B8D87A41A409E6D008E5702 /* PasswordWindow.xib */,
 				5B8D87991A406572008E5702 /* Helper.h */,
 				5B8D879A1A40658B008E5702 /* Helper.m */,
+				5B3BD2541D6E144F002C4030 /* Application.h */,
+				5B3BD2551D6E144F002C4030 /* Application.m */,
 			);
 			path = strongSwan;
 			sourceTree = "<group>";
@@ -306,6 +311,7 @@
 				5BD1CCC41726DB0100587077 /* AppDelegate.m in Sources */,
 				5BD1CCFB1729365F00587077 /* Control.m in Sources */,
 				5B7FA5A11754D5DB00264BAC /* LogController.m in Sources */,
+				5B3BD2561D6E144F002C4030 /* Application.m in Sources */,
 				5B8D879B1A40658B008E5702 /* Helper.m in Sources */,
 				5B7FA5B01754EBC800264BAC /* ConnController.m in Sources */,
 				5B7FA5B51754F5AF00264BAC /* PasswordController.m in Sources */,

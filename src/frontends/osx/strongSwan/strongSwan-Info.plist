@@ -33,7 +33,7 @@
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
+	<string>Application</string>
 	<key>SMPrivilegedExecutables</key>
 	<dict>
 		<key>org.strongswan.charon-xpc</key>
