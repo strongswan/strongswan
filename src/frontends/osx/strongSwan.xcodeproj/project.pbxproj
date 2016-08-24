@@ -255,7 +255,7 @@
 		5BD1CCA31726DB0100587077 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0620;
+				LastUpgradeCheck = 0730;
 				ORGANIZATIONNAME = "revosec AG";
 			};
 			buildConfigurationList = 5BD1CCA61726DB0100587077 /* Build configuration list for PBXProject "strongSwan" */;
@@ -394,6 +394,7 @@
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
@@ -443,6 +444,7 @@
 				GCC_PREFIX_HEADER = "strongSwan/strongSwan-Prefix.pch";
 				INFOPLIST_FILE = "strongSwan/strongSwan-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				PRODUCT_BUNDLE_IDENTIFIER = org.strongswan.osx;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				SDKROOT = macosx;
@@ -460,6 +462,7 @@
 				GCC_PREFIX_HEADER = "strongSwan/strongSwan-Prefix.pch";
 				INFOPLIST_FILE = "strongSwan/strongSwan-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				PRODUCT_BUNDLE_IDENTIFIER = org.strongswan.osx;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE = "";
 				SDKROOT = macosx;
@@ -508,6 +511,7 @@
 					__launchd_plist,
 					"charon-xpc/charon-xpc-Launchd.plist",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.strongswan.charon-xpc";
 				PRODUCT_NAME = "org.strongswan.charon-xpc";
 				PROVISIONING_PROFILE = "";
 				SDKROOT = macosx;
@@ -557,6 +561,7 @@
 					__launchd_plist,
 					"charon-xpc/charon-xpc-Launchd.plist",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.strongswan.charon-xpc";
 				PRODUCT_NAME = "org.strongswan.charon-xpc";
 				PROVISIONING_PROFILE = "";
 				SDKROOT = macosx;
