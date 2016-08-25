@@ -276,7 +276,8 @@ static void finalize_context(private_tpm_tss_tss2_t *this)
 {
 	if (this->tcti_context)
 	{
-		TeardownSocketTcti(this->tcti_context);
+		tss2_tcti_finalize(this->tcti_context);
+		free(this->tcti_context);
 	}
 	if (this->sys_context)
 	{
