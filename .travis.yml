@@ -1,5 +1,8 @@
 language: c
 
+sudo: required
+dist: trusty
+
 compiler:
   - gcc
   - clang

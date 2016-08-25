@@ -50,7 +50,7 @@ all)
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libnm-glib-dev libnm-glib-vpn-dev libpcsclite-dev libpam0g-dev
-		  binutils-dev libunwind7-dev libjson0-dev iptables-dev python-pip
+		  binutils-dev libunwind8-dev libjson0-dev iptables-dev python-pip
 		  libtspi-dev"
 	PYDEPS="pytest"
 	;;
@@ -67,16 +67,16 @@ win*)
 	# no make check for Windows binaries
 	TARGET=
 	CFLAGS="$CFLAGS -mno-ms-bitfields"
-	DEPS="gcc-mingw-w64-base mingw-w64-dev"
+	DEPS="gcc-mingw-w64-base"
 	case "$TEST" in
 	win64)
 		CONFIG="--host=x86_64-w64-mingw32 $CONFIG"
-		DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 $DEPS"
+		DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev $DEPS"
 		CC="x86_64-w64-mingw32-gcc"
 		;;
 	win32)
 		CONFIG="--host=i686-w64-mingw32 $CONFIG"
-		DEPS="gcc-mingw-w64-i686 binutils-mingw-w64-i686 $DEPS"
+		DEPS="gcc-mingw-w64-i686 binutils-mingw-w64-i686 mingw-w64-i686-dev $DEPS"
 		CC="i686-w64-mingw32-gcc"
 		;;
 	esac
