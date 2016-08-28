@@ -136,7 +136,7 @@ struct private_tun_device_t {
 	 */
 	int sock;
 #endif /* WIN32 */
-        
+
 	/**
 	 * The current MTU
 	 */
@@ -843,11 +843,10 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 	}
 	return TRUE;
 #elif defined(WIN32)
-        /* WIN32 TAP driver stuff*/
-        /* Check if there is an unused tun device following the IPsec name scheme*/
         enumerator_t *enumerator;
         char *guid;
         BOOL success = FALSE;
+        /* Get all existing TAP devices */
         linked_list_t *possible_devices = get_tap_reg();
         memset(this->if_name, 0, sizeof(this->if_name));
 
@@ -890,6 +889,9 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
          */
         enumerator->destroy(enumerator);
         possible_devices->destroy(possible_devices);
+        /* If we didn't find one or could open one, we need to bail out.
+         * We currently can not create new devices.
+         */
         if (!success)
         {
             return FALSE;
