@@ -409,18 +409,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
             DBG2(DBG_ESP, "Event triggered with event_status %d", event_status);
             offset = event_status - WAIT_OBJECT_0;
             DBG2(DBG_ESP, "offset == %d", offset);
-//            if (offset== 1)
-//            {
-//                ResetEvent(event_array[offset]);
-//                // Reset the structs
-//                if (!start_read(&structures[offset], structures[offset].overlapped->hEvent))
-//                {
-//                        // TODO: Cleanup heap
-//                        this->lock->unlock(this->lock);
-//                        return JOB_REQUEUE_FAIR;
-//                }
-//                continue;
-//            }
+            
             /* A handle was signaled. Find the tun handle whose read was successful */
 
             /* We can only use the event_status of indication for the first completed IO operation.
