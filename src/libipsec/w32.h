@@ -13,8 +13,7 @@
 
    You should have received a copy of the GNU Lesser General Public
    License along with the GNU C Library; if not, see
-   <http://www.gnu.org/licenses/>.  */
-
+   <http://www.gnu.org/licenses/>.
 */
 
 /*
@@ -82,7 +81,7 @@ struct ip
     struct in_addr ip_src, ip_dst;      /* source and dest address */
   };
 
-# 
+#
 #define IPPROTO_IPIP 4
 #define IPPROTO_IPv6 41
 #define IPPROTO_NONE 59
