@@ -46,6 +46,7 @@ SOURCEIP_ROUTING_TABLE=220
 testnumber="0"
 failed_cnt="0"
 passed_cnt="0"
+subdir_cnt="0"
 
 ##############################################################################
 # copy default tests to $BUILDDIR
@@ -185,13 +186,11 @@ echo
 ##############################################################################
 # enter specific test directory
 #
-
 if [ $# -gt 0 ]
 then
-    TESTS=$*
+    TESTS=$(printf "%s\n" $* | sort -u)
 else
-    # set internal field seperator
-    TESTS="`ls $DEFAULTTESTSDIR`"
+    TESTS=$(ls $DEFAULTTESTSDIR)
 fi
 
 for SUBDIR in $TESTS
@@ -214,12 +213,18 @@ do
 	else
 	    FIRST="&nbsp;"
 	fi
+
+	if [ $subdir_cnt != 0 ]
+	then
+	    echo "      <td align=\"right\">$subdir_cnt</td>" >> $INDEX
+	    echo "      <td>&nbsp;</td>" >> $INDEX
+	    echo "    </tr>" >> $INDEX
+	    subdir_cnt="0"
+	fi
 	echo "    <tr>" >> $INDEX
     echo "      <td>$FIRST</td>">> $INDEX
     echo "      <td><a href=\"$SUBDIR/index.html\">$SUBDIR</a></td>" >> $INDEX
-    echo "      <td align=\"right\">x</td>" >> $INDEX
-    echo "      <td>&nbsp;</td>" >> $INDEX
-    echo "    </tr>" >> $INDEX
+
 	SUBTESTSINDEX=$TODAYDIR/$SUBDIR/index.html
 	cat > $SUBTESTSINDEX <<@EOF
 <html>
@@ -259,6 +264,7 @@ do
     for name in $SUBTESTS
     do
 	let "testnumber += 1"
+	let "subdir_cnt += 1"
 	testname=$SUBDIR/$name
 	log_action " $testnumber $testname:"
 
@@ -899,6 +905,15 @@ cat >> $TESTRESULTSHTML << @EOF
 </body>
 </html>
 @EOF
+
+if [ $subdir_cnt != 0 ]
+then
+cat >> $INDEX << @EOF
+      <td align="right">$subdir_cnt</td>
+      <td>&nbsp;</td>
+    </tr>
+@EOF
+fi
 
 let "all_cnt = $passed_cnt + $failed_cnt"
 
