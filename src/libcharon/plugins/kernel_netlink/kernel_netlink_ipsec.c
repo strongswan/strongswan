@@ -1245,7 +1245,7 @@ METHOD(kernel_ipsec_t, get_cpi, status_t,
  */
 static void format_mark(char *buf, int buflen, mark_t mark)
 {
-	if (mark.value)
+	if (mark.value | mark.mask)
 	{
 		snprintf(buf, buflen, " (mark %u/0x%08x)", mark.value, mark.mask);
 	}
@@ -1256,7 +1256,7 @@ static void format_mark(char *buf, int buflen, mark_t mark)
  */
 static bool add_mark(struct nlmsghdr *hdr, int buflen, mark_t mark)
 {
-	if (mark.value)
+	if (mark.value | mark.mask)
 	{
 		struct xfrm_mark *xmrk;
 
