@@ -182,6 +182,16 @@ echo "strongSwan   : $SWANVERSION"
 echo "Date         : $TESTDATE"
 echo
 
+##############################################################################
+# trap CTRL-C to properly terminate a long run
+#
+
+function abort_tests()
+{
+	echo -n "...aborting..." > /dev/tty
+	aborted=YES
+}
+trap abort_tests INT
 
 ##############################################################################
 # enter specific test directory
@@ -878,6 +888,11 @@ do
 	    eval HOSTLOGIN=root@\$ipv4_${host}
 	    ssh $SSHCONF $HOSTLOGIN 'if [ -f /var/run/charon.pid ]; then rm /var/run/charon.pid; echo "    removed charon.pid on `hostname`"; fi'
 	done
+
+	if [ -n "$aborted" ]
+	then
+	    break 2
+	fi
 
     done
 
