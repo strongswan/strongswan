@@ -237,6 +237,20 @@ METHOD(listener_t, ike_rekey, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, alert, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, alert_t alert, va_list args)
+{
+	switch (alert)
+	{
+		case ALERT_HALF_OPEN_TIMEOUT:
+			ike_updown(this, ike_sa, FALSE);
+			break;
+		default:
+			break;
+	}
+	return TRUE;
+}
+
 METHOD(listener_t, ike_state_change, bool,
 	private_ha_ike_t *this, ike_sa_t *ike_sa, ike_sa_state_t new)
 {
@@ -393,6 +407,7 @@ ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
 	INIT(this,
 		.public = {
 			.listener = {
+				.alert = _alert,
 				.ike_keys = _ike_keys,
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
