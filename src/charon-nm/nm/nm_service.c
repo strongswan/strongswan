@@ -396,7 +396,8 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	else
 	{
 		/* no certificate defined, fall back to system-wide CA certificates */
-		priv->creds->load_ca_dir(priv->creds, NM_CA_DIR);
+		priv->creds->load_ca_dir(priv->creds, lib->settings->get_str(
+								 lib->settings, "charon-nm.ca_dir", NM_CA_DIR));
 	}
 	if (!gateway)
 	{
