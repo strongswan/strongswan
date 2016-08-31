@@ -94,6 +94,10 @@ static int self()
 				{
 					type = KEY_BLISS;
 				}
+				else if (streq(arg, "priv"))
+				{
+					type = KEY_ANY;
+				}
 				else
 				{
 					error = "invalid input type";
@@ -417,7 +421,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		self, 's', "self",
 		"create a self signed certificate",
-		{" [--in file|--keyid hex] [--type rsa|ecdsa|bliss]",
+		{" [--in file|--keyid hex] [--type rsa|ecdsa|bliss|priv]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
 		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning|msSmartcardLogon]+",
@@ -431,7 +435,7 @@ static void __attribute__ ((constructor))reg()
 			{"help",			'h', 0, "show usage information"},
 			{"in",				'i', 1, "private key input file, default: stdin"},
 			{"keyid",			'x', 1, "keyid on smartcard of private key"},
-			{"type",			't', 1, "type of input key, default: rsa"},
+			{"type",			't', 1, "type of input key, default: priv"},
 			{"dn",				'd', 1, "subject and issuer distinguished name"},
 			{"san",				'a', 1, "subjectAltName to include in certificate"},
 			{"lifetime",		'l', 1, "days the certificate is valid, default: 1095"},
