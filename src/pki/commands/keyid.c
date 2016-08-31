@@ -42,17 +42,20 @@ static int keyid()
 			case 'h':
 				return command_usage(NULL);
 			case 't':
-				if (streq(arg, "rsa-priv"))
+				if (streq(arg, "rsa") ||
+					streq(arg, "rsa-priv"))
 				{
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_RSA;
 				}
-				else if (streq(arg, "ecdsa-priv"))
+				else if (streq(arg, "ecdsa") ||
+						 streq(arg, "ecdsa-priv"))
 				{
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_ECDSA;
 				}
-				else if (streq(arg, "bliss-priv"))
+				else if (streq(arg, "bliss") ||
+						 streq(arg, "bliss-priv"))
 				{
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_BLISS;
@@ -169,11 +172,11 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t)
 		{ keyid, 'k', "keyid",
 		"calculate key identifiers of a key/certificate",
-		{"[--in file] [--type rsa-priv|ecdsa-priv|bliss-priv|pub|pkcs10|x509]"},
+		{"[--in file] [--type rsa|ecdsa|bliss|pub|pkcs10|x509]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
-			{"type",	't', 1, "type of key, default: rsa-priv"},
+			{"type",	't', 1, "type of key, default: rsa"},
 		}
 	});
 }
