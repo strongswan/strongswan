@@ -388,25 +388,28 @@ static void load_aik(private_pts_t *this)
 			DBG1(DBG_PTS, "AIK Blob is not available");
 		}
 
-		/* get AIK public key */
-		if (key_path)
+		/* get AIK public key if no AIK certificate is available */
+		if (!this->aik_cert)
 		{
-			map = chunk_map(key_path, FALSE);
-			if (map)
+			if (key_path)
 			{
-				DBG2(DBG_PTS, "loaded AIK public key from '%s'", key_path);
-				aik_pubkey = chunk_clone(*map);
-				chunk_unmap(map);
+				map = chunk_map(key_path, FALSE);
+				if (map)
+				{
+					DBG2(DBG_PTS, "loaded AIK public key from '%s'", key_path);
+					aik_pubkey = chunk_clone(*map);
+					chunk_unmap(map);
+				}
+				else
+				{
+					DBG1(DBG_PTS, "unable to map AIK public key file '%s': %s",
+								   key_path, strerror(errno));
+				}
 			}
 			else
 			{
-				DBG1(DBG_PTS, "unable to map AIK public key file '%s': %s",
-							   key_path, strerror(errno));
+				DBG1(DBG_PTS, "AIK public key is not available");
 			}
-		}
-		else
-		{
-			DBG1(DBG_PTS, "AIK public key is not available");
 		}
 
 		/* Load AIK item into TPM 1.2 object */
