@@ -16,7 +16,6 @@
 
 #include <string.h>
 #include <arpa/inet.h>
-#include <byteswap.h>
 
 #include "padlock_sha1_hasher.h"
 
@@ -66,11 +65,11 @@ static void sha1(chunk_t data, uint32_t *digest)
 
 	padlock_sha1(data.len, data.ptr, (u_char*)hash);
 
-	digest[0] = bswap_32(hash[0]);
-	digest[1] = bswap_32(hash[1]);
-	digest[2] = bswap_32(hash[2]);
-	digest[3] = bswap_32(hash[3]);
-	digest[4] = bswap_32(hash[4]);
+	digest[0] = __builtin_bswap32(hash[0]);
+	digest[1] = __builtin_bswap32(hash[1]);
+	digest[2] = __builtin_bswap32(hash[2]);
+	digest[3] = __builtin_bswap32(hash[3]);
+	digest[4] = __builtin_bswap32(hash[4]);
 }
 
 /**
