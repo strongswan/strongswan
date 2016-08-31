@@ -42,7 +42,7 @@ static void usage(FILE *out)
 {
 	fprintf(out,
 		"Usage: pt-tls  --connect <hostname|address> [--port <port>]\n"
-		"              [--cert <file>]+ [--key <file>]\n"
+		"              [--cert <file>]+ [--key <file>] [--key-type rsa|ecdsa]\n"
 		"              [--client <client-id>] [--secret <password>]\n"
 		"              [--optionsfrom <filename>] [--quiet] [--debug <level>]\n");
 }
@@ -121,11 +121,11 @@ static bool load_certificate(char *filename)
 /**
  * Load private key from file
  */
-static bool load_key(char *filename)
+static bool load_key(char *filename, key_type_t type)
 {
 	private_key_t *key;
 
-	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
+	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 							 BUILD_FROM_FILE, filename, BUILD_END);
 	if (!key)
 	{
@@ -255,7 +255,8 @@ static void init()
 
 int main(int argc, char *argv[])
 {
-	char *address = NULL, *identity = "%any", *secret = NULL;
+	char *address = NULL, *identity = "%any", *secret = NULL, *key_file = NULL;
+	key_type_t key_type = KEY_RSA;
 	int port = PT_TLS_PORT;
 
 	init();
@@ -270,6 +271,7 @@ int main(int argc, char *argv[])
 			{"port",		required_argument,		NULL,		'p' },
 			{"cert",		required_argument,		NULL,		'x' },
 			{"key",			required_argument,		NULL,		'k' },
+			{"key-type",		required_argument,		NULL,		't' },
 			{"mutual",		no_argument,			NULL,		'm' },
 			{"quiet",		no_argument,			NULL,		'q' },
 			{"debug",		required_argument,		NULL,		'd' },
@@ -290,9 +292,20 @@ int main(int argc, char *argv[])
 				}
 				continue;
 			case 'k':			/* --key <file> */
-				if (!load_key(optarg))
+				key_file = optarg;
+				continue;
+			case 't':			/* --key-type <type> */
+				if (strcaseeq(optarg, "ecdsa"))
 				{
-					return 1;
+					key_type = KEY_ECDSA;
+				}
+				else if (strcaseeq(optarg, "rsa"))
+				{
+					key_type = KEY_RSA;
+				}
+				else
+				{
+					key_type = KEY_ANY;
 				}
 				continue;
 			case 'c':			/* --connect <hostname|address> */
@@ -339,12 +352,15 @@ int main(int argc, char *argv[])
 		usage(stderr);
 		return 1;
 	}
+	if (key_file && !load_key(key_file, key_type))
+	{
+		return 1;
+	}
 	if (secret)
 	{
 		creds->add_shared(creds, shared_key_create(SHARED_EAP,
 										chunk_clone(chunk_from_str(secret))),
 							identification_create_from_string(identity), NULL);
 	}
-
 	return client(address, port, identity);
 }
