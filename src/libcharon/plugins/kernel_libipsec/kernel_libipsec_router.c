@@ -316,7 +316,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
         ResetEvent(event_array[i]);
         /* bundle for the read on this->tun */
         /* Reserve memory for the buffer*/
-        tun_device_handle_overlapped_buffer.buffer = chunk_alloc(tun_device->get_mtu(tun_device));
+        tun_device_handle_overlapped_buffer.buffer = chunk_alloca(tun_device->get_mtu(tun_device));
         DBG2(DBG_ESP, "Allocated buffer.");
         /* Initialise the buffer */
         memset(tun_device_handle_overlapped_buffer.buffer.ptr, 0, tun_device_handle_overlapped_buffer.buffer.len);
@@ -361,7 +361,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
             DBG2(DBG_ESP, "TUN device %s", *key);
             /* Allocate structure and buffer */
 
-            bundle_array[i].buffer = chunk_alloc(tun_device->get_mtu(tun_device));
+            bundle_array[i].buffer = chunk_alloca(tun_device->get_mtu(tun_device));
             memset(bundle_array[i].buffer.ptr, 0, bundle_array[i].buffer.len);
             bundle_array[i].fileHandle = tun_device->get_handle(tun_device);
             /* Allocate and initialise OVERLAPPED structure */
@@ -538,7 +538,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                  * and bundle_array[k].buffer has our data now.
                  */
 
-                char *foo = alloca((bundle_array[offset].buffer.len *4)/3 + 1);
+                char foo[(bundle_array[offset].buffer.len *4)/3 + 1];
                 memset(foo, 0, (bundle_array[offset].buffer.len *4)/3 + 1);
                 DBG2(DBG_ESP, "Length of buffer: %u", bundle_array[offset].buffer.len);
                 chunk_to_base64(bundle_array[offset].buffer, foo);
