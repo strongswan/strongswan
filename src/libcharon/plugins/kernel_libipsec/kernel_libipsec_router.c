@@ -260,8 +260,8 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
         DBG2(DBG_ESP, "entered handle_plain.");
         void **key = NULL;
         bool oldstate;
-        uint32_t length, event_status = 0, i = 0, j = 0, offset;
-        handle_overlapped_buffer_t *bundle_array = NULL, dummy, tun_device_handle_overlapped_buffer, *structures = NULL;
+        uint32_t length, event_status = 0, i = 0, offset;
+        handle_overlapped_buffer_t *bundle_array = NULL, dummy, tun_device_handle_overlapped_buffer;
         OVERLAPPED *overlapped = NULL;
         HANDLE *event_array = NULL, tun_device_event;
         tun_device_t *tun_device = this->tun.tun;
@@ -318,6 +318,10 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
         /* Reserve memory for the buffer*/
         tun_device_handle_overlapped_buffer.buffer = chunk_alloc(tun_device->get_mtu(tun_device));
         DBG2(DBG_ESP, "Allocated buffer.");
+        /* Initialise the buffer */
+        memset(tun_device_handle_overlapped_buffer.buffer.ptr, 0, tun_device_handle_overlapped_buffer.buffer.len);
+        DBG2(DBG_ESP, "Initialised buffer.");
+
         tun_device_handle_overlapped_buffer.fileHandle = tun_device->get_handle(tun_device);
         DBG2(DBG_ESP, "Allocated file handle.");
         tun_device_handle_overlapped_buffer.overlapped = overlapped;
@@ -357,22 +361,21 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
             DBG2(DBG_ESP, "TUN device %s", *key);
             /* Allocate structure and buffer */
 
-            structures[j].buffer = chunk_alloc(tun_device->get_mtu(tun_device));
-            memset(structures[j].buffer.ptr, 0, structures[j].buffer.len);
-            structures[j].fileHandle = tun_device->get_handle(tun_device);
+            bundle_array[i].buffer = chunk_alloc(tun_device->get_mtu(tun_device));
+            memset(bundle_array[i].buffer.ptr, 0, bundle_array[i].buffer.len);
+            bundle_array[i].fileHandle = tun_device->get_handle(tun_device);
             /* Allocate and initialise OVERLAPPED structure */
-            structures[j].overlapped = alloca(sizeof(OVERLAPPED));
-            (*structures[j].overlapped) = overlapped[j];
-            memset(&structures[j].overlapped, 0, sizeof(OVERLAPPED));
+            bundle_array[i].overlapped = alloca(sizeof(OVERLAPPED));
+            (*bundle_array[i].overlapped) = overlapped[i];
+            memset(&bundle_array[i].overlapped, 0, sizeof(OVERLAPPED));
             /* Create unique name for that event. */
             /* Create unique event for read accesses on that device
              * No security attributes, no manual reset, initial state is unsignaled,
              * name is the special name we created
              */
-            structures[j].overlapped->hEvent = CreateEvent(NULL, FALSE, FALSE, tun_device->get_read_event_name(tun_device));
+            bundle_array[i].overlapped->hEvent = CreateEvent(NULL, FALSE, FALSE, tun_device->get_read_event_name(tun_device));
             // event_array[i] = OpenEvent(EVENT_ALL_ACCESS, FALSE, tun_device->get_read_event_name(tun_device));
-            event_array[i] = structures[j].overlapped->hEvent;
-            bundle_array[i] = structures[j];
+            event_array[i] = bundle_array[i].overlapped->hEvent;
 
             if (event_array[i] == NULL)
             {
@@ -385,13 +388,13 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 
             /* Initialise read with the allocate overwrite structure */
             DBG2(DBG_ESP, "Reading on %s", tun_device->get_name(tun_device));
-            if (!start_read(&structures[j], structures[j].overlapped->hEvent))
+            if (!start_read(&bundle_array[i], bundle_array[i].overlapped->hEvent))
             {
                     // TODO: Cleanup heap
                     this->lock->unlock(this->lock);
                     return JOB_REQUEUE_FAIR;
             }
-            j++;
+            i++;
         }
         tuns_enumerator->destroy(tuns_enumerator);
 
@@ -409,7 +412,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
             DBG2(DBG_ESP, "Event triggered with event_status %d", event_status);
             offset = event_status - WAIT_OBJECT_0;
             DBG2(DBG_ESP, "offset == %d", offset);
-            
+
             /* A handle was signaled. Find the tun handle whose read was successful */
 
             /* We can only use the event_status of indication for the first completed IO operation.
@@ -453,6 +456,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                     DBG2(DBG_ESP, "Cleanup done.");
                     return JOB_REQUEUE_DIRECT;
                 }
+#if FALSE
                 for(uint32_t k=1;k<i; k++)
                 {
                     DBG2(DBG_ESP, "position %d in array", k);
@@ -477,9 +481,9 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                         /* clone the buffer */
                         chunk_t buffer_clone = chunk_clone (bundle_array[k].buffer);
                         packet = ip_packet_create(buffer_clone);
-                        DBG2(DBG_ESP, "Packet contents: %B", packet->get_encoding(packet));
                         if (packet)
                         {
+                                DBG2(DBG_ESP, "Packet contents: %B", packet->get_encoding(packet));
                                 ipsec->processor->queue_outbound(ipsec->processor, packet);
                         }
                         else
@@ -494,21 +498,25 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 
                         bundle_array[k].overlapped->hEvent = event_array[k];
 
-                        if (!start_read(&bundle_array[k], bundle_array[k].overlapped->hEvent))
+                        if (!start_read(&bundle_array[offset], bundle_array[offset].overlapped->hEvent))
                         {
                            /* Cleanup
                             *  Starts with 1 to skip over the dummy
                             */
+                            DBG2(DBG_ESP, "Failed to start the new Read. Restarting job.");
                             for(uint32_t k=1;k<i;k++)
                             {
                                 /* stop all asynchronous IO */
+                                DBG2(DBG_ESP, "Index %d", k);
                                 CancelIo(bundle_array[k].fileHandle);
+                                DBG2(DBG_ESP, "Canceled IO.");
                                 CloseHandle(bundle_array[k].overlapped->hEvent);
+                                DBG2(DBG_ESP, "Closed event.");
                                 memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
+                                DBG2(DBG_ESP, "Reset buffer.");
                                 free(bundle_array[k].buffer.ptr);
-                                ResetEvent(event_array[k]);
-                                CloseHandle(event_array[k]);
                             }
+                            DBG2(DBG_ESP, "Unlocking lock on router.");
                             this->lock->unlock(this->lock);
                             return JOB_REQUEUE_FAIR;
                         }
@@ -519,6 +527,68 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                     }
                 }
 
+#else
+                /* The arrays have the same length and the same positioning of the elements.
+                 * Therefore, if event_array[k] is signaled, the read on bundle_array[i].fileHandle has succeeded
+                 * and bundle_array[k].buffer has our data now.
+                 */
+
+                char *foo = alloca((bundle_array[offset].buffer.len *4)/3 + 1);
+                memset(foo, 0, (bundle_array[offset].buffer.len *4)/3 + 1);
+                DBG2(DBG_ESP, "Length of buffer: %u", bundle_array[offset].buffer.len);
+                chunk_to_base64(bundle_array[offset].buffer, foo);
+                DBG2(DBG_ESP, "Content of Buffer: %s", foo);
+
+                ip_packet_t *packet;
+                /* clone the buffer */
+                chunk_t buffer_clone = chunk_clone (bundle_array[offset].buffer);
+                packet = ip_packet_create(buffer_clone);
+                if (packet)
+                {
+                        DBG2(DBG_ESP, "Packet contents: %B", packet->get_encoding(packet));
+                        ipsec->processor->queue_outbound(ipsec->processor, packet);
+                }
+                else
+                {
+                        DBG2(DBG_ESP, "invalid IP packet read from TUN device");
+                }
+                /* Reset the overlapped structure, event and buffer */
+                /* Print out the package for debugging */
+                /* Don't leak packets */
+                DBG2(DBG_ESP, "resetting buffer structure");
+                memset(bundle_array[offset].buffer.ptr, 0, bundle_array[offset].buffer.len);
+
+                DBG2(DBG_ESP, "resetting OVERLAPPED");
+                bundle_array[offset].overlapped->Internal = 0;
+                bundle_array[offset].overlapped->InternalHigh = 0;
+                bundle_array[offset].overlapped->Offset = 0;
+                bundle_array[offset].overlapped->OffsetHigh = 0;
+                bundle_array[offset].overlapped->Pointer = NULL;
+
+                DBG2(DBG_ESP, "starting read.");
+                if (!start_read(&bundle_array[offset], bundle_array[offset].overlapped->hEvent))
+                {
+                   /* Cleanup
+                    *  Starts with 1 to skip over the dummy
+                    */
+                    DBG2(DBG_ESP, "Failed to start the new Read. Restarting job.");
+                    for(uint32_t k=1;k<i;k++)
+                    {
+                        /* stop all asynchronous IO */
+                        DBG2(DBG_ESP, "Index %d", k);
+                        CancelIo(bundle_array[k].fileHandle);
+                        DBG2(DBG_ESP, "Canceled IO.");
+                        CloseHandle(bundle_array[k].overlapped->hEvent);
+                        DBG2(DBG_ESP, "Closed event.");
+                        memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
+                        DBG2(DBG_ESP, "Reset buffer.");
+                        free(bundle_array[k].buffer.ptr);
+                    }
+                    DBG2(DBG_ESP, "Unlocking lock on router.");
+                    this->lock->unlock(this->lock);
+                    return JOB_REQUEUE_FAIR;
+                }
+#endif
             }
             /* Function failed */
             else
@@ -542,6 +612,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 
             }
         }
+
         return JOB_REQUEUE_DIRECT;
 #else
 	enumerator_t *enumerator;
