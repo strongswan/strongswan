@@ -492,7 +492,12 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                         }
                         /* Reset the overlapped structure, event and buffer */
                         /* Print out the package for debugging */
-                        memset(&bundle_array[k].overlapped, 0, sizeof(OVERLAPPED));
+                        DBG2(DBG_ESP, "resetting OVERLAPPED");
+                        bundle_array[k].overlapped->Internal = 0;
+                        bundle_array[k].overlapped->InternalHigh = 0;
+                        bundle_array[k].overlapped->Offset = 0;
+                        bundle_array[k].overlapped->OffsetHigh = 0;
+                        bundle_array[k].overlapped->Pointer = NULL;
                         /* Don't leak packets */
                         memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
 
