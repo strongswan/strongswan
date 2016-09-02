@@ -1,2 +1,9 @@
 charon.plugins.save-keys.load := no
 	Whether to load the plugin.
+
+charon.plugins.save-keys.wireshark_keys
+	Directory where the keys are stored in the format supported by Wireshark
+
+	Directory where the keys are stored in the format supported by Wireshark.
+	IKEv1 keys are stored in the _ikev1_decryption_table_ file.
+	IKEv2 keys are stored in the _ikev2_decryption_table_ file.
