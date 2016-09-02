@@ -371,6 +371,22 @@ struct bus_t {
 					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
 
 	/**
+	 * Save Secret IKE_SA keys hook.
+	 *
+	 * @param ike_version	IKEV1 for IKEv1, IKEV2 for IKEv2
+	 * @param sk_ei		SK_ei
+	 * @param sk_er		SK_er
+	 * @param sk_ai		SK_ai
+	 * @param sk_ar		SK_ar
+	 * @param enc_alg	Encryption algorithm
+	 * @param key_size	Key size for encryption algorithm
+	 * @param int_alg	Integrity algorithm
+	 */
+	void (*save_ike_keys)(bus_t *this, ike_version_t ike_version,
+		chunk_t sk_ei, chunk_t sk_er, chunk_t sk_ai, chunk_t sk_ar,
+		uint16_t enc_alg, uint16_t key_size, uint16_t int_alg);
+
+	/**
 	 * IKE_SA up/down hook.
 	 *
 	 * @param ike_sa	IKE_SA coming up/going down

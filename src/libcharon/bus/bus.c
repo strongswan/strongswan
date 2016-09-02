@@ -625,6 +625,36 @@ METHOD(bus_t, child_keys, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(bus_t, save_ike_keys, void,
+	private_bus_t *this, ike_version_t ike_version, chunk_t sk_ei,
+	chunk_t sk_er, chunk_t sk_ai, chunk_t sk_ar, uint16_t enc_alg,
+	uint16_t key_size, uint16_t int_alg)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool keep;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->save_ike_keys)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->save_ike_keys(entry->listener, ike_version, sk_ei,
+					sk_er, sk_ai, sk_ar, enc_alg, key_size, int_alg);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
 METHOD(bus_t, child_updown, void,
 	private_bus_t *this, child_sa_t *child_sa, bool up)
 {
@@ -1062,6 +1092,7 @@ bus_t *bus_create()
 			.message = _message,
 			.ike_keys = _ike_keys,
 			.child_keys = _child_keys,
+			.save_ike_keys = _save_ike_keys,
 			.ike_updown = _ike_updown,
 			.ike_rekey = _ike_rekey,
 			.ike_update = _ike_update,
