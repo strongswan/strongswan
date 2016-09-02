@@ -1,0 +1,2 @@
+charon.plugins.save-keys.load := no
+	Whether to load the plugin.
