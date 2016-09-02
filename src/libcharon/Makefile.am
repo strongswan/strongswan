@@ -198,6 +198,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_SAVE_KEYS
+ SUBDIRS += plugins/save_keys
+if MONOLITHIC
+ libcharon_la_LIBADD += plugins/save_keys/libstrongswan-save-keys.la
+endif
+endif
+
 if USE_SOCKET_DEFAULT
   SUBDIRS += plugins/socket_default
 if MONOLITHIC
