@@ -140,6 +140,22 @@ static inline char *expand_int_name(uint16_t int_alg)
 	return NULL;
 }
 
+METHOD(listener_t, send_spis, bool,
+	private_save_keys_listener_t *this, chunk_t spi_i, chunk_t spi_r)
+{
+	if (this->spi_i.ptr)
+	{
+		chunk_free(&this->spi_i);
+	}
+	if (this->spi_r.ptr)
+	{
+		chunk_free(&this->spi_r);
+	}
+	this->spi_i = chunk_clone(spi_i);
+	this->spi_r = chunk_clone(spi_r);
+	return TRUE;
+}
+
 /**
  * See header.
  */
@@ -150,6 +166,7 @@ save_keys_listener_t *save_keys_listener_create()
 	INIT(this,
 		.public = {
 			.listener = {
+				.send_spis = _send_spis,
 			},
 		}
 	);

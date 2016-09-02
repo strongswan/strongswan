@@ -392,7 +392,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	auth_method_t auth, shared_key_t *shared_key)
 {
 	chunk_t g_xy, g_xi, g_xr, dh_me, spi_i, spi_r, nonces, data, skeyid_e;
-	chunk_t skeyid;
+	chunk_t skeyid, send_spi_i, send_spi_r;
 	uint16_t alg;
 
 	spi_i = chunk_alloca(sizeof(uint64_t));
@@ -434,6 +434,12 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	*((uint64_t*)spi_i.ptr) = id->get_initiator_spi(id);
 	*((uint64_t*)spi_r.ptr) = id->get_responder_spi(id);
 	nonces = chunk_cata("cc", nonce_i, nonce_r);
+
+	send_spi_i = chunk_clone(spi_i);
+	send_spi_r = chunk_clone(spi_r);
+	charon->bus->send_spis(charon->bus, send_spi_i, send_spi_r);
+	chunk_clear(&send_spi_i);
+	chunk_clear(&send_spi_r);
 
 	switch (auth)
 	{

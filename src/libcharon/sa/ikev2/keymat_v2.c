@@ -304,6 +304,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	prf_plus_t *prf_plus = NULL;
 	uint16_t alg, key_size, int_alg;
 	prf_t *rekey_prf = NULL;
+	chunk_t send_spi_i, send_spi_r;
 
 	spi_i = chunk_alloca(sizeof(uint64_t));
 	spi_r = chunk_alloca(sizeof(uint64_t));
@@ -357,6 +358,12 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	*((uint64_t*)spi_i.ptr) = id->get_initiator_spi(id);
 	*((uint64_t*)spi_r.ptr) = id->get_responder_spi(id);
 	prf_plus_seed = chunk_cat("ccc", full_nonce, spi_i, spi_r);
+
+	send_spi_i = chunk_clone(spi_i);
+	send_spi_r = chunk_clone(spi_r);
+	charon->bus->send_spis(charon->bus, send_spi_i, send_spi_r);
+	chunk_clear(&send_spi_i);
+	chunk_clear(&send_spi_r);
 
 	/* KEYMAT = prf+ (SKEYSEED, Ni | Nr | SPIi | SPIr)
 	 *
