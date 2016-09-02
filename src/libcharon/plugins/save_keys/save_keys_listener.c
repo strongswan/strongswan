@@ -28,6 +28,8 @@
 
 typedef struct private_save_keys_listener_t private_save_keys_listener_t;
 
+typedef struct map_algorithm_name_t map_algorithm_name_t;
+
 /**
  * Default path for the directory where the decryption tables will be stored.
  */
@@ -57,6 +59,26 @@ struct private_save_keys_listener_t {
 	 * Path to the directory where the decryption tables will be stored.
 	 */
 	char *directory_path;
+};
+
+/**
+ * Mapping strongSwan names with wireshark names.
+ */
+struct map_algorithm_name_t {
+	/**
+	 * Identifier specified in strongSwan
+	 */
+	int strongswan;
+
+	/**
+	 * Key size identifier
+	 */
+	int size;
+
+	/**
+	 * Name of the algorithm in wireshark
+	 */
+	char *name;
 };
 
 /**
