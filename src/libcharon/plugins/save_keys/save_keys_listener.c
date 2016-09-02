@@ -93,6 +93,18 @@ static map_algorithm_name_t ike_encryption_algs[] = {
 };
 
 /**
+ * IKE Algorithms for integrity
+ */
+static map_algorithm_name_t ike_integrity_algs[] = {
+	{AUTH_HMAC_MD5_96,		-1,	"HMAC_MD5_96 [RFC2403]"},
+	{AUTH_HMAC_SHA1_96,		-1,	"HMAC_SHA1_96 [RFC2404]"},
+	{AUTH_HMAC_SHA2_256_96,		-1,	"HMAC_SHA2_256_96 [draft-ietf-ipsec-ciph-sha-256-00]"},
+	{AUTH_HMAC_SHA2_512_256,	-1,	"HMAC_SHA2_512_256 [RFC4868]"},
+	{AUTH_HMAC_SHA2_384_192,	-1,	"HMAC_SHA2_384_192 [RFC4868]"},
+	{AUTH_HMAC_SHA2_256_128,	-1,	"HMAC_SHA2_256_128 [RFC4868]"},
+};
+
+/**
  * Expands the name of encryption algorithms for IKE decryption table.
  */
 static inline char *expand_enc_name(uint16_t enc_alg, uint16_t size)
@@ -107,6 +119,22 @@ static inline char *expand_enc_name(uint16_t enc_alg, uint16_t size)
 			{
 				return ike_encryption_algs[i].name;
 			}
+		}
+	}
+	return NULL;
+}
+
+/**
+ * Expands the name of integrity algorithms for IKE decryption table.
+ */
+static inline char *expand_int_name(uint16_t int_alg)
+{
+	unsigned int i;
+	for (i = 0; i < countof(ike_integrity_algs); i ++)
+	{
+		if (ike_integrity_algs[i].strongswan == int_alg)
+		{
+			return ike_integrity_algs[i].name;
 		}
 	}
 	return NULL;
