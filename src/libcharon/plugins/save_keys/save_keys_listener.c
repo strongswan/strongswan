@@ -82,6 +82,37 @@ struct map_algorithm_name_t {
 };
 
 /**
+ * IKE Algorithms for encryption
+ */
+static map_algorithm_name_t ike_encryption_algs[] = {
+	{ENCR_3DES,		-1,	"3DES [RFC2451]"},
+	{ENCR_AES_CBC,		128,	"AES-CBC-128 [RFC3602]"},
+	{ENCR_AES_CBC,		192,	"AES-CBC-192 [RFC3602]"},
+	{ENCR_AES_CBC,		256,	"AES-CBC-256 [RFC3602]"},
+	{ENCR_NULL,		-1,	"NULL [RFC2410]"},
+};
+
+/**
+ * Expands the name of encryption algorithms for IKE decryption table.
+ */
+static inline char *expand_enc_name(uint16_t enc_alg, uint16_t size)
+{
+	unsigned int i;
+	for (i = 0; i < countof(ike_encryption_algs); i ++)
+	{
+		if (ike_encryption_algs[i].size == -1 ||
+			ike_encryption_algs[i].size == size)
+		{
+			if (ike_encryption_algs[i].strongswan == enc_alg)
+			{
+				return ike_encryption_algs[i].name;
+			}
+		}
+	}
+	return NULL;
+}
+
+/**
  * See header.
  */
 save_keys_listener_t *save_keys_listener_create()
