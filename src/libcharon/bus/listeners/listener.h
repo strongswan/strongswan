@@ -126,6 +126,14 @@ struct listener_t {
 			uint16_t enc_alg, uint16_t key_size, uint16_t int_alg);
 
 	/**
+	 * Hook function for sending spi_i and spi_r.
+	 *
+	 * @param spi_i		SPI_i
+	 * @param spi_r		SPI_r
+	 */
+	bool (*send_spis)(listener_t *this, chunk_t spi_i, chunk_t spi_r);
+
+	/**
 	 * Hook called if an IKE_SA gets up or down.
 	 *
 	 * @param ike_sa	IKE_SA coming up/going down
