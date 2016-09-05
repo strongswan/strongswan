@@ -1,6 +1,6 @@
 AC_PREREQ(2.52)
 
-AC_INIT(NetworkManager-strongswan, 1.3.2, martin@strongswan.org, NetworkManager-strongswan)
+AC_INIT(NetworkManager-strongswan, 1.4.0, martin@strongswan.org, NetworkManager-strongswan)
 AM_INIT_AUTOMAKE([subdir-objects])
 AM_MAINTAINER_MODE
 
@@ -43,13 +43,16 @@ AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE,"$GETTEXT_PACKAGE", [Gettext package])
 IT_PROG_INTLTOOL([0.35])
 AM_GLIB_GNU_GETTEXT
 
-PKG_CHECK_MODULES(GTK, gtk+-2.0 >= 2.6)
-PKG_CHECK_MODULES(LIBGNOMEUI, libgnomeui-2.0)
+PKG_CHECK_MODULES(GTK, gtk+-3.0 >= 3.0)
 PKG_CHECK_MODULES(LIBSECRET, libsecret-1)
-PKG_CHECK_EXISTS([libnm-glib],
-	[PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.9.0 libnm-util libnm-glib libnm-glib-vpn)],
-	[PKG_CHECK_MODULES(NM_UTILS, NetworkManager >= 0.9.0 libnm-util libnm_glib libnm_glib_vpn)]
-)
+
+PKG_CHECK_MODULES(LIBNM_GLIB, NetworkManager >= 1.1.0 libnm-util libnm-glib libnm-glib-vpn)
+PKG_CHECK_MODULES(LIBNM_GTK, libnm-gtk >= 1.1.0)
+PKG_CHECK_MODULES(LIBNMA, libnma >= 1.1.0)
+
+PKG_CHECK_MODULES(LIBNM, libnm >= 1.1.0)
+LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MIN_REQUIRED=NM_VERSION_1_2"
+LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MAX_ALLOWED=NM_VERSION_1_2"
 
 AC_ARG_WITH(
 	[charon],

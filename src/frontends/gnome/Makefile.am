@@ -19,6 +19,7 @@ install-data-hook:
 	sed -e "1s|^|# This file is obsoleted by a file in $(NM_VPN_SERVICE_DIR)\n\n|" \
 	    -e 's|[@]NM_LIBEXECDIR[@]|$(nm_libexecdir)|g' \
 	    -e 's|[@]NM_PLUGINDIR[@]|$(nm_plugindir)|g' \
+	    -e 's|[@]NM_PLUGINDIR_ABS[@]|$(nm_plugindir)|g' \
 	    -e 's|[@]CHARON[@]|$(charon)|' \
 	    <$(srcdir)/nm-strongswan-service.name.in \
 	    >$(DESTDIR)$(sysconfdir)/NetworkManager/VPN/nm-strongswan-service.name
@@ -29,7 +30,8 @@ uninstall-hook:
 nm-strongswan-service.name: $(srcdir)/nm-strongswan-service.name.in
 	$(AM_V_GEN) \
 	sed -e 's|[@]NM_LIBEXECDIR[@]|$(nm_libexecdir)|' \
-	    -e 's|[@]NM_PLUGINDIR[@]/|$(nm_plugindir_abs)|g' \
+	    -e 's|[@]NM_PLUGINDIR[@]|$(nm_plugindir)|g' \
+	    -e 's|[@]NM_PLUGINDIR_ABS[@]/|$(nm_plugindir_abs)|g' \
 	    -e 's|[@]CHARON[@]|$(charon)|' $< >$@
 
 EXTRA_DIST = \
