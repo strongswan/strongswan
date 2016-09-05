@@ -22,7 +22,7 @@
 #include <string.h>
 #include <glib/gi18n.h>
 #include <gtk/gtk.h>
-#include <gnome-keyring.h>
+#include <libsecret/secret.h>
 #include <libgnomeui/libgnomeui.h>
 #include <nm-vpn-plugin.h>
 #include <nm-setting-vpn.h>
@@ -30,35 +30,6 @@
 #include <nm-vpn-plugin-utils.h>
 
 #define NM_DBUS_SERVICE_STRONGSWAN	"org.freedesktop.NetworkManager.strongswan"
-
-/**
- * lookup a password in the keyring
- */
-static char *lookup_password(char *name, char *service)
-{
-	GList *list;
-	GList *iter;
-	char *pass = NULL;
-
-	if (gnome_keyring_find_network_password_sync(g_get_user_name(), NULL, name,
-			NULL, service, NULL, 0, &list) != GNOME_KEYRING_RESULT_OK)
-	{
-		return NULL;
-	}
-
-	for (iter = list; iter; iter = iter->next)
-	{
-		GnomeKeyringNetworkPasswordData *data = iter->data;
-
-		if (strcmp(data->object, "password") == 0 && data->password)
-		{
-			pass = g_strdup(data->password);
-			break;
-		}
-	}
-	gnome_keyring_network_password_list_free(list);
-	return pass;
-}
 
 /**
  * Wait for quit input
@@ -118,7 +89,7 @@ int main (int argc, char *argv[])
 	gchar *name = NULL, *uuid = NULL, *service = NULL, *keyring = NULL, *pass;
 	GOptionContext *context;
 	char *agent, *type;
-	guint32 itemid, minlen = 0;
+	guint32 minlen = 0;
 	GtkWidget *dialog;
 	GOptionEntry entries[] = {
 		{ "reprompt", 'r', 0, G_OPTION_ARG_NONE, &retry, "Reprompt for passwords", NULL},
@@ -162,7 +133,12 @@ int main (int argc, char *argv[])
 	if (!strcmp(type, "eap") || !strcmp(type, "key") || !strcmp(type, "psk") ||
 		!strcmp(type, "smartcard"))
 	{
-		pass = lookup_password(name, service);
+		pass = secret_password_lookup_sync(SECRET_SCHEMA_COMPAT_NETWORK, NULL, NULL,
+						   "user", g_get_user_name(),
+						   "server", name,
+						   "protocol", service,
+						   NULL);
+
 		if ((!pass || retry) && allow_interaction)
 		{
 			if (!strcmp(type, "eap"))
@@ -216,12 +192,15 @@ too_short_retry:
 				case GNOME_PASSWORD_DIALOG_REMEMBER_NOTHING:
 					break;
 				case GNOME_PASSWORD_DIALOG_REMEMBER_SESSION:
-					keyring = "session";
+					keyring = SECRET_COLLECTION_SESSION;
 					/* FALL */
 				case GNOME_PASSWORD_DIALOG_REMEMBER_FOREVER:
-					if (gnome_keyring_set_network_password_sync(keyring,
-							g_get_user_name(), NULL, name, "password", service, NULL, 0,
-							pass, &itemid) != GNOME_KEYRING_RESULT_OK)
+					if (!secret_password_store_sync(SECRET_SCHEMA_COMPAT_NETWORK,
+								keyring, "", pass, NULL, NULL,
+								"user", g_get_user_name(),
+								"server", name,
+								"protocol", service,
+								NULL))
 					{
 						g_warning ("storing password in keyring failed");
 					}
@@ -231,6 +210,7 @@ too_short_retry:
 		if (pass)
 		{
 			printf("password\n%s\n", pass);
+			g_free(pass);
 		}
 	}
 	else
