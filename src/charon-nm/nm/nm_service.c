@@ -428,6 +428,16 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		{
 			user = identification_create_from_string((char*)str);
 			str = nm_setting_vpn_get_secret(vpn, "password");
+			if (auth_class == AUTH_CLASS_PSK &&
+				strlen(str) < 20)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+							"pre-shared key is too short.");
+				gateway->destroy(gateway);
+				user->destroy(user);
+				return FALSE;
+			}
 			priv->creds->set_username_password(priv->creds, user, (char*)str);
 		}
 	}
