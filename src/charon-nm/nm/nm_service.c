@@ -88,11 +88,18 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 	GValue *val;
 	GHashTable *config;
 	enumerator_t *enumerator;
-	host_t *me;
+	host_t *me, *other;
 	nm_handler_t *handler;
 
 	config = g_hash_table_new(g_str_hash, g_str_equal);
 	handler = priv->handler;
+
+	/* NM apparently requires to know the gateway */
+	val = g_slice_new0 (GValue);
+	g_value_init (val, G_TYPE_UINT);
+	other = ike_sa->get_other_host(ike_sa);
+	g_value_set_uint (val, *(uint32_t*)other->get_address(other).ptr);
+	g_hash_table_insert (config, NM_VPN_PLUGIN_IP4_CONFIG_EXT_GATEWAY, val);
 
 	/* NM requires a tundev, but netkey does not use one. Passing the physical
 	 * interface does not work, as NM fiddles around with it. So we pass a dummy
