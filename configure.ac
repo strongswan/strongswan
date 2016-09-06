@@ -262,7 +262,6 @@ ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
 ARG_ENABL_SET([led],            [enable plugin to control LEDs on IKEv2 activity using the Linux kernel LED subsystem.])
 ARG_ENABL_SET([load-tester],    [enable load testing plugin for IKEv2 daemon.])
 ARG_ENABL_SET([lookip],         [enable fast virtual IP lookup and notification plugin.])
-ARG_ENABL_SET([maemo],          [enable Maemo specific plugin.])
 ARG_ENABL_SET([radattr],        [enable plugin to inject and process custom RADIUS attributes as IKEv2 client.])
 ARG_ENABL_SET([systime-fix],    [enable plugin to handle cert lifetimes with invalid system time gracefully.])
 ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
@@ -1140,14 +1139,6 @@ if test x$android_dns = xtrue; then
 	AC_SUBST(DLLIB)
 fi
 
-if test x$maemo = xtrue; then
-	PKG_CHECK_MODULES(maemo, [glib-2.0 gthread-2.0 libosso osso-af-settings])
-	AC_SUBST(maemo_CFLAGS)
-	AC_SUBST(maemo_LIBS)
-	dbusservicedir="/usr/share/dbus-1/system-services"
-	AC_SUBST(dbusservicedir)
-fi
-
 if test x$eap_sim_pcsc = xtrue; then
 	PKG_CHECK_MODULES(pcsclite, [libpcsclite])
 	AC_SUBST(pcsclite_CFLAGS)
@@ -1447,7 +1438,6 @@ ADD_PLUGIN([led],                  [c charon])
 ADD_PLUGIN([duplicheck],           [c charon])
 ADD_PLUGIN([coupling],             [c charon])
 ADD_PLUGIN([radattr],              [c charon])
-ADD_PLUGIN([maemo],                [c charon])
 ADD_PLUGIN([uci],                  [c charon])
 ADD_PLUGIN([addrblock],            [c charon])
 ADD_PLUGIN([unity],                [c charon])
@@ -1542,7 +1532,6 @@ AM_CONDITIONAL(USE_OSX_ATTR, test x$osx_attr = xtrue)
 AM_CONDITIONAL(USE_P_CSCF, test x$p_cscf = xtrue)
 AM_CONDITIONAL(USE_ANDROID_DNS, test x$android_dns = xtrue)
 AM_CONDITIONAL(USE_ANDROID_LOG, test x$android_log = xtrue)
-AM_CONDITIONAL(USE_MAEMO, test x$maemo = xtrue)
 AM_CONDITIONAL(USE_SMP, test x$smp = xtrue)
 AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_DNSCERT, test x$dnscert = xtrue)
@@ -1891,7 +1880,6 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/p_cscf/Makefile
 	src/libcharon/plugins/android_dns/Makefile
 	src/libcharon/plugins/android_log/Makefile
-	src/libcharon/plugins/maemo/Makefile
 	src/libcharon/plugins/stroke/Makefile
 	src/libcharon/plugins/vici/Makefile
 	src/libcharon/plugins/vici/ruby/Makefile

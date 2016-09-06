@@ -513,13 +513,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_MAEMO
-  SUBDIRS += plugins/maemo
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/maemo/libstrongswan-maemo.la
-endif
-endif
-
 if USE_HA
   SUBDIRS += plugins/ha
 if MONOLITHIC
