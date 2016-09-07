@@ -41,6 +41,11 @@ static char *default_path = NULL;
 static char *ikev2_name = "ikev2_decryption_table";
 
 /**
+ * Name for ikev1 decryption table file
+ */
+static char *ikev1_name = "ikev1_decryption_table";
+
+/**
  * Private data of an save_keys_listener_t object.
  */
 struct private_save_keys_listener_t {
@@ -167,14 +172,17 @@ METHOD(listener_t, save_ike_keys, bool,
 	uint16_t key_size, uint16_t int_alg)
 {
 	char *buffer_enc_alg = NULL, *buffer_int_alg = NULL;
-	FILE *ikev2_file;
-	char *path_ikev2 = NULL;
+	FILE *ikev2_file, *ikev1_file;
+	char *path_ikev2 = NULL, *path_ikev1 = NULL;
 
 	if (this->directory_path)
 	{
 		path_ikev2 = malloc (strlen(this->directory_path) + strlen(ikev2_name) + 1);
+		path_ikev1 = malloc (strlen(this->directory_path) + strlen(ikev1_name) + 1);
 		strcpy(path_ikev2, this->directory_path);
 		strcat(path_ikev2, ikev2_name);
+		strcpy(path_ikev1, this->directory_path);
+		strcat(path_ikev1, ikev1_name);
 
 		if (ike_version == IKEV2)
 		{
@@ -192,12 +200,22 @@ METHOD(listener_t, save_ike_keys, bool,
 				}
 			}
 		}
+		else
+		{
+			ikev1_file = fopen(path_ikev1, "a");
+			if (ikev1_file)
+			{
+				fprintf(ikev1_file, "%+B,%+B\n", &this->spi_i, &sk_ei);
+				fclose(ikev1_file);
+			}
+		}
 
 		free(buffer_int_alg);
 		free(buffer_enc_alg);
 		chunk_clear(&this->spi_i);
 		chunk_clear(&this->spi_r);
 		free(path_ikev2);
+		free(path_ikev1);
 	}
 
         return TRUE;

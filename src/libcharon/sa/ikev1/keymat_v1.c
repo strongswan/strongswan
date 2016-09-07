@@ -274,7 +274,7 @@ static aead_t *create_aead(proposal_t *proposal, prf_t *prf, chunk_t skeyid_e)
 	private_aead_t *this;
 	uint16_t alg, key_size;
 	crypter_t *crypter;
-	chunk_t ka;
+	chunk_t ka, sk_ei;
 
 	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg,
 								 &key_size))
@@ -296,6 +296,10 @@ static aead_t *create_aead(proposal_t *proposal, prf_t *prf, chunk_t skeyid_e)
 	{
 		return NULL;
 	}
+	sk_ei = chunk_clone(ka);
+	charon->bus->save_ike_keys(charon->bus, IKEV1, sk_ei, chunk_empty,
+					chunk_empty, chunk_empty, 0, 0, 0);
+	chunk_clear(&sk_ei);
 	DBG4(DBG_IKE, "encryption key Ka %B", &ka);
 	if (!crypter->set_key(crypter, ka))
 	{
