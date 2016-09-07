@@ -46,6 +46,11 @@ static char *ikev2_name = "ikev2_decryption_table";
 static char *ikev1_name = "ikev1_decryption_table";
 
 /**
+ * Name for esp decryption table file
+ */
+static char *esp_name = "esp_sa";
+
+/**
  * Private data of an save_keys_listener_t object.
  */
 struct private_save_keys_listener_t {
@@ -290,6 +295,61 @@ METHOD(listener_t, save_ike_keys, bool,
         return TRUE;
 }
 
+METHOD(listener_t, save_child_keys, bool,
+	private_save_keys_listener_t *this, uint16_t enc_alg,
+	uint16_t int_alg, host_t *init_ip, host_t *resp_ip,
+	uint32_t spi_out, chunk_t encr_key_out,
+	chunk_t int_key_out, uint32_t spi_in, chunk_t encr_key_in,
+	chunk_t int_key_in)
+{
+	int icv_length = -1;
+	char *name_enc_alg = NULL, *name_int_alg = NULL;
+	FILE *esp_file;
+
+	if (this->directory_path)
+	{
+		char *path_esp = malloc (strlen(this->directory_path) + strlen(esp_name) + 1);
+		strcpy(path_esp, this->directory_path);
+		strcat(path_esp, esp_name);
+
+		esp_file = fopen(path_esp, "a");
+		if (esp_file)
+		{
+			name_enc_alg = esp_expand_enc_name(enc_alg, &icv_length);
+			name_int_alg = esp_expand_int_name(int_alg, icv_length);
+
+			if (name_enc_alg && name_int_alg)
+			{
+				if (init_ip->get_family(init_ip) == AF_INET)
+				{
+					fprintf(esp_file, "\"IPv4\",\"%H\",\"%H\",\"0x%.8x\",\"%s\",\"0x%+B\",\"%s\",\"0x%+B\"\n",
+						init_ip, resp_ip, ntohl(spi_out), name_enc_alg, &encr_key_out,
+						name_int_alg, &int_key_out);
+					fprintf(esp_file, "\"IPv4\",\"%H\",\"%H\",\"0x%.8x\",\"%s\",\"0x%+B\",\"%s\",\"0x%+B\"\n",
+						resp_ip, init_ip, ntohl(spi_in), name_enc_alg, &encr_key_in,
+						name_int_alg, &int_key_in);
+				}
+				else if (init_ip->get_family(init_ip) == AF_INET6)
+				{
+					fprintf(esp_file, "\"IPv6\",\"%H\",\"%H\",\"0x%.8x\",\"%s\",\"0x%+B\",\"%s\",\"0x%+B\"\n",
+						init_ip, resp_ip, ntohl(spi_out), name_enc_alg, &encr_key_out,
+						name_int_alg, &int_key_out);
+					fprintf(esp_file, "\"IPv6\",\"%H\",\"%H\",\"0x%.8x\",\"%s\",\"0x%+B\",\"%s\",\"0x%+B\"\n",
+						resp_ip, init_ip, ntohl(spi_in), name_enc_alg, &encr_key_in,
+						name_int_alg, &int_key_in);
+				}
+			}
+
+			free(name_int_alg);
+			free(name_enc_alg);
+			fclose(esp_file);
+			free(path_esp);
+			free(this->directory_path);
+		}
+	}
+	return TRUE;
+}
+
 /**
  * See header.
  */
@@ -302,6 +362,7 @@ save_keys_listener_t *save_keys_listener_create()
 			.listener = {
 				.save_ike_keys = _save_ike_keys,
 				.send_spis = _send_spis,
+				.save_child_keys = _save_child_keys,
 			},
 		}
 	);
