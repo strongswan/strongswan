@@ -45,6 +45,11 @@ static char *ikev1_name = "ikev1_decryption_table";
 static char *ikev2_name = "ikev2_decryption_table";
 
 /**
+ * Name for esp decryption table file
+ */
+static char *esp_name = "esp_sa";
+
+/**
  * Private data.
  */
 struct private_save_keys_listener_t {
@@ -178,6 +183,72 @@ static inline void ike_names(proposal_t *proposal, const char **enc,
 	*integ = algo_name(ike_integ, countof(ike_integ), alg, -1);
 }
 
+/**
+ * Wireshark ESP algorithm identifiers for encryption
+ */
+static algo_map_t esp_encr[] = {
+	{ ENCR_NULL,          -1, "NULL"                    },
+	{ ENCR_3DES,          -1, "TripleDes-CBC [RFC2451]" },
+	{ ENCR_AES_CBC,       -1, "AES-CBC [RFC3602]"       },
+	{ ENCR_AES_CTR,       -1, "AES-CTR [RFC3686]"       },
+	{ ENCR_DES,           -1, "DES-CBC [RFC2405]"       },
+	{ ENCR_CAST,          -1, "CAST5-CBC [RFC2144]"     },
+	{ ENCR_BLOWFISH,      -1, "BLOWFISH-CBC [RFC2451]"  },
+	{ ENCR_TWOFISH_CBC,   -1, "TWOFISH-CBC"             },
+	{ ENCR_AES_GCM_ICV8,  -1, "AES-GCM [RFC4106]"       },
+	{ ENCR_AES_GCM_ICV12, -1, "AES-GCM [RFC4106]"       },
+	{ ENCR_AES_GCM_ICV16, -1, "AES-GCM [RFC4106]"       },
+};
+
+/**
+ * Wireshark ESP algorithms for integrity
+ */
+static algo_map_t esp_integ[] = {
+	{ AUTH_HMAC_SHA1_96,       -1, "HMAC-SHA-1-96 [RFC2404]"                  },
+	{ AUTH_HMAC_MD5_96,        -1, "HMAC-MD5-96 [RFC2403]"                    },
+	{ AUTH_HMAC_SHA2_256_128,  -1, "HMAC-SHA-256-128 [RFC4868]"               },
+	{ AUTH_HMAC_SHA2_384_192,  -1, "HMAC-SHA-384-192 [RFC4868]"               },
+	{ AUTH_HMAC_SHA2_512_256,  -1, "HMAC-SHA-512-256 [RFC4868]"               },
+	{ AUTH_HMAC_SHA2_256_96,   -1, "HMAC-SHA-256-96 [draft-ietf-ipsec-ciph-sha-256-00]" },
+	{ AUTH_UNDEFINED,          64, "ANY 64 bit authentication [no checking]"  },
+	{ AUTH_UNDEFINED,          96, "ANY 96 bit authentication [no checking]"  },
+	{ AUTH_UNDEFINED,         128, "ANY 128 bit authentication [no checking]" },
+	{ AUTH_UNDEFINED,         192, "ANY 192 bit authentication [no checking]" },
+	{ AUTH_UNDEFINED,         256, "ANY 256 bit authentication [no checking]" },
+	{ AUTH_UNDEFINED,          -1, "NULL"                                     },
+};
+
+/**
+ * Map an ESP proposal
+ */
+static inline void esp_names(proposal_t *proposal, const char **enc,
+							 const char **integ)
+{
+	uint16_t alg, len;
+
+	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &len))
+	{
+		*enc = algo_name(esp_encr, countof(esp_encr), alg, len);
+	}
+	len = -1;
+	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
+	{
+		switch (alg)
+		{
+			case ENCR_AES_GCM_ICV8:
+				len = 64;
+				break;
+			case ENCR_AES_GCM_ICV12:
+				len = 64;
+				break;
+			case ENCR_AES_GCM_ICV16:
+				len = 128;
+				break;
+		}
+		alg = AUTH_UNDEFINED;
+	}
+	*integ = algo_name(esp_integ, countof(esp_integ), alg, len);
+}
 
 METHOD(listener_t, ike_derived_keys, bool,
 	private_save_keys_listener_t *this, ike_sa_t *ike_sa, chunk_t sk_ei,
@@ -233,6 +304,66 @@ METHOD(listener_t, ike_derived_keys, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, child_derived_keys, bool,
+	private_save_keys_listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
+	bool initiator, chunk_t encr_i, chunk_t encr_r, chunk_t integ_i,
+	chunk_t integ_r)
+{
+	host_t *init, *resp;
+	uint32_t spi_i, spi_r;
+	const char *enc = NULL, *integ = NULL;
+	char *path, *family;
+	FILE *file;
+
+	if (!this->path || child_sa->get_protocol(child_sa) != PROTO_ESP)
+	{
+		return TRUE;
+	}
+
+	if (asprintf(&path, "%s/%s", this->path, esp_name) < 0)
+	{
+		DBG1(DBG_CHD, "failed to build path to ESP key table");
+		return TRUE;
+	}
+
+	file = fopen(path, "a");
+	if (file)
+	{
+		esp_names(child_sa->get_proposal(child_sa), &enc, &integ);
+		if (enc && integ)
+		{
+			/* Since the IPs are printed this is not compatible with MOBIKE */
+			if (initiator)
+			{
+				init = ike_sa->get_my_host(ike_sa);
+				resp = ike_sa->get_other_host(ike_sa);
+			}
+			else
+			{
+				init = ike_sa->get_other_host(ike_sa);
+				resp = ike_sa->get_my_host(ike_sa);
+			}
+			spi_i = child_sa->get_spi(child_sa, initiator);
+			spi_r = child_sa->get_spi(child_sa, !initiator);
+			family = init->get_family(init) == AF_INET ? "IPv4" : "IPv6";
+			fprintf(file, "\"%s\",\"%H\",\"%H\",\"0x%.8x\",\"%s\",\"0x%+B\","
+					"\"%s\",\"0x%+B\"\n", family, init, resp, ntohl(spi_r), enc,
+					&encr_i, integ, &integ_i);
+			fprintf(file, "\"%s\",\"%H\",\"%H\",\"0x%.8x\",\"%s\",\"0x%+B\","
+					"\"%s\",\"0x%+B\"\n", family, resp, init, ntohl(spi_i), enc,
+					&encr_r, integ, &integ_r);
+		}
+		fclose(file);
+	}
+	else
+	{
+		DBG1(DBG_CHD, "failed to open ESP key table '%s': %s", path,
+			 strerror(errno));
+	}
+	free(path);
+	return TRUE;
+}
+
 /**
  * See header.
  */
@@ -244,6 +375,7 @@ save_keys_listener_t *save_keys_listener_create()
 		.public = {
 			.listener = {
 				.ike_derived_keys = _ike_derived_keys,
+				.child_derived_keys = _child_derived_keys,
 			},
 			.destroy = _destroy,
 		},

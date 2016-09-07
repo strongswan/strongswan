@@ -7,3 +7,4 @@ charon.plugins.save-keys.wireshark_keys
 	Directory where the keys are stored in the format supported by Wireshark.
 	IKEv1 keys are stored in the _ikev1_decryption_table_ file.
 	IKEv2 keys are stored in the _ikev2_decryption_table_ file.
+	Keys for ESP CHILD_SAs are stored in the _esp_sa_ file.
