@@ -115,6 +115,23 @@ static map_algorithm_name_t ike_integrity_algs[] = {
 };
 
 /**
+ * ESP Algorithms for encryption
+ */
+static map_algorithm_name_t esp_encryption_algs[] = {
+	{ENCR_NULL,		-1,	"NULL"},
+	{ENCR_3DES,		-1,	"TripleDes-CBC [RFC2451]"},
+	{ENCR_AES_CBC,		-1,	"AES-CBC [RFC3602]"},
+	{ENCR_AES_CTR,		-1,	"AES-CTR [RFC3686]"},
+	{ENCR_DES,		-1,	"DES-CBC [RFC2405]"},
+	{ENCR_CAST,		-1,	"CAST5-CBC [RFC2144]"},
+	{ENCR_BLOWFISH,		-1,	"BLOWFISH-CBC [RFC2451]"},
+	{ENCR_TWOFISH_CBC,	-1,	"TWOFISH-CBC"},
+	{ENCR_AES_GCM_ICV8,	128,	"AES-GCM [RFC4106]"},
+	{ENCR_AES_GCM_ICV12,	192,	"AES-GCM [RFC4106]"},
+	{ENCR_AES_GCM_ICV16,	256,	"AES-GCM [RFC4106]"},
+};
+
+/**
  * Expands the name of encryption algorithms for IKE decryption table.
  */
 static inline char *expand_enc_name(uint16_t enc_alg, uint16_t size)
@@ -145,6 +162,23 @@ static inline char *expand_int_name(uint16_t int_alg)
 		if (ike_integrity_algs[i].strongswan == int_alg)
 		{
 			return ike_integrity_algs[i].name;
+		}
+	}
+	return NULL;
+}
+
+/**
+ * Expands the name of encryption algorithms for ESP decryption table.
+ */
+static inline char *esp_expand_enc_name(uint16_t enc_alg, int *ICV_length)
+{
+	unsigned int i;
+	for (i = 0; i < countof(esp_encryption_algs); i ++)
+	{
+		if (esp_encryption_algs[i].strongswan == enc_alg)
+		{
+			(*ICV_length) = esp_encryption_algs[i].size;
+			return esp_encryption_algs[i].name;
 		}
 	}
 	return NULL;
