@@ -197,6 +197,7 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
 	iv_gen_t *ivg_i, *ivg_r;
 	size_t key_size;
 	chunk_t key = chunk_empty;
+	chunk_t sk_ei, sk_er, sk_ai, sk_ar;
 
 	signer_i = lib->crypto->create_signer(lib->crypto, int_alg);
 	signer_r = lib->crypto->create_signer(lib->crypto, int_alg);
@@ -229,6 +230,7 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
 	{
 		goto failure;
 	}
+	sk_ai = chunk_clone(key);
 	chunk_clear(&key);
 
 	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
@@ -240,6 +242,7 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
 	{
 		goto failure;
 	}
+	sk_ar = chunk_clone(key);
 	chunk_clear(&key);
 
 	/* SK_ei/SK_er used for encryption */
@@ -254,6 +257,7 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
 	{
 		goto failure;
 	}
+	sk_ei = chunk_clone(key);
 	chunk_clear(&key);
 
 	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
@@ -265,6 +269,13 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
 	{
 		goto failure;
 	}
+	sk_er = chunk_clone(key);
+	charon->bus->save_ike_keys(charon->bus, IKEV2, sk_ei, sk_er, sk_ai,
+					sk_ar, enc_alg, enc_size, int_alg);
+	chunk_clear(&sk_ei);
+	chunk_clear(&sk_er);
+	chunk_clear(&sk_ai);
+	chunk_clear(&sk_ar);
 
 	ivg_i = iv_gen_create_for_alg(enc_alg);
 	ivg_r = iv_gen_create_for_alg(enc_alg);

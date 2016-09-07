@@ -36,6 +36,11 @@ typedef struct map_algorithm_name_t map_algorithm_name_t;
 static char *default_path = NULL;
 
 /**
+ * Name for ikev2 decryption table file
+ */
+static char *ikev2_name = "ikev2_decryption_table";
+
+/**
  * Private data of an save_keys_listener_t object.
  */
 struct private_save_keys_listener_t {
@@ -156,6 +161,48 @@ METHOD(listener_t, send_spis, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, save_ike_keys, bool,
+	private_save_keys_listener_t *this, ike_version_t ike_version,
+	chunk_t sk_ei, chunk_t sk_er, chunk_t sk_ai, chunk_t sk_ar, uint16_t enc_alg,
+	uint16_t key_size, uint16_t int_alg)
+{
+	char *buffer_enc_alg = NULL, *buffer_int_alg = NULL;
+	FILE *ikev2_file;
+	char *path_ikev2 = NULL;
+
+	if (this->directory_path)
+	{
+		path_ikev2 = malloc (strlen(this->directory_path) + strlen(ikev2_name) + 1);
+		strcpy(path_ikev2, this->directory_path);
+		strcat(path_ikev2, ikev2_name);
+
+		if (ike_version == IKEV2)
+		{
+			buffer_enc_alg = expand_enc_name(enc_alg, key_size);
+			buffer_int_alg = expand_int_name(int_alg);
+			if (buffer_enc_alg && buffer_enc_alg)
+			{
+				ikev2_file = fopen(path_ikev2, "a");
+				if (ikev2_file)
+				{
+					fprintf(ikev2_file, "%+B,%+B,%+B,%+B,\"%s\",%+B,%+B,\"%s\"\n",
+						&this->spi_i, &this->spi_r,&sk_ei, &sk_er,
+						buffer_enc_alg, &sk_ai, &sk_ar,	buffer_int_alg);
+					fclose(ikev2_file);
+				}
+			}
+		}
+
+		free(buffer_int_alg);
+		free(buffer_enc_alg);
+		chunk_clear(&this->spi_i);
+		chunk_clear(&this->spi_r);
+		free(path_ikev2);
+	}
+
+        return TRUE;
+}
+
 /**
  * See header.
  */
@@ -166,6 +213,7 @@ save_keys_listener_t *save_keys_listener_create()
 	INIT(this,
 		.public = {
 			.listener = {
+				.save_ike_keys = _save_ike_keys,
 				.send_spis = _send_spis,
 			},
 		}
