@@ -395,6 +395,25 @@ struct bus_t {
 	void (*send_spis)(bus_t *this, chunk_t spi_i, chunk_t spi_r);
 
 	/**
+	 * Save secret CHILD_SA keys hook.
+	 *
+	 * @param enc_alg	Name for encryption algorithm
+	 * @param int_alg	Name for integrity algorithm
+	 * @param init_ip	IP address for initiator
+	 * @param resp_ip	IP address for responder
+	 * @param spi_out	SPI for outbound SA
+	 * @param encr_key_out	Encryption key for outbound SA
+	 * @param int_key_out	Integrity key for outbound SA
+	 * @param spi_in	SPI for inbound SA
+	 * @param encr_key_in	Encryption key for inbound SA
+	 * @param int_key_out	Integrity key for inbound SA
+	 */
+	void (*save_child_keys)(bus_t *this, uint16_t enc_alg, uint16_t int_alg,
+			host_t *init_ip, host_t *resp_ip, uint32_t spi_out,
+			chunk_t encr_key_out, chunk_t int_key_out,
+			uint32_t spi_in, chunk_t encr_key_in, chunk_t int_key_in);
+
+	/**
 	 * IKE_SA up/down hook.
 	 *
 	 * @param ike_sa	IKE_SA coming up/going down
