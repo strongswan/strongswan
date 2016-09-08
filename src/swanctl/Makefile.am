@@ -13,6 +13,7 @@ swanctl_SOURCES = \
 	commands/list_certs.c \
 	commands/list_pools.c \
 	commands/list_algs.c \
+	commands/flush_certs.c \
 	commands/load_all.c \
 	commands/load_authorities.h  commands/load_authorities.c \
 	commands/load_conns.c commands/load_conns.h \

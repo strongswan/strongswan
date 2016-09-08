@@ -287,6 +287,24 @@ CALLBACK(clear_creds, vici_message_t*,
 	return create_reply(NULL);
 }
 
+CALLBACK(flush_certs, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	certificate_type_t type = CERT_ANY;
+	x509_flag_t flag = X509_NONE;
+	char *str;
+
+	str = message->get_str(message, NULL, "type");
+	if (str && !enum_from_name(certificate_type_names, str, &type) &&
+			   !vici_cert_info_from_str(str, &type, &flag))
+	{
+		return create_reply("invalid certificate type '%s'", str);
+	}
+	lib->credmgr->flush_cache(lib->credmgr, type);
+
+	return create_reply(NULL);
+}
+
 static void manage_command(private_vici_cred_t *this,
 						   char *name, vici_command_cb_t cb, bool reg)
 {
@@ -300,6 +318,7 @@ static void manage_command(private_vici_cred_t *this,
 static void manage_commands(private_vici_cred_t *this, bool reg)
 {
 	manage_command(this, "clear-creds", clear_creds, reg);
+	manage_command(this, "flush-certs", flush_certs, reg);
 	manage_command(this, "load-cert", load_cert, reg);
 	manage_command(this, "load-key", load_key, reg);
 	manage_command(this, "load-shared", load_shared, reg);
