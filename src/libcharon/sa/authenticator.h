@@ -118,6 +118,14 @@ enum auth_method_t {
 	 * IKEv1 responder XAUTH, initiator RSA, outside of IANA range
 	 */
 	AUTH_HYBRID_RESP_RSA,
+
+
+	/**
+	 * IKEv1 Kerberos authentication (draft-ietf-ipsec-isakmp-gss-auth-07.txt)
+	 */
+	AUTH_GSSAPI_KERBEROS = 65001,
+
+
 };
 
 /**
