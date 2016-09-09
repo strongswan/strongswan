@@ -133,19 +133,6 @@ struct tun_device_t {
          */
         HANDLE (*get_handle)(tun_device_t *this);
 
-        /*
-         * Get the read event name.
-         *
-         * @return                              read event name
-         */
-        char *(*get_read_event_name)(tun_device_t *this);
-
-        /*
-         * Get the write event name.
-         *
-         * @return                              write event name
-         */
-        char *(*get_write_event_name)(tun_device_t *this);
 #else
 	/**
 	 * Get the underlying tun file descriptor.

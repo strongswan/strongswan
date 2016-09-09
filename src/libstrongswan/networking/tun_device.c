@@ -102,19 +102,10 @@ struct private_tun_device_t {
         /**
          * The TUN device's file handle
          */
-        HANDLE *tunhandle;
+        HANDLE tunhandle;
 
-        /**
-         * The event handle name for writing from the device
-         */
-        char *write_event_name;
-
-        /**
-         * The event handle name for reading from the device
-         */
-        char *read_event_name;
 	/**
-	 * Lock for the overlapped_list structure.
+	 * Lock for the write function.
 	 */
 	rwlock_t *lock;
         /**
@@ -275,18 +266,6 @@ linked_list_t *get_tap_reg()
 
     RegCloseKey(adapter_key);
     return list;
-}
-
-METHOD(tun_device_t, get_read_event_name, char *,
-	private_tun_device_t *this)
-{
-    return this->read_event_name;
-}
-
-METHOD(tun_device_t, get_write_event_name, char *,
-	private_tun_device_t *this)
-{
-    return this->write_event_name;
 }
 
 #endif /* WIN32 */
@@ -484,7 +463,7 @@ METHOD(tun_device_t, set_mtu, bool,
 	private_tun_device_t *this, int mtu)
 {
 #ifdef WIN32
-        return NOT_SUPPORTED;
+        return TRUE;
 #else
 	struct ifreq ifr;
 
@@ -551,62 +530,63 @@ METHOD(tun_device_t, get_handle, HANDLE,
 METHOD(tun_device_t, write_packet, bool,
 	private_tun_device_t *this, chunk_t packet)
 {
+        DBG2(DBG_ESP, "writing packet to %s", this->if_name);
         bool status;
-        OVERLAPPED overlapped;
         DWORD error;
-        HANDLE write_event = CreateEvent(NULL, FALSE, FALSE, this->write_event_name);
 
-        ResetEvent(write_event);
+        OVERLAPPED *overlapped = alloca(sizeof(OVERLAPPED));
 
+        HANDLE write_event;
+
+        write_event = CreateEvent(NULL, FALSE, FALSE, NULL);
         error = GetLastError();
-        switch (error)
+        if (error != ERROR_SUCCESS)
         {
-            case ERROR_INVALID_HANDLE:
-                /* An event with that name already exists, but the type is a different one */
-                return FALSE;
-                break;
-            case ERROR_ALREADY_EXISTS:
-            default:
-                /* Just fine. Don't do anything. */
-                break;
+           DBG2(DBG_ESP, "Error: %d", error);
+           return FALSE;
         }
 
-        memset(&overlapped, 0, sizeof(OVERLAPPED));
+        this->lock->write_lock(this->lock);
 
-        overlapped.hEvent = write_event;
+        memset(overlapped, 0, sizeof(OVERLAPPED));
 
-        status = WriteFile(*(this->tunhandle), (LPCVOID) &packet.ptr,
-            packet.len, NULL, &overlapped);
+        overlapped->hEvent = write_event;
+
+        status = WriteFile(
+                this->tunhandle,
+                packet.ptr,
+                packet.len,
+                NULL,
+                overlapped
+                );
+        status = FALSE;
+        error = GetLastError();
         if (status) {
             /* Read returned immediately. */
             SetEvent(write_event);
         }
         else
         {
-            DWORD error = GetLastError();
+
             switch(error)
             {
+                case ERROR_SUCCESS:
+                    break;
                 case ERROR_IO_PENDING:
                     /* all fine */
                     break;
-                case ERROR_INVALID_USER_BUFFER:
-                case ERROR_NOT_ENOUGH_MEMORY:
-                    DBG1(DBG_LIB, "the operating system did not allow us to enqueue more asynchronous operations\nfailed to write packet to TUN device %s: %u",
-			 this->if_name, (uint32_t) GetLastError());
-                    return FALSE;
-                    break;
-                case ERROR_OPERATION_ABORTED:
-                    DBG1(DBG_LIB, "failed to write packet to TUN device %s, because the IO operation was aborted.");
-                    return FALSE;
-                    break;
-                case ERROR_NOT_ENOUGH_QUOTA:
-                    DBG1(DBG_LIB, "failed to write packet to TUN device %s, because the process's buffer could not be page locked.");
+                default:
+                    DBG2(DBG_ESP, "Error %d.", error);
+                    this->lock->unlock(this->lock);
                     return FALSE;
                     break;
             }
-        }
+         }
         WaitForSingleObject(write_event, INFINITE);
+
         CloseHandle(write_event);
+
+        this->lock->unlock(this->lock);
         return TRUE;
 }
 
@@ -617,13 +597,15 @@ METHOD(tun_device_t, read_packet, bool,
         DWORD size, error;
         OVERLAPPED overlapped;
 	chunk_t data;
-        HANDLE read_event = CreateEvent(NULL, FALSE, FALSE, this->read_event_name);
+        HANDLE read_event = CreateEvent(NULL, FALSE, FALSE, FALSE);
 
         ResetEvent(read_event);
 
         error = GetLastError();
-        switch (error)
+        switch(error)
         {
+            case ERROR_SUCCESS:
+                break;
             case ERROR_INVALID_HANDLE:
                 /* An event with that name already exists, but the type is a different one */
                 return FALSE;
@@ -643,7 +625,7 @@ METHOD(tun_device_t, read_packet, bool,
 	old = thread_cancelability(TRUE);
 
         /* Read chunk from handle */
-        status = ReadFile(*(this->tunhandle), (LPVOID) &data.ptr,
+        status = ReadFile(this->tunhandle, (LPVOID) &data.ptr,
             (DWORD) data.len, &size, &overlapped);
 	thread_cancelability(old);
         if (status)
@@ -656,30 +638,14 @@ METHOD(tun_device_t, read_packet, bool,
             error = GetLastError();
             switch(error)
             {
+                case ERROR_SUCCESS:
                 case ERROR_IO_PENDING:
                     /* all fine */
-                    break;
-                case ERROR_INVALID_USER_BUFFER:
-                case ERROR_NOT_ENOUGH_MEMORY:
-                    DBG1(DBG_LIB, "the operating system did not allow us to enqueue more asynchronous operations\nfailed to write packet to TUN device %s: %u",
-                            this->if_name, (uint32_t) GetLastError());
-                    CloseHandle(read_event);
-                    return FALSE;
-                    break;
-                case ERROR_OPERATION_ABORTED:
-                    DBG1(DBG_LIB, "failed to write packet to TUN device %s, because the IO operation was aborted.");
-                    CloseHandle(read_event);
-                    return FALSE;
-                    break;
-                case ERROR_NOT_ENOUGH_QUOTA:
-                    DBG1(DBG_LIB, "failed to write packet to TUN device %s, because the process's buffer could not be page locked.");
-                    CloseHandle(read_event);
-                    return FALSE;
                     break;
                 default:
                     /* TODO: Convert DWORD (GetLastError()) to human readable error string */
                     DBG1(DBG_LIB, "reading from TUN device %s failed: %u", this->if_name,
-                       (uint32_t) GetLastError());
+                       error);
                     CloseHandle(read_event);
                     return FALSE;
                     break;
@@ -758,10 +724,10 @@ METHOD(tun_device_t, destroy, void,
 	private_tun_device_t *this)
 {
 #ifdef WIN32
-        /* close file handle, destroy interface */
+        /* destroy lock, close file handle, destroy interface */
+        this->lock->destroy(this->lock);
         CloseHandle(this->tunhandle);
-        free(this->read_event_name);
-        free(this->write_event_name);
+        free(this->tunhandle);
 #else
 	if (this->tunfd > 0)
 	{
@@ -850,8 +816,6 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         linked_list_t *possible_devices = get_tap_reg();
         memset(this->if_name, 0, sizeof(this->if_name));
 
-        this->read_event_name = malloc(WIN32_TUN_EVENT_LENGTH);
-        this->write_event_name = malloc(WIN32_TUN_EVENT_LENGTH);
         /* Iterate over list */
         enumerator = possible_devices->create_enumerator(possible_devices);
         /* Try to open that device */
@@ -962,9 +926,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         }
 
             /* Give the adapter 2 seconds to come up */
-        /* Create event with special template */
-        snprintf(this->read_event_name, WIN32_TUN_EVENT_LENGTH, WIN32_TUN_READ_EVENT_TEMPLATE, this->if_name);
-        snprintf(this->write_event_name, WIN32_TUN_EVENT_LENGTH, WIN32_TUN_WRITE_EVENT_TEMPLATE, this->if_name);
+
         sleep(2);
         return TRUE;
 #elif defined(IFF_TUN)
@@ -1045,8 +1007,6 @@ tun_device_t *tun_device_create(const char *name_tmpl)
                         /* For WIN32, that's a handle. */
 #ifdef WIN32
                         .get_handle = _get_handle,
-                        .get_write_event_name = _get_write_event_name,
-                        .get_read_event_name = _get_read_event_name,
 #else
 			.get_fd = _get_fd,
 #endif /* WIN32 */
@@ -1057,6 +1017,7 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 		},
 #ifdef WIN32
                 .tunhandle = NULL,
+                .lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 #else
 		.tunfd = -1,
 		.sock = -1,
@@ -1068,10 +1029,11 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 		free(this);
 		return NULL;
 	}
+#ifdef WIN32
+	DBG1(DBG_LIB, "opened TUN device: %s", this->if_name);
+#else
 	DBG1(DBG_LIB, "created TUN device: %s", this->if_name);
 
-#ifdef WIN32
-#else
 	this->sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (this->sock < 0)
 	{
