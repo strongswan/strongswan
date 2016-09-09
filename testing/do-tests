@@ -524,16 +524,19 @@ do
     <img src="../../images/$DIAGRAM" alt="$VIRTHOSTS">
 @EOF
 
+	IPTABLES_CMD_V4="echo -e '=== filter table ==='; iptables  -v -n -L; echo -e '\n=== nat table ==='; iptables  -v -n -t nat -L; echo -e '\n=== mangle table ==='; iptables  -v -n -t mangle -L"
+	IPTABLES_CMD_V6="echo -e '=== filter table ==='; ip6tables -v -n -L; echo -e '\n=== nat table ==='; ip6tables -v -n -t nat -L; echo -e '\n=== mangle table ==='; ip6tables -v -n -t mangle -L"
+
 	if [ -n "$IPV6" ]
 	then
 	    IPROUTE_CMD="ip -6 route list table $SOURCEIP_ROUTING_TABLE"
 	    IPROUTE_DSP=$IPROUTE_CMD
-	    IPTABLES_CMD="ip6tables -v -n -L"
+	    IPTABLES_CMD="$IPTABLES_CMD_V6"
 	    IPTABLES_DSP="ip6tables -L"
 	else
 	    IPROUTE_CMD="ip route list table $SOURCEIP_ROUTING_TABLE"
 	    IPROUTE_DSP=$IPROUTE_CMD
-	    IPTABLES_CMD="iptables -v -n -L"
+	    IPTABLES_CMD="$IPTABLES_CMD_V4"
 	    IPTABLES_DSP="iptables -L"
 	fi
 
@@ -541,7 +544,7 @@ do
 	then
 	    IPROUTE_CMD="ip route list table $SOURCEIP_ROUTING_TABLE; echo; ip -6 route list table $SOURCEIP_ROUTING_TABLE"
 	    IPROUTE_DSP="ip (-6) route list table $SOURCEIP_ROUTING_TABLE"
-	    IPTABLES_CMD="iptables -v -n -L ; echo ; ip6tables -v -n -L"
+	    IPTABLES_CMD="$IPTABLES_CMD_V4; echo; $IPTABLES_CMD_V6"
 	    IPTABLES_DSP="iptables -L ; ip6tables -L"
 	fi
 
