@@ -530,7 +530,6 @@ METHOD(tun_device_t, get_handle, HANDLE,
 METHOD(tun_device_t, write_packet, bool,
 	private_tun_device_t *this, chunk_t packet)
 {
-        DBG2(DBG_ESP, "writing packet to %s", this->if_name);
         bool status;
         DWORD error;
 
@@ -546,7 +545,7 @@ METHOD(tun_device_t, write_packet, bool,
            return FALSE;
         }
 
-        this->lock->write_lock(this->lock);
+        //this->lock->write_lock(this->lock);
 
         memset(overlapped, 0, sizeof(OVERLAPPED));
 
@@ -577,7 +576,7 @@ METHOD(tun_device_t, write_packet, bool,
                     break;
                 default:
                     DBG2(DBG_ESP, "Error %d.", error);
-                    this->lock->unlock(this->lock);
+                    //this->lock->unlock(this->lock);
                     return FALSE;
                     break;
             }
@@ -586,7 +585,7 @@ METHOD(tun_device_t, write_packet, bool,
 
         CloseHandle(write_event);
 
-        this->lock->unlock(this->lock);
+        //this->lock->unlock(this->lock);
         return TRUE;
 }
 
