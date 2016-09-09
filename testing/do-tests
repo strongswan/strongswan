@@ -426,7 +426,7 @@ do
 	echo -e "\nPRE-TEST\n" >> $CONSOLE_LOG 2>&1
 
 	eval `awk -F "::" '{
-	    if ($2 != "")
+	    if ($1 !~ /^#.*/ && $2 != "")
 	    {
 		printf("echo \"%s# %s\"; ", $1, $2)
 		printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
@@ -463,7 +463,7 @@ do
 	    command=$2
 	    pattern=$3
 	    hit=$4
-	    if (command != "")
+	    if (host !~ /^#.*/ && command != "")
 	    {
 		if (command == "tcpdump")
 		{
@@ -762,7 +762,7 @@ do
 	echo -e "\nPOST-TEST\n" >> $CONSOLE_LOG 2>&1
 
 	eval `awk -F "::" '{
-	    if ($2 != "")
+	    if ($1 !~ /^#.*/ && $2 != "")
 	    {
 		printf("echo \"%s# %s\"; ", $1, $2)
 		printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
