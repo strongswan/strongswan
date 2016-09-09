@@ -142,7 +142,7 @@ static void deliver_plain(private_kernel_libipsec_router_t *this,
 	tun_entry_t *entry, lookup = {
 		.addr = packet->get_destination(packet),
 	};
-        
+
 	this->lock->read_lock(this->lock);
 	entry = this->tuns->get(this->tuns, &lookup);
 	tun = entry ? entry->tun : this->tun.tun;
@@ -444,6 +444,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                     DBG2(DBG_ESP, "position %d in array", k);
                     /* Is the object signaled? */
                     DBG2(DBG_ESP, "checking if event is signaled.");
+                    /* WaitForSingleObject() lies. It says that the signaled event is not signaled. */
                     DWORD WaitResult = WaitForSingleObject(bundle_array[k].overlapped->hEvent, 0);
                     DBG2(DBG_ESP, "WaitForSingleObject returned %d", WaitResult);
                     if (WaitResult == WAIT_OBJECT_0)
