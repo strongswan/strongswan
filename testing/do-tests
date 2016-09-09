@@ -533,11 +533,15 @@ do
 	    IPROUTE_DSP=$IPROUTE_CMD
 	    IPTABLES_CMD="$IPTABLES_CMD_V6"
 	    IPTABLES_DSP="ip6tables -L"
+	    IPTABLES_SAVE_CMD="ip6tables-save"
+	    IPTABLES_SAVE_DSP="ip6tables-save"
 	else
 	    IPROUTE_CMD="ip route list table $SOURCEIP_ROUTING_TABLE"
 	    IPROUTE_DSP=$IPROUTE_CMD
 	    IPTABLES_CMD="$IPTABLES_CMD_V4"
 	    IPTABLES_DSP="iptables -L"
+	    IPTABLES_SAVE_CMD="iptables-save"
+	    IPTABLES_SAVE_DSP="iptables-save"
 	fi
 
 	if [ $name = "net2net-ip4-in-ip6-ikev2" -o $name = "net2net-ip6-in-ip4-ikev2" ]
@@ -546,6 +550,8 @@ do
 	    IPROUTE_DSP="ip (-6) route list table $SOURCEIP_ROUTING_TABLE"
 	    IPTABLES_CMD="$IPTABLES_CMD_V4; echo; $IPTABLES_CMD_V6"
 	    IPTABLES_DSP="iptables -L ; ip6tables -L"
+	    IPTABLES_SAVE_CMD="iptables-save; echo; ip6tables-save"
+	    IPTABLES_SAVE_DSP="iptables-save ; ip6tables-save"
 	fi
 
 	for host in $DBHOSTS
@@ -608,6 +614,8 @@ do
 		    > $TESTRESULTDIR/${host}.ip.route 2>/dev/null
 	    ssh $SSHCONF $HOSTLOGIN $IPTABLES_CMD \
 		    > $TESTRESULTDIR/${host}.iptables 2>/dev/null
+		ssh $SSHCONF $HOSTLOGIN $IPTABLES_SAVE_CMD \
+		    > $TESTRESULTDIR/${host}.iptables-save 2>/dev/null
 	    chmod a+r $TESTRESULTDIR/*
 
 		if [ -n "$SWANCTL" ]
@@ -631,6 +639,7 @@ do
 	    <li><a href="$host.swanctl.pools">swanctl --list-pools</a></li>
 	    <li><a href="$host.swanctl.authorities">swanctl --list-authorities</a></li>
 	    <li><a href="$host.swanctl.stats">swanctl --stats|--list-algs</a></li>
+	    <li><a href="$host.auth.log">auth.log</a></li>
 	    <li><a href="$host.daemon.log">daemon.log</a></li>
 	  </ul>
       </td>
@@ -640,7 +649,7 @@ do
 	    <li><a href="$host.ip.state">ip -s xfrm state</a></li>
 	    <li><a href="$host.ip.route">$IPROUTE_DSP</a></li>
 	    <li><a href="$host.iptables">$IPTABLES_DSP</a></li>
-	    <li><a href="$host.auth.log">auth.log</a></li>
+	    <li><a href="$host.iptables-save">$IPTABLES_SAVE_DSP</a></li>
 	  </ul>
 	  &nbsp;
       </td>
@@ -675,6 +684,7 @@ do
 	    <li><a href="$host.ip.state">ip -s xfrm state</a></li>
 	    <li><a href="$host.ip.route">$IPROUTE_DSP</a></li>
 	    <li><a href="$host.iptables">$IPTABLES_DSP</a></li>
+	    <li><a href="$host.iptables-save">$IPTABLES_SAVE_DSP</a></li>
 	  </ul>
       </td>
     </tr>
