@@ -441,8 +441,11 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
         {
             host_t *gw = host_create_from_string("169.254.128.128", 0);
             route->gateway = gw;
-        } else {
-            route->gateway = charon->kernel->get_nexthop(charon->kernel, dst, -1, src);
+        } else if (route->src_ip->get_family(route->src_ip) == AF_INET6)
+        {
+            /* For IPv6, the next hop is fe80::8 (TAP-Windows6 magic router gw) */
+            host_t *gw = host_create_from_string("fe80::8", 0);
+            route->gateway = gw;
         }
 #else
 	/* on Linux we cant't install a gateway */
