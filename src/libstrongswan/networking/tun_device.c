@@ -153,11 +153,14 @@ struct private_tun_device_t {
 
 linked_list_t *get_tap_reg()
 {
-    HKEY adapter_key;
+    char enum_name[256], unit_string[256],
+    instance_id[256], component_id[256],
+    component_id_string[] = "ComponentId",
+    instance_id_string[] = "NetCfgInstanceId";
     LONG status;
-    DWORD len;
+    uint32_t len, type, i = 0;
+    HKEY adapter_key, unit_key;
     linked_list_t *list = linked_list_create();
-    int i = 0;
 
     /*
      * Open parent key. It contains all other keys that
@@ -175,17 +178,8 @@ linked_list_t *get_tap_reg()
         DBG2(DBG_LIB, "Error opening registry key: %s", ADAPTER_KEY);
     }
 
-    while (true)
+    while (TRUE)
     {
-        char enum_name[256];
-        char unit_string[256];
-        HKEY unit_key;
-        char component_id_string[] = "ComponentId";
-        char component_id[256];
-        char net_cfg_instance_id_string[] = "NetCfgInstanceId";
-        char net_cfg_instance_id[256];
-        DWORD data_type;
-
         len = sizeof (enum_name);
         status = RegEnumKeyEx(
                 adapter_key,
@@ -227,34 +221,34 @@ linked_list_t *get_tap_reg()
                     unit_key,
                     component_id_string,
                     NULL,
-                    &data_type,
+                    &type,
                     component_id,
                     &len);
 
-            if (status != ERROR_SUCCESS || data_type != REG_SZ)
+            if (status != ERROR_SUCCESS || type != REG_SZ)
             {
                 DBG2(DBG_LIB, "Error opening registry key: %s\\%s",
                         unit_string, component_id_string);
             }
             else
             {
-                len = sizeof (net_cfg_instance_id);
+                len = sizeof (instance_id);
                 status = RegQueryValueEx(
                         unit_key,
-                        net_cfg_instance_id_string,
+                        instance_id_string,
                         NULL,
-                        &data_type,
-                        net_cfg_instance_id,
+                        &type,
+                        instance_id,
                         &len);
 
-                if (status == ERROR_SUCCESS && data_type == REG_SZ)
+                if (status == ERROR_SUCCESS && type == REG_SZ)
                 {
                     if (!strcmp(component_id, TAP_WIN_COMPONENT_ID))
                     {
                         /* That thing is a valid interface key */
                         /* link into return list */
-                        char *guid = malloc(sizeof(net_cfg_instance_id));
-                        memcpy(guid, net_cfg_instance_id, sizeof(net_cfg_instance_id));
+                        char *guid = malloc(sizeof(instance_id));
+                        memcpy(guid, instance_id, sizeof(instance_id));
                         list->insert_last(list, guid);
                     }
                 }
