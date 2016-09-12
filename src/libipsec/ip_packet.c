@@ -238,7 +238,7 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			next_header = ip->ip_p;
 			break;
 		}
-#ifdef HAVE_NETINET_IP6_H
+#if defined(HAVE_NETINET_IP6_H) || defined(WIN32)
 		case 6:
 		{
 			struct ip6_hdr *ip;
