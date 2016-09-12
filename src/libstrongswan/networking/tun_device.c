@@ -158,7 +158,8 @@ linked_list_t *get_tap_reg()
     component_id_string[] = "ComponentId",
     instance_id_string[] = "NetCfgInstanceId";
     LONG status;
-    uint32_t len, type, i = 0;
+    uint32_t i = 0;
+    DWORD len, type;
     HKEY adapter_key, unit_key;
     linked_list_t *list = linked_list_create();
 
