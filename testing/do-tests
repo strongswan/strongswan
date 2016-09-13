@@ -496,18 +496,6 @@ do
 
 
 	##########################################################################
-	# set counters
-	#
-
-	if [ $STATUS = "failed" ]
-	then
-	    let "failed_cnt += 1"
-	else
-	    let "passed_cnt += 1"
-	fi
-
-
-	##########################################################################
 	# log statusall and listall output
 	# get copies of ipsec.conf, ipsec.secrets
 	# create index.html for the given test case
@@ -885,6 +873,18 @@ do
 	#
 
 	$DIR/scripts/restore-defaults $testname
+
+
+	##########################################################################
+	# set counters
+	#
+
+	if [ $STATUS = "failed" ]
+	then
+	    let "failed_cnt += 1"
+	else
+	    let "passed_cnt += 1"
+	fi
 
 
 	##########################################################################
