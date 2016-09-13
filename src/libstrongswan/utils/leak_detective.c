@@ -551,6 +551,13 @@ char *whitelist[] = {
 	"xmlInitParserCtxt",
 	/* libcurl */
 	"Curl_client_write",
+	/* libsoup */
+	"soup_message_headers_append",
+	"soup_message_headers_clear",
+	"soup_message_headers_get_list",
+	"soup_message_headers_get_one",
+	"soup_session_abort",
+	"soup_session_get_type",
 	/* libldap */
 	"ldap_int_initialize",
 	/* ClearSilver */
@@ -577,13 +584,18 @@ char *whitelist[] = {
 	/* libapr */
 	"apr_pool_create_ex",
 	/* glib */
+	"g_output_stream_write",
+	"g_resolver_lookup_by_name",
+	"g_signal_connect_data",
+	"g_socket_connection_factory_lookup_type",
 	"g_type_init_with_debug_flags",
 	"g_type_register_static",
 	"g_type_class_ref",
 	"g_type_create_instance",
 	"g_type_add_interface_static",
 	"g_type_interface_add_prerequisite",
-	"g_socket_connection_factory_lookup_type",
+	"g_private_set",
+	"g_queue_pop_tail",
 	/* libgpg */
 	"gpg_err_init",
 	/* gnutls */
