@@ -105,11 +105,11 @@ METHOD(enumerator_t, cert_enumerator_enumerate, bool,
 								   BUILD_NOT_BEFORE_TIME, this->notBefore,
 								   BUILD_NOT_AFTER_TIME, this->notAfter,
 								   BUILD_END);
+		public->destroy(public);
 		if (*cert == NULL)
 		{
 			DBG1(DBG_CFG, "  failed to create certificate from IPSECKEY");
 			cur_ipseckey->destroy(cur_ipseckey);
-			public->destroy(public);
 			continue;
 		}
 		cur_ipseckey->destroy(cur_ipseckey);
