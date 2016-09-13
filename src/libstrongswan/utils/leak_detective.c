@@ -551,6 +551,8 @@ char *whitelist[] = {
 	"xmlInitParserCtxt",
 	/* libcurl */
 	"Curl_client_write",
+	/* libldap */
+	"ldap_int_initialize",
 	/* ClearSilver */
 	"nerr_init",
 	/* libgcrypt */
