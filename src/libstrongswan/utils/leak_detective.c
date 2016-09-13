@@ -600,6 +600,10 @@ char *whitelist[] = {
 	"gpg_err_init",
 	/* gnutls */
 	"gnutls_global_init",
+	/* Ada runtime */
+	"system__tasking__initialize",
+	"system__tasking__initialization__abort_defer",
+	"system__tasking__stages__create_task",
 };
 
 /**
