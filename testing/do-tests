@@ -357,7 +357,7 @@ do
 
 
 	##########################################################################
-	# copy test specific configurations to uml hosts and clear auth.log files
+	# copy test specific configurations to hosts and clear log files
 	#
 
 	DBDIR=/etc/db.d
@@ -407,6 +407,16 @@ do
 	for host in $STRONGSWANHOSTS
 	do
 		ssh $SSHCONF root@`eval echo \\\$ipv4_$host` 'conntrack -F' >/dev/null 2>&1
+	done
+
+	##########################################################################
+	# remove leak detective log on all hosts
+	#
+
+	export LEAK_DETECTIVE_LOG=/var/log/leak-detective.log
+	for host in $STRONGSWANHOSTS
+	do
+		ssh $SSHCONF root@`eval echo \\\$ipv4_$host` 'rm -f $LEAK_DETECTIVE_LOG' >/dev/null 2>&1
 	done
 
 	##########################################################################
@@ -801,6 +811,25 @@ do
 			STATUS="failed"
 		fi
 	done
+
+
+	##########################################################################
+	# make sure there were no leaks
+	#
+
+	for host in $STRONGSWANHOSTS
+	do
+		eval HOSTLOGIN=root@\$ipv4_${host}
+		LEAKS=`ssh $SSHCONF $HOSTLOGIN 'cat $LEAK_DETECTIVE_LOG 2>/dev/null | grep -v "No leaks detected.*"'`
+		if [ -n "$LEAKS" ]
+		then
+			echo -e "\n$host# cat $LEAK_DETECTIVE_LOG [NO]" >> $CONSOLE_LOG
+			echo "$LEAKS" >> $CONSOLE_LOG
+			echo "<<< $host $LEAK_DETECTIVE_LOG >>>" >> $CONSOLE_LOG
+			STATUS="failed"
+		fi
+	done
+
 
 	##########################################################################
 	# get a copy of /var/log/auth.log
