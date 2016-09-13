@@ -373,6 +373,7 @@ int main(int argc, char *argv[])
 	run();
 
 	unlink_pidfile();
+	free(pidfile_name);
 	status = 0;
 	charon->bus->remove_listener(charon->bus, &listener->listener);
 	listener->destroy(listener);
