@@ -154,11 +154,13 @@ unbound_rr_t *unbound_rr_create_frm_ldns_rr(ldns_rr *rr)
 	if (status != LDNS_STATUS_OK)
 	{
 		DBG1(DBG_LIB, "failed to get the RDATA field of a DNS RR");
+		ldns_buffer_free(buf);
 		_destroy(this);
 		return NULL;
 	}
 
 	this->rdata = ldns_buffer_export(buf);
+	ldns_buffer_free(buf);
 
 	return &this->public;
 }
