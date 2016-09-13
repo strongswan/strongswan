@@ -494,7 +494,7 @@ static bool register_hooks()
  * List of functions using static allocation buffers or should be suppressed
  * otherwise on leak report.
  */
-char *whitelist[] = {
+static char *whitelist[] = {
 	/* backtraces, including own */
 	"backtrace_create",
 	"strerror_safe",
@@ -604,6 +604,8 @@ char *whitelist[] = {
 	"system__tasking__initialize",
 	"system__tasking__initialization__abort_defer",
 	"system__tasking__stages__create_task",
+	/* in case external threads call into our code */
+	"thread_current_id",
 };
 
 /**
