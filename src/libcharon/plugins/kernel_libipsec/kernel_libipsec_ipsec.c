@@ -382,6 +382,9 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 	host_t *src, host_t *dst, traffic_selector_t *src_ts,
 	traffic_selector_t *dst_ts, policy_entry_t *policy)
 {
+#ifdef WIN32
+        uint16_t family;
+#endif
 	route_entry_t *route, *old;
 	host_t *src_ip;
 	bool is_virtual;
@@ -435,15 +438,26 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 #ifdef __linux__
 #elif defined(WIN32)
         /* Set out special gateway */
-        if (route->src_ip->get_family(route->src_ip) == AF_INET)
+        family = route->src_ip->get_family(route->src_ip);
+        switch(family)
         {
-            host_t *gw = host_create_from_string("169.254.128.128", 0);
-            route->gateway = gw;
-        } else if (route->src_ip->get_family(route->src_ip) == AF_INET6)
-        {
-            /* For IPv6, the next hop is fe80::8 (TAP-Windows6 magic router gw) */
-            host_t *gw = host_create_from_string("fe80::8", 0);
-            route->gateway = gw;
+            case AF_INET:
+            {
+                /* For IPv4, the nxt hop is 169.254.128.128 (Configured next hop) */
+                host_t *gw = host_create_from_string("169.254.128.128", 0);
+                route->gateway = gw;
+                break;
+            }
+            case AF_INET6:
+            {
+                /* For IPv6, the next hop is fe80::8 (TAP-Windows6 magic router gw) */
+                host_t *gw = host_create_from_string("fe80::8", 0);
+                route->gateway = gw;
+                break;
+            }
+            default:
+                DBG2(DBG_ESP, "Unknown Protocol family %d encountered. Not setting a next hop.", family);
+                break;
         }
 #else
 	/* on Linux we cant't install a gateway */
