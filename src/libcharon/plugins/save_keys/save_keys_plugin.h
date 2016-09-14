@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Codrut Cristian Grosu (codrut.cristian.grosu@gmail.com)
+ * Copyright (C) 2016 IXIA (http://www.ixiacom.com)
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
