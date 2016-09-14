@@ -434,9 +434,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 	);
 #ifdef __linux__
 #elif defined(WIN32)
-        /* TODO: Complete */
         /* Set out special gateway */
-        /* We also need to add a route to 169.254.0.0/16 via all our tun devices */
         if (route->src_ip->get_family(route->src_ip) == AF_INET)
         {
             host_t *gw = host_create_from_string("169.254.128.128", 0);
