@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Tobias Brunner
+ * Copyright (C) 2011-2016 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -601,6 +601,38 @@ METHOD(bus_t, ike_keys, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(bus_t, ike_derived_keys, void,
+	private_bus_t *this, chunk_t sk_ei, chunk_t sk_er, chunk_t sk_ai,
+	chunk_t sk_ar)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	bool keep;
+
+	ike_sa = this->thread_sa->get(this->thread_sa);
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->ike_derived_keys)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->ike_derived_keys(entry->listener, ike_sa, sk_ei,
+												 sk_er, sk_ai, sk_ar);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
 METHOD(bus_t, child_keys, void,
 	private_bus_t *this, child_sa_t *child_sa, bool initiator,
 	diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r)
@@ -623,6 +655,39 @@ METHOD(bus_t, child_keys, void,
 		entry->calling++;
 		keep = entry->listener->child_keys(entry->listener, ike_sa,
 								child_sa, initiator, dh, nonce_i, nonce_r);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
+METHOD(bus_t, child_derived_keys, void,
+	private_bus_t *this, child_sa_t *child_sa, bool initiator,
+	chunk_t encr_i, chunk_t encr_r, chunk_t integ_i, chunk_t integ_r)
+{
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa;
+	entry_t *entry;
+	bool keep;
+
+	ike_sa = this->thread_sa->get(this->thread_sa);
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->child_derived_keys)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->child_derived_keys(entry->listener, ike_sa,
+											child_sa, initiator, encr_i, encr_r,
+											integ_i, integ_r);
 		entry->calling--;
 		if (!keep)
 		{
@@ -1069,7 +1134,9 @@ bus_t *bus_create()
 			.child_state_change = _child_state_change,
 			.message = _message,
 			.ike_keys = _ike_keys,
+			.ike_derived_keys = _ike_derived_keys,
 			.child_keys = _child_keys,
+			.child_derived_keys = _child_derived_keys,
 			.ike_updown = _ike_updown,
 			.ike_rekey = _ike_rekey,
 			.ike_update = _ike_update,

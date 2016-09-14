@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Tobias Brunner
+ * Copyright (C) 2012-2016 Tobias Brunner
  * Copyright (C) 2006-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
  *
@@ -349,8 +349,8 @@ struct bus_t {
 	 * @param ike_sa	IKE_SA this keymat belongs to
 	 * @param dh		diffie hellman shared secret
 	 * @param dh_other	others DH public value (IKEv1 only)
-	 * @param nonce_i	initiators nonce
-	 * @param nonce_r	responders nonce
+	 * @param nonce_i	initiator's nonce
+	 * @param nonce_r	responder's nonce
 	 * @param rekey		IKE_SA we are rekeying, if any (IKEv2 only)
 	 * @param shared	shared key used for key derivation (IKEv1-PSK only)
 	 */
@@ -359,16 +359,41 @@ struct bus_t {
 					 ike_sa_t *rekey, shared_key_t *shared);
 
 	/**
+	 * IKE_SA derived keys hook.
+	 *
+	 * @param sk_ei		SK_ei, or Ka for IKEv1
+	 * @param sk_er		SK_er
+	 * @param sk_ai		SK_ai, or SKEYID_a for IKEv1
+	 * @param sk_ar		SK_ar
+	 */
+	void (*ike_derived_keys)(bus_t *this, chunk_t sk_ei, chunk_t sk_er,
+							 chunk_t sk_ai, chunk_t sk_ar);
+
+	/**
 	 * CHILD_SA keymat hook.
 	 *
 	 * @param child_sa	CHILD_SA this keymat is used for
 	 * @param initiator	initiator of the CREATE_CHILD_SA exchange
 	 * @param dh		diffie hellman shared secret
-	 * @param nonce_i	initiators nonce
-	 * @param nonce_r	responders nonce
+	 * @param nonce_i	initiator's nonce
+	 * @param nonce_r	responder's nonce
 	 */
 	void (*child_keys)(bus_t *this, child_sa_t *child_sa, bool initiator,
 					   diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r);
+
+	/**
+	 * CHILD_SA derived keys hook.
+	 *
+	 * @param child_sa	CHILD_SA these keys are used for
+	 * @param initiator	initiator of the CREATE_CHILD_SA exchange
+	 * @param encr_i	initiator's encryption key
+	 * @param encr_o	responder's encryption key
+	 * @param integ_i	initiator's integrity key
+	 * @param integ_r	responder's integrity key
+	 */
+	void (*child_derived_keys)(bus_t *this, child_sa_t *child_sa,
+							   bool initiator, chunk_t encr_i, chunk_t encr_r,
+							   chunk_t integ_i, chunk_t integ_r);
 
 	/**
 	 * IKE_SA up/down hook.
