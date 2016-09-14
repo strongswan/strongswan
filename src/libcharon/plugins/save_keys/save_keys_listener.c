@@ -344,7 +344,6 @@ METHOD(listener_t, save_child_keys, bool,
 			free(name_enc_alg);
 			fclose(esp_file);
 			free(path_esp);
-			free(this->directory_path);
 		}
 	}
 	return TRUE;
