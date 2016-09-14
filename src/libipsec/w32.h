@@ -113,4 +113,3 @@ struct ip6_hdr
 #define IPPROTO_NONE 59
 
 #endif /* WINDOWS_32_PROTOCOL_HEADERS */
-
