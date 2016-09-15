@@ -1,3 +1,18 @@
+strongswan-5.5.1
+----------------
+
+- The newhope plugin implements the post-quantum NewHope key exchange algorithm
+  proposed in their 2015 paper by Erdem Alkim, Léo Ducas, Thomas Pöppelmann and
+  Peter Schwabe.
+
+- The VICI flush-certs commands flushes certificates from the volatile
+  certificate cache. Optionally the type of the certificates to be
+  flushed  (e.g. type = x509_crl) can be specified.
+
+- libtpmtss: In the TSS2 API the function TeardownSocketTcti() was replaced by
+  tss2_tcti_finalize().
+
+
 strongswan-5.5.0
 ----------------
 
