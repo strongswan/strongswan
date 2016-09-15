@@ -39,7 +39,6 @@
  */
 
 #include "tun_device.h"
-#include "threading/rwlock.h"
 
 #include <utils/debug.h>
 #include <threading/thread.h>
@@ -104,10 +103,6 @@ struct private_tun_device_t {
          */
         HANDLE tunhandle;
 
-	/**
-	 * Lock for the write function.
-	 */
-	rwlock_t *lock;
         /**
          * Name of the TUN device
          */
@@ -540,7 +535,6 @@ METHOD(tun_device_t, write_packet, bool,
            return FALSE;
         }
 
-        //this->lock->write_lock(this->lock);
 
         memset(overlapped, 0, sizeof(OVERLAPPED));
 
@@ -571,7 +565,6 @@ METHOD(tun_device_t, write_packet, bool,
                     break;
                 default:
                     DBG2(DBG_ESP, "Error %d.", error);
-                    //this->lock->unlock(this->lock);
                     return FALSE;
                     break;
             }
@@ -580,7 +573,6 @@ METHOD(tun_device_t, write_packet, bool,
 
         CloseHandle(write_event);
 
-        //this->lock->unlock(this->lock);
         return TRUE;
 }
 
@@ -718,8 +710,7 @@ METHOD(tun_device_t, destroy, void,
 	private_tun_device_t *this)
 {
 #ifdef WIN32
-        /* destroy lock, close file handle, destroy interface */
-        this->lock->destroy(this->lock);
+        /* close file handle, destroy interface */
         CloseHandle(this->tunhandle);
         free(this->tunhandle);
 #else
@@ -1011,8 +1002,8 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 		},
 #ifdef WIN32
                 .tunhandle = NULL,
-                .lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 #else
+
 		.tunfd = -1,
 		.sock = -1,
 #endif /* WIN32 */
