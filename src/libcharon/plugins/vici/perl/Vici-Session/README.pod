@@ -560,6 +560,21 @@ print "----- unload-authority -----\n";
 ($res, $errmsg) = $session->unload_authority(Vici::Message->new(\%vars));
 print $res ? "ok\n" : "failed: $errmsg\n";
 
+=item flush_certs()
+
+flushes the volatile certificate cache. Optionally only a given certificate
+type is flushed.
+
+  my %vars = ( type => 'x509_crl' );
+  my ($res, $errmsg) = $session->flush_certs(Vici::Message->new(\%vars));
+
+=cut
+
+print "----- flush-certs -----\n";
+%vars = ( type => 'x509_crl' );
+($res, $errmsg) = $session->flush_certs(Vici::Message->new(\%vars));
+print $res ? "ok\n" : "failed: $errmsg\n";
+
 =item clear_creds()
 
 clears all loaded certificate, private key and shared key credentials. This
