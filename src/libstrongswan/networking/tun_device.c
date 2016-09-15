@@ -448,12 +448,138 @@ METHOD(tun_device_t, up, bool,
 	return TRUE;
 }
 
-/* Fix for WIN32 */
 METHOD(tun_device_t, set_mtu, bool,
 	private_tun_device_t *this, int mtu)
 {
 #ifdef WIN32
-        return TRUE;
+        /* Access registry */
+        char enum_name[256], unit_string[256],
+        instance_id[256],
+        instance_id_string[] = "NetCfgInstanceId",
+        mtu_string[256];
+        LONG status;
+        uint32_t i = 0;
+        DWORD len, type;
+        HKEY adapter_key, unit_key, write_key;
+
+        /* The MTU is encoded as a string. */
+        snprintf(mtu_string, sizeof(mtu_string), "%d", mtu);
+        /*
+         * Open parent key. It contains all other keys that
+         * describe any possible interfaces.
+         */
+        status = RegOpenKeyEx(
+                HKEY_LOCAL_MACHINE,
+                ADAPTER_KEY,
+                0,
+                KEY_READ,
+                &adapter_key);
+
+        if (status != ERROR_SUCCESS)
+        {
+            DBG2(DBG_LIB, "Error opening registry key: %s", ADAPTER_KEY);
+        }
+
+        /* Iterate over all the interfaces in the registry key. They're enumerated from 1
+         * to n.
+         */
+        while (TRUE)
+        {
+            len = sizeof (enum_name);
+            status = RegEnumKeyEx(
+                    adapter_key,
+                    i,
+                    enum_name,
+                    &len,
+                    NULL,
+                    NULL,
+                    NULL,
+                    NULL);
+            if (status == ERROR_NO_MORE_ITEMS)
+            {
+                break;
+            }
+            else if (status != ERROR_SUCCESS)
+            {
+                DBG2(DBG_LIB, "Error enumerating registry subkeys of key: %s",
+                        ADAPTER_KEY);
+            }
+
+            snprintf(unit_string, sizeof (unit_string), "%s\\%s",
+                    ADAPTER_KEY, enum_name);
+
+            status = RegOpenKeyEx(
+                    HKEY_LOCAL_MACHINE,
+                    unit_string,
+                    0,
+                    KEY_READ,
+                    &unit_key);
+
+            if (status!= ERROR_SUCCESS)
+            {
+                DBG2(DBG_LIB, "Error opening registry key: %s", unit_string);
+            }
+            else
+            {
+                len = sizeof (instance_id);
+                status = RegQueryValueEx(
+                        unit_key,
+                        instance_id_string,
+                        NULL,
+                        &type,
+                        instance_id,
+                        &len);
+
+                if (status != ERROR_SUCCESS || type != REG_SZ)
+                {
+                    DBG2(DBG_LIB, "Error opening registry key: %s\\%s",
+                            unit_string, instance_id_string);
+                }
+                else
+                {
+                    DBG2(DBG_LIB, "Trying to match %s", instance_id);
+                    if (!strcmp(instance_id, this->if_name))
+                    {
+                        /* Open the registry key for write access */
+                        status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, unit_string, 0, KEY_WRITE, &write_key);
+                        if (status != ERROR_SUCCESS)
+                        {
+                            DBG2(DBG_LIB, "Failed to open the registry key %s with write access: %d", unit_string, status);
+                        }
+                        else
+                        {
+                            len= sizeof(mtu_string);
+                            status = RegSetValueEx(
+                                write_key,
+                                "MTU",
+                                0,
+                                REG_SZ,
+                                mtu_string,
+                                len);
+                            RegCloseKey(unit_key);
+                            RegCloseKey(write_key);
+                            RegCloseKey(adapter_key);
+                            if (status == ERROR_SUCCESS)
+                            {
+                                DBG2(DBG_LIB, "MTU set to %s", mtu_string);
+                                return TRUE;
+                            }
+                            else
+                            {
+                                DBG1(DBG_LIB, "Failed (error %d) to set the MTU to %d", status, mtu);
+                                return FALSE;
+                            }
+                        }
+                    }
+                }
+                RegCloseKey(unit_key);
+            }
+            ++i;
+        }
+
+        RegCloseKey(adapter_key);
+        DBG1(DBG_LIB, "Failed to set the MTU to %d", mtu);
+        return FALSE;
 #else
 	struct ifreq ifr;
 
