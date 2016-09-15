@@ -38,11 +38,9 @@ output.
 initiate a connection
 .TP
 .B "\-t, \-\-terminate"
-\-\-terminate\fR
 terminate a connection
 .TP
 .B "\-d, \-\-redirect"
-\-\-redirect\fR
 redirect an IKE_SA
 .TP
 .B "\-p, \-\-install"
@@ -93,7 +91,10 @@ trace logging output
 .B "\-S, \-\-stats"
 show daemon infos and statistics
 .TP
-.B "\-r, \-\-reload-settings"
+.B "\-f, \-\-flush\-certs"
+flush cached certificates
+.TP
+.B "\-r, \-\-reload\-settings"
 reload strongswan.conf(5) configuration
 .TP
 .B "\-v, \-\-version"
