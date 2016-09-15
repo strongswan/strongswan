@@ -778,15 +778,8 @@ METHOD(kernel_net_t, add_ip, status_t,
 	}
 	MIB_UNICASTIPADDRESS_ROW row;
 	u_long status;
-        iface_t *iface = NULL, *entry = NULL;
+        iface_t *iface = NULL;
 
-        /* Print out all known interfaces */
-        enumerator_t *enumerator = this->ifaces->create_enumerator(this->ifaces);
-        while(enumerator->enumerate(enumerator, &entry))
-        {
-            DBG1(DBG_KNL, "interface %s\n index: %d\n description %s\n type %d", entry->ifname, entry->ifindex, entry->ifdesc, entry->iftype);
-        }
-        enumerator->destroy(enumerator);
 	/* name of the MS Loopback adapter */
         if (!this->install_virtual_ip_on || this->ifaces->find_first(this->ifaces, (void*)iface_by_name,
 						(void**)&iface, this->install_virtual_ip_on) != SUCCESS)
