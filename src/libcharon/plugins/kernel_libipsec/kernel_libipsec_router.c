@@ -191,8 +191,7 @@ static int find_revents(struct pollfd *pfd, int count, int fd)
 	}
 	return 0;
 }
-#endif /* WIN32 */
-
+#else
 /*
  * Formats an error message based on error. Takes info from system.
  * @return formatted error message
@@ -253,6 +252,7 @@ static BOOL start_read(handle_overlapped_buffer_t *structure, HANDLE event)
 
         }
 }
+#endif /* WIN32 */
 /**
  * Job handling outbound plaintext packets
  */
