@@ -151,6 +151,11 @@ enum ike_extension_t {
 	 * IKEv2 Redirect Mechanism, RFC 5685
 	 */
 	EXT_IKE_REDIRECTION = (1<<13),
+
+	/**
+	 * IKEv2 Message ID sync, RFC 6311
+	 */
+	EXT_IKE_MESSAGE_ID_SYNC = (1<<14),
 };
 
 /**
