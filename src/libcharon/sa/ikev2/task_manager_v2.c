@@ -34,6 +34,7 @@
 #include <sa/ikev2/tasks/ike_delete.h>
 #include <sa/ikev2/tasks/ike_config.h>
 #include <sa/ikev2/tasks/ike_dpd.h>
+#include <sa/ikev2/tasks/ike_mid_sync.h>
 #include <sa/ikev2/tasks/ike_vendor.h>
 #include <sa/ikev2/tasks/ike_verify_peer_cert.h>
 #include <sa/ikev2/tasks/child_create.h>
@@ -1068,6 +1069,10 @@ static status_t process_request(private_task_manager_t *this,
 								case REDIRECT:
 									task = (task_t*)ike_redirect_create(
 															this->ike_sa, NULL);
+									break;
+								case IKEV2_MESSAGE_ID_SYNC:
+									task = (task_t*)ike_mid_sync_create(
+																 this->ike_sa);
 									break;
 								default:
 									break;
