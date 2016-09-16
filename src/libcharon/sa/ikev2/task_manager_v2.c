@@ -1200,6 +1200,12 @@ METHOD(task_manager_t, incr_mid, void,
 	}
 }
 
+METHOD(task_manager_t, get_mid, uint32_t,
+	private_task_manager_t *this, bool initiate)
+{
+	return initiate ? this->initiating.mid : this->responding.mid;
+}
+
 /**
  * Handle the given IKE fragment, if it is one.
  *
@@ -2046,6 +2052,7 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 				.initiate = _initiate,
 				.retransmit = _retransmit,
 				.incr_mid = _incr_mid,
+				.get_mid = _get_mid,
 				.reset = _reset,
 				.adopt_tasks = _adopt_tasks,
 				.adopt_child_tasks = _adopt_child_tasks,

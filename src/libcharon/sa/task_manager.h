@@ -240,6 +240,14 @@ struct task_manager_t {
 	void (*incr_mid)(task_manager_t *this, bool initiate);
 
 	/**
+	 * Get the current message ID counter, in- or outbound.
+	 *
+	 * @param initiate		TRUE to get the initiating ID
+	 * @return				current message ID
+	 */
+	uint32_t (*get_mid)(task_manager_t *this, bool initiate);
+
+	/**
 	 * Reset message ID counters of the task manager.
 	 *
 	 * The IKEv2 protocol requires to restart exchanges with message IDs
@@ -253,7 +261,7 @@ struct task_manager_t {
 	 * @param initiate		message ID / DPD seq to initiate exchanges (send)
 	 * @param respond		message ID / DPD seq to respond to exchanges (expect)
 	 */
-	void (*reset) (task_manager_t *this, uint32_t initiate, uint32_t respond);
+	void (*reset)(task_manager_t *this, uint32_t initiate, uint32_t respond);
 
 	/**
 	 * Check if we are currently waiting for a reply.
