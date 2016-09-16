@@ -617,6 +617,12 @@ METHOD(ike_sa_t, set_message_id, void,
 	}
 }
 
+METHOD(ike_sa_t, get_message_id, uint32_t,
+	private_ike_sa_t *this, bool initiate)
+{
+	return this->task_manager->get_mid(this->task_manager, initiate);
+}
+
 METHOD(ike_sa_t, send_keepalive, void,
 	private_ike_sa_t *this, bool scheduled)
 {
@@ -2885,6 +2891,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.get_other_host = _get_other_host,
 			.set_other_host = _set_other_host,
 			.set_message_id = _set_message_id,
+			.get_message_id = _get_message_id,
 			.float_ports = _float_ports,
 			.update_hosts = _update_hosts,
 			.get_my_id = _get_my_id,

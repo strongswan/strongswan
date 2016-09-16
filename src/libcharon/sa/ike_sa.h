@@ -554,7 +554,7 @@ struct ike_sa_t {
 	void (*set_proposal)(ike_sa_t *this, proposal_t *proposal);
 
 	/**
-	 * Set the message id of the IKE_SA.
+	 * Set the message ID of the IKE_SA.
 	 *
 	 * The IKE_SA stores two message IDs, one for initiating exchanges (send)
 	 * and one to respond to exchanges (expect).
@@ -563,6 +563,17 @@ struct ike_sa_t {
 	 * @param mid			message id to set
 	 */
 	void (*set_message_id)(ike_sa_t *this, bool initiate, uint32_t mid);
+
+	/**
+	 * Get the message ID of the IKE_SA.
+	 *
+	 * The IKE_SA stores two message IDs, one for initiating exchanges (send)
+	 * and one to respond to exchanges (expect).
+	 *
+	 * @param initiate		TRUE to get message ID for initiating
+	 * @return				current message
+	 */
+	uint32_t (*get_message_id)(ike_sa_t *this, bool initiate);
 
 	/**
 	 * Add an additional address for the peer.
