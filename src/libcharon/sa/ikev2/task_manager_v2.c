@@ -1384,6 +1384,45 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 	return status;
 }
 
+/**
+ * Check if a message with message ID 0 might be used to synchronize the
+ * message IDs.
+ */
+static bool is_mid_sync(private_task_manager_t *this, message_t *msg)
+{
+	enumerator_t *enumerator;
+	notify_payload_t *notify;
+	payload_t *payload;
+	bool found = FALSE, other = FALSE;
+
+	if (msg->get_exchange_type(msg) == INFORMATIONAL &&
+		this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED &&
+		this->ike_sa->supports_extension(this->ike_sa,
+										  EXT_IKE_MESSAGE_ID_SYNC))
+	{
+		enumerator = msg->create_payload_enumerator(msg);
+		while (enumerator->enumerate(enumerator, &payload))
+		{
+			if (payload->get_type(payload) == PLV2_NOTIFY)
+			{
+				notify = (notify_payload_t*)payload;
+				switch (notify->get_notify_type(notify))
+				{
+					case IKEV2_MESSAGE_ID_SYNC:
+					case IPSEC_REPLAY_COUNTER_SYNC:
+						found = TRUE;
+						continue;
+					default:
+						break;
+				}
+			}
+			other = TRUE;
+			break;
+		}
+		enumerator->destroy(enumerator);
+	}
+	return found && !other;
+}
 
 METHOD(task_manager_t, process_message, status_t,
 	private_task_manager_t *this, message_t *msg)
@@ -1432,7 +1471,7 @@ METHOD(task_manager_t, process_message, status_t,
 	mid = msg->get_message_id(msg);
 	if (msg->get_request(msg))
 	{
-		if (mid == this->responding.mid)
+		if (mid == this->responding.mid || (mid == 0 && is_mid_sync(this, msg)))
 		{
 			/* reject initial messages if not received in specific states,
 			 * after rekeying we only expect a DELETE in an INFORMATIONAL */
@@ -1488,7 +1527,7 @@ METHOD(task_manager_t, process_message, status_t,
 		}
 		else
 		{
-			DBG1(DBG_IKE, "received message ID %d, expected %d. Ignored",
+			DBG1(DBG_IKE, "received message ID %d, expected %d, ignored",
 				 mid, this->responding.mid);
 		}
 	}
@@ -1526,7 +1565,7 @@ METHOD(task_manager_t, process_message, status_t,
 		}
 		else
 		{
-			DBG1(DBG_IKE, "received message ID %d, expected %d. Ignored",
+			DBG1(DBG_IKE, "received message ID %d, expected %d, ignored",
 				 mid, this->initiating.mid);
 			return SUCCESS;
 		}
