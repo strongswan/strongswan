@@ -575,7 +575,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                    /* Cleanup
                     *  Starts with 1 to skip over the dummy
                     */
-                    for(uint32_t k=1;k<i;k++)
+                    for(j=1;j<i;j++)
                     {
                         /* stop all asynchronous IO */
                         CancelIo(bundle_array[j].fileHandle);
