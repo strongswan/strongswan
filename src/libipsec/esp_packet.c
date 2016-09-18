@@ -25,10 +25,10 @@
 #include <bio/bio_reader.h>
 #include <bio/bio_writer.h>
 
-#if !defined(WIN32)
-#include <netinet/in.h>
-#else
+#ifdef WIN32
 #include "w32.h"
+#else
+#include <netinet/in.h>
 #endif
 
 typedef struct private_esp_packet_t private_esp_packet_t;
