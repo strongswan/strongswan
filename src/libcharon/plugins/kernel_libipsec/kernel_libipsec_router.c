@@ -258,17 +258,20 @@ static BOOL start_read(handle_overlapped_buffer_t *structure, HANDLE event)
             {
                 case ERROR_SUCCESS:
                 case ERROR_IO_PENDING:
+                {
                     /* all fine */
                     return TRUE;
                     break;
+                }
                 default:
+                {
                     /* Leave the NULL; here. Otherwise mingw64 complains about char *error_message = format_error(error); not being a label.*/
-                    NULL;
                     char *error_message = format_error(error);
                     DBG2(DBG_ESP, "Error %d.", format_error);
                     free(error_message);
                     return FALSE;
                     break;
+                }
             }
 
         }
@@ -282,7 +285,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 #ifdef WIN32
         void **key = NULL;
         bool oldstate;
-        uint32_t length, event_status = 0, i = 0, offset;
+        uint32_t length, event_status = 0, i = 0, j = 0, offset;
         handle_overlapped_buffer_t *bundle_array = NULL, dummy, tun_device_handle_overlapped_buffer;
         OVERLAPPED *overlapped = NULL;
         HANDLE *event_array = NULL, tun_device_event;
@@ -446,44 +449,44 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                     /* Cleanup
                      *  Starts with 1 to skip over the dummy
                      */
-                    for(uint32_t k=1;k<i;k++)
+                    for(j=1;j<i;j++)
                     {
                         /* stop all asynchronous IO */
-                        CancelIo(bundle_array[k].fileHandle);
-                        CloseHandle(bundle_array[k].overlapped->hEvent);
-                        memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
-                        free(bundle_array[k].buffer.ptr);
-                        ResetEvent(event_array[k]);
-                        CloseHandle(event_array[k]);
+                        CancelIo(bundle_array[j].fileHandle);
+                        CloseHandle(bundle_array[j].overlapped->hEvent);
+                        memset(bundle_array[j].buffer.ptr, 0, bundle_array[j].buffer.len);
+                        free(bundle_array[j].buffer.ptr);
+                        ResetEvent(event_array[j]);
+                        CloseHandle(event_array[j]);
                     }
                     /* exit */
                     return JOB_REQUEUE_DIRECT;
                 }
 #if FALSE
-                for(uint32_t k=1;k<i; k++)
+                for(k=1;k<i; k++)
                 {
                     DBG2(DBG_ESP, "position %d in array", k);
                     /* Is the object signaled? */
                     DBG2(DBG_ESP, "checking if event is signaled.");
                     /* WaitForSingleObject() lies. It says that the signaled event is not signaled. */
-                    DWORD WaitResult = WaitForSingleObject(bundle_array[k].overlapped->hEvent, 0);
+                    DWORD WaitResult = WaitForSingleObject(bundle_array[j].overlapped->hEvent, 0);
                     DBG2(DBG_ESP, "WaitForSingleObject returned %d", WaitResult);
                     if (WaitResult == WAIT_OBJECT_0)
                     {
                         /* The arrays have the same length and the same positioning of the elements.
-                         * Therefore, if event_array[k] is signaled, the read on bundle_array[i].fileHandle has succeeded
-                         * and bundle_array[k].buffer has our data now. */
+                         * Therefore, if event_array[j] is signaled, the read on bundle_array[i].fileHandle has succeeded
+                         * and bundle_array[j].buffer has our data now. */
                         DBG2(DBG_ESP, "Event is signaled. Processing packet.");
                         /* Do we need to copy the chunk before we enqueue it? */
-                        char *foo = alloca((bundle_array[k].buffer.len *4)/3 + 1);
-                        memset(foo, 0, (bundle_array[k].buffer.len *4)/3 + 1);
-                        DBG2(DBG_ESP, "Length of buffer: %u", bundle_array[k].buffer.len);
-                        chunk_to_base64(bundle_array[k].buffer, foo);
+                        char *foo = alloca((bundle_array[j].buffer.len *4)/3 + 1);
+                        memset(foo, 0, (bundle_array[j].buffer.len *4)/3 + 1);
+                        DBG2(DBG_ESP, "Length of buffer: %u", bundle_array[j].buffer.len);
+                        chunk_to_base64(bundle_array[j].buffer, foo);
                         DBG2(DBG_ESP, "Content of Buffer: %s", foo);
 
                         ip_packet_t *packet;
                         /* clone the buffer */
-                        chunk_t buffer_clone = chunk_clone (bundle_array[k].buffer);
+                        chunk_t buffer_clone = chunk_clone (bundle_array[j].buffer);
                         packet = ip_packet_create(buffer_clone);
                         if (packet)
                         {
@@ -497,15 +500,15 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                         /* Reset the overlapped structure, event and buffer */
                         /* Print out the package for debugging */
                         DBG2(DBG_ESP, "resetting OVERLAPPED");
-                        bundle_array[k].overlapped->Internal = 0;
-                        bundle_array[k].overlapped->InternalHigh = 0;
-                        bundle_array[k].overlapped->Offset = 0;
-                        bundle_array[k].overlapped->OffsetHigh = 0;
-                        bundle_array[k].overlapped->Pointer = NULL;
+                        bundle_array[j].overlapped->Internal = 0;
+                        bundle_array[j].overlapped->InternalHigh = 0;
+                        bundle_array[j].overlapped->Offset = 0;
+                        bundle_array[j].overlapped->OffsetHigh = 0;
+                        bundle_array[j].overlapped->Pointer = NULL;
                         /* Don't leak packets */
-                        memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
+                        memset(bundle_array[j].buffer.ptr, 0, bundle_array[j].buffer.len);
 
-                        bundle_array[k].overlapped->hEvent = event_array[k];
+                        bundle_array[j].overlapped->hEvent = event_array[j];
 
                         if (!start_read(&bundle_array[offset], bundle_array[offset].overlapped->hEvent))
                         {
@@ -513,17 +516,17 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                             *  Starts with 1 to skip over the dummy
                             */
                             DBG2(DBG_ESP, "Failed to start the new Read. Restarting job.");
-                            for(uint32_t k=1;k<i;k++)
+                            for(j=1;j<i;j++)
                             {
                                 /* stop all asynchronous IO */
                                 DBG2(DBG_ESP, "Index %d", k);
-                                CancelIo(bundle_array[k].fileHandle);
+                                CancelIo(bundle_array[j].fileHandle);
                                 DBG2(DBG_ESP, "Canceled IO.");
-                                CloseHandle(bundle_array[k].overlapped->hEvent);
+                                CloseHandle(bundle_array[j].overlapped->hEvent);
                                 DBG2(DBG_ESP, "Closed event.");
-                                memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
+                                memset(bundle_array[j].buffer.ptr, 0, bundle_array[j].buffer.len);
                                 DBG2(DBG_ESP, "Reset buffer.");
-                                free(bundle_array[k].buffer.ptr);
+                                free(bundle_array[j].buffer.ptr);
                             }
                             return JOB_REQUEUE_FAIR;
                         }
@@ -536,8 +539,8 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 
 #else
                 /* The arrays have the same length and the same positioning of the elements.
-                 * Therefore, if event_array[k] is signaled, the read on bundle_array[i].fileHandle has succeeded
-                 * and bundle_array[k].buffer has our data now.
+                 * Therefore, if event_array[j] is signaled, the read on bundle_array[i].fileHandle has succeeded
+                 * and bundle_array[j].buffer has our data now.
                  */
 
                 char foo[(bundle_array[offset].buffer.len *4)/3 + 1];
@@ -575,10 +578,10 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                     for(uint32_t k=1;k<i;k++)
                     {
                         /* stop all asynchronous IO */
-                        CancelIo(bundle_array[k].fileHandle);
-                        CloseHandle(bundle_array[k].overlapped->hEvent);
-                        memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
-                        free(bundle_array[k].buffer.ptr);
+                        CancelIo(bundle_array[j].fileHandle);
+                        CloseHandle(bundle_array[j].overlapped->hEvent);
+                        memset(bundle_array[j].buffer.ptr, 0, bundle_array[j].buffer.len);
+                        free(bundle_array[j].buffer.ptr);
                     }
                     this->lock->unlock(this->lock);
                     return JOB_REQUEUE_FAIR;
@@ -593,15 +596,15 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                 /* Cleanup
                  *  Starts with 1 to skip over the dummy
                  */
-                for(uint32_t k=1;k<i;k++)
+                for(j=1;j<i;j++)
                 {
                     /* stop all asynchronous IO */
-                    CancelIo(bundle_array[k].fileHandle);
-                    CloseHandle(bundle_array[k].overlapped->hEvent);
-                    memset(bundle_array[k].buffer.ptr, 0, bundle_array[k].buffer.len);
-                    free(bundle_array[k].buffer.ptr);
-                    ResetEvent(event_array[k]);
-                    CloseHandle(event_array[k]);
+                    CancelIo(bundle_array[j].fileHandle);
+                    CloseHandle(bundle_array[j].overlapped->hEvent);
+                    memset(bundle_array[j].buffer.ptr, 0, bundle_array[j].buffer.len);
+                    free(bundle_array[j].buffer.ptr);
+                    ResetEvent(event_array[j]);
+                    CloseHandle(event_array[j]);
                 }
                 this->lock->unlock(this->lock);
                 return JOB_REQUEUE_FAIR;
