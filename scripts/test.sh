@@ -60,7 +60,7 @@ win*)
 			--enable-updown --enable-ext-auth
 			--enable-tnccs-20 --enable-imc-attestation --enable-imv-attestation
 			--enable-imc-os --enable-imv-os --enable-tnc-imv --enable-tnc-imc
-			--enable-pki --enable-swanctl --enable-socket-win"
+			--enable-pki --enable-swanctl --enable-socket-win --enable-kernel-libipsec --enable-libipsec"
 	# no make check for Windows binaries
 	TARGET=
 	CFLAGS="$CFLAGS -mno-ms-bitfields"
