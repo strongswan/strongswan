@@ -41,7 +41,7 @@ EXTRA_DIST = \
     intltool-merge.in    \
     intltool-update.in
 
-CLEANFILES = $(appdata_DATA) *~
+CLEANFILES = $(nmvpnservice_DATA) $(appdata_DATA) *~
 DISTCLEANFILES = intltool-extract intltool-merge intltool-update
 
 ACLOCAL_AMFLAGS = -I m4
