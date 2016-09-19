@@ -16,7 +16,7 @@ appdata_in_files = NetworkManager-strongswan.appdata.xml.in
 # https://bugzilla.gnome.org/show_bug.cgi?id=693590
 install-data-hook:
 	mkdir -p $(DESTDIR)$(sysconfdir)/NetworkManager/VPN
-	sed -e "1s|^|# This file is obsoleted by a file in $(NM_VPN_SERVICE_DIR)\n\n|" \
+	sed -e "1s|^|# This file is obsoleted by a file in $(nmvpnservicedir)\n\n|" \
 	    -e 's|[@]NM_LIBEXECDIR[@]|$(nm_libexecdir)|g' \
 	    -e 's|[@]NM_PLUGINDIR[@]|$(nm_plugindir)|g' \
 	    -e 's|[@]NM_PLUGINDIR_ABS[@]|$(nm_plugindir)|g' \
