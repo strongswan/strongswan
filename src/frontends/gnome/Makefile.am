@@ -37,7 +37,6 @@ nm-strongswan-service.name: $(srcdir)/nm-strongswan-service.name.in
 EXTRA_DIST = \
     nm-strongswan-service.name.in  \
     $(appdata_in_files)  \
-    $(appdata_DATA)      \
     intltool-extract.in  \
     intltool-merge.in    \
     intltool-update.in
