@@ -17,11 +17,12 @@
 
 #include <tests/utils/test_rng.h>
 #include <utils/test.h>
-#include <crypto/mgf1/mgf1.h>
-#include <crypto/mgf1/mgf1_bitspender.h>
+#include <crypto/xofs/xof.h>
+#include <crypto/xofs/xof_bitspender.h>
+#include <crypto/xofs/mgf1.h>
 
 typedef struct {
-	hash_algorithm_t alg;
+	ext_out_function_t alg;
 	size_t hash_size;
 	size_t ml1, ml2, ml3, seed_len;
 	chunk_t seed;
@@ -34,7 +35,7 @@ typedef struct {
  * MGF1 Mask Generation Function Test Vectors
  */
 mgf1_test_t mgf1_tests[] = {
-	{	HASH_SHA1, 20, 60, 20, 15, 24,
+	{	XOF_MGF1_SHA1, 20, 60, 20, 15, 24,
 		chunk_from_chars(
 						0xED, 0xA5, 0xC3, 0xBC, 0xAF, 0xB3, 0x20, 0x7D,
 						0x14, 0xA1, 0x54, 0xF7, 0x8B, 0x37, 0xF2, 0x8D,
@@ -73,7 +74,7 @@ mgf1_test_t mgf1_tests[] = {
 		{ 0, 0, 0, 4, 1, 1, 46, 103, 38, 411, 848, 57, 3540, 4058, 12403,
 		  0x63, 0x2B, 0xC9, 0x17, 0x56, 669409, 0xA407A43B },
 	},
-	{	HASH_SHA256, 32, 64, 32, 33, 40,
+	{	XOF_MGF1_SHA256, 32, 64, 32, 33, 40,
 		chunk_from_chars(
 						0x52, 0xC5, 0xDD, 0x1E, 0xEF, 0x76, 0x1B, 0x53,
 						0x08, 0xE4, 0x86, 0x3F, 0x91, 0x12, 0x98, 0x69,
@@ -127,6 +128,7 @@ mgf1_test_t mgf1_tests[] = {
 
 START_TEST(mgf1_test_mgf1)
 {
+	xof_t *xof;
 	mgf1_t *mgf1;
 	chunk_t mask, mask1, mask2, mask3;
 
@@ -137,72 +139,88 @@ START_TEST(mgf1_test_mgf1)
 	mask2.len = mgf1_tests[_i].ml2;
 	mask3.len = mgf1_tests[_i].ml3;
 
-	mgf1 = mgf1_create(HASH_UNKNOWN, mgf1_tests[_i].seed, TRUE);
-	ck_assert(mgf1 == NULL);
+	/* unknown XOF */
+	xof = lib->crypto->create_xof(lib->crypto, XOF_UNDEFINED);
+	ck_assert(xof == NULL);
 
-	mgf1 = mgf1_create(mgf1_tests[_i].alg, chunk_empty, TRUE);
-	ck_assert(mgf1 == NULL);
+	/* create MGF1 XOF */
+	xof = lib->crypto->create_xof(lib->crypto, mgf1_tests[_i].alg);
+	ck_assert(xof);
 
-	/* return mask in allocated chunk */
-	mgf1 = mgf1_create(mgf1_tests[_i].alg, mgf1_tests[_i].seed, TRUE);
-	ck_assert(mgf1);
+	/* hash the seed */
+	mgf1 = (mgf1_t*)xof;
+	mgf1->set_hash_seed(mgf1, TRUE);
 
-	/* check hash size */
-	ck_assert(mgf1->get_hash_size(mgf1) == mgf1_tests[_i].hash_size);
+	/* check MGF1 type */
+	ck_assert(xof->get_type(xof) == mgf1_tests[_i].alg);
 
-	/* get zero number of octets */
-	ck_assert(mgf1->allocate_mask(mgf1, 0, &mask));
+	/* check seed size */
+	ck_assert(xof->get_seed_size(xof) == mgf1_tests[_i].hash_size);
+
+	/* check block size */
+	ck_assert(xof->get_block_size(xof) == mgf1_tests[_i].hash_size);
+
+	/* empty seed */
+	ck_assert(!xof->set_seed(xof, chunk_empty));
+
+	/* initialize MGF1 with non-empty seed */
+	ck_assert(xof->set_seed(xof, mgf1_tests[_i].seed));
+
+	/* allocate zero number of octets */
+	ck_assert(xof->allocate_bytes(xof, 0, &mask));
 	ck_assert(mask.len == 0 && mask.ptr == NULL);
 
-	/* get non-zero number of octets */
-	ck_assert(mgf1->allocate_mask(mgf1, mgf1_tests[_i].mask.len, &mask));
+	/* allocate non-zero number of octets */
+	ck_assert(xof->allocate_bytes(xof, mgf1_tests[_i].mask.len, &mask));
 	ck_assert(chunk_equals(mask, mgf1_tests[_i].mask));
-	mgf1->destroy(mgf1);
+
+	/* re-initialize MGF1 with non-empty seed */
+	ck_assert(xof->set_seed(xof, mgf1_tests[_i].seed));
 
 	/* copy mask to pre-allocated buffer */
-	mgf1 = mgf1_create(mgf1_tests[_i].alg, mgf1_tests[_i].seed, TRUE);
-	ck_assert(mgf1);
-	ck_assert(mgf1->get_mask(mgf1, mgf1_tests[_i].mask.len, mask.ptr));
+	ck_assert(xof->get_bytes(xof, mgf1_tests[_i].mask.len, mask.ptr));
 	ck_assert(chunk_equals(mask, mgf1_tests[_i].mask));
-	mgf1->destroy(mgf1);
 
-	/* get mask in batches without hashing the seed */
-	mgf1 = mgf1_create(mgf1_tests[_i].alg, mgf1_tests[_i].hashed_seed, FALSE);
-	ck_assert(mgf1);
+	/* do not hash the seed */
+	mgf1->set_hash_seed(mgf1, FALSE);
+
+	/* re-initialize MGF1 with non-empty seed */
+	ck_assert(xof->set_seed(xof, mgf1_tests[_i].hashed_seed));
 
 	/* first batch */
-	ck_assert(mgf1->get_mask(mgf1, mask1.len, mask.ptr));
+	ck_assert(xof->get_bytes(xof, mask1.len, mask.ptr));
 	mask.len = mask1.len;
 	ck_assert(chunk_equals(mask, mask1));
 
 	/* second batch */
-	ck_assert(mgf1->get_mask(mgf1, mask2.len, mask.ptr));
+	ck_assert(xof->get_bytes(xof, mask2.len, mask.ptr));
 	mask.len = mask2.len;
 	ck_assert(chunk_equals(mask, mask2));
 
 	/* third batch */
-	ck_assert(mgf1->get_mask(mgf1, mask3.len, mask.ptr));
+	ck_assert(xof->get_bytes(xof, mask3.len, mask.ptr));
 	mask.len = mask3.len;
 	ck_assert(chunk_equals(mask, mask3));
 
-	mgf1->destroy(mgf1);
+	/* clean up */
+	xof->destroy(xof);
 	chunk_free(&mask);
 }
 END_TEST
 
 START_TEST(mgf1_test_bitspender)
 {
-	mgf1_bitspender_t *bitspender;
+	xof_bitspender_t *bitspender;
 	uint32_t bits;
 	uint8_t byte;
 	int j;
 
-	bitspender = mgf1_bitspender_create(HASH_UNKNOWN,
-										mgf1_tests[_i].hashed_seed, FALSE);
+	bitspender = xof_bitspender_create(XOF_UNDEFINED,
+									   mgf1_tests[_i].hashed_seed, FALSE);
 	ck_assert(bitspender == NULL);
 
-	bitspender = mgf1_bitspender_create(mgf1_tests[_i].alg,
-										mgf1_tests[_i].hashed_seed, FALSE);
+	bitspender = xof_bitspender_create(mgf1_tests[_i].alg,
+									   mgf1_tests[_i].hashed_seed, FALSE);
 	ck_assert(bitspender);
 
 	for (j = 0; j < 15; j++)

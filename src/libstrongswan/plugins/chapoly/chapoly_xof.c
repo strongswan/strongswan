@@ -44,6 +44,12 @@ struct private_chapoly_xof_t {
 	chapoly_drv_t *drv;
 };
 
+METHOD(xof_t, get_type, ext_out_function_t,
+	private_chapoly_xof_t *this)
+{
+	return XOF_CHACHA20;
+}
+
 METHOD(xof_t, get_bytes, bool,
 	private_chapoly_xof_t *this, size_t out_len, uint8_t *buffer)
 {
@@ -53,7 +59,7 @@ METHOD(xof_t, get_bytes, bool,
 	len = min(out_len, CHACHA_BLOCK_SIZE - this->stream_index);
 	if (len)
 	{
-		memcpy(buffer + index, this->stream + this->stream_index, len);
+		memcpy(buffer, this->stream + this->stream_index, len);
 		index += len;
 		this->stream_index += len;
 	}
@@ -151,6 +157,7 @@ chapoly_xof_t *chapoly_xof_create(ext_out_function_t algorithm)
 	INIT(this,
 		.public = {
 			.xof_interface = {
+				.get_type = _get_type,
 				.get_bytes = _get_bytes,
 				.allocate_bytes = _allocate_bytes,
 				.get_block_size = _get_block_size,

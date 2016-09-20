@@ -31,16 +31,16 @@ typedef struct xof_t xof_t;
  */
 enum ext_out_function_t {
 	XOF_UNDEFINED,
-	/** FIPS 202 */
-	XOF_SHAKE_128,
-	/** FIPS 202 */
-	XOF_SHAKE_256,
 	/** RFC 2437 PKCS#1 */
 	XOF_MGF1_SHA1,
 	/** RFC 2437 PKCS#1 */
 	XOF_MGF1_SHA256,
 	/** RFC 2437 PKCS#1 */
 	XOF_MGF1_SHA512,
+	/** FIPS 202 */
+	XOF_SHAKE_128,
+	/** FIPS 202 */
+	XOF_SHAKE_256,
 	/** RFC 7539 ChaCha20 */
 	XOF_CHACHA20,
 };
@@ -51,9 +51,16 @@ enum ext_out_function_t {
 extern enum_name_t *ext_out_function_names;
 
 /**
- * Generic interface for pseudo-random-functions.
+ * Generic interface for Extended Output Function (XOF)
  */
 struct xof_t {
+
+	/**
+	 * Return the type of the Extended Output Function
+	 *
+	 * @return			XOF type
+	 */
+	ext_out_function_t (*get_type)(xof_t *this);
 
 	/**
 	 * Generates pseudo random bytes and writes them in the buffer.

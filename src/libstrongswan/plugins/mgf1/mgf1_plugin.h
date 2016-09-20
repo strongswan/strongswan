@@ -13,15 +13,30 @@
  * for more details.
  */
 
-#include "xof.h"
+/**
+ * @defgroup mgf1_p mgf1
+ * @ingroup plugins
+ *
+ * @defgroup mgf1_plugin mgf1_plugin
+ * @{ @ingroup mgf1_p
+ */
 
-ENUM(ext_out_function_names, XOF_UNDEFINED, XOF_CHACHA20,
-	"XOF_UNDEFINED",
-	"XOF_MGF1_SHA1",
-	"XOF_MGF1_SHA256",
-	"XOF_MGF1_SHA512",
-	"XOF_SHAKE128",
-	"XOF_SHAKE256",
-	"XOF_CHACHA20"
-);
+#ifndef MGF1_PLUGIN_H_
+#define MGF1_PLUGIN_H_
 
+#include <plugins/plugin.h>
+
+typedef struct mgf1_plugin_t mgf1_plugin_t;
+
+/**
+ * Plugin implementing the MGF1 Mask Generator Function in software.
+ */
+struct mgf1_plugin_t {
+
+	/**
+	 * implements plugin interface
+	 */
+	plugin_t plugin;
+};
+
+#endif /** MGF1_PLUGIN_H_ @}*/

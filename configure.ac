@@ -149,6 +149,7 @@ ARG_DISBL_SET([sha1],           [disable SHA1 software implementation plugin.])
 ARG_DISBL_SET([sha2],           [disable SHA256/SHA384/SHA512 software implementation plugin.])
 ARG_ENABL_SET([sha3],           [enable SHA3_224/SHA3_256/SHA3_384/SHA3_512 software implementation plugin.])
 ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
+ARG_ENABL_SET([mgf1],           [enables the MGF1 software implementation plugin.])
 # encoding/decoding plugins
 ARG_DISBL_SET([dnskey],         [disable DNS RR key decoding plugin.])
 ARG_DISBL_SET([pem],            [disable PEM decoding plugin.])
@@ -463,6 +464,10 @@ fi
 
 if test x$aikpub2 = xtrue; then
 	tss_tss2=true
+fi
+
+if test x$ntru = xtrue -o x$bliss = xtrue; then
+	mgf1=true
 fi
 
 # ===========================================
@@ -1327,6 +1332,7 @@ ADD_PLUGIN([sha3],                 [s charon scepclient pki scripts medsrv attes
 ADD_PLUGIN([sha1],                 [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([md4],                  [s charon scepclient pki nm cmd])
 ADD_PLUGIN([md5],                  [s charon scepclient pki scripts attest nm cmd aikgen])
+ADD_PLUGIN([mgf1],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([rdrand],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([random],               [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([nonce],                [s charon nm cmd aikgen])
@@ -1482,6 +1488,7 @@ AM_CONDITIONAL(USE_MD5, test x$md5 = xtrue)
 AM_CONDITIONAL(USE_SHA1, test x$sha1 = xtrue)
 AM_CONDITIONAL(USE_SHA2, test x$sha2 = xtrue)
 AM_CONDITIONAL(USE_SHA3, test x$sha3 = xtrue)
+AM_CONDITIONAL(USE_MGF1, test x$mgf1 = xtrue)
 AM_CONDITIONAL(USE_FIPS_PRF, test x$fips_prf = xtrue)
 AM_CONDITIONAL(USE_GMP, test x$gmp = xtrue)
 AM_CONDITIONAL(USE_RDRAND, test x$rdrand = xtrue)
@@ -1738,6 +1745,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/sha1/Makefile
 	src/libstrongswan/plugins/sha2/Makefile
 	src/libstrongswan/plugins/sha3/Makefile
+	src/libstrongswan/plugins/mgf1/Makefile
 	src/libstrongswan/plugins/fips_prf/Makefile
 	src/libstrongswan/plugins/gmp/Makefile
 	src/libstrongswan/plugins/rdrand/Makefile

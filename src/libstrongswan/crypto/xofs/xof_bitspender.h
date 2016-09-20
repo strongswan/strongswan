@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,22 +14,24 @@
  */
 
 /**
- * @defgroup mgf1_bitspender mgf1_bitspender
+ * @defgroup xof_bitspender xof_bitspender
  * @{ @ingroup mgf1
  */
 
-#ifndef MGF1_BITSPENDER_H_
-#define MGF1_BITSPENDER_H_
+#ifndef XOF_BITSPENDER_H_
+#define XOF_BITSPENDER_H_
+
+#include "xof.h"
 
 #include <library.h>
-#include <crypto/hashers/hasher.h>
 
-typedef struct mgf1_bitspender_t mgf1_bitspender_t;
+typedef struct xof_bitspender_t xof_bitspender_t;
 
 /**
- * Generates a given number of pseudo-random bits at a time using MGF1
+ * Generates a given number of pseudo-random bits at a time using an
+ * Extended Output Function (XOF)
  */
-struct mgf1_bitspender_t {
+struct xof_bitspender_t {
 
 	/**
 	 * Get pseudo-random bits
@@ -38,7 +40,7 @@ struct mgf1_bitspender_t {
 	 * @param bits			Pseudo-random bits
 	 * @result				FALSE if internal MGF1 error occurred
 	 */
-	bool (*get_bits)(mgf1_bitspender_t *this, int bits_needed, uint32_t *bits);
+	bool (*get_bits)(xof_bitspender_t *this, int bits_needed, uint32_t *bits);
 
 	/**
 	 * Get a pseudo-random byte
@@ -46,22 +48,22 @@ struct mgf1_bitspender_t {
 	 * @param byte			Pseudo-random byte
 	 * @result				FALSE if internal MGF1 error occurred
 	 */
-	bool (*get_byte)(mgf1_bitspender_t *this, uint8_t *byte);
+	bool (*get_byte)(xof_bitspender_t *this, uint8_t *byte);
 
 	/**
-	 * Destroy mgf1_bitspender_t object
+	 * Destroy xof_bitspender_t object
 	 */
-	void (*destroy)(mgf1_bitspender_t *this);
+	void (*destroy)(xof_bitspender_t *this);
 };
 
 /**
- * Create a mgf1_bitspender_t object
+ * Create a xof_bitspender_t object
  *
- * @param alg				Hash algorithm to be used with MGF1
- * @param seed				Seed used to initialize MGF1
+ * @param alg				XOF to be used
+ * @param seed				Seed used to initialize XOF
  * @param hash_seed			Hash seed before using it as a seed for MFG1
  */
-mgf1_bitspender_t *mgf1_bitspender_create(hash_algorithm_t alg, chunk_t seed,
-										  bool hash_seed);
+xof_bitspender_t *xof_bitspender_create(ext_out_function_t alg, chunk_t seed,
+										bool hash_seed);
 
-#endif /** MGF1_BITSPENDER_H_ @}*/
+#endif /** XOF_BITSPENDER_H_ @}*/

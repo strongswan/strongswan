@@ -17,7 +17,7 @@
 
 #include <tests/utils/test_rng.h>
 #include <utils/test.h>
-#include <crypto/mgf1/mgf1.h>
+#include <crypto/xofs/xof.h>
 #include <plugins/ntru/ntru_drbg.h>
 #include <plugins/ntru/ntru_trits.h>
 #include <plugins/ntru/ntru_poly.h>
@@ -28,10 +28,10 @@ IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_drbg_create, ntru_drbg_t*,
 						  uint32_t strength, chunk_t pers_str, rng_t *entropy)
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_trits_create, ntru_trits_t*,
-						  size_t len, hash_algorithm_t alg, chunk_t seed)
+						  size_t len, ext_out_function_t alg, chunk_t seed)
 
 IMPORT_FUNCTION_FOR_TESTS(ntru, ntru_poly_create_from_seed, ntru_poly_t*,
-						  hash_algorithm_t alg, chunk_t seed, uint8_t c_bits,
+						  ext_out_function_t alg, chunk_t seed, uint8_t c_bits,
 						  uint16_t N, uint16_t q, uint32_t indices_len_p,
 						  uint32_t indices_len_m, bool is_product_form)
 
@@ -329,7 +329,7 @@ typedef struct {
 } poly_test_t;
 
 typedef struct {
-	hash_algorithm_t alg;
+	ext_out_function_t alg;
 	size_t hash_size;
 	size_t seed_len;
 	chunk_t seed;
@@ -384,7 +384,7 @@ uint16_t indices_ees1171ep1[] = {
  * Trits and Polynomial Test Vectors
  */
 static trits_test_t trits_tests[] = {
-	{	HASH_SHA1, 20, 24,
+	{	XOF_MGF1_SHA1, 20, 24,
 		chunk_from_chars(
 						0xED, 0xA5, 0xC3, 0xBC, 0xAF, 0xB3, 0x20, 0x7D,
 						0x14, 0xA1, 0x54, 0xF7, 0x8B, 0x37, 0xF2, 0x8D,
@@ -432,7 +432,7 @@ static trits_test_t trits_tests[] = {
 			}
 		}
 	},
-	{	HASH_SHA256, 32, 40,
+	{	XOF_MGF1_SHA256, 32, 40,
 		chunk_from_chars(
 						0x52, 0xC5, 0xDD, 0x1E, 0xEF, 0x76, 0x1B, 0x53,
 						0x08, 0xE4, 0x86, 0x3F, 0x91, 0x12, 0x98, 0x69,
@@ -501,7 +501,7 @@ START_TEST(test_ntru_trits)
 	chunk_t trits;
 
 	mask = TEST_FUNCTION(ntru, ntru_trits_create, trits_tests[_i].trits.len,
-						 HASH_UNKNOWN, trits_tests[_i].seed);
+						 XOF_UNDEFINED, trits_tests[_i].seed);
 	ck_assert(mask == NULL);
 
 	mask = TEST_FUNCTION(ntru, ntru_trits_create, trits_tests[_i].trits.len,
@@ -539,7 +539,7 @@ START_TEST(test_ntru_poly)
 	seed.len = trits_tests[_i].seed_len;
 
 	p = &trits_tests[_i].poly_test[0];
-	poly = TEST_FUNCTION(ntru, ntru_poly_create_from_seed, HASH_UNKNOWN, seed,
+	poly = TEST_FUNCTION(ntru, ntru_poly_create_from_seed, XOF_UNDEFINED, seed,
 						 p->c_bits, p->N, p->q, p->indices_len, p->indices_len,
 						 p->is_product_form);
 	ck_assert(poly == NULL);

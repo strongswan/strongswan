@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2013-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -16,7 +16,7 @@
 #include "ntru_trits.h"
 #include "ntru_convert.h"
 
-#include <crypto/mgf1/mgf1_bitspender.h>
+#include <crypto/xofs/xof_bitspender.h>
 #include <utils/debug.h>
 #include <utils/test.h>
 
@@ -67,14 +67,15 @@ METHOD(ntru_trits_t, destroy, void,
 /*
  * Described in header.
  */
-ntru_trits_t *ntru_trits_create(size_t len, hash_algorithm_t alg, chunk_t seed)
+ntru_trits_t *ntru_trits_create(size_t len, ext_out_function_t alg,
+								chunk_t seed)
 {
 	private_ntru_trits_t *this;
 	uint8_t octet, buf[5], *trits;
 	size_t trits_needed;
-	mgf1_bitspender_t *bitspender;
+	xof_bitspender_t *bitspender;
 
-	bitspender = mgf1_bitspender_create(alg, seed, TRUE);
+	bitspender = xof_bitspender_create(alg, seed, TRUE);
 	if (!bitspender)
 	{
 	    return NULL;
