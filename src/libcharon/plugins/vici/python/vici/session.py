@@ -166,7 +166,7 @@ class Session(object):
         """
         self.handler.request("load-shared", secret)
 
-     def flush_certs(self, filter=None):
+    def flush_certs(self, filter=None):
         """Flush the volatile certificate cache.
 
         Flush the certificate stored temporarily in the cache. The filter
