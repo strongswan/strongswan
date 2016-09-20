@@ -37,11 +37,7 @@ all)
 			--disable-systemd --disable-soup --disable-unwind-backtraces
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
-	if test "$MONOLITHIC" = "yes"; then
-		# Ubuntu 12.04 does not provide a proper -liptc pkg-config
-		CONFIG="$CONFIG --disable-forecast --disable-connmark"
-	fi
-	# Ubuntu 12.04 does not provide libtss2-dev
+	# Ubuntu 14.04 does provide a too old libtss2-dev
 	CONFIG="$CONFIG --disable-aikpub2 --disable-tss-tss2"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
