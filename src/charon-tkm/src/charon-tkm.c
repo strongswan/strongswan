@@ -373,6 +373,7 @@ int main(int argc, char *argv[])
 	run();
 
 	unlink_pidfile();
+	free(pidfile_name);
 	status = 0;
 	charon->bus->remove_listener(charon->bus, &listener->listener);
 	listener->destroy(listener);
@@ -382,7 +383,7 @@ int main(int argc, char *argv[])
 deinit:
 	destroy_dh_mapping();
 	libcharon_deinit();
-	library_deinit();
 	tkm_deinit();
+	library_deinit();
 	return status;
 }
