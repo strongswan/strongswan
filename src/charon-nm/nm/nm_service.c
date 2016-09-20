@@ -23,7 +23,6 @@
 #include <utils/identification.h>
 #include <config/peer_cfg.h>
 #include <credentials/certificates/x509.h>
-#include <networking/tun_device.h>
 
 #include <stdio.h>
 
@@ -43,8 +42,6 @@ typedef struct {
 	nm_creds_t *creds;
 	/* attribute handler for DNS/NBNS server information */
 	nm_handler_t *handler;
-	/* dummy TUN device */
-	tun_device_t *tun;
 	/* name of the connection */
 	char *name;
 } NMStrongswanPluginPrivate;
@@ -100,14 +97,6 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 	other = ike_sa->get_other_host(ike_sa);
 	g_value_set_uint (val, *(uint32_t*)other->get_address(other).ptr);
 	g_hash_table_insert (config, NM_VPN_PLUGIN_IP4_CONFIG_EXT_GATEWAY, val);
-
-	/* NM requires a tundev, but netkey does not use one. Passing the physical
-	 * interface does not work, as NM fiddles around with it. So we pass a dummy
-	 * TUN device along for NM to play with... */
-	val = g_slice_new0 (GValue);
-	g_value_init (val, G_TYPE_STRING);
-	g_value_set_string (val, priv->tun->get_name(priv->tun));
-	g_hash_table_insert (config, NM_VPN_PLUGIN_IP4_CONFIG_TUNDEV, val);
 
 	/* NM installs this IP address on the interface above, so we use the VIP if
 	 * we got one.
@@ -343,12 +332,6 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		 priv->name);
 	DBG4(DBG_CFG, "%s",
 		 nm_setting_to_string(NM_SETTING(vpn)));
-	if (!priv->tun)
-	{
-		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
-					"Failed to create dummy TUN device.");
-		return FALSE;
-	}
 	address = nm_setting_vpn_get_data_item(vpn, "address");
 	if (!address || !*address)
 	{
@@ -739,25 +722,7 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 	memset(&priv->listener, 0, sizeof(listener_t));
 	priv->listener.child_updown = child_updown;
 	priv->listener.ike_rekey = ike_rekey;
-	priv->tun = tun_device_create(NULL);
 	priv->name = NULL;
-}
-
-/**
- * Destructor
- */
-static void nm_strongswan_plugin_dispose(GObject *obj)
-{
-	NMStrongswanPlugin *plugin;
-	NMStrongswanPluginPrivate *priv;
-
-	plugin = NM_STRONGSWAN_PLUGIN(obj);
-	priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
-	if (priv->tun)
-	{
-		priv->tun->destroy(priv->tun);
-		priv->tun = NULL;
-	}
 }
 
 /**
@@ -773,7 +738,6 @@ static void nm_strongswan_plugin_class_init(
 	parent_class->connect = connect_;
 	parent_class->need_secrets = need_secrets;
 	parent_class->disconnect = disconnect;
-	G_OBJECT_CLASS(strongswan_class)->dispose = nm_strongswan_plugin_dispose;
 }
 
 /**
