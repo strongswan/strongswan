@@ -175,13 +175,13 @@ void library_deinit()
 		this->public.integrity->destroy(this->public.integrity);
 	}
 
-#ifdef LEAK_DETECTIVE
 	if (lib->leak_detective)
 	{
 		lib->leak_detective->report(lib->leak_detective, detailed);
 		lib->leak_detective->destroy(lib->leak_detective);
 		lib->leak_detective = NULL;
 	}
+#ifdef LEAK_DETECTIVE
 	if (this->ld_out && this->ld_out != stderr)
 	{
 		fclose(this->ld_out);
