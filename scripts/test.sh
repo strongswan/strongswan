@@ -159,7 +159,7 @@ apidoc)
 esac
 
 echo "$ make $TARGET"
-make -j4 $TARGET
+make -j4 $TARGET || exit $?
 
 case "$TEST" in
 apidoc)
