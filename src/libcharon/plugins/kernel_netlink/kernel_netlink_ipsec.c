@@ -3046,6 +3046,110 @@ METHOD(kernel_ipsec_t, destroy, void,
 	free(this);
 }
 
+/**
+ * Get the currently configured SPD hashing thresholds for an address family
+ */
+static bool get_spd_hash_thresh(private_kernel_netlink_ipsec_t *this,
+								int type, uint8_t *lbits, uint8_t *rbits)
+{
+	netlink_buf_t request;
+	struct nlmsghdr *hdr, *out;
+	struct xfrmu_spdhthresh *thresh;
+	struct rtattr *rta;
+	size_t len, rtasize;
+	bool success = FALSE;
+
+	memset(&request, 0, sizeof(request));
+
+	hdr = &request.hdr;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_type = XFRM_MSG_GETSPDINFO;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(uint32_t));
+
+	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
+	{
+		hdr = out;
+		while (NLMSG_OK(hdr, len))
+		{
+			switch (hdr->nlmsg_type)
+			{
+				case XFRM_MSG_NEWSPDINFO:
+				{
+					rta = XFRM_RTA(hdr, uint32_t);
+					rtasize = XFRM_PAYLOAD(hdr, uint32_t);
+					while (RTA_OK(rta, rtasize))
+					{
+						if (rta->rta_type == type &&
+							RTA_PAYLOAD(rta) == sizeof(*thresh))
+						{
+							thresh = RTA_DATA(rta);
+							*lbits = thresh->lbits;
+							*rbits = thresh->rbits;
+							success = TRUE;
+							break;
+						}
+						rta = RTA_NEXT(rta, rtasize);
+					}
+					break;
+				}
+				case NLMSG_ERROR:
+				{
+					struct nlmsgerr *err = NLMSG_DATA(hdr);
+					DBG1(DBG_KNL, "getting SPD hash threshold failed: %s (%d)",
+						 strerror(-err->error), -err->error);
+					break;
+				}
+				default:
+					hdr = NLMSG_NEXT(hdr, len);
+					continue;
+				case NLMSG_DONE:
+					break;
+			}
+			break;
+		}
+		free(out);
+	}
+	return success;
+}
+
+/**
+ * Configure SPD hashing threshold for an address family
+ */
+static void setup_spd_hash_thresh(private_kernel_netlink_ipsec_t *this,
+								  char *key, int type, uint8_t def)
+{
+	struct xfrmu_spdhthresh *thresh;
+	struct nlmsghdr *hdr;
+	netlink_buf_t request;
+	uint8_t lbits, rbits;
+
+	if (!get_spd_hash_thresh(this, type, &lbits, &rbits))
+	{
+		return;
+	}
+	memset(&request, 0, sizeof(request));
+
+	hdr = &request.hdr;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = XFRM_MSG_NEWSPDINFO;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(uint32_t));
+
+	thresh = netlink_reserve(hdr, sizeof(request), type, sizeof(*thresh));
+	thresh->lbits = lib->settings->get_int(lib->settings,
+							"%s.plugins.kernel-netlink.spdh_thresh.%s.lbits",
+							def, lib->ns, key);
+	thresh->rbits = lib->settings->get_int(lib->settings,
+							"%s.plugins.kernel-netlink.spdh_thresh.%s.rbits",
+							def, lib->ns, key);
+	if (thresh->lbits != lbits || thresh->rbits != rbits)
+	{
+		if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "setting SPD hash threshold failed");
+		}
+	}
+}
+
 /*
  * Described in header.
  */
@@ -3115,6 +3219,9 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		destroy(this);
 		return NULL;
 	}
+
+	setup_spd_hash_thresh(this, "ipv4", XFRMA_SPD_IPV4_HTHRESH, 32);
+	setup_spd_hash_thresh(this, "ipv6", XFRMA_SPD_IPV6_HTHRESH, 128);
 
 	if (register_for_events)
 	{
