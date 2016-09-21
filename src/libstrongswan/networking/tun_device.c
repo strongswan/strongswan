@@ -146,7 +146,7 @@ struct private_tun_device_t {
  * It returns a linked list that contains all found guids. The guids describe the interfaces.
  */
 
-linked_list_t *get_tap_reg()
+linked_list_t *find_tap_devices()
 {
     char enum_name[256], unit_string[256],
     instance_id[256], component_id[256],
@@ -169,89 +169,93 @@ linked_list_t *get_tap_reg()
             KEY_READ,
             &adapter_key);
 
-    if (status != ERROR_SUCCESS)
+    if (status == ERROR_SUCCESS)
     {
-        DBG2(DBG_LIB, "Error opening registry key: %s", ADAPTER_KEY);
-    }
-
-    while (TRUE)
-    {
-        len = sizeof (enum_name);
-        status = RegEnumKeyEx(
-                adapter_key,
-                i,
-                enum_name,
-                &len,
-                NULL,
-                NULL,
-                NULL,
-                NULL);
-        if (status == ERROR_NO_MORE_ITEMS)
+        while (TRUE)
         {
-            break;
-        }
-        else if (status != ERROR_SUCCESS)
-        {
-            DBG2(DBG_LIB, "Error enumerating registry subkeys of key: %s",
-                    ADAPTER_KEY);
-        }
-
-        snprintf(unit_string, sizeof (unit_string), "%s\\%s",
-                ADAPTER_KEY, enum_name);
-
-        status = RegOpenKeyEx(
-                HKEY_LOCAL_MACHINE,
-                unit_string,
-                0,
-                KEY_READ,
-                &unit_key);
-
-        if (status != ERROR_SUCCESS)
-        {
-            DBG2(DBG_LIB, "Error opening registry key: %s", unit_string);
-        }
-        else
-        {
-            len = sizeof (component_id);
-            status = RegQueryValueEx(
-                    unit_key,
-                    component_id_string,
+            len = sizeof (enum_name);
+            status = RegEnumKeyEx(
+                    adapter_key,
+                    i,
+                    enum_name,
+                    &len,
                     NULL,
-                    &type,
-                    component_id,
-                    &len);
-
-            if (status != ERROR_SUCCESS || type != REG_SZ)
+                    NULL,
+                    NULL,
+                    NULL);
+            if (status == ERROR_SUCCESS)
             {
-                DBG2(DBG_LIB, "Error opening registry key: %s\\%s",
-                        unit_string, component_id_string);
+                snprintf(unit_string, sizeof (unit_string), "%s\\%s",
+                        ADAPTER_KEY, enum_name);
+
+                status = RegOpenKeyEx(
+                        HKEY_LOCAL_MACHINE,
+                        unit_string,
+                        0,
+                        KEY_READ,
+                        &unit_key);
+
+                if (status == ERROR_SUCCESS)
+                {
+                    len = sizeof (component_id);
+                    status = RegQueryValueEx(
+                            unit_key,
+                            component_id_string,
+                            NULL,
+                            &type,
+                            component_id,
+                            &len);
+
+                    if (status == ERROR_SUCCESS && type == REG_SZ)
+                    {
+                        len = sizeof (instance_id);
+                        status = RegQueryValueEx(
+                                unit_key,
+                                instance_id_string,
+                                NULL,
+                                &type,
+                                instance_id,
+                                &len);
+
+                        if (status == ERROR_SUCCESS && type == REG_SZ)
+                        {
+                            if (!strcmp(component_id, TAP_WIN_COMPONENT_ID))
+                            {
+                                /* That thing is a valid interface key */
+                                /* link into return list */
+                                char *guid = malloc(sizeof(instance_id));
+                                memcpy(guid, instance_id, sizeof(instance_id));
+                                list->insert_last(list, guid);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        DBG2(DBG_LIB, "Error opening registry key: %s\\%s",
+                                unit_string, component_id_string);
+                    }
+                    RegCloseKey(unit_key);
+                }
+                else if (status != ERROR_SUCCESS)
+                {
+                    DBG2(DBG_LIB, "Error opening registry key: %s", unit_string);
+                }
+                i++;
+            }
+            else if (status == ERROR_NO_MORE_ITEMS)
+            {
+                break;
             }
             else
             {
-                len = sizeof (instance_id);
-                status = RegQueryValueEx(
-                        unit_key,
-                        instance_id_string,
-                        NULL,
-                        &type,
-                        instance_id,
-                        &len);
-
-                if (status == ERROR_SUCCESS && type == REG_SZ)
-                {
-                    if (!strcmp(component_id, TAP_WIN_COMPONENT_ID))
-                    {
-                        /* That thing is a valid interface key */
-                        /* link into return list */
-                        char *guid = malloc(sizeof(instance_id));
-                        memcpy(guid, instance_id, sizeof(instance_id));
-                        list->insert_last(list, guid);
-                    }
-                }
+                DBG2(DBG_LIB, "Error enumerating registry subkeys of key: %s",
+                        ADAPTER_KEY);
             }
-            RegCloseKey(unit_key);
         }
-        ++i;
+    }
+    else
+    {
+        DBG2(DBG_LIB, "Error opening registry key: %s", ADAPTER_KEY);
     }
 
     RegCloseKey(adapter_key);
@@ -924,7 +928,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         char *guid;
         BOOL success = FALSE;
         /* Get all existing TAP devices */
-        linked_list_t *possible_devices = get_tap_reg();
+        linked_list_t *possible_devices = find_tap_devices();
         memset(this->if_name, 0, sizeof(this->if_name));
 
         /* Iterate over list */
