@@ -5,7 +5,13 @@ strongswan-5.5.1
   proposed in their 2015 paper by Erdem Alkim, Léo Ducas, Thomas Pöppelmann and
   Peter Schwabe.
 
-- The VICI flush-certs commands flushes certificates from the volatile
+- The libstrongswan crypto factory now offers the registration of Extended
+  Output Functions (XOFs). Currently supported XOFs are SHAKE128 and SHAKE256
+  implemented by the sha3 plugin, ChaCHa20 implemented by the chapoly plugin
+  and the more traditional MGF1 Mask Generation Functions based on the SHA-1,
+  SHA-256 and SHA-512 hash algorithms implemented by the new mgf1 plugin.
+
+- The VICI flush-certs command flushes certificates from the volatile
   certificate cache. Optionally the type of the certificates to be
   flushed  (e.g. type = x509_crl) can be specified.
 
