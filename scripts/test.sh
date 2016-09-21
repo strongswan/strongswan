@@ -63,7 +63,7 @@ win*)
 			--enable-pki --enable-swanctl --enable-socket-win --enable-kernel-libipsec --enable-libipsec"
 	# no make check for Windows binaries
 	TARGET=
-	CFLAGS="$CFLAGS -mno-ms-bitfields -g -O2 -Wall -Werror -Wno-pointer-sign -Wno-format-security -Wno-format"
+	CFLAGS="$CFLAGS -mno-ms-bitfields"
 	DEPS="gcc-mingw-w64-base mingw-w64-dev"
 	case "$TEST" in
 	win64)
