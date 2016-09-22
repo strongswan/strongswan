@@ -208,6 +208,24 @@ static inline void register_logger(private_bus_t *this, debug_t group,
 }
 
 /**
+ * Find the log level of the first registered logger that implements log or
+ * vlog (or both).
+ */
+static bool find_max_levels(log_entry_t *entry, debug_t *group, level_t *level,
+							level_t *vlevel)
+{
+	if (entry->logger->log && *level == LEVEL_SILENT)
+	{
+		*level = entry->levels[*group];
+	}
+	if (entry->logger->vlog && *vlevel == LEVEL_SILENT)
+	{
+		*vlevel = entry->levels[*group];
+	}
+	return *level > LEVEL_SILENT && *vlevel > LEVEL_SILENT;
+}
+
+/**
  * Unregister a logger from all log groups (destroys the log_entry_t)
  */
 static inline void unregister_logger(private_bus_t *this, logger_t *logger)
@@ -240,18 +258,8 @@ static inline void unregister_logger(private_bus_t *this, logger_t *logger)
 			{
 				loggers = this->loggers[group];
 				loggers->remove(loggers, found, NULL);
-
-				if (loggers->get_first(loggers, (void**)&entry) == SUCCESS)
-				{
-					if (entry->logger->log)
-					{
-						level = entry->levels[group];
-					}
-					if (entry->logger->vlog)
-					{
-						vlevel = entry->levels[group];
-					}
-				}
+				loggers->find_first(loggers, (linked_list_match_t)find_max_levels, NULL,
+									&group, &level, &vlevel);
 				set_level(&this->max_level[group], level);
 				set_level(&this->max_vlevel[group], vlevel);
 			}
