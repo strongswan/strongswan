@@ -1,7 +1,7 @@
 /*
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2008 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -327,7 +327,7 @@ static private_openssl_rsa_private_key_t *create_empty()
 	return this;
 }
 
-/**
+/*
  * See header.
  */
 openssl_rsa_private_key_t *openssl_rsa_private_key_gen(key_type_t type,
@@ -383,7 +383,26 @@ error:
 	return NULL;
 }
 
-/**
+/*
+ * See header
+ */
+private_key_t *openssl_rsa_private_key_create(EVP_PKEY *key)
+{
+	private_openssl_rsa_private_key_t *this;
+	RSA *rsa;
+
+	rsa = EVP_PKEY_get1_RSA(key);
+	EVP_PKEY_free(key);
+	if (!rsa)
+	{
+		return NULL;
+	}
+	this = create_empty();
+	this->rsa = rsa;
+	return &this->public.key;
+}
+
+/*
  * See header
  */
 openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
@@ -528,7 +547,7 @@ static bool login(ENGINE *engine, chunk_t keyid)
 }
 #endif /* OPENSSL_NO_ENGINE */
 
-/**
+/*
  * See header.
  */
 openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
