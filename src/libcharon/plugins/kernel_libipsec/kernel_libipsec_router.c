@@ -342,10 +342,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 
         tun_device_handle_overlapped_buffer.fileHandle = tun_device->get_handle(tun_device);
         tun_device_handle_overlapped_buffer.overlapped = overlapped;
-        /* Fill in code */
-        /*
-        tun_device_handle_overlapped_buffer.overlapped->hEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, this->tun.tun->get_read_event_name(this->tun.tun));
-        */
+        
         tun_device_handle_overlapped_buffer.overlapped->hEvent= tun_device_event;
         if (tun_device_handle_overlapped_buffer.overlapped->hEvent == NULL)
         {
