@@ -113,6 +113,14 @@ static inline char* strdup_windows(const char *src)
  */
 char* strndup(const char *s, size_t n);
 
+ /**
+ * From winsock2.h
+ */
+#ifndef IPPROTO_IPIP
+#define IPPROTO_IPIP IPPROTO_IPV4
+#define IPPROTO_IPV6 41
+#endif
+
 /**
  * Provided via ws2_32
  */
