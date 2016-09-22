@@ -20,14 +20,43 @@
 #include <utils/debug.h>
 
 #include <sys/types.h>
-#if !defined(WIN32)
+#ifndef WIN32
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #ifdef HAVE_NETINET_IP6_H
 #include <netinet/ip6.h>
 #endif
 #else
-#include "w32.h"
+
+struct ip
+  {
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+    unsigned int ip_hl:4;
+    unsigned int ip_v:4;
+#elif __BYTE__PORDER == __BIG_ENDIAN
+    unsigned int ip_v:4;
+    unsigned int ip_hl:4;
+#endif
+    uint8_t ip_tos;
+    uint16_t ip_len;
+    uint16_t ip_id;
+    uint16_t ip_off;
+    uint8_t ip_ttl;
+    uint8_t ip_p;
+    uint16_t ip_sum;
+    struct in_addr ip_src, ip_dst;
+  };
+
+struct ip6_hdr
+{
+        uint32_t ip6_flow;   /* 4 bits version, 8 bits TC, 20 bit flow label */
+        uint16_t ip6_plen;
+        uint8_t  ip6_nxt;
+        uint8_t  ip6_hlim;
+        struct in6_addr ip6_src, ip6_dst;
+};
+#define HAVE_NETINET_IP6_H /* not really, but we only need the struct above */
+
 #endif
 /**
  * TCP header, defined here because platforms disagree regarding member names

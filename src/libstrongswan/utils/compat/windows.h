@@ -43,6 +43,13 @@
 typedef u_int uid_t;
 typedef u_int gid_t;
 
+ /**
++ * From winsock2.h
++ */
+#ifndef IPPROTO_IPIP
+#define IPPROTO_IPIP IPPROTO_IPV4
+#endif
+
 /**
  * Initialize Windows libraries
  */

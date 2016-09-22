@@ -25,9 +25,7 @@
 #include <bio/bio_reader.h>
 #include <bio/bio_writer.h>
 
-#ifdef WIN32
-#include "w32.h"
-#else
+#ifndef WIN32
 #include <netinet/in.h>
 #endif
 
