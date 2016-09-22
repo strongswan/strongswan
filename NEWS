@@ -11,6 +11,9 @@ strongswan-5.5.1
   and the more traditional MGF1 Mask Generation Functions based on the SHA-1,
   SHA-256 and SHA-512 hash algorithms implemented by the new mgf1 plugin.
 
+- The pki tool can handle RSASSA-PKCS1v1.5-with-SHA-3 signatures using the
+  sha3 and gmp plugins.
+
 - The VICI flush-certs command flushes certificates from the volatile
   certificate cache. Optionally the type of the certificates to be
   flushed  (e.g. type = x509_crl) can be specified.
