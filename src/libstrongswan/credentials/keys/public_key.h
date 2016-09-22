@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Copyright (C) 2014-2015 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -70,14 +70,22 @@ enum signature_scheme_t {
 	SIGN_RSA_EMSA_PKCS1_MD5,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-1     */
 	SIGN_RSA_EMSA_PKCS1_SHA1,
-	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-224   */
-	SIGN_RSA_EMSA_PKCS1_SHA224,
-	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-256   */
-	SIGN_RSA_EMSA_PKCS1_SHA256,
-	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-384   */
-	SIGN_RSA_EMSA_PKCS1_SHA384,
-	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-512   */
-	SIGN_RSA_EMSA_PKCS1_SHA512,
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-2_224 */
+	SIGN_RSA_EMSA_PKCS1_SHA2_224,
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-2_256 */
+	SIGN_RSA_EMSA_PKCS1_SHA2_256,
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-2_384 */
+	SIGN_RSA_EMSA_PKCS1_SHA2_384,
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-2_512 */
+	SIGN_RSA_EMSA_PKCS1_SHA2_512,
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-3_224 */
+	SIGN_RSA_EMSA_PKCS1_SHA3_224,
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-3_256 */
+	SIGN_RSA_EMSA_PKCS1_SHA3_256,
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-3_384 */
+	SIGN_RSA_EMSA_PKCS1_SHA3_384,
+	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-3_512 */
+	SIGN_RSA_EMSA_PKCS1_SHA3_512,
 	/** ECDSA with SHA-1 using DER encoding as in RFC 3279             */
 	SIGN_ECDSA_WITH_SHA1_DER,
 	/** ECDSA with SHA-256 using DER encoding as in RFC 3279           */

@@ -719,13 +719,22 @@ METHOD(pts_t, verify_quote_signature, bool,
 					scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
 					break;
 				case HASH_SHA256:
-					scheme = SIGN_RSA_EMSA_PKCS1_SHA256;
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256;
 					break;
 				case HASH_SHA384:
-					scheme = SIGN_RSA_EMSA_PKCS1_SHA384;
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA2_384;
 					break;
 				case HASH_SHA512:
-					scheme = SIGN_RSA_EMSA_PKCS1_SHA512;
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512;
+					break;
+				case HASH_SHA3_256:
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA3_256;
+					break;
+				case HASH_SHA3_384:
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA3_384;
+					break;
+				case HASH_SHA3_512:
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512;
 					break;
 				default:
 					scheme = SIGN_UNKNOWN;

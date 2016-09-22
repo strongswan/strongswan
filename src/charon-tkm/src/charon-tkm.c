@@ -286,7 +286,7 @@ int main(int argc, char *argv[])
 		PLUGIN_REGISTER(PUBKEY, tkm_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
 			PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA1),
-			PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA256),
+			PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA2_256),
 		PLUGIN_CALLBACK(kernel_ipsec_register, tkm_kernel_ipsec_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
 		PLUGIN_CALLBACK(tkm_spi_generator_register, NULL),

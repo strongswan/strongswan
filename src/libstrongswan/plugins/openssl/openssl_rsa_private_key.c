@@ -158,16 +158,16 @@ METHOD(private_key_t, sign, bool,
 	{
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return build_emsa_pkcs1_signature(this, NID_undef, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_224:
+			return build_emsa_pkcs1_signature(this, NID_sha224, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_256:
+			return build_emsa_pkcs1_signature(this, NID_sha256, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_384:
+			return build_emsa_pkcs1_signature(this, NID_sha384, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
+			return build_emsa_pkcs1_signature(this, NID_sha512, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return build_emsa_pkcs1_signature(this, NID_sha1, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA224:
-			return build_emsa_pkcs1_signature(this, NID_sha224, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA256:
-			return build_emsa_pkcs1_signature(this, NID_sha256, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA384:
-			return build_emsa_pkcs1_signature(this, NID_sha384, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA512:
-			return build_emsa_pkcs1_signature(this, NID_sha512, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return build_emsa_pkcs1_signature(this, NID_md5, data, signature);
 		default:
