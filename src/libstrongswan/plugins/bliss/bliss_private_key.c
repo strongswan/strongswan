@@ -174,8 +174,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	bliss_sampler_t *sampler = NULL;
 	rng_t *rng;
 	hasher_t *hasher;
-	hash_algorithm_t mgf1_alg;
-	ext_out_function_t oracle_alg;
+	ext_out_function_t mgf1_alg, oracle_alg;
 	size_t mgf1_seed_len;
 	uint8_t mgf1_seed_buf[HASH_SIZE_SHA512], data_hash_buf[HASH_SIZE_SHA512];
 	chunk_t mgf1_seed, data_hash;
@@ -210,12 +209,12 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	/* Set MGF1 hash algorithm and seed length based on security strength */
 	if (this->set->strength > 160)
 	{
-		mgf1_alg = HASH_SHA256;
+		mgf1_alg = XOF_MGF1_SHA256;
 		mgf1_seed_len = HASH_SIZE_SHA256;
 	}
 	else
 	{
-		mgf1_alg = HASH_SHA1;
+		mgf1_alg = XOF_MGF1_SHA1;
 		mgf1_seed_len = HASH_SIZE_SHA1;
 	}
 	mgf1_seed = chunk_create(mgf1_seed_buf, mgf1_seed_len);
