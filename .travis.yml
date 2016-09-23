@@ -12,7 +12,7 @@ before_install:
   - ./scripts/test.sh pydeps
 
 before_script:
-  - sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0
+  - sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0 || true
 
 script:
   - ./scripts/test.sh
@@ -52,4 +52,5 @@ matrix:
       dist: precise
     - compiler: clang
       os: osx
+      osx_image: xcode7
       env: TEST=osx
