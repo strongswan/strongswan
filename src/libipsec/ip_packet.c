@@ -20,10 +20,39 @@
 #include <utils/debug.h>
 
 #include <sys/types.h>
+
+#ifndef WIN32
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #ifdef HAVE_NETINET_IP6_H
 #include <netinet/ip6.h>
+#endif
+#else
+struct ip {
+#if BYTE_ORDER == LITTLE_ENDIAN
+	uint8_t ip_hl: 4;
+	uint8_t ip_v: 4;
+#elif BYTE_ORDER == BIG_ENDIAN
+	uint8_t ip_v: 4;
+	uint8_t ip_hl: 4;
+#endif
+	uint8_t ip_tos;
+	uint16_t ip_len;
+	uint16_t ip_id;
+	uint16_t ip_off;
+	uint8_t ip_ttl;
+	uint8_t ip_p;
+	uint16_t ip_sum;
+	struct in_addr ip_src, ip_dst;
+} __attribute__((packed));
+struct ip6_hdr {
+	uint32_t ip6_flow; /* 4 bit version, 8 bit TC, 20 bit flow label */
+	uint16_t ip6_plen;
+	uint8_t ip6_nxt;
+	uint8_t ip6_hlim;
+	struct in6_addr ip6_src, ip6_dst;
+} __attribute__((packed));
+#define HAVE_NETINET_IP6_H /* not really, but we only need the struct above */
 #endif
 
 /**

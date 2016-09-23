@@ -25,7 +25,9 @@
 #include <bio/bio_reader.h>
 #include <bio/bio_writer.h>
 
+#ifndef WIN32
 #include <netinet/in.h>
+#endif
 
 typedef struct private_esp_packet_t private_esp_packet_t;
 
