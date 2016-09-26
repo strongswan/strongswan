@@ -842,7 +842,6 @@ METHOD(tun_device_t, destroy, void,
 #ifdef WIN32
         /* close file handle, destroy interface */
         CloseHandle(this->tunhandle);
-        free(this->tunhandle);
 #else
 	if (this->tunfd > 0)
 	{
