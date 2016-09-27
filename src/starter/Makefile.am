@@ -47,10 +47,6 @@ if USE_LOAD_WARNING
   AM_CPPFLAGS += -DLOAD_WARNING
 endif
 
-if USE_SCEPCLIENT
-  AM_CPPFLAGS += -DGENERATE_SELFCERT
-endif
-
 keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h
 		$(AM_V_GEN) \
 		$(GPERF) -m 10 -C -G -D -t < $(srcdir)/keywords.txt > $@
