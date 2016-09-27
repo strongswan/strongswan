@@ -344,13 +344,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
         tun_device_handle_overlapped_buffer.overlapped = overlapped;
 
         tun_device_handle_overlapped_buffer.overlapped->hEvent= tun_device_event;
-        if (tun_device_handle_overlapped_buffer.overlapped->hEvent == NULL)
-        {
-            char *error_message = format_error(GetLastError());
-            DBG2(DBG_ESP, "Error: %s", error_message);
-            free(error_message);
-            return JOB_REQUEUE_FAIR;
-        }
+
         bundle_array[i] = tun_device_handle_overlapped_buffer;
 
         i++;
@@ -484,12 +478,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                 /* Print out the package for debugging */
                 /* Don't leak packets */
                 memset(bundle_array[offset].buffer.ptr, 0, bundle_array[offset].buffer.len);
-
-                bundle_array[offset].overlapped->Internal = 0;
-                bundle_array[offset].overlapped->InternalHigh = 0;
-                bundle_array[offset].overlapped->Offset = 0;
-                bundle_array[offset].overlapped->OffsetHigh = 0;
-                bundle_array[offset].overlapped->Pointer = NULL;
+                memset(bundle_array[offset].overlapped, 0, sizeof(OVERLAPPED));
 
                 if (!start_read(&bundle_array[offset], bundle_array[offset].overlapped->hEvent))
                 {
