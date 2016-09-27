@@ -342,7 +342,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 
         tun_device_handle_overlapped_buffer.fileHandle = tun_device->get_handle(tun_device);
         tun_device_handle_overlapped_buffer.overlapped = overlapped;
-        
+
         tun_device_handle_overlapped_buffer.overlapped->hEvent= tun_device_event;
         if (tun_device_handle_overlapped_buffer.overlapped->hEvent == NULL)
         {
@@ -459,82 +459,6 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                     /* exit */
                     return JOB_REQUEUE_DIRECT;
                 }
-#if FALSE
-                for(k=1;k<i; k++)
-                {
-                    DBG2(DBG_ESP, "position %d in array", k);
-                    /* Is the object signaled? */
-                    DBG2(DBG_ESP, "checking if event is signaled.");
-                    /* WaitForSingleObject() lies. It says that the signaled event is not signaled. */
-                    DWORD WaitResult = WaitForSingleObject(bundle_array[j].overlapped->hEvent, 0);
-                    DBG2(DBG_ESP, "WaitForSingleObject returned %d", WaitResult);
-                    if (WaitResult == WAIT_OBJECT_0)
-                    {
-                        /* The arrays have the same length and the same positioning of the elements.
-                         * Therefore, if event_array[j] is signaled, the read on bundle_array[i].fileHandle has succeeded
-                         * and bundle_array[j].buffer has our data now. */
-                        DBG2(DBG_ESP, "Event is signaled. Processing packet.");
-                        /* Do we need to copy the chunk before we enqueue it? */
-                        char *foo = alloca((bundle_array[j].buffer.len *4)/3 + 1);
-                        memset(foo, 0, (bundle_array[j].buffer.len *4)/3 + 1);
-                        DBG2(DBG_ESP, "Length of buffer: %u", bundle_array[j].buffer.len);
-                        chunk_to_base64(bundle_array[j].buffer, foo);
-                        DBG2(DBG_ESP, "Content of Buffer: %s", foo);
-
-                        ip_packet_t *packet;
-                        /* clone the buffer */
-                        chunk_t buffer_clone = chunk_clone (bundle_array[j].buffer);
-                        packet = ip_packet_create(buffer_clone);
-                        if (packet)
-                        {
-                                DBG2(DBG_ESP, "Packet contents: %B", packet->get_encoding(packet));
-                                ipsec->processor->queue_outbound(ipsec->processor, packet);
-                        }
-                        else
-                        {
-                                DBG2(DBG_ESP, "invalid IP packet read from TUN device");
-                        }
-                        /* Reset the overlapped structure, event and buffer */
-                        /* Print out the package for debugging */
-                        DBG2(DBG_ESP, "resetting OVERLAPPED");
-                        bundle_array[j].overlapped->Internal = 0;
-                        bundle_array[j].overlapped->InternalHigh = 0;
-                        bundle_array[j].overlapped->Offset = 0;
-                        bundle_array[j].overlapped->OffsetHigh = 0;
-                        bundle_array[j].overlapped->Pointer = NULL;
-                        /* Don't leak packets */
-                        memset(bundle_array[j].buffer.ptr, 0, bundle_array[j].buffer.len);
-
-                        bundle_array[j].overlapped->hEvent = event_array[j];
-
-                        if (!start_read(&bundle_array[offset], bundle_array[offset].overlapped->hEvent))
-                        {
-                           /* Cleanup
-                            *  Starts with 1 to skip over the dummy
-                            */
-                            DBG2(DBG_ESP, "Failed to start the new Read. Restarting job.");
-                            for(j=1;j<i;j++)
-                            {
-                                /* stop all asynchronous IO */
-                                DBG2(DBG_ESP, "Index %d", k);
-                                CancelIo(bundle_array[j].fileHandle);
-                                DBG2(DBG_ESP, "Canceled IO.");
-                                CloseHandle(bundle_array[j].overlapped->hEvent);
-                                DBG2(DBG_ESP, "Closed event.");
-                                memset(bundle_array[j].buffer.ptr, 0, bundle_array[j].buffer.len);
-                                DBG2(DBG_ESP, "Reset buffer.");
-                                free(bundle_array[j].buffer.ptr);
-                            }
-                            return JOB_REQUEUE_FAIR;
-                        }
-                    }
-                    else
-                    {
-                        DBG2(DBG_ESP, "Event is not signaled.");
-                    }
-                }
-
-#else
                 /* The arrays have the same length and the same positioning of the elements.
                  * Therefore, if event_array[j] is signaled, the read on bundle_array[i].fileHandle has succeeded
                  * and bundle_array[j].buffer has our data now.
@@ -583,7 +507,6 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
                     this->lock->unlock(this->lock);
                     return JOB_REQUEUE_FAIR;
                 }
-#endif
             }
             /* Function failed */
             else
