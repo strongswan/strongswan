@@ -652,49 +652,48 @@ METHOD(tun_device_t, write_packet, bool,
 {
         bool status;
         DWORD error;
-
-        OVERLAPPED *overlapped = alloca(sizeof(OVERLAPPED));
-
+        OVERLAPPED overlapped;
         HANDLE write_event;
 
         write_event = CreateEvent(NULL, FALSE, FALSE, NULL);
         error = GetLastError();
         if (error != ERROR_SUCCESS)
         {
-           DBG2(DBG_ESP, "Error: %d", error);
+           DBG1(DBG_LIB, "creating an event to write to the TUN device %s failed: %d",
+                   this->if_name, error);
            return FALSE;
         }
 
 
-        memset(overlapped, 0, sizeof(OVERLAPPED));
+        memset(&overlapped, 0, sizeof(OVERLAPPED));
 
-        overlapped->hEvent = write_event;
+        overlapped.hEvent = write_event;
 
         status = WriteFile(
                 this->tunhandle,
                 packet.ptr,
                 packet.len,
                 NULL,
-                overlapped
+                &overlapped
                 );
-        status = FALSE;
         error = GetLastError();
+
         if (status) {
             /* Read returned immediately. */
             SetEvent(write_event);
         }
         else
         {
-
             switch(error)
             {
                 case ERROR_SUCCESS:
-                    break;
                 case ERROR_IO_PENDING:
                     /* all fine */
                     break;
                 default:
-                    DBG2(DBG_ESP, "Error %d.", error);
+                    DBG1(DBG_LIB, "writing to TUN device %s failed: %u",
+                            this->if_name, error);
+                    CloseHandle(write_event);
                     return FALSE;
                     break;
             }
@@ -710,7 +709,7 @@ METHOD(tun_device_t, read_packet, bool,
 	private_tun_device_t *this, chunk_t *packet)
 {
 	bool old, status;
-        DWORD size, error;
+        DWORD error;
         OVERLAPPED overlapped;
 	chunk_t data;
         HANDLE read_event = CreateEvent(NULL, FALSE, FALSE, FALSE);
@@ -722,11 +721,6 @@ METHOD(tun_device_t, read_packet, bool,
         {
             case ERROR_SUCCESS:
                 break;
-            case ERROR_INVALID_HANDLE:
-                /* An event with that name already exists, but the type is a different one */
-                return FALSE;
-                break;
-            case ERROR_ALREADY_EXISTS:
             default:
                 /* Just fine. Don't do anything. */
                 break;
@@ -738,12 +732,14 @@ METHOD(tun_device_t, read_packet, bool,
 
 	data = chunk_alloca(get_mtu(this));
 
-	old = thread_cancelability(TRUE);
-
         /* Read chunk from handle */
-        status = ReadFile(this->tunhandle, (LPVOID) &data.ptr,
-            (DWORD) data.len, &size, &overlapped);
-	thread_cancelability(old);
+        status = ReadFile(this->tunhandle,
+                    &data.ptr,
+                    data.len,
+                    NULL,
+                    &overlapped);
+        error = GetLastError();
+
         if (status)
         {
             /* Read returned immediately. */
@@ -751,7 +747,6 @@ METHOD(tun_device_t, read_packet, bool,
         }
         else
         {
-            error = GetLastError();
             switch(error)
             {
                 case ERROR_SUCCESS:
@@ -759,7 +754,6 @@ METHOD(tun_device_t, read_packet, bool,
                     /* all fine */
                     break;
                 default:
-                    /* TODO: Convert DWORD (GetLastError()) to human readable error string */
                     DBG1(DBG_LIB, "reading from TUN device %s failed: %u", this->if_name,
                        error);
                     CloseHandle(read_event);
@@ -767,7 +761,12 @@ METHOD(tun_device_t, read_packet, bool,
                     break;
             }
         }
+	old = thread_cancelability(TRUE);
+
         WaitForSingleObject(read_event, INFINITE);
+
+	thread_cancelability(old);
+
 	*packet = chunk_clone(data);
 
         CloseHandle(read_event);
@@ -1133,8 +1132,8 @@ tun_device_t *tun_device_create(const char *name_tmpl)
                 .tunhandle = NULL,
 #else
 
-		.tunfd = -1,
-		.sock = -1,
+                .tunfd = -1,
+                .sock = -1,
 #endif /* WIN32 */
 	);
 
