@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2015 Andreas Steffen
+ * Copyright (C) 2015-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -130,6 +130,7 @@ static bool register_vici(private_vici_plugin_t *this,
 			this->cred = vici_cred_create(this->dispatcher);
 			this->authority = vici_authority_create(this->dispatcher,
 													this->cred);
+			lib->credmgr->add_set(lib->credmgr, &this->cred->set);
 			lib->credmgr->add_set(lib->credmgr, &this->authority->set);
 			this->config = vici_config_create(this->dispatcher, this->authority,
 											  this->cred);
@@ -158,6 +159,7 @@ static bool register_vici(private_vici_plugin_t *this,
 		this->logger->destroy(this->logger);
 		this->attrs->destroy(this->attrs);
 		this->config->destroy(this->config);
+		lib->credmgr->remove_set(lib->credmgr, &this->cred->set);
 		lib->credmgr->remove_set(lib->credmgr, &this->authority->set);
 		this->authority->destroy(this->authority);
 		this->cred->destroy(this->cred);

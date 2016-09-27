@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2015 Andreas Steffen
+ * Copyright (C) 2015-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -25,7 +25,14 @@
 #include <credentials/certificates/crl.h>
 #include <credentials/certificates/x509.h>
 
+#include <errno.h>
+
 typedef struct private_vici_cred_t private_vici_cred_t;
+
+/**
+ * Directory for saved X.509 CRLs
+ */
+#define CRL_DIR SWANCTLDIR "/x509crl"
 
 /**
  * Private data of an vici_cred_t object.
@@ -46,7 +53,50 @@ struct private_vici_cred_t {
 	 * credentials
 	 */
 	mem_cred_t *creds;
+
+	/**
+	 * cache CRLs to disk?
+	 */
+	bool cachecrl;
+
 };
+
+METHOD(credential_set_t, cache_cert, void,
+	private_vici_cred_t *this, certificate_t *cert)
+{
+	if (cert->get_type(cert) == CERT_X509_CRL && this->cachecrl)
+	{
+		/* CRLs get written to /etc/swanctl/x509crl/<authkeyId>.crl */
+		crl_t *crl = (crl_t*)cert;
+
+		cert->get_ref(cert);
+		if (this->creds->add_crl(this->creds, crl))
+		{
+			char buf[BUF_LEN];
+			chunk_t chunk, hex;
+
+			chunk = crl->get_authKeyIdentifier(crl);
+			hex = chunk_to_hex(chunk, NULL, FALSE);
+			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex.ptr);
+			free(hex.ptr);
+
+			if (cert->get_encoding(cert, CERT_ASN1_DER, &chunk))
+			{
+				if (chunk_write(chunk, buf, 022, TRUE))
+				{
+					DBG1(DBG_CFG, "  written crl file '%s' (%d bytes)",
+						 buf, chunk.len);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "  writing crl file '%s' failed: %s",
+						 buf, strerror(errno));
+				}
+				free(chunk.ptr);
+			}
+		}
+	}
+}
 
 /**
  * Create a (error) reply message
@@ -349,6 +399,13 @@ vici_cred_t *vici_cred_create(vici_dispatcher_t *dispatcher)
 
 	INIT(this,
 		.public = {
+			.set = {
+				.create_private_enumerator = (void*)return_null,
+				.create_cert_enumerator = (void*)return_null,
+				.create_shared_enumerator = (void*)return_null,
+				.create_cdp_enumerator = (void*)return_null,
+				.cache_cert = (void*)_cache_cert,
+			},
 			.add_cert = _add_cert,
 			.destroy = _destroy,
 		},
@@ -356,6 +413,11 @@ vici_cred_t *vici_cred_create(vici_dispatcher_t *dispatcher)
 		.creds = mem_cred_create(),
 	);
 
+	if (lib->settings->get_bool(lib->settings, "%s.cache_crls", FALSE, lib->ns))
+	{
+		this->cachecrl = TRUE;
+		DBG1(DBG_CFG, "crl caching to %s enabled", CRL_DIR);
+	}
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 
 	manage_commands(this, TRUE);

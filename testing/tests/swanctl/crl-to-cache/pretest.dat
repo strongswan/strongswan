@@ -1,0 +1,5 @@
+moon::service charon start 2> /dev/null
+carol::service charon start 2> /dev/null
+moon::expect-connection rw
+carol::expect-connection home
+carol::swanctl --initiate --child home 2> /dev/null
