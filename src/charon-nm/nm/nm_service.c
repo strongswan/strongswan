@@ -58,14 +58,14 @@ static GVariant* handler_to_variant(nm_handler_t *handler,
 {
 	GVariantBuilder builder;
 	enumerator_t *enumerator;
-	chunk_t chunk;
+	chunk_t *chunk;
 
 	g_variant_builder_init (&builder, G_VARIANT_TYPE ("au"));
 
 	enumerator = handler->create_enumerator(handler, type);
 	while (enumerator->enumerate(enumerator, &chunk))
 	{
-		g_variant_builder_add (&builder, "u", *(uint32_t*)chunk.ptr);
+		g_variant_builder_add (&builder, "u", *(uint32_t*)chunk->ptr);
 	}
 	enumerator->destroy(enumerator);
 
