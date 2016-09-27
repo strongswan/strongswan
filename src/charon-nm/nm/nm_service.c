@@ -526,7 +526,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	/**
 	 * Set up configurations
 	 */
-	ike_cfg = ike_cfg_create(IKEV2, TRUE, encap, "0.0.0.0",
+	ike_cfg = ike_cfg_create(IKEV2, TRUE, encap, "%any",
 							 charon->socket->get_port(charon->socket, FALSE),
 							(char*)address, IKEV2_UDP_PORT,
 							 FRAGMENTATION_YES, 0);
