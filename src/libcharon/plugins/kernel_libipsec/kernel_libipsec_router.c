@@ -265,7 +265,6 @@ static BOOL start_read(handle_overlapped_buffer_t *structure, HANDLE event)
                 }
                 default:
                 {
-                    /* Leave the NULL; here. Otherwise mingw64 complains about char *error_message = format_error(error); not being a label.*/
                     char *error_message = format_error(error);
                     DBG2(DBG_ESP, "Error %d.", format_error);
                     free(error_message);
