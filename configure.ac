@@ -633,6 +633,19 @@ AC_CHECK_FUNC([syslog], [
 ])
 AM_CONDITIONAL(USE_SYSLOG, [test "x$syslog" = xtrue])
 
+AC_CHECK_HEADERS(uchar.h)
+
+AC_MSG_CHECKING([for type char16_t])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#ifdef HAVE_UCHAR_H
+		#include <uchar.h>
+		#endif]],
+		[[char16_t a = L'a'; char32_t b = (char32_t) 50; return (a == L'a' && b == 50) ? 0 : 1; ]])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_CHAR16_IN_UCHAR_H], [], [has char16_t and char32_t])],
+	[AC_MSG_RESULT([no])])
+
 AC_CHECK_HEADERS(sys/sockio.h sys/syscall.h sys/param.h glob.h net/if_tun.h)
 AC_CHECK_HEADERS(net/pfkeyv2.h netipsec/ipsec.h netinet6/ipsec.h linux/udp.h)
 AC_CHECK_HEADERS([netinet/ip6.h linux/fib_rules.h], [], [],
