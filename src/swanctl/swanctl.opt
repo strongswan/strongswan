@@ -835,6 +835,15 @@ secrets.ike<suffix>.id<suffix> =
 	may be specified, each having an _id_ prefix, if a secret is shared between
 	multiple peers.
 
+secrets.private<suffix> { # }
+	Private key decryption passphrase for a key in the _private_ folder.
+
+secrets.private<suffix>.file =
+	File name in the _private_ folder for which this passphrase should be used.
+
+secrets.private<suffix>.secret
+	Value of decryption passphrase for private key.
+
 secrets.rsa<suffix> { # }
 	Private key decryption passphrase for a key in the _rsa_ folder.
 
