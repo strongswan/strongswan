@@ -676,14 +676,14 @@ static bool compare_dn(chunk_t t_dn, chunk_t o_dn, int *wc)
 			}
 			else if (t_type == ASN1_BMPSTRING && o_type == ASN1_UTF8STRING)
 			{
-				if (!strutfwcscmp(o_data.ptr, o_data.len, t_data.ptr, t_data.len/sizeof(char16_t)))
+				if (!strutfwcscmp(o_data.ptr, o_data.len, (char16_t*)t_data.ptr, t_data.len/sizeof(char16_t)))
 				{
 					break;
 				}
 			}
 			else if (t_type == ASN1_UTF8STRING && o_type == ASN1_BMPSTRING)
 			{
-				if (!strutfwcscmp(t_data.ptr, t_data.len, o_data.ptr, o_data.len/sizeof(char16_t)))
+				if (!strutfwcscmp(t_data.ptr, t_data.len, (char16_t*)o_data.ptr, o_data.len/sizeof(char16_t)))
 				{
 					break;
 				}
