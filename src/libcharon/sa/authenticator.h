@@ -120,12 +120,6 @@ enum auth_method_t {
 	AUTH_HYBRID_RESP_RSA,
 
 
-	/**
-	 * IKEv1 Kerberos authentication (draft-ietf-ipsec-isakmp-gss-auth-07.txt)
-	 */
-	AUTH_GSSAPI_KERBEROS = 65001,
-
-
 };
 
 /**
