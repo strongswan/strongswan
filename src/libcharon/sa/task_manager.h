@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2013-2016 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -122,7 +123,17 @@ struct task_manager_t {
 	 *
 	 * @param task			task to queue
 	 */
-	void (*queue_task) (task_manager_t *this, task_t *task);
+	void (*queue_task)(task_manager_t *this, task_t *task);
+
+	/**
+	 * Queue a task in the manager, but delay its initiation for at least the
+	 * given number of seconds.
+	 *
+	 * @param task			task to queue
+	 * @param delay			minimum delay in s before initiating the task
+	 */
+	void (*queue_task_delayed)(task_manager_t *this, task_t *task,
+							   uint32_t delay);
 
 	/**
 	 * Queue IKE_SA establishing tasks.

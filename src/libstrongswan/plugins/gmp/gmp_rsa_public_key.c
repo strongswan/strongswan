@@ -291,18 +291,26 @@ METHOD(public_key_t, verify, bool,
 	{
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return verify_emsa_pkcs1_signature(this, HASH_UNKNOWN, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_MD5:
-			return verify_emsa_pkcs1_signature(this, HASH_MD5, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_224:
+			return verify_emsa_pkcs1_signature(this, HASH_SHA224, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_256:
+			return verify_emsa_pkcs1_signature(this, HASH_SHA256, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_384:
+			return verify_emsa_pkcs1_signature(this, HASH_SHA384, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
+			return verify_emsa_pkcs1_signature(this, HASH_SHA512, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_224:
+			return verify_emsa_pkcs1_signature(this, HASH_SHA3_224, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_256:
+			return verify_emsa_pkcs1_signature(this, HASH_SHA3_256, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_384:
+			return verify_emsa_pkcs1_signature(this, HASH_SHA3_384, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_512:
+			return verify_emsa_pkcs1_signature(this, HASH_SHA3_512, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return verify_emsa_pkcs1_signature(this, HASH_SHA1, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA224:
-			return verify_emsa_pkcs1_signature(this, HASH_SHA224, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA256:
-			return verify_emsa_pkcs1_signature(this, HASH_SHA256, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA384:
-			return verify_emsa_pkcs1_signature(this, HASH_SHA384, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA512:
-			return verify_emsa_pkcs1_signature(this, HASH_SHA512, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_MD5:
+			return verify_emsa_pkcs1_signature(this, HASH_MD5, data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);

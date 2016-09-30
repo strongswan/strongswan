@@ -27,6 +27,10 @@
 #include <openssl/ecdsa.h>
 #include <openssl/x509.h>
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+OPENSSL_KEY_FALLBACK(ECDSA_SIG, r, s)
+#endif
+
 typedef struct private_openssl_ec_public_key_t private_openssl_ec_public_key_t;
 
 /**
@@ -55,14 +59,23 @@ struct private_openssl_ec_public_key_t {
 static bool verify_signature(private_openssl_ec_public_key_t *this,
 							 chunk_t hash, chunk_t signature)
 {
-	bool valid = FALSE;
+	BIGNUM *r, *s;
 	ECDSA_SIG *sig;
+	bool valid = FALSE;
 
 	sig = ECDSA_SIG_new();
 	if (sig)
 	{
-		/* split the signature chunk in r and s */
-		if (openssl_bn_split(signature, sig->r, sig->s))
+		r = BN_new();
+		s = BN_new();
+		if (!openssl_bn_split(signature, r, s))
+		{
+			BN_free(r);
+			BN_free(s);
+			ECDSA_SIG_free(sig);
+			return FALSE;
+		}
+		if (ECDSA_SIG_set0(sig, r, s))
 		{
 			valid = (ECDSA_do_verify(hash.ptr, hash.len, sig, this->ec) == 1);
 		}

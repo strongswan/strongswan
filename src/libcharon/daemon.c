@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2006-2015 Tobias Brunner
+ * Copyright (C) 2006-2016 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -54,6 +54,7 @@
 #include <library.h>
 #include <bus/listeners/sys_logger.h>
 #include <bus/listeners/file_logger.h>
+#include <collections/array.h>
 #include <config/proposal.h>
 #include <plugins/plugin_feature.h>
 #include <kernel/kernel_handler.h>
@@ -701,46 +702,68 @@ static void destroy(private_daemon_t *this)
  */
 static void run_scripts(private_daemon_t *this, char *verb)
 {
+	struct {
+		char *name;
+		char *path;
+	} *script;
+	array_t *scripts = NULL;
 	enumerator_t *enumerator;
 	char *key, *value, *pos, buf[1024];
 	FILE *cmd;
 
+	/* copy the scripts so we don't hold any locks while executing them */
 	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
 												"%s.%s-scripts", lib->ns, verb);
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
-		DBG1(DBG_DMN, "executing %s script '%s' (%s):", verb, key, value);
-		cmd = popen(value, "r");
+		INIT(script,
+			.name = key,
+			.path = value,
+		);
+		array_insert_create(&scripts, ARRAY_TAIL, script);
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = array_create_enumerator(scripts);
+	while (enumerator->enumerate(enumerator, &script))
+	{
+		DBG1(DBG_DMN, "executing %s script '%s' (%s)", verb, script->name,
+			 script->path);
+		cmd = popen(script->path, "r");
 		if (!cmd)
 		{
 			DBG1(DBG_DMN, "executing %s script '%s' (%s) failed: %s",
-				 verb, key, value, strerror(errno));
-			continue;
+				 verb, script->name, script->path, strerror(errno));
 		}
-		while (TRUE)
+		else
 		{
-			if (!fgets(buf, sizeof(buf), cmd))
+			while (TRUE)
 			{
-				if (ferror(cmd))
+				if (!fgets(buf, sizeof(buf), cmd))
 				{
-					DBG1(DBG_DMN, "reading from %s script '%s' (%s) failed",
-						 verb, key, value);
+					if (ferror(cmd))
+					{
+						DBG1(DBG_DMN, "reading from %s script '%s' (%s) failed",
+							 verb, script->name, script->path);
+					}
+					break;
 				}
-				break;
-			}
-			else
-			{
-				pos = buf + strlen(buf);
-				if (pos > buf && pos[-1] == '\n')
+				else
 				{
-					pos[-1] = '\0';
+					pos = buf + strlen(buf);
+					if (pos > buf && pos[-1] == '\n')
+					{
+						pos[-1] = '\0';
+					}
+					DBG1(DBG_DMN, "%s: %s", script->name, buf);
 				}
-				DBG1(DBG_DMN, "%s: %s", key, buf);
 			}
+			pclose(cmd);
 		}
-		pclose(cmd);
+		free(script);
 	}
 	enumerator->destroy(enumerator);
+	array_destroy(scripts);
 }
 
 METHOD(daemon_t, start, void,

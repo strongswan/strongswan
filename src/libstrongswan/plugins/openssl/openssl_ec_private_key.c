@@ -28,6 +28,10 @@
 #include <openssl/ecdsa.h>
 #include <openssl/x509.h>
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+OPENSSL_KEY_FALLBACK(ECDSA_SIG, r, s)
+#endif
+
 typedef struct private_openssl_ec_private_key_t private_openssl_ec_private_key_t;
 
 /**
@@ -59,15 +63,17 @@ bool openssl_ec_fingerprint(EC_KEY *ec, cred_encoding_type_t type, chunk_t *fp);
 static bool build_signature(private_openssl_ec_private_key_t *this,
 							chunk_t hash, chunk_t *signature)
 {
-	bool built = FALSE;
+	const BIGNUM *r, *s;
 	ECDSA_SIG *sig;
+	bool built = FALSE;
 
 	sig = ECDSA_do_sign(hash.ptr, hash.len, this->ec);
 	if (sig)
 	{
+		ECDSA_SIG_get0(sig, &r, &s);
 		/* concatenate BNs r/s to a signature chunk */
 		built = openssl_bn_cat(EC_FIELD_ELEMENT_LEN(EC_KEY_get0_group(this->ec)),
-							   sig->r, sig->s, signature);
+							   r, s, signature);
 		ECDSA_SIG_free(sig);
 	}
 	return built;

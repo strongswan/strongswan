@@ -209,7 +209,7 @@ static void remove_node(node_t *list, node_t **last, node_t *node)
  */
 int main(int argc, char *argv[])
 {
-	bliss_param_set_t *set;
+	const bliss_param_set_t *set;
 	int dx, bliss_type, depth = 1, groups, groups_left, pairs = 1;
 	int i_max = 9, k_max = 8, index_max = (2*k_max - 1) * i_max;
 	int i, i_top, k, k_top;

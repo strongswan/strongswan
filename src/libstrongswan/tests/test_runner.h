@@ -70,12 +70,16 @@ struct test_configuration_t {
  * - TESTS_VERBOSITY: Numerical loglevel for debug log
  * - TESTS_STRONGSWAN_CONF: Specify a path to a custom strongswan.conf
  * - TESTS_PLUGINS: Specify an explicit list of plugins to load
+ * - TESTS_RUNNERS: Run specific test runners only
  * - TESTS_SUITES: Run specific test suites only
  * - TESTS_SUITES_EXCLUDE: Don't run specific test suites
  * - TESTS_REDUCED_KEYLENGTHS: Test minimal keylengths for public key tests only
  *
  * Please note that TESTS_PLUGINS actually must be implemented by the init
  * callback function, as plugin loading is delegated.
+ *
+ * EXIT_SUCCESS is returned right away if TESTS_RUNNERS is defined but the name
+ * passed to this function is not contained in it.
  *
  * @param name			name of test runner
  * @param config		test suite constructors with dependencies

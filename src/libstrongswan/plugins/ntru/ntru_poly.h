@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
 typedef struct ntru_poly_t ntru_poly_t;
 
 #include <library.h>
+#include <crypto/xofs/xof.h>
 
 /**
  * Implements a trinary polynomial storing the indices of non-zero coefficients 
@@ -63,9 +64,9 @@ struct ntru_poly_t {
 };
 
 /**
- * Create a trits polynomial from a seed using MGF1 with a base hash function
+ * Create a trits polynomial from a seed using MGF1
  *
- * @param alg				hash algorithm to be used by MGF1
+ * @param alg				MGF1 algorithm used(XOF_MGF1_SHA1 or XOF_MGF_SHA256)
  * @param seed				seed used by MGF1 to generate trits from
  * @param N					ring dimension, number of polynomial coefficients
  * @param q					large modulus
@@ -74,7 +75,7 @@ struct ntru_poly_t {
  * @param indices_len_m		number of indices for -1 coefficients
  * @param is_product_form	generate multiple polynomials
  */
-ntru_poly_t *ntru_poly_create_from_seed(hash_algorithm_t alg, chunk_t seed,
+ntru_poly_t *ntru_poly_create_from_seed(ext_out_function_t alg,	chunk_t seed,
 										uint8_t c_bits, uint16_t N, uint16_t q,
 										uint32_t indices_len_p,
 										uint32_t indices_len_m,

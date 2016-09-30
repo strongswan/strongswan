@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2009-2013  Security Innovation
@@ -38,7 +38,7 @@ struct private_ntru_private_key_t {
 	/**
 	 * NTRU Parameter Set
 	 */
-	ntru_param_set_t *params;
+	const ntru_param_set_t *params;
 
 	/**
 	 * Polynomial F which is the private key
@@ -178,7 +178,7 @@ bool ntru_check_min_weight(uint16_t N, uint8_t  *t, uint16_t min_wt)
 METHOD(ntru_private_key_t, decrypt, bool,
 	private_ntru_private_key_t *this, chunk_t ciphertext, chunk_t *plaintext)
 {
-	hash_algorithm_t hash_algid;
+	ext_out_function_t alg;
 	size_t t_len, seed1_len, seed2_len;
 	uint16_t *t1, *t2, *t = NULL;
     uint16_t mod_q_mask, q_mod_p, cmprime_len, cm_len = 0, num_zeros;
@@ -206,9 +206,9 @@ METHOD(ntru_private_key_t, decrypt, bool,
 	Mtrin = (uint8_t *)t1;
 	M = Mtrin + this->params->N;
 
-	/* set hash algorithm based on security strength */
-	hash_algid = (this->params->sec_strength_len <= 20) ? HASH_SHA1 :
-														  HASH_SHA256;
+	/* set MGF1 algorithm type based on security strength */
+	alg = (this->params->sec_strength_len <= 20) ? XOF_MGF1_SHA1 :
+												   XOF_MGF1_SHA256;
 
 	/* set constants */
 	mod_q_mask = this->params->q - 1;
@@ -307,7 +307,7 @@ METHOD(ntru_private_key_t, decrypt, bool,
 	ntru_coeffs_mod4_2_octets(this->params->N, t2, seed.ptr);
 
 	/* form mask */
-	mask = ntru_trits_create(this->params->N, hash_algid, seed);
+	mask = ntru_trits_create(this->params->N, alg, seed);
 	if (!mask)
 	{
 		DBG1(DBG_LIB, "mask creation failed");
@@ -390,9 +390,8 @@ METHOD(ntru_private_key_t, decrypt, bool,
 
 	/* generate cr */
 	DBG2(DBG_LIB, "generate polynomial r");
-	r_poly = ntru_poly_create_from_seed(hash_algid, seed,
-						this->params->c_bits, this->params->N,
-						this->params->q, this->params->dF_r,
+	r_poly = ntru_poly_create_from_seed(alg, seed, this->params->c_bits,
+						this->params->N, this->params->q, this->params->dF_r,
 						this->params->dF_r, this->params->is_product_form);
 	if (!r_poly)
 	{
@@ -642,13 +641,13 @@ static bool ring_inv(uint16_t *a, uint16_t N, uint16_t q, uint16_t *t,
  * Described in header.
  */
 ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
-											ntru_param_set_t *params)
+											const ntru_param_set_t *params)
 {
 	private_ntru_private_key_t *this;
 	size_t t_len;
 	uint16_t *t1, *t2, *t = NULL;
 	uint16_t mod_q_mask;
-    hash_algorithm_t hash_algid;
+    ext_out_function_t alg;
 	ntru_poly_t *g_poly;
 	chunk_t	seed;
 	int i;
@@ -667,14 +666,8 @@ ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
 	);
 
 	/* set hash algorithm and seed length based on security strength */
-	if (params->sec_strength_len <= 20)
-	{
-		hash_algid = HASH_SHA1;
-	}
-	else
-	{
-		hash_algid = HASH_SHA256;
-	}
+	alg = (params->sec_strength_len <= 20) ? XOF_MGF1_SHA1 :
+											 XOF_MGF1_SHA256;
 	seed =chunk_alloc(params->sec_strength_len + 8);
 
 	/* get random seed for generating trinary F as a list of indices */
@@ -685,7 +678,7 @@ ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
 	}
 
 	DBG2(DBG_LIB, "generate polynomial F");
-	this->privkey = ntru_poly_create_from_seed(hash_algid, seed, params->c_bits,
+	this->privkey = ntru_poly_create_from_seed(alg, seed, params->c_bits,
 											   params->N, params->q,
 											   params->dF_r, params->dF_r,
 											   params->is_product_form);
@@ -729,7 +722,7 @@ ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
 	}
 
 	DBG2(DBG_LIB, "generate polynomial g");
-	g_poly = ntru_poly_create_from_seed(hash_algid, seed, params->c_bits,
+	g_poly = ntru_poly_create_from_seed(alg, seed, params->c_bits,
 										params->N, params->q, params->dg + 1,
 										params->dg, FALSE);
 	if (!g_poly)
@@ -775,7 +768,7 @@ ntru_private_key_t *ntru_private_key_create_from_data(ntru_drbg_t *drbg,
 	size_t privkey_packed_trits_len, privkey_packed_indices_len;
 	uint8_t *privkey_packed, tag;
 	uint16_t *indices, dF;
-	ntru_param_set_t *params;
+	const ntru_param_set_t *params;
 
 	header_len = 2 + NTRU_OID_LEN;
 

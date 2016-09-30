@@ -1,25 +1,21 @@
 from setuptools import setup
 
-
-long_description = (
-    "The strongSwan VICI protocol allows external application to monitor, "
-    "configure and control the IKE daemon charon. This python package provides "
-    "a native client side implementation of the VICI protocol, well suited to "
-    "script automated tasks in a reliable way."
-)
+with open('README.rst') as file:
+    long_description = file.read()
 
 setup(
     name="vici",
     version="@EGG_VERSION@",
-    description="Native python interface for strongSwan VICI",
-    author="Bjorn Schuberg",
+    description="Native Python interface for strongSwan's VICI protocol",
+    long_description=long_description,
+    author="strongSwan Project",
+    author_email="info@strongswan.org",
     url="https://wiki.strongswan.org/projects/strongswan/wiki/Vici",
     license="MIT",
     packages=["vici"],
-    long_description=long_description,
     include_package_data=True,
     classifiers=(
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Intended Audience :: System Administrators",
         "License :: OSI Approved :: MIT License",

@@ -60,7 +60,8 @@ bool openssl_hash_chunk(int hash_type, chunk_t data, chunk_t *hash);
  * @param chunk		resulting chunk
  * @return			TRUE on success, FALSE otherwise
  */
-bool openssl_bn_cat(int len, BIGNUM *a, BIGNUM *b, chunk_t *chunk);
+bool openssl_bn_cat(const int len, const BIGNUM *a, const BIGNUM *b,
+					chunk_t *chunk);
 
 /**
  * Splits a chunk into two bignums of equal binary length.
@@ -80,7 +81,7 @@ bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b);
  * @param chunk		the chunk (data gets allocated)
  * @return			TRUE on success, FALSE otherwise
  */
-bool openssl_bn2chunk(BIGNUM *bn, chunk_t *chunk);
+bool openssl_bn2chunk(const BIGNUM *bn, chunk_t *chunk);
 
 /**
  * Allocate a chunk using the i2d function of a given object
@@ -133,5 +134,43 @@ int openssl_asn1_known_oid(ASN1_OBJECT *obj);
  * @returns			time_t, 0 on error
  */
 time_t openssl_asn1_to_time(ASN1_TIME *time);
+
+/**
+ * Macros to define fallback getters/setters to access keys (BIGNUM*) for types
+ * that were made opaque with OpenSSL 1.1.0.
+ */
+#define OPENSSL_KEY_FALLBACK(...) VA_ARGS_DISPATCH(OPENSSL_KEY_FALLBACK, __VA_ARGS__)(__VA_ARGS__)
+#define OPENSSL_KEY_FALLBACK3(type, k1, k2) \
+__attribute__((unused)) \
+static inline void type##_get0(const type *o, const BIGNUM **k1, const BIGNUM **k2) { \
+	if (k1) *k1 = o->k1; \
+	if (k2) *k2 = o->k2; } \
+__attribute__((unused)) \
+static inline int type##_set0(type *o, BIGNUM *k1, BIGNUM *k2) { \
+	if (k1) { BN_clear_free(o->k1); o->k1 = k1; } \
+	if (k2) { BN_clear_free(o->k2); o->k2 = k2; } \
+	return 1; }
+#define OPENSSL_KEY_FALLBACK4(type, name, k1, k2) \
+__attribute__((unused)) \
+static inline void type##_get0_##name(const type *o, const BIGNUM **k1, const BIGNUM **k2) { \
+	if (k1) *k1 = o->k1; \
+	if (k2) *k2 = o->k2; } \
+__attribute__((unused)) \
+static inline int type##_set0_##name(type *o, BIGNUM *k1, BIGNUM *k2) { \
+	if (k1) { BN_clear_free(o->k1); o->k1 = k1; } \
+	if (k2) { BN_clear_free(o->k2); o->k2 = k2; } \
+	return 1; }
+#define OPENSSL_KEY_FALLBACK5(type, name, k1, k2, k3) \
+__attribute__((unused)) \
+static inline void type##_get0_##name(const type *o, const BIGNUM **k1, const BIGNUM **k2, const BIGNUM **k3) { \
+	if (k1) *k1 = o->k1; \
+	if (k2) *k2 = o->k2; \
+	if (k3) *k3 = o->k3; } \
+__attribute__((unused)) \
+static inline int type##_set0_##name(type *o, BIGNUM *k1, BIGNUM *k2, BIGNUM *k3) { \
+	if (k1) { BN_clear_free(o->k1); o->k1 = k1; } \
+	if (k2) { BN_clear_free(o->k2); o->k2 = k2; } \
+	if (k3) { BN_clear_free(o->k3); o->k3 = k3; } \
+	return 1; }
 
 #endif /** OPENSSL_UTIL_H_ @}*/

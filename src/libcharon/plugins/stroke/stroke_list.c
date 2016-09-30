@@ -844,6 +844,7 @@ static void list_algs(FILE *out)
 	integrity_algorithm_t integrity;
 	hash_algorithm_t hash;
 	pseudo_random_function_t prf;
+	ext_out_function_t xof;
 	diffie_hellman_group_t group;
 	rng_quality_t quality;
 	const char *plugin_name;
@@ -889,6 +890,14 @@ static void list_algs(FILE *out)
 	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
 	{
 		print_alg(out, &len, pseudo_random_function_names, prf, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  xof:       ");
+	len = 13;
+	enumerator = lib->crypto->create_xof_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &xof, &plugin_name))
+	{
+		print_alg(out, &len, ext_out_function_names, xof, plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n  dh-group:  ");

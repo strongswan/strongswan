@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
 typedef struct ntru_trits_t ntru_trits_t;
 
 #include <library.h>
+#include <crypto/xofs/xof.h>
 
 /**
  * Implements an array of trinary elements (trits) 
@@ -52,10 +53,11 @@ struct ntru_trits_t {
  * Create a trits array from a seed using MGF1 with a base hash function
  *
  * @param size			size of the trits array
- * @param alg			hash algorithm to be used by MGF1
+ * @param alg			MGF1 algorithm used (XOF_MGF1_SHA1 or XOF_MGF_SHA256)
  * @param seed			seed used by MGF1 to generate trits from
  */
-ntru_trits_t *ntru_trits_create(size_t size, hash_algorithm_t alg, chunk_t seed);
+ntru_trits_t *ntru_trits_create(size_t size, ext_out_function_t alg,
+								chunk_t seed);
 
 #endif /** NTRU_TRITS_H_ @}*/
 

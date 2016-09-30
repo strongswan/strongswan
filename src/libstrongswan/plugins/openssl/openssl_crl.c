@@ -46,6 +46,17 @@
 #include <collections/enumerator.h>
 #include <credentials/certificates/x509.h>
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+static inline void X509_CRL_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, const X509_CRL *crl) {
+	if (psig) { *psig = crl->signature; }
+	if (palg) { *palg = crl->sig_alg; }
+}
+#define X509_REVOKED_get0_serialNumber(r) ({ (r)->serialNumber; })
+#define X509_REVOKED_get0_revocationDate(r) ({ (r)->revocationDate; })
+#define X509_CRL_get0_extensions(c) ({ (c)->crl->extensions; })
+#define X509_ALGOR_get0(oid, ppt, ppv, alg) ({ *(oid) = (alg)->algorithm; })
+#endif
+
 typedef struct private_openssl_crl_t private_openssl_crl_t;
 
 /**
@@ -141,11 +152,13 @@ METHOD(enumerator_t, crl_enumerate, bool,
 		revoked = sk_X509_REVOKED_value(this->stack, this->i);
 		if (serial)
 		{
-			*serial = openssl_asn1_str2chunk(revoked->serialNumber);
+			*serial = openssl_asn1_str2chunk(
+									X509_REVOKED_get0_serialNumber(revoked));
 		}
 		if (date)
 		{
-			*date = openssl_asn1_to_time(revoked->revocationDate);
+			*date = openssl_asn1_to_time(
+									X509_REVOKED_get0_revocationDate(revoked));
 		}
 		if (reason)
 		{
@@ -231,6 +244,7 @@ METHOD(certificate_t, issued_by, bool,
 	chunk_t fingerprint, tbs;
 	public_key_t *key;
 	x509_t *x509;
+	ASN1_BIT_STRING *sig;
 	bool valid;
 
 	if (issuer->get_type(issuer) != CERT_X509)
@@ -266,9 +280,14 @@ METHOD(certificate_t, issued_by, bool,
 	{
 		return FALSE;
 	}
+	/* i2d_re_X509_CRL_tbs() was added with 1.1.0 when X509_CRL became opaque */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	tbs = openssl_i2chunk(re_X509_CRL_tbs, this->crl);
+#else
 	tbs = openssl_i2chunk(X509_CRL_INFO, this->crl->crl);
-	valid = key->verify(key, this->scheme, tbs,
-						openssl_asn1_str2chunk(this->crl->signature));
+#endif
+	X509_CRL_get0_signature(&sig, NULL, this->crl);
+	valid = key->verify(key, this->scheme, tbs, openssl_asn1_str2chunk(sig));
 	free(tbs.ptr);
 	key->destroy(key);
 	if (valid && scheme)
@@ -448,7 +467,7 @@ static bool parse_extensions(private_openssl_crl_t *this)
 	X509_EXTENSION *ext;
 	STACK_OF(X509_EXTENSION) *extensions;
 
-	extensions = this->crl->crl->extensions;
+	extensions = X509_CRL_get0_extensions(this->crl);
 	if (extensions)
 	{
 		num = sk_X509_EXTENSION_num(extensions);
@@ -494,6 +513,8 @@ static bool parse_extensions(private_openssl_crl_t *this)
 static bool parse_crl(private_openssl_crl_t *this)
 {
 	const unsigned char *ptr = this->encoding.ptr;
+	ASN1_OBJECT *oid;
+	X509_ALGOR *alg;
 
 	this->crl = d2i_X509_CRL(NULL, &ptr, this->encoding.len);
 	if (!this->crl)
@@ -501,14 +522,28 @@ static bool parse_crl(private_openssl_crl_t *this)
 		return FALSE;
 	}
 
+	X509_CRL_get0_signature(NULL, &alg, this->crl);
+	X509_ALGOR_get0(&oid, NULL, NULL, alg);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	if (!chunk_equals(
 			openssl_asn1_obj2chunk(this->crl->crl->sig_alg->algorithm),
 			openssl_asn1_obj2chunk(this->crl->sig_alg->algorithm)))
 	{
 		return FALSE;
 	}
-	this->scheme = signature_scheme_from_oid(openssl_asn1_known_oid(
-												this->crl->sig_alg->algorithm));
+#elif 0
+	/* FIXME: we currently can't do this if X509_CRL is opaque (>= 1.1.0) as
+	 * X509_CRL_get0_tbs_sigalg() does not exist and there does not seem to be
+	 * another easy way to get the algorithm from the tbsCertList of the CRL */
+	alg = X509_CRL_get0_tbs_sigalg(this->crl);
+	X509_ALGOR_get0(&oid_tbs, NULL, NULL, alg);
+	if (!chunk_equals(openssl_asn1_obj2chunk(oid),
+					  openssl_asn1_obj2chunk(oid_tbs)))
+	{
+		return FALSE;
+	}
+#endif
+	this->scheme = signature_scheme_from_oid(openssl_asn1_known_oid(oid));
 
 	this->issuer = openssl_x509_name2id(X509_CRL_get_issuer(this->crl));
 	if (!this->issuer)

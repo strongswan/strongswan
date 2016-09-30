@@ -154,12 +154,15 @@ AM_CPPFLAGS = \
 	-DIPSEC_DIR=\"${ipsecdir}\" \
 	-DIPSEC_PIDDIR=\"${piddir}\"
 
+AM_CFLAGS = \
+  @COVERAGE_CFLAGS@
+
 AM_LDFLAGS = \
   -no-undefined
 
 libcharon_la_LIBADD = \
   $(top_builddir)/src/libstrongswan/libstrongswan.la \
-  -lm $(PTHREADLIB) $(DLLIB) $(SOCKLIB)
+  -lm $(PTHREADLIB) $(ATOMICLIB) $(DLLIB) $(SOCKLIB)
 
 if USE_WINDOWS
   libcharon_la_LIBADD += -lws2_32
@@ -507,13 +510,6 @@ if USE_ANDROID_LOG
   SUBDIRS += plugins/android_log
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/android_log/libstrongswan-android-log.la
-endif
-endif
-
-if USE_MAEMO
-  SUBDIRS += plugins/maemo
-if MONOLITHIC
-  libcharon_la_LIBADD += plugins/maemo/libstrongswan-maemo.la
 endif
 endif
 

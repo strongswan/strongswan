@@ -308,7 +308,7 @@ static void add_exclude_route(private_kernel_libipsec_ipsec_t *this,
 	if (!route->exclude)
 	{
 		DBG2(DBG_KNL, "installing new exclude route for %H src %H", dst, src);
-		gtw = charon->kernel->get_nexthop(charon->kernel, dst, -1, NULL);
+		gtw = charon->kernel->get_nexthop(charon->kernel, dst, -1, NULL, NULL);
 		if (gtw)
 		{
 			char *if_name = NULL;
@@ -434,7 +434,8 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 	);
 #ifndef __linux__
 	/* on Linux we cant't install a gateway */
-	route->gateway = charon->kernel->get_nexthop(charon->kernel, dst, -1, src);
+	route->gateway = charon->kernel->get_nexthop(charon->kernel, dst, -1, src,
+												 NULL);
 #endif
 
 	if (policy->route)

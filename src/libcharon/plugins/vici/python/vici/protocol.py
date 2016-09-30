@@ -20,14 +20,21 @@ class Transport(object):
         self.socket.sendall(struct.pack("!I", len(packet)) + packet)
 
     def receive(self):
-        raw_length = self.socket.recv(self.HEADER_LENGTH)
+        raw_length = self._recvall(self.HEADER_LENGTH)
         length, = struct.unpack("!I", raw_length)
-        payload = self.socket.recv(length)
+        payload = self._recvall(length)
         return payload
 
     def close(self):
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
+
+    def _recvall(self, count):
+        """Ensure to read count bytes from the socket"""
+        data = b""
+        while len(data) < count:
+            data += self.socket.recv(count - len(data))
+        return data
 
 
 class Packet(object):

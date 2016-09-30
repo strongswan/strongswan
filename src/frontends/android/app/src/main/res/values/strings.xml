@@ -124,6 +124,8 @@
 
     <!-- Dialogs -->
     <string name="login_title">Enter password to connect</string>
+    <string name="login_username">Username</string>
+    <string name="login_password">Password</string>
     <string name="login_confirm">Connect</string>
     <string name="error_introduction">Failed to establish VPN:</string>
     <string name="error_lookup_failed">Server address lookup failed.</string>

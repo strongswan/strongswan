@@ -4,8 +4,8 @@ moon:: ipsec status 2> /dev/null::rw\[1]: ESTABLISHED.*moon.strongswan.org.*caro
 moon:: ipsec status 2> /dev/null::rw\[2]: ESTABLISHED.*moon.strongswan.org.*dave@strongswan.org::YES
 carol::ipsec statusall 2> /dev/null::IKE proposal: BLOWFISH_CBC_256/HMAC_SHA2_512_256::YES
 dave:: ipsec statusall 2> /dev/null::IKE proposal: BLOWFISH_CBC_128/HMAC_SHA2_256_128::YES
-carol::ping -c 1 -s 120 -p deadbeef PH_IP_ALICE::128 bytes from PH_IP_ALICE: icmp_req=1::YES
-dave:: ping -c 1 -s 120 -p deadbeef PH_IP_ALICE::128 bytes from PH_IP_ALICE: icmp_req=1::YES
+carol::ping -c 1 -s 120 -p deadbeef PH_IP_ALICE::128 bytes from PH_IP_ALICE: icmp_.eq=1::YES
+dave:: ping -c 1 -s 120 -p deadbeef PH_IP_ALICE::128 bytes from PH_IP_ALICE: icmp_.eq=1::YES
 carol::ipsec statusall 2> /dev/null::BLOWFISH_CBC_192/HMAC_SHA2_256_128,::YES
 dave:: ipsec statusall 2> /dev/null::BLOWFISH_CBC_128/HMAC_SHA1_96,::YES
 carol::ip -s xfrm state::enc cbc(blowfish).*(192 bits)::YES

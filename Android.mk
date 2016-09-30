@@ -96,7 +96,8 @@ strongswan_BUILD := \
 	libstrongswan \
 	libtncif \
 	libtnccs \
-	libimcv
+	libimcv \
+	libtpmtss
 
 ifneq ($(strongswan_BUILD_STARTER),)
 strongswan_BUILD += \

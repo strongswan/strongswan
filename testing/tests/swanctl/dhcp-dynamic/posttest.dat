@@ -4,7 +4,7 @@ carol::service charon stop 2> /dev/null
 dave::service charon stop 2> /dev/null
 moon::service charon stop 2> /dev/null
 venus::cat /var/state/dhcp/dhcpd.leases
-venus::/etc/init.d/isc-dhcp-server stop 2> /dev/null
+venus::server isc-dhcp-server stop 2> /dev/null
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush
 dave::iptables-restore < /etc/iptables.flush

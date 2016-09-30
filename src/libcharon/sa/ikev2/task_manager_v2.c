@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2007-2015 Tobias Brunner
+ * Copyright (C) 2007-2016 Tobias Brunner
  * Copyright (C) 2007-2010 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -43,30 +43,14 @@
 #include <encoding/payloads/unknown_payload.h>
 #include <processing/jobs/retransmit_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
+#include <processing/jobs/initiate_tasks_job.h>
 
 #ifdef ME
 #include <sa/ikev2/tasks/ike_me.h>
 #endif
 
-typedef struct exchange_t exchange_t;
-
-/**
- * An exchange in the air, used do detect and handle retransmission
- */
-struct exchange_t {
-
-	/**
-	 * Message ID used for this transaction
-	 */
-	uint32_t mid;
-
-	/**
-	 * generated packet for retransmission
-	 */
-	packet_t *packet;
-};
-
 typedef struct private_task_manager_t private_task_manager_t;
+typedef struct queued_task_t queued_task_t;
 
 /**
  * private data of the task manager
@@ -182,6 +166,22 @@ struct private_task_manager_t {
 };
 
 /**
+ * Queued tasks
+ */
+struct queued_task_t {
+
+	/**
+	 * Queued task
+	 */
+	task_t *task;
+
+	/**
+	 * Time before which the task is not to be initiated
+	 */
+	timeval_t time;
+};
+
+/**
  * Reset retransmission packet list
  */
 static void clear_packets(array_t *array)
@@ -216,6 +216,12 @@ METHOD(task_manager_t, flush_queue, void,
 	}
 	while (array_remove(array, ARRAY_TAIL, &task))
 	{
+		if (queue == TASK_QUEUE_QUEUED)
+		{
+			queued_task_t *queued = (queued_task_t*)task;
+			task = queued->task;
+			free(queued);
+		}
 		task->destroy(task);
 	}
 }
@@ -229,22 +235,28 @@ METHOD(task_manager_t, flush, void,
 }
 
 /**
- * move a task of a specific type from the queue to the active list
+ * Move a task of a specific type from the queue to the active list, if it is
+ * not delayed.
  */
 static bool activate_task(private_task_manager_t *this, task_type_t type)
 {
 	enumerator_t *enumerator;
-	task_t *task;
+	queued_task_t *queued;
+	timeval_t now;
 	bool found = FALSE;
 
+	time_monotonic(&now);
+
 	enumerator = array_create_enumerator(this->queued_tasks);
-	while (enumerator->enumerate(enumerator, (void**)&task))
+	while (enumerator->enumerate(enumerator, (void**)&queued))
 	{
-		if (task->get_type(task) == type)
+		if (queued->task->get_type(queued->task) == type &&
+			!timercmp(&now, &queued->time, <))
 		{
 			DBG2(DBG_IKE, "  activating %N task", task_type_names, type);
 			array_remove_at(this->queued_tasks, enumerator);
-			array_insert(this->active_tasks, ARRAY_TAIL, task);
+			array_insert(this->active_tasks, ARRAY_TAIL, queued->task);
+			free(queued);
 			found = TRUE;
 			break;
 		}
@@ -352,7 +364,8 @@ METHOD(task_manager_t, retransmit, status_t,
 			{
 				DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
 					 this->initiating.retransmitted, message_id);
-				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet);
+				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet,
+								   this->initiating.retransmitted);
 			}
 			if (!mobike)
 			{
@@ -534,6 +547,7 @@ METHOD(task_manager_t, initiate, status_t,
 					break;
 				}
 			case IKE_REKEYING:
+			case IKE_REKEYED:
 				if (activate_task(this, TASK_IKE_DELETE))
 				{
 					exchange = INFORMATIONAL;
@@ -610,7 +624,8 @@ METHOD(task_manager_t, initiate, status_t,
 			case FAILED:
 			default:
 				this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
-				if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING)
+				if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING &&
+					this->ike_sa->get_state(this->ike_sa) != IKE_REKEYED)
 				{
 					charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 				}
@@ -694,6 +709,13 @@ static status_t process_response(private_task_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 
+	if (this->initiating.retransmitted)
+	{
+		packet_t *packet = NULL;
+		array_get(this->initiating.packets, 0, &packet);
+		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_CLEARED, packet);
+	}
+
 	/* catch if we get resetted while processing */
 	this->reset = FALSE;
 	enumerator = array_create_enumerator(this->active_tasks);
@@ -751,8 +773,7 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 
 	/* do we have to check  */
 	if (type == TASK_IKE_REKEY || type == TASK_CHILD_REKEY ||
-		type == TASK_CHILD_DELETE || type == TASK_IKE_DELETE ||
-		type == TASK_IKE_REAUTH)
+		type == TASK_CHILD_DELETE || type == TASK_IKE_DELETE)
 	{
 		/* find an exchange collision, and notify these tasks */
 		enumerator = array_create_enumerator(this->active_tasks);
@@ -761,8 +782,7 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 			switch (active->get_type(active))
 			{
 				case TASK_IKE_REKEY:
-					if (type == TASK_IKE_REKEY || type == TASK_IKE_DELETE ||
-						type == TASK_IKE_REAUTH)
+					if (type == TASK_IKE_REKEY || type == TASK_IKE_DELETE)
 					{
 						ike_rekey_t *rekey = (ike_rekey_t*)active;
 						rekey->collide(rekey, task);
@@ -839,6 +859,10 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				/* FALL */
 			case DESTROY_ME:
 				/* destroy IKE_SA, but SEND response first */
+				if (handle_collisions(this, task))
+				{
+					array_remove_at(this->passive_tasks, enumerator);
+				}
 				delete = TRUE;
 				break;
 		}
@@ -901,9 +925,11 @@ static status_t process_request(private_task_manager_t *this,
 	payload_t *payload;
 	notify_payload_t *notify;
 	delete_payload_t *delete;
+	ike_sa_state_t state;
 
 	if (array_count(this->passive_tasks) == 0)
 	{	/* create tasks depending on request type, if not already some queued */
+		state = this->ike_sa->get_state(this->ike_sa);
 		switch (message->get_exchange_type(message))
 		{
 			case IKE_SA_INIT:
@@ -939,8 +965,8 @@ static status_t process_request(private_task_manager_t *this,
 			{	/* FIXME: we should prevent this on mediation connections */
 				bool notify_found = FALSE, ts_found = FALSE;
 
-				if (this->ike_sa->get_state(this->ike_sa) == IKE_CREATED ||
-					this->ike_sa->get_state(this->ike_sa) == IKE_CONNECTING)
+				if (state == IKE_CREATED ||
+					state == IKE_CONNECTING)
 				{
 					DBG1(DBG_IKE, "received CREATE_CHILD_SA request for "
 						 "unestablished IKE_SA, rejected");
@@ -1005,6 +1031,14 @@ static status_t process_request(private_task_manager_t *this,
 						case PLV2_NOTIFY:
 						{
 							notify = (notify_payload_t*)payload;
+							if (state == IKE_REKEYED)
+							{
+								DBG1(DBG_IKE, "received unexpected notify %N "
+									 "for rekeyed IKE_SA, ignored",
+									 notify_type_names,
+									 notify->get_notify_type(notify));
+								break;
+							}
 							switch (notify->get_notify_type(notify))
 							{
 								case ADDITIONAL_IP4_ADDRESS:
@@ -1347,6 +1381,8 @@ METHOD(task_manager_t, process_message, status_t,
 	status_t status;
 	uint32_t mid;
 	bool schedule_delete_job = FALSE;
+	ike_sa_state_t state;
+	exchange_type_t type;
 
 	charon->bus->message(charon->bus, msg, TRUE, FALSE);
 	status = parse_message(this, msg);
@@ -1387,15 +1423,16 @@ METHOD(task_manager_t, process_message, status_t,
 	{
 		if (mid == this->responding.mid)
 		{
-			/* reject initial messages if not received in specific states */
-			if ((msg->get_exchange_type(msg) == IKE_SA_INIT &&
-				 this->ike_sa->get_state(this->ike_sa) != IKE_CREATED) ||
-				(msg->get_exchange_type(msg) == IKE_AUTH &&
-				 this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING))
+			/* reject initial messages if not received in specific states,
+			 * after rekeying we only expect a DELETE in an INFORMATIONAL */
+			type = msg->get_exchange_type(msg);
+			state = this->ike_sa->get_state(this->ike_sa);
+			if ((type == IKE_SA_INIT && state != IKE_CREATED) ||
+				(type == IKE_AUTH && state != IKE_CONNECTING) ||
+				(state == IKE_REKEYED && type != INFORMATIONAL))
 			{
 				DBG1(DBG_IKE, "ignoring %N in IKE_SA state %N",
-					 exchange_type_names, msg->get_exchange_type(msg),
-					 ike_sa_state_names, this->ike_sa->get_state(this->ike_sa));
+					 exchange_type_names, type, ike_sa_state_names, state);
 				return FAILED;
 			}
 			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
@@ -1499,18 +1536,19 @@ METHOD(task_manager_t, process_message, status_t,
 	return SUCCESS;
 }
 
-METHOD(task_manager_t, queue_task, void,
-	private_task_manager_t *this, task_t *task)
+METHOD(task_manager_t, queue_task_delayed, void,
+	private_task_manager_t *this, task_t *task, uint32_t delay)
 {
+	enumerator_t *enumerator;
+	queued_task_t *queued;
+	timeval_t time;
+
 	if (task->get_type(task) == TASK_IKE_MOBIKE)
 	{	/*  there is no need to queue more than one mobike task */
-		enumerator_t *enumerator;
-		task_t *current;
-
 		enumerator = array_create_enumerator(this->queued_tasks);
-		while (enumerator->enumerate(enumerator, &current))
+		while (enumerator->enumerate(enumerator, &queued))
 		{
-			if (current->get_type(current) == TASK_IKE_MOBIKE)
+			if (queued->task->get_type(queued->task) == TASK_IKE_MOBIKE)
 			{
 				enumerator->destroy(enumerator);
 				task->destroy(task);
@@ -1519,8 +1557,35 @@ METHOD(task_manager_t, queue_task, void,
 		}
 		enumerator->destroy(enumerator);
 	}
-	DBG2(DBG_IKE, "queueing %N task", task_type_names, task->get_type(task));
-	array_insert(this->queued_tasks, ARRAY_TAIL, task);
+	time_monotonic(&time);
+	if (delay)
+	{
+		job_t *job;
+
+		DBG2(DBG_IKE, "queueing %N task (delayed by %us)", task_type_names,
+			 task->get_type(task), delay);
+		time.tv_sec += delay;
+
+		job = (job_t*)initiate_tasks_job_create(
+											this->ike_sa->get_id(this->ike_sa));
+		lib->scheduler->schedule_job_tv(lib->scheduler, job, time);
+	}
+	else
+	{
+		DBG2(DBG_IKE, "queueing %N task", task_type_names,
+			 task->get_type(task));
+	}
+	INIT(queued,
+		.task = task,
+		.time = time,
+	);
+	array_insert(this->queued_tasks, ARRAY_TAIL, queued);
+}
+
+METHOD(task_manager_t, queue_task, void,
+	private_task_manager_t *this, task_t *task)
+{
+	queue_task_delayed(this, task, 0);
 }
 
 /**
@@ -1530,12 +1595,12 @@ static bool has_queued(private_task_manager_t *this, task_type_t type)
 {
 	enumerator_t *enumerator;
 	bool found = FALSE;
-	task_t *task;
+	queued_task_t *queued;
 
 	enumerator = array_create_enumerator(this->queued_tasks);
-	while (enumerator->enumerate(enumerator, &task))
+	while (enumerator->enumerate(enumerator, &queued))
 	{
-		if (task->get_type(task) == type)
+		if (queued->task->get_type(queued->task) == type)
 		{
 			found = TRUE;
 			break;
@@ -1614,7 +1679,7 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 	child_cfg_t *cfg;
 	ike_sa_t *new;
 	host_t *host;
-	task_t *task;
+	queued_task_t *queued;
 
 	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
 								this->ike_sa->get_version(this->ike_sa), TRUE);
@@ -1645,13 +1710,14 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 	enumerator->destroy(enumerator);
 
 	enumerator = array_create_enumerator(this->queued_tasks);
-	while (enumerator->enumerate(enumerator, &task))
+	while (enumerator->enumerate(enumerator, &queued))
 	{
-		if (task->get_type(task) == TASK_CHILD_CREATE)
+		if (queued->task->get_type(queued->task) == TASK_CHILD_CREATE)
 		{
-			task->migrate(task, new);
-			new->queue_task(new, task);
+			queued->task->migrate(queued->task, new);
+			new->queue_task(new, queued->task);
 			array_remove_at(this->queued_tasks, enumerator);
+			free(queued);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -1776,34 +1842,62 @@ METHOD(task_manager_t, adopt_tasks, void,
 	private_task_manager_t *this, task_manager_t *other_public)
 {
 	private_task_manager_t *other = (private_task_manager_t*)other_public;
-	task_t *task;
+	queued_task_t *queued;
+	timeval_t now;
+
+	time_monotonic(&now);
 
 	/* move queued tasks from other to this */
-	while (array_remove(other->queued_tasks, ARRAY_TAIL, &task))
+	while (array_remove(other->queued_tasks, ARRAY_TAIL, &queued))
 	{
-		DBG2(DBG_IKE, "migrating %N task", task_type_names, task->get_type(task));
-		task->migrate(task, this->ike_sa);
-		array_insert(this->queued_tasks, ARRAY_HEAD, task);
+		DBG2(DBG_IKE, "migrating %N task", task_type_names,
+			 queued->task->get_type(queued->task));
+		queued->task->migrate(queued->task, this->ike_sa);
+		/* don't delay tasks on the new IKE_SA */
+		queued->time = now;
+		array_insert(this->queued_tasks, ARRAY_HEAD, queued);
 	}
 }
 
 /**
- * Migrates child-creating tasks from src to dst
+ * Migrates child-creating tasks from other to this
  */
 static void migrate_child_tasks(private_task_manager_t *this,
-								array_t *src, array_t *dst)
+								private_task_manager_t *other,
+								task_queue_t queue)
 {
 	enumerator_t *enumerator;
+	array_t *array;
 	task_t *task;
 
-	enumerator = array_create_enumerator(src);
+	switch (queue)
+	{
+		case TASK_QUEUE_ACTIVE:
+			array = other->active_tasks;
+			break;
+		case TASK_QUEUE_QUEUED:
+			array = other->queued_tasks;
+			break;
+		default:
+			return;
+	}
+
+	enumerator = array_create_enumerator(array);
 	while (enumerator->enumerate(enumerator, &task))
 	{
+		queued_task_t *queued = NULL;
+
+		if (queue == TASK_QUEUE_QUEUED)
+		{
+			queued = (queued_task_t*)task;
+			task = queued->task;
+		}
 		if (task->get_type(task) == TASK_CHILD_CREATE)
 		{
-			array_remove_at(src, enumerator);
+			array_remove_at(array, enumerator);
 			task->migrate(task, this->ike_sa);
-			array_insert(dst, ARRAY_TAIL, task);
+			queue_task(this, task);
+			free(queued);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -1815,9 +1909,9 @@ METHOD(task_manager_t, adopt_child_tasks, void,
 	private_task_manager_t *other = (private_task_manager_t*)other_public;
 
 	/* move active child tasks from other to this */
-	migrate_child_tasks(this, other->active_tasks, this->queued_tasks);
+	migrate_child_tasks(this, other, TASK_QUEUE_ACTIVE);
 	/* do the same for queued tasks */
-	migrate_child_tasks(this, other->queued_tasks, this->queued_tasks);
+	migrate_child_tasks(this, other, TASK_QUEUE_QUEUED);
 }
 
 METHOD(task_manager_t, busy, bool,
@@ -1830,7 +1924,9 @@ METHOD(task_manager_t, reset, void,
 	private_task_manager_t *this, uint32_t initiate, uint32_t respond)
 {
 	enumerator_t *enumerator;
+	queued_task_t *queued;
 	task_t *task;
+	timeval_t now;
 
 	/* reset message counters and retransmit packets */
 	clear_packets(this->responding.packets);
@@ -1849,11 +1945,13 @@ METHOD(task_manager_t, reset, void,
 	}
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 
+	time_monotonic(&now);
 	/* reset queued tasks */
 	enumerator = array_create_enumerator(this->queued_tasks);
-	while (enumerator->enumerate(enumerator, &task))
+	while (enumerator->enumerate(enumerator, &queued))
 	{
-		task->migrate(task, this->ike_sa);
+		queued->time = now;
+		queued->task->migrate(queued->task, this->ike_sa);
 	}
 	enumerator->destroy(enumerator);
 
@@ -1861,10 +1959,23 @@ METHOD(task_manager_t, reset, void,
 	while (array_remove(this->active_tasks, ARRAY_TAIL, &task))
 	{
 		task->migrate(task, this->ike_sa);
-		array_insert(this->queued_tasks, ARRAY_HEAD, task);
+		INIT(queued,
+			.task = task,
+			.time = now,
+		);
+		array_insert(this->queued_tasks, ARRAY_HEAD, queued);
 	}
 
 	this->reset = TRUE;
+}
+
+/**
+ * Filter queued tasks
+ */
+static bool filter_queued(void *unused, queued_task_t **queued, task_t **task)
+{
+	*task = (*queued)->task;
+	return TRUE;
 }
 
 METHOD(task_manager_t, create_task_enumerator, enumerator_t*,
@@ -1877,7 +1988,9 @@ METHOD(task_manager_t, create_task_enumerator, enumerator_t*,
 		case TASK_QUEUE_PASSIVE:
 			return array_create_enumerator(this->passive_tasks);
 		case TASK_QUEUE_QUEUED:
-			return array_create_enumerator(this->queued_tasks);
+			return enumerator_create_filter(
+									array_create_enumerator(this->queued_tasks),
+									(void*)filter_queued, NULL, NULL);
 		default:
 			return enumerator_create_empty();
 	}
@@ -1913,6 +2026,7 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 			.task_manager = {
 				.process_message = _process_message,
 				.queue_task = _queue_task,
+				.queue_task_delayed = _queue_task_delayed,
 				.queue_ike = _queue_ike,
 				.queue_ike_rekey = _queue_ike_rekey,
 				.queue_ike_reauth = _queue_ike_reauth,

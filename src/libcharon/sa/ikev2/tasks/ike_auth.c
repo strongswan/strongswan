@@ -564,6 +564,10 @@ METHOD(task_t, process_r, status_t,
 			this->ike_sa->enable_extension(this->ike_sa,
 										   EXT_EAP_ONLY_AUTHENTICATION);
 		}
+		if (message->get_notify(message, INITIAL_CONTACT))
+		{
+			this->initial_contact = TRUE;
+		}
 	}
 
 	if (this->other_auth == NULL)
@@ -650,14 +654,6 @@ METHOD(task_t, process_r, status_t,
 		default:
 			this->authentication_failed = TRUE;
 			return NEED_MORE;
-	}
-
-	/* If authenticated (with non-EAP) and received INITIAL_CONTACT,
-	 * delete any existing IKE_SAs with that peer. */
-	if (message->get_message_id(message) == 1 &&
-		message->get_notify(message, INITIAL_CONTACT))
-	{
-		this->initial_contact = TRUE;
 	}
 
 	/* another auth round done, invoke authorize hook */
@@ -749,13 +745,6 @@ METHOD(task_t, build_r, status_t,
 		get_reserved_id_bytes(this, id_payload);
 		message->add_payload(message, (payload_t*)id_payload);
 
-		if (this->initial_contact)
-		{
-			charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
-													 this->ike_sa, TRUE);
-			this->initial_contact = FALSE;
-		}
-
 		if ((uintptr_t)cfg->get(cfg, AUTH_RULE_AUTH_CLASS) == AUTH_CLASS_EAP)
 		{	/* EAP-only authentication */
 			if (!this->ike_sa->supports_extension(this->ike_sa,
@@ -830,7 +819,7 @@ METHOD(task_t, build_r, status_t,
 	}
 
 	if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
-												 this->ike_sa, FALSE))
+										this->ike_sa, this->initial_contact))
 	{
 		DBG1(DBG_IKE, "cancelling IKE_SA setup due to uniqueness policy");
 		charon->bus->alert(charon->bus, ALERT_UNIQUE_KEEP);

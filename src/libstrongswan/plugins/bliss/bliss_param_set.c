@@ -33,7 +33,7 @@ ENUM(bliss_param_set_id_names, BLISS_I, BLISS_B_IV,
  *
  * c[i] = exp(-2^i/f), i = 0..20, with f = k_sigma^2 / ln 2 = 93'076.9
  */
-static uint8_t c_bliss_i[] = {
+static const uint8_t c_bliss_i[] = {
 	255, 255,  75, 191, 247,  94,  30,  51, 147, 246,  89,  59,  99, 248,  26, 128,
 	255, 254, 151, 128, 109, 166,  88, 143,  30, 175, 149,  20, 240,  81, 138, 111,
 	255, 253,  47,   2, 214, 243, 188,  76, 236, 235,  40,  62,  54,  35,  33, 205,
@@ -62,7 +62,7 @@ static uint8_t c_bliss_i[] = {
  *
  * c[i] = exp(-2^i/f), i = 0..20, with f = k_sigma^2 / ln 2 = 125'550.5
  */
-static uint8_t c_bliss_iii[] = {
+static const uint8_t c_bliss_iii[] = {
 	255, 255, 122,  95,  16, 128,  14, 195,  60,  90, 166, 191, 205,  26, 144, 204,
 	255, 254, 244, 190, 102, 192, 187, 141, 169,  92,  33,  30, 170, 141, 184,  56,
 	255, 253, 233, 125, 228, 131,  93, 148, 121,  92,  52, 122, 149,  96,  29,  66,
@@ -91,7 +91,7 @@ static uint8_t c_bliss_iii[] = {
  *
  * c[i] = exp(-2^i/f), i = 0..21, with f = k_sigma^2 / ln 2 = 147'732.0
  */
-static uint8_t c_bliss_iv[] = {
+static const uint8_t c_bliss_iv[] = {
 	255, 255, 142, 111, 102,   2, 141,  87, 150,  42,  18,  70,   6, 224,  18,  70,
 	255, 255,  28, 222, 254, 102,  20,  78, 133,  78, 189, 107,  29,   7,  23, 193,
 	255, 254,  57, 190, 198,  79, 181, 181, 108,  75, 142, 145,  45, 238, 193,  29,
@@ -119,7 +119,7 @@ static uint8_t c_bliss_iv[] = {
 /**
  * BLISS signature parameter set definitions
  */
-static bliss_param_set_t bliss_param_sets[] = {
+static const bliss_param_set_t bliss_param_sets[] = {
 
 	/* BLISS-I scheme */
 	{
@@ -131,7 +131,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.q2_inv = 6145,
 		.n = 512,
 		.n_bits = 9,
-		.fft_params = &bliss_fft_12289_512,
+		.fft_params = &ntt_fft_12289_512,
 		.non_zero1 = 154,
 		.non_zero2 = 0,
 		.kappa = 23,
@@ -161,7 +161,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.q2_inv = 6145,
 		.n = 512,
 		.n_bits = 9,
-		.fft_params = &bliss_fft_12289_512,
+		.fft_params = &ntt_fft_12289_512,
 		.non_zero1 = 216,
 		.non_zero2 = 16,
 		.kappa = 30,
@@ -191,7 +191,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.q2_inv = 6145,
 		.n = 512,
 		.n_bits = 9,
-		.fft_params = &bliss_fft_12289_512,
+		.fft_params = &ntt_fft_12289_512,
 		.non_zero1 = 231,
 		.non_zero2 = 31,
 		.kappa = 39,
@@ -221,7 +221,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.q2_inv = 6145,
 		.n = 512,
 		.n_bits = 9,
-		.fft_params = &bliss_fft_12289_512,
+		.fft_params = &ntt_fft_12289_512,
 		.non_zero1 = 154,
 		.non_zero2 = 0,
 		.kappa = 23,
@@ -251,7 +251,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.q2_inv = 6145,
 		.n = 512,
 		.n_bits = 9,
-		.fft_params = &bliss_fft_12289_512,
+		.fft_params = &ntt_fft_12289_512,
 		.non_zero1 = 216,
 		.non_zero2 = 16,
 		.kappa = 30,
@@ -281,7 +281,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 		.q2_inv = 6145,
 		.n = 512,
 		.n_bits = 9,
-		.fft_params = &bliss_fft_12289_512,
+		.fft_params = &ntt_fft_12289_512,
 		.non_zero1 = 231,
 		.non_zero2 = 31,
 		.kappa = 39,
@@ -306,7 +306,7 @@ static bliss_param_set_t bliss_param_sets[] = {
 /**
  * See header.
  */
-bliss_param_set_t* bliss_param_set_get_by_id(bliss_param_set_id_t id)
+const bliss_param_set_t* bliss_param_set_get_by_id(bliss_param_set_id_t id)
 {
 	int i;
 
@@ -324,7 +324,7 @@ bliss_param_set_t* bliss_param_set_get_by_id(bliss_param_set_id_t id)
 /**
  * See header.
  */
-bliss_param_set_t* bliss_param_set_get_by_oid(int oid)
+const bliss_param_set_t* bliss_param_set_get_by_oid(int oid)
 {
 	int i;
 

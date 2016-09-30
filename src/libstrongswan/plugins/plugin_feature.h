@@ -110,6 +110,8 @@ struct plugin_feature_t {
 		FEATURE_HASHER,
 		/** prf_t */
 		FEATURE_PRF,
+		/** xof_t */
+		FEATURE_XOF,
 		/** diffie_hellman_t */
 		FEATURE_DH,
 		/** rng_t */
@@ -171,6 +173,8 @@ struct plugin_feature_t {
 		integrity_algorithm_t signer;
 		/** FEATURE_PRF */
 		pseudo_random_function_t prf;
+		/** FEATURE_XOFF */
+		ext_out_function_t xof;
 		/** FEATURE_HASHER */
 		hash_algorithm_t hasher;
 		/** FEATURE_DH */
@@ -278,6 +282,7 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_SIGNER(kind, alg)					__PLUGIN_FEATURE(kind, SIGNER, .signer = alg)
 #define _PLUGIN_FEATURE_HASHER(kind, alg)					__PLUGIN_FEATURE(kind, HASHER, .hasher = alg)
 #define _PLUGIN_FEATURE_PRF(kind, alg)						__PLUGIN_FEATURE(kind, PRF, .prf = alg)
+#define _PLUGIN_FEATURE_XOF(kind, alg)						__PLUGIN_FEATURE(kind, XOF, .xof = alg)
 #define _PLUGIN_FEATURE_DH(kind, group)						__PLUGIN_FEATURE(kind, DH, .dh_group = group)
 #define _PLUGIN_FEATURE_RNG(kind, quality)					__PLUGIN_FEATURE(kind, RNG, .rng_quality = quality)
 #define _PLUGIN_FEATURE_NONCE_GEN(kind, ...)				__PLUGIN_FEATURE(kind, NONCE_GEN, .custom = NULL)
@@ -310,6 +315,7 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_REGISTER_SIGNER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_HASHER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_PRF(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
+#define _PLUGIN_FEATURE_REGISTER_XOF(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_DH(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_RNG(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_NONCE_GEN(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)

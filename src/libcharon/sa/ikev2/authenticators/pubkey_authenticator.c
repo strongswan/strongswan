@@ -161,8 +161,8 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 		if (key_type == KEY_RSA)
 		{
 			signature_scheme_t schemes[] = {
-				SIGN_RSA_EMSA_PKCS1_SHA384,
-				SIGN_RSA_EMSA_PKCS1_SHA256,
+				SIGN_RSA_EMSA_PKCS1_SHA2_384,
+				SIGN_RSA_EMSA_PKCS1_SHA2_256,
 				SIGN_RSA_EMSA_PKCS1_SHA1,
 			}, contained;
 			bool found;

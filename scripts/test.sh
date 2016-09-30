@@ -32,15 +32,13 @@ printf-builtin)
 all)
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
 			--disable-dumm --disable-kernel-pfroute --disable-keychain
-			--disable-lock-profiler --disable-maemo --disable-padlock
-			--disable-osx-attr --disable-tkm --disable-uci --disable-aikgen
+			--disable-lock-profiler --disable-padlock
+			--disable-osx-attr --disable-tkm --disable-uci
 			--disable-systemd --disable-soup --disable-unwind-backtraces
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
-	if test "$MONOLITHIC" = "yes"; then
-		# Ubuntu 12.04 does not provide a proper -liptc pkg-config
-		CONFIG="$CONFIG --disable-forecast --disable-connmark"
-	fi
+	# Ubuntu 14.04 does provide a too old libtss2-dev
+	CONFIG="$CONFIG --disable-aikpub2 --disable-tss-tss2"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
 	# TODO: enable? perhaps via coveralls.io (cpp-coveralls)?
@@ -48,7 +46,8 @@ all)
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libnm-glib-dev libnm-glib-vpn-dev libpcsclite-dev libpam0g-dev
-		  binutils-dev libunwind7-dev libjson0-dev iptables-dev python-pip"
+		  binutils-dev libunwind8-dev libjson0-dev iptables-dev python-pip
+		  libtspi-dev"
 	PYDEPS="pytest"
 	;;
 win*)
@@ -64,16 +63,17 @@ win*)
 	# no make check for Windows binaries
 	TARGET=
 	CFLAGS="$CFLAGS -mno-ms-bitfields"
-	DEPS="gcc-mingw-w64-base mingw-w64-dev"
+	DEPS="gcc-mingw-w64-base"
 	case "$TEST" in
 	win64)
 		CONFIG="--host=x86_64-w64-mingw32 $CONFIG"
-		DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 $DEPS"
+		DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev $DEPS"
 		CC="x86_64-w64-mingw32-gcc"
 		;;
 	win32)
 		CONFIG="--host=i686-w64-mingw32 $CONFIG"
-		DEPS="gcc-mingw-w64-i686 binutils-mingw-w64-i686 $DEPS"
+		# currently only works on 12.04, so use mingw-w64-dev instead of mingw-w64-i686-dev
+		DEPS="gcc-mingw-w64-i686 binutils-mingw-w64-i686 mingw-w64-dev $DEPS"
 		CC="i686-w64-mingw32-gcc"
 		;;
 	esac
@@ -96,7 +96,7 @@ osx)
 	export ACLOCAL_PATH=$BREW_PREFIX/opt/gettext/share/aclocal:$ACLOCAL_PATH
 	for pkg in openssl curl
 	do
-		PKG_CONFIG_PATH=$BREW_PREFIX/opt/$PKG/lib/pkgconfig:$PKG_CONFIG_PATH
+		PKG_CONFIG_PATH=$BREW_PREFIX/opt/$pkg/lib/pkgconfig:$PKG_CONFIG_PATH
 		CPPFLAGS="-I$BREW_PREFIX/opt/$pkg/include $CPPFLAGS"
 		LDFLAGS="-L$BREW_PREFIX/opt/$pkg/lib $LDFLAGS"
 	done
@@ -106,6 +106,11 @@ osx)
 	;;
 dist)
 	TARGET=distcheck
+	;;
+apidoc)
+	DEPS="doxygen"
+	CONFIG="--disable-defaults"
+	TARGET=apidoc
 	;;
 *)
 	echo "$0: unknown test $TEST" >&2
@@ -121,6 +126,8 @@ if test "$1" = "deps"; then
 		;;
 	osx)
 		brew update && \
+		# workaround for issue #6352
+		brew uninstall --force libtool && brew install libtool && \
 		brew install $DEPS
 		;;
 	esac
@@ -141,5 +148,27 @@ CONFIG="$CONFIG
 
 echo "$ ./autogen.sh"
 ./autogen.sh || exit $?
-echo "$ CC=$CC CFLAGS=\"$CFLAGS\" ./configure $CONFIG && make $TARGET"
-CC="$CC" CFLAGS="$CFLAGS" ./configure $CONFIG && make -j4 $TARGET
+echo "$ CC=$CC CFLAGS=\"$CFLAGS\" ./configure $CONFIG"
+CC="$CC" CFLAGS="$CFLAGS" ./configure $CONFIG || exit $?
+
+case "$TEST" in
+apidoc)
+	exec 2>make.warnings
+	;;
+*)
+	;;
+esac
+
+echo "$ make $TARGET"
+make -j4 $TARGET || exit $?
+
+case "$TEST" in
+apidoc)
+	if test -s make.warnings; then
+		cat make.warnings
+		exit 1
+	fi
+	;;
+*)
+	;;
+esac

@@ -686,6 +686,7 @@ CALLBACK(list_conns, vici_message_t*,
 	uint32_t manual_prio;
 	linked_list_t *list;
 	traffic_selector_t *ts;
+	lifetime_cfg_t *lft;
 	vici_builder_t *b;
 
 	ike = request->get_str(request, NULL, "ike");
@@ -726,6 +727,10 @@ CALLBACK(list_conns, vici_message_t*,
 
 		b->add_kv(b, "version", "%N", ike_version_names,
 			peer_cfg->get_ike_version(peer_cfg));
+		b->add_kv(b, "reauth_time", "%u",
+			peer_cfg->get_reauth_time(peer_cfg, FALSE));
+		b->add_kv(b, "rekey_time", "%u",
+			peer_cfg->get_rekey_time(peer_cfg, FALSE));
 
 		build_auth_cfgs(peer_cfg, TRUE, b);
 		build_auth_cfgs(peer_cfg, FALSE, b);
@@ -739,6 +744,12 @@ CALLBACK(list_conns, vici_message_t*,
 
 			b->add_kv(b, "mode", "%N", ipsec_mode_names,
 				child_cfg->get_mode(child_cfg));
+
+			lft = child_cfg->get_lifetime(child_cfg, FALSE);
+			b->add_kv(b, "rekey_time",    "%"PRIu64, lft->time.rekey);
+			b->add_kv(b, "rekey_bytes",   "%"PRIu64, lft->bytes.rekey);
+			b->add_kv(b, "rekey_packets", "%"PRIu64, lft->packets.rekey);
+			free(lft);
 
 			b->begin_list(b, "local-ts");
 			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
@@ -1061,6 +1072,7 @@ CALLBACK(get_algorithms, vici_message_t*,
 	integrity_algorithm_t integrity;
 	hash_algorithm_t hash;
 	pseudo_random_function_t prf;
+	ext_out_function_t xof;
 	diffie_hellman_group_t group;
 	rng_quality_t quality;
 	const char *plugin_name;
@@ -1108,6 +1120,15 @@ CALLBACK(get_algorithms, vici_message_t*,
 	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
 	{
 		add_algorithm(b, pseudo_random_function_names, prf, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	b->end_section(b);
+
+	b->begin_section(b, "xof");
+	enumerator = lib->crypto->create_xof_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &xof, &plugin_name))
+	{
+		add_algorithm(b, ext_out_function_names, xof, plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	b->end_section(b);

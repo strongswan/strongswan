@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Tobias Brunner
+ * Copyright (C) 2012-2016 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -310,42 +310,57 @@ METHOD(ike_cfg_t, get_proposals, linked_list_t*,
 }
 
 METHOD(ike_cfg_t, select_proposal, proposal_t*,
-	private_ike_cfg_t *this, linked_list_t *proposals, bool private)
+	private_ike_cfg_t *this, linked_list_t *proposals, bool private,
+	bool prefer_self)
 {
-	enumerator_t *stored_enum, *supplied_enum;
-	proposal_t *stored, *supplied, *selected;
+	enumerator_t *prefer_enum, *match_enum;
+	proposal_t *proposal, *match, *selected = NULL;
 
-	stored_enum = this->proposals->create_enumerator(this->proposals);
-	supplied_enum = proposals->create_enumerator(proposals);
-
-
-	/* compare all stored proposals with all supplied. Stored ones are preferred.*/
-	while (stored_enum->enumerate(stored_enum, (void**)&stored))
+	if (prefer_self)
 	{
-		proposals->reset_enumerator(proposals, supplied_enum);
+		prefer_enum = this->proposals->create_enumerator(this->proposals);
+		match_enum = proposals->create_enumerator(proposals);
+	}
+	else
+	{
+		prefer_enum = proposals->create_enumerator(proposals);
+		match_enum = this->proposals->create_enumerator(this->proposals);
+	}
 
-		while (supplied_enum->enumerate(supplied_enum, (void**)&supplied))
+	while (prefer_enum->enumerate(prefer_enum, (void**)&proposal))
+	{
+		if (prefer_self)
 		{
-			selected = stored->select(stored, supplied, private);
+			proposals->reset_enumerator(proposals, match_enum);
+		}
+		else
+		{
+			this->proposals->reset_enumerator(this->proposals, match_enum);
+		}
+		while (match_enum->enumerate(match_enum, (void**)&match))
+		{
+			selected = proposal->select(proposal, match, private);
 			if (selected)
 			{
-				/* they match, return */
-				stored_enum->destroy(stored_enum);
-				supplied_enum->destroy(supplied_enum);
 				DBG2(DBG_CFG, "received proposals: %#P", proposals);
 				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
 				DBG2(DBG_CFG, "selected proposal: %P", selected);
-				return selected;
+				break;
 			}
 		}
+		if (selected)
+		{
+			break;
+		}
 	}
-	/* no proposal match :-(, will result in a NO_PROPOSAL_CHOSEN... */
-	stored_enum->destroy(stored_enum);
-	supplied_enum->destroy(supplied_enum);
-	DBG1(DBG_CFG, "received proposals: %#P", proposals);
-	DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);
-
-	return NULL;
+	prefer_enum->destroy(prefer_enum);
+	match_enum->destroy(match_enum);
+	if (!selected)
+	{
+		DBG1(DBG_CFG, "received proposals: %#P", proposals);
+		DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);
+	}
+	return selected;
 }
 
 METHOD(ike_cfg_t, get_dh_group, diffie_hellman_group_t,

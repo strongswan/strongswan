@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2016 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -39,13 +40,25 @@ struct child_rekey_t {
 	task_t task;
 
 	/**
-	 * Register a rekeying task which collides with this one
+	 * Check if the given SA is the redundant CHILD_SA created during a rekey
+	 * collision.
+	 *
+	 * This is called if the other peer deletes the redundant SA before we were
+	 * able to handle the CREATE_CHILD_SA response.
+	 *
+	 * @param child		CHILD_SA to check
+	 * @return			TRUE if the SA is the redundant CHILD_SA
+	 */
+	bool (*is_redundant)(child_rekey_t *this, child_sa_t *child);
+
+	/**
+	 * Register a rekeying/delete task which collides with this one
 	 *
 	 * If two peers initiate rekeying at the same time, the collision must
 	 * be handled gracefully. The task manager is aware of what exchanges
-	 * are going on and notifies the outgoing task by passing the incoming.
+	 * are going on and notifies the active task by passing the passive.
 	 *
-	 * @param other		incoming task
+	 * @param other		passive task (adopted)
 	 */
 	void (*collide)(child_rekey_t* this, task_t *other);
 };

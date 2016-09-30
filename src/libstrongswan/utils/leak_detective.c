@@ -494,7 +494,7 @@ static bool register_hooks()
  * List of functions using static allocation buffers or should be suppressed
  * otherwise on leak report.
  */
-char *whitelist[] = {
+static char *whitelist[] = {
 	/* backtraces, including own */
 	"backtrace_create",
 	"strerror_safe",
@@ -522,6 +522,7 @@ char *whitelist[] = {
 	"vsyslog",
 	"__syslog_chk",
 	"__vsyslog_chk",
+	"__fprintf_chk",
 	"getaddrinfo",
 	"setlocale",
 	"getpass",
@@ -550,6 +551,15 @@ char *whitelist[] = {
 	"xmlInitParserCtxt",
 	/* libcurl */
 	"Curl_client_write",
+	/* libsoup */
+	"soup_message_headers_append",
+	"soup_message_headers_clear",
+	"soup_message_headers_get_list",
+	"soup_message_headers_get_one",
+	"soup_session_abort",
+	"soup_session_get_type",
+	/* libldap */
+	"ldap_int_initialize",
 	/* ClearSilver */
 	"nerr_init",
 	/* libgcrypt */
@@ -563,6 +573,10 @@ char *whitelist[] = {
 	"ECDSA_do_sign_ex",
 	"ECDSA_verify",
 	"RSA_new_method",
+	/* OpenSSL 1.1.0 does not cleanup anymore until the library is unloaded */
+	"OPENSSL_init_crypto",
+	"CRYPTO_THREAD_lock_new",
+	"ERR_add_error_data",
 	/* OpenSSL libssl */
 	"SSL_COMP_get_compression_methods",
 	/* NSPR */
@@ -570,17 +584,28 @@ char *whitelist[] = {
 	/* libapr */
 	"apr_pool_create_ex",
 	/* glib */
+	"g_output_stream_write",
+	"g_resolver_lookup_by_name",
+	"g_signal_connect_data",
+	"g_socket_connection_factory_lookup_type",
 	"g_type_init_with_debug_flags",
 	"g_type_register_static",
 	"g_type_class_ref",
 	"g_type_create_instance",
 	"g_type_add_interface_static",
 	"g_type_interface_add_prerequisite",
-	"g_socket_connection_factory_lookup_type",
+	"g_private_set",
+	"g_queue_pop_tail",
 	/* libgpg */
 	"gpg_err_init",
 	/* gnutls */
 	"gnutls_global_init",
+	/* Ada runtime */
+	"system__tasking__initialize",
+	"system__tasking__initialization__abort_defer",
+	"system__tasking__stages__create_task",
+	/* in case external threads call into our code */
+	"thread_current_id",
 };
 
 /**
@@ -809,10 +834,11 @@ HOOK(void*, malloc, size_t bytes)
 HOOK(void*, calloc, size_t nmemb, size_t size)
 {
 	void *ptr;
+	volatile size_t total;
 
-	size *= nmemb;
-	ptr = malloc(size);
-	memset(ptr, 0, size);
+	total = nmemb * size;
+	ptr = malloc(total);
+	memset(ptr, 0, total);
 
 	return ptr;
 }
@@ -838,6 +864,18 @@ HOOK(void, free, void *ptr)
 
 	if (!enabled || thread_disabled->get(thread_disabled))
 	{
+		/* after deinitialization we might have to free stuff we allocated
+		 * while we were enabled */
+		if (!first_header.magic && ptr)
+		{
+			hdr = ptr - sizeof(memory_header_t);
+			tail = ptr + hdr->bytes;
+			if (hdr->magic == MEMORY_HEADER_MAGIC &&
+				tail->magic == MEMORY_TAIL_MAGIC)
+			{
+				ptr = hdr;
+			}
+		}
 		real_free(ptr);
 		return;
 	}
@@ -954,6 +992,7 @@ METHOD(leak_detective_t, destroy, void,
 	lock->destroy(lock);
 	thread_disabled->destroy(thread_disabled);
 	free(this);
+	first_header.magic = 0;
 	first_header.next = NULL;
 }
 

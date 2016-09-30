@@ -2,5 +2,6 @@ moon::iptables-restore < /etc/iptables.rules
 sun::iptables-restore < /etc/iptables.rules
 moon::service charon start
 sun::service charon start
-moon::expect-connection mutual 
-moon::swanctl --initiate --child mutual 
+sun::expect-connection mutual
+moon::expect-connection mutual
+moon::swanctl --initiate --child mutual

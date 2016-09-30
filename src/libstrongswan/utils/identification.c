@@ -744,7 +744,8 @@ METHOD(identification_t, equals_strcasecmp,  bool,
 
 	/* we do some extra sanity checks to check for invalid IDs with a
 	 * terminating null in it. */
-	if (this->encoded.len == encoded.len &&
+	if (this->type == other->get_type(other) &&
+		this->encoded.len == encoded.len &&
 		memchr(this->encoded.ptr, 0, this->encoded.len) == NULL &&
 		memchr(encoded.ptr, 0, encoded.len) == NULL &&
 		strncasecmp(this->encoded.ptr, encoded.ptr, this->encoded.len) == 0)
@@ -1169,15 +1170,15 @@ static private_identification_t *identification_create(id_type_t type)
 	{
 		case ID_ANY:
 			this->public.hash = _hash_binary;
-			this->public.matches = _matches_any;
 			this->public.equals = _equals_binary;
+			this->public.matches = _matches_any;
 			this->public.contains_wildcards = return_true;
 			break;
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
 			this->public.hash = _hash_binary;
-			this->public.matches = _matches_string;
 			this->public.equals = _equals_strcasecmp;
+			this->public.matches = _matches_string;
 			this->public.contains_wildcards = _contains_wildcards_memchr;
 			break;
 		case ID_DER_ASN1_DN:

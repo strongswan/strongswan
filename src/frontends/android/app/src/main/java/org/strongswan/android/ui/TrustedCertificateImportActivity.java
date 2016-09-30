@@ -52,6 +52,7 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		"application/x-pem-file",
 		"application/pkix-cert"
 	};
+	private Uri mCertificateUri;
 
 	@TargetApi(Build.VERSION_CODES.KITKAT)
 	@Override
@@ -82,18 +83,29 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data)
 	{
+		super.onActivityResult(requestCode, resultCode, data);
 		switch (requestCode)
 		{
 			case OPEN_DOCUMENT:
 				if (resultCode == Activity.RESULT_OK && data != null)
 				{
-					importCertificate(data.getData());
+					mCertificateUri = data.getData();
 					return;
 				}
 				finish();
 				return;
 		}
-		super.onActivityResult(requestCode, resultCode, data);
+	}
+
+	@Override
+	protected void onPostResume()
+	{
+		super.onPostResume();
+		if (mCertificateUri != null)
+		{
+			importCertificate(mCertificateUri);
+			mCertificateUri = null;
+		}
 	}
 
 	/**

@@ -111,10 +111,15 @@ struct private_child_sa_t {
 	 */
 	bool static_reqid;
 
-	/*
+	/**
 	 * Unique CHILD_SA identifier
 	 */
 	uint32_t unique_id;
+
+	/**
+	 * Whether FWD policieis in the outbound direction should be installed
+	 */
+	bool policies_fwd_out;
 
 	/**
 	 * inbound mark used for this child_sa
@@ -751,7 +756,7 @@ METHOD(child_sa_t, install, status_t,
 		this->reqid_allocated = TRUE;
 	}
 
-	lifetime = this->config->get_lifetime(this->config);
+	lifetime = this->config->get_lifetime(this->config, TRUE);
 
 	now = time_monotonic(NULL);
 	if (lifetime->time.rekey)
@@ -927,12 +932,23 @@ static status_t install_policies_internal(private_child_sa_t *this,
 		 * matching outbound forwarded traffic, to allow another tunnel to use
 		 * the reversed subnets and do the same we don't set a reqid (this also
 		 * allows the kernel backend to distinguish between the two types of
-		 * FWD policies) */
-		out_id.dir = POLICY_FWD;
-		other_sa->reqid = 0;
-		status |= charon->kernel->add_policy(charon->kernel, &out_id, &out_policy);
-		/* reset the reqid for any other further policies */
-		other_sa->reqid = this->reqid;
+		 * FWD policies). To avoid problems with symmetrically overlapping
+		 * policies of two SAs we install them with reduced priority.  As they
+		 * basically act as bypass policies for drop policies we use a higher
+		 * priority than is used for them. */
+		if (this->policies_fwd_out)
+		{
+			out_id.dir = POLICY_FWD;
+			other_sa->reqid = 0;
+			if (priority == POLICY_PRIORITY_DEFAULT)
+			{
+				out_policy.prio = POLICY_PRIORITY_ROUTED;
+			}
+			status |= charon->kernel->add_policy(charon->kernel, &out_id,
+												 &out_policy);
+			/* reset the reqid for any other further policies */
+			other_sa->reqid = this->reqid;
+		}
 	}
 	return status;
 }
@@ -981,10 +997,17 @@ static void del_policies_internal(private_child_sa_t *this,
 		in_id.dir = POLICY_FWD;
 		charon->kernel->del_policy(charon->kernel, &in_id, &in_policy);
 
-		out_id.dir = POLICY_FWD;
-		other_sa->reqid = 0;
-		charon->kernel->del_policy(charon->kernel, &out_id, &out_policy);
-		other_sa->reqid = this->reqid;
+		if (this->policies_fwd_out)
+		{
+			out_id.dir = POLICY_FWD;
+			other_sa->reqid = 0;
+			if (priority == POLICY_PRIORITY_DEFAULT)
+			{
+				out_policy.prio = POLICY_PRIORITY_ROUTED;
+			}
+			charon->kernel->del_policy(charon->kernel, &out_id, &out_policy);
+			other_sa->reqid = this->reqid;
+		}
 	}
 }
 
@@ -1379,7 +1402,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 u_int mark_in, u_int mark_out)
 {
 	private_child_sa_t *this;
-	static refcount_t unique_id = 0, unique_mark = 0, mark;
+	static refcount_t unique_id = 0, unique_mark = 0;
+	refcount_t mark;
 
 	INIT(this,
 		.public = {
@@ -1431,6 +1455,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		.mark_in = config->get_mark(config, TRUE),
 		.mark_out = config->get_mark(config, FALSE),
 		.install_time = time_monotonic(NULL),
+		.policies_fwd_out = config->install_fwd_out_policy(config),
 	);
 
 	this->config = config;

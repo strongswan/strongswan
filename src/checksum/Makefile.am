@@ -48,9 +48,19 @@ if USE_RADIUS
   libs += $(DESTDIR)$(ipseclibdir)/libradius.so
 endif
 
+if USE_LIBNTTFFT
+  deps += $(top_builddir)/src/libstrongswan/math/libnttfft/libnttfft.la
+  libs += $(DESTDIR)$(ipseclibdir)/libnttfft.so
+endif
+
 if USE_LIBPTTLS
   deps += $(top_builddir)/src/libpttls/libpttls.la
   libs += $(DESTDIR)$(ipseclibdir)/libpttls.so
+endif
+
+if USE_LIBTPMTSS
+  deps += $(top_builddir)/src/libtpmtss/libtpmtss.la
+  libs += $(DESTDIR)$(ipseclibdir)/libtpmtss.so
 endif
 
 if USE_LIBTNCCS
@@ -82,6 +92,10 @@ endif
 
 if USE_CMD
   exes += $(DESTDIR)$(sbindir)/charon-cmd
+endif
+
+if USE_SYSTEMD
+  exes += $(DESTDIR)$(sbindir)/charon-systemd
 endif
 
 if USE_SCEPCLIENT

@@ -61,6 +61,8 @@ enum event_type_t {
 	EV_EFI_PLATFORM_FIRMWARE_BLOB =    0x80000008,
 	EV_EFI_HANDOFF_TABLES =            0x80000009,
 
+	EV_EFI_HCRTM_EVENT =               0x80000010,
+
 	EV_EFI_VARIABLE_AUTHORITY =        0x800000E0
 };
 
@@ -85,7 +87,6 @@ ENUM_BEGIN(event_type_names, EV_PREBOOT_CERT, EV_OMIT_BOOT_DEVICE_EVENTS,
 	"Nonhost Info",
 	"Omit Boot Device Events"
 );
-
 ENUM_NEXT(event_type_names, EV_EFI_EVENT_BASE, EV_EFI_HANDOFF_TABLES,
 							EV_OMIT_BOOT_DEVICE_EVENTS,
 	"EFI Event Base",
@@ -99,8 +100,12 @@ ENUM_NEXT(event_type_names, EV_EFI_EVENT_BASE, EV_EFI_HANDOFF_TABLES,
 	"EFI Platform Firmware Blob",
 	"EFI Handoff Tables"
 );
-ENUM_NEXT(event_type_names, EV_EFI_VARIABLE_AUTHORITY, EV_EFI_VARIABLE_AUTHORITY,
+ENUM_NEXT(event_type_names, EV_EFI_HCRTM_EVENT, EV_EFI_HCRTM_EVENT,
 							EV_EFI_HANDOFF_TABLES,
+	"EFI HCRTM Event"
+);
+ENUM_NEXT(event_type_names, EV_EFI_VARIABLE_AUTHORITY, EV_EFI_VARIABLE_AUTHORITY,
+							EV_EFI_HCRTM_EVENT,
 	"EFI Variable Authority"
 );
 ENUM_END(event_type_names, EV_EFI_VARIABLE_AUTHORITY);

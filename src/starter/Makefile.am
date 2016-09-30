@@ -28,13 +28,16 @@ AM_CPPFLAGS = \
 	-DPLUGINS=\""${starter_plugins}\"" \
 	-DDEBUG
 
+AM_CFLAGS = \
+	@COVERAGE_CFLAGS@
+
 AM_YFLAGS = -v -d
 
 starter_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libcharon/libcharon.la \
 	libstarter.la \
-	$(SOCKLIB) $(PTHREADLIB)
+	$(SOCKLIB) $(PTHREADLIB) $(ATOMICLIB)
 
 EXTRA_DIST = keywords.txt ipsec.conf Android.mk
 MAINTAINERCLEANFILES = keywords.c

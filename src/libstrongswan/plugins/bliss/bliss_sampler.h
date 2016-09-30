@@ -84,11 +84,11 @@ struct bliss_sampler_t {
 /**
  * Create a bliss_sampler_t object.
  *
- * @param alg		Hash algorithm to be used for the internal bitspender
+ * @param alg		XOF to be used for the internal bitspender
  * @param seed		Seed used to initialize the internal bitspender
  * @param set		BLISS parameter set to be used
  */
-bliss_sampler_t *bliss_sampler_create(hash_algorithm_t alg, chunk_t seed,
-									  bliss_param_set_t *set);
+bliss_sampler_t *bliss_sampler_create(ext_out_function_t alg, chunk_t seed,
+									  const bliss_param_set_t *set);
 
 #endif /** BLISS_SAMPLER_H_ @}*/

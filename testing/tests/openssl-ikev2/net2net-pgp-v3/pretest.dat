@@ -5,4 +5,5 @@ sun::rm /etc/ipsec.d/cacerts/*
 moon::ipsec start
 sun::ipsec start
 moon::expect-connection net-net
+sun::expect-connection net-net
 moon::ipsec up net-net

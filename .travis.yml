@@ -1,5 +1,8 @@
 language: c
 
+sudo: required
+dist: trusty
+
 compiler:
   - gcc
   - clang
@@ -9,7 +12,7 @@ before_install:
   - ./scripts/test.sh pydeps
 
 before_script:
-  - sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0
+  - sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0 || true
 
 script:
   - ./scripts/test.sh
@@ -39,9 +42,15 @@ matrix:
     - compiler: gcc
       env: TEST=dist
     - compiler: gcc
+      env: TEST=apidoc
+    - compiler: gcc
       env: TEST=win64 MONOLITHIC=yes
+    # this does not work on 14.04 due to a missing @4 decoration for
+    # TryAcquireSRWLockExclusive in MinGW 3.1.0
     - compiler: gcc
       env: TEST=win32 MONOLITHIC=yes
+      dist: precise
     - compiler: clang
       os: osx
+      osx_image: xcode7
       env: TEST=osx

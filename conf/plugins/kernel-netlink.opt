@@ -61,8 +61,12 @@ charon.plugins.kernel-netlink.ignore_retransmit_errors = no
 	Whether to ignore errors potentially resulting from a retransmission.
 
 charon.plugins.kernel-netlink.xfrm_acq_expires = 165
-	Lifetime of XFRM acquire state in kernel.
+	Lifetime of XFRM acquire state and allocated SPIs in kernel.
 
-	Lifetime of XFRM acquire state in kernel. The value gets written to
-	/proc/sys/net/core/xfrm_acq_expires. Indirectly controls the delay of XFRM
-	acquire messages sent.
+	Lifetime of XFRM acquire state created by the kernel when traffic matches a
+	trap policy. The value gets written to /proc/sys/net/core/xfrm_acq_expires.
+	Indirectly controls the delay between XFRM acquire messages triggered by the
+	kernel for a trap policy. The same value is used as timeout for SPIs
+	allocated by the kernel. The default value equals the default total
+	retransmission timeout for IKE messages, see IKEv2 RETRANSMISSION
+	in **strongswan.conf**(5).

@@ -146,7 +146,7 @@ struct private_quick_mode_t {
 	uint32_t lifetime;
 
 	/**
-	 * Negotaited lifebytes of new SA
+	 * Negotiated lifebytes of new SA
 	 */
 	uint64_t lifebytes;
 
@@ -722,12 +722,12 @@ static void get_lifetimes(private_quick_mode_t *this)
 {
 	lifetime_cfg_t *lft;
 
-	lft = this->config->get_lifetime(this->config);
+	lft = this->config->get_lifetime(this->config, TRUE);
 	if (lft->time.life)
 	{
 		this->lifetime = lft->time.life;
 	}
-	else if (lft->bytes.life)
+	if (lft->bytes.life)
 	{
 		this->lifebytes = lft->bytes.life;
 	}
@@ -1007,7 +1007,6 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 			{
 				case CHILD_INSTALLED:
 				case CHILD_REKEYING:
-				case CHILD_REKEYED:
 					policies = child_sa->create_policy_enumerator(child_sa);
 					if (policies->enumerate(policies, &local, &remote) &&
 						local->equals(local, this->tsr) &&
@@ -1026,9 +1025,10 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 							 child_sa->get_unique_id(child_sa));
 					}
 					policies->destroy(policies);
-				break;
-			default:
-				break;
+					break;
+				case CHILD_REKEYED:
+				default:
+					break;
 			}
 		}
 	}
@@ -1051,7 +1051,7 @@ METHOD(task_t, process_r, status_t,
 			linked_list_t *tsi, *tsr, *hostsi, *hostsr, *list = NULL;
 			peer_cfg_t *peer_cfg;
 			uint16_t group;
-			bool private;
+			bool private, prefer_configured;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													PLV1_SECURITY_ASSOCIATION);
@@ -1109,8 +1109,10 @@ METHOD(task_t, process_r, status_t,
 			}
 			private = this->ike_sa->supports_extension(this->ike_sa,
 													   EXT_STRONGSWAN);
-			this->proposal = this->config->select_proposal(this->config,
-														   list, FALSE, private);
+			prefer_configured = lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns);
+			this->proposal = this->config->select_proposal(this->config, list,
+											FALSE, private, prefer_configured);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 
 			get_lifetimes(this);
@@ -1323,8 +1325,8 @@ METHOD(task_t, process_i, status_t,
 			}
 			private = this->ike_sa->supports_extension(this->ike_sa,
 													   EXT_STRONGSWAN);
-			this->proposal = this->config->select_proposal(this->config,
-														   list, FALSE, private);
+			this->proposal = this->config->select_proposal(this->config, list,
+														FALSE, private, TRUE);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{

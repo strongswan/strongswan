@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:enabled="false"
             android:inputType="none"
-            android:hint="@string/profile_username_label" />
+            android:hint="@string/login_username" />
 
     </android.support.design.widget.TextInputLayout>
 
@@ -48,7 +48,7 @@
             android:layout_height="wrap_content"
             android:singleLine="true"
             android:inputType="textPassword|textNoSuggestions"
-            android:hint="@string/profile_password_label" />
+            android:hint="@string/login_password" />
 
     </android.support.design.widget.TextInputLayout>
 

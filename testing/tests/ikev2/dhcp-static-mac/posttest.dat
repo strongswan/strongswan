@@ -1,7 +1,7 @@
 moon::ipsec stop
 carol::ipsec stop
 dave::ipsec stop
-venus::/etc/init.d/isc-dhcp-server stop 2> /dev/null
+venus::service isc-dhcp-server stop 2> /dev/null
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush
 dave::iptables-restore < /etc/iptables.flush

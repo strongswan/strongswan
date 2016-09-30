@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011-2012 Sansar Choinyambuu, Andreas Steffen
+ * Copyright (C) 2011-2012 Sansar Choinyambuu
+ * Copyright (C) 2011-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -420,11 +421,11 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 		}
 		case TCG_PTS_GEN_ATTEST_EVID:
 		{
-			pts_simple_evid_final_flag_t flags;
-			pts_meas_algorithms_t comp_hash_algorithm;
 			pts_comp_evidence_t *evid;
-			chunk_t pcr_composite, quote_sig;
-			bool use_quote2;
+			tpm_quote_mode_t quote_mode;
+			tpm_tss_quote_info_t *quote_info;
+			chunk_t quote_sig;
+			bool use_quote2, use_version_info;
 
 			/* Send cached Component Evidence entries */
 			while (attestation_state->next_evidence(attestation_state, &evid))
@@ -434,21 +435,23 @@ bool imc_attestation_process(pa_tnc_attr_t *attr, imc_msg_t *msg,
 			}
 
 			use_quote2 = lib->settings->get_bool(lib->settings,
-							"%s.plugins.imc-attestation.use_quote2", TRUE,
-							lib->ns);
-			if (!pts->quote_tpm(pts, use_quote2, &pcr_composite, &quote_sig))
+							"%s.plugins.imc-attestation.use_quote2",
+							TRUE, lib->ns);
+			use_version_info = lib->settings->get_bool(lib->settings,
+							"%s.plugins.imc-attestation.use_version_info",
+							FALSE, lib->ns);
+			quote_mode = use_quote2 ? (use_version_info ?
+									  TPM_QUOTE2_VERSION_INFO :
+									  TPM_QUOTE2) :
+									  TPM_QUOTE;
+
+			if (!pts->quote(pts, &quote_mode, &quote_info, &quote_sig))
 			{
 				DBG1(DBG_IMC, "error occurred during TPM quote operation");
 				return FALSE;
 			}
 
-			/* Send Simple Evidence Final attribute */
-			flags = use_quote2 ? PTS_SIMPLE_EVID_FINAL_QUOTE_INFO2 :
-								 PTS_SIMPLE_EVID_FINAL_QUOTE_INFO;
-			comp_hash_algorithm = PTS_MEAS_ALGO_SHA1;
-
-			attr = tcg_pts_attr_simple_evid_final_create(flags,
-								comp_hash_algorithm, pcr_composite, quote_sig);
+			attr = tcg_pts_attr_simple_evid_final_create(quote_info, quote_sig);
 			msg->add_attribute(msg, attr);
 			break;
 		}

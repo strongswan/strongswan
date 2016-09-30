@@ -124,6 +124,8 @@
 
     <!-- Dialogs -->
     <string name="login_title">Wprowadż hasło</string>
+    <string name="login_username">Użytkownik</string>
+    <string name="login_password">Hasło</string>
     <string name="login_confirm">Połącz</string>
     <string name="error_introduction">Nie udało się utworzyć tunelu VPN:</string>
     <string name="error_lookup_failed">Nie znaleziono adresu serwer</string>

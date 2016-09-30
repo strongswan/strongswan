@@ -1,6 +1,6 @@
 #!/usr/bin/make
 
-PV  = 2.2.1
+PV  = 2.2.8
 PKG = freeradius-server-$(PV)
 TAR = $(PKG).tar.bz2
 SRC = ftp://ftp.freeradius.org/pub/freeradius/old/$(TAR)

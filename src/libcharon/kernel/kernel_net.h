@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -88,10 +88,12 @@ struct kernel_net_t {
 	 * @param dest			target destination address
 	 * @param prefix		prefix length if dest is a subnet, -1 for auto
 	 * @param src			source address to check, or NULL
+	 * @param[out] iface	allocated name of the interface to reach dest, if
+	 *						available (optional)
 	 * @return				next hop address, NULL if unreachable
 	 */
 	host_t* (*get_nexthop)(kernel_net_t *this, host_t *dest, int prefix,
-						   host_t *src);
+						   host_t *src, char **iface);
 
 	/**
 	 * Get the interface name of a local address. Interfaces that are down or

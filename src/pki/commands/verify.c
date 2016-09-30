@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2016 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -58,6 +59,18 @@ static int verify()
 				}
 				has_ca = TRUE;
 				creds->add_cert(creds, TRUE, cert);
+				continue;
+			case 'l':
+				cert = lib->creds->create(lib->creds,
+										  CRED_CERTIFICATE, CERT_X509_CRL,
+										  BUILD_FROM_FILE, arg, BUILD_END);
+				if (!cert)
+				{
+					fprintf(stderr, "parsing CRL failed\n");
+					goto end;
+				}
+				online = TRUE;
+				creds->add_crl(creds, (crl_t*)cert);
 				continue;
 			case 'o':
 				online = TRUE;
@@ -173,11 +186,12 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		verify, 'v', "verify",
 		"verify a certificate using the CA certificate",
-		{"[--in file] [--cacert file]"},
+		{"[--in file] [--cacert file] [--crl file]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "X.509 certificate to verify, default: stdin"},
 			{"cacert",	'c', 1, "CA certificate for trustchain verification"},
+			{"crl",		'l', 1, "CRL for trustchain verification"},
 			{"online",	'o', 0, "enable online CRL/OCSP revocation checking"},
 		}
 	});

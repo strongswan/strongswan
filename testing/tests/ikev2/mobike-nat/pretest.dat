@@ -6,4 +6,5 @@ moon::iptables -t nat -A POSTROUTING -o eth0 -s 10.1.0.0/16 -p tcp -j SNAT --to-
 alice::ipsec start
 sun::ipsec start
 alice::expect-connection mobike
+sun::expect-connection mobike
 alice::ipsec up mobike

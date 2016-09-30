@@ -250,6 +250,7 @@ METHOD(mem_cred_t, add_crl, bool,
 				if (new)
 				{
 					this->untrusted->remove_at(this->untrusted, enumerator);
+					current->destroy(current);
 				}
 				else
 				{

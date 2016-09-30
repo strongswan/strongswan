@@ -15,8 +15,8 @@ dave:: cat /var/log/daemon.log::installing new virtual IP 10.3.0.2::YES
 dave:: cat /var/log/daemon.log::installing DNS server PH_IP_WINNETOU::YES
 dave:: cat /var/log/daemon.log::installing DNS server PH_IP_VENUS::YES
 dave:: cat /var/log/daemon.log::handling INTERNAL_IP4_NBNS attribute failed::YES
-alice::ping -c 1 10.3.0.1::64 bytes from 10.3.0.1: icmp_req=1::YES
-alice::ping -c 1 10.3.0.2::64 bytes from 10.3.0.2: icmp_req=1::YES
+alice::ping -c 1 10.3.0.1::64 bytes from 10.3.0.1: icmp_.eq=1::YES
+alice::ping -c 1 10.3.0.2::64 bytes from 10.3.0.2: icmp_.eq=1::YES
 moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP::YES
 moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
 moon::tcpdump::IP moon.strongswan.org > dave.strongswan.org: ESP::YES

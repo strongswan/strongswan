@@ -4,9 +4,9 @@ dave::ipsec stop
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush
 dave::iptables-restore < /etc/iptables.flush
-moon:rm /etc/resolv.conf
-carol:rm /etc/resolv.conf
-dave:rm /etc/resolv.conf
-moon:rm /etc/ipsec.d/dnssec.key
-carol:rm /etc/ipsec.d/dnssec.key
-dave:rm /etc/ipse.cd/dnssec.key
+moon::rm /etc/resolv.conf
+carol::rm /etc/resolv.conf
+dave::rm /etc/resolv.conf
+moon::rm /etc/ipsec.d/dnssec.keys
+carol::rm /etc/ipsec.d/dnssec.keys
+dave::rm /etc/ipsec.d/dnssec.keys

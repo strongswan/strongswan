@@ -22,4 +22,4 @@ endif
 
 libfast_la_LIBADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
-	-lfcgi $(clearsilver_LIBS) $(PTHREADLIB)
+	-lfcgi $(clearsilver_LIBS) $(PTHREADLIB) $(ATOMICLIB)

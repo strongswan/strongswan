@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,7 +13,6 @@
  * for more details.
  */
 
-TEST_SUITE(bliss_fft_suite_create)
 TEST_SUITE(bliss_bitpacker_suite_create)
 TEST_SUITE(bliss_huffman_suite_create)
 TEST_SUITE(bliss_keys_suite_create)

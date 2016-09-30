@@ -449,6 +449,12 @@ module Vici
     end
 
     ##
+    # Flush credential cache.
+    def flush_certs((match = nil)
+      check_success(@transp.request("flush-certs", Message.new(match)))
+    end
+
+    ##
     # Clear all loaded credentials.
     def clear_creds()
       check_success(@transp.request("clear-creds"))

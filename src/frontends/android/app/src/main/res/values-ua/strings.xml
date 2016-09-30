@@ -122,6 +122,8 @@
 
     <!-- Dialogs -->
     <string name="login_title">Введіть пароль для з\'єднання</string>
+    <string name="login_username">Логін</string>
+    <string name="login_password">Пароль</string>
     <string name="login_confirm">Підключити</string>
     <string name="error_introduction">Помилка підлючення VPN:</string>
     <string name="error_lookup_failed">Помилка пошуку адреси сервер.</string>

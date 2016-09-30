@@ -197,9 +197,7 @@ METHOD(trap_manager_t, install, uint32_t,
 			me = charon->kernel->get_source_addr(charon->kernel, other, NULL);
 			if (!me)
 			{
-				DBG1(DBG_CFG, "installing trap failed, local address unknown");
-				other->destroy(other);
-				return 0;
+				me = host_create_any(other->get_family(other));
 			}
 			me->set_port(me, ike_cfg->get_my_port(ike_cfg));
 		}

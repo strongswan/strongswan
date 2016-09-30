@@ -65,7 +65,7 @@ static FILE* make_connection()
 static int initiate(unsigned int count, unsigned int delay)
 {
 	FILE *stream;
-	char c;
+	int c;
 
 	stream = make_connection();
 	if (!stream)

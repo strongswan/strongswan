@@ -9,6 +9,7 @@ CONFDIR=$DIR/config/kvm
 KNLSRC=$BUILDDIR/$KERNEL/arch/x86/boot/bzImage
 KNLTARGET=/var/run/kvm-swan-kernel
 HOSTFSTARGET=/var/run/kvm-swan-hostfs
+TESTRESTULSTARGET=/var/run/kvm-swan-testresults
 MCASTBRS="test-br0 test-br1"
 
 echo "Starting test environment"
@@ -25,6 +26,9 @@ execute "ln -fs $KNLSRC $KNLTARGET"
 log_action "Deploying $SHAREDDIR as hostfs"
 execute "chown -R $KVMUSER:$KVMGROUP $SHAREDDIR" 0
 execute "ln -Tfs $SHAREDDIR $HOSTFSTARGET"
+
+log_action "Deploying $TESTRESULTSDIR as hostfs"
+execute "ln -Tfs $TESTRESULTSDIR $TESTRESTULSTARGET"
 
 for net in $NETWORKS
 do

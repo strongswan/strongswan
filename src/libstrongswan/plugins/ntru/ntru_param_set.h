@@ -80,23 +80,81 @@ extern enum_name_t *ntru_param_set_id_names;
  * NTRU encryption parameter set definitions
  */
 struct ntru_param_set_t {
-	ntru_param_set_id_t id;     /* NTRU parameter set ID */
-	uint8_t  oid[NTRU_OID_LEN]; /* pointer to OID */
-	uint8_t  der_id;            /* parameter-set DER id */
-	uint8_t  N_bits;            /* no. of bits in N (i.e. in an index */
-	uint16_t N;                 /* ring dimension */
-	uint16_t sec_strength_len;  /* no. of octets of security strength */
-	uint16_t q;                 /* big modulus */
-	uint8_t  q_bits;            /* no. of bits in q (i.e. in a coefficient */
-	bool     is_product_form;   /* if product form used */
-	uint32_t dF_r;              /* no. of +1 or -1 coefficients in ring elements
-                                   F, r */
-	uint16_t dg;                /* no. - 1 of +1 coefficients or
-                                   no. of -1 coefficients in ring element g */
-	uint16_t m_len_max;         /* max no. of plaintext octets */
-	uint16_t min_msg_rep_wt;    /* min. message representative weight */
-	uint8_t  c_bits;            /* no. bits in candidate for deriving an index */
-	uint8_t  m_len_len;         /* no. of octets to hold mLenOctets */
+
+    /**
+	 * NTRU parameter set ID
+	 */
+	const ntru_param_set_id_t id;
+
+	/**
+	 * pointer to OID
+	 */
+	const uint8_t oid[NTRU_OID_LEN];
+
+	/**
+	 * parameter-set DER id
+	 */
+	const uint8_t der_id;
+
+	/**
+	 * no. of bits in N (i.e. in an index
+	 */
+	const uint8_t N_bits;
+
+	/**
+	 * ring dimension
+	 */
+	const uint16_t N;
+
+	/**
+	 * no. of octets of security strength
+	 */
+	const uint16_t sec_strength_len;
+
+	/**
+	 * big modulus
+	 */
+	const uint16_t q;
+
+	/**
+	 * no. of bits in q (i.e. in a coefficient)
+	 */
+	const uint8_t q_bits;
+
+	/**
+	 * if product form used
+	 */
+	const bool is_product_form;
+
+	/**
+	 * no. of +1 or -1 coefficients in ring elements F, r
+	 */
+	const uint32_t dF_r;
+
+	/**
+	 * no. - 1 of +1 coefficients or no. of -1 coefficients in ring element g
+	 */
+	const uint16_t dg;
+
+	/**
+	 * max no. of plaintext octets
+	 */
+	const uint16_t m_len_max;
+
+	/**
+	 * min. message representative weight
+	 */
+	const uint16_t min_msg_rep_wt;
+
+	/**
+	 * no. bits in candidate for deriving an index
+	 */
+	const uint8_t  c_bits;
+
+	/**
+	 * no. of octets to hold mLenOctets
+	 */
+	const uint8_t  m_len_len;
 };
 
 /**
@@ -105,7 +163,7 @@ struct ntru_param_set_t {
  * @param id	NTRU parameter set ID
  * @return		NTRU parameter set
 */
-ntru_param_set_t* ntru_param_set_get_by_id(ntru_param_set_id_t id);
+const ntru_param_set_t* ntru_param_set_get_by_id(ntru_param_set_id_t id);
 
 /**
  * Get NTRU encryption parameter set by NTRU parameter set OID
@@ -113,6 +171,6 @@ ntru_param_set_t* ntru_param_set_get_by_id(ntru_param_set_id_t id);
  * @param oid	NTRU parameter set OID
  * @return		NTRU parameter set
 */
-ntru_param_set_t* ntru_param_set_get_by_oid(uint8_t const *oid);
+const ntru_param_set_t* ntru_param_set_get_by_oid(uint8_t const *oid);
 
 #endif /** NTRU_PARAM_SET_H_ @}*/

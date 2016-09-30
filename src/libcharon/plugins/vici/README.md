@@ -481,6 +481,19 @@ Load a shared IKE PSK, EAP or XAuth secret into the daemon.
 		errmsg = <error string on failure>
 	}
 
+### flush-certs() ###
+
+Flushes the certificate cache. The optional type argument allows to flush
+only certificates of a given type, e.g. all cached CRLs.
+
+	{
+		type = <certificate type to filter for, X509|X509_AC|X509_CRL|
+												OCSP_RESPONSE|PUBKEY or ANY>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
 ### clear-creds() ###
 
 Clear all loaded certificate, private key and shared key credentials. This
@@ -734,6 +747,8 @@ _list-conns_ command.
 				<list of valid remote IKE endpoint addresses>
 			]
 			version = <IKE version as string, IKEv1|IKEv2 or 0 for any>
+			reauth_time = <IKE_SA reauthentication interval in seconds>
+			rekey_time = <IKE_SA rekeying interval in seconds>
 
 			local*, remote* = { # multiple local and remote auth sections
 				class = <authentication type>
@@ -758,6 +773,9 @@ _list-conns_ command.
 			children = {
 				<CHILD_SA config name>* = {
 					mode = <IPsec mode>
+					rekey_time = <CHILD_SA rekeying interval in seconds>
+					rekey_bytes = <CHILD_SA rekeying interval in bytes>
+					rekey_packets = <CHILD_SA rekeying interval in packets>
 					local-ts = [
 						<list of local traffic selectors>
 					]

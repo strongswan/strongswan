@@ -1,0 +1,12 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fe65134512ea..3c5255f21ea6 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -101,7 +101,6 @@ IF(${COMPONENT} STREQUAL "ALL")
+ 	add_subdirectory(tncxacml)
+ 	add_subdirectory(imcv)
+ 	add_subdirectory(tncs)
+-	add_subdirectory(tncsim)
+ 			
+ 	IF(${NAL} STREQUAL "8021X" OR ${NAL} STREQUAL "ALL")
+ 		add_subdirectory(naaeap)

@@ -70,6 +70,8 @@ typedef struct {
 	enumerator_t *inner;
 	/** response of the DNS resolver which contains the CERTs */
 	resolver_response_t *response;
+	/** most recently enumerated certificate */
+	certificate_t *cert;
 } cert_enumerator_t;
 
 METHOD(enumerator_t, cert_enumerator_enumerate, bool,
@@ -101,17 +103,17 @@ METHOD(enumerator_t, cert_enumerator_enumerate, bool,
 		/* Try to parse PEM certificate container. Both x509 and PGP should
 		 * presumably come as PEM encoded certs. */
 		certificate = cur_crt->get_certificate(cur_crt);
-		*cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_ANY,
-								   BUILD_BLOB_PEM, certificate,
-								   BUILD_END);
-		if (*cert == NULL)
+		DESTROY_IF(this->cert);
+		this->cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_ANY,
+										BUILD_BLOB_PEM, certificate,
+										BUILD_END);
+		cur_crt->destroy(cur_crt);
+		if (!this->cert)
 		{
-			DBG1(DBG_CFG, "  unable to parse certificate, skipping",
-				 cur_crt->get_cert_type(cur_crt));
-			cur_crt->destroy(cur_crt);
+			DBG1(DBG_CFG, "  unable to parse certificate, skipping");
 			continue;
 		}
-		cur_crt->destroy(cur_crt);
+		*cert = this->cert;
 		return TRUE;
 	}
 	return FALSE;
@@ -120,6 +122,7 @@ METHOD(enumerator_t, cert_enumerator_enumerate, bool,
 METHOD(enumerator_t, cert_enumerator_destroy, void,
 	cert_enumerator_t *this)
 {
+	DESTROY_IF(this->cert);
 	this->inner->destroy(this->inner);
 	this->response->destroy(this->response);
 	free(this);

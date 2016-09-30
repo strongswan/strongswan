@@ -1,7 +1,8 @@
 carol::iptables-restore < /etc/iptables.rules
+moon::ipsec start
 carol::ipsec start
 dave::ipsec start
-moon::ipsec start
+moon::expect-connection carol
 carol::expect-connection moon
 carol::ipsec up moon
 carol::iptables -D INPUT  -i eth0 -p udp --dport 500 --sport 500 -j ACCEPT

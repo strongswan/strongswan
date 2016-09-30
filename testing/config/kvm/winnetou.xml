@@ -35,6 +35,11 @@
       <target dir='/hostshare'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x08' function='0x0'/>
     </filesystem>
+    <filesystem type='mount' accessmode='mapped'>
+      <source dir='/var/run/kvm-swan-testresults'/>
+      <target dir='/testresults'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x09' function='0x0'/>
+    </filesystem>
     <interface type='network'>
       <mac address='52:54:00:4b:23:fa'/>
       <source network='vnet1'/>

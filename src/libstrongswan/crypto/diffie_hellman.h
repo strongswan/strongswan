@@ -68,6 +68,7 @@ enum diffie_hellman_group_t {
 	NTRU_128_BIT = 1031,
 	NTRU_192_BIT = 1032,
 	NTRU_256_BIT = 1033,
+	NH_128_BIT   = 1040,
 	/** internally used DH group with additional parameters g and p, outside
 	 * of PRIVATE USE (i.e. IKEv2 DH group range) so it can't be negotiated */
 	MODP_CUSTOM = 65536,

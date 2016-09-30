@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,9 +20,10 @@
 #include "bliss_sampler.h"
 #include "bliss_signature.h"
 #include "bliss_bitpacker.h"
-#include "bliss_fft.h"
+#include "ntt_fft.h"
+#include "ntt_fft_reduce.h"
 
-#include <crypto/mgf1/mgf1_bitspender.h>
+#include <crypto/xofs/xof_bitspender.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
@@ -46,7 +47,7 @@ struct private_bliss_private_key_t {
 	/**
 	 * BLISS signature parameter set
 	 */
-	bliss_param_set_t *set;
+	const bliss_param_set_t *set;
 
 	/**
 	 * BLISS secret key S1 (coefficients of polynomial f)
@@ -62,6 +63,11 @@ struct private_bliss_private_key_t {
 	 * NTT of BLISS public key a (coefficients of polynomial (2g + 1)/f)
 	 */
 	uint32_t *A;
+
+	/**
+	 * NTT of BLISS public key in Montgomery representation Ar = rA mod
+	 */
+	uint32_t *Ar;
 
 	/**
 	 * reference count
@@ -163,12 +169,12 @@ static void greedy_sc(int8_t *s1, int8_t *s2, int n, uint16_t *c_indices,
 static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 					   chunk_t data, chunk_t *signature)
 {
-	bliss_fft_t *fft;
+	ntt_fft_t *fft;
 	bliss_signature_t *sig;
 	bliss_sampler_t *sampler = NULL;
 	rng_t *rng;
 	hasher_t *hasher;
-	hash_algorithm_t mgf1_alg, oracle_alg;
+	ext_out_function_t mgf1_alg, oracle_alg;
 	size_t mgf1_seed_len;
 	uint8_t mgf1_seed_buf[HASH_SIZE_SHA512], data_hash_buf[HASH_SIZE_SHA512];
 	chunk_t mgf1_seed, data_hash;
@@ -203,12 +209,12 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	/* Set MGF1 hash algorithm and seed length based on security strength */
 	if (this->set->strength > 160)
 	{
-		mgf1_alg = HASH_SHA256;
+		mgf1_alg = XOF_MGF1_SHA256;
 		mgf1_seed_len = HASH_SIZE_SHA256;
 	}
 	else
 	{
-		mgf1_alg = HASH_SHA1;
+		mgf1_alg = XOF_MGF1_SHA1;
 		mgf1_seed_len = HASH_SIZE_SHA1;
 	}
 	mgf1_seed = chunk_create(mgf1_seed_buf, mgf1_seed_len);
@@ -220,7 +226,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	}
 
 	/* MGF1 hash algorithm to be used for random oracle */
-	oracle_alg = HASH_SHA512;
+	oracle_alg = XOF_MGF1_SHA512;
 
 	/* Initialize a couple of needed variables */
 	n  = this->set->n;
@@ -241,7 +247,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	y2 = z2;
 	ud = z2d;
 
-	fft = bliss_fft_create(this->set->fft_params);
+	fft = ntt_fft_create(this->set->fft_params);
 
 	/* Use of the enhanced BLISS-B signature algorithm? */
 	switch (this->set->id)
@@ -337,7 +343,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 
 		for (i = 0; i < n; i++)
 		{
-			ay[i] = (this->A[i] * ay[i]) % q;
+			ay[i] = ntt_fft_mreduce(this->Ar[i] * ay[i], this->set->fft_params);
 		}
 		fft->transform(fft, ay, ay, TRUE);
 
@@ -668,6 +674,7 @@ METHOD(private_key_t, destroy, void,
 			free(this->s2);
 		}
 		free(this->A);
+		free(this->Ar);
 		free(this);
 	}
 }
@@ -795,13 +802,13 @@ static uint32_t nks_norm(int8_t *s1, int8_t *s2, int n, uint16_t kappa)
 /**
  * Compute the inverse x1 of x modulo q as x^(-1) = x^(q-2) mod q
  */
-static uint32_t invert(uint32_t x, uint16_t q)
+static uint32_t invert(private_bliss_private_key_t *this, uint32_t x)
 {
 	uint32_t x1, x2;
 	uint16_t q2;
 	int i, i_max;
 
-	q2 = q - 2;
+	q2 = this->set->q - 2;
 	x1 = (q2 & 1) ? x : 1;
 	x2 = x;
 	i_max = 15;
@@ -812,11 +819,11 @@ static uint32_t invert(uint32_t x, uint16_t q)
 	}
 	for (i = 1; i <= i_max; i++)
 	{
-		x2 = (x2 * x2) % q;
+		x2 = ntt_fft_mreduce(x2 * x2, this->set->fft_params);
 
 		if (q2 & (1 << i))
 		{
-			x1 = (x1 * x2) % q;
+			x1 = ntt_fft_mreduce(x1 * x2, this->set->fft_params);
 		}
 	}
 
@@ -827,14 +834,14 @@ static uint32_t invert(uint32_t x, uint16_t q)
  * Create a vector with sparse and small coefficients from seed
  */
 static int8_t* create_vector_from_seed(private_bliss_private_key_t *this,
-									   hash_algorithm_t alg, chunk_t seed)
+									   ext_out_function_t alg, chunk_t seed)
 {
-	mgf1_bitspender_t *bitspender;
+	xof_bitspender_t *bitspender;
 	uint32_t index, sign;
 	int8_t *vector;
 	int non_zero;
 
-	bitspender = mgf1_bitspender_create(alg, seed, FALSE);
+	bitspender = xof_bitspender_create(alg, seed, FALSE);
 	if (!bitspender)
 	{
 	    return NULL;
@@ -903,7 +910,7 @@ static bool create_secret(private_bliss_private_key_t *this, rng_t *rng,
 	int i, n;
 	chunk_t seed;
 	size_t seed_len;
-	hash_algorithm_t alg;
+	ext_out_function_t alg;
 
 	n = this->set->n;
 	*s1 = NULL;
@@ -912,12 +919,12 @@ static bool create_secret(private_bliss_private_key_t *this, rng_t *rng,
 	/* Set MGF1 hash algorithm and seed length based on security strength */
 	if (this->set->strength > 160)
 	{
-		alg = HASH_SHA256;
+		alg = XOF_MGF1_SHA256;
 		seed_len = HASH_SIZE_SHA256;
 	}
 	else
 	{
-		alg = HASH_SHA1;
+		alg = XOF_MGF1_SHA1;
 		seed_len = HASH_SIZE_SHA1;
 	}
 	seed = chunk_create(seed_buf, seed_len);
@@ -1000,8 +1007,8 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 	uint32_t *S1, *S2, *a;
 	uint16_t q;
 	bool success = FALSE;
-	bliss_param_set_t *set;
-	bliss_fft_t *fft;
+	const bliss_param_set_t *set;
+	ntt_fft_t *fft;
 	rng_t *rng;
 
 	while (TRUE)
@@ -1062,13 +1069,14 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 	this->set = set;
 
 	/* We derive the public key from the private key using the FFT */
-	fft = bliss_fft_create(set->fft_params);
+	fft = ntt_fft_create(set->fft_params);
 
 	/* Some vectors needed to derive the publi key */
 	S1 = malloc(n * sizeof(uint32_t));
 	S2 = malloc(n * sizeof(uint32_t));
 	a  = malloc(n * sizeof(uint32_t));
-	this->A = malloc(n * sizeof(uint32_t));
+	this->A  = malloc(n * sizeof(uint32_t));
+	this->Ar = malloc(n * sizeof(uint32_t));
 
 	/* Instantiate a true random generator */
 	rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
@@ -1091,6 +1099,7 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 		fft->transform(fft, S2, S2, FALSE);
 
 		success = TRUE;
+
 		for (i = 0; i < n; i++)
 		{
 			if (S1[i] == 0)
@@ -1103,8 +1112,9 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 				success = FALSE;
 				break;
 			}
-			this->A[i] = invert(S1[i], q);
-			this->A[i] = (S2[i] * this->A[i]) % q;
+			this->Ar[i] = invert(this, S1[i]);
+			this->Ar[i] = ntt_fft_mreduce(S2[i] * this->Ar[i], set->fft_params);
+			this->A[i]  = ntt_fft_mreduce(this->Ar[i], set->fft_params);
 		}
 	}
 	while (!success && trials < SECRET_KEY_TRIALS_MAX);
@@ -1114,13 +1124,15 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 
 	if (success)
 	{
-		fft->transform(fft, this->A, a, TRUE);
+		fft->transform(fft, this->Ar, a, TRUE);
 
 		DBG4(DBG_LIB, "   i   f   g     a     F     G     A");
 		for (i = 0; i < n; i++)
 		{
 			DBG4(DBG_LIB, "%4d %3d %3d %5u %5u %5u %5u",
-				 i, this->s1[i], this->s2[i], a[i], S1[i], S2[i], this->A[i]);
+						  i, this->s1[i], this->s2[i],
+						  ntt_fft_mreduce(a[i], set->fft_params),
+				 		  S1[i], S2[i], this->A[i]);
 		}
 	}
 	else
@@ -1167,7 +1179,7 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 	asn1_parser_t *parser;
 	size_t s_bits = 0;
 	int8_t s, s_min = 0, s_max = 0;
-	uint32_t s_sign = 0x02, s_mask = 0xfffffffc, value;
+	uint32_t s_sign = 0x02, s_mask = 0xfffffffc, value, r2;
 	bool success = FALSE;
 	int objectID, oid, i;
 
@@ -1247,6 +1259,14 @@ bliss_private_key_t *bliss_private_key_load(key_type_t type, va_list args)
 				if (!bliss_public_key_from_asn1(object, this->set, &this->A))
 				{
 					goto end;
+				}
+				this->Ar = malloc(this->set->n * sizeof(uint32_t));
+				r2 = this->set->fft_params->r2;
+
+				for (i = 0; i < this->set->n; i++)
+				{
+					this->Ar[i] = ntt_fft_mreduce(this->A[i] * r2,
+												  this->set->fft_params);
 				}
 				break;
 			case PRIV_KEY_SECRET1:
