@@ -1,4 +1,3 @@
-carol::swanctl --terminate --ike home
 carol::service charon stop 2> /dev/null
 moon::service charon stop 2> /dev/null
 moon::rm /etc/swanctl/x509crl/*

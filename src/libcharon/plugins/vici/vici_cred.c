@@ -74,10 +74,13 @@ METHOD(credential_set_t, cache_cert, void,
 		{
 			char buf[BUF_LEN];
 			chunk_t chunk, hex;
+			bool is_delta_crl;
 
+			is_delta_crl = crl->is_delta_crl(crl, NULL);
 			chunk = crl->get_authKeyIdentifier(crl);
 			hex = chunk_to_hex(chunk, NULL, FALSE);
-			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex.ptr);
+			snprintf(buf, sizeof(buf), "%s/%s%s.crl", CRL_DIR, hex.ptr,
+										is_delta_crl ? "_delta" : "");
 			free(hex.ptr);
 
 			if (cert->get_encoding(cert, CERT_ASN1_DER, &chunk))
