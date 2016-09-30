@@ -915,6 +915,8 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case ECP_256_BP:
 			case ECP_384_BP:
 			case ECP_512_BP:
+			case CURVE_25519:
+			case CURVE_448:
 			case NTRU_128_BIT:
 			case NTRU_192_BIT:
 			case NTRU_256_BIT:
