@@ -369,7 +369,10 @@ static int sign_crl()
 	}
 	else
 	{
-		crl_serial = chunk_from_chars(0x00);
+		if (!crl_serial.ptr)
+		{
+			crl_serial = chunk_from_chars(0x00);
+		}
 		lastenum = enumerator_create_empty();
 	}
 
