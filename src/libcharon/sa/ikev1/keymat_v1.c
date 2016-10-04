@@ -75,11 +75,6 @@ struct private_keymat_v1_t {
 	hasher_t *hasher;
 
 	/**
-	 * Key used for authentication during main mode
-	 */
-	chunk_t skeyid;
-
-	/**
 	 * Key to derive key material from for non-ISAKMP SAs, rekeying
 	 */
 	chunk_t skeyid_d;
@@ -269,12 +264,12 @@ static bool expand_skeyid_e(chunk_t skeyid_e, size_t key_size, prf_t *prf,
  * Create a simple implementation of the aead_t interface which only encrypts
  * or decrypts data.
  */
-static aead_t *create_aead(proposal_t *proposal, prf_t *prf, chunk_t skeyid_e)
+static aead_t *create_aead(proposal_t *proposal, prf_t *prf, chunk_t skeyid_e,
+						   chunk_t *ka)
 {
 	private_aead_t *this;
 	uint16_t alg, key_size;
 	crypter_t *crypter;
-	chunk_t ka;
 
 	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg,
 								 &key_size))
@@ -292,17 +287,16 @@ static aead_t *create_aead(proposal_t *proposal, prf_t *prf, chunk_t skeyid_e)
 		return NULL;
 	}
 	key_size = crypter->get_key_size(crypter);
-	if (!expand_skeyid_e(skeyid_e, crypter->get_key_size(crypter), prf, &ka))
+	if (!expand_skeyid_e(skeyid_e, crypter->get_key_size(crypter), prf, ka))
 	{
 		return NULL;
 	}
-	DBG4(DBG_IKE, "encryption key Ka %B", &ka);
-	if (!crypter->set_key(crypter, ka))
+	DBG4(DBG_IKE, "encryption key Ka %B", ka);
+	if (!crypter->set_key(crypter, *ka))
 	{
-		chunk_clear(&ka);
+		chunk_clear(ka);
 		return NULL;
 	}
-	chunk_clear(&ka);
 
 	INIT(this,
 		.aead = {
@@ -392,7 +386,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	auth_method_t auth, shared_key_t *shared_key)
 {
 	chunk_t g_xy, g_xi, g_xr, dh_me, spi_i, spi_r, nonces, data, skeyid_e;
-	chunk_t skeyid;
+	chunk_t skeyid, ka;
 	uint16_t alg;
 
 	spi_i = chunk_alloca(sizeof(uint64_t));
@@ -550,11 +544,14 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	}
 	chunk_clear(&skeyid);
 
-	this->aead = create_aead(proposal, this->prf, skeyid_e);
+	this->aead = create_aead(proposal, this->prf, skeyid_e, &ka);
 	if (!this->aead)
 	{
 		return FALSE;
 	}
+	charon->bus->ike_derived_keys(charon->bus, ka, chunk_empty, this->skeyid_a,
+								  chunk_empty);
+	chunk_clear(&ka);
 	if (!this->hasher && !this->public.create_hasher(&this->public, proposal))
 	{
 		return FALSE;
