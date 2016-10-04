@@ -1398,20 +1398,18 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 }
 
 /**
- * Check if a message with message ID 0 might be used to synchronize the
- * message IDs.
+ * Check if a message with message ID 0 looks like it is used to synchronize
+ * the message IDs.
  */
-static bool is_mid_sync(private_task_manager_t *this, message_t *msg)
+static bool looks_like_mid_sync(private_task_manager_t *this, message_t *msg,
+								bool strict)
 {
 	enumerator_t *enumerator;
 	notify_payload_t *notify;
 	payload_t *payload;
 	bool found = FALSE, other = FALSE;
 
-	if (msg->get_exchange_type(msg) == INFORMATIONAL &&
-		this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED &&
-		this->ike_sa->supports_extension(this->ike_sa,
-										  EXT_IKE_MESSAGE_ID_SYNC))
+	if (msg->get_exchange_type(msg) == INFORMATIONAL)
 	{
 		enumerator = msg->create_payload_enumerator(msg);
 		while (enumerator->enumerate(enumerator, &payload))
@@ -1429,12 +1427,33 @@ static bool is_mid_sync(private_task_manager_t *this, message_t *msg)
 						break;
 				}
 			}
-			other = TRUE;
-			break;
+			if (strict)
+			{
+				other = TRUE;
+				break;
+			}
 		}
 		enumerator->destroy(enumerator);
 	}
 	return found && !other;
+}
+
+/**
+ * Check if a message with message ID 0 looks like it is used to synchronize
+ * the message IDs and we are prepared to process it.
+ *
+ * Note: This is not called if the responder never sent a message before (i.e.
+ * we expect MID 0).
+ */
+static bool is_mid_sync(private_task_manager_t *this, message_t *msg)
+{
+	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED &&
+		this->ike_sa->supports_extension(this->ike_sa,
+										 EXT_IKE_MESSAGE_ID_SYNC))
+	{
+		return looks_like_mid_sync(this, msg, TRUE);
+	}
+	return FALSE;
 }
 
 METHOD(task_manager_t, process_message, status_t,
@@ -1525,7 +1544,8 @@ METHOD(task_manager_t, process_message, status_t,
 			}
 		}
 		else if ((mid == this->responding.mid - 1) &&
-				 array_count(this->responding.packets))
+				 array_count(this->responding.packets) &&
+				 !(mid == 0 && looks_like_mid_sync(this, msg, FALSE)))
 		{
 			status = handle_fragment(this, &this->responding.defrag, msg);
 			if (status != SUCCESS)

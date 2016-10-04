@@ -112,6 +112,13 @@ METHOD(task_t, pre_process, status_t,
 		 * unexpected message ID */
 		return SUCCESS;
 	}
+	if (!this->ike_sa->supports_extension(this->ike_sa,
+										  EXT_IKE_MESSAGE_ID_SYNC))
+	{
+		DBG1(DBG_ENC, "unexpected %N notify, ignored", notify_type_names,
+			 IKEV2_MESSAGE_ID_SYNC);
+		return FAILED;
+	}
 	notify = message->get_notify(message, IKEV2_MESSAGE_ID_SYNC);
 
 	reader = bio_reader_create(notify->get_notification_data(notify));
