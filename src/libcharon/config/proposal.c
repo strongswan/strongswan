@@ -420,6 +420,25 @@ static const struct {
 };
 
 /**
+ * Remove all entries of the given transform type
+ */
+static void remove_transform(private_proposal_t *this, transform_type_t type)
+{
+	enumerator_t *e;
+	entry_t *entry;
+
+	e = array_create_enumerator(this->transforms);
+	while (e->enumerate(e, &entry))
+	{
+		if (entry->type == type)
+		{
+			array_remove_at(this->transforms, e);
+		}
+	}
+	e->destroy(e);
+}
+
+/**
  * Checks the proposal read from a string.
  */
 static bool check_proposal(private_proposal_t *this)
@@ -432,12 +451,9 @@ static bool check_proposal(private_proposal_t *this)
 
 	if (this->protocol == PROTO_IKE)
 	{
-		e = create_enumerator(this, PSEUDO_RANDOM_FUNCTION);
-		if (!e->enumerate(e, &alg, &ks))
-		{
-			/* No explicit PRF found. We assume the same algorithm as used
-			 * for integrity checking */
-			e->destroy(e);
+		if (!get_algorithm(this, PSEUDO_RANDOM_FUNCTION, NULL, NULL))
+		{	/* No explicit PRF found. We assume the same algorithm as used
+			 * for integrity checking. */
 			e = create_enumerator(this, INTEGRITY_ALGORITHM);
 			while (e->enumerate(e, &alg, &ks))
 			{
@@ -451,8 +467,13 @@ static bool check_proposal(private_proposal_t *this)
 					}
 				}
 			}
+			e->destroy(e);
 		}
-		e->destroy(e);
+		if (!get_algorithm(this, PSEUDO_RANDOM_FUNCTION, NULL, NULL))
+		{
+			DBG1(DBG_CFG, "a PRF algorithm is mandatory in IKE proposals");
+			return FALSE;
+		}
 		/* remove MODP_NONE from IKE proposal */
 		e = array_create_enumerator(this->transforms);
 		while (e->enumerate(e, &entry))
@@ -463,14 +484,15 @@ static bool check_proposal(private_proposal_t *this)
 			}
 		}
 		e->destroy(e);
-		e = create_enumerator(this, DIFFIE_HELLMAN_GROUP);
-		if (!e->enumerate(e, &alg, &ks))
+		if (!get_algorithm(this, DIFFIE_HELLMAN_GROUP, NULL, NULL))
 		{
 			DBG1(DBG_CFG, "a DH group is mandatory in IKE proposals");
-			e->destroy(e);
 			return FALSE;
 		}
-		e->destroy(e);
+	}
+	else
+	{	/* remove PRFs from ESP/AH proposals */
+		remove_transform(this, PSEUDO_RANDOM_FUNCTION);
 	}
 
 	if (this->protocol == PROTO_ESP)
@@ -504,12 +526,10 @@ static bool check_proposal(private_proposal_t *this)
 
 	if (this->protocol == PROTO_AH || this->protocol == PROTO_ESP)
 	{
-		e = create_enumerator(this, EXTENDED_SEQUENCE_NUMBERS);
-		if (!e->enumerate(e, NULL, NULL))
+		if (!get_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NULL, NULL))
 		{	/* ESN not specified, assume not supported */
 			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 		}
-		e->destroy(e);
 	}
 
 	array_compress(this->transforms);
