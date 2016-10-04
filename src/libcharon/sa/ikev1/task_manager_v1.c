@@ -1189,7 +1189,7 @@ static status_t process_response(private_task_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	if (this->initiating.retransmitted)
+	if (this->initiating.retransmitted > 1)
 	{
 		packet_t *packet = NULL;
 		array_get(this->initiating.packets, 0, &packet);
