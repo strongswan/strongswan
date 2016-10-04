@@ -139,12 +139,12 @@ connections.<conn>.dpd_timeout = 0s
 	checking. For compatibility reasons, with IKEv1 a custom interval may be
 	specified; this option has no effect on connections using IKE2.
 
-connections.<conn>.fragmentation = no
+connections.<conn>.fragmentation = yes
 	Use IKE UDP datagram fragmentation.  (_yes_, _no_ or _force_).
 
 	Use IKE fragmentation (proprietary IKEv1 extension or RFC 7383 IKEv2
-	fragmentation).  Acceptable  values  are _yes_, _force_ and _no_ (the
-	default). Fragmented IKE messages sent by a peer are always accepted
+	fragmentation).  Acceptable  values  are _yes_ (the	default), _force_ and
+	_no_. Fragmented IKE messages sent by a peer are always accepted
 	irrespective of  the  value  of  this option. If set to _yes_, and the peer
 	supports it, oversized IKE messages will be sent in fragments.  If set  to
 	_force_  (only  supported  for IKEv1) the initial IKE message will already
