@@ -446,7 +446,7 @@ static bool check_proposal(private_proposal_t *this)
 	enumerator_t *e;
 	entry_t *entry;
 	uint16_t alg, ks;
-	bool all_aead = TRUE;
+	bool all_aead = TRUE, any_aead = FALSE, any_enc = FALSE;
 	int i;
 
 	if (this->protocol == PROTO_IKE)
@@ -495,32 +495,38 @@ static bool check_proposal(private_proposal_t *this)
 		remove_transform(this, PSEUDO_RANDOM_FUNCTION);
 	}
 
-	if (this->protocol == PROTO_ESP)
+	if (this->protocol == PROTO_IKE || this->protocol == PROTO_ESP)
 	{
 		e = create_enumerator(this, ENCRYPTION_ALGORITHM);
 		while (e->enumerate(e, &alg, &ks))
 		{
-			if (!encryption_algorithm_is_aead(alg))
+			any_enc = TRUE;
+			if (encryption_algorithm_is_aead(alg))
 			{
-				all_aead = FALSE;
-				break;
+				any_aead = TRUE;
+				continue;
 			}
+			all_aead = FALSE;
 		}
 		e->destroy(e);
 
-		if (all_aead)
+		if (!any_enc)
 		{
-			/* if all encryption algorithms in the proposal are AEADs,
+			DBG1(DBG_CFG, "an encryption algorithm is mandatory in %N proposals",
+				 protocol_id_names, this->protocol);
+			return FALSE;
+		}
+		else if (any_aead && !all_aead)
+		{
+			DBG1(DBG_CFG, "classic and combined-mode (AEAD) encryption "
+				 "algorithms can't be contained in the same %N proposal",
+				 protocol_id_names, this->protocol);
+			return FALSE;
+		}
+		else if (all_aead)
+		{	/* if all encryption algorithms in the proposal are AEADs,
 			 * we MUST NOT propose any integrity algorithms */
-			e = array_create_enumerator(this->transforms);
-			while (e->enumerate(e, &entry))
-			{
-				if (entry->type == INTEGRITY_ALGORITHM)
-				{
-					array_remove_at(this->transforms, e);
-				}
-			}
-			e->destroy(e);
+			remove_transform(this, INTEGRITY_ALGORITHM);
 		}
 	}
 
