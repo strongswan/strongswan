@@ -529,6 +529,47 @@ static bool check_proposal(private_proposal_t *this)
 			remove_transform(this, INTEGRITY_ALGORITHM);
 		}
 	}
+	else
+	{	/* AES-GMAC is parsed as encryption algorithm, so we map that to the
+		 * proper integrity algorithm */
+		e = array_create_enumerator(this->transforms);
+		while (e->enumerate(e, &entry))
+		{
+			if (entry->type == ENCRYPTION_ALGORITHM)
+			{
+				if (entry->alg == ENCR_NULL_AUTH_AES_GMAC)
+				{
+					entry->type = INTEGRITY_ALGORITHM;
+					ks = entry->key_size;
+					entry->key_size = 0;
+					switch (ks)
+					{
+						case 128:
+							entry->alg = AUTH_AES_128_GMAC;
+							continue;
+						case 192:
+							entry->alg = AUTH_AES_192_GMAC;
+							continue;
+						case 256:
+							entry->alg = AUTH_AES_256_GMAC;
+							continue;
+						default:
+							break;
+					}
+				}
+				/* remove all other encryption algorithms */
+				array_remove_at(this->transforms, e);
+			}
+		}
+		e->destroy(e);
+
+		if (!get_algorithm(this, INTEGRITY_ALGORITHM, NULL, NULL))
+		{
+			DBG1(DBG_CFG, "an integrity algorithm is mandatory in AH "
+				 "proposals");
+			return FALSE;
+		}
+	}
 
 	if (this->protocol == PROTO_AH || this->protocol == PROTO_ESP)
 	{
