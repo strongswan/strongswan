@@ -180,9 +180,7 @@ METHOD(task_t, process, status_t,
 	m2 = max(this->send, resp);
 	if (resp != m2)
 	{
-		/* after responding to this message the expected message ID is increased
-		 * by one so we reduce it here */
-		this->ike_sa->set_message_id(this->ike_sa, FALSE, m2 - 1);
+		this->ike_sa->set_message_id(this->ike_sa, FALSE, m2);
 	}
 	init = this->ike_sa->get_message_id(this->ike_sa, TRUE);
 	p2 = max(this->recv, has_active_tasks(this) ? init + 1 : init);

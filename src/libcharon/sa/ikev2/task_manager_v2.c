@@ -918,6 +918,9 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 		/* we don't want to resend messages to sync MIDs if requests with the
 		 * previous MID arrive */
 		clear_packets(this->responding.packets);
+		/* avoid increasing the expected message ID after handling a message
+		 * to sync MIDs with MID 0 */
+		return NEED_MORE;
 	}
 
 	array_compress(this->passive_tasks);
