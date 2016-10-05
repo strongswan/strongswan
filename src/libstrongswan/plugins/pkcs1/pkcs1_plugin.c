@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -42,6 +42,10 @@ METHOD(plugin_t, get_features, int,
 	private_pkcs1_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
+		PLUGIN_REGISTER(PRIVKEY, pkcs1_private_key_load, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
+				PLUGIN_SDEPEND(PRIVKEY, KEY_RSA),
+				PLUGIN_SDEPEND(PRIVKEY, KEY_ECDSA),
 		PLUGIN_REGISTER(PRIVKEY, pkcs1_private_key_load, FALSE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_RSA),
 		PLUGIN_REGISTER(PUBKEY, pkcs1_public_key_load, FALSE),

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -304,7 +304,26 @@ static private_openssl_ec_private_key_t *create_empty(void)
 	return this;
 }
 
-/**
+/*
+ * See header.
+ */
+private_key_t *openssl_ec_private_key_create(EVP_PKEY *key)
+{
+	private_openssl_ec_private_key_t *this;
+	EC_KEY *ec;
+
+	ec = EVP_PKEY_get1_EC_KEY(key);
+	EVP_PKEY_free(key);
+	if (!ec)
+	{
+		return NULL;
+	}
+	this = create_empty();
+	this->ec = ec;
+	return &this->public.key;
+}
+
+/*
  * See header.
  */
 openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,

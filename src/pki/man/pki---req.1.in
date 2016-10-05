@@ -49,7 +49,8 @@ Read command line options from \fIfile\fR.
 Private key input file. If not given the key is read from \fISTDIN\fR.
 .TP
 .BI "\-t, \-\-type " type
-Type of the input key. Either \fIrsa\fR or \fIecdsa\fR, defaults to \fIrsa\fR.
+Type of the input key. Either \fIpriv\fR, \fIrsa\fR, \fIecdsa\fR or \fIbliss\fR,
+defaults to \fIpriv\fR.
 .TP
 .BI "\-d, \-\-dn " distinguished-name
 Subject distinguished name (DN). Required.

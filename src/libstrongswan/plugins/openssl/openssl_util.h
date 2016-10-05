@@ -136,6 +136,13 @@ int openssl_asn1_known_oid(ASN1_OBJECT *obj);
 time_t openssl_asn1_to_time(ASN1_TIME *time);
 
 /**
+ * Compatibility macros
+ */
+#ifdef OPENSSL_IS_BORINGSSL
+#define EVP_PKEY_base_id(p) EVP_PKEY_type(p->type)
+#endif
+
+/**
  * Macros to define fallback getters/setters to access keys (BIGNUM*) for types
  * that were made opaque with OpenSSL 1.1.0.
  */

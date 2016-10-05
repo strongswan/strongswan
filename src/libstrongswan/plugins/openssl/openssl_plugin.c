@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2013 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -269,6 +269,53 @@ static bool seed_rng()
 	return TRUE;
 }
 
+/**
+ * Generic key loader
+ */
+static private_key_t *openssl_private_key_load(key_type_t type, va_list args)
+{
+	chunk_t blob = chunk_empty;
+	EVP_PKEY *key;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_BLOB_ASN1_DER:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	if (blob.ptr)
+	{
+		key = d2i_AutoPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
+		if (key)
+		{
+			switch (EVP_PKEY_base_id(key))
+			{
+#ifndef OPENSSL_NO_RSA
+				case EVP_PKEY_RSA:
+					return openssl_rsa_private_key_create(key);
+#endif
+#ifndef OPENSSL_NO_ECDSA
+				case EVP_PKEY_EC:
+					return openssl_ec_private_key_create(key);
+#endif
+				default:
+					EVP_PKEY_free(key);
+					break;
+			}
+		}
+	}
+	return NULL;
+}
+
 METHOD(plugin_t, get_name, char*,
 	private_openssl_plugin_t *this)
 {
@@ -504,6 +551,9 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_521),
 #endif
 #endif /* OPENSSL_NO_ECDSA */
+		/* generic key loader */
+		PLUGIN_REGISTER(PRIVKEY, openssl_private_key_load, TRUE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 		PLUGIN_REGISTER(RNG, openssl_rng_create),
 			PLUGIN_PROVIDE(RNG, RNG_STRONG),
 			PLUGIN_PROVIDE(RNG, RNG_WEAK),
