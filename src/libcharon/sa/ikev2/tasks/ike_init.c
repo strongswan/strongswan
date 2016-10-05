@@ -655,6 +655,7 @@ METHOD(task_t, build_r, status_t,
 		else
 		{
 			DBG1(DBG_IKE, "no acceptable proposal found");
+			message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		}
 		return FAILED;
 	}
