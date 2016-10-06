@@ -189,7 +189,7 @@ unbound_response_t *unbound_response_create_frm_libub_response(
 		 */
 		rr_list = linked_list_create();
 
-		orig_rr_list = ldns_pkt_get_section_clone(dns_pkt, LDNS_SECTION_ANSWER);
+		orig_rr_list = ldns_pkt_answer(dns_pkt);
 		orig_rr_count = ldns_rr_list_rr_count(orig_rr_list);
 
 		for (i = 0; i < orig_rr_count; i++)
@@ -253,7 +253,6 @@ unbound_response_t *unbound_response_create_frm_libub_response(
 		this->rr_set = rr_set_create(rr_list, rrsig_list);
 
 		ldns_pkt_free(dns_pkt);
-		ldns_rr_list_free(orig_rr_list);
 	}
 	return &this->public;
 }

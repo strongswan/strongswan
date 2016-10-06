@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2011-2016 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,6 +24,7 @@
 
 #include <utils/debug.h>
 #include <library.h>
+#include <collections/array.h>
 #include <networking/host.h>
 #include <utils/identification.h>
 #include <attributes/attributes.h>
@@ -586,11 +588,11 @@ static void resize(char *name, host_t *end)
 /**
  * create the lease query using the filter string
  */
-static enumerator_t *create_lease_query(char *filter)
+static enumerator_t *create_lease_query(char *filter, array_t **to_free)
 {
 	enumerator_t *query;
-	identification_t *id = NULL;
-	host_t *addr = NULL;
+	chunk_t id_chunk = chunk_empty, addr_chunk = chunk_empty;
+	id_type_t id_type = 0;
 	u_int tstamp = 0;
 	bool online = FALSE, valid = FALSE, expired = FALSE;
 	char *value, *pos, *pool = NULL;
@@ -635,18 +637,29 @@ static enumerator_t *create_lease_query(char *filter)
 			case FIL_ID:
 				if (value)
 				{
+					identification_t *id;
+
 					id = identification_create_from_string(value);
+					id_type = id->get_type(id);
+					id_chunk = chunk_clone(id->get_encoding(id));
+					array_insert_create(to_free, ARRAY_TAIL, id_chunk.ptr);
+					id->destroy(id);
 				}
 				break;
 			case FIL_ADDR:
 				if (value)
 				{
+					host_t *addr;
+
 					addr = host_create_from_string(value, 0);
-				}
-				if (!addr)
-				{
-					fprintf(stderr, "invalid 'addr' in filter string.\n");
-					exit(EXIT_FAILURE);
+					if (!addr)
+					{
+						fprintf(stderr, "invalid 'addr' in filter string.\n");
+						exit(EXIT_FAILURE);
+					}
+					addr_chunk = chunk_clone(addr->get_address(addr));
+					array_insert_create(to_free, ARRAY_TAIL, addr_chunk.ptr);
+					addr->destroy(addr);
 				}
 				break;
 			case FIL_TSTAMP:
@@ -710,11 +723,11 @@ static enumerator_t *create_lease_query(char *filter)
 				"AND (? OR (identities.type = ? AND identities.data = ?)) "
 				"AND (? OR address = ?)",
 				DB_INT, pool == NULL, DB_TEXT, pool,
-				DB_INT, id == NULL,
-					DB_INT, id ? id->get_type(id) : 0,
-					DB_BLOB, id ? id->get_encoding(id) : chunk_empty,
-				DB_INT, addr == NULL,
-					DB_BLOB, addr ? addr->get_address(addr) : chunk_empty,
+				DB_INT, !id_chunk.ptr,
+					DB_INT, id_type,
+					DB_BLOB, id_chunk,
+				DB_INT, !addr_chunk.ptr,
+					DB_BLOB, addr_chunk,
 				DB_INT, tstamp == 0, DB_UINT, tstamp, DB_UINT, tstamp,
 				DB_INT, !valid, DB_INT, time(NULL),
 				DB_INT, !expired, DB_INT, time(NULL),
@@ -722,14 +735,13 @@ static enumerator_t *create_lease_query(char *filter)
 				/* union */
 				DB_INT, !(valid || expired),
 				DB_INT, pool == NULL, DB_TEXT, pool,
-				DB_INT, id == NULL,
-					DB_INT, id ? id->get_type(id) : 0,
-					DB_BLOB, id ? id->get_encoding(id) : chunk_empty,
-				DB_INT, addr == NULL,
-					DB_BLOB, addr ? addr->get_address(addr) : chunk_empty,
+				DB_INT, !id_chunk.ptr,
+					DB_INT, id_type,
+					DB_BLOB, id_chunk,
+				DB_INT, !addr_chunk.ptr,
+					DB_BLOB, addr_chunk,
 				/* res */
 				DB_TEXT, DB_BLOB, DB_INT, DB_BLOB, DB_UINT, DB_UINT, DB_UINT);
-	/* id and addr leak but we can't destroy them until query is destroyed. */
 	return query;
 }
 
@@ -739,6 +751,7 @@ static enumerator_t *create_lease_query(char *filter)
 static void leases(char *filter, bool utc)
 {
 	enumerator_t *query;
+	array_t *to_free = NULL;
 	chunk_t address_chunk, identity_chunk;
 	int identity_type;
 	char *name;
@@ -748,7 +761,7 @@ static void leases(char *filter, bool utc)
 	identification_t *identity;
 	bool found = FALSE;
 
-	query = create_lease_query(filter);
+	query = create_lease_query(filter, &to_free);
 	if (!query)
 	{
 		fprintf(stderr, "querying leases failed.\n");
@@ -809,6 +822,10 @@ static void leases(char *filter, bool utc)
 		identity->destroy(identity);
 	}
 	query->destroy(query);
+	if (to_free)
+	{
+		array_destroy_function(to_free, (void*)free, NULL);
+	}
 	if (!found)
 	{
 		fprintf(stderr, "no matching leases found.\n");

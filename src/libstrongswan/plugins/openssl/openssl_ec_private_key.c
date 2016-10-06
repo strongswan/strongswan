@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -27,6 +27,10 @@
 #include <openssl/evp.h>
 #include <openssl/ecdsa.h>
 #include <openssl/x509.h>
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+OPENSSL_KEY_FALLBACK(ECDSA_SIG, r, s)
+#endif
 
 typedef struct private_openssl_ec_private_key_t private_openssl_ec_private_key_t;
 
@@ -59,15 +63,17 @@ bool openssl_ec_fingerprint(EC_KEY *ec, cred_encoding_type_t type, chunk_t *fp);
 static bool build_signature(private_openssl_ec_private_key_t *this,
 							chunk_t hash, chunk_t *signature)
 {
-	bool built = FALSE;
+	const BIGNUM *r, *s;
 	ECDSA_SIG *sig;
+	bool built = FALSE;
 
 	sig = ECDSA_do_sign(hash.ptr, hash.len, this->ec);
 	if (sig)
 	{
+		ECDSA_SIG_get0(sig, &r, &s);
 		/* concatenate BNs r/s to a signature chunk */
 		built = openssl_bn_cat(EC_FIELD_ELEMENT_LEN(EC_KEY_get0_group(this->ec)),
-							   sig->r, sig->s, signature);
+							   r, s, signature);
 		ECDSA_SIG_free(sig);
 	}
 	return built;
@@ -298,7 +304,26 @@ static private_openssl_ec_private_key_t *create_empty(void)
 	return this;
 }
 
-/**
+/*
+ * See header.
+ */
+private_key_t *openssl_ec_private_key_create(EVP_PKEY *key)
+{
+	private_openssl_ec_private_key_t *this;
+	EC_KEY *ec;
+
+	ec = EVP_PKEY_get1_EC_KEY(key);
+	EVP_PKEY_free(key);
+	if (!ec)
+	{
+		return NULL;
+	}
+	this = create_empty();
+	this->ec = ec;
+	return &this->public.key;
+}
+
+/*
  * See header.
  */
 openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,

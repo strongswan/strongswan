@@ -51,6 +51,35 @@ charon.plugins.kernel-netlink.set_proto_port_transport_sa = no
 	traffic, it also prevents the use of a single IPsec SA by more than one
 	traffic selector.
 
+charon.plugins.kernel-netlink.spdh_thresh {}
+	XFRM policy hashing threshold configuration for IPv4 and IPv6.
+
+	XFRM policy hashing threshold configuration for IPv4 and IPv6.
+
+	The section defines hashing thresholds to configure in the kernel during
+	daemon startup. Each address family takes a threshold for the local subnet
+	of an IPsec policy (src in out-policies, dst in in- and forward-policies)
+	and the remote subnet (dst in out-policies, src in in- and
+	forward-policies).
+
+	If the subnet has more or equal net bits than the threshold, the first
+	threshold bits are used to calculate a hash to lookup the policy.
+
+	Policy hashing thresholds are not supported before Linux 3.18 and might
+	conflict with socket policies before Linux 4.8.
+
+charon.plugins.kernel-netlink.spdh_thresh.ipv4.lbits = 32
+	Local subnet XFRM policy hashing threshold for IPv4.
+
+charon.plugins.kernel-netlink.spdh_thresh.ipv4.rbits = 32
+	Remote subnet XFRM policy hashing threshold for IPv4.
+
+charon.plugins.kernel-netlink.spdh_thresh.ipv6.lbits = 128
+	Local subnet XFRM policy hashing threshold for IPv6.
+
+charon.plugins.kernel-netlink.spdh_thresh.ipv6.rbits = 128
+	Remote subnet XFRM policy hashing threshold for IPv6.
+
 charon.plugins.kernel-netlink.retries = 0
 	Number of Netlink message retransmissions to send on timeout.
 
@@ -61,8 +90,12 @@ charon.plugins.kernel-netlink.ignore_retransmit_errors = no
 	Whether to ignore errors potentially resulting from a retransmission.
 
 charon.plugins.kernel-netlink.xfrm_acq_expires = 165
-	Lifetime of XFRM acquire state in kernel.
+	Lifetime of XFRM acquire state and allocated SPIs in kernel.
 
-	Lifetime of XFRM acquire state in kernel. The value gets written to
-	/proc/sys/net/core/xfrm_acq_expires. Indirectly controls the delay of XFRM
-	acquire messages sent.
+	Lifetime of XFRM acquire state created by the kernel when traffic matches a
+	trap policy. The value gets written to /proc/sys/net/core/xfrm_acq_expires.
+	Indirectly controls the delay between XFRM acquire messages triggered by the
+	kernel for a trap policy. The same value is used as timeout for SPIs
+	allocated by the kernel. The default value equals the default total
+	retransmission timeout for IKE messages, see IKEv2 RETRANSMISSION
+	in **strongswan.conf**(5).

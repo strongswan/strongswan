@@ -96,6 +96,10 @@ sub load_shared {
     return request_vars_res('load-shared', @_);
 }
 
+sub flush_certs {
+    return request_vars_res('flush-certs', @_);
+}
+
 sub clear_creds {
    return request_res('clear-creds', @_);
 }

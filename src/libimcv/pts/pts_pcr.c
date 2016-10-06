@@ -200,10 +200,10 @@ METHOD(pts_pcr_t, extend, chunk_t,
 	return this->pcrs[pcr];
 }
 
-METHOD(pts_pcr_t, get_composite, chunk_t,
+METHOD(pts_pcr_t, get_composite, tpm_tss_pcr_composite_t*,
 	private_pts_pcr_t *this)
 {
-	chunk_t composite;
+	tpm_tss_pcr_composite_t *pcr_composite;
 	enumerator_t *enumerator;
 	uint16_t selection_size;
 	uint32_t pcr_field_size, pcr;
@@ -212,14 +212,13 @@ METHOD(pts_pcr_t, get_composite, chunk_t,
 	selection_size = get_selection_size(this);
 	pcr_field_size = this->pcr_count * PTS_PCR_LEN;
 
-	composite = chunk_alloc(2 + selection_size + 4 + pcr_field_size);
-	pos = composite.ptr;
-	htoun16(pos, selection_size);
-	pos += 2;
-	memcpy(pos, this->pcr_select, selection_size);
-	pos += selection_size;
-	htoun32(pos, pcr_field_size);
-	pos += 4;
+	INIT(pcr_composite,
+		.pcr_select    = chunk_alloc(selection_size),
+		.pcr_composite = chunk_alloc(pcr_field_size),
+	);
+
+	memcpy(pcr_composite->pcr_select.ptr, this->pcr_select, selection_size);
+	pos = pcr_composite->pcr_composite.ptr;
 
 	enumerator = create_enumerator(this);
 	while (enumerator->enumerate(enumerator, &pcr))
@@ -229,8 +228,7 @@ METHOD(pts_pcr_t, get_composite, chunk_t,
 	}
 	enumerator->destroy(enumerator);
 
-	DBG3(DBG_PTS, "constructed PCR Composite: %B", &composite);
-	return composite;
+	return pcr_composite;
 }
 
 METHOD(pts_pcr_t, destroy, void,

@@ -484,6 +484,29 @@ INSERT INTO products (			/* 81 */
  'Android 6.0.1'
 );
 
+INSERT INTO products (          /* 82 */
+  name
+) VALUES (
+ 'Debian 8.5 i686'
+);
+
+INSERT INTO products (          /* 83 */
+  name
+) VALUES (
+ 'Debian 8.5 x86_64'
+);
+
+INSERT INTO products (          /* 84 */
+  name
+) VALUES (
+ 'Debian 8.6 i686'
+);
+
+INSERT INTO products (          /* 85 */
+  name
+) VALUES (
+ 'Debian 8.6 x86_64'
+);
 
 /* Directories */
 
@@ -614,19 +637,19 @@ INSERT INTO files (				/*  6 */
 INSERT INTO algorithms (
   id, name
 ) VALUES (
-  32768, 'SHA1' 
+  32768, 'SHA1'
 );
 
 INSERT INTO algorithms (
   id, name
 ) VALUES (
-  16384, 'SHA256' 
+  16384, 'SHA256'
 );
 
 INSERT INTO algorithms (
   id, name
 ) VALUES (
-  8192, 'SHA384' 
+  8192, 'SHA384'
 );
 
 /* File Hashes */
@@ -1071,6 +1094,18 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   5, 77
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 83
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 85
 );
 
 INSERT INTO groups_product_defaults (

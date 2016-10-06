@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2006-2015 Tobias Brunner
+ * Copyright (C) 2006-2016 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -58,12 +58,12 @@ typedef struct ike_sa_t ike_sa_t;
 /**
  * After which time rekeying should be retried if it failed, in seconds.
  */
-#define RETRY_INTERVAL 30
+#define RETRY_INTERVAL 15
 
 /**
  * Jitter to subtract from RETRY_INTERVAL to randomize rekey retry.
  */
-#define RETRY_JITTER 20
+#define RETRY_JITTER 10
 
 /**
  * Number of redirects allowed within REDIRECT_LOOP_DETECT_PERIOD.
@@ -307,6 +307,11 @@ enum ike_sa_state_t {
 	 * IKE_SA rekeying in progress
 	 */
 	IKE_REKEYING,
+
+	/**
+	 * IKE_SA has been rekeyed (or is redundant)
+	 */
+	IKE_REKEYED,
 
 	/**
 	 * IKE_SA is in progress of deletion
@@ -1117,6 +1122,15 @@ struct ike_sa_t {
 	 * @param task			task to queue
 	 */
 	void (*queue_task)(ike_sa_t *this, task_t *task);
+
+	/**
+	 * Queue a task in the manager, but delay its initiation for at least the
+	 * given number of seconds.
+	 *
+	 * @param task			task to queue
+	 * @param delay			minimum delay in s before initiating the task
+	 */
+	void (*queue_task_delayed)(ike_sa_t *this, task_t *task, uint32_t delay);
 
 	/**
 	 * Inherit required attributes to new SA before rekeying.

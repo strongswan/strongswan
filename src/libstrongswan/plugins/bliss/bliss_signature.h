@@ -61,7 +61,7 @@ struct bliss_signature_t {
  *
  * @param set			BLISS parameter set
  */
-bliss_signature_t *bliss_signature_create(bliss_param_set_t *set);
+bliss_signature_t *bliss_signature_create(const bliss_param_set_t *set);
 
 /**
  * Create a BLISS signature object from encoding.
@@ -69,7 +69,7 @@ bliss_signature_t *bliss_signature_create(bliss_param_set_t *set);
  * @param set			BLISS parameter set
  * @param encoding		binary signature encoding
  */
-bliss_signature_t *bliss_signature_create_from_data(bliss_param_set_t *set,
+bliss_signature_t *bliss_signature_create_from_data(const bliss_param_set_t *set,
 													chunk_t encoding);
 
 #endif /** BLISS_SIGNATURE_H_ @}*/

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Sansar Choinyambuu
- * Copyright (C) 2012-2014 Andreas Steffen
+ * Copyright (C) 2012-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -32,8 +32,9 @@ typedef struct pts_t pts_t;
 #include "pts_dh_group.h"
 #include "pts_pcr.h"
 #include "pts_req_func_comp_evid.h"
-#include "pts_simple_evid_final.h"
 #include "components/pts_comp_func_name.h"
+
+#include <tpm_tss_quote_info.h>
 
 #include <library.h>
 #include <collections/linked_list.h>
@@ -69,11 +70,6 @@ typedef struct pts_t pts_t;
  * Length of the generated nonce used for calculation of shared secret
  */
 #define ASSESSMENT_SECRET_LEN	20
-
-/**
- * Length of the TPM_QUOTE_INFO structure, TPM Spec 1.2
- */
-#define TPM_QUOTE_INFO_LEN		48
 
 /**
  * Hashing algorithm used by tboot and trustedGRUB
@@ -236,39 +232,39 @@ struct pts_t {
 	pts_file_meta_t* (*get_metadata)(pts_t *this, char *pathname, bool is_dir);
 
 	/**
-	 * Reads given PCR value and returns it
-	 * Expects owner secret to be WELL_KNOWN_SECRET
+	 * Retrieve the current value of a PCR register in a given PCR bank
 	 *
-	 * @param pcr_num			Number of PCR to read
-	 * @param pcr_value			Chunk to save pcr read output
-	 * @return					NULL in case of TSS error, PCR value otherwise
+	 * @param pcr_num		PCR number
+	 * @param pcr_value		PCR value returned
+	 * @param alg			hash algorithm, selects PCR bank (TPM 2.0 only)
+	 * @return				TRUE if PCR value retrieval succeeded
 	 */
-	bool (*read_pcr)(pts_t *this, uint32_t pcr_num, chunk_t *pcr_value);
+	bool (*read_pcr)(pts_t *this, uint32_t pcr_num, chunk_t *pcr_value,
+					 hash_algorithm_t alg);
 
 	/**
-	 * Extends given PCR with given value
-	 * Expects owner secret to be WELL_KNOWN_SECRET
+	 * Extend a PCR register in a given PCR bank with a hash value
 	 *
-	 * @param pcr_num			Number of PCR to extend
-	 * @param input				Value to extend
-	 * @param output			Chunk to save PCR value after extension
-	 * @return					FALSE in case of TSS error, TRUE otherwise
+	 * @param pcr_num		PCR number
+	 * @param pcr_value		extended PCR value returned
+	 * @param hash			data to be extended into the PCR
+	 * @param alg			hash algorithm, selects PCR bank (TPM 2.0 only)
+	 * @return				TRUE if PCR extension succeeded
 	 */
-	bool (*extend_pcr)(pts_t *this, uint32_t pcr_num, chunk_t input,
-					   chunk_t *output);
+	bool (*extend_pcr)(pts_t *this, uint32_t pcr_num, chunk_t *pcr_value,
+					   chunk_t data, hash_algorithm_t alg);
 
 	/**
 	 * Quote over PCR's
 	 * Expects owner and SRK secret to be WELL_KNOWN_SECRET and no password set for AIK
 	 *
-	 * @param use_quote2		Version of the Quote function to be used
-	 * @param pcr_comp			Chunk to save PCR composite structure
-	 * @param quote_sig			Chunk to save quote operation output
-	 *							without external data (anti-replay protection)
-	 * @return					FALSE in case of TSS error, TRUE otherwise
+	 * @param quote_mode	type of Quote signature
+	 * @param quote_info	returns various info covered by Quote signature
+	 * @param quote_sig		returns Quote signature
+	 * @return				FALSE in case of Quote error, TRUE otherwise
 	 */
-	 bool (*quote_tpm)(pts_t *this, bool use_quote2, chunk_t *pcr_comp,
-													 chunk_t *quote_sig);
+	 bool (*quote)(pts_t *this, tpm_quote_mode_t *quote_mode,
+				   tpm_tss_quote_info_t **quote_info, chunk_t *quote_sig);
 
 	/**
 	 * Get the shadow PCR set
@@ -277,28 +273,26 @@ struct pts_t {
 	 */
 	pts_pcr_t* (*get_pcrs)(pts_t *this);
 
-	 /**
-	 * Constructs and returns TPM Quote Info structure expected from IMC
+	/**
+	 * Computes digest of the constructed TPM Quote Info structure
 	 *
-	 * @param use_quote2		Version of the TPM_QUOTE_INFO to be constructed
-	 * @param use_ver_info		Version info is concatenated to TPM_QUOTE_INFO2
-	 * @param comp_hash_algo	Composite Hash Algorithm
-	 * @param pcr_comp			Output variable to store PCR Composite
-	 * @param quote_info		Output variable to store TPM Quote Info
+	 * @param quote_info		TPM Quote Info as received from IMC
+	 * @param quoted			Encoding of TPM Quote Info
 	 * @return					FALSE in case of any error, TRUE otherwise
 	 */
-	 bool (*get_quote_info)(pts_t *this, bool use_quote2, bool ver_info_included,
-							pts_meas_algorithms_t comp_hash_algo,
-							chunk_t *pcr_comp, chunk_t *quote_info);
+	 bool (*get_quote)(pts_t *this, tpm_tss_quote_info_t *quote_info,
+					   chunk_t *quoted);
 
 	 /**
 	 * Constructs and returns PCR Quote Digest structure expected from IMC
 	 *
-	 * @param data				Calculated TPM Quote Digest
+	 * @param digest_alg		Hash algorithm used for TPM Quote Digest
+	 * @param digest			Calculated TPM Quote Digest
 	 * @param signature			TPM Quote Signature received from IMC
 	 * @return					FALSE if signature is not verified
 	 */
-	 bool (*verify_quote_signature)(pts_t *this, chunk_t data, chunk_t signature);
+	 bool (*verify_quote_signature)(pts_t *this, hash_algorithm_t digest_alg,
+									chunk_t digest, chunk_t signature);
 
 	/**
 	 * Destroys a pts_t object.

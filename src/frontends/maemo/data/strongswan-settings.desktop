@@ -1,9 +1,0 @@
-[Desktop Entry]
-Encoding=UTF-8
-Version=1.0
-Name=strongSwan VPN
-Comment=A control panel applet to configure strongSwan VPN
-Type=HildonControlPanelPlugin
-Icon=strongswan_lock_close
-Categories=connectivity
-X-control-panel-plugin=libstrongswan-settings.so

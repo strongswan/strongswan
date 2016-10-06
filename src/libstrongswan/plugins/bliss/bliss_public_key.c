@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -16,7 +16,8 @@
 #include "bliss_public_key.h"
 #include "bliss_signature.h"
 #include "bliss_bitpacker.h"
-#include "bliss_fft.h"
+#include "ntt_fft.h"
+#include "ntt_fft_reduce.h"
 #include "bliss_utils.h"
 
 #include <asn1/asn1.h>
@@ -37,12 +38,17 @@ struct private_bliss_public_key_t {
 	/**
 	 * BLISS signature parameter set
 	 */
-	bliss_param_set_t *set;
+	const bliss_param_set_t *set;
 
 	/**
 	 * NTT of BLISS public key a (coefficients of polynomial (2g + 1)/f)
 	 */
 	uint32_t *A;
+
+	/**
+	 * NTT of BLISS public key in Montgomery representation Ar = rA mod
+	 */
+	uint32_t *Ar;
 
 	/**
 	 * reference counter
@@ -70,8 +76,8 @@ static bool verify_bliss(private_bliss_public_key_t *this, hash_algorithm_t alg,
 	uint8_t data_hash_buf[HASH_SIZE_SHA512];
 	chunk_t data_hash;
 	hasher_t *hasher;
-	hash_algorithm_t oracle_alg;
-	bliss_fft_t *fft;
+	ext_out_function_t oracle_alg;
+	ntt_fft_t *fft;
 	bliss_signature_t *sig;
 	bool success = FALSE;
 
@@ -104,7 +110,7 @@ static bool verify_bliss(private_bliss_public_key_t *this, hash_algorithm_t alg,
 	}
 
 	/* MGF1 hash algorithm to be used for random oracle */
-	oracle_alg = HASH_SHA512;
+	oracle_alg = XOF_MGF1_SHA512;
 
 	/* Initialize a couple of needed variables */
 	n  = this->set->n;
@@ -120,12 +126,12 @@ static bool verify_bliss(private_bliss_public_key_t *this, hash_algorithm_t alg,
 	{
 		az[i] = z1[i] < 0 ? q + z1[i] : z1[i];
 	}
-	fft = bliss_fft_create(this->set->fft_params);
+	fft = ntt_fft_create(this->set->fft_params);
 	fft->transform(fft, az, az, FALSE);
 
 	for (i = 0; i < n; i++)
 	{
-		az[i] = (this->A[i] * az[i]) % q;
+		az[i] = ntt_fft_mreduce(this->Ar[i] * az[i], this->set->fft_params);
 	}
 	fft->transform(fft, az, az, TRUE);
 
@@ -279,6 +285,7 @@ METHOD(public_key_t, destroy, void,
 	{
 		lib->encoding->clear_cache(lib->encoding, this);
 		free(this->A);
+		free(this->Ar);
 		free(this);
 	}
 }
@@ -304,7 +311,8 @@ bliss_public_key_t *bliss_public_key_load(key_type_t type, va_list args)
 	chunk_t blob = chunk_empty, object, param;
 	asn1_parser_t *parser;
 	bool success = FALSE;
-	int objectID, oid;
+	int objectID, oid, i;
+	uint32_t r2;
 
 	while (TRUE)
 	{
@@ -380,6 +388,14 @@ bliss_public_key_t *bliss_public_key_load(key_type_t type, va_list args)
 				{
 					goto end;
 				}
+				this->Ar = malloc(this->set->n * sizeof(uint32_t));
+				r2 = this->set->fft_params->r2;
+
+				for (i = 0; i < this->set->n; i++)
+				{
+					this->Ar[i] = ntt_fft_mreduce(this->A[i] * r2,
+												  this->set->fft_params);
+				}
 				break;
 		}
 	}
@@ -399,7 +415,7 @@ end:
 /**
  * See header.
  */
-bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
+bool bliss_public_key_from_asn1(chunk_t object, const bliss_param_set_t *set,
 								uint32_t **pubkey)
 {
 	bliss_bitpacker_t *packer;
@@ -438,7 +454,7 @@ bool bliss_public_key_from_asn1(chunk_t object, bliss_param_set_t *set,
 /**
  * See header.
  */
-chunk_t bliss_public_key_encode(uint32_t *pubkey, bliss_param_set_t *set)
+chunk_t bliss_public_key_encode(uint32_t *pubkey, const bliss_param_set_t *set)
 {
 	bliss_bitpacker_t *packer;
 	chunk_t encoding;
@@ -460,7 +476,7 @@ chunk_t bliss_public_key_encode(uint32_t *pubkey, bliss_param_set_t *set)
  * See header.
  */
 chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey,
-									 bliss_param_set_t *set)
+									 const bliss_param_set_t *set)
 {
 	chunk_t encoding, pubkey_encoding;
 
@@ -479,7 +495,7 @@ chunk_t bliss_public_key_info_encode(int oid, uint32_t *pubkey,
  * See header.
  */
 bool bliss_public_key_fingerprint(int oid, uint32_t *pubkey,
-								  bliss_param_set_t *set,
+								  const bliss_param_set_t *set,
 								  cred_encoding_type_t type, chunk_t *fp)
 {
 	hasher_t *hasher;

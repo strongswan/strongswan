@@ -211,7 +211,7 @@ METHOD(tls_application_t, process, status_t,
 	{
 		DBG1(DBG_IKE, "received tunneled EAP-PEAP AVP [EAP/%N]",
 								eap_code_short_names, code);
-
+		in->destroy(in);
 		/* if EAP_SUCCESS check if to continue phase2 with EAP-TNC */
 		return (this->phase2_result == EAP_SUCCESS && code == EAP_SUCCESS) ?
 			   start_phase2_tnc(this) : FAILED;
@@ -250,6 +250,7 @@ METHOD(tls_application_t, process, status_t,
 			{
 				DBG1(DBG_IKE, "%N method not available",
 							   eap_type_names, EAP_IDENTITY);
+				in->destroy(in);
 				return FAILED;
 			}
 		}
@@ -258,6 +259,7 @@ METHOD(tls_application_t, process, status_t,
 		{
 
 			DBG1(DBG_IKE, "%N method failed", eap_type_names, EAP_IDENTITY);
+			in->destroy(in);
 			return FAILED;
 		}
 

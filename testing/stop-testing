@@ -9,6 +9,7 @@ echo "Stopping test environment"
 NETWORKS="vnet1 vnet2 vnet3"
 KNLTARGET=/var/run/kvm-swan-kernel
 HOSTFSTARGET=/var/run/kvm-swan-hostfs
+TESTRESULTSTARGET=/var/run/kvm-swan-testresults
 
 [ `id -u` -eq 0 ] || die "You must be root to run $0"
 
@@ -32,3 +33,6 @@ execute "rm $KNLTARGET"
 
 log_action "Removing link to hostfs"
 execute "rm $HOSTFSTARGET"
+
+log_action "Removing link to testresults"
+execute "rm $TESTRESULTSTARGET"

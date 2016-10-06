@@ -48,7 +48,6 @@ libimcv_la_SOURCES := \
 	pts/pts_pcr.h pts/pts_pcr.c \
 	pts/pts_proto_caps.h \
 	pts/pts_req_func_comp_evid.h \
-	pts/pts_simple_evid_final.h \
 	pts/pts_creds.h pts/pts_creds.c \
 	pts/pts_database.h pts/pts_database.c \
 	pts/pts_dh_group.h pts/pts_dh_group.c \
@@ -107,6 +106,7 @@ LOCAL_SRC_FILES := $(filter %.c,$(libimcv_la_SOURCES))
 
 LOCAL_C_INCLUDES += \
 	$(strongswan_PATH)/src/libtncif \
+	$(strongswan_PATH)/src/libtpmtss \
 	$(strongswan_PATH)/src/libstrongswan
 
 LOCAL_CFLAGS := $(strongswan_CFLAGS)
@@ -119,6 +119,6 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false
 
-LOCAL_SHARED_LIBRARIES += libstrongswan libtncif
+LOCAL_SHARED_LIBRARIES += libstrongswan libtncif libtpmtss
 
 include $(BUILD_SHARED_LIBRARY)

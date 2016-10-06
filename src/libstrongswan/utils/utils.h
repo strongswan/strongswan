@@ -22,16 +22,20 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#define _GNU_SOURCE
 #include <sys/types.h>
 #include <stdlib.h>
 #include <stddef.h>
 #include <sys/time.h>
 #include <string.h>
 
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+
 #ifdef WIN32
 # include "compat/windows.h"
 #else
-# define _GNU_SOURCE
 # include <arpa/inet.h>
 # include <sys/socket.h>
 # include <netdb.h>

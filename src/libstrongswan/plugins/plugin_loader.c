@@ -1024,6 +1024,15 @@ static int plugin_priority_cmp(const plugin_priority_t *a,
 	return diff;
 }
 
+/**
+ * Convert enumerated plugin_priority_t to a plugin name
+ */
+static bool plugin_priority_filter(void *null, plugin_priority_t **prio,
+						   char **name)
+{
+	*name = (*prio)->name;
+	return TRUE;
+}
 
 /**
  * Determine the list of plugins to load via load option in each plugin's
@@ -1036,12 +1045,7 @@ static char *modular_pluginlist(char *list)
 	plugin_priority_t item, *current, found;
 	char *plugin, *plugins = NULL;
 	int i = 0, max_prio;
-
-	if (!lib->settings->get_bool(lib->settings, "%s.load_modular", FALSE,
-								 lib->ns))
-	{
-		return list;
-	}
+	bool load_def = FALSE;
 
 	given = array_create(sizeof(plugin_priority_t), 0);
 	final = array_create(sizeof(plugin_priority_t), 0);
@@ -1058,16 +1062,26 @@ static char *modular_pluginlist(char *list)
 	/* the maximum priority used for plugins not found in this list */
 	max_prio = i + 1;
 
-	enumerator = lib->settings->create_section_enumerator(lib->settings,
+	if (lib->settings->get_bool(lib->settings, "%s.load_modular", FALSE,
+								lib->ns))
+	{
+		enumerator = lib->settings->create_section_enumerator(lib->settings,
 														"%s.plugins", lib->ns);
+	}
+	else
+	{
+		enumerator = enumerator_create_filter(array_create_enumerator(given),
+									(void*)plugin_priority_filter, NULL, NULL);
+		load_def = TRUE;
+	}
 	while (enumerator->enumerate(enumerator, &plugin))
 	{
 		item.prio = lib->settings->get_int(lib->settings,
-								"%s.plugins.%s.load", 0, lib->ns, plugin);
+							"%s.plugins.%s.load", 0, lib->ns, plugin);
 		if (!item.prio)
 		{
 			if (!lib->settings->get_bool(lib->settings,
-								"%s.plugins.%s.load", FALSE, lib->ns, plugin))
+							"%s.plugins.%s.load", load_def, lib->ns, plugin))
 			{
 				continue;
 			}
@@ -1083,7 +1097,6 @@ static char *modular_pluginlist(char *list)
 		array_insert(final, ARRAY_TAIL, &item);
 	}
 	enumerator->destroy(enumerator);
-	array_destroy_function(given, (void*)plugin_priority_free, NULL);
 
 	array_sort(final, (void*)plugin_priority_cmp, NULL);
 
@@ -1100,6 +1113,7 @@ static char *modular_pluginlist(char *list)
 		free(prev);
 	}
 	enumerator->destroy(enumerator);
+	array_destroy_function(given, (void*)plugin_priority_free, NULL);
 	array_destroy(final);
 	return plugins;
 }

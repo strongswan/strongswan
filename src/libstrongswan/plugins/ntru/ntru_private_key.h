@@ -77,7 +77,8 @@ struct ntru_private_key_t {
  * @param drbg			Digital Random Bit Generator used for key generation
  * @param params		NTRU encryption parameter set to be used
  */
-ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg, ntru_param_set_t *params);
+ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
+											const ntru_param_set_t *params);
 
 /**
  * Creates an NTRU encryption private key from encoding

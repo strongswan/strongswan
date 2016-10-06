@@ -1,38 +1,25 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
- * Copyright (c) 2008 Hal Finney
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
  */
+
+#include "tpm_tss.h"
 
 #include <library.h>
 #include <utils/debug.h>
 #include <utils/optionsfrom.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/keys/public_key.h>
-#include <asn1/oid.h>
-#include <asn1/asn1.h>
-
-#include <trousers/tss.h>
-#include <trousers/trousers.h>
 
 #include <syslog.h>
 #include <getopt.h>
@@ -44,11 +31,8 @@
 /* default name of AIK private key blob */
 #define DEFAULT_FILENAME_AIKBLOB		AIK_DIR "aikBlob.bin"
 
-/* default name of AIK private key blob */
+/* default name of AIK public key */
 #define DEFAULT_FILENAME_AIKPUBKEY		AIK_DIR "aikPub.der"
-
-/* size in bytes of a TSS AIK public key blob */
-#define AIK_PUBKEY_BLOB_SIZE			284
 
 /* logging */
 static bool log_to_stderr = TRUE;
@@ -64,9 +48,7 @@ public_key_t *ca_pubkey;
 chunk_t ca_modulus;
 chunk_t aik_pubkey;
 chunk_t aik_keyid;
-
-/* TPM context */
-TSS_HCONTEXT  hContext;
+tpm_tss_t *tpm;
 
 /**
  * logging function for aikgen
@@ -128,25 +110,19 @@ static void init_log(const char *program)
 /**
  * @brief exit aikgen
  *
- * @param status 0 = OK, 1 = general discomfort
+ * @param status 0 = OK, -1 = general discomfort
  */
 static void exit_aikgen(err_t message, ...)
 {
 	int status = 0;
 
+	DESTROY_IF(tpm);
 	DESTROY_IF(cacert);
 	DESTROY_IF(ca_pubkey);
 	free(ca_modulus.ptr);
 	free(aik_pubkey.ptr);
 	free(aik_keyid.ptr);
 	options->destroy(options);
-
-	/* clean up TPM context */
-	if (hContext)
-	{
-		Tspi_Context_FreeMemory(hContext, NULL);
-		Tspi_Context_Close(hContext);
-	}
 
 	/* print any error message to stderr */
 	if (message != NULL && *message != '\0')
@@ -158,7 +134,7 @@ static void exit_aikgen(err_t message, ...)
 		vsnprintf(m, sizeof(m), message, args);
 		va_end(args);
 
-		fprintf(stderr, "error: %s\n", m);
+		fprintf(stderr, "aikgen error: %s\n", m);
 		status = -1;
 	}
 	library_deinit();
@@ -178,7 +154,7 @@ static void usage(const char *message)
 		" [--aikblob <filename>] [--aikpubkey <filename>] \n"
 		"              [--idreq <filename>] [--force]"
 		" [--quiet] [--debug <level>]\n"
-		"       aikgen --help\n"
+		"       aikgen  --help\n"
 		"\n"
 		"Options:\n"
 		" --cacert (-c)     certificate of [privacy] CA\n"
@@ -216,24 +192,7 @@ int main(int argc, char *argv[])
 	bool force = FALSE;
 	chunk_t identity_req;
 	chunk_t aik_blob;
-	chunk_t aik_pubkey_blob;
-	chunk_t aik_modulus;
-	chunk_t aik_exponent;
-
-	/* TPM variables */
-	TSS_RESULT   result;
-	TSS_HTPM     hTPM;
-	TSS_HKEY     hSRK;
-	TSS_HKEY     hPCAKey;
-	TSS_HPOLICY  hSrkPolicy;
-	TSS_HPOLICY  hTPMPolicy;
-	TSS_HKEY     hIdentKey;
-	TSS_UUID     SRK_UUID = TSS_UUID_SRK;
-	BYTE         secret[] = TSS_WELL_KNOWN_SECRET;
-	BYTE        *IdentityReq;
-	UINT32       IdentityReqLen;
-	BYTE        *blob;
-	UINT32       blobLen;
+	hasher_t *hasher;
 
 	atexit(library_deinit);
 	if (!library_init(NULL, "aikgen"))
@@ -370,105 +329,29 @@ int main(int argc, char *argv[])
 	if (ca_pubkey->get_type(ca_pubkey) != KEY_RSA ||
 		ca_pubkey->get_keysize(ca_pubkey) != 2048)
 	{
-		exit_aikgen("ca public key must be RSA 2048 but is %N %d",
+		exit_aikgen("CA public key must be RSA 2048 but is %N %d",
 					 key_type_names, ca_pubkey->get_type(ca_pubkey),
 					 ca_pubkey->get_keysize(ca_pubkey));
 	}
 	if (!ca_pubkey->get_encoding(ca_pubkey, PUBKEY_RSA_MODULUS, &ca_modulus))
 	{
-		exit_aikgen("could not extract RSA modulus from ca public key");
+		exit_aikgen("could not extract RSA modulus from CA public key");
 	}
 
-	/* initialize TSS context and connect to it */
-	result = Tspi_Context_Create(&hContext);
-	if (result != TSS_SUCCESS)
+	/* try to find a TPM 1.2 */
+	tpm = tpm_tss_probe(TPM_VERSION_1_2);
+	if (!tpm)
 	{
-		exit_aikgen("tss 0x%x on Tspi_Context_Create", result);
-	}
-	result = Tspi_Context_Connect(hContext, NULL);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_Context_Connect", result);
+		exit_aikgen("no TPM 1.2 found");
 	}
 
-	/* get SRK plus SRK policy and set SRK secret */
-	result = Tspi_Context_LoadKeyByUUID(hContext, TSS_PS_TYPE_SYSTEM,
-										SRK_UUID, &hSRK);
- 	if (result != TSS_SUCCESS)
+	if (!tpm->generate_aik(tpm, ca_modulus, &aik_blob, &aik_pubkey,
+						   &identity_req))
 	{
-		exit_aikgen("tss 0x%x on Tspi_Context_LoadKeyByUUID for SRK", result);
-	}
-	result = Tspi_GetPolicyObject(hSRK, TSS_POLICY_USAGE, &hSrkPolicy);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_GetPolicyObject for SRK", result);
-	}
-	result = Tspi_Policy_SetSecret(hSrkPolicy, TSS_SECRET_MODE_SHA1, 20, secret);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_Policy_SetSecret for SRK", result);
+		exit_aikgen("could not generate AIK");
 	}
 
-	/* get TPM plus TPM policy and set TPM secret */
-	result = Tspi_Context_GetTpmObject (hContext, &hTPM);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_Context_GetTpmObject", result);
-	}
-	result = Tspi_GetPolicyObject(hTPM, TSS_POLICY_USAGE, &hTPMPolicy);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_GetPolicyObject for TPM", result);
-	}
-	result = Tspi_Policy_SetSecret(hTPMPolicy, TSS_SECRET_MODE_SHA1, 20, secret);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_Policy_SetSecret for TPM", result);
-	}
-
-	/* create context for a 2048 bit AIK */
-	result = Tspi_Context_CreateObject(hContext, TSS_OBJECT_TYPE_RSAKEY,
-					TSS_KEY_TYPE_IDENTITY | TSS_KEY_SIZE_2048 |
-					TSS_KEY_VOLATILE | TSS_KEY_NOT_MIGRATABLE, &hIdentKey);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_Context_CreateObject for key", result);
-	}
-
-	/* create context for the Privacy CA public key and assign modulus */
-	result = Tspi_Context_CreateObject(hContext, TSS_OBJECT_TYPE_RSAKEY,
-					TSS_KEY_TYPE_LEGACY|TSS_KEY_SIZE_2048, &hPCAKey);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_Context_CreateObject for PCA", result);
-	}
-	result = Tspi_SetAttribData (hPCAKey, TSS_TSPATTRIB_RSAKEY_INFO,
-					TSS_TSPATTRIB_KEYINFO_RSA_MODULUS, ca_modulus.len,
-					ca_modulus.ptr);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_SetAttribData for PCA modulus", result);
-	}
-	result = Tspi_SetAttribUint32(hPCAKey, TSS_TSPATTRIB_KEY_INFO,
-					TSS_TSPATTRIB_KEYINFO_ENCSCHEME, TSS_ES_RSAESPKCSV15);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_SetAttribUint32 for PCA "
-					"encryption scheme", result);
-	}
-
-	/* generate AIK */
-	DBG1(DBG_LIB, "Generating identity key...");
-	result = Tspi_TPM_CollateIdentityRequest(hTPM, hSRK, hPCAKey, 0, NULL,
-					hIdentKey, TSS_ALG_AES,	&IdentityReqLen, &IdentityReq);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_TPM_CollateIdentityRequest", result);
-	}
-	identity_req = chunk_create(IdentityReq, IdentityReqLen);
-	DBG3(DBG_LIB, "Identity Request: %B", &identity_req);
-
-	/* optionally output identity request encrypted with ca public key */
+	/* optionally output identity request encrypted with CA public key */
 	if (idreq_filename)
 	{
 		if (!chunk_write(identity_req, idreq_filename, 0022, force))
@@ -480,24 +363,7 @@ int main(int argc, char *argv[])
 					   idreq_filename, identity_req.len);
 	}
 
-	/* load identity key */
-	result = Tspi_Key_LoadKey (hIdentKey, hSRK);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_Key_LoadKey for AIK\n", result);
-	}
-
-	/* output AIK private key in TSS blob format */
-	result = Tspi_GetAttribData (hIdentKey, TSS_TSPATTRIB_KEY_BLOB,
-					TSS_TSPATTRIB_KEYBLOB_BLOB, &blobLen, &blob);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_GetAttribData for private key blob",
-					 result);
-	}
-	aik_blob = chunk_create(blob, blobLen);
-	DBG3(DBG_LIB, "AIK private key blob: %B", &aik_blob);
-
+	/* output AIK private key blob */
 	if (!chunk_write(aik_blob, aikblob_filename, 0022, force))
 	{
 		exit_aikgen("could not write AIK blob file '%s': %s",
@@ -506,32 +372,7 @@ int main(int argc, char *argv[])
 	DBG1(DBG_LIB, "AIK private key blob written to '%s' (%u bytes)",
 				   aikblob_filename, aik_blob.len);
 
-	/* output AIK Public Key in TSS blob format */
-	result = Tspi_GetAttribData (hIdentKey, TSS_TSPATTRIB_KEY_BLOB,
-					TSS_TSPATTRIB_KEYBLOB_PUBLIC_KEY, &blobLen, &blob);
-	if (result != TSS_SUCCESS)
-	{
-		exit_aikgen("tss 0x%x on Tspi_GetAttribData for public key blob",
-					 result);
-	}
-	aik_pubkey_blob = chunk_create(blob, blobLen);
-	DBG3(DBG_LIB, "AIK public key blob: %B", &aik_pubkey_blob);
-
-	/* create a trusted AIK public key */
-	if (aik_pubkey_blob.len != AIK_PUBKEY_BLOB_SIZE)
-	{
-		exit_aikgen("AIK public key is not in TSS blob format");
-	}
-	aik_modulus = chunk_skip(aik_pubkey_blob, AIK_PUBKEY_BLOB_SIZE - 256);
-	aik_exponent = chunk_from_chars(0x01, 0x00, 0x01);
-
-	/* output subjectPublicKeyInfo encoding of AIK public key */
-	if (!lib->encoding->encode(lib->encoding, PUBKEY_SPKI_ASN1_DER, NULL,
-					&aik_pubkey, CRED_PART_RSA_MODULUS, aik_modulus,
-					CRED_PART_RSA_PUB_EXP, aik_exponent, CRED_PART_END))
-	{
-		exit_aikgen("subjectPublicKeyInfo encoding of AIK key failed");
-	}
+	/* output AIK public key */
 	if (!chunk_write(aik_pubkey, aikpubkey_filename, 0022, force))
 	{
 		exit_aikgen("could not write AIK public key file '%s': %s",
@@ -541,12 +382,14 @@ int main(int argc, char *argv[])
 				   aikpubkey_filename, aik_pubkey.len);
 
 	/* display AIK keyid derived from subjectPublicKeyInfo encoding */
-	if (!lib->encoding->encode(lib->encoding, KEYID_PUBKEY_INFO_SHA1, NULL,
-					&aik_keyid, CRED_PART_RSA_MODULUS, aik_modulus,
-					CRED_PART_RSA_PUB_EXP, aik_exponent, CRED_PART_END))
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
+	if (!hasher || !hasher->allocate_hash(hasher, aik_pubkey, &aik_keyid))
 	{
-		exit_aikgen("computation of AIK keyid failed");
+		DESTROY_IF(hasher);
+		exit_aikgen("SHA1 hash algorithm not supported, computation of AIK "
+					"keyid failed");
 	}
+	hasher->destroy(hasher);
 	DBG1(DBG_LIB, "AIK keyid: %#B", &aik_keyid);
 
 	exit_aikgen(NULL);

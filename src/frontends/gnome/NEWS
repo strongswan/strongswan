@@ -1,3 +1,17 @@
+NetworkManager-strongswan-1.4.0
+-------------------------------
+
+- Updated to NetworkManager 1.2
+- Updated dependencies (GTK+, libnm, libnma)
+- GUI updated (password widget, not hiding credential widgets)
+
+NetworkManager-strongswan-1.3.2
+-------------------------------
+
+- GUI fix
+- Update to libsecret
+- D-Bus policy moved to charon-nm
+
 NetworkManager-strongswan-1.3.1
 -------------------------------
 
@@ -7,7 +21,7 @@ NetworkManager-strongswan-1.3.1
 NetworkManager-strongswan-1.3.0
 -------------------------------
 
-- updated to NetworkManager 0.9
+- Updated to NetworkManager 0.9
 
 NetworkManager-strongswan-1.2.0
 -------------------------------

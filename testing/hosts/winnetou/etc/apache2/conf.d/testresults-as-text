@@ -1,1 +1,1 @@
-AddType text/plain .iptables .log .sql
+../conf-enabled/testresults-as-text.conf

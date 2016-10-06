@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2006-2010 Martin Willi
  * Copyright (C) 2013-2015 Andreas Steffen
  * Hochschule fuer Technik Rapperswil
@@ -210,7 +210,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 
 	e1 = create_enumerator(this, type);
 	e2 = other->create_enumerator(other, type);
-	if (!e1->enumerate(e1, NULL, NULL))
+	if (!e1->enumerate(e1, &alg1, NULL))
 	{
 		if (!e2->enumerate(e2, &alg2, NULL))
 		{
@@ -219,10 +219,21 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 		else if (optional)
 		{
 			do
-			{	/* if the other peer proposes NONE, we accept the proposal */
+			{	/* if NONE is proposed, we accept the proposal */
 				found = !alg2;
 			}
 			while (!found && e2->enumerate(e2, &alg2, NULL));
+		}
+	}
+	else if (!e2->enumerate(e2, NULL, NULL))
+	{
+		if (optional)
+		{
+			do
+			{	/* if NONE is proposed, we accept the proposal */
+				found = !alg1;
+			}
+			while (!found && e1->enumerate(e1, &alg1, NULL));
 		}
 	}
 
@@ -244,7 +255,6 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 						 "but peer implementation is unknown, skipped");
 					continue;
 				}
-				/* ok, we have an algorithm */
 				selected->add_algorithm(selected, type, alg1, ks1);
 				found = TRUE;
 				break;
@@ -288,9 +298,7 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 	}
 
 	DBG2(DBG_CFG, "  proposal matches");
-
 	selected->set_spi(selected, other->get_spi(other));
-
 	return selected;
 }
 
@@ -412,24 +420,40 @@ static const struct {
 };
 
 /**
+ * Remove all entries of the given transform type
+ */
+static void remove_transform(private_proposal_t *this, transform_type_t type)
+{
+	enumerator_t *e;
+	entry_t *entry;
+
+	e = array_create_enumerator(this->transforms);
+	while (e->enumerate(e, &entry))
+	{
+		if (entry->type == type)
+		{
+			array_remove_at(this->transforms, e);
+		}
+	}
+	e->destroy(e);
+}
+
+/**
  * Checks the proposal read from a string.
  */
-static void check_proposal(private_proposal_t *this)
+static bool check_proposal(private_proposal_t *this)
 {
 	enumerator_t *e;
 	entry_t *entry;
 	uint16_t alg, ks;
-	bool all_aead = TRUE;
+	bool all_aead = TRUE, any_aead = FALSE, any_enc = FALSE;
 	int i;
 
 	if (this->protocol == PROTO_IKE)
 	{
-		e = create_enumerator(this, PSEUDO_RANDOM_FUNCTION);
-		if (!e->enumerate(e, &alg, &ks))
-		{
-			/* No explicit PRF found. We assume the same algorithm as used
-			 * for integrity checking */
-			e->destroy(e);
+		if (!get_algorithm(this, PSEUDO_RANDOM_FUNCTION, NULL, NULL))
+		{	/* No explicit PRF found. We assume the same algorithm as used
+			 * for integrity checking. */
 			e = create_enumerator(this, INTEGRITY_ALGORITHM);
 			while (e->enumerate(e, &alg, &ks))
 			{
@@ -443,50 +467,120 @@ static void check_proposal(private_proposal_t *this)
 					}
 				}
 			}
+			e->destroy(e);
+		}
+		if (!get_algorithm(this, PSEUDO_RANDOM_FUNCTION, NULL, NULL))
+		{
+			DBG1(DBG_CFG, "a PRF algorithm is mandatory in IKE proposals");
+			return FALSE;
+		}
+		/* remove MODP_NONE from IKE proposal */
+		e = array_create_enumerator(this->transforms);
+		while (e->enumerate(e, &entry))
+		{
+			if (entry->type == DIFFIE_HELLMAN_GROUP && !entry->alg)
+			{
+				array_remove_at(this->transforms, e);
+			}
 		}
 		e->destroy(e);
+		if (!get_algorithm(this, DIFFIE_HELLMAN_GROUP, NULL, NULL))
+		{
+			DBG1(DBG_CFG, "a DH group is mandatory in IKE proposals");
+			return FALSE;
+		}
+	}
+	else
+	{	/* remove PRFs from ESP/AH proposals */
+		remove_transform(this, PSEUDO_RANDOM_FUNCTION);
 	}
 
-	if (this->protocol == PROTO_ESP)
+	if (this->protocol == PROTO_IKE || this->protocol == PROTO_ESP)
 	{
 		e = create_enumerator(this, ENCRYPTION_ALGORITHM);
 		while (e->enumerate(e, &alg, &ks))
 		{
-			if (!encryption_algorithm_is_aead(alg))
+			any_enc = TRUE;
+			if (encryption_algorithm_is_aead(alg))
 			{
-				all_aead = FALSE;
-				break;
+				any_aead = TRUE;
+				continue;
+			}
+			all_aead = FALSE;
+		}
+		e->destroy(e);
+
+		if (!any_enc)
+		{
+			DBG1(DBG_CFG, "an encryption algorithm is mandatory in %N proposals",
+				 protocol_id_names, this->protocol);
+			return FALSE;
+		}
+		else if (any_aead && !all_aead)
+		{
+			DBG1(DBG_CFG, "classic and combined-mode (AEAD) encryption "
+				 "algorithms can't be contained in the same %N proposal",
+				 protocol_id_names, this->protocol);
+			return FALSE;
+		}
+		else if (all_aead)
+		{	/* if all encryption algorithms in the proposal are AEADs,
+			 * we MUST NOT propose any integrity algorithms */
+			remove_transform(this, INTEGRITY_ALGORITHM);
+		}
+	}
+	else
+	{	/* AES-GMAC is parsed as encryption algorithm, so we map that to the
+		 * proper integrity algorithm */
+		e = array_create_enumerator(this->transforms);
+		while (e->enumerate(e, &entry))
+		{
+			if (entry->type == ENCRYPTION_ALGORITHM)
+			{
+				if (entry->alg == ENCR_NULL_AUTH_AES_GMAC)
+				{
+					entry->type = INTEGRITY_ALGORITHM;
+					ks = entry->key_size;
+					entry->key_size = 0;
+					switch (ks)
+					{
+						case 128:
+							entry->alg = AUTH_AES_128_GMAC;
+							continue;
+						case 192:
+							entry->alg = AUTH_AES_192_GMAC;
+							continue;
+						case 256:
+							entry->alg = AUTH_AES_256_GMAC;
+							continue;
+						default:
+							break;
+					}
+				}
+				/* remove all other encryption algorithms */
+				array_remove_at(this->transforms, e);
 			}
 		}
 		e->destroy(e);
 
-		if (all_aead)
+		if (!get_algorithm(this, INTEGRITY_ALGORITHM, NULL, NULL))
 		{
-			/* if all encryption algorithms in the proposal are AEADs,
-			 * we MUST NOT propose any integrity algorithms */
-			e = array_create_enumerator(this->transforms);
-			while (e->enumerate(e, &entry))
-			{
-				if (entry->type == INTEGRITY_ALGORITHM)
-				{
-					array_remove_at(this->transforms, e);
-				}
-			}
-			e->destroy(e);
+			DBG1(DBG_CFG, "an integrity algorithm is mandatory in AH "
+				 "proposals");
+			return FALSE;
 		}
 	}
 
 	if (this->protocol == PROTO_AH || this->protocol == PROTO_ESP)
 	{
-		e = create_enumerator(this, EXTENDED_SEQUENCE_NUMBERS);
-		if (!e->enumerate(e, NULL, NULL))
+		if (!get_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NULL, NULL))
 		{	/* ESN not specified, assume not supported */
 			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 		}
-		e->destroy(e);
 	}
 
 	array_compress(this->transforms);
+	return TRUE;
 }
 
 /**
@@ -824,6 +918,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case NTRU_128_BIT:
 			case NTRU_192_BIT:
 			case NTRU_256_BIT:
+			case NH_128_BIT:
 				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
 				break;
 			default:
@@ -981,13 +1076,11 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 	}
 	enumerator->destroy(enumerator);
 
-	if (failed)
+	if (failed || !check_proposal(this))
 	{
 		destroy(this);
 		return NULL;
 	}
-
-	check_proposal(this);
 
 	return &this->public;
 }

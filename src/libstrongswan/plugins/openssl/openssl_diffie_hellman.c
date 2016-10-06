@@ -22,8 +22,16 @@
 #include <openssl/dh.h>
 
 #include "openssl_diffie_hellman.h"
+#include "openssl_util.h"
 
 #include <utils/debug.h>
+
+/* these were added with 1.1.0 when DH was made opaque */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+OPENSSL_KEY_FALLBACK(DH, key, pub_key, priv_key)
+OPENSSL_KEY_FALLBACK(DH, pqg, p, q, g)
+#define DH_set_length(dh, len) ({ (dh)->length = len; 1; })
+#endif
 
 typedef struct private_openssl_diffie_hellman_t private_openssl_diffie_hellman_t;
 
@@ -65,10 +73,12 @@ struct private_openssl_diffie_hellman_t {
 METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t *value)
 {
+	const BIGNUM *pubkey;
+
 	*value = chunk_alloc(DH_size(this->dh));
 	memset(value->ptr, 0, value->len);
-	BN_bn2bin(this->dh->pub_key,
-			  value->ptr + value->len - BN_num_bytes(this->dh->pub_key));
+	DH_get0_key(this->dh, &pubkey, NULL);
+	BN_bn2bin(pubkey, value->ptr + value->len - BN_num_bytes(pubkey));
 	return TRUE;
 }
 
@@ -116,8 +126,15 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 METHOD(diffie_hellman_t, set_private_value, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t value)
 {
-	if (BN_bin2bn(value.ptr, value.len, this->dh->priv_key))
+	BIGNUM *privkey;
+
+	privkey = BN_bin2bn(value.ptr, value.len, NULL);
+	if (privkey)
 	{
+		if (!DH_set0_key(this->dh, NULL, privkey))
+		{
+			return FALSE;
+		}
 		chunk_clear(&this->shared_secret);
 		this->computed = FALSE;
 		return DH_generate_key(this->dh);
@@ -136,19 +153,28 @@ METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
  */
 static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 {
+	BIGNUM *p, *g;
+
 	diffie_hellman_params_t *params = diffie_hellman_get_params(this->group);
 	if (!params)
 	{
 		return NOT_FOUND;
 	}
-	this->dh->p = BN_bin2bn(params->prime.ptr, params->prime.len, NULL);
-	this->dh->g = BN_bin2bn(params->generator.ptr, params->generator.len, NULL);
+	p = BN_bin2bn(params->prime.ptr, params->prime.len, NULL);
+	g = BN_bin2bn(params->generator.ptr, params->generator.len, NULL);
+	if (!DH_set0_pqg(this->dh, p, NULL, g))
+	{
+		return FAILED;
+	}
 	if (params->exp_len != params->prime.len)
 	{
 #ifdef OPENSSL_IS_BORINGSSL
 		this->dh->priv_length = params->exp_len * 8;
 #else
-		this->dh->length = params->exp_len * 8;
+		if (!DH_set_length(this->dh, params->exp_len * 8))
+		{
+			return FAILED;
+		}
 #endif
 	}
 	return SUCCESS;
@@ -170,6 +196,7 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(
 							diffie_hellman_group_t group, chunk_t g, chunk_t p)
 {
 	private_openssl_diffie_hellman_t *this;
+	const BIGNUM *privkey;
 
 	INIT(this,
 		.public = {
@@ -198,8 +225,12 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(
 
 	if (group == MODP_CUSTOM)
 	{
-		this->dh->p = BN_bin2bn(p.ptr, p.len, NULL);
-		this->dh->g = BN_bin2bn(g.ptr, g.len, NULL);
+		if (!DH_set0_pqg(this->dh, BN_bin2bn(p.ptr, p.len, NULL), NULL,
+						 BN_bin2bn(g.ptr, g.len, NULL)))
+		{
+			destroy(this);
+			return NULL;
+		}
 	}
 	else
 	{
@@ -217,9 +248,8 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(
 		destroy(this);
 		return NULL;
 	}
-	DBG2(DBG_LIB, "size of DH secret exponent: %d bits",
-		 BN_num_bits(this->dh->priv_key));
-
+	DH_get0_key(this->dh, NULL, &privkey);
+	DBG2(DBG_LIB, "size of DH secret exponent: %d bits", BN_num_bits(privkey));
 	return &this->public;
 }
 

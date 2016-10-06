@@ -143,6 +143,15 @@ struct ipsec_sa_cfg_t {
 };
 
 /**
+ * Compare two ipsec_sa_cfg_t objects for equality.
+ *
+ * @param a			first object
+ * @param b			second object
+ * @return			TRUE if both objects are equal
+ */
+bool ipsec_sa_cfg_equals(ipsec_sa_cfg_t *a, ipsec_sa_cfg_t *b);
+
+/**
  * A lifetime_cfg_t defines the lifetime limits of an SA.
  *
  * Set any of these values to 0 to ignore.

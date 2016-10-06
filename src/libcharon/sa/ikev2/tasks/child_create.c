@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -29,7 +29,7 @@
 #include <encoding/payloads/delete_payload.h>
 #include <processing/jobs/delete_ike_sa_job.h>
 #include <processing/jobs/inactivity_job.h>
-
+#include <processing/jobs/initiate_tasks_job.h>
 
 typedef struct private_child_create_t private_child_create_t;
 
@@ -203,6 +203,25 @@ struct private_child_create_t {
 	 */
 	bool retry;
 };
+
+/**
+ * Schedule a retry if creating the CHILD_SA temporary failed
+ */
+static void schedule_delayed_retry(private_child_create_t *this)
+{
+	child_create_t *task;
+	uint32_t retry;
+
+	retry = RETRY_INTERVAL - (random() % RETRY_JITTER);
+
+	task = child_create_create(this->ike_sa,
+							   this->config->get_ref(this->config), FALSE,
+							   this->packet_tsi, this->packet_tsr);
+	task->use_reqid(task, this->reqid);
+	DBG1(DBG_IKE, "creating CHILD_SA failed, trying again in %d seconds",
+		 retry);
+	this->ike_sa->queue_task_delayed(this->ike_sa, (task_t*)task, retry);
+}
 
 /**
  * get the nonce from a message
@@ -464,7 +483,7 @@ static status_t select_and_install(private_child_create_t *this,
 	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
 	linked_list_t *my_ts, *other_ts;
 	host_t *me, *other;
-	bool private;
+	bool private, prefer_configured;
 
 	if (this->proposals == NULL)
 	{
@@ -481,8 +500,10 @@ static status_t select_and_install(private_child_create_t *this,
 	other = this->ike_sa->get_other_host(this->ike_sa);
 
 	private = this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN);
+	prefer_configured = lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns);
 	this->proposal = this->config->select_proposal(this->config,
-											this->proposals, no_dh, private);
+							this->proposals, no_dh, private, prefer_configured);
 	if (this->proposal == NULL)
 	{
 		DBG1(DBG_IKE, "no acceptable proposal found");
@@ -645,10 +666,6 @@ static status_t select_and_install(private_child_create_t *this,
 							FALSE, this->tfcv3, my_ts, other_ts);
 		}
 	}
-	chunk_clear(&integ_i);
-	chunk_clear(&integ_r);
-	chunk_clear(&encr_i);
-	chunk_clear(&encr_r);
 
 	if (status_i != SUCCESS || status_o != SUCCESS)
 	{
@@ -658,41 +675,62 @@ static status_t select_and_install(private_child_create_t *this,
 			(status_o != SUCCESS) ? "outbound " : "");
 		charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_SA_FAILED,
 						   this->child_sa);
-		return FAILED;
-	}
-
-	if (this->initiator)
-	{
-		status = this->child_sa->add_policies(this->child_sa, my_ts, other_ts);
+		status = FAILED;
 	}
 	else
 	{
-		/* use a copy of the traffic selectors, as the POST hook should not
-		 * change payloads */
-		my_ts = this->tsr->clone_offset(this->tsr,
-										offsetof(traffic_selector_t, clone));
-		other_ts = this->tsi->clone_offset(this->tsi,
-										offsetof(traffic_selector_t, clone));
-		charon->bus->narrow(charon->bus, this->child_sa,
-							NARROW_RESPONDER_POST, my_ts, other_ts);
-		if (my_ts->get_count(my_ts) == 0 || other_ts->get_count(other_ts) == 0)
+		if (this->initiator)
 		{
-			status = FAILED;
+			status = this->child_sa->add_policies(this->child_sa,
+												  my_ts, other_ts);
 		}
 		else
 		{
-			status = this->child_sa->add_policies(this->child_sa,
-												   my_ts, other_ts);
+			/* use a copy of the traffic selectors, as the POST hook should not
+			 * change payloads */
+			my_ts = this->tsr->clone_offset(this->tsr,
+										offsetof(traffic_selector_t, clone));
+			other_ts = this->tsi->clone_offset(this->tsi,
+										offsetof(traffic_selector_t, clone));
+			charon->bus->narrow(charon->bus, this->child_sa,
+								NARROW_RESPONDER_POST, my_ts, other_ts);
+			if (my_ts->get_count(my_ts) == 0 ||
+				other_ts->get_count(other_ts) == 0)
+			{
+				status = FAILED;
+			}
+			else
+			{
+				status = this->child_sa->add_policies(this->child_sa,
+													  my_ts, other_ts);
+			}
+			my_ts->destroy_offset(my_ts,
+								  offsetof(traffic_selector_t, destroy));
+			other_ts->destroy_offset(other_ts,
+								  offsetof(traffic_selector_t, destroy));
 		}
-		my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
-		other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
+			charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_POLICY_FAILED,
+							   this->child_sa);
+			status = NOT_FOUND;
+		}
+		else
+		{
+			charon->bus->child_derived_keys(charon->bus, this->child_sa,
+											this->initiator, encr_i, encr_r,
+											integ_i, integ_r);
+		}
 	}
+	chunk_clear(&integ_i);
+	chunk_clear(&integ_r);
+	chunk_clear(&encr_i);
+	chunk_clear(&encr_r);
+
 	if (status != SUCCESS)
 	{
-		DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
-		charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_POLICY_FAILED,
-						   this->child_sa);
-		return NOT_FOUND;
+		return status;
 	}
 
 	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
@@ -1232,13 +1270,13 @@ METHOD(task_t, build_r, status_t,
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING)
 	{
 		DBG1(DBG_IKE, "unable to create CHILD_SA while rekeying IKE_SA");
-		message->add_notify(message, TRUE, NO_ADDITIONAL_SAS, chunk_empty);
+		message->add_notify(message, TRUE, TEMPORARY_FAILURE, chunk_empty);
 		return SUCCESS;
 	}
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_DELETING)
 	{
 		DBG1(DBG_IKE, "unable to create CHILD_SA while deleting IKE_SA");
-		message->add_notify(message, TRUE, NO_ADDITIONAL_SAS, chunk_empty);
+		message->add_notify(message, TRUE, TEMPORARY_FAILURE, chunk_empty);
 		return SUCCESS;
 	}
 
@@ -1439,6 +1477,17 @@ METHOD(task_t, process_i, status_t,
 					raise_alerts(this, type);
 					handle_child_sa_failure(this, message);
 					/* an error in CHILD_SA creation is not critical */
+					return SUCCESS;
+				}
+				case TEMPORARY_FAILURE:
+				{
+					DBG1(DBG_IKE, "received %N notify, will retry later",
+						 notify_type_names, type);
+					enumerator->destroy(enumerator);
+					if (!this->rekey)
+					{	/* the rekey task will retry itself if necessary */
+						schedule_delayed_retry(this);
+					}
 					return SUCCESS;
 				}
 				case INVALID_KE_PAYLOAD:

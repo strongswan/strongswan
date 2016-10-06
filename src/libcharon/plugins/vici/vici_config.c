@@ -437,6 +437,7 @@ typedef struct {
 	linked_list_t *remote_ts;
 	uint32_t replay_window;
 	bool policies;
+	bool policies_fwd_out;
 	child_cfg_create_t cfg;
 } child_data_t;
 
@@ -462,6 +463,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   ipcomp = %u", cfg->ipcomp);
 	DBG2(DBG_CFG, "   mode = %N", ipsec_mode_names, cfg->mode);
 	DBG2(DBG_CFG, "   policies = %u", data->policies);
+	DBG2(DBG_CFG, "   policies_fwd_out = %u", data->policies_fwd_out);
 	if (data->replay_window != REPLAY_UNDEFINED)
 	{
 		DBG2(DBG_CFG, "   replay_window = %u", data->replay_window);
@@ -503,7 +505,7 @@ static void free_child_data(child_data_t *data)
  */
 static bool parse_proposal(linked_list_t *list, protocol_id_t proto, chunk_t v)
 {
-	char buf[128];
+	char buf[BUF_LEN];
 	proposal_t *proposal;
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
@@ -566,7 +568,7 @@ CALLBACK(parse_ah_proposal, bool,
 CALLBACK(parse_ts, bool,
 	linked_list_t *out, chunk_t v)
 {
-	char buf[128], *protoport, *sep, *port = "", *end;
+	char buf[BUF_LEN], *protoport, *sep, *port = "", *end;
 	traffic_selector_t *ts = NULL;
 	struct protoent *protoent;
 	struct servent *svc;
@@ -720,7 +722,7 @@ typedef struct {
  */
 static bool parse_map(enum_map_t *map, int count, int *out, chunk_t v)
 {
-	char buf[128];
+	char buf[BUF_LEN];
 	int i;
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
@@ -1051,7 +1053,7 @@ CALLBACK(parse_auth, bool,
  */
 static bool parse_id(auth_cfg_t *cfg, auth_rule_t rule, chunk_t v)
 {
-	char buf[256];
+	char buf[BUF_LEN];
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
 	{
@@ -1330,31 +1332,32 @@ CALLBACK(child_kv, bool,
 	child_data_t *child, vici_message_t *message, char *name, chunk_t value)
 {
 	parse_rule_t rules[] = {
-		{ "updown",			parse_string,		&child->cfg.updown					},
-		{ "hostaccess",		parse_bool,			&child->cfg.hostaccess				},
-		{ "mode",			parse_mode,			&child->cfg.mode					},
-		{ "policies",		parse_bool,			&child->policies					},
-		{ "replay_window",	parse_uint32,		&child->replay_window				},
-		{ "rekey_time",		parse_time,			&child->cfg.lifetime.time.rekey		},
-		{ "life_time",		parse_time,			&child->cfg.lifetime.time.life		},
-		{ "rand_time",		parse_time,			&child->cfg.lifetime.time.jitter	},
-		{ "rekey_bytes",	parse_bytes,		&child->cfg.lifetime.bytes.rekey	},
-		{ "life_bytes",		parse_bytes,		&child->cfg.lifetime.bytes.life		},
-		{ "rand_bytes",		parse_bytes,		&child->cfg.lifetime.bytes.jitter	},
-		{ "rekey_packets",	parse_uint64,		&child->cfg.lifetime.packets.rekey	},
-		{ "life_packets",	parse_uint64,		&child->cfg.lifetime.packets.life	},
-		{ "rand_packets",	parse_uint64,		&child->cfg.lifetime.packets.jitter	},
-		{ "dpd_action",		parse_action,		&child->cfg.dpd_action				},
-		{ "start_action",	parse_action,		&child->cfg.start_action			},
-		{ "close_action",	parse_action,		&child->cfg.close_action			},
-		{ "ipcomp",			parse_bool,			&child->cfg.ipcomp					},
-		{ "inactivity",		parse_time,			&child->cfg.inactivity				},
-		{ "reqid",			parse_uint32,		&child->cfg.reqid					},
-		{ "mark_in",		parse_mark,			&child->cfg.mark_in					},
-		{ "mark_out",		parse_mark,			&child->cfg.mark_out				},
-		{ "tfc_padding",	parse_tfc,			&child->cfg.tfc						},
-		{ "priority",		parse_uint32,		&child->cfg.priority				},
-		{ "interface",		parse_string,		&child->cfg.interface				},
+		{ "updown",				parse_string,		&child->cfg.updown					},
+		{ "hostaccess",			parse_bool,			&child->cfg.hostaccess				},
+		{ "mode",				parse_mode,			&child->cfg.mode					},
+		{ "policies",			parse_bool,			&child->policies					},
+		{ "policies_fwd_out",	parse_bool,			&child->policies_fwd_out			},
+		{ "replay_window",		parse_uint32,		&child->replay_window				},
+		{ "rekey_time",			parse_time,			&child->cfg.lifetime.time.rekey		},
+		{ "life_time",			parse_time,			&child->cfg.lifetime.time.life		},
+		{ "rand_time",			parse_time,			&child->cfg.lifetime.time.jitter	},
+		{ "rekey_bytes",		parse_bytes,		&child->cfg.lifetime.bytes.rekey	},
+		{ "life_bytes",			parse_bytes,		&child->cfg.lifetime.bytes.life		},
+		{ "rand_bytes",			parse_bytes,		&child->cfg.lifetime.bytes.jitter	},
+		{ "rekey_packets",		parse_uint64,		&child->cfg.lifetime.packets.rekey	},
+		{ "life_packets",		parse_uint64,		&child->cfg.lifetime.packets.life	},
+		{ "rand_packets",		parse_uint64,		&child->cfg.lifetime.packets.jitter	},
+		{ "dpd_action",			parse_action,		&child->cfg.dpd_action				},
+		{ "start_action",		parse_action,		&child->cfg.start_action			},
+		{ "close_action",		parse_action,		&child->cfg.close_action			},
+		{ "ipcomp",				parse_bool,			&child->cfg.ipcomp					},
+		{ "inactivity",			parse_time,			&child->cfg.inactivity				},
+		{ "reqid",				parse_uint32,		&child->cfg.reqid					},
+		{ "mark_in",			parse_mark,			&child->cfg.mark_in					},
+		{ "mark_out",			parse_mark,			&child->cfg.mark_out				},
+		{ "tfc_padding",		parse_tfc,			&child->cfg.tfc						},
+		{ "priority",			parse_uint32,		&child->cfg.priority				},
+		{ "interface",			parse_string,		&child->cfg.interface				},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
@@ -1537,6 +1540,7 @@ CALLBACK(children_sn, bool,
 		}
 	}
 	child.cfg.suppress_policies = !child.policies;
+	child.cfg.fwd_out_policies = child.policies_fwd_out;
 
 	check_lifetimes(&child.cfg.lifetime);
 
@@ -1976,7 +1980,7 @@ CALLBACK(config_sn, bool,
 		.send_cert = CERT_SEND_IF_ASKED,
 		.version = IKE_ANY,
 		.remote_port = IKEV2_UDP_PORT,
-		.fragmentation = FRAGMENTATION_NO,
+		.fragmentation = FRAGMENTATION_YES,
 		.unique = UNIQUE_NO,
 		.keyingtries = 1,
 		.rekey_time = LFT_UNDEFINED,

@@ -100,10 +100,12 @@ struct child_cfg_t {
 	 * @param proposals		list from which proposals are selected
 	 * @param strip_dh		TRUE strip out diffie hellman groups
 	 * @param private		accept algorithms from a private range
+	 * @param prefer_self	whether to prefer configured or supplied proposals
 	 * @return				selected proposal, or NULL if nothing matches
 	 */
 	proposal_t* (*select_proposal)(child_cfg_t*this, linked_list_t *proposals,
-								   bool strip_dh, bool private);
+								   bool strip_dh, bool private,
+								   bool prefer_self);
 
 	/**
 	 * Add a traffic selector to the config.
@@ -282,6 +284,14 @@ struct child_cfg_t {
 	bool (*install_policy)(child_cfg_t *this);
 
 	/**
+	 * Check whether outbound FWD IPsec policies should be installed.
+	 *
+	 * @return				TRUE, if outbound FWD policies should be installed
+	 *						FALSE, otherwise
+	 */
+	bool (*install_fwd_out_policy)(child_cfg_t *this);
+
+	/**
 	 * Check if two child_cfg objects are equal.
 	 *
 	 * @param other			candidate to check for equality against this
@@ -344,6 +354,8 @@ struct child_cfg_create_t {
 	bool hostaccess;
 	/** Don't install IPsec policies */
 	bool suppress_policies;
+	/** Install outbound FWD IPsec policies to bypass drop policies */
+	bool fwd_out_policies;
 };
 
 /**

@@ -1,8 +1,8 @@
 /*
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
- * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2000-2008 Andreas Steffen
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -204,7 +204,6 @@ static private_key_t *parse_rsa_private_key(chunk_t blob)
 			case PRIV_KEY_VERSION:
 				if (object.len > 0 && *object.ptr != 0)
 				{
-					DBG1(DBG_ASN, "PKCS#1 private key format is not version 1");
 					goto end;
 				}
 				break;
@@ -246,6 +245,63 @@ end:
 			BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e, BUILD_RSA_PRIV_EXP, d,
 			BUILD_RSA_PRIME1, p,  BUILD_RSA_PRIME2, q, BUILD_RSA_EXP1, exp1,
 			BUILD_RSA_EXP2, exp2, BUILD_RSA_COEFF, coeff, BUILD_END);
+}
+
+/**
+ * Check if the ASN.1 structure looks like an EC private key according to
+ * RFC 5915.
+ *
+ * ECPrivateKey :=: SEQUENCE {
+ *   version        INTEGER { ecPrivkeyVer1(1) } (ecPrivkeyVer1),
+ *   privateKey     OCTET STRING,
+ *   parameters [0] ECParameters {{ NamedCurve }} OPTIONAL,
+ *   publicKey  [1] BIT STRING OPTIONAL
+ * }
+ *
+ * While the parameters and publicKey fields are OPTIONAL, RFC 5915 says that
+ * paramaters MUST be included and publicKey SHOULD be.
+ */
+static bool is_ec_private_key(chunk_t blob)
+{
+	chunk_t data;
+	return asn1_unwrap(&blob, &blob) == ASN1_SEQUENCE &&
+		   asn1_unwrap(&blob, &data) == ASN1_INTEGER &&
+		   asn1_parse_integer_uint64(data) == 1 &&
+		   asn1_unwrap(&blob, &data) == ASN1_OCTET_STRING &&
+		   asn1_unwrap(&blob, &data) == ASN1_CONTEXT_C_0 &&
+		   asn1_unwrap(&blob, &data) == ASN1_CONTEXT_C_1;
+}
+
+/**
+ * Check if the ASN.1 structure looks like a BLISS private key.
+ */
+static bool is_bliss_private_key(chunk_t blob)
+{
+	chunk_t data;
+	return asn1_unwrap(&blob, &blob) == ASN1_SEQUENCE &&
+		   asn1_unwrap(&blob, &data) == ASN1_OID &&
+		   asn1_unwrap(&blob, &data) == ASN1_BIT_STRING &&
+		   asn1_unwrap(&blob, &data) == ASN1_BIT_STRING &&
+		   asn1_unwrap(&blob, &data) == ASN1_BIT_STRING;
+}
+
+/**
+ * Load a private key from an ASN.1 encoded blob trying to detect the type
+ * automatically.
+ */
+static private_key_t *parse_private_key(chunk_t blob)
+{
+	if (is_ec_private_key(blob))
+	{
+		return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+								  BUILD_BLOB_ASN1_DER, blob, BUILD_END);
+	}
+	else if (is_bliss_private_key(blob))
+	{
+		return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+								  BUILD_BLOB_ASN1_DER, blob, BUILD_END);
+	}
+	return parse_rsa_private_key(blob);
 }
 
 /**
@@ -301,6 +357,14 @@ private_key_t *pkcs1_private_key_load(key_type_t type, va_list args)
 		}
 		break;
 	}
-	return parse_rsa_private_key(blob);
+	switch (type)
+	{
+		case KEY_ANY:
+			return parse_private_key(blob);
+		case KEY_RSA:
+			return parse_rsa_private_key(blob);
+		default:
+			return NULL;
+	}
 }
 

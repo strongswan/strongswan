@@ -13,9 +13,9 @@ alice::chgrp -R www-data /etc/db.d/config.db; chmod -R g+w /etc/db.d/config.db
 alice::/var/www/tnc/manage.py setpassword strongSwan strongSwan
 alice::rm /etc/swanctl/x509/aliceCert.pem
 alice::rm /etc/swanctl/rsa/aliceKey.pem
-alice::service apache2 start
 alice::service charon start
-alice::expect-connection aaa
+alice::service apache2 start
+alice::swanctl --load-creds
 winnetou::ip route add 10.1.0.0/16 via 192.168.0.1
 dave::ip route add 10.1.0.0/16 via 192.168.0.1
 dave::cat /etc/pts/options

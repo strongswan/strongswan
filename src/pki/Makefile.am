@@ -19,7 +19,7 @@ pki_SOURCES = pki.c pki.h command.c command.h \
 
 pki_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
-	$(PTHREADLIB) $(DLLIB)
+	$(PTHREADLIB) $(ATOMICLIB) $(DLLIB)
 
 pki.o :	$(top_builddir)/config.status
 

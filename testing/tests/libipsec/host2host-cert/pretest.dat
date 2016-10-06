@@ -2,7 +2,8 @@ moon::sysctl -w net.ipv4.conf.all.rp_filter=2
 sun::sysctl -w net.ipv4.conf.all.rp_filter=2
 moon::iptables-restore < /etc/iptables.rules
 sun::iptables-restore < /etc/iptables.rules
-moon::ipsec start
 sun::ipsec start
+moon::ipsec start
+sun::expect-connection host-host
 moon::expect-connection host-host
 moon::ipsec up host-host

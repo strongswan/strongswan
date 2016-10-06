@@ -5463,8 +5463,8 @@ diff -u -r -N freeradius-server-2.2.0.orig/src/modules/rlm_eap/types/rlm_eap_tnc
 -HEADERS     = eap_tnc.h tncs.h tncs_connect.h ../../eap.h ../../rlm_eap.h
 +SRCS        = rlm_eap_tnc.c eap_tnc.c
 +HEADERS     = eap_tnc.h ../../eap.h ../../rlm_eap.h
- RLM_CFLAGS  = -I../.. -I../../libeap $(OPENSSL_INCLUDE) @eap_tnc_cflags@
- RLM_LIBS    = @eap_tnc_ldflags@ ../../libeap/$(LIBPREFIX)freeradius-eap.la $(OPENSSL_LIBS)
+ RLM_CFLAGS  = -I../.. -I../../libeap @eap_tnc_cflags@
+ RLM_LIBS    = @eap_tnc_ldflags@ ../../libeap/$(LIBPREFIX)freeradius-eap.la
  RLM_INSTALL =
 diff -u -r -N freeradius-server-2.2.0.orig/src/modules/rlm_eap/types/rlm_eap_tnc/rlm_eap_tnc.c freeradius-server-2.2.0/src/modules/rlm_eap/types/rlm_eap_tnc/rlm_eap_tnc.c
 --- freeradius-server-2.2.0.orig/src/modules/rlm_eap/types/rlm_eap_tnc/rlm_eap_tnc.c	2012-09-10 13:51:34.000000000 +0200

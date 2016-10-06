@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2007-2015 Tobias Brunner
+ * Copyright (C) 2007-2016 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -361,7 +361,8 @@ static status_t retransmit_packet(private_task_manager_t *this, uint32_t seqnr,
 		DBG1(DBG_IKE, "sending retransmit %u of %s message ID %u, seq %u",
 			 retransmitted, seqnr < RESPONDING_SEQ ? "request" : "response",
 			 mid, seqnr < RESPONDING_SEQ ? seqnr : seqnr - RESPONDING_SEQ);
-		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet);
+		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet,
+						   retransmitted);
 	}
 	send_packets(this, packets);
 	lib->scheduler->schedule_job_ms(lib->scheduler, (job_t*)
@@ -514,13 +515,13 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
-				if (activate_task(this, TASK_ISAKMP_DELETE))
+				if (activate_task(this, TASK_QUICK_DELETE))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
 					break;
 				}
-				if (activate_task(this, TASK_QUICK_DELETE))
+				if (activate_task(this, TASK_ISAKMP_DELETE))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
@@ -540,6 +541,14 @@ METHOD(task_manager_t, initiate, status_t,
 					break;
 				}
 				if (activate_task(this, TASK_ISAKMP_DPD))
+				{
+					exchange = INFORMATIONAL_V1;
+					new_mid = TRUE;
+					break;
+				}
+				break;
+			case IKE_REKEYING:
+				if (activate_task(this, TASK_ISAKMP_DELETE))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
@@ -935,9 +944,9 @@ static bool have_quick_mode_task(private_task_manager_t *this, uint32_t mid)
 }
 
 /**
- * Check if we still have an aggressive mode task queued
+ * Check if we still have a specific task queued
  */
-static bool have_aggressive_mode_task(private_task_manager_t *this)
+static bool have_task_queued(private_task_manager_t *this, task_type_t type)
 {
 	enumerator_t *enumerator;
 	task_t *task;
@@ -946,7 +955,7 @@ static bool have_aggressive_mode_task(private_task_manager_t *this)
 	enumerator = this->passive_tasks->create_enumerator(this->passive_tasks);
 	while (enumerator->enumerate(enumerator, &task))
 	{
-		if (task->get_type(task) == TASK_AGGRESSIVE_MODE)
+		if (task->get_type(task) == type)
 		{
 			found = TRUE;
 			break;
@@ -1180,6 +1189,12 @@ static status_t process_response(private_task_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 
+	if (this->initiating.retransmitted > 1)
+	{
+		packet_t *packet = NULL;
+		array_get(this->initiating.packets, 0, &packet);
+		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_CLEARED, packet);
+	}
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	clear_packets(this->initiating.packets);
 
@@ -1405,7 +1420,7 @@ METHOD(task_manager_t, process_message, status_t,
 		/* drop XAuth/Mode Config/Quick Mode messages until we received the last
 		 * Aggressive Mode message.  since Informational messages are not
 		 * retransmitted we queue them. */
-		if (have_aggressive_mode_task(this))
+		if (have_task_queued(this, TASK_AGGRESSIVE_MODE))
 		{
 			if (msg->get_exchange_type(msg) == INFORMATIONAL_V1)
 			{
@@ -1423,6 +1438,13 @@ METHOD(task_manager_t, process_message, status_t,
 		 * initiated is complete */
 		if (msg->get_exchange_type(msg) == TRANSACTION &&
 			this->active_tasks->get_count(this->active_tasks))
+		{
+			return queue_message(this, msg);
+		}
+
+		/* some peers send INITIAL_CONTACT notifies during XAuth, cache it */
+		if (have_task_queued(this, TASK_XAUTH) &&
+			msg->get_exchange_type(msg) == INFORMATIONAL_V1)
 		{
 			return queue_message(this, msg);
 		}
@@ -1499,8 +1521,8 @@ static bool has_queued(private_task_manager_t *this, task_type_t type)
 	return found;
 }
 
-METHOD(task_manager_t, queue_task, void,
-	private_task_manager_t *this, task_t *task)
+METHOD(task_manager_t, queue_task_delayed, void,
+	private_task_manager_t *this, task_t *task, uint32_t delay)
 {
 	task_type_t type = task->get_type(task);
 
@@ -1519,6 +1541,12 @@ METHOD(task_manager_t, queue_task, void,
 	}
 	DBG2(DBG_IKE, "queueing %N task", task_type_names, task->get_type(task));
 	this->queued_tasks->insert_last(this->queued_tasks, task);
+}
+
+METHOD(task_manager_t, queue_task, void,
+	private_task_manager_t *this, task_t *task)
+{
+	queue_task_delayed(this, task, 0);
 }
 
 METHOD(task_manager_t, queue_ike, void,
@@ -1640,6 +1668,9 @@ METHOD(task_manager_t, queue_ike_delete, void,
 {
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
+
+	/* cancel any currently active task to get the DELETE done quickly */
+	flush_queue(this, TASK_QUEUE_ACTIVE);
 
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, &child_sa))
@@ -1961,6 +1992,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 			.task_manager = {
 				.process_message = _process_message,
 				.queue_task = _queue_task,
+				.queue_task_delayed = _queue_task_delayed,
 				.queue_ike = _queue_ike,
 				.queue_ike_rekey = _queue_ike_rekey,
 				.queue_ike_reauth = _queue_ike_reauth,

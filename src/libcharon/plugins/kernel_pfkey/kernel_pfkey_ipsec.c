@@ -352,7 +352,7 @@ static bool ipsec_sa_equals(ipsec_sa_t *sa, ipsec_sa_t *other_sa)
 {
 	return sa->src->ip_equals(sa->src, other_sa->src) &&
 		   sa->dst->ip_equals(sa->dst, other_sa->dst) &&
-		   memeq(&sa->cfg, &other_sa->cfg, sizeof(ipsec_sa_cfg_t));
+		   ipsec_sa_cfg_equals(&sa->cfg, &other_sa->cfg);
 }
 
 /**
@@ -400,7 +400,7 @@ static void ipsec_sa_destroy(private_kernel_pfkey_ipsec_t *this,
 }
 
 typedef struct policy_sa_t policy_sa_t;
-typedef struct policy_sa_in_t policy_sa_in_t;
+typedef struct policy_sa_out_t policy_sa_out_t;
 
 /**
  * Mapping between a policy and an IPsec SA.
@@ -420,10 +420,10 @@ struct policy_sa_t {
 };
 
 /**
- * For input policies we also cache the traffic selectors in order to install
+ * For outbound policies we also cache the traffic selectors in order to install
  * the route.
  */
-struct policy_sa_in_t {
+struct policy_sa_out_t {
 	/** Generic interface */
 	policy_sa_t generic;
 
@@ -443,14 +443,14 @@ static policy_sa_t *policy_sa_create(private_kernel_pfkey_ipsec_t *this,
 {
 	policy_sa_t *policy;
 
-	if (dir == POLICY_IN)
+	if (dir == POLICY_OUT)
 	{
-		policy_sa_in_t *in;
-		INIT(in,
+		policy_sa_out_t *out;
+		INIT(out,
 			.src_ts = src_ts->clone(src_ts),
 			.dst_ts = dst_ts->clone(dst_ts),
 		);
-		policy = &in->generic;
+		policy = &out->generic;
 	}
 	else
 	{
@@ -467,11 +467,11 @@ static policy_sa_t *policy_sa_create(private_kernel_pfkey_ipsec_t *this,
 static void policy_sa_destroy(policy_sa_t *policy, policy_dir_t *dir,
 							  private_kernel_pfkey_ipsec_t *this)
 {
-	if (*dir == POLICY_IN)
+	if (*dir == POLICY_OUT)
 	{
-		policy_sa_in_t *in = (policy_sa_in_t*)policy;
-		in->src_ts->destroy(in->src_ts);
-		in->dst_ts->destroy(in->dst_ts);
+		policy_sa_out_t *out = (policy_sa_out_t*)policy;
+		out->src_ts->destroy(out->src_ts);
+		out->dst_ts->destroy(out->dst_ts);
 	}
 	ipsec_sa_destroy(this, policy->sa);
 	free(policy);
@@ -1725,12 +1725,17 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	else
 	{
 		/* Linux interprets sadb_sa_replay as number of packets/bits in the
-		 * replay window, whereas on BSD it's the size of the window in bytes */
+		 * replay window, whereas on BSD it's the size of the window in bytes.
+		 * Only set for the inbound SA as it's not relevant for the outbound
+		 * SA and might waste memory with large windows. */
+		if (data->inbound)
+		{
 #ifdef __linux__
-		sa->sadb_sa_replay = min(data->replay_window, 32);
+			sa->sadb_sa_replay = min(data->replay_window, 32);
 #else
-		sa->sadb_sa_replay = (data->replay_window + 7) / 8;
+			sa->sadb_sa_replay = (data->replay_window + 7) / 8;
 #endif
+		}
 		sa->sadb_sa_auth = lookup_algorithm(INTEGRITY_ALGORITHM, data->int_alg);
 		sa->sadb_sa_encrypt = lookup_algorithm(ENCRYPTION_ALGORITHM,
 											   data->enc_alg);
@@ -2199,7 +2204,7 @@ static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
 	if (!route->exclude)
 	{
 		DBG2(DBG_KNL, "installing new exclude route for %H src %H", dst, src);
-		gtw = charon->kernel->get_nexthop(charon->kernel, dst, -1, NULL);
+		gtw = charon->kernel->get_nexthop(charon->kernel, dst, -1, NULL, NULL);
 		if (gtw)
 		{
 			char *if_name = NULL;
@@ -2287,56 +2292,58 @@ static void remove_exclude_route(private_kernel_pfkey_ipsec_t *this,
 }
 
 /**
- * Try to install a route to the given inbound policy
+ * Try to install a route to the given outbound policy
  */
 static bool install_route(private_kernel_pfkey_ipsec_t *this,
-						  policy_entry_t *policy, policy_sa_in_t *in)
+						  policy_entry_t *policy, policy_sa_out_t *out)
 {
 	route_entry_t *route, *old;
 	host_t *host, *src, *dst;
 	bool is_virtual;
 
-	if (charon->kernel->get_address_by_ts(charon->kernel, in->dst_ts, &host,
+	if (charon->kernel->get_address_by_ts(charon->kernel, out->src_ts, &host,
 										  &is_virtual) != SUCCESS)
 	{
 		return FALSE;
 	}
 
-	/* switch src/dst, as we handle an IN policy */
-	src = in->generic.sa->dst;
-	dst = in->generic.sa->src;
-
 	INIT(route,
-		.prefixlen = policy->src.mask,
+		.prefixlen = policy->dst.mask,
 		.src_ip = host,
-		.dst_net = chunk_clone(policy->src.net->get_address(policy->src.net)),
+		.dst_net = chunk_clone(policy->dst.net->get_address(policy->dst.net)),
 	);
+
+	src = out->generic.sa->src;
+	dst = out->generic.sa->dst;
 
 	if (!dst->is_anyaddr(dst))
 	{
 		route->gateway = charon->kernel->get_nexthop(charon->kernel, dst, -1,
-													 src);
+													 src, &route->if_name);
 
 		/* if the IP is virtual, we install the route over the interface it has
 		 * been installed on. Otherwise we use the interface we use for IKE, as
 		 * this is required for example on Linux. */
 		if (is_virtual)
 		{
+			free(route->if_name);
+			route->if_name = NULL;
 			src = route->src_ip;
 		}
 	}
 	else
 	{	/* for shunt policies */
 		route->gateway = charon->kernel->get_nexthop(charon->kernel,
-											policy->src.net, policy->src.mask,
-											route->src_ip);
+											policy->dst.net, policy->dst.mask,
+											route->src_ip, &route->if_name);
 
 		/* we don't have a source address, use the address we found */
 		src = route->src_ip;
 	}
 
 	/* get interface for route, using source address */
-	if (!charon->kernel->get_interface(charon->kernel, src, &route->if_name))
+	if (!route->if_name &&
+		!charon->kernel->get_interface(charon->kernel, src, &route->if_name))
 	{
 		route_entry_destroy(route);
 		return FALSE;
@@ -2357,7 +2364,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 									  old->src_ip, old->if_name) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with policy "
-				 "%R === %R %N", in->src_ts, in->dst_ts,
+				 "%R === %R %N", out->src_ts, out->dst_ts,
 				policy_dir_names, policy->direction);
 		}
 		route_entry_destroy(old);
@@ -2367,22 +2374,22 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	/* if remote traffic selector covers the IKE peer, add an exclude route */
 	if (charon->kernel->get_features(charon->kernel) & KERNEL_REQUIRE_EXCLUDE_ROUTE)
 	{
-		if (in->src_ts->is_host(in->src_ts, dst))
+		if (out->dst_ts->is_host(out->dst_ts, dst))
 		{
 			DBG1(DBG_KNL, "can't install route for %R === %R %N, conflicts "
-				 "with IKE traffic", in->src_ts, in->dst_ts, policy_dir_names,
+				 "with IKE traffic", out->src_ts, out->dst_ts, policy_dir_names,
 				 policy->direction);
 			route_entry_destroy(route);
 			return FALSE;
 		}
-		if (in->src_ts->includes(in->src_ts, dst))
+		if (out->dst_ts->includes(out->dst_ts, dst))
 		{
-			add_exclude_route(this, route, in->generic.sa->dst, dst);
+			add_exclude_route(this, route, out->generic.sa->src, dst);
 		}
 	}
 
 	DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
-		 in->src_ts, route->gateway, route->src_ip, route->if_name);
+		 out->dst_ts, route->gateway, route->src_ip, route->if_name);
 
 	switch (charon->kernel->add_route(charon->kernel, route->dst_net,
 									  route->prefixlen, route->gateway,
@@ -2399,7 +2406,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 			return TRUE;
 		default:
 			DBG1(DBG_KNL, "installing route failed: %R via %H src %H dev %s",
-				 in->src_ts, route->gateway, route->src_ip, route->if_name);
+				 out->dst_ts, route->gateway, route->src_ip, route->if_name);
 			remove_exclude_route(this, route);
 			route_entry_destroy(route);
 			return FALSE;
@@ -2556,14 +2563,21 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 	free(out);
 
 	/* install a route, if:
-	 * - this is an inbound policy (to just get one for each child)
-	 * - we are in tunnel mode or install a bypass policy
+	 * - this is an outbound policy (to just get one for each child)
 	 * - routing is not disabled via strongswan.conf
+	 * - the selector is not for a specific protocol/port
+	 * - we are in tunnel mode or install a bypass policy
 	 */
-	if (policy->direction == POLICY_IN && this->install_routes &&
-		(mapping->type != POLICY_IPSEC || ipsec->cfg.mode != MODE_TRANSPORT))
+	if (policy->direction == POLICY_OUT && this->install_routes &&
+		policy->src.proto == IPSEC_PROTO_ANY &&
+		!policy->src.net->get_port(policy->src.net) &&
+		!policy->dst.net->get_port(policy->dst.net))
 	{
-		install_route(this, policy, (policy_sa_in_t*)mapping);
+		if (mapping->type == POLICY_PASS ||
+		   (mapping->type == POLICY_IPSEC && ipsec->cfg.mode != MODE_TRANSPORT))
+		{
+			install_route(this, policy, (policy_sa_out_t*)mapping);
+		}
 	}
 	this->mutex->unlock(this->mutex);
 	return SUCCESS;

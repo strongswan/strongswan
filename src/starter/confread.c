@@ -222,6 +222,7 @@ static void conn_defaults(starter_conn_t *conn)
 	conn->dpd_delay             =  30; /* seconds */
 	conn->dpd_timeout           = 150; /* seconds */
 	conn->replay_window         = SA_REPLAY_WINDOW_DEFAULT;
+	conn->fragmentation         = FRAGMENTATION_YES;
 
 	conn->left.sendcert = CERT_SEND_IF_ASKED;
 	conn->right.sendcert = CERT_SEND_IF_ASKED;

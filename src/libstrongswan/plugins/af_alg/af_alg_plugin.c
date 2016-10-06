@@ -22,6 +22,8 @@
 #include "af_alg_prf.h"
 #include "af_alg_crypter.h"
 
+#include <unistd.h>
+
 typedef struct private_af_alg_plugin_t private_af_alg_plugin_t;
 
 /**
@@ -41,6 +43,19 @@ METHOD(plugin_t, get_name, char*,
 	return "af-alg";
 }
 
+static bool af_alg_supported()
+{
+	int fd;
+
+	fd = socket(AF_ALG, SOCK_SEQPACKET, 0);
+	if (fd != -1)
+	{
+		close(fd);
+		return true;
+	}
+	return false;
+}
+
 METHOD(plugin_t, get_features, int,
 	private_af_alg_plugin_t *this, plugin_feature_t *features[])
 {
@@ -50,6 +65,10 @@ METHOD(plugin_t, get_features, int,
 
 	if (!count)
 	{	/* initialize only once */
+		if (!af_alg_supported())
+		{
+			return 0;
+		}
 		f[count++] = PLUGIN_REGISTER(HASHER, af_alg_hasher_create);
 		af_alg_hasher_probe(f, &count);
 		f[count++] = PLUGIN_REGISTER(SIGNER, af_alg_signer_create);

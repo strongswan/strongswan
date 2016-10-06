@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,7 +17,7 @@
 
 #include <asn1/asn1.h>
 #include <crypto/hashers/hasher.h>
-#include <crypto/mgf1/mgf1_bitspender.h>
+#include <crypto/xofs/xof_bitspender.h>
 #include <utils/debug.h>
 
 /**
@@ -39,7 +39,8 @@ int32_t bliss_utils_scalar_product(int32_t *x, int32_t *y, int n)
 /**
  * See header.
  */
-void bliss_utils_round_and_drop(bliss_param_set_t *set, int32_t *x, int16_t *xd)
+void bliss_utils_round_and_drop(const bliss_param_set_t *set,
+								int32_t *x, int16_t *xd)
 {
 	int32_t factor;
 	int i;
@@ -55,8 +56,8 @@ void bliss_utils_round_and_drop(bliss_param_set_t *set, int32_t *x, int16_t *xd)
 /**
  * See header.
  */
-bool bliss_utils_generate_c(hash_algorithm_t alg, chunk_t data_hash,
-							uint16_t *ud, bliss_param_set_t *set,
+bool bliss_utils_generate_c(ext_out_function_t alg, chunk_t data_hash,
+							uint16_t *ud, const bliss_param_set_t *set,
 							uint16_t *c_indices)
 {
 	int i, index_trials = 0, index_found = 0;
@@ -64,7 +65,7 @@ bool bliss_utils_generate_c(hash_algorithm_t alg, chunk_t data_hash,
 	uint32_t index;
 	uint8_t *seed_pos;
 	chunk_t seed;
-	mgf1_bitspender_t *bitspender;
+	xof_bitspender_t *bitspender;
 
 	seed = chunk_alloca(data_hash.len + set->n * sizeof(uint16_t));
 
@@ -79,7 +80,7 @@ bool bliss_utils_generate_c(hash_algorithm_t alg, chunk_t data_hash,
 		seed_pos += sizeof(uint16_t);
 	}
 
-	bitspender = mgf1_bitspender_create(alg, seed, FALSE);
+	bitspender = xof_bitspender_create(alg, seed, FALSE);
 	if (!bitspender)
 	{
 	    return NULL;
@@ -117,7 +118,8 @@ bool bliss_utils_generate_c(hash_algorithm_t alg, chunk_t data_hash,
 /**
  * See header.
  */
-bool bliss_utils_check_norms(bliss_param_set_t *set, int32_t *z1, int16_t *z2d)
+bool bliss_utils_check_norms(const bliss_param_set_t *set,
+							 int32_t *z1, int16_t *z2d)
 {
 	int32_t z2ds[set->n];
 	int32_t z1_min, z1_max, norm;

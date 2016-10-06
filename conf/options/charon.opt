@@ -100,11 +100,12 @@ charon.flush_auth_cfg = no
 charon.follow_redirects = yes
 	Whether to follow IKEv2 redirects (RFC 5685).
 
-charon.fragment_size = 0
+charon.fragment_size = 1280
 	Maximum size (complete IP datagram size in bytes) of a sent IKE fragment
-	when using proprietary IKEv1 or standardized IKEv2 fragmentation (0 for
-	address family specific	default values). If specified this limit is used
-	for both IPv4 and IPv6.
+	when using proprietary IKEv1 or standardized IKEv2 fragmentation, defaults
+	to 1280 (use 0 for address family specific default values, which uses a
+	lower value for IPv4).  If specified this limit is used for both IPv4 and
+	IPv6.
 
 charon.group
 	Name of the group the daemon changes to after startup.
@@ -252,6 +253,11 @@ charon.port_nat_t = 4500
 	UDP port used locally in case of NAT-T. If set to 0 a random port will be
 	allocated.  Has to be different from **charon.port**, otherwise a random
 	port will be allocated.
+
+charon.prefer_configured_proposals = yes
+	Prefer locally configured proposals for	IKE/IPsec over supplied ones as
+	responder (disabling this can avoid keying retries due to INVALID_KE_PAYLOAD
+	notifies).
 
 charon.prefer_temporary_addrs = no
 	By default public IPv6 addresses are preferred over temporary ones (RFC

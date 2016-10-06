@@ -95,8 +95,8 @@ static chunk_t data = chunk_from_chars(
 
 START_TEST(test_bliss_signature_fail)
 {
-	bliss_param_set_t set2 = { .id = BLISS_B_II };
-	bliss_param_set_t *set;
+	const bliss_param_set_t set2 = { .id = BLISS_B_II };
+	const bliss_param_set_t *set;
 	bliss_signature_t *signature;
 	chunk_t encoding;
 	int k;

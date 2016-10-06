@@ -30,6 +30,7 @@ ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 	"SIGNER",
 	"HASHER",
 	"PRF",
+	"XOF",
 	"DH",
 	"RNG",
 	"NONCE_GEN",
@@ -86,6 +87,9 @@ uint32_t plugin_feature_hash(plugin_feature_t *feature)
 			break;
 		case FEATURE_PRF:
 			data = chunk_from_thing(feature->arg.prf);
+			break;
+		case FEATURE_XOF:
+			data = chunk_from_thing(feature->arg.xof);
 			break;
 		case FEATURE_DH:
 			data = chunk_from_thing(feature->arg.dh_group);
@@ -160,6 +164,8 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 				return a->arg.hasher == b->arg.hasher;
 			case FEATURE_PRF:
 				return a->arg.prf == b->arg.prf;
+			case FEATURE_XOF:
+				return a->arg.xof == b->arg.xof;
 			case FEATURE_DH:
 				return a->arg.dh_group == b->arg.dh_group;
 			case FEATURE_RNG:
@@ -218,6 +224,7 @@ bool plugin_feature_equals(plugin_feature_t *a, plugin_feature_t *b)
 			case FEATURE_SIGNER:
 			case FEATURE_HASHER:
 			case FEATURE_PRF:
+			case FEATURE_XOF:
 			case FEATURE_DH:
 			case FEATURE_NONCE_GEN:
 			case FEATURE_RESOLVER:
@@ -301,6 +308,13 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 		case FEATURE_PRF:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
 					pseudo_random_function_names, feature->arg.prf) > 0)
+			{
+				return str;
+			}
+			break;
+		case FEATURE_XOF:
+			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
+					ext_out_function_names, feature->arg.xof) > 0)
 			{
 				return str;
 			}
@@ -465,6 +479,10 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 			lib->crypto->add_prf(lib->crypto, feature->arg.prf,
 								name, reg->arg.reg.f);
 			break;
+		case FEATURE_XOF:
+			lib->crypto->add_xof(lib->crypto, feature->arg.xof,
+								name, reg->arg.reg.f);
+			break;
 		case FEATURE_DH:
 			lib->crypto->add_dh(lib->crypto, feature->arg.dh_group,
 								name, reg->arg.reg.f);
@@ -551,6 +569,9 @@ bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 			break;
 		case FEATURE_PRF:
 			lib->crypto->remove_prf(lib->crypto, reg->arg.reg.f);
+			break;
+		case FEATURE_XOF:
+			lib->crypto->remove_xof(lib->crypto, reg->arg.reg.f);
 			break;
 		case FEATURE_DH:
 			lib->crypto->remove_dh(lib->crypto, reg->arg.reg.f);

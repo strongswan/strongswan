@@ -285,10 +285,12 @@ struct kernel_interface_t {
 	 * @param dest			target destination address
 	 * @param prefix		prefix length if dest is a subnet, -1 for auto
 	 * @param src			source address to check, or NULL
+	 * @param[out] iface	allocated name of the interface to reach dest, if
+	 *						available (optional)
 	 * @return				next hop address, NULL if unreachable
 	 */
 	host_t* (*get_nexthop)(kernel_interface_t *this, host_t *dest,
-						   int prefix, host_t *src);
+						   int prefix, host_t *src, char **iface);
 
 	/**
 	 * Get the interface name of a local address. Interfaces that are down or

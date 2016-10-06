@@ -247,7 +247,9 @@ can be added at the end.
 If
 .B dh-group
 is specified, CHILD_SA/Quick Mode setup and rekeying include a separate
-Diffie-Hellman exchange.
+Diffie-Hellman exchange (refer to the
+.B esp
+keyword for details).
 .TP
 .BR also " = <name>"
 includes conn section
@@ -410,18 +412,27 @@ exclamation mark
 can be added at the end.
 
 .BR Note :
-As a responder the daemon accepts the first supported proposal received from
-the peer. In order to restrict a responder to only accept specific cipher
-suites, the strict flag
+As a responder, the daemon defaults to selecting the first configured proposal
+that's also supported by the peer. This may be changed via
+.BR strongswan.conf (5)
+to selecting the first acceptable proposal sent by the peer instead. In order to
+restrict a responder to only accept specific cipher suites, the strict flag
 .RB ( ! ,
 exclamation mark) can be used, e.g: aes256-sha512-modp4096!
-.br
+
 If
 .B dh-group
-is specified, CHILD_SA/Quick Mode setup and rekeying include a separate
-Diffie-Hellman exchange.  Valid values for
+is specified, CHILD_SA/Quick Mode rekeying and initial negotiation use a
+separate Diffie-Hellman exchange using the specified group. However, for IKEv2,
+the keys of the CHILD_SA created implicitly with the IKE_SA will always be
+derived from the IKE_SA's key material. So any DH group specified here will only
+apply when the CHILD_SA is later rekeyed or is created with a separate
+CREATE_CHILD_SA exchange.  Therefore, a proposal mismatch might not immediately
+be noticed when the SA is established, but may later cause rekeying to fail.
+
+Valid values for
 .B esnmode
-(IKEv2 only) are
+are
 .B esn
 and
 .BR noesn .
@@ -434,14 +445,15 @@ force UDP encapsulation for ESP packets even if no NAT situation is detected.
 This may help to surmount restrictive firewalls. In order to force the peer to
 encapsulate packets, NAT detection payloads are faked.
 .TP
-.BR fragmentation " = yes | force | " no
+.BR fragmentation " = " yes "  | force | no"
 whether to use IKE fragmentation (proprietary IKEv1 extension or IKEv2
 fragmentation as per RFC 7383).  Acceptable values are
-.BR yes ,
+.B yes
+(the default),
 .B force
 and
-.B no
-(the default). Fragmented IKE messages sent by a peer are always accepted
+.BR no .
+Fragmented IKE messages sent by a peer are always accepted
 irrespective of the value of this option. If set to
 .BR yes ,
 and the peer supports it, larger IKE messages will be sent in fragments.

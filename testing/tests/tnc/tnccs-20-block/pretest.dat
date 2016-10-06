@@ -11,6 +11,7 @@ dave::rm /etc/swanctl/x509/*
 moon::service charon start
 carol::service charon start
 dave::service charon start
+moon::expect-connection rw
 carol::expect-connection home
 carol::swanctl --initiate --child home 2> /dev/null
 dave::expect-connection home

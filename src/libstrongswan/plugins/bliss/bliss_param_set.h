@@ -24,7 +24,7 @@
 typedef enum bliss_param_set_id_t bliss_param_set_id_t;
 typedef struct bliss_param_set_t bliss_param_set_t;
 
-#include "bliss_fft_params.h"
+#include "ntt_fft_params.h"
 #include "bliss_huffman_code.h"
 
 #include <library.h>
@@ -53,132 +53,132 @@ struct bliss_param_set_t {
 	/**
 	 * BLISS parameter set ID
 	 */
-	bliss_param_set_id_t id;
+	const bliss_param_set_id_t id;
 
 	/**
 	 * BLISS parameter set OID
 	 */
-	int oid;
+	const int oid;
 
 	/**
 	 * Security strength in bits
 	 */
-	uint16_t strength;
+	const uint16_t strength;
 
 	/**
 	 * Prime modulus
 	 */
-	uint16_t q;
+	const uint16_t q;
 
 	/**
 	 * Number of bits in q
 	 */
-	uint16_t q_bits;
+	const uint16_t q_bits;
 
 	/**
 	 * Inverse of (q + 2) mod 2q
 	 */
-	uint16_t q2_inv;
+	const uint16_t q2_inv;
 
 	/**
 	 * Ring dimension equal to the number of polynomial coefficients
 	 */
-	uint16_t n;
+	const uint16_t n;
 
 	/**
 	 * Number of bits in n
 	 */
-	uint16_t n_bits;
+	const uint16_t n_bits;
 
 	/**
 	 * FFT parameters
 	 */
-	bliss_fft_params_t *fft_params;
+	const ntt_fft_params_t *fft_params;
 
 	/**
 	 * Number of [-1, +1] secret key coefficients
 	 */
-	uint16_t non_zero1;
+	const uint16_t non_zero1;
 
 	/**
 	 * Number of [-2, +2] secret key coefficients
 	 */
-	uint16_t non_zero2;
+	const uint16_t non_zero2;
 
 	/**
 	 * Number of secret key terms that go into Nk(S) norm
 	 */
-	uint16_t kappa;
+	const uint16_t kappa;
 
 	/**
 	 * Maximum Nk(S) tolerable NK(S) norm (BLISS only)
 	 */
-	uint32_t nks_max;
+	const uint32_t nks_max;
 
 	/**
 	 * Maximum value Pmax for ||Sc'||^2 norm (BLISS-B only)
 	 */
-	uint32_t p_max;
+	const uint32_t p_max;
 
 	/**
 	 * Standard deviation sigma
 	 */
-	uint16_t sigma;
+	const uint16_t sigma;
 
 	/**
 	 *  k_sigma = ceiling[ sqrt(2*ln 2) * sigma ]
 	 */
-	uint16_t k_sigma;
+	const uint16_t k_sigma;
 
 	/**
 	 *  Number of bits in k_sigma
 	 */
-	uint16_t k_sigma_bits;
+	const uint16_t k_sigma_bits;
 
 	/**
 	 * Coefficients for Bernoulli sampling with exponential biases
 	 */
-	uint8_t *c;
+	const uint8_t *c;
 
 	/**
 	 * Number of columns in Bernoulli coefficient table
 	 */
-	size_t c_cols;
+	const size_t c_cols;
 
 	/**
 	 * Number of rows in Bernoulli coefficient table
 	 */
-	size_t c_rows;
+	const size_t c_rows;
 
 	/**
 	 * Number of bits in z1
 	 */
-	uint16_t z1_bits;
+	const uint16_t z1_bits;
 
 	/**
 	 * Number of z2 bits to be dropped after rounding
 	 */
-	uint16_t d;
+	const uint16_t d;
 
 	/**
 	 * Modulus p = floor(2q / 2^d) applied after bit dropping
 	 */
-	uint16_t p;
+	const uint16_t p;
 
 	/**
 	 * M = sigma^2 / alpha_rejection^2
 	 */
-	uint32_t M;
+	const uint32_t M;
 
 	/**
 	 * B_infinity bound
 	 */
-	uint16_t B_inf;
+	const uint16_t B_inf;
 
 	/**
 	 * B_verify bound
 	 */
-	uint32_t B_l2;
+	const uint32_t B_l2;
 
 };
 
@@ -188,7 +188,7 @@ struct bliss_param_set_t {
  * @param id	BLISS parameter set ID
  * @return		BLISS parameter set
 */
-bliss_param_set_t* bliss_param_set_get_by_id(bliss_param_set_id_t id);
+const bliss_param_set_t* bliss_param_set_get_by_id(bliss_param_set_id_t id);
 
 /**
  * Get BLISS signature parameter set by BLISS parameter set OID
@@ -196,6 +196,6 @@ bliss_param_set_t* bliss_param_set_get_by_id(bliss_param_set_id_t id);
  * @param oid	BLISS parameter set OID
  * @return		BLISS parameter set
 */
-bliss_param_set_t* bliss_param_set_get_by_oid(int oid);
+const bliss_param_set_t* bliss_param_set_get_by_oid(int oid);
 
 #endif /** BLISS_PARAM_SET_H_ @}*/

@@ -1,5 +1,6 @@
 Port 22
 Protocol 2
+Ciphers arcfour
 HostKey /etc/ssh/ssh_host_rsa_key
 HostKey /etc/ssh/ssh_host_dsa_key
 HostKey /etc/ssh/ssh_host_ecdsa_key
@@ -11,3 +12,4 @@ PermitEmptyPasswords yes
 PrintMotd no
 PrintLastLog no
 UsePAM no
+AcceptEnv LEAK_DETECTIVE_LOG

@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2016 Andreas Steffeb
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -548,10 +549,10 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 		} schemes[] = {
 			{ "md5",		SIGN_RSA_EMSA_PKCS1_MD5,		KEY_RSA,	},
 			{ "sha1",		SIGN_RSA_EMSA_PKCS1_SHA1,		KEY_RSA,	},
-			{ "sha224",		SIGN_RSA_EMSA_PKCS1_SHA224,		KEY_RSA,	},
-			{ "sha256",		SIGN_RSA_EMSA_PKCS1_SHA256,		KEY_RSA,	},
-			{ "sha384",		SIGN_RSA_EMSA_PKCS1_SHA384,		KEY_RSA,	},
-			{ "sha512",		SIGN_RSA_EMSA_PKCS1_SHA512,		KEY_RSA,	},
+			{ "sha224",		SIGN_RSA_EMSA_PKCS1_SHA2_224,	KEY_RSA,	},
+			{ "sha256",		SIGN_RSA_EMSA_PKCS1_SHA2_256,	KEY_RSA,	},
+			{ "sha384",		SIGN_RSA_EMSA_PKCS1_SHA2_384,	KEY_RSA,	},
+			{ "sha512",		SIGN_RSA_EMSA_PKCS1_SHA2_512,	KEY_RSA,	},
 			{ "sha1",		SIGN_ECDSA_WITH_SHA1_DER,		KEY_ECDSA,	},
 			{ "sha256",		SIGN_ECDSA_WITH_SHA256_DER,		KEY_ECDSA,	},
 			{ "sha384",		SIGN_ECDSA_WITH_SHA384_DER,		KEY_ECDSA,	},

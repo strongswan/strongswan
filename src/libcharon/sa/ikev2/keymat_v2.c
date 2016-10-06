@@ -103,7 +103,7 @@ static bool derive_ike_aead(private_keymat_v2_t *this, uint16_t alg,
 							uint16_t key_size, prf_plus_t *prf_plus)
 {
 	aead_t *aead_i, *aead_r;
-	chunk_t key = chunk_empty;
+	chunk_t sk_ei = chunk_empty, sk_er = chunk_empty;
 	u_int salt_size;
 
 	switch (alg)
@@ -146,23 +146,22 @@ static bool derive_ike_aead(private_keymat_v2_t *this, uint16_t alg,
 	{
 		goto failure;
 	}
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_ei))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
-	if (!aead_i->set_key(aead_i, key))
+	DBG4(DBG_IKE, "Sk_ei secret %B", &sk_ei);
+	if (!aead_i->set_key(aead_i, sk_ei))
 	{
 		goto failure;
 	}
-	chunk_clear(&key);
 
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_er))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_er secret %B", &key);
-	if (!aead_r->set_key(aead_r, key))
+	DBG4(DBG_IKE, "Sk_er secret %B", &sk_er);
+	if (!aead_r->set_key(aead_r, sk_er))
 	{
 		goto failure;
 	}
@@ -178,11 +177,14 @@ static bool derive_ike_aead(private_keymat_v2_t *this, uint16_t alg,
 		this->aead_out = aead_r;
 	}
 	aead_i = aead_r = NULL;
+	charon->bus->ike_derived_keys(charon->bus, sk_ei, sk_er, chunk_empty,
+								  chunk_empty);
 
 failure:
 	DESTROY_IF(aead_i);
 	DESTROY_IF(aead_r);
-	chunk_clear(&key);
+	chunk_clear(&sk_ei);
+	chunk_clear(&sk_er);
 	return this->aead_in && this->aead_out;
 }
 
@@ -196,7 +198,8 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
 	signer_t *signer_i, *signer_r;
 	iv_gen_t *ivg_i, *ivg_r;
 	size_t key_size;
-	chunk_t key = chunk_empty;
+	chunk_t sk_ei = chunk_empty, sk_er = chunk_empty,
+			sk_ai = chunk_empty, sk_ar = chunk_empty;
 
 	signer_i = lib->crypto->create_signer(lib->crypto, int_alg);
 	signer_r = lib->crypto->create_signer(lib->crypto, int_alg);
@@ -220,48 +223,45 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
 	/* SK_ai/SK_ar used for integrity protection */
 	key_size = signer_i->get_key_size(signer_i);
 
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_ai))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_ai secret %B", &key);
-	if (!signer_i->set_key(signer_i, key))
+	DBG4(DBG_IKE, "Sk_ai secret %B", &sk_ai);
+	if (!signer_i->set_key(signer_i, sk_ai))
 	{
 		goto failure;
 	}
-	chunk_clear(&key);
 
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_ar))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_ar secret %B", &key);
-	if (!signer_r->set_key(signer_r, key))
+	DBG4(DBG_IKE, "Sk_ar secret %B", &sk_ar);
+	if (!signer_r->set_key(signer_r, sk_ar))
 	{
 		goto failure;
 	}
-	chunk_clear(&key);
 
 	/* SK_ei/SK_er used for encryption */
 	key_size = crypter_i->get_key_size(crypter_i);
 
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_ei))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_ei secret %B", &key);
-	if (!crypter_i->set_key(crypter_i, key))
+	DBG4(DBG_IKE, "Sk_ei secret %B", &sk_ei);
+	if (!crypter_i->set_key(crypter_i, sk_ei))
 	{
 		goto failure;
 	}
-	chunk_clear(&key);
 
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_er))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_er secret %B", &key);
-	if (!crypter_r->set_key(crypter_r, key))
+	DBG4(DBG_IKE, "Sk_er secret %B", &sk_er);
+	if (!crypter_r->set_key(crypter_r, sk_er))
 	{
 		goto failure;
 	}
@@ -284,9 +284,13 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
 	}
 	signer_i = signer_r = NULL;
 	crypter_i = crypter_r = NULL;
+	charon->bus->ike_derived_keys(charon->bus, sk_ei, sk_er, sk_ai, sk_ar);
 
 failure:
-	chunk_clear(&key);
+	chunk_clear(&sk_ai);
+	chunk_clear(&sk_ar);
+	chunk_clear(&sk_ei);
+	chunk_clear(&sk_er);
 	DESTROY_IF(signer_i);
 	DESTROY_IF(signer_r);
 	DESTROY_IF(crypter_i);

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2013 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -64,6 +64,11 @@ struct private_openssl_plugin_t {
 	 */
 	openssl_plugin_t public;
 };
+
+/**
+ * OpenSSL is thread-safe since 1.1.0
+ */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 
 /**
  * Array of static mutexs, with CRYPTO_num_locks() mutex
@@ -227,6 +232,14 @@ static void threading_cleanup()
 	cleanup->destroy(cleanup);
 }
 
+#else /* OPENSSL_VERSION_NUMBER */
+
+#define threading_init()
+
+#define threading_cleanup()
+
+#endif
+
 /**
  * Seed the OpenSSL RNG, if required
  */
@@ -254,6 +267,53 @@ static bool seed_rng()
 	}
 	DESTROY_IF(rng);
 	return TRUE;
+}
+
+/**
+ * Generic key loader
+ */
+static private_key_t *openssl_private_key_load(key_type_t type, va_list args)
+{
+	chunk_t blob = chunk_empty;
+	EVP_PKEY *key;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_BLOB_ASN1_DER:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	if (blob.ptr)
+	{
+		key = d2i_AutoPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
+		if (key)
+		{
+			switch (EVP_PKEY_base_id(key))
+			{
+#ifndef OPENSSL_NO_RSA
+				case EVP_PKEY_RSA:
+					return openssl_rsa_private_key_create(key);
+#endif
+#ifndef OPENSSL_NO_ECDSA
+				case EVP_PKEY_EC:
+					return openssl_ec_private_key_create(key);
+#endif
+				default:
+					EVP_PKEY_free(key);
+					break;
+			}
+		}
+	}
+	return NULL;
 }
 
 METHOD(plugin_t, get_name, char*,
@@ -425,16 +485,16 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA1),
 #endif
 #ifndef OPENSSL_NO_SHA256
-		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA224),
-		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA256),
-		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA224),
-		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA256),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA2_224),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA2_256),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA2_224),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA2_256),
 #endif
 #ifndef OPENSSL_NO_SHA512
-		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA384),
-		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA512),
-		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA384),
-		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA512),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA2_384),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA2_512),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA2_384),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA2_512),
 #endif
 #ifndef OPENSSL_NO_MD5
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_MD5),
@@ -491,6 +551,9 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_521),
 #endif
 #endif /* OPENSSL_NO_ECDSA */
+		/* generic key loader */
+		PLUGIN_REGISTER(PRIVKEY, openssl_private_key_load, TRUE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 		PLUGIN_REGISTER(RNG, openssl_rng_create),
 			PLUGIN_PROVIDE(RNG, RNG_STRONG),
 			PLUGIN_PROVIDE(RNG, RNG_WEAK),
@@ -502,6 +565,10 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_openssl_plugin_t *this)
 {
+/* OpenSSL 1.1.0 cleans up itself at exit and while OPENSSL_cleanup() exists we
+ * can't call it as we couldn't re-initialize the library (as required by the
+ * unit tests and the Android app) */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 #ifndef OPENSSL_IS_BORINGSSL
 	CONF_modules_free();
 	OBJ_cleanup();
@@ -513,6 +580,7 @@ METHOD(plugin_t, destroy, void,
 	CRYPTO_cleanup_all_ex_data();
 	threading_cleanup();
 	ERR_free_strings();
+#endif /* OPENSSL_VERSION_NUMBER */
 
 	free(this);
 }
@@ -555,12 +623,23 @@ plugin_t *openssl_plugin_create()
 		},
 	);
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	/* note that we can't call OPENSSL_cleanup() when the plugin is destroyed
+	 * as we couldn't initialize the library again afterwards */
+	OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG |
+						OPENSSL_INIT_ENGINE_ALL_BUILTIN, NULL);
+#else /* OPENSSL_VERSION_NUMBER */
 	threading_init();
-
 #ifndef OPENSSL_IS_BORINGSSL
 	OPENSSL_config(NULL);
 #endif
 	OpenSSL_add_all_algorithms();
+#ifndef OPENSSL_NO_ENGINE
+	/* activate support for hardware accelerators */
+	ENGINE_load_builtin_engines();
+	ENGINE_register_all_complete();
+#endif /* OPENSSL_NO_ENGINE */
+#endif /* OPENSSL_VERSION_NUMBER */
 
 #ifdef OPENSSL_FIPS
 	/* we do this here as it may have been enabled via openssl.conf */
@@ -568,12 +647,6 @@ plugin_t *openssl_plugin_create()
 	dbg(DBG_LIB, strpfx(lib->ns, "charon") ? 1 : 2,
 		"openssl FIPS mode(%d) - %sabled ", fips_mode, fips_mode ? "en" : "dis");
 #endif /* OPENSSL_FIPS */
-
-#ifndef OPENSSL_NO_ENGINE
-	/* activate support for hardware accelerators */
-	ENGINE_load_builtin_engines();
-	ENGINE_register_all_complete();
-#endif /* OPENSSL_NO_ENGINE */
 
 	if (!seed_rng())
 	{

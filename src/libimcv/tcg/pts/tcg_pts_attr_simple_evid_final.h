@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Sansar Choinyambuu
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -28,6 +28,8 @@ typedef struct tcg_pts_attr_simple_evid_final_t tcg_pts_attr_simple_evid_final_t
 #include "tcg_pts_attr_meas_algo.h"
 #include "pa_tnc/pa_tnc_attr.h"
 
+#include <tpm_tss_quote_info.h>
+
 /**
  * Class implementing the TCG PTS Simple Evidence Final attribute
  *
@@ -40,16 +42,14 @@ struct tcg_pts_attr_simple_evid_final_t {
 	pa_tnc_attr_t pa_tnc_attribute;
 
 	/**
-	 * Get Optional PCR Composite and TPM Quote Signature
+	 * Get Optional TPM Quote Info and TPM Quote Signature
 	 *
-	 * @param comp_hash_algo	Optional Composite Hash Algorithm
-	 * @param pcr_comp			Optional PCR Composite
-	 * @param tpm_quote sig		Optional TPM Quote Signature
-	 * @return					PTS_SIMPLE_EVID_FINAL flags
+	 * @param quote_info		Optional TPM Quote Info
+	 * @param quote sig			Optional TPM Quote Signature
 	 */
-	uint8_t (*get_quote_info)(tcg_pts_attr_simple_evid_final_t *this,
-							   pts_meas_algorithms_t *comp_hash_algo,
-							   chunk_t *pcr_comp, chunk_t *tpm_quote_sig);
+	void (*get_quote_info)(tcg_pts_attr_simple_evid_final_t *this,
+						   tpm_tss_quote_info_t **quote_info,
+						   chunk_t *quote_sig);
 
 	/**
 	 * Get Optional Evidence Signature
@@ -73,16 +73,11 @@ struct tcg_pts_attr_simple_evid_final_t {
 /**
  * Creates an tcg_pts_attr_simple_evid_final_t object
  *
- * @param flags					Set of flags
- * @param comp_hash_algorithm	Composite Hash Algorithm
- * @param pcr_comp				Optional TPM PCR Composite
- * @param tpm_quote_sign		Optional TPM Quote Signature
+ * @param quote_info			Optional TPM Quote Info
+ * @param quote_sig				Optional TPM Quote Signature
  */
 pa_tnc_attr_t* tcg_pts_attr_simple_evid_final_create(
-							uint8_t flags,
-							pts_meas_algorithms_t comp_hash_algorithm,
-							chunk_t pcr_comp,
-							chunk_t tpm_quote_sign);
+						tpm_tss_quote_info_t *quote_info, chunk_t quote_sig);
 
 /**
  * Creates an tcg_pts_attr_simple_evid_final_t object from received data

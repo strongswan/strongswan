@@ -90,7 +90,7 @@ METHOD(pts_component_t, measure, status_t,
 	extended_pcr = PCR_DEBUG;
 	time(&measurement_time);
 
-	if (!pts->read_pcr(pts, extended_pcr, &pcr_after))
+	if (!pts->read_pcr(pts, extended_pcr, &pcr_after, HASH_SHA1))
 	{
 		DBG1(DBG_PTS, "error occurred while reading PCR: %d", extended_pcr);
 		return FAILED;

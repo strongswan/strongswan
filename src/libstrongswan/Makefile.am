@@ -14,7 +14,7 @@ crypto/signers/mac_signer.c crypto/crypto_factory.c crypto/crypto_tester.c \
 crypto/diffie_hellman.c crypto/aead.c crypto/transform.c \
 crypto/iv/iv_gen.c crypto/iv/iv_gen_rand.c crypto/iv/iv_gen_seq.c \
 crypto/iv/iv_gen_null.c \
-crypto/mgf1/mgf1.c crypto/mgf1/mgf1_bitspender.c \
+crypto/xofs/xof.c crypto/xofs/xof_bitspender.c \
 credentials/credential_factory.c credentials/builder.c \
 credentials/cred_encoding.c credentials/keys/private_key.c \
 credentials/keys/public_key.c credentials/keys/shared_key.c \
@@ -75,7 +75,7 @@ crypto/prf_plus.h crypto/signers/signer.h crypto/signers/mac_signer.h \
 crypto/crypto_factory.h crypto/crypto_tester.h crypto/diffie_hellman.h \
 crypto/aead.h crypto/transform.h crypto/pkcs5.h crypto/iv/iv_gen.h \
 crypto/iv/iv_gen_rand.h crypto/iv/iv_gen_seq.h crypto/iv/iv_gen_null.h \
-crypto/mgf1/mgf1.h crypto/mgf1/mgf1_bitspender.h \
+crypto/xofs/xof.h crypto/xofs/xof_bitspender.h crypto/xofs/mgf1.h \
 credentials/credential_factory.h credentials/builder.h \
 credentials/cred_encoding.h credentials/keys/private_key.h \
 credentials/keys/public_key.h credentials/keys/shared_key.h \
@@ -120,7 +120,9 @@ endif
 
 library.lo :	$(top_builddir)/config.status
 
-libstrongswan_la_LIBADD = $(DLLIB) $(BTLIB) $(SOCKLIB) $(RTLIB) $(BFDLIB) $(UNWINDLIB)
+libstrongswan_la_LIBADD = \
+	$(DLLIB) $(ATOMICLIB)  $(BTLIB) $(SOCKLIB) \
+	$(RTLIB) $(BFDLIB) $(UNWINDLIB)
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
@@ -218,15 +220,21 @@ $(srcdir)/crypto/proposal/proposal_keywords_static.c:	$(srcdir)/crypto/proposal/
 		$(GPERF) -N proposal_get_token_static -m 10 -C -G -c -t -D < \
 												$(srcdir)/crypto/proposal/proposal_keywords_static.txt > $@
 
-
-# build plugins with their own Makefile
-#######################################
-
 if MONOLITHIC
 SUBDIRS =
 else
 SUBDIRS = .
 endif
+
+# build libnttfft used by some plugins
+######################################
+
+if USE_LIBNTTFFT
+  SUBDIRS += math/libnttfft
+endif
+
+# build plugins with their own Makefile
+#######################################
 
 if USE_AF_ALG
   SUBDIRS += plugins/af_alg
@@ -578,6 +586,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_MGF1
+  SUBDIRS += plugins/mgf1
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/mgf1/libstrongswan-mgf1.la
+endif
+endif
+
 if USE_NTRU
   SUBDIRS += plugins/ntru
 if MONOLITHIC
@@ -592,6 +607,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_NEWHOPE
+  SUBDIRS += plugins/newhope
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/newhope/libstrongswan-newhope.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC
@@ -602,7 +624,20 @@ endif
 if MONOLITHIC
   SUBDIRS += .
 endif
+
+# build unit tests
+##################
+
 SUBDIRS += tests
+
+if USE_LIBNTTFFT
+  SUBDIRS += math/libnttfft/tests
+endif
+
 if USE_BLISS
   SUBDIRS += plugins/bliss/tests
+endif
+
+if USE_NEWHOPE
+  SUBDIRS += plugins/newhope/tests
 endif

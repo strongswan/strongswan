@@ -25,22 +25,22 @@
 typedef struct private_ntru_ke_t private_ntru_ke_t;
 
 /* Best bandwidth and speed, no X9.98 compatibility */
-static ntru_param_set_id_t param_sets_optimum[] = {
+static const ntru_param_set_id_t param_sets_optimum[] = {
 	NTRU_EES401EP2, NTRU_EES439EP1, NTRU_EES593EP1, NTRU_EES743EP1
 };
 
 /* X9.98/IEEE 1363.1 parameter sets for best speed */
-static ntru_param_set_id_t param_sets_x9_98_speed[] = {
+static const ntru_param_set_id_t param_sets_x9_98_speed[] = {
 	NTRU_EES659EP1, NTRU_EES761EP1, NTRU_EES1087EP1, NTRU_EES1499EP1
 };
 
 /* X9.98/IEEE 1363.1 parameter sets for best bandwidth (smallest size) */
-static ntru_param_set_id_t param_sets_x9_98_bandwidth[] = {
+static const ntru_param_set_id_t param_sets_x9_98_bandwidth[] = {
 	NTRU_EES401EP1, NTRU_EES449EP1, NTRU_EES677EP1, NTRU_EES1087EP2
 };
 
 /* X9.98/IEEE 1363.1 parameter sets balancing speed and bandwidth */
-static ntru_param_set_id_t param_sets_x9_98_balance[] = {
+static const ntru_param_set_id_t param_sets_x9_98_balance[] = {
 	NTRU_EES541EP1, NTRU_EES613EP1, NTRU_EES887EP1, NTRU_EES1171EP1
 };
 
@@ -61,7 +61,7 @@ struct private_ntru_ke_t {
 	/**
 	 * NTRU Parameter Set
 	 */
-	ntru_param_set_t *param_set;
+	const ntru_param_set_t *param_set;
 
 	/**
 	 * Cryptographical strength in bits of the NTRU Parameter Set
@@ -243,7 +243,8 @@ METHOD(diffie_hellman_t, destroy, void,
 ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 {
 	private_ntru_ke_t *this;
-	ntru_param_set_id_t *param_sets, param_set_id;
+	const ntru_param_set_id_t *param_sets;
+	ntru_param_set_id_t param_set_id;
 	rng_t *entropy;
 	ntru_drbg_t *drbg;
 	char *parameter_set;

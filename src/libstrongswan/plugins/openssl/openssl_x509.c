@@ -60,6 +60,25 @@
 #define OPENSSL_NO_RFC3779
 #endif
 
+/* added with 1.0.2 */
+#if OPENSSL_VERSION_NUMBER < 0x10002000L
+static inline void X509_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg, const X509 *x) {
+	if (psig) { *psig = x->signature; }
+	if (palg) { *palg = x->sig_alg; }
+}
+#endif
+
+/* added with 1.1.0 when X509 etc. was made opaque */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define X509_get0_extensions(x509) ({ (x509)->cert_info->extensions; })
+#define X509_get0_tbs_sigalg(x509) ({ (x509)->cert_info->signature; })
+#define X509_ALGOR_get0(oid, ppt, ppv, alg) ({ *(oid) = (alg)->algorithm; })
+#define X509_PUBKEY_get0_param(oid, pk, len, pa, pub) X509_ALGOR_get0(oid, NULL, NULL, (pub)->algor)
+#define X509v3_addr_get_afi v3_addr_get_afi
+#define X509v3_addr_get_range v3_addr_get_range
+#define X509v3_addr_is_canonical v3_addr_is_canonical
+#endif
+
 typedef struct private_openssl_x509_t private_openssl_x509_t;
 
 /**
@@ -380,6 +399,7 @@ METHOD(certificate_t, issued_by, bool,
 	public_key_t *key;
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
+	ASN1_BIT_STRING *sig;
 	chunk_t tbs;
 
 	if (&this->public.x509.interface == issuer)
@@ -413,9 +433,14 @@ METHOD(certificate_t, issued_by, bool,
 	{
 		return FALSE;
 	}
+	/* i2d_re_X509_tbs() was added with 1.1.0 when X509 was made opaque */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	tbs = openssl_i2chunk(re_X509_tbs, this->x509);
+#else
 	tbs = openssl_i2chunk(X509_CINF, this->x509->cert_info);
-	valid = key->verify(key, this->scheme, tbs,
-						openssl_asn1_str2chunk(this->x509->signature));
+#endif
+	X509_get0_signature(&sig, NULL, this->x509);
+	valid = key->verify(key, this->scheme, tbs, openssl_asn1_str2chunk(sig));
 	free(tbs.ptr);
 	key->destroy(key);
 	if (valid && scheme)
@@ -850,7 +875,7 @@ static void parse_ipAddrBlock_ext_fam(private_openssl_x509_t *this,
 		return;
 	}
 
-	afi = v3_addr_get_afi(fam);
+	afi = X509v3_addr_get_afi(fam);
 	switch (afi)
 	{
 		case IANA_AFI_IPV4:
@@ -871,7 +896,7 @@ static void parse_ipAddrBlock_ext_fam(private_openssl_x509_t *this,
 	for (i = 0; i < sk_IPAddressOrRange_num(list); i++)
 	{
 		aor = sk_IPAddressOrRange_value(list, i);
-		if (v3_addr_get_range(aor, afi, from.ptr, to.ptr, from.len) > 0)
+		if (X509v3_addr_get_range(aor, afi, from.ptr, to.ptr, from.len) > 0)
 		{
 			ts = traffic_selector_create_from_bytes(0, type, from, 0, to, 65535);
 			if (ts)
@@ -897,7 +922,7 @@ static bool parse_ipAddrBlock_ext(private_openssl_x509_t *this,
 		return FALSE;
 	}
 
-	if (!v3_addr_is_canonical(blocks))
+	if (!X509v3_addr_is_canonical(blocks))
 	{
 		sk_IPAddressFamily_free(blocks);
 		return FALSE;
@@ -964,7 +989,7 @@ static bool parse_extensions(private_openssl_x509_t *this)
 	STACK_OF(X509_EXTENSION) *extensions;
 	int i, num;
 
-	extensions = this->x509->cert_info->extensions;
+	extensions = X509_get0_extensions(this->x509);
 	if (extensions)
 	{
 		num = sk_X509_EXTENSION_num(extensions);
@@ -1041,6 +1066,8 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	const unsigned char *ptr = this->encoding.ptr;
 	hasher_t *hasher;
 	chunk_t chunk;
+	ASN1_OBJECT *oid, *oid_tbs;
+	X509_ALGOR *alg;
 
 	this->x509 = d2i_X509(NULL, &ptr, this->encoding.len);
 	if (!this->x509)
@@ -1057,7 +1084,12 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	this->subject = openssl_x509_name2id(X509_get_subject_name(this->x509));
 	this->issuer = openssl_x509_name2id(X509_get_issuer_name(this->x509));
 
-	switch (openssl_asn1_known_oid(this->x509->cert_info->key->algor->algorithm))
+	if (!X509_PUBKEY_get0_param(&oid, NULL, NULL, NULL,
+							    X509_get_X509_PUBKEY(this->x509)))
+	{
+		return FALSE;
+	}
+	switch (openssl_asn1_known_oid(oid))
 	{
 		case OID_RSA_ENCRYPTION:
 			this->pubkey = lib->creds->create(lib->creds,
@@ -1086,14 +1118,18 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	this->notBefore = openssl_asn1_to_time(X509_get_notBefore(this->x509));
 	this->notAfter = openssl_asn1_to_time(X509_get_notAfter(this->x509));
 
-	if (!chunk_equals(
-			openssl_asn1_obj2chunk(this->x509->cert_info->signature->algorithm),
-			openssl_asn1_obj2chunk(this->x509->sig_alg->algorithm)))
+	/* while X509_ALGOR_cmp() is declared in the headers of older OpenSSL
+	 * versions, at least on Ubuntu 14.04 it is not actually defined */
+	X509_get0_signature(NULL, &alg, this->x509);
+	X509_ALGOR_get0(&oid, NULL, NULL, alg);
+	alg = X509_get0_tbs_sigalg(this->x509);
+	X509_ALGOR_get0(&oid_tbs, NULL, NULL, alg);
+	if (!chunk_equals(openssl_asn1_obj2chunk(oid),
+					  openssl_asn1_obj2chunk(oid_tbs)))
 	{
 		return FALSE;
 	}
-	this->scheme = signature_scheme_from_oid(openssl_asn1_known_oid(
-												this->x509->sig_alg->algorithm));
+	this->scheme = signature_scheme_from_oid(openssl_asn1_known_oid(oid));
 
 	if (!parse_extensions(this))
 	{

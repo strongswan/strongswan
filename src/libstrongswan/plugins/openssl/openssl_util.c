@@ -22,6 +22,12 @@
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 
+/* these were added with 1.1.0 when ASN1_OBJECT was made opaque */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#define OBJ_get0_data(o) ((o)->data)
+#define OBJ_length(o) ((o)->length)
+#endif
+
 /**
  * Described in header.
  */
@@ -70,7 +76,8 @@ error:
 /**
  * Described in header.
  */
-bool openssl_bn_cat(int len, BIGNUM *a, BIGNUM *b, chunk_t *chunk)
+bool openssl_bn_cat(const int len, const BIGNUM *a, const BIGNUM *b,
+					chunk_t *chunk)
 {
 	int offset;
 
@@ -127,7 +134,7 @@ bool openssl_bn_split(chunk_t chunk, BIGNUM *a, BIGNUM *b)
 /**
  * Described in header.
  */
-bool openssl_bn2chunk(BIGNUM *bn, chunk_t *chunk)
+bool openssl_bn2chunk(const BIGNUM *bn, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(BN_num_bytes(bn));
 	if (BN_bn2bin(bn, chunk->ptr) == chunk->len)
@@ -149,7 +156,7 @@ chunk_t openssl_asn1_obj2chunk(ASN1_OBJECT *asn1)
 {
 	if (asn1)
 	{
-		return chunk_create((u_char*)asn1->data, asn1->length);
+		return chunk_create((u_char*)OBJ_get0_data(asn1), OBJ_length(asn1));
 	}
 	return chunk_empty;
 }

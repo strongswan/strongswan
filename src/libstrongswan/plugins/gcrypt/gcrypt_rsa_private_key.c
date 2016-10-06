@@ -206,16 +206,16 @@ METHOD(private_key_t, sign, bool,
 	{
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return sign_raw(this, data, sig);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_224:
+			return sign_pkcs1(this, HASH_SHA224, "sha224", data, sig);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_256:
+			return sign_pkcs1(this, HASH_SHA256, "sha256", data, sig);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_384:
+			return sign_pkcs1(this, HASH_SHA384, "sha384", data, sig);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
+			return sign_pkcs1(this, HASH_SHA512, "sha512", data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return sign_pkcs1(this, HASH_SHA1, "sha1", data, sig);
-		case SIGN_RSA_EMSA_PKCS1_SHA224:
-			return sign_pkcs1(this, HASH_SHA224, "sha224", data, sig);
-		case SIGN_RSA_EMSA_PKCS1_SHA256:
-			return sign_pkcs1(this, HASH_SHA256, "sha256", data, sig);
-		case SIGN_RSA_EMSA_PKCS1_SHA384:
-			return sign_pkcs1(this, HASH_SHA384, "sha384", data, sig);
-		case SIGN_RSA_EMSA_PKCS1_SHA512:
-			return sign_pkcs1(this, HASH_SHA512, "sha512", data, sig);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return sign_pkcs1(this, HASH_MD5, "md5", data, sig);
 		default:

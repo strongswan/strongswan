@@ -9,9 +9,11 @@ pluginstemplatedir = $(templatesdir)/plugins
 
 options = \
 	options/aikgen.opt \
+	options/aikpub2.opt \
 	options/attest.opt \
 	options/charon.opt \
 	options/charon-logging.opt \
+	options/charon-nm.opt \
 	options/charon-systemd.opt \
 	options/imcv.opt \
 	options/imv_policy_manager.opt \

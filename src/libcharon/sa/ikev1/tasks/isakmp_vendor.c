@@ -102,6 +102,7 @@ static struct {
 	{ "DPD", EXT_DPD, TRUE, 16,
 	  "\xaf\xca\xd7\x13\x68\xa1\xf1\xc9\x6b\x86\x96\xfc\x77\x57\x01\x00"},
 
+	/* CISCO-UNITY, similar to DPD the last two bytes indicate the version */
 	{ "Cisco Unity", EXT_CISCO_UNITY, FALSE, 16,
 	  "\x12\xf5\xf2\x8c\x45\x71\x68\xa9\x70\x2d\x9f\xe2\x74\xcc\x01\x00"},
 
@@ -190,6 +191,8 @@ static bool is_known_vid(chunk_t data, int i)
 			break;
 		case EXT_MS_WINDOWS:
 			return data.len == 20 && memeq(data.ptr, vendor_ids[i].id, 16);
+		case EXT_CISCO_UNITY:
+			return data.len == 16 && memeq(data.ptr, vendor_ids[i].id, 14);
 		default:
 			return chunk_equals(data, chunk_create(vendor_ids[i].id,
 												   vendor_ids[i].len));

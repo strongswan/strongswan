@@ -22,16 +22,16 @@ static u_int key_size[] = { 1, 3, 4};
 START_TEST(test_bliss_sampler_gaussian)
 {
 	bliss_sampler_t *sampler;
-	bliss_param_set_t *set;
+	const bliss_param_set_t *set;
 	int i, k, count;
 	uint32_t hist[8], sign[3];
 	int32_t z;
-	hash_algorithm_t alg;
+	ext_out_function_t alg;
 	size_t seed_len;
 	chunk_t seed;
 
 	set = bliss_param_set_get_by_id(key_size[_i]);
-	alg = HASH_SHA256;
+	alg = XOF_MGF1_SHA256;
 	seed_len = 32;
 	count = 10000000;
 

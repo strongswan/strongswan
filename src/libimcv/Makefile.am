@@ -1,6 +1,7 @@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtncif \
+	-I$(top_srcdir)/src/libtpmtss \
 	-DIPSEC_SCRIPT=\"${ipsec_script}\"
 
 ipseclib_LTLIBRARIES = libimcv.la
@@ -10,11 +11,8 @@ libimcv_la_LDFLAGS = \
 
 libimcv_la_LIBADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
-	$(top_builddir)/src/libtncif/libtncif.la
-
-if USE_TROUSERS
-  libimcv_la_LIBADD += -ltspi
-endif
+	$(top_builddir)/src/libtncif/libtncif.la \
+	$(top_builddir)/src/libtpmtss/libtpmtss.la
 
 if USE_WINDOWS
   libimcv_la_LIBADD += -lws2_32
@@ -66,7 +64,6 @@ libimcv_la_SOURCES = \
 	pts/pts_pcr.h pts/pts_pcr.c \
 	pts/pts_proto_caps.h \
 	pts/pts_req_func_comp_evid.h \
-	pts/pts_simple_evid_final.h \
 	pts/pts_creds.h pts/pts_creds.c \
 	pts/pts_database.h pts/pts_database.c \
 	pts/pts_dh_group.h pts/pts_dh_group.c \
@@ -207,5 +204,6 @@ imcv_tests_CFLAGS = \
 imcv_tests_LDFLAGS = @COVERAGE_LDFLAGS@
 imcv_tests_LDADD = \
 	$(top_builddir)/src/libimcv/libimcv.la \
+	$(top_builddir)/src/libtpmtss/libtpmtss.la \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libstrongswan/tests/libtest.la

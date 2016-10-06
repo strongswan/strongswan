@@ -9,7 +9,8 @@ project Build_Common is
 
    C_Compiler_Switches   := ("-W",
                              "-Wall",
-                             "-Wno-unused-parameter");
+                             "-Wno-unused-parameter",
+                             "-g");
    Ada_Compiler_Switches := ("-gnatwale",
                              "-gnatygAdISuxo",
                              "-gnata",

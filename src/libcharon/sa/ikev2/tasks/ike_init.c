@@ -373,13 +373,15 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 			{
 				sa_payload_t *sa_payload = (sa_payload_t*)payload;
 				linked_list_t *proposal_list;
-				bool private;
+				bool private, prefer_configured;
 
 				proposal_list = sa_payload->get_proposals(sa_payload);
 				private = this->ike_sa->supports_extension(this->ike_sa,
 														   EXT_STRONGSWAN);
+				prefer_configured = lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns);
 				this->proposal = this->config->select_proposal(this->config,
-														proposal_list, private);
+									proposal_list, private, prefer_configured);
 				if (!this->proposal)
 				{
 					charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE,
@@ -454,6 +456,11 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (this->proposal)
+	{
+		this->ike_sa->set_proposal(this->ike_sa, this->proposal);
+	}
 
 	if (ke_payload && this->proposal &&
 		this->proposal->has_dh_group(this->proposal, this->dh_group))
@@ -612,7 +619,6 @@ METHOD(task_t, build_r, status_t,
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
-	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 
 	/* check if we'd have to redirect the client */
 	if (!this->old_sa &&
@@ -649,6 +655,7 @@ METHOD(task_t, build_r, status_t,
 		else
 		{
 			DBG1(DBG_IKE, "no acceptable proposal found");
+			message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		}
 		return FAILED;
 	}
@@ -847,7 +854,6 @@ METHOD(task_t, process_i, status_t,
 		DBG1(DBG_IKE, "peers proposal selection invalid");
 		return FAILED;
 	}
-	this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 
 	if (this->dh == NULL ||
 		!this->proposal->has_dh_group(this->proposal, this->dh_group))

@@ -221,7 +221,7 @@ static bool load_conn(vici_conn_t *conn, settings_t *cfg,
 	vici_req_t *req;
 	vici_res_t *res;
 	bool ret = TRUE;
-	char buf[128];
+	char buf[BUF_LEN];
 
 	snprintf(buf, sizeof(buf), "%s.%s", "connections", section);
 

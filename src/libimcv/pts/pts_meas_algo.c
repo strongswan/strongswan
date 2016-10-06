@@ -158,6 +158,24 @@ hash_algorithm_t pts_meas_algo_to_hash(pts_meas_algorithms_t algorithm)
 /**
  * Described in header.
  */
+pts_meas_algorithms_t pts_meas_algo_from_hash(hash_algorithm_t algorithm)
+{
+	switch (algorithm)
+	{
+		case HASH_SHA1:
+			return PTS_MEAS_ALGO_SHA1;
+		case HASH_SHA256:
+			return PTS_MEAS_ALGO_SHA256;
+		case HASH_SHA384:
+			return PTS_MEAS_ALGO_SHA384;
+		default:
+			return PTS_MEAS_ALGO_NONE;
+	}
+}
+
+/**
+ * Described in header.
+ */
 size_t pts_meas_algo_hash_size(pts_meas_algorithms_t algorithm)
 {
 	switch (algorithm)

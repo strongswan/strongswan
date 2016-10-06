@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2016 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -31,15 +32,30 @@ struct private_eap_simaka_pseudonym_card_t {
 	eap_simaka_pseudonym_card_t public;
 
 	/**
-	 * Permanent -> pseudonym mappings
+	 * Permanent -> pseudonym mappings (entry_t*)
 	 */
 	hashtable_t *pseudonym;
-
-	/**
-	 * Reverse pseudonym -> permanent mappings
-	 */
-	hashtable_t *permanent;
 };
+
+/**
+ * Mapping between real and pseudonym identity
+ */
+typedef struct {
+
+	/** Real identity */
+	identification_t *id;
+
+	/** Pseudonym */
+	identification_t *pseudonym;
+
+} entry_t;
+
+static void destroy_entry(entry_t *this)
+{
+	this->id->destroy(this->id);
+	this->pseudonym->destroy(this->pseudonym);
+	free(this);
+}
 
 /**
  * hashtable hash function
@@ -60,12 +76,12 @@ static bool equals(identification_t *key1, identification_t *key2)
 METHOD(simaka_card_t, get_pseudonym, identification_t*,
 	private_eap_simaka_pseudonym_card_t *this, identification_t *id)
 {
-	identification_t *pseudonym;
+	entry_t *entry;
 
-	pseudonym = this->pseudonym->get(this->pseudonym, id);
-	if (pseudonym)
+	entry = this->pseudonym->get(this->pseudonym, id);
+	if (entry)
 	{
-		return pseudonym->clone(pseudonym);
+		return entry->pseudonym->clone(entry->pseudonym);
 	}
 	return NULL;
 }
@@ -74,17 +90,17 @@ METHOD(simaka_card_t, set_pseudonym, void,
 	private_eap_simaka_pseudonym_card_t *this, identification_t *id,
 	identification_t *pseudonym)
 {
-	identification_t *permanent;
+	entry_t *entry;
 
-	/* create new entries */
-	id = id->clone(id);
-	pseudonym = pseudonym->clone(pseudonym);
-	permanent = this->permanent->put(this->permanent, pseudonym, id);
-	pseudonym = this->pseudonym->put(this->pseudonym, id, pseudonym);
-
-	/* delete old entries */
-	DESTROY_IF(permanent);
-	DESTROY_IF(pseudonym);
+	INIT(entry,
+		.id = id->clone(id),
+		.pseudonym = pseudonym->clone(pseudonym),
+	);
+	entry = this->pseudonym->put(this->pseudonym, entry->id, entry);
+	if (entry)
+	{
+		destroy_entry(entry);
+	}
 }
 
 METHOD(simaka_card_t, get_quintuplet, status_t,
@@ -98,26 +114,7 @@ METHOD(simaka_card_t, get_quintuplet, status_t,
 METHOD(eap_simaka_pseudonym_card_t, destroy, void,
 	private_eap_simaka_pseudonym_card_t *this)
 {
-	enumerator_t *enumerator;
-	identification_t *id;
-	void *key;
-
-	enumerator = this->pseudonym->create_enumerator(this->pseudonym);
-	while (enumerator->enumerate(enumerator, &key, &id))
-	{
-		id->destroy(id);
-	}
-	enumerator->destroy(enumerator);
-
-	enumerator = this->permanent->create_enumerator(this->permanent);
-	while (enumerator->enumerate(enumerator, &key, &id))
-	{
-		id->destroy(id);
-	}
-	enumerator->destroy(enumerator);
-
-	this->pseudonym->destroy(this->pseudonym);
-	this->permanent->destroy(this->permanent);
+	this->pseudonym->destroy_function(this->pseudonym, (void*)destroy_entry);
 	free(this);
 }
 
@@ -142,9 +139,6 @@ eap_simaka_pseudonym_card_t *eap_simaka_pseudonym_card_create()
 			.destroy = _destroy,
 		},
 		.pseudonym = hashtable_create((void*)hash, (void*)equals, 0),
-		.permanent = hashtable_create((void*)hash, (void*)equals, 0),
 	);
-
 	return &this->public;
 }
-

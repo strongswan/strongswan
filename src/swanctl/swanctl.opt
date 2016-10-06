@@ -139,12 +139,12 @@ connections.<conn>.dpd_timeout = 0s
 	checking. For compatibility reasons, with IKEv1 a custom interval may be
 	specified; this option has no effect on connections using IKE2.
 
-connections.<conn>.fragmentation = no
+connections.<conn>.fragmentation = yes
 	Use IKE UDP datagram fragmentation.  (_yes_, _no_ or _force_).
 
 	Use IKE fragmentation (proprietary IKEv1 extension or RFC 7383 IKEv2
-	fragmentation).  Acceptable  values  are _yes_, _force_ and _no_ (the
-	default). Fragmented IKE messages sent by a peer are always accepted
+	fragmentation).  Acceptable  values  are _yes_ (the	default), _force_ and
+	_no_. Fragmented IKE messages sent by a peer are always accepted
 	irrespective of  the  value  of  this option. If set to _yes_, and the peer
 	supports it, oversized IKE messages will be sent in fragments.  If set  to
 	_force_  (only  supported  for IKEv1) the initial IKE message will already
@@ -472,7 +472,7 @@ connections.<conn>.children.<child>.ah_proposals =
 	For AH, this includes an integrity algorithm and an optional Diffie-Hellman
 	group. If a DH group is specified, CHILD_SA/Quick Mode rekeying and initial
 	negotiation uses a separate Diffie-Hellman exchange using the specified
-	group.
+	group (refer to _esp_proposals_ for details).
 
 	In IKEv2, multiple algorithms of the same kind can be specified in a single
 	proposal, from which one gets selected. In IKEv1, only one algorithm per
@@ -495,11 +495,18 @@ connections.<conn>.children.<child>.esp_proposals = default
 	mode algorithm is used instead of the separate encryption/integrity
 	algorithms.
 
-	If a DH group is specified, CHILD_SA/Quick Mode rekeying and initial (non
-	IKE_AUTH piggybacked) negotiation uses a separate Diffie-Hellman exchange
-	using the specified group. Extended Sequence Number support may be indicated
-	with the _esn_ and _noesn_ values, both may be included to indicate support
-	for both modes. If omitted, _noesn_ is assumed.
+	If a DH group is specified, CHILD_SA/Quick Mode rekeying and initial
+	negotiation use a separate Diffie-Hellman exchange using the specified
+	group. However, for IKEv2, the keys of the CHILD_SA created implicitly with
+	the IKE_SA will always be derived from the IKE_SA's key material. So any DH
+	group specified here will only apply when the CHILD_SA is later rekeyed or
+	is created with a separate CREATE_CHILD_SA exchange. A proposal mismatch
+	might, therefore, not immediately be noticed when the SA is established, but
+	may later cause rekeying to fail.
+
+	Extended Sequence Number support may be indicated with the _esn_ and _noesn_
+	values, both may be included to indicate support for both modes. If omitted,
+	_noesn_ is assumed.
 
 	In IKEv2, multiple algorithms of the same kind can be specified in a single
 	proposal, from which one gets selected. In IKEv1, only one algorithm per
@@ -651,6 +658,13 @@ connections.<conn>.children.<child>.policies = yes
 
 	Whether to install IPsec policies or not. Disabling this can be useful in
 	some scenarios e.g. MIPv6, where policies are not managed by the IKE daemon.
+
+connections.<conn>.children.<child>.policies_fwd_out = no
+	Whether to install outbound FWD IPsec policies or not.
+
+	Whether to install outbound FWD IPsec policies or not. Enabling this is
+	required in case there is a drop policy that would match and block forwarded
+	traffic for this CHILD_SA.
 
 connections.<conn>.children.<child>.dpd_action = clear
 	Action to perform on DPD timeout (_clear_, _trap_ or _restart_).
@@ -820,6 +834,15 @@ secrets.ike<suffix>.id<suffix> =
 	IKE identity the IKE preshared secret belongs to. Multiple unique identities
 	may be specified, each having an _id_ prefix, if a secret is shared between
 	multiple peers.
+
+secrets.private<suffix> { # }
+	Private key decryption passphrase for a key in the _private_ folder.
+
+secrets.private<suffix>.file =
+	File name in the _private_ folder for which this passphrase should be used.
+
+secrets.private<suffix>.secret
+	Value of decryption passphrase for private key.
 
 secrets.rsa<suffix> { # }
 	Private key decryption passphrase for a key in the _rsa_ folder.

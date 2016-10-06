@@ -1489,7 +1489,7 @@ static bool manage_route(private_kernel_wfp_ipsec_t *this,
 		dst->destroy(dst);
 		return FALSE;
 	}
-	gtw = charon->kernel->get_nexthop(charon->kernel, remote, -1, local);
+	gtw = charon->kernel->get_nexthop(charon->kernel, remote, -1, local, NULL);
 	if (add)
 	{
 		done = install_route(this, dst, mask, src, gtw);

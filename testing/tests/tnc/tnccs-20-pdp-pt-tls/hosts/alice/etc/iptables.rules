@@ -9,7 +9,7 @@
 -A INPUT  -i lo -j ACCEPT
 -A OUTPUT -o lo -j ACCEPT
 
-# allow PT-TLS 
+# allow PT-TLS
 -A INPUT  -i eth0 -p tcp --dport 271 -j ACCEPT
 -A OUTPUT -o eth0 -p tcp --sport 271 -j ACCEPT
 
@@ -18,7 +18,7 @@
 -A OUTPUT -p tcp --sport 22 -j ACCEPT
 
 # allow outbound ssh
--A OUTPU  -p tcp --dport 22 -j ACCEPT
+-A OUTPUT  -p tcp --dport 22 -j ACCEPT
 -A INPUT  -p tcp --sport 22 -j ACCEPT
 
 # allow crl fetch from winnetou

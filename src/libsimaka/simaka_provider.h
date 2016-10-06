@@ -62,7 +62,7 @@ struct simaka_provider_t {
 	 * @param id		permanent identity of peer to create challenge for
 	 * @param rand		buffer receiving random value rand
 	 * @param xres		buffer receiving expected authentication result xres
-	 * @param xres_len	nubmer of bytes written to xres buffer
+	 * @param xres_len	number of bytes written to xres buffer
 	 * @param ck		buffer receiving encryption key ck
 	 * @param ik		buffer receiving integrity key ik
 	 * @param autn		authentication token autn

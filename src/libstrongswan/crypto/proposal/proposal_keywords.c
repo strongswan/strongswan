@@ -154,7 +154,7 @@ METHOD(proposal_keywords_t, register_algname_parser, void,
 	private_proposal_keywords_t *this, proposal_algname_parser_t parser)
 {
 	this->lock->write_lock(this->lock);
-	this->tokens->insert_first(this->parsers, parser);
+	this->parsers->insert_first(this->parsers, parser);
 	this->lock->unlock(this->lock);
 }
 

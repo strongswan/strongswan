@@ -68,7 +68,14 @@ struct private_mac_t {
 	/**
 	 * Current HMAC context
 	 */
-	HMAC_CTX hmac;
+	HMAC_CTX *hmac;
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	/**
+	 * Static context for OpenSSL < 1.1.0
+	 */
+	HMAC_CTX hmac_ctx;
+#endif
 
 	/**
 	 * Key set on HMAC_CTX?
@@ -80,14 +87,14 @@ METHOD(mac_t, set_key, bool,
 	private_mac_t *this, chunk_t key)
 {
 #if OPENSSL_VERSION_NUMBER >= 0x10000000L
-	if (HMAC_Init_ex(&this->hmac, key.ptr, key.len, this->hasher, NULL))
+	if (HMAC_Init_ex(this->hmac, key.ptr, key.len, this->hasher, NULL))
 	{
 		this->key_set = TRUE;
 		return TRUE;
 	}
 	return FALSE;
 #else /* OPENSSL_VERSION_NUMBER < 1.0 */
-	HMAC_Init_ex(&this->hmac, key.ptr, key.len, this->hasher, NULL);
+	HMAC_Init_ex(this->hmac, key.ptr, key.len, this->hasher, NULL);
 	this->key_set = TRUE;
 	return TRUE;
 #endif
@@ -101,7 +108,7 @@ METHOD(mac_t, get_mac, bool,
 		return FALSE;
 	}
 #if OPENSSL_VERSION_NUMBER >= 0x10000000L
-	if (!HMAC_Update(&this->hmac, data.ptr, data.len))
+	if (!HMAC_Update(this->hmac, data.ptr, data.len))
 	{
 		return FALSE;
 	}
@@ -109,17 +116,17 @@ METHOD(mac_t, get_mac, bool,
 	{
 		return TRUE;
 	}
-	if (!HMAC_Final(&this->hmac, out, NULL))
+	if (!HMAC_Final(this->hmac, out, NULL))
 	{
 		return FALSE;
 	}
 #else /* OPENSSL_VERSION_NUMBER < 1.0 */
-	HMAC_Update(&this->hmac, data.ptr, data.len);
+	HMAC_Update(this->hmac, data.ptr, data.len);
 	if (out == NULL)
 	{
 		return TRUE;
 	}
-	HMAC_Final(&this->hmac, out, NULL);
+	HMAC_Final(this->hmac, out, NULL);
 #endif
 	return set_key(this, chunk_empty);
 }
@@ -133,7 +140,11 @@ METHOD(mac_t, get_mac_size, size_t,
 METHOD(mac_t, destroy, void,
 	private_mac_t *this)
 {
-	HMAC_CTX_cleanup(&this->hmac);
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	HMAC_CTX_free(this->hmac);
+#else
+	HMAC_CTX_cleanup(&this->hmac_ctx);
+#endif
 	free(this);
 }
 
@@ -167,7 +178,12 @@ static mac_t *hmac_create(hash_algorithm_t algo)
 		return NULL;
 	}
 
-	HMAC_CTX_init(&this->hmac);
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	this->hmac = HMAC_CTX_new();
+#else
+	HMAC_CTX_init(&this->hmac_ctx);
+	this->hmac = &this->hmac_ctx;
+#endif
 
 	return &this->public;
 }

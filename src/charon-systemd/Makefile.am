@@ -14,4 +14,5 @@ charon_systemd_CPPFLAGS = \
 charon_systemd_LDADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libcharon/libcharon.la \
-	$(systemd_LIBS) $(systemd_daemon_LIBS) $(systemd_journal_LIBS) -lm $(PTHREADLIB) $(DLLIB)
+	$(systemd_LIBS) $(systemd_daemon_LIBS) $(systemd_journal_LIBS) \
+	-lm $(PTHREADLIB) $(ATOMICLIB) $(DLLIB)

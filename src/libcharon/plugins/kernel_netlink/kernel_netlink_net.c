@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -702,6 +702,54 @@ static void addr_map_entry_remove(hashtable_t *map, addr_entry_t *addr,
 }
 
 /**
+ * Check if an address or net (addr with prefix net bits) is in
+ * subnet (net with net_len net bits)
+ */
+static bool addr_in_subnet(chunk_t addr, int prefix, chunk_t net, int net_len)
+{
+	static const u_char mask[] = { 0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
+	int byte = 0;
+
+	if (net_len == 0)
+	{	/* any address matches a /0 network */
+		return TRUE;
+	}
+	if (addr.len != net.len || net_len > 8 * net.len || prefix < net_len)
+	{
+		return FALSE;
+	}
+	/* scan through all bytes in network order */
+	while (net_len > 0)
+	{
+		if (net_len < 8)
+		{
+			return (mask[net_len] & addr.ptr[byte]) == (mask[net_len] & net.ptr[byte]);
+		}
+		else
+		{
+			if (addr.ptr[byte] != net.ptr[byte])
+			{
+				return FALSE;
+			}
+			byte++;
+			net_len -= 8;
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * Check if the given address is in subnet (net with net_len net bits)
+ */
+static bool host_in_subnet(host_t *host, chunk_t net, int net_len)
+{
+	chunk_t addr;
+
+	addr = host->get_address(host);
+	return addr_in_subnet(addr, addr.len * 8, net, net_len);
+}
+
+/**
  * Determine the type or scope of the given unicast IP address.  This is not
  * the same thing returned in rtm_scope/ifa_scope.
  *
@@ -837,6 +885,65 @@ static bool is_address_better(private_kernel_netlink_net_t *this,
 }
 
 /**
+ * Get a non-virtual IP address on the given interfaces and optionally in a
+ * given subnet.
+ *
+ * If a candidate address is given, we first search for that address and if not
+ * found return the address as above.
+ * Returned host is a clone, has to be freed by caller.
+ *
+ * this->lock must be held when calling this function.
+ */
+static host_t *get_matching_address(private_kernel_netlink_net_t *this,
+									int *ifindex, int family, chunk_t net,
+									uint8_t mask, host_t *dest,
+									host_t *candidate)
+{
+	enumerator_t *ifaces, *addrs;
+	iface_entry_t *iface;
+	addr_entry_t *addr, *best = NULL;
+	bool candidate_matched = FALSE;
+
+	ifaces = this->ifaces->create_enumerator(this->ifaces);
+	while (ifaces->enumerate(ifaces, &iface))
+	{
+		if (iface->usable && (!ifindex || iface->ifindex == *ifindex))
+		{	/* only use matching interfaces not excluded by config */
+			addrs = iface->addrs->create_enumerator(iface->addrs);
+			while (addrs->enumerate(addrs, &addr))
+			{
+				if (addr->refcount ||
+					addr->ip->get_family(addr->ip) != family)
+				{	/* ignore virtual IP addresses and ensure family matches */
+					continue;
+				}
+				if (net.ptr && !host_in_subnet(addr->ip, net, mask))
+				{	/* optionally match a subnet */
+					continue;
+				}
+				if (candidate && candidate->ip_equals(candidate, addr->ip))
+				{	/* stop if we find the candidate */
+					best = addr;
+					candidate_matched = TRUE;
+					break;
+				}
+				else if (!best || is_address_better(this, best, addr, dest))
+				{
+					best = addr;
+				}
+			}
+			addrs->destroy(addrs);
+			if (ifindex || candidate_matched)
+			{
+				break;
+			}
+		}
+	}
+	ifaces->destroy(ifaces);
+	return best ? best->ip->clone(best->ip) : NULL;
+}
+
+/**
  * Get a non-virtual IP address on the given interface.
  *
  * If a candidate address is given, we first search for that address and if not
@@ -849,37 +956,24 @@ static host_t *get_interface_address(private_kernel_netlink_net_t *this,
 									 int ifindex, int family, host_t *dest,
 									 host_t *candidate)
 {
-	iface_entry_t *iface;
-	enumerator_t *addrs;
-	addr_entry_t *addr, *best = NULL;
+	return get_matching_address(this, &ifindex, family, chunk_empty, 0, dest,
+								candidate);
+}
 
-	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_index,
-								 (void**)&iface, &ifindex) == SUCCESS)
-	{
-		if (iface->usable)
-		{	/* only use interfaces not excluded by config */
-			addrs = iface->addrs->create_enumerator(iface->addrs);
-			while (addrs->enumerate(addrs, &addr))
-			{
-				if (addr->refcount ||
-					addr->ip->get_family(addr->ip) != family)
-				{	/* ignore virtual IP addresses and ensure family matches */
-					continue;
-				}
-				if (candidate && candidate->ip_equals(candidate, addr->ip))
-				{	/* stop if we find the candidate */
-					best = addr;
-					break;
-				}
-				else if (!best || is_address_better(this, best, addr, dest))
-				{
-					best = addr;
-				}
-			}
-			addrs->destroy(addrs);
-		}
-	}
-	return best ? best->ip->clone(best->ip) : NULL;
+/**
+ * Get a non-virtual IP address in the given subnet.
+ *
+ * If a candidate address is given, we first search for that address and if not
+ * found return the address as above.
+ * Returned host is a clone, has to be freed by caller.
+ *
+ * this->lock must be held when calling this function.
+ */
+static host_t *get_subnet_address(private_kernel_netlink_net_t *this,
+								  int family, chunk_t net, uint8_t mask,
+								  host_t *dest, host_t *candidate)
+{
+	return get_matching_address(this, NULL, family, net, mask, dest, candidate);
 }
 
 /**
@@ -1297,7 +1391,8 @@ static bool receive_events(private_kernel_netlink_net_t *this, int fd,
 				/* no data ready, select again */
 				return TRUE;
 			default:
-				DBG1(DBG_KNL, "unable to receive from rt event socket");
+				DBG1(DBG_KNL, "unable to receive from RT event socket %s (%d)",
+					 strerror(errno), errno);
 				sleep(1);
 				return TRUE;
 		}
@@ -1501,40 +1596,29 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 }
 
 /**
- * check if an address or net (addr with prefix net bits) is in
- * subnet (net with net_len net bits)
+ * get the name of an interface by index (allocated)
  */
-static bool addr_in_subnet(chunk_t addr, int prefix, chunk_t net, int net_len)
+static char *get_interface_name_by_index(private_kernel_netlink_net_t *this,
+										 int index)
 {
-	static const u_char mask[] = { 0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
-	int byte = 0;
+	iface_entry_t *iface;
+	char *name = NULL;
 
-	if (net_len == 0)
-	{	/* any address matches a /0 network */
-		return TRUE;
-	}
-	if (addr.len != net.len || net_len > 8 * net.len || prefix < net_len)
+	DBG2(DBG_KNL, "getting iface name for index %d", index);
+
+	this->lock->read_lock(this->lock);
+	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_index,
+								(void**)&iface, &index) == SUCCESS)
 	{
-		return FALSE;
+		name = strdup(iface->ifname);
 	}
-	/* scan through all bytes in network order */
-	while (net_len > 0)
+	this->lock->unlock(this->lock);
+
+	if (!name)
 	{
-		if (net_len < 8)
-		{
-			return (mask[net_len] & addr.ptr[byte]) == (mask[net_len] & net.ptr[byte]);
-		}
-		else
-		{
-			if (addr.ptr[byte] != net.ptr[byte])
-			{
-				return FALSE;
-			}
-			byte++;
-			net_len -= 8;
-		}
+		DBG1(DBG_KNL, "unable to get interface name for %d", index);
 	}
-	return TRUE;
+	return name;
 }
 
 /**
@@ -1542,10 +1626,12 @@ static bool addr_in_subnet(chunk_t addr, int prefix, chunk_t net, int net_len)
  */
 typedef struct {
 	chunk_t gtw;
-	chunk_t src;
+	chunk_t pref_src;
 	chunk_t dst;
+	chunk_t src;
 	host_t *src_host;
 	uint8_t dst_len;
+	uint8_t src_len;
 	uint32_t table;
 	uint32_t oif;
 	uint32_t priority;
@@ -1599,9 +1685,11 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
 	if (route)
 	{
 		route->gtw = chunk_empty;
-		route->src = chunk_empty;
+		route->pref_src = chunk_empty;
 		route->dst = chunk_empty;
 		route->dst_len = msg->rtm_dst_len;
+		route->src = chunk_empty;
+		route->src_len = msg->rtm_src_len;
 		route->table = msg->rtm_table;
 		route->oif = 0;
 		route->priority = 0;
@@ -1610,6 +1698,7 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
 	{
 		INIT(route,
 			.dst_len = msg->rtm_dst_len,
+			.src_len = msg->rtm_src_len,
 			.table = msg->rtm_table,
 		);
 	}
@@ -1619,13 +1708,16 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
 		switch (rta->rta_type)
 		{
 			case RTA_PREFSRC:
-				route->src = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
+				route->pref_src = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
 				break;
 			case RTA_GATEWAY:
 				route->gtw = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
 				break;
 			case RTA_DST:
 				route->dst = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
+				break;
+			case RTA_SRC:
+				route->src = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
 				break;
 			case RTA_OIF:
 				if (RTA_PAYLOAD(rta) == sizeof(route->oif))
@@ -1658,7 +1750,7 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
  */
 static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 						 int prefix, bool nexthop, host_t *candidate,
-						 u_int recursion)
+						 char **iface, u_int recursion)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *hdr, *out, *current;
@@ -1763,10 +1855,10 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				{	/* route destination does not contain dest */
 					continue;
 				}
-				if (route->src.ptr)
+				if (route->pref_src.ptr)
 				{	/* verify source address, if any */
 					host_t *src = host_create_from_chunk(msg->rtm_family,
-														 route->src, 0);
+														 route->pref_src, 0);
 					if (src && is_known_vip(this, src))
 					{	/* ignore routes installed by us */
 						src->destroy(src);
@@ -1836,12 +1928,29 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 			best = best ?: route;
 			continue;
 		}
+		if (route->src.ptr)
+		{	/* no src, but a source selector, try to find a matching address */
+			route->src_host = get_subnet_address(this, msg->rtm_family,
+											route->src, route->src_len, dest,
+											candidate);
+			if (route->src_host)
+			{	/* we handle this address the same as the one above */
+				if (!candidate ||
+					 candidate->ip_equals(candidate, route->src_host))
+				{
+					best = route;
+					break;
+				}
+				best = best ?: route;
+				continue;
+			}
+		}
 		if (route->oif)
 		{	/* no src, but an interface - get address from it */
 			route->src_host = get_interface_address(this, route->oif,
 											msg->rtm_family, dest, candidate);
 			if (route->src_host)
-			{	/* we handle this address the same as the one above */
+			{	/* more of the same */
 				if (!candidate ||
 					 candidate->ip_equals(candidate, route->src_host))
 				{
@@ -1860,7 +1969,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 			if (gtw && !gtw->ip_equals(gtw, dest))
 			{
 				route->src_host = get_route(this, gtw, -1, FALSE, candidate,
-											recursion + 1);
+											iface, recursion + 1);
 			}
 			DESTROY_IF(gtw);
 			if (route->src_host)
@@ -1878,10 +1987,18 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	enumerator->destroy(enumerator);
 
 	if (nexthop)
-	{	/* nexthop lookup, return gateway if any */
+	{	/* nexthop lookup, return gateway and oif if any */
+		if (iface)
+		{
+			*iface = NULL;
+		}
 		if (best || routes->get_first(routes, (void**)&best) == SUCCESS)
 		{
 			addr = host_create_from_chunk(msg->rtm_family, best->gtw, 0);
+			if (iface && route->oif)
+			{
+				*iface = get_interface_name_by_index(this, route->oif);
+			}
 		}
 		if (!addr && !match_net)
 		{	/* fallback to destination address */
@@ -1901,8 +2018,16 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 
 	if (addr)
 	{
-		DBG2(DBG_KNL, "using %H as %s to reach %H/%d", addr,
-			 nexthop ? "nexthop" : "address", dest, prefix);
+		if (nexthop && iface && *iface)
+		{
+			DBG2(DBG_KNL, "using %H as nexthop and %s as dev to reach %H/%d",
+				 addr, *iface, dest, prefix);
+		}
+		else
+		{
+			DBG2(DBG_KNL, "using %H as %s to reach %H/%d", addr,
+				 nexthop ? "nexthop" : "address", dest, prefix);
+		}
 	}
 	else if (!recursion)
 	{
@@ -1915,13 +2040,14 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 METHOD(kernel_net_t, get_source_addr, host_t*,
 	private_kernel_netlink_net_t *this, host_t *dest, host_t *src)
 {
-	return get_route(this, dest, -1, FALSE, src, 0);
+	return get_route(this, dest, -1, FALSE, src, NULL, 0);
 }
 
 METHOD(kernel_net_t, get_nexthop, host_t*,
-	private_kernel_netlink_net_t *this, host_t *dest, int prefix, host_t *src)
+	private_kernel_netlink_net_t *this, host_t *dest, int prefix, host_t *src,
+	char **iface)
 {
-	return get_route(this, dest, prefix, TRUE, src, 0);
+	return get_route(this, dest, prefix, TRUE, src, iface, 0);
 }
 
 /**
@@ -2644,7 +2770,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		this->socket_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 		if (this->socket_events < 0)
 		{
-			DBG1(DBG_KNL, "unable to create RT event socket");
+			DBG1(DBG_KNL, "unable to create RT event socket: %s (%d)",
+				 strerror(errno), errno);
 			destroy(this);
 			return NULL;
 		}
@@ -2652,7 +2779,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 						 RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE | RTMGRP_LINK;
 		if (bind(this->socket_events, (struct sockaddr*)&addr, sizeof(addr)))
 		{
-			DBG1(DBG_KNL, "unable to bind RT event socket");
+			DBG1(DBG_KNL, "unable to bind RT event socket: %s (%d)",
+				 strerror(errno), errno);
 			destroy(this);
 			return NULL;
 		}

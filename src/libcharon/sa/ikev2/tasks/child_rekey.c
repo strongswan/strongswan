@@ -1,7 +1,8 @@
 /*
+ * Copyright (C) 2009-2016 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -159,14 +160,21 @@ METHOD(task_t, build_i, status_t,
 	{	/* check if it is an outbound CHILD_SA */
 		this->child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
 													this->spi, FALSE);
-		if (!this->child_sa)
-		{	/* CHILD_SA is gone, unable to rekey. As an empty CREATE_CHILD_SA
-			 * exchange is invalid, we fall back to an INFORMATIONAL exchange.*/
-			message->set_exchange_type(message, INFORMATIONAL);
-			return SUCCESS;
+		if (this->child_sa)
+		{
+			/* we work only with the inbound SPI */
+			this->spi = this->child_sa->get_spi(this->child_sa, TRUE);
 		}
-		/* we work only with the inbound SPI */
-		this->spi = this->child_sa->get_spi(this->child_sa, TRUE);
+	}
+	if (!this->child_sa ||
+		(!this->child_create &&
+		  this->child_sa->get_state(this->child_sa) != CHILD_INSTALLED) ||
+		(this->child_create &&
+		 this->child_sa->get_state(this->child_sa) != CHILD_REKEYING))
+	{
+		/* CHILD_SA is gone or in the wrong state, unable to rekey */
+		message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
+		return SUCCESS;
 	}
 	config = this->child_sa->get_config(this->child_sa);
 
@@ -218,12 +226,18 @@ METHOD(task_t, build_r, status_t,
 {
 	child_cfg_t *config;
 	uint32_t reqid;
+	child_sa_state_t state;
 
-	if (this->child_sa == NULL ||
-		this->child_sa->get_state(this->child_sa) == CHILD_DELETING)
+	if (!this->child_sa)
 	{
 		DBG1(DBG_IKE, "unable to rekey, CHILD_SA not found");
-		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
+		message->add_notify(message, TRUE, CHILD_SA_NOT_FOUND, chunk_empty);
+		return SUCCESS;
+	}
+	if (this->child_sa->get_state(this->child_sa) == CHILD_DELETING)
+	{
+		DBG1(DBG_IKE, "unable to rekey, we are deleting the CHILD_SA");
+		message->add_notify(message, TRUE, TEMPORARY_FAILURE, chunk_empty);
 		return SUCCESS;
 	}
 
@@ -237,14 +251,16 @@ METHOD(task_t, build_r, status_t,
 	this->child_create->set_config(this->child_create, config->get_ref(config));
 	this->child_create->task.build(&this->child_create->task, message);
 
+	state = this->child_sa->get_state(this->child_sa);
+	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
+
 	if (message->get_payload(message, PLV2_SECURITY_ASSOCIATION) == NULL)
-	{
-		/* rekeying failed, reuse old child */
-		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
+	{	/* rekeying failed, reuse old child */
+		this->child_sa->set_state(this->child_sa, state);
 		return SUCCESS;
 	}
 
-	this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
+	this->child_sa->set_state(this->child_sa, CHILD_REKEYED);
 
 	/* invoke rekey hook */
 	charon->bus->child_rekey(charon->bus, this->child_sa,
@@ -284,9 +300,9 @@ static child_sa_t *handle_collision(private_child_rekey_t *this)
 				if (child_sa)
 				{
 					child_sa->set_close_action(child_sa, ACTION_NONE);
-					if (child_sa->get_state(child_sa) != CHILD_REKEYING)
+					if (child_sa->get_state(child_sa) != CHILD_REKEYED)
 					{
-						child_sa->set_state(child_sa, CHILD_REKEYING);
+						child_sa->set_state(child_sa, CHILD_REKEYED);
 					}
 				}
 			}
@@ -337,6 +353,34 @@ METHOD(task_t, process_i, status_t,
 							this->ike_sa->get_id(this->ike_sa), TRUE));
 		return SUCCESS;
 	}
+	if (message->get_notify(message, CHILD_SA_NOT_FOUND))
+	{
+		child_cfg_t *child_cfg;
+		uint32_t reqid;
+
+		if (this->collision &&
+			this->collision->get_type(this->collision) == TASK_CHILD_DELETE)
+		{	/* ignore this error if we already deleted the CHILD_SA on the
+			 * peer's behalf (could happen if the other peer does not detect
+			 * the collision and did not respond with TEMPORARY_FAILURE) */
+			return SUCCESS;
+		}
+		DBG1(DBG_IKE, "peer didn't find the CHILD_SA we tried to rekey");
+		/* FIXME: according to RFC 7296 we should only create a new CHILD_SA if
+		 * it does not exist yet, we currently have no good way of checking for
+		 * that (we could go by name, but that might be tricky e.g. due to
+		 * narrowing) */
+		spi = this->child_sa->get_spi(this->child_sa, TRUE);
+		reqid = this->child_sa->get_reqid(this->child_sa);
+		protocol = this->child_sa->get_protocol(this->child_sa);
+		child_cfg = this->child_sa->get_config(this->child_sa);
+		child_cfg->get_ref(child_cfg);
+		charon->bus->child_updown(charon->bus, this->child_sa, FALSE);
+		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
+		return this->ike_sa->initiate(this->ike_sa,
+									  child_cfg->get_ref(child_cfg), reqid,
+									  NULL, NULL);
+	}
 
 	if (this->child_create->task.process(&this->child_create->task,
 										 message) == NEED_MORE)
@@ -346,10 +390,10 @@ METHOD(task_t, process_i, status_t,
 	}
 	if (message->get_payload(message, PLV2_SECURITY_ASSOCIATION) == NULL)
 	{
-		/* establishing new child failed, reuse old. but not when we
-		 * received a delete in the meantime */
-		if (!(this->collision &&
-			  this->collision->get_type(this->collision) == TASK_CHILD_DELETE))
+		/* establishing new child failed, reuse old and try again. but not when
+		 * we received a delete in the meantime */
+		if (!this->collision ||
+			 this->collision->get_type(this->collision) != TASK_CHILD_DELETE)
 		{
 			schedule_delayed_rekey(this);
 		}
@@ -377,9 +421,9 @@ METHOD(task_t, process_i, status_t,
 		return SUCCESS;
 	}
 	/* disable updown event for redundant CHILD_SA */
-	if (to_delete->get_state(to_delete) != CHILD_REKEYING)
+	if (to_delete->get_state(to_delete) != CHILD_REKEYED)
 	{
-		to_delete->set_state(to_delete, CHILD_REKEYING);
+		to_delete->set_state(to_delete, CHILD_REKEYED);
 	}
 	spi = to_delete->get_spi(to_delete, TRUE);
 	protocol = to_delete->get_protocol(to_delete);
@@ -398,6 +442,18 @@ METHOD(task_t, get_type, task_type_t,
 	return TASK_CHILD_REKEY;
 }
 
+METHOD(child_rekey_t, is_redundant, bool,
+	private_child_rekey_t *this, child_sa_t *child)
+{
+	if (this->collision &&
+		this->collision->get_type(this->collision) == TASK_CHILD_REKEY)
+	{
+		private_child_rekey_t *rekey = (private_child_rekey_t*)this->collision;
+		return child == rekey->child_create->get_child(rekey->child_create);
+	}
+	return FALSE;
+}
+
 METHOD(child_rekey_t, collide, void,
 	private_child_rekey_t *this, task_t *other)
 {
@@ -406,9 +462,18 @@ METHOD(child_rekey_t, collide, void,
 	if (other->get_type(other) == TASK_CHILD_REKEY)
 	{
 		private_child_rekey_t *rekey = (private_child_rekey_t*)other;
+		child_sa_t *other_child;
+
 		if (rekey->child_sa != this->child_sa)
+		{	/* not the same child => no collision */
+			other->destroy(other);
+			return;
+		}
+		/* ignore passive tasks that did not successfully create a CHILD_SA */
+		other_child = rekey->child_create->get_child(rekey->child_create);
+		if (!other_child ||
+			 other_child->get_state(other_child) != CHILD_INSTALLED)
 		{
-			/* not the same child => no collision */
 			other->destroy(other);
 			return;
 		}
@@ -416,19 +481,11 @@ METHOD(child_rekey_t, collide, void,
 	else if (other->get_type(other) == TASK_CHILD_DELETE)
 	{
 		child_delete_t *del = (child_delete_t*)other;
-		if (this->collision &&
-			this->collision->get_type(this->collision) == TASK_CHILD_REKEY)
+		if (is_redundant(this, del->get_child(del)))
 		{
-			private_child_rekey_t *rekey;
-
-			rekey = (private_child_rekey_t*)this->collision;
-			if (del->get_child(del) == rekey->child_create->get_child(rekey->child_create))
-			{
-				/* peer deletes redundant child created in collision */
-				this->other_child_destroyed = TRUE;
-				other->destroy(other);
-				return;
-			}
+			this->other_child_destroyed = TRUE;
+			other->destroy(other);
+			return;
 		}
 		if (del->get_child(del) != this->child_sa)
 		{
@@ -439,7 +496,7 @@ METHOD(child_rekey_t, collide, void,
 	}
 	else
 	{
-		/* any other task is not critical for collisisions, ignore */
+		/* any other task is not critical for collisions, ignore */
 		other->destroy(other);
 		return;
 	}
@@ -496,6 +553,7 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
+			.is_redundant = _is_redundant,
 			.collide = _collide,
 		},
 		.ike_sa = ike_sa,

@@ -12,7 +12,7 @@ libtest_la_CFLAGS = \
 libtest_la_LDFLAGS = @COVERAGE_LDFLAGS@
 libtest_la_LIBADD = \
   $(top_builddir)/src/libstrongswan/libstrongswan.la \
-  $(PTHREADLIB)
+  $(PTHREADLIB) $(ATOMICLIB)
 
 
 TESTS = tests

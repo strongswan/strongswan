@@ -40,6 +40,22 @@ ENUM(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_LZJH,
 /*
  * See header
  */
+bool ipsec_sa_cfg_equals(ipsec_sa_cfg_t *a, ipsec_sa_cfg_t *b)
+{
+	return a->mode == b->mode &&
+		a->reqid == b->reqid &&
+		a->policy_count == b->policy_count &&
+		a->esp.use == b->esp.use &&
+		a->esp.spi == b->esp.spi &&
+		a->ah.use == b->ah.use &&
+		a->ah.spi == b->ah.spi &&
+		a->ipcomp.transform == b->ipcomp.transform &&
+		a->ipcomp.cpi == b->ipcomp.cpi;
+}
+
+/*
+ * See header
+ */
 bool mark_from_string(const char *value, mark_t *mark)
 {
 	char *endptr;

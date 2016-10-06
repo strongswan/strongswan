@@ -84,7 +84,7 @@ struct simaka_manager_t {
 	 * @param ck		buffer receiving encryption key ck
 	 * @param ik		buffer receiving integrity key ik
 	 * @param res		buffer receiving authentication result res
-	 * @param res_len	nubmer of bytes written to res buffer
+	 * @param res_len	number of bytes written to res buffer
 	 * @return			SUCCESS, FAILED, or INVALID_STATE if out of sync
 	 */
 	status_t (*card_get_quintuplet)(simaka_manager_t *this, identification_t *id,

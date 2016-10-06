@@ -57,12 +57,12 @@ static char* lookup_algorithm(uint16_t ikev2_algo, size_t *key_size)
 		/* maximum key size */
 		size_t key_max;
 	} mappings[] = {
-		{ENCR_DES, 			"des",			 8,		 8,		  8},
-		{ENCR_3DES, 		"des3",			24,		24,		 24},
-		{ENCR_RC5, 			"rc5", 			16,		 5,		255},
-		{ENCR_IDEA, 		"idea",			16,		16,		 16},
-		{ENCR_CAST, 		"cast",			16,		 5,		 16},
-		{ENCR_BLOWFISH, 	"blowfish",		16,		 5,		 56},
+		{ENCR_DES, 			"des-cbc",		 8,		 8,		  8},
+		{ENCR_3DES, 		"des-ede3-cbc",	24,		24,		 24},
+		{ENCR_RC5, 			"rc5-cbc",		16,		 5,		255},
+		{ENCR_IDEA, 		"idea-cbc",		16,		16,		 16},
+		{ENCR_CAST, 		"cast5-cbc",	16,		 5,		 16},
+		{ENCR_BLOWFISH, 	"bf-cbc",		16,		 5,		 56},
 	};
 	int i;
 
@@ -93,8 +93,10 @@ static char* lookup_algorithm(uint16_t ikev2_algo, size_t *key_size)
 static bool crypt(private_openssl_crypter_t *this, chunk_t data, chunk_t iv,
 				  chunk_t *dst, int enc)
 {
+	EVP_CIPHER_CTX *ctx;
 	int len;
 	u_char *out;
+	bool success = FALSE;
 
 	out = data.ptr;
 	if (dst)
@@ -102,16 +104,19 @@ static bool crypt(private_openssl_crypter_t *this, chunk_t data, chunk_t iv,
 		*dst = chunk_alloc(data.len);
 		out = dst->ptr;
 	}
-	EVP_CIPHER_CTX ctx;
-	EVP_CIPHER_CTX_init(&ctx);
-	return EVP_CipherInit_ex(&ctx, this->cipher, NULL, NULL, NULL, enc) &&
-		   EVP_CIPHER_CTX_set_padding(&ctx, 0) /* disable padding */ &&
-		   EVP_CIPHER_CTX_set_key_length(&ctx, this->key.len) &&
-		   EVP_CipherInit_ex(&ctx, NULL, NULL, this->key.ptr, iv.ptr, enc) &&
-		   EVP_CipherUpdate(&ctx, out, &len, data.ptr, data.len) &&
-		   /* since padding is disabled this does nothing */
-		   EVP_CipherFinal_ex(&ctx, out + len, &len) &&
-		   EVP_CIPHER_CTX_cleanup(&ctx);
+	ctx = EVP_CIPHER_CTX_new();
+	if (EVP_CipherInit_ex(ctx, this->cipher, NULL, NULL, NULL, enc) &&
+		EVP_CIPHER_CTX_set_padding(ctx, 0) /* disable padding */ &&
+		EVP_CIPHER_CTX_set_key_length(ctx, this->key.len) &&
+		EVP_CipherInit_ex(ctx, NULL, NULL, this->key.ptr, iv.ptr, enc) &&
+		EVP_CipherUpdate(ctx, out, &len, data.ptr, data.len) &&
+		/* since padding is disabled this does nothing */
+		EVP_CipherFinal_ex(ctx, out + len, &len))
+	{
+		success = TRUE;
+	}
+	EVP_CIPHER_CTX_free(ctx);
+	return success;
 }
 
 METHOD(crypter_t, decrypt, bool,
@@ -129,13 +134,13 @@ METHOD(crypter_t, encrypt, bool,
 METHOD(crypter_t, get_block_size, size_t,
 	private_openssl_crypter_t *this)
 {
-	return this->cipher->block_size;
+	return EVP_CIPHER_block_size(this->cipher);
 }
 
 METHOD(crypter_t, get_iv_size, size_t,
 	private_openssl_crypter_t *this)
 {
-	return this->cipher->iv_len;
+	return EVP_CIPHER_iv_length(this->cipher);
 }
 
 METHOD(crypter_t, get_key_size, size_t,
@@ -193,13 +198,13 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 					key_size = 16;
 					/* FALL */
 				case 16:        /* AES 128 */
-					this->cipher = EVP_get_cipherbyname("aes128");
+					this->cipher = EVP_get_cipherbyname("aes-128-cbc");
 					break;
 				case 24:        /* AES-192 */
-					this->cipher = EVP_get_cipherbyname("aes192");
+					this->cipher = EVP_get_cipherbyname("aes-192-cbc");
 					break;
 				case 32:        /* AES-256 */
-					this->cipher = EVP_get_cipherbyname("aes256");
+					this->cipher = EVP_get_cipherbyname("aes-256-cbc");
 					break;
 				default:
 					free(this);
@@ -213,13 +218,13 @@ openssl_crypter_t *openssl_crypter_create(encryption_algorithm_t algo,
 					key_size = 16;
 					/* FALL */
 				case 16:        /* CAMELLIA 128 */
-					this->cipher = EVP_get_cipherbyname("camellia128");
+					this->cipher = EVP_get_cipherbyname("camellia-128-cbc");
 					break;
 				case 24:        /* CAMELLIA 192 */
-					this->cipher = EVP_get_cipherbyname("camellia192");
+					this->cipher = EVP_get_cipherbyname("camellia-192-cbc");
 					break;
 				case 32:        /* CAMELLIA 256 */
-					this->cipher = EVP_get_cipherbyname("camellia256");
+					this->cipher = EVP_get_cipherbyname("camellia-256-cbc");
 					break;
 				default:
 					free(this);

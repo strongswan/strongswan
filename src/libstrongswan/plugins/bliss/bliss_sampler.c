@@ -17,7 +17,7 @@
 
 typedef struct private_bliss_sampler_t private_bliss_sampler_t;
 
-#include <crypto/mgf1/mgf1_bitspender.h>
+#include <crypto/xofs/xof_bitspender.h>
 
 /**
  * Private data of a bliss_sampler_t object.
@@ -32,12 +32,12 @@ struct private_bliss_sampler_t {
 	/**
 	 * BLISS parameter the rejection sampling is to be based on
 	 */
-	bliss_param_set_t *set;
+	const bliss_param_set_t *set;
 
 	/**
 	 * Bitspender used for random rejection sampling
 	 */
-	mgf1_bitspender_t *bitspender;
+	xof_bitspender_t *bitspender;
 
 };
 
@@ -45,7 +45,8 @@ METHOD(bliss_sampler_t, bernoulli_exp, bool,
 	private_bliss_sampler_t *this, uint32_t x, bool *accepted)
 {
 	uint32_t x_mask;
-	uint8_t *c, u;
+	uint8_t u;
+	const uint8_t *c;
 	int i;
 
 	x_mask = 1 << (this->set->c_rows - 1);
@@ -221,13 +222,13 @@ METHOD(bliss_sampler_t, destroy, void,
 /**
  * See header.
  */
-bliss_sampler_t *bliss_sampler_create(hash_algorithm_t alg, chunk_t seed,
-									  bliss_param_set_t *set)
+bliss_sampler_t *bliss_sampler_create(ext_out_function_t alg, chunk_t seed,
+									  const bliss_param_set_t *set)
 {
 	private_bliss_sampler_t *this;
-	mgf1_bitspender_t *bitspender;
+	xof_bitspender_t *bitspender;
 
-	bitspender = mgf1_bitspender_create(alg, seed, FALSE);
+	bitspender = xof_bitspender_create(alg, seed, FALSE);
 	if (!bitspender)
 	{
 		return NULL;
