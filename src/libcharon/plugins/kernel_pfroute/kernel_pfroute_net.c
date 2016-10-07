@@ -1448,7 +1448,8 @@ static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
 				}
 				break;
 			case RTAX_GATEWAY:
-				if (gateway)
+				if (gateway &&
+					gateway->get_family(gateway) == dst->get_family(dst))
 				{
 					add_rt_addr(&msg.hdr, RTA_GATEWAY, gateway);
 				}
