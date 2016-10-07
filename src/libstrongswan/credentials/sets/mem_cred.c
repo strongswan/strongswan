@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2010-2015 Tobias Brunner
- * Hochschule fuer Technik Rapperwsil
+ * Copyright (C) 2010-2016 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperwsil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -223,6 +224,7 @@ METHOD(mem_cred_t, add_crl, bool,
 	{
 		if (current->get_type(current) == CERT_X509_CRL)
 		{
+			chunk_t base;
 			bool found = FALSE;
 			crl_t *crl_c = (crl_t*)current;
 			chunk_t authkey = crl->get_authKeyIdentifier(crl);
@@ -246,17 +248,37 @@ METHOD(mem_cred_t, add_crl, bool,
 			}
 			if (found)
 			{
-				new = crl_is_newer(crl, crl_c);
-				if (new)
+				/* we keep at most one delta CRL for each base CRL */
+				if (crl->is_delta_crl(crl, &base))
 				{
-					this->untrusted->remove_at(this->untrusted, enumerator);
-					current->destroy(current);
+					if (!crl_c->is_delta_crl(crl_c, NULL))
+					{
+						if (chunk_equals(base, crl_c->get_serial(crl_c)))
+						{	/* keep the added delta and the existing base CRL
+							 * but check if this is the newest delta CRL for
+							 * the same base */
+							continue;
+						}
+					}
 				}
-				else
+				else if (crl_c->is_delta_crl(crl_c, &base))
+				{
+					if (chunk_equals(base, crl->get_serial(crl)))
+					{	/* keep the existing delta and the added base CRL,
+						 * but check if we don't store it already */
+						continue;
+					}
+				}
+				new = crl_is_newer(crl, crl_c);
+				if (!new)
 				{
 					cert->destroy(cert);
+					break;
 				}
-				break;
+				/* we remove the existing older CRL but there might be other
+				 * delta or base CRLs we can replace */
+				this->untrusted->remove_at(this->untrusted, enumerator);
+				current->destroy(current);
 			}
 		}
 	}
