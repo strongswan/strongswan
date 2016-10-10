@@ -2442,6 +2442,25 @@ static bool is_current_path_valid(private_ike_sa_t *this)
 {
 	bool valid = FALSE;
 	host_t *src;
+
+	if (supports_extension(this, EXT_MOBIKE) &&
+		lib->settings->get_bool(lib->settings,
+								"%s.prefer_best_path", FALSE, lib->ns))
+	{
+		/* check if the current path is the best path; migrate otherwise */
+		src = charon->kernel->get_source_addr(charon->kernel, this->other_host,
+											  NULL);
+		if (src)
+		{
+			valid = src->ip_equals(src, this->my_host);
+			src->destroy(src);
+		}
+		if (!valid)
+		{
+			DBG1(DBG_IKE, "old path is not preferred anymore");
+		}
+		return valid;
+	}
 	src = charon->kernel->get_source_addr(charon->kernel, this->other_host,
 										  this->my_host);
 	if (src)
@@ -2451,6 +2470,10 @@ static bool is_current_path_valid(private_ike_sa_t *this)
 			valid = TRUE;
 		}
 		src->destroy(src);
+	}
+	if (!valid)
+	{
+		DBG1(DBG_IKE, "old path is not available anymore, try to find another");
 	}
 	return valid;
 }
@@ -2478,7 +2501,6 @@ static bool is_any_path_valid(private_ike_sa_t *this)
 			break;
 	}
 
-	DBG1(DBG_IKE, "old path is not available anymore, try to find another");
 	enumerator = create_peer_address_enumerator(this);
 	while (enumerator->enumerate(enumerator, &addr))
 	{

@@ -260,6 +260,16 @@ charon.port_nat_t = 4500
 	allocated.  Has to be different from **charon.port**, otherwise a random
 	port will be allocated.
 
+charon.prefer_best_path = no
+	Wether to prefer updating SAs to the path with the best route.
+
+	By default, charon keeps SAs on the routing path with addresses it
+	previously used if that path is still usable. By setting this option to
+	yes, it tries more aggressively to update SAs with MOBIKE on routing
+	priority changes using the cheapest path. This adds more noise, but allows
+	to dynamically adapt SAs to routing priority changes. This option has no
+	effect if MOBIKE is not supported or disabled.
+
 charon.prefer_configured_proposals = yes
 	Prefer locally configured proposals for	IKE/IPsec over supplied ones as
 	responder (disabling this can avoid keying retries due to INVALID_KE_PAYLOAD
