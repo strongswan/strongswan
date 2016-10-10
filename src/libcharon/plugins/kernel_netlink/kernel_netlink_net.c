@@ -795,6 +795,68 @@ static u_char get_scope(host_t *ip)
 }
 
 /**
+ * Determine the label of the given unicast IP address.
+ *
+ * We currently only support the default table given in RFC 6724:
+ *
+ *  Prefix        Precedence Label
+ *  ::1/128               50     0
+ *  ::/0                  40     1
+ *  ::ffff:0:0/96         35     4
+ *  2002::/16             30     2
+ *  2001::/32              5     5
+ *  fc00::/7               3    13
+ *  ::/96                  1     3
+ *  fec0::/10              1    11
+ *  3ffe::/16              1    12
+ */
+static u_char get_label(host_t *ip)
+{
+	struct {
+		chunk_t net;
+		u_char prefix;
+		u_char label;
+	} priorities[] = {
+		/* priority table ordered by prefix */
+		/* ::1/128 */
+		{ chunk_from_chars(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+						   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01), 128, 0 },
+		/* ::ffff:0:0/96 */
+		{ chunk_from_chars(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+						   0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00), 96, 4 },
+		/* ::/96 */
+		{ chunk_from_chars(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+						   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00), 96, 3 },
+		/* 2001::/32 */
+		{ chunk_from_chars(0x20, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+						   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00), 32, 5 },
+		/* 2002::/16 */
+		{ chunk_from_chars(0x20, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+						   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00), 16, 2 },
+		/* 3ffe::/16 */
+		{ chunk_from_chars(0x3f, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+						   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00), 16, 12 },
+		/* fec0::/10 */
+		{ chunk_from_chars(0xfe, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+						   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00), 10, 11 },
+		/* fc00::/7 */
+		{ chunk_from_chars(0xfc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+						   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00), 7, 13 },
+	};
+	int i;
+
+	for (i = 0; i < countof(priorities); i++)
+	{
+		if (host_in_subnet(ip, priorities[i].net, priorities[i].prefix))
+		{
+			return priorities[i].label;
+		}
+	}
+	/* ::/0 */
+	return 1;
+}
+
+/**
  * Returns the length of the common prefix in bits up to the length of a's
  * prefix, defined by RFC 6724 as the portion of the address not including the
  * interface ID, which is 64-bit for most unicast addresses (see RFC 4291).
@@ -829,7 +891,7 @@ static u_char common_prefix(host_t *a, host_t *b)
 static bool is_address_better(private_kernel_netlink_net_t *this,
 							  addr_entry_t *a, addr_entry_t *b, host_t *d)
 {
-	u_char sa, sb, sd, pa, pb;
+	u_char sa, sb, sd, la, lb, ld, pa, pb;
 
 	/* rule 2: prefer appropriate scope */
 	if (d)
@@ -858,9 +920,22 @@ static bool is_address_better(private_kernel_netlink_net_t *this,
 	/* rule 4 is not applicable as we don't know if an address is a home or
 	 * care-of addresses.
 	 * rule 5 does not apply as we only compare addresses from one interface
-	 * rule 6 requires a policy table (optionally configurable) to match
-	 * configurable labels
 	 */
+	/* rule 6: prefer matching label */
+	if (d)
+	{
+		la = get_label(a->ip);
+		lb = get_label(b->ip);
+		ld = get_label(d);
+		if (la == ld && lb != ld)
+		{
+			return FALSE;
+		}
+		else if (lb == ld && la != ld)
+		{
+			return TRUE;
+		}
+	}
 	/* rule 7: prefer temporary addresses (WE REVERSE THIS BY DEFAULT!) */
 	if ((a->flags & IFA_F_TEMPORARY) != (b->flags & IFA_F_TEMPORARY))
 	{
