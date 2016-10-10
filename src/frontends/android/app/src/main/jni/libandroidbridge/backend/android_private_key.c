@@ -77,16 +77,16 @@ METHOD(private_key_t, sign, bool,
 				case SIGN_RSA_EMSA_PKCS1_SHA1:
 					method = "SHA1withRSA";
 					break;
-				case SIGN_RSA_EMSA_PKCS1_SHA224:
+				case SIGN_RSA_EMSA_PKCS1_SHA2_224:
 					method = "SHA224withRSA";
 					break;
-				case SIGN_RSA_EMSA_PKCS1_SHA256:
+				case SIGN_RSA_EMSA_PKCS1_SHA2_256:
 					method = "SHA256withRSA";
 					break;
-				case SIGN_RSA_EMSA_PKCS1_SHA384:
+				case SIGN_RSA_EMSA_PKCS1_SHA2_384:
 					method = "SHA384withRSA";
 					break;
-				case SIGN_RSA_EMSA_PKCS1_SHA512:
+				case SIGN_RSA_EMSA_PKCS1_SHA2_512:
 					method = "SHA512withRSA";
 					break;
 				default:
