@@ -37,7 +37,7 @@ static int initiate(vici_conn_t *conn)
 	vici_req_t *req;
 	vici_res_t *res;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
-	char *arg, *child = NULL;
+	char *arg, *child = NULL, *ike = NULL;
 	int ret = 0, timeout = 0, level = 1;
 
 	while (TRUE)
@@ -54,6 +54,9 @@ static int initiate(vici_conn_t *conn)
 				continue;
 			case 'c':
 				child = arg;
+				continue;
+			case 'i':
+				ike = arg;
 				continue;
 			case 't':
 				timeout = atoi(arg);
@@ -79,6 +82,10 @@ static int initiate(vici_conn_t *conn)
 	if (child)
 	{
 		vici_add_key_valuef(req, "child", "%s", child);
+	}
+	if (ike)
+	{
+		vici_add_key_valuef(req, "ike", "%s", ike);
 	}
 	if (timeout)
 	{
@@ -121,10 +128,11 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		initiate, 'i', "initiate", "initiate a connection",
-		{"--child <name> [--timeout <s>] [--raw|--pretty]"},
+		{"--child <name> [--ike <name>] [--timeout <s>] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"child",		'c', 1, "initate a CHILD_SA configuration"},
+			{"ike",			'i', 1, "name of the connection to which the child belongs"},
 			{"timeout",		't', 1, "timeout in seconds before detaching"},
 			{"raw",			'r', 0, "dump raw response message"},
 			{"pretty",		'P', 0, "dump raw response message in pretty print"},

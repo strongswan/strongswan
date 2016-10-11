@@ -22,7 +22,7 @@ static int manage_policy(vici_conn_t *conn, char *label)
 	vici_req_t *req;
 	vici_res_t *res;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
-	char *arg, *child = NULL;
+	char *arg, *child = NULL, *ike = NULL;
 	int ret = 0;
 
 	while (TRUE)
@@ -40,6 +40,9 @@ static int manage_policy(vici_conn_t *conn, char *label)
 			case 'c':
 				child = arg;
 				continue;
+			case 'i':
+				ike = arg;
+				continue;
 			case EOF:
 				break;
 			default:
@@ -51,6 +54,10 @@ static int manage_policy(vici_conn_t *conn, char *label)
 	if (child)
 	{
 		vici_add_key_valuef(req, "child", "%s", child);
+	}
+	if (ike)
+	{
+		vici_add_key_valuef(req, "ike", "%s", ike);
 	}
 	res = vici_submit(req, conn);
 	if (!res)
@@ -98,10 +105,11 @@ static void __attribute__ ((constructor))reg_uninstall()
 {
 	command_register((command_t) {
 		uninstall, 'u', "uninstall", "uninstall a trap or shunt policy",
-		{"--child <name> [--raw|--pretty]"},
+		{"--child <name> [--ike <name>] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"child",		'c', 1, "CHILD_SA configuration to uninstall"},
+			{"ike",			'i', 1, "name of the connection to which the child belongs"},
 			{"raw",			'r', 0, "dump raw response message"},
 			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
@@ -115,10 +123,11 @@ static void __attribute__ ((constructor))reg_install()
 {
 	command_register((command_t) {
 		install, 'p', "install", "install a trap or shunt policy",
-		{"--child <name> [--raw|--pretty]"},
+		{"--child <name> [--ike <name>] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"child",		'c', 1, "CHILD_SA configuration to install"},
+			{"ike",			'i', 1, "name of the connection to which the child belongs"},
 			{"raw",			'r', 0, "dump raw response message"},
 			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
