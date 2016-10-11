@@ -166,6 +166,17 @@ class Session(object):
         """
         self.handler.request("load-shared", secret)
 
+    def flush_certs(self, filter=None):
+        """Flush the volatile certificate cache.
+
+        Flush the certificate stored temporarily in the cache. The filter
+        allows to flush only a certain type of certificates, e.g. CRLs.
+
+        :param filter: flush only certificates of a given type (optional)
+        :type filter: dict
+        """
+        self.handler.request("flush-certs", filter)
+
     def clear_creds(self):
         """Clear credentials loaded over vici.
 

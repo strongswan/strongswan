@@ -666,10 +666,6 @@ static status_t select_and_install(private_child_create_t *this,
 							FALSE, this->tfcv3, my_ts, other_ts);
 		}
 	}
-	chunk_clear(&integ_i);
-	chunk_clear(&integ_r);
-	chunk_clear(&encr_i);
-	chunk_clear(&encr_r);
 
 	if (status_i != SUCCESS || status_o != SUCCESS)
 	{
@@ -679,41 +675,62 @@ static status_t select_and_install(private_child_create_t *this,
 			(status_o != SUCCESS) ? "outbound " : "");
 		charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_SA_FAILED,
 						   this->child_sa);
-		return FAILED;
-	}
-
-	if (this->initiator)
-	{
-		status = this->child_sa->add_policies(this->child_sa, my_ts, other_ts);
+		status = FAILED;
 	}
 	else
 	{
-		/* use a copy of the traffic selectors, as the POST hook should not
-		 * change payloads */
-		my_ts = this->tsr->clone_offset(this->tsr,
-										offsetof(traffic_selector_t, clone));
-		other_ts = this->tsi->clone_offset(this->tsi,
-										offsetof(traffic_selector_t, clone));
-		charon->bus->narrow(charon->bus, this->child_sa,
-							NARROW_RESPONDER_POST, my_ts, other_ts);
-		if (my_ts->get_count(my_ts) == 0 || other_ts->get_count(other_ts) == 0)
+		if (this->initiator)
 		{
-			status = FAILED;
+			status = this->child_sa->add_policies(this->child_sa,
+												  my_ts, other_ts);
 		}
 		else
 		{
-			status = this->child_sa->add_policies(this->child_sa,
-												   my_ts, other_ts);
+			/* use a copy of the traffic selectors, as the POST hook should not
+			 * change payloads */
+			my_ts = this->tsr->clone_offset(this->tsr,
+										offsetof(traffic_selector_t, clone));
+			other_ts = this->tsi->clone_offset(this->tsi,
+										offsetof(traffic_selector_t, clone));
+			charon->bus->narrow(charon->bus, this->child_sa,
+								NARROW_RESPONDER_POST, my_ts, other_ts);
+			if (my_ts->get_count(my_ts) == 0 ||
+				other_ts->get_count(other_ts) == 0)
+			{
+				status = FAILED;
+			}
+			else
+			{
+				status = this->child_sa->add_policies(this->child_sa,
+													  my_ts, other_ts);
+			}
+			my_ts->destroy_offset(my_ts,
+								  offsetof(traffic_selector_t, destroy));
+			other_ts->destroy_offset(other_ts,
+								  offsetof(traffic_selector_t, destroy));
 		}
-		my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
-		other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
+			charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_POLICY_FAILED,
+							   this->child_sa);
+			status = NOT_FOUND;
+		}
+		else
+		{
+			charon->bus->child_derived_keys(charon->bus, this->child_sa,
+											this->initiator, encr_i, encr_r,
+											integ_i, integ_r);
+		}
 	}
+	chunk_clear(&integ_i);
+	chunk_clear(&integ_r);
+	chunk_clear(&encr_i);
+	chunk_clear(&encr_r);
+
 	if (status != SUCCESS)
 	{
-		DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
-		charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_POLICY_FAILED,
-						   this->child_sa);
-		return NOT_FOUND;
+		return status;
 	}
 
 	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,

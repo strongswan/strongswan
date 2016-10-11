@@ -496,6 +496,18 @@ INSERT INTO products (          /* 83 */
  'Debian 8.5 x86_64'
 );
 
+INSERT INTO products (          /* 84 */
+  name
+) VALUES (
+ 'Debian 8.6 i686'
+);
+
+INSERT INTO products (          /* 85 */
+  name
+) VALUES (
+ 'Debian 8.6 x86_64'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -1088,6 +1100,12 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   5, 83
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 85
 );
 
 INSERT INTO groups_product_defaults (

@@ -13,6 +13,7 @@ swanctl_SOURCES = \
 	commands/list_certs.c \
 	commands/list_pools.c \
 	commands/list_algs.c \
+	commands/flush_certs.c \
 	commands/load_all.c \
 	commands/load_authorities.h  commands/load_authorities.c \
 	commands/load_conns.c commands/load_conns.h \
@@ -69,6 +70,7 @@ install-data-local: swanctl.conf
 	test -e "$(DESTDIR)$(swanctldir)/x509crl" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)/x509crl" || true
 	test -e "$(DESTDIR)$(swanctldir)/x509ac" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)/x509ac" || true
 	test -e "$(DESTDIR)$(swanctldir)/pubkey" || $(INSTALL) -d "$(DESTDIR)$(swanctldir)/pubkey" || true
+	test -e "$(DESTDIR)$(swanctldir)/private" || $(INSTALL) -d -m 750 "$(DESTDIR)$(swanctldir)/private" || true
 	test -e "$(DESTDIR)$(swanctldir)/rsa" || $(INSTALL) -d -m 750 "$(DESTDIR)$(swanctldir)/rsa" || true
 	test -e "$(DESTDIR)$(swanctldir)/ecdsa" || $(INSTALL) -d -m 750 "$(DESTDIR)$(swanctldir)/ecdsa" || true
 	test -e "$(DESTDIR)$(swanctldir)/bliss" || $(INSTALL) -d -m 750 "$(DESTDIR)$(swanctldir)/bliss" || true

@@ -1,12 +1,12 @@
 carol::cat /var/log/daemon.log::authentication of .*moon.strongswan.org.* with RSA.* successful::YES
-moon ::cat /var/log/daemon.log::authentication of .*carol@strongswan.org.* with RSA_EMSA_PKCS1_SHA384 successful::YES
+moon ::cat /var/log/daemon.log::authentication of .*carol@strongswan.org.* with RSA_EMSA_PKCS1_SHA2_384 successful::YES
 moon ::ipsec status 2> /dev/null::research.*ESTABLISHED.*moon.strongswan.org.*PH_IP_CAROL::YES
 carol::ipsec status 2> /dev/null::alice.*ESTABLISHED.*PH_IP_CAROL.*moon.strongswan.org::YES
 moon ::ipsec status 2> /dev/null::research.*INSTALLED, TUNNEL::YES
 carol::ipsec status 2> /dev/null::alice.*INSTALLED, TUNNEL::YES
 carol::ipsec status 2> /dev/null::venus.*INSTALLED, TUNNEL::NO
 dave ::cat /var/log/daemon.log::authentication of .*moon.strongswan.org.* with RSA.* successful::YES
-moon ::cat /var/log/daemon.log::authentication of .*dave@strongswan.org.* with RSA_EMSA_PKCS1_SHA512 successful::YES
+moon ::cat /var/log/daemon.log::authentication of .*dave@strongswan.org.* with RSA_EMSA_PKCS1_SHA2_512 successful::YES
 moon ::ipsec status 2> /dev/null::accounting.*ESTABLISHED.*moon.strongswan.org.*PH_IP_DAVE::YES
 dave ::ipsec status 2> /dev/null::alice.*ESTABLISHED.*PH_IP_DAVE.*moon.strongswan.org::YES
 moon ::ipsec status 2> /dev/null::accounting.*INSTALLED, TUNNEL::YES

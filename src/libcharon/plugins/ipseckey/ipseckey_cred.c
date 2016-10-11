@@ -57,6 +57,8 @@ typedef struct {
 	time_t notAfter;
 	/* identity to which the IPSECKEY belongs */
 	identification_t *identity;
+	/** most recently enumerated certificate */
+	certificate_t *cert;
 } cert_enumerator_t;
 
 METHOD(enumerator_t, cert_enumerator_enumerate, bool,
@@ -91,28 +93,27 @@ METHOD(enumerator_t, cert_enumerator_enumerate, bool,
 		public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 									BUILD_BLOB_DNSKEY, key,
 									BUILD_END);
+		cur_ipseckey->destroy(cur_ipseckey);
 		if (!public)
 		{
 			DBG1(DBG_CFG, "  failed to create public key from IPSECKEY");
-			cur_ipseckey->destroy(cur_ipseckey);
 			continue;
 		}
-
-		*cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
-								   CERT_TRUSTED_PUBKEY,
-								   BUILD_PUBLIC_KEY, public,
-								   BUILD_SUBJECT, this->identity,
-								   BUILD_NOT_BEFORE_TIME, this->notBefore,
-								   BUILD_NOT_AFTER_TIME, this->notAfter,
-								   BUILD_END);
-		if (*cert == NULL)
+		DESTROY_IF(this->cert);
+		this->cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										CERT_TRUSTED_PUBKEY,
+										BUILD_PUBLIC_KEY, public,
+										BUILD_SUBJECT, this->identity,
+										BUILD_NOT_BEFORE_TIME, this->notBefore,
+										BUILD_NOT_AFTER_TIME, this->notAfter,
+										BUILD_END);
+		public->destroy(public);
+		if (!this->cert)
 		{
 			DBG1(DBG_CFG, "  failed to create certificate from IPSECKEY");
-			cur_ipseckey->destroy(cur_ipseckey);
-			public->destroy(public);
 			continue;
 		}
-		cur_ipseckey->destroy(cur_ipseckey);
+		*cert = this->cert;
 		return TRUE;
 	}
 	return FALSE;
@@ -121,6 +122,7 @@ METHOD(enumerator_t, cert_enumerator_enumerate, bool,
 METHOD(enumerator_t, cert_enumerator_destroy, void,
 	cert_enumerator_t *this)
 {
+	DESTROY_IF(this->cert);
 	this->inner->destroy(this->inner);
 	this->response->destroy(this->response);
 	free(this);

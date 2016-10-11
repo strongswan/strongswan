@@ -2,6 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
+ * Copyright (C) 2016 Tobias Brunner
  * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -128,7 +129,8 @@ static bool load_key(vici_conn_t *conn, command_format_options_t format,
 
 	req = vici_begin("load-key");
 
-	if (streq(type, "pkcs8"))
+	if (streq(type, "private") ||
+		streq(type, "pkcs8"))
 	{	/* as used by vici */
 		vici_add_key_valuef(req, "type", "any");
 	}
@@ -251,6 +253,7 @@ static bool determine_credtype(char *type, credential_type_t *credtype,
 		credential_type_t credtype;
 		int subtype;
 	} map[] = {
+		{ "private",		CRED_PRIVATE_KEY,		KEY_ANY,			},
 		{ "pkcs8",			CRED_PRIVATE_KEY,		KEY_ANY,			},
 		{ "rsa",			CRED_PRIVATE_KEY,		KEY_RSA,			},
 		{ "ecdsa",			CRED_PRIVATE_KEY,		KEY_ECDSA,			},
@@ -565,6 +568,7 @@ static bool load_secret(vici_conn_t *conn, settings_t *cfg,
 		"eap",
 		"xauth",
 		"ike",
+		"private",
 		"rsa",
 		"ecdsa",
 		"bliss",
@@ -700,10 +704,11 @@ int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
 	load_certs(conn, format, "x509crl",  SWANCTL_X509CRLDIR);
 	load_certs(conn, format, "pubkey",   SWANCTL_PUBKEYDIR);
 
-	load_keys(conn, format, noprompt, cfg, "rsa",   SWANCTL_RSADIR);
-	load_keys(conn, format, noprompt, cfg, "ecdsa", SWANCTL_ECDSADIR);
-	load_keys(conn, format, noprompt, cfg, "bliss", SWANCTL_BLISSDIR);
-	load_keys(conn, format, noprompt, cfg, "pkcs8", SWANCTL_PKCS8DIR);
+	load_keys(conn, format, noprompt, cfg, "private", SWANCTL_PRIVATEDIR);
+	load_keys(conn, format, noprompt, cfg, "rsa",     SWANCTL_RSADIR);
+	load_keys(conn, format, noprompt, cfg, "ecdsa",   SWANCTL_ECDSADIR);
+	load_keys(conn, format, noprompt, cfg, "bliss",   SWANCTL_BLISSDIR);
+	load_keys(conn, format, noprompt, cfg, "pkcs8",   SWANCTL_PKCS8DIR);
 
 	load_containers(conn, format, noprompt, cfg, "pkcs12", SWANCTL_PKCS12DIR);
 

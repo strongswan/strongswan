@@ -709,7 +709,7 @@ static status_t process_response(private_task_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	if (this->initiating.retransmitted)
+	if (this->initiating.retransmitted > 1)
 	{
 		packet_t *packet = NULL;
 		array_get(this->initiating.packets, 0, &packet);
@@ -1827,15 +1827,22 @@ METHOD(task_manager_t, queue_dpd, void,
 	if (this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE) &&
 		this->ike_sa->has_condition(this->ike_sa, COND_NAT_HERE))
 	{
-		/* use mobike enabled DPD to detect NAT mapping changes */
-		mobike = ike_mobike_create(this->ike_sa, TRUE);
-		mobike->dpd(mobike);
-		queue_task(this, &mobike->task);
+#ifdef ME
+		peer_cfg_t *cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		if (cfg->get_peer_id(cfg) ||
+			this->ike_sa->has_condition(this->ike_sa, COND_ORIGINAL_INITIATOR))
+#else
+		if (this->ike_sa->has_condition(this->ike_sa, COND_ORIGINAL_INITIATOR))
+#endif
+		{
+			/* use mobike enabled DPD to detect NAT mapping changes */
+			mobike = ike_mobike_create(this->ike_sa, TRUE);
+			mobike->dpd(mobike);
+			queue_task(this, &mobike->task);
+			return;
+		}
 	}
-	else
-	{
-		queue_task(this, (task_t*)ike_dpd_create(TRUE));
-	}
+	queue_task(this, (task_t*)ike_dpd_create(TRUE));
 }
 
 METHOD(task_manager_t, adopt_tasks, void,

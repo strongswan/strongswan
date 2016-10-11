@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2008-2016 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -20,6 +20,8 @@
 
 #ifndef OPENSSL_EC_PRIVATE_KEY_H_
 #define OPENSSL_EC_PRIVATE_KEY_H_
+
+#include <openssl/evp.h>
 
 #include <credentials/builder.h>
 #include <credentials/keys/private_key.h>
@@ -60,5 +62,13 @@ openssl_ec_private_key_t *openssl_ec_private_key_gen(key_type_t type,
  */
 openssl_ec_private_key_t *openssl_ec_private_key_load(key_type_t type,
 													  va_list args);
+
+/**
+ * Wrap an EVP_PKEY object of type EVP_PKEY_EC
+ *
+ * @param key		EVP_PKEY_EC key object (adopted)
+ * @return 			loaded key, NULL on failure
+ */
+private_key_t *openssl_ec_private_key_create(EVP_PKEY *key);
 
 #endif /** OPENSSL_EC_PRIVATE_KEY_H_ @}*/

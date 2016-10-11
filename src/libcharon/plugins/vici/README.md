@@ -481,6 +481,19 @@ Load a shared IKE PSK, EAP or XAuth secret into the daemon.
 		errmsg = <error string on failure>
 	}
 
+### flush-certs() ###
+
+Flushes the certificate cache. The optional type argument allows to flush
+only certificates of a given type, e.g. all cached CRLs.
+
+	{
+		type = <certificate type to filter for, X509|X509_AC|X509_CRL|
+												OCSP_RESPONSE|PUBKEY or ANY>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
 ### clear-creds() ###
 
 Clear all loaded certificate, private key and shared key credentials. This

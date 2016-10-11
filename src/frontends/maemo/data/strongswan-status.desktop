@@ -1,9 +1,0 @@
-[Desktop Entry]
-Encoding=UTF-8
-Version=1.0
-Name=strongSwan Status
-Comment=A status menu widget to control strongSwan
-Type=default
-Icon=strongswan_lock_close
-Category=permanent
-X-Path=libstrongswan-status.so

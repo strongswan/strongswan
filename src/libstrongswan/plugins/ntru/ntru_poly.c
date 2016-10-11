@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2009-2013  Security Innovation
@@ -17,7 +17,7 @@
 
 #include "ntru_poly.h"
 
-#include <crypto/mgf1/mgf1_bitspender.h>
+#include <crypto/xofs/xof_bitspender.h>
 #include <utils/debug.h>
 #include <utils/test.h>
 
@@ -290,8 +290,9 @@ static private_ntru_poly_t* ntru_poly_create(uint16_t N, uint16_t q,
 /*
  * Described in header.
  */
-ntru_poly_t *ntru_poly_create_from_seed(hash_algorithm_t alg, chunk_t seed,
-										uint8_t c_bits, uint16_t N, uint16_t q,
+ntru_poly_t *ntru_poly_create_from_seed(ext_out_function_t mgf1_type,
+										chunk_t seed, uint8_t c_bits,
+										uint16_t N, uint16_t q,
 										uint32_t indices_len_p,
 										uint32_t indices_len_m,
 										bool is_product_form)
@@ -300,9 +301,9 @@ ntru_poly_t *ntru_poly_create_from_seed(hash_algorithm_t alg, chunk_t seed,
 	int n, num_indices, index_i = 0;
 	uint32_t index, limit;
 	uint8_t *used;
-	mgf1_bitspender_t *bitspender;
+	xof_bitspender_t *bitspender;
 
-	bitspender = mgf1_bitspender_create(alg, seed, TRUE);
+	bitspender = xof_bitspender_create(mgf1_type, seed, TRUE);
 	if (!bitspender)
 	{
 	    return NULL;

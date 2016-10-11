@@ -108,7 +108,7 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator,
 	}
 	*value = cert;
 	enumerator->auth->replace(enumerator->auth, enumerator->inner,
-							  *rule, cert->get_ref(cert));
+							  *rule, cert);
 	return TRUE;
 }
 

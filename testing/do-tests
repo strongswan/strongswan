@@ -357,7 +357,7 @@ do
 
 
 	##########################################################################
-	# copy test specific configurations to uml hosts and clear auth.log files
+	# copy test specific configurations to hosts and clear log files
 	#
 
 	DBDIR=/etc/db.d
@@ -410,6 +410,16 @@ do
 	done
 
 	##########################################################################
+	# remove leak detective log on all hosts
+	#
+
+	export LEAK_DETECTIVE_LOG=/var/log/leak-detective.log
+	for host in $STRONGSWANHOSTS
+	do
+		ssh $SSHCONF root@`eval echo \\\$ipv4_$host` 'rm -f $LEAK_DETECTIVE_LOG' >/dev/null 2>&1
+	done
+
+	##########################################################################
 	# flush IPsec state on all hosts
 	#
 
@@ -426,7 +436,7 @@ do
 	echo -e "\nPRE-TEST\n" >> $CONSOLE_LOG 2>&1
 
 	eval `awk -F "::" '{
-	    if ($2 != "")
+	    if ($1 !~ /^#.*/ && $2 != "")
 	    {
 		printf("echo \"%s# %s\"; ", $1, $2)
 		printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
@@ -463,7 +473,7 @@ do
 	    command=$2
 	    pattern=$3
 	    hit=$4
-	    if (command != "")
+	    if (host !~ /^#.*/ && command != "")
 	    {
 		if (command == "tcpdump")
 		{
@@ -483,18 +493,6 @@ do
 		printf("; then STATUS=\"failed\"; fi; \n")
 	    }
 	}' $TESTDIR/evaltest.dat` >> $CONSOLE_LOG 2>&1
-
-
-	##########################################################################
-	# set counters
-	#
-
-	if [ $STATUS = "failed" ]
-	then
-	    let "failed_cnt += 1"
-	else
-	    let "passed_cnt += 1"
-	fi
 
 
 	##########################################################################
@@ -524,25 +522,34 @@ do
     <img src="../../images/$DIAGRAM" alt="$VIRTHOSTS">
 @EOF
 
+	IPTABLES_CMD_V4="echo -e '=== filter table ==='; iptables  -v -n -L; echo -e '\n=== nat table ==='; iptables  -v -n -t nat -L; echo -e '\n=== mangle table ==='; iptables  -v -n -t mangle -L"
+	IPTABLES_CMD_V6="echo -e '=== filter table ==='; ip6tables -v -n -L; echo -e '\n=== nat table ==='; ip6tables -v -n -t nat -L; echo -e '\n=== mangle table ==='; ip6tables -v -n -t mangle -L"
+
 	if [ -n "$IPV6" ]
 	then
 	    IPROUTE_CMD="ip -6 route list table $SOURCEIP_ROUTING_TABLE"
 	    IPROUTE_DSP=$IPROUTE_CMD
-	    IPTABLES_CMD="ip6tables -v -n -L"
+	    IPTABLES_CMD="$IPTABLES_CMD_V6"
 	    IPTABLES_DSP="ip6tables -L"
+	    IPTABLES_SAVE_CMD="ip6tables-save"
+	    IPTABLES_SAVE_DSP="ip6tables-save"
 	else
 	    IPROUTE_CMD="ip route list table $SOURCEIP_ROUTING_TABLE"
 	    IPROUTE_DSP=$IPROUTE_CMD
-	    IPTABLES_CMD="iptables -v -n -L"
+	    IPTABLES_CMD="$IPTABLES_CMD_V4"
 	    IPTABLES_DSP="iptables -L"
+	    IPTABLES_SAVE_CMD="iptables-save"
+	    IPTABLES_SAVE_DSP="iptables-save"
 	fi
 
 	if [ $name = "net2net-ip4-in-ip6-ikev2" -o $name = "net2net-ip6-in-ip4-ikev2" ]
 	then
 	    IPROUTE_CMD="ip route list table $SOURCEIP_ROUTING_TABLE; echo; ip -6 route list table $SOURCEIP_ROUTING_TABLE"
 	    IPROUTE_DSP="ip (-6) route list table $SOURCEIP_ROUTING_TABLE"
-	    IPTABLES_CMD="iptables -v -n -L ; echo ; ip6tables -v -n -L"
+	    IPTABLES_CMD="$IPTABLES_CMD_V4; echo; $IPTABLES_CMD_V6"
 	    IPTABLES_DSP="iptables -L ; ip6tables -L"
+	    IPTABLES_SAVE_CMD="iptables-save; echo; ip6tables-save"
+	    IPTABLES_SAVE_DSP="iptables-save ; ip6tables-save"
 	fi
 
 	for host in $DBHOSTS
@@ -605,6 +612,8 @@ do
 		    > $TESTRESULTDIR/${host}.ip.route 2>/dev/null
 	    ssh $SSHCONF $HOSTLOGIN $IPTABLES_CMD \
 		    > $TESTRESULTDIR/${host}.iptables 2>/dev/null
+		ssh $SSHCONF $HOSTLOGIN $IPTABLES_SAVE_CMD \
+		    > $TESTRESULTDIR/${host}.iptables-save 2>/dev/null
 	    chmod a+r $TESTRESULTDIR/*
 
 		if [ -n "$SWANCTL" ]
@@ -628,6 +637,7 @@ do
 	    <li><a href="$host.swanctl.pools">swanctl --list-pools</a></li>
 	    <li><a href="$host.swanctl.authorities">swanctl --list-authorities</a></li>
 	    <li><a href="$host.swanctl.stats">swanctl --stats|--list-algs</a></li>
+	    <li><a href="$host.auth.log">auth.log</a></li>
 	    <li><a href="$host.daemon.log">daemon.log</a></li>
 	  </ul>
       </td>
@@ -637,7 +647,7 @@ do
 	    <li><a href="$host.ip.state">ip -s xfrm state</a></li>
 	    <li><a href="$host.ip.route">$IPROUTE_DSP</a></li>
 	    <li><a href="$host.iptables">$IPTABLES_DSP</a></li>
-	    <li><a href="$host.auth.log">auth.log</a></li>
+	    <li><a href="$host.iptables-save">$IPTABLES_SAVE_DSP</a></li>
 	  </ul>
 	  &nbsp;
       </td>
@@ -672,6 +682,7 @@ do
 	    <li><a href="$host.ip.state">ip -s xfrm state</a></li>
 	    <li><a href="$host.ip.route">$IPROUTE_DSP</a></li>
 	    <li><a href="$host.iptables">$IPTABLES_DSP</a></li>
+	    <li><a href="$host.iptables-save">$IPTABLES_SAVE_DSP</a></li>
 	  </ul>
       </td>
     </tr>
@@ -762,7 +773,7 @@ do
 	echo -e "\nPOST-TEST\n" >> $CONSOLE_LOG 2>&1
 
 	eval `awk -F "::" '{
-	    if ($2 != "")
+	    if ($1 !~ /^#.*/ && $2 != "")
 	    {
 		printf("echo \"%s# %s\"; ", $1, $2)
 		printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
@@ -788,6 +799,25 @@ do
 			STATUS="failed"
 		fi
 	done
+
+
+	##########################################################################
+	# make sure there were no leaks
+	#
+
+	for host in $STRONGSWANHOSTS
+	do
+		eval HOSTLOGIN=root@\$ipv4_${host}
+		LEAKS=`ssh $SSHCONF $HOSTLOGIN 'cat $LEAK_DETECTIVE_LOG 2>/dev/null | grep -v "No leaks detected.*"'`
+		if [ -n "$LEAKS" ]
+		then
+			echo -e "\n$host# cat $LEAK_DETECTIVE_LOG [NO]" >> $CONSOLE_LOG
+			echo "$LEAKS" >> $CONSOLE_LOG
+			echo "<<< $host $LEAK_DETECTIVE_LOG >>>" >> $CONSOLE_LOG
+			STATUS="failed"
+		fi
+	done
+
 
 	##########################################################################
 	# get a copy of /var/log/auth.log
@@ -843,6 +873,18 @@ do
 	#
 
 	$DIR/scripts/restore-defaults $testname
+
+
+	##########################################################################
+	# set counters
+	#
+
+	if [ $STATUS = "failed" ]
+	then
+	    let "failed_cnt += 1"
+	else
+	    let "passed_cnt += 1"
+	fi
 
 
 	##########################################################################

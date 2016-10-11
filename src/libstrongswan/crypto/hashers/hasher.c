@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012-2015 Tobias Brunner
- * Copyright (C) 2015 Andreas Steffen
+ * Copyright (C) 2015-2016 Andreas Steffen
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -83,12 +83,16 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 		case OID_SHA512_WITH_RSA:
 			return HASH_SHA512;
 		case OID_SHA3_224:
+		case OID_RSASSA_PKCS1V15_WITH_SHA3_224:
 			return HASH_SHA3_224;
 		case OID_SHA3_256:
+		case OID_RSASSA_PKCS1V15_WITH_SHA3_256:
 			return HASH_SHA3_256;
 		case OID_SHA3_384:
+		case OID_RSASSA_PKCS1V15_WITH_SHA3_384:
 			return HASH_SHA3_384;
 		case OID_SHA3_512:
+		case OID_RSASSA_PKCS1V15_WITH_SHA3_512:
 			return HASH_SHA3_512;
 		default:
 			return HASH_UNKNOWN;
@@ -367,6 +371,14 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 					return OID_SHA384_WITH_RSA;
 				case HASH_SHA512:
 					return OID_SHA512_WITH_RSA;
+				case HASH_SHA3_224:
+					return OID_RSASSA_PKCS1V15_WITH_SHA3_224;
+				case HASH_SHA3_256:
+					return OID_RSASSA_PKCS1V15_WITH_SHA3_256;
+				case HASH_SHA3_384:
+					return OID_RSASSA_PKCS1V15_WITH_SHA3_384;
+				case HASH_SHA3_512:
+					return OID_RSASSA_PKCS1V15_WITH_SHA3_512;
 				default:
 					return OID_UNKNOWN;
 			}
@@ -423,27 +435,32 @@ hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme)
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 		case SIGN_ECDSA_WITH_SHA1_DER:
 			return HASH_SHA1;
-		case SIGN_RSA_EMSA_PKCS1_SHA224:
+		case SIGN_RSA_EMSA_PKCS1_SHA2_224:
 			return HASH_SHA224;
-		case SIGN_RSA_EMSA_PKCS1_SHA256:
+		case SIGN_RSA_EMSA_PKCS1_SHA2_256:
 		case SIGN_ECDSA_WITH_SHA256_DER:
 		case SIGN_ECDSA_256:
 		case SIGN_BLISS_WITH_SHA2_256:
 			return HASH_SHA256;
-		case SIGN_RSA_EMSA_PKCS1_SHA384:
+		case SIGN_RSA_EMSA_PKCS1_SHA2_384:
 		case SIGN_ECDSA_WITH_SHA384_DER:
 		case SIGN_ECDSA_384:
 		case SIGN_BLISS_WITH_SHA2_384:
 			return HASH_SHA384;
-		case SIGN_RSA_EMSA_PKCS1_SHA512:
+		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
 		case SIGN_ECDSA_WITH_SHA512_DER:
 		case SIGN_ECDSA_521:
 		case SIGN_BLISS_WITH_SHA2_512:
 			return HASH_SHA512;
+		case SIGN_RSA_EMSA_PKCS1_SHA3_224:
+			return HASH_SHA3_224;
+		case SIGN_RSA_EMSA_PKCS1_SHA3_256:
 		case SIGN_BLISS_WITH_SHA3_256:
 			return HASH_SHA3_256;
+		case SIGN_RSA_EMSA_PKCS1_SHA3_384:
 		case SIGN_BLISS_WITH_SHA3_384:
 			return HASH_SHA3_384;
+		case SIGN_RSA_EMSA_PKCS1_SHA3_512:
 		case SIGN_BLISS_WITH_SHA3_512:
 			return HASH_SHA3_512;
 	}

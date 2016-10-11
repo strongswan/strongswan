@@ -348,10 +348,6 @@ static bool install(private_quick_mode_t *this)
 									this->initiator, FALSE, FALSE, tsr, tsi);
 		}
 	}
-	chunk_clear(&integ_i);
-	chunk_clear(&integ_r);
-	chunk_clear(&encr_i);
-	chunk_clear(&encr_r);
 
 	if (status_i != SUCCESS || status_o != SUCCESS)
 	{
@@ -361,22 +357,38 @@ static bool install(private_quick_mode_t *this)
 			(status_o != SUCCESS) ? "outbound " : "");
 		tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
 		tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
-		return FALSE;
-	}
-
-	if (this->initiator)
-	{
-		status = this->child_sa->add_policies(this->child_sa, tsi, tsr);
+		status = FAILED;
 	}
 	else
 	{
-		status = this->child_sa->add_policies(this->child_sa, tsr, tsi);
+		if (this->initiator)
+		{
+			status = this->child_sa->add_policies(this->child_sa, tsi, tsr);
+		}
+		else
+		{
+			status = this->child_sa->add_policies(this->child_sa, tsr, tsi);
+		}
+		tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+		tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
+		if (status != SUCCESS)
+		{
+			DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
+		}
+		else
+		{
+			charon->bus->child_derived_keys(charon->bus, this->child_sa,
+											this->initiator, encr_i, encr_r,
+											integ_i, integ_r);
+		}
 	}
-	tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
-	tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
+	chunk_clear(&integ_i);
+	chunk_clear(&integ_r);
+	chunk_clear(&encr_i);
+	chunk_clear(&encr_r);
+
 	if (status != SUCCESS)
 	{
-		DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
 		return FALSE;
 	}
 

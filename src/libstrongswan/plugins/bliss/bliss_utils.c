@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,7 +17,7 @@
 
 #include <asn1/asn1.h>
 #include <crypto/hashers/hasher.h>
-#include <crypto/mgf1/mgf1_bitspender.h>
+#include <crypto/xofs/xof_bitspender.h>
 #include <utils/debug.h>
 
 /**
@@ -56,7 +56,7 @@ void bliss_utils_round_and_drop(const bliss_param_set_t *set,
 /**
  * See header.
  */
-bool bliss_utils_generate_c(hash_algorithm_t alg, chunk_t data_hash,
+bool bliss_utils_generate_c(ext_out_function_t alg, chunk_t data_hash,
 							uint16_t *ud, const bliss_param_set_t *set,
 							uint16_t *c_indices)
 {
@@ -65,7 +65,7 @@ bool bliss_utils_generate_c(hash_algorithm_t alg, chunk_t data_hash,
 	uint32_t index;
 	uint8_t *seed_pos;
 	chunk_t seed;
-	mgf1_bitspender_t *bitspender;
+	xof_bitspender_t *bitspender;
 
 	seed = chunk_alloca(data_hash.len + set->n * sizeof(uint16_t));
 
@@ -80,7 +80,7 @@ bool bliss_utils_generate_c(hash_algorithm_t alg, chunk_t data_hash,
 		seed_pos += sizeof(uint16_t);
 	}
 
-	bitspender = mgf1_bitspender_create(alg, seed, FALSE);
+	bitspender = xof_bitspender_create(alg, seed, FALSE);
 	if (!bitspender)
 	{
 	    return NULL;

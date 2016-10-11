@@ -1,7 +1,0 @@
-# libraries
-usr/lib/hildon-control-panel/libstrongswan-settings.so*
-usr/lib/hildon-desktop/libstrongswan-status.so*
-# *.desktop files
-usr/share/applications
-# icons
-usr/share/icons/hicolor

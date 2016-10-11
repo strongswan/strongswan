@@ -23,10 +23,6 @@
 #include <library.h>
 #include <credentials/sets/mem_cred.h>
 
-#ifdef OPENSSL_IS_BORINGSSL
-#define EVP_PKEY_base_id(p) EVP_PKEY_type(p->type)
-#endif
-
 typedef struct private_pkcs12_t private_pkcs12_t;
 
 /**

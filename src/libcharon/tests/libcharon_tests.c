@@ -32,6 +32,22 @@ static test_configuration_t tests[] = {
 	{ .suite = NULL, }
 };
 
+static void initialize_logging()
+{
+	int level = LEVEL_SILENT;
+	char *verbosity;
+
+	verbosity = getenv("TESTS_VERBOSITY");
+	if (verbosity)
+	{
+		level = atoi(verbosity);
+	}
+	lib->settings->set_int(lib->settings, "%s.filelog.stderr.default",
+			lib->settings->get_int(lib->settings, "%s.filelog.stderr.default",
+								   level, lib->ns), lib->ns);
+	charon->load_loggers(charon, NULL, TRUE);
+}
+
 static bool test_runner_init(bool init)
 {
 	if (init)
@@ -39,6 +55,7 @@ static bool test_runner_init(bool init)
 		char *plugins, *plugindir;
 
 		libcharon_init();
+		initialize_logging();
 
 		plugins = getenv("TESTS_PLUGINS") ?:
 					lib->settings->get_str(lib->settings,

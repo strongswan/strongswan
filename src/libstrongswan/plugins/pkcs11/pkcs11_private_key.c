@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Tobias Brunner
+ * Copyright (C) 2011-2016 Tobias Brunner
  * Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2010 Martin Willi
@@ -14,6 +14,27 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
+ */
+/*
+ * Copyright (C) 2016 EDF S.A.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 #include "pkcs11_private_key.h"
@@ -112,13 +133,13 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme,
 	} mappings[] = {
 		{SIGN_RSA_EMSA_PKCS1_NULL,		{CKM_RSA_PKCS,			NULL, 0},
 		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_256,	{CKM_SHA256_RSA_PKCS,	NULL, 0},
+		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_384,	{CKM_SHA384_RSA_PKCS,	NULL, 0},
+		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_512,	{CKM_SHA512_RSA_PKCS,	NULL, 0},
+		 KEY_RSA, 0,									   HASH_UNKNOWN},
 		{SIGN_RSA_EMSA_PKCS1_SHA1,		{CKM_SHA1_RSA_PKCS,		NULL, 0},
-		 KEY_RSA, 0,									   HASH_UNKNOWN},
-		{SIGN_RSA_EMSA_PKCS1_SHA256,	{CKM_SHA256_RSA_PKCS,	NULL, 0},
-		 KEY_RSA, 0,									   HASH_UNKNOWN},
-		{SIGN_RSA_EMSA_PKCS1_SHA384,	{CKM_SHA384_RSA_PKCS,	NULL, 0},
-		 KEY_RSA, 0,									   HASH_UNKNOWN},
-		{SIGN_RSA_EMSA_PKCS1_SHA512,	{CKM_SHA512_RSA_PKCS,	NULL, 0},
 		 KEY_RSA, 0,									   HASH_UNKNOWN},
 		{SIGN_RSA_EMSA_PKCS1_MD5,		{CKM_MD5_RSA_PKCS,		NULL, 0},
 		 KEY_RSA, 0,									   HASH_UNKNOWN},
@@ -496,6 +517,120 @@ static pkcs11_library_t* find_lib_by_keyid(chunk_t keyid, int *slot,
 }
 
 /**
+ * Find the PKCS#11 lib and CKA_ID of the certificate object of a given
+ * subjectKeyIdentifier and optional slot
+ */
+static pkcs11_library_t* find_lib_and_keyid_by_skid(chunk_t keyid_chunk,
+													chunk_t *ckaid, int *slot)
+{
+	CK_OBJECT_CLASS class = CKO_CERTIFICATE;
+	CK_CERTIFICATE_TYPE type = CKC_X_509;
+	CK_ATTRIBUTE tmpl[] = {
+		{CKA_CLASS, &class, sizeof(class)},
+		{CKA_CERTIFICATE_TYPE, &type, sizeof(type)},
+	};
+	CK_ATTRIBUTE attr[] = {
+		{CKA_VALUE, NULL, 0},
+		{CKA_ID, NULL, 0},
+	};
+	CK_OBJECT_HANDLE object;
+	CK_SESSION_HANDLE session;
+	CK_RV rv;
+	pkcs11_manager_t *manager;
+	enumerator_t *enumerator, *certs;
+	identification_t *keyid;
+	pkcs11_library_t *p11, *found = NULL;
+	CK_SLOT_ID current;
+	linked_list_t *raw;
+	certificate_t *cert;
+	struct {
+		chunk_t value;
+		chunk_t ckaid;
+	} *entry;
+
+	manager = lib->get(lib, "pkcs11-manager");
+	if (!manager)
+	{
+		return NULL;
+	}
+
+	keyid = identification_create_from_encoding(ID_KEY_ID, keyid_chunk);
+	/* store result in a temporary list, avoid recursive operation */
+	raw = linked_list_create();
+
+	enumerator = manager->create_token_enumerator(manager);
+	while (enumerator->enumerate(enumerator, &p11, &current))
+	{
+		if (*slot != -1 && *slot != current)
+		{
+			continue;
+		}
+		rv = p11->f->C_OpenSession(current, CKF_SERIAL_SESSION, NULL, NULL,
+								   &session);
+		if (rv != CKR_OK)
+		{
+			DBG1(DBG_CFG, "opening PKCS#11 session failed: %N",
+				 ck_rv_names, rv);
+			continue;
+		}
+		certs = p11->create_object_enumerator(p11, session, tmpl, countof(tmpl),
+											  attr, countof(attr));
+		while (certs->enumerate(certs, &object))
+		{
+			INIT(entry,
+				.value = chunk_clone(
+							chunk_create(attr[0].pValue, attr[0].ulValueLen)),
+				.ckaid = chunk_clone(
+							chunk_create(attr[1].pValue, attr[1].ulValueLen)),
+			);
+			raw->insert_last(raw, entry);
+		}
+		certs->destroy(certs);
+
+		while (raw->remove_first(raw, (void**)&entry) == SUCCESS)
+		{
+			if (!found)
+			{
+				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										  CERT_X509, BUILD_BLOB_ASN1_DER,
+										  entry->value, BUILD_END);
+				if (cert)
+				{
+					if (cert->has_subject(cert, keyid))
+					{
+						DBG1(DBG_CFG, "found cert with keyid '%#B' on PKCS#11 "
+							 "token '%s':%d", &keyid_chunk, p11->get_name(p11),
+							 current);
+						found = p11;
+						*ckaid = chunk_clone(entry->ckaid);
+						*slot = current;
+					}
+					cert->destroy(cert);
+				}
+				else
+				{
+					DBG1(DBG_CFG, "parsing cert with CKA_ID '%#B' on PKCS#11 "
+						 "token '%s':%d failed", &entry->ckaid,
+						 p11->get_name(p11), current);
+				}
+			}
+			chunk_free(&entry->value);
+			chunk_free(&entry->ckaid);
+			free(entry);
+		}
+		p11->f->C_CloseSession(session);
+		if (found)
+		{
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	keyid->destroy(keyid);
+	raw->destroy(raw);
+	return found;
+}
+
+/**
  * Find the key on the token
  */
 static bool find_key(private_pkcs11_private_key_t *this, chunk_t keyid)
@@ -645,7 +780,7 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 {
 	private_pkcs11_private_key_t *this;
 	char *module = NULL;
-	chunk_t keyid = chunk_empty;
+	chunk_t keyid = chunk_empty, ckaid = chunk_empty;
 	int slot = -1;
 	CK_RV rv;
 
@@ -713,6 +848,10 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		}
 		if (!this->lib)
 		{
+			this->lib = find_lib_and_keyid_by_skid(keyid, &ckaid, &slot);
+		}
+		if (!this->lib)
+		{
 			DBG1(DBG_CFG, "no PKCS#11 module found having a keyid %#B", &keyid);
 			free(this);
 			return NULL;
@@ -738,8 +877,17 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		return NULL;
 	}
 
+	if (ckaid.ptr)
+	{
+		DBG1(DBG_CFG, "using CKA_ID '%#B' for key with keyid '%#B'",
+			 &ckaid, &keyid);
+		keyid = ckaid;
+	}
+
 	if (!find_key(this, keyid))
 	{
+		DBG1(DBG_CFG, "did not find the key with %s '%#B'",
+			 ckaid.ptr ? "CKA_ID" : "keyid", &keyid);
 		destroy(this);
 		return NULL;
 	}
@@ -751,11 +899,11 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args)
 		if (!this->pubkey)
 		{
 			DBG1(DBG_CFG, "no public key or certificate found for private key "
-				 "on '%s':%d", module, slot);
+				 "(%s '%#B') on '%s':%d", ckaid.ptr ? "CKA_ID" : "keyid",
+				 &keyid, module, slot);
 			destroy(this);
 			return NULL;
 		}
 	}
-
 	return &this->public;
 }

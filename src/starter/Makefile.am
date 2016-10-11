@@ -39,16 +39,12 @@ starter_LDADD = \
 	libstarter.la \
 	$(SOCKLIB) $(PTHREADLIB) $(ATOMICLIB)
 
-EXTRA_DIST = keywords.txt ipsec.conf Android.mk
+EXTRA_DIST = keywords.txt ipsec.conf ipsec.secrets Android.mk
 MAINTAINERCLEANFILES = keywords.c
 BUILT_SOURCES = keywords.c parser/parser.h
 
 if USE_LOAD_WARNING
   AM_CPPFLAGS += -DLOAD_WARNING
-endif
-
-if USE_SCEPCLIENT
-  AM_CPPFLAGS += -DGENERATE_SELFCERT
 endif
 
 keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h
@@ -66,3 +62,4 @@ install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/reqs" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d/reqs" || true
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d/private" || $(INSTALL) -d -m 750 "$(DESTDIR)$(sysconfdir)/ipsec.d/private" || true
 		test -e "$(DESTDIR)$(sysconfdir)/ipsec.conf" || $(INSTALL) -m 644 $(srcdir)/ipsec.conf $(DESTDIR)$(sysconfdir)/ipsec.conf || true
+		test -e "$(DESTDIR)$(sysconfdir)/ipsec.secrets" || $(INSTALL) -m 600 $(srcdir)/ipsec.secrets $(DESTDIR)$(sysconfdir)/ipsec.secrets || true

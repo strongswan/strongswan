@@ -23,7 +23,7 @@
 #include "ntt_fft.h"
 #include "ntt_fft_reduce.h"
 
-#include <crypto/mgf1/mgf1_bitspender.h>
+#include <crypto/xofs/xof_bitspender.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
@@ -174,7 +174,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	bliss_sampler_t *sampler = NULL;
 	rng_t *rng;
 	hasher_t *hasher;
-	hash_algorithm_t mgf1_alg, oracle_alg;
+	ext_out_function_t mgf1_alg, oracle_alg;
 	size_t mgf1_seed_len;
 	uint8_t mgf1_seed_buf[HASH_SIZE_SHA512], data_hash_buf[HASH_SIZE_SHA512];
 	chunk_t mgf1_seed, data_hash;
@@ -209,12 +209,12 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	/* Set MGF1 hash algorithm and seed length based on security strength */
 	if (this->set->strength > 160)
 	{
-		mgf1_alg = HASH_SHA256;
+		mgf1_alg = XOF_MGF1_SHA256;
 		mgf1_seed_len = HASH_SIZE_SHA256;
 	}
 	else
 	{
-		mgf1_alg = HASH_SHA1;
+		mgf1_alg = XOF_MGF1_SHA1;
 		mgf1_seed_len = HASH_SIZE_SHA1;
 	}
 	mgf1_seed = chunk_create(mgf1_seed_buf, mgf1_seed_len);
@@ -226,7 +226,7 @@ static bool sign_bliss(private_bliss_private_key_t *this, hash_algorithm_t alg,
 	}
 
 	/* MGF1 hash algorithm to be used for random oracle */
-	oracle_alg = HASH_SHA512;
+	oracle_alg = XOF_MGF1_SHA512;
 
 	/* Initialize a couple of needed variables */
 	n  = this->set->n;
@@ -834,14 +834,14 @@ static uint32_t invert(private_bliss_private_key_t *this, uint32_t x)
  * Create a vector with sparse and small coefficients from seed
  */
 static int8_t* create_vector_from_seed(private_bliss_private_key_t *this,
-									   hash_algorithm_t alg, chunk_t seed)
+									   ext_out_function_t alg, chunk_t seed)
 {
-	mgf1_bitspender_t *bitspender;
+	xof_bitspender_t *bitspender;
 	uint32_t index, sign;
 	int8_t *vector;
 	int non_zero;
 
-	bitspender = mgf1_bitspender_create(alg, seed, FALSE);
+	bitspender = xof_bitspender_create(alg, seed, FALSE);
 	if (!bitspender)
 	{
 	    return NULL;
@@ -910,7 +910,7 @@ static bool create_secret(private_bliss_private_key_t *this, rng_t *rng,
 	int i, n;
 	chunk_t seed;
 	size_t seed_len;
-	hash_algorithm_t alg;
+	ext_out_function_t alg;
 
 	n = this->set->n;
 	*s1 = NULL;
@@ -919,12 +919,12 @@ static bool create_secret(private_bliss_private_key_t *this, rng_t *rng,
 	/* Set MGF1 hash algorithm and seed length based on security strength */
 	if (this->set->strength > 160)
 	{
-		alg = HASH_SHA256;
+		alg = XOF_MGF1_SHA256;
 		seed_len = HASH_SIZE_SHA256;
 	}
 	else
 	{
-		alg = HASH_SHA1;
+		alg = XOF_MGF1_SHA1;
 		seed_len = HASH_SIZE_SHA1;
 	}
 	seed = chunk_create(seed_buf, seed_len);

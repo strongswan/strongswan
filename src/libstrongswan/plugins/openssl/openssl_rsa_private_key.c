@@ -1,7 +1,7 @@
 /*
+ * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2008 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -158,16 +158,16 @@ METHOD(private_key_t, sign, bool,
 	{
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return build_emsa_pkcs1_signature(this, NID_undef, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_224:
+			return build_emsa_pkcs1_signature(this, NID_sha224, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_256:
+			return build_emsa_pkcs1_signature(this, NID_sha256, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_384:
+			return build_emsa_pkcs1_signature(this, NID_sha384, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
+			return build_emsa_pkcs1_signature(this, NID_sha512, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return build_emsa_pkcs1_signature(this, NID_sha1, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA224:
-			return build_emsa_pkcs1_signature(this, NID_sha224, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA256:
-			return build_emsa_pkcs1_signature(this, NID_sha256, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA384:
-			return build_emsa_pkcs1_signature(this, NID_sha384, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA512:
-			return build_emsa_pkcs1_signature(this, NID_sha512, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return build_emsa_pkcs1_signature(this, NID_md5, data, signature);
 		default:
@@ -327,7 +327,7 @@ static private_openssl_rsa_private_key_t *create_empty()
 	return this;
 }
 
-/**
+/*
  * See header.
  */
 openssl_rsa_private_key_t *openssl_rsa_private_key_gen(key_type_t type,
@@ -383,7 +383,26 @@ error:
 	return NULL;
 }
 
-/**
+/*
+ * See header
+ */
+private_key_t *openssl_rsa_private_key_create(EVP_PKEY *key)
+{
+	private_openssl_rsa_private_key_t *this;
+	RSA *rsa;
+
+	rsa = EVP_PKEY_get1_RSA(key);
+	EVP_PKEY_free(key);
+	if (!rsa)
+	{
+		return NULL;
+	}
+	this = create_empty();
+	this->rsa = rsa;
+	return &this->public.key;
+}
+
+/*
  * See header
  */
 openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
@@ -528,7 +547,7 @@ static bool login(ENGINE *engine, chunk_t keyid)
 }
 #endif /* OPENSSL_NO_ENGINE */
 
-/**
+/*
  * See header.
  */
 openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,

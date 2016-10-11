@@ -2,6 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
+ * Copyright (C) 2016 Tobias Brunner
  * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -63,6 +64,11 @@
  * Directory for raw public keys
  */
 #define SWANCTL_PUBKEYDIR SWANCTLDIR "/pubkey"
+
+/**
+ * Directory for private keys
+ */
+#define SWANCTL_PRIVATEDIR SWANCTLDIR "/private"
 
 /**
  * Directory for RSA private keys

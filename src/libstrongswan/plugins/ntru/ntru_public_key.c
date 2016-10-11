@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2009-2013  Security Innovation
@@ -102,7 +102,7 @@ extern bool ntru_check_min_weight(uint16_t N, uint8_t  *t, uint16_t min_wt);
 METHOD(ntru_public_key_t, encrypt, bool,
 	private_ntru_public_key_t *this, chunk_t plaintext, chunk_t *ciphertext)
 {
-	hash_algorithm_t hash_algid;
+	ext_out_function_t alg;
 	size_t t_len, seed1_len, seed2_len;
 	uint16_t *t1, *t = NULL;
 	uint8_t b[MAX_SEC_STRENGTH_LEN];
@@ -139,8 +139,8 @@ METHOD(ntru_public_key_t, encrypt, bool,
 	M = Mtrin + this->params->N;
 
 	/* set hash algorithm based on security strength */
-	hash_algid = (this->params->sec_strength_len <= 20) ? HASH_SHA1 :
-														  HASH_SHA256;
+	alg = (this->params->sec_strength_len <= 20) ? XOF_MGF1_SHA1 :
+												   XOF_MGF1_SHA256;
 	/* set constants */
 	mod_q_mask = this->params->q - 1;
 
@@ -173,7 +173,7 @@ METHOD(ntru_public_key_t, encrypt, bool,
 		seed.len = seed2_len;
 
 		DBG2(DBG_LIB, "generate polynomial r");
-		r_poly = ntru_poly_create_from_seed(hash_algid, seed, this->params->c_bits,
+		r_poly = ntru_poly_create_from_seed(alg, seed, this->params->c_bits,
 											this->params->N, this->params->q,
 											this->params->dF_r, this->params->dF_r,
 											this->params->is_product_form);
@@ -191,7 +191,7 @@ METHOD(ntru_public_key_t, encrypt, bool,
 		seed.len = seed1_len;
 
 		/* form mask */
-		mask = ntru_trits_create(this->params->N, hash_algid, seed);
+		mask = ntru_trits_create(this->params->N, alg, seed);
 		if (!mask)
 		{
 			DBG1(DBG_LIB, "mask creation failed");

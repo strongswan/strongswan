@@ -143,16 +143,16 @@ METHOD(public_key_t, verify, bool,
 	{
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return verify_emsa_pkcs1_signature(this, NID_undef, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_224:
+			return verify_emsa_pkcs1_signature(this, NID_sha224, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_256:
+			return verify_emsa_pkcs1_signature(this, NID_sha256, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_384:
+			return verify_emsa_pkcs1_signature(this, NID_sha384, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
+			return verify_emsa_pkcs1_signature(this, NID_sha512, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return verify_emsa_pkcs1_signature(this, NID_sha1, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA224:
-			return verify_emsa_pkcs1_signature(this, NID_sha224, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA256:
-			return verify_emsa_pkcs1_signature(this, NID_sha256, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA384:
-			return verify_emsa_pkcs1_signature(this, NID_sha384, data, signature);
-		case SIGN_RSA_EMSA_PKCS1_SHA512:
-			return verify_emsa_pkcs1_signature(this, NID_sha512, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return verify_emsa_pkcs1_signature(this, NID_md5, data, signature);
 		default:

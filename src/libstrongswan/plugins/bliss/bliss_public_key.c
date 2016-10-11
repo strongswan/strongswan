@@ -76,7 +76,7 @@ static bool verify_bliss(private_bliss_public_key_t *this, hash_algorithm_t alg,
 	uint8_t data_hash_buf[HASH_SIZE_SHA512];
 	chunk_t data_hash;
 	hasher_t *hasher;
-	hash_algorithm_t oracle_alg;
+	ext_out_function_t oracle_alg;
 	ntt_fft_t *fft;
 	bliss_signature_t *sig;
 	bool success = FALSE;
@@ -110,7 +110,7 @@ static bool verify_bliss(private_bliss_public_key_t *this, hash_algorithm_t alg,
 	}
 
 	/* MGF1 hash algorithm to be used for random oracle */
-	oracle_alg = HASH_SHA512;
+	oracle_alg = XOF_MGF1_SHA512;
 
 	/* Initialize a couple of needed variables */
 	n  = this->set->n;

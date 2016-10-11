@@ -46,6 +46,11 @@ struct private_sha3_shake_t {
 
 };
 
+METHOD(xof_t, get_type, ext_out_function_t,
+	private_sha3_shake_t *this)
+{
+	return this->algorithm;
+}
 
 METHOD(xof_t, get_bytes, bool,
 	private_sha3_shake_t *this, size_t out_len, uint8_t *buffer)
@@ -114,6 +119,7 @@ sha3_shake_t* sha3_shake_create(ext_out_function_t algorithm)
 	INIT(this,
 		.public = {
 			.xof_interface = {
+				.get_type = _get_type,
 				.get_bytes = _get_bytes,
 				.allocate_bytes = _allocate_bytes,
 				.get_block_size = _get_block_size,
