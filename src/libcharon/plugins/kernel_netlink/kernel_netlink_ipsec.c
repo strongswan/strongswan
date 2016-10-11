@@ -76,7 +76,7 @@
 #endif
 
 /** Base priority for installed policies */
-#define PRIO_BASE 100000
+#define PRIO_BASE 200000
 
 /** Default lifetime of an acquire XFRM state (in seconds) */
 #define DEFAULT_ACQUIRE_LIFETIME 165
@@ -653,14 +653,15 @@ static inline uint32_t port_mask_bits(uint16_t port_mask)
 /**
  * Calculate the priority of a policy
  *
- * bits 0-0:  restriction to network interface (0..1)   1 bit
- * bits 1-6:  src + dst port mask bits (2 * 0..16)      6 bits
- * bits 7-7:  restriction to protocol (0..1)            1 bit
- * bits 8-16: src + dst network mask bits (2 * 0..128)  9 bits
- *                                                     17 bits
+ * bits 0-0:  separate trap and regular policies (0..1) 1 bit
+ * bits 1-1:  restriction to network interface (0..1)   1 bit
+ * bits 2-7:  src + dst port mask bits (2 * 0..16)      6 bits
+ * bits 8-8:  restriction to protocol (0..1)            1 bit
+ * bits 9-17: src + dst network mask bits (2 * 0..128)  9 bits
+ *                                                     18 bits
  *
- * smallest value: 000000000 0 000000 0:      0, lowest priority = 100'000
- * largest value : 100000000 1 100000 1: 65'729, highst priority =  34'271
+ * smallest value: 000000000 0 000000 0 0:       0, lowest priority = 200'000
+ * largest value : 100000000 1 100000 1 1: 131'459, highst priority =  68'541
  */
 static uint32_t get_priority(policy_entry_t *policy, policy_priority_t prio,
 							 char *interface)
@@ -673,8 +674,6 @@ static uint32_t get_priority(policy_entry_t *policy, policy_priority_t prio,
 			priority += PRIO_BASE;
 			/* fall-through to next case */
 		case POLICY_PRIORITY_ROUTED:
-			priority += PRIO_BASE;
-			/* fall-through to next case */
 		case POLICY_PRIORITY_DEFAULT:
 			priority += PRIO_BASE;
 			/* fall-through to next case */
@@ -685,10 +684,11 @@ static uint32_t get_priority(policy_entry_t *policy, policy_priority_t prio,
 	dport_mask_bits = port_mask_bits(policy->sel.dport_mask);
 
 	/* calculate priority */
-	priority -= (policy->sel.prefixlen_s + policy->sel.prefixlen_d) * 256;
-	priority -=  policy->sel.proto ? 128 : 0;
-	priority -= (sport_mask_bits + dport_mask_bits) * 2;
-	priority -= (interface != NULL);
+	priority -= (policy->sel.prefixlen_s + policy->sel.prefixlen_d) * 512;
+	priority -=  policy->sel.proto ? 256 : 0;
+	priority -= (sport_mask_bits + dport_mask_bits) * 4;
+	priority -= (interface != NULL) * 2;
+	priority -= (prio != POLICY_PRIORITY_ROUTED);
 
 	return priority;
 }
