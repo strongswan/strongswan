@@ -255,13 +255,13 @@ aead_t *openssl_gcm_create(encryption_algorithm_t algo,
 					key_size = 16;
 					/* FALL */
 				case 16:
-					this->cipher = EVP_get_cipherbyname("aes-128-gcm");
+					this->cipher = EVP_aes_128_gcm();
 					break;
 				case 24:
-					this->cipher = EVP_get_cipherbyname("aes-192-gcm");
+					this->cipher = EVP_aes_192_gcm();
 					break;
 				case 32:
-					this->cipher = EVP_get_cipherbyname("aes-256-gcm");
+					this->cipher = EVP_aes_256_gcm();
 					break;
 				default:
 					free(this);
