@@ -2530,7 +2530,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	{	/* we don't update the policy if the priority is lower than that of
 		 * the currently installed one */
 		policy_change_done(this, policy);
-		DBG2(DBG_KNL, "not updating policy %R === %R %N%s [priority %u,"
+		DBG2(DBG_KNL, "not updating policy %R === %R %N%s [priority %u, "
 			 "refcount %d]", id->src_ts, id->dst_ts, policy_dir_names,
 			 id->dir, markstr, cur_priority, use_count);
 		return SUCCESS;
