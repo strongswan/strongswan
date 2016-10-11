@@ -18,6 +18,9 @@ strongswan-5.5.1
   certificate cache. Optionally the type of the certificates to be
   flushed  (e.g. type = x509_crl) can be specified.
 
+- Setting cache_crls = yes in strongswan.conf the vici plugin saves regular,
+  base and delta CRLs to disk.
+
 - libtpmtss: In the TSS2 API the function TeardownSocketTcti() was replaced by
   tss2_tcti_finalize().
 
