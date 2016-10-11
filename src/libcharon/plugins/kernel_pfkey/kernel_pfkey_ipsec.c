@@ -142,7 +142,7 @@
 #endif
 
 /** Base priority for installed policies */
-#define PRIO_BASE 100000
+#define PRIO_BASE 200000
 
 #ifdef __APPLE__
 /** from xnu/bsd/net/pfkeyv2.h */
@@ -597,17 +597,18 @@ static inline bool policy_entry_match_byindex(policy_entry_t *current,
  * This is the same formula we use in the kernel-netlink interface, but some
  * features are currently not or only partially supported by PF_KEY.
  *
- * bits 0-0:  reserved for interface restriction (0..1)     1 bit
- * bits 1-6:  src + dst port mask bits (2 * 0..16)          6 bits
- * bits 7-7:  restriction to protocol (0..1)                1 bit
- * bits 8-16: src + dst network mask bits (2 * 0..128)      9 bits
- *                                                         17 bits
+ * bits 0-0:  separate trap and regular policies (0..1)     1 bit
+ * bits 1-1:  reserved for interface restriction (0..1)     1 bit
+ * bits 2-7:  src + dst port mask bits (2 * 0..16)          6 bits
+ * bits 8-8:  restriction to protocol (0..1)                1 bit
+ * bits 9-17: src + dst network mask bits (2 * 0..128)      9 bits
+ *                                                         18 bits
  *
- * smallest value: 000000000 0 000000 0:      0, lowest priority = 100'000
- * largest value : 100000000 1 100000 0: 65'728, highst priority =  34'272
+ * smallest value: 000000000 0 000000 0 0:       0, lowest priority = 100'000
+ * largest value : 100000000 1 100000 0 1: 131'457, highst priority =  68'543
  */
 static inline uint32_t get_priority(policy_entry_t *policy,
-									 policy_priority_t prio)
+									policy_priority_t prio)
 {
 	uint32_t priority = PRIO_BASE;
 
@@ -617,8 +618,6 @@ static inline uint32_t get_priority(policy_entry_t *policy,
 			priority += PRIO_BASE;
 			/* fall-through */
 		case POLICY_PRIORITY_ROUTED:
-			priority += PRIO_BASE;
-			/* fall-through */
 		case POLICY_PRIORITY_DEFAULT:
 			priority += PRIO_BASE;
 			/* fall-through */
@@ -627,10 +626,11 @@ static inline uint32_t get_priority(policy_entry_t *policy,
 	}
 
 	/* calculate priority */
-	priority -= (policy->src.mask + policy->dst.mask) * 256;
-	priority -=  policy->src.proto != IPSEC_PROTO_ANY ? 128 : 0;
-	priority -= policy->src.net->get_port(policy->src.net) ? 32 : 0;
-	priority -= policy->dst.net->get_port(policy->dst.net) ? 32 : 0;
+	priority -= (policy->src.mask + policy->dst.mask) * 512;
+	priority -=  policy->src.proto != IPSEC_PROTO_ANY ? 256 : 0;
+	priority -= policy->src.net->get_port(policy->src.net) ? 64 : 0;
+	priority -= policy->dst.net->get_port(policy->dst.net) ? 64 : 0;
+	priority -= (prio != POLICY_PRIORITY_ROUTED);
 	return priority;
 }
 
