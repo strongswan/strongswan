@@ -404,6 +404,26 @@ static bool verify_crl(certificate_t *crl)
 }
 
 /**
+ * Report the given CRL's validity and cache it if valid and requested
+ */
+static bool is_crl_valid(certificate_t *crl, bool cache)
+{
+	time_t valid_until;
+
+	if (crl->get_validity(crl, NULL, NULL, &valid_until))
+	{
+		DBG1(DBG_CFG, "  crl is valid: until %T", &valid_until, FALSE);
+		if (cache)
+		{
+			lib->credmgr->cache_cert(lib->credmgr, crl);
+		}
+		return TRUE;
+	}
+	DBG1(DBG_CFG, "  crl is stale: since %T", &valid_until, FALSE);
+	return FALSE;
+}
+
+/**
  * Get the better of two CRLs, and check for usable CRL info
  */
 static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
@@ -411,7 +431,7 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 					bool cache, crl_t *base)
 {
 	enumerator_t *enumerator;
-	time_t revocation, valid_until;
+	time_t revocation;
 	crl_reason_t reason;
 	chunk_t serial;
 	crl_t *crl = (crl_t*)cand;
@@ -447,8 +467,6 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 	{
 		if (chunk_equals(serial, subject->get_serial(subject)))
 		{
-			DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
-				 &revocation, TRUE, crl_reason_names, reason);
 			if (reason != CRL_REASON_CERTIFICATE_HOLD)
 			{
 				*valid = VALIDATION_REVOKED;
@@ -458,6 +476,9 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 				/* if the cert is on hold, a newer CRL might not contain it */
 				*valid = VALIDATION_ON_HOLD;
 			}
+			is_crl_valid(cand, cache);
+			DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
+				 &revocation, TRUE, crl_reason_names, reason);
 			enumerator->destroy(enumerator);
 			DESTROY_IF(best);
 			return cand;
@@ -470,18 +491,12 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 	{
 		DESTROY_IF(best);
 		best = cand;
-		if (best->get_validity(best, NULL, NULL, &valid_until))
+		if (is_crl_valid(best, cache))
 		{
-			DBG1(DBG_CFG, "  crl is valid: until %T", &valid_until, FALSE);
 			*valid = VALIDATION_GOOD;
-			if (cache)
-			{	/* we cache non-stale crls only, as a stale crls are refetched */
-				lib->credmgr->cache_cert(lib->credmgr, best);
-			}
 		}
 		else
 		{
-			DBG1(DBG_CFG, "  crl is stale: since %T", &valid_until, FALSE);
 			*valid = VALIDATION_STALE;
 		}
 	}

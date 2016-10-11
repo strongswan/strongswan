@@ -1,0 +1,4 @@
+carol::service charon stop 2> /dev/null
+moon::service charon stop 2> /dev/null
+moon::rm /etc/swanctl/x509crl/*
+carol::rm /etc/swanctl/x509crl/*

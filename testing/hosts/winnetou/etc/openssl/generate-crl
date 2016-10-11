@@ -31,6 +31,12 @@ cp index.html         ${ROOT}
 # revoke moon's current CERT
 pki --signcrl --cacert strongswanCert.pem --cakey strongswanKey.pem --lifetime 30 --reason key-compromise --cert newcerts/2B.pem --lastcrl strongswan.crl > strongswan_moon_revoked.crl
 cp strongswan_moon_revoked.crl ${ROOT}
+# generate a base CRL
+pki --signcrl --lastcrl strongswan.crl --cacert strongswanCert.der --cakey strongswanKey.pem --lifetime 30 --crluri http://crl.strongswan.org/strongswan_delta.crl --digest sha256 > strongswan_base.crl
+cp strongswan_base.crl ${ROOT}
+# generate a delta CRL revoking moon's current cert
+pki --signcrl --basecrl strongswan_base.crl --reason key-compromise --cert newcerts/2B.pem --cacert strongswanCert.der --cakey strongswanKey.pem --lifetime 10 --digest sha256 > strongswan_delta.crl
+cp strongswan_delta.crl ${ROOT}
 cd /etc/openssl/research
 openssl ca -gencrl -crldays 15 -config /etc/openssl/research/openssl.cnf -out crl.pem
 openssl crl -in crl.pem -outform der -out research.crl

@@ -369,18 +369,22 @@ static int sign_crl()
 	}
 	else
 	{
-		crl_serial = chunk_from_chars(0x00);
+		if (!crl_serial.ptr)
+		{
+			crl_serial = chunk_from_chars(0x00);
+		}
 		lastenum = enumerator_create_empty();
 	}
 
-	/* remove superfluous leading zeros */
-	while (crl_serial.len > 1 && crl_serial.ptr[0] == 0x00 &&
-		  (crl_serial.ptr[1] & 0x80) == 0x00)
-	{
-		crl_serial = chunk_skip_zero(crl_serial);
+	if (!crl_serial.len || crl_serial.ptr[0] & 0x80)
+	{	/* add leading 0x00 to handle potential overflow if serial is encoded
+		 * incorrectly */
+		crl_serial = chunk_cat("cc", chunk_from_chars(0x00), crl_serial);
 	}
-	crl_serial = chunk_clone(crl_serial);
-
+	else
+	{
+		crl_serial = chunk_clone(crl_serial);
+	}
 	/* increment the serial number by one */
 	chunk_increment(crl_serial);
 

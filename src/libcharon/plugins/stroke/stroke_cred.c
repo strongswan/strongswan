@@ -562,7 +562,7 @@ static void load_certdir(private_stroke_cred_t *this, char *path,
 	}
 }
 
-METHOD(stroke_cred_t, cache_cert, void,
+METHOD(credential_set_t, cache_cert, void,
 	private_stroke_cred_t *this, certificate_t *cert)
 {
 	if (cert->get_type(cert) == CERT_X509_CRL && this->cachecrl)
@@ -575,10 +575,14 @@ METHOD(stroke_cred_t, cache_cert, void,
 		{
 			char buf[BUF_LEN];
 			chunk_t chunk, hex;
+			bool is_delta_crl;
+
+			is_delta_crl = crl->is_delta_crl(crl, NULL);
 
 			chunk = crl->get_authKeyIdentifier(crl);
 			hex = chunk_to_hex(chunk, NULL, FALSE);
-			snprintf(buf, sizeof(buf), "%s/%s.crl", CRL_DIR, hex.ptr);
+			snprintf(buf, sizeof(buf), "%s/%s%s.crl", CRL_DIR, hex.ptr,
+										is_delta_crl ? "_delta" : "");
 			free(hex.ptr);
 
 			if (cert->get_encoding(cert, CERT_ASN1_DER, &chunk))
@@ -1497,6 +1501,10 @@ stroke_cred_t *stroke_cred_create(stroke_ca_t *ca)
 		.ca = ca,
 	);
 
+	if (lib->settings->get_bool(lib->settings, "%s.cache_crls", FALSE, lib->ns))
+	{
+		cachecrl(this, TRUE);
+	}
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 	lib->credmgr->add_set(lib->credmgr, &this->aacerts->set);
 
