@@ -1995,9 +1995,9 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		if (best || routes->get_first(routes, (void**)&best) == SUCCESS)
 		{
 			addr = host_create_from_chunk(msg->rtm_family, best->gtw, 0);
-			if (iface && route->oif)
+			if (iface && best->oif)
 			{
-				*iface = get_interface_name_by_index(this, route->oif);
+				*iface = get_interface_name_by_index(this, best->oif);
 			}
 		}
 		if (!addr && !match_net)
