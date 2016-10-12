@@ -2137,6 +2137,8 @@ typedef struct {
 	size_t len;
 	/** last subnet enumerated */
 	host_t *net;
+	/** interface of current net */
+	char ifname[IFNAMSIZ];
 } subnet_enumerator_t;
 
 METHOD(enumerator_t, destroy_subnet_enumerator, void,
@@ -2173,6 +2175,7 @@ METHOD(enumerator_t, enumerate_subnets, bool,
 				struct rtattr *rta;
 				size_t rtasize;
 				chunk_t dst = chunk_empty;
+				uint32_t oif = 0;
 
 				msg = NLMSG_DATA(this->current);
 
@@ -2191,20 +2194,27 @@ METHOD(enumerator_t, enumerate_subnets, bool,
 				rtasize = RTM_PAYLOAD(this->current);
 				while (RTA_OK(rta, rtasize))
 				{
-					if (rta->rta_type == RTA_DST)
+					switch (rta->rta_type)
 					{
-						dst = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
-						break;
+						case RTA_DST:
+							dst = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
+							break;
+						case RTA_OIF:
+							if (RTA_PAYLOAD(rta) == sizeof(oif))
+							{
+								oif = *(uint32_t*)RTA_DATA(rta);
+							}
+							break;
 					}
 					rta = RTA_NEXT(rta, rtasize);
 				}
 
-				if (dst.ptr)
+				if (dst.ptr && oif && if_indextoname(oif, this->ifname))
 				{
 					this->net = host_create_from_chunk(msg->rtm_family, dst, 0);
 					*net = this->net;
 					*mask = msg->rtm_dst_len;
-					*ifname = NULL;
+					*ifname = this->ifname;
 					return TRUE;
 				}
 				break;
