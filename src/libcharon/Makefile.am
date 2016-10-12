@@ -227,6 +227,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_BYPASS_LAN
+  SUBDIRS += plugins/bypass_lan
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/bypass_lan/libstrongswan-bypass-lan.la
+endif
+endif
+
 if USE_FORECAST
   SUBDIRS += plugins/forecast
 if MONOLITHIC
