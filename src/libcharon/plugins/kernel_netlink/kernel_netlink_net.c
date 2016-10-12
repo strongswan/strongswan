@@ -2148,7 +2148,7 @@ METHOD(enumerator_t, destroy_subnet_enumerator, void,
 }
 
 METHOD(enumerator_t, enumerate_subnets, bool,
-	subnet_enumerator_t *this, host_t **net, uint8_t *mask)
+	subnet_enumerator_t *this, host_t **net, uint8_t *mask, char **ifname)
 {
 	if (!this->current)
 	{
@@ -2204,6 +2204,7 @@ METHOD(enumerator_t, enumerate_subnets, bool,
 					this->net = host_create_from_chunk(msg->rtm_family, dst, 0);
 					*net = this->net;
 					*mask = msg->rtm_dst_len;
+					*ifname = NULL;
 					return TRUE;
 				}
 				break;

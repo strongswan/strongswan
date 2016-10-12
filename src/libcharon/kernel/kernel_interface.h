@@ -320,7 +320,9 @@ struct kernel_interface_t {
 	 *
 	 * Local subnets are subnets the host is directly connected to.
 	 *
-	 * @return				enumerator over host_t*, uint8_t
+	 * The enumerator returns the network, subnet mask and interface.
+	 *
+	 * @return				enumerator over host_t*, uint8_t, char*
 	 */
 	enumerator_t *(*create_local_subnet_enumerator)(kernel_interface_t *this);
 

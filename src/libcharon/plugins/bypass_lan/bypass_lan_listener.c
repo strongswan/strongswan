@@ -102,6 +102,7 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 	bypass_policy_t *found, *lookup;
 	host_t *net;
 	uint8_t mask;
+	char *iface;
 
 	seen = hashtable_create((hashtable_hash_t)policy_hash,
 							(hashtable_equals_t)policy_equals, 4);
@@ -109,7 +110,7 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 	this->mutex->lock(this->mutex);
 
 	enumerator = charon->kernel->create_local_subnet_enumerator(charon->kernel);
-	while (enumerator->enumerate(enumerator, &net, &mask))
+	while (enumerator->enumerate(enumerator, &net, &mask, &iface))
 	{
 		INIT(lookup,
 			.net = net->clone(net),
