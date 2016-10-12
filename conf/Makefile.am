@@ -32,6 +32,7 @@ plugins = \
 	plugins/attr.opt \
 	plugins/attr-sql.opt \
 	plugins/bliss.opt \
+	plugins/bypass-lan.opt \
 	plugins/certexpire.opt \
 	plugins/coupling.opt \
 	plugins/dhcp.opt \

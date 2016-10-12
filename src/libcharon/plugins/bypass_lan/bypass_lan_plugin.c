@@ -72,6 +72,13 @@ METHOD(plugin_t, get_features, int,
 	return countof(f);
 }
 
+METHOD(plugin_t, reload, bool,
+	private_bypass_lan_plugin_t *this)
+{
+	this->listener->reload_interfaces(this->listener);
+	return TRUE;
+}
+
 METHOD(plugin_t, destroy, void,
 	private_bypass_lan_plugin_t *this)
 {
@@ -91,6 +98,7 @@ plugin_t *bypass_lan_plugin_create()
 			.plugin = {
 				.get_name = _get_name,
 				.get_features = _get_features,
+				.reload = _reload,
 				.destroy = _destroy,
 			},
 		},

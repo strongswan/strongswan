@@ -16,6 +16,7 @@
 #include "bypass_lan_listener.h"
 
 #include <collections/hashtable.h>
+#include <collections/linked_list.h>
 #include <threading/mutex.h>
 #include <processing/jobs/callback_job.h>
 
@@ -34,14 +35,26 @@ struct private_bypass_lan_listener_t {
 	bypass_lan_listener_t public;
 
 	/**
-	 * Currently installed bypass policies, bypass_policy_t*
+	 * Currently installed bypass policies, bypass_policy_t*.
 	 */
 	hashtable_t *policies;
 
 	/**
-	 * Mutex to access list of policies
+	 * Mutex to access list of policies.
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * List of interface names to include or exclude (char*), NULL if interfaces
+	 * are not filtered.
+	 */
+	linked_list_t *ifaces_filter;
+
+	/**
+	 * TRUE to exclude interfaces listed in ifaces_filter, FALSE to consider
+	 * only those listed there.
+	 */
+	bool ifaces_exclude;
 };
 
 /**
@@ -95,6 +108,22 @@ static bool policy_equals(bypass_policy_t *a, bypass_policy_t *b)
 }
 
 /**
+ * Check if an interface should be considered
+ */
+static bool consider_interface(private_bypass_lan_listener_t *this, char *iface)
+{
+	status_t expected;
+
+	if (!iface || !this->ifaces_filter)
+	{
+		return TRUE;
+	}
+	expected = this->ifaces_exclude ? NOT_FOUND : SUCCESS;
+	return this->ifaces_filter->find_first(this->ifaces_filter, (void*)streq,
+										   NULL, iface) == expected;
+}
+
+/**
  * Job updating bypass policies
  */
 static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
@@ -114,6 +143,11 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 	enumerator = charon->kernel->create_local_subnet_enumerator(charon->kernel);
 	while (enumerator->enumerate(enumerator, &net, &mask, &iface))
 	{
+		if (!consider_interface(this, iface))
+		{
+			continue;
+		}
+
 		INIT(lookup,
 			.net = net->clone(net),
 			.mask = mask,
@@ -178,6 +212,47 @@ METHOD(kernel_listener_t, roam, bool,
 	return TRUE;
 }
 
+METHOD(bypass_lan_listener_t, reload_interfaces, void,
+	private_bypass_lan_listener_t *this)
+{
+	char *ifaces;
+
+	this->mutex->lock(this->mutex);
+	DESTROY_FUNCTION_IF(this->ifaces_filter, (void*)free);
+	this->ifaces_filter = NULL;
+	this->ifaces_exclude = FALSE;
+
+	ifaces = lib->settings->get_str(lib->settings,
+					"%s.plugins.bypass-lan.interfaces_use", NULL, lib->ns);
+	if (!ifaces)
+	{
+		this->ifaces_exclude = TRUE;
+		ifaces = lib->settings->get_str(lib->settings,
+					"%s.plugins.bypass-lan.interfaces_ignore", NULL, lib->ns);
+	}
+	if (ifaces)
+	{
+		enumerator_t *enumerator;
+		char *iface;
+
+		enumerator = enumerator_create_token(ifaces, ",", " ");
+		while (enumerator->enumerate(enumerator, &iface))
+		{
+			if (!this->ifaces_filter)
+			{
+				this->ifaces_filter = linked_list_create();
+			}
+			this->ifaces_filter->insert_last(this->ifaces_filter,
+											 strdup(iface));
+		}
+		enumerator->destroy(enumerator);
+	}
+	this->mutex->unlock(this->mutex);
+	lib->processor->queue_job(lib->processor,
+			(job_t*)callback_job_create((callback_job_cb_t)update_bypass, this,
+									NULL, (callback_job_cancel_t)return_false));
+}
+
 METHOD(bypass_lan_listener_t, destroy, void,
 	private_bypass_lan_listener_t *this)
 {
@@ -190,6 +265,7 @@ METHOD(bypass_lan_listener_t, destroy, void,
 		bypass_policy_destroy(policy);
 	}
 	enumerator->destroy(enumerator);
+	DESTROY_FUNCTION_IF(this->ifaces_filter, (void*)free);
 	this->policies->destroy(this->policies);
 	this->mutex->destroy(this->mutex);
 	free(this);
@@ -207,6 +283,7 @@ bypass_lan_listener_t *bypass_lan_listener_create()
 			.listener = {
 				.roam = _roam,
 			},
+			.reload_interfaces = _reload_interfaces,
 			.destroy = _destroy,
 		},
 		.policies = hashtable_create((hashtable_hash_t)policy_hash,
@@ -214,9 +291,6 @@ bypass_lan_listener_t *bypass_lan_listener_create()
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);
 
-	/* FIXME: schedule this? */
-	lib->processor->queue_job(lib->processor,
-			(job_t*)callback_job_create((callback_job_cb_t)update_bypass, this,
-									NULL, (callback_job_cancel_t)return_false));
+	reload_interfaces(this);
 	return &this->public;
 }

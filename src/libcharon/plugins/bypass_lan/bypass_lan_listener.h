@@ -36,6 +36,11 @@ struct bypass_lan_listener_t {
 	kernel_listener_t listener;
 
 	/**
+	 * Reload ignored/used interface names from config.
+	 */
+	void (*reload_interfaces)(bypass_lan_listener_t *this);
+
+	/**
 	 * Destroy a bypass_lan_listener_t.
 	 */
 	void (*destroy)(bypass_lan_listener_t *this);
