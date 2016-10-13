@@ -215,8 +215,12 @@ METHOD(attribute_provider_t, acquire_address, host_t*,
 		}
 		if (offset == -1)
 		{
-			DBG1(DBG_CFG, "no address left in HA pool '%s' belonging to"
-				 "a responsible segment", name);
+			DBG1(DBG_CFG, "no address belonging to a responsible segment left "
+				 "in HA pool '%s'", name);
+		}
+		else
+		{
+			break;
 		}
 	}
 	this->mutex->unlock(this->mutex);
