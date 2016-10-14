@@ -14,8 +14,10 @@
  */
 
 /**
+ * @defgroup ntt_p libnttfft
+ *
  * @defgroup ntt_fft ntt_fft
- * @{ @ingroup bliss_p
+ * @{ @ingroup ntt_p
  */
 
 #ifndef NTT_FFT_H_
