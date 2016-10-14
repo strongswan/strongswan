@@ -14,7 +14,7 @@
  */
 
 /**
- * @defgroup newhope_p ntru
+ * @defgroup newhope_p newhope
  * @ingroup plugins
  *
  * @defgroup newhope_plugin newhope_plugin
