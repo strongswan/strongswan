@@ -197,7 +197,7 @@ static uint32_t* multiply_add_poly(private_newhope_ke_t *this,
 	fft->transform(fft, this->s, this->s, FALSE);
 	fft->transform(fft, e, e, FALSE);
 	fft->destroy(fft);
-	
+
 	b = (uint32_t*)malloc(this->params->n * sizeof(uint32_t));
 
 	/* compute  b = a * s + e in the frequency domain */
@@ -301,7 +301,7 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 		/* allocate space for public output value */
 		*value = chunk_alloc(poly_len + seed_len);
 		a_seed = chunk_create(value->ptr + poly_len, seed_len);
-	
+
 		/* create polynomial a from 256 bit random seed */
 		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 		if (!rng)
@@ -314,20 +314,20 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 			DBG1(DBG_LIB, "could not generate seed for polynomial a");
 			goto end;
 		}
-	
+
 		a = derive_a_poly(this, a_seed);
 		if (a == NULL)
 		{
 			goto end;
 		}
-	
+
 		/* generate random seed for the derivation of noise polynomials */
 		if (!rng->get_bytes(rng, seed_len, noise_seed.ptr))
 		{
 			DBG1(DBG_LIB, "could not generate seed for noise polynomials");
 			goto end;
 		}
-	
+
 		/* create noise polynomial generator */
 		noise = newhope_noise_create(noise_seed);
 		if (!noise)
@@ -458,13 +458,13 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 		{
 			DBG3(DBG_LIB, "%4d %5u %5u", i, a[i], b[i]);
 		}
-		
+
 		/* generate random seed for the derivation of noise polynomials */
 		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 		if (!rng)
 		{
 			DBG1(DBG_LIB, "could not instatiate random source");
-			return FALSE;
+			goto end;
 		}
 		if (!rng->get_bytes(rng, seed_len, noise_seed.ptr))
 		{
@@ -492,7 +492,7 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 		{
 			goto end;
 		}
-		
+
 		/* create noise polynomial e'' from seed with nonce = 0x02 */
 		e2 = noise->get_binomial_words(noise, 0x02, n, q);
 		if (e2 == NULL)
