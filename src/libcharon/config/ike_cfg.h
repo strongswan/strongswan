@@ -256,7 +256,7 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 						  fragmentation_t fragmentation, uint8_t dscp);
 
 /**
- * Determine the address family of the local or remtoe address(es).  If multiple
+ * Determine the address family of the local or remote address(es).  If multiple
  * families are configured AF_UNSPEC is returned.  %any is ignored (%any4|6 are
  * not though).
  *

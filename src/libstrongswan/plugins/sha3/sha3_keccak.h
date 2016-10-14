@@ -38,7 +38,7 @@ struct sha3_keccak_t {
 	u_int (*get_rate)(sha3_keccak_t *this);
 
 	/**
-	 * Resets the interal Keccak state
+	 * Resets the internal Keccak state
 	 */
 	void (*reset)(sha3_keccak_t *this);
 
@@ -50,7 +50,7 @@ struct sha3_keccak_t {
 	void (*absorb)(sha3_keccak_t *this, chunk_t data);
 
 	/**
-	 * Finalize the absorbtion phase and switch to the squeeze phase
+	 * Finalize the absorption phase and switch to the squeeze phase
 	 */
 	void (*finalize)(sha3_keccak_t *this);
 
