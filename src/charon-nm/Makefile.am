@@ -25,3 +25,5 @@ charon_nm_LDADD = \
 
 dbusservicedir = $(sysconfdir)/dbus-1/system.d
 dbusservice_DATA = nm-strongswan-service.conf
+
+EXTRA_DIST = $(dbusservice_DATA)
