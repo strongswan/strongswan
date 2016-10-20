@@ -539,7 +539,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	ike_cfg = ike_cfg_create(IKEV2, TRUE, encap, "0.0.0.0",
 							 charon->socket->get_port(charon->socket, FALSE),
 							(char*)address, IKEV2_UDP_PORT,
-							 FRAGMENTATION_NO, 0);
+							 FRAGMENTATION_YES, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 
