@@ -27,6 +27,7 @@ log_action "Deploying $SHAREDDIR as hostfs"
 execute "chown -R $KVMUSER:$KVMGROUP $SHAREDDIR" 0
 execute "ln -Tfs $SHAREDDIR $HOSTFSTARGET"
 
+[ -d $TESTRESULTSDIR ] || mkdir $TESTRESULTSDIR
 log_action "Deploying $TESTRESULTSDIR as hostfs"
 execute "ln -Tfs $TESTRESULTSDIR $TESTRESTULSTARGET"
 

@@ -11,6 +11,12 @@ strongswan-5.5.1
   and the more traditional MGF1 Mask Generation Functions based on the SHA-1,
   SHA-256 and SHA-512 hash algorithms implemented by the new mgf1 plugin.
 
+- The pki tool, with help of the pkcs1 or openssl plugins, can parse private
+  keys in any of the supported formats without having to know the exact type.
+  So instead of having to specify rsa or ecdsa explicitly the keyword priv may
+  be used to indicate a private key of any type. Similarly, swanctl can load
+  any type of private key from the swanctl/private directory.
+
 - The pki tool can handle RSASSA-PKCS1v1.5-with-SHA-3 signatures using the
   sha3 and gmp plugins.
 
@@ -20,6 +26,9 @@ strongswan-5.5.1
 
 - Setting cache_crls = yes in strongswan.conf the vici plugin saves regular,
   base and delta CRLs to disk.
+
+- IKE fragmentation is now enabled by default with the default fragment size
+  set to 1280 bytes for both IP address families.
 
 - libtpmtss: In the TSS2 API the function TeardownSocketTcti() was replaced by
   tss2_tcti_finalize().
