@@ -90,6 +90,12 @@ plugin_t *connmark_plugin_create()
 		return NULL;
 	}
 
+	if (!lib->caps->keep(lib->caps, CAP_NET_RAW))
+	{
+		DBG1(DBG_NET, "connmark plugin requires CAP_NET_RAW capability");
+		return NULL;
+	}
+
 	INIT(this,
 		.public = {
 			.plugin = {
