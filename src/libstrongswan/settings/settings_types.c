@@ -177,7 +177,7 @@ static bool section_purge(section_t *this, array_t *contents)
 	 * having any such subsections) are not removed */
 	for (i = array_count(this->sections_order) - 1; i >= 0; i--)
 	{
-		array_get(this->sections, i, &current);
+		array_get(this->sections_order, i, &current);
 		if (section_purge(current, contents))
 		{
 			array_remove(this->sections_order, i, NULL);
