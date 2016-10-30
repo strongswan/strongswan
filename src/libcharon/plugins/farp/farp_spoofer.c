@@ -143,7 +143,7 @@ farp_spoofer_t *farp_spoofer_create(farp_listener_t *listener)
 		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, offsetof(arp_t, hardware_size)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 6, 0, 7),
 		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, offsetof(arp_t, protocol_size)),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 4, 0, 4),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 4, 0, 5),
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, offsetof(arp_t, opcode)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, ARPOP_REQUEST, 0, 3),
 		BPF_STMT(BPF_LD+BPF_W+BPF_LEN, 0),
