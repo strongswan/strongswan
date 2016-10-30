@@ -1,3 +1,10 @@
+strongswan-5.5.2
+----------------
+
+- In-place update of cached base and delta CRLs does no leave dozens
+  of stale copies in cache memory.
+
+
 strongswan-5.5.1
 ----------------
 
