@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2016 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -92,12 +93,10 @@ static void cache(private_cert_cache_t *this,
 	/* cache a CRL by replacing a previous CRL cache entry if present */
 	if (subject->get_type(subject) == CERT_X509_CRL)
 	{
-		bool is_delta_crl;
 		crl_t *crl, *cached_crl;
 
 		/* cache a delta CRL ? */
 		crl = (crl_t*)subject;
-		is_delta_crl = crl->is_delta_crl(crl, NULL);
 
 		for (i = 0; i < CACHE_SIZE; i++)
 		{
@@ -113,7 +112,8 @@ static void cache(private_cert_cache_t *this,
 				{
 					cached_crl = (crl_t*)rel->subject;
 
-					if (cached_crl->is_delta_crl(crl, NULL) == is_delta_crl &&
+					if (cached_crl->is_delta_crl(cached_crl, NULL) ==
+							   crl->is_delta_crl(crl, NULL) &&
 						crl_is_newer(crl, cached_crl))
 					{
 						rel->subject->destroy(rel->subject);
