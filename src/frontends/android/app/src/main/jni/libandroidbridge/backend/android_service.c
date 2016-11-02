@@ -550,6 +550,8 @@ METHOD(listener_t, alert, bool,
 	private_android_service_t *this, ike_sa_t *ike_sa, alert_t alert,
 	va_list args)
 {
+	bool stay_registered = TRUE;
+
 	if (this->ike_sa == ike_sa)
 	{
 		switch (alert)
@@ -557,11 +559,13 @@ METHOD(listener_t, alert, bool,
 			case ALERT_PEER_ADDR_FAILED:
 				charonservice->update_status(charonservice,
 											 CHARONSERVICE_LOOKUP_ERROR);
-				break;
+				return FALSE;
+
 			case ALERT_PEER_AUTH_FAILED:
 				charonservice->update_status(charonservice,
 											 CHARONSERVICE_PEER_AUTH_ERROR);
-				break;
+				return FALSE;
+
 			case ALERT_KEEP_ON_CHILD_SA_FAILURE:
 			{
 				uint32_t *id = malloc_thing(uint32_t);
@@ -593,6 +597,7 @@ METHOD(listener_t, alert, bool,
 						(job_t*)callback_job_create_with_prio(
 							(callback_job_cb_t)terminate, id, free,
 							(callback_job_cancel_t)return_false, JOB_PRIO_HIGH));
+					stay_registered = FALSE;
 				}
 				else
 				{
@@ -609,6 +614,7 @@ METHOD(listener_t, alert, bool,
 					{
 						charonservice->update_status(charonservice,
 											CHARONSERVICE_UNREACHABLE_ERROR);
+						stay_registered = FALSE;
 					}
 				}
 				this->lock->unlock(this->lock);
@@ -617,7 +623,7 @@ METHOD(listener_t, alert, bool,
 				break;
 		}
 	}
-	return TRUE;
+	return stay_registered;
 }
 
 static void add_auth_cfg_pw(private_android_service_t *this,
