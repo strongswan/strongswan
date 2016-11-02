@@ -58,7 +58,7 @@ METHOD(attribute_handler_t, handle, bool,
 		DESTROY_IF(dns);
 		return FALSE;
 	}
-
+	DBG1(DBG_IKE, "installing DNS server %H", dns);
 	builder = charonservice->get_vpnservice_builder(charonservice);
 	builder->add_dns(builder, dns);
 	dns->destroy(dns);
