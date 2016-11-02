@@ -17,29 +17,9 @@
 
 package org.strongswan.android.logic;
 
-import java.io.File;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.security.PrivateKey;
-import java.security.cert.CertificateEncodingException;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-
-import org.strongswan.android.data.VpnProfile;
-import org.strongswan.android.data.VpnProfileDataSource;
-import org.strongswan.android.data.VpnType.VpnTypeFeature;
-import org.strongswan.android.logic.VpnStateService.ErrorState;
-import org.strongswan.android.logic.VpnStateService.State;
-import org.strongswan.android.logic.imc.ImcState;
-import org.strongswan.android.logic.imc.RemediationInstruction;
-import org.strongswan.android.ui.MainActivity;
-import org.strongswan.android.utils.SettingsWriter;
-
 import android.annotation.TargetApi;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ComponentName;
@@ -53,13 +33,39 @@ import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.security.KeyChain;
 import android.security.KeyChainException;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.ContextCompat;
 import android.system.OsConstants;
 import android.util.Log;
 
-public class CharonVpnService extends VpnService implements Runnable
+import org.strongswan.android.R;
+import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnType.VpnTypeFeature;
+import org.strongswan.android.logic.VpnStateService.ErrorState;
+import org.strongswan.android.logic.VpnStateService.State;
+import org.strongswan.android.logic.imc.ImcState;
+import org.strongswan.android.logic.imc.RemediationInstruction;
+import org.strongswan.android.ui.MainActivity;
+import org.strongswan.android.utils.SettingsWriter;
+
+import java.io.File;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.security.PrivateKey;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+public class CharonVpnService extends VpnService implements Runnable, VpnStateService.VpnStateListener
 {
 	private static final String TAG = CharonVpnService.class.getSimpleName();
 	public static final String LOG_FILE = "charon.log";
+	public static final int VPN_STATE_NOTIFICATION_ID = 1;
 
 	private String mLogFile;
 	private VpnProfileDataSource mDataSource;
@@ -71,6 +77,7 @@ public class CharonVpnService extends VpnService implements Runnable
 	private volatile boolean mProfileUpdated;
 	private volatile boolean mTerminate;
 	private volatile boolean mIsDisconnecting;
+	private volatile boolean mShowNotification;
 	private VpnStateService mService;
 	private final Object mServiceLock = new Object();
 	private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -91,6 +98,7 @@ public class CharonVpnService extends VpnService implements Runnable
 				mService = ((VpnStateService.LocalBinder)service).getService();
 			}
 			/* we are now ready to start the handler thread */
+			mService.registerListener(CharonVpnService.this);
 			mConnectionHandler.start();
 		}
 	};
@@ -163,6 +171,7 @@ public class CharonVpnService extends VpnService implements Runnable
 		}
 		if (mService != null)
 		{
+			mService.unregisterListener(this);
 			unbindService(mServiceConnection);
 		}
 		mDataSource.close();
@@ -220,6 +229,7 @@ public class CharonVpnService extends VpnService implements Runnable
 						startConnection(mCurrentProfile);
 						mIsDisconnecting = false;
 
+						addNotification();
 						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName(), mCurrentProfile.getSplitTunneling());
 						if (initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
 						{
@@ -268,7 +278,91 @@ public class CharonVpnService extends VpnService implements Runnable
 				deinitializeCharon();
 				Log.i(TAG, "charon stopped");
 				mCurrentProfile = null;
+				removeNotification();
 			}
+		}
+	}
+
+	/**
+	 * Add a permanent notification while we are connected to avoid the service getting killed by
+	 * the system when low on memory.
+	 */
+	private void addNotification()
+	{
+		mShowNotification = true;
+		startForeground(VPN_STATE_NOTIFICATION_ID, buildNotification());
+	}
+
+	/**
+	 * Remove the permanent notification.
+	 */
+	private void removeNotification()
+	{
+		mShowNotification = false;
+		stopForeground(true);
+	}
+
+
+	/**
+	 * Build a notification matching the current state
+	 */
+	private Notification buildNotification()
+	{
+		VpnProfile profile = mService.getProfile();
+		State state = mService.getState();
+		ErrorState error = mService.getErrorState();
+		String name = "";
+
+		if (profile != null)
+		{
+			name = profile.getName();
+		}
+		android.support.v4.app.NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
+				.setContentText(name)
+				.setSmallIcon(R.drawable.ic_notification)
+				.setCategory(NotificationCompat.CATEGORY_SERVICE)
+				.setVisibility(NotificationCompat.VISIBILITY_SECRET);
+		int s = R.string.state_disabled;
+		if (error != ErrorState.NO_ERROR)
+		{
+			s = R.string.state_error;
+			builder.setSmallIcon(R.drawable.ic_notification_warning);
+			builder.setColor(ContextCompat.getColor(this, R.color.error_text));
+		}
+		else
+		{
+			switch (state)
+			{
+				case CONNECTING:
+					s = R.string.state_connecting;
+					builder.setSmallIcon(R.drawable.ic_notification_warning);
+					builder.setColor(ContextCompat.getColor(this, R.color.warning_text));
+					break;
+				case CONNECTED:
+					s = R.string.state_connected;
+					builder.setColor(ContextCompat.getColor(this, R.color.success_text));
+					builder.setUsesChronometer(true);
+					break;
+				case DISCONNECTING:
+					s = R.string.state_disconnecting;
+					break;
+			}
+		}
+		builder.setContentTitle(getString(s));
+
+		Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+		PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
+														  PendingIntent.FLAG_UPDATE_CURRENT);
+		builder.setContentIntent(pending);
+		return builder.build();
+	}
+
+	@Override
+	public void stateChanged() {
+		if (mShowNotification)
+		{
+			NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+			manager.notify(VPN_STATE_NOTIFICATION_ID, buildNotification());
 		}
 	}
 
@@ -521,7 +615,7 @@ public class CharonVpnService extends VpnService implements Runnable
 	 *
 	 * @param builder BuilderAdapter for this connection
 	 * @param logfile absolute path to the logfile
-	 * @param boyd enable BYOD features
+	 * @param byod enable BYOD features
 	 * @return TRUE if initialization was successful
 	 */
 	public native boolean initializeCharon(BuilderAdapter builder, String logfile, boolean byod);

@@ -187,12 +187,11 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		State state = mService.getState();
 		ErrorState error = mService.getErrorState();
 		ImcState imcState = mService.getImcState();
-		String name = "", gateway = "";
+		String name = "";
 
 		if (profile != null)
 		{
 			name = profile.getName();
-			gateway = profile.getGateway();
 		}
 
 		if (reportError(connectionID, name, error, imcState))

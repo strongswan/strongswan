@@ -315,7 +315,7 @@ public class VpnStateService extends Service
 	 *
 	 * May be called from threads other than the main thread.
 	 *
-	 * @param error error state
+	 * @param state IMC state
 	 */
 	public void setImcState(final ImcState state)
 	{
