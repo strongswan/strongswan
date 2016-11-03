@@ -509,6 +509,8 @@ update_connection (NMVpnEditor *iface,
 			str = "agent";
 			break;
 		case 2:
+			nm_setting_set_secret_flags (NM_SETTING (settings), "password",
+										 NM_SETTING_SECRET_FLAG_NOT_SAVED, NULL);
 			str = "smartcard";
 			break;
 		case 3:
