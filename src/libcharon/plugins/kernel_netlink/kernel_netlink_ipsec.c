@@ -1369,6 +1369,11 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		default:
 			break;
 	}
+	if (id->proto == IPPROTO_AH && sa->family == AF_INET)
+	{	/* use alignment to 4 bytes for IPv4 instead of the incorrect 8 byte
+		 * alignment that's used by default but is only valid for IPv6 */
+		sa->flags |= XFRM_STATE_ALIGN4;
+	}
 
 	sa->reqid = data->reqid;
 	sa->lft.soft_byte_limit = XFRM_LIMIT(data->lifetime->bytes.rekey);
