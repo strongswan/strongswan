@@ -12,4 +12,3 @@ moon::tcpdump::IP carol.strongswan.org > moon.strongswan.org: ESP::YES
 moon::tcpdump::IP moon.strongswan.org > carol.strongswan.org: ESP::YES
 moon::tcpdump::IP dave.strongswan.org > moon.strongswan.org: ESP::YES
 moon::tcpdump::IP moon.strongswan.org > dave.strongswan.org: ESP::YES
-
