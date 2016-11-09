@@ -113,6 +113,33 @@ struct mem_cred_t {
 							linked_list_t *owners);
 
 	/**
+	 * Add a shared key to the credential set, associated with the given unique
+	 * identifier.
+	 *
+	 * If a shared key with the same id already exists it is replaced.
+	 *
+	 * @param id			unique identifier of this key (cloned)
+	 * @param shared		shared key to add, gets owned by set
+	 * @param ...			NULL terminated list of owners (identification_t*)
+	 */
+	void (*add_shared_unique)(mem_cred_t *this, char *id, shared_key_t *shared,
+							  linked_list_t *owners);
+
+	/**
+	 * Remove a shared key by its unique identifier.
+	 *
+	 * @param id			unique identifier of this key
+	 */
+	void (*remove_shared_unique)(mem_cred_t *this, char *id);
+
+	/**
+	 * Create an enumerator over the unique identifiers of shared keys.
+	 *
+	 * @return			enumerator over char*
+	 */
+	enumerator_t *(*create_unique_shared_enumerator)(mem_cred_t *this);
+
+	/**
 	 * Add a certificate distribution point to the set.
 	 *
 	 * @param type			type of the certificate

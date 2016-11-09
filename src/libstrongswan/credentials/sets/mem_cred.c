@@ -400,10 +400,12 @@ METHOD(mem_cred_t, remove_key, bool,
  * Shared key entry
  */
 typedef struct {
-	/* shared key */
+	/** shared key */
 	shared_key_t *shared;
-	/* list of owners, identification_t */
+	/** list of owners, identification_t */
 	linked_list_t *owners;
+	/** optional unique identifier */
+	char *id;
 } shared_entry_t;
 
 /**
@@ -414,11 +416,12 @@ static void shared_entry_destroy(shared_entry_t *entry)
 	entry->owners->destroy_offset(entry->owners,
 								  offsetof(identification_t, destroy));
 	entry->shared->destroy(entry->shared);
+	free(entry->id);
 	free(entry);
 }
 
 /**
- * Check if two shared key entries equal
+ * Check if two shared key entries are equal (ignoring the unique identifier)
  */
 static bool shared_entry_equals(shared_entry_t *a, shared_entry_t *b)
 {
@@ -554,8 +557,9 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 						(void*)shared_filter, data, (void*)shared_data_destroy);
 }
 
-METHOD(mem_cred_t, add_shared_list, void,
-	private_mem_cred_t *this, shared_key_t *shared, linked_list_t* owners)
+METHOD(mem_cred_t, add_shared_unique, void,
+	private_mem_cred_t *this, char *id, shared_key_t *shared,
+	linked_list_t* owners)
 {
 	shared_entry_t *current, *new;
 	enumerator_t *enumerator;
@@ -563,6 +567,7 @@ METHOD(mem_cred_t, add_shared_list, void,
 	INIT(new,
 		.shared = shared,
 		.owners = owners,
+		.id = strdupnull(id),
 	);
 
 	this->lock->write_lock(this->lock);
@@ -570,7 +575,10 @@ METHOD(mem_cred_t, add_shared_list, void,
 	enumerator = this->shared->create_enumerator(this->shared);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (shared_entry_equals(current, new))
+		/* always replace keys with the same unique identifier, only compare
+		 * them if both have no unique id assigned */
+		if ((id && streq(id, current->id)) ||
+			(!id && !current->id && shared_entry_equals(current, new)))
 		{
 			this->shared->remove_at(this->shared, enumerator);
 			shared_entry_destroy(current);
@@ -582,6 +590,12 @@ METHOD(mem_cred_t, add_shared_list, void,
 	this->shared->insert_first(this->shared, new);
 
 	this->lock->unlock(this->lock);
+}
+
+METHOD(mem_cred_t, add_shared_list, void,
+	private_mem_cred_t *this, shared_key_t *shared, linked_list_t* owners)
+{
+	add_shared_unique(this, NULL, shared, owners);
 }
 
 METHOD(mem_cred_t, add_shared, void,
@@ -604,6 +618,63 @@ METHOD(mem_cred_t, add_shared, void,
 	va_end(args);
 
 	add_shared_list(this, shared, owners);
+}
+
+METHOD(mem_cred_t, remove_shared_unique, void,
+	private_mem_cred_t *this, char *id)
+{
+	enumerator_t *enumerator;
+	shared_entry_t *current;
+
+	if (!id)
+	{
+		return;
+	}
+
+	this->lock->write_lock(this->lock);
+
+	enumerator = this->shared->create_enumerator(this->shared);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (streq(id, current->id))
+		{
+			this->shared->remove_at(this->shared, enumerator);
+			shared_entry_destroy(current);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	this->lock->unlock(this->lock);
+}
+
+/**
+ * Filter unique ids of shared keys (ingore secrets without unique id)
+ */
+static bool unique_filter(void *unused,
+						  shared_entry_t **in, char **id)
+{
+	shared_entry_t *entry = *in;
+
+	if (!entry->id)
+	{
+		return FALSE;
+	}
+	if (id)
+	{
+		*id = entry->id;
+	}
+	return TRUE;
+}
+
+METHOD(mem_cred_t, create_unique_shared_enumerator, enumerator_t*,
+	private_mem_cred_t *this)
+{
+	this->lock->read_lock(this->lock);
+	return enumerator_create_filter(
+								this->shared->create_enumerator(this->shared),
+								(void*)unique_filter, this->lock,
+								(void*)this->lock->unlock);
 }
 
 /**
@@ -846,6 +917,9 @@ mem_cred_t *mem_cred_create()
 			.remove_key = _remove_key,
 			.add_shared = _add_shared,
 			.add_shared_list = _add_shared_list,
+			.add_shared_unique = _add_shared_unique,
+			.remove_shared_unique = _remove_shared_unique,
+			.create_unique_shared_enumerator = _create_unique_shared_enumerator,
 			.add_cdp = _add_cdp,
 			.replace_certs = _replace_certs,
 			.replace_secrets = _replace_secrets,
