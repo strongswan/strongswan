@@ -320,11 +320,12 @@ CALLBACK(load_shared, vici_message_t*,
 	shared_key_type_t type;
 	linked_list_t *owners;
 	chunk_t data;
-	char *str, buf[512] = "";
+	char *unique, *str, buf[512] = "";
 	enumerator_t *enumerator;
 	identification_t *owner;
 	int len;
 
+	unique = message->get_str(message, NULL, "id");
 	str = message->get_str(message, NULL, "type");
 	if (!str)
 	{
@@ -371,13 +372,57 @@ CALLBACK(load_shared, vici_message_t*,
 	}
 	enumerator->destroy(enumerator);
 
-	DBG1(DBG_CFG, "loaded %N shared key for: %s",
-		 shared_key_type_names, type, buf);
+	if (unique)
+	{
+		DBG1(DBG_CFG, "loaded %N shared key with id '%s' for: %s",
+			 shared_key_type_names, type, unique, buf);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "loaded %N shared key for: %s",
+			 shared_key_type_names, type, buf);
+	}
 
-	this->creds->add_shared_list(this->creds,
+	this->creds->add_shared_unique(this->creds, unique,
 						shared_key_create(type, chunk_clone(data)), owners);
 
 	return create_reply(NULL);
+}
+
+CALLBACK(unload_shared, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	char *unique;
+
+	unique = message->get_str(message, NULL, "id");
+	if (!unique)
+	{
+		return create_reply("unique identifier missing");
+	}
+	DBG1(DBG_CFG, "unloaded shared key with id '%s'", unique);
+	this->creds->remove_shared_unique(this->creds, unique);
+	return create_reply(NULL);
+}
+
+CALLBACK(get_shared, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	vici_builder_t *builder;
+	enumerator_t *enumerator;
+	char *unique;
+
+	builder = vici_builder_create();
+	builder->begin_list(builder, "keys");
+
+	enumerator = this->creds->create_unique_shared_enumerator(this->creds);
+	while (enumerator->enumerate(enumerator, &unique))
+	{
+		builder->add_li(builder, "%s", unique);
+	}
+	enumerator->destroy(enumerator);
+
+	builder->end_list(builder);
+	return builder->finalize(builder);
 }
 
 CALLBACK(clear_creds, vici_message_t*,
@@ -426,6 +471,8 @@ static void manage_commands(private_vici_cred_t *this, bool reg)
 	manage_command(this, "unload-key", unload_key, reg);
 	manage_command(this, "get-keys", get_keys, reg);
 	manage_command(this, "load-shared", load_shared, reg);
+	manage_command(this, "unload-shared", unload_shared, reg);
+	manage_command(this, "get-shared", get_shared, reg);
 }
 
 METHOD(vici_cred_t, add_cert, certificate_t*,

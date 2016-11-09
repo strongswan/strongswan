@@ -493,7 +493,8 @@ including keys found in other backends.
 Load a shared IKE PSK, EAP or XAuth secret into the daemon.
 
 	{
-		type = <private key type, IKE|EAP|XAUTH>
+		id = <optional unique identifier of this shared key>
+		type = <shared key type, IKE|EAP|XAUTH>
 		data = <raw shared key data>
 		owners = [
 			<list of shared key owner identities>
@@ -501,6 +502,29 @@ Load a shared IKE PSK, EAP or XAuth secret into the daemon.
 	} => {
 		success = <yes or no>
 		errmsg = <error string on failure>
+	}
+
+### unload-shared() ###
+
+Unload a previously loaded shared IKE PSK, EAP or XAuth secret by its unique
+identifier.
+
+	{
+		id = <unique identifier of the shared key to unload>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### get-shared() ###
+
+Return a list of unique identifiers of shared keys loaded exclusively over vici,
+not including keys found in other backends.
+
+	{} => {
+		keys = [
+			<list of unique identifiers>
+		]
 	}
 
 ### flush-certs() ###
