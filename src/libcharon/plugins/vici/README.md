@@ -466,6 +466,28 @@ Load a private key into the daemon.
 		errmsg = <error string on failure>
 	}
 
+### unload-key() ###
+
+Unload the private key with the given key identifier.
+
+	{
+		id = <hex-encoded SHA-1 key identifier of the private key to unload>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### get-keys() ###
+
+Return a list of identifiers of private keys loaded exclusively over vici, not
+including keys found in other backends.
+
+	{} => {
+		keys = [
+			<list of hex-encoded SHA-1 key identifiers>
+		]
+	}
+
 ### load-shared() ###
 
 Load a shared IKE PSK, EAP or XAuth secret into the daemon.

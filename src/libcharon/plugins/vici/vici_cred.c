@@ -1,9 +1,11 @@
 /*
+ * Copyright (C) 2015-2016 Andreas Steffen
+ * Copyright (C) 2016 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2015-2016 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -249,6 +251,53 @@ CALLBACK(load_key, vici_message_t*,
 	return create_reply(NULL);
 }
 
+CALLBACK(unload_key, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	chunk_t keyid;
+	char *hex, *msg = NULL;
+
+	hex = message->get_str(message, NULL, "id");
+	if (!hex)
+	{
+		return create_reply("key id missing");
+	}
+	keyid = chunk_from_hex(chunk_from_str(hex), NULL);
+	DBG1(DBG_CFG, "unloaded private key with id %+B", &keyid);
+	if (!this->creds->remove_key(this->creds, keyid))
+	{
+		msg = "key not found";
+	}
+	chunk_free(&keyid);
+	return create_reply(msg);
+}
+
+CALLBACK(get_keys, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	vici_builder_t *builder;
+	enumerator_t *enumerator;
+	private_key_t *private;
+	chunk_t keyid;
+
+	builder = vici_builder_create();
+	builder->begin_list(builder, "keys");
+
+	enumerator = this->creds->set.create_private_enumerator(&this->creds->set,
+															KEY_ANY, NULL);
+	while (enumerator->enumerate(enumerator, &private))
+	{
+		if (private->get_fingerprint(private, KEYID_PUBKEY_SHA1, &keyid))
+		{
+			builder->add_li(builder, "%+B", &keyid);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	builder->end_list(builder);
+	return builder->finalize(builder);
+}
+
 CALLBACK(shared_owners, bool,
 	linked_list_t *owners, vici_message_t *message, char *name, chunk_t value)
 {
@@ -374,6 +423,8 @@ static void manage_commands(private_vici_cred_t *this, bool reg)
 	manage_command(this, "flush-certs", flush_certs, reg);
 	manage_command(this, "load-cert", load_cert, reg);
 	manage_command(this, "load-key", load_key, reg);
+	manage_command(this, "unload-key", unload_key, reg);
+	manage_command(this, "get-keys", get_keys, reg);
 	manage_command(this, "load-shared", load_shared, reg);
 }
 
