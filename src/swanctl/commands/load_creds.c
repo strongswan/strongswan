@@ -50,6 +50,8 @@ typedef struct {
 	bool noprompt;
 	/** list of key ids of loaded private keys */
 	hashtable_t *keys;
+	/** list of unique ids of loaded shared keys */
+	hashtable_t *shared;
 } load_ctx_t;
 
 /**
@@ -629,6 +631,7 @@ static bool load_secret(load_ctx_t *ctx, char *section)
 
 	req = vici_begin("load-shared");
 
+	vici_add_key_valuef(req, "id", "%s", section);
 	vici_add_key_valuef(req, "type", "%s", type);
 	vici_add_key_value(req, "data", data.ptr, data.len);
 	chunk_clear(&data);
@@ -667,6 +670,10 @@ static bool load_secret(load_ctx_t *ctx, char *section)
 	{
 		printf("loaded %s secret '%s'\n", type, section);
 	}
+	if (ret)
+	{
+		free(ctx->shared->remove(ctx->shared, section));
+	}
 	vici_free_res(res);
 	return ret;
 }
@@ -687,9 +694,9 @@ CALLBACK(get_id, int,
 }
 
 /**
- * Get a list of currently loaded private keys
+ * Get a list of currently loaded private and shared keys
  */
-static void get_keys(load_ctx_t *ctx)
+static void get_creds(load_ctx_t *ctx)
 {
 	vici_res_t *res;
 
@@ -704,31 +711,43 @@ static void get_keys(load_ctx_t *ctx)
 		vici_parse_cb(res, NULL, NULL, get_id, ctx->keys);
 		vici_free_res(res);
 	}
+	res = vici_submit(vici_begin("get-shared"), ctx->conn);
+	if (res)
+	{
+		if (ctx->format & COMMAND_FORMAT_RAW)
+		{
+			vici_dump(res, "get-shared reply", ctx->format & COMMAND_FORMAT_PRETTY,
+					  stdout);
+		}
+		vici_parse_cb(res, NULL, NULL, get_id, ctx->shared);
+		vici_free_res(res);
+	}
 }
 
 /**
  * Remove a given key
  */
-static bool unload_key(load_ctx_t *ctx, char *id)
+static bool unload_key(load_ctx_t *ctx, char *command, char *id)
 {
 	vici_req_t *req;
 	vici_res_t *res;
+	char buf[BUF_LEN];
 	bool ret = TRUE;
 
-	req = vici_begin("unload-key");
+	req = vici_begin(command);
 
 	vici_add_key_valuef(req, "id", "%s", id);
 
 	res = vici_submit(req, ctx->conn);
 	if (!res)
 	{
-		fprintf(stderr, "unload-key request failed: %s\n", strerror(errno));
+		fprintf(stderr, "%s request failed: %s\n", command, strerror(errno));
 		return FALSE;
 	}
 	if (ctx->format & COMMAND_FORMAT_RAW)
 	{
-		vici_dump(res, "unload-key reply", ctx->format & COMMAND_FORMAT_PRETTY,
-				  stdout);
+		snprintf(buf, sizeof(buf), "%s reply", command);
+		vici_dump(res, buf, ctx->format & COMMAND_FORMAT_PRETTY, stdout);
 	}
 	else if (!streq(vici_find_str(res, "no", "success"), "yes"))
 	{
@@ -738,6 +757,22 @@ static bool unload_key(load_ctx_t *ctx, char *id)
 	}
 	vici_free_res(res);
 	return ret;
+}
+
+/**
+ * Remove all keys in the given hashtable using the given command
+ */
+static void unload_keys(load_ctx_t *ctx, hashtable_t *ht, char *command)
+{
+	enumerator_t *enumerator;
+	char *id;
+
+	enumerator = ht->create_enumerator(ht);
+	while (enumerator->enumerate(enumerator, &id, NULL))
+	{
+		unload_key(ctx, command, id);
+	}
+	enumerator->destroy(enumerator);
 }
 
 /**
@@ -769,13 +804,14 @@ int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
 				   settings_t *cfg, bool clear, bool noprompt)
 {
 	enumerator_t *enumerator;
-	char *section, *id;
+	char *section;
 	load_ctx_t ctx = {
 		.conn = conn,
 		.format = format,
 		.noprompt = noprompt,
 		.cfg = cfg,
 		.keys = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8),
+		.shared = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8),
 	};
 
 	if (clear)
@@ -786,7 +822,7 @@ int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
 		}
 	}
 
-	get_keys(&ctx);
+	get_creds(&ctx);
 
 	load_certs(&ctx, "x509",     SWANCTL_X509DIR);
 	load_certs(&ctx, "x509ca",   SWANCTL_X509CADIR);
@@ -811,13 +847,11 @@ int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
 	}
 	enumerator->destroy(enumerator);
 
-	enumerator = ctx.keys->create_enumerator(ctx.keys);
-	while (enumerator->enumerate(enumerator, &id, NULL))
-	{
-		unload_key(&ctx, id);
-	}
-	enumerator->destroy(enumerator);
+	unload_keys(&ctx, ctx.keys, "unload-key");
+	unload_keys(&ctx, ctx.shared, "unload-shared");
+
 	ctx.keys->destroy_function(ctx.keys, (void*)free);
+	ctx.shared->destroy_function(ctx.shared, (void*)free);
 	return 0;
 }
 
