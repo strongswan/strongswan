@@ -233,6 +233,7 @@ static inline void unregister_logger(private_bus_t *this, logger_t *logger)
 	enumerator_t *enumerator;
 	linked_list_t *loggers;
 	log_entry_t *entry, *found = NULL;
+	debug_t group;
 
 	loggers = this->loggers[DBG_MAX];
 	enumerator = loggers->create_enumerator(loggers);
@@ -249,17 +250,16 @@ static inline void unregister_logger(private_bus_t *this, logger_t *logger)
 
 	if (found)
 	{
-		level_t level = LEVEL_SILENT, vlevel = LEVEL_SILENT;
-		debug_t group;
-
 		for (group = 0; group < DBG_MAX; group++)
 		{
 			if (found->levels[group] > LEVEL_SILENT)
 			{
+				level_t level = LEVEL_SILENT, vlevel = LEVEL_SILENT;
+
 				loggers = this->loggers[group];
 				loggers->remove(loggers, found, NULL);
-				loggers->find_first(loggers, (linked_list_match_t)find_max_levels, NULL,
-									&group, &level, &vlevel);
+				loggers->find_first(loggers, (linked_list_match_t)find_max_levels,
+									NULL, group, &level, &vlevel);
 				set_level(&this->max_level[group], level);
 				set_level(&this->max_vlevel[group], vlevel);
 			}
