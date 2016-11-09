@@ -370,6 +370,32 @@ METHOD(mem_cred_t, add_key, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(mem_cred_t, remove_key, bool,
+	private_mem_cred_t *this, chunk_t fp)
+{
+	enumerator_t *enumerator;
+	private_key_t *current;
+	bool found = FALSE;
+
+	this->lock->write_lock(this->lock);
+
+	enumerator = this->keys->create_enumerator(this->keys);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (current->has_fingerprint(current, fp))
+		{
+			this->keys->remove_at(this->keys, enumerator);
+			current->destroy(current);
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	this->lock->unlock(this->lock);
+	return found;
+}
+
 /**
  * Shared key entry
  */
@@ -817,6 +843,7 @@ mem_cred_t *mem_cred_create()
 			.get_cert_ref = _get_cert_ref,
 			.add_crl = _add_crl,
 			.add_key = _add_key,
+			.remove_key = _remove_key,
 			.add_shared = _add_shared,
 			.add_shared_list = _add_shared_list,
 			.add_cdp = _add_cdp,

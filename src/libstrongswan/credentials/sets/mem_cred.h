@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2010-2015 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2010-2016 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -85,6 +86,14 @@ struct mem_cred_t {
 	 * @param key			key, reference gets owned by set
 	 */
 	void (*add_key)(mem_cred_t *this, private_key_t *key);
+
+	/**
+	 * Remove a private key from the credential set.
+	 *
+	 * @param fp			fingerprint of the key to remove
+	 * @return				TRUE if the key was found and removed
+	 */
+	bool (*remove_key)(mem_cred_t *this, chunk_t fp);
 
 	/**
 	 * Add a shared key to the credential set.
