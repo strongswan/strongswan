@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2014-2015 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2014-2016 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
@@ -668,10 +668,11 @@ CALLBACK(get_pools, vici_message_t*,
 	identification_t *uid;
 	host_t *lease;
 	bool list_leases, on;
-	char buf[32];
+	char buf[32], *filter;
 	int i;
 
 	list_leases = message->get_bool(message, FALSE, "leases");
+	filter = message->get_str(message, NULL, "name");
 
 	builder = vici_builder_create();
 
@@ -679,6 +680,11 @@ CALLBACK(get_pools, vici_message_t*,
 	enumerator = this->pools->create_enumerator(this->pools);
 	while (enumerator->enumerate(enumerator, &name, &pool))
 	{
+		if (filter && !streq(name, filter))
+		{
+			continue;
+		}
+
 		vips = pool->vips;
 
 		builder->begin_section(builder, name);

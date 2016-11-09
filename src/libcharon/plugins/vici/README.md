@@ -569,6 +569,7 @@ List the currently loaded pools.
 
 	{
 		leases = <set to yes to include leases>
+		name = <optional name of the pool to query>
 	} => {
 		<pool name>* = {
 			base = <virtual IP pool base address>
