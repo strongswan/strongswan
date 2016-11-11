@@ -235,6 +235,7 @@ METHOD(enumerator_t, child_cfgs_replace_enumerate, bool,
 		{
 			break;
 		}
+		this->wrapped->destroy(this->wrapped);
 		this->wrapped = this->added->create_enumerator(this->added);
 		this->add = TRUE;
 	}
