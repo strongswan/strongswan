@@ -102,6 +102,14 @@ connections.<conn>.pull = yes
 	Push mode is currently supported for IKEv1, but not in IKEv2. It is used
 	by a few implementations only, pull mode is recommended.
 
+connections.<conn>.dscp = 000000
+	Differentiated Services Field Codepoint to set on outgoing IKE packets (six
+	binary digits).
+
+	Differentiated Services Field Codepoint to set on outgoing IKE packets for
+	this connection. The value is a six digit binary encoded string specifying
+	the Codepoint to set, as defined in RFC 2474.
+
 connections.<conn>.encap = no
 	Enforce UDP encapsulation by faking NAT-D payloads.
 

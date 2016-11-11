@@ -295,6 +295,7 @@ typedef struct {
 	uint64_t rekey_time;
 	uint64_t over_time;
 	uint64_t rand_time;
+	uint8_t dscp;
 } peer_data_t;
 
 /**
@@ -370,6 +371,7 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  send_cert = %N", cert_policy_names, data->send_cert);
 	DBG2(DBG_CFG, "  mobike = %u", data->mobike);
 	DBG2(DBG_CFG, "  aggressive = %u", data->aggressive);
+	DBG2(DBG_CFG, "  dscp = 0x%.2x", data->dscp);
 	DBG2(DBG_CFG, "  encap = %u", data->encap);
 	DBG2(DBG_CFG, "  dpd_delay = %llu", data->dpd_delay);
 	DBG2(DBG_CFG, "  dpd_timeout = %llu", data->dpd_timeout);
@@ -814,10 +816,9 @@ CALLBACK(parse_action, bool,
 }
 
 /**
- * Parse a uint32_t
+ * Parse a uint32_t with the given base
  */
-CALLBACK(parse_uint32, bool,
-	uint32_t *out, chunk_t v)
+static bool parse_uint32_base(uint32_t *out, chunk_t v, int base)
 {
 	char buf[16], *end;
 	u_long l;
@@ -826,13 +827,31 @@ CALLBACK(parse_uint32, bool,
 	{
 		return FALSE;
 	}
-	l = strtoul(buf, &end, 0);
+	l = strtoul(buf, &end, base);
 	if (*end == 0)
 	{
 		*out = l;
 		return TRUE;
 	}
 	return FALSE;
+}
+
+/**
+ * Parse a uint32_t
+ */
+CALLBACK(parse_uint32, bool,
+	uint32_t *out, chunk_t v)
+{
+	return parse_uint32_base(out, v, 0);
+}
+
+/**
+ * Parse a uint32_t in binary encoding
+ */
+CALLBACK(parse_uint32_bin, bool,
+	uint32_t *out, chunk_t v)
+{
+	return parse_uint32_base(out, v, 2);
 }
 
 /**
@@ -981,6 +1000,20 @@ CALLBACK(parse_tfc, bool,
 		return TRUE;
 	}
 	return parse_uint32(out, v);
+}
+
+/**
+ * Parse 6-bit DSCP value
+ */
+CALLBACK(parse_dscp, bool,
+	uint8_t *out, chunk_t v)
+{
+	if (parse_uint32_bin(out, v))
+	{
+		*out = *out & 0x3f;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
@@ -1417,6 +1450,7 @@ CALLBACK(peer_kv, bool,
 		{ "version",		parse_uint32,		&peer->version				},
 		{ "aggressive",		parse_bool,			&peer->aggressive			},
 		{ "pull",			parse_bool,			&peer->pull					},
+		{ "dscp",			parse_dscp,			&peer->dscp					},
 		{ "encap",			parse_bool,			&peer->encap				},
 		{ "mobike",			parse_bool,			&peer->mobike				},
 		{ "dpd_delay",		parse_time,			&peer->dpd_delay			},
@@ -2085,7 +2119,7 @@ CALLBACK(config_sn, bool,
 	ike_cfg = ike_cfg_create(peer.version, peer.send_certreq, peer.encap,
 						peer.local_addrs, peer.local_port,
 						peer.remote_addrs, peer.remote_port,
-						peer.fragmentation, 0);
+						peer.fragmentation, peer.dscp);
 
 	cfg = (peer_cfg_create_t){
 		.cert_policy = peer.send_cert,
