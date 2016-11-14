@@ -1,6 +1,9 @@
 strongswan-5.5.2
 ----------------
 
+- Support of Diffie-Hellman group 31 using Curve25519 for IKE as defined
+  by RFC 8031.
+
 - In-place update of cached base and delta CRLs does no leave dozens
   of stale copies in cache memory.
 
