@@ -259,7 +259,7 @@ static inline void unregister_logger(private_bus_t *this, logger_t *logger)
 				loggers = this->loggers[group];
 				loggers->remove(loggers, found, NULL);
 				loggers->find_first(loggers, (linked_list_match_t)find_max_levels,
-									NULL, group, &level, &vlevel);
+									NULL, &group, &level, &vlevel);
 				set_level(&this->max_level[group], level);
 				set_level(&this->max_vlevel[group], vlevel);
 			}
