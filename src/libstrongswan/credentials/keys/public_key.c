@@ -24,6 +24,8 @@ ENUM(key_type_names, KEY_ANY, KEY_BLISS,
 	"RSA",
 	"ECDSA",
 	"DSA",
+	"ED25519",
+	"ED448",
 	"BLISS"
 );
 
@@ -48,6 +50,8 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_BLISS_WITH_SHA3_512,
 	"ECDSA-256",
 	"ECDSA-384",
 	"ECDSA-521",
+	"ED25519",
+	"ED448",
 	"BLISS_WITH_SHA2_256",
 	"BLISS_WITH_SHA2_384",
 	"BLISS_WITH_SHA2_512",
@@ -151,6 +155,10 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 			return SIGN_ECDSA_WITH_SHA384_DER;
 		case OID_ECDSA_WITH_SHA512:
 			return SIGN_ECDSA_WITH_SHA512_DER;
+		case OID_ED25519:
+			return SIGN_ED25519;
+		case OID_ED448:
+			return SIGN_ED448;
 		case OID_BLISS_PUBLICKEY:
 		case OID_BLISS_WITH_SHA2_512:
 			return SIGN_BLISS_WITH_SHA2_512;
@@ -210,6 +218,10 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 			return OID_ECDSA_WITH_SHA384;
 		case SIGN_ECDSA_WITH_SHA512_DER:
 			return OID_ECDSA_WITH_SHA512;
+		case SIGN_ED25519:
+			return OID_ED25519;
+		case SIGN_ED448:
+			return OID_ED448;
 		case SIGN_BLISS_WITH_SHA2_256:
 			return OID_BLISS_WITH_SHA2_256;
 		case SIGN_BLISS_WITH_SHA2_384:
@@ -236,15 +248,17 @@ static struct {
 	key_type_t type;
 	int max_keysize;
 } scheme_map[] = {
-	{ SIGN_RSA_EMSA_PKCS1_SHA2_256, KEY_RSA, 3072 },
-	{ SIGN_RSA_EMSA_PKCS1_SHA2_384, KEY_RSA, 7680 },
-	{ SIGN_RSA_EMSA_PKCS1_SHA2_512, KEY_RSA, 0 },
-	{ SIGN_ECDSA_WITH_SHA256_DER, KEY_ECDSA, 256 },
-	{ SIGN_ECDSA_WITH_SHA384_DER, KEY_ECDSA, 384 },
-	{ SIGN_ECDSA_WITH_SHA512_DER, KEY_ECDSA, 0 },
-	{ SIGN_BLISS_WITH_SHA2_256,   KEY_BLISS, 128 },
-	{ SIGN_BLISS_WITH_SHA2_384,   KEY_BLISS, 192 },
-	{ SIGN_BLISS_WITH_SHA2_512,   KEY_BLISS, 0 }
+	{ SIGN_RSA_EMSA_PKCS1_SHA2_256, KEY_RSA,  3072 },
+	{ SIGN_RSA_EMSA_PKCS1_SHA2_384, KEY_RSA,  7680 },
+	{ SIGN_RSA_EMSA_PKCS1_SHA2_512, KEY_RSA,     0 },
+	{ SIGN_ECDSA_WITH_SHA256_DER,   KEY_ECDSA, 256 },
+	{ SIGN_ECDSA_WITH_SHA384_DER,   KEY_ECDSA, 384 },
+	{ SIGN_ECDSA_WITH_SHA512_DER,   KEY_ECDSA,   0 },
+	{ SIGN_ED25519,                 KEY_ED25519, 0 },
+	{ SIGN_ED448,                   KEY_ED448,   0 },
+	{ SIGN_BLISS_WITH_SHA2_256,     KEY_BLISS, 128 },
+	{ SIGN_BLISS_WITH_SHA2_384,     KEY_BLISS, 192 },
+	{ SIGN_BLISS_WITH_SHA2_512,     KEY_BLISS,   0 }
 };
 
 /**
@@ -323,6 +337,10 @@ key_type_t key_type_from_signature_scheme(signature_scheme_t scheme)
 		case SIGN_ECDSA_384:
 		case SIGN_ECDSA_521:
 			return KEY_ECDSA;
+		case SIGN_ED25519:
+			return KEY_ED25519;
+		case SIGN_ED448:
+			return KEY_ED448;
 		case SIGN_BLISS_WITH_SHA2_256:
 		case SIGN_BLISS_WITH_SHA2_384:
 		case SIGN_BLISS_WITH_SHA2_512:

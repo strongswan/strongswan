@@ -15,7 +15,7 @@
 
 /**
  * @defgroup curve25519_drv curve25519_drv
- * @{ @ingroup curve25519
+ * @{ @ingroup curve25519_p
  */
 
 #ifndef CURVE25519_DRV_H_

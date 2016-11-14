@@ -2,6 +2,9 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
+ * Copyright (C) 2016 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -15,6 +18,8 @@
 
 #include "curve25519_plugin.h"
 #include "curve25519_dh.h"
+#include "curve25519_private_key.h"
+#include "curve25519_public_key.h"
 
 #include <library.h>
 
@@ -41,9 +46,25 @@ METHOD(plugin_t, get_features, int,
 	private_curve25519_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
+		/* X25519 DH group */
 		PLUGIN_REGISTER(DH, curve25519_dh_create),
 			PLUGIN_PROVIDE(DH, CURVE_25519),
 				PLUGIN_DEPENDS(RNG, RNG_STRONG),
+		/* Ed25519 private/public keys */
+		PLUGIN_REGISTER(PRIVKEY, curve25519_private_key_load, TRUE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ED25519),
+		PLUGIN_REGISTER(PRIVKEY_GEN, curve25519_private_key_gen, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ED25519),
+				PLUGIN_DEPENDS(RNG, RNG_TRUE),
+				PLUGIN_DEPENDS(HASHER, HASH_SHA512),
+		PLUGIN_REGISTER(PUBKEY, curve25519_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ED25519),
+		/* Ed25519 signature scheme, private */
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ED25519),
+			PLUGIN_DEPENDS(HASHER, HASH_SHA512),
+		/* Ed25519 signature verification scheme, public */
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ED25519),
+			PLUGIN_DEPENDS(HASHER, HASH_SHA512),
 	};
 	*features = f;
 	return countof(f);

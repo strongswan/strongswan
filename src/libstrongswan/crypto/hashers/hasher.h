@@ -1,8 +1,9 @@
 /*
+ * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -35,6 +36,7 @@ typedef struct hasher_t hasher_t;
  * Hash algorithms as defined for IKEv2 by RFC 7427
  */
 enum hash_algorithm_t {
+	HASH_IDENTITY		= 0,
 	HASH_SHA1 			= 1,
 	HASH_SHA256			= 2,
 	HASH_SHA384			= 3,

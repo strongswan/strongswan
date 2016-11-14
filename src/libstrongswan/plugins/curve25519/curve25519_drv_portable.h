@@ -15,7 +15,7 @@
 
 /**
  * @defgroup curve25519_drv_portable curve25519_drv_portable
- * @{ @ingroup curve25519
+ * @{ @ingroup curve25519_p
  */
 
 #include "curve25519_drv.h"
