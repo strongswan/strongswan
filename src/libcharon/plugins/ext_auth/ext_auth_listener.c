@@ -98,6 +98,8 @@ METHOD(listener_t, authorize, bool,
 		process_t *process;
 		char *envp[32] = {};
 		int out, retval;
+		auth_cfg_t *auth;
+		certificate_t *cert;
 
 		*success = FALSE;
 
@@ -122,6 +124,12 @@ METHOD(listener_t, authorize, bool,
 			push_env(envp, countof(envp), "IKE_REMOTE_EAP_ID=%Y",
 					 ike_sa->get_other_eap_id(ike_sa));
 		}
+
+		auth = ike_sa->get_auth_cfg(ike_sa, TRUE);
+		cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+		if (cert)
+			push_env(envp, countof(envp), "CERT_SUBJECT=%Y",
+					cert->get_subject(cert));
 
 		process = process_start_shell(envp, NULL, &out, NULL,
 									  "2>&1 %s", this->script);
