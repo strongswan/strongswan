@@ -495,9 +495,11 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 					{
 						this->my_usetime = time;
 					}
-					return SUCCESS;
 				}
-				return FAILED;
+				else
+				{
+					status = FAILED;
+				}
 			}
 		}
 	}
@@ -526,9 +528,11 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 					{
 						this->other_usetime = time;
 					}
-					return SUCCESS;
 				}
-				return FAILED;
+				else
+				{
+					status = FAILED;
+				}
 			}
 		}
 	}
