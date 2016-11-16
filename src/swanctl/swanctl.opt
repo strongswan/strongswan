@@ -831,6 +831,28 @@ secrets.eap<suffix>.id<suffix> =
 	be specified, each having an _id_ prefix, if a secret is shared between
 	multiple users.
 
+secrets.ntlm<suffix> { # }
+	NTLM secret section for a specific secret.
+
+	NTLM secret section for a specific secret. Each NTLM secret is defined in
+	a unique section having the _ntlm_ prefix. NTLM secrets may only be used for
+	EAP-MSCHAPv2 authentication.
+
+secrets.ntlm<suffix>.secret =
+	Value of the NTLM secret.
+
+	Value of the NTLM secret, which is the NT Hash of the actual secret, that
+	is, MD4(UTF-16LE(secret)). The resulting 16-byte value may either be given
+	as a hex encoded string with a _0x_ prefix or as a Base64 encoded string
+	with a _0s_ prefix.
+
+secrets.ntlm<suffix>.id<suffix> =
+	Identity the NTLM secret belongs to.
+
+	Identity the NTLM secret belongs to. Multiple unique identities may
+	be specified, each having an _id_ prefix, if a secret is shared between
+	multiple users.
+
 secrets.ike<suffix> { # }
 	IKE preshared secret section for a specific secret.
 

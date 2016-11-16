@@ -583,6 +583,7 @@ static bool load_secret(load_ctx_t *ctx, char *section)
 	char *types[] = {
 		"eap",
 		"xauth",
+		"ntlm",
 		"ike",
 		"private",
 		"rsa",
@@ -605,7 +606,8 @@ static bool load_secret(load_ctx_t *ctx, char *section)
 		fprintf(stderr, "ignoring unsupported secret '%s'\n", section);
 		return FALSE;
 	}
-	if (!streq(type, "eap") && !streq(type, "xauth") && !streq(type, "ike"))
+	if (!streq(type, "eap") && !streq(type, "xauth") && !streq(type, "ntlm") &&
+		!streq(type, "ike"))
 	{	/* skip non-shared secrets */
 		return TRUE;
 	}
