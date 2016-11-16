@@ -1757,7 +1757,8 @@ static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 			{
 				case MODE_PASS:
 				case MODE_DROP:
-					charon->shunts->install(charon->shunts, NULL, child_cfg);
+					charon->shunts->install(charon->shunts,
+									peer_cfg->get_name(peer_cfg), child_cfg);
 					break;
 				default:
 					charon->traps->install(charon->traps, peer_cfg, child_cfg,
@@ -1778,6 +1779,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 {
 	enumerator_t *enumerator, *children;
 	child_sa_t *child_sa;
+	peer_cfg_t *peer_cfg;
 	ike_sa_t *ike_sa;
 	uint32_t id = 0, others;
 	array_t *ids = NULL, *ikeids = NULL;
@@ -1865,13 +1867,15 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 			{
 				case MODE_PASS:
 				case MODE_DROP:
-					charon->shunts->uninstall(charon->shunts, NULL, name);
+					charon->shunts->uninstall(charon->shunts, peer_name, name);
 					break;
 				default:
 					enumerator = charon->traps->create_enumerator(charon->traps);
-					while (enumerator->enumerate(enumerator, NULL, &child_sa))
+					while (enumerator->enumerate(enumerator, &peer_cfg,
+												 &child_sa))
 					{
-						if (streq(name, child_sa->get_name(child_sa)))
+						if (streq(peer_name, peer_cfg->get_name(peer_cfg)) &&
+							streq(name, child_sa->get_name(child_sa)))
 						{
 							id = child_sa->get_reqid(child_sa);
 							break;
