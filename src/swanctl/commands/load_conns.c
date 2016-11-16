@@ -38,6 +38,7 @@ static bool is_list_key(char *key)
 		"vips",
 		"pools",
 		"groups",
+		"cert_policy",
 	};
 	int i;
 

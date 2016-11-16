@@ -1142,6 +1142,22 @@ CALLBACK(parse_group, bool,
 }
 
 /**
+ * Parse certificate policy
+ */
+CALLBACK(parse_cert_policy, bool,
+	auth_cfg_t *cfg, chunk_t v)
+{
+	char buf[BUF_LEN];
+
+	if (!vici_stringify(v, buf, sizeof(buf)))
+	{
+		return FALSE;
+	}
+	cfg->add(cfg, AUTH_RULE_CERT_POLICY, strdup(buf));
+	return TRUE;
+}
+
+/**
  * Parse a certificate; add as auth rule to config
  */
 static bool parse_cert(auth_data_t *auth, auth_rule_t rule, chunk_t v)
@@ -1402,6 +1418,7 @@ CALLBACK(auth_li, bool,
 {
 	parse_rule_t rules[] = {
 		{ "groups",			parse_group,		auth->cfg					},
+		{ "cert_policy",	parse_cert_policy,	auth						},
 		{ "certs",			parse_certs,		auth						},
 		{ "cacerts",		parse_cacerts,		auth						},
 		{ "pubkeys",		parse_pubkeys,		auth						},

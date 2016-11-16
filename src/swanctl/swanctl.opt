@@ -406,6 +406,12 @@ connections.<conn>.remote<suffix>.groups =
 	can be certified by different means, for example by appropriate Attribute
 	Certificates or by an AAA backend involved in the authentication.
 
+connections.<conn>.remote<suffix>.cert_policy =
+	Certificate policy OIDs the peer's certificate must have.
+
+	Comma separated list of certificate policy OIDs the peer's certificate must
+	have. OIDs are specified using the numerical dotted representation.
+
 connections.<conn>.remote<suffix>.certs =
 	Comma separated list of certificate to accept for authentication.
 
