@@ -580,7 +580,7 @@ CALLBACK(list_policies, vici_message_t*,
 	if (drop || pass)
 	{
 		enumerator = charon->shunts->create_enumerator(charon->shunts);
-		while (enumerator->enumerate(enumerator, &child_cfg))
+		while (enumerator->enumerate(enumerator, NULL, &child_cfg))
 		{
 			if (child && !streq(child, child_cfg->get_name(child_cfg)))
 			{

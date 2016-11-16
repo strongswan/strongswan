@@ -36,7 +36,7 @@ struct private_shunt_manager_t {
 	shunt_manager_t public;
 
 	/**
-	 * Installed shunts, as child_cfg_t
+	 * Installed shunts, as entry_t
 	 */
 	linked_list_t *shunts;
 
@@ -55,6 +55,32 @@ struct private_shunt_manager_t {
 	 */
 	rwlock_condvar_t *condvar;
 };
+
+/**
+ * Config entry for a shunt
+ */
+typedef struct {
+	/**
+	 * Configured namespace
+	 */
+	char *ns;
+
+	/**
+	 * Child config
+	 */
+	child_cfg_t *cfg;
+
+} entry_t;
+
+/**
+ * Destroy a config entry
+ */
+static void entry_destroy(entry_t *this)
+{
+	this->cfg->destroy(this->cfg);
+	free(this->ns);
+	free(this);
+}
 
 /**
  * Install in and out shunt policies in the kernel
@@ -162,10 +188,10 @@ static bool install_shunt_policy(child_cfg_t *child)
 }
 
 METHOD(shunt_manager_t, install, bool,
-	private_shunt_manager_t *this, child_cfg_t *child)
+	private_shunt_manager_t *this, char *ns, child_cfg_t *cfg)
 {
 	enumerator_t *enumerator;
-	child_cfg_t *child_cfg;
+	entry_t *entry;
 	bool found = FALSE, success;
 
 	/* check if not already installed */
@@ -176,9 +202,10 @@ METHOD(shunt_manager_t, install, bool,
 		return FALSE;
 	}
 	enumerator = this->shunts->create_enumerator(this->shunts);
-	while (enumerator->enumerate(enumerator, &child_cfg))
+	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (streq(child_cfg->get_name(child_cfg), child->get_name(child)))
+		if (streq(ns, entry->ns) &&
+			streq(cfg->get_name(cfg), entry->cfg->get_name(entry->cfg)))
 		{
 			found = TRUE;
 			break;
@@ -188,21 +215,25 @@ METHOD(shunt_manager_t, install, bool,
 	if (found)
 	{
 		DBG1(DBG_CFG, "shunt %N policy '%s' already installed",
-			 ipsec_mode_names, child->get_mode(child), child->get_name(child));
+			 ipsec_mode_names, cfg->get_mode(cfg), cfg->get_name(cfg));
 		this->lock->unlock(this->lock);
 		return TRUE;
 	}
-	this->shunts->insert_last(this->shunts, child->get_ref(child));
+	INIT(entry,
+		.ns = strdupnull(ns),
+		.cfg = cfg->get_ref(cfg),
+	);
+	this->shunts->insert_last(this->shunts, entry);
 	this->installing++;
 	this->lock->unlock(this->lock);
 
-	success = install_shunt_policy(child);
+	success = install_shunt_policy(cfg);
 
 	this->lock->write_lock(this->lock);
 	if (!success)
 	{
-		this->shunts->remove(this->shunts, child, NULL);
-		child->destroy(child);
+		this->shunts->remove(this->shunts, entry, NULL);
+		entry_destroy(entry);
 	}
 	this->installing--;
 	this->condvar->signal(this->condvar);
@@ -320,19 +351,20 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 }
 
 METHOD(shunt_manager_t, uninstall, bool,
-	private_shunt_manager_t *this, char *name)
+	private_shunt_manager_t *this, char *ns, char *name)
 {
 	enumerator_t *enumerator;
-	child_cfg_t *child, *found = NULL;
+	entry_t *entry, *found = NULL;
 
 	this->lock->write_lock(this->lock);
 	enumerator = this->shunts->create_enumerator(this->shunts);
-	while (enumerator->enumerate(enumerator, &child))
+	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (streq(name, child->get_name(child)))
+		if (streq(ns, entry->ns) &&
+			streq(name, entry->cfg->get_name(entry->cfg)))
 		{
 			this->shunts->remove_at(this->shunts, enumerator);
-			found = child;
+			found = entry;
 			break;
 		}
 	}
@@ -343,8 +375,19 @@ METHOD(shunt_manager_t, uninstall, bool,
 	{
 		return FALSE;
 	}
-	uninstall_shunt_policy(child);
-	child->destroy(child);
+	uninstall_shunt_policy(found->cfg);
+	entry_destroy(found);
+	return TRUE;
+}
+
+CALLBACK(filter_entries, bool,
+	void *unused, entry_t **entry, char **ns, void **in, child_cfg_t **cfg)
+{
+	if (ns)
+	{
+		*ns = (*entry)->ns;
+	}
+	*cfg = (*entry)->cfg;
 	return TRUE;
 }
 
@@ -352,25 +395,26 @@ METHOD(shunt_manager_t, create_enumerator, enumerator_t*,
 	private_shunt_manager_t *this)
 {
 	this->lock->read_lock(this->lock);
-	return enumerator_create_cleaner(
+	return enumerator_create_filter(
 							this->shunts->create_enumerator(this->shunts),
-							(void*)this->lock->unlock, this->lock);
+							(void*)filter_entries, this->lock,
+							(void*)this->lock->unlock);
 }
 
 METHOD(shunt_manager_t, flush, void,
 	private_shunt_manager_t *this)
 {
-	child_cfg_t *child;
+	entry_t *entry;
 
 	this->lock->write_lock(this->lock);
 	while (this->installing)
 	{
 		this->condvar->wait(this->condvar, this->lock);
 	}
-	while (this->shunts->remove_last(this->shunts, (void**)&child) == SUCCESS)
+	while (this->shunts->remove_last(this->shunts, (void**)&entry) == SUCCESS)
 	{
-		uninstall_shunt_policy(child);
-		child->destroy(child);
+		uninstall_shunt_policy(entry->cfg);
+		entry_destroy(entry);
 	}
 	this->installing = INSTALL_DISABLED;
 	this->lock->unlock(this->lock);

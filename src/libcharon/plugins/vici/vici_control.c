@@ -565,7 +565,7 @@ CALLBACK(install, vici_message_t*,
 	{
 		case MODE_PASS:
 		case MODE_DROP:
-			ok = charon->shunts->install(charon->shunts, child_cfg);
+			ok = charon->shunts->install(charon->shunts, NULL, child_cfg);
 			break;
 		default:
 			ok = charon->traps->install(charon->traps, peer_cfg, child_cfg,
@@ -594,7 +594,7 @@ CALLBACK(uninstall, vici_message_t*,
 
 	DBG1(DBG_CFG, "vici uninstall '%s'", child);
 
-	if (charon->shunts->uninstall(charon->shunts, child))
+	if (charon->shunts->uninstall(charon->shunts, NULL, child))
 	{
 		return send_reply(this, NULL);
 	}

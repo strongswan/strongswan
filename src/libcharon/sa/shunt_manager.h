@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
+ * Copyright (C) 2015-2016 Tobias Brunner
  * Copyright (C) 2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -36,23 +36,26 @@ struct shunt_manager_t {
 	/**
 	 * Install a policy as a shunt.
 	 *
-	 * @param child 	child configuration to install as a shunt
+	 * @param ns		optional namespace (e.g. name of a connection or
+	 *					plugin), cloned
+	 * @param child		child configuration to install as a shunt
 	 * @return			TRUE if installed successfully
 	 */
-	bool (*install)(shunt_manager_t *this, child_cfg_t *child);
+	bool (*install)(shunt_manager_t *this, char *ns, child_cfg_t *child);
 
 	/**
 	 * Uninstall a shunt policy.
 	 *
+	 * @param ns		namespace (same as given during installation)
 	 * @param name	 	name of child configuration to uninstall as a shunt
 	 * @return			TRUE if uninstalled successfully
 	 */
-	bool (*uninstall)(shunt_manager_t *this, char *name);
+	bool (*uninstall)(shunt_manager_t *this, char *ns, char *name);
 
 	/**
 	 * Create an enumerator over all installed shunts.
 	 *
-	 * @return			enumerator over (child_sa_t)
+	 * @return			enumerator over (char*, child_cfg_t*)
 	 */
 	enumerator_t* (*create_enumerator)(shunt_manager_t *this);
 

@@ -641,7 +641,7 @@ static void charon_route(peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
 	mode = child_cfg->get_mode(child_cfg);
 	if (mode == MODE_PASS || mode == MODE_DROP)
 	{
-		if (charon->shunts->install(charon->shunts, child_cfg))
+		if (charon->shunts->install(charon->shunts, NULL, child_cfg))
 		{
 			fprintf(out, "'%s' shunt %N policy installed\n",
 					name, ipsec_mode_names, mode);
@@ -733,7 +733,7 @@ METHOD(stroke_control_t, unroute, void,
 	enumerator_t *enumerator;
 	uint32_t id = 0;
 
-	if (charon->shunts->uninstall(charon->shunts, msg->unroute.name))
+	if (charon->shunts->uninstall(charon->shunts, NULL, msg->unroute.name))
 	{
 		fprintf(out, "shunt policy '%s' uninstalled\n", msg->unroute.name);
 		return;

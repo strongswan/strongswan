@@ -1757,7 +1757,7 @@ static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 			{
 				case MODE_PASS:
 				case MODE_DROP:
-					charon->shunts->install(charon->shunts, child_cfg);
+					charon->shunts->install(charon->shunts, NULL, child_cfg);
 					break;
 				default:
 					charon->traps->install(charon->traps, peer_cfg, child_cfg,
@@ -1865,7 +1865,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 			{
 				case MODE_PASS:
 				case MODE_DROP:
-					charon->shunts->uninstall(charon->shunts, name);
+					charon->shunts->uninstall(charon->shunts, NULL, name);
 					break;
 				default:
 					enumerator = charon->traps->create_enumerator(charon->traps);
