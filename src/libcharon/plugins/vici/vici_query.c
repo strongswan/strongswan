@@ -93,6 +93,29 @@ static void add_mark(vici_builder_t *b, mark_t mark,
 }
 
 /**
+ * List the mode of a CHILD_SA or config
+ */
+static void list_mode(vici_builder_t *b, child_sa_t *child, child_cfg_t *cfg)
+{
+	ipsec_mode_t mode;
+	char *sub_mode = "";
+
+	if (child || cfg)
+	{
+		if (!cfg)
+		{
+			cfg = child->get_config(child);
+		}
+		mode = child ? child->get_mode(child) : cfg->get_mode(cfg);
+		if (mode == MODE_TRANSPORT && cfg->use_proxy_mode(cfg))
+		{	/* only report this if the negotiated mode is actually TRANSPORT */
+			sub_mode = "_PROXY";
+		}
+		b->add_kv(b, "mode", "%N%s", ipsec_mode_names, mode, sub_mode);
+	}
+}
+
+/**
  * List details of a CHILD_SA
  */
 static void list_child(private_vici_query_t *this, vici_builder_t *b,
@@ -108,7 +131,7 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 	b->add_kv(b, "uniqueid", "%u", child->get_unique_id(child));
 	b->add_kv(b, "reqid", "%u", child->get_reqid(child));
 	b->add_kv(b, "state", "%N", child_sa_state_names, child->get_state(child));
-	b->add_kv(b, "mode", "%N", ipsec_mode_names, child->get_mode(child));
+	list_mode(b, child, NULL);
 	if (child->get_state(child) == CHILD_INSTALLED ||
 		child->get_state(child) == CHILD_REKEYING ||
 		child->get_state(child) == CHILD_REKEYED)
@@ -455,7 +478,7 @@ static void raise_policy(private_vici_query_t *this, u_int id, child_sa_t *child
 	b = vici_builder_create();
 	b->begin_section(b, child->get_name(child));
 
-	b->add_kv(b, "mode", "%N", ipsec_mode_names, child->get_mode(child));
+	list_mode(b, child, NULL);
 
 	b->begin_list(b, "local-ts");
 	enumerator = child->create_ts_enumerator(child, TRUE);
@@ -495,7 +518,7 @@ static void raise_policy_cfg(private_vici_query_t *this, u_int id,
 	b = vici_builder_create();
 	b->begin_section(b, cfg->get_name(cfg));
 
-	b->add_kv(b, "mode", "%N", ipsec_mode_names, cfg->get_mode(cfg));
+	list_mode(b, NULL, cfg);
 
 	b->begin_list(b, "local-ts");
 	list = cfg->get_traffic_selectors(cfg, TRUE, NULL, NULL);
@@ -757,8 +780,7 @@ CALLBACK(list_conns, vici_message_t*,
 		{
 			b->begin_section(b, child_cfg->get_name(child_cfg));
 
-			b->add_kv(b, "mode", "%N", ipsec_mode_names,
-				child_cfg->get_mode(child_cfg));
+			list_mode(b, NULL, child_cfg);
 
 			lft = child_cfg->get_lifetime(child_cfg, FALSE);
 			b->add_kv(b, "rekey_time",    "%"PRIu64, lft->time.rekey);

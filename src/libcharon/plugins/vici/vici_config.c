@@ -463,7 +463,8 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   updown = %s", cfg->updown);
 	DBG2(DBG_CFG, "   hostaccess = %u", cfg->hostaccess);
 	DBG2(DBG_CFG, "   ipcomp = %u", cfg->ipcomp);
-	DBG2(DBG_CFG, "   mode = %N", ipsec_mode_names, cfg->mode);
+	DBG2(DBG_CFG, "   mode = %N%s", ipsec_mode_names, cfg->mode,
+		 cfg->proxy_mode ? "_PROXY" : "");
 	DBG2(DBG_CFG, "   policies = %u", data->policies);
 	DBG2(DBG_CFG, "   policies_fwd_out = %u", data->policies_fwd_out);
 	if (data->replay_window != REPLAY_UNDEFINED)
@@ -772,20 +773,22 @@ CALLBACK(parse_bool, bool,
  * Parse a ipsec_mode_t
  */
 CALLBACK(parse_mode, bool,
-	ipsec_mode_t *out, chunk_t v)
+	child_cfg_create_t *cfg, chunk_t v)
 {
 	enum_map_t map[] = {
-		{ "tunnel",		MODE_TUNNEL		},
-		{ "transport",	MODE_TRANSPORT	},
-		{ "beet",		MODE_BEET		},
-		{ "drop",		MODE_DROP		},
-		{ "pass",		MODE_PASS		},
+		{ "tunnel",				MODE_TUNNEL		},
+		{ "transport",			MODE_TRANSPORT	},
+		{ "transport_proxy",	MODE_TRANSPORT	},
+		{ "beet",				MODE_BEET		},
+		{ "drop",				MODE_DROP		},
+		{ "pass",				MODE_PASS		},
 	};
 	int d;
 
 	if (parse_map(map, countof(map), &d, v))
 	{
-		*out = d;
+		cfg->mode = d;
+		cfg->proxy_mode = (d == MODE_TRANSPORT) && (v.len > 9);
 		return TRUE;
 	}
 	return FALSE;
@@ -1383,7 +1386,7 @@ CALLBACK(child_kv, bool,
 	parse_rule_t rules[] = {
 		{ "updown",				parse_string,		&child->cfg.updown					},
 		{ "hostaccess",			parse_bool,			&child->cfg.hostaccess				},
-		{ "mode",				parse_mode,			&child->cfg.mode					},
+		{ "mode",				parse_mode,			&child->cfg							},
 		{ "policies",			parse_bool,			&child->policies					},
 		{ "policies_fwd_out",	parse_bool,			&child->policies_fwd_out			},
 		{ "replay_window",		parse_uint32,		&child->replay_window				},
