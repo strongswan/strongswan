@@ -15,6 +15,29 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2016 secunet Security Networks AG
+ * Copyright (C) 2016 Thomas Egerer
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -557,6 +580,8 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 	struct sockaddr_nl addr = {
 		.nl_family = AF_NETLINK,
 	};
+	bool force_buf = FALSE;
+	int rcvbuf_size = 0;
 
 	INIT(this,
 		.public = {
@@ -605,6 +630,25 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 			 strerror(errno), errno);
 		destroy(this);
 		return NULL;
+	}
+	rcvbuf_size = lib->settings->get_int(lib->settings,
+						"%s.plugins.kernel-netlink.receive_buffer_size",
+						rcvbuf_size, lib->ns);
+	if (rcvbuf_size)
+	{
+		int optname;
+
+		force_buf = lib->settings->get_bool(lib->settings,
+						"%s.plugins.kernel-netlink.force_receive_buffer_size",
+						force_buf, lib->ns);
+		optname = force_buf ? SO_RCVBUFFORCE : SO_RCVBUF;
+
+		if (setsockopt(this->socket, SOL_SOCKET, optname, &rcvbuf_size,
+					   sizeof(rcvbuf_size)) == -1)
+		{
+			DBG1(DBG_KNL, "failed to %supdate receive buffer size to %d: %s",
+					force_buf ? "forcibly " : "", rcvbuf_size, strerror(errno));
+		}
 	}
 	if (this->parallel)
 	{
