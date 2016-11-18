@@ -491,6 +491,24 @@ including keys found in other backends.
 		]
 	}
 
+### load-token() ###
+
+Load a private key located on a token into the daemon.  Such keys may be listed
+and unloaded using the _get-keys_ and _unload-key_ commands, respectively (based
+on the key identifier derived from the public key).
+
+	{
+		handle = <hex-encoded CKA_ID of the private key on token>
+		slot = <optional slot number>
+		module = <optional PKCS#11 module>
+		pin = <optional PIN to access the key, has to be provided via other
+			   means if not given>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+		id = <hex-encoded SHA-1 key identifier of the public key on success>
+	}
+
 ### load-shared() ###
 
 Load a shared IKE PSK, EAP or XAuth secret into the daemon.
