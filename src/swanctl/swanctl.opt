@@ -918,6 +918,22 @@ secrets.pkcs12<suffix>.file =
 secrets.pkcs12<suffix>.secret
 	Value of decryption passphrase for PKCS#12 container.
 
+secrets.token<suffix> { # }
+	Definition for a private key that's stored on a token/smartcard.
+
+secrets.token<suffix>.handle =
+	Hex-encoded CKA_ID of the private key on the token.
+
+secrets.token<suffix>.slot =
+	Optional slot number to access the token.
+
+secrets.token<suffix>.module =
+	Optional PKCS#11 module name to access the token.
+
+secrets.token<suffix>.pin =
+	Optional PIN required to access the key on the token. If none is provided
+	the user is prompted during an interactive --load-creds call.
+
 pools { # }
 	Section defining named pools.
 

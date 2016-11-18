@@ -569,6 +569,93 @@ static void load_containers(load_ctx_t *ctx, char *type, char *dir)
 }
 
 /**
+ * Load a single private key on a token over vici
+ */
+static bool load_token(load_ctx_t *ctx, char *name, char *pin)
+{
+	vici_req_t *req;
+	vici_res_t *res;
+	enumerator_t *enumerator;
+	char *key, *value, *id;
+	bool ret = TRUE;
+
+	req = vici_begin("load-token");
+
+	enumerator = ctx->cfg->create_key_value_enumerator(ctx->cfg, "secrets.%s",
+													   name);
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		vici_add_key_valuef(req, key, "%s", value);
+	}
+	enumerator->destroy(enumerator);
+
+	if (pin)
+	{
+		vici_add_key_valuef(req, "pin", "%s", pin);
+	}
+	res = vici_submit(req, ctx->conn);
+	if (!res)
+	{
+		fprintf(stderr, "load-token request failed: %s\n", strerror(errno));
+		return FALSE;
+	}
+	if (ctx->format & COMMAND_FORMAT_RAW)
+	{
+		vici_dump(res, "load-token reply", ctx->format & COMMAND_FORMAT_PRETTY,
+				  stdout);
+	}
+	else if (!streq(vici_find_str(res, "no", "success"), "yes"))
+	{
+		fprintf(stderr, "loading '%s' failed: %s\n",
+				name, vici_find_str(res, "", "errmsg"));
+		ret = FALSE;
+	}
+	else
+	{
+		id = vici_find_str(res, "", "id");
+		printf("loaded key %s from token [keyid: %s]\n", name, id);
+		free(ctx->keys->remove(ctx->keys, id));
+	}
+	vici_free_res(res);
+	return ret;
+}
+
+/**
+ * Load keys from tokens
+ */
+static void load_tokens(load_ctx_t *ctx)
+{
+	enumerator_t *enumerator;
+	char *section, *pin = NULL, prompt[128];
+
+	enumerator = ctx->cfg->create_section_enumerator(ctx->cfg, "secrets");
+	while (enumerator->enumerate(enumerator, &section))
+	{
+		if (strpfx(section, "token"))
+		{
+			if (!ctx->noprompt &&
+				!ctx->cfg->get_str(ctx->cfg, "secrets.%s.pin", NULL, section))
+			{
+#ifdef HAVE_GETPASS
+				snprintf(prompt, sizeof(prompt), "PIN for %s: ", section);
+				pin = strdupnull(getpass(prompt));
+#endif
+			}
+			load_token(ctx, section, pin);
+			if (pin)
+			{
+				memwipe(pin, strlen(pin));
+				free(pin);
+				pin = NULL;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+
+
+/**
  * Load a single secret over VICI
  */
 static bool load_secret(load_ctx_t *ctx, char *section)
@@ -591,6 +678,7 @@ static bool load_secret(load_ctx_t *ctx, char *section)
 		"bliss",
 		"pkcs8",
 		"pkcs12",
+		"token",
 	};
 
 	for (i = 0; i < countof(types); i++)
@@ -841,6 +929,8 @@ int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
 	load_keys(&ctx, "pkcs8",   SWANCTL_PKCS8DIR);
 
 	load_containers(&ctx, "pkcs12", SWANCTL_PKCS12DIR);
+
+	load_tokens(&ctx);
 
 	enumerator = cfg->create_section_enumerator(cfg, "secrets");
 	while (enumerator->enumerate(enumerator, &section))
