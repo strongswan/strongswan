@@ -1367,7 +1367,7 @@ void plugin_loader_add_plugindirs(char *basedir, char *plugins)
 	enumerator_t *enumerator;
 	char *name, path[PATH_MAX], dir[64];
 
-	enumerator = enumerator_create_token(plugins, " ", "");
+	enumerator = enumerator_create_token(plugins, " ", "!");
 	while (enumerator->enumerate(enumerator, &name))
 	{
 		snprintf(dir, sizeof(dir), "%s", name);
