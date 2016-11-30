@@ -1950,7 +1950,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	size_t len;
 	struct rtattr *rta;
 	size_t rtasize;
-	struct xfrm_encap_tmpl* tmpl = NULL;
+	struct xfrm_encap_tmpl* encap = NULL;
 	struct xfrm_replay_state *replay = NULL;
 	struct xfrm_replay_state_esn *replay_esn = NULL;
 	struct xfrm_lifetime_cur *lifetime = NULL;
@@ -2075,9 +2075,34 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		{
 			if (rta->rta_type == XFRMA_ENCAP)
 			{	/* update encap tmpl */
-				tmpl = RTA_DATA(rta);
-				tmpl->encap_sport = ntohs(data->new_src->get_port(data->new_src));
-				tmpl->encap_dport = ntohs(data->new_dst->get_port(data->new_dst));
+				encap = RTA_DATA(rta);
+				encap->encap_sport = ntohs(data->new_src->get_port(data->new_src));
+				encap->encap_dport = ntohs(data->new_dst->get_port(data->new_dst));
+			}
+			if (rta->rta_type == XFRMA_OFFLOAD_DEV)
+			{	/* update offload device */
+				struct xfrm_user_offload *offload;
+				host_t *local;
+				char *ifname;
+
+				offload = RTA_DATA(rta);
+				local = offload->flags & XFRM_OFFLOAD_INBOUND ? data->new_dst
+															  : data->new_src;
+
+				if (charon->kernel->get_interface(charon->kernel, local,
+												  &ifname))
+				{
+					offload->ifindex = if_nametoindex(ifname);
+					if (local->get_family(local) == AF_INET6)
+					{
+						offload->flags |= XFRM_OFFLOAD_IPV6;
+					}
+					else
+					{
+						offload->flags &= ~XFRM_OFFLOAD_IPV6;
+					}
+					free(ifname);
+				}
 			}
 			netlink_add_attribute(hdr, rta->rta_type,
 								  chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta)),
@@ -2086,17 +2111,18 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		rta = RTA_NEXT(rta, rtasize);
 	}
 
-	if (tmpl == NULL && data->new_encap)
+	if (encap == NULL && data->new_encap)
 	{	/* add tmpl if we are enabling it */
-		tmpl = netlink_reserve(hdr, sizeof(request), XFRMA_ENCAP, sizeof(*tmpl));
-		if (!tmpl)
+		encap = netlink_reserve(hdr, sizeof(request), XFRMA_ENCAP,
+								sizeof(*encap));
+		if (!encap)
 		{
 			goto failed;
 		}
-		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
-		tmpl->encap_sport = ntohs(data->new_src->get_port(data->new_src));
-		tmpl->encap_dport = ntohs(data->new_dst->get_port(data->new_dst));
-		memset(&tmpl->encap_oa, 0, sizeof (xfrm_address_t));
+		encap->encap_type = UDP_ENCAP_ESPINUDP;
+		encap->encap_sport = ntohs(data->new_src->get_port(data->new_src));
+		encap->encap_dport = ntohs(data->new_dst->get_port(data->new_dst));
+		memset(&encap->encap_oa, 0, sizeof (xfrm_address_t));
 	}
 
 	if (replay_esn)
