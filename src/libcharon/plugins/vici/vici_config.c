@@ -247,6 +247,26 @@ typedef struct {
 } request_data_t;
 
 /**
+ * Certificate data
+ */
+typedef struct {
+	request_data_t *request;
+	char *handle;
+	uint32_t slot;
+	char *module;
+} cert_data_t;
+
+/**
+ * Clean up certificate data
+ */
+static void free_cert_data(cert_data_t *data)
+{
+	free(data->handle);
+	free(data->module);
+	free(data);
+}
+
+/**
  * Auth config data
  */
 typedef struct {
@@ -1161,27 +1181,36 @@ CALLBACK(parse_cert_policy, bool,
 }
 
 /**
+ * Add a certificate as auth rule to config
+ */
+static bool add_cert(auth_data_t *auth, auth_rule_t rule, certificate_t *cert)
+{
+	vici_authority_t *authority;
+	vici_cred_t *cred;
+
+	if (rule == AUTH_RULE_SUBJECT_CERT)
+	{
+		authority = auth->request->this->authority;
+		authority->check_for_hash_and_url(authority, cert);
+	}
+	cred = auth->request->this->cred;
+	cert = cred->add_cert(cred, cert);
+	auth->cfg->add(auth->cfg, rule, cert);
+	return TRUE;
+}
+
+/**
  * Parse a certificate; add as auth rule to config
  */
 static bool parse_cert(auth_data_t *auth, auth_rule_t rule, chunk_t v)
 {
-	vici_authority_t *authority;
-	vici_cred_t *cred;
 	certificate_t *cert;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							  BUILD_BLOB_PEM, v, BUILD_END);
 	if (cert)
 	{
-		if (rule == AUTH_RULE_SUBJECT_CERT)
-		{
-			authority = auth->request->this->authority;
-			authority->check_for_hash_and_url(authority, cert);
-		}
-		cred = auth->request->this->cred;
-		cert = cred->add_cert(cred, cert);
-		auth->cfg->add(auth->cfg, rule, cert);
-		return TRUE;
+		return add_cert(auth, rule, cert);
 	}
 	return FALSE;
 }
@@ -1366,6 +1395,19 @@ CALLBACK(parse_hosts, bool,
 	return TRUE;
 }
 
+CALLBACK(cert_kv, bool,
+	cert_data_t *cert, vici_message_t *message, char *name, chunk_t value)
+{
+	parse_rule_t rules[] = {
+		{ "handle",			parse_string,		&cert->handle				},
+		{ "slot",			parse_uint32,		&cert->slot					},
+		{ "module",			parse_string,		&cert->module				},
+	};
+
+	return parse_rules(rules, countof(rules), name, value,
+					   &cert->request->reply);
+}
+
 CALLBACK(child_li, bool,
 	child_data_t *child, vici_message_t *message, char *name, chunk_t value)
 {
@@ -1490,6 +1532,67 @@ CALLBACK(peer_kv, bool,
 
 	return parse_rules(rules, countof(rules), name, value,
 					   &peer->request->reply);
+}
+
+CALLBACK(auth_sn, bool,
+	auth_data_t *auth, vici_message_t *message, vici_parse_context_t *ctx,
+	char *name)
+{
+	if (strcasepfx(name, "cert") ||
+		strcasepfx(name, "cacert"))
+	{
+		cert_data_t *data;
+		auth_rule_t rule;
+		certificate_t *cert;
+		chunk_t handle;
+
+		INIT(data,
+			.request = auth->request,
+			.slot = -1,
+		);
+
+		if (!message->parse(message, ctx, NULL, cert_kv, NULL, data))
+		{
+			free_cert_data(data);
+			return FALSE;
+		}
+		if  (!data->handle)
+		{
+			auth->request->reply = create_reply("CKA_ID missing: %s", name);
+			free_cert_data(data);
+			return FALSE;
+		}
+
+		handle = chunk_from_hex(chunk_from_str(data->handle), NULL);
+		if (data->slot != -1)
+		{
+			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+							BUILD_PKCS11_KEYID, handle,
+							BUILD_PKCS11_SLOT, data->slot,
+							data->module ? BUILD_PKCS11_MODULE : BUILD_END,
+							data->module, BUILD_END);
+		}
+		else
+		{
+			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+							BUILD_PKCS11_KEYID, handle,
+							data->module ? BUILD_PKCS11_MODULE : BUILD_END,
+							data->module, BUILD_END);
+		}
+		chunk_free(&handle);
+		free_cert_data(data);
+		if (!cert)
+		{
+			auth->request->reply = create_reply("unable to load certificate: "
+												"%s", name);
+			return FALSE;
+		}
+		rule = strcasepfx(name, "cert") ? AUTH_RULE_SUBJECT_CERT
+										: AUTH_RULE_CA_CERT;
+		return add_cert(auth, rule, cert);
+	}
+	auth->request->reply = create_reply("invalid section: %s", name);
+	return FALSE;
 }
 
 /**
@@ -1654,7 +1757,7 @@ CALLBACK(peer_sn, bool,
 			.cfg = auth_cfg_create(),
 		);
 
-		if (!message->parse(message, ctx, NULL, auth_kv, auth_li, auth))
+		if (!message->parse(message, ctx, auth_sn, auth_kv, auth_li, auth))
 		{
 			free_auth_data(auth);
 			return FALSE;

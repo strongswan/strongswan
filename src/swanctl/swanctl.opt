@@ -292,6 +292,22 @@ connections.<conn>.local<suffix>.certs =
 	certificate request payloads. If no appropriate CA can be located, the
 	first certificate is used.
 
+connections.<conn>.local<suffix>.cert<suffix> =
+	Section for a certificate candidate to use for authentication.
+
+	Section for a certificate candidate to use for authentication. Certificates
+	in _certs_ are transmitted as binary blobs, these sections offer more
+	flexibility.
+
+connections.<conn>.local<suffix>.cert<suffix>.handle =
+	Hex-encoded CKA_ID of the certificate on a token.
+
+connections.<conn>.local<suffix>.cert<suffix>.slot =
+	Optional slot number of the token that stores the certificate.
+
+connections.<conn>.local<suffix>.cert<suffix>.module =
+	Optional PKCS#11 module name.
+
 connections.<conn>.local<suffix>.pubkeys =
 	Comma separated list of raw public key candidates to use for authentication.
 
@@ -419,12 +435,44 @@ connections.<conn>.remote<suffix>.certs =
 	The certificates may use a relative path from the **swanctl** _x509_
 	directory or an absolute path.
 
+connections.<conn>.remote<suffix>.cert<suffix> =
+	Section for a certificate to accept for authentication.
+
+	Section for a certificate to accept for authentication. Certificates
+	in _certs_ are transmitted as binary blobs, these sections offer more
+	flexibility.
+
+connections.<conn>.remote<suffix>.cert<suffix>.handle =
+	Hex-encoded CKA_ID of the certificate on a token.
+
+connections.<conn>.remote<suffix>.cert<suffix>.slot =
+	Optional slot number of the token that stores the certificate.
+
+connections.<conn>.remote<suffix>.cert<suffix>.module =
+	Optional PKCS#11 module name.
+
 connections.<conn>.remote<suffix>.cacerts =
 	Comma separated list of CA certificates to accept for authentication.
 
 	Comma separated list of CA certificates to accept for authentication.
 	The certificates may use a relative path from the **swanctl** _x509ca_
 	directory or an absolute path.
+
+connections.<conn>.remote<suffix>.cacert<suffix> =
+	Section for a CA certificate to accept for authentication.
+
+	Section for a CA certificate to accept for authentication. Certificates
+	in _cacerts_ are transmitted as binary blobs, these sections offer more
+	flexibility.
+
+connections.<conn>.remote<suffix>.cacert<suffix>.handle =
+	Hex-encoded CKA_ID of the CA certificate on a token.
+
+connections.<conn>.remote<suffix>.cacert<suffix>.slot =
+	Optional slot number of the token that stores the CA certificate.
+
+connections.<conn>.remote<suffix>.cacert<suffix>.module =
+	Optional PKCS#11 module name.
 
 connections.<conn>.remote<suffix>.pubkeys =
 	Comma separated list of raw public keys to accept for authentication.
