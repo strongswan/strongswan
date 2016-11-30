@@ -1944,9 +1944,9 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	kernel_ipsec_update_sa_t *data)
 {
 	netlink_buf_t request;
-	struct nlmsghdr *hdr, *out = NULL;
+	struct nlmsghdr *hdr, *out_hdr = NULL, *out = NULL;
 	struct xfrm_usersa_id *sa_id;
-	struct xfrm_usersa_info *out_sa = NULL, *sa;
+	struct xfrm_usersa_info *sa;
 	size_t len;
 	struct rtattr *rta;
 	size_t rtasize;
@@ -2008,7 +2008,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 			{
 				case XFRM_MSG_NEWSA:
 				{
-					out_sa = NLMSG_DATA(hdr);
+					out_hdr = hdr;
 					break;
 				}
 				case NLMSG_ERROR:
@@ -2027,7 +2027,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 			break;
 		}
 	}
-	if (out_sa == NULL)
+	if (!out_hdr)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x%s",
 			 ntohl(id->spi), markstr);
@@ -2054,7 +2054,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	hdr->nlmsg_type = XFRM_MSG_NEWSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 	sa = NLMSG_DATA(hdr);
-	memcpy(sa, NLMSG_DATA(out), sizeof(struct xfrm_usersa_info));
+	memcpy(sa, NLMSG_DATA(out_hdr), sizeof(struct xfrm_usersa_info));
 	sa->family = data->new_dst->get_family(data->new_dst);
 
 	if (!id->src->ip_equals(id->src, data->new_src))
@@ -2066,8 +2066,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		host2xfrm(data->new_dst, &sa->id.daddr);
 	}
 
-	rta = XFRM_RTA(out, struct xfrm_usersa_info);
-	rtasize = XFRM_PAYLOAD(out, struct xfrm_usersa_info);
+	rta = XFRM_RTA(out_hdr, struct xfrm_usersa_info);
+	rtasize = XFRM_PAYLOAD(out_hdr, struct xfrm_usersa_info);
 	while (RTA_OK(rta, rtasize))
 	{
 		/* copy all attributes, but not XFRMA_ENCAP if we are disabling it */
