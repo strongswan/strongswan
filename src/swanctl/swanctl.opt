@@ -299,8 +299,20 @@ connections.<conn>.local<suffix>.cert<suffix> =
 	in _certs_ are transmitted as binary blobs, these sections offer more
 	flexibility.
 
+connections.<conn>.local<suffix>.cert<suffix>.file =
+	Absolute path to the certificate to load.
+
+	Absolute path to the certificate to load. Passed as-is to the daemon, so it
+	must be readable by it.
+
+	Configure either this or _handle_, but not both, in one section.
+
 connections.<conn>.local<suffix>.cert<suffix>.handle =
 	Hex-encoded CKA_ID of the certificate on a token.
+
+	Hex-encoded CKA_ID of the certificate on a token.
+
+	Configure either this or _file_, but not both, in one section.
 
 connections.<conn>.local<suffix>.cert<suffix>.slot =
 	Optional slot number of the token that stores the certificate.
@@ -442,8 +454,20 @@ connections.<conn>.remote<suffix>.cert<suffix> =
 	in _certs_ are transmitted as binary blobs, these sections offer more
 	flexibility.
 
+connections.<conn>.remote<suffix>.cert<suffix>.file =
+	Absolute path to the certificate to load.
+
+	Absolute path to the certificate to load. Passed as-is to the daemon, so it
+	must be readable by it.
+
+	Configure either this or _handle_, but not both, in one section.
+
 connections.<conn>.remote<suffix>.cert<suffix>.handle =
 	Hex-encoded CKA_ID of the certificate on a token.
+
+	Hex-encoded CKA_ID of the certificate on a token.
+
+	Configure either this or _file_, but not both, in one section.
 
 connections.<conn>.remote<suffix>.cert<suffix>.slot =
 	Optional slot number of the token that stores the certificate.
@@ -465,8 +489,20 @@ connections.<conn>.remote<suffix>.cacert<suffix> =
 	in _cacerts_ are transmitted as binary blobs, these sections offer more
 	flexibility.
 
+connections.<conn>.remote<suffix>.cacert<suffix>.file =
+	Absolute path to the certificate to load.
+
+	Absolute path to the certificate to load. Passed as-is to the daemon, so it
+	must be readable by it.
+
+	Configure either this or _handle_, but not both, in one section.
+
 connections.<conn>.remote<suffix>.cacert<suffix>.handle =
 	Hex-encoded CKA_ID of the CA certificate on a token.
+
+	Hex-encoded CKA_ID of the CA certificate on a token.
+
+	Configure either this or _file_, but not both, in one section.
 
 connections.<conn>.remote<suffix>.cacert<suffix>.slot =
 	Optional slot number of the token that stores the CA certificate.

@@ -254,6 +254,7 @@ typedef struct {
 	char *handle;
 	uint32_t slot;
 	char *module;
+	char *file;
 } cert_data_t;
 
 /**
@@ -263,6 +264,7 @@ static void free_cert_data(cert_data_t *data)
 {
 	free(data->handle);
 	free(data->module);
+	free(data->file);
 	free(data);
 }
 
@@ -1402,6 +1404,7 @@ CALLBACK(cert_kv, bool,
 		{ "handle",			parse_string,		&cert->handle				},
 		{ "slot",			parse_uint32,		&cert->slot					},
 		{ "module",			parse_string,		&cert->module				},
+		{ "file",			parse_string,		&cert->file					},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
@@ -1556,30 +1559,46 @@ CALLBACK(auth_sn, bool,
 			free_cert_data(data);
 			return FALSE;
 		}
-		if  (!data->handle)
+		if  (!data->handle && !data->file)
 		{
-			auth->request->reply = create_reply("CKA_ID missing: %s", name);
+			auth->request->reply = create_reply("handle or file path missing: "
+												"%s", name);
+			free_cert_data(data);
+			return FALSE;
+		}
+		else if (data->handle && data->file)
+		{
+			auth->request->reply = create_reply("handle and file path given: "
+												"%s", name);
 			free_cert_data(data);
 			return FALSE;
 		}
 
-		handle = chunk_from_hex(chunk_from_str(data->handle), NULL);
-		if (data->slot != -1)
+		if (data->file)
 		{
 			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							BUILD_PKCS11_KEYID, handle,
-							BUILD_PKCS11_SLOT, data->slot,
-							data->module ? BUILD_PKCS11_MODULE : BUILD_END,
-							data->module, BUILD_END);
+								BUILD_FROM_FILE, data->file, BUILD_END);
 		}
 		else
 		{
-			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							BUILD_PKCS11_KEYID, handle,
-							data->module ? BUILD_PKCS11_MODULE : BUILD_END,
-							data->module, BUILD_END);
+			handle = chunk_from_hex(chunk_from_str(data->handle), NULL);
+			if (data->slot != -1)
+			{
+				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+								CERT_X509, BUILD_PKCS11_KEYID, handle,
+								BUILD_PKCS11_SLOT, data->slot,
+								data->module ? BUILD_PKCS11_MODULE : BUILD_END,
+								data->module, BUILD_END);
+			}
+			else
+			{
+				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+								CERT_X509, BUILD_PKCS11_KEYID, handle,
+								data->module ? BUILD_PKCS11_MODULE : BUILD_END,
+								data->module, BUILD_END);
+			}
+			chunk_free(&handle);
 		}
-		chunk_free(&handle);
 		free_cert_data(data);
 		if (!cert)
 		{
