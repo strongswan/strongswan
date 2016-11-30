@@ -1054,18 +1054,40 @@ authorities.<name> { # }
 authorities.<name>.cacert =
 	CA certificate belonging to the certification authority.
 
-	The certificates may use a relative path from the **swanctl** _x509ca_
-	directory or an absolute path.
+	CA certificate belonging to the certification authority. The certificates
+	may use a relative path from the **swanctl** _x509ca_ directory or an
+	absolute path.
+
+	Configure one of _cacert_, _file_, or _handle_ per section.
+
+authorities.<name>.file =
+	Absolute path to the certificate to load.
+
+	Absolute path to the certificate to load. Passed as-is to the daemon, so it
+	must be readable by it.
+
+	Configure one of _cacert_, _file_, or _handle_ per section.
+
+authorities.<name>.handle =
+	Hex-encoded CKA_ID of the CA certificate on a token.
+
+	Hex-encoded CKA_ID of the CA certificate on a token.
+
+	Configure one of _cacert_, _file_, or _handle_ per section.
+
+authorities.<name>.slot =
+	Optional slot number of the token that stores the CA certificate.
+
+authorities.<name>.module =
+	Optional PKCS#11 module name.
 
 authorities.<name>.crl_uris =
-	Comma-separated list of CRL distribution points
+	Comma-separated list of CRL distribution points.
 
-	Comma-separated list of CRL distribution points (ldap, http, or file URI)
+	Comma-separated list of CRL distribution points (ldap, http, or file URI).
 
 authorities.<name>.ocsp_uris =
-	Comma-separated list of OCSP URIs
-
-	Comma-separated list of OCSP URIs
+	Comma-separated list of OCSP URIs.
 
 authorities.<name>.cert_uri_base =
 	Defines the base URI for the Hash and URL feature supported by IKEv2.
