@@ -22,6 +22,7 @@
 #define KEYMAT_V2_H_
 
 #include <sa/keymat.h>
+#include <collections/array.h>
 
 typedef struct keymat_v2_t keymat_v2_t;
 
@@ -100,11 +101,14 @@ struct keymat_v2_t {
 	 * @param id			identity
 	 * @param reserved		reserved bytes of id_payload
 	 * @param octests		chunk receiving allocated auth octets
+	 * @param schemes		array containing signature schemes in case they
+	 * 						need to be modified by the keymat implementation
 	 * @return				TRUE if octets created successfully
 	 */
 	bool (*get_auth_octets)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
 							chunk_t nonce, identification_t *id,
-							char reserved[3], chunk_t *octets);
+							char reserved[3], chunk_t *octets,
+							array_t *schemes);
 	/**
 	 * Build the shared secret signature used for PSK and EAP authentication.
 	 *

@@ -81,7 +81,7 @@ METHOD(authenticator_t, build, status_t,
 	keymat = (keymat_v1_t*)this->ike_sa->get_keymat(this->ike_sa);
 	if (!keymat->get_hash(keymat, this->initiator, dh, this->dh_value,
 					this->ike_sa->get_id(this->ike_sa), this->sa_payload,
-					this->id_payload, &hash))
+					this->id_payload, &hash, NULL))
 	{
 		free(dh.ptr);
 		return FAILED;
@@ -118,7 +118,7 @@ METHOD(authenticator_t, process, status_t,
 	keymat = (keymat_v1_t*)this->ike_sa->get_keymat(this->ike_sa);
 	if (!keymat->get_hash(keymat, !this->initiator, this->dh_value, dh,
 					this->ike_sa->get_id(this->ike_sa), this->sa_payload,
-					this->id_payload, &hash))
+					this->id_payload, &hash, NULL))
 	{
 		free(dh.ptr);
 		return FAILED;

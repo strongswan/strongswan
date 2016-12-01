@@ -629,7 +629,8 @@ METHOD(keymat_t, get_aead, aead_t*,
 
 METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
-	chunk_t nonce, identification_t *id, char reserved[3], chunk_t *octets)
+	chunk_t nonce, identification_t *id, char reserved[3], chunk_t *octets,
+	array_t *schemes)
 {
 	chunk_t chunk, idx;
 	chunk_t skp;
@@ -669,7 +670,8 @@ METHOD(keymat_v2_t, get_psk_sig, bool,
 	{	/* EAP uses SK_p if no MSK has been established */
 		secret = verify ? this->skp_verify : this->skp_build;
 	}
-	if (!get_auth_octets(this, verify, ike_sa_init, nonce, id, reserved, &octets))
+	if (!get_auth_octets(this, verify, ike_sa_init, nonce, id, reserved,
+						 &octets, NULL))
 	{
 		return FALSE;
 	}

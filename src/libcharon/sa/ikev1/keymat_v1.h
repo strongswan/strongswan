@@ -102,11 +102,14 @@ struct keymat_v1_t {
 	 * @param sa_i			encoded SA payload of initiator
 	 * @param id			encoded IDii payload for HASH_I (IDir for HASH_R)
 	 * @param hash			chunk receiving allocated HASH data
+	 * @param scheme		pointer to signature scheme in case it needs to be
+	 * 						modified by the keymat implementation
 	 * @return				TRUE if hash allocated successfully
 	 */
 	bool (*get_hash)(keymat_v1_t *this, bool initiator,
 						chunk_t dh, chunk_t dh_other, ike_sa_id_t *ike_sa_id,
-						chunk_t sa_i, chunk_t id, chunk_t *hash);
+						chunk_t sa_i, chunk_t id, chunk_t *hash,
+						signature_scheme_t *scheme);
 
 	/**
 	 * Get HASH data for integrity/authentication in Phase 2 exchanges.

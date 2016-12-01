@@ -217,7 +217,8 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 	}
 
 	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
-								this->nonce, id, this->reserved, &octets))
+								this->nonce, id, this->reserved, &octets,
+								schemes))
 	{
 		enumerator = array_create_enumerator(schemes);
 		while (enumerator->enumerate(enumerator, &schemep))
@@ -247,6 +248,32 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 }
 
 /**
+ * Get the auth octets and the signature scheme (in case it is changed by the
+ * keymat).
+ */
+static bool get_auth_octets_scheme(private_pubkey_authenticator_t *this,
+								   bool verify, identification_t *id,
+								   chunk_t *octets, signature_scheme_t *scheme)
+{
+	keymat_v2_t *keymat;
+	array_t *schemes;
+	bool success = FALSE;
+
+	schemes = array_create(sizeof(signature_scheme_t), 0);
+	array_insert(schemes, ARRAY_TAIL, scheme);
+
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
+	if (keymat->get_auth_octets(keymat, verify, this->ike_sa_init, this->nonce,
+								id, this->reserved, octets, schemes) &&
+		array_get(schemes, 0, &scheme))
+	{
+		success = TRUE;
+	}
+	array_destroy(schemes);
+	return success;
+}
+
+/**
  * Create a classic IKEv2 signature
  */
 static status_t sign_classic(private_pubkey_authenticator_t *this,
@@ -255,7 +282,6 @@ static status_t sign_classic(private_pubkey_authenticator_t *this,
 							 chunk_t *auth_data)
 {
 	signature_scheme_t scheme;
-	keymat_v2_t *keymat;
 	chunk_t octets = chunk_empty;
 	status_t status = FAILED;
 
@@ -293,9 +319,7 @@ static status_t sign_classic(private_pubkey_authenticator_t *this,
 			return FAILED;
 	}
 
-	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
-	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
-								this->nonce, id, this->reserved, &octets) &&
+	if (get_auth_octets_scheme(this, FALSE, id, &octets, &scheme) &&
 		private->sign(private, scheme, octets, auth_data))
 	{
 		status = SUCCESS;
@@ -363,7 +387,6 @@ METHOD(authenticator_t, process, status_t,
 	key_type_t key_type = KEY_ECDSA;
 	signature_scheme_t scheme;
 	status_t status = NOT_FOUND;
-	keymat_v2_t *keymat;
 	const char *reason = "unsupported";
 	bool online;
 
@@ -402,9 +425,7 @@ METHOD(authenticator_t, process, status_t,
 			return INVALID_ARG;
 	}
 	id = this->ike_sa->get_other_id(this->ike_sa);
-	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
-	if (!keymat->get_auth_octets(keymat, TRUE, this->ike_sa_init,
-								 this->nonce, id, this->reserved, &octets))
+	if (!get_auth_octets_scheme(this, TRUE, id, &octets, &scheme))
 	{
 		return FAILED;
 	}

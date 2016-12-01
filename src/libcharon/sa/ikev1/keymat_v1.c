@@ -748,7 +748,8 @@ METHOD(keymat_v1_t, get_hasher, hasher_t*,
 
 METHOD(keymat_v1_t, get_hash, bool,
 	private_keymat_v1_t *this, bool initiator, chunk_t dh, chunk_t dh_other,
-	ike_sa_id_t *ike_sa_id, chunk_t sa_i, chunk_t id, chunk_t *hash)
+	ike_sa_id_t *ike_sa_id, chunk_t sa_i, chunk_t id, chunk_t *hash,
+	signature_scheme_t *scheme)
 {
 	chunk_t data;
 	uint64_t spi, spi_other;
