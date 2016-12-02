@@ -899,7 +899,7 @@ AC_COMPILE_IFELSE(
 AM_CONDITIONAL(USE_X86X64, [test "x$x86x64" = xtrue])
 
 if test x$printf_hooks = xvstr; then
-	AC_CHECK_LIB([vstr],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
+	AC_CHECK_LIB([vstr],[vstr_init],[LIBS="$LIBS"],[AC_MSG_ERROR([Vstr string library not found])],[])
 	AC_DEFINE([USE_VSTR], [], [use Vstr string library for printf hooks])
 fi
 
@@ -909,7 +909,7 @@ fi
 
 if test x$gmp = xtrue; then
 	saved_LIBS=$LIBS
-	AC_CHECK_LIB([gmp],[main],[],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])],[])
+	AC_CHECK_LIB([gmp],[__gmpz_init],[],[AC_MSG_ERROR([GNU Multi Precision library gmp not found])],[])
 	AC_MSG_CHECKING([mpz_powm_sec])
 	if test x$mpz_powm_sec = xyes; then
 		AC_COMPILE_IFELSE(
@@ -938,20 +938,20 @@ if test x$gmp = xtrue; then
 fi
 
 if test x$ldap = xtrue; then
-	AC_CHECK_LIB([ldap],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP library ldap not found])],[])
-	AC_CHECK_LIB([lber],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP library lber not found])],[])
+	AC_CHECK_LIB([ldap],[ldap_init],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP library ldap not found])],[])
+	AC_CHECK_LIB([lber],[ber_free],[LIBS="$LIBS"],[AC_MSG_ERROR([LDAP library lber not found])],[])
 	AC_CHECK_HEADER([ldap.h],,[AC_MSG_ERROR([LDAP header ldap.h not found!])])
 fi
 
 if test x$curl = xtrue; then
-	AC_CHECK_LIB([curl],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([CURL library curl not found])],[])
+	AC_CHECK_LIB([curl],[curl_global_init],[LIBS="$LIBS"],[AC_MSG_ERROR([CURL library curl not found])],[])
 	AC_CHECK_HEADER([curl/curl.h],,[AC_MSG_ERROR([CURL header curl/curl.h not found!])])
 fi
 
 if test x$unbound = xtrue; then
-	AC_CHECK_LIB([ldns],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([UNBOUND library ldns not found])],[])
+	AC_CHECK_LIB([ldns],[ldns_rr_get_type],[LIBS="$LIBS"],[AC_MSG_ERROR([UNBOUND library ldns not found])],[])
 	AC_CHECK_HEADER([ldns/ldns.h],,[AC_MSG_ERROR([UNBOUND header ldns/ldns.h not found!])])
-	AC_CHECK_LIB([unbound],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([UNBOUND library libunbound not found])],[])
+	AC_CHECK_LIB([unbound],[ub_ctx_create],[LIBS="$LIBS"],[AC_MSG_ERROR([UNBOUND library libunbound not found])],[])
 	AC_CHECK_HEADER([unbound.h],,[AC_MSG_ERROR([UNBOUND header unbound.h not found!])])
 fi
 
@@ -988,7 +988,7 @@ if test x$systemd = xtrue; then
 fi
 
 if test x$tss_trousers = xtrue; then
-	AC_CHECK_LIB([tspi],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([TrouSerS library libtspi not found])],[])
+	AC_CHECK_LIB([tspi],[Tspi_Context_Create],[LIBS="$LIBS"],[AC_MSG_ERROR([TrouSerS library libtspi not found])],[])
 	AC_CHECK_HEADER([trousers/tss.h],,[AC_MSG_ERROR([TrouSerS header trousers/tss.h not found!])])
 	AC_DEFINE([TSS_TROUSERS], [], [use TrouSerS library libtspi])
 fi
@@ -1047,34 +1047,39 @@ if test x$dumm = xtrue; then
 fi
 
 if test x$fast = xtrue; then
-	AC_CHECK_LIB([neo_cgi],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_cgi not found!])],[])
-	AC_CHECK_LIB([neo_utl],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_utl not found!])],[])
-	AC_MSG_CHECKING([ClearSilver requires zlib])
+	AC_CHECK_LIB([neo_utl],[hdf_init],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_utl not found!])],[])
+	AC_MSG_CHECKING([for -lneo_cgi and dependencies])
 	saved_CFLAGS=$CFLAGS
 	saved_LIBS=$LIBS
 	LIBS="-lneo_cgi -lneo_cs -lneo_utl"
 	CFLAGS="-I/usr/include/ClearSilver"
 	AC_LINK_IFELSE(
 		[AC_LANG_PROGRAM(
-			[[#include <ClearSilver.h>]],
+			[[#include <cgi/cgi.h>]],
 			[[NEOERR *err = cgi_display(NULL, NULL);]])],
-		[AC_MSG_RESULT([no]); clearsilver_LIBS="$LIBS"],
-		[AC_MSG_RESULT([yes]); clearsilver_LIBS="$LIBS -lz"]
+		[AC_MSG_RESULT([yes])],
+		[LIBS="$LIBS -lz";
+		 AC_LINK_IFELSE(
+			[AC_LANG_PROGRAM(
+				[[#include <cgi/cgi.h>]],
+				[[NEOERR *err = cgi_display(NULL, NULL);]])],
+			[AC_MSG_RESULT([yes, zlib required])],
+			[AC_MSG_ERROR([not found])]
+		 )]
 	)
+	clearsilver_LIBS="$LIBS"
 	AC_SUBST(clearsilver_LIBS)
 	LIBS=$saved_LIBS
 	CFLAGS=$saved_CFLAGS
-# autoconf does not like CamelCase!? How to fix this?
-#	AC_CHECK_HEADER([ClearSilver/ClearSilver.h],,[AC_MSG_ERROR([ClearSilver header file ClearSilver/ClearSilver.h not found!])])
 
-	AC_CHECK_LIB([fcgi],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([FastCGI library fcgi not found!])],[])
+	AC_CHECK_LIB([fcgi],[FCGX_Init],[LIBS="$LIBS"],[AC_MSG_ERROR([FastCGI library fcgi not found!])],[])
 	AC_CHECK_HEADER([fcgiapp.h],,[AC_MSG_ERROR([FastCGI header file fcgiapp.h not found!])])
 fi
 
 if test x$mysql = xtrue; then
 	if test "x$windows" = xtrue; then
 		AC_CHECK_HEADER([mysql.h],,[AC_MSG_ERROR([MySQL header file mysql.h not found!])])
-		AC_CHECK_LIB([mysql],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([MySQL library not found!])],[])
+		AC_CHECK_LIB([mysql],[mysql_database_init],[LIBS="$LIBS"],[AC_MSG_ERROR([MySQL library not found!])],[])
 		AC_SUBST(MYSQLLIB, -lmysql)
 	else
 		AC_PATH_PROG([MYSQLCONFIG], [mysql_config], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
@@ -1087,7 +1092,7 @@ if test x$mysql = xtrue; then
 fi
 
 if test x$sqlite = xtrue; then
-	AC_CHECK_LIB([sqlite3],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([SQLite library sqlite3 not found])],[])
+	AC_CHECK_LIB([sqlite3],[sqlite3_open],[LIBS="$LIBS"],[AC_MSG_ERROR([SQLite library sqlite3 not found])],[])
 	AC_CHECK_HEADER([sqlite3.h],,[AC_MSG_ERROR([SQLite header sqlite3.h not found!])])
 	AC_MSG_CHECKING([sqlite3_prepare_v2])
 	AC_COMPILE_IFELSE(
@@ -1112,13 +1117,13 @@ if test x$sqlite = xtrue; then
 fi
 
 if test x$openssl = xtrue; then
-	AC_CHECK_LIB([$openssl_lib],[main],[LIBS="$LIBS"],
+	AC_CHECK_LIB([$openssl_lib],[EVP_CIPHER_CTX_new],[LIBS="$LIBS"],
 				 [AC_MSG_ERROR([OpenSSL lib$openssl_lib not found])],[$DLLIB])
 	AC_CHECK_HEADER([openssl/evp.h],,[AC_MSG_ERROR([OpenSSL header openssl/evp.h not found!])])
 fi
 
 if test x$gcrypt = xtrue; then
-	AC_CHECK_LIB([gcrypt],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([gcrypt library not found])],[-lgpg-error])
+	AC_CHECK_LIB([gcrypt],[gcry_control],[LIBS="$LIBS"],[AC_MSG_ERROR([gcrypt library not found])],[-lgpg-error])
 	AC_CHECK_HEADER([gcrypt.h],,[AC_MSG_ERROR([gcrypt header gcrypt.h not found!])])
 	AC_MSG_CHECKING([gcrypt CAMELLIA cipher])
 	AC_COMPILE_IFELSE(
@@ -1132,12 +1137,12 @@ if test x$gcrypt = xtrue; then
 fi
 
 if test x$uci = xtrue; then
-	AC_CHECK_LIB([uci],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])],[])
+	AC_CHECK_LIB([uci],[uci_alloc_context],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])],[])
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
 fi
 
 if test x$android_dns = xtrue; then
-	AC_CHECK_LIB([cutils],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([Android library libcutils not found])],[])
+	AC_CHECK_LIB([cutils],[property_get],[LIBS="$LIBS"],[AC_MSG_ERROR([Android library libcutils not found])],[])
 	AC_CHECK_HEADER([cutils/properties.h],,[AC_MSG_ERROR([Android header cutils/properties.h not found!])])
 	# we have to force the use of libdl here because the autodetection
 	# above does not work correctly when cross-compiling for android.
@@ -1161,7 +1166,7 @@ if test x$nm = xtrue; then
 fi
 
 if test x$xauth_pam = xtrue; then
-	AC_CHECK_LIB([pam],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([PAM library not found])],[])
+	AC_CHECK_LIB([pam],[pam_start],[LIBS="$LIBS"],[AC_MSG_ERROR([PAM library not found])],[])
 	AC_CHECK_HEADER([security/pam_appl.h],,[AC_MSG_ERROR([PAM header security/pam_appl.h not found!])])
 fi
 
@@ -1181,7 +1186,7 @@ if test x$capabilities = xnative; then
 fi
 
 if test x$capabilities = xlibcap; then
-	AC_CHECK_LIB([cap],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([libcap library not found])],[])
+	AC_CHECK_LIB([cap],[cap_init],[LIBS="$LIBS"],[AC_MSG_ERROR([libcap library not found])],[])
 	AC_CHECK_HEADER([sys/capability.h],
 		[AC_DEFINE([HAVE_SYS_CAPABILITY_H], [], [have sys/capability.h])],
 		[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
@@ -1212,7 +1217,7 @@ if test x$integrity_test = xtrue; then
 fi
 
 if test x$bfd_backtraces = xtrue; then
-	AC_CHECK_LIB([bfd],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([binutils libbfd not found!])],[])
+	AC_CHECK_LIB([bfd],[bfd_init],[LIBS="$LIBS"],[AC_MSG_ERROR([binutils libbfd not found!])],[])
 	AC_CHECK_HEADER([bfd.h],[AC_DEFINE([HAVE_BFD_H],,[have binutils bfd.h])],
 		[AC_MSG_ERROR([binutils bfd.h header not found!])])
 	BFDLIB="-lbfd"
@@ -1220,7 +1225,7 @@ if test x$bfd_backtraces = xtrue; then
 fi
 
 if test x$unwind_backtraces = xtrue; then
-	AC_CHECK_LIB([unwind],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([libunwind not found!])],[])
+	AC_CHECK_LIB([unwind],[unw_getcontext],[LIBS="$LIBS"],[AC_MSG_ERROR([libunwind not found!])],[])
 	AC_CHECK_HEADER([libunwind.h],[AC_DEFINE([HAVE_LIBUNWIND_H],,[have libunwind.h])],
 		[AC_MSG_ERROR([libunwind.h header not found!])])
 	UNWINDLIB="-lunwind"
