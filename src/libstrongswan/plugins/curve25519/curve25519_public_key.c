@@ -14,6 +14,7 @@
  */
 
 #include "curve25519_public_key.h"
+#include "ref10/ref10.h"
 
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
@@ -47,22 +48,72 @@ METHOD(public_key_t, get_type, key_type_t,
 	return KEY_ED25519;
 }
 
-
 METHOD(public_key_t, verify, bool,
 	private_curve25519_public_key_t *this, signature_scheme_t scheme,
 	chunk_t data, chunk_t signature)
 {
+	hasher_t *hasher;
+	uint8_t d = 0, k[HASH_SIZE_SHA512], r[32], *sig;
+	int i;
+	ge_p3 A;
+	ge_p2 R;
+
 	if (scheme != SIGN_ED25519)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported by Ed25519",
 			 signature_scheme_names, scheme);
 		return FALSE;
 	}
-	/* TODO Implement signature verification */
 
-	return FALSE;
+	if (signature.len != 64)
+	{
+		DBG1(DBG_LIB, "size of Ed25519 signature is not 64 bytes");
+		return FALSE;
+	}
+	sig = signature.ptr;
+
+	if (sig[63] & 0xe0)
+	{
+		DBG1(DBG_LIB, "the three most significant bits of Ed25519 signature "
+			 "are not zero");
+		return FALSE;
+	}
+
+	if (ge_frombytes_negate_vartime(&A, this->pubkey.ptr) != 0)
+	{
+		return FALSE;
+	}
+
+	/* check for all-zeroes public key */
+	for (i = 0; i < 32; i++)
+	{
+		d |= this->pubkey.ptr[i];
+	}
+	if (!d)
+	{
+		return FALSE;
+	}
+
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
+	if (!hasher)
+	{
+		return FALSE;
+	}
+	if (!hasher->get_hash(hasher, chunk_create(sig, 32), NULL) ||
+		!hasher->get_hash(hasher, this->pubkey, NULL) ||
+		!hasher->get_hash(hasher, data, k))
+	{
+		hasher->destroy(hasher);
+		return FALSE;
+	}
+	hasher->destroy(hasher);
+
+	sc_reduce(k);
+	ge_double_scalarmult_vartime(&R, k, &A, sig + 32);
+	ge_tobytes(r, &R);
+
+	return memeq_const(sig, r, 32);
 }
-
 
 METHOD(public_key_t, encrypt_, bool,
 	private_curve25519_public_key_t *this, encryption_scheme_t scheme,

@@ -15,6 +15,7 @@
 
 #include "curve25519_private_key.h"
 #include "curve25519_public_key.h"
+#include "ref10/ref10.h"
 
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
@@ -32,6 +33,11 @@ struct private_curve25519_private_key_t {
 	 * Public interface for this signer.
 	 */
 	curve25519_private_key_t public;
+
+	/**
+	 * Secret scalar s derived from private key.
+	 */
+	uint8_t s[HASH_SIZE_SHA512];
 
 	/**
 	 * Ed25519 private key
@@ -59,13 +65,50 @@ METHOD(private_key_t, sign, bool,
 	private_curve25519_private_key_t *this, signature_scheme_t scheme,
 	chunk_t data, chunk_t *signature)
 {
+	uint8_t r[HASH_SIZE_SHA512], k[HASH_SIZE_SHA512], sig[HASH_SIZE_SHA512];
+	hasher_t *hasher;
+	chunk_t prefix;
+	ge_p3 R;
+	bool success = FALSE;
+
 	if (scheme != SIGN_ED25519)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported by Ed25519",
 			 signature_scheme_names, scheme);
 		return FALSE;
 	}
-	return FALSE;
+
+	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
+	if (!hasher)
+	{
+		return FALSE;
+	}
+	prefix = chunk_create(this->s + 32, 32);
+
+	if (!hasher->get_hash(hasher, prefix, NULL) ||
+		!hasher->get_hash(hasher, data, r))
+	{
+		goto end;
+	}
+	sc_reduce(r);
+	ge_scalarmult_base(&R, r);
+	ge_p3_tobytes(sig, &R);
+
+	if (!hasher->get_hash(hasher, chunk_create(sig, 32), NULL) ||
+		!hasher->get_hash(hasher, this->pubkey, NULL) ||
+		!hasher->get_hash(hasher, data, k))
+	{
+		goto end;
+	}
+	sc_reduce(k);
+	sc_muladd(sig + 32, k, this->s, r);
+
+	*signature = chunk_clone(chunk_create(sig, sizeof(sig)));
+	success = TRUE;
+
+end:
+	hasher->destroy(hasher);
+	return success;
 }
 
 METHOD(private_key_t, decrypt, bool,
@@ -162,6 +205,7 @@ METHOD(private_key_t, destroy, void,
 	if (ref_put(&this->ref))
 	{
 		lib->encoding->clear_cache(lib->encoding, this);
+		memwipe(this->s, HASH_SIZE_SHA512);
 		chunk_clear(&this->key);
 		chunk_free(&this->pubkey);
 		free(this);
@@ -174,18 +218,16 @@ METHOD(private_key_t, destroy, void,
 static private_curve25519_private_key_t *curve25519_private_key_create(chunk_t key)
 {
 	private_curve25519_private_key_t *this;
-	uint8_t buf[HASH_SIZE_SHA512];
 	hasher_t *hasher;
+	ge_p3 A;
 
-	/* derive public key */
+	/* derive public key from private key */
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
-	if (!hasher || !hasher->get_hash(hasher, key, buf))
+	if (!hasher)
 	{
+		chunk_clear(&key);
 		return NULL;
 	}
-	buf[ 0] &= 0xf8;
-	buf[31] &= 0x7f;
-	buf[31] |= 0x40;
 
 	INIT(this,
 		.public = {
@@ -205,9 +247,26 @@ static private_curve25519_private_key_t *curve25519_private_key_create(chunk_t k
 			},
 		},
 		.key = key,
-		.pubkey = chunk_clone(chunk_create(buf, ED25519_KEY_LEN)),
+		.pubkey = chunk_alloc(ED25519_KEY_LEN),
 		.ref = 1,
 	);
+
+	/* derive secret scalar s from private key */
+	if (!hasher->get_hash(hasher, key, this->s))
+	{
+		destroy(this);
+		hasher->destroy(hasher);
+		return NULL;
+	}
+	hasher->destroy(hasher);
+
+	this->s[0]  &= 0xf8;
+	this->s[31] &= 0x3f;
+	this->s[31] |= 0x40;
+
+	/* derive public key */
+	ge_scalarmult_base(&A, this->s);
+	ge_p3_tobytes(this->pubkey.ptr, &A);
 
 	return this;
 }
