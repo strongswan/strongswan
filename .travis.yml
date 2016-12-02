@@ -17,6 +17,9 @@ before_script:
 script:
   - ./scripts/test.sh
 
+after_failure:
+  - cat config.log
+
 env:
   global:
     - TESTS_REDUCED_KEYLENGTHS=yes
