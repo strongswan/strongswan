@@ -221,6 +221,7 @@ static kernel_algorithm_t integrity_algs[] = {
 /*	{AUTH_DES_MAC,				"***"				}, */
 /*	{AUTH_KPDK_MD5,				"***"				}, */
 	{AUTH_AES_XCBC_96,			"xcbc(aes)"			},
+	{AUTH_AES_CMAC_96,			"cmac(aes)"			},
 };
 
 /**
