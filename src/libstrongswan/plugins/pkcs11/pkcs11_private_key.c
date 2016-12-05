@@ -117,6 +117,9 @@ METHOD(private_key_t, get_keysize, int,
 	return this->pubkey->get_keysize(this->pubkey);
 }
 
+
+#define HASH_NOT_USED (hash_algorithm_t)(-1)
+
 /**
  * See header.
  */
@@ -131,22 +134,26 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme,
 		size_t keylen;
 		hash_algorithm_t hash;
 	} mappings[] = {
+		/* versions for external hashers or no hashers at all*/
 		{SIGN_RSA_EMSA_PKCS1_NULL,		{CKM_RSA_PKCS,			NULL, 0},
-		 KEY_RSA, 0,									   HASH_UNKNOWN},
-		{SIGN_RSA_EMSA_PKCS1_SHA2_256,	{CKM_SHA256_RSA_PKCS,	NULL, 0},
-		 KEY_RSA, 0,									   HASH_UNKNOWN},
-		{SIGN_RSA_EMSA_PKCS1_SHA2_384,	{CKM_SHA384_RSA_PKCS,	NULL, 0},
-		 KEY_RSA, 0,									   HASH_UNKNOWN},
-		{SIGN_RSA_EMSA_PKCS1_SHA2_512,	{CKM_SHA512_RSA_PKCS,	NULL, 0},
-		 KEY_RSA, 0,									   HASH_UNKNOWN},
-		{SIGN_RSA_EMSA_PKCS1_SHA1,		{CKM_SHA1_RSA_PKCS,		NULL, 0},
-		 KEY_RSA, 0,									   HASH_UNKNOWN},
-		{SIGN_RSA_EMSA_PKCS1_MD5,		{CKM_MD5_RSA_PKCS,		NULL, 0},
-		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		 KEY_RSA, 0,									  HASH_NOT_USED},
+		{SIGN_RSA_EMSA_PKCS1_SHA1,		{CKM_RSA_PKCS,			NULL, 0},
+		 KEY_RSA, 0,										  HASH_SHA1},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_224,	{CKM_RSA_PKCS,			NULL, 0},
+		 KEY_RSA, 0,										HASH_SHA224},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_256,	{CKM_RSA_PKCS,			NULL, 0},
+		 KEY_RSA, 0,										HASH_SHA256},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_384,	{CKM_RSA_PKCS,			NULL, 0},
+		 KEY_RSA, 0,										HASH_SHA384},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_512,	{CKM_RSA_PKCS,			NULL, 0},
+		 KEY_RSA, 0,										HASH_SHA512},
+		{SIGN_RSA_EMSA_PKCS1_MD5,		{CKM_RSA_PKCS,			NULL, 0},
+		 KEY_RSA, 0,										   HASH_MD5},
+
 		{SIGN_ECDSA_WITH_NULL,			{CKM_ECDSA,				NULL, 0},
-		 KEY_ECDSA, 0,									   HASH_UNKNOWN},
-		{SIGN_ECDSA_WITH_SHA1_DER,		{CKM_ECDSA_SHA1,		NULL, 0},
-		 KEY_ECDSA, 0,									   HASH_UNKNOWN},
+		 KEY_ECDSA, 0,									  HASH_NOT_USED},
+		{SIGN_ECDSA_WITH_SHA1_DER,		{CKM_ECDSA,				NULL, 0},
+		 KEY_ECDSA, 0,										  HASH_SHA1},
 		{SIGN_ECDSA_WITH_SHA256_DER,	{CKM_ECDSA,				NULL, 0},
 		 KEY_ECDSA, 0,										HASH_SHA256},
 		{SIGN_ECDSA_WITH_SHA384_DER,	{CKM_ECDSA,				NULL, 0},
@@ -159,6 +166,22 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme,
 		 KEY_ECDSA, 384,									HASH_SHA384},
 		{SIGN_ECDSA_521,				{CKM_ECDSA,				NULL, 0},
 		 KEY_ECDSA, 521,									HASH_SHA512},
+
+		/* versions with use of hasher inside PKCS#11 library */
+		{SIGN_RSA_EMSA_PKCS1_SHA1,		{CKM_SHA1_RSA_PKCS,		NULL, 0},
+		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_224,	{CKM_SHA224_RSA_PKCS,	NULL, 0},
+		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_256,	{CKM_SHA256_RSA_PKCS,	NULL, 0},
+		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_384,	{CKM_SHA384_RSA_PKCS,	NULL, 0},
+		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_512,	{CKM_SHA512_RSA_PKCS,	NULL, 0},
+		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_MD5,		{CKM_MD5_RSA_PKCS,		NULL, 0},
+		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_ECDSA_WITH_SHA1_DER,		{CKM_ECDSA_SHA1,		NULL, 0},
+		 KEY_ECDSA, 0,									   HASH_UNKNOWN},
 	};
 	int i;
 
@@ -169,13 +192,25 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme,
 			size_t len = mappings[i].keylen;
 			if (mappings[i].type != type || (len && keylen != len))
 			{
-				return NULL;
+				continue;
 			}
-			if (hash)
+			if (mappings[i].hash == HASH_NOT_USED )
+			{
+				if (hash)
+					*hash = HASH_UNKNOWN;
+				return &mappings[i].mechanism;
+			}
+
+			if (hash && mappings[i].hash != HASH_UNKNOWN)
 			{
 				*hash = mappings[i].hash;
+				return &mappings[i].mechanism;
 			}
-			return &mappings[i].mechanism;
+
+			if (!hash && mappings[i].hash == HASH_UNKNOWN)
+			{
+				return &mappings[i].mechanism;
+			}
 		}
 	}
 	return NULL;
@@ -242,20 +277,111 @@ static bool reauth(private_pkcs11_private_key_t *this,
 	return success;
 }
 
+/*
+ MD5:     (0x)30 20 30 0c 06 08 2a 86 48 86 f7 0d 02 05 05 00 04
+              10 || H.
+ SHA-1:   (0x)30 21 30 09 06 05 2b 0e 03 02 1a 05 00 04 14 || H.
+ SHA-256: (0x)30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00
+              04 20 || H.
+ SHA-384: (0x)30 41 30 0d 06 09 60 86 48 01 65 03 04 02 02 05 00
+              04 30 || H.
+ SHA-512: (0x)30 51 30 0d 06 09 60 86 48 01 65 03 04 02 03 05 00
+                 04 40 || H.
+ */
+
+static chunk_t ssa_pkcs1v15_md5_prolog = chunk_from_chars(
+	0x30, 0x20, /*  DigestInfo tag + length */
+	  0x30, 0x0c, /* AlgorithmIdentifier tag + length */
+	    0x06, 0x08, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05, /* MD5 OID tag + length + value*/
+	    0x05, 0x00, /* NULL*/
+	  0x04, 0x10 /* Digest value + length (prolog, no value) */
+	);
+
+static chunk_t ssa_pkcs1v15_sha1_prolog = chunk_from_chars(
+	0x30, 0x21, /*  DigestInfo tag + length */
+	  0x30, 0x09, /* AlgorithmIdentifier tag + length */
+	    0x06, 0x05, 0x2b, 0x0e, 0x03, 0x02, 0x1a, /* SHA-1 OID tag + length + value*/
+	    0x05, 0x00, /* NULL*/
+	  0x04, 0x14 /* Digest value + length (prolog, no value) */
+	);
+
+static chunk_t ssa_pkcs1v15_sha256_prolog = chunk_from_chars(
+	0x30, 0x31, /*  DigestInfo tag + length */
+	  0x30, 0x0d, /* AlgorithmIdentifier tag + length */
+	    0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01, /* SHA-256 OID tag + length + value*/
+	    0x05, 0x00, /* NULL*/
+	  0x04, 0x20 /* Digest value + length (prolog, no value) */
+	);
+
+static chunk_t ssa_pkcs1v15_sha384_prolog = chunk_from_chars(
+	0x30, 0x41, /*  DigestInfo tag + length */
+	  0x30, 0x0d, /* AlgorithmIdentifier tag + length */
+	    0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02, /* SHA-384 OID tag + length + value*/
+	    0x05, 0x00, /* NULL*/
+	  0x04, 0x30 /* Digest value + length (prolog, no value) */
+	);
+
+static chunk_t ssa_pkcs1v15_sha512_prolog = chunk_from_chars(
+	0x30, 0x51, /*  DigestInfo tag + length */
+	  0x30, 0x0d, /* AlgorithmIdentifier tag + length */
+	    0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03, /* SHA-512 OID tag + length + value*/
+	    0x05, 0x00, /* NULL*/
+	  0x04, 0x40 /* Digest value + length (prolog, no value) */
+	);
+
+static chunk_t ssa_pkcs1v15_sha224_prolog = chunk_from_chars(
+	0x30, 0x2d, /*  DigestInfo tag + length */
+	  0x30, 0x0d, /* AlgorithmIdentifier tag + length */
+	    0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x04, /* SHA-224 OID tag + length + value*/
+	    0x05, 0x00, /* NULL*/
+	  0x04, 0x1c /* Digest value + length (prolog, no value) */
+	);
+
+static inline chunk_t cat_prolog_and_hash( chunk_t prolog, chunk_t hash)
+{
+	if (prolog.ptr[prolog.len-1] != hash.len)
+		return chunk_empty;
+
+	return chunk_cat( "cc", prolog, hash );
+}
+
+chunk_t pkcs11_ssa_pkcs1v15_encode(hash_algorithm_t hash_alg, chunk_t hash)
+{
+	switch (hash_alg)
+	{
+		case HASH_MD5:    return cat_prolog_and_hash(ssa_pkcs1v15_md5_prolog,    hash);
+		case HASH_SHA1:   return cat_prolog_and_hash(ssa_pkcs1v15_sha1_prolog,   hash);
+		case HASH_SHA224: return cat_prolog_and_hash(ssa_pkcs1v15_sha224_prolog, hash);
+		case HASH_SHA256: return cat_prolog_and_hash(ssa_pkcs1v15_sha256_prolog, hash);
+		case HASH_SHA384: return cat_prolog_and_hash(ssa_pkcs1v15_sha384_prolog, hash);
+		case HASH_SHA512: return cat_prolog_and_hash(ssa_pkcs1v15_sha512_prolog, hash);
+
+		default:
+			return chunk_empty;
+	}
+}
+
 METHOD(private_key_t, sign, bool,
 	private_pkcs11_private_key_t *this, signature_scheme_t scheme, void *params,
 	chunk_t data, chunk_t *signature)
 {
-	CK_MECHANISM_PTR mechanism;
+	CK_MECHANISM_PTR mechanism = NULL;
 	CK_SESSION_HANDLE session;
 	CK_BYTE_PTR buf;
 	CK_ULONG len;
 	CK_RV rv;
-	hash_algorithm_t hash_alg;
+	hash_algorithm_t hash_alg = HASH_UNKNOWN;
 	chunk_t hash = chunk_empty;
+	chunk_t digest_info = chunk_empty;
+	bool use_sign_hasher;
 
-	mechanism = pkcs11_signature_scheme_to_mech(scheme, this->type,
-												get_keysize(this), &hash_alg);
+	use_sign_hasher = lib->settings->get_bool(lib->settings, "%s.plugins.pkcs11.use_sign_hasher", FALSE, lib->ns);
+
+	if( use_sign_hasher )
+		mechanism = pkcs11_signature_scheme_to_mech(scheme, this->type, get_keysize(this), NULL);
+	if( !mechanism )
+		mechanism  = pkcs11_signature_scheme_to_mech(scheme, this->type, get_keysize(this), &hash_alg);
+
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported",
@@ -293,7 +419,23 @@ METHOD(private_key_t, sign, bool,
 			return FALSE;
 		}
 		hasher->destroy(hasher);
-		data = hash;
+		switch (scheme)
+		{
+			case SIGN_RSA_EMSA_PKCS1_MD5:
+			case SIGN_RSA_EMSA_PKCS1_SHA1:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_224:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_256:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_384:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_512:
+				digest_info = pkcs11_ssa_pkcs1v15_encode(hash_alg, hash);
+				data = digest_info;
+				break;
+
+			default:
+				data = hash;
+				break;
+		}
+
 	}
 	len = (get_keysize(this) + 7) / 8;
 	if (this->type == KEY_ECDSA)
@@ -304,6 +446,7 @@ METHOD(private_key_t, sign, bool,
 	rv = this->lib->f->C_Sign(session, data.ptr, data.len, buf, &len);
 	this->lib->f->C_CloseSession(session);
 	chunk_free(&hash);
+	chunk_free(&digest_info);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_LIB, "C_Sign() failed: %N", ck_rv_names, rv);

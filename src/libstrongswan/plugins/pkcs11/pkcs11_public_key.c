@@ -204,15 +204,21 @@ METHOD(public_key_t, verify, bool,
 	private_pkcs11_public_key_t *this, signature_scheme_t scheme, void *params,
 	chunk_t data, chunk_t sig)
 {
-	CK_MECHANISM_PTR mechanism;
+	CK_MECHANISM_PTR mechanism = NULL;
 	CK_SESSION_HANDLE session;
 	CK_RV rv;
 	hash_algorithm_t hash_alg;
-	chunk_t hash = chunk_empty, parse, r, s;
+	chunk_t hash = chunk_empty, digest_info = chunk_empty, parse, r, s;
 	size_t len;
+	bool use_sign_hasher;
 
-	mechanism = pkcs11_signature_scheme_to_mech(scheme, this->type, this->k,
-												&hash_alg);
+	use_sign_hasher = lib->settings->get_bool(lib->settings, "%s.plugins.pkcs11.use_sign_hasher", FALSE, lib->ns);
+
+	if( use_sign_hasher )
+		mechanism = pkcs11_signature_scheme_to_mech(scheme, this->type, this->k, NULL);
+	if( !mechanism )
+		mechanism  = pkcs11_signature_scheme_to_mech(scheme, this->type, this->k, &hash_alg);
+
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported",
@@ -247,6 +253,7 @@ METHOD(public_key_t, verify, bool,
 			memcpy(sig.ptr + (len - r.len), r.ptr, r.len);
 			memcpy(sig.ptr + len + (len - s.len), s.ptr, s.len);
 			break;
+
 		default:
 			sig = chunk_skip_zero(sig);
 			break;
@@ -277,11 +284,28 @@ METHOD(public_key_t, verify, bool,
 			return FALSE;
 		}
 		hasher->destroy(hasher);
-		data = hash;
+
+		switch (scheme)
+		{
+			case SIGN_RSA_EMSA_PKCS1_MD5:
+			case SIGN_RSA_EMSA_PKCS1_SHA1:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_224:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_256:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_384:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_512:
+				digest_info = pkcs11_ssa_pkcs1v15_encode(hash_alg, hash);
+				data = digest_info;
+				break;
+
+			default:
+				data = hash;
+				break;
+		}
 	}
 	rv = this->lib->f->C_Verify(session, data.ptr, data.len, sig.ptr, sig.len);
 	this->lib->f->C_CloseSession(session);
 	chunk_free(&hash);
+	chunk_free(&digest_info);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_LIB, "C_Verify() failed: %N", ck_rv_names, rv);

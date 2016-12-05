@@ -62,6 +62,8 @@ pkcs11_private_key_t *pkcs11_private_key_connect(key_type_t type, va_list args);
  * @param type			key type
  * @param keylen		key length in bits
  * @param hash			hash algorithm to apply first (HASH_UNKNOWN if none)
+ * 						If hash is given NULL, returns mechanism (if supported)
+ * 						for hashing and signing/verifying at once.
  */
 CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme,
 												 key_type_t type, size_t keylen,
@@ -71,5 +73,11 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme,
  * Get the Cryptoki mechanism for a encryption scheme.
  */
 CK_MECHANISM_PTR pkcs11_encryption_scheme_to_mech(encryption_scheme_t scheme);
+
+/**
+ * Encodes digest for PKCS#1 v1.5 signature to be given for CKM_RSA_PKCS mechanism
+ */
+chunk_t pkcs11_ssa_pkcs1v15_encode(hash_algorithm_t hash_alg, chunk_t hash);
+
 
 #endif /** PKCS11_PRIVATE_KEY_H_ @}*/
