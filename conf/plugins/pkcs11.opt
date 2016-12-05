@@ -1,8 +1,14 @@
 charon.plugins.pkcs11.modules {}
 	List of available PKCS#11 modules.
 
-charon.plugins.pkcs11.load_certs = yes
-	Whether to load certificates from tokens.
+charon.plugins.pkcs11.modules.<name>.path =
+	Full path to the shared object file of this PKCS#11 module.
+
+charon.plugins.pkcs11.modules.<name>.os_locking = no
+	Whether OS locking should be enabled for this module.
+
+charon.plugins.pkcs11.modules.<name>.load_certs = yes
+	Whether to automatically load certificates from tokens.
 
 charon.plugins.pkcs11.reload_certs = no
 	Reload certificates from all tokens if charon receives a SIGHUP.
