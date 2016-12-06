@@ -72,6 +72,8 @@ LOCAL_C_INCLUDES += $(libcurl_PATH)
 LOCAL_SHARED_LIBRARIES += libcurl
 endif
 
+LOCAL_SRC_FILES += $(call add_plugin, curve25519)
+
 LOCAL_SRC_FILES += $(call add_plugin, des)
 
 LOCAL_SRC_FILES += $(call add_plugin, fips-prf)
