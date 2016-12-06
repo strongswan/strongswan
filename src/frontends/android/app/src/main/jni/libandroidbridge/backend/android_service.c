@@ -790,14 +790,14 @@ static job_requeue_t initiate(private_android_service_t *this)
 	 * if PFS is used */
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128gcm16-aes256gcm16-chacha20poly1305-"
-							"ecp256-modp3072"));
+							"curve25519-ecp256-modp3072"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-							"aes128-sha256-ecp256-modp3072"));
+							"aes128-sha256-curve25519-ecp256-modp3072"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes256-sha384-ecp521-modp8192"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128-aes192-aes256-sha1-sha256-sha384-sha512-"
-							"ecp256-ecp384-ecp521-"
+							"curve25519-ecp256-ecp384-ecp521-"
 							"modp2048-modp3072-modp4096-modp1024"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128gcm16-aes256gcm16-chacha20poly1305"));
