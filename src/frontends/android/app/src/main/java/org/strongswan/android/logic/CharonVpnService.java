@@ -542,7 +542,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	private byte[][] getTrustedCertificates()
 	{
 		ArrayList<byte[]> certs = new ArrayList<byte[]>();
-		TrustedCertificateManager certman = TrustedCertificateManager.getInstance();
+		TrustedCertificateManager certman = TrustedCertificateManager.getInstance().load();
 		try
 		{
 			String alias = this.mCurrentCertificateAlias;
