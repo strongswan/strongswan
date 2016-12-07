@@ -290,7 +290,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	private void addNotification()
 	{
 		mShowNotification = true;
-		startForeground(VPN_STATE_NOTIFICATION_ID, buildNotification());
+		startForeground(VPN_STATE_NOTIFICATION_ID, buildNotification(false));
 	}
 
 	/**
@@ -302,11 +302,10 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		stopForeground(true);
 	}
 
-
 	/**
 	 * Build a notification matching the current state
 	 */
-	private Notification buildNotification()
+	private Notification buildNotification(boolean publicVersion)
 	{
 		VpnProfile profile = mService.getProfile();
 		State state = mService.getState();
@@ -318,10 +317,10 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			name = profile.getName();
 		}
 		android.support.v4.app.NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
-				.setContentText(name)
 				.setSmallIcon(R.drawable.ic_notification)
 				.setCategory(NotificationCompat.CATEGORY_SERVICE)
-				.setVisibility(NotificationCompat.VISIBILITY_SECRET);
+				.setVisibility(publicVersion ? NotificationCompat.VISIBILITY_PUBLIC
+											 : NotificationCompat.VISIBILITY_PRIVATE);
 		int s = R.string.state_disabled;
 		if (error != ErrorState.NO_ERROR)
 		{
@@ -349,6 +348,11 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			}
 		}
 		builder.setContentTitle(getString(s));
+		if (!publicVersion)
+		{
+			builder.setContentText(name);
+			builder.setPublicVersion(buildNotification(true));
+		}
 
 		Intent intent = new Intent(getApplicationContext(), MainActivity.class);
 		PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
@@ -362,7 +366,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		if (mShowNotification)
 		{
 			NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-			manager.notify(VPN_STATE_NOTIFICATION_ID, buildNotification());
+			manager.notify(VPN_STATE_NOTIFICATION_ID, buildNotification(false));
 		}
 	}
 
