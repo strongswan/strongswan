@@ -496,14 +496,12 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			showCertificateAlert();
 			valid = false;
 		}
-		Integer mtu = getInteger(mMTU);
-		if (mtu != null && (mtu < MTU_MIN || mtu > MTU_MAX))
+		if (!validateInteger(mMTU, MTU_MIN, MTU_MAX))
 		{
 			mMTUWrap.setError(String.format(getString(R.string.alert_text_out_of_range), MTU_MIN, MTU_MAX));
 			valid = false;
 		}
-		Integer port = getInteger(mPort);
-		if (port != null && (port < 1 || port > 65535))
+		if (!validateInteger(mPort, 1, 65535))
 		{
 			mPortWrap.setError(String.format(getString(R.string.alert_text_out_of_range), 1, 65535));
 			valid = false;
@@ -630,6 +628,31 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		catch (NumberFormatException e)
 		{
 			return null;
+		}
+	}
+
+	/**
+	 * Check that the value in the given text box is a valid integer in the given range
+	 *
+	 * @param view text box (numeric entry assumed)
+	 * @param min minimum value (inclusive)
+	 * @param max maximum value (inclusive)
+	 */
+	private boolean validateInteger(EditText view, Integer min, Integer max)
+	{
+		String value = view.getText().toString().trim();
+		try
+		{
+			if (value.isEmpty())
+			{
+				return true;
+			}
+			Integer val = Integer.valueOf(value);
+			return min <= val && val <= max;
+		}
+		catch (NumberFormatException e)
+		{
+			return false;
 		}
 	}
 

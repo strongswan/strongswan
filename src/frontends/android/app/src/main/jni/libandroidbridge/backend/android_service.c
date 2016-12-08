@@ -550,6 +550,8 @@ METHOD(listener_t, alert, bool,
 	private_android_service_t *this, ike_sa_t *ike_sa, alert_t alert,
 	va_list args)
 {
+	bool stay_registered = TRUE;
+
 	if (this->ike_sa == ike_sa)
 	{
 		switch (alert)
@@ -557,11 +559,13 @@ METHOD(listener_t, alert, bool,
 			case ALERT_PEER_ADDR_FAILED:
 				charonservice->update_status(charonservice,
 											 CHARONSERVICE_LOOKUP_ERROR);
-				break;
+				return FALSE;
+
 			case ALERT_PEER_AUTH_FAILED:
 				charonservice->update_status(charonservice,
 											 CHARONSERVICE_PEER_AUTH_ERROR);
-				break;
+				return FALSE;
+
 			case ALERT_KEEP_ON_CHILD_SA_FAILURE:
 			{
 				uint32_t *id = malloc_thing(uint32_t);
@@ -593,6 +597,7 @@ METHOD(listener_t, alert, bool,
 						(job_t*)callback_job_create_with_prio(
 							(callback_job_cb_t)terminate, id, free,
 							(callback_job_cancel_t)return_false, JOB_PRIO_HIGH));
+					stay_registered = FALSE;
 				}
 				else
 				{
@@ -609,6 +614,7 @@ METHOD(listener_t, alert, bool,
 					{
 						charonservice->update_status(charonservice,
 											CHARONSERVICE_UNREACHABLE_ERROR);
+						stay_registered = FALSE;
 					}
 				}
 				this->lock->unlock(this->lock);
@@ -617,7 +623,7 @@ METHOD(listener_t, alert, bool,
 				break;
 		}
 	}
-	return TRUE;
+	return stay_registered;
 }
 
 static void add_auth_cfg_pw(private_android_service_t *this,
@@ -789,17 +795,18 @@ static job_requeue_t initiate(private_android_service_t *this)
 	/* create ESP proposals with and without DH groups, let responder decide
 	 * if PFS is used */
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-							"aes128gcm16-aes256gcm16-ecp256"));
+							"aes128gcm16-aes256gcm16-chacha20poly1305-"
+							"curve25519-ecp256-modp3072"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-							"aes128-sha256-ecp256-modp3072"));
+							"aes128-sha256-curve25519-ecp256-modp3072"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes256-sha384-ecp521-modp8192"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128-aes192-aes256-sha1-sha256-sha384-sha512-"
-							"ecp256-ecp384-ecp521-"
+							"curve25519-ecp256-ecp384-ecp521-"
 							"modp2048-modp3072-modp4096-modp1024"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-							"aes128gcm16-aes256gcm16"));
+							"aes128gcm16-aes256gcm16-chacha20poly1305"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128-sha256"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
