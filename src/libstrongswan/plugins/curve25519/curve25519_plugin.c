@@ -20,6 +20,7 @@
 #include "curve25519_dh.h"
 #include "curve25519_private_key.h"
 #include "curve25519_public_key.h"
+#include "curve25519_identity_hasher.h"
 
 #include <library.h>
 
@@ -65,6 +66,9 @@ METHOD(plugin_t, get_features, int,
 		/* Ed25519 signature verification scheme, public */
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ED25519),
 			PLUGIN_DEPENDS(HASHER, HASH_SHA512),
+		/* register a pro forma identity hasher */
+		PLUGIN_REGISTER(HASHER, curve25519_identity_hasher_create),
+			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
 	};
 	*features = f;
 	return countof(f);
