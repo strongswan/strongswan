@@ -943,6 +943,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 
 			if (MainActivity.USE_BYOD)
 			{
+				System.loadLibrary("tpmtss");
 				System.loadLibrary("tncif");
 				System.loadLibrary("tnccs");
 				System.loadLibrary("imcv");

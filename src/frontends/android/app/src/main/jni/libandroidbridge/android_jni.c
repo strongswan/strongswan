@@ -33,6 +33,7 @@ static struct {
 } libs[] = {
 	{ "libstrongswan.so", NULL },
 #ifdef USE_BYOD
+	{ "libtpmtss.so", NULL },
 	{ "libtncif.so", NULL },
 	{ "libtnccs.so", NULL },
 	{ "libimcv.so", NULL },
