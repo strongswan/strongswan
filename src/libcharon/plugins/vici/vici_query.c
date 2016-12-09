@@ -128,6 +128,7 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
 
+	b->add_kv(b, "name", "%s", child->get_name(child));
 	b->add_kv(b, "uniqueid", "%u", child->get_unique_id(child));
 	b->add_kv(b, "reqid", "%u", child->get_reqid(child));
 	b->add_kv(b, "state", "%N", child_sa_state_names, child->get_state(child));
@@ -420,6 +421,7 @@ CALLBACK(list_sas, vici_message_t*,
 	char *ike;
 	u_int ike_id;
 	bool bl;
+	char buf[BUF_LEN];
 
 	bl = request->get_str(request, NULL, "noblock") == NULL;
 	ike = request->get_str(request, NULL, "ike");
@@ -448,7 +450,9 @@ CALLBACK(list_sas, vici_message_t*,
 		csas = ike_sa->create_child_sa_enumerator(ike_sa);
 		while (csas->enumerate(csas, &child_sa))
 		{
-			b->begin_section(b, child_sa->get_name(child_sa));
+			snprintf(buf, sizeof(buf), "%s-%u", child_sa->get_name(child_sa),
+					 child_sa->get_unique_id(child_sa));
+			b->begin_section(b, buf);
 			list_child(this, b, child_sa, now);
 			b->end_section(b);
 		}

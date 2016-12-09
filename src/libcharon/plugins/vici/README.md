@@ -746,7 +746,8 @@ command.
 				<list of tasks currently handling passively>
 			]
 			child-sas = {
-				<child-sa-name>* = {
+				<unique child-sa-name>* = {
+					name = <name of the CHILD_SA>
 					uniqueid = <unique CHILD_SA identifier>
 					reqid = <reqid of CHILD_SA>
 					state = <state string of CHILD_SA>

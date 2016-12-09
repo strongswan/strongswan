@@ -112,8 +112,9 @@ CALLBACK(child_sas, int,
 	if (ret == 0)
 	{
 		printf("  %s: #%s, reqid %s, %s, %s%s, %s:",
-			name, child->get(child, "uniqueid"), child->get(child, "reqid"),
-			child->get(child, "state"), child->get(child, "mode"),
+			child->get(child, "name"), child->get(child, "uniqueid"),
+			child->get(child, "reqid"), child->get(child, "state"),
+			child->get(child, "mode"),
 			child->get(child, "encap") ? "-in-UDP" : "",
 			child->get(child, "protocol"));
 
