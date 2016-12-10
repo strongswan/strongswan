@@ -327,9 +327,12 @@ METHOD(diffie_hellman_t, destroy, void,
 /**
  * ECC Brainpool curves are not available in OpenSSL releases < 1.0.2, but we
  * don't check the version in case somebody backported them.
+ *
+ * BoringSSL defines the constants but not the curves.
  */
 #if (!defined(NID_brainpoolP224r1) || !defined(NID_brainpoolP256r1) || \
-	 !defined(NID_brainpoolP384r1) || !defined(NID_brainpoolP512r1))
+	 !defined(NID_brainpoolP384r1) || !defined(NID_brainpoolP512r1) || \
+	 defined(OPENSSL_IS_BORINGSSL))
 
 /**
  * Parameters for ECC Brainpool curves
