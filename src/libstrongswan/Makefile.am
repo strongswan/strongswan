@@ -648,7 +648,3 @@ endif
 if USE_NEWHOPE
   SUBDIRS += plugins/newhope/tests
 endif
-
-if USE_CURVE25519
-  SUBDIRS += plugins/curve25519/tests
-endif

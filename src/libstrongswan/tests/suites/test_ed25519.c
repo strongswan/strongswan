@@ -15,9 +15,6 @@
 
 #include "test_suite.h"
 
-#include <curve25519_private_key.h>
-#include <curve25519_public_key.h>
-
 #include <time.h>
 
 typedef struct sig_test_t sig_test_t;
@@ -272,7 +269,7 @@ static sig_test_t sig_tests[] = {
 	}
 };
 
-START_TEST(test_curve25519_ed25519_sign)
+START_TEST(test_ed25519_sign)
 {
 	private_key_t *key;
 	public_key_t *pubkey, *public;
@@ -316,7 +313,7 @@ START_TEST(test_curve25519_ed25519_sign)
 }
 END_TEST
 
-START_TEST(test_curve25519_ed25519_gen)
+START_TEST(test_ed25519_gen)
 {
 	private_key_t *key, *key2;
 	public_key_t *pubkey, *pubkey2;
@@ -390,19 +387,18 @@ START_TEST(test_curve25519_ed25519_gen)
 }
 END_TEST
 
-START_TEST(test_curve25519_ed25519_speed)
+START_TEST(test_ed25519_speed)
 {
 	private_key_t *key;
 	public_key_t *pubkey;
 	chunk_t msg = chunk_from_str("Hello Ed25519"), sig;
-	struct timespec start, stop;
 	int i, count = 1000;
 
-	/* use /dev/urandom for true random source */
-	lib->settings->set_str(lib->settings,
-				"libstrongswan.plugins.random.random", "/dev/urandom");
-
+#ifdef HAVE_CLOCK_GETTIME
+	struct timespec start, stop;
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+#endif
+
 	for (i = 0; i < count; i++)
 	{
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ED25519,
@@ -416,15 +412,13 @@ START_TEST(test_curve25519_ed25519_speed)
 		pubkey->destroy(pubkey);
 		chunk_free(&sig);
 	}
-	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &stop);
 
+#ifdef HAVE_CLOCK_GETTIME
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &stop);
 	DBG0(DBG_LIB, "%d Ed25519 keys and signatures in %d ms\n", count,
 				  (stop.tv_nsec - start.tv_nsec) / 1000000 +
 				  (stop.tv_sec - start.tv_sec) * 1000);
-
-	/* revert to /dev/random for true random source */
-	lib->settings->set_str(lib->settings,
-				"libstrongswan.plugins.random.random", "/dev/random");
+#endif
 }
 END_TEST
 
@@ -435,7 +429,7 @@ static chunk_t zero_pk = chunk_from_chars(
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00);
 
-START_TEST(test_curve25519_ed25519_fail)
+START_TEST(test_ed25519_fail)
 {
 	private_key_t *key;
 	public_key_t *pubkey;
@@ -505,28 +499,28 @@ START_TEST(test_curve25519_ed25519_fail)
 }
 END_TEST
 
-Suite *curve25519_ed25519_suite_create()
+Suite *ed25519_suite_create()
 {
 	Suite *s;
 	TCase *tc;
 
-	s = suite_create("curve25519_ed25519");
+	s = suite_create("ed25519");
 
 	tc = tcase_create("ed25519_sign");
-	tcase_add_loop_test(tc, test_curve25519_ed25519_sign, 0, countof(sig_tests));
+	tcase_add_loop_test(tc, test_ed25519_sign, 0, countof(sig_tests));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ed25519_gen");
-	tcase_add_test(tc, test_curve25519_ed25519_gen);
+	tcase_add_test(tc, test_ed25519_gen);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ed25519_fail");
-	tcase_add_test(tc, test_curve25519_ed25519_fail);
+	tcase_add_test(tc, test_ed25519_fail);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("ed25519_speed");
 	test_case_set_timeout(tc, 10);
-	tcase_add_test(tc, test_curve25519_ed25519_speed);
+	tcase_add_test(tc, test_ed25519_speed);
 	suite_add_tcase(s, tc);
 
 	return s;

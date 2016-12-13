@@ -1757,7 +1757,6 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/fips_prf/Makefile
 	src/libstrongswan/plugins/gmp/Makefile
 	src/libstrongswan/plugins/curve25519/Makefile
-	src/libstrongswan/plugins/curve25519/tests/Makefile
 	src/libstrongswan/plugins/rdrand/Makefile
 	src/libstrongswan/plugins/aesni/Makefile
 	src/libstrongswan/plugins/random/Makefile
