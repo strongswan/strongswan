@@ -33,7 +33,10 @@ class Transport(object):
         """Ensure to read count bytes from the socket"""
         data = b""
         while len(data) < count:
-            data += self.socket.recv(count - len(data))
+            buf = self.socket.recv(count - len(data))
+            if not buf:
+                raise socket.error('Connection closed')
+            data += buf
         return data
 
 
