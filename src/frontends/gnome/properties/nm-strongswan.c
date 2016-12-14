@@ -371,7 +371,13 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	}
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
-
+	
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "remote-identity-entry"));
+	value = nm_setting_vpn_get_data_item (settings, "remote-identity");
+	if (value)
+		gtk_entry_set_text (GTK_ENTRY (widget), value);
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
+	
 	return TRUE;
 }
 
@@ -506,7 +512,13 @@ update_connection (NMVpnEditor *iface,
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "ipcomp-check"));
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "ipcomp", active ? "yes" : "no");
-
+	
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "remote-identity-entry"));
+	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+	if (str && strlen (str)) {
+		nm_setting_vpn_add_data_item (settings, "remote-identity", str);
+	}
+	
 	nm_connection_add_setting (connection, NM_SETTING (settings));
 	return TRUE;
 }
