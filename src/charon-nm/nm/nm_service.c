@@ -405,7 +405,9 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 		 * of the gateway as its identity. This identity will be used for
 		 * certificate lookup and requires the configured IP/DNS to be
 		 * included in the gateway certificate. */
-		gateway = identification_create_from_string((char*)address);
+		str = nm_setting_vpn_get_data_item(vpn, "remote-identity");
+		char* remote_id = str?str:(char*)address;
+		gateway = identification_create_from_string(remote_id);
 		DBG1(DBG_CFG, "using CA certificate, gateway identity '%Y'", gateway);
 		loose_gateway_id = TRUE;
 	}
