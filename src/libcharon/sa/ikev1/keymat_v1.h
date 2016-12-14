@@ -121,39 +121,17 @@ struct keymat_v1_t {
 	bool (*get_hash_phase2)(keymat_v1_t *this, message_t *message, chunk_t *hash);
 
 	/**
-	 * Returns the IV for a message with the given message ID.
-	 *
-	 * The return chunk contains internal data and is valid until the next
-	 * get_iv/udpate_iv/confirm_iv call.
-	 *
-	 * @param mid			message ID
-	 * @param iv			chunk receiving IV, internal data
-	 * @return				TRUE if IV allocated successfully
+	 * @see iv_manager_t.get_iv
 	 */
 	bool (*get_iv)(keymat_v1_t *this, uint32_t mid, chunk_t *iv);
 
 	/**
-	 * Updates the IV for the next message with the given message ID.
-	 *
-	 * A call of confirm_iv() is required in order to actually make the IV
-	 * available.  This is needed for the inbound case where we store the last
-	 * block of the encrypted message but want to update the IV only after
-	 * verification of the decrypted message.
-	 *
-	 * @param mid			message ID
-	 * @param last_block	last block of encrypted message (gets cloned)
-	 * @return				TRUE if IV updated successfully
+	 * @see iv_manager_t.update_iv
 	 */
 	bool (*update_iv)(keymat_v1_t *this, uint32_t mid, chunk_t last_block);
 
 	/**
-	 * Confirms the updated IV for the given message ID.
-	 *
-	 * To actually make the new IV available via get_iv this method has to
-	 * be called after update_iv.
-	 *
-	 * @param mid			message ID
-	 * @return				TRUE if IV confirmed successfully
+	 * @see iv_manager_t.confirm_iv
 	 */
 	bool (*confirm_iv)(keymat_v1_t *this, uint32_t mid);
 };
