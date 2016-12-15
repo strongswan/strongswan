@@ -273,7 +273,8 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 }
 
 METHOD(proposal_t, select_proposal, proposal_t*,
-	private_proposal_t *this, proposal_t *other, bool private)
+	private_proposal_t *this, proposal_t *other, bool other_remote,
+	bool private)
 {
 	proposal_t *selected;
 
@@ -285,7 +286,17 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 		return NULL;
 	}
 
-	selected = proposal_create(this->protocol, other->get_number(other));
+	if (other_remote)
+	{
+		selected = proposal_create(this->protocol, other->get_number(other));
+		selected->set_spi(selected, other->get_spi(other));
+	}
+	else
+	{
+		selected = proposal_create(this->protocol, this->number);
+		selected->set_spi(selected, this->spi);
+
+	}
 
 	if (!select_algo(this, other, selected, ENCRYPTION_ALGORITHM, private) ||
 		!select_algo(this, other, selected, PSEUDO_RANDOM_FUNCTION, private) ||
@@ -298,7 +309,6 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 	}
 
 	DBG2(DBG_CFG, "  proposal matches");
-	selected->set_spi(selected, other->get_spi(other));
 	return selected;
 }
 

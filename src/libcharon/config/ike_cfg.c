@@ -339,7 +339,7 @@ METHOD(ike_cfg_t, select_proposal, proposal_t*,
 		}
 		while (match_enum->enumerate(match_enum, (void**)&match))
 		{
-			selected = proposal->select(proposal, match, private);
+			selected = proposal->select(proposal, match, prefer_self, private);
 			if (selected)
 			{
 				DBG2(DBG_CFG, "received proposals: %#P", proposals);

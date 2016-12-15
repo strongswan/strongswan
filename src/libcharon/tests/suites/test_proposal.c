@@ -108,7 +108,7 @@ START_TEST(test_select)
 									   select_data[_i].self);
 	other = proposal_create_from_string(select_data[_i].proto,
 										select_data[_i].other);
-	selected = self->select(self, other, FALSE);
+	selected = self->select(self, other, TRUE, FALSE);
 	if (select_data[_i].expected)
 	{
 		expected = proposal_create_from_string(select_data[_i].proto,
@@ -128,6 +128,29 @@ START_TEST(test_select)
 }
 END_TEST
 
+START_TEST(test_select_spi)
+{
+	proposal_t *self, *other, *selected;
+
+	self = proposal_create_from_string(PROTO_ESP, "aes128-sha256-modp3072");
+	other = proposal_create_from_string(PROTO_ESP, "aes128-sha256-modp3072");
+	other->set_spi(other, 0x12345678);
+
+	selected = self->select(self, other, TRUE, FALSE);
+	ck_assert(selected);
+	ck_assert_int_eq(selected->get_spi(selected), other->get_spi(other));
+	selected->destroy(selected);
+
+	selected = self->select(self, other, FALSE, FALSE);
+	ck_assert(selected);
+	ck_assert_int_eq(selected->get_spi(selected), self->get_spi(self));
+	selected->destroy(selected);
+
+	other->destroy(other);
+	self->destroy(self);
+}
+END_TEST
+
 Suite *proposal_suite_create()
 {
 	Suite *s;
@@ -141,6 +164,7 @@ Suite *proposal_suite_create()
 
 	tc = tcase_create("select");
 	tcase_add_loop_test(tc, test_select, 0, countof(select_data));
+	tcase_add_test(tc, test_select_spi);
 	suite_add_tcase(s, tc);
 
 	return s;

@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2009-2016 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -124,10 +125,14 @@ struct proposal_t {
 	 * in common, a resulting proposal of this kind is created.
 	 *
 	 * @param other			proposal to compare against
+	 * @param other_remote	whether other is the remote proposal from which to
+	 *						copy SPI and proposal number to the result,
+	 *						otherwise copy from this proposal
 	 * @param private		accepts algorithms allocated in a private range
 	 * @return				selected proposal, NULL if proposals don't match
 	 */
-	proposal_t *(*select) (proposal_t *this, proposal_t *other, bool private);
+	proposal_t *(*select)(proposal_t *this, proposal_t *other,
+						  bool other_remote, bool private);
 
 	/**
 	 * Get the protocol ID of the proposal.

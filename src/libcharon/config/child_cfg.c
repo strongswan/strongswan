@@ -249,7 +249,7 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 			{
 				proposal->strip_dh(proposal, MODP_NONE);
 			}
-			selected = proposal->select(proposal, match, private);
+			selected = proposal->select(proposal, match, prefer_self, private);
 			if (selected)
 			{
 				DBG2(DBG_CFG, "received proposals: %#P", proposals);
