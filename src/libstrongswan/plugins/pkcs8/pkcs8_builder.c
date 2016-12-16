@@ -47,6 +47,7 @@ static private_key_t *parse_private_key(chunk_t blob)
 	int objectID;
 	private_key_t *key = NULL;
 	key_type_t type = KEY_ANY;
+	builder_part_t part = BUILD_BLOB_ASN1_DER;
 
 	parser = asn1_parser_create(pkinfoObjects, blob);
 	parser->set_flags(parser, FALSE, TRUE);
@@ -68,6 +69,14 @@ static private_key_t *parse_private_key(chunk_t blob)
 					case OID_EC_PUBLICKEY:
 						type = KEY_ECDSA;
 						break;
+					case OID_ED25519:
+						type = KEY_ED25519;
+						part = BUILD_EDDSA_PRIV_ASN1_DER;
+						break;
+					case OID_ED448:
+						type = KEY_ED448;
+						part = BUILD_EDDSA_PRIV_ASN1_DER;
+						break;
 					default:
 						/* key type not supported */
 						goto end;
@@ -81,14 +90,12 @@ static private_key_t *parse_private_key(chunk_t blob)
 				{
 					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
 											 type, BUILD_BLOB_ALGID_PARAMS,
-											 params, BUILD_BLOB_ASN1_DER,
-											 object, BUILD_END);
+											 params, part, object, BUILD_END);
 				}
 				else
 				{
 					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-											 type, BUILD_BLOB_ASN1_DER, object,
-											 BUILD_END);
+											 type, part, object, BUILD_END);
 				}
 				DBG2(DBG_ASN, "-- < --");
 				break;

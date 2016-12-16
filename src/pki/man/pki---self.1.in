@@ -1,4 +1,4 @@
-.TH "PKI \-\-SELF" 1 "2013-07-31" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-SELF" 1 "2016-12-13" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -68,8 +68,8 @@ Private key input file. If not given the key is read from \fISTDIN\fR.
 Key ID of a private key on a smartcard.
 .TP
 .BI "\-t, \-\-type " type
-Type of the input key. Either \fIpriv\fR, \fIrsa\fR, \fIecdsa\fR or \fIbliss\fR,
-defaults to \fIpriv\fR.
+Type of the input key. Either \fIpriv\fR, \fIrsa\fR, \fIecdsa\fR, \fIed25519\fR
+or \fIbliss\fR, defaults to \fIpriv\fR.
 .TP
 .BI "\-d, \-\-dn " distinguished-name
 Subject and issuer distinguished name (DN). Required.

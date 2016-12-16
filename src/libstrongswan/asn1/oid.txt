@@ -382,6 +382,9 @@
                 0x0C         "brainpoolP384t1"
                 0x0D         "brainpoolP512r1"
                 0x0E         "brainpoolP512t1"
+  0x65                       "Thawte"
+    0x70                     "id-Ed25519"				OID_ED25519
+    0x71                     "id-Ed448"					OID_ED448
   0x81                       ""
     0x04                     "Certicom"
       0x00                   "curve"

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Martin Will
- * Copyright (C) 2000-2008 Andreas Steffen
+ * Copyright (C) 2000-2016 Andreas Steffen
  *
  * Hochschule fuer Technik Rapperswil
  *
@@ -47,6 +47,8 @@ chunk_t asn1_algorithmIdentifier(int oid)
 		case OID_ECDSA_WITH_SHA256:
 		case OID_ECDSA_WITH_SHA384:
 		case OID_ECDSA_WITH_SHA512:
+		case OID_ED25519:
+		case OID_ED448:
 			parameters = chunk_empty;
 			break;
 		default:

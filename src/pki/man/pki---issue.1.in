@@ -1,4 +1,4 @@
-.TH "PKI \-\-ISSUE" 1 "2013-08-12" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-ISSUE" 1 "2016-12-13" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -68,9 +68,9 @@ key/request is read from \fISTDIN\fR.
 .TP
 .BI "\-t, \-\-type " type
 Type of the input. One of \fIpub\fR (public key), \fIpriv\fR (private key),
-\fIrsa\fR (RSA private key), \fIecdsa\fR (ECDSA private key), \fIbliss\fR (BLISS
-private key) or \fIpkcs10\fR (PKCS#10 certificate request), defaults to
-\fIpub\fR.
+\fIrsa\fR (RSA private key), \fIecdsa\fR (ECDSA private key),
+\fIed25519\fR (Ed25519 private key) \fIbliss\fR (BLISS private key) or
+\fIpkcs10\fR (PKCS#10 certificate request), defaults to \fIpub\fR.
 .TP
 .BI "\-k, \-\-cakey " file
 CA private key file. Either this or

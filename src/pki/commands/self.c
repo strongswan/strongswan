@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2015 Andreas Steffen
+ * Copyright (C) 2015-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -89,6 +89,10 @@ static int self()
 				else if (streq(arg, "ecdsa"))
 				{
 					type = KEY_ECDSA;
+				}
+				else if (streq(arg, "ed25519"))
+				{
+					type = KEY_ED25519;
 				}
 				else if (streq(arg, "bliss"))
 				{
@@ -421,7 +425,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		self, 's', "self",
 		"create a self signed certificate",
-		{" [--in file|--keyid hex] [--type rsa|ecdsa|bliss|priv]",
+		{" [--in file|--keyid hex] [--type rsa|ecdsa|ed25519|bliss|priv]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
 		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning|msSmartcardLogon]+",

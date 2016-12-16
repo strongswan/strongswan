@@ -20,7 +20,8 @@
 
 #include <asn1/oid.h>
 
-ENUM_BEGIN(hash_algorithm_names, HASH_SHA1, HASH_SHA512,
+ENUM_BEGIN(hash_algorithm_names, HASH_IDENTITY, HASH_SHA512,
+	"HASH_IDENTITY",
 	"HASH_SHA1",
 	"HASH_SHA256",
 	"HASH_SHA384",
@@ -37,7 +38,8 @@ ENUM_NEXT(hash_algorithm_names, HASH_UNKNOWN, HASH_SHA3_512, HASH_SHA512,
 	"HASH_SHA3_512");
 ENUM_END(hash_algorithm_names, HASH_SHA3_512);
 
-ENUM_BEGIN(hash_algorithm_short_names, HASH_SHA1, HASH_SHA512,
+ENUM_BEGIN(hash_algorithm_short_names, HASH_IDENTITY, HASH_SHA512,
+	"identity",
 	"sha1",
 	"sha256",
 	"sha384",
@@ -94,6 +96,9 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 		case OID_SHA3_512:
 		case OID_RSASSA_PKCS1V15_WITH_SHA3_512:
 			return HASH_SHA3_512;
+		case OID_ED25519:
+		case OID_ED448:
+			return HASH_IDENTITY;
 		default:
 			return HASH_UNKNOWN;
 	}
@@ -267,6 +272,7 @@ integrity_algorithm_t hasher_algorithm_to_integrity(hash_algorithm_t alg,
 		case HASH_SHA3_256:
 		case HASH_SHA3_384:
 		case HASH_SHA3_512:
+		case HASH_IDENTITY:
 		case HASH_UNKNOWN:
 			break;
 	}
@@ -280,6 +286,7 @@ bool hasher_algorithm_for_ikev2(hash_algorithm_t alg)
 {
 	switch (alg)
 	{
+		case HASH_IDENTITY:
 		case HASH_SHA1:
 		case HASH_SHA256:
 		case HASH_SHA384:
@@ -396,6 +403,22 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 				default:
 					return OID_UNKNOWN;
 			}
+		case KEY_ED25519:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+					return OID_ED25519;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_ED448:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+					return OID_ED448;
+				default:
+					return OID_UNKNOWN;
+			}
 		case KEY_BLISS:
 			switch (alg)
 			{
@@ -430,6 +453,9 @@ hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme)
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 		case SIGN_ECDSA_WITH_NULL:
 			break;
+		case SIGN_ED25519:
+		case SIGN_ED448:
+			return HASH_IDENTITY;
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return HASH_MD5;
 		case SIGN_RSA_EMSA_PKCS1_SHA1:

@@ -63,3 +63,6 @@ cp strongswan_bliss.crl ${ROOT}
 cd /etc/openssl/sha3-rsa
 pki --signcrl --cacert strongswanCert.pem --cakey strongswanKey.pem --lifetime 30 --digest sha3_256 > strongswan-sha3-rsa.crl
 cp strongswan-sha3-rsa.crl ${ROOT}
+cd /etc/openssl/ed25519
+pki --signcrl --cacert strongswan_ed25519Cert.pem --cakey strongswan_ed25519Key.pem --lifetime 30 > strongswan_ed25519.crl
+cp strongswan_ed25519.crl ${ROOT}

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
- * Copyright (C) 2016 Andreas Steffeb
+ * Copyright (C) 2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -547,22 +547,24 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 			signature_scheme_t scheme;
 			key_type_t key;
 		} schemes[] = {
-			{ "md5",		SIGN_RSA_EMSA_PKCS1_MD5,		KEY_RSA,	},
-			{ "sha1",		SIGN_RSA_EMSA_PKCS1_SHA1,		KEY_RSA,	},
-			{ "sha224",		SIGN_RSA_EMSA_PKCS1_SHA2_224,	KEY_RSA,	},
-			{ "sha256",		SIGN_RSA_EMSA_PKCS1_SHA2_256,	KEY_RSA,	},
-			{ "sha384",		SIGN_RSA_EMSA_PKCS1_SHA2_384,	KEY_RSA,	},
-			{ "sha512",		SIGN_RSA_EMSA_PKCS1_SHA2_512,	KEY_RSA,	},
-			{ "sha1",		SIGN_ECDSA_WITH_SHA1_DER,		KEY_ECDSA,	},
-			{ "sha256",		SIGN_ECDSA_WITH_SHA256_DER,		KEY_ECDSA,	},
-			{ "sha384",		SIGN_ECDSA_WITH_SHA384_DER,		KEY_ECDSA,	},
-			{ "sha512",		SIGN_ECDSA_WITH_SHA512_DER,		KEY_ECDSA,	},
-			{ "sha256",		SIGN_ECDSA_256,					KEY_ECDSA,	},
-			{ "sha384",		SIGN_ECDSA_384,					KEY_ECDSA,	},
-			{ "sha512",		SIGN_ECDSA_521,					KEY_ECDSA,	},
-			{ "sha256",		SIGN_BLISS_WITH_SHA2_256,		KEY_BLISS,	},
-			{ "sha384",		SIGN_BLISS_WITH_SHA2_384,		KEY_BLISS,	},
-			{ "sha512",		SIGN_BLISS_WITH_SHA2_512,		KEY_BLISS,	},
+			{ "md5",		SIGN_RSA_EMSA_PKCS1_MD5,		KEY_RSA,	 },
+			{ "sha1",		SIGN_RSA_EMSA_PKCS1_SHA1,		KEY_RSA,	 },
+			{ "sha224",		SIGN_RSA_EMSA_PKCS1_SHA2_224,	KEY_RSA,	 },
+			{ "sha256",		SIGN_RSA_EMSA_PKCS1_SHA2_256,	KEY_RSA,	 },
+			{ "sha384",		SIGN_RSA_EMSA_PKCS1_SHA2_384,	KEY_RSA,	 },
+			{ "sha512",		SIGN_RSA_EMSA_PKCS1_SHA2_512,	KEY_RSA,	 },
+			{ "sha1",		SIGN_ECDSA_WITH_SHA1_DER,		KEY_ECDSA,	 },
+			{ "sha256",		SIGN_ECDSA_WITH_SHA256_DER,		KEY_ECDSA,	 },
+			{ "sha384",		SIGN_ECDSA_WITH_SHA384_DER,		KEY_ECDSA,	 },
+			{ "sha512",		SIGN_ECDSA_WITH_SHA512_DER,		KEY_ECDSA,	 },
+			{ "sha256",		SIGN_ECDSA_256,					KEY_ECDSA,	 },
+			{ "sha384",		SIGN_ECDSA_384,					KEY_ECDSA,	 },
+			{ "sha512",		SIGN_ECDSA_521,					KEY_ECDSA,	 },
+			{ "sha256",		SIGN_BLISS_WITH_SHA2_256,		KEY_BLISS,	 },
+			{ "sha384",		SIGN_BLISS_WITH_SHA2_384,		KEY_BLISS,	 },
+			{ "sha512",		SIGN_BLISS_WITH_SHA2_512,		KEY_BLISS,	 },
+			{ "identity",	SIGN_ED25519,					KEY_ED25519, },
+			{ "identity",	SIGN_ED448,						KEY_ED448,	 },
 		};
 
 		if (expected_strength != AUTH_RULE_MAX)
@@ -589,6 +591,18 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 		{
 			expected_type = KEY_ECDSA;
 			expected_strength = AUTH_RULE_ECDSA_STRENGTH;
+			is_ike = strpfx(token, "ike:");
+			continue;
+		}
+		if (streq(token, "ed25519") || streq(token, "ike:ed25519"))
+		{
+			expected_type = KEY_ED25519;
+			is_ike = strpfx(token, "ike:");
+			continue;
+		}
+		if (streq(token, "ed448") || streq(token, "ike:ed448"))
+		{
+			expected_type = KEY_ED448;
 			is_ike = strpfx(token, "ike:");
 			continue;
 		}

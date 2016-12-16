@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2014-2015 Andreas Steffen
+ * Copyright (C) 2014-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -43,6 +43,10 @@ static int gen()
 				else if (streq(arg, "ecdsa"))
 				{
 					type = KEY_ECDSA;
+				}
+				else if (streq(arg, "ed25519"))
+				{
+					type = KEY_ED25519;
 				}
 				else if (streq(arg, "bliss"))
 				{
@@ -100,6 +104,9 @@ static int gen()
 				break;
 			case KEY_ECDSA:
 				size = 384;
+				break;
+			case KEY_ED25519:
+				size = 256;
 				break;
 			case KEY_BLISS:
 				size = 1;
@@ -159,7 +166,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"  [--type rsa|ecdsa|bliss] [--size bits] [--safe-primes]",
+		{"  [--type rsa|ecdsa|ed25519|bliss] [--size bits] [--safe-primes]",
 		 "[--shares n] [--threshold l] [--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
