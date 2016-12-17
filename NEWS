@@ -4,6 +4,10 @@ strongswan-5.5.2
 - Support of Diffie-Hellman group 31 using Curve25519 for IKE as defined
   by RFC 8031.
 
+- Support of Ed25519 digital signature algorithm for IKEv2 as defined by
+  draft-ietf-ipsecme-eddsa. Ed25519-based public key pairs, X.509 certificates
+  and CRLs can be generated and printed by the pki tool.
+
 - In-place update of cached base and delta CRLs does no leave dozens
   of stale copies in cache memory.
 
