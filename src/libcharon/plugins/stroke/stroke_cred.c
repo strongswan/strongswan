@@ -1310,7 +1310,7 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 			break;
 		}
 		if (match("RSA", &token) || match("ECDSA", &token) ||
-			match("BLISS", &token))
+			match("BLISS", &token) || match("PKCS8", &token))
 		{
 			if (match("RSA", &token))
 			{
@@ -1320,9 +1320,13 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 			{
 				key_type = KEY_ECDSA;
 			}
-			else
+			else if (match("BLISS", &token))
 			{
 				key_type = KEY_BLISS;
+			}
+			else
+			{
+				key_type = KEY_ANY;
 			}
 			if (!load_private(secrets, line, line_nr, prompt, key_type))
 			{
@@ -1356,7 +1360,7 @@ static void load_secrets(private_stroke_cred_t *this, mem_cred_t *secrets,
 		else
 		{
 			DBG1(DBG_CFG, "line %d: token must be either RSA, ECDSA, BLISS, "
-						  "P12, PIN, PSK, EAP, XAUTH or NTLM", line_nr);
+						  "PKCS8 P12, PIN, PSK, EAP, XAUTH or NTLM", line_nr);
 			break;
 		}
 	}
