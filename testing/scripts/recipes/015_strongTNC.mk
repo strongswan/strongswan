@@ -19,4 +19,4 @@ $(DEPS): $(PKG)-master
 
 install: $(DEPS)
 	pip install --no-index --find-links=file://`pwd`/$(DEPS) -r $(PKG)-master/requirements.txt
-	cp -r $(PKG)-master /var/www/tnc && chgrp -R www-data /var/www/tnc && chmod g+w /var/www/tnc /var/www/tnc/django.db
+	cp -r $(PKG)-master /var/www/tnc && chgrp -R www-data /var/www/tnc && chmod g+sw /var/www/tnc

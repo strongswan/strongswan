@@ -10,7 +10,7 @@ alice::sed -i "s/NOW/`date +%s`/g" /etc/pts/data1.sql
 alice::sed -i "s:DEBIAN_VERSION:\`cat /etc/debian_version\`:" /etc/pts/data1.sql
 alice::cd /usr/local/share/strongswan/templates/database/imv; cat tables.sql data.sql /etc/pts/data1.sql | sqlite3 /etc/db.d/config.db
 alice::chgrp -R www-data /etc/db.d/config.db; chmod -R g+w /etc/db.d/config.db
-alice::/var/www/tnc/manage.py setpassword strongSwan strongSwan
+alice::/usr/local/bin/init_tnc
 alice::rm /etc/swanctl/x509/aliceCert.pem
 alice::rm /etc/swanctl/rsa/aliceKey.pem
 alice::service charon start
