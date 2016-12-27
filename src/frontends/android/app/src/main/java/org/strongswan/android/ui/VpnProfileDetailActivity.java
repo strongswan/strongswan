@@ -65,6 +65,7 @@ import org.strongswan.android.ui.adapter.CertificateIdentitiesAdapter;
 import org.strongswan.android.ui.widget.TextInputLayoutHelper;
 
 import java.security.cert.X509Certificate;
+import java.util.UUID;
 
 public class VpnProfileDetailActivity extends AppCompatActivity
 {
@@ -453,6 +454,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			if (mProfile != null)
 			{
 				updateProfileData();
+				if (mProfile.getUUID() == null)
+				{
+					mProfile.setUUID(UUID.randomUUID());
+				}
 				mDataSource.updateVpnProfile(mProfile);
 			}
 			else

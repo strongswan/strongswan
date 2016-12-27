@@ -18,6 +18,8 @@
 package org.strongswan.android.data;
 
 
+import java.util.UUID;
+
 public class VpnProfile implements Cloneable
 {
 	/* While storing this as EnumSet would be nicer this simplifies storing it in a database */
@@ -28,7 +30,13 @@ public class VpnProfile implements Cloneable
 	private String mRemoteId, mLocalId;
 	private Integer mMTU, mPort, mSplitTunneling;
 	private VpnType mVpnType;
+	private UUID mUUID;
 	private long mId = -1;
+
+	public VpnProfile()
+	{
+		this.mUUID = UUID.randomUUID();
+	}
 
 	public long getId()
 	{
@@ -38,6 +46,16 @@ public class VpnProfile implements Cloneable
 	public void setId(long id)
 	{
 		this.mId = id;
+	}
+
+	public void setUUID(UUID uuid)
+	{
+		this.mUUID = uuid;
+	}
+
+	public UUID getUUID()
+	{
+		return mUUID;
 	}
 
 	public String getName()
@@ -171,7 +189,12 @@ public class VpnProfile implements Cloneable
 	{
 		if (o != null && o instanceof VpnProfile)
 		{
-			return this.mId == ((VpnProfile)o).getId();
+			VpnProfile other = (VpnProfile)o;
+			if (this.mUUID != null && other.getUUID() != null)
+			{
+				return this.mUUID.equals(other.getUUID());
+			}
+			return this.mId == other.getId();
 		}
 		return false;
 	}
