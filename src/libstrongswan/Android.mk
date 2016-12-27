@@ -73,6 +73,7 @@ LOCAL_SHARED_LIBRARIES += libcurl
 endif
 
 LOCAL_SRC_FILES += $(call add_plugin, curve25519)
+LOCAL_SRC_FILES += $(call add_plugin_subdirs, curve25519, ref10)
 
 LOCAL_SRC_FILES += $(call add_plugin, des)
 
