@@ -46,8 +46,10 @@
 
     <!-- VPN profile details -->
     <string name="profile_edit_save">Зберегти</string>
+    <string name="profile_edit_import">Import</string>
     <string name="profile_edit_cancel">Відміна</string>
     <string name="profile_name_label">Назва профілю (необов\'язковий)</string>
+    <string name="profile_name_label_simple">Назва профілю</string>
     <string name="profile_name_hint">Defaults to the configured server</string>
     <string name="profile_name_hint_gateway">Defaults to \"%1$s\"</string>
     <string name="profile_gateway_label">Сервер</string>
@@ -78,6 +80,11 @@
     <string name="profile_split_tunneling_label">Split tunneling</string>
     <string name="profile_split_tunnelingv4_title">Block IPv4 traffic not destined for the VPN</string>
     <string name="profile_split_tunnelingv6_title">Block IPv6 traffic not destined for the VPN</string>
+    <string name="profile_import">Import VPN profile</string>
+    <string name="profile_import_failed">Failed to import VPN profile</string>
+    <string name="profile_import_exists">This VPN profile already exists, its current settings will be replaced.</string>
+    <string name="profile_cert_import">Import certificate from VPN profile</string>
+    <string name="profile_cert_alias">Certificate for \"%1$s\"</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">A value is required to initiate the connection</string>
     <string name="alert_text_no_input_username">Введіть ім\'я користувача </string>

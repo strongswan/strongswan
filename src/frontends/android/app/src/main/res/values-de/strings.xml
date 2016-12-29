@@ -48,8 +48,10 @@
 
     <!-- VPN profile details -->
     <string name="profile_edit_save">Speichern</string>
+    <string name="profile_edit_import">Importieren</string>
     <string name="profile_edit_cancel">Abbrechen</string>
     <string name="profile_name_label">Profilname (optional)</string>
+    <string name="profile_name_label_simple">Profilname</string>
     <string name="profile_name_hint">Standardwert ist der konfigurierte Server</string>
     <string name="profile_name_hint_gateway">Standardwert ist \"%1$s\"</string>
     <string name="profile_gateway_label">Server</string>
@@ -80,6 +82,11 @@
     <string name="profile_split_tunneling_label">Split-Tunneling</string>
     <string name="profile_split_tunnelingv4_title">Blockiere IPv4 Verkehr der nicht für das VPN bestimmt ist</string>
     <string name="profile_split_tunnelingv6_title">Blockiere IPv6 Verkehr der nicht für das VPN bestimmt ist</string>
+    <string name="profile_import">VPN Profile importieren</string>
+    <string name="profile_import_failed">VPN Profil-Import fehlgeschlagen</string>
+    <string name="profile_import_exists">Dieses VPN Profil existiert bereits, die bestehenden Einstellungen werden ersetzt.</string>
+    <string name="profile_cert_import">Zertifikat aus VPN Profil importieren</string>
+    <string name="profile_cert_alias">Zertifikat für \"%1$s\"</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">Ein Wert wird benötigt, um die Verbindung aufbauen zu können</string>
     <string name="alert_text_no_input_username">Bitte geben Sie Ihren Benutzernamen ein</string>
