@@ -689,6 +689,10 @@ command.
 					spi-out = <hex encoded outbound SPI>
 					cpi-in = <hex encoded inbound CPI, if using compression>
 					cpi-out = <hex encoded outbound CPI, if using compression>
+					mark-in = <hex encoded inbound Netfilter mark value>
+					mark-mask-in = <hex encoded inbound Netfilter mark mask>
+					mark-out = <hex encoded outbound Netfilter mark value>
+					mark-mask-out = <hex encoded outbound Netfilter mark mask>
 					encr-alg = <ESP encryption algorithm name, if any>
 					encr-keysize = <ESP encryption key size, if applicable>
 					integ-alg = <ESP or AH integrity algorithm name, if any>

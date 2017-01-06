@@ -79,6 +79,19 @@ struct private_vici_query_t {
 	time_t uptime;
 };
 
+static void add_mark(vici_builder_t *b, mark_t mark,
+					 char *label, char *mask_label)
+{
+	if (mark.value | mark.mask)
+	{
+		b->add_kv(b, label, "%.8x", mark.value);
+		if (~mark.mask)
+		{
+			b->add_kv(b, mask_label, "%.8x", mark.mask);
+		}
+	}
+}
+
 /**
  * List details of a CHILD_SA
  */
@@ -114,6 +127,8 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 			b->add_kv(b, "cpi-in", "%.4x", ntohs(child->get_cpi(child, TRUE)));
 			b->add_kv(b, "cpi-out", "%.4x", ntohs(child->get_cpi(child, FALSE)));
 		}
+		add_mark(b, child->get_mark(child, TRUE), "mark-in", "mark-mask-in");
+		add_mark(b, child->get_mark(child, FALSE), "mark-out", "mark-mask-out");
 		proposal = child->get_proposal(child);
 		if (proposal)
 		{
