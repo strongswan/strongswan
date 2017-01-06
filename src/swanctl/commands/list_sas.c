@@ -165,6 +165,15 @@ CALLBACK(child_sas, int,
 		printf("    in  %s%s%s", child->get(child, "spi-in"),
 			child->get(child, "cpi-in") ? "/" : "",
 			child->get(child, "cpi-in") ?: "");
+		if (child->get(child, "mark-in"))
+		{
+			printf(" (0x%s", child->get(child, "mark-in"));
+			if (child->get(child, "mark-mask-in"))
+			{
+				printf("/0x%s", child->get(child, "mark-mask-in"));
+			}
+			printf(")");
+		}
 		printf(", %6s bytes, %5s packets",
 			child->get(child, "bytes-in"), child->get(child, "packets-in"));
 		if (child->get(child, "use-in"))
@@ -176,6 +185,15 @@ CALLBACK(child_sas, int,
 		printf("    out %s%s%s", child->get(child, "spi-out"),
 			child->get(child, "cpi-out") ? "/" : "",
 			child->get(child, "cpi-out") ?: "");
+		if (child->get(child, "mark-out"))
+		{
+			printf(" (0x%s", child->get(child, "mark-out"));
+			if (child->get(child, "mark-mask-out"))
+			{
+				printf("/0x%s", child->get(child, "mark-mask-out"));
+			}
+			printf(")");
+		}
 		printf(", %6s bytes, %5s packets",
 			child->get(child, "bytes-out"), child->get(child, "packets-out"));
 		if (child->get(child, "use-out"))
