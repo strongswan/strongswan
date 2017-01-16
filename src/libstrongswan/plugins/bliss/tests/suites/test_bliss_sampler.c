@@ -70,7 +70,7 @@ START_TEST(test_bliss_sampler_gaussian)
 	sampler->destroy(sampler);
 	free(seed.ptr);
 
-	DBG1(DBG_LIB, "histogram");	
+	DBG1(DBG_LIB, "histogram");
 	for (k = 0; k < 8; k++)
 	{
 		DBG1(DBG_LIB, "%d %7d", k, hist[k]);
@@ -89,7 +89,7 @@ Suite *bliss_sampler_suite_create()
 	s = suite_create("bliss_sampler");
 
 	tc = tcase_create("sampler_gaussian");
-	tcase_set_timeout(tc, 10);
+	tcase_set_timeout(tc, 30);
 	tcase_add_loop_test(tc, test_bliss_sampler_gaussian, 0, countof(key_size));
 	suite_add_tcase(s, tc);
 
