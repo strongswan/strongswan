@@ -61,6 +61,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -68,6 +69,8 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.UUID;
+
+import javax.net.ssl.SSLHandshakeException;
 
 public class VpnProfileImportActivity extends AppCompatActivity
 {
@@ -99,22 +102,22 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	private ViewGroup mRemoteCertificate;
 	private RelativeLayout mRemoteCert;
 
-	private LoaderManager.LoaderCallbacks<String> mProfileLoaderCallbacks = new LoaderManager.LoaderCallbacks<String>()
+	private LoaderManager.LoaderCallbacks<ProfileLoadResult> mProfileLoaderCallbacks = new LoaderManager.LoaderCallbacks<ProfileLoadResult>()
 	{
 		@Override
-		public Loader<String> onCreateLoader(int id, Bundle args)
+		public Loader<ProfileLoadResult> onCreateLoader(int id, Bundle args)
 		{
 			return new ProfileLoader(VpnProfileImportActivity.this, getIntent().getData());
 		}
 
 		@Override
-		public void onLoadFinished(Loader<String> loader, String data)
+		public void onLoadFinished(Loader<ProfileLoadResult> loader, ProfileLoadResult data)
 		{
 			handleProfile(data);
 		}
 
 		@Override
-		public void onLoaderReset(Loader<String> loader)
+		public void onLoaderReset(Loader<ProfileLoadResult> loader)
 		{
 
 		}
@@ -279,16 +282,16 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		}
 	}
 
-	public void handleProfile(String data)
+	public void handleProfile(ProfileLoadResult data)
 	{
 		mProgress.dismiss();
 
 		mProfile = null;
-		if (data != null)
+		if (data != null && data.ThrownException == null)
 		{
 			try
 			{
-				JSONObject obj = new JSONObject(data);
+				JSONObject obj = new JSONObject(data.Profile);
 				mProfile = parseProfile(obj);
 			}
 			catch (JSONException e)
@@ -302,7 +305,38 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		}
 		if (mProfile == null)
 		{
-			Toast.makeText(this, R.string.profile_import_failed, Toast.LENGTH_LONG).show();
+			String error = null;
+			if (data.ThrownException != null)
+			{
+				try
+				{
+					throw data.ThrownException;
+				}
+				catch (FileNotFoundException e)
+				{
+					error = getString(R.string.profile_import_failed_not_found);
+				}
+				catch (UnknownHostException e)
+				{
+					error = getString(R.string.profile_import_failed_host);
+				}
+				catch (SSLHandshakeException e)
+				{
+					error = getString(R.string.profile_import_failed_tls);
+				}
+				catch (Exception e)
+				{
+					e.printStackTrace();
+				}
+			}
+			if (error != null)
+			{
+				Toast.makeText(this, getString(R.string.profile_import_failed_detail, error), Toast.LENGTH_LONG).show();
+			}
+			else
+			{
+				Toast.makeText(this, R.string.profile_import_failed, Toast.LENGTH_LONG).show();
+			}
 			finish();
 			return;
 		}
@@ -529,10 +563,10 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	/**
 	 * Load the JSON-encoded VPN profile from the given URI
 	 */
-	private static class ProfileLoader extends AsyncTaskLoader<String>
+	private static class ProfileLoader extends AsyncTaskLoader<ProfileLoadResult>
 	{
 		private final Uri mUri;
-		private String mData;
+		private ProfileLoadResult mData;
 
 		public ProfileLoader(Context context, Uri uri)
 		{
@@ -541,8 +575,9 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		}
 
 		@Override
-		public String loadInBackground()
+		public ProfileLoadResult loadInBackground()
 		{
+			ProfileLoadResult result = new ProfileLoadResult();
 			InputStream in = null;
 
 			if (ContentResolver.SCHEME_CONTENT.equals(mUri.getScheme()) ||
@@ -554,7 +589,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 				}
 				catch (FileNotFoundException e)
 				{
-					e.printStackTrace();
+					result.ThrownException = e;
 				}
 			}
 			else
@@ -566,14 +601,14 @@ public class VpnProfileImportActivity extends AppCompatActivity
 				}
 				catch (IOException e)
 				{
-					e.printStackTrace();
+					result.ThrownException = e;
 				}
 			}
 			if (in != null)
 			{
-				return streamToString(in);
+				result.Profile = streamToString(in);
 			}
-			return null;
+			return result;
 		}
 
 		@Override
@@ -590,7 +625,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		}
 
 		@Override
-		public void deliverResult(String data)
+		public void deliverResult(ProfileLoadResult data)
 		{
 			if (isReset())
 			{
@@ -631,6 +666,12 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			}
 			return null;
 		}
+	}
+
+	private static class ProfileLoadResult
+	{
+		public String Profile;
+		public Exception ThrownException;
 	}
 
 	/**
