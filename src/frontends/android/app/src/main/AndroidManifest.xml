@@ -88,6 +88,9 @@
                 <data android:scheme="file" />
                 <data android:scheme="content" />
                 <data android:host="*" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.sswan" />
+                <data android:pathPattern=".*\\..*\\..*\\.sswan" />
+                <data android:pathPattern=".*\\..*\\.sswan" />
                 <data android:pathPattern=".*\\.sswan" />
             </intent-filter>
         </activity>
