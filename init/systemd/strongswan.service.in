@@ -5,6 +5,7 @@ After=syslog.target network-online.target
 [Service]
 ExecStart=@SBINDIR@/@IPSEC_SCRIPT@ start --nofork
 StandardOutput=syslog
+Restart=on-abnormal
 
 [Install]
 WantedBy=multi-user.target
