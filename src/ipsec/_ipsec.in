@@ -44,6 +44,8 @@ export IPSEC_DIR IPSEC_BINDIR IPSEC_SBINDIR IPSEC_CONFDIR IPSEC_PIDDIR IPSEC_SCR
 
 IPSEC_DISTRO="Institute for Internet Technologies and Applications\nUniversity of Applied Sciences Rapperswil, Switzerland"
 
+command_dir="$IPSEC_DIR"
+
 case "$1" in
 '')
 	echo "$IPSEC_SCRIPT command [arguments]"
@@ -93,10 +95,6 @@ case "$1" in
 --piddir)
 	echo "$IPSEC_PIDDIR"
 	exit 0
-	;;
-copyright|--copyright)
-	set _copyright
-	# and fall through, invoking "ipsec _copyright"
 	;;
 down)
 	shift
@@ -307,13 +305,19 @@ update)
 		exit 7
 	fi
 	;;
-pki)
-	shift
-	exec $IPSEC_BINDIR/pki "$@"
+aikgen|pki)
+	# programs in BINDIR may be called directly, these two are listed for legacy reasons
+	command_dir="$IPSEC_BINDIR"
+	# fall through
 	;;
-aikgen)
-	shift
-	exec $IPSEC_BINDIR/aikgen "$@"
+attest|conftest|dumm|irdumm|pacman|pool|pt-tls-client|scepclient|stroke|\
+duplicheck|error-notify|imv_policy_manager|load-tester|lookip|whitelist|\
+_updown|_imv_policy)
+	# fall through
+	;;
+copyright|--copyright)
+	set _copyright
+	# fall through
 	;;
 version|--version)
 	printf "$OS_NAME $IPSEC_NAME $IPSEC_VERSION\n"
@@ -325,16 +329,20 @@ version|--version)
 	echo "$0: unknown option \`$1' (perhaps command name was omitted?)" >&2
 	exit 2
 	;;
+*)
+	echo "$0: unknown command \`$1' (\`$IPSEC_SCRIPT --help' for list)" >&2
+	exit 2
+	;;
 esac
 
 cmd="$1"
 shift
 
-path="$IPSEC_DIR/$cmd"
+path="$command_dir/$cmd"
 
 if [ ! -x "$path" ]
 then
-	echo "$0: unknown IPsec command \`$cmd' (\`$IPSEC_SCRIPT --help' for list)" >&2
+	echo "$0: unknown command \`$cmd' (\`$IPSEC_SCRIPT --help' for list)" >&2
 	exit 2
 fi
 
