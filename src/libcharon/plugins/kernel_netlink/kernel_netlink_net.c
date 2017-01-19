@@ -476,6 +476,11 @@ struct private_kernel_netlink_net_t {
 	bool roam_events;
 
 	/**
+	 * whether to install IPsec policy routes
+	 */
+	bool install_routes;
+
+	/**
 	 * whether to actually install virtual IPs
 	 */
 	bool install_virtual_ip;
@@ -1870,7 +1875,10 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	{	/* kernels prior to 3.0 do not support RTA_PREFSRC for IPv6 routes.
 		 * as we want to ignore routes with virtual IPs we cannot use DUMP
 		 * if these routes are not installed in a separate table */
-		hdr->nlmsg_flags |= NLM_F_DUMP;
+		if (this->install_routes)
+		{
+			hdr->nlmsg_flags |= NLM_F_DUMP;
+		}
 	}
 	if (candidate)
 	{
@@ -2937,6 +2945,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 						"%s.routing_table_prio", ROUTING_TABLE_PRIO, lib->ns),
 		.process_route = lib->settings->get_bool(lib->settings,
 						"%s.process_route", TRUE, lib->ns),
+		.install_routes = lib->settings->get_bool(lib->settings,
+						"%s.install_routes", TRUE, lib->ns),
 		.install_virtual_ip = lib->settings->get_bool(lib->settings,
 						"%s.install_virtual_ip", TRUE, lib->ns),
 		.install_virtual_ip_on = lib->settings->get_str(lib->settings,
