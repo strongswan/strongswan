@@ -1883,7 +1883,14 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	if (candidate)
 	{
 		chunk = candidate->get_address(candidate);
-		netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
+		if (hdr->nlmsg_flags & NLM_F_DUMP)
+		{
+			netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
+		}
+		else
+		{
+			netlink_add_attribute(hdr, RTA_SRC, chunk, sizeof(request));
+		}
 	}
 	/* we use this below to match against the routes */
 	chunk = dest->get_address(dest);
