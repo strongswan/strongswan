@@ -19,6 +19,7 @@ package org.strongswan.android.data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -33,6 +34,7 @@ public class VpnProfileDataSource
 {
 	private static final String TAG = VpnProfileDataSource.class.getSimpleName();
 	public static final String KEY_ID = "_id";
+	public static final String KEY_UUID = "_uuid";
 	public static final String KEY_NAME = "name";
 	public static final String KEY_GATEWAY = "gateway";
 	public static final String KEY_VPN_TYPE = "vpn_type";
@@ -53,11 +55,12 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 8;
+	private static final int DATABASE_VERSION = 9;
 
 	public static final String DATABASE_CREATE =
 							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
 								KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+								KEY_UUID + " TEXT UNIQUE," +
 								KEY_NAME + " TEXT NOT NULL," +
 								KEY_GATEWAY + " TEXT NOT NULL," +
 								KEY_VPN_TYPE + " TEXT NOT NULL," +
@@ -73,6 +76,7 @@ public class VpnProfileDataSource
 							");";
 	private static final String[] ALL_COLUMNS = new String[] {
 								KEY_ID,
+								KEY_UUID,
 								KEY_NAME,
 								KEY_GATEWAY,
 								KEY_VPN_TYPE,
@@ -140,6 +144,12 @@ public class VpnProfileDataSource
 						   " TEXT;");
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_REMOTE_ID +
 						   " TEXT;");
+			}
+			if (oldVersion < 9)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_UUID +
+						   " TEXT;");
+				updateColumns(db);
 			}
 		}
 
@@ -262,6 +272,24 @@ public class VpnProfileDataSource
 	}
 
 	/**
+	 * Get a single VPN profile from the database by its UUID.
+	 * @param uuid the UUID of the VPN profile
+	 * @return the profile or null, if not found
+	 */
+	public VpnProfile getVpnProfile(UUID uuid)
+	{
+		VpnProfile profile = null;
+		Cursor cursor = mDatabase.query(TABLE_VPNPROFILE, ALL_COLUMNS,
+										KEY_UUID + "='" + uuid.toString() + "'", null, null, null, null);
+		if (cursor.moveToFirst())
+		{
+			profile = VpnProfileFromCursor(cursor);
+		}
+		cursor.close();
+		return profile;
+	}
+
+	/**
 	 * Get a list of all VPN profiles stored in the database.
 	 * @return list of VPN profiles
 	 */
@@ -285,6 +313,7 @@ public class VpnProfileDataSource
 	{
 		VpnProfile profile = new VpnProfile();
 		profile.setId(cursor.getLong(cursor.getColumnIndex(KEY_ID)));
+		profile.setUUID(getUUID(cursor, cursor.getColumnIndex(KEY_UUID)));
 		profile.setName(cursor.getString(cursor.getColumnIndex(KEY_NAME)));
 		profile.setGateway(cursor.getString(cursor.getColumnIndex(KEY_GATEWAY)));
 		profile.setVpnType(VpnType.fromIdentifier(cursor.getString(cursor.getColumnIndex(KEY_VPN_TYPE))));
@@ -303,6 +332,7 @@ public class VpnProfileDataSource
 	private ContentValues ContentValuesFromVpnProfile(VpnProfile profile)
 	{
 		ContentValues values = new ContentValues();
+		values.put(KEY_UUID, profile.getUUID() != null ? profile.getUUID().toString() : null);
 		values.put(KEY_NAME, profile.getName());
 		values.put(KEY_GATEWAY, profile.getGateway());
 		values.put(KEY_VPN_TYPE, profile.getVpnType().getIdentifier());
@@ -321,5 +351,17 @@ public class VpnProfileDataSource
 	private Integer getInt(Cursor cursor, int columnIndex)
 	{
 		return cursor.isNull(columnIndex) ? null : cursor.getInt(columnIndex);
+	}
+
+	private UUID getUUID(Cursor cursor, int columnIndex)
+	{
+		try
+		{
+			return cursor.isNull(columnIndex) ? null : UUID.fromString(cursor.getString(columnIndex));
+		}
+		catch (Exception e)
+		{
+			return null;
+		}
 	}
 }
