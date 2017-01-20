@@ -8,8 +8,8 @@ android {
         applicationId "org.strongswan.android"
         minSdkVersion 15
         targetSdkVersion 22
-        versionCode 36
-        versionName "1.7.2"
+        versionCode 40
+        versionName "1.8.0"
     }
 
     sourceSets.main {
