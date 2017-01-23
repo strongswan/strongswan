@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2016-2017 Yick Xie
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation; either version 2 of the License, or (at your
+    option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+-->
+<resources>
+
+    <!-- Application -->
+    <string name="app_name">strongSwan VPN 客户端</string>
+    <string name="main_activity_name">strongSwan</string>
+    <string name="show_log">浏览日志</string>
+    <string name="search">搜索</string>
+    <string name="vpn_not_supported_title">无法支持VPN</string>
+    <string name="vpn_not_supported">您的设备无法支持VPN应用。\n请联系供应商。</string>
+    <string name="vpn_not_supported_during_lockdown">锁定模式下无法支持VPN连接</string>
+    <string name="loading">载入中&#8230;</string>
+    <string name="profile_not_found">未找到配置</string>
+    <string name="strongswan_shortcut">strongSwan快捷方式</string>
+
+    <!-- Log view -->
+    <string name="log_title">日志</string>
+    <string name="send_log">发送日志文件</string>
+    <string name="empty_log">日志文件为空</string>
+    <string name="log_mail_subject">strongSwan %1$s 日志文件</string>
+
+    <!-- VPN profile list -->
+    <string name="no_profiles">无配置.</string>
+    <string name="add_profile">添加VPN配置</string>
+    <string name="edit_profile">编辑</string>
+    <string name="delete_profile">删除</string>
+    <string name="select_profiles">选择配置</string>
+    <string name="profiles_deleted">所选配置已删除</string>
+    <string name="no_profile_selected">未选择配置</string>
+    <string name="one_profile_selected">已选择1项配置</string>
+    <string name="x_profiles_selected">已选择%1$d项配置</string>
+
+    <!-- VPN profile details -->
+    <string name="profile_edit_save">保存</string>
+    <string name="profile_edit_import">导入</string>
+    <string name="profile_edit_cancel">取消</string>
+    <string name="profile_name_label">配置名称 (可选)</string>
+    <string name="profile_name_label_simple">配置名称</string>
+    <string name="profile_name_hint">默认为已配置服务器地址</string>
+    <string name="profile_name_hint_gateway">默认为 \"%1$s\"</string>
+    <string name="profile_gateway_label">服务器地址</string>
+    <string name="profile_gateway_hint">IP地址或服务器域名</string>
+    <string name="profile_vpn_type_label">VPN类型</string>
+    <string name="profile_username_label">用户名</string>
+    <string name="profile_password_label">密码 (可选)</string>
+    <string name="profile_password_hint">留空则在要求时弹出</string>
+    <string name="profile_user_certificate_label">用户证书</string>
+    <string name="profile_user_select_certificate_label">选择用户证书</string>
+    <string name="profile_user_select_certificate">选择指定的用户证书</string>
+    <string name="profile_user_select_id_label">用户ID</string>
+    <string name="profile_user_select_id_init">首先选择一个证书</string>
+    <string name="profile_user_select_id_default">默认(%1$s)</string>
+    <string name="profile_ca_label">CA证书</string>
+    <string name="profile_ca_auto_label">自动选择</string>
+    <string name="profile_ca_select_certificate_label">选择CA证书</string>
+    <string name="profile_ca_select_certificate">选择一个指定的CA证书</string>
+    <string name="profile_advanced_label">高级设置</string>
+    <string name="profile_show_advanced_label">显示高级设置</string>
+    <string name="profile_remote_id_label">服务器ID</string>
+    <string name="profile_remote_id_hint">默认为已配置的服务器地址。自义定值将在鉴权期间被显式地发送至服务器</string>
+    <string name="profile_remote_id_hint_gateway">默认为 \"%1$s\"。自义定值将在鉴权期间被显式地发送至服务器</string>
+    <string name="profile_mtu_label">VPN隧道设备的MTU值</string>
+    <string name="profile_mtu_hint">假如在某一网络下默认值不合适</string>
+    <string name="profile_port_label">服务器端口</string>
+    <string name="profile_port_hint">如不同于默认值，则所需连接的UDP端口</string>
+    <string name="profile_split_tunneling_label">拆分隧道</string>
+    <string name="profile_split_tunnelingv4_title">屏蔽不通过VPN的IPV4流量</string>
+    <string name="profile_split_tunnelingv6_title">屏蔽不通过VPN的IPV6流量</string>
+    <string name="profile_import">导入VPN配置</string>
+    <string name="profile_import_failed">导入VPN配置失败</string>
+    <string name="profile_import_failed_detail">导入VPN配置失败: %1$s</string>
+    <string name="profile_import_failed_not_found">文件未找到</string>
+    <string name="profile_import_failed_host">未知主机</string>
+    <string name="profile_import_failed_tls">TLS握手失败</string>
+    <string name="profile_import_exists">此VPN配置已经存在，当前设定将被覆盖。</string>
+    <string name="profile_cert_import">从VPN配置导入证书</string>
+    <string name="profile_cert_alias">\"%1$s\" 所对应的证书</string>
+    <!-- Warnings/Notifications in the details view -->
+    <string name="alert_text_no_input_gateway">必填信息以初始化连接</string>
+    <string name="alert_text_no_input_username">请输入您的用户名</string>
+    <string name="alert_text_nocertfound_title">未选择CA证书</string>
+    <string name="alert_text_nocertfound">请选择一项或激活 <i>自动选择</i></string>
+    <string name="alert_text_out_of_range">请输入一个数字范围从%1$d到%2$d</string>
+    <string name="tnc_notice_title">EAP-TNC可能会影响您的隐私</string>
+    <string name="tnc_notice_subtitle">设备数据已被发送至服务器管理员</string>
+    <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) 允许服务器管理员评定一个用户设备的状况。</p><p>出于此目的，服务器管理员可能要求以下数据如独立ID、已安装软件列表、系统设置、或加密过的文件校验值。</p><b>任何数据都仅将在验证过服务器的身份ID之后被发出。</b>]]></string>
+
+    <!-- Trusted certificate selection -->
+    <string name="trusted_certs_title">CA证书</string>
+    <string name="no_certificates">无证书</string>
+    <string name="reload_trusted_certs">重载CA证书</string>
+    <string name="system_tab">系统</string>
+    <string name="user_tab">用户</string>
+    <string name="local_tab">已导入</string>
+    <string name="delete_certificate_question">是否删除证书？</string>
+    <string name="delete_certificate">证书将被永久移除！</string>
+    <string name="import_certificate">导入证书</string>
+    <string name="cert_imported_successfully">证书已成功被导入</string>
+    <string name="cert_import_failed">证书导入失败</string>
+
+    <!-- VPN state fragment -->
+    <string name="state_label">状态：</string>
+    <string name="profile_label">配置：</string>
+    <string name="disconnect">断开链接</string>
+    <string name="state_connecting">连接中&#8230;</string>
+    <string name="state_connected">已连接</string>
+    <string name="state_disconnecting">断开连接中&#8230;</string>
+    <string name="state_disabled">无活跃VPN</string>
+    <string name="state_error">错误</string>
+
+    <!-- IMC state fragment -->
+    <string name="imc_state_label">评估详情：</string>
+    <string name="imc_state_isolate">受限的</string>
+    <string name="imc_state_block">失败的</string>
+    <string name="show_remediation_instructions">浏览修复指引</string>
+
+    <!-- Remediation instructions -->
+    <string name="remediation_instructions_title">修复指引</string>
+
+    <!-- Dialogs -->
+    <string name="login_title">输入密码用于连接</string>
+    <string name="login_username">用户名</string>
+    <string name="login_password">密码</string>
+    <string name="login_confirm">连接</string>
+    <string name="error_introduction">无法建立VPN：</string>
+    <string name="error_lookup_failed">服务器地址查找失败。</string>
+    <string name="error_unreachable">服务器地址无法连接。</string>
+    <string name="error_peer_auth_failed">核验服务器鉴权失败。</string>
+    <string name="error_auth_failed">用户鉴权失败。</string>
+    <string name="error_assessment_failed">可靠性评估失败。</string>
+    <string name="error_generic">连接中遭遇未知失败。</string>
+    <string name="vpn_connected">VPN已连接</string>
+    <string name="vpn_profile_connected">此VPN配置目前已连接。</string>
+    <string name="reconnect">重连</string>
+    <string name="connect_profile_question">是否连接%1$s？</string>
+    <string name="replaces_active_connection">这将覆盖您当前活跃的VPN连接！</string>
+    <string name="connect">连接</string>
+
+</resources>

@@ -44,7 +44,7 @@
     <string name="profiles_deleted">Wybrane profile usunięte</string>
     <string name="no_profile_selected">Nie wybrano profilu</string>
     <string name="one_profile_selected">Wybrano jeden profil</string>
-    <string name="x_profiles_selected">Wzbrano %1$d profile"</string>
+    <string name="x_profiles_selected">Wzbrano %1$d profile</string>
 
     <!-- VPN profile details -->
     <string name="profile_edit_save">Zapisz</string>

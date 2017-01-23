@@ -41,7 +41,7 @@
     <string name="profiles_deleted">Выбранные профили удалены</string>
     <string name="no_profile_selected">Профили не выбраны</string>
     <string name="one_profile_selected">Выбран профиль</string>
-    <string name="x_profiles_selected">%1$d прифиля(ей) выбрано"</string>
+    <string name="x_profiles_selected">%1$d прифиля(ей) выбрано</string>
 
     <!-- VPN profile details -->
     <string name="profile_edit_save">Сохранить</string>
