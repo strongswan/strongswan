@@ -117,7 +117,7 @@ struct kernel_algorithm_t {
 	/**
 	 * Name of the algorithm in linux crypto API
 	 */
-	char *name;
+	const char *name;
 };
 
 ENUM(xfrm_msg_names, XFRM_MSG_NEWSA, XFRM_MSG_MAPPING,
@@ -237,7 +237,7 @@ static kernel_algorithm_t compression_algs[] = {
 /**
  * Look up a kernel algorithm name and its key size
  */
-static char* lookup_algorithm(transform_type_t type, int ikev2)
+static const char* lookup_algorithm(transform_type_t type, int ikev2)
 {
 	kernel_algorithm_t *list;
 	int i, count;
@@ -1277,7 +1277,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	kernel_ipsec_add_sa_t *data)
 {
 	netlink_buf_t request;
-	char *alg_name, markstr[32] = "";
+	const char *alg_name;
+	char markstr[32] = "";
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
 	uint16_t icv_size = 64, ipcomp = data->ipcomp;
