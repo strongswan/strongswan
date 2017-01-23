@@ -626,6 +626,7 @@ CALLBACK(reload_settings, vici_message_t*,
 {
 	if (lib->settings->load_files(lib->settings, lib->conf, FALSE))
 	{
+		charon->load_loggers(charon);
 		lib->plugins->reload(lib->plugins, NULL);
 		return send_reply(this, NULL);
 	}
