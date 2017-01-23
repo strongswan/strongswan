@@ -282,7 +282,7 @@ static void initialize_logging()
 								   level, lib->ns), lib->ns);
 	lib->settings->set_bool(lib->settings, "%s.filelog.stderr.ike_name", TRUE,
 							lib->ns);
-	charon->load_loggers(charon, NULL, TRUE);
+	charon->load_loggers(charon);
 }
 
 /**

@@ -40,11 +40,6 @@
 static level_t default_loglevel = LEVEL_CTRL;
 
 /**
- * Loglevel configuration
- */
-static level_t levels[DBG_MAX];
-
-/**
  * Connection to initiate
  */
 static cmd_connection_t *conn;
@@ -129,7 +124,7 @@ static int run()
 					 "configuration");
 				if (lib->settings->load_files(lib->settings, lib->conf, FALSE))
 				{
-					charon->load_loggers(charon, levels, TRUE);
+					charon->load_loggers(charon);
 					lib->plugins->reload(lib->plugins, NULL);
 				}
 				else
@@ -311,6 +306,7 @@ int main(int argc, char *argv[])
 {
 	struct sigaction action;
 	struct utsname utsname;
+	level_t levels[DBG_MAX];
 	int group;
 
 	/* handle simple arguments */
@@ -338,7 +334,8 @@ int main(int argc, char *argv[])
 	{
 		levels[group] = default_loglevel;
 	}
-	charon->load_loggers(charon, levels, TRUE);
+	charon->set_default_loggers(charon, levels, TRUE);
+	charon->load_loggers(charon);
 
 	if (!lookup_uid_gid())
 	{

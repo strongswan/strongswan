@@ -269,7 +269,7 @@ static int run()
 					 "configuration");
 				if (lib->settings->load_files(lib->settings, lib->conf, FALSE))
 				{
-					charon->load_loggers(charon, NULL, FALSE);
+					charon->load_loggers(charon);
 					lib->plugins->reload(lib->plugins, NULL);
 				}
 				else
@@ -390,7 +390,7 @@ int main(int argc, char *argv[])
 		sd_notifyf(0, "STATUS=unknown uid/gid");
 		return SS_RC_INITIALIZATION_FAILED;
 	}
-	charon->load_loggers(charon, NULL, FALSE);
+	charon->load_loggers(charon);
 
 	lib->plugins->add_static_features(lib->plugins, lib->ns, features,
 							countof(features), TRUE, journal_reload, &journal);

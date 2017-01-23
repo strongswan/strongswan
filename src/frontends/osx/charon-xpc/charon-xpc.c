@@ -42,11 +42,6 @@ void dispatcher_cleanup()
 }
 
 /**
- * Loglevel configuration
- */
-static level_t levels[DBG_MAX];
-
-/**
  * hook in library for debugging messages
  */
 extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
@@ -154,6 +149,7 @@ int main(int argc, char *argv[])
 {
 	struct sigaction action;
 	struct utsname utsname;
+	level_t levels[DBG_MAX];
 	int group;
 
 	dbg = dbg_stderr;
@@ -178,7 +174,8 @@ int main(int argc, char *argv[])
 	{
 		levels[group] = LEVEL_CTRL;
 	}
-	charon->load_loggers(charon, levels, TRUE);
+	charon->set_default_loggers(charon, levels, TRUE);
+	charon->load_loggers(charon);
 
 	lib->settings->set_default_str(lib->settings, "charon-xpc.port", "0");
 	lib->settings->set_default_str(lib->settings, "charon-xpc.port_nat_t", "0");

@@ -220,7 +220,8 @@ static void init_and_run(DWORD dwArgc, LPTSTR *lpszArgv, int (*wait)())
 			update_status(SERVICE_START_PENDING);
 			if (libcharon_init())
 			{
-				charon->load_loggers(charon, levels, TRUE);
+				charon->set_default_loggers(charon, levels, TRUE);
+				charon->load_loggers(charon);
 				print_version();
 				update_status(SERVICE_START_PENDING);
 				if (charon->initialize(charon, PLUGINS))

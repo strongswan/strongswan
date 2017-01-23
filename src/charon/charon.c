@@ -59,16 +59,6 @@
 static FILE *pidfile = NULL;
 
 /**
- * Log levels as defined via command line arguments
- */
-static level_t levels[DBG_MAX];
-
-/**
- * Whether to only use syslog when logging
- */
-static bool use_syslog = FALSE;
-
-/**
  * hook in library for debugging messages
  */
 extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
@@ -126,7 +116,7 @@ static void run()
 					 "configuration");
 				if (lib->settings->load_files(lib->settings, lib->conf, FALSE))
 				{
-					charon->load_loggers(charon, levels, !use_syslog);
+					charon->load_loggers(charon);
 					lib->plugins->reload(lib->plugins, NULL);
 				}
 				else
@@ -289,6 +279,8 @@ int main(int argc, char *argv[])
 	struct sigaction action;
 	int group, status = SS_RC_INITIALIZATION_FAILED;
 	struct utsname utsname;
+	level_t levels[DBG_MAX];
+	bool use_syslog = FALSE;
 
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_stderr;
@@ -382,7 +374,8 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
-	charon->load_loggers(charon, levels, !use_syslog);
+	charon->set_default_loggers(charon, levels, !use_syslog);
+	charon->load_loggers(charon);
 
 	if (uname(&utsname) != 0)
 	{

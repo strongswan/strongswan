@@ -624,7 +624,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 		return FALSE;
 	}
 
-	charon->load_loggers(charon, NULL, FALSE);
+	charon->load_loggers(charon);
 
 	charonservice_init(env, this, builder, byod);
 

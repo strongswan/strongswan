@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 	lib->settings->set_int(lib->settings, "%s.syslog.daemon.default",
 			lib->settings->get_int(lib->settings, "%s.syslog.daemon.default", 1,
 								   dmn_name), dmn_name);
-	charon->load_loggers(charon, NULL, FALSE);
+	charon->load_loggers(charon);
 
 	DBG1(DBG_DMN, "Starting charon with TKM backend (strongSwan "VERSION")");
 

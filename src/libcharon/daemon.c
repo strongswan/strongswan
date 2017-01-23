@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2016 Tobias Brunner
+ * Copyright (C) 2006-2017 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -85,6 +85,16 @@ struct private_daemon_t {
 	 * A list of installed loggers (as logger_entry_t*)
 	 */
 	linked_list_t *loggers;
+
+	/**
+	 * Cached log levels for default loggers
+	 */
+	level_t *levels;
+
+	/**
+	 * Whether to log to stdout/err by default
+	 */
+	bool to_stderr;
 
 	/**
 	 * Identifier used for syslog (in the openlog call)
@@ -532,7 +542,7 @@ static void load_custom_logger(private_daemon_t *this,
 }
 
 METHOD(daemon_t, load_loggers, void,
-	private_daemon_t *this, level_t levels[DBG_MAX], bool to_stderr)
+	private_daemon_t *this)
 {
 	enumerator_t *enumerator;
 	linked_list_t *current_loggers;
@@ -564,7 +574,7 @@ METHOD(daemon_t, load_loggers, void,
 		load_custom_logger(this, &custom_loggers[i], current_loggers);
 	}
 
-	if (!this->loggers->get_count(this->loggers) && levels)
+	if (!this->loggers->get_count(this->loggers) && this->levels)
 	{	/* setup legacy style default loggers configured via command-line */
 		file_logger_t *file_logger;
 		sys_logger_t *sys_logger;
@@ -578,11 +588,11 @@ METHOD(daemon_t, load_loggers, void,
 		{
 			if (sys_logger)
 			{
-				sys_logger->set_level(sys_logger, group, levels[group]);
+				sys_logger->set_level(sys_logger, group, this->levels[group]);
 			}
-			if (to_stderr)
+			if (this->to_stderr)
 			{
-				file_logger->set_level(file_logger, group, levels[group]);
+				file_logger->set_level(file_logger, group, this->levels[group]);
 			}
 		}
 		if (sys_logger)
@@ -604,13 +614,39 @@ METHOD(daemon_t, load_loggers, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(daemon_t, set_default_loggers, void,
+	private_daemon_t *this, level_t levels[DBG_MAX], bool to_stderr)
+{
+	debug_t group;
+
+	this->mutex->lock(this->mutex);
+	if (!levels)
+	{
+		free(this->levels);
+		this->levels = NULL;
+	}
+	else
+	{
+		if (!this->levels)
+		{
+			this->levels = calloc(sizeof(level_t), DBG_MAX);
+		}
+		for (group = 0; group < DBG_MAX; group++)
+		{
+			this->levels[group] = levels[group];
+		}
+		this->to_stderr = to_stderr;
+	}
+	this->mutex->unlock(this->mutex);
+}
+
 METHOD(daemon_t, set_level, void,
 	private_daemon_t *this, debug_t group, level_t level)
 {
 	enumerator_t *enumerator;
 	logger_entry_t *entry;
 
-	/* we set the loglevel on ALL sys- and file-loggers */
+	/* we set the loglevel on ALL loggers */
 	this->mutex->lock(this->mutex);
 	enumerator = this->loggers->create_enumerator(this->loggers);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -694,6 +730,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->public.bus);
 	this->loggers->destroy_function(this->loggers, (void*)logger_entry_destroy);
 	this->mutex->destroy(this->mutex);
+	free(this->levels);
 	free(this);
 }
 
@@ -879,6 +916,7 @@ private_daemon_t *daemon_create()
 			.initialize = _initialize,
 			.start = _start,
 			.load_loggers = _load_loggers,
+			.set_default_loggers = _set_default_loggers,
 			.set_level = _set_level,
 			.bus = bus_create(),
 		},
