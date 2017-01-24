@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2015-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
@@ -23,6 +23,8 @@
 
 #include <daemon.h>
 #include <collections/array.h>
+#include <processing/jobs/rekey_ike_sa_job.h>
+#include <processing/jobs/rekey_child_sa_job.h>
 #include <processing/jobs/redirect_job.h>
 
 typedef struct private_vici_control_t private_vici_control_t;
@@ -360,6 +362,100 @@ CALLBACK(terminate, vici_message_t*,
 	return builder->finalize(builder);
 }
 
+CALLBACK(rekey, vici_message_t*,
+	private_vici_control_t *this, char *name, u_int id, vici_message_t *request)
+{
+	enumerator_t *isas, *csas;
+	char *child, *ike, *errmsg = NULL;
+	u_int child_id, ike_id, found = 0;
+	ike_sa_t *ike_sa;
+	child_sa_t *child_sa;
+	vici_builder_t *builder;
+
+	child = request->get_str(request, NULL, "child");
+	ike = request->get_str(request, NULL, "ike");
+	child_id = request->get_int(request, 0, "child-id");
+	ike_id = request->get_int(request, 0, "ike-id");
+
+	if (!child && !ike && !ike_id && !child_id)
+	{
+		return send_reply(this, "missing rekey selector");
+	}
+
+	if (ike_id)
+	{
+		DBG1(DBG_CFG, "vici rekey IKE_SA #%d", ike_id);
+	}
+	if (child_id)
+	{
+		DBG1(DBG_CFG, "vici rekey CHILD_SA #%d", child_id);
+	}
+	if (ike)
+	{
+		DBG1(DBG_CFG, "vici rekey IKE_SA '%s'", ike);
+	}
+	if (child)
+	{
+		DBG1(DBG_CFG, "vici rekey CHILD_SA '%s'", child);
+	}
+
+	isas = charon->controller->create_ike_sa_enumerator(charon->controller, TRUE);
+	while (isas->enumerate(isas, &ike_sa))
+	{
+		if (child || child_id)
+		{
+			if (ike && !streq(ike, ike_sa->get_name(ike_sa)))
+			{
+				continue;
+			}
+			if (ike_id && ike_id != ike_sa->get_unique_id(ike_sa))
+			{
+				continue;
+			}
+			csas = ike_sa->create_child_sa_enumerator(ike_sa);
+			while (csas->enumerate(csas, &child_sa))
+			{
+				if (child && !streq(child, child_sa->get_name(child_sa)))
+				{
+					continue;
+				}
+				if (child_id && child_sa->get_unique_id(child_sa) != child_id)
+				{
+					continue;
+				}
+				lib->processor->queue_job(lib->processor,
+						(job_t*)rekey_child_sa_job_create(
+											child_sa->get_protocol(child_sa),
+											child_sa->get_spi(child_sa, TRUE),
+											ike_sa->get_my_host(ike_sa)));
+				found++;
+			}
+			csas->destroy(csas);
+		}
+		else if ((ike && streq(ike, ike_sa->get_name(ike_sa))) ||
+				 (ike_id && ike_id == ike_sa->get_unique_id(ike_sa)))
+		{
+			lib->processor->queue_job(lib->processor,
+				(job_t*)rekey_ike_sa_job_create(ike_sa->get_id(ike_sa), FALSE));
+			found++;
+		}
+	}
+	isas->destroy(isas);
+
+	builder = vici_builder_create();
+	if (!found)
+	{
+		errmsg = "no matching SAs to rekey found";
+	}
+	builder->add_kv(builder, "success", errmsg ? "no" : "yes");
+	builder->add_kv(builder, "matches", "%u", found);
+	if (errmsg)
+	{
+		builder->add_kv(builder, "errmsg", "%s", errmsg);
+	}
+	return builder->finalize(builder);
+}
+
 /**
  * Parse a peer-ip specified, which can be a subnet in CIDR notation, a range
  * or a single IP address.
@@ -494,6 +590,7 @@ CALLBACK(redirect, vici_message_t*,
 		errmsg = "no matching SAs to redirect found";
 	}
 	builder->add_kv(builder, "success", errmsg ? "no" : "yes");
+	builder->add_kv(builder, "matches", "%u", found);
 	if (errmsg)
 	{
 		builder->add_kv(builder, "errmsg", "%s", errmsg);
@@ -671,6 +768,7 @@ static void manage_commands(private_vici_control_t *this, bool reg)
 {
 	manage_command(this, "initiate", initiate, reg);
 	manage_command(this, "terminate", terminate, reg);
+	manage_command(this, "rekey", rekey, reg);
 	manage_command(this, "redirect", redirect, reg);
 	manage_command(this, "install", install, reg);
 	manage_command(this, "uninstall", uninstall, reg);

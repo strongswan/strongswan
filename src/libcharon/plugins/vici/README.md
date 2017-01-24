@@ -283,11 +283,28 @@ Terminates an SA while streaming _control-log_ events.
 		loglevel = <loglevel to issue "control-log" events for>
 	} => {
 		success = <yes or no>
+		matches = <number of matched SAs>
+		terminated = <number of terminated SAs>
 		errmsg = <error string on failure or timeout>
 	}
 
 The default timeout of 0 waits indefinitely for a result, and a timeout value
 of -1 returns a result immediately.
+
+### rekey() ###
+
+Initiate the rekeying of an SA.
+
+	{
+		child = <rekey a CHILD_SA by configuration name>
+		ike = <rekey an IKE_SA by configuration name>
+		child-id = <rekey a CHILD_SA by its reqid>
+		ike-id = <rekey an IKE_SA by its unique id>
+	} => {
+		success = <yes or no>
+		matches = <number of matched SAs>
+		errmsg = <error string on failure>
+	}
 
 ### redirect() ###
 
@@ -303,6 +320,7 @@ supported by the peer.
 				   wildcards>
 	} => {
 		success = <yes or no>
+		matches = <number of matched SAs>
 		errmsg = <error string on failure>
 	}
 
