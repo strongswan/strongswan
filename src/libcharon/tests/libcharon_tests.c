@@ -45,7 +45,7 @@ static void initialize_logging()
 	lib->settings->set_int(lib->settings, "%s.filelog.stderr.default",
 			lib->settings->get_int(lib->settings, "%s.filelog.stderr.default",
 								   level, lib->ns), lib->ns);
-	charon->load_loggers(charon, NULL, TRUE);
+	charon->load_loggers(charon);
 }
 
 static bool test_runner_init(bool init)

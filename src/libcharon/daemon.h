@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2017 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -338,17 +338,27 @@ struct daemon_t {
 	/**
 	 * Load/Reload loggers defined in strongswan.conf
 	 *
-	 * @param levels	optional debug levels used to create default loggers
-	 * 					if none are defined in strongswan.conf
-	 * @param to_stderr	TRUE to log to stderr/stdout if no loggers are defined
-	 * 					in strongswan.conf
+	 * If none are defined in strongswan.conf default loggers configured via
+	 * set_default_loggers() are loaded.
 	 */
-	void (*load_loggers)(daemon_t *this, level_t levels[DBG_MAX],
-						 bool to_stderr);
+	void (*load_loggers)(daemon_t *this);
 
 	/**
-	 * Set the log level for the given log group for all configured file-,
-	 * syslog and custom-loggers.
+	 * Configure default loggers if none are defined in strongswan.conf
+	 *
+	 * @param levels	debug levels used to create default loggers if none are
+	 *					defined in strongswan.conf (NULL to disable)
+	 * @param to_stderr	TRUE to log to stderr/stdout if no loggers are defined
+	 * 					in strongswan.conf (logging to syslog is always enabled)
+	 */
+	void (*set_default_loggers)(daemon_t *this, level_t levels[DBG_MAX],
+								bool to_stderr);
+
+	/**
+	 * Set the log level for the given log group for all loaded loggers.
+	 *
+	 * This change is not persistent and gets reset if loggers are reloaded
+	 * via load_loggers().
 	 *
 	 * @param group		log group
 	 * @param level		log level

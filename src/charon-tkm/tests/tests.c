@@ -52,7 +52,7 @@ static bool test_runner_init(bool init)
 		libcharon_init();
 		lib->settings->set_int(lib->settings,
 							   "test-runner.filelog.stdout.default", 0);
-		charon->load_loggers(charon, NULL, FALSE);
+		charon->load_loggers(charon);
 
 		/* Register TKM specific plugins */
 		static plugin_feature_t features[] = {

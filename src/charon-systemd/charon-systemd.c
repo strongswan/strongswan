@@ -241,6 +241,7 @@ static int run()
 	sigset_t set;
 
 	sigemptyset(&set);
+	sigaddset(&set, SIGHUP);
 	sigaddset(&set, SIGTERM);
 	sigprocmask(SIG_BLOCK, &set, NULL);
 
@@ -262,6 +263,21 @@ static int run()
 		}
 		switch (sig)
 		{
+			case SIGHUP:
+			{
+				DBG1(DBG_DMN, "signal of type SIGHUP received. Reloading "
+					 "configuration");
+				if (lib->settings->load_files(lib->settings, lib->conf, FALSE))
+				{
+					charon->load_loggers(charon);
+					lib->plugins->reload(lib->plugins, NULL);
+				}
+				else
+				{
+					DBG1(DBG_DMN, "reloading config failed, keeping old");
+				}
+				break;
+			}
 			case SIGTERM:
 			{
 				DBG1(DBG_DMN, "SIGTERM received, shutting down");
@@ -374,7 +390,7 @@ int main(int argc, char *argv[])
 		sd_notifyf(0, "STATUS=unknown uid/gid");
 		return SS_RC_INITIALIZATION_FAILED;
 	}
-	charon->load_loggers(charon, NULL, FALSE);
+	charon->load_loggers(charon);
 
 	lib->plugins->add_static_features(lib->plugins, lib->ns, features,
 							countof(features), TRUE, journal_reload, &journal);
