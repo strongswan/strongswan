@@ -38,12 +38,12 @@ struct private_revocation_validator_t {
 	revocation_validator_t public;
 
 	/**
-	 * Enable OCSP fetching
+	 * Enable OCSP validation
 	 */
 	bool enable_ocsp;
 
 	/**
-	 * Enable CRL fetching
+	 * Enable CRL validation
 	 */
 	bool enable_crl;
 
@@ -743,9 +743,9 @@ METHOD(cert_validator_t, validate, bool,
 	certificate_t *issuer, bool online, u_int pathlen, bool anchor,
 	auth_cfg_t *auth)
 {
-	if (subject->get_type(subject) == CERT_X509 &&
-		issuer->get_type(issuer) == CERT_X509 &&
-		online)
+	if (online && (this->enable_ocsp || this->enable_crl) &&
+		subject->get_type(subject) == CERT_X509 &&
+		issuer->get_type(issuer) == CERT_X509)
 	{
 		DBG1(DBG_CFG, "checking certificate status of \"%Y\"",
 					   subject->get_subject(subject));
@@ -832,12 +832,11 @@ revocation_validator_t *revocation_validator_create()
 
 	if (!this->enable_ocsp)
 	{
-		DBG1(DBG_LIB, "all OCSP fetching disabled");
+		DBG1(DBG_LIB, "all OCSP validation disabled");
 	}
 	if (!this->enable_crl)
 	{
-		DBG1(DBG_LIB, "all CRL fetching disabled");
+		DBG1(DBG_LIB, "all CRL validation disabled");
 	}
-
 	return &this->public;
 }
