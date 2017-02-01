@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -265,5 +265,16 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
  * @return					address family of address(es) if distinct
  */
 int ike_cfg_get_family(ike_cfg_t *this, bool local);
+
+/**
+ * Determine if the given address was explicitly configured as local or remote
+ * address.
+ *
+ * @param this				ike config to check
+ * @param addr				address to check
+ * @param local				TRUE to check local addresses, FALSE for remote
+ * @return					TRUE if address was configured
+ */
+bool ike_cfg_has_address(ike_cfg_t *this, host_t *addr, bool local);
 
 #endif /** IKE_CFG_H_ @}*/

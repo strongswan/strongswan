@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -554,6 +554,39 @@ int ike_cfg_get_family(ike_cfg_t *cfg, bool local)
 	}
 	enumerator->destroy(enumerator);
 	return family;
+}
+
+/**
+ * Described in header.
+ */
+bool ike_cfg_has_address(ike_cfg_t *cfg, host_t *addr, bool local)
+{
+	private_ike_cfg_t *this = (private_ike_cfg_t*)cfg;
+	enumerator_t *enumerator;
+	host_t *host;
+	char *str;
+	bool found = FALSE;
+
+	if (local)
+	{
+		enumerator = this->my_hosts->create_enumerator(this->my_hosts);
+	}
+	else
+	{
+		enumerator = this->other_hosts->create_enumerator(this->other_hosts);
+	}
+	while (enumerator->enumerate(enumerator, &str))
+	{
+		host = host_create_from_string(str, 0);
+		if (host && addr->ip_equals(addr, host))
+		{
+			found = TRUE;
+			break;
+		}
+		DESTROY_IF(host);
+	}
+	enumerator->destroy(enumerator);
+	return found;
 }
 
 /**
