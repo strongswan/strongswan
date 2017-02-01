@@ -790,6 +790,8 @@ CALLBACK(list_conns, vici_message_t*,
 			peer_cfg->get_reauth_time(peer_cfg, FALSE));
 		b->add_kv(b, "rekey_time", "%u",
 			peer_cfg->get_rekey_time(peer_cfg, FALSE));
+		b->add_kv(b, "unique", "%N", unique_policy_names,
+			peer_cfg->get_unique_policy(peer_cfg));
 
 		build_auth_cfgs(peer_cfg, TRUE, b);
 		build_auth_cfgs(peer_cfg, FALSE, b);
