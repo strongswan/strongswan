@@ -381,12 +381,14 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 		ike = get_ike_cfg_by_id(this, ike_cfg);
 
 #ifdef ME
-		mediated_cfg = mediated_by ? get_peer_cfg_by_id(this, mediated_by) : NULL;
+		mediated_cfg = mediated_by ? get_peer_cfg_by_id(this, mediated_by)
+								   : NULL;
 		if (p_type)
 		{
 			peer_id = identification_create_from_encoding(p_type, p_data);
 		}
-#endif
+#endif /* ME */
+
 		if (virtual)
 		{
 			vip = host_create_from_string(virtual, 0);
@@ -405,7 +407,8 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 				.dpd = dpd_delay,
 #ifdef ME
 				.mediation = mediation,
-				.mediated_by = mediated_cfg,
+				.mediated_by = mediated_cfg ?
+									mediated_cfg->get_name(mediated_cfg) : NULL,
 				.peer_id = peer_id,
 #endif /* ME */
 			};
@@ -443,6 +446,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 			}
 			peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 			add_child_cfgs(this, peer_cfg, id);
+			DESTROY_IF(mediated_cfg);
 			return peer_cfg;
 		}
 		DESTROY_IF(ike);

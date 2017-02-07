@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Tobias Brunner
+ * Copyright (C) 2007-2017 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -164,7 +164,7 @@ struct private_peer_cfg_t {
 	/**
 	 * Name of the mediation connection to mediate through
 	 */
-	peer_cfg_t *mediated_by;
+	char *mediated_by;
 
 	/**
 	 * ID of our peer at the mediation server (= leftid of the peer's conn with
@@ -580,7 +580,7 @@ METHOD(peer_cfg_t, is_mediation, bool,
 	return this->mediation;
 }
 
-METHOD(peer_cfg_t, get_mediated_by, peer_cfg_t*,
+METHOD(peer_cfg_t, get_mediated_by, char*,
 	private_peer_cfg_t *this)
 {
 	return this->mediated_by;
@@ -683,7 +683,7 @@ METHOD(peer_cfg_t, equals, bool,
 		auth_cfg_equal(this, other)
 #ifdef ME
 		&& this->mediation == other->mediation &&
-		this->mediated_by == other->mediated_by &&
+		streq(this->mediated_by, other->mediated_by) &&
 		(this->peer_id == other->peer_id ||
 		 (this->peer_id && other->peer_id &&
 		  this->peer_id->equals(this->peer_id, other->peer_id)))
@@ -713,8 +713,8 @@ METHOD(peer_cfg_t, destroy, void,
 		this->vips->destroy_offset(this->vips, offsetof(host_t, destroy));
 		this->pools->destroy_function(this->pools, free);
 #ifdef ME
-		DESTROY_IF(this->mediated_by);
 		DESTROY_IF(this->peer_id);
+		free(this->mediated_by);
 #endif /* ME */
 		this->mutex->destroy(this->mutex);
 		free(this->name);
@@ -802,7 +802,7 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 		.refcount = 1,
 #ifdef ME
 		.mediation = data->mediation,
-		.mediated_by = data->mediated_by,
+		.mediated_by = strdupnull(data->mediated_by),
 		.peer_id = data->peer_id,
 #endif /* ME */
 	);
