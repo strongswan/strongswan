@@ -1944,7 +1944,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		sa_2 = (struct sadb_sa_2*)PFKEY_EXT_ADD_NEXT(msg);
 		sa_2->sa.sadb_sa_len = PFKEY_LEN(sizeof(struct sadb_sa_2));
 		memcpy(&sa_2->sa, response.sa, sizeof(struct sadb_sa));
-		if (data->encap)
+		if (data->new_encap)
 		{
 			sa_2->sadb_sa_natt_port = data->new_dst->get_port(data->new_dst);
 			sa_2->sa.sadb_sa_flags |= SADB_X_EXT_NATT;
