@@ -202,6 +202,11 @@ struct private_child_create_t {
 	 * whether we are retrying with another DH group
 	 */
 	bool retry;
+
+	/**
+	 * Force host as remote traffic selector
+	 */
+	bool force_host_ts;
 };
 
 /**
@@ -1052,6 +1057,44 @@ METHOD(task_t, build_i, status_t,
 		this->tsr->insert_first(this->tsr,
 								this->packet_tsr->clone(this->packet_tsr));
 	}
+
+	if (this->force_host_ts)
+	{
+		DBG2(DBG_CHD, "forcing host as remote ts");
+		host_t *host;
+		traffic_selector_t *new_ts, *old_ts;
+		linked_list_t *new_tsr, *old_tsr;
+		enumerator_t *enumerator;
+
+		old_tsr = this->tsr;
+		new_tsr = linked_list_create();
+
+		host = this->ike_sa->get_other_host(this->ike_sa);
+
+		enumerator = old_tsr->create_enumerator(old_tsr);
+
+		while (enumerator->enumerate(enumerator, &old_ts))
+		{
+			uint8_t protocol;
+			uint16_t from_port, to_port;
+
+			protocol = old_ts->get_protocol(old_ts);
+			from_port = old_ts->get_from_port(old_ts);
+			to_port = old_ts->get_to_port(old_ts);
+
+			new_ts = traffic_selector_create_dynamic(protocol, from_port, to_port);
+			new_ts->set_address(new_ts, host);
+
+			new_tsr->insert_last(new_tsr, new_ts);
+			DBG2(DBG_CHD, " old ts: %R, new ts: %R", old_ts, new_ts);
+		}
+
+		this->tsr = new_tsr;
+
+		enumerator->destroy(enumerator);
+		old_tsr->destroy_offset(old_tsr, offsetof(traffic_selector_t, destroy));
+	}
+
 	this->proposals = this->config->get_proposals(this->config,
 												  this->dh_group == MODP_NONE);
 	this->mode = this->config->get_mode(this->config);
@@ -1730,6 +1773,9 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 		.ipcomp_received = IPCOMP_NONE,
 		.rekey = rekey,
 		.retry = FALSE,
+        .force_host_ts = lib->settings->get_bool(lib->settings,
+										"%s.force_host_ts", FALSE, lib->ns),
+
 	);
 
 	if (config)

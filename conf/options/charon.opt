@@ -106,6 +106,13 @@ charon.flush_auth_cfg = no
 charon.follow_redirects = yes
 	Whether to follow IKEv2 redirects (RFC 5685).
 
+charon.force_host_ts = no
+	Force remote traffic selector to be the remote host when initiating a
+	CHILD_SA (IKEv2 only).
+
+	This is useful for transport mode connections with implementations that do
+	not support subnet range negotiation (eg. Windows).
+
 charon.fragment_size = 1280
 	Maximum size (complete IP datagram size in bytes) of a sent IKE fragment
 	when using proprietary IKEv1 or standardized IKEv2 fragmentation, defaults
