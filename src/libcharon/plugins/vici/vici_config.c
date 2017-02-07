@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2015-2016 Tobias Brunner
+ * Copyright (C) 2015-2017 Tobias Brunner
  * Copyright (C) 2015-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -318,6 +318,11 @@ typedef struct {
 	uint64_t over_time;
 	uint64_t rand_time;
 	uint8_t dscp;
+#ifdef ME
+	bool mediation;
+	char *mediated_by;
+	identification_t *peer_id;
+#endif /* ME */
 } peer_data_t;
 
 /**
@@ -405,6 +410,14 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  over_time = %llu", data->over_time);
 	DBG2(DBG_CFG, "  rand_time = %llu", data->rand_time);
 	DBG2(DBG_CFG, "  proposals = %#P", data->proposals);
+#ifdef ME
+	DBG2(DBG_CFG, "  mediation = %u", data->mediation);
+	if (data->mediated_by)
+	{
+		DBG2(DBG_CFG, "  mediated_by = %s", data->mediated_by);
+		DBG2(DBG_CFG, "  mediation_peer = %Y", data->peer_id);
+	}
+#endif /* ME */
 
 	if (data->vips->get_count(data->vips))
 	{
@@ -449,6 +462,10 @@ static void free_peer_data(peer_data_t *data)
 	free(data->pools);
 	free(data->local_addrs);
 	free(data->remote_addrs);
+#ifdef ME
+	free(data->mediated_by);
+	DESTROY_IF(data->peer_id);
+#endif /* ME */
 }
 
 /**
@@ -1397,6 +1414,24 @@ CALLBACK(parse_hosts, bool,
 	return TRUE;
 }
 
+#ifdef ME
+/**
+ * Parse peer ID
+ */
+CALLBACK(parse_peer_id, bool,
+	identification_t **out, chunk_t v)
+{
+	char buf[BUF_LEN];
+
+	if (!vici_stringify(v, buf, sizeof(buf)))
+	{
+		return FALSE;
+	}
+	*out = identification_create_from_string(buf);
+	return TRUE;
+}
+#endif /* ME */
+
 CALLBACK(cert_kv, bool,
 	cert_data_t *cert, vici_message_t *message, char *name, chunk_t value)
 {
@@ -1531,6 +1566,11 @@ CALLBACK(peer_kv, bool,
 		{ "rekey_time",		parse_time,			&peer->rekey_time			},
 		{ "over_time",		parse_time,			&peer->over_time			},
 		{ "rand_time",		parse_time,			&peer->rand_time			},
+#ifdef ME
+		{ "mediation",		parse_bool,			&peer->mediation			},
+		{ "mediated_by",	parse_string,		&peer->mediated_by			},
+		{ "mediation_peer",	parse_peer_id,		&peer->peer_id				},
+#endif /* ME */
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
@@ -2260,6 +2300,42 @@ CALLBACK(config_sn, bool,
 		peer.rand_time = min(peer.over_time, peer.rand_time / 2);
 	}
 
+#ifdef ME
+	if (peer.mediation && peer.mediated_by)
+	{
+		DBG1(DBG_CFG, "a mediation connection cannot be a mediated connection "
+			 "at the same time, config discarded");
+		free_peer_data(&peer);
+		return FALSE;
+	}
+	if (peer.mediation)
+	{	/* force unique connections for mediation connections */
+		peer.unique = UNIQUE_REPLACE;
+	}
+	else if (peer.mediated_by)
+	{	/* fallback to remote identity of first auth round if peer_id is not
+		 * given explicitly */
+		auth_cfg_t *cfg;
+
+		if (!peer.peer_id &&
+			peer.remote->get_first(peer.remote, (void**)&cfg) == SUCCESS)
+		{
+			peer.peer_id = cfg->get(cfg, AUTH_RULE_IDENTITY);
+			if (peer.peer_id)
+			{
+				peer.peer_id = peer.peer_id->clone(peer.peer_id);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "mediation peer missing for mediated connection, "
+					 "config discarded");
+				free_peer_data(&peer);
+				return FALSE;
+			}
+		}
+	}
+#endif /* ME */
+
 	log_peer_data(&peer);
 
 	ike_cfg = ike_cfg_create(peer.version, peer.send_certreq, peer.encap,
@@ -2281,6 +2357,14 @@ CALLBACK(config_sn, bool,
 		.dpd = peer.dpd_delay,
 		.dpd_timeout = peer.dpd_timeout,
 	};
+#ifdef ME
+	cfg.mediation = peer.mediation;
+	if (peer.mediated_by)
+	{
+		cfg.mediated_by = peer.mediated_by;
+		cfg.peer_id = peer.peer_id->clone(peer.peer_id);
+	}
+#endif /* ME */
 	peer_cfg = peer_cfg_create(name, ike_cfg, &cfg);
 
 	while (peer.local->remove_first(peer.local,

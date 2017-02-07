@@ -264,6 +264,30 @@ connections.<conn>.pools =
 	other configuration attributes from. Each name references a pool by name
 	from either the **pools** section or an external pool.
 
+connections.<conn>.mediation = no
+	Whether this connection is a mediation connection.
+
+	Whether this connection is a mediation connection, that is, whether this
+	connection is used to mediate other connections using the IKEv2 Mediation
+	Extension.  Mediation connections create no CHILD_SA.
+
+connections.<conn>.mediated_by =
+	The name of the connection to mediate this connection through.
+
+	The name of the connection to mediate this connection through. If given, the
+	connection will be mediated through the named mediation connection.
+	The	mediation connection must have **mediation** enabled.
+
+connections.<conn>.mediation_peer =
+	Identity under which the peer is registered at the mediation server.
+
+	Identity under which the peer is registered at the mediation server, that
+	is, the IKE identity the other end of this connection uses as its local
+	identity on its connection to the mediation server. This is the identity we
+	request the mediation server to mediate us with. Only relevant on
+	connections that set **mediated_by**. If it is not given, the remote IKE
+	identity of the first authentication round of this connection will be used.
+
 connections.<conn>.local<suffix> {}
 	Section for a local authentication round.
 
