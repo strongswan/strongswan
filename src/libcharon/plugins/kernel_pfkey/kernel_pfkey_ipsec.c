@@ -999,24 +999,6 @@ static void add_addr_ext(struct sadb_msg *msg, host_t *host, uint16_t type,
 	PFKEY_EXT_ADD(msg, addr);
 }
 
-/**
- * adds an empty address extension to the given sadb_msg
- */
-static void add_anyaddr_ext(struct sadb_msg *msg, int family, uint8_t type)
-{
-	socklen_t len = (family == AF_INET) ? sizeof(struct sockaddr_in) :
-										  sizeof(struct sockaddr_in6);
-	struct sadb_address *addr = (struct sadb_address*)PFKEY_EXT_ADD_NEXT(msg);
-	addr->sadb_address_exttype = type;
-	sockaddr_t *saddr = (sockaddr_t*)(addr + 1);
-	saddr->sa_family = family;
-#ifdef HAVE_STRUCT_SOCKADDR_SA_LEN
-	saddr->sa_len = len;
-#endif
-	addr->sadb_address_len = PFKEY_LEN(sizeof(*addr) + len);
-	PFKEY_EXT_ADD(msg, addr);
-}
-
 #ifdef HAVE_NATT
 /**
  * add udp encap extensions to a sadb_msg
@@ -1854,6 +1836,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	pfkey_msg_t response;
 	size_t len;
 
+#ifndef SADB_X_EXT_NEW_ADDRESS_SRC
 	/* we can't update the SA if any of the ip addresses have changed.
 	 * that's because we can't use SADB_UPDATE and by deleting and readding the
 	 * SA the sequence numbers would get lost */
@@ -1864,6 +1847,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 			 "changes are not supported", ntohl(id->spi));
 		return NOT_SUPPORTED;
 	}
+#endif /*SADB_X_EXT_NEW_ADDRESS_SRC*/
 
 	/* if IPComp is used, we first update the IPComp SA */
 	if (data->cpi)
@@ -1900,9 +1884,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	sa->sadb_sa_state = SADB_SASTATE_MATURE;
 	PFKEY_EXT_ADD(msg, sa);
 
-	/* the kernel wants a SADB_EXT_ADDRESS_SRC to be present even though
-	 * it is not used for anything. */
-	add_anyaddr_ext(msg, id->dst->get_family(id->dst), SADB_EXT_ADDRESS_SRC);
+	add_addr_ext(msg, id->src, SADB_EXT_ADDRESS_SRC, 0, 0, FALSE);
 	add_addr_ext(msg, id->dst, SADB_EXT_ADDRESS_DST, 0, 0, FALSE);
 
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
@@ -1977,6 +1959,19 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		add_encap_ext(msg, data->new_src, data->new_dst);
 	}
 #endif /*HAVE_NATT*/
+
+#ifdef SADB_X_EXT_NEW_ADDRESS_SRC
+	if (!id->src->ip_equals(id->src, data->new_src))
+	{
+		add_addr_ext(msg, data->new_src, SADB_X_EXT_NEW_ADDRESS_SRC, 0, 0,
+					 FALSE);
+	}
+	if (!id->dst->ip_equals(id->dst, data->new_dst))
+	{
+		add_addr_ext(msg, data->new_dst, SADB_X_EXT_NEW_ADDRESS_DST, 0, 0,
+					 FALSE);
+	}
+#endif /*SADB_X_EXT_NEW_ADDRESS_SRC*/
 
 	free(out);
 
