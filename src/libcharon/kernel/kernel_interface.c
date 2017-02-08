@@ -554,6 +554,16 @@ METHOD(kernel_interface_t, create_address_enumerator, enumerator_t*,
 	return this->net->create_address_enumerator(this->net, which);
 }
 
+METHOD(kernel_interface_t, create_local_subnet_enumerator, enumerator_t*,
+	private_kernel_interface_t *this)
+{
+	if (!this->net || !this->net->create_local_subnet_enumerator)
+	{
+		return enumerator_create_empty();
+	}
+	return this->net->create_local_subnet_enumerator(this->net);
+}
+
 METHOD(kernel_interface_t, add_ip, status_t,
 	private_kernel_interface_t *this, host_t *virtual_ip, int prefix,
 	char *iface)
@@ -1005,6 +1015,7 @@ kernel_interface_t *kernel_interface_create()
 			.get_nexthop = _get_nexthop,
 			.get_interface = _get_interface,
 			.create_address_enumerator = _create_address_enumerator,
+			.create_local_subnet_enumerator = _create_local_subnet_enumerator,
 			.add_ip = _add_ip,
 			.del_ip = _del_ip,
 			.add_route = _add_route,

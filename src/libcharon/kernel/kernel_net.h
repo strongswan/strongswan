@@ -119,6 +119,17 @@ struct kernel_net_t {
 												kernel_address_type_t which);
 
 	/**
+	 * Creates an enumerator over all local subnets.
+	 *
+	 * Local subnets are subnets the host is directly connected to.
+	 *
+	 * The enumerator returns the network, subnet mask and interface.
+	 *
+	 * @return				enumerator over host_t*, uint8_t, char*
+	 */
+	enumerator_t *(*create_local_subnet_enumerator)(kernel_net_t *this);
+
+	/**
 	 * Add a virtual IP to an interface.
 	 *
 	 * Virtual IPs are attached to an interface. If an IP is added multiple

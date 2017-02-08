@@ -2125,6 +2125,146 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	return get_route(this, dest, prefix, TRUE, src, iface, 0);
 }
 
+/** enumerator over subnets */
+typedef struct {
+	enumerator_t public;
+	private_kernel_netlink_net_t *private;
+	/** message from the kernel */
+	struct nlmsghdr *msg;
+	/** current message from the kernel */
+	struct nlmsghdr *current;
+	/** remaining length */
+	size_t len;
+	/** last subnet enumerated */
+	host_t *net;
+	/** interface of current net */
+	char ifname[IFNAMSIZ];
+} subnet_enumerator_t;
+
+METHOD(enumerator_t, destroy_subnet_enumerator, void,
+	subnet_enumerator_t *this)
+{
+	DESTROY_IF(this->net);
+	free(this->msg);
+	free(this);
+}
+
+METHOD(enumerator_t, enumerate_subnets, bool,
+	subnet_enumerator_t *this, host_t **net, uint8_t *mask, char **ifname)
+{
+	if (!this->current)
+	{
+		this->current = this->msg;
+	}
+	else
+	{
+		this->current = NLMSG_NEXT(this->current, this->len);
+		DESTROY_IF(this->net);
+		this->net = NULL;
+	}
+
+	while (NLMSG_OK(this->current, this->len))
+	{
+		switch (this->current->nlmsg_type)
+		{
+			case NLMSG_DONE:
+				break;
+			case RTM_NEWROUTE:
+			{
+				struct rtmsg *msg;
+				struct rtattr *rta;
+				size_t rtasize;
+				chunk_t dst = chunk_empty;
+				uint32_t oif = 0;
+
+				msg = NLMSG_DATA(this->current);
+
+				if (!route_usable(this->current))
+				{
+					break;
+				}
+				else if (msg->rtm_table && (
+							msg->rtm_table == RT_TABLE_LOCAL ||
+							msg->rtm_table == this->private->routing_table))
+				{	/* ignore our own and the local routing tables */
+					break;
+				}
+
+				rta = RTM_RTA(msg);
+				rtasize = RTM_PAYLOAD(this->current);
+				while (RTA_OK(rta, rtasize))
+				{
+					switch (rta->rta_type)
+					{
+						case RTA_DST:
+							dst = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
+							break;
+						case RTA_OIF:
+							if (RTA_PAYLOAD(rta) == sizeof(oif))
+							{
+								oif = *(uint32_t*)RTA_DATA(rta);
+							}
+							break;
+					}
+					rta = RTA_NEXT(rta, rtasize);
+				}
+
+				if (dst.ptr && oif && if_indextoname(oif, this->ifname))
+				{
+					this->net = host_create_from_chunk(msg->rtm_family, dst, 0);
+					*net = this->net;
+					*mask = msg->rtm_dst_len;
+					*ifname = this->ifname;
+					return TRUE;
+				}
+				break;
+			}
+			default:
+				break;
+		}
+		this->current = NLMSG_NEXT(this->current, this->len);
+	}
+	return FALSE;
+}
+
+METHOD(kernel_net_t, create_local_subnet_enumerator, enumerator_t*,
+	private_kernel_netlink_net_t *this)
+{
+	netlink_buf_t request;
+	struct nlmsghdr *hdr, *out;
+	struct rtmsg *msg;
+	size_t len;
+	subnet_enumerator_t *enumerator;
+
+	memset(&request, 0, sizeof(request));
+
+	hdr = &request.hdr;
+	hdr->nlmsg_flags = NLM_F_REQUEST;
+	hdr->nlmsg_type = RTM_GETROUTE;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+	hdr->nlmsg_flags |= NLM_F_DUMP;
+
+	msg = NLMSG_DATA(hdr);
+	msg->rtm_scope = RT_SCOPE_LINK;
+
+	if (this->socket->send(this->socket, hdr, &out, &len) != SUCCESS)
+	{
+		DBG2(DBG_KNL, "enumerating local subnets failed");
+		return enumerator_create_empty();
+	}
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = (void*)_enumerate_subnets,
+			.destroy = _destroy_subnet_enumerator,
+		},
+		.private = this,
+		.msg = out,
+		.len = len,
+	);
+	return &enumerator->public;
+}
+
 /**
  * Manages the creation and deletion of ip addresses on an interface.
  * By setting the appropriate nlmsg_type, the ip will be set or unset.
@@ -2761,6 +2901,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 			.interface = {
 				.get_interface = _get_interface_name,
 				.create_address_enumerator = _create_address_enumerator,
+				.create_local_subnet_enumerator = _create_local_subnet_enumerator,
 				.get_source_addr = _get_source_addr,
 				.get_nexthop = _get_nexthop,
 				.add_ip = _add_ip,
