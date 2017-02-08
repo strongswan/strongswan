@@ -68,7 +68,8 @@ METHOD(job_t, execute, job_requeue_t,
 					mode = child_cfg->get_mode(child_cfg);
 					if (mode == MODE_PASS || mode == MODE_DROP)
 					{
-						charon->shunts->install(charon->shunts, NULL,
+						charon->shunts->install(charon->shunts,
+												peer_cfg->get_name(peer_cfg),
 												child_cfg);
 					}
 					else
