@@ -61,6 +61,8 @@ enum task_type_t {
 	TASK_IKE_REDIRECT,
 	/** verify a peer's certificate */
 	TASK_IKE_VERIFY_PEER_CERT,
+	/** synchronize message IDs, RFC6311 */
+	TASK_IKE_MID_SYNC,
 	/** delete an IKE_SA */
 	TASK_IKE_DELETE,
 	/** liveness check */

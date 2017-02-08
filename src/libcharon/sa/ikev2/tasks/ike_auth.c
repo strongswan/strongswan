@@ -417,6 +417,9 @@ METHOD(task_t, build_i, status_t,
 		/* indicate support for EAP-only authentication */
 		message->add_notify(message, FALSE, EAP_ONLY_AUTHENTICATION,
 							chunk_empty);
+		/* indicate support for RFC 6311 Message ID synchronization */
+		message->add_notify(message, FALSE, IKEV2_MESSAGE_ID_SYNC_SUPPORTED,
+							chunk_empty);
 	}
 
 	if (!this->do_another_auth && !this->my_auth)
@@ -991,6 +994,10 @@ METHOD(task_t, process_i, status_t,
 					{
 						DBG1(DBG_IKE, "received invalid REDIRECT notify");
 					}
+					break;
+				case IKEV2_MESSAGE_ID_SYNC_SUPPORTED:
+					this->ike_sa->enable_extension(this->ike_sa,
+												   EXT_IKE_MESSAGE_ID_SYNC);
 					break;
 				default:
 				{
