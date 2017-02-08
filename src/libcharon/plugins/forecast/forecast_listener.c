@@ -212,7 +212,7 @@ static bool manage_pre_esp_in_udp(struct iptc_handle *ipth,
 	ADD_STRUCT(pos, struct xt_udp,
 		.spts = {
 			entry->rhost->get_port(entry->rhost),
-			entry->rhost->get_port(entry->lhost)
+			entry->rhost->get_port(entry->rhost)
 		},
 		.dpts = {
 			entry->lhost->get_port(entry->lhost),
