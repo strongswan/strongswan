@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Andreas Steffen
+ * Copyright (C) 2016-2017 Andreas Steffen
  * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -33,14 +33,16 @@ typedef struct hasher_t hasher_t;
 #include <credentials/keys/public_key.h>
 
 /**
- * Hash algorithms as defined for IKEv2 by RFC 7427
+ * Hash algorithms as defined for IKEv2
  */
 enum hash_algorithm_t {
-	HASH_IDENTITY		= 0,
+	/* RFC 7427 */
 	HASH_SHA1 			= 1,
 	HASH_SHA256			= 2,
 	HASH_SHA384			= 3,
 	HASH_SHA512			= 4,
+	/* draft-ietf-ipsecme-eddsa (RFC TBA) */
+	HASH_IDENTITY		= 5,
 	/* use private use range for algorithms not defined/permitted by RFC 7427 */
 	HASH_UNKNOWN 		= 1024,
 	HASH_MD2 			= 1025,

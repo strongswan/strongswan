@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Copyright (C) 2014-2016 Andreas Steffen
+ * Copyright (C) 2014-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -44,9 +44,9 @@ enum key_type_t {
 	KEY_ECDSA   = 2,
 	/** DSA */
 	KEY_DSA     = 3,
-	/** Ed25519 PureEdDSA instance as in draft-irtf-cfrg-eddsa */
+	/** Ed25519 PureEdDSA instance as in RFC 8032 */
 	KEY_ED25519 = 4,
-	/** Ed448   PureEdDSA instance as in draft-irtf-cfrg-eddsa */
+	/** Ed448   PureEdDSA instance as in RFC 8032 */
 	KEY_ED448   = 5,
 	/** BLISS */
 	KEY_BLISS = 6,
@@ -105,9 +105,9 @@ enum signature_scheme_t {
 	SIGN_ECDSA_384,
 	/** ECDSA on the P-521 curve with SHA-512 as in RFC 4754           */
 	SIGN_ECDSA_521,
-	/** PureEdDSA on Curve25519 as in draft-ietf-curdle-pkix           */
+	/** PureEdDSA on Curve25519 as in draft-ietf-curdle-pkix (RFC TBA) */
 	SIGN_ED25519,
-	/** PureEdDSA on Curve448 as in draft-ietf-curdle-pkix             */
+	/** PureEdDSA on Curve448 as in draft-ietf-curdle-pkix (RFC TBA)   */
 	SIGN_ED448,
 	/** BLISS with SHA-2_256                                           */
 	SIGN_BLISS_WITH_SHA2_256,
