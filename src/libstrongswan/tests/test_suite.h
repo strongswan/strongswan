@@ -39,7 +39,9 @@ typedef struct test_fixture_t test_fixture_t;
 /**
  * Default timeout for a single test function
  */
+#ifndef TEST_FUNCTION_DEFAULT_TIMEOUT
 #define TEST_FUNCTION_DEFAULT_TIMEOUT 2
+#endif
 
 /**
  * Test function implementation
