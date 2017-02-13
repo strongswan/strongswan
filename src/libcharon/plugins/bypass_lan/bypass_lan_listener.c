@@ -64,7 +64,6 @@ typedef struct {
 	private_bypass_lan_listener_t *listener;
 	host_t *net;
 	uint8_t mask;
-	char *iface;
 	child_cfg_t *cfg;
 } bypass_policy_t;
 
@@ -86,7 +85,6 @@ static void bypass_policy_destroy(bypass_policy_t *this)
 		ts->destroy(ts);
 	}
 	this->net->destroy(this->net);
-	free(this->iface);
 	free(this);
 }
 
@@ -151,16 +149,18 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 		INIT(lookup,
 			.net = net->clone(net),
 			.mask = mask,
-			.iface = strdupnull(iface),
 		);
-		seen->put(seen, lookup, lookup);
+		found = seen->put(seen, lookup, lookup);
+		if (found)
+		{	/* in case the same subnet is on multiple interfaces */
+			bypass_policy_destroy(found);
+		}
 
 		found = this->policies->get(this->policies, lookup);
 		if (!found)
 		{
 			child_cfg_create_t child = {
 				.mode = MODE_PASS,
-				.interface = iface,
 			};
 			child_cfg_t *cfg;
 			traffic_selector_t *ts;
@@ -168,7 +168,7 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 
 			ts = traffic_selector_create_from_subnet(net->clone(net), mask,
 													 0, 0, 65535);
-			snprintf(name, sizeof(name), "Bypass LAN %R [%s]", ts, iface ?: "");
+			snprintf(name, sizeof(name), "Bypass LAN %R", ts);
 
 			cfg = child_cfg_create(name, &child);
 			cfg->add_traffic_selector(cfg, FALSE, ts->clone(ts));
@@ -179,7 +179,6 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 			INIT(found,
 				.net = net->clone(net),
 				.mask = mask,
-				.iface = strdupnull(iface),
 				.cfg = cfg,
 			);
 			this->policies->put(this->policies, found, found);
