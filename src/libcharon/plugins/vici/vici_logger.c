@@ -95,6 +95,11 @@ METHOD(logger_t, log_, void,
 	private_vici_logger_t *this, debug_t group, level_t level, int thread,
 	ike_sa_t* ike_sa, const char *msg)
 {
+	if (!this->dispatcher->has_event_listeners(this->dispatcher, "log"))
+	{
+		return;
+	}
+
 	this->mutex->lock(this->mutex);
 
 	/* avoid recursive invocations by the vici subsystem */
@@ -130,6 +135,8 @@ METHOD(logger_t, log_, void,
 METHOD(logger_t, get_level, level_t,
 	private_vici_logger_t *this, debug_t group)
 {
+	/* anything higher might produce a loop as sending messages or listening
+	 * for clients might cause log messages itself */
 	return LEVEL_CTRL;
 }
 
