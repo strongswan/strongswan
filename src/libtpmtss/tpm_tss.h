@@ -120,6 +120,21 @@ struct tpm_tss_t {
 				  tpm_tss_quote_info_t **quote_info, chunk_t *quote_sig);
 
 	/**
+	 * Do a signature over a data hash using a TPM key handle (TPM 2.0 only)
+	 *
+	 * @param handle		object handle of TPM key to be used for signature
+	 * @param hierarchy		hierarchy the TPM key object is attached to
+	 * @param scheme		scheme to be used for signature
+	 * @param data			data to be hashed and signed
+	 * @param pin			PIN code or empty chunk
+	 * @param signature		returns signature
+	 * @return				TRUE if signature succeeded
+	 */
+	bool (*sign)(tpm_tss_t *this, uint32_t hierarchy, uint32_t handle,
+				 signature_scheme_t scheme, chunk_t data, chunk_t pin,
+				 chunk_t *signature);
+
+	/**
 	 * Destroy a tpm_tss_t.
 	 */
 	void (*destroy)(tpm_tss_t *this);

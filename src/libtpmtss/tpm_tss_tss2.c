@@ -317,16 +317,9 @@ bool read_public(private_tpm_tss_tss2_t *this, TPMI_DH_OBJECT handle,
 	sessions_data.rspAuths = &session_data_array[0];
 	sessions_data.rspAuthsCount = 1;
 
-	/* always send simulator platform command, ignored by true RM */
-	PlatformCommand(this->tcti_context ,MS_SIM_POWER_ON );
-	PlatformCommand(this->tcti_context, MS_SIM_NV_ON );
-
 	/* read public key for a given object handle from TPM 2.0 NVRAM */
 	rval = Tss2_Sys_ReadPublic(this->sys_context, handle, 0, public, &name,
 							   &qualified_name, &sessions_data);
-
-	PlatformCommand(this->tcti_context, MS_SIM_POWER_OFF);
-
 	if (rval != TPM_RC_SUCCESS)
 	{
 		DBG1(DBG_PTS, "%s could not read public key from handle 0x%08x: 0x%06x",
@@ -646,6 +639,196 @@ METHOD(tpm_tss_t, quote, bool,
 	return TRUE;
 }
 
+METHOD(tpm_tss_t, sign, bool,
+	private_tpm_tss_tss2_t *this, uint32_t hierarchy, uint32_t handle,
+	signature_scheme_t scheme, chunk_t data, chunk_t pin, chunk_t *signature)
+{
+	key_type_t key_type;
+	hash_algorithm_t hash_alg;
+	uint32_t rval;
+
+	TPM_ALG_ID alg_id;
+	TPM2B_MAX_BUFFER buffer;
+	TPM2B_DIGEST hash = { { sizeof(TPM2B_DIGEST)-2, } };
+	TPMT_TK_HASHCHECK validation;
+	TPM2B_PUBLIC public = { { 0, } };
+	TPMT_SIG_SCHEME sig_scheme;
+	TPMT_SIGNATURE sig;
+	TPMS_AUTH_COMMAND  session_data_cmd;
+	TPMS_AUTH_RESPONSE session_data_rsp;
+	TSS2_SYS_CMD_AUTHS sessions_data_cmd;
+	TSS2_SYS_RSP_AUTHS sessions_data_rsp;
+	TPMS_AUTH_COMMAND  *session_data_cmd_array[1];
+	TPMS_AUTH_RESPONSE *session_data_rsp_array[1];
+
+	session_data_cmd_array[0] = &session_data_cmd;
+	session_data_rsp_array[0] = &session_data_rsp;
+
+	sessions_data_cmd.cmdAuths = &session_data_cmd_array[0];
+	sessions_data_rsp.rspAuths = &session_data_rsp_array[0];
+
+	sessions_data_cmd.cmdAuthsCount = 1;
+	sessions_data_rsp.rspAuthsCount = 1;
+
+	session_data_cmd.sessionHandle = TPM_RS_PW;
+	session_data_cmd.nonce.t.size = 0;
+	session_data_cmd.hmac.t.size = 0;
+
+	if (pin.len > 0)
+	{
+		session_data_cmd.hmac.t.size = min(sizeof(session_data_cmd.hmac.t) - 2,
+										   pin.len);
+		memcpy(session_data_cmd.hmac.t.buffer, pin.ptr,
+			   session_data_cmd.hmac.t.size);
+	}
+	*( (uint8_t *)((void *)&session_data_cmd.sessionAttributes ) ) = 0;
+
+	key_type = key_type_from_signature_scheme(scheme);
+	hash_alg = hasher_from_signature_scheme(scheme);
+
+	/* Check if hash algorithm is supported by TPM */
+	alg_id = hash_alg_to_tpm_alg_id(hash_alg);
+	if (!is_supported_alg(this, alg_id))
+	{
+		DBG1(DBG_PTS, "%s %N hash algorithm not supported by TPM",
+			 LABEL, hash_algorithm_short_names, hash_alg);
+		return FALSE;
+	}
+
+	/* Get public key */
+	if (!read_public(this, handle, &public))
+	{
+		return FALSE;
+	}
+
+	if (key_type == KEY_RSA && public.t.publicArea.type == TPM_ALG_RSA)
+	{
+		sig_scheme.scheme = TPM_ALG_RSASSA;
+		sig_scheme.details.rsassa.hashAlg = alg_id;
+	}
+	else if (key_type == KEY_ECDSA && public.t.publicArea.type == TPM_ALG_ECC)
+	{
+		sig_scheme.scheme = TPM_ALG_ECDSA;
+		sig_scheme.details.ecdsa.hashAlg = alg_id;
+
+	}
+	else
+	{
+		DBG1(DBG_PTS, "%s signature scheme %N not supported by TPM key",
+			 LABEL, signature_scheme_names, scheme);
+		return FALSE;
+	}
+
+	if (data.len <= MAX_DIGEST_BUFFER)
+	{
+		memcpy(buffer.t.buffer, data.ptr, data.len);
+		buffer.t.size = data.len;
+
+		rval = Tss2_Sys_Hash(this->sys_context, 0, &buffer, alg_id, hierarchy,
+							 &hash, &validation, 0);
+		if (rval != TPM_RC_SUCCESS)
+		{
+			DBG1(DBG_PTS,"%s Tss2_Sys_Hash failed: 0x%06x", LABEL, rval);
+			return FALSE;
+		}
+	}
+	else
+	{
+	    TPMI_DH_OBJECT sequence_handle;
+	    TPM2B_AUTH null_auth;
+
+		null_auth.t.size = 0;
+		rval = Tss2_Sys_HashSequenceStart(this->sys_context, 0, &null_auth,
+										  alg_id, &sequence_handle, 0);
+		if (rval != TPM_RC_SUCCESS)
+		{
+			DBG1(DBG_PTS,"%s Tss2_Sys_HashSequenceStart failed: 0x%06x",
+				 LABEL, rval);
+			return FALSE;
+		}
+
+		while (data.len > 0)
+		{
+			buffer.t.size = min(data.len, MAX_DIGEST_BUFFER);
+			memcpy(buffer.t.buffer, data.ptr, buffer.t.size);
+			data.ptr += buffer.t.size;
+			data.len -= buffer.t.size;
+
+			rval = Tss2_Sys_SequenceUpdate(this->sys_context, sequence_handle,
+										   &sessions_data_cmd, &buffer, 0);
+			if (rval != TPM_RC_SUCCESS)
+			{
+				DBG1(DBG_PTS,"%s Tss2_Sys_SequenceUpdate failed: 0x%06x",
+					 LABEL, rval);
+				return FALSE;
+			}
+		}
+		buffer.t.size = 0;
+
+		rval = Tss2_Sys_SequenceComplete(this->sys_context, sequence_handle,
+										 &sessions_data_cmd, &buffer, hierarchy,
+										 &hash, &validation, 0);
+		if (rval != TPM_RC_SUCCESS)
+		{
+			DBG1(DBG_PTS,"%s Tss2_Sys_SequenceComplete failed: 0x%06x",
+				 LABEL, rval);
+			return FALSE;
+		}
+	}
+
+	rval = Tss2_Sys_Sign(this->sys_context, handle, &sessions_data_cmd, &hash,
+						 &sig_scheme, &validation, &sig, &sessions_data_rsp);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS,"%s Tss2_Sys_Sign failed: 0x%06x", LABEL, rval);
+		return FALSE;
+	}
+
+	/* extract signature */
+	switch (scheme)
+	{
+		case SIGN_RSA_EMSA_PKCS1_SHA1:
+		case SIGN_RSA_EMSA_PKCS1_SHA2_256:
+		case SIGN_RSA_EMSA_PKCS1_SHA2_384:
+		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
+			*signature = chunk_clone(
+							chunk_create(
+								sig.signature.rsassa.sig.t.buffer,
+								sig.signature.rsassa.sig.t.size));
+			break;
+		case SIGN_ECDSA_256:
+		case SIGN_ECDSA_384:
+		case SIGN_ECDSA_521:
+			*signature = chunk_cat("cc",
+							chunk_create(
+								sig.signature.ecdsa.signatureR.t.buffer,
+								sig.signature.ecdsa.signatureR.t.size),
+							chunk_create(
+								sig.signature.ecdsa.signatureS.t.buffer,
+								sig.signature.ecdsa.signatureS.t.size));
+			break;
+		case SIGN_ECDSA_WITH_SHA256_DER:
+		case SIGN_ECDSA_WITH_SHA384_DER:
+		case SIGN_ECDSA_WITH_SHA512_DER:
+			*signature = asn1_wrap(ASN1_SEQUENCE, "mm",
+							asn1_integer("c",
+								chunk_create(
+									sig.signature.ecdsa.signatureR.t.buffer,
+									sig.signature.ecdsa.signatureR.t.size)),
+							asn1_integer("c",
+								chunk_create(
+									sig.signature.ecdsa.signatureS.t.buffer,
+									sig.signature.ecdsa.signatureS.t.size)));
+			break;
+		default:
+			DBG1(DBG_PTS, "%s unsupported %N signature scheme",
+						   LABEL, signature_scheme_names, scheme);
+			return FALSE;
+	};
+
+	return TRUE;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_tss2_t *this)
 {
@@ -670,6 +853,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 			.read_pcr = _read_pcr,
 			.extend_pcr = _extend_pcr,
 			.quote = _quote,
+			.sign = _sign,
 			.destroy = _destroy,
 		},
 	);

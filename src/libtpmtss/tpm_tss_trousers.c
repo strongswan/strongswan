@@ -582,6 +582,13 @@ err1:
 	return success;
 }
 
+METHOD(tpm_tss_t, sign, bool,
+	private_tpm_tss_trousers_t *this, uint32_t hierarchy, uint32_t handle,
+	signature_scheme_t scheme, chunk_t data, chunk_t pin, chunk_t *signature)
+{
+	return FALSE;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_trousers_t *this)
 {
@@ -622,8 +629,9 @@ tpm_tss_t *tpm_tss_trousers_create()
 				.generate_aik = _generate_aik,
 				.get_public = _get_public,
 				.read_pcr = _read_pcr,
-				.quote = _quote,
 				.extend_pcr = _extend_pcr,
+				.quote = _quote,
+				.sign = _sign,
 				.destroy = _destroy,
 			},
 			.load_aik = _load_aik,
