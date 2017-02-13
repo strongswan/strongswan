@@ -354,6 +354,7 @@ _list-policy_ events.
 		pass = <set to yes to list bypass policies>
 		trap = <set to yes to list trap policies>
 		child = <filter by CHILD_SA configuration name>
+		ike = <filter by IKE_SA configuration name>
 	} => {
 		# completes after streaming list-sa events
 	}
@@ -775,7 +776,9 @@ The _list-policy_ event is issued to stream installed policies during an active
 _list-policies_ command.
 
 	{
-		<child-sa-config-name> = {
+		<ike-sa-config-name/child-sa-config-name> = {
+			child = <CHILD_SA configuration name>
+			ike = <IKE_SA configuration name or namespace, if available>
 			mode = <policy mode, tunnel|transport|pass|drop>
 			local-ts = [
 				<list of local traffic selectors>

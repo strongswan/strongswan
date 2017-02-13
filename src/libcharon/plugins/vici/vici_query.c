@@ -469,14 +469,19 @@ CALLBACK(list_sas, vici_message_t*,
 /**
  * Raise a list-policy event for given CHILD_SA
  */
-static void raise_policy(private_vici_query_t *this, u_int id, child_sa_t *child)
+static void raise_policy(private_vici_query_t *this, u_int id, char *ike,
+						 child_sa_t *child)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
 	vici_builder_t *b;
+	char buf[BUF_LEN];
 
 	b = vici_builder_create();
-	b->begin_section(b, child->get_name(child));
+	snprintf(buf, sizeof(buf), "%s/%s", ike, child->get_name(child));
+	b->begin_section(b, buf);
+	b->add_kv(b, "child", "%s", child->get_name(child));
+	b->add_kv(b, "ike", "%s", ike);
 
 	list_mode(b, child, NULL);
 
@@ -507,16 +512,24 @@ static void raise_policy(private_vici_query_t *this, u_int id, child_sa_t *child
 /**
  * Raise a list-policy event for given CHILD_SA config
  */
-static void raise_policy_cfg(private_vici_query_t *this, u_int id,
+static void raise_policy_cfg(private_vici_query_t *this, u_int id, char *ike,
 							 child_cfg_t *cfg)
 {
 	enumerator_t *enumerator;
 	linked_list_t *list;
 	traffic_selector_t *ts;
 	vici_builder_t *b;
+	char buf[BUF_LEN];
 
 	b = vici_builder_create();
-	b->begin_section(b, cfg->get_name(cfg));
+	snprintf(buf, sizeof(buf), "%s%s%s", ike ? ike : "", ike ? "/" : "",
+			 cfg->get_name(cfg));
+	b->begin_section(b, buf);
+	b->add_kv(b, "child", "%s", cfg->get_name(cfg));
+	if (ike)
+	{
+		b->add_kv(b, "ike", "%s", ike);
+	}
 
 	list_mode(b, NULL, cfg);
 
@@ -554,25 +567,28 @@ CALLBACK(list_policies, vici_message_t*,
 	enumerator_t *enumerator;
 	vici_builder_t *b;
 	child_sa_t *child_sa;
+	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 	bool drop, pass, trap;
-	char *child;
+	char *child, *ike, *ns;
 
 	drop = request->get_str(request, NULL, "drop") != NULL;
 	pass = request->get_str(request, NULL, "pass") != NULL;
 	trap = request->get_str(request, NULL, "trap") != NULL;
 	child = request->get_str(request, NULL, "child");
+	ike = request->get_str(request, NULL, "ike");
 
 	if (trap)
 	{
 		enumerator = charon->traps->create_enumerator(charon->traps);
-		while (enumerator->enumerate(enumerator, NULL, &child_sa))
+		while (enumerator->enumerate(enumerator, &peer_cfg, &child_sa))
 		{
-			if (child && !streq(child, child_sa->get_name(child_sa)))
+			if ((ike && !streq(ike, peer_cfg->get_name(peer_cfg))) ||
+				(child && !streq(child, child_sa->get_name(child_sa))))
 			{
 				continue;
 			}
-			raise_policy(this, id, child_sa);
+			raise_policy(this, id, peer_cfg->get_name(peer_cfg), child_sa);
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -580,9 +596,10 @@ CALLBACK(list_policies, vici_message_t*,
 	if (drop || pass)
 	{
 		enumerator = charon->shunts->create_enumerator(charon->shunts);
-		while (enumerator->enumerate(enumerator, NULL, &child_cfg))
+		while (enumerator->enumerate(enumerator, &ns, &child_cfg))
 		{
-			if (child && !streq(child, child_cfg->get_name(child_cfg)))
+			if ((ike && !streq(ike, ns)) ||
+				(child && !streq(child, child_cfg->get_name(child_cfg))))
 			{
 				continue;
 			}
@@ -591,13 +608,13 @@ CALLBACK(list_policies, vici_message_t*,
 				case MODE_DROP:
 					if (drop)
 					{
-						raise_policy_cfg(this, id, child_cfg);
+						raise_policy_cfg(this, id, ns, child_cfg);
 					}
 					break;
 				case MODE_PASS:
 					if (pass)
 					{
-						raise_policy_cfg(this, id, child_cfg);
+						raise_policy_cfg(this, id, ns, child_cfg);
 					}
 					break;
 				default:
