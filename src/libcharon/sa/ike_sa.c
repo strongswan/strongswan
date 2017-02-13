@@ -762,6 +762,10 @@ METHOD(ike_sa_t, send_dpd, status_t,
 	{
 		return INVALID_STATE;
 	}
+	if (this->version == IKEV1 && this->state == IKE_REKEYING)
+	{	/* don't send DPDs for rekeyed IKEv1 SAs */
+		return SUCCESS;
+	}
 	delay = this->peer_cfg->get_dpd(this->peer_cfg);
 	if (this->task_manager->busy(this->task_manager))
 	{
