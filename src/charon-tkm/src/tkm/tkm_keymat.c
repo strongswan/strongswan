@@ -378,7 +378,8 @@ METHOD(keymat_t, get_aead, aead_t*,
 
 METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_tkm_keymat_t *this, bool verify, chunk_t ike_sa_init,
-	chunk_t nonce, identification_t *id, char reserved[3], chunk_t *octets)
+	chunk_t nonce, identification_t *id, char reserved[3], chunk_t *octets,
+	array_t *schemes)
 {
 	sign_info_t *sign;
 
