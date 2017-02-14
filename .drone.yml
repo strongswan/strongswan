@@ -1,0 +1,12 @@
+build:
+  image: teaci/msys$$arch
+  pull: true
+  shell: mingw$$arch
+  commands:
+    - TEST=win$$arch MONOLITHIC=yes ./scripts/test.sh deps
+    - TEST=win$$arch MONOLITHIC=yes ./scripts/test.sh pydeps
+    - TEST=win$$arch MONOLITHIC=yes ./scripts/test.sh
+matrix:
+  arch:
+    - 64
+    - 32
