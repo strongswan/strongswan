@@ -22,10 +22,14 @@ import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
-public class NetworkManager extends BroadcastReceiver
+import java.util.LinkedList;
+
+public class NetworkManager extends BroadcastReceiver implements Runnable
 {
 	private final Context mContext;
-	private boolean mRegistered;
+	private volatile boolean mRegistered;
+	private Thread mEventNotifier;
+	private LinkedList<Boolean> mEvents = new LinkedList<>();
 
 	public NetworkManager(Context context)
 	{
@@ -34,12 +38,30 @@ public class NetworkManager extends BroadcastReceiver
 
 	public void Register()
 	{
+		mEvents.clear();
+		mRegistered = true;
+		mEventNotifier = new Thread(this);
+		mEventNotifier.start();
 		mContext.registerReceiver(this, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
 	}
 
 	public void Unregister()
 	{
 		mContext.unregisterReceiver(this);
+		mRegistered = false;
+		synchronized (this)
+		{
+			notifyAll();
+		}
+		try
+		{
+			mEventNotifier.join();
+			mEventNotifier = null;
+		}
+		catch (InterruptedException e)
+		{
+			e.printStackTrace();
+		}
 	}
 
 	public boolean isConnected()
@@ -56,7 +78,42 @@ public class NetworkManager extends BroadcastReceiver
 	@Override
 	public void onReceive(Context context, Intent intent)
 	{
-		networkChanged(!isConnected());
+		synchronized (this)
+		{
+			mEvents.addLast(isConnected());
+			notifyAll();
+		}
+	}
+
+	@Override
+	public void run()
+	{
+		while (mRegistered)
+		{
+			boolean connected;
+
+			synchronized (this)
+			{
+				try
+				{
+					while (mRegistered && mEvents.isEmpty())
+					{
+						wait();
+					}
+				}
+				catch (InterruptedException ex)
+				{
+					break;
+				}
+				if (!mRegistered)
+				{
+					break;
+				}
+				connected = mEvents.removeFirst();
+			}
+			/* call the native parts without holding the lock */
+			networkChanged(!connected);
+		}
 	}
 
 	/**

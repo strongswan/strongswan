@@ -123,13 +123,20 @@ static void unregister_network_manager(private_network_manager_t *this)
 METHOD(network_manager_t, remove_connectivity_cb, void,
 	private_network_manager_t *this, connectivity_cb_t cb)
 {
+	bool unregister = FALSE;
+
 	this->mutex->lock(this->mutex);
 	if (this->connectivity_cb.cb == cb)
 	{
 		this->connectivity_cb.cb = NULL;
-		unregister_network_manager(this);
+		unregister = TRUE;
 	}
 	this->mutex->unlock(this->mutex);
+	if (unregister)
+	{	/* this call blocks until a possible networkChanged call returned so
+		 * we can't hold the mutex */
+		unregister_network_manager(this);
+	}
 }
 
 METHOD(network_manager_t, is_connected, bool,
