@@ -101,6 +101,24 @@ METHOD(ipsec_policy_t, match, bool,
 			this->dst_ts->equals(this->dst_ts, dst_ts));
 }
 
+/**
+ * Match the port of the given host against the given traffic selector.
+ */
+static inline bool match_port(traffic_selector_t *ts, host_t *host)
+{
+	uint16_t from, to, port;
+
+	from = ts->get_from_port(ts);
+	to = ts->get_to_port(ts);
+	if ((from == 0 && to == 0xffff) ||
+		(from == 0xffff && to == 0))
+	{
+		return TRUE;
+	}
+	port = host->get_port(host);
+	return from <= port && port <= to;
+}
+
 METHOD(ipsec_policy_t, match_packet, bool,
 	private_ipsec_policy_t *this, ip_packet_t *packet)
 {
@@ -110,7 +128,9 @@ METHOD(ipsec_policy_t, match_packet, bool,
 
 	return (!this->protocol || this->protocol == proto) &&
 		   this->src_ts->includes(this->src_ts, src) &&
-		   this->dst_ts->includes(this->dst_ts, dst);
+		   match_port(this->src_ts, src) &&
+		   this->dst_ts->includes(this->dst_ts, dst) &&
+		   match_port(this->dst_ts, dst);
 }
 
 METHOD(ipsec_policy_t, get_source_ts, traffic_selector_t*,
