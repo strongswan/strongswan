@@ -208,13 +208,15 @@ class Session(object):
         """
         self.handler.request("unload-pool", pool_name)
 
-    def get_pools(self):
+    def get_pools(self, options):
         """Retrieve loaded pools.
 
+        :param options: filter by name and/or retrieve leases (optional)
+        :type options: dict
         :return: loaded pools
         :rtype: dict
         """
-        return self.handler.request("get-pools")
+        return self.handler.request("get-pools", options)
 
     def listen(self, event_types):
         """Register and listen for the given events.

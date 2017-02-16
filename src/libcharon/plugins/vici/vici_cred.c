@@ -1,9 +1,11 @@
 /*
+ * Copyright (C) 2015-2016 Andreas Steffen
+ * Copyright (C) 2016 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2015-2016 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -53,6 +55,11 @@ struct private_vici_cred_t {
 	 * credentials
 	 */
 	mem_cred_t *creds;
+
+	/**
+	 * separate credential set for token PINs
+	 */
+	mem_cred_t *pins;
 
 	/**
 	 * cache CRLs to disk?
@@ -249,6 +256,139 @@ CALLBACK(load_key, vici_message_t*,
 	return create_reply(NULL);
 }
 
+CALLBACK(unload_key, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	chunk_t keyid;
+	char buf[BUF_LEN], *hex, *msg = NULL;
+
+	hex = message->get_str(message, NULL, "id");
+	if (!hex)
+	{
+		return create_reply("key id missing");
+	}
+	keyid = chunk_from_hex(chunk_from_str(hex), NULL);
+	snprintf(buf, sizeof(buf), "%+B", &keyid);
+	DBG1(DBG_CFG, "unloaded private key with id %s", buf);
+	if (this->creds->remove_key(this->creds, keyid))
+	{	/* also remove any potential PIN associated with this id */
+		this->pins->remove_shared_unique(this->pins, buf);
+	}
+	else
+	{
+		msg = "key not found";
+	}
+	chunk_free(&keyid);
+	return create_reply(msg);
+}
+
+CALLBACK(get_keys, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	vici_builder_t *builder;
+	enumerator_t *enumerator;
+	private_key_t *private;
+	chunk_t keyid;
+
+	builder = vici_builder_create();
+	builder->begin_list(builder, "keys");
+
+	enumerator = this->creds->set.create_private_enumerator(&this->creds->set,
+															KEY_ANY, NULL);
+	while (enumerator->enumerate(enumerator, &private))
+	{
+		if (private->get_fingerprint(private, KEYID_PUBKEY_SHA1, &keyid))
+		{
+			builder->add_li(builder, "%+B", &keyid);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	builder->end_list(builder);
+	return builder->finalize(builder);
+}
+
+CALLBACK(load_token, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	vici_builder_t *builder;
+	private_key_t *key;
+	shared_key_t *shared = NULL;
+	identification_t *owner;
+	mem_cred_t *set = NULL;
+	chunk_t handle, fp;
+	char buf[BUF_LEN], *hex, *module, *pin, *unique = NULL;
+	int slot;
+
+	hex = message->get_str(message, NULL, "handle");
+	if (!hex)
+	{
+		return create_reply("keyid missing");
+	}
+	handle = chunk_from_hex(chunk_from_str(hex), NULL);
+	slot = message->get_int(message, -1, "slot");
+	module = message->get_str(message, NULL, "module");
+	pin = message->get_str(message, NULL, "pin");
+
+	if (pin)
+	{	/* provide the pin in a temporary credential set to access the key */
+		shared = shared_key_create(SHARED_PIN, chunk_clone(chunk_from_str(pin)));
+		owner = identification_create_from_encoding(ID_KEY_ID, handle);
+		set = mem_cred_create();
+		set->add_shared(set, shared->get_ref(shared), owner, NULL);
+		lib->credmgr->add_local_set(lib->credmgr, &set->set, FALSE);
+	}
+	if (slot >= 0)
+	{
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+						BUILD_PKCS11_KEYID, handle,
+						BUILD_PKCS11_SLOT, slot,
+						module ? BUILD_PKCS11_MODULE : BUILD_END, module,
+						BUILD_END);
+	}
+	else
+	{
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+						BUILD_PKCS11_KEYID, handle,
+						module ? BUILD_PKCS11_MODULE : BUILD_END, module,
+						BUILD_END);
+	}
+	if (set)
+	{
+		lib->credmgr->remove_local_set(lib->credmgr, &set->set);
+		set->destroy(set);
+	}
+	if (!key)
+	{
+		chunk_free(&handle);
+		DESTROY_IF(shared);
+		return create_reply("loading private key from token failed");
+	}
+	builder = vici_builder_create();
+	builder->add_kv(builder, "success", "yes");
+	if (key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &fp))
+	{
+		snprintf(buf, sizeof(buf), "%+B", &fp);
+		builder->add_kv(builder, "id", "%s", buf);
+		unique = buf;
+	}
+	if (shared && unique)
+	{	/* use the handle as owner, but the key identifier as unique ID */
+		owner = identification_create_from_encoding(ID_KEY_ID, handle);
+		this->pins->add_shared_unique(this->pins, unique, shared,
+									linked_list_create_with_items(owner, NULL));
+	}
+	else
+	{
+		DESTROY_IF(shared);
+	}
+	DBG1(DBG_CFG, "loaded %N private key from token", key_type_names,
+		 key->get_type(key));
+	this->creds->add_key(this->creds, key);
+	chunk_free(&handle);
+	return builder->finalize(builder);
+}
+
 CALLBACK(shared_owners, bool,
 	linked_list_t *owners, vici_message_t *message, char *name, chunk_t value)
 {
@@ -271,11 +411,12 @@ CALLBACK(load_shared, vici_message_t*,
 	shared_key_type_t type;
 	linked_list_t *owners;
 	chunk_t data;
-	char *str, buf[512] = "";
+	char *unique, *str, buf[512] = "";
 	enumerator_t *enumerator;
 	identification_t *owner;
 	int len;
 
+	unique = message->get_str(message, NULL, "id");
 	str = message->get_str(message, NULL, "type");
 	if (!str)
 	{
@@ -288,6 +429,10 @@ CALLBACK(load_shared, vici_message_t*,
 	else if (strcaseeq(str, "eap") || streq(str, "xauth"))
 	{
 		type = SHARED_EAP;
+	}
+	else if (strcaseeq(str, "ntlm"))
+	{
+		type = SHARED_NT_HASH;
 	}
 	else
 	{
@@ -322,13 +467,57 @@ CALLBACK(load_shared, vici_message_t*,
 	}
 	enumerator->destroy(enumerator);
 
-	DBG1(DBG_CFG, "loaded %N shared key for: %s",
-		 shared_key_type_names, type, buf);
+	if (unique)
+	{
+		DBG1(DBG_CFG, "loaded %N shared key with id '%s' for: %s",
+			 shared_key_type_names, type, unique, buf);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "loaded %N shared key for: %s",
+			 shared_key_type_names, type, buf);
+	}
 
-	this->creds->add_shared_list(this->creds,
+	this->creds->add_shared_unique(this->creds, unique,
 						shared_key_create(type, chunk_clone(data)), owners);
 
 	return create_reply(NULL);
+}
+
+CALLBACK(unload_shared, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	char *unique;
+
+	unique = message->get_str(message, NULL, "id");
+	if (!unique)
+	{
+		return create_reply("unique identifier missing");
+	}
+	DBG1(DBG_CFG, "unloaded shared key with id '%s'", unique);
+	this->creds->remove_shared_unique(this->creds, unique);
+	return create_reply(NULL);
+}
+
+CALLBACK(get_shared, vici_message_t*,
+	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
+{
+	vici_builder_t *builder;
+	enumerator_t *enumerator;
+	char *unique;
+
+	builder = vici_builder_create();
+	builder->begin_list(builder, "keys");
+
+	enumerator = this->creds->create_unique_shared_enumerator(this->creds);
+	while (enumerator->enumerate(enumerator, &unique))
+	{
+		builder->add_li(builder, "%s", unique);
+	}
+	enumerator->destroy(enumerator);
+
+	builder->end_list(builder);
+	return builder->finalize(builder);
 }
 
 CALLBACK(clear_creds, vici_message_t*,
@@ -374,7 +563,12 @@ static void manage_commands(private_vici_cred_t *this, bool reg)
 	manage_command(this, "flush-certs", flush_certs, reg);
 	manage_command(this, "load-cert", load_cert, reg);
 	manage_command(this, "load-key", load_key, reg);
+	manage_command(this, "unload-key", unload_key, reg);
+	manage_command(this, "get-keys", get_keys, reg);
+	manage_command(this, "load-token", load_token, reg);
 	manage_command(this, "load-shared", load_shared, reg);
+	manage_command(this, "unload-shared", unload_shared, reg);
+	manage_command(this, "get-shared", get_shared, reg);
 }
 
 METHOD(vici_cred_t, add_cert, certificate_t*,
@@ -390,6 +584,8 @@ METHOD(vici_cred_t, destroy, void,
 
 	lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 	this->creds->destroy(this->creds);
+	lib->credmgr->remove_set(lib->credmgr, &this->pins->set);
+	this->pins->destroy(this->pins);
 	free(this);
 }
 
@@ -414,6 +610,7 @@ vici_cred_t *vici_cred_create(vici_dispatcher_t *dispatcher)
 		},
 		.dispatcher = dispatcher,
 		.creds = mem_cred_create(),
+		.pins = mem_cred_create(),
 	);
 
 	if (lib->settings->get_bool(lib->settings, "%s.cache_crls", FALSE, lib->ns))
@@ -422,6 +619,7 @@ vici_cred_t *vici_cred_create(vici_dispatcher_t *dispatcher)
 		DBG1(DBG_CFG, "crl caching to %s enabled", CRL_DIR);
 	}
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
+	lib->credmgr->add_set(lib->credmgr, &this->pins->set);
 
 	manage_commands(this, TRUE);
 

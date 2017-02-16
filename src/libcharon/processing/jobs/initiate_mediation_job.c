@@ -82,8 +82,25 @@ METHOD(job_t, initiate, job_requeue_t,
 
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, mediated_sa);
 
-		mediation_cfg = mediated_cfg->get_mediated_by(mediated_cfg);
-		mediation_cfg->get_ref(mediation_cfg);
+		mediation_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
+								mediated_cfg->get_mediated_by(mediated_cfg));
+		if (!mediation_cfg)
+		{
+			DBG1(DBG_IKE, "mediation connection '%s' not found, aborting",
+				 mediated_cfg->get_mediated_by(mediated_cfg));
+			mediated_cfg->destroy(mediated_cfg);
+			return JOB_REQUEUE_NONE;
+		}
+		if (!mediation_cfg->is_mediation(mediation_cfg))
+		{
+			DBG1(DBG_CFG, "connection '%s' as referred to by '%s' is no "
+				 "mediation connection, aborting",
+				 mediated_cfg->get_mediated_by(mediated_cfg),
+				 mediated_cfg->get_name(mediated_cfg));
+			mediated_cfg->destroy(mediated_cfg);
+			mediation_cfg->destroy(mediation_cfg);
+			return JOB_REQUEUE_NONE;
+		}
 
 		enumerator = mediation_cfg->create_auth_cfg_enumerator(mediation_cfg,
 															   TRUE);

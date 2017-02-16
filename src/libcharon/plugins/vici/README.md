@@ -283,11 +283,28 @@ Terminates an SA while streaming _control-log_ events.
 		loglevel = <loglevel to issue "control-log" events for>
 	} => {
 		success = <yes or no>
+		matches = <number of matched SAs>
+		terminated = <number of terminated SAs>
 		errmsg = <error string on failure or timeout>
 	}
 
 The default timeout of 0 waits indefinitely for a result, and a timeout value
 of -1 returns a result immediately.
+
+### rekey() ###
+
+Initiate the rekeying of an SA.
+
+	{
+		child = <rekey a CHILD_SA by configuration name>
+		ike = <rekey an IKE_SA by configuration name>
+		child-id = <rekey a CHILD_SA by its reqid>
+		ike-id = <rekey an IKE_SA by its unique id>
+	} => {
+		success = <yes or no>
+		matches = <number of matched SAs>
+		errmsg = <error string on failure>
+	}
 
 ### redirect() ###
 
@@ -303,6 +320,7 @@ supported by the peer.
 				   wildcards>
 	} => {
 		success = <yes or no>
+		matches = <number of matched SAs>
 		errmsg = <error string on failure>
 	}
 
@@ -312,7 +330,7 @@ Install a trap, drop or bypass policy defined by a CHILD_SA config.
 
 	{
 		child = <CHILD_SA configuration name to install>
-		ike = <optional IKE_SA configuraiton name to find child under>
+		ike = <optional IKE_SA configuration name to find child under>
 	} => {
 		success = <yes or no>
 		errmsg = <error string on failure>
@@ -324,6 +342,8 @@ Uninstall a trap, drop or bypass policy defined by a CHILD_SA config.
 
 	{
 		child = <CHILD_SA configuration name to install>
+		ike = <optional IKE_SA configuration name to find child under,
+			   if not given the first policy matching child is removed>
 	} => {
 		success = <yes or no>
 		errmsg = <error string on failure>
@@ -352,6 +372,7 @@ _list-policy_ events.
 		pass = <set to yes to list bypass policies>
 		trap = <set to yes to list trap policies>
 		child = <filter by CHILD_SA configuration name>
+		ike = <filter by IKE_SA configuration name>
 	} => {
 		# completes after streaming list-sa events
 	}
@@ -466,12 +487,53 @@ Load a private key into the daemon.
 		errmsg = <error string on failure>
 	}
 
+### unload-key() ###
+
+Unload the private key with the given key identifier.
+
+	{
+		id = <hex-encoded SHA-1 key identifier of the private key to unload>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### get-keys() ###
+
+Return a list of identifiers of private keys loaded exclusively over vici, not
+including keys found in other backends.
+
+	{} => {
+		keys = [
+			<list of hex-encoded SHA-1 key identifiers>
+		]
+	}
+
+### load-token() ###
+
+Load a private key located on a token into the daemon.  Such keys may be listed
+and unloaded using the _get-keys_ and _unload-key_ commands, respectively (based
+on the key identifier derived from the public key).
+
+	{
+		handle = <hex-encoded CKA_ID of the private key on token>
+		slot = <optional slot number>
+		module = <optional PKCS#11 module>
+		pin = <optional PIN to access the key, has to be provided via other
+			   means if not given>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+		id = <hex-encoded SHA-1 key identifier of the public key on success>
+	}
+
 ### load-shared() ###
 
 Load a shared IKE PSK, EAP or XAuth secret into the daemon.
 
 	{
-		type = <private key type, IKE|EAP|XAUTH>
+		id = <optional unique identifier of this shared key>
+		type = <shared key type, IKE|EAP|XAUTH>
 		data = <raw shared key data>
 		owners = [
 			<list of shared key owner identities>
@@ -479,6 +541,29 @@ Load a shared IKE PSK, EAP or XAuth secret into the daemon.
 	} => {
 		success = <yes or no>
 		errmsg = <error string on failure>
+	}
+
+### unload-shared() ###
+
+Unload a previously loaded shared IKE PSK, EAP or XAuth secret by its unique
+identifier.
+
+	{
+		id = <unique identifier of the shared key to unload>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### get-shared() ###
+
+Return a list of unique identifiers of shared keys loaded exclusively over vici,
+not including keys found in other backends.
+
+	{} => {
+		keys = [
+			<list of unique identifiers>
+		]
 	}
 
 ### flush-certs() ###
@@ -569,6 +654,7 @@ List the currently loaded pools.
 
 	{
 		leases = <set to yes to include leases>
+		name = <optional name of the pool to query>
 	} => {
 		<pool name>* = {
 			base = <virtual IP pool base address>
@@ -678,7 +764,8 @@ command.
 				<list of tasks currently handling passively>
 			]
 			child-sas = {
-				<child-sa-name>* = {
+				<unique child-sa-name>* = {
+					name = <name of the CHILD_SA>
 					uniqueid = <unique CHILD_SA identifier>
 					reqid = <reqid of CHILD_SA>
 					state = <state string of CHILD_SA>
@@ -726,7 +813,9 @@ The _list-policy_ event is issued to stream installed policies during an active
 _list-policies_ command.
 
 	{
-		<child-sa-config-name> = {
+		<ike-sa-config-name/child-sa-config-name> = {
+			child = <CHILD_SA configuration name>
+			ike = <IKE_SA configuration name or namespace, if available>
 			mode = <policy mode, tunnel|transport|pass|drop>
 			local-ts = [
 				<list of local traffic selectors>

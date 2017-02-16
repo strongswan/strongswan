@@ -38,6 +38,7 @@ static bool is_list_key(char *key)
 		"vips",
 		"pools",
 		"groups",
+		"cert_policy",
 	};
 	int i;
 
@@ -97,7 +98,7 @@ static void add_list_key(vici_req_t *req, char *key, char *value)
 static bool add_file_list_key(vici_req_t *req, char *key, char *value)
 {
 	enumerator_t *enumerator;
-	chunk_t *map;
+	chunk_t *map, blob;
 	char *token, buf[PATH_MAX];
 	bool ret = TRUE;
 
@@ -105,40 +106,50 @@ static bool add_file_list_key(vici_req_t *req, char *key, char *value)
 	enumerator = enumerator_create_token(value, ",", " ");
 	while (enumerator->enumerate(enumerator, &token))
 	{
-		if (!path_absolute(token))
+		if (strcasepfx(token, "0x") || strcasepfx(token, "0s"))
 		{
-			if (streq(key, "certs"))
-			{
-				snprintf(buf, sizeof(buf), "%s%s%s",
-						 SWANCTL_X509DIR, DIRECTORY_SEPARATOR, token);
-				token = buf;
-			}
-			else if (streq(key, "cacerts"))
-			{
-				snprintf(buf, sizeof(buf), "%s%s%s",
-						 SWANCTL_X509CADIR, DIRECTORY_SEPARATOR, token);
-				token = buf;
-			}
-			else if (streq(key, "pubkeys"))
-			{
-				snprintf(buf, sizeof(buf), "%s%s%s",
-						 SWANCTL_PUBKEYDIR, DIRECTORY_SEPARATOR, token);
-				token = buf;
-			}
-		}
-
-		map = chunk_map(token, FALSE);
-		if (map)
-		{
-			vici_add_list_item(req, map->ptr, map->len);
-			chunk_unmap(map);
+			blob = chunk_from_str(token + 2);
+			blob = strcasepfx(token, "0x") ? chunk_from_hex(blob, NULL)
+										   : chunk_from_base64(blob, NULL);
+			vici_add_list_item(req, blob.ptr, blob.len);
+			chunk_free(&blob);
 		}
 		else
 		{
-			fprintf(stderr, "loading %s certificate '%s' failed: %s\n",
-					key, token, strerror(errno));
-			ret = FALSE;
-			break;
+			if (!path_absolute(token))
+			{
+				if (streq(key, "certs"))
+				{
+					snprintf(buf, sizeof(buf), "%s%s%s",
+							 SWANCTL_X509DIR, DIRECTORY_SEPARATOR, token);
+					token = buf;
+				}
+				else if (streq(key, "cacerts"))
+				{
+					snprintf(buf, sizeof(buf), "%s%s%s",
+							 SWANCTL_X509CADIR, DIRECTORY_SEPARATOR, token);
+					token = buf;
+				}
+				else if (streq(key, "pubkeys"))
+				{
+					snprintf(buf, sizeof(buf), "%s%s%s",
+							 SWANCTL_PUBKEYDIR, DIRECTORY_SEPARATOR, token);
+					token = buf;
+				}
+			}
+			map = chunk_map(token, FALSE);
+			if (map)
+			{
+				vici_add_list_item(req, map->ptr, map->len);
+				chunk_unmap(map);
+			}
+			else
+			{
+				fprintf(stderr, "loading %s certificate '%s' failed: %s\n",
+						key, token, strerror(errno));
+				ret = FALSE;
+				break;
+			}
 		}
 	}
 	enumerator->destroy(enumerator);

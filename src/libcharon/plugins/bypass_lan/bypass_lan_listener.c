@@ -79,7 +79,7 @@ static void bypass_policy_destroy(bypass_policy_t *this)
 		ts = traffic_selector_create_from_subnet(this->net->clone(this->net),
 												 this->mask, 0, 0, 65535);
 		DBG1(DBG_IKE, "uninstalling bypass policy for %R", ts);
-		charon->shunts->uninstall(charon->shunts,
+		charon->shunts->uninstall(charon->shunts, "bypass-lan",
 								  this->cfg->get_name(this->cfg));
 		this->cfg->destroy(this->cfg);
 		ts->destroy(ts);
@@ -173,7 +173,7 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 			cfg = child_cfg_create(name, &child);
 			cfg->add_traffic_selector(cfg, FALSE, ts->clone(ts));
 			cfg->add_traffic_selector(cfg, TRUE, ts);
-			charon->shunts->install(charon->shunts, cfg);
+			charon->shunts->install(charon->shunts, "bypass-lan", cfg);
 			DBG1(DBG_IKE, "installed bypass policy for %R", ts);
 
 			INIT(found,

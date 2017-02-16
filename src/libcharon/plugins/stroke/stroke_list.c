@@ -603,7 +603,7 @@ METHOD(stroke_list_t, status, void,
 	/* Enumerate shunt policies */
 	first = TRUE;
 	enumerator = charon->shunts->create_enumerator(charon->shunts);
-	while (enumerator->enumerate(enumerator, &child_cfg))
+	while (enumerator->enumerate(enumerator, NULL, &child_cfg))
 	{
 		if (name && !streq(name, child_cfg->get_name(child_cfg)))
 		{

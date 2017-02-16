@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Tobias Brunner
+ * Copyright (C) 2007-2017 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -319,14 +319,14 @@ struct peer_cfg_t {
 	 *
 	 * @return				TRUE, if this is a mediation connection
 	 */
-	bool (*is_mediation) (peer_cfg_t *this);
+	bool (*is_mediation)(peer_cfg_t *this);
 
 	/**
-	 * Get peer_cfg of the connection this one is mediated through.
+	 * Get name of the connection this one is mediated through.
 	 *
-	 * @return				the peer_cfg of the mediation connection
+	 * @return				the name of the mediation connection
 	 */
-	peer_cfg_t* (*get_mediated_by) (peer_cfg_t *this);
+	char* (*get_mediated_by)(peer_cfg_t *this);
 
 	/**
 	 * Get the id of the other peer at the mediation server.
@@ -338,7 +338,7 @@ struct peer_cfg_t {
 	 *
 	 * @return				the id of the other peer
 	 */
-	identification_t* (*get_peer_id) (peer_cfg_t *this);
+	identification_t* (*get_peer_id)(peer_cfg_t *this);
 #endif /* ME */
 
 	/**
@@ -398,8 +398,8 @@ struct peer_cfg_create_t {
 #ifdef ME
 	/** TRUE if this is a mediation connection */
 	bool mediation;
-	/** peer_cfg_t of the mediation connection to mediate through (adopted) */
-	peer_cfg_t *mediated_by;
+	/** peer_cfg_t of the mediation connection to mediate through (cloned) */
+	char *mediated_by;
 	/** ID that identifies our peer at the mediation server (adopted) */
 	identification_t *peer_id;
 #endif /* ME */

@@ -8,8 +8,22 @@ strongswan-5.5.2
   draft-ietf-ipsecme-eddsa. Ed25519-based public key pairs, X.509 certificates
   and CRLs can be generated and printed by the pki tool.
 
-- In-place update of cached base and delta CRLs does no leave dozens
+- In-place update of cached base and delta CRLs does not leave dozens
   of stale copies in cache memory.
+
+- Several new features for the VICI interface and the swanctl utility: Querying
+  specific pools, enumerating and unloading keys and shared secrets, loading
+  keys and certificates from PKCS#11 tokens, the ability to initiate, install
+  and uninstall connections and policies by their exact name (if multiple child
+  sections in different connections share the same name), a command to initiate
+  the rekeying of IKE and IPsec SAs, support for settings previously only
+  supported by the old config files (plain pubkeys, dscp, certificate policies,
+  IPv6 Transport Proxy Mode, NT Hash secrets, mediation extension).
+
+  Important:  Due to issues with VICI bindings that map sub-sections to
+  dictionaries the CHILD_SA sections returned via list-sas now have a unique
+  name, the original name of a CHILD_SA is returned in the "name" key of its
+  section.
 
 
 strongswan-5.5.1

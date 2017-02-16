@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2010-2015 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2010-2016 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -87,6 +88,14 @@ struct mem_cred_t {
 	void (*add_key)(mem_cred_t *this, private_key_t *key);
 
 	/**
+	 * Remove a private key from the credential set.
+	 *
+	 * @param fp			fingerprint of the key to remove
+	 * @return				TRUE if the key was found and removed
+	 */
+	bool (*remove_key)(mem_cred_t *this, chunk_t fp);
+
+	/**
 	 * Add a shared key to the credential set.
 	 *
 	 * @param shared		shared key to add, gets owned by set
@@ -102,6 +111,33 @@ struct mem_cred_t {
 	 */
 	void (*add_shared_list)(mem_cred_t *this, shared_key_t *shared,
 							linked_list_t *owners);
+
+	/**
+	 * Add a shared key to the credential set, associated with the given unique
+	 * identifier.
+	 *
+	 * If a shared key with the same id already exists it is replaced.
+	 *
+	 * @param id			unique identifier of this key (cloned)
+	 * @param shared		shared key to add, gets owned by set
+	 * @param ...			NULL terminated list of owners (identification_t*)
+	 */
+	void (*add_shared_unique)(mem_cred_t *this, char *id, shared_key_t *shared,
+							  linked_list_t *owners);
+
+	/**
+	 * Remove a shared key by its unique identifier.
+	 *
+	 * @param id			unique identifier of this key
+	 */
+	void (*remove_shared_unique)(mem_cred_t *this, char *id);
+
+	/**
+	 * Create an enumerator over the unique identifiers of shared keys.
+	 *
+	 * @return			enumerator over char*
+	 */
+	enumerator_t *(*create_unique_shared_enumerator)(mem_cred_t *this);
 
 	/**
 	 * Add a certificate distribution point to the set.

@@ -471,15 +471,17 @@ METHOD(vici_dispatcher_t, manage_event, void,
 METHOD(vici_dispatcher_t, has_event_listeners, bool,
 	private_vici_dispatcher_t *this, char *name)
 {
+	event_t *event;
 	bool retval = FALSE;
 
 	this->mutex->lock(this->mutex);
-	if (this->events->get(this->events, name))
+	event = this->events->get(this->events, name);
+	if (event)
 	{
 		/* the entry might be getting destroyed, but returning
 		 * false positive is not a problem as a later raise_event
 		 * will check things again. */
-		retval = TRUE;
+		retval = array_count(event->clients);
 	}
 	this->mutex->unlock(this->mutex);
 

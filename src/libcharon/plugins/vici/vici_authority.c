@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2016 Tobias Brunner
  * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -199,7 +200,26 @@ typedef struct {
 typedef struct {
 	request_data_t *request;
 	authority_t *authority;
+	char *handle;
+	uint32_t slot;
+	char *module;
+	char *file;
 } load_data_t;
+
+/**
+ * Clean up data associated with an authority load
+ */
+static void free_load_data(load_data_t *data)
+{
+	if (data->authority)
+	{
+		authority_destroy(data->authority);
+	}
+	free(data->handle);
+	free(data->module);
+	free(data->file);
+	free(data);
+}
 
 /**
  * Parse a string
@@ -214,6 +234,28 @@ CALLBACK(parse_string, bool,
 	*str = strndup(v.ptr, v.len);
 
 	return TRUE;
+}
+
+/**
+ * Parse a uint32_t
+ */
+CALLBACK(parse_uint32, bool,
+	uint32_t *out, chunk_t v)
+{
+	char buf[16], *end;
+	u_long l;
+
+	if (!vici_stringify(v, buf, sizeof(buf)))
+	{
+		return FALSE;
+	}
+	l = strtoul(buf, &end, 0);
+	if (*end == 0)
+	{
+		*out = l;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
@@ -266,8 +308,12 @@ CALLBACK(authority_kv, bool,
 	load_data_t *data, vici_message_t *message, char *name, chunk_t value)
 {
 	parse_rule_t rules[] = {
-		{ "cacert",			parse_cacert, &data->authority->cert	      },
-		{ "cert_uri_base",	parse_string, &data->authority->cert_uri_base },
+		{ "cacert",			parse_cacert, &data->authority->cert			},
+		{ "file",			parse_string, &data->file						},
+		{ "handle",			parse_string, &data->handle						},
+		{ "slot",			parse_uint32, &data->slot						},
+		{ "module",			parse_string, &data->module						},
+		{ "cert_uri_base",	parse_string, &data->authority->cert_uri_base	},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
@@ -341,21 +387,60 @@ CALLBACK(authority_sn, bool,
 	linked_list_t *authorities;
 	authority_t *authority;
 	vici_cred_t *cred;
+	load_data_t *data;
+	chunk_t handle;
 
-	load_data_t data = {
+	INIT(data,
 		.request = request,
 		.authority = authority_create(name),
-	};
+		.slot = -1,
+	);
 
 	DBG2(DBG_CFG, " authority %s:", name);
 
-	if (!message->parse(message, ctx, NULL, authority_kv, authority_li, &data) ||
-		!data.authority->cert)
+	if (!message->parse(message, ctx, NULL, authority_kv, authority_li, data))
 	{
-		authority_destroy(data.authority);
+		free_load_data(data);
 		return FALSE;
 	}
-	log_authority_data(data.authority);
+	if (!data->authority->cert)
+	{
+		if (data->file)
+		{
+			data->authority->cert = lib->creds->create(lib->creds,
+										CRED_CERTIFICATE, CERT_X509,
+										BUILD_FROM_FILE, data->file, BUILD_END);
+		}
+		else if (data->handle)
+		{
+			handle = chunk_from_hex(chunk_from_str(data->handle), NULL);
+			if (data->slot != -1)
+			{
+				data->authority->cert = lib->creds->create(lib->creds,
+								CRED_CERTIFICATE, CERT_X509,
+								BUILD_PKCS11_KEYID, handle,
+								BUILD_PKCS11_SLOT, data->slot,
+								data->module ? BUILD_PKCS11_MODULE : BUILD_END,
+								data->module, BUILD_END);
+			}
+			else
+			{
+				data->authority->cert = lib->creds->create(lib->creds,
+								CRED_CERTIFICATE, CERT_X509,
+								BUILD_PKCS11_KEYID, handle,
+								data->module ? BUILD_PKCS11_MODULE : BUILD_END,
+								data->module, BUILD_END);
+			}
+			chunk_free(&handle);
+		}
+	}
+	if (!data->authority->cert)
+	{
+		request->reply = create_reply("CA certificate missing: %s", name);
+		free_load_data(data);
+		return FALSE;
+	}
+	log_authority_data(data->authority);
 
 	request->this->lock->write_lock(request->this->lock);
 
@@ -372,12 +457,14 @@ CALLBACK(authority_sn, bool,
 		}
 	}
 	enumerator->destroy(enumerator);
-	authorities->insert_last(authorities, data.authority);
+	authorities->insert_last(authorities, data->authority);
 
 	cred = request->this->cred;
-	data.authority->cert = cred->add_cert(cred, data.authority->cert);
+	data->authority->cert = cred->add_cert(cred, data->authority->cert);
+	data->authority = NULL;
 
 	request->this->lock->unlock(request->this->lock);
+	free_load_data(data);
 
 	return TRUE;
 }

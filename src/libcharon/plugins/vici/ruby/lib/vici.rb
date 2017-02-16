@@ -492,8 +492,8 @@ module Vici
 
     ##
     # Get the currently loaded pools.
-    def get_pools()
-      @transp.request("get-pools").root
+    def get_pools(options)
+      @transp.request("get-pools", Message.new(options)).root
     end
 
     ##

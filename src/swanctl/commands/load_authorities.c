@@ -86,18 +86,18 @@ static bool add_key_values(vici_req_t *req, settings_t *cfg, char *section)
 	enumerator = cfg->create_key_value_enumerator(cfg, section);
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
-		/* pool subnet is encoded as key/value, all other attributes as list */
 		if (streq(key, "cacert"))
 		{
 			ret = add_file_key_value(req, key, value);
 		}
-		else if (streq(key, "cert_uri_base"))
+		else if (streq(key, "crl_uris") ||
+				 streq(key, "ocsp_uris"))
 		{
-			vici_add_key_valuef(req, key, "%s", value);
+			add_list_key(req, key, value);
 		}
 		else
 		{
-			add_list_key(req, key, value);
+			vici_add_key_valuef(req, key, "%s", value);
 		}
 		if (!ret)
 		{

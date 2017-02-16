@@ -40,6 +40,9 @@ initiate a connection
 .B "\-t, \-\-terminate"
 terminate a connection
 .TP
+.B "\-R, \-\-rekey"
+rekey an SA
+.TP
 .B "\-d, \-\-redirect"
 redirect an IKE_SA
 .TP

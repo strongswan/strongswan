@@ -235,7 +235,7 @@ static job_requeue_t add_exclude_async(entry_t *entry)
 		enumerator->destroy(enumerator);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 
-		charon->shunts->install(charon->shunts, child_cfg);
+		charon->shunts->install(charon->shunts, "unity", child_cfg);
 		child_cfg->destroy(child_cfg);
 
 		DBG1(DBG_IKE, "installed %N bypass policy for %R",
@@ -310,7 +310,8 @@ static bool remove_exclude(private_unity_handler_t *this, chunk_t data)
 		DBG1(DBG_IKE, "uninstalling %N bypass policy for %R",
 			 configuration_attribute_type_names, UNITY_LOCAL_LAN, ts);
 		ts->destroy(ts);
-		success = charon->shunts->uninstall(charon->shunts, name) && success;
+		success = charon->shunts->uninstall(charon->shunts, "unity",
+											name) && success;
 	}
 	list->destroy(list);
 	return success;

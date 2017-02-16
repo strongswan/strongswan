@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2015-2016 Tobias Brunner
+ * Copyright (C) 2015-2017 Tobias Brunner
  * Copyright (C) 2015-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -247,6 +247,28 @@ typedef struct {
 } request_data_t;
 
 /**
+ * Certificate data
+ */
+typedef struct {
+	request_data_t *request;
+	char *handle;
+	uint32_t slot;
+	char *module;
+	char *file;
+} cert_data_t;
+
+/**
+ * Clean up certificate data
+ */
+static void free_cert_data(cert_data_t *data)
+{
+	free(data->handle);
+	free(data->module);
+	free(data->file);
+	free(data);
+}
+
+/**
  * Auth config data
  */
 typedef struct {
@@ -295,6 +317,12 @@ typedef struct {
 	uint64_t rekey_time;
 	uint64_t over_time;
 	uint64_t rand_time;
+	uint8_t dscp;
+#ifdef ME
+	bool mediation;
+	char *mediated_by;
+	identification_t *peer_id;
+#endif /* ME */
 } peer_data_t;
 
 /**
@@ -370,6 +398,7 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  send_cert = %N", cert_policy_names, data->send_cert);
 	DBG2(DBG_CFG, "  mobike = %u", data->mobike);
 	DBG2(DBG_CFG, "  aggressive = %u", data->aggressive);
+	DBG2(DBG_CFG, "  dscp = 0x%.2x", data->dscp);
 	DBG2(DBG_CFG, "  encap = %u", data->encap);
 	DBG2(DBG_CFG, "  dpd_delay = %llu", data->dpd_delay);
 	DBG2(DBG_CFG, "  dpd_timeout = %llu", data->dpd_timeout);
@@ -381,6 +410,14 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  over_time = %llu", data->over_time);
 	DBG2(DBG_CFG, "  rand_time = %llu", data->rand_time);
 	DBG2(DBG_CFG, "  proposals = %#P", data->proposals);
+#ifdef ME
+	DBG2(DBG_CFG, "  mediation = %u", data->mediation);
+	if (data->mediated_by)
+	{
+		DBG2(DBG_CFG, "  mediated_by = %s", data->mediated_by);
+		DBG2(DBG_CFG, "  mediation_peer = %Y", data->peer_id);
+	}
+#endif /* ME */
 
 	if (data->vips->get_count(data->vips))
 	{
@@ -425,6 +462,10 @@ static void free_peer_data(peer_data_t *data)
 	free(data->pools);
 	free(data->local_addrs);
 	free(data->remote_addrs);
+#ifdef ME
+	free(data->mediated_by);
+	DESTROY_IF(data->peer_id);
+#endif /* ME */
 }
 
 /**
@@ -461,7 +502,8 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   updown = %s", cfg->updown);
 	DBG2(DBG_CFG, "   hostaccess = %u", cfg->hostaccess);
 	DBG2(DBG_CFG, "   ipcomp = %u", cfg->ipcomp);
-	DBG2(DBG_CFG, "   mode = %N", ipsec_mode_names, cfg->mode);
+	DBG2(DBG_CFG, "   mode = %N%s", ipsec_mode_names, cfg->mode,
+		 cfg->proxy_mode ? "_PROXY" : "");
 	DBG2(DBG_CFG, "   policies = %u", data->policies);
 	DBG2(DBG_CFG, "   policies_fwd_out = %u", data->policies_fwd_out);
 	if (data->replay_window != REPLAY_UNDEFINED)
@@ -770,20 +812,22 @@ CALLBACK(parse_bool, bool,
  * Parse a ipsec_mode_t
  */
 CALLBACK(parse_mode, bool,
-	ipsec_mode_t *out, chunk_t v)
+	child_cfg_create_t *cfg, chunk_t v)
 {
 	enum_map_t map[] = {
-		{ "tunnel",		MODE_TUNNEL		},
-		{ "transport",	MODE_TRANSPORT	},
-		{ "beet",		MODE_BEET		},
-		{ "drop",		MODE_DROP		},
-		{ "pass",		MODE_PASS		},
+		{ "tunnel",				MODE_TUNNEL		},
+		{ "transport",			MODE_TRANSPORT	},
+		{ "transport_proxy",	MODE_TRANSPORT	},
+		{ "beet",				MODE_BEET		},
+		{ "drop",				MODE_DROP		},
+		{ "pass",				MODE_PASS		},
 	};
 	int d;
 
 	if (parse_map(map, countof(map), &d, v))
 	{
-		*out = d;
+		cfg->mode = d;
+		cfg->proxy_mode = (d == MODE_TRANSPORT) && (v.len > 9);
 		return TRUE;
 	}
 	return FALSE;
@@ -814,10 +858,9 @@ CALLBACK(parse_action, bool,
 }
 
 /**
- * Parse a uint32_t
+ * Parse a uint32_t with the given base
  */
-CALLBACK(parse_uint32, bool,
-	uint32_t *out, chunk_t v)
+static bool parse_uint32_base(uint32_t *out, chunk_t v, int base)
 {
 	char buf[16], *end;
 	u_long l;
@@ -826,13 +869,31 @@ CALLBACK(parse_uint32, bool,
 	{
 		return FALSE;
 	}
-	l = strtoul(buf, &end, 0);
+	l = strtoul(buf, &end, base);
 	if (*end == 0)
 	{
 		*out = l;
 		return TRUE;
 	}
 	return FALSE;
+}
+
+/**
+ * Parse a uint32_t
+ */
+CALLBACK(parse_uint32, bool,
+	uint32_t *out, chunk_t v)
+{
+	return parse_uint32_base(out, v, 0);
+}
+
+/**
+ * Parse a uint32_t in binary encoding
+ */
+CALLBACK(parse_uint32_bin, bool,
+	uint32_t *out, chunk_t v)
+{
+	return parse_uint32_base(out, v, 2);
 }
 
 /**
@@ -984,6 +1045,20 @@ CALLBACK(parse_tfc, bool,
 }
 
 /**
+ * Parse 6-bit DSCP value
+ */
+CALLBACK(parse_dscp, bool,
+	uint8_t *out, chunk_t v)
+{
+	if (parse_uint32_bin(out, v))
+	{
+		*out = *out & 0x3f;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Parse authentication config
  */
 CALLBACK(parse_auth, bool,
@@ -1109,27 +1184,52 @@ CALLBACK(parse_group, bool,
 }
 
 /**
+ * Parse certificate policy
+ */
+CALLBACK(parse_cert_policy, bool,
+	auth_cfg_t *cfg, chunk_t v)
+{
+	char buf[BUF_LEN];
+
+	if (!vici_stringify(v, buf, sizeof(buf)))
+	{
+		return FALSE;
+	}
+	cfg->add(cfg, AUTH_RULE_CERT_POLICY, strdup(buf));
+	return TRUE;
+}
+
+/**
+ * Add a certificate as auth rule to config
+ */
+static bool add_cert(auth_data_t *auth, auth_rule_t rule, certificate_t *cert)
+{
+	vici_authority_t *authority;
+	vici_cred_t *cred;
+
+	if (rule == AUTH_RULE_SUBJECT_CERT)
+	{
+		authority = auth->request->this->authority;
+		authority->check_for_hash_and_url(authority, cert);
+	}
+	cred = auth->request->this->cred;
+	cert = cred->add_cert(cred, cert);
+	auth->cfg->add(auth->cfg, rule, cert);
+	return TRUE;
+}
+
+/**
  * Parse a certificate; add as auth rule to config
  */
 static bool parse_cert(auth_data_t *auth, auth_rule_t rule, chunk_t v)
 {
-	vici_authority_t *authority;
-	vici_cred_t *cred;
 	certificate_t *cert;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 							  BUILD_BLOB_PEM, v, BUILD_END);
 	if (cert)
 	{
-		if (rule == AUTH_RULE_SUBJECT_CERT)
-		{
-			authority = auth->request->this->authority;
-			authority->check_for_hash_and_url(authority, cert);
-		}
-		cred = auth->request->this->cred;
-		cert = cred->add_cert(cred, cert);
-		auth->cfg->add(auth->cfg, rule, cert);
-		return TRUE;
+		return add_cert(auth, rule, cert);
 	}
 	return FALSE;
 }
@@ -1314,6 +1414,38 @@ CALLBACK(parse_hosts, bool,
 	return TRUE;
 }
 
+#ifdef ME
+/**
+ * Parse peer ID
+ */
+CALLBACK(parse_peer_id, bool,
+	identification_t **out, chunk_t v)
+{
+	char buf[BUF_LEN];
+
+	if (!vici_stringify(v, buf, sizeof(buf)))
+	{
+		return FALSE;
+	}
+	*out = identification_create_from_string(buf);
+	return TRUE;
+}
+#endif /* ME */
+
+CALLBACK(cert_kv, bool,
+	cert_data_t *cert, vici_message_t *message, char *name, chunk_t value)
+{
+	parse_rule_t rules[] = {
+		{ "handle",			parse_string,		&cert->handle				},
+		{ "slot",			parse_uint32,		&cert->slot					},
+		{ "module",			parse_string,		&cert->module				},
+		{ "file",			parse_string,		&cert->file					},
+	};
+
+	return parse_rules(rules, countof(rules), name, value,
+					   &cert->request->reply);
+}
+
 CALLBACK(child_li, bool,
 	child_data_t *child, vici_message_t *message, char *name, chunk_t value)
 {
@@ -1334,7 +1466,7 @@ CALLBACK(child_kv, bool,
 	parse_rule_t rules[] = {
 		{ "updown",				parse_string,		&child->cfg.updown					},
 		{ "hostaccess",			parse_bool,			&child->cfg.hostaccess				},
-		{ "mode",				parse_mode,			&child->cfg.mode					},
+		{ "mode",				parse_mode,			&child->cfg							},
 		{ "policies",			parse_bool,			&child->policies					},
 		{ "policies_fwd_out",	parse_bool,			&child->policies_fwd_out			},
 		{ "replay_window",		parse_uint32,		&child->replay_window				},
@@ -1369,6 +1501,7 @@ CALLBACK(auth_li, bool,
 {
 	parse_rule_t rules[] = {
 		{ "groups",			parse_group,		auth->cfg					},
+		{ "cert_policy",	parse_cert_policy,	auth						},
 		{ "certs",			parse_certs,		auth						},
 		{ "cacerts",		parse_cacerts,		auth						},
 		{ "pubkeys",		parse_pubkeys,		auth						},
@@ -1417,6 +1550,7 @@ CALLBACK(peer_kv, bool,
 		{ "version",		parse_uint32,		&peer->version				},
 		{ "aggressive",		parse_bool,			&peer->aggressive			},
 		{ "pull",			parse_bool,			&peer->pull					},
+		{ "dscp",			parse_dscp,			&peer->dscp					},
 		{ "encap",			parse_bool,			&peer->encap				},
 		{ "mobike",			parse_bool,			&peer->mobike				},
 		{ "dpd_delay",		parse_time,			&peer->dpd_delay			},
@@ -1432,10 +1566,92 @@ CALLBACK(peer_kv, bool,
 		{ "rekey_time",		parse_time,			&peer->rekey_time			},
 		{ "over_time",		parse_time,			&peer->over_time			},
 		{ "rand_time",		parse_time,			&peer->rand_time			},
+#ifdef ME
+		{ "mediation",		parse_bool,			&peer->mediation			},
+		{ "mediated_by",	parse_string,		&peer->mediated_by			},
+		{ "mediation_peer",	parse_peer_id,		&peer->peer_id				},
+#endif /* ME */
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
 					   &peer->request->reply);
+}
+
+CALLBACK(auth_sn, bool,
+	auth_data_t *auth, vici_message_t *message, vici_parse_context_t *ctx,
+	char *name)
+{
+	if (strcasepfx(name, "cert") ||
+		strcasepfx(name, "cacert"))
+	{
+		cert_data_t *data;
+		auth_rule_t rule;
+		certificate_t *cert;
+		chunk_t handle;
+
+		INIT(data,
+			.request = auth->request,
+			.slot = -1,
+		);
+
+		if (!message->parse(message, ctx, NULL, cert_kv, NULL, data))
+		{
+			free_cert_data(data);
+			return FALSE;
+		}
+		if  (!data->handle && !data->file)
+		{
+			auth->request->reply = create_reply("handle or file path missing: "
+												"%s", name);
+			free_cert_data(data);
+			return FALSE;
+		}
+		else if (data->handle && data->file)
+		{
+			auth->request->reply = create_reply("handle and file path given: "
+												"%s", name);
+			free_cert_data(data);
+			return FALSE;
+		}
+
+		if (data->file)
+		{
+			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								BUILD_FROM_FILE, data->file, BUILD_END);
+		}
+		else
+		{
+			handle = chunk_from_hex(chunk_from_str(data->handle), NULL);
+			if (data->slot != -1)
+			{
+				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+								CERT_X509, BUILD_PKCS11_KEYID, handle,
+								BUILD_PKCS11_SLOT, data->slot,
+								data->module ? BUILD_PKCS11_MODULE : BUILD_END,
+								data->module, BUILD_END);
+			}
+			else
+			{
+				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+								CERT_X509, BUILD_PKCS11_KEYID, handle,
+								data->module ? BUILD_PKCS11_MODULE : BUILD_END,
+								data->module, BUILD_END);
+			}
+			chunk_free(&handle);
+		}
+		free_cert_data(data);
+		if (!cert)
+		{
+			auth->request->reply = create_reply("unable to load certificate: "
+												"%s", name);
+			return FALSE;
+		}
+		rule = strcasepfx(name, "cert") ? AUTH_RULE_SUBJECT_CERT
+										: AUTH_RULE_CA_CERT;
+		return add_cert(auth, rule, cert);
+	}
+	auth->request->reply = create_reply("invalid section: %s", name);
+	return FALSE;
 }
 
 /**
@@ -1600,7 +1816,7 @@ CALLBACK(peer_sn, bool,
 			.cfg = auth_cfg_create(),
 		);
 
-		if (!message->parse(message, ctx, NULL, auth_kv, auth_li, auth))
+		if (!message->parse(message, ctx, auth_sn, auth_kv, auth_li, auth))
 		{
 			free_auth_data(auth);
 			return FALSE;
@@ -1703,7 +1919,8 @@ static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 			{
 				case MODE_PASS:
 				case MODE_DROP:
-					charon->shunts->install(charon->shunts, child_cfg);
+					charon->shunts->install(charon->shunts,
+									peer_cfg->get_name(peer_cfg), child_cfg);
 					break;
 				default:
 					charon->traps->install(charon->traps, peer_cfg, child_cfg,
@@ -1724,6 +1941,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 {
 	enumerator_t *enumerator, *children;
 	child_sa_t *child_sa;
+	peer_cfg_t *peer_cfg;
 	ike_sa_t *ike_sa;
 	uint32_t id = 0, others;
 	array_t *ids = NULL, *ikeids = NULL;
@@ -1811,13 +2029,15 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 			{
 				case MODE_PASS:
 				case MODE_DROP:
-					charon->shunts->uninstall(charon->shunts, name);
+					charon->shunts->uninstall(charon->shunts, peer_name, name);
 					break;
 				default:
 					enumerator = charon->traps->create_enumerator(charon->traps);
-					while (enumerator->enumerate(enumerator, NULL, &child_sa))
+					while (enumerator->enumerate(enumerator, &peer_cfg,
+												 &child_sa))
 					{
-						if (streq(name, child_sa->get_name(child_sa)))
+						if (streq(peer_name, peer_cfg->get_name(peer_cfg)) &&
+							streq(name, child_sa->get_name(child_sa)))
 						{
 							id = child_sa->get_reqid(child_sa);
 							break;
@@ -2080,12 +2300,48 @@ CALLBACK(config_sn, bool,
 		peer.rand_time = min(peer.over_time, peer.rand_time / 2);
 	}
 
+#ifdef ME
+	if (peer.mediation && peer.mediated_by)
+	{
+		DBG1(DBG_CFG, "a mediation connection cannot be a mediated connection "
+			 "at the same time, config discarded");
+		free_peer_data(&peer);
+		return FALSE;
+	}
+	if (peer.mediation)
+	{	/* force unique connections for mediation connections */
+		peer.unique = UNIQUE_REPLACE;
+	}
+	else if (peer.mediated_by)
+	{	/* fallback to remote identity of first auth round if peer_id is not
+		 * given explicitly */
+		auth_cfg_t *cfg;
+
+		if (!peer.peer_id &&
+			peer.remote->get_first(peer.remote, (void**)&cfg) == SUCCESS)
+		{
+			peer.peer_id = cfg->get(cfg, AUTH_RULE_IDENTITY);
+			if (peer.peer_id)
+			{
+				peer.peer_id = peer.peer_id->clone(peer.peer_id);
+			}
+			else
+			{
+				DBG1(DBG_CFG, "mediation peer missing for mediated connection, "
+					 "config discarded");
+				free_peer_data(&peer);
+				return FALSE;
+			}
+		}
+	}
+#endif /* ME */
+
 	log_peer_data(&peer);
 
 	ike_cfg = ike_cfg_create(peer.version, peer.send_certreq, peer.encap,
 						peer.local_addrs, peer.local_port,
 						peer.remote_addrs, peer.remote_port,
-						peer.fragmentation, 0);
+						peer.fragmentation, peer.dscp);
 
 	cfg = (peer_cfg_create_t){
 		.cert_policy = peer.send_cert,
@@ -2101,6 +2357,14 @@ CALLBACK(config_sn, bool,
 		.dpd = peer.dpd_delay,
 		.dpd_timeout = peer.dpd_timeout,
 	};
+#ifdef ME
+	cfg.mediation = peer.mediation;
+	if (peer.mediated_by)
+	{
+		cfg.mediated_by = peer.mediated_by;
+		cfg.peer_id = peer.peer_id->clone(peer.peer_id);
+	}
+#endif /* ME */
 	peer_cfg = peer_cfg_create(name, ike_cfg, &cfg);
 
 	while (peer.local->remove_first(peer.local,

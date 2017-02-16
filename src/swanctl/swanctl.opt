@@ -102,6 +102,14 @@ connections.<conn>.pull = yes
 	Push mode is currently supported for IKEv1, but not in IKEv2. It is used
 	by a few implementations only, pull mode is recommended.
 
+connections.<conn>.dscp = 000000
+	Differentiated Services Field Codepoint to set on outgoing IKE packets (six
+	binary digits).
+
+	Differentiated Services Field Codepoint to set on outgoing IKE packets for
+	this connection. The value is a six digit binary encoded string specifying
+	the Codepoint to set, as defined in RFC 2474.
+
 connections.<conn>.encap = no
 	Enforce UDP encapsulation by faking NAT-D payloads.
 
@@ -256,6 +264,30 @@ connections.<conn>.pools =
 	other configuration attributes from. Each name references a pool by name
 	from either the **pools** section or an external pool.
 
+connections.<conn>.mediation = no
+	Whether this connection is a mediation connection.
+
+	Whether this connection is a mediation connection, that is, whether this
+	connection is used to mediate other connections using the IKEv2 Mediation
+	Extension.  Mediation connections create no CHILD_SA.
+
+connections.<conn>.mediated_by =
+	The name of the connection to mediate this connection through.
+
+	The name of the connection to mediate this connection through. If given, the
+	connection will be mediated through the named mediation connection.
+	The	mediation connection must have **mediation** enabled.
+
+connections.<conn>.mediation_peer =
+	Identity under which the peer is registered at the mediation server.
+
+	Identity under which the peer is registered at the mediation server, that
+	is, the IKE identity the other end of this connection uses as its local
+	identity on its connection to the mediation server. This is the identity we
+	request the mediation server to mediate us with. Only relevant on
+	connections that set **mediated_by**. If it is not given, the remote IKE
+	identity of the first authentication round of this connection will be used.
+
 connections.<conn>.local<suffix> {}
 	Section for a local authentication round.
 
@@ -283,6 +315,34 @@ connections.<conn>.local<suffix>.certs =
 	The certificate used for authentication is selected based on the received
 	certificate request payloads. If no appropriate CA can be located, the
 	first certificate is used.
+
+connections.<conn>.local<suffix>.cert<suffix> =
+	Section for a certificate candidate to use for authentication.
+
+	Section for a certificate candidate to use for authentication. Certificates
+	in _certs_ are transmitted as binary blobs, these sections offer more
+	flexibility.
+
+connections.<conn>.local<suffix>.cert<suffix>.file =
+	Absolute path to the certificate to load.
+
+	Absolute path to the certificate to load. Passed as-is to the daemon, so it
+	must be readable by it.
+
+	Configure either this or _handle_, but not both, in one section.
+
+connections.<conn>.local<suffix>.cert<suffix>.handle =
+	Hex-encoded CKA_ID of the certificate on a token.
+
+	Hex-encoded CKA_ID of the certificate on a token.
+
+	Configure either this or _file_, but not both, in one section.
+
+connections.<conn>.local<suffix>.cert<suffix>.slot =
+	Optional slot number of the token that stores the certificate.
+
+connections.<conn>.local<suffix>.cert<suffix>.module =
+	Optional PKCS#11 module name.
 
 connections.<conn>.local<suffix>.pubkeys =
 	Comma separated list of raw public key candidates to use for authentication.
@@ -398,6 +458,12 @@ connections.<conn>.remote<suffix>.groups =
 	can be certified by different means, for example by appropriate Attribute
 	Certificates or by an AAA backend involved in the authentication.
 
+connections.<conn>.remote<suffix>.cert_policy =
+	Certificate policy OIDs the peer's certificate must have.
+
+	Comma separated list of certificate policy OIDs the peer's certificate must
+	have. OIDs are specified using the numerical dotted representation.
+
 connections.<conn>.remote<suffix>.certs =
 	Comma separated list of certificate to accept for authentication.
 
@@ -405,12 +471,68 @@ connections.<conn>.remote<suffix>.certs =
 	The certificates may use a relative path from the **swanctl** _x509_
 	directory or an absolute path.
 
+connections.<conn>.remote<suffix>.cert<suffix> =
+	Section for a certificate to accept for authentication.
+
+	Section for a certificate to accept for authentication. Certificates
+	in _certs_ are transmitted as binary blobs, these sections offer more
+	flexibility.
+
+connections.<conn>.remote<suffix>.cert<suffix>.file =
+	Absolute path to the certificate to load.
+
+	Absolute path to the certificate to load. Passed as-is to the daemon, so it
+	must be readable by it.
+
+	Configure either this or _handle_, but not both, in one section.
+
+connections.<conn>.remote<suffix>.cert<suffix>.handle =
+	Hex-encoded CKA_ID of the certificate on a token.
+
+	Hex-encoded CKA_ID of the certificate on a token.
+
+	Configure either this or _file_, but not both, in one section.
+
+connections.<conn>.remote<suffix>.cert<suffix>.slot =
+	Optional slot number of the token that stores the certificate.
+
+connections.<conn>.remote<suffix>.cert<suffix>.module =
+	Optional PKCS#11 module name.
+
 connections.<conn>.remote<suffix>.cacerts =
 	Comma separated list of CA certificates to accept for authentication.
 
 	Comma separated list of CA certificates to accept for authentication.
 	The certificates may use a relative path from the **swanctl** _x509ca_
 	directory or an absolute path.
+
+connections.<conn>.remote<suffix>.cacert<suffix> =
+	Section for a CA certificate to accept for authentication.
+
+	Section for a CA certificate to accept for authentication. Certificates
+	in _cacerts_ are transmitted as binary blobs, these sections offer more
+	flexibility.
+
+connections.<conn>.remote<suffix>.cacert<suffix>.file =
+	Absolute path to the certificate to load.
+
+	Absolute path to the certificate to load. Passed as-is to the daemon, so it
+	must be readable by it.
+
+	Configure either this or _handle_, but not both, in one section.
+
+connections.<conn>.remote<suffix>.cacert<suffix>.handle =
+	Hex-encoded CKA_ID of the CA certificate on a token.
+
+	Hex-encoded CKA_ID of the CA certificate on a token.
+
+	Configure either this or _file_, but not both, in one section.
+
+connections.<conn>.remote<suffix>.cacert<suffix>.slot =
+	Optional slot number of the token that stores the CA certificate.
+
+connections.<conn>.remote<suffix>.cacert<suffix>.module =
+	Optional PKCS#11 module name.
 
 connections.<conn>.remote<suffix>.pubkeys =
 	Comma separated list of raw public keys to accept for authentication.
@@ -640,11 +762,13 @@ connections.<conn>.children.<child>.hostaccess = yes
 	Hostaccess variable to pass to **updown** script.
 
 connections.<conn>.children.<child>.mode = tunnel
-	IPsec Mode to establish (_tunnel_, _transport_, _beet_, _pass_ or _drop_).
+	IPsec Mode to establish (_tunnel_, _transport_, _transport_proxy_, _beet_,
+	_pass_ or _drop_).
 
 	IPsec Mode to establish CHILD_SA with. _tunnel_ negotiates the CHILD_SA
-	in IPsec Tunnel Mode, whereas _transport_ uses IPsec Transport Mode. _beet_
-	is the Bound End to End Tunnel mixture mode, working with fixed inner
+	in IPsec Tunnel Mode, whereas _transport_ uses IPsec Transport Mode.
+	_transport_proxy_ signifying the special Mobile IPv6 Transport Proxy Mode.
+	_beet_ is the Bound End to End Tunnel mixture mode, working with fixed inner
 	addresses without the need to include them in each packet.
 
 	Both _transport_ and _beet_ modes are subject to mode negotiation; _tunnel_
@@ -815,6 +939,28 @@ secrets.eap<suffix>.id<suffix> =
 	be specified, each having an _id_ prefix, if a secret is shared between
 	multiple users.
 
+secrets.ntlm<suffix> { # }
+	NTLM secret section for a specific secret.
+
+	NTLM secret section for a specific secret. Each NTLM secret is defined in
+	a unique section having the _ntlm_ prefix. NTLM secrets may only be used for
+	EAP-MSCHAPv2 authentication.
+
+secrets.ntlm<suffix>.secret =
+	Value of the NTLM secret.
+
+	Value of the NTLM secret, which is the NT Hash of the actual secret, that
+	is, MD4(UTF-16LE(secret)). The resulting 16-byte value may either be given
+	as a hex encoded string with a _0x_ prefix or as a Base64 encoded string
+	with a _0s_ prefix.
+
+secrets.ntlm<suffix>.id<suffix> =
+	Identity the NTLM secret belongs to.
+
+	Identity the NTLM secret belongs to. Multiple unique identities may
+	be specified, each having an _id_ prefix, if a secret is shared between
+	multiple users.
+
 secrets.ike<suffix> { # }
 	IKE preshared secret section for a specific secret.
 
@@ -880,6 +1026,22 @@ secrets.pkcs12<suffix>.file =
 secrets.pkcs12<suffix>.secret
 	Value of decryption passphrase for PKCS#12 container.
 
+secrets.token<suffix> { # }
+	Definition for a private key that's stored on a token/smartcard.
+
+secrets.token<suffix>.handle =
+	Hex-encoded CKA_ID of the private key on the token.
+
+secrets.token<suffix>.slot =
+	Optional slot number to access the token.
+
+secrets.token<suffix>.module =
+	Optional PKCS#11 module name to access the token.
+
+secrets.token<suffix>.pin =
+	Optional PIN required to access the key on the token. If none is provided
+	the user is prompted during an interactive --load-creds call.
+
 pools { # }
 	Section defining named pools.
 
@@ -916,18 +1078,40 @@ authorities.<name> { # }
 authorities.<name>.cacert =
 	CA certificate belonging to the certification authority.
 
-	The certificates may use a relative path from the **swanctl** _x509ca_
-	directory or an absolute path.
+	CA certificate belonging to the certification authority. The certificates
+	may use a relative path from the **swanctl** _x509ca_ directory or an
+	absolute path.
+
+	Configure one of _cacert_, _file_, or _handle_ per section.
+
+authorities.<name>.file =
+	Absolute path to the certificate to load.
+
+	Absolute path to the certificate to load. Passed as-is to the daemon, so it
+	must be readable by it.
+
+	Configure one of _cacert_, _file_, or _handle_ per section.
+
+authorities.<name>.handle =
+	Hex-encoded CKA_ID of the CA certificate on a token.
+
+	Hex-encoded CKA_ID of the CA certificate on a token.
+
+	Configure one of _cacert_, _file_, or _handle_ per section.
+
+authorities.<name>.slot =
+	Optional slot number of the token that stores the CA certificate.
+
+authorities.<name>.module =
+	Optional PKCS#11 module name.
 
 authorities.<name>.crl_uris =
-	Comma-separated list of CRL distribution points
+	Comma-separated list of CRL distribution points.
 
-	Comma-separated list of CRL distribution points (ldap, http, or file URI)
+	Comma-separated list of CRL distribution points (ldap, http, or file URI).
 
 authorities.<name>.ocsp_uris =
-	Comma-separated list of OCSP URIs
-
-	Comma-separated list of OCSP URIs
+	Comma-separated list of OCSP URIs.
 
 authorities.<name>.cert_uri_base =
 	Defines the base URI for the Hash and URL feature supported by IKEv2.

@@ -642,28 +642,9 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 		/* force unique connections for mediation connections */
 		msg->add_conn.unique = 1;
 	}
-
-	if (msg->add_conn.ikeme.mediated_by)
+	else if (msg->add_conn.ikeme.mediated_by)
 	{
-		peer_cfg_t *mediated_by;
-
-		mediated_by = charon->backends->get_peer_cfg_by_name(
-							charon->backends, msg->add_conn.ikeme.mediated_by);
-		if (!mediated_by)
-		{
-			DBG1(DBG_CFG, "mediation connection '%s' not found, aborting",
-				 msg->add_conn.ikeme.mediated_by);
-			return NULL;
-		}
-		if (!mediated_by->is_mediation(mediated_by))
-		{
-			DBG1(DBG_CFG, "connection '%s' as referred to by '%s' is "
-				 "no mediation connection, aborting",
-				 msg->add_conn.ikeme.mediated_by, msg->add_conn.name);
-			mediated_by->destroy(mediated_by);
-			return NULL;
-		}
-		peer.mediated_by = mediated_by;
+		peer.mediated_by = msg->add_conn.ikeme.mediated_by;
 		if (msg->add_conn.ikeme.peerid)
 		{
 			peer.peer_id = identification_create_from_string(

@@ -93,6 +93,29 @@ static void add_mark(vici_builder_t *b, mark_t mark,
 }
 
 /**
+ * List the mode of a CHILD_SA or config
+ */
+static void list_mode(vici_builder_t *b, child_sa_t *child, child_cfg_t *cfg)
+{
+	ipsec_mode_t mode;
+	char *sub_mode = "";
+
+	if (child || cfg)
+	{
+		if (!cfg)
+		{
+			cfg = child->get_config(child);
+		}
+		mode = child ? child->get_mode(child) : cfg->get_mode(cfg);
+		if (mode == MODE_TRANSPORT && cfg->use_proxy_mode(cfg))
+		{	/* only report this if the negotiated mode is actually TRANSPORT */
+			sub_mode = "_PROXY";
+		}
+		b->add_kv(b, "mode", "%N%s", ipsec_mode_names, mode, sub_mode);
+	}
+}
+
+/**
  * List details of a CHILD_SA
  */
 static void list_child(private_vici_query_t *this, vici_builder_t *b,
@@ -105,10 +128,11 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
 
+	b->add_kv(b, "name", "%s", child->get_name(child));
 	b->add_kv(b, "uniqueid", "%u", child->get_unique_id(child));
 	b->add_kv(b, "reqid", "%u", child->get_reqid(child));
 	b->add_kv(b, "state", "%N", child_sa_state_names, child->get_state(child));
-	b->add_kv(b, "mode", "%N", ipsec_mode_names, child->get_mode(child));
+	list_mode(b, child, NULL);
 	if (child->get_state(child) == CHILD_INSTALLED ||
 		child->get_state(child) == CHILD_REKEYING ||
 		child->get_state(child) == CHILD_REKEYED)
@@ -397,6 +421,7 @@ CALLBACK(list_sas, vici_message_t*,
 	char *ike;
 	u_int ike_id;
 	bool bl;
+	char buf[BUF_LEN];
 
 	bl = request->get_str(request, NULL, "noblock") == NULL;
 	ike = request->get_str(request, NULL, "ike");
@@ -425,7 +450,9 @@ CALLBACK(list_sas, vici_message_t*,
 		csas = ike_sa->create_child_sa_enumerator(ike_sa);
 		while (csas->enumerate(csas, &child_sa))
 		{
-			b->begin_section(b, child_sa->get_name(child_sa));
+			snprintf(buf, sizeof(buf), "%s-%u", child_sa->get_name(child_sa),
+					 child_sa->get_unique_id(child_sa));
+			b->begin_section(b, buf);
 			list_child(this, b, child_sa, now);
 			b->end_section(b);
 		}
@@ -446,16 +473,21 @@ CALLBACK(list_sas, vici_message_t*,
 /**
  * Raise a list-policy event for given CHILD_SA
  */
-static void raise_policy(private_vici_query_t *this, u_int id, child_sa_t *child)
+static void raise_policy(private_vici_query_t *this, u_int id, char *ike,
+						 child_sa_t *child)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
 	vici_builder_t *b;
+	char buf[BUF_LEN];
 
 	b = vici_builder_create();
-	b->begin_section(b, child->get_name(child));
+	snprintf(buf, sizeof(buf), "%s/%s", ike, child->get_name(child));
+	b->begin_section(b, buf);
+	b->add_kv(b, "child", "%s", child->get_name(child));
+	b->add_kv(b, "ike", "%s", ike);
 
-	b->add_kv(b, "mode", "%N", ipsec_mode_names, child->get_mode(child));
+	list_mode(b, child, NULL);
 
 	b->begin_list(b, "local-ts");
 	enumerator = child->create_ts_enumerator(child, TRUE);
@@ -484,18 +516,26 @@ static void raise_policy(private_vici_query_t *this, u_int id, child_sa_t *child
 /**
  * Raise a list-policy event for given CHILD_SA config
  */
-static void raise_policy_cfg(private_vici_query_t *this, u_int id,
+static void raise_policy_cfg(private_vici_query_t *this, u_int id, char *ike,
 							 child_cfg_t *cfg)
 {
 	enumerator_t *enumerator;
 	linked_list_t *list;
 	traffic_selector_t *ts;
 	vici_builder_t *b;
+	char buf[BUF_LEN];
 
 	b = vici_builder_create();
-	b->begin_section(b, cfg->get_name(cfg));
+	snprintf(buf, sizeof(buf), "%s%s%s", ike ? ike : "", ike ? "/" : "",
+			 cfg->get_name(cfg));
+	b->begin_section(b, buf);
+	b->add_kv(b, "child", "%s", cfg->get_name(cfg));
+	if (ike)
+	{
+		b->add_kv(b, "ike", "%s", ike);
+	}
 
-	b->add_kv(b, "mode", "%N", ipsec_mode_names, cfg->get_mode(cfg));
+	list_mode(b, NULL, cfg);
 
 	b->begin_list(b, "local-ts");
 	list = cfg->get_traffic_selectors(cfg, TRUE, NULL, NULL);
@@ -531,25 +571,28 @@ CALLBACK(list_policies, vici_message_t*,
 	enumerator_t *enumerator;
 	vici_builder_t *b;
 	child_sa_t *child_sa;
+	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 	bool drop, pass, trap;
-	char *child;
+	char *child, *ike, *ns;
 
 	drop = request->get_str(request, NULL, "drop") != NULL;
 	pass = request->get_str(request, NULL, "pass") != NULL;
 	trap = request->get_str(request, NULL, "trap") != NULL;
 	child = request->get_str(request, NULL, "child");
+	ike = request->get_str(request, NULL, "ike");
 
 	if (trap)
 	{
 		enumerator = charon->traps->create_enumerator(charon->traps);
-		while (enumerator->enumerate(enumerator, NULL, &child_sa))
+		while (enumerator->enumerate(enumerator, &peer_cfg, &child_sa))
 		{
-			if (child && !streq(child, child_sa->get_name(child_sa)))
+			if ((ike && !streq(ike, peer_cfg->get_name(peer_cfg))) ||
+				(child && !streq(child, child_sa->get_name(child_sa))))
 			{
 				continue;
 			}
-			raise_policy(this, id, child_sa);
+			raise_policy(this, id, peer_cfg->get_name(peer_cfg), child_sa);
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -557,9 +600,10 @@ CALLBACK(list_policies, vici_message_t*,
 	if (drop || pass)
 	{
 		enumerator = charon->shunts->create_enumerator(charon->shunts);
-		while (enumerator->enumerate(enumerator, &child_cfg))
+		while (enumerator->enumerate(enumerator, &ns, &child_cfg))
 		{
-			if (child && !streq(child, child_cfg->get_name(child_cfg)))
+			if ((ike && !streq(ike, ns)) ||
+				(child && !streq(child, child_cfg->get_name(child_cfg))))
 			{
 				continue;
 			}
@@ -568,13 +612,13 @@ CALLBACK(list_policies, vici_message_t*,
 				case MODE_DROP:
 					if (drop)
 					{
-						raise_policy_cfg(this, id, child_cfg);
+						raise_policy_cfg(this, id, ns, child_cfg);
 					}
 					break;
 				case MODE_PASS:
 					if (pass)
 					{
-						raise_policy_cfg(this, id, child_cfg);
+						raise_policy_cfg(this, id, ns, child_cfg);
 					}
 					break;
 				default:
@@ -746,6 +790,8 @@ CALLBACK(list_conns, vici_message_t*,
 			peer_cfg->get_reauth_time(peer_cfg, FALSE));
 		b->add_kv(b, "rekey_time", "%u",
 			peer_cfg->get_rekey_time(peer_cfg, FALSE));
+		b->add_kv(b, "unique", "%N", unique_policy_names,
+			peer_cfg->get_unique_policy(peer_cfg));
 
 		build_auth_cfgs(peer_cfg, TRUE, b);
 		build_auth_cfgs(peer_cfg, FALSE, b);
@@ -757,8 +803,7 @@ CALLBACK(list_conns, vici_message_t*,
 		{
 			b->begin_section(b, child_cfg->get_name(child_cfg));
 
-			b->add_kv(b, "mode", "%N", ipsec_mode_names,
-				child_cfg->get_mode(child_cfg));
+			list_mode(b, NULL, child_cfg);
 
 			lft = child_cfg->get_lifetime(child_cfg, FALSE);
 			b->add_kv(b, "rekey_time",    "%"PRIu64, lft->time.rekey);
