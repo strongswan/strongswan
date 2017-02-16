@@ -8,6 +8,11 @@ strongswan-5.5.2
   draft-ietf-ipsecme-eddsa. Ed25519-based public key pairs, X.509 certificates
   and CRLs can be generated and printed by the pki tool.
 
+- The new "tpm" libtpmtss plugin allows to use persistent private RSA and ECDSA
+  keys bound to a TPM 2.0 for both IKE and TLS authentication. Using the
+  TPM 2.0 object handle as keyid parameter, the pki --pub tool can extract
+  the public key from the TPM thereby replacing the aikpub2 tool.
+
 - In-place update of cached base and delta CRLs does not leave dozens
   of stale copies in cache memory.
 

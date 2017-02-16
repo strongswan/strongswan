@@ -61,6 +61,10 @@ endif
 if USE_LIBTPMTSS
   deps += $(top_builddir)/src/libtpmtss/libtpmtss.la
   libs += $(DESTDIR)$(ipseclibdir)/libtpmtss.so
+if !MONOLITHIC
+  AM_CPPFLAGS += -DP_PLUGINS=\""${p_plugins}\""
+endif
+
 endif
 
 if USE_LIBTNCCS
