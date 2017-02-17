@@ -139,7 +139,7 @@ int host_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					snprintf(buffer, sizeof(buffer),
 							 "(address conversion failed)");
 				}
-				else if (spec->hash)
+				else if (spec->hash && port)
 				{
 					len = strlen(buffer);
 					snprintf(buffer + len, sizeof(buffer) - len,
