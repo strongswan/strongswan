@@ -148,9 +148,10 @@ static job_requeue_t process_inbound(private_ipsec_processor_t *this)
 				policy->destroy(policy);
 				break;
 			}
-			DBG1(DBG_ESP, "discarding inbound IP packet %H == %H due to "
-				 "policy", ip_packet->get_source(ip_packet),
-				 ip_packet->get_destination(ip_packet));
+			DBG1(DBG_ESP, "discarding inbound IP packet %#H == %#H [%hhu] due "
+				 "to policy", ip_packet->get_source(ip_packet),
+				 ip_packet->get_destination(ip_packet),
+				 ip_packet->get_next_header(ip_packet));
 			/* no matching policy found, fall-through */
 		}
 		case IPPROTO_NONE:
@@ -198,8 +199,9 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 	policy = ipsec->policies->find_by_packet(ipsec->policies, packet, FALSE, 0);
 	if (!policy)
 	{
-		DBG2(DBG_ESP, "no matching outbound IPsec policy for %H == %H",
-			 packet->get_source(packet), packet->get_destination(packet));
+		DBG2(DBG_ESP, "no matching outbound IPsec policy for %#H == %#H [%hhu]",
+			 packet->get_source(packet), packet->get_destination(packet),
+			 packet->get_next_header(packet));
 		packet->destroy(packet);
 		return JOB_REQUEUE_DIRECT;
 	}
