@@ -1,8 +1,8 @@
 # The Versatile IKE Control Interface (VICI) protocol #
 
-The vici plugin implements the server side of an IPC protocol to configure,
-monitor and control the IKE daemon charon. It uses request/response and event
-messages to communicate over a reliable stream based transport.
+The vici _[ˈvitʃi]_ plugin implements the server side of an IPC protocol to
+configure, monitor and control the IKE daemon charon. It uses request/response
+and event messages to communicate over a reliable stream based transport.
 
 ## Transport protocol ##
 
