@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Tobias Brunner
+ * Copyright (C) 2007-2017 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -82,15 +82,15 @@ struct traffic_selector_t {
 	 *					- created subset of them
 	 *					- or NULL if no match between this and other
 	 */
-	traffic_selector_t *(*get_subset)  (traffic_selector_t *this,
-										traffic_selector_t *other);
+	traffic_selector_t *(*get_subset)(traffic_selector_t *this,
+									  traffic_selector_t *other);
 
 	/**
 	 * Clone a traffic selector.
 	 *
 	 * @return			clone of it
 	 */
-	traffic_selector_t *(*clone) (traffic_selector_t *this);
+	traffic_selector_t *(*clone)(traffic_selector_t *this);
 
 	/**
 	 * Get starting address of this ts as a chunk.
@@ -99,7 +99,7 @@ struct traffic_selector_t {
 	 *
 	 * @return			chunk containing the address
 	 */
-	chunk_t (*get_from_address) (traffic_selector_t *this);
+	chunk_t (*get_from_address)(traffic_selector_t *this);
 
 	/**
 	 * Get ending address of this ts as a chunk.
@@ -108,7 +108,7 @@ struct traffic_selector_t {
 	 *
 	 * @return			chunk containing the address
 	 */
-	chunk_t (*get_to_address) (traffic_selector_t *this);
+	chunk_t (*get_to_address)(traffic_selector_t *this);
 
 	/**
 	 * Get starting port of this ts.
@@ -122,7 +122,7 @@ struct traffic_selector_t {
 	 *
 	 * @return			port
 	 */
-	uint16_t (*get_from_port) (traffic_selector_t *this);
+	uint16_t (*get_from_port)(traffic_selector_t *this);
 
 	/**
 	 * Get ending port of this ts.
@@ -136,21 +136,21 @@ struct traffic_selector_t {
 	 *
 	 * @return			port
 	 */
-	uint16_t (*get_to_port) (traffic_selector_t *this);
+	uint16_t (*get_to_port)(traffic_selector_t *this);
 
 	/**
 	 * Get the type of the traffic selector.
 	 *
 	 * @return			ts_type_t specifying the type
 	 */
-	ts_type_t (*get_type) (traffic_selector_t *this);
+	ts_type_t (*get_type)(traffic_selector_t *this);
 
 	/**
 	 * Get the protocol id of this ts.
 	 *
 	 * @return			protocol id
 	 */
-	uint8_t (*get_protocol) (traffic_selector_t *this);
+	uint8_t (*get_protocol)(traffic_selector_t *this);
 
 	/**
 	 * Check if the traffic selector is for a single host.
@@ -158,29 +158,39 @@ struct traffic_selector_t {
 	 * Traffic selector may describe the end of *-to-host tunnel. In this
 	 * case, the address range is a single address equal to the hosts
 	 * peer address.
-	 * If host is NULL, the traffic selector is checked if it is a single host,
-	 * but not a specific one.
 	 *
-	 * @param host		host_t specifying the address range
+	 * If host is specified, the traffic selector must equal that specific
+	 * IP address.  If it is not specified, TRUE is also returned for dynamic
+	 * traffic selectors.
+	 *
+	 * @param host		IP address to check for, or NULL
+	 * @return			TRUE if TS is for a single host
 	 */
-	bool (*is_host) (traffic_selector_t *this, host_t* host);
+	bool (*is_host)(traffic_selector_t *this, host_t* host);
 
 	/**
-	 * Check if a traffic selector has been created by create_dynamic().
+	 * Check if this traffic selector was created by
+	 * traffic_selector_create_dynamic() but no address has yet been set with
+	 * set_address().
 	 *
 	 * @return			TRUE if TS is dynamic
 	 */
 	bool (*is_dynamic)(traffic_selector_t *this);
 
 	/**
-	 * Update the address of a traffic selector.
+	 * Set the traffic selector to the given IP address.
 	 *
-	 * Update the address range of a traffic selector, if it is
-	 * constructed with the traffic_selector_create_dynamic().
+	 * If host is %any or %any6 the traffic selector gets set to 0.0.0.0/0 or
+	 * ::/0, respectively.
 	 *
-	 * @param host		host_t specifying the address
+	 * Checking is_host(), is_dynamic() or includes() might be appropriate
+	 * before calling this.
+	 *
+	 * is_dynamic() will return FALSE after calling this.
+	 *
+	 * @param host		target IP address
 	 */
-	void (*set_address) (traffic_selector_t *this, host_t* host);
+	void (*set_address)(traffic_selector_t *this, host_t* host);
 
 	/**
 	 * Compare two traffic selectors for equality.
@@ -188,17 +198,17 @@ struct traffic_selector_t {
 	 * @param other		ts to compare with this
 	 * @return			TRUE if equal, FALSE otherwise
 	 */
-	bool (*equals) (traffic_selector_t *this, traffic_selector_t *other);
+	bool (*equals)(traffic_selector_t *this, traffic_selector_t *other);
 
 	/**
-	 * Check if a traffic selector is contained completly in another.
+	 * Check if a traffic selector is contained completely in another.
 	 *
 	 * contains() allows to check if multiple traffic selectors are redundant.
 	 *
 	 * @param other		ts that contains this
-	 * @return			TRUE if other contains this completly, FALSE otherwise
+	 * @return			TRUE if other contains this completely, FALSE otherwise
 	 */
-	bool (*is_contained_in) (traffic_selector_t *this, traffic_selector_t *other);
+	bool (*is_contained_in)(traffic_selector_t *this, traffic_selector_t *other);
 
 	/**
 	 * Check if a specific host is included in the address range of
@@ -206,7 +216,7 @@ struct traffic_selector_t {
 	 *
 	 * @param host		the host to check
 	 */
-	bool (*includes) (traffic_selector_t *this, host_t *host);
+	bool (*includes)(traffic_selector_t *this, host_t *host);
 
 	/**
 	 * Convert a traffic selector address range to a subnet
@@ -218,7 +228,7 @@ struct traffic_selector_t {
 	 * @param mask		converted net mask
 	 * @return			TRUE if traffic selector matches exactly to the subnet
 	 */
-	bool (*to_subnet) (traffic_selector_t *this, host_t **net, uint8_t *mask);
+	bool (*to_subnet)(traffic_selector_t *this, host_t **net, uint8_t *mask);
 
 	/**
 	 * Create a hash value for the traffic selector.
@@ -231,7 +241,7 @@ struct traffic_selector_t {
 	/**
 	 * Destroys the ts object
 	 */
-	void (*destroy) (traffic_selector_t *this);
+	void (*destroy)(traffic_selector_t *this);
 };
 
 /**

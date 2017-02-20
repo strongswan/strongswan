@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2013 Tobias Brunner
+ * Copyright (C) 2007-2017 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -550,26 +550,23 @@ METHOD(traffic_selector_t, is_dynamic, bool,
 METHOD(traffic_selector_t, set_address, void,
 	private_traffic_selector_t *this, host_t *host)
 {
-	if (is_host(this, NULL))
-	{
-		this->type = host->get_family(host) == AF_INET ?
-				TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE;
+	this->type = host->get_family(host) == AF_INET ? TS_IPV4_ADDR_RANGE
+												   : TS_IPV6_ADDR_RANGE;
 
-		if (host->is_anyaddr(host))
-		{
-			memset(this->from6, 0x00, sizeof(this->from6));
-			memset(this->to6, 0xFF, sizeof(this->to6));
-			this->netbits = 0;
-		}
-		else
-		{
-			chunk_t from = host->get_address(host);
-			memcpy(this->from, from.ptr, from.len);
-			memcpy(this->to, from.ptr, from.len);
-			this->netbits = from.len * 8;
-		}
-		this->dynamic = FALSE;
+	if (host->is_anyaddr(host))
+	{
+		memset(this->from6, 0x00, sizeof(this->from6));
+		memset(this->to6, 0xFF, sizeof(this->to6));
+		this->netbits = 0;
 	}
+	else
+	{
+		chunk_t from = host->get_address(host);
+		memcpy(this->from, from.ptr, from.len);
+		memcpy(this->to, from.ptr, from.len);
+		this->netbits = from.len * 8;
+	}
+	this->dynamic = FALSE;
 }
 
 METHOD(traffic_selector_t, is_contained_in, bool,
