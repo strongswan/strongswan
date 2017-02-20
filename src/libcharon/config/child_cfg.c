@@ -306,25 +306,30 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 	{
 		e1 = this->other_ts->create_enumerator(this->other_ts);
 	}
-	/* In a first step, replace "dynamic" TS with the host list */
+	/* in a first step, replace "dynamic" TS with the host list */
 	while (e1->enumerate(e1, &ts1))
 	{
-		if (hosts && hosts->get_count(hosts) &&
-			ts1->is_dynamic(ts1))
-		{
-			e2 = hosts->create_enumerator(hosts);
-			while (e2->enumerate(e2, &host))
+		if (hosts && hosts->get_count(hosts))
+		{	/* set hosts if TS is dynamic or as initiator in transport mode */
+			bool dynamic = ts1->is_dynamic(ts1);
+			if (dynamic || (this->mode == MODE_TRANSPORT && !this->proxy_mode &&
+							!supplied))
 			{
-				ts2 = ts1->clone(ts1);
-				ts2->set_address(ts2, host);
-				derived->insert_last(derived, ts2);
+				e2 = hosts->create_enumerator(hosts);
+				while (e2->enumerate(e2, &host))
+				{
+					ts2 = ts1->clone(ts1);
+					if (dynamic || !host->is_anyaddr(host))
+					{	/* don't make regular TS larger than they were */
+						ts2->set_address(ts2, host);
+					}
+					derived->insert_last(derived, ts2);
+				}
+				e2->destroy(e2);
+				continue;
 			}
-			e2->destroy(e2);
 		}
-		else
-		{
-			derived->insert_last(derived, ts1->clone(ts1));
-		}
+		derived->insert_last(derived, ts1->clone(ts1));
 	}
 	e1->destroy(e1);
 
