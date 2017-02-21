@@ -2289,9 +2289,8 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 							chunk_from_chars(0x00,0x02)),
 						asn1_wrap(ASN1_SEQUENCE, "m", v6blocks));
 		}
-		ipAddrBlocks = asn1_wrap(ASN1_SEQUENCE, "mmm",
+		ipAddrBlocks = asn1_wrap(ASN1_SEQUENCE, "mm",
 						asn1_build_known_oid(OID_IP_ADDR_BLOCKS),
-						asn1_wrap(ASN1_BOOLEAN, "c", chunk_from_chars(0xFF)),
 						asn1_wrap(ASN1_OCTET_STRING, "m",
 							asn1_wrap(ASN1_SEQUENCE, "mm",
 								v4blocks, v6blocks)));
