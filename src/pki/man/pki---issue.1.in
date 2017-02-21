@@ -24,6 +24,7 @@ pki \-\-issue \- Issue a certificate using a CA certificate and key
 .OP \-\-ocsp uri
 .OP \-\-pathlen len
 .OP \-\-nc-permitted name
+.OP \-\-addrblock block
 .OP \-\-nc-excluded name
 .OP \-\-policy\-mapping mapping
 .OP \-\-policy\-explicit len
@@ -147,6 +148,11 @@ times.
 .TP
 .BI "\-p, \-\-pathlen " len
 Set path length constraint.
+.TP
+.BI "\-B, \-\-addrblock " block
+RFC 3779 address block to include in certificate. \fIblock\fR is either a
+CIDR subnet (such as \fI10.0.0.0/8\fR) or an arbitrary address range
+(\fI192.168.1.7-192.168.1.13\fR). Can be repeated to include multiple blocks.
 .TP
 .BI "\-n, \-\-nc-permitted " name
 Add permitted NameConstraint extension to certificate. For DNS or email
