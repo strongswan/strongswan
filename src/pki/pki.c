@@ -258,6 +258,28 @@ hash_algorithm_t get_default_digest(private_key_t *private)
 	return alg == HASH_UNKNOWN ? HASH_SHA256 : alg;
 }
 
+/*
+ * Described in header
+ */
+traffic_selector_t* parse_ts(char *str)
+{
+	ts_type_t type = TS_IPV4_ADDR_RANGE;
+	char *to, from[64];
+
+	if (strchr(str, ':'))
+	{
+		type = TS_IPV6_ADDR_RANGE;
+	}
+	to = strchr(str, '-');
+	if (to)
+	{
+		snprintf(from, sizeof(from), "%.*s", to - str, str);
+		to++;
+		return traffic_selector_create_from_string(0, type, from, 0, to, 65535);
+	}
+	return traffic_selector_create_from_cidr(str, 0, 0, 65535);
+}
+
 /**
  * Callback credential set pki uses
  */
