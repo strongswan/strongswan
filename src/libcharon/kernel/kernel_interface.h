@@ -57,6 +57,12 @@ typedef enum kernel_feature_t kernel_feature_t;
 #include <kernel/kernel_net.h>
 
 /**
+ * Default range for SPIs requested from kernels
+ */
+#define KERNEL_SPI_MIN 0xc0000000
+#define KERNEL_SPI_MAX 0xcfffffff
+
+/**
  * Bitfield of optional features a kernel backend supports.
  *
  * This feature-set is for both, kernel_ipsec_t and kernel_net_t. Each

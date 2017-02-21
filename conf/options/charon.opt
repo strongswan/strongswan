@@ -350,6 +350,12 @@ charon.signature_authentication_constraints = yes
 	certificate chain, are also used as constraints against the signature scheme
 	used by peers during IKEv2.
 
+charon.spi_min = 0xc0000000
+	The lower limit for SPIs requested from the kernel for IPsec SAs.
+
+charon.spi_max = 0xcfffffff
+	The upper limit for SPIs requested from the kernel for IPsec SAs.
+
 charon.start-scripts {}
 	Section containing a list of scripts (name = path) that are executed when
 	the daemon is started.

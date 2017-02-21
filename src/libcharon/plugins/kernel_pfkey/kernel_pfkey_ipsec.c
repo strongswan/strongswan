@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2008 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -1586,8 +1586,15 @@ METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_pfkey_ipsec_t *this, host_t *src, host_t *dst,
 	uint8_t protocol, uint32_t *spi)
 {
-	if (get_spi_internal(this, src, dst, protocol,
-						 0xc0000000, 0xcFFFFFFF, spi) != SUCCESS)
+	uint32_t spi_min, spi_max;
+
+	spi_min = lib->settings->get_int(lib->settings, "%s.spi_min",
+									 KERNEL_SPI_MIN, lib->ns);
+	spi_max = lib->settings->get_int(lib->settings, "%s.spi_max",
+									 KERNEL_SPI_MAX, lib->ns);
+
+	if (get_spi_internal(this, src, dst, protocol, min(spi_min, spi_max),
+						 max(spi_min, spi_max), spi) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to get SPI");
 		return FAILED;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -398,7 +398,18 @@ METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, uint8_t protocol,
 	uint32_t *spi)
 {
-	uint32_t spi_new;
+	uint32_t spi_min, spi_max, spi_new;
+
+	spi_min = lib->settings->get_int(lib->settings, "%s.spi_min",
+									 KERNEL_SPI_MIN, lib->ns);
+	spi_max = lib->settings->get_int(lib->settings, "%s.spi_max",
+									 KERNEL_SPI_MAX, lib->ns);
+	if (spi_min > spi_max)
+	{
+		spi_new = spi_min;
+		spi_min = spi_max;
+		spi_max = spi_new;
+	}
 
 	this->mutex->lock(this->mutex);
 	if (!this->rng)
@@ -421,6 +432,7 @@ METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 			DBG1(DBG_ESP, "failed to allocate SPI");
 			return FAILED;
 		}
+		spi_new = spi_min + spi_new % (spi_max - spi_min + 1);
 		/* make sure the SPI is valid (not in range 0-255) */
 		spi_new |= 0x00000100;
 		spi_new = htonl(spi_new);
