@@ -512,11 +512,16 @@ inline int settings_value_as_int(char *value, int def)
 {
 	int intval;
 	char *end;
+	int base = 10;
 
 	if (value)
 	{
 		errno = 0;
-		intval = strtol(value, &end, 10);
+		if (value[0] == '0' && value[1] == 'x')
+		{	/* manually detect 0x prefix as we want to avoid octal encoding */
+			base = 16;
+		}
+		intval = strtol(value, &end, base);
 		if (errno == 0 && *end == 0 && end != value)
 		{
 			return intval;
