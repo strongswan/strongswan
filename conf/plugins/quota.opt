@@ -1,0 +1,31 @@
+charon.plugins.quota.script =
+	Shell script to invoke for quota events.
+
+	This script will be called for start/stop/update events.
+	If the script returns exit code of zero the IKE_SA session is allowed to
+	continue. If it returns an error (exit code greater than zero), the session
+	is closed. If accouting feature is turned off, this script is called for
+	start/stop events without quota information, behaving more or less
+	like an additional updown plugin script hook.
+
+	The following environment variables get passed to the script:
+	_QUOTA_VERSION_: The version number of the quota plugin.
+	_QUOTA_UNIQUEID_: The IKE_SA numerical unique identifier.
+	_QUOTA_ME_: The local IP address.
+	_QUOTA_MY_ID_: The local IKE identity.
+	_QUOTA_PEER_: The remote IP address.
+	_QUOTA_PEER_ID_: The remote IKE identity.
+	_QUOTA_EVENT_: The event type can be: 'start', 'stop', or 'update'.
+	_QUOTA_BYTES_IN_: The number of bytes received for this IKE_SA session.
+	_QUOTA_PAKETS_IN_: The number of packets received for this IKE_SA session.
+	_QUOTA_BYTES_OUT_: The number of bytes send for this IKE_SA session.
+	_QUOTA_PAKETS_OUT_: The number of packets send for this IKE_SA session.
+	_QUOTA_DURATION_: The number of seconds the IKE_SA is active.
+
+charon.plugins.quota.update_interval = 0
+	Interval in seconds for update events, if 0 or not specified,
+	use the child_sa rekeing events for updates.
+
+charon.plugins.quota.accounting_requires_vip = no
+	If enabled, accounting is disabled unless an IKE_SA has at least one
+	virtual IP. Only for IKEv2, for IKEv1 a virtual IP is strictly necessary.

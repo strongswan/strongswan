@@ -201,6 +201,7 @@ ARG_ENABL_SET([ext-auth],       [enable plugin calling an external authorization
 ARG_ENABL_SET([ipseckey],       [enable IPSECKEY authentication plugin.])
 ARG_ENABL_SET([keychain],       [enables OS X Keychain Services credential set.])
 ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
+ARG_ENABL_SET([quota],          [enable QUOTA plugin.])
 ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.])
 ARG_ENABL_SET([whitelist],      [enable peer identity whitelisting plugin.])
 ARG_DISBL_SET([xauth-generic],  [disable generic XAuth backend.])
@@ -1405,6 +1406,7 @@ ADD_PLUGIN([vici],                 [c charon])
 ADD_PLUGIN([smp],                  [c charon])
 ADD_PLUGIN([sql],                  [c charon])
 ADD_PLUGIN([updown],               [c charon])
+ADD_PLUGIN([quota],                [c charon])
 ADD_PLUGIN([eap-identity],         [c charon nm cmd])
 ADD_PLUGIN([eap-sim],              [c charon])
 ADD_PLUGIN([eap-sim-file],         [c charon])
@@ -1554,6 +1556,7 @@ AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_DNSCERT, test x$dnscert = xtrue)
 AM_CONDITIONAL(USE_IPSECKEY, test x$ipseckey = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
+AM_CONDITIONAL(USE_QUOTA, test x$quota = xtrue)
 AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
@@ -1907,6 +1910,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/vici/perl/Makefile
 	src/libcharon/plugins/vici/python/Makefile
 	src/libcharon/plugins/updown/Makefile
+	src/libcharon/plugins/quota/Makefile
 	src/libcharon/plugins/dhcp/Makefile
 	src/libcharon/plugins/load_tester/Makefile
 	src/libcharon/plugins/resolve/Makefile
