@@ -33,17 +33,15 @@ struct private_addrblock_narrow_t {
 	addrblock_narrow_t public;
 };
 
-/**
- * Check if the negotiated TS list is acceptable by X509 ipAddrBlock constraints
- */
-static bool check_constraints(ike_sa_t *ike_sa, linked_list_t *list)
+static void narrow_addrblock(private_addrblock_narrow_t *this, ike_sa_t *ike_sa,
+							 linked_list_t *list)
 {
-	auth_cfg_t *auth;
-	enumerator_t *auth_enum;
 	certificate_t *cert = NULL;
+	enumerator_t *enumerator;
+	auth_cfg_t *auth;
 
-	auth_enum = ike_sa->create_auth_cfg_enumerator(ike_sa, FALSE);
-	while (auth_enum->enumerate(auth_enum, &auth))
+	enumerator = ike_sa->create_auth_cfg_enumerator(ike_sa, FALSE);
+	while (enumerator->enumerate(enumerator, &auth))
 	{
 		cert = auth->get(auth, AUTH_HELPER_SUBJECT_CERT);
 		if (cert)
@@ -51,7 +49,7 @@ static bool check_constraints(ike_sa_t *ike_sa, linked_list_t *list)
 			break;
 		}
 	}
-	auth_enum->destroy(auth_enum);
+	enumerator->destroy(enumerator);
 
 	if (cert && cert->get_type(cert) == CERT_X509)
 	{
@@ -59,53 +57,44 @@ static bool check_constraints(ike_sa_t *ike_sa, linked_list_t *list)
 
 		if (x509->get_flags(x509) & X509_IP_ADDR_BLOCKS)
 		{
-			enumerator_t *enumerator, *block_enum;
-			traffic_selector_t *ts, *block_ts;
+			traffic_selector_t *ts, *block, *subset;
+			linked_list_t *original;
+
+			original = linked_list_create();
+			while (list->remove_last(list, (void**)&ts) == SUCCESS)
+			{
+				original->insert_first(original, ts);
+			}
 
 			DBG1(DBG_IKE, "checking certificate-based traffic selector "
-						  "constraints [RFC 3779]");
-			enumerator = list->create_enumerator(list);
-			while (enumerator->enumerate(enumerator, &ts))
+				 "constraints [RFC 3779]");
+			while (original->remove_first(original, (void**)&ts) == SUCCESS)
 			{
 				bool contained = FALSE;
 
-				block_enum = x509->create_ipAddrBlock_enumerator(x509);
-				while (block_enum->enumerate(block_enum, &block_ts))
+				enumerator = x509->create_ipAddrBlock_enumerator(x509);
+				while (enumerator->enumerate(enumerator, &block))
 				{
-					if (ts->is_contained_in(ts, block_ts))
+					subset = ts->get_subset(ts, block);
+					if (subset)
 					{
 						DBG1(DBG_IKE, "  TS %R is contained in address block"
-									  " constraint %R", ts, block_ts);
+							 " constraint %R (subset %R)", ts, block, subset);
+						list->insert_last(list, subset);
 						contained = TRUE;
-						break;
 					}
 				}
-				block_enum->destroy(block_enum);
+				enumerator->destroy(enumerator);
 
 				if (!contained)
 				{
 					DBG1(DBG_IKE, "  TS %R is not contained in any"
-								  " address block constraint", ts);
-					enumerator->destroy(enumerator);
-					return FALSE;
+						 " address block constraint", ts);
 				}
+				ts->destroy(ts);
 			}
-			enumerator->destroy(enumerator);
+			original->destroy(original);
 		}
-	}
-	return TRUE;
-}
-
-/**
- * Delete all traffic selectors in a list
- */
-static void flush_ts_list(linked_list_t *list)
-{
-	traffic_selector_t *ts;
-
-	while (list->remove_last(list, (void**)&ts) == SUCCESS)
-	{
-		ts->destroy(ts);
 	}
 }
 
@@ -118,11 +107,7 @@ METHOD(listener_t, narrow, bool,
 		case NARROW_RESPONDER:
 		case NARROW_INITIATOR_POST_AUTH:
 		case NARROW_INITIATOR_POST_NOAUTH:
-			if (!check_constraints(ike_sa, remote))
-			{
-				flush_ts_list(local);
-				flush_ts_list(remote);
-			}
+			narrow_addrblock(this, ike_sa, remote);
 			break;
 		default:
 			break;
