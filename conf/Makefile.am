@@ -28,6 +28,7 @@ options = \
 	options/tnc.opt
 
 plugins = \
+	plugins/addrblock.opt \
 	plugins/android_log.opt \
 	plugins/attr.opt \
 	plugins/attr-sql.opt \

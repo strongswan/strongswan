@@ -30,12 +30,18 @@ struct private_addrblock_validator_t {
 	 * Public addrblock_validator_t interface.
 	 */
 	addrblock_validator_t public;
+
+	/**
+	 * Whether to reject subject certificates not having a addrBlock extension
+	 */
+	bool strict;
 };
 
 /**
  * Do the addrblock check for two x509 plugins
  */
-static bool check_addrblock(x509_t *subject, x509_t *issuer)
+static bool check_addrblock(private_addrblock_validator_t *this,
+							x509_t *subject, x509_t *issuer)
 {
 	bool subject_const, issuer_const, contained = TRUE;
 	enumerator_t *subject_enumerator, *issuer_enumerator;
@@ -51,7 +57,7 @@ static bool check_addrblock(x509_t *subject, x509_t *issuer)
 	if (!subject_const)
 	{
 		DBG1(DBG_CFG, "subject certficate lacks ipAddrBlocks extension");
-		return FALSE;
+		return !this->strict;
 	}
 	if (!issuer_const)
 	{
@@ -94,7 +100,7 @@ METHOD(cert_validator_t, validate, bool,
 	if (subject->get_type(subject) == CERT_X509 &&
 		issuer->get_type(issuer) == CERT_X509)
 	{
-		if (!check_addrblock((x509_t*)subject, (x509_t*)issuer))
+		if (!check_addrblock(this, (x509_t*)subject, (x509_t*)issuer))
 		{
 			lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_POLICY_VIOLATION,
 									subject);
@@ -124,6 +130,8 @@ addrblock_validator_t *addrblock_validator_create()
 			},
 			.destroy = _destroy,
 		},
+		.strict = lib->settings->get_bool(lib->settings,
+						"%s.plugins.addrblock.strict", TRUE, lib->ns),
 	);
 
 	return &this->public;
