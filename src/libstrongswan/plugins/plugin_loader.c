@@ -107,7 +107,7 @@ struct registered_feature_t {
 /**
  * Hash a registered feature
  */
-static bool registered_feature_hash(registered_feature_t *this)
+static u_int registered_feature_hash(registered_feature_t *this)
 {
 	return plugin_feature_hash(this->feature);
 }
