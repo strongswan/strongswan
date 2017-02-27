@@ -100,6 +100,8 @@ enum builder_part_t {
 	BUILD_OCSP_ACCESS_LOCATIONS,
 	/** certificate path length constraint */
 	BUILD_PATHLEN,
+	/** RFC3779 addressBlock, linked_list_t* of traffic_selector_t* */
+	BUILD_ADDRBLOCKS,
 	/** permitted X509 name constraints, linked_list_t* of identification_t* */
 	BUILD_PERMITTED_NAME_CONSTRAINTS,
 	/** excluded X509 name constraints, linked_list_t* of identification_t* */

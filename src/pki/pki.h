@@ -26,6 +26,7 @@
 #include "command.h"
 
 #include <library.h>
+#include <selectors/traffic_selector.h>
 #include <credentials/keys/private_key.h>
 
 /**
@@ -62,5 +63,13 @@ void set_file_mode(FILE *stream, cred_encoding_type_t enc);
  * @return			hash algorithm
  */
 hash_algorithm_t get_default_digest(private_key_t *private);
+
+/**
+ * Create a traffic selector from a CIDR or range string.
+ *
+ * @param str		input string, either a.b.c.d/e or a.b.c.d-e.f.g.h
+ * @return			traffic selector, NULL on error
+ */
+traffic_selector_t* parse_ts(char *str);
 
 #endif /** PKI_H_ @}*/

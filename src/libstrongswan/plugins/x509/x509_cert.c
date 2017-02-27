@@ -1992,6 +1992,72 @@ chunk_t x509_build_crlDistributionPoints(linked_list_t *list, int extn)
 					asn1_wrap(ASN1_SEQUENCE, "m", crlDistributionPoints)));
 }
 
+static chunk_t generate_ts(traffic_selector_t *ts)
+{
+	chunk_t from, to;
+	uint8_t minbits = 0, maxbits = 0, unused;
+	host_t *net;
+	int bit, byte;
+
+	if (ts->to_subnet(ts, &net, &minbits))
+	{
+		unused = round_up(minbits, BITS_PER_BYTE) - minbits;
+		from = asn1_wrap(ASN1_BIT_STRING, "m",
+			chunk_cat("cc", chunk_from_thing(unused),
+							chunk_create(net->get_address(net).ptr,
+										 (minbits + unused) / BITS_PER_BYTE)));
+		net->destroy(net);
+		return from;
+	}
+	net->destroy(net);
+
+	from = ts->get_from_address(ts);
+	for (byte = from.len - 1; byte >= 0; byte--)
+	{
+		if (from.ptr[byte] != 0)
+		{
+			minbits = byte * BITS_PER_BYTE + BITS_PER_BYTE;
+			for (bit = 0; bit < BITS_PER_BYTE; bit++)
+			{
+				if (from.ptr[byte] & 1 << bit)
+				{
+					break;
+				}
+				minbits--;
+			}
+			break;
+		}
+	}
+	to = ts->get_to_address(ts);
+	for (byte = to.len - 1; byte >= 0; byte--)
+	{
+		if (to.ptr[byte] != 0xFF)
+		{
+			maxbits = byte * BITS_PER_BYTE + BITS_PER_BYTE;
+			for (bit = 0; bit < BITS_PER_BYTE; bit++)
+			{
+				if ((to.ptr[byte] & 1 << bit) == 0)
+				{
+					break;
+				}
+				maxbits--;
+			}
+			break;
+		}
+	}
+	unused = round_up(minbits, BITS_PER_BYTE) - minbits;
+	from = asn1_wrap(ASN1_BIT_STRING, "m",
+			chunk_cat("cc", chunk_from_thing(unused),
+							chunk_create(from.ptr,
+										 (minbits + unused) / BITS_PER_BYTE)));
+	unused = round_up(maxbits, BITS_PER_BYTE) - maxbits;
+	to = asn1_wrap(ASN1_BIT_STRING, "m",
+			chunk_cat("cc", chunk_from_thing(unused),
+							chunk_create(to.ptr,
+										 (maxbits + unused) / BITS_PER_BYTE)));
+	return asn1_wrap(ASN1_SEQUENCE, "mm", from, to);
+}
+
 /**
  * Generate and sign a new certificate
  */
@@ -2008,6 +2074,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
 	chunk_t policyConstraints = chunk_empty, inhibitAnyPolicy = chunk_empty;
 	chunk_t ikeIntermediate = chunk_empty, msSmartcardLogon = chunk_empty;
+	chunk_t ipAddrBlocks = chunk_empty;
 	identification_t *issuer, *subject;
 	chunk_t key_info;
 	signature_scheme_t scheme;
@@ -2184,6 +2251,52 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		}
 	}
 
+	if (cert->ipAddrBlocks->get_count(cert->ipAddrBlocks))
+	{
+		chunk_t v4blocks = chunk_empty, v6blocks = chunk_empty, block;
+		traffic_selector_t *ts;
+
+		enumerator = cert->ipAddrBlocks->create_enumerator(cert->ipAddrBlocks);
+		while (enumerator->enumerate(enumerator, &ts))
+		{
+			switch (ts->get_type(ts))
+			{
+				case TS_IPV4_ADDR_RANGE:
+					block = generate_ts(ts);
+					v4blocks = chunk_cat("mm", v4blocks, block);
+					break;
+				case TS_IPV6_ADDR_RANGE:
+					block = generate_ts(ts);
+					v6blocks = chunk_cat("mm", v6blocks, block);
+					break;
+				default:
+					break;
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (v4blocks.ptr)
+		{
+			v4blocks = asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_wrap(ASN1_OCTET_STRING, "c",
+							chunk_from_chars(0x00,0x01)),
+						asn1_wrap(ASN1_SEQUENCE, "m", v4blocks));
+		}
+		if (v6blocks.ptr)
+		{
+			v6blocks = asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_wrap(ASN1_OCTET_STRING, "c",
+							chunk_from_chars(0x00,0x02)),
+						asn1_wrap(ASN1_SEQUENCE, "m", v6blocks));
+		}
+		ipAddrBlocks = asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_build_known_oid(OID_IP_ADDR_BLOCKS),
+						asn1_wrap(ASN1_OCTET_STRING, "m",
+							asn1_wrap(ASN1_SEQUENCE, "mm",
+								v4blocks, v6blocks)));
+		cert->flags |= X509_IP_ADDR_BLOCKS;
+	}
+
 	if (cert->permitted_names->get_count(cert->permitted_names) ||
 		cert->excluded_names->get_count(cert->excluded_names))
 	{
@@ -2321,15 +2434,16 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	}
 
 	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr ||
-		crlDistributionPoints.ptr || nameConstraints.ptr)
+		crlDistributionPoints.ptr || nameConstraints.ptr || ipAddrBlocks.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
-						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmmmmmmm",
+						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmmmmmmmm",
 							basicConstraints, keyUsage, subjectKeyIdentifier,
 							authKeyIdentifier, subjectAltNames,
 							extendedKeyUsage, crlDistributionPoints,
 							authorityInfoAccess, nameConstraints, certPolicies,
-							policyMappings, policyConstraints, inhibitAnyPolicy));
+							policyMappings, policyConstraints, inhibitAnyPolicy,
+							ipAddrBlocks));
 	}
 
 	cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
@@ -2492,6 +2606,22 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				cert->pathLenConstraint = (constraint < 128) ?
 										   constraint : X509_NO_CONSTRAINT;
 				continue;
+			case BUILD_ADDRBLOCKS:
+			{
+				enumerator_t *enumerator;
+				traffic_selector_t *ts;
+				linked_list_t *list;
+
+				list = va_arg(args, linked_list_t*);
+				enumerator = list->create_enumerator(list);
+				while (enumerator->enumerate(enumerator, &ts))
+				{
+					cert->ipAddrBlocks->insert_last(cert->ipAddrBlocks,
+													ts->clone(ts));
+				}
+				enumerator->destroy(enumerator);
+				continue;
+			}
 			case BUILD_PERMITTED_NAME_CONSTRAINTS:
 			{
 				enumerator_t *enumerator;
