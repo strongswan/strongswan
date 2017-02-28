@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2006-2017 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
- * Copyright (C) 2006-2016 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -888,9 +888,43 @@ static void prepare_sa_cfg(private_child_sa_t *this, ipsec_sa_cfg_t *my_sa,
 }
 
 /**
- * Install 3 policies: out, in and forward
+ * Install inbound policie(s): in, fwd
  */
-static status_t install_policies_internal(private_child_sa_t *this,
+static status_t install_policies_inbound(private_child_sa_t *this,
+	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
+	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
+	ipsec_sa_cfg_t *other_sa, policy_type_t type,
+	policy_priority_t priority,	uint32_t manual_prio)
+{
+	kernel_ipsec_policy_id_t in_id = {
+		.dir = POLICY_IN,
+		.src_ts = other_ts,
+		.dst_ts = my_ts,
+		.mark = this->mark_in,
+	};
+	kernel_ipsec_manage_policy_t in_policy = {
+		.type = type,
+		.prio = priority,
+		.manual_prio = manual_prio,
+		.src = other_addr,
+		.dst = my_addr,
+		.sa = my_sa,
+	};
+	status_t status = SUCCESS;
+
+	status |= charon->kernel->add_policy(charon->kernel, &in_id, &in_policy);
+	if (this->mode != MODE_TRANSPORT)
+	{
+		in_id.dir = POLICY_FWD;
+		status |= charon->kernel->add_policy(charon->kernel, &in_id, &in_policy);
+	}
+	return status;
+}
+
+/**
+ * Install outbound policie(s): out, [fwd]
+ */
+static status_t install_policies_outbound(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
 	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
 	ipsec_sa_cfg_t *other_sa, policy_type_t type,
@@ -902,11 +936,6 @@ static status_t install_policies_internal(private_child_sa_t *this,
 		.dst_ts = other_ts,
 		.mark = this->mark_out,
 		.interface = this->config->get_interface(this->config),
-	}, in_id = {
-		.dir = POLICY_IN,
-		.src_ts = other_ts,
-		.dst_ts = my_ts,
-		.mark = this->mark_in,
 	};
 	kernel_ipsec_manage_policy_t out_policy = {
 		.type = type,
@@ -915,23 +944,13 @@ static status_t install_policies_internal(private_child_sa_t *this,
 		.src = my_addr,
 		.dst = other_addr,
 		.sa = other_sa,
-	}, in_policy = {
-		.type = type,
-		.prio = priority,
-		.manual_prio = manual_prio,
-		.src = other_addr,
-		.dst = my_addr,
-		.sa = my_sa,
 	};
 	status_t status = SUCCESS;
 
 	status |= charon->kernel->add_policy(charon->kernel, &out_id, &out_policy);
-	status |= charon->kernel->add_policy(charon->kernel, &in_id, &in_policy);
-	if (this->mode != MODE_TRANSPORT)
-	{
-		in_id.dir = POLICY_FWD;
-		status |= charon->kernel->add_policy(charon->kernel, &in_id, &in_policy);
 
+	if (this->mode != MODE_TRANSPORT && this->policies_fwd_out)
+	{
 		/* install an "outbound" FWD policy in case there is a drop policy
 		 * matching outbound forwarded traffic, to allow another tunnel to use
 		 * the reversed subnets and do the same we don't set a reqid (this also
@@ -940,27 +959,77 @@ static status_t install_policies_internal(private_child_sa_t *this,
 		 * policies of two SAs we install them with reduced priority.  As they
 		 * basically act as bypass policies for drop policies we use a higher
 		 * priority than is used for them. */
-		if (this->policies_fwd_out)
+		out_id.dir = POLICY_FWD;
+		other_sa->reqid = 0;
+		if (priority == POLICY_PRIORITY_DEFAULT)
 		{
-			out_id.dir = POLICY_FWD;
-			other_sa->reqid = 0;
-			if (priority == POLICY_PRIORITY_DEFAULT)
-			{
-				out_policy.prio = POLICY_PRIORITY_ROUTED;
-			}
-			status |= charon->kernel->add_policy(charon->kernel, &out_id,
-												 &out_policy);
-			/* reset the reqid for any other further policies */
-			other_sa->reqid = this->reqid;
+			out_policy.prio = POLICY_PRIORITY_ROUTED;
 		}
+		status |= charon->kernel->add_policy(charon->kernel, &out_id,
+											 &out_policy);
+		/* reset the reqid for any other further policies */
+		other_sa->reqid = this->reqid;
 	}
 	return status;
 }
 
 /**
- * Delete 3 policies: out, in and forward
+ * Install all policies
  */
-static void del_policies_internal(private_child_sa_t *this,
+static status_t install_policies_internal(private_child_sa_t *this,
+	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
+	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
+	ipsec_sa_cfg_t *other_sa, policy_type_t type,
+	policy_priority_t priority,	uint32_t manual_prio)
+{
+	status_t status = SUCCESS;
+
+	status |= install_policies_inbound(this, my_addr, other_addr, my_ts,
+									   other_ts, my_sa, other_sa, type,
+									   priority, manual_prio);
+	status |= install_policies_outbound(this, my_addr, other_addr, my_ts,
+										other_ts, my_sa, other_sa, type,
+										priority, manual_prio);
+	return status;
+}
+
+/**
+ * Delete inbound policies: in, fwd
+ */
+static void del_policies_inbound(private_child_sa_t *this,
+	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
+	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
+	ipsec_sa_cfg_t *other_sa, policy_type_t type,
+	policy_priority_t priority, uint32_t manual_prio)
+{
+	kernel_ipsec_policy_id_t in_id = {
+		.dir = POLICY_IN,
+		.src_ts = other_ts,
+		.dst_ts = my_ts,
+		.mark = this->mark_in,
+	};
+	kernel_ipsec_manage_policy_t in_policy = {
+		.type = type,
+		.prio = priority,
+		.manual_prio = manual_prio,
+		.src = other_addr,
+		.dst = my_addr,
+		.sa = my_sa,
+	};
+
+	charon->kernel->del_policy(charon->kernel, &in_id, &in_policy);
+
+	if (this->mode != MODE_TRANSPORT)
+	{
+		in_id.dir = POLICY_FWD;
+		charon->kernel->del_policy(charon->kernel, &in_id, &in_policy);
+	}
+}
+
+/**
+ * Delete outbound policies: out, [fwd]
+ */
+static void del_policies_outbound(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
 	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
 	ipsec_sa_cfg_t *other_sa, policy_type_t type,
@@ -972,11 +1041,6 @@ static void del_policies_internal(private_child_sa_t *this,
 		.dst_ts = other_ts,
 		.mark = this->mark_out,
 		.interface = this->config->get_interface(this->config),
-	}, in_id = {
-		.dir = POLICY_IN,
-		.src_ts = other_ts,
-		.dst_ts = my_ts,
-		.mark = this->mark_in,
 	};
 	kernel_ipsec_manage_policy_t out_policy = {
 		.type = type,
@@ -985,34 +1049,36 @@ static void del_policies_internal(private_child_sa_t *this,
 		.src = my_addr,
 		.dst = other_addr,
 		.sa = other_sa,
-	}, in_policy = {
-		.type = type,
-		.prio = priority,
-		.manual_prio = manual_prio,
-		.src = other_addr,
-		.dst = my_addr,
-		.sa = my_sa,
 	};
 
 	charon->kernel->del_policy(charon->kernel, &out_id, &out_policy);
-	charon->kernel->del_policy(charon->kernel, &in_id, &in_policy);
-	if (this->mode != MODE_TRANSPORT)
-	{
-		in_id.dir = POLICY_FWD;
-		charon->kernel->del_policy(charon->kernel, &in_id, &in_policy);
 
-		if (this->policies_fwd_out)
+	if (this->mode != MODE_TRANSPORT && this->policies_fwd_out)
+	{
+		out_id.dir = POLICY_FWD;
+		other_sa->reqid = 0;
+		if (priority == POLICY_PRIORITY_DEFAULT)
 		{
-			out_id.dir = POLICY_FWD;
-			other_sa->reqid = 0;
-			if (priority == POLICY_PRIORITY_DEFAULT)
-			{
-				out_policy.prio = POLICY_PRIORITY_ROUTED;
-			}
-			charon->kernel->del_policy(charon->kernel, &out_id, &out_policy);
-			other_sa->reqid = this->reqid;
+			out_policy.prio = POLICY_PRIORITY_ROUTED;
 		}
+		charon->kernel->del_policy(charon->kernel, &out_id, &out_policy);
+		other_sa->reqid = this->reqid;
 	}
+}
+
+/**
+ * Delete in- and outbound policies
+ */
+static void del_policies_internal(private_child_sa_t *this,
+	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
+	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
+	ipsec_sa_cfg_t *other_sa, policy_type_t type,
+	policy_priority_t priority, uint32_t manual_prio)
+{
+	del_policies_outbound(this, my_addr, other_addr, my_ts, other_ts, my_sa,
+						 other_sa, type, priority, manual_prio);
+	del_policies_inbound(this, my_addr, other_addr, my_ts, other_ts, my_sa,
+						 other_sa, type, priority, manual_prio);
 }
 
 METHOD(child_sa_t, add_policies, status_t,
@@ -1077,13 +1143,12 @@ METHOD(child_sa_t, add_policies, status_t,
 			if (priority == POLICY_PRIORITY_DEFAULT && manual_prio == 0 &&
 				require_policy_update())
 			{
-				status |= install_policies_internal(this, this->my_addr,
+				status |= install_policies_outbound(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
 									&my_sa, &other_sa, POLICY_DROP,
 									POLICY_PRIORITY_FALLBACK, 0);
 			}
 
-			/* install policies */
 			status |= install_policies_internal(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
 									&my_sa, &other_sa, POLICY_IPSEC,
@@ -1242,12 +1307,12 @@ METHOD(child_sa_t, update, status_t,
 				/* update fallback policies after the new policy is in place */
 				if (manual_prio == 0)
 				{
-					del_policies_internal(this, this->my_addr, this->other_addr,
+					del_policies_outbound(this, this->my_addr, this->other_addr,
 										  old_my_ts ?: my_ts,
 										  old_other_ts ?: other_ts,
 										  &my_sa, &other_sa, POLICY_DROP,
 										  POLICY_PRIORITY_FALLBACK, 0);
-					install_policies_internal(this, me, other, my_ts, other_ts,
+					install_policies_outbound(this, me, other, my_ts, other_ts,
 										  &my_sa, &other_sa, POLICY_DROP,
 										  POLICY_PRIORITY_FALLBACK, 0);
 				}
@@ -1308,7 +1373,7 @@ METHOD(child_sa_t, destroy, void,
 			if (priority == POLICY_PRIORITY_DEFAULT && manual_prio == 0 &&
 				require_policy_update())
 			{
-				del_policies_internal(this, this->my_addr, this->other_addr,
+				del_policies_outbound(this, this->my_addr, this->other_addr,
 									  my_ts, other_ts, &my_sa, &other_sa,
 									  POLICY_DROP, POLICY_PRIORITY_FALLBACK, 0);
 			}
