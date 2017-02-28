@@ -113,6 +113,11 @@ struct private_child_sa_t {
 	bool tfcv3;
 
 	/**
+	 * The outbound SPI of the CHILD_SA that replaced this one during a rekeying
+	 */
+	uint32_t rekey_spi;
+
+	/**
 	 * Protocol used to protect this SA, ESP|AH
 	 */
 	protocol_id_t protocol;
@@ -1303,6 +1308,18 @@ METHOD(child_sa_t, install_outbound, status_t,
 	return status;
 }
 
+METHOD(child_sa_t, set_rekey_spi, void,
+	private_child_sa_t *this, uint32_t spi)
+{
+	this->rekey_spi = spi;
+}
+
+METHOD(child_sa_t, get_rekey_spi, uint32_t,
+	private_child_sa_t *this)
+{
+	return this->rekey_spi;
+}
+
 /**
  * Callback to reinstall a virtual IP
  */
@@ -1642,6 +1659,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.install = _install,
 			.register_outbound = _register_outbound,
 			.install_outbound = _install_outbound,
+			.set_rekey_spi = _set_rekey_spi,
+			.get_rekey_spi = _get_rekey_spi,
 			.update = _update,
 			.set_policies = _set_policies,
 			.install_policies = _install_policies,

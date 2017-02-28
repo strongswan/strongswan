@@ -419,6 +419,22 @@ struct child_sa_t {
 	status_t (*install_policies)(child_sa_t *this);
 
 	/**
+	 * Set the outbound SPI of the CHILD_SA that replaced this CHILD_SA during
+	 * a rekeying.
+	 *
+	 * @param spi		outbound SPI of the CHILD_SA that replaced this CHILD_SA
+	 */
+	void (*set_rekey_spi)(child_sa_t *this, uint32_t spi);
+
+	/**
+	 * Get the outbound SPI of the CHILD_SA that replaced this CHILD_SA during
+	 * a rekeying.
+	 *
+	 * @return			outbound SPI of the CHILD_SA that replaced this CHILD_SA
+	 */
+	uint32_t (*get_rekey_spi)(child_sa_t *this);
+
+	/**
 	 * Update hosts and ecapulation mode in the kernel SAs and policies.
 	 *
 	 * @param me		the new local host
