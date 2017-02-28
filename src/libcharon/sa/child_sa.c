@@ -93,6 +93,26 @@ struct private_child_sa_t {
 	array_t *other_ts;
 
 	/**
+	 * Outbound encryption key cached during a rekeying
+	 */
+	chunk_t encr_r;
+
+	/**
+	 * Outbound integrity key cached during a rekeying
+	 */
+	chunk_t integ_r;
+
+	/**
+	 * Whether the outbound SA has only been registered yet during a rekeying
+	 */
+	bool outbound_registered;
+
+	/**
+	 * Whether the peer supports TFCv3
+	 */
+	bool tfcv3;
+
+	/**
 	 * Protocol used to protect this SA, ESP|AH
 	 */
 	protocol_id_t protocol;
@@ -692,9 +712,12 @@ METHOD(child_sa_t, alloc_cpi, uint16_t,
 	return 0;
 }
 
-METHOD(child_sa_t, install, status_t,
-	private_child_sa_t *this, chunk_t encr, chunk_t integ, uint32_t spi,
-	uint16_t cpi, bool initiator, bool inbound, bool tfcv3)
+/**
+ * Install the given SA in the kernel
+ */
+static status_t install_internal(private_child_sa_t *this, chunk_t encr,
+	chunk_t integ, uint32_t spi, uint16_t cpi, bool initiator, bool inbound,
+	bool tfcv3)
 {
 	uint16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
 	uint16_t esn = NO_EXT_SEQ_NUMBERS;
@@ -832,6 +855,14 @@ METHOD(child_sa_t, install, status_t,
 	free(lifetime);
 
 	return status;
+}
+
+METHOD(child_sa_t, install, status_t,
+	private_child_sa_t *this, chunk_t encr, chunk_t integ, uint32_t spi,
+	uint16_t cpi, bool initiator, bool inbound, bool tfcv3)
+{
+	return install_internal(this, encr, integ, spi, cpi, initiator, inbound,
+							tfcv3);
 }
 
 /**
@@ -1167,7 +1198,7 @@ METHOD(child_sa_t, install_policies, status_t,
 			/* install outbound drop policy to avoid packets leaving unencrypted
 			 * when updating policies */
 			if (priority == POLICY_PRIORITY_DEFAULT && manual_prio == 0 &&
-				require_policy_update())
+				require_policy_update() && !this->outbound_registered)
 			{
 				status |= install_policies_outbound(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
@@ -1175,11 +1206,19 @@ METHOD(child_sa_t, install_policies, status_t,
 									POLICY_PRIORITY_FALLBACK, 0);
 			}
 
-			status |= install_policies_internal(this, this->my_addr,
+			status |= install_policies_inbound(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
 									&my_sa, &other_sa, POLICY_IPSEC,
 									priority, manual_prio);
 
+			if (!this->outbound_registered)
+			{
+				status |= install_policies_outbound(this, this->my_addr,
+									this->other_addr, my_ts, other_ts,
+									&my_sa, &other_sa, POLICY_IPSEC,
+									priority, manual_prio);
+
+			}
 			if (status != SUCCESS)
 			{
 				break;
@@ -1191,6 +1230,75 @@ METHOD(child_sa_t, install_policies, status_t,
 	if (status == SUCCESS && this->trap)
 	{
 		set_state(this, CHILD_ROUTED);
+	}
+	return status;
+}
+
+METHOD(child_sa_t, register_outbound, void,
+	private_child_sa_t *this, chunk_t encr, chunk_t integ, uint32_t spi,
+	uint16_t cpi, bool tfcv3)
+{
+	DBG2(DBG_CHD, "registering outbound %N SA", protocol_id_names,
+		 this->protocol);
+	DBG2(DBG_CHD, "  SPI 0x%.8x, src %H dst %H", ntohl(spi), this->my_addr,
+		 this->other_addr);
+
+	this->other_spi = spi;
+	this->other_cpi = cpi;
+	this->encr_r = chunk_clone(encr);
+	this->integ_r = chunk_clone(integ);
+	this->tfcv3 = tfcv3;
+	this->outbound_registered = TRUE;
+}
+
+METHOD(child_sa_t, install_outbound, status_t,
+	private_child_sa_t *this)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *my_ts, *other_ts;
+	status_t status;
+
+	this->outbound_registered = FALSE;
+
+	status = install_internal(this, this->encr_r, this->integ_r,
+							  this->other_spi, this->other_cpi, FALSE, FALSE,
+							  this->tfcv3);
+	chunk_clear(&this->encr_r);
+	chunk_clear(&this->integ_r);
+	if (status != SUCCESS)
+	{
+		return status;
+	}
+	if (!this->config->has_option(this->config, OPT_NO_POLICIES))
+	{
+		ipsec_sa_cfg_t my_sa, other_sa;
+		uint32_t manual_prio;
+
+		prepare_sa_cfg(this, &my_sa, &other_sa);
+		manual_prio = this->config->get_manual_prio(this->config);
+
+		enumerator = create_policy_enumerator(this);
+		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+		{
+			/* install outbound drop policy to avoid packets leaving unencrypted
+			 * when updating policies */
+			if (manual_prio == 0 &&	require_policy_update())
+			{
+				status |= install_policies_outbound(this, this->my_addr,
+									this->other_addr, my_ts, other_ts,
+									&my_sa, &other_sa, POLICY_DROP,
+									POLICY_PRIORITY_FALLBACK, 0);
+			}
+			status |= install_policies_outbound(this, this->my_addr,
+									this->other_addr, my_ts, other_ts,
+									&my_sa, &other_sa, POLICY_IPSEC,
+									POLICY_PRIORITY_DEFAULT, manual_prio);
+			if (status != SUCCESS)
+			{
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
 	}
 	return status;
 }
@@ -1451,6 +1559,8 @@ METHOD(child_sa_t, destroy, void,
 	this->other_addr->destroy(this->other_addr);
 	DESTROY_IF(this->proposal);
 	this->config->destroy(this->config);
+	chunk_clear(&this->encr_r);
+	chunk_clear(&this->integ_r);
 	free(this);
 }
 
@@ -1530,6 +1640,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.alloc_spi = _alloc_spi,
 			.alloc_cpi = _alloc_cpi,
 			.install = _install,
+			.register_outbound = _register_outbound,
+			.install_outbound = _install_outbound,
 			.update = _update,
 			.set_policies = _set_policies,
 			.install_policies = _install_policies,
