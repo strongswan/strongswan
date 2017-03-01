@@ -291,6 +291,10 @@ METHOD(child_sa_t, get_config, child_cfg_t*,
 METHOD(child_sa_t, set_state, void,
 	   private_child_sa_t *this, child_sa_state_t state)
 {
+	DBG2(DBG_CHD, "CHILD_SA %s{%d} state change: %N => %N",
+		 get_name(this), this->unique_id,
+		 child_sa_state_names, this->state,
+		 child_sa_state_names, state);
 	charon->bus->child_state_change(charon->bus, &this->public, state);
 	this->state = state;
 }
