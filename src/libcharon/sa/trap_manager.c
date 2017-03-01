@@ -272,7 +272,8 @@ METHOD(trap_manager_t, install, uint32_t,
 	proposals->destroy_offset(proposals, offsetof(proposal_t, destroy));
 	child_sa->set_protocol(child_sa, proto);
 	child_sa->set_mode(child_sa, child->get_mode(child));
-	status = child_sa->add_policies(child_sa, my_ts, other_ts);
+	child_sa->set_policies(child_sa, my_ts, other_ts);
+	status = child_sa->install_policies(child_sa);
 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
 	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
 	if (status != SUCCESS)

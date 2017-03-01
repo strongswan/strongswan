@@ -649,6 +649,15 @@ static status_t select_and_install(private_child_create_t *this,
 		}
 	}
 
+	this->child_sa->set_policies(this->child_sa, my_ts, other_ts);
+	if (!this->initiator)
+	{
+		my_ts->destroy_offset(my_ts,
+							  offsetof(traffic_selector_t, destroy));
+		other_ts->destroy_offset(other_ts,
+							  offsetof(traffic_selector_t, destroy));
+	}
+
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
 	this->child_sa->set_ipcomp(this->child_sa, this->ipcomp);
 	this->child_sa->set_mode(this->child_sa, this->mode);
@@ -668,19 +677,19 @@ static status_t select_and_install(private_child_create_t *this,
 		{
 			status_i = this->child_sa->install(this->child_sa, encr_r, integ_r,
 							this->my_spi, this->my_cpi, this->initiator,
-							TRUE, this->tfcv3, my_ts, other_ts);
+							TRUE, this->tfcv3);
 			status_o = this->child_sa->install(this->child_sa, encr_i, integ_i,
 							this->other_spi, this->other_cpi, this->initiator,
-							FALSE, this->tfcv3, my_ts, other_ts);
+							FALSE, this->tfcv3);
 		}
 		else
 		{
 			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
 							this->my_spi, this->my_cpi, this->initiator,
-							TRUE, this->tfcv3, my_ts, other_ts);
+							TRUE, this->tfcv3);
 			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
 							this->other_spi, this->other_cpi, this->initiator,
-							FALSE, this->tfcv3, my_ts, other_ts);
+							FALSE, this->tfcv3);
 		}
 	}
 
@@ -696,15 +705,8 @@ static status_t select_and_install(private_child_create_t *this,
 	}
 	else
 	{
-		status = this->child_sa->add_policies(this->child_sa, my_ts, other_ts);
+		status = this->child_sa->install_policies(this->child_sa);
 
-		if (!this->initiator)
-		{
-			my_ts->destroy_offset(my_ts,
-								  offsetof(traffic_selector_t, destroy));
-			other_ts->destroy_offset(other_ts,
-								  offsetof(traffic_selector_t, destroy));
-		}
 		if (status != SUCCESS)
 		{
 			DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");

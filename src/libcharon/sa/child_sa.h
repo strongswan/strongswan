@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2006-2008 Tobias Brunner
+ * Copyright (C) 2006-2017 Tobias Brunner
  * Copyright (C) 2006-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -347,6 +347,8 @@ struct child_sa_t {
 	/**
 	 * Install an IPsec SA for one direction.
 	 *
+	 * set_policies() should be called before calling this.
+	 *
 	 * @param encr		encryption key, if any
 	 * @param integ		integrity key
 	 * @param spi		SPI to use, allocated for inbound
@@ -354,26 +356,36 @@ struct child_sa_t {
 	 * @param initiator	TRUE if initiator of exchange resulting in this SA
 	 * @param inbound	TRUE to install an inbound SA, FALSE for outbound
 	 * @param tfcv3		TRUE if peer supports ESPv3 TFC
-	 * @param my_ts		negotiated local traffic selector list
-	 * @param other_ts	negotiated remote traffic selector list
 	 * @return			SUCCESS or FAILED
 	 */
 	status_t (*install)(child_sa_t *this, chunk_t encr, chunk_t integ,
 						uint32_t spi, uint16_t cpi,
-						bool initiator, bool inbound, bool tfcv3,
-						linked_list_t *my_ts, linked_list_t *other_ts);
+						bool initiator, bool inbound, bool tfcv3);
+
 	/**
-	 * Install the policies using some traffic selectors.
+	 * Configure the policies using some traffic selectors.
 	 *
 	 * Supplied lists of traffic_selector_t's specify the policies
 	 * to use for this child sa.
 	 *
-	 * @param my_ts		traffic selectors for local site
-	 * @param other_ts	traffic selectors for remote site
+	 * Install the policies by calling install_policies().
+	 *
+	 * This should be called before calling install() so the traffic selectors
+	 * may be passed to the kernel interface when installing the SAs.
+	 *
+	 * @param my_ts		traffic selectors for local site (cloned)
+	 * @param other_ts	traffic selectors for remote site (cloned)
+	 */
+	void (*set_policies)(child_sa_t *this, linked_list_t *my_ts_list,
+						 linked_list_t *other_ts_list);
+
+	/**
+	 * Install the configured policies.
+	 *
 	 * @return			SUCCESS or FAILED
 	 */
-	status_t (*add_policies)(child_sa_t *this, linked_list_t *my_ts_list,
-							 linked_list_t *other_ts_list);
+	status_t (*install_policies)(child_sa_t *this);
+
 	/**
 	 * Update hosts and ecapulation mode in the kernel SAs and policies.
 	 *

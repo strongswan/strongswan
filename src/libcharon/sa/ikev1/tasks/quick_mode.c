@@ -325,6 +325,17 @@ static bool install(private_quick_mode_t *this)
 		return FALSE;
 	}
 
+	if (this->initiator)
+	{
+		this->child_sa->set_policies(this->child_sa, tsi, tsr);
+	}
+	else
+	{
+		this->child_sa->set_policies(this->child_sa, tsr, tsi);
+	}
+	tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+	tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
+
 	if (this->keymat->derive_child_keys(this->keymat, this->proposal, this->dh,
 						this->spi_i, this->spi_r, this->nonce_i, this->nonce_r,
 						&encr_i, &integ_i, &encr_r, &integ_r))
@@ -333,19 +344,19 @@ static bool install(private_quick_mode_t *this)
 		{
 			status_i = this->child_sa->install(this->child_sa,
 									encr_r, integ_r, this->spi_i, this->cpi_i,
-									this->initiator, TRUE, FALSE, tsi, tsr);
+									this->initiator, TRUE, FALSE);
 			status_o = this->child_sa->install(this->child_sa,
 									encr_i, integ_i, this->spi_r, this->cpi_r,
-									this->initiator, FALSE, FALSE, tsi, tsr);
+									this->initiator, FALSE, FALSE);
 		}
 		else
 		{
 			status_i = this->child_sa->install(this->child_sa,
 									encr_i, integ_i, this->spi_r, this->cpi_r,
-									this->initiator, TRUE, FALSE, tsr, tsi);
+									this->initiator, TRUE, FALSE);
 			status_o = this->child_sa->install(this->child_sa,
 									encr_r, integ_r, this->spi_i, this->cpi_i,
-									this->initiator, FALSE, FALSE, tsr, tsi);
+									this->initiator, FALSE, FALSE);
 		}
 	}
 
@@ -355,22 +366,12 @@ static bool install(private_quick_mode_t *this)
 			(status_i != SUCCESS) ? "inbound " : "",
 			(status_i != SUCCESS && status_o != SUCCESS) ? "and ": "",
 			(status_o != SUCCESS) ? "outbound " : "");
-		tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
-		tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 		status = FAILED;
 	}
 	else
 	{
-		if (this->initiator)
-		{
-			status = this->child_sa->add_policies(this->child_sa, tsi, tsr);
-		}
-		else
-		{
-			status = this->child_sa->add_policies(this->child_sa, tsr, tsi);
-		}
-		tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
-		tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
+		status = this->child_sa->install_policies(this->child_sa);
+
 		if (status != SUCCESS)
 		{
 			DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");

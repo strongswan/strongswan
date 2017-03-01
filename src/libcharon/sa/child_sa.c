@@ -693,12 +693,11 @@ METHOD(child_sa_t, alloc_cpi, uint16_t,
 
 METHOD(child_sa_t, install, status_t,
 	private_child_sa_t *this, chunk_t encr, chunk_t integ, uint32_t spi,
-	uint16_t cpi, bool initiator, bool inbound, bool tfcv3,
-	linked_list_t *my_ts, linked_list_t *other_ts)
+	uint16_t cpi, bool initiator, bool inbound, bool tfcv3)
 {
 	uint16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
 	uint16_t esn = NO_EXT_SEQ_NUMBERS;
-	linked_list_t *src_ts = NULL, *dst_ts = NULL;
+	linked_list_t *my_ts, *other_ts, *src_ts, *dst_ts;
 	time_t now;
 	kernel_ipsec_sa_id_t id;
 	kernel_ipsec_add_sa_t sa;
@@ -707,6 +706,12 @@ METHOD(child_sa_t, install, status_t,
 	host_t *src, *dst;
 	status_t status;
 	bool update = FALSE;
+
+	/* BEET requires the bound address from the traffic selectors */
+	my_ts = linked_list_create_from_enumerator(
+									array_create_enumerator(this->my_ts));
+	other_ts = linked_list_create_from_enumerator(
+									array_create_enumerator(this->other_ts));
 
 	/* now we have to decide which spi to use. Use self allocated, if "in",
 	 * or the one in the proposal, if not "in" (others). Additionally,
@@ -721,6 +726,8 @@ METHOD(child_sa_t, install, status_t,
 		}
 		this->my_spi = spi;
 		this->my_cpi = cpi;
+		dst_ts = my_ts;
+		src_ts = other_ts;
 	}
 	else
 	{
@@ -728,6 +735,8 @@ METHOD(child_sa_t, install, status_t,
 		dst = this->other_addr;
 		this->other_spi = spi;
 		this->other_cpi = cpi;
+		src_ts = my_ts;
+		dst_ts = other_ts;
 
 		if (tfcv3)
 		{
@@ -754,6 +763,8 @@ METHOD(child_sa_t, install, status_t,
 								this->mark_in, this->mark_out, &this->reqid);
 		if (status != SUCCESS)
 		{
+			my_ts->destroy(my_ts);
+			other_ts->destroy(other_ts);
 			return status;
 		}
 		this->reqid_allocated = TRUE;
@@ -781,18 +792,6 @@ METHOD(child_sa_t, install, status_t,
 	if (!lifetime->time.jitter && !inbound)
 	{	/* avoid triggering multiple rekey events */
 		lifetime->time.rekey = 0;
-	}
-
-	/* BEET requires the bound address from the traffic selectors */
-	if (inbound)
-	{
-		dst_ts = my_ts;
-		src_ts = other_ts;
-	}
-	else
-	{
-		src_ts = my_ts;
-		dst_ts = other_ts;
 	}
 
 	id = (kernel_ipsec_sa_id_t){
@@ -827,6 +826,8 @@ METHOD(child_sa_t, install, status_t,
 
 	status = charon->kernel->add_sa(charon->kernel, &id, &sa);
 
+	my_ts->destroy(my_ts);
+	other_ts->destroy(other_ts);
 	free(lifetime);
 
 	return status;
@@ -1081,28 +1082,19 @@ static void del_policies_internal(private_child_sa_t *this,
 						 other_sa, type, priority, manual_prio);
 }
 
-METHOD(child_sa_t, add_policies, status_t,
+METHOD(child_sa_t, set_policies, void,
 	   private_child_sa_t *this, linked_list_t *my_ts_list,
 	   linked_list_t *other_ts_list)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
-	status_t status = SUCCESS;
 
-	if (!this->reqid_allocated && !this->static_reqid)
+	if (array_count(this->my_ts))
 	{
-		/* trap policy, get or confirm reqid */
-		status = charon->kernel->alloc_reqid(
-							charon->kernel, my_ts_list, other_ts_list,
-							this->mark_in, this->mark_out, &this->reqid);
-		if (status != SUCCESS)
-		{
-			return status;
-		}
-		this->reqid_allocated = TRUE;
+		array_destroy_offset(this->my_ts,
+							 offsetof(traffic_selector_t, destroy));
+		this->my_ts = array_create(0, 0);
 	}
-
-	/* apply traffic selectors */
 	enumerator = my_ts_list->create_enumerator(my_ts_list);
 	while (enumerator->enumerate(enumerator, &my_ts))
 	{
@@ -1111,6 +1103,12 @@ METHOD(child_sa_t, add_policies, status_t,
 	enumerator->destroy(enumerator);
 	array_sort(this->my_ts, (void*)traffic_selector_cmp, NULL);
 
+	if (array_count(this->other_ts))
+	{
+		array_destroy_offset(this->other_ts,
+							 offsetof(traffic_selector_t, destroy));
+		this->other_ts = array_create(0, 0);
+	}
 	enumerator = other_ts_list->create_enumerator(other_ts_list);
 	while (enumerator->enumerate(enumerator, &other_ts))
 	{
@@ -1118,6 +1116,33 @@ METHOD(child_sa_t, add_policies, status_t,
 	}
 	enumerator->destroy(enumerator);
 	array_sort(this->other_ts, (void*)traffic_selector_cmp, NULL);
+}
+
+METHOD(child_sa_t, install_policies, status_t,
+	   private_child_sa_t *this)
+{
+	enumerator_t *enumerator;
+	linked_list_t *my_ts_list, *other_ts_list;
+	traffic_selector_t *my_ts, *other_ts;
+	status_t status = SUCCESS;
+
+	if (!this->reqid_allocated && !this->static_reqid)
+	{
+		my_ts_list = linked_list_create_from_enumerator(
+									array_create_enumerator(this->my_ts));
+		other_ts_list = linked_list_create_from_enumerator(
+									array_create_enumerator(this->other_ts));
+		status = charon->kernel->alloc_reqid(
+							charon->kernel, my_ts_list, other_ts_list,
+							this->mark_in, this->mark_out, &this->reqid);
+		my_ts_list->destroy(my_ts_list);
+		other_ts_list->destroy(other_ts_list);
+		if (status != SUCCESS)
+		{
+			return status;
+		}
+		this->reqid_allocated = TRUE;
+	}
 
 	if (!this->config->has_option(this->config, OPT_NO_POLICIES))
 	{
@@ -1505,7 +1530,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.alloc_cpi = _alloc_cpi,
 			.install = _install,
 			.update = _update,
-			.add_policies = _add_policies,
+			.set_policies = _set_policies,
+			.install_policies = _install_policies,
 			.create_ts_enumerator = _create_ts_enumerator,
 			.create_policy_enumerator = _create_policy_enumerator,
 			.destroy = _destroy,
