@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -630,6 +630,23 @@ static status_t select_and_install(private_child_create_t *this,
 			default:
 				break;
 		}
+		/* use a copy of the traffic selectors, as the POST hook should not
+		 * change payloads */
+		my_ts = this->tsr->clone_offset(this->tsr,
+										offsetof(traffic_selector_t, clone));
+		other_ts = this->tsi->clone_offset(this->tsi,
+										offsetof(traffic_selector_t, clone));
+		charon->bus->narrow(charon->bus, this->child_sa,
+							NARROW_RESPONDER_POST, my_ts, other_ts);
+
+		if (my_ts->get_count(my_ts) == 0 ||	other_ts->get_count(other_ts) == 0)
+		{
+			my_ts->destroy_offset(my_ts,
+								  offsetof(traffic_selector_t, destroy));
+			other_ts->destroy_offset(other_ts,
+								  offsetof(traffic_selector_t, destroy));
+			return NOT_FOUND;
+		}
 	}
 
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
@@ -679,31 +696,10 @@ static status_t select_and_install(private_child_create_t *this,
 	}
 	else
 	{
-		if (this->initiator)
+		status = this->child_sa->add_policies(this->child_sa, my_ts, other_ts);
+
+		if (!this->initiator)
 		{
-			status = this->child_sa->add_policies(this->child_sa,
-												  my_ts, other_ts);
-		}
-		else
-		{
-			/* use a copy of the traffic selectors, as the POST hook should not
-			 * change payloads */
-			my_ts = this->tsr->clone_offset(this->tsr,
-										offsetof(traffic_selector_t, clone));
-			other_ts = this->tsi->clone_offset(this->tsi,
-										offsetof(traffic_selector_t, clone));
-			charon->bus->narrow(charon->bus, this->child_sa,
-								NARROW_RESPONDER_POST, my_ts, other_ts);
-			if (my_ts->get_count(my_ts) == 0 ||
-				other_ts->get_count(other_ts) == 0)
-			{
-				status = FAILED;
-			}
-			else
-			{
-				status = this->child_sa->add_policies(this->child_sa,
-													  my_ts, other_ts);
-			}
 			my_ts->destroy_offset(my_ts,
 								  offsetof(traffic_selector_t, destroy));
 			other_ts->destroy_offset(other_ts,
