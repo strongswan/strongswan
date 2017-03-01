@@ -227,6 +227,7 @@ METHOD(task_t, build_r, status_t,
 	child_cfg_t *config;
 	uint32_t reqid;
 	child_sa_state_t state;
+	child_sa_t *child_sa;
 
 	if (!this->child_sa)
 	{
@@ -260,7 +261,10 @@ METHOD(task_t, build_r, status_t,
 		return SUCCESS;
 	}
 
+	child_sa = this->child_create->get_child(this->child_create);
 	this->child_sa->set_state(this->child_sa, CHILD_REKEYED);
+	this->child_sa->set_rekey_spi(this->child_sa,
+								  child_sa->get_spi(child_sa, FALSE));
 
 	/* invoke rekey hook */
 	charon->bus->child_rekey(charon->bus, this->child_sa,
@@ -472,7 +476,8 @@ METHOD(child_rekey_t, collide, void,
 		/* ignore passive tasks that did not successfully create a CHILD_SA */
 		other_child = rekey->child_create->get_child(rekey->child_create);
 		if (!other_child ||
-			 other_child->get_state(other_child) != CHILD_INSTALLED)
+			(other_child->get_state(other_child) != CHILD_INSTALLED &&
+			 other_child->get_state(other_child) != CHILD_INSTALLED_INBOUND))
 		{
 			other->destroy(other);
 			return;

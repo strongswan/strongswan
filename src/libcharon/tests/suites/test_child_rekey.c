@@ -62,7 +62,7 @@ START_TEST(test_regular)
 	assert_notify(IN, REKEY_SA);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, spi_b, CHILD_REKEYED);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 
 	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
@@ -150,7 +150,7 @@ START_TEST(test_regular_ke_invalid)
 	assert_notify(IN, REKEY_SA);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, spi_b, CHILD_REKEYED);
-	assert_child_sa_state(b, 6, CHILD_INSTALLED);
+	assert_child_sa_state(b, 6, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 
 	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
@@ -204,7 +204,7 @@ START_TEST(test_regular_responder_ignore_soft_expire)
 	assert_notify(IN, REKEY_SA);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, 2, CHILD_REKEYED);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 
 	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
@@ -263,7 +263,7 @@ START_TEST(test_regular_responder_handle_hard_expire)
 	assert_notify(IN, REKEY_SA);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, 2, CHILD_REKEYED);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 
 	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
@@ -284,7 +284,7 @@ START_TEST(test_regular_responder_handle_hard_expire)
 	/* INFORMATIONAL { D } --> */
 	assert_single_payload(IN, PLV2_DELETE);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED_INBOUND);
 	assert_child_sa_state(a, 2, CHILD_DELETING);
 	/* <-- INFORMATIONAL { D } */
 	assert_single_payload(IN, PLV2_DELETE);
@@ -361,14 +361,14 @@ START_TEST(test_collision)
 	assert_hook_rekey(child_rekey, 2, 5);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, 2, CHILD_REKEYED);
-	assert_child_sa_state(b, 5, CHILD_INSTALLED);
+	assert_child_sa_state(b, 5, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[3];
 	assert_hook_rekey(child_rekey, 1, 6);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_child_sa_state(a, 1, CHILD_REKEYED);
-	assert_child_sa_state(a, 6, CHILD_INSTALLED);
+	assert_child_sa_state(a, 6, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 
 	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
@@ -387,7 +387,9 @@ START_TEST(test_collision)
 	}
 	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING);
 	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_REKEYED);
-	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED);
+	assert_child_sa_state(a, data[_i].spi_a,
+						  data[_i].spi_del_a == 1 ? CHILD_INSTALLED
+												  : CHILD_INSTALLED_INBOUND);
 	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
 	if (data[_i].spi_del_b == 2)
 	{
@@ -403,7 +405,9 @@ START_TEST(test_collision)
 	}
 	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING);
 	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED);
+	assert_child_sa_state(b, data[_i].spi_b,
+						  data[_i].spi_del_b == 2 ? CHILD_INSTALLED
+												  : CHILD_INSTALLED_INBOUND);
 
 	/* we don't expect this hook to get called anymore */
 	assert_hook_not_called(child_rekey);
@@ -494,14 +498,14 @@ START_TEST(test_collision_delayed_response)
 	assert_hook_rekey(child_rekey, 2, 5);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, 2, CHILD_REKEYED);
-	assert_child_sa_state(b, 5, CHILD_INSTALLED);
+	assert_child_sa_state(b, 5, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[3];
 	assert_hook_rekey(child_rekey, 1, 6);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_child_sa_state(a, 1, CHILD_REKEYED);
-	assert_child_sa_state(a, 6, CHILD_INSTALLED);
+	assert_child_sa_state(a, 6, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 
 	/* delay the CREATE_CHILD_SA response from b to a */
@@ -522,7 +526,9 @@ START_TEST(test_collision_delayed_response)
 	}
 	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING);
 	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED);
+	assert_child_sa_state(b, data[_i].spi_b,
+						  data[_i].spi_del_b == 2 ? CHILD_INSTALLED
+												  : CHILD_INSTALLED_INBOUND);
 
 	/* <-- INFORMATIONAL { D } */
 	assert_hook_not_called(child_rekey);
@@ -540,7 +546,9 @@ START_TEST(test_collision_delayed_response)
 	/* INFORMATIONAL { D } --> */
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED);
+	assert_child_sa_state(b, data[_i].spi_b,
+						  data[_i].spi_del_b == 2 ? CHILD_INSTALLED
+												  : CHILD_INSTALLED_INBOUND);
 	assert_child_sa_count(b, 2);
 	assert_hook();
 
@@ -635,7 +643,7 @@ START_TEST(test_collision_delayed_request)
 	assert_hook_rekey(child_rekey, 1, 5);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_child_sa_state(a, 1, CHILD_REKEYED);
-	assert_child_sa_state(a, 5, CHILD_INSTALLED);
+	assert_child_sa_state(a, 5, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
 	assert_hook_rekey(child_rekey, 2, 4);
@@ -736,7 +744,7 @@ START_TEST(test_collision_delayed_request_more)
 	assert_hook_rekey(child_rekey, 1, 5);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_child_sa_state(a, 1, CHILD_REKEYED);
-	assert_child_sa_state(a, 5, CHILD_INSTALLED);
+	assert_child_sa_state(a, 5, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
 	assert_hook_rekey(child_rekey, 2, 4);
@@ -874,14 +882,14 @@ START_TEST(test_collision_ke_invalid)
 	assert_hook_rekey(child_rekey, 2, 9);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, 2, CHILD_REKEYED);
-	assert_child_sa_state(b, 9, CHILD_INSTALLED);
+	assert_child_sa_state(b, 9, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[3];
 	assert_hook_rekey(child_rekey, 1, 10);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_child_sa_state(a, 1, CHILD_REKEYED);
-	assert_child_sa_state(a,10, CHILD_INSTALLED);
+	assert_child_sa_state(a,10, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 
 	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
@@ -898,7 +906,9 @@ START_TEST(test_collision_ke_invalid)
 	}
 	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING);
 	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_REKEYED);
-	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED);
+	assert_child_sa_state(a, data[_i].spi_a,
+						  data[_i].spi_del_a == 1 ? CHILD_INSTALLED
+												  : CHILD_INSTALLED_INBOUND);
 	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
 	if (data[_i].spi_del_b == 2)
 	{
@@ -912,7 +922,9 @@ START_TEST(test_collision_ke_invalid)
 	}
 	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING);
 	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED);
+	assert_child_sa_state(b, data[_i].spi_b,
+						  data[_i].spi_del_b == 2 ? CHILD_INSTALLED
+												  : CHILD_INSTALLED_INBOUND);
 
 	/* we don't expect this hook to get called anymore */
 	assert_hook_not_called(child_rekey);
@@ -1039,7 +1051,7 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 	assert_hook_rekey(child_rekey, 1, 9);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_child_sa_state(a, 1, CHILD_REKEYED);
-	assert_child_sa_state(a, 9, CHILD_INSTALLED);
+	assert_child_sa_state(a, 9, CHILD_INSTALLED_INBOUND);
 	assert_hook();
 	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
 	assert_hook_rekey(child_rekey, 2, 8);

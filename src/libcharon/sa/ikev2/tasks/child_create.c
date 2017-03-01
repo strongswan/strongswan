@@ -682,7 +682,7 @@ static status_t select_and_install(private_child_create_t *this,
 							this->other_spi, this->other_cpi, this->initiator,
 							FALSE, this->tfcv3);
 		}
-		else
+		else if (!this->rekey)
 		{
 			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
 							this->my_spi, this->my_cpi, this->initiator,
@@ -690,6 +690,17 @@ static status_t select_and_install(private_child_create_t *this,
 			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
 							this->other_spi, this->other_cpi, this->initiator,
 							FALSE, this->tfcv3);
+		}
+		else
+		{	/* as responder during a rekeying we only install the inbound
+			 * SA now, the outbound SA and policies are installed when we
+			 * receive the delete for the old SA */
+			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
+							this->my_spi, this->my_cpi, this->initiator,
+							TRUE, this->tfcv3);
+			this->child_sa->register_outbound(this->child_sa, encr_r, integ_r,
+							this->other_spi, this->other_cpi, this->tfcv3);
+			status_o = SUCCESS;
 		}
 	}
 
@@ -734,8 +745,14 @@ static status_t select_and_install(private_child_create_t *this,
 	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
 							this->dh, nonce_i, nonce_r);
 
-	/* add to IKE_SA, and remove from task */
-	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
+	if (this->rekey && !this->initiator)
+	{
+		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED_INBOUND);
+	}
+	else
+	{
+		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
+	}
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	this->established = TRUE;
 
@@ -746,16 +763,17 @@ static status_t select_and_install(private_child_create_t *this,
 	other_ts = linked_list_create_from_enumerator(
 				this->child_sa->create_ts_enumerator(this->child_sa, FALSE));
 
-	DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
+	DBG0(DBG_IKE, "%sCHILD_SA %s{%d} established "
 		 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
+		 this->rekey && !this->initiator ? "inbound " : "",
 		 this->child_sa->get_name(this->child_sa),
 		 this->child_sa->get_unique_id(this->child_sa),
 		 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
-		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)), my_ts, other_ts);
+		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)),
+		 my_ts, other_ts);
 
 	my_ts->destroy(my_ts);
 	other_ts->destroy(other_ts);
-
 	return SUCCESS;
 }
 
@@ -1688,7 +1706,6 @@ METHOD(task_t, destroy, void,
 	{
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
 	}
-
 	DESTROY_IF(this->config);
 	DESTROY_IF(this->nonceg);
 	free(this);

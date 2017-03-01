@@ -147,6 +147,57 @@ static bool is_redundant(private_child_delete_t *this, child_sa_t *child)
 }
 
 /**
+ * Install the outbound CHILD_SA with the given SPI
+ */
+static void install_outbound(private_child_delete_t *this,
+							 protocol_id_t protocol, uint32_t spi)
+{
+	child_sa_t *child_sa;
+	linked_list_t *my_ts, *other_ts;
+	status_t status;
+
+	child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
+										  spi, FALSE);
+	if (!child_sa)
+	{
+		DBG1(DBG_IKE, "CHILD_SA not found after rekeying");
+		return;
+	}
+	if (this->initiator && is_redundant(this, child_sa))
+	{	/* if we won the rekey collision we don't want to install the
+		 * redundant SA created by the peer */
+		return;
+	}
+
+	status = child_sa->install_outbound(child_sa);
+	if (status != SUCCESS)
+	{
+		DBG1(DBG_IKE, "unable to install outbound IPsec SA (SAD) in kernel");
+		charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_SA_FAILED,
+						   child_sa);
+		/* FIXME: delete the new child_sa? */
+		return;
+	}
+	child_sa->set_state(child_sa, CHILD_INSTALLED);
+
+	my_ts = linked_list_create_from_enumerator(
+							child_sa->create_ts_enumerator(child_sa, TRUE));
+	other_ts = linked_list_create_from_enumerator(
+							child_sa->create_ts_enumerator(child_sa, FALSE));
+
+	DBG0(DBG_IKE, "outbound CHILD_SA %s{%d} established "
+		 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
+		 child_sa->get_name(child_sa),
+		 child_sa->get_unique_id(child_sa),
+		 ntohl(child_sa->get_spi(child_sa, TRUE)),
+		 ntohl(child_sa->get_spi(child_sa, FALSE)),
+		 my_ts, other_ts);
+
+	my_ts->destroy(my_ts);
+	other_ts->destroy(other_ts);
+}
+
+/**
  * read in payloads and find the children to delete
  */
 static void process_payloads(private_child_delete_t *this, message_t *message)
@@ -197,6 +248,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 						/* fall through */
 					case CHILD_REKEYING:
 						/* we reply as usual, rekeying will fail */
+					case CHILD_INSTALLED_INBOUND:
 					case CHILD_INSTALLED:
 						if (!this->initiator)
 						{
@@ -234,7 +286,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
 	protocol_id_t protocol;
-	uint32_t spi, reqid;
+	uint32_t spi, reqid, rekey_spi;
 	action_t action;
 	status_t status = SUCCESS;
 
@@ -242,13 +294,21 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		/* signal child down event if we weren't rekeying */
+		protocol = child_sa->get_protocol(child_sa);
 		if (!this->rekeyed)
 		{
 			charon->bus->child_updown(charon->bus, child_sa, FALSE);
 		}
+		else
+		{
+			rekey_spi = child_sa->get_rekey_spi(child_sa);
+			if (rekey_spi)
+			{
+				install_outbound(this, protocol, rekey_spi);
+			}
+		}
 		spi = child_sa->get_spi(child_sa, TRUE);
 		reqid = child_sa->get_reqid(child_sa);
-		protocol = child_sa->get_protocol(child_sa);
 		child_cfg = child_sa->get_config(child_sa);
 		child_cfg->get_ref(child_cfg);
 		action = child_sa->get_close_action(child_sa);
