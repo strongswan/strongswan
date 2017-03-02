@@ -34,7 +34,7 @@ static int req()
 	hash_algorithm_t digest = HASH_UNKNOWN;
 	certificate_t *cert = NULL;
 	private_key_t *private = NULL;
-	char *file = NULL, *dn = NULL, *error = NULL;
+	char *file = NULL, *keyid = NULL, *dn = NULL, *error = NULL;
 	identification_t *id = NULL;
 	linked_list_t *san;
 	chunk_t encoding = chunk_empty;
@@ -98,6 +98,9 @@ static int req()
 					goto usage;
 				}
 				continue;
+			case 'x':
+				keyid = arg;
+				continue;
 			case EOF:
 				break;
 			default:
@@ -122,6 +125,15 @@ static int req()
 	{
 		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 									 BUILD_FROM_FILE, file, BUILD_END);
+	}
+	else if (keyid)
+	{
+		chunk_t chunk;
+
+		chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+									  BUILD_PKCS11_KEYID, chunk, BUILD_END);
+		free(chunk.ptr);
 	}
 	else
 	{
@@ -198,13 +210,14 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		req, 'r', "req",
 		"create a PKCS#10 certificate request",
-		{"  [--in file] [--type rsa|ecdsa|bliss|priv] --dn distinguished-name",
+		{"  [--in file|--keyid hex] [--type rsa|ecdsa|bliss|priv] --dn distinguished-name",
 		 "[--san subjectAltName]+ [--password challengePassword]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
 		 "[--outform der|pem]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "private key input file, default: stdin"},
+			{"keyid",	'x', 1, "keyid on smartcard of private key"},
 			{"type",	't', 1, "type of input key, default: priv"},
 			{"dn",		'd', 1, "subject distinguished name"},
 			{"san",		'a', 1, "subjectAltName to include in cert request"},
