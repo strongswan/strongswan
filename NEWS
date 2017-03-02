@@ -13,6 +13,12 @@ strongswan-5.5.2
   TPM 2.0 object handle as keyid parameter, the pki --pub tool can extract
   the public key from the TPM thereby replacing the aikpub2 tool.
 
+- The pki tool gained support for generating certificates with the RFC 3779
+  addrblock extension. The charon addrblock plugin now dynamically narrows
+  traffic selectors based on the certificate addrblocks instead of rejecting
+  non-matching selectors completely. This allows generic connections, where
+  the allowed selectors are defined by the used certificates only.
+
 - In-place update of cached base and delta CRLs does not leave dozens
   of stale copies in cache memory.
 
