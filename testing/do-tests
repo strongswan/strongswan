@@ -298,63 +298,6 @@ do
 	touch $CONSOLE_LOG
 
 	TESTDIR=$TESTSDIR/${testname}
-	rm -rf $TESTDIR
-	mkdir -p $TESTDIR
-	cp -rfp $DEFAULTTESTSDIR/${testname}/* $TESTDIR
-
-
-	##############################################################################
-	# replace IP wildcards with actual IPv4 and IPv6 addresses
-	#
-
-	for host in $STRONGSWANHOSTS
-	do
-	    case $host in
-	    moon)
-		searchandreplace PH_IP_MOON1     $ipv4_moon1 $TESTDIR
-		searchandreplace PH_IP_MOON      $ipv4_moon  $TESTDIR
-		searchandreplace PH_IP6_MOON1    $ipv6_moon1 $TESTDIR
-		searchandreplace PH_IP6_MOON     $ipv6_moon  $TESTDIR
-		;;
-	    sun)
-		searchandreplace PH_IP_SUN1      $ipv4_sun1 $TESTDIR
-		searchandreplace PH_IP_SUN       $ipv4_sun  $TESTDIR
-		searchandreplace PH_IP6_SUN1     $ipv6_sun1 $TESTDIR
-		searchandreplace PH_IP6_SUN      $ipv6_sun  $TESTDIR
-		;;
-	    alice)
-		searchandreplace PH_IP_ALICE1    $ipv4_alice1 $TESTDIR
-		searchandreplace PH_IP_ALICE     $ipv4_alice  $TESTDIR
-		searchandreplace PH_IP6_ALICE1   $ipv6_alice1 $TESTDIR
-		searchandreplace PH_IP6_ALICE    $ipv6_alice  $TESTDIR
-		;;
-	    venus)
-		searchandreplace PH_IP_VENUS     $ipv4_venus $TESTDIR
-		searchandreplace PH_IP6_VENUS    $ipv6_venus $TESTDIR
-		;;
-	    bob)
-		searchandreplace PH_IP_BOB       $ipv4_bob $TESTDIR
-		searchandreplace PH_IPV6_BOB     $ipv6_bob $TESTDIR
-		;;
-	    carol)
-		searchandreplace PH_IP_CAROL1    $ipv4_carol1 $TESTDIR
-		searchandreplace PH_IP_CAROL     $ipv4_carol  $TESTDIR
-		searchandreplace PH_IP6_CAROL1   $ipv6_carol1 $TESTDIR
-		searchandreplace PH_IP6_CAROL    $ipv6_carol  $TESTDIR
-		;;
-	    dave)
-		searchandreplace PH_IP_DAVE1     $ipv4_dave1 $TESTDIR
-		searchandreplace PH_IP_DAVE      $ipv4_dave  $TESTDIR
-		searchandreplace PH_IP6_DAVE1    $ipv6_dave1 $TESTDIR
-		searchandreplace PH_IP6_DAVE     $ipv6_dave  $TESTDIR
-		;;
-	    winnetou)
-		searchandreplace PH_IP_WINNETOU  $ipv4_winnetou $TESTDIR
-		searchandreplace PH_IP6_WINNETOU $ipv6_winnetou $TESTDIR
-		;;
-	    esac
-	done
-
 
 	##########################################################################
 	# copy test specific configurations to hosts and clear log files
