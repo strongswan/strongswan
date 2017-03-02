@@ -588,7 +588,6 @@ METHOD(controller_t, terminate_ike, status_t,
 		.listener = {
 			.public = {
 				.ike_state_change = _ike_state_change_terminate,
-				.child_state_change = _child_state_change_terminate,
 			},
 			.logger = {
 				.public = {
