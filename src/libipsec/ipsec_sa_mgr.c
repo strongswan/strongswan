@@ -401,9 +401,9 @@ METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 	uint32_t spi_min, spi_max, spi_new;
 
 	spi_min = lib->settings->get_int(lib->settings, "%s.spi_min",
-									 KERNEL_SPI_MIN, lib->ns);
+									 0x00000000, lib->ns);
 	spi_max = lib->settings->get_int(lib->settings, "%s.spi_max",
-									 KERNEL_SPI_MAX, lib->ns);
+									 0xffffffff, lib->ns);
 	if (spi_min > spi_max)
 	{
 		spi_new = spi_min;
