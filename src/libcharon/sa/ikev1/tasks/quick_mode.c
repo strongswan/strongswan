@@ -703,25 +703,30 @@ static void add_nat_oa_payloads(private_quick_mode_t *this, message_t *message)
 {
 	identification_t *id;
 	id_payload_t *nat_oa;
-	host_t *src, *dst;
+	host_t *init, *resp;
 	payload_type_t nat_oa_payload_type;
 
-	src = message->get_source(message);
-	dst = message->get_destination(message);
-
-	src = this->initiator ? src : dst;
-	dst = this->initiator ? dst : src;
+	if (this->initiator)
+	{
+		init = message->get_source(message);
+		resp = message->get_destination(message);
+	}
+	else
+	{
+		init = message->get_destination(message);
+		resp = message->get_source(message);
+	}
 
 	nat_oa_payload_type = get_nat_oa_payload_type(this->ike_sa);
 
 	/* first NAT-OA is the initiator's address */
-	id = identification_create_from_sockaddr(src->get_sockaddr(src));
+	id = identification_create_from_sockaddr(init->get_sockaddr(init));
 	nat_oa = id_payload_create_from_identification(nat_oa_payload_type, id);
 	message->add_payload(message, (payload_t*)nat_oa);
 	id->destroy(id);
 
 	/* second NAT-OA is that of the responder */
-	id = identification_create_from_sockaddr(dst->get_sockaddr(dst));
+	id = identification_create_from_sockaddr(resp->get_sockaddr(resp));
 	nat_oa = id_payload_create_from_identification(nat_oa_payload_type, id);
 	message->add_payload(message, (payload_t*)nat_oa);
 	id->destroy(id);
