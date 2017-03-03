@@ -11,7 +11,9 @@ strongswan-5.5.2
 - The new "tpm" libtpmtss plugin allows to use persistent private RSA and ECDSA
   keys bound to a TPM 2.0 for both IKE and TLS authentication. Using the
   TPM 2.0 object handle as keyid parameter, the pki --pub tool can extract
-  the public key from the TPM thereby replacing the aikpub2 tool.
+  the public key from the TPM thereby replacing the aikpub2 tool. In a similar
+  fashion pki --req can generate a PKCS#10 certificate request signed with
+  the TPM private key.
 
 - The pki tool gained support for generating certificates with the RFC 3779
   addrblock extension. The charon addrblock plugin now dynamically narrows
