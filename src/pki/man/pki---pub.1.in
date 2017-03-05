@@ -46,6 +46,10 @@ Read command line options from \fIfile\fR.
 .BI "\-i, \-\-in " file
 Input file. If not given the input is read from \fISTDIN\fR.
 .TP
+.BI "\-x, \-\-keyid " hex
+Smartcard or TPM private key object handle in hex format with an optional
+0x prefix.
+.TP
 .BI "\-t, \-\-type " type
 Type of input. One of \fIpriv\fR (private key), \fIrsa\fR (RSA private key),
 \fIecdsa\fR (ECDSA private key), \fIpub\fR (public key), \fIpkcs10\fR (PKCS#10

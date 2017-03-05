@@ -63,7 +63,8 @@ Issuer private key file. Either this or
 is required.
 .TP
 .BI "\-x, \-\-issuerkeyid " hex
-Key ID of a issuer private key on a smartcard. Either this or
+Smartcard or TPM issuer private key object handle in hex format with an optional
+h0x prefix. Either this or
 .B \-\-issuerkey
 is required.
 .TP

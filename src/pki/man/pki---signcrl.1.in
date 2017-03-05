@@ -56,7 +56,8 @@ CA private key file. Either this or
 is required.
 .TP
 .BI "\-x, \-\-cakeyid " hex
-Key ID of a CA private key on a smartcard. Either this or
+Smartcard or TPM CA private key object handle in hex format with an optional
+0x prefix. Either this or
 .B \-\-cakey
 is required.
 .TP

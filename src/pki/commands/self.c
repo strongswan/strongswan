@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2015-2016 Andreas Steffen
+ * Copyright (C) 2015-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -454,7 +454,7 @@ static void __attribute__ ((constructor))reg()
 		{
 			{"help",			'h', 0, "show usage information"},
 			{"in",				'i', 1, "private key input file, default: stdin"},
-			{"keyid",			'x', 1, "keyid on smartcard of private key"},
+			{"keyid",			'x', 1, "smartcard or TPM private key object handle"},
 			{"type",			't', 1, "type of input key, default: priv"},
 			{"dn",				'd', 1, "subject and issuer distinguished name"},
 			{"san",				'a', 1, "subjectAltName to include in certificate"},

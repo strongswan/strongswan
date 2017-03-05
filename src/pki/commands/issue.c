@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2015-2016 Andreas Steffen
+ * Copyright (C) 2015-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -620,7 +620,7 @@ static void __attribute__ ((constructor))reg()
 			{"type",			't', 1, "type of input, default: pub"},
 			{"cacert",			'c', 1, "CA certificate file"},
 			{"cakey",			'k', 1, "CA private key file"},
-			{"cakeyid",			'x', 1, "keyid on smartcard of CA private key"},
+			{"cakeyid",			'x', 1, "smartcard or TPM CA private key object handle"},
 			{"dn",				'd', 1, "distinguished name to include as subject"},
 			{"san",				'a', 1, "subjectAltName to include in certificate"},
 			{"lifetime",		'l', 1, "days the certificate is valid, default: 1095"},

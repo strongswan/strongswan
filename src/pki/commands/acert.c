@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2015 Andreas Steffen
+ * Copyright (C) 2015-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -286,7 +286,7 @@ static void __attribute__ ((constructor))reg()
 			{"group",			'm', 1, "group membership string to include"},
 			{"issuercert",		'c', 1, "issuer certificate file"},
 			{"issuerkey",		'k', 1, "issuer private key file"},
-			{"issuerkeyid",		'x', 1, "keyid on smartcard of issuer private key"},
+			{"issuerkeyid",		'x', 1, "smartcard or TPM issuer private key object handle"},
 			{"serial",			's', 1, "serial number in hex, default: random"},
 			{"lifetime",		'l', 1, "hours the acert is valid, default: 24"},
 			{"not-before",		'F', 1, "date/time the validity of the AC starts"},

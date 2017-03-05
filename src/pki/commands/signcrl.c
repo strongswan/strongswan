@@ -2,6 +2,9 @@
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
+ * Copyright (C) 2017 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -461,7 +464,7 @@ static void __attribute__ ((constructor))reg()
 			{"help",		'h', 0, "show usage information"},
 			{"cacert",		'c', 1, "CA certificate file"},
 			{"cakey",		'k', 1, "CA private key file"},
-			{"cakeyid",		'x', 1, "keyid on smartcard of CA private key"},
+			{"cakeyid",		'x', 1, "smartcard or TPM CA private key object handle"},
 			{"lifetime",	'l', 1, "days the CRL gets a nextUpdate, default: 15"},
 			{"this-update",	'F', 1, "date/time the validity of the CRL starts"},
 			{"next-update",	'T', 1, "date/time the validity of the CRL ends"},
