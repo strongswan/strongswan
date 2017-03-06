@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2017 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,7 +31,7 @@ static int keyid()
 	certificate_t *cert;
 	private_key_t *private;
 	public_key_t *public;
-	char *file = NULL;
+	char *file = NULL, *keyid = NULL;
 	void *cred;
 	chunk_t id;
 	char *arg;
@@ -88,6 +89,9 @@ static int keyid()
 			case 'i':
 				file = arg;
 				continue;
+			case 'x':
+				keyid = arg;
+				continue;
 			case EOF:
 				break;
 			default:
@@ -99,6 +103,15 @@ static int keyid()
 	{
 		cred = lib->creds->create(lib->creds, type, subtype,
 								  BUILD_FROM_FILE, file, BUILD_END);
+	}
+	else if (keyid)
+	{
+		chunk_t chunk;
+
+		chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+		cred = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+								  BUILD_PKCS11_KEYID, chunk, BUILD_END);
+		free(chunk.ptr);
 	}
 	else
 	{
@@ -177,10 +190,11 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t)
 		{ keyid, 'k', "keyid",
 		"calculate key identifiers of a key/certificate",
-		{"[--in file] [--type priv|rsa|ecdsa|bliss|pub|pkcs10|x509]"},
+		{"[--in file|--keyid hex] [--type priv|rsa|ecdsa|bliss|pub|pkcs10|x509]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
+			{"keyid",	'x', 1, "smartcard or TPM private key object handle"},
 			{"type",	't', 1, "type of key, default: priv"},
 		}
 	});

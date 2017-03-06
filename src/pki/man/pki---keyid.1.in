@@ -7,7 +7,9 @@ pki \-\-keyid \- Calculate key identifiers of a key or certificate
 .SH "SYNOPSIS"
 .
 .SY pki\ \-\-keyid
-.OP \-\-in file
+.RB [ \-\-in
+.IR file | \fB\-\-keyid\fR
+.IR hex ]
 .OP \-\-type type
 .OP \-\-debug level
 .YS
@@ -42,6 +44,10 @@ Read command line options from \fIfile\fR.
 .TP
 .BI "\-i, \-\-in " file
 Input file. If not given the input is read from \fISTDIN\fR.
+.TP
+.BI "\-x, \-\-keyid " hex
+Smartcard or TPM private key object handle in hex format with an optional
+0x prefix.
 .TP
 .BI "\-t, \-\-type " type
 Type of input. One of \fIpriv\fR (private key), \fIrsa\fR (RSA private key),
