@@ -504,7 +504,13 @@ chunk_t chunk_from_hex(chunk_t hex, char *buf)
 	u_char *ptr;
 	bool odd = FALSE;
 
-   /* subtract the number of optional ':' separation characters */
+	/* skip an optional 0x prefix */
+	if (hex.len > 1 && hex.ptr[1] == 'x' && hex.ptr[0] == '0')
+	{
+		hex = chunk_skip(hex, 2);
+	}
+
+	/* subtract the number of optional ':' separation characters */
 	len = hex.len;
 	ptr = hex.ptr;
 	for (i = 0; i < hex.len; i++)

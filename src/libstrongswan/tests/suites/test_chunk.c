@@ -397,15 +397,15 @@ START_TEST(test_base16)
 		{FALSE, "fooba", "666f6f6261"},
 		{FALSE, "foobar", "666f6f626172"},
 	};
-	testdata_t test_colon[] = {
-		{TRUE,  "", ""},
-		{TRUE,  "f", "66"},
+	testdata_t test_prefix_colon[] = {
+		{TRUE,  "", "0x"},
+		{TRUE,  "f", "0x66"},
 		{TRUE,  "fo", "66:6F"},
-		{TRUE,  "foo", "66:6F:6F"},
+		{TRUE,  "foo", "0x66:6F:6F"},
 		{FALSE, "foob", "66:6f:6f:62"},
-		{FALSE, "fooba", "66:6f:6f:62:61"},
+		{FALSE, "fooba", "0x66:6f:6f:62:61"},
 		{FALSE, "foobar", "66:6f:6f:62:61:72"},
-		{FALSE, "foobar", "66:6f6f:6261:72"},
+		{FALSE, "foobar", "0x66:6f6f:6261:72"},
 	};
 	int i;
 
@@ -430,14 +430,15 @@ START_TEST(test_base16)
 		free(out.ptr);
 	}
 
-	for (i = 0; i < countof(test_colon); i++)
+	for (i = 0; i < countof(test_prefix_colon); i++)
 	{
 		chunk_t out;
 
-		out = chunk_from_hex(chunk_create(test_colon[i].out, strlen(test_colon[i].out)), NULL);
-		fail_unless(strneq(out.ptr, test_colon[i].in, out.len),
+		out = chunk_from_hex(chunk_create(test_prefix_colon[i].out,
+							 strlen(test_prefix_colon[i].out)), NULL);
+		fail_unless(strneq(out.ptr, test_prefix_colon[i].in, out.len),
 					"base16 conversion error - should '%s', is %#B",
-					test_colon[i].in, &out);
+					test_prefix_colon[i].in, &out);
 		free(out.ptr);
 	}
 }
