@@ -105,7 +105,11 @@ struct private_child_sa_t {
 	/**
 	 * Whether the outbound SA has only been registered yet during a rekeying
 	 */
-	bool outbound_registered;
+	enum {
+		OUTBOUND_NONE,
+		OUTBOUND_REGISTERED,
+		OUTBOUND_INSTALLED,
+	} outbound_state;
 
 	/**
 	 * Whether the peer supports TFCv3
@@ -534,7 +538,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 	}
 	else
 	{
-		if (this->other_spi)
+		if (this->other_spi && this->outbound_state == OUTBOUND_INSTALLED)
 		{
 			kernel_ipsec_sa_id_t id = {
 				.src = this->my_addr,
@@ -775,6 +779,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		{
 			tfc = this->config->get_tfc(this->config);
 		}
+		this->outbound_state = OUTBOUND_INSTALLED;
 	}
 
 	DBG2(DBG_CHD, "adding %s %N SA", inbound ? "inbound" : "outbound",
@@ -1190,6 +1195,7 @@ METHOD(child_sa_t, install_policies, status_t,
 		policy_priority_t priority;
 		ipsec_sa_cfg_t my_sa, other_sa;
 		uint32_t manual_prio;
+		bool install_outbound;
 
 		prepare_sa_cfg(this, &my_sa, &other_sa);
 		manual_prio = this->config->get_manual_prio(this->config);
@@ -1199,6 +1205,7 @@ METHOD(child_sa_t, install_policies, status_t,
 		this->trap = this->state == CHILD_CREATED;
 		priority = this->trap ? POLICY_PRIORITY_ROUTED
 							  : POLICY_PRIORITY_DEFAULT;
+		install_outbound = this->outbound_state != OUTBOUND_REGISTERED;
 
 		/* enumerate pairs of traffic selectors */
 		enumerator = create_policy_enumerator(this);
@@ -1207,7 +1214,7 @@ METHOD(child_sa_t, install_policies, status_t,
 			/* install outbound drop policy to avoid packets leaving unencrypted
 			 * when updating policies */
 			if (priority == POLICY_PRIORITY_DEFAULT && manual_prio == 0 &&
-				require_policy_update() && !this->outbound_registered)
+				require_policy_update() && install_outbound)
 			{
 				status |= install_policies_outbound(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
@@ -1220,7 +1227,7 @@ METHOD(child_sa_t, install_policies, status_t,
 									&my_sa, &other_sa, POLICY_IPSEC,
 									priority, manual_prio);
 
-			if (!this->outbound_registered)
+			if (install_outbound)
 			{
 				status |= install_policies_outbound(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
@@ -1257,7 +1264,7 @@ METHOD(child_sa_t, register_outbound, void,
 	this->encr_r = chunk_clone(encr);
 	this->integ_r = chunk_clone(integ);
 	this->tfcv3 = tfcv3;
-	this->outbound_registered = TRUE;
+	this->outbound_state = OUTBOUND_REGISTERED;
 }
 
 METHOD(child_sa_t, install_outbound, status_t,
@@ -1266,8 +1273,6 @@ METHOD(child_sa_t, install_outbound, status_t,
 	enumerator_t *enumerator;
 	traffic_selector_t *my_ts, *other_ts;
 	status_t status;
-
-	this->outbound_registered = FALSE;
 
 	status = install_internal(this, this->encr_r, this->integ_r,
 							  this->other_spi, this->other_cpi, FALSE, FALSE,
@@ -1550,7 +1555,7 @@ METHOD(child_sa_t, destroy, void,
 		};
 		charon->kernel->del_sa(charon->kernel, &id, &sa);
 	}
-	if (this->other_spi)
+	if (this->other_spi && this->outbound_state == OUTBOUND_INSTALLED)
 	{
 		kernel_ipsec_sa_id_t id = {
 			.src = this->my_addr,
