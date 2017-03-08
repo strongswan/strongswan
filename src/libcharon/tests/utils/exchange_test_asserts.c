@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2017 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,6 +18,7 @@
 #include <test_suite.h>
 
 #include "exchange_test_asserts.h"
+#include "mock_ipsec.h"
 
 /*
  * Described in header
@@ -179,4 +180,58 @@ bool exchange_test_asserts_message(listener_t *listener, ike_sa_t *ike_sa,
 		return FALSE;
 	}
 	return TRUE;
+}
+
+/**
+ * Compare two SPIs
+ */
+static int spis_cmp(const void *a, const void *b)
+{
+	return *(const uint32_t*)a - *(const uint32_t*)b;
+}
+
+/**
+ * Compare two SPIs to sort them
+ */
+static int spis_sort(const void *a, const void *b, void *data)
+{
+	return spis_cmp(a, b);
+}
+
+
+/*
+ * Described in header
+ */
+void exchange_test_asserts_ipsec_sas(ipsec_sas_assert_t *sas)
+{
+	enumerator_t *enumerator;
+	array_t *spis;
+	ike_sa_t *ike_sa;
+	uint32_t spi;
+	int i;
+
+	spis = array_create(sizeof(uint32_t), 0);
+	for (i = 0; i < sas->count; i++)
+	{
+		array_insert(spis, ARRAY_TAIL, &sas->spis[i]);
+	}
+	array_sort(spis, spis_sort, NULL);
+
+	enumerator = mock_ipsec_create_sa_enumerator();
+	while (enumerator->enumerate(enumerator, &ike_sa, &spi))
+	{
+		if (ike_sa == sas->ike_sa)
+		{
+			i = array_bsearch(spis, &spi, spis_cmp, NULL);
+			assert_listener_msg(i != -1, sas, "unexpected IPsec SA %.8x", spi);
+			array_remove(spis, i, NULL);
+		}
+	}
+	enumerator->destroy(enumerator);
+	for (i = 0; i < array_count(spis); i++)
+	{
+		array_get(spis, i, &spi);
+		assert_listener_msg(!spi, sas, "expected IPsec SA %.8x not found", spi);
+	}
+	array_destroy(spis);
 }
