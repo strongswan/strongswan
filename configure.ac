@@ -277,6 +277,7 @@ ARG_ENABL_SET([cmd],            [enable the command line IKE client charon-cmd.]
 ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
 ARG_ENABL_SET([dumm],           [enable the DUMM UML test framework.])
 ARG_ENABL_SET([fast],           [enable libfast (FastCGI Application Server w/ templates.])
+ARG_ENABL_SET([fuzzing],        [enable fuzzing scripts (found in directory fuzz).])
 ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
 ARG_ENABL_SET([manager],        [enable web management console (proof of concept).])
 ARG_ENABL_SET([medcli],         [enable mediation client configuration database plugin.])
@@ -1263,6 +1264,11 @@ if test x$coverage = xtrue; then
 	CFLAGS="${CFLAGS} -g -O0"
 fi
 
+if test x$fuzzing = xtrue; then
+	AC_MSG_NOTICE([fuzzing enabled, modifying CFLAGS])
+	CFLAGS="${CFLAGS} -fsanitize-coverage=trace-pc-guard -fsanitize=address"
+fi
+
 if test x$ruby_gems = xtrue; then
 	AC_PATH_PROG([GEM], [gem], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 	if test x$GEM = x; then
@@ -1309,6 +1315,7 @@ attest_plugins=
 scepclient_plugins=
 pki_plugins=
 scripts_plugins=
+fuzz_plugins=
 manager_plugins=
 medsrv_plugins=
 nm_plugins=
@@ -1332,21 +1339,21 @@ ADD_PLUGIN([aes],                  [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([des],                  [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([blowfish],             [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([rc2],                  [s charon scepclient pki scripts nm cmd])
-ADD_PLUGIN([sha2],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
-ADD_PLUGIN([sha3],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
-ADD_PLUGIN([sha1],                 [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([sha2],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen fuzz])
+ADD_PLUGIN([sha3],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen fuzz])
+ADD_PLUGIN([sha1],                 [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen fuzz])
 ADD_PLUGIN([md4],                  [s charon scepclient pki nm cmd])
 ADD_PLUGIN([md5],                  [s charon scepclient pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([mgf1],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([rdrand],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([random],               [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([nonce],                [s charon nm cmd aikgen])
-ADD_PLUGIN([x509],                 [s charon scepclient pki scripts attest nm cmd aikgen])
+ADD_PLUGIN([x509],                 [s charon scepclient pki scripts attest nm cmd aikgen fuzz])
 ADD_PLUGIN([revocation],           [s charon pki nm cmd])
 ADD_PLUGIN([constraints],          [s charon nm cmd])
 ADD_PLUGIN([acert],                [s charon])
 ADD_PLUGIN([pubkey],               [s charon cmd aikgen])
-ADD_PLUGIN([pkcs1],                [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([pkcs1],                [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen fuzz])
 ADD_PLUGIN([pkcs7],                [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([pkcs8],                [s charon scepclient pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([pkcs12],               [s charon scepclient pki scripts cmd])
@@ -1355,13 +1362,13 @@ ADD_PLUGIN([dnskey],               [s charon pki])
 ADD_PLUGIN([sshkey],               [s charon pki nm cmd])
 ADD_PLUGIN([dnscert],              [c charon])
 ADD_PLUGIN([ipseckey],             [c charon])
-ADD_PLUGIN([pem],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([pem],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen fuzz])
 ADD_PLUGIN([padlock],              [s charon])
 ADD_PLUGIN([openssl],              [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([gcrypt],               [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([af-alg],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
-ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen fuzz])
 ADD_PLUGIN([curve25519],           [s charon pki scripts nm cmd])
 ADD_PLUGIN([agent],                [s charon nm cmd])
 ADD_PLUGIN([keychain],             [s charon cmd])
@@ -1462,6 +1469,7 @@ AC_SUBST(attest_plugins)
 AC_SUBST(scepclient_plugins)
 AC_SUBST(pki_plugins)
 AC_SUBST(scripts_plugins)
+AC_SUBST(fuzz_plugins)
 AC_SUBST(manager_plugins)
 AC_SUBST(medsrv_plugins)
 AC_SUBST(nm_plugins)
@@ -1646,6 +1654,7 @@ AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_PKI, test x$pki = xtrue)
 AM_CONDITIONAL(USE_SCEPCLIENT, test x$scepclient = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
+AM_CONDITIONAL(USE_FUZZING, test x$fuzzing = xtrue)
 AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pki = xtrue -o x$scepclient = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
 AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
@@ -1734,6 +1743,7 @@ AC_SUBST(strongswan_options)
 AC_CONFIG_FILES([
 	Makefile
 	conf/Makefile
+	fuzz/Makefile
 	man/Makefile
 	init/Makefile
 	init/systemd/Makefile

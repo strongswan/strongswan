@@ -1,5 +1,9 @@
 SUBDIRS = src man conf init testing
 
+if USE_FUZZING
+  SUBDIRS += fuzz
+endif
+
 if USE_SCRIPTS
   SUBDIRS += scripts
 endif
