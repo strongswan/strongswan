@@ -18,6 +18,7 @@
 
 #include <daemon.h>
 #include <collections/hashtable.h>
+#include <collections/array.h>
 
 #include <assert.h>
 
@@ -32,6 +33,11 @@ struct private_kernel_ipsec_t {
 	 * Public interface
 	 */
 	kernel_ipsec_t public;
+
+	/**
+	 * Rekey listener
+	 */
+	listener_t listener;
 
 	/**
 	 * Allocated SPI
@@ -166,6 +172,36 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	return SUCCESS;
 }
 
+METHOD(listener_t, ike_rekey, bool,
+	listener_t *listener, ike_sa_t *old, ike_sa_t *new)
+{
+	enumerator_t *enumerator;
+	array_t *sas = NULL;
+	entry_t *entry;
+
+	enumerator = instance->sas->create_enumerator(instance->sas);
+	while (enumerator->enumerate(enumerator, &entry, NULL))
+	{
+		if (entry->ike_sa == old)
+		{
+			instance->sas->remove_at(instance->sas, enumerator);
+			array_insert_create(&sas, ARRAY_TAIL, entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+	enumerator = array_create_enumerator(sas);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		array_remove_at(sas, enumerator);
+		entry->ike_sa = new;
+		entry = instance->sas->put(instance->sas, entry, entry);
+		assert(!entry);
+	}
+	enumerator->destroy(enumerator);
+	array_destroy(sas);
+	return TRUE;
+}
+
 METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_kernel_ipsec_t *this, kernel_ipsec_policy_id_t *id,
 	kernel_ipsec_manage_policy_t *data)
@@ -191,6 +227,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 METHOD(kernel_ipsec_t, destroy, void,
 	private_kernel_ipsec_t *this)
 {
+	charon->bus->remove_listener(charon->bus, &this->listener);
 	this->sas->destroy(this->sas);
 	free(this);
 }
@@ -219,10 +256,15 @@ kernel_ipsec_t *mock_ipsec_create()
 			.enable_udp_decap = (void*)return_true,
 			.destroy = _destroy,
 		},
+		.listener = {
+			.ike_rekey = _ike_rekey,
+		},
 		.sas = hashtable_create(entry_hash, entry_equals, 8),
 	);
 
 	instance = this;
+
+	charon->bus->add_listener(charon->bus, &this->listener);
 
 	return &this->public;
 }
