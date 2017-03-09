@@ -554,6 +554,11 @@ If
 .B %any
 is used for the remote endpoint it literally means any IP address.
 
+If an
+.B FQDN
+is assigned it is resolved every time a configuration lookup is done. If DNS
+resolution times out, the lookup is delayed for that time.
+
 To limit the connection to a  specific range of hosts, a range (
 .BR 10.1.0.0-10.2.255.255
 ) or a subnet (
