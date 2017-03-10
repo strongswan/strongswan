@@ -28,6 +28,9 @@ connections.<conn>.local_addrs = %any
 	connection from. As responder, the local destination address must match at
 	least to one of the specified addresses, subnets or ranges.
 
+	If FQDNs are assigned they are resolved every time a configuration lookup
+	is done. If DNS resolution times out, the lookup is delayed for that time.
+
 connections.<conn>.remote_addrs = %any
 	Remote address(es) to use for IKE communication, comma separated.
 
@@ -37,6 +40,9 @@ connections.<conn>.remote_addrs = %any
 	As initiator, the first non-range/non-subnet is used to initiate the
 	connection to. As responder, the initiator source address must match at
 	least to one of the specified addresses, subnets or ranges.
+
+	If FQDNs are assigned they are resolved every time a configuration lookup
+	is done. If DNS resolution times out, the lookup is delayed for that time.
 
 	To initiate a connection, at least one specific address or DNS name must
 	be specified.
