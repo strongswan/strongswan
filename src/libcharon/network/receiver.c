@@ -321,18 +321,16 @@ static bool cookie_required(private_receiver_t *this,
  */
 static bool drop_ike_sa_init(private_receiver_t *this, message_t *message)
 {
-	u_int half_open, half_open_r;
+	u_int half_open;
 	uint32_t now;
 
 	now = time_monotonic(NULL);
 	half_open = charon->ike_sa_manager->get_half_open_count(
-										charon->ike_sa_manager, NULL, FALSE);
-	half_open_r = charon->ike_sa_manager->get_half_open_count(
 										charon->ike_sa_manager, NULL, TRUE);
 
 	/* check for cookies in IKEv2 */
 	if (message->get_major_version(message) == IKEV2_MAJOR_VERSION &&
-		cookie_required(this, half_open_r, now) && !check_cookie(this, message))
+		cookie_required(this, half_open, now) && !check_cookie(this, message))
 	{
 		chunk_t cookie;
 
