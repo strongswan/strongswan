@@ -1058,6 +1058,7 @@ and
 .B pull
 (the default).
 Push mode is currently not supported with IKEv2.
+The setting must be the same on both sides.
 .TP
 .BR reauth " = " yes " | no"
 whether rekeying of an IKE_SA should also reauthenticate the peer. In IKEv1,
