@@ -113,6 +113,6 @@ charon.plugins.kernel-netlink.xfrm_acq_expires = 165
 	trap policy. The value gets written to /proc/sys/net/core/xfrm_acq_expires.
 	Indirectly controls the delay between XFRM acquire messages triggered by the
 	kernel for a trap policy. The same value is used as timeout for SPIs
-	allocated by the kernel. The default value equals the default total
-	retransmission timeout for IKE messages, see IKEv2 RETRANSMISSION
-	in **strongswan.conf**(5).
+	allocated by the kernel. The default value equals the total	retransmission
+	timeout for IKE messages, see IKEv2 RETRANSMISSION in
+	**strongswan.conf**(5).

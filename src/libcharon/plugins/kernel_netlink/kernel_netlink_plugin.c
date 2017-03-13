@@ -19,6 +19,8 @@
 #include "kernel_netlink_ipsec.h"
 #include "kernel_netlink_net.h"
 
+#include <sa/task_manager.h>
+
 typedef struct private_kernel_netlink_plugin_t private_kernel_netlink_plugin_t;
 
 /**
@@ -50,6 +52,24 @@ METHOD(plugin_t, get_features, int,
 	return countof(f);
 }
 
+METHOD(plugin_t, reload, bool,
+	private_kernel_netlink_plugin_t *this)
+{
+	u_int timeout;
+	FILE *f;
+
+	f = fopen("/proc/sys/net/core/xfrm_acq_expires", "w");
+	if (f)
+	{
+		timeout = lib->settings->get_int(lib->settings,
+							"%s.plugins.kernel-netlink.xfrm_acq_expires",
+							task_manager_total_retransmit_timeout(), lib->ns);
+		fprintf(f, "%u", timeout);
+		fclose(f);
+	}
+	return TRUE;
+}
+
 METHOD(plugin_t, destroy, void,
 	private_kernel_netlink_plugin_t *this)
 {
@@ -76,10 +96,13 @@ plugin_t *kernel_netlink_plugin_create()
 			.plugin = {
 				.get_name = _get_name,
 				.get_features = _get_features,
+				.reload = _reload,
 				.destroy = _destroy,
 			},
 		},
 	);
+
+	reload(this);
 
 	return &this->public.plugin;
 }
