@@ -913,7 +913,9 @@ the greatest common subnet. In IKEv1, this may lead to problems with other
 implementations, make sure to configure identical subnets in such
 configurations. IKEv2 supports multiple subnets separated by commas. IKEv1 only
 interprets the first subnet of such a definition, unless the Cisco Unity
-extension plugin is enabled.
+extension plugin is enabled. This is due to a limitation of the IKEv1 protocol,
+which only allows a single pair of subnets per CHILD_SA. So to tunnel several
+subnets a conn entry has to be defined and brought up for each pair of subnets.
 
 The optional part after each subnet enclosed in square brackets specifies a
 protocol/port to restrict the selector for that subnet.
