@@ -113,22 +113,8 @@ static shared_key_t *lookup_shared_key(private_phase1_t *this,
 	auth_cfg_t *my_auth, *other_auth;
 	enumerator_t *enumerator;
 
-	/* try to get a PSK for IP addresses */
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
-	my_id = identification_create_from_sockaddr(me->get_sockaddr(me));
-	other_id = identification_create_from_sockaddr(other->get_sockaddr(other));
-	if (my_id && other_id)
-	{
-		shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE,
-											  my_id, other_id);
-	}
-	DESTROY_IF(my_id);
-	DESTROY_IF(other_id);
-	if (shared_key)
-	{
-		return shared_key;
-	}
 
 	if (peer_cfg)
 	{	/* as initiator or aggressive responder, use identities */
@@ -156,39 +142,51 @@ static shared_key_t *lookup_shared_key(private_phase1_t *this,
 				}
 			}
 		}
-		return shared_key;
 	}
-	/* as responder, we try to find a config by IP */
-	enumerator = charon->backends->create_peer_cfg_enumerator(charon->backends,
-												me, other, NULL, NULL, IKEV1);
-	while (enumerator->enumerate(enumerator, &peer_cfg))
-	{
-		my_auth = get_auth_cfg(peer_cfg, TRUE);
-		other_auth = get_auth_cfg(peer_cfg, FALSE);
-		if (my_auth && other_auth)
+	else
+	{	/* as responder, we try to find a config by IP addresses and use the
+		 * configured identities to find the PSK */
+		enumerator = charon->backends->create_peer_cfg_enumerator(
+								charon->backends, me, other, NULL, NULL, IKEV1);
+		while (enumerator->enumerate(enumerator, &peer_cfg))
 		{
-			my_id = my_auth->get(my_auth, AUTH_RULE_IDENTITY);
-			other_id = other_auth->get(other_auth, AUTH_RULE_IDENTITY);
-			if (my_id)
+			my_auth = get_auth_cfg(peer_cfg, TRUE);
+			other_auth = get_auth_cfg(peer_cfg, FALSE);
+			if (my_auth && other_auth)
 			{
-				shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE,
-													  my_id, other_id);
-				if (shared_key)
+				my_id = my_auth->get(my_auth, AUTH_RULE_IDENTITY);
+				other_id = other_auth->get(other_auth, AUTH_RULE_IDENTITY);
+				if (my_id)
 				{
-					break;
-				}
-				else
-				{
+					shared_key = lib->credmgr->get_shared(lib->credmgr,
+												SHARED_IKE, my_id, other_id);
+					if (shared_key)
+					{
+						break;
+					}
 					DBG1(DBG_IKE, "no shared key found for '%Y'[%H] - '%Y'[%H]",
 						 my_id, me, other_id, other);
 				}
 			}
 		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
 	if (!shared_key)
-	{
-		DBG1(DBG_IKE, "no shared key found for %H - %H", me, other);
+	{	/* try to get a PSK for IP addresses */
+		my_id = identification_create_from_sockaddr(me->get_sockaddr(me));
+		other_id = identification_create_from_sockaddr(
+													other->get_sockaddr(other));
+		if (my_id && other_id)
+		{
+			shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE,
+												  my_id, other_id);
+		}
+		DESTROY_IF(my_id);
+		DESTROY_IF(other_id);
+		if (!shared_key)
+		{
+			DBG1(DBG_IKE, "no shared key found for %H - %H", me, other);
+		}
 	}
 	return shared_key;
 }
