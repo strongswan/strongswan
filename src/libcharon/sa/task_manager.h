@@ -303,6 +303,17 @@ struct task_manager_t {
 };
 
 /**
+ * Calculate total timeout of the retransmission mechanism.
+ *
+ * This is affected by modifications of retransmit_base, retransmit_timeout,
+ * retransmit_limit or retransmit_tries. The resulting value can then be used
+ * e.g. in kernel plugins to set the system's acquire timeout properly.
+ *
+ * @return					calculated total retransmission timeout in seconds
+ */
+u_int task_manager_total_retransmit_timeout();
+
+/**
  * Create a task manager instance for the correct IKE version.
  *
  * @param ike_sa			IKE_SA to create a task manager for

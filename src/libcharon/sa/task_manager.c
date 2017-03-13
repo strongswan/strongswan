@@ -15,10 +15,40 @@
 
 #include "task_manager.h"
 
+#include <math.h>
 #include <sa/ikev1/task_manager_v1.h>
 #include <sa/ikev2/task_manager_v2.h>
 
-/**
+/*
+ * See header
+ */
+u_int task_manager_total_retransmit_timeout()
+{
+	double timeout, base, limit = 0, total = 0;
+	int tries, i;
+
+	tries = lib->settings->get_int(lib->settings, "%s.retransmit_tries",
+								   RETRANSMIT_TRIES, lib->ns);
+	base = lib->settings->get_double(lib->settings, "%s.retransmit_base",
+									 RETRANSMIT_BASE, lib->ns);
+	timeout = lib->settings->get_double(lib->settings, "%s.retransmit_timeout",
+										RETRANSMIT_TIMEOUT, lib->ns);
+	limit = lib->settings->get_double(lib->settings, "%s.retransmit_limit",
+									  0, lib->ns);
+
+	for (i = 0; i <= tries; i++)
+	{
+		double interval = timeout * pow(base, i);
+		if (limit)
+		{
+			interval = min(interval, limit);
+		}
+		total += interval;
+	}
+	return (u_int)total;
+}
+
+/*
  * See header
  */
 task_manager_t *task_manager_create(ike_sa_t *ike_sa)
