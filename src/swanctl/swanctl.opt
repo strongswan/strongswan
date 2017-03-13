@@ -664,9 +664,16 @@ connections.<conn>.children.<child>.local_ts = dynamic
 	value _opaque_ for RFC 4301 OPAQUE selectors. Port ranges may be specified
 	as well, none of the kernel backends currently support port ranges, though.
 
-	Unless the Unity extension is used, IKEv1 supports the first specified
-	selector only. IKEv1 uses very similar traffic selector narrowing as it is
-	supported in the IKEv2 protocol.
+	When IKEv1 is used only the first selector is interpreted, except if
+	the Cisco Unity extension plugin is used. This is due to a limitation of the
+	IKEv1 protocol, which only allows a single pair of selectors per CHILD_SA.
+	So to tunnel traffic matched by several pairs of selectors when using IKEv1
+	several children (CHILD_SAs) have to be defined that cover the selectors.
+
+	The IKE daemon uses traffic selector narrowing for IKEv1, the same way it is
+	standardized and implemented for IKEv2. However, this may lead to problems
+	with other implementations. To avoid that, configure identical selectors in
+	such scenarios.
 
 connections.<conn>.children.<child>.remote_ts = dynamic
 	Remote selectors to include in CHILD_SA.
