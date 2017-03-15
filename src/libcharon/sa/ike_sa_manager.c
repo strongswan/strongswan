@@ -2303,7 +2303,6 @@ ike_sa_manager_t *ike_sa_manager_create()
 	for (i = 0; i < this->segment_count; i++)
 	{
 		this->segments[i].mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
-		this->segments[i].count = 0;
 	}
 
 	/* we use the same table parameters for the table to track half-open SAs */
@@ -2312,7 +2311,6 @@ ike_sa_manager_t *ike_sa_manager_create()
 	for (i = 0; i < this->segment_count; i++)
 	{
 		this->half_open_segments[i].lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-		this->half_open_segments[i].count = 0;
 	}
 
 	/* also for the hash table used for duplicate tests */
@@ -2321,7 +2319,6 @@ ike_sa_manager_t *ike_sa_manager_create()
 	for (i = 0; i < this->segment_count; i++)
 	{
 		this->connected_peers_segments[i].lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
-		this->connected_peers_segments[i].count = 0;
 	}
 
 	/* and again for the table of hashes of seen initial IKE messages */
@@ -2330,7 +2327,6 @@ ike_sa_manager_t *ike_sa_manager_create()
 	for (i = 0; i < this->segment_count; i++)
 	{
 		this->init_hashes_segments[i].mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
-		this->init_hashes_segments[i].count = 0;
 	}
 
 	this->reuse_ikesa = lib->settings->get_bool(lib->settings,
