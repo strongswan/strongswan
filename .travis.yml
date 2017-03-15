@@ -17,6 +17,11 @@ before_script:
 script:
   - ./scripts/test.sh
 
+after_success:
+  if [ "$TEST" == "coverage" ]; then
+    bash <(curl -s https://codecov.io/bash);
+  fi
+
 after_failure:
   - cat config.log
 
@@ -46,6 +51,8 @@ matrix:
       env: TEST=dist
     - compiler: gcc
       env: TEST=apidoc
+    - compiler: gcc
+      env: TEST=coverage
     - compiler: gcc
       env: TEST=win64 MONOLITHIC=yes
     # this does not work on 14.04 due to a missing @4 decoration for

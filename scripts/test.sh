@@ -29,7 +29,7 @@ gcrypt)
 printf-builtin)
 	CONFIG="--with-printf-hooks=builtin"
 	;;
-all)
+all|coverage)
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
 			--disable-dumm --disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-padlock
@@ -41,8 +41,12 @@ all)
 	CONFIG="$CONFIG --disable-aikpub2 --disable-tss-tss2"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
-	# TODO: enable? perhaps via coveralls.io (cpp-coveralls)?
-	CONFIG="$CONFIG --disable-coverage"
+	if test "$TEST" != "coverage"; then
+		CONFIG="$CONFIG --disable-coverage"
+	else
+		# not actually required but configure checks for it
+		DEPS="$DEPS lcov"
+	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libnm-glib-dev libnm-glib-vpn-dev libpcsclite-dev libpam0g-dev
