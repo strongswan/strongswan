@@ -15,6 +15,7 @@
 
 #include "tpm_plugin.h"
 #include "tpm_private_key.h"
+#include "tpm_rng.h"
 
 #include <library.h>
 
@@ -40,13 +41,32 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, get_features, int,
 	private_tpm_plugin_t *this, plugin_feature_t *features[])
 {
-	static plugin_feature_t f[] = {
+	static plugin_feature_t f_rng[] = {
+		PLUGIN_REGISTER(RNG, tpm_rng_create),
+			PLUGIN_PROVIDE(RNG, RNG_STRONG),
+			PLUGIN_PROVIDE(RNG, RNG_TRUE),
+	};
+	static plugin_feature_t f_privkey[] = {
 		PLUGIN_REGISTER(PRIVKEY, tpm_private_key_connect, FALSE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 	};
+	static plugin_feature_t f[countof(f_rng) + countof(f_privkey)] = {};
+
+	static int count = 0;
+
+	if (!count)
+	{
+		plugin_features_add(f, f_privkey, countof(f_privkey), &count);
+
+		if (lib->settings->get_bool(lib->settings,
+								"%s.plugins.tpm.use_rng", FALSE, lib->ns))
+		{
+			plugin_features_add(f, f_rng, countof(f_rng), &count);
+		}
+	}
 	*features = f;
 
-	return countof(f);
+	return count;
 }
 
 METHOD(plugin_t, destroy, void,

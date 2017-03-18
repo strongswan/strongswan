@@ -135,6 +135,15 @@ struct tpm_tss_t {
 				 chunk_t *signature);
 
 	/**
+	 * Get random bytes from the TPM
+	 *
+	 * @param bytes			number of random bytes requested
+	 * @param buffer		buffer where the random bytes are written into
+	 * @return				TRUE if random bytes could be delivered
+	 */
+	bool (*get_random)(tpm_tss_t *this, size_t bytes, uint8_t *buffer);
+
+	/**
 	 * Destroy a tpm_tss_t.
 	 */
 	void (*destroy)(tpm_tss_t *this);

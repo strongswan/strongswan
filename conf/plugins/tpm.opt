@@ -1,0 +1,2 @@
+charon.plugins.tpm.use_rng = no
+	Whether the TPM should be used as RNG.

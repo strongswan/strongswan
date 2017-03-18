@@ -829,6 +829,32 @@ METHOD(tpm_tss_t, sign, bool,
 	return TRUE;
 }
 
+METHOD(tpm_tss_t, get_random, bool,
+	private_tpm_tss_tss2_t *this, size_t bytes, uint8_t *buffer)
+{
+	size_t len, random_len= sizeof(TPM2B_DIGEST)-2;
+	TPM2B_DIGEST random = { { random_len, } };
+	uint8_t *pos = buffer;
+	uint32_t rval;
+
+	while (bytes > 0)
+	{
+		len = min(bytes, random_len);
+
+		rval = Tss2_Sys_GetRandom(this->sys_context, NULL, len, &random, NULL);
+		if (rval != TSS2_RC_SUCCESS)
+		{
+			DBG1(DBG_PTS,"%s Tss2_Sys_GetRandom failed: 0x%06x", LABEL, rval);
+			return FALSE;
+	    }
+		memcpy(pos, random.t.buffer, random.t.size);
+		pos   += random.t.size;
+		bytes -= random.t.size;
+	}
+
+	return TRUE;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_tss2_t *this)
 {
@@ -854,6 +880,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 			.extend_pcr = _extend_pcr,
 			.quote = _quote,
 			.sign = _sign,
+			.get_random = _get_random,
 			.destroy = _destroy,
 		},
 	);

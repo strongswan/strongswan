@@ -589,6 +589,12 @@ METHOD(tpm_tss_t, sign, bool,
 	return FALSE;
 }
 
+METHOD(tpm_tss_t, get_random, bool,
+	private_tpm_tss_trousers_t *this, size_t bytes, uint8_t *buffer)
+{
+	return FALSE;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_trousers_t *this)
 {
@@ -632,6 +638,7 @@ tpm_tss_t *tpm_tss_trousers_create()
 				.extend_pcr = _extend_pcr,
 				.quote = _quote,
 				.sign = _sign,
+				.get_random = _get_random,
 				.destroy = _destroy,
 			},
 			.load_aik = _load_aik,
