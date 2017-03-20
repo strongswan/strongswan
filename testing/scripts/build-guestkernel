@@ -14,7 +14,7 @@ cd $BUILDDIR
 
 if [ ! -f "$KERNELTARBALL" ]
 then
-	url=ftp://ftp.kernel.org/pub/linux/kernel/v${KERNELVERSION:0:1}.x/$KERNELTARBALL
+	url=https://cdn.kernel.org/pub/linux/kernel/v${KERNELVERSION:0:1}.x/$KERNELTARBALL
 	log_action "Downloading $url"
 	execute "wget -q $url"
 fi
