@@ -391,6 +391,11 @@ struct child_sa_t {
 	status_t (*install_outbound)(child_sa_t *this);
 
 	/**
+	 * Remove the outbound SA and the outbound policies after a rekeying.
+	 */
+	void (*remove_outbound)(child_sa_t *this);
+
+	/**
 	 * Configure the policies using some traffic selectors.
 	 *
 	 * Supplied lists of traffic_selector_t's specify the policies

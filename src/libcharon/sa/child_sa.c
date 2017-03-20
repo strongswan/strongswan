@@ -1317,6 +1317,64 @@ METHOD(child_sa_t, install_outbound, status_t,
 	return status;
 }
 
+METHOD(child_sa_t, remove_outbound, void,
+	private_child_sa_t *this)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *my_ts, *other_ts;
+
+	switch (this->outbound_state)
+	{
+		case OUTBOUND_INSTALLED:
+			break;
+		case OUTBOUND_REGISTERED:
+			chunk_clear(&this->encr_r);
+			chunk_clear(&this->integ_r);
+			this->outbound_state = OUTBOUND_NONE;
+			/* fall-through */
+		case OUTBOUND_NONE:
+			return;
+	}
+
+	if (!this->config->has_option(this->config, OPT_NO_POLICIES))
+	{
+		ipsec_sa_cfg_t my_sa, other_sa;
+		uint32_t manual_prio;
+
+		prepare_sa_cfg(this, &my_sa, &other_sa);
+		manual_prio = this->config->get_manual_prio(this->config);
+
+		enumerator = create_policy_enumerator(this);
+		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+		{
+			del_policies_outbound(this, this->my_addr, this->other_addr,
+								  my_ts, other_ts, &my_sa, &other_sa,
+								  POLICY_IPSEC, POLICY_PRIORITY_DEFAULT,
+								  manual_prio);
+			if (manual_prio == 0 && require_policy_update())
+			{
+				del_policies_outbound(this, this->my_addr, this->other_addr,
+									  my_ts, other_ts, &my_sa, &other_sa,
+									  POLICY_DROP, POLICY_PRIORITY_FALLBACK, 0);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	kernel_ipsec_sa_id_t id = {
+		.src = this->my_addr,
+		.dst = this->other_addr,
+		.spi = this->other_spi,
+		.proto = proto_ike2ip(this->protocol),
+		.mark = this->mark_out,
+	};
+	kernel_ipsec_del_sa_t sa = {
+		.cpi = this->other_cpi,
+	};
+	charon->kernel->del_sa(charon->kernel, &id, &sa);
+	this->outbound_state = OUTBOUND_NONE;
+}
+
 METHOD(child_sa_t, set_rekey_spi, void,
 	private_child_sa_t *this, uint32_t spi)
 {
@@ -1519,19 +1577,28 @@ METHOD(child_sa_t, destroy, void,
 	{
 		ipsec_sa_cfg_t my_sa, other_sa;
 		uint32_t manual_prio;
+		bool del_outbound;
 
 		prepare_sa_cfg(this, &my_sa, &other_sa);
 		manual_prio = this->config->get_manual_prio(this->config);
+		del_outbound = this->trap || this->outbound_state == OUTBOUND_INSTALLED;
 
 		/* delete all policies in the kernel */
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
-			del_policies_internal(this, this->my_addr, this->other_addr,
-								  my_ts, other_ts, &my_sa, &other_sa,
-								  POLICY_IPSEC, priority, manual_prio);
-			if (priority == POLICY_PRIORITY_DEFAULT && manual_prio == 0 &&
-				require_policy_update())
+			if (del_outbound)
+			{
+				del_policies_outbound(this, this->my_addr,
+									  this->other_addr, my_ts, other_ts,
+									  &my_sa, &other_sa, POLICY_IPSEC,
+									  priority, manual_prio);
+			}
+			del_policies_inbound(this, this->my_addr, this->other_addr,
+								 my_ts, other_ts, &my_sa, &other_sa,
+								 POLICY_IPSEC, priority, manual_prio);
+			if (!this->trap && manual_prio == 0 && require_policy_update() &&
+				del_outbound)
 			{
 				del_policies_outbound(this, this->my_addr, this->other_addr,
 									  my_ts, other_ts, &my_sa, &other_sa,
@@ -1668,6 +1735,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.install = _install,
 			.register_outbound = _register_outbound,
 			.install_outbound = _install_outbound,
+			.remove_outbound = _remove_outbound,
 			.set_rekey_spi = _set_rekey_spi,
 			.get_rekey_spi = _get_rekey_spi,
 			.update = _update,
