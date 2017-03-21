@@ -271,7 +271,6 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 						break;
 					case CHILD_REKEYING:
 						/* we reply as usual, rekeying will fail */
-					case CHILD_INSTALLED_INBOUND:
 					case CHILD_INSTALLED:
 						if (!this->initiator)
 						{

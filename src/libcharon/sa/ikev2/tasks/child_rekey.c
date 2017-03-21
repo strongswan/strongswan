@@ -476,8 +476,7 @@ METHOD(child_rekey_t, collide, void,
 		/* ignore passive tasks that did not successfully create a CHILD_SA */
 		other_child = rekey->child_create->get_child(rekey->child_create);
 		if (!other_child ||
-			(other_child->get_state(other_child) != CHILD_INSTALLED &&
-			 other_child->get_state(other_child) != CHILD_INSTALLED_INBOUND))
+			 other_child->get_state(other_child) != CHILD_INSTALLED)
 		{
 			other->destroy(other);
 			return;

@@ -54,11 +54,6 @@ enum child_sa_state_t {
 	CHILD_INSTALLING,
 
 	/**
-	 * Installed the inbound SA of a CHILD_SA during rekeying
-	 */
-	CHILD_INSTALLED_INBOUND,
-
-	/**
 	 * Installed both SAs of a CHILD_SA
 	 */
 	CHILD_INSTALLED,

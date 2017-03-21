@@ -745,14 +745,7 @@ static status_t select_and_install(private_child_create_t *this,
 	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
 							this->dh, nonce_i, nonce_r);
 
-	if (this->rekey && !this->initiator)
-	{
-		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED_INBOUND);
-	}
-	else
-	{
-		this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-	}
+	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	this->established = TRUE;
 
