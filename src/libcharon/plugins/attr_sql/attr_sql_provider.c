@@ -200,7 +200,6 @@ static host_t* get_lease(private_attr_sql_provider_t *this, char *name,
 				"SELECT id, address FROM addresses "
 				"WHERE pool = ? AND identity = 0 LIMIT 1",
 				DB_UINT, pool, DB_UINT, DB_BLOB);
-
 		}
 
 		if (!e || !e->enumerate(e, &id, &address))
@@ -447,7 +446,6 @@ METHOD(attr_sql_provider_t, destroy, void,
 attr_sql_provider_t *attr_sql_provider_create(database_t *db)
 {
 	private_attr_sql_provider_t *this;
-	time_t now = time(NULL);
 
 	INIT(this,
 		.public = {
@@ -460,19 +458,25 @@ attr_sql_provider_t *attr_sql_provider_create(database_t *db)
 		},
 		.db = db,
 		.history = lib->settings->get_bool(lib->settings,
-							"%s.plugins.attr-sql.lease_history", TRUE, lib->ns),
+						"%s.plugins.attr-sql.lease_history", TRUE, lib->ns),
 	);
 
-	/* close any "online" leases in the case we crashed */
-	if (this->history)
+	if (lib->settings->get_bool(lib->settings,
+						"%s.plugins.attr-sql.crash_recovery", TRUE, lib->ns))
 	{
-		this->db->execute(this->db, NULL,
+		time_t now = time(NULL);
+
+		/* close any "online" leases in the case we crashed */
+		if (this->history)
+		{
+			this->db->execute(this->db, NULL,
 					"INSERT INTO leases (address, identity, acquired, released)"
 					" SELECT id, identity, acquired, ? FROM addresses "
 					" WHERE released = 0", DB_UINT, now);
-	}
-	this->db->execute(this->db, NULL,
+		}
+		this->db->execute(this->db, NULL,
 					  "UPDATE addresses SET released = ? WHERE released = 0",
 					  DB_UINT, now);
+	}
 	return &this->public;
 }
