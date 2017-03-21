@@ -41,6 +41,12 @@ ENUM(child_sa_state_names, CHILD_CREATED, CHILD_DESTROYING,
 	"DESTROYING",
 );
 
+ENUM(child_sa_outbound_state_names, CHILD_OUTBOUND_NONE, CHILD_OUTBOUND_INSTALLED,
+	"NONE",
+	"REGISTERED",
+	"INSTALLED",
+);
+
 typedef struct private_child_sa_t private_child_sa_t;
 
 /**
@@ -105,11 +111,7 @@ struct private_child_sa_t {
 	/**
 	 * Whether the outbound SA has only been registered yet during a rekeying
 	 */
-	enum {
-		OUTBOUND_NONE,
-		OUTBOUND_REGISTERED,
-		OUTBOUND_INSTALLED,
-	} outbound_state;
+	child_sa_outbound_state_t outbound_state;
 
 	/**
 	 * Whether the peer supports TFCv3
@@ -307,6 +309,12 @@ METHOD(child_sa_t, get_state, child_sa_state_t,
 	   private_child_sa_t *this)
 {
 	return this->state;
+}
+
+METHOD(child_sa_t, get_outbound_state, child_sa_outbound_state_t,
+	   private_child_sa_t *this)
+{
+	return this->outbound_state;
 }
 
 METHOD(child_sa_t, get_spi, uint32_t,
@@ -538,7 +546,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 	}
 	else
 	{
-		if (this->other_spi && this->outbound_state == OUTBOUND_INSTALLED)
+		if (this->other_spi && this->outbound_state == CHILD_OUTBOUND_INSTALLED)
 		{
 			kernel_ipsec_sa_id_t id = {
 				.src = this->my_addr,
@@ -779,7 +787,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		{
 			tfc = this->config->get_tfc(this->config);
 		}
-		this->outbound_state = OUTBOUND_INSTALLED;
+		this->outbound_state = CHILD_OUTBOUND_INSTALLED;
 	}
 
 	DBG2(DBG_CHD, "adding %s %N SA", inbound ? "inbound" : "outbound",
@@ -1205,7 +1213,7 @@ METHOD(child_sa_t, install_policies, status_t,
 		this->trap = this->state == CHILD_CREATED;
 		priority = this->trap ? POLICY_PRIORITY_ROUTED
 							  : POLICY_PRIORITY_DEFAULT;
-		install_outbound = this->outbound_state != OUTBOUND_REGISTERED;
+		install_outbound = this->outbound_state != CHILD_OUTBOUND_REGISTERED;
 
 		/* enumerate pairs of traffic selectors */
 		enumerator = create_policy_enumerator(this);
@@ -1264,7 +1272,7 @@ METHOD(child_sa_t, register_outbound, void,
 	this->encr_r = chunk_clone(encr);
 	this->integ_r = chunk_clone(integ);
 	this->tfcv3 = tfcv3;
-	this->outbound_state = OUTBOUND_REGISTERED;
+	this->outbound_state = CHILD_OUTBOUND_REGISTERED;
 }
 
 METHOD(child_sa_t, install_outbound, status_t,
@@ -1325,14 +1333,14 @@ METHOD(child_sa_t, remove_outbound, void,
 
 	switch (this->outbound_state)
 	{
-		case OUTBOUND_INSTALLED:
+		case CHILD_OUTBOUND_INSTALLED:
 			break;
-		case OUTBOUND_REGISTERED:
+		case CHILD_OUTBOUND_REGISTERED:
 			chunk_clear(&this->encr_r);
 			chunk_clear(&this->integ_r);
-			this->outbound_state = OUTBOUND_NONE;
+			this->outbound_state = CHILD_OUTBOUND_NONE;
 			/* fall-through */
-		case OUTBOUND_NONE:
+		case CHILD_OUTBOUND_NONE:
 			return;
 	}
 
@@ -1372,7 +1380,7 @@ METHOD(child_sa_t, remove_outbound, void,
 		.cpi = this->other_cpi,
 	};
 	charon->kernel->del_sa(charon->kernel, &id, &sa);
-	this->outbound_state = OUTBOUND_NONE;
+	this->outbound_state = CHILD_OUTBOUND_NONE;
 }
 
 METHOD(child_sa_t, set_rekey_spi, void,
@@ -1581,7 +1589,8 @@ METHOD(child_sa_t, destroy, void,
 
 		prepare_sa_cfg(this, &my_sa, &other_sa);
 		manual_prio = this->config->get_manual_prio(this->config);
-		del_outbound = this->trap || this->outbound_state == OUTBOUND_INSTALLED;
+		del_outbound = this->trap ||
+					   this->outbound_state == CHILD_OUTBOUND_INSTALLED;
 
 		/* delete all policies in the kernel */
 		enumerator = create_policy_enumerator(this);
@@ -1622,7 +1631,7 @@ METHOD(child_sa_t, destroy, void,
 		};
 		charon->kernel->del_sa(charon->kernel, &id, &sa);
 	}
-	if (this->other_spi && this->outbound_state == OUTBOUND_INSTALLED)
+	if (this->other_spi && this->outbound_state == CHILD_OUTBOUND_INSTALLED)
 	{
 		kernel_ipsec_sa_id_t id = {
 			.src = this->my_addr,
@@ -1711,6 +1720,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.get_config = _get_config,
 			.get_state = _get_state,
 			.set_state = _set_state,
+			.get_outbound_state = _get_outbound_state,
 			.get_spi = _get_spi,
 			.get_cpi = _get_cpi,
 			.get_protocol = _get_protocol,

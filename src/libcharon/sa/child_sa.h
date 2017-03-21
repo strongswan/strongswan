@@ -24,6 +24,7 @@
 #define CHILD_SA_H_
 
 typedef enum child_sa_state_t child_sa_state_t;
+typedef enum child_sa_outbound_state_t child_sa_outbound_state_t;
 typedef struct child_sa_t child_sa_t;
 
 #include <library.h>
@@ -99,6 +100,32 @@ enum child_sa_state_t {
 extern enum_name_t *child_sa_state_names;
 
 /**
+ * States of the outbound SA of a CHILD_SA
+ */
+enum child_sa_outbound_state_t {
+
+	/**
+	 * Outbound SA is not installed
+	 */
+	CHILD_OUTBOUND_NONE,
+
+	/**
+	 * Data for the outbound SA has been registered, but not installed yet
+	 */
+	CHILD_OUTBOUND_REGISTERED,
+
+	/**
+	 * The outbound SA is currently installed
+	 */
+	CHILD_OUTBOUND_INSTALLED,
+};
+
+/**
+ * enum strings for child_sa_outbound_state_t.
+ */
+extern enum_name_t *child_sa_outbound_state_names;
+
+/**
  * Represents an IPsec SAs between two hosts.
  *
  * A child_sa_t contains two SAs. SAs for both
@@ -157,7 +184,14 @@ struct child_sa_t {
 	 *
 	 * @return 			CHILD_SA state
 	 */
-	child_sa_state_t (*get_state) (child_sa_t *this);
+	child_sa_state_t (*get_state)(child_sa_t *this);
+
+	/**
+	 * Get the state of the outbound SA.
+	 *
+	 * @return 			outbound SA state
+	 */
+	child_sa_outbound_state_t (*get_outbound_state)(child_sa_t *this);
 
 	/**
 	 * Set the state of the CHILD_SA.
