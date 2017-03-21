@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2017 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -28,7 +28,23 @@
 	assert_hook_not_called(child_updown); \
 	assert_hook_not_called(child_rekey); \
 	call_ikesa(sa, rekey_child_sa, PROTO_ESP, spi); \
-	assert_child_sa_state(sa, spi, CHILD_REKEYING); \
+	assert_child_sa_state(sa, spi, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED); \
+	assert_hook(); \
+	assert_hook(); \
+})
+
+/**
+ * Destroy a rekeyed CHILD_SA that was kept around to accept inbound traffic.
+ * Simulates the job that's scheduled to do this.
+ */
+#define destroy_rekeyed(sa, spi) ({ \
+	assert_hook_not_called(child_updown); \
+	assert_hook_not_called(child_rekey); \
+	assert_no_jobs_scheduled(); \
+	assert_child_sa_state(sa, spi, CHILD_DELETING, CHILD_OUTBOUND_NONE); \
+	call_ikesa(sa, delete_child_sa, PROTO_ESP, spi, FALSE); \
+	assert_child_sa_not_exists(sa, spi); \
+	assert_scheduler(); \
 	assert_hook(); \
 	assert_hook(); \
 })
@@ -61,7 +77,7 @@ START_TEST(test_regular)
 	assert_hook_called(child_rekey);
 	assert_notify(IN, REKEY_SA);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, spi_b, CHILD_REKEYED);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
 	assert_hook();
 
@@ -69,24 +85,36 @@ START_TEST(test_regular)
 	assert_hook_called(child_rekey);
 	assert_no_notify(IN, REKEY_SA);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, spi_a, CHILD_DELETING);
+	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
 	assert_hook();
 
 	/* INFORMATIONAL { D } --> */
 	assert_hook_not_called(child_rekey);
+	assert_jobs_scheduled(1);
 	assert_single_payload(IN, PLV2_DELETE);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_DELETING, CHILD_OUTBOUND_NONE);
 	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
-	assert_child_sa_count(b, 1);
+	assert_child_sa_count(b, 2);
+	assert_scheduler();
 	assert_hook();
 	/* <-- INFORMATIONAL { D } */
 	assert_hook_not_called(child_rekey);
+	assert_jobs_scheduled(1);
 	assert_single_payload(IN, PLV2_DELETE);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 3, CHILD_INSTALLED);
-	assert_child_sa_count(a, 1);
+	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_scheduler();
 	assert_hook();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, spi_a);
+	assert_child_sa_count(a, 1);
+	destroy_rekeyed(b, spi_b);
+	assert_child_sa_count(b, 1);
 
 	/* child_updown */
 	assert_hook();
@@ -165,16 +193,24 @@ START_TEST(test_regular_ke_invalid)
 	assert_hook_not_called(child_rekey);
 	assert_single_payload(IN, PLV2_DELETE);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_DELETING, CHILD_OUTBOUND_NONE);
 	assert_child_sa_state(b, 6, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
-	assert_child_sa_count(b, 1);
+	assert_child_sa_count(b, 2);
 	assert_hook();
 	/* <-- INFORMATIONAL { D } */
 	assert_hook_not_called(child_rekey);
 	assert_single_payload(IN, PLV2_DELETE);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_NONE);
 	assert_child_sa_state(a, 5, CHILD_INSTALLED);
-	assert_child_sa_count(a, 1);
+	assert_child_sa_count(a, 2);
 	assert_hook();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, spi_a);
+	assert_child_sa_count(a, 1);
+	destroy_rekeyed(b, spi_b);
+	assert_child_sa_count(b, 1);
 
 	/* child_updown */
 	assert_hook();
@@ -223,15 +259,27 @@ START_TEST(test_regular_responder_ignore_soft_expire)
 	assert_child_sa_state(b, 2, CHILD_REKEYED);
 
 	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
 	assert_single_payload(IN, PLV2_DELETE);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_NONE);
 	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
-	assert_child_sa_count(b, 1);
+	assert_child_sa_count(b, 2);
+	assert_scheduler();
 	/* <-- INFORMATIONAL { D } */
+	assert_jobs_scheduled(1);
 	assert_single_payload(IN, PLV2_DELETE);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_NONE);
 	assert_child_sa_state(a, 3, CHILD_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_scheduler();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, 1);
 	assert_child_sa_count(a, 1);
+	destroy_rekeyed(b, 2);
+	assert_child_sa_count(b, 1);
 
 	/* child_rekey/child_updown */
 	assert_hook();
@@ -279,27 +327,40 @@ START_TEST(test_regular_responder_handle_hard_expire)
 	/* this is similar to a regular delete collision */
 	assert_single_payload(OUT, PLV2_DELETE);
 	call_ikesa(b, delete_child_sa, PROTO_ESP, 2, TRUE);
-	assert_child_sa_state(b, 2, CHILD_DELETING);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
 
 	/* INFORMATIONAL { D } --> */
 	assert_single_payload(IN, PLV2_DELETE);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(a, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
-	assert_child_sa_state(a, 2, CHILD_DELETING);
 	/* <-- INFORMATIONAL { D } */
 	assert_single_payload(IN, PLV2_DELETE);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
-	assert_child_sa_state(a, 1, CHILD_DELETING);
 	/* <-- INFORMATIONAL { } */
+	assert_jobs_scheduled(1);
 	assert_message_empty(IN);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 3, CHILD_INSTALLED);
-	assert_child_sa_count(a, 1);
+	assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_scheduler();
 	/* INFORMATIONAL { } --> */
+	assert_jobs_scheduled(1);
 	assert_message_empty(IN);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_scheduler();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, 1);
+	assert_child_sa_count(a, 1);
+	destroy_rekeyed(b, 2);
 	assert_child_sa_count(b, 1);
 
 	/* child_rekey/child_updown */
@@ -360,14 +421,14 @@ START_TEST(test_collision)
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
 	assert_hook_rekey(child_rekey, 2, 5);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_REKEYED);
+	assert_child_sa_state(b, 2, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(b, 5, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
 	assert_hook();
 	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[3];
 	assert_hook_rekey(child_rekey, 1, 6);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_REKEYED);
+	assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
 	assert_hook();
 
@@ -378,56 +439,100 @@ START_TEST(test_collision)
 		assert_hook_rekey(child_rekey, 1, data[_i].spi_a);
 		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 		assert_hook();
+		assert_child_sa_state(a, data[_i].spi_del_b, CHILD_REKEYED,
+							  CHILD_OUTBOUND_REGISTERED);
+		assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_INSTALLED);
 	}
 	else
 	{
 		assert_hook_not_called(child_rekey);
 		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 		assert_hook();
+		assert_child_sa_state(a, data[_i].spi_del_b, CHILD_REKEYED,
+							  CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_REGISTERED);
 	}
-	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING);
-	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_REKEYED);
-	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
-						  data[_i].spi_del_a == 1 ? CHILD_OUTBOUND_INSTALLED
-												  : CHILD_OUTBOUND_REGISTERED);
+	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_INSTALLED);
 	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
 	if (data[_i].spi_del_b == 2)
 	{
 		assert_hook_rekey(child_rekey, 2, data[_i].spi_b);
 		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 		assert_hook();
+		assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED,
+							  CHILD_OUTBOUND_REGISTERED);
+		assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_INSTALLED);
 	}
 	else
 	{
 		assert_hook_not_called(child_rekey);
 		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 		assert_hook();
+		assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED,
+							  CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_REGISTERED);
 	}
-	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING);
-	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
-						  data[_i].spi_del_b == 2 ? CHILD_OUTBOUND_INSTALLED
-												  : CHILD_OUTBOUND_REGISTERED);
+	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_INSTALLED);
 
 	/* we don't expect this hook to get called anymore */
 	assert_hook_not_called(child_rekey);
 	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED);
-	assert_child_sa_count(b, 2);
+	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 3);
+	assert_scheduler();
 	/* <-- INFORMATIONAL { D } */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING);
-	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED);
-	assert_child_sa_count(a, 2);
+	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 3);
+	assert_scheduler();
 	/* <-- INFORMATIONAL { D } */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED);
-	assert_child_sa_count(a, 1);
+	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 3);
+	assert_scheduler();
 	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED);
+	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 3);
+	assert_scheduler();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, data[_i].spi_del_a);
+	destroy_rekeyed(a, data[_i].spi_del_b);
+	assert_child_sa_count(a, 1);
+	destroy_rekeyed(b, data[_i].spi_del_a);
+	destroy_rekeyed(b, data[_i].spi_del_b);
 	assert_child_sa_count(b, 1);
 
 	/* child_rekey/child_updown */
@@ -497,14 +602,14 @@ START_TEST(test_collision_delayed_response)
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
 	assert_hook_rekey(child_rekey, 2, 5);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_REKEYED);
+	assert_child_sa_state(b, 2, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(b, 5, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
 	assert_hook();
 	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[3];
 	assert_hook_rekey(child_rekey, 1, 6);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_REKEYED);
+	assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
 	assert_hook();
 
@@ -517,39 +622,64 @@ START_TEST(test_collision_delayed_response)
 		assert_hook_rekey(child_rekey, 2, data[_i].spi_b);
 		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 		assert_hook();
+		assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED,
+							  CHILD_OUTBOUND_REGISTERED);
+		assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_INSTALLED);
 	}
 	else
 	{
 		assert_hook_not_called(child_rekey);
 		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 		assert_hook();
+		assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED,
+							  CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_REGISTERED);
 	}
-	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING);
-	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
-						  data[_i].spi_del_b == 2 ? CHILD_OUTBOUND_INSTALLED
-												  : CHILD_OUTBOUND_REGISTERED);
+	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_INSTALLED);
 
 	/* <-- INFORMATIONAL { D } */
 	assert_hook_not_called(child_rekey);
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	if (data[_i].spi_del_b == 2)
 	{
-		assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED);
-		assert_child_sa_count(a, 1);
+		assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_count(a, 2);
 	}
 	else
 	{
-		assert_child_sa_state(a, 1, CHILD_REKEYED);
-		assert_child_sa_count(a, 1);
+		assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, data[_i].spi_del_b, CHILD_DELETING,
+							  CHILD_OUTBOUND_NONE);
+		assert_child_sa_count(a, 2);
 	}
+	assert_scheduler();
 	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
-						  data[_i].spi_del_b == 2 ? CHILD_OUTBOUND_INSTALLED
-												  : CHILD_OUTBOUND_REGISTERED);
-	assert_child_sa_count(b, 2);
+	if (data[_i].spi_del_b == 2)
+	{
+		assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED,
+							  CHILD_OUTBOUND_REGISTERED);
+		assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_INSTALLED);
+	}
+	else
+	{
+		assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED,
+							  CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_REGISTERED);
+	}
+	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_count(b, 3);
+	assert_scheduler();
 	assert_hook();
 
 	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } (delayed) */
@@ -565,20 +695,46 @@ START_TEST(test_collision_delayed_response)
 		exchange_test_helper->process_message(exchange_test_helper, a, msg);
 		assert_hook();
 	}
-	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING);
-	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED);
-	assert_child_sa_count(a, 2);
+	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 3);
 
 	/* we don't expect this hook to get called anymore */
 	assert_hook_not_called(child_rekey);
 	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED);
-	assert_child_sa_count(b, 1);
+	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 3);
+	assert_scheduler();
 	/* <-- INFORMATIONAL { D } */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED);
+	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 3);
+	assert_scheduler();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, data[_i].spi_del_a);
+	destroy_rekeyed(a, data[_i].spi_del_b);
 	assert_child_sa_count(a, 1);
+	destroy_rekeyed(b, data[_i].spi_del_a);
+	destroy_rekeyed(b, data[_i].spi_del_b);
+	assert_child_sa_count(b, 1);
 
 	/* child_rekey/child_updown */
 	assert_hook();
@@ -642,13 +798,13 @@ START_TEST(test_collision_delayed_request)
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
 	assert_hook_rekey(child_rekey, 1, 5);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_REKEYED);
+	assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(a, 5, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
 	assert_hook();
 	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
 	assert_hook_rekey(child_rekey, 2, 4);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_DELETING);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
 	assert_hook();
 
@@ -658,24 +814,37 @@ START_TEST(test_collision_delayed_request)
 	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> (delayed) */
 	assert_single_notify(OUT, TEMPORARY_FAILURE);
 	exchange_test_helper->process_message(exchange_test_helper, b, msg);
-	assert_child_sa_state(b, 2, CHILD_DELETING);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
 
 	/* <-- INFORMATIONAL { D } */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_NONE);
 	assert_child_sa_state(a, 5, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
-	assert_child_sa_count(a, 1);
+	assert_child_sa_count(a, 2);
+	assert_scheduler();
 
 	/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
 	assert_no_jobs_scheduled();
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 5, CHILD_INSTALLED);
-	assert_child_sa_count(a, 1);
+	assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 5, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 2);
 	assert_scheduler();
 
 	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_scheduler();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, 1);
+	assert_child_sa_count(a, 1);
+	destroy_rekeyed(b, 2);
 	assert_child_sa_count(b, 1);
 
 	/* child_rekey/child_updown */
@@ -743,13 +912,13 @@ START_TEST(test_collision_delayed_request_more)
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
 	assert_hook_rekey(child_rekey, 1, 5);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_REKEYED);
+	assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(a, 5, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
 	assert_hook();
 	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
 	assert_hook_rekey(child_rekey, 2, 4);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_DELETING);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
 	assert_hook();
 
@@ -757,25 +926,39 @@ START_TEST(test_collision_delayed_request_more)
 	assert_hook_not_called(child_rekey);
 
 	/* <-- INFORMATIONAL { D } */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_NONE);
 	assert_child_sa_state(a, 5, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
-	assert_child_sa_count(a, 1);
+	assert_child_sa_count(a, 2);
+	assert_scheduler();
 	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED);
-	assert_child_sa_count(b, 1);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_scheduler();
 
 	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
 	assert_single_notify(OUT, CHILD_SA_NOT_FOUND);
 	exchange_test_helper->process_message(exchange_test_helper, b, msg);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED);
-	assert_child_sa_count(b, 1);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
 	/* <-- CREATE_CHILD_SA { N(NO_CHILD_SA) } */
 	assert_no_jobs_scheduled();
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 5, CHILD_INSTALLED);
-	assert_child_sa_count(a, 1);
+	assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 5, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 2);
 	assert_scheduler();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, 1);
+	assert_child_sa_count(a, 1);
+	destroy_rekeyed(b, 2);
+	assert_child_sa_count(b, 1);
 
 	/* child_rekey/child_updown */
 	assert_hook();
@@ -850,13 +1033,13 @@ START_TEST(test_collision_ke_invalid)
 	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
 	assert_hook_not_called(child_rekey);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_REKEYING);
+	assert_child_sa_state(b, 2, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_count(b, 1);
 	assert_hook();
 	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
 	assert_hook_not_called(child_rekey);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_REKEYING);
+	assert_child_sa_state(a, 1, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_count(a, 1);
 	assert_hook();
 
@@ -865,7 +1048,7 @@ START_TEST(test_collision_ke_invalid)
 	assert_hook_not_called(child_rekey);
 	assert_single_notify(IN, INVALID_KE_PAYLOAD);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_REKEYING);
+	assert_child_sa_state(a, 1, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_count(a, 1);
 	assert_hook();
 	/* CREATE_CHILD_SA { N(INVAL_KE) } --> */
@@ -873,7 +1056,7 @@ START_TEST(test_collision_ke_invalid)
 	assert_hook_not_called(child_rekey);
 	assert_single_notify(IN, INVALID_KE_PAYLOAD);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_REKEYING);
+	assert_child_sa_state(b, 2, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_count(b, 1);
 	assert_hook();
 
@@ -881,14 +1064,14 @@ START_TEST(test_collision_ke_invalid)
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
 	assert_hook_rekey(child_rekey, 2, 9);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_REKEYED);
+	assert_child_sa_state(b, 2, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(b, 9, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
 	assert_hook();
 	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[3];
 	assert_hook_rekey(child_rekey, 1, 10);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_REKEYED);
+	assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(a,10, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
 	assert_hook();
 
@@ -899,52 +1082,96 @@ START_TEST(test_collision_ke_invalid)
 		assert_hook_rekey(child_rekey, 1, data[_i].spi_a);
 		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 		assert_hook();
+		assert_child_sa_state(a, data[_i].spi_del_b, CHILD_REKEYED,
+							  CHILD_OUTBOUND_REGISTERED);
+		assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_INSTALLED);
 	}
 	else
 	{
 		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_child_sa_state(a, data[_i].spi_del_b, CHILD_REKEYED,
+							  CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_REGISTERED);
 	}
-	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING);
-	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_REKEYED);
-	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
-						  data[_i].spi_del_a == 1 ? CHILD_OUTBOUND_INSTALLED
-												  : CHILD_OUTBOUND_REGISTERED);
+	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_INSTALLED);
 	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
 	if (data[_i].spi_del_b == 2)
 	{
 		assert_hook_rekey(child_rekey, 2, data[_i].spi_b);
 		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 		assert_hook();
+		assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED,
+							  CHILD_OUTBOUND_REGISTERED);
+		assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_INSTALLED);
 	}
 	else
 	{
 		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED,
+							  CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+							  CHILD_OUTBOUND_REGISTERED);
 	}
-	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING);
-	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_REKEYED);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
-						  data[_i].spi_del_b == 2 ? CHILD_OUTBOUND_INSTALLED
-												  : CHILD_OUTBOUND_REGISTERED);
+	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_INSTALLED);
 
 	/* we don't expect this hook to get called anymore */
 	assert_hook_not_called(child_rekey);
 	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED);
-	assert_child_sa_count(b, 2);
+	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 3);
+	assert_scheduler();
 	/* <-- INFORMATIONAL { D } */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING);
-	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED);
-	assert_child_sa_count(a, 2);
+	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 3);
+	assert_scheduler();
 	/* <-- INFORMATIONAL { D } */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED);
-	assert_child_sa_count(a, 1);
+	assert_child_sa_state(a, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, data[_i].spi_a, CHILD_INSTALLED,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 3);
+	assert_scheduler();
 	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED);
+	assert_child_sa_state(b, data[_i].spi_del_b, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, data[_i].spi_del_a, CHILD_DELETING,
+						  CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, data[_i].spi_b, CHILD_INSTALLED,
+						  CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 3);
+	assert_scheduler();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, data[_i].spi_del_a);
+	destroy_rekeyed(a, data[_i].spi_del_b);
+	assert_child_sa_count(a, 1);
+	destroy_rekeyed(b, data[_i].spi_del_a);
+	destroy_rekeyed(b, data[_i].spi_del_b);
 	assert_child_sa_count(b, 1);
 
 	/* child_rekey/child_updown */
@@ -1016,13 +1243,13 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
 	assert_hook_not_called(child_rekey);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_REKEYING);
+	assert_child_sa_state(b, 2, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_count(b, 1);
 	assert_hook();
 	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
 	assert_hook_not_called(child_rekey);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_REKEYING);
+	assert_child_sa_state(a, 1, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_count(a, 1);
 	assert_hook();
 
@@ -1031,7 +1258,7 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 	assert_hook_not_called(child_rekey);
 	assert_single_notify(IN, INVALID_KE_PAYLOAD);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_REKEYING);
+	assert_child_sa_state(a, 1, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_count(a, 1);
 	assert_hook();
 	/* CREATE_CHILD_SA { N(INVAL_KE) } --> */
@@ -1039,7 +1266,7 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 	assert_hook_not_called(child_rekey);
 	assert_single_notify(IN, INVALID_KE_PAYLOAD);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_REKEYING);
+	assert_child_sa_state(b, 2, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_count(b, 1);
 	assert_hook();
 
@@ -1050,14 +1277,14 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
 	assert_hook_rekey(child_rekey, 1, 9);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_REKEYED);
+	assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(a, 9, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
 	assert_hook();
 	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
 	assert_hook_rekey(child_rekey, 2, 8);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_DELETING);
-	assert_child_sa_state(b, 8, CHILD_INSTALLED);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 8, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
 	assert_hook();
 
 	/* we don't expect this hook to get called anymore */
@@ -1066,24 +1293,37 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> (delayed) */
 	assert_single_notify(OUT, TEMPORARY_FAILURE);
 	exchange_test_helper->process_message(exchange_test_helper, b, msg);
-	assert_child_sa_state(b, 2, CHILD_DELETING);
-	assert_child_sa_state(b, 8, CHILD_INSTALLED);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 8, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
 
 	/* <-- INFORMATIONAL { D } */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_NONE);
 	assert_child_sa_state(a, 9, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
-	assert_child_sa_count(a, 1);
+	assert_child_sa_count(a, 2);
+	assert_scheduler();
 
 	/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
 	assert_no_jobs_scheduled();
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 9, CHILD_INSTALLED);
-	assert_child_sa_count(a, 1);
+	assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 9, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 2);
 	assert_scheduler();
 
 	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 8, CHILD_INSTALLED);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 8, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_scheduler();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, 1);
+	assert_child_sa_count(a, 1);
+	destroy_rekeyed(b, 2);
 	assert_child_sa_count(b, 1);
 
 	/* child_rekey/child_updown */
@@ -1126,7 +1366,7 @@ START_TEST(test_collision_delete)
 	}
 	initiate_rekey(a, spi_a);
 	call_ikesa(b, delete_child_sa, PROTO_ESP, spi_b, FALSE);
-	assert_child_sa_state(b, spi_b, CHILD_DELETING);
+	assert_child_sa_state(b, spi_b, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
 
 	/* this should never get called as there is no successful rekeying on
 	 * either side */
@@ -1141,7 +1381,7 @@ START_TEST(test_collision_delete)
 	assert_notify(IN, REKEY_SA);
 	assert_single_notify(OUT, TEMPORARY_FAILURE);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, spi_b, CHILD_DELETING);
+	assert_child_sa_state(b, spi_b, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
 	assert_hook();
 
 	/* RFC 7296, 2.25.1: If a peer receives a request to delete a CHILD_SA that
@@ -1213,7 +1453,7 @@ START_TEST(test_collision_delete_drop_delete)
 	}
 	initiate_rekey(a, spi_a);
 	call_ikesa(b, delete_child_sa, PROTO_ESP, spi_b, FALSE);
-	assert_child_sa_state(b, spi_b, CHILD_DELETING);
+	assert_child_sa_state(b, spi_b, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
 
 	/* this should never get called as there is no successful rekeying on
 	 * either side */
@@ -1228,7 +1468,7 @@ START_TEST(test_collision_delete_drop_delete)
 	assert_notify(IN, REKEY_SA);
 	assert_single_notify(OUT, TEMPORARY_FAILURE);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, spi_b, CHILD_DELETING);
+	assert_child_sa_state(b, spi_b, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
 	assert_hook();
 
 	/* delay the DELETE request */
@@ -1239,7 +1479,7 @@ START_TEST(test_collision_delete_drop_delete)
 	/* we expect a job to retry the rekeying is scheduled */
 	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, spi_a, CHILD_INSTALLED);
+	assert_child_sa_state(a, spi_a, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
 	assert_scheduler();
 	assert_hook();
 
@@ -1298,7 +1538,7 @@ END_TEST
 	}
 	initiate_rekey(a, spi_a);
 	call_ikesa(b, delete_child_sa, PROTO_ESP, spi_b, FALSE);
-	assert_child_sa_state(b, spi_b, CHILD_DELETING);
+	assert_child_sa_state(b, spi_b, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
 
 	/* this should never get called as there is no successful rekeying on
 	 * either side */
@@ -1431,13 +1671,13 @@ START_TEST(test_collision_ike_rekey)
 	/* <-- CREATE_CHILD_SA { SA, Ni, KEi } */
 	assert_single_notify(OUT, TEMPORARY_FAILURE);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, spi_a, CHILD_REKEYING);
+	assert_child_sa_state(a, spi_a, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
 
 	/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
 	/* we expect a job to retry the rekeying is scheduled */
 	assert_jobs_scheduled(1);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, spi_a, CHILD_INSTALLED);
+	assert_child_sa_state(a, spi_a, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
 	assert_scheduler();
 
 	/* CREATE_CHILD_SA { N(TEMP_FAIL) } --> */

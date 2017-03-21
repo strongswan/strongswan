@@ -18,8 +18,13 @@
 
 #include <daemon.h>
 #include <encoding/payloads/delete_payload.h>
+#include <processing/jobs/delete_child_sa_job.h>
 #include <sa/ikev2/tasks/child_create.h>
 #include <sa/ikev2/tasks/child_rekey.h>
+
+#ifndef DELETE_REKEYED_DELAY
+#define DELETE_REKEYED_DELAY 5
+#endif
 
 typedef struct private_child_delete_t private_child_delete_t;
 
@@ -308,6 +313,12 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 	uint32_t spi, reqid, rekey_spi;
 	action_t action;
 	status_t status = SUCCESS;
+	time_t now, expire;
+	u_int delay;
+
+	now = time_monotonic(NULL);
+	delay = lib->settings->get_int(lib->settings, "%s.delete_rekeyed_delay",
+								   DELETE_REKEYED_DELAY, lib->ns);
 
 	enumerator = this->child_sas->create_enumerator(this->child_sas);
 	while (enumerator->enumerate(enumerator, (void**)&entry))
@@ -326,13 +337,32 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 			{
 				install_outbound(this, protocol, rekey_spi);
 			}
+			/* for rekeyed CHILD_SAs we uninstall the outbound SA but don't
+			 * immediately destroy it, by default, so we can process delayed
+			 * packets */
+			child_sa->remove_outbound(child_sa);
+			expire = child_sa->get_lifetime(child_sa, TRUE);
+			if (delay && (!expire || ((now + delay) < expire)))
+			{
+				lib->scheduler->schedule_job(lib->scheduler,
+					(job_t*)delete_child_sa_job_create_id(
+									child_sa->get_unique_id(child_sa)), delay);
+				continue;
+			}
+			else if (expire)
+			{	/* let it expire naturally */
+				continue;
+			}
+			/* no delay and no lifetime, destroy it immediately */
 		}
 		spi = child_sa->get_spi(child_sa, TRUE);
 		reqid = child_sa->get_reqid(child_sa);
 		child_cfg = child_sa->get_config(child_sa);
 		child_cfg->get_ref(child_cfg);
 		action = child_sa->get_close_action(child_sa);
+
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
+
 		if (entry->check_delete_action)
 		{	/* enforce child_cfg policy if deleted passively */
 			switch (action)
@@ -425,14 +455,20 @@ METHOD(task_t, build_i, status_t,
 		/* we work only with the inbound SPI */
 		this->spi = child_sa->get_spi(child_sa, TRUE);
 	}
+
+	if (child_sa->get_state(child_sa) == CHILD_DELETING)
+	{	/* DELETEs for this CHILD_SA were already exchanged, but it was not yet
+		 * destroyed to allow delayed packets to get processed */
+		this->ike_sa->destroy_child_sa(this->ike_sa, this->protocol, this->spi);
+		message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
+		return SUCCESS;
+	}
+
 	INIT(entry,
 		.child_sa = child_sa,
+		.rekeyed = child_sa->get_state(child_sa) == CHILD_REKEYED,
 	);
 	this->child_sas->insert_last(this->child_sas, entry);
-	if (child_sa->get_state(child_sa) == CHILD_REKEYED)
-	{
-		entry->rekeyed = TRUE;
-	}
 	log_children(this);
 	build_payloads(this, message);
 
