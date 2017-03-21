@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,19 +25,19 @@ typedef struct private_delete_child_sa_job_t private_delete_child_sa_job_t;
  * Private data of an delete_child_sa_job_t object.
  */
 struct private_delete_child_sa_job_t {
-	/**
 
+	/**
 	 * Public delete_child_sa_job_t interface.
 	 */
 	delete_child_sa_job_t public;
 
 	/**
-	 * protocol of the CHILD_SA (ESP/AH)
+	 * Protocol of the CHILD_SA (ESP/AH)
 	 */
 	protocol_id_t protocol;
 
 	/**
-	 * inbound SPI of the CHILD_SA
+	 * Inbound SPI of the CHILD_SA
 	 */
 	uint32_t spi;
 
@@ -49,12 +50,17 @@ struct private_delete_child_sa_job_t {
 	 * Delete for an expired CHILD_SA
 	 */
 	bool expired;
+
+	/**
+	 * Unique ID of the CHILD_SA
+	 */
+	uint32_t id;
 };
 
 METHOD(job_t, destroy, void,
 	private_delete_child_sa_job_t *this)
 {
-	this->dst->destroy(this->dst);
+	DESTROY_IF(this->dst);
 	free(this);
 }
 
@@ -63,17 +69,37 @@ METHOD(job_t, execute, job_requeue_t,
 {
 	ike_sa_t *ike_sa;
 
-	ike_sa = charon->child_sa_manager->checkout(charon->child_sa_manager,
-									this->protocol, this->spi, this->dst, NULL);
-	if (ike_sa == NULL)
+	if (this->id)
 	{
-		DBG1(DBG_JOB, "CHILD_SA %N/0x%08x/%H not found for delete",
-			 protocol_id_names, this->protocol, htonl(this->spi), this->dst);
+		child_sa_t *child_sa;
+
+		ike_sa = charon->child_sa_manager->checkout_by_id(
+								charon->child_sa_manager, this->id, &child_sa);
+		if (!ike_sa)
+		{
+			DBG1(DBG_JOB, "CHILD_SA {%d} not found for delete", this->id);
+		}
+		else
+		{
+			this->spi = child_sa->get_spi(child_sa, TRUE);
+			this->protocol = child_sa->get_protocol(child_sa);
+		}
 	}
 	else
 	{
-		ike_sa->delete_child_sa(ike_sa, this->protocol, this->spi, this->expired);
+		ike_sa = charon->child_sa_manager->checkout(charon->child_sa_manager,
+									this->protocol, this->spi, this->dst, NULL);
+		if (!ike_sa)
+		{
+			DBG1(DBG_JOB, "CHILD_SA %N/0x%08x/%H not found for delete",
+				 protocol_id_names, this->protocol, htonl(this->spi), this->dst);
+		}
+	}
 
+	if (ike_sa)
+	{
+		ike_sa->delete_child_sa(ike_sa, this->protocol, this->spi,
+								this->expired);
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	return JOB_REQUEUE_NONE;
@@ -105,6 +131,27 @@ delete_child_sa_job_t *delete_child_sa_job_create(protocol_id_t protocol,
 		.spi = spi,
 		.dst = dst->clone(dst),
 		.expired = expired,
+	);
+
+	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+delete_child_sa_job_t *delete_child_sa_job_create_id(uint32_t id)
+{
+	private_delete_child_sa_job_t *this;
+
+	INIT(this,
+		.public = {
+			.job_interface = {
+				.execute = _execute,
+				.get_priority = _get_priority,
+				.destroy = _destroy,
+			},
+		},
+		.id = id,
 	);
 
 	return &this->public;
