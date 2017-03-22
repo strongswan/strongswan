@@ -273,7 +273,7 @@ traffic_selector_t* parse_ts(char *str)
 	to = strchr(str, '-');
 	if (to)
 	{
-		snprintf(from, sizeof(from), "%.*s", to - str, str);
+		snprintf(from, sizeof(from), "%.*s", (int)(to - str), str);
 		to++;
 		return traffic_selector_create_from_string(0, type, from, 0, to, 65535);
 	}
