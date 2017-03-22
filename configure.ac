@@ -1222,7 +1222,7 @@ if test x$bfd_backtraces = xtrue; then
 fi
 
 if test x$unwind_backtraces = xtrue; then
-	AC_CHECK_LIB([unwind],[unw_getcontext],[LIBS="$LIBS"],[AC_MSG_ERROR([libunwind not found!])],[])
+	AC_CHECK_LIB([unwind],[unw_backtrace],[LIBS="$LIBS"],[AC_MSG_ERROR([libunwind not found!])],[])
 	AC_CHECK_HEADER([libunwind.h],[AC_DEFINE([HAVE_LIBUNWIND_H],,[have libunwind.h])],
 		[AC_MSG_ERROR([libunwind.h header not found!])])
 	UNWINDLIB="-lunwind"
