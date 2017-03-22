@@ -169,7 +169,7 @@
  * IKE_SA.
  *
  * The controller, credential_manager, bus and backend_manager (config) are
- * places where a plugin ca register itself to privide information or observe
+ * places where a plugin ca register itself to provide information or observe
  * and control the daemon.
  */
 

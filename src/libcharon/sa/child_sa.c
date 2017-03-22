@@ -1,5 +1,5 @@
 /*
- * Coypright (C) 2016 Andreas Steffen
+ * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2006-2016 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger

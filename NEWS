@@ -1397,7 +1397,7 @@ strongswan-4.3.5
   correctly if the system time changes (e.g. when using NTP).
 
 - In addition to time based rekeying, charon supports IPsec SA lifetimes based
-  on processed volume or number of packets. They new ipsec.conf paramaters
+  on processed volume or number of packets. They new ipsec.conf parameters
   'lifetime' (an alias to 'keylife'), 'lifebytes' and 'lifepackets' handle
   SA timeouts, while the parameters 'margintime' (an alias to rekeymargin),
   'marginbytes' and 'marginpackets' trigger the rekeying before a SA expires.
@@ -1625,7 +1625,7 @@ strongswan-4.2.10
   counterparts with better lookup times.
 
 - Better parallelization to run charon on multiple cores. Due to improved
-  ressource locking and other optimizations the daemon can take full
+  resource locking and other optimizations the daemon can take full
   advantage of 16 or even more cores.
 
 - The load-tester plugin can use a NULL Diffie-Hellman group and simulate

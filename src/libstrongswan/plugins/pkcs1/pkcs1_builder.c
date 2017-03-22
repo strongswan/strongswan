@@ -266,7 +266,7 @@ end:
  * }
  *
  * While the parameters and publicKey fields are OPTIONAL, RFC 5915 says that
- * paramaters MUST be included and publicKey SHOULD be.
+ * parameters MUST be included and publicKey SHOULD be.
  */
 static bool is_ec_private_key(chunk_t blob)
 {

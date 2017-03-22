@@ -38,7 +38,7 @@ typedef struct vici_config_t vici_config_t;
 struct vici_config_t {
 
 	/**
-	 * Implements a configuraiton backend.
+	 * Implements a configuration backend.
 	 */
 	backend_t backend;
 

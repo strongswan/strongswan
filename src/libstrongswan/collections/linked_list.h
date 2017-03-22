@@ -212,7 +212,7 @@ struct linked_list_t {
 	/**
 	 * Clones a list and its objects using the objects' clone method.
 	 *
-	 * @param offset	offset ot the objects clone function
+	 * @param offset	offset to the objects clone function
 	 * @return			cloned list
 	 */
 	linked_list_t *(*clone_offset) (linked_list_t *this, size_t offset);

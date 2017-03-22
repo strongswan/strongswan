@@ -329,7 +329,7 @@ static bool check_alerts(private_tls_fragmentation_t *this, chunk_t *data)
 }
 
 /**
- * Build hanshake message
+ * Build handshake message
  */
 static status_t build_handshake(private_tls_fragmentation_t *this)
 {
