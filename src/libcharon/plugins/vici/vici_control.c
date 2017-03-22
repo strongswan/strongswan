@@ -707,12 +707,16 @@ CALLBACK(uninstall, vici_message_t*,
 			}
 		}
 		enumerator->destroy(enumerator);
-		if (ike && charon->shunts->uninstall(charon->shunts, ike, child))
+		if (ike)
 		{
+			if (charon->shunts->uninstall(charon->shunts, ike, child))
+			{
+				free(ike);
+				return send_reply(this, NULL);
+			}
 			free(ike);
-			return send_reply(this, NULL);
+			return send_reply(this, "uninstalling policy '%s' failed", child);
 		}
-		free(ike);
 	}
 	else if (charon->shunts->uninstall(charon->shunts, ike, child))
 	{
