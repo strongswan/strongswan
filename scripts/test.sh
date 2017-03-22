@@ -70,9 +70,15 @@ win*)
 	DEPS="gcc-mingw-w64-base"
 	case "$TEST" in
 	win64)
-		CONFIG="--host=x86_64-w64-mingw32 $CONFIG"
+		# headers on 12.04 are too old, so we only build the plugins here
+		CONFIG="--host=x86_64-w64-mingw32 $CONFIG --enable-dbghelp-backtraces
+				--enable-kernel-iph --enable-kernel-wfp --enable-winhttp"
 		DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev $DEPS"
 		CC="x86_64-w64-mingw32-gcc"
+		# apply patch to MinGW headers
+		if test -z "$1"; then
+			sudo patch -f -p 4 -d /usr/share/mingw-w64/include < src/libcharon/plugins/kernel_wfp/mingw-w64-4.8.1.diff
+		fi
 		;;
 	win32)
 		CONFIG="--host=i686-w64-mingw32 $CONFIG"
