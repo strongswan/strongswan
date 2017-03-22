@@ -25,8 +25,12 @@
 #include <collections/hashtable.h>
 #include <processing/jobs/callback_job.h>
 
+#ifndef IPPROTO_IPIP
 #define IPPROTO_IPIP 4
+#endif
+#ifndef IPPROTO_IPV6
 #define IPPROTO_IPV6 41
+#endif
 
 typedef struct private_kernel_wfp_ipsec_t private_kernel_wfp_ipsec_t;
 
