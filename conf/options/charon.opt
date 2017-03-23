@@ -353,6 +353,10 @@ charon.signature_authentication_constraints = yes
 charon.spi_min = 0xc0000000
 	The lower limit for SPIs requested from the kernel for IPsec SAs.
 
+	The lower limit for SPIs requested from the kernel for IPsec SAs. Should not
+	be set lower than 0x00000100 (256), as SPIs between 1 and 255 are reserved
+	by IANA.
+
 charon.spi_max = 0xcfffffff
 	The upper limit for SPIs requested from the kernel for IPsec SAs.
 
