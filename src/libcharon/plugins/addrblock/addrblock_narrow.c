@@ -105,6 +105,7 @@ METHOD(listener_t, narrow, bool,
 	switch (type)
 	{
 		case NARROW_RESPONDER:
+		case NARROW_INITIATOR_PRE_AUTH:
 		case NARROW_INITIATOR_POST_AUTH:
 		case NARROW_INITIATOR_POST_NOAUTH:
 			narrow_addrblock(this, ike_sa, remote);
