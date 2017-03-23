@@ -38,7 +38,7 @@ all|coverage)
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
 	# Ubuntu 14.04 does provide a too old libtss2-dev
-	CONFIG="$CONFIG --disable-aikpub2 --disable-tss-tss2"
+	CONFIG="$CONFIG --disable-tss-tss2"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
 	if test "$TEST" != "coverage"; then
