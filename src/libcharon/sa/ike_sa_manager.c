@@ -276,9 +276,6 @@ typedef struct segment_t segment_t;
 struct segment_t {
 	/** mutex to access a segment exclusively */
 	mutex_t *mutex;
-
-	/** the number of entries in this segment */
-	u_int count;
 };
 
 typedef struct shareable_segment_t shareable_segment_t;
@@ -369,6 +366,11 @@ struct private_ike_sa_manager_t {
 	 * Total number of half-open IKE_SAs as responder.
 	 */
 	refcount_t half_open_count_responder;
+
+	/**
+	 * Total number of IKE_SAs registered with IKE_SA manager.
+	 */
+	refcount_t total_sa_count;
 
 	/**
 	 * Hash table with connected_peers_t objects.
@@ -601,7 +603,7 @@ static u_int put_entry(private_ike_sa_manager_t *this, entry_t *entry)
 		item->next = current;
 	}
 	this->ike_sa_table[row] = item;
-	this->segments[segment].count++;
+	ref_get(&this->total_sa_count);
 	return segment;
 }
 
@@ -612,10 +614,9 @@ static u_int put_entry(private_ike_sa_manager_t *this, entry_t *entry)
 static void remove_entry(private_ike_sa_manager_t *this, entry_t *entry)
 {
 	table_item_t *item, *prev = NULL;
-	u_int row, segment;
+	u_int row;
 
 	row = ike_sa_id_hash(entry->ike_sa_id) & this->table_mask;
-	segment = row & this->segment_mask;
 	item = this->ike_sa_table[row];
 	while (item)
 	{
@@ -629,7 +630,7 @@ static void remove_entry(private_ike_sa_manager_t *this, entry_t *entry)
 			{
 				this->ike_sa_table[row] = item->next;
 			}
-			this->segments[segment].count--;
+			ignore_result(ref_put(&this->total_sa_count));
 			free(item);
 			break;
 		}
@@ -648,7 +649,7 @@ static void remove_entry_at(private_enumerator_t *this)
 	{
 		table_item_t *current = this->current;
 
-		this->manager->segments[this->segment].count--;
+		ignore_result(ref_put(&this->manager->total_sa_count));
 		this->current = this->prev;
 
 		if (this->prev)
@@ -2034,17 +2035,7 @@ METHOD(ike_sa_manager_t, has_contact, bool,
 METHOD(ike_sa_manager_t, get_count, u_int,
 	private_ike_sa_manager_t *this)
 {
-	u_int segment, count = 0;
-	mutex_t *mutex;
-
-	for (segment = 0; segment < this->segment_count; segment++)
-	{
-		mutex = this->segments[segment & this->segment_mask].mutex;
-		mutex->lock(mutex);
-		count += this->segments[segment].count;
-		mutex->unlock(mutex);
-	}
-	return count;
+	return (u_int)ref_cur(&this->total_sa_count);
 }
 
 METHOD(ike_sa_manager_t, get_half_open_count, u_int,
