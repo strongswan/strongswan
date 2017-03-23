@@ -304,8 +304,9 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 						  uintptr_t seq, struct nlmsghdr **out, size_t *out_len)
 {
 	struct nlmsghdr *hdr;
-	chunk_t result = {};
 	entry_t *entry;
+	u_char *ptr;
+	int i;
 
 	in->nlmsg_seq = seq;
 	in->nlmsg_pid = getpid();
@@ -366,6 +367,14 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 		return OUT_OF_RES;
 	}
 
+	for (i = 0, *out_len = 0; i < array_count(entry->hdrs); i++)
+	{
+		array_get(entry->hdrs, i, &hdr);
+		*out_len += hdr->nlmsg_len;
+	}
+	ptr = malloc(*out_len);
+	*out = (struct nlmsghdr*)ptr;
+
 	while (array_remove(entry->hdrs, ARRAY_HEAD, &hdr))
 	{
 		if (this->names)
@@ -373,14 +382,11 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 			DBG3(DBG_KNL, "received %N %u: %b", this->names, hdr->nlmsg_type,
 				 hdr->nlmsg_seq, hdr, hdr->nlmsg_len);
 		}
-		result = chunk_cat("mm", result,
-						   chunk_create((char*)hdr, hdr->nlmsg_len));
+		memcpy(ptr, hdr, hdr->nlmsg_len);
+		ptr += hdr->nlmsg_len;
+		free(hdr);
 	}
 	destroy_entry(entry);
-
-	*out_len = result.len;
-	*out = (struct nlmsghdr*)result.ptr;
-
 	return SUCCESS;
 }
 
