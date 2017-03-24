@@ -50,7 +50,7 @@ static void destroy_policy_mapping(x509_policy_mapping_t *mapping)
 static int self()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
-	key_type_t type = KEY_RSA;
+	key_type_t type = KEY_ANY;
 	hash_algorithm_t digest = HASH_UNKNOWN;
 	certificate_t *cert = NULL;
 	private_key_t *private = NULL;
