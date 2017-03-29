@@ -7,6 +7,6 @@ noinst_PROGRAMS = fuzz_certs
 
 fuzz_certs_SOURCES = fuzz_certs.c
 
-fuzz_certs_LDFLAGS = libFuzzer.a -lstdc++
+fuzz_certs_LDFLAGS = ${libfuzzer} -lstdc++
 
 fuzz_certs_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
