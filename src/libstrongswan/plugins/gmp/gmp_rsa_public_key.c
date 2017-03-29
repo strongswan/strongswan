@@ -475,7 +475,7 @@ gmp_rsa_public_key_t *gmp_rsa_public_key_load(key_type_t type, va_list args)
 		}
 		break;
 	}
-	if (!e.ptr || !n.ptr)
+	if (!e.len || !n.len || (n.ptr[n.len-1] & 0x01) == 0)
 	{
 		return NULL;
 	}
@@ -506,5 +506,10 @@ gmp_rsa_public_key_t *gmp_rsa_public_key_load(key_type_t type, va_list args)
 
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
 
+	if (!mpz_sgn(this->e))
+	{
+		destroy(this);
+		return NULL;
+	}
 	return &this->public;
 }
