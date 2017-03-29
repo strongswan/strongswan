@@ -818,10 +818,12 @@ static void add_cdps(linked_list_t *list, linked_list_t *uris,
 	enumerator_t *enumerator;
 	x509_cdp_t *cdp;
 	char *uri;
+	int len;
 
 	while (uris->remove_last(uris, (void**)&id) == SUCCESS)
 	{
-		if (asprintf(&uri, "%Y", id) > 0)
+		len = asprintf(&uri, "%Y", id);
+		if (len > 0)
 		{
 			if (issuers->get_count(issuers))
 			{
@@ -844,6 +846,10 @@ static void add_cdps(linked_list_t *list, linked_list_t *uris,
 				);
 				list->insert_last(list, cdp);
 			}
+		}
+		else if (!len)
+		{
+			free(uri);
 		}
 		id->destroy(id);
 	}
