@@ -41,10 +41,12 @@ DROP TABLE IF EXISTS file_hashes;
 CREATE TABLE file_hashes (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   file INTEGER NOT NULL REFERENCES files(id),
-  product INTEGER NOT NULL REFERENCES products(id),
-  device INTEGER DEFAULT 0 REFERENCES devices(id),
+  version INTEGER REFERENCES versions(id),
+  device INTEGER REFERENCES devices(id),
+  size INTEGER,
   algo INTEGER NOT NULL REFERENCES algorithms(id),
-  hash BLOB NOT NULL
+  hash VARCHAR(64) NOT NULL,
+  mutable INTEGER DEFAULT 0
 );
 
 DROP TABLE IF EXISTS groups;
@@ -177,9 +179,9 @@ CREATE INDEX packages_name ON packages (
 DROP TABLE IF EXISTS versions;
 CREATE TABLE versions (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  package INTEGER NOT NULL REFERENCES packages(id),
   product INTEGER NOT NULL REFERENCES products(id),
-  release TEXT NOT NULL,
+  package INTEGER NOT NULL REFERENCES packages(id),
+  release TEXT,
   security INTEGER DEFAULT 0,
   blacklist INTEGER DEFAULT 0,
   time INTEGER DEFAULT 0
