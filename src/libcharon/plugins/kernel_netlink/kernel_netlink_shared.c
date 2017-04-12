@@ -333,7 +333,8 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 	while (!entry->complete)
 	{
 		if (this->parallel &&
-			lib->watcher->get_state(lib->watcher) != WATCHER_STOPPED)
+			lib->watcher->get_state(lib->watcher) != WATCHER_STOPPED &&
+			lib->processor->get_total_threads(lib->processor))
 		{
 			if (this->timeout)
 			{
