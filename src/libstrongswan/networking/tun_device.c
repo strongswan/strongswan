@@ -21,7 +21,16 @@
 #include <utils/debug.h>
 #include <threading/thread.h>
 
-#if !defined(__APPLE__) && !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H)
+#if defined(__APPLE__)
+#include "TargetConditionals.h"
+#if !TARGET_OS_OSX
+#define TUN_DEVICE_NOT_SUPPORTED
+#endif
+#elif !defined(__linux__) && !defined(HAVE_NET_IF_TUN_H)
+#define TUN_DEVICE_NOT_SUPPORTED
+#endif
+
+#ifdef TUN_DEVICE_NOT_SUPPORTED
 
 tun_device_t *tun_device_create(const char *name_tmpl)
 {
