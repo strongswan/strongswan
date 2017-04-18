@@ -62,8 +62,8 @@ class Packet(object):
 
     @classmethod
     def _named_request(cls, request_type, request, message=None):
-        requestdata = request.encode("UTF-8")
-        payload = struct.pack("!BB", request_type, len(request)) + requestdata
+        request = request.encode("UTF-8")
+        payload = struct.pack("!BB", request_type, len(request)) + request
         if message is not None:
             return payload + message
         else:
