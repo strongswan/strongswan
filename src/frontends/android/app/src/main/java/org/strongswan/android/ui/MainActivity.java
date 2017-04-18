@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * Hochschule fuer Technik Rapperswil
@@ -26,6 +26,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.VpnService;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.app.Fragment;
@@ -141,10 +142,24 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	}
 
 	@Override
+	public boolean onPrepareOptionsMenu(Menu menu)
+	{
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT)
+		{
+			menu.removeItem(R.id.menu_import_profile);
+		}
+		return true;
+	}
+
+	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
 		switch (item.getItemId())
 		{
+			case R.id.menu_import_profile:
+				Intent intent = new Intent(this, VpnProfileImportActivity.class);
+				startActivity(intent);
+				return true;
 			case R.id.menu_manage_certs:
 				Intent certIntent = new Intent(this, TrustedCertificatesActivity.class);
 				startActivity(certIntent);

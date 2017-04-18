@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2017 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
@@ -75,7 +76,9 @@ import javax.net.ssl.SSLHandshakeException;
 public class VpnProfileImportActivity extends AppCompatActivity
 {
 	private static final String PKCS12_INSTALLED = "PKCS12_INSTALLED";
+	private static final String PROFILE_URI = "PROFILE_URI";
 	private static final int INSTALL_PKCS12 = 0;
+	private static final int OPEN_DOCUMENT = 1;
 	private static final int PROFILE_LOADER = 0;
 	private static final int USER_CERT_LOADER = 1;
 
@@ -107,7 +110,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		@Override
 		public Loader<ProfileLoadResult> onCreateLoader(int id, Bundle args)
 		{
-			return new ProfileLoader(VpnProfileImportActivity.this, getIntent().getData());
+			return new ProfileLoader(VpnProfileImportActivity.this, (Uri)args.getParcelable(PROFILE_URI));
 		}
 
 		@Override
@@ -197,16 +200,13 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		String action = intent.getAction();
 		if (Intent.ACTION_VIEW.equals(action))
 		{
-			mProgress = ProgressDialog.show(this, null, getString(R.string.loading),
-											true, true, new DialogInterface.OnCancelListener() {
-				@Override
-				public void onCancel(DialogInterface dialog)
-				{
-					finish();
-				}
-			});
-
-			getLoaderManager().initLoader(PROFILE_LOADER, null, mProfileLoaderCallbacks);
+			loadProfile(getIntent().getData());
+		}
+		else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
+		{
+			Intent openIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+			openIntent.setType("*/*");
+			startActivityForResult(openIntent, OPEN_DOCUMENT);
 		}
 
 		if (savedInstanceState != null)
@@ -279,7 +279,32 @@ public class VpnProfileImportActivity extends AppCompatActivity
 					mImportUserCert.setEnabled(false);
 					mSelectUserCert.performClick();
 				}
+				break;
+			case OPEN_DOCUMENT:
+				if (resultCode == Activity.RESULT_OK && data != null)
+				{
+					loadProfile(data.getData());
+					return;
+				}
+				finish();
+				break;
 		}
+	}
+
+	private void loadProfile(Uri uri)
+	{
+		mProgress = ProgressDialog.show(this, null, getString(R.string.loading),
+				true, true, new DialogInterface.OnCancelListener() {
+					@Override
+					public void onCancel(DialogInterface dialog)
+					{
+						finish();
+					}
+				});
+
+		Bundle args = new Bundle();
+		args.putParcelable(PROFILE_URI, uri);
+		getLoaderManager().initLoader(PROFILE_LOADER, args, mProfileLoaderCallbacks);
 	}
 
 	public void handleProfile(ProfileLoadResult data)
