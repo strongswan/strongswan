@@ -406,6 +406,7 @@ static int issue()
 		goto end;
 	}
 	public->destroy(public);
+	public = NULL;
 
 	if (hex)
 	{
