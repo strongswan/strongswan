@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -64,6 +64,7 @@ import java.util.Locale;
 public class CharonVpnService extends VpnService implements Runnable, VpnStateService.VpnStateListener
 {
 	private static final String TAG = CharonVpnService.class.getSimpleName();
+	public static final String DISCONNECT_ACTION = "org.strongswan.android.CharonVpnService.DISCONNECT";
 	public static final String LOG_FILE = "charon.log";
 	public static final int VPN_STATE_NOTIFICATION_ID = 1;
 
@@ -119,18 +120,25 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	{
 		if (intent != null)
 		{
-			Bundle bundle = intent.getExtras();
-			VpnProfile profile = null;
-			if (bundle != null)
+			if (DISCONNECT_ACTION.equals(intent.getAction()))
 			{
-				profile = mDataSource.getVpnProfile(bundle.getLong(VpnProfileDataSource.KEY_ID));
-				if (profile != null)
-				{
-					String password = bundle.getString(VpnProfileDataSource.KEY_PASSWORD);
-					profile.setPassword(password);
-				}
+				setNextProfile(null);
 			}
-			setNextProfile(profile);
+			else
+			{
+				Bundle bundle = intent.getExtras();
+				VpnProfile profile = null;
+				if (bundle != null)
+				{
+					profile = mDataSource.getVpnProfile(bundle.getLong(VpnProfileDataSource.KEY_ID));
+					if (profile != null)
+					{
+						String password = bundle.getString(VpnProfileDataSource.KEY_PASSWORD);
+						profile.setPassword(password);
+					}
+				}
+				setNextProfile(profile);
+			}
 		}
 		return START_NOT_STICKY;
 	}

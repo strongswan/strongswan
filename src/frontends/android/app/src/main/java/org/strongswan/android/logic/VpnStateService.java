@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2012-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -197,10 +197,11 @@ public class VpnStateService extends Service
 		 * VpnService.Builder object the system binds to the service and keeps
 		 * bound until the file descriptor of the TUN device is closed.  thus
 		 * calling stopService() here would not stop (destroy) the service yet,
-		 * instead we call startService() with an empty Intent which shuts down
+		 * instead we call startService() with a specific action which shuts down
 		 * the daemon (and closes the TUN device, if any) */
 		Context context = getApplicationContext();
 		Intent intent = new Intent(context, CharonVpnService.class);
+		intent.setAction(CharonVpnService.DISCONNECT_ACTION);
 		context.startService(intent);
 	}
 
