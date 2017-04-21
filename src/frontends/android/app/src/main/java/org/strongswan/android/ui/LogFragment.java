@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2012-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.StringReader;
+import java.util.ArrayList;
 
 public class LogFragment extends Fragment implements Runnable
 {
@@ -121,16 +122,20 @@ public class LogFragment extends Fragment implements Runnable
 	 * Write the given log line to the TextView. We strip the prefix off to save
 	 * some space (it is not that helpful for regular users anyway).
 	 *
-	 * @param line log line to log
+	 * @param lines log lines to log
 	 */
-	public void logLine(final String line)
+	public void logLines(final ArrayList<String> lines)
 	{
 		mLogHandler.post(new Runnable() {
 			@Override
 			public void run()
 			{
-				/* strip off prefix (month=3, day=2, time=8, thread=2, spaces=3) */
-				mLogView.append((line.length() > 18 ? line.substring(18) : line) + '\n');
+				mLogView.beginBatchEdit();
+				for (String line : lines)
+				{	/* strip off prefix (month=3, day=2, time=8, thread=2, spaces=3) */
+					mLogView.append((line.length() > 18 ? line.substring(18) : line) + '\n');
+				}
+				mLogView.endBatchEdit();
 				/* calling autoScroll() directly does not work, probably because content
 				 * is not yet updated, so we post this to be done later */
 				mScrollView.post(new Runnable() {
@@ -147,24 +152,40 @@ public class LogFragment extends Fragment implements Runnable
 	@Override
 	public void run()
 	{
+		ArrayList<String> lines = null;
+
 		while (mRunning)
 		{
 			try
 			{	/* this works as long as the file is not truncated */
 				String line = mReader.readLine();
 				if (line == null)
-				{	/* wait until there is more to log */
+				{
+					if (lines != null)
+					{
+						logLines(lines);
+						lines = null;
+					}
+					/* wait until there is more to log */
 					Thread.sleep(1000);
 				}
 				else
 				{
-					logLine(line);
+					if (lines == null)
+					{
+						lines = new ArrayList<>();
+					}
+					lines.add(line);
 				}
 			}
 			catch (Exception e)
 			{
 				break;
 			}
+		}
+		if (lines != null)
+		{
+			logLines(lines);
 		}
 	}
 
