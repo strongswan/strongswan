@@ -15,16 +15,6 @@
 
 package org.strongswan.android.logic;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.Callable;
-
-import org.strongswan.android.data.VpnProfile;
-import org.strongswan.android.logic.imc.ImcState;
-import org.strongswan.android.logic.imc.RemediationInstruction;
-
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -32,9 +22,19 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 
+import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.logic.imc.ImcState;
+import org.strongswan.android.logic.imc.RemediationInstruction;
+
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Callable;
+
 public class VpnStateService extends Service
 {
-	private final List<VpnStateListener> mListeners = new ArrayList<VpnStateListener>();
+	private final HashSet<VpnStateListener> mListeners = new HashSet<VpnStateListener>();
 	private final IBinder mBinder = new LocalBinder();
 	private long mConnectionID = 0;
 	private Handler mHandler;
