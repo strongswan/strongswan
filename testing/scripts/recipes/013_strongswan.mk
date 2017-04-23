@@ -28,6 +28,7 @@ CONFIG_OPTS = \
 	--enable-eap-aka-3gpp2 \
 	--enable-eap-sim \
 	--enable-eap-sim-file \
+	--enable-eap-simaka-sql \
 	--enable-eap-md5 \
 	--enable-md4 \
 	--enable-eap-mschapv2 \
