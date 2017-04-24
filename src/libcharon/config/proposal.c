@@ -752,6 +752,9 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			switch (encryption)
 			{
 				case ENCR_AES_GCM_ICV16:
+					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 128);
+					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 256);
+					break;
 				case ENCR_AES_CCM_ICV16:
 				case ENCR_CAMELLIA_CCM_ICV16:
 					/* we assume that we support all AES/Camellia sizes */
@@ -887,6 +890,8 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case PRF_HMAC_SHA2_256:
 			case PRF_HMAC_SHA2_384:
 			case PRF_HMAC_SHA2_512:
+				add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
+				break;
 			case PRF_AES128_XCBC:
 			case PRF_AES128_CMAC:
 				add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
@@ -920,6 +925,8 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 		switch (group)
 		{
 			case ECP_256_BIT:
+				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
+				break;
 			case ECP_384_BIT:
 			case ECP_521_BIT:
 			case ECP_256_BP:
@@ -1043,26 +1050,28 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
  */
 proposal_t *proposal_create_default_aead(protocol_id_t protocol)
 {
-	private_proposal_t *this;
+	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol, 0);;
 
 	switch (protocol)
 	{
 		case PROTO_IKE:
-			this = (private_proposal_t*)proposal_create(protocol, 0);
 			if (!proposal_add_supported_ike(this, TRUE))
 			{
 				destroy(this);
 				return NULL;
 			}
-			return &this->public;
+			break;
 		case PROTO_ESP:
-			/* we currently don't include any AEAD proposal for ESP, as we
-			 * don't know if our kernel backend actually supports it. */
-			return NULL;
+			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16,    128);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,  ECP_256_BIT,            0);
+			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+			break;
 		case PROTO_AH:
+			break;
 		default:
-			return NULL;
+			break;
 	}
+	return &this->public;
 }
 
 /*
