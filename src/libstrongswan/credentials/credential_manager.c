@@ -166,19 +166,19 @@ METHOD(enumerator_t, sets_enumerate, bool,
 			return TRUE;
 		}
 	}
-	if (this->global)
+	if (this->local)
 	{
-		if (this->global->enumerate(this->global, set))
+		if (this->local->enumerate(this->local, set))
 		{
 			return TRUE;
 		}
-		/* end of global sets, look for local */
-		this->global->destroy(this->global);
-		this->global = NULL;
+		/* end of local sets, look for global */
+		this->local->destroy(this->local);
+		this->local = NULL;
 	}
-	if (this->local)
+	if (this->global)
 	{
-		return this->local->enumerate(this->local, set);
+		return this->global->enumerate(this->global, set);
 	}
 	return FALSE;
 }
