@@ -2,6 +2,9 @@
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
+ * Copyright (C) 2017 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -54,7 +57,7 @@ METHOD(simaka_card_t, get_triplet, bool,
 	snprintf(buf, sizeof(buf), "%Y", id);
 	query = this->db->query(this->db,
 				"select sres, kc from triplets where rand = ? and id = ? "
-				"order by use limit 1",
+				"order by used limit 1",
 				DB_BLOB, chunk_create(rand, SIM_RAND_LEN), DB_TEXT, buf,
 				DB_BLOB, DB_BLOB);
 	if (query)
@@ -82,7 +85,7 @@ METHOD(simaka_card_t, get_triplet, bool,
 		else
 		{
 			this->db->execute(this->db, NULL,
-					"update triplets set use = ? where id = ? and rand = ?",
+					"update triplets set used = ? where id = ? and rand = ?",
 					DB_UINT, time(NULL), DB_TEXT, buf,
 					DB_BLOB, chunk_create(rand, SIM_RAND_LEN));
 		}
@@ -102,7 +105,7 @@ METHOD(simaka_card_t, get_quintuplet, status_t,
 
 	snprintf(buf, sizeof(buf), "%Y", id);
 	query = this->db->query(this->db, "select ck, ik, res from quintuplets "
-				"where rand = ? and autn = ? and id = ? order by use limit 1",
+				"where rand = ? and autn = ? and id = ? order by used limit 1",
 				DB_BLOB, chunk_create(rand, AKA_RAND_LEN),
 				DB_BLOB, chunk_create(autn, AKA_AUTN_LEN), DB_TEXT, buf,
 				DB_BLOB, DB_BLOB, DB_BLOB);
@@ -134,7 +137,7 @@ METHOD(simaka_card_t, get_quintuplet, status_t,
 		else
 		{
 			this->db->execute(this->db, NULL,
-					"update quintuplets set use = ? where id = ? and rand = ?",
+					"update quintuplets set used = ? where id = ? and rand = ?",
 					DB_UINT, time(NULL), DB_TEXT, buf,
 					DB_BLOB, chunk_create(rand, AKA_RAND_LEN));
 		}
