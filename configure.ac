@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2015 Tobias Brunner
+# Copyright (C) 2007-2017 Tobias Brunner
 # Copyright (C) 2006-2016 Andreas Steffen
 # Copyright (C) 2006-2014 Martin Willi
 # HSR Hochschule fuer Technik Rapperswil
@@ -1303,6 +1303,19 @@ AM_CONDITIONAL(PYTHON_EGGS_INSTALL, [test "x$python_eggs_install" = xtrue])
 
 AM_CONDITIONAL(PERL_CPAN_INSTALL, [test "x$perl_cpan_install" = xtrue])
 
+AC_CACHE_CHECK(
+	[if plugin constructors should be resolved statically],
+	[ss_cv_static_plugin_constructors],
+	[if test x$monolithic = xtrue -a x$enable_static = xyes; then
+		ss_cv_static_plugin_constructors=yes
+	 else
+		ss_cv_static_plugin_constructors="no (enabled for static, monolithic builds)"
+	 fi]
+)
+if test "x$ss_cv_static_plugin_constructors" = xyes; then
+	static_plugin_constructors=true
+fi
+
 # ===============================================
 #  collect plugin list for strongSwan components
 # ===============================================
@@ -1678,6 +1691,7 @@ AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
 AM_CONDITIONAL(USE_TROUSERS, test x$tss_trousers = xtrue)
 AM_CONDITIONAL(USE_TSS2, test x$tss_tss2 = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
+AM_CONDITIONAL(STATIC_PLUGIN_CONSTRUCTORS, test x$static_plugin_constructors = xtrue)
 AM_CONDITIONAL(USE_SILENT_RULES, test x$enable_silent_rules = xyes)
 AM_CONDITIONAL(COVERAGE, test x$coverage = xtrue)
 AM_CONDITIONAL(USE_DBGHELP, test x$dbghelp_backtraces = xtrue)
@@ -1708,6 +1722,9 @@ if test x$log_thread_ids = xtrue; then
 fi
 if test x$monolithic = xtrue; then
 	AC_DEFINE([MONOLITHIC], [], [monolithic build embedding plugins])
+fi
+if test x$static_plugin_constructors = xtrue; then
+	AC_DEFINE([STATIC_PLUGIN_CONSTRUCTORS], [], [static plugin constructors])
 fi
 if test x$ikev1 = xtrue; then
 	AC_DEFINE([USE_IKEV1], [], [support for IKEv1 protocol])
