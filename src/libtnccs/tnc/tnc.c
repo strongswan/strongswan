@@ -55,6 +55,13 @@ struct private_tnc_t {
 };
 
 /**
+ * Register plugins if built statically
+ */
+#ifdef STATIC_PLUGIN_CONSTRUCTORS
+#include "plugin_constructors.c"
+#endif
+
+/**
  * Single instance of tnc_t.
  */
 tnc_t *tnc;

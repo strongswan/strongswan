@@ -18,6 +18,13 @@
 #include "tpm_tss_trousers.h"
 
 /**
+ * Register plugins if built statically
+ */
+#ifdef STATIC_PLUGIN_CONSTRUCTORS
+#include "plugin_constructors.c"
+#endif
+
+/**
  * Described in header.
  */
 void libtpmtss_init(void)

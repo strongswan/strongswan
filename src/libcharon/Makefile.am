@@ -184,6 +184,15 @@ if USE_ME
     sa/ikev2/tasks/ike_me.c sa/ikev2/tasks/ike_me.h
 endif
 
+if STATIC_PLUGIN_CONSTRUCTORS
+BUILT_SOURCES = $(srcdir)/plugin_constructors.c
+CLEANFILES = $(srcdir)/plugin_constructors.c
+
+$(srcdir)/plugin_constructors.c: $(top_srcdir)/src/libstrongswan/plugins/plugin_constructors.py
+		$(AM_V_GEN) \
+		$(PYTHON) $(top_srcdir)/src/libstrongswan/plugins/plugin_constructors.py ${c_plugins} > $@
+endif
+
 # build optional plugins
 ########################
 

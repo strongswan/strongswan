@@ -94,6 +94,13 @@ void library_add_namespace(char *ns)
 }
 
 /**
+ * Register plugins if built statically
+ */
+#ifdef STATIC_PLUGIN_CONSTRUCTORS
+#include "plugin_constructors.c"
+#endif
+
+/**
  * library instance
  */
 library_t *lib = NULL;
