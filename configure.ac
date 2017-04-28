@@ -35,6 +35,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_CONFIG_MACRO_DIR([m4/config])
 AC_CONFIG_HEADERS([config.h])
 AC_DEFINE([CONFIG_H_INCLUDED], [], [defined if config.h included])
+AC_DISABLE_STATIC
 PKG_PROG_PKG_CONFIG
 
 m4_include(m4/macros/split-package-version.m4)
