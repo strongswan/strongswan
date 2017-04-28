@@ -195,6 +195,7 @@ endif
 EXTRA_DIST = \
 asn1/oid.txt asn1/oid.pl \
 crypto/proposal/proposal_keywords_static.txt \
+plugins/plugin_constructors.py \
 Android.mk
 
 BUILT_SOURCES = \
