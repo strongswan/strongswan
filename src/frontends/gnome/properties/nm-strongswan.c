@@ -229,6 +229,15 @@ show_toggled_cb (GtkCheckButton *button, StrongswanPluginUiWidget *self)
 }
 
 static void
+toggle_proposal_cb(GtkCheckButton *button, StrongswanPluginUiWidget *self)
+{
+	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
+	gboolean visible = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button));
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(priv->builder, "ike-entry")), visible);
+	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(priv->builder, "esp-entry")), visible);
+}
+
+static void
 password_storage_changed_cb (GObject *entry, GParamSpec *pspec, gpointer user_data)
 {
 	settings_changed_cb (NULL, STRONGSWAN_PLUGIN_UI_WIDGET (user_data));
@@ -372,6 +381,34 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	}
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
 
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "proposal-check"));
+	value = nm_setting_vpn_get_data_item(settings, "proposal");
+	if (value && strcmp(value, "yes") == 0)
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
+	else
+		toggle_proposal_cb(GTK_CHECK_BUTTON(widget), self);
+	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (toggle_proposal_cb), self);
+
+	widget = GTK_WIDGET(gtk_builder_get_object(priv->builder, "ike-entry"));
+	value = nm_setting_vpn_get_data_item(settings, "ike");
+	if (value)
+	{
+		value = g_strdelimit (g_strdup (value), ";", ',');
+		gtk_entry_set_text (GTK_ENTRY (widget), value);
+		g_free ((char*)value);
+	}
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
+
+	widget = GTK_WIDGET(gtk_builder_get_object(priv->builder, "esp-entry"));
+	value = nm_setting_vpn_get_data_item(settings, "esp");
+	if (value)
+	{
+		value = g_strdelimit (g_strdup (value), ";", ',');
+		gtk_entry_set_text (GTK_ENTRY (widget), value);
+		g_free ((char*)value);
+	}
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
+
 	return TRUE;
 }
 
@@ -506,6 +543,26 @@ update_connection (NMVpnEditor *iface,
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "ipcomp-check"));
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "ipcomp", active ? "yes" : "no");
+
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "proposal-check"));
+	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+	nm_setting_vpn_add_data_item (settings, "proposal", active ? "yes" : "no");
+
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "ike-entry"));
+	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+	if (str && strlen (str)) {
+		str = g_strdelimit (g_strdup (str), ",", ';');
+		nm_setting_vpn_add_data_item (settings, "ike", str);
+		g_free (str);
+	}
+
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "esp-entry"));
+	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+	if (str && strlen (str)) {
+		str = g_strdelimit (g_strdup (str), ",", ';');
+		nm_setting_vpn_add_data_item (settings, "esp", str);
+		g_free (str);
+	}
 
 	nm_connection_add_setting (connection, NM_SETTING (settings));
 	return TRUE;
