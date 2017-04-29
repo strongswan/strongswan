@@ -283,9 +283,10 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	NMStrongswanPluginPrivate *priv;
 	NMSettingConnection *conn;
 	NMSettingVPN *vpn;
+	enumerator_t *enumerator;
 	identification_t *user = NULL, *gateway = NULL;
 	const char *address, *str;
-	bool virtual, encap;
+	bool virtual, encap, proposal, restricted=FALSE;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -540,8 +541,23 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 							 charon->socket->get_port(charon->socket, FALSE),
 							(char*)address, IKEV2_UDP_PORT,
 							 FRAGMENTATION_YES, 0);
-	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
-	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
+
+	str = nm_setting_vpn_get_data_item(vpn, "proposal");
+	proposal = str ? streq(str, "yes") : FALSE;
+
+	if(proposal) {
+		if((str = nm_setting_vpn_get_data_item(vpn, "ike"))) {
+			restricted = (bool)g_str_has_suffix(str, "!");
+			enumerator = enumerator_create_token(str, ";", "!");
+			while (enumerator->enumerate(enumerator, &str)) {
+				ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE, str));
+			}
+		}
+	}
+	if(!restricted) {
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
+	}
 
 	peer_cfg = peer_cfg_create(priv->name, ike_cfg, &peer);
 	if (virtual)
@@ -566,8 +582,20 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
 	child_cfg = child_cfg_create(priv->name, &child);
-	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
-	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
+	restricted = FALSE;
+	if(proposal) {
+		if((str = nm_setting_vpn_get_data_item(vpn, "esp"))) {
+			restricted = (bool)g_str_has_suffix(str, "!");
+			enumerator = enumerator_create_token(str, ";", "!");
+			while (enumerator->enumerate(enumerator, &str)) {
+				child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP, str));
+			}
+		}
+	}
+	if(!restricted) {
+		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+		child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
+	}
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
