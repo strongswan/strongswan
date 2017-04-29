@@ -283,9 +283,11 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	NMStrongswanPluginPrivate *priv;
 	NMSettingConnection *conn;
 	NMSettingVPN *vpn;
+	enumerator_t *enumerator;
 	identification_t *user = NULL, *gateway = NULL;
 	const char *address, *str;
-	bool virtual, encap;
+	bool virtual, encap, proposal;
+	proposal_t *prop;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -540,8 +542,36 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 							 charon->socket->get_port(charon->socket, FALSE),
 							(char*)address, IKEV2_UDP_PORT,
 							 FRAGMENTATION_YES, 0);
-	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
-	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
+
+	str = nm_setting_vpn_get_data_item(vpn, "proposal");
+	proposal = streq(str, "yes");
+	str = nm_setting_vpn_get_data_item(vpn, "ike");
+	if (proposal && str && strlen(str))
+	{
+		enumerator = enumerator_create_token(str, ";", "");
+		while (enumerator->enumerate(enumerator, &str))
+		{
+			prop = proposal_create_from_string(PROTO_IKE, str);
+			if (!prop)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+							"Invalid IKE proposal.");
+				enumerator->destroy(enumerator);
+				ike_cfg->destroy(ike_cfg);
+				gateway->destroy(gateway);
+				user->destroy(user);
+				return FALSE;
+			}
+			ike_cfg->add_proposal(ike_cfg, prop);
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
+		ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
+	}
 
 	peer_cfg = peer_cfg_create(priv->name, ike_cfg, &peer);
 	if (virtual)
@@ -566,8 +596,32 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
 	child_cfg = child_cfg_create(priv->name, &child);
-	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
-	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
+	str = nm_setting_vpn_get_data_item(vpn, "esp");
+	if (proposal && str && strlen(str))
+	{
+		enumerator = enumerator_create_token(str, ";", "");
+		while (enumerator->enumerate(enumerator, &str))
+		{
+			prop = proposal_create_from_string(PROTO_ESP, str);
+			if (!prop)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+							"Invalid ESP proposal.");
+				enumerator->destroy(enumerator);
+				child_cfg->destroy(child_cfg);
+				peer_cfg->destroy(peer_cfg);
+				return FALSE;
+			}
+			child_cfg->add_proposal(child_cfg, prop);
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
+		child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
+	}
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
