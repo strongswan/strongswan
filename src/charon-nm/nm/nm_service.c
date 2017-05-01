@@ -286,7 +286,8 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	enumerator_t *enumerator;
 	identification_t *user = NULL, *gateway = NULL;
 	const char *address, *str;
-	bool virtual, encap, proposal, restricted=FALSE;
+	bool virtual, encap, proposal;
+	proposal_t *prop;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
@@ -544,17 +545,25 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 
 	str = nm_setting_vpn_get_data_item(vpn, "proposal");
 	proposal = str ? streq(str, "yes") : FALSE;
-
-	if(proposal) {
-		if((str = nm_setting_vpn_get_data_item(vpn, "ike"))) {
-			restricted = (bool)g_str_has_suffix(str, "!");
-			enumerator = enumerator_create_token(str, ";", "!");
-			while (enumerator->enumerate(enumerator, &str)) {
-				ike_cfg->add_proposal(ike_cfg, proposal_create_from_string(PROTO_IKE, str));
+	str = nm_setting_vpn_get_data_item(vpn, "ike");
+	if (proposal && str && strlen(str))
+	{
+		enumerator = enumerator_create_token(str, ";", "");
+		while (enumerator->enumerate(enumerator, &str))
+		{
+			prop = proposal_create_from_string(PROTO_IKE, str);
+			if (!prop)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+							"Unrecognized IKE proposal.");
+				return FALSE;
 			}
+			ike_cfg->add_proposal(ike_cfg, prop);
 		}
 	}
-	if(!restricted) {
+	else
+	{
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 		ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
 	}
@@ -582,17 +591,26 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
 	child_cfg = child_cfg_create(priv->name, &child);
-	restricted = FALSE;
-	if(proposal) {
-		if((str = nm_setting_vpn_get_data_item(vpn, "esp"))) {
-			restricted = (bool)g_str_has_suffix(str, "!");
-			enumerator = enumerator_create_token(str, ";", "!");
-			while (enumerator->enumerate(enumerator, &str)) {
-				child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP, str));
+	str = nm_setting_vpn_get_data_item(vpn, "esp");
+	if (proposal && str && strlen(str))
+	{
+		enumerator = enumerator_create_token(str, ";", "");
+		while (enumerator->enumerate(enumerator, &str))
+		{
+			prop = proposal_create_from_string(PROTO_ESP, str);
+			if (!prop)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+							"Unrecognized ESP proposal.");
+				return FALSE;
 			}
+			child_cfg->add_proposal(child_cfg, prop);
 		}
+
 	}
-	if(!restricted) {
+	else
+	{
 		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 		child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 	}
