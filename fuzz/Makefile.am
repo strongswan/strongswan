@@ -1,12 +1,18 @@
-AM_CPPFLAGS = \
+CPPFLAGS = @CPPFLAGS@ \
 	-I$(top_srcdir)/src/libstrongswan \
 	-DPLUGINDIR=\""$(abs_top_builddir)/src/libstrongswan/plugins\"" \
 	-DPLUGINS="\"${fuzz_plugins}\""
 
-noinst_PROGRAMS = fuzz_certs
+LDFLAGS = @LDFLAGS@ ${libfuzzer} \
+	$(top_builddir)/src/libstrongswan/.libs/libstrongswan.a \
+	-Wl,-Bstatic -lgmp -Wl,-Bdynamic \
+	-stdlib=libc++ -lstdc++
 
-fuzz_certs_SOURCES = fuzz_certs.c
+FUZZ_TARGETS=fuzz_certs
 
-fuzz_certs_LDFLAGS = ${libfuzzer} -lstdc++
+all-local: $(FUZZ_TARGETS)
 
-fuzz_certs_LDADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
+CLEANFILES=$(FUZZ_TARGETS)
+
+fuzz_certs: fuzz_certs.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< $(LDFLAGS)
