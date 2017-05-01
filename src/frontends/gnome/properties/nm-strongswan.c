@@ -383,7 +383,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "proposal-check"));
 	value = nm_setting_vpn_get_data_item(settings, "proposal");
-	if(value && strcmp(value, "yes") == 0)
+	if (value && strcmp(value, "yes") == 0)
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
 	else
 		toggle_proposal_cb(GTK_CHECK_BUTTON(widget), self);
@@ -391,14 +391,14 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 
 	widget = GTK_WIDGET(gtk_builder_get_object(priv->builder, "ike-entry"));
 	value = nm_setting_vpn_get_data_item(settings, "ike");
-	if(value)
+	if (value)
 		gtk_entry_set_text(GTK_ENTRY(widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 
 	widget = GTK_WIDGET(gtk_builder_get_object(priv->builder, "esp-entry"));
 	value = nm_setting_vpn_get_data_item(settings, "esp");
-	if(value)
+	if (value)
 		gtk_entry_set_text(GTK_ENTRY(widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 

@@ -148,9 +148,6 @@
                 <property name="column_spacing">6</property>
                 <property name="row_spacing">6</property>
                 <child>
-                  <placeholder/>
-                </child>
-                <child>
                   <object class="GtkFileChooserButton" id="userkey-button">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
@@ -313,6 +310,10 @@
                     <property name="top_attach">5</property>
                     <property name="bottom_attach">6</property>
                   </packing>
+                </child>
+                <child>
+                  <placeholder/>
+
                 </child>
               </object>
             </child>
