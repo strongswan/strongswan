@@ -392,14 +392,14 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	widget = GTK_WIDGET(gtk_builder_get_object(priv->builder, "ike-entry"));
 	value = nm_setting_vpn_get_data_item(settings, "ike");
 	if (value)
-		gtk_entry_set_text(GTK_ENTRY(widget), value);
+		gtk_entry_set_text(GTK_ENTRY(widget), g_strdelimit(g_strdup(value), ";", ','));
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 
 	widget = GTK_WIDGET(gtk_builder_get_object(priv->builder, "esp-entry"));
 	value = nm_setting_vpn_get_data_item(settings, "esp");
 	if (value)
-		gtk_entry_set_text(GTK_ENTRY(widget), value);
+		gtk_entry_set_text(GTK_ENTRY(widget), g_strdelimit(g_strdup(value), ";", ','));
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 
@@ -544,16 +544,13 @@ update_connection (NMVpnEditor *iface,
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "ike-entry"));
 	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
-	if (str && strlen (str)) {
-		nm_setting_vpn_add_data_item (settings, "ike", str);
-	}
+	if (str && strlen (str))
+		nm_setting_vpn_add_data_item (settings, "ike", g_strdelimit(g_strdup(str), ",", ';'));
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "esp-entry"));
 	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
-	if (str && strlen (str)) {
-		nm_setting_vpn_add_data_item (settings, "esp", str);
-	}
-
+	if (str && strlen (str))
+		nm_setting_vpn_add_data_item (settings, "esp", g_strdelimit(g_strdup(str), ",", ';'));
 
 	nm_connection_add_setting (connection, NM_SETTING (settings));
 	return TRUE;
