@@ -1732,6 +1732,9 @@ fi
 if test x$ikev2 = xtrue; then
 	AC_DEFINE([USE_IKEV2], [], [support for IKEv2 protocol])
 fi
+if test x$fuzzing = xtrue; then
+	AC_DEFINE([USE_FUZZING], [], [build code for fuzzing])
+fi
 
 # ====================================================
 #  options for enabled modules (see conf/Makefile.am)

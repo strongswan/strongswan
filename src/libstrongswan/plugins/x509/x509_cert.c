@@ -218,6 +218,29 @@ struct private_x509_cert_t {
 };
 
 /**
+ * Convert a generalName to a string
+ */
+static bool gn_to_string(identification_t *id, char **uri)
+{
+	int len;
+
+#ifdef USE_FUZZING
+	chunk_t proper;
+	chunk_printable(id->get_encoding(id), &proper, '?');
+	len = asprintf(uri, "%.*s", (int)proper.len, proper.ptr);
+	chunk_free(&proper);
+#else
+	len = asprintf(uri, "%Y", id);
+#endif
+	if (!len)
+	{
+		free(*uri);
+		return FALSE;
+	}
+	return len > 0;
+}
+
+/**
  * Destroy a CertificateDistributionPoint
  */
 static void crl_uri_destroy(x509_cdp_t *this)
@@ -649,7 +672,7 @@ static bool parse_authorityInfoAccess(chunk_t blob, int level0,
 							}
 							DBG2(DBG_ASN, "  '%Y'", id);
 							if (accessMethod == OID_OCSP &&
-								asprintf(&uri, "%Y", id) > 0)
+								gn_to_string(id, &uri))
 							{
 								this->ocsp_uris->insert_last(this->ocsp_uris, uri);
 							}
@@ -818,12 +841,10 @@ static void add_cdps(linked_list_t *list, linked_list_t *uris,
 	enumerator_t *enumerator;
 	x509_cdp_t *cdp;
 	char *uri;
-	int len;
 
 	while (uris->remove_last(uris, (void**)&id) == SUCCESS)
 	{
-		len = asprintf(&uri, "%Y", id);
-		if (len > 0)
+		if (gn_to_string(id, &uri))
 		{
 			if (issuers->get_count(issuers))
 			{
@@ -846,10 +867,6 @@ static void add_cdps(linked_list_t *list, linked_list_t *uris,
 				);
 				list->insert_last(list, cdp);
 			}
-		}
-		else if (!len)
-		{
-			free(uri);
 		}
 		id->destroy(id);
 	}
