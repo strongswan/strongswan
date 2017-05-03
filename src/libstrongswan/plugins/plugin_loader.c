@@ -730,8 +730,10 @@ static bool load_dependencies(private_plugin_loader_t *this,
 
 		if (!find_compatible_feature(this, &provided->feature[i]))
 		{
-			char *name, *provide, *depend;
 			bool soft = provided->feature[i].kind == FEATURE_SDEPEND;
+
+#ifndef USE_FUZZING
+			char *name, *provide, *depend;
 
 			name = provided->entry->plugin->get_name(provided->entry->plugin);
 			provide = plugin_feature_get_string(&provided->feature[0]);
@@ -753,6 +755,8 @@ static bool load_dependencies(private_plugin_loader_t *this,
 			}
 			free(provide);
 			free(depend);
+#endif /* !USE_FUZZING */
+
 			if (soft)
 			{	/* it's ok if we can't resolve soft dependencies */
 				continue;
@@ -772,8 +776,6 @@ static void load_feature(private_plugin_loader_t *this,
 {
 	if (load_dependencies(this, provided, level))
 	{
-		char *name, *provide;
-
 		if (plugin_feature_load(provided->entry->plugin, provided->feature,
 								provided->reg))
 		{
@@ -782,6 +784,9 @@ static void load_feature(private_plugin_loader_t *this,
 			this->loaded->insert_first(this->loaded, provided);
 			return;
 		}
+
+#ifndef USE_FUZZING
+		char *name, *provide;
 
 		name = provided->entry->plugin->get_name(provided->entry->plugin);
 		provide = plugin_feature_get_string(&provided->feature[0]);
@@ -796,6 +801,7 @@ static void load_feature(private_plugin_loader_t *this,
 				 provide, name);
 		}
 		free(provide);
+#endif /* !USE_FUZZING */
 	}
 	else
 	{	/* TODO: we could check the current level and set a different flag when
@@ -815,13 +821,16 @@ static void load_provided(private_plugin_loader_t *this,
 						  provided_feature_t *provided,
 						  int level)
 {
-	char *name, *provide;
 	int indent = level * 2;
 
 	if (provided->loaded || provided->failed)
 	{
 		return;
 	}
+
+#ifndef USE_FUZZING
+	char *name, *provide;
+
 	name = provided->entry->plugin->get_name(provided->entry->plugin);
 	provide = plugin_feature_get_string(provided->feature);
 	if (provided->loading)
@@ -834,6 +843,12 @@ static void load_provided(private_plugin_loader_t *this,
 	DBG3(DBG_LIB, "%*sloading feature %s in plugin '%s'",
 		 indent, "", provide, name);
 	free(provide);
+#else
+	if (provided->loading)
+	{
+		return;
+	}
+#endif /* USE_FUZZING */
 
 	provided->loading = TRUE;
 	load_feature(this, provided, level + 1);
