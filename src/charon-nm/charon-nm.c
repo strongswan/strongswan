@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 
 	/* use random ports to avoid conflicts with regular charon */
 	lib->settings->set_int(lib->settings, "charon-nm.port", 0);
-	lib->settings->set_int(lib->settings, "charon-nm.port_natt_t", 0);
+	lib->settings->set_int(lib->settings, "charon-nm.port_nat_t", 0);
 
 	DBG1(DBG_DMN, "Starting charon NetworkManager backend (strongSwan "VERSION")");
 	if (lib->integrity)
