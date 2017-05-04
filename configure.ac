@@ -1266,11 +1266,6 @@ if test x$coverage = xtrue; then
 	CFLAGS="${CFLAGS} -g -O0"
 fi
 
-if test x$fuzzing = xtrue; then
-	AC_MSG_NOTICE([fuzzing enabled, modifying CFLAGS])
-	CFLAGS="${CFLAGS} -fsanitize-coverage=trace-pc-guard -fsanitize=address"
-fi
-
 if test x$ruby_gems = xtrue; then
 	AC_PATH_PROG([GEM], [gem], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 	if test x$GEM = x; then
