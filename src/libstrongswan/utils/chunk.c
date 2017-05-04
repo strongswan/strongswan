@@ -643,7 +643,7 @@ chunk_t chunk_from_base64(chunk_t base64, char *buf)
 		outlen += 3;
 		for (j = 0; j < 4; j++)
 		{
-			if (*pos == '=')
+			if (*pos == '=' && outlen > 0)
 			{
 				outlen--;
 			}
