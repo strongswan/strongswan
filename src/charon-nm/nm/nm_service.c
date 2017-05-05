@@ -558,8 +558,6 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 				g_set_error(err, NM_VPN_PLUGIN_ERROR,
 							NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
 							"Unrecognized IKE proposal.");
-				DESTROY_IF(gateway);
-				DESTROY_IF(user);
 				DESTROY_IF(ike_cfg);
 				return FALSE;
 			}
@@ -607,10 +605,6 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 				g_set_error(err, NM_VPN_PLUGIN_ERROR,
 							NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
 							"Unrecognized ESP proposal.");
-				DESTROY_IF(gateway);
-				DESTROY_IF(user);
-				DESTROY_IF(ike_cfg);
-				DESTROY_IF(auth);
 				DESTROY_IF(peer_cfg);
 				DESTROY_IF(child_cfg);
 				return FALSE;
