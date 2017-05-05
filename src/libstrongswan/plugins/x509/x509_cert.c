@@ -933,14 +933,13 @@ end:
  * ASN.1 definition of nameConstraints
  */
 static const asn1Object_t nameConstraintsObjects[] = {
-	{ 0, "nameConstraints",			ASN1_SEQUENCE,		ASN1_LOOP			}, /*  0 */
+	{ 0, "nameConstraints",			ASN1_SEQUENCE,		ASN1_NONE			}, /*  0 */
 	{ 1,   "permittedSubtrees",		ASN1_CONTEXT_C_0,	ASN1_OPT|ASN1_LOOP	}, /*  1 */
 	{ 2,     "generalSubtree",		ASN1_SEQUENCE,		ASN1_BODY			}, /*  2 */
 	{ 1,   "end loop",				ASN1_EOC,			ASN1_END			}, /*  3 */
 	{ 1,   "excludedSubtrees",		ASN1_CONTEXT_C_1,	ASN1_OPT|ASN1_LOOP	}, /*  4 */
 	{ 2,     "generalSubtree",		ASN1_SEQUENCE,		ASN1_BODY			}, /*  5 */
 	{ 1,   "end loop",				ASN1_EOC,			ASN1_END			}, /*  6 */
-	{ 0, "end loop",				ASN1_EOC,			ASN1_END			}, /*  7 */
 	{ 0, "exit",					ASN1_EOC,			ASN1_EXIT			}
 };
 #define NAME_CONSTRAINT_PERMITTED 2
