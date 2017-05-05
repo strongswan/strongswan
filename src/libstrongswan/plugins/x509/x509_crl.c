@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008-2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2017 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -149,7 +150,7 @@ extern chunk_t x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
 /**
  * from x509_cert
  */
-extern void x509_parse_crlDistributionPoints(chunk_t blob, int level0,
+extern bool x509_parse_crlDistributionPoints(chunk_t blob, int level0,
 											 linked_list_t *list);
 
 /**
@@ -309,8 +310,11 @@ static bool parse(private_x509_crl_t *this)
 						this->crlNumber = object;
 						break;
 					case OID_FRESHEST_CRL:
-						x509_parse_crlDistributionPoints(object, level,
-														 this->crl_uris);
+						if (!x509_parse_crlDistributionPoints(object, level,
+															  this->crl_uris))
+						{
+							goto end;
+						}
 						break;
 					case OID_DELTA_CRL_INDICATOR:
 						if (!asn1_parse_simple_object(&object, ASN1_INTEGER,

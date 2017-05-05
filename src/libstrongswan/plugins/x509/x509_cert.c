@@ -280,13 +280,14 @@ static const asn1Object_t basicConstraintsObjects[] = {
 /**
  * Extracts the basicConstraints extension
  */
-static void parse_basicConstraints(chunk_t blob, int level0,
+static bool parse_basicConstraints(chunk_t blob, int level0,
 								   private_x509_cert_t *this)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
 	bool isCA = FALSE;
+	bool success;
 
 	parser = asn1_parser_create(basicConstraintsObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -313,7 +314,10 @@ static void parse_basicConstraints(chunk_t blob, int level0,
 				break;
 		}
 	}
+	success = parser->success(parser);
 	parser->destroy(parser);
+
+	return success;
 }
 
 /**
@@ -502,11 +506,14 @@ static const asn1Object_t generalNamesObjects[] = {
 /**
  * Extracts one or several GNs and puts them into a chained list
  */
-void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list)
+bool x509_parse_generalNames(chunk_t blob, int level0, bool implicit,
+							 linked_list_t *list)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
+	identification_t *gn;
 	int objectID;
+	bool success = FALSE;
 
 	parser = asn1_parser_create(generalNamesObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -516,16 +523,20 @@ void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_lis
 	{
 		if (objectID == GENERAL_NAMES_GN)
 		{
-			identification_t *gn = parse_generalName(object,
-											parser->get_level(parser)+1);
-
-			if (gn)
+			gn = parse_generalName(object, parser->get_level(parser)+1);
+			if (!gn)
 			{
-				list->insert_last(list, (void *)gn);
+				goto end;
 			}
+			list->insert_last(list, (void *)gn);
 		}
 	}
+	success = parser->success(parser);
+
+end:
 	parser->destroy(parser);
+
+	return success;
 }
 
 /**
@@ -579,6 +590,7 @@ chunk_t x509_parse_authorityKeyIdentifier(chunk_t blob, int level0,
 		}
 	}
 	parser->destroy(parser);
+
 	return authKeyIdentifier;
 }
 
@@ -599,13 +611,14 @@ static const asn1Object_t authInfoAccessObjects[] = {
 /**
  * Extracts an authorityInfoAcess location
  */
-static void parse_authorityInfoAccess(chunk_t blob, int level0,
+static bool parse_authorityInfoAccess(chunk_t blob, int level0,
 									  private_x509_cert_t *this)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
 	int accessMethod = OID_UNKNOWN;
+	bool success = FALSE;
 
 	parser = asn1_parser_create(authInfoAccessObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -653,9 +666,12 @@ static void parse_authorityInfoAccess(chunk_t blob, int level0,
 				break;
 		}
 	}
+	success = parser->success(parser);
 
 end:
 	parser->destroy(parser);
+
+	return success;
 }
 
 /**
@@ -726,12 +742,13 @@ static const asn1Object_t extendedKeyUsageObjects[] = {
 /**
  * Extracts extendedKeyUsage OIDs
  */
-static void parse_extendedKeyUsage(chunk_t blob, int level0,
+static bool parse_extendedKeyUsage(chunk_t blob, int level0,
 								   private_x509_cert_t *this)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
+	bool success;
 
 	parser = asn1_parser_create(extendedKeyUsageObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -762,7 +779,10 @@ static void parse_extendedKeyUsage(chunk_t blob, int level0,
 			}
 		}
 	}
+	success = parser->success(parser);
 	parser->destroy(parser);
+
+	return success;
 }
 
 /**
@@ -836,13 +856,14 @@ static void add_cdps(linked_list_t *list, linked_list_t *uris,
 /**
  * Extracts one or several crlDistributionPoints into a list
  */
-void x509_parse_crlDistributionPoints(chunk_t blob, int level0,
+bool x509_parse_crlDistributionPoints(chunk_t blob, int level0,
 									  linked_list_t *list)
 {
 	linked_list_t *uris, *issuers;
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
+	bool success = FALSE;
 
 	uris = linked_list_create();
 	issuers = linked_list_create();
@@ -857,23 +878,32 @@ void x509_parse_crlDistributionPoints(chunk_t blob, int level0,
 				add_cdps(list, uris, issuers);
 				break;
 			case CRL_DIST_POINTS_FULLNAME:
-				x509_parse_generalNames(object, parser->get_level(parser) + 1,
-										TRUE, uris);
+				if (!x509_parse_generalNames(object,
+								parser->get_level(parser) + 1, TRUE, uris))
+				{
+					goto end;
+				}
 				break;
 			case CRL_DIST_POINTS_ISSUER:
-				x509_parse_generalNames(object, parser->get_level(parser) + 1,
-										TRUE, issuers);
+				if (!x509_parse_generalNames(object,
+								parser->get_level(parser) + 1, TRUE, issuers))
+				{
+					goto end;
+				}
 				break;
 			default:
 				break;
 		}
 	}
-	parser->destroy(parser);
-
+	success = parser->success(parser);
 	add_cdps(list, uris, issuers);
 
+end:
+	parser->destroy(parser);
 	uris->destroy(uris);
 	issuers->destroy(issuers);
+
+	return success;
 }
 
 /**
@@ -896,13 +926,14 @@ static const asn1Object_t nameConstraintsObjects[] = {
 /**
  * Parse permitted/excluded nameConstraints
  */
-static void parse_nameConstraints(chunk_t blob, int level0,
+static bool parse_nameConstraints(chunk_t blob, int level0,
 								  private_x509_cert_t *this)
 {
 	asn1_parser_t *parser;
 	identification_t *id;
 	chunk_t object;
 	int objectID;
+	bool success = FALSE;
 
 	parser = asn1_parser_create(nameConstraintsObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -913,23 +944,30 @@ static void parse_nameConstraints(chunk_t blob, int level0,
 		{
 			case NAME_CONSTRAINT_PERMITTED:
 				id = parse_generalName(object, parser->get_level(parser) + 1);
-				if (id)
+				if (!id)
 				{
-					this->permitted_names->insert_last(this->permitted_names, id);
+					goto end;
 				}
+				this->permitted_names->insert_last(this->permitted_names, id);
 				break;
 			case NAME_CONSTRAINT_EXCLUDED:
 				id = parse_generalName(object, parser->get_level(parser) + 1);
-				if (id)
+				if (!id)
 				{
-					this->excluded_names->insert_last(this->excluded_names, id);
+					goto end;
 				}
+				this->excluded_names->insert_last(this->excluded_names, id);
 				break;
 			default:
 				break;
 		}
 	}
+	success = parser->success(parser);
+
+end:
 	parser->destroy(parser);
+
+	return success;
 }
 
 /**
@@ -959,13 +997,14 @@ static const asn1Object_t certificatePoliciesObject[] = {
 /**
  * Parse certificatePolicies
  */
-static void parse_certificatePolicies(chunk_t blob, int level0,
+static bool parse_certificatePolicies(chunk_t blob, int level0,
 									  private_x509_cert_t *this)
 {
 	x509_cert_policy_t *policy = NULL;
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID, qualifier = OID_UNKNOWN;
+	bool success;
 
 	parser = asn1_parser_create(certificatePoliciesObject, blob);
 	parser->set_top_level(parser, level0);
@@ -998,7 +1037,10 @@ static void parse_certificatePolicies(chunk_t blob, int level0,
 				break;
 		}
 	}
+	success = parser->success(parser);
 	parser->destroy(parser);
+
+	return success;
 }
 
 /**
@@ -1019,13 +1061,14 @@ static const asn1Object_t policyMappingsObjects[] = {
 /**
  * Parse policyMappings
  */
-static void parse_policyMappings(chunk_t blob, int level0,
+static bool parse_policyMappings(chunk_t blob, int level0,
 								 private_x509_cert_t *this)
 {
 	x509_policy_mapping_t *map = NULL;
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
+	bool success;
 
 	parser = asn1_parser_create(policyMappingsObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -1054,7 +1097,10 @@ static void parse_policyMappings(chunk_t blob, int level0,
 				break;
 		}
 	}
+	success = parser->success(parser);
 	parser->destroy(parser);
+
+	return success;
 }
 
 /**
@@ -1076,12 +1122,13 @@ static const asn1Object_t policyConstraintsObjects[] = {
 /**
  * Parse policyConstraints
  */
-static void parse_policyConstraints(chunk_t blob, int level0,
+static bool parse_policyConstraints(chunk_t blob, int level0,
 									private_x509_cert_t *this)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
+	bool success;
 
 	parser = asn1_parser_create(policyConstraintsObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -1100,7 +1147,10 @@ static void parse_policyConstraints(chunk_t blob, int level0,
 				break;
 		}
 	}
+	success = parser->success(parser);
 	parser->destroy(parser);
+
+	return success;
 }
 
 /**
@@ -1171,7 +1221,7 @@ static bool check_address_object(ts_type_t ts_type, chunk_t object)
 	return TRUE;
 }
 
-static void parse_ipAddrBlocks(chunk_t blob, int level0,
+static bool parse_ipAddrBlocks(chunk_t blob, int level0,
 							   private_x509_cert_t *this)
 {
 	asn1_parser_t *parser;
@@ -1179,6 +1229,7 @@ static void parse_ipAddrBlocks(chunk_t blob, int level0,
 	ts_type_t ts_type = 0;
 	traffic_selector_t *ts;
 	int objectID;
+	bool success = FALSE;
 
 	parser = asn1_parser_create(ipAddrBlocksObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -1240,10 +1291,13 @@ static void parse_ipAddrBlocks(chunk_t blob, int level0,
 				break;
 		}
 	}
+	success = parser->success(parser);
 	this->flags |= X509_IP_ADDR_BLOCKS;
 
 end:
 	parser->destroy(parser);
+
+	return success;
 }
 
 /**
@@ -1387,43 +1441,73 @@ static bool parse_certificate(private_x509_cert_t *this)
 						this->subjectKeyIdentifier = object;
 						break;
 					case OID_SUBJECT_ALT_NAME:
-						x509_parse_generalNames(object, level, FALSE,
-												this->subjectAltNames);
+						if (!x509_parse_generalNames(object, level, FALSE,
+													 this->subjectAltNames))
+						{
+							goto end;
+						}
 						break;
 					case OID_BASIC_CONSTRAINTS:
-						parse_basicConstraints(object, level, this);
+						if (!parse_basicConstraints(object, level, this))
+						{
+							goto end;
+						}
 						break;
 					case OID_CRL_DISTRIBUTION_POINTS:
-						x509_parse_crlDistributionPoints(object, level,
-														 this->crl_uris);
+						if (!x509_parse_crlDistributionPoints(object, level,
+															  this->crl_uris))
+						{
+							goto end;
+						}
 						break;
 					case OID_AUTHORITY_KEY_ID:
-						this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(object,
-														level, &this->authKeySerialNumber);
+						this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(
+									object, level, &this->authKeySerialNumber);
 						break;
 					case OID_AUTHORITY_INFO_ACCESS:
-						parse_authorityInfoAccess(object, level, this);
+						if (!parse_authorityInfoAccess(object, level, this))
+						{
+							goto end;
+						}
 						break;
 					case OID_KEY_USAGE:
 						parse_keyUsage(object, this);
 						break;
 					case OID_EXTENDED_KEY_USAGE:
-						parse_extendedKeyUsage(object, level, this);
+						if (!parse_extendedKeyUsage(object, level, this))
+						{
+							goto end;
+						}
 						break;
 					case OID_IP_ADDR_BLOCKS:
-						parse_ipAddrBlocks(object, level, this);
+						if (!parse_ipAddrBlocks(object, level, this))
+						{
+							goto end;
+						}
 						break;
 					case OID_NAME_CONSTRAINTS:
-						parse_nameConstraints(object, level, this);
+						if (!parse_nameConstraints(object, level, this))
+						{
+							goto end;
+						}
 						break;
 					case OID_CERTIFICATE_POLICIES:
-						parse_certificatePolicies(object, level, this);
+						if (!parse_certificatePolicies(object, level, this))
+						{
+							goto end;
+						}
 						break;
 					case OID_POLICY_MAPPINGS:
-						parse_policyMappings(object, level, this);
+						if (!parse_policyMappings(object, level, this))
+						{
+							goto end;
+						}
 						break;
 					case OID_POLICY_CONSTRAINTS:
-						parse_policyConstraints(object, level, this);
+						if (!parse_policyConstraints(object, level, this))
+						{
+							goto end;
+						}
 						break;
 					case OID_INHIBIT_ANY_POLICY:
 						if (!asn1_parse_simple_object(&object, ASN1_INTEGER,

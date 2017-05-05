@@ -1,7 +1,6 @@
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
- * Copyright (C) 2009 Andreas Steffen
- *
+ * Copyright (C) 2009-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -101,7 +100,8 @@ struct private_x509_pkcs10_t {
 /**
  * Imported from x509_cert.c
  */
-extern void x509_parse_generalNames(chunk_t blob, int level0, bool implicit, linked_list_t *list);
+extern bool x509_parse_generalNames(chunk_t blob, int level0, bool implicit,
+									linked_list_t *list);
 extern chunk_t x509_build_subjectAltNames(linked_list_t *list);
 
 METHOD(certificate_t, get_type, certificate_type_t,
@@ -290,8 +290,11 @@ static bool parse_extension_request(private_x509_pkcs10_t *this, chunk_t blob, i
 				switch (extn_oid)
 				{
 					case OID_SUBJECT_ALT_NAME:
-						x509_parse_generalNames(object, level, FALSE,
-												this->subjectAltNames);
+						if (!x509_parse_generalNames(object, level, FALSE,
+													 this->subjectAltNames))
+						{
+							goto end;
+						}
 						break;
 					default:
 						break;
@@ -303,7 +306,10 @@ static bool parse_extension_request(private_x509_pkcs10_t *this, chunk_t blob, i
 		}
 	}
 	success = parser->success(parser);
+
+end:
 	parser->destroy(parser);
+
 	return success;
 }
 
