@@ -110,6 +110,7 @@ static const char *LST_authby[] = {
 
 static const char *LST_fragmentation[] = {
 	"no",
+	"accept",
 	"yes",
 	"force",
 	 NULL

@@ -65,6 +65,7 @@ typedef enum {
 typedef enum {
 		/* same as in ike_cfg.h */
 		FRAGMENTATION_NO,
+		FRAGMENTATION_ACCEPT,
 		FRAGMENTATION_YES,
 		FRAGMENTATION_FORCE,
 } fragmentation_t;

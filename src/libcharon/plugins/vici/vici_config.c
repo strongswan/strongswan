@@ -1336,6 +1336,7 @@ CALLBACK(parse_frag, bool,
 {
 	enum_map_t map[] = {
 		{ "yes",		FRAGMENTATION_YES		},
+		{ "accept",		FRAGMENTATION_ACCEPT	},
 		{ "no",			FRAGMENTATION_NO		},
 		{ "force",		FRAGMENTATION_FORCE		},
 	};

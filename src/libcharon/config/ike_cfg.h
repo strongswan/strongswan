@@ -47,14 +47,16 @@ enum ike_version_t {
 };
 
 /**
- * Proprietary IKEv1 fragmentation
+ * Proprietary IKEv1 fragmentation and IKEv2 fragmentation
  */
 enum fragmentation_t {
 	/** disable fragmentation */
 	FRAGMENTATION_NO,
-	/** enable fragmentation if supported by peer */
+	/** announce support, but don't send any fragments */
+	FRAGMENTATION_ACCEPT,
+	/** enable fragmentation, if supported by peer */
 	FRAGMENTATION_YES,
-	/** force use of fragmentation (even for the first message) */
+	/** force use of fragmentation (even for the first message for IKEv1) */
 	FRAGMENTATION_FORCE,
 };
 
