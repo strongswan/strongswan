@@ -250,7 +250,7 @@ static status_t pem_to_bin(chunk_t *blob, bool *pgp)
 				{
 					continue;
 				}
-				if (match("Proc-Type", &name) && *value.ptr == '4')
+				if (match("Proc-Type", &name) && value.len && *value.ptr == '4')
 				{
 					encrypted = TRUE;
 				}
