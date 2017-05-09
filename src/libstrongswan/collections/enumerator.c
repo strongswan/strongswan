@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2013 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,6 +30,25 @@
 #endif /* HAVE_GLOB_H */
 
 #include <utils/debug.h>
+
+/*
+ * Described in header.
+ */
+bool enumerator_enumerate_default(enumerator_t *enumerator, ...)
+{
+	va_list args;
+	bool result;
+
+	if (!enumerator->venumerate)
+	{
+		DBG1(DBG_LIB, "!!! ENUMERATE DEFAULT: venumerate() missing !!!");
+		return FALSE;
+	}
+	va_start(args, enumerator);
+	result = enumerator->venumerate(enumerator, args);
+	va_end(args);
+	return result;
+}
 
 /**
  * Implementation of enumerator_create_empty().enumerate
@@ -646,4 +665,3 @@ enumerator_t *enumerator_create_single(void *item, void (*cleanup)(void *item))
 
 	return &this->public;
 }
-

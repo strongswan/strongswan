@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2017 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -34,8 +34,11 @@ struct enumerator_t {
 	/**
 	 * Enumerate collection.
 	 *
-	 * The enumerate function takes a variable argument list containing
-	 * pointers where the enumerated values get written.
+	 * The enumerate() method takes a variable number of pointer arguments
+	 * where the enumerated values get written to.
+	 *
+	 * @note Just assigning the generic enumerator_enumerate_default() function
+	 * that calls the enumerator's venumerate() method is usually enough.
 	 *
 	 * @param ...	variable list of enumerated items, implementation dependent
 	 * @return		TRUE if pointers returned
@@ -43,10 +46,32 @@ struct enumerator_t {
 	bool (*enumerate)(enumerator_t *this, ...);
 
 	/**
-	 * Destroy a enumerator instance.
+	 * Enumerate collection.
+	 *
+	 * The venumerate() method takes a variable argument list containing
+	 * pointers where the enumerated values get written to.
+	 *
+	 * To simplify the implementation the VA_ARGS_VGET() macro may be used.
+	 *
+	 * @param args	variable list of enumerated items, implementation dependent
+	 * @return		TRUE if pointers returned
+	 */
+	bool (*venumerate)(enumerator_t *this, va_list args);
+
+	/**
+	 * Destroy an enumerator_t instance.
 	 */
 	void (*destroy)(enumerator_t *this);
 };
+
+/**
+ * Generic implementation of enumerator_t::enumerate() that simply calls
+ * the enumerator's venumerate() method.
+ *
+ * @param enumerator	the enumerator
+ * @param ...			arguments passed to enumerate()
+ */
+bool enumerator_enumerate_default(enumerator_t *enumerator, ...);
 
 /**
  * Create an enumerator which enumerates over nothing
