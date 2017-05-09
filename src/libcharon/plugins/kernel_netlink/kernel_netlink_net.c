@@ -2035,22 +2035,6 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				continue;
 			}
 		}
-		if (route->oif)
-		{	/* no src, but an interface - get address from it */
-			route->src_host = get_interface_address(this, route->oif,
-											msg->rtm_family, dest, candidate);
-			if (route->src_host)
-			{	/* more of the same */
-				if (!candidate ||
-					 candidate->ip_equals(candidate, route->src_host))
-				{
-					best = route;
-					break;
-				}
-				best = best ?: route;
-				continue;
-			}
-		}
 		if (route->gtw.ptr)
 		{	/* no src, no iface, but a gateway - lookup src to reach gtw */
 			host_t *gtw;
@@ -2071,6 +2055,22 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					break;
 				}
 				best = best ?: route;
+			}
+		}
+		if (route->oif)
+		{	/* no src, but an interface - get address from it */
+			route->src_host = get_interface_address(this, route->oif,
+											msg->rtm_family, dest, candidate);
+			if (route->src_host)
+			{	/* more of the same */
+				if (!candidate ||
+					 candidate->ip_equals(candidate, route->src_host))
+				{
+					best = route;
+					break;
+				}
+				best = best ?: route;
+				continue;
 			}
 		}
 	}
