@@ -1071,15 +1071,15 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 		},
 		.reqid = msg->add_conn.reqid,
 		.mode = msg->add_conn.mode,
-		.proxy_mode = msg->add_conn.proxy_mode,
-		.ipcomp = msg->add_conn.ipcomp,
+		.options = (msg->add_conn.proxy_mode ? OPT_PROXY_MODE : 0) |
+				   (msg->add_conn.ipcomp ? OPT_IPCOMP : 0) |
+				   (msg->add_conn.me.hostaccess ? OPT_HOSTACCESS : 0) |
+				   (msg->add_conn.install_policy ? 0 : OPT_NO_POLICIES),
 		.tfc = msg->add_conn.tfc,
 		.inactivity = msg->add_conn.inactivity,
 		.dpd_action = map_action(msg->add_conn.dpd.action),
 		.close_action = map_action(msg->add_conn.close_action),
 		.updown = msg->add_conn.me.updown,
-		.hostaccess = msg->add_conn.me.hostaccess,
-		.suppress_policies = !msg->add_conn.install_policy,
 	};
 
 	child_cfg = child_cfg_create(msg->add_conn.name, &child);

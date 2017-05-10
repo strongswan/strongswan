@@ -1052,7 +1052,7 @@ METHOD(child_sa_t, add_policies, status_t,
 	enumerator->destroy(enumerator);
 	array_sort(this->other_ts, (void*)traffic_selector_cmp, NULL);
 
-	if (this->config->install_policy(this->config))
+	if (!this->config->has_option(this->config, OPT_NO_POLICIES))
 	{
 		policy_priority_t priority;
 		ipsec_sa_cfg_t my_sa, other_sa;
@@ -1134,8 +1134,9 @@ METHOD(child_sa_t, update, status_t,
 
 	old = this->state;
 	set_state(this, CHILD_UPDATING);
-	transport_proxy_mode = this->config->use_proxy_mode(this->config) &&
-						   this->mode == MODE_TRANSPORT;
+	transport_proxy_mode = this->mode == MODE_TRANSPORT &&
+						   this->config->has_option(this->config,
+													OPT_PROXY_MODE);
 
 	if (!transport_proxy_mode)
 	{
@@ -1189,7 +1190,8 @@ METHOD(child_sa_t, update, status_t,
 		}
 	}
 
-	if (this->config->install_policy(this->config) && require_policy_update())
+	if (!this->config->has_option(this->config, OPT_NO_POLICIES) &&
+		require_policy_update())
 	{
 		if (!me->ip_equals(me, this->my_addr) ||
 			!other->ip_equals(other, this->other_addr))
@@ -1287,7 +1289,7 @@ METHOD(child_sa_t, destroy, void,
 
 	set_state(this, CHILD_DESTROYING);
 
-	if (this->config->install_policy(this->config))
+	if (!this->config->has_option(this->config, OPT_NO_POLICIES))
 	{
 		ipsec_sa_cfg_t my_sa, other_sa;
 		uint32_t manual_prio;
@@ -1456,7 +1458,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		.mark_in = config->get_mark(config, TRUE),
 		.mark_out = config->get_mark(config, FALSE),
 		.install_time = time_monotonic(NULL),
-		.policies_fwd_out = config->install_fwd_out_policy(config),
+		.policies_fwd_out = config->has_option(config, OPT_FWD_OUT_POLICIES),
 	);
 
 	this->config = config;
@@ -1509,7 +1511,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 
 	/* MIPv6 proxy transport mode sets SA endpoints to TS hosts */
 	if (config->get_mode(config) == MODE_TRANSPORT &&
-		config->use_proxy_mode(config))
+		config->has_option(config, OPT_PROXY_MODE))
 	{
 		this->mode = MODE_TRANSPORT;
 

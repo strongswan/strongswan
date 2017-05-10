@@ -853,7 +853,7 @@ METHOD(task_t, build_i, status_t,
 				add_nat_oa_payloads(this, message);
 			}
 
-			if (this->config->use_ipcomp(this->config))
+			if (this->config->has_option(this->config, OPT_IPCOMP))
 			{
 				this->cpi_i = this->child_sa->alloc_cpi(this->child_sa);
 				if (!this->cpi_i)
@@ -1108,7 +1108,7 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, INVALID_ID_INFORMATION);
 			}
 
-			if (this->config->use_ipcomp(this->config))
+			if (this->config->has_option(this->config, OPT_IPCOMP))
 			{
 				list = sa_payload->get_ipcomp_proposals(sa_payload,
 														&this->cpi_i);

@@ -107,7 +107,7 @@ static void list_mode(vici_builder_t *b, child_sa_t *child, child_cfg_t *cfg)
 			cfg = child->get_config(child);
 		}
 		mode = child ? child->get_mode(child) : cfg->get_mode(cfg);
-		if (mode == MODE_TRANSPORT && cfg->use_proxy_mode(cfg))
+		if (mode == MODE_TRANSPORT && cfg->has_option(cfg, OPT_PROXY_MODE))
 		{	/* only report this if the negotiated mode is actually TRANSPORT */
 			sub_mode = "_PROXY";
 		}

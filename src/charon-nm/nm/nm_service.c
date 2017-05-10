@@ -346,7 +346,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 	str = nm_setting_vpn_get_data_item(vpn, "encap");
 	encap = streq(str, "yes");
 	str = nm_setting_vpn_get_data_item(vpn, "ipcomp");
-	child.ipcomp = streq(str, "yes");
+	child.options |= streq(str, "yes") ? OPT_IPCOMP : 0;
 	str = nm_setting_vpn_get_data_item(vpn, "method");
 	if (streq(str, "psk"))
 	{
