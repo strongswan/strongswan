@@ -307,6 +307,9 @@ enum child_cfg_option_t {
 
 	/** Enable hardware offload, if supported by the IPsec backend */
 	OPT_HW_OFFLOAD = (1<<5),
+
+	/** Force 96-bit truncation for SHA-256 */
+	OPT_SHA256_96 = (1<<6),
 };
 
 /**

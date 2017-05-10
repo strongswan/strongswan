@@ -802,6 +802,14 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 	this->proposal->get_algorithm(this->proposal, EXTENDED_SEQUENCE_NUMBERS,
 								  &esn, NULL);
 
+	if (int_alg == AUTH_HMAC_SHA2_256_128 &&
+		this->config->has_option(this->config, OPT_SHA256_96))
+	{
+		DBG2(DBG_CHD, "  using %N with 96-bit truncation",
+			 integrity_algorithm_names, int_alg);
+		int_alg = AUTH_HMAC_SHA2_256_96;
+	}
+
 	if (!this->reqid_allocated && !this->static_reqid)
 	{
 		status = charon->kernel->alloc_reqid(charon->kernel, my_ts, other_ts,
