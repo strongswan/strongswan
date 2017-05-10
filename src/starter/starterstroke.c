@@ -220,6 +220,7 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg->add_conn.dpd.timeout = conn->dpd_timeout;
 	msg->add_conn.dpd.action = conn->dpd_action;
 	msg->add_conn.close_action = conn->close_action;
+	msg->add_conn.sha256_96 = conn->sha256_96;
 	msg->add_conn.inactivity = conn->inactivity;
 	msg->add_conn.ikeme.mediation = conn->me_mediation;
 	push_string(&msg, add_conn.ikeme.mediated_by, conn->me_mediated_by);

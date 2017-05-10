@@ -302,6 +302,7 @@ struct stroke_msg_t {
 			} mark_in, mark_out;
 			stroke_end_t me, other;
 			uint32_t replay_window;
+			bool sha256_96;
 		} add_conn;
 
 		/* data for STR_ADD_CA */

@@ -1074,7 +1074,8 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 		.options = (msg->add_conn.proxy_mode ? OPT_PROXY_MODE : 0) |
 				   (msg->add_conn.ipcomp ? OPT_IPCOMP : 0) |
 				   (msg->add_conn.me.hostaccess ? OPT_HOSTACCESS : 0) |
-				   (msg->add_conn.install_policy ? 0 : OPT_NO_POLICIES),
+				   (msg->add_conn.install_policy ? 0 : OPT_NO_POLICIES) |
+				   (msg->add_conn.sha256_96 ? OPT_SHA256_96 : 0),
 		.tfc = msg->add_conn.tfc,
 		.inactivity = msg->add_conn.inactivity,
 		.dpd_action = map_action(msg->add_conn.dpd.action),

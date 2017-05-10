@@ -1141,6 +1141,13 @@ a value of 0 disables IPsec replay protection.
 .BR reqid " = <number>"
 sets the reqid for a given connection to a pre-configured fixed value.
 .TP
+.BR sha256_96 " = " no " | yes"
+HMAC-SHA-256 is used with 128-bit truncation with IPsec. For compatibility
+with implementations that incorrectly use 96-bit truncation this option may be
+enabled to configure the shorter truncation length in the kernel.  This is not
+negotiated, so this only works with peers that use the incorrect truncation
+length (or have this option enabled).
+.TP
 .BR tfc " = <value>"
 number of bytes to pad ESP payload data to. Traffic Flow Confidentiality
 is currently supported in IKEv2 and applies to outgoing packets only. The

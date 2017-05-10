@@ -162,6 +162,8 @@ struct starter_conn {
 
 		dpd_action_t    close_action;
 
+		bool            sha256_96;
+
 		time_t          inactivity;
 
 		bool            me_mediation;
