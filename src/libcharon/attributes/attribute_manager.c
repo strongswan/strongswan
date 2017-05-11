@@ -237,14 +237,14 @@ typedef struct {
 	linked_list_t *vips;
 } initiator_enumerator_t;
 
-/**
- * Enumerator implementation for initiator attributes
- */
-static bool initiator_enumerate(initiator_enumerator_t *this,
-								attribute_handler_t **handler,
-								configuration_attribute_type_t *type,
-								chunk_t *value)
+METHOD(enumerator_t, initiator_enumerate, bool,
+	initiator_enumerator_t *this, va_list args)
 {
+	configuration_attribute_type_t *type;
+	attribute_handler_t **handler;
+	chunk_t *value;
+
+	VA_ARGS_VGET(args, handler, type, value);
 	/* enumerate inner attributes using outer handler enumerator */
 	while (!this->inner || !this->inner->enumerate(this->inner, type, value))
 	{
@@ -261,10 +261,8 @@ static bool initiator_enumerate(initiator_enumerator_t *this,
 	return TRUE;
 }
 
-/**
- * Cleanup function of initiator attribute enumerator
- */
-static void initiator_destroy(initiator_enumerator_t *this)
+METHOD(enumerator_t, initiator_destroy, void,
+	initiator_enumerator_t *this)
 {
 	this->this->lock->unlock(this->this->lock);
 	this->outer->destroy(this->outer);
@@ -281,8 +279,9 @@ METHOD(attribute_manager_t, create_initiator_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)initiator_enumerate,
-			.destroy = (void*)initiator_destroy,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _initiator_enumerate,
+			.destroy = _initiator_destroy,
 		},
 		.this = this,
 		.ike_sa = ike_sa,

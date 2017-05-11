@@ -146,12 +146,14 @@ typedef struct {
 	bool enumerated[AUTH_RULE_MAX];
 } entry_enumerator_t;
 
-/**
- * enumerate function for item_enumerator_t
- */
-static bool enumerate(entry_enumerator_t *this, auth_rule_t *type, void **value)
+METHOD(enumerator_t, enumerate, bool,
+	entry_enumerator_t *this, va_list args)
 {
+	auth_rule_t *type;
 	entry_t *entry;
+	void **value;
+
+	VA_ARGS_VGET(args, type, value);
 
 	while (this->inner->enumerate(this->inner, &entry))
 	{
@@ -174,10 +176,8 @@ static bool enumerate(entry_enumerator_t *this, auth_rule_t *type, void **value)
 	return FALSE;
 }
 
-/**
- * destroy function for item_enumerator_t
- */
-static void entry_enumerator_destroy(entry_enumerator_t *this)
+METHOD(enumerator_t, entry_enumerator_destroy, void,
+	entry_enumerator_t *this)
 {
 	this->inner->destroy(this->inner);
 	free(this);
@@ -190,8 +190,9 @@ METHOD(auth_cfg_t, create_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)enumerate,
-			.destroy = (void*)entry_enumerator_destroy,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate,
+			.destroy = _entry_enumerator_destroy,
 		},
 		.inner = array_create_enumerator(this->entries),
 	);

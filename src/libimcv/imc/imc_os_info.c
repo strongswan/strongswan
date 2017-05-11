@@ -283,23 +283,20 @@ typedef struct {
 
 } package_enumerator_t;
 
-/**
- * Implementation of package_enumerator.destroy.
- */
-static void package_enumerator_destroy(package_enumerator_t *this)
+METHOD(enumerator_t, package_enumerator_destroy, void,
+	package_enumerator_t *this)
 {
 	pclose(this->file);
 	free(this);
 }
 
-/**
- * Implementation of package_enumerator.enumerate
- */
-static bool package_enumerator_enumerate(package_enumerator_t *this, ...)
+METHOD(enumerator_t, package_enumerator_enumerate, bool,
+	package_enumerator_t *this, va_list args)
 {
 	chunk_t *name, *version;
 	u_char *pos;
-	va_list args;
+
+	VA_ARGS_VGET(args, name, version);
 
 	while (TRUE)
 	{
@@ -319,23 +316,16 @@ static bool package_enumerator_enumerate(package_enumerator_t *this, ...)
 		{
 			continue;
 		}
-		va_start(args, this);
-
-		name = va_arg(args, chunk_t*);
 		name->ptr = pos;
 		pos = strchr(pos, '\t');
 		if (!pos)
 		{
-			va_end(args);
 			return FALSE;
 		}
 		name->len = pos++ - name->ptr;
 
-		version = va_arg(args, chunk_t*);
 		version->ptr = pos;
 		version->len = strlen(pos) - 1;
-
-		va_end(args);
 		return TRUE;
 	}
 }
@@ -362,12 +352,14 @@ METHOD(imc_os_info_t, create_package_enumerator, enumerator_t*,
 		return NULL;
 	}
 
-	/* Create a package enumerator instance */
-	enumerator = malloc_thing(package_enumerator_t);
-	enumerator->public.enumerate = (void*)package_enumerator_enumerate;
-	enumerator->public.destroy = (void*)package_enumerator_destroy;
-	enumerator->file = file;
-
+	INIT(enumerator,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _package_enumerator_enumerate,
+			.destroy = _package_enumerator_destroy,
+		},
+		.file = file,
+	);
 	return (enumerator_t*)enumerator;
 }
 

@@ -1699,8 +1699,11 @@ typedef struct {
 } child_enumerator_t;
 
 METHOD(enumerator_t, child_enumerate, bool,
-	child_enumerator_t *this, child_sa_t **child_sa)
+	child_enumerator_t *this, va_list args)
 {
+	child_sa_t **child_sa;
+
+	VA_ARGS_VGET(args, child_sa);
 	if (this->inner->enumerate(this->inner, &this->current))
 	{
 		*child_sa = this->current;
@@ -1723,7 +1726,8 @@ METHOD(ike_sa_t, create_child_sa_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_child_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _child_enumerate,
 			.destroy = _child_enumerator_destroy,
 		},
 		.inner = array_create_enumerator(this->child_sas),

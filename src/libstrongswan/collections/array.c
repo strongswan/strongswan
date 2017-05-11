@@ -214,9 +214,11 @@ typedef struct {
 } array_enumerator_t;
 
 METHOD(enumerator_t, enumerate, bool,
-	array_enumerator_t *this, void **out)
+	array_enumerator_t *this, va_list args)
 {
-	void *pos;
+	void *pos, **out;
+
+	VA_ARGS_VGET(args, out);
 
 	if (this->idx >= this->array->count)
 	{
@@ -250,7 +252,8 @@ enumerator_t* array_create_enumerator(array_t *array)
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate,
 			.destroy = (void*)free,
 		},
 		.array = array,

@@ -403,10 +403,8 @@ typedef struct {
 	unsigned long *length;
 } mysql_enumerator_t;
 
-/**
- * create a mysql enumerator
- */
-static void mysql_enumerator_destroy(mysql_enumerator_t *this)
+METHOD(enumerator_t, mysql_enumerator_destroy, void,
+	mysql_enumerator_t *this)
 {
 	int columns, i;
 
@@ -434,13 +432,10 @@ static void mysql_enumerator_destroy(mysql_enumerator_t *this)
 	free(this);
 }
 
-/**
- * Implementation of database.query().enumerate
- */
-static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
+METHOD(enumerator_t, mysql_enumerator_enumerate, bool,
+	mysql_enumerator_t *this, va_list args)
 {
 	int i, columns;
-	va_list args;
 
 	columns = mysql_stmt_field_count(this->stmt);
 
@@ -477,7 +472,6 @@ static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
 			return FALSE;
 	}
 
-	va_start(args, this);
 	for (i = 0; i < columns; i++)
 	{
 		switch (this->bind[i].buffer_type)
@@ -526,7 +520,6 @@ static bool mysql_enumerator_enumerate(mysql_enumerator_t *this, ...)
 				break;
 		}
 	}
-	va_end(args);
 	return TRUE;
 }
 
@@ -552,9 +545,9 @@ METHOD(database_t, query, enumerator_t*,
 
 		INIT(enumerator,
 			.public = {
-				.enumerate = (void*)mysql_enumerator_enumerate,
-				.destroy = (void*)mysql_enumerator_destroy,
-
+				.enumerate = enumerator_enumerate_default,
+				.venumerate = _mysql_enumerator_enumerate,
+				.destroy = _mysql_enumerator_destroy,
 			},
 			.db = this,
 			.stmt = stmt,

@@ -252,13 +252,14 @@ typedef struct {
 	int locked;
 } cert_enumerator_t;
 
-/**
- * filter function for certs enumerator
- */
-static bool cert_enumerate(cert_enumerator_t *this, certificate_t **out)
+METHOD(enumerator_t, cert_enumerate, bool,
+	cert_enumerator_t *this, va_list args)
 {
 	public_key_t *public;
 	relation_t *rel;
+	certificate_t **out;
+
+	VA_ARGS_VGET(args, out);
 
 	if (this->locked >= 0)
 	{
@@ -311,10 +312,8 @@ static bool cert_enumerate(cert_enumerator_t *this, certificate_t **out)
 	return FALSE;
 }
 
-/**
- * clean up enumeration data
- */
-static void cert_enumerator_destroy(cert_enumerator_t *this)
+METHOD(enumerator_t, cert_enumerator_destroy, void,
+	cert_enumerator_t *this)
 {
 	relation_t *rel;
 
@@ -336,16 +335,19 @@ METHOD(credential_set_t, create_enumerator, enumerator_t*,
 	{
 		return NULL;
 	}
-	enumerator = malloc_thing(cert_enumerator_t);
-	enumerator->public.enumerate = (void*)cert_enumerate;
-	enumerator->public.destroy = (void*)cert_enumerator_destroy;
-	enumerator->cert = cert;
-	enumerator->key = key;
-	enumerator->id = id;
-	enumerator->relations = this->relations;
-	enumerator->index = -1;
-	enumerator->locked = -1;
-
+	INIT(enumerator,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _cert_enumerate,
+			.destroy = _cert_enumerator_destroy,
+		},
+		.cert = cert,
+		.key = key,
+		.id = id,
+		.relations = this->relations,
+		.index = -1,
+		.locked = -1,
+	);
 	return &enumerator->public;
 }
 

@@ -267,10 +267,12 @@ typedef struct {
 } template_enumerator_t;
 
 METHOD(enumerator_t, template_enumerate, bool,
-	template_enumerator_t *this, char **template)
+	template_enumerator_t *this, va_list args)
 {
 	struct stat st;
-	char *rel;
+	char *rel, **template;
+
+	VA_ARGS_VGET(args, template);
 
 	while (this->inner->enumerate(this->inner, &rel, NULL, &st))
 	{
@@ -296,7 +298,8 @@ METHOD(dumm_t, create_template_enumerator, enumerator_t*,
 	template_enumerator_t *enumerator;
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_template_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _template_enumerate,
 			.destroy = (void*)_template_enumerator_destroy,
 		},
 		.inner = enumerator_create_directory(TEMPLATE_DIR),

@@ -112,14 +112,14 @@ static bool fetch_cert(wrapper_enumerator_t *enumerator,
 	return TRUE;
 }
 
-/**
- * enumerate function for wrapper_enumerator_t
- */
-static bool enumerate(wrapper_enumerator_t *this, certificate_t **cert)
+METHOD(enumerator_t, enumerate, bool,
+	wrapper_enumerator_t *this, va_list args)
 {
 	auth_rule_t rule;
-	certificate_t *current;
+	certificate_t *current, **cert;
 	public_key_t *public;
+
+	VA_ARGS_VGET(args, cert);
 
 	while (this->inner->enumerate(this->inner, &rule, &current))
 	{
@@ -164,10 +164,8 @@ static bool enumerate(wrapper_enumerator_t *this, certificate_t **cert)
 	return FALSE;
 }
 
-/**
- * destroy function for wrapper_enumerator_t
- */
-static void wrapper_enumerator_destroy(wrapper_enumerator_t *this)
+METHOD(enumerator_t, wrapper_enumerator_destroy, void,
+	wrapper_enumerator_t *this)
 {
 	this->inner->destroy(this->inner);
 	free(this);
@@ -183,14 +181,18 @@ METHOD(credential_set_t, create_enumerator, enumerator_t*,
 	{
 		return NULL;
 	}
-	enumerator = malloc_thing(wrapper_enumerator_t);
-	enumerator->auth = this->auth;
-	enumerator->cert = cert;
-	enumerator->key = key;
-	enumerator->id = id;
-	enumerator->inner = this->auth->create_enumerator(this->auth);
-	enumerator->public.enumerate = (void*)enumerate;
-	enumerator->public.destroy = (void*)wrapper_enumerator_destroy;
+	INIT(enumerator,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate,
+			.destroy = _wrapper_enumerator_destroy,
+		},
+		.auth = this->auth,
+		.cert = cert,
+		.key = key,
+		.id = id,
+		.inner = this->auth->create_enumerator(this->auth),
+	);
 	return &enumerator->public;
 }
 

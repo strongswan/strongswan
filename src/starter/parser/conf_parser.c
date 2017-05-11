@@ -158,10 +158,13 @@ typedef struct {
 } dictionary_enumerator_t;
 
 METHOD(enumerator_t, dictionary_enumerate, bool,
-	dictionary_enumerator_t *this, char **key, char **value)
+	dictionary_enumerator_t *this, va_list args)
 {
 	setting_t *setting;
 	section_t *parent;
+	char **key, **value;
+
+	VA_ARGS_VGET(args, key, value);
 
 	while (TRUE)
 	{
@@ -221,7 +224,8 @@ METHOD(dictionary_t, dictionary_create_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_dictionary_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _dictionary_enumerate,
 			.destroy = _dictionary_enumerator_destroy,
 		},
 		.seen = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8),

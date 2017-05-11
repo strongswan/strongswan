@@ -744,10 +744,8 @@ typedef struct {
 	hashtable_t *seen;
 } enumerator_data_t;
 
-/**
- * Destroy enumerator data
- */
-static void enumerator_destroy(enumerator_data_t *this)
+CALLBACK(enumerator_destroy, void,
+	enumerator_data_t *this)
 {
 	this->settings->lock->unlock(this->settings->lock);
 	this->seen->destroy(this->seen);

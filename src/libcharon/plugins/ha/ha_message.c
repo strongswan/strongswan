@@ -331,10 +331,12 @@ typedef struct {
 } attribute_enumerator_t;
 
 METHOD(enumerator_t, attribute_enumerate, bool,
-	attribute_enumerator_t *this, ha_message_attribute_t *attr_out,
-	ha_message_value_t *value)
+	attribute_enumerator_t *this, va_list args)
 {
-	ha_message_attribute_t attr;
+	ha_message_attribute_t attr, *attr_out;
+	ha_message_value_t *value;
+
+	VA_ARGS_VGET(args, attr_out, value);
 
 	if (this->cleanup)
 	{
@@ -602,7 +604,8 @@ METHOD(ha_message_t, create_attribute_enumerator, enumerator_t*,
 
 	INIT(e,
 		.public = {
-			.enumerate = (void*)_attribute_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _attribute_enumerate,
 			.destroy = _enum_destroy,
 		},
 		.buf = chunk_skip(this->buf, 2),

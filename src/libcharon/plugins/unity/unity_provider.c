@@ -77,11 +77,14 @@ static void append_ts(bio_writer_t *writer, traffic_selector_t *ts)
 }
 
 METHOD(enumerator_t, attribute_enumerate, bool,
-	attribute_enumerator_t *this, configuration_attribute_type_t *type,
-	chunk_t *attr)
+	attribute_enumerator_t *this, va_list args)
 {
+	configuration_attribute_type_t *type;
+	chunk_t *attr;
 	traffic_selector_t *ts;
 	bio_writer_t *writer;
+
+	VA_ARGS_VGET(args, type, attr);
 
 	if (this->list->get_count(this->list) == 0)
 	{
@@ -183,7 +186,8 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 
 	INIT(attr_enum,
 		.public = {
-			.enumerate = (void*)_attribute_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _attribute_enumerate,
 			.destroy = _attribute_destroy,
 		},
 		.list = list,

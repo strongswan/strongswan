@@ -172,17 +172,21 @@ enumerator_t* enumerator_create_token(const char *string, const char *sep,
 /**
  * Creates an enumerator which enumerates over enumerated enumerators :-).
  *
- * The variable argument list of enumeration values is limit to 5.
+ * The outer enumerator is expected to return objects that, when passed to
+ * inner_contructor, will create a new enumerator that will be enumerated until
+ * completion (to this enumerator will the pointer arguments that are passed to
+ * this enumerator be forwarded) at which point a new element from the outer
+ * enumerator is requested to create a new inner enumerator.
  *
  * @param outer					outer enumerator
- * @param inner_constructor		constructor to inner enumerator
+ * @param inner_constructor		constructor to create inner enumerator
  * @param data					data to pass to each inner_constructor call
- * @param destroy_data			destructor to pass to data
+ * @param destructor			destructor function to clean up data after use
  * @return						the nested enumerator
  */
 enumerator_t *enumerator_create_nested(enumerator_t *outer,
 					enumerator_t *(*inner_constructor)(void *outer, void *data),
-					void *data, void (*destroy_data)(void *data));
+					void *data, void (*destructor)(void *data));
 
 /**
  * Creates an enumerator which filters output of another enumerator.

@@ -368,9 +368,12 @@ typedef struct {
 } attribute_enumerator_t;
 
 METHOD(enumerator_t, enumerate_attributes, bool,
-	attribute_enumerator_t *this, configuration_attribute_type_t *type,
-	chunk_t *data)
+	attribute_enumerator_t *this, va_list args)
 {
+	configuration_attribute_type_t *type;
+	chunk_t *data;
+
+	VA_ARGS_VGET(args, type, data);
 	if (this->i < countof(attributes))
 	{
 		*type = attributes[this->i++];
@@ -393,7 +396,8 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
 	}
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_enumerate_attributes,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_attributes,
 			.destroy = (void*)free,
 		},
 	);

@@ -111,8 +111,12 @@ typedef struct {
 } shared_enum_t;
 
 METHOD(enumerator_t, shared_enumerate, bool,
-	shared_enum_t *this, shared_key_t **key, id_match_t *me, id_match_t *other)
+	shared_enum_t *this, va_list args)
 {
+	shared_key_t **key;
+	id_match_t *me, *other;
+
+	VA_ARGS_VGET(args, key, me, other);
 	if (this->key)
 	{
 		if (me)
@@ -151,7 +155,8 @@ METHOD(ha_creds_t, create_shared_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_shared_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _shared_enumerate,
 			.destroy = (void*)free,
 		},
 		.key = this->key,

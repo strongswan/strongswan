@@ -174,10 +174,8 @@ typedef struct {
 	private_sqlite_database_t *database;
 } sqlite_enumerator_t;
 
-/**
- * destroy a sqlite enumerator
- */
-static void sqlite_enumerator_destroy(sqlite_enumerator_t *this)
+METHOD(enumerator_t, sqlite_enumerator_destroy, void,
+	sqlite_enumerator_t *this)
 {
 	sqlite3_finalize(this->stmt);
 	if (!is_threadsave())
@@ -188,13 +186,10 @@ static void sqlite_enumerator_destroy(sqlite_enumerator_t *this)
 	free(this);
 }
 
-/**
- * Implementation of database.query().enumerate
- */
-static bool sqlite_enumerator_enumerate(sqlite_enumerator_t *this, ...)
+METHOD(enumerator_t, sqlite_enumerator_enumerate, bool,
+	sqlite_enumerator_t *this, va_list args)
 {
 	int i;
-	va_list args;
 
 	switch (sqlite3_step(this->stmt))
 	{
@@ -207,7 +202,7 @@ static bool sqlite_enumerator_enumerate(sqlite_enumerator_t *this, ...)
 		case SQLITE_DONE:
 			return FALSE;
 	}
-	va_start(args, this);
+
 	for (i = 0; i < this->count; i++)
 	{
 		switch (this->columns[i])
@@ -245,11 +240,9 @@ static bool sqlite_enumerator_enumerate(sqlite_enumerator_t *this, ...)
 			}
 			default:
 				DBG1(DBG_LIB, "invalid result type supplied");
-				va_end(args);
 				return FALSE;
 		}
 	}
-	va_end(args);
 	return TRUE;
 }
 
@@ -270,13 +263,17 @@ METHOD(database_t, query, enumerator_t*,
 	stmt = run(this, sql, &args);
 	if (stmt)
 	{
-		enumerator = malloc_thing(sqlite_enumerator_t);
-		enumerator->public.enumerate = (void*)sqlite_enumerator_enumerate;
-		enumerator->public.destroy = (void*)sqlite_enumerator_destroy;
-		enumerator->stmt = stmt;
-		enumerator->count = sqlite3_column_count(stmt);
+		INIT(enumerator,
+			.public = {
+				.enumerate = enumerator_enumerate_default,
+				.venumerate = _sqlite_enumerator_enumerate,
+				.destroy = _sqlite_enumerator_destroy,
+			},
+			.stmt = stmt,
+			.count = sqlite3_column_count(stmt),
+			.database = this,
+		);
 		enumerator->columns = malloc(sizeof(db_type_t) * enumerator->count);
-		enumerator->database = this;
 		for (i = 0; i < enumerator->count; i++)
 		{
 			enumerator->columns[i] = va_arg(args, db_type_t);

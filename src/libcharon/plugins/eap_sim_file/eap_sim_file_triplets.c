@@ -79,10 +79,8 @@ typedef struct {
 	private_eap_sim_file_triplets_t *this;
 } triplet_enumerator_t;
 
-/**
- * destroy a triplet enumerator
- */
-static void enumerator_destroy(triplet_enumerator_t *e)
+METHOD(enumerator_t, enumerator_destroy, void,
+	triplet_enumerator_t *e)
 {
 	if (e->current)
 	{
@@ -97,13 +95,14 @@ static void enumerator_destroy(triplet_enumerator_t *e)
 	free(e);
 }
 
-/**
- * enumerate through triplets
- */
-static bool enumerator_enumerate(triplet_enumerator_t *e, identification_t **imsi,
-								 char **rand, char **sres, char **kc)
+METHOD(enumerator_t, enumerator_enumerate, bool,
+	triplet_enumerator_t *e, va_list args)
 {
+	identification_t **imsi;
 	triplet_t *triplet;
+	char **rand, **sres, **kc;
+
+	VA_ARGS_VGET(args, imsi, rand, sres, kc);
 
 	if (e->inner->enumerate(e->inner, &triplet))
 	{
@@ -124,12 +123,15 @@ METHOD(eap_sim_file_triplets_t, create_enumerator, enumerator_t*,
 	triplet_enumerator_t *enumerator = malloc_thing(triplet_enumerator_t);
 
 	this->mutex->lock(this->mutex);
-	enumerator->public.enumerate = (void*)enumerator_enumerate;
-	enumerator->public.destroy = (void*)enumerator_destroy;
-	enumerator->inner = this->triplets->create_enumerator(this->triplets);
-	enumerator->current = NULL;
-	enumerator->this = this;
-
+	INIT(enumerator,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerator_enumerate,
+			.destroy = _enumerator_destroy,
+		},
+		.inner = this->triplets->create_enumerator(this->triplets),
+		.this = this,
+	);
 	return &enumerator->public;
 }
 

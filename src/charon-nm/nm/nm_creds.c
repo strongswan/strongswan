@@ -235,9 +235,13 @@ typedef struct {
 } shared_enumerator_t;
 
 METHOD(enumerator_t, shared_enumerate, bool,
-	shared_enumerator_t *this, shared_key_t **key, id_match_t *me,
-	id_match_t *other)
+	shared_enumerator_t *this, va_list args)
 {
+	shared_key_t **key;
+	id_match_t *me, *other;
+
+	VA_ARGS_VGET(args, key, me, other);
+
 	if (this->done)
 	{
 		return FALSE;
@@ -307,7 +311,8 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_shared_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _shared_enumerate,
 			.destroy = _shared_destroy,
 		},
 		.this = this,

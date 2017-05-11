@@ -52,10 +52,13 @@ typedef struct {
 } private_enumerator_t;
 
 METHOD(enumerator_t, private_enumerator_enumerate, bool,
-	   private_enumerator_t *this, private_key_t **key)
+	   private_enumerator_t *this, va_list args)
 {
+	private_key_t **key;
 	chunk_t blob;
 	int type;
+
+	VA_ARGS_VGET(args, key);
 
 	DESTROY_IF(this->current);
 	while (this->inner->enumerate(this->inner, &type, &blob))
@@ -88,7 +91,8 @@ METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
 
 	INIT(e,
 		.public = {
-			.enumerate = (void*)_private_enumerator_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _private_enumerator_enumerate,
 			.destroy = _private_enumerator_destroy,
 		},
 	);
@@ -132,10 +136,13 @@ typedef struct {
 } cert_enumerator_t;
 
 METHOD(enumerator_t, cert_enumerator_enumerate, bool,
-	   cert_enumerator_t *this, certificate_t **cert)
+	   cert_enumerator_t *this, va_list args)
 {
+	certificate_t **cert;
 	chunk_t blob;
 	int type;
+
+	VA_ARGS_VGET(args, cert);
 
 	DESTROY_IF(this->current);
 	while (this->inner->enumerate(this->inner, &type, &blob))
@@ -169,7 +176,8 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 
 	INIT(e,
 		.public = {
-			.enumerate = (void*)_cert_enumerator_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _cert_enumerator_enumerate,
 			.destroy = _cert_enumerator_destroy,
 		},
 	);
@@ -221,11 +229,14 @@ typedef struct {
 } shared_enumerator_t;
 
 METHOD(enumerator_t, shared_enumerator_enumerate, bool,
-	   shared_enumerator_t *this, shared_key_t **shared,
-	   id_match_t *me, id_match_t *other)
+	   shared_enumerator_t *this, va_list args)
 {
+	shared_key_t **shared;
+	id_match_t *me, *other;
 	chunk_t blob;
 	int type;
+
+	VA_ARGS_VGET(args, shared, me, other);
 
 	DESTROY_IF(this->current);
 	while (this->inner->enumerate(this->inner, &type, &blob))
@@ -265,7 +276,8 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 
 	INIT(e,
 		.public = {
-			.enumerate = (void*)_shared_enumerator_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _shared_enumerator_enumerate,
 			.destroy = _shared_enumerator_destroy,
 		},
 		.me = me,
@@ -340,9 +352,11 @@ typedef enum {
 } cdp_type_t;
 
 METHOD(enumerator_t, cdp_enumerator_enumerate, bool,
-	   cdp_enumerator_t *this, char **uri)
+	   cdp_enumerator_t *this, va_list args)
 {
-	char *text;
+	char *text, **uri;
+
+	VA_ARGS_VGET(args, uri);
 
 	free(this->current);
 	while (this->inner->enumerate(this->inner, &text))
@@ -384,7 +398,8 @@ METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
 	}
 	INIT(e,
 		.public = {
-			.enumerate = (void*)_cdp_enumerator_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _cdp_enumerator_enumerate,
 			.destroy = _cdp_enumerator_destroy,
 		},
 	);

@@ -2165,8 +2165,14 @@ METHOD(enumerator_t, destroy_subnet_enumerator, void,
 }
 
 METHOD(enumerator_t, enumerate_subnets, bool,
-	subnet_enumerator_t *this, host_t **net, uint8_t *mask, char **ifname)
+	subnet_enumerator_t *this, va_list args)
 {
+	host_t **net;
+	uint8_t *mask;
+	char **ifname;
+
+	VA_ARGS_VGET(args, net, mask, ifname);
+
 	if (!this->current)
 	{
 		this->current = this->msg;
@@ -2270,7 +2276,8 @@ METHOD(kernel_net_t, create_local_subnet_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_enumerate_subnets,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_subnets,
 			.destroy = _destroy_subnet_enumerator,
 		},
 		.private = this,

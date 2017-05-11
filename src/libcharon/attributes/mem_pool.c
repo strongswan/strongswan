@@ -512,10 +512,15 @@ typedef struct {
 } lease_enumerator_t;
 
 METHOD(enumerator_t, lease_enumerate, bool,
-	lease_enumerator_t *this, identification_t **id, host_t **addr, bool *online)
+	lease_enumerator_t *this, va_list args)
 {
-	u_int *offset;
+	identification_t **id;
 	unique_lease_t *lease;
+	host_t **addr;
+	u_int *offset;
+	bool *online;
+
+	VA_ARGS_VGET(args, id, addr, online);
 
 	DESTROY_IF(this->addr);
 	this->addr = NULL;
@@ -570,7 +575,8 @@ METHOD(mem_pool_t, create_lease_enumerator, enumerator_t*,
 	this->mutex->lock(this->mutex);
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_lease_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _lease_enumerate,
 			.destroy = _lease_enumerator_destroy,
 		},
 		.pool = this,

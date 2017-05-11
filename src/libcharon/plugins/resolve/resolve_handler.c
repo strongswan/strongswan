@@ -391,10 +391,13 @@ typedef struct {
 	bool v6;
 } attribute_enumerator_t;
 
-static bool attribute_enumerate(attribute_enumerator_t *this,
-								configuration_attribute_type_t *type,
-								chunk_t *data)
+METHOD(enumerator_t, attribute_enumerate, bool,
+	attribute_enumerator_t *this, va_list args)
 {
+	configuration_attribute_type_t *type;
+	chunk_t *data;
+
+	VA_ARGS_VGET(args, type, data);
 	if (this->v4)
 	{
 		*type = INTERNAL_IP4_DNS;
@@ -443,7 +446,8 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)attribute_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _attribute_enumerate,
 			.destroy = (void*)free,
 		},
 		.v4 = has_host_family(vips, AF_INET),

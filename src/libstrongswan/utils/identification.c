@@ -136,9 +136,12 @@ typedef struct {
 } rdn_enumerator_t;
 
 METHOD(enumerator_t, rdn_enumerate, bool,
-	rdn_enumerator_t *this, chunk_t *oid, u_char *type, chunk_t *data)
+	rdn_enumerator_t *this, va_list args)
 {
-	chunk_t rdn;
+	chunk_t rdn, *oid, *data;
+	u_char *type;
+
+	VA_ARGS_VGET(args, oid, type, data);
 
 	/* a DN contains one or more SET, each containing one or more SEQUENCES,
 	 * each containing a OID/value RDN */
@@ -173,7 +176,8 @@ static enumerator_t* create_rdn_enumerator(chunk_t dn)
 
 	INIT(e,
 		.public = {
-			.enumerate = (void*)_rdn_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _rdn_enumerate,
 			.destroy = (void*)free,
 		},
 	);
@@ -199,10 +203,11 @@ typedef struct {
 } rdn_part_enumerator_t;
 
 METHOD(enumerator_t, rdn_part_enumerate, bool,
-	rdn_part_enumerator_t *this, id_part_t *type, chunk_t *data)
+	rdn_part_enumerator_t *this, va_list args)
 {
 	int i, known_oid, strtype;
-	chunk_t oid, inner_data;
+	chunk_t oid, inner_data, *data;
+	id_part_t *type;
 	static const struct {
 		int oid;
 		id_part_t type;
@@ -227,6 +232,8 @@ METHOD(enumerator_t, rdn_part_enumerate, bool,
 		{OID_EMAIL_ADDRESS,		ID_PART_RDN_E},
 		{OID_EMPLOYEE_NUMBER,	ID_PART_RDN_EN},
 	};
+
+	VA_ARGS_VGET(args, type, data);
 
 	while (this->inner->enumerate(this->inner, &oid, &strtype, &inner_data))
 	{
@@ -263,7 +270,8 @@ METHOD(identification_t, create_part_enumerator, enumerator_t*,
 			INIT(e,
 				.inner = create_rdn_enumerator(this->encoded),
 				.public = {
-					.enumerate = (void*)_rdn_part_enumerate,
+					.enumerate = enumerator_enumerate_default,
+					.venumerate = _rdn_part_enumerate,
 					.destroy = _rdn_part_enumerator_destroy,
 				},
 			);

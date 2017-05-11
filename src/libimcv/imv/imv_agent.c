@@ -626,22 +626,13 @@ typedef struct {
 
 } language_enumerator_t;
 
-/**
- * Implementation of language_enumerator.destroy.
- */
-static void language_enumerator_destroy(language_enumerator_t *this)
-{
-	free(this);
-}
-
-/**
- * Implementation of language_enumerator.enumerate
- */
-static bool language_enumerator_enumerate(language_enumerator_t *this, ...)
+METHOD(enumerator_t, language_enumerator_enumerate, bool,
+	language_enumerator_t *this, va_list args)
 {
 	char *pos, *cur_lang, **lang;
 	TNC_UInt32 len;
-	va_list args;
+
+	VA_ARGS_VGET(args, lang);
 
 	if (!this->lang_len)
 	{
@@ -676,11 +667,7 @@ static bool language_enumerator_enumerate(language_enumerator_t *this, ...)
 	}
 	cur_lang[len] = '\0';
 
-	va_start(args, this);
-	lang = va_arg(args, char**);
 	*lang = cur_lang;
-	va_end(args);
-
 	return TRUE;
 }
 
@@ -689,10 +676,13 @@ METHOD(imv_agent_t, create_language_enumerator, enumerator_t*,
 {
 	language_enumerator_t *e;
 
-	/* Create a language enumerator instance */
-	e = malloc_thing(language_enumerator_t);
-	e->public.enumerate = (void*)language_enumerator_enumerate;
-	e->public.destroy = (void*)language_enumerator_destroy;
+	INIT(e,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _language_enumerator_enumerate,
+			.destroy = (void*)free,
+		},
+	);
 
 	if (!this->get_attribute ||
 		!this->get_attribute(this->id, state->get_connection_id(state),
