@@ -1296,28 +1296,32 @@ static struct {
 	{ ECP_192_BIT, TLS_SECP192R1},
 };
 
-/**
- * Filter EC groups, add TLS curve
- */
-static bool group_filter(void *null,
-						diffie_hellman_group_t *in, diffie_hellman_group_t *out,
-						void* dummy1, tls_named_curve_t *curve)
+CALLBACK(group_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
+	diffie_hellman_group_t group, *out;
+	tls_named_curve_t *curve;
+	char *plugin;
 	int i;
 
-	for (i = 0; i < countof(curves); i++)
+	VA_ARGS_VGET(args, out, curve);
+
+	while (orig->enumerate(orig, &group, &plugin))
 	{
-		if (curves[i].group == *in)
+		for (i = 0; i < countof(curves); i++)
 		{
-			if (out)
+			if (curves[i].group == group)
 			{
-				*out = curves[i].group;
+				if (out)
+				{
+					*out = curves[i].group;
+				}
+				if (curve)
+				{
+					*curve = curves[i].curve;
+				}
+				return TRUE;
 			}
-			if (curve)
-			{
-				*curve = curves[i].curve;
-			}
-			return TRUE;
 		}
 	}
 	return FALSE;
@@ -1327,8 +1331,8 @@ METHOD(tls_crypto_t, create_ec_enumerator, enumerator_t*,
 	private_tls_crypto_t *this)
 {
 	return enumerator_create_filter(
-					lib->crypto->create_dh_enumerator(lib->crypto),
-					(void*)group_filter, NULL, NULL);
+							lib->crypto->create_dh_enumerator(lib->crypto),
+							group_filter, NULL, NULL);
 }
 
 METHOD(tls_crypto_t, set_protection, void,

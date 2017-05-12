@@ -179,7 +179,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	u_char *pos;
 
 	if (this->offset == 0)
-	{	
+	{
 		if (this->length < IETF_INSTALLED_PACKAGES_MIN_SIZE)
 		{
 			DBG1(DBG_TNC, "insufficient data for %N/%N", pen_names, PEN_IETF,
@@ -291,15 +291,21 @@ METHOD(ietf_attr_installed_packages_t, add, void,
 	this->packages->insert_last(this->packages, entry);
 }
 
-/**
- * Enumerate package filter entries
- */
-static bool package_filter(void *null, package_entry_t **entry, chunk_t *name,
-						   void *i2, chunk_t *version)
+CALLBACK(package_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*name = (*entry)->name;
-	*version = (*entry)->version;
-	return TRUE;
+	package_entry_t *entry;
+	chunk_t *name, *version;
+
+	VA_ARGS_VGET(args, name, version);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*name = entry->name;
+		*version = entry->version;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(ietf_attr_installed_packages_t, create_enumerator, enumerator_t*,
@@ -307,7 +313,7 @@ METHOD(ietf_attr_installed_packages_t, create_enumerator, enumerator_t*,
 {
 	return enumerator_create_filter(
 						this->packages->create_enumerator(this->packages),
-						(void*)package_filter, NULL, NULL);
+						package_filter, NULL, NULL);
 }
 
 METHOD(ietf_attr_installed_packages_t, get_count, uint16_t,

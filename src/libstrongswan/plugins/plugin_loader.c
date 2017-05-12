@@ -465,34 +465,48 @@ static plugin_entry_t *load_plugin(private_plugin_loader_t *this, char *name,
 	return entry;
 }
 
-/**
- * Convert enumerated provided_feature_t to plugin_feature_t
- */
-static bool feature_filter(void *null, provided_feature_t **provided,
-						   plugin_feature_t **feature)
+CALLBACK(feature_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*feature = (*provided)->feature;
-	return (*provided)->loaded;
+	provided_feature_t *provided;
+	plugin_feature_t **feature;
+
+	VA_ARGS_VGET(args, feature);
+
+	while (orig->enumerate(orig, &provided))
+	{
+		if (provided->loaded)
+		{
+			*feature = provided->feature;
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
-/**
- * Convert enumerated entries to plugin_t
- */
-static bool plugin_filter(void *null, plugin_entry_t **entry, plugin_t **plugin,
-						  void *in, linked_list_t **list)
+CALLBACK(plugin_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	plugin_entry_t *this = *entry;
+	plugin_entry_t *entry;
+	linked_list_t **list;
+	plugin_t **plugin;
 
-	*plugin = this->plugin;
-	if (list)
+	VA_ARGS_VGET(args, plugin, list);
+
+	if (orig->enumerate(orig, &entry))
 	{
-		enumerator_t *features;
-		features = enumerator_create_filter(
-							this->features->create_enumerator(this->features),
-							(void*)feature_filter, NULL, NULL);
-		*list = linked_list_create_from_enumerator(features);
+		*plugin = entry->plugin;
+		if (list)
+		{
+			enumerator_t *features;
+			features = enumerator_create_filter(
+							entry->features->create_enumerator(entry->features),
+							feature_filter, NULL, NULL);
+			*list = linked_list_create_from_enumerator(features);
+		}
+		return TRUE;
 	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(plugin_loader_t, create_plugin_enumerator, enumerator_t*,
@@ -500,7 +514,7 @@ METHOD(plugin_loader_t, create_plugin_enumerator, enumerator_t*,
 {
 	return enumerator_create_filter(
 							this->plugins->create_enumerator(this->plugins),
-							(void*)plugin_filter, NULL, NULL);
+							plugin_filter, NULL, NULL);
 }
 
 METHOD(plugin_loader_t, has_feature, bool,
@@ -1095,14 +1109,20 @@ static int plugin_priority_cmp(const plugin_priority_t *a,
 	return diff;
 }
 
-/**
- * Convert enumerated plugin_priority_t to a plugin name
- */
-static bool plugin_priority_filter(void *null, plugin_priority_t **prio,
-						   char **name)
+CALLBACK(plugin_priority_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*name = (*prio)->name;
-	return TRUE;
+	plugin_priority_t *prio;
+	char **name;
+
+	VA_ARGS_VGET(args, name);
+
+	if (orig->enumerate(orig, &prio))
+	{
+		*name = prio->name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
@@ -1142,7 +1162,7 @@ static char *modular_pluginlist(char *list)
 	else
 	{
 		enumerator = enumerator_create_filter(array_create_enumerator(given),
-									(void*)plugin_priority_filter, NULL, NULL);
+										plugin_priority_filter, NULL, NULL);
 		load_def = TRUE;
 	}
 	while (enumerator->enumerate(enumerator, &plugin))

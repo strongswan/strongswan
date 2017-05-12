@@ -1562,42 +1562,52 @@ METHOD(ike_sa_manager_t, checkout_by_name, ike_sa_t*,
 	return ike_sa;
 }
 
-/**
- * enumerator filter function, waiting variant
- */
-static bool enumerator_filter_wait(private_ike_sa_manager_t *this,
-								   entry_t **in, ike_sa_t **out, u_int *segment)
+CALLBACK(enumerator_filter_wait, bool,
+	private_ike_sa_manager_t *this, enumerator_t *orig, va_list args)
 {
-	if (wait_for_entry(this, *in, *segment))
+	entry_t *entry;
+	u_int segment;
+	ike_sa_t **out;
+
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &entry, &segment))
 	{
-		*out = (*in)->ike_sa;
-		charon->bus->set_sa(charon->bus, *out);
-		return TRUE;
+		if (wait_for_entry(this, entry, segment))
+		{
+			*out = entry->ike_sa;
+			charon->bus->set_sa(charon->bus, *out);
+			return TRUE;
+		}
 	}
 	return FALSE;
 }
 
-/**
- * enumerator filter function, skipping variant
- */
-static bool enumerator_filter_skip(private_ike_sa_manager_t *this,
-								   entry_t **in, ike_sa_t **out, u_int *segment)
+CALLBACK(enumerator_filter_skip, bool,
+	private_ike_sa_manager_t *this, enumerator_t *orig, va_list args)
 {
-	if (!(*in)->driveout_new_threads &&
-		!(*in)->driveout_waiting_threads &&
-		!(*in)->checked_out)
+	entry_t *entry;
+	u_int segment;
+	ike_sa_t **out;
+
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &entry, &segment))
 	{
-		*out = (*in)->ike_sa;
-		charon->bus->set_sa(charon->bus, *out);
-		return TRUE;
+		if (!entry->driveout_new_threads &&
+			!entry->driveout_waiting_threads &&
+			!entry->checked_out)
+		{
+			*out = entry->ike_sa;
+			charon->bus->set_sa(charon->bus, *out);
+			return TRUE;
+		}
 	}
 	return FALSE;
 }
 
-/**
- * Reset threads SA after enumeration
- */
-static void reset_sa(void *data)
+CALLBACK(reset_sa, void,
+	void *data)
 {
 	charon->bus->set_sa(charon->bus, NULL);
 }

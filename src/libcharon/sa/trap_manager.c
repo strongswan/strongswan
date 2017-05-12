@@ -335,25 +335,32 @@ METHOD(trap_manager_t, uninstall, bool,
 	return TRUE;
 }
 
-/**
- * convert enumerated entries to peer_cfg, child_sa
- */
-static bool trap_filter(rwlock_t *lock, entry_t **entry, peer_cfg_t **peer_cfg,
-						void *none, child_sa_t **child_sa)
+CALLBACK(trap_filter, bool,
+	rwlock_t *lock, enumerator_t *orig, va_list args)
 {
-	if (!(*entry)->child_sa)
-	{	/* skip entries that are currently being installed */
-		return FALSE;
-	}
-	if (peer_cfg)
+	entry_t *entry;
+	peer_cfg_t **peer_cfg;
+	child_sa_t **child_sa;
+
+	VA_ARGS_VGET(args, peer_cfg, child_sa);
+
+	while (orig->enumerate(orig, &entry))
 	{
-		*peer_cfg = (*entry)->peer_cfg;
+		if (!entry->child_sa)
+		{	/* skip entries that are currently being installed */
+			continue;
+		}
+		if (peer_cfg)
+		{
+			*peer_cfg = entry->peer_cfg;
+		}
+		if (child_sa)
+		{
+			*child_sa = entry->child_sa;
+		}
+		return TRUE;
 	}
-	if (child_sa)
-	{
-		*child_sa = (*entry)->child_sa;
-	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(trap_manager_t, create_enumerator, enumerator_t*,
@@ -361,7 +368,7 @@ METHOD(trap_manager_t, create_enumerator, enumerator_t*,
 {
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->traps->create_enumerator(this->traps),
-									(void*)trap_filter, this->lock,
+									trap_filter, this->lock,
 									(void*)this->lock->unlock);
 }
 

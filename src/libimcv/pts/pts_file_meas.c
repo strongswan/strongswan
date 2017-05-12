@@ -94,22 +94,29 @@ METHOD(pts_file_meas_t, add, void,
 	this->list->insert_last(this->list, entry);
 }
 
-/**
- * Enumerate file measurement entries
- */
-static bool entry_filter(void *null, entry_t **entry, char **filename,
-						 void *i2, chunk_t *measurement)
+CALLBACK(entry_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*filename = (*entry)->filename;
-	*measurement = (*entry)->measurement;
-	return TRUE;
+	entry_t *entry;
+	chunk_t *measurement;
+	char **filename;
+
+	VA_ARGS_VGET(args, filename, measurement);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*filename = entry->filename;
+		*measurement = entry->measurement;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(pts_file_meas_t, create_enumerator, enumerator_t*,
 	private_pts_file_meas_t *this)
 {
 	return enumerator_create_filter(this->list->create_enumerator(this->list),
-								   (void*)entry_filter, NULL, NULL);
+									entry_filter, NULL, NULL);
 }
 
 METHOD(pts_file_meas_t, check, bool,

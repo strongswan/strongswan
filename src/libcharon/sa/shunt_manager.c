@@ -381,14 +381,24 @@ METHOD(shunt_manager_t, uninstall, bool,
 }
 
 CALLBACK(filter_entries, bool,
-	void *unused, entry_t **entry, char **ns, void **in, child_cfg_t **cfg)
+	void *unused, enumerator_t *orig, va_list args)
 {
-	if (ns)
+	entry_t *entry;
+	child_cfg_t **cfg;
+	char **ns;
+
+	VA_ARGS_VGET(args, ns, cfg);
+
+	if (orig->enumerate(orig, &entry))
 	{
-		*ns = (*entry)->ns;
+		if (ns)
+		{
+			*ns = entry->ns;
+		}
+		*cfg = entry->cfg;
+		return TRUE;
 	}
-	*cfg = (*entry)->cfg;
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(shunt_manager_t, create_enumerator, enumerator_t*,
@@ -397,7 +407,7 @@ METHOD(shunt_manager_t, create_enumerator, enumerator_t*,
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(
 							this->shunts->create_enumerator(this->shunts),
-							(void*)filter_entries, this->lock,
+							filter_entries, this->lock,
 							(void*)this->lock->unlock);
 }
 

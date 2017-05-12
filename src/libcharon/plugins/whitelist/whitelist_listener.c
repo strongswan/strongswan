@@ -119,14 +119,19 @@ METHOD(whitelist_listener_t, remove_, void,
 	DESTROY_IF(id);
 }
 
-/**
- * Enumerator filter, from hashtable (key, value) to single identity
- */
-static bool whitelist_filter(rwlock_t *lock, identification_t **key,
-							 identification_t **id, identification_t **value)
+CALLBACK(whitelist_filter, bool,
+	rwlock_t *lock, enumerator_t *orig, va_list args)
 {
-	*id = *value;
-	return TRUE;
+	identification_t *key, *value, **out;
+
+	VA_ARGS_VGET(args, out);
+
+	if (orig->enumerate(orig, &key, &value))
+	{
+		*out = value;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(whitelist_listener_t, create_enumerator, enumerator_t*,
@@ -134,7 +139,7 @@ METHOD(whitelist_listener_t, create_enumerator, enumerator_t*,
 {
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->ids->create_enumerator(this->ids),
-									(void*)whitelist_filter, this->lock,
+									whitelist_filter, this->lock,
 									(void*)this->lock->unlock);
 }
 

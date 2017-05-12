@@ -518,9 +518,9 @@ enumerator_t *enumerator_create_nested(enumerator_t *outer,
  */
 typedef struct {
 	enumerator_t public;
-	enumerator_t *unfiltered;
+	enumerator_t *orig;
 	void *data;
-	bool (*filter)(void *data, ...);
+	bool (*filter)(void*,enumerator_t*,va_list);
 	void (*destructor)(void *data);
 } filter_enumerator_t;
 
@@ -531,35 +531,28 @@ METHOD(enumerator_t, destroy_filter, void,
 	{
 		this->destructor(this->data);
 	}
-	this->unfiltered->destroy(this->unfiltered);
+	this->orig->destroy(this->orig);
 	free(this);
 }
 
 METHOD(enumerator_t, enumerate_filter, bool,
 	filter_enumerator_t *this, va_list args)
 {
-	void *i1, *i2, *i3, *i4, *i5;
-	void *o1, *o2, *o3, *o4, *o5;
+	bool result = FALSE;
 
-	/* FIXME: what happens if there are less than five arguments is not defined */
-	VA_ARGS_VGET(args, o1, o2, o3, o4, o5);
-
-	while (this->unfiltered->enumerate(this->unfiltered, &i1, &i2, &i3, &i4, &i5))
+	if (this->filter(this->data, this->orig, args))
 	{
-		if (this->filter(this->data, &i1, o1, &i2, o2, &i3, o3, &i4, o4, &i5, o5))
-		{
-			return TRUE;
-		}
+		result = TRUE;
 	}
-	return FALSE;
+	return result;
 }
 
 /*
  * Described in header
  */
-enumerator_t *enumerator_create_filter(enumerator_t *unfiltered,
-									   bool (*filter)(void *data, ...),
-									   void *data, void (*destructor)(void *data))
+enumerator_t *enumerator_create_filter(enumerator_t *orig,
+			bool (*filter)(void *data, enumerator_t *orig, va_list args),
+			void *data, void (*destructor)(void *data))
 {
 	filter_enumerator_t *this;
 
@@ -569,7 +562,7 @@ enumerator_t *enumerator_create_filter(enumerator_t *unfiltered,
 			.venumerate = _enumerate_filter,
 			.destroy = _destroy_filter,
 		},
-		.unfiltered = unfiltered,
+		.orig = orig,
 		.filter = filter,
 		.data = data,
 		.destructor = destructor,

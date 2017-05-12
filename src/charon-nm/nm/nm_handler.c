@@ -113,13 +113,20 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
 	return enumerator_create_empty();
 }
 
-/**
- * convert plain byte ptrs to handy chunk during enumeration
- */
-static bool filter_chunks(void* null, char **in, chunk_t *out)
+CALLBACK(filter_chunks, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*out = chunk_create(*in, 4);
-	return TRUE;
+	chunk_t *out;
+	char *ptr;
+
+	VA_ARGS_VGET(args, out);
+
+	if (orig->enumerate(orig, &ptr))
+	{
+		*out = chunk_create(ptr, 4);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(nm_handler_t, create_enumerator, enumerator_t*,
@@ -139,7 +146,7 @@ METHOD(nm_handler_t, create_enumerator, enumerator_t*,
 			return enumerator_create_empty();
 	}
 	return enumerator_create_filter(list->create_enumerator(list),
-						(void*)filter_chunks, NULL, NULL);
+									filter_chunks, NULL, NULL);
 }
 
 METHOD(nm_handler_t, reset, void,

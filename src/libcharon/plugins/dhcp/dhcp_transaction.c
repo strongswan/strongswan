@@ -114,16 +114,22 @@ METHOD(dhcp_transaction_t, add_attribute, void,
 	this->attributes->insert_last(this->attributes, entry);
 }
 
-/**
- * Filter function to map entries to type/data
- */
-static bool attribute_filter(void *null, attribute_entry_t **entry,
-							 configuration_attribute_type_t *type,
-							 void **dummy, chunk_t *data)
+CALLBACK(attribute_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*type = (*entry)->type;
-	*data = (*entry)->data;
-	return TRUE;
+	configuration_attribute_type_t *type;
+	attribute_entry_t *entry;
+	chunk_t *data;
+
+	VA_ARGS_VGET(args, type, data);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*type = entry->type;
+		*data = entry->data;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(dhcp_transaction_t, create_attribute_enumerator, enumerator_t*,
@@ -131,7 +137,7 @@ METHOD(dhcp_transaction_t, create_attribute_enumerator, enumerator_t*,
 {
 	return enumerator_create_filter(
 						this->attributes->create_enumerator(this->attributes),
-						(void*)attribute_filter, NULL, NULL);
+						attribute_filter, NULL, NULL);
 }
 
 /**

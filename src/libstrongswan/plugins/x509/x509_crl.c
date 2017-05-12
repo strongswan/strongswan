@@ -364,25 +364,33 @@ end:
 	return success;
 }
 
-/**
- * enumerator filter callback for create_enumerator
- */
-static bool filter(void *data, revoked_t **revoked, chunk_t *serial, void *p2,
-				   time_t *date, void *p3, crl_reason_t *reason)
+CALLBACK(filter, bool,
+	void *data, enumerator_t *orig, va_list args)
 {
-	if (serial)
+	revoked_t *revoked;
+	crl_reason_t *reason;
+	chunk_t *serial;
+	time_t *date;
+
+	VA_ARGS_VGET(args, serial, date, reason);
+
+	if (orig->enumerate(orig, &revoked))
 	{
-		*serial = (*revoked)->serial;
+		if (serial)
+		{
+			*serial = revoked->serial;
+		}
+		if (date)
+		{
+			*date = revoked->date;
+		}
+		if (reason)
+		{
+			*reason = revoked->reason;
+		}
+		return TRUE;
 	}
-	if (date)
-	{
-		*date = (*revoked)->date;
-	}
-	if (reason)
-	{
-		*reason = (*revoked)->reason;
-	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(crl_t, get_serial, chunk_t,
@@ -422,7 +430,7 @@ METHOD(crl_t, create_enumerator, enumerator_t*,
 {
 	return enumerator_create_filter(
 								this->revoked->create_enumerator(this->revoked),
-								(void*)filter, NULL, NULL);
+								filter, NULL, NULL);
 }
 
 METHOD(certificate_t, get_type, certificate_type_t,

@@ -265,20 +265,24 @@ static void peer_enum_destroy(peer_data_t *data)
 	free(data);
 }
 
-/**
- * convert enumerator value from match_entry to config
- */
-static bool peer_enum_filter(linked_list_t *configs,
-							 match_entry_t **in, peer_cfg_t **out)
+CALLBACK(peer_enum_filter, bool,
+	linked_list_t *configs, enumerator_t *orig, va_list args)
 {
-	*out = (*in)->cfg;
-	return TRUE;
+	match_entry_t *entry;
+	peer_cfg_t **out;
+
+	VA_ARGS_VGET(args, out);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*out = entry->cfg;
+		return TRUE;
+	}
+	return FALSE;
 }
 
-/**
- * Clean up temporary config list
- */
-static void peer_enum_filter_destroy(linked_list_t *configs)
+CALLBACK(peer_enum_filter_destroy, void,
+	linked_list_t *configs)
 {
 	match_entry_t *entry;
 
@@ -379,8 +383,8 @@ METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 	helper->destroy(helper);
 
 	return enumerator_create_filter(configs->create_enumerator(configs),
-									(void*)peer_enum_filter, configs,
-									(void*)peer_enum_filter_destroy);
+									peer_enum_filter, configs,
+									peer_enum_filter_destroy);
 }
 
 METHOD(backend_manager_t, get_peer_cfg_by_name, peer_cfg_t*,

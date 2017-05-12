@@ -75,17 +75,23 @@ typedef struct {
 	ike_version_t ike;
 } enumerator_data_t;
 
-/**
- * convert enumerator value from attribute_entry
- */
-static bool attr_enum_filter(enumerator_data_t *data, attribute_entry_t **in,
-			configuration_attribute_type_t *type, void* none, chunk_t *value)
+CALLBACK(attr_enum_filter, bool,
+	enumerator_data_t *data, enumerator_t *orig, va_list args)
 {
-	if ((*in)->ike == IKE_ANY || (*in)->ike == data->ike)
+	configuration_attribute_type_t *type;
+	attribute_entry_t *entry;
+	chunk_t *value;
+
+	VA_ARGS_VGET(args, type, value);
+
+	while (orig->enumerate(orig, &entry))
 	{
-		*type = (*in)->type;
-		*value = (*in)->value;
-		return TRUE;
+		if (entry->ike == IKE_ANY || entry->ike == data->ike)
+		{
+			*type = entry->type;
+			*value = entry->value;
+			return TRUE;
+		}
 	}
 	return FALSE;
 }
@@ -112,7 +118,7 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 		this->lock->read_lock(this->lock);
 		return enumerator_create_filter(
 				this->attributes->create_enumerator(this->attributes),
-				(void*)attr_enum_filter, data, attr_enum_destroy);
+				attr_enum_filter, data, attr_enum_destroy);
 	}
 	return enumerator_create_empty();
 }

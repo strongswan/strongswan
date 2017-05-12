@@ -189,25 +189,24 @@ enumerator_t *enumerator_create_nested(enumerator_t *outer,
 					void *data, void (*destructor)(void *data));
 
 /**
- * Creates an enumerator which filters output of another enumerator.
+ * Creates an enumerator which filters/maps output of another enumerator.
  *
- * The filter function receives the user supplied "data" followed by a
- * unfiltered enumeration item, followed by an output pointer where to write
- * the filtered data. Then the next input/output pair follows.
- * It returns TRUE to deliver the
- * values to the caller of enumerate(), FALSE to filter this enumeration.
+ * The filter function receives the user supplied "data" followed by the
+ * original enumerator, followed by the arguments passed to the outer
+ * enumerator.  It returns TRUE to deliver the values assigned to these
+ * arguments to the caller of enumerate() and FALSE to end the enumeration.
+ * Filtering items is simple as the filter function may just skip enumerated
+ * items from the original enumerator.
  *
- * The variable argument list of enumeration values is limit to 5.
- *
- * @param unfiltered			unfiltered enumerator to wrap, gets destroyed
+ * @param orig					original enumerator to wrap, gets destroyed
  * @param filter				filter function
  * @param data					user data to supply to filter
  * @param destructor			destructor function to clean up data after use
  * @return						the filtered enumerator
  */
-enumerator_t *enumerator_create_filter(enumerator_t *unfiltered,
-					bool (*filter)(void *data, ...),
-					void *data, void (*destructor)(void *data));
+enumerator_t *enumerator_create_filter(enumerator_t *orig,
+				bool (*filter)(void *data, enumerator_t *orig, va_list args),
+				void *data, void (*destructor)(void *data));
 
 /**
  * Create an enumerator wrapper which does a cleanup on destroy.

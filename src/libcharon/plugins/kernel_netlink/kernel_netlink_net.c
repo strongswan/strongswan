@@ -1518,35 +1518,39 @@ typedef struct {
 	kernel_address_type_t which;
 } address_enumerator_t;
 
-/**
- * cleanup function for address enumerator
- */
-static void address_enumerator_destroy(address_enumerator_t *data)
+CALLBACK(address_enumerator_destroy, void,
+	address_enumerator_t *data)
 {
 	data->this->lock->unlock(data->this->lock);
 	free(data);
 }
 
-/**
- * filter for addresses
- */
-static bool filter_addresses(address_enumerator_t *data,
-							 addr_entry_t** in, host_t** out)
+CALLBACK(filter_addresses, bool,
+	address_enumerator_t *data, enumerator_t *orig, va_list args)
 {
-	if (!(data->which & ADDR_TYPE_VIRTUAL) && (*in)->refcount)
-	{	/* skip virtual interfaces added by us */
-		return FALSE;
+	addr_entry_t *addr;
+	host_t **out;
+
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &addr))
+	{
+		if (!(data->which & ADDR_TYPE_VIRTUAL) && addr->refcount)
+		{	/* skip virtual interfaces added by us */
+			continue;
+		}
+		if (!(data->which & ADDR_TYPE_REGULAR) && !addr->refcount)
+		{	/* address is regular, but not requested */
+			continue;
+		}
+		if (addr->scope >= RT_SCOPE_LINK)
+		{	/* skip addresses with a unusable scope */
+			continue;
+		}
+		*out = addr->ip;
+		return TRUE;
 	}
-	if (!(data->which & ADDR_TYPE_REGULAR) && !(*in)->refcount)
-	{	/* address is regular, but not requested */
-		return FALSE;
-	}
-	if ((*in)->scope >= RT_SCOPE_LINK)
-	{	/* skip addresses with a unusable scope */
-		return FALSE;
-	}
-	*out = (*in)->ip;
-	return TRUE;
+	return FALSE;
 }
 
 /**
@@ -1556,30 +1560,35 @@ static enumerator_t *create_iface_enumerator(iface_entry_t *iface,
 											 address_enumerator_t *data)
 {
 	return enumerator_create_filter(
-				iface->addrs->create_enumerator(iface->addrs),
-				(void*)filter_addresses, data, NULL);
+						iface->addrs->create_enumerator(iface->addrs),
+						filter_addresses, data, NULL);
 }
 
-/**
- * filter for interfaces
- */
-static bool filter_interfaces(address_enumerator_t *data, iface_entry_t** in,
-							  iface_entry_t** out)
+CALLBACK(filter_interfaces, bool,
+	address_enumerator_t *data, enumerator_t *orig, va_list args)
 {
-	if (!(data->which & ADDR_TYPE_IGNORED) && !(*in)->usable)
-	{	/* skip interfaces excluded by config */
-		return FALSE;
+	iface_entry_t *iface, **out;
+
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &iface))
+	{
+		if (!(data->which & ADDR_TYPE_IGNORED) && !iface->usable)
+		{	/* skip interfaces excluded by config */
+			continue;
+		}
+		if (!(data->which & ADDR_TYPE_LOOPBACK) && (iface->flags & IFF_LOOPBACK))
+		{	/* ignore loopback devices */
+			continue;
+		}
+		if (!(data->which & ADDR_TYPE_DOWN) && !(iface->flags & IFF_UP))
+		{	/* skip interfaces not up */
+			continue;
+		}
+		*out = iface;
+		return TRUE;
 	}
-	if (!(data->which & ADDR_TYPE_LOOPBACK) && ((*in)->flags & IFF_LOOPBACK))
-	{	/* ignore loopback devices */
-		return FALSE;
-	}
-	if (!(data->which & ADDR_TYPE_DOWN) && !((*in)->flags & IFF_UP))
-	{	/* skip interfaces not up */
-		return FALSE;
-	}
-	*out = *in;
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
@@ -1596,9 +1605,9 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 	return enumerator_create_nested(
 				enumerator_create_filter(
 					this->ifaces->create_enumerator(this->ifaces),
-					(void*)filter_interfaces, data, NULL),
+					filter_interfaces, data, NULL),
 				(void*)create_iface_enumerator, data,
-				(void*)address_enumerator_destroy);
+				address_enumerator_destroy);
 }
 
 METHOD(kernel_net_t, get_interface_name, bool,
