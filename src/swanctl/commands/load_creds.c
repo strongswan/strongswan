@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2017 Tobias Brunner
  * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -33,8 +33,6 @@
 #include <collections/hashtable.h>
 
 #include <vici_cert_info.h>
-
-#define HASH_SIZE_SHA1_HEX (2 * HASH_SIZE_SHA1)
 
 /**
  * Context used to track loaded secrets
@@ -144,6 +142,7 @@ static bool load_key(load_ctx_t *ctx, char *dir, char *type, chunk_t data)
 	vici_req_t *req;
 	vici_res_t *res;
 	bool ret = TRUE;
+	char *id;
 
 	req = vici_begin("load-key");
 
@@ -178,6 +177,8 @@ static bool load_key(load_ctx_t *ctx, char *dir, char *type, chunk_t data)
 	else
 	{
 		printf("loaded %s key from '%s'\n", type, dir);
+		id = vici_find_str(res, "", "id");
+		free(ctx->keys->remove(ctx->keys, id));
 	}
 	vici_free_res(res);
 	return ret;
@@ -190,8 +191,7 @@ static bool load_key_anytype(load_ctx_t *ctx, char *path,
 							 private_key_t *private)
 {
 	bool loaded = FALSE;
-	chunk_t encoding, keyid;
-	char hex[HASH_SIZE_SHA1_HEX + 1];
+	chunk_t encoding;
 
 	if (!private->get_encoding(private, PRIVKEY_ASN1_DER, &encoding))
 	{
@@ -212,13 +212,6 @@ static bool load_key_anytype(load_ctx_t *ctx, char *path,
 		default:
 			fprintf(stderr, "unsupported key type in '%s'\n", path);
 			break;
-	}
-
-	if (loaded &&
-		private->get_fingerprint(private, KEYID_PUBKEY_SHA1, &keyid) &&
-		snprintf(hex, sizeof(hex), "%+B", &keyid) == HASH_SIZE_SHA1_HEX)
-	{
-		free(ctx->keys->remove(ctx->keys, hex));
 	}
 	chunk_clear(&encoding);
 	return loaded;
@@ -408,7 +401,7 @@ static void* decrypt_with_config(load_ctx_t *ctx, char *name, char *type,
 /**
  * Try to decrypt and load a private key
  */
-static bool load_encrypted_key(load_ctx_t *ctx,  char *rel, char *path,
+static bool load_encrypted_key(load_ctx_t *ctx, char *rel, char *path,
 							   char *type, chunk_t data)
 {
 	private_key_t *private;
