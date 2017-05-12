@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2016 Andreas Steffen
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2017 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2014 Martin Willi
@@ -206,9 +206,10 @@ CALLBACK(load_cert, vici_message_t*,
 CALLBACK(load_key, vici_message_t*,
 	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
 {
+	vici_builder_t *builder;
 	key_type_t type;
 	private_key_t *key;
-	chunk_t data;
+	chunk_t data, fp;
 	char *str;
 
 	str = message->get_str(message, NULL, "type");
@@ -248,12 +249,19 @@ CALLBACK(load_key, vici_message_t*,
 		return create_reply("parsing %N private key failed",
 							key_type_names, type);
 	}
+	if (!key->get_fingerprint(key, KEYID_PUBKEY_SHA1, &fp))
+	{
+		return create_reply("failed to get key id");
+	}
 
 	DBG1(DBG_CFG, "loaded %N private key", key_type_names, type);
 
+	builder = vici_builder_create();
+	builder->add_kv(builder, "success", "yes");
+	builder->add_kv(builder, "id", "%+B", &fp);
 	this->creds->add_key(this->creds, key);
 
-	return create_reply(NULL);
+	return builder->finalize(builder);
 }
 
 CALLBACK(unload_key, vici_message_t*,
