@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2015 Tobias Brunner
+ * Copyright (C) 2007-2017 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -39,12 +39,12 @@ typedef struct linked_list_t linked_list_t;
 typedef bool (*linked_list_match_t)(void *item, ...);
 
 /**
- * Method to be invoked on elements in a linked list (used in invoke_* functions)
+ * Function to be invoked on elements in a linked list
  *
  * @param item			current list item
- * @param ...			user supplied data (only pointers, at most 5)
+ * @param args			user supplied data
  */
-typedef void (*linked_list_invoke_t)(void *item, ...);
+typedef void (*linked_list_invoke_t)(void *item, va_list args);
 
 /**
  * Class implementing a double linked list.
@@ -199,12 +199,11 @@ struct linked_list_t {
 	/**
 	 * Invoke a function on all of the contained objects.
 	 *
-	 * @warning Only use pointers as user supplied data.
-	 *
-	 * @param function	offset of the method to invoke on objects
-	 * @param ...		user data to supply to called function (limited to 5 arguments)
+	 * @param function	function to call for each object
+	 * @param ...		user data to supply to called function
 	 */
-	void (*invoke_function) (linked_list_t *this, linked_list_invoke_t function, ...);
+	void (*invoke_function)(linked_list_t *this, linked_list_invoke_t function,
+							...);
 
 	/**
 	 * Clones a list and its objects using the objects' clone method.

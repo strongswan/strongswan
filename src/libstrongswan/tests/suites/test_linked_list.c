@@ -244,8 +244,13 @@ struct invoke_t {
 	void (*invoke)(invoke_t *item);
 };
 
-static void invoke(intptr_t item, void *a, void *b, void *c, void *d, int *sum)
+CALLBACK(invoke, void,
+	intptr_t item, va_list args)
 {
+	void *a, *b, *c, *d;
+	int *sum;
+
+	VA_ARGS_VGET(args, a, b, c, d, sum);
 	ck_assert_int_eq((uintptr_t)a, 1);
 	ck_assert_int_eq((uintptr_t)b, 2);
 	ck_assert_int_eq((uintptr_t)c, 3);
@@ -267,8 +272,7 @@ START_TEST(test_invoke_function)
 	list->insert_last(list, (void*)3);
 	list->insert_last(list, (void*)4);
 	list->insert_last(list, (void*)5);
-	list->invoke_function(list, (linked_list_invoke_t)invoke,
-						  (uintptr_t)1, (uintptr_t)2,
+	list->invoke_function(list, invoke, (uintptr_t)1, (uintptr_t)2,
 						  (uintptr_t)3, (uintptr_t)4, &sum);
 	ck_assert_int_eq(sum, 15);
 }

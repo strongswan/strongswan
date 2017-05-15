@@ -464,10 +464,10 @@ static policy_sa_t *policy_sa_create(private_kernel_pfkey_ipsec_t *this,
 /**
  * Destroy a policy_sa(_in)_t object
  */
-static void policy_sa_destroy(policy_sa_t *policy, policy_dir_t *dir,
+static void policy_sa_destroy(policy_sa_t *policy, policy_dir_t dir,
 							  private_kernel_pfkey_ipsec_t *this)
 {
-	if (*dir == POLICY_OUT)
+	if (dir == POLICY_OUT)
 	{
 		policy_sa_out_t *out = (policy_sa_out_t*)policy;
 		out->src_ts->destroy(out->src_ts);
@@ -475,6 +475,16 @@ static void policy_sa_destroy(policy_sa_t *policy, policy_dir_t *dir,
 	}
 	ipsec_sa_destroy(this, policy->sa);
 	free(policy);
+}
+
+CALLBACK(policy_sa_destroy_cb, void,
+	policy_sa_t *policy, va_list args)
+{
+	private_kernel_pfkey_ipsec_t *this;
+	policy_dir_t dir;
+
+	VA_ARGS_VGET(args, dir, this);
+	policy_sa_destroy(policy, dir, this);
 }
 
 typedef struct policy_entry_t policy_entry_t;
@@ -557,14 +567,22 @@ static void policy_entry_destroy(policy_entry_t *policy,
 	}
 	if (policy->used_by)
 	{
-		policy->used_by->invoke_function(policy->used_by,
-										(linked_list_invoke_t)policy_sa_destroy,
-										 &policy->direction, this);
+		policy->used_by->invoke_function(policy->used_by, policy_sa_destroy_cb,
+										 policy->direction, this);
 		policy->used_by->destroy(policy->used_by);
 	}
 	DESTROY_IF(policy->src.net);
 	DESTROY_IF(policy->dst.net);
 	free(policy);
+}
+
+CALLBACK(policy_entry_destroy_cb, void,
+	policy_entry_t *policy, va_list args)
+{
+	private_kernel_pfkey_ipsec_t *this;
+
+	VA_ARGS_VGET(args, this);
+	policy_entry_destroy(policy, this);
 }
 
 /**
@@ -2860,7 +2878,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	if (policy->used_by->get_count(policy->used_by) > 0)
 	{	/* policy is used by more SAs, keep in kernel */
 		DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
-		policy_sa_destroy(mapping, &id->dir, this);
+		policy_sa_destroy(mapping, id->dir, this);
 
 		if (!is_installed)
 		{	/* no need to update as the policy was not installed for this SA */
@@ -2915,7 +2933,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	}
 
 	this->policies->remove(this->policies, found, NULL);
-	policy_sa_destroy(mapping, &id->dir, this);
+	policy_sa_destroy(mapping, id->dir, this);
 	policy_entry_destroy(policy, this);
 	this->mutex->unlock(this->mutex);
 
@@ -3088,8 +3106,7 @@ METHOD(kernel_ipsec_t, destroy, void,
 		lib->watcher->remove(lib->watcher, this->socket_events);
 		close(this->socket_events);
 	}
-	this->policies->invoke_function(this->policies,
-								   (linked_list_invoke_t)policy_entry_destroy,
+	this->policies->invoke_function(this->policies, policy_entry_destroy_cb,
 									this);
 	this->policies->destroy(this->policies);
 	this->excludes->destroy(this->excludes);

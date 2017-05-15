@@ -330,11 +330,12 @@ typedef struct {
 	va_list args;
 } log_data_t;
 
-/**
- * logger->log() invocation as a invoke_function callback
- */
-static void log_cb(log_entry_t *entry, log_data_t *data)
+CALLBACK(log_cb, void,
+	log_entry_t *entry, va_list args)
 {
+	log_data_t *data;
+
+	VA_ARGS_VGET(args, data);
 	if (entry->logger->log && entry->levels[data->group] >= data->level)
 	{
 		entry->logger->log(entry->logger, data->group, data->level,
@@ -342,11 +343,12 @@ static void log_cb(log_entry_t *entry, log_data_t *data)
 	}
 }
 
-/**
- * logger->vlog() invocation as a invoke_function callback
- */
-static void vlog_cb(log_entry_t *entry, log_data_t *data)
+CALLBACK(vlog_cb, void,
+	log_entry_t *entry, va_list args)
 {
+	log_data_t *data;
+
+	VA_ARGS_VGET(args, data);
 	if (entry->logger->vlog && entry->levels[data->group] >= data->level)
 	{
 		va_list copy;
@@ -405,8 +407,7 @@ METHOD(bus_t, vlog, void,
 		}
 		if (len > 0)
 		{
-			loggers->invoke_function(loggers, (linked_list_invoke_t)log_cb,
-									 &data);
+			loggers->invoke_function(loggers, log_cb, &data);
 		}
 		if (data.message != buf)
 		{
@@ -422,7 +423,7 @@ METHOD(bus_t, vlog, void,
 		data.message = format;
 
 		va_copy(data.args, args);
-		loggers->invoke_function(loggers, (linked_list_invoke_t)vlog_cb, &data);
+		loggers->invoke_function(loggers, vlog_cb, &data);
 		va_end(data.args);
 	}
 

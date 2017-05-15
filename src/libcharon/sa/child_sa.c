@@ -1404,13 +1404,13 @@ METHOD(child_sa_t, get_rekey_spi, uint32_t,
 	return this->rekey_spi;
 }
 
-/**
- * Callback to reinstall a virtual IP
- */
-static void reinstall_vip(host_t *vip, host_t *me)
+CALLBACK(reinstall_vip, void,
+	host_t *vip, va_list args)
 {
+	host_t *me;
 	char *iface;
 
+	VA_ARGS_VGET(args, me);
 	if (charon->kernel->get_interface(charon->kernel, me, &iface))
 	{
 		charon->kernel->del_ip(charon->kernel, vip, -1, TRUE);
@@ -1532,7 +1532,7 @@ METHOD(child_sa_t, update, status_t,
 
 				/* we reinstall the virtual IP to handle interface roaming
 				 * correctly */
-				vips->invoke_function(vips, (void*)reinstall_vip, me);
+				vips->invoke_function(vips, reinstall_vip, me);
 
 				/* reinstall updated policies */
 				install_policies_internal(this, me, other, my_ts, other_ts,

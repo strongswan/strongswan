@@ -1125,9 +1125,13 @@ static bool is_interface_up_and_usable(private_kernel_netlink_net_t *this,
  *
  * this->lock must be locked when calling this function
  */
-static void addr_entry_unregister(addr_entry_t *addr, iface_entry_t *iface,
-								  private_kernel_netlink_net_t *this)
+CALLBACK(addr_entry_unregister, void,
+	addr_entry_t *addr, va_list args)
 {
+	private_kernel_netlink_net_t *this;
+	iface_entry_t *iface;
+
+	VA_ARGS_VGET(args, iface, this);
 	if (addr->refcount)
 	{
 		addr_map_entry_remove(this->vips, addr, iface);
@@ -1217,7 +1221,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 					 * another interface? */
 					this->ifaces->remove_at(this->ifaces, enumerator);
 					current->addrs->invoke_function(current->addrs,
-								(void*)addr_entry_unregister, current, this);
+										addr_entry_unregister, current, this);
 					iface_entry_destroy(current);
 					break;
 				}
