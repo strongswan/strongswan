@@ -394,16 +394,15 @@ METHOD(linked_list_t, find_first, status_t,
 }
 
 METHOD(linked_list_t, invoke_offset, void,
-	private_linked_list_t *this, size_t offset,
-	void *d1, void *d2, void *d3, void *d4, void *d5)
+	private_linked_list_t *this, size_t offset)
 {
 	element_t *current = this->first;
-	linked_list_invoke_t *method;
+	void (**method)(void*);
 
 	while (current)
 	{
 		method = current->value + offset;
-		(*method)(current->value, d1, d2, d3, d4, d5);
+		(*method)(current->value);
 		current = current->next;
 	}
 }
@@ -555,7 +554,7 @@ linked_list_t *linked_list_create()
 			.remove_last = _remove_last,
 			.remove = _remove_,
 			.remove_at = (void*)_remove_at,
-			.invoke_offset = (void*)_invoke_offset,
+			.invoke_offset = _invoke_offset,
 			.invoke_function = (void*)_invoke_function,
 			.clone_offset = _clone_offset,
 			.equals_offset = _equals_offset,

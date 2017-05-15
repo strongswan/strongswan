@@ -192,12 +192,9 @@ struct linked_list_t {
 	 * which can be evalutated at compile time using the offsetof
 	 * macro, e.g.: list->invoke(list, offsetof(object_t, method));
 	 *
-	 * @warning Only use pointers as user supplied data.
-	 *
 	 * @param offset	offset of the method to invoke on objects
-	 * @param ...		user data to supply to called function (limited to 5 arguments)
 	 */
-	void (*invoke_offset) (linked_list_t *this, size_t offset, ...);
+	void (*invoke_offset)(linked_list_t *this, size_t offset);
 
 	/**
 	 * Invoke a function on all of the contained objects.

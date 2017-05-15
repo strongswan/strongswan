@@ -241,7 +241,7 @@ typedef struct invoke_t invoke_t;
 
 struct invoke_t {
 	int val;
-	void (*invoke)(invoke_t *item, void *a, void *b, void *c, void *d, int *sum);
+	void (*invoke)(invoke_t *item);
 };
 
 static void invoke(intptr_t item, void *a, void *b, void *c, void *d, int *sum)
@@ -253,9 +253,9 @@ static void invoke(intptr_t item, void *a, void *b, void *c, void *d, int *sum)
 	*sum += item;
 }
 
-static void invoke_offset(invoke_t *item, void *a, void *b, void *c, void *d, int *sum)
+static void invoke_offset(invoke_t *item)
 {
-	invoke(item->val, a, b, c, d, sum);
+	item->val++;
 }
 
 START_TEST(test_invoke_function)
@@ -282,17 +282,19 @@ START_TEST(test_invoke_offset)
 		{ .val = 3, .invoke = invoke_offset, },
 		{ .val = 4, .invoke = invoke_offset, },
 		{ .val = 5, .invoke = invoke_offset, },
-	};
-	int i, sum = 0;
+	}, *item;
+	int i;
 
 	for (i = 0; i < countof(items); i++)
 	{
 		list->insert_last(list, &items[i]);
 	}
-	list->invoke_offset(list, offsetof(invoke_t, invoke),
-						(uintptr_t)1, (uintptr_t)2,
-						(uintptr_t)3, (uintptr_t)4, &sum);
-	ck_assert_int_eq(sum, 15);
+	list->invoke_offset(list, offsetof(invoke_t, invoke));
+	i = 2;
+	while (list->remove_first(list, (void**)&item) == SUCCESS)
+	{
+		ck_assert_int_eq(item->val, i++);
+	}
 }
 END_TEST
 
