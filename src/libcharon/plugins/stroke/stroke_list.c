@@ -958,8 +958,7 @@ static void list_plugins(FILE *out)
 				{
 					case FEATURE_PROVIDE:
 						fp = &features[i];
-						loaded = list->find_first(list, NULL,
-												  (void**)&fp) == SUCCESS;
+						loaded = list->find_first(list, NULL, (void**)&fp);
 						fprintf(out, "    %s%s\n",
 								str, loaded ? "" : " (not loaded)");
 						break;

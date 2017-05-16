@@ -110,15 +110,12 @@ static bool policy_equals(bypass_policy_t *a, bypass_policy_t *b)
  */
 static bool consider_interface(private_bypass_lan_listener_t *this, char *iface)
 {
-	status_t expected;
-
 	if (!iface || !this->ifaces_filter)
 	{
 		return TRUE;
 	}
-	expected = this->ifaces_exclude ? NOT_FOUND : SUCCESS;
-	return this->ifaces_filter->find_first(this->ifaces_filter, (void*)streq,
-										   NULL, iface) == expected;
+	return this->ifaces_filter->find_first(this->ifaces_filter,
+					linked_list_match_str, NULL, iface) != this->ifaces_exclude;
 }
 
 /**

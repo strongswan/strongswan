@@ -358,11 +358,12 @@ METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
 			data, (void*)cdp_data_destroy);
 }
 
-/**
- * Compare the given certificate to the ca_cert_t items in the list
- */
-static bool match_cert(ca_cert_t *item, certificate_t *cert)
+CALLBACK(match_cert, bool,
+	ca_cert_t *item, va_list args)
 {
+	certificate_t *cert;
+
+	VA_ARGS_VGET(args, cert);
 	return cert->equals(cert, item->cert);
 }
 
@@ -409,8 +410,7 @@ static certificate_t *add_cert_internal(private_stroke_ca_t *this,
 {
 	ca_cert_t *found;
 
-	if (this->certs->find_first(this->certs, (linked_list_match_t)match_cert,
-								(void**)&found, cert) == SUCCESS)
+	if (this->certs->find_first(this->certs, match_cert, (void**)&found, cert))
 	{
 		cert->destroy(cert);
 		cert = found->cert->get_ref(found->cert);
@@ -515,8 +515,7 @@ METHOD(stroke_ca_t, get_cert_ref, certificate_t*,
 	ca_cert_t *found;
 
 	this->lock->read_lock(this->lock);
-	if (this->certs->find_first(this->certs, (linked_list_match_t)match_cert,
-								(void**)&found, cert) == SUCCESS)
+	if (this->certs->find_first(this->certs, match_cert, (void**)&found, cert))
 	{
 		cert->destroy(cert);
 		cert = found->cert->get_ref(found->cert);

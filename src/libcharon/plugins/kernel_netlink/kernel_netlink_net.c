@@ -163,19 +163,21 @@ static void iface_entry_destroy(iface_entry_t *this)
 	free(this);
 }
 
-/**
- * find an interface entry by index
- */
-static bool iface_entry_by_index(iface_entry_t *this, int *ifindex)
+CALLBACK(iface_entry_by_index, bool,
+	iface_entry_t *this, va_list args)
 {
-	return this->ifindex == *ifindex;
+	int ifindex;
+
+	VA_ARGS_VGET(args, ifindex);
+	return this->ifindex == ifindex;
 }
 
-/**
- * find an interface entry by name
- */
-static bool iface_entry_by_name(iface_entry_t *this, char *ifname)
+CALLBACK(iface_entry_by_name, bool,
+	iface_entry_t *this, va_list args)
 {
+	char *ifname;
+
+	VA_ARGS_VGET(args, ifname);
 	return streq(this->ifname, ifname);
 }
 
@@ -1112,8 +1114,8 @@ static bool is_interface_up_and_usable(private_kernel_netlink_net_t *this,
 {
 	iface_entry_t *iface;
 
-	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_index,
-								 (void**)&iface, &index) == SUCCESS)
+	if (this->ifaces->find_first(this->ifaces, iface_entry_by_index,
+								 (void**)&iface, index))
 	{
 		return iface_entry_up_and_usable(iface);
 	}
@@ -1175,9 +1177,8 @@ static void process_link(private_kernel_netlink_net_t *this,
 	{
 		case RTM_NEWLINK:
 		{
-			if (this->ifaces->find_first(this->ifaces,
-									(void*)iface_entry_by_index, (void**)&entry,
-									&msg->ifi_index) != SUCCESS)
+			if (!this->ifaces->find_first(this->ifaces, iface_entry_by_index,
+										 (void**)&entry, msg->ifi_index))
 			{
 				INIT(entry,
 					.ifindex = msg->ifi_index,
@@ -1292,8 +1293,8 @@ static void process_addr(private_kernel_netlink_net_t *this,
 	}
 
 	this->lock->write_lock(this->lock);
-	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_index,
-								 (void**)&iface, &msg->ifa_index) == SUCCESS)
+	if (this->ifaces->find_first(this->ifaces, iface_entry_by_index,
+								 (void**)&iface, msg->ifa_index))
 	{
 		addr_map_entry_t *entry, lookup = {
 			.ip = host,
@@ -1674,8 +1675,8 @@ static int get_interface_index(private_kernel_netlink_net_t *this, char* name)
 	DBG2(DBG_KNL, "getting iface index for %s", name);
 
 	this->lock->read_lock(this->lock);
-	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_name,
-								(void**)&iface, name) == SUCCESS)
+	if (this->ifaces->find_first(this->ifaces, iface_entry_by_name,
+								(void**)&iface, name))
 	{
 		ifindex = iface->ifindex;
 	}
@@ -1700,8 +1701,8 @@ static char *get_interface_name_by_index(private_kernel_netlink_net_t *this,
 	DBG2(DBG_KNL, "getting iface name for index %d", index);
 
 	this->lock->read_lock(this->lock);
-	if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_index,
-								(void**)&iface, &index) == SUCCESS)
+	if (this->ifaces->find_first(this->ifaces, iface_entry_by_index,
+								(void**)&iface, index))
 	{
 		name = strdup(iface->ifname);
 	}
@@ -1941,7 +1942,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 
 				table = (uintptr_t)route->table;
 				if (this->rt_exclude->find_first(this->rt_exclude, NULL,
-												 (void**)&table) == SUCCESS)
+												 (void**)&table))
 				{	/* route is from an excluded routing table */
 					continue;
 				}
@@ -2400,11 +2401,11 @@ METHOD(kernel_net_t, add_ip, status_t,
 	}
 	/* try to find the target interface, either by config or via src ip */
 	if (!this->install_virtual_ip_on ||
-		 this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_name,
-						(void**)&iface, this->install_virtual_ip_on) != SUCCESS)
+		!this->ifaces->find_first(this->ifaces, iface_entry_by_name,
+								 (void**)&iface, this->install_virtual_ip_on))
 	{
-		if (this->ifaces->find_first(this->ifaces, (void*)iface_entry_by_name,
-									 (void**)&iface, iface_name) != SUCCESS)
+		if (!this->ifaces->find_first(this->ifaces, iface_entry_by_name,
+									 (void**)&iface, iface_name))
 		{	/* if we don't find the requested interface we just use the first */
 			this->ifaces->get_first(this->ifaces, (void**)&iface);
 		}

@@ -151,8 +151,7 @@ METHOD(attribute_provider_t, create_attribute_enumerator, enumerator_t*,
 	identification_t *id;
 	host_t *vip;
 
-	if (pools->find_first(pools, (linked_list_match_t)streq,
-						  NULL, "dhcp") != SUCCESS)
+	if (!pools->find_first(pools, linked_list_match_str, NULL, "dhcp"))
 	{
 		return NULL;
 	}

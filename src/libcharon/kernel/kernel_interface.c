@@ -632,21 +632,18 @@ METHOD(kernel_interface_t, enable_udp_decap, bool,
 METHOD(kernel_interface_t, is_interface_usable, bool,
 	private_kernel_interface_t *this, const char *iface)
 {
-	status_t expected;
-
 	if (!this->ifaces_filter)
 	{
 		return TRUE;
 	}
-	expected = this->ifaces_exclude ? NOT_FOUND : SUCCESS;
-	return this->ifaces_filter->find_first(this->ifaces_filter, (void*)streq,
-										   NULL, iface) == expected;
+	return this->ifaces_filter->find_first(this->ifaces_filter,
+					linked_list_match_str, NULL, iface) != this->ifaces_exclude;
 }
 
 METHOD(kernel_interface_t, all_interfaces_usable, bool,
 	private_kernel_interface_t *this)
 {
-	return this->ifaces_filter == NULL;
+	return !this->ifaces_filter;
 }
 
 METHOD(kernel_interface_t, get_address_by_ts, status_t,

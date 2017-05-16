@@ -585,12 +585,12 @@ CALLBACK(policy_entry_destroy_cb, void,
 	policy_entry_destroy(policy, this);
 }
 
-/**
- * compares two policy_entry_t
- */
-static inline bool policy_entry_equals(policy_entry_t *current,
-									   policy_entry_t *policy)
+CALLBACK(policy_entry_equals, bool,
+	policy_entry_t *current, va_list args)
 {
+	policy_entry_t *policy;
+
+	VA_ARGS_VGET(args, policy);
 	return current->direction == policy->direction &&
 		   current->src.proto == policy->src.proto &&
 		   current->dst.proto == policy->dst.proto &&
@@ -600,13 +600,13 @@ static inline bool policy_entry_equals(policy_entry_t *current,
 		   current->dst.net->equals(current->dst.net, policy->dst.net);
 }
 
-/**
- * compare the given kernel index with that of a policy
- */
-static inline bool policy_entry_match_byindex(policy_entry_t *current,
-											  uint32_t *index)
+CALLBACK(policy_entry_match_byindex, bool,
+	policy_entry_t *current, va_list args)
 {
-	return current->index == *index;
+	uint32_t index;
+
+	VA_ARGS_VGET(args, index);
+	return current->index == index;
 }
 
 /**
@@ -1279,9 +1279,8 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 
 	index = response.x_policy->sadb_x_policy_id;
 	this->mutex->lock(this->mutex);
-	if (this->policies->find_first(this->policies,
-								(linked_list_match_t)policy_entry_match_byindex,
-								(void**)&policy, &index) == SUCCESS &&
+	if (this->policies->find_first(this->policies, policy_entry_match_byindex,
+								  (void**)&policy, index) &&
 		policy->used_by->get_first(policy->used_by, (void**)&sa) == SUCCESS)
 	{
 		reqid = sa->sa->cfg.reqid;
@@ -2572,8 +2571,7 @@ static status_t add_policy_internal(private_kernel_pfkey_ipsec_t *this,
 
 	/* we try to find the policy again and update the kernel index */
 	this->mutex->lock(this->mutex);
-	if (this->policies->find_first(this->policies, NULL,
-								  (void**)&policy) != SUCCESS)
+	if (!this->policies->find_first(this->policies, NULL, (void**)&policy))
 	{
 		DBG2(DBG_KNL, "unable to update index, the policy is already gone, "
 					  "ignoring");
@@ -2624,9 +2622,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 	/* find a matching policy */
 	this->mutex->lock(this->mutex);
-	if (this->policies->find_first(this->policies,
-								  (linked_list_match_t)policy_entry_equals,
-								  (void**)&found, policy) == SUCCESS)
+	if (this->policies->find_first(this->policies, policy_entry_equals,
+								   (void**)&found, policy))
 	{	/* use existing policy */
 		DBG2(DBG_KNL, "policy %R === %R %N already exists, increasing "
 			 "refcount", id->src_ts, id->dst_ts, policy_dir_names, id->dir);
@@ -2719,9 +2716,8 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 
 	/* find a matching policy */
 	this->mutex->lock(this->mutex);
-	if (this->policies->find_first(this->policies,
-								  (linked_list_match_t)policy_entry_equals,
-								  (void**)&found, policy) != SUCCESS)
+	if (!this->policies->find_first(this->policies, policy_entry_equals,
+									(void**)&found, policy))
 	{
 		DBG1(DBG_KNL, "querying policy %R === %R %N failed, not found",
 			 id->src_ts, id->dst_ts, policy_dir_names, id->dir);
@@ -2832,9 +2828,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 
 	/* find a matching policy */
 	this->mutex->lock(this->mutex);
-	if (this->policies->find_first(this->policies,
-								  (linked_list_match_t)policy_entry_equals,
-								  (void**)&found, policy) != SUCCESS)
+	if (!this->policies->find_first(this->policies, policy_entry_equals,
+									(void**)&found, policy))
 	{
 		DBG1(DBG_KNL, "deleting policy %R === %R %N failed, not found",
 			 id->src_ts, id->dst_ts, policy_dir_names, id->dir);

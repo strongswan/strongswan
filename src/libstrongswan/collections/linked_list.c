@@ -47,6 +47,17 @@ struct element_t {
 	element_t *next;
 };
 
+/*
+ * Described in header
+ */
+bool linked_list_match_str(void *item, va_list args)
+{
+	char *a = item, *b;
+
+	VA_ARGS_VGET(args, b);
+	return streq(a, b);
+}
+
 /**
  * Creates an empty linked list object.
  */
@@ -371,26 +382,41 @@ METHOD(linked_list_t, remove_at, void,
 	}
 }
 
-METHOD(linked_list_t, find_first, status_t,
-	private_linked_list_t *this, linked_list_match_t match,
-	void **item, void *d1, void *d2, void *d3, void *d4, void *d5)
+METHOD(linked_list_t, find_first, bool,
+	private_linked_list_t *this, linked_list_match_t match, void **item, ...)
 {
 	element_t *current = this->first;
+	va_list args;
+	bool matched = FALSE;
+
+	if (!match && !item)
+	{
+		return FALSE;
+	}
 
 	while (current)
 	{
-		if ((match && match(current->value, d1, d2, d3, d4, d5)) ||
-			(!match && item && current->value == *item))
+		if (match)
+		{
+			va_start(args, item);
+			matched = match(current->value, args);
+			va_end(args);
+		}
+		else
+		{
+			matched = current->value == *item;
+		}
+		if (matched)
 		{
 			if (item != NULL)
 			{
 				*item = current->value;
 			}
-			return SUCCESS;
+			return TRUE;
 		}
 		current = current->next;
 	}
-	return NOT_FOUND;
+	return FALSE;
 }
 
 METHOD(linked_list_t, invoke_offset, void,
@@ -548,7 +574,7 @@ linked_list_t *linked_list_create()
 			.reset_enumerator = (void*)_reset_enumerator,
 			.get_first = _get_first,
 			.get_last = _get_last,
-			.find_first = (void*)_find_first,
+			.find_first = _find_first,
 			.insert_first = _insert_first,
 			.insert_last = _insert_last,
 			.insert_before = (void*)_insert_before,

@@ -28,15 +28,22 @@ typedef struct linked_list_t linked_list_t;
 #include <collections/enumerator.h>
 
 /**
- * Method to match elements in a linked list (used in find_* functions)
+ * Function to match elements in a linked list
  *
  * @param item			current list item
- * @param ...			user supplied data (only pointers, at most 5)
- * @return
- *						- TRUE, if the item matched
- *						- FALSE, otherwise
+ * @param args			user supplied data
+ * @return				TRUE, if the item matched, FALSE otherwise
  */
-typedef bool (*linked_list_match_t)(void *item, ...);
+typedef bool (*linked_list_match_t)(void *item, va_list args);
+
+/**
+ * Helper function to match a string in a linked list of strings
+ *
+ * @param item			list item (char*)
+ * @param args			user supplied data (char*)
+ * @return
+ */
+bool linked_list_match_str(void *item, va_list args);
 
 /**
  * Function to be invoked on elements in a linked list
@@ -167,21 +174,20 @@ struct linked_list_t {
 	 *
 	 * The first object passed to the match function is the current list item,
 	 * followed by the user supplied data.
-	 * If the supplied function returns TRUE this function returns SUCCESS, and
-	 * the current object is returned in the third parameter, otherwise,
+	 * If the supplied function returns TRUE so does this function, and the
+	 * current object is returned in the third parameter (if given), otherwise,
 	 * the next item is checked.
 	 *
 	 * If match is NULL, *item and the current object are compared.
 	 *
-	 * @warning Only use pointers as user supplied data.
-	 *
 	 * @param match			comparison function to call on each object, or NULL
-	 * @param item			the list item, if found
-	 * @param ...			user data to supply to match function (limited to 5 arguments)
-	 * @return				SUCCESS if found, NOT_FOUND otherwise
+	 * @param item			the list item, if found, or NULL
+	 * @param ...			user data to supply to match function
+	 * @return				TRUE if found, FALSE otherwise (or if neither match,
+	 *						nor item is supplied)
 	 */
-	status_t (*find_first) (linked_list_t *this, linked_list_match_t match,
-							void **item, ...);
+	bool (*find_first)(linked_list_t *this, linked_list_match_t match,
+					   void **item, ...);
 
 	/**
 	 * Invoke a method on all of the contained objects.

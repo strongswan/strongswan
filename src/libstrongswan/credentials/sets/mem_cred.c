@@ -149,8 +149,12 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 									cert_data_destroy);
 }
 
-static bool certificate_equals(certificate_t *item, certificate_t *cert)
+CALLBACK(certificate_equals, bool,
+	certificate_t *item, va_list args)
 {
+	certificate_t *cert;
+
+	VA_ARGS_VGET(args, cert);
 	return item->equals(item, cert);
 }
 
@@ -163,9 +167,8 @@ static certificate_t *add_cert_internal(private_mem_cred_t *this, bool trusted,
 {
 	certificate_t *cached;
 	this->lock->write_lock(this->lock);
-	if (this->untrusted->find_first(this->untrusted,
-									(linked_list_match_t)certificate_equals,
-									(void**)&cached, cert) == SUCCESS)
+	if (this->untrusted->find_first(this->untrusted, certificate_equals,
+									(void**)&cached, cert))
 	{
 		cert->destroy(cert);
 		cert = cached->get_ref(cached);
@@ -201,9 +204,8 @@ METHOD(mem_cred_t, get_cert_ref, certificate_t*,
 	certificate_t *cached;
 
 	this->lock->read_lock(this->lock);
-	if (this->untrusted->find_first(this->untrusted,
-									(linked_list_match_t)certificate_equals,
-									(void**)&cached, cert) == SUCCESS)
+	if (this->untrusted->find_first(this->untrusted, certificate_equals,
+									(void**)&cached, cert))
 	{
 		cert->destroy(cert);
 		cert = cached->get_ref(cached);

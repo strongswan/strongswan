@@ -282,13 +282,14 @@ static void logger_entry_unregister_destroy(logger_entry_t *this)
 	logger_entry_destroy(this);
 }
 
-/**
- * Match a logger entry by target and whether it is a file or syslog logger
- */
-static bool logger_entry_match(logger_entry_t *this, char *target,
-							   logger_type_t *type)
+CALLBACK(logger_entry_match, bool,
+	logger_entry_t *this, va_list args)
 {
-	return this->type == *type && streq(this->target, target);
+	logger_type_t type;
+	char *target;
+
+	VA_ARGS_VGET(args, target, type);
+	return this->type == type && streq(this->target, target);
 }
 
 /**
@@ -350,8 +351,8 @@ static logger_entry_t *get_logger_entry(char *target, logger_type_t type,
 {
 	logger_entry_t *entry;
 
-	if (existing->find_first(existing, (void*)logger_entry_match,
-							(void**)&entry, target, &type) != SUCCESS)
+	if (!existing->find_first(existing, logger_entry_match, (void**)&entry,
+							  target, type))
 	{
 		INIT(entry,
 			.target = strdup(target),
