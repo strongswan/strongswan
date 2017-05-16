@@ -39,7 +39,8 @@ plugins = \
 	plugins/dnscert.opt \
 	plugins/duplicheck.opt \
 	plugins/eap-aka.opt \
-	plugins/eap-aka-3ggp2.opt \
+	plugins/eap-aka-3gpp.opt \
+	plugins/eap-aka-3gpp2.opt \
 	plugins/eap-dynamic.opt \
 	plugins/eap-gtc.opt \
 	plugins/eap-peap.opt \

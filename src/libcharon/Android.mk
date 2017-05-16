@@ -163,6 +163,8 @@ LOCAL_SRC_FILES += $(call add_plugin, p-cscf)
 
 LOCAL_SRC_FILES += $(call add_plugin, eap-aka)
 
+LOCAL_SRC_FILES += $(call add_plugin, eap-aka-3gpp)
+
 LOCAL_SRC_FILES += $(call add_plugin, eap-aka-3gpp2)
 ifneq ($(call plugin_enabled, eap-aka-3gpp2),)
 LOCAL_C_INCLUDES += $(libgmp_PATH)

@@ -370,6 +370,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EAP_AKA_3GPP
+  SUBDIRS += plugins/eap_aka_3gpp
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_aka_3gpp/libstrongswan-eap-aka-3gpp.la
+endif
+endif
+
 if USE_EAP_AKA_3GPP2
   SUBDIRS += plugins/eap_aka_3gpp2
 if MONOLITHIC
