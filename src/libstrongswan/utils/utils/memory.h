@@ -80,7 +80,7 @@ static inline void *memset_noop(void *s, int c, size_t n)
 /**
  * Same as memcpy, but XORs src into dst instead of copy
  */
-void memxor(uint8_t dest[], uint8_t src[], size_t n);
+void memxor(uint8_t dest[], const uint8_t src[], size_t n);
 
 /**
  * Safely overwrite n bytes of memory at ptr with zero, non-inlining variant.

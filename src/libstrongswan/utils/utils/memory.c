@@ -20,7 +20,7 @@
 /**
  * Described in header.
  */
-void memxor(uint8_t dst[], uint8_t src[], size_t n)
+void memxor(uint8_t dst[], const uint8_t src[], size_t n)
 {
 	int m, i;
 
