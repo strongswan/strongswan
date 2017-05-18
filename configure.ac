@@ -37,6 +37,12 @@ AC_CONFIG_HEADERS([config.h])
 AC_DEFINE([CONFIG_H_INCLUDED], [], [defined if config.h included])
 PKG_PROG_PKG_CONFIG
 
+# set configure arguments
+AC_CONFIGURE_ARGS=`echo "${ac_configure_args}" | sed "s/ //"`
+# | sed "s/'/\\\'/g"`
+AC_DEFINE_UNQUOTED(AC_CONFIGURE_ARGS, "$AC_CONFIGURE_ARGS", "")
+
+
 m4_include(m4/macros/split-package-version.m4)
 SPLIT_PACKAGE_VERSION
 
