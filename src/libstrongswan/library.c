@@ -66,6 +66,11 @@ struct private_library_t {
 	 * Number of times we have been initialized
 	 */
 	refcount_t ref;
+
+	/**
+	 * The configuration variables with which the library was built
+	 */
+	char *configuration_arguments;
 };
 
 #define MAX_NAMESPACES 5
@@ -220,6 +225,12 @@ METHOD(library_t, set, bool,
 	return this->objects->remove(this->objects, name) != NULL;
 }
 
+METHOD(library_t, get_configure_arguments, char*,
+	private_library_t *this)
+{
+	return this->configuration_arguments;
+}
+
 /**
  * Hashtable hash function
  */
@@ -305,7 +316,9 @@ bool library_init(char *settings, const char *namespace)
 			.set = _set,
 			.ns = strdup(namespace ?: "libstrongswan"),
 			.conf = strdupnull(settings ?: (getenv("STRONGSWAN_CONF") ?: STRONGSWAN_CONF)),
+			.get_configure_arguments = _get_configure_arguments,
 		},
+		.configuration_arguments = AC_CONFIGURE_ARGS,
 		.ref = 1,
 	);
 	lib = &this->public;

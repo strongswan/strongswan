@@ -155,6 +155,14 @@ struct library_t {
 	char *conf;
 
 	/**
+	 * Get the configuration arguments at build time.
+	 *
+	 * @return	string
+	 */
+
+	char *(*get_configure_arguments)(library_t *this);
+
+	/**
 	 * Printf hook registering facility
 	 */
 	printf_hook_t *printf_hook;
