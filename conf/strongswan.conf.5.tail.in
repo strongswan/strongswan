@@ -408,6 +408,8 @@ using the three keys listed below:
 .BR charon.retransmit_base " [1.8]"
 .BR charon.retransmit_timeout " [4.0]"
 .BR charon.retransmit_tries " [5]"
+.BR charon.retransmit_jitter " [0]"
+.BR charon.retransmit_limit " [0]"
 .fi
 .RE
 .PP
@@ -419,7 +421,15 @@ The following algorithm is used to calculate the timeout:
 .PP
 Where
 .I n
-is the current retransmission count.
+is the current retransmission count. The calculated timeout can't exceed the
+configured retransmit_limit (if any), which is useful if the number of retries
+is high.
+.PP
+If a jitter in percent is configured, the timeout is modified as follows:
+.PP
+.EX
+	relative timeout -= random(0, retransmit_jitter * relative timeout)
+.EE
 .PP
 Using the default values, packets are retransmitted in:
 

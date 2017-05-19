@@ -48,6 +48,11 @@ typedef enum task_queue_t task_queue_t;
 #define RETRANSMIT_TRIES 5
 
 /**
+ * Maximum jitter in percent.
+ */
+#define RETRANSMIT_JITTER_MAX 20
+
+/**
  * Interval for mobike routability checks in ms.
  */
 #define ROUTEABILITY_CHECK_INTERVAL 2500
