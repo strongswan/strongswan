@@ -923,8 +923,8 @@ bool x509_parse_crlDistributionPoints(chunk_t blob, int level0,
 
 end:
 	parser->destroy(parser);
-	uris->destroy(uris);
-	issuers->destroy(issuers);
+	uris->destroy_offset(uris, offsetof(identification_t, destroy));
+	issuers->destroy_offset(issuers, offsetof(identification_t, destroy));
 
 	return success;
 }
