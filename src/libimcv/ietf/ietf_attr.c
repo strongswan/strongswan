@@ -25,6 +25,9 @@
 #include "ietf/ietf_attr_product_info.h"
 #include "ietf/ietf_attr_remediation_instr.h"
 #include "ietf/ietf_attr_string_version.h"
+#include "ietf/swima/ietf_swima_attr_req.h"
+#include "ietf/swima/ietf_swima_attr_sw_inv.h"
+#include "ietf/swima/ietf_swima_attr_sw_ev.h"
 #include "generic/generic_attr_bool.h"
 
 
@@ -94,14 +97,19 @@ pa_tnc_attr_t* ietf_attr_create_from_data(uint32_t type, size_t length,
 		case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
 			return generic_attr_bool_create_from_data(length, value,
 									pen_type_create(PEN_IETF, type));
+		case IETF_ATTR_SW_REQUEST:
+			return ietf_swima_attr_req_create_from_data(length, value);
+		case IETF_ATTR_SW_ID_INVENTORY:
+			return ietf_swima_attr_sw_inv_create_from_data(length, value, TRUE);
+		case IETF_ATTR_SW_INVENTORY:
+			return ietf_swima_attr_sw_inv_create_from_data(length, value, FALSE);
+		case IETF_ATTR_SW_ID_EVENTS:
+			return ietf_swima_attr_sw_ev_create_from_data(length, value, TRUE);
+		case IETF_ATTR_SW_EVENTS:
+			return ietf_swima_attr_sw_ev_create_from_data(length, value, FALSE);
 		case IETF_ATTR_TESTING:
 		case IETF_ATTR_RESERVED:
 		/* unsupported IETF/SWIMA attributes */
-		case IETF_ATTR_SW_REQUEST:
-		case IETF_ATTR_SW_ID_INVENTORY:
-		case IETF_ATTR_SW_ID_EVENTS:
-		case IETF_ATTR_SW_INVENTORY:
-		case IETF_ATTR_SW_EVENTS:
 		case IETF_ATTR_SUBSCRIPTION_STATUS_REQ:
 		case IETF_ATTR_SUBSCRIPTION_STATUS_RESP:
 		case IETF_ATTR_SRC_METADATA_REQ:

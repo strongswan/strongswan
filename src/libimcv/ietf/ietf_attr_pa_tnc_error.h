@@ -37,6 +37,7 @@ enum  pa_tnc_error_code_t {
 	PA_ERROR_INVALID_PARAMETER =             1,
 	PA_ERROR_VERSION_NOT_SUPPORTED =         2,
 	PA_ERROR_ATTR_TYPE_NOT_SUPPORTED =       3,
+	PA_ERROR_PA_TNC_MSG_ROOF =               3,
 
 	/* draft-ietf-sacm-nea-swid-patnc (SWIMA) */
 	PA_ERROR_SW =                           32,

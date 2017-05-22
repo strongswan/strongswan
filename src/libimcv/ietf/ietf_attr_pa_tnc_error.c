@@ -256,7 +256,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	reader->read_uint24(reader, &this->error_code.vendor_id);
 	reader->read_uint32(reader, &this->error_code.type);
 
-	if (this->error_code.vendor_id == PEN_IETF)
+	if (this->error_code.vendor_id == PEN_IETF &&
+		this->error_code.type <= PA_ERROR_PA_TNC_MSG_ROOF)
 	{
 		if (!reader->read_data(reader, PA_ERROR_MSG_INFO_SIZE, &this->msg_info))
 		{
@@ -406,7 +407,8 @@ pa_tnc_attr_t *ietf_attr_pa_tnc_error_create(pen_type_t error_code,
 {
 	private_ietf_attr_pa_tnc_error_t *this;
 
-	if (error_code.vendor_id == PEN_IETF)
+	if (error_code.vendor_id == PEN_IETF &&
+		error_code.type <= PA_ERROR_PA_TNC_MSG_ROOF)
 	{
 		msg_info.len = PA_ERROR_MSG_INFO_SIZE;
 	}

@@ -304,14 +304,47 @@ CREATE INDEX "swid_tags_sessions_session_id" ON "swid_tags_sessions" (
 
 DROP TABLE IF EXISTS "swid_tagstats";
 CREATE TABLE "swid_tagstats" (
-  "id" integer NOT NULL PRIMARY KEY,
-  "tag_id" integer NOT NULL REFERENCES "swid_tags" ("id"),
-  "device_id" integer NOT NULL REFERENCES "devices" ("id"),
-  "first_seen_id" integer NOT NULL REFERENCES "sessions" ("id"),
-  "last_seen_id" integer NOT NULL REFERENCES "sessions" ("id"),
+  "id" INTEGER NOT NULL PRIMARY KEY,
+  "tag_id" INTEGER NOT NULL REFERENCES "swid_tags" ("id"),
+  "device_id" INTEGER NOT NULL REFERENCES "devices" ("id"),
+  "first_seen_id" INTEGER NOT NULL REFERENCES "sessions" ("id"),
+  "last_seen_id" INTEGER NOT NULL REFERENCES "sessions" ("id"),
+  "first_installed_id" INTEGER REFERENCES "swid_events" ("id"),
+  "last_deleted_id" INTEGER REFERENCES "swid_events" ("id"),
   UNIQUE ("tag_id", "device_id")
 );
 CREATE INDEX "swid_tagstats_tag_id" ON "swid_tagstats" ("tag_id");
 CREATE INDEX "swid_tagstats_device_id" ON "swid_tagstats" ("device_id");
 CREATE INDEX "swid_tagstats_first_seen_id" ON "swid_tagstats" ("first_seen_id");
 CREATE INDEX "swid_tagstats_last_seen_id" ON "swid_tagstats" ("last_seen_id");
+
+DROP TABLE IF EXISTS "swid_events";
+CREATE TABLE "swid_events" (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "device" INTEGER REFERENCES "devices" ("id"),
+  "epoch" INTEGER NOT NULL,
+  "eid" INTEGER NOT NULL,
+  "timestamp" CHAR(20) NOT NULL
+);
+DROP INDEX IF EXISTS "swid_events_device";
+CREATE INDEX "swid_events_device" ON "swid_events" (
+  "device"
+);
+
+DROP TABLE IF EXISTS "swid_tags_events";
+CREATE TABLE "swid_tags_events" (
+  "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "tag_id" INTEGER NOT NULL REFERENCES "swid_tags" ("id"),
+  "event_id" INTEGER NOT NULL REFERENCES "swid_events" ("id"),
+  "action" INTEGER NOT NULL,
+  "record_id" INTEGER DEFAULT 0,
+  "source_id" INTEGER DEFAULT 0
+);
+DROP INDEX IF EXISTS "swid_tags_events_event_id";
+DROP INDEX IF EXISTS "swid_tags_events_tag_id";
+CREATE INDEX "swid_tags_events_event_id" ON "swid_tags_events" (
+  "event_id"
+);
+CREATE INDEX "swid_tags_events_tag_id" ON "swid_tags_events" (
+  "tag_id"
+);

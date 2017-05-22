@@ -299,8 +299,9 @@ METHOD(pa_tnc_msg_t, process_ietf_std_errors, bool,
 			error_code = error_attr->get_error_code(error_attr);
 			msg_info = error_attr->get_msg_info(error_attr);
 
-			/* skip errors from non-IETF namespaces */
-			if (error_code.vendor_id != PEN_IETF)
+			/* skip errors from non-IETF namespaces and non PA-TNC msg errors */
+			if (error_code.vendor_id != PEN_IETF ||
+				error_code.type > PA_ERROR_PA_TNC_MSG_ROOF)
 			{
 				continue;
 			}

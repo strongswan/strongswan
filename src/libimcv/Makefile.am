@@ -2,7 +2,8 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libtpmtss \
-	-DIPSEC_SCRIPT=\"${ipsec_script}\"
+	-DIPSEC_SCRIPT=\"${ipsec_script}\" \
+	-DSWID_DIRECTORY=\"${prefix}/share\"
 
 ipseclib_LTLIBRARIES = libimcv.la
 
@@ -49,6 +50,9 @@ libimcv_la_SOURCES = \
 	ietf/ietf_attr_product_info.h ietf/ietf_attr_product_info.c \
 	ietf/ietf_attr_remediation_instr.h ietf/ietf_attr_remediation_instr.c \
 	ietf/ietf_attr_string_version.h ietf/ietf_attr_string_version.c \
+	ietf/swima/ietf_swima_attr_req.h ietf/swima/ietf_swima_attr_req.c \
+	ietf/swima/ietf_swima_attr_sw_inv.h ietf/swima/ietf_swima_attr_sw_inv.c \
+	ietf/swima/ietf_swima_attr_sw_ev.h ietf/swima/ietf_swima_attr_sw_ev.c \
 	ita/ita_attr.h ita/ita_attr.c \
 	ita/ita_attr_command.h ita/ita_attr_command.c \
 	ita/ita_attr_dummy.h ita/ita_attr_dummy.c \
@@ -91,6 +95,13 @@ libimcv_la_SOURCES = \
 	swid/swid_inventory.h swid/swid_inventory.c \
 	swid/swid_tag.h swid/swid_tag.c \
 	swid/swid_tag_id.h swid/swid_tag_id.c \
+	swima/swima_data_model.h swima/swima_data_model.c \
+	swima/swima_record.h swima/swima_record.c \
+	swima/swima_event.h swima/swima_event.c \
+	swima/swima_events.h swima/swima_events.c \
+	swima/swima_inventory.h swima/swima_inventory.c \
+	swima/swima_collector.h swima/swima_collector.c \
+	swima/swima_error.h swima/swima_error.c \
 	tcg/tcg_attr.h tcg/tcg_attr.c \
 	tcg/pts/tcg_pts_attr_proto_caps.h tcg/pts/tcg_pts_attr_proto_caps.c \
 	tcg/pts/tcg_pts_attr_dh_nonce_params_req.h tcg/pts/tcg_pts_attr_dh_nonce_params_req.c \
@@ -192,6 +203,8 @@ imcv_tests_SOURCES = \
 	seg/seg_contract_manager.c \
 	suites/test_imcv_seg.c \
 	ietf/ietf_attr_pa_tnc_error.c \
+	ietf/swima/ietf_swima_attr_req.c \
+	ietf/swima/ietf_swima_attr_sw_inv.c \
 	tcg/seg/tcg_seg_attr_seg_env.c \
 	imcv.c imcv_tests.h imcv_tests.c
 
