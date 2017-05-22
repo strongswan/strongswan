@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,13 +20,23 @@
 #include <bio/bio_reader.h>
 #include <utils/debug.h>
 
-ENUM(pa_tnc_error_code_names, PA_ERROR_RESERVED,
-							  PA_ERROR_ATTR_TYPE_NOT_SUPPORTED,
+ENUM_BEGIN(pa_tnc_error_code_names,	PA_ERROR_RESERVED,
+									PA_ERROR_ATTR_TYPE_NOT_SUPPORTED,
 	"Reserved",
 	"Invalid Parameter",
 	"Version Not Supported",
 	"Attribute Type Not Supported"
 );
+ENUM_NEXT(pa_tnc_error_code_names,	PA_ERROR_SW,
+									PA_ERROR_SW_SUBSCRIPTION_ID_REUSE,
+									PA_ERROR_ATTR_TYPE_NOT_SUPPORTED,
+	"SW Error",
+	"SW Subscription Denied",
+	"SW Response Too Large",
+	"SW Subscription Fulfillment Error",
+	"SW Subscription ID Reuse"
+);
+ENUM_END(pa_tnc_error_code_names,	PA_ERROR_SW_SUBSCRIPTION_ID_REUSE);
 
 typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t;
 

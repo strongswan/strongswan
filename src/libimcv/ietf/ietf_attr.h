@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -28,9 +28,11 @@
 typedef enum ietf_attr_t ietf_attr_t;
 
 /**
- * IETF standard PA-TNC attribute types defined by RFC 5792
+ * IETF standard PA-TNC attribute types
  */
 enum ietf_attr_t {
+
+	/* RFC 5792 */
 	IETF_ATTR_TESTING =                            0,
 	IETF_ATTR_ATTRIBUTE_REQUEST =                  1,
 	IETF_ATTR_PRODUCT_INFORMATION =                2,
@@ -44,6 +46,18 @@ enum ietf_attr_t {
 	IETF_ATTR_REMEDIATION_INSTRUCTIONS =          10,
 	IETF_ATTR_FORWARDING_ENABLED =                11,
 	IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED =       12,
+
+	/* draft-ietf-sacm-nea-swid-patnc */
+	IETF_ATTR_SW_REQUEST =                        17,
+	IETF_ATTR_SW_ID_INVENTORY =                   18,
+	IETF_ATTR_SW_ID_EVENTS =                      19,
+	IETF_ATTR_SW_INVENTORY =                      20,
+	IETF_ATTR_SW_EVENTS =                         21,
+	IETF_ATTR_SUBSCRIPTION_STATUS_REQ =           22,
+	IETF_ATTR_SUBSCRIPTION_STATUS_RESP =          23,
+	IETF_ATTR_SRC_METADATA_REQ =                  24,
+	IETF_ATTR_SRC_METADATA_RESP =                 25,
+
 	IETF_ATTR_RESERVED =                  0xffffffff,
 };
 

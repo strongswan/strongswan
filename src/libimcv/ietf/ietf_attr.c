@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Andreas Steffen
+ * Copyright (C) 2011-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -28,7 +28,8 @@
 #include "generic/generic_attr_bool.h"
 
 
-ENUM(ietf_attr_names, IETF_ATTR_TESTING, IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED,
+ENUM_BEGIN(ietf_attr_names, IETF_ATTR_TESTING,
+							IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED,
 	"Testing",
 	"Attribute Request",
 	"Product Information",
@@ -43,6 +44,20 @@ ENUM(ietf_attr_names, IETF_ATTR_TESTING, IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED,
 	"Forwarding Enabled",
 	"Factory Default Password Enabled",
 );
+ENUM_NEXT(ietf_attr_names,  IETF_ATTR_SW_REQUEST,
+							IETF_ATTR_SRC_METADATA_RESP,
+							IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED,
+	"SW Request",
+	"SW Identifier Inventory",
+	"SW Identifier Events",
+	"SW Inventory",
+	"SW Events",
+	"SW Subscription Status Request",
+	"SW Subscription Status Response",
+	"SW Source Metadata Request",
+	"SW Source Metadata Response",
+);
+ENUM_END(ietf_attr_names,	IETF_ATTR_SRC_METADATA_RESP);
 
 /**
  * See header
@@ -81,6 +96,16 @@ pa_tnc_attr_t* ietf_attr_create_from_data(uint32_t type, size_t length,
 									pen_type_create(PEN_IETF, type));
 		case IETF_ATTR_TESTING:
 		case IETF_ATTR_RESERVED:
+		/* unsupported IETF/SWIMA attributes */
+		case IETF_ATTR_SW_REQUEST:
+		case IETF_ATTR_SW_ID_INVENTORY:
+		case IETF_ATTR_SW_ID_EVENTS:
+		case IETF_ATTR_SW_INVENTORY:
+		case IETF_ATTR_SW_EVENTS:
+		case IETF_ATTR_SUBSCRIPTION_STATUS_REQ:
+		case IETF_ATTR_SUBSCRIPTION_STATUS_RESP:
+		case IETF_ATTR_SRC_METADATA_REQ:
+		case IETF_ATTR_SRC_METADATA_RESP:
 		default:
 			return NULL;
 	}
