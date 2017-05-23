@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,4 +14,4 @@
  */
 
 TEST_SUITE(imcv_seg_suite_create)
-
+TEST_SUITE(imcv_swima_suite_create)
