@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2017 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -82,9 +82,15 @@
 })
 
 /**
+ * Check if the CHILD_SA with the given SPI is in the expected state, optionally
+ * check the state of the outbound SA.
+ */
+#define assert_child_sa_state(...) VA_ARGS_DISPATCH(assert_child_sa_state, __VA_ARGS__)(__VA_ARGS__)
+
+/**
  * Check if the CHILD_SA with the given SPI is in the expected state.
  */
-#define assert_child_sa_state(ike_sa, spi, state) \
+#define assert_child_sa_state3(ike_sa, spi, state) \
 ({ \
 	typeof(ike_sa) _sa = ike_sa; \
 	typeof(spi) _spi = spi; \
@@ -96,6 +102,28 @@
 	test_assert_msg(_state == _child->get_state(_child), "%N != %N", \
 					child_sa_state_names, _state, \
 					child_sa_state_names, _child->get_state(_child)); \
+})
+
+/**
+ * Check if the outbound SA of a CHILD_SA with the given SPI is in the
+ * expected state.
+ */
+#define assert_child_sa_state4(ike_sa, spi, state, outbound) \
+({ \
+	typeof(ike_sa) _sa = ike_sa; \
+	typeof(spi) _spi = spi; \
+	typeof(state) _state = state; \
+	typeof(outbound) _outbound = outbound; \
+	child_sa_t *_child = _sa->get_child_sa(_sa, PROTO_ESP, _spi, TRUE) ?: \
+						 _sa->get_child_sa(_sa, PROTO_ESP, _spi, FALSE); \
+	test_assert_msg(_child, "CHILD_SA with SPI %.8x does not exist", \
+					ntohl(_spi)); \
+	test_assert_msg(_state == _child->get_state(_child), "%N != %N", \
+					child_sa_state_names, _state, \
+					child_sa_state_names, _child->get_state(_child)); \
+	test_assert_msg(_outbound == _child->get_outbound_state(_child), "%N != %N", \
+					child_sa_outbound_state_names, _outbound, \
+					child_sa_outbound_state_names, _child->get_outbound_state(_child)); \
 })
 
 /**

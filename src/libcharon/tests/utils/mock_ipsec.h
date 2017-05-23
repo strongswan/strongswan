@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2017 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,7 +15,7 @@
 
 /**
  * kernel_ipsec_t implementation used for exchange unit tests.  Currently
- * returns sequential SPIs, all other methods are noops.
+ * returns sequential SPIs, and keeps track of installed SAs.
  *
  * @defgroup mock_ipsec mock_ipsec
  * @{ @ingroup test_utils_c
@@ -32,5 +32,12 @@
  * @return		created object
  */
 kernel_ipsec_t *mock_ipsec_create();
+
+/**
+ * Enumerate the installed SAs
+ *
+ * @return		enumerator over (ike_sa_t*, uint32_t)
+ */
+enumerator_t *mock_ipsec_create_sa_enumerator();
 
 #endif /** MOCK_IPSEC_H_ @}*/

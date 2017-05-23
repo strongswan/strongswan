@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -630,6 +630,32 @@ static status_t select_and_install(private_child_create_t *this,
 			default:
 				break;
 		}
+		/* use a copy of the traffic selectors, as the POST hook should not
+		 * change payloads */
+		my_ts = this->tsr->clone_offset(this->tsr,
+										offsetof(traffic_selector_t, clone));
+		other_ts = this->tsi->clone_offset(this->tsi,
+										offsetof(traffic_selector_t, clone));
+		charon->bus->narrow(charon->bus, this->child_sa,
+							NARROW_RESPONDER_POST, my_ts, other_ts);
+
+		if (my_ts->get_count(my_ts) == 0 ||	other_ts->get_count(other_ts) == 0)
+		{
+			my_ts->destroy_offset(my_ts,
+								  offsetof(traffic_selector_t, destroy));
+			other_ts->destroy_offset(other_ts,
+								  offsetof(traffic_selector_t, destroy));
+			return NOT_FOUND;
+		}
+	}
+
+	this->child_sa->set_policies(this->child_sa, my_ts, other_ts);
+	if (!this->initiator)
+	{
+		my_ts->destroy_offset(my_ts,
+							  offsetof(traffic_selector_t, destroy));
+		other_ts->destroy_offset(other_ts,
+							  offsetof(traffic_selector_t, destroy));
 	}
 
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
@@ -651,19 +677,30 @@ static status_t select_and_install(private_child_create_t *this,
 		{
 			status_i = this->child_sa->install(this->child_sa, encr_r, integ_r,
 							this->my_spi, this->my_cpi, this->initiator,
-							TRUE, this->tfcv3, my_ts, other_ts);
+							TRUE, this->tfcv3);
 			status_o = this->child_sa->install(this->child_sa, encr_i, integ_i,
 							this->other_spi, this->other_cpi, this->initiator,
-							FALSE, this->tfcv3, my_ts, other_ts);
+							FALSE, this->tfcv3);
 		}
-		else
+		else if (!this->rekey)
 		{
 			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
 							this->my_spi, this->my_cpi, this->initiator,
-							TRUE, this->tfcv3, my_ts, other_ts);
+							TRUE, this->tfcv3);
 			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
 							this->other_spi, this->other_cpi, this->initiator,
-							FALSE, this->tfcv3, my_ts, other_ts);
+							FALSE, this->tfcv3);
+		}
+		else
+		{	/* as responder during a rekeying we only install the inbound
+			 * SA now, the outbound SA and policies are installed when we
+			 * receive the delete for the old SA */
+			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
+							this->my_spi, this->my_cpi, this->initiator,
+							TRUE, this->tfcv3);
+			this->child_sa->register_outbound(this->child_sa, encr_r, integ_r,
+							this->other_spi, this->other_cpi, this->tfcv3);
+			status_o = SUCCESS;
 		}
 	}
 
@@ -679,36 +716,8 @@ static status_t select_and_install(private_child_create_t *this,
 	}
 	else
 	{
-		if (this->initiator)
-		{
-			status = this->child_sa->add_policies(this->child_sa,
-												  my_ts, other_ts);
-		}
-		else
-		{
-			/* use a copy of the traffic selectors, as the POST hook should not
-			 * change payloads */
-			my_ts = this->tsr->clone_offset(this->tsr,
-										offsetof(traffic_selector_t, clone));
-			other_ts = this->tsi->clone_offset(this->tsi,
-										offsetof(traffic_selector_t, clone));
-			charon->bus->narrow(charon->bus, this->child_sa,
-								NARROW_RESPONDER_POST, my_ts, other_ts);
-			if (my_ts->get_count(my_ts) == 0 ||
-				other_ts->get_count(other_ts) == 0)
-			{
-				status = FAILED;
-			}
-			else
-			{
-				status = this->child_sa->add_policies(this->child_sa,
-													  my_ts, other_ts);
-			}
-			my_ts->destroy_offset(my_ts,
-								  offsetof(traffic_selector_t, destroy));
-			other_ts->destroy_offset(other_ts,
-								  offsetof(traffic_selector_t, destroy));
-		}
+		status = this->child_sa->install_policies(this->child_sa);
+
 		if (status != SUCCESS)
 		{
 			DBG1(DBG_IKE, "unable to install IPsec policies (SPD) in kernel");
@@ -736,7 +745,6 @@ static status_t select_and_install(private_child_create_t *this,
 	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
 							this->dh, nonce_i, nonce_r);
 
-	/* add to IKE_SA, and remove from task */
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 	this->established = TRUE;
@@ -748,16 +756,17 @@ static status_t select_and_install(private_child_create_t *this,
 	other_ts = linked_list_create_from_enumerator(
 				this->child_sa->create_ts_enumerator(this->child_sa, FALSE));
 
-	DBG0(DBG_IKE, "CHILD_SA %s{%d} established "
+	DBG0(DBG_IKE, "%sCHILD_SA %s{%d} established "
 		 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
+		 this->rekey && !this->initiator ? "inbound " : "",
 		 this->child_sa->get_name(this->child_sa),
 		 this->child_sa->get_unique_id(this->child_sa),
 		 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
-		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)), my_ts, other_ts);
+		 ntohl(this->child_sa->get_spi(this->child_sa, FALSE)),
+		 my_ts, other_ts);
 
 	my_ts->destroy(my_ts);
 	other_ts->destroy(other_ts);
-
 	return SUCCESS;
 }
 
@@ -1690,7 +1699,6 @@ METHOD(task_t, destroy, void,
 	{
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
 	}
-
 	DESTROY_IF(this->config);
 	DESTROY_IF(this->nonceg);
 	free(this);

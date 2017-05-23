@@ -818,14 +818,14 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	}
 	enumerator->destroy(enumerator);
 
+	child_sa->set_policies(child_sa, local_ts, remote_ts);
+
 	if (initiator)
 	{
 		if (child_sa->install(child_sa, encr_r, integ_r, inbound_spi,
-							  inbound_cpi, initiator, TRUE, TRUE,
-							  local_ts, remote_ts) != SUCCESS ||
+							  inbound_cpi, initiator, TRUE, TRUE) != SUCCESS ||
 			child_sa->install(child_sa, encr_i, integ_i, outbound_spi,
-							  outbound_cpi, initiator, FALSE, TRUE,
-							  local_ts, remote_ts) != SUCCESS)
+							  outbound_cpi, initiator, FALSE, TRUE) != SUCCESS)
 		{
 			failed = TRUE;
 		}
@@ -833,11 +833,9 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	else
 	{
 		if (child_sa->install(child_sa, encr_i, integ_i, inbound_spi,
-							  inbound_cpi, initiator, TRUE, TRUE,
-							  local_ts, remote_ts) != SUCCESS ||
+							  inbound_cpi, initiator, TRUE, TRUE) != SUCCESS ||
 			child_sa->install(child_sa, encr_r, integ_r, outbound_spi,
-							  outbound_cpi, initiator, FALSE, TRUE,
-							  local_ts, remote_ts) != SUCCESS)
+							  outbound_cpi, initiator, FALSE, TRUE) != SUCCESS)
 		{
 			failed = TRUE;
 		}
@@ -868,7 +866,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		child_sa->get_unique_id(child_sa), local_ts, remote_ts,
 		seg_i, this->segments->is_active(this->segments, seg_i) ? "*" : "",
 		seg_o, this->segments->is_active(this->segments, seg_o) ? "*" : "");
-	child_sa->add_policies(child_sa, local_ts, remote_ts);
+	child_sa->install_policies(child_sa);
 	local_ts->destroy_offset(local_ts, offsetof(traffic_selector_t, destroy));
 	remote_ts->destroy_offset(remote_ts, offsetof(traffic_selector_t, destroy));
 

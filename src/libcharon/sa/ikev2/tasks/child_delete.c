@@ -18,8 +18,13 @@
 
 #include <daemon.h>
 #include <encoding/payloads/delete_payload.h>
+#include <processing/jobs/delete_child_sa_job.h>
 #include <sa/ikev2/tasks/child_create.h>
 #include <sa/ikev2/tasks/child_rekey.h>
+
+#ifndef DELETE_REKEYED_DELAY
+#define DELETE_REKEYED_DELAY 5
+#endif
 
 typedef struct private_child_delete_t private_child_delete_t;
 
@@ -39,40 +44,50 @@ struct private_child_delete_t {
 	ike_sa_t *ike_sa;
 
 	/**
-	 * Are we the initiator?
+	 * Whether we are the initiator of the exchange
 	 */
 	bool initiator;
 
 	/**
-	 * Protocol of CHILD_SA to delete
+	 * Protocol of CHILD_SA to delete (as initiator)
 	 */
 	protocol_id_t protocol;
 
 	/**
-	 * Inbound SPI of CHILD_SA to delete
+	 * Inbound SPI of CHILD_SA to delete (as initiator)
 	 */
 	uint32_t spi;
 
 	/**
-	 * whether to enforce delete action policy
-	 */
-	bool check_delete_action;
-
-	/**
-	 * is this delete exchange following a rekey?
-	 */
-	bool rekeyed;
-
-	/**
-	 * CHILD_SA already expired?
+	 * CHILD_SA already expired (as initiator)
 	 */
 	bool expired;
 
 	/**
-	 * CHILD_SAs which get deleted
+	 * CHILD_SAs which get deleted, entry_t*
 	 */
 	linked_list_t *child_sas;
 };
+
+/**
+ * Information about a deleted CHILD_SA
+ */
+typedef struct {
+	/** Deleted CHILD_SA */
+	child_sa_t *child_sa;
+	/** Whether the CHILD_SA was rekeyed */
+	bool rekeyed;
+	/** Whether to enforce any delete action policy */
+	bool check_delete_action;
+} entry_t;
+
+/**
+ * Check if the given entry is for the same CHILD_SA
+ */
+static bool match_child(entry_t *entry, child_sa_t *child_sa)
+{
+	return entry->child_sa == child_sa;
+}
 
 /**
  * build the delete payloads from the listed child_sas
@@ -81,25 +96,27 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 {
 	delete_payload_t *ah = NULL, *esp = NULL;
 	enumerator_t *enumerator;
-	child_sa_t *child_sa;
+	entry_t *entry;
+	protocol_id_t protocol;
+	uint32_t spi;
 
 	enumerator = this->child_sas->create_enumerator(this->child_sas);
-	while (enumerator->enumerate(enumerator, (void**)&child_sa))
+	while (enumerator->enumerate(enumerator, (void**)&entry))
 	{
-		protocol_id_t protocol = child_sa->get_protocol(child_sa);
-		uint32_t spi = child_sa->get_spi(child_sa, TRUE);
+		protocol = entry->child_sa->get_protocol(entry->child_sa);
+		spi = entry->child_sa->get_spi(entry->child_sa, TRUE);
 
 		switch (protocol)
 		{
 			case PROTO_ESP:
-				if (esp == NULL)
+				if (!esp)
 				{
 					esp = delete_payload_create(PLV2_DELETE, PROTO_ESP);
 					message->add_payload(message, (payload_t*)esp);
 				}
 				esp->add_spi(esp, spi);
 				DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x",
-							   protocol_id_names, protocol, ntohl(spi));
+					 protocol_id_names, protocol, ntohl(spi));
 				break;
 			case PROTO_AH:
 				if (ah == NULL)
@@ -109,12 +126,12 @@ static void build_payloads(private_child_delete_t *this, message_t *message)
 				}
 				ah->add_spi(ah, spi);
 				DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x",
-							   protocol_id_names, protocol, ntohl(spi));
+					 protocol_id_names, protocol, ntohl(spi));
 				break;
 			default:
 				break;
 		}
-		child_sa->set_state(child_sa, CHILD_DELETING);
+		entry->child_sa->set_state(entry->child_sa, CHILD_DELETING);
 	}
 	enumerator->destroy(enumerator);
 }
@@ -147,6 +164,57 @@ static bool is_redundant(private_child_delete_t *this, child_sa_t *child)
 }
 
 /**
+ * Install the outbound CHILD_SA with the given SPI
+ */
+static void install_outbound(private_child_delete_t *this,
+							 protocol_id_t protocol, uint32_t spi)
+{
+	child_sa_t *child_sa;
+	linked_list_t *my_ts, *other_ts;
+	status_t status;
+
+	child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
+										  spi, FALSE);
+	if (!child_sa)
+	{
+		DBG1(DBG_IKE, "CHILD_SA not found after rekeying");
+		return;
+	}
+	if (this->initiator && is_redundant(this, child_sa))
+	{	/* if we won the rekey collision we don't want to install the
+		 * redundant SA created by the peer */
+		return;
+	}
+
+	status = child_sa->install_outbound(child_sa);
+	if (status != SUCCESS)
+	{
+		DBG1(DBG_IKE, "unable to install outbound IPsec SA (SAD) in kernel");
+		charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_SA_FAILED,
+						   child_sa);
+		/* FIXME: delete the new child_sa? */
+		return;
+	}
+	child_sa->set_state(child_sa, CHILD_INSTALLED);
+
+	my_ts = linked_list_create_from_enumerator(
+							child_sa->create_ts_enumerator(child_sa, TRUE));
+	other_ts = linked_list_create_from_enumerator(
+							child_sa->create_ts_enumerator(child_sa, FALSE));
+
+	DBG0(DBG_IKE, "outbound CHILD_SA %s{%d} established "
+		 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
+		 child_sa->get_name(child_sa),
+		 child_sa->get_unique_id(child_sa),
+		 ntohl(child_sa->get_spi(child_sa, TRUE)),
+		 ntohl(child_sa->get_spi(child_sa, FALSE)),
+		 my_ts, other_ts);
+
+	my_ts->destroy(my_ts);
+	other_ts->destroy(other_ts);
+}
+
+/**
  * read in payloads and find the children to delete
  */
 static void process_payloads(private_child_delete_t *this, message_t *message)
@@ -157,6 +225,7 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 	uint32_t spi;
 	protocol_id_t protocol;
 	child_sa_t *child_sa;
+	entry_t *entry;
 
 	payloads = message->create_payload_enumerator(message);
 	while (payloads->enumerate(payloads, &payload))
@@ -174,27 +243,37 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 			{
 				child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
 													  spi, FALSE);
-				if (child_sa == NULL)
+				if (!child_sa)
 				{
-					DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI %.8x, "
-						 "but no such SA", protocol_id_names, protocol, ntohl(spi));
+					DBG1(DBG_IKE, "received DELETE for unknown %N CHILD_SA with"
+						 " SPI %.8x", protocol_id_names, protocol, ntohl(spi));
 					continue;
 				}
 				DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI %.8x",
 					 protocol_id_names, protocol, ntohl(spi));
 
+				if (this->child_sas->find_first(this->child_sas,
+								(void*)match_child, NULL, child_sa) == SUCCESS)
+				{
+					continue;
+				}
+				INIT(entry,
+					.child_sa = child_sa
+				);
 				switch (child_sa->get_state(child_sa))
 				{
 					case CHILD_REKEYED:
-						this->rekeyed = TRUE;
+						entry->rekeyed = TRUE;
 						break;
 					case CHILD_DELETING:
-						/* we don't send back a delete if we initiated ourself */
+						/* we don't send back a delete if we already initiated
+						 * a delete ourself */
 						if (!this->initiator)
 						{
+							free(entry);
 							continue;
 						}
-						/* fall through */
+						break;
 					case CHILD_REKEYING:
 						/* we reply as usual, rekeying will fail */
 					case CHILD_INSTALLED:
@@ -202,22 +281,18 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 						{
 							if (is_redundant(this, child_sa))
 							{
-								this->rekeyed = TRUE;
+								entry->rekeyed = TRUE;
 							}
 							else
 							{
-								this->check_delete_action = TRUE;
+								entry->check_delete_action = TRUE;
 							}
 						}
 						break;
 					default:
 						break;
 				}
-				if (this->child_sas->find_first(this->child_sas, NULL,
-												(void**)&child_sa) != SUCCESS)
-				{
-					this->child_sas->insert_last(this->child_sas, child_sa);
-				}
+				this->child_sas->insert_last(this->child_sas, entry);
 			}
 			spis->destroy(spis);
 		}
@@ -231,29 +306,64 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 static status_t destroy_and_reestablish(private_child_delete_t *this)
 {
 	enumerator_t *enumerator;
+	entry_t *entry;
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
 	protocol_id_t protocol;
-	uint32_t spi, reqid;
+	uint32_t spi, reqid, rekey_spi;
 	action_t action;
 	status_t status = SUCCESS;
+	time_t now, expire;
+	u_int delay;
+
+	now = time_monotonic(NULL);
+	delay = lib->settings->get_int(lib->settings, "%s.delete_rekeyed_delay",
+								   DELETE_REKEYED_DELAY, lib->ns);
 
 	enumerator = this->child_sas->create_enumerator(this->child_sas);
-	while (enumerator->enumerate(enumerator, (void**)&child_sa))
+	while (enumerator->enumerate(enumerator, (void**)&entry))
 	{
+		child_sa = entry->child_sa;
 		/* signal child down event if we weren't rekeying */
-		if (!this->rekeyed)
+		protocol = child_sa->get_protocol(child_sa);
+		if (!entry->rekeyed)
 		{
 			charon->bus->child_updown(charon->bus, child_sa, FALSE);
 		}
+		else
+		{
+			rekey_spi = child_sa->get_rekey_spi(child_sa);
+			if (rekey_spi)
+			{
+				install_outbound(this, protocol, rekey_spi);
+			}
+			/* for rekeyed CHILD_SAs we uninstall the outbound SA but don't
+			 * immediately destroy it, by default, so we can process delayed
+			 * packets */
+			child_sa->remove_outbound(child_sa);
+			expire = child_sa->get_lifetime(child_sa, TRUE);
+			if (delay && (!expire || ((now + delay) < expire)))
+			{
+				lib->scheduler->schedule_job(lib->scheduler,
+					(job_t*)delete_child_sa_job_create_id(
+									child_sa->get_unique_id(child_sa)), delay);
+				continue;
+			}
+			else if (expire)
+			{	/* let it expire naturally */
+				continue;
+			}
+			/* no delay and no lifetime, destroy it immediately */
+		}
 		spi = child_sa->get_spi(child_sa, TRUE);
 		reqid = child_sa->get_reqid(child_sa);
-		protocol = child_sa->get_protocol(child_sa);
 		child_cfg = child_sa->get_config(child_sa);
 		child_cfg->get_ref(child_cfg);
 		action = child_sa->get_close_action(child_sa);
+
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
-		if (this->check_delete_action)
+
+		if (entry->check_delete_action)
 		{	/* enforce child_cfg policy if deleted passively */
 			switch (action)
 			{
@@ -288,12 +398,14 @@ static void log_children(private_child_delete_t *this)
 {
 	linked_list_t *my_ts, *other_ts;
 	enumerator_t *enumerator;
+	entry_t *entry;
 	child_sa_t *child_sa;
 	uint64_t bytes_in, bytes_out;
 
 	enumerator = this->child_sas->create_enumerator(this->child_sas);
-	while (enumerator->enumerate(enumerator, (void**)&child_sa))
+	while (enumerator->enumerate(enumerator, (void**)&entry))
 	{
+		child_sa = entry->child_sa;
 		my_ts = linked_list_create_from_enumerator(
 							child_sa->create_ts_enumerator(child_sa, TRUE));
 		other_ts = linked_list_create_from_enumerator(
@@ -328,6 +440,7 @@ METHOD(task_t, build_i, status_t,
 	private_child_delete_t *this, message_t *message)
 {
 	child_sa_t *child_sa;
+	entry_t *entry;
 
 	child_sa = this->ike_sa->get_child_sa(this->ike_sa, this->protocol,
 										  this->spi, TRUE);
@@ -342,15 +455,24 @@ METHOD(task_t, build_i, status_t,
 		/* we work only with the inbound SPI */
 		this->spi = child_sa->get_spi(child_sa, TRUE);
 	}
-	this->child_sas->insert_last(this->child_sas, child_sa);
-	if (child_sa->get_state(child_sa) == CHILD_REKEYED)
-	{
-		this->rekeyed = TRUE;
+
+	if (child_sa->get_state(child_sa) == CHILD_DELETING)
+	{	/* DELETEs for this CHILD_SA were already exchanged, but it was not yet
+		 * destroyed to allow delayed packets to get processed */
+		this->ike_sa->destroy_child_sa(this->ike_sa, this->protocol, this->spi);
+		message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
+		return SUCCESS;
 	}
+
+	INIT(entry,
+		.child_sa = child_sa,
+		.rekeyed = child_sa->get_state(child_sa) == CHILD_REKEYED,
+	);
+	this->child_sas->insert_last(this->child_sas, entry);
 	log_children(this);
 	build_payloads(this, message);
 
-	if (!this->rekeyed && this->expired)
+	if (!entry->rekeyed && this->expired)
 	{
 		child_cfg_t *child_cfg;
 
@@ -397,24 +519,28 @@ METHOD(child_delete_t , get_child, child_sa_t*,
 	private_child_delete_t *this)
 {
 	child_sa_t *child_sa = NULL;
-	this->child_sas->get_first(this->child_sas, (void**)&child_sa);
+	entry_t *entry;
+
+	if (this->child_sas->get_first(this->child_sas, (void**)&entry) == SUCCESS)
+	{
+		child_sa = entry->child_sa;
+	}
 	return child_sa;
 }
 
 METHOD(task_t, migrate, void,
 	private_child_delete_t *this, ike_sa_t *ike_sa)
 {
-	this->check_delete_action = FALSE;
 	this->ike_sa = ike_sa;
 
-	this->child_sas->destroy(this->child_sas);
+	this->child_sas->destroy_function(this->child_sas, free);
 	this->child_sas = linked_list_create();
 }
 
 METHOD(task_t, destroy, void,
 	private_child_delete_t *this)
 {
-	this->child_sas->destroy(this->child_sas);
+	this->child_sas->destroy_function(this->child_sas, free);
 	free(this);
 }
 

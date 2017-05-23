@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2017 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,7 +14,7 @@
  */
 
 /**
- * Special assertions using listener_t.
+ * Special assertions using listener_t etc.
  *
  * @defgroup exchange_test_asserts exchange_test_asserts
  * @{ @ingroup test_utils_c
@@ -28,6 +28,7 @@
 typedef struct listener_hook_assert_t listener_hook_assert_t;
 typedef struct listener_message_assert_t listener_message_assert_t;
 typedef struct listener_message_rule_t listener_message_rule_t;
+typedef struct ipsec_sas_assert_t ipsec_sas_assert_t;
 
 struct listener_hook_assert_t {
 
@@ -338,6 +339,62 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
 		.num_rules = countof(_rules), \
 	}; \
 	exchange_test_helper->add_listener(exchange_test_helper, &_listener.listener); \
+})
+
+/**
+ * Data used to check IPsec SAs
+ */
+struct ipsec_sas_assert_t {
+
+	/**
+	 * Original source file
+	 */
+	const char *file;
+
+	/**
+	 * Source line
+	 */
+	int line;
+
+	/**
+	 * IKE_SA that installed the IPsec SAs
+	 */
+	ike_sa_t *ike_sa;
+
+	/**
+	 * SPIs to check
+	 */
+	uint32_t *spis;
+
+	/**
+	 * Number of SPIs for IPsec SAs to check
+	 */
+	int count;
+};
+
+/**
+ * Assert that all given IPsec SAs (and only these) are installed for the given
+ * IKE_SA.
+ */
+void exchange_test_asserts_ipsec_sas(ipsec_sas_assert_t *sas);
+
+/**
+ * Assert that the IPsec SAs with the given SPIs (and none other) are currently
+ * installed by the given IKE_SA.
+ *
+ * @param sa		IKE_SA
+ * @param ...		list of SPIs
+ */
+#define assert_ipsec_sas_installed(sa, ...) ({ \
+	uint32_t _spis[] = { __VA_ARGS__ }; \
+	ipsec_sas_assert_t _sas_assert = { \
+		.file = __FILE__, \
+		.line = __LINE__, \
+		.ike_sa = sa, \
+		.spis = _spis, \
+		.count = countof(_spis), \
+	}; \
+	exchange_test_asserts_ipsec_sas(&_sas_assert); \
 })
 
 #endif /** EXCHANGE_TEST_ASSERTS_H_ @}*/

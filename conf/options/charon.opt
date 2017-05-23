@@ -75,6 +75,16 @@ charon.delete_rekeyed = no
 	However, this might cause problems with implementations that continue to
 	use rekeyed SAs until they expire.
 
+charon.delete_rekeyed_delay = 5
+	Delay in seconds until inbound IPsec SAs are deleted after rekeyings (IKEv2
+	only).
+
+	Delay in seconds until inbound IPsec SAs are deleted after rekeyings (IKEv2
+	only). To process delayed packets the inbound part of a CHILD_SA is kept
+	installed up to the configured number of seconds after it got replaced
+	during a rekeying. If set to 0 the CHILD_SA will be kept installed until it
+	expires (if no lifetime is set it will be destroyed immediately).
+
 charon.dh_exponent_ansi_x9_42 = yes
 	Use ANSI X9.42 DH exponent size or optimum size matched to cryptographic
 	strength.

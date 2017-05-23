@@ -132,6 +132,7 @@ static void find_child(private_child_rekey_t *this, message_t *message)
 	notify_payload_t *notify;
 	protocol_id_t protocol;
 	uint32_t spi;
+	child_sa_t *child_sa;
 
 	notify = message->get_notify(message, REKEY_SA);
 	if (notify)
@@ -141,8 +142,15 @@ static void find_child(private_child_rekey_t *this, message_t *message)
 
 		if (protocol == PROTO_ESP || protocol == PROTO_AH)
 		{
-			this->child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
-														spi, FALSE);
+			child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
+												  spi, FALSE);
+			if (child_sa &&
+				child_sa->get_state(child_sa) == CHILD_DELETING &&
+				child_sa->get_outbound_state(child_sa) == CHILD_OUTBOUND_NONE)
+			{	/* ignore rekeyed CHILD_SAs we keep around */
+				return;
+			}
+			this->child_sa = child_sa;
 		}
 	}
 }
@@ -227,6 +235,7 @@ METHOD(task_t, build_r, status_t,
 	child_cfg_t *config;
 	uint32_t reqid;
 	child_sa_state_t state;
+	child_sa_t *child_sa;
 
 	if (!this->child_sa)
 	{
@@ -260,7 +269,10 @@ METHOD(task_t, build_r, status_t,
 		return SUCCESS;
 	}
 
+	child_sa = this->child_create->get_child(this->child_create);
 	this->child_sa->set_state(this->child_sa, CHILD_REKEYED);
+	this->child_sa->set_rekey_spi(this->child_sa,
+								  child_sa->get_spi(child_sa, FALSE));
 
 	/* invoke rekey hook */
 	charon->bus->child_rekey(charon->bus, this->child_sa,
