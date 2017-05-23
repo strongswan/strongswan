@@ -602,7 +602,7 @@ static status_t select_and_install(private_child_create_t *this,
 		switch (this->mode)
 		{
 			case MODE_TRANSPORT:
-				if (!this->config->use_proxy_mode(this->config) &&
+				if (!this->config->has_option(this->config, OPT_PROXY_MODE) &&
 					   (!ts_list_is_host(this->tsi, other) ||
 						!ts_list_is_host(this->tsr, me))
 				   )
@@ -1073,7 +1073,7 @@ METHOD(task_t, build_i, status_t,
 												  this->dh_group);
 	}
 
-	if (this->config->use_ipcomp(this->config))
+	if (this->config->has_option(this->config, OPT_IPCOMP))
 	{
 		/* IPCOMP_DEFLATE is the only transform we support at the moment */
 		add_ipcomp_notify(this, message, IPCOMP_DEFLATE);
@@ -1327,7 +1327,7 @@ METHOD(task_t, build_r, status_t,
 
 	if (this->ipcomp_received != IPCOMP_NONE)
 	{
-		if (this->config->use_ipcomp(this->config))
+		if (this->config->has_option(this->config, OPT_IPCOMP))
 		{
 			add_ipcomp_notify(this, message, this->ipcomp_received);
 		}

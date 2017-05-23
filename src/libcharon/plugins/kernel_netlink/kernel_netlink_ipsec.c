@@ -1639,6 +1639,31 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				 data->replay_window);
 			sa->replay_window = data->replay_window;
 		}
+		if (data->hw_offload)
+		{
+			host_t *local = data->inbound ? id->dst : id->src;
+			char *ifname;
+
+			if (charon->kernel->get_interface(charon->kernel, local, &ifname))
+			{
+				struct xfrm_user_offload *offload;
+
+				offload = netlink_reserve(hdr, sizeof(request),
+										  XFRMA_OFFLOAD_DEV, sizeof(*offload));
+				if (!offload)
+				{
+					free(ifname);
+					goto failed;
+				}
+				offload->ifindex = if_nametoindex(ifname);
+				if (local->get_family(local) == AF_INET6)
+				{
+					offload->flags |= XFRM_OFFLOAD_IPV6;
+				}
+				offload->flags |= data->inbound ? XFRM_OFFLOAD_INBOUND : 0;
+				free(ifname);
+			}
+		}
 	}
 
 	if (this->socket_xfrm->send_ack(this->socket_xfrm, hdr) != SUCCESS)
@@ -1919,13 +1944,13 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	kernel_ipsec_update_sa_t *data)
 {
 	netlink_buf_t request;
-	struct nlmsghdr *hdr, *out = NULL;
+	struct nlmsghdr *hdr, *out_hdr = NULL, *out = NULL;
 	struct xfrm_usersa_id *sa_id;
-	struct xfrm_usersa_info *out_sa = NULL, *sa;
+	struct xfrm_usersa_info *sa;
 	size_t len;
 	struct rtattr *rta;
 	size_t rtasize;
-	struct xfrm_encap_tmpl* tmpl = NULL;
+	struct xfrm_encap_tmpl* encap = NULL;
 	struct xfrm_replay_state *replay = NULL;
 	struct xfrm_replay_state_esn *replay_esn = NULL;
 	struct xfrm_lifetime_cur *lifetime = NULL;
@@ -1983,7 +2008,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 			{
 				case XFRM_MSG_NEWSA:
 				{
-					out_sa = NLMSG_DATA(hdr);
+					out_hdr = hdr;
 					break;
 				}
 				case NLMSG_ERROR:
@@ -2002,7 +2027,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 			break;
 		}
 	}
-	if (out_sa == NULL)
+	if (!out_hdr)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x%s",
 			 ntohl(id->spi), markstr);
@@ -2029,7 +2054,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	hdr->nlmsg_type = XFRM_MSG_NEWSA;
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct xfrm_usersa_info));
 	sa = NLMSG_DATA(hdr);
-	memcpy(sa, NLMSG_DATA(out), sizeof(struct xfrm_usersa_info));
+	memcpy(sa, NLMSG_DATA(out_hdr), sizeof(struct xfrm_usersa_info));
 	sa->family = data->new_dst->get_family(data->new_dst);
 
 	if (!id->src->ip_equals(id->src, data->new_src))
@@ -2041,8 +2066,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		host2xfrm(data->new_dst, &sa->id.daddr);
 	}
 
-	rta = XFRM_RTA(out, struct xfrm_usersa_info);
-	rtasize = XFRM_PAYLOAD(out, struct xfrm_usersa_info);
+	rta = XFRM_RTA(out_hdr, struct xfrm_usersa_info);
+	rtasize = XFRM_PAYLOAD(out_hdr, struct xfrm_usersa_info);
 	while (RTA_OK(rta, rtasize))
 	{
 		/* copy all attributes, but not XFRMA_ENCAP if we are disabling it */
@@ -2050,9 +2075,34 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		{
 			if (rta->rta_type == XFRMA_ENCAP)
 			{	/* update encap tmpl */
-				tmpl = RTA_DATA(rta);
-				tmpl->encap_sport = ntohs(data->new_src->get_port(data->new_src));
-				tmpl->encap_dport = ntohs(data->new_dst->get_port(data->new_dst));
+				encap = RTA_DATA(rta);
+				encap->encap_sport = ntohs(data->new_src->get_port(data->new_src));
+				encap->encap_dport = ntohs(data->new_dst->get_port(data->new_dst));
+			}
+			if (rta->rta_type == XFRMA_OFFLOAD_DEV)
+			{	/* update offload device */
+				struct xfrm_user_offload *offload;
+				host_t *local;
+				char *ifname;
+
+				offload = RTA_DATA(rta);
+				local = offload->flags & XFRM_OFFLOAD_INBOUND ? data->new_dst
+															  : data->new_src;
+
+				if (charon->kernel->get_interface(charon->kernel, local,
+												  &ifname))
+				{
+					offload->ifindex = if_nametoindex(ifname);
+					if (local->get_family(local) == AF_INET6)
+					{
+						offload->flags |= XFRM_OFFLOAD_IPV6;
+					}
+					else
+					{
+						offload->flags &= ~XFRM_OFFLOAD_IPV6;
+					}
+					free(ifname);
+				}
 			}
 			netlink_add_attribute(hdr, rta->rta_type,
 								  chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta)),
@@ -2061,17 +2111,18 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		rta = RTA_NEXT(rta, rtasize);
 	}
 
-	if (tmpl == NULL && data->new_encap)
+	if (encap == NULL && data->new_encap)
 	{	/* add tmpl if we are enabling it */
-		tmpl = netlink_reserve(hdr, sizeof(request), XFRMA_ENCAP, sizeof(*tmpl));
-		if (!tmpl)
+		encap = netlink_reserve(hdr, sizeof(request), XFRMA_ENCAP,
+								sizeof(*encap));
+		if (!encap)
 		{
 			goto failed;
 		}
-		tmpl->encap_type = UDP_ENCAP_ESPINUDP;
-		tmpl->encap_sport = ntohs(data->new_src->get_port(data->new_src));
-		tmpl->encap_dport = ntohs(data->new_dst->get_port(data->new_dst));
-		memset(&tmpl->encap_oa, 0, sizeof (xfrm_address_t));
+		encap->encap_type = UDP_ENCAP_ESPINUDP;
+		encap->encap_sport = ntohs(data->new_src->get_port(data->new_src));
+		encap->encap_dport = ntohs(data->new_dst->get_port(data->new_dst));
+		memset(&encap->encap_oa, 0, sizeof (xfrm_address_t));
 	}
 
 	if (replay_esn)

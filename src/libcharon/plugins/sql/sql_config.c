@@ -173,7 +173,8 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 		child_cfg_create_t child = {
 			.mode = mode,
 			.reqid = reqid,
-			.ipcomp = ipcomp,
+			.options = (ipcomp ? OPT_IPCOMP : 0) |
+					   (hostaccess ? OPT_HOSTACCESS : 0),
 			.lifetime = {
 				.time = {
 					.life = lifetime, .rekey = rekeytime, .jitter = jitter
@@ -183,7 +184,6 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 			.dpd_action = dpd,
 			.close_action = close,
 			.updown = updown,
-			.hostaccess = hostaccess,
 		};
 		child_cfg = child_cfg_create(name, &child);
 		add_esp_proposals(this, child_cfg, id);

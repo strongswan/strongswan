@@ -366,7 +366,7 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		push_env(envp, countof(envp), "PLUTO_IPCOMP=1");
 	}
 	push_dns_env(this, ike_sa, envp, countof(envp));
-	if (config->get_hostaccess(config))
+	if (config->has_option(config, OPT_HOSTACCESS))
 	{
 		push_env(envp, countof(envp), "PLUTO_HOST_ACCESS=1");
 	}

@@ -478,7 +478,6 @@ typedef struct {
 	linked_list_t *remote_ts;
 	uint32_t replay_window;
 	bool policies;
-	bool policies_fwd_out;
 	child_cfg_create_t cfg;
 } child_data_t;
 
@@ -500,12 +499,12 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   life_packets = %llu", cfg->lifetime.packets.life);
 	DBG2(DBG_CFG, "   rand_packets = %llu", cfg->lifetime.packets.jitter);
 	DBG2(DBG_CFG, "   updown = %s", cfg->updown);
-	DBG2(DBG_CFG, "   hostaccess = %u", cfg->hostaccess);
-	DBG2(DBG_CFG, "   ipcomp = %u", cfg->ipcomp);
+	DBG2(DBG_CFG, "   hostaccess = %u", cfg->options & OPT_HOSTACCESS);
+	DBG2(DBG_CFG, "   ipcomp = %u", cfg->options & OPT_IPCOMP);
 	DBG2(DBG_CFG, "   mode = %N%s", ipsec_mode_names, cfg->mode,
-		 cfg->proxy_mode ? "_PROXY" : "");
+		 cfg->options & OPT_PROXY_MODE ? "_PROXY" : "");
 	DBG2(DBG_CFG, "   policies = %u", data->policies);
-	DBG2(DBG_CFG, "   policies_fwd_out = %u", data->policies_fwd_out);
+	DBG2(DBG_CFG, "   policies_fwd_out = %u", cfg->options & OPT_FWD_OUT_POLICIES);
 	if (data->replay_window != REPLAY_UNDEFINED)
 	{
 		DBG2(DBG_CFG, "   replay_window = %u", data->replay_window);
@@ -525,6 +524,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   proposals = %#P", data->proposals);
 	DBG2(DBG_CFG, "   local_ts = %#R", data->local_ts);
 	DBG2(DBG_CFG, "   remote_ts = %#R", data->remote_ts);
+	DBG2(DBG_CFG, "   hw_offload = %u", cfg->options & OPT_HW_OFFLOAD);
 }
 
 /**
@@ -827,10 +827,68 @@ CALLBACK(parse_mode, bool,
 	if (parse_map(map, countof(map), &d, v))
 	{
 		cfg->mode = d;
-		cfg->proxy_mode = (d == MODE_TRANSPORT) && (v.len > 9);
+		if ((d == MODE_TRANSPORT) && (v.len > 9))
+		{
+			cfg->options |= OPT_PROXY_MODE;
+		}
 		return TRUE;
 	}
 	return FALSE;
+}
+
+/**
+ * Enable a child_cfg_option_t
+ */
+static bool parse_option(child_cfg_option_t *out, child_cfg_option_t opt,
+						 chunk_t v)
+{
+	bool val;
+
+	if (parse_bool(&val, v))
+	{
+		if (val)
+		{
+			*out |= opt;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Parse OPT_HOSTACCESS option
+ */
+CALLBACK(parse_opt_haccess, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_HOSTACCESS, v);
+}
+
+/**
+ * Parse OPT_FWD_OUT_POLICIES option
+ */
+CALLBACK(parse_opt_fwd_out, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_FWD_OUT_POLICIES, v);
+}
+
+/**
+ * Parse OPT_FWD_OUT_POLICIES option
+ */
+CALLBACK(parse_opt_ipcomp, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_IPCOMP, v);
+}
+
+/**
+ * Parse OPT_HW_OFFLOAD option
+ */
+CALLBACK(parse_opt_hw_offl, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_HW_OFFLOAD, v);
 }
 
 /**
@@ -1466,10 +1524,10 @@ CALLBACK(child_kv, bool,
 {
 	parse_rule_t rules[] = {
 		{ "updown",				parse_string,		&child->cfg.updown					},
-		{ "hostaccess",			parse_bool,			&child->cfg.hostaccess				},
+		{ "hostaccess",			parse_opt_haccess,	&child->cfg.options					},
 		{ "mode",				parse_mode,			&child->cfg							},
 		{ "policies",			parse_bool,			&child->policies					},
-		{ "policies_fwd_out",	parse_bool,			&child->policies_fwd_out			},
+		{ "policies_fwd_out",	parse_opt_fwd_out,	&child->cfg.options					},
 		{ "replay_window",		parse_uint32,		&child->replay_window				},
 		{ "rekey_time",			parse_time,			&child->cfg.lifetime.time.rekey		},
 		{ "life_time",			parse_time,			&child->cfg.lifetime.time.life		},
@@ -1483,7 +1541,7 @@ CALLBACK(child_kv, bool,
 		{ "dpd_action",			parse_action,		&child->cfg.dpd_action				},
 		{ "start_action",		parse_action,		&child->cfg.start_action			},
 		{ "close_action",		parse_action,		&child->cfg.close_action			},
-		{ "ipcomp",				parse_bool,			&child->cfg.ipcomp					},
+		{ "ipcomp",				parse_opt_ipcomp,	&child->cfg.options					},
 		{ "inactivity",			parse_time,			&child->cfg.inactivity				},
 		{ "reqid",				parse_uint32,		&child->cfg.reqid					},
 		{ "mark_in",			parse_mark,			&child->cfg.mark_in					},
@@ -1491,6 +1549,7 @@ CALLBACK(child_kv, bool,
 		{ "tfc_padding",		parse_tfc,			&child->cfg.tfc						},
 		{ "priority",			parse_uint32,		&child->cfg.priority				},
 		{ "interface",			parse_string,		&child->cfg.interface				},
+		{ "hw_offload",			parse_opt_hw_offl,	&child->cfg.options					},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
@@ -1756,8 +1815,7 @@ CALLBACK(children_sn, bool,
 			child.proposals->insert_last(child.proposals, proposal);
 		}
 	}
-	child.cfg.suppress_policies = !child.policies;
-	child.cfg.fwd_out_policies = child.policies_fwd_out;
+	child.cfg.options |= child.policies ? 0 : OPT_NO_POLICIES;
 
 	check_lifetimes(&child.cfg.lifetime);
 

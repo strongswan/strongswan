@@ -91,6 +91,8 @@ struct kernel_ipsec_add_sa_t {
 	uint16_t cpi;
 	/** TRUE to enable UDP encapsulation for NAT traversal */
 	bool encap;
+	/** TRUE to enable hardware offloading if available */
+	bool hw_offload;
 	/** TRUE to use Extended Sequence Numbers */
 	bool esn;
 	/** TRUE if initiator of the exchange creating the SA */
