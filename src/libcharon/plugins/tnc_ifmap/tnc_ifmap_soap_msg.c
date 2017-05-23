@@ -55,7 +55,7 @@ struct private_tnc_ifmap_soap_msg_t {
 static xmlNodePtr find_child(xmlNodePtr parent, const xmlChar* name)
 {
 	xmlNodePtr child;
-	
+
 	child = parent->xmlChildrenNode;
 	while (child)
 	{
@@ -80,7 +80,7 @@ METHOD(tnc_ifmap_soap_msg_t, post, bool,
 	xmlChar *xml_str, *errorCode, *errorString;
 	int xml_len, len, written;
 	chunk_t xml, http;
-	char buf[4096];
+	char buf[4096] = { 0 };
 	status_t status;
 
 	DBG2(DBG_TNC, "sending ifmap %s", request->name);
@@ -131,7 +131,8 @@ METHOD(tnc_ifmap_soap_msg_t, post, bool,
 	xml = chunk_empty;
 	do
 	{
-		len = this->tls->read(this->tls, buf, sizeof(buf), TRUE);
+		/* reduce size so the buffer is null-terminated */
+		len = this->tls->read(this->tls, buf, sizeof(buf)-1, TRUE);
 		if (len <= 0)
 		{
 			return FALSE;
@@ -150,7 +151,7 @@ METHOD(tnc_ifmap_soap_msg_t, post, bool,
 	DBG3(DBG_TNC, "parsing XML message %B", &xml);
 	this->doc = xmlParseMemory(xml.ptr, xml.len);
 	free(xml.ptr);
-	
+
 	if (!this->doc)
 	{
 		DBG1(DBG_TNC, "failed to parse XML message");
