@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2015 Tobias Brunner
+# Copyright (C) 2007-2017 Tobias Brunner
 # Copyright (C) 2006-2016 Andreas Steffen
 # Copyright (C) 2006-2014 Martin Willi
 # HSR Hochschule fuer Technik Rapperswil
@@ -35,6 +35,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_CONFIG_MACRO_DIR([m4/config])
 AC_CONFIG_HEADERS([config.h])
 AC_DEFINE([CONFIG_H_INCLUDED], [], [defined if config.h included])
+AC_DISABLE_STATIC
 PKG_PROG_PKG_CONFIG
 
 m4_include(m4/macros/split-package-version.m4)
@@ -62,6 +63,7 @@ ARG_WITH_SUBST([routing-table],      [220], [set routing table to use for IPsec 
 ARG_WITH_SUBST([routing-table-prio], [220], [set priority for IPsec routing table])
 ARG_WITH_SUBST([ipsec-script],       [ipsec], [change the name of the ipsec script])
 ARG_WITH_SUBST([fips-mode],          [0], [set openssl FIPS mode: disabled(0), enabled(1), Suite B enabled(2)])
+ARG_WITH_SUBST([libfuzzer],          [], [path to libFuzzer.a])
 ARG_WITH_SET([capabilities],         [no], [set capability dropping library. Currently supported values are "libcap" and "native"])
 ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant mpz_powm_sec in libgmp, if available])
 ARG_WITH_SET([dev-headers],          [no], [install strongSwan development headers to directory.])
@@ -277,6 +279,7 @@ ARG_ENABL_SET([cmd],            [enable the command line IKE client charon-cmd.]
 ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
 ARG_ENABL_SET([dumm],           [enable the DUMM UML test framework.])
 ARG_ENABL_SET([fast],           [enable libfast (FastCGI Application Server w/ templates.])
+ARG_ENABL_SET([fuzzing],        [enable fuzzing scripts (found in directory fuzz).])
 ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
 ARG_ENABL_SET([manager],        [enable web management console (proof of concept).])
 ARG_ENABL_SET([medcli],         [enable mediation client configuration database plugin.])
@@ -1295,6 +1298,19 @@ AM_CONDITIONAL(PYTHON_EGGS_INSTALL, [test "x$python_eggs_install" = xtrue])
 
 AM_CONDITIONAL(PERL_CPAN_INSTALL, [test "x$perl_cpan_install" = xtrue])
 
+AC_CACHE_CHECK(
+	[if plugin constructors should be resolved statically],
+	[ss_cv_static_plugin_constructors],
+	[if test x$monolithic = xtrue -a x$enable_static = xyes; then
+		ss_cv_static_plugin_constructors=yes
+	 else
+		ss_cv_static_plugin_constructors="no (enabled for static, monolithic builds)"
+	 fi]
+)
+if test "x$ss_cv_static_plugin_constructors" = xyes; then
+	static_plugin_constructors=true
+fi
+
 # ===============================================
 #  collect plugin list for strongSwan components
 # ===============================================
@@ -1309,6 +1325,7 @@ attest_plugins=
 scepclient_plugins=
 pki_plugins=
 scripts_plugins=
+fuzz_plugins=
 manager_plugins=
 medsrv_plugins=
 nm_plugins=
@@ -1332,21 +1349,21 @@ ADD_PLUGIN([aes],                  [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([des],                  [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([blowfish],             [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([rc2],                  [s charon scepclient pki scripts nm cmd])
-ADD_PLUGIN([sha2],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
-ADD_PLUGIN([sha3],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
-ADD_PLUGIN([sha1],                 [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([sha2],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen fuzz])
+ADD_PLUGIN([sha3],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen fuzz])
+ADD_PLUGIN([sha1],                 [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen fuzz])
 ADD_PLUGIN([md4],                  [s charon scepclient pki nm cmd])
 ADD_PLUGIN([md5],                  [s charon scepclient pki scripts attest nm cmd aikgen])
 ADD_PLUGIN([mgf1],                 [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([rdrand],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([random],               [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([nonce],                [s charon nm cmd aikgen])
-ADD_PLUGIN([x509],                 [s charon scepclient pki scripts attest nm cmd aikgen])
+ADD_PLUGIN([x509],                 [s charon scepclient pki scripts attest nm cmd aikgen fuzz])
 ADD_PLUGIN([revocation],           [s charon pki nm cmd])
 ADD_PLUGIN([constraints],          [s charon nm cmd])
 ADD_PLUGIN([acert],                [s charon])
 ADD_PLUGIN([pubkey],               [s charon cmd aikgen])
-ADD_PLUGIN([pkcs1],                [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([pkcs1],                [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen fuzz])
 ADD_PLUGIN([pkcs7],                [s charon scepclient pki scripts nm cmd])
 ADD_PLUGIN([pkcs8],                [s charon scepclient pki scripts manager medsrv attest nm cmd])
 ADD_PLUGIN([pkcs12],               [s charon scepclient pki scripts cmd])
@@ -1355,13 +1372,13 @@ ADD_PLUGIN([dnskey],               [s charon pki])
 ADD_PLUGIN([sshkey],               [s charon pki nm cmd])
 ADD_PLUGIN([dnscert],              [c charon])
 ADD_PLUGIN([ipseckey],             [c charon])
-ADD_PLUGIN([pem],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([pem],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen fuzz])
 ADD_PLUGIN([padlock],              [s charon])
 ADD_PLUGIN([openssl],              [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([gcrypt],               [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([af-alg],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
-ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen fuzz])
 ADD_PLUGIN([curve25519],           [s charon pki scripts nm cmd])
 ADD_PLUGIN([agent],                [s charon nm cmd])
 ADD_PLUGIN([keychain],             [s charon cmd])
@@ -1462,6 +1479,7 @@ AC_SUBST(attest_plugins)
 AC_SUBST(scepclient_plugins)
 AC_SUBST(pki_plugins)
 AC_SUBST(scripts_plugins)
+AC_SUBST(fuzz_plugins)
 AC_SUBST(manager_plugins)
 AC_SUBST(medsrv_plugins)
 AC_SUBST(nm_plugins)
@@ -1646,6 +1664,7 @@ AM_CONDITIONAL(USE_NM, test x$nm = xtrue)
 AM_CONDITIONAL(USE_PKI, test x$pki = xtrue)
 AM_CONDITIONAL(USE_SCEPCLIENT, test x$scepclient = xtrue)
 AM_CONDITIONAL(USE_SCRIPTS, test x$scripts = xtrue)
+AM_CONDITIONAL(USE_FUZZING, test x$fuzzing = xtrue)
 AM_CONDITIONAL(USE_CONFTEST, test x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBSTRONGSWAN, test x$charon = xtrue -o x$pki = xtrue -o x$scepclient = xtrue -o x$conftest = xtrue -o x$fast = xtrue -o x$imcv = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$tls = xtrue -o x$tnc_tnccs = xtrue -o x$aikgen = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
 AM_CONDITIONAL(USE_LIBCHARON, test x$charon = xtrue -o x$conftest = xtrue -o x$nm = xtrue -o x$tkm = xtrue -o x$cmd = xtrue -o x$svc = xtrue -o x$systemd = xtrue)
@@ -1667,6 +1686,7 @@ AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
 AM_CONDITIONAL(USE_TROUSERS, test x$tss_trousers = xtrue)
 AM_CONDITIONAL(USE_TSS2, test x$tss_tss2 = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
+AM_CONDITIONAL(STATIC_PLUGIN_CONSTRUCTORS, test x$static_plugin_constructors = xtrue)
 AM_CONDITIONAL(USE_SILENT_RULES, test x$enable_silent_rules = xyes)
 AM_CONDITIONAL(COVERAGE, test x$coverage = xtrue)
 AM_CONDITIONAL(USE_DBGHELP, test x$dbghelp_backtraces = xtrue)
@@ -1698,11 +1718,17 @@ fi
 if test x$monolithic = xtrue; then
 	AC_DEFINE([MONOLITHIC], [], [monolithic build embedding plugins])
 fi
+if test x$static_plugin_constructors = xtrue; then
+	AC_DEFINE([STATIC_PLUGIN_CONSTRUCTORS], [], [static plugin constructors])
+fi
 if test x$ikev1 = xtrue; then
 	AC_DEFINE([USE_IKEV1], [], [support for IKEv1 protocol])
 fi
 if test x$ikev2 = xtrue; then
 	AC_DEFINE([USE_IKEV2], [], [support for IKEv2 protocol])
+fi
+if test x$fuzzing = xtrue; then
+	AC_DEFINE([USE_FUZZING], [], [build code for fuzzing])
 fi
 
 # ====================================================
@@ -1734,6 +1760,7 @@ AC_SUBST(strongswan_options)
 AC_CONFIG_FILES([
 	Makefile
 	conf/Makefile
+	fuzz/Makefile
 	man/Makefile
 	init/Makefile
 	init/systemd/Makefile

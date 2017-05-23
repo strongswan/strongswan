@@ -94,6 +94,13 @@ void library_add_namespace(char *ns)
 }
 
 /**
+ * Register plugins if built statically
+ */
+#ifdef STATIC_PLUGIN_CONSTRUCTORS
+#include "plugin_constructors.c"
+#endif
+
+/**
  * library instance
  */
 library_t *lib = NULL;
@@ -241,6 +248,8 @@ static bool equals(char *a, char *b)
  */
 #define MEMWIPE_WIPE_WORDS 16
 
+#ifndef NO_CHECK_MEMWIPE
+
 /**
  * Write magic to memory, and try to clear it with memwipe()
  */
@@ -280,6 +289,8 @@ static bool check_memwipe()
 	}
 	return TRUE;
 }
+
+#endif
 
 /*
  * see header file
@@ -387,10 +398,12 @@ bool library_init(char *settings, const char *namespace)
 	this->public.streams = stream_manager_create();
 	this->public.plugins = plugin_loader_create();
 
+#ifndef NO_CHECK_MEMWIPE
 	if (!check_memwipe())
 	{
 		return FALSE;
 	}
+#endif
 
 	if (lib->settings->get_bool(lib->settings,
 								"%s.integrity_test", FALSE, lib->ns))

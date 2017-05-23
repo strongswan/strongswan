@@ -263,13 +263,15 @@ bool measurement_time_from_utc(time_t *measurement_time, chunk_t utc_time)
 {
 	int tm_year, tm_mon, tm_day, tm_days, tm_hour, tm_min, tm_sec, tm_secs;
 	int tm_leap_4, tm_leap_100, tm_leap_400, tm_leap;
+	char buf[BUF_LEN];
 
 	if (memeq(utc_undefined_time_str, utc_time.ptr, utc_time.len))
 	{
 		*measurement_time = 0;
 		return TRUE;
 	}
-	if (sscanf(utc_time.ptr, "%4d-%2d-%2dT%2d:%2d:%2dZ",
+	snprintf(buf, sizeof(buf), "%.*s", (int)utc_time.len, utc_time.ptr);
+	if (sscanf(buf, "%4d-%2d-%2dT%2d:%2d:%2dZ",
 		&tm_year, &tm_mon, &tm_day, &tm_hour, &tm_min, &tm_sec) != 6)
 	{
 		return FALSE;

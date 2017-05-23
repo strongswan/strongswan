@@ -195,6 +195,7 @@ endif
 EXTRA_DIST = \
 asn1/oid.txt asn1/oid.pl \
 crypto/proposal/proposal_keywords_static.txt \
+plugins/plugin_constructors.py \
 Android.mk
 
 BUILT_SOURCES = \
@@ -219,6 +220,15 @@ $(srcdir)/crypto/proposal/proposal_keywords_static.c:	$(srcdir)/crypto/proposal/
 		$(AM_V_GEN) \
 		$(GPERF) -N proposal_get_token_static -m 10 -C -G -c -t -D < \
 												$(srcdir)/crypto/proposal/proposal_keywords_static.txt > $@
+
+if STATIC_PLUGIN_CONSTRUCTORS
+BUILT_SOURCES += $(srcdir)/plugin_constructors.c
+CLEANFILES = $(srcdir)/plugin_constructors.c
+
+$(srcdir)/plugin_constructors.c: $(srcdir)/plugins/plugin_constructors.py
+		$(AM_V_GEN) \
+		$(PYTHON) $(srcdir)/plugins/plugin_constructors.py ${s_plugins} > $@
+endif
 
 if MONOLITHIC
 SUBDIRS =

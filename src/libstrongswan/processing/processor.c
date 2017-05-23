@@ -429,7 +429,15 @@ METHOD(processor_t, execute_job, void,
 METHOD(processor_t, set_threads, void,
 	private_processor_t *this, u_int count)
 {
+	int i;
+
 	this->mutex->lock(this->mutex);
+	for (i = 0; i < JOB_PRIO_MAX; i++)
+	{
+		this->prio_threads[i] = lib->settings->get_int(lib->settings,
+						"%s.processor.priority_threads.%N", 0, lib->ns,
+						job_priority_names, i);
+	}
 	if (count > this->total_threads)
 	{	/* increase thread count */
 		worker_thread_t *worker;
@@ -551,13 +559,10 @@ processor_t *processor_create()
 		.job_added = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.thread_terminated = condvar_create(CONDVAR_TYPE_DEFAULT),
 	);
+
 	for (i = 0; i < JOB_PRIO_MAX; i++)
 	{
 		this->jobs[i] = linked_list_create();
-		this->prio_threads[i] = lib->settings->get_int(lib->settings,
-						"%s.processor.priority_threads.%N", 0, lib->ns,
-						job_priority_names, i);
 	}
-
 	return &this->public;
 }

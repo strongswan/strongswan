@@ -40,6 +40,13 @@ typedef struct registered_feature_t registered_feature_t;
 typedef struct provided_feature_t provided_feature_t;
 typedef struct plugin_entry_t plugin_entry_t;
 
+#ifdef STATIC_PLUGIN_CONSTRUCTORS
+/**
+ * Statically registered constructors
+ */
+static hashtable_t *plugin_constructors = NULL;
+#endif
+
 /**
  * private data of plugin_loader
  */
@@ -298,6 +305,46 @@ static plugin_t *static_features_create(const char *name,
 	return &this->public;
 }
 
+#ifdef STATIC_PLUGIN_CONSTRUCTORS
+/*
+ * Described in header.
+ */
+void plugin_constructor_register(char *name, void *constructor)
+{
+	bool old = FALSE;
+
+	if (lib && lib->leak_detective)
+	{
+		old = lib->leak_detective->set_state(lib->leak_detective, FALSE);
+	}
+
+	if (!plugin_constructors)
+	{
+		chunk_hash_seed();
+		plugin_constructors = hashtable_create(hashtable_hash_str,
+											   hashtable_equals_str, 32);
+	}
+	if (constructor)
+	{
+		plugin_constructors->put(plugin_constructors, name, constructor);
+	}
+	else
+	{
+		plugin_constructors->remove(plugin_constructors, name);
+		if (!plugin_constructors->get_count(plugin_constructors))
+		{
+			plugin_constructors->destroy(plugin_constructors);
+			plugin_constructors = NULL;
+		}
+	}
+
+	if (lib && lib->leak_detective)
+	{
+		lib->leak_detective->set_state(lib->leak_detective, old);
+	}
+}
+#endif
+
 /**
  * create a plugin
  * returns: NOT_FOUND, if the constructor was not found
@@ -309,7 +356,7 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 {
 	char create[128];
 	plugin_t *plugin;
-	plugin_constructor_t constructor;
+	plugin_constructor_t constructor = NULL;
 
 	if (snprintf(create, sizeof(create), "%s_plugin_create",
 				 name) >= sizeof(create))
@@ -317,8 +364,17 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 		return FAILED;
 	}
 	translate(create, "-", "_");
-	constructor = dlsym(handle, create);
-	if (constructor == NULL)
+#ifdef STATIC_PLUGIN_CONSTRUCTORS
+	if (plugin_constructors)
+	{
+		constructor = plugin_constructors->get(plugin_constructors, name);
+	}
+	if (!constructor)
+#endif
+	{
+		constructor = dlsym(handle, create);
+	}
+	if (!constructor)
 	{
 		return NOT_FOUND;
 	}
@@ -674,8 +730,10 @@ static bool load_dependencies(private_plugin_loader_t *this,
 
 		if (!find_compatible_feature(this, &provided->feature[i]))
 		{
-			char *name, *provide, *depend;
 			bool soft = provided->feature[i].kind == FEATURE_SDEPEND;
+
+#ifndef USE_FUZZING
+			char *name, *provide, *depend;
 
 			name = provided->entry->plugin->get_name(provided->entry->plugin);
 			provide = plugin_feature_get_string(&provided->feature[0]);
@@ -697,6 +755,8 @@ static bool load_dependencies(private_plugin_loader_t *this,
 			}
 			free(provide);
 			free(depend);
+#endif /* !USE_FUZZING */
+
 			if (soft)
 			{	/* it's ok if we can't resolve soft dependencies */
 				continue;
@@ -716,8 +776,6 @@ static void load_feature(private_plugin_loader_t *this,
 {
 	if (load_dependencies(this, provided, level))
 	{
-		char *name, *provide;
-
 		if (plugin_feature_load(provided->entry->plugin, provided->feature,
 								provided->reg))
 		{
@@ -726,6 +784,9 @@ static void load_feature(private_plugin_loader_t *this,
 			this->loaded->insert_first(this->loaded, provided);
 			return;
 		}
+
+#ifndef USE_FUZZING
+		char *name, *provide;
 
 		name = provided->entry->plugin->get_name(provided->entry->plugin);
 		provide = plugin_feature_get_string(&provided->feature[0]);
@@ -740,6 +801,7 @@ static void load_feature(private_plugin_loader_t *this,
 				 provide, name);
 		}
 		free(provide);
+#endif /* !USE_FUZZING */
 	}
 	else
 	{	/* TODO: we could check the current level and set a different flag when
@@ -759,13 +821,16 @@ static void load_provided(private_plugin_loader_t *this,
 						  provided_feature_t *provided,
 						  int level)
 {
-	char *name, *provide;
 	int indent = level * 2;
 
 	if (provided->loaded || provided->failed)
 	{
 		return;
 	}
+
+#ifndef USE_FUZZING
+	char *name, *provide;
+
 	name = provided->entry->plugin->get_name(provided->entry->plugin);
 	provide = plugin_feature_get_string(provided->feature);
 	if (provided->loading)
@@ -778,6 +843,12 @@ static void load_provided(private_plugin_loader_t *this,
 	DBG3(DBG_LIB, "%*sloading feature %s in plugin '%s'",
 		 indent, "", provide, name);
 	free(provide);
+#else
+	if (provided->loading)
+	{
+		return;
+	}
+#endif /* USE_FUZZING */
 
 	provided->loading = TRUE;
 	load_feature(this, provided, level + 1);

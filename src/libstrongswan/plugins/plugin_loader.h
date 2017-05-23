@@ -168,4 +168,14 @@ plugin_loader_t *plugin_loader_create();
  */
 void plugin_loader_add_plugindirs(char *basedir, char *plugins);
 
+#ifdef STATIC_PLUGIN_CONSTRUCTORS
+/**
+ * Register a plugin constructor in case of static builds.
+ *
+ * @param name         name of the plugin
+ * @param constructor  constructor to register (set to NULL to unregister)
+ */
+void plugin_constructor_register(char *name, void *constructor);
+#endif
+
 #endif /** PLUGIN_LOADER_H_ @}*/

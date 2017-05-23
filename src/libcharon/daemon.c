@@ -118,6 +118,13 @@ struct private_daemon_t {
 };
 
 /**
+ * Register plugins if built statically
+ */
+#ifdef STATIC_PLUGIN_CONSTRUCTORS
+#include "plugin_constructors.c"
+#endif
+
+/**
  * One and only instance of the daemon.
  */
 daemon_t *charon;

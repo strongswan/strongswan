@@ -218,6 +218,29 @@ struct private_x509_cert_t {
 };
 
 /**
+ * Convert a generalName to a string
+ */
+static bool gn_to_string(identification_t *id, char **uri)
+{
+	int len;
+
+#ifdef USE_FUZZING
+	chunk_t proper;
+	chunk_printable(id->get_encoding(id), &proper, '?');
+	len = asprintf(uri, "%.*s", (int)proper.len, proper.ptr);
+	chunk_free(&proper);
+#else
+	len = asprintf(uri, "%Y", id);
+#endif
+	if (!len)
+	{
+		free(*uri);
+		return FALSE;
+	}
+	return len > 0;
+}
+
+/**
  * Destroy a CertificateDistributionPoint
  */
 static void crl_uri_destroy(x509_cdp_t *this)
@@ -649,7 +672,7 @@ static bool parse_authorityInfoAccess(chunk_t blob, int level0,
 							}
 							DBG2(DBG_ASN, "  '%Y'", id);
 							if (accessMethod == OID_OCSP &&
-								asprintf(&uri, "%Y", id) > 0)
+								gn_to_string(id, &uri))
 							{
 								this->ocsp_uris->insert_last(this->ocsp_uris, uri);
 							}
@@ -821,7 +844,7 @@ static void add_cdps(linked_list_t *list, linked_list_t *uris,
 
 	while (uris->remove_last(uris, (void**)&id) == SUCCESS)
 	{
-		if (asprintf(&uri, "%Y", id) > 0)
+		if (gn_to_string(id, &uri))
 		{
 			if (issuers->get_count(issuers))
 			{
@@ -900,8 +923,8 @@ bool x509_parse_crlDistributionPoints(chunk_t blob, int level0,
 
 end:
 	parser->destroy(parser);
-	uris->destroy(uris);
-	issuers->destroy(issuers);
+	uris->destroy_offset(uris, offsetof(identification_t, destroy));
+	issuers->destroy_offset(issuers, offsetof(identification_t, destroy));
 
 	return success;
 }
@@ -1461,6 +1484,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 						}
 						break;
 					case OID_AUTHORITY_KEY_ID:
+						chunk_free(&this->authKeyIdentifier);
 						this->authKeyIdentifier = x509_parse_authorityKeyIdentifier(
 									object, level, &this->authKeySerialNumber);
 						break;

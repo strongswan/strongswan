@@ -170,6 +170,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	chunk_t last_use;
 	uint16_t reserved;
 	struct tm t;
+	char buf[BUF_LEN];
 
 	*offset = 0;
 
@@ -208,7 +209,8 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	*offset = 4;
 
 	/* Conversion from RFC 3339 ASCII string to time_t */
-	if (sscanf(last_use.ptr, "%4d-%2d-%2dT%2d:%2d:%2dZ", &t.tm_year, &t.tm_mon,
+	snprintf(buf, sizeof(buf), "%.*s", (int)last_use.len, last_use.ptr);
+	if (sscanf(buf, "%4d-%2d-%2dT%2d:%2d:%2dZ", &t.tm_year, &t.tm_mon,
 			   &t.tm_mday, &t.tm_hour, &t.tm_min, &t.tm_sec) != 6)
 	{
 		DBG1(DBG_TNC, "invalid last_use time format in IETF operational status");
