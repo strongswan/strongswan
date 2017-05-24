@@ -1,4 +1,4 @@
-# strongSwan Configuration #
+# Legacy strongSwan Configuration #
 
 ## Overview ##
 
