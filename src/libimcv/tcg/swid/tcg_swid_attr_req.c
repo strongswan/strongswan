@@ -201,6 +201,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		if (!reader->read_data16(reader, &tag_creator))
 		{
 			DBG1(DBG_TNC, "insufficient data for Tag Creator field");
+			reader->destroy(reader);
 			return FAILED;
 		}
 		*offset += 2 + tag_creator.len;
@@ -208,6 +209,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		if (!reader->read_data16(reader, &unique_sw_id))
 		{
 			DBG1(DBG_TNC, "insufficient data for Unique Software ID");
+			reader->destroy(reader);
 			return FAILED;
 		}
 		*offset += 2 + unique_sw_id.len;
