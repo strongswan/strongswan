@@ -298,7 +298,7 @@ void test_fail_if_worker_failed();
 	chunk_t _a = (chunk_t)a; \
 	chunk_t _b = (chunk_t)b; \
 	test_fail_if_worker_failed(); \
-	if (_a.len != _b.len || !memeq(a.ptr, b.ptr, a.len)) \
+	if (_a.len != _b.len || !memeq(_a.ptr, _b.ptr, _a.len)) \
 	{ \
 		test_fail_msg(__FILE__, __LINE__, \
 					  #a " != " #b " (\"%#B\" != \"%#B\")", &_a, &_b); \
