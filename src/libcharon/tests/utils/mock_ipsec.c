@@ -269,19 +269,27 @@ kernel_ipsec_t *mock_ipsec_create()
 	return &this->public;
 }
 
-/**
- * Filter SAs
- */
-static bool filter_sas(void *data, entry_t **entry, ike_sa_t **ike_sa,
-					   void *unused, uint32_t *spi)
+
+CALLBACK(filter_sas, bool,
+	void *data, enumerator_t *orig, va_list args)
 {
-	if ((*entry)->alloc)
+	entry_t *entry;
+	ike_sa_t **ike_sa;
+	uint32_t *spi;
+
+	VA_ARGS_VGET(args, ike_sa, spi);
+
+	while (orig->enumerate(orig, &entry, NULL))
 	{
-		return FALSE;
+		if (entry->alloc)
+		{
+			continue;
+		}
+		*ike_sa = entry->ike_sa;
+		*spi = entry->spi;
+		return TRUE;
 	}
-	*ike_sa = (*entry)->ike_sa;
-	*spi = (*entry)->spi;
-	return TRUE;
+	return FALSE;
 }
 
 /*
@@ -291,5 +299,5 @@ enumerator_t *mock_ipsec_create_sa_enumerator()
 {
 	return enumerator_create_filter(
 							instance->sas->create_enumerator(instance->sas),
-							(void*)filter_sas, NULL, NULL);
+							filter_sas, NULL, NULL);
 }

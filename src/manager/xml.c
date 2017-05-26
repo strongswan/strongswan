@@ -67,8 +67,13 @@ typedef struct {
 } child_enum_t;
 
 METHOD(enumerator_t, child_enumerate, bool,
-	child_enum_t *e, private_xml_t **child, char **name, char **value)
+	child_enum_t *e, va_list args)
 {
+	private_xml_t **child;
+	char **name, **value;
+
+	VA_ARGS_VGET(args, child, name, value);
+
 	while (e->node && e->node->type != XML_ELEMENT_NODE)
 	{
 		e->node = e->node->next;
@@ -120,7 +125,8 @@ METHOD(xml_t, children, enumerator_t*,
 	child_enum_t *ce;
 	INIT(ce,
 		.e = {
-			.enumerate = (void*)_child_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _child_enumerate,
 			.destroy = _child_destroy,
 		},
 		.child = {

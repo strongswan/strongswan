@@ -466,9 +466,12 @@ typedef struct {
 } addr_enumerator_t;
 
 METHOD(enumerator_t, addr_enumerate, bool,
-	addr_enumerator_t *this, host_t **host)
+	addr_enumerator_t *this, va_list args)
 {
 	iface_t *entry;
+	host_t **host;
+
+	VA_ARGS_VGET(args, host);
 
 	while (TRUE)
 	{
@@ -523,7 +526,8 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_addr_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _addr_enumerate,
 			.destroy = _addr_destroy,
 		},
 		.which = which,

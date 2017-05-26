@@ -719,11 +719,13 @@ static bool get_attributes(object_enumerator_t *this, CK_OBJECT_HANDLE object)
 }
 
 METHOD(enumerator_t, object_enumerate, bool,
-	object_enumerator_t *this, CK_OBJECT_HANDLE *out)
+	object_enumerator_t *this, va_list args)
 {
-	CK_OBJECT_HANDLE object;
+	CK_OBJECT_HANDLE object, *out;
 	CK_ULONG found;
 	CK_RV rv;
+
+	VA_ARGS_VGET(args, out);
 
 	if (!this->object)
 	{
@@ -786,7 +788,8 @@ METHOD(pkcs11_library_t, create_object_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_object_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _object_enumerate,
 			.destroy = _object_destroy,
 		},
 		.session = session,
@@ -806,7 +809,8 @@ METHOD(pkcs11_library_t, create_object_attr_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_object_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _object_enumerate,
 			.destroy = _object_destroy,
 		},
 		.session = session,
@@ -838,10 +842,13 @@ typedef struct {
 } mechanism_enumerator_t;
 
 METHOD(enumerator_t, enumerate_mech, bool,
-	mechanism_enumerator_t *this, CK_MECHANISM_TYPE* type,
-	CK_MECHANISM_INFO *info)
+	mechanism_enumerator_t *this, va_list args)
 {
+	CK_MECHANISM_INFO *info;
+	CK_MECHANISM_TYPE *type;
 	CK_RV rv;
+
+	VA_ARGS_VGET(args, type, info);
 
 	if (this->current >= this->count)
 	{
@@ -876,7 +883,8 @@ METHOD(pkcs11_library_t, create_mechanism_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_enumerate_mech,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_mech,
 			.destroy = _destroy_mech,
 		},
 		.lib = &this->public,

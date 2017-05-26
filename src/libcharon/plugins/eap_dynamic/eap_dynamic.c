@@ -69,6 +69,15 @@ static bool entry_matches(eap_vendor_type_t *item, eap_vendor_type_t *other)
 	return item->type == other->type && item->vendor == other->vendor;
 }
 
+CALLBACK(entry_matches_cb, bool,
+	eap_vendor_type_t *item, va_list args)
+{
+	eap_vendor_type_t *other;
+
+	VA_ARGS_VGET(args, other);
+	return entry_matches(item, other);
+}
+
 /**
  * Load the given EAP method
  */
@@ -121,8 +130,7 @@ static void select_method(private_eap_dynamic_t *this)
 	{
 		if (inner)
 		{
-			if (inner->find_first(inner, (void*)entry_matches,
-								  NULL, entry) != SUCCESS)
+			if (!inner->find_first(inner, entry_matches_cb, NULL, entry))
 			{
 				if (entry->vendor)
 				{

@@ -59,8 +59,11 @@ typedef struct {
 } mech_enumerator_t;
 
 METHOD(enumerator_t, mech_enumerate, bool,
-	mech_enumerator_t *this, char **name)
+	mech_enumerator_t *this, va_list args)
 {
+	char **name;
+
+	VA_ARGS_VGET(args, name);
 	while (this->i < countof(mechs))
 	{
 		if (mechs[this->i].server == this->server)
@@ -83,7 +86,8 @@ enumerator_t* sasl_mechanism_create_enumerator(bool server)
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_mech_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _mech_enumerate,
 			.destroy = (void*)free,
 		},
 		.server = server,

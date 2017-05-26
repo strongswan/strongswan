@@ -84,12 +84,12 @@ static void exclude_route_destroy(exclude_route_t *this)
 	free(this);
 }
 
-/**
- * Find an exclude route entry by destination address
- */
-static bool exclude_route_match(exclude_route_t *current,
-								host_t *dst)
+CALLBACK(exclude_route_match, bool,
+	exclude_route_t *current, va_list args)
 {
+	host_t *dst;
+
+	VA_ARGS_VGET(args, dst);
 	return dst->ip_equals(dst, current->dst);
 }
 
@@ -204,12 +204,12 @@ static void policy_entry_destroy(policy_entry_t *this)
 	free(this);
 }
 
-/**
- * Compare two policy_entry_t objects
- */
-static inline bool policy_entry_equals(policy_entry_t *a,
-									   policy_entry_t *b)
+CALLBACK(policy_entry_equals, bool,
+	policy_entry_t *a, va_list args)
 {
+	policy_entry_t *b;
+
+	VA_ARGS_VGET(args, b);
 	return a->direction == b->direction &&
 		   a->src.proto == b->src.proto &&
 		   a->dst.proto == b->dst.proto &&
@@ -297,9 +297,8 @@ static void add_exclude_route(private_kernel_libipsec_ipsec_t *this,
 	exclude_route_t *exclude;
 	host_t *gtw;
 
-	if (this->excludes->find_first(this->excludes,
-								  (linked_list_match_t)exclude_route_match,
-								  (void**)&exclude, dst) == SUCCESS)
+	if (this->excludes->find_first(this->excludes, exclude_route_match,
+								  (void**)&exclude, dst))
 	{
 		route->exclude = exclude;
 		exclude->refs++;
@@ -524,9 +523,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	policy = create_policy_entry(id->src_ts, id->dst_ts, id->dir);
 
 	this->mutex->lock(this->mutex);
-	if (this->policies->find_first(this->policies,
-								  (linked_list_match_t)policy_entry_equals,
-								  (void**)&found, policy) == SUCCESS)
+	if (this->policies->find_first(this->policies, policy_entry_equals,
+								  (void**)&found, policy))
 	{
 		policy_entry_destroy(policy);
 		policy = found;
@@ -567,9 +565,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	policy = create_policy_entry(id->src_ts, id->dst_ts, id->dir);
 
 	this->mutex->lock(this->mutex);
-	if (this->policies->find_first(this->policies,
-								  (linked_list_match_t)policy_entry_equals,
-								  (void**)&found, policy) != SUCCESS)
+	if (!this->policies->find_first(this->policies, policy_entry_equals,
+									(void**)&found, policy))
 	{
 		policy_entry_destroy(policy);
 		this->mutex->unlock(this->mutex);

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -28,6 +28,7 @@
 #include <stddef.h>
 #include <sys/time.h>
 #include <string.h>
+#include <stdarg.h>
 
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
@@ -139,6 +140,49 @@ void utils_deinit();
 #define VA_ARGS_DISPATCH(func, ...) _VA_ARGS_DISPATCH(func, VA_ARGS_NUM(__VA_ARGS__))
 #define _VA_ARGS_DISPATCH(func, num) __VA_ARGS_DISPATCH(func, num)
 #define __VA_ARGS_DISPATCH(func, num) func ## num
+
+/**
+ * Assign variadic arguments to the given variables.
+ *
+ * @note The order and types of the variables are significant and must match the
+ * variadic arguments passed to the function that calls this macro exactly.
+ *
+ * @param last		the last argument before ... in the function that calls this
+ * @param ...		variable names
+ */
+#define VA_ARGS_GET(last, ...) ({ \
+	va_list _va_args_get_ap; \
+	va_start(_va_args_get_ap, last); \
+	_VA_ARGS_GET_ASGN(__VA_ARGS__) \
+	va_end(_va_args_get_ap); \
+})
+
+/**
+ * Assign variadic arguments from a va_list to the given variables.
+ *
+ * @note The order and types of the variables are significant and must match the
+ * variadic arguments passed to the function that calls this macro exactly.
+ *
+ * @param list		the va_list variable in the function that calls this
+ * @param ...		variable names
+ */
+#define VA_ARGS_VGET(list, ...) ({ \
+	va_list _va_args_get_ap; \
+	va_copy(_va_args_get_ap, list); \
+	_VA_ARGS_GET_ASGN(__VA_ARGS__) \
+	va_end(_va_args_get_ap); \
+})
+
+#define _VA_ARGS_GET_ASGN(...) VA_ARGS_DISPATCH(_VA_ARGS_GET_ASGN, __VA_ARGS__)(__VA_ARGS__)
+#define _VA_ARGS_GET_ASGN1(v1) __VA_ARGS_GET_ASGN(v1)
+#define _VA_ARGS_GET_ASGN2(v1,v2) __VA_ARGS_GET_ASGN(v1) __VA_ARGS_GET_ASGN(v2)
+#define _VA_ARGS_GET_ASGN3(v1,v2,v3) __VA_ARGS_GET_ASGN(v1) __VA_ARGS_GET_ASGN(v2) \
+	__VA_ARGS_GET_ASGN(v3)
+#define _VA_ARGS_GET_ASGN4(v1,v2,v3,v4) __VA_ARGS_GET_ASGN(v1) __VA_ARGS_GET_ASGN(v2) \
+	__VA_ARGS_GET_ASGN(v3) __VA_ARGS_GET_ASGN(v4)
+#define _VA_ARGS_GET_ASGN5(v1,v2,v3,v4,v5) __VA_ARGS_GET_ASGN(v1) __VA_ARGS_GET_ASGN(v2) \
+	__VA_ARGS_GET_ASGN(v3) __VA_ARGS_GET_ASGN(v4) __VA_ARGS_GET_ASGN(v5)
+#define __VA_ARGS_GET_ASGN(v) v = va_arg(_va_args_get_ap, typeof(v));
 
 /**
  * Macro to allocate a sized type.

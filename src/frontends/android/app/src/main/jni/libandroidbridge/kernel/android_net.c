@@ -167,6 +167,15 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 	return host_create_from_sockaddr((sockaddr_t*)&addr);
 }
 
+CALLBACK(vip_equals, bool,
+	host_t *vip, va_list args)
+{
+	host_t *host;
+
+	VA_ARGS_VGET(args, host);
+	return host->ip_equals(host, vip);
+}
+
 METHOD(kernel_net_t, get_source_addr_old, host_t*,
 	private_android_net_t *this, host_t *dest, host_t *src)
 {
@@ -179,8 +188,7 @@ METHOD(kernel_net_t, get_source_addr_old, host_t*,
 	if (host)
 	{
 		this->mutex->lock(this->mutex);
-		if (this->vips->find_first(this->vips, (void*)host->ip_equals,
-								   NULL, host) == SUCCESS)
+		if (this->vips->find_first(this->vips, vip_equals, NULL, host))
 		{
 			host->destroy(host);
 			host = NULL;
@@ -236,8 +244,8 @@ METHOD(kernel_net_t, del_ip, status_t,
 	host_t *vip;
 
 	this->mutex->lock(this->mutex);
-	if (this->vips->find_first(this->vips, (void*)virtual_ip->ip_equals,
-							   (void**)&vip, virtual_ip) == SUCCESS)
+	if (this->vips->find_first(this->vips, vip_equals, (void**)&vip,
+							   virtual_ip))
 	{
 		this->vips->remove(this->vips, vip, NULL);
 		vip->destroy(vip);

@@ -105,31 +105,38 @@ METHOD(eap_manager_t, remove_method, void,
 	this->lock->unlock(this->lock);
 }
 
-/**
- * filter the registered methods
- */
-static bool filter_methods(uintptr_t role, eap_entry_t **entry,
-						   eap_type_t *type, void *in, uint32_t *vendor)
+CALLBACK(filter_methods, bool,
+	uintptr_t role, enumerator_t *orig, va_list args)
 {
-	if ((*entry)->role != (eap_role_t)role)
+	eap_entry_t *entry;
+	eap_type_t *type;
+	uint32_t *vendor;
+
+	VA_ARGS_VGET(args, type, vendor);
+
+	while (orig->enumerate(orig, &entry))
 	{
-		return FALSE;
+		if (entry->role != (eap_role_t)role)
+		{
+			continue;
+		}
+		if (entry->vendor == 0 &&
+		   (entry->type < 4 || entry->type == EAP_EXPANDED ||
+		    entry->type > EAP_EXPERIMENTAL))
+		{	/* filter invalid types */
+			continue;
+		}
+		if (type)
+		{
+			*type = entry->type;
+		}
+		if (vendor)
+		{
+			*vendor = entry->vendor;
+		}
+		return TRUE;
 	}
-	if ((*entry)->vendor == 0 &&
-	   ((*entry)->type < 4 || (*entry)->type == EAP_EXPANDED ||
-	    (*entry)->type > EAP_EXPERIMENTAL))
-	{	/* filter invalid types */
-		return FALSE;
-	}
-	if (type)
-	{
-		*type = (*entry)->type;
-	}
-	if (vendor)
-	{
-		*vendor = (*entry)->vendor;
-	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(eap_manager_t, create_enumerator, enumerator_t*,
@@ -139,7 +146,7 @@ METHOD(eap_manager_t, create_enumerator, enumerator_t*,
 	return enumerator_create_cleaner(
 				enumerator_create_filter(
 					this->methods->create_enumerator(this->methods),
-					(void*)filter_methods, (void*)(uintptr_t)role, NULL),
+					filter_methods, (void*)(uintptr_t)role, NULL),
 				(void*)this->lock->unlock, this->lock);
 }
 

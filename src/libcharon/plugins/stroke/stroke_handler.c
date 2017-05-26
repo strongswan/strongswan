@@ -62,35 +62,39 @@ static void attributes_destroy(attributes_t *this)
 	free(this);
 }
 
-/**
- * Filter function to convert host to DNS configuration attributes
- */
-static bool attr_filter(void *lock, host_t **in,
-						configuration_attribute_type_t *type,
-						void *dummy, chunk_t *data)
+CALLBACK(attr_filter, bool,
+	void *lock, enumerator_t *orig, va_list args)
 {
-	host_t *host = *in;
+	configuration_attribute_type_t *type;
+	chunk_t *data;
+	host_t *host;
 
-	switch (host->get_family(host))
+	VA_ARGS_VGET(args, type, data);
+
+	while (orig->enumerate(orig, &host))
 	{
-		case AF_INET:
-			*type = INTERNAL_IP4_DNS;
-			break;
-		case AF_INET6:
-			*type = INTERNAL_IP6_DNS;
-			break;
-		default:
-			return FALSE;
+		switch (host->get_family(host))
+		{
+			case AF_INET:
+				*type = INTERNAL_IP4_DNS;
+				break;
+			case AF_INET6:
+				*type = INTERNAL_IP6_DNS;
+				break;
+			default:
+				continue;
+		}
+		if (host->is_anyaddr(host))
+		{
+			*data = chunk_empty;
+		}
+		else
+		{
+			*data = host->get_address(host);
+		}
+		return TRUE;
 	}
-	if (host->is_anyaddr(host))
-	{
-		*data = chunk_empty;
-	}
-	else
-	{
-		*data = host->get_address(host);
-	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
@@ -114,7 +118,7 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
 				enumerator->destroy(enumerator);
 				return enumerator_create_filter(
 									attr->dns->create_enumerator(attr->dns),
-									(void*)attr_filter, this->lock,
+									attr_filter, this->lock,
 									(void*)this->lock->unlock);
 			}
 		}

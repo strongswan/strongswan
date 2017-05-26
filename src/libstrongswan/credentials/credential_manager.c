@@ -155,8 +155,12 @@ METHOD(credential_manager_t, call_hook, void,
 }
 
 METHOD(enumerator_t, sets_enumerate, bool,
-	sets_enumerator_t *this, credential_set_t **set)
+	sets_enumerator_t *this, va_list args)
 {
+	credential_set_t **set;
+
+	VA_ARGS_VGET(args, set);
+
 	if (this->exclusive)
 	{
 		if (this->exclusive->enumerate(this->exclusive, set))
@@ -202,7 +206,8 @@ static enumerator_t *create_sets_enumerator(private_credential_manager_t *this)
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_sets_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _sets_enumerate,
 			.destroy = _sets_destroy,
 		},
 	);
@@ -807,11 +812,12 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 	return trusted;
 }
 
-/**
- * List find match function for certificates
- */
-static bool cert_equals(certificate_t *a, certificate_t *b)
+CALLBACK(cert_equals, bool,
+	certificate_t *a, va_list args)
 {
+	certificate_t *b;
+
+	VA_ARGS_VGET(args, b);
 	return a->equals(a, b);
 }
 
@@ -840,9 +846,12 @@ typedef struct {
 } trusted_enumerator_t;
 
 METHOD(enumerator_t, trusted_enumerate, bool,
-	trusted_enumerator_t *this, certificate_t **cert, auth_cfg_t **auth)
+	trusted_enumerator_t *this, va_list args)
 {
-	certificate_t *current;
+	certificate_t *current, **cert;
+	auth_cfg_t **auth;
+
+	VA_ARGS_VGET(args, cert, auth);
 
 	DESTROY_IF(this->auth);
 	this->auth = auth_cfg_create();
@@ -888,8 +897,7 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 			continue;
 		}
 
-		if (this->failed->find_first(this->failed, (void*)cert_equals,
-									 NULL, current) == SUCCESS)
+		if (this->failed->find_first(this->failed, cert_equals, NULL, current))
 		{	/* check each candidate only once */
 			continue;
 		}
@@ -931,7 +939,8 @@ METHOD(credential_manager_t, create_trusted_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_trusted_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _trusted_enumerate,
 			.destroy = _trusted_destroy,
 		},
 		.this = this,
@@ -960,9 +969,13 @@ typedef struct {
 } public_enumerator_t;
 
 METHOD(enumerator_t, public_enumerate, bool,
-	public_enumerator_t *this, public_key_t **key, auth_cfg_t **auth)
+	public_enumerator_t *this, va_list args)
 {
 	certificate_t *cert;
+	public_key_t **key;
+	auth_cfg_t **auth;
+
+	VA_ARGS_VGET(args, key, auth);
 
 	while (this->inner->enumerate(this->inner, &cert, auth))
 	{
@@ -1001,7 +1014,8 @@ METHOD(credential_manager_t, create_public_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_public_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _public_enumerate,
 			.destroy = _public_destroy,
 		},
 		.inner = create_trusted_enumerator(this, type, id, online),

@@ -71,17 +71,26 @@ METHOD(hash_algorithm_set_t, count, int,
 	return array_count(this->algorithms);
 }
 
-static bool hash_filter(void *data, void **in, hash_algorithm_t *out)
+CALLBACK(hash_filter, bool,
+	void *data, enumerator_t *orig, va_list args)
 {
-	*out = **(hash_algorithm_t**)in;
-	return TRUE;
+	hash_algorithm_t *algo, *out;
+
+	VA_ARGS_VGET(args, out);
+
+	if (orig->enumerate(orig, &algo))
+	{
+		*out = *algo;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(hash_algorithm_set_t, create_enumerator, enumerator_t*,
 	private_hash_algorithm_set_t *this)
 {
 	return enumerator_create_filter(array_create_enumerator(this->algorithms),
-									(void*)hash_filter, NULL, NULL);
+									hash_filter, NULL, NULL);
 }
 
 METHOD(hash_algorithm_set_t, destroy, void,

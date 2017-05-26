@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2013 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -31,22 +31,43 @@
 
 #include <utils/debug.h>
 
-/**
- * Implementation of enumerator_create_empty().enumerate
+/*
+ * Described in header.
  */
-static bool enumerate_empty(enumerator_t *enumerator, ...)
+bool enumerator_enumerate_default(enumerator_t *enumerator, ...)
+{
+	va_list args;
+	bool result;
+
+	if (!enumerator->venumerate)
+	{
+		DBG1(DBG_LIB, "!!! ENUMERATE DEFAULT: venumerate() missing !!!");
+		return FALSE;
+	}
+	va_start(args, enumerator);
+	result = enumerator->venumerate(enumerator, args);
+	va_end(args);
+	return result;
+}
+
+METHOD(enumerator_t, enumerate_empty, bool,
+	enumerator_t *enumerator, va_list args)
 {
 	return FALSE;
 }
 
-/**
- * See header
+/*
+ * Described in header
  */
 enumerator_t* enumerator_create_empty()
 {
-	enumerator_t *this = malloc_thing(enumerator_t);
-	this->enumerate = enumerate_empty;
-	this->destroy = (void*)free;
+	enumerator_t *this;
+
+	INIT(this,
+		.enumerate = enumerator_enumerate_default,
+		.venumerate = _enumerate_empty,
+		.destroy = (void*)free,
+	);
 	return this;
 }
 
@@ -64,24 +85,23 @@ typedef struct {
 	char *full_end;
 } dir_enum_t;
 
-/**
- * Implementation of enumerator_create_directory().destroy
- */
-static void destroy_dir_enum(dir_enum_t *this)
+METHOD(enumerator_t, destroy_dir_enum, void,
+	dir_enum_t *this)
 {
 	closedir(this->dir);
 	free(this);
 }
 
-/**
- * Implementation of enumerator_create_directory().enumerate
- */
-static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
-							   char **absolute, struct stat *st)
+METHOD(enumerator_t, enumerate_dir_enum, bool,
+	dir_enum_t *this, va_list args)
 {
 	struct dirent *entry = readdir(this->dir);
+	struct stat *st;
 	size_t remaining;
+	char **relative, **absolute;
 	int len;
+
+	VA_ARGS_VGET(args, relative, absolute, st);
 
 	if (!entry)
 	{
@@ -89,7 +109,7 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
 	}
 	if (streq(entry->d_name, ".") || streq(entry->d_name, ".."))
 	{
-		return enumerate_dir_enum(this, relative, absolute, st);
+		return this->public.enumerate(&this->public, relative, absolute, st);
 	}
 	if (relative)
 	{
@@ -122,15 +142,21 @@ static bool enumerate_dir_enum(dir_enum_t *this, char **relative,
 	return TRUE;
 }
 
-/**
- * See header
+/*
+ * Described in header
  */
 enumerator_t* enumerator_create_directory(const char *path)
 {
+	dir_enum_t *this;
 	int len;
-	dir_enum_t *this = malloc_thing(dir_enum_t);
-	this->public.enumerate = (void*)enumerate_dir_enum;
-	this->public.destroy = (void*)destroy_dir_enum;
+
+	INIT(this,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_dir_enum,
+			.destroy = _destroy_dir_enum,
+		},
+	);
 
 	if (*path == '\0')
 	{
@@ -152,9 +178,10 @@ enumerator_t* enumerator_create_directory(const char *path)
 	this->full_end = &this->full[len];
 
 	this->dir = opendir(path);
-	if (this->dir == NULL)
+	if (!this->dir)
 	{
-		DBG1(DBG_LIB, "opening directory '%s' failed: %s", path, strerror(errno));
+		DBG1(DBG_LIB, "opening directory '%s' failed: %s", path,
+			 strerror(errno));
 		free(this);
 		return NULL;
 	}
@@ -177,21 +204,21 @@ typedef struct {
 	char full[PATH_MAX];
 } glob_enum_t;
 
-/**
- * Implementation of enumerator_create_glob().destroy
- */
-static void destroy_glob_enum(glob_enum_t *this)
+METHOD(enumerator_t, destroy_glob_enum, void,
+	glob_enum_t *this)
 {
 	globfree(&this->glob);
 	free(this);
 }
 
-/**
- * Implementation of enumerator_create_glob().enumerate
- */
-static bool enumerate_glob_enum(glob_enum_t *this, char **file, struct stat *st)
+METHOD(enumerator_t, enumerate_glob_enum, bool,
+	glob_enum_t *this, va_list args)
 {
+	struct stat *st;
 	char *match;
+	char **file;
+
+	VA_ARGS_VGET(args, file, st);
 
 	if (this->pos >= this->glob.gl_pathc)
 	{
@@ -202,20 +229,17 @@ static bool enumerate_glob_enum(glob_enum_t *this, char **file, struct stat *st)
 	{
 		*file = match;
 	}
-	if (st)
+	if (st && stat(match, st))
 	{
-		if (stat(match, st))
-		{
-			DBG1(DBG_LIB, "stat() on '%s' failed: %s", match,
-				 strerror(errno));
-			return FALSE;
-		}
+		DBG1(DBG_LIB, "stat() on '%s' failed: %s", match,
+			 strerror(errno));
+		return FALSE;
 	}
 	return TRUE;
 }
 
-/**
- * See header
+/*
+ * Described in header
  */
 enumerator_t* enumerator_create_glob(const char *pattern)
 {
@@ -229,8 +253,9 @@ enumerator_t* enumerator_create_glob(const char *pattern)
 
 	INIT(this,
 		.public = {
-			.enumerate = (void*)enumerate_glob_enum,
-			.destroy = (void*)destroy_glob_enum,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_glob_enum,
+			.destroy = _destroy_glob_enum,
 		},
 	);
 
@@ -272,23 +297,21 @@ typedef struct {
 	const char *trim;
 } token_enum_t;
 
-/**
- * Implementation of enumerator_create_token().destroy
- */
-static void destroy_token_enum(token_enum_t *this)
+METHOD(enumerator_t, destroy_token_enum, void,
+	token_enum_t *this)
 {
 	free(this->string);
 	free(this);
 }
 
-/**
- * Implementation of enumerator_create_token().enumerate
- */
-static bool enumerate_token_enum(token_enum_t *this, char **token)
+METHOD(enumerator_t, enumerate_token_enum, bool,
+	token_enum_t *this, va_list args)
 {
 	const char *sep, *trim;
-	char *pos = NULL, *tmp;
+	char *pos = NULL, *tmp, **token;
 	bool last = FALSE;
+
+	VA_ARGS_VGET(args, token);
 
 	/* trim leading characters/separators */
 	while (*this->pos)
@@ -390,52 +413,48 @@ static bool enumerate_token_enum(token_enum_t *this, char **token)
 	return FALSE;
 }
 
-/**
- * See header
+/*
+ * Described in header
  */
 enumerator_t* enumerator_create_token(const char *string, const char *sep,
 									  const char *trim)
 {
-	token_enum_t *enumerator = malloc_thing(token_enum_t);
+	token_enum_t *this;
 
-	enumerator->public.enumerate = (void*)enumerate_token_enum;
-	enumerator->public.destroy = (void*)destroy_token_enum;
-	enumerator->string = strdup(string);
-	enumerator->pos = enumerator->string;
-	enumerator->sep = sep;
-	enumerator->trim = trim;
+	INIT(this,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_token_enum,
+			.destroy = _destroy_token_enum,
+		},
+		.string = strdup(string),
+		.sep = sep,
+		.trim = trim,
+	);
+	this->pos = this->string;
 
-	return &enumerator->public;
+	return &this->public;
 }
 
 /**
- * enumerator for nested enumerations
+ * Enumerator for nested enumerations
  */
 typedef struct {
-	/* implements enumerator_t */
 	enumerator_t public;
-	/* outer enumerator */
 	enumerator_t *outer;
-	/* inner enumerator */
 	enumerator_t *inner;
-	/* constructor for inner enumerator */
 	enumerator_t *(*create_inner)(void *outer, void *data);
-	/* data to pass to constructor above */
 	void *data;
-	/* destructor for data */
-	void (*destroy_data)(void *data);
+	void (*destructor)(void *data);
 } nested_enumerator_t;
 
 
-/**
- * Implementation of enumerator_create_nested().enumerate()
- */
-static bool enumerate_nested(nested_enumerator_t *this, void *v1, void *v2,
-							 void *v3, void *v4, void *v5)
+METHOD(enumerator_t, enumerate_nested, bool,
+	nested_enumerator_t *this, va_list args)
 {
 	while (TRUE)
 	{
-		while (this->inner == NULL)
+		while (!this->inner)
 		{
 			void *outer;
 
@@ -444,8 +463,13 @@ static bool enumerate_nested(nested_enumerator_t *this, void *v1, void *v2,
 				return FALSE;
 			}
 			this->inner = this->create_inner(outer, this->data);
+			if (this->inner && !this->inner->venumerate)
+			{
+				DBG1(DBG_LIB, "!!! ENUMERATE NESTED: venumerate() missing !!!");
+				return FALSE;
+			}
 		}
-		if (this->inner->enumerate(this->inner, v1, v2, v3, v4, v5))
+		if (this->inner->venumerate(this->inner, args))
 		{
 			return TRUE;
 		}
@@ -454,103 +478,100 @@ static bool enumerate_nested(nested_enumerator_t *this, void *v1, void *v2,
 	}
 }
 
-/**
- * Implementation of enumerator_create_nested().destroy()
- **/
-static void destroy_nested(nested_enumerator_t *this)
+METHOD(enumerator_t, destroy_nested, void,
+	nested_enumerator_t *this)
 {
-	if (this->destroy_data)
+	if (this->destructor)
 	{
-		this->destroy_data(this->data);
+		this->destructor(this->data);
 	}
 	DESTROY_IF(this->inner);
 	this->outer->destroy(this->outer);
 	free(this);
 }
 
-/**
- * See header
+/*
+ * Described in header
  */
 enumerator_t *enumerator_create_nested(enumerator_t *outer,
 					enumerator_t *(inner_constructor)(void *outer, void *data),
-					void *data, void (*destroy_data)(void *data))
+					void *data, void (*destructor)(void *data))
 {
-	nested_enumerator_t *enumerator = malloc_thing(nested_enumerator_t);
+	nested_enumerator_t *this;
 
-	enumerator->public.enumerate = (void*)enumerate_nested;
-	enumerator->public.destroy = (void*)destroy_nested;
-	enumerator->outer = outer;
-	enumerator->inner = NULL;
-	enumerator->create_inner = (void*)inner_constructor;
-	enumerator->data = data;
-	enumerator->destroy_data = destroy_data;
-
-	return &enumerator->public;
+	INIT(this,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_nested,
+			.destroy = _destroy_nested,
+		},
+		.outer = outer,
+		.create_inner = inner_constructor,
+		.data = data,
+		.destructor = destructor,
+	);
+	return &this->public;
 }
 
 /**
- * enumerator for filtered enumerator
+ * Enumerator for filtered enumerator
  */
 typedef struct {
 	enumerator_t public;
-	enumerator_t *unfiltered;
+	enumerator_t *orig;
 	void *data;
-	bool (*filter)(void *data, ...);
+	bool (*filter)(void*,enumerator_t*,va_list);
 	void (*destructor)(void *data);
 } filter_enumerator_t;
 
-/**
- * Implementation of enumerator_create_filter().destroy
- */
-static void destroy_filter(filter_enumerator_t *this)
+METHOD(enumerator_t, destroy_filter, void,
+	filter_enumerator_t *this)
 {
 	if (this->destructor)
 	{
 		this->destructor(this->data);
 	}
-	this->unfiltered->destroy(this->unfiltered);
+	this->orig->destroy(this->orig);
 	free(this);
 }
 
-/**
- * Implementation of enumerator_create_filter().enumerate
- */
-static bool enumerate_filter(filter_enumerator_t *this, void *o1, void *o2,
-							 void *o3, void *o4, void *o5)
+METHOD(enumerator_t, enumerate_filter, bool,
+	filter_enumerator_t *this, va_list args)
 {
-	void *i1, *i2, *i3, *i4, *i5;
+	bool result = FALSE;
 
-	while (this->unfiltered->enumerate(this->unfiltered, &i1, &i2, &i3, &i4, &i5))
+	if (this->filter(this->data, this->orig, args))
 	{
-		if (this->filter(this->data, &i1, o1, &i2, o2, &i3, o3, &i4, o4, &i5, o5))
-		{
-			return TRUE;
-		}
+		result = TRUE;
 	}
-	return FALSE;
+	return result;
 }
 
-/**
- * see header
+/*
+ * Described in header
  */
-enumerator_t *enumerator_create_filter(enumerator_t *unfiltered,
-									   bool (*filter)(void *data, ...),
-									   void *data, void (*destructor)(void *data))
+enumerator_t *enumerator_create_filter(enumerator_t *orig,
+			bool (*filter)(void *data, enumerator_t *orig, va_list args),
+			void *data, void (*destructor)(void *data))
 {
-	filter_enumerator_t *this = malloc_thing(filter_enumerator_t);
+	filter_enumerator_t *this;
 
-	this->public.enumerate = (void*)enumerate_filter;
-	this->public.destroy = (void*)destroy_filter;
-	this->unfiltered = unfiltered;
-	this->filter = filter;
-	this->data = data;
-	this->destructor = destructor;
-
+	INIT(this,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_filter,
+			.destroy = _destroy_filter,
+		},
+		.orig = orig,
+		.filter = filter,
+		.data = data,
+		.destructor = destructor,
+	);
 	return &this->public;
 }
 
 /**
- * enumerator for cleaner enumerator
+ * Enumerator for cleaner enumerator
  */
 typedef struct {
 	enumerator_t public;
@@ -559,44 +580,48 @@ typedef struct {
 	void *data;
 } cleaner_enumerator_t;
 
-/**
- * Implementation of enumerator_create_cleanup().destroy
- */
-static void destroy_cleaner(cleaner_enumerator_t *this)
+METHOD(enumerator_t, destroy_cleaner, void,
+	cleaner_enumerator_t *this)
 {
 	this->cleanup(this->data);
 	this->wrapped->destroy(this->wrapped);
 	free(this);
 }
 
-/**
- * Implementation of enumerator_create_cleaner().enumerate
- */
-static bool enumerate_cleaner(cleaner_enumerator_t *this, void *v1, void *v2,
-							  void *v3, void *v4, void *v5)
+METHOD(enumerator_t, enumerate_cleaner, bool,
+	cleaner_enumerator_t *this, va_list args)
 {
-	return this->wrapped->enumerate(this->wrapped, v1, v2, v3, v4, v5);
+	if (!this->wrapped->venumerate)
+	{
+		DBG1(DBG_LIB, "!!! CLEANER ENUMERATOR: venumerate() missing !!!");
+		return FALSE;
+	}
+	return this->wrapped->venumerate(this->wrapped, args);
 }
 
-/**
- * see header
+/*
+ * Described in header
  */
 enumerator_t *enumerator_create_cleaner(enumerator_t *wrapped,
 										void (*cleanup)(void *data), void *data)
 {
-	cleaner_enumerator_t *this = malloc_thing(cleaner_enumerator_t);
+	cleaner_enumerator_t *this;
 
-	this->public.enumerate = (void*)enumerate_cleaner;
-	this->public.destroy = (void*)destroy_cleaner;
-	this->wrapped = wrapped;
-	this->cleanup = cleanup;
-	this->data = data;
-
+	INIT(this,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_cleaner,
+			.destroy = _destroy_cleaner,
+		},
+		.wrapped = wrapped,
+		.cleanup = cleanup,
+		.data = data,
+	);
 	return &this->public;
 }
 
 /**
- * enumerator for single enumerator
+ * Enumerator for single enumerator
  */
 typedef struct {
 	enumerator_t public;
@@ -605,10 +630,8 @@ typedef struct {
 	bool done;
 } single_enumerator_t;
 
-/**
- * Implementation of enumerator_create_single().destroy
- */
-static void destroy_single(single_enumerator_t *this)
+METHOD(enumerator_t, destroy_single, void,
+	single_enumerator_t *this)
 {
 	if (this->cleanup)
 	{
@@ -617,11 +640,12 @@ static void destroy_single(single_enumerator_t *this)
 	free(this);
 }
 
-/**
- * Implementation of enumerator_create_single().enumerate
- */
-static bool enumerate_single(single_enumerator_t *this, void **item)
+METHOD(enumerator_t, enumerate_single, bool,
+	single_enumerator_t *this, va_list args)
 {
+	void **item;
+
+	VA_ARGS_VGET(args, item);
 	if (this->done)
 	{
 		return FALSE;
@@ -631,19 +655,21 @@ static bool enumerate_single(single_enumerator_t *this, void **item)
 	return TRUE;
 }
 
-/**
- * see header
+/*
+ * Described in header
  */
 enumerator_t *enumerator_create_single(void *item, void (*cleanup)(void *item))
 {
-	single_enumerator_t *this = malloc_thing(single_enumerator_t);
+	single_enumerator_t *this;
 
-	this->public.enumerate = (void*)enumerate_single;
-	this->public.destroy = (void*)destroy_single;
-	this->item = item;
-	this->cleanup = cleanup;
-	this->done = FALSE;
-
+	INIT(this,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_single,
+			.destroy = _destroy_single,
+		},
+		.item = item,
+		.cleanup = cleanup,
+	);
 	return &this->public;
 }
-

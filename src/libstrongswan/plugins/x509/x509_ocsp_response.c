@@ -228,32 +228,38 @@ METHOD(ocsp_response_t, create_cert_enumerator, enumerator_t*,
 	return this->certs->create_enumerator(this->certs);
 }
 
-/**
- * enumerator filter callback for create_response_enumerator
- */
-static bool filter(void *data, single_response_t **response,
-				   chunk_t *serialNumber,
-				   void *p2, cert_validation_t *status,
-				   void *p3, time_t *revocationTime,
-				   void *p4, crl_reason_t *revocationReason)
+CALLBACK(filter, bool,
+	void *data, enumerator_t *orig, va_list args)
 {
-	if (serialNumber)
+	single_response_t *response;
+	cert_validation_t *status;
+	crl_reason_t *revocationReason;
+	chunk_t *serialNumber;
+	time_t *revocationTime;
+
+	VA_ARGS_VGET(args, serialNumber, status, revocationTime, revocationReason);
+
+	if (orig->enumerate(orig, &response))
 	{
-		*serialNumber = (*response)->serialNumber;
+		if (serialNumber)
+		{
+			*serialNumber = response->serialNumber;
+		}
+		if (status)
+		{
+			*status = response->status;
+		}
+		if (revocationTime)
+		{
+			*revocationTime = response->revocationTime;
+		}
+		if (revocationReason)
+		{
+			*revocationReason = response->revocationReason;
+		}
+		return TRUE;
 	}
-	if (status)
-	{
-		*status = (*response)->status;
-	}
-	if (revocationTime)
-	{
-		*revocationTime = (*response)->revocationTime;
-	}
-	if (revocationReason)
-	{
-		*revocationReason = (*response)->revocationReason;
-	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(ocsp_response_t, create_response_enumerator, enumerator_t*,
@@ -261,7 +267,7 @@ METHOD(ocsp_response_t, create_response_enumerator, enumerator_t*,
 {
 	return enumerator_create_filter(
 				this->responses->create_enumerator(this->responses),
-				(void*)filter, NULL, NULL);
+				filter, NULL, NULL);
 }
 
 /**

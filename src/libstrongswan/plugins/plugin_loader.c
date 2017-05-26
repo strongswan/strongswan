@@ -465,34 +465,48 @@ static plugin_entry_t *load_plugin(private_plugin_loader_t *this, char *name,
 	return entry;
 }
 
-/**
- * Convert enumerated provided_feature_t to plugin_feature_t
- */
-static bool feature_filter(void *null, provided_feature_t **provided,
-						   plugin_feature_t **feature)
+CALLBACK(feature_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*feature = (*provided)->feature;
-	return (*provided)->loaded;
+	provided_feature_t *provided;
+	plugin_feature_t **feature;
+
+	VA_ARGS_VGET(args, feature);
+
+	while (orig->enumerate(orig, &provided))
+	{
+		if (provided->loaded)
+		{
+			*feature = provided->feature;
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
-/**
- * Convert enumerated entries to plugin_t
- */
-static bool plugin_filter(void *null, plugin_entry_t **entry, plugin_t **plugin,
-						  void *in, linked_list_t **list)
+CALLBACK(plugin_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	plugin_entry_t *this = *entry;
+	plugin_entry_t *entry;
+	linked_list_t **list;
+	plugin_t **plugin;
 
-	*plugin = this->plugin;
-	if (list)
+	VA_ARGS_VGET(args, plugin, list);
+
+	if (orig->enumerate(orig, &entry))
 	{
-		enumerator_t *features;
-		features = enumerator_create_filter(
-							this->features->create_enumerator(this->features),
-							(void*)feature_filter, NULL, NULL);
-		*list = linked_list_create_from_enumerator(features);
+		*plugin = entry->plugin;
+		if (list)
+		{
+			enumerator_t *features;
+			features = enumerator_create_filter(
+							entry->features->create_enumerator(entry->features),
+							feature_filter, NULL, NULL);
+			*list = linked_list_create_from_enumerator(features);
+		}
+		return TRUE;
 	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(plugin_loader_t, create_plugin_enumerator, enumerator_t*,
@@ -500,7 +514,7 @@ METHOD(plugin_loader_t, create_plugin_enumerator, enumerator_t*,
 {
 	return enumerator_create_filter(
 							this->plugins->create_enumerator(this->plugins),
-							(void*)plugin_filter, NULL, NULL);
+							plugin_filter, NULL, NULL);
 }
 
 METHOD(plugin_loader_t, has_feature, bool,
@@ -592,18 +606,14 @@ static void load_provided(private_plugin_loader_t *this,
 						  provided_feature_t *provided,
 						  int level);
 
-/**
- * Used to find a loaded feature
- */
-static bool is_feature_loaded(provided_feature_t *item)
+CALLBACK(is_feature_loaded, bool,
+	provided_feature_t *item, va_list args)
 {
 	return item->loaded;
 }
 
-/**
- * Used to find a loadable feature
- */
-static bool is_feature_loadable(provided_feature_t *item)
+CALLBACK(is_feature_loadable, bool,
+	provided_feature_t *item, va_list args)
 {
 	return !item->loading && !item->loaded && !item->failed;
 }
@@ -616,8 +626,7 @@ static bool loaded_feature_matches(registered_feature_t *a,
 {
 	if (plugin_feature_matches(a->feature, b->feature))
 	{
-		return b->plugins->find_first(b->plugins, (void*)is_feature_loaded,
-									  NULL) == SUCCESS;
+		return b->plugins->find_first(b->plugins, is_feature_loaded, NULL);
 	}
 	return FALSE;
 }
@@ -630,8 +639,7 @@ static bool loadable_feature_equals(registered_feature_t *a,
 {
 	if (plugin_feature_equals(a->feature, b->feature))
 	{
-		return b->plugins->find_first(b->plugins, (void*)is_feature_loadable,
-									  NULL) == SUCCESS;
+		return b->plugins->find_first(b->plugins, is_feature_loadable, NULL);
 	}
 	return FALSE;
 }
@@ -644,8 +652,7 @@ static bool loadable_feature_matches(registered_feature_t *a,
 {
 	if (plugin_feature_matches(a->feature, b->feature))
 	{
-		return b->plugins->find_first(b->plugins, (void*)is_feature_loadable,
-									  NULL) == SUCCESS;
+		return b->plugins->find_first(b->plugins, is_feature_loadable, NULL);
 	}
 	return FALSE;
 }
@@ -997,8 +1004,8 @@ static void purge_plugins(private_plugin_loader_t *this)
 		{	/* feature interface not supported */
 			continue;
 		}
-		if (entry->features->find_first(entry->features,
-									(void*)is_feature_loaded, NULL) != SUCCESS)
+		if (!entry->features->find_first(entry->features, is_feature_loaded,
+										 NULL))
 		{
 			DBG2(DBG_LIB, "unloading plugin '%s' without loaded features",
 				 entry->plugin->get_name(entry->plugin));
@@ -1048,6 +1055,15 @@ static bool find_plugin(char *path, char *name, char *buf, char **file)
 	return FALSE;
 }
 
+CALLBACK(find_plugin_cb, bool,
+	char *path, va_list args)
+{
+	char *name, *buf, **file;
+
+	VA_ARGS_VGET(args, name, buf, file);
+	return find_plugin(path, name, buf, file);
+}
+
 /**
  * Used to sort plugins by priority
  */
@@ -1095,14 +1111,20 @@ static int plugin_priority_cmp(const plugin_priority_t *a,
 	return diff;
 }
 
-/**
- * Convert enumerated plugin_priority_t to a plugin name
- */
-static bool plugin_priority_filter(void *null, plugin_priority_t **prio,
-						   char **name)
+CALLBACK(plugin_priority_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*name = (*prio)->name;
-	return TRUE;
+	plugin_priority_t *prio;
+	char **name;
+
+	VA_ARGS_VGET(args, name);
+
+	if (orig->enumerate(orig, &prio))
+	{
+		*name = prio->name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
@@ -1142,7 +1164,7 @@ static char *modular_pluginlist(char *list)
 	else
 	{
 		enumerator = enumerator_create_filter(array_create_enumerator(given),
-									(void*)plugin_priority_filter, NULL, NULL);
+										plugin_priority_filter, NULL, NULL);
 		load_def = TRUE;
 	}
 	while (enumerator->enumerate(enumerator, &plugin))
@@ -1224,8 +1246,8 @@ METHOD(plugin_loader_t, load_plugins, bool,
 		}
 		if (this->paths)
 		{
-			this->paths->find_first(this->paths, (void*)find_plugin, NULL,
-									token, buf, &file);
+			this->paths->find_first(this->paths, find_plugin_cb, NULL, token,
+									buf, &file);
 		}
 		if (!file)
 		{

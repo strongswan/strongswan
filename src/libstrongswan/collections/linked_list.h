@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2015 Tobias Brunner
+ * Copyright (C) 2007-2017 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * Hochschule fuer Technik Rapperswil
@@ -28,23 +28,30 @@ typedef struct linked_list_t linked_list_t;
 #include <collections/enumerator.h>
 
 /**
- * Method to match elements in a linked list (used in find_* functions)
+ * Function to match elements in a linked list
  *
  * @param item			current list item
- * @param ...			user supplied data (only pointers, at most 5)
- * @return
- *						- TRUE, if the item matched
- *						- FALSE, otherwise
+ * @param args			user supplied data
+ * @return				TRUE, if the item matched, FALSE otherwise
  */
-typedef bool (*linked_list_match_t)(void *item, ...);
+typedef bool (*linked_list_match_t)(void *item, va_list args);
 
 /**
- * Method to be invoked on elements in a linked list (used in invoke_* functions)
+ * Helper function to match a string in a linked list of strings
+ *
+ * @param item			list item (char*)
+ * @param args			user supplied data (char*)
+ * @return
+ */
+bool linked_list_match_str(void *item, va_list args);
+
+/**
+ * Function to be invoked on elements in a linked list
  *
  * @param item			current list item
- * @param ...			user supplied data (only pointers, at most 5)
+ * @param args			user supplied data
  */
-typedef void (*linked_list_invoke_t)(void *item, ...);
+typedef void (*linked_list_invoke_t)(void *item, va_list args);
 
 /**
  * Class implementing a double linked list.
@@ -167,21 +174,20 @@ struct linked_list_t {
 	 *
 	 * The first object passed to the match function is the current list item,
 	 * followed by the user supplied data.
-	 * If the supplied function returns TRUE this function returns SUCCESS, and
-	 * the current object is returned in the third parameter, otherwise,
+	 * If the supplied function returns TRUE so does this function, and the
+	 * current object is returned in the third parameter (if given), otherwise,
 	 * the next item is checked.
 	 *
 	 * If match is NULL, *item and the current object are compared.
 	 *
-	 * @warning Only use pointers as user supplied data.
-	 *
 	 * @param match			comparison function to call on each object, or NULL
-	 * @param item			the list item, if found
-	 * @param ...			user data to supply to match function (limited to 5 arguments)
-	 * @return				SUCCESS if found, NOT_FOUND otherwise
+	 * @param item			the list item, if found, or NULL
+	 * @param ...			user data to supply to match function
+	 * @return				TRUE if found, FALSE otherwise (or if neither match,
+	 *						nor item is supplied)
 	 */
-	status_t (*find_first) (linked_list_t *this, linked_list_match_t match,
-							void **item, ...);
+	bool (*find_first)(linked_list_t *this, linked_list_match_t match,
+					   void **item, ...);
 
 	/**
 	 * Invoke a method on all of the contained objects.
@@ -192,22 +198,18 @@ struct linked_list_t {
 	 * which can be evalutated at compile time using the offsetof
 	 * macro, e.g.: list->invoke(list, offsetof(object_t, method));
 	 *
-	 * @warning Only use pointers as user supplied data.
-	 *
 	 * @param offset	offset of the method to invoke on objects
-	 * @param ...		user data to supply to called function (limited to 5 arguments)
 	 */
-	void (*invoke_offset) (linked_list_t *this, size_t offset, ...);
+	void (*invoke_offset)(linked_list_t *this, size_t offset);
 
 	/**
 	 * Invoke a function on all of the contained objects.
 	 *
-	 * @warning Only use pointers as user supplied data.
-	 *
-	 * @param function	offset of the method to invoke on objects
-	 * @param ...		user data to supply to called function (limited to 5 arguments)
+	 * @param function	function to call for each object
+	 * @param ...		user data to supply to called function
 	 */
-	void (*invoke_function) (linked_list_t *this, linked_list_invoke_t function, ...);
+	void (*invoke_function)(linked_list_t *this, linked_list_invoke_t function,
+							...);
 
 	/**
 	 * Clones a list and its objects using the objects' clone method.

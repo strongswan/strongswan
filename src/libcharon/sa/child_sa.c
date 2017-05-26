@@ -435,10 +435,11 @@ struct policy_enumerator_t {
 };
 
 METHOD(enumerator_t, policy_enumerate, bool,
-	   policy_enumerator_t *this, traffic_selector_t **my_out,
-	   traffic_selector_t **other_out)
+	   policy_enumerator_t *this, va_list args)
 {
-	traffic_selector_t *other_ts;
+	traffic_selector_t *other_ts, **my_out, **other_out;
+
+	VA_ARGS_VGET(args, my_out, other_out);
 
 	while (this->ts || this->mine->enumerate(this->mine, &this->ts))
 	{
@@ -487,7 +488,8 @@ METHOD(child_sa_t, create_policy_enumerator, enumerator_t*,
 
 	INIT(e,
 		.public = {
-			.enumerate = (void*)_policy_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _policy_enumerate,
 			.destroy = _policy_destroy,
 		},
 		.mine = array_create_enumerator(this->my_ts),
@@ -1402,13 +1404,13 @@ METHOD(child_sa_t, get_rekey_spi, uint32_t,
 	return this->rekey_spi;
 }
 
-/**
- * Callback to reinstall a virtual IP
- */
-static void reinstall_vip(host_t *vip, host_t *me)
+CALLBACK(reinstall_vip, void,
+	host_t *vip, va_list args)
 {
+	host_t *me;
 	char *iface;
 
+	VA_ARGS_VGET(args, me);
 	if (charon->kernel->get_interface(charon->kernel, me, &iface))
 	{
 		charon->kernel->del_ip(charon->kernel, vip, -1, TRUE);
@@ -1530,7 +1532,7 @@ METHOD(child_sa_t, update, status_t,
 
 				/* we reinstall the virtual IP to handle interface roaming
 				 * correctly */
-				vips->invoke_function(vips, (void*)reinstall_vip, me);
+				vips->invoke_function(vips, reinstall_vip, me);
 
 				/* reinstall updated policies */
 				install_policies_internal(this, me, other, my_ts, other_ts,

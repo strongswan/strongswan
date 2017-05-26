@@ -120,48 +120,49 @@ typedef struct {
 	identification_t *id;
 } cert_data_t;
 
-/**
- * Destroy CA certificate enumerator data
- */
-static void cert_data_destroy(cert_data_t *data)
+CALLBACK(cert_data_destroy, void,
+	cert_data_t *data)
 {
 	data->this->lock->unlock(data->this->lock);
 	free(data);
 }
 
-/**
- * Filter function for certificates enumerator
- */
-static bool cert_filter(cert_data_t *data, certificate_t **in,
-						 certificate_t **out)
+CALLBACK(cert_filter, bool,
+	cert_data_t *data, enumerator_t *orig, va_list args)
 {
-	certificate_t *cert = *in;
+	certificate_t *cert, **out;
 	public_key_t *public;
 
-	public = cert->get_public_key(cert);
-	if (!public)
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &cert))
 	{
-		return FALSE;
-	}
-	if (data->key != KEY_ANY && public->get_type(public) != data->key)
-	{
+		public = cert->get_public_key(cert);
+		if (!public)
+		{
+			continue;
+		}
+		if (data->key != KEY_ANY && public->get_type(public) != data->key)
+		{
+			public->destroy(public);
+			continue;
+		}
+		if (data->id && data->id->get_type(data->id) == ID_KEY_ID &&
+			public->has_fingerprint(public, data->id->get_encoding(data->id)))
+		{
+			public->destroy(public);
+			*out = cert;
+			return TRUE;
+		}
 		public->destroy(public);
-		return FALSE;
-	}
-	if (data->id && data->id->get_type(data->id) == ID_KEY_ID &&
-		public->has_fingerprint(public, data->id->get_encoding(data->id)))
-	{
-		public->destroy(public);
+		if (data->id && !cert->has_subject(cert, data->id))
+		{
+			continue;
+		}
 		*out = cert;
 		return TRUE;
 	}
-	public->destroy(public);
-	if (data->id && !cert->has_subject(cert, data->id))
-	{
-		return FALSE;
-	}
-	*out = cert;
-	return TRUE;
+	return FALSE;
 }
 
 /**
@@ -181,7 +182,7 @@ static enumerator_t *create_trusted_cert_enumerator(private_nm_creds_t *this,
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(
 					this->certs->create_enumerator(this->certs),
-					(void*)cert_filter, data, (void*)cert_data_destroy);
+					cert_filter, data, cert_data_destroy);
 }
 
 METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
@@ -235,9 +236,13 @@ typedef struct {
 } shared_enumerator_t;
 
 METHOD(enumerator_t, shared_enumerate, bool,
-	shared_enumerator_t *this, shared_key_t **key, id_match_t *me,
-	id_match_t *other)
+	shared_enumerator_t *this, va_list args)
 {
+	shared_key_t **key;
+	id_match_t *me, *other;
+
+	VA_ARGS_VGET(args, key, me, other);
+
 	if (this->done)
 	{
 		return FALSE;
@@ -307,7 +312,8 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_shared_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _shared_enumerate,
 			.destroy = _shared_destroy,
 		},
 		.this = this,

@@ -153,30 +153,32 @@ static bool load_certificates(private_pkcs11_creds_t *this)
 	return TRUE;
 }
 
-/**
- * filter function for certs enumerator
- */
-static bool certs_filter(identification_t *id,
-						 certificate_t **in, certificate_t **out)
+CALLBACK(certs_filter, bool,
+	identification_t *id, enumerator_t *orig, va_list args)
 {
 	public_key_t *public;
-	certificate_t *cert = *in;
+	certificate_t *cert, **out;
 
-	if (id == NULL || cert->has_subject(cert, id))
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &cert))
 	{
-		*out = *in;
-		return TRUE;
-	}
-	public = cert->get_public_key(cert);
-	if (public)
-	{
-		if (public->has_fingerprint(public, id->get_encoding(id)))
+		if (id == NULL || cert->has_subject(cert, id))
 		{
-			public->destroy(public);
-			*out = *in;
+			*out = cert;
 			return TRUE;
 		}
-		public->destroy(public);
+		public = cert->get_public_key(cert);
+		if (public)
+		{
+			if (public->has_fingerprint(public, id->get_encoding(id)))
+			{
+				public->destroy(public);
+				*out = cert;
+				return TRUE;
+			}
+			public->destroy(public);
+		}
 	}
 	return FALSE;
 }
@@ -199,7 +201,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	{
 		inner = this->untrusted->create_enumerator(this->untrusted);
 	}
-	return enumerator_create_filter(inner, (void*)certs_filter, id, NULL);
+	return enumerator_create_filter(inner, certs_filter, id, NULL);
 }
 
 METHOD(pkcs11_creds_t, get_library, pkcs11_library_t*,

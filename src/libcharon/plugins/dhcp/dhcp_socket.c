@@ -382,8 +382,7 @@ METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 	while (try <= DHCP_TRIES && discover(this, transaction))
 	{
 		if (!this->condvar->timed_wait(this->condvar, this->mutex, 1000 * try) &&
-			this->request->find_first(this->request, NULL,
-									  (void**)&transaction) == SUCCESS)
+			this->request->find_first(this->request, NULL, (void**)&transaction))
 		{
 			break;
 		}

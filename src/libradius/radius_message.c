@@ -244,8 +244,12 @@ typedef struct {
 } attribute_enumerator_t;
 
 METHOD(enumerator_t, attribute_enumerate, bool,
-	attribute_enumerator_t *this, int *type, chunk_t *data)
+	attribute_enumerator_t *this, va_list args)
 {
+	chunk_t *data;
+	int *type;
+
+	VA_ARGS_VGET(args, type, data);
 	if (this->left == 0)
 	{
 		return FALSE;
@@ -275,7 +279,8 @@ METHOD(radius_message_t, create_enumerator, enumerator_t*,
 	}
 	INIT(e,
 		.public = {
-			.enumerate = (void*)_attribute_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _attribute_enumerate,
 			.destroy = (void*)free,
 		},
 		.next = (rattr_t*)this->msg->attributes,
@@ -299,11 +304,13 @@ typedef struct {
 } vendor_enumerator_t;
 
 METHOD(enumerator_t, vendor_enumerate, bool,
-	vendor_enumerator_t *this, int *vendor, int *type, chunk_t *data)
+	vendor_enumerator_t *this, va_list args)
 {
-	chunk_t inner_data;
-	int inner_type;
+	chunk_t inner_data, *data;
+	int inner_type, *vendor, *type;
 	uint8_t type8, len;
+
+	VA_ARGS_VGET(args, vendor, type, data);
 
 	while (TRUE)
 	{
@@ -354,7 +361,8 @@ METHOD(radius_message_t, create_vendor_enumerator, enumerator_t*,
 
 	INIT(e,
 		.public = {
-			.enumerate = (void*)_vendor_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _vendor_enumerate,
 			.destroy = _vendor_destroy,
 		},
 		.inner = create_enumerator(this),

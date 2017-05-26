@@ -140,19 +140,21 @@ static void destroy_acquire(acquire_t *this)
 	free(this);
 }
 
-/**
- * match an acquire entry by reqid
- */
-static bool acquire_by_reqid(acquire_t *this, uint32_t *reqid)
+CALLBACK(acquire_by_reqid, bool,
+	acquire_t *this, va_list args)
 {
-	return this->reqid == *reqid;
+	uint32_t reqid;
+
+	VA_ARGS_VGET(args, reqid);
+	return this->reqid == reqid;
 }
 
-/**
- * match an acquire entry by destination address
- */
-static bool acquire_by_dst(acquire_t *this, host_t *dst)
+CALLBACK(acquire_by_dst, bool,
+	acquire_t *this, va_list args)
 {
+	host_t *dst;
+
+	VA_ARGS_VGET(args, dst);
 	return this->dst && this->dst->ip_equals(this->dst, dst);
 }
 
@@ -335,25 +337,32 @@ METHOD(trap_manager_t, uninstall, bool,
 	return TRUE;
 }
 
-/**
- * convert enumerated entries to peer_cfg, child_sa
- */
-static bool trap_filter(rwlock_t *lock, entry_t **entry, peer_cfg_t **peer_cfg,
-						void *none, child_sa_t **child_sa)
+CALLBACK(trap_filter, bool,
+	rwlock_t *lock, enumerator_t *orig, va_list args)
 {
-	if (!(*entry)->child_sa)
-	{	/* skip entries that are currently being installed */
-		return FALSE;
-	}
-	if (peer_cfg)
+	entry_t *entry;
+	peer_cfg_t **peer_cfg;
+	child_sa_t **child_sa;
+
+	VA_ARGS_VGET(args, peer_cfg, child_sa);
+
+	while (orig->enumerate(orig, &entry))
 	{
-		*peer_cfg = (*entry)->peer_cfg;
+		if (!entry->child_sa)
+		{	/* skip entries that are currently being installed */
+			continue;
+		}
+		if (peer_cfg)
+		{
+			*peer_cfg = entry->peer_cfg;
+		}
+		if (child_sa)
+		{
+			*child_sa = entry->child_sa;
+		}
+		return TRUE;
 	}
-	if (child_sa)
-	{
-		*child_sa = (*entry)->child_sa;
-	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(trap_manager_t, create_enumerator, enumerator_t*,
@@ -361,7 +370,7 @@ METHOD(trap_manager_t, create_enumerator, enumerator_t*,
 {
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(this->traps->create_enumerator(this->traps),
-									(void*)trap_filter, this->lock,
+									trap_filter, this->lock,
 									(void*)this->lock->unlock);
 }
 
@@ -432,8 +441,8 @@ METHOD(trap_manager_t, acquire, void,
 		uint8_t mask;
 
 		dst->to_subnet(dst, &host, &mask);
-		if (this->acquires->find_first(this->acquires, (void*)acquire_by_dst,
-									  (void**)&acquire, host) == SUCCESS)
+		if (this->acquires->find_first(this->acquires, acquire_by_dst,
+									  (void**)&acquire, host))
 		{
 			host->destroy(host);
 			ignore = TRUE;
@@ -449,8 +458,8 @@ METHOD(trap_manager_t, acquire, void,
 	}
 	else
 	{
-		if (this->acquires->find_first(this->acquires, (void*)acquire_by_reqid,
-									  (void**)&acquire, &reqid) == SUCCESS)
+		if (this->acquires->find_first(this->acquires, acquire_by_reqid,
+									  (void**)&acquire, reqid))
 		{
 			ignore = TRUE;
 		}

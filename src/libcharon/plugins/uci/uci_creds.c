@@ -52,11 +52,14 @@ typedef struct {
 } shared_enumerator_t;
 
 METHOD(enumerator_t, shared_enumerator_enumerate, bool,
-	shared_enumerator_t *this, shared_key_t **key, id_match_t *me,
-	id_match_t *other)
+	shared_enumerator_t *this, va_list args)
 {
+	shared_key_t **key;
+	id_match_t *me, *other;
 	char *local_id, *remote_id, *psk;
 	identification_t *local, *remote;
+
+	VA_ARGS_VGET(args, key, me, other);
 
 	while (TRUE)
 	{
@@ -126,7 +129,8 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 
 	INIT(e,
 		.public = {
-			.enumerate = (void*)_shared_enumerator_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _shared_enumerator_enumerate,
 			.destroy = _shared_enumerator_destroy,
 		},
 		.me = me,

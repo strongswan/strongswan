@@ -158,10 +158,13 @@ typedef struct {
 } dictionary_enumerator_t;
 
 METHOD(enumerator_t, dictionary_enumerate, bool,
-	dictionary_enumerator_t *this, char **key, char **value)
+	dictionary_enumerator_t *this, va_list args)
 {
 	setting_t *setting;
 	section_t *parent;
+	char **key, **value;
+
+	VA_ARGS_VGET(args, key, value);
 
 	while (TRUE)
 	{
@@ -221,7 +224,8 @@ METHOD(dictionary_t, dictionary_create_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_dictionary_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _dictionary_enumerate,
 			.destroy = _dictionary_enumerator_destroy,
 		},
 		.seen = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8),
@@ -290,24 +294,43 @@ static dictionary_t *section_dictionary_create(private_conf_parser_t *parser,
 	return &this->public;
 }
 
-static bool conn_filter(void *unused, section_t **section, char **name)
+CALLBACK(conn_filter, bool,
+	void *unused, enumerator_t *orig, va_list args)
 {
-	if (streq((*section)->name, "%default"))
+	section_t *section;
+	char **name;
+
+	VA_ARGS_VGET(args, name);
+
+	while (orig->enumerate(orig, &section))
 	{
-		return FALSE;
+		if (!streq(section->name, "%default"))
+		{
+			*name = section->name;
+			return TRUE;
+		}
 	}
-	*name = (*section)->name;
-	return TRUE;
+	return FALSE;
 }
 
-static bool ca_filter(void *unused, void *key, char **name, section_t **section)
+CALLBACK(ca_filter, bool,
+	void *unused, enumerator_t *orig, va_list args)
 {
-	if (streq((*section)->name, "%default"))
+	void *key;
+	section_t *section;
+	char **name;
+
+	VA_ARGS_VGET(args, name);
+
+	while (orig->enumerate(orig, &key, &section))
 	{
-		return FALSE;
+		if (!streq(section->name, "%default"))
+		{
+			*name = section->name;
+			return TRUE;
+		}
 	}
-	*name = (*section)->name;
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(conf_parser_t, get_sections, enumerator_t*,
@@ -317,12 +340,12 @@ METHOD(conf_parser_t, get_sections, enumerator_t*,
 	{
 		case CONF_PARSER_CONN:
 			return enumerator_create_filter(
-						array_create_enumerator(this->conns_order),
-						(void*)conn_filter, NULL, NULL);
+									array_create_enumerator(this->conns_order),
+									conn_filter, NULL, NULL);
 		case CONF_PARSER_CA:
 			return enumerator_create_filter(
-						this->cas->create_enumerator(this->cas),
-						(void*)ca_filter, NULL, NULL);
+									this->cas->create_enumerator(this->cas),
+									ca_filter, NULL, NULL);
 		case CONF_PARSER_CONFIG_SETUP:
 		default:
 			return enumerator_create_empty();

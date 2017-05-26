@@ -190,8 +190,12 @@ struct keyid_enumerator_t  {
 };
 
 METHOD(enumerator_t, keyid_enumerate, bool,
-	keyid_enumerator_t *this, chunk_t *chunk)
+	keyid_enumerator_t *this, va_list args)
 {
+	chunk_t *chunk;
+
+	VA_ARGS_VGET(args, chunk);
+
 	if (this->pos == NULL)
 	{
 		this->pos = this->full.ptr;
@@ -224,7 +228,8 @@ METHOD(certreq_payload_t, create_keyid_enumerator, enumerator_t*,
 	}
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_keyid_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _keyid_enumerate,
 			.destroy = (void*)free,
 		},
 		.full = this->data,

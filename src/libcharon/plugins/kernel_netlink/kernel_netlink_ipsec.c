@@ -542,10 +542,10 @@ static policy_sa_t *policy_sa_create(private_kernel_netlink_ipsec_t *this,
 /**
  * Destroy a policy_sa(_in)_t object
  */
-static void policy_sa_destroy(policy_sa_t *policy, policy_dir_t *dir,
+static void policy_sa_destroy(policy_sa_t *policy, policy_dir_t dir,
 							  private_kernel_netlink_ipsec_t *this)
 {
-	if (*dir == POLICY_OUT)
+	if (dir == POLICY_OUT)
 	{
 		policy_sa_out_t *out = (policy_sa_out_t*)policy;
 		out->src_ts->destroy(out->src_ts);
@@ -553,6 +553,16 @@ static void policy_sa_destroy(policy_sa_t *policy, policy_dir_t *dir,
 	}
 	ipsec_sa_destroy(this, policy->sa);
 	free(policy);
+}
+
+CALLBACK(policy_sa_destroy_cb, void,
+	policy_sa_t *policy, va_list args)
+{
+	private_kernel_netlink_ipsec_t *this;
+	policy_dir_t dir;
+
+	VA_ARGS_VGET(args, dir, this);
+	policy_sa_destroy(policy, dir, this);
 }
 
 typedef struct policy_entry_t policy_entry_t;
@@ -599,9 +609,8 @@ static void policy_entry_destroy(private_kernel_netlink_ipsec_t *this,
 	}
 	if (policy->used_by)
 	{
-		policy->used_by->invoke_function(policy->used_by,
-										(linked_list_invoke_t)policy_sa_destroy,
-										 &policy->direction, this);
+		policy->used_by->invoke_function(policy->used_by, policy_sa_destroy_cb,
+										 policy->direction, this);
 		policy->used_by->destroy(policy->used_by);
 	}
 	free(policy);
@@ -2768,7 +2777,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 			ipsec_sa_equals(mapping->sa, &assigned_sa))
 		{
 			current->used_by->remove_at(current->used_by, enumerator);
-			policy_sa_destroy(mapping, &id->dir, this);
+			policy_sa_destroy(mapping, id->dir, this);
 			break;
 		}
 		if (is_installed)

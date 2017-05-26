@@ -215,7 +215,7 @@ failed:
 /**
  * Bypass a single socket
  */
-static bool bypass_single_socket(intptr_t fd, private_charonservice_t *this)
+static bool bypass_single_socket(private_charonservice_t *this, int fd)
 {
 	JNIEnv *env;
 	jmethodID method_id;
@@ -242,16 +242,24 @@ failed:
 	return FALSE;
 }
 
+CALLBACK(bypass_single_socket_cb, void,
+	intptr_t fd, va_list args)
+{
+	private_charonservice_t *this;
+
+	VA_ARGS_VGET(args, this);
+	bypass_single_socket(this, fd);
+}
+
 METHOD(charonservice_t, bypass_socket, bool,
 	private_charonservice_t *this, int fd, int family)
 {
 	if (fd >= 0)
 	{
 		this->sockets->insert_last(this->sockets, (void*)(intptr_t)fd);
-		return bypass_single_socket((intptr_t)fd, this);
+		return bypass_single_socket(this, fd);
 	}
-	this->sockets->invoke_function(this->sockets, (void*)bypass_single_socket,
-								   this);
+	this->sockets->invoke_function(this->sockets, bypass_single_socket_cb, this);
 	return TRUE;
 }
 

@@ -270,8 +270,12 @@ typedef struct {
 } type_enumerator_t;
 
 METHOD(enumerator_t, enumerate_types, bool,
-	type_enumerator_t *this, eap_type_t *type, uint32_t *vendor)
+	type_enumerator_t *this, va_list args)
 {
+	eap_type_t *type;
+	uint32_t *vendor;
+
+	VA_ARGS_VGET(args, type, vendor);
 	this->offset = extract_type(this->payload, this->offset, type, vendor);
 	return this->offset;
 }
@@ -289,7 +293,8 @@ METHOD(eap_payload_t, get_types, enumerator_t*,
 	{
 		INIT(enumerator,
 			.public = {
-				.enumerate = (void*)_enumerate_types,
+				.enumerate = enumerator_enumerate_default,
+				.venumerate = _enumerate_types,
 				.destroy = (void*)free,
 			},
 			.payload = this,

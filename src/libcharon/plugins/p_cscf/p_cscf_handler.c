@@ -83,9 +83,12 @@ typedef struct {
 } attr_enumerator_t;
 
 METHOD(enumerator_t, enumerate_attrs, bool,
-	attr_enumerator_t *this, configuration_attribute_type_t *type,
-	chunk_t *data)
+	attr_enumerator_t *this, va_list args)
 {
+	configuration_attribute_type_t *type;
+	chunk_t *data;
+
+	VA_ARGS_VGET(args, type, data);
 	if (this->request_ipv4)
 	{
 		*type = P_CSCF_IP4_ADDRESS;
@@ -103,12 +106,13 @@ METHOD(enumerator_t, enumerate_attrs, bool,
 	return FALSE;
 }
 
-/**
- * Check if the given host has a matching address family
- */
-static bool is_family(host_t *host, int *family)
+CALLBACK(is_family, bool,
+	host_t *host, va_list args)
 {
-	return host->get_family(host) == *family;
+	int family;
+
+	VA_ARGS_VGET(args, family);
+	return host->get_family(host) == family;
 }
 
 /**
@@ -116,7 +120,7 @@ static bool is_family(host_t *host, int *family)
  */
 static bool has_host_family(linked_list_t *list, int family)
 {
-	return list->find_first(list, (void*)is_family, NULL, &family) == SUCCESS;
+	return list->find_first(list, is_family, NULL, family);
 }
 
 METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
@@ -132,7 +136,8 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t *,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_enumerate_attrs,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_attrs,
 			.destroy = (void*)free,
 		},
 	);

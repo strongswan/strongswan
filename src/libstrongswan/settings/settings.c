@@ -744,10 +744,8 @@ typedef struct {
 	hashtable_t *seen;
 } enumerator_data_t;
 
-/**
- * Destroy enumerator data
- */
-static void enumerator_destroy(enumerator_data_t *this)
+CALLBACK(enumerator_destroy, void,
+	enumerator_data_t *this)
 {
 	this->settings->lock->unlock(this->settings->lock);
 	this->seen->destroy(this->seen);
@@ -755,18 +753,25 @@ static void enumerator_destroy(enumerator_data_t *this)
 	free(this);
 }
 
-/**
- * Enumerate section names, not sections
- */
-static bool section_filter(hashtable_t *seen, section_t **in, char **out)
+CALLBACK(section_filter, bool,
+	hashtable_t *seen, enumerator_t *orig, va_list args)
 {
-	*out = (*in)->name;
-	if (seen->get(seen, *out))
+	section_t *section;
+	char **out;
+
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &section))
 	{
-		return FALSE;
+		if (seen->get(seen, section->name))
+		{
+			continue;
+		}
+		*out = section->name;
+		seen->put(seen, section->name, section->name);
+		return TRUE;
 	}
-	seen->put(seen, *out, *out);
-	return TRUE;
+	return FALSE;
 }
 
 /**
@@ -776,8 +781,8 @@ static enumerator_t *section_enumerator(section_t *section,
 										enumerator_data_t *data)
 {
 	return enumerator_create_filter(
-			array_create_enumerator(section->sections_order),
-				(void*)section_filter, data->seen, NULL);
+							array_create_enumerator(section->sections_order),
+							section_filter, data->seen, NULL);
 }
 
 METHOD(settings_t, create_section_enumerator, enumerator_t*,
@@ -803,23 +808,29 @@ METHOD(settings_t, create_section_enumerator, enumerator_t*,
 		.seen = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8),
 	);
 	return enumerator_create_nested(array_create_enumerator(sections),
-					(void*)section_enumerator, data, (void*)enumerator_destroy);
+						(void*)section_enumerator, data, enumerator_destroy);
 }
 
-/**
- * Enumerate key and values, not kv_t entries
- */
-static bool kv_filter(hashtable_t *seen, kv_t **in, char **key,
-					  void *none, char **value)
+CALLBACK(kv_filter, bool,
+	hashtable_t *seen, enumerator_t *orig, va_list args)
 {
-	*key = (*in)->key;
-	if (seen->get(seen, *key) || !(*in)->value)
+	kv_t *kv;
+	char **key, **value;
+
+	VA_ARGS_VGET(args, key, value);
+
+	while (orig->enumerate(orig, &kv))
 	{
-		return FALSE;
+		if (seen->get(seen, kv->key) || !kv->value)
+		{
+			continue;
+		}
+		*key = kv->key;
+		*value = kv->value;
+		seen->put(seen, kv->key, kv->key);
+		return TRUE;
 	}
-	*value = (*in)->value;
-	seen->put(seen, *key, *key);
-	return TRUE;
+	return FALSE;
 }
 
 /**
@@ -828,7 +839,7 @@ static bool kv_filter(hashtable_t *seen, kv_t **in, char **key,
 static enumerator_t *kv_enumerator(section_t *section, enumerator_data_t *data)
 {
 	return enumerator_create_filter(array_create_enumerator(section->kv_order),
-					(void*)kv_filter, data->seen, NULL);
+									kv_filter, data->seen, NULL);
 }
 
 METHOD(settings_t, create_key_value_enumerator, enumerator_t*,

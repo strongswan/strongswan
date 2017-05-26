@@ -265,8 +265,13 @@ typedef struct {
 } token_enumerator_t;
 
 METHOD(enumerator_t, enumerate_token, bool,
-	token_enumerator_t *this, pkcs11_library_t **out, CK_SLOT_ID *slot)
+	token_enumerator_t *this, va_list args)
 {
+	pkcs11_library_t **out;
+	CK_SLOT_ID *slot;
+
+	VA_ARGS_VGET(args, out, slot);
+
 	if (this->current >= this->count)
 	{
 		free(this->slots);
@@ -301,7 +306,8 @@ METHOD(pkcs11_manager_t, create_token_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_enumerate_token,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_token,
 			.destroy = _destroy_token,
 		},
 		.inner = this->libs->create_enumerator(this->libs),

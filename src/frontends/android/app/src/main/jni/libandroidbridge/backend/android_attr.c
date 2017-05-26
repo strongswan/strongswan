@@ -73,20 +73,28 @@ METHOD(attribute_handler_t, release, void,
 }
 
 METHOD(enumerator_t, enumerate_dns6, bool,
-	enumerator_t *this, configuration_attribute_type_t *type, chunk_t *data)
+	enumerator_t *this, va_list args)
 {
+	configuration_attribute_type_t *type;
+	chunk_t *data;
+
+	VA_ARGS_VGET(args, type, data);
 	*type = INTERNAL_IP6_DNS;
 	*data = chunk_empty;
-	this->enumerate = (void*)return_false;
+	this->venumerate = (void*)return_false;
 	return TRUE;
 }
 
 METHOD(enumerator_t, enumerate_dns4, bool,
-	enumerator_t *this, configuration_attribute_type_t *type, chunk_t *data)
+	enumerator_t *this, va_list args)
 {
+	configuration_attribute_type_t *type;
+	chunk_t *data;
+
+	VA_ARGS_VGET(args, type, data);
 	*type = INTERNAL_IP4_DNS;
 	*data = chunk_empty;
-	this->enumerate = (void*)_enumerate_dns6;
+	this->venumerate = _enumerate_dns6;
 	return TRUE;
 }
 
@@ -96,7 +104,8 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
 	enumerator_t *enumerator;
 
 	INIT(enumerator,
-			.enumerate = (void*)_enumerate_dns4,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_dns4,
 			.destroy = (void*)free,
 	);
 	return enumerator;

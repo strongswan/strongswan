@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2017 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -34,8 +34,11 @@ struct enumerator_t {
 	/**
 	 * Enumerate collection.
 	 *
-	 * The enumerate function takes a variable argument list containing
-	 * pointers where the enumerated values get written.
+	 * The enumerate() method takes a variable number of pointer arguments
+	 * where the enumerated values get written to.
+	 *
+	 * @note Just assigning the generic enumerator_enumerate_default() function
+	 * that calls the enumerator's venumerate() method is usually enough.
 	 *
 	 * @param ...	variable list of enumerated items, implementation dependent
 	 * @return		TRUE if pointers returned
@@ -43,10 +46,32 @@ struct enumerator_t {
 	bool (*enumerate)(enumerator_t *this, ...);
 
 	/**
-	 * Destroy a enumerator instance.
+	 * Enumerate collection.
+	 *
+	 * The venumerate() method takes a variable argument list containing
+	 * pointers where the enumerated values get written to.
+	 *
+	 * To simplify the implementation the VA_ARGS_VGET() macro may be used.
+	 *
+	 * @param args	variable list of enumerated items, implementation dependent
+	 * @return		TRUE if pointers returned
+	 */
+	bool (*venumerate)(enumerator_t *this, va_list args);
+
+	/**
+	 * Destroy an enumerator_t instance.
 	 */
 	void (*destroy)(enumerator_t *this);
 };
+
+/**
+ * Generic implementation of enumerator_t::enumerate() that simply calls
+ * the enumerator's venumerate() method.
+ *
+ * @param enumerator	the enumerator
+ * @param ...			arguments passed to enumerate()
+ */
+bool enumerator_enumerate_default(enumerator_t *enumerator, ...);
 
 /**
  * Create an enumerator which enumerates over nothing
@@ -147,38 +172,41 @@ enumerator_t* enumerator_create_token(const char *string, const char *sep,
 /**
  * Creates an enumerator which enumerates over enumerated enumerators :-).
  *
- * The variable argument list of enumeration values is limit to 5.
+ * The outer enumerator is expected to return objects that, when passed to
+ * inner_contructor, will create a new enumerator that will be enumerated until
+ * completion (to this enumerator will the pointer arguments that are passed to
+ * this enumerator be forwarded) at which point a new element from the outer
+ * enumerator is requested to create a new inner enumerator.
  *
  * @param outer					outer enumerator
- * @param inner_constructor		constructor to inner enumerator
+ * @param inner_constructor		constructor to create inner enumerator
  * @param data					data to pass to each inner_constructor call
- * @param destroy_data			destructor to pass to data
+ * @param destructor			destructor function to clean up data after use
  * @return						the nested enumerator
  */
 enumerator_t *enumerator_create_nested(enumerator_t *outer,
 					enumerator_t *(*inner_constructor)(void *outer, void *data),
-					void *data, void (*destroy_data)(void *data));
+					void *data, void (*destructor)(void *data));
 
 /**
- * Creates an enumerator which filters output of another enumerator.
+ * Creates an enumerator which filters/maps output of another enumerator.
  *
- * The filter function receives the user supplied "data" followed by a
- * unfiltered enumeration item, followed by an output pointer where to write
- * the filtered data. Then the next input/output pair follows.
- * It returns TRUE to deliver the
- * values to the caller of enumerate(), FALSE to filter this enumeration.
+ * The filter function receives the user supplied "data" followed by the
+ * original enumerator, followed by the arguments passed to the outer
+ * enumerator.  It returns TRUE to deliver the values assigned to these
+ * arguments to the caller of enumerate() and FALSE to end the enumeration.
+ * Filtering items is simple as the filter function may just skip enumerated
+ * items from the original enumerator.
  *
- * The variable argument list of enumeration values is limit to 5.
- *
- * @param unfiltered			unfiltered enumerator to wrap, gets destroyed
+ * @param orig					original enumerator to wrap, gets destroyed
  * @param filter				filter function
  * @param data					user data to supply to filter
  * @param destructor			destructor function to clean up data after use
  * @return						the filtered enumerator
  */
-enumerator_t *enumerator_create_filter(enumerator_t *unfiltered,
-					bool (*filter)(void *data, ...),
-					void *data, void (*destructor)(void *data));
+enumerator_t *enumerator_create_filter(enumerator_t *orig,
+				bool (*filter)(void *data, enumerator_t *orig, va_list args),
+				void *data, void (*destructor)(void *data));
 
 /**
  * Create an enumerator wrapper which does a cleanup on destroy.

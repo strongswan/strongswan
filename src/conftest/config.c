@@ -36,13 +36,20 @@ struct private_config_t {
 	linked_list_t *configs;
 };
 
-/**
- * filter function for ike configs
- */
-static bool ike_filter(void *data, peer_cfg_t **in, ike_cfg_t **out)
+CALLBACK(ike_filter, bool,
+	void *data, enumerator_t *orig, va_list args)
 {
-	*out = (*in)->get_ike_cfg(*in);
-	return TRUE;
+	peer_cfg_t *cfg;
+	ike_cfg_t **out;
+
+	VA_ARGS_VGET(args, out);
+
+	if (orig->enumerate(orig, &cfg))
+	{
+		*out = cfg->get_ike_cfg(cfg);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
@@ -51,7 +58,7 @@ METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
 
 	return enumerator_create_filter(
 							this->configs->create_enumerator(this->configs),
-							(void*)ike_filter, NULL, NULL);
+							ike_filter, NULL, NULL);
 }
 
 METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,

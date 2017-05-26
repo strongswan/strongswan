@@ -1200,12 +1200,20 @@ METHOD(ike_sa_t, generate_message, status_t,
 	return status;
 }
 
-static bool filter_fragments(private_ike_sa_t *this, packet_t **fragment,
-							 packet_t **packet)
+CALLBACK(filter_fragments, bool,
+	private_ike_sa_t *this, enumerator_t *orig, va_list args)
 {
-	*packet = (*fragment)->clone(*fragment);
-	set_dscp(this, *packet);
-	return TRUE;
+	packet_t *fragment, **packet;
+
+	VA_ARGS_VGET(args, packet);
+
+	if (orig->enumerate(orig, &fragment))
+	{
+		*packet = fragment->clone(fragment);
+		set_dscp(this, *packet);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(ike_sa_t, generate_message_fragmented, status_t,
@@ -1265,7 +1273,7 @@ METHOD(ike_sa_t, generate_message_fragmented, status_t,
 		{
 			charon->bus->message(charon->bus, message, FALSE, FALSE);
 		}
-		*packets = enumerator_create_filter(fragments, (void*)filter_fragments,
+		*packets = enumerator_create_filter(fragments, filter_fragments,
 											this, NULL);
 	}
 	return status;
@@ -1699,8 +1707,11 @@ typedef struct {
 } child_enumerator_t;
 
 METHOD(enumerator_t, child_enumerate, bool,
-	child_enumerator_t *this, child_sa_t **child_sa)
+	child_enumerator_t *this, va_list args)
 {
+	child_sa_t **child_sa;
+
+	VA_ARGS_VGET(args, child_sa);
 	if (this->inner->enumerate(this->inner, &this->current))
 	{
 		*child_sa = this->current;
@@ -1723,7 +1734,8 @@ METHOD(ike_sa_t, create_child_sa_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_child_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _child_enumerate,
 			.destroy = _child_enumerator_destroy,
 		},
 		.inner = array_create_enumerator(this->child_sas),
@@ -2619,24 +2631,31 @@ METHOD(ike_sa_t, add_configuration_attribute, void,
 	array_insert(this->attributes, ARRAY_TAIL, &entry);
 }
 
-/**
- * Enumerator filter for attributes
- */
-static bool filter_attribute(void *null, attribute_entry_t **in,
-							 configuration_attribute_type_t *type, void *in2,
-							 chunk_t *data, void *in3, bool *handled)
+CALLBACK(filter_attribute, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*type = (*in)->type;
-	*data = (*in)->data;
-	*handled = (*in)->handler != NULL;
-	return TRUE;
+	attribute_entry_t *entry;
+	configuration_attribute_type_t *type;
+	chunk_t *data;
+	bool *handled;
+
+	VA_ARGS_VGET(args, type, data, handled);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*type = entry->type;
+		*data = entry->data;
+		*handled = entry->handler != NULL;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(ike_sa_t, create_attribute_enumerator, enumerator_t*,
 	private_ike_sa_t *this)
 {
 	return enumerator_create_filter(array_create_enumerator(this->attributes),
-									(void*)filter_attribute, NULL, NULL);
+									filter_attribute, NULL, NULL);
 }
 
 METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,

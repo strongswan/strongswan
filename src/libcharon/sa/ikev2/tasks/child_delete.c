@@ -81,11 +81,12 @@ typedef struct {
 	bool check_delete_action;
 } entry_t;
 
-/**
- * Check if the given entry is for the same CHILD_SA
- */
-static bool match_child(entry_t *entry, child_sa_t *child_sa)
+CALLBACK(match_child, bool,
+	entry_t *entry, va_list args)
 {
+	child_sa_t *child_sa;
+
+	VA_ARGS_VGET(args, child_sa);
 	return entry->child_sa == child_sa;
 }
 
@@ -252,8 +253,8 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 				DBG1(DBG_IKE, "received DELETE for %N CHILD_SA with SPI %.8x",
 					 protocol_id_names, protocol, ntohl(spi));
 
-				if (this->child_sas->find_first(this->child_sas,
-								(void*)match_child, NULL, child_sa) == SUCCESS)
+				if (this->child_sas->find_first(this->child_sas, match_child,
+												NULL, child_sa))
 				{
 					continue;
 				}

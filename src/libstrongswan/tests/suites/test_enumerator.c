@@ -104,25 +104,45 @@ static void destroy_data(void *data)
  * filtered test
  */
 
-static bool filter(int *data, int **v, int *vo, int **w, int *wo,
-				   int **x, int *xo, int **y, int *yo, int **z, int *zo)
+CALLBACK(filter, bool,
+	int *data, enumerator_t *orig, va_list args)
 {
-	int val = **v;
+	int *item, *vo, *wo, *xo, *yo, *zo;
 
-	*vo = val++;
-	*wo = val++;
-	*xo = val++;
-	*yo = val++;
-	*zo = val++;
-	fail_if(data != (void*)101, "data does not match '101' in filter function");
-	return TRUE;
+	VA_ARGS_VGET(args, vo, wo, xo, yo, zo);
+
+	if (orig->enumerate(orig, &item))
+	{
+		int val = *item;
+		*vo = val++;
+		*wo = val++;
+		*xo = val++;
+		*yo = val++;
+		*zo = val++;
+		fail_if(data != (void*)101, "data does not match '101' in filter function");
+		return TRUE;
+	}
+	return FALSE;
 }
 
-static bool filter_odd(void *data, int **item, int *out)
+CALLBACK(filter_odd, bool,
+	void *data, enumerator_t *orig, va_list args)
 {
+	int *item, *out;
+
+	VA_ARGS_VGET(args, out);
+
 	fail_if(data != (void*)101, "data does not match '101' in filter function");
-	*out = **item;
-	return **item % 2 == 0;
+
+	while (orig->enumerate(orig, &item))
+	{
+		if (*item % 2 == 0)
+		{
+			*out = *item;
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 START_TEST(test_filtered)
@@ -136,7 +156,7 @@ START_TEST(test_filtered)
 
 	round = 1;
 	enumerator = enumerator_create_filter(list->create_enumerator(list),
-									(void*)filter, (void*)101, destroy_data);
+										  filter, (void*)101, destroy_data);
 	while (enumerator->enumerate(enumerator, &v, &w, &x, &y, &z))
 	{
 		ck_assert_int_eq(v, round);
@@ -166,7 +186,7 @@ START_TEST(test_filtered_filter)
 	/* should also work without destructor, so set this manually */
 	destroy_data_called = 1;
 	enumerator = enumerator_create_filter(list->create_enumerator(list),
-										 (void*)filter_odd, (void*)101, NULL);
+										  filter_odd, (void*)101, NULL);
 	while (enumerator->enumerate(enumerator, &x))
 	{
 		ck_assert(x % 2 == 0);

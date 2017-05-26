@@ -418,24 +418,24 @@ METHOD(imv_attestation_state_t, create_component, pts_component_t*,
 	}
 }
 
-/**
- * Enumerate file measurement entries
- */
-static bool entry_filter(void *null, func_comp_t **entry, uint8_t *flags,
-						 void *i2, uint32_t *depth,
-						 void *i3, pts_comp_func_name_t **comp_name)
+CALLBACK(entry_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	pts_component_t *comp;
-	pts_comp_func_name_t *name;
+	func_comp_t *entry;
+	pts_comp_func_name_t **comp_name;
+	uint32_t *depth;
+	uint8_t *flags;
 
-	comp = (*entry)->comp;
-	name = (*entry)->name;
+	VA_ARGS_VGET(args, flags, depth, comp_name);
 
-	*flags = comp->get_evidence_flags(comp);
-	*depth = comp->get_depth(comp);
-	*comp_name = name;
-
-	return TRUE;
+	if (orig->enumerate(orig, &entry))
+	{
+		*flags = entry->comp->get_evidence_flags(entry->comp);
+		*depth = entry->comp->get_depth(entry->comp);
+		*comp_name = entry->name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(imv_attestation_state_t, create_component_enumerator, enumerator_t*,
@@ -443,7 +443,7 @@ METHOD(imv_attestation_state_t, create_component_enumerator, enumerator_t*,
 {
 	return enumerator_create_filter(
 				this->components->create_enumerator(this->components),
-				(void*)entry_filter, NULL, NULL);
+				entry_filter, NULL, NULL);
 }
 
 METHOD(imv_attestation_state_t, get_component, pts_component_t*,

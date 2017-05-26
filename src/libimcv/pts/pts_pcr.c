@@ -111,17 +111,12 @@ typedef struct {
 	private_pts_pcr_t *pcrs;
 } pcr_enumerator_t;
 
-/**
- * Implementation of enumerator.enumerate
- */
-static bool pcr_enumerator_enumerate(pcr_enumerator_t *this, ...)
+METHOD(enumerator_t, pcr_enumerator_enumerate, bool,
+	pcr_enumerator_t *this, va_list args)
 {
-	uint32_t *pcr, i, f;
-	va_list args;
+	uint32_t i, f, *pcr;
 
-	va_start(args, this);
-	pcr = va_arg(args, uint32_t*);
-	va_end(args);
+	VA_ARGS_VGET(args, pcr);
 
 	while (this->pcr <= this->pcrs->pcr_max)
 	{
@@ -148,7 +143,8 @@ METHOD(pts_pcr_t, create_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)pcr_enumerator_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _pcr_enumerator_enumerate,
 			.destroy = (void*)free,
 		},
 		.pcrs = this,

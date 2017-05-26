@@ -207,20 +207,20 @@ static inline void register_logger(private_bus_t *this, debug_t group,
 	}
 }
 
-/**
- * Find the log level of the first registered logger that implements log or
- * vlog (or both).
- */
-static bool find_max_levels(log_entry_t *entry, debug_t *group, level_t *level,
-							level_t *vlevel)
+CALLBACK(find_max_levels, bool,
+	log_entry_t *entry, va_list args)
 {
+	level_t *level, *vlevel;
+	debug_t group;
+
+	VA_ARGS_VGET(args, group, level, vlevel);
 	if (entry->logger->log && *level == LEVEL_SILENT)
 	{
-		*level = entry->levels[*group];
+		*level = entry->levels[group];
 	}
 	if (entry->logger->vlog && *vlevel == LEVEL_SILENT)
 	{
-		*vlevel = entry->levels[*group];
+		*vlevel = entry->levels[group];
 	}
 	return *level > LEVEL_SILENT && *vlevel > LEVEL_SILENT;
 }
@@ -258,8 +258,8 @@ static inline void unregister_logger(private_bus_t *this, logger_t *logger)
 
 				loggers = this->loggers[group];
 				loggers->remove(loggers, found, NULL);
-				loggers->find_first(loggers, (linked_list_match_t)find_max_levels,
-									NULL, &group, &level, &vlevel);
+				loggers->find_first(loggers, find_max_levels, NULL, group,
+									&level, &vlevel);
 				set_level(&this->max_level[group], level);
 				set_level(&this->max_vlevel[group], vlevel);
 			}
@@ -330,11 +330,12 @@ typedef struct {
 	va_list args;
 } log_data_t;
 
-/**
- * logger->log() invocation as a invoke_function callback
- */
-static void log_cb(log_entry_t *entry, log_data_t *data)
+CALLBACK(log_cb, void,
+	log_entry_t *entry, va_list args)
 {
+	log_data_t *data;
+
+	VA_ARGS_VGET(args, data);
 	if (entry->logger->log && entry->levels[data->group] >= data->level)
 	{
 		entry->logger->log(entry->logger, data->group, data->level,
@@ -342,11 +343,12 @@ static void log_cb(log_entry_t *entry, log_data_t *data)
 	}
 }
 
-/**
- * logger->vlog() invocation as a invoke_function callback
- */
-static void vlog_cb(log_entry_t *entry, log_data_t *data)
+CALLBACK(vlog_cb, void,
+	log_entry_t *entry, va_list args)
 {
+	log_data_t *data;
+
+	VA_ARGS_VGET(args, data);
 	if (entry->logger->vlog && entry->levels[data->group] >= data->level)
 	{
 		va_list copy;
@@ -405,8 +407,7 @@ METHOD(bus_t, vlog, void,
 		}
 		if (len > 0)
 		{
-			loggers->invoke_function(loggers, (linked_list_invoke_t)log_cb,
-									 &data);
+			loggers->invoke_function(loggers, log_cb, &data);
 		}
 		if (data.message != buf)
 		{
@@ -422,7 +423,7 @@ METHOD(bus_t, vlog, void,
 		data.message = format;
 
 		va_copy(data.args, args);
-		loggers->invoke_function(loggers, (linked_list_invoke_t)vlog_cb, &data);
+		loggers->invoke_function(loggers, vlog_cb, &data);
 		va_end(data.args);
 	}
 

@@ -49,13 +49,14 @@ typedef struct {
 	identification_t *id;
 } wrapper_enumerator_t;
 
-/**
- * enumerate function wrapper_enumerator_t
- */
-static bool enumerate(wrapper_enumerator_t *this, certificate_t **cert)
+METHOD(enumerator_t, enumerate, bool,
+	wrapper_enumerator_t *this, va_list args)
 {
-	certificate_t *current;
+	certificate_t *current, **cert;
 	public_key_t *public;
+
+
+	VA_ARGS_VGET(args, cert);
 
 	while (this->inner->enumerate(this->inner, &current))
 	{
@@ -85,10 +86,8 @@ static bool enumerate(wrapper_enumerator_t *this, certificate_t **cert)
 	return FALSE;
 }
 
-/**
- * destroy function for wrapper_enumerator_t
- */
-static void enumerator_destroy(wrapper_enumerator_t *this)
+METHOD(enumerator_t, enumerator_destroy, void,
+	wrapper_enumerator_t *this)
 {
 	this->inner->destroy(this->inner);
 	free(this);
@@ -105,13 +104,17 @@ METHOD(credential_set_t, create_enumerator, enumerator_t*,
 		return NULL;
 	}
 
-	enumerator = malloc_thing(wrapper_enumerator_t);
-	enumerator->cert = cert;
-	enumerator->key = key;
-	enumerator->id = id;
-	enumerator->inner = this->response->create_cert_enumerator(this->response);
-	enumerator->public.enumerate = (void*)enumerate;
-	enumerator->public.destroy = (void*)enumerator_destroy;
+	INIT(enumerator,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate,
+			.destroy = _enumerator_destroy,
+		},
+		.cert = cert,
+		.key = key,
+		.id = id,
+		.inner = this->response->create_cert_enumerator(this->response),
+	);
 	return &enumerator->public;
 }
 

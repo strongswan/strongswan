@@ -811,51 +811,66 @@ METHOD(crypto_factory_t, remove_dh, void,
 	this->lock->unlock(this->lock);
 }
 
-/**
- * match algorithms of an entry?
- */
-static bool entry_match(entry_t *a, entry_t *b)
+CALLBACK(entry_match, bool,
+	entry_t *a, va_list args)
 {
+	entry_t *b;
+
+	VA_ARGS_VGET(args, b);
 	return a->algo == b->algo;
 }
 
-/**
- * check for uniqueness of an entry
- */
-static bool unique_check(linked_list_t *list, entry_t **in, entry_t **out)
+CALLBACK(unique_check, bool,
+	linked_list_t *list, enumerator_t *orig, va_list args)
 {
-	if (list->find_first(list, (void*)entry_match, NULL, *in) == SUCCESS)
+	entry_t *entry, **out;
+
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &entry))
 	{
-		return FALSE;
+		if (list->find_first(list, entry_match, NULL, entry))
+		{
+			continue;
+		}
+		*out = entry;
+		list->insert_last(list, entry);
+		return TRUE;
 	}
-	*out = *in;
-	list->insert_last(list, *in);
-	return TRUE;
+	return FALSE;
 }
 
 /**
  * create an enumerator over entry->algo in list with locking and unique check
  */
 static enumerator_t *create_enumerator(private_crypto_factory_t *this,
-									   linked_list_t *list, void *filter)
+									linked_list_t *list,
+									bool (*filter)(void*,enumerator_t*,va_list))
 {
 	this->lock->read_lock(this->lock);
 	return enumerator_create_filter(
 				enumerator_create_filter(
-					list->create_enumerator(list), (void*)unique_check,
+					list->create_enumerator(list), unique_check,
 					linked_list_create(), (void*)list->destroy),
 				filter,	this->lock, (void*)this->lock->unlock);
 }
 
-/**
- * Filter function to enumerate algorithm, not entry
- */
-static bool crypter_filter(void *n, entry_t **entry, encryption_algorithm_t *algo,
-						   void *i2, const char **plugin_name)
+CALLBACK(crypter_filter, bool,
+	void *n, enumerator_t *orig, va_list args)
 {
-	*algo = (*entry)->algo;
-	*plugin_name = (*entry)->plugin_name;
-	return TRUE;
+	entry_t *entry;
+	encryption_algorithm_t *algo;
+	const char **plugin_name;
+
+	VA_ARGS_VGET(args, algo, plugin_name);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*algo = entry->algo;
+		*plugin_name = entry->plugin_name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(crypto_factory_t, create_crypter_enumerator, enumerator_t*,
@@ -870,15 +885,22 @@ METHOD(crypto_factory_t, create_aead_enumerator, enumerator_t*,
 	return create_enumerator(this, this->aeads, crypter_filter);
 }
 
-/**
- * Filter function to enumerate algorithm, not entry
- */
-static bool signer_filter(void *n, entry_t **entry, integrity_algorithm_t *algo,
-						  void *i2, const char **plugin_name)
+CALLBACK(signer_filter, bool,
+	void *n, enumerator_t *orig, va_list args)
 {
-	*algo = (*entry)->algo;
-	*plugin_name = (*entry)->plugin_name;
-	return TRUE;
+	entry_t *entry;
+	integrity_algorithm_t *algo;
+	const char **plugin_name;
+
+	VA_ARGS_VGET(args, algo, plugin_name);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*algo = entry->algo;
+		*plugin_name = entry->plugin_name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(crypto_factory_t, create_signer_enumerator, enumerator_t*,
@@ -887,15 +909,22 @@ METHOD(crypto_factory_t, create_signer_enumerator, enumerator_t*,
 	return create_enumerator(this, this->signers, signer_filter);
 }
 
-/**
- * Filter function to enumerate algorithm, not entry
- */
-static bool hasher_filter(void *n, entry_t **entry, hash_algorithm_t *algo,
-						  void *i2, const char **plugin_name)
+CALLBACK(hasher_filter, bool,
+	void *n, enumerator_t *orig, va_list args)
 {
-	*algo = (*entry)->algo;
-	*plugin_name = (*entry)->plugin_name;
-	return TRUE;
+	entry_t *entry;
+	hash_algorithm_t *algo;
+	const char **plugin_name;
+
+	VA_ARGS_VGET(args, algo, plugin_name);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*algo = entry->algo;
+		*plugin_name = entry->plugin_name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(crypto_factory_t, create_hasher_enumerator, enumerator_t*,
@@ -904,15 +933,22 @@ METHOD(crypto_factory_t, create_hasher_enumerator, enumerator_t*,
 	return create_enumerator(this, this->hashers, hasher_filter);
 }
 
-/**
- * Filter function to enumerate algorithm, not entry
- */
-static bool prf_filter(void *n, entry_t **entry, pseudo_random_function_t *algo,
-					   void *i2, const char **plugin_name)
+CALLBACK(prf_filter, bool,
+	void *n, enumerator_t *orig, va_list args)
 {
-	*algo = (*entry)->algo;
-	*plugin_name = (*entry)->plugin_name;
-	return TRUE;
+	entry_t *entry;
+	pseudo_random_function_t *algo;
+	const char **plugin_name;
+
+	VA_ARGS_VGET(args, algo, plugin_name);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*algo = entry->algo;
+		*plugin_name = entry->plugin_name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(crypto_factory_t, create_prf_enumerator, enumerator_t*,
@@ -921,15 +957,22 @@ METHOD(crypto_factory_t, create_prf_enumerator, enumerator_t*,
 	return create_enumerator(this, this->prfs, prf_filter);
 }
 
-/**
- * Filter function to enumerate algorithm, not entry
- */
-static bool xof_filter(void *n, entry_t **entry, ext_out_function_t *algo,
-					   void *i2, const char **plugin_name)
+CALLBACK(xof_filter, bool,
+	void *n, enumerator_t *orig, va_list args)
 {
-	*algo = (*entry)->algo;
-	*plugin_name = (*entry)->plugin_name;
-	return TRUE;
+	entry_t *entry;
+	ext_out_function_t *algo;
+	const char **plugin_name;
+
+	VA_ARGS_VGET(args, algo, plugin_name);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*algo = entry->algo;
+		*plugin_name = entry->plugin_name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(crypto_factory_t, create_xof_enumerator, enumerator_t*,
@@ -938,15 +981,22 @@ METHOD(crypto_factory_t, create_xof_enumerator, enumerator_t*,
 	return create_enumerator(this, this->xofs, xof_filter);
 }
 
-/**
- * Filter function to enumerate group, not entry
- */
-static bool dh_filter(void *n, entry_t **entry, diffie_hellman_group_t *group,
-					  void *i2, const char **plugin_name)
+CALLBACK(dh_filter, bool,
+	void *n, enumerator_t *orig, va_list args)
 {
-	*group = (*entry)->algo;
-	*plugin_name = (*entry)->plugin_name;
-	return TRUE;
+	entry_t *entry;
+	diffie_hellman_group_t *algo;
+	const char **plugin_name;
+
+	VA_ARGS_VGET(args, algo, plugin_name);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*algo = entry->algo;
+		*plugin_name = entry->plugin_name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(crypto_factory_t, create_dh_enumerator, enumerator_t*,
@@ -955,15 +1005,22 @@ METHOD(crypto_factory_t, create_dh_enumerator, enumerator_t*,
 	return create_enumerator(this, this->dhs, dh_filter);
 }
 
-/**
- * Filter function to enumerate strength, not entry
- */
-static bool rng_filter(void *n, entry_t **entry, rng_quality_t *quality,
-					   void *i2, const char **plugin_name)
+CALLBACK(rng_filter, bool,
+	void *n, enumerator_t *orig, va_list args)
 {
-	*quality = (*entry)->algo;
-	*plugin_name = (*entry)->plugin_name;
-	return TRUE;
+	entry_t *entry;
+	rng_quality_t *algo;
+	const char **plugin_name;
+
+	VA_ARGS_VGET(args, algo, plugin_name);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*algo = entry->algo;
+		*plugin_name = entry->plugin_name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(crypto_factory_t, create_rng_enumerator, enumerator_t*,
@@ -972,13 +1029,20 @@ METHOD(crypto_factory_t, create_rng_enumerator, enumerator_t*,
 	return create_enumerator(this, this->rngs, rng_filter);
 }
 
-/**
- * Filter function to enumerate plugin name, not entry
- */
-static bool nonce_gen_filter(void *n, entry_t **entry, const char **plugin_name)
+CALLBACK(nonce_gen_filter, bool,
+	void *n, enumerator_t *orig, va_list args)
 {
-	*plugin_name = (*entry)->plugin_name;
-	return TRUE;
+	entry_t *entry;
+	const char **plugin_name;
+
+	VA_ARGS_VGET(args, plugin_name);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*plugin_name = entry->plugin_name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(crypto_factory_t, create_nonce_gen_enumerator, enumerator_t*,
@@ -1026,9 +1090,14 @@ typedef struct {
 } verify_enumerator_t;
 
 METHOD(enumerator_t, verify_enumerate, bool,
-	verify_enumerator_t *this, u_int *alg, const char **plugin, bool *valid)
+	verify_enumerator_t *this, va_list args)
 {
+	const char **plugin;
 	entry_t *entry;
+	u_int *alg;
+	bool *valid;
+
+	VA_ARGS_VGET(args, alg, plugin, valid);
 
 	if (!this->inner->enumerate(this->inner, &entry))
 	{
@@ -1123,7 +1192,8 @@ METHOD(crypto_factory_t, create_verify_enumerator, enumerator_t*,
 	}
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_verify_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _verify_enumerate,
 			.destroy = _verify_destroy,
 		},
 		.inner = inner,

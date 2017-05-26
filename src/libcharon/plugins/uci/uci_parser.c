@@ -58,19 +58,16 @@ typedef struct {
 } section_enumerator_t;
 
 METHOD(enumerator_t, section_enumerator_enumerate, bool,
-	section_enumerator_t *this, ...)
+	section_enumerator_t *this, va_list args)
 {
 	struct uci_element *element;
 	char **value;
-	va_list args;
 	int i;
 
 	if (&this->current->list == this->list)
 	{
 		return FALSE;
 	}
-
-	va_start(args, this);
 
 	value = va_arg(args, char**);
 	if (value)
@@ -96,7 +93,6 @@ METHOD(enumerator_t, section_enumerator_enumerate, bool,
 			*value = uci_to_option(element)->value;
 		}
 	}
-	va_end(args);
 
 	this->current = list_to_element(this->current->list.next);
 	return TRUE;
@@ -124,7 +120,13 @@ METHOD(uci_parser_t, create_section_enumerator, enumerator_t*,
 		i++;
 	}
 	va_end(args);
-	e = malloc(sizeof(section_enumerator_t) + sizeof(char*) * i);
+	INIT_EXTRA(e, sizeof(char*) * i,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _section_enumerator_enumerate,
+			.destroy = _section_enumerator_destroy,
+		},
+	);
 	i = 0;
 	va_start(args, this);
 	do
@@ -133,9 +135,6 @@ METHOD(uci_parser_t, create_section_enumerator, enumerator_t*,
 	}
 	while (e->keywords[i++]);
 	va_end(args);
-
-	e->public.enumerate = (void*)_section_enumerator_enumerate;
-	e->public.destroy = _section_enumerator_destroy;
 
 	/* load uci context */
 	e->ctx = uci_alloc_context();

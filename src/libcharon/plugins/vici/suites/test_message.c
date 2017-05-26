@@ -122,9 +122,14 @@ typedef struct {
 	endecode_test_t *next;
 } endecode_enum_t;
 
-static bool endecode_enumerate(endecode_enum_t *this, vici_type_t *type,
-							   char **name, chunk_t *data)
+METHOD(enumerator_t, endecode_enumerate, bool,
+	endecode_enum_t *this, va_list args)
 {
+	vici_type_t *type;
+	chunk_t *data;
+	char **name;
+
+	VA_ARGS_VGET(args, type, name, data);
 	if (this->next)
 	{
 		*type = this->next->type;
@@ -149,7 +154,8 @@ static enumerator_t *endecode_create_enumerator(endecode_test_t *test)
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)endecode_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _endecode_enumerate,
 			.destroy = (void*)free,
 		},
 		.next = test,

@@ -171,26 +171,30 @@ typedef struct {
 	identification_t *id;
 } cert_data_t;
 
-/**
- * destroy cert_data
- */
-static void cert_data_destroy(cert_data_t *data)
+CALLBACK(cert_data_destroy, void,
+	cert_data_t *data)
 {
 	data->this->lock->unlock(data->this->lock);
 	free(data);
 }
 
-/**
- * filter function for certs enumerator
- */
-static bool certs_filter(cert_data_t *data, ca_cert_t **in,
-						 certificate_t **out)
+CALLBACK(certs_filter, bool,
+	cert_data_t *data, enumerator_t *orig, va_list args)
 {
+	ca_cert_t *cacert;
 	public_key_t *public;
-	certificate_t *cert = (*in)->cert;
+	certificate_t **out;
 
-	if (data->cert == CERT_ANY || data->cert == cert->get_type(cert))
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &cacert))
 	{
+		certificate_t *cert = cacert->cert;
+
+		if (data->cert != CERT_ANY && data->cert != cert->get_type(cert))
+		{
+			continue;
+		}
 		public = cert->get_public_key(cert);
 		if (public)
 		{
@@ -208,9 +212,9 @@ static bool certs_filter(cert_data_t *data, ca_cert_t **in,
 		}
 		else if (data->key != KEY_ANY)
 		{
-			return FALSE;
+			continue;
 		}
-		if (data->id == NULL || cert->has_subject(cert, data->id))
+		if (!data->id || cert->has_subject(cert, data->id))
 		{
 			*out = cert;
 			return TRUE;
@@ -235,8 +239,8 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->certs->create_enumerator(this->certs);
-	return enumerator_create_filter(enumerator, (void*)certs_filter, data,
-									(void*)cert_data_destroy);
+	return enumerator_create_filter(enumerator, certs_filter, data,
+									cert_data_destroy);
 }
 
 /**
@@ -354,11 +358,12 @@ METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
 			data, (void*)cdp_data_destroy);
 }
 
-/**
- * Compare the given certificate to the ca_cert_t items in the list
- */
-static bool match_cert(ca_cert_t *item, certificate_t *cert)
+CALLBACK(match_cert, bool,
+	ca_cert_t *item, va_list args)
 {
+	certificate_t *cert;
+
+	VA_ARGS_VGET(args, cert);
 	return cert->equals(cert, item->cert);
 }
 
@@ -405,8 +410,7 @@ static certificate_t *add_cert_internal(private_stroke_ca_t *this,
 {
 	ca_cert_t *found;
 
-	if (this->certs->find_first(this->certs, (linked_list_match_t)match_cert,
-								(void**)&found, cert) == SUCCESS)
+	if (this->certs->find_first(this->certs, match_cert, (void**)&found, cert))
 	{
 		cert->destroy(cert);
 		cert = found->cert->get_ref(found->cert);
@@ -511,8 +515,7 @@ METHOD(stroke_ca_t, get_cert_ref, certificate_t*,
 	ca_cert_t *found;
 
 	this->lock->read_lock(this->lock);
-	if (this->certs->find_first(this->certs, (linked_list_match_t)match_cert,
-								(void**)&found, cert) == SUCCESS)
+	if (this->certs->find_first(this->certs, match_cert, (void**)&found, cert))
 	{
 		cert->destroy(cert);
 		cert = found->cert->get_ref(found->cert);

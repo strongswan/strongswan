@@ -320,31 +320,33 @@ METHOD(recommendations_t, set_reason_language, TNC_Result,
 	return found ? TNC_RESULT_SUCCESS : TNC_RESULT_INVALID_PARAMETER;
 }
 
-/**
- * Enumerate reason and reason_language, not recommendation entries
- */
-static bool reason_filter(void *null, recommendation_entry_t **entry,
-						 TNC_IMVID *id, void *i2, chunk_t *reason, void *i3,
-						 chunk_t *reason_language)
+CALLBACK(reason_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	if ((*entry)->reason.len)
+	recommendation_entry_t *entry;
+	TNC_IMVID *id;
+	chunk_t *reason, *reason_language;
+
+	VA_ARGS_VGET(args, id, reason, reason_language);
+
+	while (orig->enumerate(orig, &entry))
 	{
-		*id = (*entry)->id;
-		*reason = (*entry)->reason;
-		*reason_language = (*entry)->reason_language;
-		return TRUE;
+		if (entry->reason.len)
+		{
+			*id = entry->id;
+			*reason = entry->reason;
+			*reason_language = entry->reason_language;
+			return TRUE;
+		}
 	}
-	else
-	{
-		return FALSE;
-	}
+	return FALSE;
 }
 
 METHOD(recommendations_t, create_reason_enumerator, enumerator_t*,
 	private_tnc_imv_recommendations_t *this)
 {
 	return enumerator_create_filter(this->recs->create_enumerator(this->recs),
-					(void*)reason_filter, NULL, NULL);
+									reason_filter, NULL, NULL);
 }
 
 METHOD(recommendations_t, destroy, void,

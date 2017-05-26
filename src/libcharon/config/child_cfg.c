@@ -165,8 +165,12 @@ METHOD(child_cfg_t, add_proposal, void,
 	}
 }
 
-static bool match_proposal(proposal_t *item, proposal_t *proposal)
+CALLBACK(match_proposal, bool,
+	proposal_t *item, va_list args)
 {
+	proposal_t *proposal;
+
+	VA_ARGS_VGET(args, proposal);
 	return item->equals(item, proposal);
 }
 
@@ -185,8 +189,7 @@ METHOD(child_cfg_t, get_proposals, linked_list_t*,
 		{
 			current->strip_dh(current, MODP_NONE);
 		}
-		if (proposals->find_first(proposals, (linked_list_match_t)match_proposal,
-								  NULL, current) == SUCCESS)
+		if (proposals->find_first(proposals, match_proposal, NULL, current))
 		{
 			current->destroy(current);
 			continue;

@@ -135,10 +135,15 @@ typedef struct {
 } parse_enumerator_t;
 
 METHOD(enumerator_t, parse_enumerate, bool,
-	parse_enumerator_t *this, vici_type_t *out, char **name, chunk_t *value)
+	parse_enumerator_t *this, va_list args)
 {
+	vici_type_t *out;
+	chunk_t *value;
+	char **name;
 	uint8_t type;
 	chunk_t data;
+
+	VA_ARGS_VGET(args, out, name, value);
 
 	if (!this->reader->remaining(this->reader) ||
 		!this->reader->read_uint8(this->reader, &type))
@@ -218,7 +223,8 @@ METHOD(vici_message_t, create_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_parse_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _parse_enumerate,
 			.destroy = _parse_destroy,
 		},
 		.reader = bio_reader_create(this->encoding),

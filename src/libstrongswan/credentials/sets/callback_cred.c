@@ -60,9 +60,12 @@ typedef struct {
 } shared_enumerator_t;
 
 METHOD(enumerator_t, shared_enumerate, bool,
-	shared_enumerator_t *this, shared_key_t **out,
-	id_match_t *match_me, id_match_t *match_other)
+	shared_enumerator_t *this, va_list args)
 {
+	shared_key_t **out;
+	id_match_t *match_me, *match_other;
+
+	VA_ARGS_VGET(args, out, match_me, match_other);
 	DESTROY_IF(this->current);
 	this->current = this->this->cb.shared(this->this->data, this->type,
 								this->me, this->other, match_me, match_other);
@@ -89,7 +92,8 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 
 	INIT(enumerator,
 		.public = {
-			.enumerate = (void*)_shared_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _shared_enumerate,
 			.destroy = _shared_destroy,
 		},
 		.this = this,

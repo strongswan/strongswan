@@ -306,8 +306,12 @@ typedef struct {
 } spi_enumerator_t;
 
 METHOD(enumerator_t, spis_enumerate, bool,
-	spi_enumerator_t *this, uint32_t *spi)
+	spi_enumerator_t *this, va_list args)
 {
+	uint32_t *spi;
+
+	VA_ARGS_VGET(args, spi);
+
 	if (this->spis.len >= sizeof(*spi))
 	{
 		memcpy(spi, this->spis.ptr, sizeof(*spi));
@@ -328,7 +332,8 @@ METHOD(delete_payload_t, create_spi_enumerator, enumerator_t*,
 	}
 	INIT(e,
 		.public = {
-			.enumerate = (void*)_spis_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _spis_enumerate,
 			.destroy = (void*)free,
 		},
 		.spis = this->spis,

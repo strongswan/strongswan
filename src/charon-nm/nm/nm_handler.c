@@ -65,29 +65,33 @@ METHOD(attribute_handler_t, handle, bool,
 	return TRUE;
 }
 
-/**
- * Implementation of create_attribute_enumerator().enumerate() for WINS
- */
-static bool enumerate_nbns(enumerator_t *this,
-						   configuration_attribute_type_t *type, chunk_t *data)
+METHOD(enumerator_t, enumerate_nbns, bool,
+	enumerator_t *this, va_list args)
 {
+	configuration_attribute_type_t *type;
+	chunk_t *data;
+
+	VA_ARGS_VGET(args, type, data);
 	*type = INTERNAL_IP4_NBNS;
 	*data = chunk_empty;
-	/* done */
-	this->enumerate = (void*)return_false;
+	this->venumerate = (void*)return_false;
 	return TRUE;
 }
 
 /**
  * Implementation of create_attribute_enumerator().enumerate() for DNS
  */
-static bool enumerate_dns(enumerator_t *this,
-						  configuration_attribute_type_t *type, chunk_t *data)
+METHOD(enumerator_t, enumerate_dns, bool,
+	enumerator_t *this, va_list args)
 {
+	configuration_attribute_type_t *type;
+	chunk_t *data;
+
+	VA_ARGS_VGET(args, type, data);
 	*type = INTERNAL_IP4_DNS;
 	*data = chunk_empty;
 	/* enumerate WINS server as next attribute ... */
-	this->enumerate = (void*)enumerate_nbns;
+	this->venumerate = _enumerate_nbns;
 	return TRUE;
 }
 
@@ -100,7 +104,8 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
 
 		INIT(enumerator,
 			/* enumerate DNS attribute first ... */
-			.enumerate = (void*)enumerate_dns,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_dns,
 			.destroy = (void*)free,
 		);
 		return enumerator;
@@ -108,13 +113,20 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
 	return enumerator_create_empty();
 }
 
-/**
- * convert plain byte ptrs to handy chunk during enumeration
- */
-static bool filter_chunks(void* null, char **in, chunk_t *out)
+CALLBACK(filter_chunks, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*out = chunk_create(*in, 4);
-	return TRUE;
+	chunk_t *out;
+	char *ptr;
+
+	VA_ARGS_VGET(args, out);
+
+	if (orig->enumerate(orig, &ptr))
+	{
+		*out = chunk_create(ptr, 4);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(nm_handler_t, create_enumerator, enumerator_t*,
@@ -134,7 +146,7 @@ METHOD(nm_handler_t, create_enumerator, enumerator_t*,
 			return enumerator_create_empty();
 	}
 	return enumerator_create_filter(list->create_enumerator(list),
-						(void*)filter_chunks, NULL, NULL);
+									filter_chunks, NULL, NULL);
 }
 
 METHOD(nm_handler_t, reset, void,

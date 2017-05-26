@@ -94,27 +94,31 @@ METHOD(proposal_t, add_algorithm, void,
 	array_insert(this->transforms, ARRAY_TAIL, &entry);
 }
 
-/**
- * filter function for peer configs
- */
-static bool alg_filter(uintptr_t type, entry_t **in, uint16_t *alg,
-					   void **unused, uint16_t *key_size)
+CALLBACK(alg_filter, bool,
+	uintptr_t type, enumerator_t *orig, va_list args)
 {
-	entry_t *entry = *in;
+	entry_t *entry;
+	uint16_t *alg, *key_size;
 
-	if (entry->type != type)
+	VA_ARGS_VGET(args, alg, key_size);
+
+	while (orig->enumerate(orig, &entry))
 	{
-		return FALSE;
+		if (entry->type != type)
+		{
+			continue;
+		}
+		if (alg)
+		{
+			*alg = entry->alg;
+		}
+		if (key_size)
+		{
+			*key_size = entry->key_size;
+		}
+		return TRUE;
 	}
-	if (alg)
-	{
-		*alg = entry->alg;
-	}
-	if (key_size)
-	{
-		*key_size = entry->key_size;
-	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(proposal_t, create_enumerator, enumerator_t*,
@@ -122,7 +126,7 @@ METHOD(proposal_t, create_enumerator, enumerator_t*,
 {
 	return enumerator_create_filter(
 						array_create_enumerator(this->transforms),
-						(void*)alg_filter, (void*)(uintptr_t)type, NULL);
+						alg_filter, (void*)(uintptr_t)type, NULL);
 }
 
 METHOD(proposal_t, get_algorithm, bool,

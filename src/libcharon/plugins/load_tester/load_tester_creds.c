@@ -395,22 +395,28 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	return NULL;
 }
 
-/**
- * Filter function for shared keys, returning ID matches
- */
-static bool shared_filter(void *null, shared_key_t **in, shared_key_t **out,
-				void **un1, id_match_t *me, void **un2, id_match_t *other)
+CALLBACK(shared_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*out = *in;
-	if (me)
+	shared_key_t *key, **out;
+	id_match_t *me, *other;
+
+	VA_ARGS_VGET(args, out, me, other);
+
+	if (orig->enumerate(orig, &key))
 	{
-		*me = ID_MATCH_ANY;
+		*out = key;
+		if (me)
+		{
+			*me = ID_MATCH_ANY;
+		}
+		if (other)
+		{
+			*other = ID_MATCH_ANY;
+		}
+		return TRUE;
 	}
-	if (other)
-	{
-		*other = ID_MATCH_ANY;
-	}
-	return TRUE;
+	return FALSE;
 }
 
 METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
@@ -431,7 +437,7 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 			return NULL;
 	}
 	return enumerator_create_filter(enumerator_create_single(shared, NULL),
-									(void*)shared_filter, NULL, NULL);
+									shared_filter, NULL, NULL);
 }
 
 METHOD(load_tester_creds_t, destroy, void,

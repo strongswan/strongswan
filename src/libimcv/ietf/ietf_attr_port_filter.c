@@ -213,24 +213,31 @@ METHOD(ietf_attr_port_filter_t, add_port, void,
 	this->ports->insert_last(this->ports, entry);
 }
 
-/**
- * Enumerate port filter entries
- */
-static bool port_filter(void *null, port_entry_t **entry,
-						bool *blocked, void *i2, uint8_t *protocol, void *i3,
-						uint16_t *port)
+CALLBACK(port_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*blocked = (*entry)->blocked;
-	*protocol = (*entry)->protocol;
-	*port = (*entry)->port;
-	return TRUE;
+	port_entry_t *entry;
+	uint16_t *port;
+	uint8_t *protocol;
+	bool *blocked;
+
+	VA_ARGS_VGET(args, blocked, protocol, port);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*blocked = entry->blocked;
+		*protocol = entry->protocol;
+		*port = entry->port;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(ietf_attr_port_filter_t, create_port_enumerator, enumerator_t*,
 	private_ietf_attr_port_filter_t *this)
 {
 	return enumerator_create_filter(this->ports->create_enumerator(this->ports),
-					(void*)port_filter, NULL, NULL);
+									port_filter, NULL, NULL);
 }
 
 /**

@@ -115,18 +115,24 @@ struct entry_t {
 	pts_comp_func_name_t *name;
 };
 
-/**
- * Enumerate functional component entries
- */
-static bool entry_filter(void *null, entry_t **entry, uint8_t *flags,
-						 void *i2, uint32_t *depth, void *i3,
-						 pts_comp_func_name_t **name)
+CALLBACK(entry_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	*flags = (*entry)->flags;
-	*depth = (*entry)->depth;
-	*name  = (*entry)->name;
+	entry_t *entry;
+	pts_comp_func_name_t **name;
+	uint32_t *depth;
+	uint8_t *flags;
 
-	return TRUE;
+	VA_ARGS_VGET(args, flags, depth, name);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*flags = entry->flags;
+		*depth = entry->depth;
+		*name  = entry->name;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
@@ -318,7 +324,7 @@ METHOD(tcg_pts_attr_req_func_comp_evid_t, create_enumerator, enumerator_t*,
 	private_tcg_pts_attr_req_func_comp_evid_t *this)
 {
 	return enumerator_create_filter(this->list->create_enumerator(this->list),
-								   (void*)entry_filter, NULL, NULL);
+									entry_filter, NULL, NULL);
 }
 
 /**

@@ -272,8 +272,12 @@ typedef struct  {
 } private_enumerator_t;
 
 METHOD(enumerator_t, signature_schemes_enumerate, bool,
-	private_enumerator_t *this, signature_scheme_t *scheme)
+	private_enumerator_t *this, va_list args)
 {
+	signature_scheme_t *scheme;
+
+	VA_ARGS_VGET(args, scheme);
+
 	while (++this->index < countof(scheme_map))
 	{
 		if (this->type == scheme_map[this->index].type &&
@@ -296,7 +300,8 @@ enumerator_t *signature_schemes_for_key(key_type_t type, int size)
 
 	INIT(this,
 		.public = {
-			.enumerate = (void*)_signature_schemes_enumerate,
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _signature_schemes_enumerate,
 			.destroy = (void*)free,
 		},
 		.index = -1,

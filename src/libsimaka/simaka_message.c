@@ -222,17 +222,22 @@ METHOD(simaka_message_t, get_type, eap_type_t,
 	return this->hdr->type;
 }
 
-/**
- * convert attr_t to type and data enumeration
- */
-static bool attr_enum_filter(void *null, attr_t **in, simaka_attribute_t *type,
-							 void *dummy, chunk_t *data)
+CALLBACK(attr_enum_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
 {
-	attr_t *attr = *in;
+	attr_t *attr;
+	simaka_attribute_t *type;
+	chunk_t *data;
 
-	*type = attr->type;
-	*data = chunk_create(attr->data, attr->len);
-	return TRUE;
+	VA_ARGS_VGET(args, type, data);
+
+	if (orig->enumerate(orig, &attr))
+	{
+		*type = attr->type;
+		*data = chunk_create(attr->data, attr->len);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 METHOD(simaka_message_t, create_attribute_enumerator, enumerator_t*,
@@ -240,7 +245,7 @@ METHOD(simaka_message_t, create_attribute_enumerator, enumerator_t*,
 {
 	return enumerator_create_filter(
 						this->attributes->create_enumerator(this->attributes),
-						(void*)attr_enum_filter, NULL, NULL);
+						attr_enum_filter, NULL, NULL);
 }
 
 METHOD(simaka_message_t, add_attribute, void,

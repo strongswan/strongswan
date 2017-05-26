@@ -450,22 +450,21 @@ static initiate_data_t *initiate_data_create(check_list_t *checklist,
 	return this;
 }
 
-/**
- * Find an initiated connection by the peers' ids
- */
-static bool match_initiated_by_ids(initiated_t *current, identification_t *id,
-								   identification_t *peer_id)
+CALLBACK(match_initiated_by_ids, bool,
+	initiated_t *current, va_list args)
 {
+	identification_t *id, *peer_id;
+
+	VA_ARGS_VGET(args, id, peer_id);
 	return id->equals(id, current->id) && peer_id->equals(peer_id, current->peer_id);
 }
 
-static status_t get_initiated_by_ids(private_connect_manager_t *this,
-									 identification_t *id,
-									 identification_t *peer_id,
-									 initiated_t **initiated)
+static bool get_initiated_by_ids(private_connect_manager_t *this,
+								 identification_t *id,
+								 identification_t *peer_id,
+								 initiated_t **initiated)
 {
-	return this->initiated->find_first(this->initiated,
-								(linked_list_match_t)match_initiated_by_ids,
+	return this->initiated->find_first(this->initiated, match_initiated_by_ids,
 								(void**)initiated, id, peer_id);
 }
 
@@ -490,21 +489,20 @@ static void remove_initiated(private_connect_manager_t *this,
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Find the checklist with a specific connect ID
- */
-static bool match_checklist_by_id(check_list_t *current, chunk_t *connect_id)
+CALLBACK(match_checklist_by_id, bool,
+	check_list_t *current, va_list args)
 {
-	return chunk_equals(*connect_id, current->connect_id);
+	chunk_t connect_id;
+
+	VA_ARGS_VGET(args, connect_id);
+	return chunk_equals(connect_id, current->connect_id);
 }
 
-static status_t get_checklist_by_id(private_connect_manager_t *this,
-									chunk_t connect_id,
-									check_list_t **check_list)
+static bool get_checklist_by_id(private_connect_manager_t *this,
+								chunk_t connect_id, check_list_t **check_list)
 {
-	return this->checklists->find_first(this->checklists,
-								(linked_list_match_t)match_checklist_by_id,
-								(void**)check_list, &connect_id);
+	return this->checklists->find_first(this->checklists, match_checklist_by_id,
+										(void**)check_list, connect_id);
 }
 
 /**
@@ -528,19 +526,19 @@ static void remove_checklist(private_connect_manager_t *this,
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Checks if a list of endpoint_notify_t contains a certain host_t
- */
-static bool match_endpoint_by_host(endpoint_notify_t *current, host_t *host)
+CALLBACK(match_endpoint_by_host, bool,
+	endpoint_notify_t *current, va_list args)
 {
+	host_t *host;
+
+	VA_ARGS_VGET(args, host);
 	return host->equals(host, current->get_host(current));
 }
 
-static status_t endpoints_contain(linked_list_t *endpoints, host_t *host,
+static bool endpoints_contain(linked_list_t *endpoints, host_t *host,
 								  endpoint_notify_t **endpoint)
 {
-	return endpoints->find_first(endpoints,
-								 (linked_list_match_t)match_endpoint_by_host,
+	return endpoints->find_first(endpoints, match_endpoint_by_host,
 								 (void**)endpoint, host);
 }
 
@@ -560,39 +558,44 @@ static void insert_pair_by_priority(linked_list_t *pairs, endpoint_pair_t *pair)
 	enumerator->destroy(enumerator);
 }
 
-/**
- * Searches a list of endpoint_pair_t for a pair with specific host_ts
- */
-static bool match_pair_by_hosts(endpoint_pair_t *current, host_t *local,
-								host_t *remote)
+CALLBACK(match_pair_by_hosts, bool,
+	endpoint_pair_t *current, va_list args)
 {
-	return local->equals(local, current->local) && remote->equals(remote, current->remote);
+	host_t *local, *remote;
+
+	VA_ARGS_VGET(args, local, remote);
+	return local->equals(local, current->local) &&
+		   remote->equals(remote, current->remote);
 }
 
-static status_t get_pair_by_hosts(linked_list_t *pairs, host_t *local,
-								  host_t *remote, endpoint_pair_t **pair)
+static bool get_pair_by_hosts(linked_list_t *pairs, host_t *local,
+							  host_t *remote, endpoint_pair_t **pair)
 {
-	return pairs->find_first(pairs, (linked_list_match_t)match_pair_by_hosts,
-							 (void**)pair, local, remote);
+	return pairs->find_first(pairs, match_pair_by_hosts, (void**)pair, local,
+							 remote);
 }
 
-static bool match_pair_by_id(endpoint_pair_t *current, uint32_t *id)
+CALLBACK(match_pair_by_id, bool,
+	endpoint_pair_t *current, va_list args)
 {
-	return current->id == *id;
+	uint32_t id;
+
+	VA_ARGS_VGET(args, id);
+	return current->id == id;
 }
 
 /**
  * Searches for a pair with a specific id
  */
-static status_t get_pair_by_id(check_list_t *checklist, uint32_t id,
-							   endpoint_pair_t **pair)
+static bool get_pair_by_id(check_list_t *checklist, uint32_t id,
+						   endpoint_pair_t **pair)
 {
-	return checklist->pairs->find_first(checklist->pairs,
-										(linked_list_match_t)match_pair_by_id,
-										(void**)pair, &id);
+	return checklist->pairs->find_first(checklist->pairs, match_pair_by_id,
+										(void**)pair, id);
 }
 
-static bool match_succeeded_pair(endpoint_pair_t *current)
+CALLBACK(match_succeeded_pair, bool,
+	endpoint_pair_t *current, va_list args)
 {
 	return current->state == CHECK_SUCCEEDED;
 }
@@ -600,15 +603,14 @@ static bool match_succeeded_pair(endpoint_pair_t *current)
 /**
  * Returns the best pair of state CHECK_SUCCEEDED from a checklist.
  */
-static status_t get_best_valid_pair(check_list_t *checklist,
-									endpoint_pair_t **pair)
+static bool get_best_valid_pair(check_list_t *checklist, endpoint_pair_t **pair)
 {
-	return checklist->pairs->find_first(checklist->pairs,
-									(linked_list_match_t)match_succeeded_pair,
-									(void**)pair);
+	return checklist->pairs->find_first(checklist->pairs, match_succeeded_pair,
+										(void**)pair);
 }
 
-static bool match_waiting_pair(endpoint_pair_t *current)
+CALLBACK(match_waiting_pair, bool,
+	endpoint_pair_t *current, va_list args)
 {
 	return current->state == CHECK_WAITING;
 }
@@ -865,7 +867,7 @@ static job_requeue_t initiator_finish(callback_data_t *data)
 	this->mutex->lock(this->mutex);
 
 	check_list_t *checklist;
-	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
+	if (!get_checklist_by_id(this, data->connect_id, &checklist))
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't finish "
 			 "connectivity checks", &data->connect_id);
@@ -953,7 +955,7 @@ static job_requeue_t retransmit(callback_data_t *data)
 	this->mutex->lock(this->mutex);
 
 	check_list_t *checklist;
-	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
+	if (!get_checklist_by_id(this, data->connect_id, &checklist))
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't retransmit "
 			 "connectivity check", &data->connect_id);
@@ -962,7 +964,7 @@ static job_requeue_t retransmit(callback_data_t *data)
 	}
 
 	endpoint_pair_t *pair;
-	if (get_pair_by_id(checklist, data->mid, &pair) != SUCCESS)
+	if (!get_pair_by_id(checklist, data->mid, &pair))
 	{
 		DBG1(DBG_IKE, "pair with id '%d' not found, can't retransmit "
 			 "connectivity check", data->mid);
@@ -1108,7 +1110,7 @@ static job_requeue_t sender(callback_data_t *data)
 	this->mutex->lock(this->mutex);
 
 	check_list_t *checklist;
-	if (get_checklist_by_id(this, data->connect_id, &checklist) != SUCCESS)
+	if (!get_checklist_by_id(this, data->connect_id, &checklist))
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' not found, can't send "
 			 "connectivity check", &data->connect_id);
@@ -1124,9 +1126,8 @@ static job_requeue_t sender(callback_data_t *data)
 	{
 		DBG1(DBG_IKE, "no triggered check queued, sending an ordinary check");
 
-		if (checklist->pairs->find_first(checklist->pairs,
-									(linked_list_match_t)match_waiting_pair,
-									(void**)&pair) != SUCCESS)
+		if (!checklist->pairs->find_first(checklist->pairs, match_waiting_pair,
+										  (void**)&pair))
 		{
 			this->mutex->unlock(this->mutex);
 			DBG1(DBG_IKE, "no pairs in waiting state, aborting");
@@ -1182,7 +1183,7 @@ static job_requeue_t initiate_mediated(initiate_data_t *data)
 	initiated_t *initiated = data->initiated;
 
 	endpoint_pair_t *pair;
-	if (get_best_valid_pair(checklist, &pair) == SUCCESS)
+	if (get_best_valid_pair(checklist, &pair))
 	{
 		ike_sa_id_t *waiting_sa;
 		enumerator_t *enumerator = initiated->mediated->create_enumerator(
@@ -1219,7 +1220,7 @@ static void finish_checks(private_connect_manager_t *this, check_list_t *checkli
 	{
 		initiated_t *initiated;
 		if (get_initiated_by_ids(this, checklist->initiator.id,
-				checklist->responder.id, &initiated) == SUCCESS)
+								 checklist->responder.id, &initiated))
 		{
 			callback_job_t *job;
 
@@ -1247,7 +1248,7 @@ static void process_response(private_connect_manager_t *this, check_t *check,
 		check_list_t *checklist)
 {
 	endpoint_pair_t *pair;
-	if (get_pair_by_id(checklist, check->mid, &pair) == SUCCESS)
+	if (get_pair_by_id(checklist, check->mid, &pair))
 	{
 		if (pair->local->equals(pair->local, check->dst) &&
 			pair->remote->equals(pair->remote, check->src))
@@ -1261,9 +1262,9 @@ static void process_response(private_connect_manager_t *this, check_t *check,
 			checklist->initiator.endpoints : checklist->responder.endpoints;
 
 		endpoint_notify_t *local_endpoint;
-		if (endpoints_contain(local_endpoints,
-							  check->endpoint->get_host(check->endpoint),
-							  &local_endpoint) != SUCCESS)
+		if (!endpoints_contain(local_endpoints,
+							   check->endpoint->get_host(check->endpoint),
+							   &local_endpoint))
 		{
 			local_endpoint = endpoint_notify_create_from_host(PEER_REFLEXIVE,
 					check->endpoint->get_host(check->endpoint), pair->local);
@@ -1302,15 +1303,14 @@ static void process_request(private_connect_manager_t *this, check_t *check,
 	peer_reflexive->set_priority(peer_reflexive,
 							check->endpoint->get_priority(check->endpoint));
 
-	if (endpoints_contain(remote_endpoints, check->src, &remote_endpoint) != SUCCESS)
+	if (!endpoints_contain(remote_endpoints, check->src, &remote_endpoint))
 	{
 		remote_endpoint = peer_reflexive->clone(peer_reflexive);
 		remote_endpoints->insert_last(remote_endpoints, remote_endpoint);
 	}
 
 	endpoint_pair_t *pair;
-	if (get_pair_by_hosts(checklist->pairs, check->dst, check->src,
-						  &pair) == SUCCESS)
+	if (get_pair_by_hosts(checklist->pairs, check->dst, check->src, &pair))
 	{
 		switch(pair->state)
 		{
@@ -1389,7 +1389,7 @@ METHOD(connect_manager_t, process_check, void,
 	this->mutex->lock(this->mutex);
 
 	check_list_t *checklist;
-	if (get_checklist_by_id(this, check->connect_id, &checklist) != SUCCESS)
+	if (!get_checklist_by_id(this, check->connect_id, &checklist))
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' not found",
 			 &check->connect_id);
@@ -1423,6 +1423,15 @@ METHOD(connect_manager_t, process_check, void,
 	check_destroy(check);
 }
 
+CALLBACK(id_matches, bool,
+	ike_sa_id_t *a, va_list args)
+{
+	ike_sa_id_t *b;
+
+	VA_ARGS_VGET(args, b);
+	return a->equals(a, b);
+}
+
 METHOD(connect_manager_t, check_and_register, bool,
 	private_connect_manager_t *this, identification_t *id,
 	identification_t *peer_id, ike_sa_id_t *mediated_sa)
@@ -1432,7 +1441,7 @@ METHOD(connect_manager_t, check_and_register, bool,
 
 	this->mutex->lock(this->mutex);
 
-	if (get_initiated_by_ids(this, id, peer_id, &initiated) != SUCCESS)
+	if (!get_initiated_by_ids(this, id, peer_id, &initiated))
 	{
 		DBG2(DBG_IKE, "registered waiting mediated connection with '%Y'",
 			 peer_id);
@@ -1441,9 +1450,8 @@ METHOD(connect_manager_t, check_and_register, bool,
 		already_there = FALSE;
 	}
 
-	if (initiated->mediated->find_first(initiated->mediated,
-								(linked_list_match_t)mediated_sa->equals,
-								NULL, mediated_sa) != SUCCESS)
+	if (!initiated->mediated->find_first(initiated->mediated, id_matches,
+										 NULL, mediated_sa))
 	{
 		initiated->mediated->insert_last(initiated->mediated,
 										 mediated_sa->clone(mediated_sa));
@@ -1462,7 +1470,7 @@ METHOD(connect_manager_t, check_and_initiate, void,
 
 	this->mutex->lock(this->mutex);
 
-	if (get_initiated_by_ids(this, id, peer_id, &initiated) != SUCCESS)
+	if (!get_initiated_by_ids(this, id, peer_id, &initiated))
 	{
 		DBG2(DBG_IKE, "no waiting mediated connections with '%Y'", peer_id);
 		this->mutex->unlock(this->mutex);
@@ -1492,7 +1500,7 @@ METHOD(connect_manager_t, set_initiator_data, status_t,
 
 	this->mutex->lock(this->mutex);
 
-	if (get_checklist_by_id(this, connect_id, NULL) == SUCCESS)
+	if (get_checklist_by_id(this, connect_id, NULL))
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' already exists, aborting",
 			 &connect_id);
@@ -1517,7 +1525,7 @@ METHOD(connect_manager_t, set_responder_data, status_t,
 
 	this->mutex->lock(this->mutex);
 
-	if (get_checklist_by_id(this, connect_id, &checklist) != SUCCESS)
+	if (!get_checklist_by_id(this, connect_id, &checklist))
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' not found",
 			 &connect_id);
@@ -1547,7 +1555,7 @@ METHOD(connect_manager_t, stop_checks, status_t,
 
 	this->mutex->lock(this->mutex);
 
-	if (get_checklist_by_id(this, connect_id, &checklist) != SUCCESS)
+	if (!get_checklist_by_id(this, connect_id, &checklist))
 	{
 		DBG1(DBG_IKE, "checklist with id '%#B' not found",
 			 &connect_id);
