@@ -1,6 +1,18 @@
 strongswan-5.5.3
 ----------------
 
+- Fixed a DoS vulnerability in the gmp plugin that was caused by insufficient
+  input validation when verifying RSA signatures.  More specifically,
+  mpz_powm_sec() has two requirements regarding the passed exponent and modulus
+  that the plugin did not enforce, if these are not met the calculation will
+  result in a floating point exception that crashes the whole process.
+  This vulnerability has been registered as CVE-2017-9022.
+
+- Fixed a DoS vulnerability in the x509 plugin that was caused because the ASN.1
+  parser didn't handle ASN.1 CHOICE types properly, which could result in an
+  infinite loop when parsing X.509 extensions that use such types.
+  This vulnerability has been registered as CVE-2017-9023.
+
 - The behavior during IKEv2 CHILD_SA rekeying has been changed in order to avoid
   traffic loss. The responder now only installs the new inbound SA and delays
   installing the outbound SA until it receives the DELETE for the replaced
