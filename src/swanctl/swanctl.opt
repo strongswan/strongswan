@@ -651,6 +651,15 @@ connections.<conn>.children.<child>.esp_proposals = default
 	for interoperability. If no algorithms are specified for AH nor ESP,
 	the _default_ set of algorithms for ESP is included.
 
+connections.<conn>.children.<child>.sha256_96 = no
+	Use incorrect 96-bit truncation for HMAC-SHA-256.
+
+	HMAC-SHA-256 is used with 128-bit truncation with IPsec. For compatibility
+	with implementations that incorrectly use 96-bit truncation this option may
+	be enabled to configure the shorter truncation length in the kernel.  This
+	is not negotiated, so this only works with peers that use the incorrect
+	truncation length (or have this option enabled).
+
 connections.<conn>.children.<child>.local_ts = dynamic
 	Local traffic selectors to include in CHILD_SA.
 

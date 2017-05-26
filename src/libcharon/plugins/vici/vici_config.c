@@ -525,6 +525,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   local_ts = %#R", data->local_ts);
 	DBG2(DBG_CFG, "   remote_ts = %#R", data->remote_ts);
 	DBG2(DBG_CFG, "   hw_offload = %u", cfg->options & OPT_HW_OFFLOAD);
+	DBG2(DBG_CFG, "   sha256_96 = %u", cfg->options & OPT_SHA256_96);
 }
 
 /**
@@ -889,6 +890,15 @@ CALLBACK(parse_opt_hw_offl, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
 	return parse_option(out, OPT_HW_OFFLOAD, v);
+}
+
+/**
+ * Parse OPT_SHA256_96 option
+ */
+CALLBACK(parse_opt_sha256_96, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_SHA256_96, v);
 }
 
 /**
@@ -1550,6 +1560,7 @@ CALLBACK(child_kv, bool,
 		{ "priority",			parse_uint32,		&child->cfg.priority				},
 		{ "interface",			parse_string,		&child->cfg.interface				},
 		{ "hw_offload",			parse_opt_hw_offl,	&child->cfg.options					},
+		{ "sha256_96",			parse_opt_sha256_96,&child->cfg.options					},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,

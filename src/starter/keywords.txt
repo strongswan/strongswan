@@ -61,6 +61,7 @@ dpddelay,          KW_DPDDELAY
 dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION
 closeaction,       KW_CLOSEACTION
+sha256_96,         KW_SHA256_96
 inactivity,        KW_INACTIVITY
 modeconfig,        KW_MODECONFIG
 xauth,             KW_XAUTH
