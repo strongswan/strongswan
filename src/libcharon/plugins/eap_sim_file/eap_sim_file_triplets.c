@@ -120,7 +120,7 @@ METHOD(enumerator_t, enumerator_enumerate, bool,
 METHOD(eap_sim_file_triplets_t, create_enumerator, enumerator_t*,
 	private_eap_sim_file_triplets_t *this)
 {
-	triplet_enumerator_t *enumerator = malloc_thing(triplet_enumerator_t);
+	triplet_enumerator_t *enumerator;
 
 	this->mutex->lock(this->mutex);
 	INIT(enumerator,
