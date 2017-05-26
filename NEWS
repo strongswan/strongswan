@@ -1,6 +1,46 @@
 strongswan-5.5.3
 ----------------
 
+- The behavior during IKEv2 CHILD_SA rekeying has been changed in order to avoid
+  traffic loss. The responder now only installs the new inbound SA and delays
+  installing the outbound SA until it receives the DELETE for the replaced
+  CHILD_SA.  Similarly, the inbound SA of the replaced CHILD_SA is not removed
+  for a configurable amount of seconds (charon.delete_rekeyed_delay) after the
+  DELETE has been processed to reduce the chance of dropping delayed packets.
+
+- The code base has been ported to Apple's ARM64 iOS platform, whose calling
+  conventions for variadic and regular functions are different.  This means
+  assigning non-variadic functions to variadic function pointers does not work.
+  To avoid this issue the enumerator_t interface has been changed and the
+  signatures of the callback functions for enumerator_create_filter(), and the
+  invoke_function() and find_first() methods on linked_list_t have been changed.
+  The return type of find_first() also changed from status_t to bool.
+
+- Added support for fuzzing the certificate parser provided by the default
+  plugins (x509, pem, gmp etc.) on Google's OSS-Fuzz infrastructure. Several
+  issues found while fuzzing these plugins were fixed.
+
+- Two new options have been added to charon's retransmission settings:
+  retransmit_limit and retransmit_jitter.  The former adds an upper limit to the
+  calculated retransmission timeout, the latter randomly reduces it.
+
+- A bug in swanctl's --load-creds command was fixed that caused unencrypted
+  private keys to get unloaded if the command was called multiple times. The
+  load-key VICI command now returns the key ID of the loaded key on success.
+
+- The credential manager now enumerates local credential sets before global
+  ones. This means certificates supplied by the peer will now be preferred over
+  certificates with the same identity that may be locally stored (e.g. in the
+  certificate cache).
+
+- Added support for hardware offload of IPsec SAs as introduced by Linux 4.11
+  for hardware that supports this.
+
+- When building the libraries monolithically and statically the plugin
+  constructors are now hard-coded in each library so the plugin code is not
+  removed by the linker because it thinks none of their symbols are ever
+  referenced.
+
 - The pki tool loads the curve25519 plugin by default.
 
 
