@@ -366,14 +366,14 @@ static status_t retransmit_packet(private_task_manager_t *this, uint32_t seqnr,
 	}
 	t = (uint32_t)(this->retransmit_timeout * 1000.0 *
 					pow(this->retransmit_base, retransmitted));
+	if (this->retransmit_limit)
+	{
+		t = min(t, this->retransmit_limit);
+	}
 	if (this->retransmit_jitter)
 	{
 		max_jitter = (t / 100.0) * this->retransmit_jitter;
 		t -= max_jitter * (random() / (RAND_MAX + 1.0));
-	}
-	if (this->retransmit_limit)
-	{
-		t = min(t, this->retransmit_limit);
 	}
 	if (retransmitted)
 	{

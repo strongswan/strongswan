@@ -362,14 +362,14 @@ METHOD(task_manager_t, retransmit, status_t,
 				timeout = (uint32_t)(this->retransmit_timeout * 1000.0 *
 					pow(this->retransmit_base, this->initiating.retransmitted));
 
+				if (this->retransmit_limit)
+				{
+					timeout = min(timeout, this->retransmit_limit);
+				}
 				if (this->retransmit_jitter)
 				{
 					max_jitter = (timeout / 100.0) * this->retransmit_jitter;
 					timeout -= max_jitter * (random() / (RAND_MAX + 1.0));
-				}
-				if (this->retransmit_limit)
-				{
-					timeout = min(timeout, this->retransmit_limit);
 				}
 			}
 			else
