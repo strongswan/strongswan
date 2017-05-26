@@ -598,7 +598,7 @@ METHOD(enumerator_t, peer_enumerator_destroy, void,
 METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 	private_sql_config_t *this, identification_t *me, identification_t *other)
 {
-	peer_enumerator_t *e = malloc_thing(peer_enumerator_t);
+	peer_enumerator_t *e;
 
 	INIT(e,
 		.public = {
