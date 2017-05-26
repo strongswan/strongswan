@@ -37,7 +37,7 @@ struct medcli_listener_t {
 	listener_t listener;
 
 	/**
-	 * Destroy the credentials databse.
+	 * Destroy the credentials database.
 	 */
 	void (*destroy)(medcli_listener_t *this);
 };

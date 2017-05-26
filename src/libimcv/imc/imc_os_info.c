@@ -344,7 +344,7 @@ METHOD(imc_os_info_t, create_package_enumerator, enumerator_t*,
 		return NULL;
 	}
 
-	/* Open a pipe stream for reading the output of the dpkg-query commmand */
+	/* Open a pipe stream for reading the output of the dpkg-query command */
 	file = popen(command, "r");
 	if (!file)
 	{

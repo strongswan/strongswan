@@ -37,7 +37,7 @@ struct medsrv_creds_t {
 	credential_set_t set;
 
 	/**
-	 * Destroy the credentials databse.
+	 * Destroy the credentials database.
 	 */
 	void (*destroy)(medsrv_creds_t *this);
 };

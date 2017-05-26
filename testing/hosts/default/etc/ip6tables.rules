@@ -28,7 +28,7 @@
 -A INPUT  -p icmpv6 --icmpv6-type neighbor-advertisement -j ACCEPT
 -A OUTPUT -p icmpv6 --icmpv6-type neighbor-advertisement -j ACCEPT
 
-# allow crl and certficate fetch from winnetou
+# allow crl and certificate fetch from winnetou
 -A INPUT  -i eth0 -p tcp --sport 80 -s fec0::15 -j ACCEPT
 -A OUTPUT -o eth0 -p tcp --dport 80 -d fec0::15 -j ACCEPT
 

@@ -42,14 +42,14 @@ struct imc_test_state_t {
 	/**
 	 * get the command to send to IMV
 	 *
-	 * @return				commmand to send to IMV
+	 * @return				command to send to IMV
 	 */
 	char* (*get_command)(imc_test_state_t *this);
 
 	/**
 	 * set the command to send to IMV
 	 *
-	 * @param command		commmand to send to IMV
+	 * @param command		command to send to IMV
 	 */
 	void (*set_command)(imc_test_state_t *this, char *command);
 

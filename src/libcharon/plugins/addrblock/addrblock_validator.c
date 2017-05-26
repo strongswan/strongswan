@@ -56,12 +56,12 @@ static bool check_addrblock(private_addrblock_validator_t *this,
 	}
 	if (!subject_const)
 	{
-		DBG1(DBG_CFG, "subject certficate lacks ipAddrBlocks extension");
+		DBG1(DBG_CFG, "subject certificate lacks ipAddrBlocks extension");
 		return !this->strict;
 	}
 	if (!issuer_const)
 	{
-		DBG1(DBG_CFG, "issuer certficate lacks ipAddrBlocks extension");
+		DBG1(DBG_CFG, "issuer certificate lacks ipAddrBlocks extension");
 		return FALSE;
 	}
 	subject_enumerator = subject->create_ipAddrBlock_enumerator(subject);

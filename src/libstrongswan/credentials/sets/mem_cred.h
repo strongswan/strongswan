@@ -62,7 +62,7 @@ struct mem_cred_t {
 	/**
 	 * Get an existing reference to the same certificate.
 	 *
-	 * Searches for the same certficate in the set, and returns a reference
+	 * Searches for the same certificate in the set, and returns a reference
 	 * to it, destroying the passed certificate. If the passed certificate
 	 * is not found, it is just returned.
 	 *
