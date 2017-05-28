@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Andreas Steffen
+ * Copyright (C) 2010-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,6 +17,7 @@
 #include "tnccs_11.h"
 
 #include <tnc/tnccs/tnccs_manager.h>
+#include <libxml/parser.h>
 
 METHOD(plugin_t, get_name, char*,
 	tnccs_11_plugin_t *this)
@@ -39,6 +40,7 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	tnccs_11_plugin_t *this)
 {
+	xmlCleanupParser();
 	free(this);
 }
 
@@ -56,6 +58,7 @@ plugin_t *tnccs_11_plugin_create()
 			.destroy = _destroy,
 		},
 	);
+	xmlInitParser();
 
 	return &this->plugin;
 }
