@@ -188,6 +188,8 @@ static TNC_Result receive_msg(private_imv_test_agent_t *this, imv_state_t *state
 	if (retry)
 	{
 		test_state->set_rounds(test_state, rounds);
+		out_msg->destroy(out_msg);
+
 		return this->agent->request_handshake_retry(
 									this->agent->get_id(this->agent),
 									state->get_connection_id(state),
