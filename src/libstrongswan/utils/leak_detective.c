@@ -606,6 +606,9 @@ static char *whitelist[] = {
 	"system__tasking__stages__create_task",
 	/* in case external threads call into our code */
 	"thread_current_id",
+	/* FHH IMCs and IMVs */
+	"TNC_IMC_NotifyConnectionChange",
+	"TNC_IMV_NotifyConnectionChange",
 };
 
 /**
