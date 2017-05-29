@@ -78,11 +78,17 @@ static chunk_t rsaep(private_gmp_rsa_public_key_t *this, chunk_t data)
 	mpz_t m, c;
 	chunk_t encrypted;
 
-	mpz_init(c);
 	mpz_init(m);
-
 	mpz_import(m, data.len, 1, 1, 1, 0, data.ptr);
 
+	if (mpz_cmp_ui(m, 0) <= 0 || mpz_cmp(m, this->n) >= 0)
+	{	/* m must be <= n-1, and while 0 is technically a valid value, it
+		 * doesn't really make sense here, so we filter that too */
+		mpz_clear(m);
+		return chunk_empty;
+	}
+
+	mpz_init(c);
 	mpz_powm(c, m, this->e, this->n);
 
 	encrypted.len = this->k;
@@ -150,7 +156,7 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 	 */
 
 	/* check magic bytes */
-	if (*(em.ptr) != 0x00 || *(em.ptr+1) != 0x01)
+	if (em.len < 2 || *(em.ptr) != 0x00 || *(em.ptr+1) != 0x01)
 	{
 		goto end;
 	}
