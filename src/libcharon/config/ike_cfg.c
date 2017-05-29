@@ -224,12 +224,12 @@ static u_int match(linked_list_t *hosts, linked_list_t *ranges, host_t *cand)
 			if (ts->to_subnet(ts, &host, &mask))
 			{
 				quality = max(quality, mask + 1);
-				host->destroy(host);
 			}
 			else
 			{
 				quality = max(quality, 1);
 			}
+			host->destroy(host);
 		}
 	}
 	enumerator->destroy(enumerator);
