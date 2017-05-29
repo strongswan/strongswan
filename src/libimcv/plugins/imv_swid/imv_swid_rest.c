@@ -70,27 +70,29 @@ METHOD(imv_swid_rest_t, post, status_t,
 				FETCH_END);
 	free(uri);
 
-	if (status == SUCCESS)
+	if (status != SUCCESS)
 	{
-		return 	SUCCESS;
-	}
-
-	if (code != HTTP_STATUS_CODE_PRECONDITION_FAILED || !response.ptr)
-	{
-		DBG2(DBG_IMV, "REST http request failed with status code: %d", code);
-		return FAILED;
-	}
-
-	if (jresponse)
-	{
-		/* Parse HTTP response into a JSON object */
-		tokener = json_tokener_new();
-		*jresponse = json_tokener_parse_ex(tokener, response.ptr, response.len);
-		json_tokener_free(tokener);
+		if (code != HTTP_STATUS_CODE_PRECONDITION_FAILED || !response.ptr)
+		{
+			DBG2(DBG_IMV, "REST http request failed with status code: %d", code);
+			status = FAILED;
+		}
+		else
+		{
+			if (jresponse)
+			{
+				/* Parse HTTP response into a JSON object */
+				tokener = json_tokener_new();
+				*jresponse = json_tokener_parse_ex(tokener, response.ptr,
+															response.len);
+				json_tokener_free(tokener);
+			}
+			status = NEED_MORE;
+		}
 	}
 	free(response.ptr);
 
-	return NEED_MORE;
+	return status;
 }
 
 METHOD(imv_swid_rest_t, destroy, void,
