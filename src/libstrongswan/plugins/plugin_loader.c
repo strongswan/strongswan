@@ -698,7 +698,6 @@ static bool load_dependencies(private_plugin_loader_t *this,
 							  int level)
 {
 	registered_feature_t *registered, lookup;
-	int indent = level * 2;
 	int i;
 
 	/* first entry is provided feature, followed by dependencies */
@@ -741,6 +740,7 @@ static bool load_dependencies(private_plugin_loader_t *this,
 
 #ifndef USE_FUZZING
 			char *name, *provide, *depend;
+			int indent = level * 2;
 
 			name = provided->entry->plugin->get_name(provided->entry->plugin);
 			provide = plugin_feature_get_string(&provided->feature[0]);
@@ -828,7 +828,6 @@ static void load_provided(private_plugin_loader_t *this,
 						  provided_feature_t *provided,
 						  int level)
 {
-	int indent = level * 2;
 
 	if (provided->loaded || provided->failed)
 	{
@@ -837,6 +836,7 @@ static void load_provided(private_plugin_loader_t *this,
 
 #ifndef USE_FUZZING
 	char *name, *provide;
+	int indent = level * 2;
 
 	name = provided->entry->plugin->get_name(provided->entry->plugin);
 	provide = plugin_feature_get_string(provided->feature);
