@@ -136,7 +136,7 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 /**
  * parse a proposal string, either into ike_cfg or child_cfg
  */
-static void add_proposals(private_stroke_config_t *this, char *string,
+static bool add_proposals(private_stroke_config_t *this, char *string,
 				ike_cfg_t *ike_cfg, child_cfg_t *child_cfg, protocol_id_t proto)
 {
 	if (string)
@@ -170,10 +170,11 @@ static void add_proposals(private_stroke_config_t *this, char *string,
 				continue;
 			}
 			DBG1(DBG_CFG, "skipped invalid proposal string: %s", single);
+			return FALSE;
 		}
 		if (strict)
 		{
-			return;
+			return TRUE;
 		}
 		/* add default porposal to the end if not strict */
 	}
@@ -187,6 +188,7 @@ static void add_proposals(private_stroke_config_t *this, char *string,
 		child_cfg->add_proposal(child_cfg, proposal_create_default(proto));
 		child_cfg->add_proposal(child_cfg, proposal_create_default_aead(proto));
 	}
+	return TRUE;
 }
 
 /**
@@ -289,7 +291,12 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 							 msg->add_conn.fragmentation,
 							 msg->add_conn.ikedscp);
 
-	add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg, NULL, PROTO_IKE);
+	if (!add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg,
+					   NULL, PROTO_IKE))
+	{
+		ike_cfg->destroy(ike_cfg);
+		return NULL;
+	}
 	return ike_cfg;
 }
 
@@ -1050,6 +1057,7 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 									stroke_msg_t *msg)
 {
 	child_cfg_t *child_cfg;
+	bool success;
 	child_cfg_create_t child = {
 		.lifetime = {
 			.time = {
@@ -1100,13 +1108,18 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 
 	if (msg->add_conn.algorithms.ah)
 	{
-		add_proposals(this, msg->add_conn.algorithms.ah,
-					  NULL, child_cfg, PROTO_AH);
+		success = add_proposals(this, msg->add_conn.algorithms.ah,
+								NULL, child_cfg, PROTO_AH);
 	}
 	else
 	{
-		add_proposals(this, msg->add_conn.algorithms.esp,
-					  NULL, child_cfg, PROTO_ESP);
+		success = add_proposals(this, msg->add_conn.algorithms.esp,
+								NULL, child_cfg, PROTO_ESP);
+	}
+	if (!success)
+	{
+		child_cfg->destroy(child_cfg);
+		return NULL;
 	}
 	return child_cfg;
 }
