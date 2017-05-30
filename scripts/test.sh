@@ -132,6 +132,14 @@ fuzzing)
 			git clone --depth 1 https://github.com/strongswan/fuzzing-corpora.git fuzzing-corpora
 			export FUZZING_CORPORA=$TRAVIS_BUILD_DIR/fuzzing-corpora
 		fi
+		# these are about the same as those on OSS-Fuzz (except for the
+		# symbolize options and strip_path_prefix)
+		export ASAN_OPTIONS=redzone=16:handle_sigill=1:strict_string_check=1:\
+			allocator_release_to_os_interval_ms=500:strict_memcmp=1:detect_container_overflow=1:\
+			coverage=0:allocator_may_return_null=1:use_sigaltstack=1:detect_stack_use_after_return=1:\
+			alloc_dealloc_mismatch=0:detect_leaks=1:print_scariness=1:max_uar_stack_size_log=16:\
+			handle_abort=1:check_malloc_usable_size=0:quarantine_size_mb=10:detect_odr_violation=0:\
+			symbolize=1:handle_segv=1:fast_unwind_on_fatal=0:external_symbolizer_path=/usr/bin/llvm-symbolizer-3.5
 	fi
 	;;
 dist)
