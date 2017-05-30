@@ -1253,6 +1253,18 @@ if test x$coverage = xtrue; then
 	CFLAGS="${CFLAGS} -g -O0"
 fi
 
+if test x$fuzzing = xtrue; then
+	if test x$libfuzzer = x; then
+		AC_MSG_NOTICE([fuzz targets enabled without libFuzzer, using local driver])
+		CFLAGS="${CFLAGS} -fsanitize=address"
+		libfuzzer="libFuzzerLocal.a"
+	else
+		# required for libFuzzer
+		FUZZING_LDFLAGS="-stdlib=libc++ -lstdc++"
+		AC_SUBST(FUZZING_LDFLAGS)
+	fi
+fi
+
 if test x$ruby_gems = xtrue; then
 	AC_PATH_PROG([GEM], [gem], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 	if test x$GEM = x; then
