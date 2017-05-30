@@ -121,6 +121,19 @@ osx)
 	export CPPFLAGS
 	export LDFLAGS
 	;;
+fuzzing)
+	CFLAGS="$CFLAGS -DNO_CHECK_MEMWIPE"
+	CONFIG="--enable-fuzzing --enable-static --disable-shared --disable-scripts"
+	# don't run any of the unit tests
+	export TESTS_RUNNERS=
+	# prepare corpora
+	if test -z "$1"; then
+		if test -z "$FUZZING_CORPORA"; then
+			git clone --depth 1 https://github.com/strongswan/fuzzing-corpora.git fuzzing-corpora
+			export FUZZING_CORPORA=$TRAVIS_BUILD_DIR/fuzzing-corpora
+		fi
+	fi
+	;;
 dist)
 	TARGET=distcheck
 	;;

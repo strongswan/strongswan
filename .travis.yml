@@ -61,5 +61,7 @@ matrix:
       env: TEST=win32 MONOLITHIC=yes
       dist: precise
     - compiler: clang
+      env: TEST=fuzzing MONOLITHIC=yes
+    - compiler: clang
       os: osx
       env: TEST=osx
