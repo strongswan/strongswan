@@ -1047,26 +1047,28 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
  */
 proposal_t *proposal_create_default_aead(protocol_id_t protocol)
 {
-	private_proposal_t *this;
+	private_proposal_t *this = (private_proposal_t*)proposal_create(protocol, 0);;
 
 	switch (protocol)
 	{
 		case PROTO_IKE:
-			this = (private_proposal_t*)proposal_create(protocol, 0);
 			if (!proposal_add_supported_ike(this, TRUE))
 			{
 				destroy(this);
 				return NULL;
 			}
-			return &this->public;
+			break;
 		case PROTO_ESP:
-			/* we currently don't include any AEAD proposal for ESP, as we
-			 * don't know if our kernel backend actually supports it. */
-			return NULL;
+			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16,    128);
+			add_algorithm(this, DIFFIE_HELLMAN_GROUP,  ECP_256_BIT,            0);
+			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+			break;
 		case PROTO_AH:
+			break;
 		default:
-			return NULL;
+			break;
 	}
+	return &this->public;
 }
 
 /*
