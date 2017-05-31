@@ -231,6 +231,7 @@ METHOD(enumerator_t, rdn_part_enumerate, bool,
 		{OID_UNIQUE_IDENTIFIER,	ID_PART_RDN_ID},
 		{OID_EMAIL_ADDRESS,		ID_PART_RDN_E},
 		{OID_EMPLOYEE_NUMBER,	ID_PART_RDN_EN},
+		{OID_DMD_NAME,			ID_PART_RDN_DMDNAME},
 	};
 
 	VA_ARGS_VGET(args, type, data);
