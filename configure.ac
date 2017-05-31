@@ -919,9 +919,9 @@ if test x$gmp = xtrue; then
 		AC_COMPILE_IFELSE(
 			[AC_LANG_PROGRAM(
 				[[#include "gmp.h"]],
-				[[void *x = mpz_powm_sec;]])],
+				[[void *x  __attribute__((unused)); x = mpz_powm_sec;]])],
 			[AC_MSG_RESULT([yes]);
-			 AC_DEFINE([HAVE_MPZ_POWM_SEC], [], [have mpz_mown_sec()])],
+			 AC_DEFINE([HAVE_MPZ_POWM_SEC], [], [have mpz_powm_sec()])],
 			[AC_MSG_RESULT([no])]
 		)
 	else
