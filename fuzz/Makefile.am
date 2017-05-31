@@ -26,4 +26,6 @@ check: all
 		corpus=$${f#fuzz_}; \
 		corpus=$${corpus%%_*}; \
 		./$$f $(FUZZING_CORPORA)/$${corpus}/*; \
+		crashes=$(FUZZING_CORPORA)/$${corpus}-crash; \
+		test ! -d $${crashes} || ./$$f $${crashes}/*; \
 	done
