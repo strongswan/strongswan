@@ -8,6 +8,7 @@ swanctl_SOURCES = \
 	commands/redirect.c \
 	commands/install.c \
 	commands/list_sas.c \
+	commands/list_conn_reqid.c \
 	commands/list_pols.c \
 	commands/list_authorities.c \
 	commands/list_conns.c \
