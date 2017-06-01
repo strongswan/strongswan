@@ -442,8 +442,7 @@ METHOD(task_t, build_i, status_t,
 		if (cfg)
 		{
 			idr = cfg->get(cfg, AUTH_RULE_IDENTITY);
-			if (!cfg->get(cfg, AUTH_RULE_IDENTITY_LOOSE) && idr &&
-				!idr->contains_wildcards(idr))
+			if (!cfg->get(cfg, AUTH_RULE_IDENTITY_LOOSE) && idr)
 			{
 				this->ike_sa->set_other_id(this->ike_sa, idr->clone(idr));
 				id_payload = id_payload_create_from_identification(
@@ -723,7 +722,7 @@ METHOD(task_t, build_r, status_t,
 		id = this->ike_sa->get_my_id(this->ike_sa);
 		if (id->get_type(id) == ID_ANY)
 		{	/* no IDr received, apply configured ID */
-			if (!id_cfg || id_cfg->contains_wildcards(id_cfg))
+			if (!id_cfg)
 			{	/* no ID configured, use local IP address */
 				host_t *me;
 
