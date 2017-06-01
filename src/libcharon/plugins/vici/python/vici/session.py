@@ -30,8 +30,11 @@ class Session(object):
 
     def reload_settings(self):
         """Reload strongswan.conf settings and any plugins supporting reload.
+
+        :return: generator for logs emitted as dict
+        :rtype: generator
         """
-        self.handler.request("reload-settings")
+        return self.handler.request("reload-settings")
 
     def initiate(self, sa):
         """Initiate an SA.
@@ -58,24 +61,30 @@ class Session(object):
 
         :param sa: the SA to redirect
         :type sa: dict
+        :return: generator for logs emitted as dict
+        :rtype: generator
         """
-        self.handler.request("redirect", sa)
+        return self.handler.request("redirect", sa)
 
     def install(self, policy):
         """Install a trap, drop or bypass policy defined by a CHILD_SA config.
 
         :param policy: policy to install
         :type policy: dict
+        :return: generator for logs emitted as dict
+        :rtype: generator
         """
-        self.handler.request("install", policy)
+        return self.handler.request("install", policy)
 
     def uninstall(self, policy):
         """Uninstall a trap, drop or bypass policy defined by a CHILD_SA config.
 
         :param policy: policy to uninstall
         :type policy: dict
+        :return: generator for logs emitted as dict
+        :rtype: generator
         """
-        self.handler.request("uninstall", policy)
+        return self.handler.request("uninstall", policy)
 
     def list_sas(self, filters=None):
         """Retrieve active IKE_SAs and associated CHILD_SAs.
@@ -132,39 +141,49 @@ class Session(object):
 
         :param connection: connection definition
         :type connection: dict
+        :return: generator for logs emitted as dict
+        :rtype: generator
         """
-        self.handler.request("load-conn", connection)
+        return self.handler.request("load-conn", connection)
 
     def unload_conn(self, name):
         """Unload a connection definition.
 
         :param name: connection definition name
         :type name: dict
+        :return: generator for logs emitted as dict
+        :rtype: generator
         """
-        self.handler.request("unload-conn", name)
+        return self.handler.request("unload-conn", name)
 
     def load_cert(self, certificate):
         """Load a certificate into the daemon.
 
         :param certificate: PEM or DER encoded certificate
         :type certificate: dict
+        :return: generator for logs emitted as dict
+        :rtype: generator
         """
-        self.handler.request("load-cert", certificate)
+        return self.handler.request("load-cert", certificate)
 
     def load_key(self, private_key):
         """Load a private key into the daemon.
 
         :param private_key: PEM or DER encoded key
+        :return: generator for logs emitted as dict
+        :rtype: generator
         """
-        self.handler.request("load-key", private_key)
+        return self.handler.request("load-key", private_key)
 
     def load_shared(self, secret):
         """Load a shared IKE PSK, EAP or XAuth secret into the daemon.
 
         :param secret: shared IKE PSK, EAP or XAuth secret
         :type secret: dict
+        :return: generator for logs emitted as dict
+        :rtype: generator
         """
-        self.handler.request("load-shared", secret)
+        return self.handler.request("load-shared", secret)
 
     def flush_certs(self, filter=None):
         """Flush the volatile certificate cache.
@@ -183,8 +202,11 @@ class Session(object):
         Clear all loaded certificate, private key and shared key credentials.
         This affects only credentials loaded over vici, but additionally
         flushes the credential cache.
+
+        :return: generator for logs emitted as dict
+        :rtype: generator
         """
-        self.handler.request("clear-creds")
+        return self.handler.request("clear-creds")
 
     def load_pool(self, pool):
         """Load a virtual IP pool.
@@ -205,8 +227,10 @@ class Session(object):
 
         :param pool_name: pool by name
         :type pool_name: dict
+        :return: generator for logs emitted as dict
+        :rtype: generator
         """
-        self.handler.request("unload-pool", pool_name)
+        return self.handler.request("unload-pool", pool_name)
 
     def get_pools(self, options):
         """Retrieve loaded pools.
