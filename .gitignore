@@ -51,3 +51,6 @@ coverage/
 /*.files
 /*.includes
 test-driver
+strongswan.config
+strongswan.files
+strongswan.includes
