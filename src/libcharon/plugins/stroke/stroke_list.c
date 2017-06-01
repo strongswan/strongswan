@@ -113,7 +113,7 @@ static void log_ike_sa(FILE *out, ike_sa_t *ike_sa, bool all)
 		fprintf(out, " %V ago", &now, &established);
 	}
 
-	fprintf(out, ", %H[%Y]...%H[%Y]\n",
+	fprintf(out, ", %#H[%Y]...%#H[%Y]\n",
 			ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
 			ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
 
@@ -539,7 +539,7 @@ METHOD(stroke_list_t, status, void,
 		fprintf(out, "Listening IP addresses:\n");
 		while (enumerator->enumerate(enumerator, (void**)&host))
 		{
-			fprintf(out, "  %H\n", host);
+			fprintf(out, "  %#H\n", host);
 		}
 		enumerator->destroy(enumerator);
 
