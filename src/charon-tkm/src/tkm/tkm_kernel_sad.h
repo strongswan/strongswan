@@ -79,7 +79,8 @@ struct tkm_kernel_sad_t {
 	 * @param reqid			reqid of CHILD SA
 	 * @param spi			Remote SPI of CHILD SA
 	 * @param proto			protocol of CHILD SA (ESP/AH)
-	 * @return				destination host of entry if found, NULL otherwise
+	 * @return				destination host of entry if found (cloned),
+	 *						NULL otherwise
 	 */
 	host_t * (*get_dst_host)(tkm_kernel_sad_t * const this,
 			  const uint32_t reqid, const uint32_t spi, const uint8_t proto);

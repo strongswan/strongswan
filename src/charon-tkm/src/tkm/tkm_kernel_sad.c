@@ -283,7 +283,7 @@ METHOD(tkm_kernel_sad_t, get_dst_host, host_t *,
 											(void**)&entry, &reqid, &spi, &proto);
 	if (res && entry)
 	{
-		dst = entry->dst;
+		dst = entry->dst->clone(entry->dst);
 		DBG3(DBG_KNL, "returning destination host %H of SAD entry (reqid: %u,"
 			 " spi: %x, proto: %u)", dst, reqid, ntohl(spi), proto);
 	}

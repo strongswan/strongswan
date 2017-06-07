@@ -47,4 +47,5 @@ void charon_esa_expire(result_type *res, const sp_id_type sp_id,
 	DBG1(DBG_KNL, "ees: expire received for reqid %u, spi %x, dst %H", sp_id,
 		 ntohl(spi_rem), dst);
 	charon->kernel->expire(charon->kernel, protocol, spi_rem, dst, hard != 0);
+	dst->destroy(dst);
 }
