@@ -1011,37 +1011,9 @@ if test x$dumm = xtrue; then
 	AC_SUBST(gtk_CFLAGS)
 	AC_SUBST(gtk_LIBS)
 	AC_CHECK_PROGS(RUBY, ruby)
-	AC_MSG_CHECKING([for Ruby header files])
-	if test -n "$RUBY"; then
-		RUBYINCLUDE=
-		RUBYDIR=`($RUBY -r rbconfig -e 'print RbConfig::CONFIG[["rubyhdrdir"]] || ""') 2>/dev/null`
-		if test -n "$RUBYDIR" -a -r "$RUBYDIR/ruby.h"; then
-			RUBYARCH=`($RUBY -r rbconfig -e 'print RbConfig::CONFIG[["arch"]] || ""') 2>/dev/null`
-			if test -n "$RUBYARCH"; then
-				AC_MSG_RESULT([$RUBYDIR])
-				RUBYINCLUDE="-I$RUBYDIR -I$RUBYDIR/$RUBYARCH"
-			fi
-		else
-			RUBYDIR=`($RUBY -r rbconfig -e 'print RbConfig::CONFIG[["archdir"]] || ""') 2>/dev/null`
-			if test -n "$RUBYDIR" -a -r "$RUBYDIR/ruby.h"; then
-				AC_MSG_RESULT([$RUBYDIR])
-				RUBYINCLUDE="-I$RUBYDIR"
-			fi
-		fi
-		if test -z "$RUBYINCLUDE"; then
-			AC_MSG_ERROR([ruby.h not found])
-		fi
-		AC_SUBST(RUBYINCLUDE)
-	else
-		AC_MSG_ERROR([don't know how to run ruby])
-	fi
-	AC_MSG_CHECKING([for libruby])
+	PKG_CHECK_MODULES(ruby, [ruby])
 	saved_LIBS=$LIBS
-	LIBS=`($RUBY -r rbconfig -e 'print RbConfig::CONFIG[["LIBRUBYARG_SHARED"]] || ""') 2>/dev/null`
-	AC_TRY_LINK_FUNC(ruby_init,
-		[AC_MSG_RESULT([$LIBS]); RUBYLIB=$LIBS],
-		[AC_MSG_ERROR([not found])])
-	AC_SUBST(RUBYLIB)
+	LIBS=$ruby_LIBS
 	AC_CHECK_FUNCS(rb_errinfo)
 	LIBS=$saved_LIBS
 fi

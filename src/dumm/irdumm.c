@@ -19,6 +19,8 @@
 #undef PACKAGE_STRING
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_URL
+#undef HAVE_DLADDR
+#undef HAVE_QSORT_R
 #include <ruby.h>
 
 #ifdef HAVE_RB_ERRINFO

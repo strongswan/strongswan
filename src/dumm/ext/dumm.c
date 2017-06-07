@@ -30,6 +30,8 @@
 #undef PACKAGE_STRING
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_URL
+#undef HAVE_DLADDR
+#undef HAVE_QSORT_R
 /* avoid redefintiion of snprintf etc. */
 #define RUBY_DONT_SUBST
 /* undef our _GNU_SOURCE, as it gets redefined by <ruby.h> */

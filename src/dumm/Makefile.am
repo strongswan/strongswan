@@ -11,15 +11,14 @@ irdumm_SOURCES = irdumm.c
 
 libdumm_la_LIBADD = -lbridge -lfuse -lutil $(top_builddir)/src/libstrongswan/libstrongswan.la
 dumm_LDADD = libdumm.la ${gtk_LIBS} $(top_builddir)/src/libstrongswan/libstrongswan.la
-irdumm_LDADD = libdumm.la ${RUBYLIB} $(top_builddir)/src/libstrongswan/libstrongswan.la
+irdumm_LDADD = libdumm.la ${ruby_LIBS} $(top_builddir)/src/libstrongswan/libstrongswan.la
 
 AM_CPPFLAGS = \
 	-D_FILE_OFFSET_BITS=64 \
-	-I$(top_srcdir)/src/libstrongswan \
-	${RUBYINCLUDE}
+	-I$(top_srcdir)/src/libstrongswan
 
-AM_CFLAGS = \
-	${gtk_CFLAGS}
+dumm_CFLAGS = ${gtk_CFLAGS}
+irdumm_CFLAGS = ${ruby_CFLAGS}
 
 all-local: ext
 
