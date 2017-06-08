@@ -686,15 +686,13 @@ static bool parse_keyUsage_ext(private_openssl_x509_t *this,
 			{
 				flags |= usage->data[1] << 8;
 			}
-			switch (flags)
+			if (flags & X509v3_KU_CRL_SIGN)
 			{
-				case X509v3_KU_CRL_SIGN:
-					this->flags |= X509_CRL_SIGN;
-					break;
-				case X509v3_KU_KEY_CERT_SIGN:
-					/* we use the caBasicContraint, MUST be set */
-				default:
-					break;
+				this->flags |= X509_CRL_SIGN;
+			}
+			if (flags & X509v3_KU_KEY_CERT_SIGN)
+			{
+				/* we use the caBasicContraint, MUST be set */
 			}
 		}
 		ASN1_BIT_STRING_free(usage);
