@@ -60,6 +60,7 @@ plugins = \
 	plugins/imc-os.opt \
 	plugins/imc-scanner.opt \
 	plugins/imc-swid.opt \
+	plugins/imc-swima.opt \
 	plugins/imc-test.opt \
 	plugins/imv-attestation.opt \
 	plugins/imv-os.opt \

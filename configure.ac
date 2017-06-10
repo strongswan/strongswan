@@ -247,6 +247,7 @@ ARG_ENABL_SET([imc-attestation],[enable IMC attestation module.])
 ARG_ENABL_SET([imv-attestation],[enable IMV attestation module.])
 ARG_ENABL_SET([imc-swid],       [enable IMC swid module.])
 ARG_ENABL_SET([imv-swid],       [enable IMV swid module.])
+ARG_ENABL_SET([imc-swima],      [enable IMC swima module.])
 ARG_ENABL_SET([imc-hcd],        [enable IMC hcd module.])
 ARG_ENABL_SET([imv-hcd],        [enable IMV hcd module.])
 ARG_ENABL_SET([tnc-ifmap],      [enable TNC IF-MAP module. Requires libxml])
@@ -422,7 +423,7 @@ if test x$eap_tls = xtrue -o x$eap_ttls = xtrue -o x$eap_peap = xtrue -o x$tnc_t
 	tls=true;
 fi
 
-if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$imv_scanner = xtrue -o x$imc_os = xtrue -o x$imv_os = xtrue -o x$imc_attestation = xtrue -o x$imv_attestation = xtrue -o x$imc_swid = xtrue -o x$imv_swid = xtrue -o x$imc_hcd = xtrue -o x$imv_hcd = xtrue; then
+if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$imv_scanner = xtrue -o x$imc_os = xtrue -o x$imv_os = xtrue -o x$imc_attestation = xtrue -o x$imv_attestation = xtrue -o x$imc_swid = xtrue -o x$imv_swid = xtrue -o x$imc_swima = xtrue -o x$imc_hcd = xtrue -o x$imv_hcd = xtrue; then
 	imcv=true;
 fi
 
@@ -1607,6 +1608,7 @@ AM_CONDITIONAL(USE_IMC_ATTESTATION, test x$imc_attestation = xtrue)
 AM_CONDITIONAL(USE_IMV_ATTESTATION, test x$imv_attestation = xtrue)
 AM_CONDITIONAL(USE_IMC_SWID, test x$imc_swid = xtrue)
 AM_CONDITIONAL(USE_IMV_SWID, test x$imv_swid = xtrue)
+AM_CONDITIONAL(USE_IMC_SWIMA, test x$imc_swima = xtrue)
 AM_CONDITIONAL(USE_IMC_HCD, test x$imc_hcd = xtrue)
 AM_CONDITIONAL(USE_IMV_HCD, test x$imv_hcd = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
@@ -1833,6 +1835,7 @@ AC_CONFIG_FILES([
 	src/libimcv/plugins/imv_attestation/Makefile
 	src/libimcv/plugins/imc_swid/Makefile
 	src/libimcv/plugins/imv_swid/Makefile
+	src/libimcv/plugins/imc_swima/Makefile
 	src/libimcv/plugins/imc_hcd/Makefile
 	src/libimcv/plugins/imv_hcd/Makefile
 	src/charon/Makefile
