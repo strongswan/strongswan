@@ -188,6 +188,10 @@ if USE_IMC_SWIMA
   SUBDIRS += plugins/imc_swima
 endif
 
+if USE_IMV_SWIMA
+  SUBDIRS += plugins/imv_swima
+endif
+
 if USE_IMC_HCD
   SUBDIRS += plugins/imc_hcd
 endif

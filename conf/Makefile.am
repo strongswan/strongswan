@@ -66,6 +66,7 @@ plugins = \
 	plugins/imv-os.opt \
 	plugins/imv-scanner.opt \
 	plugins/imv-swid.opt \
+	plugins/imv-swima.opt \
 	plugins/imv-test.opt \
 	plugins/ipseckey.opt \
 	plugins/led.opt \
