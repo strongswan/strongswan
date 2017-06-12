@@ -6,6 +6,7 @@ LOCAL_SRC_FILES := \
 android_jni.c \
 backend/android_attr.c \
 backend/android_creds.c \
+backend/android_fetcher.c \
 backend/android_dns_proxy.c \
 backend/android_private_key.c \
 backend/android_service.c \
