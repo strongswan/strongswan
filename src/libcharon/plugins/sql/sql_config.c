@@ -102,10 +102,11 @@ static void add_traffic_selectors(private_sql_config_t *this,
 	bool local;
 
 	e = this->db->query(this->db,
-			"SELECT kind, type, protocol, "
-			"start_addr, end_addr, start_port, end_port "
-			"FROM traffic_selectors JOIN child_config_traffic_selector "
-			"ON id = traffic_selector WHERE child_cfg = ?",
+			"SELECT ct.kind, t.type, t.protocol, "
+			"t.start_addr, t.end_addr, t.start_port, t.end_port "
+			"FROM traffic_selectors AS t "
+			"JOIN child_config_traffic_selector AS ct "
+			"ON t.id = ct.traffic_selector WHERE ct.child_cfg = ?",
 			DB_INT, id,
 			DB_INT, DB_INT, DB_INT,
 			DB_BLOB, DB_BLOB, DB_INT, DB_INT);
@@ -131,9 +132,9 @@ static void add_esp_proposals(private_sql_config_t *this,
 	bool use_default = TRUE;
 
 	e = this->db->query(this->db,
-			"SELECT proposal "
-			"FROM proposals JOIN child_config_proposal ON id = prop "
-			"WHERE child_cfg = ? ORDER BY prio",
+			"SELECT p.proposal "
+			"FROM proposals AS p JOIN child_config_proposal AS cp "
+			"ON p.id = cp.prop WHERE cp.child_cfg = ? ORDER BY cp.prio",
 			DB_INT, id, DB_TEXT);
 	if (e)
 	{
@@ -202,10 +203,11 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 	child_cfg_t *child_cfg;
 
 	e = this->db->query(this->db,
-			"SELECT id, name, lifetime, rekeytime, jitter, updown, hostaccess, "
-			"mode, start_action, dpd_action, close_action, ipcomp, reqid "
-			"FROM child_configs JOIN peer_config_child_config ON id = child_cfg "
-			"WHERE peer_cfg = ?",
+			"SELECT c.id, c.name, c.lifetime, c.rekeytime, c.jitter, c.updown, "
+			"c.hostaccess, c.mode, c.start_action, c.dpd_action, "
+			"c.close_action, c.ipcomp, c.reqid "
+			"FROM child_configs AS c JOIN peer_config_child_config AS pc "
+			"ON c.id = pc.child_cfg WHERE pc.peer_cfg = ?",
 			DB_INT, id,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_TEXT, DB_INT,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT);
@@ -231,9 +233,10 @@ static void add_ike_proposals(private_sql_config_t *this,
 	bool use_default = TRUE;
 
 	e = this->db->query(this->db,
-			"SELECT proposal "
-			"FROM proposals JOIN ike_config_proposal ON id = prop "
-			"WHERE ike_cfg = ? ORDER BY prio",
+			"SELECT p.proposal "
+			"FROM proposals AS p "
+			"JOIN ike_config_proposal AS ip ON p.id = ip.prop "
+			"WHERE ip.ike_cfg = ? ORDER BY ip.prio",
 			DB_INT, id, DB_TEXT);
 	if (e)
 	{
@@ -288,8 +291,8 @@ static ike_cfg_t* get_ike_cfg_by_id(private_sql_config_t *this, int id)
 	ike_cfg_t *ike_cfg = NULL;
 
 	e = this->db->query(this->db,
-			"SELECT id, certreq, force_encap, local, remote "
-			"FROM ike_configs WHERE id = ?",
+			"SELECT c.id, c.certreq, c.force_encap, c.local, c.remote "
+			"FROM ike_configs AS c WHERE c.id = ?",
 			DB_INT, id,
 			DB_INT, DB_INT, DB_INT, DB_TEXT, DB_TEXT);
 	if (e)
@@ -310,16 +313,16 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 	peer_cfg_t *peer_cfg = NULL;
 
 	e = this->db->query(this->db,
-			"SELECT c.id, name, ike_cfg, l.type, l.data, r.type, r.data, "
-			"cert_policy, uniqueid, auth_method, eap_type, eap_vendor, "
-			"keyingtries, rekeytime, reauthtime, jitter, overtime, mobike, "
-			"dpd_delay, virtual, pool, "
-			"mediation, mediated_by, COALESCE(p.type, 0), p.data "
+			"SELECT c.id, c.name, c.ike_cfg, l.type, l.data, r.type, r.data, "
+			"c.cert_policy, c.uniqueid, c.auth_method, c.eap_type, "
+			"c.eap_vendor, c.keyingtries, c.rekeytime, c.reauthtime, c.jitter, "
+			"c.overtime, c.mobike, c.dpd_delay, c.virtual, c.pool, "
+			"c.mediation, c.mediated_by, COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
-			"JOIN identities AS l ON local_id = l.id "
-			"JOIN identities AS r ON remote_id = r.id "
-			"LEFT JOIN identities AS p ON peer_id = p.id "
-			"WHERE id = ?",
+			"JOIN identities AS l ON c.local_id = l.id "
+			"JOIN identities AS r ON c.remote_id = r.id "
+			"LEFT JOIN identities AS p ON c.peer_id = p.id "
+			"WHERE c.id = ?",
 			DB_INT, id,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_BLOB, DB_INT, DB_BLOB,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
@@ -465,16 +468,16 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 	peer_cfg_t *peer_cfg = NULL;
 
 	e = this->db->query(this->db,
-			"SELECT c.id, name, ike_cfg, l.type, l.data, r.type, r.data, "
-			"cert_policy, uniqueid, auth_method, eap_type, eap_vendor, "
-			"keyingtries, rekeytime, reauthtime, jitter, overtime, mobike, "
-			"dpd_delay, virtual, pool, "
-			"mediation, mediated_by, COALESCE(p.type, 0), p.data "
+			"SELECT c.id, c.name, c.ike_cfg, l.type, l.data, r.type, r.data, "
+			"c.cert_policy, c.uniqueid, c.auth_method, c.eap_type, "
+			"c.eap_vendor, c.keyingtries, c.rekeytime, c.reauthtime, c.jitter, "
+			"c.overtime, c.mobike, c.dpd_delay, c.virtual, c.pool, "
+			"c.mediation, c.mediated_by, COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
-			"JOIN identities AS l ON local_id = l.id "
-			"JOIN identities AS r ON remote_id = r.id "
-			"LEFT JOIN identities AS p ON peer_id = p.id "
-			"WHERE ike_version = ? AND name = ?",
+			"JOIN identities AS l ON c.local_id = l.id "
+			"JOIN identities AS r ON c.remote_id = r.id "
+			"LEFT JOIN identities AS p ON c.peer_id = p.id "
+			"WHERE c.ike_version = ? AND c.name = ?",
 			DB_INT, 2, DB_TEXT, name,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_BLOB, DB_INT, DB_BLOB,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
@@ -544,8 +547,8 @@ METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
 		.other = other,
 	);
 	e->inner = this->db->query(this->db,
-							   "SELECT id, certreq, force_encap, local, remote "
-							   "FROM ike_configs",
+							   "SELECT c.id, c.certreq, c.force_encap, "
+							   "c.local, c.remote FROM ike_configs AS c",
 							   DB_INT, DB_INT, DB_INT, DB_TEXT, DB_TEXT);
 	if (!e->inner)
 	{
@@ -613,16 +616,16 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 
 	/* TODO: only get configs whose IDs match exactly or contain wildcards */
 	e->inner = this->db->query(this->db,
-			"SELECT c.id, name, ike_cfg, l.type, l.data, r.type, r.data, "
-			"cert_policy, uniqueid, auth_method, eap_type, eap_vendor, "
-			"keyingtries, rekeytime, reauthtime, jitter, overtime, mobike, "
-			"dpd_delay, virtual, pool, "
-			"mediation, mediated_by, COALESCE(p.type, 0), p.data "
+			"SELECT c.id, c.name, c.ike_cfg, l.type, l.data, r.type, r.data, "
+			"c.cert_policy, c.uniqueid, c.auth_method, c.eap_type, "
+			"c.eap_vendor, c.keyingtries, c.rekeytime, c.reauthtime, c.jitter, "
+			"c.overtime, c.mobike, c.dpd_delay, c.virtual, c.pool, "
+			"c.mediation, c.mediated_by, COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
-			"JOIN identities AS l ON local_id = l.id "
-			"JOIN identities AS r ON remote_id = r.id "
-			"LEFT JOIN identities AS p ON peer_id = p.id "
-			"WHERE ike_version = ?",
+			"JOIN identities AS l ON c.local_id = l.id "
+			"JOIN identities AS r ON c.remote_id = r.id "
+			"LEFT JOIN identities AS p ON c.peer_id = p.id "
+			"WHERE c.ike_version = ?",
 			DB_INT, 2,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_BLOB, DB_INT, DB_BLOB,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,

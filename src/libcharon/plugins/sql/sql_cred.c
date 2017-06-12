@@ -110,7 +110,8 @@ METHOD(credential_set_t, create_private_enumerator, enumerator_t*,
 	else
 	{
 		e->inner = this->db->query(this->db,
-				"SELECT type, data FROM private_keys WHERE (? OR type = ?)",
+				"SELECT p.type, p.data FROM private_keys AS p "
+				"WHERE (? OR p.type = ?)",
 				DB_INT, type == KEY_ANY, DB_INT, type,
 				DB_INT, DB_BLOB);
 	}
@@ -197,8 +198,8 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	else
 	{
 		e->inner = this->db->query(this->db,
-				"SELECT type, data FROM certificates WHERE "
-				"(? OR type = ?) AND (? OR keytype = ?)",
+				"SELECT c.type, c.data FROM certificates AS c WHERE "
+				"(? OR c.type = ?) AND (? OR c.keytype = ?)",
 				DB_INT, cert == CERT_ANY, DB_INT, cert,
 				DB_INT, key == KEY_ANY, DB_INT, key,
 				DB_INT, DB_BLOB);
@@ -286,7 +287,8 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 	if (!me && !other)
 	{
 		e->inner = this->db->query(this->db,
-				"SELECT type, data FROM shared_secrets WHERE  (? OR type = ?)",
+				"SELECT s.type, s.data FROM shared_secrets AS s "
+				"WHERE (? OR s.type = ?)",
 				DB_INT, type == SHARED_ANY, DB_INT, type,
 				DB_INT, DB_BLOB);
 	}
