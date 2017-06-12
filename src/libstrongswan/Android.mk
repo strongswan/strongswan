@@ -113,6 +113,8 @@ LOCAL_SRC_FILES += $(call add_plugin, pubkey)
 
 LOCAL_SRC_FILES += $(call add_plugin, random)
 
+LOCAL_SRC_FILES += $(call add_plugin, revocation)
+
 LOCAL_SRC_FILES += $(call add_plugin, sha1)
 
 LOCAL_SRC_FILES += $(call add_plugin, sha2)
