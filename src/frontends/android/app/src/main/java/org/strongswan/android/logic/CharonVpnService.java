@@ -365,6 +365,11 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		builder.setContentTitle(getString(s));
 		if (!publicVersion)
 		{
+			Intent intent = new Intent(getApplicationContext(), CharonVpnService.class);
+			intent.setAction(CharonVpnService.DISCONNECT_ACTION);
+			PendingIntent pending = PendingIntent.getService(getApplicationContext(), 0, intent,
+															 PendingIntent.FLAG_ONE_SHOT);
+			builder.addAction(R.drawable.ic_notification_disconnect, getString(R.string.disconnect), pending);
 			builder.setContentText(name);
 			builder.setPublicVersion(buildNotification(true));
 		}
