@@ -387,7 +387,15 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		mRemoteCertificate.setVisibility(mProfile.Certificate != null ? View.VISIBLE : View.GONE);
 		mImportUserCert.setVisibility(mProfile.PKCS12 != null ? View.VISIBLE : View.GONE);
 
-		updateUserCertView();
+		if (mProfile.getVpnType().has(VpnTypeFeature.CERTIFICATE))
+		{	/* try to load an existing certificate with the default name */
+			if (mUserCertLoading == null)
+			{
+				mUserCertLoading = getString(R.string.profile_cert_alias, mProfile.getName());
+				getLoaderManager().initLoader(USER_CERT_LOADER, null, mUserCertificateLoaderCallbacks);
+			}
+			updateUserCertView();
+		}
 
 		if (mProfile.Certificate != null)
 		{
