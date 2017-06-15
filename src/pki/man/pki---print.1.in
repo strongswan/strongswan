@@ -46,9 +46,9 @@ Input file. If not given the input is read from \fISTDIN\fR.
 .BI "\-t, \-\-type " type
 Type of input. One of \fIx509\fR (X.509 certificate), \fIcrl\fR (Certificate
 Revocation List, CRL), \fIac\fR (Attribute Certificate), \fIpub\fR (public key),
-\fpriv\fR (private key), \fIrsa\fR (RSA private key), \fIecdsa\fR (ECDSA private
-key), \fIed25519\fR (Ed25519 private key), \fIbliss\fR (BLISS private key),
-\fIpriv\fR (private key), defaults to \fIx509\fR.
+\fIpriv\fR (private key), \fIrsa\fR (RSA private key), \fIecdsa\fR (ECDSA
+private key), \fIed25519\fR (Ed25519 private key), \fIbliss\fR (BLISS private
+key), defaults to \fIx509\fR.
 .
 .SH "SEE ALSO"
 .
