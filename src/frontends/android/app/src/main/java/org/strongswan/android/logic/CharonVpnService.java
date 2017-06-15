@@ -939,6 +939,23 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		}
 	}
 
+	/**
+	 * Function called via JNI to determine information about the Android version.
+	 */
+	private static String getAndroidVersion()
+	{
+		return "Android " + Build.VERSION.RELEASE + " - " + Build.DISPLAY +
+			   "/" + Build.VERSION.SECURITY_PATCH;
+	}
+
+	/**
+	 * Function called via JNI to determine information about the device.
+	 */
+	private static String getDeviceString()
+	{
+		return Build.MODEL + " - " + Build.BRAND + "/" + Build.PRODUCT + "/" + Build.MANUFACTURER;
+	}
+
 	/*
 	 * The libraries are extracted to /data/data/org.strongswan.android/...
 	 * during installation.  On newer releases most are loaded in JNI_OnLoad.

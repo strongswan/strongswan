@@ -644,7 +644,8 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	{
 		memset(&utsname, 0, sizeof(utsname));
 	}
-	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION", %s %s, %s)",
+	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION", %s, %s, "
+		 "%s %s, %s)", android_version_string, android_device_string,
 		  utsname.sysname, utsname.release, utsname.machine);
 
 #ifdef PLUGINS_BYOD
