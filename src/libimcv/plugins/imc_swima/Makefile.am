@@ -30,7 +30,20 @@ imcv_LTLIBRARIES = imc-swima.la
 imc_swima_la_LIBADD = \
 	$(top_builddir)/src/libimcv/libimcv.la \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la
-
 imc_swima_la_SOURCES = imc_swima.c imc_swima_state.h imc_swima_state.c
-
 imc_swima_la_LDFLAGS = -module -avoid-version -no-undefined
+
+ipsec_PROGRAMS = sw-collector
+sw_collector_SOURCES = \
+	sw_collector/sw-collector.c \
+	sw_collector/sw_collector_db.h sw_collector/sw_collector_db.c \
+	sw_collector/sw_collector_history.h sw_collector/sw_collector_history.c
+
+sw_collector_LDADD = \
+		$(top_builddir)/src/libstrongswan/libstrongswan.la \
+		$(top_builddir)/src/libimcv/libimcv.la
+sw-collector.o : $(top_builddir)/config.status
+
+templatesdir = $(pkgdatadir)/templates/database/sw-collector
+dist_templates_DATA = sw_collector/sw_collector_tables.sql
+

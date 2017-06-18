@@ -24,7 +24,8 @@ options = \
 	options/scepclient.opt \
 	options/starter.opt \
 	options/swanctl.opt \
-	options/tnc.opt
+	options/tnc.opt \
+	options/sw-collector.opt
 
 plugins = \
 	plugins/addrblock.opt \
