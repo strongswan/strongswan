@@ -1802,13 +1802,7 @@ METHOD(task_manager_t, queue_child_rekey, void,
 	}
 	if (child_sa && child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
-		if (is_redundant(this, child_sa))
-		{
-			child_sa->set_state(child_sa, CHILD_REKEYED);
-			queue_task(this, (task_t*)quick_delete_create(this->ike_sa,
-												protocol, spi, FALSE, FALSE));
-		}
-		else
+		if (!is_redundant(this, child_sa))
 		{
 			child_sa->set_state(child_sa, CHILD_REKEYING);
 			cfg = child_sa->get_config(child_sa);
