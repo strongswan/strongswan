@@ -1805,8 +1805,12 @@ METHOD(task_manager_t, queue_child_rekey, void,
 		if (is_redundant(this, child_sa))
 		{
 			child_sa->set_state(child_sa, CHILD_REKEYED);
-			queue_task(this, (task_t*)quick_delete_create(this->ike_sa,
+			if (lib->settings->get_bool(lib->settings, "%s.delete_rekeyed",
+										FALSE, lib->ns))
+			{
+				queue_task(this, (task_t*)quick_delete_create(this->ike_sa,
 												protocol, spi, FALSE, FALSE));
+			}
 		}
 		else
 		{
