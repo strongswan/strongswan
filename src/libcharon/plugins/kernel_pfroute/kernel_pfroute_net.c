@@ -1831,7 +1831,7 @@ METHOD(enumerator_t, enumerate_subnets, bool,
 	for (; this->current < this->buf + this->len;
 		 this->current += rtm->rtm_msglen)
 	{
-		struct sockaddr *netmask;
+		struct sockaddr *netmask = NULL;
 		uint8_t netbits = 0;
 
 		rtm = (struct rt_msghdr*)this->current;
@@ -1864,7 +1864,7 @@ METHOD(enumerator_t, enumerate_subnets, bool,
 				this->ifname = strndup(sdl->sdl_data, sdl->sdl_nlen);
 			}
 		}
-		if (this->net)
+		if (this->net && netmask)
 		{
 			netbits = sockaddr_to_netmask(netmask, this->net);
 		}
