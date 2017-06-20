@@ -745,12 +745,6 @@ static status_t select_and_install(private_child_create_t *this,
 	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
 							this->dh, nonce_i, nonce_r);
 
-	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
-	this->established = TRUE;
-
-	schedule_inactivity_timeout(this);
-
 	my_ts = linked_list_create_from_enumerator(
 				this->child_sa->create_ts_enumerator(this->child_sa, TRUE));
 	other_ts = linked_list_create_from_enumerator(
@@ -767,6 +761,12 @@ static status_t select_and_install(private_child_create_t *this,
 
 	my_ts->destroy(my_ts);
 	other_ts->destroy(other_ts);
+
+	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
+	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
+	this->established = TRUE;
+
+	schedule_inactivity_timeout(this);
 	return SUCCESS;
 }
 

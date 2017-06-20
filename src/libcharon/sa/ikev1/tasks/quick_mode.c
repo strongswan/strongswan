@@ -396,10 +396,6 @@ static bool install(private_quick_mode_t *this)
 	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
 							this->dh, this->nonce_i, this->nonce_r);
 
-	/* add to IKE_SA, and remove from task */
-	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
-	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
-
 	my_ts = linked_list_create_from_enumerator(
 				this->child_sa->create_ts_enumerator(this->child_sa, TRUE));
 	other_ts = linked_list_create_from_enumerator(
@@ -414,6 +410,9 @@ static bool install(private_quick_mode_t *this)
 
 	my_ts->destroy(my_ts);
 	other_ts->destroy(other_ts);
+
+	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
+	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
 
 	if (this->rekey)
 	{
