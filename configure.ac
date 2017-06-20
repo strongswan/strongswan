@@ -350,6 +350,7 @@ fi
 if test -z "$CFLAGS"; then
 	CFLAGS="-g -O2 -Wall -Wno-format -Wno-format-security -Wno-pointer-sign"
 fi
+AC_SUBST(PLUGIN_CFLAGS)
 AC_PROG_CC
 AM_PROG_CC_C_O
 
@@ -877,7 +878,7 @@ AC_COMPILE_IFELSE(
 		AC_MSG_RESULT([no])
 		# GCC, but not MinGW requires -rdynamic for plugins
 		if test x$windows != xtrue; then
-			AC_SUBST(PLUGIN_CFLAGS, [-rdynamic])
+			PLUGIN_CFLAGS="$PLUGIN_CFLAGS -rdynamic"
 		fi
 	]
 )
@@ -1233,6 +1234,7 @@ if test x$coverage = xtrue; then
 	COVERAGE_LDFLAGS="-fprofile-arcs"
 	AC_SUBST(COVERAGE_CFLAGS)
 	AC_SUBST(COVERAGE_LDFLAGS)
+	PLUGIN_CFLAGS="$PLUGIN_CFLAGS $COVERAGE_CFLAGS"
 
 	AC_MSG_NOTICE([coverage enabled, adding "-g -O0" to CFLAGS])
 	CFLAGS="${CFLAGS} -g -O0"

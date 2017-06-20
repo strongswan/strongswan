@@ -2,8 +2,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan
 
 AM_CFLAGS = \
-	$(PLUGIN_CFLAGS) \
-	@COVERAGE_CFLAGS@
+	$(PLUGIN_CFLAGS)
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-ntru.la

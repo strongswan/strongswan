@@ -3,8 +3,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan/math/libnttfft
 
 AM_CFLAGS = \
-	$(PLUGIN_CFLAGS) \
-	@COVERAGE_CFLAGS@
+	$(PLUGIN_CFLAGS)
 
 # these file are also used by bliss_huffman
 noinst_LTLIBRARIES = libbliss-params.la

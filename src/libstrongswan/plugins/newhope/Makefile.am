@@ -3,8 +3,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan/math/libnttfft
 
 AM_CFLAGS = \
-	$(PLUGIN_CFLAGS) \
-	@COVERAGE_CFLAGS@
+	$(PLUGIN_CFLAGS)
 
 # these files are also used by the tests, we can't directly refer to them
 # because of the subdirectory, which would cause distclean to fail
