@@ -16,7 +16,7 @@
 package org.strongswan.android.utils;
 
 import java.util.ArrayList;
-import java.util.Enumeration;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
@@ -25,7 +25,7 @@ import java.util.TreeSet;
  * Class that represents a set of IP address ranges (not necessarily proper subnets) and allows
  * modifying the set and enumerating the resulting subnets.
  */
-public class IPRangeSet
+public class IPRangeSet implements Iterable<IPRange>
 {
 	private TreeSet<IPRange> mRanges = new TreeSet<>();
 
@@ -85,6 +85,17 @@ public class IPRangeSet
 	}
 
 	/**
+	 * Add all ranges from the given collection to this set.
+	 */
+	public void addAll(Collection<? extends IPRange> coll)
+	{
+		for (IPRange range : coll)
+		{
+			add(range);
+		}
+	}
+
+	/**
 	 * Remove the given range from this set. Existing ranges are automatically adjusted.
 	 */
 	public void remove(IPRange range)
@@ -125,32 +136,51 @@ public class IPRangeSet
 	}
 
 	/**
-	 * Returns the subnets derived from all the ranges in this set.
+	 * Get all the subnets derived from all the ranges in this set.
 	 */
-	public Enumeration<IPRange> getSubnets()
+	public Iterable<IPRange> subnets()
 	{
-		return new Enumeration<IPRange>()
+		return new Iterable<IPRange>()
 		{
-			private Iterator<IPRange> mIterator = mRanges.iterator();
-			private List<IPRange> mSubnets;
-
 			@Override
-			public boolean hasMoreElements()
+			public Iterator<IPRange> iterator()
 			{
-				return (mSubnets != null && mSubnets.size() > 0) || mIterator.hasNext();
-			}
-
-			@Override
-			public IPRange nextElement()
-			{
-				if (mSubnets == null || mSubnets.size() == 0)
+				return new Iterator<IPRange>()
 				{
-					IPRange range = mIterator.next();
-					mSubnets = range.toSubnets();
-				}
-				return mSubnets.remove(0);
+					private Iterator<IPRange> mIterator = mRanges.iterator();
+					private List<IPRange> mSubnets;
+
+					@Override
+					public boolean hasNext()
+					{
+						return (mSubnets != null && mSubnets.size() > 0) || mIterator.hasNext();
+					}
+
+					@Override
+					public IPRange next()
+					{
+						if (mSubnets == null || mSubnets.size() == 0)
+						{
+							IPRange range = mIterator.next();
+							mSubnets = range.toSubnets();
+						}
+						return mSubnets.remove(0);
+					}
+
+					@Override
+					public void remove()
+					{
+						throw new UnsupportedOperationException();
+					}
+				};
 			}
 		};
+	}
+
+	@Override
+	public Iterator<IPRange> iterator()
+	{
+		return mRanges.iterator();
 	}
 
 	/**
