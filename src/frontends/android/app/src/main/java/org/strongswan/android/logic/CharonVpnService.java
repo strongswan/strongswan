@@ -47,6 +47,8 @@ import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 import org.strongswan.android.ui.MainActivity;
+import org.strongswan.android.utils.IPRange;
+import org.strongswan.android.utils.IPRangeSet;
 import org.strongswan.android.utils.SettingsWriter;
 
 import java.io.File;
@@ -238,7 +240,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 						mIsDisconnecting = false;
 
 						addNotification();
-						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName(), mCurrentProfile.getSplitTunneling());
+						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName(), mCurrentProfile.getExcludedSubnets(),
+																	mCurrentProfile.getSplitTunneling());
 						if (initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
 						{
 							Log.i(TAG, "charon started");
@@ -649,17 +652,19 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	public class BuilderAdapter
 	{
 		private final String mName;
+		private final String mExcludedSubnets;
 		private final Integer mSplitTunneling;
 		private VpnService.Builder mBuilder;
 		private BuilderCache mCache;
 		private BuilderCache mEstablishedCache;
 
-		public BuilderAdapter(String name, Integer splitTunneling)
+		public BuilderAdapter(String name, String excludedSubnets, Integer splitTunneling)
 		{
 			mName = name;
+			mExcludedSubnets = excludedSubnets;
 			mSplitTunneling = splitTunneling;
 			mBuilder = createBuilder(name);
-			mCache = new BuilderCache(mSplitTunneling);
+			mCache = new BuilderCache(mExcludedSubnets, mSplitTunneling);
 		}
 
 		private VpnService.Builder createBuilder(String name)
@@ -764,7 +769,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			 * builder anymore, but we might need another when reestablishing */
 			mBuilder = createBuilder(mName);
 			mEstablishedCache = mCache;
-			mCache = new BuilderCache(mSplitTunneling);
+			mCache = new BuilderCache(mExcludedSubnets, mSplitTunneling);
 			return fd.detachFd();
 		}
 
@@ -801,22 +806,31 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 */
 	public class BuilderCache
 	{
-		private final List<PrefixedAddress> mAddresses = new ArrayList<PrefixedAddress>();
-		private final List<PrefixedAddress> mRoutesIPv4 = new ArrayList<PrefixedAddress>();
-		private final List<PrefixedAddress> mRoutesIPv6 = new ArrayList<PrefixedAddress>();
+		private final List<IPRange> mAddresses = new ArrayList<>();
+		private final List<IPRange> mRoutesIPv4 = new ArrayList<>();
+		private final List<IPRange> mRoutesIPv6 = new ArrayList<>();
+		private final IPRangeSet mExcludedSubnets;
 		private final int mSplitTunneling;
 		private int mMtu;
 		private boolean mIPv4Seen, mIPv6Seen;
 
-		public BuilderCache(Integer splitTunneling)
+		public BuilderCache(String excludedSubnets, Integer splitTunneling)
 		{
+			mExcludedSubnets = IPRangeSet.fromString(excludedSubnets);
 			mSplitTunneling = splitTunneling != null ? splitTunneling : 0;
 		}
 
 		public void addAddress(String address, int prefixLength)
 		{
-			mAddresses.add(new PrefixedAddress(address, prefixLength));
-			recordAddressFamily(address);
+			try
+			{
+				mAddresses.add(new IPRange(address, prefixLength));
+				recordAddressFamily(address);
+			}
+			catch (UnknownHostException ex)
+			{
+				ex.printStackTrace();
+			}
 		}
 
 		public void addRoute(String address, int prefixLength)
@@ -825,11 +839,11 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			{
 				if (isIPv6(address))
 				{
-					mRoutesIPv6.add(new PrefixedAddress(address, prefixLength));
+					mRoutesIPv6.add(new IPRange(address, prefixLength));
 				}
 				else
 				{
-					mRoutesIPv4.add(new PrefixedAddress(address, prefixLength));
+					mRoutesIPv4.add(new IPRange(address, prefixLength));
 				}
 			}
 			catch (UnknownHostException ex)
@@ -865,19 +879,22 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		@TargetApi(Build.VERSION_CODES.LOLLIPOP)
 		public void applyData(VpnService.Builder builder)
 		{
-			for (PrefixedAddress address : mAddresses)
+			for (IPRange address : mAddresses)
 			{
-				builder.addAddress(address.mAddress, address.mPrefix);
+				builder.addAddress(address.getFrom(), address.getPrefix());
 			}
 			/* add routes depending on whether split tunneling is allowed or not,
 			 * that is, whether we have to handle and block non-VPN traffic */
 			if ((mSplitTunneling & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) == 0)
 			{
 				if (mIPv4Seen)
-				{	/* split tunneling is used depending on the routes */
-					for (PrefixedAddress route : mRoutesIPv4)
+				{	/* split tunneling is used depending on the routes and configuration */
+					IPRangeSet ranges = new IPRangeSet();
+					ranges.addAll(mRoutesIPv4);
+					ranges.remove(mExcludedSubnets);
+					for (IPRange subnet : ranges.subnets())
 					{
-						builder.addRoute(route.mAddress, route.mPrefix);
+						builder.addRoute(subnet.getFrom(), subnet.getPrefix());
 					}
 				}
 				else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
@@ -895,9 +912,12 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			{
 				if (mIPv6Seen)
 				{
-					for (PrefixedAddress route : mRoutesIPv6)
+					IPRangeSet ranges = new IPRangeSet();
+					ranges.addAll(mRoutesIPv6);
+					ranges.remove(mExcludedSubnets);
+					for (IPRange subnet : ranges.subnets())
 					{
-						builder.addRoute(route.mAddress, route.mPrefix);
+						builder.addRoute(subnet.getFrom(), subnet.getPrefix());
 					}
 				}
 				else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
@@ -924,18 +944,6 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				return true;
 			}
 			return false;
-		}
-
-		private class PrefixedAddress
-		{
-			public String mAddress;
-			public int mPrefix;
-
-			public PrefixedAddress(String address, int prefix)
-			{
-				this.mAddress = address;
-				this.mPrefix = prefix;
-			}
 		}
 	}
 
