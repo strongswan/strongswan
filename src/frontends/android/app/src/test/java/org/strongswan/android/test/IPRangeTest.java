@@ -159,6 +159,13 @@ public class IPRangeTest
 		assertEquals("not reached", null, test);
 	}
 
+	@Test(expected = IllegalArgumentException.class)
+	public void testRangeMixed() throws UnknownHostException
+	{
+		IPRange test = new IPRange("192.168.1.1-fec1::1");
+		assertEquals("not reached", null, test);
+	}
+
 	private void testCIDR(String cidr, IPRange exp) throws UnknownHostException
 	{
 		IPRange test = new IPRange(cidr);
@@ -173,11 +180,13 @@ public class IPRangeTest
 		testCIDR("192.168.1.10/24", new IPRange("192.168.1.0", 24));
 		testCIDR("192.168.1.1/32", new IPRange("192.168.1.1", 32));
 		testCIDR("192.168.1.1", new IPRange("192.168.1.1", 32));
+		testCIDR("192.168.1.1-192.168.1.10", new IPRange("192.168.1.1", "192.168.1.10"));
 		testCIDR("::/0", new IPRange("::", 0));
 		testCIDR("fec1::/64", new IPRange("fec1::", 64));
 		testCIDR("fec1::10/64", new IPRange("fec1::", 64));
 		testCIDR("fec1::1/128", new IPRange("fec1::1", 128));
 		testCIDR("fec1::1", new IPRange("fec1::1", 128));
+		testCIDR("fec1::1-fec1::5", new IPRange("fec1::1", "fec1::5"));
 	}
 
 	private void testToString(String f, String t, String exp) throws UnknownHostException

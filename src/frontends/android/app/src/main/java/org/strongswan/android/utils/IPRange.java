@@ -81,6 +81,11 @@ public class IPRange implements Comparable<IPRange>
 
 	public IPRange(InetAddress from, InetAddress to)
 	{
+		initializeFromRange(from, to);
+	}
+
+	private void initializeFromRange(InetAddress from, InetAddress to)
+	{
 		byte[] fa = from.getAddress(), ta = to.getAddress();
 		if (fa.length != ta.length)
 		{
@@ -143,19 +148,29 @@ public class IPRange implements Comparable<IPRange>
 	public IPRange(String cidr) throws UnknownHostException
 	{
 		/* only verify the basic structure */
-		if (!cidr.matches("^(([0-9.]+)|([0-9a-f:]+))(/\\d+)?$"))
+		if (!cidr.matches("(?i)^(([0-9.]+)|([0-9a-f:]+))(-(([0-9.]+)|([0-9a-f:]+))|(/\\d+))?$"))
 		{
-			throw new IllegalArgumentException("Invalid CIDR notation");
+			throw new IllegalArgumentException("Invalid CIDR or range notation");
 		}
-		String[] parts = cidr.split("/");
-		InetAddress addr = InetAddress.getByName(parts[0]);
-		byte[] base = addr.getAddress();
-		int prefix = base.length * 8;
-		if (parts.length > 1)
+		if (cidr.contains("-"))
 		{
-			prefix = Integer.parseInt(parts[1]);
+			String[] parts = cidr.split("-");
+			InetAddress from = InetAddress.getByName(parts[0]);
+			InetAddress to = InetAddress.getByName(parts[1]);
+			initializeFromRange(from, to);
 		}
-		initializeFromCIDR(base, prefix);
+		else
+		{
+			String[] parts = cidr.split("/");
+			InetAddress addr = InetAddress.getByName(parts[0]);
+			byte[] base = addr.getAddress();
+			int prefix = base.length * 8;
+			if (parts.length > 1)
+			{
+				prefix = Integer.parseInt(parts[1]);
+			}
+			initializeFromCIDR(base, prefix);
+		}
 	}
 
 	/**

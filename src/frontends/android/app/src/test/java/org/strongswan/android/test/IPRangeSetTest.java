@@ -184,9 +184,25 @@ public class IPRangeSetTest
 	}
 
 	@Test
-	public void testFromStringInvalidRange() throws UnknownHostException
+	public void testFromStringRange() throws UnknownHostException
+	{
+		IPRangeSet set = IPRangeSet.fromString("192.168.1.0/24 10.0.1.0-10.0.1.16");
+		assertEquals("size", 2, set.size());
+		assertSubnets(set.getSubnets(), new IPRange("10.0.1.0/28"), new IPRange("10.0.1.16/32"),
+					  new IPRange("192.168.1.0/24"));
+	}
+
+	@Test
+	public void testFromStringInvalidPrefix() throws UnknownHostException
 	{
 		IPRangeSet set = IPRangeSet.fromString("192.168.1.0/65");
+		assertEquals("failed", null, set);
+	}
+
+	@Test
+	public void testFromStringInvalidRange() throws UnknownHostException
+	{
+		IPRangeSet set = IPRangeSet.fromString("192.168.1.1 - 192.168.1.10");
 		assertEquals("failed", null, set);
 	}
 }

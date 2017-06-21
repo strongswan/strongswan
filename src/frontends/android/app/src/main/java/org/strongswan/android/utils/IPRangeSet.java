@@ -30,8 +30,8 @@ public class IPRangeSet
 	private TreeSet<IPRange> mRanges = new TreeSet<>();
 
 	/**
-	 * Parse the given string (space separated subnets in CIDR notation) and return the resulting
-	 * set or {@code null} if the string was invalid. And empty set is returned if the given string
+	 * Parse the given string (space separated ranges in CIDR or range notation) and return the
+	 * resulting set or {@code null} if the string was invalid. An empty set is returned if the given string
 	 * is {@code null}.
 	 */
 	public static IPRangeSet fromString(String ranges)
