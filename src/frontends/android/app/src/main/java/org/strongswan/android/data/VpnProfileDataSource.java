@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -17,10 +17,6 @@
 
 package org.strongswan.android.data;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
@@ -29,6 +25,10 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.util.Log;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 public class VpnProfileDataSource
 {
@@ -47,6 +47,7 @@ public class VpnProfileDataSource
 	public static final String KEY_SPLIT_TUNNELING = "split_tunneling";
 	public static final String KEY_LOCAL_ID = "local_id";
 	public static final String KEY_REMOTE_ID = "remote_id";
+	public static final String KEY_EXCLUDED_SUBNETS = "excluded_subnets";
 
 	private DatabaseHelper mDbHelper;
 	private SQLiteDatabase mDatabase;
@@ -55,7 +56,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 9;
+	private static final int DATABASE_VERSION = 10;
 
 	public static final String DATABASE_CREATE =
 							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
@@ -72,7 +73,8 @@ public class VpnProfileDataSource
 								KEY_PORT + " INTEGER," +
 								KEY_SPLIT_TUNNELING + " INTEGER," +
 								KEY_LOCAL_ID + " TEXT," +
-								KEY_REMOTE_ID + " TEXT" +
+								KEY_REMOTE_ID + " TEXT," +
+								KEY_EXCLUDED_SUBNETS + " TEXT" +
 							");";
 	private static final String[] ALL_COLUMNS = new String[] {
 								KEY_ID,
@@ -89,6 +91,7 @@ public class VpnProfileDataSource
 								KEY_SPLIT_TUNNELING,
 								KEY_LOCAL_ID,
 								KEY_REMOTE_ID,
+								KEY_EXCLUDED_SUBNETS,
 							};
 
 	private static class DatabaseHelper extends SQLiteOpenHelper
@@ -150,6 +153,11 @@ public class VpnProfileDataSource
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_UUID +
 						   " TEXT;");
 				updateColumns(db);
+			}
+			if (oldVersion < 10)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_EXCLUDED_SUBNETS +
+						   " TEXT;");
 			}
 		}
 
@@ -326,6 +334,7 @@ public class VpnProfileDataSource
 		profile.setSplitTunneling(getInt(cursor, cursor.getColumnIndex(KEY_SPLIT_TUNNELING)));
 		profile.setLocalId(cursor.getString(cursor.getColumnIndex(KEY_LOCAL_ID)));
 		profile.setRemoteId(cursor.getString(cursor.getColumnIndex(KEY_REMOTE_ID)));
+		profile.setExcludedSubnets(cursor.getString(cursor.getColumnIndex(KEY_EXCLUDED_SUBNETS)));
 		return profile;
 	}
 
@@ -345,6 +354,7 @@ public class VpnProfileDataSource
 		values.put(KEY_SPLIT_TUNNELING, profile.getSplitTunneling());
 		values.put(KEY_LOCAL_ID, profile.getLocalId());
 		values.put(KEY_REMOTE_ID, profile.getRemoteId());
+		values.put(KEY_EXCLUDED_SUBNETS, profile.getExcludedSubnets());
 		return values;
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -27,7 +27,7 @@ public class VpnProfile implements Cloneable
 	public static final int SPLIT_TUNNELING_BLOCK_IPV6 = 2;
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
-	private String mRemoteId, mLocalId;
+	private String mRemoteId, mLocalId, mExcludedSubnets;
 	private Integer mMTU, mPort, mSplitTunneling;
 	private VpnType mVpnType;
 	private UUID mUUID;
@@ -166,6 +166,16 @@ public class VpnProfile implements Cloneable
 	public void setPort(Integer port)
 	{
 		this.mPort = port;
+	}
+
+	public void setExcludedSubnets(String excludedSubnets)
+	{
+		this.mExcludedSubnets = excludedSubnets;
+	}
+
+	public String getExcludedSubnets()
+	{
+		return mExcludedSubnets;
 	}
 
 	public Integer getSplitTunneling()
