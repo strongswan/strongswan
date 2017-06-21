@@ -88,6 +88,7 @@
     <string name="profile_import_failed_not_found">Datei nicht gefunden</string>
     <string name="profile_import_failed_host">Host unbekannt</string>
     <string name="profile_import_failed_tls">TLS-Handshake fehlgeschlagen</string>
+    <string name="profile_import_failed_value">Ungültiger Wert in \"%1$s\"</string>
     <string name="profile_import_exists">Dieses VPN Profil existiert bereits, die bestehenden Einstellungen werden ersetzt.</string>
     <string name="profile_cert_import">Zertifikat aus VPN Profil importieren</string>
     <string name="profile_cert_alias">Zertifikat für \"%1$s\"</string>

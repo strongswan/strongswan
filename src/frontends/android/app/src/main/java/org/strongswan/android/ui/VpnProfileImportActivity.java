@@ -55,6 +55,7 @@ import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.widget.TextInputLayoutHelper;
 import org.strongswan.android.utils.Constants;
+import org.strongswan.android.utils.IPRangeSet;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -489,6 +490,16 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		JSONObject split = obj.optJSONObject("split-tunneling");
 		if (split != null)
 		{
+			String excluded = split.optString("excluded", null);
+			if (excluded != null && !excluded.isEmpty())
+			{
+				if (IPRangeSet.fromString(excluded) == null)
+				{
+					throw new JSONException(getString(R.string.profile_import_failed_value,
+													  "split-tunneling.excluded"));
+				}
+				profile.setExcludedSubnets(excluded);
+			}
 			int st = 0;
 			st |= split.optBoolean("block-ipv4") ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 : 0;
 			st |= split.optBoolean("block-ipv6") ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
