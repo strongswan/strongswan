@@ -109,6 +109,22 @@ public class IPRangeSet
 	}
 
 	/**
+	 * Remove the given ranges from ranges in this set.
+	 */
+	public void remove(IPRangeSet ranges)
+	{
+		if (ranges == this)
+		{
+			mRanges.clear();
+			return;
+		}
+		for (IPRange range : ranges.mRanges)
+		{
+			remove(range);
+		}
+	}
+
+	/**
 	 * Returns the subnets derived from all the ranges in this set.
 	 */
 	public Enumeration<IPRange> getSubnets()

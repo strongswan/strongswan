@@ -167,6 +167,26 @@ public class IPRangeSetTest
 	}
 
 	@Test
+	public void testRemoveRangesIdent() throws UnknownHostException
+	{
+		IPRangeSet set = IPRangeSet.fromString("192.168.1.0/24 192.168.4.0/24");
+		set.remove(set);
+		assertEquals("size", 0, set.size());
+		assertSubnets(set.getSubnets());
+	}
+
+	@Test
+	public void testRemoveRanges() throws UnknownHostException
+	{
+		IPRangeSet set = IPRangeSet.fromString("192.168.0.0/16");
+		IPRangeSet remove = IPRangeSet.fromString("192.168.1.0/24 192.168.3.0/24 192.168.16.0-192.168.255.255");
+		set.remove(remove);
+		assertEquals("size", 3, set.size());
+		assertSubnets(set.getSubnets(), new IPRange("192.168.0.0/24"), new IPRange("192.168.2.0/24"),
+					  new IPRange("192.168.4.0/22"), new IPRange("192.168.8.0/21"));
+	}
+
+	@Test
 	public void testFromStringSingle() throws UnknownHostException
 	{
 		IPRangeSet set = IPRangeSet.fromString("192.168.1.0/24");
