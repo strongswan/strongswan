@@ -65,6 +65,7 @@ import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.adapter.CertificateIdentitiesAdapter;
 import org.strongswan.android.ui.widget.TextInputLayoutHelper;
 import org.strongswan.android.utils.Constants;
+import org.strongswan.android.utils.IPRangeSet;
 
 import java.security.cert.X509Certificate;
 import java.util.UUID;
@@ -105,6 +106,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private TextInputLayoutHelper mMTUWrap;
 	private EditText mPort;
 	private TextInputLayoutHelper mPortWrap;
+	private EditText mExcludedSubnets;
+	private TextInputLayoutHelper mExcludedSubnetsWrap;
 	private CheckBox mBlockIPv4;
 	private CheckBox mBlockIPv6;
 
@@ -149,6 +152,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mMTUWrap = (TextInputLayoutHelper) findViewById(R.id.mtu_wrap);
 		mPort = (EditText)findViewById(R.id.port);
 		mPortWrap = (TextInputLayoutHelper) findViewById(R.id.port_wrap);
+		mExcludedSubnets = (EditText)findViewById(R.id.excluded_subnets);
+		mExcludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.excluded_subnets_wrap);
 		mBlockIPv4 = (CheckBox)findViewById(R.id.split_tunneling_v4);
 		mBlockIPv6 = (CheckBox)findViewById(R.id.split_tunneling_v6);
 
@@ -437,7 +442,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		{
 			Integer st = mProfile.getSplitTunneling();
 			show = mProfile.getRemoteId() != null || mProfile.getMTU() != null ||
-				   mProfile.getPort() != null || (st != null && st != 0);
+				   mProfile.getPort() != null || (st != null && st != 0) ||
+				   mProfile.getExcludedSubnets() != null;
 		}
 		mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
 		mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -510,6 +516,11 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			mMTUWrap.setError(String.format(getString(R.string.alert_text_out_of_range), Constants.MTU_MIN, Constants.MTU_MAX));
 			valid = false;
 		}
+		if (!validateSubnets(mExcludedSubnets))
+		{
+			mExcludedSubnetsWrap.setError(getString(R.string.alert_text_no_subnets));
+			valid = false;
+		}
 		if (!validateInteger(mPort, 1, 65535))
 		{
 			mPortWrap.setError(String.format(getString(R.string.alert_text_out_of_range), 1, 65535));
@@ -547,6 +558,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mProfile.setRemoteId(remote_id.isEmpty() ? null : remote_id);
 		mProfile.setMTU(getInteger(mMTU));
 		mProfile.setPort(getInteger(mPort));
+		String excluded = mExcludedSubnets.getText().toString().trim();
+		mProfile.setExcludedSubnets(excluded.isEmpty() ? null : excluded);
 		int st = 0;
 		st |= mBlockIPv4.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 : 0;
 		st |= mBlockIPv6.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
@@ -576,6 +589,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mRemoteId.setText(mProfile.getRemoteId());
 				mMTU.setText(mProfile.getMTU() != null ? mProfile.getMTU().toString() : null);
 				mPort.setText(mProfile.getPort() != null ? mProfile.getPort().toString() : null);
+				mExcludedSubnets.setText(mProfile.getExcludedSubnets());
 				mBlockIPv4.setChecked(mProfile.getSplitTunneling() != null && (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) != 0);
 				mBlockIPv6.setChecked(mProfile.getSplitTunneling() != null && (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0);
 				useralias = mProfile.getUserCertificateAlias();
@@ -663,6 +677,17 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		{
 			return false;
 		}
+	}
+
+	/**
+	 * Check that the value in the given text box is a valid list of subnets/ranges
+	 *
+	 * @param view text box
+	 */
+	private boolean validateSubnets(EditText view)
+	{
+		String value = view.getText().toString().trim();
+		return value.isEmpty() || IPRangeSet.fromString(value) != null;
 	}
 
 	private class SelectUserCertOnClickListener implements OnClickListener, KeyChainAliasCallback

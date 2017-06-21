@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2016 Tobias Brunner
+    Copyright (C) 2012-2017 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
     HSR Hochschule fuer Technik Rapperswil
@@ -82,6 +82,8 @@
     <string name="profile_split_tunneling_label">Split tunneling</string>
     <string name="profile_split_tunnelingv4_title">Block IPv4 traffic not destined for the VPN</string>
     <string name="profile_split_tunnelingv6_title">Block IPv6 traffic not destined for the VPN</string>
+    <string name="profile_excluded_subnets_label">Excluded subnets</string>
+    <string name="profile_excluded_subnets_hint">Subnets and/or IP addresses, separated by spaces, to exclude from the VPN (e.g. \"192.168.1.0/24 2001:db8::/64\")</string>
     <string name="profile_import">Import VPN profile</string>
     <string name="profile_import_failed">Failed to import VPN profile</string>
     <string name="profile_import_failed_detail">Failed to import VPN profile: %1$s</string>
@@ -98,6 +100,7 @@
     <string name="alert_text_nocertfound_title">No CA certificate selected</string>
     <string name="alert_text_nocertfound">Please select one or activate <i>Select automatically</i></string>
     <string name="alert_text_out_of_range">Please enter a number in the range from %1$d - %2$d</string>
+    <string name="alert_text_no_subnets">Please enter valid subnets and/or IP addresses, separated by spaces</string>
     <string name="tnc_notice_title">EAP-TNC may affect your privacy</string>
     <string name="tnc_notice_subtitle">Device data is sent to the server operator</string>
     <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) allows server operators to assess the health of a client device.</p><p>For that purpose the server operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.</p><b>Any data will be sent only after verifying the server\'s identity.</b>]]></string>

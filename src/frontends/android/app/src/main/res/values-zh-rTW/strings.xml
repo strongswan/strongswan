@@ -79,6 +79,8 @@
     <string name="profile_split_tunneling_label">拆分隧道</string>
     <string name="profile_split_tunnelingv4_title">屏蔽不通过VPN的IPV4流量</string>
     <string name="profile_split_tunnelingv6_title">屏蔽不通过VPN的IPV6流量</string>
+    <string name="profile_excluded_subnets_label">Excluded subnets</string>
+    <string name="profile_excluded_subnets_hint">Subnets and/or IP addresses, separated by spaces, to exclude from the VPN (e.g. \"192.168.1.0/24 2001:db8::/64\")</string>
     <string name="profile_import">匯入VPN設定檔</string>
     <string name="profile_import_failed">匯入VPN設定檔失敗</string>
     <string name="profile_import_failed_detail">匯入VPN設定檔失敗: %1$s</string>
@@ -95,6 +97,7 @@
     <string name="alert_text_nocertfound_title">沒有選擇CA憑證</string>
     <string name="alert_text_nocertfound">請選擇一項或啟動 <i>自動選擇</i></string>
     <string name="alert_text_out_of_range">請輸入一個數字範圍從%1$d到%2$d</string>
+    <string name="alert_text_no_subnets">Please enter valid subnets and/or IP addresses, separated by spaces</string>
     <string name="tnc_notice_title">EAP-TNC可能會影響您的隱私安全</string>
     <string name="tnc_notice_subtitle">裝置資料已經發送給伺服器管理者</string>
     <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) 可以讓伺服器管理者評估用戶裝置的狀況。</p><p>在這個目的下，伺服器管理者可能會要求以下資料，例如ID、已安裝的App項目、系統設定、或加密檔案驗證值。</p><b>任何資料都只有在驗證伺服器的身分ID之後才會被送出。</b>]]></string>
