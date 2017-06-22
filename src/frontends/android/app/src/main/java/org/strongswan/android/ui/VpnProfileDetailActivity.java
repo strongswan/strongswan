@@ -106,6 +106,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private TextInputLayoutHelper mMTUWrap;
 	private EditText mPort;
 	private TextInputLayoutHelper mPortWrap;
+	private EditText mIncludedSubnets;
+	private TextInputLayoutHelper mIncludedSubnetsWrap;
 	private EditText mExcludedSubnets;
 	private TextInputLayoutHelper mExcludedSubnetsWrap;
 	private CheckBox mBlockIPv4;
@@ -152,6 +154,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mMTUWrap = (TextInputLayoutHelper) findViewById(R.id.mtu_wrap);
 		mPort = (EditText)findViewById(R.id.port);
 		mPortWrap = (TextInputLayoutHelper) findViewById(R.id.port_wrap);
+		mIncludedSubnets = (EditText)findViewById(R.id.included_subnets);
+		mIncludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.included_subnets_wrap);
 		mExcludedSubnets = (EditText)findViewById(R.id.excluded_subnets);
 		mExcludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.excluded_subnets_wrap);
 		mBlockIPv4 = (CheckBox)findViewById(R.id.split_tunneling_v4);
@@ -443,7 +447,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			Integer st = mProfile.getSplitTunneling();
 			show = mProfile.getRemoteId() != null || mProfile.getMTU() != null ||
 				   mProfile.getPort() != null || (st != null && st != 0) ||
-				   mProfile.getExcludedSubnets() != null;
+				   mProfile.getIncludedSubnets() != null || mProfile.getExcludedSubnets() != null;
 		}
 		mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
 		mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -516,6 +520,11 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			mMTUWrap.setError(String.format(getString(R.string.alert_text_out_of_range), Constants.MTU_MIN, Constants.MTU_MAX));
 			valid = false;
 		}
+		if (!validateSubnets(mIncludedSubnets))
+		{
+			mIncludedSubnetsWrap.setError(getString(R.string.alert_text_no_subnets));
+			valid = false;
+		}
 		if (!validateSubnets(mExcludedSubnets))
 		{
 			mExcludedSubnetsWrap.setError(getString(R.string.alert_text_no_subnets));
@@ -558,6 +567,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mProfile.setRemoteId(remote_id.isEmpty() ? null : remote_id);
 		mProfile.setMTU(getInteger(mMTU));
 		mProfile.setPort(getInteger(mPort));
+		String included = mIncludedSubnets.getText().toString().trim();
+		mProfile.setIncludedSubnets(included.isEmpty() ? null : included);
 		String excluded = mExcludedSubnets.getText().toString().trim();
 		mProfile.setExcludedSubnets(excluded.isEmpty() ? null : excluded);
 		int st = 0;
@@ -589,6 +600,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mRemoteId.setText(mProfile.getRemoteId());
 				mMTU.setText(mProfile.getMTU() != null ? mProfile.getMTU().toString() : null);
 				mPort.setText(mProfile.getPort() != null ? mProfile.getPort().toString() : null);
+				mIncludedSubnets.setText(mProfile.getIncludedSubnets());
 				mExcludedSubnets.setText(mProfile.getExcludedSubnets());
 				mBlockIPv4.setChecked(mProfile.getSplitTunneling() != null && (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) != 0);
 				mBlockIPv6.setChecked(mProfile.getSplitTunneling() != null && (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0);

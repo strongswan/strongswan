@@ -77,10 +77,13 @@
     <string name="profile_port_label">Server port</string>
     <string name="profile_port_hint">UDP port to connect to, if different from the default</string>
     <string name="profile_split_tunneling_label">Split tunneling</string>
+    <string name="profile_split_tunneling_intro">By default, the client will route all network traffic through the VPN, unless the server narrows the subnets when the connection is established, in which case only traffic the server allows will be routed via VPN (by default, all other traffic is routed as if there was no VPN).</string>
     <string name="profile_split_tunnelingv4_title">Block IPv4 traffic not destined for the VPN</string>
     <string name="profile_split_tunnelingv6_title">Block IPv6 traffic not destined for the VPN</string>
+    <string name="profile_included_subnets_label">Custom subnets</string>
+    <string name="profile_included_subnets_hint">Only route traffic to specific subnets via VPN, everything else is routed as if there was no VPN (separated by spaces, e.g. \"192.168.1.0/24 2001:db8::/64\")</string>
     <string name="profile_excluded_subnets_label">Excluded subnets</string>
-    <string name="profile_excluded_subnets_hint">Subnets and/or IP addresses, separated by spaces, to exclude from the VPN (e.g. \"192.168.1.0/24 2001:db8::/64\")</string>
+    <string name="profile_excluded_subnets_hint">Traffic to these subnets will not be routed via VPN, but as if there was no VPN (separated by spaces, e.g. \"192.168.1.0/24 2001:db8::/64\")</string>
     <string name="profile_import">Import VPN profile</string>
     <string name="profile_import_failed">Failed to import VPN profile</string>
     <string name="profile_import_failed_detail">Failed to import VPN profile: %1$s</string>
