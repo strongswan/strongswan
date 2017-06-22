@@ -48,6 +48,7 @@ public class VpnProfileDataSource
 	public static final String KEY_LOCAL_ID = "local_id";
 	public static final String KEY_REMOTE_ID = "remote_id";
 	public static final String KEY_EXCLUDED_SUBNETS = "excluded_subnets";
+	public static final String KEY_INCLUDED_SUBNETS = "included_subnets";
 
 	private DatabaseHelper mDbHelper;
 	private SQLiteDatabase mDatabase;
@@ -56,7 +57,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 10;
+	private static final int DATABASE_VERSION = 11;
 
 	public static final String DATABASE_CREATE =
 							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
@@ -74,7 +75,8 @@ public class VpnProfileDataSource
 								KEY_SPLIT_TUNNELING + " INTEGER," +
 								KEY_LOCAL_ID + " TEXT," +
 								KEY_REMOTE_ID + " TEXT," +
-								KEY_EXCLUDED_SUBNETS + " TEXT" +
+								KEY_EXCLUDED_SUBNETS + " TEXT," +
+								KEY_INCLUDED_SUBNETS + " TEXT" +
 							");";
 	private static final String[] ALL_COLUMNS = new String[] {
 								KEY_ID,
@@ -92,6 +94,7 @@ public class VpnProfileDataSource
 								KEY_LOCAL_ID,
 								KEY_REMOTE_ID,
 								KEY_EXCLUDED_SUBNETS,
+								KEY_INCLUDED_SUBNETS,
 							};
 
 	private static class DatabaseHelper extends SQLiteOpenHelper
@@ -157,6 +160,11 @@ public class VpnProfileDataSource
 			if (oldVersion < 10)
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_EXCLUDED_SUBNETS +
+						   " TEXT;");
+			}
+			if (oldVersion < 11)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_INCLUDED_SUBNETS +
 						   " TEXT;");
 			}
 		}
@@ -335,6 +343,7 @@ public class VpnProfileDataSource
 		profile.setLocalId(cursor.getString(cursor.getColumnIndex(KEY_LOCAL_ID)));
 		profile.setRemoteId(cursor.getString(cursor.getColumnIndex(KEY_REMOTE_ID)));
 		profile.setExcludedSubnets(cursor.getString(cursor.getColumnIndex(KEY_EXCLUDED_SUBNETS)));
+		profile.setIncludedSubnets(cursor.getString(cursor.getColumnIndex(KEY_INCLUDED_SUBNETS)));
 		return profile;
 	}
 
@@ -355,6 +364,7 @@ public class VpnProfileDataSource
 		values.put(KEY_LOCAL_ID, profile.getLocalId());
 		values.put(KEY_REMOTE_ID, profile.getRemoteId());
 		values.put(KEY_EXCLUDED_SUBNETS, profile.getExcludedSubnets());
+		values.put(KEY_INCLUDED_SUBNETS, profile.getIncludedSubnets());
 		return values;
 	}
 

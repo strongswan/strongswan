@@ -27,7 +27,7 @@ public class VpnProfile implements Cloneable
 	public static final int SPLIT_TUNNELING_BLOCK_IPV6 = 2;
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
-	private String mRemoteId, mLocalId, mExcludedSubnets;
+	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets;
 	private Integer mMTU, mPort, mSplitTunneling;
 	private VpnType mVpnType;
 	private UUID mUUID;
@@ -176,6 +176,16 @@ public class VpnProfile implements Cloneable
 	public String getExcludedSubnets()
 	{
 		return mExcludedSubnets;
+	}
+
+	public void setIncludedSubnets(String includedSubnets)
+	{
+		this.mIncludedSubnets = includedSubnets;
+	}
+
+	public String getIncludedSubnets()
+	{
+		return mIncludedSubnets;
 	}
 
 	public Integer getSplitTunneling()
