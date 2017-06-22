@@ -240,8 +240,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 						mIsDisconnecting = false;
 
 						addNotification();
-						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile.getName(), mCurrentProfile.getExcludedSubnets(),
-																	mCurrentProfile.getSplitTunneling());
+						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile);
 						if (initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
 						{
 							Log.i(TAG, "charon started");
@@ -653,18 +652,20 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	{
 		private final String mName;
 		private final String mExcludedSubnets;
+		private final String mIncludedSubnets;
 		private final Integer mSplitTunneling;
 		private VpnService.Builder mBuilder;
 		private BuilderCache mCache;
 		private BuilderCache mEstablishedCache;
 
-		public BuilderAdapter(String name, String excludedSubnets, Integer splitTunneling)
+		public BuilderAdapter(VpnProfile profile)
 		{
-			mName = name;
-			mExcludedSubnets = excludedSubnets;
-			mSplitTunneling = splitTunneling;
-			mBuilder = createBuilder(name);
-			mCache = new BuilderCache(mExcludedSubnets, mSplitTunneling);
+			mName = profile.getName();
+			mExcludedSubnets = profile.getExcludedSubnets();
+			mIncludedSubnets = profile.getIncludedSubnets();
+			mSplitTunneling = profile.getSplitTunneling();
+			mBuilder = createBuilder(mName);
+			mCache = new BuilderCache(mIncludedSubnets, mExcludedSubnets, mSplitTunneling);
 		}
 
 		private VpnService.Builder createBuilder(String name)
@@ -769,7 +770,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			 * builder anymore, but we might need another when reestablishing */
 			mBuilder = createBuilder(mName);
 			mEstablishedCache = mCache;
-			mCache = new BuilderCache(mExcludedSubnets, mSplitTunneling);
+			mCache = new BuilderCache(mIncludedSubnets, mExcludedSubnets, mSplitTunneling);
 			return fd.detachFd();
 		}
 
@@ -809,13 +810,27 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		private final List<IPRange> mAddresses = new ArrayList<>();
 		private final List<IPRange> mRoutesIPv4 = new ArrayList<>();
 		private final List<IPRange> mRoutesIPv6 = new ArrayList<>();
+		private final IPRangeSet mIncludedSubnetsv4 = new IPRangeSet();
+		private final IPRangeSet mIncludedSubnetsv6 = new IPRangeSet();
 		private final IPRangeSet mExcludedSubnets;
 		private final int mSplitTunneling;
 		private int mMtu;
 		private boolean mIPv4Seen, mIPv6Seen;
 
-		public BuilderCache(String excludedSubnets, Integer splitTunneling)
+		public BuilderCache(String includedSubnets, String excludedSubnets, Integer splitTunneling)
 		{
+			IPRangeSet included = IPRangeSet.fromString(includedSubnets);
+			for (IPRange range : included)
+			{
+				if (range.getFrom() instanceof Inet4Address)
+				{
+					mIncludedSubnetsv4.add(range);
+				}
+				else if (range.getFrom() instanceof Inet6Address)
+				{
+					mIncludedSubnetsv6.add(range);
+				}
+			}
 			mExcludedSubnets = IPRangeSet.fromString(excludedSubnets);
 			mSplitTunneling = splitTunneling != null ? splitTunneling : 0;
 		}
@@ -890,7 +905,14 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				if (mIPv4Seen)
 				{	/* split tunneling is used depending on the routes and configuration */
 					IPRangeSet ranges = new IPRangeSet();
-					ranges.addAll(mRoutesIPv4);
+					if (mIncludedSubnetsv4.size() > 0)
+					{
+						ranges.add(mIncludedSubnetsv4);
+					}
+					else
+					{
+						ranges.addAll(mRoutesIPv4);
+					}
 					ranges.remove(mExcludedSubnets);
 					for (IPRange subnet : ranges.subnets())
 					{
@@ -913,7 +935,14 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				if (mIPv6Seen)
 				{
 					IPRangeSet ranges = new IPRangeSet();
-					ranges.addAll(mRoutesIPv6);
+					if (mIncludedSubnetsv6.size() > 0)
+					{
+						ranges.add(mIncludedSubnetsv6);
+					}
+					else
+					{
+						ranges.addAll(mRoutesIPv6);
+					}
 					ranges.remove(mExcludedSubnets);
 					for (IPRange subnet : ranges.subnets())
 					{
