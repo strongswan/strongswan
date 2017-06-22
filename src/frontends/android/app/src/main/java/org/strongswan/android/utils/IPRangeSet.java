@@ -85,6 +85,21 @@ public class IPRangeSet implements Iterable<IPRange>
 	}
 
 	/**
+	 * Add all ranges from the given set.
+	 */
+	public void add(IPRangeSet ranges)
+	{
+		if (ranges == this)
+		{
+			return;
+		}
+		for (IPRange range : ranges.mRanges)
+		{
+			add(range);
+		}
+	}
+
+	/**
 	 * Add all ranges from the given collection to this set.
 	 */
 	public void addAll(Collection<? extends IPRange> coll)

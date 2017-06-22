@@ -143,6 +143,33 @@ public class IPRangeSetTest
 	}
 
 	@Test
+	public void testAddSet() throws UnknownHostException
+	{
+		IPRangeSet set = new IPRangeSet();
+		IPRangeSet other = new IPRangeSet();
+		other.add(new IPRange("192.168.1.0/24"));
+		other.add(new IPRange("10.0.1.0/24"));
+		other.add(new IPRange("255.255.255.255/32"));
+		set.add(other);
+		assertEquals("size", 3, set.size());
+		assertSubnets(set, new IPRange("10.0.1.0/24"), new IPRange("192.168.1.0/24"),
+					  new IPRange("255.255.255.255/32"));
+	}
+
+	@Test
+	public void testAddSetIdent() throws UnknownHostException
+	{
+		IPRangeSet set = new IPRangeSet();
+		set.add(new IPRange("192.168.1.0/24"));
+		set.add(new IPRange("10.0.1.0/24"));
+		set.add(new IPRange("255.255.255.255/32"));
+		set.add(set);
+		assertEquals("size", 3, set.size());
+		assertSubnets(set, new IPRange("10.0.1.0/24"), new IPRange("192.168.1.0/24"),
+					  new IPRange("255.255.255.255/32"));
+	}
+
+	@Test
 	public void testRemoveNothing() throws UnknownHostException
 	{
 		IPRangeSet set = new IPRangeSet();
