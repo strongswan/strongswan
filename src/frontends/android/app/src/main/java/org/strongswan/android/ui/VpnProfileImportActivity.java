@@ -490,16 +490,10 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		JSONObject split = obj.optJSONObject("split-tunneling");
 		if (split != null)
 		{
-			String excluded = split.optString("excluded", null);
-			if (excluded != null && !excluded.isEmpty())
-			{
-				if (IPRangeSet.fromString(excluded) == null)
-				{
-					throw new JSONException(getString(R.string.profile_import_failed_value,
-													  "split-tunneling.excluded"));
-				}
-				profile.setExcludedSubnets(excluded);
-			}
+			String included = getSubnets(split, "subnets");
+			profile.setIncludedSubnets(included != null ? included : null);
+			String excluded = getSubnets(split, "excluded");
+			profile.setExcludedSubnets(excluded != null ? excluded : null);
 			int st = 0;
 			st |= split.optBoolean("block-ipv4") ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 : 0;
 			st |= split.optBoolean("block-ipv6") ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
@@ -512,6 +506,21 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	{
 		Integer res = obj.optInt(key);
 		return res < min || res > max ? null : res;
+	}
+
+	private String getSubnets(JSONObject split, String key) throws JSONException
+	{
+		String subnets = split.optString(key, null);
+		if (subnets != null && !subnets.isEmpty())
+		{
+			if (IPRangeSet.fromString(subnets) == null)
+			{
+				throw new JSONException(getString(R.string.profile_import_failed_value,
+												  "split-tunneling." + key));
+			}
+			return subnets;
+		}
+		return null;
 	}
 
 	/**
