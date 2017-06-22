@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <SoftwareIdentity
   name="strongSwan"
   tagId="strongSwan-@VERSION_MAJOR@-@VERSION_MINOR@-@VERSION_BUILD@@VERSION_REVIEW@"
