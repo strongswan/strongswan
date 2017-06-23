@@ -163,6 +163,8 @@
     <string name="reconnect">重连</string>
     <string name="connect_profile_question">是否连接%1$s？</string>
     <string name="replaces_active_connection">这将覆盖您当前活跃的VPN连接！</string>
+    <string name="disconnect_question">Disconnect VPN?</string>
+    <string name="disconnect_active_connection">This will disconnect the active VPN connection!</string>
     <string name="connect">连接</string>
 
 </resources>

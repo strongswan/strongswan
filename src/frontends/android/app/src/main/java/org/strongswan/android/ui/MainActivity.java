@@ -2,7 +2,7 @@
  * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -58,6 +58,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 {
 	public static final String CONTACT_EMAIL = "android@strongswan.org";
 	public static final String START_PROFILE = "org.strongswan.android.action.START_PROFILE";
+	public static final String DISCONNECT = "org.strongswan.android.action.DISCONNECT";
 	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
 	/**
 	 * Use "bring your own device" (BYOD) features
@@ -67,6 +68,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	private static final String PROFILE_NAME = "org.strongswan.android.MainActivity.PROFILE_NAME";
 	private static final String PROFILE_REQUIRES_PASSWORD = "org.strongswan.android.MainActivity.REQUIRES_PASSWORD";
 	private static final String PROFILE_RECONNECT = "org.strongswan.android.MainActivity.RECONNECT";
+	private static final String PROFILE_DISCONNECT = "org.strongswan.android.MainActivity.DISCONNECT";
 	private static final String DIALOG_TAG = "Dialog";
 
 	private Bundle mProfileInfo;
@@ -87,6 +89,10 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 			if (START_PROFILE.equals(getIntent().getAction()))
 			{
 				startVpnProfile(getIntent());
+			}
+			else if (DISCONNECT.equals(getIntent().getAction()))
+			{
+				disconnect();
 			}
 		}
 	};
@@ -131,6 +137,10 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 		if (START_PROFILE.equals(intent.getAction()))
 		{
 			startVpnProfile(intent);
+		}
+		else if (DISCONNECT.equals(intent.getAction()))
+		{
+			disconnect();
 		}
 	}
 
@@ -304,6 +314,25 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	}
 
 	/**
+	 * Disconnect the current connection, if any (silently ignored if there is no connection).
+	 */
+	private void disconnect()
+	{
+		removeFragmentByTag(DIALOG_TAG);
+
+		if (mService != null && (mService.getState() == State.CONNECTED || mService.getState() == State.CONNECTING))
+		{
+			Bundle args = new Bundle();
+			args.putBoolean(PROFILE_DISCONNECT, true);
+
+			ConfirmationDialog dialog = new ConfirmationDialog();
+			dialog.setArguments(args);
+			dialog.show(this.getSupportFragmentManager(), DIALOG_TAG);
+			return;
+		}
+	}
+
+	/**
 	 * Class that loads the cached CA certificates.
 	 */
 	private class LoadCertificatesTask extends AsyncTask<Void, Void, TrustedCertificateManager>
@@ -364,6 +393,12 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 				message = R.string.vpn_profile_connected;
 				button = R.string.reconnect;
 			}
+			else if (profileInfo.getBoolean(PROFILE_DISCONNECT))
+			{
+				title = R.string.disconnect_question;
+				message = R.string.disconnect_active_connection;
+				button = R.string.disconnect;
+			}
 
 			return new AlertDialog.Builder(getActivity())
 				.setIcon(icon)
@@ -375,7 +410,17 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 					public void onClick(DialogInterface dialog, int whichButton)
 					{
 						MainActivity activity = (MainActivity)getActivity();
-						activity.startVpnProfile(profileInfo);
+						if (profileInfo.getBoolean(PROFILE_DISCONNECT))
+						{
+							if (activity.mService != null)
+							{
+								activity.mService.disconnect();
+							}
+						}
+						else
+						{
+							activity.startVpnProfile(profileInfo);
+						}
 					}
 				})
 				.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener()
