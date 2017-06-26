@@ -26,6 +26,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Bundle;
@@ -40,6 +41,7 @@ import android.util.Log;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.data.VpnProfile.SelectedAppsHandling;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.VpnStateService.ErrorState;
@@ -650,28 +652,22 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 */
 	public class BuilderAdapter
 	{
-		private final String mName;
-		private final String mExcludedSubnets;
-		private final String mIncludedSubnets;
-		private final Integer mSplitTunneling;
+		private final VpnProfile mProfile;
 		private VpnService.Builder mBuilder;
 		private BuilderCache mCache;
 		private BuilderCache mEstablishedCache;
 
 		public BuilderAdapter(VpnProfile profile)
 		{
-			mName = profile.getName();
-			mExcludedSubnets = profile.getExcludedSubnets();
-			mIncludedSubnets = profile.getIncludedSubnets();
-			mSplitTunneling = profile.getSplitTunneling();
-			mBuilder = createBuilder(mName);
-			mCache = new BuilderCache(mIncludedSubnets, mExcludedSubnets, mSplitTunneling);
+			mProfile = profile;
+			mBuilder = createBuilder(mProfile.getName());
+			mCache = new BuilderCache(mProfile);
 		}
 
 		private VpnService.Builder createBuilder(String name)
 		{
 			VpnService.Builder builder = new CharonVpnService.Builder();
-			builder.setSession(mName);
+			builder.setSession(name);
 
 			/* even though the option displayed in the system dialog says "Configure"
 			 * we just use our main Activity */
@@ -768,9 +764,9 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			}
 			/* now that the TUN device is created we don't need the current
 			 * builder anymore, but we might need another when reestablishing */
-			mBuilder = createBuilder(mName);
+			mBuilder = createBuilder(mProfile.getName());
 			mEstablishedCache = mCache;
-			mCache = new BuilderCache(mIncludedSubnets, mExcludedSubnets, mSplitTunneling);
+			mCache = new BuilderCache(mProfile);
 			return fd.detachFd();
 		}
 
@@ -784,7 +780,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			}
 			try
 			{
-				Builder builder = createBuilder(mName);
+				Builder builder = createBuilder(mProfile.getName());
 				mEstablishedCache.applyData(builder);
 				fd = builder.establish();
 			}
@@ -814,12 +810,14 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		private final IPRangeSet mIncludedSubnetsv6 = new IPRangeSet();
 		private final IPRangeSet mExcludedSubnets;
 		private final int mSplitTunneling;
+		private final SelectedAppsHandling mAppHandling;
+		private final String[] mSelectedApps;
 		private int mMtu;
 		private boolean mIPv4Seen, mIPv6Seen;
 
-		public BuilderCache(String includedSubnets, String excludedSubnets, Integer splitTunneling)
+		public BuilderCache(VpnProfile profile)
 		{
-			IPRangeSet included = IPRangeSet.fromString(includedSubnets);
+			IPRangeSet included = IPRangeSet.fromString(profile.getIncludedSubnets());
 			for (IPRange range : included)
 			{
 				if (range.getFrom() instanceof Inet4Address)
@@ -831,8 +829,12 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 					mIncludedSubnetsv6.add(range);
 				}
 			}
-			mExcludedSubnets = IPRangeSet.fromString(excludedSubnets);
+			mExcludedSubnets = IPRangeSet.fromString(profile.getExcludedSubnets());
+			Integer splitTunneling = profile.getSplitTunneling();
 			mSplitTunneling = splitTunneling != null ? splitTunneling : 0;
+			mAppHandling = profile.getSelectedAppsHandling();
+			String selectedApps = profile.getSelectedApps();
+			mSelectedApps = selectedApps != null ? selectedApps.split("\\s+") : null;
 		}
 
 		public void addAddress(String address, int prefixLength)
@@ -957,6 +959,41 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			else if (mIPv6Seen)
 			{
 				builder.addRoute("::", 0);
+			}
+			/* apply selected applications */
+			if (mSelectedApps != null && mSelectedApps.length > 0)
+			{
+				switch (mAppHandling)
+				{
+					case SELECTED_APPS_EXCLUDE:
+						for (String app : mSelectedApps)
+						{
+							try
+							{
+								builder.addDisallowedApplication(app);
+							}
+							catch (PackageManager.NameNotFoundException e)
+							{
+								// possible if not configured via GUI or app was uninstalled
+							}
+						}
+						break;
+					case SELECTED_APPS_ONLY:
+						for (String app : mSelectedApps)
+						{
+							try
+							{
+								builder.addAllowedApplication(app);
+							}
+							catch (PackageManager.NameNotFoundException e)
+							{
+								// possible if not configured via GUI or app was uninstalled
+							}
+						}
+						break;
+					default:
+						break;
+				}
 			}
 			builder.setMtu(mMtu);
 		}
