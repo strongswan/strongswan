@@ -27,11 +27,31 @@ public class VpnProfile implements Cloneable
 	public static final int SPLIT_TUNNELING_BLOCK_IPV6 = 2;
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
-	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets;
+	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets, mSelectedApps;
 	private Integer mMTU, mPort, mSplitTunneling;
+	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
 	private VpnType mVpnType;
 	private UUID mUUID;
 	private long mId = -1;
+
+	public enum SelectedAppsHandling
+	{
+		SELECTED_APPS_DISABLE(0),
+		SELECTED_APPS_EXCLUDE(1),
+		SELECTED_APPS_ONLY(2);
+
+		private Integer mValue;
+
+		SelectedAppsHandling(int value)
+		{
+			mValue = value;
+		}
+
+		public Integer getValue()
+		{
+			return mValue;
+		}
+	}
 
 	public VpnProfile()
 	{
@@ -182,10 +202,42 @@ public class VpnProfile implements Cloneable
 	{
 		this.mIncludedSubnets = includedSubnets;
 	}
-
 	public String getIncludedSubnets()
 	{
 		return mIncludedSubnets;
+	}
+
+	public void setSelectedApps(String selectedApps)
+	{
+		this.mSelectedApps = selectedApps;
+	}
+
+	public String getSelectedApps()
+	{
+		return mSelectedApps;
+	}
+
+	public void setSelectedAppsHandling(SelectedAppsHandling selectedAppsHandling)
+	{
+		this.mSelectedAppsHandling = selectedAppsHandling;
+	}
+
+	public void setSelectedAppsHandling(Integer value)
+	{
+		mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
+		for (SelectedAppsHandling handling : SelectedAppsHandling.values())
+		{
+			if (handling.mValue.equals(value))
+			{
+				mSelectedAppsHandling = handling;
+				break;
+			}
+		}
+	}
+
+	public SelectedAppsHandling getSelectedAppsHandling()
+	{
+		return mSelectedAppsHandling;
 	}
 
 	public Integer getSplitTunneling()

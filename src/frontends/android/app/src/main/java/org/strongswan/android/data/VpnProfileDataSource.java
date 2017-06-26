@@ -49,6 +49,8 @@ public class VpnProfileDataSource
 	public static final String KEY_REMOTE_ID = "remote_id";
 	public static final String KEY_EXCLUDED_SUBNETS = "excluded_subnets";
 	public static final String KEY_INCLUDED_SUBNETS = "included_subnets";
+	public static final String KEY_SELECTED_APPS = "selected_apps";
+	public static final String KEY_SELECTED_APPS_LIST = "selected_apps_list";
 
 	private DatabaseHelper mDbHelper;
 	private SQLiteDatabase mDatabase;
@@ -57,7 +59,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 11;
+	private static final int DATABASE_VERSION = 12;
 
 	public static final String DATABASE_CREATE =
 							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
@@ -76,7 +78,9 @@ public class VpnProfileDataSource
 								KEY_LOCAL_ID + " TEXT," +
 								KEY_REMOTE_ID + " TEXT," +
 								KEY_EXCLUDED_SUBNETS + " TEXT," +
-								KEY_INCLUDED_SUBNETS + " TEXT" +
+								KEY_INCLUDED_SUBNETS + " TEXT," +
+								KEY_SELECTED_APPS + " INTEGER," +
+								KEY_SELECTED_APPS_LIST + " TEXT" +
 							");";
 	private static final String[] ALL_COLUMNS = new String[] {
 								KEY_ID,
@@ -95,6 +99,8 @@ public class VpnProfileDataSource
 								KEY_REMOTE_ID,
 								KEY_EXCLUDED_SUBNETS,
 								KEY_INCLUDED_SUBNETS,
+								KEY_SELECTED_APPS,
+								KEY_SELECTED_APPS_LIST,
 							};
 
 	private static class DatabaseHelper extends SQLiteOpenHelper
@@ -165,6 +171,13 @@ public class VpnProfileDataSource
 			if (oldVersion < 11)
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_INCLUDED_SUBNETS +
+						   " TEXT;");
+			}
+			if (oldVersion < 12)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_SELECTED_APPS +
+						   " INTEGER;");
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_SELECTED_APPS_LIST +
 						   " TEXT;");
 			}
 		}
@@ -344,6 +357,8 @@ public class VpnProfileDataSource
 		profile.setRemoteId(cursor.getString(cursor.getColumnIndex(KEY_REMOTE_ID)));
 		profile.setExcludedSubnets(cursor.getString(cursor.getColumnIndex(KEY_EXCLUDED_SUBNETS)));
 		profile.setIncludedSubnets(cursor.getString(cursor.getColumnIndex(KEY_INCLUDED_SUBNETS)));
+		profile.setSelectedAppsHandling(getInt(cursor, cursor.getColumnIndex(KEY_SELECTED_APPS)));
+		profile.setSelectedApps(cursor.getString(cursor.getColumnIndex(KEY_SELECTED_APPS_LIST)));
 		return profile;
 	}
 
@@ -365,6 +380,8 @@ public class VpnProfileDataSource
 		values.put(KEY_REMOTE_ID, profile.getRemoteId());
 		values.put(KEY_EXCLUDED_SUBNETS, profile.getExcludedSubnets());
 		values.put(KEY_INCLUDED_SUBNETS, profile.getIncludedSubnets());
+		values.put(KEY_SELECTED_APPS, profile.getSelectedAppsHandling().getValue());
+		values.put(KEY_SELECTED_APPS_LIST, profile.getSelectedApps());
 		return values;
 	}
 
