@@ -64,6 +64,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.SortedSet;
 
 public class CharonVpnService extends VpnService implements Runnable, VpnStateService.VpnStateListener
 {
@@ -811,7 +812,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		private final IPRangeSet mExcludedSubnets;
 		private final int mSplitTunneling;
 		private final SelectedAppsHandling mAppHandling;
-		private final String[] mSelectedApps;
+		private final SortedSet<String> mSelectedApps;
 		private int mMtu;
 		private boolean mIPv4Seen, mIPv6Seen;
 
@@ -833,8 +834,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			Integer splitTunneling = profile.getSplitTunneling();
 			mSplitTunneling = splitTunneling != null ? splitTunneling : 0;
 			mAppHandling = profile.getSelectedAppsHandling();
-			String selectedApps = profile.getSelectedApps();
-			mSelectedApps = selectedApps != null ? selectedApps.split("\\s+") : null;
+			mSelectedApps = profile.getSelectedAppsSet();
 		}
 
 		public void addAddress(String address, int prefixLength)
@@ -961,7 +961,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				builder.addRoute("::", 0);
 			}
 			/* apply selected applications */
-			if (mSelectedApps != null && mSelectedApps.length > 0)
+			if (mSelectedApps.size() > 0)
 			{
 				switch (mAppHandling)
 				{

@@ -18,6 +18,11 @@
 package org.strongswan.android.data;
 
 
+import android.text.TextUtils;
+
+import java.util.Arrays;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.UUID;
 
 public class VpnProfile implements Cloneable
@@ -202,6 +207,7 @@ public class VpnProfile implements Cloneable
 	{
 		this.mIncludedSubnets = includedSubnets;
 	}
+
 	public String getIncludedSubnets()
 	{
 		return mIncludedSubnets;
@@ -212,9 +218,24 @@ public class VpnProfile implements Cloneable
 		this.mSelectedApps = selectedApps;
 	}
 
+	public void setSelectedApps(SortedSet<String> selectedApps)
+	{
+		this.mSelectedApps = selectedApps.size() > 0 ? TextUtils.join(" ", selectedApps) : null;
+	}
+
 	public String getSelectedApps()
 	{
 		return mSelectedApps;
+	}
+
+	public SortedSet<String> getSelectedAppsSet()
+	{
+		TreeSet<String> set = new TreeSet<>();
+		if (!TextUtils.isEmpty(mSelectedApps))
+		{
+			set.addAll(Arrays.asList(mSelectedApps.split("\\s+")));
+		}
+		return set;
 	}
 
 	public void setSelectedAppsHandling(SelectedAppsHandling selectedAppsHandling)
