@@ -25,6 +25,7 @@
 
 #include "sw_collector_db.h"
 #include "sw_collector_history.h"
+#include "sw_collector_rest_api.h"
 
 #include <library.h>
 #include <utils/debug.h>
@@ -41,7 +42,9 @@ typedef enum collector_op_t collector_op_t;
 
 enum collector_op_t {
 	COLLECTOR_OP_EXTRACT,
-	COLLECTOR_OP_LIST
+	COLLECTOR_OP_LIST,
+	COLLECTOR_OP_UNREGISTERED,
+	COLLECTOR_OP_GENERATE
 };
 
 /**
@@ -108,6 +111,7 @@ static void usage(void)
 Usage:\n\
   sw-collector --help\n\
   sw-collector [--debug <level>] [--quiet] --list\n\
+  sw-collector [--debug <level>] [--quiet] --unregistered|--generate\n\
   sw-collector [--debug <level>] [--quiet] [--count <event count>]\n");
 }
 
@@ -129,12 +133,14 @@ static collector_op_t do_args(int argc, char *argv[])
 			{ "help", no_argument, NULL, 'h' },
 			{ "count", required_argument, NULL, 'c' },
 			{ "debug", required_argument, NULL, 'd' },
+			{ "generate", no_argument, NULL, 'g' },
 			{ "list", no_argument, NULL, 'l' },
 			{ "quiet", no_argument, NULL, 'q' },
+			{ "unregistered", no_argument, NULL, 'u' },
 			{ 0,0,0,0 }
 		};
 
-		c = getopt_long(argc, argv, "hc:d:lq", long_opts, NULL);
+		c = getopt_long(argc, argv, "hc:d:lqu", long_opts, NULL);
 		switch (c)
 		{
 			case EOF:
@@ -149,11 +155,17 @@ static collector_op_t do_args(int argc, char *argv[])
 			case 'd':
 				debug_level = atoi(optarg);
 				continue;
+			case 'g':
+				op = COLLECTOR_OP_GENERATE;
+				continue;
 			case 'l':
 				op = COLLECTOR_OP_LIST;
 				continue;
 			case 'q':
 				stderr_quiet = TRUE;
+				continue;
+			case 'u':
+				op = COLLECTOR_OP_UNREGISTERED;
 				continue;
 			default:
 				usage();
@@ -177,8 +189,8 @@ static int extract_history(sw_collector_db_t *db)
 	bool skip = TRUE;
 
 	/* open history file for reading */
-	history_path= lib->settings->get_str(lib->settings, "sw-collector.history",
-										 NULL);
+	history_path= lib->settings->get_str(lib->settings, "%s.history", NULL,
+										 lib->ns);
 	if (!history_path)
 	{
 		fprintf(stderr, "sw-collector.history path not set.\n");
@@ -308,7 +320,7 @@ end:
 }
 
 /**
- * List all software identifiers stored in the collector database
+ * List all endpoint software identifiers stored in local collector database
  */
 static int list_identifiers(sw_collector_db_t *db)
 {
@@ -316,7 +328,7 @@ static int list_identifiers(sw_collector_db_t *db)
 	char *name, *package, *version;
 	uint32_t count = 0, installed_count = 0, installed;
 
-	e = db->create_sw_enumerator(db, FALSE);
+	e = db->create_sw_enumerator(db, SW_QUERY_ALL);
 	if (!e)
 	{
 		return EXIT_FAILURE;
@@ -335,6 +347,156 @@ static int list_identifiers(sw_collector_db_t *db)
 				  "deleted", count, installed_count, count - installed_count);
 
 	return EXIT_SUCCESS;
+}
+
+static bool query_registry(sw_collector_rest_api_t *rest_api, bool installed)
+{
+	sw_collector_db_query_t type;
+	enumerator_t *enumerator;
+	char *sw_id;
+	int count = 0;
+
+	type = installed ? SW_QUERY_INSTALLED : SW_QUERY_DELETED;
+	enumerator = rest_api->create_sw_enumerator(rest_api, type);
+	if (!enumerator)
+	{
+		return FALSE;
+	}
+	while (enumerator->enumerate(enumerator, &sw_id))
+	{
+		printf("%s,%s\n", sw_id, installed ? "1" : "0");
+		count++;
+	}
+	enumerator->destroy(enumerator);
+	DBG1(DBG_IMC, "%d %s software identifiers not registered", count,
+				   installed ? "installed" : "deleted");
+	return TRUE;
+}
+
+
+/**
+ * List all endpoint software identifiers stored in local collector database
+ * that are not registered yet in central collelector database
+ */
+static int unregistered_identifiers(sw_collector_db_t *db)
+{
+	sw_collector_rest_api_t *rest_api;
+	int status = EXIT_SUCCESS;
+
+	rest_api = sw_collector_rest_api_create(db);
+	if (!rest_api)
+	{
+		return EXIT_FAILURE;
+	}
+
+	/* List installed software identifiers not registered centrally */
+	if (!query_registry(rest_api, TRUE))
+	{
+		status = EXIT_FAILURE;
+	}
+
+	/* List deleted software identifiers not registered centrally */
+	if (!query_registry(rest_api, FALSE))
+	{
+		status = EXIT_FAILURE;
+	}
+	rest_api->destroy(rest_api);
+
+	return status;
+}
+
+/**
+ * Generate a minimalistic ISO 19770-2:2015 SWID tag
+ */
+static char* generate_tag(char *name, char *package, char *version,
+						  char* entity, char *regid, char *product)
+{
+	char *tag_id, *tag;
+	int res;
+
+	tag_id = strstr(name, "__");
+	if (!tag_id)
+	{
+		return NULL;
+	}
+	tag_id += 2;
+
+	res = asprintf(&tag, "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+			"<SoftwareIdentity name=\"%s\" tagId=\"%s\" version=\"%s\" "
+			"versionScheme=\"alphanumeric\" "
+			"xmlns=\"http://standards.iso.org/iso/19770/-2/2015/schema.xsd\">"
+			"<Entity name=\"%s\" regid=\"%s\" role=\"tagCreator\"/>"
+			"<Meta product=\"%s\"/>"
+			"</SoftwareIdentity>",
+			 package, tag_id, version, entity, regid, product);
+
+	return (res == -1) ? NULL : tag;
+}
+
+static int generate_tags(sw_collector_db_t *db)
+{
+	sw_collector_history_t *os_info;
+	sw_collector_rest_api_t *rest_api;
+	char *pos, *name, *package, *version, *entity, *regid, *product, *tag;
+	enumerator_t *enumerator;
+	uint32_t sw_id;
+	int status = EXIT_FAILURE;
+
+	entity = lib->settings->get_str(lib->settings, "%s.tag_creator.name",
+									"strongSwan Project", lib->ns);
+	regid  = lib->settings->get_str(lib->settings, "%s.tag_creator.regid",
+									"strongswan.org", lib->ns);
+
+	os_info = sw_collector_history_create(db, 0);
+	if (!os_info)
+	{
+		return EXIT_FAILURE;
+	}
+	os_info->get_os(os_info, &product);
+
+	rest_api = sw_collector_rest_api_create(db);
+	if (!rest_api)
+	{
+		goto end;
+	}
+
+	enumerator = rest_api->create_sw_enumerator(rest_api, SW_QUERY_DELETED);
+	if (!enumerator)
+	{
+		goto end;
+	}
+	while (enumerator->enumerate(enumerator, &name))
+	{
+		sw_id = db->get_sw_id(db, name, &package, &version, NULL, NULL);
+		if (sw_id)
+		{
+			/* Remove architecture from package name */
+			pos = strchr(package, ':');
+			if (pos)
+			{
+				*pos = '\0';
+			}
+			tag = generate_tag(name, package, version, entity, regid, product);
+			if (tag)
+			{
+				printf("%s\n", tag);
+				free(tag);
+				count++;
+			}
+			free(package);
+			free(version);
+		}
+	}
+	enumerator->destroy(enumerator);
+	status = EXIT_SUCCESS;
+	DBG1(DBG_IMC, "%d tags for deleted unregistered software identifiers",
+				   count);
+
+end:
+	os_info->destroy(os_info);
+	DESTROY_IF(rest_api);
+
+	return status;
 }
 
 int main(int argc, char *argv[])
@@ -362,13 +524,13 @@ int main(int argc, char *argv[])
 
 	/* load sw-collector plugins */
 	if (!lib->plugins->load(lib->plugins,
-			lib->settings->get_str(lib->settings, "sw-collector.load", PLUGINS)))
+			lib->settings->get_str(lib->settings, "%s.load", PLUGINS, lib->ns)))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
 
 	/* connect to sw-collector database */
-	uri = lib->settings->get_str(lib->settings, "sw-collector.database", NULL);
+	uri = lib->settings->get_str(lib->settings, "%s.database", NULL, lib->ns);
 	if (!uri)
 	{
 		fprintf(stderr, "sw-collector.database URI not set.\n");
@@ -389,6 +551,11 @@ int main(int argc, char *argv[])
 		case COLLECTOR_OP_LIST:
 			status = list_identifiers(db);
 			break;
+		case COLLECTOR_OP_UNREGISTERED:
+			status = unregistered_identifiers(db);
+			break;
+		case COLLECTOR_OP_GENERATE:
+			status = generate_tags(db);
 		default:
 			break;
 	}

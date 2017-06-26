@@ -45,6 +45,14 @@ enum sw_collector_history_op_t {
 struct sw_collector_history_t {
 
 	/**
+	 * Get OS and product strings
+	 *
+	 * @param product		Product string formed from OS info
+	 * @return				OS string formed from OS info
+	 */
+	char* (*get_os)(sw_collector_history_t *this, char **product);
+
+	/**
 	 * Extract timestamp from event in installation history
 	 *
 	 * @param args			Arguments to be processed

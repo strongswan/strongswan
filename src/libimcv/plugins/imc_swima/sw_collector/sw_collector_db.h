@@ -24,6 +24,16 @@
 #include <library.h>
 
 typedef struct sw_collector_db_t sw_collector_db_t;
+typedef enum sw_collector_db_query_t sw_collector_db_query_t;
+
+/**
+ * Type of software identifier queries
+ */
+enum sw_collector_db_query_t {
+	SW_QUERY_ALL,
+	SW_QUERY_INSTALLED,
+	SW_QUERY_DELETED
+};
 
 /**
  * Software collector database object
@@ -31,7 +41,7 @@ typedef struct sw_collector_db_t sw_collector_db_t;
 struct sw_collector_db_t {
 
 	/**
-	 * Add event to database
+	 * bAdd event to database
 	 *
 	 * @param timestamp		Timestamp in 20 octet RFC 3339 format
 	 * @return				Primary key pointing to event ID or 0 if failed
@@ -61,35 +71,50 @@ struct sw_collector_db_t {
 						 uint8_t action);
 
 	/**
-	 * Get software_identifier, creating one if it doesn't exist yet
+	 * Set software_identifier, checking if the identifier already exists
 	 *
+	 * @param name			Software identifier
 	 * @param package		Software package
 	 * @param version		Version of software package
-	 * @param name			Software identifier
 	 * @param source		Source ID of the software collector
 	 * @param installed		Installation status to be set, TRUE if installed
 	 * @param check			Check if SW ID is already installed
 	 * @return				Primary key pointing to SW ID or 0 if failed
 	 */
-	uint32_t (*get_sw_id)(sw_collector_db_t *this, char *package, char *version,
-						  char *name, uint8_t source, bool installed, bool check);
+	uint32_t (*set_sw_id)(sw_collector_db_t *this, char *name, char *package,
+						  char *version, uint8_t source, bool installed,
+						  bool check);
+
+	/**
+	 * Get software_identifier record
+	 *
+	 * @param name			Software identifier
+	 * @param package		Software package
+	 * @param version		Version of software package
+	 * @param source		Source ID of the software collector
+	 * @param installed		Installation status
+	 * @return				Primary key pointing to SW ID or 0 if failed
+	 */
+	uint32_t (*get_sw_id)(sw_collector_db_t *this, char *name, char **package,
+						  char **version, uint8_t *source, bool *installed);
 
 	/**
 	 * Get number of installed or deleted software identifiers
 	 *
-	 * @param installed_only	Count installed SW IDs if TRUE
-	 * @return					Count
+	 * @param type			Query type (ALL, INSTALLED, DELETED)
+	 * @return				Count
 	 */
-	uint32_t (*get_sw_id_count)(sw_collector_db_t *this, bool installed_only);
+	uint32_t (*get_sw_id_count)(sw_collector_db_t *this,
+								sw_collector_db_query_t type);
 
 	/**
 	 * Enumerate over all collected [installed] software identities
 	 *
-	 * @param installed_only	Return only installed software identities
-	 * @return					Enumerator
+	 * @param type			Query type (ALL, INSTALLED, DELETED)
+	 * @return				Enumerator
 	 */
 	enumerator_t* (*create_sw_enumerator)(sw_collector_db_t *this,
-										  bool installed_only);
+										  sw_collector_db_query_t type);
 
 	/**
 	 * Destroy sw_collector_db_t object

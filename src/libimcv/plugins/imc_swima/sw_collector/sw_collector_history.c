@@ -45,6 +45,11 @@ struct private_sw_collector_history_t {
 	char *os;
 
 	/**
+	 * Product string 'name version arch'
+	 */
+	char *product;
+
+	/**
 	 * OS info about endpoint
 	 */
 	imc_os_info_t *os_info;
@@ -60,6 +65,16 @@ struct private_sw_collector_history_t {
 	sw_collector_db_t *db;
 
 };
+
+METHOD(sw_collector_history_t, get_os, char*,
+	private_sw_collector_history_t *this, char **product)
+{
+	if (product)
+	{
+		*product = this->product;
+	}
+	return this->os;
+}
 
 /**
  * Define auxiliary package_t list item object
@@ -277,7 +292,14 @@ METHOD(sw_collector_history_t, extract_packages, bool,
 			goto end;
 		}
 
-		sw_id = this->db->get_sw_id(this->db, p->package, p->version, p->sw_id,
+		/* packages without version information cannot be handled */
+		if (strlen(p->version) == 0)
+		{
+			free_package(p);
+			continue;
+		}
+
+		sw_id = this->db->set_sw_id(this->db, p->sw_id, p->package,	p->version,
 									this->source, op != SW_OP_REMOVE, FALSE);
 		if (!sw_id)
 		{
@@ -291,8 +313,9 @@ METHOD(sw_collector_history_t, extract_packages, bool,
 
 		if (op == SW_OP_UPGRADE)
 		{
-			sw_id = this->db->get_sw_id(this->db, p->package, p->old_version,
-										p->old_sw_id, this->source, FALSE, FALSE);
+			sw_id = this->db->set_sw_id(this->db, p->old_sw_id, p->package,
+										p->old_version, this->source, FALSE,
+										FALSE);
 			if (!sw_id)
 			{
 				goto end;
@@ -376,7 +399,7 @@ METHOD(sw_collector_history_t, merge_installed_packages, bool,
 		name = create_sw_id(this->tag_creator, this->os, package, version);
 		DBG3(DBG_IMC, "  %s merged", name);
 
-		sw_id = this->db->get_sw_id(this->db, package, version, name,
+		sw_id = this->db->set_sw_id(this->db, name, package, version,
 									this->source, TRUE, TRUE);
 		free(name);
 		if (!sw_id)
@@ -387,7 +410,7 @@ METHOD(sw_collector_history_t, merge_installed_packages, bool,
 	}
 	success = TRUE;
 	DBG1(DBG_IMC, "  merged %u installed packages, %u registed in database",
-		 count, this->db->get_sw_id_count(this->db, TRUE));
+		 count, this->db->get_sw_id_count(this->db, SW_QUERY_INSTALLED));
 
 end:
 	pclose(file);
@@ -399,6 +422,7 @@ METHOD(sw_collector_history_t, destroy, void,
 {
 	this->os_info->destroy(this->os_info);
 	free(this->os);
+	free(this->product);
 	free(this);
 }
 
@@ -414,6 +438,7 @@ sw_collector_history_t *sw_collector_history_create(sw_collector_db_t *db,
 
 	INIT(this,
 		.public = {
+			.get_os = _get_os,
 			.extract_timestamp = _extract_timestamp,
 			.extract_packages = _extract_packages,
 			.merge_installed_packages = _merge_installed_packages,
@@ -423,7 +448,7 @@ sw_collector_history_t *sw_collector_history_create(sw_collector_db_t *db,
 		.source = source,
 		.os_info = imc_os_info_create(),
 		.tag_creator = lib->settings->get_str(lib->settings,
-				"sw-collector.tag_creator", "strongswan.org"),
+				"%s.tag_creator.regid", "strongswan.org", lib->ns),
 	);
 
 	os_type = this->os_info->get_type(this->os_info);
@@ -445,11 +470,23 @@ sw_collector_history_t *sw_collector_history_create(sw_collector_db_t *db,
 		destroy(this);
 		return NULL;
 	}
+
+	/* construct OS string */
 	if (asprintf(&this->os, "%.*s_%.*s-%.*s", os_name.len, os_name.ptr,
 											  os_version.len, os_version.ptr,
 		 									  os_arch.len, os_arch.ptr) == -1)
 	{
 		DBG1(DBG_IMC, "constructon of OS string failed");
+		destroy(this);
+		return NULL;
+	}
+
+	/* construct product string */
+	if (asprintf(&this->product, "%.*s %.*s %.*s", os_name.len, os_name.ptr,
+											  os_version.len, os_version.ptr,
+											  os_arch.len, os_arch.ptr) == -1)
+	{
+		DBG1(DBG_IMC, "constructon of product string failed");
 		destroy(this);
 		return NULL;
 	}

@@ -108,8 +108,8 @@ METHOD(sw_collector_db_t, add_sw_event, bool,
 	return TRUE;
 }
 
-METHOD(sw_collector_db_t, get_sw_id, uint32_t,
-	private_sw_collector_db_t *this, char *package, char *version, char *name,
+METHOD(sw_collector_db_t, set_sw_id, uint32_t,
+	private_sw_collector_db_t *this, char *name,  char *package, char *version,
 	uint8_t source, bool installed, bool check)
 {
 	uint32_t sw_id = 0, status;
@@ -179,22 +179,66 @@ METHOD(sw_collector_db_t, get_sw_id, uint32_t,
 	return sw_id;
 }
 
-METHOD(sw_collector_db_t, get_sw_id_count, uint32_t,
-	private_sw_collector_db_t *this, bool installed_only)
+METHOD(sw_collector_db_t, get_sw_id, uint32_t,
+	private_sw_collector_db_t *this, char *name, char **package, char **version,
+	uint8_t *source, bool *installed)
 {
-	uint32_t count;
+	char *sw_package, *sw_version;
+	uint32_t sw_id = 0, sw_source, sw_installed;
 	enumerator_t *e;
 
-	if (installed_only)
+	/* Does software identifier already exist in database? */
+	e = this->db->query(this->db,
+			"SELECT id, package, version, source, installed "
+			"FROM sw_identifiers WHERE name = ?",
+			DB_TEXT, name, DB_UINT, DB_TEXT, DB_TEXT, DB_UINT, DB_UINT);
+	if (!e)
 	{
-		e = this->db->query(this->db,
-			"SELECT COUNT(installed) FROM sw_identifiers WHERE installed = 1 ",
-			 DB_UINT);
+		DBG1(DBG_IMC, "database query for sw_identifier failed");
+		return 0;
 	}
-	else
+	if (e->enumerate(e, &sw_id, &sw_package, &sw_version, &sw_source,
+						&sw_installed))
+	{
+		if (package)
+		{
+			*package = strdup(sw_package);
+		}
+		if (version)
+		{
+			*version = strdup(sw_version);
+		}
+		if (source)
+		{
+			*source = sw_source;
+		}
+		if (installed)
+		{
+			*installed = sw_installed;
+		}
+	}
+	e->destroy(e);
+
+	return sw_id;
+}
+
+METHOD(sw_collector_db_t, get_sw_id_count, uint32_t,
+	private_sw_collector_db_t *this, sw_collector_db_query_t type)
+{
+	uint32_t count, installed;
+	enumerator_t *e;
+
+	if (type == SW_QUERY_ALL)
 	{
 		e = this->db->query(this->db,
 			"SELECT COUNT(installed) FROM sw_identifiers", DB_UINT);
+	}
+	else
+	{
+		installed = (type == SW_QUERY_INSTALLED);
+		e = this->db->query(this->db,
+			"SELECT COUNT(installed) FROM sw_identifiers WHERE installed = ?",
+			 DB_UINT, installed, DB_UINT);
 	}
 
 	if (!e)
@@ -212,22 +256,24 @@ METHOD(sw_collector_db_t, get_sw_id_count, uint32_t,
 }
 
 METHOD(sw_collector_db_t, create_sw_enumerator, enumerator_t*,
-	private_sw_collector_db_t *this, bool installed_only)
+	private_sw_collector_db_t *this, sw_collector_db_query_t type)
 {
 	enumerator_t *e;
+	uint32_t installed;
 
-	if (installed_only)
-	{
-		e = this->db->query(this->db,
-				"SELECT name, package, version, installed FROM sw_identifiers "
-				"WHERE installed = 1 ORDER BY name ASC",
-				 DB_TEXT, DB_TEXT, DB_TEXT, DB_UINT);
-	}
-	else
+	if (type == SW_QUERY_ALL)
 	{
 		e = this->db->query(this->db,
 				"SELECT name, package, version, installed FROM sw_identifiers "
 				"ORDER BY name ASC", DB_TEXT, DB_TEXT, DB_TEXT, DB_UINT);
+	}
+	else
+	{
+		installed = (type == SW_QUERY_INSTALLED);
+		e = this->db->query(this->db,
+				"SELECT name, package, version, installed FROM sw_identifiers "
+				"WHERE installed = ? ORDER BY name ASC",
+				 DB_UINT, installed, DB_TEXT, DB_TEXT, DB_TEXT, DB_UINT);
 	}
 	if (!e)
 	{
@@ -259,6 +305,7 @@ sw_collector_db_t *sw_collector_db_create(char *uri)
 			.add_event = _add_event,
 			.get_last_event = _get_last_event,
 			.add_sw_event = _add_sw_event,
+			.set_sw_id = _set_sw_id,
 			.get_sw_id = _get_sw_id,
 			.get_sw_id_count = _get_sw_id_count,
 			.create_sw_enumerator = _create_sw_enumerator,
@@ -295,6 +342,9 @@ sw_collector_db_t *sw_collector_db_create(char *uri)
 			return NULL;
 		}
 		rng->destroy(rng);
+
+		/* strongTNC workaround - limit epoch to 31 bit unsigned integer */
+		this->epoch &= 0x7fffffff;
 
 		/* Create first event when the OS was installed */
 		first_time = lib->settings->get_str(lib->settings,
