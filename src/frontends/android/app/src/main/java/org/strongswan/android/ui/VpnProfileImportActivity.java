@@ -32,6 +32,7 @@ import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.Base64;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -44,10 +45,12 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.data.VpnProfile.SelectedAppsHandling;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
@@ -70,6 +73,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.UUID;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -499,6 +503,19 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			st |= split.optBoolean("block-ipv6") ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
 			profile.setSplitTunneling(st == 0 ? null : st);
 		}
+		/* only one of these can be set, prefer specific apps */
+		String selectedApps = getApps(obj.optJSONArray("apps"));
+		String excludedApps = getApps(obj.optJSONArray("excluded-apps"));
+		if (!TextUtils.isEmpty(selectedApps))
+		{
+			profile.setSelectedApps(selectedApps);
+			profile.setSelectedAppsHandling(SelectedAppsHandling.SELECTED_APPS_ONLY);
+		}
+		else if (!TextUtils.isEmpty(excludedApps))
+		{
+			profile.setSelectedApps(excludedApps);
+			profile.setSelectedAppsHandling(SelectedAppsHandling.SELECTED_APPS_EXCLUDE);
+		}
 		return profile;
 	}
 
@@ -521,6 +538,19 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			return subnets;
 		}
 		return null;
+	}
+
+	private String getApps(JSONArray arr) throws JSONException
+	{
+		ArrayList<String> apps = new ArrayList<>();
+		if (arr != null)
+		{
+			for (int i = 0; i < arr.length(); i++)
+			{
+				apps.add(arr.getString(i));
+			}
+		}
+		return TextUtils.join(" ", apps);
 	}
 
 	/**
