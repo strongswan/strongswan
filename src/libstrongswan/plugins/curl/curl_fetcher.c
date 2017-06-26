@@ -58,6 +58,11 @@ struct private_curl_fetcher_t {
 	 * Timeout for a transfer
 	 */
 	long timeout;
+
+	/**
+	 * Maximum number of redirects to follow
+	 */
+	long redir;
 };
 
 /**
@@ -116,6 +121,8 @@ METHOD(fetcher_t, fetch, status_t,
 		curl_easy_setopt(this->curl, CURLOPT_TIMEOUT, this->timeout);
 	}
 	curl_easy_setopt(this->curl, CURLOPT_CONNECTTIMEOUT, CONNECT_TIMEOUT);
+	curl_easy_setopt(this->curl, CURLOPT_FOLLOWLOCATION, TRUE);
+	curl_easy_setopt(this->curl, CURLOPT_MAXREDIRS, this->redir);
 	curl_easy_setopt(this->curl, CURLOPT_WRITEFUNCTION, (void*)curl_cb);
 	curl_easy_setopt(this->curl, CURLOPT_WRITEDATA, &data);
 	if (this->headers)
@@ -260,6 +267,8 @@ curl_fetcher_t *curl_fetcher_create()
 		},
 		.curl = curl_easy_init(),
 		.cb = fetcher_default_callback,
+		.redir = lib->settings->get_int(lib->settings, "%s.plugins.curl.redir",
+										-1, lib->ns),
 	);
 
 	if (!this->curl)

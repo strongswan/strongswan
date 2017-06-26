@@ -36,6 +36,7 @@ plugins = \
 	plugins/bypass-lan.opt \
 	plugins/certexpire.opt \
 	plugins/coupling.opt \
+	plugins/curl.opt \
 	plugins/dhcp.opt \
 	plugins/dnscert.opt \
 	plugins/duplicheck.opt \
