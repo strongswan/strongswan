@@ -18,11 +18,11 @@
 
 #include "imv_swima_agent.h"
 #include "imv_swima_state.h"
-#include "imv_swima_rest.h"
 
 #include <imcv.h>
 #include <imv/imv_agent.h>
 #include <imv/imv_msg.h>
+#include "rest/rest.h"
 #include "tcg/seg/tcg_seg_attr_max_size.h"
 #include "tcg/seg/tcg_seg_attr_seg_env.h"
 #include "ietf/swima/ietf_swima_attr_req.h"
@@ -73,7 +73,7 @@ struct private_imv_swima_agent_t {
 	/**
 	 * REST API to strongTNC manager
 	 */
-	imv_swima_rest_t *rest_api;
+	rest_t *rest_api;
 
 };
 
@@ -770,7 +770,7 @@ imv_agent_if_t *imv_swima_agent_create(const char *name, TNC_IMVID id,
 						"%s.plugins.imv-swima.rest_api_timeout", 120, lib->ns);
 	if (rest_api_uri)
 	{
-		this->rest_api = imv_swima_rest_create(rest_api_uri, rest_api_timeout);
+		this->rest_api = rest_create(rest_api_uri, rest_api_timeout);
 	}
 
 	return &this->public;

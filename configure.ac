@@ -1003,7 +1003,7 @@ if test x$tss_tss2 = xtrue; then
 	AC_SUBST(tss2_LIBS)
 fi
 
-if test x$imv_swid = xtrue -o x$imv_swima = xtrue; then
+if test x$imc_swima = xtrue -o $imv_swima = xtrue -o x$imv_swid = xtrue; then
 	PKG_CHECK_MODULES(json, [json-c], [],
 		[PKG_CHECK_MODULES(json, [json])])
 	AC_SUBST(json_CFLAGS)
@@ -1710,6 +1710,9 @@ if test x$ikev2 = xtrue; then
 fi
 if test x$fuzzing = xtrue; then
 	AC_DEFINE([USE_FUZZING], [], [build code for fuzzing])
+fi
+if test x$imc_swima = xtrue -o x$imv_swima = xtrue -o x$imv_swid = xtrue ; then
+	AC_DEFINE([USE_JSON], [], [build code for JSON])
 fi
 
 # ====================================================

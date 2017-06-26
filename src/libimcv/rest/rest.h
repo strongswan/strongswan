@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,50 +14,61 @@
  */
 
 /**
- * @defgroup imv_swid imv_swid
+ * @defgroup imv_swima imv_swima
  * @ingroup libimcv_plugins
  *
- * @defgroup imv_swid_rest_t imv_swid_rest
- * @{ @ingroup imv_swid
+ * @defgroup rest_t rest
+ * @{ @ingroup imv_swima
  */
 
-#ifndef IMV_SWID_REST_H_
-#define IMV_SWID_REST_H_
+#ifndef REST_H_
+#define REST_H_
+
+#ifdef USE_JSON
 
 #include <library.h>
-
 #include <json.h>
 
-typedef struct imv_swid_rest_t imv_swid_rest_t;
+typedef struct rest_t rest_t;
 
 /**
  * Public REST interface
  */
-struct imv_swid_rest_t {
+struct rest_t {
 
 	/**
-	 * Post a HTTP request including a JSON object
+	 * Send an HTTP GET request returning a JSON object
+	 *
+	 * @param jresp		JSON object in HTTP
+	 * @return			Status (SUCCESS or FAILED)
+	 */
+	status_t (*get)(rest_t *this, char *command, json_object **jresp);
+
+	/**
+	 * Send an HTTP POST request including a JSON object
 	 *
 	 * @param jreq		JSON object in HTTP request
 	 * @param jresp		JSON object in HTTP response if NEED_MORE
 	 * @return			Status (SUCCESS, NEED_MORE or FAILED)
 	 */
-	status_t (*post)(imv_swid_rest_t *this, char *command, json_object *jreq,
+	status_t (*post)(rest_t *this, char *command, json_object *jreq,
 					 json_object **jresp);
 
 	/**
-	 * Destroy imv_swid_rest_t object
+	 * Destroy rest_t object
 	 */
-	void (*destroy)(imv_swid_rest_t *this);
+	void (*destroy)(rest_t *this);
 
 };
 
 /**
- * Create an imv_swid_rest_t instance
+ * Create an rest_t instance
  *
  * @param uri			REST URI (http://username:password@hostname[:port]/api/)
  * @param timeout		Timeout of the REST connection
  */
-imv_swid_rest_t* imv_swid_rest_create(char *uri, u_int timeout);
+rest_t* rest_create(char *uri, u_int timeout);
 
-#endif /** IMV_SWID_REST_H_ @}*/
+#endif /* USE_JSON */
+
+#endif /** REST_H_ @}*/

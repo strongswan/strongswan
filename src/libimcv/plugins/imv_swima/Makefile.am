@@ -16,7 +16,6 @@ imv_swima_la_LIBADD = \
 
 imv_swima_la_SOURCES = \
 	imv_swima.c imv_swima_state.h imv_swima_state.c \
-	imv_swima_agent.h imv_swima_agent.c \
-	imv_swima_rest.h imv_swima_rest.c
+	imv_swima_agent.h imv_swima_agent.c
 
 imv_swima_la_LDFLAGS = -module -avoid-version -no-undefined
