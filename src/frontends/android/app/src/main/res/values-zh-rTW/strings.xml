@@ -84,6 +84,7 @@
     <string name="profile_included_subnets_hint">Only route traffic to specific subnets via VPN, everything else is routed as if there was no VPN (separated by spaces, e.g. \"192.168.1.0/24 2001:db8::/64\")</string>
     <string name="profile_excluded_subnets_label">Excluded subnets</string>
     <string name="profile_excluded_subnets_hint">Traffic to these subnets will not be routed via VPN, but as if there was no VPN (separated by spaces, e.g. \"192.168.1.0/24 2001:db8::/64\")</string>
+    <string name="profile_select_apps">Select applications</string>
     <string name="profile_import">匯入VPN設定檔</string>
     <string name="profile_import_failed">匯入VPN設定檔失敗</string>
     <string name="profile_import_failed_detail">匯入VPN設定檔失敗: %1$s</string>
