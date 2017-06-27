@@ -87,7 +87,11 @@
     <string name="profile_included_subnets_hint">Nur Verkehr in die spezifizierten Subnetze wird via VPN geleitet, der Rest wird behandelt, als ob kein VPN vorhanden wäre (mit Leerzeichen getrennt, z.B. \"192.168.1.0/24 2001:db8::/64\")</string>
     <string name="profile_excluded_subnets_label">Ausgeschlossene Subnetze</string>
     <string name="profile_excluded_subnets_hint">Verkehr in diese Subnetze wird vom VPN ausgeschlossen und behandelt, als ob kein VPN vorhanden wäre (mit Leerzeichen getrennt, z.B. \"192.168.1.0/24 2001:db8::/64\")</string>
+    <string name="profile_select_apps_label">Apps</string>
     <string name="profile_select_apps">Apps auswählen</string>
+    <string name="profile_select_no_apps">Keine Apps ausgewählt</string>
+    <string name="profile_select_one_app">Eine App ausgewählt</string>
+    <string name="profile_select_x_apps">%1$d Apps ausgewählt</string>
     <string name="profile_import">VPN Profile importieren</string>
     <string name="profile_import_failed">VPN Profil-Import fehlgeschlagen</string>
     <string name="profile_import_failed_detail">VPN Profil-Import fehlgeschlagen: %1$s</string>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2014 Tobias Brunner
-    Hochschule fuer Technik Rapperswil
+    Copyright (C) 2012-2017 Tobias Brunner
+    HSR Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
@@ -21,5 +21,12 @@
         <item>IKEv2 Certificate + EAP (Username/Password)</item>
         <item>IKEv2 EAP-TLS (Certificate)</item>
         <item>IKEv2 EAP-TNC (Username/Password)</item>
+    </string-array>
+
+    <!-- the order here must match the enum entries in VpnProfile.java -->
+    <string-array name="apps_handling">
+        <item>All applications use the VPN</item>
+        <item>Exclude selected applications from the VPN</item>
+        <item>Only selected applications use the VPN</item>
     </string-array>
 </resources>

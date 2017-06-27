@@ -250,6 +250,7 @@
                 android:layout_marginTop="10dp"
                 android:layout_marginBottom="10dp"
                 android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
                 android:textSize="20sp"
                 android:text="@string/profile_split_tunneling_label" />
 
@@ -305,6 +306,27 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/profile_split_tunnelingv6_title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:textSize="20sp"
+                android:text="@string/profile_select_apps_label" />
+
+            <Spinner
+                android:id="@+id/apps_handling"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:spinnerMode="dropdown"
+                android:entries="@array/apps_handling" />
+
+            <include
+                android:id="@+id/select_applications"
+                layout="@layout/two_line_button" />
 
         </LinearLayout>
 
