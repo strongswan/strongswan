@@ -24,6 +24,10 @@
         android:drawable="@color/accent" />
 
     <item
+        android:state_checked="true"
+        android:drawable="@color/checked" />
+
+    <item
         android:drawable="@android:color/transparent" />
 
 </selector>
