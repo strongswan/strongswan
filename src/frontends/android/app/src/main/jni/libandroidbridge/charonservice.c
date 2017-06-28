@@ -420,6 +420,11 @@ static void initiate(settings_t *settings)
 						"charon.fragment_size",
 						settings->get_int(settings, "global.mtu",
 										  ANDROID_DEFAULT_MTU));
+	/* use configured interval, or an increased default to save battery power */
+	lib->settings->set_int(lib->settings,
+						"charon.keep_alive",
+						settings->get_int(settings, "global.nat_keepalive",
+										  ANDROID_KEEPALIVE_INTERVAL));
 
 	this->creds->clear(this->creds);
 	DESTROY_IF(this->service);
@@ -476,9 +481,6 @@ static void set_options(char *logfile)
 					"charon.retransmit_timeout", ANDROID_RETRANSMIT_TIMEOUT);
 	lib->settings->set_double(lib->settings,
 					"charon.retransmit_base", ANDROID_RETRANSMIT_BASE);
-	/* increase NAT-T keepalive interval a bit to save battery power */
-	lib->settings->set_time(lib->settings,
-					"charon.keep_alive", ANDROID_KEEPALIVE_INTERVAL);
 	lib->settings->set_bool(lib->settings,
 					"charon.initiator_only", TRUE);
 	lib->settings->set_bool(lib->settings,
