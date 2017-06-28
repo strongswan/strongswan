@@ -37,4 +37,10 @@ public final class Constants
 	 */
 	public static final int MTU_MAX = 1500;
 	public static final int MTU_MIN = 1280;
+
+	/**
+	 * Limits for NAT-T keepalive
+	 */
+	public static final int NAT_KEEPALIVE_MAX = 120;
+	public static final int NAT_KEEPALIVE_MIN = 10;
 }

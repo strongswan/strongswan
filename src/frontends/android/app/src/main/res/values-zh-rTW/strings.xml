@@ -76,6 +76,8 @@
     <string name="profile_mtu_hint">如果在某個網路下預設值不適合</string>
     <string name="profile_port_label">伺服器Port</string>
     <string name="profile_port_hint">如果和預設值不同，則需要連接的UDP Port</string>
+    <string name="profile_nat_keepalive_label">NAT-T keepalive interval</string>
+    <string name="profile_nat_keepalive_hint">Small packets are sent to keep mappings on NAT routers alive if there is no other traffic. In order to save energy the default interval is 45 seconds. Behind NAT routers that remove mappings early this might be too high, try 20 seconds or less in that case.</string>
     <string name="profile_split_tunneling_label">拆分隧道</string>
     <string name="profile_split_tunneling_intro">By default, the client will route all network traffic through the VPN, unless the server narrows the subnets when the connection is established, in which case only traffic the server allows will be routed via VPN (by default, all other traffic is routed as if there was no VPN).</string>
     <string name="profile_split_tunnelingv4_title">屏蔽不通过VPN的IPV4流量</string>

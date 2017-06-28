@@ -113,6 +113,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private TextInputLayoutHelper mMTUWrap;
 	private EditText mPort;
 	private TextInputLayoutHelper mPortWrap;
+	private EditText mNATKeepalive;
+	private TextInputLayoutHelper mNATKeepaliveWrap;
 	private EditText mIncludedSubnets;
 	private TextInputLayoutHelper mIncludedSubnetsWrap;
 	private EditText mExcludedSubnets;
@@ -163,6 +165,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mMTUWrap = (TextInputLayoutHelper) findViewById(R.id.mtu_wrap);
 		mPort = (EditText)findViewById(R.id.port);
 		mPortWrap = (TextInputLayoutHelper) findViewById(R.id.port_wrap);
+		mNATKeepalive = (EditText)findViewById(R.id.nat_keepalive);
+		mNATKeepaliveWrap = (TextInputLayoutHelper) findViewById(R.id.nat_keepalive_wrap);
 		mIncludedSubnets = (EditText)findViewById(R.id.included_subnets);
 		mIncludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.included_subnets_wrap);
 		mExcludedSubnets = (EditText)findViewById(R.id.excluded_subnets);
@@ -528,7 +532,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		{
 			Integer st = mProfile.getSplitTunneling();
 			show = mProfile.getRemoteId() != null || mProfile.getMTU() != null ||
-				   mProfile.getPort() != null || (st != null && st != 0) ||
+				   mProfile.getPort() != null || mProfile.getNATKeepAlive() != null || (st != null && st != 0) ||
 				   mProfile.getIncludedSubnets() != null || mProfile.getExcludedSubnets() != null ||
 				   mProfile.getSelectedAppsHandling() != SelectedAppsHandling.SELECTED_APPS_DISABLE;
 		}
@@ -618,6 +622,12 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			mPortWrap.setError(String.format(getString(R.string.alert_text_out_of_range), 1, 65535));
 			valid = false;
 		}
+		if (!validateInteger(mNATKeepalive, Constants.NAT_KEEPALIVE_MIN, Constants.NAT_KEEPALIVE_MAX))
+		{
+			mNATKeepaliveWrap.setError(String.format(getString(R.string.alert_text_out_of_range),
+													 Constants.NAT_KEEPALIVE_MIN, Constants.NAT_KEEPALIVE_MAX));
+			valid = false;
+		}
 		return valid;
 	}
 
@@ -650,6 +660,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mProfile.setRemoteId(remote_id.isEmpty() ? null : remote_id);
 		mProfile.setMTU(getInteger(mMTU));
 		mProfile.setPort(getInteger(mPort));
+		mProfile.setNATKeepAlive(getInteger(mNATKeepalive));
 		String included = mIncludedSubnets.getText().toString().trim();
 		mProfile.setIncludedSubnets(included.isEmpty() ? null : included);
 		String excluded = mExcludedSubnets.getText().toString().trim();
@@ -685,6 +696,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mRemoteId.setText(mProfile.getRemoteId());
 				mMTU.setText(mProfile.getMTU() != null ? mProfile.getMTU().toString() : null);
 				mPort.setText(mProfile.getPort() != null ? mProfile.getPort().toString() : null);
+				mNATKeepalive.setText(mProfile.getNATKeepAlive() != null ? mProfile.getNATKeepAlive().toString() : null);
 				mIncludedSubnets.setText(mProfile.getIncludedSubnets());
 				mExcludedSubnets.setText(mProfile.getExcludedSubnets());
 				mBlockIPv4.setChecked(mProfile.getSplitTunneling() != null && (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) != 0);
