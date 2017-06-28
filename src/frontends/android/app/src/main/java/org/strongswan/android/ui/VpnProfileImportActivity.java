@@ -527,15 +527,33 @@ public class VpnProfileImportActivity extends AppCompatActivity
 
 	private String getSubnets(JSONObject split, String key) throws JSONException
 	{
-		String subnets = split.optString(key, null);
-		if (subnets != null && !subnets.isEmpty())
+		ArrayList<String> subnets = new ArrayList<>();
+		JSONArray arr = split.optJSONArray(key);
+		if (arr != null)
 		{
-			if (IPRangeSet.fromString(subnets) == null)
+			for (int i = 0; i < arr.length(); i++)
+			{	/* replace all spaces, e.g. in "192.168.1.1 - 192.168.1.10" */
+				subnets.add(arr.getString(i).replace(" ", ""));
+			}
+		}
+		else
+		{
+			String value = split.optString(key, null);
+			if (!TextUtils.isEmpty(value))
+			{
+				subnets.add(value);
+			}
+		}
+		if (subnets.size() > 0)
+		{
+			String joined = TextUtils.join(" ", subnets);
+			IPRangeSet ranges = IPRangeSet.fromString(joined);
+			if (ranges == null)
 			{
 				throw new JSONException(getString(R.string.profile_import_failed_value,
 												  "split-tunneling." + key));
 			}
-			return subnets;
+			return ranges.toString();
 		}
 		return null;
 	}
