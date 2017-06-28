@@ -241,7 +241,7 @@ public class IPRange implements Comparable<IPRange>
 			{
 				return InetAddress.getByAddress(mFrom).getHostAddress() + "/" + mPrefix;
 			}
-			return InetAddress.getByAddress(mFrom).getHostAddress() + ".." +
+			return InetAddress.getByAddress(mFrom).getHostAddress() + "-" +
 				   InetAddress.getByAddress(mTo).getHostAddress();
 		}
 		catch (UnknownHostException ignored)

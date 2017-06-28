@@ -302,4 +302,11 @@ public class IPRangeSetTest
 		assertEquals("next", new IPRange("192.168.1.0/24"), iterator.next());
 		iterator.remove();
 	}
+
+	@Test
+	public void testToString() throws UnknownHostException
+	{
+		IPRangeSet set = IPRangeSet.fromString("192.168.3.10/24 192.168.1.0/24 192.168.1.1-192.168.1.10");
+		assertEquals("string", "192.168.1.0/24 192.168.3.0/24", set.toString());
+	}
 }

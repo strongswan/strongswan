@@ -205,4 +205,19 @@ public class IPRangeSet implements Iterable<IPRange>
 	{
 		return mRanges.size();
 	}
+
+	@Override
+	public String toString()
+	{	/* we could use TextUtils, but that causes the unit tests to fail */
+		StringBuilder sb = new StringBuilder();
+		for (IPRange range : mRanges)
+		{
+			if (sb.length() > 0)
+			{
+				sb.append(" ");
+			}
+			sb.append(range.toString());
+		}
+		return sb.toString();
+	}
 }
