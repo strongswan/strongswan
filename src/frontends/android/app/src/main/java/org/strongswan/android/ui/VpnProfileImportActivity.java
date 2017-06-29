@@ -491,6 +491,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		}
 
 		profile.setMTU(getInteger(obj, "mtu", Constants.MTU_MIN, Constants.MTU_MAX));
+		profile.setNATKeepAlive(getInteger(obj, "nat-keepalive", Constants.NAT_KEEPALIVE_MIN, Constants.NAT_KEEPALIVE_MAX));
 		JSONObject split = obj.optJSONObject("split-tunneling");
 		if (split != null)
 		{
