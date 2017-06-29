@@ -83,32 +83,25 @@ struct imv_swima_state_t {
 	uint32_t (*get_request_id)(imv_swima_state_t *this);
 
 	/**
-	 * Set or extend the SWID Tag ID inventory in the state
+	 * Set or extend the SW ID inventory in the state
 	 *
-	 * @param inventory			SWID Tags ID inventory to be added
+	 * @param inventory			SW ID inventory to be added
 	 */
 	void (*set_inventory)(imv_swima_state_t *this, swima_inventory_t *inventory);
 
 	/**
-	 * Get the encoding of the complete SWID Tag ID inventory
+	 * Set or extend the SW ID events in the state
 	 *
-	 * @return			       SWID Tags ID inventory as a JSON array
-	 */
-	json_object* (*get_inventory)(imv_swima_state_t *this);
-
-	/**
-	 * Set or extend the SWID Tag ID Events in the state
-	 *
-	 * @param inventory			SWID Tags ID inventory to be added
+	 * @param events			SW ID events to be added
 	 */
 	void (*set_events)(imv_swima_state_t *this, swima_events_t *events);
 
 	/**
-	 * Get the encoding of the complete Software ID Events
+	 * Get the JSON encoding of the complete SW ID inventory or SW ID events
 	 *
-	 * @return			       Software ID events as a JSON array
+	 * @return			       JSON encoding
 	 */
-	json_object* (*get_events)(imv_swima_state_t *this);
+	json_object* (*get_jrequest)(imv_swima_state_t *this);
 
 	/**
 	 * Set the number of still missing SW [ID] records or envents

@@ -52,7 +52,9 @@ static pen_type_t msg_types[] = {
  */
 enum imv_swima_attr_t {
 	IMV_SWIMA_ATTR_SW_INV =    (1<<0),
-	IMV_SWIMA_ATTR_SW_ID_INV = (1<<1)
+	IMV_SWIMA_ATTR_SW_ID_INV = (1<<1),
+	IMV_SWIMA_ATTR_SW_EV =     (1<<2),
+	IMV_SWIMA_ATTR_SW_ID_EV =  (1<<2)
 };
 
 /**
@@ -208,8 +210,8 @@ static TNC_Result receive_msg(private_imv_swima_agent_t *this,
 				missing = attr_cast->get_record_count(attr_cast);
 				swima_state->set_missing(swima_state, missing);
 
-				DBG2(DBG_IMV, "received software identity inventory with "
-					 "%d item%s for request %d at eid %d of epoch 0x%08x, "
+				DBG2(DBG_IMV, "received software ID inventory with "
+					 "%d item%s for request %d at last eid %d of epoch 0x%08x, "
 					 "%d item%s to follow", sw_id_count,
 					 (sw_id_count == 1) ? "" : "s", request_id, last_eid,
 					 eid_epoch, missing, (missing == 1) ? "" : "s");
@@ -222,7 +224,7 @@ static TNC_Result receive_msg(private_imv_swima_agent_t *this,
 				}
 				else
 				{
-					DBG1(DBG_IMV, "no workitem found for software identity "
+					DBG1(DBG_IMV, "no workitem found for software ID "
 								  "inventory with request ID %d", request_id);
 				}
 				attr_cast->clear_inventory(attr_cast);
@@ -251,9 +253,9 @@ static TNC_Result receive_msg(private_imv_swima_agent_t *this,
 				swima_state->set_missing(swima_state, missing);
 
 				DBG2(DBG_IMV, "received software inventory with %d item%s for "
-					 "request %d at eid %d of epoch 0x%08x, %d item%s to follow",
-					 sw_count, (sw_count == 1) ? "" : "s", request_id,
-					 last_eid, eid_epoch, missing, (missing == 1) ? "" : "s");
+					 "request %d at last eid %d of epoch 0x%08x, %d item%s to "
+					 "follow", sw_count, (sw_count == 1) ? "" : "s", request_id,
+					  last_eid, eid_epoch, missing, (missing == 1) ? "" : "s");
 
 				if (request_id == swima_state->get_request_id(swima_state))
 				{
@@ -310,7 +312,7 @@ static TNC_Result receive_msg(private_imv_swima_agent_t *this,
 				uint32_t missing;
 				int sw_ev_count;
 
-				state->set_action_flags(state, IMV_SWIMA_ATTR_SW_ID_INV);
+				state->set_action_flags(state, IMV_SWIMA_ATTR_SW_ID_EV);
 
 				attr_cast = (ietf_swima_attr_sw_ev_t*)attr;
 				request_id = attr_cast->get_request_id(attr_cast);
@@ -320,8 +322,8 @@ static TNC_Result receive_msg(private_imv_swima_agent_t *this,
 				missing = attr_cast->get_event_count(attr_cast);
 				swima_state->set_missing(swima_state, missing);
 
-				DBG2(DBG_IMV, "received software identity events with "
-					 "%d item%s for request %d at eid %d of epoch 0x%08x, "
+				DBG2(DBG_IMV, "received software ID events with "
+					 "%d item%s for request %d at last eid %d of epoch 0x%08x, "
 					 "%d item%s to follow", sw_ev_count,
 					 (sw_ev_count == 1) ? "" : "s", request_id, last_eid,
 					 eid_epoch, missing, (missing == 1) ? "" : "s");
@@ -334,8 +336,8 @@ static TNC_Result receive_msg(private_imv_swima_agent_t *this,
 				}
 				else
 				{
-					DBG1(DBG_IMV, "no workitem found for software identity "
-								  "evemts with request ID %d", request_id);
+					DBG1(DBG_IMV, "no workitem found for software ID events "
+								  "with request ID %d", request_id);
 				}
 				attr_cast->clear_events(attr_cast);
 				break;
@@ -499,6 +501,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				{
 					flags |= IETF_SWIMA_ATTR_REQ_FLAG_C;
 				}
+				earliest_eid = workitem->get_arg_int(workitem);
 
 				/* Determine maximum PA-TNC attribute segment size */
 				max_seg_size = state->get_max_msg_len(state)
@@ -527,11 +530,13 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				targets->set_eid(targets, earliest_eid, 0);
 				cast_attr = (ietf_swima_attr_req_t*)attr;
 				cast_attr->set_targets(cast_attr, targets);
+				targets->destroy(targets);
 
 				out_msg->add_attribute(out_msg, attr);
 				workitem->set_imv_id(workitem, imv_id);
 				no_workitems = FALSE;
-				DBG2(DBG_IMV, "IMV %d issues sw request %d", imv_id, request_id);
+				DBG2(DBG_IMV, "IMV %d issues sw request %d with earliest eid %d",
+							   imv_id, request_id, earliest_eid);
 				break;
 			}
 			enumerator->destroy(enumerator);
@@ -552,36 +557,49 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 	received = state->get_action_flags(state);
 
 	if (handshake_state == IMV_SWIMA_STATE_WORKITEMS &&
-	   (received & (IMV_SWIMA_ATTR_SW_INV|IMV_SWIMA_ATTR_SW_ID_INV)) &&
+	   (received & (IMV_SWIMA_ATTR_SW_INV|IMV_SWIMA_ATTR_SW_ID_INV|
+					IMV_SWIMA_ATTR_SW_EV |IMV_SWIMA_ATTR_SW_ID_EV)) &&
 		swima_state->get_missing(swima_state) == 0)
 	{
 		TNC_IMV_Evaluation_Result eval;
 		TNC_IMV_Action_Recommendation rec;
-		char result_str[BUF_LEN], *error_str = "", *command;
-		char *target_str;
-		int tag_id_count, tag_count, i;
+		char result_str[BUF_LEN], *format = NULL, *cmd = NULL, *command;
+		char *target_str, *error_str = "";
+		int sw_id_count, tag_count, i, res;
 		json_object *jrequest, *jresponse, *jvalue;
 		ietf_swima_attr_req_t *cast_attr;
 		swima_inventory_t *targets;
 		swima_record_t *target;
 		status_t status = SUCCESS;
 
-		if (this->rest_api && (received & IMV_SWIMA_ATTR_SW_ID_INV))
+		if (received & IMV_SWIMA_ATTR_SW_ID_INV)
 		{
-			if (asprintf(&command, "sessions/%d/swid-measurement/",
-						 session->get_session_id(session, NULL, NULL)) < 0)
+			cmd = "swid-measurement";
+			format = "received inventory of %d SW ID%s and %d SWID tag%s";
+		}
+		else if (received & IMV_SWIMA_ATTR_SW_ID_EV)
+		{
+			cmd = "swid-events";
+			format = "received %d SW ID event%s and %d SWID tag%s";
+		}
+
+		if (cmd && this->rest_api)
+		{
+			res = asprintf(&command, "sessions/%d/%s/",
+					 session->get_session_id(session, NULL, NULL), cmd);
+			if (res < 0)
 			{
 				error_str = "allocation of command string failed";
 				status = FAILED;
 			}
 			else
 			{
-				jrequest = swima_state->get_inventory(swima_state);
+				jrequest = swima_state->get_jrequest(swima_state);
 				status = this->rest_api->post(this->rest_api, command,
 											  jrequest, &jresponse);
 				if (status == FAILED)
 				{
-					error_str = "error in REST API swid-measurement request";
+						error_str = "error in REST API request";
 				}
 				free(command);
 			}
@@ -595,12 +613,20 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				{
 					if (workitem->get_type(workitem) == IMV_WORKITEM_SWID_TAGS)
 					{
-						swima_state->get_count(swima_state, &tag_id_count,
+						swima_state->get_count(swima_state, &sw_id_count,
 														  &tag_count);
-						snprintf(result_str, BUF_LEN, "received inventory of "
-								 "%d SWID tag ID%s and %d SWID tag%s",
-								 tag_id_count, (tag_id_count == 1) ? "" : "s",
-								 tag_count, (tag_count == 1) ? "" : "s");
+						if (format)
+						{
+							snprintf(result_str, BUF_LEN, format,
+								sw_id_count, (sw_id_count == 1) ? "" : "s",
+								tag_count,   (tag_count   == 1) ? "" : "s");
+						}
+						else
+						{
+							snprintf(result_str, BUF_LEN, "received %d SWID tag"
+								"%s", tag_count, (tag_count == 1) ? "" : "s");
+
+						}
 						session->remove_workitem(session, enumerator);
 
 						eval = TNC_IMV_EVALUATION_RESULT_COMPLIANT;
@@ -632,13 +658,13 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				/* Create an IETF SW Request attribute */
 				attr = ietf_swima_attr_req_create(IETF_SWIMA_ATTR_REQ_FLAG_NONE,
 								swima_state->get_request_id(swima_state));
-				tag_id_count = json_object_array_length(jresponse);
-				DBG1(DBG_IMV, "%d SWID tag target%s", tag_id_count,
-							  (tag_id_count == 1) ? "" : "s");
-				swima_state->set_missing(swima_state, tag_id_count);
+				sw_id_count = json_object_array_length(jresponse);
+				DBG1(DBG_IMV, "%d SWID tag target%s", sw_id_count,
+							  (sw_id_count == 1) ? "" : "s");
+				swima_state->set_missing(swima_state, sw_id_count);
 				targets = swima_inventory_create();
 
-				for (i = 0; i < tag_id_count; i++)
+				for (i = 0; i < sw_id_count; i++)
 				{
 					jvalue = json_object_array_get_idx(jresponse, i);
 					if (json_object_get_type(jvalue) != json_type_string)
@@ -739,8 +765,8 @@ imv_agent_if_t *imv_swima_agent_create(const char *name, TNC_IMVID id,
 {
 	private_imv_swima_agent_t *this;
 	imv_agent_t *agent;
-	char *rest_api_uri;
-	u_int rest_api_timeout;
+	char *uri;
+	u_int timeout;
 
 	agent = imv_agent_create(name, msg_types, countof(msg_types), id,
 							 actual_version);
@@ -764,13 +790,13 @@ imv_agent_if_t *imv_swima_agent_create(const char *name, TNC_IMVID id,
 		.agent = agent,
 	);
 
-	rest_api_uri = lib->settings->get_str(lib->settings,
-						"%s.plugins.imv-swima.rest_api_uri", NULL, lib->ns);
-	rest_api_timeout = lib->settings->get_int(lib->settings,
-						"%s.plugins.imv-swima.rest_api_timeout", 120, lib->ns);
-	if (rest_api_uri)
+	uri = lib->settings->get_str(lib->settings,
+					"%s.plugins.imv-swima.rest_api.uri", NULL, lib->ns);
+	timeout = lib->settings->get_int(lib->settings,
+					"%s.plugins.imv-swima.rest_api.timeout", 120, lib->ns);
+	if (uri)
 	{
-		this->rest_api = rest_create(rest_api_uri, rest_api_timeout);
+		this->rest_api = rest_create(uri, timeout);
 	}
 
 	return &this->public;

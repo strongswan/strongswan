@@ -106,9 +106,9 @@ struct private_imv_swima_state_t {
 	uint32_t request_id;
 
 	/**
-	 * Number of processed SWID Tag IDs
+	 * Number of processed Software Identifiers
 	 */
-	int tag_id_count;
+	int sw_id_count;
 
 	/**
 	 * Number of processed SWID Tags
@@ -116,7 +116,7 @@ struct private_imv_swima_state_t {
 	int tag_count;
 
 	/**
-	 * Number of missing SWID Tags or Tag IDs
+	 * Number of missing Software Identifiers or SWID Tags
 	 */
 	uint32_t missing;
 
@@ -131,7 +131,7 @@ struct private_imv_swima_state_t {
 	json_object *jobj;
 
 	/**
-	 * JSON array containing an inventory of SWID Tag IDs
+	 * JSON array containing either a SW [ID] inventory or SW ID events
 	 */
 	json_object *jarray;
 
@@ -293,6 +293,12 @@ METHOD(imv_swima_state_t, set_inventory, void,
 	swima_record_t *sw_record;
 	enumerator_t *enumerator;
 
+	if (this->sw_id_count == 0)
+	{
+		this->jarray = json_object_new_array();
+		json_object_object_add(this->jobj, "data", this->jarray);
+	}
+
 	enumerator = inventory->create_enumerator(inventory);
 	while (enumerator->enumerate(enumerator, &sw_record))
 	{
@@ -317,43 +323,64 @@ METHOD(imv_swima_state_t, set_inventory, void,
 	enumerator->destroy(enumerator);
 }
 
-METHOD(imv_swima_state_t, get_inventory, json_object*,
-	private_imv_swima_state_t *this)
-{
-	return this->jobj;
-}
-
 METHOD(imv_swima_state_t, set_events, void,
     private_imv_swima_state_t *this, swima_events_t *events)
 {
 	chunk_t sw_id, timestamp;
-	uint32_t record_id, eid;
-	char *sw_id_str;
-	json_object *jstring;
+	uint32_t record_id, eid, last_eid, epoch, source_id, action;
+	char *sw_id_str, *timestamp_str;
+	json_object *jevent, *jvalue, *jstring;
 	swima_event_t *sw_event;
 	swima_record_t *sw_record;
 	enumerator_t *enumerator;
+
+	if (this->sw_id_count == 0)
+	{
+		last_eid = events->get_eid(events, &epoch, NULL);
+		jvalue = json_object_new_int(epoch);
+		json_object_object_add(this->jobj, "epoch", jvalue);
+		jvalue = json_object_new_int(last_eid);
+		json_object_object_add(this->jobj, "lastEid", jvalue);
+		this->jarray = json_object_new_array();
+		json_object_object_add(this->jobj, "events", this->jarray);
+	}
 
 	enumerator = events->create_enumerator(events);
 	while (enumerator->enumerate(enumerator, &sw_event))
 	{
 		eid = sw_event->get_eid(sw_event, &timestamp);
+		timestamp_str = strndup(timestamp.ptr, timestamp.len);
+		action = sw_event->get_action(sw_event);
 		sw_record = sw_event->get_sw_record(sw_event);
 		record_id = sw_record->get_record_id(sw_record);
+		source_id = sw_record->get_source_id(sw_record);
 		sw_id = sw_record->get_sw_id(sw_record, NULL);
 		sw_id_str = strndup(sw_id.ptr, sw_id.len);
-		DBG3(DBG_IMV, "%3u %.*s %6u: %s", eid, timestamp.len, timestamp.ptr,
-										  record_id, sw_id_str);
+		DBG3(DBG_IMV, "%3u %.*s %u %5u: %s", eid, timestamp.len, timestamp.ptr,
+											 action, record_id, sw_id_str);
 
-		/* Add software identity to JSON array */
+		/* Add software event to JSON array */
+		jevent = json_object_new_object();
+		jvalue = json_object_new_int(eid);
+		json_object_object_add(jevent, "eid", jvalue);
+		jstring = json_object_new_string(timestamp_str);
+		json_object_object_add(jevent, "timestamp", jstring);
+		jvalue = json_object_new_int(record_id);
+		json_object_object_add(jevent, "recordId", jvalue);
+		jvalue = json_object_new_int(source_id);
+		json_object_object_add(jevent, "sourceId", jvalue);
+		jvalue = json_object_new_int(action);
+		json_object_object_add(jevent, "action", jvalue);
 		jstring = json_object_new_string(sw_id_str);
-		json_object_array_add(this->jarray, jstring);
+		json_object_object_add(jevent, "softwareId", jstring);
+		json_object_array_add(this->jarray, jevent);
+		free(timestamp_str);
 		free(sw_id_str);
 	}
 	enumerator->destroy(enumerator);
 }
 
-METHOD(imv_swima_state_t, get_events, json_object*,
+METHOD(imv_swima_state_t, get_jrequest, json_object*,
 	private_imv_swima_state_t *this)
 {
 	return this->jobj;
@@ -372,20 +399,20 @@ METHOD(imv_swima_state_t, get_missing, uint32_t,
 }
 
 METHOD(imv_swima_state_t, set_count, void,
-	private_imv_swima_state_t *this, int tag_id_count, int tag_count,
+	private_imv_swima_state_t *this, int sw_id_count, int tag_count,
 	TNC_UInt32 imc_id)
 {
-	this->tag_id_count += tag_id_count;
+	this->sw_id_count += sw_id_count;
 	this->tag_count += tag_count;
 	this->imc_id = imc_id;
 }
 
 METHOD(imv_swima_state_t, get_count, void,
-	private_imv_swima_state_t *this, int *tag_id_count, int *tag_count)
+	private_imv_swima_state_t *this, int *sw_id_count, int *tag_count)
 {
-	if (tag_id_count)
+	if (sw_id_count)
 	{
-		*tag_id_count = this->tag_id_count;
+		*sw_id_count = this->sw_id_count;
 	}
 	if (tag_count)
 	{
@@ -433,9 +460,8 @@ imv_state_t *imv_swima_state_create(TNC_ConnectionID connection_id)
 			.set_request_id = _set_request_id,
 			.get_request_id = _get_request_id,
 			.set_inventory = _set_inventory,
-			.get_inventory = _get_inventory,
 			.set_events = _set_events,
-			.get_events = _get_events,
+			.get_jrequest = _get_jrequest,
 			.set_missing = _set_missing,
 			.get_missing = _get_missing,
 			.set_count = _set_count,
@@ -449,10 +475,7 @@ imv_state_t *imv_swima_state_create(TNC_ConnectionID connection_id)
 		.contracts = seg_contract_manager_create(),
 		.imc_id = TNC_IMCID_ANY,
 		.jobj = json_object_new_object(),
-		.jarray = json_object_new_array(),
 	);
-
-	json_object_object_add(this->jobj, "data", this->jarray);
 
 	return &this->public.interface;
 }

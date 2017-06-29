@@ -85,7 +85,7 @@ static size_t curl_cb(void *ptr, size_t size, size_t nmemb, cb_data_t *data)
 METHOD(fetcher_t, fetch, status_t,
 	private_curl_fetcher_t *this, char *uri, void *userdata)
 {
-	char error[CURL_ERROR_SIZE], *enc_uri;
+	char error[CURL_ERROR_SIZE], *enc_uri, *p1, *p2;
 	CURLcode curl_status;
 	status_t status;
 	long result = 0;
@@ -123,7 +123,17 @@ METHOD(fetcher_t, fetch, status_t,
 		curl_easy_setopt(this->curl, CURLOPT_HTTPHEADER, this->headers);
 	}
 
-	DBG2(DBG_LIB, "  sending request to '%s'...", uri);
+	/* if the URI contains a username[:password] prefix then mask it */
+	p1 = strstr(uri, "://");
+	p2 = strchr(uri, '@');
+	if (p1 && p2)
+	{
+		DBG2(DBG_LIB, "  sending request to '%.*sxxxx%s'...", p1+3-uri, uri, p2);
+	}
+	else
+	{
+		DBG2(DBG_LIB, "  sending request to '%s'...", uri);
+	}
 	curl_status = curl_easy_perform(this->curl);
 	switch (curl_status)
 	{
