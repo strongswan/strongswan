@@ -315,6 +315,10 @@ int command_dispatch(int c, char *v[])
 {
 	int op, i;
 
+	uri = lib->settings->get_str(lib->settings, "%s.socket",
+			lib->settings->get_str(lib->settings, "%s.plugins.vici.socket",
+								   NULL, lib->ns), lib->ns);
+
 	options = options_create();
 	atexit(cleanup);
 	active = help_idx = registered;
