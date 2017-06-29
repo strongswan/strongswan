@@ -260,6 +260,23 @@
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
+            <Switch
+                android:id="@+id/cert_req"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:text="@string/profile_cert_req_label" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:textSize="12sp"
+                android:text="@string/profile_cert_req_hint" />
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
