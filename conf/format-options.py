@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
-# Copyright (C) 2014-2015 Tobias Brunner
-# Hochschule fuer Technik Rapperswil
+# Copyright (C) 2014-2017 Tobias Brunner
+# HSR Hochschule fuer Technik Rapperswil
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -49,6 +49,12 @@ full.section.name {[#]}
 If a # is added between the curly braces the section header will be commented
 out in the configuration file snippet, which is useful for example sections.
 
+To add include statements to generated config files (ignored when generating
+man pages) the following format can be used:
+
+full.section.name.include files/to/include
+	Description of this include statement
+
 Dots in section/option names may be escaped with a backslash.  For instance,
 with the following section description
 
@@ -62,17 +68,18 @@ import sys
 import re
 from textwrap import TextWrapper
 from optparse import OptionParser
-from operator import attrgetter
+from functools import cmp_to_key
 
 class ConfigOption:
 	"""Representing a configuration option or described section in strongswan.conf"""
-	def __init__(self, path, default = None, section = False, commented = False):
+	def __init__(self, path, default = None, section = False, commented = False, include = False):
 		self.path = path
 		self.name = path[-1]
 		self.fullname = '.'.join(path)
 		self.default = default
 		self.section = section
 		self.commented = commented
+		self.include = include
 		self.desc = []
 		self.options = []
 
@@ -98,6 +105,13 @@ class ConfigOption:
 		self.default = other.default
 		self.commented = other.commented
 		self.desc = other.desc
+
+	@staticmethod
+	def cmp(a, b):
+		# order options before sections and includes last
+		if a.include or b.include:
+			return a.include - b.include
+		return a.section - b.section
 
 class Parser:
 	"""Parses one or more files of configuration options"""
@@ -134,6 +148,14 @@ class Parser:
 			path = self.__split_name(m.group('name'))
 			self.__current = ConfigOption(path, section = True,
 										  commented = m.group('comment'))
+			return
+		# include definition
+		m = re.match(r'^(?P<name>\S+\.include|include)\s+(?P<pattern>\S+)\s*$', line)
+		if m:
+			if self.__current:
+				self.__add_option(self.__current)
+			path = self.__split_name(m.group('name'))
+			self.__current = ConfigOption(path, m.group('pattern'), include = True)
 			return
 		# paragraph separator
 		m = re.match(r'^\s*$', line)
@@ -248,7 +270,9 @@ class ConfFormatter:
 		"""Print a single option with description and default value"""
 		comment = "# " if commented or opt.commented else ""
 		self.__print_description(opt, indent)
-		if opt.default:
+		if opt.include:
+			print('{0}{1} {2}'.format(self.__indent * indent, opt.name, opt.default))
+		elif opt.default:
 			print('{0}{1}{2} = {3}'.format(self.__indent * indent, comment, opt.name, opt.default))
 		else:
 			print('{0}{1}{2} ='.format(self.__indent * indent, comment, opt.name))
@@ -261,7 +285,7 @@ class ConfFormatter:
 		self.__print_description(section, indent)
 		print('{0}{1}{2} {{'.format(self.__indent * indent, comment, section.name))
 		print('')
-		for o in sorted(section.options, key=attrgetter('section')):
+		for o in sorted(section.options, key=cmp_to_key(ConfigOption.cmp)):
 			if o.section:
 				self.__print_section(o, indent + 1, commented)
 			else:
@@ -273,7 +297,7 @@ class ConfFormatter:
 		"""Print a list of options"""
 		if not options:
 			return
-		for option in sorted(options, key=attrgetter('section')):
+		for option in sorted(options, key=cmp_to_key(ConfigOption.cmp)):
 			if option.section:
 				self.__print_section(option, 0, False)
 			else:
@@ -296,6 +320,8 @@ class ManFormatter:
 	def __format_option(self, option):
 		"""Print a single option"""
 		if option.section and not len(option.desc):
+			return
+		if option.include:
 			return
 		if option.section:
 			print('.TP\n.B {0}\n.br'.format(option.fullname))
