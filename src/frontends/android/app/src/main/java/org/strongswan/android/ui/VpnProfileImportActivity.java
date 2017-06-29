@@ -463,6 +463,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			return null;
 		}
 		ParsedVpnProfile profile = new ParsedVpnProfile();
+		Integer flags = 0;
 
 		profile.setUUID(uuid);
 		profile.setName(obj.getString("name"));
@@ -474,6 +475,11 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		profile.setPort(getInteger(remote, "port", 1, 65535));
 		profile.setRemoteId(remote.optString("id", null));
 		profile.Certificate = decodeBase64(remote.optString("cert", null));
+
+		if (remote.optBoolean("certreq", false))
+		{
+			flags |= VpnProfile.FLAGS_SUPPRESS_CERT_REQS;
+		}
 
 		JSONObject local = obj.optJSONObject("local");
 		if (local != null)
@@ -517,6 +523,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			profile.setSelectedApps(excludedApps);
 			profile.setSelectedAppsHandling(SelectedAppsHandling.SELECTED_APPS_EXCLUDE);
 		}
+		profile.setFlags(flags);
 		return profile;
 	}
 
