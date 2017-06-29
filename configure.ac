@@ -1724,6 +1724,7 @@ AM_COND_IF([USE_MEDSRV], [strongswan_options=${strongswan_options}" medsrv"])
 AM_COND_IF([USE_SCEPCLIENT], [strongswan_options=${strongswan_options}" scepclient"])
 AM_COND_IF([USE_PKI], [strongswan_options=${strongswan_options}" pki"])
 AM_COND_IF([USE_SWANCTL], [strongswan_options=${strongswan_options}" swanctl"])
+AM_COND_IF([USE_SYSTEMD], [strongswan_options=${strongswan_options}" charon-systemd"])
 
 AC_SUBST(strongswan_options)
 
