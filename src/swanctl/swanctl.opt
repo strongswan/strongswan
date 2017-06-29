@@ -1158,3 +1158,5 @@ authorities.<name>.cert_uri_base =
 	built by appending the SHA1 hash of the DER encoded certificates to this
 	base URI.
 
+include conf.d/*.conf
+	Include config snippets
