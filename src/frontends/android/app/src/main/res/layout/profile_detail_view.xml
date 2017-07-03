@@ -244,6 +244,22 @@
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
+            <org.strongswan.android.ui.widget.TextInputLayoutHelper
+                android:id="@+id/nat_keepalive_wrap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:helper_text="@string/profile_nat_keepalive_hint" >
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/nat_keepalive"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:singleLine="true"
+                    android:inputType="number|textNoSuggestions"
+                    android:hint="@string/profile_nat_keepalive_label" />
+
+            </org.strongswan.android.ui.widget.TextInputLayoutHelper>
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
