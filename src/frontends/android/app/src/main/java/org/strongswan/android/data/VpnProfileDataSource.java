@@ -52,6 +52,7 @@ public class VpnProfileDataSource
 	public static final String KEY_SELECTED_APPS = "selected_apps";
 	public static final String KEY_SELECTED_APPS_LIST = "selected_apps_list";
 	public static final String KEY_NAT_KEEPALIVE = "nat_keepalive";
+	public static final String KEY_FLAGS = "flags";
 
 	private DatabaseHelper mDbHelper;
 	private SQLiteDatabase mDatabase;
@@ -60,7 +61,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 13;
+	private static final int DATABASE_VERSION = 14;
 
 	public static final String DATABASE_CREATE =
 							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
@@ -82,7 +83,8 @@ public class VpnProfileDataSource
 								KEY_INCLUDED_SUBNETS + " TEXT," +
 								KEY_SELECTED_APPS + " INTEGER," +
 								KEY_SELECTED_APPS_LIST + " TEXT," +
-								KEY_NAT_KEEPALIVE + " INTEGER" +
+								KEY_NAT_KEEPALIVE + " INTEGER," +
+								KEY_FLAGS + " INTEGER" +
 							");";
 	private static final String[] ALL_COLUMNS = new String[] {
 								KEY_ID,
@@ -104,6 +106,7 @@ public class VpnProfileDataSource
 								KEY_SELECTED_APPS,
 								KEY_SELECTED_APPS_LIST,
 								KEY_NAT_KEEPALIVE,
+								KEY_FLAGS,
 							};
 
 	private static class DatabaseHelper extends SQLiteOpenHelper
@@ -186,6 +189,11 @@ public class VpnProfileDataSource
 			if (oldVersion < 13)
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_NAT_KEEPALIVE +
+						   " INTEGER;");
+			}
+			if (oldVersion < 14)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_FLAGS +
 						   " INTEGER;");
 			}
 		}
@@ -368,6 +376,7 @@ public class VpnProfileDataSource
 		profile.setSelectedAppsHandling(getInt(cursor, cursor.getColumnIndex(KEY_SELECTED_APPS)));
 		profile.setSelectedApps(cursor.getString(cursor.getColumnIndex(KEY_SELECTED_APPS_LIST)));
 		profile.setNATKeepAlive(getInt(cursor, cursor.getColumnIndex(KEY_NAT_KEEPALIVE)));
+		profile.setFlags(getInt(cursor, cursor.getColumnIndex(KEY_FLAGS)));
 		return profile;
 	}
 
@@ -392,6 +401,7 @@ public class VpnProfileDataSource
 		values.put(KEY_SELECTED_APPS, profile.getSelectedAppsHandling().getValue());
 		values.put(KEY_SELECTED_APPS_LIST, profile.getSelectedApps());
 		values.put(KEY_NAT_KEEPALIVE, profile.getNATKeepAlive());
+		values.put(KEY_FLAGS, profile.getFlags());
 		return values;
 	}
 

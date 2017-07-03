@@ -53,6 +53,7 @@ import android.widget.EditText;
 import android.widget.MultiAutoCompleteTextView;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import org.strongswan.android.R;
@@ -113,6 +114,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private TextInputLayoutHelper mMTUWrap;
 	private EditText mPort;
 	private TextInputLayoutHelper mPortWrap;
+	private Switch mCertReq;
 	private EditText mNATKeepalive;
 	private TextInputLayoutHelper mNATKeepaliveWrap;
 	private EditText mIncludedSubnets;
@@ -167,6 +169,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mPortWrap = (TextInputLayoutHelper) findViewById(R.id.port_wrap);
 		mNATKeepalive = (EditText)findViewById(R.id.nat_keepalive);
 		mNATKeepaliveWrap = (TextInputLayoutHelper) findViewById(R.id.nat_keepalive_wrap);
+		mCertReq = (Switch)findViewById(R.id.cert_req);
 		mIncludedSubnets = (EditText)findViewById(R.id.included_subnets);
 		mIncludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.included_subnets_wrap);
 		mExcludedSubnets = (EditText)findViewById(R.id.excluded_subnets);
@@ -530,9 +533,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		boolean show = mShowAdvanced.isChecked();
 		if (!show && mProfile != null)
 		{
-			Integer st = mProfile.getSplitTunneling();
+			Integer st = mProfile.getSplitTunneling(), flags = mProfile.getFlags();
 			show = mProfile.getRemoteId() != null || mProfile.getMTU() != null ||
-				   mProfile.getPort() != null || mProfile.getNATKeepAlive() != null || (st != null && st != 0) ||
+				   mProfile.getPort() != null || mProfile.getNATKeepAlive() != null ||
+				   (flags != null && flags != 0) || (st != null && st != 0) ||
 				   mProfile.getIncludedSubnets() != null || mProfile.getExcludedSubnets() != null ||
 				   mProfile.getSelectedAppsHandling() != SelectedAppsHandling.SELECTED_APPS_DISABLE;
 		}
@@ -661,6 +665,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mProfile.setMTU(getInteger(mMTU));
 		mProfile.setPort(getInteger(mPort));
 		mProfile.setNATKeepAlive(getInteger(mNATKeepalive));
+		int flags = 0;
+		flags |= !mCertReq.isChecked() ? VpnProfile.FLAGS_SUPPRESS_CERT_REQS : 0;
+		mProfile.setFlags(flags);
 		String included = mIncludedSubnets.getText().toString().trim();
 		mProfile.setIncludedSubnets(included.isEmpty() ? null : included);
 		String excluded = mExcludedSubnets.getText().toString().trim();
@@ -681,6 +688,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private void loadProfileData(Bundle savedInstanceState)
 	{
 		String useralias = null, local_id = null, alias = null;
+		Integer flags = null;
 
 		getSupportActionBar().setTitle(R.string.add_profile);
 		if (mId != null && mId != 0)
@@ -703,6 +711,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mBlockIPv6.setChecked(mProfile.getSplitTunneling() != null && (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0);
 				mSelectedAppsHandling = mProfile.getSelectedAppsHandling();
 				mSelectedApps = mProfile.getSelectedAppsSet();
+				flags = mProfile.getFlags();
 				useralias = mProfile.getUserCertificateAlias();
 				local_id = mProfile.getLocalId();
 				alias = mProfile.getCertificateAlias();
@@ -717,6 +726,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		}
 
 		mSelectVpnType.setSelection(mVpnType.ordinal());
+		mCertReq.setChecked(flags == null || (flags & VpnProfile.FLAGS_SUPPRESS_CERT_REQS) == 0);
 
 		/* check if the user selected a user certificate previously */
 		useralias = savedInstanceState == null ? useralias : savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);

@@ -30,10 +30,11 @@ public class VpnProfile implements Cloneable
 	/* While storing this as EnumSet would be nicer this simplifies storing it in a database */
 	public static final int SPLIT_TUNNELING_BLOCK_IPV4 = 1;
 	public static final int SPLIT_TUNNELING_BLOCK_IPV6 = 2;
+	public static final int FLAGS_SUPPRESS_CERT_REQS = 1;
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
 	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets, mSelectedApps;
-	private Integer mMTU, mPort, mSplitTunneling, mNATKeepAlive;
+	private Integer mMTU, mPort, mSplitTunneling, mNATKeepAlive, mFlags;
 	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
 	private VpnType mVpnType;
 	private UUID mUUID;
@@ -279,6 +280,16 @@ public class VpnProfile implements Cloneable
 	public void setSplitTunneling(Integer splitTunneling)
 	{
 		this.mSplitTunneling = splitTunneling;
+	}
+
+	public Integer getFlags()
+	{
+		return mFlags;
+	}
+
+	public void setFlags(Integer flags)
+	{
+		this.mFlags = flags;
 	}
 
 	@Override

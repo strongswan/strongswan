@@ -258,6 +258,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 							writer.setValue("connection.password", mCurrentProfile.getPassword());
 							writer.setValue("connection.local_id", mCurrentProfile.getLocalId());
 							writer.setValue("connection.remote_id", mCurrentProfile.getRemoteId());
+							writer.setValue("connection.certreq", (mCurrentProfile.getFlags() & VpnProfile.FLAGS_SUPPRESS_CERT_REQS) == 0);
 							initiate(writer.serialize());
 						}
 						else
