@@ -21,7 +21,7 @@
 
 #include <daemon.h>
 
-#include <threading/mutex.h>
+#include <threading/rwlock.h>
 #include <collections/linked_list.h>
 #include <utils/identification.h>
 
@@ -71,9 +71,9 @@ struct private_peer_cfg_t {
 	linked_list_t *child_cfgs;
 
 	/**
-	 * mutex to lock access to list of child_cfgs
+	 * lock to access list of child_cfgs
 	 */
-	mutex_t *mutex;
+	rwlock_t *lock;
 
 	/**
 	 * should we send a certificate
@@ -195,9 +195,9 @@ METHOD(peer_cfg_t, get_ike_cfg, ike_cfg_t*,
 METHOD(peer_cfg_t, add_child_cfg, void,
 	private_peer_cfg_t *this, child_cfg_t *child_cfg)
 {
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	this->child_cfgs->insert_last(this->child_cfgs, child_cfg);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 }
 
 typedef struct {
@@ -266,13 +266,13 @@ METHOD(peer_cfg_t, replace_child_cfgs, enumerator_t*,
 
 	removed = linked_list_create();
 
-	other->mutex->lock(other->mutex);
+	other->lock->read_lock(other->lock);
 	added = linked_list_create_from_enumerator(
 					other->child_cfgs->create_enumerator(other->child_cfgs));
 	added->invoke_offset(added, offsetof(child_cfg_t, get_ref));
-	other->mutex->unlock(other->mutex);
+	other->lock->unlock(other->lock);
 
-	this->mutex->lock(this->mutex);
+	this->lock->write_lock(this->lock);
 	others = added->create_enumerator(added);
 	mine = this->child_cfgs->create_enumerator(this->child_cfgs);
 	while (mine->enumerate(mine, &my_cfg))
@@ -302,7 +302,7 @@ METHOD(peer_cfg_t, replace_child_cfgs, enumerator_t*,
 	}
 	others->destroy(others);
 	mine->destroy(mine);
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 
 	INIT(enumerator,
 		.public = {
@@ -322,7 +322,7 @@ METHOD(peer_cfg_t, replace_child_cfgs, enumerator_t*,
 typedef struct {
 	enumerator_t public;
 	enumerator_t *wrapped;
-	mutex_t *mutex;
+	rwlock_t *lock;
 } child_cfg_enumerator_t;
 
 METHOD(peer_cfg_t, remove_child_cfg, void,
@@ -334,7 +334,7 @@ METHOD(peer_cfg_t, remove_child_cfg, void,
 METHOD(enumerator_t, child_cfg_enumerator_destroy, void,
 	child_cfg_enumerator_t *this)
 {
-	this->mutex->unlock(this->mutex);
+	this->lock->unlock(this->lock);
 	this->wrapped->destroy(this->wrapped);
 	free(this);
 }
@@ -359,11 +359,11 @@ METHOD(peer_cfg_t, create_child_cfg_enumerator, enumerator_t*,
 			.venumerate = _child_cfg_enumerate,
 			.destroy = _child_cfg_enumerator_destroy,
 		},
-		.mutex = this->mutex,
+		.lock = this->lock,
 		.wrapped = this->child_cfgs->create_enumerator(this->child_cfgs),
 	);
 
-	this->mutex->lock(this->mutex);
+	this->lock->read_lock(this->lock);
 	return &enumerator->public;
 }
 
@@ -724,7 +724,7 @@ METHOD(peer_cfg_t, destroy, void,
 		DESTROY_IF(this->peer_id);
 		free(this->mediated_by);
 #endif /* ME */
-		this->mutex->destroy(this->mutex);
+		this->lock->destroy(this->lock);
 		free(this->name);
 		free(this);
 	}
@@ -790,7 +790,7 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 		.name = strdup(name),
 		.ike_cfg = ike_cfg,
 		.child_cfgs = linked_list_create(),
-		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.cert_policy = data->cert_policy,
 		.unique = data->unique,
 		.keyingtries = data->keyingtries,
