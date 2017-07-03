@@ -326,6 +326,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		State state = mService.getState();
 		ErrorState error = mService.getErrorState();
 		String name = "";
+		boolean add_action = false;
 
 		if (profile != null)
 		{
@@ -351,11 +352,13 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 					s = R.string.state_connecting;
 					builder.setSmallIcon(R.drawable.ic_notification_warning);
 					builder.setColor(ContextCompat.getColor(this, R.color.warning_text));
+					add_action = true;
 					break;
 				case CONNECTED:
 					s = R.string.state_connected;
 					builder.setColor(ContextCompat.getColor(this, R.color.success_text));
 					builder.setUsesChronometer(true);
+					add_action = true;
 					break;
 				case DISCONNECTING:
 					s = R.string.state_disconnecting;
@@ -365,11 +368,14 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		builder.setContentTitle(getString(s));
 		if (!publicVersion)
 		{
-			Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-			intent.setAction(MainActivity.DISCONNECT);
-			PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
-															  PendingIntent.FLAG_UPDATE_CURRENT);
-			builder.addAction(R.drawable.ic_notification_disconnect, getString(R.string.disconnect), pending);
+			if (add_action)
+			{
+				Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+				intent.setAction(MainActivity.DISCONNECT);
+				PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
+																  PendingIntent.FLAG_UPDATE_CURRENT);
+				builder.addAction(R.drawable.ic_notification_disconnect, getString(R.string.disconnect), pending);
+			}
 			builder.setContentText(name);
 			builder.setPublicVersion(buildNotification(true));
 		}
