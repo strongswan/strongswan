@@ -284,7 +284,7 @@ public class VpnProfile implements Cloneable
 
 	public Integer getFlags()
 	{
-		return mFlags;
+		return mFlags == null ? 0 : mFlags;
 	}
 
 	public void setFlags(Integer flags)
