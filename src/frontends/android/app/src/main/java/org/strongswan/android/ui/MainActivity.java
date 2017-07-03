@@ -2,7 +2,7 @@
  * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -58,6 +58,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 {
 	public static final String CONTACT_EMAIL = "android@strongswan.org";
 	public static final String START_PROFILE = "org.strongswan.android.action.START_PROFILE";
+	public static final String DISCONNECT = "org.strongswan.android.action.DISCONNECT";
 	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
 	/**
 	 * Use "bring your own device" (BYOD) features
@@ -67,8 +68,11 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	private static final String PROFILE_NAME = "org.strongswan.android.MainActivity.PROFILE_NAME";
 	private static final String PROFILE_REQUIRES_PASSWORD = "org.strongswan.android.MainActivity.REQUIRES_PASSWORD";
 	private static final String PROFILE_RECONNECT = "org.strongswan.android.MainActivity.RECONNECT";
+	private static final String PROFILE_DISCONNECT = "org.strongswan.android.MainActivity.DISCONNECT";
+	private static final String PROFILE_FOREGROUND = "org.strongswan.android.MainActivity.PROFILE_FOREGROUND";
 	private static final String DIALOG_TAG = "Dialog";
 
+	private boolean mIsVisible;
 	private Bundle mProfileInfo;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection()
@@ -86,7 +90,11 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 
 			if (START_PROFILE.equals(getIntent().getAction()))
 			{
-				startVpnProfile(getIntent());
+				startVpnProfile(getIntent(), false);
+			}
+			else if (DISCONNECT.equals(getIntent().getAction()))
+			{
+				disconnect(false);
 			}
 		}
 	};
@@ -120,6 +128,20 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 		}
 	}
 
+	@Override
+	protected void onStart()
+	{
+		super.onStart();
+		mIsVisible = true;
+	}
+
+	@Override
+	protected void onStop()
+	{
+		super.onStop();
+		mIsVisible = false;
+	}
+
 	/**
 	 * Due to launchMode=singleTop this is called if the Activity already exists
 	 */
@@ -130,7 +152,11 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 
 		if (START_PROFILE.equals(intent.getAction()))
 		{
-			startVpnProfile(intent);
+			startVpnProfile(intent, mIsVisible);
+		}
+		else if (DISCONNECT.equals(intent.getAction()))
+		{
+			disconnect(mIsVisible);
 		}
 	}
 
@@ -236,6 +262,17 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	@Override
 	public void onVpnProfileSelected(VpnProfile profile)
 	{
+		startVpnProfile(profile, true);
+	}
+
+	/**
+	 * Start the given VPN profile
+	 *
+	 * @param profile VPN profile
+	 * @param foreground whether this was initiated when the activity was visible
+	 */
+	public void startVpnProfile(VpnProfile profile, boolean foreground)
+	{
 		Bundle profileInfo = new Bundle();
 		profileInfo.putLong(VpnProfileDataSource.KEY_ID, profile.getId());
 		profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, profile.getUsername());
@@ -248,6 +285,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 		if (mService != null && (mService.getState() == State.CONNECTED || mService.getState() == State.CONNECTING))
 		{
 			profileInfo.putBoolean(PROFILE_RECONNECT, mService.getProfile().getId() == profile.getId());
+			profileInfo.putBoolean(PROFILE_FOREGROUND, foreground);
 
 			ConfirmationDialog dialog = new ConfirmationDialog();
 			dialog.setArguments(profileInfo);
@@ -280,8 +318,9 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	 * if the profile doesn't exist.
 	 *
 	 * @param intent Intent that caused us to start this
+	 * @param foreground whether this was initiated when the activity was visible
 	 */
-	private void startVpnProfile(Intent intent)
+	private void startVpnProfile(Intent intent, boolean foreground)
 	{
 		long profileId = intent.getLongExtra(EXTRA_VPN_PROFILE_ID, 0);
 		if (profileId <= 0)
@@ -295,11 +334,30 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 
 		if (profile != null)
 		{
-			onVpnProfileSelected(profile);
+			startVpnProfile(profile, foreground);
 		}
 		else
 		{
 			Toast.makeText(this, R.string.profile_not_found, Toast.LENGTH_LONG).show();
+		}
+	}
+
+	/**
+	 * Disconnect the current connection, if any (silently ignored if there is no connection).
+	 */
+	private void disconnect(boolean foreground)
+	{
+		removeFragmentByTag(DIALOG_TAG);
+
+		if (mService != null && (mService.getState() == State.CONNECTED || mService.getState() == State.CONNECTING))
+		{
+			Bundle args = new Bundle();
+			args.putBoolean(PROFILE_DISCONNECT, true);
+			args.putBoolean(PROFILE_FOREGROUND, foreground);
+
+			ConfirmationDialog dialog = new ConfirmationDialog();
+			dialog.setArguments(args);
+			dialog.show(this.getSupportFragmentManager(), DIALOG_TAG);
 		}
 	}
 
@@ -364,6 +422,12 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 				message = R.string.vpn_profile_connected;
 				button = R.string.reconnect;
 			}
+			else if (profileInfo.getBoolean(PROFILE_DISCONNECT))
+			{
+				title = R.string.disconnect_question;
+				message = R.string.disconnect_active_connection;
+				button = R.string.disconnect;
+			}
 
 			return new AlertDialog.Builder(getActivity())
 				.setIcon(icon)
@@ -375,7 +439,17 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 					public void onClick(DialogInterface dialog, int whichButton)
 					{
 						MainActivity activity = (MainActivity)getActivity();
-						activity.startVpnProfile(profileInfo);
+						if (profileInfo.getBoolean(PROFILE_DISCONNECT))
+						{
+							if (activity.mService != null)
+							{
+								activity.mService.disconnect();
+							}
+						}
+						else
+						{
+							activity.startVpnProfile(profileInfo);
+						}
 					}
 				})
 				.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener()
@@ -384,6 +458,11 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 					public void onClick(DialogInterface dialog, int which)
 					{
 						dismiss();
+						if (!profileInfo.getBoolean(PROFILE_FOREGROUND))
+						{	/* if the app was not in the foreground before this action was triggered
+							 * externally, we just close the activity if canceled */
+							getActivity().finish();
+						}
 					}
 				}).create();
 		}

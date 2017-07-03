@@ -166,6 +166,8 @@
     <string name="reconnect">Reconnect</string>
     <string name="connect_profile_question">Connect %1$s?</string>
     <string name="replaces_active_connection">This will replace your active VPN connection!</string>
+    <string name="disconnect_question">Disconnect VPN?</string>
+    <string name="disconnect_active_connection">This will disconnect the active VPN connection!</string>
     <string name="connect">Connect</string>
 
 </resources>

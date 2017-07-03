@@ -164,6 +164,8 @@
     <string name="reconnect">Перепідключитися</string>
     <string name="connect_profile_question">Підключити %1$s?</string>
     <string name="replaces_active_connection">Ця дія замінить ваше поточне VPN з\'єднання!</string>
+    <string name="disconnect_question">Disconnect VPN?</string>
+    <string name="disconnect_active_connection">This will disconnect the active VPN connection!</string>
     <string name="connect">Підключити</string>
 
 </resources>
