@@ -189,6 +189,11 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		ImcState imcState = mService.getImcState();
 		String name = "";
 
+		if (getActivity() == null)
+		{
+			return;
+		}
+
 		if (profile != null)
 		{
 			name = profile.getName();

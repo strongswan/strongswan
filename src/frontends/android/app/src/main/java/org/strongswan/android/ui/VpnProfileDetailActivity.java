@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -57,6 +57,7 @@ import android.widget.TextView;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.data.VpnProfile.SelectedAppsHandling;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
@@ -65,13 +66,18 @@ import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.adapter.CertificateIdentitiesAdapter;
 import org.strongswan.android.ui.widget.TextInputLayoutHelper;
 import org.strongswan.android.utils.Constants;
+import org.strongswan.android.utils.IPRangeSet;
 
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.UUID;
 
 public class VpnProfileDetailActivity extends AppCompatActivity
 {
 	private static final int SELECT_TRUSTED_CERTIFICATE = 0;
+	private static final int SELECT_APPLICATIONS = 1;
 
 	private VpnProfileDataSource mDataSource;
 	private Long mId;
@@ -81,6 +87,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private String mSelectedUserId;
 	private TrustedCertificateEntry mUserCertEntry;
 	private VpnType mVpnType = VpnType.IKEV2_EAP;
+	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
+	private SortedSet<String> mSelectedApps = new TreeSet<>();
 	private VpnProfile mProfile;
 	private MultiAutoCompleteTextView mName;
 	private TextInputLayoutHelper mNameWrap;
@@ -105,8 +113,14 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private TextInputLayoutHelper mMTUWrap;
 	private EditText mPort;
 	private TextInputLayoutHelper mPortWrap;
+	private EditText mIncludedSubnets;
+	private TextInputLayoutHelper mIncludedSubnetsWrap;
+	private EditText mExcludedSubnets;
+	private TextInputLayoutHelper mExcludedSubnetsWrap;
 	private CheckBox mBlockIPv4;
 	private CheckBox mBlockIPv6;
+	private Spinner mSelectSelectedAppsHandling;
+	private RelativeLayout mSelectApps;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -149,8 +163,15 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mMTUWrap = (TextInputLayoutHelper) findViewById(R.id.mtu_wrap);
 		mPort = (EditText)findViewById(R.id.port);
 		mPortWrap = (TextInputLayoutHelper) findViewById(R.id.port_wrap);
+		mIncludedSubnets = (EditText)findViewById(R.id.included_subnets);
+		mIncludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.included_subnets_wrap);
+		mExcludedSubnets = (EditText)findViewById(R.id.excluded_subnets);
+		mExcludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.excluded_subnets_wrap);
 		mBlockIPv4 = (CheckBox)findViewById(R.id.split_tunneling_v4);
 		mBlockIPv6 = (CheckBox)findViewById(R.id.split_tunneling_v6);
+
+		mSelectSelectedAppsHandling = (Spinner)findViewById(R.id.apps_handling);
+		mSelectApps = (RelativeLayout)findViewById(R.id.select_applications);
 
 		final SpaceTokenizer spaceTokenizer = new SpaceTokenizer();
 		mName.setTokenizer(spaceTokenizer);
@@ -256,6 +277,32 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			}
 		});
 
+		mSelectSelectedAppsHandling.setOnItemSelectedListener(new OnItemSelectedListener() {
+			@Override
+			public void onItemSelected(AdapterView<?> parent, View view, int position, long id)
+			{
+				mSelectedAppsHandling = SelectedAppsHandling.values()[position];
+				updateAppsSelector();
+			}
+
+			@Override
+			public void onNothingSelected(AdapterView<?> parent)
+			{	/* should not happen */
+				mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
+				updateAppsSelector();
+			}
+		});
+
+		mSelectApps.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v)
+			{
+				Intent intent = new Intent(VpnProfileDetailActivity.this, SelectedApplicationsActivity.class);
+				intent.putExtra(VpnProfileDataSource.KEY_SELECTED_APPS_LIST, new ArrayList<>(mSelectedApps));
+				startActivityForResult(intent, SELECT_APPLICATIONS);
+			}
+		});
+
 		mId = savedInstanceState == null ? null : savedInstanceState.getLong(VpnProfileDataSource.KEY_ID);
 		if (mId == null)
 		{
@@ -268,6 +315,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		updateCredentialView();
 		updateCertificateSelector();
 		updateAdvancedSettings();
+		updateAppsSelector();
 	}
 
 	@Override
@@ -297,6 +345,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		{
 			outState.putString(VpnProfileDataSource.KEY_CERTIFICATE, mCertEntry.getAlias());
 		}
+		outState.putStringArrayList(VpnProfileDataSource.KEY_SELECTED_APPS_LIST, new ArrayList<>(mSelectedApps));
 	}
 
 	@Override
@@ -336,6 +385,14 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 					X509Certificate certificate = TrustedCertificateManager.getInstance().getCACertificateFromAlias(alias);
 					mCertEntry = certificate == null ? null : new TrustedCertificateEntry(alias, certificate);
 					updateCertificateSelector();
+				}
+				break;
+			case SELECT_APPLICATIONS:
+				if (resultCode == RESULT_OK)
+				{
+					ArrayList<String> selection = data.getStringArrayListExtra(VpnProfileDataSource.KEY_SELECTED_APPS_LIST);
+					mSelectedApps = new TreeSet<>(selection);
+					updateAppsSelector();
 				}
 				break;
 			default:
@@ -427,6 +484,40 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	}
 
 	/**
+	 * Update the application selection UI
+	 */
+	private void updateAppsSelector()
+	{
+		if (mSelectedAppsHandling == SelectedAppsHandling.SELECTED_APPS_DISABLE)
+		{
+			mSelectApps.setEnabled(false);
+			mSelectApps.setVisibility(View.GONE);
+
+		}
+		else
+		{
+			mSelectApps.setEnabled(true);
+			mSelectApps.setVisibility(View.VISIBLE);
+
+			((TextView)mSelectApps.findViewById(android.R.id.text1)).setText(R.string.profile_select_apps);
+			String selected;
+			switch (mSelectedApps.size())
+			{
+				case 0:
+					selected = getString(R.string.profile_select_no_apps);
+					break;
+				case 1:
+					selected = getString(R.string.profile_select_one_app);
+					break;
+				default:
+					selected = getString(R.string.profile_select_x_apps, mSelectedApps.size());
+					break;
+			}
+			((TextView)mSelectApps.findViewById(android.R.id.text2)).setText(selected);
+		}
+	}
+
+	/**
 	 * Update the advanced settings UI depending on whether any advanced
 	 * settings have already been made.
 	 */
@@ -437,7 +528,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		{
 			Integer st = mProfile.getSplitTunneling();
 			show = mProfile.getRemoteId() != null || mProfile.getMTU() != null ||
-				   mProfile.getPort() != null || (st != null && st != 0);
+				   mProfile.getPort() != null || (st != null && st != 0) ||
+				   mProfile.getIncludedSubnets() != null || mProfile.getExcludedSubnets() != null ||
+				   mProfile.getSelectedAppsHandling() != SelectedAppsHandling.SELECTED_APPS_DISABLE;
 		}
 		mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
 		mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -510,6 +603,16 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			mMTUWrap.setError(String.format(getString(R.string.alert_text_out_of_range), Constants.MTU_MIN, Constants.MTU_MAX));
 			valid = false;
 		}
+		if (!validateSubnets(mIncludedSubnets))
+		{
+			mIncludedSubnetsWrap.setError(getString(R.string.alert_text_no_subnets));
+			valid = false;
+		}
+		if (!validateSubnets(mExcludedSubnets))
+		{
+			mExcludedSubnetsWrap.setError(getString(R.string.alert_text_no_subnets));
+			valid = false;
+		}
 		if (!validateInteger(mPort, 1, 65535))
 		{
 			mPortWrap.setError(String.format(getString(R.string.alert_text_out_of_range), 1, 65535));
@@ -547,10 +650,16 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mProfile.setRemoteId(remote_id.isEmpty() ? null : remote_id);
 		mProfile.setMTU(getInteger(mMTU));
 		mProfile.setPort(getInteger(mPort));
+		String included = mIncludedSubnets.getText().toString().trim();
+		mProfile.setIncludedSubnets(included.isEmpty() ? null : included);
+		String excluded = mExcludedSubnets.getText().toString().trim();
+		mProfile.setExcludedSubnets(excluded.isEmpty() ? null : excluded);
 		int st = 0;
 		st |= mBlockIPv4.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 : 0;
 		st |= mBlockIPv6.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
 		mProfile.setSplitTunneling(st == 0 ? null : st);
+		mProfile.setSelectedAppsHandling(mSelectedAppsHandling);
+		mProfile.setSelectedApps(mSelectedApps);
 	}
 
 	/**
@@ -576,8 +685,12 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mRemoteId.setText(mProfile.getRemoteId());
 				mMTU.setText(mProfile.getMTU() != null ? mProfile.getMTU().toString() : null);
 				mPort.setText(mProfile.getPort() != null ? mProfile.getPort().toString() : null);
+				mIncludedSubnets.setText(mProfile.getIncludedSubnets());
+				mExcludedSubnets.setText(mProfile.getExcludedSubnets());
 				mBlockIPv4.setChecked(mProfile.getSplitTunneling() != null && (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4) != 0);
 				mBlockIPv6.setChecked(mProfile.getSplitTunneling() != null && (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0);
+				mSelectedAppsHandling = mProfile.getSelectedAppsHandling();
+				mSelectedApps = mProfile.getSelectedAppsSet();
 				useralias = mProfile.getUserCertificateAlias();
 				local_id = mProfile.getLocalId();
 				alias = mProfile.getCertificateAlias();
@@ -619,6 +732,13 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				showCertificateAlert();
 				mCertEntry = null;
 			}
+		}
+
+		mSelectSelectedAppsHandling.setSelection(mSelectedAppsHandling.ordinal());
+		if (savedInstanceState != null)
+		{
+			ArrayList<String> selectedApps = savedInstanceState.getStringArrayList(VpnProfileDataSource.KEY_SELECTED_APPS_LIST);
+			mSelectedApps = new TreeSet<>(selectedApps);
 		}
 	}
 
@@ -663,6 +783,17 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		{
 			return false;
 		}
+	}
+
+	/**
+	 * Check that the value in the given text box is a valid list of subnets/ranges
+	 *
+	 * @param view text box
+	 */
+	private boolean validateSubnets(EditText view)
+	{
+		String value = view.getText().toString().trim();
+		return value.isEmpty() || IPRangeSet.fromString(value) != null;
 	}
 
 	private class SelectUserCertOnClickListener implements OnClickListener, KeyChainAliasCallback

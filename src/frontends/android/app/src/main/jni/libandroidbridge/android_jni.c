@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2012-2015 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -44,7 +44,10 @@ static struct {
 
 jclass *android_charonvpnservice_class;
 jclass *android_charonvpnservice_builder_class;
+jclass *android_simple_fetcher_class;
 android_sdk_version_t android_sdk_version;
+char *android_version_string;
+char *android_device_string;
 
 /**
  * Thread-local variable. Only used because of the destructor
@@ -96,6 +99,8 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
 	JNIEnv *env;
 	jclass jversion;
 	jfieldID jsdk_int;
+	jmethodID method_id;
+	jstring jstr;
 	int i;
 
 	android_jvm = vm;
@@ -122,11 +127,30 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved)
 	android_charonvpnservice_builder_class =
 				(*env)->NewGlobalRef(env, (*env)->FindClass(env,
 						JNI_PACKAGE_STRING "/CharonVpnService$BuilderAdapter"));
+	android_simple_fetcher_class =
+				(*env)->NewGlobalRef(env, (*env)->FindClass(env,
+						JNI_PACKAGE_STRING "/SimpleFetcher"));
 
 	jversion = (*env)->FindClass(env, "android/os/Build$VERSION");
 	jsdk_int = (*env)->GetStaticFieldID(env, jversion, "SDK_INT", "I");
 	android_sdk_version = (*env)->GetStaticIntField(env, jversion, jsdk_int);
 
+	method_id = (*env)->GetStaticMethodID(env, android_charonvpnservice_class,
+									"getAndroidVersion", "()Ljava/lang/String;");
+	jstr = (*env)->CallStaticObjectMethod(env,
+									android_charonvpnservice_class, method_id);
+	if (jstr)
+	{
+		android_version_string = androidjni_convert_jstring(env, jstr);
+	}
+	method_id = (*env)->GetStaticMethodID(env, android_charonvpnservice_class,
+									"getDeviceString", "()Ljava/lang/String;");
+	jstr = (*env)->CallStaticObjectMethod(env,
+									android_charonvpnservice_class, method_id);
+	if (jstr)
+	{
+		android_device_string = androidjni_convert_jstring(env, jstr);
+	}
 	return JNI_VERSION_1_6;
 }
 
@@ -147,5 +171,6 @@ void JNI_OnUnload(JavaVM *vm, void *reserved)
 			dlclose(libs[i].handle);
 		}
 	}
+	free(android_version_string);
+	free(android_device_string);
 }
-

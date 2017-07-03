@@ -113,6 +113,8 @@ LOCAL_SRC_FILES += $(call add_plugin, pubkey)
 
 LOCAL_SRC_FILES += $(call add_plugin, random)
 
+LOCAL_SRC_FILES += $(call add_plugin, revocation)
+
 LOCAL_SRC_FILES += $(call add_plugin, sha1)
 
 LOCAL_SRC_FILES += $(call add_plugin, sha2)
@@ -133,6 +135,6 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false
 
-LOCAL_SHARED_LIBRARIES += libdl
+LOCAL_LDLIBS += -ldl
 
 include $(BUILD_SHARED_LIBRARY)

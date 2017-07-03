@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2012-2015 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,6 +25,7 @@
 #include "android_jni.h"
 #include "backend/android_attr.h"
 #include "backend/android_creds.h"
+#include "backend/android_fetcher.h"
 #include "backend/android_private_key.h"
 #include "backend/android_service.h"
 #include "kernel/android_ipsec.h"
@@ -523,6 +524,9 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
 		PLUGIN_CALLBACK(charonservice_register, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "android-backend"),
 				PLUGIN_DEPENDS(CUSTOM, "libcharon"),
+		PLUGIN_REGISTER(FETCHER, android_fetcher_create),
+			PLUGIN_PROVIDE(FETCHER, "http://"),
+			PLUGIN_PROVIDE(FETCHER, "https://"),
 	};
 
 	INIT(this,
@@ -640,7 +644,8 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	{
 		memset(&utsname, 0, sizeof(utsname));
 	}
-	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION", %s %s, %s)",
+	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION", %s, %s, "
+		 "%s %s, %s)", android_version_string, android_device_string,
 		  utsname.sysname, utsname.release, utsname.machine);
 
 #ifdef PLUGINS_BYOD

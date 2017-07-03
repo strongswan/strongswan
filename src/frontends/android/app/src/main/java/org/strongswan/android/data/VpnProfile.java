@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -18,6 +18,11 @@
 package org.strongswan.android.data;
 
 
+import android.text.TextUtils;
+
+import java.util.Arrays;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.UUID;
 
 public class VpnProfile implements Cloneable
@@ -27,11 +32,31 @@ public class VpnProfile implements Cloneable
 	public static final int SPLIT_TUNNELING_BLOCK_IPV6 = 2;
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
-	private String mRemoteId, mLocalId;
+	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets, mSelectedApps;
 	private Integer mMTU, mPort, mSplitTunneling;
+	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
 	private VpnType mVpnType;
 	private UUID mUUID;
 	private long mId = -1;
+
+	public enum SelectedAppsHandling
+	{
+		SELECTED_APPS_DISABLE(0),
+		SELECTED_APPS_EXCLUDE(1),
+		SELECTED_APPS_ONLY(2);
+
+		private Integer mValue;
+
+		SelectedAppsHandling(int value)
+		{
+			mValue = value;
+		}
+
+		public Integer getValue()
+		{
+			return mValue;
+		}
+	}
 
 	public VpnProfile()
 	{
@@ -166,6 +191,74 @@ public class VpnProfile implements Cloneable
 	public void setPort(Integer port)
 	{
 		this.mPort = port;
+	}
+
+	public void setExcludedSubnets(String excludedSubnets)
+	{
+		this.mExcludedSubnets = excludedSubnets;
+	}
+
+	public String getExcludedSubnets()
+	{
+		return mExcludedSubnets;
+	}
+
+	public void setIncludedSubnets(String includedSubnets)
+	{
+		this.mIncludedSubnets = includedSubnets;
+	}
+
+	public String getIncludedSubnets()
+	{
+		return mIncludedSubnets;
+	}
+
+	public void setSelectedApps(String selectedApps)
+	{
+		this.mSelectedApps = selectedApps;
+	}
+
+	public void setSelectedApps(SortedSet<String> selectedApps)
+	{
+		this.mSelectedApps = selectedApps.size() > 0 ? TextUtils.join(" ", selectedApps) : null;
+	}
+
+	public String getSelectedApps()
+	{
+		return mSelectedApps;
+	}
+
+	public SortedSet<String> getSelectedAppsSet()
+	{
+		TreeSet<String> set = new TreeSet<>();
+		if (!TextUtils.isEmpty(mSelectedApps))
+		{
+			set.addAll(Arrays.asList(mSelectedApps.split("\\s+")));
+		}
+		return set;
+	}
+
+	public void setSelectedAppsHandling(SelectedAppsHandling selectedAppsHandling)
+	{
+		this.mSelectedAppsHandling = selectedAppsHandling;
+	}
+
+	public void setSelectedAppsHandling(Integer value)
+	{
+		mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
+		for (SelectedAppsHandling handling : SelectedAppsHandling.values())
+		{
+			if (handling.mValue.equals(value))
+			{
+				mSelectedAppsHandling = handling;
+				break;
+			}
+		}
+	}
+
+	public SelectedAppsHandling getSelectedAppsHandling()
+	{
+		return mSelectedAppsHandling;
 	}
 
 	public Integer getSplitTunneling()

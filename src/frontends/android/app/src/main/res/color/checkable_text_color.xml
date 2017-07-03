@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2016 Tobias Brunner
+    Copyright (C) 2017 Tobias Brunner
     HSR Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
@@ -14,20 +14,6 @@
     for more details.
 -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <item
-        android:state_pressed="true"
-        android:drawable="@color/pressed" />
-
-    <item
-        android:state_activated="true"
-        android:drawable="@color/accent" />
-
-    <item
-        android:state_checked="true"
-        android:drawable="@color/checked" />
-
-    <item
-        android:drawable="@android:color/transparent" />
-
+    <item android:state_checked="false" android:color="@android:color/secondary_text_dark" />
+    <item android:color="@android:color/primary_text_dark" />
 </selector>

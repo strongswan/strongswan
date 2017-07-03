@@ -95,7 +95,8 @@ public class SettingsWriterTest
 		SettingsWriter writer = new SettingsWriter();
 		writer.setValue("key", "val\"ue");
 		writer.setValue("nl", "val\nue");
-		assertEquals("serialized", "key=\"val\\\"ue\"\nnl=\"val\nue\"\n", writer.serialize());
+		writer.setValue("bs", "val\\ue");
+		assertEquals("serialized", "key=\"val\\\"ue\"\nnl=\"val\nue\"\nbs=\"val\\\\ue\"\n", writer.serialize());
 	}
 
 	@Test

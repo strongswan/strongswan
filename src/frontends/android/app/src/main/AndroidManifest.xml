@@ -49,6 +49,10 @@
             android:label="@string/trusted_certs_title" >
         </activity>
         <activity
+            android:name=".ui.SelectedApplicationsActivity"
+            android:label="@string/profile_select_apps" >
+        </activity>
+        <activity
             android:name=".ui.LogActivity"
             android:label="@string/log_title" >
         </activity>

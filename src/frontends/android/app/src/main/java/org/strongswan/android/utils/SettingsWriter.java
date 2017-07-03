@@ -118,7 +118,7 @@ public class SettingsWriter
 	 */
 	private String escapeValue(String value)
 	{
-		return value.replace("\"", "\\\"");
+		return value.replace("\\", "\\\\").replace("\"", "\\\"");
 	}
 
 	/**
