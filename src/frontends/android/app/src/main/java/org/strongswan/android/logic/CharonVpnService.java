@@ -1031,8 +1031,12 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 */
 	private static String getAndroidVersion()
 	{
-		return "Android " + Build.VERSION.RELEASE + " - " + Build.DISPLAY +
-			   "/" + Build.VERSION.SECURITY_PATCH;
+		String version = "Android " + Build.VERSION.RELEASE + " - " + Build.DISPLAY;
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+		{
+			version += "/" + Build.VERSION.SECURITY_PATCH;
+		}
+		return version;
 	}
 
 	/**
