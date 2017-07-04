@@ -63,51 +63,67 @@ public class VpnProfileDataSource
 
 	private static final int DATABASE_VERSION = 14;
 
-	public static final String DATABASE_CREATE =
-							"CREATE TABLE " + TABLE_VPNPROFILE + " (" +
-								KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
-								KEY_UUID + " TEXT UNIQUE," +
-								KEY_NAME + " TEXT NOT NULL," +
-								KEY_GATEWAY + " TEXT NOT NULL," +
-								KEY_VPN_TYPE + " TEXT NOT NULL," +
-								KEY_USERNAME + " TEXT," +
-								KEY_PASSWORD + " TEXT," +
-								KEY_CERTIFICATE + " TEXT," +
-								KEY_USER_CERTIFICATE + " TEXT," +
-								KEY_MTU + " INTEGER," +
-								KEY_PORT + " INTEGER," +
-								KEY_SPLIT_TUNNELING + " INTEGER," +
-								KEY_LOCAL_ID + " TEXT," +
-								KEY_REMOTE_ID + " TEXT," +
-								KEY_EXCLUDED_SUBNETS + " TEXT," +
-								KEY_INCLUDED_SUBNETS + " TEXT," +
-								KEY_SELECTED_APPS + " INTEGER," +
-								KEY_SELECTED_APPS_LIST + " TEXT," +
-								KEY_NAT_KEEPALIVE + " INTEGER," +
-								KEY_FLAGS + " INTEGER" +
-							");";
-	private static final String[] ALL_COLUMNS = new String[] {
-								KEY_ID,
-								KEY_UUID,
-								KEY_NAME,
-								KEY_GATEWAY,
-								KEY_VPN_TYPE,
-								KEY_USERNAME,
-								KEY_PASSWORD,
-								KEY_CERTIFICATE,
-								KEY_USER_CERTIFICATE,
-								KEY_MTU,
-								KEY_PORT,
-								KEY_SPLIT_TUNNELING,
-								KEY_LOCAL_ID,
-								KEY_REMOTE_ID,
-								KEY_EXCLUDED_SUBNETS,
-								KEY_INCLUDED_SUBNETS,
-								KEY_SELECTED_APPS,
-								KEY_SELECTED_APPS_LIST,
-								KEY_NAT_KEEPALIVE,
-								KEY_FLAGS,
+	public static final DbColumn[] COLUMNS = new DbColumn[] {
+								new DbColumn(KEY_ID, "INTEGER PRIMARY KEY AUTOINCREMENT", 1),
+								new DbColumn(KEY_UUID, "TEXT UNIQUE", 9),
+								new DbColumn(KEY_NAME, "TEXT NOT NULL", 1),
+								new DbColumn(KEY_GATEWAY, "TEXT NOT NULL", 1),
+								new DbColumn(KEY_VPN_TYPE, "TEXT NOT NULL", 3),
+								new DbColumn(KEY_USERNAME, "TEXT", 1),
+								new DbColumn(KEY_PASSWORD, "TEXT", 1),
+								new DbColumn(KEY_CERTIFICATE, "TEXT", 1),
+								new DbColumn(KEY_USER_CERTIFICATE, "TEXT", 2),
+								new DbColumn(KEY_MTU, "INTEGER", 5),
+								new DbColumn(KEY_PORT, "INTEGER", 5),
+								new DbColumn(KEY_SPLIT_TUNNELING, "INTEGER", 7),
+								new DbColumn(KEY_LOCAL_ID, "TEXT", 8),
+								new DbColumn(KEY_REMOTE_ID, "TEXT", 8),
+								new DbColumn(KEY_EXCLUDED_SUBNETS, "TEXT", 10),
+								new DbColumn(KEY_INCLUDED_SUBNETS, "TEXT", 11),
+								new DbColumn(KEY_SELECTED_APPS, "INTEGER", 12),
+								new DbColumn(KEY_SELECTED_APPS_LIST, "TEXT", 12),
+								new DbColumn(KEY_NAT_KEEPALIVE, "INTEGER", 13),
+								new DbColumn(KEY_FLAGS, "INTEGER", 14),
 							};
+
+	private static final String[] ALL_COLUMNS = getColumns(DATABASE_VERSION);
+
+	private static String getDatabaseCreate(int version)
+	{
+		boolean first = true;
+		StringBuilder create = new StringBuilder("CREATE TABLE ");
+		create.append(TABLE_VPNPROFILE);
+		create.append(" (");
+		for (DbColumn column : COLUMNS)
+		{
+			if (column.Since <= version)
+			{
+				if (!first)
+				{
+					create.append(",");
+				}
+				first = false;
+				create.append(column.Name);
+				create.append(" ");
+				create.append(column.Type);
+			}
+		}
+		create.append(");");
+		return create.toString();
+	}
+
+	private static String[] getColumns(int version)
+	{
+		ArrayList<String> columns = new ArrayList<>();
+		for (DbColumn column : COLUMNS)
+		{
+			if (column.Since <= version)
+			{
+				columns.add(column.Name);
+			}
+		}
+		return columns.toArray(new String[0]);
+	}
 
 	private static class DatabaseHelper extends SQLiteOpenHelper
 	{
@@ -119,7 +135,7 @@ public class VpnProfileDataSource
 		@Override
 		public void onCreate(SQLiteDatabase database)
 		{
-			database.execSQL(DATABASE_CREATE);
+			database.execSQL(getDatabaseCreate(DATABASE_VERSION));
 		}
 
 		@Override
@@ -139,7 +155,7 @@ public class VpnProfileDataSource
 			}
 			if (oldVersion < 4)
 			{	/* remove NOT NULL constraint from username column */
-				updateColumns(db);
+				updateColumns(db, 4);
 			}
 			if (oldVersion < 5)
 			{
@@ -167,7 +183,7 @@ public class VpnProfileDataSource
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_UUID +
 						   " TEXT;");
-				updateColumns(db);
+				updateColumns(db, 9);
 			}
 			if (oldVersion < 10)
 			{
@@ -198,15 +214,15 @@ public class VpnProfileDataSource
 			}
 		}
 
-		private void updateColumns(SQLiteDatabase db)
+		private void updateColumns(SQLiteDatabase db, int version)
 		{
 			db.beginTransaction();
 			try
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " RENAME TO tmp_" + TABLE_VPNPROFILE + ";");
-				db.execSQL(DATABASE_CREATE);
+				db.execSQL(getDatabaseCreate(version));
 				StringBuilder insert = new StringBuilder("INSERT INTO " + TABLE_VPNPROFILE + " SELECT ");
-				SQLiteQueryBuilder.appendColumns(insert, ALL_COLUMNS);
+				SQLiteQueryBuilder.appendColumns(insert, getColumns(version));
 				db.execSQL(insert.append(" FROM tmp_" + TABLE_VPNPROFILE + ";").toString());
 				db.execSQL("DROP TABLE tmp_" + TABLE_VPNPROFILE + ";");
 				db.setTransactionSuccessful();
@@ -419,6 +435,20 @@ public class VpnProfileDataSource
 		catch (Exception e)
 		{
 			return null;
+		}
+	}
+
+	private static class DbColumn
+	{
+		public final String Name;
+		public final String Type;
+		public final Integer Since;
+
+		public DbColumn(String name, String type, Integer since)
+		{
+			Name = name;
+			Type = type;
+			Since = since;
 		}
 	}
 }
