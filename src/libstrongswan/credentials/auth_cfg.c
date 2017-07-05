@@ -840,7 +840,7 @@ METHOD(auth_cfg_t, complies, bool,
 					{	/* also verify identity against subjectAltNames */
 						certificate_t *cert;
 
-						cert = get(this, AUTH_HELPER_SUBJECT_CERT);
+						cert = get(this, AUTH_RULE_SUBJECT_CERT);
 						if (cert && cert->has_subject(cert, id1))
 						{
 							break;
