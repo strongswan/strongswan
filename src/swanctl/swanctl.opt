@@ -460,6 +460,12 @@ connections.<conn>.remote<suffix>.id = %any
 	IKE identity to expect for authentication round. Refer to the _local_ _id_
 	section for details.
 
+connections.<conn>.remote<suffix>.eap_id = id
+	Identity to use as peer identity during EAP authentication.
+
+	Identity to use as peer identity during EAP authentication. If set to _%any_
+	the EAP-Identity method will be used to ask the client for an identity.
+
 connections.<conn>.remote<suffix>.groups =
 	Authorization group memberships to require.
 
