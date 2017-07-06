@@ -218,6 +218,12 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 			VpnNotSupportedError.showWithMessage(this, R.string.vpn_not_supported_during_lockdown);
 			return;
 		}
+		catch (NullPointerException ex)
+		{
+			/* not sure when this happens exactly, but apparently it does */
+			VpnNotSupportedError.showWithMessage(this, R.string.vpn_not_supported);
+			return;
+		}
 		/* store profile info until the user grants us permission */
 		mProfileInfo = profileInfo;
 		if (intent != null)
