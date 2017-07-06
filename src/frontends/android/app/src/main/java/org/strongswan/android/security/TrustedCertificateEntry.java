@@ -43,29 +43,38 @@ public class TrustedCertificateEntry implements Comparable<TrustedCertificateEnt
 		mCert = cert;
 		mAlias = alias;
 
-		SslCertificate ssl = new SslCertificate(mCert);
-		String o = ssl.getIssuedTo().getOName();
-		String ou = ssl.getIssuedTo().getUName();
-		String cn = ssl.getIssuedTo().getCName();
-		if (!o.isEmpty())
+		try
 		{
-			mSubjectPrimary = o;
-			if (!cn.isEmpty())
+			SslCertificate ssl = new SslCertificate(mCert);
+			String o = ssl.getIssuedTo().getOName();
+			String ou = ssl.getIssuedTo().getUName();
+			String cn = ssl.getIssuedTo().getCName();
+			if (!o.isEmpty())
 			{
-				mSubjectSecondary = cn;
+				mSubjectPrimary = o;
+				if (!cn.isEmpty())
+				{
+					mSubjectSecondary = cn;
+				}
+				else if (!ou.isEmpty())
+				{
+					mSubjectSecondary = ou;
+				}
 			}
-			else if (!ou.isEmpty())
+			else if (!cn.isEmpty())
 			{
-				mSubjectSecondary = ou;
+				mSubjectPrimary = cn;
+			}
+			else
+			{
+				mSubjectPrimary = ssl.getIssuedTo().getDName();
 			}
 		}
-		else if (!cn.isEmpty())
+		catch (NullPointerException ex)
 		{
-			mSubjectPrimary = cn;
-		}
-		else
-		{
-			mSubjectPrimary = ssl.getIssuedTo().getDName();
+			/* this has been seen in Play Console for certificates for which notBefore apparently
+			 * can't be parsed (which SslCertificate() does) */
+			mSubjectPrimary = cert.getSubjectDN().getName();
 		}
 	}
 
