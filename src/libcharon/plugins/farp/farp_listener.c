@@ -101,6 +101,7 @@ METHOD(listener_t, child_updown, bool,
 				entry->remote->destroy_offset(entry->remote,
 										offsetof(traffic_selector_t, destroy));
 				free(entry);
+				break;
 			}
 		}
 		enumerator->destroy(enumerator);
