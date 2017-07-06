@@ -342,10 +342,13 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	 * the nonces. */
 	switch (alg)
 	{
+		case PRF_AES128_CMAC:
+			/* while variable keys may be used according to RFC 4615, RFC 7296
+			 * explicitly limits the key size to 128 bit for this application */
 		case PRF_AES128_XCBC:
-			/* while rfc4434 defines variable keys for AES-XCBC, rfc3664 does
+			/* while RFC 4434 defines variable keys for AES-XCBC, RFC 3664 does
 			 * not and therefore fixed key semantics apply to XCBC for key
-			 * derivation. */
+			 * derivation, which is also reinforced by RFC 7296 */
 		case PRF_CAMELLIA128_XCBC:
 			/* draft-kanno-ipsecme-camellia-xcbc refers to rfc 4434, we
 			 * assume fixed key length. */
