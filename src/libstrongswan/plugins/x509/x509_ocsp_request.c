@@ -209,7 +209,8 @@ static chunk_t build_nonce(private_x509_ocsp_request_t *this)
 	}
 	rng->destroy(rng);
 	return asn1_wrap(ASN1_SEQUENCE, "cm", ASN1_nonce_oid,
-				asn1_simple_object(ASN1_OCTET_STRING, this->nonce));
+				asn1_wrap(ASN1_OCTET_STRING, "m",
+					asn1_simple_object(ASN1_OCTET_STRING, this->nonce)));
 }
 
 /**
