@@ -42,9 +42,10 @@ static void usage(FILE *out)
 {
 	fprintf(out,
 		"Usage: pt-tls  --connect <hostname|address> [--port <port>]\n"
-		"              [--cert <file>]+ [--key <file>] [--key-type rsa|ecdsa]\n"
-		"              [--client <client-id>] [--secret <password>]\n"
-		"              [--optionsfrom <filename>] [--quiet] [--debug <level>]\n");
+		"              [--cert <file>]+ [--keyid <hex>|--key <file>]\n"
+		"              [--key-type rsa|ecdsa] [--client <client-id>]\n"
+		"              [--secret <password>] [--optionsfrom <filename>]\n"
+		"              [--quiet] [--debug <level>]\n");
 }
 
 /**
@@ -121,15 +122,26 @@ static bool load_certificate(char *filename)
 /**
  * Load private key from file
  */
-static bool load_key(char *filename, key_type_t type)
+static bool load_key(char *keyid, char *filename, key_type_t type)
 {
 	private_key_t *key;
+	chunk_t chunk;
 
-	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
-							 BUILD_FROM_FILE, filename, BUILD_END);
+	if (keyid)
+	{
+		chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+								 BUILD_PKCS11_KEYID, chunk, BUILD_END);
+		chunk_free(&chunk);
+	}
+	else
+	{
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
+								 BUILD_FROM_FILE, filename, BUILD_END);
+	}
 	if (!key)
 	{
-		DBG1(DBG_TLS, "loading key from '%s' failed", filename);
+		DBG1(DBG_TLS, "loading key from '%s' failed", keyid ? keyid : filename);
 		return FALSE;
 	}
 	creds->add_key(creds, key);
@@ -255,7 +267,8 @@ static void init()
 
 int main(int argc, char *argv[])
 {
-	char *address = NULL, *identity = "%any", *secret = NULL, *key_file = NULL;
+	char *address = NULL, *identity = "%any", *secret = NULL;
+	char *keyid = NULL, *key_file = NULL;
 	key_type_t key_type = KEY_RSA;
 	int port = PT_TLS_PORT;
 
@@ -270,8 +283,9 @@ int main(int argc, char *argv[])
 			{"secret",		required_argument,		NULL,		's' },
 			{"port",		required_argument,		NULL,		'p' },
 			{"cert",		required_argument,		NULL,		'x' },
+			{"keyid",		required_argument,		NULL,		'K' },
 			{"key",			required_argument,		NULL,		'k' },
-			{"key-type",		required_argument,		NULL,		't' },
+			{"key-type",	required_argument,		NULL,		't' },
 			{"mutual",		no_argument,			NULL,		'm' },
 			{"quiet",		no_argument,			NULL,		'q' },
 			{"debug",		required_argument,		NULL,		'd' },
@@ -290,6 +304,9 @@ int main(int argc, char *argv[])
 				{
 					return 1;
 				}
+				continue;
+			case 'K':			/* --keyid <hex> */
+				keyid = optarg;
 				continue;
 			case 'k':			/* --key <file> */
 				key_file = optarg;
@@ -352,7 +369,7 @@ int main(int argc, char *argv[])
 		usage(stderr);
 		return 1;
 	}
-	if (key_file && !load_key(key_file, key_type))
+	if ((keyid || key_file) && !load_key(keyid, key_file, key_type))
 	{
 		return 1;
 	}
