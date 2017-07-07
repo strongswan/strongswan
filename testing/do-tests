@@ -207,12 +207,16 @@ for SUBDIR in $TESTS
 do
     SUBTESTS="`basename $SUBDIR`"
 
-    if [ $SUBTESTS = $SUBDIR ]
-    then
-	SUBTESTS="`ls $DEFAULTTESTSDIR/$SUBDIR`"
-    else
-	SUBDIR="`dirname $SUBDIR`"
-    fi
+	if [ $SUBTESTS = $SUBDIR ]
+	then
+		SUBTESTS="`ls $DEFAULTTESTSDIR/$SUBDIR`"
+	else
+		if [[ $SUBTESTS == *'*'* ]]
+		then
+			SUBTESTS="`basename -a $DEFAULTTESTSDIR/$SUBDIR`"
+		fi
+		SUBDIR="`dirname $SUBDIR`"
+	fi
 
     if [ ! -d $TODAYDIR/$SUBDIR ]
     then
