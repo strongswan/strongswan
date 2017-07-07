@@ -144,6 +144,7 @@ struct starter_conn {
 		mark_t          mark_in;
 		mark_t          mark_out;
 		uint32_t       replay_window;
+		bool           nopmtudisc;
 		uint32_t       tfc;
 		bool            install_policy;
 		bool            aggressive;

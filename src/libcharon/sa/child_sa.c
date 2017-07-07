@@ -877,6 +877,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.initiator = initiator,
 		.inbound = inbound,
 		.update = update,
+		.nopmtudisc = this->config->get_nopmtudisc(this->config),
 	};
 
 	status = charon->kernel->add_sa(charon->kernel, &id, &sa);

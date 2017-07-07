@@ -1121,6 +1121,9 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 		child_cfg->destroy(child_cfg);
 		return NULL;
 	}
+
+	child_cfg->set_nopmtudisc(child_cfg, msg->add_conn.nopmtudisc);
+
 	return child_cfg;
 }
 

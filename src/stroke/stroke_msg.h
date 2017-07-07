@@ -269,6 +269,7 @@ struct stroke_msg_t {
 
 			crl_policy_t crl_policy;
 			int unique;
+			int nopmtudisc;
 			struct {
 				char *ike;
 				char *esp;

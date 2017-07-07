@@ -142,6 +142,11 @@ struct private_child_cfg_t {
 	 * anti-replay window size
 	 */
 	uint32_t replay_window;
+
+	/**
+	 * Don't Fragment bit copy policy: enable/disable the NOPMTUDISC flag
+	 */
+	bool nopmtudisc;
 };
 
 METHOD(child_cfg_t, get_name, char*,
@@ -540,6 +545,18 @@ METHOD(child_cfg_t, set_replay_window, void,
 	this->replay_window = replay_window;
 }
 
+METHOD(child_cfg_t, get_nopmtudisc, bool,
+	   private_child_cfg_t *this)
+{
+	return this->nopmtudisc;
+}
+
+METHOD(child_cfg_t, set_nopmtudisc, void,
+	   private_child_cfg_t *this, bool nopmtudisc)
+{
+	this->nopmtudisc = nopmtudisc;
+}
+
 #define LT_PART_EQUALS(a, b) ({ a.life == b.life && a.rekey == b.rekey && a.jitter == b.jitter; })
 #define LIFETIME_EQUALS(a, b) ({ LT_PART_EQUALS(a.time, b.time) && LT_PART_EQUALS(a.bytes, b.bytes) && LT_PART_EQUALS(a.packets, b.packets); })
 
@@ -586,6 +603,7 @@ METHOD(child_cfg_t, equals, bool,
 		this->tfc == other->tfc &&
 		this->manual_prio == other->manual_prio &&
 		this->replay_window == other->replay_window &&
+		this->nopmtudisc == other->nopmtudisc &&
 		streq(this->updown, other->updown) &&
 		streq(this->interface, other->interface);
 }
@@ -642,6 +660,8 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_interface = _get_interface,
 			.get_replay_window = _get_replay_window,
 			.set_replay_window = _set_replay_window,
+			.get_nopmtudisc = _get_nopmtudisc,
+			.set_nopmtudisc = _set_nopmtudisc,
 			.has_option = _has_option,
 			.equals = _equals,
 			.get_ref = _get_ref,
