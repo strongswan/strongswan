@@ -18,6 +18,6 @@ alice::cat /var/log/daemon.log::user AR identity.*carol.*authenticated by passwo
 alice::cat /var/log/daemon.log::received SWID tag ID inventory with ... items for request 9 at eid 1 of epoch::YES
 alice::cat /var/log/daemon.log::1 SWID tag target::YES
 alice::cat /var/log/daemon.log::received SWID tag inventory with 1 item for request 9 at eid 1 of epoch::YES
-alice::cat /var/log/daemon.log::regid.2004-03.org.strongswan_strongSwan-::YES
+alice::cat /var/log/daemon.log::strongswan.org__strongSwan-::YES
 alice::cat /var/log/daemon.log::successful system command: ssh root@moon.*logger -t charon -p auth.alert.*host with IP address 192.168.0.100 is allowed::YES
 moon::cat /var/log/auth.log::host with IP address 192.168.0.100 is allowed::YES
