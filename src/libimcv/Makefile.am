@@ -2,7 +2,11 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libtpmtss \
-	-DIPSEC_SCRIPT=\"${ipsec_script}\"
+	-DIPSEC_SCRIPT=\"${ipsec_script}\" \
+	-DSWID_DIRECTORY=\"${prefix}/share\"
+
+AM_CFLAGS = \
+	$(json_CFLAGS)
 
 ipseclib_LTLIBRARIES = libimcv.la
 
@@ -12,7 +16,8 @@ libimcv_la_LDFLAGS = \
 libimcv_la_LIBADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la \
 	$(top_builddir)/src/libtncif/libtncif.la \
-	$(top_builddir)/src/libtpmtss/libtpmtss.la
+	$(top_builddir)/src/libtpmtss/libtpmtss.la \
+	$(json_LIBS)
 
 if USE_WINDOWS
   libimcv_la_LIBADD += -lws2_32
@@ -49,6 +54,9 @@ libimcv_la_SOURCES = \
 	ietf/ietf_attr_product_info.h ietf/ietf_attr_product_info.c \
 	ietf/ietf_attr_remediation_instr.h ietf/ietf_attr_remediation_instr.c \
 	ietf/ietf_attr_string_version.h ietf/ietf_attr_string_version.c \
+	ietf/swima/ietf_swima_attr_req.h ietf/swima/ietf_swima_attr_req.c \
+	ietf/swima/ietf_swima_attr_sw_inv.h ietf/swima/ietf_swima_attr_sw_inv.c \
+	ietf/swima/ietf_swima_attr_sw_ev.h ietf/swima/ietf_swima_attr_sw_ev.c \
 	ita/ita_attr.h ita/ita_attr.c \
 	ita/ita_attr_command.h ita/ita_attr_command.c \
 	ita/ita_attr_dummy.h ita/ita_attr_dummy.c \
@@ -84,6 +92,7 @@ libimcv_la_SOURCES = \
 	pts/components/tcg/tcg_comp_func_name.h pts/components/tcg/tcg_comp_func_name.c \
 	pwg/pwg_attr.h pwg/pwg_attr.c \
 	pwg/pwg_attr_vendor_smi_code.h pwg/pwg_attr_vendor_smi_code.c \
+	rest/rest.h rest/rest.c \
 	seg/seg_contract.h seg/seg_contract.c \
 	seg/seg_contract_manager.h seg/seg_contract_manager.c \
 	seg/seg_env.h seg/seg_env.c \
@@ -91,6 +100,13 @@ libimcv_la_SOURCES = \
 	swid/swid_inventory.h swid/swid_inventory.c \
 	swid/swid_tag.h swid/swid_tag.c \
 	swid/swid_tag_id.h swid/swid_tag_id.c \
+	swima/swima_data_model.h swima/swima_data_model.c \
+	swima/swima_record.h swima/swima_record.c \
+	swima/swima_event.h swima/swima_event.c \
+	swima/swima_events.h swima/swima_events.c \
+	swima/swima_inventory.h swima/swima_inventory.c \
+	swima/swima_collector.h swima/swima_collector.c \
+	swima/swima_error.h swima/swima_error.c \
 	tcg/tcg_attr.h tcg/tcg_attr.c \
 	tcg/pts/tcg_pts_attr_proto_caps.h tcg/pts/tcg_pts_attr_proto_caps.c \
 	tcg/pts/tcg_pts_attr_dh_nonce_params_req.h tcg/pts/tcg_pts_attr_dh_nonce_params_req.c \
@@ -173,6 +189,14 @@ if USE_IMV_SWID
   SUBDIRS += plugins/imv_swid
 endif
 
+if USE_IMC_SWIMA
+  SUBDIRS += plugins/imc_swima
+endif
+
+if USE_IMV_SWIMA
+  SUBDIRS += plugins/imv_swima
+endif
+
 if USE_IMC_HCD
   SUBDIRS += plugins/imc_hcd
 endif
@@ -190,8 +214,18 @@ imcv_tests_SOURCES = \
 	pa_tnc/pa_tnc_attr_manager.c \
 	seg/seg_env.c seg/seg_contract.c \
 	seg/seg_contract_manager.c \
+	swima/swima_data_model.c \
+	swima/swima_event.c \
+	swima/swima_events.c \
+	swima/swima_record.c \
+	swima/swima_inventory.c \
+	swima/swima_collector.c \
 	suites/test_imcv_seg.c \
+	suites/test_imcv_swima.c \
 	ietf/ietf_attr_pa_tnc_error.c \
+	ietf/swima/ietf_swima_attr_req.c \
+	ietf/swima/ietf_swima_attr_sw_inv.c \
+	ietf/swima/ietf_swima_attr_sw_ev.c \
 	tcg/seg/tcg_seg_attr_seg_env.c \
 	imcv.c imcv_tests.h imcv_tests.c
 

@@ -652,114 +652,120 @@ INSERT INTO algorithms (
   8192, 'SHA384'
 );
 
+INSERT INTO algorithms (
+  id, name
+) VALUES (
+  4096, 'SHA512'
+);
+
 /* File Hashes */
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  28, 2, 32768, X'6c6f8e12f6cbfba612e780374c4cdcd40f20968a'
+  2, 2, 32768, '6c6f8e12f6cbfba612e780374c4cdcd40f20968a'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  28, 2, 16384, X'dbcecd19d59310183cf5c31ddee29e8d7bec64d3f9583aad074330a1b3024b07'
+  2, 2, 16384, 'dbcecd19d59310183cf5c31ddee29e8d7bec64d3f9583aad074330a1b3024b07'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  28, 2, 8192, X'197c5385e5853003188833d4f991136c1b0875fa416a60b1159f64e57e457b3184762c884a802a2bda194c058e3bd953'
+  2, 2, 8192, '197c5385e5853003188833d4f991136c1b0875fa416a60b1159f64e57e457b3184762c884a802a2bda194c058e3bd953'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  28, 4, 32768, X'3ad204f99eb7262efab79cfca02628870ea76361'
+  2, 4, 32768, '3ad204f99eb7262efab79cfca02628870ea76361'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  28, 4, 16384, X'3a2170aad92fdd58b55e0e199822bc873cf587b2d1eb1ed7ed8dcea97ae86376'
+  2, 4, 16384, '3a2170aad92fdd58b55e0e199822bc873cf587b2d1eb1ed7ed8dcea97ae86376'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+ version, file, algo, hash
 ) VALUES (
-  28, 4, 8192, X'f778076baa876b5e4b502494a3db081fb09dd870dee6991d54104a74b7e009c58fe261db5ffd13c11e08ef0cefcfa59f'
+  2, 4, 8192, 'f778076baa876b5e4b502494a3db081fb09dd870dee6991d54104a74b7e009c58fe261db5ffd13c11e08ef0cefcfa59f'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  28, 5, 32768, X'ecd9c7076cc0572724c7a67db7f19c2831e0445f'
+  4, 5, 32768, 'ecd9c7076cc0572724c7a67db7f19c2831e0445f'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  28, 5, 16384, X'28f3ea5afd34444c8232ea75003131e294a0c9b847de300e4b205d38c1a41305'
+  4, 5, 16384, '28f3ea5afd34444c8232ea75003131e294a0c9b847de300e4b205d38c1a41305'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  28, 5, 8192, X'51921a8b9322f2d3f06d55002ff40a79da67e70cb563b2a50977642d603dfac2ccbb68b3d32a8bb350769b75d6254208'
+  4, 5, 8192, '51921a8b9322f2d3f06d55002ff40a79da67e70cb563b2a50977642d603dfac2ccbb68b3d32a8bb350769b75d6254208'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  18, 1, 32768, X'd9309b9e45928239d7a7b18711e690792632cce4'
+  5, 1, 32768, 'd9309b9e45928239d7a7b18711e690792632cce4'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  18, 1, 16384, X'dbfa1856d278d8707c4989b30dd065b4bcd309908f0f2e6e66ff2aa83ff93f59'
+  5, 1, 16384, 'dbfa1856d278d8707c4989b30dd065b4bcd309908f0f2e6e66ff2aa83ff93f59'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  18, 1, 8192, X'fb8d027f03bb5ebb47741ed247eb9e174127b714d20229885feb37e0979aeb14a1b74020cded891d680441093625729c'
+  5, 1, 8192, 'fb8d027f03bb5ebb47741ed247eb9e174127b714d20229885feb37e0979aeb14a1b74020cded891d680441093625729c'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  18, 3, 32768, X'3715f2f94016a91fab5bbc503f0f1d43c5a9fc2b'
+  5, 3, 32768, '3715f2f94016a91fab5bbc503f0f1d43c5a9fc2b'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  18, 3, 16384, X'c03a5296b5decb87b01517f9927a8b2349dfb29ff9f5ba084f994c155ca5d4be'
+  5, 3, 16384, 'c03a5296b5decb87b01517f9927a8b2349dfb29ff9f5ba084f994c155ca5d4be'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  18, 3, 8192, X'b8bc345f56115235cc6091f61e312ce43ea54a5b99e7295002ae7b415fd35e06ec4c731ab70ad00d784bb53a318a2fa0'
+  5, 3, 8192, 'b8bc345f56115235cc6091f61e312ce43ea54a5b99e7295002ae7b415fd35e06ec4c731ab70ad00d784bb53a318a2fa0'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  18, 5, 32768, X'e59602f4edf24c1b36199588886d06665d4adcd7'
+  6, 5, 32768, 'e59602f4edf24c1b36199588886d06665d4adcd7'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  18, 5, 16384, X'090e1b77bda7fe665e498c6b5e09dbb7ddc5cfe57f213de48f4fb6736484f500'
+  6, 5, 16384, '090e1b77bda7fe665e498c6b5e09dbb7ddc5cfe57f213de48f4fb6736484f500'
 );
 
 INSERT INTO file_hashes (
-  product, file, algo, hash
+  version, file, algo, hash
 ) VALUES (
-  18, 5, 8192, X'7cbdb4612a13443dba910ecdef5161f2213e52c9b4a2eef14bcee5d287e9df931cd022e9e9715518ad9c9b6e3384a668'
+  6, 5, 8192, '7cbdb4612a13443dba910ecdef5161f2213e52c9b4a2eef14bcee5d287e9df931cd022e9e9715518ad9c9b6e3384a668'
 );
 
 /* Packages */
@@ -790,28 +796,40 @@ INSERT INTO packages (			/*  4 */
 
 /* Versions */
 
-INSERT INTO versions (
+INSERT INTO versions (             /*  1 */
   package, product, release, time
 ) VALUES (
   1, 28, '1.0.1e-2', 1366531494
 );
 
-INSERT INTO versions (
+INSERT INTO versions (             /*  2 */
   package, product, release, time
 ) VALUES (
   2, 28, '1.0.1e-2', 1366531494
 );
 
-INSERT INTO versions (
+INSERT INTO versions (             /*  3 */
   package, product, release, time
 ) VALUES (
   3, 28, '1.0.1e-2', 1366531494
 );
 
-INSERT INTO versions (
+INSERT INTO versions (             /*  4 */
   package, product, release, time
 ) VALUES (
   4, 28, '1.0.1e-2', 1366531494
+);
+
+INSERT INTO versions (             /*  5 */
+  package, product, time
+) VALUES (
+  2, 18, 1350544774
+);
+
+INSERT INTO versions (             /*  6 */
+  package, product, time
+) VALUES (
+  4, 18, 1350544774
 );
 
 /* Components */
@@ -1681,59 +1699,59 @@ INSERT INTO enforcements (      /* 18 */
 INSERT INTO "swid_entities" (		/*  1 */
   "name", "regid"
 ) VALUES (
-  'strongSwan Project', 'regid.2004-03.org.strongswan'
+  'strongSwan Project', 'strongswan.org'
 );
 
 INSERT INTO swid_entities (			/*  2 */
   "name", "regid"
 ) VALUES (
-  'Adobe Systems Inc.', 'regid.1986-12.com.adobe'
+  'Adobe Systems Inc.', 'adobe.com'
 );
 
 INSERT INTO swid_entities (			/*  3 */
   "name", "regid"
 ) VALUES (
-  'Microsoft Corporation', 'regid.1991-06.com.microsoft'
+  'Microsoft Corporation', 'microsoft.com'
 );
 
 INSERT INTO swid_entities (			/*  4 */
   "name", "regid"
 ) VALUES (
-  'Ubuntu Project', 'regid.2004-05.com.ubuntu'
+  'Ubuntu Project', 'ubuntu.com'
 );
 
 INSERT INTO swid_entities (			/*  5 */
   "name", "regid"
 ) VALUES (
-  'Apache Software Foundation', 'regid.1995-04.org.apache'
+  'Apache Software Foundation', 'apache.org'
 );
 
 INSERT INTO swid_entities (			/*  6 */
   "name", "regid"
 ) VALUES (
-  'Debian Project', 'regid.1999-03.org.debian'
+  'Debian Project', 'debian.org'
 );
 
 INSERT INTO swid_entities (			/*  7 */
   "name", "regid"
 ) VALUES (
-  'Internet Systems Consortium', 'regid.1994-04.org.isc'
+  'Internet Systems Consortium', 'isc.org'
 );
 
 INSERT INTO swid_entities (			/*  8 */
   "name", "regid"
 ) VALUES (
-  'OpenSSL Project', 'regid.1998-12.org.openssl'
+  'OpenSSL Project', 'openssl.org'
 );
 
 INSERT INTO swid_entities (			/*  9 */
   "name", "regid"
 ) VALUES (
-  'Samba Project', 'regid.1998-01.org.samba'
+  'Samba Project', 'samba.org'
 );
 
 INSERT INTO swid_entities (			/* 10 */
   "name", "regid"
 ) VALUES (
-  'SQLite Project', 'regid.2002-08.org.sqlite'
+  'SQLite Project', 'sqlite.org'
 );

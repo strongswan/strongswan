@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Andreas Steffen
+ * Copyright (C) 2011-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -43,6 +43,7 @@ typedef enum pa_subtype_ita_t pa_subtype_ita_t;
 	PA_SUBTYPE_IETF_IDPS =				0x06,
 	PA_SUBTYPE_IETF_VPN =				0x07,
 	PA_SUBTYPE_IETF_NEA_CLIENT =		0x08,
+	PA_SUBTYPE_IETF_SW =				0x09,
 	PA_SUBTYPE_IETF_ANY =				0xff
 };
 

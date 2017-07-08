@@ -1,21 +1,20 @@
-regid = regid.2004-03.org.strongswan
+regid = strongswan.org
 unique_sw_id = strongSwan-$(PACKAGE_VERSION_MAJOR)-$(PACKAGE_VERSION_MINOR)-$(PACKAGE_VERSION_BUILD)$(PACKAGE_VERSION_REVIEW)
-swid_tag = $(regid)_$(unique_sw_id).swidtag
+swid_tag = $(regid)__$(unique_sw_id).swidtag
 
-swiddir = $(prefix)/share/$(regid)
-swid_DATA = $(swid_tag)
-ipsec_DATA = $(swid_tag)
-EXTRA_DIST = $(regid)_strongSwan.swidtag.in
-CLEANFILES = $(regid)_strongSwan*.swidtag
+swiddir = $(pkgdatadir)/swidtag
+dist_swid_DATA = $(swid_tag)
+EXTRA_DIST = $(regid)__strongSwan.swidtag.in
+CLEANFILES = $(regid)__strongSwan*.swidtag
 
-$(swid_tag) : regid.2004-03.org.strongswan_strongSwan.swidtag.in
+$(swid_tag) : $(regid)__strongSwan.swidtag.in
 	$(AM_V_GEN) \
 	sed \
 	-e "s:@VERSION_MAJOR@:$(PACKAGE_VERSION_MAJOR):" \
 	-e "s:@VERSION_MINOR@:$(PACKAGE_VERSION_MINOR):" \
 	-e "s:@VERSION_BUILD@:$(PACKAGE_VERSION_BUILD):" \
 	-e "s:@VERSION_REVIEW@:$(PACKAGE_VERSION_REVIEW):" \
-	$(srcdir)/$(regid)_strongSwan.swidtag.in > $@
+	$(srcdir)/$(regid)__strongSwan.swidtag.in > $@
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \

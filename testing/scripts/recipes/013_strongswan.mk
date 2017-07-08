@@ -56,6 +56,8 @@ CONFIG_OPTS = \
 	--enable-imv-attestation \
 	--enable-imc-swid \
 	--enable-imv-swid \
+	--enable-imc-swima \
+	--enable-imv-swima \
 	--enable-imc-hcd \
 	--enable-imv-hcd \
 	--enable-sql \

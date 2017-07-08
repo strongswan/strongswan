@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -77,8 +77,9 @@ Usage:\n\
   ipsec attest --add [--owner <name>] --key <digest>|--aik <path>\n\
     Add an AIK public key digest entry preceded by an optional owner name\n\
   \n\
-  ipsec attest --add --product <name>|--pid <id> --sha1|--sha1-ima|--sha256|--sha384\n\
-              [--relative|--rel] --dir <path>|--file <path>\n\
+  ipsec attest --add --product <name>|--pid <id> --sha1|--sha256|--sha384\n\
+              [--relative|--rel] [--package <name> --version <string>]\n\
+               --dir <path>|--file <path>\n\
     Add hashes of a single file or all files in a directory under absolute or relative filenames\n\
   \n\
   ipsec attest --add --key <digest|--kid <id> --component <cfn>|--cid <id> --sequence <no>|--seq <no>\n\

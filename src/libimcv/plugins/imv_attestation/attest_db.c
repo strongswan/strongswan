@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -132,6 +132,11 @@ struct private_attest_db_t {
 	 * Software package version to be queried
 	 */
 	char *version;
+
+	/**
+	 * Primary key of software package version to be queried
+	 */
+	int vid;
 
 	/**
 	 * TRUE if version has been set
@@ -975,7 +980,7 @@ METHOD(attest_db_t, list_files, void,
 		{
 			while (e->enumerate(e, &fid, &file))
 			{
-				printf("%4d: %s\n", fid, file);
+				printf("%6d: %s\n", fid, file);
 				count++;
 			}
 			e->destroy(e);
@@ -996,10 +1001,10 @@ METHOD(attest_db_t, list_files, void,
 			{
 				if (did != last_did)
 				{
-					printf("%4d: %s\n", did, dir);
+					printf("%6d: %s\n", did, dir);
 					last_did = did;
 				}
-				printf("%4d:   %s\n", fid, file);
+				printf("%6d:   %s\n", fid, file);
 				count++;
 			}
 			e->destroy(e);
@@ -1182,24 +1187,24 @@ METHOD(attest_db_t, list_hashes, void,
 	private_attest_db_t *this)
 {
 	enumerator_t *e;
-	chunk_t hash;
-	char *file, *dir, *product;
+	char *file, *dir, *product, *hash;
 	int id, fid, fid_old = 0, did, did_old = 0, pid, pid_old = 0, count = 0;
 
 	if (this->pid && this->fid && this->did)
 	{
-		printf("%4d: %s\n", this->did, this->dir);
-		printf("%4d:   %s\n", this->fid, this->file);
+		printf("%6d: %s\n", this->did, this->dir);
+		printf("%6d:   %s\n", this->fid, this->file);
 		e = this->db->query(this->db,
-				"SELECT id, hash FROM file_hashes "
-				"WHERE algo = ? AND file = ? AND product = ?",
+				"SELECT h.id, h.hash FROM file_hashes AS h "
+				"JOIN versions AS v ON h.version = v.id "
+				"WHERE h.algo = ? AND h.file = ? AND v.product = ?",
 				DB_INT, this->algo, DB_INT, this->fid, DB_INT, this->pid,
-				DB_INT, DB_BLOB);
+				DB_INT, DB_TEXT);
 		if (e)
 		{
 			while (e->enumerate(e, &id, &hash))
 			{
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %s\n", id, hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1216,25 +1221,26 @@ METHOD(attest_db_t, list_hashes, void,
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
 				"JOIN directories AS d ON f.dir = d.id "
-				"WHERE h.algo = ? AND h.product = ? AND f.name = ? "
+				"JOIN versions AS v ON h.version = v.id "
+				"WHERE h.algo = ? AND v.product = ? AND f.name = ? "
 				"ORDER BY d.path, f.name, h.hash",
 				DB_INT, this->algo, DB_INT, this->pid, DB_TEXT, this->file,
-				DB_INT, DB_BLOB, DB_INT, DB_INT, DB_TEXT);
+				DB_INT, DB_TEXT, DB_INT, DB_INT, DB_TEXT);
 		if (e)
 		{
 			while (e->enumerate(e, &id, &hash, &fid, &did, &dir))
 			{
 				if (did != did_old)
 				{
-					printf("%4d: %s\n", did, dir);
+					printf("%6d: %s\n", did, dir);
 					did_old = did;
 				}
 				if (fid != fid_old)
 				{
-					printf("%4d:   %s\n", fid, this->file);
+					printf("%6d:   %s\n", fid, this->file);
 					fid_old = fid;
 				}
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %s\n", id, hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1246,25 +1252,26 @@ METHOD(attest_db_t, list_hashes, void,
 	}
 	else if (this->pid && this->did)
 	{
-		printf("%4d: %s\n", this->did, this->dir);
+		printf("%6d: %s\n", this->did, this->dir);
 		e = this->db->query(this->db,
 				"SELECT h.id, h.hash, f.id, f.name "
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
-				"WHERE h.algo = ? AND h.product = ? AND f.dir = ? "
+				"JOIN versions AS v ON h.version = v.id "
+				"WHERE h.algo = ? AND v.product = ? AND f.dir = ? "
 				"ORDER BY f.name, h.hash",
 				DB_INT, this->algo, DB_INT, this->pid, DB_INT, this->did,
-				DB_INT, DB_BLOB, DB_INT, DB_TEXT);
+				DB_INT, DB_TEXT, DB_INT, DB_TEXT);
 		if (e)
 		{
 			while (e->enumerate(e, &id, &hash, &fid, &file))
 			{
 				if (fid != fid_old)
 				{
-					printf("%4d:   %s\n", fid, file);
+					printf("%6d:   %s\n", fid, file);
 					fid_old = fid;
 				}
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %s\n", id, hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1281,25 +1288,26 @@ METHOD(attest_db_t, list_hashes, void,
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
 				"JOIN directories AS d ON f.dir = d.id "
-				"WHERE h.algo = ? AND h.product = ? "
+				"JOIN versions AS v ON h.version = v.id "
+				"WHERE h.algo = ? AND v.product = ? "
 				"ORDER BY d.path, f.name, h.hash",
 				DB_INT, this->algo, DB_INT, this->pid,
-				DB_INT, DB_BLOB, DB_INT, DB_TEXT, DB_INT, DB_TEXT);
+				DB_INT, DB_TEXT, DB_INT, DB_TEXT, DB_INT, DB_TEXT);
 		if (e)
 		{
 			while (e->enumerate(e, &id, &hash, &fid, &file, &did, &dir))
 			{
 				if (did != did_old)
 				{
-					printf("%4d: %s\n", did, dir);
+					printf("%6d: %s\n", did, dir);
 					did_old = did;
 				}
 				if (fid != fid_old)
 				{
-					printf("%4d:   %s\n", fid, file);
+					printf("%6d:   %s\n", fid, file);
 					fid_old = fid;
 				}
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %s\n", id, hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1313,21 +1321,22 @@ METHOD(attest_db_t, list_hashes, void,
 	{
 		e = this->db->query(this->db,
 				"SELECT h.id, h.hash, p.id, p.name FROM file_hashes AS h "
-				"JOIN products AS p ON h.product = p.id "
+				"JOIN versions AS v ON h.version = v.id "
+				"JOIN products AS p ON v.product = p.id "
 				"WHERE h.algo = ? AND h.file = ? "
 				"ORDER BY p.name, h.hash",
 				DB_INT, this->algo, DB_INT, this->fid,
-				DB_INT, DB_BLOB, DB_INT, DB_TEXT);
+				DB_INT, DB_TEXT, DB_INT, DB_TEXT);
 		if (e)
 		{
 			while (e->enumerate(e, &id, &hash, &pid, &product))
 			{
 				if (pid != pid_old)
 				{
-					printf("%4d: %s\n", pid, product);
+					printf("%6d: %s\n", pid, product);
 					pid_old = pid;
 				}
-				printf("%4d:   %#B\n", id, &hash);
+				printf("%6d:   %s\n", id, hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1345,32 +1354,33 @@ METHOD(attest_db_t, list_hashes, void,
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
 				"JOIN directories AS d ON f.dir = d.id "
-				"JOIN products AS p ON h.product = p.id "
+				"JOIN versions AS v ON h.version = v.id "
+				"JOIN products AS p ON v.product = p.id "
 				"WHERE h.algo = ? AND f.name = ? "
 				"ORDER BY d.path, f.name, p.name, h.hash",
 				DB_INT, this->algo, DB_TEXT, this->file,
-				DB_INT, DB_BLOB, DB_INT, DB_INT, DB_TEXT, DB_INT, DB_TEXT);
+				DB_INT, DB_TEXT, DB_INT, DB_INT, DB_TEXT, DB_INT, DB_TEXT);
 		if (e)
 		{
 			while (e->enumerate(e, &id, &hash, &fid, &did, &dir, &pid, &product))
 			{
 				if (did != did_old)
 				{
-					printf("%4d: %s\n", did, dir);
+					printf("%6d: %s\n", did, dir);
 					did_old = did;
 				}
 				if (fid != fid_old)
 				{
-					printf("%4d:   %s\n", fid, this->file);
+					printf("%6d:   %s\n", fid, this->file);
 					fid_old = fid;
 					pid_old = 0;
 				}
 				if (pid != pid_old)
 				{
-					printf("%4d:     %s\n", pid, product);
+					printf("%6d:     %s\n", pid, product);
 					pid_old = pid;
 				}
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %s\n", id, hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1386,27 +1396,28 @@ METHOD(attest_db_t, list_hashes, void,
 				"SELECT h.id, h.hash, f.id, f.name, p.id, p.name "
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
-				"JOIN products AS p ON h.product = p.id "
+				"JOIN versions AS v ON h.version = v.id "
+				"JOIN products AS p ON v.product = p.id "
 				"WHERE h.algo = ? AND f.dir = ? "
 				"ORDER BY f.name, p.name, h.hash",
 				DB_INT, this->algo, DB_INT, this->did,
-				DB_INT, DB_BLOB, DB_INT, DB_TEXT, DB_INT, DB_TEXT);
+				DB_INT, DB_TEXT, DB_INT, DB_TEXT, DB_INT, DB_TEXT);
 		if (e)
 		{
 			while (e->enumerate(e, &id, &hash, &fid, &file, &pid, &product))
 			{
 				if (fid != fid_old)
 				{
-					printf("%4d: %s\n", fid, file);
+					printf("%6d: %s\n", fid, file);
 					fid_old = fid;
 					pid_old = 0;
 				}
 				if (pid != pid_old)
 				{
-					printf("%4d:   %s\n", pid, product);
+					printf("%6d:   %s\n", pid, product);
 					pid_old = pid;
 				}
-				printf("%4d:     %#B\n", id, &hash);
+				printf("%6d:     %s\n", id, hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1423,10 +1434,11 @@ METHOD(attest_db_t, list_hashes, void,
 				"FROM file_hashes AS h "
 				"JOIN files AS f ON h.file = f.id "
 				"JOIN directories AS d ON f.dir = d.id "
-				"JOIN products AS p on h.product = p.id "
+				"JOIN versions AS v ON h.version = v.id "
+				"JOIN products AS p on v.product = p.id "
 				"WHERE h.algo = ? "
 				"ORDER BY d.path, f.name, p.name, h.hash",
-				DB_INT, this->algo, DB_INT, DB_BLOB, DB_INT, DB_TEXT,
+				DB_INT, this->algo, DB_INT, DB_TEXT, DB_INT, DB_TEXT,
 				DB_INT, DB_TEXT, DB_INT, DB_TEXT);
 		if (e)
 		{
@@ -1435,21 +1447,21 @@ METHOD(attest_db_t, list_hashes, void,
 			{
 				if (did != did_old)
 				{
-					printf("%4d: %s\n", did, dir);
+					printf("%6d: %s\n", did, dir);
 					did_old = did;
 				}
 				if (fid != fid_old)
 				{
-					printf("%4d:   %s\n", fid, file);
+					printf("%6d:   %s\n", fid, file);
 					fid_old = fid;
 					pid_old = 0;
 				}
 				if (pid != pid_old)
 				{
-					printf("%4d:     %s\n", pid, product);
+					printf("%6d:     %s\n", pid, product);
 					pid_old = pid;
 				}
-				printf("%4d:       %#B\n", id, &hash);
+				printf("%6d:       %s\n", id, hash);
 				count++;
 			}
 			e->destroy(e);
@@ -1610,28 +1622,32 @@ static bool insert_file_hash(private_attest_db_t *this,
 							 int *hashes_added, int *hashes_updated)
 {
 	enumerator_t *e;
-	chunk_t hash;
+	uint8_t hex_measurement_buf[2*HASH_SIZE_SHA512 + 1];
+	uint8_t *hex_hash_buf;
+	chunk_t hex_hash, hex_measurement;
 	char *label;
 	bool insert = TRUE, update = FALSE;
 
 	label = "could not be created";
 
 	e = this->db->query(this->db,
-		"SELECT hash FROM file_hashes WHERE algo = ? "
-		"AND file = ? AND product = ? AND device = 0",
-		DB_INT, algo, DB_UINT, fid, DB_UINT, this->pid, DB_BLOB);
+		"SELECT hash FROM file_hashes "
+		"WHERE algo = ? AND file = ? AND version = ?",
+		DB_INT, algo, DB_UINT, fid, DB_UINT, this->vid, DB_TEXT);
 
 	if (!e)
 	{
 		printf("file_hashes query failed\n");
 		return FALSE;
 	}
+	hex_measurement = chunk_to_hex(measurement, hex_measurement_buf, FALSE);
 
-	while (e->enumerate(e, &hash))
+	while (e->enumerate(e, &hex_hash_buf))
 	{
 		update = TRUE;
+		hex_hash = chunk_from_str(hex_hash_buf);
 
-		if (chunk_equals(measurement, hash))
+		if (chunk_equals(hex_measurement, hex_hash))
 		{
 			label = "exists and equals";
 			insert = FALSE;
@@ -1644,10 +1660,10 @@ static bool insert_file_hash(private_attest_db_t *this,
 	{
 		if (this->db->execute(this->db, NULL,
 			"INSERT INTO file_hashes "
-			"(file, product, device, algo, hash) "
-			"VALUES (?, ?, 0, ?, ?)",
-			DB_UINT, fid, DB_UINT, this->pid,
-			DB_INT, algo, DB_BLOB, measurement) != 1)
+			"(file, version, algo, hash) "
+			"VALUES (?, ?, ?, ?)",
+			DB_UINT, fid, DB_UINT, this->vid,
+			DB_INT, algo, DB_TEXT, hex_measurement) != 1)
 		{
 			printf("file_hash insertion failed\n");
 			return FALSE;
@@ -1665,6 +1681,75 @@ static bool insert_file_hash(private_attest_db_t *this,
 	}
 	printf("     %#B - %s\n", &measurement, label);
 	return TRUE;
+}
+
+/**
+ * Add a package version
+ */
+static bool add_version(private_attest_db_t *this)
+{
+	int vid, security_old, security, blacklist_old, blacklist;
+	time_t t = time(NULL);
+	enumerator_t *e;
+	bool success;
+
+	security =  this->package_state == OS_PACKAGE_STATE_SECURITY;
+	blacklist = this->package_state == OS_PACKAGE_STATE_BLACKLIST;
+
+	e = this->db->query(this->db,
+				"SELECT id, security, blacklist FROM versions "
+				"WHERE package = ? AND product = ? AND release = ?",
+				DB_UINT, this->gid, DB_UINT, this->pid, DB_TEXT, this->version,
+				DB_INT, DB_INT, DB_INT, DB_INT);
+	if (e)
+	{
+		if (e->enumerate(e, &vid, &security_old, &blacklist_old))
+		{
+			this->vid = vid;
+		}
+		e->destroy(e);
+	}
+	if (this->vid)
+	{
+		if (security != security_old || blacklist != blacklist_old)
+		{
+			/* update security and/or blacklist flag */
+			success = this->db->execute(this->db, NULL, "UPDATE versions "
+					"SET security = ?, blacklist = ?, time = ? WHERE id = ?",
+					DB_INT, security, DB_INT, blacklist, DB_INT, t,
+					DB_INT, this->vid) == 1;
+
+			printf("'%s' package %s (%s)%N %s updated in database\n",
+				   this->product, this->package, this->version,
+				   os_package_state_names, this->package_state,
+				   success ? "" : "could not be ");
+		}
+		else
+		{
+			success = TRUE;
+
+			printf("'%s' package %s (%s)%N exists in database\n",
+				   this->product, this->package, this->version,
+				   os_package_state_names, this->package_state);
+		}
+		return success;
+	}
+
+	/* create a new version */
+	success = this->db->execute(this->db, NULL,
+				"INSERT INTO versions "
+				"(package, product, release, security, blacklist, time) "
+				"VALUES (?, ?, ?, ?, ?, ?)",
+				DB_UINT, this->gid, DB_INT, this->pid, DB_TEXT,
+				this->version, DB_INT, security, DB_INT, blacklist,
+				DB_INT, t) == 1;
+
+	printf("'%s' package %s (%s)%N %sinserted into database\n",
+			this->product, this->package, this->version,
+			os_package_state_names, this->package_state,
+			success ? "" : "could not be ");
+
+	return success;
 }
 
 /**
@@ -1771,7 +1856,14 @@ static bool add_hash(private_attest_db_t *this)
 METHOD(attest_db_t, add, bool,
 	private_attest_db_t *this)
 {
-	bool success = FALSE;
+	/* insert package version */
+	if (this->version_set && this->gid && this->pid)
+	{
+		if (!add_version(this))
+		{
+			return FALSE;
+		}
+	}
 
 	/* add directory or file hash measurement for a given product */
 	if (this->did && this->pid)
@@ -1779,29 +1871,7 @@ METHOD(attest_db_t, add, bool,
 		return add_hash(this);
 	}
 
-	/* insert package version */
-	if (this->version_set && this->gid && this->pid)
-	{
-		time_t t = time(NULL);
-		int security, blacklist;
-
-		security =  this->package_state == OS_PACKAGE_STATE_SECURITY;
-		blacklist = this->package_state == OS_PACKAGE_STATE_BLACKLIST;
-
-		success = this->db->execute(this->db, NULL,
-					"INSERT INTO versions "
-					"(package, product, release, security, blacklist, time) "
-					"VALUES (?, ?, ?, ?, ?, ?)",
-					DB_UINT, this->gid, DB_INT, this->pid, DB_TEXT,
-					this->version, DB_INT, security, DB_INT, blacklist,
-					DB_INT, t) == 1;
-
-		printf("'%s' package %s (%s)%N %sinserted into database\n",
-				this->product, this->package, this->version,
-				os_package_state_names, this->package_state,
-				success ? "" : "could not be ");
-	}
-	return success;
+	return FALSE;
 }
 
 METHOD(attest_db_t, delete, bool,
@@ -1816,8 +1886,9 @@ METHOD(attest_db_t, delete, bool,
 	if (this->algo && this->pid && this->fid)
 	{
 		success = this->db->execute(this->db, NULL,
-								"DELETE FROM file_hashes "
-								"WHERE algo = ? AND product = ? AND file = ?",
+								"DELETE FROM file_hashes AS h "
+								"JOIN versions AS v ON h.version = v.id "
+								"WHERE h.algo = ? AND v.product = ? AND h.file = ?",
 								DB_UINT, this->algo, DB_UINT, this->pid,
 								DB_UINT, this->fid) > 0;
 

@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2010-2015 Andreas Steffen
- *
+ * Copyright (C) 2010-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,7 +16,7 @@
 #include "tncif_pa_subtypes.h"
 
 /* IETF PA Subtype names */
-ENUM_BEGIN(pa_subtype_ietf_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_NEA_CLIENT,
+ENUM_BEGIN(pa_subtype_ietf_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_SW,
 	"Testing",
 	"Operating System",
 	"Anti-Virus",
@@ -26,10 +25,11 @@ ENUM_BEGIN(pa_subtype_ietf_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_NEA_C
 	"Firewall",
 	"IDPS",
 	"VPN",
-	"NEA Client"
+	"NEA Client",
+	"Software"
 );
 ENUM_NEXT(pa_subtype_ietf_names, PA_SUBTYPE_IETF_ANY, PA_SUBTYPE_IETF_ANY,
-								PA_SUBTYPE_IETF_NEA_CLIENT,
+								PA_SUBTYPE_IETF_SW,
 	"ANY"
 );
 ENUM_END(pa_subtype_ietf_names, PA_SUBTYPE_IETF_ANY);

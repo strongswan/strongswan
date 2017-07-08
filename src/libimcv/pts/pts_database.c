@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011-2012 Sansar Choinyambuu
- * Copyright (C) 2012-2014 Andreas Steffen
+ * Copyright (C) 2012-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -104,17 +104,19 @@ METHOD(pts_database_t, create_file_hash_enumerator, enumerator_t*,
 				"SELECT f.id, f.name, fh.hash FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
 				"JOIN directories as d ON d.id = f.dir "
-				"WHERE fh.product = ? AND fh.algo = ? AND d.id = ? "
+				"JOIN versions as v ON v.id = fh.version "
+				"WHERE v.product = ? AND fh.algo = ? AND d.id = ? "
 				"ORDER BY f.name",
-				DB_INT, pid, DB_INT, algo, DB_INT, id, DB_INT, DB_TEXT, DB_BLOB);
+				DB_INT, pid, DB_INT, algo, DB_INT, id, DB_INT, DB_TEXT, DB_TEXT);
 	}
 	else
 	{
 		e = this->db->query(this->db,
 				"SELECT f.id, f.name, fh.hash FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
-				"WHERE fh.product = ? AND fh.algo = ? AND fh.file = ?",
-				DB_INT, pid, DB_INT, algo, DB_INT, id, DB_INT, DB_TEXT, DB_BLOB);
+				"JOIN versions AS v ON v.id = fh.version "
+				"WHERE v.product = ? AND fh.algo = ? AND fh.file = ?",
+				DB_INT, pid, DB_INT, algo, DB_INT, id, DB_INT, DB_TEXT, DB_TEXT);
 	}
 	return e;
 }
@@ -179,7 +181,8 @@ METHOD(pts_database_t, add_file_measurement, status_t,
 	/* does hash measurement value already exist? */
 	e = this->db->query(this->db,
 			"SELECT fh.id, fh.hash FROM file_hashes AS fh "
-			"WHERE fh.product = ? AND fh.algo = ? AND fh.file = ?",
+			"JOIN versions AS v ON v.id = fh.version "
+			"WHERE v.product = ? AND fh.algo = ? AND fh.file = ?",
 			 DB_INT, pid, DB_INT, algo, DB_INT, fid, DB_INT, DB_BLOB);
 	if (!e)
 	{
@@ -235,8 +238,10 @@ METHOD(pts_database_t, create_file_meas_enumerator, enumerator_t*,
 		e = this->db->query(this->db,
 				"SELECT fh.hash FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
-				"WHERE fh.product = ? AND f.name = ? AND fh.algo = ?",
-				DB_INT, pid, DB_TEXT, file, DB_INT, algo, DB_BLOB);
+				"JOIN versions AS v ON v.id = fh.version "
+				"WHERE v.product = ? AND f.name = ? AND fh.algo = ? "
+				"ORDER BY v.time DESC",
+				DB_INT, pid, DB_TEXT, file, DB_INT, algo, DB_TEXT);
 	}
 	else
 	{	/* absolute pathname */
@@ -256,8 +261,10 @@ METHOD(pts_database_t, create_file_meas_enumerator, enumerator_t*,
 		e = this->db->query(this->db,
 				"SELECT fh.hash FROM file_hashes AS fh "
 				"JOIN files AS f ON f.id = fh.file "
-				"WHERE fh.product = ? AND f.dir = ? AND f.name = ? AND fh.algo = ?",
-				DB_INT, pid, DB_INT, did, DB_TEXT, file, DB_INT, algo, DB_BLOB);
+				"JOIN versions AS v ON v.id = fh.version "
+				"WHERE v.product = ? AND f.dir = ? AND f.name = ? AND fh.algo = ? "
+				"ORDER BY v.time DESC",
+				DB_INT, pid, DB_INT, did, DB_TEXT, file, DB_INT, algo, DB_TEXT);
 	}
 
 err:

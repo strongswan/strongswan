@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -667,7 +667,8 @@ METHOD(pts_component_t, verify, status_t,
 			case IMA_STATE_RUNTIME:
 			{
 				uint8_t hash_buf[HASH_SIZE_SHA512];
-				chunk_t digest, hash;
+				uint8_t digest_buf[HASH_SIZE_SHA512], *hex_digest_buf;
+				chunk_t hex_digest, digest, hash;
 				enumerator_t *e;
 
 				this->count++;
@@ -685,8 +686,10 @@ METHOD(pts_component_t, verify, status_t,
 												hash_algo, ima_name);
 				if (e)
 				{
-					while (e->enumerate(e, &digest))
+					while (e->enumerate(e, &hex_digest_buf))
 					{
+						hex_digest = chunk_from_str(hex_digest_buf);
+						digest = chunk_from_hex(hex_digest, digest_buf);
 						if (!ima_hash(digest, ima_algo, ima_name,
 									  FALSE, algo, hash_buf))
 						{

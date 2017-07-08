@@ -24,7 +24,8 @@ options = \
 	options/scepclient.opt \
 	options/starter.opt \
 	options/swanctl.opt \
-	options/tnc.opt
+	options/tnc.opt \
+	options/sw-collector.opt
 
 plugins = \
 	plugins/addrblock.opt \
@@ -60,11 +61,13 @@ plugins = \
 	plugins/imc-os.opt \
 	plugins/imc-scanner.opt \
 	plugins/imc-swid.opt \
+	plugins/imc-swima.opt \
 	plugins/imc-test.opt \
 	plugins/imv-attestation.opt \
 	plugins/imv-os.opt \
 	plugins/imv-scanner.opt \
 	plugins/imv-swid.opt \
+	plugins/imv-swima.opt \
 	plugins/imv-test.opt \
 	plugins/ipseckey.opt \
 	plugins/led.opt \

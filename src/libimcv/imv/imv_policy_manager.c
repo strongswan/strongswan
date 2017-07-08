@@ -130,6 +130,31 @@ static bool iterate_enforcements(database_t *db, int device_id, int session_id,
 				case IMV_WORKITEM_DIR_META:
 					arg_int = dir;
 					break;
+				case IMV_WORKITEM_SWID_TAGS:
+					/* software [identifier] inventory by default */
+					arg_int = 0;
+
+					/* software identifiers only? */
+					if (device_id && strchr(argument, 'R'))
+					{
+						/* get last EID in order to set earliest EID */
+						e2 = db->query(db,
+							"SELECT eid FROM swid_events where device == ? "
+							"ORDER BY eid DESC", DB_UINT, device_id, DB_INT);
+						if (e2)
+						{
+							if (e2->enumerate(e2, &arg_int))
+							{
+								arg_int++;
+							}
+							else
+							{
+								arg_int = 1;
+							}
+							e2->destroy(e2);
+						}
+					}
+					break;
 				default:
 					arg_int = 0;
 			}

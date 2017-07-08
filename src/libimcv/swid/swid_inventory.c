@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2013-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -237,7 +237,7 @@ static status_t generate_tags(private_swid_inventory_t *this, char *generator,
 }
 
 static bool collect_tags(private_swid_inventory_t *this, char *pathname,
-						 swid_inventory_t *targets)
+						 swid_inventory_t *targets, bool is_swidtag_dir)
 {
 	char *rel_name, *abs_name;
 	struct stat st;
@@ -251,72 +251,49 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname,
 			 pathname, strerror(errno));
 		return FALSE;
 	}
-	DBG2(DBG_IMC, "entering %s", pathname);
+	if (is_swidtag_dir)
+	{
+			DBG2(DBG_IMC, "entering %s", pathname);
+	}
 
 	while (enumerator->enumerate(enumerator, &rel_name, &abs_name, &st))
 	{
-		char * start, *stop;
+		char *separator, *suffix;
 		chunk_t tag_creator;
 		chunk_t unique_sw_id = chunk_empty, tag_file_path = chunk_empty;
 
-		if (!strstr(rel_name, "regid."))
-		{
-			continue;
-		}
 		if (S_ISDIR(st.st_mode))
 		{
-			/* In case of a targeted request */
-			if (targets->get_count(targets))
-			{
-				enumerator_t *target_enumerator;
-				swid_tag_id_t *tag_id;
-				bool match = FALSE;
-
-				target_enumerator = targets->create_enumerator(targets);
-				while (target_enumerator->enumerate(target_enumerator, &tag_id))
-				{
-					if (chunk_equals(tag_id->get_tag_creator(tag_id),
-						chunk_from_str(rel_name)))
-					{
-						match = TRUE;
-						break;
-					}
-				}
-				target_enumerator->destroy(target_enumerator);
-
-				if (!match)
-				{
-					continue;
-				}
-			}
-
-			if (!collect_tags(this, abs_name, targets))
+			if (!collect_tags(this, abs_name, targets, is_swidtag_dir ||
+							  streq(rel_name, "swidtag")))
 			{
 				goto end;
 			}
 			continue;
 		}
+		if (!is_swidtag_dir)
+		{
+			continue;
+		}
 
-		/* parse the regid filename into its components */
-		start = rel_name;
-		stop = strchr(start, '_');
-		if (!stop)
+		/* found a swidtag file? */
+		suffix = strstr(rel_name, ".swidtag");
+		if (!suffix)
+		{
+			continue;
+		}
+
+		/* parse the swidtag filename into its components */
+		separator = strchr(rel_name, '_');
+		if (!separator)
 		{
 			DBG1(DBG_IMC, "  %s", rel_name);
 			DBG1(DBG_IMC, "  '_' separator not found");
 			goto end;
 		}
-		tag_creator = chunk_create(start, stop-start);
-		start = stop + 1;
+		tag_creator = chunk_create(rel_name, separator-rel_name);
 
-		stop = strstr(start, ".swidtag");
-		if (!stop)
-		{
-			DBG1(DBG_IMC, "  %s", rel_name);
-			DBG1(DBG_IMC, "  swidtag postfix not found");
-			goto end;
-		}
-		unique_sw_id = chunk_create(start, stop-start);
+		unique_sw_id = chunk_create(separator+1, suffix-separator-1);
 		tag_file_path = chunk_from_str(abs_name);
 
 		/* In case of a targeted request */
@@ -334,7 +311,7 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname,
 				target_tag_creator  = tag_id->get_tag_creator(tag_id);
 
 				if (chunk_equals(target_unique_sw_id, unique_sw_id) &&
-					chunk_equals(target_tag_creator, tag_creator))
+				    chunk_equals(target_tag_creator, tag_creator))
 				{
 					match = TRUE;
 					break;
@@ -358,7 +335,7 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname,
 			if (!xml_tag)
 			{
 				DBG1(DBG_IMC, "  opening '%s' failed: %s", abs_name,
-					 strerror(errno));
+				     strerror(errno));
 				goto end;
 			}
 
@@ -378,7 +355,10 @@ static bool collect_tags(private_swid_inventory_t *this, char *pathname,
 
 end:
 	enumerator->destroy(enumerator);
-	DBG2(DBG_IMC, "leaving %s", pathname);
+	if (is_swidtag_dir)
+	{
+		DBG2(DBG_IMC, "leaving %s", pathname);
+	}
 
 	return success;
 }
@@ -396,7 +376,7 @@ METHOD(swid_inventory_t, collect, bool,
 	 * Collect swidtag files by iteratively entering all directories in
 	 * the tree under the "directory" path.
 	 */
-	return collect_tags(this, directory, targets);
+	return collect_tags(this, directory, targets, FALSE);
 }
 
 METHOD(swid_inventory_t, add, void,
