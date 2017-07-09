@@ -110,70 +110,18 @@ METHOD(sw_collector_db_t, add_sw_event, bool,
 
 METHOD(sw_collector_db_t, set_sw_id, uint32_t,
 	private_sw_collector_db_t *this, char *name,  char *package, char *version,
-	uint8_t source, bool installed, bool check)
+	uint8_t source, bool installed)
 {
-	uint32_t sw_id = 0, status;
-	enumerator_t *e;
+	uint32_t sw_id;
 
-	/* Does software identifier already exist in database? */
-	e = this->db->query(this->db,
-			"SELECT id, installed FROM sw_identifiers WHERE name = ?",
-			DB_TEXT, name, DB_UINT, DB_UINT);
-	if (!e)
+	if (this->db->execute(this->db, &sw_id,
+			"INSERT INTO sw_identifiers "
+			"(name, package, version, source, installed) VALUES (?, ?, ?, ?, ?)",
+			 DB_TEXT, name, DB_TEXT, package, DB_TEXT, version, DB_UINT, source,
+			 DB_UINT, installed) != 1)
 	{
-		DBG1(DBG_IMC, "database query for sw_identifier failed");
+		DBG1(DBG_IMC, "unable to insert sw_id into database");
 		return 0;
-	}
-	if (!e->enumerate(e, &sw_id, &status))
-	{
-		sw_id = 0;
-	}
-	e->destroy(e);
-
-	if (sw_id)
-	{
-		if (status == installed)
-		{
-			if (!check)
-			{
-				DBG1(DBG_IMC, "  Warning: sw_id %u is already %s", sw_id,
-					 status ? "installed" : "deleted");
-			}
-			return sw_id;
-		}
-		if (check)
-		{
-			DBG1(DBG_IMC, "  Warning: sw_id %u is %s", sw_id,
-				 status ? "installed" : "deleted");
-		}
-
-		/* Change installation status */
-		if (this->db->execute(this->db, NULL,
-				"UPDATE sw_identifiers SET installed = ? WHERE id = ?",
-				 DB_UINT, installed, DB_UINT, sw_id) != 1)
-		{
-			DBG1(DBG_IMC, "unable to update sw_id status in database");
-			return 0;
-		}
-	}
-	else
-	{
-		/* Create new software identifier */
-		if (this->db->execute(this->db, &sw_id,
-				"INSERT INTO sw_identifiers "
-				"(name, package, version, source, installed) VALUES "
-				"(?, ?, ?, ?, ?)",
-				 DB_TEXT, name, DB_TEXT, package, DB_TEXT, version,
-				 DB_UINT, source, DB_UINT, installed) != 1)
-		{
-			DBG1(DBG_IMC, "unable to insert sw_id into database");
-			return 0;
-		}
-
-		if (check || !installed)
-		{
-			add_sw_event(this, 1, sw_id, SWIMA_EVENT_ACTION_CREATION);
-		}
 	}
 
 	return sw_id;
@@ -255,25 +203,91 @@ METHOD(sw_collector_db_t, get_sw_id_count, uint32_t,
 	return count;
 }
 
+METHOD(sw_collector_db_t, update_sw_id, bool,
+	private_sw_collector_db_t *this, uint32_t sw_id, char *name, char *version,
+	bool installed)
+{
+	int res;
+
+	if (name && version)
+	{
+		res = this->db->execute(this->db, NULL,
+			"UPDATE sw_identifiers SET name = ?, version = ?, installed = ? "
+			"WHERE id = ?", DB_TEXT, name, DB_TEXT, version, DB_UINT, installed,
+			 DB_UINT, sw_id);
+	}
+	else
+	{
+		res = this->db->execute(this->db, NULL,
+			"UPDATE sw_identifiers SET installed = ? WHERE id = ?",
+			 DB_UINT, installed, DB_UINT, sw_id);
+	}
+	if (res != 1)
+	{
+		DBG1(DBG_IMC, "unable to update software identifier in database");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+METHOD(sw_collector_db_t, update_package, int,
+	private_sw_collector_db_t *this, char *package, char *package_new)
+{
+	int count;
+
+	count = this->db->execute(this->db, NULL,
+			"UPDATE sw_identifiers SET package = ? "
+			"WHERE package = ?", DB_TEXT, package_new, DB_TEXT, package);
+	if (count < 0)
+	{
+		DBG1(DBG_IMC, "unable to update package name in database");
+	}
+
+	return count;
+}
+
 METHOD(sw_collector_db_t, create_sw_enumerator, enumerator_t*,
-	private_sw_collector_db_t *this, sw_collector_db_query_t type)
+	private_sw_collector_db_t *this, sw_collector_db_query_t type, char *package)
 {
 	enumerator_t *e;
-	uint32_t installed;
+	u_int installed;
 
 	if (type == SW_QUERY_ALL)
 	{
-		e = this->db->query(this->db,
-				"SELECT name, package, version, installed FROM sw_identifiers "
-				"ORDER BY name ASC", DB_TEXT, DB_TEXT, DB_TEXT, DB_UINT);
+		if (package)
+		{
+			e = this->db->query(this->db,
+				"SELECT id, name, package, version, installed "
+				"FROM sw_identifiers WHERE package = ? ORDER BY name ASC",
+				 DB_TEXT, package, DB_UINT, DB_TEXT, DB_TEXT, DB_TEXT, DB_UINT);
+		}
+		else
+		{
+			e = this->db->query(this->db,
+				"SELECT id, name, package, version, installed "
+				"FROM sw_identifiers ORDER BY name ASC",
+				 DB_UINT, DB_TEXT, DB_TEXT, DB_TEXT, DB_UINT);
+		}
 	}
 	else
 	{
 		installed = (type == SW_QUERY_INSTALLED);
-		e = this->db->query(this->db,
-				"SELECT name, package, version, installed FROM sw_identifiers "
-				"WHERE installed = ? ORDER BY name ASC",
-				 DB_UINT, installed, DB_TEXT, DB_TEXT, DB_TEXT, DB_UINT);
+
+		if (package)
+		{
+			e = this->db->query(this->db,
+				"SELECT id, name, package, version, installed "
+				"FROM sw_identifiers WHERE package = ? AND installed = ? "
+				"ORDER BY name ASC", DB_TEXT, package, DB_UINT, installed,
+				 DB_UINT, DB_TEXT, DB_TEXT, DB_TEXT, DB_UINT);
+		}
+		else
+		{
+			e = this->db->query(this->db,
+				"SELECT id, name, package, version, installed "
+				"FROM sw_identifiers WHERE installed = ? ORDER BY name ASC",
+				 DB_UINT, installed, DB_UINT, DB_TEXT, DB_TEXT, DB_TEXT, DB_UINT);
+		}
 	}
 	if (!e)
 	{
@@ -308,6 +322,8 @@ sw_collector_db_t *sw_collector_db_create(char *uri)
 			.set_sw_id = _set_sw_id,
 			.get_sw_id = _get_sw_id,
 			.get_sw_id_count = _get_sw_id_count,
+			.update_sw_id = _update_sw_id,
+			.update_package = _update_package,
 			.create_sw_enumerator = _create_sw_enumerator,
 			.destroy = _destroy,
 		},

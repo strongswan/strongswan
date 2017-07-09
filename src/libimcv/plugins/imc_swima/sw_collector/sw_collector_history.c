@@ -18,8 +18,8 @@
 #include <time.h>
 
 #include "sw_collector_history.h"
+#include "sw_collector_dpkg.h"
 
-#include "imc/imc_os_info.h"
 #include "swima/swima_event.h"
 
 typedef struct private_sw_collector_history_t private_sw_collector_history_t;
@@ -35,29 +35,14 @@ struct private_sw_collector_history_t {
 	sw_collector_history_t public;
 
 	/**
-	 * tagCreator
-	 */
-	char *tag_creator;
-
-	/**
-	 * OS string 'name_version-arch'
-	 */
-	char *os;
-
-	/**
-	 * Product string 'name version arch'
-	 */
-	char *product;
-
-	/**
-	 * OS info about endpoint
-	 */
-	imc_os_info_t *os_info;
-
-	/**
 	 * Software Event Source Number
 	 */
 	uint8_t source;
+
+	/**
+	 * Reference to OS info object
+	 */
+	sw_collector_info_t *info;
 
 	/**
 	 * Reference to collector database
@@ -65,16 +50,6 @@ struct private_sw_collector_history_t {
 	sw_collector_db_t *db;
 
 };
-
-METHOD(sw_collector_history_t, get_os, char*,
-	private_sw_collector_history_t *this, char **product)
-{
-	if (product)
-	{
-		*product = this->product;
-	}
-	return this->os;
-}
 
 /**
  * Define auxiliary package_t list item object
@@ -90,52 +65,9 @@ struct package_t {
 };
 
 /**
- * Replaces invalid character by a valid one
- */
-static void sanitize_uri(char *uri, char a, char b)
-{
-	char *pos = uri;
-
-	while (TRUE)
-	{
-		pos = strchr(pos, a);
-		if (!pos)
-		{
-			break;
-		}
-		*pos = b;
-		pos++;
-	}
-}
-
-/**
- * Create software identifier
- */
-char* create_sw_id(char *tag_creator, char *os, char *package, char *version)
-{
-	char *pos, *sw_id;
-	size_t len;
-
-	/* Remove architecture from package name */
-	pos = strchr(package, ':');
-	len = pos ? (pos - package) : strlen(package);
-
-	/* Build software identifier */
-	if (asprintf(&sw_id, "%s__%s-%.*s%s%s", tag_creator, os, len, package,
-				 strlen(version) ? "-" : "", version) == -1)
-	{
-		return NULL;
-	}
-	sanitize_uri(sw_id, ':', '~');
-	sanitize_uri(sw_id, '+', '~');
-
-	return sw_id;
-}
-
-/**
  * Create package_t list item object
  */
-static package_t* create_package(char* tag_creator, char *os, chunk_t package,
+static package_t* create_package(sw_collector_info_t *info, chunk_t package,
 								 chunk_t version, chunk_t old_version)
 {
 	package_t *this;
@@ -146,11 +78,11 @@ static package_t* create_package(char* tag_creator, char *os, chunk_t package,
 		.old_version = strndup(old_version.ptr, old_version.len),
 	)
 
-	this->sw_id = create_sw_id(tag_creator, os, this->package, this->version);
+	this->sw_id = info->create_sw_id(info, this->package, this->version);
 	if (old_version.len)
 	{
-		this->old_sw_id = create_sw_id(tag_creator, os, this->package,
-									   this->old_version);
+		this->old_sw_id = info->create_sw_id(info, this->package,
+												   this->old_version);
 	}
 
 	return this;
@@ -175,8 +107,8 @@ static void free_package(package_t *this)
 /**
  * Extract and parse a single package item
  */
-static package_t* extract_package(chunk_t item, char *tag_creator, char *os,
-								  sw_collector_history_op_t op)
+static package_t* extract_package(chunk_t item, sw_collector_info_t *info,
+												sw_collector_history_op_t op)
 {
 	chunk_t package, version, old_version;
 	package_t *p;
@@ -208,7 +140,7 @@ static package_t* extract_package(chunk_t item, char *tag_creator, char *os,
 			version = item;
 		}
 	}
-	p = create_package(tag_creator, os, package, version, old_version);
+	p = create_package(info, package, version, old_version);
 
 	/* generate log entry */
 	if (op == SW_OP_UPGRADE)
@@ -277,16 +209,22 @@ METHOD(sw_collector_history_t, extract_packages, bool,
 	private_sw_collector_history_t *this, chunk_t args, uint32_t eid,
 	sw_collector_history_op_t op)
 {
-	package_t *p = NULL;
-	uint32_t sw_id;
-	chunk_t item;
 	bool success = FALSE;
+	package_t *p = NULL;
+	chunk_t item;
 
 	eat_whitespace(&args);
 
 	while (extract_token(&item, ')', &args))
 	{
-		p = extract_package(item, this->tag_creator, this->os, op);
+		char *del_sw_id = NULL, *del_version = NULL;
+		char *nx, *px, *vx, *v1;
+		bool installed;
+		u_int sw_idx, ix;
+		uint32_t sw_id, sw_id_epoch_less = 0;
+		enumerator_t *e;
+
+		p = extract_package(item, this->info, op);
 		if (!p)
 		{
 			goto end;
@@ -299,29 +237,115 @@ METHOD(sw_collector_history_t, extract_packages, bool,
 			continue;
 		}
 
-		sw_id = this->db->set_sw_id(this->db, p->sw_id, p->package,	p->version,
-									this->source, op != SW_OP_REMOVE, FALSE);
-		if (!sw_id)
+		switch (op)
 		{
-			goto end;
-		}
-		if (!this->db->add_sw_event(this->db, eid, sw_id, op != SW_OP_REMOVE ?
-					SWIMA_EVENT_ACTION_CREATION : SWIMA_EVENT_ACTION_DELETION))
-		{
-			goto end;
+			case SW_OP_REMOVE:
+				/* prepare subsequent deletion sw event */
+				del_sw_id = p->sw_id;
+				del_version = p->version;
+				break;
+			case SW_OP_UPGRADE:
+				/* prepare subsequent deletion sw event */
+				del_sw_id = p->old_sw_id;
+				del_version = p->old_version;
+				/* fall through to next case */
+			case SW_OP_INSTALL:
+				sw_id = this->db->get_sw_id(this->db, p->sw_id, NULL, NULL,
+											NULL, &installed);
+				if (sw_id)
+				{
+					/* sw identifier exists - update state to 'installed' */
+					if (installed)
+					{
+						/* this case should not occur */
+						DBG1(DBG_IMC, "  warning:  sw_id %d is already "
+									  "installed", sw_id);
+					}
+					else if (!this->db->update_sw_id(this->db, sw_id, NULL,
+													 NULL, TRUE))
+					{
+						goto end;
+					}
+				}
+				else
+				{
+					/* new sw identifier - create with state 'installed' */
+					sw_id = this->db->set_sw_id(this->db, p->sw_id, p->package,
+												p->version,	this->source, TRUE);
+					if (!sw_id)
+					{
+						goto end;
+					}
+				}
+
+				/* add creation sw event with current eid */
+				if (!this->db->add_sw_event(this->db, eid, sw_id,
+									SWIMA_EVENT_ACTION_CREATION))
+				{
+					goto end;
+				}
+				break;
 		}
 
-		if (op == SW_OP_UPGRADE)
+		if (op != SW_OP_INSTALL)
 		{
-			sw_id = this->db->set_sw_id(this->db, p->old_sw_id, p->package,
-										p->old_version, this->source, FALSE,
-										FALSE);
-			if (!sw_id)
+			sw_id = 0;
+
+			/* look for existing installed package versions */
+			e = this->db->create_sw_enumerator(this->db, SW_QUERY_INSTALLED,
+											   p->package);
+			if (!e)
 			{
 				goto end;
 			}
+
+			while (e->enumerate(e, &sw_idx, &nx, &px, &vx, &ix))
+			{
+				if (streq(vx, del_version))
+				{
+					/* full match with epoch */
+					sw_id = sw_idx;
+					break;
+				}
+				v1 = strchr(vx, ':');
+				if (v1 && streq(++v1, del_version))
+				{
+					/* match with stripped epoch */
+					sw_id_epoch_less = sw_idx;
+				}
+			}
+			e->destroy(e);
+
+			if (!sw_id && sw_id_epoch_less)
+			{
+				/* no full match - fall back to epoch-less match */
+				sw_id = sw_id_epoch_less;
+			}
+			if (sw_id)
+			{
+				/* sw identifier exists - update state to 'deleted' */
+				if (!this->db->update_sw_id(this->db, sw_id, NULL, NULL, FALSE))
+				{
+					goto end;
+				}
+			}
+			else
+			{
+				/* new sw identifier - create with state 'deleted' */
+				sw_id = this->db->set_sw_id(this->db, del_sw_id, p->package,
+									del_version, this->source, FALSE);
+
+				/* add creation sw event with eid = 1 */
+				if (!sw_id || !this->db->add_sw_event(this->db, 1, sw_id,
+											SWIMA_EVENT_ACTION_CREATION))
+				{
+					goto end;
+				}
+			}
+
+			/* add creation sw event with current eid */
 			if (!this->db->add_sw_event(this->db, eid, sw_id,
-										SWIMA_EVENT_ACTION_DELETION))
+								SWIMA_EVENT_ACTION_DELETION))
 			{
 				goto end;
 			}
@@ -346,150 +370,136 @@ end:
 METHOD(sw_collector_history_t, merge_installed_packages, bool,
 	private_sw_collector_history_t *this)
 {
-	FILE *file;
 	uint32_t sw_id, count = 0;
-	char line[BUF_LEN], *pos, *package, *version, *state, *name;
-	bool success = FALSE;
-	char cmd[] = "dpkg-query -W -f=\'${Package}\t${Version}\t${Status}\n\'";
+	char package_arch[BUF_LEN];
+	char *package, *arch, *version, *v1, *name, *n1;
+	bool installed, success = FALSE;
+	sw_collector_dpkg_t *dpkg;
+	enumerator_t *enumerator;
 
 	DBG1(DBG_IMC, "Merging:");
 
-	file = popen(cmd, "r");
-	if (!file)
+	dpkg = sw_collector_dpkg_create();
+	if (!dpkg)
 	{
-		DBG1(DBG_IMC, "failed to run dpgk-query command");
 		return FALSE;
 	}
 
-	while (TRUE)
+	enumerator = dpkg->create_sw_enumerator(dpkg);
+	while (enumerator->enumerate(enumerator, &package, &arch, &version))
 	{
-		if (!fgets(line, sizeof(line), file))
-		{
-			break;
-		}
-
-		package = line;
-		pos = strchr(line, '\t');
-		if (!pos)
-		{
-			goto end;
-		}
-		*pos = '\0';
-
-		version = ++pos;
-		pos = strchr(pos, '\t');
-		if (!pos)
-		{
-			goto end;
-		}
-		*pos = '\0';
-
-		state = ++pos;
-		pos = strchr(pos, '\n');
-		if (!pos)
-		{
-			goto end;
-		}
-		*pos = '\0';
-
-		if (!streq(state, "install ok installed"))
-		{
-			continue;
-		}
-		name = create_sw_id(this->tag_creator, this->os, package, version);
+		name = this->info->create_sw_id(this->info, package, version);
 		DBG3(DBG_IMC, "  %s merged", name);
 
-		sw_id = this->db->set_sw_id(this->db, name, package, version,
-									this->source, TRUE, TRUE);
-		free(name);
+		sw_id = this->db->get_sw_id(this->db, name, NULL, NULL, NULL,
+									&installed);
+		if (sw_id)
+		{
+			if (!installed)
+			{
+				DBG1(DBG_IMC, "  warning: existing sw_id %u"
+							  " is not installed", sw_id);
+
+				if (!this->db->update_sw_id(this->db, sw_id, name, version,
+											TRUE))
+				{
+					free(name);
+					goto end;
+				}
+			}
+		}
+		else
+		{
+			/* check for a Debian epoch number */
+			v1 = strchr(version, ':');
+			if (v1)
+			{
+				/* check for existing and installed epoch-less version */
+				n1 = this->info->create_sw_id(this->info, package, ++v1);
+				sw_id = this->db->get_sw_id(this->db, n1, NULL, NULL, NULL,
+											&installed);
+				free(n1);
+
+				if (sw_id && installed)
+				{
+					/* add epoch to existing version */
+					if (!this->db->update_sw_id(this->db, sw_id, name, version,
+												installed))
+					{
+						free(name);
+						goto end;
+					}
+				}
+				else
+				{
+					sw_id = 0;
+				}
+			}
+		}
+
 		if (!sw_id)
 		{
-			goto end;
+			/* Package name is stored with appended architecture */
+			if (!streq(arch, "all"))
+			{
+				snprintf(package_arch, BUF_LEN, "%s:%s", package, arch);
+				package = package_arch;
+			}
+
+			/* new sw identifier - create with state 'installed' */
+			sw_id = this->db->set_sw_id(this->db, name, package, version,
+										this->source, TRUE);
+
+			/* add creation sw event with eid = 1 */
+			if (!sw_id || !this->db->add_sw_event(this->db, 1, sw_id,
+										SWIMA_EVENT_ACTION_CREATION))
+			{
+				free(name);
+				goto end;
+			}
+
 		}
+		free(name);
 		count++;
 	}
 	success = TRUE;
-	DBG1(DBG_IMC, "  merged %u installed packages, %u registed in database",
+
+	DBG1(DBG_IMC, "  merged %u installed packages, %u registered in database",
 		 count, this->db->get_sw_id_count(this->db, SW_QUERY_INSTALLED));
 
 end:
-	pclose(file);
+	enumerator->destroy(enumerator);
+	dpkg->destroy(dpkg);
+
 	return success;
 }
 
 METHOD(sw_collector_history_t, destroy, void,
 	private_sw_collector_history_t *this)
 {
-	this->os_info->destroy(this->os_info);
-	free(this->os);
-	free(this->product);
 	free(this);
 }
 
 /**
  * Described in header.
  */
-sw_collector_history_t *sw_collector_history_create(sw_collector_db_t *db,
+sw_collector_history_t *sw_collector_history_create(sw_collector_info_t *info,
+													sw_collector_db_t *db,
 													uint8_t source)
 {
 	private_sw_collector_history_t *this;
-	chunk_t os_name, os_version, os_arch;
-	os_type_t os_type;
 
 	INIT(this,
 		.public = {
-			.get_os = _get_os,
 			.extract_timestamp = _extract_timestamp,
 			.extract_packages = _extract_packages,
 			.merge_installed_packages = _merge_installed_packages,
 			.destroy = _destroy,
 		},
-		.db = db,
 		.source = source,
-		.os_info = imc_os_info_create(),
-		.tag_creator = lib->settings->get_str(lib->settings,
-				"%s.tag_creator.regid", "strongswan.org", lib->ns),
+		.info = info,
+		.db = db,
 	);
-
-	os_type = this->os_info->get_type(this->os_info);
-	os_name = this->os_info->get_name(this->os_info);
-	os_arch = this->os_info->get_version(this->os_info);
-
-	/* check if OS is supported */
-	if (os_type != 	OS_TYPE_DEBIAN && os_type != OS_TYPE_UBUNTU)
-	{
-		DBG1(DBG_IMC, "%.*s OS not supported", os_name.len, os_name.ptr);
-		destroy(this);
-		return NULL;
-	}
-
-	/* get_version() returns version followed by arch */ 
-	if (!extract_token(&os_version, ' ', &os_arch))
-	{
-		DBG1(DBG_IMC, "separation of OS version from arch failed");
-		destroy(this);
-		return NULL;
-	}
-
-	/* construct OS string */
-	if (asprintf(&this->os, "%.*s_%.*s-%.*s", os_name.len, os_name.ptr,
-											  os_version.len, os_version.ptr,
-		 									  os_arch.len, os_arch.ptr) == -1)
-	{
-		DBG1(DBG_IMC, "constructon of OS string failed");
-		destroy(this);
-		return NULL;
-	}
-
-	/* construct product string */
-	if (asprintf(&this->product, "%.*s %.*s %.*s", os_name.len, os_name.ptr,
-											  os_version.len, os_version.ptr,
-											  os_arch.len, os_arch.ptr) == -1)
-	{
-		DBG1(DBG_IMC, "constructon of product string failed");
-		destroy(this);
-		return NULL;
-	}
 
 	return &this->public;
 }

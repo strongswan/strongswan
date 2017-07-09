@@ -15,12 +15,14 @@
 
 /**
  * @defgroup sw_collector_history_t sw_collector_history
- * @{ @ingroup imc_swima
+ * @{ @ingroup sw_collector
  */
 
 #ifndef SW_COLLECTOR_HISTORY_H_
 #define SW_COLLECTOR_HISTORY_H_
 
+#include "sw_collector_history.h"
+#include "sw_collector_info.h"
 #include "sw_collector_db.h"
 
 #include <library.h>
@@ -43,14 +45,6 @@ enum sw_collector_history_op_t {
  * Software collector history object
  */
 struct sw_collector_history_t {
-
-	/**
-	 * Get OS and product strings
-	 *
-	 * @param product		Product string formed from OS info
-	 * @return				OS string formed from OS info
-	 */
-	char* (*get_os)(sw_collector_history_t *this, char **product);
 
 	/**
 	 * Extract timestamp from event in installation history
@@ -90,10 +84,12 @@ struct sw_collector_history_t {
 /**
  * Create an sw_collector_history_t instance
  *
+ * @param info				Internal reference to collector info
  * @param db				Internal reference to collector database
  * @param source			Software event source number
  */
-sw_collector_history_t* sw_collector_history_create(sw_collector_db_t *db,
+sw_collector_history_t* sw_collector_history_create(sw_collector_info_t *info,
+													sw_collector_db_t *db,
 													uint8_t source);
 
 #endif /** SW_COLLECTOR_HISTORY_H_ @}*/

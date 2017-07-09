@@ -37,7 +37,9 @@ ipsec_PROGRAMS = sw-collector
 sw_collector_SOURCES = \
 	sw_collector/sw-collector.c \
 	sw_collector/sw_collector_db.h sw_collector/sw_collector_db.c \
+	sw_collector/sw_collector_dpkg.h sw_collector/sw_collector_dpkg.c \
 	sw_collector/sw_collector_history.h sw_collector/sw_collector_history.c \
+	sw_collector/sw_collector_info.h sw_collector/sw_collector_info.c \
 	sw_collector/sw_collector_rest_api.h sw_collector/sw_collector_rest_api.c
 
 sw_collector_LDADD = \

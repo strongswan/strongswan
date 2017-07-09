@@ -23,13 +23,17 @@
 # include <syslog.h>
 #endif
 
+#include "sw_collector_info.h"
 #include "sw_collector_db.h"
 #include "sw_collector_history.h"
 #include "sw_collector_rest_api.h"
-
+#include "sw_collector_dpkg.h"
+#
 #include <library.h>
 #include <utils/debug.h>
 #include <utils/lexparser.h>
+
+#include <imv/imv_os_info.h>
 
 /**
  * global debug output variables
@@ -44,7 +48,8 @@ enum collector_op_t {
 	COLLECTOR_OP_EXTRACT,
 	COLLECTOR_OP_LIST,
 	COLLECTOR_OP_UNREGISTERED,
-	COLLECTOR_OP_GENERATE
+	COLLECTOR_OP_GENERATE,
+	COLLECTOR_OP_MIGRATE
 };
 
 /**
@@ -110,9 +115,9 @@ static void usage(void)
 	printf("\
 Usage:\n\
   sw-collector --help\n\
-  sw-collector [--debug <level>] [--quiet] --list\n\
-  sw-collector [--debug <level>] [--quiet] --unregistered|--generate\n\
-  sw-collector [--debug <level>] [--quiet] [--count <event count>]\n");
+  sw-collector [--debug <level>] [--quiet] [--count <event count>]\n\
+  sw-collector [--debug <level>] [--quiet] --list|-unregistered\n\
+  sw-collector [--debug <level>] [--quiet] ---generate|--migrate\n");
 }
 
 /**
@@ -135,12 +140,13 @@ static collector_op_t do_args(int argc, char *argv[])
 			{ "debug", required_argument, NULL, 'd' },
 			{ "generate", no_argument, NULL, 'g' },
 			{ "list", no_argument, NULL, 'l' },
+			{ "migrate", no_argument, NULL, 'm' },
 			{ "quiet", no_argument, NULL, 'q' },
 			{ "unregistered", no_argument, NULL, 'u' },
 			{ 0,0,0,0 }
 		};
 
-		c = getopt_long(argc, argv, "hc:d:lqu", long_opts, NULL);
+		c = getopt_long(argc, argv, "hc:d:lmqu", long_opts, NULL);
 		switch (c)
 		{
 			case EOF:
@@ -161,6 +167,9 @@ static collector_op_t do_args(int argc, char *argv[])
 			case 'l':
 				op = COLLECTOR_OP_LIST;
 				continue;
+			case 'm':
+				op = COLLECTOR_OP_MIGRATE;
+				continue;
 			case 'q':
 				stderr_quiet = TRUE;
 				continue;
@@ -179,14 +188,25 @@ static collector_op_t do_args(int argc, char *argv[])
 /**
  * Extract software events from apt history log files
  */
-static int extract_history(sw_collector_db_t *db)
+static int extract_history(sw_collector_info_t *info, sw_collector_db_t *db)
 {
 	sw_collector_history_t *history = NULL;
 	uint32_t epoch, last_eid, eid = 0;
-	char *history_path, *last_time = NULL, rfc_time[21];
+	char *history_path, *os, *last_time = NULL, rfc_time[21];
 	chunk_t *h, history_chunk, line, cmd;
+	os_type_t os_type;
 	int status = EXIT_FAILURE;
 	bool skip = TRUE;
+
+	/* check if OS supports apg/dpkg history logs */
+	info->get_os(info, &os);
+	os_type = info->get_os_type(info);
+
+	if (os_type != 	OS_TYPE_DEBIAN && os_type != OS_TYPE_UBUNTU)
+	{
+		DBG1(DBG_IMC, "%.*s not supported", os);
+		return EXIT_FAILURE;
+	}
 
 	/* open history file for reading */
 	history_path= lib->settings->get_str(lib->settings, "%s.history", NULL,
@@ -194,23 +214,18 @@ static int extract_history(sw_collector_db_t *db)
 	if (!history_path)
 	{
 		fprintf(stderr, "sw-collector.history path not set.\n");
-		return FALSE;
+		return EXIT_FAILURE;
 	}
 	h = chunk_map(history_path, FALSE);
 	if (!h)
 	{
 		fprintf(stderr, "opening '%s' failed: %s", history, strerror(errno));
-		return FALSE;
+		return EXIT_FAILURE;
 	}
 	history_chunk = *h;
 
 	/* Instantiate history extractor */
-	history = sw_collector_history_create(db, 1);
-	if (!history)
-	{
-		/* OS is not supported */
-		goto end;
-	}
+	history = sw_collector_history_create(info, db, 1);
 
 	/* retrieve last event in database */
 	if (!db->get_last_event(db, &last_eid, &epoch, &last_time) || !last_eid)
@@ -313,7 +328,7 @@ static int extract_history(sw_collector_db_t *db)
 
 end:
 	free(last_time);
-	DESTROY_IF(history);
+	history->destroy(history);
 	chunk_unmap(h);
 
 	return status;
@@ -326,14 +341,14 @@ static int list_identifiers(sw_collector_db_t *db)
 {
 	enumerator_t *e;
 	char *name, *package, *version;
-	uint32_t count = 0, installed_count = 0, installed;
+	uint32_t sw_id, count = 0, installed_count = 0, installed;
 
-	e = db->create_sw_enumerator(db, SW_QUERY_ALL);
+	e = db->create_sw_enumerator(db, SW_QUERY_ALL, NULL);
 	if (!e)
 	{
 		return EXIT_FAILURE;
 	}
-	while (e->enumerate(e, &name, &package, &version, &installed))
+	while (e->enumerate(e, &sw_id, &name, &package, &version, &installed))
 	{
 		printf("%s,%s,%s,%d\n", name, package, version, installed);
 		if (installed)
@@ -433,9 +448,12 @@ static char* generate_tag(char *name, char *package, char *version,
 	return (res == -1) ? NULL : tag;
 }
 
-static int generate_tags(sw_collector_db_t *db)
+/**
+ * Generate a minimalistic ISO 19770-2:2015 SWID tag for
+ * all deleted SW identifiers that are not registered centrally
+ */
+static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db)
 {
-	sw_collector_history_t *os_info;
 	sw_collector_rest_api_t *rest_api;
 	char *pos, *name, *package, *version, *entity, *regid, *product, *tag;
 	enumerator_t *enumerator;
@@ -446,13 +464,7 @@ static int generate_tags(sw_collector_db_t *db)
 									"strongSwan Project", lib->ns);
 	regid  = lib->settings->get_str(lib->settings, "%s.tag_creator.regid",
 									"strongswan.org", lib->ns);
-
-	os_info = sw_collector_history_create(db, 0);
-	if (!os_info)
-	{
-		return EXIT_FAILURE;
-	}
-	os_info->get_os(os_info, &product);
+	info->get_os(info, &product);
 
 	rest_api = sw_collector_rest_api_create(db);
 	if (!rest_api)
@@ -493,18 +505,69 @@ static int generate_tags(sw_collector_db_t *db)
 				   count);
 
 end:
-	os_info->destroy(os_info);
 	DESTROY_IF(rest_api);
 
 	return status;
 }
 
+/**
+ * Append missing architecture suffix to package entries in the database
+ */
+static int migrate(sw_collector_info_t *info, sw_collector_db_t *db)
+{
+	sw_collector_dpkg_t *dpkg;
+
+	char *package, *arch, *version;
+	char package_arch[BUF_LEN];
+	int res, count = 0;
+	int status = EXIT_SUCCESS;
+	enumerator_t *enumerator;
+
+	dpkg = sw_collector_dpkg_create();
+	if (!dpkg)
+	{
+		return FAILED;
+	}
+
+	enumerator = dpkg->create_sw_enumerator(dpkg);
+	while (enumerator->enumerate(enumerator, &package, &arch, &version))
+	{
+		if (streq(arch, "all"))
+		{
+			continue;
+		}
+
+		/* Concatenate package and architecture strings */
+		snprintf(package_arch, BUF_LEN, "%s:%s", package, arch);
+
+		res = db->update_package(db, package, package_arch);
+		if (res < 0)
+		{
+				status = EXIT_FAILURE;
+				break;
+		}
+		else if (res > 0)
+		{
+			count += res;
+			DBG2(DBG_IMC, "replaced '%s' by '%s'", package, package_arch);
+		}
+	}
+	enumerator->destroy(enumerator);
+	dpkg->destroy(dpkg);
+
+	DBG1(DBG_IMC, "migrated %d sw identifier records", count);
+ 
+	return status;
+}
+
+
 int main(int argc, char *argv[])
 {
 	sw_collector_db_t *db = NULL;
+	sw_collector_info_t *info;
 	collector_op_t op;
-	char *uri;
-	int status;
+	char *uri, *tag_creator;
+	int status = EXIT_FAILURE;
 
 	op = do_args(argc, argv);
 
@@ -543,10 +606,15 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	/* Attach OS info */
+	tag_creator = lib->settings->get_str(lib->settings, "%s.tag_creator.regid",
+										 "strongswan.org", lib->ns);
+	info = sw_collector_info_create(tag_creator);
+
 	switch (op)
 	{
 		case COLLECTOR_OP_EXTRACT:
-			status = extract_history(db);
+			status = extract_history(info, db);
 			break;
 		case COLLECTOR_OP_LIST:
 			status = list_identifiers(db);
@@ -555,11 +623,14 @@ int main(int argc, char *argv[])
 			status = unregistered_identifiers(db);
 			break;
 		case COLLECTOR_OP_GENERATE:
-			status = generate_tags(db);
-		default:
+			status = generate_tags(info, db);
+			break;
+		case COLLECTOR_OP_MIGRATE:
+			status = migrate(info, db);
 			break;
 	}
 	db->destroy(db);
+	info->destroy(info);
 
 	exit(status);
 }

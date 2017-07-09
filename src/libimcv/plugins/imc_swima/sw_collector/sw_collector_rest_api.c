@@ -50,19 +50,19 @@ static json_object* create_rest_request(private_sw_collector_rest_api_t *this,
 {
 	json_object *jrequest, *jarray, *jstring;
 	char *name, *package, *version;
-	uint32_t i;
+	uint32_t sw_id, i;
 	enumerator_t *e;
 
 	jrequest = json_object_new_object();
 	jarray = json_object_new_array();
 	json_object_object_add(jrequest, "data", jarray);
 
-	e = this->db->create_sw_enumerator(this->db, type);
+	e = this->db->create_sw_enumerator(this->db, type, NULL);
 	if (!e)
 	{
 		return NULL;
 	}
-	while (e->enumerate(e, &name, &package, &version, &i))
+	while (e->enumerate(e, &sw_id, &name, &package, &version, &i))
 	{
 		jstring = json_object_new_string(name);
 		json_object_array_add(jarray, jstring);

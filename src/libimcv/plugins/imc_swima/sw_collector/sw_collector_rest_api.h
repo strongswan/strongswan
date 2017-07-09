@@ -26,7 +26,7 @@
 typedef struct sw_collector_rest_api_t sw_collector_rest_api_t;
 
 /**
- * Software collector database object
+ * Software collector REST API object
  */
 struct sw_collector_rest_api_t {
 

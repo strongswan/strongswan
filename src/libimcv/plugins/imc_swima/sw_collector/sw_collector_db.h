@@ -78,12 +78,10 @@ struct sw_collector_db_t {
 	 * @param version		Version of software package
 	 * @param source		Source ID of the software collector
 	 * @param installed		Installation status to be set, TRUE if installed
-	 * @param check			Check if SW ID is already installed
 	 * @return				Primary key pointing to SW ID or 0 if failed
 	 */
 	uint32_t (*set_sw_id)(sw_collector_db_t *this, char *name, char *package,
-						  char *version, uint8_t source, bool installed,
-						  bool check);
+						  char *version, uint8_t source, bool installed);
 
 	/**
 	 * Get software_identifier record
@@ -108,13 +106,37 @@ struct sw_collector_db_t {
 								sw_collector_db_query_t type);
 
 	/**
+	 * Update the software identifier version
+	 *
+	 * @param sw_id			Primary key of software identifier
+	 * @param name			Software identifier
+	 * @param version		Package version
+	 * @param installed		Installation status
+	 * @return				TRUE if update successful
+	 */
+	bool (*update_sw_id)(sw_collector_db_t *this, uint32_t sw_id, char *name,
+						 char *version, bool installed);
+
+	/**
+	 * Update the package name
+	 *
+	 * @param package		Package name to be changed
+	 * @param package_new	New package name
+	 * @return				TRUE if update successful
+	 */
+	int (*update_package)(sw_collector_db_t *this, char *package,
+												   char *package_new);
+
+	/**
 	 * Enumerate over all collected [installed] software identities
 	 *
 	 * @param type			Query type (ALL, INSTALLED, DELETED)
+	 * @param package		If not NULL enumerate over all package versions
 	 * @return				Enumerator
 	 */
 	enumerator_t* (*create_sw_enumerator)(sw_collector_db_t *this,
-										  sw_collector_db_query_t type);
+										  sw_collector_db_query_t type,
+										  char *package);
 
 	/**
 	 * Destroy sw_collector_db_t object
