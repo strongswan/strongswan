@@ -1184,6 +1184,11 @@ and
 .BR xauth_identity " = <id>"
 defines the identity/username the client uses to reply to an XAuth request.
 If not defined, the IKEv1 identity will be used as XAuth identity.
+.TP
+.BR nopmtudisc " = yes | " no
+enable/disable path MTU Discovery.
+.B no
+by default (path MTU discovery enable).
 
 .SS "CONN PARAMETERS: IKEv2 MEDIATION EXTENSION"
 The following parameters are relevant to IKEv2 Mediation Extension

@@ -934,6 +934,10 @@ connections.<conn>.children.<child>.close_action = none
 	alive. It acts on explicit close messages only, but not on negotiation
 	failures. Use trap policies to reliably re-create failed CHILD_SAs.
 
+connections.<conn>.children.<child>.nopmtudisc = no
+	Enable/disable path MTU Discovery. No by default (path MTU discovery
+	enable).
+
 secrets { # }
 	Section defining secrets for IKE/EAP/XAuth authentication and private
 	key decryption.

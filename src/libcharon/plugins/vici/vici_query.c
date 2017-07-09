@@ -811,6 +811,9 @@ CALLBACK(list_conns, vici_message_t*,
 			b->add_kv(b, "rekey_packets", "%"PRIu64, lft->packets.rekey);
 			free(lft);
 
+			b->add_kv(b, "nopmtudisc",
+					  child_cfg->get_nopmtudisc(child_cfg) ? "yes" : "no");
+
 			b->begin_list(b, "local-ts");
 			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
 			selectors = list->create_enumerator(list);

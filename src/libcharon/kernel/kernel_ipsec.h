@@ -101,6 +101,8 @@ struct kernel_ipsec_add_sa_t {
 	bool inbound;
 	/** TRUE if an SPI has already been allocated for this SA */
 	bool update;
+	/** Don't Fragment bit copy policy: enable/disable the NOPMTUDISC flag */
+	bool nopmtudisc;
 };
 
 /**

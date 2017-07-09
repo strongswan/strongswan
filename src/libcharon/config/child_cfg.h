@@ -254,6 +254,20 @@ struct child_cfg_t {
 	void (*set_replay_window)(child_cfg_t *this, uint32_t window);
 
 	/**
+	 * Get the DF bit copy policy (NOPMTUDISC flag in the SA)
+	 *
+	 * @return				don't fragment copy policy
+	 */
+	bool (*get_nopmtudisc)(child_cfg_t *this);
+
+	/**
+	 * Set the DF bit copy policy (NOPMTUDISC flag in the SA)
+	 *
+	 * @param nopmtudisc		don't fragment copy policy
+	 */
+	void (*set_nopmtudisc)(child_cfg_t *this, bool nopmtudisc);
+
+	/**
 	 * Check if an option flag is set.
 	 *
 	 * @param option		option flag to check

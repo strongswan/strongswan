@@ -485,6 +485,7 @@ typedef struct {
 	linked_list_t *remote_ts;
 	uint32_t replay_window;
 	bool policies;
+	bool nopmtudisc;
 	child_cfg_create_t cfg;
 } child_data_t;
 
@@ -516,6 +517,7 @@ static void log_child_data(child_data_t *data, char *name)
 	{
 		DBG2(DBG_CFG, "   replay_window = %u", data->replay_window);
 	}
+	DBG2(DBG_CFG, "   nopmtudisc = %u", data->nopmtudisc);
 	DBG2(DBG_CFG, "   dpd_action = %N", action_names, cfg->dpd_action);
 	DBG2(DBG_CFG, "   start_action = %N", action_names, cfg->start_action);
 	DBG2(DBG_CFG, "   close_action = %N", action_names, cfg->close_action);
@@ -1546,6 +1548,7 @@ CALLBACK(child_kv, bool,
 		{ "policies",			parse_bool,			&child->policies					},
 		{ "policies_fwd_out",	parse_opt_fwd_out,	&child->cfg.options					},
 		{ "replay_window",		parse_uint32,		&child->replay_window				},
+		{ "nopmtudisc",			parse_bool,			&child->nopmtudisc					},
 		{ "rekey_time",			parse_time,			&child->cfg.lifetime.time.rekey		},
 		{ "life_time",			parse_time,			&child->cfg.lifetime.time.life		},
 		{ "rand_time",			parse_time,			&child->cfg.lifetime.time.jitter	},
@@ -1840,6 +1843,8 @@ CALLBACK(children_sn, bool,
 	log_child_data(&child, name);
 
 	cfg = child_cfg_create(name, &child.cfg);
+
+	cfg->set_nopmtudisc(cfg, child.nopmtudisc);
 
 	if (child.replay_window != REPLAY_UNDEFINED)
 	{
