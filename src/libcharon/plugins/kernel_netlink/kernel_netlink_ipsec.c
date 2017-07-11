@@ -1141,7 +1141,7 @@ static bool receive_events(private_kernel_netlink_ipsec_t *this, int fd,
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	private_kernel_netlink_ipsec_t *this)
 {
-	return KERNEL_ESP_V3_TFC;
+	return KERNEL_ESP_V3_TFC | KERNEL_POLICY_SPI;
 }
 
 /**
@@ -2409,11 +2409,13 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 		struct xfrm_user_tmpl *tmpl;
 		struct {
 			uint8_t proto;
+			uint32_t spi;
 			bool use;
 		} protos[] = {
-			{ IPPROTO_COMP, ipsec->cfg.ipcomp.transform != IPCOMP_NONE },
-			{ IPPROTO_ESP, ipsec->cfg.esp.use },
-			{ IPPROTO_AH, ipsec->cfg.ah.use },
+			{ IPPROTO_COMP, htonl(ntohs(ipsec->cfg.ipcomp.cpi)),
+			  ipsec->cfg.ipcomp.transform != IPCOMP_NONE },
+			{ IPPROTO_ESP, ipsec->cfg.esp.spi, ipsec->cfg.esp.use },
+			{ IPPROTO_AH, ipsec->cfg.ah.spi, ipsec->cfg.ah.use },
 		};
 		ipsec_mode_t proto_mode = ipsec->cfg.mode;
 		int count = 0;
@@ -2441,6 +2443,10 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			}
 			tmpl->reqid = ipsec->cfg.reqid;
 			tmpl->id.proto = protos[i].proto;
+			if (policy->direction == POLICY_OUT)
+			{
+				tmpl->id.spi = protos[i].spi;
+			}
 			tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 			tmpl->mode = mode2kernel(proto_mode);
 			tmpl->optional = protos[i].proto == IPPROTO_COMP &&
