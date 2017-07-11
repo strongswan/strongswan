@@ -102,17 +102,28 @@ enum child_sa_outbound_state_t {
 	/**
 	 * Outbound SA is not installed
 	 */
-	CHILD_OUTBOUND_NONE,
+	CHILD_OUTBOUND_NONE = 0,
 
 	/**
-	 * Data for the outbound SA has been registered, but not installed yet
+	 * Data for the outbound SA has been registered during a rekeying (not set
+	 * once the SA and policies are both installed)
 	 */
-	CHILD_OUTBOUND_REGISTERED,
+	CHILD_OUTBOUND_REGISTERED = (1<<0),
 
 	/**
-	 * The outbound SA is currently installed
+	 * The outbound SA has been installed
 	 */
-	CHILD_OUTBOUND_INSTALLED,
+	CHILD_OUTBOUND_SA = (1<<1),
+
+	/**
+	 * The outbound policies have been installed
+	 */
+	CHILD_OUTBOUND_POLICIES = (1<<2),
+
+	/**
+	 * The outbound SA and policies are both installed
+	 */
+	CHILD_OUTBOUND_INSTALLED = (CHILD_OUTBOUND_SA|CHILD_OUTBOUND_POLICIES),
 };
 
 /**
