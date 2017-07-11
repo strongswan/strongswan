@@ -698,9 +698,9 @@ static status_t select_and_install(private_child_create_t *this,
 			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
 							this->my_spi, this->my_cpi, this->initiator,
 							TRUE, this->tfcv3);
-			this->child_sa->register_outbound(this->child_sa, encr_r, integ_r,
-							this->other_spi, this->other_cpi, this->tfcv3);
-			status_o = SUCCESS;
+			status_o = this->child_sa->register_outbound(this->child_sa, encr_r,
+							integ_r, this->other_spi, this->other_cpi,
+							this->tfcv3);
 		}
 	}
 

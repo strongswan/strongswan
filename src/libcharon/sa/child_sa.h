@@ -411,20 +411,23 @@ struct child_sa_t {
 	 * Register data for the installation of an outbound SA as responder during
 	 * a rekeying.
 	 *
-	 * The SA is not installed until install_outbound() is called.
+	 * If the kernel is able to handle SPIs on policies the SA is installed
+	 * immediately, if not it won't be installed until install_outbound() is
+	 * called.
 	 *
 	 * @param encr		encryption key, if any (cloned)
 	 * @param integ		integrity key (cloned)
 	 * @param spi		SPI to use, allocated for inbound
 	 * @param cpi		CPI to use, allocated for outbound
 	 * @param tfcv3		TRUE if peer supports ESPv3 TFC
+	 * @return			SUCCESS or FAILED
 	 */
-	void (*register_outbound)(child_sa_t *this, chunk_t encr, chunk_t integ,
-							  uint32_t spi, uint16_t cpi, bool tfcv3);
+	status_t (*register_outbound)(child_sa_t *this, chunk_t encr, chunk_t integ,
+								  uint32_t spi, uint16_t cpi, bool tfcv3);
 
 	/**
-	 * Install the outbound SA and the outbound policies as responder during a
-	 * rekeying.
+	 * Install the outbound policies and, if not already done, the outbound SA
+	 * as responder during a rekeying.
 	 *
 	 * @return			SUCCESS or FAILED
 	 */
