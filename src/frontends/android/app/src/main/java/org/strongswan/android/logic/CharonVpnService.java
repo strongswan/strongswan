@@ -974,7 +974,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				builder.addRoute("::", 0);
 			}
 			/* apply selected applications */
-			if (mSelectedApps.size() > 0)
+			if (mSelectedApps.size() > 0 &&
+				Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
 			{
 				switch (mAppHandling)
 				{
