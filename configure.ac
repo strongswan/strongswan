@@ -998,9 +998,19 @@ if test x$tss_trousers = xtrue; then
 fi
 
 if test x$tss_tss2 = xtrue; then
-	PKG_CHECK_MODULES(tss2, [tcti-socket], [AC_DEFINE([TSS_TSS2], [], [use TSS 2.0 libraries])])
-	AC_SUBST(tss2_CFLAGS)
-	AC_SUBST(tss2_LIBS)
+	PKG_CHECK_MODULES(tss2_tabrmd, [tcti-tabrmd],
+		[tss2_tabrmd=true; AC_DEFINE([TSS2_TCTI_TABRMD], [], [use TCTI Access Broker and Resource Mamager])],
+		[tss2_tabrmd=false])
+	PKG_CHECK_MODULES(tss2_socket, [tcti-socket],
+		[tss2_socket=true; AC_DEFINE([TSS2_TCTI_SOCKET], [], [use TCTI Sockets])],
+		[tss2_socket=false])
+	if test x$tss2_tabrmd = xtrue -o x$tss2_socket = xtrue; then
+		AC_DEFINE([TSS_TSS2], [], [use TSS 2.0 libraries])
+		AC_SUBST(tss2_CFLAGS, "$tss2_tabrmd_CFLAGS $tss2_socket_CFLAGS")
+		AC_SUBST(tss2_LIBS, "$tss2_tabrmd_LIBS $tss2_socket_LIBS")
+	else
+		AC_MSG_FAILURE([no TSS2 TCTI library detected])
+	fi
 fi
 
 if test x$imc_swima = xtrue -o $imv_swima = xtrue -o x$imv_swid = xtrue; then

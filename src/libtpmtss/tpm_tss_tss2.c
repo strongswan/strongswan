@@ -23,7 +23,17 @@
 #include <bio/bio_reader.h>
 
 #include <tpm20.h>
+
+#ifdef TSS2_TCTI_TABRMD
+#include <tcti/tcti-tabrmd.h>
+#endif /* TSS2_TCTI_TABRMD */
+
+#ifdef TSS2_TCTI_SOCKET
 #include <tcti_socket.h>
+
+#define TCTI_SOCKET_DEFAULT_ADDRESS "127.0.0.1"
+#define TCTI_SOCKET_DEFAULT_PORT     2323
+#endif /* TSS2_TCTI_SOCKET */
 
 #define LABEL	"TPM 2.0 -"
 
@@ -209,23 +219,52 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 }
 
 /**
- * Initialize TSS context
+ * Initialize TSS2 TCTI TABRMD context
  */
-static bool initialize_context(private_tpm_tss_tss2_t *this)
+static bool initialize_tcti_tabrmd_context(private_tpm_tss_tss2_t *this)
 {
+#ifdef TSS2_TCTI_TABRMD
 	size_t   tcti_context_size;
-	uint32_t sys_context_size;
 	uint32_t rval;
 
-	TCTI_SOCKET_CONF rm_if_config = { DEFAULT_HOSTNAME,
-									  DEFAULT_RESMGR_TPM_PORT
-									};
+	/* determine size of tcti context */
+	rval = tss2_tcti_tabrmd_init(NULL, &tcti_context_size);
+	if (rval != TSS2_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s could not get tcti_context size: 0x%06x",
+					   LABEL, rval);
+		return FALSE;
+	}
 
-	TSS2_ABI_VERSION abi_version = { TSSWG_INTEROP,
-									 TSS_SAPI_FIRST_FAMILY,
-									 TSS_SAPI_FIRST_LEVEL,
-									 TSS_SAPI_FIRST_VERSION
-								   };
+	/* allocate memory for tcti context */
+	this->tcti_context = (TSS2_TCTI_CONTEXT*)malloc(tcti_context_size);
+
+	/* initialize tcti context */
+	rval = tss2_tcti_tabrmd_init(this->tcti_context, &tcti_context_size);
+	if (rval != TSS2_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s could not get tcti_context: 0x%06x "
+					  "via tabrmd interface", LABEL, rval);
+		return FALSE;
+	}
+	return TRUE;
+#else /* TSS2_TCTI_TABRMD */
+	return FALSE;
+#endif /* TSS2_TCTI_TABRMD */
+}
+
+/**
+ * Initialize TSS2 TCTI Socket context
+ */
+static bool initialize_tcti_socket_context(private_tpm_tss_tss2_t *this)
+{
+#ifdef TSS2_TCTI_SOCKET
+	size_t   tcti_context_size;
+	uint32_t rval;
+
+	TCTI_SOCKET_CONF rm_if_config = { TCTI_SOCKET_DEFAULT_ADDRESS,
+									  TCTI_SOCKET_DEFAULT_PORT
+									};
 
 	/* determine size of tcti context */
 	rval = InitSocketTcti(NULL, &tcti_context_size, &rm_if_config, 0);
@@ -244,10 +283,29 @@ static bool initialize_context(private_tpm_tss_tss2_t *this)
 						  &rm_if_config, 0);
 	if (rval != TSS2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s could not get tcti_context: 0x%06x",
-					   LABEL, rval);
+		DBG1(DBG_PTS, "%s could not get tcti_context: 0x%06x "
+					  "via socket interface", LABEL, rval);
 		return FALSE;
 	}
+	return TRUE;
+#else /* TSS2_TCTI_SOCKET */
+	return FALSE;
+#endif /* TSS2_TCTI_SOCKET */
+}
+
+/**
+ * Initialize TSS2 Sys context
+ */
+static bool initialize_sys_context(private_tpm_tss_tss2_t *this)
+{
+	uint32_t sys_context_size;
+	uint32_t rval;
+
+	TSS2_ABI_VERSION abi_version = { TSSWG_INTEROP,
+									 TSS_SAPI_FIRST_FAMILY,
+									 TSS_SAPI_FIRST_LEVEL,
+									 TSS_SAPI_FIRST_VERSION
+								   };
 
 	/* determine size of sys context */
 	sys_context_size = Tss2_Sys_GetContextSize(0);
@@ -885,7 +943,15 @@ tpm_tss_t *tpm_tss_tss2_create()
 		},
 	);
 
-	available = initialize_context(this);
+	available = initialize_tcti_tabrmd_context(this);
+	if (!available)
+	{
+		available = initialize_tcti_socket_context(this);
+	}
+	if (available)
+	{
+		available = initialize_sys_context(this);
+	}
 	DBG1(DBG_PTS, "TPM 2.0 via TSS2 %savailable", available ? "" : "not ");
 
 	if (!available)
