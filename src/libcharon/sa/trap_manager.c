@@ -158,6 +158,31 @@ CALLBACK(acquire_by_dst, bool,
 	return this->dst && this->dst->ip_equals(this->dst, dst);
 }
 
+/**
+ * Check if any remote TS are dynamic
+ */
+static bool dynamic_remote_ts(child_cfg_t *child)
+{
+	enumerator_t *enumerator;
+	linked_list_t *other_ts;
+	traffic_selector_t *ts;
+	bool found = FALSE;
+
+	other_ts = child->get_traffic_selectors(child, FALSE, NULL, NULL);
+	enumerator = other_ts->create_enumerator(other_ts);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		if (ts->is_dynamic(ts))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
+	return found;
+}
+
 METHOD(trap_manager_t, install, uint32_t,
 	private_trap_manager_t *this, peer_cfg_t *peer, child_cfg_t *child,
 	uint32_t reqid)
@@ -184,25 +209,39 @@ METHOD(trap_manager_t, install, uint32_t,
 		me = host_create_any(other->get_family(other));
 		wildcard = TRUE;
 	}
-	else if (!other || other->is_anyaddr(other))
+	else if (other && other->is_anyaddr(other))
 	{
-		DESTROY_IF(other);
+		other->destroy(other);
 		DBG1(DBG_CFG, "installing trap failed, remote address unknown");
 		return 0;
 	}
 	else
-	{
-		me = ike_cfg->resolve_me(ike_cfg, other->get_family(other));
-		if (!me || me->is_anyaddr(me))
+	{	/* depending on the traffic selectors we don't really need a remote
+		 * host yet, but we might fail later if no IP can be resolved */
+		if (!other && dynamic_remote_ts(child))
+		{	/* with dynamic TS we do need a host, otherwise 0.0.0.0/0 is used,
+			 * which is probably not what users expect*/
+			DBG1(DBG_CFG, "installing trap failed, remote address unknown with "
+				 "dynamic traffic selector");
+			return 0;
+		}
+		me = ike_cfg->resolve_me(ike_cfg, other ? other->get_family(other)
+												: AF_UNSPEC);
+		if (!other)
+		{
+			other = host_create_any(me ? me->get_family(me) : AF_INET);
+		}
+		other->set_port(other, ike_cfg->get_other_port(ike_cfg));
+		if ((!me || me->is_anyaddr(me)) && !other->is_anyaddr(other))
 		{
 			DESTROY_IF(me);
 			me = charon->kernel->get_source_addr(charon->kernel, other, NULL);
-			if (!me)
-			{
-				me = host_create_any(other->get_family(other));
-			}
-			me->set_port(me, ike_cfg->get_my_port(ike_cfg));
 		}
+		if (!me)
+		{
+			me = host_create_any(other->get_family(other));
+		}
+		me->set_port(me, ike_cfg->get_my_port(ike_cfg));
 	}
 
 	this->lock->write_lock(this->lock);
