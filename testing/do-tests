@@ -416,29 +416,38 @@ do
 	STATUS="passed"
 
 	eval `awk -F "::" '{
-	    host=$1
-	    command=$2
-	    pattern=$3
-	    hit=$4
-	    if (host !~ /^#.*/ && command != "")
-	    {
+		host=$1
+		command=$2
+		pattern=$3
+		hit=$4
+		if (host ~ /^#.*/ || command == "")
+		{
+			next
+		}
 		if (command == "tcpdump")
 		{
-		    printf("if [ \044TDUP_%s == \"true\" ]; then stop_tcpdump %s; fi; \n", host, host)
-		    printf("echo \"%s# cat /tmp/tcpdump.log | grep \047%s\047  [%s]\"; ", host, pattern, hit)
-		    printf("ssh \044SSHCONF root@\044ipv4_%s cat /tmp/tcpdump.log | grep \"%s\"; ", host, pattern)
+			printf("if [ \044TDUP_%s == \"true\" ]; then stop_tcpdump %s; fi; \n", host, host)
+			printf("echo \"%s# cat /tmp/tcpdump.log | grep \047%s\047  [%s]\"; ", host, pattern, hit)
+			printf("cmd_out=\044(ssh \044SSHCONF root@\044ipv4_%s cat /tmp/tcpdump.log | grep \"%s\"); ", host, pattern)
 		}
 		else
 		{
-		    printf("echo \"%s# %s | grep \047%s\047  [%s]\"; ", host, command, pattern, hit)
-		    printf("ssh \044SSHCONF root@\044ipv4_%s %s | grep \"%s\"; ",  host, command, pattern)
+			printf("echo \"%s# %s | grep \047%s\047  [%s]\"; ", host, command, pattern, hit)
+			printf("cmd_out=\044(ssh \044SSHCONF root@\044ipv4_%s %s | grep \"%s\"); ",  host, command, pattern)
 		}
 		printf("cmd_exit=\044?; ")
+		printf("echo \"\044cmd_out\"; ")
 		printf("echo; ")
-		printf("if [ \044cmd_exit -eq 0 -a \"%s\" = \"NO\"  ] ", hit)
-		printf("|| [ \044cmd_exit -ne 0 -a \"%s\" = \"YES\" ] ", hit)
+		if (hit ~ /^[0-9]+$/)
+		{
+			printf("if [ \044(echo \"\044cmd_out\" | wc -l) -ne %d ] ", hit)
+		}
+		else
+		{
+			printf("if [ \044cmd_exit -eq 0 -a \"%s\" = \"NO\"  ] ", hit)
+			printf("|| [ \044cmd_exit -ne 0 -a \"%s\" = \"YES\" ] ", hit)
+		}
 		printf("; then STATUS=\"failed\"; fi; \n")
-	    }
 	}' $TESTDIR/evaltest.dat` >> $CONSOLE_LOG 2>&1
 
 
