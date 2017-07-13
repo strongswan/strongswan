@@ -231,13 +231,13 @@ METHOD(sw_collector_db_t, update_sw_id, bool,
 }
 
 METHOD(sw_collector_db_t, update_package, int,
-	private_sw_collector_db_t *this, char *package, char *package_new)
+	private_sw_collector_db_t *this, char *package_filter, char *package)
 {
 	int count;
 
 	count = this->db->execute(this->db, NULL,
-			"UPDATE sw_identifiers SET package = ? "
-			"WHERE package = ?", DB_TEXT, package_new, DB_TEXT, package);
+			"UPDATE sw_identifiers SET package = ? WHERE package LIKE ?",
+			 DB_TEXT, package, DB_TEXT, package_filter);
 	if (count < 0)
 	{
 		DBG1(DBG_IMC, "unable to update package name in database");

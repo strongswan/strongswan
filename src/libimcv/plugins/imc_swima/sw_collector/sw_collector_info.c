@@ -93,15 +93,9 @@ METHOD(sw_collector_info_t, get_os, char*,
 METHOD(sw_collector_info_t, create_sw_id, char*,
 	private_sw_collector_info_t *this, char *package, char *version)
 {
-	char *pos, *sw_id;
-	size_t len;
+	char *sw_id;
 
-	/* Remove architecture from package name */
-	pos = strchr(package, ':');
-	len = pos ? (pos - package) : strlen(package);
-
-	/* Build software identifier */
-	if (asprintf(&sw_id, "%s__%s-%.*s%s%s", this->tag_creator, this->os, len,
+	if (asprintf(&sw_id, "%s__%s-%s%s%s", this->tag_creator, this->os,
 				 package, strlen(version) ? "-" : "", version) == -1)
 	{
 		return NULL;

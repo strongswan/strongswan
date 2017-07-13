@@ -110,7 +110,7 @@ static void free_package(package_t *this)
 static package_t* extract_package(chunk_t item, sw_collector_info_t *info,
 												sw_collector_history_op_t op)
 {
-	chunk_t package, version, old_version;
+	chunk_t package, package_stripped, version, old_version;
 	package_t *p;
 
 	/* extract package name */
@@ -120,6 +120,12 @@ static package_t* extract_package(chunk_t item, sw_collector_info_t *info,
 		return NULL;
 	}
 	item = chunk_skip(item, 1);
+
+	/* strip architecture suffix if present */
+	if (extract_token(&package_stripped, ':', &package))
+	{
+		package = package_stripped;
+	}
 
 	/* extract versions */
 	version = old_version = chunk_empty;
@@ -371,7 +377,6 @@ METHOD(sw_collector_history_t, merge_installed_packages, bool,
 	private_sw_collector_history_t *this)
 {
 	uint32_t sw_id, count = 0;
-	char package_arch[BUF_LEN];
 	char *package, *arch, *version, *v1, *name, *n1;
 	bool installed, success = FALSE;
 	sw_collector_dpkg_t *dpkg;
@@ -439,13 +444,6 @@ METHOD(sw_collector_history_t, merge_installed_packages, bool,
 
 		if (!sw_id)
 		{
-			/* Package name is stored with appended architecture */
-			if (!streq(arch, "all"))
-			{
-				snprintf(package_arch, BUF_LEN, "%s:%s", package, arch);
-				package = package_arch;
-			}
-
 			/* new sw identifier - create with state 'installed' */
 			sw_id = this->db->set_sw_id(this->db, name, package, version,
 										this->source, TRUE);

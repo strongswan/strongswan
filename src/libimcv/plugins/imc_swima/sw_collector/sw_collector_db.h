@@ -120,12 +120,12 @@ struct sw_collector_db_t {
 	/**
 	 * Update the package name
 	 *
-	 * @param package		Package name to be changed
-	 * @param package_new	New package name
-	 * @return				TRUE if update successful
+	 * @param package_filter	Package name[s] to be changed
+	 * @param package			New package name
+	 * @return					TRUE if update successful
 	 */
-	int (*update_package)(sw_collector_db_t *this, char *package,
-												   char *package_new);
+	int (*update_package)(sw_collector_db_t *this, char *package_filter,
+												   char *package);
 
 	/**
 	 * Enumerate over all collected [installed] software identities

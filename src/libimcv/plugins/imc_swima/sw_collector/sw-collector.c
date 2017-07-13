@@ -518,7 +518,7 @@ static int migrate(sw_collector_info_t *info, sw_collector_db_t *db)
 	sw_collector_dpkg_t *dpkg;
 
 	char *package, *arch, *version;
-	char package_arch[BUF_LEN];
+	char package_filter[BUF_LEN];
 	int res, count = 0;
 	int status = EXIT_SUCCESS;
 	enumerator_t *enumerator;
@@ -532,15 +532,11 @@ static int migrate(sw_collector_info_t *info, sw_collector_db_t *db)
 	enumerator = dpkg->create_sw_enumerator(dpkg);
 	while (enumerator->enumerate(enumerator, &package, &arch, &version))
 	{
-		if (streq(arch, "all"))
-		{
-			continue;
-		}
 
-		/* Concatenate package and architecture strings */
-		snprintf(package_arch, BUF_LEN, "%s:%s", package, arch);
+		/* Look for package names with architecture suffix */
+		snprintf(package_filter, BUF_LEN, "%s:%%", package);
 
-		res = db->update_package(db, package, package_arch);
+		res = db->update_package(db, package_filter, package);
 		if (res < 0)
 		{
 				status = EXIT_FAILURE;
@@ -549,7 +545,7 @@ static int migrate(sw_collector_info_t *info, sw_collector_db_t *db)
 		else if (res > 0)
 		{
 			count += res;
-			DBG2(DBG_IMC, "replaced '%s' by '%s'", package, package_arch);
+			DBG2(DBG_IMC, "%s: removed arch suffix %d times", package, res);
 		}
 	}
 	enumerator->destroy(enumerator);
