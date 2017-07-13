@@ -94,7 +94,6 @@ METHOD(error_notify_socket_t, notify, void,
 					DBG1(DBG_CFG, "sending notify failed: %s", strerror(errno));
 					break;
 			}
-			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -146,7 +145,7 @@ error_notify_socket_t *error_notify_socket_create()
 	this->service = lib->streams->create_service(lib->streams, uri, 10);
 	if (!this->service)
 	{
-		DBG1(DBG_CFG, "creating duplicheck socket failed");
+		DBG1(DBG_CFG, "creating error-notify socket failed");
 		destroy(this);
 		return NULL;
 	}
