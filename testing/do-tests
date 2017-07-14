@@ -424,6 +424,7 @@ do
 		{
 			next
 		}
+		printf("cmd_err=\044(tempfile -p test -s err); ")
 		if (command == "tcpdump")
 		{
 			printf("if [ \044TDUP_%s == \"true\" ]; then stop_tcpdump %s; fi; \n", host, host)
@@ -431,7 +432,7 @@ do
 		}
 		else
 		{
-			printf("cmd_out=\044(ssh \044SSHCONF root@\044ipv4_%s %s | grep \"%s\"); ",  host, command, pattern)
+			printf("cmd_out=\044(ssh \044SSHCONF root@\044ipv4_%s %s 2>\044cmd_err | grep \"%s\"); ",  host, command, pattern)
 		}
 		printf("cmd_exit=\044?; ")
 		printf("cmd_fail=0; ")
@@ -456,6 +457,7 @@ do
 			printf("echo \"%s# %s | grep \047%s\047  [%s]\"; ", host, command, pattern, hit)
 		}
 		printf("if [ -n \"\044cmd_out\" ]; then echo \"\044cmd_out\"; fi; \n")
+		printf("cat \044cmd_err; rm -f -- \044cmd_err; \n")
 		printf("if [ \044cmd_fail -ne 0 ]; then echo \"~~~~~~~~~~~~~~~~~~~~\"; fi; \n")
 		printf("echo; ")
 	}' $TESTDIR/evaltest.dat` >> $CONSOLE_LOG 2>&1
