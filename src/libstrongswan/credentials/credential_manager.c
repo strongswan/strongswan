@@ -774,6 +774,8 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			{
 				DBG1(DBG_CFG, "no issuer certificate found for \"%Y\"",
 					 current->get_subject(current));
+				DBG1(DBG_CFG, "  issuer is \"%Y\"",
+					 current->get_issuer(current));
 				call_hook(this, CRED_HOOK_NO_ISSUER, current);
 				break;
 			}
