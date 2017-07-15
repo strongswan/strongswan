@@ -1,4 +1,4 @@
-ipsec_PROGRAMS = pt-tls-client
+bin_PROGRAMS = pt-tls-client
 
 pt_tls_client_SOURCES = pt-tls-client.c
 
@@ -18,4 +18,8 @@ pt_tls_client_LDADD = \
 	$(top_builddir)/src/libtls/libtls.la \
 	$(top_builddir)/src/libpttls/libpttls.la \
 	$(top_builddir)/src/libtnccs/libtnccs.la
+
+man1_MANS = pt-tls-client.1
+
+CLEANFILES = $(man1_MANS)
 

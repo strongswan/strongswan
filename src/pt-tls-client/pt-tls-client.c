@@ -44,8 +44,8 @@ static void usage(FILE *out)
 		"Usage: pt-tls  --connect <hostname|address> [--port <port>]\n"
 		"              [--cert <file>]+ [--keyid <hex>|--key <file>]\n"
 		"              [--key-type rsa|ecdsa] [--client <client-id>]\n"
-		"              [--secret <password>] [--optionsfrom <filename>]\n"
-		"              [--quiet] [--debug <level>]\n");
+		"              [--secret <password>] [--mutual] [--quiet]\n"
+		"              [--debug <level>] [--optionsfrom <filename>]\n");
 }
 
 /**
@@ -292,7 +292,8 @@ int main(int argc, char *argv[])
 			{"optionsfrom",	required_argument,		NULL,		'+' },
 			{0,0,0,0 }
 		};
-		switch (getopt_long(argc, argv, "", long_opts, NULL))
+		switch (getopt_long(argc, argv, "hc:i:s:p:x:K:k:t:mqd:+:", long_opts,
+			    NULL))
 		{
 			case EOF:
 				break;
