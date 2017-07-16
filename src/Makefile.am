@@ -135,3 +135,7 @@ endif
 if USE_AIKGEN
   SUBDIRS += aikgen
 endif
+
+if USE_IMC_SWIMA
+  SUBDIRS += sw-collector
+endif
