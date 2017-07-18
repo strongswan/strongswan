@@ -1,4 +1,4 @@
 sun::service charon start
 moon::cat /etc/pts/options
 moon::sleep 1
-moon::ipsec pt-tls-client --optionsfrom /etc/pts/options
+moon::/usr/local/bin/pt-tls-client --optionsfrom /etc/pts/options
