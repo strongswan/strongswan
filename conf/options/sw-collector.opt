@@ -10,6 +10,9 @@ sw-collector.database =
 sw-collector.history =
 	Path pointing to apt history.log file.
 
+sw-collector.first_file = /var/log/bootstrap.log
+	Path pointing to file created when the Linux OS was installed.	
+
 sw-collector.first_time = 0000-00-00T00:00:00Z
 	Time in UTC when the Linux OS was installed.
 

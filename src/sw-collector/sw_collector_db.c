@@ -13,6 +13,12 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <time.h>
+
 #include "sw_collector_db.h"
 
 #include "swima/swima_event.h"
@@ -306,13 +312,40 @@ METHOD(sw_collector_db_t, destroy, void,
 }
 
 /**
+ * Determine file creation data and convert it into RFC 3339 format
+ */
+bool get_file_creation_date(char *pathname, char *timestamp)
+{
+	struct stat st;
+	struct tm ct;
+
+	if (stat(pathname, &st))
+	{
+		DBG1(DBG_IMC, "unable to obtain statistics on '%s'", pathname);
+		return FALSE;
+	}
+
+	/* Convert from local time to UTC */
+	gmtime_r(&st.st_mtime, &ct);
+	ct.tm_year += 1900;
+	ct.tm_mon += 1;
+
+	/* Form timestamp according to RFC 3339 (20 characters) */
+	snprintf(timestamp, 21, "%4d-%02d-%02dT%02d:%02d:%02dZ",
+			 ct.tm_year, ct.tm_mon, ct.tm_mday,
+			 ct.tm_hour, ct.tm_min, ct.tm_sec);
+
+	return TRUE;
+}
+
+/**
  * Described in header.
  */
 sw_collector_db_t *sw_collector_db_create(char *uri)
 {
 	private_sw_collector_db_t *this;
 	uint32_t first_eid, last_eid;
-	char *first_time;
+	char first_time_buf[21], *first_time, *first_file;
 
 	INIT(this,
 		.public = {
@@ -363,9 +396,23 @@ sw_collector_db_t *sw_collector_db_create(char *uri)
 		this->epoch &= 0x7fffffff;
 
 		/* Create first event when the OS was installed */
+		first_file = lib->settings->get_str(lib->settings,
+						"sw-collector.first_file", "/var/log/bootstrap.log");
 		first_time = lib->settings->get_str(lib->settings,
-						"sw-collector.first_time", "0000-00-00T00:00:00Z");
+						"sw-collector.first_time", NULL);
+		if (!first_time)
+		{
+			if (get_file_creation_date(first_file, first_time_buf))
+			{
+				first_time = first_time_buf;
+			}
+			else
+			{
+				first_time = "0000-00-00T00:00:00Z";
+			}
+		}
 		first_eid = add_event(this, first_time);
+
 		if (!first_eid)
 		{
 			destroy(this);
