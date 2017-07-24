@@ -29,6 +29,10 @@
 #define SOURCE_ID_GENERATOR		1
 #define SOURCE_ID_COLLECTOR		2
 
+#ifndef SWID_DIRECTORY
+#define SWID_DIRECTORY NULL
+#endif
+
 #define SWID_GENERATOR	"/usr/local/bin/swid_generator"
 
 /**
@@ -386,6 +390,11 @@ static bool collect_tags(private_swima_collector_t *this, char *pathname,
 	enumerator_t *enumerator;
 	int i;
 
+	if (!pathname)
+	{
+		return TRUE;
+	}
+
 	enumerator = enumerator_create_directory(pathname);
 	if (!enumerator)
 	{
@@ -618,7 +627,7 @@ swima_collector_t *swima_collector_create(void)
 			{
 				DBG1(DBG_IMC, "database query for last event failed");
 				DESTROY_IF(e);
-				db->destroy(db);				
+				db->destroy(db);
 			}
 			else
 			{
