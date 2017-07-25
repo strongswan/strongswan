@@ -115,8 +115,8 @@ METHOD(prf_plus_t, allocate_bytes, bool,
 METHOD(prf_plus_t, destroy, void,
 	private_prf_plus_t *this)
 {
-	free(this->buffer.ptr);
-	free(this->seed.ptr);
+	chunk_clear(&this->buffer);
+	chunk_clear(&this->seed);
 	free(this);
 }
 
