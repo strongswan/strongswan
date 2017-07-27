@@ -266,6 +266,7 @@ ARG_ENABL_SET([connmark],       [enable connmark plugin using conntrack based ma
 ARG_ENABL_SET([forecast],       [enable forecast plugin forwarding broadcast/multicast messages.])
 ARG_ENABL_SET([duplicheck],     [advanced duplicate checking plugin using liveness checks.])
 ARG_ENABL_SET([error-notify],   [enable error notification plugin.])
+ARG_ENABL_SET([dead-peer-notify],[enable dead peer notification plugin.])
 ARG_ENABL_SET([farp],           [enable ARP faking plugin that responds to ARP requests to peers virtual IP])
 ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
 ARG_ENABL_SET([led],            [enable plugin to control LEDs on IKEv2 activity using the Linux kernel LED subsystem.])
@@ -952,6 +953,11 @@ if test x$curl = xtrue; then
 	AC_CHECK_HEADER([curl/curl.h],,[AC_MSG_ERROR([CURL header curl/curl.h not found!])])
 fi
 
+if test x$dead_peer_notify = xtrue; then
+	AC_CHECK_LIB([curl],[main],[LIBS="$LIBS"],[AC_MSG_ERROR([CURL library curl not found])],[])
+	AC_CHECK_HEADER([curl/curl.h],,[AC_MSG_ERROR([CURL header curl/curl.h not found!])])
+fi
+
 if test x$unbound = xtrue; then
 	AC_CHECK_LIB([ldns],[ldns_rr_get_type],[LIBS="$LIBS"],[AC_MSG_ERROR([UNBOUND library ldns not found])],[])
 	AC_CHECK_HEADER([ldns/ldns.h],,[AC_MSG_ERROR([UNBOUND header ldns/ldns.h not found!])])
@@ -1450,6 +1456,7 @@ ADD_PLUGIN([whitelist],            [c charon])
 ADD_PLUGIN([ext-auth],             [c charon])
 ADD_PLUGIN([lookip],               [c charon])
 ADD_PLUGIN([error-notify],         [c charon])
+ADD_PLUGIN([dead-peer-notify],     [c charon])
 ADD_PLUGIN([certexpire],           [c charon])
 ADD_PLUGIN([systime-fix],          [c charon])
 ADD_PLUGIN([led],                  [c charon])
@@ -1572,6 +1579,7 @@ AM_CONDITIONAL(USE_WHITELIST, test x$whitelist = xtrue)
 AM_CONDITIONAL(USE_EXT_AUTH, test x$ext_auth = xtrue)
 AM_CONDITIONAL(USE_LOOKIP, test x$lookip = xtrue)
 AM_CONDITIONAL(USE_ERROR_NOTIFY, test x$error_notify = xtrue)
+AM_CONDITIONAL(USE_DEAD_PEER_NOTIFY, test x$dead_peer_notify = xtrue)
 AM_CONDITIONAL(USE_CERTEXPIRE, test x$certexpire = xtrue)
 AM_CONDITIONAL(USE_SYSTIME_FIX, test x$systime_fix = xtrue)
 AM_CONDITIONAL(USE_LED, test x$led = xtrue)
@@ -1913,6 +1921,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/ext_auth/Makefile
 	src/libcharon/plugins/lookip/Makefile
 	src/libcharon/plugins/error_notify/Makefile
+	src/libcharon/plugins/dead_peer_notify/Makefile
 	src/libcharon/plugins/certexpire/Makefile
 	src/libcharon/plugins/systime_fix/Makefile
 	src/libcharon/plugins/led/Makefile
