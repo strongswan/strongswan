@@ -1719,7 +1719,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 {
 	private_child_sa_t *this;
 	static refcount_t unique_id = 0, unique_mark = 0;
-	refcount_t mark;
+	refcount_t mark = 0;
 
 	INIT(this,
 		.public = {
@@ -1792,16 +1792,33 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	{
 		this->mark_out.value = mark_out;
 	}
-	if (this->mark_in.value == MARK_UNIQUE ||
-		this->mark_out.value == MARK_UNIQUE)
+
+	if (MARK_IS_UNIQUE(this->mark_in.value) ||
+		MARK_IS_UNIQUE(this->mark_out.value))
 	{
-		mark = ref_get(&unique_mark);
-		if (this->mark_in.value == MARK_UNIQUE)
+		bool strict;
+
+		strict = this->mark_in.value == MARK_UNIQUE_STRICT ||
+				 this->mark_out.value == MARK_UNIQUE_STRICT;
+
+		if (!strict)
 		{
+			mark = ref_get(&unique_mark);
+		}
+		if (MARK_IS_UNIQUE(this->mark_in.value))
+		{
+			if (strict)
+			{
+				mark = ref_get(&unique_mark);
+			}
 			this->mark_in.value = mark;
 		}
-		if (this->mark_out.value == MARK_UNIQUE)
+		if (MARK_IS_UNIQUE(this->mark_out.value))
 		{
+			if (strict)
+			{
+				mark = ref_get(&unique_mark);
+			}
 			this->mark_out.value = mark;
 		}
 	}

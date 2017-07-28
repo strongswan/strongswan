@@ -178,9 +178,11 @@ struct mark_t {
 };
 
 /**
- * Special mark value that uses a unique mark for each CHILD_SA
+ * Special mark value that uses a unique mark for each CHILD_SA (and direction)
  */
 #define MARK_UNIQUE (0xFFFFFFFF)
+#define MARK_UNIQUE_STRICT (0xFFFFFFFE)
+#define MARK_IS_UNIQUE(m) ((m) == MARK_UNIQUE || (m) == MARK_UNIQUE_STRICT)
 
 /**
  * Try to parse a mark_t from the given string of the form mark[/mask].
