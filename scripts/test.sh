@@ -67,6 +67,11 @@ win*)
 	# no make check for Windows binaries unless we run on a windows host
 	if test "$APPVEYOR" != "True"; then
 		TARGET=
+	else
+		CONFIG="$CONFIG --enable-openssl"
+		CFLAGS="$CFLAGS -I/c/OpenSSL-$TEST/include"
+		LDFLAGS="-L/c/OpenSSL-$TEST"
+		export LDFLAGS
 	fi
 	CFLAGS="$CFLAGS -mno-ms-bitfields"
 	DEPS="gcc-mingw-w64-base"
