@@ -28,5 +28,8 @@ sw-collector.tag_creator.name = strongSwan Project
 sw-collector.tag_creator.regid = strongswan.org
 	regid of the tagCreator entity.
 
+sw-collector.swid_generator = /usr/local/bin/swid_generator
+	SWID generator command to be executed.
+
 sw-collector.load =
 	Plugins to load in sw-collector tool.

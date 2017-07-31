@@ -16,7 +16,15 @@ sw-collector \- Extracts software installation events from dpkg history log
 .OP \-\-debug level
 .OP \-\-quiet
 .OP \-\-installed\fR|\fB\--removed
-.BR \-\-list |\fB\-\-unregistered\fR|\fB\-\-generate
+.BR \-\-list |\fB\-\-unregistered
+.YS
+.
+.SY "sw-collector"
+.OP \-\-debug level
+.OP \-\-quiet
+.OP \-\-installed\fR|\fB\--removed
+.OP \-\-full
+.BR \-\-generate
 .YS
 .
 .SY "sw-collector"
@@ -57,6 +65,10 @@ Apply command to installed software packages, only.
 .B "\-r, \-\-removed
 Apply command to removed software packages, only.
 .TP
+.B "\-f, \-\-full
+Generate ISO 19770-2:2015 SWID tags with full file information (possible for
+installed software packages, only).
+.TP
 .B "\-l, \-\-list
 Lists all software packages stored in the collector database showing their
 installation status.
@@ -67,8 +79,8 @@ which no SWID tags exist yet in a central collector database reachable via a
 REST interface. 
 .TP
 .B "\-g, \-\-generate
-Generates minimal SWID tags for all software packages residing in the local
-collector database but for which no SWID tags exist in a central collector
+Generates ISO 19770-2:2015 SWID tags for all software packages residing in the
+local collector database but for which no SWID tags exist in a central collector
 database reachable via a REST interface.
 .TP
 .B "\-m, \-\-migrate

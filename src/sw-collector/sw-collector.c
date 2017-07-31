@@ -30,10 +30,13 @@
 #include "sw_collector_dpkg.h"
 #
 #include <library.h>
+#include <bio/bio_writer.h>
 #include <utils/debug.h>
 #include <utils/lexparser.h>
 
 #include <imv/imv_os_info.h>
+
+#define SWID_GENERATOR	"/usr/local/bin/swid_generator"
 
 /**
  * global debug output variables
@@ -117,18 +120,20 @@ Usage:\n\
   sw-collector --help\n\
   sw-collector [--debug <level>] [--quiet] [--count <event count>]\n\
   sw-collector [--debug <level>] [--quiet] [--installed|--removed] \
---list|-unregistered|--generate\n\
+--list|-unregistered\n\
+  sw-collector [--debug <level>] [--quiet] [--installed|--removed] \
+[--full] --generate\n\
   sw-collector [--debug <level>] [--quiet] --migrate\n");
 }
 
 /**
  * Parse command line options
  */
-static collector_op_t do_args(int argc, char *argv[],
+static collector_op_t do_args(int argc, char *argv[], bool *full_tags,
 							  sw_collector_db_query_t *query_type)
 {
 	collector_op_t op = COLLECTOR_OP_EXTRACT;
-	bool installed = FALSE, removed = FALSE;
+	bool installed = FALSE, removed = FALSE, full = FALSE;
 
 	/* reinit getopt state */
 	optind = 0;
@@ -141,6 +146,7 @@ static collector_op_t do_args(int argc, char *argv[],
 			{ "help", no_argument, NULL, 'h' },
 			{ "count", required_argument, NULL, 'c' },
 			{ "debug", required_argument, NULL, 'd' },
+			{ "full", no_argument, NULL, 'f' },
 			{ "generate", no_argument, NULL, 'g' },
 			{ "installed", no_argument, NULL, 'i' },
 			{ "list", no_argument, NULL, 'l' },
@@ -151,7 +157,7 @@ static collector_op_t do_args(int argc, char *argv[],
 			{ 0,0,0,0 }
 		};
 
-		c = getopt_long(argc, argv, "hc:d:gilmqru", long_opts, NULL);
+		c = getopt_long(argc, argv, "hc:d:fgilmqru", long_opts, NULL);
 		switch (c)
 		{
 			case EOF:
@@ -165,6 +171,9 @@ static collector_op_t do_args(int argc, char *argv[],
 				continue;
 			case 'd':
 				debug_level = atoi(optarg);
+				continue;
+			case 'f':
+				full = TRUE;
 				continue;
 			case 'g':
 				op = COLLECTOR_OP_GENERATE;
@@ -193,6 +202,7 @@ static collector_op_t do_args(int argc, char *argv[],
 		}
 		break;
 	}
+
 	if ((!installed && !removed) || (installed && removed))
 	{
 		*query_type = SW_QUERY_ALL;
@@ -205,6 +215,8 @@ static collector_op_t do_args(int argc, char *argv[],
 	{
 		*query_type = SW_QUERY_REMOVED;
 	}
+	*full_tags = full;
+
 	return op;
 }
 
@@ -458,31 +470,81 @@ static int unregistered_identifiers(sw_collector_db_t *db,
 }
 
 /**
- * Generate a minimalistic ISO 19770-2:2015 SWID tag
+ * Generate a either a full or a minimalistic ISO 19770-2:2015 SWID tag
  */
 static char* generate_tag(char *name, char *package, char *version,
-						  char* entity, char *regid, char *product)
+						  char* entity, char *regid, char *product,
+						  bool full_tag, char *generator)
 {
-	char *tag_id, *tag;
-	int res;
+	char *tag = NULL;
 
-	tag_id = strstr(name, "__");
-	if (!tag_id)
+	if (full_tag)
 	{
-		return NULL;
-	}
-	tag_id += 2;
+		size_t tag_buf_len = 8192;
+		char tag_buf[tag_buf_len], command[BUF_LEN];
+		bio_writer_t *writer;
+		chunk_t tag_chunk;
+		FILE *file;
 
-	res = asprintf(&tag, "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+		/* Compose the SWID generator command */
+		snprintf(command, BUF_LEN, "%s swid --full --regid %s --entity-name "
+				 "\"%s\" --package %s", generator, regid, entity, package);
+\
+		/* Open a pipe stream for reading the SWID generator output */
+		file = popen(command, "r");
+		if (file)
+		{
+			writer = bio_writer_create(tag_buf_len);
+			while (TRUE)
+			{
+				if (!fgets(tag_buf, tag_buf_len, file))
+				{
+					break;
+				}
+				writer->write_data(writer,
+								   chunk_create(tag_buf, strlen(tag_buf)));
+			}
+			pclose(file);
+			tag_chunk = writer->extract_buf(writer);
+			writer->destroy(writer);
+			if (tag_chunk.len > 1)
+			{
+				tag = tag_chunk.ptr;
+				tag[tag_chunk.len - 1] = '\0';
+			}
+		}
+		else
+		{
+			DBG1(DBG_IMC, "failed to run swid_generator command");
+		}
+	}
+
+	/* Generate minimalistic SWID tag */
+	if (!tag)
+	{
+		char *tag_id;
+
+		tag_id = strstr(name, "__");
+		if (!tag_id)
+		{
+			return NULL;
+		}
+		tag_id += 2;
+
+		if (asprintf(&tag, "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
 			"<SoftwareIdentity name=\"%s\" tagId=\"%s\" version=\"%s\" "
 			"versionScheme=\"alphanumeric\" "
 			"xmlns=\"http://standards.iso.org/iso/19770/-2/2015/schema.xsd\">"
 			"<Entity name=\"%s\" regid=\"%s\" role=\"tagCreator\"/>"
 			"<Meta product=\"%s\"/>"
 			"</SoftwareIdentity>",
-			 package, tag_id, version, entity, regid, product);
+			 package, tag_id, version, entity, regid, product) == -1)
+		{
+			tag = NULL;
+		}
+	}
 
-	return (res == -1) ? NULL : tag;
+	return tag;
 }
 
 /**
@@ -490,10 +552,10 @@ static char* generate_tag(char *name, char *package, char *version,
  * all removed SW identifiers that are not registered centrally
  */
 static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db,
-						 sw_collector_db_query_t type)
+						 bool full_tags, sw_collector_db_query_t type)
 {
 	sw_collector_rest_api_t *rest_api;
-	char *name, *package, *version, *entity, *regid, *product, *tag;
+	char *name, *package, *version, *entity, *regid, *product, *generator, *tag;
 	enumerator_t *enumerator;
 	uint32_t sw_id;
 	bool installed;
@@ -503,6 +565,8 @@ static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db,
 									"strongSwan Project", lib->ns);
 	regid  = lib->settings->get_str(lib->settings, "%s.tag_creator.regid",
 									"strongswan.org", lib->ns);
+	generator = lib->settings->get_str(lib->settings, "%s.swid_generator",
+									SWID_GENERATOR, lib->ns);
 	info->get_os(info, &product);
 
 	rest_api = sw_collector_rest_api_create(db);
@@ -521,9 +585,11 @@ static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db,
 		sw_id = db->get_sw_id(db, name, &package, &version, NULL, &installed);
 		if (sw_id)
 		{
-			tag = generate_tag(name, package, version, entity, regid, product);
+			tag = generate_tag(name, package, version, entity, regid, product,
+							   full_tags && installed, generator);
 			if (tag)
 			{
+				DBG2(DBG_IMC, "  creating %s", name);
 				printf("%s\n", tag);
 				free(tag);
 				count++;
@@ -542,16 +608,16 @@ static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db,
 	switch (type)
 	{
 		case SW_QUERY_ALL:
-			DBG1(DBG_IMC, "%d tags for unregistered software identifiers with "
-				 "%d installed and %d removed", count, installed_count,
-				 count - installed_count);
+			DBG1(DBG_IMC, "created %d tags for unregistered software "
+				 "identifiers with %d installed and %d removed", count,
+				 installed_count,  count - installed_count);
 			break;
 		case SW_QUERY_INSTALLED:
-			DBG1(DBG_IMC, "%d tags for unregistered installed software "
+			DBG1(DBG_IMC, "created %d tags for unregistered installed software "
 				 "identifiers", count);
 			break;
 		case SW_QUERY_REMOVED:
-			DBG1(DBG_IMC, "%d tags for unregistered removed software "
+			DBG1(DBG_IMC, "created %d tags for unregistered removed software "
 				 "identifiers", count);
 			break;
 	}
@@ -615,10 +681,11 @@ int main(int argc, char *argv[])
 	sw_collector_db_query_t query_type;
 	sw_collector_info_t *info;
 	collector_op_t op;
+	bool full_tags;
 	char *uri, *tag_creator;
 	int status = EXIT_FAILURE;
 
-	op = do_args(argc, argv, &query_type);
+	op = do_args(argc, argv, &full_tags, &query_type);
 
 	/* enable sw_collector debugging hook */
 	dbg = sw_collector_dbg;
@@ -672,7 +739,7 @@ int main(int argc, char *argv[])
 			status = unregistered_identifiers(db, query_type);
 			break;
 		case COLLECTOR_OP_GENERATE:
-			status = generate_tags(info, db, query_type);
+			status = generate_tags(info, db, full_tags, query_type);
 			break;
 		case COLLECTOR_OP_MIGRATE:
 			status = migrate(info, db);
