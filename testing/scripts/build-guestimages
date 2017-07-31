@@ -48,11 +48,15 @@ do
 	execute "cp -rf $HOSTSDIR/${host}/etc $LOOPDIR" 0
 	execute "cp -rf $HOSTSDIR/default/* $LOOPDIR" 0
 	execute_chroot "ldconfig" 0
+	execute "mkdir $LOOPDIR/etc/pts" 0
 
+	if [ "$host" = "carol" ]
+	then
+		execute_chroot "/usr/local/bin/init_collector" 0
+	fi
 	if [ "$host" = "alice" ]
 	then
 		execute "mkdir $LOOPDIR/var/log/apache2/tnc" 0
-		execute "mkdir $LOOPDIR/etc/pts" 0
 		execute_chroot "chgrp www-data /etc/pts" 0
 		execute_chroot "chmod g+w /etc/pts" 0
 	fi

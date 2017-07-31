@@ -1,0 +1,4 @@
+#! /bin/sh
+
+cat /usr/local/share/strongswan/templates/database/sw-collector/sw_collector_tables.sql | sqlite3 /etc/pts/collector.db
+LEAK_DETECTIVE_DISABLE=1 /usr/local/sbin/sw-collector
