@@ -32,7 +32,7 @@ typedef enum sw_collector_db_query_t sw_collector_db_query_t;
 enum sw_collector_db_query_t {
 	SW_QUERY_ALL,
 	SW_QUERY_INSTALLED,
-	SW_QUERY_DELETED
+	SW_QUERY_REMOVED
 };
 
 /**
@@ -97,9 +97,9 @@ struct sw_collector_db_t {
 						  char **version, uint8_t *source, bool *installed);
 
 	/**
-	 * Get number of installed or deleted software identifiers
+	 * Get number of installed or removed software identifiers
 	 *
-	 * @param type			Query type (ALL, INSTALLED, DELETED)
+	 * @param type			Query type (ALL, INSTALLED, REMOVED)
 	 * @return				Count
 	 */
 	uint32_t (*get_sw_id_count)(sw_collector_db_t *this,
@@ -130,7 +130,7 @@ struct sw_collector_db_t {
 	/**
 	 * Enumerate over all collected [installed] software identities
 	 *
-	 * @param type			Query type (ALL, INSTALLED, DELETED)
+	 * @param type			Query type (ALL, INSTALLED, REMOVED)
 	 * @param package		If not NULL enumerate over all package versions
 	 * @return				Enumerator
 	 */

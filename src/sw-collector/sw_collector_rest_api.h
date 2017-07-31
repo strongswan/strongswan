@@ -34,7 +34,7 @@ struct sw_collector_rest_api_t {
 	 * List of locally stored software identifiers that are not registered
 	 * in a central collector database
 	 *
-	 * @param type			Query type (ALL, INSTALLED, DELETED)
+	 * @param type			Query type (ALL, INSTALLED, REMOVED)
 	 * @return				Enumerator
 	 */
 	enumerator_t* (*create_sw_enumerator)(sw_collector_rest_api_t *this,

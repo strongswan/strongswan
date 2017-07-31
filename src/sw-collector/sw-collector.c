@@ -116,16 +116,19 @@ static void usage(void)
 Usage:\n\
   sw-collector --help\n\
   sw-collector [--debug <level>] [--quiet] [--count <event count>]\n\
-  sw-collector [--debug <level>] [--quiet] --list|-unregistered\n\
-  sw-collector [--debug <level>] [--quiet] ---generate|--migrate\n");
+  sw-collector [--debug <level>] [--quiet] [--installed|--removed] \
+--list|-unregistered|--generate\n\
+  sw-collector [--debug <level>] [--quiet] --migrate\n");
 }
 
 /**
  * Parse command line options
  */
-static collector_op_t do_args(int argc, char *argv[])
+static collector_op_t do_args(int argc, char *argv[],
+							  sw_collector_db_query_t *query_type)
 {
 	collector_op_t op = COLLECTOR_OP_EXTRACT;
+	bool installed = FALSE, removed = FALSE;
 
 	/* reinit getopt state */
 	optind = 0;
@@ -139,14 +142,16 @@ static collector_op_t do_args(int argc, char *argv[])
 			{ "count", required_argument, NULL, 'c' },
 			{ "debug", required_argument, NULL, 'd' },
 			{ "generate", no_argument, NULL, 'g' },
+			{ "installed", no_argument, NULL, 'i' },
 			{ "list", no_argument, NULL, 'l' },
 			{ "migrate", no_argument, NULL, 'm' },
 			{ "quiet", no_argument, NULL, 'q' },
+			{ "removed", no_argument, NULL, 'r' },
 			{ "unregistered", no_argument, NULL, 'u' },
 			{ 0,0,0,0 }
 		};
 
-		c = getopt_long(argc, argv, "hc:d:lmqu", long_opts, NULL);
+		c = getopt_long(argc, argv, "hc:d:gilmqru", long_opts, NULL);
 		switch (c)
 		{
 			case EOF:
@@ -164,6 +169,9 @@ static collector_op_t do_args(int argc, char *argv[])
 			case 'g':
 				op = COLLECTOR_OP_GENERATE;
 				continue;
+			case 'i':
+				installed = TRUE;
+				continue;
 			case 'l':
 				op = COLLECTOR_OP_LIST;
 				continue;
@@ -173,6 +181,9 @@ static collector_op_t do_args(int argc, char *argv[])
 			case 'q':
 				stderr_quiet = TRUE;
 				continue;
+			case 'r':
+				removed = TRUE;
+				continue;
 			case 'u':
 				op = COLLECTOR_OP_UNREGISTERED;
 				continue;
@@ -181,6 +192,18 @@ static collector_op_t do_args(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 		}
 		break;
+	}
+	if ((!installed && !removed) || (installed && removed))
+	{
+		*query_type = SW_QUERY_ALL;
+	}
+	else if (installed)
+	{
+		*query_type = SW_QUERY_INSTALLED;
+	}
+	else
+	{
+		*query_type = SW_QUERY_REMOVED;
 	}
 	return op;
 }
@@ -337,13 +360,13 @@ end:
 /**
  * List all endpoint software identifiers stored in local collector database
  */
-static int list_identifiers(sw_collector_db_t *db)
+static int list_identifiers(sw_collector_db_t *db, sw_collector_db_query_t type)
 {
 	enumerator_t *e;
 	char *name, *package, *version;
-	uint32_t sw_id, count = 0, installed_count = 0, installed;
+	uint32_t sw_id, count = 0, installed_count = 0, removed_count, installed;
 
-	e = db->create_sw_enumerator(db, SW_QUERY_ALL, NULL);
+	e = db->create_sw_enumerator(db, type, NULL);
 	if (!e)
 	{
 		return EXIT_FAILURE;
@@ -357,9 +380,22 @@ static int list_identifiers(sw_collector_db_t *db)
 		}
 		count++;
 	}
+	removed_count = count - installed_count;
 	e->destroy(e);
-	DBG1(DBG_IMC, "retrieved %u software identities with %u installed and %u "
-				  "deleted", count, installed_count, count - installed_count);
+
+	switch (type)
+	{
+		case SW_QUERY_ALL:
+			DBG1(DBG_IMC, "retrieved %u software identities with %u installed "
+				 "and %u removed", count, installed_count, removed_count);
+			break;
+		case SW_QUERY_INSTALLED:
+			DBG1(DBG_IMC, "retrieved %u installed software identities", count);
+			break;
+		case SW_QUERY_REMOVED:
+			DBG1(DBG_IMC, "retrieved %u removed software identities", count);
+			break;
+	}
 
 	return EXIT_SUCCESS;
 }
@@ -371,7 +407,7 @@ static bool query_registry(sw_collector_rest_api_t *rest_api, bool installed)
 	char *sw_id;
 	int count = 0;
 
-	type = installed ? SW_QUERY_INSTALLED : SW_QUERY_DELETED;
+	type = installed ? SW_QUERY_INSTALLED : SW_QUERY_REMOVED;
 	enumerator = rest_api->create_sw_enumerator(rest_api, type);
 	if (!enumerator)
 	{
@@ -384,7 +420,7 @@ static bool query_registry(sw_collector_rest_api_t *rest_api, bool installed)
 	}
 	enumerator->destroy(enumerator);
 	DBG1(DBG_IMC, "%d %s software identifiers not registered", count,
-				   installed ? "installed" : "deleted");
+				   installed ? "installed" : "removed");
 	return TRUE;
 }
 
@@ -393,7 +429,8 @@ static bool query_registry(sw_collector_rest_api_t *rest_api, bool installed)
  * List all endpoint software identifiers stored in local collector database
  * that are not registered yet in central collelector database
  */
-static int unregistered_identifiers(sw_collector_db_t *db)
+static int unregistered_identifiers(sw_collector_db_t *db,
+									sw_collector_db_query_t type)
 {
 	sw_collector_rest_api_t *rest_api;
 	int status = EXIT_SUCCESS;
@@ -405,13 +442,13 @@ static int unregistered_identifiers(sw_collector_db_t *db)
 	}
 
 	/* List installed software identifiers not registered centrally */
-	if (!query_registry(rest_api, TRUE))
+	if (type != SW_QUERY_REMOVED && !query_registry(rest_api, TRUE))
 	{
 		status = EXIT_FAILURE;
 	}
 
-	/* List deleted software identifiers not registered centrally */
-	if (!query_registry(rest_api, FALSE))
+	/* List removed software identifiers not registered centrally */
+	if (type != SW_QUERY_INSTALLED && !query_registry(rest_api, FALSE))
 	{
 		status = EXIT_FAILURE;
 	}
@@ -450,15 +487,17 @@ static char* generate_tag(char *name, char *package, char *version,
 
 /**
  * Generate a minimalistic ISO 19770-2:2015 SWID tag for
- * all deleted SW identifiers that are not registered centrally
+ * all removed SW identifiers that are not registered centrally
  */
-static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db)
+static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db,
+						 sw_collector_db_query_t type)
 {
 	sw_collector_rest_api_t *rest_api;
-	char *pos, *name, *package, *version, *entity, *regid, *product, *tag;
+	char *name, *package, *version, *entity, *regid, *product, *tag;
 	enumerator_t *enumerator;
 	uint32_t sw_id;
-	int status = EXIT_FAILURE;
+	bool installed;
+	int count = 0, installed_count = 0, status = EXIT_FAILURE;
 
 	entity = lib->settings->get_str(lib->settings, "%s.tag_creator.name",
 									"strongSwan Project", lib->ns);
@@ -472,28 +511,26 @@ static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db)
 		goto end;
 	}
 
-	enumerator = rest_api->create_sw_enumerator(rest_api, SW_QUERY_DELETED);
+	enumerator = rest_api->create_sw_enumerator(rest_api, type);
 	if (!enumerator)
 	{
 		goto end;
 	}
 	while (enumerator->enumerate(enumerator, &name))
 	{
-		sw_id = db->get_sw_id(db, name, &package, &version, NULL, NULL);
+		sw_id = db->get_sw_id(db, name, &package, &version, NULL, &installed);
 		if (sw_id)
 		{
-			/* Remove architecture from package name */
-			pos = strchr(package, ':');
-			if (pos)
-			{
-				*pos = '\0';
-			}
 			tag = generate_tag(name, package, version, entity, regid, product);
 			if (tag)
 			{
 				printf("%s\n", tag);
 				free(tag);
 				count++;
+				if (installed)
+				{
+					installed_count++;
+				}
 			}
 			free(package);
 			free(version);
@@ -501,8 +538,23 @@ static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db)
 	}
 	enumerator->destroy(enumerator);
 	status = EXIT_SUCCESS;
-	DBG1(DBG_IMC, "%d tags for deleted unregistered software identifiers",
-				   count);
+
+	switch (type)
+	{
+		case SW_QUERY_ALL:
+			DBG1(DBG_IMC, "%d tags for unregistered software identifiers with "
+				 "%d installed and %d removed", count, installed_count,
+				 count - installed_count);
+			break;
+		case SW_QUERY_INSTALLED:
+			DBG1(DBG_IMC, "%d tags for unregistered installed software "
+				 "identifiers", count);
+			break;
+		case SW_QUERY_REMOVED:
+			DBG1(DBG_IMC, "%d tags for unregistered removed software "
+				 "identifiers", count);
+			break;
+	}
 
 end:
 	DESTROY_IF(rest_api);
@@ -560,12 +612,13 @@ static int migrate(sw_collector_info_t *info, sw_collector_db_t *db)
 int main(int argc, char *argv[])
 {
 	sw_collector_db_t *db = NULL;
+	sw_collector_db_query_t query_type;
 	sw_collector_info_t *info;
 	collector_op_t op;
 	char *uri, *tag_creator;
 	int status = EXIT_FAILURE;
 
-	op = do_args(argc, argv);
+	op = do_args(argc, argv, &query_type);
 
 	/* enable sw_collector debugging hook */
 	dbg = sw_collector_dbg;
@@ -613,13 +666,13 @@ int main(int argc, char *argv[])
 			status = extract_history(info, db);
 			break;
 		case COLLECTOR_OP_LIST:
-			status = list_identifiers(db);
+			status = list_identifiers(db, query_type);
 			break;
 		case COLLECTOR_OP_UNREGISTERED:
-			status = unregistered_identifiers(db);
+			status = unregistered_identifiers(db, query_type);
 			break;
 		case COLLECTOR_OP_GENERATE:
-			status = generate_tags(info, db);
+			status = generate_tags(info, db, query_type);
 			break;
 		case COLLECTOR_OP_MIGRATE:
 			status = migrate(info, db);

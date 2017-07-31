@@ -329,7 +329,7 @@ METHOD(sw_collector_history_t, extract_packages, bool,
 			}
 			if (sw_id)
 			{
-				/* sw identifier exists - update state to 'deleted' */
+				/* sw identifier exists - update state to 'removed' */
 				if (!this->db->update_sw_id(this->db, sw_id, NULL, NULL, FALSE))
 				{
 					goto end;
@@ -337,7 +337,7 @@ METHOD(sw_collector_history_t, extract_packages, bool,
 			}
 			else
 			{
-				/* new sw identifier - create with state 'deleted' */
+				/* new sw identifier - create with state 'removed' */
 				sw_id = this->db->set_sw_id(this->db, del_sw_id, p->package,
 									del_version, this->source, FALSE);
 
