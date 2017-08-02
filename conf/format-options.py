@@ -217,7 +217,7 @@ class TagReplacer:
 		return re.compile(r'''
 			(^|\s|(?P<brack>[(\[])) # prefix with optional opening bracket
 			(?P<tag>''' + tag + r''') # start tag
-			(?P<text>\w|\S.*?\S) # text
+			(?P<text>\S|\S.*?\S) # text
 			''' + tag + r''' # end tag
 			(?P<punct>([.,!:)\]]|\(\d+\))*) # punctuation
 			(?=$|\s) # suffix (don't consume it so that subsequent tags can match)
