@@ -265,9 +265,10 @@ static bool read_and_queue(private_netlink_socket_t *this, bool block)
 {
 	struct nlmsghdr *hdr;
 	char buf[this->buflen];
-	ssize_t len;
+	ssize_t len, read_len;
+	bool wipe = FALSE;
 
-	len = read_msg(this, buf, sizeof(buf), block);
+	len = read_len = read_msg(this, buf, sizeof(buf), block);
 	if (len == -1)
 	{
 		return TRUE;
@@ -277,12 +278,21 @@ static bool read_and_queue(private_netlink_socket_t *this, bool block)
 		hdr = (struct nlmsghdr*)buf;
 		while (NLMSG_OK(hdr, len))
 		{
+			if (this->protocol == NETLINK_XFRM &&
+				hdr->nlmsg_type == XFRM_MSG_NEWSA)
+			{	/* wipe potential IPsec SA keys */
+				wipe = TRUE;
+			}
 			if (!queue(this, hdr))
 			{
 				break;
 			}
 			hdr = NLMSG_NEXT(hdr, len);
 		}
+	}
+	if (wipe)
+	{
+		memwipe(buf, read_len);
 	}
 	return FALSE;
 }
