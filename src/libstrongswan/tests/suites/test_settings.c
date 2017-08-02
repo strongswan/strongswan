@@ -549,10 +549,14 @@ END_TEST
 
 #ifdef WIN32
 # define include1 "C:\\Windows\\Temp\\strongswan-settings-test-include1"
+# define include1_str "C:\\\\Windows\\\\Temp\\\\strongswan-settings-test-include1"
 # define include2 "C:\\Windows\\Temp\\strongswan-settings-test-include2"
+# define include2_str "C:\\\\Windows\\\\Temp\\\\strongswan-settings-test-include2"
 #else
 # define include1 "/tmp/strongswan-settings-test-include1"
+# define include1_str include1
 # define include2 "/tmp/strongswan-settings-test-include2"
+# define include2_str include2
 #endif
 
 static char *include_content1 =
@@ -638,10 +642,10 @@ START_TEST(test_include_string)
 		"		include this/does/not/exist.conf\n"
 		"		include = value\n"
 		"		key2 = value2\n"
-		"		include \"" include2 "\"\n"
+		"		include \"" include2_str "\"\n"
 		"	}\n"
 		"}\n"
-		"include \"" include1 "\"");
+		"include \"" include1_str "\"");
 
 	create_settings(contents);
 	verify_include();

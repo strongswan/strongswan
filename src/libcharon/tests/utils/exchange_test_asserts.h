@@ -285,7 +285,7 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
  * @param dir			IN or OUT to check the next in- or outbound message
  */
 #define assert_message_empty(dir) \
-				_assert_payload(dir, 0)
+				_assert_payload(#dir, 0)
 
 /**
  * Assert that the next in- or outbound plaintext message contains exactly
@@ -295,7 +295,7 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
  * @param expected		expected payload type
  */
 #define assert_single_payload(dir, expected) \
-				_assert_payload(dir, 1, { TRUE, expected, 0 })
+				_assert_payload(#dir, 1, { TRUE, expected, 0 })
 
 /**
  * Assert that the next in- or outbound plaintext message contains exactly
@@ -305,7 +305,7 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
  * @param expected		expected notify type
  */
 #define assert_single_notify(dir, expected) \
-				_assert_payload(dir, 1, { TRUE, 0, expected })
+				_assert_payload(#dir, 1, { TRUE, 0, expected })
 
 /**
  * Assert that the next in- or outbound plaintext message contains a notify
@@ -315,7 +315,7 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
  * @param expected		expected notify type
  */
 #define assert_notify(dir, expected) \
-				_assert_payload(dir, -1, { TRUE, 0, expected })
+				_assert_payload(#dir, -1, { TRUE, 0, expected })
 
 /**
  * Assert that the next in- or outbound plaintext message does not contain a
@@ -325,7 +325,7 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
  * @param unexpected	not expected notify type
  */
 #define assert_no_notify(dir, unexpected) \
-				_assert_payload(dir, -1, { FALSE, 0, unexpected })
+				_assert_payload(#dir, -1, { FALSE, 0, unexpected })
 
 #define _assert_payload(dir, c, ...) ({ \
 	listener_message_rule_t _rules[] = { __VA_ARGS__ }; \
@@ -333,7 +333,7 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
 		.listener = { .message = exchange_test_asserts_message, }, \
 		.file = __FILE__, \
 		.line = __LINE__, \
-		.incoming = streq(#dir, "IN") ? TRUE : FALSE, \
+		.incoming = streq(dir, "IN") ? TRUE : FALSE, \
 		.count = c, \
 		.rules = _rules, \
 		.num_rules = countof(_rules), \

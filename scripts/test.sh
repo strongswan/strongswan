@@ -64,8 +64,15 @@ win*)
 			--enable-tnccs-20 --enable-imc-attestation --enable-imv-attestation
 			--enable-imc-os --enable-imv-os --enable-tnc-imv --enable-tnc-imc
 			--enable-pki --enable-swanctl --enable-socket-win"
-	# no make check for Windows binaries
-	TARGET=
+	# no make check for Windows binaries unless we run on a windows host
+	if test "$APPVEYOR" != "True"; then
+		TARGET=
+	else
+		CONFIG="$CONFIG --enable-openssl"
+		CFLAGS="$CFLAGS -I/c/OpenSSL-$TEST/include"
+		LDFLAGS="-L/c/OpenSSL-$TEST"
+		export LDFLAGS
+	fi
 	CFLAGS="$CFLAGS -mno-ms-bitfields"
 	DEPS="gcc-mingw-w64-base"
 	case "$TEST" in
@@ -76,7 +83,7 @@ win*)
 		DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev $DEPS"
 		CC="x86_64-w64-mingw32-gcc"
 		# apply patch to MinGW headers
-		if test -z "$1"; then
+		if test "$APPVEYOR" != "True" -a -z "$1"; then
 			sudo patch -f -p 4 -d /usr/share/mingw-w64/include < src/libcharon/plugins/kernel_wfp/mingw-w64-4.8.1.diff
 		fi
 		;;
