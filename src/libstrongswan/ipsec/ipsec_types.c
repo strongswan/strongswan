@@ -69,7 +69,7 @@ bool mark_from_string(const char *value, mark_t *mark)
 		endptr = (char*)value + strlen("%unique");
 		if (strcasepfx(endptr, "-dir"))
 		{
-			mark->value = MARK_UNIQUE_STRICT;
+			mark->value = MARK_UNIQUE_DIR;
 			endptr += strlen("-dir");
 		}
 		else if (!*endptr || *endptr == '/')

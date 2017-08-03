@@ -1796,18 +1796,18 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	if (MARK_IS_UNIQUE(this->mark_in.value) ||
 		MARK_IS_UNIQUE(this->mark_out.value))
 	{
-		bool strict;
+		bool unique_dir;
 
-		strict = this->mark_in.value == MARK_UNIQUE_STRICT ||
-				 this->mark_out.value == MARK_UNIQUE_STRICT;
+		unique_dir = this->mark_in.value == MARK_UNIQUE_DIR ||
+				this->mark_out.value == MARK_UNIQUE_DIR;
 
-		if (!strict)
+		if (!unique_dir)
 		{
 			mark = ref_get(&unique_mark);
 		}
 		if (MARK_IS_UNIQUE(this->mark_in.value))
 		{
-			if (strict)
+			if (unique_dir)
 			{
 				mark = ref_get(&unique_mark);
 			}
@@ -1815,7 +1815,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		}
 		if (MARK_IS_UNIQUE(this->mark_out.value))
 		{
-			if (strict)
+			if (unique_dir)
 			{
 				mark = ref_get(&unique_mark);
 			}
