@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Andreas Steffen
+ * Copyright (C) 2013-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -37,13 +37,12 @@ struct swid_inventory_t {
 	 * Collect the SWID tags stored on the endpoint
 	 *
 	 * @param directory		SWID directory path
-	 * @param generator		Path to SWID generator
 	 * @param targets		List of target tag IDs
 	 * @param pretty		Generate indented XML SWID tags
 	 * @param full			Include file information in SWID tags
 	 * @return				TRUE if successful
 	 */
-	bool (*collect)(swid_inventory_t *this, char *directory, char *generator,
+	bool (*collect)(swid_inventory_t *this, char *directory,
 					swid_inventory_t *targets, bool pretty, bool full);
 
 	/**

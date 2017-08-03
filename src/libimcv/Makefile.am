@@ -100,6 +100,7 @@ libimcv_la_SOURCES = \
 	swid/swid_inventory.h swid/swid_inventory.c \
 	swid/swid_tag.h swid/swid_tag.c \
 	swid/swid_tag_id.h swid/swid_tag_id.c \
+	swid_gen/swid_gen.h swid_gen/swid_gen.c \
 	swima/swima_data_model.h swima/swima_data_model.c \
 	swima/swima_record.h swima/swima_record.c \
 	swima/swima_event.h swima/swima_event.c \
@@ -214,6 +215,7 @@ imcv_tests_SOURCES = \
 	pa_tnc/pa_tnc_attr_manager.c \
 	seg/seg_env.c seg/seg_contract.c \
 	seg/seg_contract_manager.c \
+	swid_gen/swid_gen.c \
 	swima/swima_data_model.c \
 	swima/swima_event.c \
 	swima/swima_events.c \

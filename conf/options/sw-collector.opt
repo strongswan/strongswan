@@ -22,14 +22,5 @@ sw-collector.rest_api.uri =
 sw-collector.rest_api.timeout = 120
 	Timeout of REST API HTTP POST transaction.
 
-sw-collector.tag_creator.name = strongSwan Project
-	Name of the tagCreator entity.
-
-sw-collector.tag_creator.regid = strongswan.org
-	regid of the tagCreator entity.
-
-sw-collector.swid_generator = /usr/local/bin/swid_generator
-	SWID generator command to be executed.
-
 sw-collector.load =
 	Plugins to load in sw-collector tool.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Andreas Steffen
+ * Copyright (C) 2013-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -288,8 +288,8 @@ METHOD(imv_swid_state_t, get_request_id, uint32_t,
 METHOD(imv_swid_state_t, set_swid_inventory, void,
     private_imv_swid_state_t *this, swid_inventory_t *inventory)
 {
-	chunk_t tag_creator, unique_sw_id;
-	char software_id[256];
+	chunk_t tag_creator, sw_id;
+	char software_id[BUF_LEN];
 	json_object *jstring;
 	swid_tag_id_t *tag_id;
 	enumerator_t *enumerator;
@@ -299,10 +299,9 @@ METHOD(imv_swid_state_t, set_swid_inventory, void,
 	{
 		/* Construct software ID from tag creator and unique software ID */
 		tag_creator = tag_id->get_tag_creator(tag_id);
-		unique_sw_id = tag_id->get_unique_sw_id(tag_id, NULL);
-		snprintf(software_id, 256, "%.*s_%.*s",
-				 tag_creator.len, tag_creator.ptr,
-				 unique_sw_id.len, unique_sw_id.ptr);
+		sw_id = tag_id->get_unique_sw_id(tag_id, NULL);
+		snprintf(software_id, BUF_LEN, "%.*s__%.*s",
+				 tag_creator.len, tag_creator.ptr, sw_id.len, sw_id.ptr);
 		DBG3(DBG_IMV, "  %s", software_id);
 
 		/* Add software ID to JSON array */

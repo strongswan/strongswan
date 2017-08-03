@@ -30,13 +30,11 @@
 #include "sw_collector_dpkg.h"
 #
 #include <library.h>
-#include <bio/bio_writer.h>
 #include <utils/debug.h>
 #include <utils/lexparser.h>
 
 #include <imv/imv_os_info.h>
-
-#define SWID_GENERATOR	"/usr/local/bin/swid_generator"
+#include <swid_gen/swid_gen.h>
 
 /**
  * global debug output variables
@@ -470,105 +468,21 @@ static int unregistered_identifiers(sw_collector_db_t *db,
 }
 
 /**
- * Generate a either a full or a minimalistic ISO 19770-2:2015 SWID tag
- */
-static char* generate_tag(char *name, char *package, char *version,
-						  char* entity, char *regid, char *product,
-						  bool full_tag, char *generator)
-{
-	char *tag = NULL;
-
-	if (full_tag)
-	{
-		size_t tag_buf_len = 8192;
-		char tag_buf[tag_buf_len], command[BUF_LEN];
-		bio_writer_t *writer;
-		chunk_t tag_chunk;
-		FILE *file;
-
-		/* Compose the SWID generator command */
-		snprintf(command, BUF_LEN, "%s swid --full --regid %s --entity-name "
-				 "\"%s\" --package %s", generator, regid, entity, package);
-\
-		/* Open a pipe stream for reading the SWID generator output */
-		file = popen(command, "r");
-		if (file)
-		{
-			writer = bio_writer_create(tag_buf_len);
-			while (TRUE)
-			{
-				if (!fgets(tag_buf, tag_buf_len, file))
-				{
-					break;
-				}
-				writer->write_data(writer,
-								   chunk_create(tag_buf, strlen(tag_buf)));
-			}
-			pclose(file);
-			tag_chunk = writer->extract_buf(writer);
-			writer->destroy(writer);
-			if (tag_chunk.len > 1)
-			{
-				tag = tag_chunk.ptr;
-				tag[tag_chunk.len - 1] = '\0';
-			}
-		}
-		else
-		{
-			DBG1(DBG_IMC, "failed to run swid_generator command");
-		}
-	}
-
-	/* Generate minimalistic SWID tag */
-	if (!tag)
-	{
-		char *tag_id;
-
-		tag_id = strstr(name, "__");
-		if (!tag_id)
-		{
-			return NULL;
-		}
-		tag_id += 2;
-
-		if (asprintf(&tag, "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-			"<SoftwareIdentity name=\"%s\" tagId=\"%s\" version=\"%s\" "
-			"versionScheme=\"alphanumeric\" "
-			"xmlns=\"http://standards.iso.org/iso/19770/-2/2015/schema.xsd\">"
-			"<Entity name=\"%s\" regid=\"%s\" role=\"tagCreator\"/>"
-			"<Meta product=\"%s\"/>"
-			"</SoftwareIdentity>",
-			 package, tag_id, version, entity, regid, product) == -1)
-		{
-			tag = NULL;
-		}
-	}
-
-	return tag;
-}
-
-/**
- * Generate a minimalistic ISO 19770-2:2015 SWID tag for
- * all removed SW identifiers that are not registered centrally
+ * Generate ISO 19770-2:2015 SWID tags for [installed|removed|all]
+ * SW identifiers that are not registered centrally
  */
 static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db,
 						 bool full_tags, sw_collector_db_query_t type)
 {
+	swid_gen_t * swid_gen;
 	sw_collector_rest_api_t *rest_api;
-	char *name, *package, *version, *entity, *regid, *product, *generator, *tag;
+	char *name, *package, *version, *tag;
 	enumerator_t *enumerator;
 	uint32_t sw_id;
 	bool installed;
 	int count = 0, installed_count = 0, status = EXIT_FAILURE;
 
-	entity = lib->settings->get_str(lib->settings, "%s.tag_creator.name",
-									"strongSwan Project", lib->ns);
-	regid  = lib->settings->get_str(lib->settings, "%s.tag_creator.regid",
-									"strongswan.org", lib->ns);
-	generator = lib->settings->get_str(lib->settings, "%s.swid_generator",
-									SWID_GENERATOR, lib->ns);
-	info->get_os(info, &product);
-
+	swid_gen = swid_gen_create();
 	rest_api = sw_collector_rest_api_create(db);
 	if (!rest_api)
 	{
@@ -585,8 +499,8 @@ static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db,
 		sw_id = db->get_sw_id(db, name, &package, &version, NULL, &installed);
 		if (sw_id)
 		{
-			tag = generate_tag(name, package, version, entity, regid, product,
-							   full_tags && installed, generator);
+			tag = swid_gen->generate_tag(swid_gen, name, package, version,
+										 full_tags && installed, FALSE);
 			if (tag)
 			{
 				DBG2(DBG_IMC, "  creating %s", name);
@@ -623,6 +537,7 @@ static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db,
 	}
 
 end:
+	swid_gen->destroy(swid_gen);
 	DESTROY_IF(rest_api);
 
 	return status;

@@ -99,9 +99,18 @@ The following parameters can be configured in strongswan.conf:
        uri = https://admin-user:ietf99hackathon@tnc.strongswan.org/api/
        timeout = 120
     }
-    tag_creator {
-       name = strongSwan Project
-       regid = strongswan.org
+ }
+.P
+The parameters of the swid_generator used with the \-\-generate command can
+be changed in the libimcv section of strongswan.conf:
+.P
+ libimcv {
+    swid_gen {
+       command = /usr/local/bin/swid_generator
+       tag_creator {
+          name = strongSwan Project
+          regid = strongswan.org
+       }
     }
  }
 .

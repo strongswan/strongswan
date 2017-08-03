@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Andreas Steffen
+ * Copyright (C) 2013-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -29,8 +29,6 @@
 
 #include <pen/pen.h>
 #include <utils/debug.h>
-
-#define SWID_GENERATOR	"/usr/local/bin/swid_generator"
 
 /* IMC definitions */
 
@@ -165,7 +163,7 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 	pa_tnc_attr_t *attr, *attr_error;
 	imc_swid_state_t *swid_state;
 	swid_inventory_t *swid_inventory;
-	char *swid_directory, *swid_generator;
+	char *swid_directory;
 	uint32_t eid_epoch;
 	bool swid_pretty, swid_full;
 	enumerator_t *enumerator;
@@ -173,9 +171,6 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 	swid_directory = lib->settings->get_str(lib->settings,
 								"%s.plugins.imc-swid.swid_directory",
 								 SWID_DIRECTORY, lib->ns);
-	swid_generator = lib->settings->get_str(lib->settings,
-								"%s.plugins.imc-swid.swid_generator",
-								 SWID_GENERATOR, lib->ns);
 	swid_pretty = lib->settings->get_bool(lib->settings,
 								"%s.plugins.imc-swid.swid_pretty",
 								 FALSE, lib->ns);
@@ -184,8 +179,8 @@ static bool add_swid_inventory(imc_state_t *state, imc_msg_t *msg,
 								 FALSE, lib->ns);
 
 	swid_inventory = swid_inventory_create(full_tags);
-	if (!swid_inventory->collect(swid_inventory, swid_directory, swid_generator,
-								 targets, swid_pretty, swid_full))
+	if (!swid_inventory->collect(swid_inventory, swid_directory, targets,
+								 swid_pretty, swid_full))
 	{
 		swid_inventory->destroy(swid_inventory);
 		attr_error = swid_error_create(TCG_SWID_ERROR, request_id,

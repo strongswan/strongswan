@@ -590,7 +590,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 					DBG1(DBG_IMV, "  %s", target);
 
 					/* Separate target into tag_creator and unique_sw_id */
-					separator = strchr(target, '_');
+					separator = strstr(target, "__");
 					if (!separator)
 					{
 						error_str = "separation of regid from "
@@ -598,9 +598,9 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 						break;
 					}
 					tag_creator = chunk_create(target, separator - target);
-					separator++;
+					separator += 2;
 					unique_sw_id = chunk_create(separator, strlen(target) -
-												tag_creator.len - 1);
+												tag_creator.len - 2);
 					tag_id = swid_tag_id_create(tag_creator, unique_sw_id,
 												chunk_empty);
 					cast_attr = (tcg_swid_attr_req_t*)attr;

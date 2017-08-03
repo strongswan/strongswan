@@ -15,8 +15,9 @@
 
 #include "swima_collector.h"
 
+#include <swid_gen/swid_gen.h>
+
 #include <collections/linked_list.h>
-#include <bio/bio_writer.h>
 #include <utils/debug.h>
 
 #include <stdio.h>
@@ -32,8 +33,6 @@
 #ifndef SWID_DIRECTORY
 #define SWID_DIRECTORY NULL
 #endif
-
-#define SWID_GENERATOR	"/usr/local/bin/swid_generator"
 
 /**
  * Directories to be skipped by collector
@@ -133,104 +132,6 @@ end:
 	return status;
 }
 
-/**
- * Read SWID tags issued by the swid_generator tool
- */
-static status_t read_swid_tags(private_swima_collector_t *this, FILE *file)
-{
-	swima_record_t *sw_record;
-	bio_writer_t *writer;
-	chunk_t sw_id, swid_tag;
-	bool more_tags = TRUE, last_newline;
-	char line[8192];
-	size_t len;
-	status_t status;
-
-	while (more_tags)
-	{
-		last_newline = TRUE;
-		writer = bio_writer_create(512);
-		while (TRUE)
-		{
-			if (!fgets(line, sizeof(line), file))
-			{
-				more_tags = FALSE;
-				break;
-			}
-			len = strlen(line);
-
-			if (last_newline && line[0] == '\n')
-			{
-				break;
-			}
-			else
-			{
-				last_newline = (line[len-1] == '\n');
-				writer->write_data(writer, chunk_create(line, len));
-			}
-		}
-		swid_tag = writer->get_buf(writer);
-
-		if (swid_tag.len > 1)
-		{
-			/* remove trailing newline if present */
-			if (swid_tag.ptr[swid_tag.len - 1] == '\n')
-			{
-				swid_tag.len--;
-			}
-			DBG3(DBG_IMC, "  %.*s", swid_tag.len, swid_tag.ptr);
-
-			status = extract_sw_id(swid_tag, &sw_id);
-			if (status != SUCCESS)
-			{
-				DBG1(DBG_IMC, "software id could not be extracted from tag");
-				writer->destroy(writer);
-				return status;
-			}
-			sw_record = swima_record_create(0, sw_id, chunk_empty);
-			sw_record->set_source_id(sw_record, SOURCE_ID_GENERATOR);
-			sw_record->set_record(sw_record, swid_tag);
-			this->inventory->add(this->inventory, sw_record);
-			chunk_free(&sw_id);
-		}
-		writer->destroy(writer);
-	}
-
-	return SUCCESS;
-}
-
-/**
- * Read Software Identifiers issued by the swid_generator tool
- */
-static status_t read_swid_tag_ids(private_swima_collector_t *this, FILE *file)
-{
-	swima_record_t *sw_record;
-	chunk_t sw_id;
-	char line[BUF_LEN];
-	size_t len;
-
-	while (TRUE)
-	{
-		if (!fgets(line, sizeof(line), file))
-		{
-			return SUCCESS;
-		}
-		len = strlen(line);
-
-		/* remove trailing newline if present */
-		if (len > 0 && line[len - 1] == '\n')
-		{
-			len--;
-		}
-		DBG3(DBG_IMC, "  %.*s", len, line);
-
-		sw_id = chunk_create(line, len);
-		sw_record = swima_record_create(0, sw_id, chunk_empty);
-		sw_record->set_source_id(sw_record, SOURCE_ID_GENERATOR);
-		this->inventory->add(this->inventory, sw_record);
-	}
-}
-
 static status_t retrieve_inventory(private_swima_collector_t *this,
 								   swima_inventory_t *targets)
 {
@@ -299,82 +200,118 @@ static status_t retrieve_events(private_swima_collector_t *this,
 	return SUCCESS;
 }
 
-static status_t generate_tags(private_swima_collector_t *this, char *generator,
-							swima_inventory_t *targets, bool pretty, bool full)
+static status_t generate_tags(private_swima_collector_t *this,
+							  swima_inventory_t *targets, bool pretty, bool full)
 {
-	FILE *file;
-	char command[BUF_LEN];
-	char doc_separator[] = "'\n\n'";
-
+	swid_gen_t *swid_gen;
+	swima_record_t *target, *sw_record;
+	enumerator_t *enumerator;
 	status_t status = SUCCESS;
+
+	swid_gen = swid_gen_create();
 
 	if (targets->get_count(targets) == 0)
 	{
-		/* Assemble the SWID generator command */
-		if (this->sw_id_only)
+		chunk_t out, sw_id, swid_tag = chunk_empty;
+
+		DBG2(DBG_IMC, "SWID tag%s generation by package manager",
+					   this->sw_id_only ? " ID" : "");
+
+		enumerator = swid_gen->create_tag_enumerator(swid_gen, this->sw_id_only,
+													 full, pretty);
+		if (enumerator)
 		{
-			snprintf(command, BUF_LEN, "%s software-id", generator);
+			while (enumerator->enumerate(enumerator, &out))
+			{
+				if (this->sw_id_only)
+				{
+					sw_id = out;
+				}
+				else
+				{
+					swid_tag = out;
+					status = extract_sw_id(swid_tag, &sw_id);
+					if (status != SUCCESS)
+					{
+						DBG1(DBG_IMC, "software id could not be extracted "
+									  "from tag");
+						chunk_free(&swid_tag);
+						break;
+					}
+				}
+				sw_record = swima_record_create(0, sw_id, chunk_empty);
+				sw_record->set_source_id(sw_record, SOURCE_ID_GENERATOR);
+				if (!this->sw_id_only)
+				{
+					sw_record->set_record(sw_record, swid_tag);
+					chunk_free(&swid_tag);
+				}
+				this->inventory->add(this->inventory, sw_record);
+				chunk_free(&sw_id);
+			}
+			enumerator->destroy(enumerator);
 		}
 		else
 		{
-			snprintf(command, BUF_LEN, "%s swid --doc-separator %s%s%s",
-					 generator, doc_separator, pretty ? " --pretty" : "",
-											   full   ? " --full"   : "");
+			status = NOT_SUPPORTED;
 		}
-
-		/* Open a pipe stream for reading the SWID generator output */
-		file = popen(command, "r");
-		if (!file)
-		{
-			DBG1(DBG_IMC, "failed to run swid_generator command");
-			return NOT_SUPPORTED;
-		}
-
-		if (this->sw_id_only)
-		{
-			DBG2(DBG_IMC, "SWID tag ID generation by package manager");
-			status = read_swid_tag_ids(this, file);
-		}
-		else
-		{
-			DBG2(DBG_IMC, "SWID tag generation by package manager");
-			status = read_swid_tags(this, file);
-		}
-		pclose(file);
 	}
 	else if (!this->sw_id_only)
 	{
-		swima_record_t *target;
-		enumerator_t *enumerator;
-		chunk_t sw_id;
+		DBG2(DBG_IMC, "targeted SWID tag generation");
 
 		enumerator = targets->create_enumerator(targets);
 		while (enumerator->enumerate(enumerator, &target))
 		{
+			swima_record_t *sw_record;
+			char *tag = NULL, *name, *package, *version;
+			u_int installed;
+			chunk_t sw_id;
+			enumerator_t *e;
+
 			sw_id = target->get_sw_id(target, NULL);
+			name = strndup(sw_id.ptr, sw_id.len);
 
-			/* Assemble the SWID generator command */
-			snprintf(command, BUF_LEN, "%s swid --software-id %.*s%s%s",
-					 generator, sw_id.len, sw_id.ptr,
-					 pretty ? " --pretty" : "", full ? " --full" : "");
-
-			/* Open a pipe stream for reading the SWID generator output */
-			file = popen(command, "r");
-			if (!file)
+			if (this->db)
 			{
-				DBG1(DBG_IMC, "failed to run swid_generator command");
-				return NOT_SUPPORTED;
+				e = this->db->query(this->db,
+						"SELECT package, version, installed "
+						"FROM sw_identifiers WHERE name = ?", DB_TEXT, name,
+						 DB_TEXT, DB_TEXT, DB_UINT);
+				if (!e)
+				{
+					DBG1(DBG_IMC, "database query for sw_identifiers failed");
+					status = FAILED;
+					free(name);
+					break;
+				}
+				if (e->enumerate(e, &package, &version, &installed))
+				{
+					tag = swid_gen->generate_tag(swid_gen, name, package,
+									version, full && installed, pretty);
+				}
+				e->destroy(e);
 			}
-			status = read_swid_tags(this, file);
-			pclose(file);
-
-			if (status != SUCCESS)
+			else
 			{
-				break;
+				tag = swid_gen->generate_tag(swid_gen, name, NULL, NULL,
+											 full, pretty);
+			}
+			free(name);
+
+			if (tag)
+			{
+				DBG2(DBG_IMC, "  %.*s", sw_id.len, sw_id.ptr);
+				sw_record = swima_record_create(0, sw_id, chunk_empty);
+				sw_record->set_source_id(sw_record, SOURCE_ID_GENERATOR);
+				sw_record->set_record(sw_record, chunk_from_str(tag));
+				this->inventory->add(this->inventory, sw_record);
+				free(tag);
 			}
 		}
 		enumerator->destroy(enumerator);
 	}
+	swid_gen->destroy(swid_gen);
 
 	return status;
 }
@@ -480,6 +417,7 @@ static bool collect_tags(private_swima_collector_t *this, char *pathname,
 			{
 				if (chunk_equals(target->get_sw_id(target, NULL), sw_id))
 				{
+					DBG2(DBG_IMC, "  %.*s", sw_id.len, sw_id.ptr);
 					match = TRUE;
 					break;
 				}
@@ -518,16 +456,13 @@ end:
 METHOD(swima_collector_t, collect_inventory, swima_inventory_t*,
 	private_swima_collector_t *this, bool sw_id_only, swima_inventory_t *targets)
 {
-	char *directory, *generator;
 	bool pretty, full;
+	char *directory;
 	status_t status;
 
 	directory = lib->settings->get_str(lib->settings,
 									"%s.plugins.imc-swima.swid_directory",
 									 SWID_DIRECTORY, lib->ns);
-	generator = lib->settings->get_str(lib->settings,
-									"%s.plugins.imc-swima.swid_generator",
-									 SWID_GENERATOR, lib->ns);
 	pretty = lib->settings->get_bool(lib->settings,
 									"%s.plugins.imc-swima.swid_pretty",
 									 FALSE, lib->ns);
@@ -550,13 +485,14 @@ METHOD(swima_collector_t, collect_inventory, swima_inventory_t*,
 	}
 	else
 	{
-		status = generate_tags(this, generator, targets, pretty, full);
+		status = generate_tags(this, targets, pretty, full);
 	}
 
 	/**
 	 * Source 2: Collect swidtag files by iteratively entering all
 	 *           directories in the tree under the "directory" path.
 	 */
+	DBG2(DBG_IMC, "SWID tag%s collection", sw_id_only ? " ID" : "");
 	collect_tags(this, directory, targets, FALSE);
 
 	return status == SUCCESS ? this->inventory : NULL;

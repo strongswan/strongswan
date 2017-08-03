@@ -9,9 +9,6 @@ libimcv.plugins.imc-swima.swid_epoch = 0x11223344
 libimcv.plugins.imc-swima.swid_directory = ${prefix}/share
 	Directory where SWID tags are located.
 
-libimcv.plugins.imc-swima.swid_generator = /usr/local/bin/swid_generator
-	SWID generator command to be executed.
-
 libimcv.plugins.imc-swima.swid_pretty = FALSE
 	Generate XML-encoded SWID tags with pretty indentation.
 
