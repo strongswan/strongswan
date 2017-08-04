@@ -2,13 +2,15 @@ strongswan-5.6.0
 ----------------
 
 - New SWIMA IMC/IMV pair implements the "draft-ietf-sacm-nea-swima-patnc"
-  Internet Draft and will be demonstrated at the IETF 99 Prague Hackathon.
+  Internet Draft and has been demonstrated at the IETF 99 Prague Hackathon.
 
 - The IMV database template has been adapted to achieve full compliancei
   with the ISO 19770-2:2015 SWID tag standard.
 
 - The sw-collector tool extracts software events from apt history logs
   and stores them in an SQLite database to be used by the SWIMA IMC.
+  The tool can also generate SWID tags both for installed and removed
+  package versions.
 
 - The pt-tls-client can attach and use TPM 2.0 protected private keys
   via the --keyid parameter.
