@@ -64,16 +64,6 @@ struct tkm_kernel_sad_t {
 				 const uint32_t spi, const uint8_t proto);
 
 	/**
-	 * Get ESA id for entry associated with same security policy as the
-	 * specified ESA.
-	 *
-	 * @param esa_id		id of ESA identifying the security policy
-	 * @return				ESA id of entry if found, 0 otherwise
-	 */
-	esa_id_type (*get_other_esa_id)(tkm_kernel_sad_t * const this,
-									const esa_id_type esa_id);
-
-	/**
 	 * Get destination host for entry with given parameters.
 	 *
 	 * @param reqid			reqid of CHILD SA
