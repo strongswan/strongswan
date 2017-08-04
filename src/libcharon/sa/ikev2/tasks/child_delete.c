@@ -196,7 +196,6 @@ static void install_outbound(private_child_delete_t *this,
 		/* FIXME: delete the new child_sa? */
 		return;
 	}
-	child_sa->set_state(child_sa, CHILD_INSTALLED);
 
 	my_ts = linked_list_create_from_enumerator(
 							child_sa->create_ts_enumerator(child_sa, TRUE));

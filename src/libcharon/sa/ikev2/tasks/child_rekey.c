@@ -283,7 +283,8 @@ METHOD(task_t, build_r, status_t,
 /**
  * Handle a rekey collision
  */
-static child_sa_t *handle_collision(private_child_rekey_t *this)
+static child_sa_t *handle_collision(private_child_rekey_t *this,
+									child_sa_t **to_install)
 {
 	child_sa_t *to_delete;
 
@@ -303,6 +304,7 @@ static child_sa_t *handle_collision(private_child_rekey_t *this)
 			child_sa_t *child_sa;
 
 			DBG1(DBG_IKE, "CHILD_SA rekey collision won, deleting old child");
+			*to_install = this->child_create->get_child(this->child_create);
 			to_delete = this->child_sa;
 			/* don't touch child other created, it has already been deleted */
 			if (!this->other_child_destroyed)
@@ -353,7 +355,7 @@ METHOD(task_t, process_i, status_t,
 {
 	protocol_id_t protocol;
 	uint32_t spi;
-	child_sa_t *to_delete;
+	child_sa_t *to_delete, *to_install = NULL;
 
 	if (message->get_notify(message, NO_ADDITIONAL_SAS))
 	{
@@ -415,19 +417,48 @@ METHOD(task_t, process_i, status_t,
 	/* check for rekey collisions */
 	if (this->collision)
 	{
-		to_delete = handle_collision(this);
+		to_delete = handle_collision(this, &to_install);
 	}
 	else
 	{
+		to_install = this->child_create->get_child(this->child_create);
 		to_delete = this->child_sa;
 	}
+	if (to_install)
+	{
+		if (to_install->install_outbound(to_install) != SUCCESS)
+		{
+			DBG1(DBG_IKE, "unable to install outbound IPsec SA (SAD) in kernel");
+			charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_SA_FAILED,
+							   to_install);
+			/* FIXME: delete the child_sa? fail the task? */
+		}
+		else
+		{
+			linked_list_t *my_ts, *other_ts;
 
+			my_ts = linked_list_create_from_enumerator(
+						to_install->create_ts_enumerator(to_install, TRUE));
+			other_ts = linked_list_create_from_enumerator(
+						to_install->create_ts_enumerator(to_install, FALSE));
+
+			DBG0(DBG_IKE, "outbound CHILD_SA %s{%d} established "
+				 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
+				 to_install->get_name(to_install),
+				 to_install->get_unique_id(to_install),
+				 ntohl(to_install->get_spi(to_install, TRUE)),
+				 ntohl(to_install->get_spi(to_install, FALSE)),
+				 my_ts, other_ts);
+
+			my_ts->destroy(my_ts);
+			other_ts->destroy(other_ts);
+		}
+	}
 	if (to_delete != this->child_create->get_child(this->child_create))
 	{	/* invoke rekey hook if rekeying successful */
 		charon->bus->child_rekey(charon->bus, this->child_sa,
 							this->child_create->get_child(this->child_create));
 	}
-
 	if (to_delete == NULL)
 	{
 		return SUCCESS;

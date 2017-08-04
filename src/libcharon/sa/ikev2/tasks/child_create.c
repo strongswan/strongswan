@@ -478,6 +478,7 @@ static status_t select_and_install(private_child_create_t *this,
 								   bool no_dh, bool ike_auth)
 {
 	status_t status, status_i, status_o;
+	child_sa_outbound_state_t out_state;
 	chunk_t nonce_i, nonce_r;
 	chunk_t encr_i = chunk_empty, encr_r = chunk_empty;
 	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
@@ -678,29 +679,42 @@ static status_t select_and_install(private_child_create_t *this,
 			status_i = this->child_sa->install(this->child_sa, encr_r, integ_r,
 							this->my_spi, this->my_cpi, this->initiator,
 							TRUE, this->tfcv3);
-			status_o = this->child_sa->install(this->child_sa, encr_i, integ_i,
-							this->other_spi, this->other_cpi, this->initiator,
-							FALSE, this->tfcv3);
 		}
-		else if (!this->rekey)
+		else
 		{
 			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
 							this->my_spi, this->my_cpi, this->initiator,
 							TRUE, this->tfcv3);
-			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
+		}
+		if (this->rekey)
+		{	/* during rekeyings we install the outbound SA and/or policies
+			 * separately: as responder when we receive the delete for the old
+			 * SA, as initiator pretty much immediately in the ike-rekey task,
+			 * unless there was a rekey collision that we lost */
+			if (this->initiator)
+			{
+				status_o = this->child_sa->register_outbound(this->child_sa,
+							encr_i, integ_i, this->other_spi, this->other_cpi,
+							this->tfcv3);
+			}
+			else
+			{
+				status_o = this->child_sa->register_outbound(this->child_sa,
+							encr_r, integ_r, this->other_spi, this->other_cpi,
+							this->tfcv3);
+			}
+		}
+		else if (this->initiator)
+		{
+			status_o = this->child_sa->install(this->child_sa, encr_i, integ_i,
 							this->other_spi, this->other_cpi, this->initiator,
 							FALSE, this->tfcv3);
 		}
 		else
-		{	/* as responder during a rekeying we only install the inbound
-			 * SA now, the outbound SA and policies are installed when we
-			 * receive the delete for the old SA */
-			status_i = this->child_sa->install(this->child_sa, encr_i, integ_i,
-							this->my_spi, this->my_cpi, this->initiator,
-							TRUE, this->tfcv3);
-			status_o = this->child_sa->register_outbound(this->child_sa, encr_r,
-							integ_r, this->other_spi, this->other_cpi,
-							this->tfcv3);
+		{
+			status_o = this->child_sa->install(this->child_sa, encr_r, integ_r,
+							this->other_spi, this->other_cpi, this->initiator,
+							FALSE, this->tfcv3);
 		}
 	}
 
@@ -749,10 +763,11 @@ static status_t select_and_install(private_child_create_t *this,
 				this->child_sa->create_ts_enumerator(this->child_sa, TRUE));
 	other_ts = linked_list_create_from_enumerator(
 				this->child_sa->create_ts_enumerator(this->child_sa, FALSE));
+	out_state = this->child_sa->get_outbound_state(this->child_sa);
 
 	DBG0(DBG_IKE, "%sCHILD_SA %s{%d} established "
 		 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
-		 this->rekey && !this->initiator ? "inbound " : "",
+		 (out_state == CHILD_OUTBOUND_INSTALLED) ? "" : "inbound ",
 		 this->child_sa->get_name(this->child_sa),
 		 this->child_sa->get_unique_id(this->child_sa),
 		 ntohl(this->child_sa->get_spi(this->child_sa, TRUE)),
