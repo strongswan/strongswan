@@ -107,16 +107,23 @@ CALLBACK(sad_entry_match, bool,
 	const host_t *src, *dst;
 	const uint32_t *spi;
 	const uint8_t *proto;
+	const bool *local;
 
-	VA_ARGS_VGET(args, src, dst, spi, proto);
+	VA_ARGS_VGET(args, src, dst, spi, proto, local);
 
-	if (entry->src == NULL || entry->dst == NULL)
+	if (entry->src == NULL || entry->dst == NULL || entry->proto != *proto)
 	{
 		return FALSE;
 	}
-	return src->ip_equals(entry->src, (host_t *)src) &&
-		   dst->ip_equals(entry->dst, (host_t *)dst) &&
-		   entry->spi_rem == *spi && entry->proto == *proto;
+	if (*local)
+	{
+		return entry->src->ip_equals(entry->src, (host_t *)dst) &&
+			   entry->dst->ip_equals(entry->dst, (host_t *)src) &&
+			   entry->spi_loc == *spi;
+	}
+	return entry->src->ip_equals(entry->src, (host_t *)src) &&
+		   entry->dst->ip_equals(entry->dst, (host_t *)dst) &&
+		   entry->spi_rem == *spi;
 }
 
 CALLBACK(sad_entry_match_dst, bool,
@@ -193,7 +200,8 @@ METHOD(tkm_kernel_sad_t, insert, bool,
 
 METHOD(tkm_kernel_sad_t, get_esa_id, esa_id_type,
 	private_tkm_kernel_sad_t * const this, const host_t * const src,
-	const host_t * const dst, const uint32_t spi, const uint8_t proto)
+	const host_t * const dst, const uint32_t spi, const uint8_t proto,
+	const bool local)
 {
 	esa_id_type id = 0;
 	sad_entry_t *entry = NULL;
@@ -201,17 +209,18 @@ METHOD(tkm_kernel_sad_t, get_esa_id, esa_id_type,
 	this->mutex->lock(this->mutex);
 	const bool res = this->data->find_first(this->data, sad_entry_match,
 											(void**)&entry, src, dst, &spi,
-											&proto);
+											&proto, &local);
 	if (res && entry)
 	{
 		id = entry->esa_id;
 		DBG3(DBG_KNL, "returning ESA id %llu of SAD entry (src: %H, dst: %H, "
-			 "spi: %x, proto: %u)", id, src, dst, ntohl(spi), proto);
+			 "%sbound spi: %x, proto: %u)", id, src, dst, local ? "in" : "out",
+			 ntohl(spi), proto);
 	}
 	else
 	{
-		DBG3(DBG_KNL, "no SAD entry found for src %H, dst %H, spi %x, proto %u",
-			 src, dst, ntohl(spi), proto);
+		DBG3(DBG_KNL, "no SAD entry found for src %H, dst %H, %sbound spi %x, "
+			 "proto %u", src, dst, local ? "in" : "out", ntohl(spi), proto);
 	}
 	this->mutex->unlock(this->mutex);
 	return id;

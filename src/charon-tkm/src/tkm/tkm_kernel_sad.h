@@ -55,13 +55,14 @@ struct tkm_kernel_sad_t {
 	 *
 	 * @param src			source address of CHILD SA
 	 * @param dst			destination address of CHILD SA
-	 * @param spi			Remote SPI of CHILD SA
+	 * @param spi			SPI of CHILD SA
 	 * @param proto			protocol of CHILD SA (ESP/AH)
+	 * @param local			whether the SPI is local or remote
 	 * @return				ESA id of entry if found, 0 otherwise
 	 */
 	esa_id_type (*get_esa_id)(tkm_kernel_sad_t * const this,
 				 const host_t * const src, const host_t * const dst,
-				 const uint32_t spi, const uint8_t proto);
+				 const uint32_t spi, const uint8_t proto, const bool local);
 
 	/**
 	 * Get destination host for entry with given parameters.

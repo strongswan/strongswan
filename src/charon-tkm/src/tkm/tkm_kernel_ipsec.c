@@ -216,7 +216,7 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	esa_id_type esa_id;
 
 	esa_id = tkm->sad->get_esa_id(tkm->sad, id->src, id->dst,
-								  id->spi, id->proto);
+								  id->spi, id->proto, TRUE);
 	if (esa_id)
 	{
 		DBG1(DBG_KNL, "deleting child SA (esa: %llu, spi: %x)", esa_id,
@@ -272,7 +272,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			return FAILED;
 		}
 		esa_id = tkm->sad->get_esa_id(tkm->sad, data->src, data->dst,
-									  spi, proto);
+									  spi, proto, FALSE);
 		if (!esa_id)
 		{
 			DBG1(DBG_KNL, "unable to find esa ID for policy (spi: %x)",
