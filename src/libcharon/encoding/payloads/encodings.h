@@ -37,7 +37,7 @@ typedef struct encoding_rule_t encoding_rule_t;
  * Header is parsed like a payload and gets its one payload_id
  * from PRIVATE USE space. Also the substructures
  * of specific payload types get their own payload_id
- * from PRIVATE_USE space. See IKEv2-Draft for more informations.
+ * from PRIVATE_USE space. See IKEv2-Draft for more information.
  */
 enum encoding_type_t {
 

@@ -312,7 +312,7 @@ struct message_t {
 	status_t (*add_fragment)(message_t *this, message_t *fragment);
 
 	/**
-	 * Gets the source host informations.
+	 * Gets the source host information.
 	 *
 	 * @warning Returned host_t object is not getting cloned,
 	 * do not destroy nor modify.
@@ -322,7 +322,7 @@ struct message_t {
 	host_t * (*get_source) (message_t *this);
 
 	/**
-	 * Sets the source host informations.
+	 * Sets the source host information.
 	 *
 	 * @warning host_t object is not getting cloned and gets destroyed by
 	 *			message_t.destroy or next call of message_t.set_source.
@@ -332,7 +332,7 @@ struct message_t {
 	void (*set_source) (message_t *this, host_t *host);
 
 	/**
-	 * Gets the destination host informations.
+	 * Gets the destination host information.
 	 *
 	 * @warning Returned host_t object is not getting cloned,
 	 * do not destroy nor modify.
@@ -342,7 +342,7 @@ struct message_t {
 	host_t * (*get_destination) (message_t *this);
 
 	/**
-	 * Sets the destination host informations.
+	 * Sets the destination host information.
 	 *
 	 * @warning host_t object is not getting cloned and gets destroyed by
 	 *			message_t.destroy or next call of message_t.set_destination.

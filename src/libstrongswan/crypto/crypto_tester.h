@@ -83,7 +83,7 @@ struct signer_test_vector_t {
 	size_t len;
 	/** input data */
 	u_char *data;
-	/** expected output, with ouput size of the tested algorithm */
+	/** expected output, with output size of the tested algorithm */
 	u_char *mac;
 };
 

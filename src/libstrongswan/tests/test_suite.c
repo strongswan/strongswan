@@ -381,7 +381,7 @@ void test_setup_handler()
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
 	sigaction(SIGBUS, &action, NULL);
-	/* ignore ALRM/USR1, these are catched by main thread only */
+	/* ignore ALRM/USR1, these are caught by main thread only */
 	action.sa_handler = SIG_IGN;
 	sigaction(SIGALRM, &action, NULL);
 	sigaction(SIGUSR1, &action, NULL);

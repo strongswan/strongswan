@@ -435,7 +435,7 @@ METHOD(listener_t, ike_updown, bool,
 {
 	/* this callback is only registered during initiation, so if the IKE_SA
 	 * goes down we assume some kind of authentication error, more specific
-	 * errors are catched in the alert() handler */
+	 * errors are caught in the alert() handler */
 	if (this->ike_sa == ike_sa && !up)
 	{
 		charonservice->update_status(charonservice,

@@ -477,7 +477,7 @@ static entry_t* get_or_create_entry(private_eap_radius_accounting_t *this,
 			.interim = {
 				.last = now,
 			},
-			/* default terminate cause, if none other catched */
+			/* default terminate cause, if none other caught */
 			.cause = ACCT_CAUSE_USER_REQUEST,
 		);
 		snprintf(entry->sid, sizeof(entry->sid), "%u-%u", this->prefix, unique);

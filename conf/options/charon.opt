@@ -271,7 +271,7 @@ charon.port_nat_t = 4500
 	port will be allocated.
 
 charon.prefer_best_path = no
-	Wether to prefer updating SAs to the path with the best route.
+	Whether to prefer updating SAs to the path with the best route.
 
 	By default, charon keeps SAs on the routing path with addresses it
 	previously used if that path is still usable. By setting this option to

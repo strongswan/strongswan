@@ -550,7 +550,7 @@ module Vici
     # Listen for a set of event messages. This call is blocking, and invokes
     # the passed closure for each event received. The closure receives the
     # event name and the event message as argument. To stop listening, the
-    # closure may raise a StopEventListening exception, the only catched
+    # closure may raise a StopEventListening exception, the only caught
     # exception.
     def listen_events(events, &block)
       self.class.instance_eval do

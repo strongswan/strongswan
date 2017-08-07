@@ -37,7 +37,7 @@ struct swid_gen_t {
 	 * @param package		Package name (can be NULL)
 	 * @param version		Package version (can be NULL)
 	 * @param full			Generate full SWID tags with file information
-	 * @param pretty		Generate SWID tags with pretty formating
+	 * @param pretty		Generate SWID tags with pretty formatting
 	 * @return				SWID tag
 	 */
 	char* (*generate_tag)(swid_gen_t *this, char *sw_id, char *package,
@@ -48,7 +48,7 @@ struct swid_gen_t {
 	 *
 	 * @param sw_id_only 	Return software identifier only
 	 * @param full			Generate full SWID tags with file information
-	 * @param pretty		Generate SWID tags with pretty formating
+	 * @param pretty		Generate SWID tags with pretty formatting
 	 * @return				Tag enumerator (sw_id, tag)
 	 */
 	enumerator_t* (*create_tag_enumerator)(swid_gen_t *this, bool sw_id_only,

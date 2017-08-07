@@ -86,7 +86,7 @@ struct private_generator_t {
 	uint8_t current_bit;
 
 	/**
-	 * Associated data struct to read informations from.
+	 * Associated data struct to read information from.
 	 */
 	void *data_struct;
 

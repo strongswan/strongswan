@@ -75,7 +75,7 @@ struct tls_aead_t {
 	size_t (*get_mac_key_size)(tls_aead_t *this);
 
 	/**
-	 * Get the encrytion key size, if used.
+	 * Get the encryption key size, if used.
 	 *
 	 * @return		key size, in bytes, 0 if not used
 	 */

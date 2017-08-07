@@ -915,7 +915,7 @@ strongswan-5.0.0
   keying protocols. The feature-set of IKEv1 in charon is almost on par with
   pluto, but currently does not support AH or bundled AH+ESP SAs. Beside
   RSA/ECDSA, PSK and XAuth, charon also supports the Hybrid authentication
-  mode. Informations for interoperability and migration is available at
+  mode. Information for interoperability and migration is available at
   http://wiki.strongswan.org/projects/strongswan/wiki/CharonPlutoIKEv1.
 
 - Charon's bus_t has been refactored so that loggers and other listeners are

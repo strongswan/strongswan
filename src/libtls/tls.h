@@ -169,7 +169,7 @@ struct tls_t {
 	 * Query upper layer for one or more TLS records, build fragments.
 	 *
 	 * The TLS stack automatically fragments the records to the given buffer
-	 * size. Fragmentation is indicated by the reclen ouput parameter and
+	 * size. Fragmentation is indicated by the reclen output parameter and
 	 * the return value. For the first fragment of a TLS record, a non-zero
 	 * record length is returned in reclen. If more fragments follow, NEED_MORE
 	 * is returned. A return value of ALREADY_DONE indicates that the final
