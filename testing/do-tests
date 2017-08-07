@@ -49,6 +49,25 @@ passed_cnt="0"
 subdir_cnt="0"
 
 ##############################################################################
+# parse optional arguments
+#
+while getopts "v" opt
+do
+	case "$opt" in
+	v)
+		verbose=YES
+		;;
+	esac
+done
+shift $((OPTIND-1))
+
+
+function print_time()
+{
+	[ "$verbose" == "YES" ] && echo "$(date +%T.%N) ~ "
+}
+
+##############################################################################
 # copy default tests to $BUILDDIR
 #
 
@@ -330,7 +349,7 @@ do
 		host=`echo $host_iface | awk -F ":" '{print $1}'`
 		iface=`echo $host_iface | awk -F ":" '{if ($2 != "") { print $2 } else { printf("eth0") }}'`
 		tcpdump_cmd="tcpdump -l $TCPDUMP_IM -i $iface not port ssh and not port domain >/tmp/tcpdump.log 2>/tmp/tcpdump.err.log &"
-		echo "${host}# $tcpdump_cmd" >> $CONSOLE_LOG
+		echo "$(print_time)${host}# $tcpdump_cmd" >> $CONSOLE_LOG
 		ssh $SSHCONF root@`eval echo \\\$ipv4_$host '$tcpdump_cmd'`
 		eval TDUP_${host}="true"
 	    done
@@ -385,7 +404,7 @@ do
 	eval `awk -F "::" '{
 	    if ($1 !~ /^#.*/ && $2 != "")
 	    {
-		printf("echo \"%s# %s\"; ", $1, $2)
+		printf("echo \"$(print_time)%s# %s\"; ", $1, $2)
 		printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
 		printf("echo;\n")
 	    }
@@ -399,7 +418,7 @@ do
 	function stop_tcpdump {
 	    # wait for packets to get processed, but don't wait longer than 1s
 	    eval ssh $SSHCONF root@\$ipv4_${1} "\"i=100; while [ \\\$i -gt 0 ]; do pkill -USR1 tcpdump; tail -1 /tmp/tcpdump.err.log | perl -n -e '/(\\d+).*?(\\d+)/; exit (\\\$1 == \\\$2)' || break; sleep 0.01; i=\\\$((\\\$i-1)); done;\""
-	    echo "${1}# killall tcpdump" >> $CONSOLE_LOG
+	    echo "$(print_time)${1}# killall tcpdump" >> $CONSOLE_LOG
 	    eval ssh $SSHCONF root@\$ipv4_${1} "\"killall tcpdump; while true; do killall -q -0 tcpdump || break; sleep 0.01; done;\""
 	    eval TDUP_${1}="false"
 	    echo "" >> $CONSOLE_LOG
@@ -450,11 +469,11 @@ do
 		printf("if [ \044cmd_fail -ne 0 ]; then echo \"~~~~~~~ FAIL ~~~~~~~\"; fi; \n")
 		if (command == "tcpdump")
 		{
-			printf("echo \"%s# cat /tmp/tcpdump.log | grep \047%s\047  [%s]\"; ", host, pattern, hit)
+			printf("echo \"$(print_time)%s# cat /tmp/tcpdump.log | grep \047%s\047  [%s]\"; ", host, pattern, hit)
 		}
 		else
 		{
-			printf("echo \"%s# %s | grep \047%s\047  [%s]\"; ", host, command, pattern, hit)
+			printf("echo \"$(print_time)%s# %s | grep \047%s\047  [%s]\"; ", host, command, pattern, hit)
 		}
 		printf("if [ -n \"\044cmd_out\" ]; then echo \"\044cmd_out\"; fi; \n")
 		printf("cat \044cmd_err; rm -f -- \044cmd_err; \n")
@@ -743,7 +762,7 @@ do
 	eval `awk -F "::" '{
 	    if ($1 !~ /^#.*/ && $2 != "")
 	    {
-		printf("echo \"%s# %s\"; ", $1, $2)
+		printf("echo \"$(print_time)%s# %s\"; ", $1, $2)
 		printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
 		printf("echo;\n")
 	    }
