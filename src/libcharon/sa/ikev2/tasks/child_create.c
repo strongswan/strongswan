@@ -1022,17 +1022,6 @@ METHOD(task_t, build_i, status_t,
 			break;
 	}
 
-	if (this->reqid)
-	{
-		DBG0(DBG_IKE, "establishing CHILD_SA %s{%d}",
-			 this->config->get_name(this->config), this->reqid);
-	}
-	else
-	{
-		DBG0(DBG_IKE, "establishing CHILD_SA %s",
-			 this->config->get_name(this->config));
-	}
-
 	/* check if we want a virtual IP, but don't have one */
 	list = linked_list_create();
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
@@ -1084,6 +1073,19 @@ METHOD(task_t, build_i, status_t,
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
 			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY),
 			this->mark_in, this->mark_out);
+
+	if (this->reqid)
+	{
+		DBG0(DBG_IKE, "establishing CHILD_SA %s{%d} reqid %d",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa), this->reqid);
+	}
+	else
+	{
+		DBG0(DBG_IKE, "establishing CHILD_SA %s{%d}",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
+	}
 
 	if (!allocate_spi(this))
 	{
