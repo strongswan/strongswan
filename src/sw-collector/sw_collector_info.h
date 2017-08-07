@@ -14,6 +14,8 @@
  */
 
 /**
+ * @defgroup sw_collector sw-collector
+ *
  * @defgroup sw_collector_info_t sw_collector_info
  * @{ @ingroup sw_collector
  */

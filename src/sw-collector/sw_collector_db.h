@@ -15,7 +15,7 @@
 
 /**
  * @defgroup sw_collector_db_t sw_collector_db
- * @{ @ingroup imc_swima
+ * @{ @ingroup sw_collector
  */
 
 #ifndef SW_COLLECTOR_DB_H_
@@ -54,7 +54,7 @@ struct sw_collector_db_t {
 	 * @param eid			Primary key pointing to last event
 	 * @param epoch			Epoch
 	 * @param last_time		Timestamp in 20 octet RFC 3339 format of last event
-	 * @return				
+	 * @return
 	 */
 	bool (*get_last_event)(sw_collector_db_t *this, uint32_t *eid,
 							   uint32_t *epoch, char **last_time);

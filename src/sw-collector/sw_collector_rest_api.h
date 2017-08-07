@@ -15,7 +15,7 @@
 
 /**
  * @defgroup sw_collector_rest_api_t sw_collector_rest_api
- * @{ @ingroup imc_swima
+ * @{ @ingroup sw_collector
  */
 
 #ifndef SW_COLLECTOR_REST_API_H_
