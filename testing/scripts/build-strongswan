@@ -51,6 +51,7 @@ do_on_exit umount $LOOPDIR/root/strongswan
 
 log_action "Remove SWID tags of previous versions"
 execute_chroot 'find /usr/local/share/regid.2004-03.org.strongswan -name *.swidtag -delete'
+execute_chroot 'find /usr/local/share/strongswan -name *.swidtag -delete'
 
 echo "Building and installing strongSwan"
 
