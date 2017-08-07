@@ -15,7 +15,7 @@
 
 /**
  * @defgroup swima_error swima_error
- * @{ @ingroup libimcv_swid
+ * @{ @ingroup libimcv_swima
  */
 
 #ifndef SWIMA_ERROR_H_
