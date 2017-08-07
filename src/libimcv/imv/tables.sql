@@ -48,6 +48,8 @@ CREATE TABLE file_hashes (
   hash VARCHAR(64) NOT NULL,
   mutable INTEGER DEFAULT 0
 );
+DROP INDEX IF EXISTS "file_hashes_idx";
+CREATE INDEX "file_hashes_idx" ON "file_hashes" ("file", "version", "algo");
 
 DROP TABLE IF EXISTS groups;
 CREATE TABLE groups (
