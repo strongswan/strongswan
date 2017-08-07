@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2016 Tobias Brunner
+ * Copyright (C) 2009-2017 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -303,9 +303,11 @@ static child_sa_t *handle_collision(private_child_rekey_t *this,
 		{
 			child_sa_t *child_sa;
 
-			DBG1(DBG_IKE, "CHILD_SA rekey collision won, deleting old child");
 			*to_install = this->child_create->get_child(this->child_create);
 			to_delete = this->child_sa;
+			DBG1(DBG_IKE, "CHILD_SA rekey collision won, deleting old child "
+				 "%s{%d}", to_delete->get_name(to_delete),
+				 to_delete->get_unique_id(to_delete));
 			/* don't touch child other created, it has already been deleted */
 			if (!this->other_child_destroyed)
 			{
@@ -323,9 +325,10 @@ static child_sa_t *handle_collision(private_child_rekey_t *this,
 		}
 		else
 		{
-			DBG1(DBG_IKE, "CHILD_SA rekey collision lost, "
-				 "deleting rekeyed child");
 			to_delete = this->child_create->get_child(this->child_create);
+			DBG1(DBG_IKE, "CHILD_SA rekey collision lost, deleting redundant "
+				 "child %s{%d}", to_delete->get_name(to_delete),
+				 to_delete->get_unique_id(to_delete));
 		}
 	}
 	else
@@ -336,15 +339,17 @@ static child_sa_t *handle_collision(private_child_rekey_t *this,
 		 * the CHILD_SA the other is not deleting. */
 		if (del->get_child(del) != this->child_sa)
 		{
-			DBG1(DBG_IKE, "CHILD_SA rekey/delete collision, "
-				 "deleting rekeyed child");
 			to_delete = this->child_sa;
+			DBG1(DBG_IKE, "CHILD_SA rekey/delete collision, deleting old child "
+				 "%s{%d}", to_delete->get_name(to_delete),
+				 to_delete->get_unique_id(to_delete));
 		}
 		else
 		{
-			DBG1(DBG_IKE, "CHILD_SA rekey/delete collision, "
-				 "deleting redundant child");
 			to_delete = this->child_create->get_child(this->child_create);
+			DBG1(DBG_IKE, "CHILD_SA rekey/delete collision, deleting redundant "
+				 "child %s{%d}", to_delete->get_name(to_delete),
+				 to_delete->get_unique_id(to_delete));
 		}
 	}
 	return to_delete;
