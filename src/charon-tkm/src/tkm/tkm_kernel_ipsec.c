@@ -1,7 +1,8 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2012-2014 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -51,6 +52,12 @@ struct private_tkm_kernel_ipsec_t {
 	rng_t *rng;
 
 };
+
+METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
+	private_tkm_kernel_ipsec_t *this)
+{
+	return KERNEL_POLICY_SPI;
+}
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_tkm_kernel_ipsec_t *this, host_t *src, host_t *dst,
@@ -176,15 +183,6 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		tkm->chunk_map->remove(tkm->chunk_map, nonce_loc);
 		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nonce_loc_id);
 	}
-	if (ike_esa_select(esa_id) != TKM_OK)
-	{
-		DBG1(DBG_KNL, "error selecting new child SA (%llu)", esa_id);
-		if (ike_esa_reset(esa_id) != TKM_OK)
-		{
-			DBG1(DBG_KNL, "child SA (%llu) deletion failed", esa_id);
-		}
-		goto failure;
-	}
 
 	DBG1(DBG_KNL, "added child SA (esa: %llu, isa: %llu, esp_spi_loc: %x, "
 		 "esp_spi_rem: %x, role: %s)", esa_id, esa.isa_id, ntohl(spi_loc),
@@ -215,23 +213,12 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	private_tkm_kernel_ipsec_t *this, kernel_ipsec_sa_id_t *id,
 	kernel_ipsec_del_sa_t *data)
 {
-	esa_id_type esa_id, other_esa_id;
+	esa_id_type esa_id;
 
 	esa_id = tkm->sad->get_esa_id(tkm->sad, id->src, id->dst,
-								  id->spi, id->proto);
+								  id->spi, id->proto, TRUE);
 	if (esa_id)
 	{
-		other_esa_id = tkm->sad->get_other_esa_id(tkm->sad, esa_id);
-		if (other_esa_id)
-		{
-			DBG1(DBG_KNL, "selecting child SA (esa: %llu)", other_esa_id);
-			if (ike_esa_select(other_esa_id) != TKM_OK)
-			{
-				DBG1(DBG_KNL, "error selecting other child SA (esa: %llu)",
-						other_esa_id);
-			}
-		}
-
 		DBG1(DBG_KNL, "deleting child SA (esa: %llu, spi: %x)", esa_id,
 			 ntohl(id->spi));
 		if (ike_esa_reset(esa_id) != TKM_OK)
@@ -263,6 +250,43 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	private_tkm_kernel_ipsec_t *this, kernel_ipsec_policy_id_t *id,
 	kernel_ipsec_manage_policy_t *data)
 {
+	esa_id_type esa_id;
+	uint32_t spi;
+	uint8_t proto;
+
+	if (id->dir == POLICY_OUT && data->type == POLICY_IPSEC &&
+		data->prio == POLICY_PRIORITY_DEFAULT)
+	{
+		if (data->sa->esp.use)
+		{
+			spi = data->sa->esp.spi;
+			proto = IPPROTO_ESP;
+		}
+		else if (data->sa->ah.use)
+		{
+			spi = data->sa->ah.spi;
+			proto = IPPROTO_AH;
+		}
+		else
+		{
+			return FAILED;
+		}
+		esa_id = tkm->sad->get_esa_id(tkm->sad, data->src, data->dst,
+									  spi, proto, FALSE);
+		if (!esa_id)
+		{
+			DBG1(DBG_KNL, "unable to find esa ID for policy (spi: %x)",
+				 ntohl(spi));
+			return FAILED;
+		}
+		DBG1(DBG_KNL, "selecting child SA (esa: %llu, spi: %x)", esa_id,
+			 ntohl(spi));
+		if (ike_esa_select(esa_id) != TKM_OK)
+		{
+			DBG1(DBG_KNL, "error selecting new child SA (%llu)", esa_id);
+			return FAILED;
+		}
+	}
 	return SUCCESS;
 }
 
@@ -358,6 +382,7 @@ tkm_kernel_ipsec_t *tkm_kernel_ipsec_create()
 	INIT(this,
 		.public = {
 			.interface = {
+				.get_features = _get_features,
 				.get_spi = _get_spi,
 				.get_cpi = _get_cpi,
 				.add_sa  = _add_sa,

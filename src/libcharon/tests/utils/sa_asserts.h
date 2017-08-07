@@ -121,7 +121,8 @@
 	test_assert_msg(_state == _child->get_state(_child), "%N != %N", \
 					child_sa_state_names, _state, \
 					child_sa_state_names, _child->get_state(_child)); \
-	test_assert_msg(_outbound == _child->get_outbound_state(_child), "%N != %N", \
+	typeof(outbound) _cur_out = _child->get_outbound_state(_child); \
+	test_assert_msg(_outbound == _cur_out || _outbound & _cur_out, "%N != %N", \
 					child_sa_outbound_state_names, _outbound, \
 					child_sa_outbound_state_names, _child->get_outbound_state(_child)); \
 })

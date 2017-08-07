@@ -77,6 +77,8 @@ enum kernel_feature_t {
 	KERNEL_REQUIRE_UDP_ENCAPSULATION = (1<<2),
 	/** IPsec backend does not require a policy reinstall on SA updates */
 	KERNEL_NO_POLICY_UPDATES = (1<<3),
+	/** IPsec backend supports installing SPIs on policies */
+	KERNEL_POLICY_SPI = (1<<4),
 };
 
 /**
