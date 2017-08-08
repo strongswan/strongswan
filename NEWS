@@ -1,6 +1,15 @@
 strongswan-5.6.0
 ----------------
 
+- Fixed a DoS vulnerability in the gmp plugin that was caused by insufficient
+  input validation when verifying RSA signatures, which requires decryption
+  with the operation m^e mod n, where m is the signature, and e and n are the
+  exponent and modulus of the public key.  The value m is an integer between
+  0 and n-1, however, the gmp plugin did not verify this.  So if m equals n the
+  calculation results in 0, in which case mpz_export() returns NULL.  This
+  result wasn't handled properly causing a null-pointer dereference.
+  This vulnerability has been registered as CVE-2017-11185.
+
 - New SWIMA IMC/IMV pair implements the "draft-ietf-sacm-nea-swima-patnc"
   Internet Draft and has been demonstrated at the IETF 99 Prague Hackathon.
 
