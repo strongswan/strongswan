@@ -366,6 +366,7 @@ sw_collector_db_t *sw_collector_db_create(char *uri)
 	if (!this->db)
 	{
 		DBG1(DBG_IMC, "opening database URI '%s' failed", uri);
+		free(this);
 		return NULL;
 	}
 
