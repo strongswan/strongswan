@@ -4,7 +4,7 @@ strongswan-5.6.0
 - New SWIMA IMC/IMV pair implements the "draft-ietf-sacm-nea-swima-patnc"
   Internet Draft and has been demonstrated at the IETF 99 Prague Hackathon.
 
-- The IMV database template has been adapted to achieve full compliancei
+- The IMV database template has been adapted to achieve full compliance
   with the ISO 19770-2:2015 SWID tag standard.
 
 - The sw-collector tool extracts software events from apt history logs
@@ -17,6 +17,18 @@ strongswan-5.6.0
 
 - libtpmtss supports Intel's TSS2 Architecture Broker and Resource
   Manager interface (tcti-tabrmd).
+
+- The new eap-aka-3gpp plugin implements the 3GPP MILENAGE algorithms
+  in software.  K (optionally concatenated with OPc) may be configured as
+  binary EAP secret.
+
+- CHILD_SA rekeying was fixed in charon-tkm and was slightly changed: The
+  switch to the new outbound IPsec SA now happens via SPI on the outbound
+  policy on Linux, and in case of lost rekey collisions no outbound SA/policy
+  is temporarily installed for the redundant CHILD_SA.
+
+- The new %unique-dir value for mark* settings allocates separate unique marks
+  for each CHILD_SA direction (in/out).
 
 
 strongswan-5.5.3
