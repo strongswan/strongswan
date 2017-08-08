@@ -125,7 +125,8 @@ static status_t generate_tags(private_swid_inventory_t *this,
 			tag_creator  = tag_id->get_tag_creator(tag_id);
 			sw_id = tag_id->get_unique_sw_id(tag_id, NULL);
 			snprintf(software_id, BUF_LEN, "%.*s__%.*s",
-					 tag_creator.len, tag_creator.ptr, sw_id.len, sw_id.ptr);
+					 (int)tag_creator.len, tag_creator.ptr,
+					 (int)sw_id.len, sw_id.ptr);
 
 			swid_tag = swid_gen->generate_tag(swid_gen, software_id, NULL, NULL,
 										 full, pretty);
