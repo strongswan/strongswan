@@ -138,7 +138,7 @@ sw_collector_info_t *sw_collector_info_create(char *tag_creator)
 	os_name = this->os_info->get_name(this->os_info);
 	os_arch = this->os_info->get_version(this->os_info);
 
-	/* get_version() returns version followed by arch */ 
+	/* get_version() returns version followed by arch */
 	if (!extract_token(&os_version, ' ', &os_arch))
 	{
 		DBG1(DBG_IMC, "separation of OS version from arch failed");
@@ -147,9 +147,9 @@ sw_collector_info_t *sw_collector_info_create(char *tag_creator)
 	}
 
 	/* construct OS string */
-	if (asprintf(&this->os, "%.*s_%.*s-%.*s", os_name.len, os_name.ptr,
-											  os_version.len, os_version.ptr,
-		 									  os_arch.len, os_arch.ptr) == -1)
+	if (asprintf(&this->os, "%.*s_%.*s-%.*s", (int)os_name.len, os_name.ptr,
+				 (int)os_version.len, os_version.ptr, (int)os_arch.len,
+				 os_arch.ptr) == -1)
 	{
 		DBG1(DBG_IMC, "constructon of OS string failed");
 		destroy(this);
@@ -157,9 +157,9 @@ sw_collector_info_t *sw_collector_info_create(char *tag_creator)
 	}
 
 	/* construct product string */
-	if (asprintf(&this->product, "%.*s %.*s %.*s", os_name.len, os_name.ptr,
-											  os_version.len, os_version.ptr,
-											  os_arch.len, os_arch.ptr) == -1)
+	if (asprintf(&this->product, "%.*s %.*s %.*s", (int)os_name.len,
+				 os_name.ptr, (int)os_version.len, os_version.ptr,
+				 (int)os_arch.len, os_arch.ptr) == -1)
 	{
 		DBG1(DBG_IMC, "constructon of product string failed");
 		destroy(this);
