@@ -242,8 +242,8 @@ static int extract_history(sw_collector_info_t *info, sw_collector_db_t *db)
 	}
 
 	/* open history file for reading */
-	history_path= lib->settings->get_str(lib->settings, "%s.history", NULL,
-										 lib->ns);
+	history_path = lib->settings->get_str(lib->settings, "%s.history", NULL,
+										  lib->ns);
 	if (!history_path)
 	{
 		fprintf(stderr, "sw-collector.history path not set.\n");
@@ -252,7 +252,8 @@ static int extract_history(sw_collector_info_t *info, sw_collector_db_t *db)
 	h = chunk_map(history_path, FALSE);
 	if (!h)
 	{
-		fprintf(stderr, "opening '%s' failed: %s", history, strerror(errno));
+		fprintf(stderr, "opening '%s' failed: %s", history_path,
+				strerror(errno));
 		return EXIT_FAILURE;
 	}
 	history_chunk = *h;
@@ -585,7 +586,7 @@ static int migrate(sw_collector_info_t *info, sw_collector_db_t *db)
 	dpkg->destroy(dpkg);
 
 	DBG1(DBG_IMC, "migrated %d sw identifier records", count);
- 
+
 	return status;
 }
 
