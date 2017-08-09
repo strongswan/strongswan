@@ -16,25 +16,25 @@
 /**
  * @defgroup sw_collector sw-collector
  *
- * @defgroup sw_collector_info_t sw_collector_info
+ * @defgroup swid_gen_info_t swid_gen_info
  * @{ @ingroup sw_collector
  */
 
-#ifndef SW_COLLECTOR_INFO_H_
-#define SW_COLLECTOR_INFO_H_
+#ifndef SWID_GEN_INFO_H_
+#define SWID_GEN_INFO_H_
 
-typedef struct sw_collector_info_t sw_collector_info_t;
+typedef struct swid_gen_info_t swid_gen_info_t;
 
 #include "imc/imc_os_info.h"
 
-struct sw_collector_info_t {
+struct swid_gen_info_t {
 
 	/**
 	 * Get OS type
 	 *
 	 * @return				OS type
 	 */
-	os_type_t (*get_os_type)(sw_collector_info_t *this);
+	os_type_t (*get_os_type)(swid_gen_info_t *this);
 
 	/**
 	 * Get OS and product strings
@@ -42,7 +42,7 @@ struct sw_collector_info_t {
 	 * @param product		Product string 'Name Version Arch'
 	 * @return				OS string      'Name_Version-Arch'
 	 */
-	char* (*get_os)(sw_collector_info_t *this, char **product);
+	char* (*get_os)(swid_gen_info_t *this, char **product);
 
 	/**
 	 * Create software identifier including tagCreator and OS
@@ -51,21 +51,19 @@ struct sw_collector_info_t {
 	 * @param version		Version string
 	 * @return				Software Identifier string
 	 */
-	char* (*create_sw_id)(sw_collector_info_t *this, char *package,
-													 char *version);
+	char* (*create_sw_id)(swid_gen_info_t *this, char *package,
+												 char *version);
 
 	/**
-	 * Destroy sw_collector_info_t object
+	 * Destroy swid_gen_info_t object
 	 */
-	void (*destroy)(sw_collector_info_t *this);
+	void (*destroy)(swid_gen_info_t *this);
 
 };
 
 /**
- * Create an sw_collector_info_t instance
- *
- * @param tag_creator		Regid of tagCreator
+ * Create an swid_gen_info_t instance
  */
-sw_collector_info_t* sw_collector_info_create(char *tag_creator);
+swid_gen_info_t* swid_gen_info_create(void);
 
-#endif /** SW_COLLECTOR_INFO_H_ @}*/
+#endif /** SWID_GEN_INFO_H_ @}*/

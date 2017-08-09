@@ -21,8 +21,6 @@
 #ifndef SW_COLLECTOR_HISTORY_H_
 #define SW_COLLECTOR_HISTORY_H_
 
-#include "sw_collector_history.h"
-#include "sw_collector_info.h"
 #include "sw_collector_db.h"
 
 #include <library.h>
@@ -84,12 +82,10 @@ struct sw_collector_history_t {
 /**
  * Create an sw_collector_history_t instance
  *
- * @param info				Internal reference to collector info
  * @param db				Internal reference to collector database
  * @param source			Software event source number
  */
-sw_collector_history_t* sw_collector_history_create(sw_collector_info_t *info,
-													sw_collector_db_t *db,
+sw_collector_history_t* sw_collector_history_create(sw_collector_db_t *db,
 													uint8_t source);
 
 #endif /** SW_COLLECTOR_HISTORY_H_ @}*/

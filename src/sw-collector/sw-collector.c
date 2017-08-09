@@ -23,7 +23,6 @@
 # include <syslog.h>
 #endif
 
-#include "sw_collector_info.h"
 #include "sw_collector_db.h"
 #include "sw_collector_history.h"
 #include "sw_collector_rest_api.h"
@@ -33,7 +32,6 @@
 #include <utils/debug.h>
 #include <utils/lexparser.h>
 
-#include <imv/imv_os_info.h>
 #include <swid_gen/swid_gen.h>
 
 /**
@@ -221,25 +219,14 @@ static collector_op_t do_args(int argc, char *argv[], bool *full_tags,
 /**
  * Extract software events from apt history log files
  */
-static int extract_history(sw_collector_info_t *info, sw_collector_db_t *db)
+static int extract_history(sw_collector_db_t *db)
 {
 	sw_collector_history_t *history = NULL;
 	uint32_t epoch, last_eid, eid = 0;
-	char *history_path, *os, *last_time = NULL, rfc_time[21];
+	char *history_path, *last_time = NULL, rfc_time[21];
 	chunk_t *h, history_chunk, line, cmd;
-	os_type_t os_type;
 	int status = EXIT_FAILURE;
 	bool skip = TRUE;
-
-	/* check if OS supports apg/dpkg history logs */
-	info->get_os(info, &os);
-	os_type = info->get_os_type(info);
-
-	if (os_type != 	OS_TYPE_DEBIAN && os_type != OS_TYPE_UBUNTU)
-	{
-		DBG1(DBG_IMC, "%.*s not supported", os);
-		return EXIT_FAILURE;
-	}
 
 	/* open history file for reading */
 	history_path = lib->settings->get_str(lib->settings, "%s.history", NULL,
@@ -259,7 +246,11 @@ static int extract_history(sw_collector_info_t *info, sw_collector_db_t *db)
 	history_chunk = *h;
 
 	/* Instantiate history extractor */
-	history = sw_collector_history_create(info, db, 1);
+	history = sw_collector_history_create(db, 1);
+	if (!history)
+	{
+		return EXIT_FAILURE;
+	}
 
 	/* retrieve last event in database */
 	if (!db->get_last_event(db, &last_eid, &epoch, &last_time) || !last_eid)
@@ -472,8 +463,8 @@ static int unregistered_identifiers(sw_collector_db_t *db,
  * Generate ISO 19770-2:2015 SWID tags for [installed|removed|all]
  * SW identifiers that are not registered centrally
  */
-static int generate_tags(sw_collector_info_t *info, sw_collector_db_t *db,
-						 bool full_tags, sw_collector_db_query_t type)
+static int generate_tags(sw_collector_db_t *db, bool full_tags,
+						 sw_collector_db_query_t type)
 {
 	swid_gen_t * swid_gen;
 	sw_collector_rest_api_t *rest_api;
@@ -547,7 +538,7 @@ end:
 /**
  * Append missing architecture suffix to package entries in the database
  */
-static int migrate(sw_collector_info_t *info, sw_collector_db_t *db)
+static int migrate(sw_collector_db_t *db)
 {
 	sw_collector_dpkg_t *dpkg;
 
@@ -595,10 +586,9 @@ int main(int argc, char *argv[])
 {
 	sw_collector_db_t *db = NULL;
 	sw_collector_db_query_t query_type;
-	sw_collector_info_t *info;
 	collector_op_t op;
 	bool full_tags;
-	char *uri, *tag_creator;
+	char *uri;
 	int status = EXIT_FAILURE;
 
 	op = do_args(argc, argv, &full_tags, &query_type);
@@ -638,15 +628,10 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	/* Attach OS info */
-	tag_creator = lib->settings->get_str(lib->settings, "%s.tag_creator.regid",
-										 "strongswan.org", lib->ns);
-	info = sw_collector_info_create(tag_creator);
-
 	switch (op)
 	{
 		case COLLECTOR_OP_EXTRACT:
-			status = extract_history(info, db);
+			status = extract_history(db);
 			break;
 		case COLLECTOR_OP_LIST:
 			status = list_identifiers(db, query_type);
@@ -655,14 +640,13 @@ int main(int argc, char *argv[])
 			status = unregistered_identifiers(db, query_type);
 			break;
 		case COLLECTOR_OP_GENERATE:
-			status = generate_tags(info, db, full_tags, query_type);
+			status = generate_tags(db, full_tags, query_type);
 			break;
 		case COLLECTOR_OP_MIGRATE:
-			status = migrate(info, db);
+			status = migrate(db);
 			break;
 	}
 	db->destroy(db);
-	info->destroy(info);
 
 	exit(status);
 }

@@ -21,9 +21,6 @@ sw-collector.first_time = 0000-00-00T00:00:00Z
 sw-collector.history =
 	Path pointing to apt history.log file.
 
-sw-collector.tag_creator.regid = strongswan.org
-	regid of the tagCreator entity.
-
 sw-collector.rest_api.uri =
 	HTTP URI of the central collector's REST API.
 

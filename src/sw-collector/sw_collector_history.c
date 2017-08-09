@@ -20,7 +20,8 @@
 #include "sw_collector_history.h"
 #include "sw_collector_dpkg.h"
 
-#include "swima/swima_event.h"
+#include <swima/swima_event.h>
+#include <swid_gen/swid_gen_info.h>
 
 typedef struct private_sw_collector_history_t private_sw_collector_history_t;
 
@@ -42,7 +43,7 @@ struct private_sw_collector_history_t {
 	/**
 	 * Reference to OS info object
 	 */
-	sw_collector_info_t *info;
+	swid_gen_info_t *info;
 
 	/**
 	 * Reference to collector database
@@ -67,7 +68,7 @@ struct package_t {
 /**
  * Create package_t list item object
  */
-static package_t* create_package(sw_collector_info_t *info, chunk_t package,
+static package_t* create_package(swid_gen_info_t *info, chunk_t package,
 								 chunk_t version, chunk_t old_version)
 {
 	package_t *this;
@@ -107,7 +108,7 @@ static void free_package(package_t *this)
 /**
  * Extract and parse a single package item
  */
-static package_t* extract_package(chunk_t item, sw_collector_info_t *info,
+static package_t* extract_package(chunk_t item, swid_gen_info_t *info,
 												sw_collector_history_op_t op)
 {
 	chunk_t package, package_stripped, version, old_version;
@@ -475,17 +476,32 @@ end:
 METHOD(sw_collector_history_t, destroy, void,
 	private_sw_collector_history_t *this)
 {
+	this->info->destroy(this->info);
 	free(this);
 }
 
 /**
  * Described in header.
  */
-sw_collector_history_t *sw_collector_history_create(sw_collector_info_t *info,
-													sw_collector_db_t *db,
+sw_collector_history_t *sw_collector_history_create(sw_collector_db_t *db,
 													uint8_t source)
 {
 	private_sw_collector_history_t *this;
+	swid_gen_info_t *info;
+	os_type_t os_type;
+	char *os;
+
+	info = swid_gen_info_create();
+
+	/* check if OS supports apg/dpkg history logs */
+	info->get_os(info, &os);
+	os_type = info->get_os_type(info);
+	if (os_type != 	OS_TYPE_DEBIAN && os_type != OS_TYPE_UBUNTU)
+	{
+		DBG1(DBG_IMC, "%.*s not supported", os);
+		info->destroy(info);
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {

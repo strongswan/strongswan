@@ -16,22 +16,22 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 
-#include "sw_collector_info.h"
+#include "swid_gen_info.h"
 
 #include <library.h>
 #include <utils/lexparser.h>
 
-typedef struct private_sw_collector_info_t private_sw_collector_info_t;
+typedef struct private_swid_gen_info_t private_swid_gen_info_t;
 
 /**
- * Private data of an sw_collector_info_t object.
+ * Private data of an swid_gen_info_t object.
  */
-struct private_sw_collector_info_t {
+struct private_swid_gen_info_t {
 
 	/**
-	 * Public members of sw_collector_info_state_t
+	 * Public members of swid_gen_info_state_t
 	 */
-	sw_collector_info_t public;
+	swid_gen_info_t public;
 
 	/**
 	 * tagCreator
@@ -74,14 +74,14 @@ static void sanitize_uri(char *uri, char a, char b)
 	}
 }
 
-METHOD(sw_collector_info_t, get_os_type, os_type_t,
-	private_sw_collector_info_t *this)
+METHOD(swid_gen_info_t, get_os_type, os_type_t,
+	private_swid_gen_info_t *this)
 {
 	return this->os_info->get_type(this->os_info);
 }
 
-METHOD(sw_collector_info_t, get_os, char*,
-	private_sw_collector_info_t *this, char **product)
+METHOD(swid_gen_info_t, get_os, char*,
+	private_swid_gen_info_t *this, char **product)
 {
 	if (product)
 	{
@@ -90,8 +90,8 @@ METHOD(sw_collector_info_t, get_os, char*,
 	return this->os;
 }
 
-METHOD(sw_collector_info_t, create_sw_id, char*,
-	private_sw_collector_info_t *this, char *package, char *version)
+METHOD(swid_gen_info_t, create_sw_id, char*,
+	private_swid_gen_info_t *this, char *package, char *version)
 {
 	char *sw_id;
 
@@ -106,8 +106,8 @@ METHOD(sw_collector_info_t, create_sw_id, char*,
 	return sw_id;
 }
 
-METHOD(sw_collector_info_t, destroy, void,
-	private_sw_collector_info_t *this)
+METHOD(swid_gen_info_t, destroy, void,
+	private_swid_gen_info_t *this)
 {
 	this->os_info->destroy(this->os_info);
 	free(this->os);
@@ -119,10 +119,14 @@ METHOD(sw_collector_info_t, destroy, void,
 /**
  * Described in header.
  */
-sw_collector_info_t *sw_collector_info_create(char *tag_creator)
+swid_gen_info_t *swid_gen_info_create(void)
 {
-	private_sw_collector_info_t *this;
+	private_swid_gen_info_t *this;
 	chunk_t os_name, os_version, os_arch;
+	char *tag_creator;
+
+	tag_creator = lib->settings->get_str(lib->settings,
+					"libimcv.swid_gen.tag_creator.regid", "strongswan.org");
 
 	INIT(this,
 		.public = {
