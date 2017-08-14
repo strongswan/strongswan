@@ -1183,13 +1183,13 @@ static void process_link(private_kernel_netlink_net_t *this,
 				INIT(entry,
 					.ifindex = msg->ifi_index,
 					.addrs = linked_list_create(),
-					.usable = charon->kernel->is_interface_usable(
-														charon->kernel, name),
 				);
 				this->ifaces->insert_last(this->ifaces, entry);
 			}
 			strncpy(entry->ifname, name, IFNAMSIZ);
 			entry->ifname[IFNAMSIZ-1] = '\0';
+			entry->usable = charon->kernel->is_interface_usable(charon->kernel,
+																name);
 			if (event && entry->usable)
 			{
 				if (!(entry->flags & IFF_UP) && (msg->ifi_flags & IFF_UP))
