@@ -294,10 +294,7 @@ METHOD(listener_t, ike_state_change_terminate, bool,
 		switch (state)
 		{
 			case IKE_DESTROYING:
-				if (ike_sa->get_state(ike_sa) == IKE_DELETING)
-				{	/* proper termination */
-					this->status = SUCCESS;
-				}
+				this->status = SUCCESS;
 				return listener_done(this);
 			default:
 				break;
