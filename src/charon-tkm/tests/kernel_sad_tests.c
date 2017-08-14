@@ -123,11 +123,11 @@ START_TEST(test_remove)
 	tkm_kernel_sad_t *sad = tkm_kernel_sad_create();
 	fail_unless(sad->insert(sad, 23, 54, addr, addr, 27, 42, 50),
 				"Error inserting SAD entry");
-	fail_unless(sad->get_esa_id(sad, addr, addr, 42, 50) == 23,
+	fail_unless(sad->get_esa_id(sad, addr, addr, 42, 50, FALSE) == 23,
 				"Error getting esa id");
 	fail_unless(sad->remove(sad, 23),
 				"Error removing SAD entry");
-	fail_unless(sad->get_esa_id(sad, addr, addr, 42, 50) == 0,
+	fail_unless(sad->get_esa_id(sad, addr, addr, 42, 50, FALSE) == 0,
 				"Got esa id for removed SAD entry");
 	sad->destroy(sad);
 	addr->destroy(addr);
