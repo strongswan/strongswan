@@ -25,6 +25,10 @@
 #include <utils/identification.h>
 #include <collections/linked_list.h>
 
+#define IPV4_LEN	4
+#define IPV6_LEN	16
+#define TS_IP_LEN(this) ({ ((this)->type == TS_IPV4_ADDR_RANGE) ? IPV4_LEN : IPV6_LEN; })
+
 #define NON_SUBNET_ADDRESS_RANGE	255
 
 ENUM(ts_type_name, TS_IPV4_ADDR_RANGE, TS_IPV6_ADDR_RANGE,
@@ -68,26 +72,12 @@ struct private_traffic_selector_t {
 	/**
 	 * begin of address range, network order
 	 */
-	union {
-		/** dummy char for common address manipulation */
-		char from[0];
-		/** IPv4 address */
-		uint32_t from4[1];
-		/** IPv6 address */
-		uint32_t from6[4];
-	};
+	char from[IPV6_LEN];
 
 	/**
 	 * end of address range, network order
 	 */
-	union {
-		/** dummy char for common address manipulation */
-		char to[0];
-		/** IPv4 address */
-		uint32_t to4[1];
-		/** IPv6 address */
-		uint32_t to6[4];
-	};
+	char to[IPV6_LEN];
 
 	/**
 	 * begin of port range
@@ -111,7 +101,7 @@ static void calc_range(private_traffic_selector_t *this, uint8_t netbits)
 
 	this->netbits = netbits;
 
-	len   = (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+	len   = TS_IP_LEN(this);
 	bytes = (netbits + 7)/8;
 	bits  = (bytes * 8) - netbits;
 	mask  = bits ? (1 << bits) - 1 : 0;
@@ -130,7 +120,7 @@ static uint8_t calc_netbits(private_traffic_selector_t *this)
 {
 	int byte, bit;
 	uint8_t netbits;
-	size_t size = (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+	size_t size = TS_IP_LEN(this);
 	bool prefix = TRUE;
 
 	/* a perfect match results in a single address with a /32 or /128 netmask */
@@ -221,8 +211,8 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 	char to_str[INET6_ADDRSTRLEN] = "";
 	char *serv_proto = NULL, *sep = "";
 	bool has_proto, has_ports;
-	size_t written = 0;
-	uint32_t from[4], to[4];
+	size_t written = 0, len;
+	char from[IPV6_LEN], to[IPV6_LEN];
 
 	if (this == NULL)
 	{
@@ -241,11 +231,11 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 		return written;
 	}
 
-	memset(from, 0, sizeof(from));
-	memset(to, 0xFF, sizeof(to));
+	len = TS_IP_LEN(this);
+	memset(from, 0, len);
+	memset(to, 0xFF, len);
 	if (this->dynamic &&
-		memeq(this->from, from, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16) &&
-		memeq(this->to, to, this->type == TS_IPV4_ADDR_RANGE ? 4 : 16))
+		memeq(this->from, from, len) &&	memeq(this->to, to, len))
 	{
 		written += print_in_hook(data, "dynamic");
 	}
@@ -253,21 +243,21 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 	{
 		if (this->type == TS_IPV4_ADDR_RANGE)
 		{
-			inet_ntop(AF_INET, &this->from4, from_str, sizeof(from_str));
+			inet_ntop(AF_INET, &this->from, from_str, sizeof(from_str));
 		}
 		else
 		{
-			inet_ntop(AF_INET6, &this->from6, from_str, sizeof(from_str));
+			inet_ntop(AF_INET6, &this->from, from_str, sizeof(from_str));
 		}
 		if (this->netbits == NON_SUBNET_ADDRESS_RANGE)
 		{
 			if (this->type == TS_IPV4_ADDR_RANGE)
 			{
-				inet_ntop(AF_INET, &this->to4, to_str, sizeof(to_str));
+				inet_ntop(AF_INET, &this->to, to_str, sizeof(to_str));
 			}
 			else
 			{
-				inet_ntop(AF_INET6, &this->to6, to_str, sizeof(to_str));
+				inet_ntop(AF_INET6, &this->to, to_str, sizeof(to_str));
 			}
 			written += print_in_hook(data, "%s..%s", from_str, to_str);
 		}
@@ -377,17 +367,6 @@ METHOD(traffic_selector_t, get_subset, traffic_selector_t*,
 	{
 		return NULL;
 	}
-	switch (this->type)
-	{
-		case TS_IPV4_ADDR_RANGE:
-			size = sizeof(this->from4);
-			break;
-		case TS_IPV6_ADDR_RANGE:
-			size = sizeof(this->from6);
-			break;
-		default:
-			return NULL;
-	}
 
 	if (this->protocol != other->protocol &&
 		this->protocol != 0 && other->protocol != 0)
@@ -414,6 +393,7 @@ METHOD(traffic_selector_t, get_subset, traffic_selector_t*,
 			return NULL;
 		}
 	}
+	size = TS_IP_LEN(this);
 	/* get higher from-address */
 	if (memcmp(this->from, other->from, size) > 0)
 	{
@@ -456,29 +436,13 @@ METHOD(traffic_selector_t, equals, bool,
 METHOD(traffic_selector_t, get_from_address, chunk_t,
 	private_traffic_selector_t *this)
 {
-	switch (this->type)
-	{
-		case TS_IPV4_ADDR_RANGE:
-			return chunk_create(this->from, sizeof(this->from4));
-		case TS_IPV6_ADDR_RANGE:
-			return chunk_create(this->from, sizeof(this->from6));
-		default:
-			return chunk_empty;
-	}
+	return chunk_create(this->from, TS_IP_LEN(this));
 }
 
 METHOD(traffic_selector_t, get_to_address, chunk_t,
 	private_traffic_selector_t *this)
 {
-	switch (this->type)
-	{
-		case TS_IPV4_ADDR_RANGE:
-			return chunk_create(this->to, sizeof(this->to4));
-		case TS_IPV6_ADDR_RANGE:
-			return chunk_create(this->to, sizeof(this->to6));
-		default:
-			return chunk_empty;
-	}
+	return chunk_create(this->to, TS_IP_LEN(this));
 }
 
 METHOD(traffic_selector_t, get_from_port, uint16_t,
@@ -526,7 +490,7 @@ METHOD(traffic_selector_t, is_host, bool,
 	}
 	else
 	{
-		size_t length = (this->type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+		size_t length = TS_IP_LEN(this);
 
 		if (this->dynamic)
 		{
@@ -555,8 +519,8 @@ METHOD(traffic_selector_t, set_address, void,
 
 	if (host->is_anyaddr(host))
 	{
-		memset(this->from6, 0x00, sizeof(this->from6));
-		memset(this->to6, 0xFF, sizeof(this->to6));
+		memset(this->from, 0x00, sizeof(this->from));
+		memset(this->to, 0xFF, sizeof(this->to));
 		this->netbits = 0;
 	}
 	else
@@ -624,11 +588,11 @@ METHOD(traffic_selector_t, to_subnet, bool,
 	{
 		case TS_IPV4_ADDR_RANGE:
 			family = AF_INET;
-			net_chunk.len = sizeof(this->from4);
+			net_chunk.len = IPV4_LEN;
 			break;
 		case TS_IPV6_ADDR_RANGE:
 			family = AF_INET6;
-			net_chunk.len = sizeof(this->from6);
+			net_chunk.len = IPV6_LEN;
 			break;
 		default:
 			/* unreachable */
@@ -659,26 +623,16 @@ METHOD(traffic_selector_t, clone_, traffic_selector_t*,
 	private_traffic_selector_t *this)
 {
 	private_traffic_selector_t *clone;
+	size_t len = TS_IP_LEN(this);
 
 	clone = traffic_selector_create(this->protocol, this->type,
 									this->from_port, this->to_port);
 	clone->netbits = this->netbits;
 	clone->dynamic = this->dynamic;
 
-	switch (clone->type)
-	{
-		case TS_IPV4_ADDR_RANGE:
-			memcpy(clone->from4, this->from4, sizeof(this->from4));
-			memcpy(clone->to4, this->to4, sizeof(this->to4));
-			return &clone->public;
-		case TS_IPV6_ADDR_RANGE:
-			memcpy(clone->from6, this->from6, sizeof(this->from6));
-			memcpy(clone->to6, this->to6, sizeof(this->to6));
-			return &clone->public;
-		default:
-			/* unreachable */
-			return &clone->public;
-	}
+	memcpy(clone->from, this->from, len);
+	memcpy(clone->to, this->to, len);
+	return &clone->public;
 }
 
 METHOD(traffic_selector_t, hash, u_int,
@@ -713,6 +667,7 @@ int traffic_selector_cmp(traffic_selector_t *a_pub, traffic_selector_t *b_pub,
 						 void *opts)
 {
 	private_traffic_selector_t *a, *b;
+	size_t len;
 	int res;
 
 	a = (private_traffic_selector_t*)a_pub;
@@ -724,36 +679,18 @@ int traffic_selector_cmp(traffic_selector_t *a_pub, traffic_selector_t *b_pub,
 	{
 		return res;
 	}
-	switch (a->type)
+	len = TS_IP_LEN(a);
+	/* lower starting subnets first */
+	res = memcmp(a->from, b->from, len);
+	if (res)
 	{
-		case TS_IPV4_ADDR_RANGE:
-			/* lower starting subnets first */
-			res = memcmp(a->from4, b->from4, sizeof(a->from4));
-			if (res)
-			{
-				return res;
-			}
-			/* larger subnets first */
-			res = memcmp(b->to4, a->to4, sizeof(a->to4));
-			if (res)
-			{
-				return res;
-			}
-			break;
-		case TS_IPV6_ADDR_RANGE:
-			res = memcmp(a->from6, b->from6, sizeof(a->from6));
-			if (res)
-			{
-				return res;
-			}
-			res = memcmp(b->to6, a->to6, sizeof(a->to6));
-			if (res)
-			{
-				return res;
-			}
-			break;
-		default:
-			return 1;
+		return res;
+	}
+	/* larger subnets first */
+	res = memcmp(b->to, a->to, len);
+	if (res)
+	{
+		return res;
 	}
 	/* lower protocols first */
 	res = compare_int(a->protocol, b->protocol);
@@ -782,32 +719,19 @@ traffic_selector_t *traffic_selector_create_from_bytes(uint8_t protocol,
 	private_traffic_selector_t *this = traffic_selector_create(protocol, type,
 															from_port, to_port);
 
-	switch (type)
+	if (!this)
 	{
-		case TS_IPV4_ADDR_RANGE:
-			if (from.len != 4 || to.len != 4)
-			{
-				free(this);
-				return NULL;
-			}
-			memcpy(this->from4, from.ptr, from.len);
-			memcpy(this->to4, to.ptr, to.len);
-			break;
-		case TS_IPV6_ADDR_RANGE:
-			if (from.len != 16 || to.len != 16)
-			{
-				free(this);
-				return NULL;
-			}
-			memcpy(this->from6, from.ptr, from.len);
-			memcpy(this->to6, to.ptr, to.len);
-			break;
-		default:
-			free(this);
-			return NULL;
+		return NULL;
 	}
+	if (from.len != to.len || from.len != TS_IP_LEN(this))
+	{
+		free(this);
+		return NULL;
+	}
+	memcpy(this->from, from.ptr, from.len);
+	memcpy(this->to, to.ptr, to.len);
 	calc_netbits(this);
-	return (&this->public);
+	return &this->public;
 }
 
 /*
@@ -816,21 +740,15 @@ traffic_selector_t *traffic_selector_create_from_bytes(uint8_t protocol,
 traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
 												chunk_t from, chunk_t to)
 {
-	size_t len;
 	private_traffic_selector_t *this = traffic_selector_create(0, type, 0, 65535);
+	size_t len;
 
-	switch (type)
+	if (!this)
 	{
-		case TS_IPV4_ADDR_RANGE:
-			len = 4;
-			break;
-		case TS_IPV6_ADDR_RANGE:
-			len = 16;
-			break;
-		default:
-			free(this);
-			return NULL;
+		return NULL;
 	}
+	len = TS_IP_LEN(this);
+
 	memset(this->from, 0x00, len);
 	memset(this->to  , 0xff, len);
 
@@ -846,7 +764,7 @@ traffic_selector_t *traffic_selector_create_from_rfc3779_format(ts_type_t type,
 		this->to[to.len-2] |= mask;
 	}
 	calc_netbits(this);
-	return (&this->public);
+	return &this->public;
 }
 
 /*
@@ -857,29 +775,29 @@ traffic_selector_t *traffic_selector_create_from_subnet(host_t *net,
 							uint16_t from_port, uint16_t to_port)
 {
 	private_traffic_selector_t *this;
+	ts_type_t type;
 	chunk_t from;
-
-	this = traffic_selector_create(protocol, 0, from_port, to_port);
 
 	switch (net->get_family(net))
 	{
 		case AF_INET:
-			this->type = TS_IPV4_ADDR_RANGE;
+			type = TS_IPV4_ADDR_RANGE;
 			break;
 		case AF_INET6:
-			this->type = TS_IPV6_ADDR_RANGE;
+			type = TS_IPV6_ADDR_RANGE;
 			break;
 		default:
 			net->destroy(net);
-			free(this);
 			return NULL;
 	}
+
+	this = traffic_selector_create(protocol, type, from_port, to_port);
+
 	from = net->get_address(net);
 	memcpy(this->from, from.ptr, from.len);
-	netbits = min(netbits, this->type == TS_IPV4_ADDR_RANGE ? 32 : 128);
+	netbits = min(netbits, TS_IP_LEN(this) * 8);
 	calc_range(this, netbits);
 	net->destroy(net);
-
 	return &this->public;
 }
 
@@ -914,7 +832,6 @@ traffic_selector_t *traffic_selector_create_from_string(
 		free(this);
 		return NULL;
 	}
-
 	calc_netbits(this);
 	return &this->public;
 }
@@ -947,8 +864,8 @@ traffic_selector_t *traffic_selector_create_dynamic(uint8_t protocol,
 	private_traffic_selector_t *this = traffic_selector_create(
 							protocol, TS_IPV4_ADDR_RANGE, from_port, to_port);
 
-	memset(this->from6, 0, sizeof(this->from6));
-	memset(this->to6, 0xFF, sizeof(this->to6));
+	memset(this->from, 0, sizeof(this->from));
+	memset(this->to, 0xFF, sizeof(this->to));
 	this->netbits = 0;
 	this->dynamic = TRUE;
 
@@ -962,6 +879,12 @@ static private_traffic_selector_t *traffic_selector_create(uint8_t protocol,
 						ts_type_t type, uint16_t from_port, uint16_t to_port)
 {
 	private_traffic_selector_t *this;
+
+	/* sanity check */
+	if (type != TS_IPV4_ADDR_RANGE && type != TS_IPV6_ADDR_RANGE)
+	{
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {

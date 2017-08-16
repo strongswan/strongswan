@@ -25,6 +25,11 @@ static void verify(const char *str, const char *alt, traffic_selector_t *ts)
 {
 	char buf[512];
 
+	if (!str)
+	{
+		ck_assert_msg(!ts, "traffic selector not null: %R", ts);
+		return;
+	}
 	snprintf(buf, sizeof(buf), "%R", ts);
 	DESTROY_IF(ts);
 	if (!streq(buf, str) && (!alt || !streq(buf, alt)))
@@ -48,12 +53,14 @@ START_TEST(test_create_from_string)
 	verify("fec1::1..fec1::ffff:ffff:ffff:ffff", NULL,
 		traffic_selector_create_from_string(0, TS_IPV6_ADDR_RANGE,
 							"fec1::1", 0, "fec1::ffff:ffff:ffff:ffff", 65535));
-
-	ck_assert(!traffic_selector_create_from_string(IPPROTO_TCP, 0,
+	verify(NULL, NULL,
+		traffic_selector_create_from_string(IPPROTO_TCP, 0,
 							"10.1.0.0", 80, "10.1.255.255", 80));
-	ck_assert(!traffic_selector_create_from_string(IPPROTO_TCP, TS_IPV4_ADDR_RANGE,
+	verify(NULL, NULL,
+		traffic_selector_create_from_string(IPPROTO_TCP, TS_IPV4_ADDR_RANGE,
 							"a.b.c.d", 80, "10.1.255.255", 80));
-	ck_assert(!traffic_selector_create_from_string(IPPROTO_TCP, TS_IPV4_ADDR_RANGE,
+	verify(NULL, NULL,
+		traffic_selector_create_from_string(IPPROTO_TCP, TS_IPV4_ADDR_RANGE,
 							"10.1.0.0", 80, "a.b.c.d", 80));
 }
 END_TEST
@@ -62,13 +69,17 @@ START_TEST(test_create_from_cidr)
 {
 	verify("10.1.0.0/16", NULL,
 		traffic_selector_create_from_cidr("10.1.0.0/16", 0, 0, 65535));
+	verify("10.1.0.1/32[udp]", "10.1.0.1/32[17]",
+		traffic_selector_create_from_cidr("10.1.0.1/32", IPPROTO_UDP,
+										  0, 65535));
 	verify("10.1.0.1/32[udp/1234-1235]", "10.1.0.1/32[17/1234-1235]",
 		traffic_selector_create_from_cidr("10.1.0.1/32", IPPROTO_UDP,
 										  1234, 1235));
 	verify("10.1.0.0/16[OPAQUE]", NULL,
 		traffic_selector_create_from_cidr("10.1.0.0/16", 0, 65535, 0));
 
-	ck_assert(!traffic_selector_create_from_cidr("a.b.c.d/16", 0, 0, 65535));
+	verify(NULL, NULL,
+		traffic_selector_create_from_cidr("a.b.c.d/16", 0, 0, 65535));
 }
 END_TEST
 
@@ -78,14 +89,20 @@ START_TEST(test_create_from_bytes)
 		traffic_selector_create_from_bytes(0, TS_IPV4_ADDR_RANGE,
 			chunk_from_chars(0x0a,0x01,0x00,0x00), 0,
 			chunk_from_chars(0x0a,0x01,0xff,0xff), 65535));
-
-	ck_assert(!traffic_selector_create_from_bytes(0, TS_IPV4_ADDR_RANGE,
+	verify(NULL, NULL,
+		traffic_selector_create_from_bytes(0, TS_IPV4_ADDR_RANGE,
+			chunk_from_chars(0x0a,0x01,0x00,0x00), 0,
+			chunk_from_chars(0x0a,0x01,0xff,0xff,0xff), 65535));
+	verify(NULL, NULL,
+		traffic_selector_create_from_bytes(0, TS_IPV4_ADDR_RANGE,
 			chunk_empty, 0,
 			chunk_empty, 65535));
-	ck_assert(!traffic_selector_create_from_bytes(0, TS_IPV6_ADDR_RANGE,
+	verify(NULL, NULL,
+		traffic_selector_create_from_bytes(0, TS_IPV6_ADDR_RANGE,
 			chunk_from_chars(0x0a,0x01,0x00,0x00), 0,
 			chunk_from_chars(0x0a,0x01,0xff,0xff), 65535));
-	ck_assert(!traffic_selector_create_from_bytes(0, 0,
+	verify(NULL, NULL,
+		traffic_selector_create_from_bytes(0, 0,
 			chunk_from_chars(0x0a,0x01,0x00,0x00), 0,
 			chunk_from_chars(0x0a,0x01,0xff,0xff), 65535));
 }
@@ -117,6 +134,7 @@ struct {
 	{ "128.0.0.0/4",	TS_IPV4_ADDR_RANGE,	chunk_from_chars(0x04,0x80),				},
 	{ "172.16.0.0/12",	TS_IPV4_ADDR_RANGE,	chunk_from_chars(0x04,0xac,0x10),			},
 	{ "0.0.0.0/0",		TS_IPV4_ADDR_RANGE,	chunk_from_chars(0x00),						},
+	{ NULL,				0,					chunk_from_chars(0x00),						},
 	/* FIXME: not a correct encoding, so we might want to fail here */
 	{ "0.0.0.0/0",		TS_IPV4_ADDR_RANGE,	{NULL, 0},									},
 	{ "2001:0:2::/48",	TS_IPV6_ADDR_RANGE,	chunk_from_chars(0x00,0x20,0x01,0x00,0x00,0x00,0x02),},
@@ -411,6 +429,7 @@ struct {
 	{ "0.0.0.0/0",		"fec2::1",				FALSE },
 	{ "::/0",			"1.2.3.4",				FALSE },
 	{ "10.0.0.0/16",	"10.1.0.0",				FALSE },
+	{ "10.1.0.0/16",	"10.0.255.255",			FALSE },
 	{ "fec2::/64",		"fec2:0:0:1::afaf",		FALSE },
 };
 
@@ -469,6 +488,7 @@ struct {
 } is_host_tests[] = {
 	{ "0.0.0.0/0",		"192.168.1.2",	FALSE, FALSE },
 	{ "::/0",			"fec2::1",		FALSE, FALSE },
+	{ "192.168.1.0/24",	"192.168.1.0",	FALSE, FALSE },
 	{ "192.168.1.2/32",	"192.168.1.2",	TRUE,  TRUE },
 	{ "192.168.1.2/32",	"192.168.1.1",	FALSE, TRUE },
 	{ "192.168.1.2/32",	"fec2::1",		FALSE, TRUE },
