@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
- * Copyright (C) 2008 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2008-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -44,6 +44,7 @@
 #include <linux/xfrm.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 #include "kernel_netlink_shared.h"
 
@@ -189,7 +190,7 @@ static bool write_msg(private_netlink_socket_t *this, struct nlmsghdr *msg)
  * Read a single Netlink message from socket, return 0 on error, -1 on timeout
  */
 static ssize_t read_msg(private_netlink_socket_t *this,
-						char *buf, size_t buflen, bool block)
+						char **buf, size_t buflen, bool block)
 {
 	ssize_t len;
 
@@ -208,12 +209,21 @@ static ssize_t read_msg(private_netlink_socket_t *this,
 			return -1;
 		}
 	}
-	len = recv(this->socket, buf, buflen, MSG_TRUNC|(block ? 0 : MSG_DONTWAIT));
-	if (len > buflen)
+	len = recv(this->socket, NULL, 0, MSG_TRUNC|MSG_PEEK|(block?0:MSG_DONTWAIT));
+	if (len < 0)
 	{
-		DBG1(DBG_KNL, "netlink response exceeds buffer size");
+		DBG1(DBG_KNL, "failed to determine netlink response size: %s",
+			 strerror(errno));
 		return 0;
 	}
+	else if (len > buflen)
+	{
+		DBG2(DBG_KNL, "netlink response (%d bytes) exceeds buffer size "
+			 "(%zu bytes), allocating dynamic buffer", len, buflen);
+		buflen = len;
+		*buf = malloc(buflen);
+	}
+	len = recv(this->socket, *buf, buflen, block ? 0 : MSG_DONTWAIT);
 	if (len < 0)
 	{
 		if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
@@ -264,11 +274,11 @@ static bool queue(private_netlink_socket_t *this, struct nlmsghdr *buf)
 static bool read_and_queue(private_netlink_socket_t *this, bool block)
 {
 	struct nlmsghdr *hdr;
-	char buf[this->buflen];
+	char static_buf[this->buflen], *buf = static_buf;
 	ssize_t len, read_len;
 	bool wipe = FALSE;
 
-	len = read_len = read_msg(this, buf, sizeof(buf), block);
+	len = read_len = read_msg(this, &buf, this->buflen, block);
 	if (len == -1)
 	{
 		return TRUE;
@@ -293,6 +303,10 @@ static bool read_and_queue(private_netlink_socket_t *this, bool block)
 	if (wipe)
 	{
 		memwipe(buf, read_len);
+	}
+	if (buf != static_buf)
+	{
+		free(buf);
 	}
 	return FALSE;
 }
