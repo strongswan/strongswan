@@ -605,41 +605,11 @@ METHOD(settings_t, get_double, double,
  */
 inline uint32_t settings_value_as_time(char *value, uint32_t def)
 {
-	char *endptr;
-	uint32_t timeval;
-	if (value)
+	time_t val;
+
+	if (timespan_from_string(value, NULL, &val))
 	{
-		errno = 0;
-		timeval = strtoul(value, &endptr, 10);
-		if (endptr == value)
-		{
-			return def;
-		}
-		if (errno == 0)
-		{
-			while (isspace(*endptr))
-			{
-				endptr++;
-			}
-			switch (*endptr)
-			{
-				case 'd':		/* time in days */
-					timeval *= 24 * 3600;
-					break;
-				case 'h':		/* time in hours */
-					timeval *= 3600;
-					break;
-				case 'm':		/* time in minutes */
-					timeval *= 60;
-					break;
-				case 's':		/* time in seconds */
-				case '\0':
-					break;
-				default:
-					return def;
-			}
-			return timeval;
-		}
+		return val;
 	}
 	return def;
 }

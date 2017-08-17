@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -69,6 +69,18 @@ static inline void timeval_add_ms(timeval_t *tv, u_int ms)
 		tv->tv_sec++;
 	}
 }
+
+/**
+ * Parse the given string as time span and return the number of seconds,
+ * optionally with a default unit ('s' for seconds, 'm' for minutes, 'h' for
+ * hours, 'd' for days - default is 's').
+ *
+ * @param str		value to parse
+ * @param defunit	optional default unit
+ * @param[out] val	parsed value
+ * @return			TRUE if a value was parsed
+ */
+bool timespan_from_string(char *str, char *defunit, time_t *val);
 
 /**
  * printf hook for time_t.

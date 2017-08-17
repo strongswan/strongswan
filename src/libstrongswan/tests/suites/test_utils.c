@@ -115,6 +115,54 @@ START_TEST(test_timeval_add_ms)
 END_TEST
 
 /*******************************************************************************
+ * timespan_from_string
+ */
+
+static struct {
+	char *s;
+	char *u;
+	bool v;
+	time_t t;
+} ts_data[] = {
+	{NULL,	NULL,	FALSE,	0},
+	{"",	NULL,	FALSE,	0},
+	{"a",	NULL,	FALSE,	0},
+	{"0",	NULL,	TRUE,	0},
+	{"5",	NULL,	TRUE,	5},
+	{"5s",	NULL,	TRUE,	5},
+	{"5m",	NULL,	TRUE,	300},
+	{"5ms",	NULL,	TRUE,	300},
+	{"5h",	NULL,	TRUE,	18000},
+	{"5d",	NULL,	TRUE,	432000},
+	{"5x",	NULL,	FALSE,	0},
+	{"5",	"",		TRUE,	5},
+	{"5",	"m",	TRUE,	300},
+	{"5",	"ms",	TRUE,	300},
+	{"5",	"x",	FALSE,	0},
+	{"5x",	"m",	FALSE,	0},
+	{"18446744073709551616",	NULL,	FALSE,	0},
+};
+
+START_TEST(test_timespan_from_string)
+{
+	time_t val = 42;
+
+	ck_assert(timespan_from_string(ts_data[_i].s, ts_data[_i].u,
+								   NULL) == ts_data[_i].v);
+	ck_assert(timespan_from_string(ts_data[_i].s, ts_data[_i].u,
+								   &val) == ts_data[_i].v);
+	if (ts_data[_i].v)
+	{
+		ck_assert_int_eq(val, ts_data[_i].t);
+	}
+	else
+	{
+		ck_assert_int_eq(val, 42);
+	}
+}
+END_TEST
+
+/*******************************************************************************
  * htoun/untoh
  */
 
@@ -919,6 +967,10 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("timeval_add_ms");
 	tcase_add_test(tc, test_timeval_add_ms);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("timespan_from_string");
+	tcase_add_loop_test(tc, test_timespan_from_string, 0, countof(ts_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("htoun,untoh");
