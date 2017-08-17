@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Tobias Brunner
+ * Copyright (C) 2011-2017 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -56,7 +56,7 @@ static void do_args(int argc, char *argv[]);
 /**
  * Create or replace a pool by name
  */
-static u_int create_pool(char *name, chunk_t start, chunk_t end, int timeout)
+static u_int create_pool(char *name, chunk_t start, chunk_t end, u_int timeout)
 {
 	enumerator_t *e;
 	int pool;
@@ -77,7 +77,7 @@ static u_int create_pool(char *name, chunk_t start, chunk_t end, int timeout)
 	if (db->execute(db, &pool,
 			"INSERT INTO pools (name, start, end, timeout) VALUES (?, ?, ?, ?)",
 			DB_TEXT, name, DB_BLOB, start, DB_BLOB, end,
-			DB_INT, timeout*3600) != 1)
+			DB_UINT, timeout) != 1)
 	{
 		fprintf(stderr, "creating pool failed.\n");
 		exit(EXIT_FAILURE);
@@ -258,7 +258,18 @@ static void status(void)
 			}
 			if (timeout)
 			{
-				printf("%7dh ", timeout/3600);
+				if (timeout >= 60 * 300)
+				{
+					printf("%7dh ", timeout/3600);
+				}
+				else if (timeout >= 300)
+				{
+					printf("%7dm ", timeout/60);
+				}
+				else
+				{
+					printf("%7ds ", timeout);
+				}
 			}
 			else
 			{
@@ -318,7 +329,7 @@ next_pool:
 /**
  * ipsec pool --add - add a new pool
  */
-static void add(char *name, host_t *start, host_t *end, int timeout)
+static void add(char *name, host_t *start, host_t *end, u_int timeout)
 {
 	chunk_t start_addr, end_addr, cur_addr;
 	u_int id, count;
@@ -407,7 +418,7 @@ static bool add_address(u_int pool_id, char *address_str, int *family)
 	return TRUE;
 }
 
-static void add_addresses(char *pool, char *path, int timeout)
+static void add_addresses(char *pool, char *path, u_int timeout)
 {
 	u_int pool_id, count = 0;
 	int family = AF_UNSPEC;
@@ -941,7 +952,7 @@ static void do_args(int argc, char *argv[])
 	char *name = "", *value = "", *filter = "";
 	char *pool = NULL, *identity = NULL, *addresses = NULL;
 	value_type_t value_type = VALUE_NONE;
-	int timeout = 0;
+	time_t timeout = 0;
 	bool utc = FALSE, hexout = FALSE;
 
 	enum {
@@ -1088,8 +1099,7 @@ static void do_args(int argc, char *argv[])
 				}
 				continue;
 			case 't':
-				timeout = atoi(optarg);
-				if (timeout == 0 && strcmp(optarg, "0") != 0)
+				if (!timespan_from_string(optarg, "h", &timeout))
 				{
 					fprintf(stderr, "invalid timeout '%s'.\n", optarg);
 					usage();
