@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2012-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -67,8 +67,10 @@ struct android_creds_t {
 
 /**
  * Create an android_creds instance.
+ *
+ * @param crldir				directory for cached CRLs
  */
-android_creds_t *android_creds_create();
+android_creds_t *android_creds_create(char *crldir);
 
 #endif /** ANDROID_CREDS_H_ @}*/
 
