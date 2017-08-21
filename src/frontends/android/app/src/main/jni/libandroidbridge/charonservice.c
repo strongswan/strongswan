@@ -515,7 +515,7 @@ static void set_options(char *logfile)
  * Initialize the charonservice object
  */
 static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
-							   jboolean byod)
+							   char *appdir, jboolean byod)
 {
 	private_charonservice_t *this;
 	static plugin_feature_t features[] = {
@@ -602,11 +602,11 @@ static void segv_handler(int signal)
  * Initialize charon and the libraries via JNI
  */
 JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
-	jobject builder, jstring jlogfile, jboolean byod)
+	jobject builder, jstring jlogfile, jstring jappdir, jboolean byod)
 {
 	struct sigaction action;
 	struct utsname utsname;
-	char *logfile, *plugins;
+	char *logfile, *appdir, *plugins;
 
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_android;
@@ -640,7 +640,9 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 
 	charon->load_loggers(charon);
 
-	charonservice_init(env, this, builder, byod);
+	appdir = androidjni_convert_jstring(env, jappdir);
+	charonservice_init(env, this, builder, appdir, byod);
+	free(appdir);
 
 	if (uname(&utsname) != 0)
 	{

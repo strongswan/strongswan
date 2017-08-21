@@ -74,6 +74,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	public static final int VPN_STATE_NOTIFICATION_ID = 1;
 
 	private String mLogFile;
+	private String mAppDir;
 	private VpnProfileDataSource mDataSource;
 	private Thread mConnectionHandler;
 	private VpnProfile mCurrentProfile;
@@ -152,6 +153,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	public void onCreate()
 	{
 		mLogFile = getFilesDir().getAbsolutePath() + File.separator + LOG_FILE;
+		mAppDir = getFilesDir().getAbsolutePath();
 
 		mDataSource = new VpnProfileDataSource(this);
 		mDataSource.open();
@@ -244,7 +246,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 
 						addNotification();
 						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile);
-						if (initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
+						if (initializeCharon(builder, mLogFile, mAppDir, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
 						{
 							Log.i(TAG, "charon started");
 							SettingsWriter writer = new SettingsWriter();
@@ -645,10 +647,11 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 *
 	 * @param builder BuilderAdapter for this connection
 	 * @param logfile absolute path to the logfile
+	 * @param appdir absolute path to the data directory of the app
 	 * @param byod enable BYOD features
 	 * @return TRUE if initialization was successful
 	 */
-	public native boolean initializeCharon(BuilderAdapter builder, String logfile, boolean byod);
+	public native boolean initializeCharon(BuilderAdapter builder, String logfile, String appdir, boolean byod);
 
 	/**
 	 * Deinitialize charon, provided by libandroidbridge.so
