@@ -474,42 +474,65 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 				button = R.string.disconnect;
 			}
 
-			return new AlertDialog.Builder(getActivity())
+			DialogInterface.OnClickListener connectListener = new DialogInterface.OnClickListener()
+			{
+				@Override
+				public void onClick(DialogInterface dialog, int which)
+				{
+					MainActivity activity = (MainActivity)getActivity();
+					activity.startVpnProfile(profileInfo);
+				}
+			};
+			DialogInterface.OnClickListener disconnectListener = new DialogInterface.OnClickListener()
+			{
+				@Override
+				public void onClick(DialogInterface dialog, int which)
+				{
+					MainActivity activity = (MainActivity)getActivity();
+					if (activity.mService != null)
+					{
+						activity.mService.disconnect();
+					}
+				}
+			};
+			DialogInterface.OnClickListener cancelListener = new DialogInterface.OnClickListener()
+			{
+				@Override
+				public void onClick(DialogInterface dialog, int which)
+				{
+					dismiss();
+					if (!profileInfo.getBoolean(PROFILE_FOREGROUND))
+					{	/* if the app was not in the foreground before this action was triggered
+						 * externally, we just close the activity if canceled */
+						getActivity().finish();
+					}
+				}
+			};
+
+			AlertDialog.Builder builder = new AlertDialog.Builder(getActivity())
 				.setIcon(icon)
 				.setTitle(String.format(getString(title), profileInfo.getString(PROFILE_NAME)))
-				.setMessage(message)
-				.setPositiveButton(button, new DialogInterface.OnClickListener()
-				{
-					@Override
-					public void onClick(DialogInterface dialog, int whichButton)
-					{
-						MainActivity activity = (MainActivity)getActivity();
-						if (profileInfo.getBoolean(PROFILE_DISCONNECT))
-						{
-							if (activity.mService != null)
-							{
-								activity.mService.disconnect();
-							}
-						}
-						else
-						{
-							activity.startVpnProfile(profileInfo);
-						}
-					}
-				})
-				.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener()
-				{
-					@Override
-					public void onClick(DialogInterface dialog, int which)
-					{
-						dismiss();
-						if (!profileInfo.getBoolean(PROFILE_FOREGROUND))
-						{	/* if the app was not in the foreground before this action was triggered
-							 * externally, we just close the activity if canceled */
-							getActivity().finish();
-						}
-					}
-				}).create();
+				.setMessage(message);
+
+			if (profileInfo.getBoolean(PROFILE_DISCONNECT))
+			{
+				builder.setPositiveButton(button, disconnectListener);
+			}
+			else
+			{
+				builder.setPositiveButton(button, connectListener);
+			}
+
+			if (profileInfo.getBoolean(PROFILE_RECONNECT))
+			{
+				builder.setNegativeButton(R.string.disconnect, disconnectListener);
+				builder.setNeutralButton(android.R.string.cancel, cancelListener);
+			}
+			else
+			{
+				builder.setNegativeButton(android.R.string.cancel, cancelListener);
+			}
+			return builder.create();
 		}
 	}
 
