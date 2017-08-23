@@ -1031,8 +1031,8 @@ Relevant only locally, other end need not agree on it. Also see EXPIRY/REKEY
 below.
 .TP
 .BR mark " = <value>[/<mask>]"
-sets an XFRM mark in the inbound and outbound
-IPsec SAs and policies. If the mask is missing then a default
+sets an XFRM mark on the inbound policy and outbound
+IPsec SA and policy. If the mask is missing then a default
 mask of
 .B 0xffffffff
 is assumed. The special value
@@ -1043,13 +1043,13 @@ make the mark unique for each IPsec SA direction (in/out) the special value
 may be used.
 .TP
 .BR mark_in " = <value>[/<mask>]"
-sets an XFRM mark in the inbound IPsec SA and
-policy. If the mask is missing then a default mask of
+sets an XFRM mark on the inbound policy (not on the SA). If the mask is missing
+then a default mask of
 .B 0xffffffff
 is assumed.
 .TP
 .BR mark_out " = <value>[/<mask>]"
-sets an XFRM mark in the outbound IPsec SA and
+sets an XFRM mark on the outbound IPsec SA and
 policy. If the mask is missing then a default mask of
 .B 0xffffffff
 is assumed.
