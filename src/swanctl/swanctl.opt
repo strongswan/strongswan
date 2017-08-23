@@ -867,25 +867,37 @@ connections.<conn>.children.<child>.interface =
 connections.<conn>.children.<child>.mark_in = 0/0x00000000
 	Netfilter mark and mask for input traffic.
 
-	Netfilter mark and mask for input traffic. On Linux Netfilter may require
-	marks on each packet to match an SA having that option set. This allows
-	Netfilter rules to select specific tunnels for incoming traffic. The
-	special value _%unique_ sets a unique mark on each CHILD_SA instance,
-	beyond that the value _%unique-dir_ assigns a different unique mark for each
+	Netfilter mark and mask for input traffic. On Linux, Netfilter may require
+	marks on each packet to match an SA/policy having that option set. This
+	allows installing duplicate policies and enables Netfilter rules to select
+	specific SAs/policies for incoming traffic.  Note that inbound marks are
+	only set on policies, by default, unless *mark_in_sa* is enabled. The
+	special value _%unique_ sets a unique mark on each CHILD_SA instance, beyond
+	that the value _%unique-dir_ assigns a different unique mark for each
 	CHILD_SA direction (in/out).
 
 	An additional mask may be appended to the mark, separated by _/_. The
 	default mask if omitted is 0xffffffff.
 
+connections.<conn>.children.<child>.mark_in_sa = no
+	Whether to set *mark_in* on the inbound SA.
+
+	Whether to set *mark_in* on the inbound SA. By default, the inbound mark is
+	only set on the inbound policy. The tuple destination address, protocol and
+	SPI is unique and the mark is not required to find the correct SA, allowing
+	to mark traffic after decryption instead (where more specific selectors may
+	be used) to match different policies. Marking packets before decryption	is
+	still possible, even if no mark is set on the SA.
+
 connections.<conn>.children.<child>.mark_out = 0/0x00000000
 	Netfilter mark and mask for output traffic.
 
-	Netfilter mark and mask for output traffic. On Linux Netfilter may require
-	marks on each packet to match a policy having that option set. This allows
-	Netfilter rules to select specific tunnels for outgoing traffic. The
-	special value _%unique_ sets a unique mark on each CHILD_SA instance,
-	beyond that the value _%unique-dir_ assigns a different unique mark for each
-	CHILD_SA direction (in/out).
+	Netfilter mark and mask for output traffic. On Linux, Netfilter may require
+	marks on each packet to match a policy/SA having that option set. This
+	allows installing duplicate policies and enables Netfilter rules to select
+	specific policies/SAs for outgoing traffic. The special value _%unique_ sets
+	a unique mark on each CHILD_SA instance, beyond that the value _%unique-dir_
+	assigns a different unique mark for each CHILD_SA direction (in/out).
 
 	An additional mask may be appended to the mark, separated by _/_. The
 	default mask if omitted is 0xffffffff.

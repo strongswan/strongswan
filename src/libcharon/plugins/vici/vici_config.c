@@ -495,6 +495,7 @@ static void log_child_data(child_data_t *data, char *name)
 {
 	child_cfg_create_t *cfg = &data->cfg;
 
+#define has_opt(opt) ({ (cfg->options & (opt)) == (opt); })
 	DBG2(DBG_CFG, "  child %s:", name);
 	DBG2(DBG_CFG, "   rekey_time = %llu", cfg->lifetime.time.rekey);
 	DBG2(DBG_CFG, "   life_time = %llu", cfg->lifetime.time.life);
@@ -506,12 +507,12 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   life_packets = %llu", cfg->lifetime.packets.life);
 	DBG2(DBG_CFG, "   rand_packets = %llu", cfg->lifetime.packets.jitter);
 	DBG2(DBG_CFG, "   updown = %s", cfg->updown);
-	DBG2(DBG_CFG, "   hostaccess = %u", cfg->options & OPT_HOSTACCESS);
-	DBG2(DBG_CFG, "   ipcomp = %u", cfg->options & OPT_IPCOMP);
+	DBG2(DBG_CFG, "   hostaccess = %u", has_opt(OPT_HOSTACCESS));
+	DBG2(DBG_CFG, "   ipcomp = %u", has_opt(OPT_IPCOMP));
 	DBG2(DBG_CFG, "   mode = %N%s", ipsec_mode_names, cfg->mode,
-		 cfg->options & OPT_PROXY_MODE ? "_PROXY" : "");
+		 has_opt(OPT_PROXY_MODE) ? "_PROXY" : "");
 	DBG2(DBG_CFG, "   policies = %u", data->policies);
-	DBG2(DBG_CFG, "   policies_fwd_out = %u", cfg->options & OPT_FWD_OUT_POLICIES);
+	DBG2(DBG_CFG, "   policies_fwd_out = %u", has_opt(OPT_FWD_OUT_POLICIES));
 	if (data->replay_window != REPLAY_UNDEFINED)
 	{
 		DBG2(DBG_CFG, "   replay_window = %u", data->replay_window);
@@ -525,14 +526,15 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   interface = %s", cfg->interface);
 	DBG2(DBG_CFG, "   mark_in = %u/%u",
 		 cfg->mark_in.value, cfg->mark_in.mask);
+	DBG2(DBG_CFG, "   mark_in_sa = %u", has_opt(OPT_MARK_IN_SA));
 	DBG2(DBG_CFG, "   mark_out = %u/%u",
 		 cfg->mark_out.value, cfg->mark_out.mask);
 	DBG2(DBG_CFG, "   inactivity = %llu", cfg->inactivity);
 	DBG2(DBG_CFG, "   proposals = %#P", data->proposals);
 	DBG2(DBG_CFG, "   local_ts = %#R", data->local_ts);
 	DBG2(DBG_CFG, "   remote_ts = %#R", data->remote_ts);
-	DBG2(DBG_CFG, "   hw_offload = %u", cfg->options & OPT_HW_OFFLOAD);
-	DBG2(DBG_CFG, "   sha256_96 = %u", cfg->options & OPT_SHA256_96);
+	DBG2(DBG_CFG, "   hw_offload = %u", has_opt(OPT_HW_OFFLOAD));
+	DBG2(DBG_CFG, "   sha256_96 = %u", has_opt(OPT_SHA256_96));
 }
 
 /**
@@ -882,7 +884,7 @@ CALLBACK(parse_opt_fwd_out, bool,
 }
 
 /**
- * Parse OPT_FWD_OUT_POLICIES option
+ * Parse OPT_IPCOMP option
  */
 CALLBACK(parse_opt_ipcomp, bool,
 	child_cfg_option_t *out, chunk_t v)
@@ -906,6 +908,15 @@ CALLBACK(parse_opt_sha256_96, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
 	return parse_option(out, OPT_SHA256_96, v);
+}
+
+/**
+ * Parse OPT_MARK_IN_SA option
+ */
+CALLBACK(parse_opt_mark_in, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_MARK_IN_SA, v);
 }
 
 /**
@@ -1562,6 +1573,7 @@ CALLBACK(child_kv, bool,
 		{ "inactivity",			parse_time,			&child->cfg.inactivity				},
 		{ "reqid",				parse_uint32,		&child->cfg.reqid					},
 		{ "mark_in",			parse_mark,			&child->cfg.mark_in					},
+		{ "mark_in_sa",			parse_opt_mark_in,	&child->cfg.options					},
 		{ "mark_out",			parse_mark,			&child->cfg.mark_out				},
 		{ "tfc_padding",		parse_tfc,			&child->cfg.tfc						},
 		{ "priority",			parse_uint32,		&child->cfg.priority				},
