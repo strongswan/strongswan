@@ -17,16 +17,18 @@ package org.strongswan.android.logic;
 
 import android.support.annotation.Keep;
 
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 @Keep
 public class SimpleFetcher
 {
-	public static byte[] fetch(String uri) throws IOException
+	public static byte[] fetch(String uri, byte[] data, String contentType) throws IOException
 	{
 		URL url = new URL(uri);
 		HttpURLConnection conn = (HttpURLConnection)url.openConnection();
@@ -34,6 +36,18 @@ public class SimpleFetcher
 		conn.setReadTimeout(10000);
 		try
 		{
+			if (contentType != null)
+			{
+				conn.setRequestProperty("Content-Type", contentType);
+			}
+			if (data != null)
+			{
+				conn.setDoOutput(true);
+				conn.setFixedLengthStreamingMode(data.length);
+				OutputStream out = new BufferedOutputStream(conn.getOutputStream());
+				out.write(data);
+				out.close();
+			}
 			return streamToArray(conn.getInputStream());
 		}
 		finally
@@ -42,7 +56,7 @@ public class SimpleFetcher
 		}
 	}
 
-	private static byte[] streamToArray(InputStream in)
+	private static byte[] streamToArray(InputStream in) throws IOException
 	{
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		byte[] buf = new byte[1024];
@@ -59,6 +73,10 @@ public class SimpleFetcher
 		catch (IOException e)
 		{
 			e.printStackTrace();
+		}
+		finally
+		{
+			in.close();
 		}
 		return null;
 	}
