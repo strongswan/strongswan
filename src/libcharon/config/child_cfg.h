@@ -310,6 +310,9 @@ enum child_cfg_option_t {
 
 	/** Force 96-bit truncation for SHA-256 */
 	OPT_SHA256_96 = (1<<6),
+
+	/** Set mark on inbound SAs */
+	OPT_MARK_IN_SA = (1<<7),
 };
 
 /**
