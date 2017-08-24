@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2015 Tobias Brunner, Andreas Steffen
+ * Copyright (C) 2015-2017 Tobias Brunner
+ * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2014 Martin Willi
@@ -55,6 +56,32 @@
 #include <asn1/asn1.h>
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
+#include <counters_query.h>
+
+ENUM(vici_counter_type_names,
+	COUNTER_INIT_IKE_SA_REKEY, COUNTER_OUT_INFORMATIONAL_RSP,
+	"ike-rekey-init",
+	"ike-rekey-resp",
+	"child-rekey",
+	"invalid",
+	"invalid-spi",
+	"ike-init-in-req",
+	"ike-init-in-resp",
+	"ike-init-out-req",
+	"ike-init-out-resp",
+	"ike-auth-in-req",
+	"ike-auth-in-resp",
+	"ike-auth-out-req",
+	"ike-auth-out-resp",
+	"create-child-in-req",
+	"create-child-in-resp",
+	"create-child-out-req",
+	"create-child-out-resp",
+	"info-in-req",
+	"info-in-resp",
+	"info-out-req",
+	"info-out-resp",
+);
 
 typedef struct private_vici_query_t private_vici_query_t;
 
@@ -72,6 +99,11 @@ struct private_vici_query_t {
 	 * Dispatcher
 	 */
 	vici_dispatcher_t *dispatcher;
+
+	/**
+	 * Query interface for counters
+	 */
+	counters_query_t *counters;
 
 	/**
 	 * Daemon startup timestamp
@@ -1223,6 +1255,131 @@ CALLBACK(get_algorithms, vici_message_t*,
 	return b->finalize(b);
 }
 
+/**
+ * Make sure we have the counters query interface
+ */
+static inline bool ensure_counters(private_vici_query_t *this)
+{
+	if (this->counters)
+	{
+		return TRUE;
+	}
+	return (this->counters = lib->get(lib, "counters")) != NULL;
+}
+
+/**
+ * Add a single set of counters to the message
+ *
+ * Frees the array of counter values
+ */
+static void add_counters(vici_builder_t *b, char *name, uint64_t *counters)
+{
+	char buf[BUF_LEN];
+	counter_type_t i;
+
+	b->begin_section(b, name ?: "");
+	for (i = 0; i < COUNTER_MAX; i++)
+	{
+		snprintf(buf, sizeof(buf), "%N", vici_counter_type_names, i);
+		b->add_kv(b, buf, "%"PRIu64, counters[i]);
+	}
+	b->end_section(b);
+	free(counters);
+}
+
+CALLBACK(get_counters, vici_message_t*,
+	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
+{
+	vici_builder_t *b;
+	enumerator_t *enumerator;
+	uint64_t *counters;
+	char *conn, *errmsg = NULL;
+	bool all;
+
+	b = vici_builder_create();
+
+	if (ensure_counters(this))
+	{
+		conn = request->get_str(request, NULL, "name");
+		all = request->get_bool(request, FALSE, "all");
+
+		b->begin_section(b, "counters");
+		if (all)
+		{
+			enumerator = this->counters->get_names(this->counters);
+			while (enumerator->enumerate(enumerator, &conn))
+			{
+				counters = this->counters->get_all(this->counters, conn);
+				if (counters)
+				{
+					add_counters(b, conn, counters);
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+		else
+		{
+			counters = this->counters->get_all(this->counters, conn);
+			if (counters)
+			{
+				add_counters(b, conn, counters);
+			}
+			else
+			{
+				errmsg = "no counters found for this connection";
+			}
+		}
+		b->end_section(b);
+	}
+	else
+	{
+		errmsg = "no counters available (plugin missing?)";
+	}
+
+	b->add_kv(b, "success", errmsg ? "no" : "yes");
+	if (errmsg)
+	{
+		b->add_kv(b, "errmsg", "%s", errmsg);
+	}
+	return b->finalize(b);
+}
+
+CALLBACK(reset_counters, vici_message_t*,
+	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
+{
+	vici_builder_t *b;
+	char *conn, *errmsg = NULL;
+	bool all;
+
+	b = vici_builder_create();
+
+	if (ensure_counters(this))
+	{
+		conn = request->get_str(request, NULL, "name");
+		all = request->get_bool(request, FALSE, "all");
+
+		if (all)
+		{
+			this->counters->reset_all(this->counters);
+		}
+		else
+		{
+			this->counters->reset(this->counters, conn);
+		}
+	}
+	else
+	{
+		errmsg = "no counters available (plugin missing?)";
+	}
+
+	b->add_kv(b, "success", errmsg ? "no" : "yes");
+	if (errmsg)
+	{
+		b->add_kv(b, "errmsg", "%s", errmsg);
+	}
+	return b->finalize(b);
+}
+
 CALLBACK(version, vici_message_t*,
 	private_vici_query_t *this, char *name, u_int id, vici_message_t *request)
 {
@@ -1423,6 +1580,8 @@ static void manage_commands(private_vici_query_t *this, bool reg)
 	manage_command(this, "list-conns", list_conns, reg);
 	manage_command(this, "list-certs", list_certs, reg);
 	manage_command(this, "get-algorithms", get_algorithms, reg);
+	manage_command(this, "get-counters", get_counters, reg);
+	manage_command(this, "reset-counters", reset_counters, reg);
 	manage_command(this, "version", version, reg);
 	manage_command(this, "stats", stats, reg);
 }

@@ -2,6 +2,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libstrongswan/plugins/pubkey \
 	-I$(top_srcdir)/src/libcharon \
+	-I$(top_srcdir)/src/libcharon/plugins/counters \
 	-DSWANCTLDIR=\""${swanctldir}\"" \
 	-DIPSEC_PIDDIR=\"${piddir}\"
 

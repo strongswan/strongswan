@@ -682,6 +682,35 @@ List currently loaded algorithms and their implementation.
 		}
 	}
 
+### get-counters() ###
+
+List global or connection-specific counters for several IKE events.
+
+	{
+		name = <optional connection name, omit for global counters>
+		all = <yes to get counters for all connections, name is ignored>
+	} => {
+		counters = {
+			<name|empty for global counters> = {
+				<pairs of counter name and 64-bit counter value>
+			}
+		}
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### reset-counters() ###
+
+Reset global or connection-specific IKE event counters.
+
+	{
+		name = <optional connection name, omit for global counters>
+		all = <yes to reset counters for all connections, name is ignored>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
 ## Server-issued events ##
 
 Based on the packet layer, the vici plugin raises event messages using named
