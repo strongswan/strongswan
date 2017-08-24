@@ -341,6 +341,7 @@
                 android:text="@string/profile_split_tunnelingv6_title" />
 
             <TextView
+                android:id="@+id/apps"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
