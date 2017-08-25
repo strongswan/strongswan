@@ -1,4 +1,4 @@
-.TH SW-COLLECTOR 1 "2017-07-15" "@PACKAGE_VERSION@" "strongSwan"
+.TH SW-COLLECTOR 8 "2017-08-25" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -56,34 +56,34 @@ Prints usage information and a short summary of the available commands.
 .BI "\-v, \-\-debug " level
 Set debug level, default: 2.
 .TP
-.B "\-q, \-\-quiet
+.B "\-q, \-\-quiet"
 Disable debug output to stderr.
 .TP
-.B "\-i, \-\-installed
+.B "\-i, \-\-installed"
 Apply command to installed software packages, only.
 .TP
-.B "\-r, \-\-removed
+.B "\-r, \-\-removed"
 Apply command to removed software packages, only.
 .TP
-.B "\-f, \-\-full
+.B "\-f, \-\-full"
 Generate ISO 19770-2:2015 SWID tags with full file information (possible for
 installed software packages, only).
 .TP
-.B "\-l, \-\-list
+.B "\-l, \-\-list"
 Lists all software packages stored in the collector database showing their
 installation status.
 .TP
-.B "\-u, \-\-unregistered
+.B "\-u, \-\-unregistered"
 Lists all software packages residing in the local collector database but for
 which no SWID tags exist yet in a central collector database reachable via a
 REST interface. 
 .TP
-.B "\-g, \-\-generate
+.B "\-g, \-\-generate"
 Generates ISO 19770-2:2015 SWID tags for all software packages residing in the
 local collector database but for which no SWID tags exist in a central collector
 database reachable via a REST interface.
 .TP
-.B "\-m, \-\-migrate
+.B "\-m, \-\-migrate"
 Can be used to migrate collector database versions. Currently all architecture
 suffixes are removed from dpkg package names.
 .
