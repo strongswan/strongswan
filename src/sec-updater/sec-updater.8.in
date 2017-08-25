@@ -1,0 +1,65 @@
+.TH SEC-UPDATER 8 "2017-08-25" "@PACKAGE_VERSION@" "strongSwan"
+.
+.SH "NAME"
+.
+sec-updater \- Extracts security update information of Linux distributions
+.
+.SH "SYNOPSIS"
+.
+.SY "sec-updater"
+.OP \-\-debug level
+.OP \-\-quiet
+.OP \-\-security
+.BI \-\-product " name"
+.BI \-\-file " filename"
+.YS
+.
+.SY "sec-updater"
+.B \-h
+|
+.B \-\-help
+.YS
+.
+.SH "DESCRIPTION"
+.
+.B sec-updater
+extracts information about security updates and backports of Linux repositories
+(e.g. Debian or Ubuntu). This information is used to update the package version
+information stored in the strongTNC SQLite database. The "dbkg --compare-versions"
+command is used to determine which package versions are affected by a given
+security update.
+.
+.SH "OPTIONS"
+.
+.TP
+.B "\-h, \-\-help"
+Prints usage information and a short summary of the available commands.
+.TP
+.BI "\-v, \-\-debug " level
+Set debug level, default: 1.
+.TP
+.B "\-q, \-\-quiet"
+Disable debug output to stderr.
+.TP
+.B "\-s, \-\-security"
+Set when parsing a distributions file with security updates.
+.TP
+.BI "\-p, \-\-product " name
+Name of Linux version as stored in database. eg. "Ubuntu 16.04 x86_64".
+.TP
+.BI "\-f, \-\-file " filename
+Linux package information file to parse.
+.
+.SH "CONFIGURATION"
+.
+The following parameter must be configured in strongswan.conf:
+.P
+ sec-updater {
+    database = sqlite:///etc/pts/config.db
+ }
+.P
+.
+.SH "SEE ALSO"
+.
+.BR strongswan.conf (5)
+

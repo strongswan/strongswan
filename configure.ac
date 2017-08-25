@@ -1969,6 +1969,7 @@ AC_CONFIG_FILES([
 	src/conftest/Makefile
 	src/pt-tls-client/Makefile
 	src/sw-collector/Makefile
+	src/sec-updater/Makefile
 	src/swanctl/Makefile
 	scripts/Makefile
 	testing/Makefile
@@ -2003,6 +2004,7 @@ AC_CONFIG_FILES([
 	src/swanctl/swanctl.conf.5.tail
 	src/pt-tls-client/pt-tls-client.1
 	src/sw-collector/sw-collector.8
+	src/sec-updater/sec-updater.8
 ])
 
 AC_OUTPUT

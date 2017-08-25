@@ -130,6 +130,10 @@ if USE_IMC_SWIMA
   exes += $(DESTDIR)$(sbindir)/sw-collector
 endif
 
+if USE_IMV_SWIMA
+  exes += $(DESTDIR)$(sbindir)/sec-updater
+endif
+
 checksum.c : checksum_builder $(deps) $(exes)
 		./checksum_builder $(libs) $(exes) > checksum.c
 
