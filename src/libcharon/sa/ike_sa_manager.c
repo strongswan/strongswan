@@ -1,9 +1,10 @@
 /*
  * Copyright (C) 2005-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
- * Copyright (C) 2008-2016 Tobias Brunner
+ *
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -1572,6 +1573,88 @@ METHOD(ike_sa_manager_t, checkout_by_name, ike_sa_t*,
 	return ike_sa;
 }
 
+METHOD(ike_sa_manager_t, new_initiator_spi, bool,
+	private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
+{
+	ike_sa_state_t state;
+	ike_sa_id_t *ike_sa_id;
+	entry_t *entry;
+	u_int segment;
+	uint64_t new_spi, spi;
+
+	state = ike_sa->get_state(ike_sa);
+	if (state != IKE_CONNECTING)
+	{
+		DBG1(DBG_MGR, "unable to change initiator SPI for IKE_SA in state "
+			 "%N", ike_sa_state_names, state);
+		return FALSE;
+	}
+
+	ike_sa_id = ike_sa->get_id(ike_sa);
+	if (!ike_sa_id->is_initiator(ike_sa_id))
+	{
+		DBG1(DBG_MGR, "unable to change initiator SPI of IKE_SA as responder");
+		return FALSE;
+	}
+
+	if (ike_sa != charon->bus->get_sa(charon->bus))
+	{
+		DBG1(DBG_MGR, "unable to change initiator SPI of IKE_SA not checked "
+			 "out by current thread");
+		return FALSE;
+	}
+
+	new_spi = get_spi(this);
+	if (!new_spi)
+	{
+		DBG1(DBG_MGR, "unable to allocate new initiator SPI for IKE_SA");
+		return FALSE;
+	}
+
+	if (get_entry_by_sa(this, ike_sa_id, ike_sa, &entry, &segment) == SUCCESS)
+	{
+		if (entry->driveout_waiting_threads && entry->driveout_new_threads)
+		{	/* it looks like flush() has been called and the SA is being deleted
+			 * anyway, no need for a new SPI */
+			DBG2(DBG_MGR, "ignored change of initiator SPI during shutdown");
+			unlock_single_segment(this, segment);
+			return FALSE;
+		}
+		/* threads waiting for this entry do so using the (soon) wrong IKE_SA
+		 * ID and, therefore, likely on the wrong segment, so drive them out */
+		entry->driveout_waiting_threads = TRUE;
+		entry->driveout_new_threads = TRUE;
+		while (entry->waiting_threads)
+		{
+			entry->condvar->broadcast(entry->condvar);
+			entry->condvar->wait(entry->condvar, this->segments[segment].mutex);
+		}
+		remove_entry(this, entry);
+		unlock_single_segment(this, segment);
+	}
+	else
+	{
+		DBG1(DBG_MGR, "unable to change initiator SPI of IKE_SA, not found");
+		return FALSE;
+	}
+
+	spi = ike_sa_id->get_initiator_spi(ike_sa_id);
+
+	DBG2(DBG_MGR, "change initiator SPI of IKE_SA %s[%u] from %.16"PRIx64" to "
+		 "%.16"PRIx64, ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
+		 be64toh(spi), be64toh(new_spi));
+
+	ike_sa_id->set_initiator_spi(ike_sa_id, new_spi);
+	entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa_id);
+
+	entry->driveout_waiting_threads = FALSE;
+	entry->driveout_new_threads = FALSE;
+
+	segment = put_entry(this, entry);
+	unlock_single_segment(this, segment);
+	return TRUE;
+}
+
 CALLBACK(enumerator_filter_wait, bool,
 	private_ike_sa_manager_t *this, enumerator_t *orig, va_list args)
 {
@@ -2277,6 +2360,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 			.checkout_by_config = _checkout_by_config,
 			.checkout_by_id = _checkout_by_id,
 			.checkout_by_name = _checkout_by_name,
+			.new_initiator_spi = _new_initiator_spi,
 			.check_uniqueness = _check_uniqueness,
 			.has_contact = _has_contact,
 			.create_enumerator = _create_enumerator,
