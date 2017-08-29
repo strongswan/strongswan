@@ -1,4 +1,5 @@
 Host *
+	LogLevel QUIET
 	# debian default
 	SendEnv LANG LC_*
 	SendEnv LEAK_DETECTIVE_LOG
