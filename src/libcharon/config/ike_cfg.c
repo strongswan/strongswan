@@ -580,6 +580,7 @@ bool ike_cfg_has_address(ike_cfg_t *cfg, host_t *addr, bool local)
 		host = host_create_from_string(str, 0);
 		if (host && addr->ip_equals(addr, host))
 		{
+			host->destroy(host);
 			found = TRUE;
 			break;
 		}
