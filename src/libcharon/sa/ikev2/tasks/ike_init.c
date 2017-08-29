@@ -815,7 +815,7 @@ METHOD(task_t, process_i, status_t,
 
 					if (this->old_sa == NULL)
 					{	/* reset the IKE_SA if we are not rekeying */
-						this->ike_sa->reset(this->ike_sa);
+						this->ike_sa->reset(this->ike_sa, FALSE);
 					}
 
 					enumerator->destroy(enumerator);
@@ -833,7 +833,7 @@ METHOD(task_t, process_i, status_t,
 				{
 					chunk_free(&this->cookie);
 					this->cookie = chunk_clone(notify->get_notification_data(notify));
-					this->ike_sa->reset(this->ike_sa);
+					this->ike_sa->reset(this->ike_sa, FALSE);
 					enumerator->destroy(enumerator);
 					DBG2(DBG_IKE, "received %N notify", notify_type_names, type);
 					this->retry++;

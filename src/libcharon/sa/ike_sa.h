@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2016 Tobias Brunner
+ * Copyright (C) 2006-2017 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -1169,9 +1169,11 @@ struct ike_sa_t {
 	void (*inherit_post) (ike_sa_t *this, ike_sa_t *other);
 
 	/**
-	 * Reset the IKE_SA, useable when initiating fails
+	 * Reset the IKE_SA, useable when initiating fails.
+	 *
+	 * @param new_spi		TRUE to allocate a new initiator SPI
 	 */
-	void (*reset) (ike_sa_t *this);
+	void (*reset) (ike_sa_t *this, bool new_spi);
 
 	/**
 	 * Destroys a ike_sa_t object.

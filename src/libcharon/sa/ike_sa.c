@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2016 Tobias Brunner
+ * Copyright (C) 2006-2017 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -914,9 +914,15 @@ METHOD(ike_sa_t, set_state, void,
 }
 
 METHOD(ike_sa_t, reset, void,
-	private_ike_sa_t *this)
+	private_ike_sa_t *this, bool new_spi)
 {
-	/*  the responder ID is reset, as peer may choose another one */
+	/* reset the initiator SPI if requested */
+	if (new_spi)
+	{
+		charon->ike_sa_manager->new_initiator_spi(charon->ike_sa_manager,
+												  &this->public);
+	}
+	/* the responder ID is reset, as peer may choose another one */
 	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
 	{
 		this->ike_sa_id->set_responder_spi(this->ike_sa_id, 0);
@@ -1849,7 +1855,7 @@ METHOD(ike_sa_t, reauth, status_t,
 	{
 		DBG0(DBG_IKE, "reinitiating IKE_SA %s[%d]",
 			 get_name(this), this->unique_id);
-		reset(this);
+		reset(this, TRUE);
 		return this->task_manager->initiate(this->task_manager);
 	}
 	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
@@ -2222,7 +2228,7 @@ static bool redirect_connecting(private_ike_sa_t *this, identification_t *to)
 	{
 		return FALSE;
 	}
-	reset(this);
+	reset(this, TRUE);
 	DESTROY_IF(this->redirected_from);
 	this->redirected_from = this->other_host->clone(this->other_host);
 	DESTROY_IF(this->remote_host);
@@ -2351,7 +2357,7 @@ METHOD(ike_sa_t, retransmit, status_t,
 				{
 					DBG1(DBG_IKE, "peer not responding, trying again (%d/%d)",
 						 this->keyingtry + 1, tries);
-					reset(this);
+					reset(this, TRUE);
 					resolve_hosts(this);
 					return this->task_manager->initiate(this->task_manager);
 				}
