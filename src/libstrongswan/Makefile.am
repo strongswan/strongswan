@@ -96,6 +96,7 @@ fetcher/fetcher_manager.h eap/eap.h pen/pen.h ipsec/ipsec_types.h \
 networking/host.h networking/host_resolver.h networking/packet.h \
 networking/tun_device.h networking/streams/stream.h \
 networking/streams/stream_unix.h networking/streams/stream_service_unix.h \
+networking/streams/stream_service_systemd.h \
 networking/streams/stream_tcp.h networking/streams/stream_service_tcp.h \
 networking/streams/stream_service.h networking/streams/stream_manager.h \
 resolver/resolver.h resolver/resolver_response.h resolver/rr_set.h \
@@ -190,6 +191,12 @@ endif
 
 if USE_LIBCAP
   libstrongswan_la_LIBADD += -lcap
+endif
+
+if USE_SYSTEMD
+  AM_CPPFLAGS += $(systemd_CFLAGS) -DUSE_SYSTEMD
+  libstrongswan_la_SOURCES += networking/streams/stream_service_systemd.c
+  libstrongswan_la_LIBADD += $(systemd_LIBS)
 endif
 
 EXTRA_DIST = \
