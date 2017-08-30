@@ -253,23 +253,29 @@ CREATE INDEX "swid_entityroles_entity_id" ON "swid_entityroles" (
 DROP TABLE IF EXISTS "swid_tags";
 CREATE TABLE "swid_tags" (
   "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  "version_id" INTEGER REFERENCES "versions" ("id"),
   "package_name" VARCHAR(255) NOT NULL,
-  "version" VARCHAR(255) NOT NULL,
+  "version_str" VARCHAR(255) NOT NULL,
   "unique_id" VARCHAR(255) NOT NULL,
   "swid_xml" TEXT NOT NULL,
   "software_id" VARCHAR(255) NOT NULL
 );
-DROP INDEX if EXISTS "swid_tags_unique_id";
-DROP INDEX IF EXISTS "swid_tags_package_name";
 DROP INDEX IF EXISTS "swid_tags_software_id";
+DROP INDEX if EXISTS "swid_tags_unique_id";
+DROP INDEX IF EXISTS "swid_tags_version";
+DROP INDEX IF EXISTS "swid_tags_package_name";
+
+CREATE INDEX "swid_tags_software_id" ON "swid_tags" (
+  "software_id"
+);
 CREATE INDEX "swid_tags_unique_id" ON "swid_tags" (
   "unique_id"
 );
+CREATE INDEX "swid_tags_version_id" ON "swid_tags" (
+  "version_id"
+);
 CREATE INDEX "swid_tags_package_name" ON "swid_tags" (
   "package_name"
-);
-CREATE INDEX "swid_tags_software_id" ON "swid_tags" (
-  "software_id"
 );
 
 DROP TABLE IF EXISTS "swid_tags_files";
