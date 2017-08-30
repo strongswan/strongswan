@@ -40,9 +40,6 @@
 #define SA_REPLACEMENT_RETRIES_DEFAULT   3
 #define SA_REPLAY_WINDOW_DEFAULT        -1 /* use charon.replay_window */
 
-static const char ike_defaults[] = "aes128-sha256-curve25519";
-static const char esp_defaults[] = "aes128-sha256";
-
 static const char firewall_defaults[] = IPSEC_SCRIPT " _updown iptables";
 
 /**
@@ -206,7 +203,6 @@ static void conn_defaults(starter_conn_t *conn)
 	conn->mode    = MODE_TUNNEL;
 	conn->options = SA_OPTION_MOBIKE;
 
-	conn->ike                   = strdupnull(ike_defaults);
 	/* esp defaults are set after parsing the conn section */
 	conn->sa_ike_life_seconds   = IKE_LIFETIME_DEFAULT;
 	conn->sa_ipsec_life_seconds = IPSEC_LIFETIME_DEFAULT;
@@ -622,11 +618,6 @@ static void load_conn(starter_conn_t *conn, starter_config_t *cfg,
 
 	handle_firewall("left", &conn->left, cfg);
 	handle_firewall("right", &conn->right, cfg);
-
-	if (!conn->esp && !conn->ah)
-	{
-		conn->esp = strdupnull(esp_defaults);
-	}
 }
 
 /*
