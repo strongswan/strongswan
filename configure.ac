@@ -842,7 +842,7 @@ AC_COMPILE_IFELSE(
 	[
 		AC_MSG_RESULT([yes])
 		windows=true
-		openssl_lib=eay32
+
 		AC_SUBST(PTHREADLIB, "")
 		# explicitly disable ms-bitfields, as it breaks __attribute__((packed))
 		case "$CFLAGS" in
@@ -852,7 +852,6 @@ AC_COMPILE_IFELSE(
 	],
 	[
 		AC_MSG_RESULT([no])
-		openssl_lib=crypto
 
 		# check for clock_gettime() on non-Windows only. Otherwise this
 		# check might find clock_gettime() in libwinpthread, but we don't want
@@ -866,7 +865,6 @@ AC_COMPILE_IFELSE(
 		LIBS=$saved_LIBS
 	]
 )
-AC_SUBST(OPENSSL_LIB, [-l$openssl_lib])
 AM_CONDITIONAL(USE_WINDOWS, [test "x$windows" = xtrue])
 
 AC_MSG_CHECKING([for working __attribute__((packed))])
@@ -1118,8 +1116,17 @@ if test x$sqlite = xtrue; then
 fi
 
 if test x$openssl = xtrue; then
-	AC_CHECK_LIB([$openssl_lib],[EVP_CIPHER_CTX_new],[LIBS="$LIBS"],
-				 [AC_MSG_ERROR([OpenSSL lib$openssl_lib not found])],[$DLLIB])
+	if test "x$windows" = xtrue; then
+		openssl_lib=eay32
+		AC_CHECK_LIB([$openssl_lib],[EVP_CIPHER_CTX_new],[LIBS="$LIBS"],
+			[AC_MSG_RESULT([no]);openssl_lib=""],[$DLLIB])
+	fi
+	if test -z "$openssl_lib"; then
+		openssl_lib=crypto
+		AC_CHECK_LIB([$openssl_lib],[EVP_CIPHER_CTX_new],[LIBS="$LIBS"],
+			[AC_MSG_ERROR([OpenSSL lib$openssl_lib not found])],[$DLLIB])
+	fi
+	AC_SUBST(OPENSSL_LIB, [-l$openssl_lib])
 	AC_CHECK_HEADER([openssl/evp.h],,[AC_MSG_ERROR([OpenSSL header openssl/evp.h not found!])])
 fi
 
