@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Andreas Steffen
+ * Copyright (C) 2012-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -81,22 +81,22 @@ struct imv_os_state_t {
 	 * Set [or with multiple attributes increment] package counters
 	 *
 	 * @param count				Number of processed packages
-	 * @param count_update		Number of not updated packages
+	 * @param count_security	Number of vulnerable packages
 	 * @param count_blacklist	Number of blacklisted packages
 	 * @param count_ok			Number of whitelisted packages
 	 */
-	void (*set_count)(imv_os_state_t *this, int count, int count_update,
+	void (*set_count)(imv_os_state_t *this, int count, int count_security,
 					  int count_blacklist, int count_ok);
 
 	/**
 	 * Set [or with multiple attributes increment] package counters
 	 *
 	 * @param count				Number of processed packages
-	 * @param count_update		Number of not updated packages
+	 * @param count_security	Number of vulnerable packages
 	 * @param count_blacklist	Number of blacklisted packages
 	 * @param count_ok			Number of whitelisted packages
 	 */
-	void (*get_count)(imv_os_state_t *this, int *count, int *count_update,
+	void (*get_count)(imv_os_state_t *this, int *count, int *count_security,
 					  int *count_blacklist, int *count_ok);
 
 	/**

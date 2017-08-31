@@ -705,8 +705,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 					eval = fail ? TNC_IMV_EVALUATION_RESULT_NONCOMPLIANT_MINOR :
 								  TNC_IMV_EVALUATION_RESULT_COMPLIANT;
 					snprintf(result_str, BUF_LEN, "processed %d packages: "
-							"%d not updated, %d blacklisted, %d ok, "
-							"%d unknown",
+							"%d vulnerable, %d blacklisted, %d ok, %d unknown",
 							count, count_update, count_blacklist, count_ok,
 							count - count_update - count_blacklist - count_ok);
 					break;
