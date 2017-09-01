@@ -90,11 +90,11 @@ struct tkm_id_manager_t {
 	 *
 	 * @param kind			kind of context id to release
 	 * @param id			id to release
-	 * @return				TRUE if id was released, FALSE otherwise
+	 * @return				current refcount if id was released, -1 otherwise
 	 */
-	bool (*release_id)(tkm_id_manager_t * const this,
-					   const tkm_context_kind_t kind,
-					   const int id);
+	int (*release_id)(tkm_id_manager_t * const this,
+					  const tkm_context_kind_t kind,
+					  const int id);
 
 	/**
 	 * Destroy a tkm_id_manager instance.

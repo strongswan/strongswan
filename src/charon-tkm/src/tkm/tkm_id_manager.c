@@ -130,27 +130,28 @@ METHOD(tkm_id_manager_t, acquire_ref, bool,
 	return TRUE;
 }
 
-METHOD(tkm_id_manager_t, release_id, bool,
+METHOD(tkm_id_manager_t, release_id, int,
 	private_tkm_id_manager_t * const this, const tkm_context_kind_t kind,
 	const int id)
 {
 	const int idx = id - 1;
+	int refcount = 0;
 
 	if (!is_valid_kind(kind))
 	{
 		DBG1(DBG_LIB, "tried to release id %d for invalid context kind '%d'",
 			 id, kind);
-		return FALSE;
+		return -1;
 	}
 
 	this->locks[kind]->write_lock(this->locks[kind]);
 	if (this->ctxids[kind][idx] > 0)
 	{
-		this->ctxids[kind][idx]--;
+		refcount = --this->ctxids[kind][idx];
 	}
 	this->locks[kind]->unlock(this->locks[kind]);
 
-	return TRUE;
+	return refcount;
 }
 
 
