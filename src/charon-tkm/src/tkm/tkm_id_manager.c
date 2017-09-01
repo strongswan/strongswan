@@ -43,7 +43,7 @@ struct private_tkm_id_manager_t {
 	/**
 	 * Per-kind array of free context ids
 	 */
-	bool* ctxids[TKM_CTX_MAX];
+	int* ctxids[TKM_CTX_MAX];
 
 	/**
 	 * Per-kind context limits.
@@ -85,9 +85,9 @@ METHOD(tkm_id_manager_t, acquire_id, int,
 	this->locks[kind]->write_lock(this->locks[kind]);
 	for (j = 0; j < this->limits[kind]; j++)
 	{
-		if (!this->ctxids[kind][j])
+		if (this->ctxids[kind][j] == 0)
 		{
-			this->ctxids[kind][j] = true;
+			this->ctxids[kind][j] = 1;
 			id = j + 1;
 			break;
 		}
@@ -117,7 +117,10 @@ METHOD(tkm_id_manager_t, release_id, bool,
 	}
 
 	this->locks[kind]->write_lock(this->locks[kind]);
-	this->ctxids[kind][idx] = false;
+	if (this->ctxids[kind][idx] > 0)
+	{
+		this->ctxids[kind][idx]--;
+	}
 	this->locks[kind]->unlock(this->locks[kind]);
 
 	return TRUE;
@@ -155,7 +158,7 @@ tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits)
 	for (i = 0; i < TKM_CTX_MAX; i++)
 	{
 		this->limits[i] = limits[i];
-		this->ctxids[i] = calloc(limits[i], sizeof(bool));
+		this->ctxids[i] = calloc(limits[i], sizeof(int));
 		this->locks[i] = rwlock_create(RWLOCK_TYPE_DEFAULT);
 		DBG2(DBG_LIB, "%N initialized, %llu slot(s)", tkm_context_kind_names, i,
 			 limits[i]);
