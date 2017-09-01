@@ -1,3 +1,16 @@
+strongswan-5.6.1
+----------------
+
+- The sec-updater tool checks for security updates dpkg-based repositories
+  (e.g. Debian/Ubuntu) and sets the security flags in the IMV policy database
+  accordingly. Using the sec-updater.sh script template the lookup can be
+  automated (e.g. via a cron job).
+
+- The introduction of file versions in the IMV database scheme broke file
+  reference hash measurements. This has been fixed by creating generic product
+  versions having an empty package name.
+
+
 strongswan-5.6.0
 ----------------
 
