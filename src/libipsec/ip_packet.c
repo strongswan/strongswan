@@ -52,7 +52,11 @@ struct ip6_hdr {
 	uint8_t ip6_hlim;
 	struct in6_addr ip6_src, ip6_dst;
 } __attribute__((packed));
-#define HAVE_NETINET_IP6_H /* not really, but we only need the struct above */
+struct ip6_ext {
+	uint8_t ip6e_nxt;
+	uint8_t ip6e_len;
+} __attribute__((packed));
+#define HAVE_NETINET_IP6_H /* not really, but we only need the structs above */
 #endif
 
 #ifndef IP_OFFMASK
@@ -223,6 +227,56 @@ static bool parse_transport_header(chunk_t packet, uint8_t proto,
 	return TRUE;
 }
 
+#ifdef HAVE_NETINET_IP6_H
+/**
+ * Skip to the actual payload and parse the transport header.
+ */
+static bool parse_transport_header_v6(struct ip6_hdr *ip, chunk_t packet,
+									  chunk_t *payload, uint8_t *proto,
+									  uint16_t *sport, uint16_t *dport)
+{
+	struct ip6_ext *ext;
+	bool fragment = FALSE;
+
+	*proto = ip->ip6_nxt;
+	*payload = chunk_skip(packet, 40);
+	while (payload->len >= sizeof(struct ip6_ext))
+	{
+		switch (*proto)
+		{
+			case 44:  /* Fragment Header */
+				fragment = TRUE;
+				/* skip the header */
+			case 0:   /* Hop-by-Hop Options Header */
+			case 43:  /* Routing Header */
+			case 60:  /* Destination Options Header */
+			case 135: /* Mobility Header */
+			case 139: /* HIP */
+			case 140: /* Shim6 */
+				/* simply skip over these headers for now */
+				ext = (struct ip6_ext*)payload->ptr;
+				*proto = ext->ip6e_nxt;
+				*payload = chunk_skip(*payload, 8 * (ext->ip6e_len + 1));
+				continue;
+			default:
+				/* assume anything else is an upper layer protocol but only
+				 * attempt to parse the transport header for non-fragmented
+				 * packets as there is no guarantee that initial fragments
+				 * contain the transport header, depending on the number and
+				 * type of extension headers */
+				if (!fragment &&
+					!parse_transport_header(*payload, *proto, sport, dport))
+				{
+					return FALSE;
+				}
+				break;
+		}
+		break;
+	}
+	return TRUE;
+}
+#endif /* HAVE_NETINET_IP6_H */
+
 /**
  * Described in header.
  */
@@ -282,10 +336,8 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			ip = (struct ip6_hdr*)packet.ptr;
 			/* remove any RFC 4303 TFC extra padding */
 			packet.len = min(packet.len, 40 + untoh16(&ip->ip6_plen));
-			/* we only handle packets without extension headers, just skip the
-			 * basic IPv6 header */
-			payload = chunk_skip(packet, 40);
-			if (!parse_transport_header(payload, ip->ip6_nxt, &sport, &dport))
+			if (!parse_transport_header_v6(ip, packet, &payload, &next_header,
+										   &sport, &dport))
 			{
 				goto failed;
 			}
@@ -293,7 +345,6 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 										 chunk_from_thing(ip->ip6_src), sport);
 			dst = host_create_from_chunk(AF_INET6,
 										 chunk_from_thing(ip->ip6_dst), dport);
-			next_header = ip->ip6_nxt;
 			break;
 		}
 #endif /* HAVE_NETINET_IP6_H */
