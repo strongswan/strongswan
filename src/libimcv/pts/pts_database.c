@@ -121,15 +121,69 @@ METHOD(pts_database_t, create_file_hash_enumerator, enumerator_t*,
 	return e;
 }
 
-METHOD(pts_database_t, add_file_measurement, status_t,
-	private_pts_database_t *this, int pid, pts_meas_algorithms_t algo,
+
+METHOD(pts_database_t, get_product_version, bool,
+	private_pts_database_t *this, int pid, int *vid)
+{
+	enumerator_t *e;
+	int pkg_id;
+
+	/* does empty package name already exist? */
+	e = this->db->query(this->db,
+			"SELECT id FROM packages WHERE name = ''", DB_INT);
+	if (!e)
+	{
+		return FALSE;
+	}
+	if (!e->enumerate(e, &pkg_id))
+	{
+		/* create generic product version entry */
+		if (this->db->execute(this->db, &pkg_id,
+				"INSERT INTO packages (name) VALUES ('')") != 1)
+		{
+			DBG1(DBG_PTS, "could not insert package into database");
+			e->destroy(e);
+			return FALSE;
+		}
+	}
+	e->destroy(e);
+
+	/* does generic product version already exist? */
+	e = this->db->query(this->db,
+			"SELECT id FROM versions WHERE product = ? AND package = ?",
+			 DB_INT, pid, DB_INT, pkg_id);
+	if (!e)
+	{
+		return FALSE;
+	}
+	if (!e->enumerate(e, vid))
+	{
+		/* create generic product version entry */
+		if (this->db->execute(this->db, vid,
+				"INSERT INTO versions (product, package) VALUES (?, ?)",
+				 DB_INT, pid, DB_INT, pkg_id) != 1)
+		{
+			DBG1(DBG_PTS, "could not insert version into database");
+			e->destroy(e);
+			return FALSE;
+		}
+	}
+	e->destroy(e);
+
+	return TRUE;
+}
+
+METHOD(pts_database_t, add_file_measurement, bool,
+	private_pts_database_t *this, int vid, pts_meas_algorithms_t algo,
 	chunk_t measurement, char *filename, bool is_dir, int id)
 {
 	enumerator_t *e;
 	char *name;
-	chunk_t hash_value;
+	uint8_t hash_buf[HASH_SIZE_SHA512];
+	uint8_t hex_meas_buf[2*HASH_SIZE_SHA512+1], *hex_hash_buf;
+	chunk_t hash, hex_hash, hex_meas;
 	int hash_id, fid;
-	status_t status = SUCCESS;
+	bool success = TRUE;
 
 	if (is_dir)
 	{
@@ -139,7 +193,7 @@ METHOD(pts_database_t, add_file_measurement, status_t,
 				 DB_TEXT, filename, DB_INT, id, DB_INT);
 		if (!e)
 		{
-			return FAILED;
+			return FALSE;
 		}
 		if (!e->enumerate(e, &fid))
 		{
@@ -149,7 +203,7 @@ METHOD(pts_database_t, add_file_measurement, status_t,
 					 DB_TEXT, filename, DB_INT, id) != 1)
 			{
 				DBG1(DBG_PTS, "could not insert filename into database");
-				status = FAILED;
+				success = FALSE;
 			}
 		}
 		e->destroy(e);
@@ -163,58 +217,63 @@ METHOD(pts_database_t, add_file_measurement, status_t,
 				 "SELECT name FROM files WHERE id = ?", DB_INT, fid, DB_TEXT);
 		if (!e)
 		{
-			return FAILED;
+			return FALSE;
 		}
 		if (!e->enumerate(e, &name) || !streq(name, filename))
 		{
 			DBG1(DBG_PTS, "filename of reference measurement does not match");
-			status = FAILED;
+			success = FALSE;
 		}
 		e->destroy(e);
 	}
 
-	if (status != SUCCESS)
+	if (!success)
 	{
-		return status;
+		return FALSE;
 	}
 
 	/* does hash measurement value already exist? */
 	e = this->db->query(this->db,
-			"SELECT fh.id, fh.hash FROM file_hashes AS fh "
-			"JOIN versions AS v ON v.id = fh.version "
-			"WHERE v.product = ? AND fh.algo = ? AND fh.file = ?",
-			 DB_INT, pid, DB_INT, algo, DB_INT, fid, DB_INT, DB_BLOB);
+			"SELECT id, hash FROM file_hashes "
+			"WHERE algo = ? AND file = ? AND version = ?",
+			 DB_INT, algo, DB_INT, fid, DB_INT, vid, DB_INT, DB_TEXT);
 	if (!e)
 	{
-		return FAILED;
+		return FALSE;
 	}
-	if (e->enumerate(e, &hash_id, &hash_value))
+	if (e->enumerate(e, &hash_id, &hex_hash_buf))
 	{
-		if (!chunk_equals_const(measurement, hash_value))
+		hex_hash = chunk_from_str(hex_hash_buf);
+		hash = chunk_from_hex(hex_hash, hash_buf);
+
+		if (!chunk_equals(measurement, hash))
 		{
 			/* update hash measurement value */
 			if (this->db->execute(this->db, &hash_id,
 					"UPDATE file_hashes SET hash = ? WHERE id = ?",
 					 DB_BLOB, measurement, DB_INT, hash_id) != 1)
 			{
-				status = FAILED;
+				success = FALSE;
 			}
 		}
 	}
 	else
 	{
+		hex_meas = chunk_to_hex(measurement, hex_meas_buf, FALSE);
+		hex_meas_buf[hex_meas.len] = '\0';
+
 		/* insert hash measurement value */
 		if (this->db->execute(this->db, &hash_id,
-				"INSERT INTO file_hashes (file, product, algo, hash) "
-				"VALUES (?, ?, ?, ?)", DB_INT, fid, DB_INT, pid,
-				 DB_INT, algo, DB_BLOB, measurement) != 1)
+				"INSERT INTO file_hashes (file, version, algo, hash) "
+				"VALUES (?, ?, ?, ?)", DB_INT, fid, DB_INT, vid,
+				 DB_INT, algo, DB_TEXT, hex_meas_buf) != 1)
 		{
-			status = FAILED;
+			success = FALSE;
 		}
 	}
 	e->destroy(e);
 
-	return status;
+	return success;
 }
 
 METHOD(pts_database_t, create_file_meas_enumerator, enumerator_t*,
@@ -296,7 +355,7 @@ METHOD(pts_database_t, check_comp_measurement, status_t,
 
 	while (e->enumerate(e, &hash))
 	{
-		if (chunk_equals_const(hash, measurement))
+		if (chunk_equals(hash, measurement))
 		{
 			status = SUCCESS;
 			break;
@@ -424,6 +483,7 @@ pts_database_t *pts_database_create(imv_database_t *imv_db)
 		.public = {
 			.get_pathname = _get_pathname,
 			.create_file_hash_enumerator = _create_file_hash_enumerator,
+			.get_product_version = _get_product_version,
 			.add_file_measurement = _add_file_measurement,
 			.create_file_meas_enumerator = _create_file_meas_enumerator,
 			.check_comp_measurement = _check_comp_measurement,

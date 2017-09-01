@@ -318,15 +318,24 @@ bool imv_attestation_process(pa_tnc_attr_t *attr, imv_msg_t *out_msg,
 						enumerator_t *e;
 						char *filename;
 						chunk_t measurement;
+						int vid;
+
+						if (!pts_db->get_product_version(pts_db,
+											pts->get_platform_id(pts), &vid))
+						{
+							eval = TNC_IMV_EVALUATION_RESULT_ERROR;
+							break;
+						}
 
 						e = measurements->create_enumerator(measurements);
 						while (e->enumerate(e, &filename, &measurement))
 						{
-							if (pts_db->add_file_measurement(pts_db,
-									pts->get_platform_id(pts), algo, measurement,
-									filename, is_dir, arg_int) != SUCCESS)
+							if (!pts_db->add_file_measurement(pts_db, vid, algo,
+										measurement, filename, is_dir, arg_int))
 							{
 								eval = TNC_IMV_EVALUATION_RESULT_ERROR;
+								e->destroy(e);
+								break;
 							}
 						}
 						e->destroy(e);

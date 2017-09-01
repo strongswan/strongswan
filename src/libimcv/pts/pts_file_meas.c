@@ -140,7 +140,7 @@ METHOD(pts_file_meas_t, check, bool,
 		{
 			while (e->enumerate(e, &hash))
 			{
-				if (chunk_equals_const(entry->measurement, hash))
+				if (chunk_equals(entry->measurement, hash))
 				{
 					status = SUCCESS;
 					break;
@@ -193,12 +193,13 @@ METHOD(pts_file_meas_t, verify, bool,
 {
 	int fid, fid_last = 0;
 	char *filename;
-	chunk_t measurement;
+	uint8_t measurement_buf[HASH_SIZE_SHA512], *hex_meas_buf;
+	chunk_t measurement, hex_meas;
 	entry_t *entry;
 	enumerator_t *enumerator = NULL;
 	bool found = FALSE, match = FALSE, success = TRUE;
 
-	while (e_hash->enumerate(e_hash, &fid, &filename, &measurement))
+	while (e_hash->enumerate(e_hash, &fid, &filename, &hex_meas_buf))
 	{
 		if (fid != fid_last)
 		{
@@ -241,7 +242,10 @@ METHOD(pts_file_meas_t, verify, bool,
 
 		if (found && !match)
 		{
-			if (chunk_equals_const(measurement, entry->measurement))
+			hex_meas = chunk_from_str(hex_meas_buf);
+			measurement = chunk_from_hex(hex_meas, measurement_buf);
+
+			if (chunk_equals(measurement, entry->measurement))
 			{
 				match = TRUE;
 				DBG2(DBG_PTS, "  %#B for '%s' is ok",

@@ -60,18 +60,27 @@ struct pts_database_t {
 	/**
 	* Add PTS file measurement reference value
 	*
-	* @param pid			Primary key of software product in database
+	* @param pid			Primary key of platform product
+	* @param vid			Primary key of generic product version
+	* @return				TRUE if successful
+	*/
+	bool (*get_product_version)(pts_database_t *this, int pid, int *vid);
+
+	/**
+	* Add PTS file measurement reference value
+	*
+	* @param vid			Primary key of generic product version
 	* @param algo			File measurement hash algorithm used
 	* @param measurement	File measurement hash
 	* @param filename		Optional name of the file to be checked
 	* @param is_dir			TRUE if part of directory measurement
 	* @param id				Primary key into direcories/files table
-	* @return				Status
+	* @return				TRUE if successful
 	*/
-	status_t (*add_file_measurement)(pts_database_t *this, int pid,
-									 pts_meas_algorithms_t algo,
-									 chunk_t measurement, char *filename,
-									 bool is_dir, int id);
+	bool (*add_file_measurement)(pts_database_t *this, int vid,
+								 pts_meas_algorithms_t algo,
+								 chunk_t measurement, char *filename,
+								 bool is_dir, int id);
 
 	/**
 	* Get PTS measurement[s] for a given filename stored in database
