@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
+ * Copyright (C) 2016 Noel Kuntze
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -14,6 +15,9 @@
  */
 
 /* Windows 7, for some iphlpapi.h functionality */
+#ifdef NOCRYPT
+#undef NOCRYPT
+#endif
 #define _WIN32_WINNT 0x0601
 #include <winsock2.h>
 #include <ws2ipdef.h>
@@ -74,7 +78,38 @@ struct private_kernel_iph_net_t {
 	 * Roam event due to address change?
 	 */
 	bool roam_address;
+
+        /**
+         * Whether to install virtual IPs
+         */
+        bool install_virtual_ip;
+
+        /**
+         * Where to install virtual IPs
+         */
+
+        char *install_virtual_ip_on;
 };
+
+/**
+ * Interface address entry
+ */
+typedef struct {
+	/** address */
+	host_t *ip;
+	/** is virtual installed by us? */
+	bool virtual;
+} addr_t;
+
+/**
+ * Clean up an addr_t
+ */
+CALLBACK(addr_destroy, void,
+	addr_t *this)
+{
+	this->ip->destroy(this->ip);
+	free(this);
+}
 
 /**
  * Interface entry
@@ -90,7 +125,7 @@ typedef struct  {
 	DWORD iftype;
 	/** interface status */
 	IF_OPER_STATUS status;
-	/** list of known addresses, as host_t */
+	/** list of known addresses, as addr_t */
 	linked_list_t *addrs;
 } iface_t;
 
@@ -99,10 +134,17 @@ typedef struct  {
  */
 static void iface_destroy(iface_t *this)
 {
-	this->addrs->destroy_offset(this->addrs, offsetof(host_t, destroy));
+	this->addrs->destroy_function(this->addrs, addr_destroy);
 	free(this->ifname);
 	free(this->ifdesc);
 	free(this);
+}
+/**
+ * find an interface entry by name
+ */
+static bool iface_by_name(iface_t *this, char *ifname)
+{
+	return streq(this->ifname, ifname);
 }
 
 /**
@@ -155,6 +197,70 @@ static void fire_roam_event(private_kernel_iph_net_t *this, bool address)
 }
 
 /**
+ * Add an address entry to a named interface, return ifindex
+ */
+static DWORD add_addr(private_kernel_iph_net_t *this, char *name, host_t *ip,
+					  bool virtual)
+{
+	enumerator_t *enumerator;
+	addr_t *addr;
+	iface_t *iface;
+	DWORD ifindex = 0;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, &iface))
+	{
+		if (streq(name, iface->ifname))
+		{
+			INIT(addr,
+				.ip = ip->clone(ip),
+				.virtual = virtual,
+			);
+			iface->addrs->insert_last(iface->addrs, addr);
+			ifindex = iface->ifindex;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	return ifindex;
+}
+
+/**
+ * Remove address entry from named interface, return ifindex
+ */
+static DWORD remove_addr(private_kernel_iph_net_t *this, host_t *ip)
+{
+	enumerator_t *ifaces, *addrs;
+	iface_t *iface;
+	addr_t *addr;
+	DWORD ifindex = 0;
+
+	this->mutex->lock(this->mutex);
+	ifaces = this->ifaces->create_enumerator(this->ifaces);
+	while (!ifindex && ifaces->enumerate(ifaces, &iface))
+	{
+		addrs = iface->addrs->create_enumerator(iface->addrs);
+		while (!ifindex && addrs->enumerate(addrs, &addr))
+		{
+			if (ip->ip_equals(ip, addr->ip))
+			{
+				iface->addrs->remove_at(iface->addrs, addrs);
+				addr_destroy(addr);
+				ifindex = iface->ifindex;
+			}
+		}
+		addrs->destroy(addrs);
+	}
+	ifaces->destroy(ifaces);
+	this->mutex->unlock(this->mutex);
+
+	return ifindex;
+}
+
+/**
  * Update addresses for an iface entry
  */
 static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
@@ -163,7 +269,8 @@ static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
 	IP_ADAPTER_UNICAST_ADDRESS *current;
 	enumerator_t *enumerator;
 	linked_list_t *list;
-	host_t *host, *old;
+	host_t *host;
+	addr_t *aentry;
 	bool changes = FALSE;
 
 	list = entry->addrs;
@@ -185,21 +292,27 @@ static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
 		host = host_create_from_sockaddr(current->Address.lpSockaddr);
 		if (host)
 		{
-			bool found = FALSE;
+			addr_t *found = FALSE;
 
 			enumerator = list->create_enumerator(list);
-			while (enumerator->enumerate(enumerator, &old))
+			while (enumerator->enumerate(enumerator, &aentry))
 			{
-				if (host->ip_equals(host, old))
+				if (host->ip_equals(host, aentry->ip))
 				{
 					list->remove_at(list, enumerator);
-					old->destroy(old);
-					found = TRUE;
+					found = aentry;
+					break;
 				}
 			}
 			enumerator->destroy(enumerator);
 
-			entry->addrs->insert_last(entry->addrs, host);
+			if (!found)
+			{
+				INIT(found,
+					.ip = host->clone(host),
+				);
+			}
+			entry->addrs->insert_last(entry->addrs, found);
 
 			if (!found && log)
 			{
@@ -207,18 +320,19 @@ static void update_addrs(private_kernel_iph_net_t *this, iface_t *entry,
 					 host, entry->ifindex, entry->ifdesc);
 				changes = TRUE;
 			}
+			host->destroy(host);
 		}
 	}
 
-	while (list->remove_first(list, (void**)&old) == SUCCESS)
+	while (list->remove_first(list, (void**)&aentry) == SUCCESS)
 	{
 		if (log)
 		{
 			DBG1(DBG_KNL, "%H disappeared from interface %u '%s'",
-				 old, entry->ifindex, entry->ifdesc);
+				 aentry->ip, entry->ifindex, entry->ifdesc);
 			changes = TRUE;
 		}
-		old->destroy(old);
+		addr_destroy(aentry);
 	}
 	list->destroy(list);
 
@@ -413,15 +527,15 @@ static iface_t* address2entry(private_kernel_iph_net_t *this, host_t *ip)
 {
 	enumerator_t *ifaces, *addrs;
 	iface_t *entry, *found = NULL;
-	host_t *host;
+	addr_t *addr;
 
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (!found && ifaces->enumerate(ifaces, &entry))
 	{
 		addrs = entry->addrs->create_enumerator(entry->addrs);
-		while (!found && addrs->enumerate(addrs, &host))
+		while (!found && addrs->enumerate(addrs, &addr))
 		{
-			if (host->ip_equals(host, ip))
+			if (ip->ip_equals(ip, addr->ip))
 			{
 				found = entry;
 			}
@@ -431,6 +545,31 @@ static iface_t* address2entry(private_kernel_iph_net_t *this, host_t *ip)
 	ifaces->destroy(ifaces);
 
 	return found;
+}
+
+/**
+ * Find an interface index by interface name
+ */
+static DWORD ifname2index(private_kernel_iph_net_t *this, char *name)
+{
+	enumerator_t *enumerator;
+	iface_t *entry;
+	DWORD ifindex = 0;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (streq(name, entry->ifname))
+		{
+			ifindex = entry->ifindex;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	return ifindex;
 }
 
 METHOD(kernel_net_t, get_interface_name, bool,
@@ -469,6 +608,7 @@ METHOD(enumerator_t, addr_enumerate, bool,
 	addr_enumerator_t *this, va_list args)
 {
 	iface_t *entry;
+	addr_t *addr;
 	host_t **host;
 
 	VA_ARGS_VGET(args, host);
@@ -493,8 +633,13 @@ METHOD(enumerator_t, addr_enumerate, bool,
 			}
 			this->addrs = entry->addrs->create_enumerator(entry->addrs);
 		}
-		if (this->addrs->enumerate(this->addrs, host))
+		if (this->addrs->enumerate(this->addrs, &addr))
 		{
+			if (addr->virtual && (this->which & ADDR_TYPE_REGULAR))
+			{
+				continue;
+			}
+			*host = addr->ip;
 			return TRUE;
 		}
 		this->addrs->destroy(this->addrs);
@@ -502,7 +647,7 @@ METHOD(enumerator_t, addr_enumerate, bool,
 	}
 }
 
-METHOD(enumerator_t, addr_destroy, void,
+METHOD(enumerator_t, addr_enumerator_destroy, void,
 	addr_enumerator_t *this)
 {
 	DESTROY_IF(this->addrs);
@@ -516,19 +661,13 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t*,
 {
 	addr_enumerator_t *enumerator;
 
-	if (!(which & ADDR_TYPE_REGULAR))
-	{
-		/* we currently have no virtual, but regular IPs only */
-		return enumerator_create_empty();
-	}
-
 	this->mutex->lock(this->mutex);
 
 	INIT(enumerator,
 		.public = {
 			.enumerate = enumerator_enumerate_default,
 			.venumerate = _addr_enumerate,
-			.destroy = _addr_destroy,
+			.destroy = _addr_enumerator_destroy,
 		},
 		.which = which,
 		.ifaces = this->ifaces->create_enumerator(this->ifaces),
@@ -608,18 +747,107 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	return NULL;
 }
 
-METHOD(kernel_net_t, add_ip, status_t,
-	private_kernel_iph_net_t *this, host_t *virtual_ip, int prefix,
-	char *iface_name)
+
+/**
+ * Create a MIB unicast row from a host
+ */
+static void host2unicast(host_t *host, int prefix, MIB_UNICASTIPADDRESS_ROW *row)
 {
-	return NOT_SUPPORTED;
+	InitializeUnicastIpAddressEntry(row);
+
+	row->Address.si_family = host->get_family(host);
+	memcpy(&row->Address, host->get_sockaddr(host),
+		   *host->get_sockaddr_len(host));
+
+	row->PrefixOrigin = IpPrefixOriginOther;
+	row->SuffixOrigin = IpSuffixOriginOther;
+	/* don't change the default route to this address */
+	row->SkipAsSource = FALSE;
+	if (prefix == -1)
+	{
+		if (row->Address.si_family == AF_INET)
+		{
+			row->OnLinkPrefixLength = 32;
+		}
+		else
+		{
+			row->OnLinkPrefixLength = 128;
+		}
+	}
+	else
+	{
+		row->OnLinkPrefixLength = prefix;
+	}
+}
+
+METHOD(kernel_net_t, add_ip, status_t,
+	private_kernel_iph_net_t *this, host_t *vip, int prefix, char *name)
+{
+	if (!this->install_virtual_ip)
+	{	/* disabled by config */
+		return SUCCESS;
+	}
+	MIB_UNICASTIPADDRESS_ROW row;
+	u_long status;
+        iface_t *iface = NULL;
+
+	/* name of the MS Loopback adapter */
+        if (!this->install_virtual_ip_on || this->ifaces->find_first(this->ifaces, (void*)iface_by_name,
+						(void**)&iface, this->install_virtual_ip_on) != SUCCESS)
+        {
+            name = "{DB2C49B1-7C90-4253-9E61-8C6A881194ED}";
+        }
+        else
+        {
+            name = this->install_virtual_ip_on;
+        }
+	host2unicast(vip, prefix, &row);
+
+	row.InterfaceIndex = add_addr(this, name, vip, TRUE);
+	if (!row.InterfaceIndex)
+	{
+		DBG1(DBG_KNL, "interface '%s' not found", name);
+		return NOT_FOUND;
+	}
+
+	status = CreateUnicastIpAddressEntry(&row);
+	if (status != NO_ERROR)
+	{
+		DBG1(DBG_KNL, "creating IPH address entry failed: %lu", status);
+		remove_addr(this, vip);
+		return FAILED;
+	}
+	return SUCCESS;
 }
 
 METHOD(kernel_net_t, del_ip, status_t,
-	private_kernel_iph_net_t *this, host_t *virtual_ip, int prefix,
-	bool wait)
+	private_kernel_iph_net_t *this, host_t *vip, int prefix, bool wait)
 {
-	return NOT_SUPPORTED;
+        if (!this->install_virtual_ip)
+	{	/* disabled by config */
+		return SUCCESS;
+	}
+
+	MIB_UNICASTIPADDRESS_ROW row;
+	u_long status;
+
+	host2unicast(vip, prefix, &row);
+
+	row.InterfaceIndex = remove_addr(this, vip);
+	if (!row.InterfaceIndex)
+	{
+		DBG1(DBG_KNL, "virtual IP %H not found", vip);
+		return NOT_FOUND;
+	}
+
+	status = DeleteUnicastIpAddressEntry(&row);
+	if (status != NO_ERROR)
+	{
+		DBG1(DBG_KNL, "deleting IPH address entry failed: %lu", status);
+		return FAILED;
+	}
+
+	return SUCCESS;
 }
 
 /**
@@ -638,23 +866,30 @@ static status_t manage_route(private_kernel_iph_net_t *this, bool add,
 		.Metric = 10,
 		.Protocol = MIB_IPPROTO_NETMGMT,
 	};
-	enumerator_t *enumerator;
-	iface_t *entry;
 	ULONG ret;
 
-	this->mutex->lock(this->mutex);
-	enumerator = this->ifaces->create_enumerator(this->ifaces);
-	while (enumerator->enumerate(enumerator, &entry))
+	/* if route is 0.0.0.0/0, we can't install it, as it would
+	 * overwrite the default route. Instead, we add two routes:
+	 * 0.0.0.0/1 and 128.0.0.0/1 */
+	if (prefixlen == 0)
 	{
-		if (streq(name, entry->ifname))
-		{
-			row.InterfaceIndex = entry->ifindex;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	this->mutex->unlock(this->mutex);
+		chunk_t half;
+		status_t status;
 
+		half = chunk_alloca(dst.len);
+		memset(half.ptr, 0, half.len);
+		prefixlen = 1;
+
+		status = manage_route(this, add, half, prefixlen, gtw, name);
+		if (status == SUCCESS)
+		{
+			half.ptr[0] |= 0x80;
+			status = manage_route(this, add, half, prefixlen, gtw, name);
+		}
+		return status;
+	}
+
+	row.InterfaceIndex = ifname2index(this, name);
 	if (!row.InterfaceIndex)
 	{
 		return NOT_FOUND;
@@ -767,6 +1002,10 @@ kernel_iph_net_t *kernel_iph_net_create()
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.ifaces = linked_list_create(),
+		.install_virtual_ip = lib->settings->get_bool(lib->settings,
+						"%s.install_virtual_ip", TRUE, lib->ns),
+		.install_virtual_ip_on = lib->settings->get_str(lib->settings,
+						"%s.install_virtual_ip_on", NULL, lib->ns),
 	);
 	/* PIPINTERFACE_CHANGE_CALLBACK is not using WINAPI in MinGW, which seems
 	 * to be wrong. Force a cast to our WINAPI call */

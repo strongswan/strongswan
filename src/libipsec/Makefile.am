@@ -17,7 +17,7 @@ libipsec_la_LIBADD = \
 	$(top_builddir)/src/libstrongswan/libstrongswan.la
 
 if USE_WINDOWS
-  libipsec_la_LIBADD += -lws2_32
+	libipsec_la_LIBADD += -lws2_32 -lpsapi
 endif
 
 AM_CPPFLAGS = \

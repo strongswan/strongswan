@@ -12,6 +12,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2016 Noel Kuntze
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "kernel_libipsec_ipsec.h"
 #include "kernel_libipsec_router.h"
 
@@ -381,6 +403,9 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 	host_t *src, host_t *dst, traffic_selector_t *src_ts,
 	traffic_selector_t *dst_ts, policy_entry_t *policy)
 {
+#ifdef WIN32
+        uint16_t family;
+#endif
 	route_entry_t *route, *old;
 	host_t *src_ip;
 	bool is_virtual;
@@ -431,7 +456,31 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		.dst_net = chunk_clone(policy->dst.net->get_address(policy->dst.net)),
 		.prefixlen = policy->dst.mask,
 	);
-#ifndef __linux__
+#ifdef __linux__
+#elif defined(WIN32)
+        /* Set out special gateway */
+        family = route->src_ip->get_family(route->src_ip);
+        switch(family)
+        {
+            case AF_INET:
+            {
+                /* For IPv4, the nxt hop is 169.254.128.128 (Configured next hop) */
+                host_t *gw = host_create_from_string("169.254.128.128", 0);
+                route->gateway = gw;
+                break;
+            }
+            case AF_INET6:
+            {
+                /* For IPv6, the next hop is fe80::8 (TAP-Windows6 magic router gw) */
+                host_t *gw = host_create_from_string("fe80::8", 0);
+                route->gateway = gw;
+                break;
+            }
+            default:
+                DBG2(DBG_ESP, "Unknown Protocol family %d encountered. Not setting a next hop.", family);
+                break;
+        }
+#else
 	/* on Linux we cant't install a gateway */
 	route->gateway = charon->kernel->get_nexthop(charon->kernel, dst, -1, src,
 												 NULL);
@@ -475,10 +524,13 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		/* add exclude route for peer */
 		add_exclude_route(this, route, src, dst);
 	}
-
+#ifdef WIN32
+        DBG1(DBG_KNL, "installing route %R src %H gateway %H dev %s",
+                dst_ts, route->src_ip, route->gateway, route->if_name);
+#else
 	DBG2(DBG_KNL, "installing route: %R src %H dev %s",
 		 dst_ts, route->src_ip, route->if_name);
-
+#endif
 	switch (charon->kernel->add_route(charon->kernel, route->dst_net,
 									  route->prefixlen, route->gateway,
 									  route->src_ip, route->if_name))
