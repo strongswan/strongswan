@@ -103,6 +103,33 @@ METHOD(tkm_id_manager_t, acquire_id, int,
 	return id;
 }
 
+METHOD(tkm_id_manager_t, acquire_ref, bool,
+	private_tkm_id_manager_t * const this, const tkm_context_kind_t kind,
+	const int ref_id)
+{
+	const int idx = ref_id - 1;
+
+	if (!is_valid_kind(kind))
+	{
+		DBG1(DBG_LIB, "tried to acquire reference for invalid context kind '%d'",
+			 kind);
+		return FALSE;
+	}
+
+	if (ref_id < 1 || (uint64_t)ref_id > this->limits[kind])
+	{
+		DBG1(DBG_LIB, "tried to acquire reference for context id %d out of "
+			 "bounds (max %llu)", ref_id, this->limits[kind]);
+		return FALSE;
+	}
+
+	this->locks[kind]->write_lock(this->locks[kind]);
+	this->ctxids[kind][idx]++;
+	this->locks[kind]->unlock(this->locks[kind]);
+
+	return TRUE;
+}
+
 METHOD(tkm_id_manager_t, release_id, bool,
 	private_tkm_id_manager_t * const this, const tkm_context_kind_t kind,
 	const int id)
@@ -150,6 +177,7 @@ tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits)
 	INIT(this,
 		.public = {
 			.acquire_id = _acquire_id,
+			.acquire_ref = _acquire_ref,
 			.release_id = _release_id,
 			.destroy = _destroy,
 		},

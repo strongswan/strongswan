@@ -74,6 +74,18 @@ struct tkm_id_manager_t {
 					  const tkm_context_kind_t kind);
 
 	/**
+	 * Acquire reference to given context id for a specific context kind.
+	 *
+	 * @param kind			kind of context id
+	 * @param ref_id		id to acquire a reference for
+	 * @return				TRUE if reference could be acquired,
+	 *						FALSE otherwise
+	 */
+	bool (*acquire_ref)(tkm_id_manager_t * const this,
+						const tkm_context_kind_t kind,
+						const int ref_id);
+
+	/**
 	 * Release a previously acquired context id.
 	 *
 	 * @param kind			kind of context id to release
