@@ -279,7 +279,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		}
 		isa_info = *((isa_info_t *)(rekey_skd.ptr));
 		DBG1(DBG_IKE, "deriving IKE keys (parent_isa: %llu, ae: %llu, nc: %llu,"
-			 "dh: %llu, spi_loc: %llx, spi_rem: %llx)", isa_info.parent_isa_id,
+			 " dh: %llu, spi_loc: %llx, spi_rem: %llx)", isa_info.parent_isa_id,
 			 isa_info.ae_id, nc_id, dh_id, spi_loc, spi_rem);
 		this->ae_ctx_id = isa_info.ae_id;
 		res = ike_isa_create_child(this->isa_ctx_id, isa_info.parent_isa_id, 1,
