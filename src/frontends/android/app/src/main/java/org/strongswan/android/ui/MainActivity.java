@@ -36,6 +36,7 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.AppCompatDialogFragment;
+import android.text.format.Formatter;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -54,12 +55,17 @@ import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.ui.VpnProfileListFragment.OnVpnProfileSelectedListener;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity implements OnVpnProfileSelectedListener
 {
 	public static final String CONTACT_EMAIL = "android@strongswan.org";
 	public static final String START_PROFILE = "org.strongswan.android.action.START_PROFILE";
 	public static final String DISCONNECT = "org.strongswan.android.action.DISCONNECT";
 	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
+	public static final String EXTRA_CRL_LIST = "org.strongswan.android.CRL_LIST";
 	/**
 	 * Use "bring your own device" (BYOD) features
 	 */
@@ -189,6 +195,9 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 			case R.id.menu_manage_certs:
 				Intent certIntent = new Intent(this, TrustedCertificatesActivity.class);
 				startActivity(certIntent);
+				return true;
+			case R.id.menu_crl_cache:
+				clearCRLs();
 				return true;
 			case R.id.menu_show_log:
 				Intent logIntent = new Intent(this, LogActivity.class);
@@ -365,6 +374,36 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 			dialog.setArguments(args);
 			dialog.show(this.getSupportFragmentManager(), DIALOG_TAG);
 		}
+	}
+
+	/**
+	 * Ask the user whether to clear the CRL cache.
+	 */
+	private void clearCRLs()
+	{
+		final String FILE_PREFIX = "crl-";
+		ArrayList<String> list = new ArrayList<>();
+
+		for (String file : fileList())
+		{
+			if (file.startsWith(FILE_PREFIX))
+			{
+				list.add(file);
+			}
+		}
+		if (list.size() == 0)
+		{
+			Toast.makeText(this, R.string.clear_crl_cache_msg_none, Toast.LENGTH_SHORT).show();
+			return;
+		}
+		removeFragmentByTag(DIALOG_TAG);
+
+		Bundle args = new Bundle();
+		args.putStringArrayList(EXTRA_CRL_LIST, list);
+
+		CRLCacheDialog dialog = new CRLCacheDialog();
+		dialog.setArguments(args);
+		dialog.show(this.getSupportFragmentManager(), DIALOG_TAG);
 	}
 
 	/**
@@ -549,6 +588,51 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 						dialog.dismiss();
 					}
 				}).create();
+		}
+	}
+
+	/**
+	 * Confirmation dialog to clear CRL cache
+	 */
+	public static class CRLCacheDialog extends AppCompatDialogFragment
+	{
+		@Override
+		public Dialog onCreateDialog(Bundle savedInstanceState)
+		{
+			final List<String> list = getArguments().getStringArrayList(EXTRA_CRL_LIST);
+			String size;
+			long s = 0;
+
+			for (String file : list)
+			{
+				File crl = getActivity().getFileStreamPath(file);
+				s += crl.length();
+			}
+			size = Formatter.formatFileSize(getActivity(), s);
+
+			AlertDialog.Builder builder = new AlertDialog.Builder(getActivity())
+					.setTitle(R.string.clear_crl_cache_title)
+					.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener()
+					{
+						@Override
+						public void onClick(DialogInterface dialog, int which)
+						{
+							dismiss();
+						}
+					})
+					.setPositiveButton(R.string.clear, new DialogInterface.OnClickListener()
+					{
+						@Override
+						public void onClick(DialogInterface dialog, int whichButton)
+						{
+							for (String file : list)
+							{
+								getActivity().deleteFile(file);
+							}
+						}
+					});
+			builder.setMessage(getActivity().getResources().getQuantityString(R.plurals.clear_crl_cache_msg, list.size(), list.size(), size));
+			return builder.create();
 		}
 	}
 }

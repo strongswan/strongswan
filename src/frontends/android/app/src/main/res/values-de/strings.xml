@@ -129,6 +129,14 @@
     <string name="import_certificate">Zertifikat importieren</string>
     <string name="cert_imported_successfully">Zertifikat erfolgreich importiert</string>
     <string name="cert_import_failed">Zertifikat-Import fehlgeschlagen</string>
+    <string name="crl_cache">CRL-Cache</string>
+    <string name="clear_crl_cache_title">CRL-Cache leeren?</string>
+    <string name="clear_crl_cache_msg_none">Der CRL-Cache ist leer</string>
+    <plurals name="clear_crl_cache_msg">
+        <item quantity="one">Der CRL-Cache enthält %1$d Datei (%2$s).</item>
+        <item quantity="other">Der CRL-Cache enthält %1$d Dateien (%2$s).</item>
+    </plurals>
+    <string name="clear">Leeren</string>
 
     <!-- VPN state fragment -->
     <string name="state_label">Status:</string>

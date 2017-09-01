@@ -126,6 +126,14 @@
     <string name="import_certificate">导入证书</string>
     <string name="cert_imported_successfully">证书已成功被导入</string>
     <string name="cert_import_failed">证书导入失败</string>
+    <string name="crl_cache">CRL cache</string>
+    <string name="clear_crl_cache_title">Clear CRL cache?</string>
+    <string name="clear_crl_cache_msg_none">The CRL cache is empty</string>
+    <plurals name="clear_crl_cache_msg">
+        <item quantity="one">The CRL cache contains %1$d file (%2$s).</item>
+        <item quantity="other">The CRL cache contains %1$d files (%2$s).</item>
+    </plurals>
+    <string name="clear">Clear</string>
 
     <!-- VPN state fragment -->
     <string name="state_label">状态：</string>
