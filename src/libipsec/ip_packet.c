@@ -55,6 +55,10 @@ struct ip6_hdr {
 #define HAVE_NETINET_IP6_H /* not really, but we only need the struct above */
 #endif
 
+#ifndef IP_OFFMASK
+#define IP_OFFMASK 0x1fff
+#endif
+
 /**
  * TCP header, defined here because platforms disagree regarding member names
  * and unfortunately Android does not define a variant with BSD names.
@@ -253,7 +257,8 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			/* remove any RFC 4303 TFC extra padding */
 			packet.len = min(packet.len, untoh16(&ip->ip_len));
 			payload = chunk_skip(packet, ip->ip_hl * 4);
-			if (!parse_transport_header(payload, ip->ip_p, &sport, &dport))
+			if ((ip->ip_off & htons(IP_OFFMASK)) == 0 &&
+				!parse_transport_header(payload, ip->ip_p, &sport, &dport))
 			{
 				goto failed;
 			}
