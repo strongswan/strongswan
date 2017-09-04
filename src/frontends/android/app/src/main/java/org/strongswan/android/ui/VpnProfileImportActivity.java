@@ -65,6 +65,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.OutOfMemoryError;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.security.KeyStore;
@@ -715,7 +716,14 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			}
 			if (in != null)
 			{
-				result.Profile = streamToString(in);
+				try
+				{
+					result.Profile = streamToString(in);
+				}
+				catch (OutOfMemoryError e)
+				{	/* just use a generic exception */
+					result.ThrownException = new RuntimeException();
+				}
 			}
 			return result;
 		}

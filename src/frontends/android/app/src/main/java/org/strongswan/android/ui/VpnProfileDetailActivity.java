@@ -22,6 +22,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
@@ -186,6 +187,13 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		final ArrayAdapter<String> completeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line);
 		mName.setAdapter(completeAdapter);
 		mRemoteId.setAdapter(completeAdapter);
+
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
+		{
+			findViewById(R.id.apps).setVisibility(View.GONE);
+			mSelectSelectedAppsHandling.setVisibility(View.GONE);
+			mSelectApps.setVisibility(View.GONE);
+		}
 
 		mGateway.addTextChangedListener(new TextWatcher() {
 			@Override

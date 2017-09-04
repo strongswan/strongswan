@@ -31,6 +31,16 @@ struct android_fetcher_t {
 	 * Callback function
 	 */
 	fetcher_callback_t cb;
+
+	/**
+	 * Data to POST
+	 */
+	chunk_t data;
+
+	/**
+	 * Type of data to POST
+	 */
+	char *request_type;
 };
 
 METHOD(fetcher_t, fetch, status_t,
@@ -38,8 +48,8 @@ METHOD(fetcher_t, fetch, status_t,
 {
 	JNIEnv *env;
 	jmethodID method_id;
-	jobjectArray jdata;
-	jstring juri;
+	jobjectArray jdata = NULL;
+	jstring juri, jct = NULL;
 	chunk_t data;
 	status_t status = FAILED;
 
@@ -51,7 +61,7 @@ METHOD(fetcher_t, fetch, status_t,
 	androidjni_attach_thread(&env);
 	/* can't use FindClass here as this is not called by the main thread */
 	method_id = (*env)->GetStaticMethodID(env, android_simple_fetcher_class,
-										  "fetch", "(Ljava/lang/String;)[B");
+						"fetch", "(Ljava/lang/String;[BLjava/lang/String;)[B");
 	if (!method_id)
 	{
 		goto failed;
@@ -61,8 +71,24 @@ METHOD(fetcher_t, fetch, status_t,
 	{
 		goto failed;
 	}
+	if (this->request_type)
+	{
+		jct = (*env)->NewStringUTF(env, this->request_type);
+		if (!jct)
+		{
+			goto failed;
+		}
+	}
+	if (this->data.ptr)
+	{
+		jdata = byte_array_from_chunk(env, this->data);
+		if (!jdata)
+		{
+			goto failed;
+		}
+	}
 	jdata = (*env)->CallStaticObjectMethod(env, android_simple_fetcher_class,
-										   method_id, juri);
+										   method_id, juri, jdata, jct);
 	if (!jdata || androidjni_exception_occurred(env))
 	{
 		goto failed;
@@ -97,6 +123,16 @@ METHOD(fetcher_t, set_option, bool,
 			this->cb = va_arg(args, fetcher_callback_t);
 			break;
 		}
+		case FETCH_REQUEST_DATA:
+		{
+			this->data = chunk_clone(va_arg(args, chunk_t));
+			break;
+		}
+		case FETCH_REQUEST_TYPE:
+		{
+			this->request_type = strdup(va_arg(args, char*));
+			break;
+		}
 		default:
 			supported = FALSE;
 			break;
@@ -108,6 +144,8 @@ METHOD(fetcher_t, set_option, bool,
 METHOD(fetcher_t, destroy, void,
 	android_fetcher_t *this)
 {
+	chunk_clear(&this->data);
+	free(this->request_type);
 	free(this);
 }
 
