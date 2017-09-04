@@ -349,7 +349,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 									child_sa->get_unique_id(child_sa)), delay);
 				continue;
 			}
-			else if (expire)
+			else if (now < expire)
 			{	/* let it expire naturally */
 				continue;
 			}
