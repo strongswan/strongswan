@@ -199,6 +199,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	return SUCCESS;
 
 failure:
+	ike_esa_reset(esa_id);
 	tkm->sad->remove(tkm->sad, esa_id);
 sad_failure:
 	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
