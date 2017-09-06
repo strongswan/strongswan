@@ -1377,7 +1377,6 @@ METHOD(task_t, build_r, status_t,
 			uint16_t group = htons(this->dh_group);
 			message->add_notify(message, FALSE, INVALID_KE_PAYLOAD,
 								chunk_from_thing(group));
-			handle_child_sa_failure(this, message);
 			return SUCCESS;
 		}
 		case FAILED:
