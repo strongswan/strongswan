@@ -49,6 +49,11 @@ struct private_openssl_ec_private_key_t {
 	EC_KEY *ec;
 
 	/**
+	 * TRUE if the key is from an OpenSSL ENGINE and might not be readable
+	 */
+	bool engine;
+
+	/**
 	 * reference count
 	 */
 	refcount_t ref;
@@ -226,6 +231,11 @@ METHOD(private_key_t, get_encoding, bool,
 {
 	u_char *p;
 
+	if (this->engine)
+	{
+		return FALSE;
+	}
+
 	switch (type)
 	{
 		case PRIVKEY_ASN1_DER:
@@ -307,7 +317,7 @@ static private_openssl_ec_private_key_t *create_empty(void)
 /*
  * See header.
  */
-private_key_t *openssl_ec_private_key_create(EVP_PKEY *key)
+private_key_t *openssl_ec_private_key_create(EVP_PKEY *key, bool engine)
 {
 	private_openssl_ec_private_key_t *this;
 	EC_KEY *ec;
@@ -320,6 +330,7 @@ private_key_t *openssl_ec_private_key_create(EVP_PKEY *key)
 	}
 	this = create_empty();
 	this->ec = ec;
+	this->engine = engine;
 	return &this->public.key;
 }
 
