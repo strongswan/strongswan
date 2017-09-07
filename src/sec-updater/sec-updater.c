@@ -27,6 +27,8 @@
 #include <library.h>
 #include <utils/debug.h>
 
+#define EXIT_NO_UPDATES		80
+
 typedef enum sec_update_state_t sec_update_state_t;
 
 enum sec_update_state_t {
@@ -227,7 +229,7 @@ static bool update_database(database_t *db, char *package, char *version,
 /**
  * Process a package file and store updates in the database
  */
-static void process_packages(char *filename, char *product, bool security)
+static int process_packages(char *filename, char *product, bool security)
 {
 	char *uri, line[BUF_LEN], *pos, *package = NULL, *version = NULL;
 	sec_update_state_t state;
@@ -245,7 +247,6 @@ static void process_packages(char *filename, char *product, bool security)
 	stats.release = time(NULL);
 
 	/* opening package file */
-	DBG1(DBG_IMV, "loading \"%s\"", filename);
 	file = fopen(filename, "r");
 	if (!file)
 	{
@@ -367,9 +368,12 @@ static void process_packages(char *filename, char *product, bool security)
 	DBG1(DBG_IMV, "processed \"%s\": %d packages, %d new versions, "
 				  "%d updated versions", filename, stats.packages,
 				   stats.new_versions, stats.updated_versions);
+
+	return (stats.new_versions + stats.updated_versions) ?
+			EXIT_SUCCESS : EXIT_NO_UPDATES;
 }
 
-static void do_args(int argc, char *argv[])
+static int do_args(int argc, char *argv[])
 {
 	char *filename = NULL, *product = NULL;
 	bool security = FALSE;
@@ -420,7 +424,7 @@ static void do_args(int argc, char *argv[])
 
 	if (filename && product)
 	{
-		process_packages(filename, product, security);
+		return process_packages(filename, product, security);
 	}
 	else
 	{
@@ -447,8 +451,6 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
-	do_args(argc, argv);
-
-	exit(EXIT_SUCCESS);
+	exit(do_args(argc, argv));
 }
 
