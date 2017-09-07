@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -85,6 +88,16 @@ struct private_openssl_crl_t {
 	chunk_t serial;
 
 	/**
+	 * Number of base CRL (deltaCrlIndicator), if a delta CRL
+	 */
+	chunk_t base;
+
+	/**
+	 * List of Freshest CRL distribution points
+	 */
+	linked_list_t *crl_uris;
+
+	/**
 	 * AuthorityKeyIdentifier of the issuing CA
 	 */
 	chunk_t authKeyIdentifier;
@@ -140,6 +153,11 @@ typedef struct {
 	int i;
 } crl_enumerator_t;
 
+/**
+ * from openssl_x509
+ */
+bool openssl_parse_crlDistributionPoints(X509_EXTENSION *ext,
+										 linked_list_t *list);
 
 METHOD(enumerator_t, crl_enumerate, bool,
 	crl_enumerator_t *this, va_list args)
@@ -213,6 +231,26 @@ METHOD(crl_t, get_serial, chunk_t,
 	private_openssl_crl_t *this)
 {
 	return this->serial;
+}
+
+METHOD(crl_t, is_delta_crl, bool,
+	private_openssl_crl_t *this, chunk_t *base_crl)
+{
+	if (this->base.len)
+	{
+		if (base_crl)
+		{
+			*base_crl = this->base;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+METHOD(crl_t, create_delta_crl_uri_enumerator, enumerator_t*,
+	private_openssl_crl_t *this)
+{
+	return this->crl_uris->create_enumerator(this->crl_uris);
 }
 
 METHOD(crl_t, get_authKeyIdentifier, chunk_t,
@@ -379,8 +417,11 @@ METHOD(certificate_t, destroy, void,
 		{
 			X509_CRL_free(this->crl);
 		}
+		this->crl_uris->destroy_function(this->crl_uris,
+										 (void*)x509_cdp_destroy);
 		DESTROY_IF(this->issuer);
 		free(this->authKeyIdentifier.ptr);
+		free(this->base.ptr);
 		free(this->serial.ptr);
 		free(this->encoding.ptr);
 		free(this);
@@ -413,11 +454,12 @@ static private_openssl_crl_t *create_empty()
 				},
 				.get_serial = _get_serial,
 				.get_authKeyIdentifier = _get_authKeyIdentifier,
-				.is_delta_crl = (void*)return_false,
-				.create_delta_crl_uri_enumerator = (void*)enumerator_create_empty,
+				.is_delta_crl = _is_delta_crl,
+				.create_delta_crl_uri_enumerator = _create_delta_crl_uri_enumerator,
 				.create_enumerator = _create_enumerator,
 			},
 		},
+		.crl_uris = linked_list_create(),
 		.ref = 1,
 	);
 	return this;
@@ -444,21 +486,19 @@ static bool parse_authKeyIdentifier_ext(private_openssl_crl_t *this,
 }
 
 /**
- * Parse the crlNumber extension
+ * Quick and dirty INTEGER unwrap for crlNumber/deltaCrlIndicator extensions
  */
-static bool parse_crlNumber_ext(private_openssl_crl_t *this,
-								X509_EXTENSION *ext)
+static bool parse_integer_ext(X509_EXTENSION *ext, chunk_t *out)
 {
 	chunk_t chunk;
 
 	chunk = openssl_asn1_str2chunk(X509_EXTENSION_get_data(ext));
-	/* quick and dirty INTEGER unwrap */
 	if (chunk.len > 1 && chunk.ptr[0] == V_ASN1_INTEGER &&
 		chunk.ptr[1] == chunk.len - 2)
 	{
 		chunk = chunk_skip(chunk, 2);
-		free(this->serial.ptr);
-		this->serial = chunk_clone(chunk);
+		free(out->ptr);
+		*out = chunk_clone(chunk);
 		return TRUE;
 	}
 	return FALSE;
@@ -488,7 +528,13 @@ static bool parse_extensions(private_openssl_crl_t *this)
 					ok = parse_authKeyIdentifier_ext(this, ext);
 					break;
 				case NID_crl_number:
-					ok = parse_crlNumber_ext(this, ext);
+					ok = parse_integer_ext(ext, &this->serial);
+					break;
+				case NID_delta_crl:
+					ok = parse_integer_ext(ext, &this->base);
+					break;
+				case NID_freshest_crl:
+					ok = openssl_parse_crlDistributionPoints(ext, this->crl_uris);
 					break;
 				case NID_issuing_distribution_point:
 					/* TODO support of IssuingDistributionPoints */

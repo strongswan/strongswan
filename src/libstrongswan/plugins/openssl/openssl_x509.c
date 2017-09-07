@@ -730,15 +730,15 @@ static bool parse_extKeyUsage_ext(private_openssl_x509_t *this,
 /**
  * Parse CRL distribution points
  */
-static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
-											X509_EXTENSION *ext)
+bool openssl_parse_crlDistributionPoints(X509_EXTENSION *ext,
+										 linked_list_t *list)
 {
 	CRL_DIST_POINTS *cdps;
 	DIST_POINT *cdp;
 	identification_t *id, *issuer;
 	x509_cdp_t *entry;
 	char *uri;
-	int i, j, k, point_num, name_num, issuer_num;
+	int i, j, k, point_num, name_num, issuer_num, len;
 
 	cdps = X509V3_EXT_d2i(ext);
 	if (!cdps)
@@ -761,7 +761,12 @@ static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
 											cdp->distpoint->name.fullname, j));
 					if (id)
 					{
-						if (asprintf(&uri, "%Y", id) > 0)
+						len = asprintf(&uri, "%Y", id);
+						if (!len)
+						{
+							free(uri);
+						}
+						else if (len > 0)
 						{
 							if (cdp->CRLissuer)
 							{
@@ -776,8 +781,7 @@ static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
 											.uri = strdup(uri),
 											.issuer = issuer,
 										);
-										this->crl_uris->insert_last(
-														this->crl_uris, entry);
+										list->insert_last(list, entry);
 									}
 								}
 								free(uri);
@@ -787,7 +791,7 @@ static bool parse_crlDistributionPoints_ext(private_openssl_x509_t *this,
 								INIT(entry,
 									.uri = uri,
 								);
-								this->crl_uris->insert_last(this->crl_uris, entry);
+								list->insert_last(list, entry);
 							}
 						}
 						id->destroy(id);
@@ -811,7 +815,7 @@ static bool parse_authorityInfoAccess_ext(private_openssl_x509_t *this,
 	AUTHORITY_INFO_ACCESS *infos;
 	ACCESS_DESCRIPTION *desc;
 	identification_t *id;
-	int i, num;
+	int i, num, len;
 	char *uri;
 
 	infos = X509V3_EXT_d2i(ext);
@@ -830,7 +834,12 @@ static bool parse_authorityInfoAccess_ext(private_openssl_x509_t *this,
 				id = general_name2id(desc->location);
 				if (id)
 				{
-					if (asprintf(&uri, "%Y", id) > 0)
+					len = asprintf(&uri, "%Y", id);
+					if (!len)
+					{
+						free(uri);
+					}
+					else if (len > 0)
 					{
 						this->ocsp_uris->insert_last(this->ocsp_uris, uri);
 					}
@@ -1016,7 +1025,7 @@ static bool parse_extensions(private_openssl_x509_t *this)
 					ok = parse_extKeyUsage_ext(this, ext);
 					break;
 				case NID_crl_distribution_points:
-					ok = parse_crlDistributionPoints_ext(this, ext);
+					ok = openssl_parse_crlDistributionPoints(ext, this->crl_uris);
 					break;
 #ifndef OPENSSL_NO_RFC3779
 				case NID_sbgp_ipAddrBlock:
