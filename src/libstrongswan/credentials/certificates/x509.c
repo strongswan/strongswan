@@ -25,3 +25,12 @@ ENUM_NEXT(x509_flag_names, X509_ANY, X509_ANY, X509_OCSP_SIGNER,
 	"ANY");
 ENUM_END(x509_flag_names, X509_ANY);
 
+/*
+ * Described in header
+ */
+void x509_cdp_destroy(x509_cdp_t *this)
+{
+	free(this->uri);
+	DESTROY_IF(this->issuer);
+	free(this);
+}

@@ -241,16 +241,6 @@ static bool gn_to_string(identification_t *id, char **uri)
 }
 
 /**
- * Destroy a CertificateDistributionPoint
- */
-static void crl_uri_destroy(x509_cdp_t *this)
-{
-	free(this->uri);
-	DESTROY_IF(this->issuer);
-	free(this);
-}
-
-/**
  * Destroy a CertificatePolicy
  */
 static void cert_policy_destroy(x509_cert_policy_t *this)
@@ -1920,7 +1910,8 @@ METHOD(certificate_t, destroy, void,
 	{
 		this->subjectAltNames->destroy_offset(this->subjectAltNames,
 									offsetof(identification_t, destroy));
-		this->crl_uris->destroy_function(this->crl_uris, (void*)crl_uri_destroy);
+		this->crl_uris->destroy_function(this->crl_uris,
+										 (void*)x509_cdp_destroy);
 		this->ocsp_uris->destroy_function(this->ocsp_uris, free);
 		this->ipAddrBlocks->destroy_offset(this->ipAddrBlocks,
 										offsetof(traffic_selector_t, destroy));

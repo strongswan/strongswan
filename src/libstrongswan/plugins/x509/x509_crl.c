@@ -585,23 +585,14 @@ static void revoked_destroy(revoked_t *revoked)
 	free(revoked);
 }
 
-/**
- * Destroy a CDP entry
- */
-static void cdp_destroy(x509_cdp_t *this)
-{
-	free(this->uri);
-	DESTROY_IF(this->issuer);
-	free(this);
-}
-
 METHOD(certificate_t, destroy, void,
 	private_x509_crl_t *this)
 {
 	if (ref_put(&this->ref))
 	{
 		this->revoked->destroy_function(this->revoked, (void*)revoked_destroy);
-		this->crl_uris->destroy_function(this->crl_uris, (void*)cdp_destroy);
+		this->crl_uris->destroy_function(this->crl_uris,
+										 (void*)x509_cdp_destroy);
 		DESTROY_IF(this->issuer);
 		free(this->authKeyIdentifier.ptr);
 		free(this->encoding.ptr);

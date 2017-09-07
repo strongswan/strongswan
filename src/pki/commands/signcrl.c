@@ -109,15 +109,6 @@ static int read_serial(char *file, char *buf, int buflen)
 }
 
 /**
- * Destroy a CDP
- */
-static void cdp_destroy(x509_cdp_t *this)
-{
-	free(this->uri);
-	free(this);
-}
-
-/**
  * Sign a CRL
  */
 static int sign_crl()
@@ -439,7 +430,7 @@ error:
 	free(encoding.ptr);
 	free(baseCrlNumber.ptr);
 	list->destroy_function(list, (void*)revoked_destroy);
-	cdps->destroy_function(cdps, (void*)cdp_destroy);
+	cdps->destroy_function(cdps, (void*)x509_cdp_destroy);
 	if (error)
 	{
 		fprintf(stderr, "%s\n", error);
@@ -449,7 +440,7 @@ error:
 
 usage:
 	list->destroy_function(list, (void*)revoked_destroy);
-	cdps->destroy_function(cdps, (void*)cdp_destroy);
+	cdps->destroy_function(cdps, (void*)x509_cdp_destroy);
 	return command_usage(error);
 }
 

@@ -210,8 +210,11 @@ struct x509_t {
 	 * @return			enumerator over x509_policy_mapping
 	 */
 	enumerator_t* (*create_policy_mapping_enumerator)(x509_t *this);
-
-
 };
+
+/**
+ * Destroy an x509_cdp_t instance.
+ */
+void x509_cdp_destroy(x509_cdp_t *this);
 
 #endif /** X509_H_ @}*/

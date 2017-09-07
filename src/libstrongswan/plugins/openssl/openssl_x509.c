@@ -189,16 +189,6 @@ struct private_openssl_x509_t {
 };
 
 /**
- * Destroy a CRL URI struct
- */
-static void crl_uri_destroy(x509_cdp_t *this)
-{
-	free(this->uri);
-	DESTROY_IF(this->issuer);
-	free(this);
-}
-
-/**
  * Convert a GeneralName to an identification_t.
  */
 static identification_t *general_name2id(GENERAL_NAME *name)
@@ -549,7 +539,8 @@ METHOD(certificate_t, destroy, void,
 										offsetof(identification_t, destroy));
 		this->issuerAltNames->destroy_offset(this->issuerAltNames,
 										offsetof(identification_t, destroy));
-		this->crl_uris->destroy_function(this->crl_uris, (void*)crl_uri_destroy);
+		this->crl_uris->destroy_function(this->crl_uris,
+										 (void*)x509_cdp_destroy);
 		this->ocsp_uris->destroy_function(this->ocsp_uris, free);
 		this->ipAddrBlocks->destroy_offset(this->ipAddrBlocks,
 										offsetof(traffic_selector_t, destroy));
