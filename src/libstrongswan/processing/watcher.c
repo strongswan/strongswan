@@ -513,6 +513,7 @@ METHOD(watcher_t, remove_, void,
 	private_watcher_t *this, int fd)
 {
 	entry_t *entry, *prev = NULL;
+	bool found = FALSE;
 
 	this->mutex->lock(this->mutex);
 	while (TRUE)
@@ -530,6 +531,7 @@ METHOD(watcher_t, remove_, void,
 					break;
 				}
 				entry = remove_entry(this, entry, prev);
+				found = TRUE;
 				continue;
 			}
 			prev = entry;
@@ -541,8 +543,10 @@ METHOD(watcher_t, remove_, void,
 		}
 		this->condvar->wait(this->condvar, this->mutex);
 	}
-
-	update(this);
+	if (found)
+	{
+		update(this);
+	}
 	this->mutex->unlock(this->mutex);
 }
 
