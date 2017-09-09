@@ -10,7 +10,9 @@ sec-updater \- Extracts security update information of Linux distributions
 .OP \-\-debug level
 .OP \-\-quiet
 .OP \-\-security
-.BI \-\-product " name"
+.BI \-\-os " string"
+.BI \-\-arch " string"
+.BI \-\-uri " uri"
 .BI \-\-file " filename"
 .YS
 .
@@ -44,20 +46,37 @@ Disable debug output to stderr.
 .B "\-s, \-\-security"
 Set when parsing a distributions file with security updates.
 .TP
-.BI "\-p, \-\-product " name
-Name of Linux version as stored in database. eg. "Ubuntu 16.04 x86_64".
+.BI "\-o, \-\-os " string
+Name of operating system (OS). eg. "Ubuntu 16.04".
+.TP
+.BI "\-o, \-\-arch " string
+Name of HW architecture. eg. "x86_64".
+.TP
+.BI "\-o, \-\-uri " uri
+URI where to download deb package from.
 .TP
 .BI "\-f, \-\-file " filename
 Linux package information file to parse.
 .
 .SH "CONFIGURATION"
 .
-The following parameter must be configured in strongswan.conf:
+The following parameters can be configured in strongswan.conf:
 .P
  sec-updater {
-    database = sqlite:///etc/pts/config.db
+   database = sqlite:///etc/pts/config.db
+   swid_gen {
+       command = /usr/local/bin/swid_generator
+       tag_creator {
+          name = strongSwan Project
+          regid = strongswan.org
+       }
+    }
+    tnc_manage_command = /var/www/tnc/manage.py
+    tmp {
+       deb_file = /tmp/sec-updater.deb
+       tag_file = /tmp/sec-updater.tag
+    }
  }
-.P
 .
 .SH "SEE ALSO"
 .

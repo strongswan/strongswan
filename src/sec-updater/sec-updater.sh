@@ -10,7 +10,7 @@ UBUNTU_ARCH="binary-amd64"
 DEBIAN="http://security.debian.org"
 DEBIAN_VERSIONS="jessie wheezy"
 DEBIAN_DIRS="main contrib non-free"
-DEBIAN_ARCH="binary-amd64"
+DEBIAN_ARCH="binary-amd64 binary-armhf"
 RASPIAN="http://archive.raspberrypi.org/debian"
 RASPIAN_VERSIONS="jessie wheezy"
 RASPIAN_DIRS="main"
@@ -74,66 +74,88 @@ done
 for f in xenial-security/binary-amd64/*
 do
   echo "security: $f"
-  $CMD --product "Ubuntu 16.04 x86_64" --file $f --security >> $CMD_LOG 2>&1
+  $CMD --os "Ubuntu 16.04" --arch "x86_64" --file $f --security \
+       --uri $UBUNTU >> $CMD_LOG 2>&1
   if [ $? -eq 0 ]
   then
     DEL_LOG=0
-    echo $DEL_LOG
   fi
 done
 
 for f in xenial-updates/binary-amd64/*
 do
   echo "updates:  $f"
-  $CMD --product "Ubuntu 16.04 x86_64" --file $f >> $CMD_LOG 2>&1
+  $CMD --os "Ubuntu 16.04" --arch "x86_64" --file $f \
+       --uri $UBUNTU >> $CMD_LOG 2>&1
   if [ $? -eq 0 ]
   then
     DEL_LOG=0
-    echo $DEL_LOG
   fi
 done
 
 for f in jessie-updates/binary-amd64/*
 do
   echo "security: $f"
-  $CMD --product "Debian 8.0 x86_64" --file $f --security >> $CMD_LOG 2>&1
+  $CMD --os "Debian 8.0" --arch "x86_64" --file $f --security \
+       --uri $DEBIAN >> $CMD_LOG 2>&1
   if [ $? -eq 0 ]
   then
     DEL_LOG=0
-    echo $DEL_LOG
   fi
 done
 
 for f in wheezy-updates/binary-amd64/*
 do
   echo "security: $f"
-  $CMD --product "Debian 7.0 x86_64" --file $f --security >> $CMD_LOG 2>&1
+  $CMD --os "Debian 7.0" --arch "x86_64" --file $f --security \
+       --uri $DEBIAN >> $CMD_LOG 2>&1
   if [ $? -eq 0 ]
   then
     DEL_LOG=0
-    echo $DEL_LOG
+  fi
+done
+
+for f in jessie-updates/binary-armhf/*
+do
+  echo "security: $f"
+  $CMD --os "Debian 8.0" --arch "armhf" --file $f --security \
+       --uri $DEBIAN >> $CMD_LOG 2>&1
+  if [ $? -eq 0 ]
+  then
+    DEL_LOG=0
+  fi
+done
+
+for f in wheezy-updates/binary-armhf/*
+do
+  echo "security: $f"
+  $CMD --os "Debian 7.0" --arch "armhf" --file $f --security \
+       --uri $DEBIAN >> $CMD_LOG 2>&1
+  if [ $? -eq 0 ]
+  then
+    DEL_LOG=0
   fi
 done
 
 for f in jessie-raspian/binary-armhf/*
 do
   echo "security: $f"
-  $CMD --product "Debian 8.0 armv7l" --file $f --security >> $CMD_LOG 2>&1
+  $CMD --os "Debian 8.0" --arch "armv7l" --file $f --security \
+       --uri $RASPIAN >> $CMD_LOG 2>&1
   if [ $? -eq 0 ]
   then
     DEL_LOG=0
-    echo $DEL_LOG
   fi
 done
 
 for f in wheezy-raspian/binary-armhf/*
 do
   echo "security: $f"
-  $CMD --product "Debian 7.11 armv7l" --file $f --security >> $CMD_LOG 2>&1
+  $CMD --os "Debian 7.11" --arch "armv7l" --file $f --security \
+       --uri $RASPIAN >> $CMD_LOG 2>&1
   if [ $? -eq 0 ]
   then
     DEL_LOG=0
-    echo $DEL_LOG
   fi
 done
 

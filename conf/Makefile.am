@@ -25,6 +25,7 @@ options = \
 	options/starter.opt \
 	options/swanctl.opt \
 	options/tnc.opt \
+	options/sec-updater.opt \
 	options/sw-collector.opt
 
 plugins = \
