@@ -45,7 +45,7 @@ static void usage(FILE *out)
 		"              [--cert <file>]+ [--keyid <hex>|--key <file>]\n"
 		"              [--key-type rsa|ecdsa] [--client <client-id>]\n"
 		"              [--secret <password>] [--mutual] [--quiet]\n"
-		"              [--debug <level>] [--optionsfrom <filename>]\n");
+		"              [--debug <level>] [--options <filename>]\n");
 }
 
 /**
@@ -289,6 +289,7 @@ int main(int argc, char *argv[])
 			{"mutual",		no_argument,			NULL,		'm' },
 			{"quiet",		no_argument,			NULL,		'q' },
 			{"debug",		required_argument,		NULL,		'd' },
+			{"options",		required_argument,		NULL,		'+' },
 			{"optionsfrom",	required_argument,		NULL,		'+' },
 			{0,0,0,0 }
 		};

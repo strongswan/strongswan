@@ -20,7 +20,7 @@ pt-tls-client \- Simple client using PT-TLS to collect integrity information
 .OP \-\-client client-id
 .OP \-\-secret password
 .OP \-\-mutual
-.OP \-\-optionsfrom filename
+.OP \-\-options filename
 .OP \-\-quiet
 .OP \-\-debug level
 .YS
@@ -92,7 +92,7 @@ Set debug level, default: 1.
 .B "\-q, \-\-quiet
 Disable debug output to stderr.
 .TP
-.BI "\-+, \-\-optionsfrom " file
+.BI "\-+, \-\-options " file
 Read command line options from \fIfile\fR.
 .
 .SH "EXAMPLES"
