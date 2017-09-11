@@ -934,7 +934,18 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 					ranges.remove(mExcludedSubnets);
 					for (IPRange subnet : ranges.subnets())
 					{
-						builder.addRoute(subnet.getFrom(), subnet.getPrefix());
+						try
+						{
+							builder.addRoute(subnet.getFrom(), subnet.getPrefix());
+						}
+						catch (IllegalArgumentException e)
+						{	/* some Android versions don't seem to like multicast addresses here,
+							 * ignore it for now */
+							if (!subnet.getFrom().isMulticastAddress())
+							{
+								throw e;
+							}
+						}
 					}
 				}
 				else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
@@ -964,7 +975,17 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 					ranges.remove(mExcludedSubnets);
 					for (IPRange subnet : ranges.subnets())
 					{
-						builder.addRoute(subnet.getFrom(), subnet.getPrefix());
+						try
+						{
+							builder.addRoute(subnet.getFrom(), subnet.getPrefix());
+						}
+						catch (IllegalArgumentException e)
+						{
+							if (!subnet.getFrom().isMulticastAddress())
+							{
+								throw e;
+							}
+						}
 					}
 				}
 				else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
