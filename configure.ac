@@ -1,6 +1,6 @@
 #
 # Copyright (C) 2007-2017 Tobias Brunner
-# Copyright (C) 2006-2016 Andreas Steffen
+# Copyright (C) 2006-2017 Andreas Steffen
 # Copyright (C) 2006-2014 Martin Willi
 # HSR Hochschule fuer Technik Rapperswil
 #
@@ -19,7 +19,7 @@
 #  initialize & set some vars
 # ============================
 
-AC_INIT([strongSwan],[5.6.1dr1])
+AC_INIT([strongSwan],[5.6.1dr2])
 AM_INIT_AUTOMAKE(m4_esyscmd([
 	echo tar-ustar
 	echo subdir-objects
