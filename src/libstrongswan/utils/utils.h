@@ -25,6 +25,7 @@
 #define _GNU_SOURCE
 #include <sys/types.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stddef.h>
 #include <sys/time.h>
 #include <string.h>
