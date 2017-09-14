@@ -255,7 +255,7 @@ static int process_packages(char *path, char *os, char *arch, char *uri,
 	chunk_t deb = chunk_empty;
 	FILE *file;
 	stats_t stats;
-	bool success, new;
+	bool success = TRUE, new;
 
 	/* initialize statistics */
 	memset(&stats, 0x00, sizeof(stats_t));
