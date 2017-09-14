@@ -438,7 +438,7 @@ METHOD(dhcp_socket_t, release, void,
 	DBG1(DBG_CFG, "sending DHCP RELEASE for %H to %H", release, server);
 
 	chunk = release->get_address(release);
-	memcpy(&dhcp.client_address, chunk.ptr,
+	memcpy((char*)&dhcp.client_address, chunk.ptr,
 		   min(chunk.len, sizeof(dhcp.client_address)));
 
 	option = (dhcp_option_t*)&dhcp.options[optlen];
