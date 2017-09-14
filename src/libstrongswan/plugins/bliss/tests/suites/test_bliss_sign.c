@@ -134,7 +134,7 @@ START_TEST(test_bliss_sign_fail)
 {
 	private_key_t *privkey;
 	public_key_t *pubkey;
-	chunk_t msg, signature, encoding, fp;
+	chunk_t msg = chunk_empty, signature, encoding, fp;
 
 	/* generate non-supported BLISS-II private key */
 	privkey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_BLISS,
