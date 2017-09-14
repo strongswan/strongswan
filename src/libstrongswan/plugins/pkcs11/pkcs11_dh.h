@@ -40,12 +40,10 @@ struct pkcs11_dh_t {
  * Creates a new pkcs11_dh_t object.
  *
  * @param group			Diffie Hellman group number to use
- * @param g				generator in case group is MODP_CUSTOM
- * @param p				prime in case group is MODP_CUSTOM
+ * @param ...			expects generator and prime as chunk_t if MODP_CUSTOM
  * @return				pkcs11_dh_t object, NULL if not supported
  */
-pkcs11_dh_t *pkcs11_dh_create(diffie_hellman_group_t group,
-							  chunk_t g, chunk_t p);
+pkcs11_dh_t *pkcs11_dh_create(diffie_hellman_group_t group, ...);
 
 #endif /** PKCS11_DH_H_ @}*/
 

@@ -48,12 +48,10 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group);
  * Creates a new gcrypt_dh_t object for MODP_CUSTOM.
  *
  * @param group			MODP_CUSTOM
- * @param g				generator
- * @param p				prime
+ * @param ...			expects generator and prime as chunk_t
  * @return				gcrypt_dh_t object, NULL if not supported
  */
-gcrypt_dh_t *gcrypt_dh_create_custom(diffie_hellman_group_t group,
-									 chunk_t g, chunk_t p);
+gcrypt_dh_t *gcrypt_dh_create_custom(diffie_hellman_group_t group, ...);
 
 #endif /** GCRYPT_DH_H_ @}*/
 

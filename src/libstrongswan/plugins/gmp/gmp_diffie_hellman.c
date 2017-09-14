@@ -272,7 +272,7 @@ static gmp_diffie_hellman_t *create_generic(diffie_hellman_group_t group,
 }
 
 /*
- * Described in header.
+ * Described in header
  */
 gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 {
@@ -287,12 +287,17 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group)
 						  params->generator, params->prime);
 }
 
-
+/*
+ * Described in header
+ */
 gmp_diffie_hellman_t *gmp_diffie_hellman_create_custom(
-							diffie_hellman_group_t group, chunk_t g, chunk_t p)
+											diffie_hellman_group_t group, ...)
 {
 	if (group == MODP_CUSTOM)
 	{
+		chunk_t g, p;
+
+		VA_ARGS_GET(group, g, p);
 		return create_generic(MODP_CUSTOM, p.len, g, p);
 	}
 	return NULL;
