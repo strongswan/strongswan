@@ -685,9 +685,9 @@ METHOD(imv_agent_t, create_language_enumerator, enumerator_t*,
 	);
 
 	if (!this->get_attribute ||
-		!this->get_attribute(this->id, state->get_connection_id(state),
+		 this->get_attribute(this->id, state->get_connection_id(state),
 						TNC_ATTRIBUTEID_PREFERRED_LANGUAGE, BUF_LEN,
-						e->lang_buf, &e->lang_len) == TNC_RESULT_SUCCESS ||
+						e->lang_buf, &e->lang_len) != TNC_RESULT_SUCCESS ||
 		e->lang_len >= BUF_LEN)
 	{
 		e->lang_len = 0;
