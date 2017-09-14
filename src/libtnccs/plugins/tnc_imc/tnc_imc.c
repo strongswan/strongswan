@@ -354,7 +354,7 @@ imc_t* tnc_imc_create(char *name, char *path)
 	this = tnc_imc_create_empty(name);
 
 	if (lib->settings->get_bool(lib->settings, "%s.dlopen_use_rtld_now",
-								lib->ns, FALSE))
+								FALSE, lib->ns))
 	{
 		flag = RTLD_NOW;
 	}
