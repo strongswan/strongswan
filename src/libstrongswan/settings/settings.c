@@ -494,11 +494,12 @@ inline bool settings_value_as_bool(char *value, bool def)
 }
 
 METHOD(settings_t, get_bool, bool,
-	private_settings_t *this, char *key, bool def, ...)
+	private_settings_t *this, char *key, int def, ...)
 {
 	char *value;
 	va_list args;
 
+	/* we can't use bool for def due to this call */
 	va_start(args, def);
 	value = find_value(this, this->top, key, args);
 	va_end(args);
@@ -665,9 +666,10 @@ METHOD(settings_t, set_str, void,
 }
 
 METHOD(settings_t, set_bool, void,
-	private_settings_t *this, char *key, bool value, ...)
+	private_settings_t *this, char *key, int value, ...)
 {
 	va_list args;
+	/* we can't use bool for value due to this call */
 	va_start(args, value);
 	set_value(this, this->top, key, args, value ? "1" : "0");
 	va_end(args);
