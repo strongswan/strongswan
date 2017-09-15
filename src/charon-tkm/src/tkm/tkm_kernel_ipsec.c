@@ -134,6 +134,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 
 	esa_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ESA);
+	if (esa_id == 0)
+	{
+		DBG1(DBG_KNL, "unable to acquire esa context id");
+		goto esa_id_failure;
+	}
+
 	if (!tkm->sad->insert(tkm->sad, esa_id, data->reqid, local, peer,
 						  spi_loc, spi_rem, id->proto))
 	{
@@ -193,9 +199,11 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	return SUCCESS;
 
 failure:
+	ike_esa_reset(esa_id);
 	tkm->sad->remove(tkm->sad, esa_id);
 sad_failure:
 	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_ESA, esa_id);
+esa_id_failure:
 	chunk_free(&esa.nonce_i);
 	chunk_free(&esa.nonce_r);
 	return FAILED;

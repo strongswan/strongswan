@@ -279,8 +279,15 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		}
 		isa_info = *((isa_info_t *)(rekey_skd.ptr));
 		DBG1(DBG_IKE, "deriving IKE keys (parent_isa: %llu, ae: %llu, nc: %llu,"
-			 "dh: %llu, spi_loc: %llx, spi_rem: %llx)", isa_info.parent_isa_id,
+			 " dh: %llu, spi_loc: %llx, spi_rem: %llx)", isa_info.parent_isa_id,
 			 isa_info.ae_id, nc_id, dh_id, spi_loc, spi_rem);
+
+		if (!tkm->idmgr->acquire_ref(tkm->idmgr, TKM_CTX_AE, isa_info.ae_id))
+		{
+			DBG1(DBG_IKE, "unable to acquire reference for ae: %llu",
+				 isa_info.ae_id);
+			return FALSE;
+		}
 		this->ae_ctx_id = isa_info.ae_id;
 		res = ike_isa_create_child(this->isa_ctx_id, isa_info.parent_isa_id, 1,
 								   dh_id, nc_id, nonce_rem, this->initiator,
@@ -416,11 +423,6 @@ METHOD(keymat_v2_t, get_skd, pseudo_random_function_t,
 
 	*skd = chunk_create((u_char *)isa_info, sizeof(isa_info_t));
 
-	/*
-	 * remove ae context id, since control has now been handed over to the new
-	 * IKE SA keymat
-	 */
-	this->ae_ctx_id = 0;
 	return PRF_HMAC_SHA2_512;
 }
 
@@ -462,11 +464,12 @@ METHOD(keymat_t, destroy, void,
 	/* only reset ae context if set */
 	if (this->ae_ctx_id != 0)
 	{
-		if (ike_ae_reset(this->ae_ctx_id) != TKM_OK)
+		int count;
+		count = tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_AE, this->ae_ctx_id);
+		if (count == 0 && ike_ae_reset(this->ae_ctx_id) != TKM_OK)
 		{
 			DBG1(DBG_IKE, "failed to reset AE context %d", this->ae_ctx_id);
 		}
-		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_AE, this->ae_ctx_id);
 	}
 
 	DESTROY_IF(this->hash_algorithms);

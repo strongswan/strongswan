@@ -84,21 +84,85 @@ START_TEST(test_acquire_id_same)
 }
 END_TEST
 
-START_TEST(test_release_id)
+START_TEST(test_acquire_ref)
 {
 	int i, id = 0;
-	bool released = false;
+	bool acquired = false;
 	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
 
 	for (i = 0; i < TKM_CTX_MAX; i++)
 	{
 		id = idmgr->acquire_id(idmgr, i);
-		released = idmgr->release_id(idmgr, i, id);
+		acquired = idmgr->acquire_ref(idmgr, i, id);
+		fail_unless(acquired, "Error acquiring reference context kind %d", i);
 
-		fail_unless(released, "Error releasing id of context kind %d", i);
+		/* Reset test variable */
+		acquired = false;
+	}
 
-		/* Reset released variable */
-		released = FALSE;
+	idmgr->destroy(idmgr);
+}
+END_TEST
+
+START_TEST(test_acquire_ref_invalid_kind)
+{
+	bool acquired;
+	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
+
+	acquired = idmgr->acquire_ref(idmgr, TKM_CTX_MAX, 1);
+	fail_if(acquired, "Acquired reference for invalid context kind %d", TKM_CTX_MAX);
+
+	/* Reset test variable */
+	acquired = 0;
+
+	acquired = idmgr->acquire_ref(idmgr, -1, 1);
+	fail_if(acquired, "Acquired reference for invalid context kind %d", -1);
+
+	idmgr->destroy(idmgr);
+}
+END_TEST
+
+START_TEST(test_acquire_ref_invalid_id)
+{
+	int i;
+	bool acquired;
+	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
+
+	for (i = 0; i < TKM_CTX_MAX; i++)
+	{
+		acquired = idmgr->acquire_ref(idmgr, i, -1);
+		fail_if(acquired,
+				"Acquired reference for negative id of context kind %d", i);
+
+		/* Reset test variable */
+		acquired = false;
+
+		acquired = idmgr->acquire_ref(idmgr, i, limits[i] + 1);
+		fail_if(acquired,
+				"Acquired reference exceeding limit of context kind %d", i);
+
+		/* Reset test variable */
+		acquired = false;
+	}
+
+	idmgr->destroy(idmgr);
+}
+END_TEST
+
+START_TEST(test_release_id)
+{
+	int i, count, id = 0;
+	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
+
+	for (i = 0; i < TKM_CTX_MAX; i++)
+	{
+		id = idmgr->acquire_id(idmgr, i);
+		count = idmgr->release_id(idmgr, i, id);
+
+		fail_unless(count == 0, "Error releasing id of context kind %d", i);
+
+		/* Reset count variable */
+		count = 0;
 	}
 
 	idmgr->destroy(idmgr);
@@ -107,17 +171,17 @@ END_TEST
 
 START_TEST(test_release_id_invalid_kind)
 {
-	bool released = TRUE;
+	int count = 0;
 	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
 
-	released = idmgr->release_id(idmgr, TKM_CTX_MAX, 1);
-	fail_if(released, "Released id for invalid context kind %d", TKM_CTX_MAX);
+	count = idmgr->release_id(idmgr, TKM_CTX_MAX, 1);
+	fail_if(count >= 0, "Released id for invalid context kind %d", TKM_CTX_MAX);
 
 	/* Reset test variable */
-	released = TRUE;
+	count = 0;
 
-	released = idmgr->release_id(idmgr, -1, 1);
-	fail_if(released, "Released id for invalid context kind %d", -1);
+	count = idmgr->release_id(idmgr, -1, 1);
+	fail_if(count >= 0, "Released id for invalid context kind %d", -1);
 
 	idmgr->destroy(idmgr);
 }
@@ -125,11 +189,11 @@ END_TEST
 
 START_TEST(test_release_id_nonexistent)
 {
-	bool released = FALSE;
+	int count = 0;
 	tkm_id_manager_t *idmgr = tkm_id_manager_create(limits);
 
-	released = idmgr->release_id(idmgr, TKM_CTX_NONCE, 1);
-	fail_unless(released, "Release of nonexistent id failed");
+	count = idmgr->release_id(idmgr, TKM_CTX_NONCE, 1);
+	fail_unless(count == 0, "Release of nonexistent id failed");
 
 	idmgr->destroy(idmgr);
 }
@@ -150,6 +214,9 @@ Suite *make_id_manager_tests()
 	tcase_add_test(tc, test_acquire_id);
 	tcase_add_test(tc, test_acquire_id_invalid_kind);
 	tcase_add_test(tc, test_acquire_id_same);
+	tcase_add_test(tc, test_acquire_ref);
+	tcase_add_test(tc, test_acquire_ref_invalid_kind);
+	tcase_add_test(tc, test_acquire_ref_invalid_id);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("release");
