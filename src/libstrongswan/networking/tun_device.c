@@ -228,7 +228,7 @@ linked_list_t *find_tap_devices()
 
                         if (status == ERROR_SUCCESS && type == REG_SZ)
                         {
-                            if (!strcmp(component_id, TAP_WIN_COMPONENT_ID))
+                            if (!stricmp(component_id, TAP_WIN_COMPONENT_ID))
                             {
                                 /* That thing is a valid interface key */
                                 /* link into return list */
@@ -550,7 +550,6 @@ METHOD(tun_device_t, set_mtu, bool,
                 }
                 else
                 {
-                    DBG2(DBG_LIB, "Trying to match %s", instance_id);
                     if (!strcmp(instance_id, this->if_name))
                     {
                         /* Open the registry key for write access */
