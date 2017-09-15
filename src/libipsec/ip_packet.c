@@ -253,7 +253,7 @@ ip_packet_t *ip_packet_create(chunk_t packet)
 			/* remove any RFC 4303 TFC extra padding */
 			packet.len = min(packet.len, untoh16(&ip->ip_len));
 			payload = chunk_skip(packet, ip->ip_hl * 4);
-			if (!parse_transport_header(payload, ip->ip_p, &sport, &dport))
+			if (ip->ip_off == 0 && !parse_transport_header(payload, ip->ip_p, &sport, &dport))
 			{
 				goto failed;
 			}
