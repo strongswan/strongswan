@@ -950,7 +950,7 @@ METHOD(ike_sa_t, add_virtual_ip, void,
 		if (charon->kernel->get_interface(charon->kernel, this->my_host,
 										  &iface))
 		{
-			DBG1(DBG_IKE, "installing new virtual IP %H", ip);
+			DBG1(DBG_IKE, "installing new virtual IP %H on interface %s", ip, iface);
 			if (charon->kernel->add_ip(charon->kernel, ip, -1,
 									   iface) == SUCCESS)
 			{
