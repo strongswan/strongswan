@@ -1,0 +1,7 @@
+moon::ipsec status 2> /dev/null::net-net.*ESTABLISHED.*moon.strongswan.org.*sun.strongswan.org::YES
+sun:: ipsec status 2> /dev/null::net-net.*ESTABLISHED.*sun.strongswan.org.*moon.strongswan.org::YES
+moon::ipsec status 2> /dev/null::net-net.*INSTALLED, TUNNEL::YES
+sun:: ipsec status 2> /dev/null::net-net.*INSTALLED, TUNNEL::YES
+alice::ping6 -c 3 -W 1 -i 0.2 -s 8184 -p deadbeef ip6-bob.strongswan.org::8192 bytes from ip6-bob.strongswan.org: icmp_seq=3::YES
+sun::tcpdump::IP moon.strongswan.org.\(4500\|ipsec-nat-t\) > sun.strongswan.org.\(4500\|ipsec-nat-t\): UDP-encap: ESP::YES
+sun::tcpdump::IP sun.strongswan.org.\(4500\|ipsec-nat-t\) > moon.strongswan.org.\(4500\|ipsec-nat-t\): UDP-encap: ESP::YES
