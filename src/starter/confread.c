@@ -48,7 +48,7 @@ static const char firewall_defaults[] = IPSEC_SCRIPT " _updown iptables";
 /**
  * Provided by GPERF
  */
-extern kw_entry_t *in_word_set (char *str, unsigned int len);
+extern const kw_entry_t *in_word_set(register const char*, register GPERF_LEN_TYPE);
 
 /**
  * Process deprecated keywords
@@ -95,7 +95,7 @@ static void load_setup(starter_config_t *cfg, conf_parser_t *parser)
 {
 	enumerator_t *enumerator;
 	dictionary_t *dict;
-	kw_entry_t *entry;
+	const kw_entry_t *entry;
 	char *key, *value;
 
 	DBG2(DBG_APP, "Loading config setup");
@@ -146,7 +146,7 @@ static void load_ca(starter_ca_t *ca, starter_config_t *cfg,
 {
 	enumerator_t *enumerator;
 	dictionary_t *dict;
-	kw_entry_t *entry;
+	const kw_entry_t *entry;
 	kw_token_t token;
 	char *key, *value;
 
@@ -559,7 +559,7 @@ static void load_conn(starter_conn_t *conn, starter_config_t *cfg,
 {
 	enumerator_t *enumerator;
 	dictionary_t *dict;
-	kw_entry_t *entry;
+	const kw_entry_t *entry;
 	kw_token_t token;
 	char *key, *value;
 
