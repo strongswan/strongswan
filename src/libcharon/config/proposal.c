@@ -872,9 +872,10 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 				case AUTH_AES_XCBC_96:
 				case AUTH_AES_CMAC_96:
 				case AUTH_HMAC_SHA1_96:
-				case AUTH_HMAC_MD5_96:
 					add_algorithm(this, INTEGRITY_ALGORITHM, integrity, 0);
 					break;
+				case AUTH_HMAC_MD5_96:
+					/* no, thanks */
 				default:
 					break;
 			}
@@ -908,8 +909,10 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 		switch (prf)
 		{
 			case PRF_HMAC_SHA1:
-			case PRF_HMAC_MD5:
 				add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
+				break;
+			case PRF_HMAC_MD5:
+				/* no, thanks */
 				break;
 			default:
 				break;
