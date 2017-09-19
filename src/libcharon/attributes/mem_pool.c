@@ -296,7 +296,7 @@ static int get_existing(private_mem_pool_t *this, identification_t *id,
 	enumerator->destroy(enumerator);
 	if (offset)
 	{
-		DBG1(DBG_CFG, "reassigning offline lease to '%Y'", id);
+		DBG1(DBG_CFG, "reassigning offline lease %u back to '%Y'", offset, id);
 		return offset;
 	}
 	if (!peer)
@@ -319,7 +319,7 @@ static int get_existing(private_mem_pool_t *this, identification_t *id,
 	enumerator->destroy(enumerator);
 	if (offset)
 	{
-		DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
+		DBG1(DBG_CFG, "reassigning online lease %u to back to '%Y'", offset, id);
 	}
 	return offset;
 }
@@ -344,7 +344,7 @@ static int get_new(private_mem_pool_t *this, identification_t *id, host_t *peer)
 		lease.offset = ++this->unused + (this->base_is_network_id ? 1 : 0);
 		lease.hash = hash_addr(peer);
 		array_insert(entry->online, ARRAY_TAIL, &lease);
-		DBG1(DBG_CFG, "assigning new lease to '%Y'", id);
+		DBG1(DBG_CFG, "assigning new lease %u to '%Y'", lease.offset, id);
 	}
 	return lease.offset;
 }
@@ -366,8 +366,8 @@ static int get_reassigned(private_mem_pool_t *this, identification_t *id,
 		if (array_remove(entry->offline, ARRAY_HEAD, &current))
 		{
 			lease.offset = current;
-			DBG1(DBG_CFG, "reassigning existing offline lease by '%Y' "
-				 "to '%Y'", entry->id, id);
+			DBG1(DBG_CFG, "reassigning existing offline lease %u by '%Y' "
+				 "to '%Y'", current, entry->id, id);
 		}
 		if (!array_count(entry->online) && !array_count(entry->offline))
 		{
@@ -483,7 +483,7 @@ METHOD(mem_pool_t, release_address, bool,
 			{
 				/* no tunnels are online anymore for this lease, make offline */
 				array_insert(entry->offline, ARRAY_TAIL, &offset);
-				DBG1(DBG_CFG, "lease %H by '%Y' went offline", address, id);
+				DBG1(DBG_CFG, "lease %u %H by '%Y' went offline", offset, address, id);
 			}
 		}
 		this->mutex->unlock(this->mutex);
