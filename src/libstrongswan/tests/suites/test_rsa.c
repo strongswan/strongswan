@@ -47,7 +47,7 @@ static void test_good_sig(private_key_t *privkey, public_key_t *pubkey)
 		{
 			continue;
 		}
-		fail_unless(privkey->sign(privkey, schemes[i], data, &sig),
+		fail_unless(privkey->sign(privkey, schemes[i], NULL, data, &sig),
 					"sign %N", signature_scheme_names, schemes[i]);
 		fail_unless(pubkey->verify(pubkey, schemes[i], NULL, data, sig),
 					"verify %N", signature_scheme_names, schemes[i]);

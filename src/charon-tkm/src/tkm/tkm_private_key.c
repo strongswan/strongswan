@@ -58,7 +58,7 @@ METHOD(private_key_t, get_type, key_type_t,
 }
 
 METHOD(private_key_t, sign, bool,
-	private_tkm_private_key_t *this, signature_scheme_t scheme,
+	private_tkm_private_key_t *this, signature_scheme_t scheme, void *params,
 	chunk_t data, chunk_t *signature)
 {
 	signature_type sig;

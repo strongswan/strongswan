@@ -297,7 +297,7 @@ START_TEST(test_ed25519_sign)
 	ck_assert(public->equals(public, pubkey));
 
 	/* sign */
-	ck_assert(key->sign(key, SIGN_ED25519, sig_tests[_i].msg, &sig));
+	ck_assert(key->sign(key, SIGN_ED25519, NULL, sig_tests[_i].msg, &sig));
 	ck_assert(sig.len == 64);
 	ck_assert(chunk_equals(sig, sig_tests[_i].sig));
 
@@ -340,10 +340,10 @@ START_TEST(test_ed25519_gen)
 	ck_assert(!key->decrypt(key, ENCRYPT_UNKNOWN, msg, NULL));
 
 	/* wrong signature scheme */
-	ck_assert(!key->sign(key, SIGN_ED448, msg, &sig));
+	ck_assert(!key->sign(key, SIGN_ED448, NULL, msg, &sig));
 
 	/* correct signature scheme*/
-	ck_assert(key->sign(key, SIGN_ED25519, msg, &sig));
+	ck_assert(key->sign(key, SIGN_ED25519, NULL, msg, &sig));
 
 	/* export public key */
 	pubkey = key->get_public_key(key);
@@ -404,7 +404,7 @@ START_TEST(test_ed25519_speed)
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ED25519,
 								 BUILD_KEY_SIZE, 256, BUILD_END);
 		ck_assert(key != NULL);
-		ck_assert(key->sign(key, SIGN_ED25519, msg, &sig));
+		ck_assert(key->sign(key, SIGN_ED25519, NULL, msg, &sig));
 		pubkey = key->get_public_key(key);
 		ck_assert(pubkey != NULL);
 		ck_assert(pubkey->verify(pubkey, SIGN_ED25519, NULL, msg, sig));

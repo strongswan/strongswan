@@ -763,7 +763,7 @@ static bool build_ac(private_x509_ac_t *this)
 	chunk_t signatureValue, attributeCertificateInfo;
 
 	attributeCertificateInfo = build_attr_cert_info(this);
-	if (!this->signerKey->sign(this->signerKey, SIGN_RSA_EMSA_PKCS1_SHA1,
+	if (!this->signerKey->sign(this->signerKey, SIGN_RSA_EMSA_PKCS1_SHA1, NULL,
 							   attributeCertificateInfo, &signatureValue))
 	{
 		free(attributeCertificateInfo.ptr);

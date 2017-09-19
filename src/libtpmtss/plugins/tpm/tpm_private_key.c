@@ -76,7 +76,7 @@ METHOD(private_key_t, get_keysize, int,
 }
 
 METHOD(private_key_t, sign, bool,
-	private_tpm_private_key_t *this, signature_scheme_t scheme,
+	private_tpm_private_key_t *this, signature_scheme_t scheme, void *params,
 	chunk_t data, chunk_t *signature)
 {
 	chunk_t pin = chunk_empty;
@@ -191,7 +191,7 @@ tpm_private_key_t *tpm_private_key_connect(key_type_t type, va_list args)
 	if (!tpm)
 	{
 		DBG1(DBG_LIB, "no TPM 2.0 found");
-		return NULL;	
+		return NULL;
 	}
 
 	INIT(this,

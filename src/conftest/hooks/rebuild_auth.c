@@ -143,7 +143,7 @@ static bool rebuild_auth(private_rebuild_auth_t *this, ike_sa_t *ike_sa,
 		id->destroy(id);
 		return FALSE;
 	}
-	if (!private->sign(private, scheme, octets, &auth_data))
+	if (!private->sign(private, scheme, NULL, octets, &auth_data))
 	{
 		chunk_free(&octets);
 		private->destroy(private);

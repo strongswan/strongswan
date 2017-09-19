@@ -233,7 +233,7 @@ static bool scheme_supported(private_agent_private_key_t *this,
 }
 
 METHOD(private_key_t, sign, bool,
-	private_agent_private_key_t *this, signature_scheme_t scheme,
+	private_agent_private_key_t *this, signature_scheme_t scheme, void *params,
 	chunk_t data, chunk_t *signature)
 {
 	uint32_t len, flags;

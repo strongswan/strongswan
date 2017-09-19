@@ -53,7 +53,7 @@ struct private_private_key_t {
 };
 
 METHOD(private_key_t, sign, bool,
-	private_private_key_t *this, signature_scheme_t scheme,
+	private_private_key_t *this, signature_scheme_t scheme, void *params,
 	chunk_t data, chunk_t *signature)
 {
 	JNIEnv *env;

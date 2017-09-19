@@ -584,7 +584,7 @@ static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 							key_info,
 							attributes);
 
-	if (!sign_key->sign(sign_key, scheme, cert->certificationRequestInfo,
+	if (!sign_key->sign(sign_key, scheme, NULL, cert->certificationRequestInfo,
 						&cert->signature))
 	{
 		return FALSE;

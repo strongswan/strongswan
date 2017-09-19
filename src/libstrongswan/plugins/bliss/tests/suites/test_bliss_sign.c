@@ -118,7 +118,7 @@ START_TEST(test_bliss_sign_all)
 		/* generate and verify 1000 BLISS signatures */
 		while (verify_count--)
 		{
-			ck_assert(privkey->sign(privkey, signature_scheme, msg,
+			ck_assert(privkey->sign(privkey, signature_scheme, NULL, msg,
 									&signature));
 			ck_assert(pubkey->verify(pubkey, signature_scheme, NULL, msg,
 									 signature));
@@ -172,11 +172,11 @@ START_TEST(test_bliss_sign_fail)
 	ck_assert(!privkey->decrypt(privkey, ENCRYPT_UNKNOWN, chunk_empty, NULL));
 
 	/* sign with invalid signature scheme */
-	ck_assert(!privkey->sign(privkey, SIGN_UNKNOWN, msg, &signature));
+	ck_assert(!privkey->sign(privkey, SIGN_UNKNOWN, NULL, msg, &signature));
 
 	/* generate valid signature */
 	msg = chunk_from_str("Hello Dolly!");
-	ck_assert(privkey->sign(privkey, SIGN_BLISS_WITH_SHA2_512, msg, &signature));
+	ck_assert(privkey->sign(privkey, SIGN_BLISS_WITH_SHA2_512, NULL, msg, &signature));
 
 	/* verify with invalid signature scheme */
 	ck_assert(!pubkey->verify(pubkey, SIGN_UNKNOWN, NULL, msg, signature));

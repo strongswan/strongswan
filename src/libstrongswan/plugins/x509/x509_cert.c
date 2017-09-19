@@ -2562,7 +2562,8 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		subject->get_encoding(subject),
 		key_info, extensions);
 
-	if (!sign_key->sign(sign_key, scheme, cert->tbsCertificate, &cert->signature))
+	if (!sign_key->sign(sign_key, scheme, NULL, cert->tbsCertificate,
+						&cert->signature))
 	{
 		return FALSE;
 	}

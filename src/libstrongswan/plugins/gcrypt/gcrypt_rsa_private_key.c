@@ -200,7 +200,7 @@ METHOD(private_key_t, get_type, key_type_t,
 
 METHOD(private_key_t, sign, bool,
 	private_gcrypt_rsa_private_key_t *this, signature_scheme_t scheme,
-	chunk_t data, chunk_t *sig)
+	void *params, chunk_t data, chunk_t *sig)
 {
 	switch (scheme)
 	{

@@ -222,7 +222,7 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 		while (enumerator->enumerate(enumerator, &schemep))
 		{
 			scheme = *schemep;
-			if (private->sign(private, scheme, octets, auth_data) &&
+			if (private->sign(private, scheme, NULL, octets, auth_data) &&
 				build_signature_auth_data(auth_data, scheme))
 			{
 				status = SUCCESS;
@@ -318,7 +318,7 @@ static status_t sign_classic(private_pubkey_authenticator_t *this,
 	}
 
 	if (get_auth_octets_scheme(this, FALSE, id, &octets, &scheme) &&
-		private->sign(private, scheme, octets, auth_data))
+		private->sign(private, scheme, NULL, octets, auth_data))
 	{
 		status = SUCCESS;
 	}

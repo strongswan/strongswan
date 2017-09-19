@@ -787,7 +787,7 @@ static bool generate(private_x509_crl_t *this, certificate_t *cert,
 							asn1_wrap(ASN1_SEQUENCE, "m", certList),
 							extensions);
 
-	if (!key->sign(key, signature_scheme_from_oid(this->algorithm),
+	if (!key->sign(key, signature_scheme_from_oid(this->algorithm), NULL,
 				   this->tbsCertList, &this->signature))
 	{
 		return FALSE;

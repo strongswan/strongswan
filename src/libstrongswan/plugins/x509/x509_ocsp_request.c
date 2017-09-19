@@ -276,7 +276,7 @@ static chunk_t build_optionalSignature(private_x509_ocsp_request_t *this,
 			return chunk_empty;
 	}
 
-	if (!this->key->sign(this->key, scheme, tbsRequest, &signature))
+	if (!this->key->sign(this->key, scheme, NULL, tbsRequest, &signature))
 	{
 		DBG1(DBG_LIB, "creating OCSP signature failed, skipped");
 		return chunk_empty;

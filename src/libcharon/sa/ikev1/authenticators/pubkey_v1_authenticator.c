@@ -110,7 +110,7 @@ METHOD(authenticator_t, build, status_t,
 	}
 	free(dh.ptr);
 
-	if (private->sign(private, scheme, hash, &sig))
+	if (private->sign(private, scheme, NULL, hash, &sig))
 	{
 		sig_payload = hash_payload_create(PLV1_SIGNATURE);
 		sig_payload->set_hash(sig_payload, sig);
