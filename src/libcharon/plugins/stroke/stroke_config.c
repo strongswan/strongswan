@@ -750,6 +750,11 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 				}
 				if (pool)
 				{
+					if (msg->add_conn.other.reassign_after)
+					{
+						pool->set_reassign_after(pool, msg->add_conn.other.reassign_after);
+					}
+
 					this->attributes->add_pool(this->attributes, pool);
 					peer_cfg->add_pool(peer_cfg, token);
 				}

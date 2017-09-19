@@ -173,6 +173,7 @@ static void add_end(stroke_msg_t **msg, size_t offset, starter_end_t *conn_end)
 	msg_end->protocol = conn_end->protocol;
 	msg_end->from_port = conn_end->from_port;
 	msg_end->to_port = conn_end->to_port;
+	msg_end->reassign_after = conn_end->reassign_after;
 }
 
 int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
