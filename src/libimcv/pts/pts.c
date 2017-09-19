@@ -762,7 +762,7 @@ METHOD(pts_t, verify_quote_signature, bool,
 			return FALSE;
 	}
 
-	if (!aik_pubkey->verify(aik_pubkey, scheme, digest, signature))
+	if (!aik_pubkey->verify(aik_pubkey, scheme, NULL, digest, signature))
 	{
 		DBG1(DBG_PTS, "signature verification failed for TPM Quote Info");
 		DESTROY_IF(aik_pubkey);

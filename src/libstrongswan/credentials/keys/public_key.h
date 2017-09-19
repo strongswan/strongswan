@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
- * Copyright (C) 2007 Martin Willi
+ * Copyright (C) 2015-2017 Tobias Brunner
  * Copyright (C) 2014-2017 Andreas Steffen
+ * Copyright (C) 2007 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -170,12 +170,13 @@ struct public_key_t {
 	/**
 	 * Verifies a signature against a chunk of data.
 	 *
-	 * @param scheme	signature scheme to use for verification, may be default
+	 * @param scheme	signature scheme to use for verification
+	 * @param params	optional parameters required by the specified scheme
 	 * @param data		data to check signature against
 	 * @param signature	signature to check
 	 * @return			TRUE if signature matches
 	 */
-	bool (*verify)(public_key_t *this, signature_scheme_t scheme,
+	bool (*verify)(public_key_t *this, signature_scheme_t scheme, void *params,
 				   chunk_t data, chunk_t signature);
 
 	/**

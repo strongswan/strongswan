@@ -434,7 +434,7 @@ METHOD(authenticator_t, process, status_t,
 													key_type, id, auth, online);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
-		if (public->verify(public, scheme, octets, auth_data))
+		if (public->verify(public, scheme, NULL, octets, auth_data))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful", id,
 				 auth_method == AUTH_DS ? signature_scheme_names : auth_method_names,

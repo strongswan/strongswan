@@ -176,7 +176,7 @@ METHOD(authenticator_t, process, status_t,
 														id, auth, TRUE);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
-		if (public->verify(public, scheme, hash, sig))
+		if (public->verify(public, scheme, NULL, hash, sig))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
 				 id, signature_scheme_names, scheme);

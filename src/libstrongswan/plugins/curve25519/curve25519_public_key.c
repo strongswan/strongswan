@@ -50,7 +50,7 @@ METHOD(public_key_t, get_type, key_type_t,
 
 METHOD(public_key_t, verify, bool,
 	private_curve25519_public_key_t *this, signature_scheme_t scheme,
-	chunk_t data, chunk_t signature)
+	void *params, chunk_t data, chunk_t signature)
 {
 	hasher_t *hasher;
 	uint8_t d = 0, k[HASH_SIZE_SHA512], r[32], *sig;

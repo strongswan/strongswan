@@ -120,7 +120,7 @@ START_TEST(test_bliss_sign_all)
 		{
 			ck_assert(privkey->sign(privkey, signature_scheme, msg,
 									&signature));
-			ck_assert(pubkey->verify(pubkey, signature_scheme, msg,
+			ck_assert(pubkey->verify(pubkey, signature_scheme, NULL, msg,
 									 signature));
 			free(signature.ptr);
 		}
@@ -179,11 +179,11 @@ START_TEST(test_bliss_sign_fail)
 	ck_assert(privkey->sign(privkey, SIGN_BLISS_WITH_SHA2_512, msg, &signature));
 
 	/* verify with invalid signature scheme */
-	ck_assert(!pubkey->verify(pubkey, SIGN_UNKNOWN, msg, signature));
+	ck_assert(!pubkey->verify(pubkey, SIGN_UNKNOWN, NULL, msg, signature));
 
 	/* corrupt signature */
 	signature.ptr[signature.len - 1] ^= 0x80;
-	ck_assert(!pubkey->verify(pubkey, SIGN_BLISS_WITH_SHA2_512, msg, signature));
+	ck_assert(!pubkey->verify(pubkey, SIGN_BLISS_WITH_SHA2_512, NULL, msg, signature));
 
 	free(signature.ptr);
 	privkey->destroy(privkey);

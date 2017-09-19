@@ -256,7 +256,7 @@ static auth_cfg_t *verify_signature(CMS_SignerInfo *si, int hash_oid)
 			key = cert->get_public_key(cert);
 			if (key)
 			{
-				if (key->verify(key, signature_scheme_from_oid(hash_oid),
+				if (key->verify(key, signature_scheme_from_oid(hash_oid), NULL,
 								attrs, sig))
 				{
 					found = auth->clone(auth);

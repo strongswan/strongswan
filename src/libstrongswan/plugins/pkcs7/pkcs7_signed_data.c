@@ -227,7 +227,8 @@ METHOD(enumerator_t, enumerate, bool,
 				if (key)
 				{
 					chunk = info->attributes->get_encoding(info->attributes);
-					if (key->verify(key, scheme, chunk, info->encrypted_digest))
+					if (key->verify(key, scheme, NULL, chunk,
+									info->encrypted_digest))
 					{
 						this->auth = auth->clone(auth);
 						key->destroy(key);
