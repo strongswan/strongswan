@@ -95,6 +95,42 @@ static void assert_acquires_released(mem_pool_t *pool, char *pattern, int first)
 
 	/* pool should still be full and not allocate anything */
 	assert_acquire(pool, "0.0.0.0", NULL, MEM_POOL_NEW);
+
+	id->destroy(id);
+}
+
+static void assert_release(mem_pool_t *pool, char *pattern, int first, int first_not)
+{
+	char expected[16];
+	host_t *req, *acquired;
+	identification_t *id;
+	int i;
+	int online = pool->get_online(pool);
+	bool release_found;
+
+	id = identification_create_from_string("tester");
+
+	for (i = 0; i < first_not; i++)
+	{
+		snprintf(expected, sizeof(expected), pattern, first + i);
+		req = host_create_from_string(expected, 0);
+		ck_assert_msg(pool->release_address(pool, req, id), "failed to release address %s", expected);
+		req->destroy(req);
+	}
+
+	id->destroy(id);
+}
+
+static void assert_acquires_reassigned(mem_pool_t *pool, char *pattern, int first, int first_not)
+{
+	char expected[16];
+	int i;
+
+	for (i = 0; i < first_not; i++)
+	{
+		snprintf(expected, sizeof(expected), pattern, first + i);
+		assert_acquire(pool, "0.0.0.0", expected, MEM_POOL_REASSIGN);
+	}
 }
 
 START_TEST(test_config)
@@ -195,22 +231,61 @@ START_TEST(test_cidr_offset)
 }
 END_TEST
 
-START_TEST(test_cidr_reallocate)
+START_TEST(test_cidr_reassign_immediate)
 {
 	mem_pool_t *pool;
 	host_t *base;
 
 	base = host_create_from_string("192.168.0.0", 0);
-	
 	pool = mem_pool_create("test", base, 24);
-	ck_assert_int_eq(254, pool->get_size(pool));
-	
+
 	/* allocate all addresses */
 	assert_acquires_new(pool, "192.168.0.%d", 1);
+	/* test that just-released addresses will be reallocated */
 	assert_acquires_released(pool, "192.168.0.%d", 1);
-	
-	pool->destroy(pool);
 
+	pool->destroy(pool);
+	base->destroy(base);
+}
+END_TEST
+
+START_TEST(test_cidr_reassign_after)
+{
+	mem_pool_t *pool;
+	host_t *base;
+
+	base = host_create_from_string("192.168.0.0", 0);
+
+	pool = mem_pool_create("test", base, 24);
+
+	/* Allow reassigning an offline address after 2 seconds.
+	 * Must use 2: timer resolution is a second, and 1 second will pass
+	 * between 2 function calls when you are unlucky.
+	 */
+	pool->set_reassign_after(pool, 2);
+
+	/* allocate all addresses */
+	assert_acquires_new(pool, "192.168.0.%d", 1);
+	/* release first 10 addresses */
+	assert_release(pool, "192.168.0.%d", 1, 11);
+	/* pool should still be full and not allocate anything; this might
+	 * happen on a different second than the releases, so use 2s
+	 * release time for this test
+	 */
+	assert_acquire(pool, "0.0.0.0", NULL, MEM_POOL_NEW);
+	assert_acquire(pool, "0.0.0.0", NULL, MEM_POOL_REASSIGN);
+
+	/* sleep for more than 2 seconds, but not much more */
+	struct timeval tv = { 2, 10000000 };
+	nanosleep(&tv, NULL);
+
+	/* ah, now the addresses are happily assigned */
+	assert_acquires_reassigned(pool, "192.168.0.%d", 1, 11);
+
+	/* but no more than the 10 which we released */
+	assert_acquire(pool, "0.0.0.0", NULL, MEM_POOL_REASSIGN);
+
+	pool->destroy(pool);
 	base->destroy(base);
 }
 END_TEST
@@ -270,9 +345,11 @@ Suite *mem_pool_suite_create()
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("cidr constructor");
+	tcase_set_timeout(tc, 3); /* reassign_after needs to sleep */
 	tcase_add_test(tc, test_cidr);
 	tcase_add_test(tc, test_cidr_offset);
-	tcase_add_test(tc, test_cidr_reallocate);
+	tcase_add_test(tc, test_cidr_reassign_immediate);
+	tcase_add_test(tc, test_cidr_reassign_after);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("range constructor");

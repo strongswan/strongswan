@@ -80,6 +80,11 @@ struct mem_pool_t {
 	u_int (*get_offline)(mem_pool_t *this);
 
 	/**
+	 * Set the reservation time for leases
+	 */
+	void (*set_reassign_after)(mem_pool_t *this, u_int seconds);
+
+	/**
 	 * Acquire an address for the given id from this pool.
 	 *
 	 * This call is usually invoked several times: The first time to find an
