@@ -21,7 +21,7 @@ static void assert_host(char *expected, host_t *host)
 {
 	if (!expected)
 	{
-		ck_assert_msg(!host, "not epxecting IP != %+H", host);
+		ck_assert_msg(!host, "not expecting IP != %+H", host);
 	}
 	else
 	{
@@ -62,6 +62,38 @@ static void assert_acquires_new(mem_pool_t *pool, char *pattern, int first)
 		assert_acquire(pool, "0.0.0.0", expected, MEM_POOL_NEW);
 		ck_assert_int_eq(i + 1, pool->get_online(pool));
 	}
+	assert_acquire(pool, "0.0.0.0", NULL, MEM_POOL_NEW);
+}
+
+static void assert_acquires_released(mem_pool_t *pool, char *pattern, int first)
+{
+	char expected[16];
+	host_t *req, *acquired;
+	identification_t *id;
+	int i;
+	int online = pool->get_online(pool);
+	bool release_found;
+
+	id = identification_create_from_string("tester");
+
+	/* should not get anything, pool full of active leases */
+	assert_acquire(pool, "0.0.0.0", NULL, MEM_POOL_REASSIGN);
+
+	for (i = 0; i < pool->get_size(pool); i++)
+	{
+		/* release and reassign all addresses one by one */
+		snprintf(expected, sizeof(expected), pattern, first + i);
+		req = host_create_from_string(expected, 0);
+		ck_assert_msg(pool->release_address(pool, req, id), "failed to release address %s", expected);
+		/* should get the same one back */
+		assert_acquire(pool, "0.0.0.0", expected, MEM_POOL_REASSIGN);
+		req->destroy(req);
+		/* pool should still be full */
+		ck_assert_int_eq(online, pool->get_online(pool));
+		assert_acquire(pool, "0.0.0.0", NULL, MEM_POOL_REASSIGN);
+	}
+
+	/* pool should still be full and not allocate anything */
 	assert_acquire(pool, "0.0.0.0", NULL, MEM_POOL_NEW);
 }
 
@@ -163,6 +195,26 @@ START_TEST(test_cidr_offset)
 }
 END_TEST
 
+START_TEST(test_cidr_reallocate)
+{
+	mem_pool_t *pool;
+	host_t *base;
+
+	base = host_create_from_string("192.168.0.0", 0);
+	
+	pool = mem_pool_create("test", base, 24);
+	ck_assert_int_eq(254, pool->get_size(pool));
+	
+	/* allocate all addresses */
+	assert_acquires_new(pool, "192.168.0.%d", 1);
+	assert_acquires_released(pool, "192.168.0.%d", 1);
+	
+	pool->destroy(pool);
+
+	base->destroy(base);
+}
+END_TEST
+
 START_TEST(test_range)
 {
 	mem_pool_t *pool;
@@ -220,6 +272,7 @@ Suite *mem_pool_suite_create()
 	tc = tcase_create("cidr constructor");
 	tcase_add_test(tc, test_cidr);
 	tcase_add_test(tc, test_cidr_offset);
+	tcase_add_test(tc, test_cidr_reallocate);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("range constructor");
