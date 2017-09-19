@@ -201,9 +201,9 @@ START_TEST(test_hasher_from_integrity)
 	size_t length;
 
 	length = 0;
-	ck_assert(hasher_algorithm_from_integrity(auths[_i].auth, NULL) == 
+	ck_assert(hasher_algorithm_from_integrity(auths[_i].auth, NULL) ==
 											  auths[_i].alg);
-	ck_assert(hasher_algorithm_from_integrity(auths[_i].auth, &length) == 
+	ck_assert(hasher_algorithm_from_integrity(auths[_i].auth, &length) ==
 											  auths[_i].alg);
 	ck_assert(length == auths[_i].length);
 }
@@ -226,7 +226,7 @@ typedef struct {
 
 static hasher_ikev2_t ikev2[] = {
 	{ HASH_IDENTITY, TRUE  },
-	{ HASH_SHA1,     TRUE  },
+	{ HASH_SHA1,     FALSE },
 	{ HASH_SHA256,   TRUE  },
 	{ HASH_SHA384,   TRUE  },
 	{ HASH_SHA512,   TRUE  },

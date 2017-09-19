@@ -156,14 +156,12 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 		}
 		enumerator->destroy(enumerator);
 
-		/* for RSA we tried at least SHA-512, also try other schemes down to
-		 * what we'd use with classic authentication */
+		/* for RSA we tried at least SHA-512, also try other schemes */
 		if (key_type == KEY_RSA)
 		{
 			signature_scheme_t schemes[] = {
 				SIGN_RSA_EMSA_PKCS1_SHA2_384,
 				SIGN_RSA_EMSA_PKCS1_SHA2_256,
-				SIGN_RSA_EMSA_PKCS1_SHA1,
 			}, contained;
 			bool found;
 			int i, j;

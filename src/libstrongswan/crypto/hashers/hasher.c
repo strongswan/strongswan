@@ -287,7 +287,6 @@ bool hasher_algorithm_for_ikev2(hash_algorithm_t alg)
 	switch (alg)
 	{
 		case HASH_IDENTITY:
-		case HASH_SHA1:
 		case HASH_SHA256:
 		case HASH_SHA384:
 		case HASH_SHA512:
@@ -296,6 +295,7 @@ bool hasher_algorithm_for_ikev2(hash_algorithm_t alg)
 		case HASH_MD2:
 		case HASH_MD4:
 		case HASH_MD5:
+		case HASH_SHA1:
 		case HASH_SHA224:
 		case HASH_SHA3_224:
 		case HASH_SHA3_256:
