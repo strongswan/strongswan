@@ -973,6 +973,8 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 				/* only for testing purposes */
 				break;
 			case MODP_768_BIT:
+			case MODP_1024_BIT:
+			case MODP_1536_BIT:
 				/* weak */
 				break;
 			case MODP_1024_160:
@@ -980,7 +982,6 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case MODP_2048_256:
 				/* RFC 5114 primes are of questionable source */
 				break;
-			case MODP_1536_BIT:
 			case ECP_224_BIT:
 			case ECP_224_BP:
 			case ECP_192_BIT:
@@ -988,7 +989,6 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 				/* rarely used */
 				break;
 			case MODP_2048_BIT:
-			case MODP_1024_BIT:
 				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
 				break;
 			default:
