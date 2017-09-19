@@ -100,6 +100,7 @@
                 0x07         "id-RSAES-OAEP"			OID_RSAES_OAEP
                 0x08         "id-mgf1"
                 0x09         "id-pSpecified"
+                0x0A         "RSASSA-PSS"				OID_RSASSA_PSS
                 0x0B         "sha256WithRSAEncryption"	OID_SHA256_WITH_RSA
                 0x0C         "sha384WithRSAEncryption"	OID_SHA384_WITH_RSA
                 0x0D         "sha512WithRSAEncryption"	OID_SHA512_WITH_RSA
