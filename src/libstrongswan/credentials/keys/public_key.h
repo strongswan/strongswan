@@ -89,6 +89,8 @@ enum signature_scheme_t {
 	SIGN_RSA_EMSA_PKCS1_SHA3_384,
 	/** EMSA-PKCS1_v1.5 signature as in PKCS#1 using RSA and SHA-3_512 */
 	SIGN_RSA_EMSA_PKCS1_SHA3_512,
+	/** EMSA-PSS signature as in PKCS#1 using RSA                      */
+	SIGN_RSA_EMSA_PSS,
 	/** ECDSA with SHA-1 using DER encoding as in RFC 3279             */
 	SIGN_ECDSA_WITH_SHA1_DER,
 	/** ECDSA with SHA-256 using DER encoding as in RFC 3279           */

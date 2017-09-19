@@ -452,6 +452,7 @@ hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme)
 		case SIGN_UNKNOWN:
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 		case SIGN_ECDSA_WITH_NULL:
+		case SIGN_RSA_EMSA_PSS:
 			break;
 		case SIGN_ED25519:
 		case SIGN_ED448:
