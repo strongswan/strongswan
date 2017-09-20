@@ -181,6 +181,14 @@ bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level0,
 uint64_t asn1_parse_integer_uint64(chunk_t blob);
 
 /**
+ * Converts an uint64_t to an ASN.1 INTEGER object.
+ *
+ * @param val		integer to convert
+ * @return			body of an ASN.1 coded integer object
+ */
+chunk_t asn1_integer_from_uint64(uint64_t val);
+
+/**
  * Print the value of an ASN.1 simple object
  *
  * @param object	ASN.1 object to be printed

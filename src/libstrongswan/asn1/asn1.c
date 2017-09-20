@@ -609,6 +609,26 @@ uint64_t asn1_parse_integer_uint64(chunk_t blob)
 	return val;
 }
 
+/*
+ * Described in header
+ */
+chunk_t asn1_integer_from_uint64(uint64_t val)
+{
+	u_char buf[sizeof(val)];
+	chunk_t enc = chunk_empty;
+
+	if (val < 0x100)
+	{
+		buf[0] = (u_char)val;
+		return chunk_clone(chunk_create(buf, 1));
+	}
+	for (enc.ptr = buf + sizeof(val); val; enc.len++, val >>= 8)
+	{	/* fill the buffer from the end */
+		*(--enc.ptr) = val & 0xff;
+	}
+	return chunk_clone(enc);
+}
+
 /**
  * ASN.1 definition of an algorithmIdentifier
  */
