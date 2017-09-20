@@ -38,4 +38,23 @@ struct rsa_pss_params_t {
 #define RSA_PSS_SALT_LEN_DEFAULT -1
 };
 
+/**
+ * Parse the given ASN.1 algorithm identifier params
+ *
+ * @param asn1		ASN.1 encoded RSASSA-PSS-params
+ * @param level0	current level of the ASN.1 parser
+ * @param params	parsed parameters
+ * @return			TRUE if successfully parsed
+ */
+bool rsa_pss_params_parse(chunk_t asn1, int level0, rsa_pss_params_t *params);
+
+/**
+ * Build ASN.1 algorithm identifier params
+ *
+ * @param params	parameters to encode
+ * @param asn1		ASN.1 encoded RSASSA-PSS-params (allocated)
+ * @return			TRUE if successfully built
+ */
+bool rsa_pss_params_build(rsa_pss_params_t *params, chunk_t *asn1);
+
 #endif /** SIGNATURE_PARAMS_H_ @}*/
