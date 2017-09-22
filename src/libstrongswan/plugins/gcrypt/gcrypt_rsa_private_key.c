@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -498,16 +499,131 @@ gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_gen(key_type_t type,
 }
 
 /**
+ * Recover the primes from n, e and d using the algorithm described in
+ * Appendix C of NIST SP 800-56B.
+ */
+static bool calculate_pqu(chunk_t cn, chunk_t ce, chunk_t cd, chunk_t *cp,
+						  chunk_t *cq, chunk_t *cu)
+{
+	gcry_mpi_t n, e, d, p, q, u, k, r, g, y, n1, x, two;
+	int i, t, j;
+	gcry_error_t err;
+	bool success = FALSE;
+
+	n = e = d = p = q = u = k = r = g = y = n1 = x = two = NULL;
+	err = gcry_mpi_scan(&n, GCRYMPI_FMT_USG, cn.ptr, cn.len, NULL)
+		| gcry_mpi_scan(&e, GCRYMPI_FMT_USG, ce.ptr, ce.len, NULL)
+		| gcry_mpi_scan(&d, GCRYMPI_FMT_USG, cd.ptr, cd.len, NULL);
+	if (err)
+	{
+		goto error;
+	}
+	/* k = (d * e) - 1 */
+	k = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	gcry_mpi_mul(k, d, e);
+	gcry_mpi_sub_ui(k, k, 1);
+	if (gcry_mpi_test_bit(k, 0))
+	{
+		goto error;
+	}
+	/* k = 2^t * r, where r is the largest odd integer dividing k, and t >= 1 */
+	r = gcry_mpi_copy(k);
+	for (t = 0; !gcry_mpi_test_bit(r, 0); t++)
+	{	/* r = r/2 */
+		gcry_mpi_rshift(r, r, 1);
+	}
+	/* we need n-1 below */
+	n1 = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	gcry_mpi_sub_ui(n1, n, 1);
+	y = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	g = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	x = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	two = gcry_mpi_set_ui(NULL, 2);
+	for (i = 0; i < 100; i++)
+	{	/* generate random integer g in [0, n-1] */
+		do
+		{
+			gcry_mpi_randomize(g, gcry_mpi_get_nbits(n), GCRY_WEAK_RANDOM);
+		}
+		while (gcry_mpi_cmp(n, g) <= 0);
+		/* y = g^r mod n */
+		gcry_mpi_powm(y, g, r, n);
+		/* try again if y == 1 or y == n-1 */
+		if (gcry_mpi_cmp_ui(y, 1) == 0 || gcry_mpi_cmp(y, n1) == 0)
+		{
+			continue;
+		}
+		for (j = 0; j < t; j++)
+		{	/* x = y^2 mod n */
+			gcry_mpi_powm(x, y, two, n);
+			/* stop if x == 1 */
+			if (gcry_mpi_cmp_ui(x, 1) == 0)
+			{
+				goto done;
+			}
+			/* retry with new g if x = n-1 */
+			if (gcry_mpi_cmp(x, n1) == 0)
+			{
+				break;
+			}
+			/* y = x */
+			gcry_mpi_set(y, x);
+		}
+	}
+	goto error;
+
+done:
+	/* p = gcd(y-1, n) */
+	gcry_mpi_sub_ui(y, y, 1);
+	p = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	gcry_mpi_gcd(p, y, n);
+	/* q = n/p */
+	q = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	gcry_mpi_div(q, NULL, n, p, 0);
+	if (gcry_mpi_cmp(p, q) > 0)
+	{	/* gcrypt expects q < p */
+		gcry_mpi_swap(p, q);
+	}
+	/* u = q^-1 mod p */
+	u = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	gcry_mpi_invm(u, p, q);
+	err = gcry_mpi_aprint(GCRYMPI_FMT_USG, &cp->ptr, &cp->len, p)
+		| gcry_mpi_aprint(GCRYMPI_FMT_USG, &cq->ptr, &cq->len, q)
+		| gcry_mpi_aprint(GCRYMPI_FMT_USG, &cu->ptr, &cu->len, u);
+	if (err)
+	{
+		goto error;
+	}
+	success = TRUE;
+
+error:
+	gcry_mpi_release(n);
+	gcry_mpi_release(e);
+	gcry_mpi_release(d);
+	gcry_mpi_release(p);
+	gcry_mpi_release(q);
+	gcry_mpi_release(u);
+	gcry_mpi_release(k);
+	gcry_mpi_release(r);
+	gcry_mpi_release(g);
+	gcry_mpi_release(y);
+	gcry_mpi_release(n1);
+	gcry_mpi_release(x);
+	gcry_mpi_release(two);
+	return success;
+}
+
+/**
  * See header.
  */
 gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_load(key_type_t type,
 													  va_list args)
 {
 	private_gcrypt_rsa_private_key_t *this;
-	chunk_t n, e, d, p, q, u;
+	chunk_t n, e, d, p, q, u, np, nq, nu;
 	gcry_error_t err;
 
-	n = e = d = p = q = u = chunk_empty;
+	n = e = d = p = q = u = np = nq = nu = chunk_empty;
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
@@ -543,12 +659,25 @@ gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_load(key_type_t type,
 		}
 		break;
 	}
-
+	if (!p.len || !q.len || !u.len)
+	{
+		if (!calculate_pqu(n, e, d, &np, &nq, &nu))
+		{
+			return NULL;
+		}
+		p = np;
+		q = nq;
+		u = nu;
+	}
 	this = create_empty();
 	err = gcry_sexp_build(&this->key, NULL,
 					"(private-key(rsa(n %b)(e %b)(d %b)(p %b)(q %b)(u %b)))",
 					n.len, n.ptr, e.len, e.ptr, d.len, d.ptr,
 					p.len, p.ptr, q.len, q.ptr, u.len, u.ptr);
+
+	chunk_clear(&np);
+	chunk_clear(&nq);
+	chunk_clear(&nu);
 	if (err)
 	{
 		DBG1(DBG_LIB, "loading private key failed: %s", gpg_strerror(err));
