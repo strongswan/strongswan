@@ -265,6 +265,7 @@ METHOD(android_creds_t, load_user_certificate, certificate_t*,
 	encodings = charonservice->get_user_certificate(charonservice);
 	if (!encodings)
 	{
+		DBG1(DBG_CFG, "failed to load user certificate and key");
 		return NULL;
 	}
 
