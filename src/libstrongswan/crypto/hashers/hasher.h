@@ -131,6 +131,14 @@ struct hasher_t {
 };
 
 /**
+ * Returns the size of the hash for the given algorithm.
+ *
+ * @param alg			hash algorithm
+ * @return				size of hash or 0 if unknown
+ */
+size_t hasher_hash_size(hash_algorithm_t alg);
+
+/**
  * Conversion of ASN.1 OID to hash algorithm.
  *
  * @param oid			ASN.1 OID

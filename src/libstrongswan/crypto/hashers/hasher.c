@@ -57,6 +57,44 @@ ENUM_NEXT(hash_algorithm_short_names, HASH_UNKNOWN, HASH_SHA3_512, HASH_IDENTITY
 ENUM_END(hash_algorithm_short_names, HASH_SHA3_512);
 
 /*
+ * Described in header
+ */
+size_t hasher_hash_size(hash_algorithm_t alg)
+{
+	switch (alg)
+	{
+		case HASH_SHA1:
+			return HASH_SIZE_SHA1;
+		case HASH_SHA256:
+			return HASH_SIZE_SHA256;
+		case HASH_SHA384:
+			return HASH_SIZE_SHA384;
+		case HASH_SHA512:
+			return HASH_SIZE_SHA512;
+		case HASH_MD2:
+			return HASH_SIZE_MD2;
+		case HASH_MD4:
+			return HASH_SIZE_MD4;
+		case HASH_MD5:
+			return HASH_SIZE_MD5;
+		case HASH_SHA224:
+			return HASH_SIZE_SHA224;
+		case HASH_SHA3_224:
+			return HASH_SIZE_SHA224;
+		case HASH_SHA3_256:
+			return HASH_SIZE_SHA256;
+		case HASH_SHA3_384:
+			return HASH_SIZE_SHA384;
+		case HASH_SHA3_512:
+			return HASH_SIZE_SHA512;
+		case HASH_IDENTITY:
+		case HASH_UNKNOWN:
+			break;
+	}
+	return 0;
+}
+
+/*
  * Described in header.
  */
 hash_algorithm_t hasher_algorithm_from_oid(int oid)
