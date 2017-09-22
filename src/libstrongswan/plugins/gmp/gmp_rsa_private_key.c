@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2012 Andreas Steffen
@@ -807,6 +808,82 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 }
 
 /**
+ * Recover the primes from n, e and d using the algorithm described in
+ * Appendix C of NIST SP 800-56B.
+ */
+static bool calculate_pq(private_gmp_rsa_private_key_t *this)
+{
+	gmp_randstate_t rstate;
+	mpz_t k, r, g, y, n1, x;
+	int i, t, j;
+	bool success = FALSE;
+
+	gmp_randinit_default(rstate);
+	mpz_inits(k, r, g, y, n1, x, NULL);
+	/* k = (d * e) - 1 */
+	mpz_mul(k, *this->d, this->e);
+	mpz_sub_ui(k, k, 1);
+	if (mpz_odd_p(k))
+	{
+		goto error;
+	}
+	/* k = 2^t * r, where r is the largest odd integer dividing k, and t >= 1 */
+	mpz_set(r, k);
+	for (t = 0; !mpz_odd_p(r); t++)
+	{	/* r = r/2 */
+		mpz_divexact_ui(r, r, 2);
+	}
+	/* we need n-1 below */
+	mpz_sub_ui(n1, this->n, 1);
+	for (i = 0; i < 100; i++)
+	{	/* generate random integer g in [0, n-1] */
+		mpz_urandomm(g, rstate, this->n);
+		/* y = g^r mod n */
+		mpz_powm_sec(y, g, r, this->n);
+		/* try again if y == 1 or y == n-1 */
+		if (mpz_cmp_ui(y, 1) == 0 || mpz_cmp(y, n1) == 0)
+		{
+			continue;
+		}
+		for (j = 0; j < t; j++)
+		{	/* x = y^2 mod n */
+			mpz_powm_ui(x, y, 2, this->n);
+			/* stop if x == 1 */
+			if (mpz_cmp_ui(x, 1) == 0)
+			{
+				goto done;
+			}
+			/* retry with new g if x = n-1 */
+			if (mpz_cmp(x, n1) == 0)
+			{
+				break;
+			}
+			/* y = x */
+			mpz_set(y, x);
+		}
+	}
+	goto error;
+
+done:
+	/* p = gcd(y-1, n) */
+	mpz_sub_ui(y, y, 1);
+	mpz_gcd(this->p, y, this->n);
+	/* q = n/p */
+	mpz_divexact(this->q, this->n, this->p);
+	success = TRUE;
+
+error:
+	mpz_clear_sensitive(k);
+	mpz_clear_sensitive(r);
+	mpz_clear_sensitive(g);
+	mpz_clear_sensitive(y);
+	mpz_clear_sensitive(x);
+	mpz_clear(n1);
+	gmp_randclear(rstate);
+	return success;
+}
+
+/**
  * See header.
  */
 gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
@@ -868,9 +945,30 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
 	mpz_import(this->n, n.len, 1, 1, 1, 0, n.ptr);
 	mpz_import(this->e, e.len, 1, 1, 1, 0, e.ptr);
 	mpz_import(*this->d, d.len, 1, 1, 1, 0, d.ptr);
-	mpz_import(this->p, p.len, 1, 1, 1, 0, p.ptr);
-	mpz_import(this->q, q.len, 1, 1, 1, 0, q.ptr);
-	mpz_import(this->coeff, coeff.len, 1, 1, 1, 0, coeff.ptr);
+	if (p.len)
+	{
+		mpz_import(this->p, p.len, 1, 1, 1, 0, p.ptr);
+	}
+	if (q.len)
+	{
+		mpz_import(this->q, q.len, 1, 1, 1, 0, q.ptr);
+	}
+	if (!p.len && !q.len)
+	{	/* p and q missing in key, recalculate from n, e and d */
+		if (!calculate_pq(this))
+		{
+			destroy(this);
+			return NULL;
+		}
+	}
+	else if (!p.len)
+	{	/* p missing in key, recalculate: p = n / q */
+		mpz_divexact(this->p, this->n, this->q);
+	}
+	else if (!q.len)
+	{	/* q missing in key, recalculate: q = n / p */
+		mpz_divexact(this->q, this->n, this->p);
+	}
 	if (!exp1.len)
 	{	/* exp1 missing in key, recalculate: exp1 = d mod (p-1) */
 		mpz_sub_ui(this->exp1, this->p, 1);
@@ -889,6 +987,14 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
 	{
 		mpz_import(this->exp2, exp2.len, 1, 1, 1, 0, exp2.ptr);
 	}
+	if (!coeff.len)
+	{	/* coeff missing in key, recalculate: coeff = q^-1 mod p */
+		mpz_invert(this->coeff, this->q, this->p);
+	}
+	else
+	{
+		mpz_import(this->coeff, coeff.len, 1, 1, 1, 0, coeff.ptr);
+	}
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
 	if (check(this) != SUCCESS)
 	{
@@ -897,4 +1003,3 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
 	}
 	return &this->public;
 }
-
