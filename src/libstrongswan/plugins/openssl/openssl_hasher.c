@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2008-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -91,16 +91,24 @@ METHOD(hasher_t, destroy, void,
 /*
  * Described in header
  */
-openssl_hasher_t *openssl_hasher_create(hash_algorithm_t algo)
+const EVP_MD *openssl_get_md(hash_algorithm_t hash)
 {
-	private_openssl_hasher_t *this;
-	char* name;
+	char *name;
 
-	name = enum_to_name(hash_algorithm_short_names, algo);
+	name = enum_to_name(hash_algorithm_short_names, hash);
 	if (!name)
 	{
 		return NULL;
 	}
+	return EVP_get_digestbyname(name);
+}
+
+/*
+ * Described in header
+ */
+openssl_hasher_t *openssl_hasher_create(hash_algorithm_t algo)
+{
+	private_openssl_hasher_t *this;
 
 	INIT(this,
 		.public = {
@@ -114,7 +122,7 @@ openssl_hasher_t *openssl_hasher_create(hash_algorithm_t algo)
 		},
 	);
 
-	this->hasher = EVP_get_digestbyname(name);
+	this->hasher = openssl_get_md(algo);
 	if (!this->hasher)
 	{
 		/* OpenSSL does not support the requested algo */
