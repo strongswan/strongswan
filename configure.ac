@@ -487,7 +487,7 @@ if test x$aikgen = xtrue; then
 	tss_trousers=true
 fi
 
-if test x$ntru = xtrue -o x$bliss = xtrue; then
+if test x$gmp = xtrue -o x$ntru = xtrue -o x$bliss = xtrue; then
 	mgf1=true
 fi
 
