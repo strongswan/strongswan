@@ -28,6 +28,7 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
+#include <credentials/keys/signature_params.h>
 
 #ifdef HAVE_MPZ_POWM_SEC
 # undef mpz_powm
@@ -334,6 +335,125 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 	return TRUE;
 }
 
+/**
+ * Build a signature using the PKCS#1 EMSA PSS scheme
+ */
+static bool build_emsa_pss_signature(private_gmp_rsa_private_key_t *this,
+									 rsa_pss_params_t *params, chunk_t data,
+									 chunk_t *signature)
+{
+	ext_out_function_t xof;
+	hasher_t *hasher = NULL;
+	rng_t *rng = NULL;
+	xof_t *mgf = NULL;
+	chunk_t hash, salt = chunk_empty, m, ps, db, dbmask, em;
+	size_t embits, emlen, maskbits;
+	bool success = FALSE;
+
+	if (!params)
+	{
+		return FALSE;
+	}
+	switch (params->mgf1_hash)
+	{
+		case HASH_SHA1:
+			xof = XOF_MGF1_SHA1;
+			break;
+		case HASH_SHA256:
+			xof = XOF_MGF1_SHA256;
+			break;
+		case HASH_SHA512:
+			xof = XOF_MGF1_SHA512;
+			break;
+		default:
+			DBG1(DBG_LIB, "%N is not supported for MGF1", hash_algorithm_names,
+				 params->mgf1_hash);
+			return FALSE;
+	}
+	/* emBits = modBits - 1 */
+	embits = mpz_sizeinbase(this->n, 2) - 1;
+	/* emLen = ceil(emBits/8) */
+	emlen = (embits + 7) / BITS_PER_BYTE;
+	/* mHash = Hash(M) */
+	hasher = lib->crypto->create_hasher(lib->crypto, params->hash);
+	if (!hasher)
+	{
+		DBG1(DBG_LIB, "hash algorithm %N not supported",
+			 hash_algorithm_names, params->hash);
+		return FALSE;
+	}
+	hash = chunk_alloca(hasher->get_hash_size(hasher));
+	if (!hasher->get_hash(hasher, data, hash.ptr))
+	{
+		goto error;
+	}
+
+	salt.len = hash.len;
+	if (params->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
+	{
+		salt.len = params->salt_len;
+	}
+	if (emlen < (hash.len + salt.len + 2))
+	{	/* too long */
+		goto error;
+	}
+	if (salt.len)
+	{
+		salt = chunk_alloca(salt.len);
+		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+		if (!rng || !rng->get_bytes(rng, salt.len, salt.ptr))
+		{
+			goto error;
+		}
+	}
+	/* M' = 0x0000000000000000 | mHash | salt */
+	m = chunk_cata("ccc",
+				   chunk_from_chars(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00),
+				   hash, salt);
+	/* H = Hash(M') */
+	if (!hasher->get_hash(hasher, m, hash.ptr))
+	{
+		goto error;
+	}
+	/* PS = 00...<padding depending on hash and salt length> */
+	ps = chunk_alloca(emlen - salt.len - hash.len - 2);
+	memset(ps.ptr, 0, ps.len);
+	/* DB = PS | 0x01 | salt */
+	db = chunk_cata("ccc", ps, chunk_from_chars(0x01), salt);
+	/* dbMask = MGF(H, emLen - hLen - 1) */
+	mgf = lib->crypto->create_xof(lib->crypto, xof);
+	dbmask = chunk_alloca(db.len);
+	if (!mgf)
+	{
+		DBG1(DBG_LIB, "%N not supported", ext_out_function_names, xof);
+		goto error;
+	}
+	if (!mgf->set_seed(mgf, hash) ||
+		!mgf->get_bytes(mgf, dbmask.len, dbmask.ptr))
+	{
+		goto error;
+	}
+	/* maskedDB = DB xor dbMask */
+	memxor(db.ptr, dbmask.ptr, db.len);
+	/* zero out unused bits */
+	maskbits = (8 * emlen) - embits;
+	if (maskbits)
+	{
+		db.ptr[0] &= (0xff >> maskbits);
+	}
+	/* EM = maskedDB | H | 0xbc */
+	em = chunk_cata("ccc", db, hash, chunk_from_chars(0xbc));
+	/* S = RSASP1(K, EM) */
+	*signature = rsasp1(this, em);
+	success = TRUE;
+
+error:
+	DESTROY_IF(hasher);
+	DESTROY_IF(rng);
+	DESTROY_IF(mgf);
+	return success;
+}
+
 METHOD(private_key_t, get_type, key_type_t,
 	private_gmp_rsa_private_key_t *this)
 {
@@ -368,6 +488,8 @@ METHOD(private_key_t, sign, bool,
 			return build_emsa_pkcs1_signature(this, HASH_SHA1, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return build_emsa_pkcs1_signature(this, HASH_MD5, data, signature);
+		case SIGN_RSA_EMSA_PSS:
+			return build_emsa_pss_signature(this, params, data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
