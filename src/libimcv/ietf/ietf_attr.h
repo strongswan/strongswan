@@ -48,7 +48,7 @@ enum ietf_attr_t {
 	IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED =       12,
 
 	/* draft-ietf-sacm-nea-swid-patnc */
-	IETF_ATTR_SW_REQUEST =                        17,
+	IETF_ATTR_SWIMA_REQUEST =                     17,
 	IETF_ATTR_SW_ID_INVENTORY =                   18,
 	IETF_ATTR_SW_ID_EVENTS =                      19,
 	IETF_ATTR_SW_INVENTORY =                      20,

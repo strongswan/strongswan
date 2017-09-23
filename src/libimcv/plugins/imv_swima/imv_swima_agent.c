@@ -44,7 +44,7 @@ typedef struct private_imv_swima_agent_t private_imv_swima_agent_t;
 
 /* Subscribed PA-TNC message subtypes */
 static pen_type_t msg_types[] = {
-	{ PEN_IETF, PA_SUBTYPE_IETF_SW }
+	{ PEN_IETF, PA_SUBTYPE_IETF_SWIMA }
 };
 
 /**
@@ -175,7 +175,7 @@ static TNC_Result receive_msg(private_imv_swima_agent_t *this,
 					reader->destroy(reader);
 					continue;
 				}
-				if (error_code.type == PA_ERROR_SW_RESPONSE_TOO_LARGE)
+				if (error_code.type == PA_ERROR_SWIMA_RESPONSE_TOO_LARGE)
 				{
 					if (!reader->read_uint32(reader, &max_attr_size))
 					{

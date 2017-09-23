@@ -124,7 +124,7 @@ static req_data_t req_data[] = {
 START_TEST(test_imcv_swima_sw_req)
 {
 	pen_type_t type;
-	pen_type_t pen_type = { PEN_IETF, IETF_ATTR_SW_REQUEST };
+	pen_type_t pen_type = { PEN_IETF, IETF_ATTR_SWIMA_REQUEST };
 	pa_tnc_attr_t *attr, *attr1, *attr2;
 	ietf_swima_attr_req_t *c_attr;
 	swima_record_t *target;

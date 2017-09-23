@@ -27,16 +27,16 @@ ENUM_BEGIN(pa_tnc_error_code_names,	PA_ERROR_RESERVED,
 	"Version Not Supported",
 	"Attribute Type Not Supported"
 );
-ENUM_NEXT(pa_tnc_error_code_names,	PA_ERROR_SW,
-									PA_ERROR_SW_SUBSCRIPTION_ID_REUSE,
+ENUM_NEXT(pa_tnc_error_code_names,	PA_ERROR_SWIMA,
+									PA_ERROR_SWIMA_SUBSCRIPTION_ID_REUSE,
 									PA_ERROR_ATTR_TYPE_NOT_SUPPORTED,
-	"SW Error",
-	"SW Subscription Denied",
-	"SW Response Too Large",
-	"SW Subscription Fulfillment Error",
-	"SW Subscription ID Reuse"
+	"SWIMA Error",
+	"SWIMA Subscription Denied",
+	"SWIMA Response Too Large",
+	"SWIMA Subscription Fulfillment Error",
+	"SWIMA Subscription ID Reuse"
 );
-ENUM_END(pa_tnc_error_code_names,	PA_ERROR_SW_SUBSCRIPTION_ID_REUSE);
+ENUM_END(pa_tnc_error_code_names,	PA_ERROR_SWIMA_SUBSCRIPTION_ID_REUSE);
 
 typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t;
 

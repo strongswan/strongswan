@@ -33,18 +33,18 @@ typedef enum pa_tnc_error_code_t pa_tnc_error_code_t;
 enum  pa_tnc_error_code_t {
 
 	/* RFC 5792 PA-TNC */
-	PA_ERROR_RESERVED =                      0,
-	PA_ERROR_INVALID_PARAMETER =             1,
-	PA_ERROR_VERSION_NOT_SUPPORTED =         2,
-	PA_ERROR_ATTR_TYPE_NOT_SUPPORTED =       3,
-	PA_ERROR_PA_TNC_MSG_ROOF =               3,
+	PA_ERROR_RESERVED =                         0,
+	PA_ERROR_INVALID_PARAMETER =                1,
+	PA_ERROR_VERSION_NOT_SUPPORTED =            2,
+	PA_ERROR_ATTR_TYPE_NOT_SUPPORTED =          3,
+	PA_ERROR_PA_TNC_MSG_ROOF =                  3,
 
 	/* draft-ietf-sacm-nea-swid-patnc (SWIMA) */
-	PA_ERROR_SW =                           32,
-	PA_ERROR_SW_SUBSCRIPTION_DENIED =       33,
-	PA_ERROR_SW_RESPONSE_TOO_LARGE =        34,
-	PA_ERROR_SW_SUBSCRIPTION_FULFILLMENT =  35,
-	PA_ERROR_SW_SUBSCRIPTION_ID_REUSE =     36
+	PA_ERROR_SWIMA =                           32,
+	PA_ERROR_SWIMA_SUBSCRIPTION_DENIED =       33,
+	PA_ERROR_SWIMA_RESPONSE_TOO_LARGE =        34,
+	PA_ERROR_SWIMA_SUBSCRIPTION_FULFILLMENT =  35,
+	PA_ERROR_SWIMA_SUBSCRIPTION_ID_REUSE =     36
 };
 
 /**

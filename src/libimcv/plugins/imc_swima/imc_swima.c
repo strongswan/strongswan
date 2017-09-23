@@ -35,7 +35,7 @@
 static const char imc_name[] = "SWIMA";
 
 static pen_type_t msg_types[] = {
-	{ PEN_IETF, PA_SUBTYPE_IETF_SW }
+	{ PEN_IETF, PA_SUBTYPE_IETF_SWIMA }
 };
 
 static imc_agent_t *imc_swima;
@@ -180,7 +180,7 @@ static void fulfill_request(imc_state_t *state, imc_msg_t *msg,
 		{
 			snprintf(error_msg, msg_len, "failed to collect SW%s events, "
 					 "fallback to SW%s inventory", id_str, id_str);
-			attr = swima_error_create(PA_ERROR_SW, request_id, 0, error_msg);
+			attr = swima_error_create(PA_ERROR_SWIMA, request_id, 0, error_msg);
 			msg->add_attribute(msg, attr);
 		}
 		else {
@@ -207,7 +207,7 @@ static void fulfill_request(imc_state_t *state, imc_msg_t *msg,
 		{
 			snprintf(error_msg, msg_len, "failed to collect SW%s inventory",
 					 id_str);
-			attr = swima_error_create(PA_ERROR_SW, request_id, 0, error_msg);
+			attr = swima_error_create(PA_ERROR_SWIMA, request_id, 0, error_msg);
 		}
 		else
 		{
@@ -258,7 +258,7 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 
 		type = attr->get_type(attr);
 
-		if (type.vendor_id != PEN_IETF || type.type != IETF_ATTR_SW_REQUEST)
+		if (type.vendor_id != PEN_IETF || type.type != IETF_ATTR_SWIMA_REQUEST)
 		{
 			continue;
 		}
@@ -270,7 +270,7 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 
 		if (flags & (IETF_SWIMA_ATTR_REQ_FLAG_S | IETF_SWIMA_ATTR_REQ_FLAG_C))
 		{
-			attr = swima_error_create(PA_ERROR_SW_SUBSCRIPTION_DENIED,
+			attr = swima_error_create(PA_ERROR_SWIMA_SUBSCRIPTION_DENIED,
 						request_id, 0, "no subscription available yet");
 			out_msg->add_attribute(out_msg, attr);
 			break;

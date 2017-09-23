@@ -16,7 +16,7 @@
 #include "tncif_pa_subtypes.h"
 
 /* IETF PA Subtype names */
-ENUM_BEGIN(pa_subtype_ietf_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_SW,
+ENUM_BEGIN(pa_subtype_ietf_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_SWIMA,
 	"Testing",
 	"Operating System",
 	"Anti-Virus",
@@ -26,10 +26,10 @@ ENUM_BEGIN(pa_subtype_ietf_names, PA_SUBTYPE_IETF_TESTING, PA_SUBTYPE_IETF_SW,
 	"IDPS",
 	"VPN",
 	"NEA Client",
-	"Software"
+	"SWIMA"
 );
 ENUM_NEXT(pa_subtype_ietf_names, PA_SUBTYPE_IETF_ANY, PA_SUBTYPE_IETF_ANY,
-								PA_SUBTYPE_IETF_SW,
+								PA_SUBTYPE_IETF_SWIMA,
 	"ANY"
 );
 ENUM_END(pa_subtype_ietf_names, PA_SUBTYPE_IETF_ANY);
