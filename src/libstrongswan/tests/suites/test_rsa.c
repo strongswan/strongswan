@@ -19,6 +19,7 @@
 #include "test_suite.h"
 
 #include <plugins/plugin_feature.h>
+#include <credentials/keys/signature_params.h>
 
 /**
  * Signature schemes to test
@@ -31,6 +32,15 @@ static signature_scheme_t schemes[] = {
 	SIGN_RSA_EMSA_PKCS1_SHA2_256,
 	SIGN_RSA_EMSA_PKCS1_SHA2_384,
 	SIGN_RSA_EMSA_PKCS1_SHA2_512,
+	SIGN_RSA_EMSA_PSS,
+};
+/**
+ * Default parameters for RSA PSS signatures
+ */
+static rsa_pss_params_t default_pss_params = {
+	.hash = HASH_SHA256,
+	.mgf1_hash = HASH_SHA256,
+	.salt_len = RSA_PSS_SALT_LEN_DEFAULT,
 };
 
 /**
@@ -43,6 +53,8 @@ static void test_good_sig(private_key_t *privkey, public_key_t *pubkey)
 
 	for (i = 0; i < countof(schemes); i++)
 	{
+		rsa_pss_params_t *params = NULL;
+
 		if (!lib->plugins->has_feature(lib->plugins,
 						PLUGIN_PROVIDE(PUBKEY_VERIFY, schemes[i])) ||
 			!lib->plugins->has_feature(lib->plugins,
@@ -50,9 +62,13 @@ static void test_good_sig(private_key_t *privkey, public_key_t *pubkey)
 		{
 			continue;
 		}
-		fail_unless(privkey->sign(privkey, schemes[i], NULL, data, &sig),
+		if (schemes[i] == SIGN_RSA_EMSA_PSS)
+		{
+			params = &default_pss_params;
+		}
+		fail_unless(privkey->sign(privkey, schemes[i], params, data, &sig),
 					"sign %N", signature_scheme_names, schemes[i]);
-		fail_unless(pubkey->verify(pubkey, schemes[i], NULL, data, sig),
+		fail_unless(pubkey->verify(pubkey, schemes[i], params, data, sig),
 					"verify %N", signature_scheme_names, schemes[i]);
 		free(sig.ptr);
 	}
@@ -101,15 +117,21 @@ static void test_bad_sigs(public_key_t *pubkey)
 
 	for (s = 0; s < countof(schemes); s++)
 	{
+		rsa_pss_params_t *params = NULL;
+
 		if (!lib->plugins->has_feature(lib->plugins,
 						PLUGIN_PROVIDE(PUBKEY_VERIFY, schemes[s])))
 		{
 			continue;
 		}
+		if (schemes[s] == SIGN_RSA_EMSA_PSS)
+		{
+			params = &default_pss_params;
+		}
 		for (i = 0; i < countof(invalid_sigs); i++)
 		{
 			fail_if(
-				pubkey->verify(pubkey, schemes[s], NULL, data, invalid_sigs[i]),
+				pubkey->verify(pubkey, schemes[s], params, data, invalid_sigs[i]),
 				"bad %N sig accepted %B", signature_scheme_names, schemes[s],
 				&invalid_sigs[i]);
 		}
