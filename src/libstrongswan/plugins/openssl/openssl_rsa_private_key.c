@@ -20,9 +20,11 @@
 
 #include "openssl_rsa_private_key.h"
 #include "openssl_rsa_public_key.h"
+#include "openssl_hasher.h"
 #include "openssl_util.h"
 
 #include <utils/debug.h>
+#include <credentials/keys/signature_params.h>
 
 #include <openssl/bn.h>
 #include <openssl/evp.h>
@@ -70,8 +72,126 @@ struct private_openssl_rsa_private_key_t {
 /* implemented in rsa public key */
 bool openssl_rsa_fingerprint(RSA *rsa, cred_encoding_type_t type, chunk_t *fp);
 
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+
 /**
- * Build an EMPSA PKCS1 signature described in PKCS#1
+ * Build RSA signature
+ */
+static bool build_signature(private_openssl_rsa_private_key_t *this,
+							const EVP_MD *md, rsa_pss_params_t *pss,
+							chunk_t data, chunk_t *sig)
+{
+	EVP_PKEY_CTX *pctx = NULL;
+	EVP_MD_CTX *mctx = NULL;
+	EVP_PKEY *key;
+	bool success = FALSE;
+
+	mctx = EVP_MD_CTX_create();
+	key = EVP_PKEY_new();
+	if (!mctx || !key)
+	{
+		goto error;
+	}
+	if (!EVP_PKEY_set1_RSA(key, this->rsa))
+	{
+		goto error;
+	}
+	if (EVP_DigestSignInit(mctx, &pctx, md, NULL, key) <= 0)
+	{
+		goto error;
+	}
+	if (pss)
+	{
+		const EVP_MD *mgf1md = openssl_get_md(pss->mgf1_hash);
+		int slen = EVP_MD_size(md);
+		if (pss->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
+		{
+			slen = pss->salt_len;
+		}
+		if (EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) <= 0 ||
+			EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, slen) <= 0 ||
+			EVP_PKEY_CTX_set_rsa_mgf1_md(pctx, mgf1md) <= 0)
+		{
+			goto error;
+		}
+	}
+	if (EVP_DigestSignUpdate(mctx, data.ptr, data.len) <= 0)
+	{
+		goto error;
+	}
+	success = (EVP_DigestSignFinal(mctx, sig->ptr, &sig->len) == 1);
+
+error:
+	if (key)
+	{
+		EVP_PKEY_free(key);
+	}
+	if (mctx)
+	{
+		EVP_MD_CTX_destroy(mctx);
+	}
+	return success;
+}
+
+/**
+ * Build an EMSA PKCS1 signature described in PKCS#1
+ */
+static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
+									   int type, chunk_t data, chunk_t *sig)
+{
+	const EVP_MD *md;
+
+	*sig = chunk_alloc(RSA_size(this->rsa));
+
+	if (type == NID_undef)
+	{
+		if (RSA_private_encrypt(data.len, data.ptr, sig->ptr, this->rsa,
+								RSA_PKCS1_PADDING) == sig->len)
+		{
+			return TRUE;
+		}
+	}
+	else
+	{
+		md = EVP_get_digestbynid(type);
+		if (md && build_signature(this, md, NULL, data, sig))
+		{
+			return TRUE;
+		}
+	}
+	chunk_free(sig);
+	return FALSE;
+}
+
+/**
+ * Build an EMSA PSS signature described in PKCS#1
+ */
+static bool build_emsa_pss_signature(private_openssl_rsa_private_key_t *this,
+									 rsa_pss_params_t *params, chunk_t data,
+									 chunk_t *sig)
+{
+	const EVP_MD *md;
+
+	if (!params)
+	{
+		return FALSE;
+	}
+
+	*sig = chunk_alloc(RSA_size(this->rsa));
+
+	md = openssl_get_md(params->hash);
+	if (md && build_signature(this, md, params, data, sig))
+	{
+		return TRUE;
+	}
+	chunk_free(sig);
+	return FALSE;
+}
+
+#else /* OPENSSL_VERSION_NUMBER < 1.0 */
+
+/**
+ * Build an EMSA PKCS1 signature described in PKCS#1
  */
 static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
 									   int type, chunk_t data, chunk_t *sig)
@@ -90,15 +210,15 @@ static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
 	}
 	else
 	{
-		EVP_MD_CTX *ctx;
-		EVP_PKEY *key;
+		EVP_MD_CTX *ctx = NULL;
+		EVP_PKEY *key = NULL;
 		const EVP_MD *hasher;
 		u_int len;
 
 		hasher = EVP_get_digestbynid(type);
 		if (!hasher)
 		{
-			return FALSE;
+			goto error;
 		}
 
 		ctx = EVP_MD_CTX_create();
@@ -140,7 +260,7 @@ error:
 	}
 	return success;
 }
-
+#endif /* OPENSSL_VERSION_NUMBER < 1.0 */
 
 METHOD(private_key_t, get_type, key_type_t,
 	private_openssl_rsa_private_key_t *this)
@@ -168,6 +288,10 @@ METHOD(private_key_t, sign, bool,
 			return build_emsa_pkcs1_signature(this, NID_sha1, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return build_emsa_pkcs1_signature(this, NID_md5, data, signature);
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+		case SIGN_RSA_EMSA_PSS:
+			return build_emsa_pss_signature(this, params, data, signature);
+#endif
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
