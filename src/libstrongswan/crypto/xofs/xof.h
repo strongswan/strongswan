@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -110,5 +111,13 @@ struct xof_t {
 	 */
 	void (*destroy)(xof_t *this);
 };
+
+/**
+ * Determine an MGF1 XOF type for the given hash algorithm.
+ *
+ * @param alg			hash algorithm to map
+ * @return				MGF1 XOF type if available, XOF_UNDEFINED otherwise
+ */
+ext_out_function_t xof_mgf1_from_hash_algorithm(hash_algorithm_t alg);
 
 #endif /** XOF_H_ @}*/
