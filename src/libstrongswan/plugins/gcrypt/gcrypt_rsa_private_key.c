@@ -22,6 +22,7 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
+#include <credentials/keys/signature_params.h>
 
 typedef struct private_gcrypt_rsa_private_key_t private_gcrypt_rsa_private_key_t;
 
@@ -148,50 +149,88 @@ static bool sign_raw(private_gcrypt_rsa_private_key_t *this,
 }
 
 /**
- * Sign a chunk of data using hashing and PKCS#1 encoding
+ * Sign a chunk of data using hashing and PKCS#1v1.5/EMSA-PSS encoding
  */
 static bool sign_pkcs1(private_gcrypt_rsa_private_key_t *this,
-					   hash_algorithm_t hash_algorithm, char *hash_name,
+					   hash_algorithm_t hash_algorithm, rsa_pss_params_t *pss,
 					   chunk_t data, chunk_t *signature)
 {
 	hasher_t *hasher;
 	chunk_t hash;
 	gcry_error_t err;
 	gcry_sexp_t in, out;
-	int hash_oid;
+	char *hash_name = enum_to_name(hash_algorithm_short_names, hash_algorithm);
 
-	hash_oid = hasher_algorithm_to_oid(hash_algorithm);
-	if (hash_oid == OID_UNKNOWN)
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
+	if (!hasher)
 	{
+		DBG1(DBG_LIB, "hash algorithm %N not supported",
+			 hash_algorithm_names, hash_algorithm);
 		return FALSE;
 	}
-	hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
-	if (!hasher || !hasher->allocate_hash(hasher, data, &hash))
+	if (!hasher->allocate_hash(hasher, data, &hash))
 	{
-		DESTROY_IF(hasher);
+		hasher->destroy(hasher);
 		return FALSE;
 	}
 	hasher->destroy(hasher);
 
-	err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(hash %s %b))",
-						  hash_name, hash.len, hash.ptr);
+	if (pss)
+	{
+		u_int slen = hasher_hash_size(hash_algorithm);
+		if (pss->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
+		{
+			slen = pss->salt_len;
+		}
+		err = gcry_sexp_build(&in, NULL,
+							  "(data(flags pss)(salt-length %u)(hash %s %b))",
+							  slen, hash_name, hash.len, hash.ptr);
+	}
+	else
+	{
+		err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(hash %s %b))",
+							  hash_name, hash.len, hash.ptr);
+	}
 	chunk_free(&hash);
 	if (err)
 	{
-		DBG1(DBG_LIB, "building signature S-expression failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "building signature S-expression failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
 	err = gcry_pk_sign(&out, in, this->key);
 	gcry_sexp_release(in);
 	if (err)
 	{
-		DBG1(DBG_LIB, "creating pkcs1 signature failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "creating pkcs1 signature failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
+
 	*signature = gcrypt_rsa_find_token(out, "s", this->key);
 	gcry_sexp_release(out);
 	return !!signature->len;
 }
+
+#if GCRYPT_VERSION_NUMBER >= 0x010700
+/**
+ * Sign a chunk of data using hashing and EMSA-PSS encoding
+ */
+static bool sign_pss(private_gcrypt_rsa_private_key_t *this,
+					 rsa_pss_params_t *params, chunk_t data, chunk_t *signature)
+{
+	if (!params)
+	{
+		return FALSE;
+	}
+	if (params->mgf1_hash != params->hash)
+	{
+		DBG1(DBG_LIB, "unable to use a different MGF1 hash for RSA-PSS");
+		return FALSE;
+	}
+	return sign_pkcs1(this, params->hash, params, data, signature);
+}
+#endif
 
 METHOD(private_key_t, get_type, key_type_t,
 	private_gcrypt_rsa_private_key_t *this)
@@ -208,17 +247,21 @@ METHOD(private_key_t, sign, bool,
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return sign_raw(this, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_224:
-			return sign_pkcs1(this, HASH_SHA224, "sha224", data, sig);
+			return sign_pkcs1(this, HASH_SHA224, NULL, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_256:
-			return sign_pkcs1(this, HASH_SHA256, "sha256", data, sig);
+			return sign_pkcs1(this, HASH_SHA256, NULL, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_384:
-			return sign_pkcs1(this, HASH_SHA384, "sha384", data, sig);
+			return sign_pkcs1(this, HASH_SHA384, NULL, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
-			return sign_pkcs1(this, HASH_SHA512, "sha512", data, sig);
+			return sign_pkcs1(this, HASH_SHA512, NULL, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
-			return sign_pkcs1(this, HASH_SHA1, "sha1", data, sig);
+			return sign_pkcs1(this, HASH_SHA1, NULL, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
-			return sign_pkcs1(this, HASH_MD5, "md5", data, sig);
+			return sign_pkcs1(this, HASH_MD5, NULL, data, sig);
+#if GCRYPT_VERSION_NUMBER >= 0x010700
+		case SIGN_RSA_EMSA_PSS:
+			return sign_pss(this, params, data, sig);
+#endif
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
