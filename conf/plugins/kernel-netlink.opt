@@ -116,3 +116,19 @@ charon.plugins.kernel-netlink.xfrm_acq_expires = 165
 	allocated by the kernel. The default value equals the total	retransmission
 	timeout for IKE messages, see IKEv2 RETRANSMISSION in
 	**strongswan.conf**(5).
+
+charon.plugins.kernel-netlink.preferred_rule_prio =
+	Priority of routing rule pointing to the routing table of the current
+	preferred network
+
+	On multihomed hosts, it is common to prioritize one network over the
+	other(s) (for example a modem with LTE over one with 2G). If policy
+	routing is used, this option can be set to the priority of the preferred
+	routing rule. I.e., the rule that points to the routing table of the
+	current preferred interface. When the rule is updated, the SAs will try
+	to be updated with MOBIKE using the preferred path. In order for this
+	option to have an effect, MOBIKE must be supported and enabled, and
+	charon.prefer_best_path set to yes.
+
+	Implementing the policy for which interface should be preferred and
+	updating the rule, is up to other applications.

@@ -526,6 +526,12 @@ struct private_kernel_netlink_net_t {
 	 * MSS to set on installed routes
 	 */
 	uint32_t mss;
+
+	/**
+	 * Priority of rule pointing to the routing table for the current
+	 * preferred network
+	 */
+	uint32_t preferred_rule_prio;
 };
 
 /**
@@ -1452,6 +1458,37 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 }
 
 /**
+ * process RTM_NEWRULE from kernel
+ */
+static void process_rule(private_kernel_netlink_net_t *this,
+			 struct nlmsghdr *hdr)
+{
+	struct fib_rule_hdr* fib_hdr = NLMSG_DATA(hdr);
+	struct rtattr *rta = (struct rtattr*) (((uint8_t*) fib_hdr) +
+			     NLMSG_ALIGN(sizeof(struct fib_rule_hdr)));
+	size_t rtasize = NLMSG_PAYLOAD(hdr, sizeof(struct fib_rule_hdr));
+	uint32_t priority = 0;
+	bool prio_rule_found = false;
+
+	while (RTA_OK(rta, rtasize)) {
+		if (rta->rta_type == FRA_PRIORITY) {
+			priority = *(uint32_t*) RTA_DATA(rta);
+
+			if (priority == this->preferred_rule_prio) {
+				prio_rule_found = true;
+			}
+
+			break;
+		}
+		rta = RTA_NEXT(rta, rtasize);
+	}
+
+	if (prio_rule_found) {
+		fire_roam_event(this, FALSE);
+	}
+}
+
+/**
  * Receives events from kernel
  */
 static bool receive_events(private_kernel_netlink_net_t *this, int fd,
@@ -1507,6 +1544,9 @@ static bool receive_events(private_kernel_netlink_net_t *this, int fd,
 				{
 					process_route(this, hdr);
 				}
+				break;
+			case RTM_NEWRULE:
+				process_rule(this, hdr);
 				break;
 			default:
 				break;
@@ -1839,6 +1879,74 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
 	return route;
 }
 
+static uint32_t get_pref_table(private_kernel_netlink_net_t *this, int family)
+{
+	uint32_t pref_table = 0, pref_table_tmp = 0, priority = 0;
+	struct nlmsghdr *hdr, *out, *current;
+	struct rtmsg *msg;
+	size_t len = 4096;
+	netlink_buf_t request;
+	struct rtattr *rta;
+	size_t rtasize;
+
+	memset(&request, 0, sizeof(request));
+
+	hdr = &request.hdr;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+	hdr->nlmsg_type = RTM_GETRULE;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+
+	msg = NLMSG_DATA(hdr);
+	msg->rtm_family = family;
+
+	if (this->socket->send(this->socket, hdr, &out, &len) != SUCCESS)
+	{
+		DBG2(DBG_KNL, "getting rules failed");
+		return 0;
+	}
+
+	for (current = out; NLMSG_OK(current, len);
+	     current = NLMSG_NEXT(current, len))
+	{
+		if (current->nlmsg_type	== NLMSG_DONE)
+		{
+			break;
+		}
+
+		msg = NLMSG_DATA(current);
+		rta = (struct rtattr*) (((uint8_t*) msg) +
+					NLMSG_ALIGN(sizeof(struct fib_rule_hdr)));
+		rtasize = NLMSG_PAYLOAD(current, sizeof(struct fib_rule_hdr));
+
+		priority = pref_table_tmp = 0;
+
+		while (RTA_OK(rta, rtasize)) {
+			if (rta->rta_type == FRA_TABLE) {
+				pref_table_tmp = *(uint32_t*) RTA_DATA(rta);
+			} else if (rta->rta_type == FRA_PRIORITY) {
+				priority = *(uint32_t*) RTA_DATA(rta);
+			}
+
+			if (priority == this->preferred_rule_prio &&
+			    pref_table_tmp) {
+				pref_table = pref_table_tmp;
+				break;
+			}
+
+			rta = RTA_NEXT(rta, rtasize);
+		}
+
+		if (pref_table)
+		{
+			break;
+		}
+	}
+
+	free(out);
+
+	return pref_table;
+}
+
 /**
  * Get a route: If "nexthop", the nexthop is returned. source addr otherwise.
  */
@@ -1851,17 +1959,26 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	struct rtmsg *msg;
 	chunk_t chunk;
 	size_t len;
-	linked_list_t *routes;
+	linked_list_t *routes, *pref_routes, *tmp_routes;
 	rt_entry_t *route = NULL, *best = NULL;
 	enumerator_t *enumerator;
 	host_t *addr = NULL;
 	bool match_net;
 	int family;
+	uint32_t pref_table = 0;
 
 	if (recursion > MAX_ROUTE_RECURSION)
 	{
 		return NULL;
 	}
+
+	family = dest->get_family(dest);
+
+	if (this->preferred_rule_prio)
+	{
+		pref_table = get_pref_table(this, family);
+	}
+
 	chunk = dest->get_address(dest);
 	len = chunk.len * 8;
 	prefix = prefix < 0 ? len : min(prefix, len);
@@ -1869,7 +1986,6 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 
 	memset(&request, 0, sizeof(request));
 
-	family = dest->get_family(dest);
 	hdr = &request.hdr;
 	hdr->nlmsg_flags = NLM_F_REQUEST;
 	hdr->nlmsg_type = RTM_GETROUTE;
@@ -1920,6 +2036,12 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 		return NULL;
 	}
 	routes = linked_list_create();
+
+	if (pref_table)
+	{
+		pref_routes = linked_list_create();
+	}
+
 	this->lock->read_lock(this->lock);
 
 	for (current = out; NLMSG_OK(current, len);
@@ -1951,7 +2073,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				{	/* route is from our own ipsec routing table */
 					continue;
 				}
-				if (route->oif && !is_interface_up_and_usable(this, route->oif))
+				if (route->oif && (!is_interface_up_and_usable(this, route->oif) || route->oif == 1))
 				{	/* interface is down */
 					continue;
 				}
@@ -1970,21 +2092,30 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 					}
 					route->src_host = src;
 				}
+
+				if (pref_table && route->table == pref_table) {
+					tmp_routes = pref_routes;
+				} else {
+					tmp_routes = routes;
+				}
+
 				/* insert route, sorted by network prefix and priority */
-				enumerator = routes->create_enumerator(routes);
+				enumerator = tmp_routes->create_enumerator(tmp_routes);
 				while (enumerator->enumerate(enumerator, &other))
 				{
 					if (route->dst_len > other->dst_len)
 					{
 						break;
 					}
+
 					if (route->dst_len == other->dst_len &&
-						route->priority < other->priority)
+					    route->priority < other->priority)
 					{
 						break;
 					}
 				}
-				routes->insert_before(routes, enumerator, route);
+				tmp_routes->insert_before(tmp_routes, enumerator,
+							  route);
 				enumerator->destroy(enumerator);
 				route = NULL;
 				continue;
@@ -1997,6 +2128,20 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 	if (route)
 	{
 		rt_entry_destroy(route);
+	}
+
+	/* Push the preferred routes onto the normal routes list in the correct
+	 * order, so that they get considered first */
+	if (pref_table)
+	{
+		while (pref_routes->remove_last(pref_routes,
+						(void**) &route) == SUCCESS)
+		{
+			routes->insert_first(routes, route);
+		}
+		pref_routes->destroy_function(pref_routes,
+					      (void*)rt_entry_destroy);
+		route = NULL;
 	}
 
 	/* now we have a list of routes matching dest, sorted by net prefix.
@@ -2989,6 +3134,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 						"%s.plugins.kernel-netlink.mtu", 0, lib->ns),
 		.mss = lib->settings->get_int(lib->settings,
 						"%s.plugins.kernel-netlink.mss", 0, lib->ns),
+		.preferred_rule_prio = lib->settings->get_int(lib->settings,
+						"%s.plugins.kernel-netlink.preferred_rule_prio", 0, lib->ns),
 	);
 	timerclear(&this->last_route_reinstall);
 	timerclear(&this->next_roam);
@@ -3038,7 +3185,17 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 			return NULL;
 		}
 		addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR |
-						 RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE | RTMGRP_LINK;
+				 RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE |
+				 RTMGRP_LINK;
+
+		if (this->preferred_rule_prio)
+		{
+			addr.nl_groups |= RTMGRP_IPV4_RULE;
+#ifdef RTNLGRP_IPV6_RULE
+			addr.nl_groups |= RTNLGRP_IPV6_RULE;
+#endif
+		}
+
 		if (bind(this->socket_events, (struct sockaddr*)&addr, sizeof(addr)))
 		{
 			DBG1(DBG_KNL, "unable to bind RT event socket: %s (%d)",
