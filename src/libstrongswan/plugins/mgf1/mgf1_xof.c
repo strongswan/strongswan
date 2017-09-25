@@ -244,8 +244,14 @@ mgf1_xof_t *mgf1_xof_create(ext_out_function_t algorithm)
 		case XOF_MGF1_SHA1:
 			hash_alg = HASH_SHA1;
 			break;
+		case XOF_MGF1_SHA224:
+			hash_alg = HASH_SHA224;
+			break;
 		case XOF_MGF1_SHA256:
 			hash_alg = HASH_SHA256;
+			break;
+		case XOF_MGF1_SHA384:
+			hash_alg = HASH_SHA384;
 			break;
 		case XOF_MGF1_SHA512:
 			hash_alg = HASH_SHA512;
@@ -261,7 +267,7 @@ mgf1_xof_t *mgf1_xof_create(ext_out_function_t algorithm)
 			 hash_algorithm_names, hash_alg);
 		return NULL;
 	}
-	
+
 	INIT(this,
 		.public = {
 			.mgf1_interface = {
