@@ -32,11 +32,15 @@ typedef struct xof_t xof_t;
  */
 enum ext_out_function_t {
 	XOF_UNDEFINED,
-	/** RFC 2437 PKCS#1 */
+	/** RFC 8017 PKCS#1 */
 	XOF_MGF1_SHA1,
-	/** RFC 2437 PKCS#1 */
+	/** RFC 8017 PKCS#1 */
+	XOF_MGF1_SHA224,
+	/** RFC 8017 PKCS#1 */
 	XOF_MGF1_SHA256,
-	/** RFC 2437 PKCS#1 */
+	/** RFC 8017 PKCS#1 */
+	XOF_MGF1_SHA384,
+	/** RFC 8017 PKCS#1 */
 	XOF_MGF1_SHA512,
 	/** FIPS 202 */
 	XOF_SHAKE_128,
