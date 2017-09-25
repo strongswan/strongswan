@@ -354,21 +354,12 @@ static bool build_emsa_pss_signature(private_gmp_rsa_private_key_t *this,
 	{
 		return FALSE;
 	}
-	switch (params->mgf1_hash)
+	xof = xof_mgf1_from_hash_algorithm(params->mgf1_hash);
+	if (xof == XOF_UNDEFINED)
 	{
-		case HASH_SHA1:
-			xof = XOF_MGF1_SHA1;
-			break;
-		case HASH_SHA256:
-			xof = XOF_MGF1_SHA256;
-			break;
-		case HASH_SHA512:
-			xof = XOF_MGF1_SHA512;
-			break;
-		default:
-			DBG1(DBG_LIB, "%N is not supported for MGF1", hash_algorithm_names,
-				 params->mgf1_hash);
-			return FALSE;
+		DBG1(DBG_LIB, "%N is not supported for MGF1", hash_algorithm_names,
+			 params->mgf1_hash);
+		return FALSE;
 	}
 	/* emBits = modBits - 1 */
 	embits = mpz_sizeinbase(this->n, 2) - 1;
