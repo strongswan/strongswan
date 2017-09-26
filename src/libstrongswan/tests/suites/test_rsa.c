@@ -60,6 +60,8 @@ static void test_good_sig(private_key_t *privkey, public_key_t *pubkey)
 			!lib->plugins->has_feature(lib->plugins,
 						PLUGIN_PROVIDE(PRIVKEY_SIGN, schemes[i])))
 		{
+			warn("%N not supported, skip scheme", signature_scheme_names,
+				 schemes[i]);
 			continue;
 		}
 		if (schemes[i] == SIGN_RSA_EMSA_PSS)
@@ -122,6 +124,8 @@ static void test_bad_sigs(public_key_t *pubkey)
 		if (!lib->plugins->has_feature(lib->plugins,
 						PLUGIN_PROVIDE(PUBKEY_VERIFY, schemes[s])))
 		{
+			warn("%N not supported, skip scheme", signature_scheme_names,
+				 schemes[s]);
 			continue;
 		}
 		if (schemes[s] == SIGN_RSA_EMSA_PSS)
@@ -1411,6 +1415,7 @@ START_TEST(test_sign_pkcs15_2048)
 		!lib->plugins->has_feature(lib->plugins,
 					PLUGIN_PROVIDE(PRIVKEY_SIGN, scheme)))
 	{
+		warn("%N not supported, skip test", signature_scheme_names, scheme);
 		return;
 	}
 	fail_unless(privkey_2048->sign(privkey_2048, scheme, NULL, pkcs15_2048[_i].m, &sig),
@@ -2551,6 +2556,7 @@ START_TEST(test_sign_pkcs15_3072)
 		!lib->plugins->has_feature(lib->plugins,
 					PLUGIN_PROVIDE(PRIVKEY_SIGN, scheme)))
 	{
+		warn("%N not supported, skip test", signature_scheme_names, scheme);
 		return;
 	}
 	fail_unless(privkey_3072->sign(privkey_3072, scheme, NULL, pkcs15_3072[_i].m, &sig),
@@ -3203,6 +3209,8 @@ START_TEST(test_sign_pss_no_salt)
 		!lib->plugins->has_feature(lib->plugins,
 					PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PSS)))
 	{
+		warn("%N not supported, skip test", signature_scheme_names,
+			 SIGN_RSA_EMSA_PSS);
 		return;
 	}
 	privkey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
@@ -3452,6 +3460,7 @@ START_TEST(test_verify_pkcs15)
 	if (!lib->plugins->has_feature(lib->plugins,
 					PLUGIN_PROVIDE(PUBKEY_VERIFY, scheme)))
 	{
+		warn("%N not supported, skip test", signature_scheme_names, scheme);
 		return;
 	}
 	for (i = 0; i < countof(pkcs15_verify[_i].tests); i++)
@@ -4414,6 +4423,8 @@ START_TEST(test_verify_pss)
 	if (!lib->plugins->has_feature(lib->plugins,
 					PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PSS)))
 	{
+		warn("%N not supported, skip test", signature_scheme_names,
+			 SIGN_RSA_EMSA_PSS);
 		return;
 	}
 	for (i = 0; i < countof(pss_verify[_i].tests); i++)
