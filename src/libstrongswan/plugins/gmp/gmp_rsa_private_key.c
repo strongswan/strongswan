@@ -380,7 +380,11 @@ static bool build_emsa_pss_signature(private_gmp_rsa_private_key_t *this,
 	}
 
 	salt.len = hash.len;
-	if (params->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
+	if (params->salt.len)
+	{
+		salt = params->salt;
+	}
+	else if (params->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
 	{
 		salt.len = params->salt_len;
 	}
@@ -388,7 +392,7 @@ static bool build_emsa_pss_signature(private_gmp_rsa_private_key_t *this,
 	{	/* too long */
 		goto error;
 	}
-	if (salt.len)
+	if (salt.len && !params->salt.len)
 	{
 		salt = chunk_alloca(salt.len);
 		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
