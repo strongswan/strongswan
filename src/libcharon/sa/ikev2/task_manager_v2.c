@@ -1780,9 +1780,11 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	child_cfg_t *cfg;
+	peer_cfg_t *peer;
 	ike_sa_t *new;
 	host_t *host;
 	queued_task_t *queued;
+	bool children = FALSE;
 
 	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
 								this->ike_sa->get_version(this->ike_sa), TRUE);
@@ -1791,7 +1793,8 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 		return;
 	}
 
-	new->set_peer_cfg(new, this->ike_sa->get_peer_cfg(this->ike_sa));
+	peer = this->ike_sa->get_peer_cfg(this->ike_sa);
+	new->set_peer_cfg(new, peer);
 	host = this->ike_sa->get_other_host(this->ike_sa);
 	new->set_other_host(new, host->clone(host));
 	host = this->ike_sa->get_my_host(this->ike_sa);
@@ -1809,6 +1812,7 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 		cfg = child_sa->get_config(child_sa);
 		new->queue_task(new, &child_create_create(new, cfg->get_ref(cfg),
 												  FALSE, NULL, NULL)->task);
+		children = TRUE;
 	}
 	enumerator->destroy(enumerator);
 
@@ -1821,9 +1825,23 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 			new->queue_task(new, queued->task);
 			array_remove_at(this->queued_tasks, enumerator);
 			free(queued);
+			children = TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (!children
+#ifdef ME
+		/* allow reauth of mediation connections without CHILD_SAs */
+		&& !peer->is_mediation(peer)
+#endif /* ME */
+		)
+	{
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, new);
+		DBG1(DBG_IKE, "unable to reauthenticate IKE_SA, no CHILD_SA "
+			 "to recreate");
+		return;
+	}
 
 	/* suspend online revocation checking until the SA is established */
 	new->set_condition(new, COND_ONLINE_VALIDATION_SUSPENDED, TRUE);
