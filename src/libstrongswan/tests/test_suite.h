@@ -220,6 +220,17 @@ void test_setup_timeout(int s);
 int test_failure_get(char *msg, int len, const char **file);
 
 /**
+ * Get info about a warning if one was issued during the test. Resets the
+ * warning state.
+ *
+ * @param msg		buffer receiving warning
+ * @param len		size of msg buffer
+ * @param file		pointer receiving source code file
+ * @return			source code line number, 0 if no warning issued
+ */
+int test_warning_get(char *msg, int len, const char **file);
+
+/**
  * Get a backtrace for a failure.
  *
  * @return			allocated backtrace of test failure, if any
@@ -245,6 +256,18 @@ void test_fail_vmsg(const char *file, int line, char *fmt, va_list args);
  * @param ...		arguments for fmt
  */
 void test_fail_msg(const char *file, int line, char *fmt, ...);
+
+/**
+ * Issue a warning for a particular test with a message using printf style
+ * arguments. This does not fail the test, and only the last warning for each
+ * test is kept.
+ *
+ * @param file		source code file name
+ * @param line		source code line number
+ * @param fmt		printf format string
+ * @param ...		arguments for fmt
+ */
+void test_warn_msg(const char *file, int line, char *fmt, ...);
 
 /**
  * Let a test fail if one of the worker threads has failed (only if called from
@@ -345,6 +368,7 @@ void test_fail_if_worker_failed();
 #define ck_assert_msg test_assert_msg
 #define ck_assert_str_eq test_str_eq
 #define ck_assert_chunk_eq test_chunk_eq
+#define warn(fmt, ...) test_warn_msg(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define fail(fmt, ...) test_fail_msg(__FILE__, __LINE__, fmt, ##__VA_ARGS__)
 #define fail_if(x, fmt, ...) \
 ({ \
