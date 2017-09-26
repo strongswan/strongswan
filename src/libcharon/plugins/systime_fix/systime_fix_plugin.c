@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2013-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
@@ -53,6 +53,11 @@ struct private_systime_fix_plugin_t {
 	 * Interval we check for a now-valid system time, in seconds. 0 if disabled
 	 */
 	u_int interval;
+
+	/**
+	 * How long to wait for a valid system time, 0 to wait indefinitely
+	 */
+	time_t timeout;
 
 	/**
 	 * Timestamp where we start considering system time valid
@@ -118,6 +123,23 @@ static bool has_invalid_certs(ike_sa_t *ike_sa)
 }
 
 /**
+ * Check if we reached the timeout
+ */
+static inline bool timeout_reached(private_systime_fix_plugin_t *this)
+{
+	if (this->timeout == 0)
+	{	/* disabled */
+		return FALSE;
+	}
+	if (this->timeout <= this->interval)
+	{
+		return TRUE;
+	}
+	this->timeout -= this->interval;
+	return FALSE;
+}
+
+/**
  * Check system time, reevaluate certificates
  */
 static job_requeue_t check_systime(private_systime_fix_plugin_t *this)
@@ -129,14 +151,22 @@ static job_requeue_t check_systime(private_systime_fix_plugin_t *this)
 
 	if (time(NULL) < this->threshold)
 	{
-		DBG2(DBG_CFG, "systime not valid, rechecking in %ds", this->interval);
-		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
-					callback_job_create((callback_job_cb_t)check_systime, this,
-										NULL, NULL), this->interval);
-		return JOB_REQUEUE_NONE;
+		if (!timeout_reached(this))
+		{
+			DBG2(DBG_CFG, "system time not valid, rechecking in %us",
+				 this->interval);
+			return JOB_RESCHEDULE(this->interval);
+		}
+		DBG1(DBG_CFG, "timeout reached while waiting for valid system time, "
+			 "force rechecking certificates");
+		/* force regular lifetime checks for new connections */
+		lib->credmgr->remove_validator(lib->credmgr,
+									   &this->validator->validator);
 	}
-
-	DBG1(DBG_CFG, "system time got valid, rechecking certificates");
+	else
+	{
+		DBG1(DBG_CFG, "system time got valid, rechecking certificates");
+	}
 
 	enumerator = charon->ike_sa_manager->create_enumerator(
 												charon->ike_sa_manager, TRUE);
@@ -225,7 +255,7 @@ static bool plugin_cb(private_systime_fix_plugin_t *this,
 		lib->credmgr->add_validator(lib->credmgr, &this->validator->validator);
 		if (this->interval != 0)
 		{
-			DBG1(DBG_CFG, "starting systime check, interval: %ds",
+			DBG1(DBG_CFG, "starting system time check, interval: %us",
 				 this->interval);
 			lib->scheduler->schedule_job(lib->scheduler, (job_t*)
 					callback_job_create((callback_job_cb_t)check_systime,
@@ -275,6 +305,8 @@ plugin_t *systime_fix_plugin_create()
 		},
 		.interval = lib->settings->get_int(lib->settings,
 						"%s.plugins.%s.interval", 0, lib->ns, get_name(this)),
+		.timeout = lib->settings->get_time(lib->settings,
+						"%s.plugins.%s.timeout", 0, lib->ns, get_name(this)),
 		.reauth = lib->settings->get_bool(lib->settings,
 						"%s.plugins.%s.reauth", FALSE, lib->ns, get_name(this)),
 	);
