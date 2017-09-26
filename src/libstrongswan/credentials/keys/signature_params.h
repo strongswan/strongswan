@@ -35,6 +35,8 @@ struct rsa_pss_params_t {
 	hash_algorithm_t mgf1_hash;
 	/** Salt length, use RSA_PSS_SALT_LEN_DEFAULT for length equal to hash */
 	ssize_t salt_len;
+	/** Salt value, for unit tests (not all implementations support this) */
+	chunk_t salt;
 #define RSA_PSS_SALT_LEN_DEFAULT -1
 };
 
