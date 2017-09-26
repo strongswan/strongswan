@@ -195,16 +195,19 @@ endif
 EXTRA_DIST = \
 asn1/oid.txt asn1/oid.pl \
 crypto/proposal/proposal_keywords_static.txt \
+crypto/proposal/proposal_keywords_static.h.in \
 plugins/plugin_constructors.py \
 Android.mk
 
 BUILT_SOURCES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
+$(srcdir)/crypto/proposal/proposal_keywords_static.h \
 $(srcdir)/crypto/proposal/proposal_keywords_static.c \
 settings/settings_parser.h
 
 MAINTAINERCLEANFILES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
+$(srcdir)/crypto/proposal/proposal_keywords_static.h \
 $(srcdir)/crypto/proposal/proposal_keywords_static.c
 
 $(srcdir)/asn1/oid.c :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
@@ -214,6 +217,12 @@ $(srcdir)/asn1/oid.c :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
 $(srcdir)/asn1/oid.h :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
 		$(AM_V_GEN) \
 		(cd $(srcdir)/asn1/ && $(PERL) oid.pl)
+
+$(srcdir)/crypto/proposal/proposal_keywords_static.h: $(srcdir)/crypto/proposal/proposal_keywords_static.h.in
+		$(AM_V_GEN) \
+		sed \
+		-e "s:\@GPERF_LEN_TYPE\@:$(GPERF_LEN_TYPE):" \
+		$< > $@
 
 $(srcdir)/crypto/proposal/proposal_keywords_static.c:	$(srcdir)/crypto/proposal/proposal_keywords_static.txt \
 														$(srcdir)/crypto/proposal/proposal_keywords_static.h

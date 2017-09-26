@@ -19,7 +19,7 @@
 #include "proposal_keywords.h"
 
 const proposal_token_t* proposal_get_token_static(register const char *str,
-												  register GPERF_LEN_TYPE len);
+												  register @GPERF_LEN_TYPE@ len);
 
 #endif /* PROPOSAL_KEYWORDS_STATIC_H_ */
 

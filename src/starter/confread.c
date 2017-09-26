@@ -46,11 +46,6 @@ static const char esp_defaults[] = "aes128-sha256";
 static const char firewall_defaults[] = IPSEC_SCRIPT " _updown iptables";
 
 /**
- * Provided by GPERF
- */
-extern const kw_entry_t *in_word_set(register const char*, register GPERF_LEN_TYPE);
-
-/**
  * Process deprecated keywords
  */
 static bool is_deprecated(kw_token_t token, char *name, char *conn)

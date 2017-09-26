@@ -39,13 +39,19 @@ starter_LDADD = \
 	libstarter.la \
 	$(SOCKLIB) $(PTHREADLIB) $(ATOMICLIB)
 
-EXTRA_DIST = keywords.txt ipsec.conf ipsec.secrets Android.mk
-MAINTAINERCLEANFILES = keywords.c
-BUILT_SOURCES = keywords.c parser/parser.h
+EXTRA_DIST = keywords.h keywords.txt ipsec.conf ipsec.secrets Android.mk
+MAINTAINERCLEANFILES = keywords.h keywords.c
+BUILT_SOURCES = keywords.h keywords.c parser/parser.h
 
 if USE_LOAD_WARNING
   AM_CPPFLAGS += -DLOAD_WARNING
 endif
+
+keywords.h: $(srcdir)/keywords.h.in
+		$(AM_V_GEN) \
+		sed \
+		-e "s:\@GPERF_LEN_TYPE\@:$(GPERF_LEN_TYPE):" \
+		$< > $@
 
 keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h
 		$(AM_V_GEN) \

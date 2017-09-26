@@ -392,7 +392,7 @@ if test -x "$GPERF"; then
 				[AC_MSG_ERROR([unable to determine gperf len type])]
 			)]
 		)
-		AC_DEFINE_UNQUOTED([GPERF_LEN_TYPE], [$GPERF_LEN_TYPE], [gperf len type])
+		AC_SUBST(GPERF_LEN_TYPE)
 		AC_MSG_RESULT([yes])
 	else
 		AC_MSG_RESULT([no])

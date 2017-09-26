@@ -196,4 +196,8 @@ struct kw_entry_t {
 	kw_token_t token;
 };
 
+#ifndef IN_GPERF_GENERATED_FILE
+const kw_entry_t *in_word_set(register const char*, register @GPERF_LEN_TYPE@);
+#endif
+
 #endif /* _KEYWORDS_H_ */
