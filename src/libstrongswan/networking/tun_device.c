@@ -706,7 +706,7 @@ METHOD(tun_device_t, write_packet, bool,
                     break;
             }
          }
-        WaitForSingleObject(write_event, INFINITE);
+		WaitForSingleObject(write_event, INFINITE);
 
         CloseHandle(write_event);
 
@@ -716,69 +716,57 @@ METHOD(tun_device_t, write_packet, bool,
 METHOD(tun_device_t, read_packet, bool,
 	private_tun_device_t *this, chunk_t *packet)
 {
-	bool old, status;
-        DWORD error;
-        OVERLAPPED overlapped;
-	chunk_t data;
-        HANDLE read_event = CreateEvent(NULL, FALSE, FALSE, FALSE);
+    bool old, status;
+    DWORD error;
+	OVERLAPPED overlapped;
+    chunk_t data;
+    HANDLE read_event = CreateEvent(NULL, FALSE, FALSE, FALSE);
 
-        ResetEvent(read_event);
+    memset(&overlapped, 0, sizeof(OVERLAPPED));
 
-        error = GetLastError();
-        switch(error)
-        {
-            case ERROR_SUCCESS:
-                break;
-            default:
-                /* Just fine. Don't do anything. */
-                break;
-        }
-
-        memset(&overlapped, 0, sizeof(OVERLAPPED));
-
-        overlapped.hEvent = read_event;
+    overlapped.hEvent = read_event;
 
 	data = chunk_alloca(get_mtu(this));
 
-        /* Read chunk from handle */
-        status = ReadFile(this->tunhandle,
-                    &data.ptr,
-                    data.len,
-                    NULL,
-                    &overlapped);
-        error = GetLastError();
+    /* Read chunk from handle */
+	status = ReadFile(this->tunhandle,
+                      &data.ptr,
+                      data.len,
+                      NULL,
+                      &overlapped);
+    error = GetLastError();
 
-        if (status)
+    if (status)
+    {
+        /* Read returned immediately. */
+		SetEvent(read_event);
+    }
+    else
+    {
+        switch(error)
         {
-            /* Read returned immediately. */
-            SetEvent(read_event);
+            case ERROR_SUCCESS:
+            case ERROR_IO_PENDING:
+				/* all fine */
+                break;
+            default:
+                DBG1(DBG_LIB, "reading from TUN device %s failed: %u", this->if_name,
+                     error);
+                CloseHandle(read_event);
+                return FALSE;
+                break;
         }
-        else
-        {
-            switch(error)
-            {
-                case ERROR_SUCCESS:
-                case ERROR_IO_PENDING:
-                    /* all fine */
-                    break;
-                default:
-                    DBG1(DBG_LIB, "reading from TUN device %s failed: %u", this->if_name,
-                       error);
-                    CloseHandle(read_event);
-                    return FALSE;
-                    break;
-            }
-        }
-	old = thread_cancelability(TRUE);
+    }
+    old = thread_cancelability(TRUE);
 
-        WaitForSingleObject(read_event, INFINITE);
+	WaitForSingleObject(read_event, INFINITE);
 
-	thread_cancelability(old);
+    thread_cancelability(old);
 
-	*packet = chunk_clone(data);
+    *packet = chunk_clone(data);
 
-        CloseHandle(read_event);
-        return TRUE;
+    CloseHandle(read_event);
+    return TRUE;
 }
 
 #else
