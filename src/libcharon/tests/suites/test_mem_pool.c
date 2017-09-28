@@ -17,6 +17,8 @@
 
 #include <attributes/mem_pool.h>
 
+#include <time.h>
+
 static void assert_host(char *expected, host_t *host)
 {
 	if (!expected)
@@ -68,11 +70,10 @@ static void assert_acquires_new(mem_pool_t *pool, char *pattern, int first)
 static void assert_acquires_released(mem_pool_t *pool, char *pattern, int first)
 {
 	char expected[16];
-	host_t *req, *acquired;
+	host_t *req;
 	identification_t *id;
 	int i;
 	int online = pool->get_online(pool);
-	bool release_found;
 
 	id = identification_create_from_string("tester");
 
@@ -102,11 +103,9 @@ static void assert_acquires_released(mem_pool_t *pool, char *pattern, int first)
 static void assert_release(mem_pool_t *pool, char *pattern, int first, int first_not)
 {
 	char expected[16];
-	host_t *req, *acquired;
+	host_t *req;
 	identification_t *id;
 	int i;
-	int online = pool->get_online(pool);
-	bool release_found;
 
 	id = identification_create_from_string("tester");
 
@@ -276,8 +275,8 @@ START_TEST(test_cidr_reassign_after)
 	assert_acquire(pool, "0.0.0.0", NULL, MEM_POOL_REASSIGN);
 
 	/* sleep for more than 2 seconds, but not much more */
-	struct timeval tv = { 2, 10000000 };
-	nanosleep(&tv, NULL);
+	struct timespec ts = { 2, 10000000 };
+	nanosleep(&ts, NULL);
 
 	/* ah, now the addresses are happily assigned */
 	assert_acquires_reassigned(pool, "192.168.0.%d", 1, 11);
