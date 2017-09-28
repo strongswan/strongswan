@@ -2,6 +2,7 @@
  * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2008-2010 Martin Willi
  * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2017 F-Secure Corporation
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,6 +24,9 @@
 #include <threading/mutex.h>
 
 #define POOL_LIMIT (sizeof(u_int)*8 - 1)
+#define POOL_REASSIGN_AFTER_DEFAULT 0
+
+#define LOG_PREFIX "mem_pool "
 
 typedef struct private_mem_pool_t private_mem_pool_t;
 
@@ -51,6 +55,12 @@ struct private_mem_pool_t {
 	bool base_is_network_id;
 
 	/**
+	 * how many seconds must pass before an offline lease is reassigned to
+	 * someone else
+	 */
+	u_int reassign_after;
+
+	/**
 	 * size of the pool
 	 */
 	u_int size;
@@ -72,7 +82,7 @@ struct private_mem_pool_t {
 };
 
 /**
- * A unique lease address offset, with a hash of the peer host address
+ * A unique online lease address offset, with a hash of the peer host address
  */
 typedef struct {
 	/** lease, as offset */
@@ -80,6 +90,16 @@ typedef struct {
 	/** hash of remote address, to allow duplicates */
 	u_int hash;
 } unique_lease_t;
+
+/**
+ * A unique offline lease address offset, with timestamp of release time
+ */
+typedef struct {
+	/** lease, as offset */
+	u_int offset;
+	/** when the lease went offline */
+	time_t released;
+} unique_offline_lease_t;
 
 /**
  * Lease entry.
@@ -103,7 +123,7 @@ static entry_t* entry_create(identification_t *id)
 	INIT(entry,
 		.id = id->clone(id),
 		.online = array_create(sizeof(unique_lease_t), 0),
-		.offline = array_create(sizeof(u_int), 0),
+		.offline = array_create(sizeof(unique_offline_lease_t), 0),
 	);
 	return entry;
 }
@@ -254,6 +274,14 @@ METHOD(mem_pool_t, get_offline, u_int,
 	return count;
 }
 
+METHOD(mem_pool_t, set_reassign_after, void,
+	private_mem_pool_t *this, u_int seconds)
+{
+	this->mutex->lock(this->mutex);
+	this->reassign_after = seconds;
+	this->mutex->unlock(this->mutex);
+}
+
 /**
  * Create a unique hash for a remote address
  */
@@ -274,7 +302,7 @@ static int get_existing(private_mem_pool_t *this, identification_t *id,
 {
 	enumerator_t *enumerator;
 	unique_lease_t *lease, reassign;
-	u_int *current;
+	unique_offline_lease_t *offline;
 	entry_t *entry;
 	int offset = 0;
 
@@ -286,9 +314,9 @@ static int get_existing(private_mem_pool_t *this, identification_t *id,
 
 	/* check for a valid offline lease, refresh */
 	enumerator = array_create_enumerator(entry->offline);
-	if (enumerator->enumerate(enumerator, &current))
+	if (enumerator->enumerate(enumerator, &offline))
 	{
-		reassign.offset = offset = *current;
+		reassign.offset = offset = offline->offset;
 		reassign.hash = hash_addr(peer);
 		array_insert(entry->online, ARRAY_TAIL, &reassign);
 		array_remove_at(entry->offline, enumerator);
@@ -296,7 +324,7 @@ static int get_existing(private_mem_pool_t *this, identification_t *id,
 	enumerator->destroy(enumerator);
 	if (offset)
 	{
-		DBG1(DBG_CFG, "reassigning offline lease to '%Y'", id);
+		DBG1(DBG_CFG, LOG_PREFIX "reassigning offline lease %u back to '%Y'", offset, id);
 		return offset;
 	}
 	if (!peer)
@@ -319,7 +347,7 @@ static int get_existing(private_mem_pool_t *this, identification_t *id,
 	enumerator->destroy(enumerator);
 	if (offset)
 	{
-		DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
+		DBG1(DBG_CFG, LOG_PREFIX "reassigning online lease %u to back to '%Y'", offset, id);
 	}
 	return offset;
 }
@@ -344,7 +372,7 @@ static int get_new(private_mem_pool_t *this, identification_t *id, host_t *peer)
 		lease.offset = ++this->unused + (this->base_is_network_id ? 1 : 0);
 		lease.hash = hash_addr(peer);
 		array_insert(entry->online, ARRAY_TAIL, &lease);
-		DBG1(DBG_CFG, "assigning new lease to '%Y'", id);
+		DBG1(DBG_CFG, LOG_PREFIX "assigning new lease %u to '%Y'", lease.offset, id);
 	}
 	return lease.offset;
 }
@@ -355,20 +383,29 @@ static int get_new(private_mem_pool_t *this, identification_t *id, host_t *peer)
 static int get_reassigned(private_mem_pool_t *this, identification_t *id,
 						  host_t *peer)
 {
-	enumerator_t *enumerator;
+	enumerator_t *enumerator, *enumerator_offline;
 	entry_t *entry;
-	u_int current;
+	unique_offline_lease_t *offline;
 	unique_lease_t lease = {};
+	time_t max_release_time = time_monotonic(NULL) - this->reassign_after;
 
 	enumerator = this->leases->create_enumerator(this->leases);
 	while (enumerator->enumerate(enumerator, NULL, &entry))
 	{
-		if (array_remove(entry->offline, ARRAY_HEAD, &current))
+		/* check for a valid online lease to reassign */
+		enumerator_offline = array_create_enumerator(entry->offline);
+		while (enumerator_offline->enumerate(enumerator_offline, &offline))
 		{
-			lease.offset = current;
-			DBG1(DBG_CFG, "reassigning existing offline lease by '%Y' "
-				 "to '%Y'", entry->id, id);
+			if (offline->released <= max_release_time) {
+				lease.offset = offline->offset;
+				DBG1(DBG_CFG, LOG_PREFIX "reassigning existing offline lease %u by '%Y' "
+					 "to '%Y', age %d", offline->offset, entry->id, id, time_monotonic(NULL) - offline->released);
+				array_remove_at(entry->offline, enumerator_offline);
+				break;
+			}
 		}
+		enumerator_offline->destroy(enumerator_offline);
+
 		if (!array_count(entry->online) && !array_count(entry->offline))
 		{
 			this->leases->remove_at(this->leases, enumerator);
@@ -427,7 +464,7 @@ METHOD(mem_pool_t, acquire_address, host_t*,
 			offset = get_reassigned(this, id, peer);
 			if (!offset)
 			{
-				DBG1(DBG_CFG, "pool '%s' is full, unable to assign address",
+				DBG1(DBG_CFG, LOG_PREFIX "'%s' is full, unable to assign lease",
 					 this->name);
 			}
 			break;
@@ -451,6 +488,7 @@ METHOD(mem_pool_t, release_address, bool,
 	entry_t *entry;
 	u_int offset;
 	unique_lease_t *current;
+	unique_offline_lease_t offline;
 
 	if (this->size != 0)
 	{
@@ -482,8 +520,10 @@ METHOD(mem_pool_t, release_address, bool,
 			if (found && !more)
 			{
 				/* no tunnels are online anymore for this lease, make offline */
-				array_insert(entry->offline, ARRAY_TAIL, &offset);
-				DBG1(DBG_CFG, "lease %H by '%Y' went offline", address, id);
+				offline.offset = offset;
+				offline.released = time_monotonic(NULL);
+				array_insert(entry->offline, ARRAY_TAIL, &offline);
+				DBG1(DBG_CFG, LOG_PREFIX "lease %u %H by '%Y' went offline", offset, address, id);
 			}
 		}
 		this->mutex->unlock(this->mutex);
@@ -516,8 +556,8 @@ METHOD(enumerator_t, lease_enumerate, bool,
 {
 	identification_t **id;
 	unique_lease_t *lease;
+	unique_offline_lease_t *offline;
 	host_t **addr;
-	u_int *offset;
 	bool *online;
 
 	VA_ARGS_VGET(args, id, addr, online);
@@ -536,10 +576,10 @@ METHOD(enumerator_t, lease_enumerate, bool,
 				*online = TRUE;
 				return TRUE;
 			}
-			if (this->offline->enumerate(this->offline, &offset))
+			if (this->offline->enumerate(this->offline, &offline))
 			{
 				*id = this->entry->id;
-				*addr = this->addr = offset2host(this->pool, *offset);
+				*addr = this->addr = offset2host(this->pool, offline->offset);
 				*online = FALSE;
 				return TRUE;
 			}
@@ -619,6 +659,7 @@ static private_mem_pool_t *create_generic(char *name)
 			.get_size = _get_size,
 			.get_online = _get_online,
 			.get_offline = _get_offline,
+			.set_reassign_after = _set_reassign_after,
 			.acquire_address = _acquire_address,
 			.release_address = _release_address,
 			.create_lease_enumerator = _create_lease_enumerator,
@@ -628,6 +669,7 @@ static private_mem_pool_t *create_generic(char *name)
 		.leases = hashtable_create((hashtable_hash_t)id_hash,
 								   (hashtable_equals_t)id_equals, 16),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.reassign_after = POOL_REASSIGN_AFTER_DEFAULT,
 	);
 
 	return this;
@@ -672,7 +714,7 @@ mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 		if (bits > POOL_LIMIT)
 		{
 			bits = POOL_LIMIT;
-			DBG1(DBG_CFG, "virtual IP pool too large, limiting to %H/%d",
+			DBG1(DBG_CFG, LOG_PREFIX "virtual IP pool too large, limiting to %H/%d",
 				 base, addr_bits - bits);
 		}
 		this->size = 1 << bits;
@@ -720,14 +762,14 @@ mem_pool_t *mem_pool_create_range(char *name, host_t *from, host_t *to)
 		fromaddr.len != toaddr.len || fromaddr.len < sizeof(diff) ||
 		memcmp(fromaddr.ptr, toaddr.ptr, toaddr.len) > 0)
 	{
-		DBG1(DBG_CFG, "invalid IP address range: %H-%H", from, to);
+		DBG1(DBG_CFG, LOG_PREFIX "invalid IP address range: %H-%H", from, to);
 		return NULL;
 	}
 	if (fromaddr.len > sizeof(diff) &&
 		!chunk_equals(chunk_create(fromaddr.ptr, fromaddr.len - sizeof(diff)),
 					  chunk_create(toaddr.ptr, toaddr.len - sizeof(diff))))
 	{
-		DBG1(DBG_CFG, "IP address range too large: %H-%H", from, to);
+		DBG1(DBG_CFG, LOG_PREFIX "IP address range too large: %H-%H", from, to);
 		return NULL;
 	}
 	this = create_generic(name);
