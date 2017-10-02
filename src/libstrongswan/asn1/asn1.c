@@ -33,7 +33,15 @@ const chunk_t ASN1_INTEGER_1 = chunk_from_chars(0x02, 0x01, 0x01);
 const chunk_t ASN1_INTEGER_2 = chunk_from_chars(0x02, 0x01, 0x02);
 
 /*
- * Defined in header.
+ * Described in header
+ */
+chunk_t asn1_algorithmIdentifier_params(int oid, chunk_t params)
+{
+	return asn1_wrap(ASN1_SEQUENCE, "mm", asn1_build_known_oid(oid), params);
+}
+
+/*
+ * Described in header
  */
 chunk_t asn1_algorithmIdentifier(int oid)
 {
@@ -55,7 +63,7 @@ chunk_t asn1_algorithmIdentifier(int oid)
 			parameters = asn1_simple_object(ASN1_NULL, chunk_empty);
 			break;
 	}
-	return asn1_wrap(ASN1_SEQUENCE, "mm", asn1_build_known_oid(oid), parameters);
+	return asn1_algorithmIdentifier_params(oid, parameters);
 }
 
 /*
