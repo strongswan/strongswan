@@ -104,18 +104,32 @@ static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
  * Build authentication data used for Signature Authentication as per RFC 7427
  */
 static bool build_signature_auth_data(chunk_t *auth_data,
-									  signature_scheme_t scheme)
+									  signature_params_t *params)
 {
-	chunk_t data;
+	chunk_t data, parameters = chunk_empty;
 	uint8_t len;
 	int oid;
 
-	oid = signature_scheme_to_oid(scheme);
+	oid = signature_scheme_to_oid(params->scheme);
 	if (oid == OID_UNKNOWN)
 	{
+		chunk_free(auth_data);
 		return FALSE;
 	}
-	data = asn1_algorithmIdentifier(oid);
+	if (params->scheme == SIGN_RSA_EMSA_PSS &&
+		!rsa_pss_params_build(params->params, &parameters))
+	{
+		chunk_free(auth_data);
+		return FALSE;
+	}
+	if (parameters.len)
+	{
+		data = asn1_algorithmIdentifier_params(oid, parameters);
+	}
+	else
+	{
+		data = asn1_algorithmIdentifier(oid);
+	}
 	len = data.len;
 	*auth_data = chunk_cat("cmm", chunk_from_thing(len), data, *auth_data);
 	return TRUE;
@@ -253,8 +267,9 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 		while (enumerator->enumerate(enumerator, &params))
 		{
 			scheme = params->scheme;
-			if (private->sign(private, scheme, NULL, octets, auth_data) &&
-				build_signature_auth_data(auth_data, scheme))
+			if (private->sign(private, scheme, params->params, octets,
+							  auth_data) &&
+				build_signature_auth_data(auth_data, params))
 			{
 				status = SUCCESS;
 				break;
