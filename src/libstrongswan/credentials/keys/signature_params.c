@@ -280,8 +280,8 @@ bool rsa_pss_params_build(rsa_pss_params_t *params, chunk_t *asn1)
 			chunk_free(&hash);
 			return FALSE;
 		}
-		mgf = asn1_wrap(ASN1_SEQUENCE, "mm", asn1_build_known_oid(OID_MGF1),
-						asn1_algorithmIdentifier(alg));
+		mgf = asn1_algorithmIdentifier_params(OID_MGF1,
+											  asn1_algorithmIdentifier(alg));
 	}
 	salt_len = rsa_pss_salt_length(params);
 	if (salt_len < 0)
