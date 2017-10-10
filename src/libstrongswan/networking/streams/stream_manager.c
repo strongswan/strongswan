@@ -21,6 +21,9 @@
 # include "stream_unix.h"
 # include "stream_service_unix.h"
 #endif
+#ifdef USE_SYSTEMD
+# include "stream_service_systemd.h"
+#endif
 
 #include <threading/rwlock.h>
 
@@ -240,6 +243,9 @@ stream_manager_t *stream_manager_create()
 #ifndef WIN32
 	add_stream(this, "unix://", stream_create_unix);
 	add_service(this, "unix://", stream_service_create_unix);
+#endif
+#ifdef USE_SYSTEMD
+	add_service(this, "systemd://", stream_service_create_systemd);
 #endif
 
 	return &this->public;
