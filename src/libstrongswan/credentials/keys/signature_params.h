@@ -21,9 +21,55 @@
 #ifndef SIGNATURE_PARAMS_H_
 #define SIGNATURE_PARAMS_H_
 
+typedef struct signature_params_t signature_params_t;
 typedef struct rsa_pss_params_t rsa_pss_params_t;
 
 #include <crypto/hashers/hasher.h>
+
+/**
+ * Signature scheme with parameters
+ */
+struct signature_params_t {
+	/** Signature scheme */
+	signature_scheme_t scheme;
+	/** Parameters, depending on scheme */
+	void *params;
+};
+
+/**
+ * Compare two signature schemes and their parameters
+ *
+ * @param a			first scheme
+ * @param b			second scheme
+ * @return			TRUE if schemes and parameters are equal
+ */
+bool signature_params_equal(signature_params_t *a, signature_params_t *b);
+
+/**
+ * Compare two signature schemes and their parameters
+ *
+ * @param c			constraint
+ * @param s			scheme
+ * @return			TRUE if scheme complies to constraint
+ */
+bool signature_params_comply(signature_params_t *c, signature_params_t *s);
+
+/**
+ * Clone the given scheme and parameters, if any
+ *
+ * @return			cloned object
+ */
+signature_params_t *signature_params_clone(signature_params_t *this);
+
+/**
+ * Destroy the given scheme and parameters, if any
+ */
+void signature_params_destroy(signature_params_t *this);
+
+/**
+ * Clear the given parameters, if any, sets the scheme to SIGN_UNKNOWN
+ */
+void signature_params_clear(signature_params_t *this);
 
 /**
  * Parameters for SIGN_RSA_EMSA_PSS signature scheme

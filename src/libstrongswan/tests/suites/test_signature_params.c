@@ -19,7 +19,7 @@
 #include <asn1/asn1.h>
 #include <credentials/keys/signature_params.h>
 
-struct {
+static struct {
 	chunk_t aid;
 	rsa_pss_params_t params;
 } rsa_pss_parse_tests[] = {
@@ -125,7 +125,7 @@ START_TEST(test_rsa_pss_params_parse_invalid)
 }
 END_TEST
 
-struct {
+static struct {
 	chunk_t aid;
 	rsa_pss_params_t params;
 } rsa_pss_build_tests[] = {
@@ -209,6 +209,111 @@ START_TEST(test_rsa_pss_params_build_invalid)
 }
 END_TEST
 
+static rsa_pss_params_t rsa_pss_params_sha1 = { .hash = HASH_SHA1, .mgf1_hash = HASH_SHA1, .salt_len = HASH_SIZE_SHA1, };
+static rsa_pss_params_t rsa_pss_params_sha256 = { .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = HASH_SIZE_SHA256, };
+static rsa_pss_params_t rsa_pss_params_sha256_mgf1 = { .hash = HASH_SHA256, .mgf1_hash = HASH_SHA512, .salt_len = HASH_SIZE_SHA256, };
+static rsa_pss_params_t rsa_pss_params_sha256_salt = { .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = 10, };
+
+static struct {
+	bool equal;
+	bool complies;
+	signature_params_t a;
+	signature_params_t b;
+} params_compare_tests[] = {
+	{ TRUE, TRUE, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256, }, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256, }, },
+	{ FALSE, FALSE, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA1, }, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256, }, },
+	{ TRUE, TRUE, { .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256 },
+				  { .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256 }, },
+	{ FALSE, FALSE, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256, .params = &rsa_pss_params_sha256 },
+					{ .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256, .params = &rsa_pss_params_sha256 }, },
+	{ FALSE, FALSE, { .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256 },
+					{ .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256_mgf1 }, },
+	{ FALSE, TRUE, { .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256 },
+				   { .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256_salt }, },
+	{ FALSE, FALSE, { .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha1 },
+					{ .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256 }, },
+	{ FALSE, FALSE, { .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256 },
+					{ .scheme = SIGN_RSA_EMSA_PSS, }, },
+};
+
+START_TEST(test_params_compare)
+{
+	bool res;
+
+	res = signature_params_equal(&params_compare_tests[_i].a,
+								 &params_compare_tests[_i].b);
+	ck_assert(res == params_compare_tests[_i].equal);
+	res = signature_params_comply(&params_compare_tests[_i].a,
+								  &params_compare_tests[_i].b);
+	ck_assert(res == params_compare_tests[_i].complies);
+	res = signature_params_comply(&params_compare_tests[_i].b,
+								  &params_compare_tests[_i].a);
+	ck_assert(res == params_compare_tests[_i].complies);
+}
+END_TEST
+
+START_TEST(test_params_compare_null)
+{
+	ck_assert(signature_params_equal(NULL, NULL));
+	ck_assert(!signature_params_equal(&params_compare_tests[0].a, NULL));
+	ck_assert(!signature_params_equal(NULL, &params_compare_tests[0].a));
+}
+END_TEST
+
+static struct {
+	signature_params_t src;
+	signature_params_t res;
+} params_clone_tests[] = {
+	{ { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256, }, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256, }, },
+	{ { .scheme = SIGN_RSA_EMSA_PSS }, { .scheme = SIGN_RSA_EMSA_PSS }, },
+	{ { .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256 },
+	  { .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256 }, },
+	{ { .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256_salt },
+	  { .scheme = SIGN_RSA_EMSA_PSS, .params = &rsa_pss_params_sha256_salt }, },
+	{ { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256, .params = &rsa_pss_params_sha256 },
+	  { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256 }, },
+};
+
+START_TEST(test_params_clone)
+{
+	signature_params_t *clone = NULL;
+
+	clone = signature_params_clone(&params_clone_tests[_i].src);
+	ck_assert(signature_params_equal(clone, &params_clone_tests[_i].res));
+	signature_params_destroy(clone);
+}
+END_TEST
+
+START_TEST(test_params_clone_null)
+{
+	signature_params_t *clone = NULL;
+
+	clone = signature_params_clone(clone);
+	ck_assert(!clone);
+	signature_params_destroy(clone);
+}
+END_TEST
+
+START_TEST(test_params_clear)
+{
+	signature_params_t *clone;
+
+	clone = signature_params_clone(&params_clone_tests[_i].src);
+	signature_params_clear(clone);
+	ck_assert_int_eq(clone->scheme, SIGN_UNKNOWN);
+	ck_assert(!clone->params);
+	free(clone);
+}
+END_TEST
+
+START_TEST(test_params_clear_null)
+{
+	signature_params_t *clone = NULL;
+
+	signature_params_clear(clone);
+}
+END_TEST
+
 Suite *signature_params_suite_create()
 {
 	Suite *s;
@@ -216,14 +321,29 @@ Suite *signature_params_suite_create()
 
 	s = suite_create("signature params");
 
-	tc = tcase_create("parse");
+	tc = tcase_create("rsa/pss parse");
 	tcase_add_loop_test(tc, test_rsa_pss_params_parse, 0, countof(rsa_pss_parse_tests));
 	tcase_add_loop_test(tc, test_rsa_pss_params_parse_invalid, 0, countof(rsa_pss_parse_invalid_tests));
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("build");
+	tc = tcase_create("rsa/pss build");
 	tcase_add_loop_test(tc, test_rsa_pss_params_build, 0, countof(rsa_pss_build_tests));
 	tcase_add_loop_test(tc, test_rsa_pss_params_build_invalid, 0, countof(rsa_pss_build_invalid_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("params compare");
+	tcase_add_loop_test(tc, test_params_compare, 0, countof(params_compare_tests));
+	tcase_add_test(tc, test_params_compare_null);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("params clone");
+	tcase_add_loop_test(tc, test_params_clone, 0, countof(params_clone_tests));
+	tcase_add_test(tc, test_params_clone_null);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("params clear");
+	tcase_add_loop_test(tc, test_params_clear, 0, countof(params_clone_tests));
+	tcase_add_test(tc, test_params_clear_null);
 	suite_add_tcase(s, tc);
 
 	return s;

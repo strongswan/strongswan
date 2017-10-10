@@ -19,6 +19,147 @@
 #include <asn1/asn1_parser.h>
 
 /**
+ * Determine the salt length in case it is not configured
+ */
+static ssize_t rsa_pss_salt_length(rsa_pss_params_t *pss)
+{
+	ssize_t salt_len = pss->salt_len;
+
+	if (salt_len <= RSA_PSS_SALT_LEN_DEFAULT)
+	{
+		salt_len = hasher_hash_size(pss->hash);
+		if (!salt_len)
+		{
+			return -1;
+		}
+	}
+	return salt_len;
+}
+
+/**
+ * Compare two signature schemes and their parameters
+ */
+static bool compare_params(signature_params_t *a, signature_params_t *b,
+						   bool strict)
+{
+	if (!a && !b)
+	{
+		return TRUE;
+	}
+	if (!a || !b)
+	{
+		return FALSE;
+	}
+	if (a->scheme != b->scheme)
+	{
+		return FALSE;
+	}
+	if (!a->params && !b->params)
+	{
+		return TRUE;
+	}
+	if (a->params && b->params)
+	{
+		switch (a->scheme)
+		{
+			case SIGN_RSA_EMSA_PSS:
+			{
+				rsa_pss_params_t *pss_a = a->params, *pss_b = b->params;
+
+				return pss_a->hash == pss_b->hash &&
+					   pss_a->mgf1_hash == pss_b->mgf1_hash &&
+					   (!strict ||
+						rsa_pss_salt_length(pss_a) == rsa_pss_salt_length(pss_b));
+			}
+			default:
+				break;
+		}
+	}
+	return FALSE;
+}
+
+/*
+ * Described in header
+ */
+bool signature_params_equal(signature_params_t *a, signature_params_t *b)
+{
+	return compare_params(a, b, TRUE);
+}
+
+/*
+ * Described in header
+ */
+bool signature_params_comply(signature_params_t *c, signature_params_t *s)
+{	/* the salt is variable, so it does not necessarily have to be the same */
+	return compare_params(c, s, FALSE);
+}
+
+/*
+ * Described in header
+ */
+signature_params_t *signature_params_clone(signature_params_t *this)
+{
+	signature_params_t *clone;
+
+	if (!this)
+	{
+		return NULL;
+	}
+
+	INIT(clone,
+		.scheme = this->scheme,
+	);
+	if (this->params)
+	{
+		switch (this->scheme)
+		{
+			case SIGN_RSA_EMSA_PSS:
+			{
+				rsa_pss_params_t *pss, *pss_clone;
+
+				pss = this->params;
+				INIT(pss_clone,
+					.hash = pss->hash,
+					.mgf1_hash = pss->mgf1_hash,
+					.salt_len = pss->salt_len,
+					/* ignore salt as only used for unit tests */
+				);
+				clone->params = pss_clone;
+				break;
+			}
+			default:
+				break;
+		}
+	}
+	return clone;
+}
+
+/*
+ * Described in header
+ */
+void signature_params_destroy(signature_params_t *this)
+{
+	if (this)
+	{
+		free(this->params);
+		free(this);
+	}
+}
+
+/*
+ * Described in header
+ */
+void signature_params_clear(signature_params_t *this)
+{
+	if (this)
+	{
+		free(this->params);
+		this->params = NULL;
+		this->scheme = SIGN_UNKNOWN;
+	}
+}
+
+/**
  * ASN.1 definition of RSASSA-PSS-params
  */
 static const asn1Object_t RSASSAPSSParamsObjects[] = {
@@ -119,6 +260,7 @@ end:
 bool rsa_pss_params_build(rsa_pss_params_t *params, chunk_t *asn1)
 {
 	chunk_t hash = chunk_empty, mgf = chunk_empty, slen = chunk_empty;
+	ssize_t salt_len;
 	int alg;
 
 	if (params->hash != HASH_SHA1)
@@ -141,23 +283,16 @@ bool rsa_pss_params_build(rsa_pss_params_t *params, chunk_t *asn1)
 		mgf = asn1_wrap(ASN1_SEQUENCE, "mm", asn1_build_known_oid(OID_MGF1),
 						asn1_algorithmIdentifier(alg));
 	}
-	if (params->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
+	salt_len = rsa_pss_salt_length(params);
+	if (salt_len < 0)
 	{
-		if (params->salt_len != HASH_SIZE_SHA1)
-		{
-			slen = asn1_integer("m", asn1_integer_from_uint64(params->salt_len));
-		}
+		chunk_free(&hash);
+		chunk_free(&mgf);
+		return FALSE;
 	}
-	else if (params->hash != HASH_SHA1)
+	else if (salt_len != HASH_SIZE_SHA1)
 	{
-		size_t hlen = hasher_hash_size(params->hash);
-		if (!hlen)
-		{
-			chunk_free(&hash);
-			chunk_free(&mgf);
-			return FALSE;
-		}
-		slen = asn1_integer("m", asn1_integer_from_uint64(hlen));
+		slen = asn1_integer("m", asn1_integer_from_uint64(salt_len));
 	}
 	*asn1 = asn1_wrap(ASN1_SEQUENCE, "mmm",
 				hash.len ? asn1_wrap(ASN1_CONTEXT_C_0, "m", hash) : chunk_empty,
