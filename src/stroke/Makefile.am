@@ -17,6 +17,6 @@ stroke_keywords.h: $(srcdir)/stroke_keywords.h.in
 		-e "s:\@GPERF_LEN_TYPE\@:$(GPERF_LEN_TYPE):" \
 		$< > $@
 
-stroke_keywords.c:	$(srcdir)/stroke_keywords.txt $(srcdir)/stroke_keywords.h
+stroke_keywords.c:	$(srcdir)/stroke_keywords.txt stroke_keywords.h
 		$(AM_V_GEN) \
 		$(GPERF) -m 10 -D -C -G -t < $(srcdir)/stroke_keywords.txt > $@

@@ -39,7 +39,7 @@ starter_LDADD = \
 	libstarter.la \
 	$(SOCKLIB) $(PTHREADLIB) $(ATOMICLIB)
 
-EXTRA_DIST = keywords.h keywords.txt ipsec.conf ipsec.secrets Android.mk
+EXTRA_DIST = keywords.h.in keywords.txt ipsec.conf ipsec.secrets Android.mk
 MAINTAINERCLEANFILES = keywords.h keywords.c
 BUILT_SOURCES = keywords.h keywords.c parser/parser.h
 
@@ -53,7 +53,7 @@ keywords.h: $(srcdir)/keywords.h.in
 		-e "s:\@GPERF_LEN_TYPE\@:$(GPERF_LEN_TYPE):" \
 		$< > $@
 
-keywords.c:	$(srcdir)/keywords.txt $(srcdir)/keywords.h
+keywords.c:	$(srcdir)/keywords.txt keywords.h
 		$(AM_V_GEN) \
 		$(GPERF) -m 10 -C -G -D -t < $(srcdir)/keywords.txt > $@
 
