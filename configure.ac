@@ -1002,6 +1002,10 @@ if test x$systemd = xtrue; then
 		 AC_SUBST(systemd_journal_CFLAGS)
 		 AC_SUBST(systemd_journal_LIBS)]
 	)
+	saved_LIBS=$LIBS
+	LIBS="$systemd_LIBS $systemd_daemon_LIBS"
+	AC_CHECK_FUNCS(sd_listen_fds_with_names)
+	LIBS=$saved_LIBS
 fi
 
 if test x$tss_trousers = xtrue; then

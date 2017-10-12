@@ -29,6 +29,11 @@
  */
 stream_service_t *stream_service_create_systemd(char *uri, int backlog)
 {
+#ifndef HAVE_SD_LISTEN_FDS_WITH_NAMES
+	DBG1(DBG_NET, "unable to open stream URI '%s': named systemd sockets not "
+		 "supported", uri);
+	return NULL;
+#else
 	int i, num_fds, fd;
 	char **fdmap;
 
@@ -62,4 +67,5 @@ stream_service_t *stream_service_create_systemd(char *uri, int backlog)
 		return NULL;
 	}
 	return stream_service_create_from_fd(fd);
+#endif
 }
