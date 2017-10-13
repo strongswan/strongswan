@@ -114,7 +114,7 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 {
 	enumerator_t *enumerator;
 	signature_scheme_t scheme;
-	uintptr_t config;
+	signature_params_t *config;
 	auth_rule_t rule;
 	key_type_t key_type;
 	bool have_config = FALSE;
@@ -130,11 +130,12 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 			continue;
 		}
 		have_config = TRUE;
-		if (key_type == key_type_from_signature_scheme(config) &&
+		if (key_type == key_type_from_signature_scheme(config->scheme) &&
 			keymat->hash_algorithm_supported(keymat,
-										hasher_from_signature_scheme(config)))
+								hasher_from_signature_scheme(config->scheme,
+															 config->params)))
 		{
-			scheme = config;
+			scheme = config->scheme;
 			array_insert(selected, ARRAY_TAIL, &scheme);
 		}
 	}
@@ -149,7 +150,8 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 		while (enumerator->enumerate(enumerator, &scheme))
 		{
 			if (keymat->hash_algorithm_supported(keymat,
-										hasher_from_signature_scheme(scheme)))
+										hasher_from_signature_scheme(scheme,
+																	 NULL)))
 			{
 				array_insert(selected, ARRAY_TAIL, &scheme);
 			}
@@ -180,7 +182,8 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 					}
 				}
 				if (!found && keymat->hash_algorithm_supported(keymat,
-										hasher_from_signature_scheme(scheme)))
+										hasher_from_signature_scheme(scheme,
+																	 NULL)))
 				{
 					array_insert(selected, ARRAY_TAIL, &scheme);
 				}
@@ -383,7 +386,7 @@ METHOD(authenticator_t, process, status_t,
 	auth_cfg_t *auth, *current_auth;
 	enumerator_t *enumerator;
 	key_type_t key_type = KEY_ECDSA;
-	signature_scheme_t scheme;
+	signature_params_t params;
 	status_t status = NOT_FOUND;
 	const char *reason = "unsupported";
 	bool online;
@@ -399,19 +402,19 @@ METHOD(authenticator_t, process, status_t,
 	{
 		case AUTH_RSA:
 			key_type = KEY_RSA;
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+			params.scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
 			break;
 		case AUTH_ECDSA_256:
-			scheme = SIGN_ECDSA_256;
+			params.scheme = SIGN_ECDSA_256;
 			break;
 		case AUTH_ECDSA_384:
-			scheme = SIGN_ECDSA_384;
+			params.scheme = SIGN_ECDSA_384;
 			break;
 		case AUTH_ECDSA_521:
-			scheme = SIGN_ECDSA_521;
+			params.scheme = SIGN_ECDSA_521;
 			break;
 		case AUTH_DS:
-			if (parse_signature_auth_data(&auth_data, &key_type, &scheme))
+			if (parse_signature_auth_data(&auth_data, &key_type, &params.scheme))
 			{
 				break;
 			}
@@ -423,7 +426,7 @@ METHOD(authenticator_t, process, status_t,
 			return INVALID_ARG;
 	}
 	id = this->ike_sa->get_other_id(this->ike_sa);
-	if (!get_auth_octets_scheme(this, TRUE, id, &octets, &scheme))
+	if (!get_auth_octets_scheme(this, TRUE, id, &octets, &params.scheme))
 	{
 		return FAILED;
 	}
@@ -434,15 +437,16 @@ METHOD(authenticator_t, process, status_t,
 													key_type, id, auth, online);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
-		if (public->verify(public, scheme, NULL, octets, auth_data))
+		if (public->verify(public, params.scheme, NULL, octets, auth_data))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful", id,
 				 auth_method == AUTH_DS ? signature_scheme_names : auth_method_names,
-				 auth_method == AUTH_DS ? scheme : auth_method);
+				 auth_method == AUTH_DS ? params.scheme : auth_method);
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
-			auth->add(auth, AUTH_RULE_IKE_SIGNATURE_SCHEME, (uintptr_t)scheme);
+			auth->add(auth, AUTH_RULE_IKE_SIGNATURE_SCHEME,
+					  signature_params_clone(&params));
 			if (!online)
 			{
 				auth->add(auth, AUTH_RULE_CERT_VALIDATION_SUSPENDED, TRUE);

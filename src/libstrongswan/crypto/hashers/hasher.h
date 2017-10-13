@@ -206,8 +206,10 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key);
  * Determine the hash algorithm associated with a given signature scheme.
  *
  * @param scheme		signature scheme
+ * @param params		optional parameters
  * @return				hash algorithm (could be HASH_UNKNOWN)
  */
-hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme);
+hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme,
+											  void *params);
 
 #endif /** HASHER_H_ @}*/

@@ -250,7 +250,7 @@ hash_algorithm_t get_default_digest(private_key_t *private)
 										   private->get_keysize(private));
 	if (enumerator->enumerate(enumerator, &scheme))
 	{
-		alg = hasher_from_signature_scheme(scheme);
+		alg = hasher_from_signature_scheme(scheme, NULL);
 	}
 	enumerator->destroy(enumerator);
 

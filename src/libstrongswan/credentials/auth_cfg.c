@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
  * Copyright (C) 2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
@@ -216,8 +216,6 @@ static void init_entry(entry_t *this, auth_rule_t type, va_list args)
 		case AUTH_RULE_RSA_STRENGTH:
 		case AUTH_RULE_ECDSA_STRENGTH:
 		case AUTH_RULE_BLISS_STRENGTH:
-		case AUTH_RULE_SIGNATURE_SCHEME:
-		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 		case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 			/* integer type */
 			this->value = (void*)(uintptr_t)va_arg(args, u_int);
@@ -232,6 +230,8 @@ static void init_entry(entry_t *this, auth_rule_t type, va_list args)
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
 		case AUTH_RULE_CERT_POLICY:
+		case AUTH_RULE_SIGNATURE_SCHEME:
+		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
@@ -267,8 +267,6 @@ static bool entry_equals(entry_t *e1, entry_t *e2)
 		case AUTH_RULE_RSA_STRENGTH:
 		case AUTH_RULE_ECDSA_STRENGTH:
 		case AUTH_RULE_BLISS_STRENGTH:
-		case AUTH_RULE_SIGNATURE_SCHEME:
-		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 		case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 		{
 			return e1->value == e2->value;
@@ -300,6 +298,11 @@ static bool entry_equals(entry_t *e1, entry_t *e2)
 			id2 = (identification_t*)e2->value;
 
 			return id1->equals(id1, id2);
+		}
+		case AUTH_RULE_SIGNATURE_SCHEME:
+		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+		{
+			return signature_params_equal(e1->value, e2->value);
 		}
 		case AUTH_RULE_CERT_POLICY:
 		case AUTH_RULE_XAUTH_BACKEND:
@@ -351,6 +354,12 @@ static void destroy_entry_value(entry_t *entry)
 			free(entry->value);
 			break;
 		}
+		case AUTH_RULE_SIGNATURE_SCHEME:
+		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+		{
+			signature_params_destroy(entry->value);
+			break;
+		}
 		case AUTH_RULE_IDENTITY_LOOSE:
 		case AUTH_RULE_AUTH_CLASS:
 		case AUTH_RULE_EAP_TYPE:
@@ -360,8 +369,6 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_RULE_RSA_STRENGTH:
 		case AUTH_RULE_ECDSA_STRENGTH:
 		case AUTH_RULE_BLISS_STRENGTH:
-		case AUTH_RULE_SIGNATURE_SCHEME:
-		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 		case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 		case AUTH_RULE_MAX:
 			break;
@@ -394,8 +401,6 @@ static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_RSA_STRENGTH:
 			case AUTH_RULE_ECDSA_STRENGTH:
 			case AUTH_RULE_BLISS_STRENGTH:
-			case AUTH_RULE_SIGNATURE_SCHEME:
-			case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 			case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 				/* integer type */
 				entry->value = (void*)(uintptr_t)va_arg(args, u_int);
@@ -410,6 +415,8 @@ static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_RULE_IM_CERT:
 			case AUTH_RULE_SUBJECT_CERT:
 			case AUTH_RULE_CERT_POLICY:
+			case AUTH_RULE_SIGNATURE_SCHEME:
+			case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_IM_HASH_URL:
@@ -472,9 +479,6 @@ METHOD(auth_cfg_t, get, void*,
 		case AUTH_RULE_ECDSA_STRENGTH:
 		case AUTH_RULE_BLISS_STRENGTH:
 			return (void*)0;
-		case AUTH_RULE_SIGNATURE_SCHEME:
-		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
-			return (void*)HASH_UNKNOWN;
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_OCSP_VALIDATION:
 			return (void*)VALIDATION_FAILED;
@@ -491,6 +495,8 @@ METHOD(auth_cfg_t, get, void*,
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_SUBJECT_CERT:
 		case AUTH_RULE_CERT_POLICY:
+		case AUTH_RULE_SIGNATURE_SCHEME:
+		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 		case AUTH_HELPER_IM_CERT:
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_IM_HASH_URL:
@@ -631,16 +637,19 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 			{
 				if (expected_type == KEY_ANY || expected_type == schemes[i].key)
 				{
+					signature_params_t *params;
+
+					INIT(params,
+						.scheme = schemes[i].scheme,
+					);
 					if (is_ike)
 					{
-						add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME,
-							(uintptr_t)schemes[i].scheme);
+						add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
 						ike_added = TRUE;
 					}
 					else
 					{
-						add(this, AUTH_RULE_SIGNATURE_SCHEME,
-						   (uintptr_t)schemes[i].scheme);
+						add(this, AUTH_RULE_SIGNATURE_SCHEME, params);
 					}
 				}
 				found = TRUE;
@@ -666,7 +675,7 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 			if (type == AUTH_RULE_SIGNATURE_SCHEME)
 			{
 				add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME,
-					(uintptr_t)value);
+					signature_params_clone(value));
 			}
 		}
 		enumerator->destroy(enumerator);
@@ -681,20 +690,20 @@ static bool complies_scheme(private_auth_cfg_t *this, auth_cfg_t *constraints,
 {
 	enumerator_t *e1, *e2;
 	auth_rule_t t1, t2;
-	signature_scheme_t scheme;
-	void *value;
+	signature_params_t *params, *constraint;
 	bool success = TRUE;
 
 	e2 = create_enumerator(this);
-	while (e2->enumerate(e2, &t2, &scheme))
+	while (e2->enumerate(e2, &t2, &params))
 	{
 		if (t2 == type)
 		{
 			success = FALSE;
 			e1 = constraints->create_enumerator(constraints);
-			while (e1->enumerate(e1, &t1, &value))
+			while (e1->enumerate(e1, &t1, &constraint))
 			{
-				if (t1 == type && (uintptr_t)value == scheme)
+				if (t1 == type &&
+					signature_params_comply(constraint, params))
 				{
 					success = TRUE;
 					break;
@@ -707,7 +716,7 @@ static bool complies_scheme(private_auth_cfg_t *this, auth_cfg_t *constraints,
 				{
 					DBG1(DBG_CFG, "%s signature scheme %N not acceptable",
 						 AUTH_RULE_SIGNATURE_SCHEME == type ? "X.509" : "IKE",
-						 signature_scheme_names, (int)scheme);
+						 signature_scheme_names, params->scheme);
 				}
 				break;
 			}
@@ -725,7 +734,7 @@ METHOD(auth_cfg_t, complies, bool,
 	bool ca_match = FALSE, cert_match = FALSE;
 	identification_t *require_group = NULL;
 	certificate_t *require_ca = NULL, *require_cert = NULL;
-	signature_scheme_t ike_scheme = SIGN_UNKNOWN, scheme = SIGN_UNKNOWN;
+	signature_params_t *ike_scheme = NULL, *scheme = NULL;
 	u_int strength = 0;
 	auth_rule_t t1, t2;
 	char *key_type;
@@ -928,12 +937,12 @@ METHOD(auth_cfg_t, complies, bool,
 			}
 			case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 			{
-				ike_scheme = (uintptr_t)value;
+				ike_scheme = value;
 				break;
 			}
 			case AUTH_RULE_SIGNATURE_SCHEME:
 			{
-				scheme = (uintptr_t)value;
+				scheme = value;
 				break;
 			}
 			case AUTH_RULE_CERT_POLICY:
@@ -983,12 +992,12 @@ METHOD(auth_cfg_t, complies, bool,
 
 	/* Check if we have a matching constraint (or none at all) for used
 	 * signature schemes. */
-	if (success && scheme != SIGN_UNKNOWN)
+	if (success && scheme)
 	{
 		success = complies_scheme(this, constraints,
 								  AUTH_RULE_SIGNATURE_SCHEME, log_error);
 	}
-	if (success && ike_scheme != SIGN_UNKNOWN)
+	if (success && ike_scheme)
 	{
 		success = complies_scheme(this, constraints,
 								  AUTH_RULE_IKE_SIGNATURE_SCHEME, log_error);
@@ -1114,8 +1123,6 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_RULE_RSA_STRENGTH:
 				case AUTH_RULE_ECDSA_STRENGTH:
 				case AUTH_RULE_BLISS_STRENGTH:
-				case AUTH_RULE_SIGNATURE_SCHEME:
-				case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 				case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 				{
 					add(this, type, (uintptr_t)value);
@@ -1130,6 +1137,12 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 					identification_t *id = (identification_t*)value;
 
 					add(this, type, id->clone(id));
+					break;
+				}
+				case AUTH_RULE_SIGNATURE_SCHEME:
+				case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+				{
+					add(this, type, signature_params_clone(value));
 					break;
 				}
 				case AUTH_RULE_XAUTH_BACKEND:
@@ -1286,11 +1299,15 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_RULE_RSA_STRENGTH:
 			case AUTH_RULE_ECDSA_STRENGTH:
 			case AUTH_RULE_BLISS_STRENGTH:
-			case AUTH_RULE_SIGNATURE_SCHEME:
-			case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 			case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
 				clone->add(clone, type, (uintptr_t)value);
 				break;
+			case AUTH_RULE_SIGNATURE_SCHEME:
+			case AUTH_RULE_IKE_SIGNATURE_SCHEME:
+			{
+				clone->add(clone, type, signature_params_clone(value));
+				break;
+			}
 			case AUTH_RULE_MAX:
 				break;
 		}

@@ -19,6 +19,7 @@
 #include "hasher.h"
 
 #include <asn1/oid.h>
+#include <credentials/keys/signature_params.h>
 
 ENUM_BEGIN(hash_algorithm_names, HASH_SHA1, HASH_IDENTITY,
 	"HASH_SHA1",
@@ -483,14 +484,21 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 /*
  * Defined in header.
  */
-hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme)
+hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme,
+											  void *params)
 {
 	switch (scheme)
 	{
 		case SIGN_UNKNOWN:
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 		case SIGN_ECDSA_WITH_NULL:
+			break;
 		case SIGN_RSA_EMSA_PSS:
+			if (params)
+			{
+				rsa_pss_params_t *pss = params;
+				return pss->hash;
+			}
 			break;
 		case SIGN_ED25519:
 		case SIGN_ED448:

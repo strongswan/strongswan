@@ -45,7 +45,7 @@ static void check_sig_constraints(auth_cfg_t *cfg, auth_rule_t type,
 {
 	enumerator_t *enumerator;
 	auth_rule_t t;
-	void *value;
+	signature_params_t *value;
 	int i = 0;
 
 	enumerator = cfg->create_enumerator(cfg);
@@ -54,7 +54,7 @@ static void check_sig_constraints(auth_cfg_t *cfg, auth_rule_t type,
 		if (t == type)
 		{
 			ck_assert(expected[i]);
-			ck_assert_int_eq(expected[i], (signature_scheme_t)value);
+			ck_assert_int_eq(expected[i], value->scheme);
 			i++;
 		}
 	}

@@ -750,8 +750,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 				DBG1(DBG_CFG, "  using trusted intermediate ca certificate "
 					 "\"%Y\"", issuer->get_subject(issuer));
 			}
-			auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, scheme->scheme);
-			signature_params_destroy(scheme);
+			auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, scheme);
 		}
 		else
 		{
@@ -769,8 +768,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 				auth->add(auth, AUTH_RULE_IM_CERT, issuer->get_ref(issuer));
 				DBG1(DBG_CFG, "  using untrusted intermediate certificate "
 					 "\"%Y\"", issuer->get_subject(issuer));
-				auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, scheme->scheme);
-				signature_params_destroy(scheme);
+				auth->add(auth, AUTH_RULE_SIGNATURE_SCHEME, scheme);
 			}
 			else
 			{
