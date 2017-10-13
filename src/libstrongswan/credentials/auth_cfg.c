@@ -536,11 +536,12 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 	private_auth_cfg_t *this, char* constraints, bool ike)
 {
 	enumerator_t *enumerator;
-	bool is_ike = FALSE, ike_added = FALSE;
+	bool ike_added = FALSE;
 	key_type_t expected_type = -1;
 	auth_rule_t expected_strength = AUTH_RULE_MAX;
+	signature_params_t *params;
 	int strength;
-	char *token;
+	char *token, *key_token = NULL;
 	auth_rule_t type;
 	void *value;
 
@@ -589,70 +590,106 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 		}
 		if (streq(token, "rsa") || streq(token, "ike:rsa"))
 		{
+			key_token = token;
 			expected_type = KEY_RSA;
 			expected_strength = AUTH_RULE_RSA_STRENGTH;
-			is_ike = strpfx(token, "ike:");
+			continue;
+		}
+		if (streq(token, "rsa/pss") || streq(token, "ike:rsa/pss"))
+		{
+			key_token = token;
+			expected_type = KEY_RSA;
+			expected_strength = AUTH_RULE_RSA_STRENGTH;
 			continue;
 		}
 		if (streq(token, "ecdsa") || streq(token, "ike:ecdsa"))
 		{
+			key_token = token;
 			expected_type = KEY_ECDSA;
 			expected_strength = AUTH_RULE_ECDSA_STRENGTH;
-			is_ike = strpfx(token, "ike:");
 			continue;
 		}
 		if (streq(token, "ed25519") || streq(token, "ike:ed25519"))
 		{
+			key_token = token;
 			expected_type = KEY_ED25519;
-			is_ike = strpfx(token, "ike:");
 			continue;
 		}
 		if (streq(token, "ed448") || streq(token, "ike:ed448"))
 		{
+			key_token = token;
 			expected_type = KEY_ED448;
-			is_ike = strpfx(token, "ike:");
 			continue;
 		}
 		if (streq(token, "bliss") || streq(token, "ike:bliss"))
 		{
+			key_token = token;
 			expected_type = KEY_BLISS;
 			expected_strength = AUTH_RULE_BLISS_STRENGTH;
-			is_ike = strpfx(token, "ike:");
 			continue;
 		}
 		if (streq(token, "pubkey") || streq(token, "ike:pubkey"))
 		{
+			key_token = token;
 			expected_type = KEY_ANY;
-			is_ike = strpfx(token, "ike:");
 			continue;
 		}
-		if (is_ike && !ike)
+		if (key_token && strpfx(key_token, "ike:") && !ike)
 		{
 			continue;
 		}
 
-		for (i = 0; i < countof(schemes); i++)
-		{
-			if (streq(schemes[i].name, token))
+		if (key_token && streq(key_token + strlen(key_token) - 3, "pss"))
+		{	/* these are not added automatically with 'pubkey' */
+			hash_algorithm_t hash;
+			if (enum_from_name(hash_algorithm_short_names, token, &hash))
 			{
-				if (expected_type == KEY_ANY || expected_type == schemes[i].key)
+				rsa_pss_params_t pss = {
+					.hash = hash,
+					.mgf1_hash = hash,
+					.salt_len = RSA_PSS_SALT_LEN_DEFAULT,
+				};
+				signature_params_t pss_params = {
+					.scheme = SIGN_RSA_EMSA_PSS,
+					.params = &pss,
+				};
+				params = signature_params_clone(&pss_params);
+				if (strpfx(key_token, "ike:"))
 				{
-					signature_params_t *params;
-
-					INIT(params,
-						.scheme = schemes[i].scheme,
-					);
-					if (is_ike)
-					{
-						add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
-						ike_added = TRUE;
-					}
-					else
-					{
-						add(this, AUTH_RULE_SIGNATURE_SCHEME, params);
-					}
+					add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
+					ike_added = TRUE;
+				}
+				else
+				{
+					add(this, AUTH_RULE_SIGNATURE_SCHEME, params);
 				}
 				found = TRUE;
+			}
+		}
+		else
+		{
+			for (i = 0; i < countof(schemes); i++)
+			{
+				if (streq(schemes[i].name, token))
+				{
+					if (expected_type == KEY_ANY ||
+						expected_type == schemes[i].key)
+					{
+						INIT(params,
+							.scheme = schemes[i].scheme,
+						);
+						if (strpfx(key_token, "ike:"))
+						{
+							add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
+							ike_added = TRUE;
+						}
+						else
+						{
+							add(this, AUTH_RULE_SIGNATURE_SCHEME, params);
+						}
+					}
+					found = TRUE;
+				}
 			}
 		}
 		if (!found)
