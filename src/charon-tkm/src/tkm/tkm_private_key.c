@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#include <library.h>
 #include <utils/debug.h>
 #include <tkm/constants.h>
 #include <tkm/client.h>

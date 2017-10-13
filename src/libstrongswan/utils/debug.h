@@ -24,9 +24,9 @@
 typedef enum debug_t debug_t;
 typedef enum level_t level_t;
 
-#include <stdio.h>
-
+#include <utils/printf_hook/printf_hook.h>
 #include <utils/utils.h>
+#include <stdio.h>
 
 /**
  * Debug message group.

@@ -25,7 +25,8 @@
 typedef enum pseudo_random_function_t pseudo_random_function_t;
 typedef struct prf_t prf_t;
 
-#include <library.h>
+#include <utils/utils.h>
+#include <utils/chunk.h>
 
 /**
  * Pseudo random function, as in IKEv2 RFC 3.3.2.

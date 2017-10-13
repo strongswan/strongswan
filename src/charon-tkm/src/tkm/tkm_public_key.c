@@ -14,6 +14,7 @@
  * for more details.
  */
 
+#include <library.h>
 #include <utils/debug.h>
 
 #include "tkm_public_key.h"

@@ -17,6 +17,8 @@
 
 typedef struct private_tls_prf12_t private_tls_prf12_t;
 
+#include <library.h>
+
 /**
  * Private data of an tls_prf_t object.
  */

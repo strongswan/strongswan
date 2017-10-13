@@ -25,7 +25,7 @@ typedef struct cred_encoding_t cred_encoding_t;
 typedef enum cred_encoding_type_t cred_encoding_type_t;
 typedef enum cred_encoding_part_t cred_encoding_part_t;
 
-#include <library.h>
+#include <utils/chunk.h>
 
 /**
  * Credential encoder function implementing encoding/fingerprinting.

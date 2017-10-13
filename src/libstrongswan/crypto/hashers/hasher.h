@@ -27,7 +27,6 @@
 typedef enum hash_algorithm_t hash_algorithm_t;
 typedef struct hasher_t hasher_t;
 
-#include <library.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/signers/signer.h>
 #include <credentials/keys/public_key.h>

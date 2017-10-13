@@ -124,7 +124,7 @@ METHOD(certificate_t, has_subject, id_match_t,
 
 METHOD(certificate_t, issued_by, bool,
 	private_x509_pkcs10_t *this, certificate_t *issuer,
-	signature_scheme_t *schemep)
+	signature_params_t **schemep)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
@@ -134,29 +134,32 @@ METHOD(certificate_t, issued_by, bool,
 	{
 		return FALSE;
 	}
-	if (this->self_signed)
-	{
-		return TRUE;
-	}
-
 	/* determine signature scheme */
 	scheme = signature_scheme_from_oid(this->algorithm);
 	if (scheme == SIGN_UNKNOWN)
 	{
 		return FALSE;
 	}
-
-	/* get the public key contained in the certificate request */
-	key = this->public_key;
-	if (!key)
+	if (this->self_signed)
 	{
-		return FALSE;
+		valid = TRUE;
 	}
-	valid = key->verify(key, scheme, NULL, this->certificationRequestInfo,
-						this->signature);
+	else
+	{
+		/* get the public key contained in the certificate request */
+		key = this->public_key;
+		if (!key)
+		{
+			return FALSE;
+		}
+		valid = key->verify(key, scheme, NULL, this->certificationRequestInfo,
+							this->signature);
+	}
 	if (valid && schemep)
 	{
-		*schemep = scheme;
+		INIT(*schemep,
+			.scheme = scheme,
+		);
 	}
 	return valid;
 }

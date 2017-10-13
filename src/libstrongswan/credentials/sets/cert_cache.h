@@ -45,12 +45,13 @@ struct cert_cache_t {
 	 *
 	 * @param subject		certificate to verify
 	 * @param issuer		issuing certificate to verify subject
-	 * @param scheme		receives used signature scheme, if given
+	 * @param scheme		receives used signature scheme and parameters, if
+	 *						given (allocated)
 	 * @return				TRUE if subject issued by issuer
 	 */
 	bool (*issued_by)(cert_cache_t *this,
 					  certificate_t *subject, certificate_t *issuer,
-					  signature_scheme_t *scheme);
+					  signature_params_t **scheme);
 
 	/**
 	 * Flush the certificate cache.

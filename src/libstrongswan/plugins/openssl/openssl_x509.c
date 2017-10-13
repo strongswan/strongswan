@@ -384,7 +384,7 @@ METHOD(certificate_t, has_issuer, id_match_t,
 
 METHOD(certificate_t, issued_by, bool,
 	private_openssl_x509_t *this, certificate_t *issuer,
-	signature_scheme_t *scheme)
+	signature_params_t **scheme)
 {
 	public_key_t *key;
 	bool valid;
@@ -392,11 +392,16 @@ METHOD(certificate_t, issued_by, bool,
 	ASN1_BIT_STRING *sig;
 	chunk_t tbs;
 
+	if (this->scheme == SIGN_UNKNOWN)
+	{
+		return FALSE;
+	}
 	if (&this->public.x509.interface == issuer)
 	{
 		if (this->flags & X509_SELF_SIGNED)
 		{
-			return TRUE;
+			valid = TRUE;
+			goto out;
 		}
 	}
 	else
@@ -414,10 +419,6 @@ METHOD(certificate_t, issued_by, bool,
 			return FALSE;
 		}
 	}
-	if (this->scheme == SIGN_UNKNOWN)
-	{
-		return FALSE;
-	}
 	key = issuer->get_public_key(issuer);
 	if (!key)
 	{
@@ -434,9 +435,13 @@ METHOD(certificate_t, issued_by, bool,
 						openssl_asn1_str2chunk(sig));
 	free(tbs.ptr);
 	key->destroy(key);
+
+out:
 	if (valid && scheme)
 	{
-		*scheme = this->scheme;
+		INIT(*scheme,
+			.scheme = this->scheme,
+		);
 	}
 	return valid;
 }

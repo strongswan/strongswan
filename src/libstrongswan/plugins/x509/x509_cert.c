@@ -1677,18 +1677,26 @@ METHOD(certificate_t, has_issuer, id_match_t,
 
 METHOD(certificate_t, issued_by, bool,
 	private_x509_cert_t *this, certificate_t *issuer,
-	signature_scheme_t *schemep)
+	signature_params_t **schemep)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
 
+	/* determine signature scheme */
+	scheme = signature_scheme_from_oid(this->algorithm);
+	if (scheme == SIGN_UNKNOWN)
+	{
+		return FALSE;
+	}
+
 	if (&this->public.interface.interface == issuer)
 	{
 		if (this->flags & X509_SELF_SIGNED)
 		{
-			return TRUE;
+			valid = TRUE;
+			goto out;
 		}
 	}
 	else
@@ -1707,12 +1715,6 @@ METHOD(certificate_t, issued_by, bool,
 		return FALSE;
 	}
 
-	/* determine signature scheme */
-	scheme = signature_scheme_from_oid(this->algorithm);
-	if (scheme == SIGN_UNKNOWN)
-	{
-		return FALSE;
-	}
 	/* get the public key of the issuer */
 	key = issuer->get_public_key(issuer);
 	if (!key)
@@ -1722,9 +1724,13 @@ METHOD(certificate_t, issued_by, bool,
 	valid = key->verify(key, scheme, NULL, this->tbsCertificate,
 						this->signature);
 	key->destroy(key);
+
+out:
 	if (valid && schemep)
 	{
-		*schemep = scheme;
+		INIT(*schemep,
+			.scheme = scheme,
+		);
 	}
 	return valid;
 }

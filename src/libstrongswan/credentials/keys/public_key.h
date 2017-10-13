@@ -28,7 +28,6 @@ typedef enum key_type_t key_type_t;
 typedef enum signature_scheme_t signature_scheme_t;
 typedef enum encryption_scheme_t encryption_scheme_t;
 
-#include <library.h>
 #include <utils/identification.h>
 #include <credentials/cred_encoding.h>
 

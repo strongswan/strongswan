@@ -457,7 +457,8 @@ METHOD(certificate_t, has_issuer, id_match_t,
 }
 
 METHOD(certificate_t, issued_by, bool,
-	private_x509_crl_t *this, certificate_t *issuer, signature_scheme_t *schemep)
+	private_x509_crl_t *this, certificate_t *issuer,
+	signature_params_t **schemep)
 {
 	public_key_t *key;
 	signature_scheme_t scheme;
@@ -506,7 +507,9 @@ METHOD(certificate_t, issued_by, bool,
 	key->destroy(key);
 	if (valid && schemep)
 	{
-		*schemep = scheme;
+		INIT(*schemep,
+			.scheme = scheme,
+		);
 	}
 	return valid;
 }

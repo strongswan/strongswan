@@ -284,7 +284,7 @@ METHOD(certificate_t, has_subject_or_issuer, id_match_t,
 
 METHOD(certificate_t, issued_by, bool,
 	private_openssl_crl_t *this, certificate_t *issuer,
-	signature_scheme_t *scheme)
+	signature_params_t **scheme)
 {
 	chunk_t fingerprint, tbs;
 	public_key_t *key;
@@ -338,7 +338,9 @@ METHOD(certificate_t, issued_by, bool,
 	key->destroy(key);
 	if (valid && scheme)
 	{
-		*scheme = this->scheme;
+		INIT(*scheme,
+			.scheme = this->scheme,
+		);
 	}
 	return valid;
 }
