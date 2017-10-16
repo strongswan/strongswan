@@ -243,14 +243,14 @@ void set_file_mode(FILE *stream, cred_encoding_type_t enc)
 hash_algorithm_t get_default_digest(private_key_t *private)
 {
 	enumerator_t *enumerator;
-	signature_scheme_t scheme;
+	signature_params_t *params;
 	hash_algorithm_t alg = HASH_UNKNOWN;
 
 	enumerator = signature_schemes_for_key(private->get_type(private),
 										   private->get_keysize(private));
-	if (enumerator->enumerate(enumerator, &scheme))
+	if (enumerator->enumerate(enumerator, &params))
 	{
-		alg = hasher_from_signature_scheme(scheme, NULL);
+		alg = hasher_from_signature_scheme(params->scheme, params->params);
 	}
 	enumerator->destroy(enumerator);
 

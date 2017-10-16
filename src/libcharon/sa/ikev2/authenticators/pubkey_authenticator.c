@@ -176,16 +176,20 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 		 * and supported by the other peer */
 		enumerator = signature_schemes_for_key(key_type,
 											   private->get_keysize(private));
-		while (enumerator->enumerate(enumerator, &scheme))
+		while (enumerator->enumerate(enumerator, &config))
 		{
-			if (keymat->hash_algorithm_supported(keymat,
-										hasher_from_signature_scheme(scheme,
-																	 NULL)))
+			if (config->scheme == SIGN_RSA_EMSA_PSS &&
+				!lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+										 lib->ns))
 			{
-				INIT(config,
-					.scheme = scheme,
-				)
-				array_insert(selected, ARRAY_TAIL, config);
+				continue;
+			}
+			if (keymat->hash_algorithm_supported(keymat,
+								hasher_from_signature_scheme(config->scheme,
+															 config->params)))
+			{
+				array_insert(selected, ARRAY_TAIL,
+							 signature_params_clone(config));
 			}
 		}
 		enumerator->destroy(enumerator);

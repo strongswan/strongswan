@@ -281,11 +281,11 @@ int signature_scheme_to_oid(signature_scheme_t scheme);
 
 /**
  * Enumerate signature schemes that are appropriate for a key of the given type
- * and size|strength.
+ * and size|strength ordered by increasing strength.
  *
  * @param type			type of the key
  * @param size			size or strength of the key
- * @return				enumerator over signature_scheme_t (increasing strength)
+ * @return				enumerator over signature_params_t* (by strength)
  */
 enumerator_t *signature_schemes_for_key(key_type_t type, int size);
 
