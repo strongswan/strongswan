@@ -101,8 +101,9 @@ struct keymat_v2_t {
 	 * @param id			identity
 	 * @param reserved		reserved bytes of id_payload
 	 * @param octests		chunk receiving allocated auth octets
-	 * @param schemes		array containing signature schemes in case they
-	 * 						need to be modified by the keymat implementation
+	 * @param schemes		array containing signature schemes
+	 * 						(signature_params_t*) in case they need to be
+	 *						modified by the keymat implementation
 	 * @return				TRUE if octets created successfully
 	 */
 	bool (*get_auth_octets)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
