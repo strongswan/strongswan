@@ -18,7 +18,7 @@ INC=$INC,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc
 INC=$INC,openssl,vim,sqlite3,conntrack,gdb,cmake,libltdl-dev,liblog4cxx10-dev
 INC=$INC,libboost-thread-dev,libboost-system-dev,git-core,iperf,htop,screen
 INC=$INC,gnat,gprbuild,acpid,acpi-support-base,libldns-dev,libunbound-dev
-INC=$INC,dnsutils,libsoup2.4-dev,ca-certificates,unzip
+INC=$INC,dnsutils,libsoup2.4-dev,ca-certificates,unzip,libsystemd-dev
 INC=$INC,python,python-setuptools,python-dev,python-pip,apt-transport-https
 INC=$INC,libjson0-dev,libxslt1-dev,libapache2-mod-wsgi,iptables-dev
 case "$BASEIMGSUITE" in

@@ -825,7 +825,7 @@ do
 	for host in $IPSECHOSTS
 	do
 	    eval HOSTLOGIN=root@\$ipv4_${host}
-	    ssh $SSHCONF $HOSTLOGIN "grep -s -E 'charon|last message repeated|imcv' \
+	    ssh $SSHCONF $HOSTLOGIN "grep -s -E 'systemd|swanctl|charon|last message repeated|imcv' \
 		/var/log/daemon.log" >> $TESTRESULTDIR/${host}.daemon.log
 	done
 
