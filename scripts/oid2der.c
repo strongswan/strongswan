@@ -23,9 +23,26 @@ int main(int argc, char *argv[])
 {
 	int i, nr = 0;
 	chunk_t oid;
+	char *decoded;
+	bool decode = FALSE;
+
+	if (streq(argv[1], "-d"))
+	{
+		decode = TRUE;
+		nr++;
+	}
 
 	while (argc > ++nr)
 	{
+		if (decode)
+		{
+			oid = chunk_from_hex(chunk_from_str(argv[nr]), NULL);
+			decoded = asn1_oid_to_string(oid);
+			printf("%s\n", decoded);
+			free(decoded);
+			free(oid.ptr);
+			continue;
+		}
 		oid = asn1_oid_from_string(argv[nr]);
 		if (oid.len)
 		{
