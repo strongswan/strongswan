@@ -209,6 +209,9 @@ METHOD(stream_manager_t, destroy, void,
 	remove_stream(this, stream_create_unix);
 	remove_service(this, stream_service_create_unix);
 #endif
+#ifdef USE_SYSTEMD
+	remove_service(this, stream_service_create_systemd);
+#endif
 
 	this->streams->destroy(this->streams);
 	this->services->destroy(this->services);
