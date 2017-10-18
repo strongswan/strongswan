@@ -24,10 +24,13 @@
     0x06                     "C"						OID_COUNTRY
     0x07                     "L"						OID_LOCALITY
     0x08                     "ST"						OID_STATE_OR_PROVINCE
+    0x09                     "STREET"					OID_STREET_ADDRESS
     0x0A                     "O"						OID_ORGANIZATION
     0x0B                     "OU"						OID_ORGANIZATION_UNIT
     0x0C                     "T"						OID_TITLE
     0x0D                     "D"						OID_DESCRIPTION
+    0x10                     "postalAddress"			OID_POSTAL_ADDRESS
+    0x11                     "postalCode"				OID_POSTAL_CODE
     0x24                     "userCertificate"			OID_USER_CERTIFICATE
     0x29                     "N"						OID_NAME
     0x2A                     "G"						OID_GIVEN_NAME
