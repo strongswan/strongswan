@@ -88,7 +88,7 @@ START_TEST(test_imcv_seg_env)
 			{
 				/* create first segment */
 				attr = seg_env->first_segment(seg_env, 0);
-			
+
 				seg_env_attr = (tcg_seg_attr_seg_env_t*)attr;
 				segment = seg_env_attr->get_segment(seg_env_attr, &flags);
 				if (max_seg_size > 12)
@@ -108,8 +108,8 @@ START_TEST(test_imcv_seg_env)
 				segment = seg_env_attr->get_segment(seg_env_attr, &flags);
 				seg = chunk_create(command + n * max_seg_size - 12, seg_size);
 				ck_assert(chunk_equals(seg, segment));
-				ck_assert(flags == last_seg ? SEG_ENV_FLAG_NONE :
-											  SEG_ENV_FLAG_MORE);
+				ck_assert(flags == (last_seg ? SEG_ENV_FLAG_NONE :
+											   SEG_ENV_FLAG_MORE));
 			}
 
 			/* check built segment envelope attribute */
@@ -137,8 +137,8 @@ START_TEST(test_imcv_seg_env)
 			}
 			else
 			{
-				ck_assert(flags == last_seg ? SEG_ENV_FLAG_NONE :
-											  SEG_ENV_FLAG_MORE);
+				ck_assert(flags == (last_seg ? SEG_ENV_FLAG_NONE :
+											   SEG_ENV_FLAG_MORE));
 				seg_env1->add_segment(seg_env1, segment, &error);
 			}
 			attr1->destroy(attr1);
@@ -341,7 +341,7 @@ START_TEST(test_imcv_seg_contract)
 		ita_attr = (ita_attr_command_t*)base_attr_i;
 		ck_assert(streq(ita_attr->get_command(ita_attr), command));
 		base_attr_i->destroy(base_attr_i);
-	}	
+	}
 	contract_i->destroy(contract_i);
 	contract_r->destroy(contract_r);
 	base_attr_r->destroy(base_attr_r);
@@ -389,7 +389,7 @@ START_TEST(test_imcv_seg_contract_special)
 	contract_i->get_info_string(contract_i, info, sizeof(info), TRUE);
 	ck_assert(max_attr_size == 1000 && max_seg_size == 47);
 	ck_assert(!contract_i->is_null(contract_i));
-	
+
 	/* create a null responder contract*/
 	contract_r = seg_contract_create(msg_type, SEG_CONTRACT_MAX_SIZE_VALUE,
 											   SEG_CONTRACT_MAX_SIZE_VALUE,
@@ -594,7 +594,7 @@ START_TEST(test_imcv_seg_contract_invalid)
 									 TRUE, issuer_id, FALSE);
 	base_attr = contract->add_segment(contract, attr_f, &error, &more);
 	ck_assert(base_attr == NULL);
-	
+
 	if (contract_invalid_tests[_i].err_f)
 	{
 		ck_assert(error);
@@ -641,18 +641,18 @@ START_TEST(test_imcv_seg_contract_mgr)
 	contracts = seg_contract_manager_create();
 
 	/* add contract template as issuer */
-	c1 = seg_contract_create(msg_type1, max_attr_size, max_seg_size, 
+	c1 = seg_contract_create(msg_type1, max_attr_size, max_seg_size,
 							 TRUE, 1, FALSE);
 	c1->get_info_string(c1, buf, BUF_LEN, TRUE);
 
 	contracts->add_contract(contracts, c1);
-		
+
 	/* received contract request for msg_type1 as responder */
 	cx = contracts->get_contract(contracts, msg_type1, FALSE, 2);
 	ck_assert(cx == NULL);
 
 	/* add directed contract as responder */
-	c2 = seg_contract_create(msg_type1, max_attr_size, max_seg_size, 
+	c2 = seg_contract_create(msg_type1, max_attr_size, max_seg_size,
 							 FALSE, 2, FALSE);
 	c2->set_responder(c2, 1);
 	c2->get_info_string(c2, buf, BUF_LEN, TRUE);
@@ -685,7 +685,7 @@ START_TEST(test_imcv_seg_contract_mgr)
 	ck_assert(cx == NULL);
 
 	/* add directed contract as responder */
-	c4 = seg_contract_create(msg_type2, max_attr_size, max_seg_size, 
+	c4 = seg_contract_create(msg_type2, max_attr_size, max_seg_size,
 							 FALSE, 2, FALSE);
 	c4->set_responder(c4, 1);
 	contracts->add_contract(contracts, c4);
