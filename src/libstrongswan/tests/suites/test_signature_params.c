@@ -314,6 +314,105 @@ START_TEST(test_params_clear_null)
 }
 END_TEST
 
+START_TEST(test_params_parse_rsa_pss)
+{
+	signature_params_t parsed, res = { .scheme = SIGN_RSA_EMSA_PSS, };
+
+	ck_assert(signature_params_parse(rsa_pss_parse_tests[_i].aid, 0, &parsed));
+	res.params = &rsa_pss_parse_tests[_i].params;
+	ck_assert(signature_params_equal(&parsed, &res));
+	signature_params_clear(&parsed);
+}
+END_TEST
+
+START_TEST(test_params_parse_rsa_pss_invalid)
+{
+	signature_params_t parsed;
+
+	ck_assert(!signature_params_parse(rsa_pss_parse_invalid_tests[_i], 0, &parsed));
+}
+END_TEST
+
+static struct {
+	bool valid;
+	chunk_t aid;
+	signature_params_t params;
+} params_parse_tests[] = {
+	{ TRUE, chunk_from_chars(0x30,0x0d,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x0b,0x05,0x00),
+	  { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256, }},
+	{ TRUE, chunk_from_chars(0x30,0x0a,0x06,0x08,0x2a,0x86,0x48,0xce,0x3d,0x04,0x03,0x02),
+	  { .scheme = SIGN_ECDSA_WITH_SHA256_DER, }},
+	{ FALSE, chunk_from_chars(0x30,0x0a,0x06,0x08,0x2a,0x86,0x48,0xce,0x3d,0x04,0x03,0xff), },
+};
+
+START_TEST(test_params_parse_other)
+{
+	signature_params_t parsed;
+
+	if (params_parse_tests[_i].valid)
+	{
+		ck_assert(signature_params_parse(params_parse_tests[_i].aid, 0, &parsed));
+		ck_assert(signature_params_equal(&parsed, &params_parse_tests[_i].params));
+		signature_params_clear(&parsed);
+	}
+	else
+	{
+		ck_assert(!signature_params_parse(params_parse_tests[_i].aid, 0, &parsed));
+	}
+}
+END_TEST
+
+START_TEST(test_params_build_rsa_pss)
+{
+	signature_params_t scheme = { .scheme = SIGN_RSA_EMSA_PSS, };
+	chunk_t aid;
+
+	scheme.params = &rsa_pss_build_tests[_i].params;
+	ck_assert(signature_params_build(&scheme, &aid));
+	ck_assert_chunk_eq(rsa_pss_build_tests[_i].aid, aid);
+	chunk_free(&aid);
+}
+END_TEST
+
+START_TEST(test_params_build_rsa_pss_invalid)
+{
+	signature_params_t scheme = { .scheme = SIGN_RSA_EMSA_PSS, };
+	chunk_t aid;
+
+	scheme.params = &rsa_pss_build_invalid_tests[_i];
+	ck_assert(!signature_params_build(&scheme, &aid));
+}
+END_TEST
+
+static struct {
+	bool valid;
+	signature_params_t params;
+	chunk_t aid;
+} params_build_tests[] = {
+	{ TRUE, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256, },
+		chunk_from_chars(0x30,0x0d,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x0b,0x05,0x00), },
+	{ TRUE, { .scheme = SIGN_ECDSA_WITH_SHA256_DER, },
+		chunk_from_chars(0x30,0x0a,0x06,0x08,0x2a,0x86,0x48,0xce,0x3d,0x04,0x03,0x02), },
+	{ FALSE, { .scheme = SIGN_UNKNOWN, }, },
+};
+
+START_TEST(test_params_build_other)
+{
+	chunk_t aid;
+
+	if (params_build_tests[_i].valid)
+	{
+		ck_assert(signature_params_build(&params_build_tests[_i].params, &aid));
+		ck_assert_chunk_eq(params_build_tests[_i].aid, aid);
+		chunk_free(&aid);
+	}
+	else
+	{
+		ck_assert(!signature_params_build(&params_build_tests[_i].params, &aid));
+	}
+}
+END_TEST
+
 Suite *signature_params_suite_create()
 {
 	Suite *s;
@@ -344,6 +443,18 @@ Suite *signature_params_suite_create()
 	tc = tcase_create("params clear");
 	tcase_add_loop_test(tc, test_params_clear, 0, countof(params_clone_tests));
 	tcase_add_test(tc, test_params_clear_null);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("parse");
+	tcase_add_loop_test(tc, test_params_parse_rsa_pss, 0, countof(rsa_pss_parse_tests));
+	tcase_add_loop_test(tc, test_params_parse_rsa_pss_invalid, 0, countof(rsa_pss_parse_invalid_tests));
+	tcase_add_loop_test(tc, test_params_parse_other, 0, countof(params_parse_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("build");
+	tcase_add_loop_test(tc, test_params_build_rsa_pss, 0, countof(rsa_pss_build_tests));
+	tcase_add_loop_test(tc, test_params_build_rsa_pss_invalid, 0, countof(rsa_pss_build_invalid_tests));
+	tcase_add_loop_test(tc, test_params_build_other, 0, countof(params_build_tests));
 	suite_add_tcase(s, tc);
 
 	return s;

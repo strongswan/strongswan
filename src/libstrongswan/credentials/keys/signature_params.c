@@ -159,6 +159,70 @@ void signature_params_clear(signature_params_t *this)
 	}
 }
 
+/*
+ * Described in header
+ */
+bool signature_params_parse(chunk_t asn1, int level0,
+							signature_params_t *params)
+{
+	chunk_t parameters = chunk_empty;
+	int oid;
+
+	oid = asn1_parse_algorithmIdentifier(asn1, level0, &parameters);
+	params->scheme = signature_scheme_from_oid(oid);
+	switch (params->scheme)
+	{
+		case SIGN_UNKNOWN:
+			return FALSE;
+		case SIGN_RSA_EMSA_PSS:
+		{
+			rsa_pss_params_t *pss = malloc_thing(rsa_pss_params_t);
+
+			if (!rsa_pss_params_parse(parameters, level0+1, pss))
+			{
+				DBG1(DBG_IKE, "failed parsing RSASSA-PSS parameters");
+				free(pss);
+				return FALSE;
+			}
+			params->params = pss;
+			break;
+		}
+		default:
+			params->params = NULL;
+			break;
+	}
+	return TRUE;
+}
+
+/*
+ * Described in header
+ */
+bool signature_params_build(signature_params_t *params, chunk_t *asn1)
+{
+	chunk_t parameters = chunk_empty;
+	int oid;
+
+	oid = signature_scheme_to_oid(params->scheme);
+	if (oid == OID_UNKNOWN)
+	{
+		return FALSE;
+	}
+	if (params->scheme == SIGN_RSA_EMSA_PSS &&
+		!rsa_pss_params_build(params->params, &parameters))
+	{
+		return FALSE;
+	}
+	if (parameters.len)
+	{
+		*asn1 = asn1_algorithmIdentifier_params(oid, parameters);
+	}
+	else
+	{
+		*asn1 = asn1_algorithmIdentifier(oid);
+	}
+	return TRUE;
+}
+
 /**
  * ASN.1 definition of RSASSA-PSS-params
  */

@@ -72,6 +72,27 @@ void signature_params_destroy(signature_params_t *this);
 void signature_params_clear(signature_params_t *this);
 
 /**
+ * Parse an ASN.1 algorithmIdentifier with parameters denoting a signature
+ * scheme.
+ *
+ * @param asn1		ASN.1 encoded RSASSA-PSS-params
+ * @param level0	current level of the ASN.1 parser
+ * @param params	parsed parameters
+ * @return			TRUE if successfully parsed
+ */
+bool signature_params_parse(chunk_t asn1, int level0,
+							signature_params_t *params);
+
+/**
+ * Build ASN.1 algorithmIdentifier with parameters denoting a signature scheme.
+ *
+ * @param params	signature scheme and parameters to encode
+ * @param asn1		ASN.1 encoded algorithmIdentifier (allocated)
+ * @return			TRUE if successfully built
+ */
+bool signature_params_build(signature_params_t *params, chunk_t *asn1);
+
+/**
  * Parameters for SIGN_RSA_EMSA_PSS signature scheme
  */
 struct rsa_pss_params_t {
