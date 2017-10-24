@@ -63,9 +63,7 @@ struct private_pubkey_authenticator_t {
 static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
 									  signature_params_t *params)
 {
-	chunk_t parameters = chunk_empty;
 	uint8_t len;
-	int oid;
 
 	if (!auth_data->len)
 	{
@@ -73,27 +71,9 @@ static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
 	}
 	len = auth_data->ptr[0];
 	*auth_data = chunk_skip(*auth_data, 1);
-	oid = asn1_parse_algorithmIdentifier(*auth_data, 1, &parameters);
-	params->scheme = signature_scheme_from_oid(oid);
-	switch (params->scheme)
+	if (!signature_params_parse(*auth_data, 1, params))
 	{
-		case SIGN_UNKNOWN:
-			return FALSE;
-		case SIGN_RSA_EMSA_PSS:
-		{
-			rsa_pss_params_t *pss = malloc_thing(rsa_pss_params_t);
-
-			if (!rsa_pss_params_parse(parameters, 0, pss))
-			{
-				DBG1(DBG_IKE, "failed parsing RSASSA-PSS parameters");
-				free(pss);
-				return FALSE;
-			}
-			params->params = pss;
-			break;
-		}
-		default:
-			break;
+		return FALSE;
 	}
 	*key_type = key_type_from_signature_scheme(params->scheme);
 	*auth_data = chunk_skip(*auth_data, len);
@@ -106,29 +86,13 @@ static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
 static bool build_signature_auth_data(chunk_t *auth_data,
 									  signature_params_t *params)
 {
-	chunk_t data, parameters = chunk_empty;
+	chunk_t data;
 	uint8_t len;
-	int oid;
 
-	oid = signature_scheme_to_oid(params->scheme);
-	if (oid == OID_UNKNOWN)
+	if (!signature_params_build(params, &data))
 	{
 		chunk_free(auth_data);
 		return FALSE;
-	}
-	if (params->scheme == SIGN_RSA_EMSA_PSS &&
-		!rsa_pss_params_build(params->params, &parameters))
-	{
-		chunk_free(auth_data);
-		return FALSE;
-	}
-	if (parameters.len)
-	{
-		data = asn1_algorithmIdentifier_params(oid, parameters);
-	}
-	else
-	{
-		data = asn1_algorithmIdentifier(oid);
 	}
 	len = data.len;
 	*auth_data = chunk_cat("cmm", chunk_from_thing(len), data, *auth_data);
