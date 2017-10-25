@@ -96,6 +96,7 @@ static bool install_shunt_policy(child_cfg_t *child)
 	status_t status = SUCCESS;
 	uint32_t manual_prio;
 	char *interface;
+	bool fwd_out;
 	ipsec_sa_cfg_t sa = { .mode = MODE_TRANSPORT };
 
 	switch (child->get_mode(child))
@@ -122,6 +123,7 @@ static bool install_shunt_policy(child_cfg_t *child)
 
 	manual_prio = child->get_manual_prio(child);
 	interface = child->get_interface(child);
+	fwd_out = child->has_option(child, OPT_FWD_OUT_POLICIES);
 
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
@@ -157,9 +159,11 @@ static bool install_shunt_policy(child_cfg_t *child)
 				.sa = &sa,
 			};
 			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
-			/* install "outbound" forward policy */
-			id.dir = POLICY_FWD;
-			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
+			if (fwd_out)
+			{	/* install "outbound" forward policy */
+				id.dir = POLICY_FWD;
+				status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
+			}
 			/* install in policy */
 			id = (kernel_ipsec_policy_id_t){
 				.dir = POLICY_IN,
@@ -255,6 +259,7 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 	status_t status = SUCCESS;
 	uint32_t manual_prio;
 	char *interface;
+	bool fwd_out;
 	ipsec_sa_cfg_t sa = { .mode = MODE_TRANSPORT };
 
 	switch (child->get_mode(child))
@@ -281,6 +286,7 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 
 	manual_prio = child->get_manual_prio(child);
 	interface = child->get_interface(child);
+	fwd_out = child->has_option(child, OPT_FWD_OUT_POLICIES);
 
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
@@ -316,9 +322,12 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 				.sa = &sa,
 			};
 			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
-			/* uninstall "outbound" forward policy */
-			id.dir = POLICY_FWD;
-			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
+			if (fwd_out)
+			{
+				/* uninstall "outbound" forward policy */
+				id.dir = POLICY_FWD;
+				status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
+			}
 			/* uninstall in policy */
 			id = (kernel_ipsec_policy_id_t){
 				.dir = POLICY_IN,
