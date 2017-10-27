@@ -57,7 +57,6 @@ static inline void X509_CRL_get0_signature(const X509_CRL *crl, ASN1_BIT_STRING 
 #define X509_REVOKED_get0_serialNumber(r) ({ (r)->serialNumber; })
 #define X509_REVOKED_get0_revocationDate(r) ({ (r)->revocationDate; })
 #define X509_CRL_get0_extensions(c) ({ (c)->crl->extensions; })
-#define X509_ALGOR_get0(oid, ppt, ppv, alg) ({ *(oid) = (alg)->algorithm; })
 #endif
 
 typedef struct private_openssl_crl_t private_openssl_crl_t;
@@ -120,7 +119,7 @@ struct private_openssl_crl_t {
 	/**
 	 * Signature scheme used in this CRL
 	 */
-	signature_scheme_t scheme;
+	signature_params_t *scheme;
 
 	/**
 	 * References to this CRL
@@ -321,10 +320,6 @@ METHOD(certificate_t, issued_by, bool,
 			return FALSE;
 		}
 	}
-	if (this->scheme == SIGN_UNKNOWN)
-	{
-		return FALSE;
-	}
 	/* i2d_re_X509_CRL_tbs() was added with 1.1.0 when X509_CRL became opaque */
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 	tbs = openssl_i2chunk(re_X509_CRL_tbs, this->crl);
@@ -332,15 +327,13 @@ METHOD(certificate_t, issued_by, bool,
 	tbs = openssl_i2chunk(X509_CRL_INFO, this->crl->crl);
 #endif
 	X509_CRL_get0_signature(this->crl, &sig, NULL);
-	valid = key->verify(key, this->scheme, NULL, tbs,
+	valid = key->verify(key, this->scheme->scheme, this->scheme->params, tbs,
 						openssl_asn1_str2chunk(sig));
 	free(tbs.ptr);
 	key->destroy(key);
 	if (valid && scheme)
 	{
-		INIT(*scheme,
-			.scheme = this->scheme,
-		);
+		*scheme = signature_params_clone(this->scheme);
 	}
 	return valid;
 }
@@ -420,6 +413,7 @@ METHOD(certificate_t, destroy, void,
 		{
 			X509_CRL_free(this->crl);
 		}
+		signature_params_destroy(this->scheme);
 		this->crl_uris->destroy_function(this->crl_uris,
 										 (void*)x509_cdp_destroy);
 		DESTROY_IF(this->issuer);
@@ -569,7 +563,7 @@ static bool parse_extensions(private_openssl_crl_t *this)
 static bool parse_crl(private_openssl_crl_t *this)
 {
 	const unsigned char *ptr = this->encoding.ptr;
-	ASN1_OBJECT *oid;
+	chunk_t sig_scheme;
 	X509_ALGOR *alg;
 
 	this->crl = d2i_X509_CRL(NULL, &ptr, this->encoding.len);
@@ -579,27 +573,15 @@ static bool parse_crl(private_openssl_crl_t *this)
 	}
 
 	X509_CRL_get0_signature(this->crl, NULL, &alg);
-	X509_ALGOR_get0(&oid, NULL, NULL, alg);
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-	if (!chunk_equals(
-			openssl_asn1_obj2chunk(this->crl->crl->sig_alg->algorithm),
-			openssl_asn1_obj2chunk(this->crl->sig_alg->algorithm)))
+	sig_scheme = openssl_i2chunk(X509_ALGOR, alg);
+	INIT(this->scheme);
+	if (!signature_params_parse(sig_scheme, 0, this->scheme))
 	{
+		DBG1(DBG_ASN, "unable to parse signature algorithm");
+		free(sig_scheme.ptr);
 		return FALSE;
 	}
-#elif 0
-	/* FIXME: we currently can't do this if X509_CRL is opaque (>= 1.1.0) as
-	 * X509_CRL_get0_tbs_sigalg() does not exist and there does not seem to be
-	 * another easy way to get the algorithm from the tbsCertList of the CRL */
-	alg = X509_CRL_get0_tbs_sigalg(this->crl);
-	X509_ALGOR_get0(&oid_tbs, NULL, NULL, alg);
-	if (!chunk_equals(openssl_asn1_obj2chunk(oid),
-					  openssl_asn1_obj2chunk(oid_tbs)))
-	{
-		return FALSE;
-	}
-#endif
-	this->scheme = signature_scheme_from_oid(openssl_asn1_known_oid(oid));
+	free(sig_scheme.ptr);
 
 	this->issuer = openssl_x509_name2id(X509_CRL_get_issuer(this->crl));
 	if (!this->issuer)
