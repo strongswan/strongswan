@@ -1090,6 +1090,10 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	}
 	switch (openssl_asn1_known_oid(oid))
 	{
+		case OID_RSASSA_PSS:
+			/* TODO: we should treat such keys special and use the params as
+			 * restrictions regarding the use of this key (or rather the
+			 * associated private key) */
 		case OID_RSA_ENCRYPTION:
 			this->pubkey = lib->creds->create(lib->creds,
 					CRED_PUBLIC_KEY, KEY_RSA, BUILD_BLOB_ASN1_DER,
