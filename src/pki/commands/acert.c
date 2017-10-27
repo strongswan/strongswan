@@ -227,6 +227,7 @@ static int acert()
 							BUILD_AC_GROUP_STRINGS, groups,
 							BUILD_SIGNING_CERT, issuer,
 							BUILD_SIGNING_KEY, private,
+							BUILD_DIGEST_ALG, digest,
 							BUILD_END);
 	if (!ac)
 	{
