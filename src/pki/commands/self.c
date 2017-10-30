@@ -441,7 +441,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		self, 's', "self",
 		"create a self signed certificate",
-		{" [--in file|--keyid hex] [--type rsa|ecdsa|ed25519|bliss|priv]",
+		{"[--in file|--keyid hex] [--type rsa|ecdsa|ed25519|bliss|priv]",
 		 " --dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
 		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning|msSmartcardLogon]+",
