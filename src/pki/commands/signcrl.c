@@ -120,6 +120,7 @@ static int sign_crl()
 	crl_t *lastcrl = NULL;
 	x509_t *x509;
 	hash_algorithm_t digest = HASH_UNKNOWN;
+	signature_params_t *scheme = NULL;
 	char *arg, *cacert = NULL, *cakey = NULL, *lastupdate = NULL, *error = NULL;
 	char *basecrl = NULL;
 	char serial[512], *keyid = NULL;
@@ -133,6 +134,7 @@ static int sign_crl()
 	x509_cdp_t *cdp;
 	chunk_t crl_serial = chunk_empty, baseCrlNumber = chunk_empty;
 	chunk_t encoding = chunk_empty;
+	bool pss = FALSE;
 
 	list = linked_list_create();
 	cdps = linked_list_create();
@@ -147,6 +149,17 @@ static int sign_crl()
 				if (!enum_from_name(hash_algorithm_short_names, arg, &digest))
 				{
 					error = "invalid --digest type";
+					goto usage;
+				}
+				continue;
+			case 'R':
+				if (streq(arg, "pss"))
+				{
+					pss = TRUE;
+				}
+				else if (!streq(arg, "pkcs1"))
+				{
+					error = "invalid RSA padding";
 					goto usage;
 				}
 				continue;
@@ -332,10 +345,6 @@ static int sign_crl()
 		error = "loading CA private key failed";
 		goto error;
 	}
-	if (digest == HASH_UNKNOWN)
-	{
-		digest = get_default_digest(private);
-	}
 	if (!private->belongs_to(private, public))
 	{
 		error = "CA private key does not match CA certificate";
@@ -390,6 +399,7 @@ static int sign_crl()
 	/* increment the serial number by one */
 	chunk_increment(crl_serial);
 
+	scheme = get_signature_scheme(private, digest, pss);
 	enumerator = enumerator_create_filter(list->create_enumerator(list),
 										  filter, NULL, NULL);
 	crl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
@@ -397,7 +407,7 @@ static int sign_crl()
 			BUILD_SERIAL, crl_serial,
 			BUILD_NOT_BEFORE_TIME, thisUpdate, BUILD_NOT_AFTER_TIME, nextUpdate,
 			BUILD_REVOKED_ENUMERATOR, enumerator,
-			BUILD_REVOKED_ENUMERATOR, lastenum, BUILD_DIGEST_ALG, digest,
+			BUILD_REVOKED_ENUMERATOR, lastenum, BUILD_SIGNATURE_SCHEME, scheme,
 			BUILD_CRL_DISTRIBUTION_POINTS, cdps, BUILD_BASE_CRL, baseCrlNumber,
 			BUILD_END);
 	enumerator->destroy(enumerator);
@@ -427,6 +437,7 @@ error:
 	DESTROY_IF(private);
 	DESTROY_IF(ca);
 	DESTROY_IF(crl);
+	signature_params_destroy(scheme);
 	free(encoding.ptr);
 	free(baseCrlNumber.ptr);
 	list->destroy_function(list, (void*)revoked_destroy);
@@ -458,6 +469,7 @@ static void __attribute__ ((constructor))reg()
 		 "           superseded|cessation-of-operation|certificate-hold]",
 		 " [--date timestamp] --cert file|--serial hex]*",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
+		 "[--rsa-padding pkcs1|pss]",
 		 "[--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
@@ -476,6 +488,7 @@ static void __attribute__ ((constructor))reg()
 			{"reason",		'r', 1, "reason for certificate revocation"},
 			{"date",		'd', 1, "revocation date as unix timestamp, default: now"},
 			{"digest",		'g', 1, "digest for signature creation, default: key-specific"},
+			{"rsa-padding",	'R', 1, "padding for RSA signatures, default: pkcs1"},
 			{"outform",		'f', 1, "encoding of generated crl, default: der"},
 		}
 	});

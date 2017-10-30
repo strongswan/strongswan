@@ -33,6 +33,7 @@ static int acert()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	hash_algorithm_t digest = HASH_UNKNOWN;
+	signature_params_t *scheme = NULL;
 	certificate_t *ac = NULL, *cert = NULL, *issuer =NULL;
 	private_key_t *private = NULL;
 	public_key_t *public = NULL;
@@ -44,6 +45,7 @@ static int acert()
 	char *datenb = NULL, *datena = NULL, *dateform = NULL;
 	rng_t *rng;
 	char *arg;
+	bool pss = FALSE;
 
 	groups = linked_list_create();
 
@@ -57,6 +59,17 @@ static int acert()
 				if (!enum_from_name(hash_algorithm_short_names, arg, &digest))
 				{
 					error = "invalid --digest type";
+					goto usage;
+				}
+				continue;
+			case 'R':
+				if (streq(arg, "pss"))
+				{
+					pss = TRUE;
+				}
+				else if (!streq(arg, "pkcs1"))
+				{
+					error = "invalid RSA padding";
 					goto usage;
 				}
 				continue;
@@ -162,10 +175,6 @@ static int acert()
 		error = "loading issuer private key failed";
 		goto end;
 	}
-	if (digest == HASH_UNKNOWN)
-	{
-		digest = get_default_digest(private);
-	}
 	if (!private->belongs_to(private, public))
 	{
 		error = "issuer private key does not match issuer certificate";
@@ -217,6 +226,7 @@ static int acert()
 		error = "parsing user certificate failed";
 		goto end;
 	}
+	scheme = get_signature_scheme(private, digest, pss);
 
 	ac = lib->creds->create(lib->creds,
 							CRED_CERTIFICATE, CERT_X509_AC,
@@ -227,7 +237,7 @@ static int acert()
 							BUILD_AC_GROUP_STRINGS, groups,
 							BUILD_SIGNING_CERT, issuer,
 							BUILD_SIGNING_KEY, private,
-							BUILD_DIGEST_ALG, digest,
+							BUILD_SIGNATURE_SCHEME, scheme,
 							BUILD_END);
 	if (!ac)
 	{
@@ -253,6 +263,7 @@ end:
 	DESTROY_IF(public);
 	DESTROY_IF(private);
 	groups->destroy(groups);
+	signature_params_destroy(scheme);
 	free(encoding.ptr);
 	free(serial.ptr);
 
@@ -280,6 +291,7 @@ static void __attribute__ ((constructor))reg()
 		 " --issuercert file [--serial hex] [--lifetime hours]",
 		 " [--not-before datetime] [--not-after datetime] [--dateform form]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
+		 "[--rsa-padding pkcs1|pss]",
 		 "[--outform der|pem]"},
 		{
 			{"help",			'h', 0, "show usage information"},
@@ -294,6 +306,7 @@ static void __attribute__ ((constructor))reg()
 			{"not-after",		'T', 1, "date/time the validity of the AC ends"},
 			{"dateform",		'D', 1, "strptime(3) input format, default: %d.%m.%y %T"},
 			{"digest",			'g', 1, "digest for signature creation, default: key-specific"},
+			{"rsa-padding",		'R', 1, "padding for RSA signatures, default: pkcs1"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
 	});

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2012-2014 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -237,10 +237,10 @@ void set_file_mode(FILE *stream, cred_encoding_type_t enc)
 #endif
 }
 
-/*
- * Described in header
+/**
+ * Determine a default hash algorithm for the given key
  */
-hash_algorithm_t get_default_digest(private_key_t *private)
+static hash_algorithm_t get_default_digest(private_key_t *private)
 {
 	enumerator_t *enumerator;
 	signature_params_t *params;
@@ -256,6 +256,42 @@ hash_algorithm_t get_default_digest(private_key_t *private)
 
 	/* default to SHA-256 */
 	return alg == HASH_UNKNOWN ? HASH_SHA256 : alg;
+}
+
+/*
+ * Described in header
+ */
+signature_params_t *get_signature_scheme(private_key_t *private,
+										 hash_algorithm_t digest, bool pss)
+{
+	signature_params_t *scheme;
+
+	if (digest == HASH_UNKNOWN)
+	{
+		digest = get_default_digest(private);
+	}
+	if (private->get_type(private) == KEY_RSA && pss)
+	{
+		rsa_pss_params_t pss_params = {
+			.hash = digest,
+			.mgf1_hash = digest,
+			.salt_len = RSA_PSS_SALT_LEN_DEFAULT,
+		};
+		signature_params_t pss_scheme = {
+			.scheme = SIGN_RSA_EMSA_PSS,
+			.params = &pss_params,
+		};
+		scheme = signature_params_clone(&pss_scheme);
+	}
+	else
+	{
+		INIT(scheme,
+			.scheme = signature_scheme_from_oid(
+								hasher_signature_algorithm_to_oid(digest,
+												private->get_type(private))),
+		);
+	}
+	return scheme;
 }
 
 /*

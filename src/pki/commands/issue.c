@@ -61,12 +61,13 @@ static int issue()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	hash_algorithm_t digest = HASH_UNKNOWN;
+	signature_params_t *scheme = NULL;
 	certificate_t *cert_req = NULL, *cert = NULL, *ca =NULL;
 	private_key_t *private = NULL;
 	public_key_t *public = NULL;
 	credential_type_t type = CRED_PUBLIC_KEY;
 	key_type_t subtype = KEY_ANY;
-	bool pkcs10 = FALSE;
+	bool pkcs10 = FALSE, pss = FALSE;
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
 	char *error = NULL, *keyid = NULL;
 	identification_t *id = NULL;
@@ -140,6 +141,17 @@ static int issue()
 				if (!enum_from_name(hash_algorithm_short_names, arg, &digest))
 				{
 					error = "invalid --digest type";
+					goto usage;
+				}
+				continue;
+			case 'R':
+				if (streq(arg, "pss"))
+				{
+					pss = TRUE;
+				}
+				else if (!streq(arg, "pkcs1"))
+				{
+					error = "invalid RSA padding";
 					goto usage;
 				}
 				continue;
@@ -396,10 +408,6 @@ static int issue()
 		error = "loading CA private key failed";
 		goto end;
 	}
-	if (digest == HASH_UNKNOWN)
-	{
-		digest = get_default_digest(private);
-	}
 	if (!private->belongs_to(private, public))
 	{
 		error = "CA private key does not match CA certificate";
@@ -525,11 +533,12 @@ static int issue()
 		id = identification_create_from_encoding(ID_DER_ASN1_DN,
 										chunk_from_chars(ASN1_SEQUENCE, 0));
 	}
+	scheme = get_signature_scheme(private, digest, pss);
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 					BUILD_SIGNING_KEY, private, BUILD_SIGNING_CERT, ca,
 					BUILD_PUBLIC_KEY, public, BUILD_SUBJECT, id,
-					BUILD_NOT_BEFORE_TIME, not_before, BUILD_DIGEST_ALG, digest,
+					BUILD_NOT_BEFORE_TIME, not_before,
 					BUILD_NOT_AFTER_TIME, not_after, BUILD_SERIAL, serial,
 					BUILD_SUBJECT_ALTNAMES, san, BUILD_X509_FLAG, flags,
 					BUILD_PATHLEN, pathlen, BUILD_ADDRBLOCKS, addrblocks,
@@ -542,6 +551,7 @@ static int issue()
 					BUILD_POLICY_REQUIRE_EXPLICIT, require_explicit,
 					BUILD_POLICY_INHIBIT_MAPPING, inhibit_mapping,
 					BUILD_POLICY_INHIBIT_ANY, inhibit_any,
+					BUILD_SIGNATURE_SCHEME, scheme,
 					BUILD_END);
 	if (!cert)
 	{
@@ -575,6 +585,7 @@ end:
 	mappings->destroy_function(mappings, (void*)destroy_policy_mapping);
 	cdps->destroy_function(cdps, (void*)destroy_cdp);
 	ocsp->destroy(ocsp);
+	signature_params_destroy(scheme);
 	free(encoding.ptr);
 	free(serial.ptr);
 
@@ -614,6 +625,7 @@ static void __attribute__ ((constructor))reg()
 		 "[--policy-explicit len] [--policy-inhibit len] [--policy-any len]",
 		 "[--cert-policy oid [--cps-uri uri] [--user-notice text]]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
+		 "[--rsa-padding pkcs1|pss]",
 		 "[--outform der|pem]"},
 		{
 			{"help",			'h', 0, "show usage information"},
@@ -646,6 +658,7 @@ static void __attribute__ ((constructor))reg()
 			{"crlissuer",		'I', 1, "CRL Issuer for CRL at distribution point"},
 			{"ocsp",			'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",			'g', 1, "digest for signature creation, default: key-specific"},
+			{"rsa-padding",		'R', 1, "padding for RSA signatures, default: pkcs1"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
 	});
