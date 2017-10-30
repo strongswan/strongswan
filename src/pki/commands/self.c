@@ -71,7 +71,8 @@ static int self()
 	x509_cert_policy_t *policy = NULL;
 	traffic_selector_t *ts;
 	char *arg;
-	bool pss = FALSE;
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+									   lib->ns);
 
 	san = linked_list_create();
 	ocsp = linked_list_create();

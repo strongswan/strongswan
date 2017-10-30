@@ -45,7 +45,8 @@ static int acert()
 	char *datenb = NULL, *datena = NULL, *dateform = NULL;
 	rng_t *rng;
 	char *arg;
-	bool pss = FALSE;
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+									   lib->ns);
 
 	groups = linked_list_create();
 

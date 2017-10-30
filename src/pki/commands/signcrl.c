@@ -134,7 +134,8 @@ static int sign_crl()
 	x509_cdp_t *cdp;
 	chunk_t crl_serial = chunk_empty, baseCrlNumber = chunk_empty;
 	chunk_t encoding = chunk_empty;
-	bool pss = FALSE;
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+									   lib->ns);
 
 	list = linked_list_create();
 	cdps = linked_list_create();

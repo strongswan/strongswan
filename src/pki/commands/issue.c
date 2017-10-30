@@ -67,7 +67,7 @@ static int issue()
 	public_key_t *public = NULL;
 	credential_type_t type = CRED_PUBLIC_KEY;
 	key_type_t subtype = KEY_ANY;
-	bool pkcs10 = FALSE, pss = FALSE;
+	bool pkcs10 = FALSE;
 	char *file = NULL, *dn = NULL, *hex = NULL, *cacert = NULL, *cakey = NULL;
 	char *error = NULL, *keyid = NULL;
 	identification_t *id = NULL;
@@ -85,6 +85,8 @@ static int issue()
 	x509_cert_policy_t *policy = NULL;
 	traffic_selector_t *ts;
 	char *arg;
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+									   lib->ns);
 
 	san = linked_list_create();
 	cdps = linked_list_create();

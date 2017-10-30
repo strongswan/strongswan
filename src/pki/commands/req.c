@@ -39,7 +39,8 @@ static int req()
 	chunk_t encoding = chunk_empty;
 	chunk_t challenge_password = chunk_empty;
 	char *arg;
-	bool pss = FALSE;
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+									   lib->ns);
 
 	san = linked_list_create();
 
