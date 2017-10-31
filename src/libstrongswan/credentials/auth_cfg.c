@@ -532,11 +532,35 @@ static void add(private_auth_cfg_t *this, auth_rule_t type, ...)
 	}
 }
 
+/**
+ * Create a constraint for RSA/PSS signatures
+ */
+static signature_params_t *create_rsa_pss_constraint(char *token)
+{
+	signature_params_t *params = NULL;
+	hash_algorithm_t hash;
+
+	if (enum_from_name(hash_algorithm_short_names, token, &hash))
+	{
+		rsa_pss_params_t pss = {
+			.hash = hash,
+			.mgf1_hash = hash,
+			.salt_len = RSA_PSS_SALT_LEN_DEFAULT,
+		};
+		signature_params_t pss_params = {
+			.scheme = SIGN_RSA_EMSA_PSS,
+			.params = &pss,
+		};
+		params = signature_params_clone(&pss_params);
+	}
+	return params;
+}
+
 METHOD(auth_cfg_t, add_pubkey_constraints, void,
 	private_auth_cfg_t *this, char* constraints, bool ike)
 {
 	enumerator_t *enumerator;
-	bool ike_added = FALSE;
+	bool ike_added = FALSE, rsa_pss;
 	key_type_t expected_type = -1;
 	auth_rule_t expected_strength = AUTH_RULE_MAX;
 	signature_params_t *params;
@@ -544,6 +568,9 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 	char *token, *key_token = NULL;
 	auth_rule_t type;
 	void *value;
+
+	rsa_pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+									  lib->ns);
 
 	enumerator = enumerator_create_token(constraints, "-", "");
 	while (enumerator->enumerate(enumerator, &token))
@@ -640,20 +667,10 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 		}
 
 		if (key_token && streq(key_token + strlen(key_token) - 3, "pss"))
-		{	/* these are not added automatically with 'pubkey' */
-			hash_algorithm_t hash;
-			if (enum_from_name(hash_algorithm_short_names, token, &hash))
+		{
+			params = create_rsa_pss_constraint(token);
+			if (params)
 			{
-				rsa_pss_params_t pss = {
-					.hash = hash,
-					.mgf1_hash = hash,
-					.salt_len = RSA_PSS_SALT_LEN_DEFAULT,
-				};
-				signature_params_t pss_params = {
-					.scheme = SIGN_RSA_EMSA_PSS,
-					.params = &pss,
-				};
-				params = signature_params_clone(&pss_params);
 				if (strpfx(key_token, "ike:"))
 				{
 					add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
@@ -668,6 +685,27 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 		}
 		else
 		{
+			if (rsa_pss)
+			{
+				if (expected_type == KEY_ANY ||
+					expected_type == KEY_RSA)
+				{
+					params = create_rsa_pss_constraint(token);
+					if (params)
+					{
+						if (strpfx(key_token, "ike:"))
+						{
+							add(this, AUTH_RULE_IKE_SIGNATURE_SCHEME, params);
+							ike_added = TRUE;
+						}
+						else
+						{
+							add(this, AUTH_RULE_SIGNATURE_SCHEME, params);
+						}
+						found = TRUE;
+					}
+				}
+			}
 			for (i = 0; i < countof(schemes); i++)
 			{
 				if (streq(schemes[i].name, token))

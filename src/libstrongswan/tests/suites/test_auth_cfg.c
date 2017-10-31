@@ -176,6 +176,32 @@ START_TEST(test_sig_contraints_params)
 }
 END_TEST
 
+struct {
+	char *constraints;
+	signature_scheme_t sig[6];
+	signature_param_types_t p[6];
+} sig_constraints_rsa_pss_tests[] = {
+	{ "pubkey-sha256", { SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PKCS1_SHA2_256, SIGN_ECDSA_WITH_SHA256_DER, SIGN_ECDSA_256, SIGN_BLISS_WITH_SHA2_256, 0 }, {
+		{ .pss = { .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = HASH_SIZE_SHA256, }}, {}, {}, {}, {}}},
+	{ "rsa-sha256", { SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PKCS1_SHA2_256, 0 }, {
+		{ .pss = { .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = HASH_SIZE_SHA256, }}, {}}},
+};
+
+START_TEST(test_sig_contraints_rsa_pss)
+{
+	auth_cfg_t *cfg;
+
+	lib->settings->set_bool(lib->settings, "%s.rsa_pss", TRUE, lib->ns);
+
+	cfg = auth_cfg_create();
+	cfg->add_pubkey_constraints(cfg, sig_constraints_rsa_pss_tests[_i].constraints, TRUE);
+	check_sig_constraints_params(cfg, AUTH_RULE_IKE_SIGNATURE_SCHEME,
+								 sig_constraints_rsa_pss_tests[_i].sig,
+								 sig_constraints_rsa_pss_tests[_i].p);
+	cfg->destroy(cfg);
+}
+END_TEST
+
 Suite *auth_cfg_suite_create()
 {
 	Suite *s;
@@ -190,6 +216,7 @@ Suite *auth_cfg_suite_create()
 
 	tc = tcase_create("add_pubkey_constraints parameters");
 	tcase_add_loop_test(tc, test_sig_contraints_params, 0, countof(sig_constraints_params_tests));
+	tcase_add_loop_test(tc, test_sig_contraints_rsa_pss, 0, countof(sig_constraints_rsa_pss_tests));
 	suite_add_tcase(s, tc);
 
 	return s;
