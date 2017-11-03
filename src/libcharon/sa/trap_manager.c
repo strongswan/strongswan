@@ -255,7 +255,9 @@ METHOD(trap_manager_t, install, uint32_t,
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (streq(entry->name, child->get_name(child)))
+		if (streq(entry->name, child->get_name(child)) &&
+			streq(entry->peer_cfg->get_name(entry->peer_cfg),
+				  peer->get_name(peer)))
 		{
 			found = entry;
 			if (entry->child_sa)
