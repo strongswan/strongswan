@@ -680,11 +680,10 @@ CALLBACK(uninstall, vici_message_t*,
 	private_vici_control_t *this, char *name, u_int id, vici_message_t *request)
 {
 	peer_cfg_t *peer_cfg;
-	child_cfg_t *child_cfg;
 	child_sa_t *child_sa;
 	enumerator_t *enumerator;
 	uint32_t reqid = 0;
-	char *child, *ike, *ns;
+	char *child, *ike;
 
 	child = request->get_str(request, NULL, "child");
 	ike = request->get_str(request, NULL, "ike");
@@ -695,30 +694,7 @@ CALLBACK(uninstall, vici_message_t*,
 
 	DBG1(DBG_CFG, "vici uninstall '%s'", child);
 
-	if (!ike)
-	{
-		enumerator = charon->shunts->create_enumerator(charon->shunts);
-		while (enumerator->enumerate(enumerator, &ns, &child_cfg))
-		{
-			if (ns && streq(child, child_cfg->get_name(child_cfg)))
-			{
-				ike = strdup(ns);
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-		if (ike)
-		{
-			if (charon->shunts->uninstall(charon->shunts, ike, child))
-			{
-				free(ike);
-				return send_reply(this, NULL);
-			}
-			free(ike);
-			return send_reply(this, "uninstalling policy '%s' failed", child);
-		}
-	}
-	else if (charon->shunts->uninstall(charon->shunts, ike, child))
+	if (charon->shunts->uninstall(charon->shunts, ike, child))
 	{
 		return send_reply(this, NULL);
 	}
