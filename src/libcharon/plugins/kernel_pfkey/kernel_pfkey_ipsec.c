@@ -1960,6 +1960,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	PFKEY_EXT_COPY(msg, response.lft_soft);
 	PFKEY_EXT_COPY(msg, response.lft_hard);
 
+#ifndef __FreeBSD__
+	/* FreeBSD 11.1 does not allow key updates via SADB_UPDATE for mature SAs */
 	if (response.key_encr)
 	{
 		PFKEY_EXT_COPY(msg, response.key_encr);
@@ -1969,6 +1971,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	{
 		PFKEY_EXT_COPY(msg, response.key_auth);
 	}
+#endif
 
 #ifdef HAVE_NATT
 	if (data->new_encap)
