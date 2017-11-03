@@ -1954,41 +1954,6 @@ CALLBACK(peer_sn, bool,
 }
 
 /**
- * Find reqid of an existing CHILD_SA
- */
-static uint32_t find_reqid(child_cfg_t *cfg)
-{
-	enumerator_t *enumerator, *children;
-	child_sa_t *child_sa;
-	ike_sa_t *ike_sa;
-	uint32_t reqid;
-
-	reqid = charon->traps->find_reqid(charon->traps, cfg);
-	if (reqid)
-	{	/* already trapped */
-		return reqid;
-	}
-
-	enumerator = charon->controller->create_ike_sa_enumerator(
-													charon->controller, TRUE);
-	while (!reqid && enumerator->enumerate(enumerator, &ike_sa))
-	{
-		children = ike_sa->create_child_sa_enumerator(ike_sa);
-		while (children->enumerate(children, &child_sa))
-		{
-			if (streq(cfg->get_name(cfg), child_sa->get_name(child_sa)))
-			{
-				reqid = child_sa->get_reqid(child_sa);
-				break;
-			}
-		}
-		children->destroy(children);
-	}
-	enumerator->destroy(enumerator);
-	return reqid;
-}
-
-/**
  * Perform start actions associated with a child config
  */
 static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
@@ -2012,8 +1977,7 @@ static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 									peer_cfg->get_name(peer_cfg), child_cfg);
 					break;
 				default:
-					charon->traps->install(charon->traps, peer_cfg, child_cfg,
-										   find_reqid(child_cfg));
+					charon->traps->install(charon->traps, peer_cfg, child_cfg);
 					break;
 			}
 			break;

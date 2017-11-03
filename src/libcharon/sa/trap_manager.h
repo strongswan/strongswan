@@ -38,11 +38,9 @@ struct trap_manager_t {
 	 *
 	 * @param peer		peer configuration to initiate on trap
 	 * @param child 	child configuration to install as a trap
-	 * @param reqid		optional reqid to use
-	 * @return			reqid of installed CHILD_SA, 0 if failed
+	 * @return			TRUE if successfully installed
 	 */
-	uint32_t (*install)(trap_manager_t *this, peer_cfg_t *peer,
-						 child_cfg_t *child, uint32_t reqid);
+	bool (*install)(trap_manager_t *this, peer_cfg_t *peer, child_cfg_t *child);
 
 	/**
 	 * Uninstall a trap policy.

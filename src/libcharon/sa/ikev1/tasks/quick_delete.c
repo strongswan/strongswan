@@ -154,7 +154,7 @@ static bool delete_child(private_quick_delete_t *this, protocol_id_t protocol,
 				case ACTION_ROUTE:
 					charon->traps->install(charon->traps,
 									this->ike_sa->get_peer_cfg(this->ike_sa),
-									child_cfg, child_sa->get_reqid(child_sa));
+									child_cfg);
 					break;
 				default:
 					break;

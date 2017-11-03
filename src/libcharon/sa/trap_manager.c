@@ -183,9 +183,8 @@ static bool dynamic_remote_ts(child_cfg_t *child)
 	return found;
 }
 
-METHOD(trap_manager_t, install, uint32_t,
-	private_trap_manager_t *this, peer_cfg_t *peer, child_cfg_t *child,
-	uint32_t reqid)
+METHOD(trap_manager_t, install, bool,
+	private_trap_manager_t *this, peer_cfg_t *peer, child_cfg_t *child)
 {
 	entry_t *entry, *found = NULL;
 	ike_cfg_t *ike_cfg;
@@ -197,7 +196,7 @@ METHOD(trap_manager_t, install, uint32_t,
 	linked_list_t *proposals;
 	proposal_t *proposal;
 	protocol_id_t proto = PROTO_ESP;
-	bool wildcard = FALSE;
+	bool result = FALSE, wildcard = FALSE;
 
 	/* try to resolve addresses */
 	ike_cfg = peer->get_ike_cfg(peer);
@@ -213,7 +212,7 @@ METHOD(trap_manager_t, install, uint32_t,
 	{
 		other->destroy(other);
 		DBG1(DBG_CFG, "installing trap failed, remote address unknown");
-		return 0;
+		return FALSE;
 	}
 	else
 	{	/* depending on the traffic selectors we don't really need a remote
@@ -223,7 +222,7 @@ METHOD(trap_manager_t, install, uint32_t,
 			 * which is probably not what users expect*/
 			DBG1(DBG_CFG, "installing trap failed, remote address unknown with "
 				 "dynamic traffic selector");
-			return 0;
+			return FALSE;
 		}
 		me = ike_cfg->resolve_me(ike_cfg, other ? other->get_family(other)
 												: AF_UNSPEC);
@@ -250,7 +249,7 @@ METHOD(trap_manager_t, install, uint32_t,
 		this->lock->unlock(this->lock);
 		other->destroy(other);
 		me->destroy(me);
-		return 0;
+		return FALSE;
 	}
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -277,11 +276,10 @@ METHOD(trap_manager_t, install, uint32_t,
 			this->lock->unlock(this->lock);
 			other->destroy(other);
 			me->destroy(me);
-			return 0;
+			return FALSE;
 		}
 		/* config might have changed so update everything */
 		DBG1(DBG_CFG, "updating already routed CHILD_SA '%s'", found->name);
-		reqid = found->child_sa->get_reqid(found->child_sa);
 	}
 
 	INIT(entry,
@@ -295,7 +293,7 @@ METHOD(trap_manager_t, install, uint32_t,
 	this->lock->unlock(this->lock);
 
 	/* create and route CHILD_SA */
-	child_sa = child_sa_create(me, other, child, reqid, FALSE, 0, 0);
+	child_sa = child_sa_create(me, other, child, 0, FALSE, 0, 0);
 
 	list = linked_list_create_with_items(me, NULL);
 	my_ts = child->get_traffic_selectors(child, TRUE, NULL, list);
@@ -327,14 +325,13 @@ METHOD(trap_manager_t, install, uint32_t,
 		this->lock->unlock(this->lock);
 		entry->child_sa = child_sa;
 		destroy_entry(entry);
-		reqid = 0;
 	}
 	else
 	{
-		reqid = child_sa->get_reqid(child_sa);
 		this->lock->write_lock(this->lock);
 		entry->child_sa = child_sa;
 		this->lock->unlock(this->lock);
+		result = TRUE;
 	}
 	if (found)
 	{
@@ -345,7 +342,7 @@ METHOD(trap_manager_t, install, uint32_t,
 	this->installing--;
 	this->condvar->signal(this->condvar);
 	this->lock->unlock(this->lock);
-	return reqid;
+	return result;
 }
 
 METHOD(trap_manager_t, uninstall, bool,

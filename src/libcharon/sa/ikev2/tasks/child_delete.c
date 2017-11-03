@@ -374,8 +374,8 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 					break;
 				case ACTION_ROUTE:
 					charon->traps->install(charon->traps,
-							this->ike_sa->get_peer_cfg(this->ike_sa), child_cfg,
-							reqid);
+									this->ike_sa->get_peer_cfg(this->ike_sa),
+									child_cfg);
 					break;
 				default:
 					break;

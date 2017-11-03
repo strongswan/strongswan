@@ -262,7 +262,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 	charon->backends->add_backend(charon->backends, &this->backend.public);
 
 	/* install an acquiring trap */
-	this->trap = charon->traps->install(charon->traps, peer_cfg, child_cfg, 0);
+	charon->traps->install(charon->traps, peer_cfg, child_cfg);
 }
 
 METHOD(ha_tunnel_t, destroy, void,
@@ -280,10 +280,7 @@ METHOD(ha_tunnel_t, destroy, void,
 	}
 	this->creds.local->destroy(this->creds.local);
 	this->creds.remote->destroy(this->creds.remote);
-	if (this->trap)
-	{
-		charon->traps->uninstall(charon->traps, HA_CFG_NAME, HA_CFG_NAME);
-	}
+	charon->traps->uninstall(charon->traps, HA_CFG_NAME, HA_CFG_NAME);
 	free(this);
 }
 
