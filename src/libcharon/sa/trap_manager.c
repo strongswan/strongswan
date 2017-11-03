@@ -411,31 +411,6 @@ METHOD(trap_manager_t, create_enumerator, enumerator_t*,
 									(void*)this->lock->unlock);
 }
 
-METHOD(trap_manager_t, find_reqid, uint32_t,
-	private_trap_manager_t *this, child_cfg_t *child)
-{
-	enumerator_t *enumerator;
-	entry_t *entry;
-	uint32_t reqid = 0;
-
-	this->lock->read_lock(this->lock);
-	enumerator = this->traps->create_enumerator(this->traps);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		if (streq(entry->name, child->get_name(child)))
-		{
-			if (entry->child_sa)
-			{
-				reqid = entry->child_sa->get_reqid(entry->child_sa);
-			}
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
-	return reqid;
-}
-
 METHOD(trap_manager_t, acquire, void,
 	private_trap_manager_t *this, uint32_t reqid,
 	traffic_selector_t *src, traffic_selector_t *dst)
@@ -691,7 +666,6 @@ trap_manager_t *trap_manager_create(void)
 			.install = _install,
 			.uninstall = _uninstall,
 			.create_enumerator = _create_enumerator,
-			.find_reqid = _find_reqid,
 			.acquire = _acquire,
 			.flush = _flush,
 			.destroy = _destroy,

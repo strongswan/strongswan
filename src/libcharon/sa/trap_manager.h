@@ -62,14 +62,6 @@ struct trap_manager_t {
 	enumerator_t* (*create_enumerator)(trap_manager_t *this);
 
 	/**
-	 * Find the reqid of a child config installed as a trap.
-	 *
-	 * @param child		CHILD_SA config to get the reqid for
-	 * @return			reqid of trap, 0 if not found
-	 */
-	uint32_t (*find_reqid)(trap_manager_t *this, child_cfg_t *child);
-
-	/**
 	 * Acquire an SA triggered by an installed trap.
 	 *
 	 * @param reqid		requid of the triggering CHILD_SA
