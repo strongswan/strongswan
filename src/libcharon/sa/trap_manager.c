@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2011-2015 Tobias Brunner
+ * Copyright (C) 2011-2017 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -347,7 +347,7 @@ METHOD(trap_manager_t, install, uint32_t,
 }
 
 METHOD(trap_manager_t, uninstall, bool,
-	private_trap_manager_t *this, uint32_t reqid)
+	private_trap_manager_t *this, char *peer, char *child)
 {
 	enumerator_t *enumerator;
 	entry_t *entry, *found = NULL;
@@ -356,8 +356,8 @@ METHOD(trap_manager_t, uninstall, bool,
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (entry->child_sa &&
-			entry->child_sa->get_reqid(entry->child_sa) == reqid)
+		if (streq(entry->name, child) &&
+		   (!peer || streq(peer, entry->peer_cfg->get_name(entry->peer_cfg))))
 		{
 			this->traps->remove_at(this->traps, enumerator);
 			found = entry;
@@ -369,7 +369,6 @@ METHOD(trap_manager_t, uninstall, bool,
 
 	if (!found)
 	{
-		DBG1(DBG_CFG, "trap %d not found to uninstall", reqid);
 		return FALSE;
 	}
 	destroy_entry(found);

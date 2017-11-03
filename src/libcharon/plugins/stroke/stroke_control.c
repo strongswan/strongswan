@@ -730,31 +730,13 @@ METHOD(stroke_control_t, route, void,
 METHOD(stroke_control_t, unroute, void,
 	private_stroke_control_t *this, stroke_msg_t *msg, FILE *out)
 {
-	child_sa_t *child_sa;
-	enumerator_t *enumerator;
-	uint32_t id = 0;
-
 	if (charon->shunts->uninstall(charon->shunts, NULL, msg->unroute.name))
 	{
 		fprintf(out, "shunt policy '%s' uninstalled\n", msg->unroute.name);
-		return;
 	}
-
-	enumerator = charon->traps->create_enumerator(charon->traps);
-	while (enumerator->enumerate(enumerator, NULL, &child_sa))
+	else if (charon->traps->uninstall(charon->traps, NULL, msg->unroute.name))
 	{
-		if (streq(msg->unroute.name, child_sa->get_name(child_sa)))
-		{
-			id = child_sa->get_reqid(child_sa);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	if (id)
-	{
-		charon->traps->uninstall(charon->traps, id);
-		fprintf(out, "configuration '%s' unrouted\n", msg->unroute.name);
+		fprintf(out, "trap policy '%s' unrouted\n", msg->unroute.name);
 	}
 	else
 	{

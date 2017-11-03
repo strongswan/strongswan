@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2013-2017 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -46,10 +47,14 @@ struct trap_manager_t {
 	/**
 	 * Uninstall a trap policy.
 	 *
-	 * @param id		reqid of CHILD_SA to uninstall, returned by install()
+	 * If no peer configuration name is given the first matching child
+	 * configuration is uninstalled.
+	 *
+	 * @param peer		peer configuration name or NULL
+	 * @param child		child configuration name
 	 * @return			TRUE if uninstalled successfully
 	 */
-	bool (*uninstall)(trap_manager_t *this, uint32_t reqid);
+	bool (*uninstall)(trap_manager_t *this, char *peer, char *child);
 
 	/**
 	 * Create an enumerator over all installed traps.

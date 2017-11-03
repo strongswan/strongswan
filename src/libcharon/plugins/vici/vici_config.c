@@ -2030,7 +2030,6 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 {
 	enumerator_t *enumerator, *children;
 	child_sa_t *child_sa;
-	peer_cfg_t *peer_cfg;
 	ike_sa_t *ike_sa;
 	uint32_t id = 0, others;
 	array_t *ids = NULL, *ikeids = NULL;
@@ -2121,22 +2120,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 					charon->shunts->uninstall(charon->shunts, peer_name, name);
 					break;
 				default:
-					enumerator = charon->traps->create_enumerator(charon->traps);
-					while (enumerator->enumerate(enumerator, &peer_cfg,
-												 &child_sa))
-					{
-						if (streq(peer_name, peer_cfg->get_name(peer_cfg)) &&
-							streq(name, child_sa->get_name(child_sa)))
-						{
-							id = child_sa->get_reqid(child_sa);
-							break;
-						}
-					}
-					enumerator->destroy(enumerator);
-					if (id)
-					{
-						charon->traps->uninstall(charon->traps, id);
-					}
+					charon->traps->uninstall(charon->traps, peer_name, name);
 					break;
 			}
 			break;

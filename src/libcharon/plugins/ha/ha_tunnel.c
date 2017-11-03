@@ -20,6 +20,8 @@
 #include <utils/identification.h>
 #include <processing/jobs/callback_job.h>
 
+#define HA_CFG_NAME "ha"
+
 typedef struct private_ha_tunnel_t private_ha_tunnel_t;
 typedef struct ha_backend_t ha_backend_t;
 typedef struct ha_creds_t ha_creds_t;
@@ -225,7 +227,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 							 remote, IKEV2_UDP_PORT, FRAGMENTATION_NO, 0);
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default(PROTO_IKE));
 	ike_cfg->add_proposal(ike_cfg, proposal_create_default_aead(PROTO_IKE));
-	peer_cfg = peer_cfg_create("ha", ike_cfg, &peer);
+	peer_cfg = peer_cfg_create(HA_CFG_NAME, ike_cfg, &peer);
 
 	auth_cfg = auth_cfg_create();
 	auth_cfg->add(auth_cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
@@ -239,7 +241,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 				  identification_create_from_string(remote));
 	peer_cfg->add_auth_cfg(peer_cfg, auth_cfg, FALSE);
 
-	child_cfg = child_cfg_create("ha", &child);
+	child_cfg = child_cfg_create(HA_CFG_NAME, &child);
 	ts = traffic_selector_create_dynamic(IPPROTO_UDP, HA_PORT, HA_PORT);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
 	ts = traffic_selector_create_dynamic(IPPROTO_ICMP, 0, 65535);
@@ -280,7 +282,7 @@ METHOD(ha_tunnel_t, destroy, void,
 	this->creds.remote->destroy(this->creds.remote);
 	if (this->trap)
 	{
-		charon->traps->uninstall(charon->traps, this->trap);
+		charon->traps->uninstall(charon->traps, HA_CFG_NAME, HA_CFG_NAME);
 	}
 	free(this);
 }
