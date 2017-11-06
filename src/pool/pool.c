@@ -60,20 +60,22 @@ static u_int create_pool(char *name, chunk_t start, chunk_t end, u_int timeout)
 {
 	enumerator_t *e;
 	int pool;
+	bool exists;
 
 	e = db->query(db, "SELECT id FROM pools WHERE name = ?",
 			DB_TEXT, name, DB_UINT);
-	if (e && e->enumerate(e, &pool))
+	exists = e && e->enumerate(e, &pool);
+	DESTROY_IF(e);
+
+	if (exists)
 	{
-		if (replace_pool == FALSE)
+		if (!replace_pool)
 		{
 			fprintf(stderr, "pool '%s' exists.\n", name);
-			e->destroy(e);
 			exit(EXIT_FAILURE);
 		}
 		del(name);
 	}
-	DESTROY_IF(e);
 	if (db->execute(db, &pool,
 			"INSERT INTO pools (name, start, end, timeout) VALUES (?, ?, ?, ?)",
 			DB_TEXT, name, DB_BLOB, start, DB_BLOB, end,
