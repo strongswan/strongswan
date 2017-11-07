@@ -1740,7 +1740,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 #ifdef __linux__
 			sa->sadb_sa_replay = min(data->replay_window, 32);
 #else
-			sa->sadb_sa_replay = (data->replay_window + 7) / 8;
+			sa->sadb_sa_replay = min((data->replay_window + 7) / 8, UINT8_MAX);
 #endif
 		}
 		sa->sadb_sa_auth = lookup_algorithm(INTEGRITY_ALGORITHM, data->int_alg);
@@ -1748,6 +1748,19 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 											   data->enc_alg);
 	}
 	PFKEY_EXT_ADD(msg, sa);
+
+#ifdef SADB_X_EXT_SA_REPLAY
+	if (data->inbound)
+	{
+		struct sadb_x_sa_replay *replay;
+
+		replay = (struct sadb_x_sa_replay*)PFKEY_EXT_ADD_NEXT(msg);
+		replay->sadb_x_replay_exttype = SADB_X_EXT_SA_REPLAY;
+		replay->sadb_x_replay_len = PFKEY_LEN(sizeof(struct sadb_x_sa_replay));
+		replay->sadb_x_replay_replay = min(data->replay_window, UINT32_MAX-32);
+		PFKEY_EXT_ADD(msg, replay);
+	}
+#endif
 
 	sa2 = (struct sadb_x_sa2*)PFKEY_EXT_ADD_NEXT(msg);
 	sa2->sadb_x_sa2_exttype = SADB_X_EXT_SA2;
