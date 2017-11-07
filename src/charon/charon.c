@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2017 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -203,8 +203,10 @@ static bool check_pidfile()
 				pid = atoi(buf);
 			}
 			fclose(pidfile);
+			pidfile = NULL;
 			if (pid && kill(pid, 0) == 0)
-			{	/* such a process is running */
+			{
+				DBG1(DBG_DMN, "charon already running ('"PID_FILE"' exists)");
 				return TRUE;
 			}
 		}
@@ -224,13 +226,18 @@ static bool check_pidfile()
 			DBG1(DBG_LIB, "setting FD_CLOEXEC for '"PID_FILE"' failed: %s",
 				 strerror(errno));
 		}
-		ignore_result(fchown(fileno(pidfile),
+		ignore_result(fchown(fd,
 							 lib->caps->get_uid(lib->caps),
 							 lib->caps->get_gid(lib->caps)));
 		fprintf(pidfile, "%d\n", getpid());
 		fflush(pidfile);
+		return FALSE;
 	}
-	return FALSE;
+	else
+	{
+		DBG1(DBG_DMN, "unable to create pidfile '"PID_FILE"'");
+		return TRUE;
+	}
 }
 
 /**
@@ -246,8 +253,8 @@ static void unlink_pidfile()
 	{
 		ignore_result(ftruncate(fileno(pidfile), 0));
 		fclose(pidfile);
+		unlink(PID_FILE);
 	}
-	unlink(PID_FILE);
 }
 
 /**
@@ -402,7 +409,6 @@ int main(int argc, char *argv[])
 
 	if (check_pidfile())
 	{
-		DBG1(DBG_DMN, "charon already running (\""PID_FILE"\" exists)");
 		goto deinit;
 	}
 
@@ -434,12 +440,11 @@ int main(int argc, char *argv[])
 	/* main thread goes to run loop */
 	run();
 
-	/* normal termination, cleanup and exit */
-	unlink_pidfile();
 	status = 0;
 
 deinit:
 	libcharon_deinit();
+	unlink_pidfile();
 	library_deinit();
 	return status;
 }
