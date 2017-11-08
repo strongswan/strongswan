@@ -744,7 +744,6 @@ METHOD(stroke_socket_t, destroy, void,
 										&this->attribute->provider);
 	charon->attributes->remove_handler(charon->attributes,
 									   &this->handler->handler);
-	charon->bus->remove_listener(charon->bus, &this->counter->listener);
 	this->cred->destroy(this->cred);
 	this->ca->destroy(this->ca);
 	this->config->destroy(this->config);
@@ -789,7 +788,7 @@ stroke_socket_t *stroke_socket_create()
 									 &this->attribute->provider);
 	charon->attributes->add_handler(charon->attributes,
 									&this->handler->handler);
-	charon->bus->add_listener(charon->bus, &this->counter->listener);
+
 
 	max_concurrent = lib->settings->get_int(lib->settings,
 				"%s.plugins.stroke.max_concurrent", MAX_CONCURRENT_DEFAULT,

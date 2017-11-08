@@ -258,6 +258,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_COUNTERS
+  SUBDIRS += plugins/counters
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/counters/libstrongswan-counters.la
+endif
+endif
+
 if USE_STROKE
   SUBDIRS += plugins/stroke
 if MONOLITHIC
