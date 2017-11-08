@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,6 +22,7 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
+#include <credentials/keys/signature_params.h>
 
 typedef struct private_gcrypt_rsa_private_key_t private_gcrypt_rsa_private_key_t;
 
@@ -147,50 +149,99 @@ static bool sign_raw(private_gcrypt_rsa_private_key_t *this,
 }
 
 /**
- * Sign a chunk of data using hashing and PKCS#1 encoding
+ * Sign a chunk of data using hashing and PKCS#1v1.5/EMSA-PSS encoding
  */
 static bool sign_pkcs1(private_gcrypt_rsa_private_key_t *this,
-					   hash_algorithm_t hash_algorithm, char *hash_name,
+					   hash_algorithm_t hash_algorithm, rsa_pss_params_t *pss,
 					   chunk_t data, chunk_t *signature)
 {
 	hasher_t *hasher;
 	chunk_t hash;
 	gcry_error_t err;
 	gcry_sexp_t in, out;
-	int hash_oid;
+	char *hash_name = enum_to_name(hash_algorithm_short_names, hash_algorithm);
 
-	hash_oid = hasher_algorithm_to_oid(hash_algorithm);
-	if (hash_oid == OID_UNKNOWN)
+	hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
+	if (!hasher)
 	{
+		DBG1(DBG_LIB, "hash algorithm %N not supported",
+			 hash_algorithm_names, hash_algorithm);
 		return FALSE;
 	}
-	hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
-	if (!hasher || !hasher->allocate_hash(hasher, data, &hash))
+	if (!hasher->allocate_hash(hasher, data, &hash))
 	{
-		DESTROY_IF(hasher);
+		hasher->destroy(hasher);
 		return FALSE;
 	}
 	hasher->destroy(hasher);
 
-	err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(hash %s %b))",
-						  hash_name, hash.len, hash.ptr);
+	if (pss)
+	{
+		if (pss->salt.len)
+		{
+			err = gcry_sexp_build(&in, NULL,
+							"(data(flags pss)(salt-length %u)"
+							"(random-override %b)(hash %s %b))",
+							pss->salt.len, pss->salt.len, pss->salt.ptr,
+							hash_name, hash.len, hash.ptr);
+		}
+		else
+		{
+			u_int slen = hasher_hash_size(hash_algorithm);
+			if (pss->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
+			{
+				slen = pss->salt_len;
+			}
+			err = gcry_sexp_build(&in, NULL,
+							"(data(flags pss)(salt-length %u)(hash %s %b))",
+							slen, hash_name, hash.len, hash.ptr);
+		}
+	}
+	else
+	{
+		err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(hash %s %b))",
+							  hash_name, hash.len, hash.ptr);
+	}
 	chunk_free(&hash);
 	if (err)
 	{
-		DBG1(DBG_LIB, "building signature S-expression failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "building signature S-expression failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
 	err = gcry_pk_sign(&out, in, this->key);
 	gcry_sexp_release(in);
 	if (err)
 	{
-		DBG1(DBG_LIB, "creating pkcs1 signature failed: %s", gpg_strerror(err));
+		DBG1(DBG_LIB, "creating pkcs1 signature failed: %s",
+			 gpg_strerror(err));
 		return FALSE;
 	}
+
 	*signature = gcrypt_rsa_find_token(out, "s", this->key);
 	gcry_sexp_release(out);
 	return !!signature->len;
 }
+
+#if GCRYPT_VERSION_NUMBER >= 0x010700
+/**
+ * Sign a chunk of data using hashing and EMSA-PSS encoding
+ */
+static bool sign_pss(private_gcrypt_rsa_private_key_t *this,
+					 rsa_pss_params_t *params, chunk_t data, chunk_t *signature)
+{
+	if (!params)
+	{
+		return FALSE;
+	}
+	if (params->mgf1_hash != params->hash)
+	{
+		DBG1(DBG_LIB, "unable to use a different MGF1 hash for RSA-PSS");
+		return FALSE;
+	}
+	return sign_pkcs1(this, params->hash, params, data, signature);
+}
+#endif
 
 METHOD(private_key_t, get_type, key_type_t,
 	private_gcrypt_rsa_private_key_t *this)
@@ -200,24 +251,28 @@ METHOD(private_key_t, get_type, key_type_t,
 
 METHOD(private_key_t, sign, bool,
 	private_gcrypt_rsa_private_key_t *this, signature_scheme_t scheme,
-	chunk_t data, chunk_t *sig)
+	void *params, chunk_t data, chunk_t *sig)
 {
 	switch (scheme)
 	{
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return sign_raw(this, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_224:
-			return sign_pkcs1(this, HASH_SHA224, "sha224", data, sig);
+			return sign_pkcs1(this, HASH_SHA224, NULL, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_256:
-			return sign_pkcs1(this, HASH_SHA256, "sha256", data, sig);
+			return sign_pkcs1(this, HASH_SHA256, NULL, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_384:
-			return sign_pkcs1(this, HASH_SHA384, "sha384", data, sig);
+			return sign_pkcs1(this, HASH_SHA384, NULL, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
-			return sign_pkcs1(this, HASH_SHA512, "sha512", data, sig);
+			return sign_pkcs1(this, HASH_SHA512, NULL, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
-			return sign_pkcs1(this, HASH_SHA1, "sha1", data, sig);
+			return sign_pkcs1(this, HASH_SHA1, NULL, data, sig);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
-			return sign_pkcs1(this, HASH_MD5, "md5", data, sig);
+			return sign_pkcs1(this, HASH_MD5, NULL, data, sig);
+#if GCRYPT_VERSION_NUMBER >= 0x010700
+		case SIGN_RSA_EMSA_PSS:
+			return sign_pss(this, params, data, sig);
+#endif
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
@@ -498,16 +553,131 @@ gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_gen(key_type_t type,
 }
 
 /**
+ * Recover the primes from n, e and d using the algorithm described in
+ * Appendix C of NIST SP 800-56B.
+ */
+static bool calculate_pqu(chunk_t cn, chunk_t ce, chunk_t cd, chunk_t *cp,
+						  chunk_t *cq, chunk_t *cu)
+{
+	gcry_mpi_t n, e, d, p, q, u, k, r, g, y, n1, x, two;
+	int i, t, j;
+	gcry_error_t err;
+	bool success = FALSE;
+
+	n = e = d = p = q = u = k = r = g = y = n1 = x = two = NULL;
+	err = gcry_mpi_scan(&n, GCRYMPI_FMT_USG, cn.ptr, cn.len, NULL)
+		| gcry_mpi_scan(&e, GCRYMPI_FMT_USG, ce.ptr, ce.len, NULL)
+		| gcry_mpi_scan(&d, GCRYMPI_FMT_USG, cd.ptr, cd.len, NULL);
+	if (err)
+	{
+		goto error;
+	}
+	/* k = (d * e) - 1 */
+	k = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	gcry_mpi_mul(k, d, e);
+	gcry_mpi_sub_ui(k, k, 1);
+	if (gcry_mpi_test_bit(k, 0))
+	{
+		goto error;
+	}
+	/* k = 2^t * r, where r is the largest odd integer dividing k, and t >= 1 */
+	r = gcry_mpi_copy(k);
+	for (t = 0; !gcry_mpi_test_bit(r, 0); t++)
+	{	/* r = r/2 */
+		gcry_mpi_rshift(r, r, 1);
+	}
+	/* we need n-1 below */
+	n1 = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	gcry_mpi_sub_ui(n1, n, 1);
+	y = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	g = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	x = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	two = gcry_mpi_set_ui(NULL, 2);
+	for (i = 0; i < 100; i++)
+	{	/* generate random integer g in [0, n-1] */
+		do
+		{
+			gcry_mpi_randomize(g, gcry_mpi_get_nbits(n), GCRY_WEAK_RANDOM);
+		}
+		while (gcry_mpi_cmp(n, g) <= 0);
+		/* y = g^r mod n */
+		gcry_mpi_powm(y, g, r, n);
+		/* try again if y == 1 or y == n-1 */
+		if (gcry_mpi_cmp_ui(y, 1) == 0 || gcry_mpi_cmp(y, n1) == 0)
+		{
+			continue;
+		}
+		for (j = 0; j < t; j++)
+		{	/* x = y^2 mod n */
+			gcry_mpi_powm(x, y, two, n);
+			/* stop if x == 1 */
+			if (gcry_mpi_cmp_ui(x, 1) == 0)
+			{
+				goto done;
+			}
+			/* retry with new g if x = n-1 */
+			if (gcry_mpi_cmp(x, n1) == 0)
+			{
+				break;
+			}
+			/* y = x */
+			gcry_mpi_set(y, x);
+		}
+	}
+	goto error;
+
+done:
+	/* p = gcd(y-1, n) */
+	gcry_mpi_sub_ui(y, y, 1);
+	p = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	gcry_mpi_gcd(p, y, n);
+	/* q = n/p */
+	q = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	gcry_mpi_div(q, NULL, n, p, 0);
+	if (gcry_mpi_cmp(p, q) > 0)
+	{	/* gcrypt expects q < p */
+		gcry_mpi_swap(p, q);
+	}
+	/* u = q^-1 mod p */
+	u = gcry_mpi_new(gcry_mpi_get_nbits(n));
+	gcry_mpi_invm(u, p, q);
+	err = gcry_mpi_aprint(GCRYMPI_FMT_USG, &cp->ptr, &cp->len, p)
+		| gcry_mpi_aprint(GCRYMPI_FMT_USG, &cq->ptr, &cq->len, q)
+		| gcry_mpi_aprint(GCRYMPI_FMT_USG, &cu->ptr, &cu->len, u);
+	if (err)
+	{
+		goto error;
+	}
+	success = TRUE;
+
+error:
+	gcry_mpi_release(n);
+	gcry_mpi_release(e);
+	gcry_mpi_release(d);
+	gcry_mpi_release(p);
+	gcry_mpi_release(q);
+	gcry_mpi_release(u);
+	gcry_mpi_release(k);
+	gcry_mpi_release(r);
+	gcry_mpi_release(g);
+	gcry_mpi_release(y);
+	gcry_mpi_release(n1);
+	gcry_mpi_release(x);
+	gcry_mpi_release(two);
+	return success;
+}
+
+/**
  * See header.
  */
 gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_load(key_type_t type,
 													  va_list args)
 {
 	private_gcrypt_rsa_private_key_t *this;
-	chunk_t n, e, d, p, q, u;
+	chunk_t n, e, d, p, q, u, np, nq, nu;
 	gcry_error_t err;
 
-	n = e = d = p = q = u = chunk_empty;
+	n = e = d = p = q = u = np = nq = nu = chunk_empty;
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
@@ -543,12 +713,25 @@ gcrypt_rsa_private_key_t *gcrypt_rsa_private_key_load(key_type_t type,
 		}
 		break;
 	}
-
+	if (!p.len || !q.len || !u.len)
+	{
+		if (!calculate_pqu(n, e, d, &np, &nq, &nu))
+		{
+			return NULL;
+		}
+		p = np;
+		q = nq;
+		u = nu;
+	}
 	this = create_empty();
 	err = gcry_sexp_build(&this->key, NULL,
 					"(private-key(rsa(n %b)(e %b)(d %b)(p %b)(q %b)(u %b)))",
 					n.len, n.ptr, e.len, e.ptr, d.len, d.ptr,
 					p.len, p.ptr, q.len, q.ptr, u.len, u.ptr);
+
+	chunk_clear(&np);
+	chunk_clear(&nq);
+	chunk_clear(&nu);
 	if (err)
 	{
 		DBG1(DBG_LIB, "loading private key failed: %s", gpg_strerror(err));

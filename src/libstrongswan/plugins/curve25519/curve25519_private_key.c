@@ -63,7 +63,7 @@ METHOD(private_key_t, get_type, key_type_t,
 
 METHOD(private_key_t, sign, bool,
 	private_curve25519_private_key_t *this, signature_scheme_t scheme,
-	chunk_t data, chunk_t *signature)
+	void *params, chunk_t data, chunk_t *signature)
 {
 	uint8_t r[HASH_SIZE_SHA512], k[HASH_SIZE_SHA512], sig[HASH_SIZE_SHA512];
 	hasher_t *hasher;

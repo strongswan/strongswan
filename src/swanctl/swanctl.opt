@@ -395,7 +395,11 @@ connections.<conn>.local<suffix>.auth = pubkey
 	algorithm that matches or exceeds the strength of the signature key.
 	If no constraints with _ike:_ prefix are configured any signature scheme
 	constraint (without _ike:_ prefix) will also apply to IKEv2 authentication,
-	unless this is disabled in **strongswan.conf**(5).
+	unless this is disabled in **strongswan.conf**(5). To use RSASSA-PSS
+	signatures use _rsa/pss_ instead of _pubkey_ or _rsa_ as in e.g.
+	_ike:rsa/pss-sha256_. If _pubkey_ or _rsa_ constraints are configured
+	RSASSA-PSS signatures will only be used if enabled in
+	**strongswan.conf**(5).
 
 connections.<conn>.local<suffix>.id =
 	IKE identity to use for authentication round.
@@ -589,7 +593,10 @@ connections.<conn>.remote<suffix>.auth = pubkey
 	constraints are configured (refer to the description of the **local**
 	section's **auth** keyword for details), such key types and hash algorithms
 	are also applied as constraints against IKEv2 signature authentication
-	schemes used by the remote side.
+	schemes used by the remote side. To require RSASSA-PSS signatures use
+	_rsa/pss_ instead of _pubkey_ or _rsa_ as in e.g. _rsa/pss-sha256_. If
+	_pubkey_ or _rsa_ constraints are configured RSASSA-PSS signatures will only
+	be accepted if enabled in **strongswan.conf**(5).
 
 	To specify trust chain constraints for EAP-(T)TLS, append a colon to the
 	EAP method, followed by the key type/size and hash algorithm as discussed

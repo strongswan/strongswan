@@ -158,7 +158,7 @@ static void send_supported_hash_algorithms(private_ike_init_t *this,
 	peer_cfg_t *peer;
 	auth_cfg_t *auth;
 	auth_rule_t rule;
-	uintptr_t config;
+	signature_params_t *config;
 	int written;
 	size_t len = BUF_LEN;
 	char buf[len];
@@ -177,7 +177,8 @@ static void send_supported_hash_algorithms(private_ike_init_t *this,
 			{
 				if (rule == AUTH_RULE_IKE_SIGNATURE_SCHEME)
 				{
-					hash = hasher_from_signature_scheme(config);
+					hash = hasher_from_signature_scheme(config->scheme,
+														config->params);
 					if (hasher_algorithm_for_ikev2(hash))
 					{
 						algos->add(algos, hash);

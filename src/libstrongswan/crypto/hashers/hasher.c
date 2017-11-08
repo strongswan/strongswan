@@ -19,6 +19,7 @@
 #include "hasher.h"
 
 #include <asn1/oid.h>
+#include <credentials/keys/signature_params.h>
 
 ENUM_BEGIN(hash_algorithm_names, HASH_SHA1, HASH_IDENTITY,
 	"HASH_SHA1",
@@ -55,6 +56,44 @@ ENUM_NEXT(hash_algorithm_short_names, HASH_UNKNOWN, HASH_SHA3_512, HASH_IDENTITY
 	"sha3_384",
 	"sha3_512");
 ENUM_END(hash_algorithm_short_names, HASH_SHA3_512);
+
+/*
+ * Described in header
+ */
+size_t hasher_hash_size(hash_algorithm_t alg)
+{
+	switch (alg)
+	{
+		case HASH_SHA1:
+			return HASH_SIZE_SHA1;
+		case HASH_SHA256:
+			return HASH_SIZE_SHA256;
+		case HASH_SHA384:
+			return HASH_SIZE_SHA384;
+		case HASH_SHA512:
+			return HASH_SIZE_SHA512;
+		case HASH_MD2:
+			return HASH_SIZE_MD2;
+		case HASH_MD4:
+			return HASH_SIZE_MD4;
+		case HASH_MD5:
+			return HASH_SIZE_MD5;
+		case HASH_SHA224:
+			return HASH_SIZE_SHA224;
+		case HASH_SHA3_224:
+			return HASH_SIZE_SHA224;
+		case HASH_SHA3_256:
+			return HASH_SIZE_SHA256;
+		case HASH_SHA3_384:
+			return HASH_SIZE_SHA384;
+		case HASH_SHA3_512:
+			return HASH_SIZE_SHA512;
+		case HASH_IDENTITY:
+		case HASH_UNKNOWN:
+			break;
+	}
+	return 0;
+}
 
 /*
  * Described in header.
@@ -445,13 +484,21 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 /*
  * Defined in header.
  */
-hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme)
+hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme,
+											  void *params)
 {
 	switch (scheme)
 	{
 		case SIGN_UNKNOWN:
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 		case SIGN_ECDSA_WITH_NULL:
+			break;
+		case SIGN_RSA_EMSA_PSS:
+			if (params)
+			{
+				rsa_pss_params_t *pss = params;
+				return pss->hash;
+			}
 			break;
 		case SIGN_ED25519:
 		case SIGN_ED448:

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012-2014 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2012-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,6 +18,7 @@
 #include "../android_jni.h"
 #include <utils/debug.h>
 #include <asn1/asn1.h>
+#include <credentials/keys/signature_params.h>
 
 typedef struct private_private_key_t private_private_key_t;
 
@@ -52,13 +53,121 @@ struct private_private_key_t {
 	refcount_t ref;
 };
 
+/**
+ * Get the Java name for the given hash algorithm
+ */
+static jstring hash_name(JNIEnv *env, hash_algorithm_t alg)
+{
+	const char *hash = NULL;
+
+	switch (alg)
+	{
+		case HASH_SHA1:
+			hash = "SHA-1";
+			break;
+		case HASH_SHA224:
+			hash = "SHA-224";
+			break;
+		case HASH_SHA256:
+			hash = "SHA-256";
+			break;
+		case HASH_SHA384:
+			hash = "SHA-384";
+			break;
+		case HASH_SHA512:
+			hash = "SHA-512";
+			break;
+		default:
+			return NULL;
+	}
+	return (*env)->NewStringUTF(env, hash);
+}
+
+/**
+ * Set PSSParameterSpec on Signature object
+ */
+static bool set_pss_params(private_private_key_t *this, JNIEnv *env,
+						   jobject jsignature, rsa_pss_params_t *pss)
+{
+	jmethodID method_id;
+	jclass cls;
+	jstring jhash, jmgf1;
+	jobject obj;
+	int slen;
+
+	/* create MGF1ParameterSpec instance */
+	cls = (*env)->FindClass(env, "java/security/spec/MGF1ParameterSpec");
+	if (!cls)
+	{
+		return FALSE;
+	}
+	method_id = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/lang/String;)V");
+	if (!method_id)
+	{
+		return FALSE;
+	}
+	jhash = hash_name(env, pss->mgf1_hash);
+	if (!jhash)
+	{
+		return FALSE;
+	}
+	obj = (*env)->NewObject(env, cls, method_id, jhash);
+	if (!obj)
+	{
+		return FALSE;
+	}
+	/* create PSSParameterSpec instance */
+	cls = (*env)->FindClass(env, "java/security/spec/PSSParameterSpec");
+	if (!cls)
+	{
+		return FALSE;
+	}
+	method_id = (*env)->GetMethodID(env, cls, "<init>",
+							"(Ljava/lang/String;Ljava/lang/String;"
+							 "Ljava/security/spec/AlgorithmParameterSpec;II)V");
+	if (!method_id)
+	{
+		return FALSE;
+	}
+	jhash = hash_name(env, pss->hash);
+	jmgf1 = (*env)->NewStringUTF(env, "MGF1");
+	if (!jhash || !jmgf1)
+	{
+		return FALSE;
+	}
+	slen = hasher_hash_size(pss->hash);
+	if (pss->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
+	{
+		slen = pss->salt_len;
+	}
+	obj = (*env)->NewObject(env, cls, method_id, jhash, jmgf1, obj, slen, 1);
+	if (!obj)
+	{
+		return FALSE;
+	}
+	/* update Signature instance */
+	method_id = (*env)->GetMethodID(env, this->signature_class, "setParameter",
+							"(Ljava/security/spec/AlgorithmParameterSpec;)V");
+	if (!method_id)
+	{
+		return FALSE;
+	}
+	(*env)->CallVoidMethod(env, jsignature, method_id, obj);
+	if (androidjni_exception_occurred(env))
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(private_key_t, sign, bool,
-	private_private_key_t *this, signature_scheme_t scheme,
+	private_private_key_t *this, signature_scheme_t scheme, void *params,
 	chunk_t data, chunk_t *signature)
 {
 	JNIEnv *env;
 	jmethodID method_id;
 	const char *method = NULL;
+	rsa_pss_params_t *pss = NULL;
 	jstring jmethod;
 	jobject jsignature;
 	jbyteArray jdata, jsigarray;
@@ -88,6 +197,33 @@ METHOD(private_key_t, sign, bool,
 					break;
 				case SIGN_RSA_EMSA_PKCS1_SHA2_512:
 					method = "SHA512withRSA";
+					break;
+				case SIGN_RSA_EMSA_PSS:
+					if (!params)
+					{
+						return FALSE;
+					}
+					pss = params;
+					switch (pss->hash)
+					{
+						case HASH_SHA1:
+							method = "SHA1withRSA/PSS";
+							break;
+						case HASH_SHA224:
+							method = "SHA224withRSA/PSS";
+							break;
+						case HASH_SHA256:
+							method = "SHA256withRSA/PSS";
+							break;
+						case HASH_SHA384:
+							method = "SHA384withRSA/PSS";
+							break;
+						case HASH_SHA512:
+							method = "SHA512withRSA/PSS";
+							break;
+						default:
+							break;
+					}
 					break;
 				default:
 					break;
@@ -142,6 +278,10 @@ METHOD(private_key_t, sign, bool,
 	jsignature = (*env)->CallStaticObjectMethod(env, this->signature_class,
 												method_id, jmethod);
 	if (!jsignature)
+	{
+		goto failed;
+	}
+	if (pss && !set_pss_params(this, env, jsignature, pss))
 	{
 		goto failed;
 	}

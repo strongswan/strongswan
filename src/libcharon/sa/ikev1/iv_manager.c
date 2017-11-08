@@ -15,6 +15,7 @@
 
 #include "iv_manager.h"
 
+#include <library.h>
 #include <collections/linked_list.h>
 
 /**

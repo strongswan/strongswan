@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -154,7 +154,7 @@ struct private_openssl_x509_t {
 	/**
 	 * Signature scheme of the certificate
 	 */
-	signature_scheme_t scheme;
+	signature_params_t *scheme;
 
 	/**
 	 * subjectAltNames
@@ -384,7 +384,7 @@ METHOD(certificate_t, has_issuer, id_match_t,
 
 METHOD(certificate_t, issued_by, bool,
 	private_openssl_x509_t *this, certificate_t *issuer,
-	signature_scheme_t *scheme)
+	signature_params_t **scheme)
 {
 	public_key_t *key;
 	bool valid;
@@ -396,7 +396,8 @@ METHOD(certificate_t, issued_by, bool,
 	{
 		if (this->flags & X509_SELF_SIGNED)
 		{
-			return TRUE;
+			valid = TRUE;
+			goto out;
 		}
 	}
 	else
@@ -414,10 +415,6 @@ METHOD(certificate_t, issued_by, bool,
 			return FALSE;
 		}
 	}
-	if (this->scheme == SIGN_UNKNOWN)
-	{
-		return FALSE;
-	}
 	key = issuer->get_public_key(issuer);
 	if (!key)
 	{
@@ -430,12 +427,15 @@ METHOD(certificate_t, issued_by, bool,
 	tbs = openssl_i2chunk(X509_CINF, this->x509->cert_info);
 #endif
 	X509_get0_signature(&sig, NULL, this->x509);
-	valid = key->verify(key, this->scheme, tbs, openssl_asn1_str2chunk(sig));
+	valid = key->verify(key, this->scheme->scheme, this->scheme->params, tbs,
+						openssl_asn1_str2chunk(sig));
 	free(tbs.ptr);
 	key->destroy(key);
+
+out:
 	if (valid && scheme)
 	{
-		*scheme = this->scheme;
+		*scheme = signature_params_clone(this->scheme);
 	}
 	return valid;
 }
@@ -528,6 +528,7 @@ METHOD(certificate_t, destroy, void,
 		{
 			X509_free(this->x509);
 		}
+		signature_params_destroy(this->scheme);
 		DESTROY_IF(this->subject);
 		DESTROY_IF(this->issuer);
 		DESTROY_IF(this->pubkey);
@@ -1063,8 +1064,8 @@ static bool parse_certificate(private_openssl_x509_t *this)
 {
 	const unsigned char *ptr = this->encoding.ptr;
 	hasher_t *hasher;
-	chunk_t chunk;
-	ASN1_OBJECT *oid, *oid_tbs;
+	chunk_t chunk, sig_scheme, sig_scheme_tbs;
+	ASN1_OBJECT *oid;
 	X509_ALGOR *alg;
 
 	this->x509 = d2i_X509(NULL, &ptr, this->encoding.len);
@@ -1089,6 +1090,10 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	}
 	switch (openssl_asn1_known_oid(oid))
 	{
+		case OID_RSASSA_PSS:
+			/* TODO: we should treat such keys special and use the params as
+			 * restrictions regarding the use of this key (or rather the
+			 * associated private key) */
 		case OID_RSA_ENCRYPTION:
 			this->pubkey = lib->creds->create(lib->creds,
 					CRED_PUBLIC_KEY, KEY_RSA, BUILD_BLOB_ASN1_DER,
@@ -1119,15 +1124,25 @@ static bool parse_certificate(private_openssl_x509_t *this)
 	/* while X509_ALGOR_cmp() is declared in the headers of older OpenSSL
 	 * versions, at least on Ubuntu 14.04 it is not actually defined */
 	X509_get0_signature(NULL, &alg, this->x509);
-	X509_ALGOR_get0(&oid, NULL, NULL, alg);
+	sig_scheme = openssl_i2chunk(X509_ALGOR, alg);
 	alg = X509_get0_tbs_sigalg(this->x509);
-	X509_ALGOR_get0(&oid_tbs, NULL, NULL, alg);
-	if (!chunk_equals(openssl_asn1_obj2chunk(oid),
-					  openssl_asn1_obj2chunk(oid_tbs)))
+	sig_scheme_tbs = openssl_i2chunk(X509_ALGOR, alg);
+	if (!chunk_equals(sig_scheme, sig_scheme_tbs))
 	{
+		free(sig_scheme_tbs.ptr);
+		free(sig_scheme.ptr);
 		return FALSE;
 	}
-	this->scheme = signature_scheme_from_oid(openssl_asn1_known_oid(oid));
+	free(sig_scheme_tbs.ptr);
+
+	INIT(this->scheme);
+	if (!signature_params_parse(sig_scheme, 0, this->scheme))
+	{
+		DBG1(DBG_ASN, "unable to parse signature algorithm");
+		free(sig_scheme.ptr);
+		return FALSE;
+	}
+	free(sig_scheme.ptr);
 
 	if (!parse_extensions(this))
 	{

@@ -1428,7 +1428,7 @@ METHOD(tls_crypto_t, sign, bool,
 			{
 				scheme = hashsig_to_scheme(key->get_type(key), hash, alg);
 				if (scheme != SIGN_UNKNOWN &&
-					key->sign(key, scheme, data, &sig))
+					key->sign(key, scheme, NULL, data, &sig))
 				{
 					done = TRUE;
 					break;
@@ -1460,7 +1460,8 @@ METHOD(tls_crypto_t, sign, bool,
 				{
 					return FALSE;
 				}
-				done = key->sign(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, &sig);
+				done = key->sign(key, SIGN_RSA_EMSA_PKCS1_NULL, NULL, hash,
+								 &sig);
 				free(hash.ptr);
 				if (!done)
 				{
@@ -1469,7 +1470,7 @@ METHOD(tls_crypto_t, sign, bool,
 				DBG2(DBG_TLS, "created signature with MD5+SHA1/RSA");
 				break;
 			case KEY_ECDSA:
-				if (!key->sign(key, SIGN_ECDSA_WITH_SHA1_DER, data, &sig))
+				if (!key->sign(key, SIGN_ECDSA_WITH_SHA1_DER, NULL, data, &sig))
 				{
 					return FALSE;
 				}
@@ -1509,7 +1510,7 @@ METHOD(tls_crypto_t, verify, bool,
 				 tls_signature_algorithm_names, alg);
 			return FALSE;
 		}
-		if (!key->verify(key, scheme, data, sig))
+		if (!key->verify(key, scheme, NULL, data, sig))
 		{
 			return FALSE;
 		}
@@ -1533,7 +1534,8 @@ METHOD(tls_crypto_t, verify, bool,
 				{
 					return FALSE;
 				}
-				done = key->verify(key, SIGN_RSA_EMSA_PKCS1_NULL, hash, sig);
+				done = key->verify(key, SIGN_RSA_EMSA_PKCS1_NULL, NULL, hash,
+								   sig);
 				free(hash.ptr);
 				if (!done)
 				{
@@ -1542,7 +1544,8 @@ METHOD(tls_crypto_t, verify, bool,
 				DBG2(DBG_TLS, "verified signature data with MD5+SHA1/RSA");
 				break;
 			case KEY_ECDSA:
-				if (!key->verify(key, SIGN_ECDSA_WITH_SHA1_DER, data, sig))
+				if (!key->verify(key, SIGN_ECDSA_WITH_SHA1_DER, NULL, data,
+								 sig))
 				{
 					return FALSE;
 				}

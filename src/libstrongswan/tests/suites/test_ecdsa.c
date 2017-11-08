@@ -57,9 +57,9 @@ static void test_good_sig(private_key_t *privkey, public_key_t *pubkey)
 		{
 			continue;
 		}
-		fail_unless(privkey->sign(privkey, schemes[i].scheme, data, &sig),
+		fail_unless(privkey->sign(privkey, schemes[i].scheme, NULL, data, &sig),
 					"sign %N", signature_scheme_names, schemes[i].scheme);
-		fail_unless(pubkey->verify(pubkey, schemes[i].scheme, data, sig),
+		fail_unless(pubkey->verify(pubkey, schemes[i].scheme, NULL, data, sig),
 					"verify %N", signature_scheme_names, schemes[i].scheme);
 		free(sig.ptr);
 	}
@@ -121,7 +121,8 @@ static void test_bad_sigs(public_key_t *pubkey)
 		for (i = 0; i < countof(invalid_sigs); i++)
 		{
 			fail_if(
-				pubkey->verify(pubkey, schemes[s].scheme, data, invalid_sigs[i]),
+				pubkey->verify(pubkey, schemes[s].scheme, NULL, data,
+							   invalid_sigs[i]),
 				"bad %N sig accepted %B",
 				signature_scheme_names, schemes[s].scheme,
 				&invalid_sigs[i]);

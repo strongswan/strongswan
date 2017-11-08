@@ -18,6 +18,7 @@ crypto/xofs/xof.c crypto/xofs/xof_bitspender.c \
 credentials/credential_factory.c credentials/builder.c \
 credentials/cred_encoding.c credentials/keys/private_key.c \
 credentials/keys/public_key.c credentials/keys/shared_key.c \
+credentials/keys/signature_params.c \
 credentials/certificates/certificate.c credentials/certificates/crl.c \
 credentials/certificates/ocsp_response.c credentials/certificates/x509.c \
 credentials/certificates/certificate_printer.c \
@@ -79,6 +80,7 @@ crypto/xofs/xof.h crypto/xofs/xof_bitspender.h crypto/xofs/mgf1.h \
 credentials/credential_factory.h credentials/builder.h \
 credentials/cred_encoding.h credentials/keys/private_key.h \
 credentials/keys/public_key.h credentials/keys/shared_key.h \
+credentials/keys/signature_params.h \
 credentials/certificates/certificate.h credentials/certificates/x509.h \
 credentials/certificates/ac.h credentials/certificates/crl.h \
 credentials/certificates/pkcs10.h credentials/certificates/ocsp_request.h \

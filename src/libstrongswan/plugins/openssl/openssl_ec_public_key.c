@@ -151,7 +151,7 @@ METHOD(public_key_t, get_type, key_type_t,
 
 METHOD(public_key_t, verify, bool,
 	private_openssl_ec_public_key_t *this, signature_scheme_t scheme,
-	chunk_t data, chunk_t signature)
+	void *params, chunk_t data, chunk_t signature)
 {
 	switch (scheme)
 	{

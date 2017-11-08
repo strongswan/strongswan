@@ -904,15 +904,20 @@ END_TEST
 static struct {
 	key_type_t type;
 	int size;
-	signature_scheme_t expected[4];
+	signature_scheme_t expected[7];
 } scheme_data[] = {
-	{KEY_RSA,   1024, { SIGN_RSA_EMSA_PKCS1_SHA2_256, SIGN_RSA_EMSA_PKCS1_SHA2_384,
-						SIGN_RSA_EMSA_PKCS1_SHA2_512, SIGN_UNKNOWN }},
-	{KEY_RSA,   2048, { SIGN_RSA_EMSA_PKCS1_SHA2_256, SIGN_RSA_EMSA_PKCS1_SHA2_384,
-						SIGN_RSA_EMSA_PKCS1_SHA2_512, SIGN_UNKNOWN }},
-	{KEY_RSA,   4096, { SIGN_RSA_EMSA_PKCS1_SHA2_384, SIGN_RSA_EMSA_PKCS1_SHA2_512,
+	{KEY_RSA,   1024, { SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PSS,
+						SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PKCS1_SHA2_256,
+						SIGN_RSA_EMSA_PKCS1_SHA2_384, SIGN_RSA_EMSA_PKCS1_SHA2_512,
 						SIGN_UNKNOWN }},
-	{KEY_RSA,   8192, { SIGN_RSA_EMSA_PKCS1_SHA2_512, SIGN_UNKNOWN }},
+	{KEY_RSA,   2048, { SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PSS,
+						SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PKCS1_SHA2_256,
+						SIGN_RSA_EMSA_PKCS1_SHA2_384, SIGN_RSA_EMSA_PKCS1_SHA2_512,
+						SIGN_UNKNOWN }},
+	{KEY_RSA,   4096, { SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PSS,
+						SIGN_RSA_EMSA_PKCS1_SHA2_384, SIGN_RSA_EMSA_PKCS1_SHA2_512,
+						SIGN_UNKNOWN }},
+	{KEY_RSA,   8192, { SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PKCS1_SHA2_512, SIGN_UNKNOWN }},
 	{KEY_ECDSA,  256, { SIGN_ECDSA_WITH_SHA256_DER, SIGN_ECDSA_WITH_SHA384_DER,
 						SIGN_ECDSA_WITH_SHA512_DER, SIGN_UNKNOWN }},
 	{KEY_ECDSA,  384, { SIGN_ECDSA_WITH_SHA384_DER, SIGN_ECDSA_WITH_SHA512_DER,
@@ -928,16 +933,16 @@ static struct {
 START_TEST(test_signature_schemes_for_key)
 {
 	enumerator_t  *enumerator;
-	signature_scheme_t scheme;
+	signature_params_t *params;
 	int i;
 
 	enumerator = signature_schemes_for_key(scheme_data[_i].type, scheme_data[_i].size);
 	for (i = 0; scheme_data[_i].expected[i] != SIGN_UNKNOWN; i++)
 	{
-		ck_assert(enumerator->enumerate(enumerator, &scheme));
-		ck_assert_int_eq(scheme_data[_i].expected[i], scheme);
+		ck_assert(enumerator->enumerate(enumerator, &params));
+		ck_assert_int_eq(scheme_data[_i].expected[i], params->scheme);
 	}
-	ck_assert(!enumerator->enumerate(enumerator, &scheme));
+	ck_assert(!enumerator->enumerate(enumerator, &params));
 	enumerator->destroy(enumerator);
 }
 END_TEST

@@ -1,4 +1,5 @@
-/**
+/*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
  * Copyright (C) 2007-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
@@ -63,9 +64,9 @@ struct private_x509_ocsp_response_t {
 	chunk_t tbsResponseData;
 
 	/**
-	 * signature algorithm (OID)
+	 * signature scheme
 	 */
-	int signatureAlgorithm;
+	signature_params_t *scheme;
 
 	/**
 	 * signature
@@ -576,8 +577,13 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				}
 				break;
 			case BASIC_RESPONSE_ALGORITHM:
-				this->signatureAlgorithm = asn1_parse_algorithmIdentifier(object,
-												parser->get_level(parser)+1, NULL);
+				INIT(this->scheme);
+				if (!signature_params_parse(object, parser->get_level(parser)+1,
+											this->scheme))
+				{
+					DBG1(DBG_ASN, "  unable to parse signature algorithm");
+					goto end;
+				}
 				break;
 			case BASIC_RESPONSE_SIGNATURE:
 				this->signature = chunk_skip(object, 1);
@@ -703,10 +709,9 @@ METHOD(certificate_t, has_issuer, id_match_t,
 
 METHOD(certificate_t, issued_by, bool,
 	private_x509_ocsp_response_t *this, certificate_t *issuer,
-	signature_scheme_t *schemep)
+	signature_params_t **scheme)
 {
 	public_key_t *key;
-	signature_scheme_t scheme;
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
 
@@ -743,21 +748,17 @@ METHOD(certificate_t, issued_by, bool,
 		return FALSE;
 	}
 
-	/* get the public key of the issuer */
 	key = issuer->get_public_key(issuer);
-
-	/* determine signature scheme */
-	scheme = signature_scheme_from_oid(this->signatureAlgorithm);
-
-	if (scheme == SIGN_UNKNOWN || key == NULL)
+	if (!key)
 	{
 		return FALSE;
 	}
-	valid = key->verify(key, scheme, this->tbsResponseData, this->signature);
+	valid = key->verify(key, this->scheme->scheme, this->scheme->params,
+						this->tbsResponseData, this->signature);
 	key->destroy(key);
-	if (valid && schemep)
+	if (valid && scheme)
 	{
-		*schemep = scheme;
+		*scheme = signature_params_clone(this->scheme);
 	}
 	return valid;
 }
@@ -839,6 +840,7 @@ METHOD(certificate_t, destroy, void,
 	{
 		this->certs->destroy_offset(this->certs, offsetof(certificate_t, destroy));
 		this->responses->destroy_function(this->responses, free);
+		signature_params_destroy(this->scheme);
 		DESTROY_IF(this->responderId);
 		free(this->encoding.ptr);
 		free(this);
@@ -879,7 +881,6 @@ static x509_ocsp_response_t *load(chunk_t blob)
 		.producedAt = UNDEFINED_TIME,
 		.usableUntil = UNDEFINED_TIME,
 		.responses = linked_list_create(),
-		.signatureAlgorithm = OID_UNKNOWN,
 		.certs = linked_list_create(),
 	);
 

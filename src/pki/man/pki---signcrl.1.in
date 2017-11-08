@@ -16,6 +16,7 @@ pki \-\-signcrl \- Issue a Certificate Revocation List (CRL) using a CA certific
 .OP \-\-basecrl crl
 .OP \-\-crluri uri
 .OP \-\-digest digest
+.OP \-\-rsa\-padding padding
 .OP \fR[\fB\-\-reason\ \fIreason\fR]\ \fR[\fB\-\-date\ \fIts\fR]\ \fB\-\-cert\ \fIfile\fB|\-\-serial\ \fIhex\fR
 .OP \-\-outform encoding
 .OP \-\-debug level
@@ -101,6 +102,10 @@ Freshest delta CRL URI to include in CRL. Can be used multiple times.
 Digest to use for signature creation. One of \fImd5\fR, \fIsha1\fR,
 \fIsha224\fR, \fIsha256\fR, \fIsha384\fR, or \fIsha512\fR.  The default is
 determined based on the type and size of the signature key.
+.TP
+.BI "\-R, \-\-rsa\-padding " padding
+Padding to use for RSA signatures. Either \fIpkcs1\fR or \fIpss\fR, defaults
+to \fIpkcs1\fR.
 .TP
 .BI "\-f, \-\-outform " encoding
 Encoding of the created certificate file. Either \fIder\fR (ASN.1 DER) or

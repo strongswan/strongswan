@@ -110,7 +110,7 @@ METHOD(authenticator_t, build, status_t,
 	}
 	free(dh.ptr);
 
-	if (private->sign(private, scheme, hash, &sig))
+	if (private->sign(private, scheme, NULL, hash, &sig))
 	{
 		sig_payload = hash_payload_create(PLV1_SIGNATURE);
 		sig_payload->set_hash(sig_payload, sig);
@@ -176,7 +176,7 @@ METHOD(authenticator_t, process, status_t,
 														id, auth, TRUE);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
-		if (public->verify(public, scheme, hash, sig))
+		if (public->verify(public, scheme, NULL, hash, sig))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful",
 				 id, signature_scheme_names, scheme);

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2012 Andreas Steffen
@@ -27,6 +28,7 @@
 #include <asn1/oid.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
+#include <credentials/keys/signature_params.h>
 
 #ifdef HAVE_MPZ_POWM_SEC
 # undef mpz_powm
@@ -333,6 +335,120 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 	return TRUE;
 }
 
+/**
+ * Build a signature using the PKCS#1 EMSA PSS scheme
+ */
+static bool build_emsa_pss_signature(private_gmp_rsa_private_key_t *this,
+									 rsa_pss_params_t *params, chunk_t data,
+									 chunk_t *signature)
+{
+	ext_out_function_t xof;
+	hasher_t *hasher = NULL;
+	rng_t *rng = NULL;
+	xof_t *mgf = NULL;
+	chunk_t hash, salt = chunk_empty, m, ps, db, dbmask, em;
+	size_t embits, emlen, maskbits;
+	bool success = FALSE;
+
+	if (!params)
+	{
+		return FALSE;
+	}
+	xof = xof_mgf1_from_hash_algorithm(params->mgf1_hash);
+	if (xof == XOF_UNDEFINED)
+	{
+		DBG1(DBG_LIB, "%N is not supported for MGF1", hash_algorithm_names,
+			 params->mgf1_hash);
+		return FALSE;
+	}
+	/* emBits = modBits - 1 */
+	embits = mpz_sizeinbase(this->n, 2) - 1;
+	/* emLen = ceil(emBits/8) */
+	emlen = (embits + 7) / BITS_PER_BYTE;
+	/* mHash = Hash(M) */
+	hasher = lib->crypto->create_hasher(lib->crypto, params->hash);
+	if (!hasher)
+	{
+		DBG1(DBG_LIB, "hash algorithm %N not supported",
+			 hash_algorithm_names, params->hash);
+		return FALSE;
+	}
+	hash = chunk_alloca(hasher->get_hash_size(hasher));
+	if (!hasher->get_hash(hasher, data, hash.ptr))
+	{
+		goto error;
+	}
+
+	salt.len = hash.len;
+	if (params->salt.len)
+	{
+		salt = params->salt;
+	}
+	else if (params->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
+	{
+		salt.len = params->salt_len;
+	}
+	if (emlen < (hash.len + salt.len + 2))
+	{	/* too long */
+		goto error;
+	}
+	if (salt.len && !params->salt.len)
+	{
+		salt = chunk_alloca(salt.len);
+		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+		if (!rng || !rng->get_bytes(rng, salt.len, salt.ptr))
+		{
+			goto error;
+		}
+	}
+	/* M' = 0x0000000000000000 | mHash | salt */
+	m = chunk_cata("ccc",
+				   chunk_from_chars(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00),
+				   hash, salt);
+	/* H = Hash(M') */
+	if (!hasher->get_hash(hasher, m, hash.ptr))
+	{
+		goto error;
+	}
+	/* PS = 00...<padding depending on hash and salt length> */
+	ps = chunk_alloca(emlen - salt.len - hash.len - 2);
+	memset(ps.ptr, 0, ps.len);
+	/* DB = PS | 0x01 | salt */
+	db = chunk_cata("ccc", ps, chunk_from_chars(0x01), salt);
+	/* dbMask = MGF(H, emLen - hLen - 1) */
+	mgf = lib->crypto->create_xof(lib->crypto, xof);
+	dbmask = chunk_alloca(db.len);
+	if (!mgf)
+	{
+		DBG1(DBG_LIB, "%N not supported", ext_out_function_names, xof);
+		goto error;
+	}
+	if (!mgf->set_seed(mgf, hash) ||
+		!mgf->get_bytes(mgf, dbmask.len, dbmask.ptr))
+	{
+		goto error;
+	}
+	/* maskedDB = DB xor dbMask */
+	memxor(db.ptr, dbmask.ptr, db.len);
+	/* zero out unused bits */
+	maskbits = (8 * emlen) - embits;
+	if (maskbits)
+	{
+		db.ptr[0] &= (0xff >> maskbits);
+	}
+	/* EM = maskedDB | H | 0xbc */
+	em = chunk_cata("ccc", db, hash, chunk_from_chars(0xbc));
+	/* S = RSASP1(K, EM) */
+	*signature = rsasp1(this, em);
+	success = TRUE;
+
+error:
+	DESTROY_IF(hasher);
+	DESTROY_IF(rng);
+	DESTROY_IF(mgf);
+	return success;
+}
+
 METHOD(private_key_t, get_type, key_type_t,
 	private_gmp_rsa_private_key_t *this)
 {
@@ -341,7 +457,7 @@ METHOD(private_key_t, get_type, key_type_t,
 
 METHOD(private_key_t, sign, bool,
 	private_gmp_rsa_private_key_t *this, signature_scheme_t scheme,
-	chunk_t data, chunk_t *signature)
+	void *params, chunk_t data, chunk_t *signature)
 {
 	switch (scheme)
 	{
@@ -367,6 +483,8 @@ METHOD(private_key_t, sign, bool,
 			return build_emsa_pkcs1_signature(this, HASH_SHA1, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return build_emsa_pkcs1_signature(this, HASH_MD5, data, signature);
+		case SIGN_RSA_EMSA_PSS:
+			return build_emsa_pss_signature(this, params, data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
@@ -807,6 +925,82 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 }
 
 /**
+ * Recover the primes from n, e and d using the algorithm described in
+ * Appendix C of NIST SP 800-56B.
+ */
+static bool calculate_pq(private_gmp_rsa_private_key_t *this)
+{
+	gmp_randstate_t rstate;
+	mpz_t k, r, g, y, n1, x;
+	int i, t, j;
+	bool success = FALSE;
+
+	gmp_randinit_default(rstate);
+	mpz_inits(k, r, g, y, n1, x, NULL);
+	/* k = (d * e) - 1 */
+	mpz_mul(k, *this->d, this->e);
+	mpz_sub_ui(k, k, 1);
+	if (mpz_odd_p(k))
+	{
+		goto error;
+	}
+	/* k = 2^t * r, where r is the largest odd integer dividing k, and t >= 1 */
+	mpz_set(r, k);
+	for (t = 0; !mpz_odd_p(r); t++)
+	{	/* r = r/2 */
+		mpz_divexact_ui(r, r, 2);
+	}
+	/* we need n-1 below */
+	mpz_sub_ui(n1, this->n, 1);
+	for (i = 0; i < 100; i++)
+	{	/* generate random integer g in [0, n-1] */
+		mpz_urandomm(g, rstate, this->n);
+		/* y = g^r mod n */
+		mpz_powm_sec(y, g, r, this->n);
+		/* try again if y == 1 or y == n-1 */
+		if (mpz_cmp_ui(y, 1) == 0 || mpz_cmp(y, n1) == 0)
+		{
+			continue;
+		}
+		for (j = 0; j < t; j++)
+		{	/* x = y^2 mod n */
+			mpz_powm_ui(x, y, 2, this->n);
+			/* stop if x == 1 */
+			if (mpz_cmp_ui(x, 1) == 0)
+			{
+				goto done;
+			}
+			/* retry with new g if x = n-1 */
+			if (mpz_cmp(x, n1) == 0)
+			{
+				break;
+			}
+			/* y = x */
+			mpz_set(y, x);
+		}
+	}
+	goto error;
+
+done:
+	/* p = gcd(y-1, n) */
+	mpz_sub_ui(y, y, 1);
+	mpz_gcd(this->p, y, this->n);
+	/* q = n/p */
+	mpz_divexact(this->q, this->n, this->p);
+	success = TRUE;
+
+error:
+	mpz_clear_sensitive(k);
+	mpz_clear_sensitive(r);
+	mpz_clear_sensitive(g);
+	mpz_clear_sensitive(y);
+	mpz_clear_sensitive(x);
+	mpz_clear(n1);
+	gmp_randclear(rstate);
+	return success;
+}
+
+/**
  * See header.
  */
 gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
@@ -868,9 +1062,30 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
 	mpz_import(this->n, n.len, 1, 1, 1, 0, n.ptr);
 	mpz_import(this->e, e.len, 1, 1, 1, 0, e.ptr);
 	mpz_import(*this->d, d.len, 1, 1, 1, 0, d.ptr);
-	mpz_import(this->p, p.len, 1, 1, 1, 0, p.ptr);
-	mpz_import(this->q, q.len, 1, 1, 1, 0, q.ptr);
-	mpz_import(this->coeff, coeff.len, 1, 1, 1, 0, coeff.ptr);
+	if (p.len)
+	{
+		mpz_import(this->p, p.len, 1, 1, 1, 0, p.ptr);
+	}
+	if (q.len)
+	{
+		mpz_import(this->q, q.len, 1, 1, 1, 0, q.ptr);
+	}
+	if (!p.len && !q.len)
+	{	/* p and q missing in key, recalculate from n, e and d */
+		if (!calculate_pq(this))
+		{
+			destroy(this);
+			return NULL;
+		}
+	}
+	else if (!p.len)
+	{	/* p missing in key, recalculate: p = n / q */
+		mpz_divexact(this->p, this->n, this->q);
+	}
+	else if (!q.len)
+	{	/* q missing in key, recalculate: q = n / p */
+		mpz_divexact(this->q, this->n, this->p);
+	}
 	if (!exp1.len)
 	{	/* exp1 missing in key, recalculate: exp1 = d mod (p-1) */
 		mpz_sub_ui(this->exp1, this->p, 1);
@@ -889,6 +1104,14 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
 	{
 		mpz_import(this->exp2, exp2.len, 1, 1, 1, 0, exp2.ptr);
 	}
+	if (!coeff.len)
+	{	/* coeff missing in key, recalculate: coeff = q^-1 mod p */
+		mpz_invert(this->coeff, this->q, this->p);
+	}
+	else
+	{
+		mpz_import(this->coeff, coeff.len, 1, 1, 1, 0, coeff.ptr);
+	}
 	this->k = (mpz_sizeinbase(this->n, 2) + 7) / BITS_PER_BYTE;
 	if (check(this) != SUCCESS)
 	{
@@ -897,4 +1120,3 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_load(key_type_t type, va_list args)
 	}
 	return &this->public;
 }
-

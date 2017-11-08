@@ -15,6 +15,7 @@
 
 #include "pgp_encoder.h"
 
+#include <library.h>
 #include <utils/debug.h>
 
 /**

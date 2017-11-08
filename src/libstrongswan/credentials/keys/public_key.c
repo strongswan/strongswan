@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
- * Copyright (C) 2007 Martin Willi
+ * Copyright (C) 2015-2017 Tobias Brunner
  * Copyright (C) 2014-2016 Andreas Steffen
+ * Copyright (C) 2007 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,6 +18,7 @@
 #include <asn1/oid.h>
 
 #include "public_key.h"
+#include "signature_params.h"
 
 ENUM(key_type_names, KEY_ANY, KEY_BLISS,
 	"ANY",
@@ -42,6 +43,7 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_BLISS_WITH_SHA3_512,
 	"RSA_EMSA_PKCS1_SHA3_256",
 	"RSA_EMSA_PKCS1_SHA3_384",
 	"RSA_EMSA_PKCS1_SHA3_512",
+	"RSA_EMSA_PSS",
 	"ECDSA_WITH_SHA1_DER",
 	"ECDSA_WITH_SHA256_DER",
 	"ECDSA_WITH_SHA384_DER",
@@ -146,6 +148,8 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 			return SIGN_RSA_EMSA_PKCS1_SHA3_384;
 		case OID_RSASSA_PKCS1V15_WITH_SHA3_512:
 			return SIGN_RSA_EMSA_PKCS1_SHA3_512;
+		case OID_RSASSA_PSS:
+			return SIGN_RSA_EMSA_PSS;
 		case OID_ECDSA_WITH_SHA1:
 		case OID_EC_PUBLICKEY:
 			return SIGN_ECDSA_WITH_SHA1_DER;
@@ -210,6 +214,8 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 			return OID_RSASSA_PKCS1V15_WITH_SHA3_384;
 		case SIGN_RSA_EMSA_PKCS1_SHA3_512:
 			return OID_RSASSA_PKCS1V15_WITH_SHA3_384;
+		case SIGN_RSA_EMSA_PSS:
+			return OID_RSASSA_PSS;
 		case SIGN_ECDSA_WITH_SHA1_DER:
 			return OID_ECDSA_WITH_SHA1;
 		case SIGN_ECDSA_WITH_SHA256_DER:
@@ -239,26 +245,42 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 }
 
 /**
+ * Parameters for RSA/PSS signature schemes
+ */
+#define PSS_PARAMS(bits) static rsa_pss_params_t pss_params_sha##bits = { \
+	.hash = HASH_SHA##bits, \
+	.mgf1_hash = HASH_SHA##bits, \
+	.salt_len = RSA_PSS_SALT_LEN_DEFAULT, \
+}
+
+PSS_PARAMS(256);
+PSS_PARAMS(384);
+PSS_PARAMS(512);
+
+/**
  * Map for signature schemes to the key type and maximum key size allowed.
  * We only cover schemes with hash algorithms supported by IKEv2 signature
  * authentication.
  */
 static struct {
-	signature_scheme_t scheme;
 	key_type_t type;
 	int max_keysize;
+	signature_params_t params;
 } scheme_map[] = {
-	{ SIGN_RSA_EMSA_PKCS1_SHA2_256, KEY_RSA,  3072 },
-	{ SIGN_RSA_EMSA_PKCS1_SHA2_384, KEY_RSA,  7680 },
-	{ SIGN_RSA_EMSA_PKCS1_SHA2_512, KEY_RSA,     0 },
-	{ SIGN_ECDSA_WITH_SHA256_DER,   KEY_ECDSA, 256 },
-	{ SIGN_ECDSA_WITH_SHA384_DER,   KEY_ECDSA, 384 },
-	{ SIGN_ECDSA_WITH_SHA512_DER,   KEY_ECDSA,   0 },
-	{ SIGN_ED25519,                 KEY_ED25519, 0 },
-	{ SIGN_ED448,                   KEY_ED448,   0 },
-	{ SIGN_BLISS_WITH_SHA2_256,     KEY_BLISS, 128 },
-	{ SIGN_BLISS_WITH_SHA2_384,     KEY_BLISS, 192 },
-	{ SIGN_BLISS_WITH_SHA2_512,     KEY_BLISS,   0 }
+	{ KEY_RSA,  3072, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha256, }},
+	{ KEY_RSA,  7680, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha384, }},
+	{ KEY_RSA,     0, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha512, }},
+	{ KEY_RSA,  3072, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256 }},
+	{ KEY_RSA,  7680, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_384 }},
+	{ KEY_RSA,     0, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512 }},
+	{ KEY_ECDSA, 256, { .scheme = SIGN_ECDSA_WITH_SHA256_DER }},
+	{ KEY_ECDSA, 384, { .scheme = SIGN_ECDSA_WITH_SHA384_DER }},
+	{ KEY_ECDSA,   0, { .scheme = SIGN_ECDSA_WITH_SHA512_DER }},
+	{ KEY_ED25519, 0, { .scheme = SIGN_ED25519 }},
+	{ KEY_ED448,   0, { .scheme = SIGN_ED448 }},
+	{ KEY_BLISS, 128, { .scheme = SIGN_BLISS_WITH_SHA2_256 }},
+	{ KEY_BLISS, 192, { .scheme = SIGN_BLISS_WITH_SHA2_384 }},
+	{ KEY_BLISS,   0, { .scheme = SIGN_BLISS_WITH_SHA2_512 }},
 };
 
 /**
@@ -274,9 +296,9 @@ typedef struct  {
 METHOD(enumerator_t, signature_schemes_enumerate, bool,
 	private_enumerator_t *this, va_list args)
 {
-	signature_scheme_t *scheme;
+	signature_params_t **params;
 
-	VA_ARGS_VGET(args, scheme);
+	VA_ARGS_VGET(args, params);
 
 	while (++this->index < countof(scheme_map))
 	{
@@ -284,7 +306,7 @@ METHOD(enumerator_t, signature_schemes_enumerate, bool,
 		   (this->size <= scheme_map[this->index].max_keysize ||
 			!scheme_map[this->index].max_keysize))
 		{
-			*scheme = scheme_map[this->index].scheme;
+			*params = &scheme_map[this->index].params;
 			return TRUE;
 		}
 	}
@@ -332,6 +354,7 @@ key_type_t key_type_from_signature_scheme(signature_scheme_t scheme)
 		case SIGN_RSA_EMSA_PKCS1_SHA3_256:
 		case SIGN_RSA_EMSA_PKCS1_SHA3_384:
 		case SIGN_RSA_EMSA_PKCS1_SHA3_512:
+		case SIGN_RSA_EMSA_PSS:
 			return KEY_RSA;
 		case SIGN_ECDSA_WITH_SHA1_DER:
 		case SIGN_ECDSA_WITH_SHA256_DER:

@@ -166,7 +166,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"  [--type rsa|ecdsa|ed25519|bliss] [--size bits] [--safe-primes]",
+		{"[--type rsa|ecdsa|ed25519|bliss] [--size bits] [--safe-primes]",
 		 "[--shares n] [--threshold l] [--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},

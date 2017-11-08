@@ -631,6 +631,12 @@ constraint (without ike: prefix) will also apply to IKEv2 authentication, unless
 this is disabled in
 .BR strongswan.conf (5).
 
+To use or require RSASSA-PSS signatures use rsa/pss instead of rsa as in e.g.
+.BR ike:rsa/pss-sha256 .
+If \fBpubkey\fR or \fBrsa\fR constraints are configured RSASSA-PSS signatures
+will only be used/accepted if enabled in
+.BR strongswan.conf (5).
+
 For
 .BR eap ,
 an optional EAP method can be appended. Currently defined methods are

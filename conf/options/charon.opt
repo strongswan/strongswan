@@ -341,6 +341,9 @@ charon.routing_table
 charon.routing_table_prio
 	Priority of the routing table.
 
+charon.rsa_pss = no
+	Whether to use RSA with PSS padding instead of PKCS#1 padding by default.
+
 charon.send_delay = 0
 	Delay in ms for sending packets, to simulate larger RTT.
 

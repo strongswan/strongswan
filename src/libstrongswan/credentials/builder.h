@@ -56,7 +56,7 @@ enum builder_part_t {
 	BUILD_BLOB_PEM,
 	/** OpenPGP key blob, chunk_t */
 	BUILD_BLOB_PGP,
-	/** DNS public key blob (RFC 4034, RSA specifc RFC 3110), chunk_t */
+	/** DNS public key blob (RFC 4034, RSA specific RFC 3110), chunk_t */
 	BUILD_BLOB_DNSKEY,
 	/** SSH public key blob (RFC 4253), chunk_t */
 	BUILD_BLOB_SSHKEY,
@@ -84,6 +84,8 @@ enum builder_part_t {
 	BUILD_NOT_AFTER_TIME,
 	/** a serial number in binary form, chunk_t */
 	BUILD_SERIAL,
+	/** signature scheme and parameters for signature, signature_params_t* */
+	BUILD_SIGNATURE_SCHEME,
 	/** digest algorithm to be used for signature, hash_algorithm_t */
 	BUILD_DIGEST_ALG,
 	/** encryption algorithm to use, encryption_algorithm_t */
