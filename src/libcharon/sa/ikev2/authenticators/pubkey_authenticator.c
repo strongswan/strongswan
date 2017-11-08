@@ -211,8 +211,7 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 {
 	enumerator_t *enumerator;
 	keymat_v2_t *keymat;
-	signature_scheme_t scheme = SIGN_UNKNOWN;
-	signature_params_t *params;
+	signature_params_t *params = NULL;
 	array_t *schemes;
 	chunk_t octets = chunk_empty;
 	status_t status = FAILED;
@@ -234,8 +233,7 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 		enumerator = array_create_enumerator(schemes);
 		while (enumerator->enumerate(enumerator, &params))
 		{
-			scheme = params->scheme;
-			if (private->sign(private, scheme, params->params, octets,
+			if (private->sign(private, params->scheme, params->params, octets,
 							  auth_data) &&
 				build_signature_auth_data(auth_data, params))
 			{
@@ -245,15 +243,33 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 			else
 			{
 				DBG2(DBG_IKE, "unable to create %N signature for %N key",
-					 signature_scheme_names, scheme, key_type_names,
+					 signature_scheme_names, params->scheme, key_type_names,
 					 private->get_type(private));
 			}
 		}
 		enumerator->destroy(enumerator);
 	}
-	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
-		 signature_scheme_names, scheme,
-		 status == SUCCESS ? "successful" : "failed");
+	if (params)
+	{
+		if (params->scheme == SIGN_RSA_EMSA_PSS)
+		{
+			rsa_pss_params_t *pss = params->params;
+			DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N_%N %s", id,
+				 signature_scheme_names, params->scheme,
+				 hash_algorithm_short_names_upper, pss->hash,
+				 status == SUCCESS ? "successful" : "failed");
+		}
+		else
+		{
+			DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
+				 signature_scheme_names, params->scheme,
+				 status == SUCCESS ? "successful" : "failed");
+		}
+	}
+	else
+	{
+		DBG1(DBG_IKE, "authentication of '%Y' (myself) failed", id);
+	}
 	array_destroy_function(schemes, destroy_scheme, NULL);
 	chunk_free(&octets);
 	return status;
@@ -465,9 +481,23 @@ METHOD(authenticator_t, process, status_t,
 		if (public->verify(public, params->scheme, params->params, octets,
 						   auth_data))
 		{
-			DBG1(DBG_IKE, "authentication of '%Y' with %N successful", id,
-				 auth_method == AUTH_DS ? signature_scheme_names : auth_method_names,
-				 auth_method == AUTH_DS ? params->scheme : auth_method);
+			if (auth_method != AUTH_DS)
+			{
+				DBG1(DBG_IKE, "authentication of '%Y' with %N successful", id,
+					 auth_method_names, auth_method);
+			}
+			else if (params->scheme == SIGN_RSA_EMSA_PSS)
+			{
+				rsa_pss_params_t *pss = params->params;
+				DBG1(DBG_IKE, "authentication of '%Y' with %N_%N successful",
+					 id, signature_scheme_names, params->scheme,
+					 hash_algorithm_short_names_upper, pss->hash);
+			}
+			else
+			{
+				DBG1(DBG_IKE, "authentication of '%Y' with %N successful", id,
+					 signature_scheme_names, params->scheme);
+			}
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
