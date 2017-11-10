@@ -7,8 +7,6 @@ charon {
       xfrm_acq_expires = 60
     }
   }
-}
-charon-systemd {
   syslog {
     daemon {
     }
