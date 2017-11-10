@@ -742,7 +742,7 @@ METHOD(tpm_tss_t, sign, bool,
 	*( (uint8_t *)((void *)&session_data_cmd.sessionAttributes ) ) = 0;
 
 	key_type = key_type_from_signature_scheme(scheme);
-	hash_alg = hasher_from_signature_scheme(scheme);
+	hash_alg = hasher_from_signature_scheme(scheme, NULL);
 
 	/* Check if hash algorithm is supported by TPM */
 	alg_id = hash_alg_to_tpm_alg_id(hash_alg);
