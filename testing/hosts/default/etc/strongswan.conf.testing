@@ -8,5 +8,14 @@ charon {
     }
   }
 }
+charon-systemd {
+  syslog {
+    daemon {
+    }
+    auth {
+      default = 0
+    }
+  }
+}
 
 include strongswan.conf
