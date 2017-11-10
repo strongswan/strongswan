@@ -712,5 +712,7 @@ JNI_METHOD(CharonVpnService, initiate, void,
 
 	config = androidjni_convert_jstring(env, jconfig);
 	settings = settings_create_string(config);
+	free(config);
+
 	initiate(settings);
 }
