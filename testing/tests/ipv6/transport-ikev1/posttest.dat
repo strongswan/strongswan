@@ -1,5 +1,5 @@
-moon::ipsec stop
-sun::ipsec stop
+moon::systemctl stop strongswan-swanctl
+sun::systemctl stop strongswan-swanctl
 moon::iptables-restore < /etc/iptables.flush
 sun::iptables-restore < /etc/iptables.flush
 moon::ip6tables-restore < /etc/ip6tables.flush

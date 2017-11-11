@@ -1,8 +1,8 @@
-moon::service charon stop
-carol::service charon stop
-dave::service charon stop
-alice::service charon stop
-alice::service apache2 stop
+moon::systemctl stop strongswan-swanctl
+carol::systemctl stop strongswan-swanctl
+dave::systemctl stop strongswan-swanctl
+alice::systemctl stop strongswan-swanctl
+alice::systemctl stop apache2
 alice::rm /etc/swanctl/x509/aaaCert.pem
 alice::rm /etc/swanctl/rsa/aaaKey.pem
 moon::iptables-restore < /etc/iptables.flush

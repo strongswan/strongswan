@@ -4,6 +4,9 @@ dave::cat /usr/local/share/strongswan/templates/database/sql/sqlite.sql /etc/ips
 moon::cat /etc/db.d/ipsec.sql | sqlite3 /etc/db.d/ipsec.db
 carol::cat /etc/db.d/ipsec.sql | sqlite3 /etc/db.d/ipsec.db
 dave::cat /etc/db.d/ipsec.sql | sqlite3 /etc/db.d/ipsec.db
+carol::cd /etc/swanctl; rm -r rsa/* x509/* x509ca/*
+dave::cd /etc/swanctl; rm -r rsa/* x509/* x509ca/*
+moon::cd /etc/swanctl; rm -r rsa/* x509/* x509ca/*
 moon::iptables-restore < /etc/iptables.rules
 carol::iptables-restore < /etc/iptables.rules
 dave::iptables-restore < /etc/iptables.rules
@@ -13,9 +16,9 @@ dave::ip6tables-restore < /etc/ip6tables.rules
 alice::"ip route add fec0:\:/16 via fec1:\:1"
 carol::"ip route add fec1:\:/16 via fec0:\:1"
 dave::"ip route add fec1:\:/16 via fec0:\:1"
-moon::service charon start 2> /dev/null
-carol::service charon start 2> /dev/null
-dave::service charon start 2> /dev/null
+moon::systemctl start strongswan-swanctl
+carol::systemctl start strongswan-swanctl
+dave::systemctl start strongswan-swanctl
 moon::expect-connection rw
 carol::expect-connection home
 carol::swanctl --initiate --child home 2> /dev/null

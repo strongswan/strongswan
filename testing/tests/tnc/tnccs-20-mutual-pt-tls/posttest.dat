@@ -1,1 +1,1 @@
-sun::service charon stop
+sun::systemctl stop strongswan-swanctl

@@ -484,28 +484,64 @@ INSERT INTO products (			/* 81 */
  'Android 6.0.1'
 );
 
-INSERT INTO products (          /* 82 */
+INSERT INTO products (      /* 82 */
   name
 ) VALUES (
  'Debian 8.5 i686'
 );
 
-INSERT INTO products (          /* 83 */
+INSERT INTO products (      /* 83 */
   name
 ) VALUES (
  'Debian 8.5 x86_64'
 );
 
-INSERT INTO products (          /* 84 */
+INSERT INTO products (      /* 84 */
   name
 ) VALUES (
  'Debian 8.6 i686'
 );
 
-INSERT INTO products (          /* 85 */
+INSERT INTO products (      /* 85 */
   name
 ) VALUES (
  'Debian 8.6 x86_64'
+);
+
+INSERT INTO products (      /* 86 */
+  name
+) VALUES (
+ 'Debian 8.7 i686'
+);
+
+INSERT INTO products (      /* 87 */
+  name
+) VALUES (
+ 'Debian 8.7 x86_64'
+);
+
+INSERT INTO products (      /* 88 */
+  name
+) VALUES (
+ 'Debian 8.8 i686'
+);
+
+INSERT INTO products (      /* 89 */
+  name
+) VALUES (
+ 'Debian 8.8 x86_64'
+);
+
+INSERT INTO products (      /* 90 */
+  name
+) VALUES (
+ 'Debian 8.9 i686'
+);
+
+INSERT INTO products (      /* 91 */
+  name
+) VALUES (
+ 'Debian 8.9 x86_64'
 );
 
 /* Directories */
@@ -1039,6 +1075,36 @@ INSERT INTO groups_product_defaults (
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
+  4, 82
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 84
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 86
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 88
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 90
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
   5, 2
 );
 
@@ -1124,6 +1190,24 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   5, 85
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 87
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 89
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 91
 );
 
 INSERT INTO groups_product_defaults (
