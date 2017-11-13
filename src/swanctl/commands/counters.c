@@ -140,7 +140,7 @@ static int counters(vici_conn_t *conn)
 static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
-		counters, 'c', "counters", "list or reset IKE event counters",
+		counters, 'C', "counters", "list or reset IKE event counters",
 		{"[--name <name>|--all] [--reset] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
