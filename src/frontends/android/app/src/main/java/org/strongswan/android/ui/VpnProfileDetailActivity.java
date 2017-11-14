@@ -37,6 +37,7 @@ import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -126,6 +127,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private CheckBox mBlockIPv6;
 	private Spinner mSelectSelectedAppsHandling;
 	private RelativeLayout mSelectApps;
+	private TextInputLayoutHelper mIkeProposalWrap;
+	private EditText mIkeProposal;
+	private TextInputLayoutHelper mEspProposalWrap;
+	private EditText mEspProposal;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -180,6 +185,13 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		mSelectSelectedAppsHandling = (Spinner)findViewById(R.id.apps_handling);
 		mSelectApps = (RelativeLayout)findViewById(R.id.select_applications);
+
+		mIkeProposal = (EditText)findViewById(R.id.ike_proposal);
+		mIkeProposalWrap = (TextInputLayoutHelper)findViewById(R.id.ike_proposal_wrap);
+		mEspProposal = (EditText)findViewById(R.id.esp_proposal);
+		mEspProposalWrap = (TextInputLayoutHelper)findViewById(R.id.esp_proposal_wrap);
+		/* make the link clickable */
+		((TextView)findViewById(R.id.proposal_intro)).setMovementMethod(LinkMovementMethod.getInstance());
 
 		final SpaceTokenizer spaceTokenizer = new SpaceTokenizer();
 		mName.setTokenizer(spaceTokenizer);
@@ -546,7 +558,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				   mProfile.getPort() != null || mProfile.getNATKeepAlive() != null ||
 				   (flags != null && flags != 0) || (st != null && st != 0) ||
 				   mProfile.getIncludedSubnets() != null || mProfile.getExcludedSubnets() != null ||
-				   mProfile.getSelectedAppsHandling() != SelectedAppsHandling.SELECTED_APPS_DISABLE;
+				   mProfile.getSelectedAppsHandling() != SelectedAppsHandling.SELECTED_APPS_DISABLE ||
+				   mProfile.getIkeProposal() != null || mProfile.getEspProposal() != null;
 		}
 		mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
 		mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -686,6 +699,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mProfile.setSplitTunneling(st == 0 ? null : st);
 		mProfile.setSelectedAppsHandling(mSelectedAppsHandling);
 		mProfile.setSelectedApps(mSelectedApps);
+		String ike = mIkeProposal.getText().toString().trim();
+		mProfile.setIkeProposal(ike.isEmpty() ? null : ike);
+		String esp = mEspProposal.getText().toString().trim();
+		mProfile.setEspProposal(esp.isEmpty() ? null : esp);
 	}
 
 	/**
@@ -719,6 +736,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mBlockIPv6.setChecked(mProfile.getSplitTunneling() != null && (mProfile.getSplitTunneling() & VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6) != 0);
 				mSelectedAppsHandling = mProfile.getSelectedAppsHandling();
 				mSelectedApps = mProfile.getSelectedAppsSet();
+				mIkeProposal.setText(mProfile.getIkeProposal());
+				mEspProposal.setText(mProfile.getEspProposal());
 				flags = mProfile.getFlags();
 				useralias = mProfile.getUserCertificateAlias();
 				local_id = mProfile.getLocalId();
