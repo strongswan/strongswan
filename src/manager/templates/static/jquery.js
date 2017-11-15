@@ -311,7 +311,7 @@ jQuery.fn = jQuery.prototype = {
 					for ( var i = one ? index : 0, max = one ? index + 1 : options.length; i < max; i++ ) {
 						var option = options[i];
 						if ( option.selected ) {
-							// Get the specifc value for the option
+							// Get the specific value for the option
 							var val = jQuery.browser.msie && !option.attributes["value"].specified ? option.text : option.value;
 							
 							// We don't need an array for one selects

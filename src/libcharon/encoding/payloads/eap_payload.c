@@ -441,7 +441,7 @@ eap_payload_t *eap_payload_create_nak(uint8_t identifier, eap_type_t type,
 			added_any = TRUE;
 		}
 		else if (reg_vendor)
-		{	/* found vendor specifc method, but this is not an expanded Nak */
+		{	/* found vendor specific method, but this is not an expanded Nak */
 			found_vendor = TRUE;
 		}
 	}

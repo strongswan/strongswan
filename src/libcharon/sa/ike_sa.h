@@ -1014,7 +1014,7 @@ struct ike_sa_t {
 	/**
 	 * Rekey the IKE_SA.
 	 *
-	 * Sets up a new IKE_SA, moves all CHILDs to it and deletes this IKE_SA.
+	 * Sets up a new IKE_SA, moves all CHILD_SAs to it and deletes this IKE_SA.
 	 *
 	 * @return				- SUCCESS, if IKE_SA rekeying initiated
 	 */

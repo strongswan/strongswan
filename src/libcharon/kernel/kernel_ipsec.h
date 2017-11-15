@@ -183,7 +183,7 @@ struct kernel_ipsec_query_policy_t {
  * Policy information are cached in the interface. This is necessary to do
  * reference counting. The Linux kernel does not allow the same policy
  * installed twice, but we need this as CHILD_SA exist multiple times
- * when rekeying. Thats why we do reference counting of policies.
+ * when rekeying. That's why we do reference counting of policies.
  */
 struct kernel_ipsec_t {
 

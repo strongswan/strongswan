@@ -86,7 +86,7 @@ static encoding_rule_t encodings[] = {
 	{ RESERVED_BIT,		offsetof(private_nonce_payload_t, reserved[6])		},
 	/* Length of the whole nonce payload*/
 	{ PAYLOAD_LENGTH,	offsetof(private_nonce_payload_t, payload_length)	},
-	/* some nonce bytes, lenth is defined in PAYLOAD_LENGTH */
+	/* some nonce bytes, length is defined in PAYLOAD_LENGTH */
 	{ CHUNK_DATA,		offsetof(private_nonce_payload_t, nonce)			},
 };
 

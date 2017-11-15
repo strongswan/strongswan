@@ -131,7 +131,7 @@ struct private_task_manager_t {
 	array_t *queued_tasks;
 
 	/**
-	 * Array of active tasks, initiated by ourselve
+	 * Array of active tasks, initiated by ourselves
 	 */
 	array_t *active_tasks;
 

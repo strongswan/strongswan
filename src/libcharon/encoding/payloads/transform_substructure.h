@@ -107,7 +107,7 @@ transform_substructure_t *transform_substructure_create(payload_type_t type);
  *
  * @param type				PLV2_TRANSFORM_SUBSTRUCTURE or PLV1_TRANSFORM_SUBSTRUCTURE
  * @param type_or_number	Type (IKEv2) or number (IKEv1) of transform
- * @param id				transform id specifc for the transform type
+ * @param id				transform id specific for the transform type
  * @return					transform_substructure_t object
  */
 transform_substructure_t *transform_substructure_create_type(payload_type_t type,

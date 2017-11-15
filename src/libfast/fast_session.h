@@ -28,7 +28,7 @@
 typedef struct fast_session_t fast_session_t;
 
 /**
- * Session handling class, instanciated for each user session.
+ * Session handling class, instantiated for each user session.
  */
 struct fast_session_t {
 
