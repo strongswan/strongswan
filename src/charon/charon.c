@@ -221,7 +221,12 @@ static bool check_pidfile()
 		int fd;
 
 		fd = fileno(pidfile);
-		if (fd == -1 || fcntl(fd, F_SETFD, FD_CLOEXEC) == -1)
+		if (fd == -1)
+		{
+			DBG1(DBG_DMN, "unable to determine fd for '"PID_FILE"'");
+			return TRUE;
+		}
+		if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1)
 		{
 			DBG1(DBG_LIB, "setting FD_CLOEXEC for '"PID_FILE"' failed: %s",
 				 strerror(errno));
