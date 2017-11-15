@@ -16,7 +16,7 @@ sec-updater.swid_gen.tag_creator.name = strongSwan Project
 sec-updater.swid_gen.tag_creator.regid = strongswan.org
 	regid of the tagCreator entity.
 
-sec-updater.tnc_manager_command = /var/www/tnc/manager.py
+sec-updater.tnc_manage_command = /var/www/tnc/manage.py
 	strongTNC manage.py command used to import SWID tags.
 
 sec-updater.tmp.deb_file = /tmp/sec-updater.deb
