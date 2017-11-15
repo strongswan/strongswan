@@ -426,7 +426,7 @@ static bool parse_certificate(private_x509_ac_t *this)
 	int objectID;
 	int type     = OID_UNKNOWN;
 	int extn_oid = OID_UNKNOWN;
-	signature_params_t sig_alg;
+	signature_params_t sig_alg = {};
 	bool success = FALSE;
 	bool critical;
 
