@@ -73,6 +73,7 @@ static private_key_t *parse_private_key(chunk_t blob)
 						 * indicate RSA/PSS, but they are optional so that won't
 						 * work for keys without specific restrictions) */
 						params = chunk_empty;
+						/* fall-through */
 					case OID_RSA_ENCRYPTION:
 						type = KEY_RSA;
 						break;
