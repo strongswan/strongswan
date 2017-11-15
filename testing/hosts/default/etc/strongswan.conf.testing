@@ -16,6 +16,9 @@ charon-systemd {
       default = 0
     }
   }
+  journal {
+    default = -1
+  }
 }
 
 include strongswan.conf
