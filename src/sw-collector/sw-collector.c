@@ -249,6 +249,7 @@ static int extract_history(sw_collector_db_t *db)
 	history = sw_collector_history_create(db, 1);
 	if (!history)
 	{
+		chunk_unmap(h);
 		return EXIT_FAILURE;
 	}
 
