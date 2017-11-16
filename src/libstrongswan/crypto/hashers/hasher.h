@@ -74,6 +74,11 @@ extern enum_name_t *hash_algorithm_names;
 extern enum_name_t *hash_algorithm_short_names;
 
 /**
+ * Uppercase short names for hash_algorithm_names
+ */
+extern enum_name_t *hash_algorithm_short_names_upper;
+
+/**
  * Generic interface for all hash functions.
  */
 struct hasher_t {
