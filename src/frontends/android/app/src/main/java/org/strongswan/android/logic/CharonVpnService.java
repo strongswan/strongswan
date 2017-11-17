@@ -1073,28 +1073,4 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	{
 		return Build.MODEL + " - " + Build.BRAND + "/" + Build.PRODUCT + "/" + Build.MANUFACTURER;
 	}
-
-	/*
-	 * The libraries are extracted to /data/data/org.strongswan.android/...
-	 * during installation.  On newer releases most are loaded in JNI_OnLoad.
-	 */
-	static
-	{
-		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2)
-		{
-			System.loadLibrary("strongswan");
-
-			if (MainActivity.USE_BYOD)
-			{
-				System.loadLibrary("tpmtss");
-				System.loadLibrary("tncif");
-				System.loadLibrary("tnccs");
-				System.loadLibrary("imcv");
-			}
-
-			System.loadLibrary("charon");
-			System.loadLibrary("ipsec");
-		}
-		System.loadLibrary("androidbridge");
-	}
 }

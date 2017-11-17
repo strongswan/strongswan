@@ -18,9 +18,11 @@ package org.strongswan.android.logic;
 import java.security.Security;
 
 import org.strongswan.android.security.LocalCertificateKeyStoreProvider;
+import org.strongswan.android.ui.MainActivity;
 
 import android.app.Application;
 import android.content.Context;
+import android.os.Build;
 
 public class StrongSwanApplication extends Application
 {
@@ -44,5 +46,29 @@ public class StrongSwanApplication extends Application
 	public static Context getContext()
 	{
 		return StrongSwanApplication.mContext;
+	}
+
+	/*
+	 * The libraries are extracted to /data/data/org.strongswan.android/...
+	 * during installation.  On newer releases most are loaded in JNI_OnLoad.
+	 */
+	static
+	{
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2)
+		{
+			System.loadLibrary("strongswan");
+
+			if (MainActivity.USE_BYOD)
+			{
+				System.loadLibrary("tpmtss");
+				System.loadLibrary("tncif");
+				System.loadLibrary("tnccs");
+				System.loadLibrary("imcv");
+			}
+
+			System.loadLibrary("charon");
+			System.loadLibrary("ipsec");
+		}
+		System.loadLibrary("androidbridge");
 	}
 }
