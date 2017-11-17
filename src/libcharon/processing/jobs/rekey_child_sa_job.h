@@ -26,7 +26,7 @@ typedef struct rekey_child_sa_job_t rekey_child_sa_job_t;
 #include <library.h>
 #include <sa/ike_sa_id.h>
 #include <processing/jobs/job.h>
-#include <config/proposal.h>
+#include <crypto/proposal/proposal.h>
 
 /**
  * Class representing an REKEY_CHILD_SA Job.
@@ -50,4 +50,5 @@ struct rekey_child_sa_job_t {
  */
 rekey_child_sa_job_t *rekey_child_sa_job_create(protocol_id_t protocol,
 												uint32_t spi, host_t *dst);
+
 #endif /** REKEY_CHILD_SA_JOB_H_ @}*/

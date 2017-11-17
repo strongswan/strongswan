@@ -15,7 +15,7 @@
 
 #include "test_suite.h"
 
-#include <config/proposal.h>
+#include <crypto/proposal/proposal.h>
 
 static struct {
 	protocol_id_t proto;

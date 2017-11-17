@@ -17,7 +17,7 @@
 #include <tests/test_suite.h>
 
 #include <daemon.h>
-#include <config/proposal.h>
+#include <crypto/proposal/proposal.h>
 #include <encoding/payloads/ike_header.h>
 #include <tkm/client.h>
 

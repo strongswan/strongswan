@@ -18,7 +18,7 @@
 #include <errno.h>
 
 #include <encoding/payloads/sa_payload.h>
-#include <config/proposal.h>
+#include <crypto/proposal/proposal.h>
 
 typedef struct private_custom_proposal_t private_custom_proposal_t;
 

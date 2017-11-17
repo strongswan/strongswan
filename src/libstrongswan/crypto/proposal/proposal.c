@@ -19,7 +19,6 @@
 
 #include "proposal.h"
 
-#include <daemon.h>
 #include <collections/array.h>
 #include <utils/identification.h>
 

@@ -26,7 +26,7 @@ typedef struct update_sa_job_t update_sa_job_t;
 #include <library.h>
 #include <networking/host.h>
 #include <processing/jobs/job.h>
-#include <config/proposal.h>
+#include <crypto/proposal/proposal.h>
 
 /**
  * Update the addresses of an IKE and its CHILD_SAs.

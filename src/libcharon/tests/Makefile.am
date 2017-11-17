@@ -3,7 +3,6 @@ TESTS = libcharon_tests exchange_tests
 check_PROGRAMS = $(TESTS)
 
 libcharon_tests_SOURCES = \
-  suites/test_proposal.c \
   suites/test_ike_cfg.c \
   suites/test_mem_pool.c \
   suites/test_message_chapoly.c \

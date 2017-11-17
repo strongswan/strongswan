@@ -16,7 +16,7 @@
 
 /**
  * @defgroup proposal proposal
- * @{ @ingroup config
+ * @{ @ingroup crypto
  */
 
 #ifndef PROPOSAL_H_

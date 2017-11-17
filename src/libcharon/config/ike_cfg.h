@@ -31,7 +31,7 @@ typedef struct ike_cfg_t ike_cfg_t;
 #include <networking/host.h>
 #include <collections/linked_list.h>
 #include <utils/identification.h>
-#include <config/proposal.h>
+#include <crypto/proposal/proposal.h>
 #include <crypto/diffie_hellman.h>
 
 /**
