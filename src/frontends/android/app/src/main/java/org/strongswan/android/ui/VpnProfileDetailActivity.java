@@ -70,6 +70,7 @@ import org.strongswan.android.ui.adapter.CertificateIdentitiesAdapter;
 import org.strongswan.android.ui.widget.TextInputLayoutHelper;
 import org.strongswan.android.utils.Constants;
 import org.strongswan.android.utils.IPRangeSet;
+import org.strongswan.android.utils.Utils;
 
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -653,6 +654,16 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 													 Constants.NAT_KEEPALIVE_MIN, Constants.NAT_KEEPALIVE_MAX));
 			valid = false;
 		}
+		if (!validateProposal(mIkeProposal, true))
+		{
+			mIkeProposalWrap.setError(getString(R.string.alert_text_no_proposal));
+			valid = false;
+		}
+		if (!validateProposal(mEspProposal, false))
+		{
+			mEspProposalWrap.setError(getString(R.string.alert_text_no_proposal));
+			valid = false;
+		}
 		return valid;
 	}
 
@@ -843,6 +854,17 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	{
 		String value = view.getText().toString().trim();
 		return value.isEmpty() || IPRangeSet.fromString(value) != null;
+	}
+
+	/**
+	 * Check that the value in the given text box is a valid proposal
+	 *
+	 * @param view text box
+	 */
+	private boolean validateProposal(EditText view, boolean ike)
+	{
+		String value = view.getText().toString().trim();
+		return value.isEmpty() || Utils.isProposalValid(ike, value);
 	}
 
 	private class SelectUserCertOnClickListener implements OnClickListener, KeyChainAliasCallback
