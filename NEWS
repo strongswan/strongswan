@@ -1,7 +1,21 @@
 strongswan-5.6.1
 ----------------
 
-- The sec-updater tool checks for security updates dpkg-based repositories
+- In compliance with RFCs 8221 and 8247 several algorithms were removed from the
+  default ESP/AH and IKEv2 proposals, respectively (3DES, Blowfish and MD5 from
+  ESP/AH, MD5 and MODP-1024 from IKEv2).  These algorithms may still be used in
+  custom proposals.
+
+- Added support for RSASSA-PSS signatures.  For backwards compatibility they are
+  not used automatically by default, enable charon.rsa_pss to change that.  To
+  explicitly use or require such signatures with IKEv2 signature authentication
+  (RFC 7427), regardless of whether that option is enabled, use ike:rsa/pss...
+  authentication constraints.
+
+- The pki tool can optionally sign certificates/CRLs with RSASSA-PSS via the
+  `--rsa-padding pss` option.
+
+- The sec-updater tool checks for security updates in dpkg-based repositories
   (e.g. Debian/Ubuntu) and sets the security flags in the IMV policy database
   accordingly. Additionally for each new package version a SWID tag for the
   given OS and HW architecture is created and stored in the database.
@@ -11,6 +25,20 @@ strongswan-5.6.1
 - The introduction of file versions in the IMV database scheme broke file
   reference hash measurements. This has been fixed by creating generic product
   versions having an empty package name.
+
+- A new timeout option for the systime-fix plugin stops periodic system time
+  checks after a while and enforces a certificate verification, closing or
+  reauthenticating all SAs with invalid certificates.
+
+- The IKE event counters, previously only available via ipsec listcounters, may
+  now be queried/reset via vici and the new swanctl --counters command. They are
+  provided by the new optional counters plugin.
+
+- Class attributes received in RADIUS Access-Accept messages may optionally be
+  added to RADIUS accounting messages.
+
+- Inbound marks may optionally be installed on the SA again (was removed with
+  5.5.2) by enabling the mark_in_sa option in swanctl.conf.
 
 
 strongswan-5.6.0
