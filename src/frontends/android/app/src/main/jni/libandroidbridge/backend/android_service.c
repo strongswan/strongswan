@@ -807,7 +807,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128-aes192-aes256-sha1-sha256-sha384-sha512-"
 							"curve25519-ecp256-ecp384-ecp521-"
-							"modp2048-modp3072-modp4096-modp1024"));
+							"modp2048-modp3072-modp4096"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
 							"aes128gcm16-aes256gcm16-chacha20poly1305"));
 	child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
