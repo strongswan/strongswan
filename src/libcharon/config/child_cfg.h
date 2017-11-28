@@ -31,7 +31,7 @@ typedef struct child_cfg_create_t child_cfg_create_t;
 
 #include <library.h>
 #include <selectors/traffic_selector.h>
-#include <config/proposal.h>
+#include <crypto/proposal/proposal.h>
 #include <kernel/kernel_ipsec.h>
 
 /**

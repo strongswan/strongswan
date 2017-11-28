@@ -362,6 +362,58 @@
                 android:id="@+id/select_applications"
                 layout="@layout/two_line_button" />
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:textSize="20sp"
+                android:text="@string/profile_proposals_label" />
+
+            <TextView
+                android:id="@+id/proposal_intro"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:textSize="12sp"
+                android:text="@string/profile_proposals_intro" />
+
+            <org.strongswan.android.ui.widget.TextInputLayoutHelper
+                android:id="@+id/ike_proposal_wrap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:helper_text="@string/profile_proposals_ike_hint" >
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/ike_proposal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:singleLine="true"
+                    android:inputType="textNoSuggestions"
+                    android:hint="@string/profile_proposals_ike_label" />
+
+            </org.strongswan.android.ui.widget.TextInputLayoutHelper>
+
+            <org.strongswan.android.ui.widget.TextInputLayoutHelper
+                android:id="@+id/esp_proposal_wrap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:helper_text="@string/profile_proposals_esp_hint" >
+
+                <android.support.design.widget.TextInputEditText
+                    android:id="@+id/esp_proposal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:singleLine="true"
+                    android:inputType="textNoSuggestions"
+                    android:hint="@string/profile_proposals_esp_label" />
+
+            </org.strongswan.android.ui.widget.TextInputLayoutHelper>
+
         </LinearLayout>
 
     </LinearLayout>

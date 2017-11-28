@@ -32,7 +32,7 @@ typedef struct transform_substructure_t transform_substructure_t;
 #include <crypto/signers/signer.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/crypters/crypter.h>
-#include <config/proposal.h>
+#include <crypto/proposal/proposal.h>
 
 /**
  * IKEv1 Value for a transform payload.

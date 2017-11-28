@@ -96,6 +96,12 @@
     <string name="profile_select_no_apps">Keine Apps ausgewählt</string>
     <string name="profile_select_one_app">Eine App ausgewählt</string>
     <string name="profile_select_x_apps">%1$d Apps ausgewählt</string>
+    <string name="profile_proposals_label">Algorithmen</string>
+    <string name="profile_proposals_intro">Optionale spezifische Algorithmen für IKEv2 und/oder IPsec/ESP die statt der Standardwerte verwendet werden sollen. Eine <a href="https://wiki.strongswan.org/projects/strongswan/wiki/IKEv2CipherSuites">Liste gültiger Algorithmen</a> kann unserem Wiki entnommen werden (nicht alle werden von dieser App unterstützt). Beide Felder erwarten eine Liste von Algorithmen, jeweils mit einem Bindestrich getrennt.</string>
+    <string name="profile_proposals_ike_label">IKEv2 Algorithmen</string>
+    <string name="profile_proposals_ike_hint">Für non-AEAD/klassische Verschlüsselungsalgorithmen wird ein Integritätsalgorithmus, eine pseudozufällige Funktion (PRF, optional, ansonsten wird eine auf dem Integritätsalgorithmus basierende verwendet) und eine Diffie-Hellman Gruppe benötigt (z.B. aes256-sha256-ecp256). Für kombinierte/AEAD Algorithmen wird der Integritätsalgorithmus weggelassen aber eine PRF wird benötigt (z.B. aes256gcm16-prfsha256-ecp256).</string>
+    <string name="profile_proposals_esp_label">IPsec/ESP Algorithmen</string>
+    <string name="profile_proposals_esp_hint">Für non-AEAD/klassische Verschlüsselungsalgorithmen wird ein Integritätsalgorithmus benötigt, eine Diffie-Hellman Gruppe ist optional (z.B. aes256-sha256 oder aes256-sha256-ecp256). Für kombinierte/AEAD Algorithmen wird der Integritätsalgorithmus weggelassen (z.B. aes256gcm16 oder aes256gcm16-ecp256). Falls eine DH Gruppe angegeben wird, kommt während dem IPsec SA Rekeying ein DH Schlüsselaustausch zur Anwendung. Beim initialen Verbindungsaufbau hat eine DH Gruppe hier keinen Einfluss, weil die Schlüssel dort von der IKE SA abgeleitet werden. Deshalb wird eine Fehlkonfiguration mit dem Server erst später während dem Rekeying zu einem Fehler führen.</string>
     <string name="profile_import">VPN Profile importieren</string>
     <string name="profile_import_failed">VPN Profil-Import fehlgeschlagen</string>
     <string name="profile_import_failed_detail">VPN Profil-Import fehlgeschlagen: %1$s</string>
@@ -113,6 +119,7 @@
     <string name="alert_text_nocertfound">Bitte wählen Sie eines aus oder aktivieren Sie <i>Automatisch wählen</i></string>
     <string name="alert_text_out_of_range">Bitte geben Sie eine Nummer von %1$d - %2$d ein</string>
     <string name="alert_text_no_subnets">Bitte geben Sie mit Leerzeichen getrennte, gültige Subnetzte und/oder IP-Adressen ein</string>
+    <string name="alert_text_no_proposal">Bitte geben Sie eine mit Bindestrichen getrennte, gültige Liste von Algorithmen ein</string>
     <string name="tnc_notice_title">EAP-TNC kann Ihre Privatsphäre beeinträchtigen</string>
     <string name="tnc_notice_subtitle">Gerätedaten werden an den Server-Betreiber gesendet</string>
     <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) erlaubt Server-Betreibern den Gesundheitszustand von Endgeräten zu prüfen.</p><p>Dazu kann der Betreiber Daten verlangen, wie etwa eine eindeutige Identifikationsnummer, eine Liste der installierten Pakete, Systemeinstellungen oder kryptografische Prüfsummen von Dateien.</p><b>Solche Daten werden nur übermittelt nachdem die Identität des Servers geprüft wurde.</b>]]></string>

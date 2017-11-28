@@ -32,7 +32,7 @@ typedef struct peer_cfg_create_t peer_cfg_create_t;
 #include <utils/identification.h>
 #include <collections/enumerator.h>
 #include <selectors/traffic_selector.h>
-#include <config/proposal.h>
+#include <crypto/proposal/proposal.h>
 #include <config/ike_cfg.h>
 #include <config/child_cfg.h>
 #include <credentials/auth_cfg.h>

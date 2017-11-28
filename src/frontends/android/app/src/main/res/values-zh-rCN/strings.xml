@@ -93,6 +93,12 @@
     <string name="profile_select_no_apps">No applications selected</string>
     <string name="profile_select_one_app">One application selected</string>
     <string name="profile_select_x_apps">%1$d applications selected</string>
+    <string name="profile_proposals_label">Algorithms</string>
+    <string name="profile_proposals_intro">Optionally configure specific algorithms to use for IKEv2 and/or IPsec/ESP instead of the defaults. Refer to our wiki for a <a href="https://wiki.strongswan.org/projects/strongswan/wiki/IKEv2CipherSuites">list of algorithm identifiers</a> (note that not all are supported by this app). Both fields take a list of algorithms, each separated by a hyphen.</string>
+    <string name="profile_proposals_ike_label">IKEv2 Algorithms</string>
+    <string name="profile_proposals_ike_hint">For non-AEAD/classic encryption algorithms, an integrity algorithm, a pseudo random function (optional, defaults to one based on the integrity algorithm) and a Diffie-Hellman group are required (e.g. aes256-sha256-ecp256). For combined-mode/AEAD algorithms, the integrity algorithm is omitted but a PRF is required (e.g. aes256gcm16-prfsha256-ecp256).</string>
+    <string name="profile_proposals_esp_label">IPsec/ESP Algorithms</string>
+    <string name="profile_proposals_esp_hint">For non-AEAD/classic encryption algorithms, an integrity algorithm is required, a Diffie-Hellman group is optional (e.g. aes256-sha256 or aes256-sha256-ecp256). For combined-mode/AEAD algorithms, the integrity algorithm is omitted (e.g. aes256gcm16 or aes256gcm16-ecp256). If a DH group is specified IPsec SA rekeying will use a DH key exchange. However, DH groups specified here are not used when the connection is established initially because the keys there are derived from the IKE SA key material. Therefore, any configuration mismatch with the server will only cause errors later during rekeying.</string>
     <string name="profile_import">导入VPN配置</string>
     <string name="profile_import_failed">导入VPN配置失败</string>
     <string name="profile_import_failed_detail">导入VPN配置失败: %1$s</string>
@@ -110,6 +116,7 @@
     <string name="alert_text_nocertfound">请选择一项或激活 <i>自动选择</i></string>
     <string name="alert_text_out_of_range">请输入一个数字范围从%1$d到%2$d</string>
     <string name="alert_text_no_subnets">Please enter valid subnets and/or IP addresses, separated by spaces</string>
+    <string name="alert_text_no_proposal">Please enter a valid list of algorithms, separated by hyphens</string>
     <string name="tnc_notice_title">EAP-TNC可能会影响您的隐私</string>
     <string name="tnc_notice_subtitle">设备数据已被发送至服务器管理员</string>
     <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) 允许服务器管理员评定一个用户设备的状况。</p><p>出于此目的，服务器管理员可能要求以下数据如独立ID、已安装软件列表、系统设置、或加密过的文件校验值。</p><b>任何数据都仅将在验证过服务器的身份ID之后被发出。</b>]]></string>

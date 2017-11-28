@@ -712,5 +712,33 @@ JNI_METHOD(CharonVpnService, initiate, void,
 
 	config = androidjni_convert_jstring(env, jconfig);
 	settings = settings_create_string(config);
+	free(config);
+
 	initiate(settings);
+}
+
+/**
+ * Utility function to verify proposal strings (static, so `this` is the class)
+ */
+JNI_METHOD_P(org_strongswan_android_utils, Utils, isProposalValid, jboolean,
+	jboolean ike, jstring proposal)
+{
+	proposal_t *prop;
+	char *str;
+	bool valid;
+
+	dbg = dbg_android;
+
+	if (!library_init(NULL, "charon"))
+	{
+		library_deinit();
+		return FALSE;
+	}
+	str = androidjni_convert_jstring(env, proposal);
+	prop = proposal_create_from_string(ike ? PROTO_IKE : PROTO_ESP, str);
+	valid = prop != NULL;
+	DESTROY_IF(prop);
+	free(str);
+	library_deinit();
+	return valid;
 }

@@ -34,6 +34,7 @@ public class VpnProfile implements Cloneable
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
 	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets, mSelectedApps;
+	private String mIkeProposal, mEspProposal;
 	private Integer mMTU, mPort, mSplitTunneling, mNATKeepAlive, mFlags;
 	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
 	private VpnType mVpnType;
@@ -112,6 +113,26 @@ public class VpnProfile implements Cloneable
 	public void setVpnType(VpnType type)
 	{
 		this.mVpnType = type;
+	}
+
+	public String getIkeProposal()
+	{
+		return mIkeProposal;
+	}
+
+	public void setIkeProposal(String proposal)
+	{
+		this.mIkeProposal = proposal;
+	}
+
+	public String getEspProposal()
+	{
+		return mEspProposal;
+	}
+
+	public void setEspProposal(String proposal)
+	{
+		this.mEspProposal = proposal;
 	}
 
 	public String getUsername()
