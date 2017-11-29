@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/x86 4.13.12 Kernel Configuration
+# Linux/x86 4.13.16 Kernel Configuration
 #
 CONFIG_64BIT=y
 CONFIG_X86_64=y
@@ -667,7 +667,7 @@ CONFIG_IP_ROUTE_CLASSID=y
 # CONFIG_NET_IPGRE_DEMUX is not set
 CONFIG_NET_IP_TUNNEL=y
 # CONFIG_SYN_COOKIES is not set
-# CONFIG_NET_IPVTI is not set
+CONFIG_NET_IPVTI=y
 CONFIG_NET_UDP_TUNNEL=y
 # CONFIG_NET_FOU is not set
 CONFIG_INET_AH=y
