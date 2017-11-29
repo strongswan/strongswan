@@ -530,11 +530,11 @@ on the key identifier derived from the public key).
 
 ### load-shared() ###
 
-Load a shared IKE PSK, EAP or XAuth secret into the daemon.
+Load a shared IKE PSK, EAP, XAuth or NTLM secret into the daemon.
 
 	{
 		id = <optional unique identifier of this shared key>
-		type = <shared key type, IKE|EAP|XAUTH>
+		type = <shared key type, IKE|EAP|XAUTH|NTLM>
 		data = <raw shared key data>
 		owners = [
 			<list of shared key owner identities>
@@ -546,8 +546,8 @@ Load a shared IKE PSK, EAP or XAuth secret into the daemon.
 
 ### unload-shared() ###
 
-Unload a previously loaded shared IKE PSK, EAP or XAuth secret by its unique
-identifier.
+Unload a previously loaded shared IKE PSK, EAP, XAuth or NTLM secret by its
+unique identifier.
 
 	{
 		id = <unique identifier of the shared key to unload>
