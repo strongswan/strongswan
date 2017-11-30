@@ -1174,10 +1174,7 @@ if test x$eap_sim_pcsc = xtrue; then
 fi
 
 if test x$nm = xtrue; then
-	PKG_CHECK_EXISTS([libnm-glib],
-		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm-util libnm-glib libnm-glib-vpn])],
-		[PKG_CHECK_MODULES(nm, [NetworkManager gthread-2.0 libnm_util libnm_glib libnm_glib_vpn])]
-	)
+	PKG_CHECK_MODULES(nm, [gthread-2.0 libnm])
 	AC_SUBST(nm_CFLAGS)
 	AC_SUBST(nm_LIBS)
 fi
