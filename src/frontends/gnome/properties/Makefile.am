@@ -1,5 +1,8 @@
 nm_plugin_LTLIBRARIES = libnm-vpn-plugin-strongswan.la
+
+if WITH_LIBNM_GLIB
 nm_plugin_LTLIBRARIES += libnm-strongswan-properties.la
+endif
 
 libnm_vpn_plugin_strongswan_la_SOURCES = \
 	nm-strongswan.c \
