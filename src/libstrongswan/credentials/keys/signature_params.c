@@ -280,10 +280,14 @@ bool rsa_pss_params_parse(chunk_t asn1, int level0, rsa_pss_params_t *params)
 			case RSASSA_PSS_PARAMS_MGF_ALG:
 				if (object.len)
 				{
-					chunk_t hash;
+					chunk_t hash = chunk_empty;
 
 					alg = asn1_parse_algorithmIdentifier(object, level, &hash);
 					if (alg != OID_MGF1)
+					{
+						goto end;
+					}
+					if (!hash.len)
 					{
 						goto end;
 					}
