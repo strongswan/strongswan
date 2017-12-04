@@ -292,6 +292,7 @@
               0x01           "authorityInfoAccess"		OID_AUTHORITY_INFO_ACCESS
               0x03           "qcStatements"
               0x07           "ipAddrBlocks"				OID_IP_ADDR_BLOCKS
+              0x18           "tlsfeature"
             0x02             "id-qt"
               0x01           "cps"						OID_POLICY_QUALIFIER_CPS
               0x02           "unotice"					OID_POLICY_QUALIFIER_UNOTICE
