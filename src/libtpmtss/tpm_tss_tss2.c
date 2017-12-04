@@ -150,13 +150,54 @@ static bool is_supported_alg(private_tpm_tss_tss2_t *this, TPM_ALG_ID alg_id)
 static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 {
 	TPMS_CAPABILITY_DATA cap_data;
+	TPMS_TAGGED_PROPERTY tp;
 	TPMI_YES_NO more_data;
 	TPM_ALG_ID alg;
-	uint32_t rval, i;
+	uint32_t rval, i, offset, revision = 0, year = 0;
 	size_t len = BUF_LEN;
-	char buf[BUF_LEN];
+	char buf[BUF_LEN], manufacturer[5], vendor_string[17];
 	char *pos = buf;
 	int written;
+
+	/* get fixed properties */
+	rval = Tss2_Sys_GetCapability(this->sys_context, 0, TPM_CAP_TPM_PROPERTIES,
+						PT_FIXED, MAX_TPM_PROPERTIES, &more_data, &cap_data, 0);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s GetCapability failed for TPM_CAP_TPM_PROPERTIES: 0x%06x",
+					   LABEL, rval);
+	}
+	memset(manufacturer,  '\0', sizeof(manufacturer));
+	memset(vendor_string, '\0', sizeof(vendor_string));
+
+	/* print fixed properties */
+	for (i = 0; i < cap_data.data.tpmProperties.count; i++)
+	{
+		tp = cap_data.data.tpmProperties.tpmProperty[i];
+		switch (tp.property)
+		{
+			case TPM_PT_REVISION:
+				revision = tp.value;
+				break;
+			case TPM_PT_YEAR:
+				year = tp.value;
+				break;
+			case TPM_PT_MANUFACTURER:
+				htoun32(manufacturer, tp.value);
+				break;
+			case TPM_PT_VENDOR_STRING_1:
+			case TPM_PT_VENDOR_STRING_2:
+			case TPM_PT_VENDOR_STRING_3:
+			case TPM_PT_VENDOR_STRING_4:
+				offset = 4 * (tp.property - TPM_PT_VENDOR_STRING_1);
+				htoun32(vendor_string + offset, tp.value);
+				break;
+			default:
+				break;
+		}
+	}
+	DBG2(DBG_PTS, "%s manufacturer: %s (%s) rev: %05.2f %u", LABEL, manufacturer,
+		 vendor_string, (float)revision/100, year);
 
 	/* get supported algorithms */
 	rval = Tss2_Sys_GetCapability(this->sys_context, 0, TPM_CAP_ALGS,
