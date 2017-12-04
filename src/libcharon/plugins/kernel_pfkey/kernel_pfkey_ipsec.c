@@ -1752,13 +1752,13 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 #ifdef SADB_X_EXT_SA_REPLAY
 	if (data->inbound)
 	{
-		struct sadb_x_sa_replay *replay;
+		struct sadb_x_sa_replay *repl;
 
-		replay = (struct sadb_x_sa_replay*)PFKEY_EXT_ADD_NEXT(msg);
-		replay->sadb_x_replay_exttype = SADB_X_EXT_SA_REPLAY;
-		replay->sadb_x_replay_len = PFKEY_LEN(sizeof(struct sadb_x_sa_replay));
-		replay->sadb_x_replay_replay = min(data->replay_window, UINT32_MAX-32);
-		PFKEY_EXT_ADD(msg, replay);
+		repl = (struct sadb_x_sa_replay*)PFKEY_EXT_ADD_NEXT(msg);
+		repl->sadb_x_sa_replay_exttype = SADB_X_EXT_SA_REPLAY;
+		repl->sadb_x_sa_replay_len = PFKEY_LEN(sizeof(struct sadb_x_sa_replay));
+		repl->sadb_x_sa_replay_replay = min(data->replay_window, UINT32_MAX-32);
+		PFKEY_EXT_ADD(msg, repl);
 	}
 #endif
 
