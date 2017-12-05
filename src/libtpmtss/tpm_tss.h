@@ -144,6 +144,18 @@ struct tpm_tss_t {
 	bool (*get_random)(tpm_tss_t *this, size_t bytes, uint8_t *buffer);
 
 	/**
+	 * Get a data blob from TPM NV store using its object handle (TPM 2.0 only)
+	 *
+	 * @param handle		object handle of TPM key to be used for signature
+	 * @param hierarchy		hierarchy the TPM key object is attached to
+	 * @param pin			PIN code or empty chunk
+	 * @param data			returns data blob
+	 * @return				TRUE if data retrieval succeeded
+	 */
+	bool (*get_data)(tpm_tss_t *this, uint32_t hierarchy, uint32_t handle,
+					 chunk_t pin, chunk_t *data);
+
+	/**
 	 * Destroy a tpm_tss_t.
 	 */
 	void (*destroy)(tpm_tss_t *this);

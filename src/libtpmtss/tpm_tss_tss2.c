@@ -954,6 +954,78 @@ METHOD(tpm_tss_t, get_random, bool,
 	return TRUE;
 }
 
+METHOD(tpm_tss_t, get_data, bool,
+	private_tpm_tss_tss2_t *this, uint32_t hierarchy, uint32_t handle,
+	chunk_t pin, chunk_t *data)
+{
+	uint16_t nv_size, nv_offset = 0;
+	uint32_t rval;
+
+	TPM2B_NAME nv_name = { { sizeof(TPM2B_NAME)-2, } };
+	TPM2B_NV_PUBLIC nv_public = { { 0, } };
+	TPM2B_MAX_NV_BUFFER nv_data = { { sizeof(TPM2B_MAX_NV_BUFFER)-2, } };
+	TPMS_AUTH_COMMAND  session_data_cmd;
+	TPMS_AUTH_RESPONSE session_data_rsp;
+	TSS2_SYS_CMD_AUTHS sessions_data_cmd;
+	TSS2_SYS_RSP_AUTHS sessions_data_rsp;
+	TPMS_AUTH_COMMAND  *session_data_cmd_array[1];
+	TPMS_AUTH_RESPONSE *session_data_rsp_array[1];
+
+	/* get size of NV object */
+	rval = Tss2_Sys_NV_ReadPublic(this->sys_context, handle, 0, &nv_public,
+																&nv_name, 0);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS,"%s Tss2_Sys_NV_ReadPublic failed: 0x%06x", LABEL, rval);
+		return FALSE;
+	}
+	nv_size = nv_public.t.nvPublic.dataSize;
+	*data = chunk_alloc(nv_size);
+
+	/*prepare NV read session */
+	session_data_cmd_array[0] = &session_data_cmd;
+	session_data_rsp_array[0] = &session_data_rsp;
+
+	sessions_data_cmd.cmdAuths = &session_data_cmd_array[0];
+	sessions_data_rsp.rspAuths = &session_data_rsp_array[0];
+
+	sessions_data_cmd.cmdAuthsCount = 1;
+	sessions_data_rsp.rspAuthsCount = 1;
+
+	session_data_cmd.sessionHandle = TPM_RS_PW;
+	session_data_cmd.nonce.t.size = 0;
+	session_data_cmd.hmac.t.size = 0;
+
+	if (pin.len > 0)
+	{
+		session_data_cmd.hmac.t.size = min(sizeof(session_data_cmd.hmac.t) - 2,
+										   pin.len);
+		memcpy(session_data_cmd.hmac.t.buffer, pin.ptr,
+			   session_data_cmd.hmac.t.size);
+	}
+	*( (uint8_t *)((void *)&session_data_cmd.sessionAttributes ) ) = 0;
+
+	/* read NV data an NV buffer block at a time */
+	while (nv_size > 0)
+	{
+		rval = Tss2_Sys_NV_Read(this->sys_context, hierarchy, handle,
+					&sessions_data_cmd, min(nv_size, MAX_NV_BUFFER_SIZE),
+					nv_offset, &nv_data, &sessions_data_rsp);
+
+		if (rval != TPM_RC_SUCCESS)
+		{
+			DBG1(DBG_PTS,"%s Tss2_Sys_NV_Read failed: 0x%06x", LABEL, rval);
+			chunk_free(data);
+			return FALSE;
+		}
+		memcpy(data->ptr + nv_offset, nv_data.t.buffer, nv_data.t.size);
+		nv_offset += nv_data.t.size;
+		nv_size   -= nv_data.t.size;
+	}
+
+	return TRUE;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_tss2_t *this)
 {
@@ -980,6 +1052,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 			.quote = _quote,
 			.sign = _sign,
 			.get_random = _get_random,
+			.get_data = _get_data,
 			.destroy = _destroy,
 		},
 	);
