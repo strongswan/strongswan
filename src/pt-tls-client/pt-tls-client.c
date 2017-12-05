@@ -42,7 +42,7 @@ static void usage(FILE *out)
 {
 	fprintf(out,
 		"Usage: pt-tls  --connect <hostname|address> [--port <port>]\n"
-		"              [--cert <file>]+ [--keyid <hex>|--key <file>]\n"
+		"              [--certid <hex>|--cert <file>]+ [--keyid <hex>|--key <file>]\n"
 		"              [--key-type rsa|ecdsa] [--client <client-id>]\n"
 		"              [--secret <password>] [--mutual] [--quiet]\n"
 		"              [--debug <level>] [--options <filename>]\n");
@@ -104,15 +104,26 @@ static mem_cred_t *creds;
 /**
  * Load certificate from file
  */
-static bool load_certificate(char *filename)
+static bool load_certificate(char *certid, char *filename)
 {
 	certificate_t *cert;
+	chunk_t chunk;
 
-	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							  BUILD_FROM_FILE, filename, BUILD_END);
+	if (certid)
+	{
+		chunk = chunk_from_hex(chunk_create(certid, strlen(certid)), NULL);
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_PKCS11_KEYID, chunk, BUILD_END);
+	}
+	else
+	{
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, filename, BUILD_END);
+	}
 	if (!cert)
 	{
-		DBG1(DBG_TLS, "loading certificate from '%s' failed", filename);
+		DBG1(DBG_TLS, "loading certificate from '%s' failed",
+					   certid ? certid : filename);
 		return FALSE;
 	}
 	creds->add_cert(creds, TRUE, cert);
@@ -282,6 +293,7 @@ int main(int argc, char *argv[])
 			{"client",		required_argument,		NULL,		'i' },
 			{"secret",		required_argument,		NULL,		's' },
 			{"port",		required_argument,		NULL,		'p' },
+			{"certid",		required_argument,		NULL,		'X' },
 			{"cert",		required_argument,		NULL,		'x' },
 			{"keyid",		required_argument,		NULL,		'K' },
 			{"key",			required_argument,		NULL,		'k' },
@@ -301,8 +313,14 @@ int main(int argc, char *argv[])
 			case 'h':			/* --help */
 				usage(stdout);
 				return 0;
+			case 'X':			/* --certid <hex> */
+				if (!load_certificate(optarg, NULL))
+				{
+					return 1;
+				}
+				continue;
 			case 'x':			/* --cert <file> */
-				if (!load_certificate(optarg))
+				if (!load_certificate(NULL, optarg))
 				{
 					return 1;
 				}

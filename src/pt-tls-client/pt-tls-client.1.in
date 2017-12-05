@@ -10,7 +10,8 @@ pt-tls-client \- Simple client using PT-TLS to collect integrity information
 .BI \-\-connect
 .IR hostname |\fIaddress
 .OP \-\-port hex
-.RB [ \-\-cert
+.RB [ \-\-certid
+.IR hex |\fB\-\-cert
 .IR file ]+
 .RB [ \-\-keyid
 .IR hex |\fB\-\-key
@@ -64,6 +65,10 @@ Set the port of the PT-TLS server, default: 271.
 Set the path to an X.509 certificate file. This option can be repeated to load
 multiple client and CA certificates.
 .TP
+.BI "\-X, \-\-certid " hex
+Set the handle of the certificate stored in a smartcard or a TPM 2.0 Trusted
+Platform Module.
+.TP
 .BI "\-k, \-\-key " file
 Set the path to the client's PKCS#1 or PKCS#8 private key file
 .TP
@@ -71,7 +76,7 @@ Set the path to the client's PKCS#1 or PKCS#8 private key file
 Define the type of the private key if stored in PKCS#1 format. Can be omitted
 with PKCS#8 keys.
 .TP
-.BI "\-x, \-\-keyid " hex
+.BI "\-K, \-\-keyid " hex
 Set the keyid of the private key stored in a smartcard or a TPM 2.0 Trusted
 Platform Module.
 .TP
