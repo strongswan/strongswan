@@ -1,3 +1,10 @@
+strongswan-5.6.2
+----------------
+
+- Access X.509 certificates held in non-volatile storage of a TPM 2.0
+  referenced via the NV index.
+
+
 strongswan-5.6.1
 ----------------
 
