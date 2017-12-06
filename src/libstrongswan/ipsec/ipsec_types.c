@@ -104,7 +104,10 @@ bool mark_from_string(const char *value, mark_t *mark)
 	{
 		mark->mask = 0xffffffff;
 	}
-	/* apply the mask to ensure the value is in range */
-	mark->value &= mark->mask;
+	if (!MARK_IS_UNIQUE(mark->value))
+	{
+		/* apply the mask to ensure the value is in range */
+		mark->value &= mark->mask;
+	}
 	return TRUE;
 }
