@@ -239,9 +239,10 @@ static void add_default_pwd_enabled(imc_msg_t *msg)
 static void add_device_id(imc_msg_t *msg)
 {
 	pa_tnc_attr_t *attr;
-	chunk_t value = chunk_empty, keyid;
-	char *name, *device_id, *cert_path;
+	chunk_t chunk, value = chunk_empty, keyid;
+	char *name, *device_id, *device_handle, *cert_path;
 	certificate_t *cert = NULL;
+	private_key_t *privkey = NULL;
 	public_key_t *pubkey;
 
 	/* Get the device ID as a character string */
@@ -250,6 +251,32 @@ static void add_device_id(imc_msg_t *msg)
 	if (device_id)
 	{
 		value = chunk_clone(chunk_from_str(device_id));
+	}
+
+	if (value.len == 0)
+	{
+		/* Derive the device ID from a private key bound to a smartcard or TPM */
+		device_handle = lib->settings->get_str(lib->settings,
+						"%s.plugins.imc-os.device_handle", NULL, lib->ns);
+		if (device_handle)
+		{
+			chunk = chunk_from_hex(
+					chunk_create(device_handle, strlen(device_handle)), NULL);
+			privkey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+										 BUILD_PKCS11_KEYID, chunk, BUILD_END);
+			free(chunk.ptr);
+
+			if (privkey)
+			{
+				if (privkey->get_fingerprint(privkey, KEYID_PUBKEY_INFO_SHA1,
+											 &keyid))
+				{
+					value = chunk_to_hex(keyid, NULL, FALSE);
+				}
+				privkey->destroy(privkey);
+
+			}
+		}
 	}
 
 	if (value.len == 0)
