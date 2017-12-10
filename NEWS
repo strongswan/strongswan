@@ -4,6 +4,9 @@ strongswan-5.6.2
 - Access X.509 certificates held in non-volatile storage of a TPM 2.0
   referenced via the NV index.
 
+- Adding the --keyid parameter to pki --print allows to print private keys
+  or certificates stored in a smartcard or a TPM 2.0.
+
 
 strongswan-5.6.1
 ----------------
