@@ -2333,7 +2333,9 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 
 	if (ip->get_family(ip) == AF_INET6)
 	{
+#ifdef IFA_F_NODAD
 		msg->ifa_flags |= IFA_F_NODAD;
+#endif
 		if (this->rta_prefsrc_for_ipv6)
 		{
 			/* if source routes are possible we let the virtual IP get
