@@ -604,8 +604,93 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 	private_tpm_tss_tss2_t *this, uint32_t pcr_num, chunk_t *pcr_value,
 	chunk_t data, hash_algorithm_t alg)
 {
-	/* TODO */
-	return FALSE;
+	uint32_t rval;
+	TPM_ALG_ID alg_id;
+	TPML_DIGEST_VALUES digest_values;
+	TPMS_AUTH_COMMAND  session_data_cmd;
+	TPMS_AUTH_RESPONSE session_data_rsp;
+	TSS2_SYS_CMD_AUTHS sessions_data_cmd;
+	TSS2_SYS_RSP_AUTHS sessions_data_rsp;
+	TPMS_AUTH_COMMAND  *session_data_cmd_array[1];
+	TPMS_AUTH_RESPONSE *session_data_rsp_array[1];
+
+	session_data_cmd_array[0] = &session_data_cmd;
+	session_data_rsp_array[0] = &session_data_rsp;
+
+	sessions_data_cmd.cmdAuths = &session_data_cmd_array[0];
+	sessions_data_rsp.rspAuths = &session_data_rsp_array[0];
+
+	sessions_data_cmd.cmdAuthsCount = 1;
+	sessions_data_rsp.rspAuthsCount = 1;
+
+	session_data_cmd.sessionHandle = TPM_RS_PW;
+	session_data_cmd.hmac.t.size = 0;
+	session_data_cmd.nonce.t.size = 0;
+
+	*( (uint8_t *)((void *)&session_data_cmd.sessionAttributes ) ) = 0;
+
+	/* check if hash algorithm is supported by TPM */
+	alg_id = hash_alg_to_tpm_alg_id(alg);
+	if (!is_supported_alg(this, alg_id))
+	{
+		DBG1(DBG_PTS, "%s %N hash algorithm not supported by TPM",
+			 LABEL, hash_algorithm_short_names, alg);
+		return FALSE;
+	}
+
+	digest_values.count = 1;
+	digest_values.digests[0].hashAlg = alg_id;
+
+	switch (alg)
+	{
+		case HASH_SHA1:
+			if (data.len != HASH_SIZE_SHA1)
+			{
+				return FALSE;
+			}
+			memcpy(digest_values.digests[0].digest.sha1, data.ptr,
+				   HASH_SIZE_SHA1);
+			break;
+		case HASH_SHA256:
+			if (data.len != HASH_SIZE_SHA256)
+			{
+				return FALSE;
+			}
+			memcpy(digest_values.digests[0].digest.sha256, data.ptr,
+				    HASH_SIZE_SHA256);
+			break;
+		case HASH_SHA384:
+			if (data.len != HASH_SIZE_SHA384)
+			{
+				return FALSE;
+			}
+			memcpy(digest_values.digests[0].digest.sha384, data.ptr,
+				    HASH_SIZE_SHA384);
+			break;
+		case HASH_SHA512:
+			if (data.len != HASH_SIZE_SHA512)
+			{
+				return FALSE;
+			}
+			memcpy(digest_values.digests[0].digest.sha512, data.ptr,
+				    HASH_SIZE_SHA512);
+			break;
+		default:
+			return FALSE;
+	}
+
+	/* extend PCR */
+	rval = Tss2_Sys_PCR_Extend(this->sys_context, pcr_num, &sessions_data_cmd,
+							   &digest_values, &sessions_data_rsp);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s PCR %02u could not be extended: 0x%06x",
+			 LABEL, pcr_num, rval);
+		return FALSE;
+	}
+
+	/* get updated PCR value */
+	return read_pcr(this, pcr_num, pcr_value, alg);
 }
 
 METHOD(tpm_tss_t, quote, bool,

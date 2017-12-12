@@ -1991,6 +1991,7 @@ AC_CONFIG_FILES([
 	src/_copyright/Makefile
 	src/scepclient/Makefile
 	src/aikgen/Makefile
+	src/tpm_extendpcr/Makefile
 	src/pki/Makefile
 	src/pki/man/Makefile
 	src/pool/Makefile
