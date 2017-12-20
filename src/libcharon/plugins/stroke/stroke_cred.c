@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -1131,7 +1131,6 @@ static bool load_shared(mem_cred_t *secrets, chunk_t line, int line_nr,
 	shared_key_t *shared_key;
 	linked_list_t *owners;
 	chunk_t secret = chunk_empty;
-	bool any = TRUE;
 
 	err_t ugh = extract_secret(&secret, &line);
 	if (ugh != NULL)
@@ -1148,7 +1147,6 @@ static bool load_shared(mem_cred_t *secrets, chunk_t line, int line_nr,
 	while (ids.len > 0)
 	{
 		chunk_t id;
-		identification_t *peer_id;
 
 		ugh = extract_value(&id, &ids);
 		if (ugh != NULL)
@@ -1165,17 +1163,9 @@ static bool load_shared(mem_cred_t *secrets, chunk_t line, int line_nr,
 
 		/* NULL terminate the ID string */
 		*(id.ptr + id.len) = '\0';
-		peer_id = identification_create_from_string(id.ptr);
-		if (peer_id->get_type(peer_id) == ID_ANY)
-		{
-			peer_id->destroy(peer_id);
-			continue;
-		}
-
-		owners->insert_last(owners, peer_id);
-		any = FALSE;
+		owners->insert_last(owners, identification_create_from_string(id.ptr));
 	}
-	if (any)
+	if (!owners->get_count(owners))
 	{
 		owners->insert_last(owners,
 					identification_create_from_encoding(ID_ANY, chunk_empty));
