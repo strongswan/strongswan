@@ -55,7 +55,7 @@ struct nm_backend_t {
 static nm_backend_t *nm_backend = NULL;
 
 /**
- * NM plugin processing routine, creates and handles NMVPNPlugin
+ * NM plugin processing routine, creates and handles NMVpnServicePlugin
  */
 static job_requeue_t run(nm_backend_t *this)
 {
