@@ -2561,6 +2561,12 @@ METHOD(ike_sa_t, roam, status_t,
 			break;
 	}
 
+	if (!this->ike_cfg)
+	{	/* this is the case for new HA SAs not yet in state IKE_PASSIVE and
+		 * without config assigned */
+		return SUCCESS;
+	}
+
 	/* ignore roam events if MOBIKE is not supported/enabled and the local
 	 * address is statically configured */
 	if (this->version == IKEV2 && !supports_extension(this, EXT_MOBIKE) &&
