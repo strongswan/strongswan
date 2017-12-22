@@ -50,7 +50,7 @@ execute()
 # $1 - command to execute
 execute_chroot()
 {
-	execute "chroot $LOOPDIR $@"
+	execute "chroot $LOOPDIR env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin $@"
 }
 
 # write green status message to console
