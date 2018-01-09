@@ -166,6 +166,7 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 	{
 		DBG1(DBG_PTS, "%s GetCapability failed for TPM_CAP_TPM_PROPERTIES: 0x%06x",
 					   LABEL, rval);
+		return FALSE;
 	}
 	memset(manufacturer,  '\0', sizeof(manufacturer));
 	memset(vendor_string, '\0', sizeof(vendor_string));
@@ -474,6 +475,7 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			{
 				DBG1(DBG_PTS, "%s subjectPublicKeyInfo encoding of AIK key "
 							  "failed", LABEL);
+				return chunk_empty;
 			}
 			break;
 		}
