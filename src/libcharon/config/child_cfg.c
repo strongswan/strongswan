@@ -224,6 +224,10 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 	while (prefer_enum->enumerate(prefer_enum, &proposal))
 	{
 		proposal = proposal->clone(proposal);
+		if (strip_dh)
+		{
+			proposal->strip_dh(proposal, MODP_NONE);
+		}
 		if (prefer_self)
 		{
 			proposals->reset_enumerator(proposals, match_enum);
@@ -234,11 +238,13 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 		}
 		while (match_enum->enumerate(match_enum, &match))
 		{
+			match = match->clone(match);
 			if (strip_dh)
 			{
-				proposal->strip_dh(proposal, MODP_NONE);
+				match->strip_dh(match, MODP_NONE);
 			}
 			selected = proposal->select(proposal, match, prefer_self, private);
+			match->destroy(match);
 			if (selected)
 			{
 				DBG2(DBG_CFG, "received proposals: %#P", proposals);
