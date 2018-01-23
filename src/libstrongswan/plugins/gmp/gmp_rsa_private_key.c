@@ -936,7 +936,12 @@ static bool calculate_pq(private_gmp_rsa_private_key_t *this)
 	bool success = FALSE;
 
 	gmp_randinit_default(rstate);
-	mpz_inits(k, r, g, y, n1, x, NULL);
+	mpz_init(k);
+	mpz_init(r);
+	mpz_init(g);
+	mpz_init(y);
+	mpz_init(n1);
+	mpz_init(x);
 	/* k = (d * e) - 1 */
 	mpz_mul(k, *this->d, this->e);
 	mpz_sub_ui(k, k, 1);
@@ -956,7 +961,7 @@ static bool calculate_pq(private_gmp_rsa_private_key_t *this)
 	{	/* generate random integer g in [0, n-1] */
 		mpz_urandomm(g, rstate, this->n);
 		/* y = g^r mod n */
-		mpz_powm_sec(y, g, r, this->n);
+		mpz_powm(y, g, r, this->n);
 		/* try again if y == 1 or y == n-1 */
 		if (mpz_cmp_ui(y, 1) == 0 || mpz_cmp(y, n1) == 0)
 		{
