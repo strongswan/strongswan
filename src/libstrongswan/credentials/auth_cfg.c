@@ -73,9 +73,6 @@ static inline bool is_multi_value_rule(auth_rule_t type)
 		case AUTH_RULE_AUTH_CLASS:
 		case AUTH_RULE_EAP_TYPE:
 		case AUTH_RULE_EAP_VENDOR:
-		case AUTH_RULE_RSA_STRENGTH:
-		case AUTH_RULE_ECDSA_STRENGTH:
-		case AUTH_RULE_BLISS_STRENGTH:
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_IDENTITY_LOOSE:
 		case AUTH_RULE_EAP_IDENTITY:
@@ -94,6 +91,9 @@ static inline bool is_multi_value_rule(auth_rule_t type)
 		case AUTH_RULE_CA_CERT:
 		case AUTH_RULE_IM_CERT:
 		case AUTH_RULE_CERT_POLICY:
+		case AUTH_RULE_RSA_STRENGTH:
+		case AUTH_RULE_ECDSA_STRENGTH:
+		case AUTH_RULE_BLISS_STRENGTH:
 		case AUTH_RULE_SIGNATURE_SCHEME:
 		case AUTH_RULE_IKE_SIGNATURE_SCHEME:
 		case AUTH_HELPER_IM_CERT:
