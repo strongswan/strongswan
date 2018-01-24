@@ -444,7 +444,7 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 	enumerator_t *enumerator;
 	time_t revocation;
 	crl_reason_t reason;
-	chunk_t serial;
+	chunk_t subject_serial, serial;
 	crl_t *crl = (crl_t*)cand;
 
 	if (base)
@@ -473,10 +473,11 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 		return best;
 	}
 
+	subject_serial = chunk_skip_zero(subject->get_serial(subject));
 	enumerator = crl->create_enumerator(crl);
 	while (enumerator->enumerate(enumerator, &serial, &revocation, &reason))
 	{
-		if (chunk_equals(serial, subject->get_serial(subject)))
+		if (chunk_equals(subject_serial, chunk_skip_zero(serial)))
 		{
 			if (reason != CRL_REASON_CERTIFICATE_HOLD)
 			{
