@@ -348,7 +348,14 @@ METHOD(radius_socket_t, decrypt_msk, chunk_t,
 	enumerator->destroy(enumerator);
 	if (send.ptr && recv.ptr)
 	{
-		return chunk_cat("mm", recv, send);
+		chunk_t pad = chunk_empty;
+
+		if ((send.len + recv.len) < 64)
+		{	/* zero-pad MSK to at least 64 bytes */
+			pad = chunk_alloca(64 - send.len - recv.len);
+			memset(pad.ptr, 0, pad.len);
+		}
+		return chunk_cat("mmc", recv, send, pad);
 	}
 	chunk_clear(&send);
 	chunk_clear(&recv);
