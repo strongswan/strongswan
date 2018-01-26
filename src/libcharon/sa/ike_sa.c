@@ -734,8 +734,11 @@ METHOD(ike_sa_t, set_condition, void,
 			switch (condition)
 			{
 				case COND_NAT_HERE:
-				case COND_NAT_FAKE:
 				case COND_NAT_THERE:
+					DBG1(DBG_IKE, "%s host is not behind NAT anymore",
+						 condition == COND_NAT_HERE ? "local" : "remote");
+					/* fall-through */
+				case COND_NAT_FAKE:
 					set_condition(this, COND_NAT_ANY,
 								  has_condition(this, COND_NAT_HERE) ||
 								  has_condition(this, COND_NAT_THERE) ||
