@@ -232,11 +232,6 @@ struct private_ike_sa_t {
 	chunk_t nat_detection_dest;
 
 	/**
-	 * number pending UPDATE_SA_ADDRESS (MOBIKE)
-	 */
-	uint32_t pending_updates;
-
-	/**
 	 * NAT keep alive interval
 	 */
 	uint32_t keepalive_interval;
@@ -1053,18 +1048,6 @@ METHOD(ike_sa_t, has_mapping_changed, bool,
 	free(this->nat_detection_dest.ptr);
 	this->nat_detection_dest = chunk_clone(hash);
 	return TRUE;
-}
-
-METHOD(ike_sa_t, set_pending_updates, void,
-	private_ike_sa_t *this, uint32_t updates)
-{
-	this->pending_updates = updates;
-}
-
-METHOD(ike_sa_t, get_pending_updates, uint32_t,
-	private_ike_sa_t *this)
-{
-	return this->pending_updates;
 }
 
 METHOD(ike_sa_t, float_ports, void,
@@ -2973,8 +2956,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.supports_extension = _supports_extension,
 			.set_condition = _set_condition,
 			.has_condition = _has_condition,
-			.set_pending_updates = _set_pending_updates,
-			.get_pending_updates = _get_pending_updates,
 			.create_peer_address_enumerator = _create_peer_address_enumerator,
 			.add_peer_address = _add_peer_address,
 			.clear_peer_addresses = _clear_peer_addresses,
