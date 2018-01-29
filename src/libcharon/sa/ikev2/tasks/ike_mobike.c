@@ -627,7 +627,7 @@ METHOD(ike_mobike_t, roam, void,
 	   private_ike_mobike_t *this, bool address)
 {
 	this->check = TRUE;
-	this->address = address;
+	this->address |= address;
 	if (!this->pending_update)
 	{
 		this->pending_update = TRUE;
