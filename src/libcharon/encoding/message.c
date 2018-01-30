@@ -657,6 +657,7 @@ static payload_rule_t quick_mode_i_rules[] = {
 	{PLV1_ID,						0,	2,						TRUE,	FALSE},
 	{PLV1_NAT_OA,					0,	2,						TRUE,	FALSE},
 	{PLV1_NAT_OA_DRAFT_00_03,		0,	2,						TRUE,	FALSE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 };
 
 /**
@@ -673,6 +674,7 @@ static payload_order_t quick_mode_i_order[] = {
 	{PLV1_ID,						0},
 	{PLV1_NAT_OA,					0},
 	{PLV1_NAT_OA_DRAFT_00_03,		0},
+	{PLV1_FRAGMENT,					0},
 };
 
 /**
@@ -689,6 +691,7 @@ static payload_rule_t quick_mode_r_rules[] = {
 	{PLV1_ID,						0,	2,						TRUE,	FALSE},
 	{PLV1_NAT_OA,					0,	2,						TRUE,	FALSE},
 	{PLV1_NAT_OA_DRAFT_00_03,		0,	2,						TRUE,	FALSE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 };
 
 /**
@@ -705,6 +708,7 @@ static payload_order_t quick_mode_r_order[] = {
 	{PLV1_ID,						0},
 	{PLV1_NAT_OA,					0},
 	{PLV1_NAT_OA_DRAFT_00_03,		0},
+	{PLV1_FRAGMENT,					0},
 };
 
 /**
