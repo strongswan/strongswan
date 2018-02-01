@@ -776,8 +776,10 @@ do
 	do
 		eval HOSTLOGIN=root@\$ipv4_${host}
 		IPSECSTATE=`ssh $SSHCONF $HOSTLOGIN 'ip xfrm state'`
+		# ignore IPv4/v6 states created with IPComp SAs
+		IPSECSTATEISSUE=`echo "$IPSECSTATE" | grep 'proto.*spi' | grep -v 'proto 4'`
 		IPSECPOLICY=`ssh $SSHCONF $HOSTLOGIN 'ip xfrm policy'`
-		if [ -n "$IPSECSTATE" -o -n "$IPSECPOLICY" ]
+		if [ -n "$IPSECSTATEISSUE" -o -n "$IPSECPOLICY" ]
 		then
 			echo -e "\n$host# ip xfrm state [NO]" >> $CONSOLE_LOG
 			echo "$IPSECSTATE" >> $CONSOLE_LOG
