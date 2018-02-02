@@ -138,6 +138,8 @@ START_TEST(test_regular_ke_invalid)
 
 	lib->settings->set_bool(lib->settings, "%s.prefer_configured_proposals",
 							TRUE, lib->ns);
+	lib->settings->set_bool(lib->settings, "%s.prefer_previous_dh_group",
+							FALSE, lib->ns);
 
 	initiate_rekey(a);
 
@@ -382,6 +384,8 @@ START_TEST(test_collision_ke_invalid)
 
 	lib->settings->set_bool(lib->settings, "%s.prefer_configured_proposals",
 							TRUE, lib->ns);
+	lib->settings->set_bool(lib->settings, "%s.prefer_previous_dh_group",
+							FALSE, lib->ns);
 
 	/* Six nonces and SPIs are needed (SPI 1 and 2 are used for the initial
 	 * IKE_SA):
@@ -591,6 +595,8 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 
 	lib->settings->set_bool(lib->settings, "%s.prefer_configured_proposals",
 							TRUE, lib->ns);
+	lib->settings->set_bool(lib->settings, "%s.prefer_previous_dh_group",
+							FALSE, lib->ns);
 
 	/* Five nonces and SPIs are needed (SPI 1 and 2 are used for the initial
 	 * IKE_SA):

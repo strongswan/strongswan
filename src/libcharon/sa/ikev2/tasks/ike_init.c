@@ -534,7 +534,8 @@ METHOD(task_t, build_i, status_t,
 	/* if we are retrying after an INVALID_KE_PAYLOAD we already have one */
 	if (!this->dh)
 	{
-		if (this->old_sa)
+		if (this->old_sa && lib->settings->get_bool(lib->settings,
+								"%s.prefer_previous_dh_group", TRUE, lib->ns))
 		{	/* reuse the DH group we used for the old IKE_SA when rekeying */
 			proposal_t *proposal;
 			uint16_t dh_group;
