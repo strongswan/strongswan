@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -531,10 +531,29 @@ METHOD(task_t, build_i, status_t,
 		return FAILED;
 	}
 
-	/* if the DH group is set via use_dh_group(), we already have a DH object */
+	/* if we are retrying after an INVALID_KE_PAYLOAD we already have one */
 	if (!this->dh)
 	{
-		this->dh_group = this->config->get_dh_group(this->config);
+		if (this->old_sa)
+		{	/* reuse the DH group we used for the old IKE_SA when rekeying */
+			proposal_t *proposal;
+			uint16_t dh_group;
+
+			proposal = this->old_sa->get_proposal(this->old_sa);
+			if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+										&dh_group, NULL))
+			{
+				this->dh_group = dh_group;
+			}
+			else
+			{	/* this shouldn't happen, but let's be safe */
+				this->dh_group = this->config->get_dh_group(this->config);
+			}
+		}
+		else
+		{
+			this->dh_group = this->config->get_dh_group(this->config);
+		}
 		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
 												  this->dh_group);
 		if (!this->dh)
