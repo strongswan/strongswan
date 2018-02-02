@@ -544,6 +544,18 @@ METHOD(task_t, build_i, status_t,
 			return FAILED;
 		}
 	}
+	else if (this->dh->get_dh_group(this->dh) != this->dh_group)
+	{	/* reset DH instance if group changed (INVALID_KE_PAYLOAD) */
+		this->dh->destroy(this->dh);
+		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+												  this->dh_group);
+		if (!this->dh)
+		{
+			DBG1(DBG_IKE, "requested DH group %N not supported",
+				 diffie_hellman_group_names, this->dh_group);
+			return FAILED;
+		}
+	}
 
 	/* generate nonce only when we are trying the first time */
 	if (this->my_nonce.ptr == NULL)
@@ -929,12 +941,6 @@ METHOD(task_t, migrate, void,
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 	this->proposal = NULL;
 	this->dh_failed = FALSE;
-	if (this->dh && this->dh->get_dh_group(this->dh) != this->dh_group)
-	{	/* reset DH value only if group changed (INVALID_KE_PAYLOAD) */
-		this->dh->destroy(this->dh);
-		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
-												  this->dh_group);
-	}
 }
 
 METHOD(task_t, destroy, void,
