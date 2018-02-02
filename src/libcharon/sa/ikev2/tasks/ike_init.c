@@ -282,7 +282,7 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	sa_payload_t *sa_payload;
 	ke_payload_t *ke_payload;
 	nonce_payload_t *nonce_payload;
-	linked_list_t *proposal_list;
+	linked_list_t *proposal_list, *other_dh_groups;
 	ike_sa_id_t *id;
 	proposal_t *proposal;
 	enumerator_t *enumerator;
@@ -294,16 +294,31 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	if (this->initiator)
 	{
 		proposal_list = this->config->get_proposals(this->config);
-		if (this->old_sa)
+		other_dh_groups = linked_list_create();
+		enumerator = proposal_list->create_enumerator(proposal_list);
+		while (enumerator->enumerate(enumerator, (void**)&proposal))
 		{
 			/* include SPI of new IKE_SA when we are rekeying */
-			enumerator = proposal_list->create_enumerator(proposal_list);
-			while (enumerator->enumerate(enumerator, (void**)&proposal))
+			if (this->old_sa)
 			{
 				proposal->set_spi(proposal, id->get_initiator_spi(id));
 			}
-			enumerator->destroy(enumerator);
+			/* move the selected DH group to the front of the proposal */
+			if (!proposal->promote_dh_group(proposal, this->dh_group))
+			{	/* the proposal does not include the group, move to the back */
+				proposal_list->remove_at(proposal_list, enumerator);
+				other_dh_groups->insert_last(other_dh_groups, proposal);
+			}
 		}
+		enumerator->destroy(enumerator);
+		/* add proposals that don't contain the selected group */
+		enumerator = other_dh_groups->create_enumerator(other_dh_groups);
+		while (enumerator->enumerate(enumerator, (void**)&proposal))
+		{	/* no need to remove from the list as we destroy it anyway*/
+			proposal_list->insert_last(proposal_list, proposal);
+		}
+		enumerator->destroy(enumerator);
+		other_dh_groups->destroy(other_dh_groups);
 
 		sa_payload = sa_payload_create_from_proposals_v2(proposal_list);
 		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
