@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -1006,8 +1006,8 @@ METHOD(task_t, build_i, status_t,
 									chunk_empty);
 				return SUCCESS;
 			}
-			if (!this->retry)
-			{
+			if (!this->retry && this->dh_group == MODP_NONE)
+			{	/* during a rekeying the group might already be set */
 				this->dh_group = this->config->get_dh_group(this->config);
 			}
 			break;
@@ -1615,6 +1615,12 @@ METHOD(child_create_t, use_marks, void,
 	this->mark_out = out;
 }
 
+METHOD(child_create_t, use_dh_group, void,
+	private_child_create_t *this, diffie_hellman_group_t dh_group)
+{
+	this->dh_group = dh_group;
+}
+
 METHOD(child_create_t, get_child, child_sa_t*,
 	private_child_create_t *this)
 {
@@ -1736,6 +1742,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			.get_lower_nonce = _get_lower_nonce,
 			.use_reqid = _use_reqid,
 			.use_marks = _use_marks,
+			.use_dh_group = _use_dh_group,
 			.task = {
 				.get_type = _get_type,
 				.migrate = _migrate,
