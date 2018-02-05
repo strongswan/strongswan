@@ -758,8 +758,6 @@ static gboolean do_disconnect(gpointer plugin)
  */
 static gboolean disconnect(NMVpnServicePlugin *plugin, GError **err)
 {
-	NMStrongswanPluginPrivate *priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
-
 	/* enqueue the actual disconnection, because we may be called in
 	 * response to a listener_t callback and the SA enumeration would
 	 * possibly deadlock. */
