@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Tobias Brunner
+ * Copyright (C) 2006-2018 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -1249,17 +1249,6 @@ METHOD(child_sa_t, install_policies, status_t,
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
-			/* install outbound drop policy to avoid packets leaving unencrypted
-			 * when updating policies */
-			if (priority == POLICY_PRIORITY_DEFAULT && manual_prio == 0 &&
-				require_policy_update() && install_outbound)
-			{
-				status |= install_policies_outbound(this, this->my_addr,
-									this->other_addr, my_ts, other_ts,
-									&my_sa, &other_sa, POLICY_DROP,
-									POLICY_PRIORITY_FALLBACK, 0);
-			}
-
 			status |= install_policies_inbound(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
 									&my_sa, &other_sa, POLICY_IPSEC,
@@ -1350,15 +1339,6 @@ METHOD(child_sa_t, install_outbound, status_t,
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
-			/* install outbound drop policy to avoid packets leaving unencrypted
-			 * when updating policies */
-			if (manual_prio == 0 &&	require_policy_update())
-			{
-				status |= install_policies_outbound(this, this->my_addr,
-									this->other_addr, my_ts, other_ts,
-									&my_sa, &other_sa, POLICY_DROP,
-									POLICY_PRIORITY_FALLBACK, 0);
-			}
 			status |= install_policies_outbound(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
 									&my_sa, &other_sa, POLICY_IPSEC,
@@ -1407,12 +1387,6 @@ METHOD(child_sa_t, remove_outbound, void,
 								  my_ts, other_ts, &my_sa, &other_sa,
 								  POLICY_IPSEC, POLICY_PRIORITY_DEFAULT,
 								  manual_prio);
-			if (manual_prio == 0 && require_policy_update())
-			{
-				del_policies_outbound(this, this->my_addr, this->other_addr,
-									  my_ts, other_ts, &my_sa, &other_sa,
-									  POLICY_DROP, POLICY_PRIORITY_FALLBACK, 0);
-			}
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -1458,8 +1432,65 @@ CALLBACK(reinstall_vip, void,
 	}
 }
 
+/**
+ * Update addresses and encap state of IPsec SAs in the kernel
+ */
+static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
+						   bool encap)
+{
+	/* update our (initiator) SA */
+	if (this->my_spi)
+	{
+		kernel_ipsec_sa_id_t id = {
+			.src = this->other_addr,
+			.dst = this->my_addr,
+			.spi = this->my_spi,
+			.proto = proto_ike2ip(this->protocol),
+			.mark = mark_in_sa(this),
+		};
+		kernel_ipsec_update_sa_t sa = {
+			.cpi = this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
+			.new_src = other,
+			.new_dst = me,
+			.encap = this->encap,
+			.new_encap = encap,
+		};
+		if (charon->kernel->update_sa(charon->kernel, &id,
+									  &sa) == NOT_SUPPORTED)
+		{
+			return NOT_SUPPORTED;
+		}
+	}
+
+	/* update his (responder) SA */
+	if (this->other_spi)
+	{
+		kernel_ipsec_sa_id_t id = {
+			.src = this->my_addr,
+			.dst = this->other_addr,
+			.spi = this->other_spi,
+			.proto = proto_ike2ip(this->protocol),
+			.mark = this->mark_out,
+		};
+		kernel_ipsec_update_sa_t sa = {
+			.cpi = this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
+			.new_src = me,
+			.new_dst = other,
+			.encap = this->encap,
+			.new_encap = encap,
+		};
+		if (charon->kernel->update_sa(charon->kernel, &id,
+									  &sa) == NOT_SUPPORTED)
+		{
+			return NOT_SUPPORTED;
+		}
+	}
+	/* we currently ignore the actual return values above */
+	return SUCCESS;
+}
+
 METHOD(child_sa_t, update, status_t,
-	private_child_sa_t *this,  host_t *me, host_t *other, linked_list_t *vips,
+	private_child_sa_t *this, host_t *me, host_t *other, linked_list_t *vips,
 	bool encap)
 {
 	child_sa_state_t old;
@@ -1478,84 +1509,50 @@ METHOD(child_sa_t, update, status_t,
 						   this->config->has_option(this->config,
 													OPT_PROXY_MODE);
 
-	if (!transport_proxy_mode)
-	{
-		/* update our (initiator) SA */
-		if (this->my_spi)
-		{
-			kernel_ipsec_sa_id_t id = {
-				.src = this->other_addr,
-				.dst = this->my_addr,
-				.spi = this->my_spi,
-				.proto = proto_ike2ip(this->protocol),
-				.mark = mark_in_sa(this),
-			};
-			kernel_ipsec_update_sa_t sa = {
-				.cpi = this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
-				.new_src = other,
-				.new_dst = me,
-				.encap = this->encap,
-				.new_encap = encap,
-			};
-			if (charon->kernel->update_sa(charon->kernel, &id,
-										  &sa) == NOT_SUPPORTED)
-			{
-				set_state(this, old);
-				return NOT_SUPPORTED;
-			}
-		}
-
-		/* update his (responder) SA */
-		if (this->other_spi)
-		{
-			kernel_ipsec_sa_id_t id = {
-				.src = this->my_addr,
-				.dst = this->other_addr,
-				.spi = this->other_spi,
-				.proto = proto_ike2ip(this->protocol),
-				.mark = this->mark_out,
-			};
-			kernel_ipsec_update_sa_t sa = {
-				.cpi = this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
-				.new_src = me,
-				.new_dst = other,
-				.encap = this->encap,
-				.new_encap = encap,
-			};
-			if (charon->kernel->update_sa(charon->kernel, &id,
-										  &sa) == NOT_SUPPORTED)
-			{
-				set_state(this, old);
-				return NOT_SUPPORTED;
-			}
-		}
-	}
-
 	if (!this->config->has_option(this->config, OPT_NO_POLICIES) &&
 		require_policy_update())
 	{
-		if (!me->ip_equals(me, this->my_addr) ||
-			!other->ip_equals(other, this->other_addr))
+		ipsec_sa_cfg_t my_sa, other_sa;
+		enumerator_t *enumerator;
+		traffic_selector_t *my_ts, *other_ts;
+		uint32_t manual_prio;
+		status_t state;
+
+		prepare_sa_cfg(this, &my_sa, &other_sa);
+		manual_prio = this->config->get_manual_prio(this->config);
+
+		enumerator = create_policy_enumerator(this);
+		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
-			ipsec_sa_cfg_t my_sa, other_sa;
-			enumerator_t *enumerator;
-			traffic_selector_t *my_ts, *other_ts;
-			uint32_t manual_prio;
+			/* install drop policy to avoid traffic leaks, acquires etc. */
+			install_policies_outbound(this, this->my_addr, this->other_addr,
+						my_ts, other_ts, &my_sa, &other_sa, POLICY_DROP,
+						POLICY_PRIORITY_DEFAULT, manual_prio);
 
-			prepare_sa_cfg(this, &my_sa, &other_sa);
-			manual_prio = this->config->get_manual_prio(this->config);
+			/* remove old policies */
+			del_policies_internal(this, this->my_addr, this->other_addr,
+						my_ts, other_ts, &my_sa, &other_sa, POLICY_IPSEC,
+						POLICY_PRIORITY_DEFAULT, manual_prio);
+		}
+		enumerator->destroy(enumerator);
 
-			/* always use high priorities, as hosts getting updated are INSTALLED */
-			enumerator = create_policy_enumerator(this);
-			while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+		/* update the IPsec SAs */
+		state = update_sas(this, me, other, encap);
+
+		enumerator = create_policy_enumerator(this);
+		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
+		{
+			traffic_selector_t *old_my_ts = NULL, *old_other_ts = NULL;
+
+			/* reinstall the previous policies if we can't update the SAs */
+			if (state == NOT_SUPPORTED)
 			{
-				traffic_selector_t *old_my_ts = NULL, *old_other_ts = NULL;
-
-				/* remove old policies first */
-				del_policies_internal(this, this->my_addr, this->other_addr,
-							my_ts, other_ts, &my_sa, &other_sa, POLICY_IPSEC,
-							POLICY_PRIORITY_DEFAULT, manual_prio);
-
+				install_policies_internal(this, this->my_addr, this->other_addr,
+						my_ts, other_ts, &my_sa, &other_sa,
+						POLICY_IPSEC, POLICY_PRIORITY_DEFAULT, manual_prio);
+			}
+			else
+			{
 				/* check if we have to update a "dynamic" traffic selector */
 				if (!me->ip_equals(me, this->my_addr) &&
 					my_ts->is_host(my_ts, this->my_addr))
@@ -1578,23 +1575,32 @@ METHOD(child_sa_t, update, status_t,
 				install_policies_internal(this, me, other, my_ts, other_ts,
 										  &my_sa, &other_sa, POLICY_IPSEC,
 										  POLICY_PRIORITY_DEFAULT, manual_prio);
-
-				/* update fallback policies after the new policy is in place */
-				if (manual_prio == 0)
-				{
-					del_policies_outbound(this, this->my_addr, this->other_addr,
-										  old_my_ts ?: my_ts,
-										  old_other_ts ?: other_ts,
-										  &my_sa, &other_sa, POLICY_DROP,
-										  POLICY_PRIORITY_FALLBACK, 0);
-					install_policies_outbound(this, me, other, my_ts, other_ts,
-										  &my_sa, &other_sa, POLICY_DROP,
-										  POLICY_PRIORITY_FALLBACK, 0);
-				}
-				DESTROY_IF(old_my_ts);
-				DESTROY_IF(old_other_ts);
 			}
-			enumerator->destroy(enumerator);
+			/* remove the drop policy */
+			del_policies_outbound(this, this->my_addr, this->other_addr,
+								  old_my_ts ?: my_ts,
+								  old_other_ts ?: other_ts,
+								  &my_sa, &other_sa, POLICY_DROP,
+								  POLICY_PRIORITY_DEFAULT, 0);
+
+			DESTROY_IF(old_my_ts);
+			DESTROY_IF(old_other_ts);
+		}
+		enumerator->destroy(enumerator);
+
+		if (state == NOT_SUPPORTED)
+		{
+			set_state(this, old);
+			return NOT_SUPPORTED;
+		}
+
+	}
+	else if (!transport_proxy_mode)
+	{
+		if (update_sas(this, me, other, encap) == NOT_SUPPORTED)
+		{
+			set_state(this, old);
+			return NOT_SUPPORTED;
 		}
 	}
 
@@ -1655,13 +1661,6 @@ METHOD(child_sa_t, destroy, void,
 			del_policies_inbound(this, this->my_addr, this->other_addr,
 								 my_ts, other_ts, &my_sa, &other_sa,
 								 POLICY_IPSEC, priority, manual_prio);
-			if (!this->trap && manual_prio == 0 && require_policy_update() &&
-				del_outbound)
-			{
-				del_policies_outbound(this, this->my_addr, this->other_addr,
-									  my_ts, other_ts, &my_sa, &other_sa,
-									  POLICY_DROP, POLICY_PRIORITY_FALLBACK, 0);
-			}
 		}
 		enumerator->destroy(enumerator);
 	}
