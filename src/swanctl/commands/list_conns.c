@@ -84,8 +84,8 @@ CALLBACK(children_sn, int,
 {
 	hashtable_t *child;
 	char *mode, *interface, *priority;
-	char *rekey_time, *rekey_bytes, *rekey_packets;
-	bool no_time, no_bytes, no_packets, or = FALSE;
+	char *rekey_time, *rekey_bytes, *rekey_packets, *dpd_action, *dpd_delay;
+	bool no_time, no_bytes, no_packets, no_dpd, or = FALSE;
 	int ret;
 
 	child = hashtable_create(hashtable_hash_str, hashtable_equals_str, 1);
@@ -98,14 +98,18 @@ CALLBACK(children_sn, int,
 		rekey_time    = child->get(child, "rekey_time");
 		rekey_bytes   = child->get(child, "rekey_bytes");
 		rekey_packets = child->get(child, "rekey_packets");
+		dpd_action    = child->get(child, "dpd_action");
+		dpd_delay     = ike->get(ike, "dpd_delay");
+
 		no_time    = streq(rekey_time, "0");
 		no_bytes   = streq(rekey_bytes, "0");
 		no_packets = streq(rekey_packets, "0");
+		no_dpd     = streq(dpd_delay, "0");
 
 		if (strcaseeq(mode, "PASS") || strcaseeq(mode, "DROP") ||
 		   (no_time && no_bytes && no_packets))
 		{
-			printf("no rekeying\n");
+			printf("no rekeying");
 		}
 		else
 		{
@@ -124,8 +128,12 @@ CALLBACK(children_sn, int,
 			{
 				printf("%s %s packets", or ? " or" : "", rekey_packets);
 			}
-			printf("\n");
 		}
+		if (!no_dpd)
+		{
+			printf(", dpd action is %s", dpd_action);
+		}
+		printf("\n");
 
 		printf("    local:  %s\n", child->get(child, "local-ts"));
 		printf("    remote: %s\n", child->get(child, "remote-ts"));
@@ -153,7 +161,7 @@ CALLBACK(conn_sn, int,
 
 	if (streq(name, "children"))
 	{
-		return vici_parse_cb(res, children_sn, NULL, NULL, NULL);
+		return vici_parse_cb(res, children_sn, NULL, NULL, ike);
 	}
 	if (strpfx(name, "local") || strpfx(name, "remote"))
 	{
@@ -225,11 +233,17 @@ CALLBACK(conn_list, int,
 CALLBACK(conns, int,
 	void *null, vici_res_t *res, char *name)
 {
-	char *version, *reauth_time, *rekey_time;
+	int ret;
+	char *version, *reauth_time, *rekey_time, *dpd_delay;
+	hashtable_t *ike;
 
 	version     = vici_find_str(res, "", "%s.version", name);
-	reauth_time = vici_find_str(res, "", "%s.reauth_time", name);
-	rekey_time  = vici_find_str(res, "", "%s.rekey_time", name);
+	reauth_time = vici_find_str(res, "0", "%s.reauth_time", name);
+	rekey_time  = vici_find_str(res, "0", "%s.rekey_time", name);
+	dpd_delay   = vici_find_str(res, "0", "%s.dpd_delay", name);
+
+	ike = hashtable_create(hashtable_hash_str, hashtable_equals_str, 1);
+	free(ike->put(ike,"dpd_delay", strdup(dpd_delay)));
 
 	printf("%s: %s, ", name, version);
 	if (streq(version, "IKEv1"))
@@ -247,22 +261,26 @@ CALLBACK(conns, int,
 	{
 		printf("reauthentication every %ss", reauth_time);
 	}
-	if (streq(version, "IKEv1"))
-	{
-		printf("\n");
-	}
-	else
+	if (!streq(version, "IKEv1"))
 	{
 		if (streq(rekey_time, "0"))
 		{
-			printf(", no rekeying\n");
+			printf(", no rekeying");
 		}
 		else
 		{
-			printf(", rekeying every %ss\n", rekey_time);
+			printf(", rekeying every %ss", rekey_time);
 		}
 	}
-	return vici_parse_cb(res, conn_sn, NULL, conn_list, NULL);
+	if (!streq(dpd_delay, "0"))
+	{
+		printf(", dpd delay %ss", dpd_delay);
+	}
+	printf("\n");
+
+	ret = vici_parse_cb(res, conn_sn, NULL, conn_list, ike);
+	free_hashtable(ike);
+	return ret;
 }
 
 CALLBACK(list_cb, void,

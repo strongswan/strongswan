@@ -774,7 +774,7 @@ CALLBACK(list_conns, vici_message_t*,
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
 	char *ike, *str, *interface;
-	uint32_t manual_prio;
+	uint32_t manual_prio, dpd_delay, dpd_timeout;
 	linked_list_t *list;
 	traffic_selector_t *ts;
 	lifetime_cfg_t *lft;
@@ -825,6 +825,18 @@ CALLBACK(list_conns, vici_message_t*,
 		b->add_kv(b, "unique", "%N", unique_policy_names,
 			peer_cfg->get_unique_policy(peer_cfg));
 
+		dpd_delay = peer_cfg->get_dpd(peer_cfg);
+		if (dpd_delay)
+		{
+			b->add_kv(b, "dpd_delay", "%u", dpd_delay);
+		}
+
+		dpd_timeout = peer_cfg->get_dpd_timeout(peer_cfg);
+		if (dpd_timeout)
+		{
+			b->add_kv(b, "dpd_timeout", "%u", dpd_timeout);
+		}
+
 		build_auth_cfgs(peer_cfg, TRUE, b);
 		build_auth_cfgs(peer_cfg, FALSE, b);
 
@@ -842,6 +854,9 @@ CALLBACK(list_conns, vici_message_t*,
 			b->add_kv(b, "rekey_bytes",   "%"PRIu64, lft->bytes.rekey);
 			b->add_kv(b, "rekey_packets", "%"PRIu64, lft->packets.rekey);
 			free(lft);
+
+			b->add_kv(b, "dpd_action", "%N", action_names,
+				child_cfg->get_dpd_action(child_cfg));
 
 			b->begin_list(b, "local-ts");
 			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
