@@ -27,10 +27,13 @@ package body Esa_Event_Service
 is
 
    package Unix_TCP_Receiver is new Anet.Receivers.Stream
-     (Socket_Type => Anet.Sockets.Unix.TCP_Socket_Type);
+     (Socket_Type       => Anet.Sockets.Unix.TCP_Socket_Type,
+      Address_Type      => Anet.Sockets.Unix.Full_Path_Type,
+      Accept_Connection => Anet.Sockets.Unix.Accept_Connection);
 
    procedure Dispatch is new Tkmrpc.Process_Stream
-     (Dispatch => Tkmrpc.Dispatchers.Ees.Dispatch);
+     (Dispatch     => Tkmrpc.Dispatchers.Ees.Dispatch,
+      Address_Type => Anet.Sockets.Unix.Full_Path_Type);
 
    Sock     : aliased Anet.Sockets.Unix.TCP_Socket_Type;
    Receiver : Unix_TCP_Receiver.Receiver_Type (S => Sock'Access);

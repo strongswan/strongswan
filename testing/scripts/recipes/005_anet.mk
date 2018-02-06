@@ -2,7 +2,7 @@
 
 PKG = anet
 SRC = http://git.codelabs.ch/git/$(PKG).git
-REV = v0.3.1
+REV = c9bdee807f2fcd2b6ec2ad8fe4c814e1abb71358
 
 PREFIX = /usr/local/ada
 
