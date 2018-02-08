@@ -739,7 +739,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	ike_sa_t *ike_sa;
 	auth_cfg_t *auth;
 	peer_cfg_create_t peer = {
-		.cert_policy = CERT_SEND_IF_ASKED,
+		.cert_policy = CERT_ALWAYS_SEND,
 		.unique = UNIQUE_REPLACE,
 		.rekey_time = 36000, /* 10h */
 		.jitter_time = 600, /* 10min */
