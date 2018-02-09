@@ -574,7 +574,7 @@ METHOD(task_t, process_i, status_t,
 		if (this->natd)
 		{
 			this->natd->task.process(&this->natd->task, message);
-			if (this->natd->has_mapping_changed(this->natd))
+			if (!this->update && this->natd->has_mapping_changed(this->natd))
 			{
 				/* force an update if mappings have changed */
 				this->update = this->check = TRUE;
