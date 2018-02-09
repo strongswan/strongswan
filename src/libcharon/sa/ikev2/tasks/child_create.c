@@ -277,13 +277,11 @@ static bool ts_list_is_host(linked_list_t *list, host_t *host)
 }
 
 /**
- * Allocate SPIs and update proposals, we also promote the selected DH group
+ * Allocate local SPI
  */
 static bool allocate_spi(private_child_create_t *this)
 {
-	enumerator_t *enumerator;
 	proposal_t *proposal;
-	linked_list_t *other_dh_groups;
 
 	if (this->initiator)
 	{
@@ -301,41 +299,51 @@ static bool allocate_spi(private_child_create_t *this)
 		this->proto = this->proposal->get_protocol(this->proposal);
 	}
 	this->my_spi = this->child_sa->alloc_spi(this->child_sa, this->proto);
-	if (this->my_spi)
-	{
-		if (this->initiator)
-		{
-			other_dh_groups = linked_list_create();
-			enumerator = this->proposals->create_enumerator(this->proposals);
-			while (enumerator->enumerate(enumerator, &proposal))
-			{
-				proposal->set_spi(proposal, this->my_spi);
+	return this->my_spi != 0;
+}
 
-				/* move the selected DH group to the front, if any */
-				if (this->dh_group != MODP_NONE &&
-					!proposal->promote_dh_group(proposal, this->dh_group))
-				{	/* proposals that don't contain the selected group are
-					 * moved to the back */
-					this->proposals->remove_at(this->proposals, enumerator);
-					other_dh_groups->insert_last(other_dh_groups, proposal);
-				}
+/**
+ * Update the proposals with the allocated SPIs as initiator and check the DH
+ * group and promote it if necessary
+ */
+static bool update_and_check_proposals(private_child_create_t *this)
+{
+	enumerator_t *enumerator;
+	proposal_t *proposal;
+	linked_list_t *other_dh_groups;
+	bool found = FALSE;
+
+	other_dh_groups = linked_list_create();
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &proposal))
+	{
+		proposal->set_spi(proposal, this->my_spi);
+
+		/* move the selected DH group to the front, if any */
+		if (this->dh_group != MODP_NONE)
+		{	/* proposals that don't contain the selected group are
+			 * moved to the back */
+			if (!proposal->promote_dh_group(proposal, this->dh_group))
+			{
+				this->proposals->remove_at(this->proposals, enumerator);
+				other_dh_groups->insert_last(other_dh_groups, proposal);
 			}
-			enumerator->destroy(enumerator);
-			enumerator = other_dh_groups->create_enumerator(other_dh_groups);
-			while (enumerator->enumerate(enumerator, (void**)&proposal))
-			{	/* no need to remove from the list as we destroy it anyway*/
-				this->proposals->insert_last(this->proposals, proposal);
+			else
+			{
+				found = TRUE;
 			}
-			enumerator->destroy(enumerator);
-			other_dh_groups->destroy(other_dh_groups);
 		}
-		else
-		{
-			this->proposal->set_spi(this->proposal, this->my_spi);
-		}
-		return TRUE;
 	}
-	return FALSE;
+	enumerator->destroy(enumerator);
+	enumerator = other_dh_groups->create_enumerator(other_dh_groups);
+	while (enumerator->enumerate(enumerator, (void**)&proposal))
+	{	/* no need to remove from the list as we destroy it anyway*/
+		this->proposals->insert_last(this->proposals, proposal);
+	}
+	enumerator->destroy(enumerator);
+	other_dh_groups->destroy(other_dh_groups);
+
+	return this->dh_group == MODP_NONE || found;
 }
 
 /**
@@ -532,10 +540,15 @@ static status_t select_and_install(private_child_create_t *this,
 	}
 	this->other_spi = this->proposal->get_spi(this->proposal);
 
-	if (!this->initiator && !allocate_spi(this))
-	{	/* responder has no SPI allocated yet */
-		DBG1(DBG_IKE, "allocating SPI failed");
-		return FAILED;
+	if (!this->initiator)
+	{
+		if (!allocate_spi(this))
+		{
+			/* responder has no SPI allocated yet */
+			DBG1(DBG_IKE, "allocating SPI failed");
+			return FAILED;
+		}
+		this->proposal->set_spi(this->proposal, this->my_spi);
 	}
 	this->child_sa->set_proposal(this->child_sa, this->proposal);
 
@@ -1113,6 +1126,14 @@ METHOD(task_t, build_i, status_t,
 	if (!allocate_spi(this))
 	{
 		DBG1(DBG_IKE, "unable to allocate SPIs from kernel");
+		return FAILED;
+	}
+
+	if (!update_and_check_proposals(this))
+	{
+		DBG1(DBG_IKE, "requested DH group %N not contained in any of our "
+			 "proposals",
+			 diffie_hellman_group_names, this->dh_group);
 		return FAILED;
 	}
 
