@@ -981,7 +981,12 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 					this->dh = this->keymat->keymat.create_dh(
 										&this->keymat->keymat, this->dh_group);
 				}
-				if (this->dh)
+				else if (this->dh)
+				{
+					this->dh_failed = this->dh->get_dh_group(this->dh) !=
+									ke_payload->get_dh_group_number(ke_payload);
+				}
+				if (this->dh && !this->dh_failed)
 				{
 					this->dh_failed = !this->dh->set_other_public_value(this->dh,
 								ke_payload->get_key_exchange_data(ke_payload));
