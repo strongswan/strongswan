@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -77,6 +77,9 @@
 #ifndef ROUTING_TABLE_PRIO
 #define ROUTING_TABLE_PRIO 0
 #endif
+
+/** multicast groups (for groups > 31 setsockopt has to be used) */
+#define nl_group(group) (1 << (group - 1))
 
 ENUM(rt_msg_names, RTM_NEWLINK, RTM_GETRULE,
 	"RTM_NEWLINK",
@@ -471,6 +474,11 @@ struct private_kernel_netlink_net_t {
 	 * whether to react to RTM_NEWROUTE or RTM_DELROUTE events
 	 */
 	bool process_route;
+
+	/**
+	 * whether to react to RTM_NEWRULE or RTM_DELRULE events
+	 */
+	bool process_rules;
 
 	/**
 	 * whether to trigger roam events
@@ -1452,6 +1460,45 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 }
 
 /**
+ * process RTM_NEW|DELRULE from kernel
+ */
+static void process_rule(private_kernel_netlink_net_t *this, struct nlmsghdr *hdr)
+{
+#ifdef HAVE_LINUX_FIB_RULES_H
+	struct rtmsg* msg = NLMSG_DATA(hdr);
+	struct rtattr *rta = RTM_RTA(msg);
+	size_t rtasize = RTM_PAYLOAD(hdr);
+	uint32_t table = 0;
+
+	/* ignore rules added by us or in the local routing table (local addrs) */
+	if (msg->rtm_table && (msg->rtm_table == this->routing_table ||
+						   msg->rtm_table == RT_TABLE_LOCAL))
+	{
+		return;
+	}
+
+	while (RTA_OK(rta, rtasize))
+	{
+		switch (rta->rta_type)
+		{
+			case FRA_TABLE:
+				if (RTA_PAYLOAD(rta) == sizeof(table))
+				{
+					table = *(uint32_t*)RTA_DATA(rta);
+				}
+				break;
+		}
+		rta = RTA_NEXT(rta, rtasize);
+	}
+	if (table && table == this->routing_table)
+	{	/* also check against extended table ID */
+		return;
+	}
+	fire_roam_event(this, FALSE);
+#endif
+}
+
+/**
  * Receives events from kernel
  */
 static bool receive_events(private_kernel_netlink_net_t *this, int fd,
@@ -1506,6 +1553,13 @@ static bool receive_events(private_kernel_netlink_net_t *this, int fd,
 				if (this->process_route)
 				{
 					process_route(this, hdr);
+				}
+				break;
+			case RTM_NEWRULE:
+			case RTM_DELRULE:
+				if (this->process_rules)
+				{
+					process_rule(this, hdr);
 				}
 				break;
 			default:
@@ -2985,6 +3039,8 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 						"%s.prefer_temporary_addrs", FALSE, lib->ns),
 		.roam_events = lib->settings->get_bool(lib->settings,
 						"%s.plugins.kernel-netlink.roam_events", TRUE, lib->ns),
+		.process_rules = lib->settings->get_bool(lib->settings,
+						"%s.plugins.kernel-netlink.process_rules", FALSE, lib->ns),
 		.mtu = lib->settings->get_int(lib->settings,
 						"%s.plugins.kernel-netlink.mtu", 0, lib->ns),
 		.mss = lib->settings->get_int(lib->settings,
@@ -3037,8 +3093,19 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 			destroy(this);
 			return NULL;
 		}
-		addr.nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR |
-						 RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE | RTMGRP_LINK;
+		addr.nl_groups = nl_group(RTNLGRP_IPV4_IFADDR) |
+						 nl_group(RTNLGRP_IPV6_IFADDR) |
+						 nl_group(RTNLGRP_LINK);
+		if (this->process_route)
+		{
+			addr.nl_groups |= nl_group(RTNLGRP_IPV4_ROUTE) |
+							  nl_group(RTNLGRP_IPV6_ROUTE);
+		}
+		if (this->process_rules)
+		{
+			addr.nl_groups |= nl_group(RTNLGRP_IPV4_RULE) |
+							  nl_group(RTNLGRP_IPV6_RULE);
+		}
 		if (bind(this->socket_events, (struct sockaddr*)&addr, sizeof(addr)))
 		{
 			DBG1(DBG_KNL, "unable to bind RT event socket: %s (%d)",

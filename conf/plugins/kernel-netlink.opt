@@ -47,6 +47,13 @@ charon.plugins.kernel-netlink.port_bypass = no
 	port based policies use global XFRM bypass policies for the used IKE UDP
 	ports.
 
+charon.plugins.kernel-netlink.process_rules = no
+	Whether to process changes in routing rules to trigger roam events.
+
+	Whether to process changes in routing rules to trigger roam events. This is
+	currently only useful if the kernel based route lookup is used (i.e. if
+	route installation is disabled or an inverted fwmark match is configured).
+
 charon.plugins.kernel-netlink.receive_buffer_size = 0
 	Maximum Netlink socket receive buffer in bytes.
 

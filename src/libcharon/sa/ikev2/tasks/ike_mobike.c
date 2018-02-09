@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2010-2014 Tobias Brunner
+ * Copyright (C) 2010-2018 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -76,12 +76,34 @@ struct private_ike_mobike_t {
 	 * additional addresses got updated
 	 */
 	bool addresses_updated;
-
-	/**
-	 * whether the pending updates counter was increased
-	 */
-	bool pending_update;
 };
+
+/**
+ * Check if a newer MOBIKE update task is queued
+ */
+static bool is_newer_update_queued(private_ike_mobike_t *this)
+{
+	enumerator_t *enumerator;
+	private_ike_mobike_t *mobike;
+	task_t *task;
+	bool found = FALSE;
+
+	enumerator = this->ike_sa->create_task_enumerator(this->ike_sa,
+													  TASK_QUEUE_QUEUED);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == TASK_IKE_MOBIKE)
+		{
+			mobike = (private_ike_mobike_t*)task;
+			/* a queued check or update might invalidate the results of the
+			 * current task */
+			found = mobike->check || mobike->update;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
 
 /**
  * read notifys from message and evaluate them
@@ -526,9 +548,8 @@ METHOD(task_t, process_i, status_t,
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
-		if (this->ike_sa->get_pending_updates(this->ike_sa) > 1)
+		if (is_newer_update_queued(this))
 		{
-			/* newer update queued, ignore this one */
 			return SUCCESS;
 		}
 		if (this->cookie2.ptr)
@@ -553,7 +574,7 @@ METHOD(task_t, process_i, status_t,
 		if (this->natd)
 		{
 			this->natd->task.process(&this->natd->task, message);
-			if (this->natd->has_mapping_changed(this->natd))
+			if (!this->update && this->natd->has_mapping_changed(this->natd))
 			{
 				/* force an update if mappings have changed */
 				this->update = this->check = TRUE;
@@ -615,25 +636,13 @@ METHOD(ike_mobike_t, addresses, void,
 	   private_ike_mobike_t *this)
 {
 	this->address = TRUE;
-	if (!this->pending_update)
-	{
-		this->pending_update = TRUE;
-		this->ike_sa->set_pending_updates(this->ike_sa,
-						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
-	}
 }
 
 METHOD(ike_mobike_t, roam, void,
 	   private_ike_mobike_t *this, bool address)
 {
 	this->check = TRUE;
-	this->address = address;
-	if (!this->pending_update)
-	{
-		this->pending_update = TRUE;
-		this->ike_sa->set_pending_updates(this->ike_sa,
-						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
-	}
+	this->address |= address;
 }
 
 METHOD(ike_mobike_t, dpd, void,
@@ -642,12 +651,6 @@ METHOD(ike_mobike_t, dpd, void,
 	if (!this->natd)
 	{
 		this->natd = ike_natd_create(this->ike_sa, this->initiator);
-	}
-	if (!this->pending_update)
-	{
-		this->pending_update = TRUE;
-		this->ike_sa->set_pending_updates(this->ike_sa,
-						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
 	}
 }
 
@@ -678,21 +681,11 @@ METHOD(task_t, migrate, void,
 	{
 		this->natd->task.migrate(&this->natd->task, ike_sa);
 	}
-	if (this->pending_update)
-	{
-		this->ike_sa->set_pending_updates(this->ike_sa,
-						this->ike_sa->get_pending_updates(this->ike_sa) + 1);
-	}
 }
 
 METHOD(task_t, destroy, void,
 	   private_ike_mobike_t *this)
 {
-	if (this->pending_update)
-	{
-		this->ike_sa->set_pending_updates(this->ike_sa,
-						this->ike_sa->get_pending_updates(this->ike_sa) - 1);
-	}
 	chunk_free(&this->cookie2);
 	if (this->natd)
 	{

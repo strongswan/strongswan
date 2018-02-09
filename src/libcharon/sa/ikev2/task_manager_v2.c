@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Tobias Brunner
+ * Copyright (C) 2007-2018 Tobias Brunner
  * Copyright (C) 2007-2010 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -1642,24 +1642,9 @@ METHOD(task_manager_t, process_message, status_t,
 METHOD(task_manager_t, queue_task_delayed, void,
 	private_task_manager_t *this, task_t *task, uint32_t delay)
 {
-	enumerator_t *enumerator;
 	queued_task_t *queued;
 	timeval_t time;
 
-	if (task->get_type(task) == TASK_IKE_MOBIKE)
-	{	/*  there is no need to queue more than one mobike task */
-		enumerator = array_create_enumerator(this->queued_tasks);
-		while (enumerator->enumerate(enumerator, &queued))
-		{
-			if (queued->task->get_type(queued->task) == TASK_IKE_MOBIKE)
-			{
-				enumerator->destroy(enumerator);
-				task->destroy(task);
-				return;
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
 	time_monotonic(&time);
 	if (delay)
 	{
@@ -1877,12 +1862,41 @@ METHOD(task_manager_t, queue_ike_delete, void,
 	queue_task(this, (task_t*)ike_delete_create(this->ike_sa, TRUE));
 }
 
+/**
+ * There is no need to queue more than one mobike task, so this either returns
+ * an already queued task or queues one if there is none yet.
+ */
+static ike_mobike_t *queue_mobike_task(private_task_manager_t *this)
+{
+	enumerator_t *enumerator;
+	queued_task_t *queued;
+	ike_mobike_t *mobike = NULL;
+
+	enumerator = array_create_enumerator(this->queued_tasks);
+	while (enumerator->enumerate(enumerator, &queued))
+	{
+		if (queued->task->get_type(queued->task) == TASK_IKE_MOBIKE)
+		{
+			mobike = (ike_mobike_t*)queued->task;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!mobike)
+	{
+		mobike = ike_mobike_create(this->ike_sa, TRUE);
+		queue_task(this, &mobike->task);
+	}
+	return mobike;
+}
+
 METHOD(task_manager_t, queue_mobike, void,
 	private_task_manager_t *this, bool roam, bool address)
 {
 	ike_mobike_t *mobike;
 
-	mobike = ike_mobike_create(this->ike_sa, TRUE);
+	mobike = queue_mobike_task(this);
 	if (roam)
 	{
 		enumerator_t *enumerator;
@@ -1909,7 +1923,31 @@ METHOD(task_manager_t, queue_mobike, void,
 	{
 		mobike->addresses(mobike);
 	}
-	queue_task(this, &mobike->task);
+}
+
+METHOD(task_manager_t, queue_dpd, void,
+	private_task_manager_t *this)
+{
+	ike_mobike_t *mobike;
+
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE) &&
+		this->ike_sa->has_condition(this->ike_sa, COND_NAT_HERE))
+	{
+#ifdef ME
+		peer_cfg_t *cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		if (cfg->get_peer_id(cfg) ||
+			this->ike_sa->has_condition(this->ike_sa, COND_ORIGINAL_INITIATOR))
+#else
+		if (this->ike_sa->has_condition(this->ike_sa, COND_ORIGINAL_INITIATOR))
+#endif
+		{
+			/* use mobike enabled DPD to detect NAT mapping changes */
+			mobike = queue_mobike_task(this);
+			mobike->dpd(mobike);
+			return;
+		}
+	}
+	queue_task(this, (task_t*)ike_dpd_create(TRUE));
 }
 
 METHOD(task_manager_t, queue_child, void,
@@ -1938,32 +1976,6 @@ METHOD(task_manager_t, queue_child_delete, void,
 {
 	queue_task(this, (task_t*)child_delete_create(this->ike_sa,
 												  protocol, spi, expired));
-}
-
-METHOD(task_manager_t, queue_dpd, void,
-	private_task_manager_t *this)
-{
-	ike_mobike_t *mobike;
-
-	if (this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE) &&
-		this->ike_sa->has_condition(this->ike_sa, COND_NAT_HERE))
-	{
-#ifdef ME
-		peer_cfg_t *cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-		if (cfg->get_peer_id(cfg) ||
-			this->ike_sa->has_condition(this->ike_sa, COND_ORIGINAL_INITIATOR))
-#else
-		if (this->ike_sa->has_condition(this->ike_sa, COND_ORIGINAL_INITIATOR))
-#endif
-		{
-			/* use mobike enabled DPD to detect NAT mapping changes */
-			mobike = ike_mobike_create(this->ike_sa, TRUE);
-			mobike->dpd(mobike);
-			queue_task(this, &mobike->task);
-			return;
-		}
-	}
-	queue_task(this, (task_t*)ike_dpd_create(TRUE));
 }
 
 METHOD(task_manager_t, adopt_tasks, void,

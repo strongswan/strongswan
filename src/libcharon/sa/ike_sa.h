@@ -646,20 +646,6 @@ struct ike_sa_t {
 	 */
 	bool (*has_condition) (ike_sa_t *this, ike_condition_t condition);
 
-	/**
-	 * Get the number of queued MOBIKE address updates.
-	 *
-	 * @return				number of pending updates
-	 */
-	uint32_t (*get_pending_updates)(ike_sa_t *this);
-
-	/**
-	 * Set the number of queued MOBIKE address updates.
-	 *
-	 * @param updates		number of pending updates
-	 */
-	void (*set_pending_updates)(ike_sa_t *this, uint32_t updates);
-
 #ifdef ME
 	/**
 	 * Activate mediation server functionality for this IKE_SA.
