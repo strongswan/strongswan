@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -277,12 +277,13 @@ static bool ts_list_is_host(linked_list_t *list, host_t *host)
 }
 
 /**
- * Allocate SPIs and update proposals
+ * Allocate SPIs and update proposals, we also promote the selected DH group
  */
 static bool allocate_spi(private_child_create_t *this)
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
+	linked_list_t *other_dh_groups;
 
 	if (this->initiator)
 	{
@@ -304,12 +305,29 @@ static bool allocate_spi(private_child_create_t *this)
 	{
 		if (this->initiator)
 		{
+			other_dh_groups = linked_list_create();
 			enumerator = this->proposals->create_enumerator(this->proposals);
 			while (enumerator->enumerate(enumerator, &proposal))
 			{
 				proposal->set_spi(proposal, this->my_spi);
+
+				/* move the selected DH group to the front, if any */
+				if (this->dh_group != MODP_NONE &&
+					!proposal->promote_dh_group(proposal, this->dh_group))
+				{	/* proposals that don't contain the selected group are
+					 * moved to the back */
+					this->proposals->remove_at(this->proposals, enumerator);
+					other_dh_groups->insert_last(other_dh_groups, proposal);
+				}
 			}
 			enumerator->destroy(enumerator);
+			enumerator = other_dh_groups->create_enumerator(other_dh_groups);
+			while (enumerator->enumerate(enumerator, (void**)&proposal))
+			{	/* no need to remove from the list as we destroy it anyway*/
+				this->proposals->insert_last(this->proposals, proposal);
+			}
+			enumerator->destroy(enumerator);
+			other_dh_groups->destroy(other_dh_groups);
 		}
 		else
 		{
@@ -1006,8 +1024,8 @@ METHOD(task_t, build_i, status_t,
 									chunk_empty);
 				return SUCCESS;
 			}
-			if (!this->retry)
-			{
+			if (!this->retry && this->dh_group == MODP_NONE)
+			{	/* during a rekeying the group might already be set */
 				this->dh_group = this->config->get_dh_group(this->config);
 			}
 			break;
@@ -1615,6 +1633,12 @@ METHOD(child_create_t, use_marks, void,
 	this->mark_out = out;
 }
 
+METHOD(child_create_t, use_dh_group, void,
+	private_child_create_t *this, diffie_hellman_group_t dh_group)
+{
+	this->dh_group = dh_group;
+}
+
 METHOD(child_create_t, get_child, child_sa_t*,
 	private_child_create_t *this)
 {
@@ -1736,6 +1760,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			.get_lower_nonce = _get_lower_nonce,
 			.use_reqid = _use_reqid,
 			.use_marks = _use_marks,
+			.use_dh_group = _use_dh_group,
 			.task = {
 				.get_type = _get_type,
 				.migrate = _migrate,

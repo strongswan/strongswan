@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2016 Tobias Brunner
+ * Copyright (C) 2009-2018 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -108,7 +108,16 @@ struct proposal_t {
 	 * @param group			group to check for
 	 * @return				TRUE if algorithm included
 	 */
-	bool (*has_dh_group) (proposal_t *this, diffie_hellman_group_t group);
+	bool (*has_dh_group)(proposal_t *this, diffie_hellman_group_t group);
+
+	/**
+	 * Move the given DH group to the front of the list if it was contained in
+	 * the proposal.
+	 *
+	 * @param group			group to promote
+	 * @return				TRUE if algorithm included
+	 */
+	bool (*promote_dh_group)(proposal_t *this, diffie_hellman_group_t group);
 
 	/**
 	 * Strip DH groups from proposal to use it without PFS.

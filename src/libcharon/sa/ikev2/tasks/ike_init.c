@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -282,7 +282,7 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	sa_payload_t *sa_payload;
 	ke_payload_t *ke_payload;
 	nonce_payload_t *nonce_payload;
-	linked_list_t *proposal_list;
+	linked_list_t *proposal_list, *other_dh_groups;
 	ike_sa_id_t *id;
 	proposal_t *proposal;
 	enumerator_t *enumerator;
@@ -294,16 +294,31 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	if (this->initiator)
 	{
 		proposal_list = this->config->get_proposals(this->config);
-		if (this->old_sa)
+		other_dh_groups = linked_list_create();
+		enumerator = proposal_list->create_enumerator(proposal_list);
+		while (enumerator->enumerate(enumerator, (void**)&proposal))
 		{
 			/* include SPI of new IKE_SA when we are rekeying */
-			enumerator = proposal_list->create_enumerator(proposal_list);
-			while (enumerator->enumerate(enumerator, (void**)&proposal))
+			if (this->old_sa)
 			{
 				proposal->set_spi(proposal, id->get_initiator_spi(id));
 			}
-			enumerator->destroy(enumerator);
+			/* move the selected DH group to the front of the proposal */
+			if (!proposal->promote_dh_group(proposal, this->dh_group))
+			{	/* the proposal does not include the group, move to the back */
+				proposal_list->remove_at(proposal_list, enumerator);
+				other_dh_groups->insert_last(other_dh_groups, proposal);
+			}
 		}
+		enumerator->destroy(enumerator);
+		/* add proposals that don't contain the selected group */
+		enumerator = other_dh_groups->create_enumerator(other_dh_groups);
+		while (enumerator->enumerate(enumerator, (void**)&proposal))
+		{	/* no need to remove from the list as we destroy it anyway*/
+			proposal_list->insert_last(proposal_list, proposal);
+		}
+		enumerator->destroy(enumerator);
+		other_dh_groups->destroy(other_dh_groups);
 
 		sa_payload = sa_payload_create_from_proposals_v2(proposal_list);
 		proposal_list->destroy_offset(proposal_list, offsetof(proposal_t, destroy));
@@ -531,16 +546,48 @@ METHOD(task_t, build_i, status_t,
 		return FAILED;
 	}
 
-	/* if the DH group is set via use_dh_group(), we already have a DH object */
+	/* if we are retrying after an INVALID_KE_PAYLOAD we already have one */
 	if (!this->dh)
 	{
-		this->dh_group = this->config->get_dh_group(this->config);
+		if (this->old_sa && lib->settings->get_bool(lib->settings,
+								"%s.prefer_previous_dh_group", TRUE, lib->ns))
+		{	/* reuse the DH group we used for the old IKE_SA when rekeying */
+			proposal_t *proposal;
+			uint16_t dh_group;
+
+			proposal = this->old_sa->get_proposal(this->old_sa);
+			if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+										&dh_group, NULL))
+			{
+				this->dh_group = dh_group;
+			}
+			else
+			{	/* this shouldn't happen, but let's be safe */
+				this->dh_group = this->config->get_dh_group(this->config);
+			}
+		}
+		else
+		{
+			this->dh_group = this->config->get_dh_group(this->config);
+		}
 		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
 												  this->dh_group);
 		if (!this->dh)
 		{
 			DBG1(DBG_IKE, "configured DH group %N not supported",
 				diffie_hellman_group_names, this->dh_group);
+			return FAILED;
+		}
+	}
+	else if (this->dh->get_dh_group(this->dh) != this->dh_group)
+	{	/* reset DH instance if group changed (INVALID_KE_PAYLOAD) */
+		this->dh->destroy(this->dh);
+		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+												  this->dh_group);
+		if (!this->dh)
+		{
+			DBG1(DBG_IKE, "requested DH group %N not supported",
+				 diffie_hellman_group_names, this->dh_group);
 			return FAILED;
 		}
 	}
@@ -929,12 +976,6 @@ METHOD(task_t, migrate, void,
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 	this->proposal = NULL;
 	this->dh_failed = FALSE;
-	if (this->dh && this->dh->get_dh_group(this->dh) != this->dh_group)
-	{	/* reset DH value only if group changed (INVALID_KE_PAYLOAD) */
-		this->dh->destroy(this->dh);
-		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
-												  this->dh_group);
-	}
 }
 
 METHOD(task_t, destroy, void,

@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2008-2016 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2006-2010 Martin Willi
  * Copyright (C) 2013-2015 Andreas Steffen
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -167,6 +167,36 @@ METHOD(proposal_t, has_dh_group, bool,
 	if (!any && group == MODP_NONE)
 	{
 		found = TRUE;
+	}
+	return found;
+}
+
+METHOD(proposal_t, promote_dh_group, bool,
+	private_proposal_t *this, diffie_hellman_group_t group)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool found = FALSE;
+
+	enumerator = array_create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->type == DIFFIE_HELLMAN_GROUP &&
+			entry->alg == group)
+		{
+			array_remove_at(this->transforms, enumerator);
+			found = TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (found)
+	{
+		entry_t entry = {
+			.type = DIFFIE_HELLMAN_GROUP,
+			.alg = group,
+		};
+		array_insert(this->transforms, ARRAY_HEAD, &entry);
 	}
 	return found;
 }
@@ -716,6 +746,7 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 			.create_enumerator = _create_enumerator,
 			.get_algorithm = _get_algorithm,
 			.has_dh_group = _has_dh_group,
+			.promote_dh_group = _promote_dh_group,
 			.strip_dh = _strip_dh,
 			.select = _select_proposal,
 			.get_protocol = _get_protocol,

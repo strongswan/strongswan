@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 Tobias Brunner
+ * Copyright (C) 2009-2018 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -190,8 +190,18 @@ METHOD(task_t, build_i, status_t,
 	/* our CHILD_CREATE task does the hard work for us */
 	if (!this->child_create)
 	{
+		proposal_t *proposal;
+		uint16_t dh_group;
+
 		this->child_create = child_create_create(this->ike_sa,
 									config->get_ref(config), TRUE, NULL, NULL);
+
+		proposal = this->child_sa->get_proposal(this->child_sa);
+		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+									&dh_group, NULL))
+		{	/* reuse the DH group negotiated previously */
+			this->child_create->use_dh_group(this->child_create, dh_group);
+		}
 	}
 	reqid = this->child_sa->get_reqid(this->child_sa);
 	this->child_create->use_reqid(this->child_create, reqid);
