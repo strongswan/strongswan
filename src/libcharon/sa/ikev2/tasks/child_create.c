@@ -1570,6 +1570,15 @@ METHOD(task_t, process_i, status_t,
 						memcpy(&group, data.ptr, data.len);
 						group = ntohs(group);
 					}
+					if (this->retry)
+					{
+						DBG1(DBG_IKE, "already retried with DH group %N, ignore"
+							 "requested %N", diffie_hellman_group_names,
+							 this->dh_group, diffie_hellman_group_names, group);
+						handle_child_sa_failure(this, message);
+						/* an error in CHILD_SA creation is not critical */
+						return SUCCESS;
+					}
 					DBG1(DBG_IKE, "peer didn't accept DH group %N, "
 						 "it requested %N", diffie_hellman_group_names,
 						 this->dh_group, diffie_hellman_group_names, group);
