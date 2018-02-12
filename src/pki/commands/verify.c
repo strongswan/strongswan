@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2018 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -14,6 +14,9 @@
  * for more details.
  */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <errno.h>
 
 #include "pki.h"
@@ -21,6 +24,84 @@
 #include <credentials/certificates/certificate.h>
 #include <credentials/certificates/x509.h>
 #include <credentials/sets/mem_cred.h>
+
+/**
+ * Load a CA or CRL and add it to the credential set
+ */
+static bool load_cert(mem_cred_t *creds, char *path, certificate_type_t subtype)
+{
+	certificate_t *cert;
+	char *credname;
+
+	switch (subtype)
+	{
+		case CERT_X509:
+			credname = "CA certificate";
+			break;
+		case CERT_X509_CRL:
+			credname = "CRL";
+			break;
+		default:
+			return FALSE;
+	}
+	cert = lib->creds->create(lib->creds,
+							  CRED_CERTIFICATE, subtype,
+							  BUILD_FROM_FILE, path, BUILD_END);
+	if (!cert)
+	{
+		fprintf(stderr, "parsing %s from '%s' failed\n", credname, path);
+		return FALSE;
+	}
+	if (subtype == CERT_X509_CRL)
+	{
+		creds->add_crl(creds, (crl_t*)cert);
+	}
+	else
+	{
+		creds->add_cert(creds, TRUE, cert);
+	}
+	return TRUE;
+}
+
+/**
+ * Load CA cert or CRL either from a file or a path
+ */
+static bool load_certs(mem_cred_t *creds, char *path,
+					   certificate_type_t subtype)
+{
+	enumerator_t *enumerator;
+	struct stat st;
+	bool loaded = FALSE;
+
+	if (stat(path, &st))
+	{
+		fprintf(stderr, "failed to access '%s': %s\n", path, strerror(errno));
+		return FALSE;
+	}
+	if (S_ISDIR(st.st_mode))
+	{
+		enumerator = enumerator_create_directory(path);
+		if (!enumerator)
+		{
+			fprintf(stderr, "directory '%s' can not be opened: %s",
+					path, strerror(errno));
+			return FALSE;
+		}
+		while (enumerator->enumerate(enumerator, NULL, &path, &st))
+		{
+			if (S_ISREG(st.st_mode) && load_cert(creds, path, subtype))
+			{
+				loaded = TRUE;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		loaded = load_cert(creds, path, subtype);
+	}
+	return loaded;
+}
 
 /**
  * Verify a certificate signature
@@ -49,28 +130,16 @@ static int verify()
 				file = arg;
 				continue;
 			case 'c':
-				cert = lib->creds->create(lib->creds,
-										  CRED_CERTIFICATE, CERT_X509,
-										  BUILD_FROM_FILE, arg, BUILD_END);
-				if (!cert)
+				if (load_certs(creds, arg, CERT_X509))
 				{
-					fprintf(stderr, "parsing CA certificate failed\n");
-					goto end;
+					has_ca = TRUE;
 				}
-				has_ca = TRUE;
-				creds->add_cert(creds, TRUE, cert);
 				continue;
 			case 'l':
-				cert = lib->creds->create(lib->creds,
-										  CRED_CERTIFICATE, CERT_X509_CRL,
-										  BUILD_FROM_FILE, arg, BUILD_END);
-				if (!cert)
+				if (load_certs(creds, arg, CERT_X509_CRL))
 				{
-					fprintf(stderr, "parsing CRL failed\n");
-					goto end;
+					online = TRUE;
 				}
-				online = TRUE;
-				creds->add_crl(creds, (crl_t*)cert);
 				continue;
 			case 'o':
 				online = TRUE;
@@ -108,7 +177,7 @@ static int verify()
 		fprintf(stderr, "parsing certificate failed\n");
 		goto end;
 	}
-	creds->add_cert(creds, !has_ca, cert);
+	cert = creds->add_cert_ref(creds, !has_ca, cert);
 
 	enumerator = lib->credmgr->create_trusted_enumerator(lib->credmgr,
 									KEY_ANY, cert->get_subject(cert), online);
@@ -153,6 +222,7 @@ static int verify()
 		printf("\n");
 	}
 	enumerator->destroy(enumerator);
+	cert->destroy(cert);
 
 	if (!trusted)
 	{
