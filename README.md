@@ -36,7 +36,7 @@ Configuration on gateway _moon_:
 
     /etc/swanctl/x509ca/strongswanCert.pem
     /etc/swanctl/x509/moonCert.pem
-    /etc/swanctl/priv/moonKey.pem
+    /etc/swanctl/private/moonKey.pem
 
     /etc/swanctl/swanctl.conf:
 
@@ -66,7 +66,7 @@ Configuration on gateway _sun_:
 
     /etc/swanctl/x509ca/strongswanCert.pem
     /etc/swanctl/x509/sunCert.pem
-    /etc/swanctl/priv/sunKey.pem
+    /etc/swanctl/private/sunKey.pem
 
     /etc/swanctl/swanctl.conf:
 
@@ -120,7 +120,7 @@ connections we will use the default IPsec tunnel mode.
 
     /etc/swanctl/x509ca/strongswanCert.pem
     /etc/swanctl/x509/moonCert.pem
-    /etc/swanctl/priv/moonKey.pem
+    /etc/swanctl/private/moonKey.pem
 
     /etc/swanctl/swanctl.conf:
 
@@ -148,7 +148,7 @@ Configuration on host _sun_:
 
     /etc/swanctl/x509ca/strongswanCert.pem
     /etc/swanctl/x509/sunCert.pem
-    /etc/swanctl/priv/sunKey.pem
+    /etc/swanctl/private/sunKey.pem
 
     /etc/swanctl/swanctl.conf:
 
@@ -185,7 +185,7 @@ Configuration on gateway _moon_:
 
     /etc/swanctl/x509ca/strongswanCert.pem
     /etc/swanctl/x509/moonCert.pem
-    /etc/swanctl/priv/moonKey.pem
+    /etc/swanctl/private/moonKey.pem
 
     /etc/swanctl/swanctl.conf:
 
@@ -211,7 +211,7 @@ Configuration on roadwarrior _carol_:
 
     /etc/swanctl/x509ca/strongswanCert.pem
     /etc/swanctl/x509/carolCert.pem
-    /etc/swanctl/priv/carolKey.pem
+    /etc/swanctl/private/carolKey.pem
 
     /etc/swanctl/swanctl.conf:
 
@@ -277,7 +277,7 @@ Configuration on gateway _moon_:
 
     /etc/swanctl/x509ca/strongswanCert.pem
     /etc/swanctl/x509/moonCert.pem
-    /etc/swanctl/rsa/moonKey.pem
+    /etc/swanctl/private/moonKey.pem
 
     /etc/swanctl/swanctl.conf:
 
@@ -311,7 +311,7 @@ Configuration on roadwarrior _carol_:
 
     /etc/swanctl/x509ca/strongswanCert.pem
     /etc/swanctl/x509/carolCert.pem
-    /etc/swanctl/priv/carolKey.pem
+    /etc/swanctl/private/carolKey.pem
 
     /etc/swanctl/swanctl.conf:
 
@@ -352,7 +352,7 @@ Configuration on gateway _moon_:
 
     /etc/swanctl/x509ca/strongswanCert.pem
     /etc/swanctl/x509/moonCert.pem
-    /etc/swanctl/priv/moonKey.pem
+    /etc/swanctl/private/moonKey.pem
 
     /etc/swanctl/swanctl.conf:
 
@@ -437,7 +437,7 @@ Configuration on gateway _moon_:
 
     /etc/swanctl/x509ca/strongswanCert.pem
     /etc/swanctl/x509/moonCert.pem
-    /etc/swanctl/priv/moonKey.pem
+    /etc/swanctl/private/moonKey.pem
 
     /etc/swanctl/swanctl.conf:
 
@@ -571,7 +571,7 @@ In a next step the command
 
     pki --req --type priv --in moonKey.pem \
               --dn "C=CH, O=strongswan, CN=moon.strongswan.org \
-              --san moon.strongswan.org -- outform pem > moonReq.pem
+              --san moon.strongswan.org --outform pem > moonReq.pem
 
 creates a PKCS#10 certificate request that has to be signed by the CA.
 Through the [multiple] use of the `--san` parameter any number of desired
