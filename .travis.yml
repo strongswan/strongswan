@@ -10,19 +10,6 @@ compiler:
 before_install:
   - ./scripts/test.sh deps
   - ./scripts/test.sh pydeps
-  # use clang 4.0 instead of 3.9 due to unnecessary va_start() warnings
-  - echo $TRAVIS_OS_NAME
-  - echo $CC
-  - echo $(clang --version)
-  - if [ "$TRAVIS_OS_NAME" == "linux" -a "$CC" == "clang" ]; then
-      if [[ "$(clang --version)" =~ 3\.9\.[0-9] ]]; then
-        curl http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -;
-        echo "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main" | sudo tee -a /etc/apt/sources.list;
-        sudo apt-get update -qq;
-        sudo apt-get install -qq clang-4.0;
-        CC=clang-4.0;
-      fi;
-    fi
 
 before_script:
   - sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0 || true
