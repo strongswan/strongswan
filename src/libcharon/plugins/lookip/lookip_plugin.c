@@ -33,7 +33,7 @@ struct private_lookip_plugin_t {
 	lookip_plugin_t public;
 
 	/**
-	 * Listener collecting virtual IP assignements
+	 * Listener collecting virtual IP assignments
 	 */
 	lookip_listener_t *listener;
 

@@ -29,7 +29,7 @@ typedef struct xauth_manager_t xauth_manager_t;
  * The XAuth manager manages all XAuth implementations and creates instances.
  *
  * A plugin registers it's implemented XAuth method at the manager by
- * providing type and a contructor function. The manager then instanciates
+ * providing type and a constructor function. The manager then instantiates
  * xauth_method_t instances through the provided constructor to handle
  * XAuth authentication.
  */

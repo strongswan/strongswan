@@ -25,14 +25,14 @@
 @interface Helper : NSObject
 
 /**
- * Get the XPC connection singleton, installing helper if requried
+ * Get the XPC connection singleton, installing helper if required
  *
  * @return		XPC service connection, as a singleton
  */
 - (xpc_connection_t)getConnection;
 
 /**
- * Return an errror string if if getConnection fails
+ * Return an error string if if getConnection fails
  *
  * @return		error string, unretained
  */

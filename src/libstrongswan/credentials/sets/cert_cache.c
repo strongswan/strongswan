@@ -239,7 +239,7 @@ METHOD(cert_cache_t, issued_by, bool,
 }
 
 /**
- * certificate enumerator implemenation
+ * certificate enumerator implementation
  */
 typedef struct {
 	/** implements enumerator_t interface */

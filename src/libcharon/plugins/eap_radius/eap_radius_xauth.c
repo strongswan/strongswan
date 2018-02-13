@@ -72,7 +72,7 @@ struct private_eap_radius_xauth_t {
 	xauth_round_t round;
 
 	/**
-	 * Concatentated password of all rounds
+	 * Concatenated password of all rounds
 	 */
 	chunk_t pass;
 };

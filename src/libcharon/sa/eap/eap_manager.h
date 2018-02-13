@@ -30,7 +30,7 @@ typedef struct eap_manager_t eap_manager_t;
  * The EAP manager manages all EAP implementations and creates instances.
  *
  * A plugin registers it's implemented EAP method at the manager by
- * providing type and a contructor function. The manager then instanciates
+ * providing type and a constructor function. The manager then instantiates
  * eap_method_t instances through the provided constructor to handle
  * EAP authentication.
  */

@@ -737,7 +737,7 @@ static status_t process_response(private_task_manager_t *this,
 		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_CLEARED, packet);
 	}
 
-	/* catch if we get resetted while processing */
+	/* catch if we get reset while processing */
 	this->reset = FALSE;
 	enumerator = array_create_enumerator(this->active_tasks);
 	while (enumerator->enumerate(enumerator, &task))

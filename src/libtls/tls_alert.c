@@ -106,7 +106,7 @@ struct private_tls_alert_t {
 	bool consumed;
 
 	/**
-	 * Fatal alert discription
+	 * Fatal alert description
 	 */
 	tls_alert_desc_t desc;
 };

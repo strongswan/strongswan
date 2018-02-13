@@ -86,7 +86,7 @@ enum task_queue_t {
  * completed.
  * For the initial IKE_SA setup, several tasks are queued: One for the
  * unauthenticated IKE_SA setup, one for authentication, one for CHILD_SA setup
- * and maybe one for virtual IP assignement.
+ * and maybe one for virtual IP assignment.
  * The task manager is also responsible for retransmission. It uses a backoff
  * algorithm. The timeout is calculated using
  * RETRANSMIT_TIMEOUT * (RETRANSMIT_BASE ** try).

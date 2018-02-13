@@ -376,7 +376,7 @@ struct private_tls_crypto_t {
 	tls_cache_t *cache;
 
 	/**
-	 * All handshake data concatentated
+	 * All handshake data concatenated
 	 */
 	chunk_t handshake;
 

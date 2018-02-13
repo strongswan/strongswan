@@ -693,7 +693,7 @@ METHOD(stroke_list_t, status, void,
 
 /**
  * create a unique certificate list without duplicates
- * certicates having the same issuer are grouped together.
+ * certificates having the same issuer are grouped together.
  */
 static linked_list_t* create_unique_cert_list(certificate_type_t type)
 {

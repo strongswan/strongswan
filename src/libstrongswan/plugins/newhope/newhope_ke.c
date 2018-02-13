@@ -246,7 +246,7 @@ static uint32_t* multiply_ntt_inv_poly(private_newhope_ke_t *this, uint32_t *b)
 }
 
 /**
- * Pack four 2-bit coefficents into one byte
+ * Pack four 2-bit coefficients into one byte
  */
 static void pack_rec(private_newhope_ke_t *this, uint8_t *x, uint8_t *r)
 {

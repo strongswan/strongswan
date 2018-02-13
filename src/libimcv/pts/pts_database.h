@@ -74,7 +74,7 @@ struct pts_database_t {
 	* @param measurement	File measurement hash
 	* @param filename		Optional name of the file to be checked
 	* @param is_dir			TRUE if part of directory measurement
-	* @param id				Primary key into direcories/files table
+	* @param id				Primary key into directories/files table
 	* @return				TRUE if successful
 	*/
 	bool (*add_file_measurement)(pts_database_t *this, int vid,

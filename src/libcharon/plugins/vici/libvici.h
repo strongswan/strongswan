@@ -43,7 +43,7 @@
  * thread pool.
  *
  * Connecting requires an uri, which is currently either a UNIX socket path
- * prefixed with unix://, or a hostname:port touple prefixed with tcp://.
+ * prefixed with unix://, or a hostname:port tuple prefixed with tcp://.
  * Passing NULL takes the system default socket path.
  *
  * After the connection has been established, request messages can be sent.

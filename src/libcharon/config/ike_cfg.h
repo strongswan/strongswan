@@ -61,7 +61,7 @@ enum fragmentation_t {
 };
 
 /**
- * enum strings fro ike_version_t
+ * enum strings for ike_version_t
  */
 extern enum_name_t *ike_version_names;
 

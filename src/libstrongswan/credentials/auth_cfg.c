@@ -737,8 +737,8 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 	}
 	enumerator->destroy(enumerator);
 
-	/* if no explicit IKE signature contraints were added we add them for all
-	 * configured signature contraints */
+	/* if no explicit IKE signature constraints were added we add them for all
+	 * configured signature constraints */
 	if (ike && !ike_added &&
 		lib->settings->get_bool(lib->settings,
 							"%s.signature_authentication_constraints", TRUE,

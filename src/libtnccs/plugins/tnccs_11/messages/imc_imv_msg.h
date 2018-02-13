@@ -28,7 +28,7 @@ typedef struct imc_imv_msg_t imc_imv_msg_t;
 #include <tncif.h>
 
 /**
- * Classs representing the PB-PA message type.
+ * Class representing the PB-PA message type.
  */
 struct imc_imv_msg_t {
 

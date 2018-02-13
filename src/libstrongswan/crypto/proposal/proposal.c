@@ -697,7 +697,7 @@ int proposal_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	{
 		enumerator = list->create_enumerator(list);
 		while (enumerator->enumerate(enumerator, &this))
-		{	/* call recursivly */
+		{	/* call recursively */
 			if (first)
 			{
 				written += print_in_hook(data, "%P", this);

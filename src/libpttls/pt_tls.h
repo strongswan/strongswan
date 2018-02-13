@@ -102,7 +102,7 @@ enum pt_tls_auth_t {
  * @param tls			TLS socket to read from
  * @param vendor		receives Message Type Vendor ID from header
  * @param type			receives Message Type from header
- * @param identifier	receives Message Identifer
+ * @param identifier	receives Message Identifier
  * @return				reader over message value, NULL on error
  */
 bio_reader_t* pt_tls_read(tls_socket_t *tls, uint32_t *vendor,

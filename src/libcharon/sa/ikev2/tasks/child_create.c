@@ -414,7 +414,7 @@ static linked_list_t *get_dynamic_hosts(ike_sa_t *ike_sa, bool local)
 }
 
 /**
- * Substitude any host address with NATed address in traffic selector
+ * Substitute any host address with NATed address in traffic selector
  */
 static linked_list_t* get_transport_nat_ts(private_child_create_t *this,
 										   bool local, linked_list_t *in)

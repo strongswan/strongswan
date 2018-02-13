@@ -98,7 +98,7 @@ struct simaka_manager_t {
 	 * @param id		permanent identity to request quintuplet for
 	 * @param rand		random value rand
 	 * @param auts		resynchronization parameter auts
-	 * @return			TRUE if calculated, FALSE if no matcing card found
+	 * @return			TRUE if calculated, FALSE if no matching card found
 	 */
 	bool (*card_resync)(simaka_manager_t *this, identification_t *id,
 						char rand[AKA_RAND_LEN], char auts[AKA_AUTS_LEN]);

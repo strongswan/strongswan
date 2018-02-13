@@ -150,7 +150,7 @@ static bool manage_dns(private_osx_attr_handler_t *this,
 		if (add)
 		{
 			if (!this->append && !this->original)
-			{	/* backup orignal config, start with empty set */
+			{	/* backup original config, start with empty set */
 				this->original = arr;
 				arr = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
 			}

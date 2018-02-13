@@ -1330,7 +1330,7 @@ METHOD(task_t, process_i, status_t,
 														&this->cpi_r);
 				if (!list->get_count(list))
 				{
-					DBG1(DBG_IKE, "peer did not acccept our IPComp proposal, "
+					DBG1(DBG_IKE, "peer did not accept our IPComp proposal, "
 						 "IPComp disabled");
 					this->cpi_i = 0;
 				}

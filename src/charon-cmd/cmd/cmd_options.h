@@ -63,7 +63,7 @@ struct cmd_option_t {
 	const char *name;
 	/** takes argument */
 	int has_arg;
-	/** decription of argument */
+	/** description of argument */
 	const char *arg;
 	/** short description to option */
 	const char *desc;

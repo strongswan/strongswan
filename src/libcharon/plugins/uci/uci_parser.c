@@ -112,7 +112,7 @@ METHOD(uci_parser_t, create_section_enumerator, enumerator_t*,
 	va_list args;
 	int i;
 
-	/* allocate enumerator large enought to hold keyword pointers */
+	/* allocate enumerator large enough to hold keyword pointers */
 	i = 1;
 	va_start(args, this);
 	while (va_arg(args, char*))

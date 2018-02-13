@@ -53,7 +53,7 @@ struct private_android_service_t {
 	ike_sa_t *ike_sa;
 
 	/**
-	 * configuration setttings
+	 * configuration settings
 	 */
 	settings_t *settings;
 

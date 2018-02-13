@@ -390,7 +390,7 @@ static bool authenticate(private_pt_tls_server_t *this)
 {
 	if (do_sasl(this))
 	{
-		/* complete SASL with emtpy mechanism list */
+		/* complete SASL with empty mechanism list */
 		return pt_tls_write(this->tls, PT_TLS_SASL_MECHS, this->identifier++,
 							chunk_empty);
 	}

@@ -31,7 +31,7 @@ charon.cert_cache = yes
 	memory.
 
 charon.cache_crls = no
-	Whether Certicate Revocation Lists (CRLs) fetched via HTTP or LDAP should
+	Whether Certificate Revocation Lists (CRLs) fetched via HTTP or LDAP should
 	be saved under a unique file name derived from the public key of the
 	Certification Authority (CA) to **/etc/ipsec.d/crls** (stroke) or
 	**/etc/swanctl/x509crl** (vici), respectively.
