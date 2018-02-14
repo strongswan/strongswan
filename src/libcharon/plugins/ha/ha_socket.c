@@ -120,7 +120,7 @@ METHOD(ha_socket_t, pull, ha_message_t*,
 	while (TRUE)
 	{
 		ha_message_t *message;
-		char buf[1024];
+		char buf[4096];
 		bool oldstate;
 		ssize_t len;
 
