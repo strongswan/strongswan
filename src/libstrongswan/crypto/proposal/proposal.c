@@ -984,6 +984,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 		{
 			case MODP_3072_BIT:
 			case MODP_4096_BIT:
+			case MODP_6144_BIT:
 			case MODP_8192_BIT:
 				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
 				break;
