@@ -1,6 +1,12 @@
 charon.plugins.save-keys.load := no
 	Whether to load the plugin.
 
+charon.plugins.save-keys.esp = no
+	Whether to save ESP keys.
+
+charon.plugins.save-keys.ike = no
+	Whether to save IKE keys.
+
 charon.plugins.save-keys.wireshark_keys
 	Directory where the keys are stored in the format supported by Wireshark
 

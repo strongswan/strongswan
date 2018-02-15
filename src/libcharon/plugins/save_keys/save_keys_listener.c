@@ -1,4 +1,18 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
+ */
+/*
  * Copyright (C) 2016 Codrut Cristian Grosu (codrut.cristian.grosu@gmail.com)
  * Copyright (C) 2016 IXIA (http://www.ixiacom.com)
  *
@@ -63,6 +77,16 @@ struct private_save_keys_listener_t {
 	 * Path to the directory where the decryption tables will be stored.
 	 */
 	char *path;
+
+	/**
+	 * Whether to save IKE keys
+	 */
+	bool ike;
+
+	/**
+	 * Whether to save ESP keys
+	 */
+	bool esp;
 };
 
 METHOD(save_keys_listener_t, destroy, void,
@@ -260,7 +284,7 @@ METHOD(listener_t, ike_derived_keys, bool,
 	char *path, *name;
 	FILE *file;
 
-	if (!this->path)
+	if (!this->path || !this->ike)
 	{
 		return TRUE;
 	}
@@ -315,7 +339,8 @@ METHOD(listener_t, child_derived_keys, bool,
 	char *path, *family;
 	FILE *file;
 
-	if (!this->path || child_sa->get_protocol(child_sa) != PROTO_ESP)
+	if (!this->path || !this->esp ||
+		child_sa->get_protocol(child_sa) != PROTO_ESP)
 	{
 		return TRUE;
 	}
@@ -382,6 +407,12 @@ save_keys_listener_t *save_keys_listener_create()
 		.path = lib->settings->get_str(lib->settings,
 									   "%s.plugins.save-keys.wireshark_keys",
 									   NULL, lib->ns),
+		.esp = lib->settings->get_bool(lib->settings,
+									   "%s.plugins.save-keys.esp",
+									   FALSE, lib->ns),
+		.ike = lib->settings->get_bool(lib->settings,
+									   "%s.plugins.save-keys.ike",
+									   FALSE, lib->ns),
 	);
 
 	return &this->public;
