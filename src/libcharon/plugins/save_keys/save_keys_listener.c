@@ -415,5 +415,21 @@ save_keys_listener_t *save_keys_listener_create()
 									   FALSE, lib->ns),
 	);
 
+	if (this->path && (this->ike || this->esp))
+	{
+		char *keys = "IKE";
+
+		if (this->ike && this->esp)
+		{
+			keys = "IKE AND ESP";
+		}
+		else if (this->esp)
+		{
+			keys = "ESP";
+		}
+		DBG0(DBG_DMN, "!!", keys, this->path);
+		DBG0(DBG_DMN, "!! WARNING: SAVING %s KEYS TO '%s'", keys, this->path);
+		DBG0(DBG_DMN, "!!", keys, this->path);
+	}
 	return &this->public;
 }
