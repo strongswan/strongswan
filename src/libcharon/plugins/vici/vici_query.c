@@ -856,7 +856,9 @@ CALLBACK(list_conns, vici_message_t*,
 			free(lft);
 
 			b->add_kv(b, "dpd_action", "%N", action_names,
-				child_cfg->get_dpd_action(child_cfg));
+					  child_cfg->get_dpd_action(child_cfg));
+			b->add_kv(b, "close_action", "%N", action_names,
+					  child_cfg->get_close_action(child_cfg));
 
 			b->begin_list(b, "local-ts");
 			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
