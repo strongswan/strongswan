@@ -1,13 +1,43 @@
 strongswan-5.6.2
 ----------------
 
+- The previously negotiated DH group is reused when rekeying an SA, instead of
+  using the first group in the configured proposals, which avoids an additional
+  exchange if the peer selected a different group via INVALID_KE_PAYLOAD when
+  the SA was created initially.
+  The selected DH group is also moved to the front of all sent proposals that
+  contain it and all proposals that don't are moved to the back in order to
+  convey the preference for this group to the peer.
+
+- Handling of MOBIKE task queuing has been improved. In particular, the response
+  to an address update is not ignored anymore if only an address list update or
+  DPD is queued.
+
+- The fallback drop policies installed to avoid traffic leaks when replacing
+  addresses in installed policies are now replaced by temporary drop policies,
+  which also prevent acquires because we currently delete and reinstall IPsec
+  SAs to update their addresses.
+
 - Access X.509 certificates held in non-volatile storage of a TPM 2.0
   referenced via the NV index.
 
 - Adding the --keyid parameter to pki --print allows to print private keys
   or certificates stored in a smartcard or a TPM 2.0.
 
+- Fixed proposal selection if a peer incorrectly sends DH groups in the ESP
+  proposals during IKE_AUTH and also if a DH group is configured in the local
+  ESP proposal and charon.prefer_configured_proposals is disabled.
+
+- MSKs received via RADIUS are now padded to 64 bytes to avoid compatibility
+  issues with EAP-MSCHAPv2 and PRFs that have a block size < 64 bytes (e.g.
+  AES-XCBC-PRF-128).
+
 - The tpm_extendpcr command line tool extends a digest into a TPM PCR.
+
+- Ported the NetworkManager backend from the deprecated libnm-glib to libnm.
+
+- The save-keys debugging/development plugin saves IKE and/or ESP keys to files
+  compatible with Wireshark.
 
 
 strongswan-5.6.1
