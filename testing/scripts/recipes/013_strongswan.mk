@@ -104,7 +104,9 @@ CONFIG_OPTS = \
 	--enable-bliss \
 	--enable-sha3 \
 	--enable-newhope \
-	--enable-systemd
+	--enable-systemd \
+	--enable-counters \
+	--enable-save-keys
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 
