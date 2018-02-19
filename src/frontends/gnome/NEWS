@@ -1,3 +1,8 @@
+NetworkManager-strongswan-1.4.3
+-------------------------------
+
+- Add option to disable libnm-glib compatibility
+
 NetworkManager-strongswan-1.4.2
 -------------------------------
 
