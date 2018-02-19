@@ -1,6 +1,15 @@
 strongswan-5.6.2
 ----------------
 
+- Fixed a DoS vulnerability in the parser for PKCS#1 RSASSA-PSS signatures that
+  was caused by insufficient input validation.  One of the configurable
+  parameters in algorithm identifier structures for RSASSA-PSS signatures is the
+  mask generation function (MGF).  Only MGF1 is currently specified for this
+  purpose.  However, this in turn takes itself a parameter that specifies the
+  underlying hash function.  strongSwan's parser did not correctly handle the
+  case of this parameter being absent, causing an undefined data read.
+  This vulnerability has been registered as CVE-2018-6459.
+
 - The previously negotiated DH group is reused when rekeying an SA, instead of
   using the first group in the configured proposals, which avoids an additional
   exchange if the peer selected a different group via INVALID_KE_PAYLOAD when
