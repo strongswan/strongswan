@@ -1060,16 +1060,17 @@ static status_t install_policies_internal(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
 	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
 	ipsec_sa_cfg_t *other_sa, policy_type_t type,
-	policy_priority_t priority,	uint32_t manual_prio)
+	policy_priority_t priority,	uint32_t manual_prio, bool outbound)
 {
 	status_t status = SUCCESS;
 
 	status |= install_policies_inbound(this, my_addr, other_addr, my_ts,
-									   other_ts, my_sa, other_sa, type,
-									   priority, manual_prio);
-	status |= install_policies_outbound(this, my_addr, other_addr, my_ts,
-										other_ts, my_sa, other_sa, type,
-										priority, manual_prio);
+						other_ts, my_sa, other_sa, type, priority, manual_prio);
+	if (outbound)
+	{
+		status |= install_policies_outbound(this, my_addr, other_addr, my_ts,
+						other_ts, my_sa, other_sa, type, priority, manual_prio);
+	}
 	return status;
 }
 
@@ -1153,12 +1154,15 @@ static void del_policies_internal(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
 	traffic_selector_t *other_ts, ipsec_sa_cfg_t *my_sa,
 	ipsec_sa_cfg_t *other_sa, policy_type_t type,
-	policy_priority_t priority, uint32_t manual_prio)
+	policy_priority_t priority, uint32_t manual_prio, bool outbound)
 {
-	del_policies_outbound(this, my_addr, other_addr, my_ts, other_ts, my_sa,
-						 other_sa, type, priority, manual_prio);
+	if (outbound)
+	{
+		del_policies_outbound(this, my_addr, other_addr, my_ts, other_ts, my_sa,
+						other_sa, type, priority, manual_prio);
+	}
 	del_policies_inbound(this, my_addr, other_addr, my_ts, other_ts, my_sa,
-						 other_sa, type, priority, manual_prio);
+						other_sa, type, priority, manual_prio);
 }
 
 METHOD(child_sa_t, set_policies, void,
@@ -1249,18 +1253,10 @@ METHOD(child_sa_t, install_policies, status_t,
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
-			status |= install_policies_inbound(this, this->my_addr,
+			status |= install_policies_internal(this, this->my_addr,
 									this->other_addr, my_ts, other_ts,
-									&my_sa, &other_sa, POLICY_IPSEC,
-									priority, manual_prio);
-
-			if (install_outbound)
-			{
-				status |= install_policies_outbound(this, this->my_addr,
-									this->other_addr, my_ts, other_ts,
-									&my_sa, &other_sa, POLICY_IPSEC,
-									priority, manual_prio);
-			}
+									&my_sa, &other_sa, POLICY_IPSEC, priority,
+									manual_prio, install_outbound);
 			if (status != SUCCESS)
 			{
 				break;
@@ -1517,22 +1513,26 @@ METHOD(child_sa_t, update, status_t,
 		traffic_selector_t *my_ts, *other_ts;
 		uint32_t manual_prio;
 		status_t state;
+		bool outbound;
 
 		prepare_sa_cfg(this, &my_sa, &other_sa);
 		manual_prio = this->config->get_manual_prio(this->config);
+		outbound = (this->outbound_state & CHILD_OUTBOUND_POLICIES);
 
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
 			/* install drop policy to avoid traffic leaks, acquires etc. */
-			install_policies_outbound(this, this->my_addr, this->other_addr,
-						my_ts, other_ts, &my_sa, &other_sa, POLICY_DROP,
-						POLICY_PRIORITY_DEFAULT, manual_prio);
-
+			if (outbound)
+			{
+				install_policies_outbound(this, this->my_addr, this->other_addr,
+							my_ts, other_ts, &my_sa, &other_sa, POLICY_DROP,
+							POLICY_PRIORITY_DEFAULT, manual_prio);
+			}
 			/* remove old policies */
 			del_policies_internal(this, this->my_addr, this->other_addr,
 						my_ts, other_ts, &my_sa, &other_sa, POLICY_IPSEC,
-						POLICY_PRIORITY_DEFAULT, manual_prio);
+						POLICY_PRIORITY_DEFAULT, manual_prio, outbound);
 		}
 		enumerator->destroy(enumerator);
 
@@ -1548,8 +1548,8 @@ METHOD(child_sa_t, update, status_t,
 			if (state == NOT_SUPPORTED)
 			{
 				install_policies_internal(this, this->my_addr, this->other_addr,
-						my_ts, other_ts, &my_sa, &other_sa,
-						POLICY_IPSEC, POLICY_PRIORITY_DEFAULT, manual_prio);
+						my_ts, other_ts, &my_sa, &other_sa, POLICY_IPSEC,
+						POLICY_PRIORITY_DEFAULT, manual_prio, outbound);
 			}
 			else
 			{
@@ -1573,15 +1573,17 @@ METHOD(child_sa_t, update, status_t,
 
 				/* reinstall updated policies */
 				install_policies_internal(this, me, other, my_ts, other_ts,
-										  &my_sa, &other_sa, POLICY_IPSEC,
-										  POLICY_PRIORITY_DEFAULT, manual_prio);
+						&my_sa, &other_sa, POLICY_IPSEC,
+						POLICY_PRIORITY_DEFAULT, manual_prio, outbound);
 			}
 			/* remove the drop policy */
-			del_policies_outbound(this, this->my_addr, this->other_addr,
-								  old_my_ts ?: my_ts,
-								  old_other_ts ?: other_ts,
-								  &my_sa, &other_sa, POLICY_DROP,
-								  POLICY_PRIORITY_DEFAULT, 0);
+			if (outbound)
+			{
+				del_policies_outbound(this, this->my_addr, this->other_addr,
+						old_my_ts ?: my_ts, old_other_ts ?: other_ts,
+						&my_sa, &other_sa, POLICY_DROP,
+						POLICY_PRIORITY_DEFAULT, 0);
+			}
 
 			DESTROY_IF(old_my_ts);
 			DESTROY_IF(old_other_ts);
@@ -1651,16 +1653,9 @@ METHOD(child_sa_t, destroy, void,
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
-			if (del_outbound)
-			{
-				del_policies_outbound(this, this->my_addr,
-									  this->other_addr, my_ts, other_ts,
-									  &my_sa, &other_sa, POLICY_IPSEC,
-									  priority, manual_prio);
-			}
-			del_policies_inbound(this, this->my_addr, this->other_addr,
-								 my_ts, other_ts, &my_sa, &other_sa,
-								 POLICY_IPSEC, priority, manual_prio);
+			del_policies_internal(this, this->my_addr,
+						this->other_addr, my_ts, other_ts, &my_sa, &other_sa,
+						POLICY_IPSEC, priority, manual_prio, del_outbound);
 		}
 		enumerator->destroy(enumerator);
 	}
