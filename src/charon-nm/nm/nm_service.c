@@ -65,8 +65,7 @@ static GVariant* handler_to_variant(nm_handler_t *handler,
 	enumerator = handler->create_enumerator(handler, type);
 	while (enumerator->enumerate(enumerator, &chunk))
 	{
-		g_variant_builder_add (&builder, "u",
-							   g_variant_new_uint32 (*(uint32_t*)chunk.ptr));
+		g_variant_builder_add (&builder, "u", *(uint32_t*)chunk.ptr);
 	}
 	enumerator->destroy(enumerator);
 
