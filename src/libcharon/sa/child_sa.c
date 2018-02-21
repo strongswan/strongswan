@@ -1463,7 +1463,7 @@ static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 	}
 
 	/* update his (responder) SA */
-	if (this->other_spi)
+	if (this->other_spi && (this->outbound_state & CHILD_OUTBOUND_SA))
 	{
 		kernel_ipsec_sa_id_t id = {
 			.src = this->my_addr,
