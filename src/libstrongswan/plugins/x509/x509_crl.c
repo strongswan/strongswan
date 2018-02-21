@@ -302,6 +302,7 @@ static bool parse(private_x509_crl_t *this)
 						}
 						break;
 					case OID_AUTHORITY_KEY_ID:
+						chunk_free(&this->authKeyIdentifier);
 						this->authKeyIdentifier =
 							x509_parse_authorityKeyIdentifier(
 									object, level, &this->authKeySerialNumber);
