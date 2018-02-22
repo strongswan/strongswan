@@ -1832,15 +1832,11 @@ static rt_entry_t *parse_route(struct nlmsghdr *hdr, rt_entry_t *route)
 
 	if (route)
 	{
-		route->gtw = chunk_empty;
-		route->pref_src = chunk_empty;
-		route->dst = chunk_empty;
-		route->dst_len = msg->rtm_dst_len;
-		route->src = chunk_empty;
-		route->src_len = msg->rtm_src_len;
-		route->table = msg->rtm_table;
-		route->oif = 0;
-		route->priority = 0;
+		*route = (rt_entry_t){
+			.dst_len = msg->rtm_dst_len,
+			.src_len = msg->rtm_src_len,
+			.table = msg->rtm_table,
+		};
 	}
 	else
 	{
