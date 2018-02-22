@@ -2256,49 +2256,31 @@ METHOD(enumerator_t, enumerate_subnets, bool,
 				break;
 			case RTM_NEWROUTE:
 			{
-				struct rtmsg *msg;
-				struct rtattr *rta;
-				size_t rtasize;
-				chunk_t dst = chunk_empty;
-				uint32_t oif = 0;
-
-				msg = NLMSG_DATA(this->current);
+				rt_entry_t route;
 
 				if (!route_usable(this->current))
 				{
 					break;
 				}
-				else if (msg->rtm_table && (
-							msg->rtm_table == RT_TABLE_LOCAL ||
-							msg->rtm_table == this->private->routing_table))
+				parse_route(this->current, &route);
+
+				if (route.table && (
+							route.table == RT_TABLE_LOCAL ||
+							route.table == this->private->routing_table))
 				{	/* ignore our own and the local routing tables */
 					break;
 				}
-
-				rta = RTM_RTA(msg);
-				rtasize = RTM_PAYLOAD(this->current);
-				while (RTA_OK(rta, rtasize))
-				{
-					switch (rta->rta_type)
-					{
-						case RTA_DST:
-							dst = chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta));
-							break;
-						case RTA_OIF:
-							if (RTA_PAYLOAD(rta) == sizeof(oif))
-							{
-								oif = *(uint32_t*)RTA_DATA(rta);
-							}
-							break;
-					}
-					rta = RTA_NEXT(rta, rtasize);
+				else if (route.gtw.ptr)
+				{	/* ignore routes via gateway/next hop */
+					break;
 				}
 
-				if (dst.ptr && oif && if_indextoname(oif, this->ifname))
+				if (route.dst.ptr && route.oif &&
+					if_indextoname(route.oif, this->ifname))
 				{
-					this->net = host_create_from_chunk(msg->rtm_family, dst, 0);
+					this->net = host_create_from_chunk(AF_UNSPEC, route.dst, 0);
 					*net = this->net;
-					*mask = msg->rtm_dst_len;
+					*mask = route.dst_len;
 					*ifname = this->ifname;
 					return TRUE;
 				}
