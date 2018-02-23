@@ -212,6 +212,23 @@ START_TEST(test_unknown_transform_types_print)
 }
 END_TEST
 
+START_TEST(test_unknown_transform_types_equals)
+{
+	proposal_t *self, *other;
+
+	self = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
+	other = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
+	other->add_algorithm(other, 242, 42, 0);
+	ck_assert(!self->equals(self, other));
+	ck_assert(!other->equals(other, self));
+	self->add_algorithm(self, 242, 42, 0);
+	ck_assert(self->equals(self, other));
+	ck_assert(other->equals(other, self));
+	other->destroy(other);
+	self->destroy(self);
+}
+END_TEST
+
 START_TEST(test_unknown_transform_types_select_fail)
 {
 	proposal_t *self, *other, *selected;
@@ -288,6 +305,7 @@ Suite *proposal_suite_create()
 
 	tc = tcase_create("unknown transform types");
 	tcase_add_test(tc, test_unknown_transform_types_print);
+	tcase_add_test(tc, test_unknown_transform_types_equals);
 	tcase_add_test(tc, test_unknown_transform_types_select_fail);
 	tcase_add_test(tc, test_unknown_transform_types_select_fail_subtype);
 	tcase_add_test(tc, test_unknown_transform_types_select_success);

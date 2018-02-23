@@ -527,16 +527,27 @@ METHOD(proposal_t, get_number, u_int,
 METHOD(proposal_t, equals, bool,
 	private_proposal_t *this, proposal_t *other)
 {
+	transform_type_t type;
+	array_t *types;
+	int i;
+
 	if (&this->public == other)
 	{
 		return TRUE;
 	}
-	return (
-		algo_list_equals(this, other, ENCRYPTION_ALGORITHM) &&
-		algo_list_equals(this, other, INTEGRITY_ALGORITHM) &&
-		algo_list_equals(this, other, PSEUDO_RANDOM_FUNCTION) &&
-		algo_list_equals(this, other, DIFFIE_HELLMAN_GROUP) &&
-		algo_list_equals(this, other, EXTENDED_SEQUENCE_NUMBERS));
+
+	types = merge_types(this, (private_proposal_t*)other);
+	for (i = 0; i < array_count(types); i++)
+	{
+		array_get(types, i, &type);
+		if (!algo_list_equals(this, other, type))
+		{
+			array_destroy(types);
+			return FALSE;
+		}
+	}
+	array_destroy(types);
+	return TRUE;
 }
 
 METHOD(proposal_t, clone_, proposal_t*,
