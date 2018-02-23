@@ -213,7 +213,8 @@ METHOD(task_t, build_i, status_t,
 									   message) != NEED_MORE)
 	{
 		schedule_delayed_rekey(this);
-		return FAILED;
+		message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
+		return SUCCESS;
 	}
 	if (message->get_exchange_type(message) == CREATE_CHILD_SA)
 	{
