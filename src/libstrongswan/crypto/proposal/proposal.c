@@ -74,12 +74,30 @@ struct private_proposal_t {
 };
 
 /**
+ * This is a hack to not change the previous order when printing proposals
+ */
+static transform_type_t type_for_sort(const void *type)
+{
+	const transform_type_t *t = type;
+
+	switch (*t)
+	{
+		case PSEUDO_RANDOM_FUNCTION:
+			return INTEGRITY_ALGORITHM;
+		case INTEGRITY_ALGORITHM:
+			return PSEUDO_RANDOM_FUNCTION;
+		default:
+			return *t;
+	}
+}
+
+/**
  * Sort transform types
  */
 static int type_sort(const void *a, const void *b, void *user)
 {
-	const transform_type_t *ta = a, *tb = b;
-	return *ta - *tb;
+	transform_type_t ta = type_for_sort(a), tb = type_for_sort(b);
+	return ta - tb;
 }
 
 /**
@@ -724,30 +742,44 @@ static bool add_string_algo(private_proposal_t *this, const char *alg)
 }
 
 /**
- * print all algorithms of a kind to buffer
+ * Print all algorithms of the given type
  */
 static int print_alg(private_proposal_t *this, printf_hook_data_t *data,
-					 u_int kind, void *names, bool *first)
+					 transform_type_t type, bool *first)
 {
 	enumerator_t *enumerator;
 	size_t written = 0;
-	uint16_t alg, size;
+	entry_t *entry;
+	enum_name_t *names;
 
-	enumerator = create_enumerator(this, kind);
-	while (enumerator->enumerate(enumerator, &alg, &size))
+	names = transform_get_enum_names(type);
+
+	enumerator = array_create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &entry))
 	{
+		char *prefix = "/";
+
+		if (type != entry->type)
+		{
+			continue;
+		}
 		if (*first)
 		{
-			written += print_in_hook(data, "%N", names, alg);
+			prefix = "";
 			*first = FALSE;
+		}
+		if (names)
+		{
+			written += print_in_hook(data, "%s%N", prefix, names, entry->alg);
 		}
 		else
 		{
-			written += print_in_hook(data, "/%N", names, alg);
+			written += print_in_hook(data, "%sUNKNOWN_%u_%u", prefix,
+									 entry->type, entry->alg);
 		}
-		if (size)
+		if (entry->key_size)
 		{
-			written += print_in_hook(data, "_%u", size);
+			written += print_in_hook(data, "_%u", entry->key_size);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -763,6 +795,7 @@ int proposal_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	private_proposal_t *this = *((private_proposal_t**)(args[0]));
 	linked_list_t *list = *((linked_list_t**)(args[0]));
 	enumerator_t *enumerator;
+	transform_type_t *type;
 	size_t written = 0;
 	bool first = TRUE;
 
@@ -791,16 +824,12 @@ int proposal_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	}
 
 	written = print_in_hook(data, "%N:", protocol_id_names, this->protocol);
-	written += print_alg(this, data, ENCRYPTION_ALGORITHM,
-						 encryption_algorithm_names, &first);
-	written += print_alg(this, data, INTEGRITY_ALGORITHM,
-						 integrity_algorithm_names, &first);
-	written += print_alg(this, data, PSEUDO_RANDOM_FUNCTION,
-						 pseudo_random_function_names, &first);
-	written += print_alg(this, data, DIFFIE_HELLMAN_GROUP,
-						 diffie_hellman_group_names, &first);
-	written += print_alg(this, data, EXTENDED_SEQUENCE_NUMBERS,
-						 extended_sequence_numbers_names, &first);
+	enumerator = array_create_enumerator(this->types);
+	while (enumerator->enumerate(enumerator, &type))
+	{
+		written += print_alg(this, data, *type, &first);
+	}
+	enumerator->destroy(enumerator);
 	return written;
 }
 

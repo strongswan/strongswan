@@ -194,6 +194,24 @@ START_TEST(test_promote_dh_group_not_contained)
 }
 END_TEST
 
+START_TEST(test_unknown_transform_types_print)
+{
+	proposal_t *proposal;
+
+	proposal = proposal_create(PROTO_IKE, 0);
+	proposal->add_algorithm(proposal, 242, 42, 128);
+	assert_proposal_eq(proposal, "IKE:UNKNOWN_242_42_128");
+	proposal->destroy(proposal);
+
+	proposal = proposal_create_from_string(PROTO_IKE,
+										   "aes128-sha256-modp3072-ecp256");
+	proposal->add_algorithm(proposal, 242, 42, 128);
+	proposal->add_algorithm(proposal, 243, 1, 0);
+	assert_proposal_eq(proposal, "IKE:AES_CBC_128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/MODP_3072/ECP_256/UNKNOWN_242_42_128/UNKNOWN_243_1");
+	proposal->destroy(proposal);
+}
+END_TEST
+
 Suite *proposal_suite_create()
 {
 	Suite *s;
@@ -214,6 +232,10 @@ Suite *proposal_suite_create()
 	tcase_add_test(tc, test_promote_dh_group);
 	tcase_add_test(tc, test_promote_dh_group_already_front);
 	tcase_add_test(tc, test_promote_dh_group_not_contained);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("unknown transform types");
+	tcase_add_test(tc, test_unknown_transform_types_print);
 	suite_add_tcase(s, tc);
 
 	return s;
