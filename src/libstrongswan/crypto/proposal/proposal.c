@@ -111,21 +111,47 @@ static int type_find(const void *a, const void *b)
 /**
  * Check if the given transform type is already in the set
  */
-static bool contains_type(private_proposal_t *this, transform_type_t type)
+static bool contains_type(array_t *types, transform_type_t type)
 {
-	return array_bsearch(this->types, &type, type_find, NULL) != -1;
+	return array_bsearch(types, &type, type_find, NULL) != -1;
 }
 
 /**
  * Add the given transform type to the set
  */
-static void add_type(private_proposal_t *this, transform_type_t type)
+static void add_type(array_t *types, transform_type_t type)
 {
-	if (!contains_type(this, type))
+	if (!contains_type(types, type))
 	{
-		array_insert(this->types, ARRAY_TAIL, &type);
-		array_sort(this->types, type_sort, NULL);
+		array_insert(types, ARRAY_TAIL, &type);
+		array_sort(types, type_sort, NULL);
 	}
+}
+
+/**
+ * Merge two sets of transform types into a new array
+ */
+static array_t *merge_types(private_proposal_t *this, private_proposal_t *other)
+{
+	array_t *types;
+	transform_type_t type;
+	int i, count;
+
+	count = max(array_count(this->types), array_count(other->types));
+	types = array_create(sizeof(transform_type_t), count);
+
+	for (i = 0; i < count; i++)
+	{
+		if (array_get(this->types, i, &type))
+		{
+			add_type(types, type);
+		}
+		if (array_get(other->types, i, &type))
+		{
+			add_type(types, type);
+		}
+	}
+	return types;
 }
 
 /**
@@ -165,7 +191,7 @@ METHOD(proposal_t, add_algorithm, void,
 	};
 
 	array_insert(this->transforms, ARRAY_TAIL, &entry);
-	add_type(this, type);
+	add_type(this->types, type);
 }
 
 CALLBACK(alg_filter, bool,
@@ -397,6 +423,9 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 	bool private)
 {
 	proposal_t *selected;
+	transform_type_t type;
+	array_t *types;
+	int i;
 
 	DBG2(DBG_CFG, "selecting proposal:");
 
@@ -415,18 +444,20 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 	{
 		selected = proposal_create(this->protocol, this->number);
 		selected->set_spi(selected, this->spi);
-
 	}
 
-	if (!select_algo(this, other, selected, ENCRYPTION_ALGORITHM, private) ||
-		!select_algo(this, other, selected, PSEUDO_RANDOM_FUNCTION, private) ||
-		!select_algo(this, other, selected, INTEGRITY_ALGORITHM, private) ||
-		!select_algo(this, other, selected, DIFFIE_HELLMAN_GROUP, private) ||
-		!select_algo(this, other, selected, EXTENDED_SEQUENCE_NUMBERS, private))
+	types = merge_types(this, (private_proposal_t*)other);
+	for (i = 0; i < array_count(types); i++)
 	{
-		selected->destroy(selected);
-		return NULL;
+		array_get(types, i, &type);
+		if (!select_algo(this, other, selected, type, private))
+		{
+			selected->destroy(selected);
+			array_destroy(types);
+			return NULL;
+		}
 	}
+	array_destroy(types);
 
 	DBG2(DBG_CFG, "  proposal matches");
 	return selected;
