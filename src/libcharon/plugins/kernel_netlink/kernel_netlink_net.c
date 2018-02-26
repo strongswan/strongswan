@@ -1797,7 +1797,7 @@ static void rt_entry_destroy(rt_entry_t *this)
 /**
  * Check if the route received with RTM_NEWROUTE is usable based on its type.
  */
-static bool route_usable(struct nlmsghdr *hdr)
+static bool route_usable(struct nlmsghdr *hdr, bool allow_local)
 {
 	struct rtmsg *msg;
 
@@ -1809,6 +1809,8 @@ static bool route_usable(struct nlmsghdr *hdr)
 		case RTN_PROHIBIT:
 		case RTN_THROW:
 			return FALSE;
+		case RTN_LOCAL:
+			return allow_local;
 		default:
 			return TRUE;
 	}
@@ -1984,7 +1986,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				rt_entry_t *other;
 				uintptr_t table;
 
-				if (!route_usable(current))
+				if (!route_usable(current, TRUE))
 				{
 					continue;
 				}
@@ -2258,7 +2260,7 @@ METHOD(enumerator_t, enumerate_subnets, bool,
 			{
 				rt_entry_t route;
 
-				if (!route_usable(this->current))
+				if (!route_usable(this->current, FALSE))
 				{
 					break;
 				}
