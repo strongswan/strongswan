@@ -937,7 +937,6 @@ load_tester_config_t *load_tester_config_create()
 		.leases = hashtable_create((hashtable_hash_t)hash,
 								   (hashtable_equals_t)equals, 256),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		.num = 1,
 		.unique_port = UNIQUE_PORT_START,
 	);
 
