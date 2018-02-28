@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2006-2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,7 +21,7 @@
 #include <encoding/payloads/cert_payload.h>
 #include <encoding/payloads/certreq_payload.h>
 #include <credentials/certificates/x509.h>
-
+#include <collections/hashtable.h>
 
 typedef struct private_ike_cert_pre_t private_ike_cert_pre_t;
 
@@ -346,14 +346,15 @@ static void process_certs(private_ike_cert_pre_t *this, message_t *message)
 /**
  * add the keyid of a certificate to the certificate request payload
  */
-static void add_certreq(certreq_payload_t **req, certificate_t *cert)
+static void add_certreq(certreq_payload_t **req, certificate_t *cert,
+						hashtable_t *seen)
 {
 	switch (cert->get_type(cert))
 	{
 		case CERT_X509:
 		{
 			public_key_t *public;
-			chunk_t keyid;
+			chunk_t keyid, *fp;
 			x509_t *x509 = (x509_t*)cert;
 
 			if (!(x509->get_flags(x509) & X509_CA))
@@ -365,12 +366,23 @@ static void add_certreq(certreq_payload_t **req, certificate_t *cert)
 			{
 				break;
 			}
-			if (*req == NULL)
-			{
-				*req = certreq_payload_create_type(CERT_X509);
-			}
 			if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &keyid))
 			{
+				if (seen)
+				{
+					if (seen->get(seen, &keyid))
+					{
+						public->destroy(public);
+						break;
+					}
+					INIT(fp);
+					*fp = chunk_clone(keyid);
+					seen->put(seen, fp, fp);
+				}
+				if (!*req)
+				{
+					*req = certreq_payload_create_type(CERT_X509);
+				}
 				(*req)->add_keyid(*req, keyid);
 				DBG1(DBG_IKE, "sending cert request for \"%Y\"",
 					 cert->get_subject(cert));
@@ -398,13 +410,32 @@ static void add_certreqs(certreq_payload_t **req, auth_cfg_t *auth)
 		switch (type)
 		{
 			case AUTH_RULE_CA_CERT:
-				add_certreq(req, (certificate_t*)value);
+				add_certreq(req, (certificate_t*)value, NULL);
 				break;
 			default:
 				break;
 		}
 	}
 	enumerator->destroy(enumerator);
+}
+
+/**
+ * Hash keyids
+ */
+CALLBACK(hash_keyid, u_int,
+	const void *key)
+{
+	return chunk_hash(*(chunk_t*)key);
+}
+
+/**
+ * Destroy a keyid
+ */
+CALLBACK(destroy_keyid, void,
+	chunk_t *val, const void *key)
+{
+	chunk_free(val);
+	free(val);
 }
 
 /**
@@ -418,6 +449,7 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 	certificate_t *cert;
 	auth_cfg_t *auth;
 	certreq_payload_t *req = NULL;
+	hashtable_t *seen;
 
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 	if (!ike_cfg->send_certreq(ike_cfg))
@@ -440,13 +472,16 @@ static void build_certreqs(private_ike_cert_pre_t *this, message_t *message)
 	if (!req)
 	{
 		/* otherwise add all trusted CA certificates */
+		seen = hashtable_create(hash_keyid,
+								(hashtable_equals_t)chunk_equals_ptr, 8);
 		enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
 												CERT_ANY, KEY_ANY, NULL, TRUE);
 		while (enumerator->enumerate(enumerator, &cert))
 		{
-			add_certreq(&req, cert);
+			add_certreq(&req, cert, seen);
 		}
 		enumerator->destroy(enumerator);
+		seen->destroy_function(seen, destroy_keyid);
 	}
 
 	if (req)
