@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Andreas Steffen
+ * Copyright (C) 2017-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -19,10 +19,10 @@
  * ISO/IEC 19770-2-2015: Information Technology - Software Asset Management -
  * Part 2: Software Identification Tag
  */
-pen_type_t swima_data_model_iso_2015_swid_xml = { PEN_IETF, 1 };
+pen_type_t swima_data_model_iso_2015_swid_xml = { PEN_IETF, 0 };
 
 /**
  * ISO/IEC 19770-2-2009: Information Technology - Software Asset Management -
  * Part 2: Software Identification Tag
  */
-pen_type_t swima_data_model_iso_2009_swid_xml = { PEN_IETF, 2 };
+pen_type_t swima_data_model_iso_2009_swid_xml = { PEN_IETF, 1 };
