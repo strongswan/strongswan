@@ -2350,11 +2350,27 @@ METHOD(ike_sa_t, retransmit, status_t,
 
 				if (this->version == IKEV1 && array_count(this->child_sas))
 				{
+					enumerator_t *enumerator;
+					child_sa_t *child_sa;
+
 					/* if reauthenticating an IKEv1 SA failed (assumed for an SA
 					 * in this state with CHILD_SAs), try again from scratch */
 					DBG1(DBG_IKE, "reauthentication failed, trying to "
 						 "reestablish IKE_SA");
 					reestablish(this);
+					/* trigger down events for the CHILD_SAs, as no down event
+					 * is triggered below for IKE SAs in this state */
+					enumerator = array_create_enumerator(this->child_sas);
+					while (enumerator->enumerate(enumerator, &child_sa))
+					{
+						if (child_sa->get_state(child_sa) != CHILD_REKEYED &&
+							child_sa->get_state(child_sa) != CHILD_DELETED)
+						{
+							charon->bus->child_updown(charon->bus, child_sa,
+													  FALSE);
+						}
+					}
+					enumerator->destroy(enumerator);
 				}
 				break;
 			}
