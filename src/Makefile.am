@@ -146,4 +146,5 @@ endif
 
 if USE_TPM
   SUBDIRS += tpm_extendpcr
+  SUBDIRS += tpm_loadpkcs12
 endif

@@ -602,6 +602,13 @@ METHOD(tpm_tss_t, get_data, bool,
 	return FALSE;
 }
 
+METHOD(tpm_tss_t, load_key, bool,
+	private_tpm_tss_trousers_t *this, uint32_t hierarchy, uint32_t handle,
+	chunk_t pin, key_type_t type, chunk_t encoding)
+{
+	return FALSE;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_trousers_t *this)
 {
@@ -647,6 +654,7 @@ tpm_tss_t *tpm_tss_trousers_create()
 				.sign = _sign,
 				.get_random = _get_random,
 				.get_data = _get_data,
+				.load_key = _load_key,
 				.destroy = _destroy,
 			},
 			.load_aik = _load_aik,

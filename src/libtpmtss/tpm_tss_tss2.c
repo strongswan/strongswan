@@ -20,6 +20,7 @@
 
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
+#include <asn1/asn1_parser.h>
 #include <bio/bio_reader.h>
 
 #include <tpm20.h>
@@ -1019,7 +1020,7 @@ METHOD(tpm_tss_t, sign, bool,
 METHOD(tpm_tss_t, get_random, bool,
 	private_tpm_tss_tss2_t *this, size_t bytes, uint8_t *buffer)
 {
-	size_t len, random_len= sizeof(TPM2B_DIGEST)-2;
+	size_t len, random_len = sizeof(TPM2B_DIGEST)-2;
 	TPM2B_DIGEST random = { { random_len, } };
 	uint8_t *pos = buffer;
 	uint32_t rval;
@@ -1114,6 +1115,183 @@ METHOD(tpm_tss_t, get_data, bool,
 	return TRUE;
 }
 
+/**
+ * ASN.1 definition of a PKCS#1 RSA private key
+ */
+static const asn1Object_t privkeyObjects[] = {
+	{ 0, "RSAPrivateKey",       ASN1_SEQUENCE,     ASN1_NONE }, /*  0 */
+	{ 1,   "version",           ASN1_INTEGER,      ASN1_BODY }, /*  1 */
+	{ 1,   "modulus",           ASN1_INTEGER,      ASN1_BODY }, /*  2 */
+	{ 1,   "publicExponent",    ASN1_INTEGER,      ASN1_BODY }, /*  3 */
+	{ 1,   "privateExponent",   ASN1_INTEGER,      ASN1_BODY }, /*  4 */
+	{ 1,   "prime1",            ASN1_INTEGER,      ASN1_BODY }, /*  5 */
+	{ 1,   "prime2",            ASN1_INTEGER,      ASN1_BODY }, /*  6 */
+	{ 1,   "exponent1",         ASN1_INTEGER,      ASN1_BODY }, /*  7 */
+	{ 1,   "exponent2",         ASN1_INTEGER,      ASN1_BODY }, /*  8 */
+	{ 1,   "coefficient",       ASN1_INTEGER,      ASN1_BODY }, /*  9 */
+	{ 1,   "otherPrimeInfos",   ASN1_SEQUENCE,     ASN1_OPT |
+	                                               ASN1_LOOP }, /* 10 */
+	{ 2,     "otherPrimeInfo",  ASN1_SEQUENCE,     ASN1_NONE }, /* 11 */
+	{ 3,       "prime",         ASN1_INTEGER,      ASN1_BODY }, /* 12 */
+	{ 3,       "exponent",      ASN1_INTEGER,      ASN1_BODY }, /* 13 */
+	{ 3,       "coefficient",   ASN1_INTEGER,      ASN1_BODY }, /* 14 */
+	{ 1,   "end opt or loop",   ASN1_EOC,          ASN1_END  }, /* 15 */
+	{ 0, "exit",                ASN1_EOC,          ASN1_EXIT }
+};
+
+#define PRIV_KEY_VERSION		 1
+#define PRIV_KEY_MODULUS		 2
+#define PRIV_KEY_PUB_EXP		 3
+#define PRIV_KEY_PRIME1			 5
+
+/**
+ * Build a TPM 2.0 RSA key from an ASN.1 encoded private key blob.
+ */
+static bool build_rsa_key(chunk_t blob, TPMT_SENSITIVE *priv, TPMT_PUBLIC *pub)
+{
+	chunk_t n, e, p;
+	asn1_parser_t *parser;
+	chunk_t object;
+	int objectID ;
+	bool success = FALSE;
+
+	TPM2B_PRIVATE_KEY_RSA *priv_rsa = &priv->sensitive.rsa;
+    TPM2B_PUBLIC_KEY_RSA *pub_rsa = &pub->unique.rsa;
+
+	priv->sensitiveType = TPM_ALG_RSA;
+	pub->type = TPM_ALG_RSA;
+	pub->parameters.rsaDetail.symmetric.algorithm = TPM_ALG_NULL;
+	pub->parameters.rsaDetail.scheme.scheme = TPM_ALG_RSASSA;
+	pub->parameters.rsaDetail.scheme.details.anySig.hashAlg = TPM_ALG_SHA256;
+
+	parser = asn1_parser_create(privkeyObjects, blob);
+	parser->set_flags(parser, FALSE, TRUE);
+
+	while (parser->iterate(parser, &objectID, &object))
+	{
+		switch (objectID)
+		{
+			case PRIV_KEY_VERSION:
+				if (object.len > 0 && *object.ptr != 0)
+				{
+					goto end;
+				}
+				break;
+			case PRIV_KEY_MODULUS:
+				n = object;
+				if (n.len > 0 && *n.ptr == 0x00)
+				{
+					n = chunk_skip(n, 1);
+				}
+				if (n.len > MAX_RSA_KEY_BYTES)
+				{
+					goto end;
+				}
+				memcpy(pub_rsa->t.buffer, n.ptr, n.len);
+				pub_rsa->t.size = n.len;
+				pub->parameters.rsaDetail.keyBits = 8 * n.len;
+				break;
+			case PRIV_KEY_PUB_EXP:
+				e = object;
+				/* we only accept the standard public exponent 2'16+1 */
+				if (chunk_equals(e, chunk_from_str("\x01\x00\x01")))
+				{
+					goto end;
+				}
+				break;
+			case PRIV_KEY_PRIME1:
+				p = object;
+				if (p.len > 0 && *p.ptr == 0x00)
+				{
+					p = chunk_skip(p, 1);
+				}
+				if (p.len > MAX_RSA_KEY_BYTES / 2)
+				{
+					goto end;
+				}
+				memcpy(priv_rsa->t.buffer, p.ptr, p.len);
+				priv_rsa->t.size = p.len;
+				break;
+		}
+	}
+	success = parser->success(parser);
+
+end:
+	parser->destroy(parser);
+
+	return success;
+}
+
+/**
+ * Build a TPM 2.0 ECC key from an ASN.1 encoded private key blob.
+ */
+static bool build_ecc_key(chunk_t blob, TPMT_SENSITIVE *priv, TPMT_PUBLIC *pub)
+{
+	priv->sensitiveType = TPM_ALG_RSA;
+	pub->type = TPM_ALG_RSA;
+
+	return TRUE;
+}
+
+METHOD(tpm_tss_t, load_key, bool,
+	private_tpm_tss_tss2_t *this, uint32_t hierarchy, uint32_t handle,
+	chunk_t pin, key_type_t type, chunk_t encoding)
+{
+	bool success = FALSE;
+	uint32_t obj_handle, rval;
+
+	TPM2B_SENSITIVE sensitive = { { sizeof(TPM2B_SENSITIVE)-2, } };
+	TPM2B_PUBLIC public       = { { sizeof(TPM2B_PUBLIC)-2, } };
+	TPMT_SENSITIVE *priv = &sensitive.t.sensitiveArea;
+	TPMT_PUBLIC *pub = &public.t.publicArea;
+
+	chunk_t priv_chunk = { (uint8_t*)priv, (size_t)sensitive.t.size };
+	chunk_t pub_chunk  = { (uint8_t*)pub,  (size_t)public.t.size};
+
+	TPM2B_NAME name = { { sizeof(TPM2B_NAME)-2, } };
+
+	TPMS_AUTH_RESPONSE session_data;
+	TSS2_SYS_RSP_AUTHS sessions_data;
+	TPMS_AUTH_RESPONSE *session_data_array[1];
+
+	session_data_array[0]  = &session_data;
+	sessions_data.rspAuths = &session_data_array[0];
+	sessions_data.rspAuthsCount = 1;
+
+	pub->nameAlg = TPM_ALG_SHA256; /* TODO make nameAlg configurable */
+	pub->objectAttributes.val = 0x00040060;
+
+	switch (type)
+	{
+		case KEY_RSA:
+			success = build_rsa_key(encoding, priv, pub);
+			break;
+		case KEY_ECDSA:
+			success = build_ecc_key(encoding, priv, pub);
+			break;
+		default:
+			return FALSE;
+	}
+
+	if (!success)
+	{
+		return FALSE;
+	}
+	DBG1(DBG_PTS, "TPM2B_SENSITIVE: %B", &priv_chunk);
+	DBG1(DBG_PTS, "TPM2B_PUBLIC: %B", &pub_chunk);
+
+	rval = Tss2_Sys_LoadExternal(this->sys_context, 0, &sensitive, &public,
+					 hierarchy, &obj_handle, &name, &sessions_data);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS,"%s Tss2_Sys_LoadExternal failed: 0x%06x", LABEL, rval);
+		return FALSE;
+	}
+	DBG1(DBG_PTS, "handle = 0x%08x", obj_handle);
+
+	return success;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_tss2_t *this)
 {
@@ -1141,6 +1319,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 			.sign = _sign,
 			.get_random = _get_random,
 			.get_data = _get_data,
+			.load_key = _load_key,
 			.destroy = _destroy,
 		},
 	);

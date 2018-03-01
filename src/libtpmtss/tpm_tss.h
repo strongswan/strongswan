@@ -156,6 +156,19 @@ struct tpm_tss_t {
 					 chunk_t pin, chunk_t *data);
 
 	/**
+	 * Permanently load a private key into TPM NV storage (TPM 2.0 only)
+	 *
+	 * @param handle		object handle to be assigned to TPM key
+	 * @param hierarchy		hierarchy the TPM key object is attached to
+	 * @param pin			PIN code or empty chunk
+	 * @param type			private key type
+	 * @param encoding		private key encoding
+	 * @return				TRUE if load succeeded
+	 */
+	bool (*load_key)(tpm_tss_t *this, uint32_t hierarchy, uint32_t handle,
+					 chunk_t pin, key_type_t type, chunk_t encoding);
+
+	/**
 	 * Destroy a tpm_tss_t.
 	 */
 	void (*destroy)(tpm_tss_t *this);
