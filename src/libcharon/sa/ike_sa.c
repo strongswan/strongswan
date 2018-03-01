@@ -2347,6 +2347,15 @@ METHOD(ike_sa_t, retransmit, status_t,
 					return this->task_manager->initiate(this->task_manager);
 				}
 				DBG1(DBG_IKE, "establishing IKE_SA failed, peer not responding");
+
+				if (this->version == IKEV1 && array_count(this->child_sas))
+				{
+					/* if reauthenticating an IKEv1 SA failed (assumed for an SA
+					 * in this state with CHILD_SAs), try again from scratch */
+					DBG1(DBG_IKE, "reauthentication failed, trying to "
+						 "reestablish IKE_SA");
+					reestablish(this);
+				}
 				break;
 			}
 			case IKE_DELETING:
