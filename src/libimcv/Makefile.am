@@ -96,10 +96,6 @@ libimcv_la_SOURCES = \
 	seg/seg_contract.h seg/seg_contract.c \
 	seg/seg_contract_manager.h seg/seg_contract_manager.c \
 	seg/seg_env.h seg/seg_env.c \
-	swid/swid_error.h swid/swid_error.c \
-	swid/swid_inventory.h swid/swid_inventory.c \
-	swid/swid_tag.h swid/swid_tag.c \
-	swid/swid_tag_id.h swid/swid_tag_id.c \
 	swid_gen/swid_gen.h swid_gen/swid_gen.c \
 	swid_gen/swid_gen_info.h swid_gen/swid_gen_info.c \
 	swima/swima_data_model.h swima/swima_data_model.c \
@@ -129,10 +125,7 @@ libimcv_la_SOURCES = \
 	tcg/pts/tcg_pts_attr_unix_file_meta.h tcg/pts/tcg_pts_attr_unix_file_meta.c \
 	tcg/seg/tcg_seg_attr_max_size.h tcg/seg/tcg_seg_attr_max_size.c \
 	tcg/seg/tcg_seg_attr_seg_env.h tcg/seg/tcg_seg_attr_seg_env.c \
-	tcg/seg/tcg_seg_attr_next_seg.h tcg/seg/tcg_seg_attr_next_seg.c \
-	tcg/swid/tcg_swid_attr_req.h tcg/swid/tcg_swid_attr_req.c \
-	tcg/swid/tcg_swid_attr_tag_id_inv.h tcg/swid/tcg_swid_attr_tag_id_inv.c \
-	tcg/swid/tcg_swid_attr_tag_inv.h tcg/swid/tcg_swid_attr_tag_inv.c
+	tcg/seg/tcg_seg_attr_next_seg.h tcg/seg/tcg_seg_attr_next_seg.c
 
 ipsec_SCRIPTS = imv/_imv_policy
 EXTRA_DIST = imv/_imv_policy Android.mk
@@ -181,14 +174,6 @@ endif
 
 if USE_IMV_ATTESTATION
   SUBDIRS += plugins/imv_attestation
-endif
-
-if USE_IMC_SWID
-  SUBDIRS += plugins/imc_swid
-endif
-
-if USE_IMV_SWID
-  SUBDIRS += plugins/imv_swid
 endif
 
 if USE_IMC_SWIMA
