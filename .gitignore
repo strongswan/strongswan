@@ -30,6 +30,7 @@ lex.yy.c
 plugin_constructors.c
 Doxyfile
 apidoc/
+fuzzing-corpora/
 *~
 *.orig
 *.patch

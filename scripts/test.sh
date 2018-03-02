@@ -126,7 +126,8 @@ osx)
 	;;
 fuzzing)
 	CFLAGS="$CFLAGS -DNO_CHECK_MEMWIPE"
-	CONFIG="--enable-fuzzing --enable-static --disable-shared --disable-scripts"
+	CONFIG="--enable-fuzzing --enable-static --disable-shared --disable-scripts
+			--enable-imc-test"
 	# don't run any of the unit tests
 	export TESTS_RUNNERS=
 	# prepare corpora
