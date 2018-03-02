@@ -734,7 +734,7 @@ METHOD(pts_t, verify_quote_signature, bool,
 					scheme = SIGN_RSA_EMSA_PKCS1_SHA3_384;
 					break;
 				case HASH_SHA3_512:
-					scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512;
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA3_512;
 					break;
 				default:
 					scheme = SIGN_UNKNOWN;
