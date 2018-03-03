@@ -71,7 +71,7 @@ enum pts_simple_evid_final_flag_t {
 	/** TPM PCR Composite and TPM Quote Signature not included   */
 	PTS_SIMPLE_EVID_FINAL_NO =						0x00,
 	/** TPM Quote Info and TPM Quite Signature included
-	  * using TPM 2.0 Quote Info format                          */		
+	  * using TPM 2.0 Quote Info format                          */
 	PTS_SIMPLE_EVID_FINAL_EVID_QUOTE_INFO_TPM2 =	0x10,
     /** Evidence Signature included                              */
 	PTS_SIMPLE_EVID_FINAL_EVID_SIG =				0x20,
@@ -208,7 +208,7 @@ METHOD(pa_tnc_attr_t, build, void,
 		return;
 	}
 
-	quote_mode = this->quote_info->get_quote_mode(this->quote_info); 
+	quote_mode = this->quote_info->get_quote_mode(this->quote_info);
 	switch (quote_mode)
 	{
 		case TPM_QUOTE:
@@ -258,7 +258,7 @@ METHOD(pa_tnc_attr_t, build, void,
 		writer->write_data16(writer, version_info);
 		writer->write_data16(writer, pcr_select);
 	}
-		
+
 	if (quote_mode != TPM_QUOTE_NONE)
 	{
 		writer->write_data32(writer, this->quote_sig);
@@ -377,7 +377,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 		this->quote_info->set_version_info(this->quote_info, version_info);
 	}
 
-	
+
 	if (quote_mode != TPM_QUOTE_NONE)
 	{
 		if (!reader->read_data32(reader, &quote_sig))
