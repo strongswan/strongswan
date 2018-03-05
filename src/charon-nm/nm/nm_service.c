@@ -492,7 +492,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 					priv->creds->set_key_password(priv->creds, secret);
 				}
 				private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								KEY_RSA, BUILD_FROM_FILE, str, BUILD_END);
+								KEY_ANY, BUILD_FROM_FILE, str, BUILD_END);
 				if (!private)
 				{
 					g_set_error(err, NM_VPN_PLUGIN_ERROR,
