@@ -21,13 +21,29 @@ sub send {
 
 sub receive {
     my $self = shift;
-    my $packet_header;
+    my $packet_header = "";
     my $data;
 
-    $self->{'Socket'}->recv($packet_header, 4);
+    my $header_len = 4;
+    while ($header_len) {
+        my $buf;
+        $self->{'Socket'}->recv($buf, $header_len);
+        return undef
+            unless length($buf);
+        $header_len -= length($buf);
+        $packet_header .= $buf;
+    }
     my $packet_len = unpack('N', $packet_header);
-    $self->{'Socket'}->recv($data, $packet_len);
-	return $data;
+    while ($packet_len) {
+        my $buf;
+        $self->{'Socket'}->recv($buf, $packet_len);
+        return undef
+            unless length($buf);
+        $packet_len -= length($buf);
+        $data //= "";
+        $data .= $buf;
+    }
+    return $data;
 }
 
 1;
