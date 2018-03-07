@@ -194,6 +194,93 @@ START_TEST(test_promote_dh_group_not_contained)
 }
 END_TEST
 
+START_TEST(test_unknown_transform_types_print)
+{
+	proposal_t *proposal;
+
+	proposal = proposal_create(PROTO_IKE, 0);
+	proposal->add_algorithm(proposal, 242, 42, 128);
+	assert_proposal_eq(proposal, "IKE:UNKNOWN_242_42_128");
+	proposal->destroy(proposal);
+
+	proposal = proposal_create_from_string(PROTO_IKE,
+										   "aes128-sha256-ecp256");
+	proposal->add_algorithm(proposal, 242, 42, 128);
+	proposal->add_algorithm(proposal, 243, 1, 0);
+	assert_proposal_eq(proposal, "IKE:AES_CBC_128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/ECP_256/UNKNOWN_242_42_128/UNKNOWN_243_1");
+	proposal->destroy(proposal);
+}
+END_TEST
+
+START_TEST(test_unknown_transform_types_equals)
+{
+	proposal_t *self, *other;
+
+	self = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
+	other = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
+	other->add_algorithm(other, 242, 42, 0);
+	ck_assert(!self->equals(self, other));
+	ck_assert(!other->equals(other, self));
+	self->add_algorithm(self, 242, 42, 0);
+	ck_assert(self->equals(self, other));
+	ck_assert(other->equals(other, self));
+	other->destroy(other);
+	self->destroy(self);
+}
+END_TEST
+
+START_TEST(test_unknown_transform_types_select_fail)
+{
+	proposal_t *self, *other, *selected;
+
+	self = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
+	other = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
+	other->add_algorithm(other, 242, 42, 0);
+
+	selected = self->select(self, other, TRUE, FALSE);
+	ck_assert(!selected);
+	other->destroy(other);
+	self->destroy(self);
+}
+END_TEST
+
+START_TEST(test_unknown_transform_types_select_fail_subtype)
+{
+	proposal_t *self, *other, *selected;
+
+	self = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
+	self->add_algorithm(self, 242, 8, 0);
+	other = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
+	other->add_algorithm(other, 242, 42, 0);
+
+	selected = self->select(self, other, TRUE, FALSE);
+	ck_assert(!selected);
+	other->destroy(other);
+	self->destroy(self);
+}
+END_TEST
+
+START_TEST(test_unknown_transform_types_select_success)
+{
+	proposal_t *self, *other, *selected;
+
+	self = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
+	self->add_algorithm(self, 242, 42, 128);
+	other = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
+	other->add_algorithm(other, 242, 42, 128);
+	other->add_algorithm(other, 242, 1, 0);
+
+	selected = self->select(self, other, TRUE, FALSE);
+	ck_assert(selected);
+	assert_proposal_eq(selected, "IKE:AES_CBC_128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/ECP_256/UNKNOWN_242_42_128");
+	selected->destroy(selected);
+	other->destroy(other);
+	self->destroy(self);
+}
+END_TEST
+
+
+
 Suite *proposal_suite_create()
 {
 	Suite *s;
@@ -214,6 +301,14 @@ Suite *proposal_suite_create()
 	tcase_add_test(tc, test_promote_dh_group);
 	tcase_add_test(tc, test_promote_dh_group_already_front);
 	tcase_add_test(tc, test_promote_dh_group_not_contained);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("unknown transform types");
+	tcase_add_test(tc, test_unknown_transform_types_print);
+	tcase_add_test(tc, test_unknown_transform_types_equals);
+	tcase_add_test(tc, test_unknown_transform_types_select_fail);
+	tcase_add_test(tc, test_unknown_transform_types_select_fail_subtype);
+	tcase_add_test(tc, test_unknown_transform_types_select_success);
 	suite_add_tcase(s, tc);
 
 	return s;
