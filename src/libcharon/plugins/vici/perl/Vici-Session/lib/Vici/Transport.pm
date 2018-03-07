@@ -22,12 +22,27 @@ sub send {
 sub receive {
     my $self = shift;
     my $packet_header;
+
+    $packet_header = $self->_recv_all(4);
+    my $packet_len = unpack('N', $packet_header);
+    return $self->_recv_all($packet_len);
+}
+
+sub _recv_all {
+    my ($self, $len) = @_;
     my $data;
 
-    $self->{'Socket'}->recv($packet_header, 4);
-    my $packet_len = unpack('N', $packet_header);
-    $self->{'Socket'}->recv($data, $packet_len);
-	return $data;
+    while ($len)
+    {
+        my $buf;
+        unless (defined $self->{'Socket'}->recv($buf, $len))
+        {
+            die "error reading from socket\n";
+        }
+        $len -= length($buf);
+        $data .= $buf;
+    }
+    return $data;
 }
 
 1;
