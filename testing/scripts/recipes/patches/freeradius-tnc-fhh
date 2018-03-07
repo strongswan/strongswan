@@ -5363,7 +5363,7 @@ diff -u -r -N freeradius-server-2.2.0.orig/src/modules/rlm_eap/types/rlm_eap_tnc
 -#define VLAN_ACCESS 2
 -/*
 - ****
-- * EAP - MD5 does not specify code, id & length but chap specifies them,
+- * EAP - MD5 doesnot specify code, id & length but chap specifies them,
 - *	for generalization purpose, complete header should be sent
 - *	and not just value_size, value and name.
 - *	future implementation.
