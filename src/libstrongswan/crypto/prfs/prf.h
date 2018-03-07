@@ -1,7 +1,8 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -124,5 +125,13 @@ struct prf_t {
 	 */
 	void (*destroy)(prf_t *this);
 };
+
+/**
+ * Conversion of ASN.1 OID to PRF algorithm.
+ *
+ * @param oid			ASN.1 OID
+ * @return				encryption algorithm, PRF_UNDEFINED if OID unsupported
+ */
+pseudo_random_function_t pseudo_random_function_from_oid(int oid);
 
 #endif /** PRF_H_ @}*/

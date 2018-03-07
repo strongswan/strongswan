@@ -422,7 +422,9 @@ static bool parse_pbes1_params(private_pkcs5_t *this, chunk_t blob, int level0)
 /**
  * ASN.1 definition of a PBKDF2-params structure
  * The salt is actually a CHOICE and could be an AlgorithmIdentifier from
- * PBKDF2-SaltSources (but as per RFC 2898 that's for future versions).
+ * PBKDF2-SaltSources (but as per RFC 8018 that's for future versions).
+ * The PRF algorithm is actually defined as DEFAULT and not OPTIONAL, but the
+ * parser can't handle ASN1_DEF with SEQUENCEs.
  */
 static const asn1Object_t pbkdf2ParamsObjects[] = {
 	{ 0, "PBKDF2-params",	ASN1_SEQUENCE,		ASN1_NONE			}, /* 0 */
@@ -430,7 +432,8 @@ static const asn1Object_t pbkdf2ParamsObjects[] = {
 	{ 1,   "iterationCount",ASN1_INTEGER,		ASN1_BODY			}, /* 2 */
 	{ 1,   "keyLength",		ASN1_INTEGER,		ASN1_OPT|ASN1_BODY	}, /* 3 */
 	{ 1,   "end opt",		ASN1_EOC,			ASN1_END			}, /* 4 */
-	{ 1,   "prf",			ASN1_EOC,			ASN1_DEF|ASN1_RAW	}, /* 5 */
+	{ 1,   "prf",			ASN1_SEQUENCE,		ASN1_OPT|ASN1_RAW	}, /* 5 */
+	{ 1,   "end opt",		ASN1_EOC,			ASN1_END			}, /* 6 */
 	{ 0, "exit",			ASN1_EOC,			ASN1_EXIT			}
 };
 #define PBKDF2_SALT					1
@@ -446,13 +449,15 @@ static bool parse_pbkdf2_params(private_pkcs5_t *this, chunk_t blob, int level0)
 	asn1_parser_t *parser;
 	chunk_t object;
 	int objectID;
-	bool success;
+	bool success = FALSE;
 
 	parser = asn1_parser_create(pbkdf2ParamsObjects, blob);
 	parser->set_top_level(parser, level0);
 
  	/* keylen is optional */
 	this->keylen = 0;
+	/* defaults to id-hmacWithSHA1 */
+	this->data.pbes2.prf_alg = PRF_HMAC_SHA1;
 
 	while (parser->iterate(parser, &objectID, &object))
 	{
@@ -474,13 +479,22 @@ static bool parse_pbkdf2_params(private_pkcs5_t *this, chunk_t blob, int level0)
 				break;
 			}
 			case PBKDF2_PRF:
-			{	/* defaults to id-hmacWithSHA1, no other is currently defined */
-				this->data.pbes2.prf_alg = PRF_HMAC_SHA1;
+			{
+				int oid;
+
+				oid = asn1_parse_algorithmIdentifier(object,
+										parser->get_level(parser) + 1, NULL);
+				this->data.pbes2.prf_alg = pseudo_random_function_from_oid(oid);
+				if (this->data.pbes2.prf_alg == PRF_UNDEFINED)
+				{	/* unsupported PRF algorithm */
+					goto end;
+				}
 				break;
 			}
 		}
 	}
 	success = parser->success(parser);
+end:
 	parser->destroy(parser);
 	return success;
 }

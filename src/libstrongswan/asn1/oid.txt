@@ -150,6 +150,13 @@
             0x02             "digestAlgorithm"
               0x02           "md2"						OID_MD2
               0x05           "md5"						OID_MD5
+              0x07           "hmacWithSHA1"				OID_HMAC_SHA1
+              0x08           "hmacWithSHA224"			OID_HMAC_SHA224
+              0x09           "hmacWithSHA256"			OID_HMAC_SHA256
+              0x0A           "hmacWithSHA384"			OID_HMAC_SHA384
+              0x0B           "hmacWithSHA512"			OID_HMAC_SHA512
+              0x0C           "hmacWithSHA512-224"		OID_HMAC_SHA512_224
+              0x0D           "hmacWithSHA512-256"		OID_HMAC_SHA512_256
             0x03             "encryptionAlgorithm"
               0x07           "3des-ede-cbc"				OID_3DES_EDE_CBC
       0xCE                   ""
