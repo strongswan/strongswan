@@ -220,6 +220,11 @@ struct private_kernel_pfkey_ipsec_t
 	bool install_routes;
 
 	/**
+	 * whether to install the route via internal interface
+	 */
+	bool route_via_internal;
+
+	/**
 	 * mutex to lock access to the PF_KEY socket
 	 */
 	mutex_t *mutex_pfkey;
@@ -2361,7 +2366,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 		/* if the IP is virtual, we install the route over the interface it has
 		 * been installed on. Otherwise we use the interface we use for IKE, as
 		 * this is required for example on Linux. */
-		if (is_virtual)
+		if (is_virtual || this->route_via_internal)
 		{
 			free(route->if_name);
 			route->if_name = NULL;
@@ -3164,6 +3169,9 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 		.install_routes = lib->settings->get_bool(lib->settings,
 												  "%s.install_routes", TRUE,
 												  lib->ns),
+		.route_via_internal = lib->settings->get_bool(lib->settings,
+								"%s.plugins.kernel-pfkey.route_via_internal",
+								FALSE, lib->ns),
 	);
 
 	if (streq(lib->ns, "starter"))
