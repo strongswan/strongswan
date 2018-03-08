@@ -325,10 +325,12 @@ METHOD(proposal_t, strip_dh, void,
 		}
 	}
 	enumerator->destroy(enumerator);
+	array_compress(this->transforms);
 
 	if (keep == MODP_NONE || !found)
 	{
 		remove_type(this, DIFFIE_HELLMAN_GROUP);
+		array_compress(this->types);
 	}
 }
 
@@ -761,6 +763,7 @@ static bool check_proposal(private_proposal_t *this)
 	}
 
 	array_compress(this->transforms);
+	array_compress(this->types);
 	return TRUE;
 }
 
