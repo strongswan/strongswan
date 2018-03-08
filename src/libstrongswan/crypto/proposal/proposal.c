@@ -710,6 +710,14 @@ static bool check_proposal(private_proposal_t *this)
 			 * we MUST NOT propose any integrity algorithms */
 			remove_transform(this, INTEGRITY_ALGORITHM);
 		}
+		else if (this->protocol == PROTO_IKE &&
+				 !get_algorithm(this, INTEGRITY_ALGORITHM, NULL, NULL))
+		{
+			DBG1(DBG_CFG, "an integrity algorithm is mandatory in %N proposals "
+				 "with classic (non-AEAD) encryption algorithms",
+				 protocol_id_names, this->protocol);
+			return FALSE;
+		}
 	}
 	else
 	{	/* AES-GMAC is parsed as encryption algorithm, so we map that to the

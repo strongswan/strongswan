@@ -29,6 +29,8 @@ static struct {
 	{ PROTO_IKE, "aes128", NULL },
 	{ PROTO_IKE, "aes128-sha256", NULL },
 	{ PROTO_IKE, "aes128-sha256-modpnone", NULL },
+	{ PROTO_IKE, "aes128-prfsha256", NULL },
+	{ PROTO_IKE, "aes128-prfsha256-modp2048", NULL },
 	{ PROTO_IKE, "aes128-sha256-modp3072", "IKE:AES_CBC_128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/MODP_3072" },
 	{ PROTO_IKE, "aes128-sha256-prfsha384-modp3072", "IKE:AES_CBC_128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_384/MODP_3072" },
 	{ PROTO_IKE, "aes128gcm16-modp3072", NULL },
