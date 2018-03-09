@@ -3,6 +3,8 @@ AM_CPPFLAGS = @CPPFLAGS@ \
 	-I$(top_srcdir)/src/libimcv \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libtpmtss \
+	-I$(top_srcdir)/src/libtnccs \
+	-I$(top_srcdir)/src/libtnccs/plugins/tnccs_20 \
 	-DPLUGINDIR=\""$(abs_top_builddir)/src/libstrongswan/plugins\"" \
 	-DPLUGINS="\"${fuzz_plugins}\""
 
@@ -17,7 +19,12 @@ pa_tnc_ldflags = \
 	$(top_builddir)/src/libtpmtss/.libs/libtpmtss.a \
 	$(fuzz_ldflags)
 
-FUZZ_TARGETS=fuzz_certs fuzz_crls fuzz_pa_tnc
+pb_tnc_ldflags = \
+	$(top_builddir)/src/libtnccs/.libs/libtnccs.a \
+	$(top_builddir)/src/libtncif/.libs/libtncif.a \
+	$(fuzz_ldflags)
+
+FUZZ_TARGETS=fuzz_certs fuzz_crls fuzz_pa_tnc fuzz_pb_tnc
 
 all-local: $(FUZZ_TARGETS)
 
@@ -31,6 +38,9 @@ fuzz_crls: fuzz_crls.c ${libfuzzer}
 
 fuzz_pa_tnc: fuzz_pa_tnc.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(pa_tnc_ldflags)
+
+fuzz_pb_tnc: fuzz_pb_tnc.c ${libfuzzer}
+	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(pb_tnc_ldflags)
 
 noinst_LIBRARIES = libFuzzerLocal.a
 libFuzzerLocal_a_SOURCES = libFuzzerLocal.c
