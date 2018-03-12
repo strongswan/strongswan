@@ -37,6 +37,12 @@ ENUM(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_LZJH,
 	"IPCOMP_LZJH"
 );
 
+ENUM(hw_offload_names, HW_OFFLOAD_NO, HW_OFFLOAD_AUTO,
+	"no",
+	"yes",
+	"auto",
+);
+
 /*
  * See header
  */
