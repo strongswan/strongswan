@@ -204,7 +204,7 @@ static bool check_pidfile()
 			}
 			fclose(pidfile);
 			pidfile = NULL;
-			if (pid && kill(pid, 0) == 0)
+			if (pid && pid != getpid() && kill(pid, 0) == 0)
 			{
 				DBG1(DBG_DMN, "charon already running ('"PID_FILE"' exists)");
 				return TRUE;
