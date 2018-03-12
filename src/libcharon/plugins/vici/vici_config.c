@@ -533,7 +533,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   proposals = %#P", data->proposals);
 	DBG2(DBG_CFG, "   local_ts = %#R", data->local_ts);
 	DBG2(DBG_CFG, "   remote_ts = %#R", data->remote_ts);
-	DBG2(DBG_CFG, "   hw_offload = %u", has_opt(OPT_HW_OFFLOAD));
+	DBG2(DBG_CFG, "   hw_offload = %N", hw_offload_names, cfg->hw_offload);
 	DBG2(DBG_CFG, "   sha256_96 = %u", has_opt(OPT_SHA256_96));
 }
 
@@ -892,14 +892,6 @@ CALLBACK(parse_opt_ipcomp, bool,
 	return parse_option(out, OPT_IPCOMP, v);
 }
 
-/**
- * Parse OPT_HW_OFFLOAD option
- */
-CALLBACK(parse_opt_hw_offl, bool,
-	child_cfg_option_t *out, chunk_t v)
-{
-	return parse_option(out, OPT_HW_OFFLOAD, v);
-}
 
 /**
  * Parse OPT_SHA256_96 option
@@ -932,6 +924,27 @@ CALLBACK(parse_action, bool,
 		{ "trap",		ACTION_ROUTE	},
 		{ "none",		ACTION_NONE		},
 		{ "clear",		ACTION_NONE		},
+	};
+	int d;
+
+	if (parse_map(map, countof(map), &d, v))
+	{
+		*out = d;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Parse an hw_offload_t
+ */
+CALLBACK(parse_hw_offload, bool,
+	action_t *out, chunk_t v)
+{
+	enum_map_t map[] = {
+		{ "no",		HW_OFFLOAD_NO	},
+		{ "yes",	HW_OFFLOAD_YES	},
+		{ "auto",	HW_OFFLOAD_AUTO	},
 	};
 	int d;
 
@@ -1578,7 +1591,7 @@ CALLBACK(child_kv, bool,
 		{ "tfc_padding",		parse_tfc,			&child->cfg.tfc						},
 		{ "priority",			parse_uint32,		&child->cfg.priority				},
 		{ "interface",			parse_string,		&child->cfg.interface				},
-		{ "hw_offload",			parse_opt_hw_offl,	&child->cfg.options					},
+		{ "hw_offload",			parse_hw_offload,	&child->cfg.hw_offload				},
 		{ "sha256_96",			parse_opt_sha256_96,&child->cfg.options					},
 	};
 

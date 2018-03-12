@@ -142,6 +142,11 @@ struct private_child_cfg_t {
 	 * anti-replay window size
 	 */
 	uint32_t replay_window;
+
+	/**
+	 * HW offload mode
+	 */
+	hw_offload_t hw_offload;
 };
 
 METHOD(child_cfg_t, get_name, char*,
@@ -467,6 +472,12 @@ METHOD(child_cfg_t, get_start_action, action_t,
 	return this->start_action;
 }
 
+METHOD(child_cfg_t, get_hw_offload, hw_offload_t,
+	private_child_cfg_t *this)
+{
+	return this->hw_offload;
+}
+
 METHOD(child_cfg_t, get_dpd_action, action_t,
 	private_child_cfg_t *this)
 {
@@ -652,6 +663,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.equals = _equals,
 			.get_ref = _get_ref,
 			.destroy = _destroy,
+			.get_hw_offload = _get_hw_offload,
 		},
 		.name = strdup(name),
 		.options = data->options,
@@ -674,6 +686,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 		.other_ts = linked_list_create(),
 		.replay_window = lib->settings->get_int(lib->settings,
 							"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
+		.hw_offload = data->hw_offload,
 	);
 
 	return &this->public;
