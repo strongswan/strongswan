@@ -66,11 +66,9 @@ static struct {
 	diffie_hellman_params_t public;
 	/* The group identifier as specified in IKEv2 */
 	diffie_hellman_group_t group;
-	/* Optimal length of the exponent (in bytes), as specified in RFC 3526. */
-	size_t opt_exp;
 } dh_params[] = {
 	{
-		.group = MODP_768_BIT, .opt_exp = 32, .public = {
+		.group = MODP_768_BIT, .public = {
 			.exp_len = 32,
 			.generator = chunk_from_chars(0x02),
 			.prime = chunk_from_chars(
@@ -82,7 +80,7 @@ static struct {
 				0xF4,0x4C,0x42,0xE9,0xA6,0x3A,0x36,0x20,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF),
 		},
 	},{
-		.group = MODP_1024_BIT, .opt_exp = 32, .public = {
+		.group = MODP_1024_BIT, .public = {
 			.exp_len = 32,
 			.generator = chunk_from_chars(0x02),
 			.prime = chunk_from_chars(
@@ -96,7 +94,7 @@ static struct {
 				0x49,0x28,0x66,0x51,0xEC,0xE6,0x53,0x81,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF),
 		},
 	},{
-		.group = MODP_1536_BIT, .opt_exp = 32, .public = {
+		.group = MODP_1536_BIT, .public = {
 			.exp_len = 32,
 			.generator = chunk_from_chars(0x02),
 			.prime = chunk_from_chars(
@@ -114,7 +112,7 @@ static struct {
 				0xF1,0x74,0x6C,0x08,0xCA,0x23,0x73,0x27,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF),
 		},
 	},{
-		.group = MODP_2048_BIT, .opt_exp = 48, .public = {
+		.group = MODP_2048_BIT, .public = {
 			.exp_len = 48,
 			.generator = chunk_from_chars(0x02),
 			.prime = chunk_from_chars(
@@ -136,7 +134,7 @@ static struct {
 				0x15,0x72,0x8E,0x5A,0x8A,0xAC,0xAA,0x68,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF),
 		},
 	},{
-		.group = MODP_3072_BIT, .opt_exp = 48, .public = {
+		.group = MODP_3072_BIT, .public = {
 			.exp_len = 48,
 			.generator = chunk_from_chars(0x02),
 			.prime = chunk_from_chars(
@@ -166,7 +164,7 @@ static struct {
 				0x4B,0x82,0xD1,0x20,0xA9,0x3A,0xD2,0xCA,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF),
 		},
 	},{
-		.group = MODP_4096_BIT, .opt_exp = 64, .public = {
+		.group = MODP_4096_BIT, .public = {
 			.exp_len = 64,
 			.generator = chunk_from_chars(0x02),
 			.prime = chunk_from_chars(
@@ -204,7 +202,7 @@ static struct {
 				0x4D,0xF4,0x35,0xC9,0x34,0x06,0x31,0x99,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF),
 		},
 	},{
-		.group = MODP_6144_BIT, .opt_exp = 64, .public = {
+		.group = MODP_6144_BIT, .public = {
 			.exp_len = 64,
 			.generator = chunk_from_chars(0x02),
 			.prime = chunk_from_chars(
@@ -258,7 +256,7 @@ static struct {
 				0xE6,0x94,0xF9,0x1E,0x6D,0xCC,0x40,0x24,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF),
 		},
 	},{
-		.group = MODP_8192_BIT, .opt_exp = 64, .public = {
+		.group = MODP_8192_BIT, .public = {
 			.exp_len = 64,
 			.generator = chunk_from_chars(0x02),
 			.prime = chunk_from_chars(
@@ -328,7 +326,7 @@ static struct {
 				0x60,0xC9,0x80,0xDD,0x98,0xED,0xD3,0xDF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF),
 		},
 	},{
-		.group = MODP_1024_160, .opt_exp = 20, .public = {
+		.group = MODP_1024_160, .public = {
 			.exp_len = 20,
 			.subgroup = chunk_from_chars(
 				0xF5,0x18,0xAA,0x87,0x81,0xA8,0xDF,0x27,0x8A,0xBA,0x4E,0x7D,0x64,0xB7,0xCB,0x9D,
@@ -353,7 +351,7 @@ static struct {
 				0xE6,0x8C,0xFD,0xA7,0x6D,0x4D,0xA7,0x08,0xDF,0x1F,0xB2,0xBC,0x2E,0x4A,0x43,0x71),
 		},
 	}, {
-		.group = MODP_2048_224, .opt_exp = 28, .public = {
+		.group = MODP_2048_224, .public = {
 			.exp_len = 28,
 			.subgroup = chunk_from_chars(
 				0x80,0x1C,0x0D,0x34,0xC5,0x8D,0x93,0xFE,0x99,0x71,0x77,0x10,0x1F,0x80,0x53,0x5A,
@@ -394,7 +392,7 @@ static struct {
 				0xCF,0x9D,0xE5,0x38,0x4E,0x71,0xB8,0x1C,0x0A,0xC4,0xDF,0xFE,0x0C,0x10,0xE6,0x4F)
 		},
 	},{
-		.group = MODP_2048_256, .opt_exp = 32, .public = {
+		.group = MODP_2048_256, .public = {
 			.exp_len = 32,
 			.subgroup = chunk_from_chars(
 				0x8C,0xF8,0x36,0x42,0xA7,0x09,0xA0,0x97,0xB4,0x47,0x99,0x76,0x40,0x12,0x9D,0xA2,
@@ -444,6 +442,8 @@ void diffie_hellman_init()
 {
 	int i;
 
+	/* the default exponent size set above is based on the optimal length
+	 * according to RFC 3526 */
 	if (lib->settings->get_bool(lib->settings,
 					"%s.dh_exponent_ansi_x9_42", TRUE, lib->ns))
 	{
@@ -471,19 +471,6 @@ diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group)
 	{
 		if (dh_params[i].group == group)
 		{
-			if (!dh_params[i].public.exp_len)
-			{
-				if (!dh_params[i].public.subgroup.len &&
-					lib->settings->get_bool(lib->settings,
-									"%s.dh_exponent_ansi_x9_42", TRUE, lib->ns))
-				{
-					dh_params[i].public.exp_len = dh_params[i].public.prime.len;
-				}
-				else
-				{
-					dh_params[i].public.exp_len = dh_params[i].opt_exp;
-				}
-			}
 			return &dh_params[i].public;
 		}
 	}
