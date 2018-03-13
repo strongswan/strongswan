@@ -449,6 +449,12 @@ void diffie_hellman_init()
 	{
 		for (i = 0; i < countof(dh_params); i++)
 		{
+			/* according to RFC 5114 the size of the exponent for these DH
+			 * groups should equal the size of their prime order subgroup */
+			if (dh_params[i].public.subgroup.len)
+			{
+				continue;
+			}
 			dh_params[i].public.exp_len = dh_params[i].public.prime.len;
 		}
 	}
