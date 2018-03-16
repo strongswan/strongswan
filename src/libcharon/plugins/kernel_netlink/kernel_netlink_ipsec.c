@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Tobias Brunner
+ * Copyright (C) 2006-2018 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008-2016 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
@@ -261,19 +261,25 @@ static kernel_algorithm_t compression_algs[] = {
 };
 
 /**
- * IPsec offload
+ * IPsec HW offload state in kernel
  */
-enum nic_offload_state {
-	NIC_OFFLOAD_UNKNOWN,
-	NIC_OFFLOAD_UNSUPPORTED,
-	NIC_OFFLOAD_SUPPORTED
-};
+typedef enum {
+	NL_OFFLOAD_UNKNOWN,
+	NL_OFFLOAD_UNSUPPORTED,
+	NL_OFFLOAD_SUPPORTED
+} nl_offload_state_t;
 
+/**
+ * Global metadata used for IPsec HW offload
+ */
 static struct {
-	unsigned int bit;
-	unsigned int total_blocks;
-	enum nic_offload_state state;
-} netlink_esp_hw_offload;
+	/** bit in feature set */
+	u_int bit;
+	/** total number of device feature blocks */
+	u_int total_blocks;
+	/** determined HW offload state */
+	nl_offload_state_t state;
+} netlink_hw_offload;
 
 /**
  * Look up a kernel algorithm name and its key size
@@ -1330,89 +1336,65 @@ static bool add_mark(struct nlmsghdr *hdr, int buflen, mark_t mark)
 }
 
 /**
- * check if kernel supported HW offload
+ * Check if kernel supports HW offload
  */
-static void netlink_find_offload_feature(const char *ifname, int fd_for_socket)
+static void netlink_find_offload_feature(const char *ifname, int query_socket)
 {
-	struct ethtool_sset_info *sset_info = NULL;
+	struct ethtool_sset_info *sset_info;
 	struct ethtool_gstrings *cmd = NULL;
 	struct ifreq ifr;
 	uint32_t sset_len, i;
 	char *str;
 	int err;
 
-	netlink_esp_hw_offload.state = NIC_OFFLOAD_UNSUPPORTED;
+	netlink_hw_offload.state = NL_OFFLOAD_UNSUPPORTED;
 
-	/* Determine number of device-features */
-	sset_info = malloc(sizeof(*sset_info));
-	if (sset_info == NULL)
-	{
-		goto out;
-	}
-	memset(sset_info, 0, sizeof(*sset_info));
-
-	sset_info->cmd = ETHTOOL_GSSET_INFO;
-	sset_info->sset_mask = 1ULL << ETH_SS_FEATURES;
+	/* determine number of device features */
+	INIT_EXTRA(sset_info, sizeof(uint32_t),
+		.cmd = ETHTOOL_GSSET_INFO,
+		.sset_mask = 1ULL << ETH_SS_FEATURES,
+	);
 	strcpy(ifr.ifr_name, ifname);
+	ifr.ifr_data = (void*)sset_info;
 
-	ifr.ifr_data = (void *)sset_info;
-
-	err = ioctl(fd_for_socket, SIOCETHTOOL, &ifr);
-	if (err != 0)
-	{
-		goto out;
-	}
-
-	if (sset_info->sset_mask != 1ULL << ETH_SS_FEATURES)
+	err = ioctl(query_socket, SIOCETHTOOL, &ifr);
+	if (err || sset_info->sset_mask != 1ULL << ETH_SS_FEATURES)
 	{
 		goto out;
 	}
 	sset_len = sset_info->data[0];
 
-	/* Retrieve names of device-features */
-	cmd = malloc(sizeof(*cmd) + ETH_GSTRING_LEN * sset_len);
-	if (cmd == NULL)
-	{
-		goto out;
-	}
-
-	memset(cmd, 0, sizeof(*cmd));
-	cmd->cmd = ETHTOOL_GSTRINGS;
-	cmd->string_set = ETH_SS_FEATURES;
+	/* retrieve names of device features */
+	INIT_EXTRA(cmd, ETH_GSTRING_LEN * sset_len,
+		.cmd = ETHTOOL_GSTRINGS,
+		.string_set = ETH_SS_FEATURES,
+	);
 	strcpy(ifr.ifr_name, ifname);
-	ifr.ifr_data = (void *)cmd;
-	err = ioctl(fd_for_socket, SIOCETHTOOL, &ifr);
+	ifr.ifr_data = (void*)cmd;
+
+	err = ioctl(query_socket, SIOCETHTOOL, &ifr);
 	if (err)
 	{
 		goto out;
 	}
 
-	/* Look for the ESP_HW feature bit */
-	str = (char *)cmd->data;
+	/* look for the ESP_HW feature bit */
+	str = (char*)cmd->data;
 	for (i = 0; i < cmd->len; i++)
 	{
-		if (strneq(str, "esp-hw-offload", ETH_GSTRING_LEN) == 1)
+		if (strneq(str, "esp-hw-offload", ETH_GSTRING_LEN))
+		{
+			netlink_hw_offload.bit = i;
+			netlink_hw_offload.total_blocks = (sset_len + 31) / 32;
+			netlink_hw_offload.state = NL_OFFLOAD_SUPPORTED;
 			break;
+		}
 		str += ETH_GSTRING_LEN;
 	}
-	if (i >= cmd->len)
-	{
-		goto out;
-	}
-
-	netlink_esp_hw_offload.bit = i;
-	netlink_esp_hw_offload.total_blocks = (sset_len + 31) / 32;
-	netlink_esp_hw_offload.state = NIC_OFFLOAD_SUPPORTED;
 
 out:
-	if (sset_info != NULL)
-	{
-		free(sset_info);
-	}
-	if (cmd != NULL)
-	{
-		free(cmd);
-	}
+	free(sset_info);
+	free(cmd);
 }
 
 /**
@@ -1423,53 +1405,44 @@ static bool netlink_detect_offload(const char *ifname)
 	struct ethtool_gfeatures *cmd;
 	uint32_t feature_bit;
 	struct ifreq ifr;
-	bool ret = FALSE;
-	int nl_send_fd;
+	int query_socket;
 	int block;
+	bool ret = FALSE;
 
-	nl_send_fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_XFRM);
-
-	if (nl_send_fd < 0)
+	query_socket = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_XFRM);
+	if (query_socket < 0)
 	{
 		return FALSE;
 	}
 
-	/*
-	 * Kernel requires a real interface in order to query the kernel-wide
+	/* kernel requires a real interface in order to query the kernel-wide
 	 * capability, so we do it here on first invocation.
 	 */
-	if (netlink_esp_hw_offload.state == NIC_OFFLOAD_UNKNOWN)
+	if (netlink_hw_offload.state == NL_OFFLOAD_UNKNOWN)
 	{
-		netlink_find_offload_feature(ifname, nl_send_fd);
+		netlink_find_offload_feature(ifname, query_socket);
 	}
-
-	if (netlink_esp_hw_offload.state == NIC_OFFLOAD_UNSUPPORTED)
+	if (netlink_hw_offload.state == NL_OFFLOAD_UNSUPPORTED)
 	{
 		DBG1(DBG_KNL, "HW offload is not supported by kernel");
 		goto out;
 	}
 
-	/* Feature is supported by kernel. Query device features */
-	cmd = malloc(sizeof(cmd->features[0]) *
-			netlink_esp_hw_offload.total_blocks);
-	if (cmd == NULL)
-	{
-		goto out;
-	}
-
+	/* feature is supported by kernel, query device features */
+	INIT_EXTRA(cmd, sizeof(cmd->features[0]) * netlink_hw_offload.total_blocks,
+		.cmd = ETHTOOL_GFEATURES,
+		.size = netlink_hw_offload.total_blocks,
+	);
 	strcpy(ifr.ifr_name, ifname);
+	ifr.ifr_data = (void*)cmd;
 
-	ifr.ifr_data = (void *)cmd;
-	cmd->cmd = ETHTOOL_GFEATURES;
-	cmd->size = netlink_esp_hw_offload.total_blocks;
-
-	if (ioctl(nl_send_fd, SIOCETHTOOL, &ifr))
+	if (ioctl(query_socket, SIOCETHTOOL, &ifr))
 	{
 		goto out_free;
 	}
 
-	block = netlink_esp_hw_offload.bit / 32;
-	feature_bit = 1U << (netlink_esp_hw_offload.bit % 32);
+	block = netlink_hw_offload.bit / 32;
+	feature_bit = 1U << (netlink_hw_offload.bit % 32);
 	if (cmd->features[block].active & feature_bit)
 	{
 		ret = TRUE;
@@ -1477,18 +1450,18 @@ static bool netlink_detect_offload(const char *ifname)
 
 out_free:
 	free(cmd);
-	if (ret == FALSE)
+	if (!ret)
 	{
 		DBG1(DBG_KNL, "HW offload is not supported by device");
 	}
 out:
-	close(nl_send_fd);
+	close(query_socket);
 	return ret;
 }
 
 /**
- * There are 3 configuration options:
- * 1. HW_OFFLOAD_NO   : Do not configure HW offload..
+ * There are 3 HW offload configuration values:
+ * 1. HW_OFFLOAD_NO   : Do not configure HW offload.
  * 2. HW_OFFLOAD_YES  : Configure HW offload.
  *                      Fail SA addition if offload is not supported.
  * 3. HW_OFFLOAD_AUTO : Configure HW offload if supported by the kernel
@@ -1496,41 +1469,40 @@ out:
  *                      Do not fail SA addition otherwise.
  */
 static bool config_hw_offload(kernel_ipsec_sa_id_t *id,
-		kernel_ipsec_add_sa_t *data, struct nlmsghdr *hdr, int buflen)
+							  kernel_ipsec_add_sa_t *data, struct nlmsghdr *hdr,
+							  int buflen)
 {
-	bool cfg_hw_offload_is_yes = (data->hw_offload == HW_OFFLOAD_YES);
 	host_t *local = data->inbound ? id->dst : id->src;
 	struct xfrm_user_offload *offload;
-	bool hw_offload_support;
-	bool ret = FALSE;
+	bool hw_offload_yes, ret = FALSE;
 	char *ifname;
 
-	/* Do Ipsec configuration without offload */
+	/* do Ipsec configuration without offload */
 	if (data->hw_offload == HW_OFFLOAD_NO)
 	{
 		return TRUE;
 	}
 
+	hw_offload_yes = (data->hw_offload == HW_OFFLOAD_YES);
+
 	if (!charon->kernel->get_interface(charon->kernel, local, &ifname))
 	{
-		return !cfg_hw_offload_is_yes;
+		return !hw_offload_yes;
 	}
 
-	/* Check if interface supports hw_offload */
-	hw_offload_support = netlink_detect_offload(ifname);
-
-	if (!hw_offload_support)
+	/* check if interface supports hw_offload */
+	if (!netlink_detect_offload(ifname))
 	{
-		ret = !cfg_hw_offload_is_yes;
+		ret = !hw_offload_yes;
 		goto out;
 	}
 
-	/* Activate HW offload */
+	/* activate HW offload */
 	offload = netlink_reserve(hdr, buflen,
 							  XFRMA_OFFLOAD_DEV, sizeof(*offload));
 	if (!offload)
 	{
-		ret = !cfg_hw_offload_is_yes;
+		ret = !hw_offload_yes;
 		goto out;
 	}
 	offload->ifindex = if_nametoindex(ifname);
@@ -1908,7 +1880,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			sa->replay_window = data->replay_window;
 		}
 
-		DBG2(DBG_KNL, "  HW offload mode = %N", hw_offload_names, data->hw_offload);
+		DBG2(DBG_KNL, "  HW offload: %N", hw_offload_names, data->hw_offload);
 		if (!config_hw_offload(id, data, hdr, sizeof(request)))
 		{
 			DBG1(DBG_KNL, "failed to configure HW offload");
