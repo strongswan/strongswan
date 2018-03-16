@@ -685,9 +685,9 @@ dhcp_socket_t *dhcp_socket_create()
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_SERVER_PORT, 0, 14),
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, sizeof(struct iphdr) +
 				 offsetof(struct udphdr, dest)),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_CLIENT_PORT, 0, 2),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_SERVER_PORT, 0, 1),
-		BPF_JUMP(BPF_JMP+BPF_JA, 0, 0, 10),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_CLIENT_PORT, 2, 0),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_SERVER_PORT, 1, 0),
+		BPF_JUMP(BPF_JMP+BPF_JA, 10, 0, 0),
 		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, sizeof(struct iphdr) +
 				 sizeof(struct udphdr) + offsetof(dhcp_t, opcode)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, BOOTREPLY, 0, 8),
