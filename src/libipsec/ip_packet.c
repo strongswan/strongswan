@@ -527,7 +527,7 @@ ip_packet_t *ip_packet_create_from_data(host_t *src, host_t *dst,
 		case AF_INET6:
 		{
 			struct ip6_hdr ip = {
-				.ip6_flow = htonl(6),
+				.ip6_flow = htonl(6 << 28),
 				.ip6_plen = htons(data.len),
 				.ip6_nxt = next_header,
 				.ip6_hlim = 0x80,
