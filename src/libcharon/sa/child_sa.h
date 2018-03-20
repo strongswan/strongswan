@@ -493,7 +493,24 @@ struct child_sa_t {
 	 */
 	status_t (*update)(child_sa_t *this, host_t *me, host_t *other,
 					   linked_list_t *vips, bool encap);
+
+        /**
+         * Set this flag to remember that this CHILD_SA has already been rekeyed.
+	 * Relevant when calling child_updown.
+	 *
+	 * @param v		TRUE to indicate that this CHILD_SA is rekeyed
+         */
+        void (*set_already_rekeyed)(child_sa_t *this, bool v);
+
 	/**
+	 * Check if this CHILD_SA was already replaced via rekeying.
+	 * Even if not in state REKEYED anymore.
+	 *
+	 * @return		TRUE if rekeyed
+	 */
+        bool (*get_already_rekeyed)(child_sa_t *this);
+
+        /**
 	 * Destroys a child_sa.
 	 */
 	void (*destroy) (child_sa_t *this);

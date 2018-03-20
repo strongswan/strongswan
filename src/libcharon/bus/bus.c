@@ -827,7 +827,7 @@ METHOD(bus_t, ike_updown, void,
 		enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
 		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
-			if (child_sa->get_state(child_sa) != CHILD_REKEYED)
+			if (child_sa->get_state(child_sa) != CHILD_REKEYED && !child_sa->get_already_rekeyed(child_sa))
 			{
 				child_updown(this, child_sa, FALSE);
 			}

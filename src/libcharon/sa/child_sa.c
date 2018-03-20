@@ -251,6 +251,11 @@ struct private_child_sa_t {
 	 * last number of outbound bytes
 	 */
 	uint64_t other_usepackets;
+
+	/**
+	 * TRUE if CHILD_SA is already rekeyed
+	 */
+	bool already_rekeyed;
 };
 
 /**
@@ -1627,6 +1632,16 @@ METHOD(child_sa_t, update, status_t,
 	return SUCCESS;
 }
 
+METHOD(child_sa_t, set_already_rekeyed, void, private_child_sa_t *this, bool v)
+{
+	this->already_rekeyed = v;
+}
+
+METHOD(child_sa_t, get_already_rekeyed, bool, private_child_sa_t *this)
+{
+	return this->already_rekeyed;
+}
+
 METHOD(child_sa_t, destroy, void,
 	   private_child_sa_t *this)
 {
@@ -1798,6 +1813,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.create_ts_enumerator = _create_ts_enumerator,
 			.create_policy_enumerator = _create_policy_enumerator,
 			.destroy = _destroy,
+			.set_already_rekeyed = _set_already_rekeyed,
+			.get_already_rekeyed = _get_already_rekeyed,
 		},
 		.encap = encap,
 		.ipcomp = IPCOMP_NONE,
@@ -1814,6 +1831,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		.mark_out = config->get_mark(config, FALSE),
 		.install_time = time_monotonic(NULL),
 		.policies_fwd_out = config->has_option(config, OPT_FWD_OUT_POLICIES),
+		.already_rekeyed = false,
 	);
 
 	this->config = config;
