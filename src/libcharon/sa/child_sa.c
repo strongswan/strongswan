@@ -37,6 +37,7 @@ ENUM(child_sa_state_names, CHILD_CREATED, CHILD_DESTROYING,
 	"REKEYED",
 	"RETRYING",
 	"DELETING",
+	"DELETED",
 	"DESTROYING",
 );
 

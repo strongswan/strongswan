@@ -135,6 +135,7 @@ static bool delete_child(private_quick_delete_t *this, protocol_id_t protocol,
 	my_ts->destroy(my_ts);
 	other_ts->destroy(other_ts);
 
+	child_sa->set_state(child_sa, CHILD_DELETED);
 	if (!rekeyed)
 	{
 		charon->bus->child_updown(charon->bus, child_sa, FALSE);

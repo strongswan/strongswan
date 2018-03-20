@@ -84,6 +84,11 @@ enum child_sa_state_t {
 	CHILD_DELETING,
 
 	/**
+	 * CHILD_SA has been deleted, but not yet destroyed
+	 */
+	CHILD_DELETED,
+
+	/**
 	 * CHILD_SA object gets destroyed
 	 */
 	CHILD_DESTROYING,
