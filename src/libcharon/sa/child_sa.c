@@ -1836,7 +1836,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		.mark_out = config->get_mark(config, FALSE),
 		.install_time = time_monotonic(NULL),
 		.policies_fwd_out = config->has_option(config, OPT_FWD_OUT_POLICIES),
-		.child_updown_called = false,
+		.already_rekeyed = false,
 	);
 
 	this->config = config;
