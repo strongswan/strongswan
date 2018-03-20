@@ -31,9 +31,15 @@ sub request {
     my ($self, $command, $vars) = @_;
     my $out = defined $vars ? $vars->encode() : '';
     my $request = pack('CC/a*a*', CMD_REQUEST, $command, $out);
-    $self->{'Transport'}->send($request);
+    return (0, 'could not send data')
+        unless defined $self->{'Transport'}->send($request);
 
     my $response = $self->{'Transport'}->receive();
+    return Vici::Message->new({
+        errmsg  => 'could not get data',
+        success => 'no'
+    }) unless $response;
+
     my ($type, $data) = unpack('Ca*', $response);
 
     if ( $type == CMD_RESPONSE )
@@ -42,55 +48,65 @@ sub request {
     }
     elsif ( $type == CMD_UNKNOWN )
     {
-        die "unknown command '", $command, "'\n"
+        return Vici::Message->new({
+            errmsg  => 'unknown command: '. $command,
+            success => 'no'
+        });
     }
     else
     {
-        die "invalid response type\n"
+        return Vici::Message->new({
+            errmsg  => 'invalid response type',
+            success => 'no'
+        });
     }
 }
 
 sub register {
     my ($self, $event) = @_;
     my $request = pack('CC/a*a*', EVENT_REGISTER, $event);
-    $self->{'Transport'}->send($request);
+    return (0, 'could not send data')
+        unless defined $self->{'Transport'}->send($request);
 
     my $response = $self->{'Transport'}->receive();
+    return (0, 'could not get data') unless $response;
     my ($type, $data) = unpack('Ca*', $response);
 
     if ( $type == EVENT_CONFIRM )
     {
-        return
+        return (1, undef);
     }
     elsif ( $type == EVENT_UNKNOWN )
     {
-        die "unknown event '", $event, "'\n"
+        return (0, "unknown event '${event}'");
     }
     else
     {
-        die "invalid response type\n"
+        return (0, 'invalid response type');
     }
 }
 
 sub unregister {
     my ($self, $event) = @_;
     my $request = pack('CC/a*a*', EVENT_UNREGISTER, $event);
-    $self->{'Transport'}->send($request);
+    return (0, 'could not send data')
+        unless defined $self->{'Transport'}->send($request);
 
     my $response = $self->{'Transport'}->receive();
+    return (0, 'could not get data') unless $response;
     my ($type, $data) = unpack('Ca*', $response);
 
     if ( $type == EVENT_CONFIRM )
     {
-        return
+        return (1, undef);
     }
     elsif ( $type == EVENT_UNKNOWN )
     {
-        die "unknown event '", $event, "'\n"
+        return (0, "unknown event '${event}'");
     }
     else
     {
-        die "invalid response type\n"
+        return (0, 'invalid response type');
     }
 }
 
@@ -98,16 +114,25 @@ sub streamed_request {
     my ($self, $command, $event, $vars) = @_;
     my $out = defined $vars ? $vars->encode() : '';
 
-   $self->register($event);
+    my ($success, $errmsg) = $self->register($event);
+    return ([], $errmsg) unless $success;
 
     my $request = pack('CC/a*a*', CMD_REQUEST, $command, $out);
-    $self->{'Transport'}->send($request);
+    return (0, 'could not send data')
+        unless defined $self->{'Transport'}->send($request);
+
     my $more = 1;
     my @list = ();
 
     while ($more)
     {
         my $response = $self->{'Transport'}->receive();
+        unless ($response) {
+            $self->unregister($event);
+            $errmsg = 'could not get data';
+            $more = 0;
+            next;
+        }
         my ($type, $data) = unpack('Ca*', $response);
 
         if ( $type == EVENT )
@@ -122,16 +147,16 @@ sub streamed_request {
         }
         elsif ( $type == CMD_RESPONSE )
         {
-            $self->unregister($event);
+            ($success, $errmsg) = $self->unregister($event);
             $more = 0;
         }
         else
         {
             $self->unregister($event);
-            die "invalid response type\n";
+            $errmsg = 'invalid response type';
         }
     }
-    return \@list;
+    return (\@list, $errmsg);
 }
 
 1;

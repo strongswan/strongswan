@@ -107,13 +107,15 @@ sub parse {
                  }
                 else
                 {
-                    die "message parsing error: ", $type, "\n"
+                    $hash->{success} = 'no';
+                    $hash->{errmsg}  = 'message parsing error: '. $type;
                 }
             }
         }
         else
         {
-            die "message parsing error: ", $type, "\n"
+            $hash->{success} = 'no';
+            $hash->{errmsg}  = 'message parsing error: '. $type;
         }
     }
     return $data;
