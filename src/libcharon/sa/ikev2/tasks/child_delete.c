@@ -472,8 +472,9 @@ METHOD(task_t, build_i, status_t,
 	log_children(this);
 	build_payloads(this, message);
 
-	if (!entry->rekeyed && this->expired)
-	{
+	if (entry->rekeyed) {
+		child_sa->set_already_rekeyed(child_sa, true);
+	} else if (this->expired){
 		child_cfg_t *child_cfg;
 
 		DBG1(DBG_IKE, "scheduling CHILD_SA recreate after hard expire");
