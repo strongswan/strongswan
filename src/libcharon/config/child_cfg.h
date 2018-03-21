@@ -183,6 +183,13 @@ struct child_cfg_t {
 	action_t (*get_dpd_action) (child_cfg_t *this);
 
 	/**
+	 * Get the HW offload mode to use for the CHILD_SA.
+	 *
+	 * @return				hw offload mode
+	 */
+	hw_offload_t (*get_hw_offload) (child_cfg_t *this);
+
+	/**
 	 * Action to take if CHILD_SA gets closed.
 	 *
 	 * @return				close action
@@ -305,14 +312,11 @@ enum child_cfg_option_t {
 	/** Install outbound FWD IPsec policies to bypass drop policies */
 	OPT_FWD_OUT_POLICIES = (1<<4),
 
-	/** Enable hardware offload, if supported by the IPsec backend */
-	OPT_HW_OFFLOAD = (1<<5),
-
 	/** Force 96-bit truncation for SHA-256 */
-	OPT_SHA256_96 = (1<<6),
+	OPT_SHA256_96 = (1<<5),
 
 	/** Set mark on inbound SAs */
-	OPT_MARK_IN_SA = (1<<7),
+	OPT_MARK_IN_SA = (1<<6),
 };
 
 /**
@@ -347,6 +351,8 @@ struct child_cfg_create_t {
 	action_t close_action;
 	/** updown script to execute on up/down event (cloned) */
 	char *updown;
+	/** HW offload mode */
+	hw_offload_t hw_offload;
 };
 
 /**
