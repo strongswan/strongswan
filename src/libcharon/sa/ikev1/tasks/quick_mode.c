@@ -245,13 +245,32 @@ static bool have_pool(ike_sa_t *ike_sa)
 }
 
 /**
+ * Get the host from the first (only) traffc selector if peer is behind a NAT
+ */
+static host_t *get_nat_host(linked_list_t *proposed)
+{
+	host_t *host = NULL;
+	traffic_selector_t *ts;
+	uint8_t mask;
+
+	if ((proposed->get_first(proposed, (void**)&ts) == SUCCESS) &&
+		ts->is_host(ts, NULL))
+	{
+		ts->to_subnet(ts, &host, &mask);
+	}
+	return host;
+}
+
+/**
  * Get hosts to use for dynamic traffic selectors
  */
-static linked_list_t *get_dynamic_hosts(ike_sa_t *ike_sa, bool local)
+static linked_list_t *get_dynamic_hosts(private_quick_mode_t *this,
+									    bool local, linked_list_t *proposed)
 {
+	ike_sa_t *ike_sa = this->ike_sa;
 	enumerator_t *enumerator;
 	linked_list_t *list;
-	host_t *host;
+	host_t *host = NULL;
 
 	list = linked_list_create();
 	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, local);
@@ -261,16 +280,26 @@ static linked_list_t *get_dynamic_hosts(ike_sa_t *ike_sa, bool local)
 	}
 	enumerator->destroy(enumerator);
 
-	if (list->get_count(list) == 0)
+	if (!list->get_count(list))
 	{	/* no virtual IPs assigned */
 		if (local)
 		{
 			host = ike_sa->get_my_host(ike_sa);
-			list->insert_last(list, host);
 		}
 		else if (!have_pool(ike_sa))
 		{	/* use host only if we don't have a pool configured */
-			host = ike_sa->get_other_host(ike_sa);
+			if (proposed && this->mode == MODE_TUNNEL &&
+				ike_sa->has_condition(ike_sa, COND_NAT_THERE))
+			{
+				host = get_nat_host(proposed);
+			}
+			if (!host)
+			{
+				host = ike_sa->get_other_host(ike_sa);
+			}
+		}
+		if (host)
+		{
 			list->insert_last(list, host);
 		}
 	}
@@ -542,7 +571,7 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool local,
 	traffic_selector_t *ts;
 	linked_list_t *list, *hosts;
 
-	hosts = get_dynamic_hosts(this->ike_sa, local);
+	hosts = get_dynamic_hosts(this, local, supplied);
 	list = this->config->get_traffic_selectors(this->config,
 											   local, supplied, hosts);
 	hosts->destroy(hosts);
@@ -1088,8 +1117,8 @@ METHOD(task_t, process_r, status_t,
 			tsi = linked_list_create_with_items(this->tsi, NULL);
 			tsr = linked_list_create_with_items(this->tsr, NULL);
 			this->tsi = this->tsr = NULL;
-			hostsi = get_dynamic_hosts(this->ike_sa, FALSE);
-			hostsr = get_dynamic_hosts(this->ike_sa, TRUE);
+			hostsi = get_dynamic_hosts(this, FALSE, tsi);
+			hostsr = get_dynamic_hosts(this, TRUE, NULL);
 			this->config = peer_cfg->select_child_cfg(peer_cfg, tsr, tsi,
 													  hostsr, hostsi);
 			hostsi->destroy(hostsi);
