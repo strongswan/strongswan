@@ -1005,13 +1005,24 @@ static bool has_notify_errors(private_quick_mode_t *this, message_t *message)
 /**
  * Check if this is a rekey for an existing CHILD_SA, reuse reqid if so
  */
-static void check_for_rekeyed_child(private_quick_mode_t *this)
+static void check_for_rekeyed_child(private_quick_mode_t *this, bool responder)
 {
 	enumerator_t *enumerator, *policies;
-	traffic_selector_t *local, *remote;
+	traffic_selector_t *local, *remote, *my_ts, *other_ts;
 	child_sa_t *child_sa;
 	proposal_t *proposal;
 	char *name;
+
+	if (responder)
+	{
+		my_ts = this->tsr;
+		other_ts = this->tsi;
+	}
+	else
+	{
+		my_ts = this->tsi;
+		other_ts = this->tsr;
+	}
 
 	name = this->config->get_name(this->config);
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
@@ -1026,8 +1037,8 @@ static void check_for_rekeyed_child(private_quick_mode_t *this)
 				case CHILD_REKEYING:
 					policies = child_sa->create_policy_enumerator(child_sa);
 					if (policies->enumerate(policies, &local, &remote) &&
-						local->equals(local, this->tsr) &&
-						remote->equals(remote, this->tsi) &&
+						local->equals(local, my_ts) &&
+						remote->equals(remote, other_ts) &&
 						this->proposal->equals(this->proposal, proposal))
 					{
 						this->reqid = child_sa->get_reqid(child_sa);
@@ -1165,7 +1176,7 @@ METHOD(task_t, process_r, status_t,
 				}
 			}
 
-			check_for_rekeyed_child(this);
+			check_for_rekeyed_child(this, TRUE);
 
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
@@ -1366,6 +1377,7 @@ METHOD(task_t, process_i, status_t,
 			{
 				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
+			check_for_rekeyed_child(this, FALSE);
 			if (!install(this))
 			{
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
