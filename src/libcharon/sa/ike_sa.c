@@ -1053,16 +1053,18 @@ METHOD(ike_sa_t, has_mapping_changed, bool,
 METHOD(ike_sa_t, float_ports, void,
 	   private_ike_sa_t *this)
 {
-	/* do not switch if we have a custom port from MOBIKE/NAT */
+	/* even if the remote port is not 500 (e.g. because the response was natted)
+	 * we switch the remote port if we used port 500 */
+	if (this->other_host->get_port(this->other_host) == IKEV2_UDP_PORT ||
+		this->my_host->get_port(this->my_host) == IKEV2_UDP_PORT)
+	{
+		this->other_host->set_port(this->other_host, IKEV2_NATT_PORT);
+	}
 	if (this->my_host->get_port(this->my_host) ==
 			charon->socket->get_port(charon->socket, FALSE))
 	{
 		this->my_host->set_port(this->my_host,
 								charon->socket->get_port(charon->socket, TRUE));
-	}
-	if (this->other_host->get_port(this->other_host) == IKEV2_UDP_PORT)
-	{
-		this->other_host->set_port(this->other_host, IKEV2_NATT_PORT);
 	}
 }
 
