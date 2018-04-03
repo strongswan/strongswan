@@ -41,6 +41,7 @@
 #include <sys/utsname.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
+#include <linux/if_addrlabel.h>
 #include <unistd.h>
 #include <errno.h>
 #include <net/if.h>
@@ -2336,6 +2337,46 @@ METHOD(kernel_net_t, create_local_subnet_enumerator, enumerator_t*,
 }
 
 /**
+ * Manages the creation and deletion of IPv6 address labels for virtual IPs.
+ * By setting the appropriate nlmsg_type the label is either added or removed.
+ */
+static status_t manage_addrlabel(private_kernel_netlink_net_t *this,
+								 int nlmsg_type, host_t *ip)
+{
+	netlink_buf_t request;
+	struct nlmsghdr *hdr;
+	struct ifaddrlblmsg *msg;
+	chunk_t chunk;
+	uint32_t label;
+
+	memset(&request, 0, sizeof(request));
+
+	chunk = ip->get_address(ip);
+
+	hdr = &request.hdr;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	if (nlmsg_type == RTM_NEWADDRLABEL)
+	{
+		hdr->nlmsg_flags |= NLM_F_CREATE | NLM_F_EXCL;
+	}
+	hdr->nlmsg_type = nlmsg_type;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrlblmsg));
+
+	msg = NLMSG_DATA(hdr);
+	msg->ifal_family = ip->get_family(ip);
+	msg->ifal_prefixlen = chunk.len * 8;
+
+	netlink_add_attribute(hdr, IFAL_ADDRESS, chunk, sizeof(request));
+	/* doesn't really matter as default labels are < 20 but this makes it kinda
+	 * recognizable */
+	label = 220;
+	netlink_add_attribute(hdr, IFAL_LABEL, chunk_from_thing(label),
+						  sizeof(request));
+
+	return this->socket->send_ack(this->socket, hdr);
+}
+
+/**
  * Manages the creation and deletion of ip addresses on an interface.
  * By setting the appropriate nlmsg_type, the ip will be set or unset.
  */
@@ -2372,16 +2413,24 @@ static status_t manage_ipaddr(private_kernel_netlink_net_t *this, int nlmsg_type
 #endif
 		if (this->rta_prefsrc_for_ipv6)
 		{
-			/* if source routes are possible we let the virtual IP get
-			 * deprecated immediately (but mark it as valid forever) so it gets
-			 * only used if forced by our route, and not by the default IPv6
-			 * address selection */
-			struct ifa_cacheinfo cache = {
-				.ifa_valid = 0xFFFFFFFF,
-				.ifa_prefered = 0,
-			};
-			netlink_add_attribute(hdr, IFA_CACHEINFO, chunk_from_thing(cache),
-								  sizeof(request));
+			/* if source routes are possible we set a label for this virtual IP
+			 * so it gets only used if forced by our route, and not by the
+			 * default IPv6 address selection */
+			int labelop = nlmsg_type == RTM_NEWADDR ? RTM_NEWADDRLABEL
+													: RTM_DELADDRLABEL;
+			if (manage_addrlabel(this, labelop, ip) != SUCCESS)
+			{
+				/* if we can't use address labels we let the virtual IP get
+				 * deprecated immediately (but mark it as valid forever), which
+				 * should also avoid that it gets used by the default address
+				 * selection */
+				struct ifa_cacheinfo cache = {
+					.ifa_valid = 0xFFFFFFFF,
+					.ifa_prefered = 0,
+				};
+				netlink_add_attribute(hdr, IFA_CACHEINFO,
+									  chunk_from_thing(cache), sizeof(request));
+			}
 		}
 	}
 	return this->socket->send_ack(this->socket, hdr);
