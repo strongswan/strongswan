@@ -579,13 +579,38 @@ static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
 }
 
 /**
+ * Check if the issuer of the given CRL matches
+ */
+static bool check_issuer(certificate_t *crl, x509_t *issuer, x509_cdp_t *cdp)
+{
+	certificate_t *cissuer = (certificate_t*)issuer;
+	identification_t *id;
+	chunk_t chunk;
+	bool matches = FALSE;
+
+	if (cdp->issuer)
+	{
+		return crl->has_issuer(crl, cdp->issuer);
+	}
+	/* check SKI/AKI first, but fall back to DN matching */
+	chunk = issuer->get_subjectKeyIdentifier(issuer);
+	if (chunk.len)
+	{
+		id = identification_create_from_encoding(ID_KEY_ID, chunk);
+		matches = crl->has_issuer(crl, id);
+		id->destroy(id);
+	}
+	return matches || crl->has_issuer(crl, cissuer->get_subject(cissuer));
+}
+
+/**
  * Look for a delta CRL for a given base CRL
  */
 static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 									crl_t *base, cert_validation_t base_valid)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
-	certificate_t *best = NULL, *current;
+	certificate_t *best = NULL, *current, *cissuer = (certificate_t*)issuer;
 	enumerator_t *enumerator;
 	identification_t *id;
 	x509_cdp_t *cdp;
@@ -621,11 +646,12 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 		current = fetch_crl(cdp->uri);
 		if (current)
 		{
-			if (cdp->issuer && !current->has_issuer(current, cdp->issuer))
+			if (!check_issuer(current, issuer, cdp))
 			{
 				DBG1(DBG_CFG, "issuer of fetched delta CRL '%Y' does not match "
-					 "certificates CRL issuer '%Y'",
-					 current->get_issuer(current), cdp->issuer);
+					 "certificate's %sissuer '%Y'",
+					 current->get_issuer(current), cdp->issuer ? "CRL " : "",
+					 cdp->issuer ?: cissuer->get_subject(cissuer));
 				current->destroy(current);
 				continue;
 			}
@@ -653,7 +679,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 								   auth_cfg_t *auth)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
-	certificate_t *best = NULL;
+	certificate_t *best = NULL, *cissuer = (certificate_t*)issuer;
 	identification_t *id;
 	x509_cdp_t *cdp;
 	bool uri_found = FALSE;
@@ -692,11 +718,12 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 			current = fetch_crl(cdp->uri);
 			if (current)
 			{
-				if (cdp->issuer && !current->has_issuer(current, cdp->issuer))
+				if (!check_issuer(current, issuer, cdp))
 				{
 					DBG1(DBG_CFG, "issuer of fetched CRL '%Y' does not match "
-						 "certificates CRL issuer '%Y'",
-						 current->get_issuer(current), cdp->issuer);
+						 "certificate's %sissuer '%Y'",
+						 current->get_issuer(current), cdp->issuer ? "CRL " : "",
+						 cdp->issuer ?: cissuer->get_subject(cissuer));
 					current->destroy(current);
 					continue;
 				}
