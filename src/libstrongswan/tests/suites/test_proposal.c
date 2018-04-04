@@ -281,6 +281,19 @@ START_TEST(test_unknown_transform_types_select_success)
 }
 END_TEST
 
+START_TEST(test_chacha20_poly1305_key_length)
+{
+	proposal_t *proposal;
+	uint16_t alg, ks;
+
+	proposal = proposal_create_from_string(PROTO_IKE, "chacha20poly1305-prfsha256-ecp256");
+	proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &ks);
+	ck_assert_int_eq(alg, ENCR_CHACHA20_POLY1305);
+	ck_assert_int_eq(ks, 0);
+	assert_proposal_eq(proposal, "IKE:CHACHA20_POLY1305/PRF_HMAC_SHA2_256/ECP_256");
+	proposal->destroy(proposal);
+}
+END_TEST
 
 
 Suite *proposal_suite_create()
@@ -311,6 +324,10 @@ Suite *proposal_suite_create()
 	tcase_add_test(tc, test_unknown_transform_types_select_fail);
 	tcase_add_test(tc, test_unknown_transform_types_select_fail_subtype);
 	tcase_add_test(tc, test_unknown_transform_types_select_success);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("chacha20/poly1305");
+	tcase_add_test(tc, test_chacha20_poly1305_key_length);
 	suite_add_tcase(s, tc);
 
 	return s;

@@ -956,7 +956,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 256);
 					break;
 				case ENCR_CHACHA20_POLY1305:
-					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 256);
+					add_algorithm(this, ENCRYPTION_ALGORITHM, encryption, 0);
 					break;
 				default:
 					break;
