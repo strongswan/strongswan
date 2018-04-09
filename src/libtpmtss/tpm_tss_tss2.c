@@ -278,8 +278,9 @@ static bool initialize_tcti_tabrmd_context(private_tpm_tss_tss2_t *this)
 		return FALSE;
 	}
 
-	/* allocate memory for tcti context */
+	/* allocate and initialize memory for tcti context */
 	this->tcti_context = (TSS2_TCTI_CONTEXT*)malloc(tcti_context_size);
+	memset(this->tcti_context, 0x00, tcti_context_size);
 
 	/* initialize tcti context */
 	rval = tss2_tcti_tabrmd_init(this->tcti_context, &tcti_context_size);
