@@ -265,6 +265,8 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
 					case CHILD_REKEYED:
 						entry->rekeyed = TRUE;
 						break;
+					case CHILD_DELETED:
+						/* already deleted but not yet destroyed, ignore */
 					case CHILD_DELETING:
 						/* we don't send back a delete if we already initiated
 						 * a delete ourself */
@@ -324,6 +326,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 	while (enumerator->enumerate(enumerator, (void**)&entry))
 	{
 		child_sa = entry->child_sa;
+		child_sa->set_state(child_sa, CHILD_DELETED);
 		/* signal child down event if we weren't rekeying */
 		protocol = child_sa->get_protocol(child_sa);
 		if (!entry->rekeyed)
@@ -456,7 +459,7 @@ METHOD(task_t, build_i, status_t,
 		this->spi = child_sa->get_spi(child_sa, TRUE);
 	}
 
-	if (child_sa->get_state(child_sa) == CHILD_DELETING)
+	if (child_sa->get_state(child_sa) == CHILD_DELETED)
 	{	/* DELETEs for this CHILD_SA were already exchanged, but it was not yet
 		 * destroyed to allow delayed packets to get processed */
 		this->ike_sa->destroy_child_sa(this->ike_sa, this->protocol, this->spi);

@@ -363,7 +363,7 @@ METHOD(listener_t, child_state_change_terminate, bool,
 			case CHILD_DESTROYING:
 				switch (child_sa->get_state(child_sa))
 				{
-					case CHILD_DELETING:
+					case CHILD_DELETED:
 						/* proper delete */
 						this->status = SUCCESS;
 						break;

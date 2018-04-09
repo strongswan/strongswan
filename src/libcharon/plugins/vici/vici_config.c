@@ -2029,7 +2029,8 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 				children = ike_sa->create_child_sa_enumerator(ike_sa);
 				while (children->enumerate(children, &child_sa))
 				{
-					if (child_sa->get_state(child_sa) != CHILD_DELETING)
+					if (child_sa->get_state(child_sa) != CHILD_DELETING &&
+						child_sa->get_state(child_sa) != CHILD_DELETED)
 					{
 						if (streq(name, child_sa->get_name(child_sa)))
 						{
