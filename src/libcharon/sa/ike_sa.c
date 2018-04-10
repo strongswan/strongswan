@@ -1928,6 +1928,15 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 	enumerator = create_child_sa_enumerator(this);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
+		switch (child_sa->get_state(child_sa))
+		{
+			case CHILD_REKEYED:
+			case CHILD_DELETED:
+				/* ignore CHILD_SAs in these states */
+				continue;
+			default:
+				break;
+		}
 		if (force)
 		{
 			action = ACTION_RESTART;
@@ -2008,6 +2017,15 @@ METHOD(ike_sa_t, reestablish, status_t,
 		enumerator = array_create_enumerator(this->child_sas);
 		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
+			switch (child_sa->get_state(child_sa))
+			{
+				case CHILD_REKEYED:
+				case CHILD_DELETED:
+					/* ignore CHILD_SAs in these states */
+					continue;
+				default:
+					break;
+			}
 			if (this->state == IKE_DELETING)
 			{
 				action = child_sa->get_close_action(child_sa);

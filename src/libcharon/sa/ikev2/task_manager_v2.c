@@ -1796,6 +1796,15 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 	{
 		child_create_t *child_create;
 
+		switch (child_sa->get_state(child_sa))
+		{
+			case CHILD_REKEYED:
+			case CHILD_DELETED:
+				/* ignore CHILD_SAs in these states */
+				continue;
+			default:
+				break;
+		}
 		cfg = child_sa->get_config(child_sa);
 		child_create = child_create_create(new, cfg->get_ref(cfg),
 										   FALSE, NULL, NULL);
