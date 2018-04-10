@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2012-2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -180,13 +183,23 @@ typedef struct __attribute__((packed)) {
 } dhcp_t;
 
 /**
+ * Check if the given address equals the broadcast address
+ */
+static inline bool is_broadcast(host_t *host)
+{
+	chunk_t broadcast = chunk_from_chars(0xFF,0xFF,0xFF,0xFF);
+
+	return chunk_equals(broadcast, host->get_address(host));
+}
+
+/**
  * Prepare a DHCP message for a given transaction
  */
 static int prepare_dhcp(private_dhcp_socket_t *this,
 						dhcp_transaction_t *transaction,
 						dhcp_message_type_t type, dhcp_t *dhcp)
 {
-	chunk_t chunk, broadcast = chunk_from_chars(0xFF,0xFF,0xFF,0xFF);
+	chunk_t chunk;
 	identification_t *identity;
 	dhcp_option_t *option;
 	int optlen = 0;
@@ -198,7 +211,7 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	dhcp->hw_type = ARPHRD_ETHER;
 	dhcp->hw_addr_len = 6;
 	dhcp->transaction_id = transaction->get_id(transaction);
-	if (chunk_equals(broadcast, this->dst->get_address(this->dst)))
+	if (is_broadcast(this->dst))
 	{
 		/* Set broadcast flag to get broadcasted replies, as we actually
 		 * do not own the MAC we request an address for. */
@@ -765,6 +778,17 @@ dhcp_socket_t *dhcp_socket_create()
 		DBG1(DBG_CFG, "unable to broadcast on DHCP socket: %s", strerror(errno));
 		destroy(this);
 		return NULL;
+	}
+	if (!is_broadcast(this->dst))
+	{
+		/* when setting giaddr (which we do when we don't broadcast), the server
+		 * should respond to the server port on that IP, according to RFC 2131,
+		 * section 4.1.  while we do receive such messages via raw socket, the
+		 * kernel will respond with an ICMP port unreachable if there is no
+		 * socket bound to that port, which might be problematic with certain
+		 * DHCP servers.  instead of opening an additional socket, that we don't
+		 * actually use, we can also just send our requests from port 67 */
+		src.sin_port = htons(DHCP_SERVER_PORT);
 	}
 	if (bind(this->send, (struct sockaddr*)&src, sizeof(src)) == -1)
 	{
