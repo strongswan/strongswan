@@ -202,7 +202,7 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	chunk_t chunk;
 	identification_t *identity;
 	dhcp_option_t *option;
-	int optlen = 0;
+	int optlen = 0, remaining;
 	host_t *src;
 	uint32_t id;
 
@@ -254,21 +254,28 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	option->data[0] = type;
 	optlen += sizeof(dhcp_option_t) + option->len;
 
+	/* the REQUEST message has the most static overhead in the 'options' field
+	 * with 17 bytes */
+	remaining = sizeof(dhcp->options) - optlen - 17;
+
 	if (identity->get_type(identity) == ID_FQDN)
 	{
 		option = (dhcp_option_t*)&dhcp->options[optlen];
 		option->type = DHCP_HOST_NAME;
-		option->len = min(chunk.len, 64);
+		option->len = min(min(chunk.len, remaining-sizeof(dhcp_option_t)), 255);
+		memcpy(option->data, chunk.ptr, option->len);
+		optlen += sizeof(dhcp_option_t) + option->len;
+		remaining -= sizeof(dhcp_option_t) + option->len;
+	}
+
+	if (remaining >= sizeof(dhcp_option_t) + 2)
+	{
+		option = (dhcp_option_t*)&dhcp->options[optlen];
+		option->type = DHCP_CLIENT_ID;
+		option->len = min(min(chunk.len, remaining-sizeof(dhcp_option_t)), 255);
 		memcpy(option->data, chunk.ptr, option->len);
 		optlen += sizeof(dhcp_option_t) + option->len;
 	}
-
-	option = (dhcp_option_t*)&dhcp->options[optlen];
-	option->type = DHCP_CLIENT_ID;
-	option->len = min(chunk.len, 64);
-	memcpy(option->data, chunk.ptr, option->len);
-	optlen += sizeof(dhcp_option_t) + option->len;
-
 	return optlen;
 }
 
