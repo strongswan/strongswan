@@ -160,7 +160,7 @@ typedef struct __attribute__((packed)) {
 } dhcp_option_t;
 
 /**
- * DHCP message format, with a maximum size options buffer
+ * DHCP message format, with a minimum size options buffer
  */
 typedef struct __attribute__((packed)) {
 	uint8_t opcode;
@@ -179,7 +179,7 @@ typedef struct __attribute__((packed)) {
 	char server_hostname[64];
 	char boot_filename[128];
 	uint32_t magic_cookie;
-	u_char options[252];
+	u_char options[308];
 } dhcp_t;
 
 /**
@@ -286,7 +286,7 @@ static bool send_dhcp(private_dhcp_socket_t *this,
 	{
 		dst = this->dst;
 	}
-	len = offsetof(dhcp_t, magic_cookie) + ((optlen + 4) / 64 * 64 + 64);
+	len = offsetof(dhcp_t, magic_cookie) + optlen + 4;
 	return sendto(this->send, dhcp, len, 0, dst->get_sockaddr(dst),
 				  *dst->get_sockaddr_len(dst)) == len;
 }
