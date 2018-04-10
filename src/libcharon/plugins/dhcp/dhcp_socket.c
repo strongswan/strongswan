@@ -688,7 +688,7 @@ dhcp_socket_t *dhcp_socket_create()
 		},
 	};
 	char *iface;
-	int on = 1;
+	int on = 1, rcvbuf = 0;
 	struct sock_filter dhcp_filter_code[] = {
 		BPF_STMT(BPF_LD+BPF_B+BPF_ABS,
 				 offsetof(struct iphdr, protocol)),
@@ -776,6 +776,19 @@ dhcp_socket_t *dhcp_socket_create()
 	if (setsockopt(this->send, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on)) == -1)
 	{
 		DBG1(DBG_CFG, "unable to broadcast on DHCP socket: %s", strerror(errno));
+		destroy(this);
+		return NULL;
+	}
+	/* we won't read any data from this socket, so reduce the buffer to save
+	 * some memory (there is some minimum, still try 0, though).
+	 * note that we might steal some packets from other processes if e.g. a DHCP
+	 * client (or server) is running on the same host, but by reducing the
+	 * buffer size the impact should be minimized */
+	if (setsockopt(this->send, SOL_SOCKET, SO_RCVBUF, &rcvbuf,
+				   sizeof(rcvbuf)) == -1)
+	{
+		DBG1(DBG_CFG, "unable to reduce receive buffer on DHCP send socket: %s",
+			 strerror(errno));
 		destroy(this);
 		return NULL;
 	}
