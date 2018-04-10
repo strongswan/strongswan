@@ -1930,21 +1930,7 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 	{
 		if (force)
 		{
-			switch (child_sa->get_state(child_sa))
-			{
-				case CHILD_ROUTED:
-				{	/* move routed child directly */
-					remove_child_sa(this, enumerator);
-					new->add_child_sa(new, child_sa);
-					action = ACTION_NONE;
-					break;
-				}
-				default:
-				{	/* initiate/queue all other CHILD_SAs */
-					action = ACTION_RESTART;
-					break;
-				}
-			}
+			action = ACTION_RESTART;
 		}
 		else
 		{	/* only restart CHILD_SAs that are configured accordingly */
