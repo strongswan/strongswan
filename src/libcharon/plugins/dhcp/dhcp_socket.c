@@ -268,7 +268,8 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 		remaining -= sizeof(dhcp_option_t) + option->len;
 	}
 
-	if (remaining >= sizeof(dhcp_option_t) + 2)
+	if (this->identity_lease &&
+		remaining >= sizeof(dhcp_option_t) + 2)
 	{
 		option = (dhcp_option_t*)&dhcp->options[optlen];
 		option->type = DHCP_CLIENT_ID;

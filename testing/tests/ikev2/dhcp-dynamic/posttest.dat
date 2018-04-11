@@ -1,8 +1,9 @@
 moon::ipsec stop
 carol::ipsec stop
 dave::ipsec stop
-venus::cat /var/state/dhcp/dhcpd.leases
+venus::cat /var/lib/dhcp/dhcpd.leases
 venus::service isc-dhcp-server stop 2> /dev/null
+venus::rm /var/lib/dhcp/dhcpd.leases*; touch /var/lib/dhcp/dhcpd.leases
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush
 dave::iptables-restore < /etc/iptables.flush
