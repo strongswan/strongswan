@@ -33,7 +33,7 @@ typedef struct dhcp_transaction_t dhcp_transaction_t;
 struct dhcp_transaction_t {
 
 	/**
-	 * Get the DCHP transaction ID.
+	 * Get the DHCP transaction ID.
 	 *
 	 * @return			DHCP transaction identifier
 	 */
@@ -61,7 +61,7 @@ struct dhcp_transaction_t {
 	host_t* (*get_address)(dhcp_transaction_t *this);
 
 	/**
-	 * Set the DCHP server address discovered.
+	 * Set the DHCP server address discovered.
 	 *
 	 * @param server	DHCP server address
 	 */
@@ -75,7 +75,7 @@ struct dhcp_transaction_t {
 	host_t* (*get_server)(dhcp_transaction_t *this);
 
 	/**
-	 * An an additional attribute to serve to peer.
+	 * Add an additional attribute to serve to peer.
 	 *
 	 * @param type		type of attribute
 	 * @param data		attribute data
