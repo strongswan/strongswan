@@ -646,17 +646,6 @@ METHOD(job_t, terminate_child_execute, job_requeue_t,
 	listener->ike_sa = ike_sa;
 	listener->lock->unlock(listener->lock);
 
-	if (child_sa->get_state(child_sa) == CHILD_ROUTED)
-	{
-		DBG1(DBG_IKE, "unable to terminate, established "
-			 "CHILD_SA with ID %d not found", id);
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		listener->status = NOT_FOUND;
-		/* release listener */
-		listener_done(listener);
-		return JOB_REQUEUE_NONE;
-	}
-
 	if (ike_sa->delete_child_sa(ike_sa, child_sa->get_protocol(child_sa),
 					child_sa->get_spi(child_sa, TRUE), FALSE) != DESTROY_ME)
 	{
