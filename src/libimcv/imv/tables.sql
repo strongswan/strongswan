@@ -204,7 +204,8 @@ CREATE TABLE devices (
   value TEXT NOT NULL,
   product INTEGER REFERENCES products(id),
   trusted INTEGER DEFAULT 0,
-  created INTEGER
+  created INTEGER,
+  inactive INTEGER DEFAULT 0
 );
 DROP INDEX IF EXISTS devices_id;
 CREATE INDEX devices_value ON devices (

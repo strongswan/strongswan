@@ -130,8 +130,9 @@ static bool create_session(private_imv_database_t *this, imv_session_t *session)
 	if (!did)
 	{
 		this->db->execute(this->db, &did,
-			"INSERT INTO devices (value, product) VALUES (?, ?)",
-			 DB_TEXT, device, DB_INT, pid);
+			"INSERT INTO devices "
+			"(value, description, product, trusted, inactive) "
+			"VALUES (?, '', ?, 0, 0)", DB_TEXT, device, DB_INT, pid);
 	}
 	free(device);
 
