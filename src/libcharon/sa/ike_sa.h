@@ -232,6 +232,11 @@ enum ike_condition_t {
 	 * Online certificate revocation checking is suspended for this IKE_SA
 	 */
 	COND_ONLINE_VALIDATION_SUSPENDED = (1<<12),
+
+	/**
+	 * Childless IKEv2, RFC 6311
+	 */
+	COND_CHILDLESS = (1<<13),
 };
 
 /**

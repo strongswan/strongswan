@@ -258,8 +258,8 @@ METHOD(listener_t, ike_state_change, bool,
 	{
 		switch (state)
 		{
-#ifdef ME
 			case IKE_ESTABLISHED:
+#ifdef ME
 			{	/* mediation connections are complete without CHILD_SA */
 				peer_cfg_t *peer_cfg = ike_sa->get_peer_cfg(ike_sa);
 
@@ -268,9 +268,16 @@ METHOD(listener_t, ike_state_change, bool,
 					this->status = SUCCESS;
 					return listener_done(this);
 				}
-				break;
 			}
 #endif /* ME */
+			{	/* childless connections are complete without CHILD_SA */
+				if (ike_sa->has_condition(ike_sa, COND_CHILDLESS))
+				{
+					this->status = SUCCESS;
+					return listener_done(this);
+				}
+				break;
+			}
 			case IKE_DESTROYING:
 				return listener_done(this);
 			default:

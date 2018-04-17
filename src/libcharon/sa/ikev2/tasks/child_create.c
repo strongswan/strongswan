@@ -202,6 +202,11 @@ struct private_child_create_t {
 	 * whether we are retrying with another DH group
 	 */
 	bool retry;
+
+	/**
+	 * whether we are parsing a childless RFC6023 compliant IKE_AUTH message
+	 */
+	bool childless;
 };
 
 /**
@@ -916,6 +921,7 @@ static void handle_notify(private_child_create_t *this, notify_payload_t *notify
 	{
 		case USE_TRANSPORT_MODE:
 			this->mode = MODE_TRANSPORT;
+			this->childless = FALSE;
 			break;
 		case USE_BEET_MODE:
 			if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
@@ -951,12 +957,14 @@ static void handle_notify(private_child_create_t *this, notify_payload_t *notify
 						 ipcomp_transform_names, ipcomp);
 					break;
 			}
+			this->childless = FALSE;
 			break;
 		}
 		case ESP_TFC_PADDING_NOT_SUPPORTED:
 			DBG1(DBG_IKE, "received %N, not using ESPv3 TFC padding",
 				 notify_type_names, notify->get_notify_type(notify));
 			this->tfcv3 = FALSE;
+			this->childless = FALSE;
 			break;
 		default:
 			break;
@@ -977,6 +985,9 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 	/* defaults to TUNNEL mode */
 	this->mode = MODE_TUNNEL;
 
+	/* defaults to childless, set to FALSE if packet contains CHILD_SA creation specific payloads (per RFC6023) */
+	this->childless = TRUE;
+
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
@@ -985,6 +996,7 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 			case PLV2_SECURITY_ASSOCIATION:
 				sa_payload = (sa_payload_t*)payload;
 				this->proposals = sa_payload->get_proposals(sa_payload);
+				this->childless = FALSE;
 				break;
 			case PLV2_KEY_EXCHANGE:
 				ke_payload = (ke_payload_t*)payload;
@@ -1004,14 +1016,17 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 					this->dh_failed = !this->dh->set_other_public_value(this->dh,
 								ke_payload->get_key_exchange_data(ke_payload));
 				}
+				this->childless = FALSE;
 				break;
 			case PLV2_TS_INITIATOR:
 				ts_payload = (ts_payload_t*)payload;
 				this->tsi = ts_payload->get_traffic_selectors(ts_payload);
+				this->childless = FALSE;
 				break;
 			case PLV2_TS_RESPONDER:
 				ts_payload = (ts_payload_t*)payload;
 				this->tsr = ts_payload->get_traffic_selectors(ts_payload);
+				this->childless = FALSE;
 				break;
 			case PLV2_NOTIFY:
 				handle_notify(this, (notify_payload_t*)payload);
@@ -1021,6 +1036,14 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	/* mark as childless only if we have RFC6023 enabled, responder is parsing IKE_AUTH message and
+	 * doesn't contain CHILD_SA creation specific paylods
+	*/
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_IKEV2_CHILDLESS) && !this->initiator && (message->get_exchange_type(message) == IKE_AUTH))
+	{
+		this->ike_sa->set_condition(this->ike_sa, COND_CHILDLESS, this->childless);
+	}
 }
 
 METHOD(task_t, build_i, status_t,
@@ -1051,6 +1074,11 @@ METHOD(task_t, build_i, status_t,
 			if (message->get_message_id(message) != 1)
 			{
 				/* send only in the first request, not in subsequent rounds */
+				return NEED_MORE;
+			}
+			if (this->ike_sa->has_condition(this->ike_sa, COND_CHILDLESS))
+			{
+				/* no CHILD_SA is created for childless IKE_SA */
 				return NEED_MORE;
 			}
 			break;
@@ -1332,6 +1360,10 @@ METHOD(task_t, build_r, status_t,
 			{	/* no CHILD_SA is created for redirected SAs */
 				return SUCCESS;
 			}
+			if (this->ike_sa->has_condition(this->ike_sa, COND_CHILDLESS))
+			{	/* no CHILD_SA is created for childless IKE_SA */ //DADA
+				return SUCCESS;
+			}
 			ike_auth = TRUE;
 		default:
 			break;
@@ -1356,6 +1388,13 @@ METHOD(task_t, build_r, status_t,
 	}
 	if (this->config == NULL)
 	{
+		/* if we received RFC6023 modified IKE_AUTH message, respond (per RFC) with INVALID_SYNTAX */
+		if (ike_auth && this->childless)
+		{
+			DBG1(DBG_IKE, "invalid RFC6023 IKE_AUTH message received");
+			message->add_notify(message, FALSE,  INVALID_SYNTAX, chunk_empty);
+			return FAILED;
+		}
 		DBG1(DBG_IKE, "traffic selectors %#R === %#R inacceptable",
 			 this->tsr, this->tsi);
 		charon->bus->alert(charon->bus, ALERT_TS_MISMATCH, this->tsi, this->tsr);
@@ -1638,6 +1677,13 @@ METHOD(task_t, process_i, status_t,
 		DBG1(DBG_IKE, "applying DH public value failed");
 		handle_child_sa_failure(this, message);
 		return delete_failed_sa(this);
+	}
+
+	/* there shouldn't be any CHILD_SAs to install if we are childless and processing IKE_AUTH message */
+	if (ike_auth && this->ike_sa->has_condition(this->ike_sa, COND_CHILDLESS))
+	{
+		/* no CHILD_SAs are created for childless IKE_SA */
+		return SUCCESS;
 	}
 
 	if (select_and_install(this, no_dh, ike_auth) == SUCCESS)
