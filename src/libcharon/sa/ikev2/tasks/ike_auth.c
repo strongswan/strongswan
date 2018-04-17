@@ -864,7 +864,8 @@ METHOD(task_t, build_r, status_t,
 							"%s.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT,
 							lib->ns));
 	}
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+	DBG0(DBG_IKE, "%sIKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+		 this->ike_sa->has_condition(this->ike_sa, COND_CHILDLESS) ? "childless " : "",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),
@@ -1150,7 +1151,8 @@ METHOD(task_t, process_i, status_t,
 				      "cancelling");
 		goto peer_auth_failed;
 	}
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+	DBG0(DBG_IKE, "%sIKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
+		 this->ike_sa->has_condition(this->ike_sa, COND_CHILDLESS) ? "childless " : "",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
 		 this->ike_sa->get_my_host(this->ike_sa),
