@@ -352,6 +352,13 @@ struct peer_cfg_t {
 	bool (*equals)(peer_cfg_t *this, peer_cfg_t *other);
 
 	/**
+	 * Check if peer_cfg has any child configs
+	 *
+	 * @return				TRUE if peer_cfg has any child configs
+	 */
+	bool (*has_children)(peer_cfg_t *this);
+
+	/**
 	 * Increase reference count.
 	 *
 	 * @return				reference to this
