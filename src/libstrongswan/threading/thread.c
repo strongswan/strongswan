@@ -348,6 +348,8 @@ thread_t *thread_create(thread_main_t main, void *arg)
 	{
 		DBG1(DBG_LIB, "failed to create thread!");
 		this->mutex->lock(this->mutex);
+		this->terminated = TRUE;
+		this->detached_or_joined = TRUE;
 		thread_destroy(this);
 		return NULL;
 	}
