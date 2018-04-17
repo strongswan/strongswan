@@ -231,9 +231,15 @@ static bool check_pidfile()
 			DBG1(DBG_LIB, "setting FD_CLOEXEC for '"PID_FILE"' failed: %s",
 				 strerror(errno));
 		}
-		ignore_result(fchown(fd,
-							 lib->caps->get_uid(lib->caps),
-							 lib->caps->get_gid(lib->caps)));
+		/* Only fchown() the pidfile if we have CAP_CHOWN. Otherwise,
+		 * directory permissions should allow pidfile to be accessed
+		 * by the UID/GID under which the charon deamon will run. */
+		if (lib->caps->check(lib->caps, CAP_CHOWN))
+		{
+			ignore_result(fchown(fd,
+								 lib->caps->get_uid(lib->caps),
+								 lib->caps->get_gid(lib->caps)));
+		}
 		fprintf(pidfile, "%d\n", getpid());
 		fflush(pidfile);
 		return FALSE;

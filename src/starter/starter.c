@@ -477,6 +477,7 @@ int main (int argc, char **argv)
 		}
 	}
 
+#ifndef STARTER_ALLOW_NON_ROOT
 	/* verify that we can start */
 	if (getuid() != 0)
 	{
@@ -484,6 +485,7 @@ int main (int argc, char **argv)
 		cleanup();
 		exit(LSB_RC_NOT_ALLOWED);
 	}
+#endif
 
 	if (check_pid(pid_file))
 	{
@@ -520,6 +522,7 @@ int main (int argc, char **argv)
 		exit(LSB_RC_INVALID_ARGUMENT);
 	}
 
+#ifndef SKIP_KERNEL_IPSEC_MODPROBES
 	/* determine if we have a native netkey IPsec stack */
 	if (!starter_netkey_init())
 	{
@@ -530,6 +533,7 @@ int main (int argc, char **argv)
 			DBG1(DBG_APP, "no known IPsec stack detected, ignoring!");
 		}
 	}
+#endif
 
 	last_reload = time_monotonic(NULL);
 

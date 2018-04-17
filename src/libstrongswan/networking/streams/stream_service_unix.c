@@ -39,8 +39,9 @@ stream_service_t *stream_service_create_unix(char *uri, int backlog)
 	}
 	if (!lib->caps->check(lib->caps, CAP_CHOWN))
 	{	/* required to chown(2) service socket */
-		DBG1(DBG_NET, "socket '%s' requires CAP_CHOWN capability", uri);
-		return NULL;
+		DBG1(DBG_NET, "cannot change ownership of socket '%s' without "
+			 "CAP_CHOWN capability. socket directory should be accessible to "
+			 "UID/GID under which the deamon will run", uri);
 	}
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1)
@@ -58,7 +59,9 @@ stream_service_t *stream_service_create_unix(char *uri, int backlog)
 		return NULL;
 	}
 	umask(old);
-	if (chown(addr.sun_path, lib->caps->get_uid(lib->caps),
+	/* only attempt to chown() socket if we have CAP_CHOWN */
+	if (lib->caps->check(lib->caps, CAP_CHOWN) &&
+		chown(addr.sun_path, lib->caps->get_uid(lib->caps),
 			  lib->caps->get_gid(lib->caps)) != 0)
 	{
 		DBG1(DBG_NET, "changing socket permissions for '%s' failed: %s",

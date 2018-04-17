@@ -422,7 +422,10 @@ METHOD(capabilities_t, drop, bool,
 {
 #ifndef WIN32
 #ifdef HAVE_PRCTL
-	prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
+	if (has_capability(this, CAP_SETPCAP, NULL))
+	{
+		prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
+	}
 #endif
 
 	if (this->uid && !init_supplementary_groups(this))
