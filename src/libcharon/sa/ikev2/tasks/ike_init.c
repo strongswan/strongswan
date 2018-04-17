@@ -493,6 +493,13 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 														   EXT_IKE_REDIRECTION);
 						}
 						break;
+					case CHILDLESS_IKEV2_SUPPORTED:
+						/* if we are initiator and have received CHILDLESS_IKEV2_SUPPORTED notify payload, enable RFC6023 support */
+						if (this->initiator && lib->settings->get_bool(lib->settings, "%s.childless_ikev2", TRUE, lib->ns))
+						{
+							this->ike_sa->enable_extension(this->ike_sa, EXT_IKEV2_CHILDLESS);
+						}
+						break;
 					default:
 						/* other notifies are handled elsewhere */
 						break;
@@ -756,6 +763,12 @@ METHOD(task_t, build_r, status_t,
 		DBG1(DBG_IKE, "key derivation failed");
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
+	}
+	/* advertise childless IKEv2 support in reponder's IKE_INIT message */
+	if (lib->settings->get_bool(lib->settings, "%s.childless_ikev2", TRUE, lib->ns))
+	{
+		this->ike_sa->enable_extension(this->ike_sa, EXT_IKEV2_CHILDLESS);
+		message->add_notify(message, FALSE, CHILDLESS_IKEV2_SUPPORTED, chunk_empty);
 	}
 	if (!build_payloads(this, message))
 	{

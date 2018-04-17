@@ -36,6 +36,10 @@ charon.cache_crls = no
 	Certification Authority (CA) to **/etc/ipsec.d/crls** (stroke) or
 	**/etc/swanctl/x509crl** (vici), respectively.
 
+charon.childless_ikev2 = yes
+	Whether we support RFC6023 - Childless Initiation of the Internet Key
+	Exchange Version 2 (IKEv2) Security Association (SA)
+
 charon.cisco_unity = no
 	Send Cisco Unity vendor ID payload (IKEv1 only).
 
