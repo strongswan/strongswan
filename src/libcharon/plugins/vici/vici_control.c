@@ -138,7 +138,8 @@ static child_cfg_t* get_child_from_peer(peer_cfg_t *peer_cfg, char *name)
 }
 
 /**
- * Find a peer/child config from a child config name
+ * Find a peer/child config from a child config name (if given),
+ * otherwise just return first matching peer_cfg
  */
 static child_cfg_t* find_child_cfg(char *name, char *pname, peer_cfg_t **out)
 {
@@ -146,6 +147,7 @@ static child_cfg_t* find_child_cfg(char *name, char *pname, peer_cfg_t **out)
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg = NULL;
 
+	*out = NULL;
 	enumerator = charon->backends->create_peer_cfg_enumerator(
 							charon->backends, NULL, NULL, NULL, NULL, IKE_ANY);
 	while (enumerator->enumerate(enumerator, &peer_cfg))
@@ -153,6 +155,12 @@ static child_cfg_t* find_child_cfg(char *name, char *pname, peer_cfg_t **out)
 		if (pname && !streq(pname, peer_cfg->get_name(peer_cfg)))
 		{
 			continue;
+		}
+		/* if we are not looking for a specific child, return first match */
+		if (name == NULL)
+		{
+			*out = peer_cfg->get_ref(peer_cfg);
+			break;
 		}
 		child_cfg = get_child_from_peer(peer_cfg, name);
 		if (child_cfg)
@@ -179,6 +187,8 @@ CALLBACK(initiate, vici_message_t*,
 		.dispatcher = this->dispatcher,
 		.id = id,
 	};
+	/* store connection type IKE_SA/CHILD_SA and name so the logging is easier */
+	char *ic_type, *ic_name;
 
 	child = request->get_str(request, NULL, "child");
 	ike = request->get_str(request, NULL, "ike");
@@ -186,21 +196,35 @@ CALLBACK(initiate, vici_message_t*,
 	limits = request->get_bool(request, FALSE, "init-limits");
 	log.level = request->get_int(request, 1, "loglevel");
 
-	if (!child)
-	{
-		return send_reply(this, "missing configuration name");
-	}
 	if (timeout >= 0)
 	{
 		log_cb = (controller_cb_t)log_vici;
 	}
 
-	DBG1(DBG_CFG, "vici initiate '%s'", child);
+	if (child)
+	{
+		ic_name = child;
+		ic_type = "CHILD_SA";
+	}
+	else
+	{
+		ic_name = ike;
+		ic_type = "IKE_SA";
+	}
+	DBG1(DBG_CFG, "vici initiate %s '%s'", ic_type, ic_name);
 
 	child_cfg = find_child_cfg(child, ike, &peer_cfg);
+	/* return an error if a child was specified and no child config was found or if no peer config was found */
+	if ((child && !child_cfg) || !peer_cfg)
+	{
+		return send_reply(this, "%s config '%s' not found", ic_type, ic_name);
+	}
 	if (!child_cfg)
 	{
-		return send_reply(this, "CHILD_SA config '%s' not found", child);
+		if (peer_cfg->has_children(peer_cfg))
+		{
+			return send_reply(this, "missing configuration name");
+		}
 	}
 	switch (charon->controller->initiate(charon->controller, peer_cfg,
 									child_cfg, log_cb, &log, timeout, limits))
@@ -208,14 +232,14 @@ CALLBACK(initiate, vici_message_t*,
 		case SUCCESS:
 			return send_reply(this, NULL);
 		case OUT_OF_RES:
-			return send_reply(this, "CHILD_SA '%s' not established after %dms",
-							  child, timeout);
+			return send_reply(this, "%s '%s' not established after %dms",
+							  ic_type, ic_name, timeout);
 		case INVALID_STATE:
-			return send_reply(this, "establishing CHILD_SA '%s' not possible "
-							  "at the moment due to limits", child);
+			return send_reply(this, "establishing %s '%s' not possible "
+							  "at the moment due to limits", ic_type, ic_name);
 		case FAILED:
 		default:
-			return send_reply(this, "establishing CHILD_SA '%s' failed", child);
+			return send_reply(this, "establishing %s '%s' failed", ic_type, ic_name);
 	}
 }
 
