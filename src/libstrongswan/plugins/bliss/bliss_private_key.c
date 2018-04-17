@@ -782,7 +782,7 @@ static uint32_t nks_norm(int8_t *s1, int8_t *s2, int n, uint16_t kappa)
 	for (i = 0; i < n; i++)
 	{
 		wrap(t, n, i, t_wrapped);
-		qsort(t_wrapped, n, sizeof(int16_t), (__compar_fn_t)compare);
+		qsort(t_wrapped, n, sizeof(int16_t), (void*)compare);
 		max_kappa[i] = 0;
 
 		for (j = 1; j <= kappa; j++)
@@ -790,7 +790,7 @@ static uint32_t nks_norm(int8_t *s1, int8_t *s2, int n, uint16_t kappa)
 			max_kappa[i] += t_wrapped[n - j];
 		}
 	}
-	qsort(max_kappa, n, sizeof(int16_t), (__compar_fn_t)compare);
+	qsort(max_kappa, n, sizeof(int16_t), (void*)compare);
 
 	for (i = 1; i <= kappa; i++)
 	{
