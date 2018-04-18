@@ -699,12 +699,6 @@ METHOD(peer_cfg_t, equals, bool,
 		);
 }
 
-METHOD(peer_cfg_t, has_children, bool,
-	private_peer_cfg_t *this)
-{
-	return this->child_cfgs->get_count(this->child_cfgs) ? TRUE : FALSE;
-}
-
 METHOD(peer_cfg_t, get_ref, peer_cfg_t*,
 	private_peer_cfg_t *this)
 {
@@ -785,7 +779,6 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 			.add_auth_cfg = _add_auth_cfg,
 			.create_auth_cfg_enumerator = _create_auth_cfg_enumerator,
 			.equals = (void*)_equals,
-			.has_children = _has_children,
 			.get_ref = _get_ref,
 			.destroy = _destroy,
 #ifdef ME
