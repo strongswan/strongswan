@@ -1522,6 +1522,14 @@ METHOD(ike_sa_t, initiate, status_t,
 		}
 #endif /* ME */
 	}
+	else
+	{
+		if (lib->settings->get_bool(lib->settings, "%s.childless_ikev2", TRUE, lib->ns))
+		{
+			/* mark this IKE_SA as childless, can change this later if CHILDLESS_IKEV2_SUPPORTED notify not received */
+			this->public.set_condition(&this->public, COND_CHILDLESS, TRUE);
+		}
+	}
 
 	if (defer_initiate)
 	{

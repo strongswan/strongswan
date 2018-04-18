@@ -1361,7 +1361,7 @@ METHOD(task_t, build_r, status_t,
 				return SUCCESS;
 			}
 			if (this->ike_sa->has_condition(this->ike_sa, COND_CHILDLESS))
-			{	/* no CHILD_SA is created for childless IKE_SA */ //DADA
+			{	/* no CHILD_SA is created for childless IKE_SA */
 				return SUCCESS;
 			}
 			ike_auth = TRUE;

@@ -411,6 +411,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 	enumerator_t *enumerator;
 	payload_t *payload;
 	ke_payload_t *ke_payload = NULL;
+	bool childless = FALSE;
 
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
@@ -494,10 +495,10 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 						}
 						break;
 					case CHILDLESS_IKEV2_SUPPORTED:
-						/* if we are initiator and have received CHILDLESS_IKEV2_SUPPORTED notify payload, enable RFC6023 support */
-						if (this->initiator && lib->settings->get_bool(lib->settings, "%s.childless_ikev2", TRUE, lib->ns))
+						/* if we are initiator and have received CHILDLESS_IKEV2_SUPPORTED notify payload, mark as RFC6023 enabled */
+						if (this->initiator)
 						{
-							this->ike_sa->enable_extension(this->ike_sa, EXT_IKEV2_CHILDLESS);
+							childless = TRUE;
 						}
 						break;
 					default:
@@ -511,6 +512,12 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (this->initiator && !childless)
+	{
+		/* no CHILDLESS_IKEV2_SUPPORTED payload received, responder does not support childless, so disable it */
+		this->ike_sa->set_condition(this->ike_sa, COND_CHILDLESS, FALSE);
+	}
 
 	if (this->proposal)
 	{

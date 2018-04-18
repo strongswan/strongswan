@@ -219,13 +219,6 @@ CALLBACK(initiate, vici_message_t*,
 	{
 		return send_reply(this, "%s config '%s' not found", ic_type, ic_name);
 	}
-	if (!child_cfg)
-	{
-		if (peer_cfg->has_children(peer_cfg))
-		{
-			return send_reply(this, "missing configuration name");
-		}
-	}
 	switch (charon->controller->initiate(charon->controller, peer_cfg,
 									child_cfg, log_cb, &log, timeout, limits))
 	{

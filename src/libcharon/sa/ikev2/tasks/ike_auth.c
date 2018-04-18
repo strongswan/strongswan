@@ -407,14 +407,6 @@ METHOD(task_t, build_i, status_t,
 		this->peer_cfg->get_ref(this->peer_cfg);
 	}
 
-	if (this->ike_sa->supports_extension(this->ike_sa, EXT_IKEV2_CHILDLESS))
-	{
-		if (!this->peer_cfg->has_children(this->peer_cfg))
-		{
-			this->ike_sa->set_condition(this->ike_sa, COND_CHILDLESS, TRUE);
-		}
-	}
-
 	if (message->get_message_id(message) == 1)
 	{	/* in the first IKE_AUTH ... */
 		if (this->ike_sa->supports_extension(this->ike_sa, EXT_MULTIPLE_AUTH))
