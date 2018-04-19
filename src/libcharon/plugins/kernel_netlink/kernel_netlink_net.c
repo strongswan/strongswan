@@ -2649,31 +2649,89 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 	return this->socket->send_ack(this->socket, hdr);
 }
 
+/**
+ * Helper struct used to check routes
+ */
+typedef struct {
+	/** the entry we look for */
+	route_entry_t route;
+	/** kernel interface */
+	private_kernel_netlink_net_t *this;
+} route_entry_lookup_t;
+
+/**
+ * Check if a matching route entry has a VIP associated
+ */
+static bool route_with_vip(route_entry_lookup_t *a, route_entry_t *b)
+{
+	if (chunk_equals(a->route.dst_net, b->dst_net) &&
+		a->route.prefixlen == b->prefixlen &&
+		is_known_vip(a->this, b->src_ip))
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Check if there is any route entry with a matching destination
+ */
+static bool route_with_dst(route_entry_lookup_t *a, route_entry_t *b)
+{
+	if (chunk_equals(a->route.dst_net, b->dst_net) &&
+		a->route.prefixlen == b->prefixlen)
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
 METHOD(kernel_net_t, add_route, status_t,
 	private_kernel_netlink_net_t *this, chunk_t dst_net, uint8_t prefixlen,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
 	status_t status;
-	route_entry_t *found, route = {
-		.dst_net = dst_net,
-		.prefixlen = prefixlen,
-		.gateway = gateway,
-		.src_ip = src_ip,
-		.if_name = if_name,
+	route_entry_t *found;
+	route_entry_lookup_t lookup = {
+		.route = {
+			.dst_net = dst_net,
+			.prefixlen = prefixlen,
+			.gateway = gateway,
+			.src_ip = src_ip,
+			.if_name = if_name,
+		},
+		.this = this,
 	};
 
 	this->routes_lock->lock(this->routes_lock);
-	found = this->routes->get(this->routes, &route);
+	found = this->routes->get(this->routes, &lookup.route);
 	if (found)
 	{
 		this->routes_lock->unlock(this->routes_lock);
 		return ALREADY_DONE;
 	}
-	status = manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
-							 dst_net, prefixlen, gateway, src_ip, if_name);
+
+	/* don't replace the route if we already have one with a VIP installed,
+	 * but keep track of it in case that other route is uninstalled */
+	this->lock->read_lock(this->lock);
+	if (!is_known_vip(this, src_ip))
+	{
+		found = this->routes->get_match(this->routes, &lookup,
+										(void*)route_with_vip);
+	}
+	this->lock->unlock(this->lock);
+	if (found)
+	{
+		status = SUCCESS;
+	}
+	else
+	{
+		status = manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE|NLM_F_REPLACE,
+								 dst_net, prefixlen, gateway, src_ip, if_name);
+	}
 	if (status == SUCCESS)
 	{
-		found = route_entry_clone(&route);
+		found = route_entry_clone(&lookup.route);
 		this->routes->put(this->routes, found, found);
 	}
 	this->routes_lock->unlock(this->routes_lock);
@@ -2685,25 +2743,49 @@ METHOD(kernel_net_t, del_route, status_t,
 	host_t *gateway, host_t *src_ip, char *if_name)
 {
 	status_t status;
-	route_entry_t *found, route = {
-		.dst_net = dst_net,
-		.prefixlen = prefixlen,
-		.gateway = gateway,
-		.src_ip = src_ip,
-		.if_name = if_name,
+	route_entry_t *found;
+	route_entry_lookup_t lookup = {
+		.route = {
+			.dst_net = dst_net,
+			.prefixlen = prefixlen,
+			.gateway = gateway,
+			.src_ip = src_ip,
+			.if_name = if_name,
+		},
+		.this = this,
 	};
 
 	this->routes_lock->lock(this->routes_lock);
-	found = this->routes->get(this->routes, &route);
+	found = this->routes->remove(this->routes, &lookup.route);
 	if (!found)
 	{
 		this->routes_lock->unlock(this->routes_lock);
 		return NOT_FOUND;
 	}
-	this->routes->remove(this->routes, found);
 	route_entry_destroy(found);
-	status = manage_srcroute(this, RTM_DELROUTE, 0, dst_net, prefixlen,
-							 gateway, src_ip, if_name);
+
+	/* check if there are any other routes for the same destination and if
+	 * so update the route, otherwise uninstall it */
+	this->lock->read_lock(this->lock);
+	found = this->routes->get_match(this->routes, &lookup,
+									(void*)route_with_vip);
+	this->lock->unlock(this->lock);
+	if (!found)
+	{
+		found = this->routes->get_match(this->routes, &lookup,
+										(void*)route_with_dst);
+	}
+	if (found)
+	{
+		status = manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE|NLM_F_REPLACE,
+							found->dst_net, found->prefixlen, found->gateway,
+							found->src_ip, found->if_name);
+	}
+	else
+	{
+		status = manage_srcroute(this, RTM_DELROUTE, 0, dst_net, prefixlen,
+								 gateway, src_ip, if_name);
+	}
 	this->routes_lock->unlock(this->routes_lock);
 	return status;
 }
