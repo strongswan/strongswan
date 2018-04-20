@@ -528,6 +528,10 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   mark_in_sa = %u", has_opt(OPT_MARK_IN_SA));
 	DBG2(DBG_CFG, "   mark_out = %u/%u",
 		 cfg->mark_out.value, cfg->mark_out.mask);
+	DBG2(DBG_CFG, "   set_mark_in = %u/%u",
+		 cfg->set_mark_in.value, cfg->set_mark_in.mask);
+	DBG2(DBG_CFG, "   set_mark_out = %u/%u",
+		 cfg->set_mark_out.value, cfg->set_mark_out.mask);
 	DBG2(DBG_CFG, "   inactivity = %llu", cfg->inactivity);
 	DBG2(DBG_CFG, "   proposals = %#P", data->proposals);
 	DBG2(DBG_CFG, "   local_ts = %#R", data->local_ts);
@@ -1639,6 +1643,8 @@ CALLBACK(child_kv, bool,
 		{ "mark_in",			parse_mark,			&child->cfg.mark_in					},
 		{ "mark_in_sa",			parse_opt_mark_in,	&child->cfg.options					},
 		{ "mark_out",			parse_mark,			&child->cfg.mark_out				},
+		{ "set_mark_in",		parse_mark,			&child->cfg.set_mark_in				},
+		{ "set_mark_out",		parse_mark,			&child->cfg.set_mark_out			},
 		{ "tfc_padding",		parse_tfc,			&child->cfg.tfc						},
 		{ "priority",			parse_uint32,		&child->cfg.priority				},
 		{ "interface",			parse_string,		&child->cfg.interface				},

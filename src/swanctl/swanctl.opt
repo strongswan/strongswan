@@ -910,6 +910,28 @@ connections.<conn>.children.<child>.mark_out = 0/0x00000000
 	An additional mask may be appended to the mark, separated by _/_. The
 	default mask if omitted is 0xffffffff.
 
+connections.<conn>.children.<child>.set_mark_in = 0/0x00000000
+	Netfilter mark applied to packets after the inbound IPsec SA processed them.
+
+	Netfilter mark applied to packets after the inbound IPsec SA processed them.
+	This way it's not necessary to mark packets via Netfilter before decryption
+	or right afterwards to match policies or process them differently (e.g. via
+	policy routing).
+
+	An additional mask may be appended to the mark, separated by _/_. The
+	default mask if omitted is 0xffffffff.
+
+connections.<conn>.children.<child>.set_mark_out = 0/0x00000000
+	Netfilter mark applied to packets after the outbound IPsec SA processed
+	them.
+
+	Netfilter mark applied to packets after the outbound IPsec SA processed
+	them. This allows processing ESP packets differently than the original
+	traffic (e.g. via policy routing).
+
+	An additional mask may be appended to the mark, separated by _/_. The
+	default mask if omitted is 0xffffffff.
+
 connections.<conn>.children.<child>.tfc_padding = 0
 	Traffic Flow Confidentiality padding.
 
