@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -227,12 +227,20 @@ struct child_cfg_t {
 	uint32_t (*get_reqid)(child_cfg_t *this);
 
 	/**
-	 * Optional mark for CHILD_SA.
+	 * Optional mark to set on policies/SAs.
 	 *
 	 * @param inbound		TRUE for inbound, FALSE for outbound
 	 * @return				mark
 	 */
 	mark_t (*get_mark)(child_cfg_t *this, bool inbound);
+
+	/**
+	 * Optional mark the SAs should apply after processing packets.
+	 *
+	 * @param inbound		TRUE for inbound, FALSE for outbound
+	 * @return				mark
+	 */
+	mark_t (*get_set_mark)(child_cfg_t *this, bool inbound);
 
 	/**
 	 * Get the TFC padding value to use for CHILD_SA.
@@ -346,6 +354,10 @@ struct child_cfg_create_t {
 	mark_t mark_in;
 	/** Optional outbound mark */
 	mark_t mark_out;
+	/** Optional inbound mark the SA should apply to traffic */
+	mark_t set_mark_in;
+	/** Optional outbound mark the SA should apply to traffic */
+	mark_t set_mark_out;
 	/** Mode to propose for CHILD_SA */
 	ipsec_mode_t mode;
 	/** TFC padding size, 0 to disable, -1 to pad to PMTU */
