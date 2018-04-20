@@ -1336,6 +1336,23 @@ static bool add_mark(struct nlmsghdr *hdr, int buflen, mark_t mark)
 }
 
 /**
+ * Add a uint32 attribute to message
+ */
+static bool add_uint32(struct nlmsghdr *hdr, int buflen,
+					   enum xfrm_attr_type_t type, uint32_t value)
+{
+	uint32_t *xvalue;
+
+	xvalue = netlink_reserve(hdr, buflen, type, sizeof(*xvalue));
+	if (!xvalue)
+	{
+		return FALSE;
+	}
+	*xvalue = value;
+	return TRUE;
+}
+
+/**
  * Check if kernel supports HW offload
  */
 static void netlink_find_offload_feature(const char *ifname, int query_socket)
@@ -1616,16 +1633,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			case DSCP_COPY_IN_ONLY:
 			case DSCP_COPY_NO:
 			{
-				uint32_t *xflags;
-
-				xflags = netlink_reserve(hdr, sizeof(request),
-										 XFRMA_SA_EXTRA_FLAGS, sizeof(*xflags));
-				if (!xflags)
+				/* currently the only extra flag */
+				if (!add_uint32(hdr, sizeof(request), XFRMA_SA_EXTRA_FLAGS,
+								XFRM_SA_XFLAG_DONT_ENCAP_DSCP))
 				{
 					goto failed;
 				}
-				/* currently the only extra flag */
-				*xflags |= XFRM_SA_XFLAG_DONT_ENCAP_DSCP;
 				break;
 			}
 			default:
@@ -1876,17 +1889,23 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		goto failed;
 	}
 
-	if (data->tfc && id->proto == IPPROTO_ESP && mode == MODE_TUNNEL)
-	{	/* the kernel supports TFC padding only for tunnel mode ESP SAs */
-		uint32_t *tfcpad;
-
-		tfcpad = netlink_reserve(hdr, sizeof(request), XFRMA_TFCPAD,
-								 sizeof(*tfcpad));
-		if (!tfcpad)
+	if (ipcomp == IPCOMP_NONE && (data->mark.value | data->mark.mask))
+	{
+		if (!add_uint32(hdr, sizeof(request), XFRMA_SET_MARK,
+						data->mark.value) ||
+			!add_uint32(hdr, sizeof(request), XFRMA_SET_MARK_MASK,
+						data->mark.mask))
 		{
 			goto failed;
 		}
-		*tfcpad = data->tfc;
+	}
+
+	if (data->tfc && id->proto == IPPROTO_ESP && mode == MODE_TUNNEL)
+	{	/* the kernel supports TFC padding only for tunnel mode ESP SAs */
+		if (!add_uint32(hdr, sizeof(request), XFRMA_TFCPAD, data->tfc))
+		{
+			goto failed;
+		}
 	}
 
 	if (id->proto != IPPROTO_COMP)
