@@ -736,4 +736,12 @@ endif
 if MONOLITHIC
   SUBDIRS += .
 endif
+
+# build unit tests
+##################
+
 SUBDIRS += tests
+
+if USE_EAP_AKA_3GPP
+  SUBDIRS += plugins/eap_aka_3gpp/tests
+endif

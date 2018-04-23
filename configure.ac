@@ -1908,6 +1908,7 @@ AC_CONFIG_FILES([
 	src/libcharon/Makefile
 	src/libcharon/plugins/eap_aka/Makefile
 	src/libcharon/plugins/eap_aka_3gpp/Makefile
+	src/libcharon/plugins/eap_aka_3gpp/tests/Makefile
 	src/libcharon/plugins/eap_aka_3gpp2/Makefile
 	src/libcharon/plugins/eap_dynamic/Makefile
 	src/libcharon/plugins/eap_identity/Makefile
