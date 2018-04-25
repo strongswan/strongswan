@@ -48,9 +48,19 @@ PKG_CHECK_MODULES(LIBSECRET, libsecret-1)
 
 AC_ARG_WITH(
 	[charon],
-	AS_HELP_STRING([--with-charon=file],[path to the strongSwan charon NetworkManager backend"]),
+	AS_HELP_STRING([--with-charon=file],[path to the strongSwan charon NetworkManager backend]),
 	[AC_SUBST(charon, "$withval")],
 	[AC_SUBST(charon, "${libexecdir}/ipsec/charon-nm")]
+)
+AC_ARG_WITH(
+	[nm-libexecdir],
+	AS_HELP_STRING([--nm-libexecdir=path],[use custom path where the auth dialog is installed]),
+	[nm_libexecdir="$withval"], []
+)
+AC_ARG_WITH(
+	[nm-plugindir],
+	AS_HELP_STRING([--nm-plugindir=path],[use custom path where the NM plugin is installed]),
+	[nm_plugindir="$withval"], []
 )
 AC_ARG_ENABLE(
 	[nm-absolute-paths],
@@ -58,7 +68,7 @@ AC_ARG_ENABLE(
 )
 AC_ARG_WITH(
 	[libnm-glib],
-	AS_HELP_STRING([--without-libnm-glib], [Build NetworkManager-strongswan without libnm-glib comatibility]),
+	AS_HELP_STRING([--without-libnm-glib], [build NetworkManager-strongswan without libnm-glib comatibility]),
 	[with_libnm_glib=no],
 	[with_libnm_glib=yes]
 )
@@ -73,11 +83,22 @@ PKG_CHECK_MODULES(LIBNMA, libnma >= 1.1.0)
 if test x"$with_libnm_glib" != xno; then
 	PKG_CHECK_MODULES(LIBNM_GLIB, NetworkManager >= 1.1.0 libnm-util libnm-glib libnm-glib-vpn)
 	PKG_CHECK_MODULES(LIBNM_GTK, libnm-gtk >= 1.1.0)
+	if test -z "$nm_libexecdir"; then
+		nm_libexecdir=$($PKG_CONFIG --variable=libgnome_serverdir NetworkManager)
+	fi
+	if test -z "$nm_plugindir"; then
+		nm_plugindir=$($PKG_CONFIG --variable=plugindir NetworkManager)
+	fi
+else
+	if test -z "$nm_libexecdir"; then
+		nm_libexecdir=$($PKG_CONFIG --variable=exec_prefix libnm)/lib/NetworkManager
+	fi
+	if test -z "$nm_plugindir"; then
+		nm_plugindir=$($PKG_CONFIG --variable=libdir libnm)/NetworkManager
+	fi
 fi
 
-nm_libexecdir=$($PKG_CONFIG --variable=libgnome_serverdir NetworkManager)
 AC_SUBST(nm_libexecdir)
-nm_plugindir=$($PKG_CONFIG --variable=plugindir NetworkManager)
 AC_SUBST(nm_plugindir)
 test x"$enable_nm_absolute_paths" = x"yes" && nm_plugindir_abs="$(nm_plugindir)/"
 AC_SUBST(nm_plugindir_abs)
