@@ -2,7 +2,6 @@ AUTOMAKE_OPTIONS = foreign
 
 SUBDIRS = properties auth-dialog po
 
-nmvpnservicedir = $(prefix)/lib/NetworkManager/VPN
 nmvpnservice_DATA = nm-strongswan-service.name
 
 @INTLTOOL_DESKTOP_RULE@

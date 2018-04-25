@@ -103,6 +103,9 @@ AC_SUBST(nm_plugindir)
 test x"$enable_nm_absolute_paths" = x"yes" && nm_plugindir_abs="$(nm_plugindir)/"
 AC_SUBST(nm_plugindir_abs)
 
+nmvpnservicedir=$($PKG_CONFIG --variable=vpnservicedir libnm)
+AC_SUBST(nmvpnservicedir)
+
 NM_COMPILER_WARNINGS
 
 AC_CONFIG_FILES([
