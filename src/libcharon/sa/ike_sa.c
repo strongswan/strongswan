@@ -2582,10 +2582,15 @@ METHOD(ike_sa_t, roam, status_t,
 		 * without config assigned */
 		return SUCCESS;
 	}
+	if (this->version == IKEV1)
+	{	/* ignore roam events for IKEv1 where we don't have MOBIKE and would
+		 * have to reestablish from scratch (reauth is not enough) */
+		return SUCCESS;
+	}
 
 	/* ignore roam events if MOBIKE is not supported/enabled and the local
 	 * address is statically configured */
-	if (this->version == IKEV2 && !supports_extension(this, EXT_MOBIKE) &&
+	if (!supports_extension(this, EXT_MOBIKE) &&
 		ike_cfg_has_address(this->ike_cfg, this->my_host, TRUE))
 	{
 		DBG2(DBG_IKE, "keeping statically configured path %H - %H",
