@@ -69,13 +69,6 @@ METHOD(job_t, execute, job_requeue_t,
 		ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, id);
 		if (ike_sa)
 		{
-			if (ike_sa->get_version(ike_sa) == IKEV1)
-			{
-				DBG2(DBG_IKE, "RFC4555 is only specified for IKEv2.");
-				charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-				continue;
-			}
-
 			if (ike_sa->roam(ike_sa, this->address) == DESTROY_ME)
 			{
 				charon->ike_sa_manager->checkin_and_destroy(
