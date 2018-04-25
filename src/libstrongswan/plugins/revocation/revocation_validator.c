@@ -1,8 +1,9 @@
 /*
+ * Copyright (C) 2015-2018 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2009 Andreas Steffen
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -14,6 +15,8 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+
+#include <time.h>
 
 #include "revocation_validator.h"
 
@@ -417,11 +420,11 @@ static bool verify_crl(certificate_t *crl)
 /**
  * Report the given CRL's validity and cache it if valid and requested
  */
-static bool is_crl_valid(certificate_t *crl, bool cache)
+static bool is_crl_valid(certificate_t *crl, time_t now, bool cache)
 {
 	time_t valid_until;
 
-	if (crl->get_validity(crl, NULL, NULL, &valid_until))
+	if (crl->get_validity(crl, &now, NULL, &valid_until))
 	{
 		DBG1(DBG_CFG, "  crl is valid: until %T", &valid_until, FALSE);
 		if (cache)
@@ -435,6 +438,25 @@ static bool is_crl_valid(certificate_t *crl, bool cache)
 }
 
 /**
+ * Check if the CRL should be used yet
+ */
+static bool is_crl_not_valid_yet(certificate_t *crl, time_t now)
+{
+	time_t this_update;
+
+	if (!crl->get_validity(crl, &now, &this_update, NULL))
+	{
+		if (this_update > now)
+		{
+			DBG1(DBG_CFG, "  crl is not valid: until %T", &this_update, FALSE);
+			return TRUE;
+		}
+		/* we accept stale CRLs */
+	}
+	return FALSE;
+}
+
+/**
  * Get the better of two CRLs, and check for usable CRL info
  */
 static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
@@ -442,7 +464,7 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 					bool cache, crl_t *base)
 {
 	enumerator_t *enumerator;
-	time_t revocation;
+	time_t now, revocation;
 	crl_reason_t reason;
 	chunk_t subject_serial, serial;
 	crl_t *crl = (crl_t*)cand;
@@ -472,6 +494,12 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 		cand->destroy(cand);
 		return best;
 	}
+	now = time(NULL);
+	if (is_crl_not_valid_yet(cand, now))
+	{
+		cand->destroy(cand);
+		return best;
+	}
 
 	subject_serial = chunk_skip_zero(subject->get_serial(subject));
 	enumerator = crl->create_enumerator(crl);
@@ -488,7 +516,7 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 				/* if the cert is on hold, a newer CRL might not contain it */
 				*valid = VALIDATION_ON_HOLD;
 			}
-			is_crl_valid(cand, cache);
+			is_crl_valid(cand, now, cache);
 			DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
 				 &revocation, TRUE, crl_reason_names, reason);
 			enumerator->destroy(enumerator);
@@ -503,7 +531,7 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 	{
 		DESTROY_IF(best);
 		best = cand;
-		if (is_crl_valid(best, cache))
+		if (is_crl_valid(best, now, cache))
 		{
 			*valid = VALIDATION_GOOD;
 		}
