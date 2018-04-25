@@ -2583,7 +2583,7 @@ METHOD(ike_sa_t, roam, status_t,
 		return SUCCESS;
 	}
 
-	if (!this->version == IKEV1)
+	if (this->version == IKEV1)
 	{ 	/* ignore roam events for IKEv1 where we don't have MOBIKE and would
 		 * have to reestablish from scratch */
 		return SUCCESS;
