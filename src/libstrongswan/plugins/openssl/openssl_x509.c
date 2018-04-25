@@ -668,6 +668,9 @@ static bool parse_keyUsage_ext(private_openssl_x509_t *this,
 {
 	ASN1_BIT_STRING *usage;
 
+	/* to be compliant with RFC 4945 specific KUs have to be included */
+	this->flags &= ~X509_IKE_COMPLIANT;
+
 	usage = X509V3_EXT_d2i(ext);
 	if (usage)
 	{
@@ -681,6 +684,11 @@ static bool parse_keyUsage_ext(private_openssl_x509_t *this,
 			if (flags & X509v3_KU_CRL_SIGN)
 			{
 				this->flags |= X509_CRL_SIGN;
+			}
+			if (flags & X509v3_KU_DIGITAL_SIGNATURE ||
+				flags & X509v3_KU_NON_REPUDIATION)
+			{
+				this->flags |= X509_IKE_COMPLIANT;
 			}
 			if (flags & X509v3_KU_KEY_CERT_SIGN)
 			{
@@ -987,6 +995,9 @@ static bool parse_extensions(private_openssl_x509_t *this)
 {
 	STACK_OF(X509_EXTENSION) *extensions;
 	int i, num;
+
+	/* unless we see a keyUsage extension we are compliant with RFC 4945 */
+	this->flags |= X509_IKE_COMPLIANT;
 
 	extensions = X509_get0_extensions(this->x509);
 	if (extensions)
