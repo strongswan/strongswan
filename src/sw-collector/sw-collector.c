@@ -31,9 +31,10 @@
 #include <library.h>
 #include <utils/debug.h>
 #include <utils/lexparser.h>
+#include <collections/hashtable.h>
 
 #include <swid_gen/swid_gen.h>
-
+#include <swid_gen/swid_gen_info.h>
 /**
  * global debug output variables
  */
@@ -48,7 +49,8 @@ enum collector_op_t {
 	COLLECTOR_OP_LIST,
 	COLLECTOR_OP_UNREGISTERED,
 	COLLECTOR_OP_GENERATE,
-	COLLECTOR_OP_MIGRATE
+	COLLECTOR_OP_MIGRATE,
+	COLLECTOR_OP_CHECK
 };
 
 /**
@@ -119,7 +121,8 @@ Usage:\n\
 --list|-unregistered\n\
   sw-collector [--debug <level>] [--quiet] [--installed|--removed] \
 [--full] --generate\n\
-  sw-collector [--debug <level>] [--quiet] --migrate\n");
+  sw-collector [--debug <level>] [--quiet] --migrate\n\
+  sw-collector [--debug <level>] [--quiet] --check\n");
 }
 
 /**
@@ -140,6 +143,7 @@ static collector_op_t do_args(int argc, char *argv[], bool *full_tags,
 
 		struct option long_opts[] = {
 			{ "help", no_argument, NULL, 'h' },
+			{ "check", no_argument, NULL, 'C' },
 			{ "count", required_argument, NULL, 'c' },
 			{ "debug", required_argument, NULL, 'd' },
 			{ "full", no_argument, NULL, 'f' },
@@ -153,7 +157,7 @@ static collector_op_t do_args(int argc, char *argv[], bool *full_tags,
 			{ 0,0,0,0 }
 		};
 
-		c = getopt_long(argc, argv, "hc:d:fgilmqru", long_opts, NULL);
+		c = getopt_long(argc, argv, "hCc:d:fgilmqru", long_opts, NULL);
 		switch (c)
 		{
 			case EOF:
@@ -162,6 +166,9 @@ static collector_op_t do_args(int argc, char *argv[], bool *full_tags,
 				usage();
 				exit(SUCCESS);
 				break;
+			case 'C':
+				op = COLLECTOR_OP_CHECK;
+				continue;
 			case 'c':
 				count = atoi(optarg);
 				continue;
@@ -537,7 +544,7 @@ end:
 }
 
 /**
- * Append missing architecture suffix to package entries in the database
+ * Remove architecture suffix from package entries in the database
  */
 static int migrate(sw_collector_db_t *db)
 {
@@ -582,6 +589,83 @@ static int migrate(sw_collector_db_t *db)
 	return status;
 }
 
+/**
+ * Free hashtable entry
+ */
+static void free_entry(void *value, void *key)
+{
+	free(value);
+	free(key);
+}
+
+/**
+ * Check consistency of installed software identifiers in collector database
+ */
+static int check(sw_collector_db_t *db)
+{
+	sw_collector_dpkg_t *dpkg;
+	swid_gen_info_t *info;
+	hashtable_t *table;
+	enumerator_t *e;
+	char *dpkg_name, *name, *package, *arch, *version;
+	uint32_t sw_id, count = 0, installed;
+
+	dpkg = sw_collector_dpkg_create();
+	if (!dpkg)
+	{
+		return EXIT_FAILURE;
+	}
+	info = swid_gen_info_create();
+	table = hashtable_create(hashtable_hash_str, hashtable_equals_str, 4096);
+
+	/* Store all installed sw identifiers (according to dpkg) in hashtable */
+	e = dpkg->create_sw_enumerator(dpkg);
+	while (e->enumerate(e, &package, &arch, &version))
+	{
+		dpkg_name = info->create_sw_id(info, package, version);
+		table->put(table, strdup(package), dpkg_name);
+	}
+	e->destroy(e);
+
+	info->destroy(info);
+	dpkg->destroy(dpkg);
+
+	e = db->create_sw_enumerator(db, SW_QUERY_ALL, NULL);
+	if (!e)
+	{
+		return EXIT_FAILURE;
+	}
+	while (e->enumerate(e, &sw_id, &name, &package, &version, &installed))
+	{
+		dpkg_name = table->get(table, package);
+		if (installed)
+		{
+			if (!dpkg_name)
+			{
+				printf("%4d %s erroneously noted as installed\n", sw_id, name);
+			}
+			else if (!streq(name, dpkg_name))
+			{
+				printf("%4d %s erroneously noted as installed instead of\n "
+					   "    %s\n", sw_id, name, dpkg_name);
+			}
+		}
+		else
+		{
+			if (dpkg_name && streq(name, dpkg_name))
+			{
+				printf("%4d %s erroneously noted as removed\n", sw_id, name);
+			}
+		}
+		count++;
+	}
+	e->destroy(e);
+
+	table->destroy_function(table, (void*)free_entry);
+	printf("checked %d software identifiers\n", count);
+
+	return EXIT_SUCCESS;
+}
 
 int main(int argc, char *argv[])
 {
@@ -645,6 +729,9 @@ int main(int argc, char *argv[])
 			break;
 		case COLLECTOR_OP_MIGRATE:
 			status = migrate(db);
+			break;
+		case COLLECTOR_OP_CHECK:
+			status = check(db);
 			break;
 	}
 	db->destroy(db);
