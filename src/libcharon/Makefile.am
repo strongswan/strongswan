@@ -720,6 +720,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_WINDOWS_DNS
+  SUBDIRS += plugins/windows_dns
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/windows_dns/libstrongswan-windows-dns.la
+endif
+endif
+
 if MONOLITHIC
   SUBDIRS += .
 endif
