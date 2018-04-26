@@ -411,7 +411,7 @@ static void remove_interface(private_kernel_iph_net_t *this, NET_IFINDEX index)
 			DBG1(DBG_KNL, "interface %u '%s' disappeared",
 				 entry->ifindex, entry->ifdesc);
 			iface_destroy(entry);
-			fire_roam_event(this, TRUE);
+			//fire_roam_event(this, TRUE);
 		}
 	}
 	enumerator->destroy(enumerator);
