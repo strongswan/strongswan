@@ -260,15 +260,20 @@ static BOOL start_read(handle_overlapped_buffer_t *structure, HANDLE event)
 			{
 				/* all fine */
 				return TRUE;
-				break;
 			}
 			default:
 			{
 				char *error_message = format_error(error);
-				DBG2(DBG_ESP, "Error %d.", format_error);
-				free(error_message);
+				if ( error_message != NULL )
+				{
+					DBG2( DBG_ESP, "Error %d. %s", error, error_message );
+					free( error_message );
+				}
+				else
+				{
+					DBG2( DBG_ESP, "Error %d.", error );
+				}
 				return FALSE;
-				break;
 			}
 		}
 	}
