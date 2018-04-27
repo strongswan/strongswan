@@ -290,7 +290,7 @@ START_TEST(test_collision_ike_delete)
 	}
 	call_ikesa(a, delete_child_sa, PROTO_ESP, spi_a, FALSE);
 	assert_child_sa_state(a, spi_a, CHILD_DELETING);
-	call_ikesa(b, delete);
+	call_ikesa(b, delete, FALSE);
 	assert_ike_sa_state(b, IKE_DELETING);
 
 	/* RFC 7296, 2.25.2 does not explicitly state what the behavior SHOULD be if

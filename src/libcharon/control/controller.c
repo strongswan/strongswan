@@ -557,7 +557,7 @@ METHOD(job_t, terminate_ike_execute, job_requeue_t,
 	listener->ike_sa = ike_sa;
 	listener->lock->unlock(listener->lock);
 
-	if (ike_sa->delete(ike_sa) != DESTROY_ME)
+	if (ike_sa->delete(ike_sa, FALSE) != DESTROY_ME)
 	{	/* delete failed */
 		listener->status = FAILED;
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Tobias Brunner
+ * Copyright (C) 2006-2018 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -776,15 +776,18 @@ struct ike_sa_t {
 	 *
 	 * Sends a delete message to the remote peer and waits for
 	 * its response. If the response comes in, or a timeout occurs,
-	 * the IKE SA gets deleted.
+	 * the IKE SA gets destroyed, unless force is TRUE then the IKE_SA is
+	 * destroyed immediately without waiting for a response.
 	 *
+	 * @param force			whether to immediately destroy the IKE_SA afterwards
+	 *						without waiting for a response
 	 * @return
 	 *						- SUCCESS if deletion is initialized
-	 *						- DESTROY_ME, if the IKE_SA is not in
-	 *						  an established state and can not be
-	 *						  deleted (but destroyed).
+	 *						- DESTROY_ME, if destroying is forced, or the IKE_SA
+	 *						  is not in an established state and can not be
+	 *						  deleted (but destroyed)
 	 */
-	status_t (*delete) (ike_sa_t *this);
+	status_t (*delete) (ike_sa_t *this, bool force);
 
 	/**
 	 * Update IKE_SAs after network interfaces have changed.

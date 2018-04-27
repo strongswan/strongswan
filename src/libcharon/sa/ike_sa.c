@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Tobias Brunner
+ * Copyright (C) 2006-2018 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -1793,8 +1793,10 @@ METHOD(ike_sa_t, destroy_child_sa, status_t,
 }
 
 METHOD(ike_sa_t, delete_, status_t,
-	private_ike_sa_t *this)
+	private_ike_sa_t *this, bool force)
 {
+	status_t status = DESTROY_ME;
+
 	switch (this->state)
 	{
 		case IKE_ESTABLISHED:
@@ -1806,19 +1808,38 @@ METHOD(ike_sa_t, delete_, status_t,
 				charon->bus->alert(charon->bus, ALERT_IKE_SA_EXPIRED);
 			}
 			this->task_manager->queue_ike_delete(this->task_manager);
-			return this->task_manager->initiate(this->task_manager);
+			status = this->task_manager->initiate(this->task_manager);
+			break;
 		case IKE_CREATED:
 			DBG1(DBG_IKE, "deleting unestablished IKE_SA");
 			break;
 		case IKE_PASSIVE:
 			break;
 		default:
-			DBG1(DBG_IKE, "destroying IKE_SA in state %N "
-				"without notification", ike_sa_state_names, this->state);
-			charon->bus->ike_updown(charon->bus, &this->public, FALSE);
+			DBG1(DBG_IKE, "destroying IKE_SA in state %N without notification",
+				 ike_sa_state_names, this->state);
+			force = TRUE;
 			break;
 	}
-	return DESTROY_ME;
+
+	if (force)
+	{
+		status = DESTROY_ME;
+
+		if (this->version == IKEV2)
+		{	/* for IKEv1 we trigger this in the ISAKMP delete task */
+			switch (this->state)
+			{
+				case IKE_ESTABLISHED:
+				case IKE_REKEYING:
+				case IKE_DELETING:
+					charon->bus->ike_updown(charon->bus, &this->public, FALSE);
+				default:
+					break;
+			}
+		}
+	}
+	return status;
 }
 
 METHOD(ike_sa_t, rekey, status_t,
