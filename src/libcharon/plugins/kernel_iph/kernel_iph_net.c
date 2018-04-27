@@ -811,7 +811,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 	}
 
 	status = CreateUnicastIpAddressEntry(&row);
-	if (status != NO_ERROR)
+	if (status != NO_ERROR && status != ERROR_OBJECT_ALREADY_EXISTS)
 	{
 		DBG1(DBG_KNL, "creating IPH address entry failed: %lu", status);
 		remove_addr(this, vip);
