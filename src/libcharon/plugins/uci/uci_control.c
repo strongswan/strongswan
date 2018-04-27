@@ -180,7 +180,7 @@ static void terminate(private_uci_control_t *this, char *name)
 		{
 			id = ike_sa->get_unique_id(ike_sa);
 			enumerator->destroy(enumerator);
-			charon->controller->terminate_ike(charon->controller, id,
+			charon->controller->terminate_ike(charon->controller, id, FALSE,
 											  controller_cb_empty, NULL, 0);
 			write_fifo(this, "connection '%s' terminated\n", name);
 			return;

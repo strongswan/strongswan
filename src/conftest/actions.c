@@ -209,7 +209,8 @@ static job_requeue_t close_ike(char *config)
 	if (id)
 	{
 		DBG1(DBG_CFG, "closing IKE_SA '%s'", config);
-		charon->controller->terminate_ike(charon->controller, id, NULL, NULL, 0);
+		charon->controller->terminate_ike(charon->controller, id, FALSE, NULL,
+										  NULL, 0);
 	}
 	else
 	{

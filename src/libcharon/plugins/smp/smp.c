@@ -415,7 +415,7 @@ static void request_control_terminate(xmlTextReaderPtr reader,
 		if (ike)
 		{
 			status = charon->controller->terminate_ike(
-					charon->controller, id,
+					charon->controller, id, FALSE,
 					(controller_cb_t)xml_callback, writer, 0);
 		}
 		else

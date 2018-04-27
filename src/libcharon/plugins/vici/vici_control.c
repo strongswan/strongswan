@@ -326,7 +326,7 @@ CALLBACK(terminate, vici_message_t*,
 		}
 		else
 		{
-			if (charon->controller->terminate_ike(charon->controller, *del,
+			if (charon->controller->terminate_ike(charon->controller, *del, FALSE,
 											log_cb, &log, timeout) == SUCCESS)
 			{
 				done++;

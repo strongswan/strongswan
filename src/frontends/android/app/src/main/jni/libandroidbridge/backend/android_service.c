@@ -401,7 +401,7 @@ static void close_tun_device(private_android_service_t *this)
 CALLBACK(terminate, job_requeue_t,
 	uint32_t *id)
 {
-	charon->controller->terminate_ike(charon->controller, *id,
+	charon->controller->terminate_ike(charon->controller, *id, FALSE,
 									  controller_cb_empty, NULL, 0);
 	return JOB_REQUEUE_NONE;
 }
