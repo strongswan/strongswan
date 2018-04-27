@@ -225,6 +225,7 @@ CALLBACK(terminate, vici_message_t*,
 	enumerator_t *enumerator, *isas, *csas;
 	char *child, *ike, *errmsg = NULL;
 	u_int child_id, ike_id, current, *del, done = 0;
+	bool force;
 	int timeout;
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
@@ -240,6 +241,7 @@ CALLBACK(terminate, vici_message_t*,
 	ike = request->get_str(request, NULL, "ike");
 	child_id = request->get_int(request, 0, "child-id");
 	ike_id = request->get_int(request, 0, "ike-id");
+	force = request->get_bool(request, FALSE, "force");
 	timeout = request->get_int(request, 0, "timeout");
 	log.level = request->get_int(request, 1, "loglevel");
 
@@ -326,7 +328,7 @@ CALLBACK(terminate, vici_message_t*,
 		}
 		else
 		{
-			if (charon->controller->terminate_ike(charon->controller, *del, FALSE,
+			if (charon->controller->terminate_ike(charon->controller, *del, force,
 											log_cb, &log, timeout) == SUCCESS)
 			{
 				done++;
