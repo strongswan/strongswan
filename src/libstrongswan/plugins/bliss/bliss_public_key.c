@@ -194,7 +194,7 @@ end:
 }
 
 METHOD(public_key_t, verify, bool,
-	private_bliss_public_key_t *this, signature_scheme_t scheme,
+	private_bliss_public_key_t *this, signature_scheme_t scheme, void *params,
 	chunk_t data, chunk_t signature)
 {
 	switch (scheme)

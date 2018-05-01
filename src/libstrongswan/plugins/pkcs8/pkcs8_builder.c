@@ -63,6 +63,17 @@ static private_key_t *parse_private_key(chunk_t blob)
 
 				switch (oid)
 				{
+					case OID_RSASSA_PSS:
+						/* TODO: parameters associated with such keys should be
+						 * treated as restrictions later when signing (the type
+						 * itself is already a restriction). However, the
+						 * builders currently don't expect any parameters for
+						 * RSA keys (we also only pass along the params, not the
+						 * exact type, so we'd have to guess that params
+						 * indicate RSA/PSS, but they are optional so that won't
+						 * work for keys without specific restrictions) */
+						params = chunk_empty;
+						/* fall-through */
 					case OID_RSA_ENCRYPTION:
 						type = KEY_RSA;
 						break;

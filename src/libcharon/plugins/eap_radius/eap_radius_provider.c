@@ -92,7 +92,7 @@ static void destroy_attr(attr_t *this)
  * Hashtable entry with leases and attributes
  */
 typedef struct {
-	/** IKE_SA uniqe id we assign the IP lease */
+	/** IKE_SA unique id we assign the IP lease */
 	uintptr_t id;
 	/** list of IP leases received from AAA, as host_t */
 	linked_list_t *addrs;

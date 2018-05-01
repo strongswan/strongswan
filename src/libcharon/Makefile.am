@@ -14,7 +14,6 @@ config/backend_manager.c config/backend_manager.h config/backend.h \
 config/child_cfg.c config/child_cfg.h \
 config/ike_cfg.c config/ike_cfg.h \
 config/peer_cfg.c config/peer_cfg.h \
-config/proposal.c config/proposal.h \
 control/controller.c control/controller.h \
 daemon.c daemon.h \
 encoding/generator.c encoding/generator.h \
@@ -209,6 +208,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_SAVE_KEYS
+ SUBDIRS += plugins/save_keys
+if MONOLITHIC
+ libcharon_la_LIBADD += plugins/save_keys/libstrongswan-save-keys.la
+endif
+endif
+
 if USE_SOCKET_DEFAULT
   SUBDIRS += plugins/socket_default
 if MONOLITHIC
@@ -255,6 +261,13 @@ if USE_FARP
   SUBDIRS += plugins/farp
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/farp/libstrongswan-farp.la
+endif
+endif
+
+if USE_COUNTERS
+  SUBDIRS += plugins/counters
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/counters/libstrongswan-counters.la
 endif
 endif
 

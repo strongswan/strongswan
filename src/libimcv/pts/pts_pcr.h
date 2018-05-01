@@ -92,7 +92,7 @@ struct pts_pcr_t {
 	 * Extend the content of a PCR
 	 *
 	 * @param pcr			index of PCR
-	 * @param measurement	measurment value to be extended into PCR
+	 * @param measurement	measurement value to be extended into PCR
 	 * @return				new content of PCR
 	 */
 	chunk_t (*extend)(pts_pcr_t *this, uint32_t pcr, chunk_t measurement);

@@ -1,7 +1,8 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -27,6 +28,7 @@
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <crypto/hashers/hasher.h>
+#include <credentials/keys/signature_params.h>
 
 #ifdef HAVE_MPZ_POWM_SEC
 # undef mpz_powm
@@ -126,7 +128,7 @@ static const asn1Object_t digestInfoObjects[] = {
 #define DIGEST_INFO_DIGEST			2
 
 /**
- * Verification of an EMPSA PKCS1 signature described in PKCS#1
+ * Verification of an EMSA PKCS1 signature described in PKCS#1
  */
 static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 										hash_algorithm_t algorithm,
@@ -283,6 +285,124 @@ end:
 	return success;
 }
 
+/**
+ * Verification of an EMSA PSS signature described in PKCS#1
+ */
+static bool verify_emsa_pss_signature(private_gmp_rsa_public_key_t *this,
+									  rsa_pss_params_t *params, chunk_t data,
+									  chunk_t signature)
+{
+	ext_out_function_t xof;
+	hasher_t *hasher = NULL;
+	xof_t *mgf = NULL;
+	chunk_t em, hash, salt, db, h, dbmask, m;
+	size_t embits, maskbits;
+	int i;
+	bool success = FALSE;
+
+	if (!params)
+	{
+		return FALSE;
+	}
+	xof = xof_mgf1_from_hash_algorithm(params->mgf1_hash);
+	if (xof == XOF_UNDEFINED)
+	{
+		DBG1(DBG_LIB, "%N is not supported for MGF1", hash_algorithm_names,
+			 params->mgf1_hash);
+		return FALSE;
+	}
+	chunk_skip_zero(signature);
+	if (signature.len == 0 || signature.len > this->k)
+	{
+		return FALSE;
+	}
+	/* EM = RSAVP1((n, e), S) */
+	em = rsavp1(this, signature);
+	if (!em.len)
+	{
+		goto error;
+	}
+	/* emBits = modBits - 1 */
+	embits = mpz_sizeinbase(this->n, 2) - 1;
+	/* mHash = Hash(M) */
+	hasher = lib->crypto->create_hasher(lib->crypto, params->hash);
+	if (!hasher)
+	{
+		DBG1(DBG_LIB, "hash algorithm %N not supported",
+			 hash_algorithm_names, params->hash);
+		goto error;
+	}
+	hash = chunk_alloca(hasher->get_hash_size(hasher));
+	if (!hasher->get_hash(hasher, data, hash.ptr))
+	{
+		goto error;
+	}
+	/* determine salt length */
+	salt.len = hash.len;
+	if (params->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
+	{
+		salt.len = params->salt_len;
+	}
+	/* verify general structure of EM */
+	maskbits = (8 * em.len) - embits;
+	if (em.len < (hash.len + salt.len + 2) || em.ptr[em.len-1] != 0xbc ||
+		(em.ptr[0] & (0xff << (8-maskbits))))
+	{	/* inconsistent */
+		goto error;
+	}
+	/* split EM in maskedDB and H */
+	db = chunk_create(em.ptr, em.len - hash.len - 1);
+	h = chunk_create(em.ptr + db.len, hash.len);
+	/* dbMask = MGF(H, emLen - hLen - 1) */
+	mgf = lib->crypto->create_xof(lib->crypto, xof);
+	if (!mgf)
+	{
+		DBG1(DBG_LIB, "%N not supported", ext_out_function_names, xof);
+		goto error;
+	}
+	dbmask = chunk_alloca(db.len);
+	if (!mgf->set_seed(mgf, h) ||
+		!mgf->get_bytes(mgf, dbmask.len, dbmask.ptr))
+	{
+		DBG1(DBG_LIB, "%N not supported or failed", ext_out_function_names, xof);
+		goto error;
+	}
+	/* DB = maskedDB xor dbMask */
+	memxor(db.ptr, dbmask.ptr, db.len);
+	if (maskbits)
+	{
+		db.ptr[0] &= (0xff >> maskbits);
+	}
+	/* check DB = PS | 0x01 | salt */
+	for (i = 0; i < (db.len - salt.len - 1); i++)
+	{
+		if (db.ptr[i])
+		{	/* padding not 0 */
+			goto error;
+		}
+	}
+	if (db.ptr[i++] != 0x01)
+	{	/* 0x01 not found */
+		goto error;
+	}
+	salt.ptr = &db.ptr[i];
+	/* M' = 0x0000000000000000 | mHash | salt */
+	m = chunk_cata("ccc",
+				   chunk_from_chars(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00),
+				   hash, salt);
+	if (!hasher->get_hash(hasher, m, hash.ptr))
+	{
+		goto error;
+	}
+	success = memeq_const(h.ptr, hash.ptr, hash.len);
+
+error:
+	DESTROY_IF(hasher);
+	DESTROY_IF(mgf);
+	free(em.ptr);
+	return success;
+}
+
 METHOD(public_key_t, get_type, key_type_t,
 	private_gmp_rsa_public_key_t *this)
 {
@@ -290,7 +410,7 @@ METHOD(public_key_t, get_type, key_type_t,
 }
 
 METHOD(public_key_t, verify, bool,
-	private_gmp_rsa_public_key_t *this, signature_scheme_t scheme,
+	private_gmp_rsa_public_key_t *this, signature_scheme_t scheme, void *params,
 	chunk_t data, chunk_t signature)
 {
 	switch (scheme)
@@ -317,6 +437,8 @@ METHOD(public_key_t, verify, bool,
 			return verify_emsa_pkcs1_signature(this, HASH_SHA1, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return verify_emsa_pkcs1_signature(this, HASH_MD5, data, signature);
+		case SIGN_RSA_EMSA_PSS:
+			return verify_emsa_pss_signature(this, params, data, signature);
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);

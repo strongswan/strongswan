@@ -173,7 +173,7 @@ struct settings_t {
 	 * @param ...		argument list for key
 	 * @return			value of the key
 	 */
-	bool (*get_bool)(settings_t *this, char *key, bool def, ...);
+	bool (*get_bool)(settings_t *this, char *key, int def, ...);
 
 	/**
 	 * Get an integer value.
@@ -221,7 +221,7 @@ struct settings_t {
 	 * @param value		value to set
 	 * @param ...		argument list for key
 	 */
-	void (*set_bool)(settings_t *this, char *key, bool value, ...);
+	void (*set_bool)(settings_t *this, char *key, int value, ...);
 
 	/**
 	 * Set an integer value.

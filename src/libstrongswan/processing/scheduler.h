@@ -45,7 +45,7 @@ typedef struct scheduler_t scheduler_t;
  * in-between got slower, as the number of events grew larger (O(n)).
  * For each connection there could be several events: IKE-rekey, NAT-keepalive,
  * retransmissions, expire (half-open), and others. So a gateway that probably
- * has to handle thousands of concurrent connnections has to be able to queue a
+ * has to handle thousands of concurrent connections has to be able to queue a
  * large number of events as fast as possible. Locking makes this even worse, to
  * provide thread-safety, no events can be processed, while an event is queued,
  * so making the insertion fast is even more important.
@@ -97,13 +97,13 @@ struct scheduler_t {
 	void (*schedule_job_ms) (scheduler_t *this, job_t *job, uint32_t ms);
 
 	/**
-	 * Adds a event to the queue, using an absolut time.
+	 * Adds a event to the queue, using an absolute time.
 	 *
 	 * The passed timeval should be calculated based on the time_monotonic()
 	 * function.
 	 *
 	 * @param job			job to schedule
-	 * @param time			absolut time to schedule job
+	 * @param time			absolute time to schedule job
 	 */
 	void (*schedule_job_tv) (scheduler_t *this, job_t *job, timeval_t tv);
 

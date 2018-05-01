@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2017 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <fcntl.h>
 #include <errno.h>
 
 #include <daemon.h>
@@ -48,6 +49,11 @@
  * TKM bus listener for IKE authorize events.
  */
 static tkm_listener_t *listener;
+
+/**
+ * Name of the daemon
+ */
+static char *dmn_name;
 
 /**
  * PID file, in which charon-tkm stores its process id
@@ -186,8 +192,11 @@ static bool check_pidfile()
 				pid = atoi(buf);
 			}
 			fclose(pidfile);
-			if (pid && kill(pid, 0) == 0)
-			{	/* such a process is running */
+			pidfile = NULL;
+			if (pid && pid != getpid() && kill(pid, 0) == 0)
+			{
+				DBG1(DBG_DMN, "%s already running ('%s' exists)", dmn_name,
+					 pidfile_name);
 				return TRUE;
 			}
 		}
@@ -199,13 +208,31 @@ static bool check_pidfile()
 	pidfile = fopen(pidfile_name, "w");
 	if (pidfile)
 	{
-		ignore_result(fchown(fileno(pidfile),
+		int fd;
+
+		fd = fileno(pidfile);
+		if (fd == -1)
+		{
+			DBG1(DBG_DMN, "unable to determine fd for '%s'", pidfile_name);
+			return TRUE;
+		}
+		if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1)
+		{
+			DBG1(DBG_LIB, "setting FD_CLOEXEC for '%s' failed: %s",
+				 pidfile_name, strerror(errno));
+		}
+		ignore_result(fchown(fd,
 							 lib->caps->get_uid(lib->caps),
 							 lib->caps->get_gid(lib->caps)));
 		fprintf(pidfile, "%d\n", getpid());
 		fflush(pidfile);
+		return FALSE;
 	}
-	return FALSE;
+	else
+	{
+		DBG1(DBG_DMN, "unable to create pidfile '%s'", pidfile_name);
+		return TRUE;
+	}
 }
 
 /**
@@ -221,15 +248,15 @@ static void unlink_pidfile()
 	{
 		ignore_result(ftruncate(fileno(pidfile), 0));
 		fclose(pidfile);
+		unlink(pidfile_name);
 	}
-	unlink(pidfile_name);
 }
+
 /**
  * Main function, starts TKM backend.
  */
 int main(int argc, char *argv[])
 {
-	char *dmn_name;
 	if (argc > 0 && strlen(argv[0]) > 0)
 	{
 		dmn_name = basename(argv[0]);
@@ -322,8 +349,6 @@ int main(int argc, char *argv[])
 
 	if (check_pidfile())
 	{
-		DBG1(DBG_DMN, "%s already running (\"%s\" exists)", dmn_name,
-			 pidfile_name);
 		goto deinit;
 	}
 
@@ -372,8 +397,6 @@ int main(int argc, char *argv[])
 	/* main thread goes to run loop */
 	run();
 
-	unlink_pidfile();
-	free(pidfile_name);
 	status = 0;
 	charon->bus->remove_listener(charon->bus, &listener->listener);
 	listener->destroy(listener);
@@ -384,6 +407,8 @@ deinit:
 	destroy_dh_mapping();
 	libcharon_deinit();
 	tkm_deinit();
+	unlink_pidfile();
+	free(pidfile_name);
 	library_deinit();
 	return status;
 }

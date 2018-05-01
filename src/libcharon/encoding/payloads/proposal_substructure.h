@@ -29,7 +29,7 @@ typedef struct proposal_substructure_t proposal_substructure_t;
 #include <library.h>
 #include <encoding/payloads/payload.h>
 #include <encoding/payloads/transform_substructure.h>
-#include <config/proposal.h>
+#include <crypto/proposal/proposal.h>
 #include <collections/linked_list.h>
 #include <kernel/kernel_ipsec.h>
 #include <sa/authenticator.h>

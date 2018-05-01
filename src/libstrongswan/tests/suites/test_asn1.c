@@ -758,13 +758,10 @@ END_TEST
 
 START_TEST(test_asn1_parse_integer_uint64)
 {
-	typedef struct {
+	struct {
 		uint64_t n;
 		chunk_t chunk;
-	} testdata_t;
-
-
-	testdata_t test[] = {
+	} test[] = {
 		{             67305985ULL, chunk_from_chars(
 						0x04, 0x03, 0x02, 0x01) },
 		{   578437695752307201ULL, chunk_from_chars(
@@ -778,6 +775,37 @@ START_TEST(test_asn1_parse_integer_uint64)
 	for (i = 0; i < countof(test); i++)
 	{
 		ck_assert(asn1_parse_integer_uint64(test[i].chunk) == test[i].n);
+	}
+}
+END_TEST
+
+/*******************************************************************************
+ * integer_from_uint64
+ */
+
+START_TEST(test_asn1_integer_from_uint64)
+{
+	struct {
+		uint64_t n;
+		chunk_t chunk;
+	} test[] = {
+		{                    0ULL, chunk_from_chars(0x00) },
+		{                  255ULL, chunk_from_chars(0xff) },
+		{                  256ULL, chunk_from_chars(0x01, 0x00) },
+		{             67305985ULL, chunk_from_chars(0x04, 0x03, 0x02, 0x01) },
+		{   578437695752307201ULL, chunk_from_chars(
+							0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01) },
+		{ 18446744073709551615ULL, chunk_from_chars(
+							0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff) },
+	};
+	chunk_t asn;
+	int i;
+
+	for (i = 0; i < countof(test); i++)
+	{
+		asn = asn1_integer_from_uint64(test[i].n);
+		ck_assert_chunk_eq(test[i].chunk, asn);
+		chunk_free(&asn);
 	}
 }
 END_TEST
@@ -861,8 +889,9 @@ Suite *asn1_suite_create()
 	tcase_add_test(tc, test_asn1_integer);
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("parse_integer_uint64");
+	tc = tcase_create("integer_uint64");
 	tcase_add_test(tc, test_asn1_parse_integer_uint64);
+	tcase_add_test(tc, test_asn1_integer_from_uint64);
 	suite_add_tcase(s, tc);
 
 	return s;

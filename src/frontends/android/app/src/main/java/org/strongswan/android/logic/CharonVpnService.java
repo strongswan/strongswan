@@ -74,6 +74,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	public static final int VPN_STATE_NOTIFICATION_ID = 1;
 
 	private String mLogFile;
+	private String mAppDir;
 	private VpnProfileDataSource mDataSource;
 	private Thread mConnectionHandler;
 	private VpnProfile mCurrentProfile;
@@ -152,6 +153,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	public void onCreate()
 	{
 		mLogFile = getFilesDir().getAbsolutePath() + File.separator + LOG_FILE;
+		mAppDir = getFilesDir().getAbsolutePath();
 
 		mDataSource = new VpnProfileDataSource(this);
 		mDataSource.open();
@@ -244,7 +246,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 
 						addNotification();
 						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile);
-						if (initializeCharon(builder, mLogFile, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
+						if (initializeCharon(builder, mLogFile, mAppDir, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
 						{
 							Log.i(TAG, "charon started");
 							SettingsWriter writer = new SettingsWriter();
@@ -259,6 +261,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 							writer.setValue("connection.local_id", mCurrentProfile.getLocalId());
 							writer.setValue("connection.remote_id", mCurrentProfile.getRemoteId());
 							writer.setValue("connection.certreq", (mCurrentProfile.getFlags() & VpnProfile.FLAGS_SUPPRESS_CERT_REQS) == 0);
+							writer.setValue("connection.ike_proposal", mCurrentProfile.getIkeProposal());
+							writer.setValue("connection.esp_proposal", mCurrentProfile.getEspProposal());
 							initiate(writer.serialize());
 						}
 						else
@@ -645,10 +649,11 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 *
 	 * @param builder BuilderAdapter for this connection
 	 * @param logfile absolute path to the logfile
+	 * @param appdir absolute path to the data directory of the app
 	 * @param byod enable BYOD features
 	 * @return TRUE if initialization was successful
 	 */
-	public native boolean initializeCharon(BuilderAdapter builder, String logfile, boolean byod);
+	public native boolean initializeCharon(BuilderAdapter builder, String logfile, String appdir, boolean byod);
 
 	/**
 	 * Deinitialize charon, provided by libandroidbridge.so
@@ -931,7 +936,18 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 					ranges.remove(mExcludedSubnets);
 					for (IPRange subnet : ranges.subnets())
 					{
-						builder.addRoute(subnet.getFrom(), subnet.getPrefix());
+						try
+						{
+							builder.addRoute(subnet.getFrom(), subnet.getPrefix());
+						}
+						catch (IllegalArgumentException e)
+						{	/* some Android versions don't seem to like multicast addresses here,
+							 * ignore it for now */
+							if (!subnet.getFrom().isMulticastAddress())
+							{
+								throw e;
+							}
+						}
 					}
 				}
 				else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
@@ -961,7 +977,17 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 					ranges.remove(mExcludedSubnets);
 					for (IPRange subnet : ranges.subnets())
 					{
-						builder.addRoute(subnet.getFrom(), subnet.getPrefix());
+						try
+						{
+							builder.addRoute(subnet.getFrom(), subnet.getPrefix());
+						}
+						catch (IllegalArgumentException e)
+						{
+							if (!subnet.getFrom().isMulticastAddress())
+							{
+								throw e;
+							}
+						}
 					}
 				}
 				else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
@@ -974,7 +1000,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				builder.addRoute("::", 0);
 			}
 			/* apply selected applications */
-			if (mSelectedApps.size() > 0)
+			if (mSelectedApps.size() > 0 &&
+				Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
 			{
 				switch (mAppHandling)
 				{
@@ -1045,29 +1072,5 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	private static String getDeviceString()
 	{
 		return Build.MODEL + " - " + Build.BRAND + "/" + Build.PRODUCT + "/" + Build.MANUFACTURER;
-	}
-
-	/*
-	 * The libraries are extracted to /data/data/org.strongswan.android/...
-	 * during installation.  On newer releases most are loaded in JNI_OnLoad.
-	 */
-	static
-	{
-		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2)
-		{
-			System.loadLibrary("strongswan");
-
-			if (MainActivity.USE_BYOD)
-			{
-				System.loadLibrary("tpmtss");
-				System.loadLibrary("tncif");
-				System.loadLibrary("tnccs");
-				System.loadLibrary("imcv");
-			}
-
-			System.loadLibrary("charon");
-			System.loadLibrary("ipsec");
-		}
-		System.loadLibrary("androidbridge");
 	}
 }

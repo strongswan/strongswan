@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2016 Tobias Brunner
+ * Copyright (C) 2006-2017 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -230,11 +230,6 @@ struct private_ike_sa_t {
 	 * previously value of received DESTINATION_IP hash
 	 */
 	chunk_t nat_detection_dest;
-
-	/**
-	 * number pending UPDATE_SA_ADDRESS (MOBIKE)
-	 */
-	uint32_t pending_updates;
 
 	/**
 	 * NAT keep alive interval
@@ -734,8 +729,11 @@ METHOD(ike_sa_t, set_condition, void,
 			switch (condition)
 			{
 				case COND_NAT_HERE:
-				case COND_NAT_FAKE:
 				case COND_NAT_THERE:
+					DBG1(DBG_IKE, "%s host is not behind NAT anymore",
+						 condition == COND_NAT_HERE ? "local" : "remote");
+					/* fall-through */
+				case COND_NAT_FAKE:
 					set_condition(this, COND_NAT_ANY,
 								  has_condition(this, COND_NAT_HERE) ||
 								  has_condition(this, COND_NAT_THERE) ||
@@ -914,9 +912,15 @@ METHOD(ike_sa_t, set_state, void,
 }
 
 METHOD(ike_sa_t, reset, void,
-	private_ike_sa_t *this)
+	private_ike_sa_t *this, bool new_spi)
 {
-	/*  the responder ID is reset, as peer may choose another one */
+	/* reset the initiator SPI if requested */
+	if (new_spi)
+	{
+		charon->ike_sa_manager->new_initiator_spi(charon->ike_sa_manager,
+												  &this->public);
+	}
+	/* the responder ID is reset, as peer may choose another one */
 	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
 	{
 		this->ike_sa_id->set_responder_spi(this->ike_sa_id, 0);
@@ -1046,31 +1050,21 @@ METHOD(ike_sa_t, has_mapping_changed, bool,
 	return TRUE;
 }
 
-METHOD(ike_sa_t, set_pending_updates, void,
-	private_ike_sa_t *this, uint32_t updates)
-{
-	this->pending_updates = updates;
-}
-
-METHOD(ike_sa_t, get_pending_updates, uint32_t,
-	private_ike_sa_t *this)
-{
-	return this->pending_updates;
-}
-
 METHOD(ike_sa_t, float_ports, void,
 	   private_ike_sa_t *this)
 {
-	/* do not switch if we have a custom port from MOBIKE/NAT */
+	/* even if the remote port is not 500 (e.g. because the response was natted)
+	 * we switch the remote port if we used port 500 */
+	if (this->other_host->get_port(this->other_host) == IKEV2_UDP_PORT ||
+		this->my_host->get_port(this->my_host) == IKEV2_UDP_PORT)
+	{
+		this->other_host->set_port(this->other_host, IKEV2_NATT_PORT);
+	}
 	if (this->my_host->get_port(this->my_host) ==
 			charon->socket->get_port(charon->socket, FALSE))
 	{
 		this->my_host->set_port(this->my_host,
 								charon->socket->get_port(charon->socket, TRUE));
-	}
-	if (this->other_host->get_port(this->other_host) == IKEV2_UDP_PORT)
-	{
-		this->other_host->set_port(this->other_host, IKEV2_NATT_PORT);
 	}
 }
 
@@ -1849,7 +1843,7 @@ METHOD(ike_sa_t, reauth, status_t,
 	{
 		DBG0(DBG_IKE, "reinitiating IKE_SA %s[%d]",
 			 get_name(this), this->unique_id);
-		reset(this);
+		reset(this, TRUE);
 		return this->task_manager->initiate(this->task_manager);
 	}
 	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
@@ -1934,23 +1928,18 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 	enumerator = create_child_sa_enumerator(this);
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
+		switch (child_sa->get_state(child_sa))
+		{
+			case CHILD_REKEYED:
+			case CHILD_DELETED:
+				/* ignore CHILD_SAs in these states */
+				continue;
+			default:
+				break;
+		}
 		if (force)
 		{
-			switch (child_sa->get_state(child_sa))
-			{
-				case CHILD_ROUTED:
-				{	/* move routed child directly */
-					remove_child_sa(this, enumerator);
-					new->add_child_sa(new, child_sa);
-					action = ACTION_NONE;
-					break;
-				}
-				default:
-				{	/* initiate/queue all other CHILD_SAs */
-					action = ACTION_RESTART;
-					break;
-				}
-			}
+			action = ACTION_RESTART;
 		}
 		else
 		{	/* only restart CHILD_SAs that are configured accordingly */
@@ -2028,6 +2017,15 @@ METHOD(ike_sa_t, reestablish, status_t,
 		enumerator = array_create_enumerator(this->child_sas);
 		while (enumerator->enumerate(enumerator, (void**)&child_sa))
 		{
+			switch (child_sa->get_state(child_sa))
+			{
+				case CHILD_REKEYED:
+				case CHILD_DELETED:
+					/* ignore CHILD_SAs in these states */
+					continue;
+				default:
+					break;
+			}
 			if (this->state == IKE_DELETING)
 			{
 				action = child_sa->get_close_action(child_sa);
@@ -2043,8 +2041,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 					break;
 				case ACTION_ROUTE:
 					charon->traps->install(charon->traps, this->peer_cfg,
-										   child_sa->get_config(child_sa),
-										   child_sa->get_reqid(child_sa));
+										   child_sa->get_config(child_sa));
 					break;
 				default:
 					break;
@@ -2222,7 +2219,7 @@ static bool redirect_connecting(private_ike_sa_t *this, identification_t *to)
 	{
 		return FALSE;
 	}
-	reset(this);
+	reset(this, TRUE);
 	DESTROY_IF(this->redirected_from);
 	this->redirected_from = this->other_host->clone(this->other_host);
 	DESTROY_IF(this->remote_host);
@@ -2351,11 +2348,36 @@ METHOD(ike_sa_t, retransmit, status_t,
 				{
 					DBG1(DBG_IKE, "peer not responding, trying again (%d/%d)",
 						 this->keyingtry + 1, tries);
-					reset(this);
+					reset(this, TRUE);
 					resolve_hosts(this);
 					return this->task_manager->initiate(this->task_manager);
 				}
 				DBG1(DBG_IKE, "establishing IKE_SA failed, peer not responding");
+
+				if (this->version == IKEV1 && array_count(this->child_sas))
+				{
+					enumerator_t *enumerator;
+					child_sa_t *child_sa;
+
+					/* if reauthenticating an IKEv1 SA failed (assumed for an SA
+					 * in this state with CHILD_SAs), try again from scratch */
+					DBG1(DBG_IKE, "reauthentication failed, trying to "
+						 "reestablish IKE_SA");
+					reestablish(this);
+					/* trigger down events for the CHILD_SAs, as no down event
+					 * is triggered below for IKE SAs in this state */
+					enumerator = array_create_enumerator(this->child_sas);
+					while (enumerator->enumerate(enumerator, &child_sa))
+					{
+						if (child_sa->get_state(child_sa) != CHILD_REKEYED &&
+							child_sa->get_state(child_sa) != CHILD_DELETED)
+						{
+							charon->bus->child_updown(charon->bus, child_sa,
+													  FALSE);
+						}
+					}
+					enumerator->destroy(enumerator);
+				}
 				break;
 			}
 			case IKE_DELETING:
@@ -2555,9 +2577,20 @@ METHOD(ike_sa_t, roam, status_t,
 			break;
 	}
 
+	if (!this->ike_cfg)
+	{	/* this is the case for new HA SAs not yet in state IKE_PASSIVE and
+		 * without config assigned */
+		return SUCCESS;
+	}
+	if (this->version == IKEV1)
+	{	/* ignore roam events for IKEv1 where we don't have MOBIKE and would
+		 * have to reestablish from scratch (reauth is not enough) */
+		return SUCCESS;
+	}
+
 	/* ignore roam events if MOBIKE is not supported/enabled and the local
 	 * address is statically configured */
-	if (this->version == IKEV2 && !supports_extension(this, EXT_MOBIKE) &&
+	if (!supports_extension(this, EXT_MOBIKE) &&
 		ike_cfg_has_address(this->ike_cfg, this->my_host, TRUE))
 	{
 		DBG2(DBG_IKE, "keeping statically configured path %H - %H",
@@ -2958,8 +2991,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.supports_extension = _supports_extension,
 			.set_condition = _set_condition,
 			.has_condition = _has_condition,
-			.set_pending_updates = _set_pending_updates,
-			.get_pending_updates = _get_pending_updates,
 			.create_peer_address_enumerator = _create_peer_address_enumerator,
 			.add_peer_address = _add_peer_address,
 			.clear_peer_addresses = _clear_peer_addresses,

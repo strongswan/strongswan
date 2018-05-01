@@ -65,6 +65,7 @@ int keymat_get_keylen_encr(encryption_algorithm_t alg)
 	keylen_entry_t map[] = {
 		{ENCR_DES,					 64},
 		{ENCR_3DES,					192},
+		{ENCR_CHACHA20_POLY1305,	256},
 	};
 	int i;
 

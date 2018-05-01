@@ -899,8 +899,8 @@ METHOD(pkcs11_library_t, create_mechanism_enumerator, enumerator_t*,
 		return enumerator_create_empty();
 	}
 	enumerator->mechs = malloc(sizeof(CK_MECHANISM_TYPE) * enumerator->count);
-	enumerator->lib->f->C_GetMechanismList(slot, enumerator->mechs,
-										   &enumerator->count);
+	rv = enumerator->lib->f->C_GetMechanismList(slot, enumerator->mechs,
+												&enumerator->count);
 	if (rv != CKR_OK)
 	{
 		DBG1(DBG_CFG, "C_GetMechanismList() failed: %N", ck_rv_names, rv);

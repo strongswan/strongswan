@@ -47,10 +47,10 @@ ENUM_BEGIN(ietf_attr_names, IETF_ATTR_TESTING,
 	"Forwarding Enabled",
 	"Factory Default Password Enabled",
 );
-ENUM_NEXT(ietf_attr_names,  IETF_ATTR_SW_REQUEST,
+ENUM_NEXT(ietf_attr_names,  IETF_ATTR_SWIMA_REQUEST,
 							IETF_ATTR_SRC_METADATA_RESP,
 							IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED,
-	"SW Request",
+	"SWIMA Request",
 	"SW Identifier Inventory",
 	"SW Identifier Events",
 	"SW Inventory",
@@ -97,7 +97,7 @@ pa_tnc_attr_t* ietf_attr_create_from_data(uint32_t type, size_t length,
 		case IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED:
 			return generic_attr_bool_create_from_data(length, value,
 									pen_type_create(PEN_IETF, type));
-		case IETF_ATTR_SW_REQUEST:
+		case IETF_ATTR_SWIMA_REQUEST:
 			return ietf_swima_attr_req_create_from_data(length, value);
 		case IETF_ATTR_SW_ID_INVENTORY:
 			return ietf_swima_attr_sw_inv_create_from_data(length, value, TRUE);

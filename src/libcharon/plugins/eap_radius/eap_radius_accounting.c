@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2015-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
@@ -160,6 +160,8 @@ typedef struct {
 	ike_sa_id_t *id;
 	/** RADIUS accounting session ID */
 	char sid[24];
+	/** cached Class attributes */
+	array_t *class_attrs;
 	/** number of sent/received octets/packets for expired SAs */
 	usage_t usage;
 	/** list of cached SAs, sa_entry_t (sorted by their unique ID) */
@@ -186,6 +188,7 @@ static void destroy_entry(entry_t *this)
 {
 	array_destroy_function(this->cached, (void*)free, NULL);
 	array_destroy_function(this->migrated, (void*)free, NULL);
+	array_destroy_function(this->class_attrs, (void*)chunk_free, NULL);
 	this->id->destroy(this->id);
 	free(this);
 }
@@ -458,6 +461,23 @@ static void add_ike_sa_parameters(private_eap_radius_accounting_t *this,
 }
 
 /**
+ * Add the Class attributes received in the Access-Accept message to the
+ * RADIUS accounting message
+ */
+static void add_class_attributes(radius_message_t *message, entry_t *entry)
+{
+	enumerator_t *enumerator;
+	chunk_t *cls;
+
+	enumerator = array_create_enumerator(entry->class_attrs);
+	while (enumerator->enumerate(enumerator, &cls))
+	{
+		message->add(message, RAT_CLASS, *cls);
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Get an existing or create a new entry from the locked session table
  */
 static entry_t* get_or_create_entry(private_eap_radius_accounting_t *this,
@@ -585,6 +605,7 @@ static job_requeue_t send_interim(interim_data_t *data)
 		message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
 		message->add(message, RAT_ACCT_SESSION_ID,
 					 chunk_create(entry->sid, strlen(entry->sid)));
+		add_class_attributes(message, entry);
 		add_ike_sa_parameters(this, message, ike_sa);
 
 		value = htonl(usage.bytes.sent);
@@ -704,6 +725,7 @@ static void send_start(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 	message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
 	message->add(message, RAT_ACCT_SESSION_ID,
 				 chunk_create(entry->sid, strlen(entry->sid)));
+	add_class_attributes(message, entry);
 
 	if (!entry->interim.interval)
 	{
@@ -766,6 +788,7 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 		message->add(message, RAT_ACCT_STATUS_TYPE, chunk_from_thing(value));
 		message->add(message, RAT_ACCT_SESSION_ID,
 					 chunk_create(entry->sid, strlen(entry->sid)));
+		add_class_attributes(message, entry);
 		add_ike_sa_parameters(this, message, ike_sa);
 
 		value = htonl(entry->usage.bytes.sent);
@@ -1061,6 +1084,27 @@ void eap_radius_accounting_start_interim(ike_sa_t *ike_sa, uint32_t interval)
 		entry = get_or_create_entry(singleton, ike_sa->get_id(ike_sa),
 									ike_sa->get_unique_id(ike_sa));
 		entry->interim.interval = interval;
+		singleton->mutex->unlock(singleton->mutex);
+	}
+}
+
+/*
+ * Described in header
+ */
+void eap_radius_accounting_add_class(ike_sa_t *ike_sa, chunk_t cls)
+{
+	if (singleton)
+	{
+		entry_t *entry;
+		chunk_t clone;
+
+		DBG2(DBG_CFG, "cache RADIUS Class attribute %B", &cls);
+		singleton->mutex->lock(singleton->mutex);
+		entry = get_or_create_entry(singleton, ike_sa->get_id(ike_sa),
+									ike_sa->get_unique_id(ike_sa));
+		clone = chunk_clone(cls);
+		array_insert_create_value(&entry->class_attrs, sizeof(chunk_t),
+								  ARRAY_TAIL, &clone);
 		singleton->mutex->unlock(singleton->mutex);
 	}
 }

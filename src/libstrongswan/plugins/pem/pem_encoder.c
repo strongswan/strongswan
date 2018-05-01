@@ -15,6 +15,8 @@
 
 #include "pem_encoder.h"
 
+#include <library.h>
+
 #define BYTES_PER_LINE	48
 
 /**

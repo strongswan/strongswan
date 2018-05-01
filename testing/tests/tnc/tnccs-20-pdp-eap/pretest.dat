@@ -17,11 +17,11 @@ alice::sed -i "s:DEBIAN_VERSION:\`cat /etc/debian_version\`:" /etc/pts/data1.sql
 alice::cd /usr/local/share/strongswan/templates/database/imv; cat tables.sql data.sql /etc/pts/data1.sql | sqlite3 /etc/db.d/config.db
 alice::chgrp -R www-data /etc/db.d/config.db; chmod -R g+w /etc/db.d/config.db
 alice::/usr/local/bin/init_tnc
-alice::service apache2 start
-alice::service charon start
-moon::service charon start
-dave::service charon start
-carol::service charon start
+alice::systemctl start apache2
+alice::systemctl start strongswan-swanctl
+moon::systemctl start strongswan-swanctl
+dave::systemctl start strongswan-swanctl
+carol::systemctl start strongswan-swanctl
 moon::expect-connection rw-allow
 moon::expect-connection rw-isolate
 dave::expect-connection home

@@ -26,6 +26,7 @@ typedef enum policy_dir_t policy_dir_t;
 typedef enum policy_type_t policy_type_t;
 typedef enum policy_priority_t policy_priority_t;
 typedef enum ipcomp_transform_t ipcomp_transform_t;
+typedef enum hw_offload_t hw_offload_t;
 typedef struct ipsec_sa_cfg_t ipsec_sa_cfg_t;
 typedef struct lifetime_cfg_t lifetime_cfg_t;
 typedef struct mark_t mark_t;
@@ -115,6 +116,20 @@ enum ipcomp_transform_t {
  * enum strings for ipcomp_transform_t.
  */
 extern enum_name_t *ipcomp_transform_names;
+
+/**
+ * HW offload mode options
+ */
+enum hw_offload_t {
+	HW_OFFLOAD_NO = 0,
+	HW_OFFLOAD_YES = 1,
+	HW_OFFLOAD_AUTO = 2,
+};
+
+/**
+ * enum names for hw_offload_t.
+ */
+extern enum_name_t *hw_offload_names;
 
 /**
  * This struct contains details about IPsec SA(s) tied to a policy.

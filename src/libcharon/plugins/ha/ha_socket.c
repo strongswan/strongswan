@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -52,6 +53,11 @@ struct private_ha_socket_t {
 	 * remote host to receive/send to
 	 */
 	host_t *remote;
+
+	/**
+	 * Receive buffer size
+	 */
+	u_int buflen;
 };
 
 /**
@@ -120,13 +126,26 @@ METHOD(ha_socket_t, pull, ha_message_t*,
 	while (TRUE)
 	{
 		ha_message_t *message;
-		char buf[1024];
+		char buf[this->buflen];
+		struct iovec iov = {
+			.iov_base = buf,
+			.iov_len = this->buflen,
+		};
+		struct msghdr msg = {
+			.msg_iov = &iov,
+			.msg_iovlen = 1,
+		};
 		bool oldstate;
 		ssize_t len;
 
 		oldstate = thread_cancelability(TRUE);
-		len = recv(this->fd, buf, sizeof(buf), 0);
+		len = recvmsg(this->fd, &msg, 0);
 		thread_cancelability(oldstate);
+		if (msg.msg_flags & MSG_TRUNC)
+		{
+			DBG1(DBG_CFG, "HA message exceeds receive buffer");
+			continue;
+		}
 		if (len <= 0)
 		{
 			switch (errno)
@@ -208,6 +227,8 @@ ha_socket_t *ha_socket_create(char *local, char *remote)
 		},
 		.local = host_create_from_dns(local, 0, HA_PORT),
 		.remote = host_create_from_dns(remote, 0, HA_PORT),
+		.buflen = lib->settings->get_int(lib->settings,
+										 "%s.plugins.ha.buflen", 2048, lib->ns),
 		.fd = -1,
 	);
 

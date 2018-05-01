@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,6 +23,7 @@
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <crypto/hashers/hasher.h>
+#include <credentials/keys/signature_params.h>
 
 typedef struct private_gcrypt_rsa_public_key_t private_gcrypt_rsa_public_key_t;
 
@@ -109,27 +111,48 @@ static bool verify_raw(private_gcrypt_rsa_public_key_t *this,
 }
 
 /**
- * Verification of an EMSA PKCS1 signature described in PKCS#1
+ * Verification of an EMSA PKCS1v1.5 / EMSA-PSS signature described in PKCS#1
  */
 static bool verify_pkcs1(private_gcrypt_rsa_public_key_t *this,
-						 hash_algorithm_t algorithm, char *hash_name,
+						 hash_algorithm_t algorithm, rsa_pss_params_t *pss,
 						 chunk_t data, chunk_t signature)
 {
 	hasher_t *hasher;
 	chunk_t hash;
 	gcry_error_t err;
 	gcry_sexp_t in, sig;
+	char *hash_name = enum_to_name(hash_algorithm_short_names, algorithm);
 
 	hasher = lib->crypto->create_hasher(lib->crypto, algorithm);
-	if (!hasher || !hasher->allocate_hash(hasher, data, &hash))
+	if (!hasher)
 	{
-		DESTROY_IF(hasher);
+		DBG1(DBG_LIB, "hash algorithm %N not supported",
+			 hash_algorithm_names, algorithm);
+		return FALSE;
+	}
+	if (!hasher->allocate_hash(hasher, data, &hash))
+	{
+		hasher->destroy(hasher);
 		return FALSE;
 	}
 	hasher->destroy(hasher);
 
-	err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(hash %s %b))",
-						  hash_name, hash.len, hash.ptr);
+	if (pss)
+	{
+		u_int slen = hasher_hash_size(algorithm);
+		if (pss->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
+		{
+			slen = pss->salt_len;
+		}
+		err = gcry_sexp_build(&in, NULL,
+							  "(data(flags pss)(salt-length %u)(hash %s %b))",
+							  slen, hash_name, hash.len, hash.ptr);
+	}
+	else
+	{
+		err = gcry_sexp_build(&in, NULL, "(data(flags pkcs1)(hash %s %b))",
+							  hash_name, hash.len, hash.ptr);
+	}
 	chunk_free(&hash);
 	if (err)
 	{
@@ -159,6 +182,26 @@ static bool verify_pkcs1(private_gcrypt_rsa_public_key_t *this,
 	return TRUE;
 }
 
+#if GCRYPT_VERSION_NUMBER >= 0x010700
+/**
+ * Verification of an EMSA-PSS signature described in PKCS#1
+ */
+static bool verify_pss(private_gcrypt_rsa_public_key_t *this,
+					   rsa_pss_params_t *params, chunk_t data, chunk_t sig)
+{
+	if (!params)
+	{
+		return FALSE;
+	}
+	if (params->mgf1_hash != params->hash)
+	{
+		DBG1(DBG_LIB, "unable to use a different MGF1 hash for RSA-PSS");
+		return FALSE;
+	}
+	return verify_pkcs1(this, params->hash, params, data, sig);
+}
+#endif
+
 METHOD(public_key_t, get_type, key_type_t,
 	private_gcrypt_rsa_public_key_t *this)
 {
@@ -167,24 +210,28 @@ METHOD(public_key_t, get_type, key_type_t,
 
 METHOD(public_key_t, verify, bool,
 	private_gcrypt_rsa_public_key_t *this, signature_scheme_t scheme,
-	chunk_t data, chunk_t signature)
+	void *params, chunk_t data, chunk_t signature)
 {
 	switch (scheme)
 	{
 		case SIGN_RSA_EMSA_PKCS1_NULL:
 			return verify_raw(this, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_224:
-			return verify_pkcs1(this, HASH_SHA224, "sha224", data, signature);
+			return verify_pkcs1(this, HASH_SHA224, NULL, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_256:
-			return verify_pkcs1(this, HASH_SHA256, "sha256", data, signature);
+			return verify_pkcs1(this, HASH_SHA256, NULL, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_384:
-			return verify_pkcs1(this, HASH_SHA384, "sha384", data, signature);
+			return verify_pkcs1(this, HASH_SHA384, NULL, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
-			return verify_pkcs1(this, HASH_SHA512, "sha512", data, signature);
+			return verify_pkcs1(this, HASH_SHA512, NULL, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
-			return verify_pkcs1(this, HASH_SHA1, "sha1", data, signature);
+			return verify_pkcs1(this, HASH_SHA1, NULL, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
-			return verify_pkcs1(this, HASH_MD5, "md5", data, signature);
+			return verify_pkcs1(this, HASH_MD5, NULL, data, signature);
+#if GCRYPT_VERSION_NUMBER >= 0x010700
+		case SIGN_RSA_EMSA_PSS:
+			return verify_pss(this, params, data, signature);
+#endif
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);

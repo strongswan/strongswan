@@ -27,11 +27,18 @@
 #include <library.h>
 #include <utils/debug.h>
 
+#define EXIT_NO_UPDATES		80
+#define TMP_DEB_FILE		"/tmp/sec-updater.deb"
+#define TMP_TAG_FILE		"/tmp/sec-updater.tag"
+#define SWID_GEN_CMD		"/usr/local/bin/swid_generator"
+#define TNC_MANAGE_CMD		"/var/www/tnc/manage.py"
+
 typedef enum sec_update_state_t sec_update_state_t;
 
 enum sec_update_state_t {
 	SEC_UPDATE_STATE_BEGIN_PACKAGE,
 	SEC_UPDATE_STATE_VERSION,
+	SEC_UPDATE_STATE_FILENAME,
 	SEC_UPDATE_STATE_END_PACKAGE
 };
 
@@ -104,21 +111,24 @@ static void usage(void)
 	printf("\
 Usage:\n\
   sec-updater --help\n\
-  sec-updater [--debug <level>] [--quiet]  [--security] --product <name> --file <filename>\n\n\
+  sec-updater [--debug <level>] [--quiet]  [--security] --os <string>\n\
+               --arch <string> --uri <uri> --file <filename>\n\n\
   Options:\n\
     --help             print usage information\n\
-    --debug            set debug level\n\
+    --debug <level>    set debug level\n\
     --quiet            suppress debug output to stderr\n\
+    --os <string>      operating system\n\
+    --arch <string>    hw architecture\n\
     --security         set when parsing a file with security updates\n\
-    --product <name>   name of the Linux version as stored in the database\n\
-    --file <filename>  package information file to parse");
-}
+    --file <filename>  package information file to parse\n\
+    --uri <uri>        uri where to download deb package from\n");
+ }
 
 /**
  * Update the package database
  */
 static bool update_database(database_t *db, char *package, char *version,
-							bool security, stats_t *stats)
+							bool security, stats_t *stats, bool *new)
 {
 	int pid = 0, vid = 0, sec_flag;
 	bool first = TRUE, found = FALSE;
@@ -127,6 +137,9 @@ static bool update_database(database_t *db, char *package, char *version,
 
 	/* increment package count */
 	stats->packages++;
+
+	/* set new output variable */
+	*new = FALSE;
 
 	/* check if package is already in database */
 	e = db->query(db, "SELECT id FROM packages WHERE name = ?",
@@ -219,6 +232,7 @@ static bool update_database(database_t *db, char *package, char *version,
 			return FALSE;
 		}
 		stats->new_versions++;
+		*new = TRUE;
 	}
 
 	return TRUE;
@@ -227,16 +241,21 @@ static bool update_database(database_t *db, char *package, char *version,
 /**
  * Process a package file and store updates in the database
  */
-static void process_packages(char *filename, char *product, bool security)
+static int process_packages(char *path, char *os, char *arch, char *uri,
+							bool security)
 {
-	char *uri, line[BUF_LEN], *pos, *package = NULL, *version = NULL;
+	char line[BUF_LEN], product[BUF_LEN], command[BUF_LEN];
+	char *db_uri, *download_uri = NULL, *swid_regid, *swid_entity;
+	char *pos, *package = NULL, *version = NULL, *filename = NULL;
+	char *swid_gen_cmd, *tnc_manage_cmd, *tmp_deb_file, *tmp_tag_file;
 	sec_update_state_t state;
 	enumerator_t *e;
 	database_t *db;
-	int pid;
+	int len, pid;
+	chunk_t deb = chunk_empty;
 	FILE *file;
 	stats_t stats;
-	bool success;
+	bool success = TRUE, new;
 
 	/* initialize statistics */
 	memset(&stats, 0x00, sizeof(stats_t));
@@ -245,29 +264,31 @@ static void process_packages(char *filename, char *product, bool security)
 	stats.release = time(NULL);
 
 	/* opening package file */
-	DBG1(DBG_IMV, "loading \"%s\"", filename);
-	file = fopen(filename, "r");
+	file = fopen(path, "r");
 	if (!file)
 	{
-		DBG1(DBG_IMV, "  could not open \"%s\"", filename);
+		DBG1(DBG_IMV, "  could not open \"%s\"", path);
 		exit(EXIT_FAILURE);
 	}
 
 	/* connect package database */
-	uri = lib->settings->get_str(lib->settings, "sec-updater.database", NULL);
-	if (!uri)
+	db_uri = lib->settings->get_str(lib->settings, "sec-updater.database", NULL);
+	if (!db_uri)
 	{
 		DBG1(DBG_IMV, "database URI sec-updater.database not set");
 		fclose(file);
 		exit(EXIT_FAILURE);
 	}
-	db = lib->db->create(lib->db, uri);
+	db = lib->db->create(lib->db, db_uri);
 	if (!db)
 	{
-		DBG1(DBG_IMV, "could not connect to database '%s'", uri);
+		DBG1(DBG_IMV, "could not connect to database '%s'", db_uri);
 		fclose(file);
 		exit(EXIT_FAILURE);
 	}
+
+	/* form product name by concatenating os and arch strings */
+	snprintf(product, BUF_LEN, "%s %s", os, arch);
 
 	/* check if product is already in database */
 	e = db->query(db, "SELECT id FROM products WHERE name = ?",
@@ -293,6 +314,22 @@ static void process_packages(char *filename, char *product, bool security)
 		}
 		stats.product = pid;
 	}
+
+	/* get settings for the loop */
+	swid_regid = lib->settings->get_str(lib->settings,
+						"sec-updater.swid_gen.tag_creator.regid",
+						"strongswan.org");
+	swid_entity = lib->settings->get_str(lib->settings,
+						"sec-updater.swid_gen.tag_creator.name",
+						"strongSwan Project");
+	swid_gen_cmd = lib->settings->get_str(lib->settings,
+						"sec-updater.swid_gen.command", SWID_GEN_CMD);
+	tnc_manage_cmd = lib->settings->get_str(lib->settings,
+						"sec-updater.tnc_manage_command", TNC_MANAGE_CMD);
+	tmp_deb_file = lib->settings->get_str(lib->settings,
+						"sec-updater.tmp.deb_file", TMP_DEB_FILE);
+	tmp_tag_file = lib->settings->get_str(lib->settings,
+						"sec-updater.tmp.tag_file", TMP_TAG_FILE);
 
 	state = SEC_UPDATE_STATE_BEGIN_PACKAGE;
 
@@ -330,7 +367,58 @@ static void process_packages(char *filename, char *product, bool security)
 				if (pos)
 				{
 					version = strndup(version, pos - version);
-					state = SEC_UPDATE_STATE_END_PACKAGE;
+					success = update_database(db, package, version, security,
+											  &stats, &new);
+					state = (success && new) ? SEC_UPDATE_STATE_FILENAME :
+											   SEC_UPDATE_STATE_END_PACKAGE;
+				}
+				break;
+			case SEC_UPDATE_STATE_FILENAME:
+				pos = strstr(pos, "Filename: ");
+				if (!pos)
+				{
+					continue;
+				}
+				state = SEC_UPDATE_STATE_END_PACKAGE;
+
+				pos += 10;
+				filename = pos;
+				pos = strchr(pos, '\n');
+				if (!pos)
+				{
+					break;
+				}
+				len = pos - filename;
+				if (asprintf(&download_uri, "%s/%.*s", uri, len, filename) == -1)
+				{
+					break;
+				}
+
+				/* retrieve deb package file from linux repository */
+				if (lib->fetcher->fetch(lib->fetcher, download_uri,
+												&deb, FETCH_END) != SUCCESS)
+				{
+					DBG1(DBG_IMV, "     %s failed", download_uri);
+					break;
+				}
+				DBG1(DBG_IMV, "     %s (%u bytes)", download_uri, deb.len);
+
+				/* store deb package file to temporary location */
+				if (!chunk_write(deb, tmp_deb_file, 0022, TRUE))
+				{
+					DBG1(DBG_IMV, "     save to '%s' failed", tmp_deb_file);
+					break;
+				}
+
+				/* generate SWID tag for downloaded deb package */
+				snprintf(command, BUF_LEN, "%s swid --full --package-file %s "
+						 "--regid %s --entity-name '%s' --os '%s' --arch '%s' "
+						 ">> %s", swid_gen_cmd, tmp_deb_file, swid_regid,
+						 swid_entity, os, arch, tmp_tag_file);
+				if (system(command) != 0)
+				{
+					DBG1(DBG_IMV, "     tag generation failed");
+					break;
 				}
 				break;
 			case SEC_UPDATE_STATE_END_PACKAGE:
@@ -338,9 +426,12 @@ static void process_packages(char *filename, char *product, bool security)
 				{
 					continue;
 				}
-				success = update_database(db, package, version, security, &stats);
 				free(package);
 				free(version);
+				free(download_uri);
+				chunk_free(&deb);
+				package = version = download_uri = NULL;
+
 				if (!success)
 				{
 					fclose(file);
@@ -350,28 +441,41 @@ static void process_packages(char *filename, char *product, bool security)
 				state = SEC_UPDATE_STATE_BEGIN_PACKAGE;
 		}
 	}
-	switch (state)
-	{
-		case SEC_UPDATE_STATE_END_PACKAGE:
-			free(version);
-			/* fall-through */
-		case SEC_UPDATE_STATE_VERSION:
-			free(package);
-			break;
-		default:
-			break;
-	}
+
+	free(package);
+	free(version);
+	free(download_uri);
 	fclose(file);
 	db->destroy(db);
 
+	/* import swid tags into strongTNC */
+	if (stats.new_versions > 0)
+	{
+		snprintf(command, BUF_LEN, "%s importswid %s",
+				 tnc_manage_cmd, tmp_tag_file);
+		if (system(command) != 0)
+		{
+			DBG1(DBG_IMV, "tag import failed");
+		}
+		snprintf(command, BUF_LEN, "rm %s %s",
+				 tmp_deb_file, tmp_tag_file);
+		if (system(command) != 0)
+		{
+			DBG1(DBG_IMV, "removing temporary files failed");
+		}
+	}
+
 	DBG1(DBG_IMV, "processed \"%s\": %d packages, %d new versions, "
-				  "%d updated versions", filename, stats.packages,
+				  "%d updated versions", path, stats.packages,
 				   stats.new_versions, stats.updated_versions);
+
+	return (stats.new_versions + stats.updated_versions) ?
+			EXIT_SUCCESS : EXIT_NO_UPDATES;
 }
 
-static void do_args(int argc, char *argv[])
+static int do_args(int argc, char *argv[])
 {
-	char *filename = NULL, *product = NULL;
+	char *filename = NULL, *arch = NULL, *os = NULL, *uri = NULL;
 	bool security = FALSE;
 
 	/* reinit getopt state */
@@ -383,15 +487,17 @@ static void do_args(int argc, char *argv[])
 
 		struct option long_opts[] = {
 			{ "help", no_argument, NULL, 'h' },
+			{ "arch", required_argument, NULL, 'a' },
 			{ "debug", required_argument, NULL, 'd' },
 			{ "file", required_argument, NULL, 'f' },
-			{ "product", required_argument, NULL, 'p' },
+			{ "os", required_argument, NULL, 'o' },
 			{ "quiet", no_argument, NULL, 'q' },
 			{ "security", no_argument, NULL, 's' },
+			{ "uri", required_argument, NULL, 'u' },
 			{ 0,0,0,0 }
 		};
 
-		c = getopt_long(argc, argv, "", long_opts, NULL);
+		c = getopt_long(argc, argv, "ha:d:f:o:qsu:", long_opts, NULL);
 		switch (c)
 		{
 			case EOF:
@@ -399,14 +505,17 @@ static void do_args(int argc, char *argv[])
 			case 'h':
 				usage();
 				exit(EXIT_SUCCESS);
+			case 'a':
+				arch = optarg;
+				continue;
 			case 'd':
 				debug_level = atoi(optarg);
 				continue;
 			case 'f':
 				filename = optarg;
 				continue;
-			case 'p':
-				product = optarg;
+			case 'o':
+				os = optarg;
 				continue;
 			case 'q':
 				stderr_quiet = TRUE;
@@ -414,13 +523,16 @@ static void do_args(int argc, char *argv[])
 			case 's':
 				security = TRUE;
 				continue;
+			case 'u':
+				uri = optarg;
+				continue;
 		}
 		break;
 	}
 
-	if (filename && product)
+	if (filename && os && arch && uri)
 	{
-		process_packages(filename, product, security);
+		return process_packages(filename, os, arch, uri, security);
 	}
 	else
 	{
@@ -443,12 +555,11 @@ int main(int argc, char *argv[])
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
 	if (!lib->plugins->load(lib->plugins,
-			lib->settings->get_str(lib->settings, "sec-updater.load", "sqlite")))
+			lib->settings->get_str(lib->settings, "sec-updater.load",
+												  "sqlite curl")))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
-	do_args(argc, argv);
-
-	exit(EXIT_SUCCESS);
+	exit(do_args(argc, argv));
 }
 

@@ -107,6 +107,11 @@ typedef struct {
 	ipsec_sa_entry_t *entry;
 
 	/**
+	 * SPI of the expired entry
+	 */
+	uint32_t spi;
+
+	/**
 	 * 0 if this is a hard expire, otherwise the offset in s (soft->hard)
 	 */
 	uint32_t hard_offset;
@@ -314,8 +319,9 @@ static job_requeue_t sa_expired(ipsec_sa_expired_t *expired)
 	private_ipsec_sa_mgr_t *this = expired->manager;
 
 	this->mutex->lock(this->mutex);
-	if (this->sas->find_first(this->sas, NULL, (void**)&expired->entry))
-	{
+	if (this->sas->find_first(this->sas, NULL, (void**)&expired->entry) &&
+		expired->spi == expired->entry->sa->get_spi(expired->entry->sa))
+	{	/* only if we find the right SA at this pointer location */
 		uint32_t hard_offset;
 
 		hard_offset = expired->hard_offset;
@@ -355,6 +361,7 @@ static void schedule_expiration(private_ipsec_sa_mgr_t *this,
 	INIT(expired,
 		.manager = this,
 		.entry = entry,
+		.spi = entry->sa->get_spi(entry->sa),
 	);
 
 	/* schedule a rekey first, a hard timeout will be scheduled then, if any */

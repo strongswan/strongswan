@@ -72,10 +72,13 @@ START_TEST(test_create_from_cidr)
 	verify("10.1.0.1/32[udp]", "10.1.0.1/32[17]",
 		traffic_selector_create_from_cidr("10.1.0.1/32", IPPROTO_UDP,
 										  0, 65535));
+	verify("10.1.0.1/32[0/domain]", "10.1.0.1/32[0/53]",
+		traffic_selector_create_from_cidr("10.1.0.1/32", 0,
+										  53, 53));
 	verify("10.1.0.1/32[udp/1234-1235]", "10.1.0.1/32[17/1234-1235]",
 		traffic_selector_create_from_cidr("10.1.0.1/32", IPPROTO_UDP,
 										  1234, 1235));
-	verify("10.1.0.0/16[OPAQUE]", NULL,
+	verify("10.1.0.0/16[0/OPAQUE]", NULL,
 		traffic_selector_create_from_cidr("10.1.0.0/16", 0, 65535, 0));
 
 	verify(NULL, NULL,

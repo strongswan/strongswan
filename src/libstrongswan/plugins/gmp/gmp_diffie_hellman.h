@@ -49,12 +49,11 @@ gmp_diffie_hellman_t *gmp_diffie_hellman_create(diffie_hellman_group_t group);
  * Creates a new gmp_diffie_hellman_t object for MODP_CUSTOM.
  *
  * @param group			MODP_CUSTOM
- * @param g				generator
- * @param p				prime
+ * @param ...			expects generator and prime as chunk_t
  * @return				gmp_diffie_hellman_t object, NULL if not supported
  */
 gmp_diffie_hellman_t *gmp_diffie_hellman_create_custom(
-							diffie_hellman_group_t group, chunk_t g, chunk_t p);
+							diffie_hellman_group_t group, ...);
 
 #endif /** GMP_DIFFIE_HELLMAN_H_ @}*/
 

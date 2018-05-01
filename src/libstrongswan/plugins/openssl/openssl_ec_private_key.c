@@ -49,6 +49,11 @@ struct private_openssl_ec_private_key_t {
 	EC_KEY *ec;
 
 	/**
+	 * TRUE if the key is from an OpenSSL ENGINE and might not be readable
+	 */
+	bool engine;
+
+	/**
 	 * reference count
 	 */
 	refcount_t ref;
@@ -146,7 +151,7 @@ static bool build_der_signature(private_openssl_ec_private_key_t *this,
 
 METHOD(private_key_t, sign, bool,
 	private_openssl_ec_private_key_t *this, signature_scheme_t scheme,
-	chunk_t data, chunk_t *signature)
+	void *params, chunk_t data, chunk_t *signature)
 {
 	switch (scheme)
 	{
@@ -225,6 +230,11 @@ METHOD(private_key_t, get_encoding, bool,
 	chunk_t *encoding)
 {
 	u_char *p;
+
+	if (this->engine)
+	{
+		return FALSE;
+	}
 
 	switch (type)
 	{
@@ -307,7 +317,7 @@ static private_openssl_ec_private_key_t *create_empty(void)
 /*
  * See header.
  */
-private_key_t *openssl_ec_private_key_create(EVP_PKEY *key)
+private_key_t *openssl_ec_private_key_create(EVP_PKEY *key, bool engine)
 {
 	private_openssl_ec_private_key_t *this;
 	EC_KEY *ec;
@@ -320,6 +330,7 @@ private_key_t *openssl_ec_private_key_create(EVP_PKEY *key)
 	}
 	this = create_empty();
 	this->ec = ec;
+	this->engine = engine;
 	return &this->public.key;
 }
 

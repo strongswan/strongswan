@@ -734,7 +734,7 @@ METHOD(pts_t, verify_quote_signature, bool,
 					scheme = SIGN_RSA_EMSA_PKCS1_SHA3_384;
 					break;
 				case HASH_SHA3_512:
-					scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512;
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA3_512;
 					break;
 				default:
 					scheme = SIGN_UNKNOWN;
@@ -762,7 +762,7 @@ METHOD(pts_t, verify_quote_signature, bool,
 			return FALSE;
 	}
 
-	if (!aik_pubkey->verify(aik_pubkey, scheme, digest, signature))
+	if (!aik_pubkey->verify(aik_pubkey, scheme, NULL, digest, signature))
 	{
 		DBG1(DBG_PTS, "signature verification failed for TPM Quote Info");
 		DESTROY_IF(aik_pubkey);

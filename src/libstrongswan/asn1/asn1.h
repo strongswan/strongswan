@@ -1,8 +1,8 @@
 /*
+ * Copyright (C) 2011-2017 Tobias Brunner
  * Copyright (C) 2006 Martin Will
  * Copyright (C) 2000-2008 Andreas Steffen
- *
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -92,12 +92,21 @@ extern const chunk_t ASN1_INTEGER_2;
 /** Some ASN.1 analysis functions */
 
 /**
- * Build an algorithmIdentifier from a known OID.
+ * Build an algorithmIdentifier from a known OID with empty parameters.
  *
  * @param oid		known OID index
- * @return			body of the corresponding OID, allocated
+ * @return			body of the corresponding ASN.1 structure, allocated
  */
 chunk_t asn1_algorithmIdentifier(int oid);
+
+/**
+ * Build an algorithmIdentifier from a known OID and the given prameters.
+ *
+ * @param oid		known OID index
+ * @param params	parameters to encode in the algorithmIdentifier (adopted)
+ * @return			body of the corresponding ASN.1 structure, allocated
+ */
+chunk_t asn1_algorithmIdentifier_params(int oid, chunk_t params);
 
 /**
  * Converts an ASN.1 OID into a known OID index
@@ -179,6 +188,14 @@ bool asn1_parse_simple_object(chunk_t *object, asn1_t type, u_int level0,
  * @return			converted integer
  */
 uint64_t asn1_parse_integer_uint64(chunk_t blob);
+
+/**
+ * Converts an uint64_t to an ASN.1 INTEGER object.
+ *
+ * @param val		integer to convert
+ * @return			body of an ASN.1 coded integer object
+ */
+chunk_t asn1_integer_from_uint64(uint64_t val);
 
 /**
  * Print the value of an ASN.1 simple object

@@ -530,11 +530,11 @@ on the key identifier derived from the public key).
 
 ### load-shared() ###
 
-Load a shared IKE PSK, EAP or XAuth secret into the daemon.
+Load a shared IKE PSK, EAP, XAuth or NTLM secret into the daemon.
 
 	{
 		id = <optional unique identifier of this shared key>
-		type = <shared key type, IKE|EAP|XAUTH>
+		type = <shared key type, IKE|EAP|XAUTH|NTLM>
 		data = <raw shared key data>
 		owners = [
 			<list of shared key owner identities>
@@ -546,8 +546,8 @@ Load a shared IKE PSK, EAP or XAuth secret into the daemon.
 
 ### unload-shared() ###
 
-Unload a previously loaded shared IKE PSK, EAP or XAuth secret by its unique
-identifier.
+Unload a previously loaded shared IKE PSK, EAP, XAuth or NTLM secret by its
+unique identifier.
 
 	{
 		id = <unique identifier of the shared key to unload>
@@ -680,6 +680,35 @@ List currently loaded algorithms and their implementation.
 		<algorithm type> = {
 			<algorithm> = <plugin providing the implementation>
 		}
+	}
+
+### get-counters() ###
+
+List global or connection-specific counters for several IKE events.
+
+	{
+		name = <optional connection name, omit for global counters>
+		all = <yes to get counters for all connections, name is ignored>
+	} => {
+		counters = {
+			<name|empty for global counters> = {
+				<pairs of counter name and 64-bit counter value>
+			}
+		}
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
+### reset-counters() ###
+
+Reset global or connection-specific IKE event counters.
+
+	{
+		name = <optional connection name, omit for global counters>
+		all = <yes to reset counters for all connections, name is ignored>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
 	}
 
 ## Server-issued events ##

@@ -438,7 +438,7 @@ static plugin_entry_t *load_plugin(private_plugin_loader_t *this, char *name,
 		}
 	}
 	if (lib->settings->get_bool(lib->settings, "%s.dlopen_use_rtld_now",
-								lib->ns, FALSE))
+								FALSE, lib->ns))
 	{
 		flag = RTLD_NOW;
 	}

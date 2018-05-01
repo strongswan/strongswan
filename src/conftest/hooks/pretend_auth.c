@@ -244,7 +244,7 @@ static bool build_auth(private_pretend_auth_t *this,
 		private->destroy(private);
 		return FALSE;
 	}
-	if (!private->sign(private, scheme, octets, &auth_data))
+	if (!private->sign(private, scheme, NULL, octets, &auth_data))
 	{
 		chunk_free(&octets);
 		private->destroy(private);

@@ -227,7 +227,8 @@ METHOD(enumerator_t, enumerate, bool,
 				if (key)
 				{
 					chunk = info->attributes->get_encoding(info->attributes);
-					if (key->verify(key, scheme, chunk, info->encrypted_digest))
+					if (key->verify(key, scheme, NULL, chunk,
+									info->encrypted_digest))
 					{
 						this->auth = auth->clone(auth);
 						key->destroy(key);
@@ -563,7 +564,7 @@ static bool generate(private_pkcs7_signed_data_t *this, private_key_t *key,
 
 	attributes = pkcs9->get_encoding(pkcs9);
 
-	if (!key->sign(key, scheme, attributes, &encryptedDigest))
+	if (!key->sign(key, scheme, NULL, attributes, &encryptedDigest))
 	{
 		free(data.ptr);
 		return FALSE;

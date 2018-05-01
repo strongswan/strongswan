@@ -59,7 +59,7 @@ pa_tnc_attr_t* swima_error_create(pa_tnc_error_code_t code, uint32_t request_id,
 	writer = bio_writer_create(4);
 	writer->write_uint32(writer, request_id);
 
-	if (code == PA_ERROR_SW_RESPONSE_TOO_LARGE)
+	if (code == PA_ERROR_SWIMA_RESPONSE_TOO_LARGE)
 	{
 		writer->write_uint32(writer, max_attr_size);
 	}

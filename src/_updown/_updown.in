@@ -215,10 +215,6 @@ then
 	fi
 fi
 
-# resolve octal escape sequences
-PLUTO_MY_ID=`printf "$PLUTO_MY_ID"`
-PLUTO_PEER_ID=`printf "$PLUTO_PEER_ID"`
-
 case "$PLUTO_VERB:$1" in
 up-host:)
 	# connection to me coming up

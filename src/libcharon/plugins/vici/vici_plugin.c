@@ -176,6 +176,7 @@ METHOD(plugin_t, get_features, int,
 	static plugin_feature_t f[] = {
 		PLUGIN_CALLBACK((plugin_feature_callback_t)register_vici, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "vici"),
+				PLUGIN_SDEPEND(CUSTOM, "counters"),
 	};
 	*features = f;
 	return countof(f);

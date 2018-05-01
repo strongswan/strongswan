@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 	start_timing(&timing);
 	for (round = 0; round < rounds; round++)
 	{
-		if (!private->sign(private, scheme, data, &sigs[round]))
+		if (!private->sign(private, scheme, NULL, data, &sigs[round]))
 		{
 			printf("creating signature failed\n");
 			exit(1);
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 	start_timing(&timing);
 	for (round = 0; round < rounds; round++)
 	{
-		if (!public->verify(public, scheme, data, sigs[round]))
+		if (!public->verify(public, scheme, NULL, data, sigs[round]))
 		{
 			printf("signature verification failed\n");
 			exit(1);

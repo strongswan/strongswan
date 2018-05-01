@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2013-2017 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -37,19 +38,21 @@ struct trap_manager_t {
 	 *
 	 * @param peer		peer configuration to initiate on trap
 	 * @param child 	child configuration to install as a trap
-	 * @param reqid		optional reqid to use
-	 * @return			reqid of installed CHILD_SA, 0 if failed
+	 * @return			TRUE if successfully installed
 	 */
-	uint32_t (*install)(trap_manager_t *this, peer_cfg_t *peer,
-						 child_cfg_t *child, uint32_t reqid);
+	bool (*install)(trap_manager_t *this, peer_cfg_t *peer, child_cfg_t *child);
 
 	/**
 	 * Uninstall a trap policy.
 	 *
-	 * @param id		reqid of CHILD_SA to uninstall, returned by install()
+	 * If no peer configuration name is given the first matching child
+	 * configuration is uninstalled.
+	 *
+	 * @param peer		peer configuration name or NULL
+	 * @param child		child configuration name
 	 * @return			TRUE if uninstalled successfully
 	 */
-	bool (*uninstall)(trap_manager_t *this, uint32_t reqid);
+	bool (*uninstall)(trap_manager_t *this, char *peer, char *child);
 
 	/**
 	 * Create an enumerator over all installed traps.
@@ -57,14 +60,6 @@ struct trap_manager_t {
 	 * @return			enumerator over (peer_cfg_t, child_sa_t)
 	 */
 	enumerator_t* (*create_enumerator)(trap_manager_t *this);
-
-	/**
-	 * Find the reqid of a child config installed as a trap.
-	 *
-	 * @param child		CHILD_SA config to get the reqid for
-	 * @return			reqid of trap, 0 if not found
-	 */
-	uint32_t (*find_reqid)(trap_manager_t *this, child_cfg_t *child);
 
 	/**
 	 * Acquire an SA triggered by an installed trap.

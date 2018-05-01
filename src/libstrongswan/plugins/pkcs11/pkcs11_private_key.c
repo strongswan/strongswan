@@ -243,7 +243,7 @@ static bool reauth(private_pkcs11_private_key_t *this,
 }
 
 METHOD(private_key_t, sign, bool,
-	private_pkcs11_private_key_t *this, signature_scheme_t scheme,
+	private_pkcs11_private_key_t *this, signature_scheme_t scheme, void *params,
 	chunk_t data, chunk_t *signature)
 {
 	CK_MECHANISM_PTR mechanism;

@@ -1,6 +1,6 @@
 AC_PREREQ(2.52)
 
-AC_INIT(NetworkManager-strongswan, 1.4.2, martin@strongswan.org, NetworkManager-strongswan)
+AC_INIT(NetworkManager-strongswan, 1.4.4, martin@strongswan.org, NetworkManager-strongswan)
 AM_INIT_AUTOMAKE([subdir-objects])
 AM_MAINTAINER_MODE
 
@@ -46,14 +46,6 @@ AM_GLIB_GNU_GETTEXT
 PKG_CHECK_MODULES(GTK, gtk+-3.0 >= 3.0)
 PKG_CHECK_MODULES(LIBSECRET, libsecret-1)
 
-PKG_CHECK_MODULES(LIBNM_GLIB, NetworkManager >= 1.1.0 libnm-util libnm-glib libnm-glib-vpn)
-PKG_CHECK_MODULES(LIBNM_GTK, libnm-gtk >= 1.1.0)
-PKG_CHECK_MODULES(LIBNMA, libnma >= 1.1.0)
-
-PKG_CHECK_MODULES(LIBNM, libnm >= 1.1.0)
-LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MIN_REQUIRED=NM_VERSION_1_2"
-LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MAX_ALLOWED=NM_VERSION_1_2"
-
 AC_ARG_WITH(
 	[charon],
 	AS_HELP_STRING([--with-charon=file],[path to the strongSwan charon NetworkManager backend"]),
@@ -64,6 +56,24 @@ AC_ARG_ENABLE(
 	[nm-absolute-paths],
 	AS_HELP_STRING([--enable-nm-absolute-paths],[use absolute paths for NM plugins in the .name file])
 )
+AC_ARG_WITH(
+	[libnm-glib],
+	AS_HELP_STRING([--without-libnm-glib], [Build NetworkManager-strongswan without libnm-glib comatibility]),
+	[with_libnm_glib=no],
+	[with_libnm_glib=yes]
+)
+
+AM_CONDITIONAL(WITH_LIBNM_GLIB, test "$with_libnm_glib" != no)
+
+PKG_CHECK_MODULES(LIBNM, libnm >= 1.1.0)
+LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MIN_REQUIRED=NM_VERSION_1_2"
+LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MAX_ALLOWED=NM_VERSION_1_2"
+PKG_CHECK_MODULES(LIBNMA, libnma >= 1.1.0)
+
+if test x"$with_libnm_glib" != xno; then
+	PKG_CHECK_MODULES(LIBNM_GLIB, NetworkManager >= 1.1.0 libnm-util libnm-glib libnm-glib-vpn)
+	PKG_CHECK_MODULES(LIBNM_GTK, libnm-gtk >= 1.1.0)
+fi
 
 nm_libexecdir=$($PKG_CONFIG --variable=libgnome_serverdir NetworkManager)
 AC_SUBST(nm_libexecdir)

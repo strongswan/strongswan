@@ -43,7 +43,7 @@ struct private_tkm_id_manager_t {
 	/**
 	 * Per-kind array of free context ids
 	 */
-	bool* ctxids[TKM_CTX_MAX];
+	int* ctxids[TKM_CTX_MAX];
 
 	/**
 	 * Per-kind context limits.
@@ -85,9 +85,9 @@ METHOD(tkm_id_manager_t, acquire_id, int,
 	this->locks[kind]->write_lock(this->locks[kind]);
 	for (j = 0; j < this->limits[kind]; j++)
 	{
-		if (!this->ctxids[kind][j])
+		if (this->ctxids[kind][j] == 0)
 		{
-			this->ctxids[kind][j] = true;
+			this->ctxids[kind][j] = 1;
 			id = j + 1;
 			break;
 		}
@@ -103,24 +103,55 @@ METHOD(tkm_id_manager_t, acquire_id, int,
 	return id;
 }
 
-METHOD(tkm_id_manager_t, release_id, bool,
+METHOD(tkm_id_manager_t, acquire_ref, bool,
+	private_tkm_id_manager_t * const this, const tkm_context_kind_t kind,
+	const int ref_id)
+{
+	const int idx = ref_id - 1;
+
+	if (!is_valid_kind(kind))
+	{
+		DBG1(DBG_LIB, "tried to acquire reference for invalid context kind '%d'",
+			 kind);
+		return FALSE;
+	}
+
+	if (ref_id < 1 || (uint64_t)ref_id > this->limits[kind])
+	{
+		DBG1(DBG_LIB, "tried to acquire reference for context id %d out of "
+			 "bounds (max %llu)", ref_id, this->limits[kind]);
+		return FALSE;
+	}
+
+	this->locks[kind]->write_lock(this->locks[kind]);
+	this->ctxids[kind][idx]++;
+	this->locks[kind]->unlock(this->locks[kind]);
+
+	return TRUE;
+}
+
+METHOD(tkm_id_manager_t, release_id, int,
 	private_tkm_id_manager_t * const this, const tkm_context_kind_t kind,
 	const int id)
 {
 	const int idx = id - 1;
+	int refcount = 0;
 
 	if (!is_valid_kind(kind))
 	{
 		DBG1(DBG_LIB, "tried to release id %d for invalid context kind '%d'",
 			 id, kind);
-		return FALSE;
+		return -1;
 	}
 
 	this->locks[kind]->write_lock(this->locks[kind]);
-	this->ctxids[kind][idx] = false;
+	if (this->ctxids[kind][idx] > 0)
+	{
+		refcount = --this->ctxids[kind][idx];
+	}
 	this->locks[kind]->unlock(this->locks[kind]);
 
-	return TRUE;
+	return refcount;
 }
 
 
@@ -147,6 +178,7 @@ tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits)
 	INIT(this,
 		.public = {
 			.acquire_id = _acquire_id,
+			.acquire_ref = _acquire_ref,
 			.release_id = _release_id,
 			.destroy = _destroy,
 		},
@@ -155,7 +187,7 @@ tkm_id_manager_t *tkm_id_manager_create(const tkm_limits_t limits)
 	for (i = 0; i < TKM_CTX_MAX; i++)
 	{
 		this->limits[i] = limits[i];
-		this->ctxids[i] = calloc(limits[i], sizeof(bool));
+		this->ctxids[i] = calloc(limits[i], sizeof(int));
 		this->locks[i] = rwlock_create(RWLOCK_TYPE_DEFAULT);
 		DBG2(DBG_LIB, "%N initialized, %llu slot(s)", tkm_context_kind_names, i,
 			 limits[i]);

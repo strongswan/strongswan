@@ -337,7 +337,7 @@ static void* decrypt_with_config(load_ctx_t *ctx, char *name, char *type,
 	credential_type_t credtype;
 	int subtype;
 	enumerator_t *enumerator, *secrets;
-	char *section, *key, *value, *file, buf[128];
+	char *section, *key, *value, *file;
 	shared_key_t *shared;
 	void *cred = NULL;
 	mem_cred_t *mem = NULL;
@@ -356,8 +356,8 @@ static void* decrypt_with_config(load_ctx_t *ctx, char *name, char *type,
 			file = ctx->cfg->get_str(ctx->cfg, "secrets.%s.file", NULL, section);
 			if (file && strcaseeq(file, name))
 			{
-				snprintf(buf, sizeof(buf), "secrets.%s", section);
-				secrets = ctx->cfg->create_key_value_enumerator(ctx->cfg, buf);
+				secrets = ctx->cfg->create_key_value_enumerator(ctx->cfg,
+														"secrets.%s", section);
 				while (secrets->enumerate(secrets, &key, &value))
 				{
 					if (strpfx(key, "secret"))
@@ -657,7 +657,7 @@ static bool load_secret(load_ctx_t *ctx, char *section)
 	vici_req_t *req;
 	vici_res_t *res;
 	chunk_t data;
-	char *key, *value, buf[128], *type = NULL;
+	char *key, *value, *type = NULL;
 	bool ret = TRUE;
 	int i;
 	char *types[] = {
@@ -720,8 +720,8 @@ static bool load_secret(load_ctx_t *ctx, char *section)
 	chunk_clear(&data);
 
 	vici_begin_list(req, "owners");
-	snprintf(buf, sizeof(buf), "secrets.%s", section);
-	enumerator = ctx->cfg->create_key_value_enumerator(ctx->cfg, buf);
+	enumerator = ctx->cfg->create_key_value_enumerator(ctx->cfg, "secrets.%s",
+													   section);
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
 		if (strpfx(key, "id"))

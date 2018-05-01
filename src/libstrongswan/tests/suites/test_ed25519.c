@@ -297,13 +297,13 @@ START_TEST(test_ed25519_sign)
 	ck_assert(public->equals(public, pubkey));
 
 	/* sign */
-	ck_assert(key->sign(key, SIGN_ED25519, sig_tests[_i].msg, &sig));
+	ck_assert(key->sign(key, SIGN_ED25519, NULL, sig_tests[_i].msg, &sig));
 	ck_assert(sig.len == 64);
 	ck_assert(chunk_equals(sig, sig_tests[_i].sig));
 
 	/* verify */
-	ck_assert(pubkey->verify(pubkey, SIGN_ED25519, sig_tests[_i].msg,
-												   sig_tests[_i].sig));
+	ck_assert(pubkey->verify(pubkey, SIGN_ED25519, NULL, sig_tests[_i].msg,
+							 sig_tests[_i].sig));
 
 	/* cleanup */
 	key->destroy(key);
@@ -340,10 +340,10 @@ START_TEST(test_ed25519_gen)
 	ck_assert(!key->decrypt(key, ENCRYPT_UNKNOWN, msg, NULL));
 
 	/* wrong signature scheme */
-	ck_assert(!key->sign(key, SIGN_ED448, msg, &sig));
+	ck_assert(!key->sign(key, SIGN_ED448, NULL, msg, &sig));
 
 	/* correct signature scheme*/
-	ck_assert(key->sign(key, SIGN_ED25519, msg, &sig));
+	ck_assert(key->sign(key, SIGN_ED25519, NULL, msg, &sig));
 
 	/* export public key */
 	pubkey = key->get_public_key(key);
@@ -375,10 +375,10 @@ START_TEST(test_ed25519_gen)
 	ck_assert(!pubkey->encrypt(pubkey, ENCRYPT_UNKNOWN, msg, NULL));
 
 	/* verify with wrong signature scheme */
-	ck_assert(!pubkey->verify(pubkey, SIGN_ED448, msg, sig));
+	ck_assert(!pubkey->verify(pubkey, SIGN_ED448, NULL, msg, sig));
 
 	/* verify with correct signature scheme */
-	ck_assert(pubkey->verify(pubkey, SIGN_ED25519, msg, sig));
+	ck_assert(pubkey->verify(pubkey, SIGN_ED25519, NULL, msg, sig));
 
 	/* cleanup */
 	key->destroy(key);
@@ -404,10 +404,10 @@ START_TEST(test_ed25519_speed)
 		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ED25519,
 								 BUILD_KEY_SIZE, 256, BUILD_END);
 		ck_assert(key != NULL);
-		ck_assert(key->sign(key, SIGN_ED25519, msg, &sig));
+		ck_assert(key->sign(key, SIGN_ED25519, NULL, msg, &sig));
 		pubkey = key->get_public_key(key);
 		ck_assert(pubkey != NULL);
-		ck_assert(pubkey->verify(pubkey, SIGN_ED25519, msg, sig));
+		ck_assert(pubkey->verify(pubkey, SIGN_ED25519, NULL, msg, sig));
 		key->destroy(key);
 		pubkey->destroy(pubkey);
 		chunk_free(&sig);
@@ -476,25 +476,29 @@ START_TEST(test_ed25519_fail)
 					BUILD_BLOB_ASN1_DER, sig_tests[0].pubkey, BUILD_END);
 	ck_assert(pubkey != NULL);
 
-	ck_assert(!pubkey->verify(pubkey, SIGN_ED25519, chunk_empty, chunk_empty));
+	ck_assert(!pubkey->verify(pubkey, SIGN_ED25519, NULL, chunk_empty,
+							  chunk_empty));
 
 	/* malformed signature */
 	sig = chunk_create(sig1, 64);
 	memcpy(sig1, sig_tests[0].sig.ptr, 64);
 	sig1[63] |= 0xe0;
-	ck_assert(!pubkey->verify(pubkey, SIGN_ED25519, sig_tests[0].msg, sig));
+	ck_assert(!pubkey->verify(pubkey, SIGN_ED25519, NULL, sig_tests[0].msg,
+							  sig));
 
 	/* wrong signature */
 	memcpy(sig1, sig_tests[0].sig.ptr, 64);
 	sig1[0] = 0xe4;
-	ck_assert(!pubkey->verify(pubkey, SIGN_ED25519, sig_tests[0].msg, sig));
+	ck_assert(!pubkey->verify(pubkey, SIGN_ED25519, NULL, sig_tests[0].msg,
+							  sig));
 
 	/* detect all-zeroes public key */
 	pubkey->destroy(pubkey);
 	pubkey = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ED25519,
 					BUILD_BLOB_ASN1_DER, zero_pk, BUILD_END);
 	ck_assert(pubkey != NULL);
-	ck_assert(!pubkey->verify(pubkey, SIGN_ED25519, sig_tests[0].msg, sig));
+	ck_assert(!pubkey->verify(pubkey, SIGN_ED25519, NULL, sig_tests[0].msg,
+							  sig));
 	pubkey->destroy(pubkey);
 }
 END_TEST

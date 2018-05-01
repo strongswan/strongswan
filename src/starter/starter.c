@@ -276,7 +276,7 @@ static bool check_pid(char *pid_file)
 				pid = atoi(buf);
 			}
 			fclose(pidfile);
-			if (pid && kill(pid, 0) == 0)
+			if (pid && pid != getpid() && kill(pid, 0) == 0)
 			{	/* such a process is running */
 				return TRUE;
 			}

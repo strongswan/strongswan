@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,7 +23,9 @@
 #include <utils/utils.h>
 
 #include <inttypes.h>
+#include <ctype.h>
 #include <time.h>
+#include <errno.h>
 
 /**
  * Return monotonic time
@@ -77,8 +79,62 @@ time_t time_monotonic(timeval_t *tv)
 #endif /* !WIN32 */
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
+ */
+bool timespan_from_string(char *str, char *defunit, time_t *val)
+{
+	char *endptr, unit;
+	time_t timeval;
+
+	if (str)
+	{
+		errno = 0;
+		timeval = strtoull(str, &endptr, 10);
+		if (endptr == str)
+		{
+			return FALSE;
+		}
+		if (errno == 0)
+		{
+			while (isspace(*endptr))
+			{
+				endptr++;
+			}
+			unit = *endptr;
+			if (!unit && defunit)
+			{
+				unit = *defunit;
+			}
+			switch (unit)
+			{
+				case 'd':		/* time in days */
+					timeval *= 24 * 3600;
+					break;
+				case 'h':		/* time in hours */
+					timeval *= 3600;
+					break;
+				case 'm':		/* time in minutes */
+					timeval *= 60;
+					break;
+				case 's':		/* time in seconds */
+				case '\0':
+					break;
+				default:
+					return FALSE;
+			}
+			if (val)
+			{
+				*val = timeval;
+			}
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/*
+ * Described in header
  */
 int time_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 					 const void *const *args)
@@ -112,8 +168,8 @@ int time_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 						 t.tm_sec, utc ? " UTC " : " ", t.tm_year + 1900);
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
 int time_delta_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 						   const void *const *args)

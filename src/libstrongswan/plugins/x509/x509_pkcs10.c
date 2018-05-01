@@ -72,9 +72,9 @@ struct private_x509_pkcs10_t {
 	chunk_t challengePassword;
 
 	/**
-	 * Signature algorithm
+	 * Signature scheme
 	 */
-	int algorithm;
+	signature_params_t *scheme;
 
 	/**
 	 * Signature
@@ -124,10 +124,9 @@ METHOD(certificate_t, has_subject, id_match_t,
 
 METHOD(certificate_t, issued_by, bool,
 	private_x509_pkcs10_t *this, certificate_t *issuer,
-	signature_scheme_t *schemep)
+	signature_params_t **scheme)
 {
 	public_key_t *key;
-	signature_scheme_t scheme;
 	bool valid;
 
 	if (&this->public.interface.interface != issuer)
@@ -136,27 +135,22 @@ METHOD(certificate_t, issued_by, bool,
 	}
 	if (this->self_signed)
 	{
-		return TRUE;
+		valid = TRUE;
 	}
-
-	/* determine signature scheme */
-	scheme = signature_scheme_from_oid(this->algorithm);
-	if (scheme == SIGN_UNKNOWN)
+	else
 	{
-		return FALSE;
+		/* get the public key contained in the certificate request */
+		key = this->public_key;
+		if (!key)
+		{
+			return FALSE;
+		}
+		valid = key->verify(key, this->scheme->scheme, this->scheme->params,
+							this->certificationRequestInfo, this->signature);
 	}
-
-	/* get the public key contained in the certificate request */
-	key = this->public_key;
-	if (!key)
+	if (valid && scheme)
 	{
-		return FALSE;
-	}
-	valid = key->verify(key, scheme, this->certificationRequestInfo,
-						this->signature);
-	if (valid && schemep)
-	{
-		*schemep = scheme;
+		*scheme = signature_params_clone(this->scheme);
 	}
 	return valid;
 }
@@ -410,7 +404,7 @@ static bool parse_certificate_request(private_x509_pkcs10_t *this)
 			case PKCS10_SUBJECT_PUBLIC_KEY_INFO:
 				this->public_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
 						KEY_ANY, BUILD_BLOB_ASN1_DER, object, BUILD_END);
-				if (this->public_key == NULL)
+				if (!this->public_key)
 				{
 					goto end;
 				}
@@ -438,7 +432,12 @@ static bool parse_certificate_request(private_x509_pkcs10_t *this)
 				}
 				break;
 			case PKCS10_ALGORITHM:
-				this->algorithm = asn1_parse_algorithmIdentifier(object, level, NULL);
+				INIT(this->scheme);
+				if (!signature_params_parse(object, level, this->scheme))
+				{
+					DBG1(DBG_ASN, "  unable to parse signature algorithm");
+					goto end;
+				}
 				break;
 			case PKCS10_SIGNATURE:
 				this->signature = chunk_skip(object, 1);
@@ -474,6 +473,7 @@ METHOD(certificate_t, destroy, void,
 	{
 		this->subjectAltNames->destroy_offset(this->subjectAltNames,
 									offsetof(identification_t, destroy));
+		signature_params_destroy(this->scheme);
 		DESTROY_IF(this->subject);
 		DESTROY_IF(this->public_key);
 		chunk_free(&this->encoding);
@@ -530,25 +530,34 @@ static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 {
 	chunk_t key_info, subjectAltNames, attributes;
 	chunk_t extensionRequest  = chunk_empty;
-	chunk_t challengePassword = chunk_empty;
-	signature_scheme_t scheme;
+	chunk_t challengePassword = chunk_empty, sig_scheme = chunk_empty;
 	identification_t *subject;
 
 	subject = cert->subject;
 	cert->public_key = sign_key->get_public_key(sign_key);
 
-	/* select signature scheme */
-	cert->algorithm = hasher_signature_algorithm_to_oid(digest_alg,
-									sign_key->get_type(sign_key));
-	if (cert->algorithm == OID_UNKNOWN)
+	/* select signature scheme, if not already specified */
+	if (!cert->scheme)
+	{
+		INIT(cert->scheme,
+			.scheme = signature_scheme_from_oid(
+								hasher_signature_algorithm_to_oid(digest_alg,
+												sign_key->get_type(sign_key))),
+		);
+	}
+	if (cert->scheme->scheme == SIGN_UNKNOWN)
 	{
 		return FALSE;
 	}
-	scheme = signature_scheme_from_oid(cert->algorithm);
+	if (!signature_params_build(cert->scheme, &sig_scheme))
+	{
+		return FALSE;
+	}
 
 	if (!cert->public_key->get_encoding(cert->public_key,
 										PUBKEY_SPKI_ASN1_DER, &key_info))
 	{
+		chunk_free(&sig_scheme);
 		return FALSE;
 	}
 
@@ -584,15 +593,16 @@ static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 							key_info,
 							attributes);
 
-	if (!sign_key->sign(sign_key, scheme, cert->certificationRequestInfo,
-						&cert->signature))
+	if (!sign_key->sign(sign_key, cert->scheme->scheme, cert->scheme->params,
+						cert->certificationRequestInfo, &cert->signature))
 	{
+		chunk_free(&sig_scheme);
 		return FALSE;
 	}
 
 	cert->encoding = asn1_wrap(ASN1_SEQUENCE, "cmm",
 							   cert->certificationRequestInfo,
-							   asn1_algorithmIdentifier(cert->algorithm),
+							   sig_scheme,
 							   asn1_bitstring("c", cert->signature));
 	return TRUE;
 }
@@ -673,6 +683,10 @@ x509_pkcs10_t *x509_pkcs10_gen(certificate_type_t type, va_list args)
 			}
 			case BUILD_CHALLENGE_PWD:
 				cert->challengePassword = chunk_clone(va_arg(args, chunk_t));
+				continue;
+			case BUILD_SIGNATURE_SCHEME:
+				cert->scheme = va_arg(args, signature_params_t*);
+				cert->scheme = signature_params_clone(cert->scheme);
 				continue;
 			case BUILD_DIGEST_ALG:
 				digest_alg = va_arg(args, int);

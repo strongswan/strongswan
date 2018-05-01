@@ -57,8 +57,13 @@ static public_key_t *parse_public_key(chunk_t blob)
 				int oid = asn1_parse_algorithmIdentifier(object,
 										parser->get_level(parser)+1, NULL);
 
-				if (oid == OID_RSA_ENCRYPTION || oid == OID_RSAES_OAEP)
+				if (oid == OID_RSA_ENCRYPTION || oid == OID_RSAES_OAEP ||
+					oid == OID_RSASSA_PSS)
 				{
+					/* TODO: we should parse parameters for PSS and pass them
+					 * (and the type), or the complete subjectPublicKeyInfo,
+					 * along so we can treat these as restrictions when
+					 * generating signatures with the associated private key */
 					type = KEY_RSA;
 				}
 				else if (oid == OID_EC_PUBLICKEY)

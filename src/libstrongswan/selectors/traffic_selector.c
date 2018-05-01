@@ -293,15 +293,16 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 			written += print_in_hook(data, "%d", this->protocol);
 		}
 	}
-
-	if (has_proto && has_ports)
+	else
 	{
-		written += print_in_hook(data, "/");
+		written += print_in_hook(data, "0");
 	}
 
 	/* build port string */
 	if (has_ports)
 	{
+		written += print_in_hook(data, "/");
+
 		if (this->from_port == this->to_port)
 		{
 			struct servent *serv;

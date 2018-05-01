@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
  *
@@ -53,5 +56,13 @@ eap_radius_accounting_t *eap_radius_accounting_create();
  * @param interval			interval for interim updates
  */
 void eap_radius_accounting_start_interim(ike_sa_t *ike_sa, uint32_t interval);
+
+/**
+ * Add a Class attribute for the given IKE_SA.
+ *
+ * @param ike_sa			IKE_SA for which the attribute was received
+ * @param cls				Class attribute value
+ */
+void eap_radius_accounting_add_class(ike_sa_t *ike_sa, chunk_t cls);
 
 #endif /** EAP_RADIUS_ACCOUNTING_H_ @}*/

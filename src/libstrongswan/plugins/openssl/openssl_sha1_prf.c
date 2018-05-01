@@ -20,6 +20,7 @@
 #include "openssl_sha1_prf.h"
 
 #include <openssl/sha.h>
+#include <crypto/hashers/hasher.h>
 
 typedef struct private_openssl_sha1_prf_t private_openssl_sha1_prf_t;
 

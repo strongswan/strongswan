@@ -1,4 +1,6 @@
 /*
+ * Copyright (C) 2017 Lubomir Rintel
+ *
  * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
  * Hochschule fuer Technik Rapperswil
@@ -14,8 +16,6 @@
  * for more details.
  */
 
-#include <nm-setting-vpn.h>
-#include <nm-setting-connection.h>
 #include "nm_service.h"
 
 #include <daemon.h>
@@ -26,7 +26,7 @@
 
 #include <stdio.h>
 
-G_DEFINE_TYPE(NMStrongswanPlugin, nm_strongswan_plugin, NM_TYPE_VPN_PLUGIN)
+G_DEFINE_TYPE(NMStrongswanPlugin, nm_strongswan_plugin, NM_TYPE_VPN_SERVICE_PLUGIN)
 
 /**
  * Private data of NMStrongswanPlugin
@@ -37,7 +37,7 @@ typedef struct {
 	/* IKE_SA we are listening on */
 	ike_sa_t *ike_sa;
 	/* backref to public plugin */
-	NMVPNPlugin *plugin;
+	NMVpnServicePlugin *plugin;
 	/* credentials to use for authentication */
 	nm_creds_t *creds;
 	/* attribute handler for DNS/NBNS server information */
@@ -53,50 +53,45 @@ typedef struct {
 /**
  * convert enumerated handler chunks to a UINT_ARRAY GValue
  */
-static GValue* handler_to_val(nm_handler_t *handler,
+static GVariant* handler_to_variant(nm_handler_t *handler,
 							 configuration_attribute_type_t type)
 {
-	GValue *val;
-	GArray *array;
+	GVariantBuilder builder;
 	enumerator_t *enumerator;
 	chunk_t chunk;
 
+	g_variant_builder_init (&builder, G_VARIANT_TYPE ("au"));
+
 	enumerator = handler->create_enumerator(handler, type);
-	array = g_array_new (FALSE, TRUE, sizeof (guint32));
 	while (enumerator->enumerate(enumerator, &chunk))
 	{
-		g_array_append_val (array, *(uint32_t*)chunk.ptr);
+		g_variant_builder_add (&builder, "u", *(uint32_t*)chunk.ptr);
 	}
 	enumerator->destroy(enumerator);
-	val = g_slice_new0 (GValue);
-	g_value_init (val, DBUS_TYPE_G_UINT_ARRAY);
-	g_value_set_boxed (val, array);
 
-	return val;
+	return g_variant_builder_end (&builder);
 }
 
 /**
  * signal IPv4 config to NM, set connection as established
  */
-static void signal_ipv4_config(NMVPNPlugin *plugin,
+static void signal_ipv4_config(NMVpnServicePlugin *plugin,
 							   ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
 	NMStrongswanPluginPrivate *priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
-	GValue *val;
-	GHashTable *config;
+	GVariantBuilder builder;
 	enumerator_t *enumerator;
 	host_t *me, *other;
 	nm_handler_t *handler;
 
-	config = g_hash_table_new(g_str_hash, g_str_equal);
+	g_variant_builder_init (&builder, G_VARIANT_TYPE_VARDICT);
+
 	handler = priv->handler;
 
 	/* NM apparently requires to know the gateway */
-	val = g_slice_new0 (GValue);
-	g_value_init (val, G_TYPE_UINT);
 	other = ike_sa->get_other_host(ike_sa);
-	g_value_set_uint (val, *(uint32_t*)other->get_address(other).ptr);
-	g_hash_table_insert (config, NM_VPN_PLUGIN_IP4_CONFIG_EXT_GATEWAY, val);
+	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_EXT_GATEWAY,
+	                       g_variant_new_uint32 (*(uint32_t*)other->get_address(other).ptr));
 
 	/* NM installs this IP address on the interface above, so we use the VIP if
 	 * we got one.
@@ -107,47 +102,40 @@ static void signal_ipv4_config(NMVPNPlugin *plugin,
 		me = ike_sa->get_my_host(ike_sa);
 	}
 	enumerator->destroy(enumerator);
-	val = g_slice_new0(GValue);
-	g_value_init(val, G_TYPE_UINT);
-	g_value_set_uint(val, *(uint32_t*)me->get_address(me).ptr);
-	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_ADDRESS, val);
+	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_ADDRESS,
+	                       g_variant_new_uint32 (*(uint32_t*)other->get_address(me).ptr));
 
-	val = g_slice_new0(GValue);
-	g_value_init(val, G_TYPE_UINT);
-	g_value_set_uint(val, me->get_address(me).len * 8);
-	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_PREFIX, val);
+	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_PREFIX,
+	                       g_variant_new_uint32 (me->get_address(me).len * 8));
 
 	/* prevent NM from changing the default route. we set our own route in our
 	 * own routing table
 	 */
-	val = g_slice_new0(GValue);
-	g_value_init(val, G_TYPE_BOOLEAN);
-	g_value_set_boolean(val, TRUE);
-	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_NEVER_DEFAULT, val);
+	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_NEVER_DEFAULT,
+	                       g_variant_new_boolean (TRUE));
 
-	val = handler_to_val(handler, INTERNAL_IP4_DNS);
-	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_DNS, val);
 
-	val = handler_to_val(handler, INTERNAL_IP4_NBNS);
-	g_hash_table_insert(config, NM_VPN_PLUGIN_IP4_CONFIG_NBNS, val);
+	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_DNS,
+	                       handler_to_variant(handler, INTERNAL_IP4_DNS));
+
+	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_NBNS,
+	                       handler_to_variant(handler, INTERNAL_IP4_NBNS));
 
 	handler->reset(handler);
 
-	nm_vpn_plugin_set_ip4_config(plugin, config);
+	nm_vpn_service_plugin_set_ip4_config(plugin, g_variant_builder_end (&builder));
 }
 
 /**
  * signal failure to NM, connecting failed
  */
-static void signal_failure(NMVPNPlugin *plugin, NMVPNPluginFailure failure)
+static void signal_failure(NMVpnServicePlugin *plugin, NMVpnPluginFailure failure)
 {
 	nm_handler_t *handler = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin)->handler;
 
 	handler->reset(handler);
 
-	/* TODO: NM does not handle this failure!? */
-	nm_vpn_plugin_failure(plugin, failure);
-	nm_vpn_plugin_set_state(plugin, NM_VPN_SERVICE_STATE_STOPPED);
+	nm_vpn_service_plugin_failure(plugin, failure);
 }
 
 /**
@@ -277,12 +265,12 @@ static identification_t *find_smartcard_key(NMStrongswanPluginPrivate *priv,
 /**
  * Connect function called from NM via DBUS
  */
-static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
+static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 						 GError **err)
 {
 	NMStrongswanPluginPrivate *priv;
 	NMSettingConnection *conn;
-	NMSettingVPN *vpn;
+	NMSettingVpn *vpn;
 	enumerator_t *enumerator;
 	identification_t *user = NULL, *gateway = NULL;
 	const char *address, *str;
@@ -504,7 +492,7 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 					priv->creds->set_key_password(priv->creds, secret);
 				}
 				private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								KEY_RSA, BUILD_FROM_FILE, str, BUILD_END);
+								KEY_ANY, BUILD_FROM_FILE, str, BUILD_END);
 				if (!private)
 				{
 					g_set_error(err, NM_VPN_PLUGIN_ERROR,
@@ -676,10 +664,10 @@ static gboolean connect_(NMVPNPlugin *plugin, NMConnection *connection,
 /**
  * NeedSecrets called from NM via DBUS
  */
-static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
-							 char **setting_name, GError **error)
+static gboolean need_secrets(NMVpnServicePlugin *plugin, NMConnection *connection,
+							 const char **setting_name, GError **error)
 {
-	NMSettingVPN *settings;
+	NMSettingVpn *settings;
 	const char *method, *path;
 
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection,
@@ -735,9 +723,9 @@ static gboolean need_secrets(NMVPNPlugin *plugin, NMConnection *connection,
 }
 
 /**
- * Disconnect called from NM via DBUS
+ * The actual disconnection
  */
-static gboolean disconnect(NMVPNPlugin *plugin, GError **err)
+static gboolean do_disconnect(gpointer plugin)
 {
 	NMStrongswanPluginPrivate *priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
 	enumerator_t *enumerator;
@@ -755,14 +743,26 @@ static gboolean disconnect(NMVPNPlugin *plugin, GError **err)
 			enumerator->destroy(enumerator);
 			charon->controller->terminate_ike(charon->controller, id,
 											  controller_cb_empty, NULL, 0);
-			return TRUE;
+			return FALSE;
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_GENERAL,
-				"Connection not found.");
+	g_debug("Connection not found.");
 	return FALSE;
+}
+
+/**
+ * Disconnect called from NM via DBUS
+ */
+static gboolean disconnect(NMVpnServicePlugin *plugin, GError **err)
+{
+	/* enqueue the actual disconnection, because we may be called in
+	 * response to a listener_t callback and the SA enumeration would
+	 * possibly deadlock. */
+	g_idle_add(do_disconnect, plugin);
+
+	return TRUE;
 }
 
 /**
@@ -773,7 +773,7 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 	NMStrongswanPluginPrivate *priv;
 
 	priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
-	priv->plugin = NM_VPN_PLUGIN(plugin);
+	priv->plugin = NM_VPN_SERVICE_PLUGIN(plugin);
 	memset(&priv->listener, 0, sizeof(listener_t));
 	priv->listener.child_updown = child_updown;
 	priv->listener.ike_rekey = ike_rekey;
@@ -786,7 +786,7 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 static void nm_strongswan_plugin_class_init(
 									NMStrongswanPluginClass *strongswan_class)
 {
-	NMVPNPluginClass *parent_class = NM_VPN_PLUGIN_CLASS(strongswan_class);
+	NMVpnServicePluginClass *parent_class = NM_VPN_SERVICE_PLUGIN_CLASS(strongswan_class);
 
 	g_type_class_add_private(G_OBJECT_CLASS(strongswan_class),
 							 sizeof(NMStrongswanPluginPrivate));
@@ -801,10 +801,15 @@ static void nm_strongswan_plugin_class_init(
 NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds,
 											 nm_handler_t *handler)
 {
-	NMStrongswanPlugin *plugin = (NMStrongswanPlugin *)g_object_new (
+	GError *error = NULL;
+
+	NMStrongswanPlugin *plugin = (NMStrongswanPlugin *)g_initable_new (
 					NM_TYPE_STRONGSWAN_PLUGIN,
-					NM_VPN_PLUGIN_DBUS_SERVICE_NAME, NM_DBUS_SERVICE_STRONGSWAN,
+					NULL,
+					&error,
+					NM_VPN_SERVICE_PLUGIN_DBUS_SERVICE_NAME, NM_DBUS_SERVICE_STRONGSWAN,
 					NULL);
+
 	if (plugin)
 	{
 		NMStrongswanPluginPrivate *priv;
@@ -814,5 +819,11 @@ NMStrongswanPlugin *nm_strongswan_plugin_new(nm_creds_t *creds,
 		priv->creds = creds;
 		priv->handler = handler;
 	}
+	else
+	{
+		g_warning ("Failed to initialize a plugin instance: %s", error->message);
+		g_error_free (error);
+	}
+
 	return plugin;
 }

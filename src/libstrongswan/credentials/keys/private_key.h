@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -42,11 +43,12 @@ struct private_key_t {
 	 * Create a signature over a chunk of data.
 	 *
 	 * @param scheme	signature scheme to use
+	 * @param params	optional parameters required by the specified scheme
 	 * @param data		chunk of data to sign
 	 * @param signature	where to allocate created signature
 	 * @return			TRUE if signature created
 	 */
-	bool (*sign)(private_key_t *this, signature_scheme_t scheme,
+	bool (*sign)(private_key_t *this, signature_scheme_t scheme, void *params,
 				 chunk_t data, chunk_t *signature);
 	/**
 	 * Decrypt a chunk of data.

@@ -351,7 +351,7 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 	if (entry)
 	{
 		/* we don't require a traffic selector match for explicit reqids,
-		 * as we wan't to reuse a reqid for trap-triggered policies that
+		 * as we want to reuse a reqid for trap-triggered policies that
 		 * got narrowed during negotiation. */
 		reqid_entry_destroy(tmpl);
 	}

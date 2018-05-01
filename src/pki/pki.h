@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2015-2017 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -57,12 +58,17 @@ bool calculate_lifetime(char *format, char *nbstr, char *nastr, time_t span,
 void set_file_mode(FILE *stream, cred_encoding_type_t enc);
 
 /**
- * Select default digest for signatures with the given key
+ * Determine the signature scheme and parameters for the given private key and
+ * hash algorithm and whether to use PSS padding for RSA.
  *
  * @param private	private key
- * @return			hash algorithm
+ * @param digest	hash algorithm (if HASH_UNKNOWN a default is determined
+ *					based on the key)
+ * @param pss		use PSS padding for RSA keys
+ * @return			allocated signature scheme and parameters
  */
-hash_algorithm_t get_default_digest(private_key_t *private);
+signature_params_t *get_signature_scheme(private_key_t *private,
+										 hash_algorithm_t digest, bool pss);
 
 /**
  * Create a traffic selector from a CIDR or range string.

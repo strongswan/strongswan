@@ -103,7 +103,10 @@ CONFIG_OPTS = \
 	--enable-lookip \
 	--enable-bliss \
 	--enable-sha3 \
-	--enable-newhope
+	--enable-newhope \
+	--enable-systemd \
+	--enable-counters \
+	--enable-save-keys
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 

@@ -216,7 +216,7 @@ connections.<conn>.unique = no
 	On initiators this setting specifies whether an INITIAL_CONTACT notify is
 	sent during IKE_AUTH if no existing connection is found with the remote
 	peer (determined by the identities of the first authentication round).
-	Only if set to _keep_ or _replace_ will the client send a notify.
+	Unless set to _never_ the client will send a notify.
 
 connections.<conn>.reauth_time = 0s
 	Time to schedule IKE reauthentication.
@@ -395,7 +395,11 @@ connections.<conn>.local<suffix>.auth = pubkey
 	algorithm that matches or exceeds the strength of the signature key.
 	If no constraints with _ike:_ prefix are configured any signature scheme
 	constraint (without _ike:_ prefix) will also apply to IKEv2 authentication,
-	unless this is disabled in **strongswan.conf**(5).
+	unless this is disabled in **strongswan.conf**(5). To use RSASSA-PSS
+	signatures use _rsa/pss_ instead of _pubkey_ or _rsa_ as in e.g.
+	_ike:rsa/pss-sha256_. If _pubkey_ or _rsa_ constraints are configured
+	RSASSA-PSS signatures will only be used if enabled in
+	**strongswan.conf**(5).
 
 connections.<conn>.local<suffix>.id =
 	IKE identity to use for authentication round.
@@ -583,13 +587,17 @@ connections.<conn>.remote<suffix>.auth = pubkey
 	key type followed by the minimum strength in bits (for example _ecdsa-384_
 	or _rsa-2048-ecdsa-256_). To limit the acceptable set of hashing algorithms
 	for trustchain validation, append hash algorithms to _pubkey_ or a key
-	strength definition (for example _pubkey-sha1-sha256_ or
-	_rsa-2048-ecdsa-256-sha256-sha384-sha512_).
+	strength definition (for example _pubkey-sha256-sha512_,
+	_rsa-2048-sha256-sha384-sha512_ or
+	_rsa-2048-sha256-ecdsa-256-sha256-sha384_).
 	Unless disabled in **strongswan.conf**(5), or explicit IKEv2 signature
 	constraints are configured (refer to the description of the **local**
 	section's **auth** keyword for details), such key types and hash algorithms
 	are also applied as constraints against IKEv2 signature authentication
-	schemes used by the remote side.
+	schemes used by the remote side. To require RSASSA-PSS signatures use
+	_rsa/pss_ instead of _pubkey_ or _rsa_ as in e.g. _rsa/pss-sha256_. If
+	_pubkey_ or _rsa_ constraints are configured RSASSA-PSS signatures will only
+	be accepted if enabled in **strongswan.conf**(5).
 
 	To specify trust chain constraints for EAP-(T)TLS, append a colon to the
 	EAP method, followed by the key type/size and hash algorithm as discussed
@@ -867,25 +875,37 @@ connections.<conn>.children.<child>.interface =
 connections.<conn>.children.<child>.mark_in = 0/0x00000000
 	Netfilter mark and mask for input traffic.
 
-	Netfilter mark and mask for input traffic. On Linux Netfilter may require
-	marks on each packet to match an SA having that option set. This allows
-	Netfilter rules to select specific tunnels for incoming traffic. The
-	special value _%unique_ sets a unique mark on each CHILD_SA instance,
-	beyond that the value _%unique-dir_ assigns a different unique mark for each
+	Netfilter mark and mask for input traffic. On Linux, Netfilter may require
+	marks on each packet to match an SA/policy having that option set. This
+	allows installing duplicate policies and enables Netfilter rules to select
+	specific SAs/policies for incoming traffic.  Note that inbound marks are
+	only set on policies, by default, unless *mark_in_sa* is enabled. The
+	special value _%unique_ sets a unique mark on each CHILD_SA instance, beyond
+	that the value _%unique-dir_ assigns a different unique mark for each
 	CHILD_SA direction (in/out).
 
 	An additional mask may be appended to the mark, separated by _/_. The
 	default mask if omitted is 0xffffffff.
 
+connections.<conn>.children.<child>.mark_in_sa = no
+	Whether to set *mark_in* on the inbound SA.
+
+	Whether to set *mark_in* on the inbound SA. By default, the inbound mark is
+	only set on the inbound policy. The tuple destination address, protocol and
+	SPI is unique and the mark is not required to find the correct SA, allowing
+	to mark traffic after decryption instead (where more specific selectors may
+	be used) to match different policies. Marking packets before decryption	is
+	still possible, even if no mark is set on the SA.
+
 connections.<conn>.children.<child>.mark_out = 0/0x00000000
 	Netfilter mark and mask for output traffic.
 
-	Netfilter mark and mask for output traffic. On Linux Netfilter may require
-	marks on each packet to match a policy having that option set. This allows
-	Netfilter rules to select specific tunnels for outgoing traffic. The
-	special value _%unique_ sets a unique mark on each CHILD_SA instance,
-	beyond that the value _%unique-dir_ assigns a different unique mark for each
-	CHILD_SA direction (in/out).
+	Netfilter mark and mask for output traffic. On Linux, Netfilter may require
+	marks on each packet to match a policy/SA having that option set. This
+	allows installing duplicate policies and enables Netfilter rules to select
+	specific policies/SAs for outgoing traffic. The special value _%unique_ sets
+	a unique mark on each CHILD_SA instance, beyond that the value _%unique-dir_
+	assigns a different unique mark for each CHILD_SA direction (in/out).
 
 	An additional mask may be appended to the mark, separated by _/_. The
 	default mask if omitted is 0xffffffff.

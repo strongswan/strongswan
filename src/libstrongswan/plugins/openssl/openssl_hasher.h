@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2008-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,6 +25,8 @@ typedef struct openssl_hasher_t openssl_hasher_t;
 
 #include <crypto/hashers/hasher.h>
 
+#include <openssl/evp.h>
+
 /**
  * Implementation of hashers using OpenSSL.
  */
@@ -35,6 +37,14 @@ struct openssl_hasher_t {
 	 */
 	hasher_t hasher;
 };
+
+/**
+ * Determine EVP_MD for the given hash algorithm
+ *
+ * @param hash			hash algorithm
+ * @return				EVP_MD or NULL if not found/supported
+ */
+const EVP_MD *openssl_get_md(hash_algorithm_t hash);
 
 /**
  * Constructor to create openssl_hasher_t.

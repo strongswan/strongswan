@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2012-2017 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2012 Martin Willi
  * Copyright (C) 2012 revosec AG
@@ -102,6 +102,31 @@ static auth_cfg_t *get_auth_cfg(peer_cfg_t *peer_cfg, bool local)
 }
 
 /**
+ * Find a shared key for the given identities
+ */
+static shared_key_t *find_shared_key(identification_t *my_id, host_t *me,
+									 identification_t *other_id, host_t *other)
+{
+	identification_t *any_id = NULL;
+	shared_key_t *shared_key;
+
+	if (!other_id)
+	{
+		any_id = identification_create_from_encoding(ID_ANY, chunk_empty);
+		other_id = any_id;
+	}
+	shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE,
+										  my_id, other_id);
+	if (!shared_key)
+	{
+		DBG1(DBG_IKE, "no shared key found for '%Y'[%H] - '%Y'[%H]",
+			 my_id, me, other_id, other);
+	}
+	DESTROY_IF(any_id);
+	return shared_key;
+}
+
+/**
  * Lookup a shared secret for this IKE_SA
  */
 static shared_key_t *lookup_shared_key(private_phase1_t *this,
@@ -131,15 +156,9 @@ static shared_key_t *lookup_shared_key(private_phase1_t *this,
 			{
 				other_id = other_auth->get(other_auth, AUTH_RULE_IDENTITY);
 			}
-			if (my_id && other_id)
+			if (my_id)
 			{
-				shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE,
-													  my_id, other_id);
-				if (!shared_key)
-				{
-					DBG1(DBG_IKE, "no shared key found for '%Y'[%H] - '%Y'[%H]",
-						 my_id, me, other_id, other);
-				}
+				shared_key = find_shared_key(my_id, me, other_id, other);
 			}
 		}
 	}
@@ -158,14 +177,11 @@ static shared_key_t *lookup_shared_key(private_phase1_t *this,
 				other_id = other_auth->get(other_auth, AUTH_RULE_IDENTITY);
 				if (my_id)
 				{
-					shared_key = lib->credmgr->get_shared(lib->credmgr,
-												SHARED_IKE, my_id, other_id);
+					shared_key = find_shared_key(my_id, me, other_id, other);
 					if (shared_key)
 					{
 						break;
 					}
-					DBG1(DBG_IKE, "no shared key found for '%Y'[%H] - '%Y'[%H]",
-						 my_id, me, other_id, other);
 				}
 			}
 		}

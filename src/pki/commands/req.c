@@ -30,6 +30,7 @@ static int req()
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	key_type_t type = KEY_ANY;
 	hash_algorithm_t digest = HASH_UNKNOWN;
+	signature_params_t *scheme = NULL;
 	certificate_t *cert = NULL;
 	private_key_t *private = NULL;
 	char *file = NULL, *keyid = NULL, *dn = NULL, *error = NULL;
@@ -38,6 +39,8 @@ static int req()
 	chunk_t encoding = chunk_empty;
 	chunk_t challenge_password = chunk_empty;
 	char *arg;
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+									   lib->ns);
 
 	san = linked_list_create();
 
@@ -74,6 +77,17 @@ static int req()
 				if (!enum_from_name(hash_algorithm_short_names, arg, &digest))
 				{
 					error = "invalid --digest type";
+					goto usage;
+				}
+				continue;
+			case 'R':
+				if (streq(arg, "pss"))
+				{
+					pss = TRUE;
+				}
+				else if (!streq(arg, "pkcs1"))
+				{
+					error = "invalid RSA padding";
 					goto usage;
 				}
 				continue;
@@ -153,16 +167,14 @@ static int req()
 		error = "parsing private key failed";
 		goto end;
 	}
-	if (digest == HASH_UNKNOWN)
-	{
-		digest = get_default_digest(private);
-	}
+	scheme = get_signature_scheme(private, digest, pss);
+
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_PKCS10_REQUEST,
 							  BUILD_SIGNING_KEY, private,
 							  BUILD_SUBJECT, id,
 							  BUILD_SUBJECT_ALTNAMES, san,
 							  BUILD_CHALLENGE_PWD, challenge_password,
-							  BUILD_DIGEST_ALG, digest,
+							  BUILD_SIGNATURE_SCHEME, scheme,
 							  BUILD_END);
 	if (!cert)
 	{
@@ -186,6 +198,7 @@ end:
 	DESTROY_IF(cert);
 	DESTROY_IF(private);
 	san->destroy_offset(san, offsetof(identification_t, destroy));
+	signature_params_destroy(scheme);
 	free(encoding.ptr);
 
 	if (error)
@@ -208,20 +221,22 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		req, 'r', "req",
 		"create a PKCS#10 certificate request",
-		{"  [--in file|--keyid hex] [--type rsa|ecdsa|bliss|priv] --dn distinguished-name",
+		{"[--in file|--keyid hex] [--type rsa|ecdsa|bliss|priv] --dn distinguished-name",
 		 "[--san subjectAltName]+ [--password challengePassword]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
+		 "[--rsa-padding pkcs1|pss]",
 		 "[--outform der|pem]"},
 		{
-			{"help",	'h', 0, "show usage information"},
-			{"in",		'i', 1, "private key input file, default: stdin"},
-			{"keyid",	'x', 1, "smartcard or TPM private key object handle"},
-			{"type",	't', 1, "type of input key, default: priv"},
-			{"dn",		'd', 1, "subject distinguished name"},
-			{"san",		'a', 1, "subjectAltName to include in cert request"},
-			{"password",'p', 1, "challengePassword to include in cert request"},
-			{"digest",	'g', 1, "digest for signature creation, default: key-specific"},
-			{"outform",	'f', 1, "encoding of generated request, default: der"},
+			{"help",		'h', 0, "show usage information"},
+			{"in",			'i', 1, "private key input file, default: stdin"},
+			{"keyid",		'x', 1, "smartcard or TPM private key object handle"},
+			{"type",		't', 1, "type of input key, default: priv"},
+			{"dn",			'd', 1, "subject distinguished name"},
+			{"san",			'a', 1, "subjectAltName to include in cert request"},
+			{"password",	'p', 1, "challengePassword to include in cert request"},
+			{"digest",		'g', 1, "digest for signature creation, default: key-specific"},
+			{"rsa-padding",	'R', 1, "padding for RSA signatures, default: pkcs1"},
+			{"outform",		'f', 1, "encoding of generated request, default: der"},
 		}
 	});
 }

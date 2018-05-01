@@ -335,7 +335,7 @@ METHOD(listener_t, message_hook, bool,
 		chunk_t iv;
 
 		/* we need the last block (or expected next IV) of Phase 1, which gets
-		 * upated after successful en-/decryption depending on direction */
+		 * updated after successful en-/decryption depending on direction */
 		if (incoming == plain)
 		{
 			if (message->get_message_id(message) == 0)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Tobias Brunner
+ * Copyright (C) 2006-2018 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008-2016 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
@@ -17,16 +17,40 @@
  * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  * for more details.
  */
+/*
+ * Copyright (C) 2018 Mellanox Technologies.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 #define _GNU_SOURCE
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <stdint.h>
 #include <linux/ipsec.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <linux/xfrm.h>
 #include <linux/udp.h>
+#include <linux/ethtool.h>
+#include <linux/sockios.h>
 #include <net/if.h>
 #include <unistd.h>
 #include <time.h>
@@ -143,7 +167,7 @@ ENUM(xfrm_msg_names, XFRM_MSG_NEWSA, XFRM_MSG_MAPPING,
 	"XFRM_MSG_MAPPING"
 );
 
-ENUM(xfrm_attr_type_names, XFRMA_UNSPEC, XFRMA_REPLAY_ESN_VAL,
+ENUM(xfrm_attr_type_names, XFRMA_UNSPEC, XFRMA_OFFLOAD_DEV,
 	"XFRMA_UNSPEC",
 	"XFRMA_ALG_AUTH",
 	"XFRMA_ALG_CRYPT",
@@ -168,6 +192,11 @@ ENUM(xfrm_attr_type_names, XFRMA_UNSPEC, XFRMA_REPLAY_ESN_VAL,
 	"XFRMA_MARK",
 	"XFRMA_TFCPAD",
 	"XFRMA_REPLAY_ESN_VAL",
+	"XFRMA_SA_EXTRA_FLAGS",
+	"XFRMA_PROTO",
+	"XFRMA_ADDRESS_FILTER",
+	"XFRMA_PAD",
+	"XFRMA_OFFLOAD_DEV",
 );
 
 /**
@@ -230,6 +259,27 @@ static kernel_algorithm_t compression_algs[] = {
 	{IPCOMP_LZS,				"lzs"				},
 	{IPCOMP_LZJH,				"lzjh"				},
 };
+
+/**
+ * IPsec HW offload state in kernel
+ */
+typedef enum {
+	NL_OFFLOAD_UNKNOWN,
+	NL_OFFLOAD_UNSUPPORTED,
+	NL_OFFLOAD_SUPPORTED
+} nl_offload_state_t;
+
+/**
+ * Global metadata used for IPsec HW offload
+ */
+static struct {
+	/** bit in feature set */
+	u_int bit;
+	/** total number of device feature blocks */
+	u_int total_blocks;
+	/** determined HW offload state */
+	nl_offload_state_t state;
+} netlink_hw_offload;
 
 /**
  * Look up a kernel algorithm name and its key size
@@ -1285,6 +1335,190 @@ static bool add_mark(struct nlmsghdr *hdr, int buflen, mark_t mark)
 	return TRUE;
 }
 
+/**
+ * Check if kernel supports HW offload
+ */
+static void netlink_find_offload_feature(const char *ifname, int query_socket)
+{
+	struct ethtool_sset_info *sset_info;
+	struct ethtool_gstrings *cmd = NULL;
+	struct ifreq ifr;
+	uint32_t sset_len, i;
+	char *str;
+	int err;
+
+	netlink_hw_offload.state = NL_OFFLOAD_UNSUPPORTED;
+
+	/* determine number of device features */
+	INIT_EXTRA(sset_info, sizeof(uint32_t),
+		.cmd = ETHTOOL_GSSET_INFO,
+		.sset_mask = 1ULL << ETH_SS_FEATURES,
+	);
+	strcpy(ifr.ifr_name, ifname);
+	ifr.ifr_data = (void*)sset_info;
+
+	err = ioctl(query_socket, SIOCETHTOOL, &ifr);
+	if (err || sset_info->sset_mask != 1ULL << ETH_SS_FEATURES)
+	{
+		goto out;
+	}
+	sset_len = sset_info->data[0];
+
+	/* retrieve names of device features */
+	INIT_EXTRA(cmd, ETH_GSTRING_LEN * sset_len,
+		.cmd = ETHTOOL_GSTRINGS,
+		.string_set = ETH_SS_FEATURES,
+	);
+	strcpy(ifr.ifr_name, ifname);
+	ifr.ifr_data = (void*)cmd;
+
+	err = ioctl(query_socket, SIOCETHTOOL, &ifr);
+	if (err)
+	{
+		goto out;
+	}
+
+	/* look for the ESP_HW feature bit */
+	str = (char*)cmd->data;
+	for (i = 0; i < cmd->len; i++)
+	{
+		if (strneq(str, "esp-hw-offload", ETH_GSTRING_LEN))
+		{
+			netlink_hw_offload.bit = i;
+			netlink_hw_offload.total_blocks = (sset_len + 31) / 32;
+			netlink_hw_offload.state = NL_OFFLOAD_SUPPORTED;
+			break;
+		}
+		str += ETH_GSTRING_LEN;
+	}
+
+out:
+	free(sset_info);
+	free(cmd);
+}
+
+/**
+ * Check if interface supported HW offload
+ */
+static bool netlink_detect_offload(const char *ifname)
+{
+	struct ethtool_gfeatures *cmd;
+	uint32_t feature_bit;
+	struct ifreq ifr;
+	int query_socket;
+	int block;
+	bool ret = FALSE;
+
+	query_socket = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_XFRM);
+	if (query_socket < 0)
+	{
+		return FALSE;
+	}
+
+	/* kernel requires a real interface in order to query the kernel-wide
+	 * capability, so we do it here on first invocation.
+	 */
+	if (netlink_hw_offload.state == NL_OFFLOAD_UNKNOWN)
+	{
+		netlink_find_offload_feature(ifname, query_socket);
+	}
+	if (netlink_hw_offload.state == NL_OFFLOAD_UNSUPPORTED)
+	{
+		DBG1(DBG_KNL, "HW offload is not supported by kernel");
+		goto out;
+	}
+
+	/* feature is supported by kernel, query device features */
+	INIT_EXTRA(cmd, sizeof(cmd->features[0]) * netlink_hw_offload.total_blocks,
+		.cmd = ETHTOOL_GFEATURES,
+		.size = netlink_hw_offload.total_blocks,
+	);
+	strcpy(ifr.ifr_name, ifname);
+	ifr.ifr_data = (void*)cmd;
+
+	if (ioctl(query_socket, SIOCETHTOOL, &ifr))
+	{
+		goto out_free;
+	}
+
+	block = netlink_hw_offload.bit / 32;
+	feature_bit = 1U << (netlink_hw_offload.bit % 32);
+	if (cmd->features[block].active & feature_bit)
+	{
+		ret = TRUE;
+	}
+
+out_free:
+	free(cmd);
+	if (!ret)
+	{
+		DBG1(DBG_KNL, "HW offload is not supported by device");
+	}
+out:
+	close(query_socket);
+	return ret;
+}
+
+/**
+ * There are 3 HW offload configuration values:
+ * 1. HW_OFFLOAD_NO   : Do not configure HW offload.
+ * 2. HW_OFFLOAD_YES  : Configure HW offload.
+ *                      Fail SA addition if offload is not supported.
+ * 3. HW_OFFLOAD_AUTO : Configure HW offload if supported by the kernel
+ *                      and device.
+ *                      Do not fail SA addition otherwise.
+ */
+static bool config_hw_offload(kernel_ipsec_sa_id_t *id,
+							  kernel_ipsec_add_sa_t *data, struct nlmsghdr *hdr,
+							  int buflen)
+{
+	host_t *local = data->inbound ? id->dst : id->src;
+	struct xfrm_user_offload *offload;
+	bool hw_offload_yes, ret = FALSE;
+	char *ifname;
+
+	/* do Ipsec configuration without offload */
+	if (data->hw_offload == HW_OFFLOAD_NO)
+	{
+		return TRUE;
+	}
+
+	hw_offload_yes = (data->hw_offload == HW_OFFLOAD_YES);
+
+	if (!charon->kernel->get_interface(charon->kernel, local, &ifname))
+	{
+		return !hw_offload_yes;
+	}
+
+	/* check if interface supports hw_offload */
+	if (!netlink_detect_offload(ifname))
+	{
+		ret = !hw_offload_yes;
+		goto out;
+	}
+
+	/* activate HW offload */
+	offload = netlink_reserve(hdr, buflen,
+							  XFRMA_OFFLOAD_DEV, sizeof(*offload));
+	if (!offload)
+	{
+		ret = !hw_offload_yes;
+		goto out;
+	}
+	offload->ifindex = if_nametoindex(ifname);
+	if (local->get_family(local) == AF_INET6)
+	{
+		offload->flags |= XFRM_OFFLOAD_IPV6;
+	}
+	offload->flags |= data->inbound ? XFRM_OFFLOAD_INBOUND : 0;
+
+	ret = TRUE;
+
+out:
+	free(ifname);
+	return ret;
+}
+
 METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, kernel_ipsec_sa_id_t *id,
 	kernel_ipsec_add_sa_t *data)
@@ -1645,30 +1879,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				 data->replay_window);
 			sa->replay_window = data->replay_window;
 		}
-		if (data->hw_offload)
+
+		DBG2(DBG_KNL, "  HW offload: %N", hw_offload_names, data->hw_offload);
+		if (!config_hw_offload(id, data, hdr, sizeof(request)))
 		{
-			host_t *local = data->inbound ? id->dst : id->src;
-			char *ifname;
-
-			if (charon->kernel->get_interface(charon->kernel, local, &ifname))
-			{
-				struct xfrm_user_offload *offload;
-
-				offload = netlink_reserve(hdr, sizeof(request),
-										  XFRMA_OFFLOAD_DEV, sizeof(*offload));
-				if (!offload)
-				{
-					free(ifname);
-					goto failed;
-				}
-				offload->ifindex = if_nametoindex(ifname);
-				if (local->get_family(local) == AF_INET6)
-				{
-					offload->flags |= XFRM_OFFLOAD_IPV6;
-				}
-				offload->flags |= data->inbound ? XFRM_OFFLOAD_INBOUND : 0;
-				free(ifname);
-			}
+			DBG1(DBG_KNL, "failed to configure HW offload");
+			goto failed;
 		}
 	}
 

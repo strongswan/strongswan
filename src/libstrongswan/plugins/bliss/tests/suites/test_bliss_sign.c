@@ -118,9 +118,9 @@ START_TEST(test_bliss_sign_all)
 		/* generate and verify 1000 BLISS signatures */
 		while (verify_count--)
 		{
-			ck_assert(privkey->sign(privkey, signature_scheme, msg,
+			ck_assert(privkey->sign(privkey, signature_scheme, NULL, msg,
 									&signature));
-			ck_assert(pubkey->verify(pubkey, signature_scheme, msg,
+			ck_assert(pubkey->verify(pubkey, signature_scheme, NULL, msg,
 									 signature));
 			free(signature.ptr);
 		}
@@ -134,7 +134,7 @@ START_TEST(test_bliss_sign_fail)
 {
 	private_key_t *privkey;
 	public_key_t *pubkey;
-	chunk_t msg, signature, encoding, fp;
+	chunk_t msg = chunk_empty, signature, encoding, fp;
 
 	/* generate non-supported BLISS-II private key */
 	privkey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_BLISS,
@@ -172,18 +172,18 @@ START_TEST(test_bliss_sign_fail)
 	ck_assert(!privkey->decrypt(privkey, ENCRYPT_UNKNOWN, chunk_empty, NULL));
 
 	/* sign with invalid signature scheme */
-	ck_assert(!privkey->sign(privkey, SIGN_UNKNOWN, msg, &signature));
+	ck_assert(!privkey->sign(privkey, SIGN_UNKNOWN, NULL, msg, &signature));
 
 	/* generate valid signature */
 	msg = chunk_from_str("Hello Dolly!");
-	ck_assert(privkey->sign(privkey, SIGN_BLISS_WITH_SHA2_512, msg, &signature));
+	ck_assert(privkey->sign(privkey, SIGN_BLISS_WITH_SHA2_512, NULL, msg, &signature));
 
 	/* verify with invalid signature scheme */
-	ck_assert(!pubkey->verify(pubkey, SIGN_UNKNOWN, msg, signature));
+	ck_assert(!pubkey->verify(pubkey, SIGN_UNKNOWN, NULL, msg, signature));
 
 	/* corrupt signature */
 	signature.ptr[signature.len - 1] ^= 0x80;
-	ck_assert(!pubkey->verify(pubkey, SIGN_BLISS_WITH_SHA2_512, msg, signature));
+	ck_assert(!pubkey->verify(pubkey, SIGN_BLISS_WITH_SHA2_512, NULL, msg, signature));
 
 	free(signature.ptr);
 	privkey->destroy(privkey);

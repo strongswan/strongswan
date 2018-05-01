@@ -137,13 +137,16 @@ METHOD(certificate_t, equals, bool,
 
 METHOD(certificate_t, issued_by, bool,
 	private_pubkey_cert_t *this, certificate_t *issuer,
-	signature_scheme_t *scheme)
+	signature_params_t **scheme)
 {
-	if (scheme)
+	bool valid = equals(this, issuer);
+	if (valid && scheme)
 	{
-		*scheme = SIGN_UNKNOWN;
+		INIT(*scheme,
+			.scheme = SIGN_UNKNOWN,
+		);
 	}
-	return equals(this, issuer);
+	return valid;
 }
 
 METHOD(certificate_t, get_public_key,  public_key_t*,

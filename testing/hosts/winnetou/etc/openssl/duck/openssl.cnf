@@ -3,7 +3,7 @@
 #	
 
 # This definitions were set by the ca_init script DO NOT change
-# them manualy.
+# them manually.
 CAHOME			= /etc/openssl/duck
 RANDFILE		= $CAHOME/.rand
 

@@ -6,4 +6,4 @@ against the gateway <b>moon</b>. The user credentials of <b>carol</b>
 and <b>dave</b> are kept both on the local clients and the RADIUS server <b>alice</b>.
 <b>carol</b> possesses the RADIUS class attribute <b>Research</b> and therefore obtains
 access to the <b>research</b> subnet behind gateway <b>moon</b> whereas <b>dave</b>
-belongs to the class <b>Accounting</b> and has access to the <b>acccess</b> subnet.
+belongs to the class <b>Accounting</b> and has access to the <b>access</b> subnet.

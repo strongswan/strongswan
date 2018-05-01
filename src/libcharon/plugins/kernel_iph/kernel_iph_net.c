@@ -79,16 +79,15 @@ struct private_kernel_iph_net_t {
 	 */
 	bool roam_address;
 
-        /**
-         * Whether to install virtual IPs
-         */
-        bool install_virtual_ip;
+	/**
+	 * Whether to install virtual IPs
+	 */
+	bool install_virtual_ip;
 
-        /**
-         * Where to install virtual IPs
-         */
-
-        char *install_virtual_ip_on;
+	/**
+	 * Where to install virtual IPs
+	 */
+	char *install_virtual_ip_on;
 };
 
 /**
@@ -99,6 +98,8 @@ typedef struct {
 	host_t *ip;
 	/** is virtual installed by us? */
 	bool virtual;
+	/** reference count */
+	int count;
 } addr_t;
 
 /**
@@ -197,13 +198,33 @@ static void fire_roam_event(private_kernel_iph_net_t *this, bool address)
 }
 
 /**
+ * Find an address entry given its IP address
+ */
+static void find_addr( iface_t *iface, host_t *ip, addr_t **found )
+{
+	enumerator_t *enumerator;
+	addr_t *addr = NULL;
+	*found = NULL;
+
+	enumerator = iface->addrs->create_enumerator( iface->addrs );
+	while ( enumerator->enumerate( enumerator, &addr ) )
+	{
+		if ( ip->ip_equals( ip, addr->ip ) )
+		{
+			*found = addr;
+			break;
+		}
+	}
+	enumerator->destroy( enumerator );
+}
+
+/**
  * Add an address entry to a named interface, return ifindex
  */
 static DWORD add_addr(private_kernel_iph_net_t *this, char *name, host_t *ip,
-					  bool virtual)
+					  bool virtual, bool *first)
 {
 	enumerator_t *enumerator;
-	addr_t *addr;
 	iface_t *iface;
 	DWORD ifindex = 0;
 
@@ -213,11 +234,28 @@ static DWORD add_addr(private_kernel_iph_net_t *this, char *name, host_t *ip,
 	{
 		if (streq(name, iface->ifname))
 		{
-			INIT(addr,
-				.ip = ip->clone(ip),
-				.virtual = virtual,
-			);
-			iface->addrs->insert_last(iface->addrs, addr);
+			addr_t *addr = NULL;
+
+			// See if this IP address is already in the list
+			find_addr(iface, ip, &addr);
+			if (addr)
+			{
+				addr->count++;
+				*first = FALSE;
+				DBG1( DBG_KNL, "%H already in addresses list, count = %d", ip, addr->count );
+			}
+			else
+			{
+				INIT(addr,
+					.ip = ip->clone(ip),
+					.virtual = virtual,
+					.count = 1
+				);
+				iface->addrs->insert_last(iface->addrs, addr);
+
+				*first = TRUE;
+				DBG1(DBG_KNL, "%H added to addresses list", ip);
+			}
 			ifindex = iface->ifindex;
 			break;
 		}
@@ -231,7 +269,7 @@ static DWORD add_addr(private_kernel_iph_net_t *this, char *name, host_t *ip,
 /**
  * Remove address entry from named interface, return ifindex
  */
-static DWORD remove_addr(private_kernel_iph_net_t *this, host_t *ip)
+static DWORD remove_addr(private_kernel_iph_net_t *this, host_t *ip, bool *last)
 {
 	enumerator_t *ifaces, *addrs;
 	iface_t *iface;
@@ -247,8 +285,19 @@ static DWORD remove_addr(private_kernel_iph_net_t *this, host_t *ip)
 		{
 			if (ip->ip_equals(ip, addr->ip))
 			{
-				iface->addrs->remove_at(iface->addrs, addrs);
-				addr_destroy(addr);
+				addr->count--;
+				if (addr->count == 0)
+				{
+					iface->addrs->remove_at(iface->addrs, addrs);
+					addr_destroy(addr);
+					*last = TRUE;
+					DBG1( DBG_KNL, "%H removed from addresses list", ip );
+				}
+				else
+				{
+					*last = FALSE;
+					DBG1( DBG_KNL, "%H still in addresses list, count = %d", ip, addr->count );
+				}
 				ifindex = iface->ifindex;
 			}
 		}
@@ -787,35 +836,48 @@ METHOD(kernel_net_t, add_ip, status_t,
 	{	/* disabled by config */
 		return SUCCESS;
 	}
+
 	MIB_UNICASTIPADDRESS_ROW row;
 	u_long status;
-        iface_t *iface = NULL;
+	iface_t *iface = NULL;
+	bool first = FALSE;
+
+	DBG1( DBG_KNL, "Adding virtual IP %H", vip );
 
 	/* name of the MS Loopback adapter */
-        if (!this->install_virtual_ip_on || this->ifaces->find_first(this->ifaces, (void*)iface_by_name,
-						(void**)&iface, this->install_virtual_ip_on) != SUCCESS)
-        {
-            name = "{DB2C49B1-7C90-4253-9E61-8C6A881194ED}";
-        }
-        else
-        {
-            name = this->install_virtual_ip_on;
-        }
+	if (!this->install_virtual_ip_on ||
+		 this->ifaces->find_first(this->ifaces, (void*)iface_by_name, (void**)&iface, this->install_virtual_ip_on) != SUCCESS)
+	{
+		name = "{DB2C49B1-7C90-4253-9E61-8C6A881194ED}";
+	}
+	else
+	{
+		name = this->install_virtual_ip_on;
+	}
 	host2unicast(vip, prefix, &row);
 
-	row.InterfaceIndex = add_addr(this, name, vip, TRUE);
+	row.InterfaceIndex = add_addr(this, name, vip, TRUE, &first);
 	if (!row.InterfaceIndex)
 	{
 		DBG1(DBG_KNL, "interface '%s' not found", name);
 		return NOT_FOUND;
 	}
 
-	status = CreateUnicastIpAddressEntry(&row);
-	if (status != NO_ERROR && status != ERROR_OBJECT_ALREADY_EXISTS)
+	/* Only do the add if this is the first time we've seen this address */
+	if (first)
 	{
-		DBG1(DBG_KNL, "creating IPH address entry failed: %lu", status);
-		remove_addr(this, vip);
-		return FAILED;
+		DBG1( DBG_KNL, "%H is not yet assigned to the virtual adapter - adding", vip );
+		status = CreateUnicastIpAddressEntry(&row);
+		if (status != NO_ERROR && status != ERROR_OBJECT_ALREADY_EXISTS)
+		{
+			DBG1(DBG_KNL, "creating IPH address entry failed: %lu", status);
+			remove_addr(this, vip, &first);
+			return FAILED;
+		}
+	}
+	else
+	{
+		DBG1( DBG_KNL, "%H is already assigned to the virtual adapter - nothing more to do", vip );
 	}
 	return SUCCESS;
 }
@@ -823,28 +885,39 @@ METHOD(kernel_net_t, add_ip, status_t,
 METHOD(kernel_net_t, del_ip, status_t,
 	private_kernel_iph_net_t *this, host_t *vip, int prefix, bool wait)
 {
-        if (!this->install_virtual_ip)
+	if (!this->install_virtual_ip)
 	{	/* disabled by config */
 		return SUCCESS;
 	}
 
 	MIB_UNICASTIPADDRESS_ROW row;
 	u_long status;
+	bool last = FALSE;
 
+	DBG1( DBG_KNL, "Removing virtual IP %H", vip );
 	host2unicast(vip, prefix, &row);
 
-	row.InterfaceIndex = remove_addr(this, vip);
+	row.InterfaceIndex = remove_addr(this, vip, &last);
 	if (!row.InterfaceIndex)
 	{
 		DBG1(DBG_KNL, "virtual IP %H not found", vip);
 		return NOT_FOUND;
 	}
 
-	status = DeleteUnicastIpAddressEntry(&row);
-	if (status != NO_ERROR)
+	/* Only do the deletion if this is the last time we've seen this address */
+	if (last)
 	{
-		DBG1(DBG_KNL, "deleting IPH address entry failed: %lu", status);
-		return FAILED;
+		status = DeleteUnicastIpAddressEntry(&row);
+		if (status != NO_ERROR)
+		{
+			DBG1(DBG_KNL, "deleting IPH address entry failed: %lu", status);
+			return FAILED;
+		}
+		DBG1( DBG_KNL, "%H has been removed from the virtual adapter", vip );
+	}
+	else
+	{
+		DBG1( DBG_KNL, "There are still more %H addresses on the virtual adapter - nothing more to do", vip );
 	}
 
 	return SUCCESS;

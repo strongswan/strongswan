@@ -60,7 +60,8 @@ static int print()
 	credential_type_t type = CRED_CERTIFICATE;
 	int subtype = CERT_X509;
 	void *cred;
-	char *arg, *file = NULL;
+	char *arg, *file = NULL, *keyid = NULL;
+	chunk_t chunk;
 
 	while (TRUE)
 	{
@@ -126,6 +127,9 @@ static int print()
 			case 'i':
 				file = arg;
 				continue;
+			case 'x':
+				keyid = arg;
+				continue;
 			case EOF:
 				break;
 			default:
@@ -133,15 +137,20 @@ static int print()
 		}
 		break;
 	}
-	if (file)
+	if (keyid)
+	{
+		chunk = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+		cred = lib->creds->create(lib->creds, type, subtype,
+								  BUILD_PKCS11_KEYID, chunk, BUILD_END);
+		free(chunk.ptr);
+	}
+	else if (file)
 	{
 		cred = lib->creds->create(lib->creds, type, subtype,
 								  BUILD_FROM_FILE, file, BUILD_END);
 	}
 	else
 	{
-		chunk_t chunk;
-
 		set_file_mode(stdin, CERT_ASN1_DER);
 		if (!chunk_from_fd(0, &chunk))
 		{
@@ -187,10 +196,12 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t)
 		{ print, 'a', "print",
 		"print a credential in a human readable form",
-		{"[--in file] [--type x509|crl|ac|pub|priv|rsa|ecdsa|ed25519|bliss]"},
+		{"[--in file|--keyid hex] "
+		 "[--type x509|crl|ac|pub|priv|rsa|ecdsa|ed25519|bliss]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
+			{"keyid",	'x', 1, "smartcard or TPM object handle"},
 			{"type",	't', 1, "type of credential, default: x509"},
 		}
 	});

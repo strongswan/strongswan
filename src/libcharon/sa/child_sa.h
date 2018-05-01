@@ -30,7 +30,7 @@ typedef struct child_sa_t child_sa_t;
 #include <library.h>
 #include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
-#include <config/proposal.h>
+#include <crypto/proposal/proposal.h>
 #include <config/child_cfg.h>
 
 /**
@@ -82,6 +82,11 @@ enum child_sa_state_t {
 	 * CHILD_SA in progress of delete
 	 */
 	CHILD_DELETING,
+
+	/**
+	 * CHILD_SA has been deleted, but not yet destroyed
+	 */
+	CHILD_DELETED,
 
 	/**
 	 * CHILD_SA object gets destroyed
@@ -145,7 +150,7 @@ extern enum_name_t *child_sa_outbound_state_names;
  * - B allocates an SPI for the selected protocol
  * - B calls child_sa_t.install for both, the allocated and received SPI
  * - B sends the proposal with the allocated SPI to A
- * - A calls child_sa_t.install for both, the allocated and recevied SPI
+ * - A calls child_sa_t.install for both, the allocated and received SPI
  *
  * Once SAs are set up, policies can be added using add_policies.
  */
@@ -254,7 +259,7 @@ struct child_sa_t {
 	/**
 	 * Set the negotiated IPsec mode to use.
 	 *
-	 * @param mode		TUNNEL | TRANPORT | BEET
+	 * @param mode		TUNNEL | TRANSPORT | BEET
 	 */
 	void (*set_mode)(child_sa_t *this, ipsec_mode_t mode);
 

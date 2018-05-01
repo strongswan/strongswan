@@ -47,7 +47,7 @@ enum guest_state_t {
 extern enum_name_t *guest_state_names;
 
 /**
- * Invoke function which lauches the UML guest.
+ * Invoke function which launches the UML guest.
  *
  * Consoles are all set to NULL, you may change them by adding additional UML
  * options to args before invocation.

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2014-2017 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
  * Copyright (C) 2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
@@ -121,9 +122,9 @@ struct private_x509_crl_t {
 	chunk_t baseCrlNumber;
 
 	/**
-	 * Signature algorithm
+	 * Signature scheme
 	 */
-	int algorithm;
+	signature_params_t *scheme;
 
 	/**
 	 * Signature
@@ -225,7 +226,7 @@ static bool parse(private_x509_crl_t *this)
 	chunk_t extnID = chunk_empty;
 	chunk_t userCertificate = chunk_empty;
 	int objectID;
-	int sig_alg = OID_UNKNOWN;
+	signature_params_t sig_alg = {};
 	bool success = FALSE;
 	bool critical = FALSE;
 	revoked_t *revoked = NULL;
@@ -246,7 +247,11 @@ static bool parse(private_x509_crl_t *this)
 				DBG2(DBG_ASN, "  v%d", this->version);
 				break;
 			case CRL_OBJ_SIG_ALG:
-				sig_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
+				if (!signature_params_parse(object, level, &sig_alg))
+				{
+					DBG1(DBG_ASN, "  unable to parse signature algorithm");
+					goto end;
+				}
 				break;
 			case CRL_OBJ_ISSUER:
 				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
@@ -297,6 +302,7 @@ static bool parse(private_x509_crl_t *this)
 						}
 						break;
 					case OID_AUTHORITY_KEY_ID:
+						chunk_free(&this->authKeyIdentifier);
 						this->authKeyIdentifier =
 							x509_parse_authorityKeyIdentifier(
 									object, level, &this->authKeySerialNumber);
@@ -342,8 +348,13 @@ static bool parse(private_x509_crl_t *this)
 			}
 			case CRL_OBJ_ALGORITHM:
 			{
-				this->algorithm = asn1_parse_algorithmIdentifier(object, level, NULL);
-				if (this->algorithm != sig_alg)
+				INIT(this->scheme);
+				if (!signature_params_parse(object, level, this->scheme))
+				{
+					DBG1(DBG_ASN, "  unable to parse signature algorithm");
+					goto end;
+				}
+				if (!signature_params_equal(this->scheme, &sig_alg))
 				{
 					DBG1(DBG_ASN, "  signature algorithms do not agree");
 					goto end;
@@ -361,6 +372,7 @@ static bool parse(private_x509_crl_t *this)
 
 end:
 	parser->destroy(parser);
+	signature_params_clear(&sig_alg);
 	return success;
 }
 
@@ -457,10 +469,10 @@ METHOD(certificate_t, has_issuer, id_match_t,
 }
 
 METHOD(certificate_t, issued_by, bool,
-	private_x509_crl_t *this, certificate_t *issuer, signature_scheme_t *schemep)
+	private_x509_crl_t *this, certificate_t *issuer,
+	signature_params_t **scheme)
 {
 	public_key_t *key;
-	signature_scheme_t scheme;
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
 	chunk_t keyid = chunk_empty;
@@ -492,21 +504,17 @@ METHOD(certificate_t, issued_by, bool,
 		}
 	}
 
-	scheme = signature_scheme_from_oid(this->algorithm);
-	if (scheme == SIGN_UNKNOWN)
-	{
-		return FALSE;
-	}
 	key = issuer->get_public_key(issuer);
 	if (!key)
 	{
 		return FALSE;
 	}
-	valid = key->verify(key, scheme, this->tbsCertList, this->signature);
+	valid = key->verify(key, this->scheme->scheme, this->scheme->params,
+						this->tbsCertList, this->signature);
 	key->destroy(key);
-	if (valid && schemep)
+	if (valid && scheme)
 	{
-		*schemep = scheme;
+		*scheme = signature_params_clone(this->scheme);
 	}
 	return valid;
 }
@@ -585,23 +593,15 @@ static void revoked_destroy(revoked_t *revoked)
 	free(revoked);
 }
 
-/**
- * Destroy a CDP entry
- */
-static void cdp_destroy(x509_cdp_t *this)
-{
-	free(this->uri);
-	DESTROY_IF(this->issuer);
-	free(this);
-}
-
 METHOD(certificate_t, destroy, void,
 	private_x509_crl_t *this)
 {
 	if (ref_put(&this->ref))
 	{
 		this->revoked->destroy_function(this->revoked, (void*)revoked_destroy);
-		this->crl_uris->destroy_function(this->crl_uris, (void*)cdp_destroy);
+		this->crl_uris->destroy_function(this->crl_uris,
+										 (void*)x509_cdp_destroy);
+		signature_params_destroy(this->scheme);
 		DESTROY_IF(this->issuer);
 		free(this->authKeyIdentifier.ptr);
 		free(this->encoding.ptr);
@@ -718,6 +718,7 @@ static bool generate(private_x509_crl_t *this, certificate_t *cert,
 {
 	chunk_t extensions = chunk_empty, certList = chunk_empty, serial;
 	chunk_t crlDistributionPoints = chunk_empty, baseCrlNumber = chunk_empty;
+	chunk_t sig_scheme = chunk_empty;
 	enumerator_t *enumerator;
 	crl_reason_t reason;
 	time_t date;
@@ -730,10 +731,20 @@ static bool generate(private_x509_crl_t *this, certificate_t *cert,
 
 	this->authKeyIdentifier = chunk_clone(x509->get_subjectKeyIdentifier(x509));
 
-	/* select signature scheme */
-	this->algorithm = hasher_signature_algorithm_to_oid(digest_alg,
-														key->get_type(key));
-	if (this->algorithm == OID_UNKNOWN)
+	/* select signature scheme, if not already specified */
+	if (!this->scheme)
+	{
+		INIT(this->scheme,
+			.scheme = signature_scheme_from_oid(
+								hasher_signature_algorithm_to_oid(digest_alg,
+												key->get_type(key))),
+		);
+	}
+	if (this->scheme->scheme == SIGN_UNKNOWN)
+	{
+		return FALSE;
+	}
+	if (!signature_params_build(this->scheme, &sig_scheme))
 	{
 		return FALSE;
 	}
@@ -787,23 +798,24 @@ static bool generate(private_x509_crl_t *this, certificate_t *cert,
 								asn1_integer("c", this->crlNumber))),
 						crlDistributionPoints, baseCrlNumber));
 
-	this->tbsCertList = asn1_wrap(ASN1_SEQUENCE, "cmcmmmm",
+	this->tbsCertList = asn1_wrap(ASN1_SEQUENCE, "cccmmmm",
 							ASN1_INTEGER_1,
-							asn1_algorithmIdentifier(this->algorithm),
+							sig_scheme,
 							this->issuer->get_encoding(this->issuer),
 							asn1_from_time(&this->thisUpdate, ASN1_UTCTIME),
 							asn1_from_time(&this->nextUpdate, ASN1_UTCTIME),
 							asn1_wrap(ASN1_SEQUENCE, "m", certList),
 							extensions);
 
-	if (!key->sign(key, signature_scheme_from_oid(this->algorithm),
+	if (!key->sign(key, this->scheme->scheme, this->scheme->params,
 				   this->tbsCertList, &this->signature))
 	{
+		chunk_free(&sig_scheme);
 		return FALSE;
 	}
 	this->encoding = asn1_wrap(ASN1_SEQUENCE, "cmm",
 							this->tbsCertList,
-							asn1_algorithmIdentifier(this->algorithm),
+							sig_scheme,
 							asn1_bitstring("c", this->signature));
 	return TRUE;
 }
@@ -841,6 +853,10 @@ x509_crl_t *x509_crl_gen(certificate_type_t type, va_list args)
 			case BUILD_SERIAL:
 				crl->crlNumber = va_arg(args, chunk_t);
 				crl->crlNumber = chunk_clone(crl->crlNumber);
+				continue;
+			case BUILD_SIGNATURE_SCHEME:
+				crl->scheme = va_arg(args, signature_params_t*);
+				crl->scheme = signature_params_clone(crl->scheme);
 				continue;
 			case BUILD_DIGEST_ALG:
 				digest_alg = va_arg(args, int);

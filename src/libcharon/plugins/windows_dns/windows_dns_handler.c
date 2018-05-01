@@ -41,6 +41,57 @@ IID MY_IID_IWbemLocator =    { 0xDC12A687, 0x737F, 0x11CF, { 0x88, 0x4D, 0x00, 0
 
 typedef struct private_windows_dns_handler_t private_windows_dns_handler_t;
 
+
+/**
+ * Server entry
+ */
+typedef struct {
+	/** address */
+	host_t *ip;
+	/** reference count */
+	int count;
+} server_t;
+
+/**
+ * Suffix entry
+ */
+typedef struct {
+	/** suffix */
+	char suffix[256];
+	/** reference count */
+	int count;
+} suffix_t;
+
+/**
+ * Clean up an server_t
+ */
+CALLBACK(server_destroy, void, server_t *this)
+{
+	this->ip->destroy(this->ip);
+	free(this);
+}
+
+/**
+* Find an address entry given its IP address
+*/
+static void find_server( linked_list_t *servers, host_t *ip, server_t **found )
+{
+	enumerator_t *enumerator;
+	server_t *server = NULL;
+	*found = NULL;
+
+	enumerator = servers->create_enumerator( servers );
+	while ( enumerator->enumerate( enumerator, &server ) )
+	{
+		if ( ip->ip_equals( ip, server->ip ) )
+		{
+			*found = server;
+			break;
+		}
+	}
+	enumerator->destroy( enumerator );
+}
+
 /**
  * Private data of an windows_dns_handler_t object.
  */
@@ -55,6 +106,16 @@ struct private_windows_dns_handler_t {
 	 * Mutex to access file exclusively
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * List of known DNS servers, as server_t
+	 */
+	linked_list_t *servers;
+
+	/**
+	 * Suffix currently assigned to the adapter
+	 */
+	suffix_t suffix;
 };
 
 static const char *ErrToStr( int err )
@@ -388,7 +449,7 @@ static int DoExec( IWbemServices *pSvc, int iface_idx, wchar_t *method, wchar_t 
 	return res;
 }
 
-int SetAdapterDnsServersList( IWbemServices *pSvc, int iface_idx, SAFEARRAY *dnsServers )
+static int SetAdapterDnsServersList( IWbemServices *pSvc, int iface_idx, SAFEARRAY *dnsServers )
 {
 	VARIANT vDnsServers;
 	int res = 1;
@@ -410,7 +471,7 @@ int SetAdapterDnsServersList( IWbemServices *pSvc, int iface_idx, SAFEARRAY *dns
 /**
  * Adds the given DNS server to the TAP adapter
  */
-static bool add_dns_server(private_windows_dns_handler_t *this, host_t *addr)
+static bool add_dns_server(private_windows_dns_handler_t *this, host_t *ip)
 {
 	chunk_t dns_server_chunk;
 	wchar_t dns_server[64];
@@ -424,8 +485,8 @@ static bool add_dns_server(private_windows_dns_handler_t *this, host_t *addr)
 	do
 	{
 		/* Convert to wide character string */
-		dns_server_chunk = addr->get_address( addr );
-		if ( InetNtopW( addr->get_family( addr ), dns_server_chunk.ptr, dns_server, _countof( dns_server ) ) == NULL )
+		dns_server_chunk = ip->get_address( ip );
+		if ( InetNtopW( ip->get_family( ip ), dns_server_chunk.ptr, dns_server, _countof( dns_server ) ) == NULL )
 		{
 			DBG1( DBG_IKE, "Failed to convert chunk to IP address string" );
 			break;
@@ -458,7 +519,7 @@ static bool add_dns_server(private_windows_dns_handler_t *this, host_t *addr)
 			 wcscmp( dns_server, dns3 ) == 0 ||
 			 wcscmp( dns_server, dns4 ) == 0 )
 		{
-			DBG1( DBG_IKE, "DNS server IP address %H is already in the DNS server list", addr );
+			DBG1( DBG_IKE, "DNS server IP address %H is already in the DNS server list", ip );
 			res = 0;
 			break;
 		}
@@ -489,7 +550,7 @@ static bool add_dns_server(private_windows_dns_handler_t *this, host_t *addr)
 		// Set the DNS servers list into the adapter (takes ownership of dns_servers_arr)
 		res = SetAdapterDnsServersList( pSvc, iface_idx, dns_servers_arr );
 		if ( res != 0 )
-			DBG1( DBG_IKE, "Add DNS server %H to adapter: %s", addr, ErrToStr( res ) );
+			DBG1( DBG_IKE, "Add DNS server %H to adapter: %s", ip, ErrToStr( res ) );
 
 	} while ( 0 );
 
@@ -503,7 +564,7 @@ static bool add_dns_server(private_windows_dns_handler_t *this, host_t *addr)
 /**
  * Removes the given DNS server from the TAP adapter
  */
-static bool remove_dns_server(private_windows_dns_handler_t *this, host_t *addr)
+static bool remove_dns_server(private_windows_dns_handler_t *this, host_t *ip)
 {
 	chunk_t dns_server_chunk;
 	wchar_t dns_server[64];
@@ -517,8 +578,8 @@ static bool remove_dns_server(private_windows_dns_handler_t *this, host_t *addr)
 	do
 	{
 		/* Convert to wide character string */
-		dns_server_chunk = addr->get_address( addr );
-		if ( InetNtopW( addr->get_family( addr ), dns_server_chunk.ptr, dns_server, _countof( dns_server ) ) == NULL )
+		dns_server_chunk = ip->get_address( ip );
+		if ( InetNtopW( ip->get_family( ip ), dns_server_chunk.ptr, dns_server, _countof( dns_server ) ) == NULL )
 		{
 			DBG1( DBG_IKE, "Failed to convert chunk to IP address string" );
 			break;
@@ -551,7 +612,7 @@ static bool remove_dns_server(private_windows_dns_handler_t *this, host_t *addr)
 			 wcscmp( dns_server, dns3 ) != 0 &&
 			 wcscmp( dns_server, dns4 ) != 0 )
 		{
-			DBG1( DBG_IKE, "Dns server IP address %H is already not in the DNS server list", addr );
+			DBG1( DBG_IKE, "Dns server IP address %H is already not in the DNS server list", ip );
 			res = 0;
 			break;
 		}
@@ -580,7 +641,7 @@ static bool remove_dns_server(private_windows_dns_handler_t *this, host_t *addr)
 		// Set the DNS servers list into the adapter (takes ownership of dns_servers_arr)
 		res = SetAdapterDnsServersList( pSvc, iface_idx, dns_servers_arr );
 		if ( res != 0 )
-			DBG1( DBG_IKE, "Remove DNS server %H from adapter: %s", addr, ErrToStr( res ) );
+			DBG1( DBG_IKE, "Remove DNS server %H from adapter: %s", ip, ErrToStr( res ) );
 
 	} while ( 0 );
 
@@ -658,29 +719,55 @@ METHOD( attribute_handler_t, handle, bool,
 	if ( type == INTERNAL_IP4_DNS ||
 		 type == INTERNAL_IP6_DNS )
 	{
-		host_t *addr = host_create_from_chunk( type == INTERNAL_IP4_DNS ? AF_INET : AF_INET6, data, 0 );
-		if ( !addr || addr->is_anyaddr( addr ) )
+		server_t *server = NULL;
+		host_t *ip = host_create_from_chunk( type == INTERNAL_IP4_DNS ? AF_INET : AF_INET6, data, 0 );
+		if ( !ip || ip->is_anyaddr( ip ) )
 		{
-			DESTROY_IF( addr );
+			DESTROY_IF( ip );
 			return FALSE;
 		}
 
-		DBG1( DBG_IKE, "Adding DNS server %H to the TAP adapter", addr );
+		DBG1( DBG_IKE, "Adding DNS server %H to the TAP adapter", ip );
 
 		this->mutex->lock( this->mutex );
-		handled = add_dns_server( this, addr );
-		this->mutex->unlock( this->mutex );
-		addr->destroy( addr );
 
-		if ( !handled )
+		// Check if we've already added this server
+		find_server(this->servers, ip, &server);
+		if ( server )
 		{
-			DBG1( DBG_IKE, "adding DNS server failed" );
+			// Yep. Just increment the reference count
+			server->count++;
+			DBG1( DBG_IKE, "%H already in servers list, count = %d", ip, server->count );
+			handled = TRUE;
 		}
+		else
+		{
+			// Nope. Do the add
+			DBG1( DBG_IKE, "%H not in servers list, doing add", ip );
+			handled = add_dns_server( this, ip );
+
+			if ( handled )
+			{
+				INIT( server,
+					  .ip = ip->clone( ip ),
+					  .count = 1
+				);
+				this->servers->insert_last( this->servers, server );
+			}
+			else
+			{
+				DBG1( DBG_IKE, "adding DNS server failed" );
+			}
+		}
+
+		this->mutex->unlock( this->mutex );
+
+		ip->destroy( ip );
+
 	}
 	else if ( type == UNITY_DEF_DOMAIN )
 	{
-		char suffix_asc[256] = { 0 };
-		wchar_t suffix[256];
+		char suffix[256] = { 0 };
 
 		// Maximum domain name length is 253
 		if ( data.len > 253 )
@@ -689,20 +776,53 @@ METHOD( attribute_handler_t, handle, bool,
 			return FALSE;
 		}
 
-		// We need both ASCII (for logging) and wide character (for WMI) versions os the domain
-		memcpy( suffix_asc, data.ptr, data.len );
-		swprintf_s( suffix, _countof( suffix ), L"%S", suffix_asc );
-
-		DBG1( DBG_IKE, "Setting DNS domain %s into the TAP adapter", suffix_asc );
+		memcpy( suffix, data.ptr, data.len );
+		DBG1( DBG_IKE, "Setting DNS suffix %s into the TAP adapter", suffix );
 
 		this->mutex->lock( this->mutex );
-		handled = set_dns_suffix( suffix );
-		this->mutex->unlock( this->mutex );
 
-		if ( !handled )
+		// Do we already have a suffix?
+		if ( this->suffix.count > 0 )
 		{
-			DBG1( DBG_IKE, "setting DNS domain failed" );
+			// Is it the same as the one being added?
+			if ( strcmp( suffix, this->suffix.suffix ) == 0 )
+			{
+				// Same, just update the reference count
+				this->suffix.count++;
+				DBG1( DBG_IKE, "Domain suffix %s already added, count = %d", suffix, this->suffix.count );
+				handled = TRUE;
+			}
+			else
+			{
+				// Different. Reset the reference count so it gets added
+				this->suffix.count = 0;
+				DBG1( DBG_IKE, "Domain suffix %s is different than existing suffix %s - resetting", suffix, this->suffix.suffix );
+			}
 		}
+
+		// Check again since the count could have been reset above
+		if ( this->suffix.count == 0 )
+		{
+			// WMI needs a wide character version of the suffix
+			wchar_t suffixW[256];
+			swprintf_s( suffixW, _countof( suffixW ), L"%S", suffix );
+
+			DBG1( DBG_IKE, "Domain suffix %s not in virtual adapter - adding", suffix );
+			handled = set_dns_suffix( suffixW );
+			if ( handled )
+			{
+				// Save the suffix and set the count
+				strncpy_s( this->suffix.suffix, _countof(this->suffix.suffix), suffix, _TRUNCATE );
+				this->suffix.count = 1;
+				DBG1( DBG_IKE, "Domain suffix %s added to virtual adapter", suffix );
+			}
+			else
+			{
+				DBG1( DBG_IKE, "setting DNS domain failed" );
+			}
+		}
+
+		this->mutex->unlock( this->mutex );
 	}
 
 	return handled;
@@ -717,28 +837,53 @@ METHOD(attribute_handler_t, release, void,
 	if ( type == INTERNAL_IP4_DNS ||
 		 type == INTERNAL_IP6_DNS )
 	{
-		host_t *addr = host_create_from_chunk( type == INTERNAL_IP4_DNS ? AF_INET : AF_INET6, data, 0 );
-		if ( !addr || addr->is_anyaddr( addr ) )
+		server_t *server = NULL;
+		host_t *ip = host_create_from_chunk( type == INTERNAL_IP4_DNS ? AF_INET : AF_INET6, data, 0 );
+		if ( !ip || ip->is_anyaddr( ip ) )
 		{
-			DESTROY_IF( addr );
+			DESTROY_IF( ip );
 			return;
 		}
 
-		DBG1( DBG_IKE, "Removing DNS server %H from the TAP adapter", addr );
+		DBG1( DBG_IKE, "Removing DNS server %H from the TAP adapter", ip );
 
 		this->mutex->lock( this->mutex );
-		handled = remove_dns_server( this, addr );
-		this->mutex->unlock( this->mutex );
-		addr->destroy( addr );
 
-		if ( !handled )
+		// Find the server
+		find_server( this->servers, ip, &server );
+		if ( server )
 		{
-			DBG1( DBG_IKE, "removing DNS server failed" );
+			server->count--;
+			if ( server->count == 0 )
+			{
+				DBG1( DBG_IKE, "%H count is 0, doing remove", ip );
+				this->servers->remove( this->servers, server, NULL );
+				server_destroy( server );
+				handled = remove_dns_server( this, ip );
+				if ( !handled )
+				{
+					DBG1( DBG_IKE, "removing DNS server failed" );
+				}
+			}
+			else
+			{
+				DBG1( DBG_IKE, "%H still in servers list, count = %d", ip, server->count );
+				handled = TRUE;
+			}
 		}
+		else
+		{
+			DBG1( DBG_IKE, "DNS server %H not in servers list - nothing more to do", ip );
+			handled = TRUE;
+		}
+
+		this->mutex->unlock( this->mutex );
+
+		ip->destroy( ip );
 	}
 	else if ( type == UNITY_DEF_DOMAIN )
 	{
-		char suffix_asc[256] = { 0 };
+		char suffix[256] = { 0 };
 
 		// Maximum domain name length is 253
 		if ( data.len > 253 )
@@ -747,17 +892,45 @@ METHOD(attribute_handler_t, release, void,
 			return;
 		}
 
-		memcpy( suffix_asc, data.ptr, data.len );
-		DBG1( DBG_IKE, "Removing DNS domain %s from the TAP adapter", suffix_asc );
+		memcpy( suffix, data.ptr, data.len );
+		DBG1( DBG_IKE, "Removing DNS suffix %s from the TAP adapter", suffix );
 
 		this->mutex->lock( this->mutex );
-		handled = set_dns_suffix( L"" );
-		this->mutex->unlock( this->mutex );
 
-		if ( !handled )
+		if ( this->suffix.count == 0 )
 		{
-			DBG1( DBG_IKE, "removing DNS domain failed" );
+			DBG1( DBG_IKE, "No suffixes assigned to the TAP adapter - nothing to do" );
+			handled = TRUE;
 		}
+		else
+		{
+			if ( strcmp( this->suffix.suffix, suffix ) != 0 )
+			{
+				DBG1( DBG_IKE, "Suffix %s is not assigned to the TAP adapter - nothing to do", suffix );
+				handled = TRUE;
+			}
+			else
+			{
+				--this->suffix.count;
+				if ( this->suffix.count == 0 )
+				{
+					DBG1( DBG_IKE, "Suffix count is 0 - doing remove" );
+
+					handled = set_dns_suffix( L"" );
+					if ( !handled )
+					{
+						DBG1( DBG_IKE, "removing DNS suffix failed" );
+					}
+				}
+				else
+				{
+					DBG1( DBG_IKE, "Suffix count is %d - nothing more to do", this->suffix.count );
+					handled = TRUE;
+				}
+			}
+		}
+
+		this->mutex->unlock( this->mutex );
 	}
 }
 
@@ -842,6 +1015,7 @@ METHOD(windows_dns_handler_t, destroy, void,
 	private_windows_dns_handler_t *this)
 {
 	this->mutex->destroy(this->mutex);
+	this->servers->destroy_function(this->servers, (void*)server_destroy);
 	free(this);
 }
 
@@ -862,6 +1036,10 @@ windows_dns_handler_t *windows_dns_handler_create()
 			.destroy = _destroy,
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.servers = linked_list_create(),
+		.suffix = {
+			  .count = 0,
+		  },
 	);
 
 	return &this->public;

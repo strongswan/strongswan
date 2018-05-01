@@ -10,3 +10,7 @@ charon.plugins.systime-fix.threshold =
 
 charon.plugins.systime-fix.threshold_format = %Y
 	**strptime**(3) format used to parse threshold option.
+
+charon.plugins.systime-fix.timeout = 0s
+	How long to wait for a valid system time if an interval is configured. 0 to
+	recheck indefinitely.

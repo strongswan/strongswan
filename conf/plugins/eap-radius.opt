@@ -13,6 +13,10 @@ charon.plugins.eap-radius.accounting_requires_vip = no
 	If enabled, accounting is disabled unless an IKE_SA has at least one
 	virtual IP. Only for IKEv2, for IKEv1 a virtual IP is strictly necessary.
 
+charon.plugins.eap-radius.accounting_send_class = no
+	If enabled, adds the Class attributes received in Access-Accept message to
+	the RADIUS accounting messages.
+
 charon.plugins.eap-radius.class_group = no
 	Use class attributes in Access-Accept messages as group membership
 	information.

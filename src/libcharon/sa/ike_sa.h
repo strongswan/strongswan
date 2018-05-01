@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2016 Tobias Brunner
+ * Copyright (C) 2006-2017 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -646,20 +646,6 @@ struct ike_sa_t {
 	 */
 	bool (*has_condition) (ike_sa_t *this, ike_condition_t condition);
 
-	/**
-	 * Get the number of queued MOBIKE address updates.
-	 *
-	 * @return				number of pending updates
-	 */
-	uint32_t (*get_pending_updates)(ike_sa_t *this);
-
-	/**
-	 * Set the number of queued MOBIKE address updates.
-	 *
-	 * @param updates		number of pending updates
-	 */
-	void (*set_pending_updates)(ike_sa_t *this, uint32_t updates);
-
 #ifdef ME
 	/**
 	 * Activate mediation server functionality for this IKE_SA.
@@ -869,7 +855,7 @@ struct ike_sa_t {
 	 * @param message_id	ID of the request to retransmit
 	 * @return
 	 *						- SUCCESS
-	 *						- NOT_FOUND if request doesn't have to be retransmited
+	 *						- NOT_FOUND if request doesn't have to be retransmitted
 	 */
 	status_t (*retransmit) (ike_sa_t *this, uint32_t message_id);
 
@@ -1014,7 +1000,7 @@ struct ike_sa_t {
 	/**
 	 * Rekey the IKE_SA.
 	 *
-	 * Sets up a new IKE_SA, moves all CHILDs to it and deletes this IKE_SA.
+	 * Sets up a new IKE_SA, moves all CHILD_SAs to it and deletes this IKE_SA.
 	 *
 	 * @return				- SUCCESS, if IKE_SA rekeying initiated
 	 */
@@ -1169,9 +1155,11 @@ struct ike_sa_t {
 	void (*inherit_post) (ike_sa_t *this, ike_sa_t *other);
 
 	/**
-	 * Reset the IKE_SA, useable when initiating fails
+	 * Reset the IKE_SA, usable when initiating fails.
+	 *
+	 * @param new_spi		TRUE to allocate a new initiator SPI
 	 */
-	void (*reset) (ike_sa_t *this);
+	void (*reset) (ike_sa_t *this, bool new_spi);
 
 	/**
 	 * Destroys a ike_sa_t object.

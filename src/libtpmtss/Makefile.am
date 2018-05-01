@@ -48,5 +48,3 @@ if MONOLITHIC
   libtpmtss_la_LIBADD += plugins/tpm/libstrongswan-tpm.la
 endif
 endif
-
-

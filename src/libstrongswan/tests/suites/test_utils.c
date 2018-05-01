@@ -115,6 +115,54 @@ START_TEST(test_timeval_add_ms)
 END_TEST
 
 /*******************************************************************************
+ * timespan_from_string
+ */
+
+static struct {
+	char *s;
+	char *u;
+	bool v;
+	time_t t;
+} ts_data[] = {
+	{NULL,	NULL,	FALSE,	0},
+	{"",	NULL,	FALSE,	0},
+	{"a",	NULL,	FALSE,	0},
+	{"0",	NULL,	TRUE,	0},
+	{"5",	NULL,	TRUE,	5},
+	{"5s",	NULL,	TRUE,	5},
+	{"5m",	NULL,	TRUE,	300},
+	{"5ms",	NULL,	TRUE,	300},
+	{"5h",	NULL,	TRUE,	18000},
+	{"5d",	NULL,	TRUE,	432000},
+	{"5x",	NULL,	FALSE,	0},
+	{"5",	"",		TRUE,	5},
+	{"5",	"m",	TRUE,	300},
+	{"5",	"ms",	TRUE,	300},
+	{"5",	"x",	FALSE,	0},
+	{"5x",	"m",	FALSE,	0},
+	{"18446744073709551616",	NULL,	FALSE,	0},
+};
+
+START_TEST(test_timespan_from_string)
+{
+	time_t val = 42;
+
+	ck_assert(timespan_from_string(ts_data[_i].s, ts_data[_i].u,
+								   NULL) == ts_data[_i].v);
+	ck_assert(timespan_from_string(ts_data[_i].s, ts_data[_i].u,
+								   &val) == ts_data[_i].v);
+	if (ts_data[_i].v)
+	{
+		ck_assert_int_eq(val, ts_data[_i].t);
+	}
+	else
+	{
+		ck_assert_int_eq(val, 42);
+	}
+}
+END_TEST
+
+/*******************************************************************************
  * htoun/untoh
  */
 
@@ -829,8 +877,23 @@ static struct {
 	{"/0xff",		TRUE,  { 0, 0xff }},
 	{"/x",			FALSE, { 0 }},
 	{"x/x",			FALSE, { 0 }},
-	{"0xffffffff/0x0000ffff",	TRUE, { 0x0000ffff, 0x0000ffff }},
-	{"0xffffffff/0xffffffff",	TRUE, { 0xffffffff, 0xffffffff }},
+	{"0xfffffff0/0x0000ffff",	TRUE,  { 0x0000fff0, 0x0000ffff }},
+	{"%unique",					TRUE,  { MARK_UNIQUE, 0xffffffff }},
+	{"%unique/",				TRUE,  { MARK_UNIQUE, 0 }},
+	{"%unique/0x0000ffff",		TRUE,  { MARK_UNIQUE, 0x0000ffff }},
+	{"%unique/0xffffffff",		TRUE,  { MARK_UNIQUE, 0xffffffff }},
+	{"%unique0xffffffffff",		FALSE, { 0, 0 }},
+	{"0xffffffff/0x0000ffff",	TRUE,  { MARK_UNIQUE, 0x0000ffff }},
+	{"0xffffffff/0xffffffff",	TRUE,  { MARK_UNIQUE, 0xffffffff }},
+	{"%unique-dir",				TRUE,  { MARK_UNIQUE_DIR, 0xffffffff }},
+	{"%unique-dir/",			TRUE,  { MARK_UNIQUE_DIR, 0 }},
+	{"%unique-dir/0x0000ffff",	TRUE,  { MARK_UNIQUE_DIR, 0x0000ffff }},
+	{"%unique-dir/0xffffffff",	TRUE,  { MARK_UNIQUE_DIR, 0xffffffff }},
+	{"%unique-dir0xffffffff",	FALSE, { 0, 0 }},
+	{"0xfffffffe/0x0000ffff",	TRUE,  { MARK_UNIQUE_DIR, 0x0000ffff }},
+	{"0xfffffffe/0xffffffff",	TRUE,  { MARK_UNIQUE_DIR, 0xffffffff }},
+	{"%unique-/0xffffffff",		FALSE, { 0, 0 }},
+	{"%unique-foo/0xffffffff",	FALSE, { 0, 0 }},
 };
 
 START_TEST(test_mark_from_string)
@@ -856,15 +919,20 @@ END_TEST
 static struct {
 	key_type_t type;
 	int size;
-	signature_scheme_t expected[4];
+	signature_scheme_t expected[7];
 } scheme_data[] = {
-	{KEY_RSA,   1024, { SIGN_RSA_EMSA_PKCS1_SHA2_256, SIGN_RSA_EMSA_PKCS1_SHA2_384,
-						SIGN_RSA_EMSA_PKCS1_SHA2_512, SIGN_UNKNOWN }},
-	{KEY_RSA,   2048, { SIGN_RSA_EMSA_PKCS1_SHA2_256, SIGN_RSA_EMSA_PKCS1_SHA2_384,
-						SIGN_RSA_EMSA_PKCS1_SHA2_512, SIGN_UNKNOWN }},
-	{KEY_RSA,   4096, { SIGN_RSA_EMSA_PKCS1_SHA2_384, SIGN_RSA_EMSA_PKCS1_SHA2_512,
+	{KEY_RSA,   1024, { SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PSS,
+						SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PKCS1_SHA2_256,
+						SIGN_RSA_EMSA_PKCS1_SHA2_384, SIGN_RSA_EMSA_PKCS1_SHA2_512,
 						SIGN_UNKNOWN }},
-	{KEY_RSA,   8192, { SIGN_RSA_EMSA_PKCS1_SHA2_512, SIGN_UNKNOWN }},
+	{KEY_RSA,   2048, { SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PSS,
+						SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PKCS1_SHA2_256,
+						SIGN_RSA_EMSA_PKCS1_SHA2_384, SIGN_RSA_EMSA_PKCS1_SHA2_512,
+						SIGN_UNKNOWN }},
+	{KEY_RSA,   4096, { SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PSS,
+						SIGN_RSA_EMSA_PKCS1_SHA2_384, SIGN_RSA_EMSA_PKCS1_SHA2_512,
+						SIGN_UNKNOWN }},
+	{KEY_RSA,   8192, { SIGN_RSA_EMSA_PSS, SIGN_RSA_EMSA_PKCS1_SHA2_512, SIGN_UNKNOWN }},
 	{KEY_ECDSA,  256, { SIGN_ECDSA_WITH_SHA256_DER, SIGN_ECDSA_WITH_SHA384_DER,
 						SIGN_ECDSA_WITH_SHA512_DER, SIGN_UNKNOWN }},
 	{KEY_ECDSA,  384, { SIGN_ECDSA_WITH_SHA384_DER, SIGN_ECDSA_WITH_SHA512_DER,
@@ -880,16 +948,16 @@ static struct {
 START_TEST(test_signature_schemes_for_key)
 {
 	enumerator_t  *enumerator;
-	signature_scheme_t scheme;
+	signature_params_t *params;
 	int i;
 
 	enumerator = signature_schemes_for_key(scheme_data[_i].type, scheme_data[_i].size);
 	for (i = 0; scheme_data[_i].expected[i] != SIGN_UNKNOWN; i++)
 	{
-		ck_assert(enumerator->enumerate(enumerator, &scheme));
-		ck_assert_int_eq(scheme_data[_i].expected[i], scheme);
+		ck_assert(enumerator->enumerate(enumerator, &params));
+		ck_assert_int_eq(scheme_data[_i].expected[i], params->scheme);
 	}
-	ck_assert(!enumerator->enumerate(enumerator, &scheme));
+	ck_assert(!enumerator->enumerate(enumerator, &params));
 	enumerator->destroy(enumerator);
 }
 END_TEST
@@ -919,6 +987,10 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("timeval_add_ms");
 	tcase_add_test(tc, test_timeval_add_ms);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("timespan_from_string");
+	tcase_add_loop_test(tc, test_timespan_from_string, 0, countof(ts_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("htoun,untoh");

@@ -33,7 +33,15 @@ const chunk_t ASN1_INTEGER_1 = chunk_from_chars(0x02, 0x01, 0x01);
 const chunk_t ASN1_INTEGER_2 = chunk_from_chars(0x02, 0x01, 0x02);
 
 /*
- * Defined in header.
+ * Described in header
+ */
+chunk_t asn1_algorithmIdentifier_params(int oid, chunk_t params)
+{
+	return asn1_wrap(ASN1_SEQUENCE, "mm", asn1_build_known_oid(oid), params);
+}
+
+/*
+ * Described in header
  */
 chunk_t asn1_algorithmIdentifier(int oid)
 {
@@ -55,7 +63,7 @@ chunk_t asn1_algorithmIdentifier(int oid)
 			parameters = asn1_simple_object(ASN1_NULL, chunk_empty);
 			break;
 	}
-	return asn1_wrap(ASN1_SEQUENCE, "mm", asn1_build_known_oid(oid), parameters);
+	return asn1_algorithmIdentifier_params(oid, parameters);
 }
 
 /*
@@ -607,6 +615,26 @@ uint64_t asn1_parse_integer_uint64(chunk_t blob)
 		val |= (uint64_t)blob.ptr[i];
 	}
 	return val;
+}
+
+/*
+ * Described in header
+ */
+chunk_t asn1_integer_from_uint64(uint64_t val)
+{
+	u_char buf[sizeof(val)];
+	chunk_t enc = chunk_empty;
+
+	if (val < 0x100)
+	{
+		buf[0] = (u_char)val;
+		return chunk_clone(chunk_create(buf, 1));
+	}
+	for (enc.ptr = buf + sizeof(val); val; enc.len++, val >>= 8)
+	{	/* fill the buffer from the end */
+		*(--enc.ptr) = val & 0xff;
+	}
+	return chunk_clone(enc);
 }
 
 /**

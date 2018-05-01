@@ -44,7 +44,9 @@ Usage:\n\
       name:    Name of the pool, as used in ipsec.conf rightsourceip=%%name\n\
       start:   Start address of the pool\n\
       end:     End address of the pool\n\
-      timeout: Lease time in hours, 0 for static leases\n\
+      timeout: Lease time in hours (use 'd', 'm', or 's' to alternatively\n\
+               configure the time in days, minutes or seconds, respectively),\n\
+               0 for static leases\n\
   \n\
   ipsec pool --add <name> --addresses <file> [--timeout <timeout>]\n\
   ipsec pool --replace <name> --addresses <file> [--timeout <timeout>]\n\
@@ -57,7 +59,9 @@ Usage:\n\
                are read from STDIN. Reading addresses stops at the end of file\n\
                or an empty line. Pools created with this command can not be\n\
                resized.\n\
-      timeout: Lease time in hours, 0 for static leases\n\
+      timeout: Lease time in hours (use 'd', 'm', or 's' to alternatively\n\
+               configure the time in days, minutes or seconds, respectively),\n\
+               0 for static leases\n\
   \n\
   ipsec pool --addattr <type> [--pool <name> [--identity <id>]]\n\
              --addr|--mask|--server|--subnet|--string|--hex <value>\n\

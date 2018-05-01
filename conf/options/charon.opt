@@ -31,7 +31,7 @@ charon.cert_cache = yes
 	memory.
 
 charon.cache_crls = no
-	Whether Certicate Revocation Lists (CRLs) fetched via HTTP or LDAP should
+	Whether Certificate Revocation Lists (CRLs) fetched via HTTP or LDAP should
 	be saved under a unique file name derived from the public key of the
 	Certification Authority (CA) to **/etc/ipsec.d/crls** (stroke) or
 	**/etc/swanctl/x509crl** (vici), respectively.
@@ -340,6 +340,9 @@ charon.routing_table
 
 charon.routing_table_prio
 	Priority of the routing table.
+
+charon.rsa_pss = no
+	Whether to use RSA with PSS padding instead of PKCS#1 padding by default.
 
 charon.send_delay = 0
 	Delay in ms for sending packets, to simulate larger RTT.

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2017 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -31,11 +32,15 @@ typedef struct xof_t xof_t;
  */
 enum ext_out_function_t {
 	XOF_UNDEFINED,
-	/** RFC 2437 PKCS#1 */
+	/** RFC 8017 PKCS#1 */
 	XOF_MGF1_SHA1,
-	/** RFC 2437 PKCS#1 */
+	/** RFC 8017 PKCS#1 */
+	XOF_MGF1_SHA224,
+	/** RFC 8017 PKCS#1 */
 	XOF_MGF1_SHA256,
-	/** RFC 2437 PKCS#1 */
+	/** RFC 8017 PKCS#1 */
+	XOF_MGF1_SHA384,
+	/** RFC 8017 PKCS#1 */
 	XOF_MGF1_SHA512,
 	/** FIPS 202 */
 	XOF_SHAKE_128,
@@ -110,5 +115,13 @@ struct xof_t {
 	 */
 	void (*destroy)(xof_t *this);
 };
+
+/**
+ * Determine an MGF1 XOF type for the given hash algorithm.
+ *
+ * @param alg			hash algorithm to map
+ * @return				MGF1 XOF type if available, XOF_UNDEFINED otherwise
+ */
+ext_out_function_t xof_mgf1_from_hash_algorithm(hash_algorithm_t alg);
 
 #endif /** XOF_H_ @}*/

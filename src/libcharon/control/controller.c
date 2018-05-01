@@ -294,10 +294,7 @@ METHOD(listener_t, ike_state_change_terminate, bool,
 		switch (state)
 		{
 			case IKE_DESTROYING:
-				if (ike_sa->get_state(ike_sa) == IKE_DELETING)
-				{	/* proper termination */
-					this->status = SUCCESS;
-				}
+				this->status = SUCCESS;
 				return listener_done(this);
 			default:
 				break;
@@ -366,7 +363,7 @@ METHOD(listener_t, child_state_change_terminate, bool,
 			case CHILD_DESTROYING:
 				switch (child_sa->get_state(child_sa))
 				{
-					case CHILD_DELETING:
+					case CHILD_DELETED:
 						/* proper delete */
 						this->status = SUCCESS;
 						break;
@@ -648,17 +645,6 @@ METHOD(job_t, terminate_child_execute, job_requeue_t,
 	listener->lock->lock(listener->lock);
 	listener->ike_sa = ike_sa;
 	listener->lock->unlock(listener->lock);
-
-	if (child_sa->get_state(child_sa) == CHILD_ROUTED)
-	{
-		DBG1(DBG_IKE, "unable to terminate, established "
-			 "CHILD_SA with ID %d not found", id);
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
-		listener->status = NOT_FOUND;
-		/* release listener */
-		listener_done(listener);
-		return JOB_REQUEUE_NONE;
-	}
 
 	if (ike_sa->delete_child_sa(ike_sa, child_sa->get_protocol(child_sa),
 					child_sa->get_spi(child_sa, TRUE), FALSE) != DESTROY_ME)

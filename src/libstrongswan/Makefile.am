@@ -6,7 +6,7 @@ asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
 collections/array.c \
 collections/linked_list.c crypto/crypters/crypter.c crypto/hashers/hasher.c \
-crypto/hashers/hash_algorithm_set.c \
+crypto/hashers/hash_algorithm_set.c crypto/proposal/proposal.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
 crypto/prfs/prf.c crypto/prfs/mac_prf.c crypto/pkcs5.c \
 crypto/rngs/rng.c crypto/prf_plus.c crypto/signers/signer.c \
@@ -18,6 +18,7 @@ crypto/xofs/xof.c crypto/xofs/xof_bitspender.c \
 credentials/credential_factory.c credentials/builder.c \
 credentials/cred_encoding.c credentials/keys/private_key.c \
 credentials/keys/public_key.c credentials/keys/shared_key.c \
+credentials/keys/signature_params.c \
 credentials/certificates/certificate.c credentials/certificates/crl.c \
 credentials/certificates/ocsp_response.c credentials/certificates/x509.c \
 credentials/certificates/certificate_printer.c \
@@ -68,7 +69,7 @@ asn1/asn1.h asn1/asn1_parser.h asn1/oid.h bio/bio_reader.h bio/bio_writer.h \
 collections/blocking_queue.h collections/enumerator.h collections/hashtable.h \
 collections/linked_list.h collections/array.h collections/dictionary.h \
 crypto/crypters/crypter.h crypto/hashers/hasher.h \
-crypto/hashers/hash_algorithm_set.h crypto/mac.h \
+crypto/hashers/hash_algorithm_set.h crypto/mac.h crypto/proposal/proposal.h \
 crypto/proposal/proposal_keywords.h crypto/proposal/proposal_keywords_static.h \
 crypto/prfs/prf.h crypto/prfs/mac_prf.h crypto/rngs/rng.h crypto/nonce_gen.h \
 crypto/prf_plus.h crypto/signers/signer.h crypto/signers/mac_signer.h \
@@ -79,6 +80,7 @@ crypto/xofs/xof.h crypto/xofs/xof_bitspender.h crypto/xofs/mgf1.h \
 credentials/credential_factory.h credentials/builder.h \
 credentials/cred_encoding.h credentials/keys/private_key.h \
 credentials/keys/public_key.h credentials/keys/shared_key.h \
+credentials/keys/signature_params.h \
 credentials/certificates/certificate.h credentials/certificates/x509.h \
 credentials/certificates/ac.h credentials/certificates/crl.h \
 credentials/certificates/pkcs10.h credentials/certificates/ocsp_request.h \
@@ -96,6 +98,7 @@ fetcher/fetcher_manager.h eap/eap.h pen/pen.h ipsec/ipsec_types.h \
 networking/host.h networking/host_resolver.h networking/packet.h \
 networking/tun_device.h networking/streams/stream.h \
 networking/streams/stream_unix.h networking/streams/stream_service_unix.h \
+networking/streams/stream_service_systemd.h \
 networking/streams/stream_tcp.h networking/streams/stream_service_tcp.h \
 networking/streams/stream_service.h networking/streams/stream_manager.h \
 resolver/resolver.h resolver/resolver_response.h resolver/rr_set.h \
@@ -192,19 +195,28 @@ if USE_LIBCAP
   libstrongswan_la_LIBADD += -lcap
 endif
 
+if USE_SYSTEMD
+  AM_CPPFLAGS += $(systemd_CFLAGS) -DUSE_SYSTEMD
+  libstrongswan_la_SOURCES += networking/streams/stream_service_systemd.c
+  libstrongswan_la_LIBADD += $(systemd_LIBS)
+endif
+
 EXTRA_DIST = \
 asn1/oid.txt asn1/oid.pl \
 crypto/proposal/proposal_keywords_static.txt \
+crypto/proposal/proposal_keywords_static.h.in \
 plugins/plugin_constructors.py \
 Android.mk
 
 BUILT_SOURCES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
+$(srcdir)/crypto/proposal/proposal_keywords_static.h \
 $(srcdir)/crypto/proposal/proposal_keywords_static.c \
 settings/settings_parser.h
 
 MAINTAINERCLEANFILES = \
 $(srcdir)/asn1/oid.c $(srcdir)/asn1/oid.h \
+$(srcdir)/crypto/proposal/proposal_keywords_static.h \
 $(srcdir)/crypto/proposal/proposal_keywords_static.c
 
 $(srcdir)/asn1/oid.c :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
@@ -214,6 +226,12 @@ $(srcdir)/asn1/oid.c :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
 $(srcdir)/asn1/oid.h :	$(srcdir)/asn1/oid.pl $(srcdir)/asn1/oid.txt
 		$(AM_V_GEN) \
 		(cd $(srcdir)/asn1/ && $(PERL) oid.pl)
+
+$(srcdir)/crypto/proposal/proposal_keywords_static.h: $(srcdir)/crypto/proposal/proposal_keywords_static.h.in
+		$(AM_V_GEN) \
+		sed \
+		-e "s:\@GPERF_LEN_TYPE\@:$(GPERF_LEN_TYPE):" \
+		$< > $@
 
 $(srcdir)/crypto/proposal/proposal_keywords_static.c:	$(srcdir)/crypto/proposal/proposal_keywords_static.txt \
 														$(srcdir)/crypto/proposal/proposal_keywords_static.h

@@ -1,14 +1,95 @@
+strongswan-5.6.2
+----------------
+
+- Fixed a DoS vulnerability in the parser for PKCS#1 RSASSA-PSS signatures that
+  was caused by insufficient input validation.  One of the configurable
+  parameters in algorithm identifier structures for RSASSA-PSS signatures is the
+  mask generation function (MGF).  Only MGF1 is currently specified for this
+  purpose.  However, this in turn takes itself a parameter that specifies the
+  underlying hash function.  strongSwan's parser did not correctly handle the
+  case of this parameter being absent, causing an undefined data read.
+  This vulnerability has been registered as CVE-2018-6459.
+
+- The previously negotiated DH group is reused when rekeying an SA, instead of
+  using the first group in the configured proposals, which avoids an additional
+  exchange if the peer selected a different group via INVALID_KE_PAYLOAD when
+  the SA was created initially.
+  The selected DH group is also moved to the front of all sent proposals that
+  contain it and all proposals that don't are moved to the back in order to
+  convey the preference for this group to the peer.
+
+- Handling of MOBIKE task queuing has been improved. In particular, the response
+  to an address update is not ignored anymore if only an address list update or
+  DPD is queued.
+
+- The fallback drop policies installed to avoid traffic leaks when replacing
+  addresses in installed policies are now replaced by temporary drop policies,
+  which also prevent acquires because we currently delete and reinstall IPsec
+  SAs to update their addresses.
+
+- Access X.509 certificates held in non-volatile storage of a TPM 2.0
+  referenced via the NV index.
+
+- Adding the --keyid parameter to pki --print allows to print private keys
+  or certificates stored in a smartcard or a TPM 2.0.
+
+- Fixed proposal selection if a peer incorrectly sends DH groups in the ESP
+  proposals during IKE_AUTH and also if a DH group is configured in the local
+  ESP proposal and charon.prefer_configured_proposals is disabled.
+
+- MSKs received via RADIUS are now padded to 64 bytes to avoid compatibility
+  issues with EAP-MSCHAPv2 and PRFs that have a block size < 64 bytes (e.g.
+  AES-XCBC-PRF-128).
+
+- The tpm_extendpcr command line tool extends a digest into a TPM PCR.
+
+- Ported the NetworkManager backend from the deprecated libnm-glib to libnm.
+
+- The save-keys debugging/development plugin saves IKE and/or ESP keys to files
+  compatible with Wireshark.
+
+
 strongswan-5.6.1
 ----------------
 
-- The sec-updater tool checks for security updates dpkg-based repositories
+- In compliance with RFCs 8221 and 8247 several algorithms were removed from the
+  default ESP/AH and IKEv2 proposals, respectively (3DES, Blowfish and MD5 from
+  ESP/AH, MD5 and MODP-1024 from IKEv2).  These algorithms may still be used in
+  custom proposals.
+
+- Added support for RSASSA-PSS signatures.  For backwards compatibility they are
+  not used automatically by default, enable charon.rsa_pss to change that.  To
+  explicitly use or require such signatures with IKEv2 signature authentication
+  (RFC 7427), regardless of whether that option is enabled, use ike:rsa/pss...
+  authentication constraints.
+
+- The pki tool can optionally sign certificates/CRLs with RSASSA-PSS via the
+  `--rsa-padding pss` option.
+
+- The sec-updater tool checks for security updates in dpkg-based repositories
   (e.g. Debian/Ubuntu) and sets the security flags in the IMV policy database
-  accordingly. Using the sec-updater.sh script template the lookup can be
-  automated (e.g. via a cron job).
+  accordingly. Additionally for each new package version a SWID tag for the
+  given OS and HW architecture is created and stored in the database.
+  Using the sec-updater.sh script template the lookup can be automated
+  (e.g. via an hourly cron job).
 
 - The introduction of file versions in the IMV database scheme broke file
   reference hash measurements. This has been fixed by creating generic product
   versions having an empty package name.
+
+- A new timeout option for the systime-fix plugin stops periodic system time
+  checks after a while and enforces a certificate verification, closing or
+  reauthenticating all SAs with invalid certificates.
+
+- The IKE event counters, previously only available via ipsec listcounters, may
+  now be queried/reset via vici and the new swanctl --counters command. They are
+  provided by the new optional counters plugin.
+
+- Class attributes received in RADIUS Access-Accept messages may optionally be
+  added to RADIUS accounting messages.
+
+- Inbound marks may optionally be installed on the SA again (was removed with
+  5.5.2) by enabling the mark_in_sa option in swanctl.conf.
 
 
 strongswan-5.6.0
@@ -1340,7 +1421,7 @@ strongswan-4.4.1
 - The openssl plugin now supports X.509 certificate and CRL functions.
 
 - OCSP/CRL checking in IKEv2 has been moved to the revocation plugin, enabled
-  by default. Plase update manual load directives in strongswan.conf.
+  by default. Please update manual load directives in strongswan.conf.
 
 - RFC3779 ipAddrBlock constraint checking has been moved to the addrblock
   plugin, disabled by default. Enable it and update manual load directives
@@ -1802,7 +1883,7 @@ strongswan-4.2.8
 
 - Several MOBIKE improvements: Detect changes in NAT mappings in DPD exchanges,
   handle events if kernel detects NAT mapping changes in UDP-encapsulated
-  ESP packets (requires kernel patch), reuse old addesses in MOBIKE updates as
+  ESP packets (requires kernel patch), reuse old addresses in MOBIKE updates as
   long as possible and other fixes.
 
 - Fixed a bug in addr_in_subnet() which caused insertion of wrong source
@@ -2081,7 +2162,7 @@ strongswan-4.1.7
 
 - In NAT traversal situations and multiple queued Quick Modes,
   those pending connections inserted by auto=start after the
-  port floating from 500 to 4500 were erronously deleted.
+  port floating from 500 to 4500 were erroneously deleted.
 
 - Added a "forceencaps" connection parameter to enforce UDP encapsulation
   to surmount restrictive firewalls. NAT detection payloads are faked to
@@ -2675,7 +2756,7 @@ strongswan-2.6.0
 strongswan-2.5.7
 ----------------
 
-- CA certicates are now automatically loaded from a smartcard
+- CA certificates are now automatically loaded from a smartcard
   or USB crypto token and appear in the ipsec auto --listcacerts
   listing.
 
@@ -2788,7 +2869,7 @@ strongswan-2.5.1
 - Under the native IPsec of the Linux 2.6 kernel, a %trap eroute
   installed either by setting auto=route in ipsec.conf or by
   a connection put into hold, generates an XFRM_AQUIRE event
-  for each packet that wants to use the not-yet exisiting
+  for each packet that wants to use the not-yet existing
   tunnel. Up to now each XFRM_AQUIRE event led to an entry in
   the Quick Mode queue, causing multiple IPsec SA to be
   established in rapid succession. Starting with strongswan-2.5.1

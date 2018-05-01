@@ -55,7 +55,6 @@
 #include <bus/listeners/sys_logger.h>
 #include <bus/listeners/file_logger.h>
 #include <collections/array.h>
-#include <config/proposal.h>
 #include <plugins/plugin_feature.h>
 #include <kernel/kernel_handler.h>
 #include <processing/jobs/start_action_job.h>
@@ -988,11 +987,6 @@ bool libcharon_init()
 	/* set up hook to log dbg message in library via charons message bus */
 	dbg_old = dbg;
 	dbg = dbg_bus;
-
-	lib->printf_hook->add_handler(lib->printf_hook, 'P',
-								  proposal_printf_hook,
-								  PRINTF_HOOK_ARGTYPE_POINTER,
-								  PRINTF_HOOK_ARGTYPE_END);
 
 	if (lib->integrity &&
 		!lib->integrity->check(lib->integrity, "libcharon", libcharon_init))

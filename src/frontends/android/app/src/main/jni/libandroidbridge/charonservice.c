@@ -515,7 +515,7 @@ static void set_options(char *logfile)
  * Initialize the charonservice object
  */
 static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
-							   jboolean byod)
+							   char *appdir, jboolean byod)
 {
 	private_charonservice_t *this;
 	static plugin_feature_t features[] = {
@@ -526,6 +526,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
 		PLUGIN_CALLBACK(charonservice_register, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "android-backend"),
 				PLUGIN_DEPENDS(CUSTOM, "libcharon"),
+				PLUGIN_DEPENDS(CERT_DECODE, CERT_X509_CRL),
 		PLUGIN_REGISTER(FETCHER, android_fetcher_create),
 			PLUGIN_PROVIDE(FETCHER, "http://"),
 			PLUGIN_PROVIDE(FETCHER, "https://"),
@@ -544,7 +545,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
 			.get_network_manager = _get_network_manager,
 		},
 		.attr = android_attr_create(),
-		.creds = android_creds_create(),
+		.creds = android_creds_create(appdir),
 		.builder = vpnservice_builder_create(builder),
 		.network_manager = network_manager_create(service),
 		.sockets = linked_list_create(),
@@ -602,11 +603,11 @@ static void segv_handler(int signal)
  * Initialize charon and the libraries via JNI
  */
 JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
-	jobject builder, jstring jlogfile, jboolean byod)
+	jobject builder, jstring jlogfile, jstring jappdir, jboolean byod)
 {
 	struct sigaction action;
 	struct utsname utsname;
-	char *logfile, *plugins;
+	char *logfile, *appdir, *plugins;
 
 	/* logging for library during initialization, as we have no bus yet */
 	dbg = dbg_android;
@@ -640,7 +641,9 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 
 	charon->load_loggers(charon);
 
-	charonservice_init(env, this, builder, byod);
+	appdir = androidjni_convert_jstring(env, jappdir);
+	charonservice_init(env, this, builder, appdir, byod);
+	free(appdir);
 
 	if (uname(&utsname) != 0)
 	{
@@ -709,5 +712,33 @@ JNI_METHOD(CharonVpnService, initiate, void,
 
 	config = androidjni_convert_jstring(env, jconfig);
 	settings = settings_create_string(config);
+	free(config);
+
 	initiate(settings);
+}
+
+/**
+ * Utility function to verify proposal strings (static, so `this` is the class)
+ */
+JNI_METHOD_P(org_strongswan_android_utils, Utils, isProposalValid, jboolean,
+	jboolean ike, jstring proposal)
+{
+	proposal_t *prop;
+	char *str;
+	bool valid;
+
+	dbg = dbg_android;
+
+	if (!library_init(NULL, "charon"))
+	{
+		library_deinit();
+		return FALSE;
+	}
+	str = androidjni_convert_jstring(env, proposal);
+	prop = proposal_create_from_string(ike ? PROTO_IKE : PROTO_ESP, str);
+	valid = prop != NULL;
+	DESTROY_IF(prop);
+	free(str);
+	library_deinit();
+	return valid;
 }

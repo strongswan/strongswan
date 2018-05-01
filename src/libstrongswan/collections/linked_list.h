@@ -195,7 +195,7 @@ struct linked_list_t {
 	 * If a linked list contains objects with function pointers,
 	 * invoke() can call a method on each of the objects. The
 	 * method is specified by an offset of the function pointer,
-	 * which can be evalutated at compile time using the offsetof
+	 * which can be evaluated at compile time using the offsetof
 	 * macro, e.g.: list->invoke(list, offsetof(object_t, method));
 	 *
 	 * @param offset	offset of the method to invoke on objects

@@ -25,9 +25,9 @@ typedef struct certificate_t certificate_t;
 typedef enum certificate_type_t certificate_type_t;
 typedef enum cert_validation_t cert_validation_t;
 
-#include <library.h>
 #include <utils/identification.h>
 #include <credentials/keys/public_key.h>
+#include <credentials/keys/signature_params.h>
 #include <credentials/cred_encoding.h>
 
 /**
@@ -139,11 +139,12 @@ struct certificate_t {
 	 * Check if this certificate is issued and signed by a specific issuer.
 	 *
 	 * @param issuer	issuer's certificate
-	 * @param scheme	receives signature scheme used during verification
+	 * @param scheme	receives used signature scheme and parameters, if
+	 *					given (allocated)
 	 * @return			TRUE if certificate issued by issuer and trusted
 	 */
 	bool (*issued_by)(certificate_t *this, certificate_t *issuer,
-					  signature_scheme_t *scheme);
+					  signature_params_t **scheme);
 
 	/**
 	 * Get the public key associated to this certificate.

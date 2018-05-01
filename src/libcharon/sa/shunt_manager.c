@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Tobias Brunner
+ * Copyright (C) 2015-2017 Tobias Brunner
  * Copyright (C) 2011-2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -96,6 +96,7 @@ static bool install_shunt_policy(child_cfg_t *child)
 	status_t status = SUCCESS;
 	uint32_t manual_prio;
 	char *interface;
+	bool fwd_out;
 	ipsec_sa_cfg_t sa = { .mode = MODE_TRANSPORT };
 
 	switch (child->get_mode(child))
@@ -122,6 +123,7 @@ static bool install_shunt_policy(child_cfg_t *child)
 
 	manual_prio = child->get_manual_prio(child);
 	interface = child->get_interface(child);
+	fwd_out = child->has_option(child, OPT_FWD_OUT_POLICIES);
 
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
@@ -157,9 +159,11 @@ static bool install_shunt_policy(child_cfg_t *child)
 				.sa = &sa,
 			};
 			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
-			/* install "outbound" forward policy */
-			id.dir = POLICY_FWD;
-			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
+			if (fwd_out)
+			{	/* install "outbound" forward policy */
+				id.dir = POLICY_FWD;
+				status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
+			}
 			/* install in policy */
 			id = (kernel_ipsec_policy_id_t){
 				.dir = POLICY_IN,
@@ -194,6 +198,13 @@ METHOD(shunt_manager_t, install, bool,
 	entry_t *entry;
 	bool found = FALSE, success;
 
+	if (!ns)
+	{
+		DBG1(DBG_CFG, "missing namespace for shunt policy '%s'",
+			 cfg->get_name(cfg));
+		return FALSE;
+	}
+
 	/* check if not already installed */
 	this->lock->write_lock(this->lock);
 	if (this->installing == INSTALL_DISABLED)
@@ -220,7 +231,7 @@ METHOD(shunt_manager_t, install, bool,
 		return TRUE;
 	}
 	INIT(entry,
-		.ns = strdupnull(ns),
+		.ns = strdup(ns),
 		.cfg = cfg->get_ref(cfg),
 	);
 	this->shunts->insert_last(this->shunts, entry);
@@ -255,6 +266,7 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 	status_t status = SUCCESS;
 	uint32_t manual_prio;
 	char *interface;
+	bool fwd_out;
 	ipsec_sa_cfg_t sa = { .mode = MODE_TRANSPORT };
 
 	switch (child->get_mode(child))
@@ -281,6 +293,7 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 
 	manual_prio = child->get_manual_prio(child);
 	interface = child->get_interface(child);
+	fwd_out = child->has_option(child, OPT_FWD_OUT_POLICIES);
 
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
@@ -316,9 +329,12 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 				.sa = &sa,
 			};
 			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
-			/* uninstall "outbound" forward policy */
-			id.dir = POLICY_FWD;
-			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
+			if (fwd_out)
+			{
+				/* uninstall "outbound" forward policy */
+				id.dir = POLICY_FWD;
+				status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
+			}
 			/* uninstall in policy */
 			id = (kernel_ipsec_policy_id_t){
 				.dir = POLICY_IN,
@@ -360,7 +376,7 @@ METHOD(shunt_manager_t, uninstall, bool,
 	enumerator = this->shunts->create_enumerator(this->shunts);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (streq(ns, entry->ns) &&
+		if ((!ns || streq(ns, entry->ns)) &&
 			streq(name, entry->cfg->get_name(entry->cfg)))
 		{
 			this->shunts->remove_at(this->shunts, enumerator);

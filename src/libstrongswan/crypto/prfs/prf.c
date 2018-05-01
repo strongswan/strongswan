@@ -1,7 +1,8 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,6 +16,8 @@
  */
 
 #include "prf.h"
+
+#include <asn1/oid.h>
 
 ENUM_BEGIN(pseudo_random_function_names, PRF_UNDEFINED, PRF_CAMELLIA128_XCBC,
 	"PRF_UNDEFINED",
@@ -33,3 +36,25 @@ ENUM_NEXT(pseudo_random_function_names, PRF_HMAC_MD5, PRF_AES128_CMAC, PRF_CAMEL
 	"PRF_AES128_CMAC");
 ENUM_END(pseudo_random_function_names, PRF_AES128_CMAC);
 
+/*
+ * Described in header.
+ */
+pseudo_random_function_t pseudo_random_function_from_oid(int oid)
+{
+	switch (oid)
+	{
+		case OID_HMAC_SHA1:
+			return PRF_HMAC_SHA1;
+		case OID_HMAC_SHA256:
+			return PRF_HMAC_SHA2_256;
+		case OID_HMAC_SHA384:
+			return PRF_HMAC_SHA2_384;
+		case OID_HMAC_SHA512:
+			return PRF_HMAC_SHA2_512;
+		case OID_HMAC_SHA224:
+		case OID_HMAC_SHA512_224:
+		case OID_HMAC_SHA512_256:
+		default:
+			return PRF_UNDEFINED;
+	}
+}

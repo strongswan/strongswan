@@ -24,10 +24,13 @@
     0x06                     "C"						OID_COUNTRY
     0x07                     "L"						OID_LOCALITY
     0x08                     "ST"						OID_STATE_OR_PROVINCE
+    0x09                     "STREET"					OID_STREET_ADDRESS
     0x0A                     "O"						OID_ORGANIZATION
     0x0B                     "OU"						OID_ORGANIZATION_UNIT
     0x0C                     "T"						OID_TITLE
     0x0D                     "D"						OID_DESCRIPTION
+    0x10                     "postalAddress"			OID_POSTAL_ADDRESS
+    0x11                     "postalCode"				OID_POSTAL_CODE
     0x24                     "userCertificate"			OID_USER_CERTIFICATE
     0x29                     "N"						OID_NAME
     0x2A                     "G"						OID_GIVEN_NAME
@@ -95,8 +98,9 @@
                 0x04         "md5WithRSAEncryption"		OID_MD5_WITH_RSA
                 0x05         "sha-1WithRSAEncryption"	OID_SHA1_WITH_RSA
                 0x07         "id-RSAES-OAEP"			OID_RSAES_OAEP
-                0x08         "id-mgf1"
+                0x08         "id-mgf1"					OID_MGF1
                 0x09         "id-pSpecified"
+                0x0A         "RSASSA-PSS"				OID_RSASSA_PSS
                 0x0B         "sha256WithRSAEncryption"	OID_SHA256_WITH_RSA
                 0x0C         "sha384WithRSAEncryption"	OID_SHA384_WITH_RSA
                 0x0D         "sha512WithRSAEncryption"	OID_SHA512_WITH_RSA
@@ -146,6 +150,13 @@
             0x02             "digestAlgorithm"
               0x02           "md2"						OID_MD2
               0x05           "md5"						OID_MD5
+              0x07           "hmacWithSHA1"				OID_HMAC_SHA1
+              0x08           "hmacWithSHA224"			OID_HMAC_SHA224
+              0x09           "hmacWithSHA256"			OID_HMAC_SHA256
+              0x0A           "hmacWithSHA384"			OID_HMAC_SHA384
+              0x0B           "hmacWithSHA512"			OID_HMAC_SHA512
+              0x0C           "hmacWithSHA512-224"		OID_HMAC_SHA512_224
+              0x0D           "hmacWithSHA512-256"		OID_HMAC_SHA512_256
             0x03             "encryptionAlgorithm"
               0x07           "3des-ede-cbc"				OID_3DES_EDE_CBC
       0xCE                   ""
@@ -288,6 +299,7 @@
               0x01           "authorityInfoAccess"		OID_AUTHORITY_INFO_ACCESS
               0x03           "qcStatements"
               0x07           "ipAddrBlocks"				OID_IP_ADDR_BLOCKS
+              0x18           "tlsfeature"
             0x02             "id-qt"
               0x01           "cps"						OID_POLICY_QUALIFIER_CPS
               0x02           "unotice"					OID_POLICY_QUALIFIER_UNOTICE

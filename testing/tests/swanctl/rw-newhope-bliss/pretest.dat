@@ -4,9 +4,9 @@ dave::iptables-restore < /etc/iptables.rules
 moon::cd /etc/swanctl;  rm rsa/* x509/moonCert.pem  x509ca/strongswanCert.pem
 carol::cd /etc/swanctl; rm rsa/* x509/carolCert.pem x509ca/strongswanCert.pem
 dave::cd /etc/swanctl;  rm rsa/* x509/daveCert.pem  x509ca/strongswanCert.pem
-moon::service charon start 2> /dev/null
-carol::service charon start 2> /dev/null
-dave::service charon start 2> /dev/null
+moon::systemctl start strongswan-swanctl
+carol::systemctl start strongswan-swanctl
+dave::systemctl start strongswan-swanctl
 moon::expect-connection rw
 carol::expect-connection home
 carol::swanctl --initiate --child home 2> /dev/null

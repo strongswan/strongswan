@@ -75,7 +75,7 @@ METHOD(job_t, execute, job_requeue_t,
 					else
 					{
 						charon->traps->install(charon->traps, peer_cfg,
-											   child_cfg, 0);
+											   child_cfg);
 					}
 					break;
 				case ACTION_NONE:

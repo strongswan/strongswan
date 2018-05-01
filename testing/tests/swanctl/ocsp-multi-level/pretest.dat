@@ -1,6 +1,6 @@
-moon::service charon start 2> /dev/null
-carol::service charon start 2> /dev/null
-dave::service charon start 2> /dev/null
+moon::systemctl start strongswan-swanctl
+carol::systemctl start strongswan-swanctl
+dave::systemctl start strongswan-swanctl
 moon::expect-connection research
 carol::expect-connection home
 carol::swanctl --initiate --child alice 2> /dev/null

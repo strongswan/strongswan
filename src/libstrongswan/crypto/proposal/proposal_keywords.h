@@ -37,7 +37,7 @@
 
 /**
  * @defgroup proposal_keywords proposal_keywords
- * @{ @ingroup crypto
+ * @{ @ingroup proposal
  */
 
 #ifndef PROPOSAL_KEYWORDS_H_

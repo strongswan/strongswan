@@ -1,5 +1,5 @@
 /*
- * Copyrigth (C) 2012 Reto Buerki
+ * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  * Hochschule fuer Technik Rapperswil
  *

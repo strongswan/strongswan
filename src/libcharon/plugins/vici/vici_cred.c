@@ -434,7 +434,7 @@ CALLBACK(load_shared, vici_message_t*,
 	{
 		type = SHARED_IKE;
 	}
-	else if (strcaseeq(str, "eap") || streq(str, "xauth"))
+	else if (strcaseeq(str, "eap") || strcaseeq(str, "xauth"))
 	{
 		type = SHARED_EAP;
 	}

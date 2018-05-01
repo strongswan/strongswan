@@ -202,7 +202,7 @@ pkcs7_attributes_t *pkcs7_attributes_create(void)
 }
 
 /**
- * ASN.1 definition of the X.501 atttribute type
+ * ASN.1 definition of the X.501 attribute type
  */
 static const asn1Object_t attributesObjects[] = {
 	{ 0, "attributes",		ASN1_SET,		ASN1_LOOP }, /* 0 */

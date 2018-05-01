@@ -26,6 +26,7 @@
 #include <collections/hashtable.h>
 #include <utils/backtrace.h>
 #include <selectors/traffic_selector.h>
+#include <crypto/proposal/proposal.h>
 
 #define CHECKSUM_LIBRARY IPSEC_LIB_DIR"/libchecksum.so"
 
@@ -368,6 +369,8 @@ bool library_init(char *settings, const char *namespace)
 	pfh->add_handler(pfh, 'Y', identification_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
 	pfh->add_handler(pfh, 'R', traffic_selector_printf_hook,
+					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
+	pfh->add_handler(pfh, 'P', proposal_printf_hook,
 					 PRINTF_HOOK_ARGTYPE_POINTER, PRINTF_HOOK_ARGTYPE_END);
 
 	this->objects = hashtable_create((hashtable_hash_t)hash,

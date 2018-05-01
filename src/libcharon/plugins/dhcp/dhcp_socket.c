@@ -176,7 +176,7 @@ typedef struct __attribute__((packed)) {
 	char server_hostname[64];
 	char boot_filename[128];
 	uint32_t magic_cookie;
-	char options[252];
+	u_char options[252];
 } dhcp_t;
 
 /**
@@ -438,7 +438,7 @@ METHOD(dhcp_socket_t, release, void,
 	DBG1(DBG_CFG, "sending DHCP RELEASE for %H to %H", release, server);
 
 	chunk = release->get_address(release);
-	memcpy(&dhcp.client_address, chunk.ptr,
+	memcpy((char*)&dhcp.client_address, chunk.ptr,
 		   min(chunk.len, sizeof(dhcp.client_address)));
 
 	option = (dhcp_option_t*)&dhcp.options[optlen];

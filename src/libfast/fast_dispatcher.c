@@ -136,7 +136,7 @@ typedef struct {
 } session_entry_t;
 
 /**
- * create a session and instanciate controllers
+ * create a session and instantiate controllers
  */
 static fast_session_t* load_session(private_fast_dispatcher_t *this)
 {

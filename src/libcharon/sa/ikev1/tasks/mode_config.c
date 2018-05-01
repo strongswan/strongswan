@@ -547,7 +547,7 @@ static status_t build_reply(private_mode_config_t *this, message_t *message)
 												 type, value));
 	}
 	enumerator->destroy(enumerator);
-	/* if a client did not re-request all adresses, release them */
+	/* if a client did not re-request all addresses, release them */
 	enumerator = migrated->create_enumerator(migrated);
 	while (enumerator->enumerate(enumerator, &found))
 	{

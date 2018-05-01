@@ -220,6 +220,11 @@ struct private_kernel_pfkey_ipsec_t
 	bool install_routes;
 
 	/**
+	 * whether to install the route via internal interface
+	 */
+	bool route_via_internal;
+
+	/**
 	 * mutex to lock access to the PF_KEY socket
 	 */
 	mutex_t *mutex_pfkey;
@@ -1740,7 +1745,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 #ifdef __linux__
 			sa->sadb_sa_replay = min(data->replay_window, 32);
 #else
-			sa->sadb_sa_replay = (data->replay_window + 7) / 8;
+			sa->sadb_sa_replay = min((data->replay_window + 7) / 8, UINT8_MAX);
 #endif
 		}
 		sa->sadb_sa_auth = lookup_algorithm(INTEGRITY_ALGORITHM, data->int_alg);
@@ -1748,6 +1753,19 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 											   data->enc_alg);
 	}
 	PFKEY_EXT_ADD(msg, sa);
+
+#ifdef SADB_X_EXT_SA_REPLAY
+	if (data->inbound)
+	{
+		struct sadb_x_sa_replay *repl;
+
+		repl = (struct sadb_x_sa_replay*)PFKEY_EXT_ADD_NEXT(msg);
+		repl->sadb_x_sa_replay_exttype = SADB_X_EXT_SA_REPLAY;
+		repl->sadb_x_sa_replay_len = PFKEY_LEN(sizeof(struct sadb_x_sa_replay));
+		repl->sadb_x_sa_replay_replay = min(data->replay_window, UINT32_MAX-32);
+		PFKEY_EXT_ADD(msg, repl);
+	}
+#endif
 
 	sa2 = (struct sadb_x_sa2*)PFKEY_EXT_ADD_NEXT(msg);
 	sa2->sadb_x_sa2_exttype = SADB_X_EXT_SA2;
@@ -1960,6 +1978,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	PFKEY_EXT_COPY(msg, response.lft_soft);
 	PFKEY_EXT_COPY(msg, response.lft_hard);
 
+#ifndef __FreeBSD__
+	/* FreeBSD 11.1 does not allow key updates via SADB_UPDATE for mature SAs */
 	if (response.key_encr)
 	{
 		PFKEY_EXT_COPY(msg, response.key_encr);
@@ -1969,6 +1989,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	{
 		PFKEY_EXT_COPY(msg, response.key_auth);
 	}
+#endif
 
 #ifdef HAVE_NATT
 	if (data->new_encap)
@@ -2345,7 +2366,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 		/* if the IP is virtual, we install the route over the interface it has
 		 * been installed on. Otherwise we use the interface we use for IKE, as
 		 * this is required for example on Linux. */
-		if (is_virtual)
+		if (is_virtual || this->route_via_internal)
 		{
 			free(route->if_name);
 			route->if_name = NULL;
@@ -3148,6 +3169,9 @@ kernel_pfkey_ipsec_t *kernel_pfkey_ipsec_create()
 		.install_routes = lib->settings->get_bool(lib->settings,
 												  "%s.install_routes", TRUE,
 												  lib->ns),
+		.route_via_internal = lib->settings->get_bool(lib->settings,
+								"%s.plugins.kernel-pfkey.route_via_internal",
+								FALSE, lib->ns),
 	);
 
 	if (streq(lib->ns, "starter"))

@@ -519,7 +519,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		enumerator->destroy(enumerator);
 	}
 
-	/* authentication metod (class, actually) */
+	/* authentication method (class, actually) */
 	if (strpfx(auth, "ike:") ||
 		strpfx(auth, "pubkey") ||
 		strpfx(auth, "rsa") ||

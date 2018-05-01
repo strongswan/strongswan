@@ -77,7 +77,7 @@ METHOD(plugin_t, get_name, char*,
 }
 
 /**
- * Try to instanciate ea_aka_3gpp functions and card/provider backends
+ * Try to instantiate ea_aka_3gpp functions and card/provider backends
  */
 static bool register_functions(private_eap_aka_3gpp_t *this,
 							   plugin_feature_t *feature, bool reg, void *data)

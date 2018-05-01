@@ -13,7 +13,7 @@
  * The implementation was written so as to conform with Netscapes SSL.
  *
  * This library is free for commercial and non-commercial use as long as
- * the following conditions are aheared to.
+ * the following conditions are adhered to.
  *
  * Copyright remains Eric Young's, and as such any Copyright notices in
  * the code are not to be removed.
@@ -34,7 +34,7 @@
  *    must display the following acknowledgement:
  *    "This product includes cryptographic software written by
  *     Eric Young (eay@cryptsoft.com)"
- *    The word 'cryptographic' can be left out if the rouines from the library
+ *    The word 'cryptographic' can be left out if the routines from the library
  *    being used are not cryptographic related :-).
  * 4. If you include any Windows specific code (or a derivative thereof) from
  *    the apps directory (application code) you must include an acknowledgement:
@@ -309,7 +309,7 @@ YOU SHOULD NOT HAVE BOTH DES_RISC1 AND DES_RISC2 DEFINED!!!!!
 #endif
 
 /* The changes to this macro may help or hinder, depending on the
- * compiler and the achitecture.  gcc2 always seems to do well :-).
+ * compiler and the architecture.  gcc2 always seems to do well :-).
  * Inspired by Dana How <how@isl.stanford.edu>
  * DO NOT use the alternative version on machines with 8 byte longs.
  * It does not seem to work on the Alpha, even when DES_LONG is 4

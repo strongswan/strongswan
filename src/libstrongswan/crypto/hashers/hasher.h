@@ -27,7 +27,6 @@
 typedef enum hash_algorithm_t hash_algorithm_t;
 typedef struct hasher_t hasher_t;
 
-#include <library.h>
 #include <crypto/prfs/prf.h>
 #include <crypto/signers/signer.h>
 #include <credentials/keys/public_key.h>
@@ -73,6 +72,11 @@ extern enum_name_t *hash_algorithm_names;
  * Short names for hash_algorithm_names
  */
 extern enum_name_t *hash_algorithm_short_names;
+
+/**
+ * Uppercase short names for hash_algorithm_names
+ */
+extern enum_name_t *hash_algorithm_short_names_upper;
 
 /**
  * Generic interface for all hash functions.
@@ -129,6 +133,14 @@ struct hasher_t {
 	 */
 	void (*destroy)(hasher_t *this);
 };
+
+/**
+ * Returns the size of the hash for the given algorithm.
+ *
+ * @param alg			hash algorithm
+ * @return				size of hash or 0 if unknown
+ */
+size_t hasher_hash_size(hash_algorithm_t alg);
 
 /**
  * Conversion of ASN.1 OID to hash algorithm.
@@ -199,8 +211,10 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key);
  * Determine the hash algorithm associated with a given signature scheme.
  *
  * @param scheme		signature scheme
+ * @param params		optional parameters
  * @return				hash algorithm (could be HASH_UNKNOWN)
  */
-hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme);
+hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme,
+											  void *params);
 
 #endif /** HASHER_H_ @}*/

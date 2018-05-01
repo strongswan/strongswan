@@ -50,6 +50,21 @@ static backtrace_t *failure_backtrace;
 static bool worker_failed;
 
 /**
+ * Warning message buf
+ */
+static char warning_buf[4096];
+
+/**
+ * Source file warning was issued
+ */
+static const char *warning_file;
+
+/**
+ * Line of source file warning was issued
+ */
+static int warning_line;
+
+/**
  * See header.
  */
 test_suite_t* test_suite_create(const char *name)
@@ -419,6 +434,21 @@ void test_fail_vmsg(const char *file, int line, char *fmt, va_list args)
 
 	test_failure();
 }
+
+/**
+ * See header.
+ */
+void test_warn_msg(const char *file, int line, char *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vsnprintf(warning_buf, sizeof(warning_buf), fmt, args);
+	warning_line = line;
+	warning_file = file;
+	va_end(args);
+}
+
 /**
  * See header.
  */
@@ -444,6 +474,25 @@ int test_failure_get(char *msg, int len, const char **file)
 	msg[len - 1] = 0;
 	*file = failure_file;
 	return failure_line;
+}
+
+/**
+ * See header.
+ */
+int test_warning_get(char *msg, int len, const char **file)
+{
+	int line = warning_line;
+
+	if (!line)
+	{
+		return 0;
+	}
+	strncpy(msg, warning_buf, len - 1);
+	msg[len - 1] = 0;
+	*file = warning_file;
+	/* reset state */
+	warning_line = 0;
+	return line;
 }
 
 /**

@@ -1,2 +1,2 @@
-moon::service charon stop
-carol::service charon stop
+carol::systemctl stop strongswan-swanctl
+moon::systemctl stop strongswan-swanctl

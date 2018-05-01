@@ -59,12 +59,14 @@ import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.widget.TextInputLayoutHelper;
 import org.strongswan.android.utils.Constants;
 import org.strongswan.android.utils.IPRangeSet;
+import org.strongswan.android.utils.Utils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.OutOfMemoryError;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.security.KeyStore;
@@ -496,6 +498,8 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			}
 		}
 
+		profile.setIkeProposal(getProposal(obj, "ike-proposal", true));
+		profile.setEspProposal(getProposal(obj, "esp-proposal", false));
 		profile.setMTU(getInteger(obj, "mtu", Constants.MTU_MIN, Constants.MTU_MAX));
 		profile.setNATKeepAlive(getInteger(obj, "nat-keepalive", Constants.NAT_KEEPALIVE_MIN, Constants.NAT_KEEPALIVE_MAX));
 		JSONObject split = obj.optJSONObject("split-tunneling");
@@ -531,6 +535,19 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	{
 		Integer res = obj.optInt(key);
 		return res < min || res > max ? null : res;
+	}
+
+	private String getProposal(JSONObject obj, String key, boolean ike) throws JSONException
+	{
+		String value = obj.optString(key, null);
+		if (!TextUtils.isEmpty(value))
+		{
+			if (!Utils.isProposalValid(ike, value))
+			{
+				throw new JSONException(getString(R.string.profile_import_failed_value, key));
+			}
+		}
+		return value;
 	}
 
 	private String getSubnets(JSONObject split, String key) throws JSONException
@@ -715,7 +732,14 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			}
 			if (in != null)
 			{
-				result.Profile = streamToString(in);
+				try
+				{
+					result.Profile = streamToString(in);
+				}
+				catch (OutOfMemoryError e)
+				{	/* just use a generic exception */
+					result.ThrownException = new RuntimeException();
+				}
 			}
 			return result;
 		}

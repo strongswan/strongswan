@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 Tobias Brunner
+ * Copyright (C) 2009-2018 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -145,8 +145,7 @@ static void find_child(private_child_rekey_t *this, message_t *message)
 			child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
 												  spi, FALSE);
 			if (child_sa &&
-				child_sa->get_state(child_sa) == CHILD_DELETING &&
-				child_sa->get_outbound_state(child_sa) == CHILD_OUTBOUND_NONE)
+				child_sa->get_state(child_sa) == CHILD_DELETED)
 			{	/* ignore rekeyed CHILD_SAs we keep around */
 				return;
 			}
@@ -190,8 +189,18 @@ METHOD(task_t, build_i, status_t,
 	/* our CHILD_CREATE task does the hard work for us */
 	if (!this->child_create)
 	{
+		proposal_t *proposal;
+		uint16_t dh_group;
+
 		this->child_create = child_create_create(this->ike_sa,
 									config->get_ref(config), TRUE, NULL, NULL);
+
+		proposal = this->child_sa->get_proposal(this->child_sa);
+		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+									&dh_group, NULL))
+		{	/* reuse the DH group negotiated previously */
+			this->child_create->use_dh_group(this->child_create, dh_group);
+		}
 	}
 	reqid = this->child_sa->get_reqid(this->child_sa);
 	this->child_create->use_reqid(this->child_create, reqid);
@@ -203,7 +212,8 @@ METHOD(task_t, build_i, status_t,
 									   message) != NEED_MORE)
 	{
 		schedule_delayed_rekey(this);
-		return FAILED;
+		message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
+		return SUCCESS;
 	}
 	if (message->get_exchange_type(message) == CREATE_CHILD_SA)
 	{

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Tobias Brunner
+ * Copyright (C) 2007-2018 Tobias Brunner
  * Copyright (C) 2007-2010 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -131,7 +131,7 @@ struct private_task_manager_t {
 	array_t *queued_tasks;
 
 	/**
-	 * Array of active tasks, initiated by ourselve
+	 * Array of active tasks, initiated by ourselves
 	 */
 	array_t *active_tasks;
 
@@ -737,7 +737,7 @@ static status_t process_response(private_task_manager_t *this,
 		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_CLEARED, packet);
 	}
 
-	/* catch if we get resetted while processing */
+	/* catch if we get reset while processing */
 	this->reset = FALSE;
 	enumerator = array_create_enumerator(this->active_tasks);
 	while (enumerator->enumerate(enumerator, &task))
@@ -1642,24 +1642,9 @@ METHOD(task_manager_t, process_message, status_t,
 METHOD(task_manager_t, queue_task_delayed, void,
 	private_task_manager_t *this, task_t *task, uint32_t delay)
 {
-	enumerator_t *enumerator;
 	queued_task_t *queued;
 	timeval_t time;
 
-	if (task->get_type(task) == TASK_IKE_MOBIKE)
-	{	/*  there is no need to queue more than one mobike task */
-		enumerator = array_create_enumerator(this->queued_tasks);
-		while (enumerator->enumerate(enumerator, &queued))
-		{
-			if (queued->task->get_type(queued->task) == TASK_IKE_MOBIKE)
-			{
-				enumerator->destroy(enumerator);
-				task->destroy(task);
-				return;
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
 	time_monotonic(&time);
 	if (delay)
 	{
@@ -1780,9 +1765,11 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	child_cfg_t *cfg;
+	peer_cfg_t *peer;
 	ike_sa_t *new;
 	host_t *host;
 	queued_task_t *queued;
+	bool children = FALSE;
 
 	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
 								this->ike_sa->get_version(this->ike_sa), TRUE);
@@ -1791,7 +1778,8 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 		return;
 	}
 
-	new->set_peer_cfg(new, this->ike_sa->get_peer_cfg(this->ike_sa));
+	peer = this->ike_sa->get_peer_cfg(this->ike_sa);
+	new->set_peer_cfg(new, peer);
 	host = this->ike_sa->get_other_host(this->ike_sa);
 	new->set_other_host(new, host->clone(host));
 	host = this->ike_sa->get_my_host(this->ike_sa);
@@ -1806,9 +1794,26 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
 	while (enumerator->enumerate(enumerator, &child_sa))
 	{
+		child_create_t *child_create;
+
+		switch (child_sa->get_state(child_sa))
+		{
+			case CHILD_REKEYED:
+			case CHILD_DELETED:
+				/* ignore CHILD_SAs in these states */
+				continue;
+			default:
+				break;
+		}
 		cfg = child_sa->get_config(child_sa);
-		new->queue_task(new, &child_create_create(new, cfg->get_ref(cfg),
-												  FALSE, NULL, NULL)->task);
+		child_create = child_create_create(new, cfg->get_ref(cfg),
+										   FALSE, NULL, NULL);
+		child_create->use_reqid(child_create, child_sa->get_reqid(child_sa));
+		child_create->use_marks(child_create,
+								child_sa->get_mark(child_sa, TRUE).value,
+								child_sa->get_mark(child_sa, FALSE).value);
+		new->queue_task(new, &child_create->task);
+		children = TRUE;
 	}
 	enumerator->destroy(enumerator);
 
@@ -1821,9 +1826,23 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 			new->queue_task(new, queued->task);
 			array_remove_at(this->queued_tasks, enumerator);
 			free(queued);
+			children = TRUE;
 		}
 	}
 	enumerator->destroy(enumerator);
+
+	if (!children
+#ifdef ME
+		/* allow reauth of mediation connections without CHILD_SAs */
+		&& !peer->is_mediation(peer)
+#endif /* ME */
+		)
+	{
+		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, new);
+		DBG1(DBG_IKE, "unable to reauthenticate IKE_SA, no CHILD_SA "
+			 "to recreate");
+		return;
+	}
 
 	/* suspend online revocation checking until the SA is established */
 	new->set_condition(new, COND_ONLINE_VALIDATION_SUSPENDED, TRUE);
@@ -1859,12 +1878,41 @@ METHOD(task_manager_t, queue_ike_delete, void,
 	queue_task(this, (task_t*)ike_delete_create(this->ike_sa, TRUE));
 }
 
+/**
+ * There is no need to queue more than one mobike task, so this either returns
+ * an already queued task or queues one if there is none yet.
+ */
+static ike_mobike_t *queue_mobike_task(private_task_manager_t *this)
+{
+	enumerator_t *enumerator;
+	queued_task_t *queued;
+	ike_mobike_t *mobike = NULL;
+
+	enumerator = array_create_enumerator(this->queued_tasks);
+	while (enumerator->enumerate(enumerator, &queued))
+	{
+		if (queued->task->get_type(queued->task) == TASK_IKE_MOBIKE)
+		{
+			mobike = (ike_mobike_t*)queued->task;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!mobike)
+	{
+		mobike = ike_mobike_create(this->ike_sa, TRUE);
+		queue_task(this, &mobike->task);
+	}
+	return mobike;
+}
+
 METHOD(task_manager_t, queue_mobike, void,
 	private_task_manager_t *this, bool roam, bool address)
 {
 	ike_mobike_t *mobike;
 
-	mobike = ike_mobike_create(this->ike_sa, TRUE);
+	mobike = queue_mobike_task(this);
 	if (roam)
 	{
 		enumerator_t *enumerator;
@@ -1891,7 +1939,31 @@ METHOD(task_manager_t, queue_mobike, void,
 	{
 		mobike->addresses(mobike);
 	}
-	queue_task(this, &mobike->task);
+}
+
+METHOD(task_manager_t, queue_dpd, void,
+	private_task_manager_t *this)
+{
+	ike_mobike_t *mobike;
+
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE) &&
+		this->ike_sa->has_condition(this->ike_sa, COND_NAT_HERE))
+	{
+#ifdef ME
+		peer_cfg_t *cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		if (cfg->get_peer_id(cfg) ||
+			this->ike_sa->has_condition(this->ike_sa, COND_ORIGINAL_INITIATOR))
+#else
+		if (this->ike_sa->has_condition(this->ike_sa, COND_ORIGINAL_INITIATOR))
+#endif
+		{
+			/* use mobike enabled DPD to detect NAT mapping changes */
+			mobike = queue_mobike_task(this);
+			mobike->dpd(mobike);
+			return;
+		}
+	}
+	queue_task(this, (task_t*)ike_dpd_create(TRUE));
 }
 
 METHOD(task_manager_t, queue_child, void,
@@ -1920,32 +1992,6 @@ METHOD(task_manager_t, queue_child_delete, void,
 {
 	queue_task(this, (task_t*)child_delete_create(this->ike_sa,
 												  protocol, spi, expired));
-}
-
-METHOD(task_manager_t, queue_dpd, void,
-	private_task_manager_t *this)
-{
-	ike_mobike_t *mobike;
-
-	if (this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE) &&
-		this->ike_sa->has_condition(this->ike_sa, COND_NAT_HERE))
-	{
-#ifdef ME
-		peer_cfg_t *cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-		if (cfg->get_peer_id(cfg) ||
-			this->ike_sa->has_condition(this->ike_sa, COND_ORIGINAL_INITIATOR))
-#else
-		if (this->ike_sa->has_condition(this->ike_sa, COND_ORIGINAL_INITIATOR))
-#endif
-		{
-			/* use mobike enabled DPD to detect NAT mapping changes */
-			mobike = ike_mobike_create(this->ike_sa, TRUE);
-			mobike->dpd(mobike);
-			queue_task(this, &mobike->task);
-			return;
-		}
-	}
-	queue_task(this, (task_t*)ike_dpd_create(TRUE));
 }
 
 METHOD(task_manager_t, adopt_tasks, void,

@@ -386,9 +386,28 @@ static void collect_failure_info(array_t *failures, char *name, int i)
 }
 
 /**
+ * Collect warning information, add failure_t to array
+ */
+static bool collect_warning_info(array_t *warnings, char *name, int i)
+{
+	failure_t warning = {
+		.name = name,
+		.i = i,
+	};
+
+	warning.line = test_warning_get(warning.msg, sizeof(warning.msg),
+									&warning.file);
+	if (warning.line)
+	{
+		array_insert(warnings, -1, &warning);
+	}
+	return warning.line;
+}
+
+/**
  * Print array of collected failure_t to stderr
  */
-static void print_failures(array_t *failures)
+static void print_failures(array_t *failures, bool warnings)
 {
 	failure_t failure;
 
@@ -397,8 +416,16 @@ static void print_failures(array_t *failures)
 
 	while (array_remove(failures, 0, &failure))
 	{
-		fprintf(stderr, "      %sFailure in '%s': %s (",
-				TTY(RED), failure.name, failure.msg);
+		if (warnings)
+		{
+			fprintf(stderr, "      %sWarning in '%s': %s (",
+					TTY(YELLOW), failure.name, failure.msg);
+		}
+		else
+		{
+			fprintf(stderr, "      %sFailure in '%s': %s (",
+					TTY(RED), failure.name, failure.msg);
+		}
 		if (failure.line)
 		{
 			fprintf(stderr, "%s:%d, ", failure.file, failure.line);
@@ -423,9 +450,10 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
 	enumerator_t *enumerator;
 	test_function_t *tfun;
 	int passed = 0;
-	array_t *failures;
+	array_t *failures, *warnings;
 
 	failures = array_create(sizeof(failure_t), 0);
+	warnings = array_create(sizeof(failure_t), 0);
 
 	fprintf(stderr, "    Running case '%s': ", tcase->name);
 	fflush(stderr);
@@ -470,7 +498,14 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
 					if (!leaks)
 					{
 						rounds++;
-						fprintf(stderr, "%s+%s", TTY(GREEN), TTY(DEF));
+						if (!collect_warning_info(warnings, tfun->name, i))
+						{
+							fprintf(stderr, "%s+%s", TTY(GREEN), TTY(DEF));
+						}
+						else
+						{
+							fprintf(stderr, "%s~%s", TTY(YELLOW), TTY(DEF));
+						}
 					}
 				}
 				else
@@ -497,8 +532,10 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
 
 	fprintf(stderr, "\n");
 
-	print_failures(failures);
+	print_failures(warnings, TRUE);
+	print_failures(failures, FALSE);
 	array_destroy(failures);
+	array_destroy(warnings);
 
 	return passed == array_count(tcase->functions);
 }

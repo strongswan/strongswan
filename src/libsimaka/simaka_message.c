@@ -49,7 +49,7 @@ struct hdr_t {
 struct attr_hdr_t {
 	/** attribute type */
 	uint8_t type;
-	/** attibute length */
+	/** attribute length */
 	uint8_t length;
 } __attribute__((__packed__));
 

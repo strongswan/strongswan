@@ -310,7 +310,7 @@ aikgen|pki)
 	command_dir="$IPSEC_BINDIR"
 	# fall through
 	;;
-attest|conftest|dumm|irdumm|pacman|pool|pt-tls-client|scepclient|stroke|\
+attest|conftest|dumm|irdumm|pool|pt-tls-client|scepclient|stroke|\
 duplicheck|error-notify|imv_policy_manager|load-tester|lookip|whitelist|\
 _updown|_imv_policy)
 	# fall through

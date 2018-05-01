@@ -30,7 +30,7 @@ typedef struct radius_client_t radius_client_t;
  * RADIUS client functionality.
  *
  * To communicate with a RADIUS server, create a client and send messages over
- * it. The client allocates a socket from the best RADIUS server abailable.
+ * it. The client allocates a socket from the best RADIUS server available.
  */
 struct radius_client_t {
 

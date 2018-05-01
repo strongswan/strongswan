@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -20,16 +20,15 @@
 
 #include "openssl_rsa_private_key.h"
 #include "openssl_rsa_public_key.h"
+#include "openssl_hasher.h"
 #include "openssl_util.h"
 
 #include <utils/debug.h>
+#include <credentials/keys/signature_params.h>
 
 #include <openssl/bn.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
-#ifndef OPENSSL_NO_ENGINE
-#include <openssl/engine.h>
-#endif /* OPENSSL_NO_ENGINE */
 
 /**
  *  Public exponent to use for key generation.
@@ -40,6 +39,7 @@
 OPENSSL_KEY_FALLBACK(RSA, key, n, e, d)
 OPENSSL_KEY_FALLBACK(RSA, factors, p, q)
 OPENSSL_KEY_FALLBACK(RSA, crt_params, dmp1, dmq1, iqmp)
+#define BN_secure_new() BN_new()
 #endif
 
 typedef struct private_openssl_rsa_private_key_t private_openssl_rsa_private_key_t;
@@ -72,8 +72,126 @@ struct private_openssl_rsa_private_key_t {
 /* implemented in rsa public key */
 bool openssl_rsa_fingerprint(RSA *rsa, cred_encoding_type_t type, chunk_t *fp);
 
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+
 /**
- * Build an EMPSA PKCS1 signature described in PKCS#1
+ * Build RSA signature
+ */
+static bool build_signature(private_openssl_rsa_private_key_t *this,
+							const EVP_MD *md, rsa_pss_params_t *pss,
+							chunk_t data, chunk_t *sig)
+{
+	EVP_PKEY_CTX *pctx = NULL;
+	EVP_MD_CTX *mctx = NULL;
+	EVP_PKEY *key;
+	bool success = FALSE;
+
+	mctx = EVP_MD_CTX_create();
+	key = EVP_PKEY_new();
+	if (!mctx || !key)
+	{
+		goto error;
+	}
+	if (!EVP_PKEY_set1_RSA(key, this->rsa))
+	{
+		goto error;
+	}
+	if (EVP_DigestSignInit(mctx, &pctx, md, NULL, key) <= 0)
+	{
+		goto error;
+	}
+	if (pss)
+	{
+		const EVP_MD *mgf1md = openssl_get_md(pss->mgf1_hash);
+		int slen = EVP_MD_size(md);
+		if (pss->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
+		{
+			slen = pss->salt_len;
+		}
+		if (EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) <= 0 ||
+			EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, slen) <= 0 ||
+			EVP_PKEY_CTX_set_rsa_mgf1_md(pctx, mgf1md) <= 0)
+		{
+			goto error;
+		}
+	}
+	if (EVP_DigestSignUpdate(mctx, data.ptr, data.len) <= 0)
+	{
+		goto error;
+	}
+	success = (EVP_DigestSignFinal(mctx, sig->ptr, &sig->len) == 1);
+
+error:
+	if (key)
+	{
+		EVP_PKEY_free(key);
+	}
+	if (mctx)
+	{
+		EVP_MD_CTX_destroy(mctx);
+	}
+	return success;
+}
+
+/**
+ * Build an EMSA PKCS1 signature described in PKCS#1
+ */
+static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
+									   int type, chunk_t data, chunk_t *sig)
+{
+	const EVP_MD *md;
+
+	*sig = chunk_alloc(RSA_size(this->rsa));
+
+	if (type == NID_undef)
+	{
+		if (RSA_private_encrypt(data.len, data.ptr, sig->ptr, this->rsa,
+								RSA_PKCS1_PADDING) == sig->len)
+		{
+			return TRUE;
+		}
+	}
+	else
+	{
+		md = EVP_get_digestbynid(type);
+		if (md && build_signature(this, md, NULL, data, sig))
+		{
+			return TRUE;
+		}
+	}
+	chunk_free(sig);
+	return FALSE;
+}
+
+/**
+ * Build an EMSA PSS signature described in PKCS#1
+ */
+static bool build_emsa_pss_signature(private_openssl_rsa_private_key_t *this,
+									 rsa_pss_params_t *params, chunk_t data,
+									 chunk_t *sig)
+{
+	const EVP_MD *md;
+
+	if (!params)
+	{
+		return FALSE;
+	}
+
+	*sig = chunk_alloc(RSA_size(this->rsa));
+
+	md = openssl_get_md(params->hash);
+	if (md && build_signature(this, md, params, data, sig))
+	{
+		return TRUE;
+	}
+	chunk_free(sig);
+	return FALSE;
+}
+
+#else /* OPENSSL_VERSION_NUMBER < 1.0 */
+
+/**
+ * Build an EMSA PKCS1 signature described in PKCS#1
  */
 static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
 									   int type, chunk_t data, chunk_t *sig)
@@ -92,15 +210,15 @@ static bool build_emsa_pkcs1_signature(private_openssl_rsa_private_key_t *this,
 	}
 	else
 	{
-		EVP_MD_CTX *ctx;
-		EVP_PKEY *key;
+		EVP_MD_CTX *ctx = NULL;
+		EVP_PKEY *key = NULL;
 		const EVP_MD *hasher;
 		u_int len;
 
 		hasher = EVP_get_digestbynid(type);
 		if (!hasher)
 		{
-			return FALSE;
+			goto error;
 		}
 
 		ctx = EVP_MD_CTX_create();
@@ -142,7 +260,7 @@ error:
 	}
 	return success;
 }
-
+#endif /* OPENSSL_VERSION_NUMBER < 1.0 */
 
 METHOD(private_key_t, get_type, key_type_t,
 	private_openssl_rsa_private_key_t *this)
@@ -152,7 +270,7 @@ METHOD(private_key_t, get_type, key_type_t,
 
 METHOD(private_key_t, sign, bool,
 	private_openssl_rsa_private_key_t *this, signature_scheme_t scheme,
-	chunk_t data, chunk_t *signature)
+	void *params, chunk_t data, chunk_t *signature)
 {
 	switch (scheme)
 	{
@@ -170,6 +288,10 @@ METHOD(private_key_t, sign, bool,
 			return build_emsa_pkcs1_signature(this, NID_sha1, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return build_emsa_pkcs1_signature(this, NID_md5, data, signature);
+#if OPENSSL_VERSION_NUMBER >= 0x10000000L
+		case SIGN_RSA_EMSA_PSS:
+			return build_emsa_pss_signature(this, params, data, signature);
+#endif
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
 				 signature_scheme_names, scheme);
@@ -386,7 +508,7 @@ error:
 /*
  * See header
  */
-private_key_t *openssl_rsa_private_key_create(EVP_PKEY *key)
+private_key_t *openssl_rsa_private_key_create(EVP_PKEY *key, bool engine)
 {
 	private_openssl_rsa_private_key_t *this;
 	RSA *rsa;
@@ -399,7 +521,197 @@ private_key_t *openssl_rsa_private_key_create(EVP_PKEY *key)
 	}
 	this = create_empty();
 	this->rsa = rsa;
+	this->engine = engine;
 	return &this->public.key;
+}
+
+/**
+ * Recover the primes from n, e and d using the algorithm described in
+ * Appendix C of NIST SP 800-56B.
+ */
+static bool calculate_pq(BIGNUM *n, BIGNUM *e, BIGNUM *d,
+						 BIGNUM **p, BIGNUM **q)
+{
+	BN_CTX *ctx;
+	BIGNUM *k, *r, *g, *y, *n1, *x;
+	int i, t, j;
+	bool success = FALSE;
+
+	ctx = BN_CTX_new();
+	if (!ctx)
+	{
+		return FALSE;
+	}
+	BN_CTX_start(ctx);
+	k = BN_CTX_get(ctx);
+	r = BN_CTX_get(ctx);
+	g = BN_CTX_get(ctx);
+	y = BN_CTX_get(ctx);
+	n1 = BN_CTX_get(ctx);
+	x = BN_CTX_get(ctx);
+	if (!x)
+	{
+		goto error;
+	}
+	/* k = (d * e) - 1 */
+	if (!BN_mul(k, d, e, ctx) || !BN_sub(k, k, BN_value_one()))
+	{
+		goto error;
+	}
+	/* k must be even */
+	if (BN_is_odd(k))
+	{
+		goto error;
+	}
+	/* k = 2^t * r, where r is the largest odd integer dividing k, and t >= 1 */
+	if (!BN_copy(r, k))
+	{
+		goto error;
+	}
+	for (t = 0; !BN_is_odd(r); t++)
+	{	/* r = r/2 */
+		if (!BN_rshift(r, r, 1))
+		{
+			goto error;
+		}
+	}
+	/* we need n-1 below */
+	if (!BN_sub(n1, n, BN_value_one()))
+	{
+		goto error;
+	}
+	for (i = 0; i < 100; i++)
+	{	/* generate random integer g in [0, n-1] */
+		if (!BN_pseudo_rand_range(g, n))
+		{
+			goto error;
+		}
+		/* y = g^r mod n */
+		if (!BN_mod_exp(y, g, r, n, ctx))
+		{
+			goto error;
+		}
+		/* try again if y == 1 or y == n-1 */
+		if (BN_is_one(y) || BN_cmp(y, n1) == 0)
+		{
+			continue;
+		}
+		for (j = 0; j < t; j++)
+		{	/* x = y^2 mod n */
+			if (!BN_mod_sqr(x, y, n, ctx))
+			{
+				goto error;
+			}
+			/* stop if x == 1 */
+			if (BN_is_one(x))
+			{
+				goto done;
+			}
+			/* retry with new g if x = n-1 */
+			if (BN_cmp(x, n1) == 0)
+			{
+				break;
+			}
+			/* y = x */
+			if (!BN_copy(y, x))
+			{
+				goto error;
+			}
+		}
+	}
+	goto error;
+
+done:
+	/* p = gcd(y-1, n) */
+	if (!BN_sub(y, y, BN_value_one()))
+	{
+		goto error;
+	}
+	*p = BN_secure_new();
+	if (!BN_gcd(*p, y, n, ctx))
+	{
+		BN_clear_free(*p);
+		goto error;
+	}
+	/* q = n/p */
+	*q = BN_secure_new();
+	if (!BN_div(*q, NULL, n, *p, ctx))
+	{
+		BN_clear_free(*p);
+		BN_clear_free(*q);
+		goto error;
+	}
+	success = TRUE;
+
+error:
+	BN_CTX_end(ctx);
+	BN_CTX_free(ctx);
+	return success;
+}
+
+/**
+ * Calculates dp = d (mod p-1) or dq = d (mod q-1) for the Chinese remainder
+ * algorithm.
+ */
+static BIGNUM *dmodpq1(BIGNUM *d, BIGNUM *pq)
+{
+	BN_CTX *ctx;
+	BIGNUM *res = NULL, *pq1;
+
+	ctx = BN_CTX_new();
+	if (!ctx)
+	{
+		return NULL;
+	}
+	BN_CTX_start(ctx);
+	pq1 = BN_CTX_get(ctx);
+	/* p|q - 1 */
+	if (!BN_sub(pq1, pq, BN_value_one()))
+	{
+		goto error;
+	}
+	/* d (mod p|q -1) */
+	res = BN_secure_new();
+	if (!BN_mod(res, d, pq1, ctx))
+	{
+		BN_clear_free(res);
+		res = NULL;
+		goto error;
+	}
+
+error:
+	BN_CTX_end(ctx);
+	BN_CTX_free(ctx);
+	return res;
+}
+
+/**
+ * Calculates qinv = q^-1 (mod p) for the Chinese remainder algorithm.
+ */
+static BIGNUM *qinv(BIGNUM *q, BIGNUM *p)
+{
+	BN_CTX *ctx;
+	BIGNUM *res = NULL;
+
+	ctx = BN_CTX_new();
+	if (!ctx)
+	{
+		return NULL;
+	}
+	BN_CTX_start(ctx);
+	/* q^-1 (mod p) */
+	res = BN_secure_new();
+	if (!BN_mod_inverse(res, q, p, ctx))
+	{
+		BN_clear_free(res);
+		res = NULL;
+		goto error;
+	}
+
+error:
+	BN_CTX_end(ctx);
+	BN_CTX_free(ctx);
+	return res;
 }
 
 /*
@@ -460,7 +772,7 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 			return &this->public;
 		}
 	}
-	else if (n.ptr && e.ptr && d.ptr && p.ptr && q.ptr && coeff.ptr)
+	else if (n.ptr && e.ptr && d.ptr)
 	{
 		BIGNUM *bn_n, *bn_e, *bn_d, *bn_p, *bn_q;
 		BIGNUM *dmp1 = NULL, *dmq1 = NULL, *iqmp = NULL;
@@ -472,178 +784,58 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
 		bn_d = BN_bin2bn((const u_char*)d.ptr, d.len, NULL);
 		if (!RSA_set0_key(this->rsa, bn_n, bn_e, bn_d))
 		{
-			destroy(this);
-			return NULL;
+			goto error;
 
 		}
-		bn_p = BN_bin2bn((const u_char*)p.ptr, p.len, NULL);
-		bn_q = BN_bin2bn((const u_char*)q.ptr, q.len, NULL);
+		if (p.ptr && q.ptr)
+		{
+			bn_p = BN_bin2bn((const u_char*)p.ptr, p.len, NULL);
+			bn_q = BN_bin2bn((const u_char*)q.ptr, q.len, NULL);
+		}
+		else
+		{
+			if (!calculate_pq(bn_n, bn_e, bn_d, &bn_p, &bn_q))
+			{
+				goto error;
+			}
+		}
 		if (!RSA_set0_factors(this->rsa, bn_p, bn_q))
 		{
-			destroy(this);
-			return NULL;
+			goto error;
 		}
 		if (exp1.ptr)
 		{
 			dmp1 = BN_bin2bn((const u_char*)exp1.ptr, exp1.len, NULL);
 		}
+		else
+		{
+			dmp1 = dmodpq1(bn_d, bn_p);
+		}
 		if (exp2.ptr)
 		{
 			dmq1 = BN_bin2bn((const u_char*)exp2.ptr, exp2.len, NULL);
 		}
-		iqmp = BN_bin2bn((const u_char*)coeff.ptr, coeff.len, NULL);
+		else
+		{
+			dmq1 = dmodpq1(bn_d, bn_q);
+		}
+		if (coeff.ptr)
+		{
+			iqmp = BN_bin2bn((const u_char*)coeff.ptr, coeff.len, NULL);
+		}
+		else
+		{
+			iqmp = qinv(bn_q, bn_p);
+		}
 		if (RSA_set0_crt_params(this->rsa, dmp1, dmq1, iqmp) &&
 			RSA_check_key(this->rsa) == 1)
 		{
 			return &this->public;
 		}
 	}
+error:
 	destroy(this);
 	return NULL;
-}
-
-#ifndef OPENSSL_NO_ENGINE
-/**
- * Login to engine with a PIN specified for a keyid
- */
-static bool login(ENGINE *engine, chunk_t keyid)
-{
-	enumerator_t *enumerator;
-	shared_key_t *shared;
-	identification_t *id;
-	chunk_t key;
-	char pin[64];
-	bool found = FALSE, success = FALSE;
-
-	id = identification_create_from_encoding(ID_KEY_ID, keyid);
-	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-														SHARED_PIN, id, NULL);
-	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
-	{
-		found = TRUE;
-		key = shared->get_key(shared);
-		if (snprintf(pin, sizeof(pin),
-					 "%.*s", (int)key.len, key.ptr) >= sizeof(pin))
-		{
-			continue;
-		}
-		if (ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
-		{
-			success = TRUE;
-			break;
-		}
-		else
-		{
-			DBG1(DBG_CFG, "setting PIN on engine failed");
-		}
-	}
-	enumerator->destroy(enumerator);
-	id->destroy(id);
-	if (!found)
-	{
-		DBG1(DBG_CFG, "no PIN found for %#B", &keyid);
-	}
-	return success;
-}
-#endif /* OPENSSL_NO_ENGINE */
-
-/*
- * See header.
- */
-openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
-														   va_list args)
-{
-#ifndef OPENSSL_NO_ENGINE
-	private_openssl_rsa_private_key_t *this;
-	char *engine_id = NULL;
-	char keyname[64];
-	chunk_t keyid = chunk_empty;;
-	EVP_PKEY *key;
-	ENGINE *engine;
-	int slot = -1;
-
-	while (TRUE)
-	{
-		switch (va_arg(args, builder_part_t))
-		{
-			case BUILD_PKCS11_KEYID:
-				keyid = va_arg(args, chunk_t);
-				continue;
-			case BUILD_PKCS11_SLOT:
-				slot = va_arg(args, int);
-				continue;
-			case BUILD_PKCS11_MODULE:
-				engine_id = va_arg(args, char*);
-				continue;
-			case BUILD_END:
-				break;
-			default:
-				return NULL;
-		}
-		break;
-	}
-	if (!keyid.len || keyid.len > 40)
-	{
-		return NULL;
-	}
-
-	memset(keyname, 0, sizeof(keyname));
-	if (slot != -1)
-	{
-		snprintf(keyname, sizeof(keyname), "%d:", slot);
-	}
-	if (sizeof(keyname) - strlen(keyname) <= keyid.len * 4 / 3 + 1)
-	{
-		return NULL;
-	}
-	chunk_to_hex(keyid, keyname + strlen(keyname), FALSE);
-
-	if (!engine_id)
-	{
-		engine_id = lib->settings->get_str(lib->settings,
-							"%s.plugins.openssl.engine_id", "pkcs11", lib->ns);
-	}
-	engine = ENGINE_by_id(engine_id);
-	if (!engine)
-	{
-		DBG2(DBG_LIB, "engine '%s' is not available", engine_id);
-		return NULL;
-	}
-	if (!ENGINE_init(engine))
-	{
-		DBG1(DBG_LIB, "failed to initialize engine '%s'", engine_id);
-		ENGINE_free(engine);
-		return NULL;
-	}
-	if (!login(engine, keyid))
-	{
-		DBG1(DBG_LIB, "login to engine '%s' failed", engine_id);
-		ENGINE_free(engine);
-		return NULL;
-	}
-	key = ENGINE_load_private_key(engine, keyname, NULL, NULL);
-	if (!key)
-	{
-		DBG1(DBG_LIB, "failed to load private key with ID '%s' from "
-			 "engine '%s'", keyname, engine_id);
-		ENGINE_free(engine);
-		return NULL;
-	}
-	ENGINE_free(engine);
-
-	this = create_empty();
-	this->rsa = EVP_PKEY_get1_RSA(key);
-	this->engine = TRUE;
-	if (!this->rsa)
-	{
-		destroy(this);
-		return NULL;
-	}
-
-	return &this->public;
-#else /* OPENSSL_NO_ENGINE */
-	return NULL;
-#endif /* OPENSSL_NO_ENGINE */
 }
 
 #endif /* OPENSSL_NO_RSA */

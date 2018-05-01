@@ -8,13 +8,16 @@ fuzz_ldflags = ${libfuzzer} \
 	-Wl,-Bstatic -lgmp -Wl,-Bdynamic \
 	@FUZZING_LDFLAGS@
 
-FUZZ_TARGETS=fuzz_certs
+FUZZ_TARGETS=fuzz_certs fuzz_crls
 
 all-local: $(FUZZ_TARGETS)
 
 CLEANFILES=$(FUZZ_TARGETS)
 
 fuzz_certs: fuzz_certs.c ${libfuzzer}
+	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_crls: fuzz_crls.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
 
 noinst_LIBRARIES = libFuzzerLocal.a

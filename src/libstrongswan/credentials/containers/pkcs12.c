@@ -15,6 +15,7 @@
 
 #include "pkcs12.h"
 
+#include <library.h>
 #include <utils/debug.h>
 
 /**

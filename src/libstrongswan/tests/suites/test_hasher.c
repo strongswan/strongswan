@@ -90,12 +90,10 @@ START_TEST(test_hasher_sig_to_oid)
 }
 END_TEST
 
-typedef struct {
+static struct {
 	signature_scheme_t scheme;
 	hash_algorithm_t alg;
-}hasher_sig_scheme_t;
-
-static hasher_sig_scheme_t sig_schemes[] = {
+} sig_schemes[] = {
 	{ SIGN_UNKNOWN,               HASH_UNKNOWN    },
 	{ SIGN_RSA_EMSA_PKCS1_NULL,   HASH_UNKNOWN    },
 	{ SIGN_RSA_EMSA_PKCS1_MD5,    HASH_MD5        },
@@ -108,6 +106,7 @@ static hasher_sig_scheme_t sig_schemes[] = {
 	{ SIGN_RSA_EMSA_PKCS1_SHA3_256, HASH_SHA3_256 },
 	{ SIGN_RSA_EMSA_PKCS1_SHA3_384, HASH_SHA3_384 },
 	{ SIGN_RSA_EMSA_PKCS1_SHA3_512, HASH_SHA3_512 },
+	{ SIGN_RSA_EMSA_PSS,		  HASH_UNKNOWN    },
 	{ SIGN_ECDSA_WITH_SHA1_DER,   HASH_SHA1       },
 	{ SIGN_ECDSA_WITH_SHA256_DER, HASH_SHA256     },
 	{ SIGN_ECDSA_WITH_SHA384_DER, HASH_SHA384     },
@@ -124,13 +123,32 @@ static hasher_sig_scheme_t sig_schemes[] = {
 	{ SIGN_BLISS_WITH_SHA3_512,   HASH_SHA3_512   },
 	{ SIGN_ED25519,               HASH_IDENTITY   },
 	{ SIGN_ED448,                 HASH_IDENTITY   },
-	{ 30,						  HASH_UNKNOWN    }
+	{ 30,						  HASH_UNKNOWN    },
 };
 
 START_TEST(test_hasher_from_sig_scheme)
 {
-	ck_assert(hasher_from_signature_scheme(sig_schemes[_i].scheme) ==
+	ck_assert(hasher_from_signature_scheme(sig_schemes[_i].scheme, NULL) ==
 										   sig_schemes[_i].alg);
+}
+END_TEST
+
+static struct {
+	signature_scheme_t scheme;
+	union {
+		rsa_pss_params_t pss;
+	} p;
+	hash_algorithm_t alg;
+} sig_schemes_params[] = {
+	{ SIGN_RSA_EMSA_PSS, .p.pss = { .hash = HASH_SHA256 }, HASH_SHA256 },
+	{ SIGN_RSA_EMSA_PSS, .p.pss = { .hash = HASH_SHA512 }, HASH_SHA512 },
+	{ SIGN_RSA_EMSA_PKCS1_SHA2_256, .p.pss = { .hash = HASH_SHA512 }, HASH_SHA256 },
+};
+
+START_TEST(test_hasher_from_sig_scheme_params)
+{
+	ck_assert(hasher_from_signature_scheme(sig_schemes_params[_i].scheme,
+					&sig_schemes_params[_i].p) == sig_schemes_params[_i].alg);
 }
 END_TEST
 
@@ -201,9 +219,9 @@ START_TEST(test_hasher_from_integrity)
 	size_t length;
 
 	length = 0;
-	ck_assert(hasher_algorithm_from_integrity(auths[_i].auth, NULL) == 
+	ck_assert(hasher_algorithm_from_integrity(auths[_i].auth, NULL) ==
 											  auths[_i].alg);
-	ck_assert(hasher_algorithm_from_integrity(auths[_i].auth, &length) == 
+	ck_assert(hasher_algorithm_from_integrity(auths[_i].auth, &length) ==
 											  auths[_i].alg);
 	ck_assert(length == auths[_i].length);
 }
@@ -226,7 +244,7 @@ typedef struct {
 
 static hasher_ikev2_t ikev2[] = {
 	{ HASH_IDENTITY, TRUE  },
-	{ HASH_SHA1,     TRUE  },
+	{ HASH_SHA1,     FALSE },
 	{ HASH_SHA256,   TRUE  },
 	{ HASH_SHA384,   TRUE  },
 	{ HASH_SHA512,   TRUE  },
@@ -269,6 +287,7 @@ Suite *hasher_suite_create()
 
 	tc = tcase_create("from_sig_scheme");
 	tcase_add_loop_test(tc, test_hasher_from_sig_scheme, 0, countof(sig_schemes));
+	tcase_add_loop_test(tc, test_hasher_from_sig_scheme_params, 0, countof(sig_schemes_params));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("from_prf");

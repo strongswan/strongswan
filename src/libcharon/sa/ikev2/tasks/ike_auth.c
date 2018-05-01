@@ -471,7 +471,6 @@ METHOD(task_t, build_i, status_t,
 
 		if (idr && !idr->contains_wildcards(idr) &&
 			message->get_message_id(message) == 1 &&
-			this->peer_cfg->get_unique_policy(this->peer_cfg) != UNIQUE_NO &&
 			this->peer_cfg->get_unique_policy(this->peer_cfg) != UNIQUE_NEVER)
 		{
 			host_t *host;

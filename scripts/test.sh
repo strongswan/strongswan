@@ -39,6 +39,8 @@ all|coverage)
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
 	# Ubuntu 14.04 does provide a too old libtss2-dev
 	CONFIG="$CONFIG --disable-tss-tss2"
+	# Ubuntu 14.04 does not provide libnm
+	CONFIG="$CONFIG --disable-nm"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
 	if test "$TEST" != "coverage"; then
@@ -49,9 +51,8 @@ all|coverage)
 	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
-		  libnm-glib-dev libnm-glib-vpn-dev libpcsclite-dev libpam0g-dev
-		  binutils-dev libunwind8-dev libjson0-dev iptables-dev python-pip
-		  libtspi-dev"
+		  libpcsclite-dev libpam0g-dev binutils-dev libunwind8-dev
+		  libjson0-dev iptables-dev python-pip libtspi-dev"
 	PYDEPS="pytest"
 	;;
 win*)
@@ -96,6 +97,8 @@ win*)
 	esac
 	;;
 osx)
+	# this causes a false positive in ip-packet.c since Xcode 8.3
+	CFLAGS="$CFLAGS -Wno-address-of-packed-member"
 	# use the same options as in the Homebrew Formula
 	CONFIG="--disable-defaults --enable-charon --enable-cmd --enable-constraints
 			--enable-curl --enable-eap-gtc --enable-eap-identity

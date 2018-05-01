@@ -91,8 +91,8 @@ struct kernel_ipsec_add_sa_t {
 	uint16_t cpi;
 	/** TRUE to enable UDP encapsulation for NAT traversal */
 	bool encap;
-	/** TRUE to enable hardware offloading if available */
-	bool hw_offload;
+	/** no (disabled), yes (enabled), auto (enabled if supported) */
+	hw_offload_t hw_offload;
 	/** TRUE to use Extended Sequence Numbers */
 	bool esn;
 	/** TRUE if initiator of the exchange creating the SA */
@@ -183,7 +183,7 @@ struct kernel_ipsec_query_policy_t {
  * Policy information are cached in the interface. This is necessary to do
  * reference counting. The Linux kernel does not allow the same policy
  * installed twice, but we need this as CHILD_SA exist multiple times
- * when rekeying. Thats why we do reference counting of policies.
+ * when rekeying. That's why we do reference counting of policies.
  */
 struct kernel_ipsec_t {
 

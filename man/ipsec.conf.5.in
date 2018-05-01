@@ -609,9 +609,10 @@ To limit the acceptable set of hashing algorithms for trustchain validation,
 append hash algorithms to
 .BR pubkey
 or a key strength definition (for example
-.BR pubkey-sha1-sha256
+.BR pubkey-sha256-sha512 ,
+.BR rsa-2048-sha256-sha384-sha512 ,
 or
-.BR rsa-2048-ecdsa-256-sha256-sha384-sha512 ).
+.BR rsa-2048-sha256-ecdsa-256-sha256-sha384 ).
 Unless disabled in
 .BR strongswan.conf (5),
 or explicit IKEv2 signature constraints are configured (see below), such key
@@ -629,6 +630,12 @@ prefer an algorithm that matches or exceeds the strength of the signature key.
 If no constraints with ike: prefix are configured any signature scheme
 constraint (without ike: prefix) will also apply to IKEv2 authentication, unless
 this is disabled in
+.BR strongswan.conf (5).
+
+To use or require RSASSA-PSS signatures use rsa/pss instead of rsa as in e.g.
+.BR ike:rsa/pss-sha256 .
+If \fBpubkey\fR or \fBrsa\fR constraints are configured RSASSA-PSS signatures
+will only be used/accepted if enabled in
 .BR strongswan.conf (5).
 
 For
@@ -1031,8 +1038,8 @@ Relevant only locally, other end need not agree on it. Also see EXPIRY/REKEY
 below.
 .TP
 .BR mark " = <value>[/<mask>]"
-sets an XFRM mark in the inbound and outbound
-IPsec SAs and policies. If the mask is missing then a default
+sets an XFRM mark on the inbound policy and outbound
+IPsec SA and policy. If the mask is missing then a default
 mask of
 .B 0xffffffff
 is assumed. The special value
@@ -1043,13 +1050,13 @@ make the mark unique for each IPsec SA direction (in/out) the special value
 may be used.
 .TP
 .BR mark_in " = <value>[/<mask>]"
-sets an XFRM mark in the inbound IPsec SA and
-policy. If the mask is missing then a default mask of
+sets an XFRM mark on the inbound policy (not on the SA). If the mask is missing
+then a default mask of
 .B 0xffffffff
 is assumed.
 .TP
 .BR mark_out " = <value>[/<mask>]"
-sets an XFRM mark in the outbound IPsec SA and
+sets an XFRM mark on the outbound IPsec SA and
 policy. If the mask is missing then a default mask of
 .B 0xffffffff
 is assumed.

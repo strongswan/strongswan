@@ -488,7 +488,7 @@ METHOD(credential_manager_t, remove_local_set, void,
 
 METHOD(credential_manager_t, issued_by, bool,
 	private_credential_manager_t *this, certificate_t *subject,
-	certificate_t *issuer, signature_scheme_t *scheme)
+	certificate_t *issuer, signature_params_t **scheme)
 {
 	if (this->cache)
 	{
@@ -661,7 +661,7 @@ static certificate_t *get_pretrusted_cert(private_credential_manager_t *this,
  */
 static certificate_t *get_issuer_cert(private_credential_manager_t *this,
 									  certificate_t *subject, bool trusted,
-									  signature_scheme_t *scheme)
+									  signature_params_t **scheme)
 {
 	enumerator_t *enumerator;
 	certificate_t *issuer = NULL, *candidate;
@@ -723,7 +723,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 {
 	certificate_t *current, *issuer;
 	auth_cfg_t *auth;
-	signature_scheme_t scheme;
+	signature_params_t *scheme;
 	int pathlen;
 
 	auth = auth_cfg_create();

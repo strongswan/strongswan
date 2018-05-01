@@ -64,7 +64,7 @@ struct eap_method_t {
 	/**
 	 * Initiate the EAP exchange.
 	 *
-	 * initiate() is only useable for server implementations, as clients only
+	 * initiate() is only usable for server implementations, as clients only
 	 * reply to server requests.
 	 * A eap_payload is created in "out" if result is NEED_MORE.
 	 *

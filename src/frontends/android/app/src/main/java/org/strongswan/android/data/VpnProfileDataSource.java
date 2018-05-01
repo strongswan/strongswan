@@ -53,6 +53,8 @@ public class VpnProfileDataSource
 	public static final String KEY_SELECTED_APPS_LIST = "selected_apps_list";
 	public static final String KEY_NAT_KEEPALIVE = "nat_keepalive";
 	public static final String KEY_FLAGS = "flags";
+	public static final String KEY_IKE_PROPOSAL = "ike_proposal";
+	public static final String KEY_ESP_PROPOSAL = "esp_proposal";
 
 	private DatabaseHelper mDbHelper;
 	private SQLiteDatabase mDatabase;
@@ -61,7 +63,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 14;
+	private static final int DATABASE_VERSION = 15;
 
 	public static final DbColumn[] COLUMNS = new DbColumn[] {
 								new DbColumn(KEY_ID, "INTEGER PRIMARY KEY AUTOINCREMENT", 1),
@@ -84,6 +86,8 @@ public class VpnProfileDataSource
 								new DbColumn(KEY_SELECTED_APPS_LIST, "TEXT", 12),
 								new DbColumn(KEY_NAT_KEEPALIVE, "INTEGER", 13),
 								new DbColumn(KEY_FLAGS, "INTEGER", 14),
+								new DbColumn(KEY_IKE_PROPOSAL, "TEXT", 15),
+								new DbColumn(KEY_ESP_PROPOSAL, "TEXT", 15),
 							};
 
 	private static final String[] ALL_COLUMNS = getColumns(DATABASE_VERSION);
@@ -211,6 +215,13 @@ public class VpnProfileDataSource
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_FLAGS +
 						   " INTEGER;");
+			}
+			if (oldVersion < 15)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_IKE_PROPOSAL +
+						   " TEXT;");
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_ESP_PROPOSAL +
+						   " TEXT;");
 			}
 		}
 
@@ -393,6 +404,8 @@ public class VpnProfileDataSource
 		profile.setSelectedApps(cursor.getString(cursor.getColumnIndex(KEY_SELECTED_APPS_LIST)));
 		profile.setNATKeepAlive(getInt(cursor, cursor.getColumnIndex(KEY_NAT_KEEPALIVE)));
 		profile.setFlags(getInt(cursor, cursor.getColumnIndex(KEY_FLAGS)));
+		profile.setIkeProposal(cursor.getString(cursor.getColumnIndex(KEY_IKE_PROPOSAL)));
+		profile.setEspProposal(cursor.getString(cursor.getColumnIndex(KEY_ESP_PROPOSAL)));
 		return profile;
 	}
 
@@ -418,6 +431,8 @@ public class VpnProfileDataSource
 		values.put(KEY_SELECTED_APPS_LIST, profile.getSelectedApps());
 		values.put(KEY_NAT_KEEPALIVE, profile.getNATKeepAlive());
 		values.put(KEY_FLAGS, profile.getFlags());
+		values.put(KEY_IKE_PROPOSAL, profile.getIkeProposal());
+		values.put(KEY_ESP_PROPOSAL, profile.getEspProposal());
 		return values;
 	}
 

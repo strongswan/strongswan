@@ -44,7 +44,7 @@ struct swid_gen_t {
 						  char *version, bool full, bool pretty);
 
 	/**
-	 * Generate a SWID tag
+	 * Generate SWID tags or software identifiers for all installed packages
 	 *
 	 * @param sw_id_only 	Return software identifier only
 	 * @param full			Generate full SWID tags with file information

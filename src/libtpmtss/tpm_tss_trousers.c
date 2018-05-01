@@ -595,6 +595,13 @@ METHOD(tpm_tss_t, get_random, bool,
 	return FALSE;
 }
 
+METHOD(tpm_tss_t, get_data, bool,
+	private_tpm_tss_trousers_t *this, uint32_t hierarchy, uint32_t handle,
+	chunk_t pin, chunk_t *data)
+{
+	return FALSE;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_trousers_t *this)
 {
@@ -639,6 +646,7 @@ tpm_tss_t *tpm_tss_trousers_create()
 				.quote = _quote,
 				.sign = _sign,
 				.get_random = _get_random,
+				.get_data = _get_data,
 				.destroy = _destroy,
 			},
 			.load_aik = _load_aik,

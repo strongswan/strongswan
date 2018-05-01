@@ -1,5 +1,5 @@
 carol::swanctl --terminate --ike home
 dave::swanctl --terminate --ike home
-carol::service charon stop 2> /dev/null
-dave::service charon stop 2> /dev/null
-moon::service charon stop 2> /dev/null
+carol::systemctl stop strongswan-swanctl
+dave::systemctl stop strongswan-swanctl
+moon::systemctl stop strongswan-swanctl

@@ -320,7 +320,7 @@ struct radius_message_t {
 radius_message_t *radius_message_create(radius_message_code_t code);
 
 /**
- * Parse and verify a recevied RADIUS message.
+ * Parse and verify a received RADIUS message.
  *
  * @param data			received message data
  * @return				radius_message_t object, NULL if length invalid

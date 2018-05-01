@@ -301,11 +301,11 @@ static private_key_t *openssl_private_key_load(key_type_t type, va_list args)
 			{
 #ifndef OPENSSL_NO_RSA
 				case EVP_PKEY_RSA:
-					return openssl_rsa_private_key_create(key);
+					return openssl_rsa_private_key_create(key, FALSE);
 #endif
 #ifndef OPENSSL_NO_ECDSA
 				case EVP_PKEY_EC:
-					return openssl_ec_private_key_create(key);
+					return openssl_ec_private_key_create(key, FALSE);
 #endif
 				default:
 					EVP_PKEY_free(key);
@@ -313,6 +313,152 @@ static private_key_t *openssl_private_key_load(key_type_t type, va_list args)
 			}
 		}
 	}
+	return NULL;
+}
+
+#ifndef OPENSSL_NO_ENGINE
+/**
+ * Login to engine with a PIN specified for a keyid
+ */
+static bool login(ENGINE *engine, chunk_t keyid)
+{
+	enumerator_t *enumerator;
+	shared_key_t *shared;
+	identification_t *id;
+	chunk_t key;
+	char pin[64];
+	bool found = FALSE, success = FALSE;
+
+	id = identification_create_from_encoding(ID_KEY_ID, keyid);
+	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
+														SHARED_PIN, id, NULL);
+	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
+	{
+		found = TRUE;
+		key = shared->get_key(shared);
+		if (snprintf(pin, sizeof(pin),
+					 "%.*s", (int)key.len, key.ptr) >= sizeof(pin))
+		{
+			continue;
+		}
+		if (ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
+		{
+			success = TRUE;
+			break;
+		}
+		else
+		{
+			DBG1(DBG_CFG, "setting PIN on engine failed");
+		}
+	}
+	enumerator->destroy(enumerator);
+	id->destroy(id);
+	if (!found)
+	{
+		DBG1(DBG_CFG, "no PIN found for %#B", &keyid);
+	}
+	return success;
+}
+#endif /* OPENSSL_NO_ENGINE */
+
+/**
+ * Load private key via engine
+ */
+static private_key_t *openssl_private_key_connect(key_type_t type,
+												  va_list args)
+{
+#ifndef OPENSSL_NO_ENGINE
+	char *engine_id = NULL;
+	char keyname[BUF_LEN];
+	chunk_t keyid = chunk_empty;;
+	EVP_PKEY *key;
+	ENGINE *engine;
+	int slot = -1;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_PKCS11_KEYID:
+				keyid = va_arg(args, chunk_t);
+				continue;
+			case BUILD_PKCS11_SLOT:
+				slot = va_arg(args, int);
+				continue;
+			case BUILD_PKCS11_MODULE:
+				engine_id = va_arg(args, char*);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+	if (!keyid.len || keyid.len > 40)
+	{
+		return NULL;
+	}
+
+	memset(keyname, 0, sizeof(keyname));
+	if (slot != -1)
+	{
+		snprintf(keyname, sizeof(keyname), "%d:", slot);
+	}
+	if (sizeof(keyname) - strlen(keyname) <= keyid.len * 4 / 3 + 1)
+	{
+		return NULL;
+	}
+	chunk_to_hex(keyid, keyname + strlen(keyname), FALSE);
+
+	if (!engine_id)
+	{
+		engine_id = lib->settings->get_str(lib->settings,
+							"%s.plugins.openssl.engine_id", "pkcs11", lib->ns);
+	}
+	engine = ENGINE_by_id(engine_id);
+	if (!engine)
+	{
+		DBG2(DBG_LIB, "engine '%s' is not available", engine_id);
+		return NULL;
+	}
+	if (!ENGINE_init(engine))
+	{
+		DBG1(DBG_LIB, "failed to initialize engine '%s'", engine_id);
+		ENGINE_free(engine);
+		return NULL;
+	}
+	if (!login(engine, keyid))
+	{
+		DBG1(DBG_LIB, "login to engine '%s' failed", engine_id);
+		ENGINE_free(engine);
+		return NULL;
+	}
+	key = ENGINE_load_private_key(engine, keyname, NULL, NULL);
+	if (!key)
+	{
+		DBG1(DBG_LIB, "failed to load private key with ID '%s' from "
+			 "engine '%s'", keyname, engine_id);
+		ENGINE_free(engine);
+		return NULL;
+	}
+	ENGINE_free(engine);
+
+	switch (EVP_PKEY_base_id(key))
+	{
+#ifndef OPENSSL_NO_RSA
+		case EVP_PKEY_RSA:
+			return openssl_rsa_private_key_create(key, TRUE);
+#endif
+#ifndef OPENSSL_NO_ECDSA
+		case EVP_PKEY_EC:
+			return openssl_ec_private_key_create(key, TRUE);
+#endif
+		default:
+			EVP_PKEY_free(key);
+			break;
+	}
+#endif /* OPENSSL_NO_ENGINE */
 	return NULL;
 }
 
@@ -469,8 +615,6 @@ METHOD(plugin_t, get_features, int,
 		/* RSA private/public key loading */
 		PLUGIN_REGISTER(PRIVKEY, openssl_rsa_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_RSA),
-		PLUGIN_REGISTER(PRIVKEY, openssl_rsa_private_key_connect, FALSE),
-			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 		PLUGIN_REGISTER(PRIVKEY_GEN, openssl_rsa_private_key_gen, FALSE),
 			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_RSA),
 		PLUGIN_REGISTER(PUBKEY, openssl_rsa_public_key_load, TRUE),
@@ -480,6 +624,10 @@ METHOD(plugin_t, get_features, int,
 		/* signature/encryption schemes */
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_NULL),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_NULL),
+#if OPENSSL_VERSION_NUMBER >=  0x10000000L
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PSS),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PSS),
+#endif
 #ifndef OPENSSL_NO_SHA1
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA1),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA1),
@@ -553,6 +701,8 @@ METHOD(plugin_t, get_features, int,
 #endif /* OPENSSL_NO_ECDSA */
 		/* generic key loader */
 		PLUGIN_REGISTER(PRIVKEY, openssl_private_key_load, TRUE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
+		PLUGIN_REGISTER(PRIVKEY, openssl_private_key_connect, FALSE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 		PLUGIN_REGISTER(RNG, openssl_rng_create),
 			PLUGIN_PROVIDE(RNG, RNG_STRONG),

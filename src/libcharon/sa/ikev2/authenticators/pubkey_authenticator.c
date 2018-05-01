@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -61,10 +61,9 @@ struct private_pubkey_authenticator_t {
  * Parse authentication data used for Signature Authentication as per RFC 7427
  */
 static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
-									  signature_scheme_t *scheme)
+									  signature_params_t *params)
 {
 	uint8_t len;
-	int oid;
 
 	if (!auth_data->len)
 	{
@@ -72,14 +71,11 @@ static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
 	}
 	len = auth_data->ptr[0];
 	*auth_data = chunk_skip(*auth_data, 1);
-	/* we currently don't support schemes that require parameters */
-	oid = asn1_parse_algorithmIdentifier(*auth_data, 1, NULL);
-	*scheme = signature_scheme_from_oid(oid);
-	if (*scheme == SIGN_UNKNOWN)
+	if (!signature_params_parse(*auth_data, 1, params))
 	{
 		return FALSE;
 	}
-	*key_type = key_type_from_signature_scheme(*scheme);
+	*key_type = key_type_from_signature_scheme(params->scheme);
 	*auth_data = chunk_skip(*auth_data, len);
 	return TRUE;
 }
@@ -88,18 +84,16 @@ static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
  * Build authentication data used for Signature Authentication as per RFC 7427
  */
 static bool build_signature_auth_data(chunk_t *auth_data,
-									  signature_scheme_t scheme)
+									  signature_params_t *params)
 {
 	chunk_t data;
 	uint8_t len;
-	int oid;
 
-	oid = signature_scheme_to_oid(scheme);
-	if (oid == OID_UNKNOWN)
+	if (!signature_params_build(params, &data))
 	{
+		chunk_free(auth_data);
 		return FALSE;
 	}
-	data = asn1_algorithmIdentifier(oid);
 	len = data.len;
 	*auth_data = chunk_cat("cmm", chunk_from_thing(len), data, *auth_data);
 	return TRUE;
@@ -114,13 +108,13 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 {
 	enumerator_t *enumerator;
 	signature_scheme_t scheme;
-	uintptr_t config;
+	signature_params_t *config;
 	auth_rule_t rule;
 	key_type_t key_type;
 	bool have_config = FALSE;
 	array_t *selected;
 
-	selected = array_create(sizeof(signature_scheme_t), 0);
+	selected = array_create(0, 0);
 	key_type = private->get_type(private);
 	enumerator = auth->create_enumerator(auth);
 	while (enumerator->enumerate(enumerator, &rule, &config))
@@ -130,12 +124,12 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 			continue;
 		}
 		have_config = TRUE;
-		if (key_type == key_type_from_signature_scheme(config) &&
+		if (key_type == key_type_from_signature_scheme(config->scheme) &&
 			keymat->hash_algorithm_supported(keymat,
-										hasher_from_signature_scheme(config)))
+								hasher_from_signature_scheme(config->scheme,
+															 config->params)))
 		{
-			scheme = config;
-			array_insert(selected, ARRAY_TAIL, &scheme);
+			array_insert(selected, ARRAY_TAIL, signature_params_clone(config));
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -146,25 +140,31 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 		 * and supported by the other peer */
 		enumerator = signature_schemes_for_key(key_type,
 											   private->get_keysize(private));
-		while (enumerator->enumerate(enumerator, &scheme))
+		while (enumerator->enumerate(enumerator, &config))
 		{
-			if (keymat->hash_algorithm_supported(keymat,
-										hasher_from_signature_scheme(scheme)))
+			if (config->scheme == SIGN_RSA_EMSA_PSS &&
+				!lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+										 lib->ns))
 			{
-				array_insert(selected, ARRAY_TAIL, &scheme);
+				continue;
+			}
+			if (keymat->hash_algorithm_supported(keymat,
+								hasher_from_signature_scheme(config->scheme,
+															 config->params)))
+			{
+				array_insert(selected, ARRAY_TAIL,
+							 signature_params_clone(config));
 			}
 		}
 		enumerator->destroy(enumerator);
 
-		/* for RSA we tried at least SHA-512, also try other schemes down to
-		 * what we'd use with classic authentication */
+		/* for RSA we tried at least SHA-512, also try other schemes */
 		if (key_type == KEY_RSA)
 		{
 			signature_scheme_t schemes[] = {
 				SIGN_RSA_EMSA_PKCS1_SHA2_384,
 				SIGN_RSA_EMSA_PKCS1_SHA2_256,
-				SIGN_RSA_EMSA_PKCS1_SHA1,
-			}, contained;
+			};
 			bool found;
 			int i, j;
 
@@ -174,22 +174,32 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 				found = FALSE;
 				for (j = 0; j < array_count(selected); j++)
 				{
-					array_get(selected, j, &contained);
-					if (scheme == contained)
+					array_get(selected, j, &config);
+					if (scheme == config->scheme)
 					{
 						found = TRUE;
 						break;
 					}
 				}
 				if (!found && keymat->hash_algorithm_supported(keymat,
-										hasher_from_signature_scheme(scheme)))
+										hasher_from_signature_scheme(scheme,
+																	 NULL)))
 				{
-					array_insert(selected, ARRAY_TAIL, &scheme);
+					INIT(config,
+						.scheme = scheme,
+					)
+					array_insert(selected, ARRAY_TAIL, config);
 				}
 			}
 		}
 	}
 	return selected;
+}
+
+CALLBACK(destroy_scheme, void,
+	signature_params_t *params, int idx, void *user)
+{
+	signature_params_destroy(params);
 }
 
 /**
@@ -201,7 +211,7 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 {
 	enumerator_t *enumerator;
 	keymat_v2_t *keymat;
-	signature_scheme_t scheme = SIGN_UNKNOWN, *schemep;
+	signature_params_t *params = NULL;
 	array_t *schemes;
 	chunk_t octets = chunk_empty;
 	status_t status = FAILED;
@@ -221,11 +231,11 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 								schemes))
 	{
 		enumerator = array_create_enumerator(schemes);
-		while (enumerator->enumerate(enumerator, &schemep))
+		while (enumerator->enumerate(enumerator, &params))
 		{
-			scheme = *schemep;
-			if (private->sign(private, scheme, octets, auth_data) &&
-				build_signature_auth_data(auth_data, scheme))
+			if (private->sign(private, params->scheme, params->params, octets,
+							  auth_data) &&
+				build_signature_auth_data(auth_data, params))
 			{
 				status = SUCCESS;
 				break;
@@ -233,16 +243,34 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 			else
 			{
 				DBG2(DBG_IKE, "unable to create %N signature for %N key",
-					 signature_scheme_names, scheme, key_type_names,
+					 signature_scheme_names, params->scheme, key_type_names,
 					 private->get_type(private));
 			}
 		}
 		enumerator->destroy(enumerator);
 	}
-	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
-		 signature_scheme_names, scheme,
-		 status == SUCCESS ? "successful" : "failed");
-	array_destroy(schemes);
+	if (params)
+	{
+		if (params->scheme == SIGN_RSA_EMSA_PSS)
+		{
+			rsa_pss_params_t *pss = params->params;
+			DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N_%N %s", id,
+				 signature_scheme_names, params->scheme,
+				 hash_algorithm_short_names_upper, pss->hash,
+				 status == SUCCESS ? "successful" : "failed");
+		}
+		else
+		{
+			DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
+				 signature_scheme_names, params->scheme,
+				 status == SUCCESS ? "successful" : "failed");
+		}
+	}
+	else
+	{
+		DBG1(DBG_IKE, "authentication of '%Y' (myself) failed", id);
+	}
+	array_destroy_function(schemes, destroy_scheme, NULL);
 	chunk_free(&octets);
 	return status;
 }
@@ -253,23 +281,27 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
  */
 static bool get_auth_octets_scheme(private_pubkey_authenticator_t *this,
 								   bool verify, identification_t *id,
-								   chunk_t *octets, signature_scheme_t *scheme)
+								   chunk_t *octets, signature_params_t **scheme)
 {
 	keymat_v2_t *keymat;
 	array_t *schemes;
 	bool success = FALSE;
 
-	schemes = array_create(sizeof(signature_scheme_t), 0);
-	array_insert(schemes, ARRAY_TAIL, scheme);
+	schemes = array_create(0, 0);
+	array_insert(schemes, ARRAY_TAIL, *scheme);
 
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	if (keymat->get_auth_octets(keymat, verify, this->ike_sa_init, this->nonce,
 								id, this->reserved, octets, schemes) &&
-		array_get(schemes, 0, &scheme))
+		array_remove(schemes, 0, scheme))
 	{
 		success = TRUE;
 	}
-	array_destroy(schemes);
+	else
+	{
+		*scheme = NULL;
+	}
+	array_destroy_function(schemes, destroy_scheme, NULL);
 	return success;
 }
 
@@ -282,6 +314,7 @@ static status_t sign_classic(private_pubkey_authenticator_t *this,
 							 chunk_t *auth_data)
 {
 	signature_scheme_t scheme;
+	signature_params_t *params;
 	chunk_t octets = chunk_empty;
 	status_t status = FAILED;
 
@@ -319,10 +352,17 @@ static status_t sign_classic(private_pubkey_authenticator_t *this,
 			return FAILED;
 	}
 
-	if (get_auth_octets_scheme(this, FALSE, id, &octets, &scheme) &&
-		private->sign(private, scheme, octets, auth_data))
+	INIT(params,
+		.scheme = scheme,
+	);
+	if (get_auth_octets_scheme(this, FALSE, id, &octets, &params) &&
+		private->sign(private, params->scheme, NULL, octets, auth_data))
 	{
 		status = SUCCESS;
+	}
+	if (params)
+	{
+		signature_params_destroy(params);
 	}
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
 		 auth_method_names, *auth_method,
@@ -385,7 +425,7 @@ METHOD(authenticator_t, process, status_t,
 	auth_cfg_t *auth, *current_auth;
 	enumerator_t *enumerator;
 	key_type_t key_type = KEY_ECDSA;
-	signature_scheme_t scheme;
+	signature_params_t *params;
 	status_t status = NOT_FOUND;
 	const char *reason = "unsupported";
 	bool online;
@@ -395,25 +435,26 @@ METHOD(authenticator_t, process, status_t,
 	{
 		return FAILED;
 	}
+	INIT(params);
 	auth_method = auth_payload->get_auth_method(auth_payload);
 	auth_data = auth_payload->get_data(auth_payload);
 	switch (auth_method)
 	{
 		case AUTH_RSA:
 			key_type = KEY_RSA;
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+			params->scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
 			break;
 		case AUTH_ECDSA_256:
-			scheme = SIGN_ECDSA_256;
+			params->scheme = SIGN_ECDSA_256;
 			break;
 		case AUTH_ECDSA_384:
-			scheme = SIGN_ECDSA_384;
+			params->scheme = SIGN_ECDSA_384;
 			break;
 		case AUTH_ECDSA_521:
-			scheme = SIGN_ECDSA_521;
+			params->scheme = SIGN_ECDSA_521;
 			break;
 		case AUTH_DS:
-			if (parse_signature_auth_data(&auth_data, &key_type, &scheme))
+			if (parse_signature_auth_data(&auth_data, &key_type, params))
 			{
 				break;
 			}
@@ -422,10 +463,11 @@ METHOD(authenticator_t, process, status_t,
 		default:
 			DBG1(DBG_IKE, "%N authentication %s", auth_method_names,
 				 auth_method, reason);
+			signature_params_destroy(params);
 			return INVALID_ARG;
 	}
 	id = this->ike_sa->get_other_id(this->ike_sa);
-	if (!get_auth_octets_scheme(this, TRUE, id, &octets, &scheme))
+	if (!get_auth_octets_scheme(this, TRUE, id, &octets, &params))
 	{
 		return FAILED;
 	}
@@ -436,15 +478,31 @@ METHOD(authenticator_t, process, status_t,
 													key_type, id, auth, online);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
-		if (public->verify(public, scheme, octets, auth_data))
+		if (public->verify(public, params->scheme, params->params, octets,
+						   auth_data))
 		{
-			DBG1(DBG_IKE, "authentication of '%Y' with %N successful", id,
-				 auth_method == AUTH_DS ? signature_scheme_names : auth_method_names,
-				 auth_method == AUTH_DS ? scheme : auth_method);
+			if (auth_method != AUTH_DS)
+			{
+				DBG1(DBG_IKE, "authentication of '%Y' with %N successful", id,
+					 auth_method_names, auth_method);
+			}
+			else if (params->scheme == SIGN_RSA_EMSA_PSS)
+			{
+				rsa_pss_params_t *pss = params->params;
+				DBG1(DBG_IKE, "authentication of '%Y' with %N_%N successful",
+					 id, signature_scheme_names, params->scheme,
+					 hash_algorithm_short_names_upper, pss->hash);
+			}
+			else
+			{
+				DBG1(DBG_IKE, "authentication of '%Y' with %N successful", id,
+					 signature_scheme_names, params->scheme);
+			}
 			status = SUCCESS;
 			auth->merge(auth, current_auth, FALSE);
 			auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
-			auth->add(auth, AUTH_RULE_IKE_SIGNATURE_SCHEME, (uintptr_t)scheme);
+			auth->add(auth, AUTH_RULE_IKE_SIGNATURE_SCHEME,
+					  signature_params_clone(params));
 			if (!online)
 			{
 				auth->add(auth, AUTH_RULE_CERT_VALIDATION_SUSPENDED, TRUE);
@@ -459,6 +517,7 @@ METHOD(authenticator_t, process, status_t,
 	}
 	enumerator->destroy(enumerator);
 	chunk_free(&octets);
+	signature_params_destroy(params);
 	if (status == NOT_FOUND)
 	{
 		DBG1(DBG_IKE, "no trusted %N public key found for '%Y'",

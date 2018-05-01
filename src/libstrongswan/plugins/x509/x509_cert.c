@@ -4,7 +4,7 @@
  * Copyright (C) 2002 Mario Strasser
  * Copyright (C) 2000-2017 Andreas Steffen
  * Copyright (C) 2006-2009 Martin Willi
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -197,9 +197,9 @@ struct private_x509_cert_t {
 	x509_flag_t flags;
 
 	/**
-	 * Signature algorithm
+	 * Signature scheme
 	 */
-	int algorithm;
+	signature_params_t *scheme;
 
 	/**
 	 * Signature
@@ -238,16 +238,6 @@ static bool gn_to_string(identification_t *id, char **uri)
 		return FALSE;
 	}
 	return len > 0;
-}
-
-/**
- * Destroy a CertificateDistributionPoint
- */
-static void crl_uri_destroy(x509_cdp_t *this)
-{
-	free(this->uri);
-	DESTROY_IF(this->issuer);
-	free(this);
 }
 
 /**
@@ -1385,7 +1375,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 	chunk_t object;
 	int objectID;
 	int extn_oid = OID_UNKNOWN;
-	int sig_alg  = OID_UNKNOWN;
+	signature_params_t sig_alg = {};
 	bool success = FALSE;
 	bool critical = FALSE;
 
@@ -1416,7 +1406,11 @@ static bool parse_certificate(private_x509_cert_t *this)
 				this->serialNumber = object;
 				break;
 			case X509_OBJ_SIG_ALG:
-				sig_alg = asn1_parse_algorithmIdentifier(object, level, NULL);
+				if (!signature_params_parse(object, level, &sig_alg))
+				{
+					DBG1(DBG_ASN, "  unable to parse signature algorithm");
+					goto end;
+				}
 				break;
 			case X509_OBJ_ISSUER:
 				this->issuer = identification_create_from_encoding(ID_DER_ASN1_DN, object);
@@ -1570,8 +1564,13 @@ static bool parse_certificate(private_x509_cert_t *this)
 				break;
 			}
 			case X509_OBJ_ALGORITHM:
-				this->algorithm = asn1_parse_algorithmIdentifier(object, level, NULL);
-				if (this->algorithm != sig_alg)
+				INIT(this->scheme);
+				if (!signature_params_parse(object, level, this->scheme))
+				{
+					DBG1(DBG_ASN, "  unable to parse signature algorithm");
+					goto end;
+				}
+				if (!signature_params_equal(this->scheme, &sig_alg))
 				{
 					DBG1(DBG_ASN, "  signature algorithms do not agree");
 					goto end;
@@ -1588,6 +1587,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 
 end:
 	parser->destroy(parser);
+	signature_params_clear(&sig_alg);
 	if (success)
 	{
 		hasher_t *hasher;
@@ -1687,10 +1687,9 @@ METHOD(certificate_t, has_issuer, id_match_t,
 
 METHOD(certificate_t, issued_by, bool,
 	private_x509_cert_t *this, certificate_t *issuer,
-	signature_scheme_t *schemep)
+	signature_params_t **scheme)
 {
 	public_key_t *key;
-	signature_scheme_t scheme;
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
 
@@ -1698,6 +1697,10 @@ METHOD(certificate_t, issued_by, bool,
 	{
 		if (this->flags & X509_SELF_SIGNED)
 		{
+			if (scheme)
+			{
+				*scheme = signature_params_clone(this->scheme);
+			}
 			return TRUE;
 		}
 	}
@@ -1717,23 +1720,18 @@ METHOD(certificate_t, issued_by, bool,
 		return FALSE;
 	}
 
-	/* determine signature scheme */
-	scheme = signature_scheme_from_oid(this->algorithm);
-	if (scheme == SIGN_UNKNOWN)
-	{
-		return FALSE;
-	}
 	/* get the public key of the issuer */
 	key = issuer->get_public_key(issuer);
 	if (!key)
 	{
 		return FALSE;
 	}
-	valid = key->verify(key, scheme, this->tbsCertificate, this->signature);
+	valid = key->verify(key, this->scheme->scheme, this->scheme->params,
+						this->tbsCertificate, this->signature);
 	key->destroy(key);
-	if (valid && schemep)
+	if (valid && scheme)
 	{
-		*schemep = scheme;
+		*scheme = signature_params_clone(this->scheme);
 	}
 	return valid;
 }
@@ -1920,7 +1918,8 @@ METHOD(certificate_t, destroy, void,
 	{
 		this->subjectAltNames->destroy_offset(this->subjectAltNames,
 									offsetof(identification_t, destroy));
-		this->crl_uris->destroy_function(this->crl_uris, (void*)crl_uri_destroy);
+		this->crl_uris->destroy_function(this->crl_uris,
+										 (void*)x509_cdp_destroy);
 		this->ocsp_uris->destroy_function(this->ocsp_uris, free);
 		this->ipAddrBlocks->destroy_offset(this->ipAddrBlocks,
 										offsetof(traffic_selector_t, destroy));
@@ -1932,6 +1931,7 @@ METHOD(certificate_t, destroy, void,
 											  (void*)cert_policy_destroy);
 		this->policy_mappings->destroy_function(this->policy_mappings,
 											  (void*)policy_mapping_destroy);
+		signature_params_destroy(this->scheme);
 		DESTROY_IF(this->issuer);
 		DESTROY_IF(this->subject);
 		DESTROY_IF(this->public_key);
@@ -2187,10 +2187,9 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	chunk_t crlDistributionPoints = chunk_empty, authorityInfoAccess = chunk_empty;
 	chunk_t policyConstraints = chunk_empty, inhibitAnyPolicy = chunk_empty;
 	chunk_t ikeIntermediate = chunk_empty, msSmartcardLogon = chunk_empty;
-	chunk_t ipAddrBlocks = chunk_empty;
+	chunk_t ipAddrBlocks = chunk_empty, sig_scheme = chunk_empty;
 	identification_t *issuer, *subject;
 	chunk_t key_info;
-	signature_scheme_t scheme;
 	hasher_t *hasher;
 	enumerator_t *enumerator;
 	char *uri;
@@ -2223,18 +2222,28 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		cert->notAfter = cert->notBefore + 60 * 60 * 24 * 365;
 	}
 
-	/* select signature scheme */
-	cert->algorithm = hasher_signature_algorithm_to_oid(digest_alg,
-								sign_key->get_type(sign_key));
-	if (cert->algorithm == OID_UNKNOWN)
+	/* select signature scheme, if not already specified */
+	if (!cert->scheme)
+	{
+		INIT(cert->scheme,
+			.scheme = signature_scheme_from_oid(
+								hasher_signature_algorithm_to_oid(digest_alg,
+												sign_key->get_type(sign_key))),
+		);
+	}
+	if (cert->scheme->scheme == SIGN_UNKNOWN)
 	{
 		return FALSE;
 	}
-	scheme = signature_scheme_from_oid(cert->algorithm);
+	if (!signature_params_build(cert->scheme, &sig_scheme))
+	{
+		return FALSE;
+	}
 
 	if (!cert->public_key->get_encoding(cert->public_key,
 										PUBKEY_SPKI_ASN1_DER, &key_info))
 	{
+		chunk_free(&sig_scheme);
 		return FALSE;
 	}
 
@@ -2559,10 +2568,10 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 							ipAddrBlocks));
 	}
 
-	cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmmcmcmm",
+	cert->tbsCertificate = asn1_wrap(ASN1_SEQUENCE, "mmccmcmm",
 		asn1_simple_object(ASN1_CONTEXT_C_0, ASN1_INTEGER_2),
 		asn1_integer("c", cert->serialNumber),
-		asn1_algorithmIdentifier(cert->algorithm),
+		sig_scheme,
 		issuer->get_encoding(issuer),
 		asn1_wrap(ASN1_SEQUENCE, "mm",
 			asn1_from_time(&cert->notBefore, ASN1_UTCTIME),
@@ -2570,12 +2579,14 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 		subject->get_encoding(subject),
 		key_info, extensions);
 
-	if (!sign_key->sign(sign_key, scheme, cert->tbsCertificate, &cert->signature))
+	if (!sign_key->sign(sign_key, cert->scheme->scheme, cert->scheme->params,
+						cert->tbsCertificate, &cert->signature))
 	{
+		chunk_free(&sig_scheme);
 		return FALSE;
 	}
 	cert->encoding = asn1_wrap(ASN1_SEQUENCE, "cmm", cert->tbsCertificate,
-							   asn1_algorithmIdentifier(cert->algorithm),
+							   sig_scheme,
 							   asn1_bitstring("c", cert->signature));
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
@@ -2639,7 +2650,7 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 	private_x509_cert_t *cert;
 	certificate_t *sign_cert = NULL;
 	private_key_t *sign_key = NULL;
-	hash_algorithm_t digest_alg = HASH_SHA1;
+	hash_algorithm_t digest_alg = HASH_SHA256;
 	u_int constraint;
 
 	cert = create_empty();
@@ -2830,6 +2841,10 @@ x509_cert_t *x509_cert_gen(certificate_type_t type, va_list args)
 				continue;
 			case BUILD_SERIAL:
 				cert->serialNumber = chunk_clone(va_arg(args, chunk_t));
+				continue;
+			case BUILD_SIGNATURE_SCHEME:
+				cert->scheme = va_arg(args, signature_params_t*);
+				cert->scheme = signature_params_clone(cert->scheme);
 				continue;
 			case BUILD_DIGEST_ALG:
 				digest_alg = va_arg(args, int);

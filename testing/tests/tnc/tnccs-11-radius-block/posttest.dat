@@ -1,6 +1,6 @@
-carol::service charon stop
-dave::service charon stop
-moon::service charon stop
+carol::systemctl stop strongswan-swanctl
+dave::systemctl stop strongswan-swanctl
+moon::systemctl stop strongswan-swanctl
 alice::killall radiusd
 alice::rm /etc/freeradius/sites-enabled/inner-tunnel-second
 moon::iptables-restore < /etc/iptables.flush

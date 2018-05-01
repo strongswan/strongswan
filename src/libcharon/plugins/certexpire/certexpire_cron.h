@@ -38,7 +38,7 @@ struct certexpire_cron_t {
 	/**
 	 * Destroy a certexpire_cron_t.
 	 *
-	 * It currently is not possible to savely cancel a cron job. Make sure
+	 * It currently is not possible to safely cancel a cron job. Make sure
 	 * any scheduled jobs have been canceled before cleaning up.
 	 */
 	void (*destroy)(certexpire_cron_t *this);

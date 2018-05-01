@@ -150,13 +150,55 @@ static bool is_supported_alg(private_tpm_tss_tss2_t *this, TPM_ALG_ID alg_id)
 static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 {
 	TPMS_CAPABILITY_DATA cap_data;
+	TPMS_TAGGED_PROPERTY tp;
 	TPMI_YES_NO more_data;
 	TPM_ALG_ID alg;
-	uint32_t rval, i;
+	uint32_t rval, i, offset, revision = 0, year = 0;
 	size_t len = BUF_LEN;
-	char buf[BUF_LEN];
+	char buf[BUF_LEN], manufacturer[5], vendor_string[17];
 	char *pos = buf;
 	int written;
+
+	/* get fixed properties */
+	rval = Tss2_Sys_GetCapability(this->sys_context, 0, TPM_CAP_TPM_PROPERTIES,
+						PT_FIXED, MAX_TPM_PROPERTIES, &more_data, &cap_data, 0);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s GetCapability failed for TPM_CAP_TPM_PROPERTIES: 0x%06x",
+					   LABEL, rval);
+		return FALSE;
+	}
+	memset(manufacturer,  '\0', sizeof(manufacturer));
+	memset(vendor_string, '\0', sizeof(vendor_string));
+
+	/* print fixed properties */
+	for (i = 0; i < cap_data.data.tpmProperties.count; i++)
+	{
+		tp = cap_data.data.tpmProperties.tpmProperty[i];
+		switch (tp.property)
+		{
+			case TPM_PT_REVISION:
+				revision = tp.value;
+				break;
+			case TPM_PT_YEAR:
+				year = tp.value;
+				break;
+			case TPM_PT_MANUFACTURER:
+				htoun32(manufacturer, tp.value);
+				break;
+			case TPM_PT_VENDOR_STRING_1:
+			case TPM_PT_VENDOR_STRING_2:
+			case TPM_PT_VENDOR_STRING_3:
+			case TPM_PT_VENDOR_STRING_4:
+				offset = 4 * (tp.property - TPM_PT_VENDOR_STRING_1);
+				htoun32(vendor_string + offset, tp.value);
+				break;
+			default:
+				break;
+		}
+	}
+	DBG2(DBG_PTS, "%s manufacturer: %s (%s) rev: %05.2f %u", LABEL, manufacturer,
+		 vendor_string, (float)revision/100, year);
 
 	/* get supported algorithms */
 	rval = Tss2_Sys_GetCapability(this->sys_context, 0, TPM_CAP_ALGS,
@@ -236,8 +278,9 @@ static bool initialize_tcti_tabrmd_context(private_tpm_tss_tss2_t *this)
 		return FALSE;
 	}
 
-	/* allocate memory for tcti context */
+	/* allocate and initialize memory for tcti context */
 	this->tcti_context = (TSS2_TCTI_CONTEXT*)malloc(tcti_context_size);
+	memset(this->tcti_context, 0x00, tcti_context_size);
 
 	/* initialize tcti context */
 	rval = tss2_tcti_tabrmd_init(this->tcti_context, &tcti_context_size);
@@ -433,6 +476,7 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			{
 				DBG1(DBG_PTS, "%s subjectPublicKeyInfo encoding of AIK key "
 							  "failed", LABEL);
+				return chunk_empty;
 			}
 			break;
 		}
@@ -563,8 +607,93 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 	private_tpm_tss_tss2_t *this, uint32_t pcr_num, chunk_t *pcr_value,
 	chunk_t data, hash_algorithm_t alg)
 {
-	/* TODO */
-	return FALSE;
+	uint32_t rval;
+	TPM_ALG_ID alg_id;
+	TPML_DIGEST_VALUES digest_values;
+	TPMS_AUTH_COMMAND  session_data_cmd;
+	TPMS_AUTH_RESPONSE session_data_rsp;
+	TSS2_SYS_CMD_AUTHS sessions_data_cmd;
+	TSS2_SYS_RSP_AUTHS sessions_data_rsp;
+	TPMS_AUTH_COMMAND  *session_data_cmd_array[1];
+	TPMS_AUTH_RESPONSE *session_data_rsp_array[1];
+
+	session_data_cmd_array[0] = &session_data_cmd;
+	session_data_rsp_array[0] = &session_data_rsp;
+
+	sessions_data_cmd.cmdAuths = &session_data_cmd_array[0];
+	sessions_data_rsp.rspAuths = &session_data_rsp_array[0];
+
+	sessions_data_cmd.cmdAuthsCount = 1;
+	sessions_data_rsp.rspAuthsCount = 1;
+
+	session_data_cmd.sessionHandle = TPM_RS_PW;
+	session_data_cmd.hmac.t.size = 0;
+	session_data_cmd.nonce.t.size = 0;
+
+	*( (uint8_t *)((void *)&session_data_cmd.sessionAttributes ) ) = 0;
+
+	/* check if hash algorithm is supported by TPM */
+	alg_id = hash_alg_to_tpm_alg_id(alg);
+	if (!is_supported_alg(this, alg_id))
+	{
+		DBG1(DBG_PTS, "%s %N hash algorithm not supported by TPM",
+			 LABEL, hash_algorithm_short_names, alg);
+		return FALSE;
+	}
+
+	digest_values.count = 1;
+	digest_values.digests[0].hashAlg = alg_id;
+
+	switch (alg)
+	{
+		case HASH_SHA1:
+			if (data.len != HASH_SIZE_SHA1)
+			{
+				return FALSE;
+			}
+			memcpy(digest_values.digests[0].digest.sha1, data.ptr,
+				   HASH_SIZE_SHA1);
+			break;
+		case HASH_SHA256:
+			if (data.len != HASH_SIZE_SHA256)
+			{
+				return FALSE;
+			}
+			memcpy(digest_values.digests[0].digest.sha256, data.ptr,
+				    HASH_SIZE_SHA256);
+			break;
+		case HASH_SHA384:
+			if (data.len != HASH_SIZE_SHA384)
+			{
+				return FALSE;
+			}
+			memcpy(digest_values.digests[0].digest.sha384, data.ptr,
+				    HASH_SIZE_SHA384);
+			break;
+		case HASH_SHA512:
+			if (data.len != HASH_SIZE_SHA512)
+			{
+				return FALSE;
+			}
+			memcpy(digest_values.digests[0].digest.sha512, data.ptr,
+				    HASH_SIZE_SHA512);
+			break;
+		default:
+			return FALSE;
+	}
+
+	/* extend PCR */
+	rval = Tss2_Sys_PCR_Extend(this->sys_context, pcr_num, &sessions_data_cmd,
+							   &digest_values, &sessions_data_rsp);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s PCR %02u could not be extended: 0x%06x",
+			 LABEL, pcr_num, rval);
+		return FALSE;
+	}
+
+	/* get updated PCR value */
+	return read_pcr(this, pcr_num, pcr_value, alg);
 }
 
 METHOD(tpm_tss_t, quote, bool,
@@ -742,7 +871,7 @@ METHOD(tpm_tss_t, sign, bool,
 	*( (uint8_t *)((void *)&session_data_cmd.sessionAttributes ) ) = 0;
 
 	key_type = key_type_from_signature_scheme(scheme);
-	hash_alg = hasher_from_signature_scheme(scheme);
+	hash_alg = hasher_from_signature_scheme(scheme, NULL);
 
 	/* Check if hash algorithm is supported by TPM */
 	alg_id = hash_alg_to_tpm_alg_id(hash_alg);
@@ -913,6 +1042,78 @@ METHOD(tpm_tss_t, get_random, bool,
 	return TRUE;
 }
 
+METHOD(tpm_tss_t, get_data, bool,
+	private_tpm_tss_tss2_t *this, uint32_t hierarchy, uint32_t handle,
+	chunk_t pin, chunk_t *data)
+{
+	uint16_t nv_size, nv_offset = 0;
+	uint32_t rval;
+
+	TPM2B_NAME nv_name = { { sizeof(TPM2B_NAME)-2, } };
+	TPM2B_NV_PUBLIC nv_public = { { 0, } };
+	TPM2B_MAX_NV_BUFFER nv_data = { { sizeof(TPM2B_MAX_NV_BUFFER)-2, } };
+	TPMS_AUTH_COMMAND  session_data_cmd;
+	TPMS_AUTH_RESPONSE session_data_rsp;
+	TSS2_SYS_CMD_AUTHS sessions_data_cmd;
+	TSS2_SYS_RSP_AUTHS sessions_data_rsp;
+	TPMS_AUTH_COMMAND  *session_data_cmd_array[1];
+	TPMS_AUTH_RESPONSE *session_data_rsp_array[1];
+
+	/* get size of NV object */
+	rval = Tss2_Sys_NV_ReadPublic(this->sys_context, handle, 0, &nv_public,
+																&nv_name, 0);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS,"%s Tss2_Sys_NV_ReadPublic failed: 0x%06x", LABEL, rval);
+		return FALSE;
+	}
+	nv_size = nv_public.t.nvPublic.dataSize;
+	*data = chunk_alloc(nv_size);
+
+	/*prepare NV read session */
+	session_data_cmd_array[0] = &session_data_cmd;
+	session_data_rsp_array[0] = &session_data_rsp;
+
+	sessions_data_cmd.cmdAuths = &session_data_cmd_array[0];
+	sessions_data_rsp.rspAuths = &session_data_rsp_array[0];
+
+	sessions_data_cmd.cmdAuthsCount = 1;
+	sessions_data_rsp.rspAuthsCount = 1;
+
+	session_data_cmd.sessionHandle = TPM_RS_PW;
+	session_data_cmd.nonce.t.size = 0;
+	session_data_cmd.hmac.t.size = 0;
+
+	if (pin.len > 0)
+	{
+		session_data_cmd.hmac.t.size = min(sizeof(session_data_cmd.hmac.t) - 2,
+										   pin.len);
+		memcpy(session_data_cmd.hmac.t.buffer, pin.ptr,
+			   session_data_cmd.hmac.t.size);
+	}
+	*( (uint8_t *)((void *)&session_data_cmd.sessionAttributes ) ) = 0;
+
+	/* read NV data an NV buffer block at a time */
+	while (nv_size > 0)
+	{
+		rval = Tss2_Sys_NV_Read(this->sys_context, hierarchy, handle,
+					&sessions_data_cmd, min(nv_size, MAX_NV_BUFFER_SIZE),
+					nv_offset, &nv_data, &sessions_data_rsp);
+
+		if (rval != TPM_RC_SUCCESS)
+		{
+			DBG1(DBG_PTS,"%s Tss2_Sys_NV_Read failed: 0x%06x", LABEL, rval);
+			chunk_free(data);
+			return FALSE;
+		}
+		memcpy(data->ptr + nv_offset, nv_data.t.buffer, nv_data.t.size);
+		nv_offset += nv_data.t.size;
+		nv_size   -= nv_data.t.size;
+	}
+
+	return TRUE;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_tss2_t *this)
 {
@@ -939,6 +1140,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 			.quote = _quote,
 			.sign = _sign,
 			.get_random = _get_random,
+			.get_data = _get_data,
 			.destroy = _destroy,
 		},
 	);

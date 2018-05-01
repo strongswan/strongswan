@@ -39,7 +39,7 @@ struct private_cred_encoding_t {
 	hashtable_t *cache[CRED_ENCODING_MAX];
 
 	/**
-	 * Registered encoding fuctions, cred_encoder_t
+	 * Registered encoding functions, cred_encoder_t
 	 */
 	linked_list_t *encoders;
 

@@ -494,11 +494,12 @@ inline bool settings_value_as_bool(char *value, bool def)
 }
 
 METHOD(settings_t, get_bool, bool,
-	private_settings_t *this, char *key, bool def, ...)
+	private_settings_t *this, char *key, int def, ...)
 {
 	char *value;
 	va_list args;
 
+	/* we can't use bool for def due to this call */
 	va_start(args, def);
 	value = find_value(this, this->top, key, args);
 	va_end(args);
@@ -604,41 +605,11 @@ METHOD(settings_t, get_double, double,
  */
 inline uint32_t settings_value_as_time(char *value, uint32_t def)
 {
-	char *endptr;
-	uint32_t timeval;
-	if (value)
+	time_t val;
+
+	if (timespan_from_string(value, NULL, &val))
 	{
-		errno = 0;
-		timeval = strtoul(value, &endptr, 10);
-		if (endptr == value)
-		{
-			return def;
-		}
-		if (errno == 0)
-		{
-			while (isspace(*endptr))
-			{
-				endptr++;
-			}
-			switch (*endptr)
-			{
-				case 'd':		/* time in days */
-					timeval *= 24 * 3600;
-					break;
-				case 'h':		/* time in hours */
-					timeval *= 3600;
-					break;
-				case 'm':		/* time in minutes */
-					timeval *= 60;
-					break;
-				case 's':		/* time in seconds */
-				case '\0':
-					break;
-				default:
-					return def;
-			}
-			return timeval;
-		}
+		return val;
 	}
 	return def;
 }
@@ -665,9 +636,10 @@ METHOD(settings_t, set_str, void,
 }
 
 METHOD(settings_t, set_bool, void,
-	private_settings_t *this, char *key, bool value, ...)
+	private_settings_t *this, char *key, int value, ...)
 {
 	va_list args;
+	/* we can't use bool for value due to this call */
 	va_start(args, value);
 	set_value(this, this->top, key, args, value ? "1" : "0");
 	va_end(args);

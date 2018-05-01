@@ -67,9 +67,10 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
  * Wrap an EVP_PKEY object of type EVP_PKEY_RSA
  *
  * @param key		EVP_PKEY_RSA key object (adopted)
+ * @param engine	whether the key was loaded via an engine
  * @return 			loaded key, NULL on failure
  */
-private_key_t *openssl_rsa_private_key_create(EVP_PKEY *key);
+private_key_t *openssl_rsa_private_key_create(EVP_PKEY *key, bool engine);
 
 /**
  * Connect to a RSA private key on a smartcard.

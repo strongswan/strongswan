@@ -7,7 +7,7 @@ charon.plugins.kernel-netlink.force_receive_buffer_size = no
 	If the maximum Netlink socket receive buffer in bytes set by
 	_receive_buffer_size_ exceeds the system-wide maximum from
 	/proc/sys/net/core/rmem_max, this option can be used to override the limit.
-	Enabling this option requires special priviliges (CAP_NET_ADMIN).
+	Enabling this option requires special privileges (CAP_NET_ADMIN).
 
 charon.plugins.kernel-netlink.fwmark =
 	Firewall mark to set on the routing rule that directs traffic to our routing
@@ -46,6 +46,13 @@ charon.plugins.kernel-netlink.port_bypass = no
 	The default socket based policies are directly tied to the IKE UDP sockets,
 	port based policies use global XFRM bypass policies for the used IKE UDP
 	ports.
+
+charon.plugins.kernel-netlink.process_rules = no
+	Whether to process changes in routing rules to trigger roam events.
+
+	Whether to process changes in routing rules to trigger roam events. This is
+	currently only useful if the kernel based route lookup is used (i.e. if
+	route installation is disabled or an inverted fwmark match is configured).
 
 charon.plugins.kernel-netlink.receive_buffer_size = 0
 	Maximum Netlink socket receive buffer in bytes.

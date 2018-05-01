@@ -627,6 +627,11 @@ static bool on_accept(private_stroke_socket_t *this, stream_t *stream)
 		}
 		return FALSE;
 	}
+	if (len < offsetof(stroke_msg_t, buffer))
+	{
+		DBG1(DBG_CFG, "invalid stroke message length %d", len);
+		return FALSE;
+	}
 
 	/* read message (we need an additional byte to terminate the buffer) */
 	msg = malloc(len + 1);
@@ -744,7 +749,6 @@ METHOD(stroke_socket_t, destroy, void,
 										&this->attribute->provider);
 	charon->attributes->remove_handler(charon->attributes,
 									   &this->handler->handler);
-	charon->bus->remove_listener(charon->bus, &this->counter->listener);
 	this->cred->destroy(this->cred);
 	this->ca->destroy(this->ca);
 	this->config->destroy(this->config);
@@ -789,7 +793,7 @@ stroke_socket_t *stroke_socket_create()
 									 &this->attribute->provider);
 	charon->attributes->add_handler(charon->attributes,
 									&this->handler->handler);
-	charon->bus->add_listener(charon->bus, &this->counter->listener);
+
 
 	max_concurrent = lib->settings->get_int(lib->settings,
 				"%s.plugins.stroke.max_concurrent", MAX_CONCURRENT_DEFAULT,

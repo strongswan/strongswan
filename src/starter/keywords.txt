@@ -16,6 +16,7 @@
 
 #include <string.h>
 
+#define IN_GPERF_GENERATED_FILE
 #include "keywords.h"
 
 %}

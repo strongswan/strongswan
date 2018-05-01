@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2018 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -26,6 +26,36 @@
 #include <threading/spinlock.h>
 #include <threading/semaphore.h>
 #include <threading/thread_value.h>
+
+#ifdef WIN32
+/* when running on AppVeyor the wait functions seem to frequently trigger a bit
+ * early, allow this if the difference is within 5ms. */
+static inline void time_is_at_least(timeval_t *expected, timeval_t *actual)
+{
+	if (!timercmp(actual, expected, >))
+	{
+		timeval_t diff;
+
+		timersub(expected, actual, &diff);
+		if (!diff.tv_sec && diff.tv_usec <= 5000)
+		{
+			warn("allow timer event %dus too early on Windows (expected: %u.%u, "
+				 "actual: %u.%u)", diff.tv_usec, expected->tv_sec,
+				 expected->tv_usec, actual->tv_sec, actual->tv_usec);
+			return;
+		}
+		fail("expected: %u.%u, actual: %u.%u", expected->tv_sec,
+			 expected->tv_usec, actual->tv_sec, actual->tv_usec);
+	}
+}
+#else /* WIN32 */
+static inline void time_is_at_least(timeval_t *expected, timeval_t *actual)
+{
+	ck_assert_msg(timercmp(actual, expected, >), "expected: %u.%u, actual: "
+				  "%u.%u", expected->tv_sec, expected->tv_usec, actual->tv_sec,
+				  actual->tv_usec);
+}
+#endif /* WIN32 */
 
 /*******************************************************************************
  * recursive mutex test
@@ -380,8 +410,7 @@ START_TEST(test_condvar_timed)
 	time_monotonic(&end);
 	mutex->unlock(mutex);
 	timersub(&end, &start, &end);
-	ck_assert_msg(timercmp(&end, &diff, >), "end: %u.%u, diff: %u.%u",
-					end.tv_sec, end.tv_usec, diff.tv_sec, diff.tv_usec);
+	time_is_at_least(&diff, &end);
 
 	thread = thread_create(condvar_run, NULL);
 
@@ -419,8 +448,7 @@ START_TEST(test_condvar_timed_abs)
 	}
 	time_monotonic(&end);
 	mutex->unlock(mutex);
-	ck_assert_msg(timercmp(&end, &diff, >), "end: %u.%u, diff: %u.%u",
-					end.tv_sec, end.tv_usec, abso.tv_sec, abso.tv_usec);
+	time_is_at_least(&diff, &end);
 
 	thread = thread_create(condvar_run, NULL);
 
@@ -704,8 +732,7 @@ START_TEST(test_rwlock_condvar_timed)
 	rwlock->unlock(rwlock);
 	time_monotonic(&end);
 	timersub(&end, &start, &end);
-	ck_assert_msg(timercmp(&end, &diff, >), "end: %u.%u, diff: %u.%u",
-					end.tv_sec, end.tv_usec, diff.tv_sec, diff.tv_usec);
+	time_is_at_least(&diff, &end);
 
 	thread = thread_create(rwlock_condvar_run, NULL);
 
@@ -743,8 +770,7 @@ START_TEST(test_rwlock_condvar_timed_abs)
 	}
 	rwlock->unlock(rwlock);
 	time_monotonic(&end);
-	ck_assert_msg(timercmp(&end, &abso, >), "end: %u.%u, abso: %u.%u",
-					end.tv_sec, end.tv_usec, abso.tv_sec, abso.tv_usec);
+	time_is_at_least(&abso, &end);
 
 	thread = thread_create(rwlock_condvar_run, NULL);
 
@@ -866,8 +892,7 @@ START_TEST(test_semaphore_timed)
 	ck_assert(semaphore->timed_wait(semaphore, diff.tv_usec / 1000));
 	time_monotonic(&end);
 	timersub(&end, &start, &end);
-	ck_assert_msg(timercmp(&end, &diff, >), "end: %u.%u, diff: %u.%u",
-					end.tv_sec, end.tv_usec, diff.tv_sec, diff.tv_usec);
+	time_is_at_least(&diff, &end);
 
 	thread = thread_create(semaphore_run, NULL);
 
@@ -889,8 +914,7 @@ START_TEST(test_semaphore_timed_abs)
 	timeradd(&start, &diff, &abso);
 	ck_assert(semaphore->timed_wait_abs(semaphore, abso));
 	time_monotonic(&end);
-	ck_assert_msg(timercmp(&end, &abso, >), "end: %u.%u, abso: %u.%u",
-					end.tv_sec, end.tv_usec, abso.tv_sec, abso.tv_usec);
+	time_is_at_least(&abso, &end);
 
 	thread = thread_create(semaphore_run, NULL);
 
