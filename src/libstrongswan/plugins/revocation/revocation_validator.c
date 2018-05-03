@@ -59,7 +59,7 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 								 certificate_t *issuer)
 {
 	certificate_t *request, *response;
-	chunk_t send, receive;
+	chunk_t send, receive = chunk_empty;
 
 	/* TODO: requestor name, signature */
 	request = lib->creds->create(lib->creds,
@@ -87,6 +87,7 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 							FETCH_END) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "ocsp request to %s failed", url);
+		chunk_free(&receive);
 		chunk_free(&send);
 		return NULL;
 	}
@@ -369,12 +370,13 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 static certificate_t* fetch_crl(char *url)
 {
 	certificate_t *crl;
-	chunk_t chunk;
+	chunk_t chunk = chunk_empty;
 
 	DBG1(DBG_CFG, "  fetching crl from '%s' ...", url);
 	if (lib->fetcher->fetch(lib->fetcher, url, &chunk, FETCH_END) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "crl fetching failed");
+		chunk_free(&chunk);
 		return NULL;
 	}
 	crl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
