@@ -824,6 +824,10 @@ METHOD(cert_validator_t, validate, bool,
 					break;
 			}
 		}
+		else
+		{
+			auth->add(auth, AUTH_RULE_OCSP_VALIDATION, VALIDATION_SKIPPED);
+		}
 
 		if (this->enable_crl)
 		{
@@ -846,6 +850,11 @@ METHOD(cert_validator_t, validate, bool,
 					DBG1(DBG_CFG, "certificate status is unknown, crl is stale");
 					break;
 			}
+		}
+		else
+		{
+			auth->add(auth, AUTH_RULE_CRL_VALIDATION,
+					  auth->get(auth, AUTH_RULE_OCSP_VALIDATION));
 		}
 
 		lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_VALIDATION_FAILED,
