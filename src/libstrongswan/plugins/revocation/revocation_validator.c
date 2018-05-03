@@ -354,13 +354,10 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 	{
 		valid = VALIDATION_FAILED;
 	}
-	if (auth)
-	{
-		auth->add(auth, AUTH_RULE_OCSP_VALIDATION, valid);
-		if (valid == VALIDATION_GOOD)
-		{	/* successful OCSP check fulfills also CRL constraint */
-			auth->add(auth, AUTH_RULE_CRL_VALIDATION, VALIDATION_GOOD);
-		}
+	auth->add(auth, AUTH_RULE_OCSP_VALIDATION, valid);
+	if (valid == VALIDATION_GOOD)
+	{	/* successful OCSP check fulfills also CRL constraint */
+		auth->add(auth, AUTH_RULE_CRL_VALIDATION, VALIDATION_GOOD);
 	}
 	DESTROY_IF(best);
 	return valid;
@@ -777,18 +774,15 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	{
 		valid = VALIDATION_FAILED;
 	}
-	if (auth)
+	if (valid == VALIDATION_SKIPPED)
+	{	/* if we skipped CRL validation, we use the result of OCSP for
+		 * constraint checking */
+		auth->add(auth, AUTH_RULE_CRL_VALIDATION,
+				  auth->get(auth, AUTH_RULE_OCSP_VALIDATION));
+	}
+	else
 	{
-		if (valid == VALIDATION_SKIPPED)
-		{	/* if we skipped CRL validation, we use the result of OCSP for
-			 * constraint checking */
-			auth->add(auth, AUTH_RULE_CRL_VALIDATION,
-					  auth->get(auth, AUTH_RULE_OCSP_VALIDATION));
-		}
-		else
-		{
-			auth->add(auth, AUTH_RULE_CRL_VALIDATION, valid);
-		}
+		auth->add(auth, AUTH_RULE_CRL_VALIDATION, valid);
 	}
 	DESTROY_IF(best);
 	return valid;
@@ -808,8 +802,7 @@ METHOD(cert_validator_t, validate, bool,
 
 		if (this->enable_ocsp)
 		{
-			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer,
-							   pathlen ? NULL : auth))
+			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth))
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
@@ -834,8 +827,7 @@ METHOD(cert_validator_t, validate, bool,
 
 		if (this->enable_crl)
 		{
-			switch (check_crl((x509_t*)subject, (x509_t*)issuer,
-							  pathlen ? NULL : auth))
+			switch (check_crl((x509_t*)subject, (x509_t*)issuer, auth))
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
