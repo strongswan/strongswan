@@ -49,6 +49,8 @@ static void include_files(parser_helper_t *ctx);
 /* type of our extra data */
 %option extra-type="parser_helper_t*"
 
+/* state used to scan values */
+%x val
 /* state used to scan include file patterns */
 %x inc
 /* state used to scan quoted strings */
@@ -61,8 +63,12 @@ static void include_files(parser_helper_t *ctx);
 \n|#.*\n				return NEWLINE; /* also eats comments at the end of a line */
 
 "{"						|
-"}"						|
-"="						return yytext[0];
+"}"						return yytext[0];
+
+"="						{
+	yy_push_state(val, yyscanner);
+	return yytext[0];
+}
 
 "include"[\t ]+/[^=]	{
 	yyextra->string_init(yyextra);
@@ -70,13 +76,49 @@ static void include_files(parser_helper_t *ctx);
 }
 
 "\""					{
-	yyextra->string_init(yyextra);
-	yy_push_state(str, yyscanner);
+	PARSER_DBG1(yyextra, "unexpected string detected");
+	return STRING_ERROR;
 }
 
 [^#{}="\r\n\t ]+			{
 	yylval->s = strdup(yytext);
 	return NAME;
+}
+
+<val>{
+	\r					/* just ignore these */
+	[\t ]+
+	<<EOF>>				|
+	[#}\n]			{
+		if (*yytext)
+		{
+			switch (yytext[0])
+			{
+				case '\n':
+					/* put the newline back to fix the line numbers */
+					unput('\n');
+					yy_set_bol(0);
+					break;
+				case '#':
+				case '}':
+					/* these are parsed outside of this start condition */
+					unput(yytext[0]);
+					break;
+			}
+		}
+		yy_pop_state(yyscanner);
+	}
+
+	"\""					{
+		yyextra->string_init(yyextra);
+		yy_push_state(str, yyscanner);
+	}
+
+	/* same as above, but allow more characters */
+	[^#}"\r\n\t ]+			{
+		yylval->s = strdup(yytext);
+		return NAME;
+	}
 }
 
 <inc>{

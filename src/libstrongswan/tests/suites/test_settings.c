@@ -1109,6 +1109,12 @@ START_TEST(test_valid)
 		"}\n");
 	ck_assert(chunk_write(contents, path, 0022, TRUE));
 	ck_assert(settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"equals = a setting with = and { character");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(settings->load_files(settings, path, FALSE));
+	verify_string("a setting with = and { character", "equals");
 }
 END_TEST
 
@@ -1148,7 +1154,7 @@ START_TEST(test_invalid)
 	ck_assert(!settings->load_files(settings, path, FALSE));
 
 	contents = chunk_from_str(
-		"only = a single setting = per line");
+		"\"unexpected\" = string");
 	ck_assert(chunk_write(contents, path, 0022, TRUE));
 	ck_assert(!settings->load_files(settings, path, FALSE));
 }
