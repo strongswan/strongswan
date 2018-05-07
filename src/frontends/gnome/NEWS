@@ -1,6 +1,7 @@
 NetworkManager-strongswan-1.4.4
 -------------------------------
 
+- Fixed paths when building without libnm-glib
 - Fixed proposal tooltips and updated German translation
 
 NetworkManager-strongswan-1.4.3
