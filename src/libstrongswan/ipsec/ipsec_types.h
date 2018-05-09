@@ -215,6 +215,7 @@ struct mark_t {
  */
 #define MARK_UNIQUE (0xFFFFFFFF)
 #define MARK_UNIQUE_DIR (0xFFFFFFFE)
+#define MARK_SAME (0xFFFFFFFF)
 #define MARK_IS_UNIQUE(m) ((m) == MARK_UNIQUE || (m) == MARK_UNIQUE_DIR)
 
 /**
@@ -225,6 +226,8 @@ enum mark_op_t {
 	MARK_OP_NONE = 0,
 	/** %unique and %unique-dir */
 	MARK_OP_UNIQUE = (1<<0),
+	/** %same */
+	MARK_OP_SAME = (1<<1),
 };
 
 /**

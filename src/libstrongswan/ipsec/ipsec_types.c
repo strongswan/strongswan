@@ -100,6 +100,24 @@ bool mark_from_string(const char *value, mark_op_t ops, mark_t *mark)
 			return FALSE;
 		}
 	}
+	else if (strcasepfx(value, "%same"))
+	{
+		if (!(ops & MARK_OP_SAME))
+		{
+			DBG1(DBG_APP, "unexpected use of %%same mark", value);
+			return FALSE;
+		}
+		endptr = (char*)value + strlen("%same");
+		if (!*endptr || *endptr == '/')
+		{
+			mark->value = MARK_SAME;
+		}
+		else
+		{
+			DBG1(DBG_APP, "invalid mark value: %s", value);
+			return FALSE;
+		}
+	}
 	else
 	{
 		mark->value = strtoul(value, &endptr, 0);

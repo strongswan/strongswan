@@ -916,6 +916,12 @@ static struct {
 		{ 0, 0 }},
 	{"%unique-foo/0xffffffff",	FALSE,	MARK_OP_UNIQUE,
 		{ 0, 0 }},
+	{"%same",					TRUE,	MARK_OP_SAME,
+		{ MARK_SAME, 0xffffffff }},
+	{"%same/0x0000ffff",		TRUE,	MARK_OP_SAME,
+		{ MARK_SAME, 0x0000ffff }},
+	{"%%same",					FALSE,	MARK_OP_NONE,
+		{ 0, 0 }},
 };
 
 START_TEST(test_mark_from_string)

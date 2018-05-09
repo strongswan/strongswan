@@ -1185,6 +1185,21 @@ CALLBACK(parse_mark, bool,
 }
 
 /**
+ * Parse a mark_t when using it as set_mark.
+ */
+CALLBACK(parse_set_mark, bool,
+	mark_t *out, chunk_t v)
+{
+	char buf[32];
+
+	if (!vici_stringify(v, buf, sizeof(buf)))
+	{
+		return FALSE;
+	}
+	return mark_from_string(buf, MARK_OP_SAME, out);
+}
+
+/**
  * Parse TFC padding option
  */
 CALLBACK(parse_tfc, bool,
@@ -1643,8 +1658,8 @@ CALLBACK(child_kv, bool,
 		{ "mark_in",			parse_mark,			&child->cfg.mark_in					},
 		{ "mark_in_sa",			parse_opt_mark_in,	&child->cfg.options					},
 		{ "mark_out",			parse_mark,			&child->cfg.mark_out				},
-		{ "set_mark_in",		parse_mark,			&child->cfg.set_mark_in				},
-		{ "set_mark_out",		parse_mark,			&child->cfg.set_mark_out			},
+		{ "set_mark_in",		parse_set_mark,		&child->cfg.set_mark_in				},
+		{ "set_mark_out",		parse_set_mark,		&child->cfg.set_mark_out			},
 		{ "tfc_padding",		parse_tfc,			&child->cfg.tfc						},
 		{ "priority",			parse_uint32,		&child->cfg.priority				},
 		{ "interface",			parse_string,		&child->cfg.interface				},

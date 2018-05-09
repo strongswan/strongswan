@@ -900,6 +900,11 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.update = update,
 	};
 
+	if (sa.mark.value == MARK_SAME)
+	{
+		sa.mark.value = inbound ? this->mark_in.value : this->mark_out.value;
+	}
+
 	status = charon->kernel->add_sa(charon->kernel, &id, &sa);
 
 	my_ts->destroy(my_ts);

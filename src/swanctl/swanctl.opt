@@ -919,7 +919,9 @@ connections.<conn>.children.<child>.set_mark_in = 0/0x00000000
 	policy routing).
 
 	An additional mask may be appended to the mark, separated by _/_. The
-	default mask if omitted is 0xffffffff.
+	default mask if omitted is 0xffffffff. The special value _%same_ uses
+	the value (but not the mask) from **mark_in** as mark value, which can be
+	fixed, _%unique_ or _%unique-dir_.
 
 	Setting marks in XFRM input requires Linux 4.19 or higher.
 
@@ -932,7 +934,9 @@ connections.<conn>.children.<child>.set_mark_out = 0/0x00000000
 	traffic (e.g. via policy routing).
 
 	An additional mask may be appended to the mark, separated by _/_. The
-	default mask if omitted is 0xffffffff.
+	default mask if omitted is 0xffffffff. The special value _%same_ uses
+	the value (but not the mask) from **mark_out** as mark value, which can be
+	fixed, _%unique_ or _%unique-dir_.
 
 	Setting marks in XFRM output is supported since Linux 4.14. Setting a mask
 	requires at least Linux 4.19.
