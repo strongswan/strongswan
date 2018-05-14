@@ -2925,7 +2925,7 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 			msg->rtm_flags |= FIB_RULE_INVERT;
 			fwmark++;
 		}
-		if (mark_from_string(fwmark, &mark))
+		if (mark_from_string(fwmark, MARK_OP_NONE, &mark))
 		{
 			chunk = chunk_from_thing(mark.value);
 			netlink_add_attribute(hdr, FRA_FWMARK, chunk, sizeof(request));

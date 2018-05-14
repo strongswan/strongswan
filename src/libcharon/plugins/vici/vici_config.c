@@ -1181,7 +1181,7 @@ CALLBACK(parse_mark, bool,
 	{
 		return FALSE;
 	}
-	return mark_from_string(buf, out);
+	return mark_from_string(buf, MARK_OP_UNIQUE, out);
 }
 
 /**
