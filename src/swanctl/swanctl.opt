@@ -921,6 +921,8 @@ connections.<conn>.children.<child>.set_mark_in = 0/0x00000000
 	An additional mask may be appended to the mark, separated by _/_. The
 	default mask if omitted is 0xffffffff.
 
+	Setting marks in XFRM input requires Linux 4.19 or higher.
+
 connections.<conn>.children.<child>.set_mark_out = 0/0x00000000
 	Netfilter mark applied to packets after the outbound IPsec SA processed
 	them.
@@ -931,6 +933,9 @@ connections.<conn>.children.<child>.set_mark_out = 0/0x00000000
 
 	An additional mask may be appended to the mark, separated by _/_. The
 	default mask if omitted is 0xffffffff.
+
+	Setting marks in XFRM output is supported since Linux 4.14. Setting a mask
+	requires at least Linux 4.19.
 
 connections.<conn>.children.<child>.tfc_padding = 0
 	Traffic Flow Confidentiality padding.
