@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 Tobias Brunner
+ * Copyright (C) 2010-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
 #define SETTINGS_TYPES_H_
 
 typedef struct kv_t kv_t;
+typedef struct section_ref_t section_ref_t;
 typedef struct section_t section_t;
 
 #include "collections/array.h"
@@ -45,6 +46,23 @@ struct kv_t {
 };
 
 /**
+ * Section reference.
+ */
+struct section_ref_t {
+
+	/**
+	 * Name of the referenced section.
+	 */
+	char *name;
+
+	/**
+	 * TRUE for permanent references that were added programmatically via
+	 * add_fallback() and are not removed during reloads/purges.
+	 */
+	bool permanent;
+};
+
+/**
  * Section containing subsections and key value pairs.
  */
 struct section_t {
@@ -55,9 +73,9 @@ struct section_t {
 	char *name;
 
 	/**
-	 * Fallback sections, as section_t.
+	 * Referenced sections, as section_ref_t.
 	 */
-	array_t *fallbacks;
+	array_t *references;
 
 	/**
 	 * Subsections, as section_t.
@@ -114,6 +132,15 @@ void settings_kv_set(kv_t *kv, char *value, array_t *contents);
  * @param contents	optional array to store replaced values in
  */
 void settings_kv_add(section_t *section, kv_t *kv, array_t *contents);
+
+/**
+ * Add a reference to another section.
+ *
+ * @param section	section to which to add the reference
+ * @param name		name of the referenced section (adopted)
+ * @param permanent	whether the reference is not removed during reloads
+ */
+void settings_reference_add(section_t *section, char *name, bool permanent);
 
 /**
  * Create a section with the given name.
