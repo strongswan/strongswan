@@ -526,11 +526,12 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 /**
  * Configure a PCR Selection assuming a maximum of 24 registers
  */
-static bool init_pcr_selection(private_tpm_tss_tss2_t *this, uint32_t pcrs,
-							   hash_algorithm_t alg, TPML_PCR_SELECTION *pcr_sel)
+static int init_pcr_selection(private_tpm_tss_tss2_t *this, uint32_t pcrs,
+							  hash_algorithm_t alg, TPML_PCR_SELECTION *pcr_sel)
 {
 	TPM_ALG_ID alg_id;
 	uint32_t pcr;
+	int count = 0;
 
 	/* check if hash algorithm is supported by TPM */
 	alg_id = hash_alg_to_tpm_alg_id(alg);
@@ -538,7 +539,7 @@ static bool init_pcr_selection(private_tpm_tss_tss2_t *this, uint32_t pcrs,
 	{
 		DBG1(DBG_PTS, "%s %N hash algorithm not supported by TPM",
 			 LABEL, hash_algorithm_short_names, alg);
-		return FALSE;
+		return 0;
 	}
 
 	/* initialize the PCR Selection structure,*/
@@ -555,9 +556,10 @@ static bool init_pcr_selection(private_tpm_tss_tss2_t *this, uint32_t pcrs,
 		if (pcrs & (1 << pcr))
 		{
 			pcr_sel->pcrSelections[0].pcrSelect[pcr / 8] |= ( 1 << (pcr % 8) );
+			count++;
 		}
 	}
-	return TRUE;
+	return count;
 }
 
 METHOD(tpm_tss_t, read_pcr, bool,
@@ -591,7 +593,7 @@ METHOD(tpm_tss_t, read_pcr, bool,
 				&pcr_update_counter, &pcr_selection, &pcr_values, 0);
 	if (rval != TPM_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s PCR bank could not be read: 0x%60x",
+		DBG1(DBG_PTS, "%s Tss2_Sys_PCR_Read failed: 0x%06x",
 					   LABEL, rval);
 		return FALSE;
 	}
@@ -694,6 +696,135 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 
 	/* get updated PCR value */
 	return read_pcr(this, pcr_num, pcr_value, alg);
+}
+
+static void update_pcr_selection(TPML_PCR_SELECTION *in,
+								 TPML_PCR_SELECTION *out)
+{
+	int i;
+
+	for (i = 0; i < out->pcrSelections[0].sizeofSelect; i++)
+	{
+		in->pcrSelections[0].pcrSelect[i] &= ~out->pcrSelections[0].pcrSelect[i];
+	}
+}
+
+METHOD(tpm_tss_t, seal, bool,
+	private_tpm_tss_tss2_t *this,hash_algorithm_t alg, uint32_t pcr_sel)
+{
+	TPMI_SH_AUTH_SESSION session_handle;
+	TPML_PCR_SELECTION  pcr_selection, pcr_sel_in, pcr_sel_out;
+	TPML_DIGEST pcr_values;
+	TPM2B_DIGEST pcr_digest    = { .t = { .size = HASH_SIZE_SHA256 } };
+	TPM2B_DIGEST policy_digest = { .t = { .size = HASH_SIZE_SHA256 } };
+	TPMT_SYM_DEF symmetric = { .algorithm = TPM_ALG_NULL };
+	TPM2B_ENCRYPTED_SECRET encrypted_salt = { .t = { .size = 0 } };
+	TPM2B_NONCE nonce_caller = { .t = { .size = HASH_SIZE_SHA256 } };
+	TPM2B_NONCE nonce_newer  = { .t = { .size = HASH_SIZE_SHA256 } };
+
+	hasher_t *hasher;
+	hash_algorithm_t auth_alg = HASH_SHA256;
+	chunk_t pcr_value, digest;
+	uint32_t  pcr = 0, pcr_update_counter, rval;
+	int count, i;
+
+	count = init_pcr_selection(this, pcr_sel, alg, &pcr_selection);
+	pcr_sel_in = pcr_selection;
+
+	/* create a hasher for the PCR digest */
+	hasher = lib->crypto->create_hasher(lib->crypto, auth_alg);
+	if (!hasher)
+	{
+		DBG1(DBG_PTS, "failed to create hasher");
+		return FALSE;
+	}
+
+	/* read the PCR values */
+	while (count)
+	{
+		pcr_values.count = 0;
+
+		rval = Tss2_Sys_PCR_Read(this->sys_context, 0, &pcr_sel_in,
+					&pcr_update_counter, &pcr_sel_out, &pcr_values, 0);
+		if (rval != TPM_RC_SUCCESS)
+		{
+			DBG1(DBG_PTS, "%s Tss2_Sys_PCR_Read failed: 0x%06x",
+						   LABEL, rval);
+			hasher->destroy(hasher);
+			return FALSE;
+		}
+
+		for (i = 0; i < pcr_values.count; i++)
+		{
+			while (!(pcr_sel & (1 << pcr)))
+			{
+				pcr++;
+			}
+			pcr_value = chunk_create(pcr_values.digests[i].t.buffer,
+									 pcr_values.digests[i].t.size);
+			DBG1(DBG_PTS, "PCR %02u %#B", pcr, &pcr_value);
+			pcr++;
+
+			if (!hasher->get_hash(hasher, pcr_value, NULL))
+			{
+				hasher->destroy(hasher);
+				return FALSE;
+			}
+			count--;
+		}
+		update_pcr_selection(&pcr_sel_in, &pcr_sel_out);
+	}
+
+	if (!hasher->get_hash(hasher, chunk_empty, pcr_digest.t.buffer))
+	{
+		hasher->destroy(hasher);
+		return FALSE;
+	}
+	hasher->destroy(hasher);
+
+	digest = chunk_create(pcr_digest.t.buffer, pcr_digest.t.size);
+	DBG1(DBG_PTS, "PCR    digest %#B", &digest);
+
+	rval = Tss2_Sys_StartAuthSession(this->sys_context, TPM_RH_NULL, TPM_RH_NULL,
+				NULL, &nonce_caller, &encrypted_salt, TPM_SE_TRIAL, &symmetric,
+				TPM_ALG_SHA256, &session_handle, &nonce_newer, NULL);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tss2_Sys_StartAuthSession failed: 0x%06x",
+					   LABEL, rval);
+		return FALSE;
+	}
+
+	rval = Tss2_Sys_PolicyPCR(this->sys_context, session_handle, NULL,
+							  &pcr_digest, &pcr_selection, NULL);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tss2_Sys_PolicyPCR failed: 0x%06x",
+					   LABEL, rval);
+		return FALSE;
+	}
+
+	rval = Tss2_Sys_PolicyGetDigest(this->sys_context, session_handle, NULL,
+									&policy_digest, NULL);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tss2_Sys_PolicyGetDigest failed: 0x%06x",
+					   LABEL, rval);
+		return FALSE;
+	}
+
+	rval = Tss2_Sys_FlushContext(this->sys_context, session_handle);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s Tss2_Sys_FlushContext failed: 0x%06x",
+					   LABEL, rval);
+		return FALSE;
+	}
+
+	digest = chunk_create(policy_digest.t.buffer, policy_digest.t.size);
+	DBG1(DBG_PTS, "policy digest %#B", &digest);
+
+	return TRUE;
 }
 
 METHOD(tpm_tss_t, quote, bool,
@@ -1137,6 +1268,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 			.get_public = _get_public,
 			.read_pcr = _read_pcr,
 			.extend_pcr = _extend_pcr,
+			.seal = _seal,
 			.quote = _quote,
 			.sign = _sign,
 			.get_random = _get_random,

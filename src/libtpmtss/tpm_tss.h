@@ -103,6 +103,15 @@ struct tpm_tss_t {
 					   chunk_t data, hash_algorithm_t alg);
 
 	/**
+	 * Seal a plaintext file to a given set of PCR values (TPM 2.0 only)
+	 *
+	 * @param alg			hash algorithm, selects PCR bank
+	 * @param pcr_sel		PCR selection
+	 * @return				TRUE if sealing succeeded
+	 */
+	bool (*seal)(tpm_tss_t *this, hash_algorithm_t alg, uint32_t pcr_sel);
+
+	/**
 	 * Do a quote signature over a selection of PCR registers
 	 *
 	 * @param aik_handle	object handle of AIK to be used for quote signature

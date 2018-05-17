@@ -429,6 +429,12 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 	return TRUE;
 }
 
+METHOD(tpm_tss_t, seal, bool,
+	private_tpm_tss_trousers_t *this, hash_algorithm_t alg, uint32_t pcr_sel)
+{
+	return FALSE;
+}
+
 METHOD(tpm_tss_t, quote, bool,
 	private_tpm_tss_trousers_t *this, uint32_t aik_handle, uint32_t pcr_sel,
 	hash_algorithm_t alg, chunk_t data, tpm_quote_mode_t *quote_mode,
@@ -643,6 +649,7 @@ tpm_tss_t *tpm_tss_trousers_create()
 				.get_public = _get_public,
 				.read_pcr = _read_pcr,
 				.extend_pcr = _extend_pcr,
+				.seal = _seal,
 				.quote = _quote,
 				.sign = _sign,
 				.get_random = _get_random,
