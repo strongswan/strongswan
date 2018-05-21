@@ -25,6 +25,9 @@ typedef struct private_socket_vpp_socket_t private_socket_vpp_socket_t;
 typedef struct vpp_packetdesc_t vpp_packetdesc_t;
 typedef struct ether_header_t ether_header_t;
 
+/**
+ * Private data of an socket_t object
+ */
 struct private_socket_vpp_socket_t {
 
     /**
@@ -32,6 +35,9 @@ struct private_socket_vpp_socket_t {
      */
     socket_vpp_socket_t public;
 
+    /**
+     * Configured IKEv2 port
+     */
     uint16_t port;
 
     /**
@@ -44,27 +50,47 @@ struct private_socket_vpp_socket_t {
      */
     int sock;
 
+    /**
+     * Write socket
+     */
     struct sockaddr_un write_addr;
 
+    /**
+     * Read socket
+     */
     struct sockaddr_un read_addr;
 
     vac_t *vac;
 };
 
+/**
+ * VPP punt socket action
+ */
 enum {
     PUNT_L2 = 0,
     PUNT_IP4_ROUTED,
     PUNT_IP6_ROUTED,
 };
 
+/**
+ * VPP punt socket packet descriptor header
+ */
 struct vpp_packetdesc_t {
+    /** RX or TX interface */
     u_int sw_if_index;
+    /** action */
     int action;
 } __attribute__((packed));
 
+/**
+ * Ethernet header
+ */
 struct ether_header_t {
+    /** src MAC */
     uint8_t src[6];
+    /** dst MAC */
     uint8_t dst[6];
+    /** EtherType */
     uint16_t type;
 } __attribute__((packed));
 
@@ -231,6 +257,9 @@ METHOD(socket_t, destroy, void,
     free(this);
 }
 
+/*
+ * See header for description
+ */
 socket_vpp_socket_t *socket_vpp_socket_create()
 {
     private_socket_vpp_socket_t *this;
@@ -263,6 +292,7 @@ socket_vpp_socket_t *socket_vpp_socket_create()
     {
         DBG1(DBG_LIB, "no vac available (plugin missing?)");
     }
+    /* Register IPv4 punt socket for IKEv2 port in VPP */
     mp = vl_msg_api_alloc(sizeof(*mp));
     memset(mp, 0, sizeof(*mp));
     mp->_vl_msg_id = ntohs(VL_API_PUNT_SOCKET_REGISTER);
@@ -282,6 +312,7 @@ socket_vpp_socket_t *socket_vpp_socket_create()
         DBG1(DBG_LIB, "register vpp ip4 punt socket faield %d", ntohl(rmp->retval));
         return NULL;
     }
+    /* Register IPv6 punt socket for IKEv2 port in VPP */
     mp->is_ip4 = 0;
     if (this->vac->send(this->vac, (char*)mp, sizeof(*mp), &out, &out_len))
     {

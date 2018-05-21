@@ -36,18 +36,34 @@ struct private_kernel_vpp_net_t {
      */
     linked_list_t *ifaces;
 
+    /**
+     * Inteface update thread
+     */
     thread_t *net_update;
 
+    /**
+     * TRUE if interface events enabled
+     */
     bool events_on;
 };
 
+/**
+ * Interface entry
+ */
 typedef struct {
+    /** interface index */
     uint32_t index;
+    /** interface name */
     char if_name[64];
+    /** list of known addresses, as host_t */
     linked_list_t *addrs;
+    /** TRUE if up */
     bool up;
 } iface_t;
 
+/**
+ * Address enumerator
+ */
 typedef struct {
     /** implements enumerator_t */
     enumerator_t public;
@@ -61,12 +77,18 @@ typedef struct {
     mutex_t *mutex;
 } addr_enumerator_t;
 
+/**
+ * FIB path entry
+ */
 typedef struct {
     chunk_t next_hop;
     uint32_t sw_if_index;
     uint8_t preference;
 } fib_path_t;
 
+/**
+ * Get an iface entry for a local address
+ */
 static iface_t* address2entry(private_kernel_vpp_net_t *this, host_t *ip)
 {
     enumerator_t *ifaces, *addrs;
@@ -91,6 +113,9 @@ static iface_t* address2entry(private_kernel_vpp_net_t *this, host_t *ip)
     return found;
 }
 
+/**
+ * Add or remove a route
+ */
 static status_t manage_route(private_kernel_vpp_net_t *this, bool add,
                              chunk_t dst, uint8_t prefixlen, host_t *gtw,
                              char *name)
@@ -163,6 +188,10 @@ static status_t manage_route(private_kernel_vpp_net_t *this, bool add,
     return SUCCESS;
 }
 
+/**
+ * Check if an address or net (addr with prefix net bits) is in
+ * subnet (net with net_len net bits)
+ */
 static bool addr_in_subnet(chunk_t addr, int prefix, chunk_t net, int net_len)
 {
     static const u_char mask[] = { 0x00, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
@@ -196,6 +225,9 @@ static bool addr_in_subnet(chunk_t addr, int prefix, chunk_t net, int net_len)
     return TRUE;
 }
 
+/**
+ * Get a route: If "nexthop" the nexthop is returned, source addr otherwise
+ */
 static host_t *get_route(private_kernel_vpp_net_t *this, host_t *dest,
                          int prefix, bool nexthop, char **iface, host_t *src)
 {
@@ -468,6 +500,9 @@ METHOD(kernel_net_t, destroy, void,
     free(this);
 }
 
+/**
+ * Update addresses for an iface entry
+ */
 static void update_addrs(private_kernel_vpp_net_t *this, iface_t *entry)
 {
     char *out;
@@ -516,6 +551,9 @@ static void update_addrs(private_kernel_vpp_net_t *this, iface_t *entry)
     addrs->destroy(addrs);
 }
 
+/**
+ * VPP API interface event callback
+ */
 static void event_cb(char *data, int data_len, void *ctx)
 {
     private_kernel_vpp_net_t *this = ctx;
@@ -552,6 +590,9 @@ static void event_cb(char *data, int data_len, void *ctx)
     free(data);
 }
 
+/**
+ * Inteface update thread (update interface list and interface address)
+ */
 static void *net_update_thread_fn(private_kernel_vpp_net_t *this)
 {
     status_t rv;

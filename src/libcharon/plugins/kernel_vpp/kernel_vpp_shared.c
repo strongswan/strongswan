@@ -24,63 +24,170 @@ typedef struct want_event_reply_t want_event_reply_t;
 
 vac_t *vac;
 
+/**
+ * Private variables and functions of vac_t class.
+ */
 struct private_vac_t {
+
+    /**
+     * public part of the vac_t object.
+     */
     vac_t public;
+
+    /**
+     * Timeout for VPP API replies, in ms
+     */
     uint16_t read_timeout;
+
+    /**
+     * True if connected to VPP vlib
+     */
     bool connected_to_vlib;
+
+    /**
+     * True if receive thread is running
+     */
     bool rx_is_running;
+
+    /**
+     * Receive thread
+     */
     thread_t *rx;
+
+    /**
+     * Mutex to lock receive queue
+     */
     mutex_t *queue_lock;
+
+    /**
+     * Condition variable rx thread susspend
+     */
     condvar_t *suspend_cv;
+
+    /**
+     * Condition variable rx thread resume
+     */
     condvar_t *resume_cv;
+
+    /**
+     * Condition variable rx thread terminate
+     */
     condvar_t *terminate_cv;
 
+
+    /**
+     * Mutex to lock send VPP API message entries
+     */
     mutex_t *entries_lock;
+
+    /**
+     * VPP API message entries currently active, uintptr_t seq => entry_t
+     */
     hashtable_t *entries;
+
+    /**
+     * Mutex to lock VPP API event entries
+     */
     mutex_t *events_lock;
+
+    /**
+     * VPP API event entries currently active, uintptr_t id = event_t
+     */
     hashtable_t *events;
+
+    /**
+     * Current sequence number for VPP API messages
+     */
     refcount_t seq;
 };
 
+/**
+ * VPP API message header
+ */
 struct vl_api_header_t {
+
+    /** message ID */
     uint16_t _vl_msg_id;
+
+    /** opaque cookie to identify the client */
     uint32_t client_index;
+
+    /** client context, to match reply with request */
     uint32_t context;
 } __attribute__((packed));
 
+/**
+ * VPP API response message header
+ */
 struct vl_api_rheader_t {
+
+    /** message ID */
     uint16_t _vl_msg_id;
+
+    /** opaque cookie to identify the client */
     uint32_t context;
 } __attribute__((packed));
 
+/**
+ * VPP API register event response message header
+ */
 struct want_event_reply_t {
+
+    /** message ID */
     uint16_t _vl_msg_id;
+
+    /** opaque cookie to identify the client */
     uint32_t context;
+
+    /** retrun code for the request */
     int32_t retval;
 } __attribute__((packed));
 
+/**
+ * VPP API request entry the answer for a waiting thread is collected in
+ */
 typedef struct {
+    /** Condition variable thread is waiting */
     condvar_t *condvar;
+    /** Array of reply msgs in a multi-message response, as struct rmsgbuf_t */
     array_t *rmsgs;
+    /** All response messages received? */
     bool complete;
+    /** Is VPP API dump? */
     bool is_dump;
 } entry_t;
 
+/**
+ * Reply message buffer
+ */
 typedef struct {
+    /** Data length */
     uint32_t data_len;
+    /** Reply data */
     uint8_t data[0];
 } rmsgbuf_t;
 
+/**
+ * VPP API event entry
+ */
 typedef struct {
+    /** Event callback */
     event_cb_t cb;
+    /** User data passed to callback */
     void *ctx;
 } event_t;
 
+/**
+ * Free VPP API message
+ */
 static void vac_free (void * msg)
 {
     vl_msg_api_free (msg);
 }
 
+/**
+ * Process a single VPP API message
+ */
 static void vac_api_handler (private_vac_t *this, void *msg)
 {
     vl_api_rheader_t *rmp;
@@ -150,6 +257,9 @@ static void vac_api_handler (private_vac_t *this, void *msg)
     vac_free(msg);
 }
 
+/**
+ * VPP API receive thread
+ */
 static void *vac_rx_thread_fn(private_vac_t *this)
 {
     svm_queue_t *q;
@@ -251,6 +361,9 @@ METHOD(vac_t, destroy, void, private_vac_t *this)
     free(this);
 }
 
+/**
+ * Write a VPP API message to shared memory
+ */
 static status_t vac_write(private_vac_t *this, char *p, int l, uint32_t ctx)
 {
     api_main_t *am = &api_main;
@@ -278,6 +391,9 @@ static status_t vac_write(private_vac_t *this, char *p, int l, uint32_t ctx)
     return SUCCESS;
 }
 
+/**
+ * Clean up a thread waiting entry
+ */
 static void destroy_entry(entry_t *entry)
 {
     entry->condvar->destroy(entry->condvar);
@@ -285,6 +401,9 @@ static void destroy_entry(entry_t *entry)
     free(entry);
 }
 
+/**
+ * Send VPP API message and wait for a reply
+ */
 static status_t send_vac(private_vac_t *this, char *in, int in_len, char **out,
                          int *out_len, bool is_dump)
 {

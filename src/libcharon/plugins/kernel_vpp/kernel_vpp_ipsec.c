@@ -19,6 +19,9 @@
 
 typedef struct private_kernel_vpp_ipsec_t private_kernel_vpp_ipsec_t;
 
+/**
+ * Private variables of kernel_vpp_ipsec class.
+ */
 struct private_kernel_vpp_ipsec_t {
 
     /**
@@ -26,41 +29,87 @@ struct private_kernel_vpp_ipsec_t {
      */
     kernel_vpp_ipsec_t public;
 
+    /**
+     * Next security association database entry ID to allocate
+     */
     refcount_t next_sad_id;
 
+    /**
+     * Next security policy database entry ID to allocate
+     */
     refcount_t next_spd_id;
 
+    /**
+     * Mutex to lock access to installed policies
+     */
     mutex_t *mutex;
 
+    /**
+     * Hash table of instaled SA, as kernel_ipsec_sa_id_t => sa_t
+     */
     hashtable_t *sas;
 
+    /**
+     * Hash table of security policy databases, as nterface => spd_t
+     */
     hashtable_t *spds;
 
+    /**
+     * Linked list of installed routes
+     */
     linked_list_t *routes;
 
+    /**
+     * Next SPI to allocate
+     */
     refcount_t nextspi;
 
+    /**
+     * Mix value to distribute SPI allocation randomly
+     */
     uint32_t mixspi;
 
+    /**
+     * Whether to install routes along policies
+     */
     bool install_routes;
 };
 
+/**
+ * Security association entry
+ */
 typedef struct {
+    /** VPP SA ID */
     uint32_t sa_id;
+    /** Data required to add/delete SA to VPP */
     vl_api_ipsec_sad_add_del_entry_t *mp;
 } sa_t;
 
+/**
+ * Security policy database
+ */
 typedef struct {
+    /** VPP SPD ID */
     uint32_t spd_id;
+    /** Networking interface ID restricting policy */
     uint32_t sw_if_index;
+    /** Policy count for this SPD */
     refcount_t policy_num;
 } spd_t;
 
+/**
+ * Installed route
+ */
 typedef struct {
+    /** Name of the interface the route is bound to */
     char *if_name;
+    /** Gateway of route */
     host_t *gateway;
+    /** Destination network of route */
     host_t *dst_net;
+    /** Prefix length of dst_net */
     uint8_t prefixlen;
+    /** References for route */
     int refs;
 } route_entry_t;
 
@@ -80,6 +129,9 @@ CALLBACK(route_equals, bool, route_entry_t *a, va_list args)
            a->prefixlen == *prefixlen;
 }
 
+/**
+ * Clean up a route entry
+ */
 static void route_destroy(route_entry_t *this)
 {
     this->dst_net->destroy(this->dst_net);
@@ -88,6 +140,9 @@ static void route_destroy(route_entry_t *this)
     free(this);
 }
 
+/**
+ * (Un)-install a single route
+ */
 static void manage_route(private_kernel_vpp_ipsec_t *this, bool add,
                          traffic_selector_t *dst_ts, host_t *src, host_t *dst)
 {
@@ -153,6 +208,9 @@ static void manage_route(private_kernel_vpp_ipsec_t *this, bool add,
     }
 }
 
+/**
+ * Hash function for IPsec SA
+ */
 static u_int sa_hash(kernel_ipsec_sa_id_t *sa)
 {
     return chunk_hash_inc(sa->src->get_address(sa->src),
@@ -161,6 +219,9 @@ static u_int sa_hash(kernel_ipsec_sa_id_t *sa)
                           chunk_hash(chunk_from_thing(sa->proto)))));
 }
 
+/**
+ * Equality function for IPsec SA
+ */
 static bool sa_equals(kernel_ipsec_sa_id_t *sa, kernel_ipsec_sa_id_t *other_sa)
 {
     return sa->src->ip_equals(sa->src, other_sa->src) &&
@@ -168,16 +229,25 @@ static bool sa_equals(kernel_ipsec_sa_id_t *sa, kernel_ipsec_sa_id_t *other_sa)
             sa->spi == other_sa->spi && sa->proto == other_sa->proto;
 }
 
+/**
+ * Hash function for interface
+ */
 static u_int interface_hash(char *interface)
 {
     return chunk_hash(chunk_from_str(interface));
 }
 
+/**
+ * Equality function for interface
+ */
 static bool interface_equals(char *interface1, char *interface2)
 {
     return streq(interface1, interface2);
 }
 
+/**
+ * Map an integer x with a one-to-one function using quadratic residues
+ */
 static u_int permute(u_int x, u_int p)
 {
     u_int qr;
@@ -191,6 +261,9 @@ static u_int permute(u_int x, u_int p)
     return p - qr;
 }
 
+/**
+ * Initialize seeds for SPI generation
+ */
 static bool init_spi(private_kernel_vpp_ipsec_t *this)
 {
     bool ok = TRUE;
@@ -210,6 +283,9 @@ static bool init_spi(private_kernel_vpp_ipsec_t *this)
     return ok;
 }
 
+/**
+ * Calculate policy priority
+ */
 static uint32_t calculate_priority(policy_priority_t policy_priority,
                                    traffic_selector_t *src,
                                    traffic_selector_t *dst)
@@ -252,6 +328,9 @@ static uint32_t calculate_priority(policy_priority_t policy_priority,
     return priority;
 }
 
+/**
+ * Get sw_if_index from interface name
+ */
 static uint32_t get_sw_if_index(char *interface)
 {
     char *out = NULL;
@@ -282,6 +361,9 @@ error:
     return sw_if_index;
 }
 
+/**
+ * (Un)-install a security policy database
+ */
 static status_t spd_add_del(bool add, uint32_t spd_id)
 {
     char *out = NULL;
@@ -314,6 +396,9 @@ error:
     return rv;
 }
 
+/**
+ * Enable or disable SPD on an insterface
+ */
 static status_t interface_add_del_spd(bool add, uint32_t spd_id, uint32_t sw_if_index)
 {
     char *out = NULL;
@@ -347,6 +432,9 @@ error:
     return rv;
 }
 
+/**
+ * Add or remove a bypass policy
+ */
 static status_t manage_bypass(bool add, uint32_t spd_id)
 {
     vl_api_ipsec_spd_add_del_entry_t *mp;
@@ -453,6 +541,9 @@ error:
     return rv;
 }
 
+/**
+ * Add or remove a policy
+ */
 static status_t manage_policy(private_kernel_vpp_ipsec_t *this, bool add,
                               kernel_ipsec_policy_id_t *id,
                               kernel_ipsec_manage_policy_t *data)
