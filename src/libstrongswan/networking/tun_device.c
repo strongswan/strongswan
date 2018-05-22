@@ -107,15 +107,15 @@ struct private_tun_device_t {
 	 */
 	tun_device_t public;
 #ifdef WIN32
-        /**
-         * The TUN device's file handle
-         */
-        HANDLE tunhandle;
+	/**
+	 * The TUN device's file handle
+	 */
+	HANDLE tunhandle;
 
-        /**
-         * Name of the TUN device
-         */
-        char if_name[256];
+	/**
+	 * Name of the TUN device
+	 */
+	char if_name[256];
 #else
 	/**
 	 * The TUN device's file descriptor
