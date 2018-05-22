@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Tobias Brunner
+ * Copyright (C) 2014-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -452,9 +452,10 @@ static void verify_sections(linked_list_t *verifier, char *parent)
 
 	enumerator = settings->create_section_enumerator(settings, parent);
 	ver = verifier->create_enumerator(verifier);
-	while (enumerator->enumerate(enumerator, &section) &&
-		   ver->enumerate(ver, &current))
+	while (enumerator->enumerate(enumerator, &section))
 	{
+		ck_assert_msg(ver->enumerate(ver, &current),
+					  "no more sections expected, found %s", section);
 		ck_assert_str_eq(section, current);
 		verifier->remove_at(verifier, ver);
 	}
@@ -498,10 +499,11 @@ static void verify_key_values(linked_list_t *keys, linked_list_t *values,
 	enumerator = settings->create_key_value_enumerator(settings, parent);
 	enum_keys = keys->create_enumerator(keys);
 	enum_values = values->create_enumerator(values);
-	while (enumerator->enumerate(enumerator, &key, &value) &&
-		   enum_keys->enumerate(enum_keys, &current_key) &&
-		   enum_values->enumerate(enum_values, &current_value))
+	while (enumerator->enumerate(enumerator, &key, &value))
 	{
+		ck_assert_msg(enum_keys->enumerate(enum_keys, &current_key),
+					  "no more key/value expected, found %s = %s", key, value);
+		ck_assert(enum_values->enumerate(enum_values, &current_value));
 		ck_assert_str_eq(current_key, key);
 		ck_assert_str_eq(current_value, value);
 		keys->remove_at(keys, enum_keys);
@@ -519,8 +521,8 @@ START_TEST(test_key_value_enumerator)
 {
 	linked_list_t *keys, *values;
 
-	keys = linked_list_create_with_items("key1", "key2", "empty", "key3", NULL);
-	values = linked_list_create_with_items("val1", "with space", "", "string with\nnewline", NULL);
+	keys = linked_list_create_with_items("key1", "key2", "empty", "key3", "key4", "key5", NULL);
+	values = linked_list_create_with_items("val1", "with space", "", "string with\nnewline", "multi line\nstring", "escaped newline", NULL);
 	verify_key_values(keys, values, "main");
 
 	keys = linked_list_create_with_items("key", "key2", "subsub", NULL);
@@ -894,7 +896,6 @@ START_TEST(test_load_string)
 }
 END_TEST
 
-
 START_TEST(test_load_string_section)
 {
 	char *content =
@@ -914,13 +915,6 @@ START_TEST(test_load_string_section)
 	ck_assert(settings->load_string_section(settings, include_content2, TRUE, "main.sub1"));
 	verify_include();
 
-	/* invalid strings are a failure */
-	ck_assert(!settings->load_string_section(settings, "conf {", TRUE, ""));
-	/* NULL or empty strings are OK though */
-	ck_assert(settings->load_string_section(settings, "", TRUE, ""));
-	ck_assert(settings->load_string_section(settings, NULL, TRUE, ""));
-	verify_include();
-
 	ck_assert(settings->load_string_section(settings, include_content2, FALSE, "main"));
 	verify_null("main.key1");
 	verify_string("v2", "main.key2");
@@ -931,6 +925,56 @@ START_TEST(test_load_string_section)
 	ck_assert(settings->load_string_section(settings, include_content2, TRUE, "main.sub2"));
 	verify_string("v2", "main.sub2.key2");
 	verify_string("val", "main.sub2.sub1.key");
+}
+END_TEST
+
+START_TEST(test_load_string_section_null)
+{
+	linked_list_t *keys, *values;
+
+	char *content =
+		"main {\n"
+		"	key1 = val1\n"
+		"	key2 = val2\n"
+		"	none = x\n"
+		"	sub1 {\n"
+		"		include = value\n"
+		"		key2 = value2\n"
+		"	}\n"
+		"}";
+
+	settings = settings_create_string(content);
+
+	ck_assert(settings->load_string_section(settings, include_content1, TRUE, ""));
+	ck_assert(settings->load_string_section(settings, include_content2, TRUE, "main.sub1"));
+	verify_include();
+
+	/* invalid strings are a failure */
+	ck_assert(!settings->load_string_section(settings, "conf {", TRUE, ""));
+	/* NULL or empty strings are OK though when merging */
+	ck_assert(settings->load_string_section(settings, "", TRUE, ""));
+	ck_assert(settings->load_string_section(settings, NULL, TRUE, ""));
+	verify_include();
+
+	/* they do purge the settings if merge is not TRUE */
+	ck_assert(settings->load_string_section(settings, "", FALSE, "main"));
+	verify_null("main.key1");
+	verify_null("main.sub1.key2");
+
+	keys = linked_list_create_with_items(NULL);
+	verify_sections(keys, "main");
+
+	keys = linked_list_create_with_items(NULL);
+	values = linked_list_create_with_items(NULL);
+	verify_key_values(keys, values, "main");
+
+	keys = linked_list_create_with_items("main", NULL);
+	verify_sections(keys, "");
+
+	ck_assert(settings->load_string_section(settings, NULL, FALSE, ""));
+
+	keys = linked_list_create_with_items(NULL);
+	verify_sections(keys, "");
 }
 END_TEST
 
@@ -1664,6 +1708,7 @@ Suite *settings_suite_create()
 	tcase_add_checked_fixture(tc, setup_include_config, teardown_config);
 	tcase_add_test(tc, test_load_string);
 	tcase_add_test(tc, test_load_string_section);
+	tcase_add_test(tc, test_load_string_section_null);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("fallback");

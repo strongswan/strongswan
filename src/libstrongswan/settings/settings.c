@@ -281,24 +281,19 @@ static void find_sections_buffered(private_settings_t *this, section_t *section,
 }
 
 /**
- * Ensure that the section with the given key exists (thread-safe).
+ * Ensure that the section with the given key exists (not thread-safe).
  */
 static section_t *ensure_section(private_settings_t *this, section_t *section,
 								 const char *key, va_list args)
 {
 	char buf[128], keybuf[512];
-	section_t *found;
 
 	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
 	{
 		return NULL;
 	}
-	/* we might have to change the tree */
-	this->lock->write_lock(this->lock);
-	found = find_section_buffered(section, keybuf, keybuf, args, buf,
-								  sizeof(buf), TRUE);
-	this->lock->unlock(this->lock);
-	return found;
+	return find_section_buffered(section, keybuf, keybuf, args, buf,
+								 sizeof(buf), TRUE);
 }
 
 /**
@@ -944,37 +939,32 @@ METHOD(settings_t, add_fallback, void,
 	va_list args;
 	char buf[512];
 
-	/* find/create the section */
+	this->lock->write_lock(this->lock);
 	va_start(args, fallback);
 	section = ensure_section(this, this->top, key, args);
 	va_end(args);
 
 	va_start(args, fallback);
-	if (vsnprintf(buf, sizeof(buf), fallback, args) < sizeof(buf))
+	if (section && vsnprintf(buf, sizeof(buf), fallback, args) < sizeof(buf))
 	{
-		this->lock->write_lock(this->lock);
 		settings_reference_add(section, strdup(buf), TRUE);
-		this->lock->unlock(this->lock);
 	}
 	va_end(args);
+	this->lock->unlock(this->lock);
 }
 
 /**
  * Load settings from files matching the given file pattern or from a string.
- * All sections and values are added relative to "parent".
  * All files (even included ones) have to be loaded successfully.
- * If merge is FALSE the contents of parent are replaced with the parsed
- * contents, otherwise they are merged together.
  */
-static bool load_internal(private_settings_t *this, section_t *parent,
-						  char *pattern, bool merge, bool string)
+static section_t *load_internal(char *pattern, bool string)
 {
 	section_t *section;
 	bool loaded;
 
 	if (pattern == NULL || !pattern[0])
-	{	/* TODO: Clear parent if merge is FALSE? */
-		return TRUE;
+	{
+		return settings_section_create(NULL);
 	}
 
 	section = settings_section_create(NULL);
@@ -983,61 +973,101 @@ static bool load_internal(private_settings_t *this, section_t *parent,
 	if (!loaded)
 	{
 		settings_section_destroy(section, NULL);
-		return FALSE;
+		section = NULL;
 	}
+	return section;
+}
 
-	this->lock->write_lock(this->lock);
-	settings_section_extend(parent, section, this->contents, !merge);
+/**
+ * Add sections and values in "section" relative to "parent".
+ * If merge is FALSE the contents of parent are replaced with the parsed
+ * contents, otherwise they are merged together.
+ *
+ * Releases the write lock and destroys the given section.
+ * If parent is NULL this is all that happens.
+ */
+static bool extend_section(private_settings_t *this, section_t *parent,
+						   section_t *section, bool merge)
+{
+	if (parent)
+	{
+		settings_section_extend(parent, section, this->contents, !merge);
+	}
 	this->lock->unlock(this->lock);
-
 	settings_section_destroy(section, NULL);
-	return TRUE;
+	return parent != NULL;
 }
 
 METHOD(settings_t, load_files, bool,
 	private_settings_t *this, char *pattern, bool merge)
 {
-	return load_internal(this, this->top, pattern, merge, FALSE);
+	section_t *section;
+
+	section = load_internal(pattern, FALSE);
+	if (!section)
+	{
+		return FALSE;
+	}
+
+	this->lock->write_lock(this->lock);
+	return extend_section(this, this->top, section, merge);
 }
 
 METHOD(settings_t, load_files_section, bool,
 	private_settings_t *this, char *pattern, bool merge, char *key, ...)
 {
-	section_t *section;
+	section_t *section, *parent;
 	va_list args;
 
-	va_start(args, key);
-	section = ensure_section(this, this->top, key, args);
-	va_end(args);
-
+	section = load_internal(pattern, FALSE);
 	if (!section)
 	{
 		return FALSE;
 	}
-	return load_internal(this, section, pattern, merge, FALSE);
+
+	this->lock->write_lock(this->lock);
+
+	va_start(args, key);
+	parent = ensure_section(this, this->top, key, args);
+	va_end(args);
+
+	return extend_section(this, parent, section, merge);
 }
 
 METHOD(settings_t, load_string, bool,
 	private_settings_t *this, char *settings, bool merge)
 {
-	return load_internal(this, this->top, settings, merge, TRUE);
+	section_t *section;
+
+	section = load_internal(settings, TRUE);
+	if (!section)
+	{
+		return FALSE;
+	}
+
+	this->lock->write_lock(this->lock);
+	return extend_section(this, this->top, section, merge);
 }
 
 METHOD(settings_t, load_string_section, bool,
 	private_settings_t *this, char *settings, bool merge, char *key, ...)
 {
-	section_t *section;
+	section_t *section, *parent;
 	va_list args;
 
-	va_start(args, key);
-	section = ensure_section(this, this->top, key, args);
-	va_end(args);
-
+	section = load_internal(settings, TRUE);
 	if (!section)
 	{
 		return FALSE;
 	}
-	return load_internal(this, section, settings, merge, TRUE);
+
+	this->lock->write_lock(this->lock);
+
+	va_start(args, key);
+	parent = ensure_section(this, this->top, key, args);
+	va_end(args);
+
+	return extend_section(this, parent, section, merge);
 }
 
 METHOD(settings_t, destroy, void,
