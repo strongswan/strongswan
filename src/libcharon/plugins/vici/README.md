@@ -279,7 +279,9 @@ Terminates an SA while streaming _control-log_ events.
 		ike = <terminate an IKE_SA by configuration name>
 		child-id = <terminate a CHILD_SA by its reqid>
 		ike-id = <terminate an IKE_SA by its unique id>
-		timeout = <timeout in ms before returning>
+		force = <terminate IKE_SA without waiting for proper DELETE, if timeout
+				 is given, waits for a response until it is reached>
+		timeout = <timeout in ms before returning, see below>
 		loglevel = <loglevel to issue "control-log" events for>
 	} => {
 		success = <yes or no>

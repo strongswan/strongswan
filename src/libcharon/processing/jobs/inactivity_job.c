@@ -101,7 +101,7 @@ METHOD(job_t, execute, job_requeue_t,
 			{
 				DBG1(DBG_JOB, "deleting IKE_SA after %d seconds "
 					 "of CHILD_SA inactivity", this->timeout);
-				status = ike_sa->delete(ike_sa);
+				status = ike_sa->delete(ike_sa, FALSE);
 			}
 			else
 			{

@@ -64,7 +64,7 @@ METHOD(job_t, execute, job_requeue_t,
 		}
 		if (this->delete_if_established)
 		{
-			if (ike_sa->delete(ike_sa) == DESTROY_ME)
+			if (ike_sa->delete(ike_sa, FALSE) == DESTROY_ME)
 			{
 				charon->ike_sa_manager->checkin_and_destroy(
 												charon->ike_sa_manager, ike_sa);

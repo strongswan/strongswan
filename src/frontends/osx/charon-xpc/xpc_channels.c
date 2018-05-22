@@ -131,7 +131,7 @@ static void stop_connection(private_xpc_channels_t *this, uint32_t ike_sa,
 {
 	status_t status;
 
-	status = charon->controller->terminate_ike(charon->controller, ike_sa,
+	status = charon->controller->terminate_ike(charon->controller, ike_sa, FALSE,
 											   NULL, NULL, 0);
 	xpc_dictionary_set_bool(reply, "success", status != NOT_FOUND);
 }

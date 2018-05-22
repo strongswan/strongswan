@@ -363,7 +363,7 @@ METHOD(task_t, process_i, status_t,
 			/* IKE_SAs in state IKE_REKEYED are silently deleted, so we use
 			 * IKE_REKEYING */
 			this->new_sa->set_state(this->new_sa, IKE_REKEYING);
-			if (this->new_sa->delete(this->new_sa) == DESTROY_ME)
+			if (this->new_sa->delete(this->new_sa, FALSE) == DESTROY_ME)
 			{
 				this->new_sa->destroy(this->new_sa);
 			}

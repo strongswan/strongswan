@@ -741,7 +741,7 @@ static gboolean do_disconnect(gpointer plugin)
 		{
 			id = ike_sa->get_unique_id(ike_sa);
 			enumerator->destroy(enumerator);
-			charon->controller->terminate_ike(charon->controller, id,
+			charon->controller->terminate_ike(charon->controller, id, FALSE,
 											  controller_cb_empty, NULL, 0);
 			return FALSE;
 		}

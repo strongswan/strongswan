@@ -316,7 +316,8 @@ static void charon_terminate(private_stroke_control_t *this, uint32_t id,
 		else
 		{
 			status = charon->controller->terminate_ike(charon->controller, id,
-							(controller_cb_t)stroke_log, &info, this->timeout);
+							FALSE, (controller_cb_t)stroke_log, &info,
+							this->timeout);
 		}
 		report_terminate_status(this, status, out, id, child);
 	}
@@ -327,7 +328,7 @@ static void charon_terminate(private_stroke_control_t *this, uint32_t id,
 	}
 	else
 	{
-		charon->controller->terminate_ike(charon->controller, id,
+		charon->controller->terminate_ike(charon->controller, id, FALSE,
 										  NULL, NULL, 0);
 	}
 }
