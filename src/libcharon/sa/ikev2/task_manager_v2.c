@@ -1946,8 +1946,7 @@ METHOD(task_manager_t, queue_dpd, void,
 {
 	ike_mobike_t *mobike;
 
-	if (this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE) &&
-		this->ike_sa->has_condition(this->ike_sa, COND_NAT_HERE))
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 	{
 #ifdef ME
 		peer_cfg_t *cfg = this->ike_sa->get_peer_cfg(this->ike_sa);

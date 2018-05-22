@@ -193,7 +193,7 @@ static void process_payloads(private_ike_mobike_t *this, message_t *message)
 			case NAT_DETECTION_DESTINATION_IP:
 			{
 				/* NAT check in this MOBIKE exchange, create subtask for it */
-				if (this->natd == NULL)
+				if (!this->natd)
 				{
 					this->natd = ike_natd_create(this->ike_sa, this->initiator);
 				}
@@ -648,7 +648,7 @@ METHOD(ike_mobike_t, roam, void,
 METHOD(ike_mobike_t, dpd, void,
 	   private_ike_mobike_t *this)
 {
-	if (!this->natd)
+	if (!this->natd && this->ike_sa->has_condition(this->ike_sa, COND_NAT_HERE))
 	{
 		this->natd = ike_natd_create(this->ike_sa, this->initiator);
 	}
