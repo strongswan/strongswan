@@ -587,7 +587,9 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 
 static bool handle_plain_cancel(private_kernel_libipsec_router_t *this)
 {
+#if defined(WIN32)
 	SetEvent( this->event );
+#endif
 	return false;
 }
 
