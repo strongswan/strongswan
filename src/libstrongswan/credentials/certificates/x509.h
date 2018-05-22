@@ -62,6 +62,9 @@ enum x509_flag_t {
 	X509_IKE_INTERMEDIATE =   (1<<8),
 	/** cert has Microsoft Smartcard Logon usage */
 	X509_MS_SMARTCARD_LOGON = (1<<9),
+	/** cert either lacks keyUsage bits, or includes either digitalSignature
+	 *  or nonRepudiation as per RFC 4945, section 5.1.3.2. */
+	X509_IKE_COMPLIANT =      (1<<10),
 };
 
 extern enum_name_t *x509_flag_names;

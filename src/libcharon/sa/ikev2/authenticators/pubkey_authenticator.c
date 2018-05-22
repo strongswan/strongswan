@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -23,6 +23,7 @@
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
 #include <collections/array.h>
+#include <credentials/certificates/x509.h>
 
 typedef struct private_pubkey_authenticator_t private_pubkey_authenticator_t;
 
@@ -414,6 +415,29 @@ METHOD(authenticator_t, build, status_t,
 	return status;
 }
 
+/**
+ * Check if the end-entity certificate, if any, is compliant with RFC 4945
+ */
+static bool is_compliant_cert(auth_cfg_t *auth)
+{
+	certificate_t *cert;
+	x509_t *x509;
+
+	cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+	if (!cert || cert->get_type(cert) != CERT_X509)
+	{
+		return TRUE;
+	}
+	x509 = (x509_t*)cert;
+	if (x509->get_flags(x509) & X509_IKE_COMPLIANT)
+	{
+		return TRUE;
+	}
+	DBG1(DBG_IKE, "rejecting certificate without digitalSignature or "
+		 "nonRepudiation keyUsage flags");
+	return FALSE;
+}
+
 METHOD(authenticator_t, process, status_t,
 	private_pubkey_authenticator_t *this, message_t *message)
 {
@@ -479,7 +503,8 @@ METHOD(authenticator_t, process, status_t,
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
 		if (public->verify(public, params->scheme, params->params, octets,
-						   auth_data))
+						   auth_data) &&
+			is_compliant_cert(current_auth))
 		{
 			if (auth_method != AUTH_DS)
 			{

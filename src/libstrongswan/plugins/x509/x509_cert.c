@@ -704,6 +704,9 @@ static void parse_keyUsage(chunk_t blob, private_x509_cert_t *this)
 		KU_DECIPHER_ONLY =		8,
 	};
 
+	/* to be compliant with RFC 4945 specific KUs have to be included */
+	this->flags &= ~X509_IKE_COMPLIANT;
+
 	if (asn1_unwrap(&blob, &blob) == ASN1_BIT_STRING && blob.len)
 	{
 		int bit, byte, unused = blob.ptr[0];
@@ -724,10 +727,12 @@ static void parse_keyUsage(chunk_t blob, private_x509_cert_t *this)
 						case KU_CRL_SIGN:
 							this->flags |= X509_CRL_SIGN;
 							break;
-						case KU_KEY_CERT_SIGN:
-							/* we use the caBasicConstraint, MUST be set */
 						case KU_DIGITAL_SIGNATURE:
 						case KU_NON_REPUDIATION:
+							this->flags |= X509_IKE_COMPLIANT;
+							break;
+						case KU_KEY_CERT_SIGN:
+							/* we use the caBasicConstraint, MUST be set */
 						case KU_KEY_ENCIPHERMENT:
 						case KU_DATA_ENCIPHERMENT:
 						case KU_KEY_AGREEMENT:
@@ -1380,6 +1385,9 @@ static bool parse_certificate(private_x509_cert_t *this)
 	bool critical = FALSE;
 
 	parser = asn1_parser_create(certObjects, this->encoding);
+
+	/* unless we see a keyUsage extension we are compliant with RFC 4945 */
+	this->flags |= X509_IKE_COMPLIANT;
 
 	while (parser->iterate(parser, &objectID, &object))
 	{

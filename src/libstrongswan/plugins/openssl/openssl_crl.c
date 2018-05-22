@@ -358,7 +358,7 @@ METHOD(certificate_t, get_validity, bool,
 	{
 		*not_after = this->nextUpdate;
 	}
-	return t <= this->nextUpdate;
+	return (t >= this->thisUpdate && t <= this->nextUpdate);
 }
 
 METHOD(certificate_t, get_encoding, bool,
