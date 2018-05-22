@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2012-2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -157,7 +160,7 @@ typedef struct __attribute__((packed)) {
 } dhcp_option_t;
 
 /**
- * DHCP message format, with a maximum size options buffer
+ * DHCP message format, with a minimum size options buffer
  */
 typedef struct __attribute__((packed)) {
 	uint8_t opcode;
@@ -176,8 +179,18 @@ typedef struct __attribute__((packed)) {
 	char server_hostname[64];
 	char boot_filename[128];
 	uint32_t magic_cookie;
-	u_char options[252];
+	u_char options[308];
 } dhcp_t;
+
+/**
+ * Check if the given address equals the broadcast address
+ */
+static inline bool is_broadcast(host_t *host)
+{
+	chunk_t broadcast = chunk_from_chars(0xFF,0xFF,0xFF,0xFF);
+
+	return chunk_equals(broadcast, host->get_address(host));
+}
 
 /**
  * Prepare a DHCP message for a given transaction
@@ -186,10 +199,10 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 						dhcp_transaction_t *transaction,
 						dhcp_message_type_t type, dhcp_t *dhcp)
 {
-	chunk_t chunk, broadcast = chunk_from_chars(0xFF,0xFF,0xFF,0xFF);
+	chunk_t chunk;
 	identification_t *identity;
 	dhcp_option_t *option;
-	int optlen = 0;
+	int optlen = 0, remaining;
 	host_t *src;
 	uint32_t id;
 
@@ -198,7 +211,7 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	dhcp->hw_type = ARPHRD_ETHER;
 	dhcp->hw_addr_len = 6;
 	dhcp->transaction_id = transaction->get_id(transaction);
-	if (chunk_equals(broadcast, this->dst->get_address(this->dst)))
+	if (is_broadcast(this->dst))
 	{
 		/* Set broadcast flag to get broadcasted replies, as we actually
 		 * do not own the MAC we request an address for. */
@@ -241,21 +254,29 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	option->data[0] = type;
 	optlen += sizeof(dhcp_option_t) + option->len;
 
+	/* the REQUEST message has the most static overhead in the 'options' field
+	 * with 17 bytes */
+	remaining = sizeof(dhcp->options) - optlen - 17;
+
 	if (identity->get_type(identity) == ID_FQDN)
 	{
 		option = (dhcp_option_t*)&dhcp->options[optlen];
 		option->type = DHCP_HOST_NAME;
-		option->len = min(chunk.len, 64);
+		option->len = min(min(chunk.len, remaining-sizeof(dhcp_option_t)), 255);
+		memcpy(option->data, chunk.ptr, option->len);
+		optlen += sizeof(dhcp_option_t) + option->len;
+		remaining -= sizeof(dhcp_option_t) + option->len;
+	}
+
+	if (this->identity_lease &&
+		remaining >= sizeof(dhcp_option_t) + 2)
+	{
+		option = (dhcp_option_t*)&dhcp->options[optlen];
+		option->type = DHCP_CLIENT_ID;
+		option->len = min(min(chunk.len, remaining-sizeof(dhcp_option_t)), 255);
 		memcpy(option->data, chunk.ptr, option->len);
 		optlen += sizeof(dhcp_option_t) + option->len;
 	}
-
-	option = (dhcp_option_t*)&dhcp->options[optlen];
-	option->type = DHCP_CLIENT_ID;
-	option->len = min(chunk.len, 64);
-	memcpy(option->data, chunk.ptr, option->len);
-	optlen += sizeof(dhcp_option_t) + option->len;
-
 	return optlen;
 }
 
@@ -273,7 +294,7 @@ static bool send_dhcp(private_dhcp_socket_t *this,
 	{
 		dst = this->dst;
 	}
-	len = offsetof(dhcp_t, magic_cookie) + ((optlen + 4) / 64 * 64 + 64);
+	len = offsetof(dhcp_t, magic_cookie) + optlen + 4;
 	return sendto(this->send, dhcp, len, 0, dst->get_sockaddr(dst),
 				  *dst->get_sockaddr_len(dst)) == len;
 }
@@ -675,7 +696,7 @@ dhcp_socket_t *dhcp_socket_create()
 		},
 	};
 	char *iface;
-	int on = 1;
+	int on = 1, rcvbuf = 0;
 	struct sock_filter dhcp_filter_code[] = {
 		BPF_STMT(BPF_LD+BPF_B+BPF_ABS,
 				 offsetof(struct iphdr, protocol)),
@@ -685,9 +706,9 @@ dhcp_socket_t *dhcp_socket_create()
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_SERVER_PORT, 0, 14),
 		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, sizeof(struct iphdr) +
 				 offsetof(struct udphdr, dest)),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_CLIENT_PORT, 0, 2),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_SERVER_PORT, 0, 1),
-		BPF_JUMP(BPF_JMP+BPF_JA, 0, 0, 10),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_CLIENT_PORT, 2, 0),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_SERVER_PORT, 1, 0),
+		BPF_JUMP(BPF_JMP+BPF_JA, 10, 0, 0),
 		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, sizeof(struct iphdr) +
 				 sizeof(struct udphdr) + offsetof(dhcp_t, opcode)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, BOOTREPLY, 0, 8),
@@ -765,6 +786,30 @@ dhcp_socket_t *dhcp_socket_create()
 		DBG1(DBG_CFG, "unable to broadcast on DHCP socket: %s", strerror(errno));
 		destroy(this);
 		return NULL;
+	}
+	/* we won't read any data from this socket, so reduce the buffer to save
+	 * some memory (there is some minimum, still try 0, though).
+	 * note that we might steal some packets from other processes if e.g. a DHCP
+	 * client (or server) is running on the same host, but by reducing the
+	 * buffer size the impact should be minimized */
+	if (setsockopt(this->send, SOL_SOCKET, SO_RCVBUF, &rcvbuf,
+				   sizeof(rcvbuf)) == -1)
+	{
+		DBG1(DBG_CFG, "unable to reduce receive buffer on DHCP send socket: %s",
+			 strerror(errno));
+		destroy(this);
+		return NULL;
+	}
+	if (!is_broadcast(this->dst))
+	{
+		/* when setting giaddr (which we do when we don't broadcast), the server
+		 * should respond to the server port on that IP, according to RFC 2131,
+		 * section 4.1.  while we do receive such messages via raw socket, the
+		 * kernel will respond with an ICMP port unreachable if there is no
+		 * socket bound to that port, which might be problematic with certain
+		 * DHCP servers.  instead of opening an additional socket, that we don't
+		 * actually use, we can also just send our requests from port 67 */
+		src.sin_port = htons(DHCP_SERVER_PORT);
 	}
 	if (bind(this->send, (struct sockaddr*)&src, sizeof(src)) == -1)
 	{
