@@ -4,7 +4,7 @@
  * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2002-2008 Andreas Steffen
  * Copyright (C) 2005 Jan Hutter, Martin Willi
- * Hochschule fuer Technik Rapperswil, Switzerland
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

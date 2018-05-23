@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  * Copyright (C) 2001-2007 Miklos Szeredi
  *
  * Based on example shipped with FUSE.

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2001-2002 Mathieu Lafon - Arkoon Network Security
  *

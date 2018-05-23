@@ -3,7 +3,7 @@
  * Copyright (C) 2005-2014 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  * Copyright (C) 2014 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it

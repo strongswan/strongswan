@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  * Copyright (C) 2001-2004 Jeff Dike
  *
  * Based on the "uml_mconsole" utility from Jeff Dike.

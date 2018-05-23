@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  * Copyright (C) 2001 Jari Ruusu.
  *
  * Ported from strongSwans implementation written by Jari Ruusu.

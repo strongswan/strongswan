@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008-2009 Martin Willi
  * Copyright (C) 2007-2014 Andreas Steffen
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
  *
  * This program is free software; you can redistribute it and/or modify it

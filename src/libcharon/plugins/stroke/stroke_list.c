@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil

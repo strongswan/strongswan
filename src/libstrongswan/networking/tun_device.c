@@ -2,7 +2,7 @@
  * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  * Copyright (C) 2012 Martin Willi
  *
  * This program is free software; you can redistribute it and/or modify it

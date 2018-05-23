@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  * Copyright (C) 2008 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
