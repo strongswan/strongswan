@@ -1354,7 +1354,8 @@ static void netlink_find_offload_feature(const char *ifname, int query_socket)
 		.cmd = ETHTOOL_GSSET_INFO,
 		.sset_mask = 1ULL << ETH_SS_FEATURES,
 	);
-	strcpy(ifr.ifr_name, ifname);
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 	ifr.ifr_data = (void*)sset_info;
 
 	err = ioctl(query_socket, SIOCETHTOOL, &ifr);
@@ -1369,7 +1370,8 @@ static void netlink_find_offload_feature(const char *ifname, int query_socket)
 		.cmd = ETHTOOL_GSTRINGS,
 		.string_set = ETH_SS_FEATURES,
 	);
-	strcpy(ifr.ifr_name, ifname);
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 	ifr.ifr_data = (void*)cmd;
 
 	err = ioctl(query_socket, SIOCETHTOOL, &ifr);
@@ -1433,7 +1435,8 @@ static bool netlink_detect_offload(const char *ifname)
 		.cmd = ETHTOOL_GFEATURES,
 		.size = netlink_hw_offload.total_blocks,
 	);
-	strcpy(ifr.ifr_name, ifname);
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 	ifr.ifr_data = (void*)cmd;
 
 	if (ioctl(query_socket, SIOCETHTOOL, &ifr))
