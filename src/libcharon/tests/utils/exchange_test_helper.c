@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -16,6 +16,7 @@
 #include "exchange_test_helper.h"
 #include "mock_dh.h"
 #include "mock_ipsec.h"
+#include "mock_net.h"
 #include "mock_nonce_gen.h"
 
 #include <collections/array.h>
@@ -333,6 +334,7 @@ void exchange_test_helper_init(char *plugins)
 	/* and there is no kernel plugin loaded
 	 * TODO: we'd have more control if we'd implement kernel_interface_t */
 	charon->kernel->add_ipsec_interface(charon->kernel, mock_ipsec_create);
+	charon->kernel->add_net_interface(charon->kernel, mock_net_create);
 	/* like SPIs for IPsec SAs, make IKE SPIs predictable */
 	charon->ike_sa_manager->set_spi_cb(charon->ike_sa_manager, get_ike_spi,
 									   this);
