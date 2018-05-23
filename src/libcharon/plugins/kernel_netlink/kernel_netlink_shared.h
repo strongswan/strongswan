@@ -32,7 +32,7 @@
 /**
  * General purpose netlink buffer.
  *
- * Some platforms require an enforced aligment to four bytes (e.g. ARM).
+ * Some platforms require an enforced alignment to four bytes (e.g. ARM).
  */
 typedef union {
 	struct nlmsghdr hdr;

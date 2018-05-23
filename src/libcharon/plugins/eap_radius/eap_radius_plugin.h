@@ -34,7 +34,7 @@ typedef struct eap_radius_plugin_t eap_radius_plugin_t;
 /**
  * EAP RADIUS proxy plugin.
  *
- * This plugin provides not a single EAP method, but a proxy to forwared
+ * This plugin provides not a single EAP method, but a proxy to forward
  * EAP packets to a RADIUS server. It only provides server implementations.
  */
 struct eap_radius_plugin_t {

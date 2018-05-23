@@ -63,7 +63,7 @@ struct ike_mobike_t {
 	void (*dpd)(ike_mobike_t *this);
 
 	/**
-	 * Transmision hook, called by task manager.
+	 * Transmission hook, called by task manager.
 	 *
 	 * The task manager calls this hook whenever it transmits a packet. It
 	 * allows the mobike task to send the packet on multiple paths to do path

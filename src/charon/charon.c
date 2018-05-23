@@ -233,7 +233,7 @@ static bool check_pidfile()
 		}
 		/* Only fchown() the pidfile if we have CAP_CHOWN. Otherwise,
 		 * directory permissions should allow pidfile to be accessed
-		 * by the UID/GID under which the charon deamon will run. */
+		 * by the UID/GID under which the charon daemon will run. */
 		if (lib->caps->check(lib->caps, CAP_CHOWN))
 		{
 			ignore_result(fchown(fd,

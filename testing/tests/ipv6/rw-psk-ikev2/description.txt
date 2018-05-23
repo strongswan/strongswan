@@ -1,4 +1,4 @@
-TThe roadwarriors <b>carol</b> and <b>dave</b> set up an IPv6 tunnel connection each
+The roadwarriors <b>carol</b> and <b>dave</b> set up an IPv6 tunnel connection each
 to gateway <b>moon</b>. The authentication is based on distinct <b>pre-shared keys</b>
 and IPv6 addresses. Upon the successful establishment of the IPsec tunnels,
 automatically inserted ip6tables-based firewall rules let pass the tunneled traffic.

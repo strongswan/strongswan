@@ -100,7 +100,7 @@ extern const chunk_t ASN1_INTEGER_2;
 chunk_t asn1_algorithmIdentifier(int oid);
 
 /**
- * Build an algorithmIdentifier from a known OID and the given prameters.
+ * Build an algorithmIdentifier from a known OID and the given parameters.
  *
  * @param oid		known OID index
  * @param params	parameters to encode in the algorithmIdentifier (adopted)

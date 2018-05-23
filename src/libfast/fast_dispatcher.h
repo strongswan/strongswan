@@ -24,7 +24,7 @@
  *
  * The application has a global context and a session context. The global
  * context is accessed from all sessions simultaneously and therefore
- * needs to be threadsave. Often a database wrapper is the global context.
+ * needs to be threadsafe. Often a database wrapper is the global context.
  * The session context is instantiated per session. Sessions are managed
  * automatically through session cookies. The session context is kept alive
  * until the session times out. It must implement the context_t interface and

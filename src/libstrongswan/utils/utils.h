@@ -206,7 +206,7 @@ void utils_deinit();
  * Block and wait for a set of signals
  *
  * We don't replicate the functionality of siginfo_t.  If info is not NULL
- * -1 is returend and errno is set to EINVAL.
+ * -1 is returned and errno is set to EINVAL.
  *
  * @param set		set of signals to wait for
  * @param info		must be NULL

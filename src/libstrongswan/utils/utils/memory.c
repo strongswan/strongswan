@@ -29,7 +29,7 @@ void memxor(uint8_t dst[], const uint8_t src[], size_t n)
 	{
 		dst[i] ^= src[i];
 	}
-	/* try to use words if src shares an aligment with dst */
+	/* try to use words if src shares an alignment with dst */
 	switch (((uintptr_t)&src[i] % sizeof(long)))
 	{
 		case 0:

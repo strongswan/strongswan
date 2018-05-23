@@ -2089,7 +2089,7 @@ strongswan-4.2.0
   refactored to support modular credential providers, proper
   CERTREQ/CERT payload exchanges and extensible authorization rules.
 
-- The framework of strongSwan Manager has envolved to the web application
+- The framework of strongSwan Manager has evolved to the web application
   framework libfast (FastCGI Application Server w/ Templates) and is usable
   by other applications.
 

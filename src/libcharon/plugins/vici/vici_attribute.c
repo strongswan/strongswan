@@ -249,7 +249,7 @@ static bool have_vips_from_pool(mem_pool_t *pool, linked_list_t *vips)
 	{
 		end = chunk_clone(start);
 
-		/* mem_pool is currenty limited to 2^31 addresses, so 32-bit
+		/* mem_pool is currently limited to 2^31 addresses, so 32-bit
 		 * calculations should be sufficient. */
 		size = untoh32(start.ptr + start.len - sizeof(size));
 		htoun32(end.ptr + end.len - sizeof(size), size + pool->get_size(pool));

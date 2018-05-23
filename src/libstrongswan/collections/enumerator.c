@@ -291,7 +291,7 @@ typedef struct {
 	char *string;
 	/** current position */
 	char *pos;
-	/** separater chars */
+	/** separator chars */
 	const char *sep;
 	/** trim chars */
 	const char *trim;

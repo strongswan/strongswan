@@ -112,7 +112,7 @@ struct private_vici_config_t {
 	rwlock_t *lock;
 
 	/**
-	 * Condvar used to snyc running actions
+	 * Condvar used to sync running actions
 	 */
 	rwlock_condvar_t *condvar;
 

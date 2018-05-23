@@ -320,7 +320,7 @@ METHOD(ha_message_t, add_attribute, void,
  * Attribute enumerator implementation
  */
 typedef struct {
-	/** implementes enumerator_t */
+	/** implements enumerator_t */
 	enumerator_t public;
 	/** position in message */
 	chunk_t buf;

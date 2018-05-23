@@ -93,7 +93,7 @@ Absolutely silent
 Very basic auditing logs, (e.g. SA up/SA down)
 .TP
 .B 1
-Generic control flow with errors, a good default to see whats going on
+Generic control flow with errors, a good default to see what's going on
 .TP
 .B 2
 More detailed debugging control flow

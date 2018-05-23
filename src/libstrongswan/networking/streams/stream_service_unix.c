@@ -41,7 +41,7 @@ stream_service_t *stream_service_create_unix(char *uri, int backlog)
 	{	/* required to chown(2) service socket */
 		DBG1(DBG_NET, "cannot change ownership of socket '%s' without "
 			 "CAP_CHOWN capability. socket directory should be accessible to "
-			 "UID/GID under which the deamon will run", uri);
+			 "UID/GID under which the daemon will run", uri);
 	}
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1)

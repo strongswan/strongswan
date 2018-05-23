@@ -75,7 +75,7 @@ struct private_fast_request_t {
 };
 
 /**
- * ClearSilver cgiwrap is not threadsave, so we use a private
+ * ClearSilver cgiwrap is not threadsafe, so we use a private
  * context for each thread.
  */
 static thread_value_t *thread_this;
