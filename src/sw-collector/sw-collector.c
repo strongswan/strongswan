@@ -633,6 +633,7 @@ static int check(sw_collector_db_t *db)
 	e = db->create_sw_enumerator(db, SW_QUERY_ALL, NULL);
 	if (!e)
 	{
+		table->destroy_function(table, (void*)free_entry);
 		return EXIT_FAILURE;
 	}
 	while (e->enumerate(e, &sw_id, &name, &package, &version, &installed))
