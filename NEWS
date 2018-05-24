@@ -1,7 +1,11 @@
 strongswan-5.6.3
 ----------------
 
-- Fixes a vulnerability in the stroke plugin, which did not check the received
+- Fixed a DoS vulnerability in the IKEv2 key derivation if the openssl plugin is
+  used in FIPS mode and HMAC-MD5 is negotiated as PRF.
+  This vulnerability has been registered as CVE-2018-10811.
+
+- Fixed a vulnerability in the stroke plugin, which did not check the received
   length before reading a message from the socket. Unless a group is configured,
   root privileges are required to access that socket, so in the default
   configuration this shouldn't be an issue.
