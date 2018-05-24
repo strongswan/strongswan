@@ -931,6 +931,12 @@ connections.<conn>.children.<child>.hw_offload = no
 	Enable hardware offload for this CHILD_SA, if supported by the IPsec
 	implementation.
 
+	Enable hardware offload for this CHILD_SA, if supported by the IPsec
+	implementation. The value _yes_ enforces offloading and the installation
+	will fail if it's not supported by either kernel or device.	The value _auto_
+	enables offloading, if it's supported, but the installation does not fail
+	otherwise.
+
 connections.<conn>.children.<child>.start_action = none
 	Action to perform after loading the configuration (_none_, _trap_, _start_).
 
