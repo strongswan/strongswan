@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tobias Brunner
+ * Copyright (C) 2007-2018 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -102,12 +102,17 @@ struct linked_list_t {
 	/**
 	 * Inserts a new item before the item the enumerator currently points to.
 	 *
-	 * If this method is called before starting the enumeration the item is
-	 * inserted first. If it is called after all items have been enumerated
-	 * the item is inserted last. This is helpful when inserting items into
-	 * a sorted list.
+	 * If this method is called after all items have been enumerated, the item
+	 * is inserted last.  This is helpful when inserting items into a sorted
+	 * list.
 	 *
-	 * @note The position of the enumerator is not changed.
+	 * @note The position of the enumerator is not changed. So it is safe to
+	 * call this before or after remove_at() to replace the item at the current
+	 * position (the enumerator will continue with the next item in the list).
+	 * And in particular, when inserting an item before calling enumerate(),
+	 * the enumeration will continue (or start) at the item that was first in
+	 * the list before any items were inserted (enumerate() will return FALSE
+	 * if the list was empty before).
 	 *
 	 * @param enumerator	enumerator with position
 	 * @param item			item value to insert in list
@@ -117,6 +122,10 @@ struct linked_list_t {
 
 	/**
 	 * Remove an item from the list where the enumerator points to.
+	 *
+	 * If this method is called before calling enumerate() of the enumerator,
+	 * the first item in the list, if any, will be removed.  No item is removed,
+	 * if the method is called after enumerating all items.
 	 *
 	 * @param enumerator enumerator with position
 	 */

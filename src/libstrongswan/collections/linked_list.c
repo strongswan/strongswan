@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2015 Tobias Brunner
+ * Copyright (C) 2007-2018 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -111,7 +111,7 @@ struct private_enumerator_t {
 	/**
 	 * implements enumerator interface
 	 */
-	enumerator_t enumerator;
+	enumerator_t public;
 
 	/**
 	 * associated linked list
@@ -122,35 +122,19 @@ struct private_enumerator_t {
 	 * current item
 	 */
 	element_t *current;
-
-	/**
-	 * enumerator has enumerated all items
-	 */
-	bool finished;
 };
 
-METHOD(enumerator_t, enumerate, bool,
-	private_enumerator_t *this, va_list args)
+/**
+ * Enumerate the current item
+ */
+static bool do_enumerate(private_enumerator_t *this, va_list args)
 {
 	void **item;
 
 	VA_ARGS_VGET(args, item);
 
-	if (this->finished)
-	{
-		return FALSE;
-	}
 	if (!this->current)
 	{
-		this->current = this->list->first;
-	}
-	else
-	{
-		this->current = this->current->next;
-	}
-	if (!this->current)
-	{
-		this->finished = TRUE;
 		return FALSE;
 	}
 	if (item)
@@ -160,28 +144,46 @@ METHOD(enumerator_t, enumerate, bool,
 	return TRUE;
 }
 
+METHOD(enumerator_t, enumerate_next, bool,
+	private_enumerator_t *this, va_list args)
+{
+	if (this->current)
+	{
+		this->current = this->current->next;
+	}
+	return do_enumerate(this, args);
+}
+
+METHOD(enumerator_t, enumerate_current, bool,
+	private_enumerator_t *this, va_list args)
+{
+	this->public.venumerate = _enumerate_next;
+	return do_enumerate(this, args);
+}
+
 METHOD(linked_list_t, create_enumerator, enumerator_t*,
 	private_linked_list_t *this)
 {
 	private_enumerator_t *enumerator;
 
 	INIT(enumerator,
-		.enumerator = {
+		.public = {
 			.enumerate = enumerator_enumerate_default,
-			.venumerate = _enumerate,
+			.venumerate = _enumerate_current,
 			.destroy = (void*)free,
 		},
 		.list = this,
+		.current = this->first,
 	);
 
-	return &enumerator->enumerator;
+	return &enumerator->public;
 }
 
 METHOD(linked_list_t, reset_enumerator, void,
 	private_linked_list_t *this, private_enumerator_t *enumerator)
 {
-	enumerator->current = NULL;
-	enumerator->finished = FALSE;
+	enumerator->current = this->first;
+	enumerator->public.venumerate = _enumerate_current;
 }
 
 METHOD(linked_list_t, get_count, int,
@@ -298,14 +300,7 @@ METHOD(linked_list_t, insert_before, void,
 	current = enumerator->current;
 	if (!current)
 	{
-		if (enumerator->finished)
-		{
-			this->public.insert_last(&this->public, item);
-		}
-		else
-		{
-			this->public.insert_first(&this->public, item);
-		}
+		insert_last(this, item);
 		return;
 	}
 	element = element_create(item);
@@ -377,7 +372,9 @@ METHOD(linked_list_t, remove_at, void,
 	if (enumerator->current)
 	{
 		current = enumerator->current;
-		enumerator->current = current->previous;
+		enumerator->current = current->next;
+		/* the enumerator already points to the next item */
+		enumerator->public.venumerate = _enumerate_current;
 		remove_element(this, current);
 	}
 }
