@@ -2212,8 +2212,8 @@ static void merge_config(private_vici_config_t *this, peer_cfg_t *peer_cfg)
 			{
 				DBG1(DBG_CFG, "replaced vici connection: %s",
 					 peer_cfg->get_name(peer_cfg));
+				this->conns->insert_before(this->conns, enumerator, peer_cfg);
 				this->conns->remove_at(this->conns, enumerator);
-				this->conns->insert_last(this->conns, peer_cfg);
 				handle_start_actions(this, current, TRUE);
 				handle_start_actions(this, peer_cfg, FALSE);
 				current->destroy(current);
