@@ -289,7 +289,7 @@ METHOD(child_cfg_t, add_traffic_selector, void,
 
 METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 	private_child_cfg_t *this, bool local, linked_list_t *supplied,
-	linked_list_t *hosts)
+	linked_list_t *hosts, bool log)
 {
 	enumerator_t *e1, *e2;
 	traffic_selector_t *ts1, *ts2, *selected;
@@ -334,13 +334,19 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 	}
 	e1->destroy(e1);
 
-	DBG2(DBG_CFG, "%s traffic selectors for %s:",
-		 supplied ? "selecting" : "proposing", local ? "us" : "other");
-	if (supplied == NULL)
+	if (log)
+	{
+		DBG2(DBG_CFG, "%s traffic selectors for %s:",
+			 supplied ? "selecting" : "proposing", local ? "us" : "other");
+	}
+	if (!supplied)
 	{
 		while (derived->remove_first(derived, (void**)&ts1) == SUCCESS)
 		{
-			DBG2(DBG_CFG, " %R", ts1);
+			if (log)
+			{
+				DBG2(DBG_CFG, " %R", ts1);
+			}
 			result->insert_last(result, ts1);
 		}
 		derived->destroy(derived);
@@ -358,11 +364,14 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 				selected = ts1->get_subset(ts1, ts2);
 				if (selected)
 				{
-					DBG2(DBG_CFG, " config: %R, received: %R => match: %R",
-						 ts1, ts2, selected);
+					if (log)
+					{
+						DBG2(DBG_CFG, " config: %R, received: %R => match: %R",
+							 ts1, ts2, selected);
+					}
 					result->insert_last(result, selected);
 				}
-				else
+				else if (log)
 				{
 					DBG2(DBG_CFG, " config: %R, received: %R => no match",
 						 ts1, ts2);

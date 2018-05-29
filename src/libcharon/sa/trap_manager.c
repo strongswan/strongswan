@@ -168,7 +168,7 @@ static bool dynamic_remote_ts(child_cfg_t *child)
 	traffic_selector_t *ts;
 	bool found = FALSE;
 
-	other_ts = child->get_traffic_selectors(child, FALSE, NULL, NULL);
+	other_ts = child->get_traffic_selectors(child, FALSE, NULL, NULL, FALSE);
 	enumerator = other_ts->create_enumerator(other_ts);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
@@ -296,11 +296,11 @@ METHOD(trap_manager_t, install, bool,
 	child_sa = child_sa_create(me, other, child, 0, FALSE, 0, 0);
 
 	list = linked_list_create_with_items(me, NULL);
-	my_ts = child->get_traffic_selectors(child, TRUE, NULL, list);
+	my_ts = child->get_traffic_selectors(child, TRUE, NULL, list, FALSE);
 	list->destroy_offset(list, offsetof(host_t, destroy));
 
 	list = linked_list_create_with_items(other, NULL);
-	other_ts = child->get_traffic_selectors(child, FALSE, NULL, list);
+	other_ts = child->get_traffic_selectors(child, FALSE, NULL, list, FALSE);
 	list->destroy_offset(list, offsetof(host_t, destroy));
 
 	/* We don't know the finally negotiated protocol (ESP|AH), we install

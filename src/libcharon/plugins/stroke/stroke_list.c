@@ -580,8 +580,10 @@ METHOD(stroke_list_t, status, void,
 			children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 			while (children->enumerate(children, &child_cfg))
 			{
-				my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
-				other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
+				my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE,
+														 NULL, NULL, FALSE);
+				other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE,
+															NULL, NULL, FALSE);
 				fprintf(out, "%12s:   child:  %#R === %#R %N",
 						child_cfg->get_name(child_cfg),	my_ts, other_ts,
 						ipsec_mode_names, child_cfg->get_mode(child_cfg));
@@ -614,8 +616,10 @@ METHOD(stroke_list_t, status, void,
 			fprintf(out, "Shunted Connections:\n");
 			first = FALSE;
 		}
-		my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
-		other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
+		my_ts = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL,
+												 NULL, FALSE);
+		other_ts = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL,
+													NULL, FALSE);
 		fprintf(out, "%12s:  %#R === %#R %N\n",
 				child_cfg->get_name(child_cfg),	my_ts, other_ts,
 				ipsec_mode_names, child_cfg->get_mode(child_cfg));
