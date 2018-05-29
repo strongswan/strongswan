@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -295,34 +296,26 @@ CALLBACK(peer_enum_filter_destroy, void,
 }
 
 /**
- * Insert entry into match-sorted list, using helper
+ * Insert entry into match-sorted list
  */
-static void insert_sorted(match_entry_t *entry, linked_list_t *list,
-						  linked_list_t *helper)
+static void insert_sorted(match_entry_t *entry, linked_list_t *list)
 {
+	enumerator_t *enumerator;
 	match_entry_t *current;
 
-	while (list->remove_first(list, (void**)&current) == SUCCESS)
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &current))
 	{
-		helper->insert_last(helper, current);
-	}
-	while (helper->remove_first(helper, (void**)&current) == SUCCESS)
-	{
-		if (entry && (
-			 (entry->match_ike > current->match_ike &&
-			  entry->match_peer >= current->match_peer) ||
-			 (entry->match_ike >= current->match_ike &&
-			  entry->match_peer > current->match_peer)))
+		if ((entry->match_ike > current->match_ike &&
+			 entry->match_peer >= current->match_peer) ||
+			(entry->match_ike >= current->match_ike &&
+			  entry->match_peer > current->match_peer))
 		{
-			list->insert_last(list, entry);
-			entry = NULL;
+			break;
 		}
-		list->insert_last(list, current);
 	}
-	if (entry)
-	{
-		list->insert_last(list, entry);
-	}
+	list->insert_before(list, enumerator, entry);
+	enumerator->destroy(enumerator);
 }
 
 METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
@@ -332,7 +325,7 @@ METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 	enumerator_t *enumerator;
 	peer_data_t *data;
 	peer_cfg_t *cfg;
-	linked_list_t *configs, *helper;
+	linked_list_t *configs;
 
 	INIT(data,
 		.lock = this->lock,
@@ -352,8 +345,6 @@ METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 	}
 
 	configs = linked_list_create();
-	/* only once allocated helper list for sorting */
-	helper = linked_list_create();
 	while (enumerator->enumerate(enumerator, &cfg))
 	{
 		id_match_t match_peer_me, match_peer_other;
@@ -376,11 +367,10 @@ METHOD(backend_manager_t, create_peer_cfg_enumerator, enumerator_t*,
 				.match_ike = match_ike,
 				.cfg = cfg->get_ref(cfg),
 			);
-			insert_sorted(entry, configs, helper);
+			insert_sorted(entry, configs);
 		}
 	}
 	enumerator->destroy(enumerator);
-	helper->destroy(helper);
 
 	return enumerator_create_filter(configs->create_enumerator(configs),
 									peer_enum_filter, configs,
