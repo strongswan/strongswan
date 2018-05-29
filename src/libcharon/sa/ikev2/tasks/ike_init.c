@@ -742,7 +742,7 @@ METHOD(task_t, build_r, status_t,
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
 	{
-		DBG1(DBG_IKE, "received proposals inacceptable");
+		DBG1(DBG_IKE, "received proposals unacceptable");
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
@@ -771,7 +771,7 @@ METHOD(task_t, build_r, status_t,
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
 										  &group, NULL))
 		{
-			DBG1(DBG_IKE, "DH group %N inacceptable, requesting %N",
+			DBG1(DBG_IKE, "DH group %N unacceptable, requesting %N",
 				 diffie_hellman_group_names, this->dh_group,
 				 diffie_hellman_group_names, group);
 			this->dh_group = group;

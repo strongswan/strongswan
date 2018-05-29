@@ -18,7 +18,7 @@ carol::swanctl --list-sas --raw 2> /dev/null::home.*version=2 state=ESTABLISHED.
 moon:: swanctl --list-sas --raw 2> /dev/null::sales.*version=2 state=ESTABLISHED.*remote-host=192.168.0.100 remote-port=4500 remote-id=carol@strongswan.org.*child-sas.*venus.*state=INSTALLED::NO
 dave:: cat /var/log/daemon.log::received TS_UNACCEPTABLE notify, no CHILD_SA built::YES
 moon:: cat /var/log/daemon.log::constraint check failed: peer not authenticated by.*Research CA::YES
-moon:: cat /var/log/daemon.log::selected peer config.*research.*inacceptable::YES
+moon:: cat /var/log/daemon.log::selected peer config.*research.*unacceptable::YES
 moon:: cat /var/log/daemon.log::switching to peer config.*sales::YES
 dave:: swanctl --list-sas --raw 2> /dev/null::home.*version=2 state=ESTABLISHED.*child-sas.*alice.*state=INSTALLED::NO
 moon:: swanctl --list-sas --raw 2> /dev/null::research.*version=2 state=ESTABLISHED.*remote-host=192.168.0.100 remote-port=4500 remote-id=dave@strongswan.org.*child-sas.*alice.*state=INSTALLED::NO

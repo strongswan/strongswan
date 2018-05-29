@@ -259,7 +259,7 @@ METHOD(task_t, build_r, status_t,
 	}
 	if (this->new_sa == NULL)
 	{
-		/* IKE_SA/a CHILD_SA is in an inacceptable state, deny rekeying */
+		/* IKE_SA/a CHILD_SA is in an unacceptable state, deny rekeying */
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return SUCCESS;
 	}

@@ -382,7 +382,7 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 			{
 				break;
 			}
-			DBG1(DBG_CFG, "selected peer config '%s' inacceptable: %s",
+			DBG1(DBG_CFG, "selected peer config '%s' unacceptable: %s",
 				 this->peer_cfg->get_name(this->peer_cfg), comply_error);
 			this->peer_cfg->destroy(this->peer_cfg);
 		}
@@ -616,7 +616,7 @@ METHOD(task_t, process_r, status_t,
 					(uintptr_t)cand->get(cand, AUTH_RULE_EAP_TYPE) == EAP_NAK &&
 					(uintptr_t)cand->get(cand, AUTH_RULE_EAP_VENDOR) == 0))
 			{	/* peer requested EAP, but current config does not match */
-				DBG1(DBG_IKE, "peer requested EAP, config inacceptable");
+				DBG1(DBG_IKE, "peer requested EAP, config unacceptable");
 				this->peer_cfg->destroy(this->peer_cfg);
 				this->peer_cfg = NULL;
 				if (!update_cfg_candidates(this, FALSE))

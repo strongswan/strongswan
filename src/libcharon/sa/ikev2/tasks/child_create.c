@@ -499,8 +499,8 @@ static linked_list_t* narrow_ts(private_child_create_t *this, bool local,
 /**
  * Install a CHILD_SA for usage, return value:
  * - FAILED: no acceptable proposal
- * - INVALID_ARG: diffie hellman group inacceptable
- * - NOT_FOUND: TS inacceptable
+ * - INVALID_ARG: diffie hellman group unacceptable
+ * - NOT_FOUND: TS unacceptable
  */
 static status_t select_and_install(private_child_create_t *this,
 								   bool no_dh, bool ike_auth)
@@ -561,7 +561,7 @@ static status_t select_and_install(private_child_create_t *this,
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
 										  &group, NULL))
 		{
-			DBG1(DBG_IKE, "DH group %N inacceptable, requesting %N",
+			DBG1(DBG_IKE, "DH group %N unacceptable, requesting %N",
 				 diffie_hellman_group_names, this->dh_group,
 				 diffie_hellman_group_names, group);
 			this->dh_group = group;
@@ -1358,7 +1358,7 @@ METHOD(task_t, build_r, status_t,
 	}
 	if (this->config == NULL)
 	{
-		DBG1(DBG_IKE, "traffic selectors %#R === %#R inacceptable",
+		DBG1(DBG_IKE, "traffic selectors %#R === %#R unacceptable",
 			 this->tsr, this->tsi);
 		charon->bus->alert(charon->bus, ALERT_TS_MISMATCH, this->tsi, this->tsr);
 		message->add_notify(message, FALSE, TS_UNACCEPTABLE, chunk_empty);

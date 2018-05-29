@@ -225,7 +225,7 @@ static status_t do_sasl(private_pt_tls_client_t *this, sasl_mechanism_t *sasl)
 								reader->destroy(reader);
 								return SUCCESS;
 							case NEED_MORE:
-								/* inacceptable, it won't get more. FALL */
+								/* unacceptable, it won't get more. FALL */
 							case FAILED:
 							default:
 								reader->destroy(reader);
