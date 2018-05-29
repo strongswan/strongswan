@@ -130,15 +130,77 @@ static ike_cfg_match_t get_ike_match(ike_cfg_t *cand, host_t *me, host_t *other,
 	return match;
 }
 
-METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
-	private_backend_manager_t *this, host_t *me, host_t *other,
-	ike_version_t version)
+/**
+ * list element to help sorting
+ */
+typedef struct {
+	ike_cfg_match_t match;
+	ike_cfg_t *cfg;
+} ike_match_entry_t;
+
+CALLBACK(ike_enum_filter, bool,
+	linked_list_t *configs, enumerator_t *orig, va_list args)
 {
-	ike_cfg_t *current, *found = NULL;
+	ike_match_entry_t *entry;
+	ike_cfg_t **out;
+
+	VA_ARGS_VGET(args, out);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*out = entry->cfg;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+CALLBACK(ike_match_entry_list_destroy, void,
+	linked_list_t *configs)
+{
+	ike_match_entry_t *entry;
+
+	while (configs->remove_last(configs, (void**)&entry) == SUCCESS)
+	{
+		entry->cfg->destroy(entry->cfg);
+		free(entry);
+	}
+	configs->destroy(configs);
+}
+
+/**
+ * Insert entry into match-sorted list
+ */
+static void insert_sorted_ike(ike_match_entry_t *entry, linked_list_t *list)
+{
+	enumerator_t *enumerator;
+	ike_match_entry_t *current;
+
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (entry->match > current->match)
+		{
+			break;
+		}
+	}
+	list->insert_before(list, enumerator, entry);
+	enumerator->destroy(enumerator);
+}
+
+/**
+ * Create a sorted list of all matching IKE configs
+ */
+static linked_list_t *get_matching_ike_cfgs(private_backend_manager_t *this,
+											host_t *me, host_t *other,
+											ike_version_t version)
+{
+	ike_cfg_t *current;
 	char *my_addr, *other_addr;
 	enumerator_t *enumerator;
-	ike_cfg_match_t match, best = MATCH_ANY;
 	ike_data_t *data;
+	linked_list_t *configs;
+	ike_cfg_match_t match;
+	ike_match_entry_t *entry;
 
 	INIT(data,
 		.this = this,
@@ -146,42 +208,78 @@ METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
 		.other = other,
 	);
 
-	DBG2(DBG_CFG, "looking for an ike config for %H...%H", me, other);
+	configs = linked_list_create();
 
 	this->lock->read_lock(this->lock);
 	enumerator = enumerator_create_nested(
 						this->backends->create_enumerator(this->backends),
 						(void*)ike_enum_create, data, (void*)free);
-	while (enumerator->enumerate(enumerator, (void**)&current))
+
+	while (enumerator->enumerate(enumerator, &current))
 	{
 		match = get_ike_match(current, me, other, version);
 		DBG3(DBG_CFG, "ike config match: %d (%H %H %N)",
 			 match, me, other, ike_version_names, version);
+
 		if (match)
 		{
 			my_addr = current->get_my_addr(current);
 			other_addr = current->get_other_addr(current);
 			DBG2(DBG_CFG, "  candidate: %s...%s, prio %d",
 				 my_addr, other_addr, match);
-			if (match > best)
-			{
-				DESTROY_IF(found);
-				found = current;
-				found->get_ref(found);
-				best = match;
-			}
+
+			INIT(entry,
+				.match = match,
+				.cfg = current->get_ref(current),
+			);
+			insert_sorted_ike(entry, configs);
 		}
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-	if (found)
+
+	return configs;
+}
+
+METHOD(backend_manager_t, get_ike_cfg, ike_cfg_t*,
+	private_backend_manager_t *this, host_t *me, host_t *other,
+	ike_version_t version)
+{
+	linked_list_t *configs;
+	ike_match_entry_t *entry;
+	ike_cfg_t *found = NULL;
+	char *my_addr, *other_addr;
+
+	DBG2(DBG_CFG, "looking for an ike config for %H...%H", me, other);
+
+	configs = get_matching_ike_cfgs(this, me, other, version);
+	if (configs->get_first(configs, (void**)&entry) == SUCCESS)
 	{
+		found = entry->cfg->get_ref(entry->cfg);
+
 		my_addr = found->get_my_addr(found);
 		other_addr = found->get_other_addr(found);
 		DBG2(DBG_CFG, "found matching ike config: %s...%s with prio %d",
-			 my_addr, other_addr, best);
+			 my_addr, other_addr, entry->match);
 	}
+	ike_match_entry_list_destroy(configs);
+
 	return found;
+}
+
+METHOD(backend_manager_t, create_ike_cfg_enumerator, enumerator_t*,
+	private_backend_manager_t *this, host_t *me, host_t *other,
+	ike_version_t version)
+{
+	linked_list_t *configs;
+
+	DBG2(DBG_CFG, "looking for ike configs for %H...%H", me, other);
+
+	configs = get_matching_ike_cfgs(this, me, other, version);
+
+	return enumerator_create_filter(configs->create_enumerator(configs),
+									ike_enum_filter, configs,
+									ike_match_entry_list_destroy);
 }
 
 /**
@@ -420,8 +518,7 @@ METHOD(backend_manager_t, destroy, void,
 }
 
 /*
- * Described in header-file
-
+ * Described in header
  */
 backend_manager_t *backend_manager_create()
 {
@@ -430,6 +527,7 @@ backend_manager_t *backend_manager_create()
 	INIT(this,
 		.public = {
 			.get_ike_cfg = _get_ike_cfg,
+			.create_ike_cfg_enumerator = _create_ike_cfg_enumerator,
 			.get_peer_cfg_by_name = _get_peer_cfg_by_name,
 			.create_peer_cfg_enumerator = _create_peer_cfg_enumerator,
 			.add_backend = _add_backend,
