@@ -1,3 +1,10 @@
+strongswan-5.7.0
+----------------
+
+- The pki tool accepts a xmppAddr otherName as a subjectAlternativeName using
+  the syntax --san xmppaddr:<jid>.
+
+
 strongswan-5.6.3
 ----------------
 
