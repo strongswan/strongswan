@@ -369,8 +369,13 @@ static bool parse_otherName(chunk_t *blob, int level0, id_type_t *type)
 				switch (oid)
 				{
 					case OID_XMPP_ADDR:
-						if (!asn1_parse_simple_object(&object, ASN1_UTF8STRING,
+						if (asn1_parse_simple_object(&object, ASN1_UTF8STRING,
 									parser->get_level(parser)+1, "xmppAddr"))
+						{	/* we handle xmppAddr as RFC822 addr */
+							*blob = object;
+							*type = ID_RFC822_ADDR;
+						}
+						else
 						{
 							goto end;
 						}
@@ -2021,6 +2026,8 @@ chunk_t build_generalName(identification_t *id)
 
 	switch (id->get_type(id))
 	{
+		case ID_DER_ASN1_GN:
+			return chunk_clone(id->get_encoding(id));
 		case ID_RFC822_ADDR:
 			context = ASN1_CONTEXT_S_1;
 			break;
