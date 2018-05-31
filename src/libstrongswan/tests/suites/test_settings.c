@@ -1480,18 +1480,6 @@ START_TEST(test_valid)
 	ck_assert(settings->load_files(settings, path, FALSE));
 	verify_string("value", "valid.key");
 	verify_string("value1", "valid.key1");
-
-	contents = chunk_from_str(
-		"c::\\Logfiles\\charon.log { dmn = 1 }");
-	ck_assert(chunk_write(contents, path, 0022, TRUE));
-	ck_assert(settings->load_files(settings, path, FALSE));
-	verify_string("1", "%s.dmn", "c:\\Logfiles\\charon.log");
-
-	contents = chunk_from_str(
-		"section { c::\\Logfiles\\charon.log = 1 }");
-	ck_assert(chunk_write(contents, path, 0022, TRUE));
-	ck_assert(settings->load_files(settings, path, FALSE));
-	verify_string("1", "section.%s", "c:\\Logfiles\\charon.log");
 }
 END_TEST
 
@@ -1537,6 +1525,16 @@ START_TEST(test_invalid)
 
 	contents = chunk_from_str(
 		"incorrect :: ref {}");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(!settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"/var/log/daemon.log { dmn = 1 }");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(!settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"filelog { /var/log/daemon.log = 1 }");
 	ck_assert(chunk_write(contents, path, 0022, TRUE));
 	ck_assert(!settings->load_files(settings, path, FALSE));
 }

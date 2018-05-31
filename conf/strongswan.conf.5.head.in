@@ -40,12 +40,6 @@ Section names and keys may contain any printable character except:
 	. , : { } = " # \\n \\t space
 .EE
 .PP
-In rare circumstances \fB.\fP characters may be used in section names (e.g. for
-log file names in a filelog section), but should generally be avoided.
-To use \fB:\fP characters in section names (e.g. for Windows log file paths)
-they may be written as \fB::\fP, which the parser replaces with a single
-\fB:\fP.
-
 An example file in this format might look like this:
 .PP
 .EX

@@ -81,7 +81,6 @@ static void print_section(section_t *section, int level)
 
 /**
  * Recursively print a given section and all subsections/settings
- * FIXME: Doesn't work properly if any of the keys contain dots
  */
 static void print_settings_section(settings_t *settings, char *section,
 								   int level)

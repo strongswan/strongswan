@@ -49,8 +49,8 @@ static void include_files(parser_helper_t *ctx);
 /* type of our extra data */
 %option extra-type="parser_helper_t*"
 
-/* state used to scan names */
-%x nam
+/* state used to scan references */
+%x ref
 /* state used to scan values */
 %x val
 /* state used to scan include file patterns */
@@ -59,7 +59,7 @@ static void include_files(parser_helper_t *ctx);
 %x str
 
 /* pattern for section/key names */
-NAME [^#{}:,="\r\n\t ]
+NAME [^#{}:.,="\r\n\t ]
 
 %%
 
@@ -68,10 +68,15 @@ NAME [^#{}:,="\r\n\t ]
 \n|#.*\n				/* eat newlines and comments at the end of a line */
 
 "{"						|
-"}"						|
-","						return yytext[0];
+"}"						return yytext[0];
 
-":"						return REFS;
+"."						return DOT;
+","						return COMMA;
+
+":"						{
+	yy_push_state(ref, yyscanner);
+	return COLON;
+}
 
 "="						{
 	yy_push_state(val, yyscanner);
@@ -88,41 +93,26 @@ NAME [^#{}:,="\r\n\t ]
 	return STRING_ERROR;
 }
 
-{NAME} {
-	yyextra->string_init(yyextra);
-	yyextra->string_add(yyextra, yytext);
-	yy_push_state(nam, yyscanner);
+{NAME}+ 				{
+	yylval->s = strdup(yytext);
+	return NAME;
 }
 
-<nam>{
-	"::"				{
-		yyextra->string_add(yyextra, yytext+1);
-	}
+<ref>{
+	[\t ]*#[^\r\n]*			/* eat comments */
+	[\t\r ]+				/* eat whitespace */
+	\n|#.*\n				/* eat newlines and comments at the end of a line */
 
-	{NAME}+ 			{
-		yyextra->string_add(yyextra, yytext);
-	}
+	","						return COMMA;
 
-	<<EOF>>				|
-	.|[\r\n]			{
-		if (*yytext)
-		{
-			switch (yytext[0])
-			{
-				case '\n':
-					/* put the newline back to fix the line numbers */
-					unput('\n');
-					yy_set_bol(0);
-					break;
-				default:
-					/* these are parsed outside of this start condition */
-					unput(yytext[0]);
-					break;
-			}
-		}
-		yy_pop_state(yyscanner);
-		yylval->s = yyextra->string_get(yyextra);
+	{NAME}+(\.{NAME}+)* {
+		yylval->s = strdup(yytext);
 		return NAME;
+	}
+
+	.					{
+		unput(yytext[0]);
+		yy_pop_state(yyscanner);
 	}
 }
 

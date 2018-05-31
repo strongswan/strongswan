@@ -82,7 +82,9 @@ static int yylex(YYSTYPE *lvalp, parser_helper_t *ctx)
 	array_t *refs;
 }
 %token <s> NAME STRING
-%token REFS ":"
+%token DOT "."
+%token COMMA ","
+%token COLON ":"
 %token NEWLINE STRING_ERROR
 
 /* ...and other symbols */
@@ -152,7 +154,7 @@ references:
 		$$ = array_create(0, 0);
 		array_insert($$, ARRAY_TAIL, $1);
 	}
-	| references ',' NAME
+	| references "," NAME
 	{
 		array_insert($1, ARRAY_TAIL, $3);
 		$$ = $1;
