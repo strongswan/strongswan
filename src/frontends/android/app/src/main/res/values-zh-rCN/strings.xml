@@ -21,7 +21,8 @@
     <string name="search">搜索</string>
     <string name="vpn_not_supported_title">无法支持VPN</string>
     <string name="vpn_not_supported">您的设备无法支持VPN应用。\n请联系供应商。</string>
-    <string name="vpn_not_supported_during_lockdown">锁定模式下无法支持VPN连接</string>
+    <string name="vpn_not_supported_during_lockdown">VPN connections are not supported if a built-in VPN has the always-on feature enabled.</string>
+    <string name="vpn_not_supported_no_permission">Unable to get permission to create VPN connections. Either because it was denied by the user, or because a different VPN app has the always-on feature enabled.</string>
     <string name="loading">载入中&#8230;</string>
     <string name="profile_not_found">未找到配置</string>
     <string name="strongswan_shortcut">strongSwan快捷方式</string>

@@ -24,7 +24,8 @@
     <string name="search">Szukaj</string>
     <string name="vpn_not_supported_title">Nie obsługiwany VPN</string>
     <string name="vpn_not_supported">Urządzenie nie obsługuje aplikacji VPN.\nProszę skontaktować się z producentem.</string>
-    <string name="vpn_not_supported_during_lockdown">Polączenia nie sa możliwe w trybie zamkniętym</string>
+    <string name="vpn_not_supported_during_lockdown">VPN connections are not supported if a built-in VPN has the always-on feature enabled.</string>
+    <string name="vpn_not_supported_no_permission">Unable to get permission to create VPN connections. Either because it was denied by the user, or because a different VPN app has the always-on feature enabled.</string>
     <string name="loading">Wczytywanie&#8230;</string>
     <string name="profile_not_found">Nie znaleziono profilu</string>
     <string name="strongswan_shortcut">Skrót strongSwan</string>

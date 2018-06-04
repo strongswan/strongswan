@@ -268,6 +268,10 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 					intent.putExtras(mProfileInfo);
 					this.startService(intent);
 				}
+				else
+				{	/* this happens if the always-on VPN feature is activated by a different app or the user declined */
+					VpnNotSupportedError.showWithMessage(this, R.string.vpn_not_supported_no_permission);
+				}
 				break;
 			default:
 				super.onActivityResult(requestCode, resultCode, data);

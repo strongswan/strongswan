@@ -22,7 +22,8 @@
     <string name="search">Пошук</string>
     <string name="vpn_not_supported_title">VPN не підтримуеться</string>
     <string name="vpn_not_supported">Ваш пристрій не підтримує VPN.\nЗв\'яжіться з виробником.</string>
-    <string name="vpn_not_supported_during_lockdown">VPN з\'єднання не пітримується у режимі lockdown.</string>
+    <string name="vpn_not_supported_during_lockdown">VPN connections are not supported if a built-in VPN has the always-on feature enabled.</string>
+    <string name="vpn_not_supported_no_permission">Unable to get permission to create VPN connections. Either because it was denied by the user, or because a different VPN app has the always-on feature enabled.</string>
     <string name="loading">Завантаження&#8230;</string>
     <string name="profile_not_found">Профіль не знайдено</string>
     <string name="strongswan_shortcut">strongSwan посилання</string>

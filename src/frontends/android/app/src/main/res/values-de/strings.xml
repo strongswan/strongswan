@@ -24,7 +24,8 @@
     <string name="search">Suchen</string>
     <string name="vpn_not_supported_title">VPN nicht unterstützt</string>
     <string name="vpn_not_supported">Ihr Gerät unterstützt keine VPN Anwendungen.\nBitte kontaktieren Sie den Hersteller.</string>
-    <string name="vpn_not_supported_during_lockdown">VPN Verbindungen sind nicht möglich im abgeriegelten Modus.</string>
+    <string name="vpn_not_supported_during_lockdown">VPN Verbindungen sind nicht möglich, wenn für ein eingebautes VPN der Always-On-Modus aktiviert ist.</string>
+    <string name="vpn_not_supported_no_permission">Keine Berechtigung, um VPN Verbindungen zu erstellen. Entweder weil diese vom Benutzer verweigert wurde oder weil für eine andere VPN Anwendung der Always-On-Modus aktiviert ist.</string>
     <string name="loading">Laden&#8230;</string>
     <string name="profile_not_found">Profil nicht gefunden</string>
     <string name="strongswan_shortcut">strongSwan-Verknüpfung</string>
