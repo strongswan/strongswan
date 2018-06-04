@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion '25.0.0'
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "org.strongswan.android"
@@ -43,7 +43,7 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:appcompat-v7:23.3.0'
-    compile 'com.android.support:design:23.3.0'
-    testCompile 'junit:junit:4.12'
+    implementation 'com.android.support:appcompat-v7:23.3.0'
+    implementation 'com.android.support:design:23.3.0'
+    testImplementation 'junit:junit:4.12'
 }
