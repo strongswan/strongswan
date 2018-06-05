@@ -29,7 +29,9 @@ sub from_data {
     my $data = shift;
     my %hash = ();
 
-    parse($data, \%hash);
+    open my $data_fd, '<', \$data;
+    parse($data_fd, \%hash);
+    close $data_fd;
 
     my $self = {
         Hash => \%hash
@@ -62,29 +64,35 @@ sub result {
 # private functions
 
 sub parse {
-    my $data = shift;
+    my $fd = shift;
     my $hash = shift;
+    my $data;
 
-    while (length($data) > 0)
+    until ( eof $fd )
     {
-        (my $type, $data) = unpack('Ca*', $data);
+        read $fd, $data, 1;
+        my $type = unpack('C', $data);
 
-		if ($type == SECTION_END)
-		{
-			return $data;
-		}
+        if ( $type == SECTION_END )
+        {
+            return;
+        }
 
-        (my $key, $data) = unpack('C/a*a*', $data);
+        read $fd, $data, 1;
+        my $length = unpack('C', $data);
+        read $fd, my $key, $length;
 
         if ( $type == KEY_VALUE )
         {
-            (my $value, $data) = unpack('n/a*a*', $data);
+            read $fd, $data, 2;
+            my $length = unpack('n', $data);
+            read $fd, my $value, $length;
             $hash->{$key} = $value;
         }
         elsif ( $type == SECTION_START )
         {
             my %section = ();
-            $data = parse($data, \%section);
+            parse($fd, \%section);
             $hash->{$key} = \%section;
         }
         elsif ( $type == LIST_START )
@@ -92,19 +100,23 @@ sub parse {
             my @list = ();
             my $more = 1;
 
-            while (length($data) > 0 and $more)
+            while ( !eof($fd) and $more )
             {
-                (my $type, $data) = unpack('Ca*', $data);
+                read $fd, $data, 1;
+                my $type = unpack('C', $data);
+
                 if ( $type == LIST_ITEM )
                 {
-                    (my $value, $data) = unpack('n/a*a*', $data);
+                    read $fd, $data, 2;
+                    my $length = unpack('n', $data);
+                    read $fd, my $value, $length;
                     push(@list, $value);
                 }
                 elsif ( $type == LIST_END )
                 {
                     $more = 0;
                     $hash->{$key} = \@list;
-                 }
+                }
                 else
                 {
                     die "message parsing error: ", $type, "\n"
@@ -116,7 +128,6 @@ sub parse {
             die "message parsing error: ", $type, "\n"
         }
     }
-    return $data;
 }
 
 
