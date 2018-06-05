@@ -70,23 +70,18 @@ sub parse {
 
     until ( eof $fd )
     {
-        read $fd, $data, 1;
-        my $type = unpack('C', $data);
+        my $type = unpack('C', read_data($fd, 1));
 
         if ( $type == SECTION_END )
         {
             return;
         }
 
-        read $fd, $data, 1;
-        my $length = unpack('C', $data);
-        read $fd, my $key, $length;
+        my $key = read_len_data($fd, 1);
 
         if ( $type == KEY_VALUE )
         {
-            read $fd, $data, 2;
-            my $length = unpack('n', $data);
-            read $fd, my $value, $length;
+            my $value = read_len_data($fd, 2);
             $hash->{$key} = $value;
         }
         elsif ( $type == SECTION_START )
@@ -102,14 +97,11 @@ sub parse {
 
             while ( !eof($fd) and $more )
             {
-                read $fd, $data, 1;
-                my $type = unpack('C', $data);
+                my $type = unpack('C', read_data($fd, 1));
 
                 if ( $type == LIST_ITEM )
                 {
-                    read $fd, $data, 2;
-                    my $length = unpack('n', $data);
-                    read $fd, my $value, $length;
+                    my $value = read_len_data($fd, 2);
                     push(@list, $value);
                 }
                 elsif ( $type == LIST_END )
@@ -130,6 +122,26 @@ sub parse {
     }
 }
 
+sub read_data {
+    my $fd = shift;
+    my $len = shift;
+    my $data;
+
+    my $res = read $fd, $data, $len;
+    unless (defined $res and $res == $len)
+    {
+        die "message parsing error: unable to read ", $len, " bytes\n";
+    }
+    return $data;
+}
+
+sub read_len_data {
+    my $fd = shift;
+    my $len = shift;
+
+    $len = unpack($len == 1 ? 'C' : 'n', read_data($fd, $len));
+    return read_data($fd, $len);
+}
 
 sub encode_hash {
     my $hash = shift;
