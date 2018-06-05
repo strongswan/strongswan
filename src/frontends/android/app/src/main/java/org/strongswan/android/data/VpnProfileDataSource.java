@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -63,7 +63,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 15;
+	private static final int DATABASE_VERSION = 16;
 
 	public static final DbColumn[] COLUMNS = new DbColumn[] {
 								new DbColumn(KEY_ID, "INTEGER PRIMARY KEY AUTOINCREMENT", 1),
@@ -222,6 +222,26 @@ public class VpnProfileDataSource
 						   " TEXT;");
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_ESP_PROPOSAL +
 						   " TEXT;");
+			}
+			if (oldVersion < 16)
+			{	/* add a UUID to all entries that haven't one yet */
+				db.beginTransaction();
+				try
+				{
+					Cursor cursor = db.query(TABLE_VPNPROFILE, ALL_COLUMNS, KEY_UUID + " is NULL", null, null, null, null);
+					for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext())
+					{
+						ContentValues values = new ContentValues();
+						values.put(KEY_UUID, UUID.randomUUID().toString());
+						db.update(TABLE_VPNPROFILE, values, KEY_ID + " = " + cursor.getLong(cursor.getColumnIndex(KEY_ID)), null);
+					}
+					cursor.close();
+					db.setTransactionSuccessful();
+				}
+				finally
+				{
+					db.endTransaction();
+				}
 			}
 		}
 
@@ -385,7 +405,7 @@ public class VpnProfileDataSource
 	{
 		VpnProfile profile = new VpnProfile();
 		profile.setId(cursor.getLong(cursor.getColumnIndex(KEY_ID)));
-		profile.setUUID(getUUID(cursor, cursor.getColumnIndex(KEY_UUID)));
+		profile.setUUID(UUID.fromString(cursor.getString(cursor.getColumnIndex(KEY_UUID))));
 		profile.setName(cursor.getString(cursor.getColumnIndex(KEY_NAME)));
 		profile.setGateway(cursor.getString(cursor.getColumnIndex(KEY_GATEWAY)));
 		profile.setVpnType(VpnType.fromIdentifier(cursor.getString(cursor.getColumnIndex(KEY_VPN_TYPE))));
@@ -412,7 +432,7 @@ public class VpnProfileDataSource
 	private ContentValues ContentValuesFromVpnProfile(VpnProfile profile)
 	{
 		ContentValues values = new ContentValues();
-		values.put(KEY_UUID, profile.getUUID() != null ? profile.getUUID().toString() : null);
+		values.put(KEY_UUID, profile.getUUID().toString());
 		values.put(KEY_NAME, profile.getName());
 		values.put(KEY_GATEWAY, profile.getGateway());
 		values.put(KEY_VPN_TYPE, profile.getVpnType().getIdentifier());
@@ -439,18 +459,6 @@ public class VpnProfileDataSource
 	private Integer getInt(Cursor cursor, int columnIndex)
 	{
 		return cursor.isNull(columnIndex) ? null : cursor.getInt(columnIndex);
-	}
-
-	private UUID getUUID(Cursor cursor, int columnIndex)
-	{
-		try
-		{
-			return cursor.isNull(columnIndex) ? null : UUID.fromString(cursor.getString(columnIndex));
-		}
-		catch (Exception e)
-		{
-			return null;
-		}
 	}
 
 	private static class DbColumn
