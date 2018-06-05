@@ -27,8 +27,14 @@
  */
 typedef u_int refcount_t;
 
+/* use __atomic* built-ins with clang, if available (note that clang also
+ * defines __GNUC__, however only claims to be GCC 4.2) */
+#if defined(__clang__)
+# if __has_builtin(__atomic_add_fetch)
+#  define HAVE_GCC_ATOMIC_OPERATIONS
+# endif
 /* use __atomic* built-ins with GCC 4.7 and newer */
-#ifdef __GNUC__
+#elif defined(__GNUC__)
 # if (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 6))
 #  define HAVE_GCC_ATOMIC_OPERATIONS
 # endif
