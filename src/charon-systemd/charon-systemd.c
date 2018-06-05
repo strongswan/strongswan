@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2012 Tobias Brunner
+ * Copyright (C) 2006-2018 Tobias Brunner
  * Copyright (C) 2005-2014 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -79,9 +79,9 @@ typedef struct journal_logger_t journal_logger_t;
 struct journal_logger_t {
 
 	/**
-	 * Implements logger_t
+	 * Public interface
 	 */
-	logger_t logger;
+	custom_logger_t public;
 
 	/**
 	 * Configured loglevels
@@ -171,66 +171,37 @@ METHOD(logger_t, get_level, level_t,
 	return level;
 }
 
-/**
- * Reload journal logger configuration
- */
-CALLBACK(journal_reload, bool,
-	journal_logger_t **journal)
+METHOD(custom_logger_t, set_level, void,
+	journal_logger_t *this, debug_t group, level_t level)
 {
-	journal_logger_t *this = *journal;
-	debug_t group;
-	level_t def;
-
-	def = lib->settings->get_int(lib->settings, "%s.journal.default", 1, lib->ns);
-
 	this->lock->write_lock(this->lock);
-	for (group = 0; group < DBG_MAX; group++)
-	{
-		this->levels[group] =
-			lib->settings->get_int(lib->settings,
-				"%s.journal.%N", def, lib->ns, debug_lower_names, group);
-	}
+	this->levels[group] = level;
 	this->lock->unlock(this->lock);
-
-	charon->bus->add_logger(charon->bus, &this->logger);
-
-	return TRUE;
 }
 
-/**
- * Initialize/deinitialize journal logger
- */
-static bool journal_register(void *plugin, plugin_feature_t *feature,
-							 bool reg, journal_logger_t **logger)
+METHOD(custom_logger_t, logger_destroy, void,
+	journal_logger_t *this)
+{
+	this->lock->destroy(this->lock);
+	free(this);
+}
+
+static custom_logger_t *journal_logger_create(const char *name)
 {
 	journal_logger_t *this;
 
-	if (reg)
-	{
-		INIT(this,
+	INIT(this,
+		.public = {
 			.logger = {
 				.vlog = _vlog,
 				.get_level = _get_level,
 			},
-			.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
-		);
-
-		journal_reload(&this);
-
-		*logger = this;
-		return TRUE;
-	}
-	else
-	{
-		this = *logger;
-
-		charon->bus->remove_logger(charon->bus, &this->logger);
-
-		this->lock->destroy(this->lock);
-		free(this);
-
-		return TRUE;
-	}
+			.set_level = _set_level,
+			.destroy = _logger_destroy,
+		},
+		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+	);
+	return &this->public;
 }
 
 /**
@@ -328,25 +299,20 @@ static void segv_handler(int signal)
 }
 
 /**
- * The journal logger instance
- */
-static journal_logger_t *journal;
-
-/**
- * Journal static features
- */
-static plugin_feature_t features[] = {
-	PLUGIN_CALLBACK((plugin_feature_callback_t)journal_register, &journal),
-		PLUGIN_PROVIDE(CUSTOM, "systemd-journal"),
-};
-
-/**
  * Add namespace alias
  */
 static void __attribute__ ((constructor))register_namespace()
 {
 	/* inherit settings from charon */
 	library_add_namespace("charon");
+}
+
+/**
+ * Register journal logger
+ */
+static void __attribute__ ((constructor))register_logger()
+{
+	register_custom_logger("journal", journal_logger_create);
 }
 
 /**
@@ -390,10 +356,15 @@ int main(int argc, char *argv[])
 		sd_notifyf(0, "STATUS=unknown uid/gid");
 		return SS_RC_INITIALIZATION_FAILED;
 	}
-	charon->load_loggers(charon);
+	/* we registered the journal logger as custom logger, which gets its
+	 * settings from <ns>.customlog.journal, let it fallback to <ns>.journal */
+	lib->settings->add_fallback(lib->settings, "%s.customlog.journal",
+								"%s.journal", lib->ns);
+	/* load the journal logger by default */
+	lib->settings->set_default_str(lib->settings, "%s.journal.default", "1",
+								   lib->ns);
 
-	lib->plugins->add_static_features(lib->plugins, lib->ns, features,
-							countof(features), TRUE, journal_reload, &journal);
+	charon->load_loggers(charon);
 
 	if (!charon->initialize(charon,
 			lib->settings->get_str(lib->settings, "%s.load", PLUGINS, lib->ns)))
