@@ -855,14 +855,6 @@ int main (int argc, char **argv)
 			}
 		}
 
- 		/*
-		 * Run again if there's pending action
-		 */
-		if (_action_)
-		{
-			continue;
-		}
-
 		/*
 		 * If auto_update activated, when to stop select
 		 */
