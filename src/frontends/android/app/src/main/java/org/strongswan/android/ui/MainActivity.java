@@ -58,6 +58,7 @@ import org.strongswan.android.ui.VpnProfileListFragment.OnVpnProfileSelectedList
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity implements OnVpnProfileSelectedListener
 {
@@ -341,14 +342,30 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	 */
 	private void startVpnProfile(Intent intent, boolean foreground)
 	{
-		long profileId = intent.getLongExtra(EXTRA_VPN_PROFILE_ID, 0);
-		if (profileId <= 0)
-		{	/* invalid invocation */
-			return;
-		}
+		VpnProfile profile = null;
+
 		VpnProfileDataSource dataSource = new VpnProfileDataSource(this);
 		dataSource.open();
-		VpnProfile profile = dataSource.getVpnProfile(profileId);
+		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
+		if (profileUUID != null)
+		{
+			try
+			{
+				profile = dataSource.getVpnProfile(UUID.fromString(profileUUID));
+			}
+			catch (Exception e)
+			{	/* invalid UUID */
+				e.printStackTrace();
+			}
+		}
+		else
+		{
+			long profileId = intent.getLongExtra(EXTRA_VPN_PROFILE_ID, 0);
+			if (profileId > 0)
+			{
+				profile = dataSource.getVpnProfile(profileId);
+			}
+		}
 		dataSource.close();
 
 		if (profile != null)
