@@ -83,6 +83,7 @@
                 <data android:scheme="content" />
                 <data android:mimeType="application/vnd.strongswan.profile" />
             </intent-filter>
+            <!-- this matches by file extension if no MIME type is provided -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -92,6 +93,22 @@
                 <data android:scheme="file" />
                 <data android:scheme="content" />
                 <data android:host="*" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.sswan" />
+                <data android:pathPattern=".*\\..*\\..*\\.sswan" />
+                <data android:pathPattern=".*\\..*\\.sswan" />
+                <data android:pathPattern=".*\\.sswan" />
+            </intent-filter>
+            <!-- this matches by file extension if any MIME type (but not ours) is provided -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.sswan" />
                 <data android:pathPattern=".*\\..*\\..*\\.sswan" />
                 <data android:pathPattern=".*\\..*\\.sswan" />
