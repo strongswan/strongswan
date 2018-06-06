@@ -110,6 +110,7 @@
     <string name="profile_import_exists">這個VPN設定檔已經存在，當前設定檔會被覆蓋。</string>
     <string name="profile_cert_import">從VPN設定檔匯入憑證</string>
     <string name="profile_cert_alias">\"%1$s\" 對應的憑證</string>
+    <string name="profile_profile_id">Profile ID</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">請填寫必要訊息才能初始化連線</string>
     <string name="alert_text_no_input_username">請輸入您的用戶名稱</string>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2017 Tobias Brunner
+    Copyright (C) 2012-2018 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
     HSR Hochschule fuer Technik Rapperswil
@@ -113,6 +113,7 @@
     <string name="profile_import_exists">This VPN profile already exists, its current settings will be replaced.</string>
     <string name="profile_cert_import">Import certificate from VPN profile</string>
     <string name="profile_cert_alias">Certificate for \"%1$s\"</string>
+    <string name="profile_profile_id">Profile ID</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">A value is required to initiate the connection</string>
     <string name="alert_text_no_input_username">Please enter your username </string>

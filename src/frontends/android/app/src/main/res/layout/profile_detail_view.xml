@@ -414,6 +414,27 @@
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
+            <TextView
+                android:id="@+id/profile_id_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:textSize="16sp"
+                android:text="@string/profile_profile_id" />
+
+            <TextView
+                android:id="@+id/profile_id"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:textSize="12sp"
+                android:textIsSelectable="true" />
+
         </LinearLayout>
 
     </LinearLayout>

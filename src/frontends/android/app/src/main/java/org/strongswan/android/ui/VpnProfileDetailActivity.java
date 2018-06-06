@@ -132,6 +132,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private EditText mIkeProposal;
 	private TextInputLayoutHelper mEspProposalWrap;
 	private EditText mEspProposal;
+	private TextView mProfileIdLabel;
+	private TextView mProfileId;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -193,6 +195,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mEspProposalWrap = (TextInputLayoutHelper)findViewById(R.id.esp_proposal_wrap);
 		/* make the link clickable */
 		((TextView)findViewById(R.id.proposal_intro)).setMovementMethod(LinkMovementMethod.getInstance());
+
+		mProfileIdLabel = (TextView)findViewById(R.id.profile_id_label);
+		mProfileId = (TextView)findViewById(R.id.profile_id);
 
 		final SpaceTokenizer spaceTokenizer = new SpaceTokenizer();
 		mName.setTokenizer(spaceTokenizer);
@@ -564,6 +569,12 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		}
 		mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
 		mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
+
+		if (show && mProfile == null)
+		{
+			mProfileIdLabel.setVisibility(View.GONE);
+			mProfileId.setVisibility(View.GONE);
+		}
 	}
 
 	/**
@@ -749,6 +760,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mSelectedApps = mProfile.getSelectedAppsSet();
 				mIkeProposal.setText(mProfile.getIkeProposal());
 				mEspProposal.setText(mProfile.getEspProposal());
+				mProfileId.setText(mProfile.getUUID().toString());
 				flags = mProfile.getFlags();
 				useralias = mProfile.getUserCertificateAlias();
 				local_id = mProfile.getLocalId();

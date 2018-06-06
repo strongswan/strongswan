@@ -110,6 +110,7 @@
     <string name="profile_import_exists">此VPN配置已经存在，当前设定将被覆盖。</string>
     <string name="profile_cert_import">从VPN配置导入证书</string>
     <string name="profile_cert_alias">\"%1$s\" 所对应的证书</string>
+    <string name="profile_profile_id">Profile ID</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">必填信息以初始化连接</string>
     <string name="alert_text_no_input_username">请输入您的用户名</string>
