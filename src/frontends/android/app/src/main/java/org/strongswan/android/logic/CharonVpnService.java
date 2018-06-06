@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -19,6 +19,7 @@ package org.strongswan.android.logic;
 
 import android.annotation.TargetApi;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -70,6 +71,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 {
 	private static final String TAG = CharonVpnService.class.getSimpleName();
 	public static final String DISCONNECT_ACTION = "org.strongswan.android.CharonVpnService.DISCONNECT";
+	private static final String NOTIFICATION_CHANNEL = "org.strongswan.android.CharonVpnService.VPN_STATE_NOTIFICATION";
 	public static final String LOG_FILE = "charon.log";
 	public static final int VPN_STATE_NOTIFICATION_ID = 1;
 
@@ -162,6 +164,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		/* the thread is started when the service is bound */
 		bindService(new Intent(this, VpnStateService.class),
 					mServiceConnection, Service.BIND_AUTO_CREATE);
+
+		createNotificationChannel();
 	}
 
 	@Override
@@ -322,6 +326,25 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	}
 
 	/**
+	 * Create a notification channel for Android 8+
+	 */
+	private void createNotificationChannel()
+	{
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+		{
+			NotificationChannel channel;
+			channel = new NotificationChannel(NOTIFICATION_CHANNEL, getString(R.string.permanent_notification_name),
+											  NotificationManager.IMPORTANCE_LOW);
+			channel.setDescription(getString(R.string.permanent_notification_description));
+			channel.setLockscreenVisibility(Notification.VISIBILITY_SECRET);
+			channel.setShowBadge(false);
+			NotificationManager notificationManager = getSystemService(NotificationManager.class);
+			notificationManager.createNotificationChannel(channel);
+		}
+	}
+
+
+	/**
 	 * Build a notification matching the current state
 	 */
 	private Notification buildNotification(boolean publicVersion)
@@ -336,7 +359,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		{
 			name = profile.getName();
 		}
-		android.support.v4.app.NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
+		NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL)
 				.setSmallIcon(R.drawable.ic_notification)
 				.setCategory(NotificationCompat.CATEGORY_SERVICE)
 				.setVisibility(publicVersion ? NotificationCompat.VISIBILITY_PUBLIC

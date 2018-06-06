@@ -29,6 +29,8 @@
     <string name="loading">Laden&#8230;</string>
     <string name="profile_not_found">Profil nicht gefunden</string>
     <string name="strongswan_shortcut">strongSwan-Verknüpfung</string>
+    <string name="permanent_notification_name">VPN Verbindungsstatus</string>
+    <string name="permanent_notification_description">Zeigt Informationen zum Verbindungsstatus der VPN Verbindung und dient als permanente Notification dazu, den VPN Dienst im Hintergrund am Laufen zu halten.</string>
 
     <!-- Log view -->
     <string name="log_title">Log</string>
