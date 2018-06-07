@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Tobias Brunner
+ * Copyright (C) 2016-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,11 +17,9 @@ package org.strongswan.android.ui;
 
 import android.app.Activity;
 import android.app.LoaderManager;
-import android.app.ProgressDialog;
 import android.content.AsyncTaskLoader;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
 import android.net.Uri;
@@ -96,7 +94,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	private TrustedCertificateEntry mUserCertEntry;
 	private String mUserCertLoading;
 	private boolean mHideImport;
-	private ProgressDialog mProgress;
+	private android.support.v4.widget.ContentLoadingProgressBar mProgressBar;
 	private TextView mExistsWarning;
 	private ViewGroup mBasicDataGroup;
 	private TextView mName;
@@ -167,6 +165,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 
 		setContentView(R.layout.profile_import_view);
 
+		mProgressBar = findViewById(R.id.progress_bar);
 		mExistsWarning = (TextView)findViewById(R.id.exists_warning);
 		mBasicDataGroup = (ViewGroup)findViewById(R.id.basic_data_group);
 		mName = (TextView)findViewById(R.id.name);
@@ -300,14 +299,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 
 	private void loadProfile(Uri uri)
 	{
-		mProgress = ProgressDialog.show(this, null, getString(R.string.loading),
-				true, true, new DialogInterface.OnCancelListener() {
-					@Override
-					public void onCancel(DialogInterface dialog)
-					{
-						finish();
-					}
-				});
+		mProgressBar.show();
 
 		Bundle args = new Bundle();
 		args.putParcelable(PROFILE_URI, uri);
@@ -316,7 +308,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 
 	public void handleProfile(ProfileLoadResult data)
 	{
-		mProgress.dismiss();
+		mProgressBar.hide();
 
 		mProfile = null;
 		if (data != null && data.ThrownException == null)
