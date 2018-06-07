@@ -318,11 +318,11 @@ enum child_cfg_option_t {
 	/** Set mark on inbound SAs */
 	OPT_MARK_IN_SA = (1<<6),
 
-	/** set XFRM_STATE_NOPMTUDISC */
-	OPT_SET_XFRM_STATE_NOPMTUDISC = (1<<7),
+	/** disables copy of PMTU (Path Maximum Transmission Unit) */
+	OPT_SET_NOPMTUDISC = (1<<7),
 
-	/** set XFRM_STATE_NOECN */
-	OPT_SET_XFRM_STATE_NOECN = (1<<8),
+	/** disables copy of ECN (Explicit Congestion Notification) */
+	OPT_SET_NOECN = (1<<8),
 };
 
 /**
