@@ -109,7 +109,6 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
-		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
 
@@ -433,21 +432,9 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	private class LoadCertificatesTask extends AsyncTask<Void, Void, TrustedCertificateManager>
 	{
 		@Override
-		protected void onPreExecute()
-		{
-			setProgressBarIndeterminateVisibility(true);
-		}
-
-		@Override
 		protected TrustedCertificateManager doInBackground(Void... params)
 		{
 			return TrustedCertificateManager.getInstance().load();
-		}
-
-		@Override
-		protected void onPostExecute(TrustedCertificateManager result)
-		{
-			setProgressBarIndeterminateVisibility(false);
 		}
 	}
 
