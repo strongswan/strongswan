@@ -535,6 +535,8 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   remote_ts = %#R", data->remote_ts);
 	DBG2(DBG_CFG, "   hw_offload = %N", hw_offload_names, cfg->hw_offload);
 	DBG2(DBG_CFG, "   sha256_96 = %u", has_opt(OPT_SHA256_96));
+	DBG2(DBG_CFG, "   xfrm_nopmtudisc = %u", has_opt(OPT_SET_XFRM_STATE_NOPMTUDISC));
+	DBG2(DBG_CFG, "   xfrm_noecn = %u", has_opt(OPT_SET_XFRM_STATE_NOECN));
 }
 
 /**
@@ -901,6 +903,26 @@ CALLBACK(parse_opt_sha256_96, bool,
 {
 	return parse_option(out, OPT_SHA256_96, v);
 }
+
+/**
+ * Parse OPT_SET_XFRM_STATE_NOECN option
+ */
+CALLBACK(parse_opt_xfrm_noecn, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_SET_XFRM_STATE_NOECN, v);
+}
+
+
+/**
+ * Parse OPT_SET_XFRM_STATE_NOPMTUDISC option
+ */
+CALLBACK(parse_opt_xfrm_nopmtudisc, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_SET_XFRM_STATE_NOPMTUDISC, v);
+}
+
 
 /**
  * Parse OPT_MARK_IN_SA option
@@ -1593,6 +1615,8 @@ CALLBACK(child_kv, bool,
 		{ "interface",			parse_string,		&child->cfg.interface				},
 		{ "hw_offload",			parse_hw_offload,	&child->cfg.hw_offload				},
 		{ "sha256_96",			parse_opt_sha256_96,&child->cfg.options					},
+		{ "xfrm_nopmtudisc",	parse_opt_xfrm_nopmtudisc,&child->cfg.options			},
+		{ "xfrm_noecn",			parse_opt_xfrm_noecn,&child->cfg.options				},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,

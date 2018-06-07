@@ -63,6 +63,8 @@ dpdtimeout,        KW_DPDTIMEOUT
 dpdaction,         KW_DPDACTION
 closeaction,       KW_CLOSEACTION
 sha256_96,         KW_SHA256_96
+xfrm_set_state_nopmtudisc,	KW_XFRM_SET_STATE_NOPMTUDISC,
+xfrm_set_state_noecn,		KW_XFRM_SET_STATE_NOECN,
 inactivity,        KW_INACTIVITY
 modeconfig,        KW_MODECONFIG
 xauth,             KW_XAUTH

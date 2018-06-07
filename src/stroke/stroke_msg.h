@@ -303,6 +303,8 @@ struct stroke_msg_t {
 			stroke_end_t me, other;
 			uint32_t replay_window;
 			bool sha256_96;
+			bool xfrm_set_state_nopmtudisc;
+			bool xfrm_set_state_noecn;
 		} add_conn;
 
 		/* data for STR_ADD_CA */

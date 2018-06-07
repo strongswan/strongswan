@@ -164,6 +164,9 @@ struct starter_conn {
 
 		bool            sha256_96;
 
+		bool 			xfrm_set_state_nopmtudisc;
+		bool 			xfrm_set_state_noecn;
+
 		time_t          inactivity;
 
 		bool            me_mediation;
