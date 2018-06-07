@@ -50,6 +50,7 @@ import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 import org.strongswan.android.ui.MainActivity;
+import org.strongswan.android.ui.VpnProfileControlActivity;
 import org.strongswan.android.utils.IPRange;
 import org.strongswan.android.utils.IPRangeSet;
 import org.strongswan.android.utils.SettingsWriter;
@@ -397,8 +398,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		{
 			if (add_action)
 			{
-				Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-				intent.setAction(MainActivity.DISCONNECT);
+				Intent intent = new Intent(getApplicationContext(), VpnProfileControlActivity.class);
+				intent.setAction(VpnProfileControlActivity.DISCONNECT);
 				PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
 																  PendingIntent.FLAG_UPDATE_CURRENT);
 				builder.addAction(R.drawable.ic_notification_disconnect, getString(R.string.disconnect), pending);

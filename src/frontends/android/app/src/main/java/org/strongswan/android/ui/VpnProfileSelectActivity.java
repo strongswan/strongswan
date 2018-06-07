@@ -39,8 +39,8 @@ public class VpnProfileSelectActivity extends AppCompatActivity implements OnVpn
 	@Override
 	public void onVpnProfileSelected(VpnProfile profile)
 	{
-		Intent shortcut = new Intent(MainActivity.START_PROFILE);
-		shortcut.putExtra(MainActivity.EXTRA_VPN_PROFILE_ID, profile.getId());
+		Intent shortcut = new Intent(VpnProfileControlActivity.START_PROFILE);
+		shortcut.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_ID, profile.getUUID().toString());
 
 		Intent intent = new Intent();
 		intent.putExtra(Intent.EXTRA_SHORTCUT_INTENT, shortcut);
