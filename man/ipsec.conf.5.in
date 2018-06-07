@@ -1150,16 +1150,6 @@ enabled to configure the shorter truncation length in the kernel.  This is not
 negotiated, so this only works with peers that use the incorrect truncation
 length (or have this option enabled).
 .TP
-.BR xfrm_nopmtudisc " = " no " | yes"
-XFRM_STATE_NOPMTUDISC is used to disable PMTU (Path Maximum Transmission Unit)
-discovery, in cases where the discovery is not supported by all Devices on the
-Network Path or a fixed MTU should be used.
-.TP
-.BR xfrm_noecn " = " no " | yes"
-XFRM_STATE_NOECN is used to disable the use of ECN (Explicit Congestion Notification).
-This is usefull when the remote endpoint or the underlying network / involved routers
-not support this.
-.TP
 .BR tfc " = <value>"
 number of bytes to pad ESP payload data to. Traffic Flow Confidentiality
 is currently supported in IKEv2 and applies to outgoing packets only. The
