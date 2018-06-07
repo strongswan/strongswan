@@ -118,7 +118,7 @@
         <activity
             android:name=".ui.TrustedCertificateImportActivity"
             android:label="@string/import_certificate"
-            android:theme="@style/AlertDialogTheme" >
+            android:theme="@style/TransparentActivity" >
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
