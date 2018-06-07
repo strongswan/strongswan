@@ -1587,11 +1587,13 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	sa->family = id->src->get_family(id->src);
 	sa->mode = mode2kernel(mode);
 
-	if(data->no_pmtudisc) {
+	if(data->no_pmtudisc)
+	{
 		sa->flags |= XFRM_STATE_NOPMTUDISC;
 	}
 
-	if(data->no_enc) {
+	if(data->no_enc)
+	{
 		sa->flags |= XFRM_STATE_NOECN;
 	}
 
