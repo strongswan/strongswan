@@ -59,13 +59,27 @@ stream_service_t *stream_service_create_unix(char *uri, int backlog)
 		return NULL;
 	}
 	umask(old);
-	/* only attempt to chown() socket if we have CAP_CHOWN */
-	if (lib->caps->check(lib->caps, CAP_CHOWN) &&
-		chown(addr.sun_path, lib->caps->get_uid(lib->caps),
-			  lib->caps->get_gid(lib->caps)) != 0)
+	/* Only attempt to change owner of socket if we have CAP_CHOWN. Otherwise,
+	 * attempt to change group of socket to group under which charon runs after
+	 * dropping caps. This requires the user that charon starts as to:
+	 * a) Have write access to the socket dir.
+	 * b) Belong to the group that charon will run under after dropping caps. */
+	if (lib->caps->check(lib->caps, CAP_CHOWN))
 	{
-		DBG1(DBG_NET, "changing socket permissions for '%s' failed: %s",
-			 uri, strerror(errno));
+		if (chown(addr.sun_path, lib->caps->get_uid(lib->caps),
+				  lib->caps->get_gid(lib->caps)) != 0)
+		{
+			DBG1(DBG_NET, "changing socket owner/group for '%s' failed: %s",
+				 uri, strerror(errno));
+		}
+	}
+	else
+	{
+		if (chown(addr.sun_path, -1, lib->caps->get_gid(lib->caps)) != 0)
+		{
+			DBG1(DBG_NET, "changing socket group for '%s' failed: %s",
+				 uri, strerror(errno));
+		}
 	}
 	if (listen(fd, backlog) < 0)
 	{

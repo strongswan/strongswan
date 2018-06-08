@@ -231,13 +231,22 @@ static bool check_pidfile()
 			DBG1(DBG_LIB, "setting FD_CLOEXEC for '"PID_FILE"' failed: %s",
 				 strerror(errno));
 		}
-		/* Only fchown() the pidfile if we have CAP_CHOWN. Otherwise,
-		 * directory permissions should allow pidfile to be accessed
-		 * by the UID/GID under which the charon daemon will run. */
+		/* Only change owner of the pidfile if we have CAP_CHOWN. Otherwise,
+		 * attempt to change group of pidfile to group under which charon
+		 * runs after dropping caps. This requires the user that charon
+		 * starts as to:
+		 * a) Have write access to the socket dir.
+		 * b) Belong to the group that charon will run under after dropping
+		 *    caps. */
 		if (lib->caps->check(lib->caps, CAP_CHOWN))
 		{
 			ignore_result(fchown(fd,
 								 lib->caps->get_uid(lib->caps),
+								 lib->caps->get_gid(lib->caps)));
+		}
+		else
+		{
+			ignore_result(fchown(fd, -1,
 								 lib->caps->get_gid(lib->caps)));
 		}
 		fprintf(pidfile, "%d\n", getpid());
