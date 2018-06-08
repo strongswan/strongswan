@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2016 Tobias Brunner
+    Copyright (C) 2018 Tobias Brunner
     HSR Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
@@ -13,36 +13,20 @@
     or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     for more details.
 -->
-<resources>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <color
-        name="accent">#96BDC2</color>
+    <item>
+        <shape>
+            <solid
+                android:color="@color/panel_separator" />
+        </shape>
+    </item>
 
-    <color
-        name="primary">#A2042C</color>
+    <item android:bottom="2dp">
+        <shape>
+            <solid
+                android:color="@android:color/white" />
+        </shape>
+    </item>
 
-    <color
-        name="primary_dark">#323232</color>
-
-    <color
-        name="error_text">#D9192C</color>
-
-    <color
-        name="warning_text">#FF9909</color>
-
-    <color
-        name="success_text">#99CC00</color>
-
-    <color
-        name="panel_background">#444444</color>
-
-    <color
-        name="panel_separator">#5a5a5a</color>
-
-    <color
-        name="checked">#4a4a4a</color>
-
-    <color
-        name="pressed">#5a5a5a</color>
-
-</resources>
+</layer-list>

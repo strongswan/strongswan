@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -20,19 +20,18 @@ package org.strongswan.android.ui;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -60,7 +59,10 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	private int mColorStateSuccess;
 	private Button mActionButton;
 	private ProgressBar mProgress;
-	private AlertDialog mErrorDialog;
+	private LinearLayout mErrorView;
+	private TextView mErrorText;
+	private Button mErrorDetails;
+	private Button mDismissError;
 	private long mErrorConnectionID;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection()
@@ -128,11 +130,24 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		});
 		enableActionButton(null);
 
+		mErrorView = view.findViewById(R.id.vpn_error);
+		mErrorText = view.findViewById(R.id.vpn_error_text);
+		mErrorDetails = view.findViewById(R.id.error_details);
+		mDismissError = view.findViewById(R.id.dismiss_error);
 		mProgress = (ProgressBar)view.findViewById(R.id.progress);
 		mStateView = (TextView)view.findViewById(R.id.vpn_state);
 		mColorStateBase = mStateView.getCurrentTextColor();
 		mProfileView = (TextView)view.findViewById(R.id.vpn_profile_label);
 		mProfileNameView = (TextView)view.findViewById(R.id.vpn_profile_name);
+
+		mDismissError.setOnClickListener(new OnClickListener()
+		{
+			@Override
+			public void onClick(View v)
+			{
+				clearError();
+			}
+		});
 
 		return view;
 	}
@@ -156,7 +171,6 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		{
 			mService.unregisterListener(this);
 		}
-		hideErrorDialog();
 	}
 
 	@Override
@@ -238,13 +252,10 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	{
 		if (error == ErrorState.NO_ERROR)
 		{
-			hideErrorDialog();
+			mErrorView.setVisibility(View.GONE);
 			return false;
 		}
-		else if (mErrorDialog != null)
-		{	/* we already show the dialog */
-			return true;
-		}
+
 		mErrorConnectionID = connectionID;
 		mProfileNameView.setText(name);
 		showProfile(true);
@@ -257,24 +268,24 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 			case AUTH_FAILED:
 				if (imcState == ImcState.BLOCK)
 				{
-					showErrorDialog(R.string.error_assessment_failed);
+					showError(R.string.error_assessment_failed);
 				}
 				else
 				{
-					showErrorDialog(R.string.error_auth_failed);
+					showError(R.string.error_auth_failed);
 				}
 				break;
 			case PEER_AUTH_FAILED:
-				showErrorDialog(R.string.error_peer_auth_failed);
+				showError(R.string.error_peer_auth_failed);
 				break;
 			case LOOKUP_FAILED:
-				showErrorDialog(R.string.error_lookup_failed);
+				showError(R.string.error_lookup_failed);
 				break;
 			case UNREACHABLE:
-				showErrorDialog(R.string.error_unreachable);
+				showError(R.string.error_unreachable);
 				break;
 			default:
-				showErrorDialog(R.string.error_generic);
+				showError(R.string.error_generic);
 				break;
 		}
 		return true;
@@ -293,75 +304,46 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		mActionButton.setVisibility(text != null ? View.VISIBLE : View.GONE);
 	}
 
-	private void hideErrorDialog()
-	{
-		if (mErrorDialog != null)
-		{
-			mErrorDialog.dismiss();
-			mErrorDialog = null;
-		}
-	}
-
 	private void clearError()
 	{
 		if (mService != null)
 		{
-			mService.disconnect();
 			if (mService.getConnectionID() == mErrorConnectionID)
 			{
+				mService.disconnect();
 				mService.setError(ErrorState.NO_ERROR);
 			}
 		}
 		updateView();
 	}
 
-	private void showErrorDialog(int textid)
+	private void showError(int textid)
 	{
 		final List<RemediationInstruction> instructions = mService.getRemediationInstructions();
 		final boolean show_instructions = mService.getImcState() == ImcState.BLOCK && !instructions.isEmpty();
 		int text = show_instructions ? R.string.show_remediation_instructions : R.string.show_log;
 
-		mErrorDialog = new AlertDialog.Builder(getActivity())
-			.setMessage(getString(R.string.error_introduction) + " " + getString(textid))
-			.setCancelable(false)
-			.setNeutralButton(text, new DialogInterface.OnClickListener()
-			{
-				@Override
-				public void onClick(DialogInterface dialog, int which)
-				{
-					clearError();
-					dialog.dismiss();
-					Intent intent;
-					if (show_instructions)
-					{
-						intent = new Intent(getActivity(), RemediationInstructionsActivity.class);
-						intent.putParcelableArrayListExtra(RemediationInstructionsFragment.EXTRA_REMEDIATION_INSTRUCTIONS,
-														   new ArrayList<RemediationInstruction>(instructions));
-					}
-					else
-					{
-						intent = new Intent(getActivity(), LogActivity.class);
-					}
-					startActivity(intent);
-				}
-			})
-			.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener()
-			{
-				@Override
-				public void onClick(DialogInterface dialog, int id)
-				{
-					clearError();
-					dialog.dismiss();
-				}
-			}).create();
-		mErrorDialog.setOnDismissListener(new DialogInterface.OnDismissListener()
+		mErrorText.setText(getString(R.string.error_introduction) + " " + getString(textid));
+		mErrorDetails.setText(text);
+		mErrorDetails.setOnClickListener(new OnClickListener()
 		{
 			@Override
-			public void onDismiss(DialogInterface dialog)
+			public void onClick(View v)
 			{
-				mErrorDialog = null;
+				Intent intent;
+				if (show_instructions)
+				{
+					intent = new Intent(getActivity(), RemediationInstructionsActivity.class);
+					intent.putParcelableArrayListExtra(RemediationInstructionsFragment.EXTRA_REMEDIATION_INSTRUCTIONS,
+							new ArrayList<RemediationInstruction>(instructions));
+				}
+				else
+				{
+					intent = new Intent(getActivity(), LogActivity.class);
+				}
+				startActivity(intent);
 			}
 		});
-		mErrorDialog.show();
+		mErrorView.setVisibility(View.VISIBLE);
 	}
 }

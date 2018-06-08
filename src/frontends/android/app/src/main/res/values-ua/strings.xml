@@ -161,6 +161,7 @@
     <string name="state_disconnecting">Роз\'єднання&#8230;</string>
     <string name="state_disabled">Немає активних VPN</string>
     <string name="state_error">Помилка</string>
+    <string name="dismiss">Dismiss</string>
 
     <!-- IMC state fragment -->
     <string name="imc_state_label">Assessment:</string>

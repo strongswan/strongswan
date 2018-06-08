@@ -163,6 +163,7 @@
     <string name="state_disconnecting">Trennen&#8230;</string>
     <string name="state_disabled">Kein aktives Profil</string>
     <string name="state_error">Fehler</string>
+    <string name="dismiss">Ausblenden</string>
 
     <!-- IMC state fragment -->
     <string name="imc_state_label">Assessment:</string>

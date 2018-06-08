@@ -160,6 +160,7 @@
     <string name="state_disconnecting">結束連線中&#8230;</string>
     <string name="state_disabled">無運作中的VPN</string>
     <string name="state_error">錯誤</string>
+    <string name="dismiss">Dismiss</string>
 
     <!-- IMC state fragment -->
     <string name="imc_state_label">評估詳情：</string>
