@@ -108,6 +108,10 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 				Intent logIntent = new Intent(this, LogActivity.class);
 				startActivity(logIntent);
 				return true;
+			case R.id.menu_settings:
+				Intent settingsIntent = new Intent(this, SettingsActivity.class);
+				startActivity(settingsIntent);
+				return true;
 			default:
 				return super.onOptionsItemSelected(item);
 		}

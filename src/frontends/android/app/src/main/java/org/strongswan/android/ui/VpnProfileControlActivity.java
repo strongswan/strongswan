@@ -44,8 +44,6 @@ import org.strongswan.android.logic.CharonVpnService;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.State;
 
-import java.util.UUID;
-
 public class VpnProfileControlActivity extends AppCompatActivity
 {
 	public static final String START_PROFILE = "org.strongswan.android.action.START_PROFILE";
@@ -254,14 +252,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
 		if (profileUUID != null)
 		{
-			try
-			{
-				profile = dataSource.getVpnProfile(UUID.fromString(profileUUID));
-			}
-			catch (Exception e)
-			{	/* invalid UUID */
-				e.printStackTrace();
-			}
+			profile = dataSource.getVpnProfile(profileUUID);
 		}
 		else
 		{

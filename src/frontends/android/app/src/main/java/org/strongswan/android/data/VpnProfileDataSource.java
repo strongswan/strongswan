@@ -382,6 +382,28 @@ public class VpnProfileDataSource
 	}
 
 	/**
+	 * Get a single VPN profile from the database by its UUID as String.
+	 * @param uuid the UUID of the VPN profile as String
+	 * @return the profile or null, if not found
+	 */
+	public VpnProfile getVpnProfile(String uuid)
+	{
+		try
+		{
+			if (uuid != null)
+			{
+				return getVpnProfile(UUID.fromString(uuid));
+			}
+			return null;
+		}
+		catch (IllegalArgumentException e)
+		{
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	/**
 	 * Get a list of all VPN profiles stored in the database.
 	 * @return list of VPN profiles
 	 */

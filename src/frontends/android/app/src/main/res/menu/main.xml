@@ -36,4 +36,9 @@
         android:title="@string/show_log"
         app:showAsAction="withText" />
 
+    <item
+        android:id="@+id/menu_settings"
+        android:title="@string/pref_title"
+        app:showAsAction="withText" />
+
 </menu>

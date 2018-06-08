@@ -29,6 +29,11 @@
     <string name="permanent_notification_name">VPN connection state</string>
     <string name="permanent_notification_description">Provides information about the VPN connection state and serves as permanent notification to keep the VPN service running in the background.</string>
 
+    <!-- Settings -->
+    <string name="pref_title">Settings</string>
+    <string name="pref_default_vpn_profile">Default VPN profile</string>
+    <string name="pref_default_vpn_profile_mru">Connect to most recently used profile</string>
+
     <!-- Log view -->
     <string name="log_title">Журнал</string>
     <string name="send_log">Отправить журнал</string>

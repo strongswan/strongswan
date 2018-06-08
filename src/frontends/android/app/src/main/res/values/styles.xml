@@ -20,6 +20,7 @@
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="android:alertDialogTheme">@style/AlertDialogTheme</item>
+        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
     </style>
 
     <style name="AlertDialogTheme.Base" parent="Theme.AppCompat.Dialog.Alert">

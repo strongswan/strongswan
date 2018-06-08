@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -43,4 +43,14 @@ public final class Constants
 	 */
 	public static final int NAT_KEEPALIVE_MAX = 120;
 	public static final int NAT_KEEPALIVE_MIN = 10;
+
+	/**
+	 * Preference key for default VPN profile
+	 */
+	public static final String PREF_DEFAULT_VPN_PROFILE = "pref_default_vpn_profile";
+
+	/**
+	 * Value used to signify that the most recently used profile should be used as default
+	 */
+	public static final String PREF_DEFAULT_VPN_PROFILE_MRU = "pref_default_vpn_profile_mru";
 }
