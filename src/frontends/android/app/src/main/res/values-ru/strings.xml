@@ -191,4 +191,9 @@
     <string name="disconnect_active_connection">This will disconnect the active VPN connection!</string>
     <string name="connect">Соединить</string>
 
+    <!-- Quick Settings tile -->
+    <string name="tile_default">Toggle VPN</string>
+    <string name="tile_connect">Connect VPN</string>
+    <string name="tile_disconnect">Disconnect VPN</string>
+
 </resources>

@@ -194,4 +194,9 @@
     <string name="disconnect_active_connection">Dies trennt die aktuelle VPN Verbindung!</string>
     <string name="connect">Verbinden</string>
 
+    <!-- Quick Settings tile -->
+    <string name="tile_default">VPN umschalten</string>
+    <string name="tile_connect">VPN verbinden</string>
+    <string name="tile_disconnect">VPN trennen</string>
+
 </resources>
