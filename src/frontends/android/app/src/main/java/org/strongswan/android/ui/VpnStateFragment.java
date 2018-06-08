@@ -51,7 +51,6 @@ import java.util.List;
 public class VpnStateFragment extends Fragment implements VpnStateListener
 {
 	private static final String KEY_ERROR_CONNECTION_ID = "error_connection_id";
-	private static final String KEY_DISMISSED_CONNECTION_ID = "dismissed_connection_id";
 
 	private TextView mProfileNameView;
 	private TextView mProfileView;
@@ -63,7 +62,6 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	private ProgressBar mProgress;
 	private AlertDialog mErrorDialog;
 	private long mErrorConnectionID;
-	private long mDismissedConnectionID;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection()
 	{
@@ -96,11 +94,9 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 							mServiceConnection, Service.BIND_AUTO_CREATE);
 
 		mErrorConnectionID = 0;
-		mDismissedConnectionID = 0;
 		if (savedInstanceState != null && savedInstanceState.containsKey(KEY_ERROR_CONNECTION_ID))
 		{
 			mErrorConnectionID = (Long)savedInstanceState.getSerializable(KEY_ERROR_CONNECTION_ID);
-			mDismissedConnectionID = (Long)savedInstanceState.getSerializable(KEY_DISMISSED_CONNECTION_ID);
 		}
 	}
 
@@ -110,7 +106,6 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		super.onSaveInstanceState(outState);
 
 		outState.putSerializable(KEY_ERROR_CONNECTION_ID, mErrorConnectionID);
-		outState.putSerializable(KEY_DISMISSED_CONNECTION_ID, mDismissedConnectionID);
 	}
 
 	@Override
@@ -241,14 +236,6 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 
 	private boolean reportError(long connectionID, String name, ErrorState error, ImcState imcState)
 	{
-		if (connectionID > mDismissedConnectionID)
-		{	/* report error if it hasn't been dismissed yet */
-			mErrorConnectionID = connectionID;
-		}
-		else
-		{	/* ignore all other errors */
-			error = ErrorState.NO_ERROR;
-		}
 		if (error == ErrorState.NO_ERROR)
 		{
 			hideErrorDialog();
@@ -258,6 +245,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		{	/* we already show the dialog */
 			return true;
 		}
+		mErrorConnectionID = connectionID;
 		mProfileNameView.setText(name);
 		showProfile(true);
 		mProgress.setVisibility(View.GONE);
@@ -319,8 +307,11 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		if (mService != null)
 		{
 			mService.disconnect();
+			if (mService.getConnectionID() == mErrorConnectionID)
+			{
+				mService.setError(ErrorState.NO_ERROR);
+			}
 		}
-		mDismissedConnectionID = mErrorConnectionID;
 		updateView();
 	}
 
