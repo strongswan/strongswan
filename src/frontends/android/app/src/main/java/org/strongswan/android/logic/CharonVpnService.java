@@ -27,6 +27,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.Build;
@@ -34,6 +35,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
+import android.preference.PreferenceManager;
 import android.security.KeyChain;
 import android.security.KeyChainException;
 import android.support.v4.app.NotificationCompat;
@@ -52,6 +54,7 @@ import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 import org.strongswan.android.ui.MainActivity;
 import org.strongswan.android.ui.VpnProfileControlActivity;
+import org.strongswan.android.utils.Constants;
 import org.strongswan.android.utils.IPRange;
 import org.strongswan.android.utils.IPRangeSet;
 import org.strongswan.android.utils.SettingsWriter;
@@ -146,6 +149,10 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 					{
 						String password = bundle.getString(VpnProfileDataSource.KEY_PASSWORD);
 						profile.setPassword(password);
+
+						SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
+						pref.edit().putString(Constants.PREF_MRU_VPN_PROFILE, profile.getUUID().toString())
+							.apply();
 					}
 				}
 				setNextProfile(profile);

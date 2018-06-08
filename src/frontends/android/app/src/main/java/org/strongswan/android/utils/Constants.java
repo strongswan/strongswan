@@ -53,4 +53,9 @@ public final class Constants
 	 * Value used to signify that the most recently used profile should be used as default
 	 */
 	public static final String PREF_DEFAULT_VPN_PROFILE_MRU = "pref_default_vpn_profile_mru";
+
+	/**
+	 * Preference key to store the most recently used VPN profile
+	 */
+	public static final String PREF_MRU_VPN_PROFILE = "pref_mru_vpn_profile";
 }
