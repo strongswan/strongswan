@@ -31,6 +31,7 @@ import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.security.KeyChain;
@@ -88,6 +89,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	private volatile boolean mTerminate;
 	private volatile boolean mIsDisconnecting;
 	private volatile boolean mShowNotification;
+	private Handler mHandler;
 	private VpnStateService mService;
 	private final Object mServiceLock = new Object();
 	private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -157,6 +159,9 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	{
 		mLogFile = getFilesDir().getAbsolutePath() + File.separator + LOG_FILE;
 		mAppDir = getFilesDir().getAbsolutePath();
+
+		/* handler used to do changes in the main UI thread */
+		mHandler = new Handler();
 
 		mDataSource = new VpnProfileDataSource(this);
 		mDataSource.open();
@@ -313,8 +318,15 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 */
 	private void addNotification()
 	{
-		mShowNotification = true;
-		startForeground(VPN_STATE_NOTIFICATION_ID, buildNotification(false));
+		mHandler.post(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				mShowNotification = true;
+				startForeground(VPN_STATE_NOTIFICATION_ID, buildNotification(false));
+			}
+		});
 	}
 
 	/**
@@ -322,8 +334,15 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 */
 	private void removeNotification()
 	{
-		mShowNotification = false;
-		stopForeground(true);
+		mHandler.post(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				mShowNotification = false;
+				stopForeground(true);
+			}
+		});
 	}
 
 	/**
