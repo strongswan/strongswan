@@ -1586,6 +1586,17 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	sa->id.proto = id->proto;
 	sa->family = id->src->get_family(id->src);
 	sa->mode = mode2kernel(mode);
+
+	if (!data->copy_df)
+	{
+		sa->flags |= XFRM_STATE_NOPMTUDISC;
+	}
+
+	if (!data->copy_ecn)
+	{
+		sa->flags |= XFRM_STATE_NOECN;
+	}
+
 	switch (mode)
 	{
 		case MODE_TUNNEL:

@@ -319,6 +319,12 @@ enum child_cfg_option_t {
 
 	/** Set mark on inbound SAs */
 	OPT_MARK_IN_SA = (1<<6),
+
+	/** Disable copying the DF bit to the outer IPv4 header in tunnel mode */
+	OPT_NO_COPY_DF = (1<<7),
+
+	/** Disable copying the ECN header field in tunnel mode */
+	OPT_NO_COPY_ECN = (1<<8),
 };
 
 /**

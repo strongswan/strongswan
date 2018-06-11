@@ -95,6 +95,10 @@ struct kernel_ipsec_add_sa_t {
 	hw_offload_t hw_offload;
 	/** TRUE to use Extended Sequence Numbers */
 	bool esn;
+	/** TRUE to copy the DF bit to the outer IPv4 header in tunnel mode */
+	bool copy_df;
+	/** TRUE to copy the ECN header field to/from the outer header */
+	bool copy_ecn;
 	/** TRUE if initiator of the exchange creating the SA */
 	bool initiator;
 	/** TRUE if this is an inbound SA */

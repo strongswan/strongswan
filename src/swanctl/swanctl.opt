@@ -937,6 +937,21 @@ connections.<conn>.children.<child>.hw_offload = no
 	enables offloading, if it's supported, but the installation does not fail
 	otherwise.
 
+connections.<conn>.children.<child>.copy_df = yes
+	Whether to copy the DF bit to the outer IPv4 header in tunnel mode.
+
+	Whether to copy the DF bit to the outer IPv4 header in tunnel mode. This
+	effectively disables Path MTU discovery (PMTUD).  Disabling this is not
+	supported by all kernel interfaces.
+
+connections.<conn>.children.<child>.copy_ecn = yes
+	Whether to copy the ECN header field to/from the outer IP header in tunnel
+	mode.
+
+	Whether to copy the ECN (Explicit Congestion Notification) header field
+	to/from the outer IP header in tunnel mode.  Disabling this is not supported
+	by all kernel interfaces.
+
 connections.<conn>.children.<child>.start_action = none
 	Action to perform after loading the configuration (_none_, _trap_, _start_).
 

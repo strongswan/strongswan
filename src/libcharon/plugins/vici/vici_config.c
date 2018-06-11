@@ -484,7 +484,6 @@ typedef struct {
 	linked_list_t *local_ts;
 	linked_list_t *remote_ts;
 	uint32_t replay_window;
-	bool policies;
 	child_cfg_create_t cfg;
 } child_data_t;
 
@@ -511,7 +510,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   ipcomp = %u", has_opt(OPT_IPCOMP));
 	DBG2(DBG_CFG, "   mode = %N%s", ipsec_mode_names, cfg->mode,
 		 has_opt(OPT_PROXY_MODE) ? "_PROXY" : "");
-	DBG2(DBG_CFG, "   policies = %u", data->policies);
+	DBG2(DBG_CFG, "   policies = %u", !has_opt(OPT_NO_POLICIES));
 	DBG2(DBG_CFG, "   policies_fwd_out = %u", has_opt(OPT_FWD_OUT_POLICIES));
 	if (data->replay_window != REPLAY_UNDEFINED)
 	{
@@ -535,6 +534,8 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   remote_ts = %#R", data->remote_ts);
 	DBG2(DBG_CFG, "   hw_offload = %N", hw_offload_names, cfg->hw_offload);
 	DBG2(DBG_CFG, "   sha256_96 = %u", has_opt(OPT_SHA256_96));
+	DBG2(DBG_CFG, "   copy_df = %u", !has_opt(OPT_NO_COPY_DF));
+	DBG2(DBG_CFG, "   copy_ecn = %u", !has_opt(OPT_NO_COPY_ECN));
 }
 
 /**
@@ -847,16 +848,17 @@ CALLBACK(parse_mode, bool,
 }
 
 /**
- * Enable a child_cfg_option_t
+ * Enable a child_cfg_option_t, the flag controls whether the option is enabled
+ * if the parsed value is TRUE or FALSE.
  */
 static bool parse_option(child_cfg_option_t *out, child_cfg_option_t opt,
-						 chunk_t v)
+						 chunk_t v, bool add_if_true)
 {
 	bool val;
 
 	if (parse_bool(&val, v))
 	{
-		if (val)
+		if (val == add_if_true)
 		{
 			*out |= opt;
 		}
@@ -871,7 +873,16 @@ static bool parse_option(child_cfg_option_t *out, child_cfg_option_t opt,
 CALLBACK(parse_opt_haccess, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
-	return parse_option(out, OPT_HOSTACCESS, v);
+	return parse_option(out, OPT_HOSTACCESS, v, TRUE);
+}
+
+/**
+ * Parse OPT_NO_POLICIES option
+ */
+CALLBACK(parse_opt_policies, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_NO_POLICIES, v, FALSE);
 }
 
 /**
@@ -880,7 +891,7 @@ CALLBACK(parse_opt_haccess, bool,
 CALLBACK(parse_opt_fwd_out, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
-	return parse_option(out, OPT_FWD_OUT_POLICIES, v);
+	return parse_option(out, OPT_FWD_OUT_POLICIES, v, TRUE);
 }
 
 /**
@@ -889,9 +900,8 @@ CALLBACK(parse_opt_fwd_out, bool,
 CALLBACK(parse_opt_ipcomp, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
-	return parse_option(out, OPT_IPCOMP, v);
+	return parse_option(out, OPT_IPCOMP, v, TRUE);
 }
-
 
 /**
  * Parse OPT_SHA256_96 option
@@ -899,7 +909,7 @@ CALLBACK(parse_opt_ipcomp, bool,
 CALLBACK(parse_opt_sha256_96, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
-	return parse_option(out, OPT_SHA256_96, v);
+	return parse_option(out, OPT_SHA256_96, v, TRUE);
 }
 
 /**
@@ -908,7 +918,25 @@ CALLBACK(parse_opt_sha256_96, bool,
 CALLBACK(parse_opt_mark_in, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
-	return parse_option(out, OPT_MARK_IN_SA, v);
+	return parse_option(out, OPT_MARK_IN_SA, v, TRUE);
+}
+
+/**
+ * Parse OPT_NO_COPY_DF option
+ */
+CALLBACK(parse_opt_copy_df, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_NO_COPY_DF, v, FALSE);
+}
+
+/**
+ * Parse OPT_NO_COPY_ECN option
+ */
+CALLBACK(parse_opt_copy_ecn, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_NO_COPY_ECN, v, FALSE);
 }
 
 /**
@@ -1567,7 +1595,7 @@ CALLBACK(child_kv, bool,
 		{ "updown",				parse_string,		&child->cfg.updown					},
 		{ "hostaccess",			parse_opt_haccess,	&child->cfg.options					},
 		{ "mode",				parse_mode,			&child->cfg							},
-		{ "policies",			parse_bool,			&child->policies					},
+		{ "policies",			parse_opt_policies,	&child->cfg.options					},
 		{ "policies_fwd_out",	parse_opt_fwd_out,	&child->cfg.options					},
 		{ "replay_window",		parse_uint32,		&child->replay_window				},
 		{ "rekey_time",			parse_time,			&child->cfg.lifetime.time.rekey		},
@@ -1593,6 +1621,8 @@ CALLBACK(child_kv, bool,
 		{ "interface",			parse_string,		&child->cfg.interface				},
 		{ "hw_offload",			parse_hw_offload,	&child->cfg.hw_offload				},
 		{ "sha256_96",			parse_opt_sha256_96,&child->cfg.options					},
+		{ "copy_df",			parse_opt_copy_df,	&child->cfg.options					},
+		{ "copy_ecn",			parse_opt_copy_ecn,	&child->cfg.options					},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
@@ -1802,7 +1832,6 @@ CALLBACK(children_sn, bool,
 		.proposals = linked_list_create(),
 		.local_ts = linked_list_create(),
 		.remote_ts = linked_list_create(),
-		.policies = TRUE,
 		.replay_window = REPLAY_UNDEFINED,
 		.cfg = {
 			.mode = MODE_TUNNEL,
@@ -1858,7 +1887,6 @@ CALLBACK(children_sn, bool,
 			child.proposals->insert_last(child.proposals, proposal);
 		}
 	}
-	child.cfg.options |= child.policies ? 0 : OPT_NO_POLICIES;
 
 	check_lifetimes(&child.cfg.lifetime);
 
