@@ -27,6 +27,7 @@ typedef enum policy_type_t policy_type_t;
 typedef enum policy_priority_t policy_priority_t;
 typedef enum ipcomp_transform_t ipcomp_transform_t;
 typedef enum hw_offload_t hw_offload_t;
+typedef enum dscp_copy_t dscp_copy_t;
 typedef struct ipsec_sa_cfg_t ipsec_sa_cfg_t;
 typedef struct lifetime_cfg_t lifetime_cfg_t;
 typedef struct mark_t mark_t;
@@ -130,6 +131,22 @@ enum hw_offload_t {
  * enum names for hw_offload_t.
  */
 extern enum_name_t *hw_offload_names;
+
+/**
+ * DSCP header field copy behavior (the default is not to copy from outer
+ * to inner header)
+ */
+enum dscp_copy_t {
+	DSCP_COPY_OUT_ONLY,
+	DSCP_COPY_IN_ONLY,
+	DSCP_COPY_YES,
+	DSCP_COPY_NO,
+};
+
+/**
+ * enum strings for dscp_copy_t.
+ */
+extern enum_name_t *dscp_copy_names;
 
 /**
  * This struct contains details about IPsec SA(s) tied to a policy.

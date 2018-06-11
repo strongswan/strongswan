@@ -941,16 +941,30 @@ connections.<conn>.children.<child>.copy_df = yes
 	Whether to copy the DF bit to the outer IPv4 header in tunnel mode.
 
 	Whether to copy the DF bit to the outer IPv4 header in tunnel mode. This
-	effectively disables Path MTU discovery (PMTUD).  Disabling this is not
-	supported by all kernel interfaces.
+	effectively disables Path MTU discovery (PMTUD).  Controlling this behavior
+	is not supported by all kernel interfaces.
 
 connections.<conn>.children.<child>.copy_ecn = yes
 	Whether to copy the ECN header field to/from the outer IP header in tunnel
 	mode.
 
 	Whether to copy the ECN (Explicit Congestion Notification) header field
-	to/from the outer IP header in tunnel mode.  Disabling this is not supported
-	by all kernel interfaces.
+	to/from the outer IP header in tunnel mode. Controlling this behavior is not
+	supported by all kernel interfaces.
+
+connections.<conn>.children.<child>.copy_dscp = out
+	Whether to copy the DSCP header field to/from the outer IP header in tunnel
+	mode.
+
+	Whether to copy the DSCP (Differentiated Services Field Codepoint) header
+	field to/from the outer IP header in tunnel mode. The value _out_ only
+	copies the field from the inner to the outer header, the value _in_ does the
+	opposite and only copies the field from the outer to the inner header when
+	decapsulating, the value _yes_ copies the field in both directions, and the
+	value _no_ disables copying the field altogether.  Setting this to _yes_ or
+	_in_ could allow an attacker to adversely affect other traffic at the
+	receiver, which is why the default is _out_. Controlling this behavior is
+	not supported by all kernel interfaces.
 
 connections.<conn>.children.<child>.start_action = none
 	Action to perform after loading the configuration (_none_, _trap_, _start_).

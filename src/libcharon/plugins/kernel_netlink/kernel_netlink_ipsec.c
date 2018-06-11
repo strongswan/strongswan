@@ -1597,6 +1597,42 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		sa->flags |= XFRM_STATE_NOECN;
 	}
 
+	if (data->inbound)
+	{
+		switch (data->copy_dscp)
+		{
+			case DSCP_COPY_YES:
+			case DSCP_COPY_IN_ONLY:
+				sa->flags |= XFRM_STATE_DECAP_DSCP;
+				break;
+			default:
+				break;
+		}
+	}
+	else
+	{
+		switch (data->copy_dscp)
+		{
+			case DSCP_COPY_IN_ONLY:
+			case DSCP_COPY_NO:
+			{
+				uint32_t *xflags;
+
+				xflags = netlink_reserve(hdr, sizeof(request),
+										 XFRMA_SA_EXTRA_FLAGS, sizeof(*xflags));
+				if (!xflags)
+				{
+					goto failed;
+				}
+				/* currently the only extra flag */
+				*xflags |= XFRM_SA_XFLAG_DONT_ENCAP_DSCP;
+				break;
+			}
+			default:
+				break;
+		}
+	}
+
 	switch (mode)
 	{
 		case MODE_TUNNEL:

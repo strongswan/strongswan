@@ -43,6 +43,13 @@ ENUM(hw_offload_names, HW_OFFLOAD_NO, HW_OFFLOAD_AUTO,
 	"auto",
 );
 
+ENUM(dscp_copy_names, DSCP_COPY_OUT_ONLY, DSCP_COPY_NO,
+	"out",
+	"in",
+	"yes",
+	"no",
+);
+
 /*
  * See header
  */

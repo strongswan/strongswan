@@ -536,6 +536,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   sha256_96 = %u", has_opt(OPT_SHA256_96));
 	DBG2(DBG_CFG, "   copy_df = %u", !has_opt(OPT_NO_COPY_DF));
 	DBG2(DBG_CFG, "   copy_ecn = %u", !has_opt(OPT_NO_COPY_ECN));
+	DBG2(DBG_CFG, "   copy_dscp = %N", dscp_copy_names, cfg->copy_dscp);
 }
 
 /**
@@ -937,6 +938,28 @@ CALLBACK(parse_opt_copy_ecn, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
 	return parse_option(out, OPT_NO_COPY_ECN, v, FALSE);
+}
+
+/**
+ * Parse a dscp_copy_t
+ */
+CALLBACK(parse_copy_dscp, bool,
+	dscp_copy_t *out, chunk_t v)
+{
+	enum_map_t map[] = {
+		{ "no",		DSCP_COPY_NO		},
+		{ "in",		DSCP_COPY_IN_ONLY	},
+		{ "out",	DSCP_COPY_OUT_ONLY	},
+		{ "yes",	DSCP_COPY_YES		},
+	};
+	int d;
+
+	if (parse_map(map, countof(map), &d, v))
+	{
+		*out = d;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 /**
@@ -1623,6 +1646,7 @@ CALLBACK(child_kv, bool,
 		{ "sha256_96",			parse_opt_sha256_96,&child->cfg.options					},
 		{ "copy_df",			parse_opt_copy_df,	&child->cfg.options					},
 		{ "copy_ecn",			parse_opt_copy_ecn,	&child->cfg.options					},
+		{ "copy_dscp",			parse_copy_dscp,	&child->cfg.copy_dscp				},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
