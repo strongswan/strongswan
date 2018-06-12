@@ -75,6 +75,7 @@ import java.util.SortedSet;
 public class CharonVpnService extends VpnService implements Runnable, VpnStateService.VpnStateListener
 {
 	private static final String TAG = CharonVpnService.class.getSimpleName();
+	private static final String VPN_SERVICE_ACTION = "android.net.VpnService";
 	public static final String DISCONNECT_ACTION = "org.strongswan.android.CharonVpnService.DISCONNECT";
 	private static final String NOTIFICATION_CHANNEL = "org.strongswan.android.CharonVpnService.VPN_STATE_NOTIFICATION";
 	public static final String LOG_FILE = "charon.log";
@@ -134,14 +135,21 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	{
 		if (intent != null)
 		{
-			if (DISCONNECT_ACTION.equals(intent.getAction()))
-			{
-				setNextProfile(null);
+			VpnProfile profile = null;
+
+			if (VPN_SERVICE_ACTION.equals(intent.getAction()))
+			{	/* triggered when Always-on VPN is activated */
+				SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
+				String uuid = pref.getString(Constants.PREF_DEFAULT_VPN_PROFILE, null);
+				if (uuid == null || uuid.equals(Constants.PREF_DEFAULT_VPN_PROFILE_MRU))
+				{
+					uuid = pref.getString(Constants.PREF_MRU_VPN_PROFILE, null);
+				}
+				profile = mDataSource.getVpnProfile(uuid);
 			}
-			else
+			else if (!DISCONNECT_ACTION.equals(intent.getAction()))
 			{
 				Bundle bundle = intent.getExtras();
-				VpnProfile profile = null;
 				if (bundle != null)
 				{
 					profile = mDataSource.getVpnProfile(bundle.getLong(VpnProfileDataSource.KEY_ID));
@@ -155,8 +163,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 							.apply();
 					}
 				}
-				setNextProfile(profile);
 			}
+			setNextProfile(profile);
 		}
 		return START_NOT_STICKY;
 	}
