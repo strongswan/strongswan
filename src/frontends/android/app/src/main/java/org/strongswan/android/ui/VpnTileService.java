@@ -131,10 +131,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 			{
 				profile = getProfile();
 			}
-
-			/* open the main activity in case of an error. since the state is still CONNECTING
-			 * there is a popup confirmation dialog if we connect again, disconnect would work
-			 * but doing two operations is not ideal */
+			/* reconnect the profile in case of an error */
 			if (mService.getErrorState() == VpnStateService.ErrorState.NO_ERROR)
 			{
 				switch (mService.getState())
@@ -159,15 +156,15 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 						}
 						return;
 				}
-				if (profile != null)
-				{
-					Intent intent = new Intent(this, VpnProfileControlActivity.class);
-					intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-					intent.setAction(VpnProfileControlActivity.START_PROFILE);
-					intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_ID, profile.getUUID().toString());
-					startActivity(intent);
-					return;
-				}
+			}
+			if (profile != null)
+			{
+				Intent intent = new Intent(this, VpnProfileControlActivity.class);
+				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+				intent.setAction(VpnProfileControlActivity.START_PROFILE);
+				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_ID, profile.getUUID().toString());
+				startActivity(intent);
+				return;
 			}
 		}
 		Intent intent = new Intent(this, MainActivity.class);
