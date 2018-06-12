@@ -192,6 +192,24 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	}
 
 	/**
+	 * Check if we are currently connected to a VPN connection
+	 *
+	 * @return true if currently connected
+	 */
+	private boolean isConnected()
+	{
+		if (mService == null)
+		{
+			return false;
+		}
+		if (mService.getErrorState() != VpnStateService.ErrorState.NO_ERROR)
+		{	/* allow reconnecting (even to a different profile) without confirmation if there is an error */
+			return false;
+		}
+		return (mService.getState() == State.CONNECTED || mService.getState() == State.CONNECTING);
+	}
+
+	/**
 	 * Start the given VPN profile
 	 *
 	 * @param profile VPN profile
@@ -207,9 +225,9 @@ public class VpnProfileControlActivity extends AppCompatActivity
 
 		removeFragmentByTag(DIALOG_TAG);
 
-		if (mService != null && (mService.getState() == State.CONNECTED || mService.getState() == State.CONNECTING))
+		if (isConnected())
 		{
-			profileInfo.putBoolean(PROFILE_RECONNECT, mService.getProfile().getId() == profile.getId());
+			profileInfo.putBoolean(PROFILE_RECONNECT, mService.getProfile().getUUID().equals(profile.getUUID()));
 
 			ConfirmationDialog dialog = new ConfirmationDialog();
 			dialog.setArguments(profileInfo);
