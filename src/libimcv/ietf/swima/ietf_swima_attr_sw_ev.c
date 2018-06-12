@@ -27,7 +27,7 @@ typedef struct private_ietf_swima_attr_sw_ev_t private_ietf_swima_attr_sw_ev_t;
 
 /**
  * Software [Identifier] Events
- * see sections 5.9/5.11 of IETF SW Inventory Message and Attributes for PA-TNC
+ * see sections 5.9/5.11 of RFC 8412 SWIMA
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -165,16 +165,40 @@ METHOD(pa_tnc_attr_t, set_noskip_flag,void,
 	this->noskip_flag = noskip;
 }
 
+/**
+ * This function is shared with ietf_swima_attr_sw_inv.c
+ **/
+void ietf_swima_attr_sw_ev_build_sw_record(bio_writer_t *writer,
+		uint8_t action, swima_record_t *sw_record, bool has_record)
+{
+	pen_type_t data_model;
+	chunk_t sw_locator;
+
+	data_model = sw_record->get_data_model(sw_record);
+
+	writer->write_uint32(writer, sw_record->get_record_id(sw_record));
+	writer->write_uint24(writer, data_model.vendor_id);
+	writer->write_uint8 (writer, data_model.type);
+	writer->write_uint8 (writer, sw_record->get_source_id(sw_record));
+	writer->write_uint8 (writer, action);
+	writer->write_data16(writer, sw_record->get_sw_id(sw_record, &sw_locator));
+	writer->write_data16(writer, sw_locator);
+
+	if (has_record)
+	{
+		writer->write_data32(writer, sw_record->get_record(sw_record));
+	}
+}
+
 METHOD(pa_tnc_attr_t, build, void,
 	private_ietf_swima_attr_sw_ev_t *this)
 {
 	bio_writer_t *writer;
 	swima_event_t *sw_event;
 	swima_record_t *sw_record;
-	chunk_t timestamp, sw_id, sw_locator, record;
-	pen_type_t data_model;
-	uint32_t eid, record_id, last_eid, last_consulted_eid, eid_epoch;
-	uint8_t action, source_id;
+	chunk_t timestamp;
+	uint32_t last_eid, last_consulted_eid, eid_epoch;
+	uint8_t action;
 	enumerator_t *enumerator;
 
 	if (this->value.ptr)
@@ -195,29 +219,14 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator = this->events->create_enumerator(this->events);
 	while (enumerator->enumerate(enumerator, &sw_event))
 	{
-		eid        = sw_event->get_eid(sw_event, &timestamp);
 		action     = sw_event->get_action(sw_event);
 		sw_record  = sw_event->get_sw_record(sw_event);
-		record_id  = sw_record->get_record_id(sw_record);
-		data_model = sw_record->get_data_model(sw_record);
-		source_id  = sw_record->get_source_id(sw_record);
-		sw_id      = sw_record->get_sw_id(sw_record, &sw_locator);
 
-		writer->write_uint32(writer, eid);
+		writer->write_uint32(writer, sw_event->get_eid(sw_event, &timestamp));
 		writer->write_data  (writer, timestamp);
-		writer->write_uint32(writer, record_id);
-		writer->write_uint24(writer, data_model.vendor_id);
-		writer->write_uint8 (writer, data_model.type);
-		writer->write_uint8 (writer, source_id);
-		writer->write_uint8 (writer, action);
-		writer->write_data16(writer, sw_id);
-		writer->write_data16(writer, sw_locator);
 
-		if (this->type.type == IETF_ATTR_SW_EVENTS)
-		{
-			record = sw_record->get_record(sw_record);
-			writer->write_data32(writer, record);
-		}
+		ietf_swima_attr_sw_ev_build_sw_record(writer, action, sw_record,
+								this->type.type == IETF_ATTR_SW_EVENTS);
 	}
 	enumerator->destroy(enumerator);
 
@@ -227,15 +236,56 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->destroy(writer);
 }
 
+/**
+ * This function is shared with ietf_swima_attr_sw_inv.c
+ **/
+bool ietf_swima_attr_sw_ev_process_sw_record(bio_reader_t *reader,
+		uint8_t *action, swima_record_t **sw_record, bool has_record)
+{
+	pen_type_t data_model;
+	swima_record_t *sw_rec;
+	uint32_t data_model_pen, record_id;
+	uint8_t  data_model_type, source_id, reserved;
+	chunk_t sw_id, sw_locator, record = chunk_empty;
+
+	if (!reader->read_uint32(reader, &record_id) ||
+		!reader->read_uint24(reader, &data_model_pen) ||
+		!reader->read_uint8 (reader, &data_model_type) ||
+		!reader->read_uint8 (reader, &source_id) ||
+		!reader->read_uint8 (reader, &reserved) ||
+		!reader->read_data16(reader, &sw_id) ||
+		!reader->read_data16(reader, &sw_locator))
+	{
+		return FALSE;
+	}
+
+	if (action)
+	{
+		*action = reserved;
+	}
+
+	if (has_record && !reader->read_data32(reader, &record))
+	{
+		return FALSE;
+	}
+
+	data_model = pen_type_create(data_model_pen, data_model_type);
+	sw_rec = swima_record_create(record_id, sw_id, sw_locator);
+	sw_rec->set_data_model(sw_rec, data_model);
+	sw_rec->set_source_id(sw_rec, source_id);
+	sw_rec->set_record(sw_rec, record);
+	*sw_record = sw_rec;
+
+	return TRUE;
+}
+
 METHOD(pa_tnc_attr_t, process, status_t,
 	private_ietf_swima_attr_sw_ev_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	uint32_t data_model_pen, record_id;
 	uint32_t eid, eid_epoch, last_eid, last_consulted_eid;
-	uint8_t  data_model_type, source_id, action;
-	pen_type_t data_model;
-	chunk_t sw_id, sw_locator, record, timestamp;
+	uint8_t  action;
+	chunk_t timestamp;
 	swima_event_t *sw_event;
 	swima_record_t *sw_record;
 	status_t status = NEED_MORE;
@@ -273,38 +323,24 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	{
 		if (!reader->read_uint32(reader, &eid) ||
 			!reader->read_data  (reader, SW_EV_TIMESTAMP_SIZE, &timestamp) ||
-			!reader->read_uint32(reader, &record_id) ||
-			!reader->read_uint24(reader, &data_model_pen) ||
-			!reader->read_uint8 (reader, &data_model_type) ||
-			!reader->read_uint8 (reader, &source_id) ||
-			!reader->read_uint8 (reader, &action) ||
-			!reader->read_data16(reader, &sw_id) ||
-			!reader->read_data16(reader, &sw_locator))
+			!ietf_swima_attr_sw_ev_process_sw_record(reader, &action, &sw_record,
+								this->type.type == IETF_ATTR_SW_EVENTS))
 		{
 			goto end;
 		}
-		record = chunk_empty;
 
-		if (action == 0 || action > SWIMA_EVENT_ACTION_LAST)
+		if (action == SWIMA_EVENT_ACTION_NONE ||
+			action  > SWIMA_EVENT_ACTION_LAST)
 		{
 			DBG1(DBG_TNC, "invalid event action value for %N/%N", pen_names,
 						   PEN_IETF, ietf_attr_names, this->type.type);
 			*offset = this->offset;
+			sw_record->destroy(sw_record);
 			reader->destroy(reader);
 
 			return FAILED;
 		}
 
-		if (this->type.type == IETF_ATTR_SW_EVENTS &&
-			!reader->read_data32(reader, &record))
-		{
-			goto end;
-		}
-		data_model = pen_type_create(data_model_pen, data_model_type);
-		sw_record = swima_record_create(record_id, sw_id, sw_locator);
-		sw_record->set_data_model(sw_record, data_model);
-		sw_record->set_source_id(sw_record, source_id);
-		sw_record->set_record(sw_record, record);
 		sw_event = swima_event_create(eid, timestamp, action, sw_record);
 		this->events->add(this->events, sw_event);
 		this->offset += this->value.len - reader->remaining(reader);

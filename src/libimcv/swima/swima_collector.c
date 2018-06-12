@@ -13,6 +13,8 @@
  * for more details.
  */
 
+#define _GNU_SOURCE /* for asprintf() */
+
 #include "swima_collector.h"
 
 #include <swid_gen/swid_gen.h>
@@ -319,7 +321,7 @@ static status_t generate_tags(private_swima_collector_t *this,
 static bool collect_tags(private_swima_collector_t *this, char *pathname,
 						 swima_inventory_t *targets, bool is_swidtag_dir)
 {
-	char *rel_name, *abs_name, *suffix, *pos;
+	char *rel_name, *abs_name, *suffix, *pos, *uri;
 	chunk_t *swid_tag, sw_id, sw_locator;
 	swima_record_t *sw_record;
 	struct stat st;
@@ -433,8 +435,12 @@ static bool collect_tags(private_swima_collector_t *this, char *pathname,
 		}
 		DBG2(DBG_IMC, "  %s", rel_name);
 
+		sw_locator = chunk_empty;
 		pos = strstr(pathname, "/swidtag");
-		sw_locator = pos ? chunk_create(pathname, pos - pathname) : chunk_empty;
+		if (pos && asprintf(&uri, "file://%.*s", pos - pathname, pathname) > 0)
+		{
+			sw_locator = chunk_from_str(uri);
+		}
 		sw_record = swima_record_create(0, sw_id, sw_locator);
 		sw_record->set_source_id(sw_record, SOURCE_ID_COLLECTOR);
 		if (!this->sw_id_only)
@@ -442,8 +448,10 @@ static bool collect_tags(private_swima_collector_t *this, char *pathname,
 			sw_record->set_record(sw_record, *swid_tag);
 		}
 		this->inventory->add(this->inventory, sw_record);
+
 		chunk_unmap(swid_tag);
 		chunk_free(&sw_id);
+		chunk_free(&sw_locator);
 	}
 	success = TRUE;
 

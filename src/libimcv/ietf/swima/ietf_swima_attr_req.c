@@ -26,7 +26,7 @@ typedef struct private_ietf_swima_attr_req_t private_ietf_swima_attr_req_t;
 
 /**
  * SW Request
- * see section 5.7 of IETF SW Inventory Message and Attributes for PA-TNC
+ * see section 5.7 of RFC 8412 SWIMA
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -191,7 +191,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 			return FAILED;
 		}
 		*offset += 2 + sw_id.len;
-		
+
 		sw_record = swima_record_create(0, sw_id, chunk_empty);
 		this->targets->add(this->targets, sw_record);
 	}

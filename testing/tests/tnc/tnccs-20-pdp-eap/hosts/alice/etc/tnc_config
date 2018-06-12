@@ -1,4 +1,4 @@
-#IMV configuration file for strongSwan client 
+#IMV configuration file for strongSwan client
 
 IMV "OS"	/usr/local/lib/ipsec/imcvs/imv-os.so
-IMV "SWID"	/usr/local/lib/ipsec/imcvs/imv-swid.so
+IMV "SWIMA"	/usr/local/lib/ipsec/imcvs/imv-swima.so

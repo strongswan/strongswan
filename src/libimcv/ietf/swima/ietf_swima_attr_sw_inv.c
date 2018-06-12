@@ -26,7 +26,7 @@ typedef struct private_ietf_swima_attr_sw_inv_t private_ietf_swima_attr_sw_inv_t
 
 /**
  * Software [Identifier] Inventory
- * see sections 5.8/5.10 of IETF SW Inventory Message and Attributes for PA-TNC
+ * see sections 5.8/5.10 of RFC 8412 SWIMA
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -43,7 +43,9 @@ typedef struct private_ietf_swima_attr_sw_inv_t private_ietf_swima_attr_sw_inv_t
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |              Data Model Type PEN              |Data Model Type|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  | Source ID Num |  Software Identifier Length   |Software Id (v)|
+ *  | Source ID Num |   Reserved    |  Software Identifier Length   |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |             Software Identifier (Variable Length)             |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |    Software Locator Length    |  Software Locator (Var. Len)  |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -148,15 +150,18 @@ METHOD(pa_tnc_attr_t, set_noskip_flag,void,
 	this->noskip_flag = noskip;
 }
 
+/**
+ * This function is shared with ietf_swima_attr_sw_ev.c
+ **/
+extern void ietf_swima_attr_sw_ev_build_sw_record(bio_writer_t *writer,
+			uint8_t action,	swima_record_t *sw_record, bool has_record);
+
 METHOD(pa_tnc_attr_t, build, void,
 	private_ietf_swima_attr_sw_inv_t *this)
 {
 	bio_writer_t *writer;
 	swima_record_t *sw_record;
-	chunk_t sw_id, sw_locator, record;
-	pen_type_t data_model;
-	uint32_t record_id, last_eid, eid_epoch;
-	uint8_t source_id;
+	uint32_t last_eid, eid_epoch;
 	enumerator_t *enumerator;
 
 	if (this->value.ptr)
@@ -175,23 +180,8 @@ METHOD(pa_tnc_attr_t, build, void,
 	enumerator = this->inventory->create_enumerator(this->inventory);
 	while (enumerator->enumerate(enumerator, &sw_record))
 	{
-		record_id  = sw_record->get_record_id(sw_record);
-		data_model = sw_record->get_data_model(sw_record);
-		source_id  = sw_record->get_source_id(sw_record);
-		sw_id      = sw_record->get_sw_id(sw_record, &sw_locator);
-
-		writer->write_uint32(writer, record_id);
-		writer->write_uint24(writer, data_model.vendor_id);
-		writer->write_uint8 (writer, data_model.type);
-		writer->write_uint8 (writer, source_id);
-		writer->write_data16(writer, sw_id);
-		writer->write_data16(writer, sw_locator);
-
-		if (this->type.type == IETF_ATTR_SW_INVENTORY)
-		{
-			record = sw_record->get_record(sw_record);
-			writer->write_data32(writer, record);
-		}
+		ietf_swima_attr_sw_ev_build_sw_record(writer, 0x00, sw_record,
+							this->type.type == IETF_ATTR_SW_INVENTORY);
 	}
 	enumerator->destroy(enumerator);
 
@@ -201,14 +191,17 @@ METHOD(pa_tnc_attr_t, build, void,
 	writer->destroy(writer);
 }
 
+/**
+ * This function is shared with ietf_swima_attr_sw_ev.c
+ **/
+extern bool ietf_swima_attr_sw_ev_process_sw_record(bio_reader_t *reader,
+			uint8_t *action, swima_record_t **sw_record, bool has_record);
+
 METHOD(pa_tnc_attr_t, process, status_t,
 	private_ietf_swima_attr_sw_inv_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
-	uint32_t data_model_pen, record_id, last_eid, eid_epoch;
-	uint8_t  data_model_type, source_id;
-	pen_type_t data_model;
-	chunk_t sw_id, sw_locator, record;
+	uint32_t last_eid, eid_epoch;
 	swima_record_t *sw_record;
 	status_t status = NEED_MORE;
 
@@ -241,27 +234,12 @@ METHOD(pa_tnc_attr_t, process, status_t,
 
 	while (this->record_count)
 	{
-		if (!reader->read_uint32(reader, &record_id) ||
-			!reader->read_uint24(reader, &data_model_pen) ||
-			!reader->read_uint8 (reader, &data_model_type) ||
-			!reader->read_uint8 (reader, &source_id) ||
-			!reader->read_data16(reader, &sw_id) ||
-			!reader->read_data16(reader, &sw_locator))
+		if (!ietf_swima_attr_sw_ev_process_sw_record(reader, NULL, &sw_record,
+								this->type.type == IETF_ATTR_SW_INVENTORY))
 		{
 			goto end;
 		}
-		record = chunk_empty;
 
-		if (this->type.type == IETF_ATTR_SW_INVENTORY &&
-			!reader->read_data32(reader, &record))
-		{
-			goto end;
-		}
-		data_model = pen_type_create(data_model_pen, data_model_type);
-		sw_record = swima_record_create(record_id, sw_id, sw_locator);
-		sw_record->set_data_model(sw_record, data_model);
-		sw_record->set_source_id(sw_record, source_id);
-		sw_record->set_record(sw_record, record);
 		this->inventory->add(this->inventory, sw_record);
 		this->offset += this->value.len - reader->remaining(reader);
 		this->value = reader->peek(reader);

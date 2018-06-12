@@ -1,8 +1,0 @@
-libimcv.plugins.imc-swid.swid_directory = ${prefix}/share
-	Directory where SWID tags are located.
-
-libimcv.plugins.imc-swid.swid_pretty = no
-	Generate XML-encoded SWID tags with pretty indentation.
-
-libimcv.plugins.imc-swid.swid_full = no
-	Include file information in the XML-encoded SWID tags.
