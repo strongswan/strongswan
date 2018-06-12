@@ -32,7 +32,7 @@ typedef enum ietf_attr_t ietf_attr_t;
  */
 enum ietf_attr_t {
 
-	/* RFC 5792 */
+	/* RFC 5792 PA-TNC */
 	IETF_ATTR_TESTING =                            0,
 	IETF_ATTR_ATTRIBUTE_REQUEST =                  1,
 	IETF_ATTR_PRODUCT_INFORMATION =                2,
@@ -47,7 +47,7 @@ enum ietf_attr_t {
 	IETF_ATTR_FORWARDING_ENABLED =                11,
 	IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED =       12,
 
-	/* draft-ietf-sacm-nea-swid-patnc */
+	/* RFC 8412 SWIMA */
 	IETF_ATTR_SWIMA_REQUEST =                     13,
 	IETF_ATTR_SW_ID_INVENTORY =                   14,
 	IETF_ATTR_SW_ID_EVENTS =                      15,

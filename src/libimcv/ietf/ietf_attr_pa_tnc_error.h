@@ -39,7 +39,7 @@ enum  pa_tnc_error_code_t {
 	PA_ERROR_ATTR_TYPE_NOT_SUPPORTED =          3,
 	PA_ERROR_PA_TNC_MSG_ROOF =                  3,
 
-	/* draft-ietf-sacm-nea-swid-patnc (SWIMA) */
+	/* RFC 8412 SWIMA */
 	PA_ERROR_SWIMA =                            4,
 	PA_ERROR_SWIMA_SUBSCRIPTION_DENIED =        5,
 	PA_ERROR_SWIMA_RESPONSE_TOO_LARGE =         6,

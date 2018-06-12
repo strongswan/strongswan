@@ -26,7 +26,7 @@ typedef struct private_ietf_swima_attr_sw_inv_t private_ietf_swima_attr_sw_inv_t
 
 /**
  * Software [Identifier] Inventory
- * see sections 5.8/5.10 of IETF SW Inventory Message and Attributes for PA-TNC
+ * see sections 5.8/5.10 of RFC 8412 SWIMA
  *
  *                       1                   2                   3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
