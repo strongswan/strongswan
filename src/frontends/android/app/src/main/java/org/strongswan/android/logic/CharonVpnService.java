@@ -402,9 +402,10 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		int s = R.string.state_disabled;
 		if (error != ErrorState.NO_ERROR)
 		{
-			s = R.string.state_error;
+			s = mService.getErrorText();
 			builder.setSmallIcon(R.drawable.ic_notification_warning);
 			builder.setColor(ContextCompat.getColor(this, R.color.error_text));
+			builder.setContentText(getString(R.string.tap_for_details));
 		}
 		else
 		{
@@ -438,7 +439,10 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 																  PendingIntent.FLAG_UPDATE_CURRENT);
 				builder.addAction(R.drawable.ic_notification_disconnect, getString(R.string.disconnect), pending);
 			}
-			builder.setContentText(name);
+			if (error == ErrorState.NO_ERROR)
+			{
+				builder.setContentText(name);
+			}
 			builder.setPublicVersion(buildNotification(true));
 		}
 

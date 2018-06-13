@@ -263,31 +263,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		enableActionButton(null);
 		mStateView.setText(R.string.state_error);
 		mStateView.setTextColor(mColorStateError);
-		switch (error)
-		{
-			case AUTH_FAILED:
-				if (imcState == ImcState.BLOCK)
-				{
-					showError(R.string.error_assessment_failed);
-				}
-				else
-				{
-					showError(R.string.error_auth_failed);
-				}
-				break;
-			case PEER_AUTH_FAILED:
-				showError(R.string.error_peer_auth_failed);
-				break;
-			case LOOKUP_FAILED:
-				showError(R.string.error_lookup_failed);
-				break;
-			case UNREACHABLE:
-				showError(R.string.error_unreachable);
-				break;
-			default:
-				showError(R.string.error_generic);
-				break;
-		}
+		showError(mService.getErrorText());
 		return true;
 	}
 

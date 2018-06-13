@@ -22,6 +22,7 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 
+import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
@@ -164,6 +165,35 @@ public class VpnStateService extends Service
 	public ErrorState getErrorState()
 	{	/* only updated from the main thread so no synchronization needed */
 		return mError;
+	}
+
+	/**
+	 * Get a description of the current error, if any.
+	 *
+	 * @return error description text id
+	 */
+	public int getErrorText()
+	{
+		switch (mError)
+		{
+			case AUTH_FAILED:
+				if (mImcState == ImcState.BLOCK)
+				{
+					return R.string.error_assessment_failed;
+				}
+				else
+				{
+					return R.string.error_auth_failed;
+				}
+			case PEER_AUTH_FAILED:
+				return R.string.error_peer_auth_failed;
+			case LOOKUP_FAILED:
+				return R.string.error_lookup_failed;
+			case UNREACHABLE:
+				return R.string.error_unreachable;
+			default:
+				return R.string.error_generic;
+		}
 	}
 
 	/**
