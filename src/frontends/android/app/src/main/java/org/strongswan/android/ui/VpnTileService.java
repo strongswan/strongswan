@@ -32,6 +32,7 @@ import android.service.quicksettings.TileService;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnType;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.utils.Constants;
 
@@ -131,6 +132,10 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 			{
 				profile = getProfile();
 			}
+			else
+			{   /* always get the plain profile without cached password */
+				profile = mDataSource.getVpnProfile(profile.getId());
+			}
 			/* reconnect the profile in case of an error */
 			if (mService.getErrorState() == VpnStateService.ErrorState.NO_ERROR)
 			{
@@ -163,7 +168,15 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 				intent.setAction(VpnProfileControlActivity.START_PROFILE);
 				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_ID, profile.getUUID().toString());
-				startActivity(intent);
+				if (profile.getVpnType().has(VpnType.VpnTypeFeature.USER_PASS) &&
+					profile.getPassword() == null)
+				{	/* the user will have to enter the password, so collapse the drawer */
+					startActivityAndCollapse(intent);
+				}
+				else
+				{
+					startActivity(intent);
+				}
 				return;
 			}
 		}
