@@ -179,12 +179,12 @@
     <string name="login_username">Użytkownik</string>
     <string name="login_password">Hasło</string>
     <string name="login_confirm">Połącz</string>
-    <string name="error_introduction">Nie udało się utworzyć tunelu VPN:</string>
+    <string name="error_format">Nie udało się utworzyć tunelu VPN: %1$s.</string>
     <string name="error_lookup_failed">Nie znaleziono adresu serwer</string>
     <string name="error_unreachable">Serwer jest nieosiągalna</string>
     <string name="error_peer_auth_failed">Błąd przy weryfikacji serwer</string>
     <string name="error_auth_failed">Błąd przy autoryzacji użytkownika</string>
-    <string name="error_assessment_failed">Security assessment failed.</string>
+    <string name="error_assessment_failed">Security assessment failed</string>
     <string name="error_generic">Nieznany błąd w czasie połączenia</string>
     <string name="vpn_connected">Połączenie z VPN</string>
     <string name="vpn_profile_connected">Ten profil VPN jest obecnie połaczony!</string>

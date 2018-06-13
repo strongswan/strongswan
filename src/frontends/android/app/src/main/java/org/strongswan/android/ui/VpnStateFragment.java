@@ -323,7 +323,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		final boolean show_instructions = mService.getImcState() == ImcState.BLOCK && !instructions.isEmpty();
 		int text = show_instructions ? R.string.show_remediation_instructions : R.string.show_log;
 
-		mErrorText.setText(getString(R.string.error_introduction) + " " + getString(textid));
+		mErrorText.setText(getString(R.string.error_format, getString(textid)));
 		mErrorDetails.setText(text);
 		mErrorDetails.setOnClickListener(new OnClickListener()
 		{
