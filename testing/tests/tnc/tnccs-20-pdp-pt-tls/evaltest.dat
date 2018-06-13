@@ -20,6 +20,6 @@ alice::cat /var/log/daemon.log::failed to collect SW ID events, fallback to SW I
 alice::cat /var/log/daemon.log::received software ID inventory with ... items for request 9 at last eid 1 of epoch::YES
 alice::cat /var/log/daemon.log::1 SWID tag target::YES
 alice::cat /var/log/daemon.log::received software inventory with 1 item for request 9 at last eid 1 of epoch::YES
-alice::cat /var/log/daemon.log::strongswan.org__strongSwan.*@ /usr/local/share/strongswan::YES
+alice::cat /var/log/daemon.log::strongswan.org__strongSwan.*@ file:///usr/local/share/strongswan::YES
 alice::cat /var/log/daemon.log::successful system command: ssh root@moon.*logger -t charon-systemd -p auth.alert.*host with IP address 192.168.0.100 is allowed::YES
 moon::cat /var/log/auth.log::host with IP address 192.168.0.100 is allowed::YES
