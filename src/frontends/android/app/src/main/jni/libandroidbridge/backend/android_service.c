@@ -794,7 +794,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 		{
 			peer_cfg->destroy(peer_cfg);
 			charonservice->update_status(charonservice,
-										 CHARONSERVICE_GENERIC_ERROR);
+										 CHARONSERVICE_CERTIFICATE_UNAVAILABLE);
 			return JOB_REQUEUE_NONE;
 		}
 	}

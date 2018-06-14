@@ -188,6 +188,7 @@
     <string name="error_assessment_failed">Security assessment failed</string>
     <string name="error_generic">Nieznany błąd w czasie połączenia</string>
     <string name="error_password_missing">Password unavailable</string>
+    <string name="error_certificate_unavailable">Client certificate unavailable</string>
     <string name="vpn_connected">Połączenie z VPN</string>
     <string name="vpn_profile_connected">Ten profil VPN jest obecnie połaczony!</string>
     <string name="reconnect">Połączyć ponownie</string>

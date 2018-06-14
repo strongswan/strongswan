@@ -62,6 +62,7 @@ public class VpnStateService extends Service
 		UNREACHABLE,
 		GENERIC_ERROR,
 		PASSWORD_MISSING,
+		CERTIFICATE_UNAVAILABLE,
 	}
 
 	/**
@@ -194,6 +195,8 @@ public class VpnStateService extends Service
 				return R.string.error_unreachable;
 			case PASSWORD_MISSING:
 				return R.string.error_password_missing;
+			case CERTIFICATE_UNAVAILABLE:
+				return R.string.error_certificate_unavailable;
 			default:
 				return R.string.error_generic;
 		}

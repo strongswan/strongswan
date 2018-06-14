@@ -128,7 +128,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	static final int STATE_PEER_AUTH_ERROR = 4;
 	static final int STATE_LOOKUP_ERROR = 5;
 	static final int STATE_UNREACHABLE_ERROR = 6;
-	static final int STATE_GENERIC_ERROR = 7;
+	static final int STATE_CERTIFICATE_UNAVAILABLE = 7;
+	static final int STATE_GENERIC_ERROR = 8;
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId)
@@ -589,6 +590,9 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			case STATE_UNREACHABLE_ERROR:
 				setErrorDisconnect(ErrorState.UNREACHABLE);
 				break;
+			case STATE_CERTIFICATE_UNAVAILABLE:
+				setErrorDisconnect(ErrorState.CERTIFICATE_UNAVAILABLE);
+				break;
 			case STATE_GENERIC_ERROR:
 				setErrorDisconnect(ErrorState.GENERIC_ERROR);
 				break;
@@ -707,7 +711,6 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 * @return the private key
 	 * @throws InterruptedException
 	 * @throws KeyChainException
-	 * @throws CertificateEncodingException
 	 */
 	private PrivateKey getUserKey() throws KeyChainException, InterruptedException
 	{
