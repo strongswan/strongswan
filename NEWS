@@ -7,6 +7,9 @@ strongswan-5.7.0
 - Implementation of RFC 8412 "Software Inventory Message and Attributes (SWIMA)
   for PA-TNC"
 
+- Added support for fuzzing the PA-TNC (RFC 5792) and PB-TNC (RFC 5793) NEA
+  protocols on Google's OSS-Fuzz infrastructure.
+
 
 strongswan-5.6.3
 ----------------
