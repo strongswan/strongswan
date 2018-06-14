@@ -24,7 +24,7 @@
 
     <application
         android:name=".logic.StrongSwanApplication"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/ApplicationTheme"
         android:allowBackup="false" >
