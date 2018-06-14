@@ -61,6 +61,7 @@ public class VpnStateService extends Service
 		LOOKUP_FAILED,
 		UNREACHABLE,
 		GENERIC_ERROR,
+		PASSWORD_MISSING,
 	}
 
 	/**
@@ -191,6 +192,8 @@ public class VpnStateService extends Service
 				return R.string.error_lookup_failed;
 			case UNREACHABLE:
 				return R.string.error_unreachable;
+			case PASSWORD_MISSING:
+				return R.string.error_password_missing;
 			default:
 				return R.string.error_generic;
 		}

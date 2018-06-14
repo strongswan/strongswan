@@ -187,6 +187,7 @@
     <string name="error_auth_failed">User authentication failed</string>
     <string name="error_assessment_failed">Security assessment failed</string>
     <string name="error_generic">Unspecified failure while connecting</string>
+    <string name="error_password_missing">Password unavailable</string>
     <string name="vpn_connected">VPN connected</string>
     <string name="vpn_profile_connected">This VPN profile is currently connected!</string>
     <string name="reconnect">Reconnect</string>

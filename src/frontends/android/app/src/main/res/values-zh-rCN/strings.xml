@@ -184,6 +184,7 @@
     <string name="error_auth_failed">用户鉴权失败</string>
     <string name="error_assessment_failed">可靠性评估失败</string>
     <string name="error_generic">连接中遭遇未知失败</string>
+    <string name="error_password_missing">Password unavailable</string>
     <string name="vpn_connected">VPN已连接</string>
     <string name="vpn_profile_connected">此VPN配置目前已连接。</string>
     <string name="reconnect">重连</string>
