@@ -1046,18 +1046,32 @@ METHOD(tpm_tss_t, get_data, bool,
 	private_tpm_tss_tss2_t *this, uint32_t hierarchy, uint32_t handle,
 	chunk_t pin, chunk_t *data)
 {
-	uint16_t nv_size, nv_offset = 0;
+	uint16_t max_data_size, nv_size, nv_offset = 0;
 	uint32_t rval;
 
+	TPMS_CAPABILITY_DATA cap_data;
+	TPMI_YES_NO more_data;
 	TPM2B_NAME nv_name = { { sizeof(TPM2B_NAME)-2, } };
 	TPM2B_NV_PUBLIC nv_public = { { 0, } };
-	TPM2B_MAX_NV_BUFFER nv_data = { { sizeof(TPM2B_MAX_NV_BUFFER)-2, } };
+	TPM2B_MAX_NV_BUFFER nv_data = { { MAX_NV_BUFFER_SIZE, } };
 	TPMS_AUTH_COMMAND  session_data_cmd;
 	TPMS_AUTH_RESPONSE session_data_rsp;
 	TSS2_SYS_CMD_AUTHS sessions_data_cmd;
 	TSS2_SYS_RSP_AUTHS sessions_data_rsp;
 	TPMS_AUTH_COMMAND  *session_data_cmd_array[1];
 	TPMS_AUTH_RESPONSE *session_data_rsp_array[1];
+
+	/* query maximum TPM data transmission size */
+	rval = Tss2_Sys_GetCapability(this->sys_context, 0, TPM_CAP_TPM_PROPERTIES,
+				TPM_PT_NV_BUFFER_MAX, 1, &more_data, &cap_data, 0);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS,"%s Tss2_Sys_GetCapability failed for "
+					 "TPM_CAP_TPM_PROPERTIES: 0x%06x", LABEL, rval);
+		return FALSE;
+	}
+	max_data_size = min(cap_data.data.tpmProperties.tpmProperty[0].value,
+						MAX_NV_BUFFER_SIZE);
 
 	/* get size of NV object */
 	rval = Tss2_Sys_NV_ReadPublic(this->sys_context, handle, 0, &nv_public,
@@ -1093,11 +1107,11 @@ METHOD(tpm_tss_t, get_data, bool,
 	}
 	*( (uint8_t *)((void *)&session_data_cmd.sessionAttributes ) ) = 0;
 
-	/* read NV data an NV buffer block at a time */
+	/* read NV data a maximum data size block at a time */
 	while (nv_size > 0)
 	{
 		rval = Tss2_Sys_NV_Read(this->sys_context, hierarchy, handle,
-					&sessions_data_cmd, min(nv_size, MAX_NV_BUFFER_SIZE),
+					&sessions_data_cmd, min(nv_size, max_data_size),
 					nv_offset, &nv_data, &sessions_data_rsp);
 
 		if (rval != TPM_RC_SUCCESS)
