@@ -19,11 +19,13 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 
@@ -238,6 +240,26 @@ public class VpnStateService extends Service
 		Context context = getApplicationContext();
 		Intent intent = new Intent(context, CharonVpnService.class);
 		intent.setAction(CharonVpnService.DISCONNECT_ACTION);
+		context.startService(intent);
+	}
+
+	/**
+	 * Reconnect to the previous profile.
+	 */
+	public void reconnect()
+	{
+		if (mProfile == null)
+		{
+			return;
+		}
+		Bundle profileInfo = new Bundle();
+		profileInfo.putLong(VpnProfileDataSource.KEY_ID, mProfile.getId());
+		/* pass the previous password along */
+		profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, mProfile.getPassword());
+		/* we assume we have the necessary permission */
+		Context context = getApplicationContext();
+		Intent intent = new Intent(context, CharonVpnService.class);
+		intent.putExtras(profileInfo);
 		context.startService(intent);
 	}
 
