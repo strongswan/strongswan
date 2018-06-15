@@ -60,10 +60,10 @@
             </Button>
 
             <Button
-                android:id="@+id/error_details"
+                android:id="@+id/retry"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/show_log"
+                android:text="@string/retry"
                 android:textColor="@color/primary"
                 android:textSize="14sp"
                 android:textStyle="bold"

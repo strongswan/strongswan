@@ -197,6 +197,7 @@
     <string name="disconnect_question">VPN Verbindung trennen?</string>
     <string name="disconnect_active_connection">Dies trennt die aktuelle VPN Verbindung!</string>
     <string name="connect">Verbinden</string>
+    <string name="retry">Wiederholen</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">VPN umschalten</string>

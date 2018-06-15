@@ -194,6 +194,7 @@
     <string name="disconnect_question">Disconnect VPN?</string>
     <string name="disconnect_active_connection">This will disconnect the active VPN connection!</string>
     <string name="connect">连接</string>
+    <string name="retry">Retry</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">Toggle VPN</string>

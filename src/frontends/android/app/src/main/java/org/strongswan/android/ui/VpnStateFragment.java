@@ -61,7 +61,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	private ProgressBar mProgress;
 	private LinearLayout mErrorView;
 	private TextView mErrorText;
-	private Button mErrorDetails;
+	private Button mErrorRetry;
 	private Button mDismissError;
 	private long mErrorConnectionID;
 	private VpnStateService mService;
@@ -79,6 +79,17 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 			mService = ((VpnStateService.LocalBinder)service).getService();
 			mService.registerListener(VpnStateFragment.this);
 			updateView();
+		}
+	};
+	private OnClickListener mDisconnectListener = new OnClickListener()
+	{
+		@Override
+		public void onClick(View v)
+		{
+			if (mService != null)
+			{
+				mService.disconnect();
+			}
 		}
 	};
 
@@ -117,22 +128,11 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		View view = inflater.inflate(R.layout.vpn_state_fragment, null);
 
 		mActionButton = (Button)view.findViewById(R.id.action);
-		mActionButton.setOnClickListener(new OnClickListener()
-		{
-			@Override
-			public void onClick(View v)
-			{
-				if (mService != null)
-				{
-					mService.disconnect();
-				}
-			}
-		});
 		enableActionButton(null);
 
 		mErrorView = view.findViewById(R.id.vpn_error);
 		mErrorText = view.findViewById(R.id.vpn_error_text);
-		mErrorDetails = view.findViewById(R.id.error_details);
+		mErrorRetry = view.findViewById(R.id.retry);
 		mDismissError = view.findViewById(R.id.dismiss_error);
 		mProgress = (ProgressBar)view.findViewById(R.id.progress);
 		mStateView = (TextView)view.findViewById(R.id.vpn_state);
@@ -140,14 +140,13 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		mProfileView = (TextView)view.findViewById(R.id.vpn_profile_label);
 		mProfileNameView = (TextView)view.findViewById(R.id.vpn_profile_name);
 
-		mDismissError.setOnClickListener(new OnClickListener()
-		{
-			@Override
-			public void onClick(View v)
+		mErrorRetry.setOnClickListener(v -> {
+			if (mService != null)
 			{
-				clearError();
+				mService.reconnect();
 			}
 		});
+		mDismissError.setOnClickListener(v -> clearError());
 
 		return view;
 	}
@@ -255,15 +254,19 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 			mErrorView.setVisibility(View.GONE);
 			return false;
 		}
-
 		mErrorConnectionID = connectionID;
 		mProfileNameView.setText(name);
 		showProfile(true);
 		mProgress.setVisibility(View.GONE);
-		enableActionButton(null);
 		mStateView.setText(R.string.state_error);
 		mStateView.setTextColor(mColorStateError);
-		showError(mService.getErrorText());
+		enableActionButton(getString(R.string.show_log));
+		mActionButton.setOnClickListener(v -> {
+			Intent intent = new Intent(getActivity(), LogActivity.class);
+			startActivity(intent);
+		});
+		mErrorText.setText(getString(R.string.error_format, getString(mService.getErrorText())));
+		mErrorView.setVisibility(View.VISIBLE);
 		return true;
 	}
 
@@ -278,6 +281,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		mActionButton.setText(text);
 		mActionButton.setEnabled(text != null);
 		mActionButton.setVisibility(text != null ? View.VISIBLE : View.GONE);
+		mActionButton.setOnClickListener(mDisconnectListener);
 	}
 
 	private void clearError()
@@ -291,35 +295,5 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 			}
 		}
 		updateView();
-	}
-
-	private void showError(int textid)
-	{
-		final List<RemediationInstruction> instructions = mService.getRemediationInstructions();
-		final boolean show_instructions = mService.getImcState() == ImcState.BLOCK && !instructions.isEmpty();
-		int text = show_instructions ? R.string.show_remediation_instructions : R.string.show_log;
-
-		mErrorText.setText(getString(R.string.error_format, getString(textid)));
-		mErrorDetails.setText(text);
-		mErrorDetails.setOnClickListener(new OnClickListener()
-		{
-			@Override
-			public void onClick(View v)
-			{
-				Intent intent;
-				if (show_instructions)
-				{
-					intent = new Intent(getActivity(), RemediationInstructionsActivity.class);
-					intent.putParcelableArrayListExtra(RemediationInstructionsFragment.EXTRA_REMEDIATION_INSTRUCTIONS,
-							new ArrayList<RemediationInstruction>(instructions));
-				}
-				else
-				{
-					intent = new Intent(getActivity(), LogActivity.class);
-				}
-				startActivity(intent);
-			}
-		});
-		mErrorView.setVisibility(View.VISIBLE);
 	}
 }
