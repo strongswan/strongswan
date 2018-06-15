@@ -41,11 +41,6 @@ import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.VpnStateService.VpnStateListener;
-import org.strongswan.android.logic.imc.ImcState;
-import org.strongswan.android.logic.imc.RemediationInstruction;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class VpnStateFragment extends Fragment implements VpnStateListener
 {
@@ -62,7 +57,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	private LinearLayout mErrorView;
 	private TextView mErrorText;
 	private Button mErrorRetry;
-	private Button mDismissError;
+	private Button mShowLog;
 	private long mErrorConnectionID;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection()
@@ -128,12 +123,13 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		View view = inflater.inflate(R.layout.vpn_state_fragment, null);
 
 		mActionButton = (Button)view.findViewById(R.id.action);
+		mActionButton.setOnClickListener(v -> clearError());
 		enableActionButton(null);
 
 		mErrorView = view.findViewById(R.id.vpn_error);
 		mErrorText = view.findViewById(R.id.vpn_error_text);
 		mErrorRetry = view.findViewById(R.id.retry);
-		mDismissError = view.findViewById(R.id.dismiss_error);
+		mShowLog = view.findViewById(R.id.show_log);
 		mProgress = (ProgressBar)view.findViewById(R.id.progress);
 		mStateView = (TextView)view.findViewById(R.id.vpn_state);
 		mColorStateBase = mStateView.getCurrentTextColor();
@@ -146,7 +142,10 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 				mService.reconnect();
 			}
 		});
-		mDismissError.setOnClickListener(v -> clearError());
+		mShowLog.setOnClickListener(v -> {
+			Intent intent = new Intent(getActivity(), LogActivity.class);
+			startActivity(intent);
+		});
 
 		return view;
 	}
@@ -194,7 +193,6 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		VpnProfile profile = mService.getProfile();
 		State state = mService.getState();
 		ErrorState error = mService.getErrorState();
-		ImcState imcState = mService.getImcState();
 		String name = "";
 
 		if (getActivity() == null)
@@ -207,12 +205,13 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 			name = profile.getName();
 		}
 
-		if (reportError(connectionID, name, error, imcState))
+		if (reportError(connectionID, name, error))
 		{
 			return;
 		}
 
 		mProfileNameView.setText(name);
+		mProgress.setIndeterminate(true);
 
 		switch (state)
 		{
@@ -247,7 +246,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		}
 	}
 
-	private boolean reportError(long connectionID, String name, ErrorState error, ImcState imcState)
+	private boolean reportError(long connectionID, String name, ErrorState error)
 	{
 		if (error == ErrorState.NO_ERROR)
 		{
@@ -257,15 +256,26 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		mErrorConnectionID = connectionID;
 		mProfileNameView.setText(name);
 		showProfile(true);
-		mProgress.setVisibility(View.GONE);
 		mStateView.setText(R.string.state_error);
 		mStateView.setTextColor(mColorStateError);
-		enableActionButton(getString(R.string.show_log));
-		mActionButton.setOnClickListener(v -> {
-			Intent intent = new Intent(getActivity(), LogActivity.class);
-			startActivity(intent);
-		});
-		mErrorText.setText(getString(R.string.error_format, getString(mService.getErrorText())));
+		enableActionButton(getString(android.R.string.cancel));
+
+		int retry = mService.getRetryIn();
+		if (retry > 0)
+		{
+			mProgress.setIndeterminate(false);
+			mProgress.setMax(mService.getRetryTimeout());
+			mProgress.setProgress(retry);
+			mProgress.setVisibility(View.VISIBLE);
+			mStateView.setText(getResources().getQuantityString(R.plurals.retry_in, retry, retry));
+		}
+		else if (mService.getRetryTimeout() <= 0)
+		{
+			mProgress.setVisibility(View.GONE);
+		}
+
+		String text = getString(R.string.error_format, getString(mService.getErrorText()));
+		mErrorText.setText(text);
 		mErrorView.setVisibility(View.VISIBLE);
 		return true;
 	}
@@ -281,19 +291,17 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		mActionButton.setText(text);
 		mActionButton.setEnabled(text != null);
 		mActionButton.setVisibility(text != null ? View.VISIBLE : View.GONE);
-		mActionButton.setOnClickListener(mDisconnectListener);
 	}
 
 	private void clearError()
 	{
 		if (mService != null)
 		{
+			mService.disconnect();
 			if (mService.getConnectionID() == mErrorConnectionID)
 			{
-				mService.disconnect();
 				mService.setError(ErrorState.NO_ERROR);
 			}
 		}
-		updateView();
 	}
 }

@@ -195,6 +195,11 @@
     <string name="disconnect_active_connection">This will disconnect the active VPN connection!</string>
     <string name="connect">連線</string>
     <string name="retry">Retry</string>
+    <plurals name="retry_in">
+        <item quantity="one">Retry in %1$d second</item>
+        <item quantity="other">Retry in %1$d seconds</item>
+    </plurals>
+    <string name="cancel_retry">Cancel retry</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">Toggle VPN</string>

@@ -198,6 +198,11 @@
     <string name="disconnect_active_connection">Dies trennt die aktuelle VPN Verbindung!</string>
     <string name="connect">Verbinden</string>
     <string name="retry">Wiederholen</string>
+    <plurals name="retry_in">
+        <item quantity="one">Wiederholen in %1$d Sekunde</item>
+        <item quantity="other">Wiederholen in %1$d Sekunden</item>
+    </plurals>
+    <string name="cancel_retry">Wiederholen abbrechen</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">VPN umschalten</string>

@@ -22,6 +22,8 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
+import android.os.SystemClock;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
@@ -29,6 +31,7 @@ import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 
+import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -46,6 +49,10 @@ public class VpnStateService extends Service
 	private ErrorState mError = ErrorState.NO_ERROR;
 	private ImcState mImcState = ImcState.UNKNOWN;
 	private final LinkedList<RemediationInstruction> mRemediationInstructions = new LinkedList<RemediationInstruction>();
+	private static long RETRY_INTERVAL = 1000;
+	private static int RETRY_MSG = 1;
+	private long mRetryTimeout;
+	private long mRetryIn;
 
 	public enum State
 	{
@@ -93,7 +100,7 @@ public class VpnStateService extends Service
 	{
 		/* this handler allows us to notify listeners from the UI thread and
 		 * not from the threads that actually report any state changes */
-		mHandler = new Handler();
+		mHandler = new RetryHandler(this);
 	}
 
 	@Override
@@ -149,6 +156,24 @@ public class VpnStateService extends Service
 	public long getConnectionID()
 	{	/* only updated from the main thread so no synchronization needed */
 		return mConnectionID;
+	}
+
+	/**
+	 * Get the total number of seconds until there is an automatic retry to reconnect.
+	 * @return total number of seconds until the retry
+	 */
+	public int getRetryTimeout()
+	{
+		return (int)(mRetryTimeout / 1000);
+	}
+
+	/**
+	 * Get the number of seconds until there is an automatic retry to reconnect.
+	 * @return number of seconds until the retry
+	 */
+	public int getRetryIn()
+	{
+		return (int)(mRetryIn / 1000);
 	}
 
 	/**
@@ -231,6 +256,7 @@ public class VpnStateService extends Service
 	 */
 	public void disconnect()
 	{
+		resetRetryTimer();
 		/* as soon as the TUN device is created by calling establish() on the
 		 * VpnService.Builder object the system binds to the service and keeps
 		 * bound until the file descriptor of the TUN device is closed.  thus
@@ -310,6 +336,7 @@ public class VpnStateService extends Service
 			@Override
 			public Boolean call() throws Exception
 			{
+				resetRetryTimer();
 				VpnStateService.this.mConnectionID++;
 				VpnStateService.this.mProfile = profile;
 				VpnStateService.this.mState = State.CONNECTING;
@@ -359,6 +386,14 @@ public class VpnStateService extends Service
 			{
 				if (VpnStateService.this.mError != error)
 				{
+					if (VpnStateService.this.mError == ErrorState.NO_ERROR)
+					{
+						setRetryTimer(error);
+					}
+					else if (error == ErrorState.NO_ERROR)
+					{
+						resetRetryTimer();
+					}
 					VpnStateService.this.mError = error;
 					return true;
 				}
@@ -415,5 +450,93 @@ public class VpnStateService extends Service
 				VpnStateService.this.mRemediationInstructions.add(instruction);
 			}
 		});
+	}
+
+	/**
+	 * Sets the retry timer
+	 */
+	private void setRetryTimer(ErrorState error)
+	{
+		long timeout;
+
+		switch (error)
+		{
+			case AUTH_FAILED:
+				timeout = 20000;
+				break;
+			case PEER_AUTH_FAILED:
+				timeout = 20000;
+				break;
+			case LOOKUP_FAILED:
+				timeout = 10000;
+				break;
+			case UNREACHABLE:
+				timeout = 10000;
+				break;
+			case PASSWORD_MISSING:
+				/* this needs user intervention (entering the password) */
+				timeout = 0;
+				break;
+			case CERTIFICATE_UNAVAILABLE:
+				/* if this is because the device has to be unlocked we might be able to reconnect */
+				timeout = 10000;
+				break;
+			default:
+				timeout = 20000;
+				break;
+		}
+		mRetryTimeout = mRetryIn = timeout;
+		if (timeout <= 0)
+		{
+			return;
+		}
+		mHandler.sendMessageAtTime(mHandler.obtainMessage(RETRY_MSG), SystemClock.uptimeMillis() + RETRY_INTERVAL);
+	}
+
+	/**
+	 * Reset the retry timer
+	 */
+	private void resetRetryTimer()
+	{
+		mRetryTimeout = 0;
+		mRetryIn = 0;
+	}
+
+	/**
+	 * Special Handler subclass that handles the retry countdown (more accurate than CountDownTimer)
+	 */
+	private static class RetryHandler extends Handler {
+		WeakReference<VpnStateService> mService;
+
+		public RetryHandler(VpnStateService service)
+		{
+			mService = new WeakReference<>(service);
+		}
+
+		@Override
+		public void handleMessage(Message msg)
+		{
+			/* handle retry countdown */
+			if (mService.get().mRetryTimeout <= 0)
+			{
+				return;
+			}
+			mService.get().mRetryIn -= RETRY_INTERVAL;
+			if (mService.get().mRetryIn > 0)
+			{
+				/* calculate next interval before notifying listeners */
+				long next = SystemClock.uptimeMillis() + RETRY_INTERVAL;
+
+				for (VpnStateListener listener : mService.get().mListeners)
+				{
+					listener.stateChanged();
+				}
+				sendMessageAtTime(obtainMessage(RETRY_MSG), next);
+			}
+			else
+			{
+				mService.get().reconnect();
+			}
+		}
 	}
 }

@@ -34,6 +34,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="20dp"
+            android:layout_marginRight="20dp"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="12dp"
             android:text="Failed to establish VPN: Server is unreachable"
@@ -48,11 +49,11 @@
             android:gravity="end" >
 
             <Button
-                android:id="@+id/dismiss_error"
+                android:id="@+id/show_log"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="8dp"
-                android:text="@string/dismiss"
+                android:text="@string/show_log"
                 android:textColor="@color/primary"
                 android:textSize="14sp"
                 android:textStyle="bold"
