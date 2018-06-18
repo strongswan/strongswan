@@ -50,7 +50,10 @@ public class VpnStateService extends Service
 	private ImcState mImcState = ImcState.UNKNOWN;
 	private final LinkedList<RemediationInstruction> mRemediationInstructions = new LinkedList<RemediationInstruction>();
 	private static long RETRY_INTERVAL = 1000;
+	/* cap the retry interval at 2 minutes */
+	private static long MAX_RETRY_INTERVAL = 120000;
 	private static int RETRY_MSG = 1;
+	private RetryTimeoutProvider mTimeoutProvider = new RetryTimeoutProvider();
 	private long mRetryTimeout;
 	private long mRetryIn;
 
@@ -270,6 +273,33 @@ public class VpnStateService extends Service
 	}
 
 	/**
+	 * Connect (or reconnect) a profile
+	 * @param profileInfo optional profile info (basically the UUID and password), taken from the
+	 *                    previous profile if null
+	 * @param fromScratch true if this is a manual retry/reconnect or a completely new connection
+	 */
+	public void connect(Bundle profileInfo, boolean fromScratch)
+	{
+		/* we assume we have the necessary permission */
+		Context context = getApplicationContext();
+		Intent intent = new Intent(context, CharonVpnService.class);
+		if (profileInfo == null)
+		{
+			profileInfo = new Bundle();
+			profileInfo.putLong(VpnProfileDataSource.KEY_ID, mProfile.getId());
+			/* pass the previous password along */
+			profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, mProfile.getPassword());
+		}
+		if (fromScratch)
+		{
+			/* reset if this is a manual retry or a new connection */
+			mTimeoutProvider.reset();
+		}
+		intent.putExtras(profileInfo);
+		context.startService(intent);
+	}
+
+	/**
 	 * Reconnect to the previous profile.
 	 */
 	public void reconnect()
@@ -278,15 +308,7 @@ public class VpnStateService extends Service
 		{
 			return;
 		}
-		Bundle profileInfo = new Bundle();
-		profileInfo.putLong(VpnProfileDataSource.KEY_ID, mProfile.getId());
-		/* pass the previous password along */
-		profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, mProfile.getPassword());
-		/* we assume we have the necessary permission */
-		Context context = getApplicationContext();
-		Intent intent = new Intent(context, CharonVpnService.class);
-		intent.putExtras(profileInfo);
-		context.startService(intent);
+		connect(null, true);
 	}
 
 	/**
@@ -361,6 +383,10 @@ public class VpnStateService extends Service
 			@Override
 			public Boolean call() throws Exception
 			{
+				if (state == State.CONNECTED)
+				{	/* reset counter in case there is an error later on */
+					mTimeoutProvider.reset();
+				}
 				if (VpnStateService.this.mState != state)
 				{
 					VpnStateService.this.mState = state;
@@ -457,36 +483,8 @@ public class VpnStateService extends Service
 	 */
 	private void setRetryTimer(ErrorState error)
 	{
-		long timeout;
-
-		switch (error)
-		{
-			case AUTH_FAILED:
-				timeout = 20000;
-				break;
-			case PEER_AUTH_FAILED:
-				timeout = 20000;
-				break;
-			case LOOKUP_FAILED:
-				timeout = 10000;
-				break;
-			case UNREACHABLE:
-				timeout = 10000;
-				break;
-			case PASSWORD_MISSING:
-				/* this needs user intervention (entering the password) */
-				timeout = 0;
-				break;
-			case CERTIFICATE_UNAVAILABLE:
-				/* if this is because the device has to be unlocked we might be able to reconnect */
-				timeout = 10000;
-				break;
-			default:
-				timeout = 20000;
-				break;
-		}
-		mRetryTimeout = mRetryIn = timeout;
-		if (timeout <= 0)
+		mRetryTimeout = mRetryIn = mTimeoutProvider.getTimeout(error);
+		if (mRetryTimeout <= 0)
 		{
 			return;
 		}
@@ -535,8 +533,59 @@ public class VpnStateService extends Service
 			}
 			else
 			{
-				mService.get().reconnect();
+				mService.get().connect(null, false);
 			}
+		}
+	}
+
+	/**
+	 * Class that handles an exponential backoff for retry timeouts
+	 */
+	private static class RetryTimeoutProvider
+	{
+		private long mRetry;
+
+		private long getBaseTimeout(ErrorState error)
+		{
+			switch (error)
+			{
+				case AUTH_FAILED:
+					return 10000;
+				case PEER_AUTH_FAILED:
+					return 5000;
+				case LOOKUP_FAILED:
+					return 5000;
+				case UNREACHABLE:
+					return 5000;
+				case PASSWORD_MISSING:
+					/* this needs user intervention (entering the password) */
+					return 0;
+				case CERTIFICATE_UNAVAILABLE:
+					/* if this is because the device has to be unlocked we might be able to reconnect */
+					return 5000;
+				default:
+					return 10000;
+			}
+		}
+
+		/**
+		 * Called each time a new retry timeout is started. The timeout increases until reset() is
+		 * called and the base timeout is returned again.
+		 * @param error Error state
+		 */
+		public long getTimeout(ErrorState error)
+		{
+			long timeout = (long)(getBaseTimeout(error) * Math.pow(2, mRetry++));
+			/* return the result rounded to seconds */
+			return Math.min((timeout / 1000) * 1000, MAX_RETRY_INTERVAL);
+		}
+
+		/**
+		 * Reset the retry counter.
+		 */
+		public void reset()
+		{
+			mRetry = 0;
 		}
 	}
 }

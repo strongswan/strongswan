@@ -40,7 +40,6 @@ import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
-import org.strongswan.android.logic.CharonVpnService;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.State;
 
@@ -176,9 +175,10 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			case PREPARE_VPN_SERVICE:
 				if (resultCode == RESULT_OK && mProfileInfo != null)
 				{
-					Intent intent = new Intent(this, CharonVpnService.class);
-					intent.putExtras(mProfileInfo);
-					this.startService(intent);
+					if (mService != null)
+					{
+						mService.connect(mProfileInfo, true);
+					}
 					finish();
 				}
 				else
