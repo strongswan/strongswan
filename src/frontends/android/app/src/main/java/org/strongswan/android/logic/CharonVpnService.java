@@ -417,10 +417,30 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			s = mService.getErrorText();
 			builder.setSmallIcon(R.drawable.ic_notification_warning);
 			builder.setColor(ContextCompat.getColor(this, R.color.error_text));
-			builder.setContentText(getString(R.string.tap_for_details));
+
+			if (!publicVersion && profile != null)
+			{
+				int retry = mService.getRetryIn();
+				if (retry > 0)
+				{
+					builder.setContentText(getResources().getQuantityString(R.plurals.retry_in, retry, retry));
+					builder.setProgress(mService.getRetryTimeout(), retry, false);
+				}
+
+				Intent intent = new Intent(getApplicationContext(), VpnProfileControlActivity.class);
+				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+				intent.setAction(VpnProfileControlActivity.START_PROFILE);
+				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_ID, profile.getUUID().toString());
+				PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
+																  PendingIntent.FLAG_UPDATE_CURRENT);
+				builder.addAction(R.drawable.ic_notification_connecting, getString(R.string.retry), pending);
+				add_action = true;
+			}
 		}
 		else
 		{
+			builder.setProgress(0, 0, false);
+
 			switch (state)
 			{
 				case CONNECTING:
