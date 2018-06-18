@@ -331,7 +331,10 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				deinitializeCharon();
 				Log.i(TAG, "charon stopped");
 				mCurrentProfile = null;
-				removeNotification();
+				if (mNextProfile == null)
+				{	/* don't remove the notification if we are connecting to a different profile */
+					removeNotification();
+				}
 			}
 		}
 	}
