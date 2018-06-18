@@ -261,8 +261,9 @@ static const int tm_leap_1970 = 477;
  */
 bool measurement_time_from_utc(time_t *measurement_time, chunk_t utc_time)
 {
-	int tm_year, tm_mon, tm_day, tm_days, tm_hour, tm_min, tm_sec, tm_secs;
+	int tm_year, tm_mon, tm_day, tm_hour, tm_min, tm_sec;
 	int tm_leap_4, tm_leap_100, tm_leap_400, tm_leap;
+	time_t tm_days, tm_secs;
 	char buf[BUF_LEN];
 
 	if (memeq(utc_undefined_time_str, utc_time.ptr, utc_time.len))
