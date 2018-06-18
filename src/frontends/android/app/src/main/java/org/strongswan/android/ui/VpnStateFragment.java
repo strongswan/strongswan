@@ -46,6 +46,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 {
 	private static final String KEY_ERROR_CONNECTION_ID = "error_connection_id";
 
+	private boolean mVisible;
 	private TextView mProfileNameView;
 	private TextView mProfileView;
 	private TextView mStateView;
@@ -72,8 +73,11 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		public void onServiceConnected(ComponentName name, IBinder service)
 		{
 			mService = ((VpnStateService.LocalBinder)service).getService();
-			mService.registerListener(VpnStateFragment.this);
-			updateView();
+			if (mVisible)
+			{
+				mService.registerListener(VpnStateFragment.this);
+				updateView();
+			}
 		}
 	};
 	private OnClickListener mDisconnectListener = new OnClickListener()
@@ -154,6 +158,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	public void onStart()
 	{
 		super.onStart();
+		mVisible = true;
 		if (mService != null)
 		{
 			mService.registerListener(this);
@@ -165,6 +170,7 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	public void onStop()
 	{
 		super.onStop();
+		mVisible = false;
 		if (mService != null)
 		{
 			mService.unregisterListener(this);
