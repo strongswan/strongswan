@@ -469,7 +469,7 @@ static void set_options(char *logfile)
 	lib->settings->set_str(lib->settings,
 					"charon.filelog.%s.time_format", "%b %e %T", logfile);
 	lib->settings->set_bool(lib->settings,
-					"charon.filelog.%s.append", FALSE, logfile);
+					"charon.filelog.%s.append", TRUE, logfile);
 	lib->settings->set_bool(lib->settings,
 					"charon.filelog.%s.flush_line", TRUE, logfile);
 	lib->settings->set_int(lib->settings,

@@ -295,6 +295,10 @@ public class VpnStateService extends Service
 			/* reset if this is a manual retry or a new connection */
 			mTimeoutProvider.reset();
 		}
+		else
+		{	/* mark this as an automatic retry */
+			profileInfo.putBoolean(CharonVpnService.KEY_IS_RETRY, true);
+		}
 		intent.putExtras(profileInfo);
 		context.startService(intent);
 	}

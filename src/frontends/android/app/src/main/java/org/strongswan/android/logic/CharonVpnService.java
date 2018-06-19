@@ -79,6 +79,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	public static final String DISCONNECT_ACTION = "org.strongswan.android.CharonVpnService.DISCONNECT";
 	private static final String NOTIFICATION_CHANNEL = "org.strongswan.android.CharonVpnService.VPN_STATE_NOTIFICATION";
 	public static final String LOG_FILE = "charon.log";
+	public static final String KEY_IS_RETRY = "retry";
 	public static final int VPN_STATE_NOTIFICATION_ID = 1;
 
 	private String mLogFile;
@@ -137,6 +138,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		if (intent != null)
 		{
 			VpnProfile profile = null;
+			boolean retry = false;
 
 			if (VPN_SERVICE_ACTION.equals(intent.getAction()))
 			{	/* triggered when Always-on VPN is activated */
@@ -159,11 +161,17 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 						String password = bundle.getString(VpnProfileDataSource.KEY_PASSWORD);
 						profile.setPassword(password);
 
+						retry = bundle.getBoolean(CharonVpnService.KEY_IS_RETRY, false);
+
 						SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
 						pref.edit().putString(Constants.PREF_MRU_VPN_PROFILE, profile.getUUID().toString())
 							.apply();
 					}
 				}
+			}
+			if (profile != null && !retry)
+			{	/* delete the log file if this is not an automatic retry */
+				deleteFile(LOG_FILE);
 			}
 			setNextProfile(profile);
 		}
