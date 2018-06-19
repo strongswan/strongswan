@@ -60,10 +60,14 @@ import org.strongswan.android.utils.IPRangeSet;
 import org.strongswan.android.utils.SettingsWriter;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedByInterruptException;
 import java.security.PrivateKey;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
@@ -94,6 +98,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	private volatile boolean mTerminate;
 	private volatile boolean mIsDisconnecting;
 	private volatile boolean mShowNotification;
+	private BuilderAdapter mBuilderAdapter = new BuilderAdapter();
 	private Handler mHandler;
 	private VpnStateService mService;
 	private final Object mServiceLock = new Object();
@@ -279,8 +284,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 						mIsDisconnecting = false;
 
 						addNotification();
-						BuilderAdapter builder = new BuilderAdapter(mCurrentProfile);
-						if (initializeCharon(builder, mLogFile, mAppDir, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
+						mBuilderAdapter.setProfile(mCurrentProfile);
+						if (initializeCharon(mBuilderAdapter, mLogFile, mAppDir, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
 						{
 							Log.i(TAG, "charon started");
 
@@ -332,6 +337,12 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	{
 		synchronized (this)
 		{
+			if (mNextProfile != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+			{
+				mBuilderAdapter.setProfile(mNextProfile);
+				mBuilderAdapter.establishBlocking();
+			}
+
 			if (mCurrentProfile != null)
 			{
 				setState(State.DISCONNECTING);
@@ -340,8 +351,9 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				Log.i(TAG, "charon stopped");
 				mCurrentProfile = null;
 				if (mNextProfile == null)
-				{	/* don't remove the notification if we are connecting to a different profile */
+				{	/* only do this if we are not connecting to another profile */
 					removeNotification();
+					mBuilderAdapter.closeBlocking();
 				}
 			}
 		}
@@ -775,12 +787,13 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 */
 	public class BuilderAdapter
 	{
-		private final VpnProfile mProfile;
+		private VpnProfile mProfile;
 		private VpnService.Builder mBuilder;
 		private BuilderCache mCache;
 		private BuilderCache mEstablishedCache;
+		private PacketDropper mDropper = new PacketDropper();
 
-		public BuilderAdapter(VpnProfile profile)
+		public synchronized void setProfile(VpnProfile profile)
 		{
 			mProfile = profile;
 			mBuilder = createBuilder(mProfile.getName());
@@ -868,29 +881,61 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			return true;
 		}
 
-		public synchronized int establish()
+		private synchronized ParcelFileDescriptor establishIntern()
 		{
 			ParcelFileDescriptor fd;
 			try
 			{
 				mCache.applyData(mBuilder);
 				fd = mBuilder.establish();
+				if (fd != null)
+				{
+					closeBlocking();
+				}
 			}
 			catch (Exception ex)
 			{
 				ex.printStackTrace();
-				return -1;
+				return null;
 			}
 			if (fd == null)
 			{
-				return -1;
+				return null;
 			}
 			/* now that the TUN device is created we don't need the current
 			 * builder anymore, but we might need another when reestablishing */
 			mBuilder = createBuilder(mProfile.getName());
 			mEstablishedCache = mCache;
 			mCache = new BuilderCache(mProfile);
-			return fd.detachFd();
+			return fd;
+		}
+
+		public synchronized int establish()
+		{
+			ParcelFileDescriptor fd = establishIntern();
+			return fd != null ? fd.detachFd() : -1;
+		}
+
+		@TargetApi(Build.VERSION_CODES.LOLLIPOP)
+		public synchronized void establishBlocking()
+		{
+			/* just choose some arbitrary values to block all traffic (except for what's configured in the profile) */
+			mCache.addAddress("172.16.252.1", 32);
+			mCache.addAddress("fd00::fd02:1", 128);
+			mCache.addRoute("0.0.0.0", 0);
+			mCache.addRoute("::", 0);
+			/* use blocking mode to simplify packet dropping */
+			mBuilder.setBlocking(true);
+			ParcelFileDescriptor fd = establishIntern();
+			if (fd != null)
+			{
+				mDropper.start(fd);
+			}
+		}
+
+		public synchronized void closeBlocking()
+		{
+			mDropper.stop();
 		}
 
 		public synchronized int establishNoDns()
@@ -917,6 +962,68 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				return -1;
 			}
 			return fd.detachFd();
+		}
+
+		private class PacketDropper implements Runnable
+		{
+			private ParcelFileDescriptor mFd;
+			private Thread mThread;
+
+			public void start(ParcelFileDescriptor fd)
+			{
+				mFd = fd;
+				mThread = new Thread(this);
+				mThread.start();
+			}
+
+			public void stop()
+			{
+				if (mFd != null)
+				{
+					try
+					{
+						mThread.interrupt();
+						mThread.join();
+						mFd.close();
+					}
+					catch (InterruptedException e)
+					{
+						e.printStackTrace();
+					}
+					catch (IOException e)
+					{
+						e.printStackTrace();
+					}
+					mFd = null;
+				}
+			}
+
+			@Override
+			public synchronized void run()
+			{
+				try
+				{
+					FileInputStream plain = new FileInputStream(mFd.getFileDescriptor());
+					ByteBuffer packet = ByteBuffer.allocate(mCache.mMtu);
+					while (true)
+					{	/* just read and ignore all data, regular read() is not properly interruptible */
+						int len = plain.getChannel().read(packet);
+						packet.clear();
+						if (len < 0)
+						{
+							break;
+						}
+					}
+				}
+				catch (ClosedByInterruptException e)
+				{
+					/* regular interruption */
+				}
+				catch (Exception e)
+				{
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 
@@ -972,6 +1079,10 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 					break;
 			}
 			mAppHandling = appHandling;
+
+			/* set a default MTU, will be set by the daemon for regular interfaces */
+			Integer mtu = profile.getMTU();
+			mMtu = mtu == null ? Constants.MTU_MAX : mtu;
 		}
 
 		public void addAddress(String address, int prefixLength)
