@@ -955,8 +955,23 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			mExcludedSubnets = IPRangeSet.fromString(profile.getExcludedSubnets());
 			Integer splitTunneling = profile.getSplitTunneling();
 			mSplitTunneling = splitTunneling != null ? splitTunneling : 0;
-			mAppHandling = profile.getSelectedAppsHandling();
+			SelectedAppsHandling appHandling = profile.getSelectedAppsHandling();
 			mSelectedApps = profile.getSelectedAppsSet();
+			/* exclude our own app, otherwise the fetcher is blocked */
+			switch (appHandling)
+			{
+				case SELECTED_APPS_DISABLE:
+					appHandling = SelectedAppsHandling.SELECTED_APPS_EXCLUDE;
+					mSelectedApps.clear();
+					/* fall-through */
+				case SELECTED_APPS_EXCLUDE:
+					mSelectedApps.add(getPackageName());
+					break;
+				case SELECTED_APPS_ONLY:
+					mSelectedApps.remove(getPackageName());
+					break;
+			}
+			mAppHandling = appHandling;
 		}
 
 		public void addAddress(String address, int prefixLength)
