@@ -24,6 +24,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.SystemClock;
+import android.support.v4.content.ContextCompat;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
@@ -300,7 +301,7 @@ public class VpnStateService extends Service
 			profileInfo.putBoolean(CharonVpnService.KEY_IS_RETRY, true);
 		}
 		intent.putExtras(profileInfo);
-		context.startService(intent);
+		ContextCompat.startForegroundService(context, intent);
 	}
 
 	/**
