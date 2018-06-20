@@ -300,6 +300,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 							writer.setValue("global.language", Locale.getDefault().getLanguage());
 							writer.setValue("global.mtu", mCurrentProfile.getMTU());
 							writer.setValue("global.nat_keepalive", mCurrentProfile.getNATKeepAlive());
+							writer.setValue("global.crl", (mCurrentProfile.getFlags() & VpnProfile.FLAGS_DISABLE_CRL) == 0);
+							writer.setValue("global.ocsp", (mCurrentProfile.getFlags() & VpnProfile.FLAGS_DISABLE_OCSP) == 0);
 							writer.setValue("connection.type", mCurrentProfile.getVpnType().getIdentifier());
 							writer.setValue("connection.server", mCurrentProfile.getGateway());
 							writer.setValue("connection.port", mCurrentProfile.getPort());
@@ -308,6 +310,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 							writer.setValue("connection.local_id", mCurrentProfile.getLocalId());
 							writer.setValue("connection.remote_id", mCurrentProfile.getRemoteId());
 							writer.setValue("connection.certreq", (mCurrentProfile.getFlags() & VpnProfile.FLAGS_SUPPRESS_CERT_REQS) == 0);
+							writer.setValue("connection.strict_revocation", (mCurrentProfile.getFlags() & VpnProfile.FLAGS_STRICT_REVOCATION) != 0);
 							writer.setValue("connection.ike_proposal", mCurrentProfile.getIkeProposal());
 							writer.setValue("connection.esp_proposal", mCurrentProfile.getEspProposal());
 							initiate(writer.serialize());

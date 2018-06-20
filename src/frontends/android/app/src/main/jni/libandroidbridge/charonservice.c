@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -412,6 +412,12 @@ static void initiate(settings_t *settings)
 	lib->settings->set_str(lib->settings,
 						"charon.plugins.tnc-imc.preferred_language",
 						settings->get_str(settings, "global.language", "en"));
+	lib->settings->set_bool(lib->settings,
+						"charon.plugins.revocation.enable_crl",
+						settings->get_bool(settings, "global.crl", TRUE));
+	lib->settings->set_bool(lib->settings,
+						"charon.plugins.revocation.enable_ocsp",
+						settings->get_bool(settings, "global.ocsp", TRUE));
 	/* this is actually the size of the complete IKE/IP packet, so if the MTU
 	 * for the TUN devices has to be reduced to pass traffic the IKE packets
 	 * will be a bit smaller than necessary as there is no IPsec overhead like
@@ -425,6 +431,9 @@ static void initiate(settings_t *settings)
 						"charon.keep_alive",
 						settings->get_int(settings, "global.nat_keepalive",
 										  ANDROID_KEEPALIVE_INTERVAL));
+
+	/* reload plugins after changing settings */
+	lib->plugins->reload(lib->plugins, NULL);
 
 	this->creds->clear(this->creds);
 	DESTROY_IF(this->service);

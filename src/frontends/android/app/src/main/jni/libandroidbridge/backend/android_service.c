@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2017 Tobias Brunner
+ * Copyright (C) 2010-2018 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -822,6 +822,10 @@ static job_requeue_t initiate(private_android_service_t *this)
 	}
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	if (this->settings->get_bool(this->settings, "connection.strict_revocation", FALSE))
+	{
+		auth->add(auth, AUTH_RULE_CRL_VALIDATION, VALIDATION_GOOD);
+	}
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
 	child_cfg = child_cfg_create("android", &child);
