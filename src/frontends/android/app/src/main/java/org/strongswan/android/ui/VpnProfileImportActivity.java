@@ -470,7 +470,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		profile.setRemoteId(remote.optString("id", null));
 		profile.Certificate = decodeBase64(remote.optString("cert", null));
 
-		if (remote.optBoolean("certreq", false))
+		if (!remote.optBoolean("certreq", true))
 		{
 			flags |= VpnProfile.FLAGS_SUPPRESS_CERT_REQS;
 		}
