@@ -475,6 +475,23 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			flags |= VpnProfile.FLAGS_SUPPRESS_CERT_REQS;
 		}
 
+		JSONObject revocation = remote.optJSONObject("revocation");
+		if (revocation != null)
+		{
+			if (!revocation.optBoolean("crl", true))
+			{
+				flags |= VpnProfile.FLAGS_DISABLE_CRL;
+			}
+			if (!revocation.optBoolean("ocsp", true))
+			{
+				flags |= VpnProfile.FLAGS_DISABLE_OCSP;
+			}
+			if (revocation.optBoolean("strict", false))
+			{
+				flags |= VpnProfile.FLAGS_STRICT_REVOCATION;
+			}
+		}
+
 		JSONObject local = obj.optJSONObject("local");
 		if (local != null)
 		{
