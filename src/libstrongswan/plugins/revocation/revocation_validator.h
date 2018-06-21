@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -34,6 +37,11 @@ struct revocation_validator_t {
 	 * Implements cert_validator_t interface.
 	 */
 	cert_validator_t validator;
+
+	/**
+	 * Reload the configuration
+	 */
+	void (*reload)(revocation_validator_t *this);
 
 	/**
 	 * Destroy a revocation_validator_t.

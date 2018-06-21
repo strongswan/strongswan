@@ -27,6 +27,7 @@
 #include <credentials/certificates/ocsp_response.h>
 #include <credentials/sets/ocsp_response_wrapper.h>
 #include <selectors/traffic_selector.h>
+#include <threading/spinlock.h>
 
 typedef struct private_revocation_validator_t private_revocation_validator_t;
 
@@ -50,6 +51,10 @@ struct private_revocation_validator_t {
 	 */
 	bool enable_crl;
 
+	/**
+	 * Lock to access flags
+	 */
+	spinlock_t *lock;
 };
 
 /**
@@ -795,14 +800,21 @@ METHOD(cert_validator_t, validate, bool,
 	certificate_t *issuer, bool online, u_int pathlen, bool anchor,
 	auth_cfg_t *auth)
 {
-	if (online && (this->enable_ocsp || this->enable_crl) &&
+	bool enable_ocsp, enable_crl;
+
+	this->lock->lock(this->lock);
+	enable_ocsp = this->enable_ocsp;
+	enable_crl = this->enable_crl;
+	this->lock->unlock(this->lock);
+
+	if (online && (enable_ocsp || enable_crl) &&
 		subject->get_type(subject) == CERT_X509 &&
 		issuer->get_type(issuer) == CERT_X509)
 	{
 		DBG1(DBG_CFG, "checking certificate status of \"%Y\"",
 					   subject->get_subject(subject));
 
-		if (this->enable_ocsp)
+		if (enable_ocsp)
 		{
 			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth))
 			{
@@ -831,7 +843,7 @@ METHOD(cert_validator_t, validate, bool,
 			auth->add(auth, AUTH_RULE_OCSP_VALIDATION, VALIDATION_SKIPPED);
 		}
 
-		if (this->enable_crl)
+		if (enable_crl)
 		{
 			switch (check_crl((x509_t*)subject, (x509_t*)issuer, auth))
 			{
@@ -865,9 +877,35 @@ METHOD(cert_validator_t, validate, bool,
 	return TRUE;
 }
 
+METHOD(revocation_validator_t, reload, void,
+	private_revocation_validator_t *this)
+{
+	bool enable_ocsp, enable_crl;
+
+	enable_ocsp = lib->settings->get_bool(lib->settings,
+							"%s.plugins.revocation.enable_ocsp", TRUE, lib->ns);
+	enable_crl  = lib->settings->get_bool(lib->settings,
+							"%s.plugins.revocation.enable_crl",  TRUE, lib->ns);
+
+	this->lock->lock(this->lock);
+	this->enable_ocsp = enable_ocsp;
+	this->enable_crl = enable_crl;
+	this->lock->unlock(this->lock);
+
+	if (!enable_ocsp)
+	{
+		DBG1(DBG_LIB, "all OCSP validation disabled");
+	}
+	if (!enable_crl)
+	{
+		DBG1(DBG_LIB, "all CRL validation disabled");
+	}
+}
+
 METHOD(revocation_validator_t, destroy, void,
 	private_revocation_validator_t *this)
 {
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -881,21 +919,13 @@ revocation_validator_t *revocation_validator_create()
 	INIT(this,
 		.public = {
 			.validator.validate = _validate,
+			.reload = _reload,
 			.destroy = _destroy,
 		},
-		.enable_ocsp = lib->settings->get_bool(lib->settings,
-							"%s.plugins.revocation.enable_ocsp", TRUE, lib->ns),
-		.enable_crl  = lib->settings->get_bool(lib->settings,
-							"%s.plugins.revocation.enable_crl",  TRUE, lib->ns),
+		.lock = spinlock_create(),
 	);
 
-	if (!this->enable_ocsp)
-	{
-		DBG1(DBG_LIB, "all OCSP validation disabled");
-	}
-	if (!this->enable_crl)
-	{
-		DBG1(DBG_LIB, "all CRL validation disabled");
-	}
+	reload(this);
+
 	return &this->public;
 }
