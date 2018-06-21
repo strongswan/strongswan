@@ -217,7 +217,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	public void startVpnProfile(VpnProfile profile)
 	{
 		Bundle profileInfo = new Bundle();
-		profileInfo.putLong(VpnProfileDataSource.KEY_ID, profile.getId());
+		profileInfo.putString(VpnProfileDataSource.KEY_UUID, profile.getUUID().toString());
 		profileInfo.putString(VpnProfileDataSource.KEY_USERNAME, profile.getUsername());
 		profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, profile.getPassword());
 		profileInfo.putBoolean(PROFILE_REQUIRES_PASSWORD, profile.getVpnType().has(VpnTypeFeature.USER_PASS));

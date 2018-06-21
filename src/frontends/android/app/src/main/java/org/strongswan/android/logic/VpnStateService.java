@@ -289,7 +289,7 @@ public class VpnStateService extends Service
 		if (profileInfo == null)
 		{
 			profileInfo = new Bundle();
-			profileInfo.putLong(VpnProfileDataSource.KEY_ID, mProfile.getId());
+			profileInfo.putString(VpnProfileDataSource.KEY_UUID, mProfile.getUUID().toString());
 			/* pass the previous password along */
 			profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, mProfile.getPassword());
 		}

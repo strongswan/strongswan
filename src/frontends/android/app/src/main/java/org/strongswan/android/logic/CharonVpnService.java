@@ -160,7 +160,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				Bundle bundle = intent.getExtras();
 				if (bundle != null)
 				{
-					profile = mDataSource.getVpnProfile(bundle.getLong(VpnProfileDataSource.KEY_ID));
+					profile = mDataSource.getVpnProfile(bundle.getString(VpnProfileDataSource.KEY_UUID));
 					if (profile != null)
 					{
 						String password = bundle.getString(VpnProfileDataSource.KEY_PASSWORD);
