@@ -121,6 +121,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private Switch mUseCrl;
 	private Switch mUseOcsp;
 	private Switch mStrictRevocation;
+	private Switch mRsaPss;
 	private EditText mNATKeepalive;
 	private TextInputLayoutHelper mNATKeepaliveWrap;
 	private EditText mIncludedSubnets;
@@ -185,6 +186,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mUseCrl = findViewById(R.id.use_crl);
 		mUseOcsp = findViewById(R.id.use_ocsp);
 		mStrictRevocation= findViewById(R.id.strict_revocation);
+		mRsaPss= findViewById(R.id.rsa_pss);
 		mIncludedSubnets = (EditText)findViewById(R.id.included_subnets);
 		mIncludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.included_subnets_wrap);
 		mExcludedSubnets = (EditText)findViewById(R.id.excluded_subnets);
@@ -719,6 +721,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		flags |= !mUseCrl.isChecked() ? VpnProfile.FLAGS_DISABLE_CRL : 0;
 		flags |= !mUseOcsp.isChecked() ? VpnProfile.FLAGS_DISABLE_OCSP : 0;
 		flags |= mStrictRevocation.isChecked() ? VpnProfile.FLAGS_STRICT_REVOCATION : 0;
+		flags |= mRsaPss.isChecked() ? VpnProfile.FLAGS_RSA_PSS : 0;
 		mProfile.setFlags(flags);
 		String included = mIncludedSubnets.getText().toString().trim();
 		mProfile.setIncludedSubnets(included.isEmpty() ? null : included);
@@ -789,6 +792,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mUseCrl.setChecked(flags == null || (flags & VpnProfile.FLAGS_DISABLE_CRL) == 0);
 		mUseOcsp.setChecked(flags == null || (flags & VpnProfile.FLAGS_DISABLE_OCSP) == 0);
 		mStrictRevocation.setChecked(flags != null && (flags & VpnProfile.FLAGS_STRICT_REVOCATION) != 0);
+		mRsaPss.setChecked(flags != null && (flags & VpnProfile.FLAGS_RSA_PSS) != 0);
 
 		/* check if the user selected a user certificate previously */
 		useralias = savedInstanceState == null ? useralias : savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);

@@ -97,6 +97,8 @@
     <string name="profile_use_crl_hint">Verwendet Zertifikatssperrlisten (CRL), sofern verfügbar, um zu prüfen, ob das Server-Zertifikat gesperrt wurde. CRLs werden nur verwendet, wenn OCSP kein Resultat liefert.</string>
     <string name="profile_strict_revocation_label">Strikte Zertifikatsprüfung verwenden</string>
     <string name="profile_strict_revocation_hint">Im strikten Modus schlägt die Authentisierung nicht nur dann fehl, wenn das Server-Zertifikat gesperrt wurde, sondern auch wenn der Status des Zertifikats unbekannt ist (z.B. weil OCSP fehl schlug und keine gültige CRL verfügbar war).</string>
+    <string name="profile_rsa_pss_label">RSA/PSS Signaturen verwenden</string>
+    <string name="profile_rsa_pss_hint">Verwendet das stärkere PSS Encoding anstatt des klassischen PKCS#1 Encoding für RSA Signaturen. Die Authentisierung wird fehlschlagen, wenn der Server solche Signaturen nicht unterstützt.</string>
     <string name="profile_split_tunneling_label">Split-Tunneling</string>
     <string name="profile_split_tunneling_intro">Standardmässig leitet der Client allen Netzwerkverkehr durch den VPN Tunnel, ausser der Server schränkt die Subnetze beim Verbindungsaufbau ein, in welchem Fall nur der Verkehr via VPN geleitet wird, den der Server erlaubt (der Rest wird standardmässig behandelt, als ob kein VPN vorhanden wäre).</string>
     <string name="profile_split_tunnelingv4_title">Blockiere IPv4 Verkehr der nicht für das VPN bestimmt ist</string>
