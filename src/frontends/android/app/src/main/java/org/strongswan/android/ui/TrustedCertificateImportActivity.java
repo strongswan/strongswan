@@ -18,6 +18,7 @@ package org.strongswan.android.ui;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -76,7 +77,15 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 			Intent openIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 			openIntent.setType("*/*");
 			openIntent.putExtra(Intent.EXTRA_MIME_TYPES, ACCEPTED_MIME_TYPES);
-			startActivityForResult(openIntent, OPEN_DOCUMENT);
+			try
+			{
+				startActivityForResult(openIntent, OPEN_DOCUMENT);
+			}
+			catch (ActivityNotFoundException e)
+			{	/* some devices are unable to browse for files */
+				finish();
+				return;
+			}
 		}
 	}
 

@@ -17,6 +17,7 @@ package org.strongswan.android.ui;
 
 import android.app.Activity;
 import android.app.LoaderManager;
+import android.content.ActivityNotFoundException;
 import android.content.AsyncTaskLoader;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -64,7 +65,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.OutOfMemoryError;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.security.KeyStore;
@@ -212,7 +212,15 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		{
 			Intent openIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 			openIntent.setType("*/*");
-			startActivityForResult(openIntent, OPEN_DOCUMENT);
+			try
+			{
+				startActivityForResult(openIntent, OPEN_DOCUMENT);
+			}
+			catch (ActivityNotFoundException e)
+			{	/* some devices are unable to browse for files */
+				finish();
+				return;
+			}
 		}
 
 		if (savedInstanceState != null)
