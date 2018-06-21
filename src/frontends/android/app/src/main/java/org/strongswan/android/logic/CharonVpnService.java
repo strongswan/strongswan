@@ -283,6 +283,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 						startConnection(mCurrentProfile);
 						mIsDisconnecting = false;
 
+						SimpleFetcher.enable();
 						addNotification();
 						mBuilderAdapter.setProfile(mCurrentProfile);
 						if (initializeCharon(mBuilderAdapter, mLogFile, mAppDir, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
@@ -350,6 +351,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			{
 				setState(State.DISCONNECTING);
 				mIsDisconnecting = true;
+				SimpleFetcher.disable();
 				deinitializeCharon();
 				Log.i(TAG, "charon stopped");
 				mCurrentProfile = null;
