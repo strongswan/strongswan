@@ -301,6 +301,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 							writer.setValue("global.language", Locale.getDefault().getLanguage());
 							writer.setValue("global.mtu", mCurrentProfile.getMTU());
 							writer.setValue("global.nat_keepalive", mCurrentProfile.getNATKeepAlive());
+							writer.setValue("global.rsa_pss", (mCurrentProfile.getFlags() & VpnProfile.FLAGS_RSA_PSS) != 0);
 							writer.setValue("global.crl", (mCurrentProfile.getFlags() & VpnProfile.FLAGS_DISABLE_CRL) == 0);
 							writer.setValue("global.ocsp", (mCurrentProfile.getFlags() & VpnProfile.FLAGS_DISABLE_OCSP) == 0);
 							writer.setValue("connection.type", mCurrentProfile.getVpnType().getIdentifier());
