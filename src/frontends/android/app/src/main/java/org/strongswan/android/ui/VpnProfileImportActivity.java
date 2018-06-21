@@ -504,6 +504,11 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			{
 				profile.setLocalId(local.optString("id", null));
 				profile.PKCS12 = decodeBase64(local.optString("p12", null));
+
+				if (local.optBoolean("rsa-pss", false))
+				{
+					flags |= VpnProfile.FLAGS_RSA_PSS;
+				}
 			}
 		}
 
