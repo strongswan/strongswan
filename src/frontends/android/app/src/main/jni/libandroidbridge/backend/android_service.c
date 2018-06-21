@@ -838,24 +838,16 @@ static job_requeue_t initiate(private_android_service_t *this)
 	{	/* create ESP proposals with and without DH groups, let responder decide
 		 * if PFS is used */
 		child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-								"aes128gcm16-aes256gcm16-chacha20poly1305-"
-								"curve25519-ecp256-modp3072"));
+								"aes256gcm16-aes128gcm16-chacha20poly1305-"
+								"curve25519-ecp384-ecp521-modp3072-modp4096-ecp256-modp8192"));
 		child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-								"aes128-sha256-curve25519-ecp256-modp3072"));
+								"aes256-aes192-aes128-sha384-sha256-sha512-sha1-"
+								"curve25519-ecp384-ecp521-modp3072-modp4096-ecp256-modp2048-"
+								"modp8192"));
 		child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-								"aes256-sha384-ecp521-modp8192"));
+								"aes256gcm16-aes128gcm16-chacha20poly1305"));
 		child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-								"aes128-aes192-aes256-sha1-sha256-sha384-sha512-"
-								"curve25519-ecp256-ecp384-ecp521-"
-								"modp2048-modp3072-modp4096"));
-		child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-								"aes128gcm16-aes256gcm16-chacha20poly1305"));
-		child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-								"aes128-sha256"));
-		child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-								"aes256-sha384"));
-		child_cfg->add_proposal(child_cfg, proposal_create_from_string(PROTO_ESP,
-								"aes128-aes192-aes256-sha1-sha256-sha384-sha512"));
+								"aes256-aes192-aes128-sha384-sha256-sha512-sha1"));
 	}
 	ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
