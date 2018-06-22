@@ -1604,7 +1604,7 @@ CALLBACK(auth_li, bool,
 {
 	parse_rule_t rules[] = {
 		{ "groups",			parse_group,		auth->cfg					},
-		{ "cert_policy",	parse_cert_policy,	auth						},
+		{ "cert_policy",	parse_cert_policy,	auth->cfg					},
 		{ "certs",			parse_certs,		auth						},
 		{ "cacerts",		parse_cacerts,		auth						},
 		{ "pubkeys",		parse_pubkeys,		auth						},
