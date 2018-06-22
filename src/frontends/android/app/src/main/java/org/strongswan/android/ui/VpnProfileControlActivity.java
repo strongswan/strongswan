@@ -50,6 +50,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
 
 	private static final int PREPARE_VPN_SERVICE = 0;
+	private static final String WAITING_FOR_RESULT = "WAITING_FOR_RESULT";
 	private static final String PROFILE_NAME = "PROFILE_NAME";
 	private static final String PROFILE_REQUIRES_PASSWORD = "REQUIRES_PASSWORD";
 	private static final String PROFILE_RECONNECT = "RECONNECT";
@@ -57,6 +58,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	private static final String DIALOG_TAG = "Dialog";
 
 	private Bundle mProfileInfo;
+	private boolean mWaitingForResult;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection()
 	{
@@ -70,15 +72,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		public void onServiceConnected(ComponentName name, IBinder service)
 		{
 			mService = ((VpnStateService.LocalBinder)service).getService();
-
-			if (START_PROFILE.equals(getIntent().getAction()))
-			{
-				startVpnProfile(getIntent());
-			}
-			else if (DISCONNECT.equals(getIntent().getAction()))
-			{
-				disconnect();
-			}
+			handleIntent();
 		}
 	};
 
@@ -87,8 +81,19 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	{
 		super.onCreate(savedInstanceState);
 
+		if (savedInstanceState != null)
+		{
+			mWaitingForResult = savedInstanceState.getBoolean(WAITING_FOR_RESULT, false);
+		}
 		this.bindService(new Intent(this, VpnStateService.class),
 						 mServiceConnection, Service.BIND_AUTO_CREATE);
+	}
+
+	@Override
+	protected void onSaveInstanceState(Bundle outState)
+	{
+		super.onSaveInstanceState(outState);
+		outState.putBoolean(WAITING_FOR_RESULT, mWaitingForResult);
 	}
 
 	@Override
@@ -109,13 +114,12 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	{
 		super.onNewIntent(intent);
 
-		if (START_PROFILE.equals(intent.getAction()))
+		/* store this intent in case the service is not yet connected or the activity is restarted */
+		setIntent(intent);
+
+		if (mService != null)
 		{
-			startVpnProfile(intent);
-		}
-		else if (DISCONNECT.equals(intent.getAction()))
-		{
-			disconnect();
+			handleIntent();
 		}
 	}
 
@@ -128,6 +132,13 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	protected void prepareVpnService(Bundle profileInfo)
 	{
 		Intent intent;
+
+		if (mWaitingForResult)
+		{
+			mProfileInfo = profileInfo;
+			return;
+		}
+
 		try
 		{
 			intent = VpnService.prepare(this);
@@ -150,6 +161,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		{
 			try
 			{
+				mWaitingForResult = true;
 				startActivityForResult(intent, PREPARE_VPN_SERVICE);
 			}
 			catch (ActivityNotFoundException ex)
@@ -159,6 +171,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				 * com.android.vpndialogs/com.android.vpndialogs.ConfirmDialog
 				 * will not be found then */
 				VpnNotSupportedError.showWithMessage(this, R.string.vpn_not_supported);
+				mWaitingForResult = false;
 			}
 		}
 		else
@@ -173,6 +186,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		switch (requestCode)
 		{
 			case PREPARE_VPN_SERVICE:
+				mWaitingForResult = false;
 				if (resultCode == RESULT_OK && mProfileInfo != null)
 				{
 					if (mService != null)
@@ -321,6 +335,21 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			{
 				finish();
 			}
+		}
+	}
+
+	/**
+	 * Handle the Intent of this Activity depending on its action
+	 */
+	private void handleIntent()
+	{
+		if (START_PROFILE.equals(getIntent().getAction()))
+		{
+			startVpnProfile(getIntent());
+		}
+		else if (DISCONNECT.equals(getIntent().getAction()))
+		{
+			disconnect();
 		}
 	}
 
