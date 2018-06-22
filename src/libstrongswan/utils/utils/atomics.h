@@ -53,7 +53,7 @@ typedef u_int refcount_t;
 #define ref_put(ref) (!__atomic_sub_fetch(ref, 1, __ATOMIC_ACQ_REL))
 #define ref_cur(ref) __atomic_load_n(ref, __ATOMIC_RELAXED)
 
-#define _cas_impl(ptr, oldval, newval) ({ typeof(oldval) _old = oldval; \
+#define _cas_impl(ptr, oldval, newval) ({ typeof(*ptr) _old = oldval; \
 			__atomic_compare_exchange_n(ptr, &_old, newval, FALSE, \
 										__ATOMIC_SEQ_CST, __ATOMIC_RELAXED); })
 #define cas_bool(ptr, oldval, newval) _cas_impl(ptr, oldval, newval)
