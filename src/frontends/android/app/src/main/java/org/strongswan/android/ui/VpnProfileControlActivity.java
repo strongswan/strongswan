@@ -183,6 +183,12 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				}
 				else
 				{	/* this happens if the always-on VPN feature is activated by a different app or the user declined */
+					if (getSupportFragmentManager().isStateSaved())
+					{	/* onActivityResult() might be called when we aren't active anymore e.g. if the
+						 * user pressed the home button, if the activity is started again we land here
+						 * before onNewIntent() is called */
+						return;
+					}
 					VpnNotSupportedError.showWithMessage(this, R.string.vpn_not_supported_no_permission);
 				}
 				break;
