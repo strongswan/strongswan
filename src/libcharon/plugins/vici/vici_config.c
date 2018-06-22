@@ -3,7 +3,7 @@
  * Copyright (C) 2014 revosec AG
  *
  * Copyright (C) 2015-2017 Tobias Brunner
- * Copyright (C) 2015-2016 Andreas Steffen
+ * Copyright (C) 2015-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it

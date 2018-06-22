@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2016 Andreas Steffen
+ * Copyright (C) 2016-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -198,6 +198,10 @@ CALLBACK(conn_sn, int,
 			if (auth->get(auth, "groups"))
 			{
 				printf("    groups: %s\n", auth->get(auth, "groups"));
+			}
+			if (auth->get(auth, "cert_policy"))
+			{
+				printf("    cert policy: %s\n", auth->get(auth, "cert_policy"));
 			}
 			if (auth->get(auth, "certs"))
 			{

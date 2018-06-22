@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2017 Tobias Brunner
- * Copyright (C) 2015 Andreas Steffen
+ * Copyright (C) 2015-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2014 Martin Willi
@@ -732,6 +732,18 @@ static void build_auth_cfgs(peer_cfg_t *peer_cfg, bool local, vici_builder_t *b)
 			if (rule == AUTH_RULE_GROUP)
 			{
 				b->add_li(b, "%Y", v.id);
+			}
+		}
+		rules->destroy(rules);
+		b->end_list(b);
+
+		b->begin_list(b, "cert_policy");
+		rules = auth->create_enumerator(auth);
+		while (rules->enumerate(rules, &rule, &v))
+		{
+			if (rule == AUTH_RULE_CERT_POLICY)
+			{
+				b->add_li(b, "%s", v.str);
 			}
 		}
 		rules->destroy(rules);
