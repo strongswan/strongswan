@@ -1165,11 +1165,6 @@ METHOD(task_t, build_i, status_t,
 			}
 			break;
 		case IKE_AUTH:
-			if (message->get_message_id(message) != 1)
-			{
-				/* send only in the first request, not in subsequent rounds */
-				return NEED_MORE;
-			}
 			switch (defer_child_sa(this))
 			{
 				case DESTROY_ME:
@@ -1183,9 +1178,11 @@ METHOD(task_t, build_i, status_t,
 					/* just continue to establish the CHILD_SA */
 					break;
 			}
+			/* send only in the first request, not in subsequent rounds */
+			this->public.task.build = (void*)return_need_more;
 			break;
 		default:
-			break;
+			return NEED_MORE;
 	}
 
 	/* check if we want a virtual IP, but don't have one */
@@ -1344,13 +1341,11 @@ METHOD(task_t, process_r, status_t,
 			get_nonce(message, &this->other_nonce);
 			break;
 		case IKE_AUTH:
-			if (message->get_message_id(message) != 1)
-			{
-				/* only handle first AUTH payload, not additional rounds */
-				return NEED_MORE;
-			}
-		default:
+			/* only handle first AUTH payload, not additional rounds */
+			this->public.task.process = (void*)return_need_more;
 			break;
+		default:
+			return NEED_MORE;
 	}
 
 	process_payloads(this, message);
@@ -1579,8 +1574,9 @@ METHOD(task_t, build_r, status_t,
 					break;
 			}
 			ike_auth = TRUE;
-		default:
 			break;
+		default:
+			return NEED_MORE;
 	}
 
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING)
@@ -1776,8 +1772,9 @@ METHOD(task_t, process_i, status_t,
 				return NEED_MORE;
 			}
 			ike_auth = TRUE;
-		default:
 			break;
+		default:
+			return NEED_MORE;
 	}
 
 	/* check for erroneous notifies */
@@ -2035,6 +2032,7 @@ METHOD(task_t, migrate, void,
 	this->ipcomp_received = IPCOMP_NONE;
 	this->other_cpi = 0;
 	this->established = FALSE;
+	this->public.task.build = _build_i;
 }
 
 METHOD(task_t, destroy, void,
