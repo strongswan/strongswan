@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
  * HSR Hochschule fuer Technik Rapperswil
@@ -239,8 +240,8 @@ static void process_payloads(private_ike_config_t *this, message_t *message)
 METHOD(task_t, build_i, status_t,
 	private_ike_config_t *this, message_t *message)
 {
-	if (message->get_message_id(message) == 1)
-	{	/* in first IKE_AUTH only */
+	if (message->get_exchange_type(message) == IKE_AUTH)
+	{
 		cp_payload_t *cp = NULL;
 		enumerator_t *enumerator;
 		attribute_handler_t *handler;
@@ -249,6 +250,9 @@ METHOD(task_t, build_i, status_t,
 		chunk_t data;
 		linked_list_t *vips;
 		host_t *host;
+
+		/* in first IKE_AUTH only */
+		this->public.task.build = (void*)return_need_more;
 
 		vips = linked_list_create();
 
@@ -328,9 +332,11 @@ METHOD(task_t, build_i, status_t,
 METHOD(task_t, process_r, status_t,
 	private_ike_config_t *this, message_t *message)
 {
-	if (message->get_message_id(message) == 1)
-	{	/* in first IKE_AUTH only */
+	if (message->get_exchange_type(message) == IKE_AUTH)
+	{
 		process_payloads(this, message);
+		/* in first IKE_AUTH only */
+		this->public.task.process = (void*)return_need_more;
 	}
 	return NEED_MORE;
 }
