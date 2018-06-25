@@ -366,11 +366,12 @@ METHOD(ike_mobike_t, transmit, bool,
 METHOD(task_t, build_i, status_t,
 	   private_ike_mobike_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_message_id(message) == 1)
-	{	/* only in first IKE_AUTH */
+	if (message->get_exchange_type(message) == IKE_AUTH)
+	{
 		message->add_notify(message, FALSE, MOBIKE_SUPPORTED, chunk_empty);
 		build_address_list(this, message);
+		/* only in first IKE_AUTH */
+		this->public.task.build = (void*)return_need_more;
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
@@ -424,10 +425,11 @@ METHOD(task_t, build_i, status_t,
 METHOD(task_t, process_r, status_t,
 	   private_ike_mobike_t *this, message_t *message)
 {
-	if (message->get_exchange_type(message) == IKE_AUTH &&
-		message->get_message_id(message) == 1)
-	{	/* only first IKE_AUTH */
+	if (message->get_exchange_type(message) == IKE_AUTH)
+	{
 		process_payloads(this, message);
+		/* only first IKE_AUTH */
+		this->public.task.process = (void*)return_need_more;
 	}
 	else if (message->get_exchange_type(message) == INFORMATIONAL)
 	{
@@ -473,7 +475,7 @@ METHOD(task_t, build_r, status_t,
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
-	{
+	{	/* in last IKE_AUTH only */
 		if (this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
 		{
 			message->add_notify(message, FALSE, MOBIKE_SUPPORTED, chunk_empty);
@@ -502,7 +504,7 @@ METHOD(task_t, process_i, status_t,
 {
 	if (message->get_exchange_type(message) == IKE_AUTH &&
 		this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
-	{
+	{	/* in last IKE_AUTH only */
 		process_payloads(this, message);
 		return SUCCESS;
 	}
@@ -642,6 +644,7 @@ METHOD(task_t, migrate, void,
 	{
 		this->natd->task.migrate(&this->natd->task, ike_sa);
 	}
+	this->public.task.build = _build_i;
 }
 
 METHOD(task_t, destroy, void,
