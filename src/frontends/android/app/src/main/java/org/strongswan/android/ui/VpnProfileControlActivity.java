@@ -315,15 +315,35 @@ public class VpnProfileControlActivity extends AppCompatActivity
 
 	/**
 	 * Disconnect the current connection, if any (silently ignored if there is no connection).
+	 *
+	 * @param intent Intent that caused us to start this
 	 */
-	private void disconnect()
+	private void disconnect(Intent intent)
 	{
+		VpnProfile profile = null;
+
 		removeFragmentByTag(DIALOG_TAG);
+
+		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
+		if (profileUUID != null)
+		{
+			VpnProfileDataSource dataSource = new VpnProfileDataSource(this);
+			dataSource.open();
+			profile = dataSource.getVpnProfile(profileUUID);
+			dataSource.close();
+		}
 
 		if (mService != null)
 		{
-			if (mService.getState() == State.CONNECTED || mService.getState() == State.CONNECTING)
+			if (mService.getState() == State.CONNECTED ||
+				mService.getState() == State.CONNECTING)
 			{
+				if (profile != null && profile.equals(mService.getProfile()))
+				{	/* allow explicit termination without confirmation */
+					mService.disconnect();
+					finish();
+					return;
+				}
 				Bundle args = new Bundle();
 				args.putBoolean(PROFILE_DISCONNECT, true);
 
@@ -343,13 +363,15 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	 */
 	private void handleIntent()
 	{
-		if (START_PROFILE.equals(getIntent().getAction()))
+		Intent intent = getIntent();
+
+		if (START_PROFILE.equals(intent.getAction()))
 		{
-			startVpnProfile(getIntent());
+			startVpnProfile(intent);
 		}
-		else if (DISCONNECT.equals(getIntent().getAction()))
+		else if (DISCONNECT.equals(intent.getAction()))
 		{
-			disconnect();
+			disconnect(intent);
 		}
 	}
 
@@ -416,7 +438,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 					{
 						activity.mService.disconnect();
 					}
-					getActivity().finish();
+					activity.finish();
 				}
 			};
 			DialogInterface.OnClickListener cancelListener = new DialogInterface.OnClickListener()
