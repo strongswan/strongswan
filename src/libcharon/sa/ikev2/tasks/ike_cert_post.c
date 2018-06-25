@@ -254,8 +254,10 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 METHOD(task_t, build_i, status_t,
 	private_ike_cert_post_t *this, message_t *message)
 {
-	build_certs(this, message);
-
+	if (message->get_exchange_type(message) == IKE_AUTH)
+	{
+		build_certs(this, message);
+	}
 	return NEED_MORE;
 }
 
@@ -268,8 +270,10 @@ METHOD(task_t, process_r, status_t,
 METHOD(task_t, build_r, status_t,
 	private_ike_cert_post_t *this, message_t *message)
 {
-	build_certs(this, message);
-
+	if (message->get_exchange_type(message) == IKE_AUTH)
+	{
+		build_certs(this, message);
+	}
 	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
 	{	/* stay alive, we might have additional rounds with certs */
 		return NEED_MORE;
