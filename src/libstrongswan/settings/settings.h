@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2018 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -288,15 +288,9 @@ struct settings_t {
 	 * 'section-one.two' will result in a lookup for the same section/key
 	 * in 'section-two'.
 	 *
-	 * @note Lookups are depth-first and currently strictly top-down.
-	 * For instance, if app.sec had lib1.sec as fallback and lib1 had lib2 as
-	 * fallback the keys/sections in lib2.sec would not be considered.  But if
-	 * app had lib3 as fallback the contents of lib3.sec would (as app is passed
-	 * during the initial lookup).  In the last example the order during
-	 * enumerations would be app.sec, lib1.sec, lib3.sec.
-	 *
 	 * @note Additional arguments will be applied to both section format
-	 * strings so they must be compatible.
+	 * strings so they must be compatible. And they are evaluated immediately,
+	 * so arguments can't contain dots.
 	 *
 	 * @param section	section for which a fallback is configured, printf style
 	 * @param fallback	fallback section, printf style
@@ -412,5 +406,19 @@ settings_t *settings_create(char *file);
  * @return				settings object, or NULL
  */
 settings_t *settings_create_string(char *settings);
+
+/**
+ * Remove the given key/value.
+ *
+ * Compared to setting a key to NULL, which makes it appear to be unset (i.e.
+ * default values will apply) this removes the given key (if found) and
+ * references/fallbacks will apply when looking for that key.  This is mainly
+ * usefuls for the unit tests.
+ *
+ * @param settings		settings to remove key/value from
+ * @param key			key including sections, printf style format
+ * @param ...			argument list for key
+ */
+void settings_remove_value(settings_t *settings, char *key, ...);
 
 #endif /** SETTINGS_H_ @}*/

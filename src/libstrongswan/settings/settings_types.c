@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 Tobias Brunner
+ * Copyright (C) 2010-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -69,6 +69,12 @@ static void kv_destroy(kv_t *kv, int idx, array_t *contents)
 	settings_kv_destroy(kv, contents);
 }
 
+static void ref_destroy(section_ref_t *ref, int idx, void *ctx)
+{
+	free(ref->name);
+	free(ref);
+}
+
 /*
  * Described in header
  */
@@ -78,7 +84,7 @@ void settings_section_destroy(section_t *this, array_t *contents)
 	array_destroy(this->sections_order);
 	array_destroy_function(this->kv, (void*)kv_destroy, contents);
 	array_destroy(this->kv_order);
-	array_destroy(this->fallbacks);
+	array_destroy_function(this->references, (void*)ref_destroy, NULL);
 	free(this->name);
 	free(this);
 }
@@ -130,6 +136,35 @@ void settings_kv_add(section_t *section, kv_t *kv, array_t *contents)
 }
 
 /*
+ * Described in header
+ */
+void settings_reference_add(section_t *section, char *name, bool permanent)
+{
+	section_ref_t *ref;
+	int i;
+
+	for (i = 0; i < array_count(section->references); i++)
+	{
+		array_get(section->references, i, &ref);
+		if (ref->permanent && !permanent)
+		{	/* add it before any permanent references */
+			break;
+		}
+		if (ref->permanent == permanent && streq(name, ref->name))
+		{
+			free(name);
+			return;
+		}
+	}
+
+	INIT(ref,
+		.name = name,
+		.permanent = permanent,
+	);
+	array_insert_create(&section->references, i, ref);
+}
+
+/*
  * Add a section to the given parent, optionally remove settings/subsections
  * not found when extending an existing section
  */
@@ -167,14 +202,28 @@ void settings_section_add(section_t *parent, section_t *section,
 static bool section_purge(section_t *this, array_t *contents)
 {
 	section_t *current;
+	section_ref_t *ref;
 	int i, idx;
 
 	array_destroy_function(this->kv, (void*)kv_destroy, contents);
 	this->kv = NULL;
 	array_destroy(this->kv_order);
 	this->kv_order = NULL;
-	/* we ensure sections used as fallback, or configured with fallbacks (or
-	 * having any such subsections) are not removed */
+	/* remove non-permanent references */
+	for (i = array_count(this->references) - 1; i >= 0; i--)
+	{
+		array_get(this->references, i, &ref);
+		if (!ref->permanent)
+		{
+			array_remove(this->references, i, NULL);
+			ref_destroy(ref, 0, NULL);
+		}
+	}
+	if (!array_count(this->references))
+	{
+		array_destroy(this->references);
+		this->references = NULL;
+	}
 	for (i = array_count(this->sections_order) - 1; i >= 0; i--)
 	{
 		array_get(this->sections_order, i, &current);
@@ -187,7 +236,9 @@ static bool section_purge(section_t *this, array_t *contents)
 			settings_section_destroy(current, contents);
 		}
 	}
-	return !this->fallbacks && !array_count(this->sections);
+	/* we ensure sections configured with permanent references (or having any
+	 * such subsections) are not removed */
+	return !this->references && !array_count(this->sections);
 }
 
 /*
@@ -198,14 +249,15 @@ void settings_section_extend(section_t *base, section_t *extension,
 {
 	enumerator_t *enumerator;
 	section_t *section;
+	section_ref_t *ref;
 	kv_t *kv;
 	array_t *sections = NULL, *kvs = NULL;
 	int idx;
 
 	if (purge)
-	{	/* remove sections and settings in base not found in extension, the
-		 * others are removed too (from the _order list) so they can be inserted
-		 * in the order found in extension */
+	{	/* remove sections, settings in base not found in extension, the others
+		 * are removed too (from the _order list) so they can be inserted in the
+		 * order found in extension, non-permanent references are removed */
 		enumerator = array_create_enumerator(base->sections_order);
 		while (enumerator->enumerate(enumerator, (void**)&section))
 		{
@@ -245,6 +297,18 @@ void settings_section_extend(section_t *base, section_t *extension,
 				array_sort(kvs, settings_kv_sort, NULL);
 			}
 		}
+
+		enumerator = array_create_enumerator(base->references);
+		while (enumerator->enumerate(enumerator, (void**)&ref))
+		{
+			if (ref->permanent)
+			{	/* permanent references are ignored */
+				continue;
+			}
+			array_remove_at(base->references, enumerator);
+			ref_destroy(ref, 0, NULL);
+		}
+		enumerator->destroy(enumerator);
 	}
 
 	while (array_remove(extension->sections_order, 0, &section))
@@ -277,6 +341,16 @@ void settings_section_extend(section_t *base, section_t *extension,
 		idx = array_bsearch(extension->kv, kv->key, settings_kv_find, NULL);
 		array_remove(extension->kv, idx, NULL);
 		settings_kv_add(base, kv, contents);
+	}
+
+	while (array_remove(extension->references, 0, &ref))
+	{
+		if (ref->permanent)
+		{	/* ignore permanent references in the extension */
+			continue;
+		}
+		settings_reference_add(base, strdup(ref->name), FALSE);
+		ref_destroy(ref, 0, NULL);
 	}
 	array_destroy(sections);
 	array_destroy(kvs);

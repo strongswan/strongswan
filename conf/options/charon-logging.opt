@@ -5,6 +5,10 @@ charon.filelog {}
 charon.filelog.<filename> { # }
 	<filename> is the full path to the log file.
 
+charon.filelog.<filename>.path =
+	Optional path to the log file. Overrides the section name, may be used
+	if the path contains characters that aren't allowed in section names.
+
 charon.filelog.<filename>.default = 1
 	Default loglevel.
 
