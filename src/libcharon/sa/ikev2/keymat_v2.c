@@ -420,6 +420,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 
 	/* SK_d is used for generating CHILD_SA key mat => store for later use */
 	key_size = this->prf->get_key_size(this->prf);
+	chunk_clear(&this->skd);
 	if (!prf_plus->allocate_bytes(prf_plus, key_size, &this->skd))
 	{
 		goto failure;
@@ -432,6 +433,9 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			 transform_type_names, ENCRYPTION_ALGORITHM);
 		goto failure;
 	}
+
+	DESTROY_IF(this->aead_in);
+	DESTROY_IF(this->aead_out);
 
 	if (encryption_algorithm_is_aead(alg))
 	{
@@ -454,6 +458,9 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			goto failure;
 		}
 	}
+
+	chunk_clear(&this->skp_build);
+	chunk_clear(&this->skp_verify);
 
 	/* SK_pi/SK_pr used for authentication => stored for later */
 	key_size = this->prf->get_key_size(this->prf);
