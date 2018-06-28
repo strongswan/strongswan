@@ -56,7 +56,7 @@ static void narrow_ts(child_cfg_t *cfg, traffic_selector_t *ts,
 
 	received = linked_list_create();
 	received->insert_last(received, ts);
-	selected = cfg->get_traffic_selectors(cfg, FALSE, received, NULL);
+	selected = cfg->get_traffic_selectors(cfg, FALSE, received, NULL, FALSE);
 	while (selected->remove_first(selected, (void**)&ts) == SUCCESS)
 	{
 		list->insert_last(list, ts);
@@ -140,7 +140,8 @@ static void narrow_responder_post(child_cfg_t *child_cfg, linked_list_t *local)
 	{
 		ts->destroy(ts);
 	}
-	configured = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
+	configured = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL,
+												  FALSE);
 
 	while (configured->remove_first(configured, (void**)&ts) == SUCCESS)
 	{

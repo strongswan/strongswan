@@ -34,7 +34,6 @@ typedef struct proposal_t proposal_t;
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
 #include <crypto/diffie_hellman.h>
-#include <selectors/traffic_selector.h>
 
 /**
  * Protocol ID of a proposal.
@@ -142,6 +141,17 @@ struct proposal_t {
 	 */
 	proposal_t *(*select)(proposal_t *this, proposal_t *other,
 						  bool other_remote, bool private);
+
+	/**
+	 * Check if the given proposal matches this proposal.
+	 *
+	 * This is similar to select, but no resulting proposal is selected.
+	 *
+	 * @param other			proposal to compare against
+	 * @param private		accepts algorithms allocated in a private range
+	 * @return				TRUE if the proposals match
+	 */
+	bool (*matches)(proposal_t *this, proposal_t *other, bool private);
 
 	/**
 	 * Get the protocol ID of the proposal.

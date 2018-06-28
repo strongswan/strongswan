@@ -10,7 +10,7 @@ carol::cat /var/log/daemon.log::received TS_UNACCEPTABLE notify, no CHILD_SA bui
 carol::ipsec status 2> /dev/null::venus.*INSTALLED::NO
 moon:: ipsec status 2> /dev/null::venus.*ESTABLISHED.*carol@strongswan.org::NO
 moon:: cat /var/log/daemon.log::constraint check failed: peer not authenticated by.*Research CA::YES
-moon:: cat /var/log/daemon.log::selected peer config.*alice.*inacceptable::YES
+moon:: cat /var/log/daemon.log::selected peer config.*alice.*unacceptable::YES
 moon:: cat /var/log/daemon.log::switching to peer config.*venus::YES
 dave:: ipsec status 2> /dev/null::venus.*INSTALLED, TUNNEL::YES
 moon:: ipsec status 2> /dev/null::venus.*ESTABLISHED.*dave@strongswan.org::YES

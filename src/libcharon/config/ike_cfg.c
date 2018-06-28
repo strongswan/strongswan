@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -309,6 +309,25 @@ METHOD(ike_cfg_t, get_proposals, linked_list_t*,
 	return proposals;
 }
 
+METHOD(ike_cfg_t, has_proposal, bool,
+	private_ike_cfg_t *this, proposal_t *match, bool private)
+{
+	enumerator_t *enumerator;
+	proposal_t *proposal;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &proposal))
+	{
+		if (proposal->matches(proposal, match, private))
+		{
+			enumerator->destroy(enumerator);
+			return TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return FALSE;
+}
+
 METHOD(ike_cfg_t, select_proposal, proposal_t*,
 	private_ike_cfg_t *this, linked_list_t *proposals, bool private,
 	bool prefer_self)
@@ -344,7 +363,7 @@ METHOD(ike_cfg_t, select_proposal, proposal_t*,
 			{
 				DBG2(DBG_CFG, "received proposals: %#P", proposals);
 				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
-				DBG2(DBG_CFG, "selected proposal: %P", selected);
+				DBG1(DBG_CFG, "selected proposal: %P", selected);
 				break;
 			}
 		}
@@ -618,6 +637,7 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 			.add_proposal = _add_proposal,
 			.get_proposals = _get_proposals,
 			.select_proposal = _select_proposal,
+			.has_proposal = _has_proposal,
 			.get_dh_group = _get_dh_group,
 			.equals = _equals,
 			.get_ref = _get_ref,

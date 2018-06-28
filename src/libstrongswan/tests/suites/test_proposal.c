@@ -102,7 +102,12 @@ static struct {
 	{ PROTO_ESP, "aes128-sha256-modp3072-modpnone", "aes128-sha256", "aes128-sha256" },
 	{ PROTO_ESP, "aes128-sha256", "aes128-sha256-modp3072-modpnone", "aes128-sha256" },
 	{ PROTO_ESP, "aes128-sha256-modp3072-modpnone", "aes128-sha256-modpnone-modp3072", "aes128-sha256-modp3072" },
-	{ PROTO_ESP, "aes128-sha256-modpnone-modp3072", "aes128-sha256-modp3072-modpnone", "aes128-sha256-modpnone" },
+	{ PROTO_ESP, "aes128-sha256-modpnone-modp3072", "aes128-sha256-modp3072-modpnone", "aes128-sha256" },
+	{ PROTO_ESP, "aes128-sha256-esn", "aes128-sha256-esn", "aes128-sha256-esn" },
+	{ PROTO_ESP, "aes128-sha256-noesn", "aes128-sha256-esn", NULL },
+	{ PROTO_ESP, "aes128-sha256-noesn-esn", "aes128-sha256-esn", "aes128-sha256-esn" },
+	{ PROTO_ESP, "aes128-sha256-noesn-esn", "aes128-sha256", "aes128-sha256" },
+	{ PROTO_ESP, "aes128-sha256-esn-noesn", "aes128-sha256-noesn-esn", "aes128-sha256-esn" },
 	{ PROTO_IKE, "aes128-sha256-modp3072", "aes128-sha256-modp3072", "aes128-sha256-modp3072" },
 	{ PROTO_IKE, "aes128-sha256-modp3072", "aes128-sha256-modp3072-modpnone", "aes128-sha256-modp3072" },
 	{ PROTO_IKE, "aes128-sha256-modp3072-modpnone", "aes128-sha256-modp3072", "aes128-sha256-modp3072" },
@@ -154,6 +159,29 @@ START_TEST(test_select_spi)
 	ck_assert_int_eq(selected->get_spi(selected), self->get_spi(self));
 	selected->destroy(selected);
 
+	other->destroy(other);
+	self->destroy(self);
+}
+END_TEST
+
+START_TEST(test_matches)
+{
+	proposal_t *self, *other;
+
+	self = proposal_create_from_string(select_data[_i].proto,
+									   select_data[_i].self);
+	other = proposal_create_from_string(select_data[_i].proto,
+										select_data[_i].other);
+	if (select_data[_i].expected)
+	{
+		ck_assert(self->matches(self, other, FALSE));
+		ck_assert(other->matches(other, self, FALSE));
+	}
+	else
+	{
+		ck_assert(!self->matches(self, other, FALSE));
+		ck_assert(!other->matches(other, self, FALSE));
+	}
 	other->destroy(other);
 	self->destroy(self);
 }
@@ -310,6 +338,10 @@ Suite *proposal_suite_create()
 	tc = tcase_create("select");
 	tcase_add_loop_test(tc, test_select, 0, countof(select_data));
 	tcase_add_test(tc, test_select_spi);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("matches");
+	tcase_add_loop_test(tc, test_matches, 0, countof(select_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("promote_dh_group");

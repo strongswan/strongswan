@@ -335,22 +335,16 @@ METHOD(proposal_t, strip_dh, void,
 }
 
 /**
- * Select a matching proposal from this and other, insert into selected.
+ * Select a matching proposal from this and other.
  */
 static bool select_algo(private_proposal_t *this, proposal_t *other,
-						proposal_t *selected, transform_type_t type, bool priv)
+						transform_type_t type, bool priv, bool log,
+						uint16_t *alg, uint16_t *ks)
 {
 	enumerator_t *e1, *e2;
 	uint16_t alg1, alg2, ks1, ks2;
 	bool found = FALSE, optional = FALSE;
 
-	if (type == INTEGRITY_ALGORITHM &&
-		selected->get_algorithm(selected, ENCRYPTION_ALGORITHM, &alg1, NULL) &&
-		encryption_algorithm_is_aead(alg1))
-	{
-		/* no integrity algorithm required, we have an AEAD */
-		return TRUE;
-	}
 	if (type == DIFFIE_HELLMAN_GROUP)
 	{
 		optional = this->protocol == PROTO_ESP || this->protocol == PROTO_AH;
@@ -398,26 +392,79 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 			{
 				if (!priv && alg1 >= 1024)
 				{
-					/* accept private use algorithms only if requested */
-					DBG1(DBG_CFG, "an algorithm from private space would match, "
-						 "but peer implementation is unknown, skipped");
+					if (log)
+					{
+						DBG1(DBG_CFG, "an algorithm from private space would "
+							 "match, but peer implementation is unknown, "
+							 "skipped");
+					}
 					continue;
 				}
-				selected->add_algorithm(selected, type, alg1, ks1);
+				*alg = alg1;
+				*ks = ks1;
 				found = TRUE;
 				break;
 			}
 		}
 	}
-	/* no match in all comparisons */
 	e1->destroy(e1);
 	e2->destroy(e2);
-
-	if (!found)
-	{
-		DBG2(DBG_CFG, "  no acceptable %N found", transform_type_names, type);
-	}
 	return found;
+}
+
+/**
+ * Select algorithms from the given proposals, if selected is given, the result
+ * is stored there and errors are logged.
+ */
+static bool select_algos(private_proposal_t *this, proposal_t *other,
+						 proposal_t *selected, bool private)
+{
+	transform_type_t type;
+	array_t *types;
+	bool skip_integrity = FALSE;
+	int i;
+
+	types = merge_types(this, (private_proposal_t*)other);
+	for (i = 0; i < array_count(types); i++)
+	{
+		uint16_t alg = 0, ks = 0;
+
+		array_get(types, i, &type);
+		if (type == INTEGRITY_ALGORITHM && skip_integrity)
+		{
+			continue;
+		}
+		if (select_algo(this, other, type, private, selected != NULL, &alg, &ks))
+		{
+			if (alg == 0 && type != EXTENDED_SEQUENCE_NUMBERS)
+			{	/* 0 is "valid" for extended sequence numbers, for other
+				 * transforms it either means NONE or is reserved */
+				continue;
+			}
+			if (selected)
+			{
+				selected->add_algorithm(selected, type, alg, ks);
+			}
+			if (type == ENCRYPTION_ALGORITHM &&
+				encryption_algorithm_is_aead(alg))
+			{
+				/* no integrity algorithm required, we have an AEAD */
+				skip_integrity = TRUE;
+			}
+		}
+		else
+		{
+			if (selected)
+			{
+				DBG2(DBG_CFG, "  no acceptable %N found", transform_type_names,
+					 type);
+			}
+			array_destroy(types);
+			return FALSE;
+		}
+	}
+	array_destroy(types);
+	return TRUE;
 }
 
 METHOD(proposal_t, select_proposal, proposal_t*,
@@ -425,9 +472,6 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 	bool private)
 {
 	proposal_t *selected;
-	transform_type_t type;
-	array_t *types;
-	int i;
 
 	DBG2(DBG_CFG, "selecting proposal:");
 
@@ -448,21 +492,23 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 		selected->set_spi(selected, this->spi);
 	}
 
-	types = merge_types(this, (private_proposal_t*)other);
-	for (i = 0; i < array_count(types); i++)
+	if (!select_algos(this, other, selected, private))
 	{
-		array_get(types, i, &type);
-		if (!select_algo(this, other, selected, type, private))
-		{
-			selected->destroy(selected);
-			array_destroy(types);
-			return NULL;
-		}
+		selected->destroy(selected);
+		return NULL;
 	}
-	array_destroy(types);
-
 	DBG2(DBG_CFG, "  proposal matches");
 	return selected;
+}
+
+METHOD(proposal_t, matches, bool,
+	private_proposal_t *this, proposal_t *other, bool private)
+{
+	if (this->protocol != other->get_protocol(other))
+	{
+		return FALSE;
+	}
+	return select_algos(this, other, NULL, private);
 }
 
 METHOD(proposal_t, get_protocol, protocol_id_t,
@@ -910,6 +956,7 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 			.promote_dh_group = _promote_dh_group,
 			.strip_dh = _strip_dh,
 			.select = _select_proposal,
+			.matches = _matches,
 			.get_protocol = _get_protocol,
 			.set_spi = _set_spi,
 			.get_spi = _get_spi,

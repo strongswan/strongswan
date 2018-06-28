@@ -190,7 +190,7 @@ static bool select_suite_and_key(private_tls_server_t *this,
 											suites, count, type);
 		if (!this->suite)
 		{
-			DBG1(DBG_TLS, "received cipher suites inacceptable");
+			DBG1(DBG_TLS, "received cipher suites unacceptable");
 			return FALSE;
 		}
 		this->server_auth->destroy(this->server_auth);
@@ -199,7 +199,7 @@ static bool select_suite_and_key(private_tls_server_t *this,
 										this->server_auth);
 		if (!key)
 		{
-			DBG1(DBG_TLS, "received cipher suites inacceptable");
+			DBG1(DBG_TLS, "received cipher suites unacceptable");
 			return FALSE;
 		}
 	}

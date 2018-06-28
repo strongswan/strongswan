@@ -544,7 +544,7 @@ static traffic_selector_t* select_ts(private_quick_mode_t *this, bool local,
 
 	hosts = get_dynamic_hosts(this->ike_sa, local);
 	list = this->config->get_traffic_selectors(this->config,
-											   local, supplied, hosts);
+											   local, supplied, hosts, TRUE);
 	hosts->destroy(hosts);
 	if (list->get_first(list, (void**)&ts) == SUCCESS)
 	{

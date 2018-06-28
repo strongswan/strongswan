@@ -674,6 +674,7 @@ METHOD(ike_sa_t, get_ike_cfg, ike_cfg_t*,
 METHOD(ike_sa_t, set_ike_cfg, void,
 	private_ike_sa_t *this, ike_cfg_t *ike_cfg)
 {
+	DESTROY_IF(this->ike_cfg);
 	ike_cfg->get_ref(ike_cfg);
 	this->ike_cfg = ike_cfg;
 }

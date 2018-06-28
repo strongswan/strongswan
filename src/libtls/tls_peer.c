@@ -188,7 +188,7 @@ static status_t process_server_hello(private_tls_peer_t *this,
 		suite = cipher;
 		if (!this->crypto->select_cipher_suite(this->crypto, &suite, 1, KEY_ANY))
 		{
-			DBG1(DBG_TLS, "received TLS cipher suite %N inacceptable",
+			DBG1(DBG_TLS, "received TLS cipher suite %N unacceptable",
 				 tls_cipher_suite_names, suite);
 			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
 			return NEED_MORE;
