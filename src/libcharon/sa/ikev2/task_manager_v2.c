@@ -471,6 +471,7 @@ METHOD(task_manager_t, initiate, status_t,
 	message_t *message;
 	host_t *me, *other;
 	exchange_type_t exchange = 0;
+	bool result;
 
 	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED)
 	{
@@ -685,16 +686,46 @@ METHOD(task_manager_t, initiate, status_t,
 		return initiate(this);
 	}
 
-	if (!generate_message(this, message, &this->initiating.packets))
+	result = generate_message(this, message, &this->initiating.packets);
+
+	if (result)
 	{
-		/* message generation failed. There is nothing more to do than to
-		 * close the SA */
-		message->destroy(message);
-		flush(this);
-		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
-		return DESTROY_ME;
+		enumerator = array_create_enumerator(this->active_tasks);
+		while (enumerator->enumerate(enumerator, &task))
+		{
+			if (!task->post_build)
+			{
+				continue;
+			}
+			switch (task->post_build(task, message))
+			{
+				case SUCCESS:
+					array_remove_at(this->active_tasks, enumerator);
+					task->destroy(task);
+					break;
+				case NEED_MORE:
+					break;
+				default:
+					/* critical failure, destroy IKE_SA */
+					result = FALSE;
+					break;
+			}
+		}
+		enumerator->destroy(enumerator);
 	}
 	message->destroy(message);
+
+	if (!result)
+	{	/* message generation failed. There is nothing more to do than to
+		 * close the SA */
+		flush(this);
+		if (this->ike_sa->get_state(this->ike_sa) != IKE_CONNECTING &&
+			this->ike_sa->get_state(this->ike_sa) != IKE_REKEYED)
+		{
+			charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+		}
+		return DESTROY_ME;
+	}
 
 	array_compress(this->active_tasks);
 	array_compress(this->queued_tasks);
@@ -946,7 +977,34 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	/* message complete, send it */
 	clear_packets(this->responding.packets);
 	result = generate_message(this, message, &this->responding.packets);
+
+	if (result && !delete)
+	{
+		enumerator = array_create_enumerator(this->passive_tasks);
+		while (enumerator->enumerate(enumerator, &task))
+		{
+			if (!task->post_build)
+			{
+				continue;
+			}
+			switch (task->post_build(task, message))
+			{
+				case SUCCESS:
+					array_remove_at(this->passive_tasks, enumerator);
+					task->destroy(task);
+					break;
+				case NEED_MORE:
+					break;
+				default:
+					/* critical failure, destroy IKE_SA */
+					result = FALSE;
+					break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 	message->destroy(message);
+
 	if (id)
 	{
 		id->set_responder_spi(id, responder_spi);
