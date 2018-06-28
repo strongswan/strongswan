@@ -280,6 +280,8 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			 ENCRYPTION_ALGORITHM);
 		return FALSE;
 	}
+	DESTROY_IF(this->aead_in);
+	DESTROY_IF(this->aead_out);
 	if (!encryption_algorithm_is_aead(enc_alg))
 	{
 		if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &int_alg,
@@ -412,6 +414,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	{
 		goto failure;
 	}
+	chunk_clear(&this->skd);
 	chunk_split(keymat, "ammmmaa", key_size, &this->skd, sk_ai.len, &sk_ai,
 				sk_ar.len, &sk_ar, sk_ei.len, &sk_ei, sk_er.len, &sk_er,
 				key_size, &sk_pi, key_size, &sk_pr);
@@ -433,6 +436,8 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	/* SK_pi/SK_pr used for authentication => stored for later */
 	DBG4(DBG_IKE, "Sk_pi secret %B", &sk_pi);
 	DBG4(DBG_IKE, "Sk_pr secret %B", &sk_pr);
+	chunk_clear(&this->skp_build);
+	chunk_clear(&this->skp_verify);
 	if (this->initiator)
 	{
 		this->skp_build = sk_pi;
