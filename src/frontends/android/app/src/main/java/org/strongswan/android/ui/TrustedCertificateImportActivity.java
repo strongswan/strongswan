@@ -45,14 +45,6 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 {
 	private static final int OPEN_DOCUMENT = 0;
 	private static final String DIALOG_TAG = "Dialog";
-
-	/* same as those listed in the manifest */
-	private static final String[] ACCEPTED_MIME_TYPES = {
-		"application/x-x509-ca-cert",
-		"application/x-x509-server-cert",
-		"application/x-pem-file",
-		"application/pkix-cert"
-	};
 	private Uri mCertificateUri;
 
 	@TargetApi(Build.VERSION_CODES.KITKAT)
@@ -76,7 +68,6 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		{
 			Intent openIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 			openIntent.setType("*/*");
-			openIntent.putExtra(Intent.EXTRA_MIME_TYPES, ACCEPTED_MIME_TYPES);
 			try
 			{
 				startActivityForResult(openIntent, OPEN_DOCUMENT);
