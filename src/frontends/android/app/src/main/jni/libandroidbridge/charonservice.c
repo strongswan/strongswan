@@ -633,6 +633,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 
 	/* set options before initializing other libraries that might read them */
 	logfile = androidjni_convert_jstring(env, jlogfile);
+
 	set_options(logfile);
 	free(logfile);
 
@@ -661,7 +662,8 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	{
 		memset(&utsname, 0, sizeof(utsname));
 	}
-	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION", %s, %s, "
+	DBG1(DBG_DMN, "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+");
+	DBG1(DBG_DMN, "Starting IKE service (strongSwan "VERSION", %s, %s, "
 		 "%s %s, %s)", android_version_string, android_device_string,
 		  utsname.sysname, utsname.release, utsname.machine);
 
