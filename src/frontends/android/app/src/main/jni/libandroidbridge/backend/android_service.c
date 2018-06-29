@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include "android_jni.h"
 #include "android_service.h"
 #include "android_dns_proxy.h"
 #include "../charonservice.h"
@@ -760,6 +761,11 @@ static job_requeue_t initiate(private_android_service_t *this)
 	char *type, *server, *remote_id;
 	int port;
 	bool certreq;
+
+	if (android_sdk_version >= ANDROID_LOLLIPOP)
+	{   /* only try once and notify the GUI on Android 5+ where we have a blocking TUN device */
+		peer.keyingtries = 1;
+	}
 
 	server = this->settings->get_str(this->settings, "connection.server", NULL);
 	port = this->settings->get_int(this->settings, "connection.port",
