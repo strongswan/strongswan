@@ -81,11 +81,6 @@ static bool print_key(char *buf, int len, char *start, char *key, va_list args)
 	char *pos = start;
 	bool res;
 
-	if (!args)
-	{
-		return snprintf(buf, len, "%s", key) < len;
-	}
-
 	va_copy(copy, args);
 	while (TRUE)
 	{
@@ -192,11 +187,16 @@ static array_t *find_sections(private_settings_t *this, section_t *section,
 
 /**
  * Resolve the given reference. Not thread-safe.
+ * Only a vararg function to get an empty va_list.
  */
 static void resolve_reference(private_settings_t *this, section_ref_t *ref,
-						array_t **sections)
+						array_t **sections, ...)
 {
-	find_sections(this, this->top, ref->name, NULL, sections);
+	va_list args;
+
+	va_start(args, sections);
+	find_sections(this, this->top, ref->name, args, sections);
+	va_end(args);
 }
 
 /**
