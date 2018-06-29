@@ -120,7 +120,7 @@ public class LogFragment extends Fragment implements Runnable
 
 	/**
 	 * Write the given log line to the TextView. We strip the prefix off to save
-	 * some space (it is not that helpful for regular users anyway).
+	 * some space in narrow views (it is not that helpful for regular users anyway).
 	 *
 	 * @param lines log lines to log
 	 */
@@ -132,8 +132,12 @@ public class LogFragment extends Fragment implements Runnable
 			{
 				mLogView.beginBatchEdit();
 				for (String line : lines)
-				{	/* strip off prefix (month=3, day=2, time=8, thread=2, spaces=3) */
-					mLogView.append((line.length() > 18 ? line.substring(18) : line) + '\n');
+				{
+					if (getResources().getConfiguration().screenWidthDp < 600)
+					{	/* strip off prefix (month=3, day=2, time=8, thread=2, spaces=3) */
+						line = line.length() > 18 ? line.substring(18) : line;
+					}
+					mLogView.append(line + '\n');
 				}
 				mLogView.endBatchEdit();
 				/* calling autoScroll() directly does not work, probably because content
