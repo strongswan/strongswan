@@ -262,7 +262,10 @@ public class VpnStateService extends Service
 	 */
 	public void disconnect()
 	{
+		/* reset any potential retry timer and error state */
 		resetRetryTimer();
+		setError(ErrorState.NO_ERROR);
+
 		/* as soon as the TUN device is created by calling establish() on the
 		 * VpnService.Builder object the system binds to the service and keeps
 		 * bound until the file descriptor of the TUN device is closed.  thus

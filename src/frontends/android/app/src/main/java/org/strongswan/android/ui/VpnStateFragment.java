@@ -28,7 +28,6 @@ import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -44,8 +43,6 @@ import org.strongswan.android.logic.VpnStateService.VpnStateListener;
 
 public class VpnStateFragment extends Fragment implements VpnStateListener
 {
-	private static final String KEY_ERROR_CONNECTION_ID = "error_connection_id";
-
 	private boolean mVisible;
 	private TextView mProfileNameView;
 	private TextView mProfileView;
@@ -59,7 +56,6 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 	private TextView mErrorText;
 	private Button mErrorRetry;
 	private Button mShowLog;
-	private long mErrorConnectionID;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection()
 	{
@@ -80,17 +76,6 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 			}
 		}
 	};
-	private OnClickListener mDisconnectListener = new OnClickListener()
-	{
-		@Override
-		public void onClick(View v)
-		{
-			if (mService != null)
-			{
-				mService.disconnect();
-			}
-		}
-	};
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -104,20 +89,6 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		Context context = getActivity().getApplicationContext();
 		context.bindService(new Intent(context, VpnStateService.class),
 							mServiceConnection, Service.BIND_AUTO_CREATE);
-
-		mErrorConnectionID = 0;
-		if (savedInstanceState != null && savedInstanceState.containsKey(KEY_ERROR_CONNECTION_ID))
-		{
-			mErrorConnectionID = (Long)savedInstanceState.getSerializable(KEY_ERROR_CONNECTION_ID);
-		}
-	}
-
-	@Override
-	public void onSaveInstanceState(Bundle outState)
-	{
-		super.onSaveInstanceState(outState);
-
-		outState.putSerializable(KEY_ERROR_CONNECTION_ID, mErrorConnectionID);
 	}
 
 	@Override
@@ -127,7 +98,12 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		View view = inflater.inflate(R.layout.vpn_state_fragment, null);
 
 		mActionButton = (Button)view.findViewById(R.id.action);
-		mActionButton.setOnClickListener(v -> clearError());
+		mActionButton.setOnClickListener(v -> {
+			if (mService != null)
+			{
+				mService.disconnect();
+			}
+		});
 		enableActionButton(null);
 
 		mErrorView = view.findViewById(R.id.vpn_error);
@@ -259,7 +235,6 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 			mErrorView.setVisibility(View.GONE);
 			return false;
 		}
-		mErrorConnectionID = connectionID;
 		mProfileNameView.setText(name);
 		showProfile(true);
 		mStateView.setText(R.string.state_error);
@@ -297,17 +272,5 @@ public class VpnStateFragment extends Fragment implements VpnStateListener
 		mActionButton.setText(text);
 		mActionButton.setEnabled(text != null);
 		mActionButton.setVisibility(text != null ? View.VISIBLE : View.GONE);
-	}
-
-	private void clearError()
-	{
-		if (mService != null)
-		{
-			mService.disconnect();
-			if (mService.getConnectionID() == mErrorConnectionID)
-			{
-				mService.setError(ErrorState.NO_ERROR);
-			}
-		}
 	}
 }
