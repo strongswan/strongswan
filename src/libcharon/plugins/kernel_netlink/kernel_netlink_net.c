@@ -2031,6 +2031,7 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 						break;
 					}
 					if (route->dst_len == other->dst_len &&
+						route->table == other->table &&
 						route->priority < other->priority)
 					{
 						break;
