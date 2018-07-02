@@ -2095,8 +2095,8 @@ METHOD(message_t, fragment, status_t,
 
 	count = data.len / frag_len + (data.len % frag_len ? 1 : 0);
 	this->fragments = array_create(0, count);
-	DBG1(DBG_ENC, "splitting IKE message with length of %zu bytes into "
-		 "%hu fragments", len, count);
+	DBG1(DBG_ENC, "splitting IKE message (%zu bytes) into %hu fragments", len,
+		 count);
 	for (num = 1; num <= count; num++)
 	{
 		len = min(data.len, frag_len);
@@ -2821,11 +2821,11 @@ METHOD(message_t, add_fragment_v1, status_t,
 		return NEED_MORE;
 	}
 
-	DBG1(DBG_ENC, "received fragment #%hhu, reassembling fragmented IKE "
-		 "message", num);
-
 	data = merge_fragments(this, message);
 	this->packet->set_data(this->packet, data);
+	DBG1(DBG_ENC, "received fragment #%hhu, reassembled fragmented IKE "
+		 "message (%zu bytes)", num, data.len);
+
 	this->parser = parser_create(data);
 
 	if (parse_header(this) != SUCCESS)
@@ -2904,10 +2904,10 @@ METHOD(message_t, add_fragment_v2, status_t,
 		return NEED_MORE;
 	}
 
-	DBG1(DBG_ENC, "received fragment #%hu of %hu, reassembling fragmented IKE "
-		 "message", num, total);
-
 	data = merge_fragments(this, message);
+	DBG1(DBG_ENC, "received fragment #%hu of %hu, reassembled fragmented IKE "
+		 "message (%zu bytes)", num, total, data.len);
+
 	encrypted = encrypted_payload_create_from_plain(this->first_payload, data);
 	this->payloads->insert_last(this->payloads, encrypted);
 	/* update next payload type (could be an unencrypted payload) */
