@@ -1012,20 +1012,42 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 					FileInputStream plain = new FileInputStream(mFd.getFileDescriptor());
 					ByteBuffer packet = ByteBuffer.allocate(mCache.mMtu);
 					while (true)
-					{	/* just read and ignore all data, regular read() is not properly interruptible */
-						int len = plain.getChannel().read(packet);
-						packet.clear();
-						if (len < 0)
-						{
-							break;
+					{
+						if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+						{	/* just read and ignore all data, regular read() is not interruptible */
+							int len = plain.getChannel().read(packet);
+							packet.clear();
+							if (len < 0)
+							{
+								break;
+							}
+						}
+						else
+						{	/* this is rather ugly but on older platforms not even the NIO version of read() is interruptible */
+							boolean wait = true;
+							if (plain.available() > 0)
+							{
+								int len = plain.read(packet.array());
+								packet.clear();
+								if (len < 0 || Thread.interrupted())
+								{
+									break;
+								}
+								/* check again right away, there may be another packet */
+								wait = false;
+							}
+							if (wait)
+							{
+								Thread.sleep(250);
+							}
 						}
 					}
 				}
-				catch (ClosedByInterruptException e)
+				catch (ClosedByInterruptException|InterruptedException e)
 				{
 					/* regular interruption */
 				}
-				catch (Exception e)
+				catch (IOException e)
 				{
 					e.printStackTrace();
 				}
