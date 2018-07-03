@@ -1,15 +1,15 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion '25.0.0'
+    compileSdkVersion 26
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "org.strongswan.android"
         minSdkVersion 15
-        targetSdkVersion 22
-        versionCode 50
-        versionName "1.9.6"
+        targetSdkVersion 26
+        versionCode 55
+        versionName "2.0.0"
     }
 
     sourceSets.main {
@@ -40,10 +40,16 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
+    compileOptions {
+        targetCompatibility 1.8
+        sourceCompatibility 1.8
+    }
 }
 
 dependencies {
-    compile 'com.android.support:appcompat-v7:23.3.0'
-    compile 'com.android.support:design:23.3.0'
-    testCompile 'junit:junit:4.12'
+    implementation 'com.android.support:appcompat-v7:26.0.2'
+    implementation 'com.android.support:design:26.0.2'
+    implementation 'com.android.support:preference-v7:26.0.2'
+    implementation 'com.android.support:support-v4:26.0.2'
+    testImplementation 'junit:junit:4.12'
 }

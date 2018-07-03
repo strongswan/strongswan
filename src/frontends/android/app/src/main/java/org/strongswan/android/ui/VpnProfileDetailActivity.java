@@ -118,6 +118,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private EditText mPort;
 	private TextInputLayoutHelper mPortWrap;
 	private Switch mCertReq;
+	private Switch mUseCrl;
+	private Switch mUseOcsp;
+	private Switch mStrictRevocation;
+	private Switch mRsaPss;
 	private EditText mNATKeepalive;
 	private TextInputLayoutHelper mNATKeepaliveWrap;
 	private EditText mIncludedSubnets;
@@ -132,6 +136,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private EditText mIkeProposal;
 	private TextInputLayoutHelper mEspProposalWrap;
 	private EditText mEspProposal;
+	private TextView mProfileIdLabel;
+	private TextView mProfileId;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -177,6 +183,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mNATKeepalive = (EditText)findViewById(R.id.nat_keepalive);
 		mNATKeepaliveWrap = (TextInputLayoutHelper) findViewById(R.id.nat_keepalive_wrap);
 		mCertReq = (Switch)findViewById(R.id.cert_req);
+		mUseCrl = findViewById(R.id.use_crl);
+		mUseOcsp = findViewById(R.id.use_ocsp);
+		mStrictRevocation= findViewById(R.id.strict_revocation);
+		mRsaPss= findViewById(R.id.rsa_pss);
 		mIncludedSubnets = (EditText)findViewById(R.id.included_subnets);
 		mIncludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.included_subnets_wrap);
 		mExcludedSubnets = (EditText)findViewById(R.id.excluded_subnets);
@@ -193,6 +203,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mEspProposalWrap = (TextInputLayoutHelper)findViewById(R.id.esp_proposal_wrap);
 		/* make the link clickable */
 		((TextView)findViewById(R.id.proposal_intro)).setMovementMethod(LinkMovementMethod.getInstance());
+
+		mProfileIdLabel = (TextView)findViewById(R.id.profile_id_label);
+		mProfileId = (TextView)findViewById(R.id.profile_id);
 
 		final SpaceTokenizer spaceTokenizer = new SpaceTokenizer();
 		mName.setTokenizer(spaceTokenizer);
@@ -564,6 +577,12 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		}
 		mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
 		mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
+
+		if (show && mProfile == null)
+		{
+			mProfileIdLabel.setVisibility(View.GONE);
+			mProfileId.setVisibility(View.GONE);
+		}
 	}
 
 	/**
@@ -699,6 +718,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mProfile.setNATKeepAlive(getInteger(mNATKeepalive));
 		int flags = 0;
 		flags |= !mCertReq.isChecked() ? VpnProfile.FLAGS_SUPPRESS_CERT_REQS : 0;
+		flags |= !mUseCrl.isChecked() ? VpnProfile.FLAGS_DISABLE_CRL : 0;
+		flags |= !mUseOcsp.isChecked() ? VpnProfile.FLAGS_DISABLE_OCSP : 0;
+		flags |= mStrictRevocation.isChecked() ? VpnProfile.FLAGS_STRICT_REVOCATION : 0;
+		flags |= mRsaPss.isChecked() ? VpnProfile.FLAGS_RSA_PSS : 0;
 		mProfile.setFlags(flags);
 		String included = mIncludedSubnets.getText().toString().trim();
 		mProfile.setIncludedSubnets(included.isEmpty() ? null : included);
@@ -749,6 +772,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mSelectedApps = mProfile.getSelectedAppsSet();
 				mIkeProposal.setText(mProfile.getIkeProposal());
 				mEspProposal.setText(mProfile.getEspProposal());
+				mProfileId.setText(mProfile.getUUID().toString());
 				flags = mProfile.getFlags();
 				useralias = mProfile.getUserCertificateAlias();
 				local_id = mProfile.getLocalId();
@@ -765,6 +789,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		mSelectVpnType.setSelection(mVpnType.ordinal());
 		mCertReq.setChecked(flags == null || (flags & VpnProfile.FLAGS_SUPPRESS_CERT_REQS) == 0);
+		mUseCrl.setChecked(flags == null || (flags & VpnProfile.FLAGS_DISABLE_CRL) == 0);
+		mUseOcsp.setChecked(flags == null || (flags & VpnProfile.FLAGS_DISABLE_OCSP) == 0);
+		mStrictRevocation.setChecked(flags != null && (flags & VpnProfile.FLAGS_STRICT_REVOCATION) != 0);
+		mRsaPss.setChecked(flags != null && (flags & VpnProfile.FLAGS_RSA_PSS) != 0);
 
 		/* check if the user selected a user certificate previously */
 		useralias = savedInstanceState == null ? useralias : savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);

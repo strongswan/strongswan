@@ -2,7 +2,7 @@
  * Copyright (C) 2005-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  *
- * Copyright (C) 2008-2017 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -1620,17 +1620,6 @@ METHOD(ike_sa_manager_t, new_initiator_spi, bool,
 			unlock_single_segment(this, segment);
 			return FALSE;
 		}
-		/* threads waiting for this entry do so using the (soon) wrong IKE_SA
-		 * ID and, therefore, likely on the wrong segment, so drive them out */
-		entry->driveout_waiting_threads = TRUE;
-		entry->driveout_new_threads = TRUE;
-		while (entry->waiting_threads)
-		{
-			entry->condvar->broadcast(entry->condvar);
-			entry->condvar->wait(entry->condvar, this->segments[segment].mutex);
-		}
-		remove_entry(this, entry);
-		unlock_single_segment(this, segment);
 	}
 	else
 	{
@@ -1638,7 +1627,19 @@ METHOD(ike_sa_manager_t, new_initiator_spi, bool,
 		return FALSE;
 	}
 
+	/* the hashtable row and segment are determined by the local SPI as
+	 * initiator, so if we change it the row and segment derived from it might
+	 * change as well.  This could be a problem for threads waiting for the
+	 * entry (in particular those enumerating entries to check them out by
+	 * unique ID or name).  In order to avoid having to drive them out and thus
+	 * preventing them from checking out the entry (even though the ID or name
+	 * will not change and enumerating it is also fine), we mask the new SPI and
+	 * merge it with the old SPI so the entry ends up in the same row/segment.
+	 * Since SPIs are 64-bit and the number of rows/segments is usually
+	 * relatively low this should not be a problem. */
 	spi = ike_sa_id->get_initiator_spi(ike_sa_id);
+	new_spi = (spi & (uint64_t)this->table_mask) |
+			  (new_spi & ~(uint64_t)this->table_mask);
 
 	DBG2(DBG_MGR, "change initiator SPI of IKE_SA %s[%u] from %.16"PRIx64" to "
 		 "%.16"PRIx64, ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
@@ -1647,10 +1648,7 @@ METHOD(ike_sa_manager_t, new_initiator_spi, bool,
 	ike_sa_id->set_initiator_spi(ike_sa_id, new_spi);
 	entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa_id);
 
-	entry->driveout_waiting_threads = FALSE;
-	entry->driveout_new_threads = FALSE;
-
-	segment = put_entry(this, entry);
+	entry->condvar->signal(entry->condvar);
 	unlock_single_segment(this, segment);
 	return TRUE;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Tobias Brunner
+ * Copyright (C) 2016-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -17,11 +17,10 @@ package org.strongswan.android.ui;
 
 import android.app.Activity;
 import android.app.LoaderManager;
-import android.app.ProgressDialog;
+import android.content.ActivityNotFoundException;
 import android.content.AsyncTaskLoader;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
 import android.net.Uri;
@@ -66,7 +65,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.OutOfMemoryError;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.security.KeyStore;
@@ -96,7 +94,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	private TrustedCertificateEntry mUserCertEntry;
 	private String mUserCertLoading;
 	private boolean mHideImport;
-	private ProgressDialog mProgress;
+	private android.support.v4.widget.ContentLoadingProgressBar mProgressBar;
 	private TextView mExistsWarning;
 	private ViewGroup mBasicDataGroup;
 	private TextView mName;
@@ -167,6 +165,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 
 		setContentView(R.layout.profile_import_view);
 
+		mProgressBar = findViewById(R.id.progress_bar);
 		mExistsWarning = (TextView)findViewById(R.id.exists_warning);
 		mBasicDataGroup = (ViewGroup)findViewById(R.id.basic_data_group);
 		mName = (TextView)findViewById(R.id.name);
@@ -213,7 +212,15 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		{
 			Intent openIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 			openIntent.setType("*/*");
-			startActivityForResult(openIntent, OPEN_DOCUMENT);
+			try
+			{
+				startActivityForResult(openIntent, OPEN_DOCUMENT);
+			}
+			catch (ActivityNotFoundException e)
+			{	/* some devices are unable to browse for files */
+				finish();
+				return;
+			}
 		}
 
 		if (savedInstanceState != null)
@@ -300,14 +307,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 
 	private void loadProfile(Uri uri)
 	{
-		mProgress = ProgressDialog.show(this, null, getString(R.string.loading),
-				true, true, new DialogInterface.OnCancelListener() {
-					@Override
-					public void onCancel(DialogInterface dialog)
-					{
-						finish();
-					}
-				});
+		mProgressBar.show();
 
 		Bundle args = new Bundle();
 		args.putParcelable(PROFILE_URI, uri);
@@ -316,7 +316,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 
 	public void handleProfile(ProfileLoadResult data)
 	{
-		mProgress.dismiss();
+		mProgressBar.hide();
 
 		mProfile = null;
 		if (data != null && data.ThrownException == null)
@@ -478,9 +478,26 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		profile.setRemoteId(remote.optString("id", null));
 		profile.Certificate = decodeBase64(remote.optString("cert", null));
 
-		if (remote.optBoolean("certreq", false))
+		if (!remote.optBoolean("certreq", true))
 		{
 			flags |= VpnProfile.FLAGS_SUPPRESS_CERT_REQS;
+		}
+
+		JSONObject revocation = remote.optJSONObject("revocation");
+		if (revocation != null)
+		{
+			if (!revocation.optBoolean("crl", true))
+			{
+				flags |= VpnProfile.FLAGS_DISABLE_CRL;
+			}
+			if (!revocation.optBoolean("ocsp", true))
+			{
+				flags |= VpnProfile.FLAGS_DISABLE_OCSP;
+			}
+			if (revocation.optBoolean("strict", false))
+			{
+				flags |= VpnProfile.FLAGS_STRICT_REVOCATION;
+			}
 		}
 
 		JSONObject local = obj.optJSONObject("local");
@@ -495,6 +512,11 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			{
 				profile.setLocalId(local.optString("id", null));
 				profile.PKCS12 = decodeBase64(local.optString("p12", null));
+
+				if (local.optBoolean("rsa-pss", false))
+				{
+					flags |= VpnProfile.FLAGS_RSA_PSS;
+				}
 			}
 		}
 

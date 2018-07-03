@@ -21,10 +21,18 @@
     <string name="search">Поиск</string>
     <string name="vpn_not_supported_title">VPN не поддерживается</string>
     <string name="vpn_not_supported">Ваше устройство не поддерживат VPN приложение.\nПожалуйста свяжитесь с производителем.</string>
-    <string name="vpn_not_supported_during_lockdown">VPN соединения не поддерживаются в режиме lockdown.</string>
+    <string name="vpn_not_supported_during_lockdown">VPN connections are not supported if a built-in VPN has the always-on feature enabled.</string>
+    <string name="vpn_not_supported_no_permission">Unable to get permission to create VPN connections. Either because it was denied by the user, or because a different VPN app has the always-on feature enabled.</string>
     <string name="loading">Загрузка&#8230;</string>
     <string name="profile_not_found">Профиль не найден</string>
     <string name="strongswan_shortcut">Ссылка на strongSwan</string>
+    <string name="permanent_notification_name">VPN connection state</string>
+    <string name="permanent_notification_description">Provides information about the VPN connection state and serves as permanent notification to keep the VPN service running in the background.</string>
+
+    <!-- Settings -->
+    <string name="pref_title">Settings</string>
+    <string name="pref_default_vpn_profile">Default VPN profile</string>
+    <string name="pref_default_vpn_profile_mru">Connect to most recently used profile</string>
 
     <!-- Log view -->
     <string name="log_title">Журнал</string>
@@ -80,6 +88,14 @@
     <string name="profile_nat_keepalive_hint">Small packets are sent to keep mappings on NAT routers alive if there is no other traffic. In order to save energy the default interval is 45 seconds. Behind NAT routers that remove mappings early this might be too high, try 20 seconds or less in that case.</string>
     <string name="profile_cert_req_label">Send certificate requests</string>
     <string name="profile_cert_req_hint">Certificate requests are sent for all available or selected CA certificates. To reduce the size of the IKE_AUTH message this can be disabled. However, this only works if the server sends its certificate even if it didn\'t receive any certificate requests.</string>
+    <string name="profile_use_ocsp_label">Use OCSP to check certificate</string>
+    <string name="profile_use_ocsp_hint">Use the Online Certificate Status Protocol (OCSP), if available, to check that the server certificate has not been revoked.</string>
+    <string name="profile_use_crl_label">Use CRLs to check certificate</string>
+    <string name="profile_use_crl_hint">Use Certificate Revocation Lists (CRL), if available, to check that the server certificate has not been revoked. CRLs are only used if OCSP doesn\'t yield a result.</string>
+    <string name="profile_strict_revocation_label">Use strict revocation checking</string>
+    <string name="profile_strict_revocation_hint">In strict mode the authentication will fail not only if the server certificate has been revoked but also if its status is unknown (e.g. because OCSP failed and no valid CRL was available).</string>
+    <string name="profile_rsa_pss_label">Use RSA/PSS signatures</string>
+    <string name="profile_rsa_pss_hint">Use the stronger PSS encoding instead of the classic PKCS#1 encoding for RSA signatures. Authentication will fail if the server does not support such signatures.</string>
     <string name="profile_split_tunneling_label">Split tunneling</string>
     <string name="profile_split_tunneling_intro">By default, the client will route all network traffic through the VPN, unless the server narrows the subnets when the connection is established, in which case only traffic the server allows will be routed via VPN (by default, all other traffic is routed as if there was no VPN).</string>
     <string name="profile_split_tunnelingv4_title">Block IPv4 traffic not destined for the VPN</string>
@@ -109,6 +125,7 @@
     <string name="profile_import_exists">This VPN profile already exists, its current settings will be replaced.</string>
     <string name="profile_cert_import">Import certificate from VPN profile</string>
     <string name="profile_cert_alias">Certificate for \"%1$s\"</string>
+    <string name="profile_profile_id">Profile ID</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">A value is required to initiate the connection</string>
     <string name="alert_text_no_input_username">Пожалуйста введите имя пользователя</string>
@@ -151,6 +168,7 @@
     <string name="state_disconnecting">Отключение&#8230;</string>
     <string name="state_disabled">Нет активных VPN</string>
     <string name="state_error">Ошибка</string>
+    <string name="dismiss">Dismiss</string>
 
     <!-- IMC state fragment -->
     <string name="imc_state_label">Assessment:</string>
@@ -166,13 +184,15 @@
     <string name="login_username">Логин</string>
     <string name="login_password">Пароль</string>
     <string name="login_confirm">Соединить</string>
-    <string name="error_introduction">Ошибка подключения к VPN:</string>
-    <string name="error_lookup_failed">Не найден адрес сервер.</string>
-    <string name="error_unreachable">Сервер недоступен.</string>
-    <string name="error_peer_auth_failed">Ошибка авторизаци при подключении к сервер.</string>
-    <string name="error_auth_failed">Ошибка авторизации пользователя.</string>
-    <string name="error_assessment_failed">Security assessment failed.</string>
-    <string name="error_generic">Неизвестная ошибка.</string>
+    <string name="error_format">Ошибка подключения к VPN: %1$s.</string>
+    <string name="error_lookup_failed">Не найден адрес сервер</string>
+    <string name="error_unreachable">Сервер недоступен</string>
+    <string name="error_peer_auth_failed">Ошибка авторизаци при подключении к сервер</string>
+    <string name="error_auth_failed">Ошибка авторизации пользователя</string>
+    <string name="error_assessment_failed">Security assessment failed</string>
+    <string name="error_generic">Неизвестная ошибка</string>
+    <string name="error_password_missing">Password unavailable</string>
+    <string name="error_certificate_unavailable">Client certificate unavailable</string>
     <string name="vpn_connected">Соединение с VPN установлено</string>
     <string name="vpn_profile_connected">Подключение к этому профилю VPN уже существует!</string>
     <string name="reconnect">Переподключить</string>
@@ -181,5 +201,16 @@
     <string name="disconnect_question">Disconnect VPN?</string>
     <string name="disconnect_active_connection">This will disconnect the active VPN connection!</string>
     <string name="connect">Соединить</string>
+    <string name="retry">Retry</string>
+    <plurals name="retry_in">
+        <item quantity="one">Retry in %1$d second</item>
+        <item quantity="other">Retry in %1$d seconds</item>
+    </plurals>
+    <string name="cancel_retry">Cancel retry</string>
+
+    <!-- Quick Settings tile -->
+    <string name="tile_default">Toggle VPN</string>
+    <string name="tile_connect">Connect VPN</string>
+    <string name="tile_disconnect">Disconnect VPN</string>
 
 </resources>

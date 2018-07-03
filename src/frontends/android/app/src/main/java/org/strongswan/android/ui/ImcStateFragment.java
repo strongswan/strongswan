@@ -49,6 +49,7 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 {
 	private int mColorIsolate;
 	private int mColorBlock;
+	private boolean mVisible;
 	private TextView mStateView;
 	private TextView mAction;
 	private LinearLayout mButton;
@@ -65,7 +66,11 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 		public void onServiceConnected(ComponentName name, IBinder service)
 		{
 			mService = ((VpnStateService.LocalBinder)service).getService();
-			mService.registerListener(ImcStateFragment.this);
+			if (mVisible)
+			{
+				mService.registerListener(ImcStateFragment.this);
+				updateView();
+			}
 		}
 	};
 
@@ -149,6 +154,7 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 	public void onResume()
 	{
 		super.onResume();
+		mVisible = true;
 		if (mService != null)
 		{
 			mService.registerListener(this);
@@ -160,6 +166,7 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 	public void onPause()
 	{
 		super.onPause();
+		mVisible = false;
 		if (mService != null)
 		{
 			mService.unregisterListener(this);
