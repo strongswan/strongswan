@@ -640,6 +640,9 @@ static void add_auth_cfg_pw(private_android_service_t *this,
 	{	/* use EAP-TTLS if BYOD is enabled */
 		auth->add(auth, AUTH_RULE_EAP_TYPE, EAP_TTLS);
 	}
+	/* in case EAP-PEAP or EAP-TTLS is used we currently accept any identity */
+	auth->add(auth, AUTH_RULE_AAA_IDENTITY,
+			  identification_create_from_string("%any"));
 
 	username = this->settings->get_str(this->settings, "connection.username",
 									   NULL);
