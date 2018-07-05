@@ -891,6 +891,9 @@ static kernel_algorithm_t encryption_algs[] = {
 	{ENCR_AES_GCM_ICV12,		SADB_X_EALG_AES_GCM_ICV12	},
 	{ENCR_AES_GCM_ICV16,		SADB_X_EALG_AES_GCM_ICV16	},
 #endif
+#ifdef SADB_X_EALG_AES_GCM
+	{ENCR_AES_GCM_ICV16,		SADB_X_EALG_AES_GCM		},
+#endif
 #ifdef SADB_X_EALG_CAMELLIACBC
 	{ENCR_CAMELLIA_CBC,			SADB_X_EALG_CAMELLIACBC		},
 #endif
