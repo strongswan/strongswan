@@ -727,6 +727,12 @@ METHOD(encrypted_payload_t, set_transform, void,
 	this->aead = aead;
 }
 
+METHOD(encrypted_payload_t, get_transform, aead_t*,
+	private_encrypted_payload_t *this)
+{
+	return this->aead;
+}
+
 METHOD2(payload_t, encrypted_payload_t, destroy, void,
 	private_encrypted_payload_t *this)
 {
@@ -759,6 +765,7 @@ encrypted_payload_t *encrypted_payload_create(payload_type_t type)
 			.remove_payload = _remove_payload,
 			.generate_payloads = _generate_payloads,
 			.set_transform = _set_transform,
+			.get_transform = _get_transform,
 			.encrypt = _encrypt,
 			.decrypt = _decrypt,
 			.destroy = _destroy,
@@ -899,6 +906,12 @@ METHOD(encrypted_payload_t, frag_set_transform, void,
 	this->aead = aead;
 }
 
+METHOD(encrypted_payload_t, frag_get_transform, aead_t*,
+	private_encrypted_fragment_payload_t *this)
+{
+	return this->aead;
+}
+
 /**
  * Append the encrypted fragment payload header to the associated data
  */
@@ -996,6 +1009,7 @@ encrypted_fragment_payload_t *encrypted_fragment_payload_create()
 				.remove_payload = (void*)return_null,
 				.generate_payloads = nop,
 				.set_transform = _frag_set_transform,
+				.get_transform = _frag_get_transform,
 				.encrypt = _frag_encrypt,
 				.decrypt = _frag_decrypt,
 				.destroy = _frag_destroy,

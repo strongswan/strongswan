@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Tobias Brunner
+ * Copyright (C) 2014-2018 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2005 Jan Hutter
@@ -74,9 +74,16 @@ struct encrypted_payload_t {
 	/**
 	 * Set the AEAD transform to use.
 	 *
-	 * @param aead		aead transform to use
+	 * @param aead			aead transform to use
 	 */
-	void (*set_transform) (encrypted_payload_t *this, aead_t *aead);
+	void (*set_transform)(encrypted_payload_t *this, aead_t *aead);
+
+	/**
+	 * Get the AEAD transform that to use (or was used).
+	 *
+	 * @param aead			aead transform to use (or was used)
+	 */
+	aead_t *(*get_transform)(encrypted_payload_t *this);
 
 	/**
 	 * Generate, encrypt and sign contained payloads.
