@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Tobias Brunner
+ * Copyright (C) 2011-2018 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2005 Jan Hutter
@@ -323,6 +323,21 @@ METHOD2(payload_t, encrypted_payload_t, get_length, size_t,
 	private_encrypted_payload_t *this)
 {
 	compute_length(this);
+	return this->payload_length;
+}
+
+METHOD2(payload_t, encrypted_payload_t, get_length_plain, size_t,
+	private_encrypted_payload_t *this)
+{
+	/* contains only the decrypted payload data, no IV, padding or ICV */
+	this->payload_length = this->encrypted.len;
+
+	if (this->aead)
+	{
+		this->payload_length += compute_overhead(this->aead,
+												 this->payload_length);
+	}
+	this->payload_length += get_header_length(this);
 	return this->payload_length;
 }
 
@@ -794,10 +809,11 @@ encrypted_payload_t *encrypted_payload_create_from_plain(payload_type_t next,
 	private_encrypted_payload_t *this;
 
 	this = (private_encrypted_payload_t*)encrypted_payload_create(PLV2_ENCRYPTED);
+	this->public.payload_interface.get_length = _get_length_plain;
+	this->public.get_length = _get_length_plain;
 	this->public.decrypt = _decrypt_plain;
 	this->next_payload = next;
 	this->encrypted = plain;
-	compute_length(this);
 
 	return &this->public;
 }
