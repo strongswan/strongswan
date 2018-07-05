@@ -5,8 +5,8 @@
 -P OUTPUT DROP
 -P FORWARD DROP
 
-# allow bootps (in relay mode also in OUTPUT)
--A OUTPUT -p udp --sport bootps --dport bootps -j ACCEPT
+# allow bootpc and bootps
+-A OUTPUT -p udp --sport bootpc --dport bootps -j ACCEPT
 -A INPUT  -p udp --sport bootps --dport bootps -j ACCEPT
 
 # allow broadcasts from eth1
