@@ -1,6 +1,6 @@
-                 -------------------------
-                  strongSwan - Development
-                 -------------------------
+                ------------------------
+                strongSwan - Development
+                ------------------------
 
 Git repository
 ---------------------
@@ -27,11 +27,11 @@ the code, you need the following tools:
 
 To check out the master branch, use:
 
-   git clone git://git.strongswan.org/strongswan.git
+    git clone git://git.strongswan.org/strongswan.git
 
-     or using HTTP
+or using HTTP:
 
-   git clone http://git.strongswan.org/strongswan.git
+    git clone http://git.strongswan.org/strongswan.git
 
 After a successful check out, give the autotools a try:
 

@@ -1217,9 +1217,9 @@ strongswan-4.6.1
   thus causing failures during the loading of the plugins which depend on these
   libraries for resolving external symbols.
 
--  Therefore our approach of computing  integrity checksums for plugins had to be
-   changed radically by moving the hash generation from the compilation to the
-   post-installation phase.
+- Therefore our approach of computing  integrity checksums for plugins had to be
+  changed radically by moving the hash generation from the compilation to the
+  post-installation phase.
 
 
 strongswan-4.6.0
@@ -2327,7 +2327,7 @@ strongswan-4.1.4
   Thanks to the rightallowany flag the connection behaves later on
   as
 
-   right=%any
+    right=%any
 
   so that the peer can rekey the connection as an initiator when his
   IP address changes. An alternative notation is
@@ -2384,8 +2384,8 @@ strongswan-4.1.3
   is provided and more advanced backends (using e.g. a database) are trivial
   to implement.
 
- - Fixed a compilation failure in libfreeswan occurring with Linux kernel
-   headers > 2.6.17.
+- Fixed a compilation failure in libfreeswan occurring with Linux kernel
+  headers > 2.6.17.
 
 
 strongswan-4.1.2
@@ -2535,7 +2535,7 @@ strongswan-4.0.5
   The debugging levels can either be specified statically in ipsec.conf as
 
     config setup
-           charondebug="lib 1, cfg 3, net 2"
+        charondebug="lib 1, cfg 3, net 2"
 
   or changed at runtime via stroke as
 
@@ -2777,9 +2777,9 @@ strongswan-2.6.2
   if an FQDN, USER_FQDN, or Key ID was defined, as in the following example.
 
   conn rw
-       right=%any
-       rightid=@foo.bar
-       authby=secret
+      right=%any
+      rightid=@foo.bar
+      authby=secret
 
 - the ipsec command now supports most ipsec auto commands (e.g. ipsec listall).
 
@@ -2922,7 +2922,7 @@ strongswan-2.5.3
 
 - fixed the initialization of the ESP key length to a default of
   128 bits in the case that the peer does not send a key length
-   attribute for AES encryption.
+  attribute for AES encryption.
 
 - applied Herbert Xu's uniqueIDs patch
 
@@ -3327,16 +3327,16 @@ strongswan-2.1.0
 - The new "ca" section allows to define the following parameters:
 
   ca kool
-     cacert=koolCA.pem                   # cacert of kool CA
-     ocspuri=http://ocsp.kool.net:8001   # ocsp server
-     ldapserver=ldap.kool.net            # default ldap server
-     crluri=http://www.kool.net/kool.crl # crl distribution point
-     crluri2="ldap:///O=Kool, C= .."     # crl distribution point #2
-     auto=add                            # add, ignore
+      cacert=koolCA.pem                   # cacert of kool CA
+      ocspuri=http://ocsp.kool.net:8001   # ocsp server
+      ldapserver=ldap.kool.net            # default ldap server
+      crluri=http://www.kool.net/kool.crl # crl distribution point
+      crluri2="ldap:///O=Kool, C= .."     # crl distribution point #2
+      auto=add                            # add, ignore
 
   The ca definitions can be monitored via the command
 
-     ipsec auto --listcainfos
+    ipsec auto --listcainfos
 
 - Fixed cosmetic corruption of /proc filesystem by integrating
   D. Hugh Redelmeier's freeswan-2.06 kernel fixes.
