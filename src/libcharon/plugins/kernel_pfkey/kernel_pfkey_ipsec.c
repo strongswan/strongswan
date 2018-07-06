@@ -896,6 +896,9 @@ static kernel_algorithm_t encryption_algs[] = {
 #ifdef SADB_X_EALG_CAMELLIACBC
 	{ENCR_CAMELLIA_CBC,			SADB_X_EALG_CAMELLIACBC		},
 #endif
+#ifdef SADB_X_EALG_CHACHA20POLY1305
+	{ENCR_CHACHA20_POLY1305,	SADB_X_EALG_CHACHA20POLY1305},
+#endif
 	{END_OF_LIST,				0							},
 };
 
