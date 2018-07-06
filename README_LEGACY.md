@@ -252,7 +252,7 @@ correctly.
 If you prefer the CA certificate to be in binary DER format then the following
 command achieves this transformation:
 
-     openssl x509 -in strongswanCert.pem -outform DER -out strongswanCert.der
+    openssl x509 -in strongswanCert.pem -outform DER -out strongswanCert.der
 
 The statements
 
@@ -275,8 +275,8 @@ the correct format will be determined.
 
 The OpenSSL statement
 
-     openssl req -newkey rsa:2048 -keyout hostKey.pem \
-                 -out hostReq.pem
+    openssl req -newkey rsa:2048 -keyout hostKey.pem \
+                -out hostReq.pem
 
 generates a 2048 bit RSA private key `hostKey.pem` and a certificate request
 `hostReq.pem` which has to be signed by the CA.
@@ -285,16 +285,16 @@ If you want to add a _subjectAltName_ field to the host certificate you must
 edit the OpenSSL configuration file `openssl.cnf` and add the following line in
 the `[ usr_cert ]` section:
 
-     subjectAltName=DNS:moon.strongswan.org
+    subjectAltName=DNS:moon.strongswan.org
 
 if you want to identify the host by its Fully Qualified Domain Name (FQDN), or
 
-     subjectAltName=IP:192.168.0.1
+    subjectAltName=IP:192.168.0.1
 
 if you want the ID to be of type _IPV4_ADDR_. Of course you could include both
 ID types with
 
-     subjectAltName=DNS:moon.strongswan.org,IP:192.168.0.1
+    subjectAltName=DNS:moon.strongswan.org,IP:192.168.0.1
 
 but the use of an IP address for the identification of a host should be
 discouraged anyway.
@@ -302,15 +302,15 @@ discouraged anyway.
 For user certificates the appropriate ID type is _RFC822_ADDR_ which can be
 specified as
 
-     subjectAltName=email:carol@strongswan.org
+    subjectAltName=email:carol@strongswan.org
 
 or if the user's e-mail address is part of the subject's distinguished name
 
-     subjectAltName=email:copy
+    subjectAltName=email:copy
 
 Now the certificate request can be signed by the CA with the command
 
-     openssl ca -in hostReq.pem -days 730 -out hostCert.pem -notext
+    openssl ca -in hostReq.pem -days 730 -out hostCert.pem -notext
 
 If you omit the `-days` option then the `default_days` value (365 days)
 specified in `openssl.cnf` is used.  The `-notext` option avoids that a human
@@ -351,17 +351,17 @@ Usually, a Windows or Mac OS X (or iOS) based VPN client needs its private key,
 its host or user certificate, and the CA certificate.  The most convenient way
 to load this information is to put everything into a PKCS#12 container:
 
-     openssl pkcs12 -export -inkey carolKey.pem \
-                    -in carolCert.pem -name "carol" \
-                    -certfile strongswanCert.pem -caname "strongSwan Root CA" \
-                    -out carolCert.p12
+    openssl pkcs12 -export -inkey carolKey.pem \
+                   -in carolCert.pem -name "carol" \
+                   -certfile strongswanCert.pem -caname "strongSwan Root CA" \
+                   -out carolCert.p12
 
 
 ### Generating a CRL ###
 
 An empty CRL that is signed by the CA can be generated with the command
 
-     openssl ca -gencrl -crldays 15 -out crl.pem
+    openssl ca -gencrl -crldays 15 -out crl.pem
 
 If you omit the `-crldays` option then the `default_crl_days` value (30 days)
 specified in `openssl.cnf` is used.
@@ -369,7 +369,7 @@ specified in `openssl.cnf` is used.
 If you prefer the CRL to be in binary DER format then this conversion
 can be achieved with
 
-     openssl crl -in crl.pem -outform DER -out cert.crl
+    openssl crl -in crl.pem -outform DER -out cert.crl
 
 The strongSwan PKI tool provides the `--signcrl` command to sign CRLs.
 
@@ -383,19 +383,19 @@ will be determined.
 A specific host certificate stored in the file `host.pem` is revoked with the
 command
 
-     openssl ca -revoke host.pem
+    openssl ca -revoke host.pem
 
 Next the CRL file must be updated
 
-     openssl ca -gencrl -crldays 60 -out crl.pem
+    openssl ca -gencrl -crldays 60 -out crl.pem
 
 The content of the CRL file can be listed with the command
 
-     openssl crl -in crl.pem -noout -text
+    openssl crl -in crl.pem -noout -text
 
 in the case of a Base64 CRL, or alternatively for a CRL in DER format
 
-     openssl crl -inform DER -in cert.crl -noout -text
+    openssl crl -inform DER -in cert.crl -noout -text
 
 Again the `--signcrl` command of the strongSwan PKI tool may also be used to
 create new CRLs containing additional certificates.
@@ -412,15 +412,15 @@ assume throughout this document that the strongSwan security gateway is **left**
 and the peer is **right** then we can write
 
     conn %default
-         leftcert=moonCert.pem
-         # load connection definitions automatically
-         auto=add
+        leftcert=moonCert.pem
+        # load connection definitions automatically
+        auto=add
 
 The X.509 certificate by which the strongSwan security gateway will authenticate
 itself by sending it in binary form to its peers as part of the Internet Key
 Exchange (IKE) is specified in the line
 
-     leftcert=moonCert.pem
+    leftcert=moonCert.pem
 
 The certificate can either be stored in Base64 PEM-format or in the binary
 DER-format. Irrespective of the file suffix the correct format will be
@@ -443,8 +443,8 @@ As an ID for the VPN gateway we recommend the use of a Fully Qualified Domain
 Name (FQDN) of the form
 
     conn rw
-         right=%any
-         leftid=moon.strongswan.org
+        right=%any
+        leftid=moon.strongswan.org
 
 **Important**: When a FQDN identifier is used it must be explicitly included as
 a so called _subjectAltName_ of type _dnsName_ (`DNS:`) in the certificate
@@ -456,14 +456,14 @@ Distinguished Name (DN) instead, which is an identifier of type _DER_ASN1_DN_
 and which can be written e.g. in the LDAP-type format
 
     conn rw
-         right=%any
-         leftid="C=CH, O=strongSwan, CN=moon.strongswan.org"
+        right=%any
+        leftid="C=CH, O=strongSwan, CN=moon.strongswan.org"
 
 Since the subject's DN is part of the certificate, the `leftid` does not have to
 be declared explicitly. Thus the entry
 
     conn rw
-         right=%any
+        right=%any
 
 automatically assumes the subject DN of `leftcert` to be the host ID.
 
@@ -474,16 +474,16 @@ strongSwan supports multiple local host certificates and corresponding
 RSA private keys:
 
     conn rw1
-         right=%any
-         rightid=peer1.domain1
-         leftcert=myCert1.pem
-         # leftid is DN of myCert1
+        right=%any
+        rightid=peer1.domain1
+        leftcert=myCert1.pem
+        # leftid is DN of myCert1
 
     conn rw2
-         right=%any
-         rightid=peer2.domain2
-         leftcert=myCert2.pem
-         # leftid is DN of myCert2
+        right=%any
+        rightid=peer2.domain2
+        leftcert=myCert2.pem
+        # leftid is DN of myCert2
 
 When _peer1_ initiates a connection then strongSwan will send _myCert1_ and will
 sign with _myKey1_ defined in `/etc/ipsec.secrets` (see below) whereas
@@ -497,7 +497,7 @@ have dozens of road warriors connecting to a central strongSwan security
 gateway. The following most simple statement:
 
     conn rw
-         right=%any
+        right=%any
 
 defines the general roadwarrior case.  The line `right=%any` literally means
 that any IPsec peer is accepted, regardless of its current IP source address and
@@ -515,7 +515,7 @@ fourth type, _DER_ASN1_DN_, the identifier must completely match the subject
 field of the peer's certificate.  One of the two possible representations of a
 Distinguished Name (DN) is the LDAP-type format
 
-     rightid="C=CH, O=strongSwan IPsec, CN=sun.strongswan.org"
+    rightid="C=CH, O=strongSwan IPsec, CN=sun.strongswan.org"
 
 Additional whitespace can be added everywhere as desired since it will be
 automatically eliminated by the parser.  An exception is the single whitespace
@@ -524,12 +524,12 @@ between individual words, like e.g. in `strongSwan IPsec`, which is preserved.
 The Relative Distinguished Names (RDNs) can alternatively be separated by a
 slash `/` instead of a comma `,`
 
-     rightid="/C=CH/O=strongSwan IPsec/CN=sun.strongswan.org"
+    rightid="/C=CH/O=strongSwan IPsec/CN=sun.strongswan.org"
 
 This is the representation extracted from the certificate by the OpenSSL
 `-subject` command line option
 
-     openssl x509 -in sunCert.pem -noout -subject
+    openssl x509 -in sunCert.pem -noout -subject
 
 The following RDNs are supported by strongSwan
 
@@ -572,12 +572,12 @@ and `10.1.3.0/24` behind the security gateway then the following connection
 definitions will make this possible
 
     conn rw1
-         right=%any
-         leftsubnet=10.1.0.0/24
+        right=%any
+        leftsubnet=10.1.0.0/24
 
     conn rw3
-         right=%any
-         leftsubnet=10.1.3.0/24
+        right=%any
+        leftsubnet=10.1.3.0/24
 
 For IKEv2 connections this can even be simplified by using
 
@@ -591,35 +591,35 @@ access can be controlled by explicitly putting a roadwarrior entry for each
 eligible peer into `ipsec.conf`:
 
     conn sun
-         right=%any
-         rightid=sun.strongswan.org
+        right=%any
+        rightid=sun.strongswan.org
 
     conn carol
-         right=%any
-         rightid=carol@strongswan.org
+        right=%any
+        rightid=carol@strongswan.org
 
     conn dave
-         right=%any
-         rightid="C=CH, O=strongSwan, CN=dave@strongswan.org"
+        right=%any
+        rightid="C=CH, O=strongSwan, CN=dave@strongswan.org"
 
 When the IP address of a peer is known to be stable, it can be specified as
 well.  This entry is mandatory when the strongSwan host wants to act as the
 initiator of an IPsec connection.
 
     conn sun
-         right=192.168.0.2
-         rightid=sun.strongswan.org
+        right=192.168.0.2
+        rightid=sun.strongswan.org
 
     conn carol
-         right=192.168.0.100
-         rightid=carol@strongswan.org
+        right=192.168.0.100
+        rightid=carol@strongswan.org
 
     conn dave
-         right=192.168.0.200
-         rightid="C=CH, O=strongSwan, CN=dave@strongswan.org"
+        right=192.168.0.200
+        rightid="C=CH, O=strongSwan, CN=dave@strongswan.org"
 
     conn venus
-         right=192.168.0.50
+        right=192.168.0.50
 
 In the last example the ID types _FQDN_, _RFC822_ADDR_, _DER_ASN1_DN_ and
 _IPV4_ADDR_, respectively, were used.  Of course all connection definitions
@@ -638,23 +638,23 @@ roadwarriors _rw1_ to _rw3_ connecting to a strongSwan security gateway the
 following entries are required in `/etc/ipsec.conf`:
 
     conn rw1
-         right=%any
-         righsubnet=10.4.0.5/32
+        right=%any
+        righsubnet=10.4.0.5/32
 
     conn rw2
-         right=%any
-         rightsubnet=10.4.0.47/32
+        right=%any
+        rightsubnet=10.4.0.47/32
 
     conn rw3
-         right=%any
-         rightsubnet=10.4.0.128/28
+        right=%any
+        rightsubnet=10.4.0.128/28
 
 Because the charon daemon uses narrowing (even for IKEv1) these three entries
 can be reduced to the single connection definition
 
     conn rw
-         right=%any
-         rightsubnet=10.4.0.0/24
+        right=%any
+        rightsubnet=10.4.0.0/24
 
 Any host will be accepted (of course after successful authentication based on
 the peer's X.509 certificate only) if it declares a client subnet lying totally
@@ -670,8 +670,8 @@ traffic back to the roadwarriors easier. For example, to assign each client an
 IP address from the `10.5.0.0/24` subnet `conn rw` can be defined as
 
     conn rw
-         right=%any
-         rightsourceip=10.5.0.0/24
+        right=%any
+        rightsourceip=10.5.0.0/24
 
 
 ### Protocol and Port Selectors ###
@@ -684,30 +684,30 @@ For IKEv2 multiple such restrictions can also be configured in
 Some examples:
 
     conn icmp
-         right=%any
-         rightprotoport=icmp
-         leftid=moon.strongswan.org
-         leftprotoport=icmp
+        right=%any
+        rightprotoport=icmp
+        leftid=moon.strongswan.org
+        leftprotoport=icmp
 
     conn http
-         right=%any
-         rightprotoport=6
-         leftid=moon.strongswan.org
-         leftprotoport=6/80
+        right=%any
+        rightprotoport=6
+        leftid=moon.strongswan.org
+        leftprotoport=6/80
 
     conn l2tp
-         right=%any
-         # with port wildcard for interoperability with certain L2TP clients
-         rightprotoport=17/%any
-         leftid=moon.strongswan.org
-         leftprotoport=17/1701
+        right=%any
+        # with port wildcard for interoperability with certain L2TP clients
+        rightprotoport=17/%any
+        leftid=moon.strongswan.org
+        leftprotoport=17/1701
 
     conn dhcp
-         right=%any
-         rightprotoport=udp/bootpc
-         leftid=moon.strongswan.org
-         leftsubnet=0.0.0.0/0  #allows DHCP discovery broadcast
-         leftprotoport=udp/bootps
+        right=%any
+        rightprotoport=udp/bootpc
+        leftid=moon.strongswan.org
+        leftsubnet=0.0.0.0/0  #allows DHCP discovery broadcast
+        leftprotoport=udp/bootps
 
 Protocols and ports can be designated either by their numerical values
 or by their acronyms defined in `/etc/services`.
@@ -742,24 +742,24 @@ The IPsec policy defined above can now be enforced with the following three
 IPsec security associations:
 
     conn sales
-         right=%any
-         rightid="C=CH, O=ACME, OU=Sales, CN=*"
-         rightsourceip=10.1.0.0/24       # Sales IP range
-         leftsubnet=10.0.0.0/24          # Sales subnet
+        right=%any
+        rightid="C=CH, O=ACME, OU=Sales, CN=*"
+        rightsourceip=10.1.0.0/24       # Sales IP range
+        leftsubnet=10.0.0.0/24          # Sales subnet
 
     conn research
-         right=%any
-         rightid="C=CH, O=ACME, OU=Research, CN=*"
-         rightsourceip=10.1.1.0/24       # Research IP range
-         leftsubnet=10.0.1.0/24          # Research subnet
+        right=%any
+        rightid="C=CH, O=ACME, OU=Research, CN=*"
+        rightsourceip=10.1.1.0/24       # Research IP range
+        leftsubnet=10.0.1.0/24          # Research subnet
 
     conn web
-         right=%any
-         rightid="C=CH, O=ACME, OU=*, CN=*"
-         rightsubnet=10.1.0.0/23         # Remote access IP range
-         leftsubnet=10.0.2.100/32        # Web server
-         rightprotoport=tcp              # TCP protocol only
-         leftprotoport=tcp/http          # TCP port 80 only
+        right=%any
+        rightid="C=CH, O=ACME, OU=*, CN=*"
+        rightsubnet=10.1.0.0/23         # Remote access IP range
+        leftsubnet=10.0.2.100/32        # Web server
+        rightprotoport=tcp              # TCP protocol only
+        leftprotoport=tcp/http          # TCP port 80 only
 
 The `*` character is used as a wildcard in relative distinguished names (RDNs).
 In order to match a wildcard template, the _ID_DER_ASN1_DN_ of a peer must
@@ -788,24 +788,24 @@ to specific client host and subnets can be controlled on the basis of the CA
 that issued the peer certificate
 
     conn sales
-         right=%any
-         rightca="C=CH, O=ACME, OU=Sales, CN=Sales CA"
-         rightsourceip=10.1.0.0/24       # Sales IP range
-         leftsubnet=10.0.0.0/24          # Sales subnet
+        right=%any
+        rightca="C=CH, O=ACME, OU=Sales, CN=Sales CA"
+        rightsourceip=10.1.0.0/24       # Sales IP range
+        leftsubnet=10.0.0.0/24          # Sales subnet
 
     conn research
-         right=%any
-         rightca="C=CH, O=ACME, OU=Research, CN=Research CA"
-         rightsourceip=10.1.1.0/24       # Research IP range
-         leftsubnet=10.0.1.0/24          # Research subnet
+        right=%any
+        rightca="C=CH, O=ACME, OU=Research, CN=Research CA"
+        rightsourceip=10.1.1.0/24       # Research IP range
+        leftsubnet=10.0.1.0/24          # Research subnet
 
     conn web
-         right=%any
-         rightca="C=CH, O=ACME, CN=ACME Root CA"
-         rightsubnet=10.1.0.0/23         # Remote access IP range
-         leftsubnet=10.0.2.100/32        # Web server
-         rightprotoport=tcp              # TCP protocol only
-         leftprotoport=tcp/http          # TCP port 80 only
+        right=%any
+        rightca="C=CH, O=ACME, CN=ACME Root CA"
+        rightsubnet=10.1.0.0/23         # Remote access IP range
+        leftsubnet=10.0.2.100/32        # Web server
+        rightprotoport=tcp              # TCP protocol only
+        leftprotoport=tcp/http          # TCP port 80 only
 
 In the example above, the connection _sales_ can be used by peers
 presenting certificates issued by the Sales CA, only.  In the same way,
@@ -820,15 +820,15 @@ The `leftca` parameter usually doesn't have to be set explicitly because
 by default it is set to the issuer field of the certificate loaded via
 `leftcert`.  The statement
 
-     rightca=%same
+    rightca=%same
 
 sets the CA requested from the peer to the CA used by the left side itself
 as e.g. in
 
     conn sales
-         right=%any
-         rightca=%same
-         leftcert=mySalesCert.pem
+        right=%any
+        rightca=%same
+        leftcert=mySalesCert.pem
 
 
 ## Configuring certificates and CRLs ##
@@ -843,7 +843,7 @@ by a root CA, but strongSwan also supports multi-level hierarchies with
 intermediate CAs in between.  All CA certificates belonging to a trust chain
 must be copied in either binary DER or Base64 PEM format into the directory
 
-     /etc/ipsec.d/cacerts/
+    /etc/ipsec.d/cacerts/
 
 
 ### Installing optional certificate revocation lists (CRLs) ###
@@ -903,7 +903,7 @@ the CRL distribution points contained in X.509 certificates.
 The `ipsec.conf` option
 
     config setup
-         cachecrls=yes
+        cachecrls=yes
 
 activates the local caching of CRLs that were dynamically fetched from an
 HTTP or LDAP server.  Cached copies are stored in `/etc/ipsec.d/crls` using a
@@ -928,9 +928,9 @@ In the simplest OCSP setup, a default URI under which the OCSP server for a
 given CA can be accessed is defined in `ipsec.conf`:
 
     ca strongswan
-         cacert=strongswanCert.pem
-         ocspuri=http://ocsp.strongswan.org:8880
-         auto=add
+        cacert=strongswanCert.pem
+        ocspuri=http://ocsp.strongswan.org:8880
+        auto=add
 
 The HTTP port can be freely chosen.
 
@@ -1013,8 +1013,8 @@ the `strictcrlpolicy` option.  This is done in the `config setup` section
 of the `ipsec.conf` file:
 
     config setup
-         strictcrlpolicy=yes
-          ...
+        strictcrlpolicy=yes
+        ...
 
 A certificate received from a peer will not be accepted if no corresponding
 CRL or OCSP response is available.  And if an IKE SA re-negotiation takes
@@ -1037,13 +1037,13 @@ keyword for the peer side, the connection definitions presented earlier can
 alternatively be written as
 
     conn sun
-          right=%any
-          rightid=sun.strongswan.org
-          rightcert=sunCert.cer
+        right=%any
+        rightid=sun.strongswan.org
+        rightcert=sunCert.cer
 
-     conn carol
-          right=192.168.0.100
-          rightcert=carolCert.der
+    conn carol
+        right=192.168.0.100
+        rightcert=carolCert.der
 
 If the peer certificates are loaded locally then there is no need to send any
 certificates to the other end via the IKE protocol.  Especially if self-signed
