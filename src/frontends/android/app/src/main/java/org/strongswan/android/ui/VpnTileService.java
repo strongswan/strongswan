@@ -204,6 +204,10 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		}
 
 		Tile tile = getQsTile();
+		if (tile == null)
+		{
+			return;
+		}
 
 		if (error != VpnStateService.ErrorState.NO_ERROR)
 		{
