@@ -698,7 +698,7 @@ static gboolean need_secrets(NMVpnServicePlugin *plugin, NMConnection *connectio
 
 				/* try to load/decrypt the private key */
 				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								KEY_RSA, BUILD_FROM_FILE, path, BUILD_END);
+								KEY_ANY, BUILD_FROM_FILE, path, BUILD_END);
 				if (key)
 				{
 					key->destroy(key);
