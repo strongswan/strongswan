@@ -251,18 +251,18 @@ METHOD(proposal_t, get_algorithm, bool,
 	return found;
 }
 
-METHOD(proposal_t, has_ke_method, bool,
-	private_proposal_t *this, key_exchange_method_t ke)
+METHOD(proposal_t, has_transform, bool,
+	private_proposal_t *this, transform_type_t type, uint16_t alg)
 {
 	bool found = FALSE, any = FALSE;
 	enumerator_t *enumerator;
 	uint16_t current;
 
-	enumerator = create_enumerator(this, KEY_EXCHANGE_METHOD);
+	enumerator = create_enumerator(this, type);
 	while (enumerator->enumerate(enumerator, &current, NULL))
 	{
 		any = TRUE;
-		if (current == ke)
+		if (current == alg)
 		{
 			found = TRUE;
 			break;
@@ -270,15 +270,15 @@ METHOD(proposal_t, has_ke_method, bool,
 	}
 	enumerator->destroy(enumerator);
 
-	if (!any && ke == MODP_NONE)
+	if (!any && alg == 0)
 	{
 		found = TRUE;
 	}
 	return found;
 }
 
-METHOD(proposal_t, promote_ke_method, bool,
-	private_proposal_t *this, key_exchange_method_t method)
+METHOD(proposal_t, promote_transform, bool,
+	private_proposal_t *this, transform_type_t type, uint16_t alg)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -287,8 +287,8 @@ METHOD(proposal_t, promote_ke_method, bool,
 	enumerator = array_create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (entry->type == KEY_EXCHANGE_METHOD &&
-			entry->alg == method)
+		if (entry->type == type &&
+			entry->alg == alg)
 		{
 			array_remove_at(this->transforms, enumerator);
 			found = TRUE;
@@ -299,8 +299,8 @@ METHOD(proposal_t, promote_ke_method, bool,
 	if (found)
 	{
 		entry_t entry = {
-			.type = KEY_EXCHANGE_METHOD,
-			.alg = method,
+			.type = type,
+			.alg = alg,
 		};
 		array_insert(this->transforms, ARRAY_HEAD, &entry);
 	}
@@ -942,8 +942,8 @@ proposal_t *proposal_create_v1(protocol_id_t protocol, uint8_t number,
 			.add_algorithm = _add_algorithm,
 			.create_enumerator = _create_enumerator,
 			.get_algorithm = _get_algorithm,
-			.has_ke_method = _has_ke_method,
-			.promote_ke_method = _promote_ke_method,
+			.has_transform = _has_transform,
+			.promote_transform = _promote_transform,
 			.select = _select_proposal,
 			.matches = _matches,
 			.get_protocol = _get_protocol,

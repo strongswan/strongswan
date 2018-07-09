@@ -316,7 +316,8 @@ static bool update_and_check_proposals(private_child_create_t *this)
 		if (this->dh_group != MODP_NONE)
 		{	/* proposals that don't contain the selected group are
 			 * moved to the back */
-			if (!proposal->promote_ke_method(proposal, this->dh_group))
+			if (!proposal->promote_transform(proposal, KEY_EXCHANGE_METHOD,
+											 this->dh_group))
 			{
 				this->proposals->remove_at(this->proposals, enumerator);
 				other_dh_groups->insert_last(other_dh_groups, proposal);
@@ -598,7 +599,8 @@ static status_t select_and_install(private_child_create_t *this,
 	}
 	this->child_sa->set_proposal(this->child_sa, this->proposal);
 
-	if (!this->proposal->has_ke_method(this->proposal, this->dh_group))
+	if (!this->proposal->has_transform(this->proposal, KEY_EXCHANGE_METHOD,
+									   this->dh_group))
 	{
 		uint16_t group;
 
