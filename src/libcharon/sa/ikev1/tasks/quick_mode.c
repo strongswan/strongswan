@@ -796,13 +796,13 @@ static linked_list_t *get_proposals(private_quick_mode_t *this,
 	{
 		if (group != KE_NONE)
 		{
-			if (!proposal->has_ke_method(proposal, group))
+			if (!proposal->has_transform(proposal, KEY_EXCHANGE_METHOD, group))
 			{
 				list->remove_at(list, enumerator);
 				proposal->destroy(proposal);
 				continue;
 			}
-			proposal->promote_ke_method(proposal, group);
+			proposal->promote_transform(proposal, KEY_EXCHANGE_METHOD, group);
 		}
 		proposal->set_spi(proposal, this->spi_i);
 	}
