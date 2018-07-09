@@ -333,7 +333,8 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 				proposal->set_spi(proposal, id->get_initiator_spi(id));
 			}
 			/* move the selected DH group to the front of the proposal */
-			if (!proposal->promote_ke_method(proposal, this->dh_group))
+			if (!proposal->promote_transform(proposal, KEY_EXCHANGE_METHOD,
+											 this->dh_group))
 			{	/* the proposal does not include the group, move to the back */
 				proposal_list->remove_at(proposal_list, enumerator);
 				other_dh_groups->insert_last(other_dh_groups, proposal);
@@ -617,7 +618,8 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 	}
 
 	if (ke_payload && this->proposal &&
-		this->proposal->has_ke_method(this->proposal, this->dh_group))
+		this->proposal->has_transform(this->proposal, KEY_EXCHANGE_METHOD,
+									  this->dh_group))
 	{
 		if (!this->initiator)
 		{
@@ -829,7 +831,8 @@ METHOD(task_t, build_r, status_t,
 	}
 
 	if (this->dh == NULL ||
-		!this->proposal->has_ke_method(this->proposal, this->dh_group))
+		!this->proposal->has_transform(this->proposal, KEY_EXCHANGE_METHOD,
+									   this->dh_group))
 	{
 		uint16_t group;
 
@@ -1064,7 +1067,8 @@ METHOD(task_t, process_i, status_t,
 	}
 
 	if (this->dh == NULL ||
-		!this->proposal->has_ke_method(this->proposal, this->dh_group))
+		!this->proposal->has_transform(this->proposal, KEY_EXCHANGE_METHOD,
+									   this->dh_group))
 	{
 		DBG1(DBG_IKE, "peer DH group selection invalid");
 		return FAILED;
