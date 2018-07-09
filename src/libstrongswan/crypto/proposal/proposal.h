@@ -109,21 +109,26 @@ struct proposal_t {
 						   uint16_t *alg, uint16_t *key_size);
 
 	/**
-	 * Check if the proposal has a specific key exchange method.
+	 * Check if the proposal has a specific transform.
 	 *
-	 * @param method		key exchange method to check for
+	 * @param type			kind of algorithm
+	 * @param alg			algorithm to check for (if 0, TRUE is returned if
+	 *						no transform of the given type is found)
 	 * @return				TRUE if algorithm included
 	 */
-	bool (*has_ke_method)(proposal_t *this, key_exchange_method_t method);
+	bool (*has_transform)(proposal_t *this, transform_type_t type,
+						  uint16_t alg);
 
 	/**
-	 * Move the given key exchange method to the front of the list if it was
-	 * contained in the proposal.
+	 * Move the given transform to the front of the list if it was contained in
+	 * the proposal.
 	 *
-	 * @param method		key exchange method to promote
+	 * @param type			kind of algorithm
+	 * @param alg			algorithm to promote
 	 * @return				TRUE if algorithm included
 	 */
-	bool (*promote_ke_method)(proposal_t *this, key_exchange_method_t method);
+	bool (*promote_transform)(proposal_t *this, transform_type_t type,
+							  uint16_t alg);
 
 	/**
 	 * Compare two proposals and select a matching subset.
