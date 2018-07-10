@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Tobias Brunner
+ * Copyright (C) 2015-2018 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -164,7 +164,7 @@ METHOD(task_t, build_i, status_t,
 	ike_version_t version;
 
 	/* create new SA only on first try */
-	if (this->new_sa == NULL)
+	if (!this->new_sa)
 	{
 		version = this->ike_sa->get_version(this->ike_sa);
 		this->new_sa = charon->ike_sa_manager->checkout_new(
@@ -245,7 +245,7 @@ METHOD(task_t, process_r, status_t,
 	this->new_sa->inherit_pre(this->new_sa, this->ike_sa);
 	this->ike_init = ike_init_create(this->new_sa, FALSE, this->ike_sa);
 	this->ike_init->task.process(&this->ike_init->task, message);
-
+	charon->bus->set_sa(charon->bus, this->ike_sa);
 	return NEED_MORE;
 }
 
@@ -257,12 +257,14 @@ METHOD(task_t, build_r, status_t,
 		message->add_notify(message, TRUE, TEMPORARY_FAILURE, chunk_empty);
 		return SUCCESS;
 	}
-	if (this->new_sa == NULL)
+	if (!this->new_sa)
 	{
 		/* IKE_SA/a CHILD_SA is in an unacceptable state, deny rekeying */
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return SUCCESS;
 	}
+
+	charon->bus->set_sa(charon->bus, this->new_sa);
 	if (this->ike_init->task.build(&this->ike_init->task, message) == FAILED)
 	{
 		this->ike_init->task.destroy(&this->ike_init->task);
@@ -329,7 +331,7 @@ METHOD(task_t, process_i, status_t,
 			}
 			return SUCCESS;
 		case NEED_MORE:
-			/* bad dh group, try again */
+			/* bad DH group or QSKE mechanism, try again */
 			this->ike_init->task.migrate(&this->ike_init->task, this->new_sa);
 			return NEED_MORE;
 		default:
