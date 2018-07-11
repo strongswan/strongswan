@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo "Preparing root image"
-
 DIR=$(dirname `readlink -f $0`)
 . $DIR/../testing.conf
 . $DIR/function.sh
@@ -26,8 +24,20 @@ load_qemu_nbd
 mkdir -p $LOOPDIR
 mkdir -p $IMGDIR
 
-log_action "Connecting root image to NBD device $NBDEV"
-execute "qemu-nbd -c $NBDEV $ROOTIMG"
+case "$2" in
+"")
+	log_action "Connecting root image to NBD device $NBDEV"
+	execute "qemu-nbd -c $NBDEV $ROOTIMG"
+	;;
+*)
+	echo $STRONGSWANHOSTS | grep -q "\b$2\b" || die "Guest $2 not found"
+	GUESTIMG="$IMGDIR/$2.$IMGEXT"
+	[ -f "$GUESTIMG" ] || die "Guest image $GUESTIMG not found"
+	log_action "Connecting guest image to NBD device $NBDEV"
+	execute "qemu-nbd -c $NBDEV $GUESTIMG"
+	;;
+esac
+
 do_on_exit qemu-nbd -d $NBDEV
 partprobe $NBDEV
 
@@ -74,7 +84,9 @@ cp $RECPDIR/$RECIPE $SHAREDDIR/build-strongswan
 log_action "Installing from recipe $RECIPE"
 execute_chroot "make SRCDIR=/root/strongswan BUILDDIR=/root/shared/build-strongswan -f /root/shared/build-strongswan/$RECIPE"
 
-# cleanup before mounting guest images
-on_exit
-
-$DIR/build-guestimages
+# requild the guest images if we modified the root image
+if [ -z "$2" ]; then
+	# cleanup before mounting guest images
+	on_exit
+	$DIR/build-guestimages
+fi
