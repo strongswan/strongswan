@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -69,5 +69,10 @@ status_t return_failed();
  * returns SUCCESS
  */
 status_t return_success();
+
+/**
+ * returns NEED_MORE
+ */
+status_t return_need_more();
 
 #endif /** STATUS_H_ @} */
