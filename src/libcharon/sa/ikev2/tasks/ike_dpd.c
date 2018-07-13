@@ -31,12 +31,6 @@ struct private_ike_dpd_t {
 	ike_dpd_t public;
 };
 
-METHOD(task_t, return_need_more, status_t,
-	private_ike_dpd_t *this, message_t *message)
-{
-	return NEED_MORE;
-}
-
 METHOD(task_t, get_type, task_type_t,
 	private_ike_dpd_t *this)
 {
@@ -47,7 +41,6 @@ METHOD(task_t, get_type, task_type_t,
 METHOD(task_t, migrate, void,
 	private_ike_dpd_t *this, ike_sa_t *ike_sa)
 {
-
 }
 
 METHOD(task_t, destroy, void,
@@ -75,13 +68,13 @@ ike_dpd_t *ike_dpd_create(bool initiator)
 
 	if (initiator)
 	{
-		this->public.task.build = _return_need_more;
+		this->public.task.build = (void*)return_need_more;
 		this->public.task.process = (void*)return_success;
 	}
 	else
 	{
 		this->public.task.build = (void*)return_success;
-		this->public.task.process = _return_need_more;
+		this->public.task.process = (void*)return_need_more;
 	}
 
 	return &this->public;
