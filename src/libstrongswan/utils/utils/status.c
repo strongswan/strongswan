@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -31,18 +31,26 @@ ENUM(status_names, SUCCESS, NEED_MORE,
 	"NEED_MORE",
 );
 
-/**
- * returns FAILED
+/*
+ * Described in header
  */
 status_t return_failed()
 {
 	return FAILED;
 }
 
-/**
- * returns SUCCESS
+/*
+ * Described in header
  */
 status_t return_success()
 {
 	return SUCCESS;
+}
+
+/*
+ * Described in header
+ */
+status_t return_need_more()
+{
+	return NEED_MORE;
 }
