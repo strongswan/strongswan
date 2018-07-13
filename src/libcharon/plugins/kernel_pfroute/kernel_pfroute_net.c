@@ -58,6 +58,9 @@
 /** delay before reinstalling routes (ms) */
 #define ROUTE_DELAY 100
 
+/** MTU to set when creating a new TUN device */
+#define TUN_DEFAULT_MTU 1400
+
 typedef struct addr_entry_t addr_entry_t;
 
 /**
@@ -834,12 +837,26 @@ static void repopulate_iface(private_kernel_pfroute_net_t *this,
 							 iface_entry_t *iface)
 {
 	struct ifaddrs *ifap, *ifa;
-	addr_entry_t *addr;
+	addr_entry_t *addr, *vaddr = NULL;
 
 	while (iface->addrs->remove_last(iface->addrs, (void**)&addr) == SUCCESS)
 	{
 		addr_map_entry_remove(addr, iface, this);
-		addr_entry_destroy(addr);
+		/* Check for the virtual IP address. If we see it, we will save it so we
+		   can set it later when the address list is rebuilt. Note that we only
+		   save one, so the last virtual address is the one we will use. */
+		if (addr->virtual)
+		{
+			if (vaddr)
+			{
+				addr_entry_destroy(vaddr);
+			}
+			vaddr = addr;
+		}
+		else
+		{
+			addr_entry_destroy(addr);
+		}
 	}
 
 	if (getifaddrs(&ifap) == 0)
@@ -855,6 +872,10 @@ static void repopulate_iface(private_kernel_pfroute_net_t *this,
 						INIT(addr,
 							.ip = host_create_from_sockaddr(ifa->ifa_addr),
 						);
+						if (vaddr && addr->ip->ip_equals(addr->ip, vaddr->ip))
+						{
+							addr->virtual = TRUE;
+						}
 						iface->addrs->insert_last(iface->addrs, addr);
 						addr_map_entry_add(this, addr, iface);
 						break;
@@ -864,6 +885,10 @@ static void repopulate_iface(private_kernel_pfroute_net_t *this,
 			}
 		}
 		freeifaddrs(ifap);
+	}
+	if (vaddr)
+	{
+		addr_entry_destroy(vaddr);
 	}
 }
 
@@ -1316,6 +1341,12 @@ METHOD(kernel_net_t, add_ip, status_t,
 	{
 		tun_dev->destroy(tun_dev);
 		return FAILED;
+	}
+	if (!tun_dev->set_mtu(tun_dev, TUN_DEFAULT_MTU))
+	{
+		/* not a fatal error */
+		DBG1(DBG_KNL, "failed to set MTU to %d on %s",
+			 TUN_DEFAULT_MTU, tun_dev->get_name(tun_dev));
 	}
 
 	/* wait until address appears */
