@@ -1746,8 +1746,12 @@ METHOD(ike_sa_manager_t, checkin, void,
 	other_id = ike_sa->get_other_eap_id(ike_sa);
 	other = ike_sa->get_other_host(ike_sa);
 
-	DBG2(DBG_MGR, "checkin IKE_SA %s[%u]", ike_sa->get_name(ike_sa),
-			ike_sa->get_unique_id(ike_sa));
+	DBG2(DBG_MGR, "checkin %N SA %s[%u] with SPIs %.16"PRIx64"_i "
+		 "%.16"PRIx64"_r", ike_version_names,
+		 ike_sa_id->get_ike_version(ike_sa_id), ike_sa->get_name(ike_sa),
+		 ike_sa->get_unique_id(ike_sa),
+		 be64toh(ike_sa_id->get_initiator_spi(ike_sa_id)),
+		 be64toh(ike_sa_id->get_responder_spi(ike_sa_id)));
 
 	/* look for the entry */
 	if (get_entry_by_sa(this, ike_sa_id, ike_sa, &entry, &segment) == SUCCESS)
