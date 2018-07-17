@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Andreas Steffen
+ * Copyright (C) 2016-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -16,7 +16,7 @@
 #include "tpm_tss_tss2.h"
 #include "tpm_tss_tss2_names.h"
 
-#ifdef TSS_TSS2
+#ifdef TSS_TSS2_V1
 
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
@@ -24,9 +24,9 @@
 
 #include <tpm20.h>
 
-#ifdef TSS2_TCTI_TABRMD
+#ifdef TSS2_TCTI_TABRMD_V1
 #include <tcti/tcti-tabrmd.h>
-#endif /* TSS2_TCTI_TABRMD */
+#endif /* TSS2_TCTI_TABRMD_V1 */
 
 #ifdef TSS2_TCTI_SOCKET
 #include <tcti_socket.h>
@@ -1168,7 +1168,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 	{
 		available = initialize_sys_context(this);
 	}
-	DBG1(DBG_PTS, "TPM 2.0 via TSS2 %savailable", available ? "" : "not ");
+	DBG1(DBG_PTS, "TPM 2.0 via TSS2 v1 %savailable", available ? "" : "not ");
 
 	if (!available)
 	{
@@ -1178,13 +1178,15 @@ tpm_tss_t *tpm_tss_tss2_create()
 	return &this->public;
 }
 
-#else /* TSS_TSS2 */
+#else /* TSS_TSS2_V1 */
 
-tpm_tss_t *tpm_tss_tss2_create()
+#ifndef TSS_TSS2_V2
+tpm_tss_t *tpm_tss_tss2_create(void)
 {
 	return NULL;
 }
+#endif /* !TSS_TSS2_V2 */
 
-#endif /* TSS_TSS2 */
+#endif /* TSS_TSS2_V1 */
 
 

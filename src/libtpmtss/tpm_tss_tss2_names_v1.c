@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Andreas Steffen
+ * Copyright (C) 2016-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,7 +15,7 @@
 
 #include "tpm_tss_tss2_names.h"
 
-#ifdef TSS_TSS2
+#ifdef TSS_TSS2_V1
 
 #include <tpm20.h>
 
@@ -102,7 +102,9 @@ ENUM_NEXT(tpm_ecc_curve_names, TPM_ECC_SM2_P256, TPM_ECC_SM2_P256, TPM_ECC_BN_P6
 );
 ENUM_END(tpm_ecc_curve_names, TPM_ECC_SM2_P256);
 
-#else /* TSS_TSS2 */
+#else /* TSS_TSS2_V1 */
+
+#ifndef TSS_TSS2_V2 
 
 /**
  * TPM 2.0 algorithm ID names
@@ -118,6 +120,8 @@ ENUM(tpm_ecc_curve_names, 0, 0,
 	"NONE"
 );
 
-#endif /* TSS_TSS2 */
+#endif /* !TSS_TSS2_V2 */
+
+#endif /* TSS_TSS2_V1 */
 
 

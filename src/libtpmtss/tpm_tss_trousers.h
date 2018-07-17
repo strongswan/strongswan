@@ -47,6 +47,6 @@ struct tpm_tss_trousers_t {
 /**
  * Create a tpm_tss_trousers instance.
  */
-tpm_tss_t *tpm_tss_trousers_create();
+tpm_tss_t *tpm_tss_trousers_create(void);
 
 #endif /** TPM_TSS_TROUSERS_H_ @}*/

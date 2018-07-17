@@ -1,2 +1,5 @@
 charon.plugins.tpm.use_rng = no
 	Whether the TPM should be used as RNG.
+
+charon.plugins.tpm.tcti.name = tabrmd
+	Name of TCTI library. Valid values: tabrmd, device, mssim.

@@ -48,14 +48,14 @@ struct tpm_tss_t {
 	/**
 	 * Get TPM version supported by TSS
 	 *
-	 * @return		TPM version
+	 * @return				TPM version
 	 */
 	tpm_version_t (*get_version)(tpm_tss_t *this);
 
 	/**
 	 * Get TPM version info (TPM 1.2 only)
 	 *
-	 * @return			TPM version info struct
+	 * @return				TPM version info struct
 	 */
 	chunk_t (*get_version_info)(tpm_tss_t *this);
 
@@ -74,8 +74,8 @@ struct tpm_tss_t {
 	/**
 	 * Get public key from TPM using its object handle (TPM 2.0 only)
 	 *
-	 * @param handle	key object handle
-	 * @return			public key in PKCS#1 format
+	 * @param handle		key object handle
+	 * @return				public key in PKCS#1 format
 	 */
 	chunk_t (*get_public)(tpm_tss_t *this, uint32_t handle);
 
@@ -169,8 +169,15 @@ struct tpm_tss_t {
 tpm_tss_t *tpm_tss_probe(tpm_version_t version);
 
 /**
- * Dummy libtpmtss initialization function needed for integrity test
+ * libtpmtss initialization function
+ *
+ * @return					TRUE if initialization was successful
  */
-void libtpmtss_init(void);
+bool libtpmtss_init(void);
+
+/**
+ * libtpmtss de-initialization function
+ */
+void libtpmtss_deinit(void);
 
 #endif /** TPM_TSS_H_ @}*/
