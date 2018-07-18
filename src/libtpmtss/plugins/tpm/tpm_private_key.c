@@ -93,7 +93,7 @@ METHOD(private_key_t, sign, bool,
 	enumerator->destroy(enumerator);
 
 	return this->tpm->sign(this->tpm, this->hierarchy, this->handle, scheme,
-						   data, pin, signature);
+						   params, data, pin, signature);
 }
 
 METHOD(private_key_t, decrypt, bool,

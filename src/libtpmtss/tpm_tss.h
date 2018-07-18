@@ -125,14 +125,15 @@ struct tpm_tss_t {
 	 * @param handle		object handle of TPM key to be used for signature
 	 * @param hierarchy		hierarchy the TPM key object is attached to
 	 * @param scheme		scheme to be used for signature
+	 * @param param			signature scheme parameters
 	 * @param data			data to be hashed and signed
 	 * @param pin			PIN code or empty chunk
 	 * @param signature		returns signature
 	 * @return				TRUE if signature succeeded
 	 */
 	bool (*sign)(tpm_tss_t *this, uint32_t hierarchy, uint32_t handle,
-				 signature_scheme_t scheme, chunk_t data, chunk_t pin,
-				 chunk_t *signature);
+				 signature_scheme_t scheme, void *params, chunk_t data,
+				 chunk_t pin, chunk_t *signature);
 
 	/**
 	 * Get random bytes from the TPM

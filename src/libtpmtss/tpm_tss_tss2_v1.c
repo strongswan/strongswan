@@ -828,10 +828,12 @@ METHOD(tpm_tss_t, quote, bool,
 
 METHOD(tpm_tss_t, sign, bool,
 	private_tpm_tss_tss2_t *this, uint32_t hierarchy, uint32_t handle,
-	signature_scheme_t scheme, chunk_t data, chunk_t pin, chunk_t *signature)
+	signature_scheme_t scheme, void *params, chunk_t data, chunk_t pin,
+	chunk_t *signature)
 {
 	key_type_t key_type;
 	hash_algorithm_t hash_alg;
+	rsa_pss_params_t *rsa_pss_params;
 	uint32_t rval;
 
 	TPM_ALG_ID alg_id;
@@ -870,8 +872,17 @@ METHOD(tpm_tss_t, sign, bool,
 	}
 	*( (uint8_t *)((void *)&session_data_cmd.sessionAttributes ) ) = 0;
 
-	key_type = key_type_from_signature_scheme(scheme);
-	hash_alg = hasher_from_signature_scheme(scheme, NULL);
+	if (scheme == SIGN_RSA_EMSA_PSS)
+	{
+		key_type = KEY_RSA;
+		rsa_pss_params = (rsa_pss_params_t *)params;
+		hash_alg = rsa_pss_params->hash;
+	}
+	else
+	{
+		key_type = key_type_from_signature_scheme(scheme);
+		hash_alg = hasher_from_signature_scheme(scheme, NULL);
+	}
 
 	/* Check if hash algorithm is supported by TPM */
 	alg_id = hash_alg_to_tpm_alg_id(hash_alg);
@@ -890,8 +901,16 @@ METHOD(tpm_tss_t, sign, bool,
 
 	if (key_type == KEY_RSA && public.t.publicArea.type == TPM_ALG_RSA)
 	{
-		sig_scheme.scheme = TPM_ALG_RSASSA;
-		sig_scheme.details.rsassa.hashAlg = alg_id;
+		if (scheme == SIGN_RSA_EMSA_PSS)
+		{
+			sig_scheme.scheme = TPM_ALG_RSAPSS;
+			sig_scheme.details.rsapss.hashAlg = alg_id;
+		}
+		else
+		{
+			sig_scheme.scheme = TPM_ALG_RSASSA;
+			sig_scheme.details.rsassa.hashAlg = alg_id;
+		}
 	}
 	else if (key_type == KEY_ECDSA && public.t.publicArea.type == TPM_ALG_ECC)
 	{
@@ -982,6 +1001,12 @@ METHOD(tpm_tss_t, sign, bool,
 							chunk_create(
 								sig.signature.rsassa.sig.t.buffer,
 								sig.signature.rsassa.sig.t.size));
+			break;
+		case SIGN_RSA_EMSA_PSS:
+			*signature = chunk_clone(
+							chunk_create(
+								sig.signature.rsapss.sig.t.buffer,
+								sig.signature.rsapss.sig.t.size));
 			break;
 		case SIGN_ECDSA_256:
 		case SIGN_ECDSA_384:
