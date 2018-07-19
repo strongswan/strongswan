@@ -673,12 +673,14 @@ METHOD(task_t, build_i, status_t,
 			}
 			else
 			{	/* this shouldn't happen, but let's be safe */
-				this->dh_group = ike_cfg->get_ke_method(ike_cfg);
+				this->dh_group = ike_cfg->get_algorithm(ike_cfg,
+														KEY_EXCHANGE_METHOD);
 			}
 		}
 		else
 		{
-			this->dh_group = ike_cfg->get_ke_method(ike_cfg);
+			this->dh_group = ike_cfg->get_algorithm(ike_cfg,
+													KEY_EXCHANGE_METHOD);
 		}
 		this->dh = this->keymat->keymat.create_ke(&this->keymat->keymat,
 												  this->dh_group);
