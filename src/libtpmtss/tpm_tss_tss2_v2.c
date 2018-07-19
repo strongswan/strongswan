@@ -23,7 +23,11 @@
 #include <bio/bio_reader.h>
 
 #include <tss2/tss2_sys.h>
+
 #include <dlfcn.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #define LABEL	"TPM 2.0 -"
 
@@ -68,6 +72,8 @@ struct private_tpm_tss_tss2_t {
 static void *tcti_handle;
 
 static TSS2_TCTI_INIT_FUNC tcti_init;
+
+static char *tcti_opts;
 
 /**
  * Empty AUTH_COMMAND
@@ -268,7 +274,7 @@ static bool initialize_tcti_context(private_tpm_tss_tss2_t *this)
 	}
 
 	/* determine size of tcti context */
-	rval = tcti_init(NULL, &tcti_context_size, "");
+	rval = tcti_init(NULL, &tcti_context_size, tcti_opts);
 	if (rval != TSS2_RC_SUCCESS)
 	{
 		DBG1(DBG_PTS, "%s tcti init setup failed: 0x%06x",  LABEL, rval);
@@ -280,13 +286,13 @@ static bool initialize_tcti_context(private_tpm_tss_tss2_t *this)
 	memset(this->tcti_context, 0x00, tcti_context_size);
 
 	/* initialize tcti context */
-	rval = tcti_init(this->tcti_context, &tcti_context_size, "");
+	rval = tcti_init(this->tcti_context, &tcti_context_size, tcti_opts);
 	if (rval != TSS2_RC_SUCCESS)
 	{
 		DBG1(DBG_PTS, "%s tcti init allocation failed: 0x%06x", LABEL,rval);
 		return FALSE;
 	}
-	return TRUE;		
+	return TRUE;
 }
 
 /**
@@ -1089,14 +1095,24 @@ bool tpm_tss_tss2_init(void)
 	const TSS2_TCTI_INFO *info;
 	char tcti_lib_format[] = "libtss2-tcti-%s.so.0";
 	char tcti_lib[BUF_LEN];
-	char *tcti_names[] = { "tabrmd", "device", "mssim" };
+	char *tcti_names[]   = { "device", "tabrmd", "mssim" };
+	char *tcti_options[] = { "/dev/tpmrm0", "", "" };
 	char *tcti_name;
 	bool match = FALSE;
-	int i;
+	struct stat st;
+	int i = 0;
 
-	/* select a dynamic TCTI library */
+	/* check for the existence of an in-kernel TPM resource manager */
+	if (stat(tcti_options[i], &st))
+	{
+		i = 1;
+	}
+	DBG2(DBG_PTS, "%s \"%s\" in-kernel resource manager is %spresent",
+				   LABEL, tcti_options[0], i ? "not " : "");
+
+	/* select a dynamic TCTI library (device, tabrmd or mssim) */
 	tcti_name = lib->settings->get_str(lib->settings,
-					 "%s.plugins.tpm.tcti.name", tcti_names[0], lib->ns);
+					 "%s.plugins.tpm.tcti.name", tcti_names[i], lib->ns);
 	snprintf(tcti_lib, BUF_LEN, tcti_lib_format, tcti_name);
 
 	for (i = 0; i < countof(tcti_names); i++)
@@ -1104,6 +1120,7 @@ bool tpm_tss_tss2_init(void)
 		if (streq(tcti_name, tcti_names[i]))
 		{
 			match = TRUE;
+			break;
 		}
 	}
 	if (!match)
@@ -1112,6 +1129,9 @@ bool tpm_tss_tss2_init(void)
 			 LABEL, tcti_lib);
 		return FALSE;
 	}
+
+	tcti_opts = lib->settings->get_str(lib->settings,
+					 "%s.plugins.tpm.tcti.opts", tcti_options[i], lib->ns);
 
 	/* open the selected dynamic TCTI library */
 	tcti_handle = dlopen(tcti_lib, RTLD_LAZY);
@@ -1143,7 +1163,9 @@ bool tpm_tss_tss2_init(void)
 void tpm_tss_tss2_deinit(void)
 {
 	dlclose(tcti_handle);
-	tcti_handle = tcti_init = NULL;
+	tcti_handle = NULL;
+	tcti_init   = NULL;
+	tcti_opts   = NULL;
 }
 
 #else /* TSS_TSS2_V2 */
