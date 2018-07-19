@@ -34,7 +34,6 @@ typedef struct ike_cfg_create_t ike_cfg_create_t;
 #include <collections/linked_list.h>
 #include <utils/identification.h>
 #include <crypto/proposal/proposal.h>
-#include <crypto/key_exchange.h>
 
 /**
  * IKE version.
@@ -230,11 +229,16 @@ struct ike_cfg_t {
 	childless_t (*childless)(ike_cfg_t *this);
 
 	/**
-	 * Get the key exchange method to use for IKE_SA setup.
+	 * Get the first algorithm of a certain transform type that's contained in
+	 * any of the configured proposals.
 	 *
-	 * @return				key exchange method to use for initialization
+	 * For instance, use with KEY_EXCHANGE_METHOD to get the KE metho to use
+	 * for the IKE_SA initiation.
+	 *
+	 * @param type			transform type to look for
+	 * @return				algorithm identifier (0 for none)
 	 */
-	key_exchange_method_t (*get_ke_method)(ike_cfg_t *this);
+	uint16_t (*get_algorithm)(ike_cfg_t *this, transform_type_t type);
 
 	/**
 	 * Check if two IKE configs are equal.
