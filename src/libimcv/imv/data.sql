@@ -556,6 +556,24 @@ INSERT INTO products (      /* 93 */
  'Debian 8.10 x86_64'
 );
 
+INSERT INTO products (      /* 94 */
+  name
+) VALUES (
+ 'Debian 8.11 i686'
+);
+
+INSERT INTO products (      /* 95 */
+  name
+) VALUES (
+ 'Debian 8.11 x86_64'
+);
+
+INSERT INTO products (      /* 96 */
+  name
+) VALUES (
+ 'Ubuntu 18.04 x86_64'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -968,19 +986,19 @@ INSERT INTO groups (			/* 10 */
   'Ref. Linux', 8
 );
 
-INSERT INTO groups (            /* 11 */
+INSERT INTO groups (      /* 11 */
   name
 ) VALUES (
   'TPM BIOS'
 );
 
-INSERT INTO groups (            /* 12 */
+INSERT INTO groups (      /* 12 */
   name
 ) VALUES (
   'TPM IMA'
 );
 
-INSERT INTO groups (            /* 13 */
+INSERT INTO groups (      /* 13 */
   name
 ) VALUES (
   'TPM BIOS/IMA'
@@ -998,7 +1016,7 @@ INSERT INTO groups (			/* 15 */
   'Debian armv7l', 2
 );
 
-INSERT INTO groups (            /* 16 */
+INSERT INTO groups (      /* 16 */
   name
 ) VALUES (
   'TPM TBOOT'
@@ -1123,6 +1141,12 @@ INSERT INTO groups_product_defaults (
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
+  4, 94
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
   5, 2
 );
 
@@ -1232,6 +1256,12 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   5, 93
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 95
 );
 
 INSERT INTO groups_product_defaults (
@@ -1382,6 +1412,12 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   7, 75
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  7, 96
 );
 
 INSERT INTO groups_product_defaults (
