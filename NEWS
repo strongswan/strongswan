@@ -10,6 +10,8 @@ strongswan-5.7.0
 - Added support for fuzzing the PA-TNC (RFC 5792) and PB-TNC (RFC 5793) NEA
   protocols on Google's OSS-Fuzz infrastructure.
 
+- Support for version 2 of Intel's TPM2-TSS TGC Software Stack.
+
 
 strongswan-5.6.3
 ----------------
