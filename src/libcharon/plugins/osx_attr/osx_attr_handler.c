@@ -52,15 +52,20 @@ static void find_server( linked_list_t *servers, host_t *ip, server_t **found )
 	server_t *server = NULL;
 	*found = NULL;
 
+	DBG1(DBG_CFG, "find_server: looking for %H in servers %p", ip, servers);
 	enumerator = servers->create_enumerator( servers );
+	DBG1(DBG_CFG, "find_server: beginning iteration");
 	while ( enumerator->enumerate( enumerator, &server ) )
 	{
+		DBG1(DBG_CFG, "find_server: checking %H, %H", ip, server->ip);
 		if ( ip->ip_equals( ip, server->ip ) )
 		{
+			DBG1(DBG_CFG, "find_server: %H matches", ip);
 			*found = server;
 			break;
 		}
 	}
+	DBG1(DBG_CFG, "find_server: destroying enumerator");
 	enumerator->destroy( enumerator );
 }
 
@@ -351,6 +356,7 @@ METHOD(attribute_handler_t, handle, bool,
 		find_server(this->servers, ip, &entry);
 		if ( entry )
 		{
+			DBG1(DBG_CFG, "Found entry %p, count = %d", entry, entry->count);
 			// Yep. Just increment the reference count
 			entry->count++;
 			DBG1(DBG_CFG, "%H already in servers list, count = %d", ip, entry->count);
@@ -447,7 +453,7 @@ METHOD(attribute_handler_t, release, void,
 	}
 
 	if ( type == INTERNAL_IP4_DNS ||
-		type == INTERNAL_IP6_DNS )
+		 type == INTERNAL_IP6_DNS )
 	{
 		server_t *entry = NULL;
 		host_t *ip = host_create_from_chunk( type == INTERNAL_IP4_DNS ? AF_INET : AF_INET6, data, 0 );
@@ -459,12 +465,15 @@ METHOD(attribute_handler_t, release, void,
 
 		DBG1(DBG_CFG, "Removing DNS server %H", ip);
 
+		DBG1(DBG_CFG, "Locking mutex %p", this->mutex);
 		this->mutex->lock( this->mutex );
 
 		// Find the server
+		DBG1(DBG_CFG, "Finding %H in servers %p", ip, this->servers);
 		find_server( this->servers, ip, &entry );
 		if ( entry )
 		{
+			DBG1(DBG_CFG, "Found entry %p, count = %d", entry, entry->count);
 			entry->count--;
 			if ( entry->count == 0 )
 			{
