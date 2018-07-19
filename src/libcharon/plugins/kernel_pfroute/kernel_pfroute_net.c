@@ -61,6 +61,10 @@
 /** MTU to set when creating a new TUN device */
 #define TUN_DEFAULT_MTU 1400
 
+/** Hack to work around issue where new VIP is sent but not used
+    REMOVE WHEN FIXED */
+#define IGNORE_VIP_CHANGES  1
+
 typedef struct addr_entry_t addr_entry_t;
 
 /**
@@ -335,6 +339,7 @@ static tun_entry_t *tun_entry_find(linked_list_t *tuns, host_t *ip)
 	enumerator_t *enumerator;
 	host_t *addr;
 	char *name;
+	bool found = FALSE;
 
 	enumerator = tuns->create_enumerator(tuns);
 	while (enumerator->enumerate(enumerator, &entry))
@@ -344,9 +349,10 @@ static tun_entry_t *tun_entry_find(linked_list_t *tuns, host_t *ip)
 		if (addr)
 		{
 			DBG2(DBG_KNL, "checking for %s:%H", name, addr);
-			if (addr->ip_equals(addr, ip))
+			if (addr->ip_equals(addr, ip) || IGNORE_VIP_CHANGES)
 			{
 				DBG2(DBG_KNL, "%s:%H matches", name, addr);
+				found = TRUE;
 				break;
 			}
 		}
@@ -356,7 +362,7 @@ static tun_entry_t *tun_entry_find(linked_list_t *tuns, host_t *ip)
 		}
 	}
 	enumerator->destroy(enumerator);
-	return entry;
+	return found ? entry : NULL;
 }
 
 /**
