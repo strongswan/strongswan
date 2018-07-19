@@ -347,24 +347,23 @@ METHOD(ike_cfg_t, select_proposal, proposal_t*,
 	return proposal_select(this->proposals, proposals, flags);
 }
 
-METHOD(ike_cfg_t, get_ke_method, key_exchange_method_t,
-	private_ike_cfg_t *this)
+METHOD(ike_cfg_t, get_algorithm, uint16_t,
+	private_ike_cfg_t *this, transform_type_t type)
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
-	uint16_t method = KE_NONE;
+	uint16_t alg = 0;
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD, &method,
-									NULL))
+		if (proposal->get_algorithm(proposal, type, &alg, NULL))
 		{
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
-	return method;
+	return alg;
 }
 
 METHOD(ike_cfg_t, equals, bool,
@@ -603,7 +602,7 @@ ike_cfg_t *ike_cfg_create(ike_cfg_create_t *data)
 			.get_proposals = _get_proposals,
 			.select_proposal = _select_proposal,
 			.has_proposal = _has_proposal,
-			.get_ke_method = _get_ke_method,
+			.get_algorithm = _get_algorithm,
 			.equals = _equals,
 			.get_ref = _get_ref,
 			.destroy = _destroy,
