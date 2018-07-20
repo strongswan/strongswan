@@ -865,7 +865,8 @@ METHOD(task_t, build_i, status_t,
 				return FAILED;
 			}
 
-			group = this->config->get_ke_method(this->config);
+			group = this->config->get_algorithm(this->config,
+												KEY_EXCHANGE_METHOD);
 			if (group != KE_NONE)
 			{
 				proposal_t *proposal;
