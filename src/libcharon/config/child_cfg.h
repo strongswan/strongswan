@@ -203,11 +203,16 @@ struct child_cfg_t {
 	action_t (*get_close_action) (child_cfg_t *this);
 
 	/**
-	 * Get the key exchange method to use for CHILD_SA setup.
+	 * Get the first algorithm of a certain transform type that's contained in
+	 * any of the configured proposals.
 	 *
-	 * @return				key exchange method to use
+	 * For instance, use with KEY_EXCHANGE_METHOD to get the KE method to use
+	 * for the CHILD_SA initiation.
+	 *
+	 * @param type			transform type to look for
+	 * @return				algorithm identifier (0 for none)
 	 */
-	key_exchange_method_t (*get_ke_method)(child_cfg_t *this);
+	uint16_t (*get_algorithm)(child_cfg_t *this, transform_type_t type);
 
 	/**
 	 * Get the inactivity timeout value.

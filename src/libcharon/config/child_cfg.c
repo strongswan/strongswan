@@ -473,24 +473,23 @@ METHOD(child_cfg_t, get_close_action, action_t,
 	return this->close_action;
 }
 
-METHOD(child_cfg_t, get_ke_method, key_exchange_method_t,
-	private_child_cfg_t *this)
+METHOD(child_cfg_t, get_algorithm, uint16_t,
+	private_child_cfg_t *this, transform_type_t type)
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
-	uint16_t method = MODP_NONE;
+	uint16_t alg = 0;
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD, &method,
-									NULL))
+		if (proposal->get_algorithm(proposal, type, &alg, NULL))
 		{
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
-	return method;
+	return alg;
 }
 
 METHOD(child_cfg_t, get_inactivity, uint32_t,
@@ -654,7 +653,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_dpd_action = _get_dpd_action,
 			.get_close_action = _get_close_action,
 			.get_lifetime = _get_lifetime,
-			.get_ke_method = _get_ke_method,
+			.get_algorithm = _get_algorithm,
 			.get_inactivity = _get_inactivity,
 			.get_reqid = _get_reqid,
 			.get_if_id = _get_if_id,
