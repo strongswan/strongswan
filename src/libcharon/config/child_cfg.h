@@ -215,6 +215,17 @@ struct child_cfg_t {
 	uint16_t (*get_algorithm)(child_cfg_t *this, transform_type_t type);
 
 	/**
+	 * Check if any of the configured proposals has a specific transform.
+	 *
+	 * @param type			transform type to check for
+	 * @param algorithm		algorithm to check for (if 0, TRUE is returned if
+	 *						no transform of the given type is found)
+	 * @return				TRUE if algorithm included
+	 */
+	bool (*has_transform)(child_cfg_t *this, transform_type_t type,
+						  uint16_t algorithm);
+
+	/**
 	 * Get the inactivity timeout value.
 	 *
 	 * @return				inactivity timeout in s
