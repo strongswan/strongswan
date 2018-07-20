@@ -1098,7 +1098,8 @@ METHOD(task_t, build_i, status_t,
 			}
 			if (!this->retry && this->dh_group == MODP_NONE)
 			{	/* during a rekeying the group might already be set */
-				this->dh_group = this->config->get_ke_method(this->config);
+				this->dh_group = this->config->get_algorithm(this->config,
+														KEY_EXCHANGE_METHOD);
 			}
 			break;
 		case IKE_AUTH:
