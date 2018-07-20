@@ -492,6 +492,25 @@ METHOD(child_cfg_t, get_algorithm, uint16_t,
 	return alg;
 }
 
+METHOD(child_cfg_t, has_transform, bool,
+	private_child_cfg_t *this, transform_type_t type, uint16_t algorithm)
+{
+	enumerator_t *enumerator;
+	proposal_t *proposal;
+
+	enumerator = this->proposals->create_enumerator(this->proposals);
+	while (enumerator->enumerate(enumerator, &proposal))
+	{
+		if (proposal->has_transform(proposal, type, algorithm))
+		{
+			enumerator->destroy(enumerator);
+			return TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return FALSE;
+}
+
 METHOD(child_cfg_t, get_inactivity, uint32_t,
 	private_child_cfg_t *this)
 {
@@ -654,6 +673,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_close_action = _get_close_action,
 			.get_lifetime = _get_lifetime,
 			.get_algorithm = _get_algorithm,
+			.has_transform = _has_transform,
 			.get_inactivity = _get_inactivity,
 			.get_reqid = _get_reqid,
 			.get_if_id = _get_if_id,
