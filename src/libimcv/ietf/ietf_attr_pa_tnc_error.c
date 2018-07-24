@@ -25,7 +25,7 @@ ENUM(pa_tnc_error_code_names, PA_ERROR_RESERVED,
 	"Reserved",
 	"Invalid Parameter",
 	"Version Not Supported",
-	"Attribute Type Not Supported"
+	"Attribute Type Not Supported",
 	"SWIMA Error",
 	"SWIMA Subscription Denied",
 	"SWIMA Response Too Large",
