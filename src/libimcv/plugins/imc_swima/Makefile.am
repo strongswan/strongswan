@@ -19,10 +19,12 @@ $(swid_tag) : $(regid)__strongSwan.swidtag.in
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtncif \
-	-I$(top_srcdir)/src/libimcv
+	-I$(top_srcdir)/src/libimcv \
+	-DSW_COLLECTOR=\"${prefix}/sbin/sw-collector\"
 
 AM_CFLAGS = \
 	$(PLUGIN_CFLAGS) $(json_CFLAGS)
+
 
 imcv_LTLIBRARIES = imc-swima.la
 

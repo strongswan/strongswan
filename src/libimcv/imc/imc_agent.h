@@ -182,6 +182,13 @@ struct imc_agent_t {
 	linked_list_t* (*get_non_fatal_attr_types)(imc_agent_t *this);
 
 	/**
+	 * Is the transport protocol PT-TLS?
+	 *
+	 * return					TRUE if PT-TLS
+	 */
+	bool (*has_pt_tls)(imc_agent_t *this);
+
+	/**
 	 * Destroys an imc_agent_t object
 	 */
 	void (*destroy)(imc_agent_t *this);

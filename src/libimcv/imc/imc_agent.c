@@ -74,6 +74,11 @@ struct private_imc_agent_t {
 	rwlock_t *connection_lock;
 
 	/**
+	 * Is the transport protocol PT-TLS?
+	 */
+	bool has_pt_tls;
+
+	/**
 	 * Inform a TNCC about the set of message types the IMC is able to receive
 	 *
 	 * @param imc_id			IMC ID assigned by TNCC
@@ -372,6 +377,8 @@ METHOD(imc_agent_t, create_state, TNC_Result,
 	DBG2(DBG_IMC, "  over %s %s with maximum PA-TNC message size of %u bytes",
 				  t_p ? t_p:"?", t_v ? t_v :"?", max_msg_len);
 
+	this->has_pt_tls = streq(t_p, "IF-T for TLS");
+
 	free(tnccs_p);
 	free(tnccs_v);
 	free(t_p);
@@ -531,6 +538,12 @@ METHOD(imc_agent_t, get_non_fatal_attr_types, linked_list_t*,
 	return this->non_fatal_attr_types;
 }
 
+METHOD(imc_agent_t, has_pt_tls, bool,
+	private_imc_agent_t *this)
+{
+	return	this->has_pt_tls;
+}
+
 METHOD(imc_agent_t, destroy, void,
 	private_imc_agent_t *this)
 {
@@ -575,6 +588,7 @@ imc_agent_t *imc_agent_create(const char *name,
 			.create_id_enumerator = _create_id_enumerator,
 			.add_non_fatal_attr_type = _add_non_fatal_attr_type,
 			.get_non_fatal_attr_types = _get_non_fatal_attr_types,
+			.has_pt_tls = _has_pt_tls,
 			.destroy = _destroy,
 		},
 		.name = name,
