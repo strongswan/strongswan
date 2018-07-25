@@ -227,8 +227,8 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 		return FAILED;
 	}
 
-	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
-								this->nonce, id, this->reserved, &octets,
+	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init, this->nonce,
+								chunk_empty, id, this->reserved, &octets,
 								schemes))
 	{
 		enumerator = array_create_enumerator(schemes);
@@ -293,7 +293,8 @@ static bool get_auth_octets_scheme(private_pubkey_authenticator_t *this,
 
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	if (keymat->get_auth_octets(keymat, verify, this->ike_sa_init, this->nonce,
-								id, this->reserved, octets, schemes) &&
+								chunk_empty, id, this->reserved, octets,
+								schemes) &&
 		array_remove(schemes, 0, scheme))
 	{
 		success = TRUE;

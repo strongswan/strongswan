@@ -74,7 +74,8 @@ METHOD(authenticator_t, build, status_t,
 		return NOT_FOUND;
 	}
 	if (!keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init, this->nonce,
-						key->get_key(key), my_id, this->reserved, &auth_data))
+							 key->get_key(key), chunk_empty, my_id,
+							 this->reserved, &auth_data))
 	{
 		key->destroy(key);
 		return FAILED;
@@ -119,7 +120,8 @@ METHOD(authenticator_t, process, status_t,
 		keys_found++;
 
 		if (!keymat->get_psk_sig(keymat, TRUE, this->ike_sa_init, this->nonce,
-					key->get_key(key), other_id, this->reserved, &auth_data))
+								 key->get_key(key), chunk_empty, other_id,
+								 this->reserved, &auth_data))
 		{
 			continue;
 		}

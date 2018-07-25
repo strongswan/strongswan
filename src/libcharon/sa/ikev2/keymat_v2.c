@@ -491,6 +491,93 @@ failure:
 	return this->skp_build.len && this->skp_verify.len;
 }
 
+/**
+ * Derives a key from the given key and a PRF that was initialized with a PPK
+ */
+static bool derive_ppk_key(prf_t *prf, char *name, chunk_t key,
+						   chunk_t *new_key)
+{
+	prf_plus_t *prf_plus;
+
+	prf_plus = prf_plus_create(prf, TRUE, key);
+	if (!prf_plus ||
+		!prf_plus->allocate_bytes(prf_plus, key.len, new_key))
+	{
+		DBG1(DBG_IKE, "unable to derive %s with PPK", name);
+		DESTROY_IF(prf_plus);
+		return FALSE;
+	}
+	prf_plus->destroy(prf_plus);
+	return TRUE;
+}
+
+/**
+ * Use the given PPK to derive a new SK_pi/r
+ */
+static bool derive_skp_ppk(private_keymat_v2_t *this, chunk_t ppk, chunk_t skp,
+						   chunk_t *new_skp)
+{
+	if (!this->prf->set_key(this->prf, ppk))
+	{
+		DBG1(DBG_IKE, "unable to set PPK in PRF");
+		return FALSE;
+	}
+	return derive_ppk_key(this->prf, "SK_p", skp, new_skp);
+}
+
+METHOD(keymat_v2_t, derive_ike_keys_ppk, bool,
+	private_keymat_v2_t *this, chunk_t ppk)
+{
+	chunk_t skd = chunk_empty, new_skpi = chunk_empty, new_skpr = chunk_empty;
+	chunk_t *skpi, *skpr;
+
+	if (!this->skd.ptr)
+	{
+		return FALSE;
+	}
+
+	if (this->initiator)
+	{
+		skpi = &this->skp_build;
+		skpr = &this->skp_verify;
+	}
+	else
+	{
+		skpi = &this->skp_verify;
+		skpr = &this->skp_build;
+	}
+
+	DBG4(DBG_IKE, "derive keys using PPK %B", &ppk);
+
+	if (!this->prf->set_key(this->prf, ppk))
+	{
+		DBG1(DBG_IKE, "unable to set PPK in PRF");
+		return FALSE;
+	}
+	if (!derive_ppk_key(this->prf, "Sk_d", this->skd, &skd) ||
+		!derive_ppk_key(this->prf, "Sk_pi", *skpi, &new_skpi) ||
+		!derive_ppk_key(this->prf, "Sk_pr", *skpr, &new_skpr))
+	{
+		chunk_clear(&skd);
+		chunk_clear(&new_skpi);
+		chunk_clear(&new_skpr);
+		return FALSE;
+	}
+
+	DBG4(DBG_IKE, "Sk_d secret %B", &skd);
+	chunk_clear(&this->skd);
+	this->skd = skd;
+
+	DBG4(DBG_IKE, "Sk_pi secret %B", &new_skpi);
+	chunk_clear(skpi);
+	*skpi = new_skpi;
+
+	DBG4(DBG_IKE, "Sk_pr secret %B", &new_skpr);
+	chunk_clear(skpr);
+	*skpr = new_skpr;
+	return TRUE;
+}
+
 METHOD(keymat_v2_t, derive_child_keys, bool,
 	private_keymat_v2_t *this, proposal_t *proposal, diffie_hellman_t *dh,
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
@@ -632,13 +719,23 @@ METHOD(keymat_t, get_aead, aead_t*,
 
 METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
-	chunk_t nonce, identification_t *id, char reserved[3], chunk_t *octets,
-	array_t *schemes)
+	chunk_t nonce, chunk_t ppk, identification_t *id, char reserved[3],
+	chunk_t *octets, array_t *schemes)
 {
 	chunk_t chunk, idx;
+	chunk_t skp_ppk = chunk_empty;
 	chunk_t skp;
 
 	skp = verify ? this->skp_verify : this->skp_build;
+	if (ppk.ptr)
+	{
+		DBG4(DBG_IKE, "PPK %B", &ppk);
+		if (!derive_skp_ppk(this, ppk, skp, &skp_ppk))
+		{
+			return FALSE;
+		}
+		skp = skp_ppk;
+	}
 
 	chunk = chunk_alloca(4);
 	chunk.ptr[0] = id->get_type(id);
@@ -650,8 +747,10 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 	if (!this->prf->set_key(this->prf, skp) ||
 		!this->prf->allocate_bytes(this->prf, idx, &chunk))
 	{
+		chunk_clear(&skp_ppk);
 		return FALSE;
 	}
+	chunk_clear(&skp_ppk);
 	*octets = chunk_cat("ccm", ike_sa_init, nonce, chunk);
 	DBG3(DBG_IKE, "octets = message + nonce + prf(Sk_px, IDx') %B", octets);
 	return TRUE;
@@ -665,41 +764,53 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 
 METHOD(keymat_v2_t, get_psk_sig, bool,
 	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init, chunk_t nonce,
-	chunk_t secret, identification_t *id, char reserved[3], chunk_t *sig)
+	chunk_t secret, chunk_t ppk, identification_t *id, char reserved[3],
+	chunk_t *sig)
 {
-	chunk_t key_pad, key, octets;
+	chunk_t skp_ppk = chunk_empty, key = chunk_empty, octets = chunk_empty;
+	chunk_t key_pad;
+	bool success = FALSE;
 
 	if (!secret.len)
 	{	/* EAP uses SK_p if no MSK has been established */
 		secret = verify ? this->skp_verify : this->skp_build;
+		if (ppk.ptr)
+		{
+			if (!derive_skp_ppk(this, ppk, secret, &skp_ppk))
+			{
+				return FALSE;
+			}
+			secret = skp_ppk;
+		}
 	}
-	if (!get_auth_octets(this, verify, ike_sa_init, nonce, id, reserved,
+	if (!get_auth_octets(this, verify, ike_sa_init, nonce, ppk, id, reserved,
 						 &octets, NULL))
 	{
-		return FALSE;
+		goto failure;
 	}
 	/* AUTH = prf(prf(Shared Secret,"Key Pad for IKEv2"), <msg octets>) */
 	key_pad = chunk_create(IKEV2_KEY_PAD, IKEV2_KEY_PAD_LENGTH);
 	if (!this->prf->set_key(this->prf, secret) ||
 		!this->prf->allocate_bytes(this->prf, key_pad, &key))
 	{
-		chunk_free(&octets);
-		return FALSE;
+		goto failure;
 	}
 	if (!this->prf->set_key(this->prf, key) ||
 		!this->prf->allocate_bytes(this->prf, octets, sig))
 	{
-		chunk_free(&key);
-		chunk_free(&octets);
-		return FALSE;
+		goto failure;
 	}
 	DBG4(DBG_IKE, "secret %B", &secret);
 	DBG4(DBG_IKE, "prf(secret, keypad) %B", &key);
 	DBG3(DBG_IKE, "AUTH = prf(prf(secret, keypad), octets) %B", sig);
+	success = TRUE;
+
+failure:
+	chunk_clear(&skp_ppk);
 	chunk_free(&octets);
 	chunk_free(&key);
+	return success;
 
-	return TRUE;
 }
 
 METHOD(keymat_v2_t, hash_algorithm_supported, bool,
@@ -752,6 +863,7 @@ keymat_v2_t *keymat_v2_create(bool initiator)
 				.destroy = _destroy,
 			},
 			.derive_ike_keys = _derive_ike_keys,
+			.derive_ike_keys_ppk = _derive_ike_keys_ppk,
 			.derive_child_keys = _derive_child_keys,
 			.get_skd = _get_skd,
 			.get_auth_octets = _get_auth_octets,
