@@ -565,6 +565,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_BOTAN
+  SUBDIRS += plugins/botan
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/botan/libstrongswan-botan.la
+endif
+endif
+
 if USE_FIPS_PRF
   SUBDIRS += plugins/fips_prf
 if MONOLITHIC
