@@ -51,7 +51,6 @@ METHOD(imv_session_manager_t, add_session, imv_session_t*,
 	enumerator_t *enumerator;
 	tncif_identity_t *tnc_id;
 	imv_session_t *current, *session = NULL;
-	time_t created;
 
 	this->mutex->lock(this->mutex);
 
@@ -105,8 +104,7 @@ METHOD(imv_session_manager_t, add_session, imv_session_t*,
 	enumerator->destroy(enumerator);
 
 	/* create a new session entry */
-	created = time(NULL);
-	session = imv_session_create(conn_id, created, ar_identities);
+	session = imv_session_create(conn_id, ar_identities);
 	this->sessions->insert_last(this->sessions, session);
 
 	this->mutex->unlock(this->mutex);

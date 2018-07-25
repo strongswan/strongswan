@@ -101,6 +101,11 @@ struct private_imv_swima_state_t {
 	imv_remediation_string_t *remediation_string;
 
 	/**
+	 * Has a subscription been established?
+	 */
+	bool has_subscription;
+
+	/**
 	 * SWID Tag Request ID
 	 */
 	uint32_t request_id;
@@ -177,7 +182,16 @@ METHOD(imv_state_t, get_max_msg_len, uint32_t,
 METHOD(imv_state_t, set_action_flags, void,
 	private_imv_swima_state_t *this, uint32_t flags)
 {
-	this->action_flags |= flags;
+	if (flags == 0)
+	{
+		/* reset action flags */
+		this->action_flags = 0;
+	}
+	else
+	{
+		/* add flags */
+		this->action_flags |= flags;
+	}
 }
 
 METHOD(imv_state_t, get_action_flags, uint32_t,
@@ -426,6 +440,18 @@ METHOD(imv_swima_state_t, get_imc_id, TNC_UInt32,
 	return this->imc_id;
 }
 
+METHOD(imv_swima_state_t, set_subscription, void,
+	private_imv_swima_state_t *this, bool set)
+{
+	this->has_subscription = set;
+}
+
+METHOD(imv_swima_state_t, get_subscription, bool,
+	private_imv_swima_state_t *this)
+{
+	return this->has_subscription;
+}
+
 /**
  * Described in header.
  */
@@ -467,6 +493,8 @@ imv_state_t *imv_swima_state_create(TNC_ConnectionID connection_id)
 			.set_count = _set_count,
 			.get_count = _get_count,
 			.get_imc_id = _get_imc_id,
+			.set_subscription = _set_subscription,
+			.get_subscription = _get_subscription,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,

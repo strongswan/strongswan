@@ -121,6 +121,12 @@ METHOD(imv_session_t, get_connection_id, TNC_ConnectionID,
 	return this->conn_id;
 }
 
+METHOD(imv_session_t, set_creation_time, void,
+	private_imv_session_t *this, time_t created)
+{
+	this->created = created;
+}
+
 METHOD(imv_session_t, get_creation_time, time_t,
 	private_imv_session_t *this)
 {
@@ -259,7 +265,7 @@ METHOD(imv_session_t, destroy, void,
 /**
  * See header
  */
-imv_session_t *imv_session_create(TNC_ConnectionID conn_id, time_t created,
+imv_session_t *imv_session_create(TNC_ConnectionID conn_id,
 								  linked_list_t *ar_identities)
 {
 	private_imv_session_t *this;
@@ -269,6 +275,7 @@ imv_session_t *imv_session_create(TNC_ConnectionID conn_id, time_t created,
 			.set_session_id = _set_session_id,
 			.get_session_id = _get_session_id,
 			.get_connection_id = _get_connection_id,
+			.set_creation_time = _set_creation_time,
 			.get_creation_time = _get_creation_time,
 			.create_ar_identities_enumerator = _create_ar_identities_enumerator,
 			.get_os_info = _get_os_info,
@@ -286,7 +293,6 @@ imv_session_t *imv_session_create(TNC_ConnectionID conn_id, time_t created,
 			.destroy = _destroy,
 		},
 		.conn_id = conn_id,
-		.created = created,
 		.ar_identities = ar_identities,
 		.os_info = imv_os_info_create(),
 		.workitems = linked_list_create(),
