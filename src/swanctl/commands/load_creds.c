@@ -665,6 +665,7 @@ static bool load_secret(load_ctx_t *ctx, char *section)
 		"xauth",
 		"ntlm",
 		"ike",
+		"ppk",
 		"private",
 		"rsa",
 		"ecdsa",
@@ -688,7 +689,7 @@ static bool load_secret(load_ctx_t *ctx, char *section)
 		return FALSE;
 	}
 	if (!streq(type, "eap") && !streq(type, "xauth") && !streq(type, "ntlm") &&
-		!streq(type, "ike"))
+		!streq(type, "ike") && !streq(type, "ppk"))
 	{	/* skip non-shared secrets */
 		return TRUE;
 	}
