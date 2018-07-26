@@ -90,19 +90,12 @@ METHOD(imv_agent_if_t, notify_connection_change, TNC_Result,
 	TNC_ConnectionState new_state)
 {
 	imv_state_t *state;
-	imv_swima_state_t *swima_state;
 
 	switch (new_state)
 	{
 		case TNC_CONNECTION_STATE_CREATE:
 			state = imv_swima_state_create(id);
 			return this->agent->create_state(this->agent, state);
- 		case TNC_CONNECTION_STATE_HANDSHAKE:
- 			this->agent->change_state(this->agent, id, new_state, &state);
- 			state->set_action_flags(state, 0);
- 			swima_state = (imv_swima_state_t*)state;
- 			swima_state->set_handshake_state(swima_state, IMV_SWIMA_STATE_INIT);
- 			return TNC_RESULT_SUCCESS;
 		case TNC_CONNECTION_STATE_DELETE:
 			return this->agent->delete_state(this->agent, id);
 		default:

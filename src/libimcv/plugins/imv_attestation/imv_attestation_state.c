@@ -250,10 +250,14 @@ METHOD(imv_state_t, get_contracts, seg_contract_manager_t*,
 	return this->contracts;
 }
 
-METHOD(imv_state_t, change_state, void,
+METHOD(imv_state_t, change_state, TNC_ConnectionState,
 	private_imv_attestation_state_t *this, TNC_ConnectionState new_state)
 {
+	TNC_ConnectionState old_state;
+
+	old_state = this->state;
 	this->state = new_state;
+	return old_state;
 }
 
 METHOD(imv_state_t, get_recommendation, void,
@@ -336,6 +340,24 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	chunk_t *string, char **lang_code, char **uri)
 {
 	return FALSE;
+}
+
+METHOD(imv_state_t, reset, void,
+	private_imv_attestation_state_t *this)
+{
+	DESTROY_IF(this->reason_string);
+	this->reason_string = NULL;
+	this->rec  = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
+	this->eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+
+	this->action_flags = 0;
+
+	this->handshake_state = IMV_ATTESTATION_STATE_INIT;
+	this->measurement_error = 0;
+	this->components->destroy_function(this->components, (void *)free_func_comp);
+	this->components = linked_list_create();
+	this->pts->destroy(this->pts);
+	this->pts = pts_create(FALSE);
 }
 
 METHOD(imv_state_t, destroy, void,
@@ -532,6 +554,7 @@ imv_state_t *imv_attestation_state_create(TNC_ConnectionID connection_id)
 				.update_recommendation = _update_recommendation,
 				.get_reason_string = _get_reason_string,
 				.get_remediation_instructions = _get_remediation_instructions,
+				.reset = _reset,
 				.destroy = _destroy,
 			},
 			.get_handshake_state = _get_handshake_state,
