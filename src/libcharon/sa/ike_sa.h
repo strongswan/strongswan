@@ -156,6 +156,11 @@ enum ike_extension_t {
 	 * IKEv2 Message ID sync, RFC 6311
 	 */
 	EXT_IKE_MESSAGE_ID_SYNC = (1<<14),
+
+	/**
+	 * Postquantum Preshared Keys, draft-ietf-ipsecme-qr-ikev2
+	 */
+	EXT_PPK = (1<<15),
 };
 
 /**
