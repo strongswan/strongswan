@@ -144,7 +144,7 @@ static status_t collect_my_init_data(private_ike_auth_t *this,
 
 	/* get the nonce that was generated in ike_init */
 	nonce = (nonce_payload_t*)message->get_payload(message, PLV2_NONCE);
-	if (nonce == NULL)
+	if (!nonce)
 	{
 		return FAILED;
 	}
@@ -170,7 +170,7 @@ static status_t collect_other_init_data(private_ike_auth_t *this,
 
 	/* get the nonce that was generated in ike_init */
 	nonce = (nonce_payload_t*)message->get_payload(message, PLV2_NONCE);
-	if (nonce == NULL)
+	if (!nonce)
 	{
 		return FAILED;
 	}
@@ -313,7 +313,7 @@ static bool load_cfg_candidates(private_ike_auth_t *this)
 			continue;
 		}
 		peer_cfg->get_ref(peer_cfg);
-		if (this->peer_cfg == NULL)
+		if (!this->peer_cfg)
 		{	/* best match */
 			this->peer_cfg = peer_cfg;
 		}
@@ -414,7 +414,7 @@ METHOD(task_t, build_i, status_t,
 		return collect_my_init_data(this, message);
 	}
 
-	if (this->peer_cfg == NULL)
+	if (!this->peer_cfg)
 	{
 		this->peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 		this->peer_cfg->get_ref(this->peer_cfg);
@@ -441,7 +441,7 @@ METHOD(task_t, build_i, status_t,
 	}
 
 	/* check if an authenticator is in progress */
-	if (this->my_auth == NULL)
+	if (!this->my_auth)
 	{
 		identification_t *idi, *idr = NULL;
 		id_payload_t *id_payload;
@@ -549,7 +549,7 @@ METHOD(task_t, process_r, status_t,
 		return collect_other_init_data(this, message);
 	}
 
-	if (this->my_auth == NULL && this->do_another_auth)
+	if (!this->my_auth && this->do_another_auth)
 	{
 		/* handle (optional) IDr payload, apply proposed identity */
 		id_payload = (id_payload_t*)message->get_payload(message, PLV2_ID_RESPONDER);
@@ -586,7 +586,7 @@ METHOD(task_t, process_r, status_t,
 		}
 	}
 
-	if (this->other_auth == NULL)
+	if (!this->other_auth)
 	{
 		/* handle IDi payload */
 		id_payload = (id_payload_t*)message->get_payload(message, PLV2_ID_INITIATOR);
@@ -601,7 +601,7 @@ METHOD(task_t, process_r, status_t,
 		cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
 		cfg->add(cfg, AUTH_RULE_IDENTITY, id->clone(id));
 
-		if (this->peer_cfg == NULL)
+		if (!this->peer_cfg)
 		{
 			if (!load_cfg_candidates(this))
 			{
@@ -609,7 +609,7 @@ METHOD(task_t, process_r, status_t,
 				return NEED_MORE;
 			}
 		}
-		if (message->get_payload(message, PLV2_AUTH) == NULL)
+		if (!message->get_payload(message, PLV2_AUTH))
 		{	/* before authenticating with EAP, we need a EAP config */
 			cand = get_auth_cfg(this, FALSE);
 			while (!cand || (
@@ -688,7 +688,7 @@ METHOD(task_t, process_r, status_t,
 		return NEED_MORE;
 	}
 
-	if (message->get_notify(message, ANOTHER_AUTH_FOLLOWS) == NULL)
+	if (!message->get_notify(message, ANOTHER_AUTH_FOLLOWS))
 	{
 		this->expect_another_auth = FALSE;
 		if (!update_cfg_candidates(this, TRUE))
@@ -716,12 +716,12 @@ METHOD(task_t, build_r, status_t,
 		return collect_my_init_data(this, message);
 	}
 
-	if (this->authentication_failed || this->peer_cfg == NULL)
+	if (this->authentication_failed || !this->peer_cfg)
 	{
 		goto peer_auth_failed;
 	}
 
-	if (this->my_auth == NULL && this->do_another_auth)
+	if (!this->my_auth && this->do_another_auth)
 	{
 		identification_t *id, *id_cfg;
 		id_payload_t *id_payload;
@@ -1032,7 +1032,7 @@ METHOD(task_t, process_i, status_t,
 
 	if (this->expect_another_auth)
 	{
-		if (this->other_auth == NULL)
+		if (!this->other_auth)
 		{
 			id_payload_t *id_payload;
 			identification_t *id;
@@ -1137,7 +1137,7 @@ METHOD(task_t, process_i, status_t,
 		DBG1(DBG_IKE, "allow mutual EAP-only authentication");
 	}
 
-	if (message->get_notify(message, ANOTHER_AUTH_FOLLOWS) == NULL)
+	if (!message->get_notify(message, ANOTHER_AUTH_FOLLOWS))
 	{
 		this->expect_another_auth = FALSE;
 	}
