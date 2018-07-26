@@ -188,6 +188,12 @@ connections.<conn>.send_cert = ifasked
 	certificate payloads altogether, _always_ causes certificate payloads to be
 	sent unconditionally whenever certificate authentication is used.
 
+connections.<conn>.ppk_id =
+	String identifying the Postquantum Preshared Key (PPK) to be used.
+
+connections.<conn>.ppk_required = no
+	Whether a Postquantum Preshared Key (PPK) is required for this connection.
+
 connections.<conn>.keyingtries = 1
 	Number of retransmission sequences to perform during initial connect.
 
