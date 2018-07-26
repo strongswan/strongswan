@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tobias Brunner
+ * Copyright (C) 2007-2018 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -311,6 +311,20 @@ struct peer_cfg_t {
 	 */
 	enumerator_t* (*create_pool_enumerator)(peer_cfg_t *this);
 
+	/**
+	 * Get the PPK ID to use with this peer.
+	 *
+	 * @return				PPK id
+	 */
+	identification_t *(*get_ppk_id)(peer_cfg_t *this);
+
+	/**
+	 * Whether a PPK is required with this peer.
+	 *
+	 * @return				TRUE, if a PPK is required
+	 */
+	bool (*ppk_required)(peer_cfg_t *this);
+
 #ifdef ME
 	/**
 	 * Is this a mediation connection?
@@ -393,6 +407,10 @@ struct peer_cfg_create_t {
 	uint32_t dpd;
 	/** DPD timeout interval (IKEv1 only), if 0 default applies */
 	uint32_t dpd_timeout;
+	/** Postquantum Preshared Key ID (adopted) */
+	identification_t *ppk_id;
+	/** TRUE if a PPK is required, FALSE if it's optional */
+	bool ppk_required;
 #ifdef ME
 	/** TRUE if this is a mediation connection */
 	bool mediation;
