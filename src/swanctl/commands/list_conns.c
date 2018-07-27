@@ -238,7 +238,7 @@ CALLBACK(conns, int,
 	void *null, vici_res_t *res, char *name)
 {
 	int ret;
-	char *version, *reauth_time, *rekey_time, *dpd_delay;
+	char *version, *reauth_time, *rekey_time, *dpd_delay, *ppk_id, *ppk_req;
 	hashtable_t *ike;
 
 	version     = vici_find_str(res, "", "%s.version", name);
@@ -281,6 +281,14 @@ CALLBACK(conns, int,
 		printf(", dpd delay %ss", dpd_delay);
 	}
 	printf("\n");
+
+	ppk_id = vici_find_str(res, NULL, "%s.ppk_id", name);
+	ppk_req = vici_find_str(res, NULL, "%s.ppk_required", name);
+	if (ppk_id || ppk_req)
+	{
+		printf("  ppk: %s%s%srequired\n", ppk_id ?: "", ppk_id ? ", " : "",
+			   !ppk_req || !streq(ppk_req, "yes") ? "not " : "");
+	}
 
 	ret = vici_parse_cb(res, conn_sn, NULL, conn_list, ike);
 	free_hashtable(ike);
