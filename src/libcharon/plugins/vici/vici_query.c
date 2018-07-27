@@ -417,6 +417,7 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 			b->add_kv(b, "dh-group", "%N", diffie_hellman_group_names, alg);
 		}
 	}
+	add_condition(b, ike_sa, "ppk", COND_PPK);
 
 	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 	{
