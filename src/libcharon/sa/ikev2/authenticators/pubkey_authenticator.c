@@ -56,6 +56,16 @@ struct private_pubkey_authenticator_t {
 	 * Reserved bytes of ID payload
 	 */
 	char reserved[3];
+
+	/**
+	 * PPK to use
+	 */
+	chunk_t ppk;
+
+	/**
+	 * Add a NO_PPK_AUTH notify
+	 */
+	bool no_ppk_auth;
 };
 
 /**
@@ -204,17 +214,42 @@ CALLBACK(destroy_scheme, void,
 }
 
 /**
+ * Adds the given auth data to the message, either in an AUTH payload or
+ * a NO_PPK_AUTH notify.
+ *
+ * The data is freed.
+ */
+static void add_auth_to_message(message_t *message, auth_method_t method,
+								chunk_t data, bool notify)
+{
+	auth_payload_t *auth_payload;
+
+	if (notify)
+	{
+		message->add_notify(message, FALSE, NO_PPK_AUTH, data);
+	}
+	else
+	{
+		auth_payload = auth_payload_create();
+		auth_payload->set_auth_method(auth_payload, method);
+		auth_payload->set_data(auth_payload, data);
+		message->add_payload(message, (payload_t*)auth_payload);
+	}
+	chunk_free(&data);
+}
+
+/**
  * Create a signature using RFC 7427 signature authentication
  */
 static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
-							auth_cfg_t *auth, private_key_t *private,
-							identification_t *id, chunk_t *auth_data)
+									auth_cfg_t *auth, private_key_t *private,
+									identification_t *id, message_t *message)
 {
 	enumerator_t *enumerator;
 	keymat_v2_t *keymat;
 	signature_params_t *params = NULL;
 	array_t *schemes;
-	chunk_t octets = chunk_empty;
+	chunk_t octets = chunk_empty, auth_data;
 	status_t status = FAILED;
 
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
@@ -228,25 +263,45 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 	}
 
 	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init, this->nonce,
-								chunk_empty, id, this->reserved, &octets,
-								schemes))
+							this->ppk, id, this->reserved, &octets, schemes))
 	{
 		enumerator = array_create_enumerator(schemes);
 		while (enumerator->enumerate(enumerator, &params))
 		{
-			if (private->sign(private, params->scheme, params->params, octets,
-							  auth_data) &&
-				build_signature_auth_data(auth_data, params))
-			{
-				status = SUCCESS;
-				break;
-			}
-			else
+			if (!private->sign(private, params->scheme, params->params, octets,
+							   &auth_data) ||
+				!build_signature_auth_data(&auth_data, params))
 			{
 				DBG2(DBG_IKE, "unable to create %N signature for %N key",
 					 signature_scheme_names, params->scheme, key_type_names,
 					 private->get_type(private));
+				continue;
 			}
+			add_auth_to_message(message, AUTH_DS, auth_data, FALSE);
+			status = SUCCESS;
+
+			if (this->no_ppk_auth)
+			{
+				chunk_free(&octets);
+
+				if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
+											this->nonce, chunk_empty, id,
+											this->reserved, &octets, schemes) &&
+					private->sign(private, params->scheme, params->params,
+								  octets, &auth_data) &&
+					build_signature_auth_data(&auth_data, params))
+				{
+					add_auth_to_message(message, AUTH_DS, auth_data, TRUE);
+				}
+				else
+				{
+					DBG2(DBG_IKE, "unable to create %N signature for %N key "
+						 "without PPK", signature_scheme_names, params->scheme,
+						 key_type_names, private->get_type(private));
+					status = FAILED;
+				}
+			}
+			break;
 		}
 		enumerator->destroy(enumerator);
 	}
@@ -281,8 +336,8 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
  * keymat).
  */
 static bool get_auth_octets_scheme(private_pubkey_authenticator_t *this,
-								   bool verify, identification_t *id,
-								   chunk_t *octets, signature_params_t **scheme)
+								bool verify, identification_t *id, chunk_t ppk,
+								chunk_t *octets, signature_params_t **scheme)
 {
 	keymat_v2_t *keymat;
 	array_t *schemes;
@@ -293,7 +348,7 @@ static bool get_auth_octets_scheme(private_pubkey_authenticator_t *this,
 
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	if (keymat->get_auth_octets(keymat, verify, this->ike_sa_init, this->nonce,
-								chunk_empty, id, this->reserved, octets,
+								ppk, id, this->reserved, octets,
 								schemes) &&
 		array_remove(schemes, 0, scheme))
 	{
@@ -312,19 +367,19 @@ static bool get_auth_octets_scheme(private_pubkey_authenticator_t *this,
  */
 static status_t sign_classic(private_pubkey_authenticator_t *this,
 							 auth_cfg_t *auth, private_key_t *private,
-							 identification_t *id, auth_method_t *auth_method,
-							 chunk_t *auth_data)
+							 identification_t *id, message_t *message)
 {
 	signature_scheme_t scheme;
 	signature_params_t *params;
-	chunk_t octets = chunk_empty;
+	auth_method_t auth_method = AUTH_NONE;
+	chunk_t octets = chunk_empty, auth_data;
 	status_t status = FAILED;
 
 	switch (private->get_type(private))
 	{
 		case KEY_RSA:
 			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
-			*auth_method = AUTH_RSA;
+			auth_method = AUTH_RSA;
 			break;
 		case KEY_ECDSA:
 			/* deduct the signature scheme from the keysize */
@@ -332,15 +387,15 @@ static status_t sign_classic(private_pubkey_authenticator_t *this,
 			{
 				case 256:
 					scheme = SIGN_ECDSA_256;
-					*auth_method = AUTH_ECDSA_256;
+					auth_method = AUTH_ECDSA_256;
 					break;
 				case 384:
 					scheme = SIGN_ECDSA_384;
-					*auth_method = AUTH_ECDSA_384;
+					auth_method = AUTH_ECDSA_384;
 					break;
 				case 521:
 					scheme = SIGN_ECDSA_521;
-					*auth_method = AUTH_ECDSA_521;
+					auth_method = AUTH_ECDSA_521;
 					break;
 				default:
 					DBG1(DBG_IKE, "%d bit ECDSA private key size not supported",
@@ -357,17 +412,34 @@ static status_t sign_classic(private_pubkey_authenticator_t *this,
 	INIT(params,
 		.scheme = scheme,
 	);
-	if (get_auth_octets_scheme(this, FALSE, id, &octets, &params) &&
-		private->sign(private, params->scheme, NULL, octets, auth_data))
+	if (get_auth_octets_scheme(this, FALSE, id, this->ppk, &octets, &params) &&
+		private->sign(private, params->scheme, NULL, octets, &auth_data))
 	{
+		add_auth_to_message(message, auth_method, auth_data, FALSE);
 		status = SUCCESS;
+
+		if (this->no_ppk_auth)
+		{
+			chunk_free(&octets);
+			if (get_auth_octets_scheme(this, FALSE, id, chunk_empty, &octets,
+									   &params) &&
+				private->sign(private, params->scheme, NULL, octets,
+							  &auth_data))
+			{
+				add_auth_to_message(message, auth_method, auth_data, TRUE);
+			}
+			else
+			{
+				status = FAILED;
+			}
+		}
 	}
 	if (params)
 	{
 		signature_params_destroy(params);
 	}
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N %s", id,
-		 auth_method_names, *auth_method,
+		 auth_method_names, auth_method,
 		 status == SUCCESS ? "successful" : "failed");
 	chunk_free(&octets);
 	return status;
@@ -379,10 +451,7 @@ METHOD(authenticator_t, build, status_t,
 	private_key_t *private;
 	identification_t *id;
 	auth_cfg_t *auth;
-	chunk_t auth_data;
 	status_t status;
-	auth_payload_t *auth_payload;
-	auth_method_t auth_method = AUTH_NONE;
 
 	id = this->ike_sa->get_my_id(this->ike_sa);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
@@ -395,24 +464,13 @@ METHOD(authenticator_t, build, status_t,
 
 	if (this->ike_sa->supports_extension(this->ike_sa, EXT_SIGNATURE_AUTH))
 	{
-		auth_method = AUTH_DS;
-		status = sign_signature_auth(this, auth, private, id, &auth_data);
+		status = sign_signature_auth(this, auth, private, id, message);
 	}
 	else
 	{
-		status = sign_classic(this, auth, private, id, &auth_method,
-							  &auth_data);
+		status = sign_classic(this, auth, private, id, message);
 	}
 	private->destroy(private);
-
-	if (status == SUCCESS)
-	{
-		auth_payload = auth_payload_create();
-		auth_payload->set_auth_method(auth_payload, auth_method);
-		auth_payload->set_data(auth_payload, auth_data);
-		chunk_free(&auth_data);
-		message->add_payload(message, (payload_t*)auth_payload);
-	}
 	return status;
 }
 
@@ -445,6 +503,7 @@ METHOD(authenticator_t, process, status_t,
 	public_key_t *public;
 	auth_method_t auth_method;
 	auth_payload_t *auth_payload;
+	notify_payload_t *notify;
 	chunk_t auth_data, octets;
 	identification_t *id;
 	auth_cfg_t *auth, *current_auth;
@@ -460,9 +519,21 @@ METHOD(authenticator_t, process, status_t,
 	{
 		return FAILED;
 	}
-	INIT(params);
 	auth_method = auth_payload->get_auth_method(auth_payload);
 	auth_data = auth_payload->get_data(auth_payload);
+
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_PPK) &&
+		!this->ppk.ptr)
+	{	/* look for a NO_PPK_AUTH notify if we have no PPK */
+		notify = message->get_notify(message, NO_PPK_AUTH);
+		if (notify)
+		{
+			DBG1(DBG_IKE, "no PPK available, using NO_PPK_AUTH notify");
+			auth_data = notify->get_notification_data(notify);
+		}
+	}
+
+	INIT(params);
 	switch (auth_method)
 	{
 		case AUTH_RSA:
@@ -492,7 +563,7 @@ METHOD(authenticator_t, process, status_t,
 			return INVALID_ARG;
 	}
 	id = this->ike_sa->get_other_id(this->ike_sa);
-	if (!get_auth_octets_scheme(this, TRUE, id, &octets, &params))
+	if (!get_auth_octets_scheme(this, TRUE, id, this->ppk, &octets, &params))
 	{
 		return FAILED;
 	}
@@ -552,6 +623,13 @@ METHOD(authenticator_t, process, status_t,
 	return status;
 }
 
+METHOD(authenticator_t, use_ppk, void,
+	private_pubkey_authenticator_t *this, chunk_t ppk, bool no_ppk_auth)
+{
+	this->ppk = ppk;
+	this->no_ppk_auth = no_ppk_auth;
+}
+
 METHOD(authenticator_t, destroy, void,
 	private_pubkey_authenticator_t *this)
 {
@@ -572,6 +650,7 @@ pubkey_authenticator_t *pubkey_authenticator_create_builder(ike_sa_t *ike_sa,
 			.authenticator = {
 				.build = _build,
 				.process = (void*)return_failed,
+				.use_ppk = _use_ppk,
 				.is_mutual = (void*)return_false,
 				.destroy = _destroy,
 			},
@@ -599,6 +678,7 @@ pubkey_authenticator_t *pubkey_authenticator_create_verifier(ike_sa_t *ike_sa,
 			.authenticator = {
 				.build = (void*)return_failed,
 				.process = _process,
+				.use_ppk = _use_ppk,
 				.is_mutual = (void*)return_false,
 				.destroy = _destroy,
 			},
