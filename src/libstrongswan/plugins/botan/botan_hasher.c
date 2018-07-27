@@ -112,6 +112,9 @@ botan_hasher_t *botan_hasher_create(hash_algorithm_t algo)
 
 	switch (algo)
 	{
+		case HASH_MD5:
+			hash_name = "MD5";
+			break;
 		case HASH_SHA1:
 			hash_name = "SHA-1";
 			break;

@@ -102,6 +102,9 @@ METHOD(plugin_t, get_features, int,
 #endif
 		/* hashers */
 		PLUGIN_REGISTER(HASHER, botan_hasher_create),
+#ifdef BOTAN_HAS_MD5
+			PLUGIN_PROVIDE(HASHER, HASH_MD5),
+#endif
 #ifdef BOTAN_HAS_SHA1
 			PLUGIN_PROVIDE(HASHER, HASH_SHA1),
 #endif
