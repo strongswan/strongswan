@@ -232,6 +232,11 @@ enum ike_condition_t {
 	 * Online certificate revocation checking is suspended for this IKE_SA
 	 */
 	COND_ONLINE_VALIDATION_SUSPENDED = (1<<12),
+
+	/**
+	 * A Postquantum Preshared Key was used when this IKE_SA was created
+	 */
+	COND_PPK = (1<<13),
 };
 
 /**
