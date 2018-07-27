@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2006-2009 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -63,6 +63,16 @@ struct private_eap_authenticator_t {
 	 * Reserved bytes of ID payload
 	 */
 	char reserved[3];
+
+	/**
+	 * PPK to use
+	 */
+	chunk_t ppk;
+
+	/**
+	 * Add a NO_PPK_AUTH notify
+	 */
+	bool no_ppk_auth;
 
 	/**
 	 * Current EAP method processing
@@ -444,6 +454,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 						chunk_t nonce, chunk_t init)
 {
 	auth_payload_t *auth_payload;
+	notify_payload_t *notify;
 	chunk_t auth_data, recv_auth_data;
 	identification_t *other_id;
 	auth_cfg_t *auth;
@@ -458,14 +469,26 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 		DBG1(DBG_IKE, "AUTH payload missing");
 		return FALSE;
 	}
+	recv_auth_data = auth_payload->get_data(auth_payload);
+
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_PPK) &&
+		!this->ppk.ptr)
+	{	/* look for a NO_PPK_AUTH notify if we have no PPK */
+		notify = message->get_notify(message, NO_PPK_AUTH);
+		if (notify)
+		{
+			DBG1(DBG_IKE, "no PPK available, using NO_PPK_AUTH notify");
+			recv_auth_data = notify->get_notification_data(notify);
+		}
+	}
+
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
-	if (!keymat->get_psk_sig(keymat, TRUE, init, nonce, this->msk, chunk_empty,
+	if (!keymat->get_psk_sig(keymat, TRUE, init, nonce, this->msk, this->ppk,
 							 other_id, this->reserved, &auth_data))
 	{
 		return FALSE;
 	}
-	recv_auth_data = auth_payload->get_data(auth_payload);
 	if (!auth_data.len || !chunk_equals_const(auth_data, recv_auth_data))
 	{
 		DBG1(DBG_IKE, "verification of AUTH payload with%s EAP MSK failed",
@@ -507,7 +530,7 @@ static bool build_auth(private_eap_authenticator_t *this, message_t *message,
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
 		 my_id, auth_class_names, AUTH_CLASS_EAP);
 
-	if (!keymat->get_psk_sig(keymat, FALSE, init, nonce, this->msk, chunk_empty,
+	if (!keymat->get_psk_sig(keymat, FALSE, init, nonce, this->msk, this->ppk,
 							 my_id, this->reserved, &auth_data))
 	{
 		return FALSE;
@@ -517,6 +540,18 @@ static bool build_auth(private_eap_authenticator_t *this, message_t *message,
 	auth_payload->set_data(auth_payload, auth_data);
 	message->add_payload(message, (payload_t*)auth_payload);
 	chunk_free(&auth_data);
+
+	if (this->no_ppk_auth)
+	{
+		if (!keymat->get_psk_sig(keymat, FALSE, init, nonce, this->msk,
+							chunk_empty, my_id, this->reserved, &auth_data))
+		{
+			DBG1(DBG_IKE, "failed adding NO_PPK_AUTH notify");
+			return FALSE;
+		}
+		message->add_notify(message, FALSE, NO_PPK_AUTH, auth_data);
+		chunk_free(&auth_data);
+	}
 	return TRUE;
 }
 
@@ -698,6 +733,13 @@ METHOD(authenticator_t, is_mutual, bool,
 	return TRUE;
 }
 
+METHOD(authenticator_t, use_ppk, void,
+	private_eap_authenticator_t *this, chunk_t ppk, bool no_ppk_auth)
+{
+	this->ppk = ppk;
+	this->no_ppk_auth = no_ppk_auth;
+}
+
 METHOD(authenticator_t, destroy, void,
 	private_eap_authenticator_t *this)
 {
@@ -723,6 +765,7 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
 			.authenticator = {
 				.build = _build_client,
 				.process = _process_client,
+				.use_ppk = _use_ppk,
 				.is_mutual = _is_mutual,
 				.destroy = _destroy,
 			},
@@ -753,6 +796,7 @@ eap_authenticator_t *eap_authenticator_create_verifier(ike_sa_t *ike_sa,
 			.authenticator = {
 				.build = _build_server,
 				.process = _process_server,
+				.use_ppk = _use_ppk,
 				.is_mutual = _is_mutual,
 				.destroy = _destroy,
 			},
