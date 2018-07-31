@@ -410,6 +410,7 @@ METHOD(imc_agent_t, change_state, TNC_Result,
 							   imc_state_t **state_p)
 {
 	imc_state_t *state;
+	TNC_ConnectionState old_state;
 
 	switch (new_state)
 	{
@@ -425,13 +426,20 @@ METHOD(imc_agent_t, change_state, TNC_Result,
 							  this->id, this->name, connection_id);
 				return TNC_RESULT_FATAL;
 			}
-			state->change_state(state, new_state);
+			old_state = state->change_state(state, new_state);
 			DBG2(DBG_IMC, "IMC %u \"%s\" changed state of Connection ID %u to '%N'",
 						  this->id, this->name, connection_id,
 						  TNC_Connection_State_names, new_state);
 			if (state_p)
 			{
 				*state_p = state;
+			}
+			if (new_state == TNC_CONNECTION_STATE_HANDSHAKE &&
+				old_state != TNC_CONNECTION_STATE_CREATE)
+			{
+				state->reset(state);
+				DBG2(DBG_IMC, "IMC %u \"%s\" reset state of Connection ID %u",
+							   this->id, this->name, connection_id);
 			}
 			break;
 		case TNC_CONNECTION_STATE_CREATE:

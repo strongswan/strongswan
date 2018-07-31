@@ -115,19 +115,8 @@ TNC_Result TNC_IMC_API TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 		case TNC_CONNECTION_STATE_CREATE:
 			state = imc_attestation_state_create(connection_id);
 			return imc_attestation->create_state(imc_attestation, state);
-		case TNC_CONNECTION_STATE_HANDSHAKE:
-			if (imc_attestation->change_state(imc_attestation, connection_id,
-				new_state, &state) != TNC_RESULT_SUCCESS)
-			{
-				return TNC_RESULT_FATAL;
-			}
-			state->set_result(state, imc_id,
-							  TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
-			return TNC_RESULT_SUCCESS;
 		case TNC_CONNECTION_STATE_DELETE:
 			return imc_attestation->delete_state(imc_attestation, connection_id);
-		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
-		case TNC_CONNECTION_STATE_ACCESS_NONE:
 		default:
 			return imc_attestation->change_state(imc_attestation, connection_id,
 												  new_state, NULL);

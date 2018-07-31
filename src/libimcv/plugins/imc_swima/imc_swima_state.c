@@ -135,10 +135,14 @@ METHOD(imc_state_t, get_contracts, seg_contract_manager_t*,
 	return this->contracts;
 }
 
-METHOD(imc_state_t, change_state, void,
+METHOD(imc_state_t, change_state, TNC_ConnectionState,
 	private_imc_swima_state_t *this, TNC_ConnectionState new_state)
 {
+	TNC_ConnectionState old_state;
+
+	old_state = this->state;
 	this->state = new_state;
+	return old_state;
 }
 
 METHOD(imc_state_t, set_result, void,
@@ -157,6 +161,12 @@ METHOD(imc_state_t, get_result, bool,
 		*result = this->result;
 	}
 	return this->result != TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+}
+
+METHOD(imc_state_t, reset, void,
+	private_imc_swima_state_t *this)
+{
+	this->result = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
 }
 
 METHOD(imc_state_t, destroy, void,
@@ -226,6 +236,7 @@ imc_state_t *imc_swima_state_create(TNC_ConnectionID connection_id)
 				.change_state = _change_state,
 				.set_result = _set_result,
 				.get_result = _get_result,
+				.reset = _reset,
 				.destroy = _destroy,
 			},
 			.set_subscription = _set_subscription,
