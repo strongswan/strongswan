@@ -5,7 +5,9 @@ strongswan-5.7.0
   the syntax --san xmppaddr:<jid>.
 
 - Implementation of RFC 8412 "Software Inventory Message and Attributes (SWIMA)
-  for PA-TNC"
+  for PA-TNC". SWIMA subscription option sets CLOSE_WRITE trigger on apt
+  history.log file resulting in a ClientRetry PB-TNC batch to initialize
+  a new measurement cycle.
 
 - Added support for fuzzing the PA-TNC (RFC 5792) and PB-TNC (RFC 5793) NEA
   protocols on Google's OSS-Fuzz infrastructure.
