@@ -101,6 +101,11 @@ struct private_imv_swima_state_t {
 	imv_remediation_string_t *remediation_string;
 
 	/**
+	 * Has a subscription been established?
+	 */
+	bool has_subscription;
+
+	/**
 	 * SWID Tag Request ID
 	 */
 	uint32_t request_id;
@@ -204,10 +209,14 @@ METHOD(imv_state_t, get_contracts, seg_contract_manager_t*,
 	return this->contracts;
 }
 
-METHOD(imv_state_t, change_state, void,
+METHOD(imv_state_t, change_state, TNC_ConnectionState,
 	private_imv_swima_state_t *this, TNC_ConnectionState new_state)
 {
+	TNC_ConnectionState old_state;
+
+	old_state = this->state;
 	this->state = new_state;
+	return old_state;
 }
 
 METHOD(imv_state_t, get_recommendation, void,
@@ -248,13 +257,28 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	return FALSE;
 }
 
+METHOD(imv_state_t, reset, void,
+	private_imv_swima_state_t *this)
+{
+	this->rec  = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
+	this->eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+
+	this->action_flags = 0;
+
+	this->handshake_state = IMV_SWIMA_STATE_INIT;
+	this->sw_id_count = 0;
+	this->tag_count = 0;
+	this->missing = 0;
+
+	json_object_put(this->jobj);
+	this->jobj = json_object_new_object();
+}
+
 METHOD(imv_state_t, destroy, void,
 	private_imv_swima_state_t *this)
 {
 	json_object_put(this->jobj);
 	DESTROY_IF(this->session);
-	DESTROY_IF(this->reason_string);
-	DESTROY_IF(this->remediation_string);
 	this->contracts->destroy(this->contracts);
 	free(this);
 }
@@ -426,6 +450,18 @@ METHOD(imv_swima_state_t, get_imc_id, TNC_UInt32,
 	return this->imc_id;
 }
 
+METHOD(imv_swima_state_t, set_subscription, void,
+	private_imv_swima_state_t *this, bool set)
+{
+	this->has_subscription = set;
+}
+
+METHOD(imv_swima_state_t, get_subscription, bool,
+	private_imv_swima_state_t *this)
+{
+	return this->has_subscription;
+}
+
 /**
  * Described in header.
  */
@@ -453,6 +489,7 @@ imv_state_t *imv_swima_state_create(TNC_ConnectionID connection_id)
 				.update_recommendation = _update_recommendation,
 				.get_reason_string = _get_reason_string,
 				.get_remediation_instructions = _get_remediation_instructions,
+				.reset = _reset,
 				.destroy = _destroy,
 			},
 			.set_handshake_state = _set_handshake_state,
@@ -467,6 +504,8 @@ imv_state_t *imv_swima_state_create(TNC_ConnectionID connection_id)
 			.set_count = _set_count,
 			.get_count = _get_count,
 			.get_imc_id = _get_imc_id,
+			.set_subscription = _set_subscription,
+			.get_subscription = _get_subscription,
 		},
 		.state = TNC_CONNECTION_STATE_CREATE,
 		.rec = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION,

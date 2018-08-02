@@ -92,8 +92,10 @@ struct imc_state_t {
 	 * Change the connection state
 	 *
 	 * @param new_state		new connection state
+	 * @return				old connection state
 	 */
-	void (*change_state)(imc_state_t *this, TNC_ConnectionState new_state);
+	TNC_ConnectionState (*change_state)(imc_state_t *this,
+						 TNC_ConnectionState new_state);
 
 	/**
 	 * Set the Assessment/Evaluation Result
@@ -113,6 +115,11 @@ struct imc_state_t {
 	 */
 	bool (*get_result)(imc_state_t *this, TNC_IMCID id,
 										  TNC_IMV_Evaluation_Result *result);
+
+	/**
+	 * Resets the state for a new measurement cycle triggered by a SRETRY batch
+	 */
+	void (*reset)(imc_state_t *this);
 
 	/**
 	 * Destroys an imc_state_t object

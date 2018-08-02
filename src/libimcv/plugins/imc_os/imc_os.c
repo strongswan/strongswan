@@ -103,15 +103,6 @@ TNC_Result TNC_IMC_API TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 		case TNC_CONNECTION_STATE_CREATE:
 			state = imc_os_state_create(connection_id);
 			return imc_os->create_state(imc_os, state);
-		case TNC_CONNECTION_STATE_HANDSHAKE:
-			if (imc_os->change_state(imc_os, connection_id, new_state,
-				&state) != TNC_RESULT_SUCCESS)
-			{
-				return TNC_RESULT_FATAL;
-			}
-			state->set_result(state, imc_id,
-							  TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
-			return TNC_RESULT_SUCCESS;
 		case TNC_CONNECTION_STATE_DELETE:
 			return imc_os->delete_state(imc_os, connection_id);
 		default:

@@ -362,10 +362,14 @@ METHOD(imv_state_t, update_recommendation, void,
 	this->eval = tncif_policy_update_evaluation(this->eval, eval);
 }
 
-METHOD(imv_state_t, change_state, void,
+METHOD(imv_state_t, change_state, TNC_ConnectionState,
 	private_imv_os_state_t *this, TNC_ConnectionState new_state)
 {
+	TNC_ConnectionState old_state;
+
+	old_state = this->state;
 	this->state = new_state;
+	return old_state;
 }
 
 METHOD(imv_state_t, get_reason_string, bool,
@@ -464,6 +468,32 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 							"%s.plugins.imv-os.remediation_uri", NULL, lib->ns);
 
 	return TRUE;
+}
+
+METHOD(imv_state_t, reset, void,
+	private_imv_os_state_t *this)
+{
+	DESTROY_IF(this->reason_string);
+	DESTROY_IF(this->remediation_string);
+	this->reason_string = NULL;
+	this->remediation_string = NULL;
+	this->rec  = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
+	this->eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+
+	this->action_flags = 0;
+
+	this->handshake_state = IMV_OS_STATE_INIT;
+	this->count = 0;
+	this->count_security = 0;
+	this->count_blacklist = 0;
+	this->count_ok = 0;
+	this->os_settings = 0;
+	this->missing = 0;
+
+	this->update_packages->destroy_function(this->update_packages, free);
+	this->remove_packages->destroy_function(this->remove_packages, free);
+	this->update_packages = linked_list_create();
+	this->remove_packages = linked_list_create();
 }
 
 METHOD(imv_state_t, destroy, void,
@@ -590,6 +620,7 @@ imv_state_t *imv_os_state_create(TNC_ConnectionID connection_id)
 				.update_recommendation = _update_recommendation,
 				.get_reason_string = _get_reason_string,
 				.get_remediation_instructions = _get_remediation_instructions,
+				.reset = _reset,
 				.destroy = _destroy,
 			},
 			.set_handshake_state = _set_handshake_state,

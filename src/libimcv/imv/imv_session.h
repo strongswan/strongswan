@@ -63,6 +63,13 @@ struct imv_session_t {
 	TNC_ConnectionID (*get_connection_id)(imv_session_t *this);
 
 	/**
+	 * Set session creation time
+	 *
+	 * @param created		Session creation time
+	 */
+	void (*set_creation_time)(imv_session_t *this, time_t created);
+
+	/**
 	 * Get session creation time
 	 *
 	 * @return				Session creation time
@@ -170,10 +177,9 @@ struct imv_session_t {
  * Create an imv_session_t instance
  *
  * @param id				Associated Connection ID
- * @param created			Session creation time
  * @param ar_identities		List of Access Requestor identities
  */
-imv_session_t* imv_session_create(TNC_ConnectionID id, time_t created,
-								  linked_list_t *ar_identities);
+imv_session_t* imv_session_create(TNC_ConnectionID id,
+								 linked_list_t *ar_identities);
 
 #endif /**  IMV_SESSION_H_ @}*/

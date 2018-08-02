@@ -143,7 +143,7 @@ static bool create_session(private_imv_database_t *this, imv_session_t *session)
 	}
 
 	/* create a new session entry */
-	created = session->get_creation_time(session);
+	created = time(NULL);
 	conn_id = session->get_connection_id(session);
 	this->db->execute(this->db, &session_id,
 			"INSERT INTO sessions (time, connection, product, device) "
@@ -161,6 +161,7 @@ static bool create_session(private_imv_database_t *this, imv_session_t *session)
 		return FALSE;
 	}
 	session->set_session_id(session, session_id, pid, did);
+	session->set_creation_time(session, created);
 
 	enumerator = session->create_ar_identities_enumerator(session);
 	while (enumerator->enumerate(enumerator, &tnc_id))

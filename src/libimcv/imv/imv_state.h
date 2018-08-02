@@ -119,8 +119,10 @@ struct imv_state_t {
 	 * Change the connection state
 	 *
 	 * @param new_state		new connection state
+	 * @return				old connection state
 	 */
-	void (*change_state)(imv_state_t *this, TNC_ConnectionState new_state);
+	TNC_ConnectionState (*change_state)(imv_state_t *this,
+						 TNC_ConnectionState new_state);
 
 	/**
 	 * Get IMV action recommendation and evaluation result
@@ -180,6 +182,11 @@ struct imv_state_t {
 										 enumerator_t *language_enumerator,
 										 chunk_t *string, char **lang_code,
 										 char **uri);
+
+	/**
+	 * Resets the state for a new measurement cycle triggered by a SRETRY batch
+	 */
+	void (*reset)(imv_state_t *this);
 
 	/**
 	 * Destroys an imv_state_t object

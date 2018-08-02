@@ -141,6 +141,20 @@ struct imv_swima_state_t {
 	 * @return					SWID IMC ID
 	 */
 	TNC_UInt32 (*get_imc_id)(imv_swima_state_t *this);
+
+	/**
+	 * Set or clear a subscription
+	 *
+	 * @param set				TRUE sets and FALSE clears a subscripton
+	 */
+	void (*set_subscription)(imv_swima_state_t *this, bool set);
+
+	/**
+	 * Get the subscription status
+	 *
+	 * @return					TRUE if subscription is set
+	 */
+	bool (*get_subscription)(imv_swima_state_t *this);
 };
 
 /**

@@ -213,10 +213,14 @@ METHOD(imv_state_t, update_recommendation, void,
 	this->eval = tncif_policy_update_evaluation(this->eval, eval);
 }
 
-METHOD(imv_state_t, change_state, void,
+METHOD(imv_state_t, change_state, TNC_ConnectionState,
 	private_imv_hcd_state_t *this, TNC_ConnectionState new_state)
 {
+	TNC_ConnectionState old_state;
+
+	old_state = this->state;
 	this->state = new_state;
+	return old_state;
 }
 
 METHOD(imv_state_t, get_reason_string, bool,
@@ -244,6 +248,24 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	chunk_t *string, char **lang_code, char **uri)
 {
 	return FALSE;
+}
+
+METHOD(imv_state_t, reset, void,
+	private_imv_hcd_state_t *this)
+{
+	DESTROY_IF(this->reason_string);
+	this->reason_string = NULL;
+	this->rec  = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
+	this->eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+
+	this->handshake_state = IMV_HCD_STATE_INIT;
+	this->subtype_action_flags[0].action_flags = IMV_HCD_ATTR_NONE;
+	this->subtype_action_flags[1].action_flags = IMV_HCD_ATTR_SYSTEM_ONLY;
+	this->subtype_action_flags[2].action_flags = IMV_HCD_ATTR_SYSTEM_ONLY;
+	this->subtype_action_flags[3].action_flags = IMV_HCD_ATTR_SYSTEM_ONLY;
+	this->subtype_action_flags[4].action_flags = IMV_HCD_ATTR_SYSTEM_ONLY;
+	this->subtype_action_flags[5].action_flags = IMV_HCD_ATTR_SYSTEM_ONLY;
+	this->action_flags = &this->subtype_action_flags[0].action_flags;
 }
 
 METHOD(imv_state_t, destroy, void,
@@ -320,6 +342,7 @@ imv_state_t *imv_hcd_state_create(TNC_ConnectionID connection_id)
 				.update_recommendation = _update_recommendation,
 				.get_reason_string = _get_reason_string,
 				.get_remediation_instructions = _get_remediation_instructions,
+				.reset = _reset,
 				.destroy = _destroy,
 			},
 			.set_handshake_state = _set_handshake_state,
