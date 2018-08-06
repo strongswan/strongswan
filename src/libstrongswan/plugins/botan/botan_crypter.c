@@ -65,7 +65,7 @@ static bool crypt(private_botan_crypter_t *this, chunk_t data, chunk_t iv,
 	in = data.ptr;
 	if (dst)
 	{
-		*dst= chunk_alloc(data.len);
+		*dst = chunk_alloc(data.len);
 		out = dst->ptr;
 	}
 	else
@@ -77,13 +77,13 @@ static bool crypt(private_botan_crypter_t *this, chunk_t data, chunk_t iv,
 	{
 		return FALSE;
 	}
-	
-	if (!botan_cipher_set_key(cipher, this->key.ptr, this->key.len)
-		&& !botan_cipher_start(cipher, iv.ptr, iv.len)
-		&& !botan_cipher_update(cipher, BOTAN_CIPHER_UPDATE_FLAG_FINAL, out,
-							   data.len, &output_written, in, data.len,
-							   &input_consumed)
-		&& (output_written == input_consumed))
+
+	if (!botan_cipher_set_key(cipher, this->key.ptr, this->key.len) &&
+		!botan_cipher_start(cipher, iv.ptr, iv.len) &&
+		!botan_cipher_update(cipher, BOTAN_CIPHER_UPDATE_FLAG_FINAL, out,
+							 data.len, &output_written, in, data.len,
+							 &input_consumed) &&
+		(output_written == input_consumed))
 	{
 		success = TRUE;
 	}
@@ -93,38 +93,38 @@ static bool crypt(private_botan_crypter_t *this, chunk_t data, chunk_t iv,
 }
 
 METHOD(crypter_t, decrypt, bool,
-		private_botan_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
+	private_botan_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	return crypt(this, data, iv, dst, BOTAN_CIPHER_INIT_FLAG_DECRYPT);
 }
 
 
 METHOD(crypter_t, encrypt, bool,
-		private_botan_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
+	private_botan_crypter_t *this, chunk_t data, chunk_t iv, chunk_t *dst)
 {
 	return crypt(this, data, iv, dst, BOTAN_CIPHER_INIT_FLAG_ENCRYPT);
 }
 
 METHOD(crypter_t, get_block_size, size_t,
-		private_botan_crypter_t *this)
+	private_botan_crypter_t *this)
 {
 	return AES_BLOCK_SIZE;
 }
 
 METHOD(crypter_t, get_iv_size, size_t,
-		private_botan_crypter_t *this)
+	private_botan_crypter_t *this)
 {
 	return AES_BLOCK_SIZE;
 }
 
 METHOD(crypter_t, get_key_size, size_t,
-		private_botan_crypter_t *this)
+	private_botan_crypter_t *this)
 {
 	return this->key.len;
 }
 
 METHOD(crypter_t, set_key, bool,
-		private_botan_crypter_t *this, chunk_t key)
+	private_botan_crypter_t *this, chunk_t key)
 {
 	memcpy(this->key.ptr, key.ptr, min(key.len, this->key.len));
 	return TRUE;
@@ -159,7 +159,6 @@ botan_crypter_t *botan_crypter_create(encryption_algorithm_t algo,
 		},
 	);
 
-
 	switch (algo)
 	{
 		case ENCR_AES_CBC:
@@ -183,11 +182,8 @@ botan_crypter_t *botan_crypter_create(encryption_algorithm_t algo,
 			}
 			break;
 		default:
-		{
 			free(this);
 			return NULL;
-
-		}
 	}
 
 	this->key = chunk_alloc(key_size);

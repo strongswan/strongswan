@@ -27,19 +27,21 @@
 
 #ifdef BOTAN_HAS_ECDH
 
+#include "botan_util.h"
+
 #include <utils/debug.h>
 
 #include <botan/ffi.h>
 
-typedef struct private_botan_ec_diffie_hellman_t
-	private_botan_ec_diffie_hellman_t;
+typedef struct private_botan_ec_diffie_hellman_t private_botan_ec_diffie_hellman_t;
 
 /**
  * Private data of a botan_ec_diffie_hellman_t object.
  */
 struct private_botan_ec_diffie_hellman_t {
+
 	/**
-	 * Public botan_ec_diffie_hellman_t interface
+	 * Public interface
 	 */
 	botan_ec_diffie_hellman_t public;
 
@@ -62,47 +64,35 @@ struct private_botan_ec_diffie_hellman_t {
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
-
-	/**
-	 * True if shared secret is computed
-	 */
-	bool computed;
 };
 
 METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_botan_ec_diffie_hellman_t *this, chunk_t value)
 {
+	botan_pk_op_ka_t ka;
+
 	if (!diffie_hellman_verify_value(this->group, value))
 	{
 		return FALSE;
 	}
 
-	botan_pk_op_ka_t ka;
 	if (botan_pk_op_key_agreement_create(&ka, this->key, "Raw", 0))
 	{
 		return FALSE;
 	}
 
-	/* prepend 0x04 to indicate uncompressed point format */
-	uint8_t indic = 0x04;
-	value = chunk_cata("cc", chunk_from_thing(indic), value);
-	size_t out_len = 0;
-	if (botan_pk_op_key_agreement(ka, NULL, &out_len, value.ptr, value.len,
-								  NULL, 0)
-		!= BOTAN_FFI_ERROR_INSUFFICIENT_BUFFER_SPACE)
-	{
-		botan_pk_op_key_agreement_destroy(ka);
-		return FALSE;
-	}
-
-	if (out_len == 0)
-	{
-		botan_pk_op_key_agreement_destroy(ka);
-		return FALSE;
-	}
-
 	chunk_clear(&this->shared_secret);
-	this->shared_secret = chunk_alloc(out_len);
+
+	if (botan_pk_op_key_agreement_size(ka, &this->shared_secret.len))
+	{
+		botan_pk_op_key_agreement_destroy(ka);
+		return FALSE;
+	}
+
+	/* prepend 0x04 to indicate uncompressed point format */
+	value = chunk_cata("cc", chunk_from_chars(0x04), value);
+
+	this->shared_secret = chunk_alloc(this->shared_secret.len);
 	if (botan_pk_op_key_agreement(ka, this->shared_secret.ptr,
 								  &this->shared_secret.len, value.ptr,
 								  value.len, NULL, 0))
@@ -111,9 +101,7 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 		botan_pk_op_key_agreement_destroy(ka);
 		return FALSE;
 	}
-
 	botan_pk_op_key_agreement_destroy(ka);
-	this->computed = TRUE;
 	return TRUE;
 }
 
@@ -121,6 +109,7 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_botan_ec_diffie_hellman_t *this, chunk_t *value)
 {
 	chunk_t pkey = chunk_empty;
+
 	if (botan_pk_op_key_agreement_export_public(this->key, NULL, &pkey.len)
 		!= BOTAN_FFI_ERROR_INSUFFICIENT_BUFFER_SPACE)
 	{
@@ -142,14 +131,11 @@ METHOD(diffie_hellman_t, set_private_value, bool,
 	private_botan_ec_diffie_hellman_t *this, chunk_t value)
 {
 	botan_mp_t scalar;
-	if (botan_mp_init(&scalar))
-	{
-		return FALSE;
-	}
 
-	if (botan_mp_from_bin(scalar, value.ptr, value.len))
+	chunk_clear(&this->shared_secret);
+
+	if (!chunk_to_botan_mp(value, &scalar))
 	{
-		botan_mp_destroy(scalar);
 		return FALSE;
 	}
 
@@ -166,14 +152,13 @@ METHOD(diffie_hellman_t, set_private_value, bool,
 	}
 
 	botan_mp_destroy(scalar);
-	this->computed = FALSE;
 	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_botan_ec_diffie_hellman_t *this, chunk_t *secret)
 {
-	if (!this->computed)
+	if (!this->shared_secret.len)
 	{
 		return FALSE;
 	}
@@ -198,10 +183,11 @@ METHOD(diffie_hellman_t, destroy, void,
 /*
  * Described in header.
  */
-botan_ec_diffie_hellman_t *
-botan_ec_diffie_hellman_create(diffie_hellman_group_t group)
+botan_ec_diffie_hellman_t *botan_ec_diffie_hellman_create(
+												diffie_hellman_group_t group)
 {
 	private_botan_ec_diffie_hellman_t *this;
+	botan_rng_t rng;
 
 	INIT(this,
 		.public = {
@@ -242,6 +228,21 @@ botan_ec_diffie_hellman_create(diffie_hellman_group_t group)
 			return NULL;
 	}
 
+	if (botan_rng_init(&rng, "user"))
+	{
+		free(this);
+		return NULL;
+	}
+
+	if (botan_privkey_create_ecdh(&this->key, rng, this->curve_name))
+	{
+		DBG1(DBG_LIB, "ECDH private key generation failed");
+		botan_rng_destroy(rng);
+		free(this);
+		return NULL;
+	}
+
+	botan_rng_destroy(rng);
 	return &this->public;
 }
 

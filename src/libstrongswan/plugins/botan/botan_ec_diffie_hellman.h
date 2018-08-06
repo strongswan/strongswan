@@ -50,8 +50,7 @@ struct botan_ec_diffie_hellman_t {
  * @param group		EC Diffie Hellman group number to use
  * @return			botan_ec_diffie_hellman_t object, NULL if not supported
  */
-botan_ec_diffie_hellman_t *
-botan_ec_diffie_hellman_create(diffie_hellman_group_t group);
+botan_ec_diffie_hellman_t *botan_ec_diffie_hellman_create(
+												diffie_hellman_group_t group);
 
 #endif /** BOTAN_EC_DIFFIE_HELLMAN_H_ @}*/
-

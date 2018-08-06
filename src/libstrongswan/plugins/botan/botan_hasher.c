@@ -22,6 +22,7 @@
  */
 
 #include "botan_hasher.h"
+#include "botan_util.h"
 
 #include <utils/debug.h>
 
@@ -49,6 +50,7 @@ METHOD(hasher_t, get_hash_size, size_t,
 	private_botan_hasher_t *this)
 {
 	size_t len = 0;
+
 	if (botan_hash_output_length(this->hash, &len))
 	{
 		return 0;
@@ -74,12 +76,9 @@ METHOD(hasher_t, get_hash, bool,
 		return FALSE;
 	}
 
-	if (hash)
+	if (hash && botan_hash_final(this->hash, hash))
 	{
-		if (botan_hash_final(this->hash, hash))
-		{
-			return FALSE;
-		}
+		return FALSE;
 	}
 	return TRUE;
 }
@@ -110,28 +109,10 @@ botan_hasher_t *botan_hasher_create(hash_algorithm_t algo)
 	private_botan_hasher_t *this;
 	const char* hash_name;
 
-	switch (algo)
+	hash_name = botan_get_hash(algo);
+	if (!hash_name)
 	{
-		case HASH_MD5:
-			hash_name = "MD5";
-			break;
-		case HASH_SHA1:
-			hash_name = "SHA-1";
-			break;
-		case HASH_SHA224:
-			hash_name = "SHA-224";
-			break;
-		case HASH_SHA256:
-			hash_name = "SHA-256";
-			break;
-		case HASH_SHA384:
-			hash_name = "SHA-384";
-			break;
-		case HASH_SHA512:
-			hash_name = "SHA-512";
-			break;
-		default:
-			return NULL;
+		return FALSE;
 	}
 
 	INIT(this,
@@ -150,6 +131,5 @@ botan_hasher_t *botan_hasher_create(hash_algorithm_t algo)
 	{
 		return NULL;
 	}
-
 	return &this->public;
 }

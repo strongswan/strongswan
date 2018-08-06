@@ -31,23 +31,17 @@
 #ifndef BOTAN_GCM_H_
 #define BOTAN_GCM_H_
 
-#include <botan/build.h>
-
-#ifdef BOTAN_HAS_AEAD_GCM
-
 #include <crypto/aead.h>
 
 /**
  * Constructor to create aead_t implementation.
  *
- * @param algo          algorithm to implement
- * @param key_size      key size in bytes
- * @param salt_size     size of implicit salt length
- * @return              aead_t object, NULL if not supported
+ * @param algo			algorithm to implement
+ * @param key_size		key size in bytes
+ * @param salt_size		size of implicit salt length
+ * @return				aead_t object, NULL if not supported
  */
 aead_t *botan_gcm_create(encryption_algorithm_t algo, size_t key_size,
 						 size_t salt_size);
-
-#endif
 
 #endif /** BOTAN_GCM_H_ @}*/

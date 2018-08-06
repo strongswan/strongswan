@@ -69,16 +69,10 @@ METHOD(mac_t, get_mac, bool,
 		return FALSE;
 	}
 
-	if ( out == NULL)
-	{
-		return TRUE;
-	}
-
-	if (botan_mac_final(this->hmac, out))
+	if (out && botan_mac_final(this->hmac, out))
 	{
 		return FALSE;
 	}
-
 	return TRUE;
 }
 
@@ -86,6 +80,7 @@ METHOD(mac_t, get_mac_size, size_t,
 	private_botan_mac_t *this)
 {
 	size_t len = 0;
+
 	if (botan_mac_output_length(this->hmac, &len))
 	{
 		return 0;
@@ -140,7 +135,6 @@ static mac_t *hmac_create(hash_algorithm_t algo)
 		free(this);
 		return NULL;
 	}
-
 	return &this->public;
 }
 

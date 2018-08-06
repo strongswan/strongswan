@@ -47,28 +47,15 @@ struct private_botan_random_t {
 	rng_quality_t quality;
 
 	/**
-	 * RNG type
+	 * RNG instance
 	 */
-	const char* rng_name;
+	botan_rng_t rng;
 };
 
 METHOD(rng_t, get_bytes, bool,
 	private_botan_random_t *this, size_t bytes, uint8_t *buffer)
 {
-	botan_rng_t rng;
-	if (botan_rng_init(&rng, this->rng_name))
-	{
-		return FALSE;
-	}
-
-	if (botan_rng_get(rng, buffer, bytes))
-	{
-		botan_rng_destroy(rng);
-		return FALSE;
-	}
-
-	botan_rng_destroy(rng);
-	return TRUE;
+	return botan_rng_get(this->rng, buffer, bytes) == 0;
 }
 
 METHOD(rng_t, allocate_bytes, bool,
@@ -86,11 +73,12 @@ METHOD(rng_t, allocate_bytes, bool,
 METHOD(rng_t, destroy, void,
 	private_botan_random_t *this)
 {
+	botan_rng_destroy(this->rng);
 	free(this);
 }
 
 /*
- * Described in header.
+ * Described in header
  */
 botan_random_t *botan_rng_create(rng_quality_t quality)
 {
@@ -101,7 +89,17 @@ botan_random_t *botan_rng_create(rng_quality_t quality)
 	{
 		case RNG_WEAK:
 		case RNG_STRONG:
+			/* some rng_t instances of this class (e.g. in the ike-sa-manager)
+			 * may be called concurrently by different threads. the Botan RNGs
+			 * are not reentrant, by default, so use the threadsafe version.
+			 * because we build without threading support when running tests
+			 * with leak-detective (lots of reports of frees of unknown memory)
+			 * there is a fallback to the default */
+#ifdef BOTAN_TARGET_OS_HAS_THREADS
+			rng_name = "user-threadsafe";
+#else
 			rng_name = "user";
+#endif
 			break;
 		case RNG_TRUE:
 			rng_name = "system";
@@ -119,9 +117,13 @@ botan_random_t *botan_rng_create(rng_quality_t quality)
 			},
 		},
 		.quality = quality,
-		.rng_name = rng_name,
 	);
 
+	if (botan_rng_init(&this->rng, rng_name))
+	{
+		free(this);
+		return NULL;
+	}
 	return &this->public;
 }
 

@@ -24,6 +24,7 @@
 
 
 #include "botan_ec_private_key.h"
+#include "botan_util.h"
 
 #include <botan/build.h>
 
@@ -43,8 +44,9 @@ typedef struct private_botan_ec_private_key_t private_botan_ec_private_key_t;
  * Private data of a botan_ec_private_key_t object.
  */
 struct private_botan_ec_private_key_t {
+
 	/**
-	 * Public interface for this signer.
+	 * Public interface
 	 */
 	botan_ec_private_key_t public;
 
@@ -62,10 +64,6 @@ struct private_botan_ec_private_key_t {
 #define SIG_FORMAT_IEEE_1363 0
 #define SIG_FORMAT_DER_SEQUENCE 1
 
-/* implemented in ec public key */
-bool botan_ec_fingerprint(botan_pubkey_t *ec, cred_encoding_type_t type,
-						  chunk_t *fp);
-
 /**
  * Build a DER encoded signature as in RFC 3279 or as in RFC 4754
  */
@@ -73,72 +71,23 @@ static bool build_signature(botan_privkey_t key, const char *hash_and_padding,
 							int signature_format, chunk_t data,
 							chunk_t *signature)
 {
-	if (!hash_and_padding || !signature)
+	if (!botan_get_signature(key, hash_and_padding, data, signature))
 	{
 		return FALSE;
 	}
-
-	botan_pk_op_sign_t sign_op;
-
-	if (botan_pk_op_sign_create(&sign_op, key, hash_and_padding, 0))
-	{
-		return FALSE;
-	}
-
-	botan_rng_t rng;
-	if (botan_rng_init(&rng, "user"))
-	{
-		return FALSE;
-	}
-
-	/* get size of signature first */
-	if (botan_pk_op_sign_update(sign_op, data.ptr, data.len))
-	{
-		botan_rng_destroy(rng);
-		botan_pk_op_sign_destroy(sign_op);
-		return FALSE;
-	}
-
-	signature->len = 0;
-	if (botan_pk_op_sign_finish(sign_op, rng, NULL, &signature->len)
-		!= BOTAN_FFI_ERROR_INSUFFICIENT_BUFFER_SPACE)
-	{
-		botan_rng_destroy(rng);
-		botan_pk_op_sign_destroy(sign_op);
-		return FALSE;
-	}
-
-	/* now get the signature */
-	*signature = chunk_alloc(signature->len);
-	if (botan_pk_op_sign_update(sign_op, data.ptr, data.len))
-	{
-		botan_rng_destroy(rng);
-		botan_pk_op_sign_destroy(sign_op);
-		return FALSE;
-	}
-
-	if (botan_pk_op_sign_finish(sign_op, rng, signature->ptr, &signature->len))
-	{
-		botan_rng_destroy(rng);
-		botan_pk_op_sign_destroy(sign_op);
-		return FALSE;
-	}
-
-	botan_rng_destroy(rng);
-	botan_pk_op_sign_destroy(sign_op);
 
 	if (signature_format == SIG_FORMAT_DER_SEQUENCE)
 	{
 		/* format as ASN.1 sequence of two integers r,s */
-		chunk_t r, s = chunk_empty;
+		chunk_t r = chunk_empty, s = chunk_empty;
+
 		chunk_split(*signature, "aa", signature->len / 2, &r,
-		            signature->len / 2, &s);
+					signature->len / 2, &s);
 
 		chunk_free(signature);
-		*signature = asn1_wrap(ASN1_SEQUENCE, "mm", asn1_integer("c", r),
-							   asn1_integer("c", s));
+		*signature = asn1_wrap(ASN1_SEQUENCE, "mm", asn1_integer("m", r),
+							   asn1_integer("m", s));
 	}
-
 	return TRUE;
 }
 
@@ -148,12 +97,12 @@ METHOD(private_key_t, sign, bool,
 {
 	switch (scheme)
 	{
+		/* r||s -> Botan::IEEE_1363, data is the hash already */
 		case SIGN_ECDSA_WITH_NULL:
-			/* r||s -> Botan::IEEE_1363, data is the hash already */
 			return build_signature(this->key, "Raw",
-					SIG_FORMAT_IEEE_1363, data, signature);
+								   SIG_FORMAT_IEEE_1363, data, signature);
+		/* DER SEQUENCE of two INTEGERS r,s -> Botan::DER_SEQUENCE */
 		case SIGN_ECDSA_WITH_SHA1_DER:
-			/* DER SEQUENCE of two INTEGERS r,s -> Botan::DER_SEQUENCE */
 			return build_signature(this->key, "EMSA1(SHA-1)",
 								   SIG_FORMAT_DER_SEQUENCE, data, signature);
 		case SIGN_ECDSA_WITH_SHA256_DER:
@@ -165,16 +114,14 @@ METHOD(private_key_t, sign, bool,
 		case SIGN_ECDSA_WITH_SHA512_DER:
 			return build_signature(this->key, "EMSA1(SHA-512)",
 								   SIG_FORMAT_DER_SEQUENCE, data, signature);
+		/* r||s -> Botan::IEEE_1363 */
 		case SIGN_ECDSA_256:
-			/* r||s -> Botan::IEEE_1363 */
 			return build_signature(this->key, "EMSA1(SHA-256)",
 								   SIG_FORMAT_IEEE_1363, data, signature);
 		case SIGN_ECDSA_384:
-			/* r||s -> Botan::IEEE_1363 */
 			return build_signature(this->key, "EMSA1(SHA-384)",
 								   SIG_FORMAT_IEEE_1363, data, signature);
 		case SIGN_ECDSA_521:
-			/* r||s -> Botan::IEEE_1363 */
 			return build_signature(this->key, "EMSA1(SHA-512)",
 								   SIG_FORMAT_IEEE_1363, data, signature);
 		default:
@@ -196,19 +143,15 @@ METHOD(private_key_t, get_keysize, int,
 	private_botan_ec_private_key_t *this)
 {
 	botan_mp_t p;
-	if(botan_mp_init(&p))
-	{
-		return 0;
-	}
-
-	if(botan_privkey_get_field(p, this->key, "p"))
-	{
-		botan_mp_destroy(p);
-		return 0;
-	}
-
 	size_t bits = 0;
-	if(botan_mp_num_bits(p, &bits))
+
+	if (botan_mp_init(&p))
+	{
+		return 0;
+	}
+
+	if (botan_privkey_get_field(p, this->key, "p") ||
+		botan_mp_num_bits(p, &bits))
 	{
 		botan_mp_destroy(p);
 		return 0;
@@ -228,9 +171,9 @@ METHOD(private_key_t, get_public_key, public_key_t*,
 	private_botan_ec_private_key_t *this)
 {
 	public_key_t *public;
+	botan_pubkey_t pubkey;
 	chunk_t key = chunk_empty;
 
-	botan_pubkey_t pubkey;
 	if (botan_privkey_export_pubkey(&pubkey, this->key))
 	{
 		return FALSE;
@@ -255,7 +198,7 @@ METHOD(private_key_t, get_public_key, public_key_t*,
 	}
 
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
-			BUILD_BLOB_ASN1_DER, key, BUILD_END);
+								BUILD_BLOB_ASN1_DER, key, BUILD_END);
 
 	chunk_free(&key);
 	botan_pubkey_destroy(pubkey);
@@ -266,15 +209,20 @@ METHOD(private_key_t, get_fingerprint, bool,
 	private_botan_ec_private_key_t *this, cred_encoding_type_t type,
 	chunk_t *fingerprint)
 {
+	botan_pubkey_t pubkey;
 	bool success = FALSE;
 
-	botan_pubkey_t pubkey;
+	/* check the cache before doing the export */
+	if (lib->encoding->get_cache(lib->encoding, type, this, fingerprint))
+	{
+		return TRUE;
+	}
+
 	if (botan_privkey_export_pubkey(&pubkey, this->key))
 	{
 		return FALSE;
 	}
-
-	success = botan_ec_fingerprint(&pubkey, type, fingerprint);
+	success = botan_get_fingerprint(pubkey, this, type, fingerprint);
 	botan_pubkey_destroy(pubkey);
 	return success;
 }
@@ -288,9 +236,10 @@ METHOD(private_key_t, get_encoding, bool,
 		case PRIVKEY_ASN1_DER:
 		case PRIVKEY_PEM:
 		{
+			botan_mp_t x;
+			chunk_t pval = chunk_empty;
 			bool success = TRUE;
 
-			botan_mp_t x;
 			if (botan_mp_init(&x))
 			{
 				return FALSE;
@@ -302,7 +251,6 @@ METHOD(private_key_t, get_encoding, bool,
 				return FALSE;
 			}
 
-			chunk_t pval = chunk_empty;
 			if (botan_mp_num_bytes(x, &pval.len))
 			{
 				botan_mp_destroy(x);
@@ -317,10 +265,12 @@ METHOD(private_key_t, get_encoding, bool,
 				return FALSE;
 			}
 
-			chunk_t version = chunk_from_chars( 0x01 );
-			*encoding =
-				asn1_wrap(ASN1_SEQUENCE, "ms", asn1_integer("c", version),
-						  asn1_wrap(ASN1_OCTET_STRING, "s", pval));
+			/* FIXME: this does not include the params, which the parser/loader
+			 * below actually requires (and is mandated by RFC 5915). we might
+			 * have to store/parse the OID so we can add it here. */
+			*encoding = asn1_wrap(ASN1_SEQUENCE, "ms",
+								  asn1_integer("c", chunk_from_chars(0x01)),
+								  asn1_wrap(ASN1_OCTET_STRING, "s", pval));
 
 			if (type == PRIVKEY_PEM)
 			{
@@ -353,11 +303,8 @@ METHOD(private_key_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
-		if (&this->key)
-		{
-			lib->encoding->clear_cache(lib->encoding, &this->key);
-			botan_privkey_destroy(this->key);
-		}
+		lib->encoding->clear_cache(lib->encoding, this);
+		botan_privkey_destroy(this->key);
 		free(this);
 	}
 }
@@ -393,13 +340,14 @@ static private_botan_ec_private_key_t *create_empty()
 }
 
 /*
- * See header.
+ * Described in header
  */
 botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 {
 	private_botan_ec_private_key_t *this;
+	botan_rng_t rng;
 	u_int key_size = 0;
-	const char* curve;
+	const char *curve;
 
 	while (TRUE)
 	{
@@ -438,19 +386,18 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 			return NULL;
 	}
 
-	botan_rng_t rng;
-	if (botan_rng_init(&rng, "user"))
+	if (botan_rng_init(&rng, "system"))
 	{
 		return NULL;
 	}
 
 	this = create_empty();
 
-	if(botan_privkey_create_ecdsa(&this->key, rng, curve))
+	if (botan_privkey_create_ecdsa(&this->key, rng, curve))
 	{
-		DBG1(DBG_LIB, "EC private key generation failed", key_size);
+		DBG1(DBG_LIB, "EC private key generation failed");
 		botan_rng_destroy(rng);
-		destroy(this);
+		free(this);
 		return NULL;
 	}
 
@@ -462,25 +409,26 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
  * ASN.1 definition of a ECPrivateKey structure (RFC 5915)
  */
 static const asn1Object_t ecPrivateKeyObjects[] = {
-	{ 0, "ECPrivateKey",    ASN1_SEQUENCE,      ASN1_NONE	}, /* 0 */
-	{ 1,   "version",       ASN1_INTEGER,       ASN1_BODY	}, /* 1 */
-	{ 1,   "privateKey",    ASN1_OCTET_STRING,  ASN1_BODY	}, /* 2 */
-	{ 1,   "parameters",    ASN1_EOC,           ASN1_RAW	}, /* 3 */
-	{ 1,   "publicKey",     ASN1_BIT_STRING,    ASN1_OPT	}, /* 4 */
-	{ 0, "exit",            ASN1_EOC,           ASN1_EXIT	}
+	{ 0, "ECPrivateKey",	ASN1_SEQUENCE,		ASN1_NONE	}, /* 0 */
+	{ 1,   "version",		ASN1_INTEGER,		ASN1_BODY	}, /* 1 */
+	{ 1,   "privateKey",	ASN1_OCTET_STRING,	ASN1_BODY	}, /* 2 */
+	{ 1,   "parameters",	ASN1_EOC,			ASN1_RAW	}, /* 3 */
+	{ 1,   "publicKey",		ASN1_BIT_STRING,	ASN1_OPT	}, /* 4 */
+	{ 0, "exit",			ASN1_EOC,			ASN1_EXIT	}
 };
 
 #define ECPK_PRIVATE_KEY 2
 #define ECPK_PRIVATE_KEY_PARAMS 3
 
-/**
- * See header.
+/*
+ * Described in header
  */
 botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 {
 	private_botan_ec_private_key_t *this;
 	chunk_t params = chunk_empty, key = chunk_empty;
-	chunk_t object, pkcs8 = chunk_empty;
+	chunk_t object, alg_id = chunk_empty, pkcs8 = chunk_empty;
+	botan_rng_t rng;
 
 	while (TRUE)
 	{
@@ -500,18 +448,15 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 		break;
 	}
 
-	this = create_empty();
-
 	/*
 	 * botan expects a PKCS#8 private key, so we build one
 	 * RFC 5282 mandates ECParameters as part of the algorithmIdentifier
 	 */
-	chunk_t alg_id = chunk_empty;
-	if(params.len != 0)
+	if (params.len != 0)
 	{
 		/* if ECDomainParameters is passed, just append it */
-		alg_id = asn1_wrap(ASN1_SEQUENCE, "mc",
-						   asn1_build_known_oid(OID_EC_PUBLICKEY), params);
+		alg_id = asn1_algorithmIdentifier_params(OID_EC_PUBLICKEY,
+												 chunk_clone(params));
 	}
 	else
 	{
@@ -541,27 +486,26 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 					parser->destroy(parser);
 					return NULL;
 				}
-
 				break;
 			}
 		}
 
 		parser->destroy(parser);
-		alg_id = asn1_wrap(ASN1_SEQUENCE, "mc",
-						   asn1_build_known_oid(OID_EC_PUBLICKEY),
-						   asn1_simple_object(ASN1_OID, params));
+		alg_id = asn1_algorithmIdentifier_params(OID_EC_PUBLICKEY,
+										asn1_simple_object(ASN1_OID, params));
 	}
 
-	pkcs8 = asn1_wrap(ASN1_SEQUENCE, "cms",
+	pkcs8 = asn1_wrap(ASN1_SEQUENCE, "mms",
 					  asn1_integer("c", chunk_from_chars(0x00)),
 					  alg_id,
 					  asn1_wrap(ASN1_OCTET_STRING, "c", key));
 
-	botan_rng_t rng;
+	this = create_empty();
+
 	if (botan_rng_init(&rng, "user"))
 	{
 		chunk_clear(&pkcs8);
-		destroy(this);
+		free(this);
 		return NULL;
 	}
 
@@ -569,7 +513,7 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 	{
 		chunk_clear(&pkcs8);
 		botan_rng_destroy(rng);
-		destroy(this);
+		free(this);
 		return NULL;
 	}
 

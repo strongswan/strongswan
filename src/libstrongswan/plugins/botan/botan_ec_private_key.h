@@ -30,10 +30,6 @@
 #ifndef BOTAN_EC_PRIVATE_KEY_H_
 #define BOTAN_EC_PRIVATE_KEY_H_
 
-#include <botan/build.h>
-
-#ifdef BOTAN_HAS_ECDSA
-
 #include <credentials/builder.h>
 #include <credentials/keys/private_key.h>
 
@@ -72,7 +68,5 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args);
  */
 botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type,
 												  va_list args);
-
-#endif
 
 #endif /** BOTAN_EC_PRIVATE_KEY_H_ @}*/

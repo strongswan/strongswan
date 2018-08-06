@@ -82,8 +82,7 @@ static bool crypt(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
 {
 	botan_cipher_t cipher;
 	uint8_t nonce[NONCE_LEN];
-	size_t output_written = 0;
-	size_t input_consumed = 0;
+	size_t output_written = 0, input_consumed = 0;
 
 	memcpy(nonce, this->salt, SALT_LEN);
 	memcpy(nonce + SALT_LEN, iv.ptr, IV_LEN);
@@ -99,8 +98,8 @@ static bool crypt(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
 		return FALSE;
 	}
 
-	if (assoc.len
-		&& botan_cipher_set_associated_data(cipher, assoc.ptr, assoc.len))
+	if (assoc.len &&
+		botan_cipher_set_associated_data(cipher, assoc.ptr, assoc.len))
 	{
 		botan_cipher_destroy(cipher);
 		return FALSE;
@@ -115,8 +114,8 @@ static bool crypt(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
 	if (init_flag == BOTAN_CIPHER_INIT_FLAG_ENCRYPT)
 	{
 		if (botan_cipher_update(cipher, BOTAN_CIPHER_UPDATE_FLAG_FINAL,
-				out, data.len + this->icv_size, &output_written,
-				data.ptr, data.len, &input_consumed))
+								out, data.len + this->icv_size, &output_written,
+								data.ptr, data.len, &input_consumed))
 		{
 			botan_cipher_destroy(cipher);
 			return FALSE;
@@ -125,8 +124,8 @@ static bool crypt(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
 	else if (init_flag == BOTAN_CIPHER_INIT_FLAG_DECRYPT)
 	{
 		if (botan_cipher_update(cipher, BOTAN_CIPHER_UPDATE_FLAG_FINAL,
-				out, data.len, &output_written,
-				data.ptr, data.len + this->icv_size, &input_consumed))
+								out, data.len, &output_written, data.ptr,
+								data.len + this->icv_size, &input_consumed))
 		{
 			botan_cipher_destroy(cipher);
 			return FALSE;
@@ -225,8 +224,11 @@ METHOD(aead_t, destroy, void,
 	free(this);
 }
 
-aead_t *botan_gcm_create(encryption_algorithm_t algo,
-						   size_t key_size, size_t salt_size)
+/*
+ * Described in header
+ */
+aead_t *botan_gcm_create(encryption_algorithm_t algo, size_t key_size,
+						 size_t salt_size)
 {
 	private_aead_t *this;
 
@@ -244,22 +246,6 @@ aead_t *botan_gcm_create(encryption_algorithm_t algo,
 		},
 	);
 
-	switch (algo)
-	{
-		case ENCR_AES_GCM_ICV8:
-			this->icv_size = 8;
-			break;
-		case ENCR_AES_GCM_ICV12:
-			this->icv_size = 12;
-			break;
-		case ENCR_AES_GCM_ICV16:
-			this->icv_size = 16;
-			break;
-		default:
-			free(this);
-			return NULL;
-	}
-
 	if (salt_size && salt_size != SALT_LEN)
 	{
 		/* currently not supported */
@@ -274,6 +260,7 @@ aead_t *botan_gcm_create(encryption_algorithm_t algo,
 			{
 				case 0:
 					key_size = 16;
+					/* FALL */
 				case 16:
 					this->cipher_name = "AES-128/GCM(8)";
 					break;
@@ -287,6 +274,7 @@ aead_t *botan_gcm_create(encryption_algorithm_t algo,
 					free(this);
 					return NULL;
 			}
+			this->icv_size = 8;
 			break;
 		case ENCR_AES_GCM_ICV12:
 			switch (key_size)
@@ -307,6 +295,7 @@ aead_t *botan_gcm_create(encryption_algorithm_t algo,
 					free(this);
 					return NULL;
 			}
+			this->icv_size = 12;
 			break;
 		case ENCR_AES_GCM_ICV16:
 			switch (key_size)
@@ -327,16 +316,11 @@ aead_t *botan_gcm_create(encryption_algorithm_t algo,
 					free(this);
 					return NULL;
 			}
+			this->icv_size = 16;
 			break;
 		default:
 			free(this);
 			return NULL;
-	}
-
-	if (!this->cipher_name)
-	{
-		free(this);
-		return NULL;
 	}
 
 	this->key = chunk_alloc(key_size);

@@ -78,7 +78,6 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, MODP_1024_BIT),
 			PLUGIN_PROVIDE(DH, MODP_1024_160),
 			PLUGIN_PROVIDE(DH, MODP_768_BIT),
-		PLUGIN_REGISTER(DH, botan_diffie_hellman_create_custom),
 			PLUGIN_PROVIDE(DH, MODP_CUSTOM),
 #endif
 		/* crypters */
@@ -146,6 +145,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_256),
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_512),
 #endif
+#endif /* BOTAN_HAS_HMAC */
 
 #ifdef BOTAN_HAS_ECDH
 		/* EC DH groups */
@@ -156,7 +156,6 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, ECP_256_BP),
 			PLUGIN_PROVIDE(DH, ECP_384_BP),
 			PLUGIN_PROVIDE(DH, ECP_512_BP),
-#endif
 #endif
 		/* RSA */
 #ifdef BOTAN_HAS_RSA
@@ -265,7 +264,7 @@ METHOD(plugin_t, destroy, void,
 }
 
 /*
- * see header file
+ * Described in header
  */
 plugin_t *botan_plugin_create()
 {

@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2018 René Korthaus
  * Rohde & Schwarz Cybersecurity GmbH
  *
@@ -34,8 +37,56 @@
 #include <botan/ffi.h>
 
 /**
- * Converts chunk_t to botan_mp_t
+ * Converts chunk_t to botan_mp_t.
+ *
+ * @param value		chunk to convert
+ * @param mp		allocated botan_mp_t
+ * @return			TRUE if conversion successful
  */
-int chunk_to_botan_mp(chunk_t value, botan_mp_t *mp);
+bool chunk_to_botan_mp(chunk_t value, botan_mp_t *mp);
+
+/**
+ * Get the Botan string identifier for the given hash algorithm.
+ *
+ * @param hash		hash algorithm
+ * @return			Botan string identifier, NULL if not found
+ */
+const char *botan_get_hash(hash_algorithm_t hash);
+
+/**
+ * Get the encoding of a botan_pubkey_t.
+ *
+ * @param pubkey	public key object
+ * @param type		encoding type
+ * @param encoding	allocated encoding
+ * @return			TRUE if encoding successful
+ */
+bool botan_get_encoding(botan_pubkey_t pubkey, cred_encoding_type_t type,
+						chunk_t *encoding);
+
+/**
+ * Get the fingerprint of a botan_pubkey_t.
+ *
+ * @param pubkey	public key object
+ * @param cache		key to use for caching, NULL to not cache
+ * @param type		fingerprint type
+ * @param fp		allocated fingerprint
+ * @return			TRUE if fingerprinting successful
+ */
+bool botan_get_fingerprint(botan_pubkey_t pubkey, void *cache,
+						   cred_encoding_type_t type, chunk_t *fp);
+
+/**
+ * Sign the given data using the provided key with the specified signature
+ * scheme (hash/padding).
+ *
+ * @param key		private key object
+ * @param scheme	hash/padding algorithm
+ * @param data		data to sign
+ * @param signature	allocated signature
+ * @return			TRUE if signature successfully created
+ */
+bool botan_get_signature(botan_privkey_t key, const char *scheme,
+						 chunk_t data, chunk_t *signature);
 
 #endif /** BOTAN_UTIL_H_ @}*/
