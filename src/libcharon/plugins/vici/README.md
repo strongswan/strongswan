@@ -75,7 +75,7 @@ for example.
 
 The defined packet types optionally wrap a message with additional data.
 Messages are currently used in CMD_REQUEST/CMD_RESPONSE, and in EVENT packets.
-A message uses a hierarchial tree of sections. Each section (or the implicit
+A message uses a hierarchical tree of sections. Each section (or the implicit
 root section) contains an arbitrary set of key/value pairs, lists and
 sub-sections. The length of a message is not part of the message itself, but
 the wrapping layer, usually calculated from the transport byte sequence length.
@@ -140,7 +140,7 @@ Consider the following structure using pseudo-markup for this example:
 		list1 = [ item1, item2 ]
 	}
 
-The example above reprensents a valid tree structure, that gets encoded as
+The example above represents a valid tree structure, that gets encoded as
 the following C array:
 
 	char msg[] = {
