@@ -177,7 +177,7 @@ if test "$1" = "deps"; then
 fi
 
 if test "$1" = "pydeps"; then
-	test -z "$PYDEPS" || sudo pip -q install $PYDEPS
+	test -z "$PYDEPS" || pip -q install --user $PYDEPS
 	exit $?
 fi
 
