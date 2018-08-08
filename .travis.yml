@@ -38,6 +38,8 @@ env:
     - TEST=default
     - TEST=default MONOLITHIC=yes
     - TEST=default LEAK_DETECTIVE=yes
+    - TEST=botan
+    - TEST=botan LEAK_DETECTIVE=yes
     - TEST=openssl
     - TEST=openssl LEAK_DETECTIVE=yes
     - TEST=gcrypt
