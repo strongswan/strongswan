@@ -211,6 +211,7 @@ METHOD(plugin_t, get_features, int,
 		/* EC private/public key loading */
 		PLUGIN_REGISTER(PRIVKEY, botan_ec_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ECDSA),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 		PLUGIN_REGISTER(PRIVKEY_GEN, botan_ec_private_key_gen, FALSE),
 			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ECDSA),
 		PLUGIN_REGISTER(PUBKEY, botan_ec_public_key_load, TRUE),

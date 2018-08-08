@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2018 René Korthaus
  * Copyright (C) 2018 Konstantinos Kolelis
  * Rohde & Schwarz Cybersecurity GmbH
@@ -32,7 +35,6 @@
 
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
-#include <asn1/asn1_parser.h>
 
 #include <utils/debug.h>
 
@@ -54,6 +56,11 @@ struct private_botan_ec_private_key_t {
 	 * Botan ec private key
 	 */
 	botan_privkey_t key;
+
+	/**
+	 * OID of the curve
+	 */
+	int oid;
 
 	/**
 	 * Reference count
@@ -227,6 +234,79 @@ METHOD(private_key_t, get_fingerprint, bool,
 	return success;
 }
 
+/**
+ * Get a field from the private key as chunk
+ */
+static bool get_field_chunk(botan_privkey_t key, char *field, chunk_t *out)
+{
+	botan_mp_t val;
+
+	*out = chunk_empty;
+
+	if (botan_mp_init(&val))
+	{
+		return FALSE;
+	}
+
+	if (botan_privkey_get_field(val, key, field) ||
+		botan_mp_num_bytes(val, &out->len))
+	{
+		botan_mp_destroy(val);
+		return FALSE;
+	}
+
+	*out = chunk_alloc(out->len);
+
+	if (botan_mp_to_bin(val, out->ptr))
+	{
+		botan_mp_destroy(val);
+		chunk_free(out);
+		return FALSE;
+	}
+	botan_mp_destroy(val);
+	return TRUE;
+}
+
+/**
+ * Encodes the public key as ASN.1 BIT STRING (0x04 || x || y)
+ */
+static bool get_pubkey_bitstring(botan_privkey_t key, chunk_t *out)
+{
+	chunk_t p, x, y, pub;
+	size_t len;
+
+	if (!get_field_chunk(key, "p", &p))
+	{
+		return FALSE;
+	}
+	len = p.len;
+	chunk_free(&p);
+
+	if (!get_field_chunk(key, "public_x", &x))
+	{
+		return FALSE;
+	}
+	if (!get_field_chunk(key, "public_y", &y))
+	{
+		chunk_free(&x);
+		return FALSE;
+	}
+
+	pub = chunk_alloca(2 * len);
+	memset(pub.ptr, 0, pub.len);
+	memcpy(pub.ptr + (len - x.len), x.ptr, x.len);
+	memcpy(pub.ptr + len + (len - y.len), y.ptr, y.len);
+	chunk_free(&x);
+	chunk_free(&y);
+
+	*out = asn1_wrap(ASN1_BIT_STRING, "ccc",
+					 /* unused bits in the bit string */
+					 chunk_from_chars(0x00),
+					 /* uncompressed format */
+					 chunk_from_chars(0x04), pub);
+	return TRUE;
+}
+
 METHOD(private_key_t, get_encoding, bool,
 	private_botan_ec_private_key_t *this, cred_encoding_type_t type,
 	chunk_t *encoding)
@@ -236,41 +316,25 @@ METHOD(private_key_t, get_encoding, bool,
 		case PRIVKEY_ASN1_DER:
 		case PRIVKEY_PEM:
 		{
-			botan_mp_t x;
-			chunk_t pval = chunk_empty;
+			chunk_t priv, pub;
 			bool success = TRUE;
 
-			if (botan_mp_init(&x))
+			if (!get_field_chunk(this->key, "x", &priv))
 			{
 				return FALSE;
 			}
-
-			if (botan_privkey_get_field(x, this->key, "x"))
+			if (!get_pubkey_bitstring(this->key, &pub))
 			{
-				botan_mp_destroy(x);
+				chunk_clear(&priv);
 				return FALSE;
 			}
 
-			if (botan_mp_num_bytes(x, &pval.len))
-			{
-				botan_mp_destroy(x);
-				return FALSE;
-			}
-
-			pval = chunk_alloc(pval.len);
-
-			if (botan_mp_to_bin(x, pval.ptr))
-			{
-				botan_mp_destroy(x);
-				return FALSE;
-			}
-
-			/* FIXME: this does not include the params, which the parser/loader
-			 * below actually requires (and is mandated by RFC 5915). we might
-			 * have to store/parse the OID so we can add it here. */
-			*encoding = asn1_wrap(ASN1_SEQUENCE, "ms",
+			*encoding = asn1_wrap(ASN1_SEQUENCE, "msmm",
 								  asn1_integer("c", chunk_from_chars(0x01)),
-								  asn1_wrap(ASN1_OCTET_STRING, "s", pval));
+								  asn1_wrap(ASN1_OCTET_STRING, "s", priv),
+								  asn1_wrap(ASN1_CONTEXT_C_0, "m",
+										asn1_build_known_oid(this->oid)),
+								  asn1_wrap(ASN1_CONTEXT_C_1, "m", pub));
 
 			if (type == PRIVKEY_PEM)
 			{
@@ -282,8 +346,6 @@ METHOD(private_key_t, get_encoding, bool,
 												asn1_encoding, CRED_PART_END);
 				chunk_clear(&asn1_encoding);
 			}
-
-			botan_mp_destroy(x);
 			return success;
 		}
 		default:
@@ -312,7 +374,7 @@ METHOD(private_key_t, destroy, void,
 /**
  * Internal generic constructor
  */
-static private_botan_ec_private_key_t *create_empty()
+static private_botan_ec_private_key_t *create_empty(int oid)
 {
 	private_botan_ec_private_key_t *this;
 
@@ -333,6 +395,7 @@ static private_botan_ec_private_key_t *create_empty()
 				.destroy = _destroy,
 			},
 		},
+		.oid = oid,
 		.ref = 1,
 	);
 
@@ -347,6 +410,7 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 	private_botan_ec_private_key_t *this;
 	botan_rng_t rng;
 	u_int key_size = 0;
+	int oid;
 	const char *curve;
 
 	while (TRUE)
@@ -373,12 +437,15 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 	{
 		case 256:
 			curve = "secp256r1";
+			oid = OID_PRIME256V1;
 			break;
 		case 384:
 			curve = "secp384r1";
+			oid = OID_SECT384R1;
 			break;
 		case 521:
 			curve = "secp521r1";
+			oid = OID_SECT521R1;
 			break;
 		default:
 			DBG1(DBG_LIB, "EC private key size %d not supported via botan",
@@ -391,7 +458,7 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 		return NULL;
 	}
 
-	this = create_empty();
+	this = create_empty(oid);
 
 	if (botan_privkey_create_ecdsa(&this->key, rng, curve))
 	{
@@ -405,21 +472,6 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 	return &this->public;
 }
 
-/**
- * ASN.1 definition of a ECPrivateKey structure (RFC 5915)
- */
-static const asn1Object_t ecPrivateKeyObjects[] = {
-	{ 0, "ECPrivateKey",	ASN1_SEQUENCE,		ASN1_NONE	}, /* 0 */
-	{ 1,   "version",		ASN1_INTEGER,		ASN1_BODY	}, /* 1 */
-	{ 1,   "privateKey",	ASN1_OCTET_STRING,	ASN1_BODY	}, /* 2 */
-	{ 1,   "parameters",	ASN1_EOC,			ASN1_RAW	}, /* 3 */
-	{ 1,   "publicKey",		ASN1_BIT_STRING,	ASN1_OPT	}, /* 4 */
-	{ 0, "exit",			ASN1_EOC,			ASN1_EXIT	}
-};
-
-#define ECPK_PRIVATE_KEY 2
-#define ECPK_PRIVATE_KEY_PARAMS 3
-
 /*
  * Described in header
  */
@@ -427,8 +479,9 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 {
 	private_botan_ec_private_key_t *this;
 	chunk_t params = chunk_empty, key = chunk_empty;
-	chunk_t object, alg_id = chunk_empty, pkcs8 = chunk_empty;
+	chunk_t alg_id = chunk_empty, pkcs8 = chunk_empty;
 	botan_rng_t rng;
+	int oid = OID_UNKNOWN;
 
 	while (TRUE)
 	{
@@ -449,50 +502,48 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 	}
 
 	/*
-	 * botan expects a PKCS#8 private key, so we build one
-	 * RFC 5282 mandates ECParameters as part of the algorithmIdentifier
+	 * Botan expects a PKCS#8 private key, so we build one, if necessary.
+	 * RFC 5480 mandates ECParameters as part of the algorithmIdentifier, which
+	 * we should get from e.g. the pkcs8 plugin.
 	 */
-	if (params.len != 0)
+	if (params.len != 0 && type == KEY_ECDSA)
 	{
-		/* if ECDomainParameters is passed, just append it */
+		/* if ECParameters is passed, just use it */
 		alg_id = asn1_algorithmIdentifier_params(OID_EC_PUBLICKEY,
 												 chunk_clone(params));
+		if (asn1_unwrap(&params, &params) == ASN1_OID)
+		{
+			oid = asn1_known_oid(params);
+		}
 	}
 	else
 	{
 		/*
-		 * no explicit ECParameters passed, so we extract them from the
-		 * ECPrivateKey structure and append it to the algorithmIdentifier
+		 * no explicit ECParameters passed, try to extract them from the
+		 * ECPrivateKey structure and create an algorithmIdentifier
 		 */
-		asn1_parser_t *parser;
-		int objectID;
+		chunk_t unwrap = key, inner;
 
-		parser = asn1_parser_create(ecPrivateKeyObjects, key);
-		parser->set_flags(parser, FALSE, TRUE);
-
-		while (parser->iterate(parser, &objectID, &object))
+		if (asn1_unwrap(&unwrap, &unwrap) == ASN1_SEQUENCE &&
+			asn1_unwrap(&unwrap, &inner) == ASN1_INTEGER &&
+			asn1_parse_integer_uint64(inner) == 1 &&
+			asn1_unwrap(&unwrap, &inner) == ASN1_OCTET_STRING &&
+			asn1_unwrap(&unwrap, &inner) == ASN1_CONTEXT_C_0 &&
+			asn1_unwrap(&inner, &inner) == ASN1_OID)
 		{
-			if (objectID == ECPK_PRIVATE_KEY_PARAMS)
+			oid = asn1_known_oid(inner);
+			if (oid != OID_UNKNOWN)
 			{
-				if (!asn1_parse_simple_object(&object, ASN1_CONTEXT_C_0, 0,
-											  "parameters"))
-				{
-					parser->destroy(parser);
-					return NULL;
-				}
-
-				if (asn1_unwrap(&object, &params) != ASN1_OID)
-				{
-					parser->destroy(parser);
-					return NULL;
-				}
-				break;
+				alg_id = asn1_algorithmIdentifier_params(OID_EC_PUBLICKEY,
+										asn1_simple_object(ASN1_OID, inner));
 			}
 		}
+	}
 
-		parser->destroy(parser);
-		alg_id = asn1_algorithmIdentifier_params(OID_EC_PUBLICKEY,
-										asn1_simple_object(ASN1_OID, params));
+	if (oid == OID_UNKNOWN)
+	{
+		chunk_free(&alg_id);
+		return NULL;
 	}
 
 	pkcs8 = asn1_wrap(ASN1_SEQUENCE, "mms",
@@ -500,7 +551,7 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 					  alg_id,
 					  asn1_wrap(ASN1_OCTET_STRING, "c", key));
 
-	this = create_empty();
+	this = create_empty(oid);
 
 	if (botan_rng_init(&rng, "user"))
 	{
