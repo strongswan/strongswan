@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2018 René Korthaus
  * Rohde & Schwarz Cybersecurity GmbH
  *
@@ -22,6 +25,7 @@
  */
 
 #include "botan_rsa_private_key.h"
+#include "botan_rsa_public_key.h"
 
 #include <botan/build.h>
 
@@ -55,39 +59,6 @@ struct private_botan_rsa_private_key_t {
 	 */
 	refcount_t ref;
 };
-
-/**
- * Get the binary representation of a named RSA parameter
- */
-static bool get_rsa_field(botan_privkey_t *key, const char *field_name,
-						  chunk_t *value)
-{
-	botan_mp_t field;
-	size_t field_size = 0;
-
-	if (botan_mp_init(&field))
-	{
-		return FALSE;
-	}
-
-	if (botan_privkey_get_field(field, *key, field_name) ||
-		botan_mp_num_bytes(field, &field_size) ||
-		!field_size)
-	{
-		botan_mp_destroy(field);
-		return FALSE;
-	}
-
-	*value = chunk_alloc(field_size);
-	if (botan_mp_to_bin(field, value->ptr))
-	{
-		botan_mp_destroy(field);
-		chunk_clear(value);
-		return FALSE;
-	}
-	botan_mp_destroy(field);
-	return TRUE;
-}
 
 /**
  * Build an EMSA PSS signature described in PKCS#1
@@ -251,27 +222,13 @@ METHOD(private_key_t, get_keysize, int,
 METHOD(private_key_t, get_public_key, public_key_t*,
 	private_botan_rsa_private_key_t *this)
 {
-	public_key_t *pub_key;
-	chunk_t n, e;
+	botan_pubkey_t pubkey;
 
-	if (!get_rsa_field(&this->key, "n", &n))
+	if (botan_privkey_export_pubkey(&pubkey, this->key))
 	{
 		return NULL;
 	}
-
-	if (!get_rsa_field(&this->key, "e", &e))
-	{
-		chunk_free(&n);
-		return NULL;
-	}
-
-	pub_key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
-								 BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e,
-								 BUILD_END);
-
-	chunk_free(&n);
-	chunk_free(&e);
-	return pub_key;
+	return (public_key_t*)botan_rsa_public_key_adopt(pubkey);
 }
 
 METHOD(private_key_t, get_fingerprint, bool,
@@ -380,6 +337,19 @@ static private_botan_rsa_private_key_t *create_empty()
 	);
 
 	return this;
+}
+
+/*
+ * Described in header
+ */
+botan_rsa_private_key_t *botan_rsa_private_key_adopt(botan_privkey_t key)
+{
+	private_botan_rsa_private_key_t *this;
+
+	this = create_empty();
+	this->key = key;
+
+	return &this->public;
 }
 
 /*
@@ -648,6 +618,11 @@ botan_rsa_private_key_t *botan_rsa_private_key_load(key_type_t type,
 				return NULL;
 		}
 		break;
+	}
+
+	if (type == KEY_ANY && !blob.ptr)
+	{
+		return NULL;
 	}
 
 	if (blob.ptr)

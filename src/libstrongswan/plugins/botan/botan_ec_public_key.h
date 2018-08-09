@@ -25,10 +25,12 @@
 #ifndef BOTAN_EC_PUBLIC_KEY_H_
 #define BOTAN_EC_PUBLIC_KEY_H_
 
-typedef struct botan_ec_public_key_t botan_ec_public_key_t;
+#include <botan/ffi.h>
 
 #include <credentials/builder.h>
 #include <credentials/keys/public_key.h>
+
+typedef struct botan_ec_public_key_t botan_ec_public_key_t;
 
 /**
  * public_key_t implementation of ECDSA using botan.
@@ -42,14 +44,11 @@ struct botan_ec_public_key_t {
 };
 
 /**
- * Load a ECDSA public key using botan.
+ * Load a ECDSA public key by adopting a botan_pubkey_t object.
  *
- * Accepts a BUILD_BLOB_ASN1_DER argument.
- *
- * @param type		type of the key, must be KEY_ECDSA
- * @param args		builder_part_t argument list
- * @return 			loaded key, NULL on failure
+ * @param key		public key object (adopted)
+ * @return			loaded key, NULL on failure
  */
-botan_ec_public_key_t *botan_ec_public_key_load(key_type_t type, va_list args);
+botan_ec_public_key_t *botan_ec_public_key_adopt(botan_pubkey_t key);
 
 #endif /** BOTAN_EC_PUBLIC_KEY_H_ @}*/

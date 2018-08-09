@@ -248,33 +248,9 @@ METHOD(public_key_t, destroy, void,
 /*
  * Described in header
  */
-botan_ec_public_key_t *botan_ec_public_key_load(key_type_t type, va_list args)
+botan_ec_public_key_t *botan_ec_public_key_adopt(botan_pubkey_t key)
 {
 	private_botan_ec_public_key_t *this;
-	chunk_t blob = chunk_empty;
-	botan_rng_t rng;
-	size_t namesize = 0;
-	char *namebuf;
-
-	if (type != KEY_ECDSA)
-	{
-		return NULL;
-	}
-
-	while (TRUE)
-	{
-		switch (va_arg(args, builder_part_t))
-		{
-			case BUILD_BLOB_ASN1_DER:
-				blob = va_arg(args, chunk_t);
-				continue;
-			case BUILD_END:
-				break;
-			default:
-				return NULL;
-		}
-		break;
-	}
 
 	INIT(this,
 		.public = {
@@ -291,52 +267,10 @@ botan_ec_public_key_t *botan_ec_public_key_load(key_type_t type, va_list args)
 				.destroy = _destroy,
 			},
 		},
+		.key = key,
 		.ref = 1,
 	);
 
-	if (botan_pubkey_load(&this->key, blob.ptr, blob.len))
-	{
-		free(this);
-		return NULL;
-	}
-
-	if (botan_pubkey_algo_name(this->key, NULL, &namesize)
-		!= BOTAN_FFI_ERROR_INSUFFICIENT_BUFFER_SPACE)
-	{
-		destroy(this);
-		return NULL;
-	}
-
-	namebuf = malloc(namesize);
-	if (botan_pubkey_algo_name(this->key, namebuf, &namesize))
-	{
-		free(namebuf);
-		destroy(this);
-		return NULL;
-	}
-
-	if (!strneq(namebuf, "ECDSA", namesize))
-	{
-		free(namebuf);
-		destroy(this);
-		return NULL;
-	}
-	free(namebuf);
-
-	if (botan_rng_init(&rng, "user"))
-	{
-		return NULL;
-	}
-
-	if (botan_pubkey_check_key(this->key, rng, BOTAN_CHECK_KEY_EXPENSIVE_TESTS))
-	{
-		DBG1(DBG_LIB, "public key failed key checks");
-		botan_rng_destroy(rng);
-		destroy(this);
-		return NULL;
-	}
-
-	botan_rng_destroy(rng);
 	return &this->public;
 }
 

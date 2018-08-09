@@ -27,6 +27,7 @@
 
 
 #include "botan_ec_private_key.h"
+#include "botan_ec_public_key.h"
 #include "botan_util.h"
 
 #include <botan/build.h>
@@ -177,39 +178,13 @@ METHOD(private_key_t, get_type, key_type_t,
 METHOD(private_key_t, get_public_key, public_key_t*,
 	private_botan_ec_private_key_t *this)
 {
-	public_key_t *public;
 	botan_pubkey_t pubkey;
-	chunk_t key = chunk_empty;
 
 	if (botan_privkey_export_pubkey(&pubkey, this->key))
 	{
-		return FALSE;
+		return NULL;
 	}
-
-	if (botan_pubkey_export(pubkey, NULL, &key.len,
-							BOTAN_PRIVKEY_EXPORT_FLAG_DER)
-		!= BOTAN_FFI_ERROR_INSUFFICIENT_BUFFER_SPACE)
-	{
-		botan_pubkey_destroy(pubkey);
-		return FALSE;
-	}
-
-	key = chunk_alloc(key.len);
-
-	if (botan_pubkey_export(pubkey, key.ptr, &key.len,
-							BOTAN_PRIVKEY_EXPORT_FLAG_DER))
-	{
-		chunk_free(&key);
-		botan_pubkey_destroy(pubkey);
-		return FALSE;
-	}
-
-	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
-								BUILD_BLOB_ASN1_DER, key, BUILD_END);
-
-	chunk_free(&key);
-	botan_pubkey_destroy(pubkey);
-	return public;
+	return (public_key_t*)botan_ec_public_key_adopt(pubkey);
 }
 
 METHOD(private_key_t, get_fingerprint, bool,
@@ -400,6 +375,19 @@ static private_botan_ec_private_key_t *create_empty(int oid)
 	);
 
 	return this;
+}
+
+/*
+ * Described in header
+ */
+botan_ec_private_key_t *botan_ec_private_key_adopt(botan_privkey_t key, int oid)
+{
+	private_botan_ec_private_key_t *this;
+
+	this = create_empty(oid);
+	this->key = key;
+
+	return &this->public;
 }
 
 /*

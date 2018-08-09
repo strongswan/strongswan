@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2018 René Korthaus
  * Rohde & Schwarz Cybersecurity GmbH
  *
@@ -319,20 +322,30 @@ static private_botan_rsa_public_key_t *create_empty()
 /*
  * Described in header
  */
+botan_rsa_public_key_t *botan_rsa_public_key_adopt(botan_pubkey_t key)
+{
+	private_botan_rsa_public_key_t *this;
+
+	this = create_empty();
+	this->key = key;
+
+	return &this->public;
+}
+
+/*
+ * Described in header
+ */
 botan_rsa_public_key_t *botan_rsa_public_key_load(key_type_t type,
 												  va_list args)
 {
 	private_botan_rsa_public_key_t *this = NULL;
-	chunk_t blob, n, e;
+	chunk_t n, e;
 
-	n = e = blob = chunk_empty;
+	n = e = chunk_empty;
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
 		{
-			case BUILD_BLOB_ASN1_DER:
-				blob = va_arg(args, chunk_t);
-				continue;
 			case BUILD_RSA_MODULUS:
 				n = va_arg(args, chunk_t);
 				continue;
@@ -347,54 +360,7 @@ botan_rsa_public_key_t *botan_rsa_public_key_load(key_type_t type,
 		break;
 	}
 
-	if (blob.ptr)
-	{
-		switch (type)
-		{
-			/* SubjectPublicKeyInfo */
-			case KEY_RSA:
-			case KEY_ANY:
-			{
-				size_t namesize = 0;
-				char *namebuf;
-
-				this = create_empty();
-
-				if (botan_pubkey_load(&this->key, blob.ptr, blob.len))
-				{
-					free(this);
-					return NULL;
-				}
-
-				if (botan_pubkey_algo_name(this->key, NULL, &namesize)
-					!= BOTAN_FFI_ERROR_INSUFFICIENT_BUFFER_SPACE)
-				{
-					destroy(this);
-					return NULL;
-				}
-
-				namebuf = malloc(namesize);
-				if (botan_pubkey_algo_name(this->key, namebuf, &namesize))
-				{
-					free(namebuf);
-					destroy(this);
-					return NULL;
-				}
-
-				if (!strneq(namebuf, "RSA", namesize))
-				{
-					free(namebuf);
-					destroy(this);
-					return NULL;
-				}
-				free(namebuf);
-				break;
-			}
-			default:
-				return NULL;
-		}
-	}
-	else if (n.ptr && e.ptr && type == KEY_RSA)
+	if (n.ptr && e.ptr && type == KEY_RSA)
 	{
 		botan_mp_t mp_n, mp_e;
 

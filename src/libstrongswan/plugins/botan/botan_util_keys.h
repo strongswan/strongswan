@@ -2,9 +2,6 @@
  * Copyright (C) 2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
- * Copyright (C) 2018 René Korthaus
- * Rohde & Schwarz Cybersecurity GmbH
- *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -25,48 +22,40 @@
  */
 
 /**
- * @defgroup botan_rsa_public_key botan_rsa_public_key
+ * Helper functions to load public and private keys in a generic way
+ *
+ * @defgroup botan_util_keys botan_util_keys
  * @{ @ingroup botan_p
  */
 
-#ifndef BOTAN_RSA_PUBLIC_KEY_H_
-#define BOTAN_RSA_PUBLIC_KEY_H_
+#ifndef BOTAN_UTIL_KEYS_H_
+#define BOTAN_UTIL_KEYS_H_
 
 #include <botan/ffi.h>
 
 #include <credentials/keys/public_key.h>
-
-typedef struct botan_rsa_public_key_t botan_rsa_public_key_t;
-
-/**
- * public_key_t implementation of RSA algorithm using Botan.
- */
-struct botan_rsa_public_key_t {
-
-	/**
-	 * Implements the public_key_t interface
-	 */
-	public_key_t key;
-};
+#include <credentials/keys/private_key.h>
 
 /**
- * Load a RSA public key using Botan.
+ * Load a public key in subjectPublicKeyInfo encoding
  *
- * Accepts a BUILD_RSA_MODULUS/BUILD_RSA_PUB_EXP arguments.
+ * Accepts a BUILD_BLOB_ASN1_DER argument.
  *
- * @param type		type of the key, must be KEY_RSA
+ * @param type		type of the key
  * @param args		builder_part_t argument list
  * @return 			loaded key, NULL on failure
  */
-botan_rsa_public_key_t *botan_rsa_public_key_load(key_type_t type,
-												  va_list args);
+public_key_t *botan_public_key_load(key_type_t type, va_list args);
 
 /**
- * Load a RSA public key by adopting a botan_pubkey_t object.
+ * Load a private key in PKCS#8 encoding
  *
- * @param key		public key object (adopted)
- * @return			loaded key, NULL on failure
+ * Accepts a BUILD_BLOB_ASN1_DER argument.
+ *
+ * @param type		type of the key
+ * @param args		builder_part_t argument list
+ * @return 			loaded key, NULL on failure
  */
-botan_rsa_public_key_t *botan_rsa_public_key_adopt(botan_pubkey_t key);
+private_key_t *botan_private_key_load(key_type_t type, va_list args);
 
-#endif /** BOTAN_RSA_PUBLIC_KEY_H_ @}*/
+#endif /** BOTAN_UTIL_KEYS_H_ @}*/

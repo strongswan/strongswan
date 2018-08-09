@@ -29,6 +29,8 @@
 #ifndef BOTAN_RSA_PRIVATE_KEY_H_
 #define BOTAN_RSA_PRIVATE_KEY_H_
 
+#include <botan/ffi.h>
+
 #include <credentials/builder.h>
 #include <credentials/keys/private_key.h>
 
@@ -68,5 +70,13 @@ botan_rsa_private_key_t *botan_rsa_private_key_gen(key_type_t type,
  */
 botan_rsa_private_key_t *botan_rsa_private_key_load(key_type_t type,
 													va_list args);
+
+/**
+ * Load a RSA private key by adopting a botan_privkey_t object.
+ *
+ * @param key		private key object (adopted)
+ * @return			loaded key, NULL on failure
+ */
+botan_rsa_private_key_t *botan_rsa_private_key_adopt(botan_privkey_t key);
 
 #endif /** BOTAN_RSA_PRIVATE_KEY_H_ @}*/

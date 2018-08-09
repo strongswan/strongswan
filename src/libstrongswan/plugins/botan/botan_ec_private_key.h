@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2018 René Korthaus
  * Copyright (C) 2018 Konstantinos Kolelis
  * Rohde & Schwarz Cybersecurity GmbH
@@ -29,6 +32,8 @@
 
 #ifndef BOTAN_EC_PRIVATE_KEY_H_
 #define BOTAN_EC_PRIVATE_KEY_H_
+
+#include <botan/ffi.h>
 
 #include <credentials/builder.h>
 #include <credentials/keys/private_key.h>
@@ -68,5 +73,15 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args);
  */
 botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type,
 												  va_list args);
+
+/**
+ * Load a ECDSA private key by adopting a botan_privkey_t object.
+ *
+ * @param key		private key object (adopted)
+ * @param oid		EC curve OID
+ * @return			loaded key, NULL on failure
+ */
+botan_ec_private_key_t *botan_ec_private_key_adopt(botan_privkey_t key,
+												   int oid);
 
 #endif /** BOTAN_EC_PRIVATE_KEY_H_ @}*/

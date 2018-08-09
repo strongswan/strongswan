@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2018 René Korthaus
  * Copyright (C) 2018 Konstantinos Kolelis
  * Rohde & Schwarz Cybersecurity GmbH
@@ -34,6 +37,7 @@
 #include "botan_ec_public_key.h"
 #include "botan_ec_private_key.h"
 #include "botan_gcm.h"
+#include "botan_util_keys.h"
 
 #include <library.h>
 
@@ -79,6 +83,16 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, MODP_1024_160),
 			PLUGIN_PROVIDE(DH, MODP_768_BIT),
 			PLUGIN_PROVIDE(DH, MODP_CUSTOM),
+#endif
+#ifdef BOTAN_HAS_ECDH
+		/* EC DH groups */
+		PLUGIN_REGISTER(DH, botan_ec_diffie_hellman_create),
+			PLUGIN_PROVIDE(DH, ECP_256_BIT),
+			PLUGIN_PROVIDE(DH, ECP_384_BIT),
+			PLUGIN_PROVIDE(DH, ECP_521_BIT),
+			PLUGIN_PROVIDE(DH, ECP_256_BP),
+			PLUGIN_PROVIDE(DH, ECP_384_BP),
+			PLUGIN_PROVIDE(DH, ECP_512_BP),
 #endif
 		/* crypters */
 		PLUGIN_REGISTER(CRYPTER, botan_crypter_create),
@@ -147,15 +161,24 @@ METHOD(plugin_t, get_features, int,
 #endif
 #endif /* BOTAN_HAS_HMAC */
 
-#ifdef BOTAN_HAS_ECDH
-		/* EC DH groups */
-		PLUGIN_REGISTER(DH, botan_ec_diffie_hellman_create),
-			PLUGIN_PROVIDE(DH, ECP_256_BIT),
-			PLUGIN_PROVIDE(DH, ECP_384_BIT),
-			PLUGIN_PROVIDE(DH, ECP_521_BIT),
-			PLUGIN_PROVIDE(DH, ECP_256_BP),
-			PLUGIN_PROVIDE(DH, ECP_384_BP),
-			PLUGIN_PROVIDE(DH, ECP_512_BP),
+		/* generic key loaders */
+#if defined (BOTAN_HAS_RSA) || defined(BOTAN_HAS_ECDSA)
+		PLUGIN_REGISTER(PUBKEY, botan_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
+#ifdef BOTAN_HAS_RSA
+			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
+#endif
+#ifdef BOTAN_HAS_ECDSA
+			PLUGIN_PROVIDE(PUBKEY, KEY_ECDSA),
+#endif
+		PLUGIN_REGISTER(PRIVKEY, botan_private_key_load, TRUE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
+#ifdef BOTAN_HAS_RSA
+			PLUGIN_PROVIDE(PRIVKEY, KEY_RSA),
+#endif
+#ifdef BOTAN_HAS_ECDSA
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ECDSA),
+#endif
 #endif
 		/* RSA */
 #ifdef BOTAN_HAS_RSA
@@ -164,6 +187,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(PUBKEY, KEY_RSA),
 		PLUGIN_REGISTER(PRIVKEY, botan_rsa_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_RSA),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 		PLUGIN_REGISTER(PRIVKEY_GEN, botan_rsa_private_key_gen, FALSE),
 			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_RSA),
 		/* encryption/signature schemes */
@@ -214,8 +238,6 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 		PLUGIN_REGISTER(PRIVKEY_GEN, botan_ec_private_key_gen, FALSE),
 			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ECDSA),
-		PLUGIN_REGISTER(PUBKEY, botan_ec_public_key_load, TRUE),
-			PLUGIN_PROVIDE(PUBKEY, KEY_ECDSA),
 #ifdef BOTAN_HAS_EMSA_RAW
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ECDSA_WITH_NULL),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_WITH_NULL),
