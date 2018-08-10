@@ -1504,7 +1504,7 @@ static void process_rule(private_kernel_netlink_net_t *this, struct nlmsghdr *hd
 static bool receive_events(private_kernel_netlink_net_t *this, int fd,
 						   watcher_event_t event)
 {
-	char response[1536];
+	char response[netlink_get_buflen()];
 	struct nlmsghdr *hdr = (struct nlmsghdr*)response;
 	struct sockaddr_nl addr;
 	socklen_t addr_len = sizeof(addr);

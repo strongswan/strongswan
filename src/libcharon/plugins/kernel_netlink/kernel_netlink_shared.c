@@ -587,8 +587,31 @@ METHOD(netlink_socket_t, destroy, void,
 	free(this);
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
+ */
+u_int netlink_get_buflen()
+{
+	u_int buflen;
+
+	buflen = lib->settings->get_int(lib->settings,
+								"%s.plugins.kernel-netlink.buflen", 0, lib->ns);
+	if (!buflen)
+	{
+		long pagesize = sysconf(_SC_PAGESIZE);
+
+		if (pagesize == -1)
+		{
+			pagesize = 4096;
+		}
+		/* base this on NLMSG_GOODSIZE */
+		buflen = min(pagesize, 8192);
+	}
+	return buflen;
+}
+
+/*
+ * Described in header
  */
 netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 										bool parallel)
@@ -612,8 +635,7 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		.entries = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 4),
 		.protocol = protocol,
 		.names = names,
-		.buflen = lib->settings->get_int(lib->settings,
-							"%s.plugins.kernel-netlink.buflen", 0, lib->ns),
+		.buflen = netlink_get_buflen(),
 		.timeout = lib->settings->get_int(lib->settings,
 							"%s.plugins.kernel-netlink.timeout", 0, lib->ns),
 		.retries = lib->settings->get_int(lib->settings,
@@ -624,16 +646,6 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		.parallel = parallel,
 	);
 
-	if (!this->buflen)
-	{
-		long pagesize = sysconf(_SC_PAGESIZE);
-		if (pagesize == -1)
-		{
-			pagesize = 4096;
-		}
-		/* base this on NLMSG_GOODSIZE */
-		this->buflen = min(pagesize, 8192);
-	}
 	if (this->socket == -1)
 	{
 		DBG1(DBG_KNL, "unable to create netlink socket: %s (%d)",

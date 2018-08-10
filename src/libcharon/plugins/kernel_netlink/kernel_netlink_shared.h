@@ -101,4 +101,11 @@ void netlink_add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
  */
 void* netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len);
 
+/**
+ * Determine buffer size for received messages (e.g. events).
+ *
+ * @return				buffer size
+ */
+u_int netlink_get_buflen();
+
 #endif /* KERNEL_NETLINK_SHARED_H_ */

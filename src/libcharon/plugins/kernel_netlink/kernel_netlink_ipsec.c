@@ -1131,7 +1131,7 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 static bool receive_events(private_kernel_netlink_ipsec_t *this, int fd,
 						   watcher_event_t event)
 {
-	char response[1024];
+	char response[netlink_get_buflen()];
 	struct nlmsghdr *hdr = (struct nlmsghdr*)response;
 	struct sockaddr_nl addr;
 	socklen_t addr_len = sizeof(addr);
