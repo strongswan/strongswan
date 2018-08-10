@@ -65,6 +65,17 @@ bool botan_get_encoding(botan_pubkey_t pubkey, cred_encoding_type_t type,
 						chunk_t *encoding);
 
 /**
+ * Get the encoding of a botan_privkey_t.
+ *
+ * @param key		private key object
+ * @param type		encoding type
+ * @param encoding	allocated encoding
+ * @return			TRUE if encoding successful
+ */
+bool botan_get_privkey_encoding(botan_privkey_t key, cred_encoding_type_t type,
+								chunk_t *encoding);
+
+/**
  * Get the fingerprint of a botan_pubkey_t.
  *
  * @param pubkey	public key object

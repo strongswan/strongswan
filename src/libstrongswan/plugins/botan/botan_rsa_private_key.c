@@ -257,38 +257,7 @@ METHOD(private_key_t, get_encoding, bool,
 	private_botan_rsa_private_key_t *this, cred_encoding_type_t type,
 	chunk_t *encoding)
 {
-	switch (type)
-	{
-		case PRIVKEY_ASN1_DER:
-		case PRIVKEY_PEM:
-		{
-			uint32_t format = BOTAN_PRIVKEY_EXPORT_FLAG_DER;
-			size_t len = 0;
-			bool success = TRUE;
-
-			if (type == PRIVKEY_PEM)
-			{
-				format = BOTAN_PRIVKEY_EXPORT_FLAG_PEM;
-			}
-
-			if (botan_privkey_rsa_get_privkey(this->key, NULL, &len, format)
-				!= BOTAN_FFI_ERROR_INSUFFICIENT_BUFFER_SPACE)
-			{
-				return FALSE;
-			}
-
-			*encoding = chunk_alloc(len);
-			if (botan_privkey_rsa_get_privkey(this->key, encoding->ptr, &len,
-											  format))
-			{
-				chunk_clear(encoding);
-				return FALSE;
-			}
-			return success;
-		}
-		default:
-			return FALSE;
-	}
+	return botan_get_privkey_encoding(this->key, type, encoding);
 }
 
 METHOD(private_key_t, get_ref, private_key_t*,

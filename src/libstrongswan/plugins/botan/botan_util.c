@@ -111,6 +111,39 @@ bool botan_get_encoding(botan_pubkey_t pubkey, cred_encoding_type_t type,
 /*
  * Described in header
  */
+bool botan_get_privkey_encoding(botan_privkey_t key, cred_encoding_type_t type,
+								chunk_t *encoding)
+{
+	uint32_t format = BOTAN_PRIVKEY_EXPORT_FLAG_DER;
+
+	switch (type)
+	{
+		case PRIVKEY_PEM:
+			format = BOTAN_PRIVKEY_EXPORT_FLAG_PEM;
+			/* fall-through */
+		case PRIVKEY_ASN1_DER:
+			encoding->len = 0;
+			if (botan_privkey_export(key, NULL, &encoding->len, format)
+				!= BOTAN_FFI_ERROR_INSUFFICIENT_BUFFER_SPACE)
+			{
+				return FALSE;
+			}
+			*encoding = chunk_alloc(encoding->len);
+			if (botan_privkey_export(key, encoding->ptr, &encoding->len,
+									 format))
+			{
+				chunk_free(encoding);
+				return FALSE;
+			}
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+
+/*
+ * Described in header
+ */
 bool botan_get_fingerprint(botan_pubkey_t pubkey, void *cache,
 						   cred_encoding_type_t type, chunk_t *fp)
 {
