@@ -223,7 +223,7 @@ static botan_diffie_hellman_t *create_generic(diffie_hellman_group_t group,
 	}
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (!rng || !rng->allocate_bytes(rng, p.len, &random))
+	if (!rng || !rng->allocate_bytes(rng, exp_len, &random))
 	{
 		DESTROY_IF(rng);
 		destroy(this);
@@ -253,7 +253,7 @@ botan_diffie_hellman_t *botan_diffie_hellman_create(
 	if (group == MODP_CUSTOM)
 	{
 		VA_ARGS_GET(group, g, p);
-		return create_generic(group, g, p);
+		return create_generic(group, g, p, p.len);
 	}
 
 	params = diffie_hellman_get_params(group);
@@ -261,7 +261,8 @@ botan_diffie_hellman_t *botan_diffie_hellman_create(
 	{
 		return NULL;
 	}
-	return create_generic(group, params->generator, params->prime);
+	return create_generic(group, params->generator, params->prime,
+						  params->exp_len);
 }
 
 #endif
