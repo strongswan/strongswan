@@ -220,14 +220,16 @@ static int find_revents(struct pollfd *pfd, int count, int fd)
 static char* format_error(DWORD error)
 {
 	char *lpMsgBuf = NULL;
-	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |
+	DWORD dwChars = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER |
 				  FORMAT_MESSAGE_IGNORE_INSERTS,
 				  NULL,
 				  error,
 				  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-				  (LPTSTR)&lpMsgBuf,
+				  &lpMsgBuf,
 				  0,
 				  NULL);
+	if ( dwChars > 2 && lpMsgBuf != NULL )
+		lpMsgBuf[dwChars - 2] = 0;
 	return lpMsgBuf;
 }
 
@@ -267,7 +269,7 @@ static BOOL start_read(handle_overlapped_buffer_t *structure, HANDLE event)
 				if ( error_message != NULL )
 				{
 					DBG2( DBG_ESP, "Error %d. %s", error, error_message );
-					free( error_message );
+					LocalFree( error_message );
 				}
 				else
 				{
@@ -332,7 +334,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 	if (!tun_device_event)
 	{
 		char *error_message = format_error(GetLastError());
-		free(error_message);
+		LocalFree(error_message);
 		return JOB_REQUEUE_FAIR;
 	}
 	event_array[i] = tun_device_event;
@@ -356,8 +358,10 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 	if (!start_read(&tun_device_handle_overlapped_buffer, tun_device_handle_overlapped_buffer.overlapped->hEvent))
 	{
 		// TODO: Cleanup heap
+		CloseHandle( tun_device_event );
 		this->lock->unlock(this->lock);
-		return JOB_REQUEUE_FAIR;
+		// Don't requeue this packet - it'll get us into an infinite loop (bad)
+		return JOB_REQUEUE_NONE;
 	}
 	/* pad bundle_array with two empty structures */
 	/* iterate over all our tun devices, create event handles, reset them, queue read operations on all handles */
@@ -385,7 +389,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 		if (event_array[i] == NULL)
 		{
 			char *error_message = format_error(GetLastError());
-			free(error_message);
+			LocalFree(error_message);
 			return JOB_REQUEUE_FAIR;
 		}
 		i++;
