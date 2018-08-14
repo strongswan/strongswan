@@ -335,6 +335,7 @@ METHOD(task_t, build_i, status_t,
 			if (!id)
 			{
 				DBG1(DBG_CFG, "own identity not known");
+				charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 				return send_notify(this, INVALID_ID_INFORMATION);
 			}
 			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
@@ -344,6 +345,7 @@ METHOD(task_t, build_i, status_t,
 			if (!this->ph1->build_auth(this->ph1, this->method, message,
 									   id_payload->get_encoded(id_payload)))
 			{
+				charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 
@@ -445,6 +447,7 @@ METHOD(task_t, process_r, status_t,
 			if (!id_payload)
 			{
 				DBG1(DBG_IKE, "IDii payload missing");
+				charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 			id = id_payload->get_identification(id_payload);
@@ -457,6 +460,7 @@ METHOD(task_t, process_r, status_t,
 													this->method, FALSE, id);
 				if (!this->peer_cfg)
 				{
+					charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 					return send_notify(this, AUTHENTICATION_FAILED);
 				}
 				this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
@@ -526,6 +530,7 @@ METHOD(task_t, build_r, status_t,
 			if (!id)
 			{
 				DBG1(DBG_CFG, "own identity not known");
+				charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 				return send_notify(this, INVALID_ID_INFORMATION);
 			}
 			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
@@ -536,6 +541,7 @@ METHOD(task_t, build_r, status_t,
 			if (!this->ph1->build_auth(this->ph1, this->method, message,
 									   id_payload->get_encoded(id_payload)))
 			{
+				charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 
@@ -688,6 +694,7 @@ METHOD(task_t, process_i, status_t,
 			if (!id_payload)
 			{
 				DBG1(DBG_IKE, "IDir payload missing");
+				charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 				return send_delete(this);
 			}
 			id = id_payload->get_identification(id_payload);
@@ -696,6 +703,7 @@ METHOD(task_t, process_i, status_t,
 			{
 				DBG1(DBG_IKE, "IDir '%Y' does not match to '%Y'", id, cid);
 				id->destroy(id);
+				charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 				return send_delete(this);
 			}
 			this->ike_sa->set_other_id(this->ike_sa, id);
@@ -703,6 +711,7 @@ METHOD(task_t, process_i, status_t,
 			if (!this->ph1->verify_auth(this->ph1, this->method, message,
 										id_payload->get_encoded(id_payload)))
 			{
+				charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 				return send_delete(this);
 			}
 			if (!charon->bus->authorize(charon->bus, FALSE))
