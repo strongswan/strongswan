@@ -664,7 +664,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	switch (fdwReason)
 	{
 		case DLL_THREAD_DETACH:
-			cleanup_tls();
 			break;
 		default:
 			break;
