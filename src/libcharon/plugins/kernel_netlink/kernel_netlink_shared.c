@@ -381,7 +381,7 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 	for (i = 0, *out_len = 0; i < array_count(entry->hdrs); i++)
 	{
 		array_get(entry->hdrs, i, &hdr);
-		*out_len += hdr->nlmsg_len;
+		*out_len += NLMSG_ALIGN(hdr->nlmsg_len);
 	}
 	ptr = malloc(*out_len);
 	*out = (struct nlmsghdr*)ptr;
@@ -394,7 +394,7 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 				 hdr->nlmsg_seq, hdr, hdr->nlmsg_len);
 		}
 		memcpy(ptr, hdr, hdr->nlmsg_len);
-		ptr += hdr->nlmsg_len;
+		ptr += NLMSG_ALIGN(hdr->nlmsg_len);
 		free(hdr);
 	}
 	destroy_entry(entry);
