@@ -476,6 +476,7 @@ METHOD(task_t, process_r, status_t,
 			{
 				DBG1(DBG_IKE, "Main Mode authorization hook forbids IKE_SA, "
 					 "cancelling");
+				charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 
@@ -568,6 +569,7 @@ METHOD(task_t, build_r, status_t,
 					}
 					if (!establish(this))
 					{
+						charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 						return send_notify(this, AUTHENTICATION_FAILED);
 					}
 					job = adopt_children_job_create(
@@ -718,6 +720,7 @@ METHOD(task_t, process_i, status_t,
 			{
 				DBG1(DBG_IKE, "Main Mode authorization hook forbids IKE_SA, "
 					 "cancelling");
+				charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 				return send_delete(this);
 			}
 
@@ -745,6 +748,7 @@ METHOD(task_t, process_i, status_t,
 					}
 					if (!establish(this))
 					{
+						charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 						return send_delete(this);
 					}
 					break;
