@@ -270,11 +270,6 @@ METHOD(task_t, build_i, status_t,
 				return FAILED;
 			}
 			id = this->ph1->get_id(this->ph1, this->peer_cfg, TRUE);
-			if (!id)
-			{
-				DBG1(DBG_CFG, "own identity not known");
-				return FAILED;
-			}
 			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
 			id_payload = id_payload_create_from_identification(PLV1_ID, id);
 			this->id_data = id_payload->get_encoded(id_payload);
@@ -302,6 +297,7 @@ METHOD(task_t, build_i, status_t,
 									   this->id_data))
 			{
 				this->id_data = chunk_empty;
+				charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 			this->id_data = chunk_empty;
@@ -330,6 +326,7 @@ METHOD(task_t, build_i, status_t,
 					}
 					if (!establish(this))
 					{
+						charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 						return send_notify(this, AUTHENTICATION_FAILED);
 					}
 					break;
@@ -428,6 +425,7 @@ METHOD(task_t, process_r, status_t,
 					{
 						DBG1(DBG_IKE, "Aggressive Mode PSK disabled for "
 							 "security reasons");
+						charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 						return send_notify(this, AUTHENTICATION_FAILED);
 					}
 					break;
@@ -455,6 +453,7 @@ METHOD(task_t, process_r, status_t,
 			if (!id_payload)
 			{
 				DBG1(DBG_IKE, "IDii payload missing");
+				charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 
@@ -465,6 +464,7 @@ METHOD(task_t, process_r, status_t,
 													  this->method, TRUE, id);
 			if (!this->peer_cfg)
 			{
+				charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 				return send_notify(this, AUTHENTICATION_FAILED);
 			}
 			this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
@@ -493,6 +493,7 @@ METHOD(task_t, process_r, status_t,
 													this->method, TRUE, NULL);
 				if (!this->peer_cfg)
 				{
+					charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 					return send_delete(this);
 				}
 				this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
@@ -502,6 +503,7 @@ METHOD(task_t, process_r, status_t,
 			{
 				DBG1(DBG_IKE, "Aggressive Mode authorization hook forbids "
 					 "IKE_SA, cancelling");
+				charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 				return send_delete(this);
 			}
 
@@ -528,6 +530,7 @@ METHOD(task_t, process_r, status_t,
 					}
 					if (!establish(this))
 					{
+						charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 						return send_delete(this);
 					}
 					job = adopt_children_job_create(
@@ -602,11 +605,6 @@ METHOD(task_t, build_r, status_t,
 		}
 
 		id = this->ph1->get_id(this->ph1, this->peer_cfg, TRUE);
-		if (!id)
-		{
-			DBG1(DBG_CFG, "own identity not known");
-			return send_notify(this, INVALID_ID_INFORMATION);
-		}
 		this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
 
 		id_payload = id_payload_create_from_identification(PLV1_ID, id);
@@ -615,6 +613,7 @@ METHOD(task_t, build_r, status_t,
 		if (!this->ph1->build_auth(this->ph1, this->method, message,
 								   id_payload->get_encoded(id_payload)))
 		{
+			charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 			return send_notify(this, AUTHENTICATION_FAILED);
 		}
 		return NEED_MORE;
@@ -679,6 +678,7 @@ METHOD(task_t, process_i, status_t,
 		if (!id_payload)
 		{
 			DBG1(DBG_IKE, "IDir payload missing");
+			charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 			return send_delete(this);
 		}
 		id = id_payload->get_identification(id_payload);
@@ -687,6 +687,7 @@ METHOD(task_t, process_i, status_t,
 		{
 			DBG1(DBG_IKE, "IDir '%Y' does not match to '%Y'", id, cid);
 			id->destroy(id);
+			charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 			return send_notify(this, INVALID_ID_INFORMATION);
 		}
 		this->ike_sa->set_other_id(this->ike_sa, id);
@@ -698,6 +699,7 @@ METHOD(task_t, process_i, status_t,
 		if (!this->ph1->verify_auth(this->ph1, this->method, message,
 									id_payload->get_encoded(id_payload)))
 		{
+			charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 			return send_notify(this, AUTHENTICATION_FAILED);
 		}
 		if (!charon->bus->authorize(charon->bus, FALSE))
