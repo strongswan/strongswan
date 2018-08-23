@@ -373,11 +373,13 @@ CALLBACK(rekey, vici_message_t*,
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	vici_builder_t *builder;
+	bool reauth;
 
 	child = request->get_str(request, NULL, "child");
 	ike = request->get_str(request, NULL, "ike");
 	child_id = request->get_int(request, 0, "child-id");
 	ike_id = request->get_int(request, 0, "ike-id");
+	reauth = request->get_bool(request, FALSE, "reauth");
 
 	if (!child && !ike && !ike_id && !child_id)
 	{
@@ -438,7 +440,7 @@ CALLBACK(rekey, vici_message_t*,
 				 (ike_id && ike_id == ike_sa->get_unique_id(ike_sa)))
 		{
 			lib->processor->queue_job(lib->processor,
-				(job_t*)rekey_ike_sa_job_create(ike_sa->get_id(ike_sa), FALSE));
+				(job_t*)rekey_ike_sa_job_create(ike_sa->get_id(ike_sa), reauth));
 			found++;
 		}
 	}

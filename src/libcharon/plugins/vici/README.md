@@ -302,6 +302,7 @@ Initiate the rekeying of an SA.
 		ike = <rekey an IKE_SA by configuration name>
 		child-id = <rekey a CHILD_SA by its reqid>
 		ike-id = <rekey an IKE_SA by its unique id>
+		reauth = <reauthenticate instead of rekey an IKEv2 SA>
 	} => {
 		success = <yes or no>
 		matches = <number of matched SAs>
