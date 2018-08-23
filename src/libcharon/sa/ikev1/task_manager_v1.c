@@ -721,6 +721,7 @@ METHOD(task_manager_t, initiate, status_t,
 		{
 			case IKE_CONNECTING:
 				/* close after sending an INFORMATIONAL when unestablished */
+				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 				return FAILED;
 			case IKE_DELETING:
 				/* close after sending a DELETE */
