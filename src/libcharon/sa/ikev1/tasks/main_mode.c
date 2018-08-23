@@ -332,12 +332,6 @@ METHOD(task_t, build_i, status_t,
 			identification_t *id;
 
 			id = this->ph1->get_id(this->ph1, this->peer_cfg, TRUE);
-			if (!id)
-			{
-				DBG1(DBG_CFG, "own identity not known");
-				charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
-				return send_notify(this, INVALID_ID_INFORMATION);
-			}
 			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
 			id_payload = id_payload_create_from_identification(PLV1_ID, id);
 			message->add_payload(message, &id_payload->payload_interface);
@@ -528,12 +522,6 @@ METHOD(task_t, build_r, status_t,
 			xauth_t *xauth = NULL;
 
 			id = this->ph1->get_id(this->ph1, this->peer_cfg, TRUE);
-			if (!id)
-			{
-				DBG1(DBG_CFG, "own identity not known");
-				charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
-				return send_notify(this, INVALID_ID_INFORMATION);
-			}
 			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
 
 			id_payload = id_payload_create_from_identification(PLV1_ID, id);
