@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Tobias Brunner
+ * Copyright (C) 2017-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@ static int rekey(vici_conn_t *conn)
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg, *child = NULL, *ike = NULL;
 	int ret = 0, child_id = 0, ike_id = 0;
+	bool reauth = FALSE;
 
 	while (TRUE)
 	{
@@ -49,6 +50,9 @@ static int rekey(vici_conn_t *conn)
 			case 'I':
 				ike_id = atoi(arg);
 				continue;
+			case 'a':
+				reauth = TRUE;
+				continue;
 			case EOF:
 				break;
 			default:
@@ -73,6 +77,10 @@ static int rekey(vici_conn_t *conn)
 	if (ike_id)
 	{
 		vici_add_key_valuef(req, "ike-id", "%d", ike_id);
+	}
+	if (reauth)
+	{
+		vici_add_key_valuef(req, "reauth", "yes");
 	}
 	res = vici_submit(req, conn);
 	if (!res)
@@ -111,13 +119,14 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		rekey, 'R', "rekey", "rekey an SA",
 		{"--child <name> | --ike <name | --child-id <id> | --ike-id <id>",
-		 "[--raw|--pretty]"},
+		 "[--reauth] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"child",		'c', 1, "rekey by CHILD_SA name"},
 			{"ike",			'i', 1, "rekey by IKE_SA name"},
 			{"child-id",	'C', 1, "rekey by CHILD_SA unique identifier"},
 			{"ike-id",		'I', 1, "rekey by IKE_SA unique identifier"},
+			{"reauth",		'a', 0, "reauthenticate instead of rekey an IKEv2 SA"},
 			{"raw",			'r', 0, "dump raw response message"},
 			{"pretty",		'P', 0, "dump raw response message in pretty print"},
 		}
