@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Tobias Brunner
+ * Copyright (C) 2017-2018 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2012 Andreas Steffen
@@ -264,14 +264,15 @@ static chunk_t rsasp1(private_gmp_rsa_private_key_t *this, chunk_t data)
 }
 
 /**
- * Build a signature using the PKCS#1 EMSA scheme
+ * Hashes the data and builds the plaintext signature value with EMSA
+ * PKCS#1 v1.5 padding.
+ *
+ * Allocates the signature data.
  */
-static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
-									   hash_algorithm_t hash_algorithm,
-									   chunk_t data, chunk_t *signature)
+bool gmp_emsa_pkcs1_signature_data(hash_algorithm_t hash_algorithm,
+								   chunk_t data, size_t keylen, chunk_t *em)
 {
 	chunk_t digestInfo = chunk_empty;
-	chunk_t em;
 
 	if (hash_algorithm != HASH_UNKNOWN)
 	{
@@ -295,43 +296,56 @@ static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
 		/* build DER-encoded digestInfo */
 		digestInfo = asn1_wrap(ASN1_SEQUENCE, "mm",
 						asn1_algorithmIdentifier(hash_oid),
-						asn1_simple_object(ASN1_OCTET_STRING, hash)
-					  );
-		chunk_free(&hash);
+						asn1_wrap(ASN1_OCTET_STRING, "m", hash));
+
 		data = digestInfo;
 	}
 
-	if (data.len > this->k - 3)
+	if (data.len > keylen - 11)
 	{
-		free(digestInfo.ptr);
-		DBG1(DBG_LIB, "unable to sign %d bytes using a %dbit key", data.len,
-			 mpz_sizeinbase(this->n, 2));
+		chunk_free(&digestInfo);
+		DBG1(DBG_LIB, "signature value of %zu bytes is too long for key of "
+			 "%zu bytes", data.len, keylen);
 		return FALSE;
 	}
 
-	/* build chunk to rsa-decrypt:
-	 * EM = 0x00 || 0x01 || PS || 0x00 || T.
-	 * PS = 0xFF padding, with length to fill em
+	/* EM = 0x00 || 0x01 || PS || 0x00 || T.
+	 * PS = 0xFF padding, with length to fill em (at least 8 bytes)
 	 * T = encoded_hash
 	 */
-	em.len = this->k;
-	em.ptr = malloc(em.len);
+	*em = chunk_alloc(keylen);
 
 	/* fill em with padding */
-	memset(em.ptr, 0xFF, em.len);
+	memset(em->ptr, 0xFF, em->len);
 	/* set magic bytes */
-	*(em.ptr) = 0x00;
-	*(em.ptr+1) = 0x01;
-	*(em.ptr + em.len - data.len - 1) = 0x00;
-	/* set DER-encoded hash */
-	memcpy(em.ptr + em.len - data.len, data.ptr, data.len);
+	*(em->ptr) = 0x00;
+	*(em->ptr+1) = 0x01;
+	*(em->ptr + em->len - data.len - 1) = 0x00;
+	/* set encoded hash */
+	memcpy(em->ptr + em->len - data.len, data.ptr, data.len);
+
+	chunk_clear(&digestInfo);
+	return TRUE;
+}
+
+/**
+ * Build a signature using the PKCS#1 EMSA scheme
+ */
+static bool build_emsa_pkcs1_signature(private_gmp_rsa_private_key_t *this,
+									   hash_algorithm_t hash_algorithm,
+									   chunk_t data, chunk_t *signature)
+{
+	chunk_t em;
+
+	if (!gmp_emsa_pkcs1_signature_data(hash_algorithm, data, this->k, &em))
+	{
+		return FALSE;
+	}
 
 	/* build signature */
 	*signature = rsasp1(this, em);
 
-	free(digestInfo.ptr);
-	free(em.ptr);
-
+	chunk_free(&em);
 	return TRUE;
 }
 

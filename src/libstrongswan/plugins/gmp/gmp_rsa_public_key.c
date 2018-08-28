@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Tobias Brunner
+ * Copyright (C) 2017-2018 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -70,7 +70,9 @@ struct private_gmp_rsa_public_key_t {
 /**
  * Shared functions defined in gmp_rsa_private_key.c
  */
-extern chunk_t gmp_mpz_to_chunk(const mpz_t value);
+chunk_t gmp_mpz_to_chunk(const mpz_t value);
+bool gmp_emsa_pkcs1_signature_data(hash_algorithm_t hash_algorithm,
+								   chunk_t data, size_t keylen, chunk_t *em);
 
 /**
  * RSAEP algorithm specified in PKCS#1.
@@ -115,26 +117,13 @@ static chunk_t rsavp1(private_gmp_rsa_public_key_t *this, chunk_t data)
 }
 
 /**
- * ASN.1 definition of digestInfo
- */
-static const asn1Object_t digestInfoObjects[] = {
-	{ 0, "digestInfo",			ASN1_SEQUENCE,		ASN1_OBJ  }, /*  0 */
-	{ 1,   "digestAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /*  1 */
-	{ 1,   "digest",			ASN1_OCTET_STRING,	ASN1_BODY }, /*  2 */
-	{ 0, "exit",				ASN1_EOC,			ASN1_EXIT }
-};
-#define DIGEST_INFO					0
-#define DIGEST_INFO_ALGORITHM		1
-#define DIGEST_INFO_DIGEST			2
-
-/**
  * Verification of an EMSA PKCS1 signature described in PKCS#1
  */
 static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 										hash_algorithm_t algorithm,
 										chunk_t data, chunk_t signature)
 {
-	chunk_t em_ori, em;
+	chunk_t em_expected, em;
 	bool success = FALSE;
 
 	/* remove any preceding 0-bytes from signature */
@@ -148,140 +137,19 @@ static bool verify_emsa_pkcs1_signature(private_gmp_rsa_public_key_t *this,
 		return FALSE;
 	}
 
+	/* generate expected signature value */
+	if (!gmp_emsa_pkcs1_signature_data(algorithm, data, this->k, &em_expected))
+	{
+		return FALSE;
+	}
+
 	/* unpack signature */
-	em_ori = em = rsavp1(this, signature);
+	em = rsavp1(this, signature);
 
-	/* result should look like this:
-	 * EM = 0x00 || 0x01 || PS || 0x00 || T.
-	 * PS = 0xFF padding, with length to fill em
-	 * T = oid || hash
-	 */
+	success = chunk_equals_const(em_expected, em);
 
-	/* check magic bytes */
-	if (em.len < 2 || *(em.ptr) != 0x00 || *(em.ptr+1) != 0x01)
-	{
-		goto end;
-	}
-	em = chunk_skip(em, 2);
-
-	/* find magic 0x00 */
-	while (em.len > 0)
-	{
-		if (*em.ptr == 0x00)
-		{
-			/* found magic byte, stop */
-			em = chunk_skip(em, 1);
-			break;
-		}
-		else if (*em.ptr != 0xFF)
-		{
-			/* bad padding, decryption failed ?!*/
-			goto end;
-		}
-		em = chunk_skip(em, 1);
-	}
-
-	if (em.len == 0)
-	{
-		/* no digestInfo found */
-		goto end;
-	}
-
-	if (algorithm == HASH_UNKNOWN)
-	{   /* IKEv1 signatures without digestInfo */
-		if (em.len != data.len)
-		{
-			DBG1(DBG_LIB, "hash size in signature is %u bytes instead of"
-				 " %u bytes", em.len, data.len);
-			goto end;
-		}
-		success = memeq_const(em.ptr, data.ptr, data.len);
-	}
-	else
-	{   /* IKEv2 and X.509 certificate signatures */
-		asn1_parser_t *parser;
-		chunk_t object;
-		int objectID;
-		hash_algorithm_t hash_algorithm = HASH_UNKNOWN;
-
-		DBG2(DBG_LIB, "signature verification:");
-		parser = asn1_parser_create(digestInfoObjects, em);
-
-		while (parser->iterate(parser, &objectID, &object))
-		{
-			switch (objectID)
-			{
-				case DIGEST_INFO:
-				{
-					if (em.len > object.len)
-					{
-						DBG1(DBG_LIB, "digestInfo field in signature is"
-							 " followed by %u surplus bytes",
-							 em.len - object.len);
-						goto end_parser;
-					}
-					break;
-				}
-				case DIGEST_INFO_ALGORITHM:
-				{
-					int hash_oid = asn1_parse_algorithmIdentifier(object,
-										 parser->get_level(parser)+1, NULL);
-
-					hash_algorithm = hasher_algorithm_from_oid(hash_oid);
-					if (hash_algorithm == HASH_UNKNOWN || hash_algorithm != algorithm)
-					{
-						DBG1(DBG_LIB, "expected hash algorithm %N, but found"
-							 " %N (OID: %#B)", hash_algorithm_names, algorithm,
-							 hash_algorithm_names, hash_algorithm,  &object);
-						goto end_parser;
-					}
-					break;
-				}
-				case DIGEST_INFO_DIGEST:
-				{
-					chunk_t hash;
-					hasher_t *hasher;
-
-					hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm);
-					if (hasher == NULL)
-					{
-						DBG1(DBG_LIB, "hash algorithm %N not supported",
-							 hash_algorithm_names, hash_algorithm);
-						goto end_parser;
-					}
-
-					if (object.len != hasher->get_hash_size(hasher))
-					{
-						DBG1(DBG_LIB, "hash size in signature is %u bytes"
-							 " instead of %u bytes", object.len,
-							 hasher->get_hash_size(hasher));
-						hasher->destroy(hasher);
-						goto end_parser;
-					}
-
-					/* build our own hash and compare */
-					if (!hasher->allocate_hash(hasher, data, &hash))
-					{
-						hasher->destroy(hasher);
-						goto end_parser;
-					}
-					hasher->destroy(hasher);
-					success = memeq_const(object.ptr, hash.ptr, hash.len);
-					free(hash.ptr);
-					break;
-				}
-				default:
-					break;
-			}
-		}
-
-end_parser:
-		success &= parser->success(parser);
-		parser->destroy(parser);
-	}
-
-end:
-	free(em_ori.ptr);
+	chunk_free(&em_expected);
+	chunk_free(&em);
 	return success;
 }
 
