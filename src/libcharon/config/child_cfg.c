@@ -147,6 +147,11 @@ struct private_child_cfg_t {
 	 * HW offload mode
 	 */
 	hw_offload_t hw_offload;
+
+	/**
+	 * DS header field copy mode
+	 */
+	dscp_copy_t copy_dscp;
 };
 
 METHOD(child_cfg_t, get_name, char*,
@@ -487,6 +492,12 @@ METHOD(child_cfg_t, get_hw_offload, hw_offload_t,
 	return this->hw_offload;
 }
 
+METHOD(child_cfg_t, get_copy_dscp, dscp_copy_t,
+	private_child_cfg_t *this)
+{
+	return this->copy_dscp;
+}
+
 METHOD(child_cfg_t, get_dpd_action, action_t,
 	private_child_cfg_t *this)
 {
@@ -612,6 +623,8 @@ METHOD(child_cfg_t, equals, bool,
 		this->tfc == other->tfc &&
 		this->manual_prio == other->manual_prio &&
 		this->replay_window == other->replay_window &&
+		this->hw_offload == other->hw_offload &&
+		this->copy_dscp == other->copy_dscp &&
 		streq(this->updown, other->updown) &&
 		streq(this->interface, other->interface);
 }
@@ -673,6 +686,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_ref = _get_ref,
 			.destroy = _destroy,
 			.get_hw_offload = _get_hw_offload,
+			.get_copy_dscp = _get_copy_dscp,
 		},
 		.name = strdup(name),
 		.options = data->options,
@@ -696,6 +710,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 		.replay_window = lib->settings->get_int(lib->settings,
 							"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
 		.hw_offload = data->hw_offload,
+		.copy_dscp = data->copy_dscp,
 	);
 
 	return &this->public;

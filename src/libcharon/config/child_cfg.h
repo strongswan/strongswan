@@ -192,6 +192,13 @@ struct child_cfg_t {
 	hw_offload_t (*get_hw_offload) (child_cfg_t *this);
 
 	/**
+	 * Get the copy mode for the DS header field to use for the CHILD_SA.
+	 *
+	 * @return				IP header copy mode
+	 */
+	dscp_copy_t (*get_copy_dscp) (child_cfg_t *this);
+
+	/**
 	 * Action to take if CHILD_SA gets closed.
 	 *
 	 * @return				close action
@@ -319,6 +326,12 @@ enum child_cfg_option_t {
 
 	/** Set mark on inbound SAs */
 	OPT_MARK_IN_SA = (1<<6),
+
+	/** Disable copying the DF bit to the outer IPv4 header in tunnel mode */
+	OPT_NO_COPY_DF = (1<<7),
+
+	/** Disable copying the ECN header field in tunnel mode */
+	OPT_NO_COPY_ECN = (1<<8),
 };
 
 /**
@@ -355,6 +368,8 @@ struct child_cfg_create_t {
 	char *updown;
 	/** HW offload mode */
 	hw_offload_t hw_offload;
+	/** How to handle the DS header field in tunnel mode */
+	dscp_copy_t copy_dscp;
 };
 
 /**
