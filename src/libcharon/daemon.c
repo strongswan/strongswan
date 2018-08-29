@@ -549,6 +549,10 @@ static void load_custom_logger(private_daemon_t *this,
 				lib->settings->get_int(lib->settings, "%s.customlog.%s.%N", def,
 							lib->ns, entry->name, debug_lower_names, group));
 	}
+	if (custom_logger->reload)
+	{
+		custom_logger->reload(custom_logger);
+	}
 	charon->bus->add_logger(charon->bus, &custom_logger->logger);
 }
 

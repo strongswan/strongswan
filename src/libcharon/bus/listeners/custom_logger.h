@@ -49,12 +49,17 @@ struct custom_logger_t {
 	 * @param group		debug group to set
 	 * @param level		max level to log (0..4)
 	 */
-	void (*set_level) (custom_logger_t *this, debug_t group, level_t level);
+	void (*set_level)(custom_logger_t *this, debug_t group, level_t level);
+
+	/**
+	 * Reload custom logger configuration.
+	 */
+	void (*reload)(custom_logger_t *this);
 
 	/**
 	 * Destroy the custom_logger_t object.
 	 */
-	void (*destroy) (custom_logger_t *this);
+	void (*destroy)(custom_logger_t *this);
 };
 
 /**
