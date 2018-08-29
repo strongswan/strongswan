@@ -101,6 +101,10 @@ struct kernel_ipsec_add_sa_t {
 	bool inbound;
 	/** TRUE if an SPI has already been allocated for this SA */
 	bool update;
+	/** if TRUE XFRM_STATE_NOPMTUDISC is set */
+	bool no_pmtudisc;
+	/** if TRUE XFRM_STATE_NOECN is set */
+	bool no_enc;
 };
 
 /**

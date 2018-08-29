@@ -535,6 +535,8 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   remote_ts = %#R", data->remote_ts);
 	DBG2(DBG_CFG, "   hw_offload = %N", hw_offload_names, cfg->hw_offload);
 	DBG2(DBG_CFG, "   sha256_96 = %u", has_opt(OPT_SHA256_96));
+	DBG2(DBG_CFG, "   copy_df = %u", !has_opt(OPT_SET_NOPMTUDISC));
+	DBG2(DBG_CFG, "   copy_ecn = %u", !has_opt(OPT_SET_NOECN));
 }
 
 /**
@@ -850,11 +852,11 @@ CALLBACK(parse_mode, bool,
  * Enable a child_cfg_option_t
  */
 static bool parse_option(child_cfg_option_t *out, child_cfg_option_t opt,
-						 chunk_t v)
+						 chunk_t v, bool invert)
 {
 	bool val;
 
-	if (parse_bool(&val, v))
+	if (parse_bool(&val, v) != invert)
 	{
 		if (val)
 		{
@@ -871,7 +873,7 @@ static bool parse_option(child_cfg_option_t *out, child_cfg_option_t opt,
 CALLBACK(parse_opt_haccess, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
-	return parse_option(out, OPT_HOSTACCESS, v);
+	return parse_option(out, OPT_HOSTACCESS, v, FALSE);
 }
 
 /**
@@ -880,7 +882,7 @@ CALLBACK(parse_opt_haccess, bool,
 CALLBACK(parse_opt_fwd_out, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
-	return parse_option(out, OPT_FWD_OUT_POLICIES, v);
+	return parse_option(out, OPT_FWD_OUT_POLICIES, v, FALSE);
 }
 
 /**
@@ -889,9 +891,8 @@ CALLBACK(parse_opt_fwd_out, bool,
 CALLBACK(parse_opt_ipcomp, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
-	return parse_option(out, OPT_IPCOMP, v);
+	return parse_option(out, OPT_IPCOMP, v, FALSE);
 }
-
 
 /**
  * Parse OPT_SHA256_96 option
@@ -899,7 +900,25 @@ CALLBACK(parse_opt_ipcomp, bool,
 CALLBACK(parse_opt_sha256_96, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
-	return parse_option(out, OPT_SHA256_96, v);
+	return parse_option(out, OPT_SHA256_96, v, FALSE);
+}
+
+/**
+ * Parse OPT_SET_NOECN option
+ */
+CALLBACK(parse_opt_copy_ecn, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_SET_NOECN, v, TRUE);
+}
+
+/**
+ * Parse OPT_SET_NOPMTUDISC option
+ */
+CALLBACK(parse_opt_copy_df, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_SET_NOPMTUDISC, v, TRUE);
 }
 
 /**
@@ -908,7 +927,7 @@ CALLBACK(parse_opt_sha256_96, bool,
 CALLBACK(parse_opt_mark_in, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
-	return parse_option(out, OPT_MARK_IN_SA, v);
+	return parse_option(out, OPT_MARK_IN_SA, v, FALSE);
 }
 
 /**
@@ -1593,6 +1612,8 @@ CALLBACK(child_kv, bool,
 		{ "interface",			parse_string,		&child->cfg.interface				},
 		{ "hw_offload",			parse_hw_offload,	&child->cfg.hw_offload				},
 		{ "sha256_96",			parse_opt_sha256_96,&child->cfg.options					},
+		{ "copy_df",			parse_opt_copy_df,	&child->cfg.options			},
+		{ "copy_ecn",			parse_opt_copy_ecn,	&child->cfg.options			},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,

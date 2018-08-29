@@ -873,6 +873,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.proto = proto_ike2ip(this->protocol),
 		.mark = inbound ? mark_in_sa(this) : this->mark_out,
 	};
+
 	sa = (kernel_ipsec_add_sa_t){
 		.reqid = this->reqid,
 		.mode = this->mode,
@@ -894,6 +895,8 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.initiator = initiator,
 		.inbound = inbound,
 		.update = update,
+		.no_pmtudisc = this->config->has_option(this->config, OPT_SET_NOPMTUDISC),
+		.no_enc = this->config->has_option(this->config, OPT_SET_NOECN),
 	};
 
 	status = charon->kernel->add_sa(charon->kernel, &id, &sa);
