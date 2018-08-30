@@ -362,8 +362,6 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	}
 	message->add_payload(message, (payload_t*)sa_payload);
 
-	nonce_payload = nonce_payload_create(PLV2_NONCE);
-	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 	ke_payload = ke_payload_create_from_diffie_hellman(PLV2_KEY_EXCHANGE,
 													   this->dh);
 	if (!ke_payload)
@@ -371,6 +369,8 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 		DBG1(DBG_IKE, "creating KE payload failed");
 		return FALSE;
 	}
+	nonce_payload = nonce_payload_create(PLV2_NONCE);
+	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 
 	if (this->old_sa)
 	{	/* payload order differs if we are rekeying */
