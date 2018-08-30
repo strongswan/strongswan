@@ -62,6 +62,7 @@ CONFIG_OPTS = \
 	--enable-sqlite \
 	--enable-attr-sql \
 	--enable-mediation \
+	--enable-botan \
 	--enable-openssl \
 	--enable-blowfish \
 	--enable-kernel-pfkey \
