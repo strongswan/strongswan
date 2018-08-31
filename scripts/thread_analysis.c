@@ -260,8 +260,6 @@ int main(int argc, char *argv[])
 	printf("  <p>\n");
 	printf("  <hr/>\n");
 	printf("  <em>&copy; 2008\n");
-	printf("    <a href=\"http://ita.hsr.ch?&L=1\" target=\"popup\">\n");
-	printf("       ITA Institute for Internet Technologies and Applications</a> -\n");
 	printf("    <a href=\"http://www.hsr.ch/?&L=1\" target=\"popup\">\n");
 	printf("       HSR Hochschule f&uuml;r Technik Rapperswil</a>\n");
 	printf("  </em>\n");
