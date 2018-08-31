@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -122,6 +122,16 @@ struct private_child_cfg_t {
 	 * Optional mark to install outbound CHILD_SA with
 	 */
 	mark_t mark_out;
+
+	/**
+	 * Optional mark to set to packets after inbound processing
+	 */
+	mark_t set_mark_in;
+
+	/**
+	 * Optional mark to set to packets after outbound processing
+	 */
+	mark_t set_mark_out;
 
 	/**
 	 * Traffic Flow Confidentiality padding, if enabled
@@ -547,6 +557,12 @@ METHOD(child_cfg_t, get_mark, mark_t,
 	return inbound ? this->mark_in : this->mark_out;
 }
 
+METHOD(child_cfg_t, get_set_mark, mark_t,
+	private_child_cfg_t *this, bool inbound)
+{
+	return inbound ? this->set_mark_in : this->set_mark_out;
+}
+
 METHOD(child_cfg_t, get_tfc, uint32_t,
 	private_child_cfg_t *this)
 {
@@ -620,6 +636,10 @@ METHOD(child_cfg_t, equals, bool,
 		this->mark_in.mask == other->mark_in.mask &&
 		this->mark_out.value == other->mark_out.value &&
 		this->mark_out.mask == other->mark_out.mask &&
+		this->set_mark_in.value == other->set_mark_in.value &&
+		this->set_mark_in.mask == other->set_mark_in.mask &&
+		this->set_mark_out.value == other->set_mark_out.value &&
+		this->set_mark_out.mask == other->set_mark_out.mask &&
 		this->tfc == other->tfc &&
 		this->manual_prio == other->manual_prio &&
 		this->replay_window == other->replay_window &&
@@ -676,6 +696,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_inactivity = _get_inactivity,
 			.get_reqid = _get_reqid,
 			.get_mark = _get_mark,
+			.get_set_mark = _get_set_mark,
 			.get_tfc = _get_tfc,
 			.get_manual_prio = _get_manual_prio,
 			.get_interface = _get_interface,
@@ -698,6 +719,8 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 		.close_action = data->close_action,
 		.mark_in = data->mark_in,
 		.mark_out = data->mark_out,
+		.set_mark_in = data->set_mark_in,
+		.set_mark_out = data->set_mark_out,
 		.lifetime = data->lifetime,
 		.inactivity = data->inactivity,
 		.tfc = data->tfc,

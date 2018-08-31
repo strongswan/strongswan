@@ -444,7 +444,7 @@ static void handle_keyword(kw_token_t token, starter_conn_t *conn, char *key,
 			KW_SA_OPTION_FLAG("yes", "no", SA_OPTION_COMPRESS)
 			break;
 		case KW_MARK:
-			if (!mark_from_string(value, &conn->mark_in))
+			if (!mark_from_string(value, MARK_OP_UNIQUE, &conn->mark_in))
 			{
 				cfg->err++;
 				break;
@@ -452,13 +452,13 @@ static void handle_keyword(kw_token_t token, starter_conn_t *conn, char *key,
 			conn->mark_out = conn->mark_in;
 			break;
 		case KW_MARK_IN:
-			if (!mark_from_string(value, &conn->mark_in))
+			if (!mark_from_string(value, MARK_OP_UNIQUE, &conn->mark_in))
 			{
 				cfg->err++;
 			}
 			break;
 		case KW_MARK_OUT:
-			if (!mark_from_string(value, &conn->mark_out))
+			if (!mark_from_string(value, MARK_OP_UNIQUE, &conn->mark_out))
 			{
 				cfg->err++;
 			}

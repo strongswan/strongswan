@@ -69,7 +69,7 @@ bool ipsec_sa_cfg_equals(ipsec_sa_cfg_t *a, ipsec_sa_cfg_t *b)
 /*
  * See header
  */
-bool mark_from_string(const char *value, mark_t *mark)
+bool mark_from_string(const char *value, mark_op_t ops, mark_t *mark)
 {
 	char *endptr;
 
@@ -79,6 +79,11 @@ bool mark_from_string(const char *value, mark_t *mark)
 	}
 	if (strcasepfx(value, "%unique"))
 	{
+		if (!(ops & MARK_OP_UNIQUE))
+		{
+			DBG1(DBG_APP, "unexpected use of %%unique mark", value);
+			return FALSE;
+		}
 		endptr = (char*)value + strlen("%unique");
 		if (strcasepfx(endptr, "-dir"))
 		{
@@ -88,6 +93,24 @@ bool mark_from_string(const char *value, mark_t *mark)
 		else if (!*endptr || *endptr == '/')
 		{
 			mark->value = MARK_UNIQUE;
+		}
+		else
+		{
+			DBG1(DBG_APP, "invalid mark value: %s", value);
+			return FALSE;
+		}
+	}
+	else if (strcasepfx(value, "%same"))
+	{
+		if (!(ops & MARK_OP_SAME))
+		{
+			DBG1(DBG_APP, "unexpected use of %%same mark", value);
+			return FALSE;
+		}
+		endptr = (char*)value + strlen("%same");
+		if (!*endptr || *endptr == '/')
+		{
+			mark->value = MARK_SAME;
 		}
 		else
 		{
