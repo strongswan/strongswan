@@ -24,6 +24,8 @@
 #include <utils/chunk.h>
 #include <threading/thread_value.h>
 #include <threading/rwlock.h>
+#include <threading/mutex.h>
+#include <threading/condvar.h>
 #include <collections/linked_list.h>
 
 /* Older mysql.h headers do not define it, but we need it. It is not returned
@@ -59,6 +61,16 @@ struct private_mysql_database_t {
 	 * read-write lock
 	 */
 	rwlock_t *rwlock;
+
+	/**
+	 * condvar for notifying clients who could not acquire a connection
+	 */
+	condvar_t *condvar;
+
+	/**
+	 * mutex for the condvar
+	 */
+	mutex_t *mutex_condvar;
 
 	/**
 	 * hostname to connect to
@@ -142,6 +154,9 @@ static void conn_destroy(conn_t *this)
 static void conn_release(private_mysql_database_t *this, conn_t *conn)
 {
 	conn->in_use->unlock(conn->in_use);
+	this->mutex_condvar->lock(this->mutex_condvar);
+	this->condvar->signal(this->condvar);
+	this->mutex_condvar->unlock(this->mutex_condvar);
 }
 
 /**
@@ -195,6 +210,15 @@ void mysql_database_deinit()
 }
 
 /**
+ * Determine if the error goes away if an existing connection is used instead of a new one
+ */
+bool is_mysql_error_fatal(uint64_t error)
+{
+	/* error 1040 is "Too many connections". The query is probably executable if an existing connection is used */
+	return error != 1040;
+}
+
+/**
  * Acquire/Reuse a mysql connection
  */
 static conn_t *conn_get(private_mysql_database_t *this, transaction_t **trans)
@@ -237,6 +261,14 @@ static conn_t *conn_get(private_mysql_database_t *this, transaction_t **trans)
 			/* Remove and destroy connection if it is not alive */
 			this->rwlock->write_lock(this->rwlock);
 			this->pool->remove(this->pool, found, NULL);
+			/* There is no more connection alive, so broadcast on the condvar
+			 * to resume execution of all threads that were waiting for a connection to be freed.
+			 */
+			if (this->pools->get_count(this->pools) == 0)
+			{
+				this->mutex_condvar->lock(this->mutex_condvar);
+				this->condvar->broadcast(this->condvar);
+			}
 			this->rwlock->unlock(this->rwlock);
 			conn_destroy(found);
 			found = NULL;
@@ -257,8 +289,37 @@ static conn_t *conn_get(private_mysql_database_t *this, transaction_t **trans)
 			DBG1(DBG_LIB, "connecting to mysql://%s:***@%s:%d/%s failed: %s",
 				 this->username, this->host, this->port, this->database,
 				 mysql_error(found->mysql));
+			uint64_t mysql_error_number = mysql_errno(found->mysql);
 			conn_destroy(found);
 			found = NULL;
+			/* check if we have at least one MySQL connection alive, otherwise waiting is probably
+			 *	futile because the MySQL server is gone.
+			 */
+			if (is_mysql_error_fatal(mysql_error_number))
+			{
+				/* signal all other threads, so they can get the fatal error
+				 * and the calling functions error out correctly
+				 */
+				this->mutex_condvar->lock(this->mutex_condvar);
+				this->condvar->broadcast(this->condvar);
+				this->mutex_condvar->unlock(this->mutex_condvar);
+			}
+			else
+			{
+				this->rwlock->write_lock(this->rwlock);
+				uint64_t count = this->pool->get_count(this->pool);
+				this->rwlock->unlock(this->rwlock);
+				if (count)
+				{
+					this->mutex_condvar->lock(this->mutex_condvar);
+					this->condvar->wait(this->condvar, this->mutex_condvar);
+					this->mutex_condvar->unlock(this->mutex_condvar);
+				}
+				else
+				{
+					DBG1(DBG_LIB, "No MySQL connection is alive and no new connection could be established.");
+				}
+			}
 		}
 		else
 		{
@@ -746,6 +807,8 @@ METHOD(database_t, destroy, void,
 	this->transaction->destroy(this->transaction);
 	this->pool->destroy_function(this->pool, (void*)conn_destroy);
 	this->rwlock->destroy(this->rwlock);
+	this->condvar->destroy(this->condvar);
+	this->mutex_condvar->destroy(this->mutex_condvar);
 	free(this->host);
 	free(this->username);
 	free(this->password);
@@ -836,6 +899,8 @@ mysql_database_t *mysql_database_create(char *uri)
 		return NULL;
 	}
 	this->rwlock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	this->condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
+	this->mutex_condvar = mutex_create(MUTEX_TYPE_DEFAULT);
 	this->pool = linked_list_create();
 	this->transaction = thread_value_create(NULL);
 
