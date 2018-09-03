@@ -23,7 +23,7 @@
 #include <utils/debug.h>
 #include <utils/chunk.h>
 #include <threading/thread_value.h>
-#include <threading/mutex.h>
+#include <threading/rwlock.h>
 #include <collections/linked_list.h>
 
 /* Older mysql.h headers do not define it, but we need it. It is not returned
@@ -56,9 +56,9 @@ struct private_mysql_database_t {
 	thread_value_t *transaction;
 
 	/**
-	 * mutex to lock pool
+	 * read-write lock
 	 */
-	mutex_t *mutex;
+	rwlock_t *rwlock;
 
 	/**
 	 * hostname to connect to
@@ -101,7 +101,7 @@ struct conn_t {
 	/**
 	 * connection in use?
 	 */
-	bool in_use;
+	rwlock_t *in_use;
 };
 
 /**
@@ -127,13 +127,21 @@ typedef struct {
 } transaction_t;
 
 /**
+ * Destroy a mysql connection
+ */
+static void conn_destroy(conn_t *this)
+{
+	mysql_close(this->mysql);
+	this->in_use->destroy(this->in_use);
+	free(this);
+}
+
+/**
  * Release a mysql connection
  */
 static void conn_release(private_mysql_database_t *this, conn_t *conn)
 {
-	this->mutex->lock(this->mutex);
-	conn->in_use = FALSE;
-	this->mutex->unlock(this->mutex);
+	conn->in_use->unlock(conn->in_use);
 }
 
 /**
@@ -187,15 +195,6 @@ void mysql_database_deinit()
 }
 
 /**
- * Destroy a mysql connection
- */
-static void conn_destroy(conn_t *this)
-{
-	mysql_close(this->mysql);
-	free(this);
-}
-
-/**
  * Acquire/Reuse a mysql connection
  */
 static conn_t *conn_get(private_mysql_database_t *this, transaction_t **trans)
@@ -215,31 +214,30 @@ static conn_t *conn_get(private_mysql_database_t *this, transaction_t **trans)
 		}
 		return transaction->conn;
 	}
-
 	while (TRUE)
 	{
-		this->mutex->lock(this->mutex);
+		this->rwlock->read_lock(this->rwlock);
 		enumerator = this->pool->create_enumerator(this->pool);
 		while (enumerator->enumerate(enumerator, &current))
 		{
-			if (!current->in_use)
+			if (current->in_use->try_write_lock(current->in_use))
 			{
 				found = current;
-				found->in_use = TRUE;
 				break;
 			}
 		}
 		enumerator->destroy(enumerator);
-		this->mutex->unlock(this->mutex);
+		this->rwlock->unlock(this->rwlock);
 		if (found)
 		{	/* check connection if found, release if ping fails */
 			if (mysql_ping(found->mysql) == 0)
 			{
 				break;
 			}
-			this->mutex->lock(this->mutex);
+			/* Remove and destroy connection if it is not alive */
+			this->rwlock->write_lock(this->rwlock);
 			this->pool->remove(this->pool, found, NULL);
-			this->mutex->unlock(this->mutex);
+			this->rwlock->unlock(this->rwlock);
 			conn_destroy(found);
 			found = NULL;
 			continue;
@@ -249,7 +247,7 @@ static conn_t *conn_get(private_mysql_database_t *this, transaction_t **trans)
 	if (found == NULL)
 	{
 		INIT(found,
-			.in_use = TRUE,
+			.in_use = rwlock_create(RWLOCK_TYPE_DEFAULT),
 			.mysql = mysql_init(NULL),
 		);
 		if (!mysql_real_connect(found->mysql, this->host, this->username,
@@ -264,11 +262,12 @@ static conn_t *conn_get(private_mysql_database_t *this, transaction_t **trans)
 		}
 		else
 		{
-			this->mutex->lock(this->mutex);
+			found->in_use->write_lock(found->in_use);
+			this->rwlock->write_lock(this->rwlock);
 			this->pool->insert_last(this->pool, found);
 			DBG2(DBG_LIB, "increased MySQL connection pool size to %d",
 				 this->pool->get_count(this->pool));
-			this->mutex->unlock(this->mutex);
+			this->rwlock->unlock(this->rwlock);
 		}
 	}
 	return found;
@@ -746,7 +745,7 @@ METHOD(database_t, destroy, void,
 {
 	this->transaction->destroy(this->transaction);
 	this->pool->destroy_function(this->pool, (void*)conn_destroy);
-	this->mutex->destroy(this->mutex);
+	this->rwlock->destroy(this->rwlock);
 	free(this->host);
 	free(this->username);
 	free(this->password);
@@ -836,7 +835,7 @@ mysql_database_t *mysql_database_create(char *uri)
 		free(this);
 		return NULL;
 	}
-	this->mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->rwlock = rwlock_create(RWLOCK_TYPE_DEFAULT);
 	this->pool = linked_list_create();
 	this->transaction = thread_value_create(NULL);
 
