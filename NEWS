@@ -1,6 +1,16 @@
 strongswan-5.7.0
 ----------------
 
+- Fixes a potential authorization bypass vulnerability in the gmp plugin that
+  was caused by a too lenient verification of PKCS#1 v1.5 signatures.  Several
+  flaws could be exploited by a Bleichenbacher-style attack to forge signatures
+  for low-exponent keys (i.e. with e=3).  CVE-2018-16151 has been assigned to
+  the problem of accepting random bytes after the OID of the hash function in
+  such signatures, and CVE-2018-16152 has been assigned to the issue of not
+  verifying that the parameters in the ASN.1 algorithmIdentitifer structure is
+  empty.  Other flaws that don't lead to a vulnerability directly (e.g. not
+  checking for at least 8 bytes of padding) have no separate CVE assigned.
+
 - Dots are not allowed anymore in section names in swanctl.conf and
   strongswan.conf. This mainly affects the configuration of file loggers. If the
   path for such a log file contains dots it now has to be configured in the new
