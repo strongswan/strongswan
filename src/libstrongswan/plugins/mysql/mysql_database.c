@@ -264,7 +264,7 @@ static conn_t *conn_get(private_mysql_database_t *this, transaction_t **trans)
 			/* There is no more connection alive, so broadcast on the condvar
 			 * to resume execution of all threads that were waiting for a connection to be freed.
 			 */
-			if (this->pools->get_count(this->pools) == 0)
+			if (this->pool->get_count(this->pool) == 0)
 			{
 				this->mutex_condvar->lock(this->mutex_condvar);
 				this->condvar->broadcast(this->condvar);
