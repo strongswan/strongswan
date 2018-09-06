@@ -258,47 +258,43 @@ METHOD(peer_cfg_t, replace_child_cfgs, enumerator_t*,
 	private_peer_cfg_t *this, peer_cfg_t *other_pub)
 {
 	private_peer_cfg_t *other = (private_peer_cfg_t*)other_pub;
-	linked_list_t *removed, *added;
+	linked_list_t *new_cfgs, *removed, *added;
 	enumerator_t *mine, *others;
 	child_cfg_t *my_cfg, *other_cfg;
 	child_cfgs_replace_enumerator_t *enumerator;
 	bool found;
 
-	removed = linked_list_create();
+	added = linked_list_create();
 
 	other->lock->read_lock(other->lock);
-	added = linked_list_create_from_enumerator(
+	new_cfgs = linked_list_create_from_enumerator(
 					other->child_cfgs->create_enumerator(other->child_cfgs));
-	added->invoke_offset(added, offsetof(child_cfg_t, get_ref));
+	new_cfgs->invoke_offset(new_cfgs, offsetof(child_cfg_t, get_ref));
 	other->lock->unlock(other->lock);
 
 	this->lock->write_lock(this->lock);
-	others = added->create_enumerator(added);
-	mine = this->child_cfgs->create_enumerator(this->child_cfgs);
-	while (mine->enumerate(mine, &my_cfg))
+	removed = this->child_cfgs;
+	this->child_cfgs = new_cfgs;
+	others = new_cfgs->create_enumerator(new_cfgs);
+	mine = removed->create_enumerator(removed);
+	while (others->enumerate(others, &other_cfg))
 	{
 		found = FALSE;
-		while (others->enumerate(others, &other_cfg))
+		while (mine->enumerate(mine, &my_cfg))
 		{
 			if (my_cfg->equals(my_cfg, other_cfg))
 			{
-				added->remove_at(added, others);
-				other_cfg->destroy(other_cfg);
+				removed->remove_at(removed, mine);
+				my_cfg->destroy(my_cfg);
 				found = TRUE;
 				break;
 			}
 		}
-		added->reset_enumerator(added, others);
+		removed->reset_enumerator(removed, mine);
 		if (!found)
 		{
-			this->child_cfgs->remove_at(this->child_cfgs, mine);
-			removed->insert_last(removed, my_cfg);
+			added->insert_last(added, other_cfg->get_ref(other_cfg));
 		}
-	}
-	while (others->enumerate(others, &other_cfg))
-	{
-		this->child_cfgs->insert_last(this->child_cfgs,
-									  other_cfg->get_ref(other_cfg));
 	}
 	others->destroy(others);
 	mine->destroy(mine);

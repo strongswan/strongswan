@@ -157,11 +157,9 @@ struct peer_cfg_t {
 	/**
 	 * Replace the CHILD configs with those in the given PEER config.
 	 *
-	 * Configs that are equal are not replaced.
-	 *
 	 * The enumerator enumerates the removed and added CHILD configs
 	 * (child_cfg_t*, bool), where the flag is FALSE for removed configs and
-	 * TRUE for added configs.
+	 * TRUE for added configs. Configs that are equal are not enumerated.
 	 *
 	 * @param other			other config to get CHILD configs from
 	 * @return				an enumerator over removed/added CHILD configs
