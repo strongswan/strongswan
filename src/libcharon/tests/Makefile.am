@@ -4,6 +4,7 @@ check_PROGRAMS = $(TESTS)
 
 libcharon_tests_SOURCES = \
   suites/test_ike_cfg.c \
+  suites/test_peer_cfg.c \
   suites/test_mem_pool.c \
   suites/test_message_chapoly.c \
   libcharon_tests.h libcharon_tests.c
