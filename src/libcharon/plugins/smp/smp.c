@@ -76,7 +76,8 @@ static void write_id(xmlTextWriterPtr writer, char *element, identification_t *i
 	switch (id->get_type(id))
 	{
 		{
-			char *type = "";
+			char *type;
+
 			while (TRUE)
 			{
 				case ID_ANY:
