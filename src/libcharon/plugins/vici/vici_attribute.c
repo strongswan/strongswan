@@ -705,7 +705,7 @@ CALLBACK(get_pools, vici_message_t*,
 			i = 0;
 			builder->begin_section(builder, "leases");
 			leases = vips->create_lease_enumerator(vips);
-			while (leases && leases->enumerate(leases, &uid, &lease, &on))
+			while (leases->enumerate(leases, &uid, &lease, &on))
 			{
 				snprintf(buf, sizeof(buf), "%d", i++);
 				builder->begin_section(builder, buf);
