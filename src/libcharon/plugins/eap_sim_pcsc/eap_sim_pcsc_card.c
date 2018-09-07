@@ -124,6 +124,7 @@ METHOD(simaka_card_t, get_triplet, bool,
 	if (rv != SCARD_S_SUCCESS)
 	{
 		DBG1(DBG_IKE, "SCardListReaders: %s", pcsc_stringify_error(rv));
+		free(mszReaders);
 		return FALSE;
 	}
 
