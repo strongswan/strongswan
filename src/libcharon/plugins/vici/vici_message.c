@@ -102,18 +102,10 @@ bool vici_verify_type(vici_type_t type, u_int section, bool list)
 		DBG1(DBG_ENC, "'%N' outside of section", vici_type_names, type);
 		return FALSE;
 	}
-	if (type == VICI_END)
+	if (type == VICI_END && section)
 	{
-		if (section)
-		{
-			DBG1(DBG_ENC, "'%N' within section", vici_type_names, type);
-			return FALSE;
-		}
-		if (list)
-		{
-			DBG1(DBG_ENC, "'%N' within list", vici_type_names, type);
-			return FALSE;
-		}
+		DBG1(DBG_ENC, "'%N' within section", vici_type_names, type);
+		return FALSE;
 	}
 	return TRUE;
 }
