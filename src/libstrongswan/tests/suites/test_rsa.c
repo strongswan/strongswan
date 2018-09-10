@@ -146,7 +146,7 @@ static void test_bad_sigs(public_key_t *pubkey)
  * RSA key sizes to test
  */
 static int key_sizes[] = {
-	768, 1024, 1536, 2048, 3072, 4096,
+	1024, 1536, 2048, 3072, 4096,
 };
 
 START_TEST(test_gen)
