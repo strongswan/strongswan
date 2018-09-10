@@ -29,7 +29,7 @@ gcrypt)
 printf-builtin)
 	CONFIG="--with-printf-hooks=builtin"
 	;;
-all|coverage)
+all|coverage|sonarcloud)
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
 			--disable-dumm --disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-padlock --disable-fuzzing
@@ -202,7 +202,16 @@ apidoc)
 esac
 
 echo "$ make $TARGET"
-make -j4 $TARGET || exit $?
+case "$TEST" in
+sonarcloud)
+	# without target, coverage is currently not supported anyway because
+	# sonarqube only supports gcov, not lcov
+	build-wrapper-linux-x86-64 --out-dir bw-output make -j4 || exit $?
+	;;
+*)
+	make -j4 $TARGET || exit $?
+	;;
+esac
 
 case "$TEST" in
 apidoc)
@@ -210,6 +219,13 @@ apidoc)
 		cat make.warnings
 		exit 1
 	fi
+	;;
+sonarcloud)
+	sonar-scanner \
+		-Dsonar.projectKey=strongswan \
+		-Dsonar.projectVersion=$(git describe)+${TRAVIS_BUILD_NUMBER} \
+		-Dsonar.sources=. \
+		-Dsonar.cfamily.build-wrapper-output=bw-output || exit $?
 	;;
 *)
 	;;
