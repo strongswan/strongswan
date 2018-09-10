@@ -8,8 +8,8 @@ compiler:
   - clang
 
 before_install:
-  - ./scripts/test.sh deps
-  - ./scripts/test.sh pydeps
+  - travis_retry ./scripts/test.sh deps
+  - travis_retry ./scripts/test.sh pydeps
 
 before_script:
   - sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0 || true
