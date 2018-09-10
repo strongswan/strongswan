@@ -43,6 +43,8 @@ enum shared_key_type_t {
 	SHARED_PIN,
 	/** Calculated NT Hash = MD4(UTF-16LE(password)) */
 	SHARED_NT_HASH,
+	/** Postquantum Preshared Key */
+	SHARED_PPK,
 };
 
 /**

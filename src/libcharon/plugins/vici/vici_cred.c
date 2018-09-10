@@ -442,6 +442,10 @@ CALLBACK(load_shared, vici_message_t*,
 	{
 		type = SHARED_NT_HASH;
 	}
+	else if (strcaseeq(str, "ppk"))
+	{
+		type = SHARED_PPK;
+	}
 	else
 	{
 		return create_reply("invalid shared key type: %s", str);

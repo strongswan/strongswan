@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tobias Brunner
+ * Copyright (C) 2007-2018 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -154,6 +154,16 @@ struct private_peer_cfg_t {
 	 * remote authentication configs (constraints)
 	 */
 	linked_list_t *remote_auth;
+
+	/**
+	 * PPK ID
+	 */
+	identification_t *ppk_id;
+
+	/**
+	 * Whether a PPK is required
+	 */
+	bool ppk_required;
 
 #ifdef ME
 	/**
@@ -577,6 +587,18 @@ METHOD(peer_cfg_t, create_auth_cfg_enumerator, enumerator_t*,
 	return this->remote_auth->create_enumerator(this->remote_auth);
 }
 
+METHOD(peer_cfg_t, get_ppk_id, identification_t*,
+	private_peer_cfg_t *this)
+{
+	return this->ppk_id;
+}
+
+METHOD(peer_cfg_t, ppk_required, bool,
+	private_peer_cfg_t *this)
+{
+	return this->ppk_required;
+}
+
 #ifdef ME
 METHOD(peer_cfg_t, is_mediation, bool,
 	private_peer_cfg_t *this)
@@ -651,6 +673,14 @@ static bool auth_cfg_equal(private_peer_cfg_t *this, private_peer_cfg_t *other)
 	return equal;
 }
 
+/**
+ * Check if two identities are equal, or both are not set
+ */
+static bool id_equal(identification_t *this, identification_t *other)
+{
+	return this == other || (this && other && this->equals(this, other));
+}
+
 METHOD(peer_cfg_t, equals, bool,
 	private_peer_cfg_t *this, private_peer_cfg_t *other)
 {
@@ -684,13 +714,13 @@ METHOD(peer_cfg_t, equals, bool,
 		this->dpd == other->dpd &&
 		this->aggressive == other->aggressive &&
 		this->pull_mode == other->pull_mode &&
-		auth_cfg_equal(this, other)
+		auth_cfg_equal(this, other) &&
+		this->ppk_required == other->ppk_required &&
+		id_equal(this->ppk_id, other->ppk_id)
 #ifdef ME
 		&& this->mediation == other->mediation &&
 		streq(this->mediated_by, other->mediated_by) &&
-		(this->peer_id == other->peer_id ||
-		 (this->peer_id && other->peer_id &&
-		  this->peer_id->equals(this->peer_id, other->peer_id)))
+		id_equal(this->peer_id, other->peer_id)
 #endif /* ME */
 		);
 }
@@ -720,6 +750,7 @@ METHOD(peer_cfg_t, destroy, void,
 		DESTROY_IF(this->peer_id);
 		free(this->mediated_by);
 #endif /* ME */
+		DESTROY_IF(this->ppk_id);
 		this->lock->destroy(this->lock);
 		free(this->name);
 		free(this);
@@ -774,6 +805,8 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 			.create_pool_enumerator = _create_pool_enumerator,
 			.add_auth_cfg = _add_auth_cfg,
 			.create_auth_cfg_enumerator = _create_auth_cfg_enumerator,
+			.get_ppk_id = _get_ppk_id,
+			.ppk_required = _ppk_required,
 			.equals = (void*)_equals,
 			.get_ref = _get_ref,
 			.destroy = _destroy,
@@ -799,6 +832,8 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 		.pull_mode = !data->push_mode,
 		.dpd = data->dpd,
 		.dpd_timeout = data->dpd_timeout,
+		.ppk_id = data->ppk_id,
+		.ppk_required = data->ppk_required,
 		.vips = linked_list_create(),
 		.pools = linked_list_create(),
 		.local_auth = linked_list_create(),

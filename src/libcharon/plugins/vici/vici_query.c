@@ -417,6 +417,7 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 			b->add_kv(b, "dh-group", "%N", diffie_hellman_group_names, alg);
 		}
 	}
+	add_condition(b, ike_sa, "ppk", COND_PPK);
 
 	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 	{
@@ -787,6 +788,7 @@ CALLBACK(list_conns, vici_message_t*,
 	child_cfg_t *child_cfg;
 	char *ike, *str, *interface;
 	uint32_t manual_prio, dpd_delay, dpd_timeout;
+	identification_t *ppk_id;
 	linked_list_t *list;
 	traffic_selector_t *ts;
 	lifetime_cfg_t *lft;
@@ -847,6 +849,16 @@ CALLBACK(list_conns, vici_message_t*,
 		if (dpd_timeout)
 		{
 			b->add_kv(b, "dpd_timeout", "%u", dpd_timeout);
+		}
+
+		ppk_id = peer_cfg->get_ppk_id(peer_cfg);
+		if (ppk_id)
+		{
+			b->add_kv(b, "ppk_id", "%Y", ppk_id);
+		}
+		if (peer_cfg->ppk_required(peer_cfg))
+		{
+			b->add_kv(b, "ppk_required", "yes");
 		}
 
 		build_auth_cfgs(peer_cfg, TRUE, b);

@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2015-2017 Tobias Brunner
+ * Copyright (C) 2015-2018 Tobias Brunner
  * Copyright (C) 2015-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -304,6 +304,8 @@ typedef struct {
 	bool mobike;
 	bool send_certreq;
 	bool pull;
+	identification_t *ppk_id;
+	bool ppk_required;
 	cert_policy_t send_cert;
 	uint64_t dpd_delay;
 	uint64_t dpd_timeout;
@@ -403,6 +405,8 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  remote_port = %u", data->remote_port);
 	DBG2(DBG_CFG, "  send_certreq = %u", data->send_certreq);
 	DBG2(DBG_CFG, "  send_cert = %N", cert_policy_names, data->send_cert);
+	DBG2(DBG_CFG, "  ppk_id = %Y",  data->ppk_id);
+	DBG2(DBG_CFG, "  ppk_required = %u",  data->ppk_required);
 	DBG2(DBG_CFG, "  mobike = %u", data->mobike);
 	DBG2(DBG_CFG, "  aggressive = %u", data->aggressive);
 	DBG2(DBG_CFG, "  dscp = 0x%.2x", data->dscp);
@@ -469,6 +473,7 @@ static void free_peer_data(peer_data_t *data)
 	free(data->pools);
 	free(data->local_addrs);
 	free(data->remote_addrs);
+	DESTROY_IF(data->ppk_id);
 #ifdef ME
 	free(data->mediated_by);
 	DESTROY_IF(data->peer_id);
@@ -1584,9 +1589,8 @@ CALLBACK(parse_hosts, bool,
 	return TRUE;
 }
 
-#ifdef ME
 /**
- * Parse peer ID
+ * Parse peer/ppk ID
  */
 CALLBACK(parse_peer_id, bool,
 	identification_t **out, chunk_t v)
@@ -1600,7 +1604,7 @@ CALLBACK(parse_peer_id, bool,
 	*out = identification_create_from_string(buf);
 	return TRUE;
 }
-#endif /* ME */
+
 
 CALLBACK(cert_kv, bool,
 	cert_data_t *cert, vici_message_t *message, char *name, chunk_t value)
@@ -1744,6 +1748,8 @@ CALLBACK(peer_kv, bool,
 		{ "rekey_time",		parse_time,			&peer->rekey_time			},
 		{ "over_time",		parse_time,			&peer->over_time			},
 		{ "rand_time",		parse_time,			&peer->rand_time			},
+		{ "ppk_id",			parse_peer_id,		&peer->ppk_id				},
+		{ "ppk_required",	parse_bool,			&peer->ppk_required			},
 #ifdef ME
 		{ "mediation",		parse_bool,			&peer->mediation			},
 		{ "mediated_by",	parse_string,		&peer->mediated_by			},
@@ -2480,6 +2486,8 @@ CALLBACK(config_sn, bool,
 		.push_mode = !peer.pull,
 		.dpd = peer.dpd_delay,
 		.dpd_timeout = peer.dpd_timeout,
+		.ppk_id = peer.ppk_id ? peer.ppk_id->clone(peer.ppk_id) : NULL,
+		.ppk_required = peer.ppk_required,
 	};
 #ifdef ME
 	cfg.mediation = peer.mediation;

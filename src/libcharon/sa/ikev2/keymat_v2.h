@@ -58,6 +58,16 @@ struct keymat_v2_t {
 							chunk_t rekey_skd);
 
 	/**
+	 * Derive SK_d, SK_pi and SK_pr after authentication using the given
+	 * Postquantum Preshared Key and the previous values of these keys that
+	 * were derived by derive_ike_keys().
+	 *
+	 * @param ppk		the postquantum preshared key
+	 * @return			TRUE on success
+	 */
+	bool (*derive_ike_keys_ppk)(keymat_v2_t *this, chunk_t ppk);
+
+	/**
 	 * Derive keys for a CHILD_SA.
 	 *
 	 * The keys for the CHILD_SA are allocated in the integ and encr chunks.
@@ -95,9 +105,10 @@ struct keymat_v2_t {
 	 * key. PSK and EAP authentication include a secret into the data, use
 	 * the get_psk_sig() method instead.
 	 *
-	 * @param verify		TRUE to create for verfification, FALSE to sign
+	 * @param verify		TRUE to create for verification, FALSE to sign
 	 * @param ike_sa_init	encoded ike_sa_init message
 	 * @param nonce			nonce value
+	 * @param ppk			optional postquantum preshared key
 	 * @param id			identity
 	 * @param reserved		reserved bytes of id_payload
 	 * @param octests		chunk receiving allocated auth octets
@@ -107,7 +118,7 @@ struct keymat_v2_t {
 	 * @return				TRUE if octets created successfully
 	 */
 	bool (*get_auth_octets)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
-							chunk_t nonce, identification_t *id,
+							chunk_t nonce, chunk_t ppk, identification_t *id,
 							char reserved[3], chunk_t *octets,
 							array_t *schemes);
 	/**
@@ -117,17 +128,18 @@ struct keymat_v2_t {
 	 * includes the secret into the signature. If no secret is given, SK_p is
 	 * used as secret (used for EAP methods without MSK).
 	 *
-	 * @param verify		TRUE to create for verfification, FALSE to sign
+	 * @param verify		TRUE to create for verification, FALSE to sign
 	 * @param ike_sa_init	encoded ike_sa_init message
 	 * @param nonce			nonce value
 	 * @param secret		optional secret to include into signature
+	 * @param ppk			optional postquantum preshared key
 	 * @param id			identity
 	 * @param reserved		reserved bytes of id_payload
 	 * @param sign			chunk receiving allocated signature octets
 	 * @return				TRUE if signature created successfully
 	 */
 	bool (*get_psk_sig)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
-						chunk_t nonce, chunk_t secret,
+						chunk_t nonce, chunk_t secret, chunk_t ppk,
 						identification_t *id, char reserved[3], chunk_t *sig);
 
 	/**
