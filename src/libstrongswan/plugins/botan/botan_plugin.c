@@ -38,6 +38,7 @@
 #include "botan_ec_private_key.h"
 #include "botan_gcm.h"
 #include "botan_util_keys.h"
+#include "botan_x25519.h"
 
 #include <library.h>
 
@@ -94,6 +95,11 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, ECP_384_BP),
 			PLUGIN_PROVIDE(DH, ECP_512_BP),
 #endif
+#ifdef BOTAN_HAS_X25519
+		PLUGIN_REGISTER(DH, botan_x25519_create),
+			PLUGIN_PROVIDE(DH, CURVE_25519),
+#endif
+
 		/* crypters */
 		PLUGIN_REGISTER(CRYPTER, botan_crypter_create),
 #ifdef BOTAN_HAS_AES

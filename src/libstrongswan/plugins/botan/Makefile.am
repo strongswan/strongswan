@@ -25,7 +25,8 @@ libstrongswan_botan_la_SOURCES = \
 	botan_ec_private_key.h botan_ec_private_key.c \
 	botan_util.h botan_util.c \
 	botan_util_keys.h botan_util_keys.c \
-	botan_gcm.h botan_gcm.c
+	botan_gcm.h botan_gcm.c \
+	botan_x25519.h botan_x25519.c
 
 libstrongswan_botan_la_LDFLAGS = -module -avoid-version
 libstrongswan_botan_la_LIBADD = $(botan_LIBS)
