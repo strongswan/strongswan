@@ -458,13 +458,11 @@ static bool parse_ppk_identity(notify_payload_t *notify, identification_t **id)
 	}
 	switch (data.ptr[0])
 	{
-		case PPK_ID_OPAQUE:
-			/* we currently don't support this */
-		default:
-			return FALSE;
 		case PPK_ID_FIXED:
 			data = chunk_skip(data, 1);
 			break;
+		default:
+			return FALSE;
 	}
 	*id = identification_create_from_data(data);
 	return TRUE;
