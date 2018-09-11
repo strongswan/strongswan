@@ -259,3 +259,33 @@ bool botan_get_signature(botan_privkey_t key, const char *scheme,
 	botan_pk_op_sign_destroy(sign_op);
 	return TRUE;
 }
+
+/*
+ * Described in header
+ */
+bool botan_dh_key_derivation(botan_privkey_t key, chunk_t pub, chunk_t *secret)
+{
+	botan_pk_op_ka_t ka;
+
+	if (botan_pk_op_key_agreement_create(&ka, key, "Raw", 0))
+	{
+		return FALSE;
+	}
+
+	if (botan_pk_op_key_agreement_size(ka, &secret->len))
+	{
+		botan_pk_op_key_agreement_destroy(ka);
+		return FALSE;
+	}
+
+	*secret = chunk_alloc(secret->len);
+	if (botan_pk_op_key_agreement(ka, secret->ptr, &secret->len, pub.ptr,
+								  pub.len, NULL, 0))
+	{
+		chunk_clear(secret);
+		botan_pk_op_key_agreement_destroy(ka);
+		return FALSE;
+	}
+	botan_pk_op_key_agreement_destroy(ka);
+	return TRUE;
+}

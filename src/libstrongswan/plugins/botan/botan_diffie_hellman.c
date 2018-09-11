@@ -97,37 +97,14 @@ bool load_private_key(private_botan_diffie_hellman_t *this, chunk_t value)
 METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_botan_diffie_hellman_t *this, chunk_t value)
 {
-	botan_pk_op_ka_t op;
-
 	if (!diffie_hellman_verify_value(this->group, value))
-	{
-		return FALSE;
-	}
-
-	if (botan_pk_op_key_agreement_create(&op, this->dh_key, "Raw", 0))
 	{
 		return FALSE;
 	}
 
 	chunk_clear(&this->shared_secret);
 
-	if (botan_pk_op_key_agreement_size(op, &this->shared_secret.len))
-	{
-		botan_pk_op_key_agreement_destroy(op);
-		return FALSE;
-	}
-
-	this->shared_secret = chunk_alloc(this->shared_secret.len);
-	if (botan_pk_op_key_agreement(op, this->shared_secret.ptr,
-								  &this->shared_secret.len, value.ptr,
-								  value.len, NULL, 0))
-	{
-		chunk_clear(&this->shared_secret);
-		botan_pk_op_key_agreement_destroy(op);
-		return FALSE;
-	}
-	botan_pk_op_key_agreement_destroy(op);
-	return TRUE;
+	return botan_dh_key_derivation(this->dh_key, value, &this->shared_secret);
 }
 
 METHOD(diffie_hellman_t, get_my_public_value, bool,

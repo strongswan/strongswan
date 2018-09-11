@@ -69,40 +69,17 @@ struct private_botan_ec_diffie_hellman_t {
 METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_botan_ec_diffie_hellman_t *this, chunk_t value)
 {
-	botan_pk_op_ka_t ka;
-
 	if (!diffie_hellman_verify_value(this->group, value))
-	{
-		return FALSE;
-	}
-
-	if (botan_pk_op_key_agreement_create(&ka, this->key, "Raw", 0))
 	{
 		return FALSE;
 	}
 
 	chunk_clear(&this->shared_secret);
 
-	if (botan_pk_op_key_agreement_size(ka, &this->shared_secret.len))
-	{
-		botan_pk_op_key_agreement_destroy(ka);
-		return FALSE;
-	}
-
 	/* prepend 0x04 to indicate uncompressed point format */
 	value = chunk_cata("cc", chunk_from_chars(0x04), value);
 
-	this->shared_secret = chunk_alloc(this->shared_secret.len);
-	if (botan_pk_op_key_agreement(ka, this->shared_secret.ptr,
-								  &this->shared_secret.len, value.ptr,
-								  value.len, NULL, 0))
-	{
-		chunk_clear(&this->shared_secret);
-		botan_pk_op_key_agreement_destroy(ka);
-		return FALSE;
-	}
-	botan_pk_op_key_agreement_destroy(ka);
-	return TRUE;
+	return botan_dh_key_derivation(this->key, value, &this->shared_secret);
 }
 
 METHOD(diffie_hellman_t, get_my_public_value, bool,

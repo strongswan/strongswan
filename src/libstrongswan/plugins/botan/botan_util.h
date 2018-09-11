@@ -100,4 +100,17 @@ bool botan_get_fingerprint(botan_pubkey_t pubkey, void *cache,
 bool botan_get_signature(botan_privkey_t key, const char *scheme,
 						 chunk_t data, chunk_t *signature);
 
+/**
+ * Do the Diffie-Hellman key derivation using the given private key and public
+ * value.
+ *
+ * Note that the public value is not verified in this function.
+ *
+ * @param key		DH private key
+ * @param pub		other's public value
+ * @param secret	the derived secret (allocated on success)
+ * @return			TRUE if derivation was successful
+ */
+bool botan_dh_key_derivation(botan_privkey_t key, chunk_t pub, chunk_t *secret);
+
 #endif /** BOTAN_UTIL_H_ @}*/
