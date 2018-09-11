@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2016 Tobias Brunner
+ * Copyright (C) 2009-2018 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -54,7 +54,7 @@ struct private_library_t {
 	/**
 	 * Integrity check failed?
 	 */
-	bool integrity_failed;
+	bool init_failed;
 
 #ifdef LEAK_DETECTIVE
 	/**
@@ -306,7 +306,7 @@ bool library_init(char *settings, const char *namespace)
 	{	/* already initialized, increase refcount */
 		this = (private_library_t*)lib;
 		ref_get(&this->ref);
-		return !this->integrity_failed;
+		return !this->init_failed;
 	}
 
 	chunk_hash_seed();
@@ -376,7 +376,14 @@ bool library_init(char *settings, const char *namespace)
 	this->objects = hashtable_create((hashtable_hash_t)hash,
 									 (hashtable_equals_t)equals, 4);
 
-	this->public.settings = settings_create(this->public.conf);
+	this->public.settings = settings_create(NULL);
+	if (!this->public.settings->load_files(this->public.settings,
+										   this->public.conf, FALSE))
+	{
+		DBG1(DBG_LIB, "abort initialization due to invalid configuration");
+		this->init_failed = TRUE;
+	}
+
 	/* add registered aliases */
 	for (i = 0; i < ns_count; ++i)
 	{
@@ -416,15 +423,15 @@ bool library_init(char *settings, const char *namespace)
 		if (!lib->integrity->check(lib->integrity, "libstrongswan", library_init))
 		{
 			DBG1(DBG_LIB, "integrity check of libstrongswan failed");
-			this->integrity_failed = TRUE;
+			this->init_failed = TRUE;
 		}
 #else /* !INTEGRITY_TEST */
 		DBG1(DBG_LIB, "integrity test enabled, but not supported");
-		this->integrity_failed = TRUE;
+		this->init_failed = TRUE;
 #endif /* INTEGRITY_TEST */
 	}
 
 	diffie_hellman_init();
 
-	return !this->integrity_failed;
+	return !this->init_failed;
 }

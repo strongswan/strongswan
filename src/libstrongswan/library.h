@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2016 Tobias Brunner
+ * Copyright (C) 2010-2018 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -258,11 +258,12 @@ struct library_t {
  *
  * The settings and namespace arguments are only used on the first call.
  *
- * @param settings		file to read settings from, may be NULL for default
+ * @param settings		file to read settings from, may be NULL for default or
+ *						"" to not load any settings
  * @param namespace		name of the binary that uses the library, determines
  *						the first section name when reading config options.
  *						Defaults to libstrongswan if NULL.
- * @return				FALSE if integrity check failed
+ * @return				FALSE if integrity check failed or settings are invalid
  */
 bool library_init(char *settings, const char *namespace);
 
