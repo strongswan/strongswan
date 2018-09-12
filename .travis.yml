@@ -7,10 +7,6 @@ compiler:
   - gcc
   - clang
 
-addons:
-  sonarcloud:
-    organization: "strongswan"
-
 before_install:
   - travis_retry ./scripts/test.sh deps
   - travis_retry ./scripts/test.sh pydeps
@@ -63,6 +59,9 @@ matrix:
       env: TEST=sonarcloud
       git:
         depth: false
+      addons:
+        sonarcloud:
+          organization: "strongswan"
     - compiler: gcc
       env: TEST=win64 MONOLITHIC=yes
     # this does not work on 14.04 due to a missing @4 decoration for
