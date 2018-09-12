@@ -3,6 +3,8 @@
 
 build_botan()
 {
+	BOTAN_DIR=$TRAVIS_BUILD_DIR/../botan
+
 	# if the leak detective is enabled we have to disable threading support
 	# (used for std::async) as that causes invalid frees somehow, the
 	# locking allocator causes a static leak via the first function that
@@ -13,12 +15,13 @@ build_botan()
 	fi
 	# disable some larger modules we don't need for the tests
 	BOTAN_CONFIG="$BOTAN_CONFIG --disable-modules=pkcs11,tls,x509,xmss"
-	git clone --depth 1 https://github.com/randombit/botan.git botan &&
-	cd botan &&
-	python ./configure.py $BOTAN_CONFIG &&
+	git clone --depth 1 https://github.com/randombit/botan.git $BOTAN_DIR &&
+	cd $BOTAN_DIR &&
+	python ./configure.py --amalgamation $BOTAN_CONFIG &&
 	make -j4 libs >/dev/null &&
 	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
+	cd -
 }
 
 if test -z $TRAVIS_BUILD_DIR; then
