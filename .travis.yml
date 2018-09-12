@@ -7,6 +7,8 @@ compiler:
   - gcc
   - clang
 
+cache: ccache
+
 before_install:
   - travis_retry ./scripts/test.sh deps
   - travis_retry ./scripts/test.sh pydeps
