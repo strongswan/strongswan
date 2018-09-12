@@ -479,13 +479,15 @@ static void set_options(char *logfile)
 					"charon.plugins.android_log.loglevel", ANDROID_DEBUG_LEVEL);
 	/* setup file logger */
 	lib->settings->set_str(lib->settings,
-					"charon.filelog.%s.time_format", "%b %e %T", logfile);
+					"charon.filelog.android.path", logfile);
+	lib->settings->set_str(lib->settings,
+					"charon.filelog.android.time_format", "%b %e %T");
 	lib->settings->set_bool(lib->settings,
-					"charon.filelog.%s.append", TRUE, logfile);
+					"charon.filelog.android.append", TRUE);
 	lib->settings->set_bool(lib->settings,
-					"charon.filelog.%s.flush_line", TRUE, logfile);
+					"charon.filelog.android.flush_line", TRUE);
 	lib->settings->set_int(lib->settings,
-					"charon.filelog.%s.default", ANDROID_DEBUG_LEVEL, logfile);
+					"charon.filelog.android.default", ANDROID_DEBUG_LEVEL);
 
 	lib->settings->set_int(lib->settings,
 					"charon.retransmit_tries", ANDROID_RETRASNMIT_TRIES);
