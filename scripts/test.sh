@@ -20,7 +20,7 @@ build_botan()
 
 	git clone https://github.com/randombit/botan.git $BOTAN_DIR &&
 	cd $BOTAN_DIR &&
-	git checkout $BOTAN_REV &&
+	git checkout -qf $BOTAN_REV &&
 	python ./configure.py --amalgamation $BOTAN_CONFIG &&
 	make -j4 libs >/dev/null &&
 	sudo make install >/dev/null &&
