@@ -7,9 +7,7 @@ compiler:
   - gcc
   - clang
 
-addons:
-  sonarcloud:
-    organization: "strongswan"
+cache: ccache
 
 before_install:
   - travis_retry ./scripts/test.sh deps
@@ -38,6 +36,8 @@ env:
     - TEST=default
     - TEST=default MONOLITHIC=yes
     - TEST=default LEAK_DETECTIVE=yes
+    - TEST=botan
+    - TEST=botan LEAK_DETECTIVE=yes
     - TEST=openssl
     - TEST=openssl LEAK_DETECTIVE=yes
     - TEST=gcrypt
@@ -61,6 +61,9 @@ matrix:
       env: TEST=sonarcloud
       git:
         depth: false
+      addons:
+        sonarcloud:
+          organization: "strongswan"
     - compiler: gcc
       env: TEST=win64 MONOLITHIC=yes
     # this does not work on 14.04 due to a missing @4 decoration for
