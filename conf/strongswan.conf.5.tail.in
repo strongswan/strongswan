@@ -15,12 +15,15 @@ does not have any effect.
 There are currently two types of loggers:
 .TP
 .B File loggers
-Log directly to a file and are defined by specifying the full path to the
-file as subsection in the
+Log directly to a file and are defined by specifying an arbitrarily named
+subsection in the
 .B charon.filelog
-section. To log to the console the two special filenames
+section. The full path to the file is configured in the \fIpath\fR setting of
+that subsection, however, if it only contains characters permitted in section
+names, the setting may also be omitted and the path specified as name of the
+subsection. To log to the console the two special filenames
 .BR stdout " and " stderr
-can be used.
+may be used.
 .TP
 .B Syslog loggers
 Log into a syslog facility and are defined by specifying the facility to log to
@@ -108,7 +111,8 @@ Also include sensitive material in dumps, e.g. keys
 .EX
 	charon {
 		filelog {
-			/var/log/charon.log {
+			charon {
+				path = /var/log/charon.log
 				time_format = %b %e %T
 				append = no
 				default = 1
