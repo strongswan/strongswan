@@ -280,7 +280,6 @@ ARG_ENABL_SET([aikgen],         [enable AIK generator for TPM 1.2.])
 ARG_DISBL_SET([charon],         [disable the IKEv1/IKEv2 keying daemon charon.])
 ARG_ENABL_SET([cmd],            [enable the command line IKE client charon-cmd.])
 ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
-ARG_ENABL_SET([dumm],           [enable the DUMM UML test framework.])
 ARG_ENABL_SET([fast],           [enable libfast (FastCGI Application Server w/ templates.])
 ARG_ENABL_SET([fuzzing],        [enable fuzzing scripts (found in directory fuzz).])
 ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
@@ -1051,18 +1050,6 @@ if test x$imc_swima = xtrue -o $imv_swima = xtrue; then
 	AC_SUBST(json_LIBS)
 fi
 
-if test x$dumm = xtrue; then
-	PKG_CHECK_MODULES(gtk, [gtk+-2.0 vte])
-	AC_SUBST(gtk_CFLAGS)
-	AC_SUBST(gtk_LIBS)
-	AC_CHECK_PROGS(RUBY, ruby)
-	PKG_CHECK_MODULES(ruby, [ruby])
-	saved_LIBS=$LIBS
-	LIBS=$ruby_LIBS
-	AC_CHECK_FUNCS(rb_errinfo)
-	LIBS=$saved_LIBS
-fi
-
 if test x$fast = xtrue; then
 	AC_CHECK_LIB([neo_utl],[hdf_init],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_utl not found!])],[])
 	AC_MSG_CHECKING([for -lneo_cgi and dependencies])
@@ -1691,7 +1678,6 @@ AM_CONDITIONAL(USE_COUNTERS, test x$counters = xtrue)
 # ---------------
 AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
 AM_CONDITIONAL(USE_LOCK_PROFILER, test x$lock_profiler = xtrue)
-AM_CONDITIONAL(USE_DUMM, test x$dumm = xtrue)
 AM_CONDITIONAL(USE_FAST, test x$fast = xtrue)
 AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
 AM_CONDITIONAL(USE_ME, test x$mediation = xtrue)
@@ -2001,8 +1987,6 @@ AC_CONFIG_FILES([
 	src/pki/Makefile
 	src/pki/man/Makefile
 	src/pool/Makefile
-	src/dumm/Makefile
-	src/dumm/ext/extconf.rb
 	src/libfast/Makefile
 	src/manager/Makefile
 	src/medsrv/Makefile

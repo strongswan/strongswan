@@ -31,7 +31,7 @@ printf-builtin)
 	;;
 all|coverage|sonarcloud)
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
-			--disable-dumm --disable-kernel-pfroute --disable-keychain
+			--disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-padlock --disable-fuzzing
 			--disable-osx-attr --disable-tkm --disable-uci
 			--disable-systemd --disable-soup --disable-unwind-backtraces
