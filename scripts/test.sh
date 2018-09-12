@@ -1,6 +1,26 @@
 #!/bin/sh
 # Build script for Travis CI
 
+build_botan()
+{
+	# if the leak detective is enabled we have to disable threading support
+	# (used for std::async) as that causes invalid frees somehow, the
+	# locking allocator causes a static leak via the first function that
+	# references it (e.g. crypter or hasher), so we disable that too
+	if test "$LEAK_DETECTIVE" = "yes"; then
+		BOTAN_CONFIG="--without-os-features=threads
+					  --disable-modules=locking_allocator"
+	fi
+	# disable some larger modules we don't need for the tests
+	BOTAN_CONFIG="$BOTAN_CONFIG --disable-modules=pkcs11,tls,x509,xmss"
+	git clone --depth 1 https://github.com/randombit/botan.git botan &&
+	cd botan &&
+	python ./configure.py $BOTAN_CONFIG &&
+	make -j4 libs >/dev/null &&
+	sudo make install >/dev/null &&
+	sudo ldconfig || exit $?
+}
+
 if test -z $TRAVIS_BUILD_DIR; then
 	TRAVIS_BUILD_DIR=$PWD
 fi
@@ -34,22 +54,7 @@ botan)
 	# currently required)
 	DEPS=""
 	if test "$1" = "deps"; then
-		# if the leak detective is enabled we have to disable threading support
-		# (used for std::async) as that causes invalid frees somehow, the
-		# locking allocator causes a static leak via the first function that
-		# references it (e.g. crypter or hasher), so we disable that too
-		if test "$LEAK_DETECTIVE" = "yes"; then
-			BOTAN_CONFIG="--without-os-features=threads
-						  --disable-modules=locking_allocator"
-		fi
-		# disable some larger modules we don't need for the tests
-		BOTAN_CONFIG="$BOTAN_CONFIG --disable-modules=pkcs11,tls,x509,xmss"
-		git clone --depth 1 https://github.com/randombit/botan.git botan &&
-		cd botan &&
-		python ./configure.py $BOTAN_CONFIG &&
-		make -j4 libs >/dev/null &&
-		sudo make install >/dev/null &&
-		sudo ldconfig || exit $?
+		build_botan
 	fi
 	;;
 printf-builtin)
@@ -69,8 +74,6 @@ all|coverage|sonarcloud)
 	CONFIG="$CONFIG --disable-nm"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
-	# separate test case with external dependency
-	CONFIG="$CONFIG --disable-botan"
 	if test "$TEST" != "coverage"; then
 		CONFIG="$CONFIG --disable-coverage"
 	else
@@ -82,6 +85,9 @@ all|coverage|sonarcloud)
 		  libpcsclite-dev libpam0g-dev binutils-dev libunwind8-dev
 		  libjson0-dev iptables-dev python-pip libtspi-dev"
 	PYDEPS="pytest"
+	if test "$1" = "deps"; then
+		build_botan
+	fi
 	;;
 win*)
 	CONFIG="--disable-defaults --enable-svc --enable-ikev2
