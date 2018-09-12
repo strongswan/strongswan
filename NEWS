@@ -1,6 +1,32 @@
 strongswan-5.7.0
 ----------------
 
+- Dots are not allowed anymore in section names in swanctl.conf and
+  strongswan.conf. This mainly affects the configuration of file loggers. If the
+  path for such a log file contains dots it now has to be configured in the new
+  `path` setting within the arbitrarily renamed subsection in the `filelog`
+  section.
+
+- Sections in swanctl.conf and strongswan.conf may now reference other sections.
+  All settings and subsections from such a section are inherited. This allows
+  to simplify configs as redundant information has only to be specified once
+  and may then be included in other sections (refer to the example in the man
+  page for strongswan.conf).
+
+- The originally selected IKE config (based on the IPs and IKE version) can now
+  change if no matching algorithm proposal is found.  This way the order
+  of the configs doesn't matter that much anymore and it's easily possible to
+  specify separate configs for clients that require weak algorithms (instead
+  of having to also add them in other configs that might be selected).
+
+- Support for Postquantum Preshared Keys for IKEv2 (draft-ietf-ipsecme-qr-ikev2)
+  has been added.
+
+- The new botan plugin is a wrapper around the Botan C++ crypto library. It
+  requires a fairly recent build from Botan's master branch (or the upcoming
+  2.8.0 release). Thanks to René Korthaus and his team from Rohde & Schwarz
+  Cybersecurity for the initial patch.
+
 - The pki tool accepts a xmppAddr otherName as a subjectAlternativeName using
   the syntax --san xmppaddr:<jid>.
 
@@ -14,6 +40,18 @@ strongswan-5.7.0
 
 - Support for version 2 of Intel's TPM2-TSS TGC Software Stack. The presence of
   the in-kernel /dev/tpmrm0 resource manager is automatically detected.
+
+- Marks the in- and/or outbound SA should apply to packets after processing may
+  be configured in swanctl.conf on Linux.  For outbound SAs this requires at
+  least a 4.14 kernel.  Setting a mask and configuring a mark/mask for inbound
+  SAs will be added with the upcoming 4.19 kernel.
+
+- New options in swanctl.conf allow configuring how/whether DF, ECN and DS
+  fields in the IP headers are copied during IPsec processing. Controlling this
+  is currently only possible on Linux.
+
+- To avoid conflicts, the dhcp plugin now only uses the DHCP server port if
+  explicitly configured.
 
 
 strongswan-5.6.3
