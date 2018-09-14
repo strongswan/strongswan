@@ -695,14 +695,9 @@ do
 		    $TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
 	    done
 
-		scp $SSHCONF $HOSTLOGIN:/etc/strongswan.conf \
-		    $TESTRESULTDIR/${host}.strongswan.conf  > /dev/null 2>&1
 
 	    scp $SSHCONF $HOSTLOGIN:/var/log/freeradius/radius.log \
 		$TESTRESULTDIR/${host}.radius.log  > /dev/null 2>&1
-
-	    ssh $SSHCONF $HOSTLOGIN grep imcv /var/log/daemon.log \
-		>> $TESTRESULTDIR/${host}.daemon.log 2>/dev/null
 
 	    chmod a+r $TESTRESULTDIR/*
 	    cat >> $TESTRESULTDIR/index.html <<@EOF
@@ -713,14 +708,12 @@ do
 	  <ul>
 	    <li><a href="$host.clients.conf">clients.conf</a></li>
 	    <li><a href="$host.radiusd.conf">radiusd.conf</a></li>
-	    <li><a href="$host.strongswan.conf">strongswan.conf</a></li>
 	  </ul>
 	</td>
 	<td valign="top">
 	  <ul>
 	    <li><a href="$host.eap.conf">eap.conf</a></li>
 	    <li><a href="$host.radius.log">radius.log</a></li>
-	    <li><a href="$host.daemon.log">daemon.log</a></li>
 	  </ul>
       </td>
 	<td valign="top">

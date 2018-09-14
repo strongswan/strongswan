@@ -34,7 +34,7 @@ stretch)
 *)
 	echo_warn "Package list for '$BASEIMGSUITE' might has to be updated"
 esac
-SERVICES="apache2 dbus isc-dhcp-server slapd bind9"
+SERVICES="apache2 dbus isc-dhcp-server slapd bind9 freeradius"
 INC=$INC,${SERVICES// /,}
 
 CACHEDIR=$BUILDDIR/cache
