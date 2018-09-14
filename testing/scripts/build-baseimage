@@ -20,15 +20,16 @@ INC=$INC,libboost-thread-dev,libboost-system-dev,git-core,iperf,htop,screen
 INC=$INC,gnat,gprbuild,acpid,acpi-support-base,libldns-dev,libunbound-dev
 INC=$INC,dnsutils,libsoup2.4-dev,ca-certificates,unzip,libsystemd-dev
 INC=$INC,python,python-setuptools,python-dev,python-pip,apt-transport-https
-INC=$INC,libjson0-dev,libxslt1-dev,libapache2-mod-wsgi,iptables-dev
+INC=$INC,libjson-c-dev,libxslt1-dev,libapache2-mod-wsgi,iptables-dev
+INC=$INC,libxerces-c-dev,libgcrypt20-dev
 case "$BASEIMGSUITE" in
-wheezy)
-	INC=$INC,libxerces-c2-dev,libahven3-dev,libxmlada4.1-dev,libgmpada3-dev
-	INC=$INC,libalog0.4.1-base-dev
-	;;
 jessie)
-	INC=$INC,libxerces-c-dev,libahven4-dev,libxmlada5-dev,libgmpada5-dev
-	INC=$INC,libalog1-dev,libgcrypt20-dev
+	INC=$INC,libahven4-dev,libxmlada5-dev,libgmpada5-dev
+	INC=$INC,libalog1-dev
+	;;
+stretch)
+	INC=$INC,libahven5-dev,libxmlada-schema6-dev,libgmpada6-dev
+	INC=$INC,libalog2-dev
 	;;
 *)
 	echo_warn "Package list for '$BASEIMGSUITE' might has to be updated"
@@ -113,12 +114,7 @@ execute_chroot "apt-get -y upgrade"
 for service in $SERVICES
 do
 	log_action "Disabling service $service"
-	if [ "$BASEIMGSUITE" == "wheezy" ]
-	then
-		execute_chroot "update-rc.d -f $service remove"
-	else
-		execute_chroot "systemctl disable $service"
-	fi
+	execute_chroot "systemctl disable $service"
 done
 
 log_action "Disabling root password"
