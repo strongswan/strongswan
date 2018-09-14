@@ -1,18 +1,10 @@
-# openssl.cnf -  OpenSSL configuration file for the ZHW PKI
-# Mario Strasser <mario.strasser@zhwin.ch>
-#	
+# openssl.cnf -  OpenSSL configuration file
+#
 
 # This definitions were set by the ca_init script DO NOT change
 # them manually.
-CAHOME			= /etc/openssl/rfc3779 
+CAHOME			= /etc/openssl/rfc3779
 RANDFILE		= $CAHOME/.rand
-
-# Extra OBJECT IDENTIFIER info:
-oid_section		= new_oids
-
-[ new_oids ]
-SmartcardLogin		= 1.3.6.1.4.1.311.20.2
-ClientAuthentication	= 1.3.6.1.4.1.311.20.2.2
 
 ####################################################################
 
@@ -21,7 +13,7 @@ default_ca	= root_ca		# The default ca section
 
 ####################################################################
 
-[ root_ca ]				
+[ root_ca ]
 
 dir		= $CAHOME
 certs		= $dir/certs		  # Where the issued certs are kept
@@ -83,7 +75,7 @@ x509_extensions		= ca_ext	# The extensions to add to the self signed cert
 # req_extensions 	= v3_req 	# The extensions to add to a certificate request
 
 
-# This sets a mask for permitted string types. There are several options. 
+# This sets a mask for permitted string types. There are several options.
 # default: PrintableString, T61String, BMPString.
 # pkix	 : PrintableString, BMPString.
 # utf8only: only UTF8Strings.
@@ -113,12 +105,12 @@ organizationName		= Organization Name (eg, company)
 organizationName_default	= Linux strongSwan
 
 0.organizationalUnitName		= Organizational Unit Name (eg, section)
-0.organizationalUnitName_default	= RFC3779 
+0.organizationalUnitName_default	= RFC3779
 
 #1.organizationalUnitName	= Type (eg, Staff)
 #1.organizationalUnitName_default = Staff
 
-#userId				= UID 
+#userId				= UID
 
 commonName			= Common Name (eg, YOUR name)
 commonName_default		= $ENV::COMMON_NAME
@@ -173,7 +165,7 @@ basicConstraints		= CA:FALSE
 keyUsage                        = digitalSignature, keyEncipherment, keyAgreement
 subjectKeyIdentifier            = hash
 authorityKeyIdentifier          = keyid, issuer:always
-subjectAltName                  = email:$ENV::COMMON_NAME 
+subjectAltName                  = email:$ENV::COMMON_NAME
 #authorityInfoAccess		= OCSP;URI:http://ocsp.strongswan.org:8880
 crlDistributionPoints          	= URI:http://crl.strongswan.org/strongswan_rfc3779.crl
 
