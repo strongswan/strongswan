@@ -2586,11 +2586,11 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 		memset(half_net.ptr, 0, half_net.len);
 		half_prefixlen = 1;
 
-		status = manage_srcroute(this, nlmsg_type, flags, half_net, half_prefixlen,
-					gateway, src_ip, if_name);
+		status = manage_srcroute(this, nlmsg_type, flags, half_net,
+								 half_prefixlen, gateway, src_ip, if_name);
 		half_net.ptr[0] |= 0x80;
-		status = manage_srcroute(this, nlmsg_type, flags, half_net, half_prefixlen,
-					gateway, src_ip, if_name);
+		status |= manage_srcroute(this, nlmsg_type, flags, half_net,
+								  half_prefixlen, gateway, src_ip, if_name);
 		return status;
 	}
 
