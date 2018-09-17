@@ -112,7 +112,7 @@ METHOD(condvar_t, timed_wait, bool,
 	thread_set_active_condvar(&this->cv);
 
 	/* while a CriticalSection is recursive, waiting in a condvar releases
-	 * only one mutex. So release (and reaquire) all locks except the last. */
+	 * only one mutex. So release (and reacquire) all locks except the last. */
 	times = mutex->times;
 	while (mutex->times-- > 1)
 	{

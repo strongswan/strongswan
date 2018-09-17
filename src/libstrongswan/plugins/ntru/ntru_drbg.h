@@ -71,7 +71,7 @@ struct ntru_drbg_t {
 };
 
 /**
- * Create and instantiate a new DRBG objet.
+ * Create and instantiate a new DRBG object.
  *
  * @param strength		security strength in bits
  * @param pers_str		personalization string

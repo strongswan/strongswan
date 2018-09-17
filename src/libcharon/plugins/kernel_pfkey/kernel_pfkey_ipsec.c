@@ -2739,7 +2739,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	if (update && current_sa)
 	{	/* check if there are actually any relevant changes, if not, we don't
 		 * send an update to the kernel as e.g. FreeBSD doesn't do that
-		 * atomically, causing unecessary traffic loss during rekeyings */
+		 * atomically, causing unnecessary traffic loss during rekeyings */
 		update = policy_update_required(current_sa, assigned_sa);
 	}
 
@@ -2948,7 +2948,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		if (is_installed)
 		{	/* check if there are actually any relevant changes, if not, we do
 			 * not send an update to the kernel as e.g. FreeBSD doesn't do that
-			 * atomically, causing unecessary traffic loss during rekeyings */
+			 * atomically, causing unnecessary traffic loss during rekeyings */
 			policy->used_by->get_first(policy->used_by, (void**)&mapping);
 			is_installed = policy_update_required(mapping, to_remove);
 		}

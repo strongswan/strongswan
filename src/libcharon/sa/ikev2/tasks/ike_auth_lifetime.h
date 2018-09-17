@@ -45,7 +45,7 @@ struct ike_auth_lifetime_t {
  * Create a new TASK_IKE_AUTH_LIFETIME task.
  *
  * @param ike_sa		IKE_SA this task works for
- * @param initiator		TRUE if taks is initiated by us
+ * @param initiator		TRUE if task is initiated by us
  * @return				ike_auth_lifetime task to handle by the task_manager
  */
 ike_auth_lifetime_t *ike_auth_lifetime_create(ike_sa_t *ike_sa, bool initiator);

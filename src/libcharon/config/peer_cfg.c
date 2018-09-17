@@ -126,12 +126,12 @@ struct private_peer_cfg_t {
 	uint32_t over_time;
 
 	/**
-	 * DPD check intervall
+	 * DPD check interval
 	 */
 	uint32_t dpd;
 
 	/**
-	 * DPD timeout intervall (used for IKEv1 only)
+	 * DPD timeout interval (used for IKEv1 only)
 	 */
 	uint32_t dpd_timeout;
 

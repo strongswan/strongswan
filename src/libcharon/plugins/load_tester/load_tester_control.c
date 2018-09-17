@@ -69,7 +69,7 @@ struct init_listener_t {
 	hashtable_t *initiated;
 
 	/**
-	 * IKE_SAs we have completed to initate (success or failure)
+	 * IKE_SAs we have completed to initiate (success or failure)
 	 */
 	hashtable_t *completed;
 

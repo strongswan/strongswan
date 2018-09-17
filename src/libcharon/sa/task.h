@@ -115,7 +115,7 @@ extern enum_name_t *task_type_names;
 /**
  * Interface for a task, an operation handled within exchanges.
  *
- * A task is an elemantary operation. It may be handled by a single or by
+ * A task is an elementary operation. It may be handled by a single or by
  * multiple exchanges. An exchange may even complete multiple tasks.
  * A task has a build() and an process() operation. The build() operation
  * creates payloads and adds it to the message. The process() operation
@@ -128,7 +128,7 @@ extern enum_name_t *task_type_names;
  * that the task completed, even when the task completed unsuccessfully. The
  * manager then removes the task from the list. A NEED_MORE is returned when
  * the task needs further build()/process() calls to complete, the manager
- * leaves the taks in the queue. A returned FAILED indicates a critical failure.
+ * leaves the task in the queue. A returned FAILED indicates a critical failure.
  * The manager closes the IKE_SA whenever a task returns FAILED.
  */
 struct task_t {
@@ -180,7 +180,7 @@ struct task_t {
 	 * Migrate a task to a new IKE_SA.
 	 *
 	 * After migrating a task, it goes back to a state where it can be
-	 * used again to initate an exchange. This is useful when a task
+	 * used again to initiate an exchange. This is useful when a task
 	 * has to get migrated to a new IKE_SA.
 	 * A special usage is when a INVALID_KE_PAYLOAD is received. A call
 	 * to reset resets the task, but uses another DH group for the next

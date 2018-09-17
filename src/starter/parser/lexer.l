@@ -30,7 +30,7 @@ static void include_files(parser_helper_t *ctx);
 /* use start conditions stack */
 %option stack
 
-/* do not declare unneded functions */
+/* do not declare unneeded functions */
 %option noinput noyywrap
 
 /* don't use global variables, and interact properly with bison */

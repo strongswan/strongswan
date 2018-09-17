@@ -141,7 +141,7 @@ extern enum_name_t *auth_rule_names;
  * RFC4739 defines multiple authentication rounds. This class defines such
  * a round from a configuration perspective, either for the local or the remote
  * peer. Local configs are called "rulesets". They define how we authenticate.
- * Remote peer configs are called "constraits". They define what is needed to
+ * Remote peer configs are called "constraints". They define what is needed to
  * complete the authentication round successfully.
  *
  * @verbatim

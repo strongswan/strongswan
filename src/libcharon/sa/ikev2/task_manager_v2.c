@@ -109,7 +109,7 @@ struct private_task_manager_t {
 		array_t *packets;
 
 		/**
-		 * type of the initated exchange
+		 * type of the initiated exchange
 		 */
 		exchange_type_t type;
 

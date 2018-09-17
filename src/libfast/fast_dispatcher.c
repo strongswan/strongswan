@@ -30,7 +30,7 @@
 #include <collections/linked_list.h>
 #include <collections/hashtable.h>
 
-/** Intervall to check for expired sessions, in seconds */
+/** Interval to check for expired sessions, in seconds */
 #define CLEANUP_INTERVAL 30
 
 typedef struct private_fast_dispatcher_t private_fast_dispatcher_t;

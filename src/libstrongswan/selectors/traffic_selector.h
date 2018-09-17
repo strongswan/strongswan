@@ -395,7 +395,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(
  * greater or equal to 256 they are assumed to be type and code as defined
  * for traffic_selector_t.
  *
- * @param protocol		upper layer protocl to allow
+ * @param protocol		upper layer protocol to allow
  * @param from_port		start of allowed port range
  * @param to_port		end of range
  * @return

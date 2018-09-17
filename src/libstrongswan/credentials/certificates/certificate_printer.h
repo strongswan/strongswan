@@ -62,7 +62,7 @@ struct certificate_printer_t {
  *
  * @param f				file where print output is directed to (usually stdout)
  * @param detailed		print more detailed certificate information
- * @param utc			print time inforamtion in UTC
+ * @param utc			print time information in UTC
  */
 certificate_printer_t* certificate_printer_create(FILE *f, bool detailed,
 												  bool utc);

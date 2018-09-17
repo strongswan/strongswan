@@ -62,7 +62,7 @@ struct private_gcm_aead_t {
 };
 
 /**
- * Find a suiteable word size and network order conversion functions
+ * Find a suitable word size and network order conversion functions
  */
 #if ULONG_MAX == 18446744073709551615UL && defined(htobe64)
 #	define htobeword htobe64

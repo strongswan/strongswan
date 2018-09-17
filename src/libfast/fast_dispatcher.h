@@ -83,7 +83,7 @@ struct fast_dispatcher_t {
 	 * The first controller added serves as default controller. Client's
 	 * get redirected to it if no other controller matches.
 	 *
-	 * @param constructor	constructor function to the conntroller
+	 * @param constructor	constructor function to the controller
 	 * @param param			param to pass to constructor
 	 */
 	void (*add_controller)(fast_dispatcher_t *this,

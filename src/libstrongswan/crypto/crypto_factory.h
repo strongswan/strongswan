@@ -177,7 +177,7 @@ struct crypto_factory_t {
 	 * Register a crypter constructor.
 	 *
 	 * @param algo			algorithm to constructor
-	 * @param key size		key size to peform benchmarking for
+	 * @param key size		key size to perform benchmarking for
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
 	 * @return				TRUE if registered, FALSE if test vector failed
@@ -204,7 +204,7 @@ struct crypto_factory_t {
 	 * Register a aead constructor.
 	 *
 	 * @param algo			algorithm to constructor
-	 * @param key size		key size to peform benchmarking for
+	 * @param key size		key size to perform benchmarking for
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
 	 * @return				TRUE if registered, FALSE if test vector failed

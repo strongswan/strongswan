@@ -311,7 +311,7 @@ static void save_auth_cfg(private_phase1_t *this,
 		return;
 	}
 	auth = auth_cfg_create();
-	/* for local config, we _copy_ entires from the config, as it contains
+	/* for local config, we _copy_ entries from the config, as it contains
 	 * certificates we must send later. */
 	auth->merge(auth, this->ike_sa->get_auth_cfg(this->ike_sa, local), local);
 	this->ike_sa->add_auth_cfg(this->ike_sa, local, auth);

@@ -31,7 +31,7 @@ typedef enum mem_pool_op_t mem_pool_op_t;
  * In-memory IP pool acquire operation.
  */
 enum mem_pool_op_t {
-	/** Check for an exsiting lease */
+	/** Check for an existing lease */
 	MEM_POOL_EXISTING,
 	/** Get a new lease */
 	MEM_POOL_NEW,

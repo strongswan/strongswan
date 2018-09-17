@@ -59,7 +59,7 @@ struct private_ike_vendor_t {
 	ike_sa_t *ike_sa;
 
 	/**
-	 * Are we the inititator of this task
+	 * Are we the initiator of this task
 	 */
 	bool initiator;
 };

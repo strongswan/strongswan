@@ -294,7 +294,7 @@ For public key authentication, the responder uses the
 identity. For the initiator, each connection attempt uses a different identity
 in the form
 .BR "\(dqCN=c1-r1, OU=load-test, O=strongSwan\(dq" ,
-where the first number inidicates the client number, the second the
+where the first number indicates the client number, the second the
 authentication round (if multiple authentication rounds are used).
 .PP
 For PSK authentication, FQDN identities are used. The server uses

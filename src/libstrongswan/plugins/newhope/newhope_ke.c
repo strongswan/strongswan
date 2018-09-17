@@ -306,7 +306,7 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 		if (!rng)
 		{
-			DBG1(DBG_LIB, "could not instatiate random source");
+			DBG1(DBG_LIB, "could not instantiate random source");
 			return FALSE;
 		}
 		if (!rng->get_bytes(rng, seed_len, a_seed.ptr))
@@ -463,7 +463,7 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 		rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 		if (!rng)
 		{
-			DBG1(DBG_LIB, "could not instatiate random source");
+			DBG1(DBG_LIB, "could not instantiate random source");
 			goto end;
 		}
 		if (!rng->get_bytes(rng, seed_len, noise_seed.ptr))

@@ -204,7 +204,7 @@ Suite *printf_suite_create()
 	tcase_add_test(tc, test_printf_err);
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("unsiged");
+	tc = tcase_create("unsigned");
 	tcase_add_test(tc, test_printf_unsigned);
 	suite_add_tcase(s, tc);
 
