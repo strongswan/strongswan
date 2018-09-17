@@ -539,7 +539,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 
 		/* Determine maximum PA-TNC attribute segment size */
 		max_seg_size = state->get_max_msg_len(state)
-								- PA_TNC_HEADER_SIZE 
+								- PA_TNC_HEADER_SIZE
 								- PA_TNC_ATTR_HEADER_SIZE
 								- TCG_SEG_ATTR_SEG_ENV_HEADER;
 
@@ -614,7 +614,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				if (result != TNC_RESULT_SUCCESS)
 				{
 					return result;
-				}  
+				}
 				return this->agent->provide_recommendation(this->agent, state);
 			}
 			else
@@ -686,7 +686,6 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 			{
 				continue;
 			}
-			eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
 
 			switch (workitem->get_type(workitem))
 			{
@@ -721,7 +720,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 								  TNC_IMV_EVALUATION_RESULT_COMPLIANT;
 					snprintf(result_str, BUF_LEN, "unknown sources%s enabled",
 							 fail ? "" : " not");
-					break;					
+					break;
 				case IMV_WORKITEM_FORWARDING:
 					if (!(received & IMV_OS_ATTR_FORWARDING_ENABLED))
 					{
@@ -749,14 +748,11 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				default:
 					continue;
 			}
-			if (eval != TNC_IMV_EVALUATION_RESULT_DONT_KNOW)
-			{
-				session->remove_workitem(session, enumerator);
-				rec = workitem->set_result(workitem, result_str, eval);
-				state->update_recommendation(state, rec, eval);
-				imcv_db->finalize_workitem(imcv_db, workitem);
-				workitem->destroy(workitem);
-			}
+			session->remove_workitem(session, enumerator);
+			rec = workitem->set_result(workitem, result_str, eval);
+			state->update_recommendation(state, rec, eval);
+			imcv_db->finalize_workitem(imcv_db, workitem);
+			workitem->destroy(workitem);
 		}
 		enumerator->destroy(enumerator);
 
@@ -772,7 +768,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				return result;
 			}
 			return this->agent->provide_recommendation(this->agent, state);
-		}		
+		}
 	}
 
 	/* send non-empty PA-TNC message with excl flag not set */
