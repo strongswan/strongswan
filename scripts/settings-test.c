@@ -73,7 +73,7 @@ static void print_section(section_t *section, int level)
 				printf("%s%s", j == 0 ? " : " : ", ", ref->name);
 			}
 		}
-		printf(" {\n", indent);
+		printf(" {\n");
 		print_section(sub, level + 1);
 		printf("%s}\n", indent);
 	}
