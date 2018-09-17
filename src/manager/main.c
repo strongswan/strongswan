@@ -50,7 +50,7 @@ int main (int arc, char *argv[])
 	{
 		DBG1(DBG_LIB, "database URI undefined, set manager.database "
 			 "in strongswan.conf");
-		//return 1;
+		return 1;
 	}
 
 	storage = storage_create(database);
