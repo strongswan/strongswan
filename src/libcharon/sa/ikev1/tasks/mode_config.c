@@ -583,7 +583,6 @@ static status_t build_ack(private_mode_config_t *this, message_t *message)
 	enumerator = this->vips->create_enumerator(this->vips);
 	while (enumerator->enumerate(enumerator, &host))
 	{
-		type = INTERNAL_IP6_ADDRESS;
 		if (host->get_family(host) == AF_INET6)
 		{
 			type = INTERNAL_IP6_ADDRESS;
