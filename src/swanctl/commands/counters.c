@@ -48,7 +48,7 @@ static int counters(vici_conn_t *conn)
 	vici_res_t *res;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	char *arg, *name = NULL;
-	int ret;
+	int ret = 0;
 	bool all = FALSE, reset = FALSE;
 
 	while (TRUE)
@@ -131,7 +131,7 @@ static int counters(vici_conn_t *conn)
 		}
 	}
 	vici_free_res(res);
-	return 0;
+	return ret;
 }
 
 /**
