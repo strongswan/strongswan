@@ -646,13 +646,13 @@ receiver_t *receiver_create()
 	this->receive_delay = lib->settings->get_int(lib->settings,
 					"%s.receive_delay", 0, lib->ns);
 	this->receive_delay_type = lib->settings->get_int(lib->settings,
-					"%s.receive_delay_type", 0, lib->ns),
+					"%s.receive_delay_type", 0, lib->ns);
 	this->receive_delay_request = lib->settings->get_bool(lib->settings,
-					"%s.receive_delay_request", TRUE, lib->ns),
+					"%s.receive_delay_request", TRUE, lib->ns);
 	this->receive_delay_response = lib->settings->get_bool(lib->settings,
-					"%s.receive_delay_response", TRUE, lib->ns),
+					"%s.receive_delay_response", TRUE, lib->ns);
 	this->initiator_only = lib->settings->get_bool(lib->settings,
-					"%s.initiator_only", FALSE, lib->ns),
+					"%s.initiator_only", FALSE, lib->ns);
 
 	this->hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!this->hasher)
