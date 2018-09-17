@@ -129,6 +129,7 @@ botan_hasher_t *botan_hasher_create(hash_algorithm_t algo)
 
 	if (botan_hash_init(&this->hash, hash_name, 0))
 	{
+		free(this);
 		return NULL;
 	}
 	return &this->public;
