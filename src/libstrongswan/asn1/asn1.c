@@ -825,7 +825,6 @@ chunk_t asn1_simple_object(asn1_t tag, chunk_t content)
 
 	u_char *pos = asn1_build_object(&object, tag, content.len);
 	memcpy(pos, content.ptr, content.len);
-	pos += content.len;
 
 	return object;
 }
