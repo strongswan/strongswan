@@ -462,6 +462,7 @@ static void remove_value_buffered(private_settings_t *this, section_t *section,
 				{
 					array_remove(section->kv_order, i, NULL);
 					settings_kv_destroy(kv, this->contents);
+					break;
 				}
 			}
 		}
