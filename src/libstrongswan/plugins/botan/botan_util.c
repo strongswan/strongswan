@@ -159,25 +159,15 @@ bool botan_get_fingerprint(botan_pubkey_t pubkey, void *cache,
 	switch (type)
 	{
 		case KEYID_PUBKEY_SHA1:
-		{
 			/* subjectPublicKey -> use botan_pubkey_fingerprint() */
-			fp->len = 0;
-			if (botan_pubkey_fingerprint(pubkey, "SHA-1", NULL, &fp->len)
-				!= BOTAN_FFI_ERROR_INSUFFICIENT_BUFFER_SPACE)
-			{
-				return FALSE;
-			}
-
-			*fp = chunk_alloc(fp->len);
+			*fp = chunk_alloc(HASH_SIZE_SHA1);
 			if (botan_pubkey_fingerprint(pubkey, "SHA-1", fp->ptr, &fp->len))
 			{
 				chunk_free(fp);
 				return FALSE;
 			}
 			break;
-		}
 		case KEYID_PUBKEY_INFO_SHA1:
-		{
 			/* subjectPublicKeyInfo -> use botan_pubkey_export(), then hash */
 			if (!botan_get_encoding(pubkey, PUBKEY_SPKI_ASN1_DER, &key))
 			{
@@ -196,7 +186,6 @@ bool botan_get_fingerprint(botan_pubkey_t pubkey, void *cache,
 			hasher->destroy(hasher);
 			chunk_free(&key);
 			break;
-		}
 		default:
 			return FALSE;
 	}
