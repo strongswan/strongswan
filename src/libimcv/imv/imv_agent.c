@@ -651,7 +651,7 @@ METHOD(enumerator_t, language_enumerator_enumerate, bool,
 	if (pos)
 	{
 		len = pos - this->lang_pos;
-		this->lang_pos += len + 1,
+		this->lang_pos += len + 1;
 		this->lang_len -= len + 1;
 	}
 	else
