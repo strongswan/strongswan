@@ -61,14 +61,11 @@ struct private_botan_rsa_private_key_t {
 };
 
 /**
- * Build an EMSA PSS signature described in PKCS#1
+ * Get the Botan string identifier for an EMSA PSS signature
  */
-static bool build_emsa_pss_signature(private_botan_rsa_private_key_t *this,
-									 rsa_pss_params_t *params, chunk_t data,
-									 chunk_t *sig)
+bool botan_emsa_pss_identifier(rsa_pss_params_t *params, char *id, size_t len)
 {
 	const char *hash;
-	char hash_and_padding[BUF_LEN];
 
 	if (!params)
 	{
@@ -90,13 +87,25 @@ static bool build_emsa_pss_signature(private_botan_rsa_private_key_t *this,
 
 	if (params->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
 	{
-		snprintf(hash_and_padding, sizeof(hash_and_padding),
-				 "EMSA-PSS(%s,MGF1,%u)", hash, params->salt_len);
+		return snprintf(id, len, "EMSA-PSS(%s,MGF1,%zd)", hash,
+						params->salt_len) < len;
 	}
-	else
+	return snprintf(id, len, "EMSA-PSS(%s,MGF1)", hash) < len;
+}
+
+/**
+ * Build an EMSA PSS signature described in PKCS#1
+ */
+static bool build_emsa_pss_signature(private_botan_rsa_private_key_t *this,
+									 rsa_pss_params_t *params, chunk_t data,
+									 chunk_t *sig)
+{
+	char hash_and_padding[BUF_LEN];
+
+	if (!botan_emsa_pss_identifier(params, hash_and_padding,
+								   sizeof(hash_and_padding)))
 	{
-		snprintf(hash_and_padding, sizeof(hash_and_padding),
-				 "EMSA-PSS(%s,MGF1)", hash);
+		return FALSE;
 	}
 	return botan_get_signature(this->key, hash_and_padding, data, sig);
 }

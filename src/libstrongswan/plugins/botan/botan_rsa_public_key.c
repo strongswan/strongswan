@@ -64,6 +64,11 @@ struct private_botan_rsa_public_key_t {
 };
 
 /**
+ * Defined in botan_rsa_private_key.c
+ */
+bool botan_emsa_pss_identifier(rsa_pss_params_t *params, char *id, size_t len);
+
+/**
  * Verify RSA signature
  */
 static bool verify_rsa_signature(private_botan_rsa_public_key_t *this,
@@ -97,36 +102,12 @@ static bool verify_emsa_pss_signature(private_botan_rsa_public_key_t *this,
 									  rsa_pss_params_t *params, chunk_t data,
 									  chunk_t signature)
 {
-	const char *hash;
 	char hash_and_padding[BUF_LEN];
 
-	if (!params)
+	if (!botan_emsa_pss_identifier(params, hash_and_padding,
+								   sizeof(hash_and_padding)))
 	{
 		return FALSE;
-	}
-
-	/* botan currently does not support passing the mgf1 hash */
-	if (params->hash != params->mgf1_hash)
-	{
-		DBG1(DBG_LIB, "passing mgf1 hash not supported via botan");
-		return FALSE;
-	}
-
-	hash = botan_get_hash(params->hash);
-	if (!hash)
-	{
-		return FALSE;
-	}
-
-	if (params->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
-	{
-		snprintf(hash_and_padding, sizeof(hash_and_padding),
-				 "EMSA-PSS(%s,MGF1,%u)", hash, params->salt_len);
-	}
-	else
-	{
-		snprintf(hash_and_padding, sizeof(hash_and_padding),
-				 "EMSA-PSS(%s,MGF1)", hash);
 	}
 	return verify_rsa_signature(this, hash_and_padding, data, signature);
 }
