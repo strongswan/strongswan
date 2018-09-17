@@ -665,7 +665,7 @@ static bool pt_tls_receive(private_tnc_pdp_t *this, int fd, watcher_event_t even
 	server_ip = host_create_any(client_ip->get_family(client_ip));
 
 	/* At this moment the client identity is not known yet */
-	client_id = identification_create_from_encoding(ID_ANY, chunk_empty),
+	client_id = identification_create_from_encoding(ID_ANY, chunk_empty);
 
 	tnccs = tnc->tnccs->create_instance(tnc->tnccs, TNCCS_2_0, TRUE,
 										this->server, client_id, server_ip,
