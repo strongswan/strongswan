@@ -187,7 +187,7 @@ char* print_cfn(pts_comp_func_name_t *cfn)
 	int type, vid, name, qualifier, n;
 	enum_name_t *names, *types;
 
-	vid = cfn->get_vendor_id(cfn),
+	vid = cfn->get_vendor_id(cfn);
 	name = cfn->get_name(cfn);
 	qualifier = cfn->get_qualifier(cfn);
 	n = snprintf(buf, BUF_LEN, "0x%06x/0x%08x-0x%02x", vid, name, qualifier);
