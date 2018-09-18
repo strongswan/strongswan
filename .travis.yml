@@ -33,6 +33,9 @@ env:
     - LEAK_DETECTIVE=no
     - MONOLITHIC=no
   matrix:
+    - TEST=all
+    - TEST=all MONOLITHIC=yes
+    - TEST=all LEAK_DETECTIVE=yes
     - TEST=default
     - TEST=default MONOLITHIC=yes
     - TEST=default LEAK_DETECTIVE=yes
@@ -45,18 +48,12 @@ env:
     # we can't test Vstr as negative int args are not properly passed to CBs
     - TEST=printf-builtin
     - TEST=printf-builtin LEAK_DETECTIVE=yes
-    - TEST=all
-    - TEST=all MONOLITHIC=yes
-    - TEST=all LEAK_DETECTIVE=yes
 
 matrix:
   include:
-    - compiler: gcc
-      env: TEST=dist
-    - compiler: gcc
-      env: TEST=apidoc
-    - compiler: gcc
-      env: TEST=coverage
+    - compiler: clang
+      os: osx
+      env: TEST=osx
     - compiler: gcc
       env: TEST=sonarcloud
       git:
@@ -65,14 +62,17 @@ matrix:
         sonarcloud:
           organization: "strongswan"
     - compiler: gcc
+      env: TEST=coverage
+    - compiler: clang
+      env: TEST=fuzzing MONOLITHIC=yes
+    - compiler: gcc
+      env: TEST=dist
+    - compiler: gcc
+      env: TEST=apidoc
+    - compiler: gcc
       env: TEST=win64 MONOLITHIC=yes
     # this does not work on 14.04 due to a missing @4 decoration for
     # TryAcquireSRWLockExclusive in MinGW 3.1.0
     - compiler: gcc
       env: TEST=win32 MONOLITHIC=yes
       dist: precise
-    - compiler: clang
-      env: TEST=fuzzing MONOLITHIC=yes
-    - compiler: clang
-      os: osx
-      env: TEST=osx
