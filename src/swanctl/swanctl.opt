@@ -1113,6 +1113,26 @@ secrets.ike<suffix>.id<suffix> =
 	may be specified, each having an _id_ prefix, if a secret is shared between
 	multiple peers.
 
+secrets.ppk<suffix> { # }
+	Postquantum Preshared Key (PPK) section for a specific secret.
+
+	Postquantum Preshared Key (PPK) section for a specific secret. Each PPK is
+	defined	in a unique section having the _ppk_ prefix.
+
+secrets.ppk<suffix>.secret =
+	Value of the PPK.
+
+	Value of the PPK. It may either be an ASCII string,	a hex encoded string if
+	it has a _0x_ prefix or a Base64 encoded string if it has a _0s_ prefix in
+	its value. Should have at least 256 bits of entropy for 128-bit security.
+
+secrets.ppk<suffix>.id<suffix> =
+	PPK identity the PPK belongs to.
+
+	PPK identity the PPK belongs to. Multiple unique identities
+	may be specified, each having an _id_ prefix, if a secret is shared between
+	multiple peers.
+
 secrets.private<suffix> { # }
 	Private key decryption passphrase for a key in the _private_ folder.
 
