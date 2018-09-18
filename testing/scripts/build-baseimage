@@ -21,7 +21,7 @@ INC=$INC,gnat,gprbuild,acpid,acpi-support-base,libldns-dev,libunbound-dev
 INC=$INC,dnsutils,libsoup2.4-dev,ca-certificates,unzip,libsystemd-dev
 INC=$INC,python,python-setuptools,python-dev,python-pip,apt-transport-https
 INC=$INC,libjson-c-dev,libxslt1-dev,libapache2-mod-wsgi,iptables-dev
-INC=$INC,libxerces-c-dev,libgcrypt20-dev
+INC=$INC,libxerces-c-dev,libgcrypt20-dev,traceroute
 case "$BASEIMGSUITE" in
 jessie)
 	INC=$INC,libahven4-dev,libxmlada5-dev,libgmpada5-dev
