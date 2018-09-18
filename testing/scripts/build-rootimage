@@ -55,8 +55,11 @@ do_on_exit umount $LOOPDIR/root/shared
 
 echo "Installing software from source"
 RECPDIR=$DIR/recipes
+if [ -d "$RECPDIR/patches" ]
+then
+	execute "cp -r $RECPDIR/patches $LOOPDIR/root/shared/compile" 0
+fi
 RECIPES=`ls $RECPDIR/*.mk | xargs -n1 basename`
-execute "cp -r $RECPDIR/patches $LOOPDIR/root/shared/compile" 0
 for r in $RECIPES
 do
 	cp $RECPDIR/$r ${LOOPDIR}/root/shared/compile
