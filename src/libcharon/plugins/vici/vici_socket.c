@@ -198,7 +198,14 @@ static entry_t* find_entry(private_vici_socket_t *this, stream_t *stream,
 			if ((reader && entry->readers) ||
 				(writer && entry->writers))
 			{
-				entry->cond->wait(entry->cond, this->mutex);
+				timeval_t now, abso, diff = { .tv_sec = 2 };
+				time_monotonic(&now);
+				timeradd(&now, &diff, &abso);
+				if (entry->cond->timed_wait_abs(entry->cond, this->mutex, abso))
+				{
+					candidate = FALSE;
+					continue;
+				}
 				break;
 			}
 			if (reader)
