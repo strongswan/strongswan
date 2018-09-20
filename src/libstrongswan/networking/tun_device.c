@@ -652,7 +652,7 @@ METHOD(tun_device_t, get_name, char*,
 METHOD(tun_device_t, get_handle, HANDLE,
         private_tun_device_t *this)
 {
-        return this->tunhandle;
+	return this->tunhandle;
 }
 
 METHOD(tun_device_t, write_packet, bool,
@@ -705,8 +705,8 @@ METHOD(tun_device_t, write_packet, bool,
                     return FALSE;
                     break;
             }
-         }
-		WaitForSingleObject(write_event, INFINITE);
+        }
+        WaitForSingleObject(write_event, INFINITE);
 
         CloseHandle(write_event);
 
@@ -835,8 +835,11 @@ METHOD(tun_device_t, destroy, void,
 	private_tun_device_t *this)
 {
 #ifdef WIN32
-        /* close file handle, destroy interface */
-        CloseHandle(this->tunhandle);
+	/* close file handle, destroy interface */
+	if (this->tunhandle != NULL && this->tunhandle != INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(this->tunhandle);
+	}
 #else
 	if (this->tunfd > 0)
 	{
@@ -973,11 +976,11 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
         /* We set a fake gateway of 169.254.254.128 that we route packets over
          The TAP driver strips the Ethernet header and trailer of the Ethernet frames
          before sending them back to the application that listens on the handle */
-	struct in_addr ep[3];
+        struct in_addr ep[3];
         ULONG status = TRUE;
         DWORD len;
         /* Local address (just fake one): 169.254.128.127 */
-	ep[0].S_un.S_un_b.s_b1 = 169;
+        ep[0].S_un.S_un_b.s_b1 = 169;
         ep[0].S_un.S_un_b.s_b2 = 254;
         ep[0].S_un.S_un_b.s_b3 = 128;
         ep[0].S_un.S_un_b.s_b4 = 127;
@@ -990,12 +993,12 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
          */
         /* We need to integrate support for IPv6, too. */
         /* Just fake a link local address for now (169.254.128.128) */
-	ep[1].S_un.S_un_b.s_b1 = 169;
+        ep[1].S_un.S_un_b.s_b1 = 169;
         ep[1].S_un.S_un_b.s_b2 = 254;
         ep[1].S_un.S_un_b.s_b3 = 128;
         ep[1].S_un.S_un_b.s_b4 = 128;
         /* Remote netmask (255.255.255.255) */
-	ep[2].S_un.S_un_b.s_b1 = 255;
+        ep[2].S_un.S_un_b.s_b1 = 255;
         ep[2].S_un.S_un_b.s_b2 = 255;
         ep[2].S_un.S_un_b.s_b3 = 255;
         ep[2].S_un.S_un_b.s_b4 = 255;
@@ -1034,8 +1037,7 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
             DBG1 (DBG_LIB, "WARNING: The TAP-Windows driver rejected a TAP_WIN_IOCTL_SET_MEDIA_STATUS DeviceIoControl call.");
         }
 
-            /* Give the adapter 2 seconds to come up */
-
+        /* Give the adapter 2 seconds to come up */
         sleep(2);
         return TRUE;
 #elif defined(IFF_TUN)
@@ -1128,9 +1130,9 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 			.get_mtu = _get_mtu,
 			.set_mtu = _set_mtu,
 			.get_name = _get_name,
-                        /* For WIN32, that's a handle. */
+			/* For WIN32, that's a handle. */
 #ifdef WIN32
-                        .get_handle = _get_handle,
+			.get_handle = _get_handle,
 #else
 			.get_fd = _get_fd,
 #endif /* WIN32 */
@@ -1140,11 +1142,10 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 			.destroy = _destroy,
 		},
 #ifdef WIN32
-                .tunhandle = NULL,
+		.tunhandle = NULL,
 #else
-
-                .tunfd = -1,
-                .sock = -1,
+		.tunfd = -1,
+		.sock = -1,
 #endif /* WIN32 */
 	);
 

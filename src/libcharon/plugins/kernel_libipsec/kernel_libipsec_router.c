@@ -62,7 +62,7 @@ typedef struct {
 	host_t *addr;
 	/** underlying TUN file descriptor (cached from tun) */
 #ifdef WIN32
-        HANDLE handle;
+	HANDLE handle;
 #else
 	int fd;
 #endif /* WIN32 */
@@ -388,6 +388,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 
 		if (event_array[i] == NULL)
 		{
+			/* @todo This leaks memory - all event_array entries before 'i' are not cleaned up */
 			char *error_message = format_error(GetLastError());
 			LocalFree(error_message);
 			return JOB_REQUEUE_FAIR;
@@ -398,6 +399,7 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 		DBG2(DBG_ESP, "Reading on %s", tun_device->get_name(tun_device));
 		if (!start_read(&bundle_array[i], bundle_array[i].overlapped->hEvent))
 		{
+			/* @todo This leaks memory - all event_array entries up to 'i' are not cleaned up */
 			// TODO: Cleanup heap
 			this->lock->unlock(this->lock);
 			return JOB_REQUEUE_FAIR;
@@ -450,7 +452,6 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 				{
 					/* stop all asynchronous IO */
 					CancelIo(bundle_array[j].fileHandle);
-					CloseHandle(bundle_array[j].overlapped->hEvent);
 					memset(bundle_array[j].buffer.ptr, 0, bundle_array[j].buffer.len);
 					ResetEvent(event_array[j]);
 					CloseHandle(event_array[j]);
@@ -491,8 +492,9 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 				{
 					/* stop all asynchronous IO */
 					CancelIo(bundle_array[j].fileHandle);
-					CloseHandle(bundle_array[j].overlapped->hEvent);
 					memset(bundle_array[j].buffer.ptr, 0, bundle_array[j].buffer.len);
+					ResetEvent(event_array[j]);
+					CloseHandle(event_array[j]);
 				}
 				this->lock->unlock(this->lock);
 				return JOB_REQUEUE_FAIR;
@@ -510,7 +512,6 @@ static job_requeue_t handle_plain(private_kernel_libipsec_router_t *this)
 			{
 				/* stop all asynchronous IO */
 				CancelIo(bundle_array[j].fileHandle);
-				CloseHandle(bundle_array[j].overlapped->hEvent);
 				memset(bundle_array[j].buffer.ptr, 0, bundle_array[j].buffer.len);
 				ResetEvent(event_array[j]);
 				CloseHandle(event_array[j]);
@@ -611,7 +612,7 @@ METHOD(kernel_listener_t, tun, bool,
 		INIT(entry,
 			.addr = tun->get_address(tun, NULL),
 #ifdef WIN32
-                        .handle = tun->get_handle(tun),
+			.handle = tun->get_handle(tun),
 #else
 			.fd = tun->get_fd(tun),
 #endif /* WIN32 */
@@ -671,7 +672,6 @@ METHOD(kernel_libipsec_router_t, destroy, void,
 	this->tuns->destroy(this->tuns);
 #ifdef WIN32
 	SetEvent(this->event);
-	CloseHandle(this->tun.handle);
 	CloseHandle(this->event);
 	/* Remove all other handles we might have */
 	/* TODO: Create enumerator, enumerate over tuns, close all those handles */
