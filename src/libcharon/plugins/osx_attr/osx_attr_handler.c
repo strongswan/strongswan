@@ -443,7 +443,7 @@ METHOD(attribute_handler_t, release, void,
 	private_osx_attr_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
-	bool handled;
+	bool handled = FALSE;
 
 	if ( type == INTERNAL_IP6_DNS )
 	{
