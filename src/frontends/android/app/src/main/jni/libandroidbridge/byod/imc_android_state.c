@@ -116,10 +116,14 @@ METHOD(imc_state_t, get_contracts, seg_contract_manager_t*,
 	return this->contracts;
 }
 
-METHOD(imc_state_t, change_state, void,
+METHOD(imc_state_t, change_state, TNC_ConnectionState,
 	private_imc_android_state_t *this, TNC_ConnectionState new_state)
 {
+	TNC_ConnectionState old;
+
+	old = this->state;
 	this->state = new_state;
+	return old;
 }
 
 METHOD(imc_state_t, set_result, void,
