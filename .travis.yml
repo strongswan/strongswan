@@ -3,6 +3,9 @@ language: c
 sudo: required
 dist: trusty
 
+# don't build tags separately
+if: tag IS blank
+
 compiler:
   - gcc
   - clang
