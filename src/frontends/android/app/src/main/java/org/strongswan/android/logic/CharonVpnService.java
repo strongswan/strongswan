@@ -930,6 +930,9 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			mCache.addAddress("fd00::fd02:1", 128);
 			mCache.addRoute("0.0.0.0", 0);
 			mCache.addRoute("::", 0);
+			/* set DNS servers to avoid DNS leak later */
+			mBuilder.addDnsServer("8.8.8.8");
+			mBuilder.addDnsServer("2001:4860:4860::8888");
 			/* use blocking mode to simplify packet dropping */
 			mBuilder.setBlocking(true);
 			ParcelFileDescriptor fd = establishIntern();
