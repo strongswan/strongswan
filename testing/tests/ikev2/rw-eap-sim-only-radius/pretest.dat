@@ -7,7 +7,6 @@ dave::iptables-restore < /etc/iptables.rules
 moon::rm /etc/ipsec.d/cacerts/*
 carol::rm /etc/ipsec.d/cacerts/*
 dave::rm /etc/ipsec.d/cacerts/*
-alice::cat /etc/freeradius/triplets.dat
 carol::cat /etc/ipsec.d/triplets.dat
 dave::cat /etc/ipsec.d/triplets.dat
 alice::freeradius
