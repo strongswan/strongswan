@@ -301,7 +301,7 @@ bool gmp_emsa_pkcs1_signature_data(hash_algorithm_t hash_algorithm,
 		data = digestInfo;
 	}
 
-	if (data.len > keylen - 11)
+	if (keylen < 11 || data.len > keylen - 11)
 	{
 		chunk_free(&digestInfo);
 		DBG1(DBG_LIB, "signature value of %zu bytes is too long for key of "
