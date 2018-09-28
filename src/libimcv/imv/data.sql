@@ -574,6 +574,24 @@ INSERT INTO products (      /* 96 */
  'Ubuntu 18.04 x86_64'
 );
 
+INSERT INTO products (      /* 97 */
+  name
+) VALUES (
+ 'Debian 9.5 i686'
+);
+
+INSERT INTO products (      /* 98 */
+  name
+) VALUES (
+ 'Debian 9.5 x86_64'
+);
+
+INSERT INTO products (      /* 99 */
+  name
+) VALUES (
+ 'Debian 9.6 x86_64'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -1147,6 +1165,12 @@ INSERT INTO groups_product_defaults (
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
+  4, 97
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
   5, 2
 );
 
@@ -1262,6 +1286,18 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   5, 95
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 98
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 99
 );
 
 INSERT INTO groups_product_defaults (
