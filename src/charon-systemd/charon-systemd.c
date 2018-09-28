@@ -322,6 +322,7 @@ int main(int argc, char *argv[])
 {
 	struct sigaction action;
 	struct utsname utsname;
+	int status = SS_RC_INITIALIZATION_FAILED;
 
 	dbg = dbg_stderr;
 
@@ -345,16 +346,15 @@ int main(int argc, char *argv[])
 		sd_notifyf(0, "STATUS=integrity check of charon-systemd failed");
 		return SS_RC_INITIALIZATION_FAILED;
 	}
-	atexit(libcharon_deinit);
 	if (!libcharon_init())
 	{
 		sd_notifyf(0, "STATUS=libcharon initialization failed");
-		return SS_RC_INITIALIZATION_FAILED;
+		goto error;
 	}
 	if (!lookup_uid_gid())
 	{
 		sd_notifyf(0, "STATUS=unknown uid/gid");
-		return SS_RC_INITIALIZATION_FAILED;
+		goto error;
 	}
 	/* we registered the journal logger as custom logger, which gets its
 	 * settings from <ns>.customlog.journal, let it fallback to <ns>.journal */
@@ -370,14 +370,14 @@ int main(int argc, char *argv[])
 			lib->settings->get_str(lib->settings, "%s.load", PLUGINS, lib->ns)))
 	{
 		sd_notifyf(0, "STATUS=charon initialization failed");
-		return SS_RC_INITIALIZATION_FAILED;
+		goto error;
 	}
 	lib->plugins->status(lib->plugins, LEVEL_CTRL);
 
 	if (!lib->caps->drop(lib->caps))
 	{
 		sd_notifyf(0, "STATUS=dropping capabilities failed");
-		return SS_RC_INITIALIZATION_FAILED;
+		goto error;
 	}
 
 	/* add handler for SEGV and ILL,
@@ -401,5 +401,9 @@ int main(int argc, char *argv[])
 	sd_notifyf(0, "STATUS=charon-systemd running, strongSwan %s, %s %s, %s",
 			   VERSION, utsname.sysname, utsname.release, utsname.machine);
 
-	return run();
+	status = run();
+
+error:
+	libcharon_deinit();
+	return status;
 }
