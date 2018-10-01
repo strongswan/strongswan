@@ -1,3 +1,13 @@
+strongswan-5.7.1
+----------------
+
+- Fixes a vulnerability in the gmp plugin triggered by crafted certificates with
+  RSA keys with very small moduli.  When verifying signatures with such keys,
+  the code patched with the fix for CVE-2018-16151/2 caused an integer underflow
+  and subsequent heap buffer overflow that results in a crash of the daemon.
+  The vulnerability has been registered as CVE-2018-17540.
+
+
 strongswan-5.7.0
 ----------------
 
