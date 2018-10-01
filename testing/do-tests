@@ -51,11 +51,15 @@ subdir_cnt="0"
 ##############################################################################
 # parse optional arguments
 #
-while getopts "v" opt
+while getopts "vt" opt
 do
 	case "$opt" in
 	v)
 		verbose=YES
+		timestamps=YES
+		;;
+	t)
+		timestamps=YES
 		;;
 	esac
 done
@@ -64,7 +68,7 @@ shift $((OPTIND-1))
 
 function print_time()
 {
-	[ "$verbose" == "YES" ] && echo "$(date +%T.%N) ~ "
+	[ "$timestamps" == "YES" ] && echo "$(date +%T.%N) ~ "
 }
 
 ##############################################################################
