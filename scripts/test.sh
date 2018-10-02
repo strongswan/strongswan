@@ -7,6 +7,10 @@ build_botan()
 	BOTAN_REV=1872f899716854927ecc68022fac318735be8824
 	BOTAN_DIR=$TRAVIS_BUILD_DIR/../botan
 
+	if test -d "$BOTAN_DIR"; then
+		return
+	fi
+
 	# if the leak detective is enabled we have to disable threading support
 	# (used for std::async) as that causes invalid frees somehow, the
 	# locking allocator causes a static leak via the first function that
