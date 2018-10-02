@@ -1110,14 +1110,17 @@ METHOD(task_t, process_r, status_t,
 				this->tsi = select_ts(this, FALSE, tsi);
 				this->tsr = select_ts(this, TRUE, tsr);
 			}
-			tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
-			tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 			if (!this->config || !this->tsi || !this->tsr ||
 				this->mode != this->config->get_mode(this->config))
 			{
-				DBG1(DBG_IKE, "no matching CHILD_SA config found");
+				DBG1(DBG_IKE, "no matching CHILD_SA config found for "
+					 "%#R === %#R", tsi, tsr);
+				tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+				tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 				return send_notify(this, INVALID_ID_INFORMATION);
 			}
+			tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+			tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 
 			if (this->config->has_option(this->config, OPT_IPCOMP))
 			{
