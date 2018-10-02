@@ -36,6 +36,8 @@ stretch)
 esac
 SERVICES="apache2 dbus isc-dhcp-server slapd bind9 freeradius"
 INC=$INC,${SERVICES// /,}
+# additional services to disable
+SERVICES="$SERVICES systemd-timesyncd.service"
 
 CACHEDIR=$BUILDDIR/cache
 APTCACHE=$LOOPDIR/var/cache/apt/archives
