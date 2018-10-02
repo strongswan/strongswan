@@ -118,7 +118,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		rekey, 'R', "rekey", "rekey an SA",
-		{"--child <name> | --ike <name | --child-id <id> | --ike-id <id>",
+		{"--child <name> | --ike <name> | --child-id <id> | --ike-id <id>",
 		 "[--reauth] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
