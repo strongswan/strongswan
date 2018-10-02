@@ -1121,7 +1121,15 @@ static status_t process_request(private_task_manager_t *this,
 		}
 	}
 	else
-	{	/* We don't send a response, so don't retransmit one if we get
+	{
+		if (this->responding.retransmitted > 1)
+		{
+			packet_t *packet = NULL;
+			array_get(this->responding.packets, 0, &packet);
+			charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_CLEARED,
+							   packet);
+		}
+		/* We don't send a response, so don't retransmit one if we get
 		 * the same message again. */
 		clear_packets(this->responding.packets);
 	}
