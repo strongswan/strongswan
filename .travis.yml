@@ -59,6 +59,7 @@ matrix:
       env: TEST=osx
     - compiler: gcc
       env: TEST=sonarcloud
+      if: env(SONAR_TOKEN) IS present
       git:
         depth: false
       addons:
