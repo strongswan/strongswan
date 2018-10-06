@@ -746,7 +746,7 @@ dhcp_socket_t *dhcp_socket_create()
 
 	if (!this->rng)
 	{
-		DBG1(DBG_CFG, "unable to create RNG");
+		DBG1(DBG_KNL, "unable to create RNG");
 		destroy(this);
 		return NULL;
 	}
