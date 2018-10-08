@@ -312,7 +312,7 @@ ARG_ENABL_SET([perl-cpan],      [enable build of provided perl CPAN module.])
 ARG_ENABL_SET([perl-cpan-install],[enable installation of provided CPAN module.])
 ARG_ENABL_SET([tss-trousers],   [enable the use of the TrouSerS Trusted Software Stack])
 ARG_ENABL_SET([tss-tss2],       [enable the use of the TSS 2.0 Trusted Software Stack])
-
+ARG_ENABL_SET([oval-updater],           [enable oval-updater])
 # compile options
 ARG_ENABL_SET([coverage],       [enable lcov coverage report generation.])
 ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
@@ -453,7 +453,7 @@ if test x$swanctl = xtrue; then
 	vici=true
 fi
 
-if test x$smp = xtrue -o x$tnccs_11 = xtrue -o x$tnc_ifmap = xtrue; then
+if test x$smp = xtrue -o x$tnccs_11 = xtrue -o x$tnc_ifmap = xtrue -o oval-updater = xtrue; then
 	xml=true
 fi
 
@@ -1741,6 +1741,7 @@ AM_CONDITIONAL(USE_RUBY_GEMS, test x$ruby_gems = xtrue)
 AM_CONDITIONAL(USE_PYTHON_EGGS, test x$python_eggs = xtrue)
 AM_CONDITIONAL(USE_PERL_CPAN, test x$perl_cpan = xtrue)
 AM_CONDITIONAL(USE_PY_TEST, test "x$PY_TEST" != x)
+AM_CONDITIONAL(USE_OVAL_UPDATER, test x$oval-updater = xtrue)
 
 # ========================
 #  set global definitions
@@ -2008,6 +2009,7 @@ AC_CONFIG_FILES([
 	src/pt-tls-client/Makefile
 	src/sw-collector/Makefile
 	src/sec-updater/Makefile
+	src/oval-updater/Makefile
 	src/swanctl/Makefile
 	scripts/Makefile
 	testing/Makefile
@@ -2043,6 +2045,7 @@ AC_CONFIG_FILES([
 	src/pt-tls-client/pt-tls-client.1
 	src/sw-collector/sw-collector.8
 	src/sec-updater/sec-updater.8
+	src/oval-updater/oval-updater.8
 ])
 
 AC_OUTPUT

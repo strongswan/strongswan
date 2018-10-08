@@ -143,3 +143,7 @@ endif
 if USE_TPM
   SUBDIRS += tpm_extendpcr
 endif
+
+if USE_OVAL_UPDATER
+  SUBDIRS += oval-updater
+endif
