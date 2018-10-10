@@ -544,6 +544,12 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
+				if (activate_task(this, TASK_ISAKMP_R_U_THERE_ACK))
+				{
+					exchange = INFORMATIONAL_V1;
+					new_mid = TRUE;
+					break;
+				}
 				if (!mode_config_expected(this) &&
 					activate_task(this, TASK_QUICK_MODE))
 				{
@@ -557,7 +563,7 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
-				if (activate_task(this, TASK_ISAKMP_DPD))
+				if (activate_task(this, TASK_ISAKMP_R_U_THERE))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
@@ -571,7 +577,13 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
-				if (activate_task(this, TASK_ISAKMP_DPD))
+				if (activate_task(this, TASK_ISAKMP_R_U_THERE))
+				{
+					exchange = INFORMATIONAL_V1;
+					new_mid = TRUE;
+					break;
+				}
+				if (activate_task(this, TASK_ISAKMP_R_U_THERE_ACK))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
