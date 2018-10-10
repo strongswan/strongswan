@@ -544,6 +544,12 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
+				if (activate_task(this, TASK_ISAKMP_DPD))
+				{
+					exchange = INFORMATIONAL_V1;
+					new_mid = TRUE;
+					break;
+				}
 				if (!mode_config_expected(this) &&
 					activate_task(this, TASK_QUICK_MODE))
 				{
@@ -552,12 +558,6 @@ METHOD(task_manager_t, initiate, status_t,
 					break;
 				}
 				if (activate_task(this, TASK_INFORMATIONAL))
-				{
-					exchange = INFORMATIONAL_V1;
-					new_mid = TRUE;
-					break;
-				}
-				if (activate_task(this, TASK_ISAKMP_DPD))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
