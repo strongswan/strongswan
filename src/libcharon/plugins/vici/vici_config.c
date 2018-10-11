@@ -733,7 +733,7 @@ CALLBACK(parse_ts, bool,
 		if (host_create_from_range(buf, &lower, &upper))
 		{
 			type = (lower->get_family(lower) == AF_INET) ?
-						 		TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE;
+								TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE;
 			ts = traffic_selector_create_from_bytes(proto, type,
 								lower->get_address(lower), from,
 								upper->get_address(upper), to);
@@ -2494,7 +2494,10 @@ CALLBACK(config_sn, bool,
 	if (peer.mediated_by)
 	{
 		cfg.mediated_by = peer.mediated_by;
-		cfg.peer_id = peer.peer_id->clone(peer.peer_id);
+		if (peer.peer_id)
+		{
+			cfg.peer_id = peer.peer_id->clone(peer.peer_id);
+		}
 	}
 #endif /* ME */
 	peer_cfg = peer_cfg_create(name, ike_cfg, &cfg);
