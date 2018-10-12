@@ -536,6 +536,11 @@ static int issue()
 										chunk_from_chars(ASN1_SEQUENCE, 0));
 	}
 	scheme = get_signature_scheme(private, digest, pss);
+	if (!scheme)
+	{
+		error = "no signature scheme found";
+		goto end;
+	}
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 					BUILD_SIGNING_KEY, private, BUILD_SIGNING_CERT, ca,

@@ -378,6 +378,11 @@ static int self()
 		rng->destroy(rng);
 	}
 	scheme = get_signature_scheme(private, digest, pss);
+	if (!scheme)
+	{
+		error = "no signature scheme found";
+		goto end;
+	}
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 						BUILD_SIGNING_KEY, private, BUILD_PUBLIC_KEY, public,
