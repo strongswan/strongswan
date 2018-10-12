@@ -18,22 +18,43 @@
 #include <asn1/oid.h>
 #include <asn1/asn1_parser.h>
 
-/**
- * Determine the salt length in case it is not configured
+/*
+ * Described in header
  */
-static ssize_t rsa_pss_salt_length(rsa_pss_params_t *pss)
+bool rsa_pss_params_set_salt_len(rsa_pss_params_t *params, size_t modbits)
 {
-	ssize_t salt_len = pss->salt_len;
+	size_t hash_len;
 
-	if (salt_len <= RSA_PSS_SALT_LEN_DEFAULT)
+	if (params->salt_len < 0)
 	{
-		salt_len = hasher_hash_size(pss->hash);
-		if (!salt_len)
+		hash_len = hasher_hash_size(params->hash);
+		if (!hash_len)
 		{
-			return -1;
+			return FALSE;
+		}
+
+		switch (params->salt_len)
+		{
+			case RSA_PSS_SALT_LEN_DEFAULT:
+				params->salt_len = hash_len;
+				break;
+			case RSA_PSS_SALT_LEN_MAX:
+				if (modbits)
+				{
+					/* emBits = modBits - 1 */
+					modbits -= 1;
+					/* emLen = ceil(emBits/8) */
+					modbits = (modbits+7) / BITS_PER_BYTE;
+					/* account for 0x01 separator in DB, 0xbc trailing byte */
+					params->salt_len = max(0, (ssize_t)(modbits - hash_len - 2));
+					break;
+				}
+				return FALSE;
+			default:
+				return FALSE;
 		}
 	}
-	return salt_len;
+	return TRUE;
 }
 
 /**
@@ -68,8 +89,7 @@ static bool compare_params(signature_params_t *a, signature_params_t *b,
 
 				return pss_a->hash == pss_b->hash &&
 					   pss_a->mgf1_hash == pss_b->mgf1_hash &&
-					   (!strict ||
-						rsa_pss_salt_length(pss_a) == rsa_pss_salt_length(pss_b));
+					   (!strict || pss_a->salt_len == pss_b->salt_len);
 			}
 			default:
 				break;
@@ -328,7 +348,6 @@ end:
 bool rsa_pss_params_build(rsa_pss_params_t *params, chunk_t *asn1)
 {
 	chunk_t hash = chunk_empty, mgf = chunk_empty, slen = chunk_empty;
-	ssize_t salt_len;
 	int alg;
 
 	if (params->hash != HASH_SHA1)
@@ -351,16 +370,15 @@ bool rsa_pss_params_build(rsa_pss_params_t *params, chunk_t *asn1)
 		mgf = asn1_algorithmIdentifier_params(OID_MGF1,
 											  asn1_algorithmIdentifier(alg));
 	}
-	salt_len = rsa_pss_salt_length(params);
-	if (salt_len < 0)
+	if (params->salt_len < 0)
 	{
 		chunk_free(&hash);
 		chunk_free(&mgf);
 		return FALSE;
 	}
-	else if (salt_len != HASH_SIZE_SHA1)
+	else if (params->salt_len != HASH_SIZE_SHA1)
 	{
-		slen = asn1_integer("m", asn1_integer_from_uint64(salt_len));
+		slen = asn1_integer("m", asn1_integer_from_uint64(params->salt_len));
 	}
 	*asn1 = asn1_wrap(ASN1_SEQUENCE, "mmm",
 				hash.len ? asn1_wrap(ASN1_CONTEXT_C_0, "m", hash) : chunk_empty,

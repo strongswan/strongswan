@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Tobias Brunner
+ * Copyright (C) 2017-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -100,11 +100,15 @@ struct rsa_pss_params_t {
 	hash_algorithm_t hash;
 	/** Hash for the MGF1 function */
 	hash_algorithm_t mgf1_hash;
-	/** Salt length, use RSA_PSS_SALT_LEN_DEFAULT for length equal to hash */
+	/** Salt length, use the constants below for special lengths resolved
+	 * via rsa_pss_params_set_salt_len() */
 	ssize_t salt_len;
 	/** Salt value, for unit tests (not all implementations support this) */
 	chunk_t salt;
+/** Use a salt length equal to the length of the hash */
 #define RSA_PSS_SALT_LEN_DEFAULT -1
+/** Use the maximum salt length depending on the hash and key length */
+#define RSA_PSS_SALT_LEN_MAX -2
 };
 
 /**
@@ -125,5 +129,16 @@ bool rsa_pss_params_parse(chunk_t asn1, int level0, rsa_pss_params_t *params);
  * @return			TRUE if successfully built
  */
 bool rsa_pss_params_build(rsa_pss_params_t *params, chunk_t *asn1);
+
+/**
+ * Determine and set the salt length for the given params in case constants
+ * are used
+ *
+ * @param params	parameters to update
+ * @param modbits	RSA modulus length in bits (required if RSA_PSS_SALT_LEN_MAX
+ *					is used)
+ * @return			salt length to use, negative on error
+ */
+bool rsa_pss_params_set_salt_len(rsa_pss_params_t *params, size_t modbits);
 
 #endif /** SIGNATURE_PARAMS_H_ @}*/

@@ -393,14 +393,10 @@ static bool build_emsa_pss_signature(private_gmp_rsa_private_key_t *this,
 		goto error;
 	}
 
-	salt.len = hash.len;
+	salt.len = params->salt_len;
 	if (params->salt.len)
 	{
 		salt = params->salt;
-	}
-	else if (params->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
-	{
-		salt.len = params->salt_len;
 	}
 	if (emlen < (hash.len + salt.len + 2))
 	{	/* too long */

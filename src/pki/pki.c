@@ -304,6 +304,7 @@ signature_params_t *get_signature_scheme(private_key_t *private,
 			.scheme = SIGN_RSA_EMSA_PSS,
 			.params = &pss_params,
 		};
+		rsa_pss_params_set_salt_len(&pss_params, 0);
 		scheme = signature_params_clone(&pss_scheme);
 	}
 	else

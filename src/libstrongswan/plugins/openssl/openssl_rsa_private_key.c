@@ -103,13 +103,8 @@ static bool build_signature(private_openssl_rsa_private_key_t *this,
 	if (pss)
 	{
 		const EVP_MD *mgf1md = openssl_get_md(pss->mgf1_hash);
-		int slen = EVP_MD_size(md);
-		if (pss->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
-		{
-			slen = pss->salt_len;
-		}
 		if (EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) <= 0 ||
-			EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, slen) <= 0 ||
+			EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, pss->salt_len) <= 0 ||
 			EVP_PKEY_CTX_set_rsa_mgf1_md(pctx, mgf1md) <= 0)
 		{
 			goto error;

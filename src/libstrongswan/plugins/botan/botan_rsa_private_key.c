@@ -84,13 +84,8 @@ bool botan_emsa_pss_identifier(rsa_pss_params_t *params, char *id, size_t len)
 	{
 		return FALSE;
 	}
-
-	if (params->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
-	{
-		return snprintf(id, len, "EMSA-PSS(%s,MGF1,%zd)", hash,
-						params->salt_len) < len;
-	}
-	return snprintf(id, len, "EMSA-PSS(%s,MGF1)", hash) < len;
+	return snprintf(id, len, "EMSA-PSS(%s,MGF1,%zd)", hash,
+					params->salt_len) < len;
 }
 
 /**
