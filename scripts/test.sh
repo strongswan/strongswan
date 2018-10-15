@@ -32,6 +32,28 @@ build_botan()
 	cd -
 }
 
+build_tss2()
+{
+	TSS2_REV=2.1.0
+	TSS2_PKG=tpm2-tss-$TSS2_REV
+	TSS2_DIR=$TRAVIS_BUILD_DIR/../$TSS2_PKG
+	TSS2_SRC=https://github.com/tpm2-software/tpm2-tss/releases/download/$TSS2_REV/$TSS2_PKG.tar.gz
+
+	if test -d "$TSS2_DIR"; then
+		return
+	fi
+
+	# the default version of libgcrypt in Ubuntu 14.04 is too old
+	sudo apt-get update -qq && \
+	sudo apt-get install -qq libgcrypt20-dev &&
+	curl -L $TSS2_SRC | tar xz -C $TRAVIS_BUILD_DIR/.. &&
+	cd $TSS2_DIR &&
+	./configure &&
+	sudo make -j4 install >/dev/null &&
+	sudo ldconfig || exit $?
+	cd -
+}
+
 if test -z $TRAVIS_BUILD_DIR; then
 	TRAVIS_BUILD_DIR=$PWD
 fi
@@ -79,8 +101,6 @@ all|coverage|sonarcloud)
 			--disable-systemd --disable-soup --disable-unwind-backtraces
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
-	# Ubuntu 14.04 does provide a too old libtss2-dev
-	CONFIG="$CONFIG --disable-tss-tss2"
 	# Ubuntu 14.04 does not provide libnm
 	CONFIG="$CONFIG --disable-nm"
 	# not enabled on the build server
@@ -98,6 +118,7 @@ all|coverage|sonarcloud)
 	PYDEPS="pytest"
 	if test "$1" = "deps"; then
 		build_botan
+		build_tss2
 	fi
 	;;
 win*)
