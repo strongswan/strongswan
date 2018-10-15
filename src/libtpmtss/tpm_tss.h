@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -78,6 +79,15 @@ struct tpm_tss_t {
 	 * @return				public key in PKCS#1 format
 	 */
 	chunk_t (*get_public)(tpm_tss_t *this, uint32_t handle);
+
+	/**
+	 * Return signature schemes supported by the given key (TPM 2.0 only)
+	 *
+	 * @param handle		key object handle
+	 * @return				enumerator over signature_params_t*
+	 */
+	enumerator_t *(*supported_signature_schemes)(tpm_tss_t *this,
+												 uint32_t handle);
 
 	/**
 	 * Retrieve the current value of a PCR register in a given PCR bank
