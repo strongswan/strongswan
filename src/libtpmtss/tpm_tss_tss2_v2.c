@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
  * Copyright (C) 2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -477,6 +478,89 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 	return aik_pubkey;
 }
 
+METHOD(tpm_tss_t, supported_signature_schemes, enumerator_t*,
+	private_tpm_tss_tss2_t *this, uint32_t handle)
+{
+	TPM2B_PUBLIC public = { 0, };
+	hash_algorithm_t digest;
+	signature_params_t supported_scheme;
+
+	if (!read_public(this, handle, &public))
+	{
+		return enumerator_create_empty();
+	}
+
+	switch (public.publicArea.type)
+	{
+		case TPM2_ALG_RSA:
+		{
+			TPMS_RSA_PARMS *rsa;
+			TPMT_RSA_SCHEME *scheme;
+
+			rsa = &public.publicArea.parameters.rsaDetail;
+			scheme = &rsa->scheme;
+			digest = hash_alg_from_tpm_alg_id(scheme->details.anySig.hashAlg);
+
+			switch (scheme->scheme)
+			{
+				case TPM2_ALG_RSAPSS:
+				{
+					rsa_pss_params_t pss_params = {
+						.hash = digest,
+						.mgf1_hash = digest,
+						.salt_len = RSA_PSS_SALT_LEN_MAX,
+					};
+					supported_scheme = (signature_params_t){
+						.scheme = SIGN_RSA_EMSA_PSS,
+						.params = &pss_params,
+					};
+					if (!rsa_pss_params_set_salt_len(&pss_params, rsa->keyBits))
+					{
+						return enumerator_create_empty();
+					}
+					break;
+				}
+				case TPM2_ALG_RSASSA:
+					supported_scheme = (signature_params_t){
+						.scheme = signature_scheme_from_oid(
+									hasher_signature_algorithm_to_oid(digest,
+																	  KEY_RSA)),
+					};
+					break;
+				default:
+					return enumerator_create_empty();
+			}
+			break;
+		}
+		case TPM2_ALG_ECC:
+		{
+			TPMT_ECC_SCHEME *scheme;
+
+			scheme = &public.publicArea.parameters.eccDetail.scheme;
+			digest = hash_alg_from_tpm_alg_id(scheme->details.anySig.hashAlg);
+
+			switch (scheme->scheme)
+			{
+				case TPM2_ALG_ECDSA:
+					supported_scheme = (signature_params_t){
+						.scheme = signature_scheme_from_oid(
+									hasher_signature_algorithm_to_oid(digest,
+																	KEY_ECDSA)),
+					};
+					break;
+				default:
+					return enumerator_create_empty();
+			}
+			break;
+		}
+		default:
+			DBG1(DBG_PTS, "%s unsupported AIK key type", LABEL);
+			return enumerator_create_empty();
+	}
+	return enumerator_create_single(signature_params_clone(&supported_scheme),
+									(void*)signature_params_destroy);
+}
+
 /**
  * Configure a PCR Selection assuming a maximum of 24 registers
  */
@@ -729,7 +813,7 @@ METHOD(tpm_tss_t, quote, bool,
 			DBG1(DBG_PTS, "%s unsupported %N signature algorithm",
 						   LABEL, tpm_alg_id_names, sig.sigAlg);
 			return FALSE;
-	};
+	}
 
 	DBG2(DBG_PTS, "PCR digest algorithm is %N", tpm_alg_id_names, hash_alg);
 	pcr_digest_alg = hash_alg_from_tpm_alg_id(hash_alg);
@@ -940,7 +1024,7 @@ METHOD(tpm_tss_t, sign, bool,
 			DBG1(DBG_PTS, "%s unsupported %N signature scheme",
 						   LABEL, signature_scheme_names, scheme);
 			return FALSE;
-	};
+	}
 
 	return TRUE;
 }
@@ -1061,6 +1145,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 			.get_version_info = _get_version_info,
 			.generate_aik = _generate_aik,
 			.get_public = _get_public,
+			.supported_signature_schemes = _supported_signature_schemes,
 			.read_pcr = _read_pcr,
 			.extend_pcr = _extend_pcr,
 			.quote = _quote,
