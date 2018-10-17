@@ -371,9 +371,9 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 		if (params->scheme == SIGN_RSA_EMSA_PSS)
 		{
 			rsa_pss_params_t *pss = params->params;
-			DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N_%N %s", id,
-				 signature_scheme_names, params->scheme,
-				 hash_algorithm_short_names_upper, pss->hash,
+			DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N_%N_SALT_%zd "
+				 "%s", id, signature_scheme_names, params->scheme,
+				 hash_algorithm_short_names_upper, pss->hash, pss->salt_len,
 				 status == SUCCESS ? "successful" : "failed");
 		}
 		else
@@ -647,9 +647,9 @@ METHOD(authenticator_t, process, status_t,
 			else if (params->scheme == SIGN_RSA_EMSA_PSS)
 			{
 				rsa_pss_params_t *pss = params->params;
-				DBG1(DBG_IKE, "authentication of '%Y' with %N_%N successful",
-					 id, signature_scheme_names, params->scheme,
-					 hash_algorithm_short_names_upper, pss->hash);
+				DBG1(DBG_IKE, "authentication of '%Y' with %N_%N_SALT_%zd "
+					 "successful", id, signature_scheme_names, params->scheme,
+					 hash_algorithm_short_names_upper, pss->hash, pss->salt_len);
 			}
 			else
 			{
