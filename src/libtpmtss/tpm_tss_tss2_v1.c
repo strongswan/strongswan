@@ -24,9 +24,9 @@
 
 #include <tpm20.h>
 
-#ifdef TSS2_TCTI_TABRMD_V1
+#ifdef TSS2_TCTI_TABRMD
 #include <tcti/tcti-tabrmd.h>
-#endif /* TSS2_TCTI_TABRMD_V1 */
+#endif /* TSS2_TCTI_TABRMD */
 
 #ifdef TSS2_TCTI_SOCKET
 #include <tcti_socket.h>
