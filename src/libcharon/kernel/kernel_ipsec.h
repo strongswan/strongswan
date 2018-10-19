@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Andreas Steffen
- * Copyright (C) 2006-2016 Tobias Brunner
+ * Copyright (C) 2006-2018 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -93,8 +93,16 @@ struct kernel_ipsec_add_sa_t {
 	bool encap;
 	/** no (disabled), yes (enabled), auto (enabled if supported) */
 	hw_offload_t hw_offload;
+	/** Mark the SA should apply to packets after processing */
+	mark_t mark;
 	/** TRUE to use Extended Sequence Numbers */
 	bool esn;
+	/** TRUE to copy the DF bit to the outer IPv4 header in tunnel mode */
+	bool copy_df;
+	/** TRUE to copy the ECN header field to/from the outer header */
+	bool copy_ecn;
+	/** Whether to copy the DSCP header field to/from the outer header */
+	dscp_copy_t copy_dscp;
 	/** TRUE if initiator of the exchange creating the SA */
 	bool initiator;
 	/** TRUE if this is an inbound SA */

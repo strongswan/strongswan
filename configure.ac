@@ -19,7 +19,7 @@
 #  initialize & set some vars
 # ============================
 
-AC_INIT([strongSwan],[5.6.3dr1])
+AC_INIT([strongSwan],[5.7.1])
 AM_INIT_AUTOMAKE(m4_esyscmd([
 	echo tar-ustar
 	echo subdir-objects
@@ -126,6 +126,7 @@ ARG_DISBL_SET([aes],            [disable AES software implementation plugin.])
 ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto API.])
 ARG_ENABL_SET([bliss],          [enable BLISS software implementation plugin.])
 ARG_ENABL_SET([blowfish],       [enable Blowfish software implementation plugin.])
+ARG_ENABL_SET([botan],          [enables the Botan crypto plugin.])
 ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([chapoly],        [enables the ChaCha20/Poly1305 AEAD plugin.])
 ARG_DISBL_SET([cmac],           [disable CMAC crypto implementation plugin.])
@@ -246,8 +247,6 @@ ARG_ENABL_SET([imc-os],         [enable IMC operating system module.])
 ARG_ENABL_SET([imv-os],         [enable IMV operating system module.])
 ARG_ENABL_SET([imc-attestation],[enable IMC attestation module.])
 ARG_ENABL_SET([imv-attestation],[enable IMV attestation module.])
-ARG_ENABL_SET([imc-swid],       [enable IMC swid module.])
-ARG_ENABL_SET([imv-swid],       [enable IMV swid module.])
 ARG_ENABL_SET([imc-swima],      [enable IMC swima module.])
 ARG_ENABL_SET([imv-swima],      [enable IMV swima module.])
 ARG_ENABL_SET([imc-hcd],        [enable IMC hcd module.])
@@ -283,7 +282,6 @@ ARG_ENABL_SET([aikgen],         [enable AIK generator for TPM 1.2.])
 ARG_DISBL_SET([charon],         [disable the IKEv1/IKEv2 keying daemon charon.])
 ARG_ENABL_SET([cmd],            [enable the command line IKE client charon-cmd.])
 ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
-ARG_ENABL_SET([dumm],           [enable the DUMM UML test framework.])
 ARG_ENABL_SET([fast],           [enable libfast (FastCGI Application Server w/ templates.])
 ARG_ENABL_SET([fuzzing],        [enable fuzzing scripts (found in directory fuzz).])
 ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
@@ -434,7 +432,7 @@ if test x$eap_radius = xtrue -o x$radattr = xtrue -o x$tnc_pdp = xtrue; then
 	radius=true;
 fi
 
-if test x$tnc_imc = xtrue -o x$tnc_imv = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_dynamic = xtrue -o x$eap_tnc = xtrue; then
+if test x$tnc_imc = xtrue -o x$tnc_imv = xtrue -o x$tnccs_11 = xtrue -o x$tnccs_20 = xtrue -o x$tnccs_dynamic = xtrue -o x$eap_tnc = xtrue; then
 	tnc_tnccs=true;
 fi
 
@@ -442,7 +440,7 @@ if test x$eap_tls = xtrue -o x$eap_ttls = xtrue -o x$eap_peap = xtrue -o x$tnc_t
 	tls=true;
 fi
 
-if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$imv_scanner = xtrue -o x$imc_os = xtrue -o x$imv_os = xtrue -o x$imc_attestation = xtrue -o x$imv_attestation = xtrue -o x$imc_swid = xtrue -o x$imv_swid = xtrue -o x$imc_swima = xtrue -o x$imv_swima = xtrue -o x$imc_hcd = xtrue -o x$imv_hcd = xtrue; then
+if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$imv_scanner = xtrue -o x$imc_os = xtrue -o x$imv_os = xtrue -o x$imc_attestation = xtrue -o x$imv_attestation = xtrue -o x$imc_swima = xtrue -o x$imv_swima = xtrue -o x$imc_hcd = xtrue -o x$imv_hcd = xtrue; then
 	imcv=true;
 fi
 
@@ -1022,38 +1020,36 @@ if test x$tss_trousers = xtrue; then
 fi
 
 if test x$tss_tss2 = xtrue; then
+	PKG_CHECK_MODULES(tss2_sys, [tss2-sys],
+		[tss2_sys=true; AC_DEFINE([TSS2_SYS], [], [use TSS2 v2 System API])],
+		[tss2_sys=false])
+	PKG_CHECK_MODULES(tss2_esys, [tss2-esys],
+		[tss2_esys=true; AC_DEFINE([TSS2_ESYS], [], [use TSS2 v2 Extended System API])],
+		[tss2_esys=false])
 	PKG_CHECK_MODULES(tss2_tabrmd, [tcti-tabrmd],
 		[tss2_tabrmd=true; AC_DEFINE([TSS2_TCTI_TABRMD], [], [use TCTI Access Broker and Resource Mamager])],
 		[tss2_tabrmd=false])
 	PKG_CHECK_MODULES(tss2_socket, [tcti-socket],
 		[tss2_socket=true; AC_DEFINE([TSS2_TCTI_SOCKET], [], [use TCTI Sockets])],
 		[tss2_socket=false])
-	if test x$tss2_tabrmd = xtrue -o x$tss2_socket = xtrue; then
-		AC_DEFINE([TSS_TSS2], [], [use TSS 2.0 libraries])
+	if test x$tss2_sys = xtrue; then
+		AC_DEFINE([TSS_TSS2_V2], [], [use TSS 2.0 v2 libraries])
+		AC_SUBST(tss2_CFLAGS, "$tss2_sys_CFLAGS")
+		AC_SUBST(tss2_LIBS, "$tss2_sys_LIBS")
+	elif test x$tss2_tabrmd = xtrue -o x$tss2_socket = xtrue; then
+		AC_DEFINE([TSS_TSS2_V1], [], [use TSS 2.0 v1 libraries])
 		AC_SUBST(tss2_CFLAGS, "$tss2_tabrmd_CFLAGS $tss2_socket_CFLAGS")
 		AC_SUBST(tss2_LIBS, "$tss2_tabrmd_LIBS $tss2_socket_LIBS")
 	else
-		AC_MSG_FAILURE([no TSS2 TCTI library detected])
+		AC_MSG_FAILURE([no TSS2 TCTI or SAPI libraries detected])
 	fi
 fi
 
-if test x$imc_swima = xtrue -o $imv_swima = xtrue -o x$imv_swid = xtrue; then
+if test x$imc_swima = xtrue -o $imv_swima = xtrue; then
 	PKG_CHECK_MODULES(json, [json-c], [],
 		[PKG_CHECK_MODULES(json, [json])])
 	AC_SUBST(json_CFLAGS)
 	AC_SUBST(json_LIBS)
-fi
-
-if test x$dumm = xtrue; then
-	PKG_CHECK_MODULES(gtk, [gtk+-2.0 vte])
-	AC_SUBST(gtk_CFLAGS)
-	AC_SUBST(gtk_LIBS)
-	AC_CHECK_PROGS(RUBY, ruby)
-	PKG_CHECK_MODULES(ruby, [ruby])
-	saved_LIBS=$LIBS
-	LIBS=$ruby_LIBS
-	AC_CHECK_FUNCS(rb_errinfo)
-	LIBS=$saved_LIBS
 fi
 
 if test x$fast = xtrue; then
@@ -1153,6 +1149,12 @@ if test x$gcrypt = xtrue; then
 		 AC_DEFINE([HAVE_GCRY_CIPHER_CAMELLIA], [], [have GCRY_CIPHER_CAMELLIA128])],
 		[AC_MSG_RESULT([no])]
 	)
+fi
+
+if test x$botan = xtrue; then
+	PKG_CHECK_MODULES(botan, [botan-2])
+	AC_SUBST(botan_CFLAGS)
+	AC_SUBST(botan_LIBS)
 fi
 
 if test x$uci = xtrue; then
@@ -1405,6 +1407,7 @@ ADD_PLUGIN([pem],                  [s charon scepclient pki scripts manager meds
 ADD_PLUGIN([padlock],              [s charon])
 ADD_PLUGIN([openssl],              [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([gcrypt],               [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([botan],                [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([af-alg],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
 ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen fuzz])
@@ -1575,6 +1578,7 @@ AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
 AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
 AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
+AM_CONDITIONAL(USE_BOTAN, test x$botan = xtrue)
 AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
 AM_CONDITIONAL(USE_KEYCHAIN, test x$keychain = xtrue)
 AM_CONDITIONAL(USE_PKCS11, test x$pkcs11 = xtrue)
@@ -1662,8 +1666,6 @@ AM_CONDITIONAL(USE_IMC_OS, test x$imc_os = xtrue)
 AM_CONDITIONAL(USE_IMV_OS, test x$imv_os = xtrue)
 AM_CONDITIONAL(USE_IMC_ATTESTATION, test x$imc_attestation = xtrue)
 AM_CONDITIONAL(USE_IMV_ATTESTATION, test x$imv_attestation = xtrue)
-AM_CONDITIONAL(USE_IMC_SWID, test x$imc_swid = xtrue)
-AM_CONDITIONAL(USE_IMV_SWID, test x$imv_swid = xtrue)
 AM_CONDITIONAL(USE_IMC_SWIMA, test x$imc_swima = xtrue)
 AM_CONDITIONAL(USE_IMV_SWIMA, test x$imv_swima = xtrue)
 AM_CONDITIONAL(USE_IMC_HCD, test x$imc_hcd = xtrue)
@@ -1688,7 +1690,6 @@ AM_CONDITIONAL(USE_COUNTERS, test x$counters = xtrue)
 # ---------------
 AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
 AM_CONDITIONAL(USE_LOCK_PROFILER, test x$lock_profiler = xtrue)
-AM_CONDITIONAL(USE_DUMM, test x$dumm = xtrue)
 AM_CONDITIONAL(USE_FAST, test x$fast = xtrue)
 AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
 AM_CONDITIONAL(USE_ME, test x$mediation = xtrue)
@@ -1769,7 +1770,7 @@ fi
 if test x$fuzzing = xtrue; then
 	AC_DEFINE([USE_FUZZING], [], [build code for fuzzing])
 fi
-if test x$imc_swima = xtrue -o x$imv_swima = xtrue -o x$imv_swid = xtrue ; then
+if test x$imc_swima = xtrue -o x$imv_swima = xtrue; then
 	AC_DEFINE([USE_JSON], [], [build code for JSON])
 fi
 
@@ -1857,6 +1858,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
 	src/libstrongswan/plugins/gcrypt/Makefile
+	src/libstrongswan/plugins/botan/Makefile
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/plugins/keychain/Makefile
 	src/libstrongswan/plugins/pkcs11/Makefile
@@ -1896,8 +1898,6 @@ AC_CONFIG_FILES([
 	src/libimcv/plugins/imv_os/Makefile
 	src/libimcv/plugins/imc_attestation/Makefile
 	src/libimcv/plugins/imv_attestation/Makefile
-	src/libimcv/plugins/imc_swid/Makefile
-	src/libimcv/plugins/imv_swid/Makefile
 	src/libimcv/plugins/imc_swima/Makefile
 	src/libimcv/plugins/imv_swima/Makefile
 	src/libimcv/plugins/imc_hcd/Makefile
@@ -1911,6 +1911,7 @@ AC_CONFIG_FILES([
 	src/libcharon/Makefile
 	src/libcharon/plugins/eap_aka/Makefile
 	src/libcharon/plugins/eap_aka_3gpp/Makefile
+	src/libcharon/plugins/eap_aka_3gpp/tests/Makefile
 	src/libcharon/plugins/eap_aka_3gpp2/Makefile
 	src/libcharon/plugins/eap_dynamic/Makefile
 	src/libcharon/plugins/eap_identity/Makefile
@@ -2000,8 +2001,6 @@ AC_CONFIG_FILES([
 	src/pki/Makefile
 	src/pki/man/Makefile
 	src/pool/Makefile
-	src/dumm/Makefile
-	src/dumm/ext/extconf.rb
 	src/libfast/Makefile
 	src/manager/Makefile
 	src/medsrv/Makefile

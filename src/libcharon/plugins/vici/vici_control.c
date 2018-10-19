@@ -225,6 +225,7 @@ CALLBACK(terminate, vici_message_t*,
 	enumerator_t *enumerator, *isas, *csas;
 	char *child, *ike, *errmsg = NULL;
 	u_int child_id, ike_id, current, *del, done = 0;
+	bool force;
 	int timeout;
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
@@ -240,6 +241,7 @@ CALLBACK(terminate, vici_message_t*,
 	ike = request->get_str(request, NULL, "ike");
 	child_id = request->get_int(request, 0, "child-id");
 	ike_id = request->get_int(request, 0, "ike-id");
+	force = request->get_bool(request, FALSE, "force");
 	timeout = request->get_int(request, 0, "timeout");
 	log.level = request->get_int(request, 1, "loglevel");
 
@@ -326,7 +328,7 @@ CALLBACK(terminate, vici_message_t*,
 		}
 		else
 		{
-			if (charon->controller->terminate_ike(charon->controller, *del,
+			if (charon->controller->terminate_ike(charon->controller, *del, force,
 											log_cb, &log, timeout) == SUCCESS)
 			{
 				done++;
@@ -371,11 +373,13 @@ CALLBACK(rekey, vici_message_t*,
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	vici_builder_t *builder;
+	bool reauth;
 
 	child = request->get_str(request, NULL, "child");
 	ike = request->get_str(request, NULL, "ike");
 	child_id = request->get_int(request, 0, "child-id");
 	ike_id = request->get_int(request, 0, "ike-id");
+	reauth = request->get_bool(request, FALSE, "reauth");
 
 	if (!child && !ike && !ike_id && !child_id)
 	{
@@ -436,7 +440,7 @@ CALLBACK(rekey, vici_message_t*,
 				 (ike_id && ike_id == ike_sa->get_unique_id(ike_sa)))
 		{
 			lib->processor->queue_job(lib->processor,
-				(job_t*)rekey_ike_sa_job_create(ike_sa->get_id(ike_sa), FALSE));
+				(job_t*)rekey_ike_sa_job_create(ike_sa->get_id(ike_sa), reauth));
 			found++;
 		}
 	}

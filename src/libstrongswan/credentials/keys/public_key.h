@@ -106,9 +106,9 @@ enum signature_scheme_t {
 	SIGN_ECDSA_384,
 	/** ECDSA on the P-521 curve with SHA-512 as in RFC 4754           */
 	SIGN_ECDSA_521,
-	/** PureEdDSA on Curve25519 as in draft-ietf-curdle-pkix (RFC TBA) */
+	/** PureEdDSA on Curve25519 as in RFC 8410                         */
 	SIGN_ED25519,
-	/** PureEdDSA on Curve448 as in draft-ietf-curdle-pkix (RFC TBA)   */
+	/** PureEdDSA on Curve448 as in RFC 8410                           */
 	SIGN_ED448,
 	/** BLISS with SHA-2_256                                           */
 	SIGN_BLISS_WITH_SHA2_256,

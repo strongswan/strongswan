@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Andreas Steffen
+ * Copyright (C) 2011-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -20,23 +20,18 @@
 #include <bio/bio_reader.h>
 #include <utils/debug.h>
 
-ENUM_BEGIN(pa_tnc_error_code_names,	PA_ERROR_RESERVED,
-									PA_ERROR_ATTR_TYPE_NOT_SUPPORTED,
+ENUM(pa_tnc_error_code_names, PA_ERROR_RESERVED,
+							  PA_ERROR_SWIMA_SUBSCRIPTION_ID_REUSE,
 	"Reserved",
 	"Invalid Parameter",
 	"Version Not Supported",
-	"Attribute Type Not Supported"
-);
-ENUM_NEXT(pa_tnc_error_code_names,	PA_ERROR_SWIMA,
-									PA_ERROR_SWIMA_SUBSCRIPTION_ID_REUSE,
-									PA_ERROR_ATTR_TYPE_NOT_SUPPORTED,
+	"Attribute Type Not Supported",
 	"SWIMA Error",
 	"SWIMA Subscription Denied",
 	"SWIMA Response Too Large",
 	"SWIMA Subscription Fulfillment Error",
 	"SWIMA Subscription ID Reuse"
 );
-ENUM_END(pa_tnc_error_code_names,	PA_ERROR_SWIMA_SUBSCRIPTION_ID_REUSE);
 
 typedef struct private_ietf_attr_pa_tnc_error_t private_ietf_attr_pa_tnc_error_t;
 

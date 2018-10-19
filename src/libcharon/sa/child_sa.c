@@ -890,11 +890,20 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.cpi = cpi,
 		.encap = this->encap,
 		.hw_offload = this->config->get_hw_offload(this->config),
+		.mark = this->config->get_set_mark(this->config, inbound),
 		.esn = esn,
+		.copy_df = !this->config->has_option(this->config, OPT_NO_COPY_DF),
+		.copy_ecn = !this->config->has_option(this->config, OPT_NO_COPY_ECN),
+		.copy_dscp = this->config->get_copy_dscp(this->config),
 		.initiator = initiator,
 		.inbound = inbound,
 		.update = update,
 	};
+
+	if (sa.mark.value == MARK_SAME)
+	{
+		sa.mark.value = inbound ? this->mark_in.value : this->mark_out.value;
+	}
 
 	status = charon->kernel->add_sa(charon->kernel, &id, &sa);
 
@@ -1723,7 +1732,7 @@ static host_t* get_proxy_addr(child_cfg_t *config, host_t *ike, bool local)
 	traffic_selector_t *ts;
 
 	list = linked_list_create_with_items(ike, NULL);
-	ts_list = config->get_traffic_selectors(config, local, NULL, list);
+	ts_list = config->get_traffic_selectors(config, local, NULL, list, FALSE);
 	list->destroy(list);
 
 	enumerator = ts_list->create_enumerator(ts_list);

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2017 Tobias Brunner
- * Copyright (C) 2015 Andreas Steffen
+ * Copyright (C) 2015-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2014 Martin Willi
@@ -417,6 +417,7 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 			b->add_kv(b, "dh-group", "%N", diffie_hellman_group_names, alg);
 		}
 	}
+	add_condition(b, ike_sa, "ppk", COND_PPK);
 
 	if (ike_sa->get_state(ike_sa) == IKE_ESTABLISHED)
 	{
@@ -570,7 +571,7 @@ static void raise_policy_cfg(private_vici_query_t *this, u_int id, char *ike,
 	list_mode(b, NULL, cfg);
 
 	b->begin_list(b, "local-ts");
-	list = cfg->get_traffic_selectors(cfg, TRUE, NULL, NULL);
+	list = cfg->get_traffic_selectors(cfg, TRUE, NULL, NULL, FALSE);
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
@@ -581,7 +582,7 @@ static void raise_policy_cfg(private_vici_query_t *this, u_int id, char *ike,
 	b->end_list(b /* local-ts */);
 
 	b->begin_list(b, "remote-ts");
-	list = cfg->get_traffic_selectors(cfg, FALSE, NULL, NULL);
+	list = cfg->get_traffic_selectors(cfg, FALSE, NULL, NULL, FALSE);
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
@@ -737,6 +738,18 @@ static void build_auth_cfgs(peer_cfg_t *peer_cfg, bool local, vici_builder_t *b)
 		rules->destroy(rules);
 		b->end_list(b);
 
+		b->begin_list(b, "cert_policy");
+		rules = auth->create_enumerator(auth);
+		while (rules->enumerate(rules, &rule, &v))
+		{
+			if (rule == AUTH_RULE_CERT_POLICY)
+			{
+				b->add_li(b, "%s", v.str);
+			}
+		}
+		rules->destroy(rules);
+		b->end_list(b);
+
 		b->begin_list(b, "certs");
 		rules = auth->create_enumerator(auth);
 		while (rules->enumerate(rules, &rule, &v))
@@ -775,6 +788,7 @@ CALLBACK(list_conns, vici_message_t*,
 	child_cfg_t *child_cfg;
 	char *ike, *str, *interface;
 	uint32_t manual_prio, dpd_delay, dpd_timeout;
+	identification_t *ppk_id;
 	linked_list_t *list;
 	traffic_selector_t *ts;
 	lifetime_cfg_t *lft;
@@ -837,6 +851,16 @@ CALLBACK(list_conns, vici_message_t*,
 			b->add_kv(b, "dpd_timeout", "%u", dpd_timeout);
 		}
 
+		ppk_id = peer_cfg->get_ppk_id(peer_cfg);
+		if (ppk_id)
+		{
+			b->add_kv(b, "ppk_id", "%Y", ppk_id);
+		}
+		if (peer_cfg->ppk_required(peer_cfg))
+		{
+			b->add_kv(b, "ppk_required", "yes");
+		}
+
 		build_auth_cfgs(peer_cfg, TRUE, b);
 		build_auth_cfgs(peer_cfg, FALSE, b);
 
@@ -861,7 +885,8 @@ CALLBACK(list_conns, vici_message_t*,
 					  child_cfg->get_close_action(child_cfg));
 
 			b->begin_list(b, "local-ts");
-			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL, NULL);
+			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL,
+													NULL, FALSE);
 			selectors = list->create_enumerator(list);
 			while (selectors->enumerate(selectors, &ts))
 			{
@@ -872,7 +897,8 @@ CALLBACK(list_conns, vici_message_t*,
 			b->end_list(b /* local-ts */);
 
 			b->begin_list(b, "remote-ts");
-			list = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL, NULL);
+			list = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL,
+													NULL, FALSE);
 			selectors = list->create_enumerator(list);
 			while (selectors->enumerate(selectors, &ts))
 			{

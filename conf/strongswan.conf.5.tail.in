@@ -15,12 +15,15 @@ does not have any effect.
 There are currently two types of loggers:
 .TP
 .B File loggers
-Log directly to a file and are defined by specifying the full path to the
-file as subsection in the
+Log directly to a file and are defined by specifying an arbitrarily named
+subsection in the
 .B charon.filelog
-section. To log to the console the two special filenames
+section. The full path to the file is configured in the \fIpath\fR setting of
+that subsection, however, if it only contains characters permitted in section
+names, the setting may also be omitted and the path specified as name of the
+subsection. To log to the console the two special filenames
 .BR stdout " and " stderr
-can be used.
+may be used.
 .TP
 .B Syslog loggers
 Log into a syslog facility and are defined by specifying the facility to log to
@@ -93,7 +96,7 @@ Absolutely silent
 Very basic auditing logs, (e.g. SA up/SA down)
 .TP
 .B 1
-Generic control flow with errors, a good default to see whats going on
+Generic control flow with errors, a good default to see what's going on
 .TP
 .B 2
 More detailed debugging control flow
@@ -108,7 +111,8 @@ Also include sensitive material in dumps, e.g. keys
 .EX
 	charon {
 		filelog {
-			/var/log/charon.log {
+			charon {
+				path = /var/log/charon.log
 				time_format = %b %e %T
 				append = no
 				default = 1
@@ -290,7 +294,7 @@ For public key authentication, the responder uses the
 identity. For the initiator, each connection attempt uses a different identity
 in the form
 .BR "\(dqCN=c1-r1, OU=load-test, O=strongSwan\(dq" ,
-where the first number inidicates the client number, the second the
+where the first number indicates the client number, the second the
 authentication round (if multiple authentication rounds are used).
 .PP
 For PSK authentication, FQDN identities are used. The server uses

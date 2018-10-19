@@ -2,7 +2,7 @@
  * Copyright (C) 2007-2017 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -395,7 +395,7 @@ traffic_selector_t *traffic_selector_create_from_subnet(
  * greater or equal to 256 they are assumed to be type and code as defined
  * for traffic_selector_t.
  *
- * @param protocol		upper layer protocl to allow
+ * @param protocol		upper layer protocol to allow
  * @param from_port		start of allowed port range
  * @param to_port		end of range
  * @return

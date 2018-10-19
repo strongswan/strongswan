@@ -18,6 +18,7 @@
 #include "tpm_cert.h"
 #include "tpm_rng.h"
 
+#include <tpm_tss.h>
 #include <library.h>
 
 typedef struct private_tpm_plugin_t private_tpm_plugin_t;
@@ -80,6 +81,7 @@ METHOD(plugin_t, destroy, void,
 	private_tpm_plugin_t *this)
 {
 	free(this);
+	libtpmtss_deinit();
 }
 
 /*
@@ -88,6 +90,11 @@ METHOD(plugin_t, destroy, void,
 plugin_t *tpm_plugin_create()
 {
 	private_tpm_plugin_t *this;
+
+	if (!libtpmtss_init())
+	{
+		return NULL;
+	}
 
 	INIT(this,
 		.public = {

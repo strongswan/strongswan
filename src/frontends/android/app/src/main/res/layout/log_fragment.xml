@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012 Tobias Brunner
-    Copyright (C) 2012 Giuliano Grassi
-    Copyright (C) 2012 Ralf Sager
-    Hochschule fuer Technik Rapperswil
+    Copyright (C) 2012-2018 Tobias Brunner
+    HSR Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
@@ -20,23 +18,18 @@
     android:layout_height="match_parent"
     android:orientation="vertical" >
 
-    <org.strongswan.android.ui.LogScrollView
-        android:id="@+id/scroll_view"
+    <ListView
+        android:id="@+id/log"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_margin="10dp"
+        android:dividerHeight="0dp"
+        android:divider="@null"
+        android:fadeScrollbars="false"
         android:scrollbarFadeDuration="0"
-        android:scrollbarAlwaysDrawVerticalTrack="true" >
+        android:scrollbarAlwaysDrawVerticalTrack="true"
+        android:transcriptMode="normal">
 
-        <TextView
-            android:id="@+id/log_view"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="9sp"
-            android:typeface="monospace"
-            android:fontFamily="monospace" >
-        </TextView>
-
-    </org.strongswan.android.ui.LogScrollView>
+    </ListView>
 
 </LinearLayout>

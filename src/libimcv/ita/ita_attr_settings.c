@@ -29,7 +29,7 @@ typedef struct private_ita_attr_settings_t private_ita_attr_settings_t;
 typedef struct entry_t entry_t;
 
 /**
- * Contains a settins name/value pair
+ * Contains a settings name/value pair
  */
 struct entry_t {
 	char *name;

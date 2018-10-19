@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,14 +15,17 @@
 
 package org.strongswan.android.ui;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.os.FileObserver;
 import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 
 import org.strongswan.android.R;
 import org.strongswan.android.logic.CharonVpnService;
@@ -34,16 +37,15 @@ import java.io.FileReader;
 import java.io.StringReader;
 import java.util.ArrayList;
 
-public class LogFragment extends Fragment implements Runnable
+public class LogFragment extends Fragment
 {
+	private static String SCROLL_POSITION = "SCROLL_POSITION";
 	private String mLogFilePath;
 	private Handler mLogHandler;
-	private TextView mLogView;
-	private LogScrollView mScrollView;
-	private BufferedReader mReader;
-	private Thread mThread;
-	private volatile boolean mRunning;
+	private ListView mLog;
+	private LogAdapter mLogAdapter;
 	private FileObserver mDirectoryObserver;
+	private int mScrollPosition;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -51,7 +53,7 @@ public class LogFragment extends Fragment implements Runnable
 		super.onCreate(savedInstanceState);
 
 		mLogFilePath = getActivity().getFilesDir() + File.separator + CharonVpnService.LOG_FILE;
-		/* use a handler to update the log view */
+
 		mLogHandler = new Handler();
 
 		mDirectoryObserver = new LogDirectoryObserver(getActivity().getFilesDir().getAbsolutePath());
@@ -61,16 +63,39 @@ public class LogFragment extends Fragment implements Runnable
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
 	{
 		View view = inflater.inflate(R.layout.log_fragment, null);
-		mLogView = (TextView)view.findViewById(R.id.log_view);
-		mScrollView = (LogScrollView)view.findViewById(R.id.scroll_view);
+
+		mLogAdapter = new LogAdapter(getActivity());
+		mLog = view.findViewById(R.id.log);
+		mLog.setAdapter(mLogAdapter);
+
+		mScrollPosition = -1;
+		if (savedInstanceState != null)
+		{
+			mScrollPosition = savedInstanceState.getInt(SCROLL_POSITION, mScrollPosition);
+		}
 		return view;
+	}
+
+	@Override
+	public void onSaveInstanceState(Bundle outState)
+	{
+		super.onSaveInstanceState(outState);
+
+		if (mLog.getLastVisiblePosition() == (mLogAdapter.getCount() - 1))
+		{
+			outState.putInt(SCROLL_POSITION, -1);
+		}
+		else
+		{
+			outState.putInt(SCROLL_POSITION, mLog.getFirstVisiblePosition());
+		}
 	}
 
 	@Override
 	public void onStart()
 	{
 		super.onStart();
-		startLogReader();
+		mLogAdapter.restart();
 		mDirectoryObserver.startWatching();
 	}
 
@@ -79,113 +104,114 @@ public class LogFragment extends Fragment implements Runnable
 	{
 		super.onStop();
 		mDirectoryObserver.stopWatching();
-		stopLogReader();
+		mLogAdapter.stop();
 	}
 
-	/**
-	 * Start reading from the log file
-	 */
-	private void startLogReader()
+	private class LogAdapter extends ArrayAdapter<String> implements Runnable
 	{
-		try
+		private BufferedReader mReader;
+		private Thread mThread;
+		private volatile boolean mRunning;
+
+		public LogAdapter(@NonNull Context context)
 		{
-			mReader = new BufferedReader(new FileReader(mLogFilePath));
-		}
-		catch (FileNotFoundException e)
-		{
-			mReader = new BufferedReader(new StringReader(""));
+			super(context, R.layout.log_list_item, R.id.log_line);
 		}
 
-		mLogView.setText("");
-		mRunning = true;
-		mThread = new Thread(this);
-		mThread.start();
-	}
-
-	/**
-	 * Stop reading from the log file
-	 */
-	private void stopLogReader()
-	{
-		try
+		public void restart()
 		{
-			mRunning = false;
-			mThread.interrupt();
-			mThread.join();
-		}
-		catch (InterruptedException e)
-		{
-		}
-	}
-
-	/**
-	 * Write the given log line to the TextView. We strip the prefix off to save
-	 * some space (it is not that helpful for regular users anyway).
-	 *
-	 * @param lines log lines to log
-	 */
-	public void logLines(final ArrayList<String> lines)
-	{
-		mLogHandler.post(new Runnable() {
-			@Override
-			public void run()
+			if (mRunning)
 			{
-				mLogView.beginBatchEdit();
-				for (String line : lines)
-				{	/* strip off prefix (month=3, day=2, time=8, thread=2, spaces=3) */
-					mLogView.append((line.length() > 18 ? line.substring(18) : line) + '\n');
-				}
-				mLogView.endBatchEdit();
-				/* calling autoScroll() directly does not work, probably because content
-				 * is not yet updated, so we post this to be done later */
-				mScrollView.post(new Runnable() {
-					@Override
-					public void run()
-					{
-						mScrollView.autoScroll();
-					}
-				});
+				stop();
 			}
-		});
-	}
 
-	@Override
-	public void run()
-	{
-		ArrayList<String> lines = null;
+			clear();
 
-		while (mRunning)
+			try
+			{
+				mReader = new BufferedReader(new FileReader(mLogFilePath));
+			}
+			catch (FileNotFoundException e)
+			{
+				mReader = new BufferedReader(new StringReader(""));
+			}
+			mRunning = true;
+			mThread = new Thread(this);
+			mThread.start();
+		}
+
+		public void stop()
 		{
 			try
-			{	/* this works as long as the file is not truncated */
-				String line = mReader.readLine();
-				if (line == null)
-				{
-					if (lines != null)
-					{
-						logLines(lines);
-						lines = null;
-					}
-					/* wait until there is more to log */
-					Thread.sleep(1000);
-				}
-				else
-				{
-					if (lines == null)
-					{
-						lines = new ArrayList<>();
-					}
-					lines.add(line);
-				}
-			}
-			catch (Exception e)
 			{
-				break;
+				mRunning = false;
+				mThread.interrupt();
+				mThread.join();
+			}
+			catch (InterruptedException e)
+			{
 			}
 		}
-		if (lines != null)
+
+		private void logLines(final ArrayList<String> lines)
 		{
-			logLines(lines);
+			mLogHandler.post(() -> {
+				boolean scroll = getCount() == 0;
+				setNotifyOnChange(false);
+				for (String line : lines)
+				{
+					if (getResources().getConfiguration().screenWidthDp < 600)
+					{	/* strip off prefix (month=3, day=2, time=8, thread=2, spaces=3) */
+						line = line.length() > 18 ? line.substring(18) : line;
+					}
+					add(line);
+				}
+				notifyDataSetChanged();
+				if (scroll)
+				{	/* scroll to the bottom or saved position after adding the first batch */
+					mLogHandler.post(() -> mLog.setSelection(mScrollPosition == -1 ? getCount() - 1 : mScrollPosition));
+				}
+			});
+		}
+
+		@Override
+		public void run()
+		{
+			ArrayList<String> lines = null;
+
+			while (mRunning)
+			{
+				try
+				{	/* this works as long as the file is not truncated */
+					String line = mReader.readLine();
+					if (line == null)
+					{
+						if (lines != null)
+						{
+							logLines(lines);
+							lines = null;
+						}
+						/* wait until there is more to log */
+						Thread.sleep(1000);
+					}
+					else
+					{
+						if (lines == null)
+						{
+							lines = new ArrayList<>();
+						}
+						lines.add(line);
+					}
+				}
+				catch (Exception e)
+				{
+					break;
+				}
+			}
+			if (lines != null)
+			{
+				logLines(lines);
+			}
 		}
 	}
 
@@ -239,8 +265,7 @@ public class LogFragment extends Fragment implements Runnable
 				@Override
 				public void run()
 				{
-					stopLogReader();
-					startLogReader();
+					mLogAdapter.restart();
 				}
 			});
 		}

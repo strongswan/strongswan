@@ -40,7 +40,7 @@ enum hash_algorithm_t {
 	HASH_SHA256			= 2,
 	HASH_SHA384			= 3,
 	HASH_SHA512			= 4,
-	/* draft-ietf-ipsecme-eddsa (RFC TBA) */
+	/* RFC 8420 */
 	HASH_IDENTITY		= 5,
 	/* use private use range for algorithms not defined/permitted by RFC 7427 */
 	HASH_UNKNOWN 		= 1024,

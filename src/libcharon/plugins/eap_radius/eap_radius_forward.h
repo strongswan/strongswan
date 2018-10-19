@@ -58,7 +58,7 @@ void eap_radius_forward_from_ike(radius_message_t *request);
 /**
  * Forward RADIUS attributes from a RADIUS response to IKE notifies.
  *
- * @param response		RADIUS respose to read notifies from
+ * @param response		RADIUS response to read notifies from
  */
 void eap_radius_forward_to_ike(radius_message_t *response);
 

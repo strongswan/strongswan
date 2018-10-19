@@ -113,7 +113,7 @@ static bool iterate_enforcements(database_t *db, int device_id, int session_id,
 			if (latest_success)
 			{
 				/*skipping enforcement */
-				printf("skipping enforcment %d\n", id);
+				printf("skipping enforcement %d\n", id);
 				continue;
 			}
 

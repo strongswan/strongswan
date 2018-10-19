@@ -323,7 +323,6 @@ METHOD(pts_t, set_tpm_version_info, void,
 	private_pts_t *this, chunk_t info)
 {
 	this->tpm_version_info = chunk_clone(info);
-	/* print_tpm_version_info(this); */
 }
 
 /**

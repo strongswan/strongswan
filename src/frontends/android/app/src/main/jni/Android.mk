@@ -35,6 +35,7 @@ strongswan_CFLAGS := \
 	-Wno-strict-aliasing \
 	-Wno-unused-parameter \
 	-Wno-missing-field-initializers \
+	-Wno-self-assign \
 	-DHAVE___BOOL \
 	-DHAVE_STDBOOL_H \
 	-DHAVE_ALLOCA_H \
@@ -49,8 +50,6 @@ strongswan_CFLAGS := \
 	-DHAVE_IN6ADDR_ANY \
 	-DHAVE_NETINET_IP6_H \
 	-DCONFIG_H_INCLUDED \
-	-DCAPABILITIES \
-	-DCAPABILITIES_NATIVE \
 	-DMONOLITHIC \
 	-DUSE_IKEV1 \
 	-DUSE_IKEV2 \

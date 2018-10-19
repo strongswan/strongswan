@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2010-2014 Tobias Brunner
+ * Copyright (C) 2010-2018 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -73,6 +73,7 @@ struct private_settings_t {
 
 /**
  * Print a format key, but consume already processed arguments
+ * Note that key and start point into the same string
  */
 static bool print_key(char *buf, int len, char *start, char *key, va_list args)
 {
@@ -112,6 +113,25 @@ static bool print_key(char *buf, int len, char *start, char *key, va_list args)
 	res = vsnprintf(buf, len, key, copy) < len;
 	va_end(copy);
 	return res;
+}
+
+/**
+ * Check if the given section is contained in the given array.
+ */
+static bool has_section(array_t *array, section_t *section)
+{
+	section_t *current;
+	int i;
+
+	for (i = 0; i < array_count(array); i++)
+	{
+		array_get(array, i, &current);
+		if (current == section)
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 /**
@@ -160,15 +180,39 @@ static section_t *find_section_buffered(section_t *section,
 }
 
 /**
- * Find all sections via a given key considering fallbacks, using buffered key,
+ * Forward declaration
+ */
+static array_t *find_sections(private_settings_t *this, section_t *section,
+							  char *key, va_list args, array_t **sections);
+
+/**
+ * Resolve the given reference. Not thread-safe.
+ * Only a vararg function to get an empty va_list.
+ */
+static void resolve_reference(private_settings_t *this, section_ref_t *ref,
+						array_t **sections, ...)
+{
+	va_list args;
+
+	va_start(args, sections);
+	find_sections(this, this->top, ref->name, args, sections);
+	va_end(args);
+}
+
+/**
+ * Find all sections via a given key considering references, using buffered key,
  * reusable buffer.
  */
-static void find_sections_buffered(section_t *section, char *start, char *key,
-						va_list args, char *buf, int len, array_t **sections)
+static void find_sections_buffered(private_settings_t *this, section_t *section,
+								   char *start, char *key, va_list args,
+								   char *buf, int len, bool ignore_refs,
+								   array_t **sections)
 {
-	section_t *found = NULL, *fallback;
+	section_t *found = NULL, *reference;
+	array_t *references;
+	section_ref_t *ref;
 	char *pos;
-	int i;
+	int i, j;
 
 	if (!section)
 	{
@@ -184,7 +228,7 @@ static void find_sections_buffered(section_t *section, char *start, char *key,
 		return;
 	}
 	if (pos)
-	{	/* restore so we can follow fallbacks */
+	{	/* restore so we can follow references */
 		*pos = '.';
 	}
 	if (!strlen(buf))
@@ -199,147 +243,100 @@ static void find_sections_buffered(section_t *section, char *start, char *key,
 	{
 		if (pos)
 		{
-			find_sections_buffered(found, start, pos+1, args, buf, len,
-								   sections);
+			find_sections_buffered(this, found, start, pos+1, args, buf, len,
+								   FALSE, sections);
 		}
-		else
+		else if (!has_section(*sections, found))
 		{
+			/* ignore if already added to avoid loops */
 			array_insert_create(sections, ARRAY_TAIL, found);
-			for (i = 0; i < array_count(found->fallbacks); i++)
+			/* add all sections that are referenced here (also resolves
+			 * references in parent sections of the referenced section) */
+			for (i = 0; i < array_count(found->references); i++)
 			{
-				array_get(found->fallbacks, i, &fallback);
-				array_insert_create(sections, ARRAY_TAIL, fallback);
+				array_get(found->references, i, &ref);
+				resolve_reference(this, ref, sections);
 			}
 		}
 	}
-	if (section->fallbacks)
+	if (!ignore_refs && section != found && section->references)
 	{
-		for (i = 0; i < array_count(section->fallbacks); i++)
+		/* find matching sub-sections relative to the referenced sections */
+		for (i = 0; i < array_count(section->references); i++)
 		{
-			array_get(section->fallbacks, i, &fallback);
-			find_sections_buffered(fallback, start, key, args, buf, len,
-								   sections);
+			array_get(section->references, i, &ref);
+			references = NULL;
+			resolve_reference(this, ref, &references);
+			for (j = 0; j < array_count(references); j++)
+			{
+				array_get(references, j, &reference);
+				/* ignore references in this referenced section, they were
+				 * resolved via resolve_reference() */
+				find_sections_buffered(this, reference, start, key, args,
+									   buf, len, TRUE, sections);
+			}
+			array_destroy(references);
 		}
 	}
 }
 
 /**
- * Ensure that the section with the given key exists (thread-safe).
+ * Ensure that the section with the given key exists (not thread-safe).
  */
 static section_t *ensure_section(private_settings_t *this, section_t *section,
 								 const char *key, va_list args)
 {
 	char buf[128], keybuf[512];
-	section_t *found;
 
 	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
 	{
 		return NULL;
 	}
-	/* we might have to change the tree */
-	this->lock->write_lock(this->lock);
-	found = find_section_buffered(section, keybuf, keybuf, args, buf,
-								  sizeof(buf), TRUE);
-	this->lock->unlock(this->lock);
-	return found;
+	return find_section_buffered(section, keybuf, keybuf, args, buf,
+								 sizeof(buf), TRUE);
 }
 
 /**
- * Find a section by a given key with its fallbacks (not thread-safe!).
- * Sections are returned in depth-first order (array is allocated). NULL is
- * returned if no sections are found.
+ * Find a section by a given key with resolved references (not thread-safe!).
+ * The array is allocated. NULL is returned if no sections are found.
  */
 static array_t *find_sections(private_settings_t *this, section_t *section,
-							  char *key, va_list args)
+							  char *key, va_list args, array_t **sections)
 {
 	char buf[128], keybuf[512];
-	array_t *sections = NULL;
 
 	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
 	{
 		return NULL;
 	}
-	find_sections_buffered(section, keybuf, keybuf, args, buf,
-						   sizeof(buf), &sections);
-	return sections;
-}
-
-/**
- * Check if the given fallback section already exists
- */
-static bool fallback_exists(section_t *section, section_t *fallback)
-{
-	if (section == fallback)
-	{
-		return TRUE;
-	}
-	else if (section->fallbacks)
-	{
-		section_t *existing;
-		int i;
-
-		for (i = 0; i < array_count(section->fallbacks); i++)
-		{
-			array_get(section->fallbacks, i, &existing);
-			if (existing == fallback)
-			{
-				return TRUE;
-			}
-		}
-	}
-	return FALSE;
-}
-
-/**
- * Ensure that the section with the given key exists and add the given fallback
- * section (thread-safe).
- */
-static void add_fallback_to_section(private_settings_t *this,
-							section_t *section, const char *key, va_list args,
-							section_t *fallback)
-{
-	char buf[128], keybuf[512];
-	section_t *found;
-
-	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
-	{
-		return;
-	}
-	this->lock->write_lock(this->lock);
-	found = find_section_buffered(section, keybuf, keybuf, args, buf,
-								  sizeof(buf), TRUE);
-	if (!fallback_exists(found, fallback))
-	{
-		/* to ensure sections referred to as fallback are not purged, we create
-		 * the array there too */
-		if (!fallback->fallbacks)
-		{
-			fallback->fallbacks = array_create(0, 0);
-		}
-		array_insert_create(&found->fallbacks, ARRAY_TAIL, fallback);
-	}
-	this->lock->unlock(this->lock);
+	find_sections_buffered(this, section, keybuf, keybuf, args, buf,
+						   sizeof(buf), FALSE, sections);
+	return *sections;
 }
 
 /**
  * Find the key/value pair for a key, using buffered key, reusable buffer
- * If "ensure" is TRUE, the sections (and key/value pair) are created if they
- * don't exist.
- * Fallbacks are only considered if "ensure" is FALSE.
+ * There are two modes: 1. To find a key at an exact location and create the
+ * sections (and key/value pair) if necessary, don't pass an array for sections.
+ * 2. To find a key and follow references pass a pointer to an array to store
+ * visited sections. NULL is returned in this case if the key is not found.
  */
-static kv_t *find_value_buffered(section_t *section, char *start, char *key,
-								 va_list args, char *buf, int len, bool ensure)
+static kv_t *find_value_buffered(private_settings_t *this, section_t *section,
+								 char *start, char *key, va_list args,
+								 char *buf, int len, bool ignore_refs,
+								 array_t **sections)
 {
-	int i;
-	char *pos;
-	kv_t *kv = NULL;
 	section_t *found = NULL;
+	kv_t *kv = NULL;
+	section_ref_t *ref;
+	array_t *references;
+	char *pos;
+	int i, j;
 
-	if (section == NULL)
+	if (!section)
 	{
 		return NULL;
 	}
-
 	pos = strchr(key, '.');
 	if (pos)
 	{
@@ -348,7 +345,7 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		{
 			return NULL;
 		}
-		/* restore so we can retry for fallbacks */
+		/* restore so we can follow references */
 		*pos = '.';
 		if (!strlen(buf))
 		{
@@ -357,7 +354,7 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		else if (array_bsearch(section->sections, buf, settings_section_find,
 							   &found) == -1)
 		{
-			if (ensure)
+			if (!sections)
 			{
 				found = settings_section_create(strdup(buf));
 				settings_section_add(section, found, NULL);
@@ -365,44 +362,134 @@ static kv_t *find_value_buffered(section_t *section, char *start, char *key,
 		}
 		if (found)
 		{
-			kv = find_value_buffered(found, start, pos+1, args, buf, len,
-									 ensure);
-		}
-		if (!kv && !ensure && section->fallbacks)
-		{
-			for (i = 0; !kv && i < array_count(section->fallbacks); i++)
-			{
-				array_get(section->fallbacks, i, &found);
-				kv = find_value_buffered(found, start, key, args, buf, len,
-										 ensure);
-			}
+			kv = find_value_buffered(this, found, start, pos+1, args, buf, len,
+									 FALSE, sections);
 		}
 	}
 	else
 	{
+		if (sections)
+		{
+			array_insert_create(sections, ARRAY_TAIL, section);
+		}
 		if (!print_key(buf, len, start, key, args))
 		{
 			return NULL;
 		}
 		if (array_bsearch(section->kv, buf, settings_kv_find, &kv) == -1)
 		{
-			if (ensure)
+			if (!sections)
 			{
 				kv = settings_kv_create(strdup(buf), NULL);
 				settings_kv_add(section, kv, NULL);
 			}
-			else if (section->fallbacks)
+		}
+	}
+	if (!kv && !ignore_refs && sections && section->references)
+	{
+		/* find key relative to the referenced sections */
+		for (i = 0; !kv && i < array_count(section->references); i++)
+		{
+			array_get(section->references, i, &ref);
+			references = NULL;
+			resolve_reference(this, ref, &references);
+			for (j = 0; !kv && j < array_count(references); j++)
 			{
-				for (i = 0; !kv && i < array_count(section->fallbacks); i++)
+				array_get(references, j, &found);
+				/* ignore if already added to avoid loops */
+				if (!has_section(*sections, found))
 				{
-					array_get(section->fallbacks, i, &found);
-					kv = find_value_buffered(found, start, key, args, buf, len,
-											 ensure);
+					/* ignore references in this referenced section, they were
+					 * resolved via resolve_reference() */
+					kv = find_value_buffered(this, found, start, key, args,
+											 buf, len, TRUE, sections);
+				}
+			}
+			array_destroy(references);
+		}
+	}
+	return kv;
+}
+
+/**
+ * Remove the key/value pair for a key, using buffered key, reusable buffer
+ */
+static void remove_value_buffered(private_settings_t *this, section_t *section,
+								  char *start, char *key, va_list args,
+								  char *buf, int len)
+{
+	section_t *found = NULL;
+	kv_t *kv = NULL, *ordered = NULL;
+	char *pos;
+	int idx, i;
+
+	if (!section)
+	{
+		return;
+	}
+	pos = strchr(key, '.');
+	if (pos)
+	{
+		*pos = '\0';
+		pos++;
+	}
+	if (!print_key(buf, len, start, key, args))
+	{
+		return;
+	}
+	if (!strlen(buf))
+	{
+		found = section;
+	}
+	if (pos)
+	{
+		if (array_bsearch(section->sections, buf, settings_section_find,
+						  &found) != -1)
+		{
+			remove_value_buffered(this, found, start, pos, args, buf, len);
+		}
+	}
+	else
+	{
+		idx = array_bsearch(section->kv, buf, settings_kv_find, &kv);
+		if (idx != -1)
+		{
+			array_remove(section->kv, idx, NULL);
+			for (i = 0; i < array_count(section->kv_order); i++)
+			{
+				array_get(section->kv_order, i, &ordered);
+				if (kv == ordered)
+				{
+					array_remove(section->kv_order, i, NULL);
+					settings_kv_destroy(kv, this->contents);
+					break;
 				}
 			}
 		}
 	}
-	return kv;
+}
+
+/*
+ * Described in header
+ */
+void settings_remove_value(settings_t *settings, char *key, ...)
+{
+	private_settings_t *this = (private_settings_t*)settings;
+	char buf[128], keybuf[512];
+	va_list args;
+
+	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
+	{
+		return;
+	}
+	va_start(args, key);
+
+	this->lock->read_lock(this->lock);
+	remove_value_buffered(this, this->top, keybuf, keybuf, args, buf,
+						  sizeof(buf));
+	this->lock->unlock(this->lock);
+
+	va_end(args);
 }
 
 /**
@@ -412,6 +499,7 @@ static char *find_value(private_settings_t *this, section_t *section,
 						char *key, va_list args)
 {
 	char buf[128], keybuf[512], *value = NULL;
+	array_t *sections = NULL;
 	kv_t *kv;
 
 	if (snprintf(keybuf, sizeof(keybuf), "%s", key) >= sizeof(keybuf))
@@ -419,13 +507,14 @@ static char *find_value(private_settings_t *this, section_t *section,
 		return NULL;
 	}
 	this->lock->read_lock(this->lock);
-	kv = find_value_buffered(section, keybuf, keybuf, args, buf, sizeof(buf),
-							 FALSE);
+	kv = find_value_buffered(this, section, keybuf, keybuf, args,
+							 buf, sizeof(buf), FALSE, &sections);
 	if (kv)
 	{
 		value = kv->value;
 	}
 	this->lock->unlock(this->lock);
+	array_destroy(sections);
 	return value;
 }
 
@@ -443,8 +532,8 @@ static void set_value(private_settings_t *this, section_t *section,
 		return;
 	}
 	this->lock->write_lock(this->lock);
-	kv = find_value_buffered(section, keybuf, keybuf, args, buf, sizeof(buf),
-							 TRUE);
+	kv = find_value_buffered(this, section, keybuf, keybuf, args,
+							 buf, sizeof(buf), FALSE, NULL);
 	if (kv)
 	{
 		settings_kv_set(kv, strdupnull(value), this->contents);
@@ -761,12 +850,12 @@ METHOD(settings_t, create_section_enumerator, enumerator_t*,
 	private_settings_t *this, char *key, ...)
 {
 	enumerator_data_t *data;
-	array_t *sections;
+	array_t *sections = NULL;
 	va_list args;
 
 	this->lock->read_lock(this->lock);
 	va_start(args, key);
-	sections = find_sections(this, this->top, key, args);
+	sections = find_sections(this, this->top, key, args, &sections);
 	va_end(args);
 
 	if (!sections)
@@ -793,13 +882,17 @@ CALLBACK(kv_filter, bool,
 
 	while (orig->enumerate(orig, &kv))
 	{
-		if (seen->get(seen, kv->key) || !kv->value)
+		if (seen->get(seen, kv->key))
+		{
+			continue;
+		}
+		seen->put(seen, kv->key, kv->key);
+		if (!kv->value)
 		{
 			continue;
 		}
 		*key = kv->key;
 		*value = kv->value;
-		seen->put(seen, kv->key, kv->key);
 		return TRUE;
 	}
 	return FALSE;
@@ -818,12 +911,12 @@ METHOD(settings_t, create_key_value_enumerator, enumerator_t*,
 	private_settings_t *this, char *key, ...)
 {
 	enumerator_data_t *data;
-	array_t *sections;
+	array_t *sections = NULL;
 	va_list args;
 
 	this->lock->read_lock(this->lock);
 	va_start(args, key);
-	sections = find_sections(this, this->top, key, args);
+	sections = find_sections(this, this->top, key, args, &sections);
 	va_end(args);
 
 	if (!sections)
@@ -845,33 +938,34 @@ METHOD(settings_t, add_fallback, void,
 {
 	section_t *section;
 	va_list args;
+	char buf[512];
 
-	/* find/create the fallback */
+	this->lock->write_lock(this->lock);
 	va_start(args, fallback);
-	section = ensure_section(this, this->top, fallback, args);
+	section = ensure_section(this, this->top, key, args);
 	va_end(args);
 
 	va_start(args, fallback);
-	add_fallback_to_section(this, this->top, key, args, section);
+	if (section && vsnprintf(buf, sizeof(buf), fallback, args) < sizeof(buf))
+	{
+		settings_reference_add(section, strdup(buf), TRUE);
+	}
 	va_end(args);
+	this->lock->unlock(this->lock);
 }
 
 /**
  * Load settings from files matching the given file pattern or from a string.
- * All sections and values are added relative to "parent".
  * All files (even included ones) have to be loaded successfully.
- * If merge is FALSE the contents of parent are replaced with the parsed
- * contents, otherwise they are merged together.
  */
-static bool load_internal(private_settings_t *this, section_t *parent,
-						  char *pattern, bool merge, bool string)
+static section_t *load_internal(char *pattern, bool string)
 {
 	section_t *section;
 	bool loaded;
 
 	if (pattern == NULL || !pattern[0])
-	{	/* TODO: Clear parent if merge is FALSE? */
-		return TRUE;
+	{
+		return settings_section_create(NULL);
 	}
 
 	section = settings_section_create(NULL);
@@ -880,61 +974,101 @@ static bool load_internal(private_settings_t *this, section_t *parent,
 	if (!loaded)
 	{
 		settings_section_destroy(section, NULL);
-		return FALSE;
+		section = NULL;
 	}
+	return section;
+}
 
-	this->lock->write_lock(this->lock);
-	settings_section_extend(parent, section, this->contents, !merge);
+/**
+ * Add sections and values in "section" relative to "parent".
+ * If merge is FALSE the contents of parent are replaced with the parsed
+ * contents, otherwise they are merged together.
+ *
+ * Releases the write lock and destroys the given section.
+ * If parent is NULL this is all that happens.
+ */
+static bool extend_section(private_settings_t *this, section_t *parent,
+						   section_t *section, bool merge)
+{
+	if (parent)
+	{
+		settings_section_extend(parent, section, this->contents, !merge);
+	}
 	this->lock->unlock(this->lock);
-
 	settings_section_destroy(section, NULL);
-	return TRUE;
+	return parent != NULL;
 }
 
 METHOD(settings_t, load_files, bool,
 	private_settings_t *this, char *pattern, bool merge)
 {
-	return load_internal(this, this->top, pattern, merge, FALSE);
+	section_t *section;
+
+	section = load_internal(pattern, FALSE);
+	if (!section)
+	{
+		return FALSE;
+	}
+
+	this->lock->write_lock(this->lock);
+	return extend_section(this, this->top, section, merge);
 }
 
 METHOD(settings_t, load_files_section, bool,
 	private_settings_t *this, char *pattern, bool merge, char *key, ...)
 {
-	section_t *section;
+	section_t *section, *parent;
 	va_list args;
 
-	va_start(args, key);
-	section = ensure_section(this, this->top, key, args);
-	va_end(args);
-
+	section = load_internal(pattern, FALSE);
 	if (!section)
 	{
 		return FALSE;
 	}
-	return load_internal(this, section, pattern, merge, FALSE);
+
+	this->lock->write_lock(this->lock);
+
+	va_start(args, key);
+	parent = ensure_section(this, this->top, key, args);
+	va_end(args);
+
+	return extend_section(this, parent, section, merge);
 }
 
 METHOD(settings_t, load_string, bool,
 	private_settings_t *this, char *settings, bool merge)
 {
-	return load_internal(this, this->top, settings, merge, TRUE);
+	section_t *section;
+
+	section = load_internal(settings, TRUE);
+	if (!section)
+	{
+		return FALSE;
+	}
+
+	this->lock->write_lock(this->lock);
+	return extend_section(this, this->top, section, merge);
 }
 
 METHOD(settings_t, load_string_section, bool,
 	private_settings_t *this, char *settings, bool merge, char *key, ...)
 {
-	section_t *section;
+	section_t *section, *parent;
 	va_list args;
 
-	va_start(args, key);
-	section = ensure_section(this, this->top, key, args);
-	va_end(args);
-
+	section = load_internal(settings, TRUE);
 	if (!section)
 	{
 		return FALSE;
 	}
-	return load_internal(this, section, settings, merge, TRUE);
+
+	this->lock->write_lock(this->lock);
+
+	va_start(args, key);
+	parent = ensure_section(this, this->top, key, args);
+	va_end(args);
+
+	return extend_section(this, parent, section, merge);
 }
 
 METHOD(settings_t, destroy, void,

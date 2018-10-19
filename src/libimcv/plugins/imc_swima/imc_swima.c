@@ -30,6 +30,17 @@
 #include <pen/pen.h>
 #include <utils/debug.h>
 
+#include <errno.h>
+#include <poll.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/inotify.h>
+#include <unistd.h>
+
+#ifndef SW_COLLECTOR
+#define SW_COLLECTOR NULL
+#endif
+
 /* IMC definitions */
 
 static const char imc_name[] = "SWIMA";
@@ -68,6 +79,75 @@ TNC_Result TNC_IMC_Initialize(TNC_IMCID imc_id,
 }
 
 /**
+ * Poll for IN_CLOSE_WRITE event on the apt history.log
+ */
+static bool poll_history_log(void)
+{
+	int fd, wd, res;
+	nfds_t nfds;
+	struct pollfd fds[1];
+	char *history_path;
+	bool success = FALSE;
+
+	history_path = lib->settings->get_str(lib->settings, "sw-collector.history",
+										  NULL);
+	if (!history_path)
+	{
+		DBG1(DBG_IMC, "sw-collector.history path not set");
+		return FALSE;
+	}
+
+	/* Create the file descriptor for accessing the inotify API */
+	fd = inotify_init1(IN_NONBLOCK);
+	if (fd == -1)
+	{
+		DBG1(DBG_IMC, "inotify file descriptor could not be created");
+		return FALSE;
+	}
+
+	/* Watch for CLOSE_WRITE events on history log */
+	wd = inotify_add_watch(fd, history_path, IN_CLOSE_WRITE);
+	if (wd == -1)
+	{
+		DBG1(DBG_IMC, "cannot watch '%s'", history_path);
+		goto end;
+	}
+
+	/* Prepare for polling */
+	nfds = 1;
+
+	/* Inotify input */
+	fds[0].fd = fd;
+	fds[0].events = POLLIN;
+
+	while (1)
+	{
+		DBG1(DBG_IMC, "  waiting for write event on history.log ...");
+
+		res = poll(fds, nfds, -1);
+		if (res == -1)
+		{
+			DBG1(DBG_IMC, "  poll failed: %s", strerror(errno));
+			if (errno == EINTR)
+			{
+				continue;
+			}
+			goto end;
+		}
+		if (res > 0 &&	fds[0].revents & POLLIN)
+		{
+			DBG1(DBG_IMC, "  poll successful");
+			success = TRUE;
+			break;
+		}
+	}
+
+end:
+	close(fd);
+	return success;
+}
+
+/**
  * see section 3.8.2 of TCG TNC IF-IMC Specification 1.3
  */
 TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
@@ -75,6 +155,11 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 										  TNC_ConnectionState new_state)
 {
 	imc_state_t *state;
+	imc_swima_state_t *swima_state;
+	imc_swima_subscription_t *subscription;
+	TNC_IMV_Evaluation_Result res;
+	TNC_Result result;
+	uint32_t eid, eid_epoch;
 
 	if (!imc_swima)
 	{
@@ -86,14 +171,42 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 		case TNC_CONNECTION_STATE_CREATE:
 			state = imc_swima_state_create(connection_id);
 			return imc_swima->create_state(imc_swima, state);
-		case TNC_CONNECTION_STATE_HANDSHAKE:
-			if (imc_swima->change_state(imc_swima, connection_id, new_state,
-				&state) != TNC_RESULT_SUCCESS)
+		case TNC_CONNECTION_STATE_ACCESS_ALLOWED:
+		case TNC_CONNECTION_STATE_ACCESS_ISOLATED:
+		case TNC_CONNECTION_STATE_ACCESS_NONE:
+			/* get updated IMC state */
+			result = imc_swima->change_state(imc_swima, connection_id,
+											 new_state, &state);
+			if (result != TNC_RESULT_SUCCESS)
 			{
 				return TNC_RESULT_FATAL;
 			}
-			state->set_result(state, imc_id,
-							  TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
+			swima_state = (imc_swima_state_t*)state;
+
+			/* do a handshake retry? */
+			if (swima_state->get_subscription(swima_state, &subscription))
+			{
+				/* update earliest EID in subscription target */
+				if (state->get_result(state, imc_id, &res) &&
+					res == TNC_IMV_EVALUATION_RESULT_COMPLIANT)
+				{
+					eid = subscription->targets->get_eid(subscription->targets,
+												   &eid_epoch);
+					if (eid > 0)
+					{
+						eid = swima_state->get_earliest_eid(swima_state);
+						subscription->targets->set_eid(subscription->targets, eid,
+													   eid_epoch);
+					}
+				}
+				DBG1(DBG_IMC, "SWIMA subscription %u:", subscription->request_id);
+				if (!poll_history_log())
+				{
+					return TNC_RESULT_FATAL;
+				}
+				return imc_swima->request_handshake_retry(imc_id, connection_id,
+												TNC_RETRY_REASON_IMC_PERIODIC);
+			}
 			return TNC_RESULT_SUCCESS;
 		case TNC_CONNECTION_STATE_DELETE:
 			return imc_swima->delete_state(imc_swima, connection_id);
@@ -104,61 +217,11 @@ TNC_Result TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 }
 
 /**
- * see section 3.8.3 of TCG TNC IF-IMC Specification 1.3
- */
-TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
-								  TNC_ConnectionID connection_id)
-{
-	imc_state_t *state;
-	imc_msg_t *out_msg;
-	pa_tnc_attr_t *attr;
-	seg_contract_t *contract;
-	seg_contract_manager_t *contracts;
-	size_t max_attr_size = SWIMA_MAX_ATTR_SIZE;
-	size_t max_seg_size;
-	char buf[BUF_LEN];
-	TNC_Result result = TNC_RESULT_SUCCESS;
-
-	if (!imc_swima)
-	{
-		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
-		return TNC_RESULT_NOT_INITIALIZED;
-	}
-	if (!imc_swima->get_state(imc_swima, connection_id, &state))
-	{
-		return TNC_RESULT_FATAL;
-	}
-
-	/* Determine maximum PA-TNC attribute segment size */
-	max_seg_size = state->get_max_msg_len(state) - PA_TNC_HEADER_SIZE
-												 - PA_TNC_ATTR_HEADER_SIZE
-												 - TCG_SEG_ATTR_SEG_ENV_HEADER;
-
-	/* Announce support of PA-TNC segmentation to IMV */
-	contract = seg_contract_create(msg_types[0], max_attr_size, max_seg_size,
-								   TRUE, imc_id, TRUE);
-	contract->get_info_string(contract, buf, BUF_LEN, TRUE);
-	DBG2(DBG_IMC, "%s", buf);
-	contracts = state->get_contracts(state);
-	contracts->add_contract(contracts, contract);
-	attr = tcg_seg_attr_max_size_create(max_attr_size, max_seg_size, TRUE);
-
-	/* send PA-TNC message with the excl flag not set */
-	out_msg = imc_msg_create(imc_swima, state, connection_id, imc_id,
-							 TNC_IMVID_ANY, msg_types[0]);
-	out_msg->add_attribute(out_msg, attr);
-	result = out_msg->send(out_msg, FALSE);
-	out_msg->destroy(out_msg);
-
-	return result;
-}
-
-/**
  * Add SWID Inventory or Event attribute to the send queue
  */
 static void fulfill_request(imc_state_t *state, imc_msg_t *msg,
-							uint32_t request_id, bool sw_id_only,
-							swima_inventory_t *targets)
+							   uint32_t request_id, bool sw_id_only,
+							   swima_inventory_t *targets)
 {
 	pa_tnc_attr_t *attr;
 	swima_collector_t  *collector;
@@ -174,6 +237,8 @@ static void fulfill_request(imc_state_t *state, imc_msg_t *msg,
 	{
 		swima_events_t *sw_ev;
 		ietf_swima_attr_sw_ev_t *sw_ev_attr;
+		imc_swima_state_t *swima_state;
+		uint32_t eid_epoch, last_eid = 0;
 
 		sw_ev = collector->collect_events(collector, sw_id_only, targets);
 		if (!sw_ev)
@@ -185,8 +250,14 @@ static void fulfill_request(imc_state_t *state, imc_msg_t *msg,
 		}
 		else {
 			items = sw_ev->get_count(sw_ev);
-			DBG1(DBG_IMC, "collected %d SW%s event%s", items, id_str,
-													   items == 1 ? "" : "s");
+			last_eid = sw_ev->get_eid(sw_ev, &eid_epoch, NULL);
+
+			DBG1(DBG_IMC, "collected %d SW%s event%s at last eid %d of epoch 0x%08x",
+				 items, id_str, items == 1 ? "" : "s", last_eid, eid_epoch);
+
+			/* Store the earliest EID for the next subscription round */
+			swima_state = (imc_swima_state_t*)state;
+			swima_state->set_earliest_eid(swima_state, last_eid + 1);
 
 			/* Send an IETF SW [Identity] Events attribute */
 			attr = ietf_swima_attr_sw_ev_create(IETF_SWIMA_ATTR_SW_INV_FLAG_NONE,
@@ -226,9 +297,78 @@ static void fulfill_request(imc_state_t *state, imc_msg_t *msg,
 	collector->destroy(collector);
 }
 
+/**
+ * see section 3.8.3 of TCG TNC IF-IMC Specification 1.3
+ */
+TNC_Result TNC_IMC_BeginHandshake(TNC_IMCID imc_id,
+								  TNC_ConnectionID connection_id)
+{
+	imc_state_t *state;
+	imc_swima_state_t *swima_state;
+	imc_msg_t *out_msg;
+	pa_tnc_attr_t *attr;
+	seg_contract_t *contract;
+	seg_contract_manager_t *contracts;
+	imc_swima_subscription_t *subscription;
+	size_t max_attr_size = SWIMA_MAX_ATTR_SIZE;
+	size_t max_seg_size;
+	char buf[BUF_LEN];
+	TNC_Result result = TNC_RESULT_SUCCESS;
+
+	if (!imc_swima)
+	{
+		DBG1(DBG_IMC, "IMC \"%s\" has not been initialized", imc_name);
+		return TNC_RESULT_NOT_INITIALIZED;
+	}
+	if (!imc_swima->get_state(imc_swima, connection_id, &state))
+	{
+		return TNC_RESULT_FATAL;
+	}
+	swima_state = (imc_swima_state_t*)state;
+
+	if (swima_state->get_subscription(swima_state, &subscription))
+	{
+		if (system(SW_COLLECTOR) != 0)
+		{
+			DBG1(DBG_IMC, "calling %s failed", SW_COLLECTOR);
+			return TNC_RESULT_FATAL;
+		}
+		out_msg = imc_msg_create(imc_swima, state, connection_id, imc_id,
+								 subscription->imv_id, msg_types[0]);
+		fulfill_request(state, out_msg, subscription->request_id,
+						subscription->sw_id_only, subscription->targets);
+	}
+	else
+	{
+		/* Determine maximum PA-TNC attribute segment size */
+		max_seg_size = state->get_max_msg_len(state) - PA_TNC_HEADER_SIZE
+													 - PA_TNC_ATTR_HEADER_SIZE
+												 - TCG_SEG_ATTR_SEG_ENV_HEADER;
+
+		/* Announce support of PA-TNC segmentation to IMV */
+		contract = seg_contract_create(msg_types[0], max_attr_size, max_seg_size,
+									   TRUE, imc_id, TRUE);
+		contract->get_info_string(contract, buf, BUF_LEN, TRUE);
+		DBG2(DBG_IMC, "%s", buf);
+		contracts = state->get_contracts(state);
+		contracts->add_contract(contracts, contract);
+		attr = tcg_seg_attr_max_size_create(max_attr_size, max_seg_size, TRUE);
+
+		/* send PA-TNC message with the excl flag not set */
+		out_msg = imc_msg_create(imc_swima, state, connection_id, imc_id,
+								 TNC_IMVID_ANY, msg_types[0]);
+		out_msg->add_attribute(out_msg, attr);
+	}
+	result = out_msg->send(out_msg, FALSE);
+	out_msg->destroy(out_msg);
+
+	return result;
+}
+
 static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 {
 	imc_msg_t *out_msg;
+	imc_swima_state_t *swima_state;
 	pa_tnc_attr_t *attr;
 	enumerator_t *enumerator;
 	pen_type_t type;
@@ -255,7 +395,6 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 		uint32_t request_id;
 		bool sw_id_only;
 		swima_inventory_t *targets;
-
 		type = attr->get_type(attr);
 
 		if (type.vendor_id != PEN_IETF || type.type != IETF_ATTR_SWIMA_REQUEST)
@@ -267,15 +406,55 @@ static TNC_Result receive_message(imc_state_t *state, imc_msg_t *in_msg)
 		flags = attr_req->get_flags(attr_req);
 		request_id = attr_req->get_request_id(attr_req);
 		targets = attr_req->get_targets(attr_req);
+		sw_id_only = (flags & IETF_SWIMA_ATTR_REQ_FLAG_R);
 
 		if (flags & (IETF_SWIMA_ATTR_REQ_FLAG_S | IETF_SWIMA_ATTR_REQ_FLAG_C))
 		{
-			attr = swima_error_create(PA_ERROR_SWIMA_SUBSCRIPTION_DENIED,
-						request_id, 0, "no subscription available yet");
-			out_msg->add_attribute(out_msg, attr);
-			break;
+			if (imc_swima->has_pt_tls(imc_swima) &&
+				lib->settings->get_bool(lib->settings,
+					"%s.plugins.imc-swima.subscriptions", FALSE, lib->ns))
+			{
+				imc_swima_subscription_t *subscription;
+
+				swima_state = (imc_swima_state_t*)state;
+
+				if (flags & IETF_SWIMA_ATTR_REQ_FLAG_C)
+				{
+					if (swima_state->get_subscription(swima_state, &subscription))
+					{
+						DBG1(DBG_IMC, "SWIMA subscription %u cleared",
+									   subscription->request_id);
+						swima_state->set_subscription(swima_state, NULL, FALSE);
+					}
+				}
+				else
+				{
+					INIT(subscription,
+						.imv_id = in_msg->get_src_id(in_msg),
+						.request_id = request_id,
+						.targets = targets->get_ref(targets),
+						.sw_id_only = sw_id_only,
+					);
+
+					swima_state->set_subscription(swima_state, subscription,
+												  TRUE);
+					DBG1(DBG_IMC, "SWIMA subscription %u established",
+								   subscription->request_id);
+					if (system(SW_COLLECTOR) != 0)
+					{
+						DBG1(DBG_IMC, "calling %s failed", SW_COLLECTOR);
+						out_msg->destroy(out_msg);
+						return TNC_RESULT_FATAL;
+					}
+				}
+			}
+			else
+			{
+				attr = swima_error_create(PA_ERROR_SWIMA_SUBSCRIPTION_DENIED,
+							request_id, 0, "subscriptions not enabled");
+				out_msg->add_attribute(out_msg, attr);
+			}
 		}
-		sw_id_only = (flags & IETF_SWIMA_ATTR_REQ_FLAG_R);
 
 		fulfill_request(state, out_msg, request_id, sw_id_only, targets);
 		break;

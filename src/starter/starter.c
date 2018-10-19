@@ -477,6 +477,7 @@ int main (int argc, char **argv)
 		}
 	}
 
+#ifndef STARTER_ALLOW_NON_ROOT
 	/* verify that we can start */
 	if (getuid() != 0)
 	{
@@ -484,6 +485,7 @@ int main (int argc, char **argv)
 		cleanup();
 		exit(LSB_RC_NOT_ALLOWED);
 	}
+#endif
 
 	if (check_pid(pid_file))
 	{
@@ -520,6 +522,7 @@ int main (int argc, char **argv)
 		exit(LSB_RC_INVALID_ARGUMENT);
 	}
 
+#ifndef SKIP_KERNEL_IPSEC_MODPROBES
 	/* determine if we have a native netkey IPsec stack */
 	if (!starter_netkey_init())
 	{
@@ -530,6 +533,7 @@ int main (int argc, char **argv)
 			DBG1(DBG_APP, "no known IPsec stack detected, ignoring!");
 		}
 	}
+#endif
 
 	last_reload = time_monotonic(NULL);
 
@@ -646,6 +650,7 @@ int main (int argc, char **argv)
 		 */
 		if (_action_ & FLAG_ACTION_RELOAD)
 		{
+			_action_ &= ~FLAG_ACTION_RELOAD;
 			if (starter_charon_pid())
 			{
 				for (conn = cfg->conn_first; conn; conn = conn->next)
@@ -675,7 +680,6 @@ int main (int argc, char **argv)
 					}
 				}
 			}
-			_action_ &= ~FLAG_ACTION_RELOAD;
 		}
 
 		/*
@@ -683,6 +687,7 @@ int main (int argc, char **argv)
 		 */
 		if (_action_ & FLAG_ACTION_UPDATE)
 		{
+			_action_ &= ~FLAG_ACTION_UPDATE;
 			DBG2(DBG_APP, "Reloading config...");
 			new_cfg = confread_load(config_file);
 
@@ -763,7 +768,6 @@ int main (int argc, char **argv)
 					confread_free(new_cfg);
 				}
 			}
-			_action_ &= ~FLAG_ACTION_UPDATE;
 			last_reload = time_monotonic(NULL);
 		}
 
@@ -772,6 +776,7 @@ int main (int argc, char **argv)
 		 */
 		if (_action_ & FLAG_ACTION_START_CHARON)
 		{
+			_action_ &= ~FLAG_ACTION_START_CHARON;
 			if (!starter_charon_pid())
 			{
 				DBG2(DBG_APP, "Attempting to start %s...", daemon_name);
@@ -782,7 +787,6 @@ int main (int argc, char **argv)
 				}
 				starter_stroke_configure(cfg);
 			}
-			_action_ &= ~FLAG_ACTION_START_CHARON;
 
 			for (ca = cfg->ca_first; ca; ca = ca->next)
 			{

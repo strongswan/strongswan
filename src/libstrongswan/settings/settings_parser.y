@@ -1,7 +1,7 @@
 %{
 /*
- * Copyright (C) 2014 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2014-2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -49,6 +49,7 @@ static section_t *push_section(parser_helper_t *ctx, char *name);
 static section_t *pop_section(parser_helper_t *ctx);
 static void add_section(parser_helper_t *ctx, section_t *section);
 static void add_setting(parser_helper_t *ctx, kv_t *kv);
+static void add_references(parser_helper_t *ctx, array_t *references);
 
 /**
  * Make sure to call lexer with the proper context
@@ -78,20 +79,26 @@ static int yylex(YYSTYPE *lvalp, parser_helper_t *ctx)
 	char *s;
 	struct section_t *sec;
 	struct kv_t *kv;
+	array_t *refs;
 }
 %token <s> NAME STRING
+%token DOT "."
+%token COMMA ","
+%token COLON ":"
 %token NEWLINE STRING_ERROR
 
 /* ...and other symbols */
 %type <s> value valuepart
 %type <sec> section_start section
 %type <kv> setting
+%type <refs> references
 
 /* properly destroy string tokens that are strdup()ed on error */
 %destructor { free($$); } NAME STRING value valuepart
 /* properly destroy parse results on error */
 %destructor { pop_section(ctx); settings_section_destroy($$, NULL); } section_start section
 %destructor { settings_kv_destroy($$, NULL); } setting
+%destructor { array_destroy_function($$, (void*)free, NULL); } references
 
 /* there are two shift/reduce conflicts because of the "NAME = NAME" and
  * "NAME {" ambiguity, and the "NAME =" rule) */
@@ -133,9 +140,24 @@ section_start:
 		$$ = push_section(ctx, $NAME);
 	}
 	|
-	NAME NEWLINE '{'
+	NAME ":" references '{'
 	{
 		$$ = push_section(ctx, $NAME);
+		add_references(ctx, $references);
+		array_destroy($references);
+	}
+	;
+
+references:
+	NAME
+	{
+		$$ = array_create(0, 0);
+		array_insert($$, ARRAY_TAIL, $1);
+	}
+	| references "," NAME
+	{
+		array_insert($1, ARRAY_TAIL, $3);
+		$$ = $1;
 	}
 	;
 
@@ -236,6 +258,27 @@ static void add_setting(parser_helper_t *ctx, kv_t *kv)
 
 	array_get(sections, ARRAY_TAIL, &section);
 	settings_kv_add(section, kv, NULL);
+}
+
+/**
+ * Adds the given references to the section on top of the stack
+ */
+static void add_references(parser_helper_t *ctx, array_t *references)
+{
+	array_t *sections = (array_t*)ctx->context;
+	section_t *section;
+	enumerator_t *refs;
+	char *ref;
+
+	array_get(sections, ARRAY_TAIL, &section);
+
+	refs = array_create_enumerator(references);
+	while (refs->enumerate(refs, &ref))
+	{
+		settings_reference_add(section, ref, FALSE);
+		array_remove_at(references, refs);
+	}
+	refs->destroy(refs);
 }
 
 /**

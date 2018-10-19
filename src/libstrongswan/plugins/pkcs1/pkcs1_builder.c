@@ -271,7 +271,8 @@ end:
  * }
  *
  * While the parameters and publicKey fields are OPTIONAL, RFC 5915 says that
- * parameters MUST be included and publicKey SHOULD be.
+ * parameters MUST be included (an errata clarifies this, so this is only the
+ * case for plain private keys, not encoded in PKCS#8) and publicKey SHOULD be.
  */
 static bool is_ec_private_key(chunk_t blob)
 {
@@ -281,7 +282,8 @@ static bool is_ec_private_key(chunk_t blob)
 		   asn1_parse_integer_uint64(data) == 1 &&
 		   asn1_unwrap(&blob, &data) == ASN1_OCTET_STRING &&
 		   asn1_unwrap(&blob, &data) == ASN1_CONTEXT_C_0 &&
-		   asn1_unwrap(&blob, &data) == ASN1_CONTEXT_C_1;
+		   asn1_unwrap(&data, &data) == ASN1_OID &&
+		   (!blob.len || (asn1_unwrap(&blob, &data) == ASN1_CONTEXT_C_1));
 }
 
 /**

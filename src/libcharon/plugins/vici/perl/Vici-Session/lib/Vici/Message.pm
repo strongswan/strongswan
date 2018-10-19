@@ -29,7 +29,9 @@ sub from_data {
     my $data = shift;
     my %hash = ();
 
-    parse($data, \%hash);
+    open my $data_fd, '<', \$data;
+    parse($data_fd, \%hash);
+    close $data_fd;
 
     my $self = {
         Hash => \%hash
@@ -62,29 +64,30 @@ sub result {
 # private functions
 
 sub parse {
-    my $data = shift;
+    my $fd = shift;
     my $hash = shift;
+    my $data;
 
-    while (length($data) > 0)
+    until ( eof $fd )
     {
-        (my $type, $data) = unpack('Ca*', $data);
+        my $type = unpack('C', read_data($fd, 1));
 
-		if ($type == SECTION_END)
-		{
-			return $data;
-		}
+        if ( $type == SECTION_END )
+        {
+            return;
+        }
 
-        (my $key, $data) = unpack('C/a*a*', $data);
+        my $key = read_len_data($fd, 1);
 
         if ( $type == KEY_VALUE )
         {
-            (my $value, $data) = unpack('n/a*a*', $data);
+            my $value = read_len_data($fd, 2);
             $hash->{$key} = $value;
         }
         elsif ( $type == SECTION_START )
         {
             my %section = ();
-            $data = parse($data, \%section);
+            parse($fd, \%section);
             $hash->{$key} = \%section;
         }
         elsif ( $type == LIST_START )
@@ -92,19 +95,20 @@ sub parse {
             my @list = ();
             my $more = 1;
 
-            while (length($data) > 0 and $more)
+            while ( !eof($fd) and $more )
             {
-                (my $type, $data) = unpack('Ca*', $data);
+                my $type = unpack('C', read_data($fd, 1));
+
                 if ( $type == LIST_ITEM )
                 {
-                    (my $value, $data) = unpack('n/a*a*', $data);
+                    my $value = read_len_data($fd, 2);
                     push(@list, $value);
                 }
                 elsif ( $type == LIST_END )
                 {
                     $more = 0;
                     $hash->{$key} = \@list;
-                 }
+                }
                 else
                 {
                     die "message parsing error: ", $type, "\n"
@@ -116,9 +120,28 @@ sub parse {
             die "message parsing error: ", $type, "\n"
         }
     }
+}
+
+sub read_data {
+    my $fd = shift;
+    my $len = shift;
+    my $data;
+
+    my $res = read $fd, $data, $len;
+    unless (defined $res and $res == $len)
+    {
+        die "message parsing error: unable to read ", $len, " bytes\n";
+    }
     return $data;
 }
 
+sub read_len_data {
+    my $fd = shift;
+    my $len = shift;
+
+    $len = unpack($len == 1 ? 'C' : 'n', read_data($fd, $len));
+    return read_data($fd, $len);
+}
 
 sub encode_hash {
     my $hash = shift;

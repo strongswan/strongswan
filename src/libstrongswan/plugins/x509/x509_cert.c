@@ -369,8 +369,13 @@ static bool parse_otherName(chunk_t *blob, int level0, id_type_t *type)
 				switch (oid)
 				{
 					case OID_XMPP_ADDR:
-						if (!asn1_parse_simple_object(&object, ASN1_UTF8STRING,
+						if (asn1_parse_simple_object(&object, ASN1_UTF8STRING,
 									parser->get_level(parser)+1, "xmppAddr"))
+						{	/* we handle xmppAddr as RFC822 addr */
+							*blob = object;
+							*type = ID_RFC822_ADDR;
+						}
+						else
 						{
 							goto end;
 						}
@@ -704,6 +709,9 @@ static void parse_keyUsage(chunk_t blob, private_x509_cert_t *this)
 		KU_DECIPHER_ONLY =		8,
 	};
 
+	/* to be compliant with RFC 4945 specific KUs have to be included */
+	this->flags &= ~X509_IKE_COMPLIANT;
+
 	if (asn1_unwrap(&blob, &blob) == ASN1_BIT_STRING && blob.len)
 	{
 		int bit, byte, unused = blob.ptr[0];
@@ -724,10 +732,12 @@ static void parse_keyUsage(chunk_t blob, private_x509_cert_t *this)
 						case KU_CRL_SIGN:
 							this->flags |= X509_CRL_SIGN;
 							break;
-						case KU_KEY_CERT_SIGN:
-							/* we use the caBasicConstraint, MUST be set */
 						case KU_DIGITAL_SIGNATURE:
 						case KU_NON_REPUDIATION:
+							this->flags |= X509_IKE_COMPLIANT;
+							break;
+						case KU_KEY_CERT_SIGN:
+							/* we use the caBasicConstraint, MUST be set */
 						case KU_KEY_ENCIPHERMENT:
 						case KU_DATA_ENCIPHERMENT:
 						case KU_KEY_AGREEMENT:
@@ -1381,6 +1391,9 @@ static bool parse_certificate(private_x509_cert_t *this)
 
 	parser = asn1_parser_create(certObjects, this->encoding);
 
+	/* unless we see a keyUsage extension we are compliant with RFC 4945 */
+	this->flags |= X509_IKE_COMPLIANT;
+
 	while (parser->iterate(parser, &objectID, &object))
 	{
 		u_int level = parser->get_level(parser)+1;
@@ -2013,6 +2026,8 @@ chunk_t build_generalName(identification_t *id)
 
 	switch (id->get_type(id))
 	{
+		case ID_DER_ASN1_GN:
+			return chunk_clone(id->get_encoding(id));
 		case ID_RFC822_ADDR:
 			context = ASN1_CONTEXT_S_1;
 			break;

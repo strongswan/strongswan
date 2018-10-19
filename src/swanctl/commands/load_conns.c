@@ -425,7 +425,7 @@ static int load_conns(vici_conn_t *conn)
 {
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	settings_t *cfg;
-	char *arg;
+	char *arg, *file = SWANCTL_CONF;
 	int ret;
 
 	while (TRUE)
@@ -440,6 +440,9 @@ static int load_conns(vici_conn_t *conn)
 			case 'r':
 				format |= COMMAND_FORMAT_RAW;
 				continue;
+			case 'f':
+				file = arg;
+				continue;
 			case EOF:
 				break;
 			default:
@@ -448,10 +451,10 @@ static int load_conns(vici_conn_t *conn)
 		break;
 	}
 
-	cfg = settings_create(SWANCTL_CONF);
+	cfg = settings_create(file);
 	if (!cfg)
 	{
-		fprintf(stderr, "parsing '%s' failed\n", SWANCTL_CONF);
+		fprintf(stderr, "parsing '%s' failed\n", file);
 		return EINVAL;
 	}
 
@@ -474,6 +477,7 @@ static void __attribute__ ((constructor))reg()
 			{"help",		'h', 0, "show usage information"},
 			{"raw",			'r', 0, "dump raw response message"},
 			{"pretty",		'P', 0, "dump raw response message in pretty print"},
+			{"file",		'f', 1, "custom path to swanctl.conf"},
 		}
 	});
 }

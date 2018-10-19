@@ -141,15 +141,6 @@ TNC_Result TNC_IMC_API TNC_IMC_NotifyConnectionChange(TNC_IMCID imc_id,
 		case TNC_CONNECTION_STATE_CREATE:
 			state = imc_hcd_state_create(connection_id);
 			return imc_hcd->create_state(imc_hcd, state);
-		case TNC_CONNECTION_STATE_HANDSHAKE:
-			if (imc_hcd->change_state(imc_hcd, connection_id, new_state,
-				&state) != TNC_RESULT_SUCCESS)
-			{
-				return TNC_RESULT_FATAL;
-			}
-			state->set_result(state, imc_id,
-							  TNC_IMV_EVALUATION_RESULT_DONT_KNOW);
-			return TNC_RESULT_SUCCESS;
 		case TNC_CONNECTION_STATE_DELETE:
 			return imc_hcd->delete_state(imc_hcd, connection_id);
 		default:
@@ -348,7 +339,7 @@ static void add_certification_state(imc_msg_t *msg)
 	if (hex_string)
 	{
 		blob = chunk_from_hex(chunk_from_str(hex_string), NULL);
-	
+
 		DBG2(DBG_IMC, "  %N: %B", pwg_attr_names, PWG_HCD_CERTIFICATION_STATE,
 					&blob);
 		attr = generic_attr_chunk_create(blob,
@@ -373,7 +364,7 @@ static void add_configuration_state(imc_msg_t *msg)
 	if (hex_string)
 	{
 		blob = chunk_from_hex(chunk_from_str(hex_string), NULL);
-	
+
 		DBG2(DBG_IMC, "  %N: %B", pwg_attr_names, PWG_HCD_CONFIGURATION_STATE,
 					&blob);
 		attr = generic_attr_chunk_create(blob,
@@ -412,7 +403,7 @@ static void add_quadruple(imc_msg_t *msg, char *section, quadruple_t *quad)
 					"%s.plugins.imc-hcd.subtypes.%s.%s.%s.string_version",
 					"",	lib->ns, section, quad->section, app);
 		hex_version = lib->settings->get_str(lib->settings,
-					"%s.plugins.imc-hcd.subtypes.%s.%s.%s.version", 
+					"%s.plugins.imc-hcd.subtypes.%s.%s.%s.version",
 					hex_version_default, lib->ns, section, quad->section, app);
 
 		/* convert hex string into binary chunk */

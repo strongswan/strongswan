@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -102,6 +102,11 @@ struct controller_t {
 	 * until the IKE_SA is properly deleted, or the call timed out.
 	 *
 	 * @param unique_id		unique id of the IKE_SA to terminate.
+	 * @param force			whether to immediately destroy the IKE_SA without
+	 *						waiting for a response or retransmitting the delete,
+	 *						if a callback is provided and timeout is > 0 the
+	 *						IKE_SA is destroyed once the timeout is reached but
+	 *						retransmits are sent until then
 	 * @param cb			logging callback
 	 * @param param			parameter to include in each call of cb
 	 * @param timeout		timeout in ms to wait for callbacks, 0 to disable
@@ -112,7 +117,7 @@ struct controller_t {
 	 *						- OUT_OF_RES if timed out
 	 */
 	status_t (*terminate_ike)(controller_t *this, uint32_t unique_id,
-							  controller_cb_t callback, void *param,
+							  bool force, controller_cb_t callback, void *param,
 							  u_int timeout);
 
 	/**

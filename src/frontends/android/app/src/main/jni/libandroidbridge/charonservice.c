@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -412,6 +412,15 @@ static void initiate(settings_t *settings)
 	lib->settings->set_str(lib->settings,
 						"charon.plugins.tnc-imc.preferred_language",
 						settings->get_str(settings, "global.language", "en"));
+	lib->settings->set_bool(lib->settings,
+						"charon.plugins.revocation.enable_crl",
+						settings->get_bool(settings, "global.crl", TRUE));
+	lib->settings->set_bool(lib->settings,
+						"charon.plugins.revocation.enable_ocsp",
+						settings->get_bool(settings, "global.ocsp", TRUE));
+	lib->settings->set_bool(lib->settings,
+						"charon.rsa_pss",
+						settings->get_bool(settings, "global.rsa_pss", FALSE));
 	/* this is actually the size of the complete IKE/IP packet, so if the MTU
 	 * for the TUN devices has to be reduced to pass traffic the IKE packets
 	 * will be a bit smaller than necessary as there is no IPsec overhead like
@@ -425,6 +434,9 @@ static void initiate(settings_t *settings)
 						"charon.keep_alive",
 						settings->get_int(settings, "global.nat_keepalive",
 										  ANDROID_KEEPALIVE_INTERVAL));
+
+	/* reload plugins after changing settings */
+	lib->plugins->reload(lib->plugins, NULL);
 
 	this->creds->clear(this->creds);
 	DESTROY_IF(this->service);
@@ -467,13 +479,15 @@ static void set_options(char *logfile)
 					"charon.plugins.android_log.loglevel", ANDROID_DEBUG_LEVEL);
 	/* setup file logger */
 	lib->settings->set_str(lib->settings,
-					"charon.filelog.%s.time_format", "%b %e %T", logfile);
+					"charon.filelog.android.path", logfile);
+	lib->settings->set_str(lib->settings,
+					"charon.filelog.android.time_format", "%b %e %T");
 	lib->settings->set_bool(lib->settings,
-					"charon.filelog.%s.append", FALSE, logfile);
+					"charon.filelog.android.append", TRUE);
 	lib->settings->set_bool(lib->settings,
-					"charon.filelog.%s.flush_line", TRUE, logfile);
+					"charon.filelog.android.flush_line", TRUE);
 	lib->settings->set_int(lib->settings,
-					"charon.filelog.%s.default", ANDROID_DEBUG_LEVEL, logfile);
+					"charon.filelog.android.default", ANDROID_DEBUG_LEVEL);
 
 	lib->settings->set_int(lib->settings,
 					"charon.retransmit_tries", ANDROID_RETRASNMIT_TRIES);
@@ -621,6 +635,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 
 	/* set options before initializing other libraries that might read them */
 	logfile = androidjni_convert_jstring(env, jlogfile);
+
 	set_options(logfile);
 	free(logfile);
 
@@ -649,7 +664,8 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	{
 		memset(&utsname, 0, sizeof(utsname));
 	}
-	DBG1(DBG_DMN, "Starting IKE charon daemon (strongSwan "VERSION", %s, %s, "
+	DBG1(DBG_DMN, "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+");
+	DBG1(DBG_DMN, "Starting IKE service (strongSwan "VERSION", %s, %s, "
 		 "%s %s, %s)", android_version_string, android_device_string,
 		  utsname.sysname, utsname.release, utsname.machine);
 

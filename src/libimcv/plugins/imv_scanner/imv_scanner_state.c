@@ -222,10 +222,14 @@ METHOD(imv_state_t, get_contracts, seg_contract_manager_t*,
 	return this->contracts;
 }
 
-METHOD(imv_state_t, change_state, void,
+METHOD(imv_state_t, change_state, TNC_ConnectionState,
 	private_imv_scanner_state_t *this, TNC_ConnectionState new_state)
 {
+	TNC_ConnectionState old_state;
+
+	old_state = this->state;
 	this->state = new_state;
+	return old_state;
 }
 
 METHOD(imv_state_t, get_recommendation, void,
@@ -303,6 +307,26 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 	return TRUE;
 }
 
+METHOD(imv_state_t, reset, void,
+	private_imv_scanner_state_t *this)
+{
+	DESTROY_IF(this->reason_string);
+	DESTROY_IF(this->remediation_string);
+	this->reason_string = NULL;
+	this->remediation_string = NULL;
+	this->rec  = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
+	this->eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+
+	this->action_flags = 0;
+
+	this->handshake_state = IMV_SCANNER_STATE_INIT;
+
+	DESTROY_IF(&this->port_filter_attr->pa_tnc_attribute);
+	this->port_filter_attr = NULL;
+	this->violating_ports->destroy_function(this->violating_ports, free);
+	this->violating_ports = linked_list_create();
+}
+
 METHOD(imv_state_t, destroy, void,
 	private_imv_scanner_state_t *this)
 {
@@ -373,6 +397,7 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 				.update_recommendation = _update_recommendation,
 				.get_reason_string = _get_reason_string,
 				.get_remediation_instructions = _get_remediation_instructions,
+				.reset = _reset,
 				.destroy = _destroy,
 			},
 			.set_handshake_state = _set_handshake_state,
@@ -391,5 +416,3 @@ imv_state_t *imv_scanner_state_create(TNC_ConnectionID connection_id)
 
 	return &this->public.interface;
 }
-
-

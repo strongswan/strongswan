@@ -1906,7 +1906,7 @@ START_TEST(test_collision_ike_delete)
 										   &a, &b, NULL);
 	}
 	initiate_rekey(a, spi_a);
-	call_ikesa(b, delete);
+	call_ikesa(b, delete, FALSE);
 	assert_ike_sa_state(b, IKE_DELETING);
 
 	/* this should never get called as there is no successful rekeying on

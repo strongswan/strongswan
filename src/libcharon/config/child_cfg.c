@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -124,6 +124,16 @@ struct private_child_cfg_t {
 	mark_t mark_out;
 
 	/**
+	 * Optional mark to set to packets after inbound processing
+	 */
+	mark_t set_mark_in;
+
+	/**
+	 * Optional mark to set to packets after outbound processing
+	 */
+	mark_t set_mark_out;
+
+	/**
 	 * Traffic Flow Confidentiality padding, if enabled
 	 */
 	uint32_t tfc;
@@ -147,6 +157,11 @@ struct private_child_cfg_t {
 	 * HW offload mode
 	 */
 	hw_offload_t hw_offload;
+
+	/**
+	 * DS header field copy mode
+	 */
+	dscp_copy_t copy_dscp;
 };
 
 METHOD(child_cfg_t, get_name, char*,
@@ -254,7 +269,7 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 			{
 				DBG2(DBG_CFG, "received proposals: %#P", proposals);
 				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
-				DBG2(DBG_CFG, "selected proposal: %P", selected);
+				DBG1(DBG_CFG, "selected proposal: %P", selected);
 				break;
 			}
 		}
@@ -289,7 +304,7 @@ METHOD(child_cfg_t, add_traffic_selector, void,
 
 METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 	private_child_cfg_t *this, bool local, linked_list_t *supplied,
-	linked_list_t *hosts)
+	linked_list_t *hosts, bool log)
 {
 	enumerator_t *e1, *e2;
 	traffic_selector_t *ts1, *ts2, *selected;
@@ -334,13 +349,19 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 	}
 	e1->destroy(e1);
 
-	DBG2(DBG_CFG, "%s traffic selectors for %s:",
-		 supplied ? "selecting" : "proposing", local ? "us" : "other");
-	if (supplied == NULL)
+	if (log)
+	{
+		DBG2(DBG_CFG, "%s traffic selectors for %s:",
+			 supplied ? "selecting" : "proposing", local ? "us" : "other");
+	}
+	if (!supplied)
 	{
 		while (derived->remove_first(derived, (void**)&ts1) == SUCCESS)
 		{
-			DBG2(DBG_CFG, " %R", ts1);
+			if (log)
+			{
+				DBG2(DBG_CFG, " %R", ts1);
+			}
 			result->insert_last(result, ts1);
 		}
 		derived->destroy(derived);
@@ -358,11 +379,14 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 				selected = ts1->get_subset(ts1, ts2);
 				if (selected)
 				{
-					DBG2(DBG_CFG, " config: %R, received: %R => match: %R",
-						 ts1, ts2, selected);
+					if (log)
+					{
+						DBG2(DBG_CFG, " config: %R, received: %R => match: %R",
+							 ts1, ts2, selected);
+					}
 					result->insert_last(result, selected);
 				}
-				else
+				else if (log)
 				{
 					DBG2(DBG_CFG, " config: %R, received: %R => no match",
 						 ts1, ts2);
@@ -478,6 +502,12 @@ METHOD(child_cfg_t, get_hw_offload, hw_offload_t,
 	return this->hw_offload;
 }
 
+METHOD(child_cfg_t, get_copy_dscp, dscp_copy_t,
+	private_child_cfg_t *this)
+{
+	return this->copy_dscp;
+}
+
 METHOD(child_cfg_t, get_dpd_action, action_t,
 	private_child_cfg_t *this)
 {
@@ -525,6 +555,12 @@ METHOD(child_cfg_t, get_mark, mark_t,
 	private_child_cfg_t *this, bool inbound)
 {
 	return inbound ? this->mark_in : this->mark_out;
+}
+
+METHOD(child_cfg_t, get_set_mark, mark_t,
+	private_child_cfg_t *this, bool inbound)
+{
+	return inbound ? this->set_mark_in : this->set_mark_out;
 }
 
 METHOD(child_cfg_t, get_tfc, uint32_t,
@@ -600,9 +636,15 @@ METHOD(child_cfg_t, equals, bool,
 		this->mark_in.mask == other->mark_in.mask &&
 		this->mark_out.value == other->mark_out.value &&
 		this->mark_out.mask == other->mark_out.mask &&
+		this->set_mark_in.value == other->set_mark_in.value &&
+		this->set_mark_in.mask == other->set_mark_in.mask &&
+		this->set_mark_out.value == other->set_mark_out.value &&
+		this->set_mark_out.mask == other->set_mark_out.mask &&
 		this->tfc == other->tfc &&
 		this->manual_prio == other->manual_prio &&
 		this->replay_window == other->replay_window &&
+		this->hw_offload == other->hw_offload &&
+		this->copy_dscp == other->copy_dscp &&
 		streq(this->updown, other->updown) &&
 		streq(this->interface, other->interface);
 }
@@ -654,6 +696,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_inactivity = _get_inactivity,
 			.get_reqid = _get_reqid,
 			.get_mark = _get_mark,
+			.get_set_mark = _get_set_mark,
 			.get_tfc = _get_tfc,
 			.get_manual_prio = _get_manual_prio,
 			.get_interface = _get_interface,
@@ -664,6 +707,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_ref = _get_ref,
 			.destroy = _destroy,
 			.get_hw_offload = _get_hw_offload,
+			.get_copy_dscp = _get_copy_dscp,
 		},
 		.name = strdup(name),
 		.options = data->options,
@@ -675,6 +719,8 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 		.close_action = data->close_action,
 		.mark_in = data->mark_in,
 		.mark_out = data->mark_out,
+		.set_mark_in = data->set_mark_in,
+		.set_mark_out = data->set_mark_out,
 		.lifetime = data->lifetime,
 		.inactivity = data->inactivity,
 		.tfc = data->tfc,
@@ -687,6 +733,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 		.replay_window = lib->settings->get_int(lib->settings,
 							"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
 		.hw_offload = data->hw_offload,
+		.copy_dscp = data->copy_dscp,
 	);
 
 	return &this->public;

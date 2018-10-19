@@ -47,10 +47,13 @@ X.509 certificate to verify. If not given it is read from \fISTDIN\fR.
 .TP
 .BI "\-c, \-\-cacert " file
 CA certificate to use for trustchain verification. If not given the certificate
-is assumed to be self\-signed.
+is assumed to be self\-signed. May optionally be a path to a directory from
+which CA certificates are loaded. Can be used multiple times.
 .TP
 .BI "\-l, \-\-crl " file
-Local CRL to use for trustchain verification. Implies \fB-o\fR.
+Local CRL to use for trustchain verification. May optionally be a path to a
+directory from which CRLs are loaded. Can be used multiple times.
+Implies \fB-o\fR.
 .TP
 .BI "\-o, \-\-online
 Enable online CRL/OCSP revocation checking.

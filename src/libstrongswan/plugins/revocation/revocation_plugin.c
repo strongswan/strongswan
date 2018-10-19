@@ -76,6 +76,13 @@ METHOD(plugin_t, get_features, int,
 	return countof(f);
 }
 
+METHOD(plugin_t, reload, bool,
+	private_revocation_plugin_t *this)
+{
+	this->validator->reload(this->validator);
+	return TRUE;
+}
+
 METHOD(plugin_t, destroy, void,
 	private_revocation_plugin_t *this)
 {
@@ -95,6 +102,7 @@ plugin_t *revocation_plugin_create()
 			.plugin = {
 				.get_name = _get_name,
 				.get_features = _get_features,
+				.reload = _reload,
 				.destroy = _destroy,
 			},
 		},

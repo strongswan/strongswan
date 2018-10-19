@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -50,7 +50,7 @@ int main (int arc, char *argv[])
 	{
 		DBG1(DBG_LIB, "database URI undefined, set manager.database "
 			 "in strongswan.conf");
-		//return 1;
+		return 1;
 	}
 
 	storage = storage_create(database);

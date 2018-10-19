@@ -1,6 +1,8 @@
 /*
+ * Copyright (C) 2010 Andreas Steffen
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2006 Mike McCauley (mikem@open.com.au)
- * Copyright (C) 2010 Andreas Steffen, HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

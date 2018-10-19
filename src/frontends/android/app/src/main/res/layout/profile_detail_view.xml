@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2017 Tobias Brunner
+    Copyright (C) 2012-2018 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
     HSR Hochschule fuer Technik Rapperswil
@@ -32,6 +32,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
+            android:hint="@string/profile_gateway_label"
             app:helper_text="@string/profile_gateway_hint" >
 
             <android.support.design.widget.TextInputEditText
@@ -39,8 +40,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:singleLine="true"
-                android:inputType="textNoSuggestions"
-                android:hint="@string/profile_gateway_label" />
+                android:inputType="textNoSuggestions" />
 
         </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -72,15 +72,15 @@
             <org.strongswan.android.ui.widget.TextInputLayoutHelper
                 android:id="@+id/username_wrap"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" >
+                android:layout_height="wrap_content"
+                android:hint="@string/profile_username_label" >
 
                 <android.support.design.widget.TextInputEditText
                     android:id="@+id/username"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
-                    android:inputType="textNoSuggestions"
-                    android:hint="@string/profile_username_label" />
+                    android:inputType="textNoSuggestions" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -89,6 +89,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
+                android:hint="@string/profile_password_label"
                 app:helper_text="@string/profile_password_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -96,8 +97,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
-                    android:inputType="textPassword|textNoSuggestions"
-                    android:hint="@string/profile_password_label" />
+                    android:inputType="textPassword|textNoSuggestions" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -161,6 +161,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:hint="@string/profile_name_label"
             app:helper_text="@string/profile_name_hint" >
 
             <MultiAutoCompleteTextView
@@ -169,8 +170,7 @@
                 android:layout_height="wrap_content"
                 android:singleLine="true"
                 android:inputType="textNoSuggestions"
-                android:completionThreshold="1"
-                android:hint="@string/profile_name_label" />
+                android:completionThreshold="1" />
 
         </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -199,6 +199,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
+                android:hint="@string/profile_remote_id_label"
                 app:helper_text="@string/profile_remote_id_hint" >
 
                 <MultiAutoCompleteTextView
@@ -207,8 +208,7 @@
                     android:layout_height="wrap_content"
                     android:singleLine="true"
                     android:inputType="textNoSuggestions"
-                    android:completionThreshold="1"
-                    android:hint="@string/profile_remote_id_label" />
+                    android:completionThreshold="1" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -216,6 +216,7 @@
                 android:id="@+id/mtu_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="@string/profile_mtu_label"
                 app:helper_text="@string/profile_mtu_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -223,8 +224,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
-                    android:inputType="number|textNoSuggestions"
-                    android:hint="@string/profile_mtu_label" />
+                    android:inputType="number|textNoSuggestions" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -232,6 +232,7 @@
                 android:id="@+id/port_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="@string/profile_port_label"
                 app:helper_text="@string/profile_port_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -239,8 +240,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
-                    android:inputType="number|textNoSuggestions"
-                    android:hint="@string/profile_port_label" />
+                    android:inputType="number|textNoSuggestions" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -248,6 +248,7 @@
                 android:id="@+id/nat_keepalive_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="@string/profile_nat_keepalive_label"
                 app:helper_text="@string/profile_nat_keepalive_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -255,8 +256,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
-                    android:inputType="number|textNoSuggestions"
-                    android:hint="@string/profile_nat_keepalive_label" />
+                    android:inputType="number|textNoSuggestions" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -276,6 +276,74 @@
                 android:layout_marginStart="4dp"
                 android:textSize="12sp"
                 android:text="@string/profile_cert_req_hint" />
+
+            <Switch
+                android:id="@+id/use_ocsp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:text="@string/profile_use_ocsp_label" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:textSize="12sp"
+                android:text="@string/profile_use_ocsp_hint" />
+
+            <Switch
+                android:id="@+id/use_crl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:text="@string/profile_use_crl_label" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:textSize="12sp"
+                android:text="@string/profile_use_crl_hint" />
+
+            <Switch
+                android:id="@+id/strict_revocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:text="@string/profile_strict_revocation_label" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:textSize="12sp"
+                android:text="@string/profile_strict_revocation_hint" />
+
+            <Switch
+                android:id="@+id/rsa_pss"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:text="@string/profile_rsa_pss_label" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:textSize="12sp"
+                android:text="@string/profile_rsa_pss_hint" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -300,6 +368,7 @@
                 android:id="@+id/included_subnets_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="@string/profile_included_subnets_label"
                 app:helper_text="@string/profile_included_subnets_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -307,8 +376,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
-                    android:inputType="textNoSuggestions"
-                    android:hint="@string/profile_included_subnets_label" />
+                    android:inputType="textNoSuggestions" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -316,6 +384,7 @@
                 android:id="@+id/excluded_subnets_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="@string/profile_excluded_subnets_label"
                 app:helper_text="@string/profile_excluded_subnets_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -323,8 +392,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
-                    android:inputType="textNoSuggestions"
-                    android:hint="@string/profile_excluded_subnets_label" />
+                    android:inputType="textNoSuggestions" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -386,6 +454,7 @@
                 android:id="@+id/ike_proposal_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="@string/profile_proposals_ike_label"
                 app:helper_text="@string/profile_proposals_ike_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -393,8 +462,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
-                    android:inputType="textNoSuggestions"
-                    android:hint="@string/profile_proposals_ike_label" />
+                    android:inputType="textNoSuggestions" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -402,6 +470,7 @@
                 android:id="@+id/esp_proposal_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="@string/profile_proposals_esp_label"
                 app:helper_text="@string/profile_proposals_esp_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -409,10 +478,30 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
-                    android:inputType="textNoSuggestions"
-                    android:hint="@string/profile_proposals_esp_label" />
+                    android:inputType="textNoSuggestions" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
+
+            <TextView
+                android:id="@+id/profile_id_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:textSize="16sp"
+                android:text="@string/profile_profile_id" />
+
+            <TextView
+                android:id="@+id/profile_id"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:textSize="12sp"
+                android:textIsSelectable="true" />
 
         </LinearLayout>
 

@@ -32,13 +32,12 @@ and key/value pairs:
 .PP
 Values must be terminated by a newline.
 .PP
-Comments are possible using the \fB#\fP-character, but be careful: The parser
-implementation is currently limited and does not like brackets in comments.
+Comments are possible using the \fB#\fP-character.
 .PP
 Section names and keys may contain any printable character except:
 .PP
 .EX
-	. { } # \\n \\t space
+	. , : { } = " # \\n \\t space
 .EE
 .PP
 An example file in this format might look like this:
@@ -59,6 +58,71 @@ An example file in this format might look like this:
 .EE
 .PP
 Indentation is optional, you may use tabs or spaces.
+
+
+.SH REFERENCING OTHER SECTIONS
+It is possible to inherit settings and sections from another section. This
+feature is mainly useful in swanctl.conf (which uses the same file format).
+The syntax is as follows:
+.PP
+.EX
+	section    := name : references { settings }
+	references := absname[, absname]*
+	absname    := name[.name]*
+.EE
+.PP
+All key/value pairs and all subsections of the referenced sections will be
+inherited by the section that references them via their absolute name. Values
+may be overridden in the section or any of its sub-sections (use an empty
+assignment to clear a value so its default value, if any, will apply). It is
+currently not possible to limit the inclusion level or clear/remove inherited
+sub-sections.
+
+If the order is important (e.g. for auth rounds in a connection, if \fIround\fR
+is not used), it should be noted that inherited settings/sections will follow
+those defined in the current section (if multiple sections are referenced, their
+settings are enumerated left to right).
+
+References are evaluated dynamically at runtime, so referring to sections later
+in the config file or included via other files is no problem.
+
+Here is an example of how this might look like:
+.PP
+.EX
+	conn-defaults {
+		# default settings for all conns (e.g. a cert, or IP pools)
+	}
+	eap-defaults {
+		# defaults if eap is used (e.g. a remote auth round)
+	}
+	child-defaults {
+		# defaults for child configs (e.g. traffic selectors)
+	}
+	connections {
+		conn-a : conn-defaults, eap-defaults {
+			# set/override stuff specific to this connection
+			children {
+				child-a : child-defaults {
+					# set/override stuff specific to this child
+				}
+			}
+		}
+		conn-b : conn-defaults {
+			# set/override stuff specific to this connection
+			children {
+				child-b : child-defaults {
+					# set/override stuff specific to this child
+				}
+			}
+		}
+		conn-c : connections.conn-a {
+			# everything is inherited, including everything conn-a
+			# already inherits from the sections it and its
+			# sub-section reference
+		}
+	}
+.EE
+.PP
 
 .SH INCLUDING FILES
 Using the

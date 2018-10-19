@@ -2,7 +2,7 @@
  * Copyright (C) 2006 Martin Will
  * Copyright (C) 2000-2016 Andreas Steffen
  *
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -825,7 +825,6 @@ chunk_t asn1_simple_object(asn1_t tag, chunk_t content)
 
 	u_char *pos = asn1_build_object(&object, tag, content.len);
 	memcpy(pos, content.ptr, content.len);
-	pos += content.len;
 
 	return object;
 }

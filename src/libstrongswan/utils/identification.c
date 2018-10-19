@@ -1222,6 +1222,7 @@ static private_identification_t* create_from_string_with_prefix_type(char *str)
 		{ "dns:",			ID_FQDN					},
 		{ "asn1dn:",		ID_DER_ASN1_DN			},
 		{ "asn1gn:",		ID_DER_ASN1_GN			},
+		{ "xmppaddr:",		ID_DER_ASN1_GN          },
 		{ "keyid:",			ID_KEY_ID				},
 	};
 	private_identification_t *this;
@@ -1233,6 +1234,7 @@ static private_identification_t* create_from_string_with_prefix_type(char *str)
 		{
 			this = identification_create(prefixes[i].type);
 			str += strlen(prefixes[i].str);
+
 			if (*str == '#')
 			{
 				this->encoded = chunk_from_hex(chunk_from_str(str + 1), NULL);
@@ -1241,6 +1243,17 @@ static private_identification_t* create_from_string_with_prefix_type(char *str)
 			{
 				this->encoded = chunk_clone(chunk_from_str(str));
 			}
+
+			if (prefixes[i].type == ID_DER_ASN1_GN &&
+				strcasepfx(prefixes[i].str, "xmppaddr:"))
+			{
+				this->encoded = asn1_wrap(ASN1_CONTEXT_C_0, "mm",
+									asn1_build_known_oid(OID_XMPP_ADDR),
+									asn1_wrap(ASN1_CONTEXT_C_0, "m",
+										asn1_wrap(ASN1_UTF8STRING, "m",
+											this->encoded)));
+			}
+
 			return this;
 		}
 	}

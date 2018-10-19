@@ -131,7 +131,7 @@ static void __attribute__ ((constructor))reg()
 		{"--child <name> [--ike <name>] [--timeout <s>] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
-			{"child",		'c', 1, "initate a CHILD_SA configuration"},
+			{"child",		'c', 1, "initiate a CHILD_SA configuration"},
 			{"ike",			'i', 1, "name of the connection to which the child belongs"},
 			{"timeout",		't', 1, "timeout in seconds before detaching"},
 			{"raw",			'r', 0, "dump raw response message"},

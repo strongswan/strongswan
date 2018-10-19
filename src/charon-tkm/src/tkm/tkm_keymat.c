@@ -2,7 +2,7 @@
  * Copyright (C) 2015 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -385,8 +385,8 @@ METHOD(keymat_t, get_aead, aead_t*,
 
 METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_tkm_keymat_t *this, bool verify, chunk_t ike_sa_init,
-	chunk_t nonce, identification_t *id, char reserved[3], chunk_t *octets,
-	array_t *schemes)
+	chunk_t nonce, chunk_t ppk, identification_t *id, char reserved[3],
+	chunk_t *octets, array_t *schemes)
 {
 	sign_info_t *sign;
 
@@ -428,7 +428,8 @@ METHOD(keymat_v2_t, get_skd, pseudo_random_function_t,
 
 METHOD(keymat_v2_t, get_psk_sig, bool,
 	private_tkm_keymat_t *this, bool verify, chunk_t ike_sa_init, chunk_t nonce,
-	chunk_t secret, identification_t *id, char reserved[3], chunk_t *sig)
+	chunk_t secret, chunk_t ppk, identification_t *id, char reserved[3],
+	chunk_t *sig)
 {
 	return FALSE;
 }
@@ -522,6 +523,7 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 					.destroy = _destroy,
 				},
 				.derive_ike_keys = _derive_ike_keys,
+				.derive_ike_keys_ppk = (void*)return_false,
 				.derive_child_keys = _derive_child_keys,
 				.get_skd = _get_skd,
 				.get_auth_octets = _get_auth_octets,

@@ -55,11 +55,6 @@ struct private_ike_init_t {
 	bool initiator;
 
 	/**
-	 * IKE config to establish
-	 */
-	ike_cfg_t *config;
-
-	/**
 	 * diffie hellman group to use
 	 */
 	diffie_hellman_group_t dh_group;
@@ -275,6 +270,38 @@ static void handle_supported_hash_algorithms(private_ike_init_t *this,
 }
 
 /**
+ * Check whether to send a USE_PPK notify
+ */
+static bool send_use_ppk(private_ike_init_t *this)
+{
+	peer_cfg_t *peer;
+	enumerator_t *keys;
+	shared_key_t *key;
+	bool use_ppk = FALSE;
+
+	if (this->initiator)
+	{
+		peer = this->ike_sa->get_peer_cfg(this->ike_sa);
+		if (peer->get_ppk_id(peer))
+		{
+			use_ppk = TRUE;
+		}
+	}
+	else if (this->ike_sa->supports_extension(this->ike_sa, EXT_PPK))
+	{
+		/* check if we have at least one PPK available */
+		keys = lib->credmgr->create_shared_enumerator(lib->credmgr, SHARED_PPK,
+													  NULL, NULL);
+		if (keys->enumerate(keys, &key, NULL, NULL))
+		{
+			use_ppk = TRUE;
+		}
+		keys->destroy(keys);
+	}
+	return use_ppk;
+}
+
+/**
  * build the payloads for the message
  */
 static bool build_payloads(private_ike_init_t *this, message_t *message)
@@ -286,14 +313,15 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	ike_sa_id_t *id;
 	proposal_t *proposal;
 	enumerator_t *enumerator;
+	ike_cfg_t *ike_cfg;
 
 	id = this->ike_sa->get_id(this->ike_sa);
 
-	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
+	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 
 	if (this->initiator)
 	{
-		proposal_list = this->config->get_proposals(this->config);
+		proposal_list = ike_cfg->get_proposals(ike_cfg);
 		other_dh_groups = linked_list_create();
 		enumerator = proposal_list->create_enumerator(proposal_list);
 		while (enumerator->enumerate(enumerator, (void**)&proposal))
@@ -334,8 +362,6 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	}
 	message->add_payload(message, (payload_t*)sa_payload);
 
-	nonce_payload = nonce_payload_create(PLV2_NONCE);
-	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 	ke_payload = ke_payload_create_from_diffie_hellman(PLV2_KEY_EXCHANGE,
 													   this->dh);
 	if (!ke_payload)
@@ -343,6 +369,8 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 		DBG1(DBG_IKE, "creating KE payload failed");
 		return FALSE;
 	}
+	nonce_payload = nonce_payload_create(PLV2_NONCE);
+	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 
 	if (this->old_sa)
 	{	/* payload order differs if we are rekeying */
@@ -357,7 +385,7 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 
 	/* negotiate fragmentation if we are not rekeying */
 	if (!this->old_sa &&
-		 this->config->fragmentation(this->config) != FRAGMENTATION_NO)
+		 ike_cfg->fragmentation(ike_cfg) != FRAGMENTATION_NO)
 	{
 		if (this->initiator ||
 			this->ike_sa->supports_extension(this->ike_sa,
@@ -400,7 +428,74 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 								chunk_empty);
 		}
 	}
+	/* notify the peer if we want to use/support PPK */
+	if (!this->old_sa && send_use_ppk(this))
+	{
+		message->add_notify(message, FALSE, USE_PPK, chunk_empty);
+	}
 	return TRUE;
+}
+
+/**
+ * Process the SA payload and select a proposal
+ */
+static void process_sa_payload(private_ike_init_t *this, message_t *message,
+							   sa_payload_t *sa_payload)
+{
+	ike_cfg_t *ike_cfg, *cfg, *alt_cfg = NULL;
+	enumerator_t *enumerator;
+	linked_list_t *proposal_list;
+	host_t *me, *other;
+	bool private, prefer_configured;
+
+	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
+
+	proposal_list = sa_payload->get_proposals(sa_payload);
+	private = this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN);
+	prefer_configured = lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns);
+
+	this->proposal = ike_cfg->select_proposal(ike_cfg, proposal_list, private,
+											  prefer_configured);
+	if (!this->proposal)
+	{
+		if (!this->initiator && !this->old_sa)
+		{
+			me = message->get_destination(message);
+			other = message->get_source(message);
+			enumerator = charon->backends->create_ike_cfg_enumerator(
+											charon->backends, me, other, IKEV2);
+			while (enumerator->enumerate(enumerator, &cfg))
+			{
+				if (ike_cfg == cfg)
+				{	/* already tried and failed */
+					continue;
+				}
+				DBG1(DBG_IKE, "no matching proposal found, trying alternative "
+					 "config");
+				this->proposal = cfg->select_proposal(cfg, proposal_list,
+													private, prefer_configured);
+				if (this->proposal)
+				{
+					alt_cfg = cfg->get_ref(cfg);
+					break;
+				}
+			}
+			enumerator->destroy(enumerator);
+		}
+		if (alt_cfg)
+		{
+			this->ike_sa->set_ike_cfg(this->ike_sa, alt_cfg);
+			alt_cfg->destroy(alt_cfg);
+		}
+		else
+		{
+			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE,
+							   proposal_list);
+		}
+	}
+	proposal_list->destroy_offset(proposal_list,
+								  offsetof(proposal_t, destroy));
 }
 
 /**
@@ -419,24 +514,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 		{
 			case PLV2_SECURITY_ASSOCIATION:
 			{
-				sa_payload_t *sa_payload = (sa_payload_t*)payload;
-				linked_list_t *proposal_list;
-				bool private, prefer_configured;
-
-				proposal_list = sa_payload->get_proposals(sa_payload);
-				private = this->ike_sa->supports_extension(this->ike_sa,
-														   EXT_STRONGSWAN);
-				prefer_configured = lib->settings->get_bool(lib->settings,
-							"%s.prefer_configured_proposals", TRUE, lib->ns);
-				this->proposal = this->config->select_proposal(this->config,
-									proposal_list, private, prefer_configured);
-				if (!this->proposal)
-				{
-					charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE,
-									   proposal_list);
-				}
-				proposal_list->destroy_offset(proposal_list,
-											  offsetof(proposal_t, destroy));
+				process_sa_payload(this, message, (sa_payload_t*)payload);
 				break;
 			}
 			case PLV2_KEY_EXCHANGE:
@@ -467,6 +545,13 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 						if (this->signature_authentication)
 						{
 							handle_supported_hash_algorithms(this, notify);
+						}
+						break;
+					case USE_PPK:
+						if (!this->old_sa)
+						{
+							this->ike_sa->enable_extension(this->ike_sa,
+														   EXT_PPK);
 						}
 						break;
 					case REDIRECTED_FROM:
@@ -533,7 +618,10 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 METHOD(task_t, build_i, status_t,
 	private_ike_init_t *this, message_t *message)
 {
-	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
+	ike_cfg_t *ike_cfg;
+
+	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
+
 	DBG0(DBG_IKE, "initiating IKE_SA %s[%d] to %H",
 		 this->ike_sa->get_name(this->ike_sa),
 		 this->ike_sa->get_unique_id(this->ike_sa),
@@ -563,12 +651,12 @@ METHOD(task_t, build_i, status_t,
 			}
 			else
 			{	/* this shouldn't happen, but let's be safe */
-				this->dh_group = this->config->get_dh_group(this->config);
+				this->dh_group = ike_cfg->get_dh_group(ike_cfg);
 			}
 		}
 		else
 		{
-			this->dh_group = this->config->get_dh_group(this->config);
+			this->dh_group = ike_cfg->get_dh_group(ike_cfg);
 		}
 		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
 												  this->dh_group);
@@ -627,7 +715,6 @@ METHOD(task_t, build_i, status_t,
 METHOD(task_t, process_r,  status_t,
 	private_ike_init_t *this, message_t *message)
 {
-	this->config = this->ike_sa->get_ike_cfg(this->ike_sa);
 	DBG0(DBG_IKE, "%H is initiating an IKE_SA", message->get_source(message));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
@@ -699,7 +786,7 @@ METHOD(task_t, build_r, status_t,
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
 	{
-		DBG1(DBG_IKE, "received proposals inacceptable");
+		DBG1(DBG_IKE, "received proposals unacceptable");
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
@@ -728,7 +815,7 @@ METHOD(task_t, build_r, status_t,
 		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
 										  &group, NULL))
 		{
-			DBG1(DBG_IKE, "DH group %N inacceptable, requesting %N",
+			DBG1(DBG_IKE, "DH group %N unacceptable, requesting %N",
 				 diffie_hellman_group_names, this->dh_group,
 				 diffie_hellman_group_names, group);
 			this->dh_group = group;
@@ -770,12 +857,14 @@ METHOD(task_t, build_r, status_t,
  */
 static void raise_alerts(private_ike_init_t *this, notify_type_t type)
 {
+	ike_cfg_t *ike_cfg;
 	linked_list_t *list;
 
 	switch (type)
 	{
 		case NO_PROPOSAL_CHOSEN:
-			list = this->config->get_proposals(this->config);
+			ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
+			list = ike_cfg->get_proposals(ike_cfg);
 			charon->bus->alert(charon->bus, ALERT_PROPOSAL_MISMATCH_IKE, list);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			break;

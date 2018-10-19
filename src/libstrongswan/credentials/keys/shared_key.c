@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,12 +15,14 @@
 
 #include "shared_key.h"
 
-ENUM(shared_key_type_names, SHARED_ANY, SHARED_PIN,
+ENUM(shared_key_type_names, SHARED_ANY, SHARED_PPK,
 	"ANY",
 	"IKE",
 	"EAP",
 	"PRIVATE_KEY_PASS",
 	"PIN",
+	"NTLM",
+	"PPK",
 );
 
 typedef struct private_shared_key_t private_shared_key_t;
@@ -93,7 +95,7 @@ shared_key_t *shared_key_create(shared_key_type_t type, chunk_t key)
 			.get_key = _get_key,
 			.get_ref = _get_ref,
 			.destroy = _destroy,
-		},	
+		},
 		.type = type,
 		.key = key,
 		.ref = 1,

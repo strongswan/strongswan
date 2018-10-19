@@ -42,7 +42,7 @@ IPSEC_STARTER="${IPSEC_DIR}/starter"
 
 export IPSEC_DIR IPSEC_BINDIR IPSEC_SBINDIR IPSEC_CONFDIR IPSEC_PIDDIR IPSEC_SCRIPT IPSEC_VERSION IPSEC_NAME IPSEC_STARTER_PID IPSEC_CHARON_PID
 
-IPSEC_DISTRO="Institute for Internet Technologies and Applications\nUniversity of Applied Sciences Rapperswil, Switzerland"
+IPSEC_DISTRO="University of Applied Sciences Rapperswil, Switzerland"
 
 command_dir="$IPSEC_DIR"
 

@@ -721,6 +721,7 @@ METHOD(task_manager_t, initiate, status_t,
 		{
 			case IKE_CONNECTING:
 				/* close after sending an INFORMATIONAL when unestablished */
+				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 				return FAILED;
 			case IKE_DELETING:
 				/* close after sending a DELETE */
@@ -920,15 +921,16 @@ static bool process_dpd(private_task_manager_t *this, message_t *message)
 	}
 	else /* DPD_R_U_THERE_ACK */
 	{
-		if (seq == this->dpd_send - 1)
+		if (seq == this->dpd_send)
 		{
+			this->dpd_send++;
 			this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
 										time_monotonic(NULL));
 		}
 		else
 		{
 			DBG1(DBG_IKE, "received invalid DPD sequence number %u "
-				 "(expected %u), ignored", seq, this->dpd_send - 1);
+				 "(expected %u), ignored", seq, this->dpd_send);
 		}
 	}
 	return TRUE;
@@ -1843,7 +1845,7 @@ METHOD(task_manager_t, queue_dpd, void,
 	uint32_t t, retransmit;
 
 	queue_task(this, (task_t*)isakmp_dpd_create(this->ike_sa, DPD_R_U_THERE,
-												this->dpd_send++));
+												this->dpd_send));
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 
 	/* compute timeout in milliseconds */

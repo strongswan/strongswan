@@ -104,7 +104,7 @@ struct tls_socket_t {
  * @param peer				client identity, NULL for no client authentication
  * @param fd				socket to read/write from
  * @param cache				session cache to use, or NULL
- * @param max_version		maximun TLS version to negotiate
+ * @param max_version		maximum TLS version to negotiate
  * @param nullok			accept NULL encryption ciphers
  * @return					TLS socket wrapper
  */

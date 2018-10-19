@@ -1,7 +1,7 @@
 %{
 /*
  * Copyright (C) 2009-2013 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil, Switzerland
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -79,6 +79,7 @@ aes128gmac,       ENCRYPTION_ALGORITHM, ENCR_NULL_AUTH_AES_GMAC, 128
 aes192gmac,       ENCRYPTION_ALGORITHM, ENCR_NULL_AUTH_AES_GMAC, 192
 aes256gmac,       ENCRYPTION_ALGORITHM, ENCR_NULL_AUTH_AES_GMAC, 256
 chacha20poly1305, ENCRYPTION_ALGORITHM, ENCR_CHACHA20_POLY1305,    0
+chacha20poly1305compat, ENCRYPTION_ALGORITHM, ENCR_CHACHA20_POLY1305, 256
 blowfish,         ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,           128
 blowfish128,      ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,           128
 blowfish192,      ENCRYPTION_ALGORITHM, ENCR_BLOWFISH,           192

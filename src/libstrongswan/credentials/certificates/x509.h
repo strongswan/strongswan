@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007-2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -62,6 +62,9 @@ enum x509_flag_t {
 	X509_IKE_INTERMEDIATE =   (1<<8),
 	/** cert has Microsoft Smartcard Logon usage */
 	X509_MS_SMARTCARD_LOGON = (1<<9),
+	/** cert either lacks keyUsage bits, or includes either digitalSignature
+	 *  or nonRepudiation as per RFC 4945, section 5.1.3.2. */
+	X509_IKE_COMPLIANT =      (1<<10),
 };
 
 extern enum_name_t *x509_flag_names;

@@ -584,7 +584,8 @@ err1:
 
 METHOD(tpm_tss_t, sign, bool,
 	private_tpm_tss_trousers_t *this, uint32_t hierarchy, uint32_t handle,
-	signature_scheme_t scheme, chunk_t data, chunk_t pin, chunk_t *signature)
+	signature_scheme_t scheme, void *params, chunk_t data, chunk_t pin,
+	chunk_t *signature)
 {
 	return FALSE;
 }

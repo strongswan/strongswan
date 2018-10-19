@@ -89,7 +89,7 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_xauth_pam_plugin_t *this)
 {
-	this->listener->destroy(this->listener),
+	this->listener->destroy(this->listener);
 	free(this);
 }
 

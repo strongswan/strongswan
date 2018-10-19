@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006-2013 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  * Copyright (C) 2013 revosec AG
  *
  * This program is free software; you can redistribute it and/or modify it

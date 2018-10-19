@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  * Copyright (C) 2008 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -381,7 +381,7 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 	for (i = 0, *out_len = 0; i < array_count(entry->hdrs); i++)
 	{
 		array_get(entry->hdrs, i, &hdr);
-		*out_len += hdr->nlmsg_len;
+		*out_len += NLMSG_ALIGN(hdr->nlmsg_len);
 	}
 	ptr = malloc(*out_len);
 	*out = (struct nlmsghdr*)ptr;
@@ -394,7 +394,7 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 				 hdr->nlmsg_seq, hdr, hdr->nlmsg_len);
 		}
 		memcpy(ptr, hdr, hdr->nlmsg_len);
-		ptr += hdr->nlmsg_len;
+		ptr += NLMSG_ALIGN(hdr->nlmsg_len);
 		free(hdr);
 	}
 	destroy_entry(entry);
@@ -587,8 +587,31 @@ METHOD(netlink_socket_t, destroy, void,
 	free(this);
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
+ */
+u_int netlink_get_buflen()
+{
+	u_int buflen;
+
+	buflen = lib->settings->get_int(lib->settings,
+								"%s.plugins.kernel-netlink.buflen", 0, lib->ns);
+	if (!buflen)
+	{
+		long pagesize = sysconf(_SC_PAGESIZE);
+
+		if (pagesize == -1)
+		{
+			pagesize = 4096;
+		}
+		/* base this on NLMSG_GOODSIZE */
+		buflen = min(pagesize, 8192);
+	}
+	return buflen;
+}
+
+/*
+ * Described in header
  */
 netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 										bool parallel)
@@ -612,8 +635,7 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		.entries = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 4),
 		.protocol = protocol,
 		.names = names,
-		.buflen = lib->settings->get_int(lib->settings,
-							"%s.plugins.kernel-netlink.buflen", 0, lib->ns),
+		.buflen = netlink_get_buflen(),
 		.timeout = lib->settings->get_int(lib->settings,
 							"%s.plugins.kernel-netlink.timeout", 0, lib->ns),
 		.retries = lib->settings->get_int(lib->settings,
@@ -624,16 +646,6 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		.parallel = parallel,
 	);
 
-	if (!this->buflen)
-	{
-		long pagesize = sysconf(_SC_PAGESIZE);
-		if (pagesize == -1)
-		{
-			pagesize = 4096;
-		}
-		/* base this on NLMSG_GOODSIZE */
-		this->buflen = min(pagesize, 8192);
-	}
 	if (this->socket == -1)
 	{
 		DBG1(DBG_KNL, "unable to create netlink socket: %s (%d)",

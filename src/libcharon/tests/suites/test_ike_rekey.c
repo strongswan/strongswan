@@ -1319,7 +1319,7 @@ START_TEST(test_collision_delete)
 	assert_hook_not_called(ike_rekey);
 
 	initiate_rekey(a);
-	call_ikesa(b, delete);
+	call_ikesa(b, delete, FALSE);
 	assert_ike_sa_state(b, IKE_DELETING);
 
 	/* RFC 7296, 2.25.2: If a peer receives a request to rekey an IKE SA that
@@ -1401,7 +1401,7 @@ START_TEST(test_collision_delete_drop_delete)
 	assert_hook_not_called(ike_rekey);
 
 	initiate_rekey(a);
-	call_ikesa(b, delete);
+	call_ikesa(b, delete, FALSE);
 	assert_ike_sa_state(b, IKE_DELETING);
 
 	/* RFC 7296, 2.25.2: If a peer receives a request to rekey an IKE SA that

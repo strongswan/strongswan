@@ -54,8 +54,6 @@ CONFIG_OPTS = \
 	--enable-imv-os \
 	--enable-imc-attestation \
 	--enable-imv-attestation \
-	--enable-imc-swid \
-	--enable-imv-swid \
 	--enable-imc-swima \
 	--enable-imv-swima \
 	--enable-imc-hcd \
@@ -64,6 +62,7 @@ CONFIG_OPTS = \
 	--enable-sqlite \
 	--enable-attr-sql \
 	--enable-mediation \
+	--enable-botan \
 	--enable-openssl \
 	--enable-blowfish \
 	--enable-kernel-pfkey \

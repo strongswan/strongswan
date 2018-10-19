@@ -92,6 +92,11 @@ struct private_tnccs_20_server_t {
 	bool request_handshake_retry;
 
 	/**
+	 * Flag set after sending SRETRY batch
+	 */
+	bool retry_handshake;
+
+	/**
 	  * SendMessage() by IMV only allowed if flag is set
 	  */
 	bool send_msg;
@@ -279,8 +284,9 @@ static void build_retry_batch(private_tnccs_20_server_t *this)
 	change_batch_type(this, PB_BATCH_SRETRY);
 
 	this->recs->clear_recommendation(this->recs);
-	tnc->imvs->notify_connection_change(tnc->imvs, this->connection_id,
-										TNC_CONNECTION_STATE_HANDSHAKE);
+
+	/* Handshake will be retried with next incoming CDATA batch */
+	this->retry_handshake = TRUE;
 }
 
 METHOD(tnccs_20_handler_t, process, status_t,
@@ -301,7 +307,17 @@ METHOD(tnccs_20_handler_t, process, status_t,
 		pb_tnc_msg_t *msg;
 		bool empty = TRUE;
 
-		if (batch_type == PB_BATCH_CRETRY)
+		if (batch_type == PB_BATCH_CDATA)
+		{
+			/* retry handshake after a previous SRETRY batch */
+			if (this->retry_handshake)
+			{
+				tnc->imvs->notify_connection_change(tnc->imvs,
+						this->connection_id, TNC_CONNECTION_STATE_HANDSHAKE);
+				this->retry_handshake = FALSE;
+			}
+		}
+		else if (batch_type == PB_BATCH_CRETRY)
 		{
 			/* Send an SRETRY batch in response */
 			this->mutex->lock(this->mutex);

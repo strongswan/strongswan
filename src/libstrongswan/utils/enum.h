@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2009 Tobias Brunner
  * Copyright (C) 2006-2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -53,7 +53,7 @@ typedef struct enum_name_t enum_name_t;
  * The ENUM and the ENUM_END define a enum_name_t pointer with the name supplied
  * in "name".
  *
- * Resolving of enum names is done using a printf hook. A printf fromat
+ * Resolving of enum names is done using a printf hook. A printf format
  * character %N is replaced by the enum string. Printf needs two arguments to
  * resolve a %N, the enum_name_t* (the defined name in ENUM_BEGIN) followed
  * by the numerical enum value.

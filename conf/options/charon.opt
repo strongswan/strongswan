@@ -52,7 +52,7 @@ charon.crypto_test.bench_size = 1024
 	Buffer size used for crypto benchmark.
 
 charon.crypto_test.bench_time = 50
-	Number of iterations to test each algorithm.
+	Time in ms during which crypto algorithm performance is measured.
 
 charon.crypto_test.on_add = no
 	Test crypto algorithms during registration (requires test vectors provided

@@ -3,7 +3,7 @@
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -745,7 +745,7 @@ static int open_socket(private_socket_default_socket_t *this,
 
 		fwmark = lib->settings->get_str(lib->settings,
 							"%s.plugins.socket-default.fwmark", NULL, lib->ns);
-		if (fwmark && mark_from_string(fwmark, &mark))
+		if (fwmark && mark_from_string(fwmark, MARK_OP_NONE, &mark))
 		{
 			if (setsockopt(skt, SOL_SOCKET, SO_MARK, &mark.value,
 						   sizeof(mark.value)) < 0)

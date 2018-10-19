@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Andreas Steffen
+ * Copyright (C) 2016-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -26,6 +26,18 @@
 /**
  * Create a tpm_tss_tss2 instance.
  */
-tpm_tss_t *tpm_tss_tss2_create();
+tpm_tss_t *tpm_tss_tss2_create(void);
+
+/**
+ * Initialize the tpm_tss_tss2 library.
+ *
+ * @return		TRUE if initialization was successful
+ */
+bool tpm_tss_tss2_init(void);
+
+/**
+ * /De-initialize the tpm_tss_tss2 library.
+ */
+void tpm_tss_tss2_deinit(void);
 
 #endif /** TPM_TSS_TSS2_H_ @}*/

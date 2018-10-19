@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -62,6 +63,20 @@ struct backend_manager_t {
 	ike_cfg_t* (*get_ike_cfg)(backend_manager_t *this,
 							  host_t *my_host, host_t *other_host,
 							  ike_version_t version);
+
+	/**
+	 * Create an enumerator over all matching IKE configs.
+	 *
+	 * Pass NULL as parameters to match any. The enumerator enumerates over
+	 * ike_cfgs, ordered by priority (best match first).
+	 *
+	 * @param me				local address
+	 * @param other				remote address
+	 * @param version			IKE version to get a config for
+	 * @return 					enumerator over ike_cfg
+	 */
+	enumerator_t* (*create_ike_cfg_enumerator)(backend_manager_t *this,
+							host_t *me, host_t *other, ike_version_t version);
 
 	/**
 	 * Get a peer_config identified by it's name.

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -320,7 +320,7 @@ METHOD(ha_message_t, add_attribute, void,
  * Attribute enumerator implementation
  */
 typedef struct {
-	/** implementes enumerator_t */
+	/** implements enumerator_t */
 	enumerator_t public;
 	/** position in message */
 	chunk_t buf;

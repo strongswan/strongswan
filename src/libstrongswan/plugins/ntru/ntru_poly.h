@@ -49,7 +49,7 @@ struct ntru_poly_t {
 	void (*get_array)(ntru_poly_t *this, uint16_t *array);
 
 	/**
-	 * Multiply polynomial a with ntru_poly_t object b having sparse coeffients
+	 * Multiply polynomial a with ntru_poly_t object b having sparse coefficients
 	 * to form result polynomial c = a * b
 	 *
 	 * @param a			input polynomial a

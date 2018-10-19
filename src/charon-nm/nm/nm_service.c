@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -698,7 +698,7 @@ static gboolean need_secrets(NMVpnServicePlugin *plugin, NMConnection *connectio
 
 				/* try to load/decrypt the private key */
 				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								KEY_RSA, BUILD_FROM_FILE, path, BUILD_END);
+								KEY_ANY, BUILD_FROM_FILE, path, BUILD_END);
 				if (key)
 				{
 					key->destroy(key);
@@ -741,7 +741,7 @@ static gboolean do_disconnect(gpointer plugin)
 		{
 			id = ike_sa->get_unique_id(ike_sa);
 			enumerator->destroy(enumerator);
-			charon->controller->terminate_ike(charon->controller, id,
+			charon->controller->terminate_ike(charon->controller, id, FALSE,
 											  controller_cb_empty, NULL, 0);
 			return FALSE;
 		}

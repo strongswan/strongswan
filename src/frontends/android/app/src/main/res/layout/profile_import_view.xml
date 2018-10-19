@@ -25,6 +25,13 @@
         android:padding="10dp"
         android:animateLayoutChanges="true" >
 
+        <android.support.v4.widget.ContentLoadingProgressBar
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            android:id="@+id/progress_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:indeterminate="true" />
+
         <TextView
             android:id="@+id/exists_warning"
             android:background="@drawable/state_background"
@@ -112,15 +119,15 @@
             <org.strongswan.android.ui.widget.TextInputLayoutHelper
                 android:id="@+id/username_wrap"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" >
+                android:layout_height="wrap_content"
+                android:hint="@string/profile_username_label" >
 
                 <android.support.design.widget.TextInputEditText
                     android:id="@+id/username"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
-                    android:inputType="textNoSuggestions"
-                    android:hint="@string/profile_username_label" />
+                    android:inputType="textNoSuggestions" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
@@ -129,6 +136,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
+                android:hint="@string/profile_password_label"
                 app:helper_text="@string/profile_password_hint" >
 
                 <android.support.design.widget.TextInputEditText
@@ -136,8 +144,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:singleLine="true"
-                    android:inputType="textPassword|textNoSuggestions"
-                    android:hint="@string/profile_password_label" />
+                    android:inputType="textPassword|textNoSuggestions" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 

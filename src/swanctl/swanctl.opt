@@ -188,6 +188,12 @@ connections.<conn>.send_cert = ifasked
 	certificate payloads altogether, _always_ causes certificate payloads to be
 	sent unconditionally whenever certificate authentication is used.
 
+connections.<conn>.ppk_id =
+	String identifying the Postquantum Preshared Key (PPK) to be used.
+
+connections.<conn>.ppk_required = no
+	Whether a Postquantum Preshared Key (PPK) is required for this connection.
+
 connections.<conn>.keyingtries = 1
 	Number of retransmission sequences to perform during initial connect.
 
@@ -910,6 +916,37 @@ connections.<conn>.children.<child>.mark_out = 0/0x00000000
 	An additional mask may be appended to the mark, separated by _/_. The
 	default mask if omitted is 0xffffffff.
 
+connections.<conn>.children.<child>.set_mark_in = 0/0x00000000
+	Netfilter mark applied to packets after the inbound IPsec SA processed them.
+
+	Netfilter mark applied to packets after the inbound IPsec SA processed them.
+	This way it's not necessary to mark packets via Netfilter before decryption
+	or right afterwards to match policies or process them differently (e.g. via
+	policy routing).
+
+	An additional mask may be appended to the mark, separated by _/_. The
+	default mask if omitted is 0xffffffff. The special value _%same_ uses
+	the value (but not the mask) from **mark_in** as mark value, which can be
+	fixed, _%unique_ or _%unique-dir_.
+
+	Setting marks in XFRM input requires Linux 4.19 or higher.
+
+connections.<conn>.children.<child>.set_mark_out = 0/0x00000000
+	Netfilter mark applied to packets after the outbound IPsec SA processed
+	them.
+
+	Netfilter mark applied to packets after the outbound IPsec SA processed
+	them. This allows processing ESP packets differently than the original
+	traffic (e.g. via policy routing).
+
+	An additional mask may be appended to the mark, separated by _/_. The
+	default mask if omitted is 0xffffffff. The special value _%same_ uses
+	the value (but not the mask) from **mark_out** as mark value, which can be
+	fixed, _%unique_ or _%unique-dir_.
+
+	Setting marks in XFRM output is supported since Linux 4.14. Setting a mask
+	requires at least Linux 4.19.
+
 connections.<conn>.children.<child>.tfc_padding = 0
 	Traffic Flow Confidentiality padding.
 
@@ -930,6 +967,41 @@ connections.<conn>.children.<child>.replay_window = 32
 connections.<conn>.children.<child>.hw_offload = no
 	Enable hardware offload for this CHILD_SA, if supported by the IPsec
 	implementation.
+
+	Enable hardware offload for this CHILD_SA, if supported by the IPsec
+	implementation. The value _yes_ enforces offloading and the installation
+	will fail if it's not supported by either kernel or device.	The value _auto_
+	enables offloading, if it's supported, but the installation does not fail
+	otherwise.
+
+connections.<conn>.children.<child>.copy_df = yes
+	Whether to copy the DF bit to the outer IPv4 header in tunnel mode.
+
+	Whether to copy the DF bit to the outer IPv4 header in tunnel mode. This
+	effectively disables Path MTU discovery (PMTUD).  Controlling this behavior
+	is not supported by all kernel interfaces.
+
+connections.<conn>.children.<child>.copy_ecn = yes
+	Whether to copy the ECN header field to/from the outer IP header in tunnel
+	mode.
+
+	Whether to copy the ECN (Explicit Congestion Notification) header field
+	to/from the outer IP header in tunnel mode. Controlling this behavior is not
+	supported by all kernel interfaces.
+
+connections.<conn>.children.<child>.copy_dscp = out
+	Whether to copy the DSCP header field to/from the outer IP header in tunnel
+	mode.
+
+	Whether to copy the DSCP (Differentiated Services Field Codepoint) header
+	field to/from the outer IP header in tunnel mode. The value _out_ only
+	copies the field from the inner to the outer header, the value _in_ does the
+	opposite and only copies the field from the outer to the inner header when
+	decapsulating, the value _yes_ copies the field in both directions, and the
+	value _no_ disables copying the field altogether.  Setting this to _yes_ or
+	_in_ could allow an attacker to adversely affect other traffic at the
+	receiver, which is why the default is _out_. Controlling this behavior is
+	not supported by all kernel interfaces.
 
 connections.<conn>.children.<child>.start_action = none
 	Action to perform after loading the configuration (_none_, _trap_, _start_).
@@ -1038,6 +1110,26 @@ secrets.ike<suffix>.id<suffix> =
 	IKE identity the IKE preshared secret belongs to.
 
 	IKE identity the IKE preshared secret belongs to. Multiple unique identities
+	may be specified, each having an _id_ prefix, if a secret is shared between
+	multiple peers.
+
+secrets.ppk<suffix> { # }
+	Postquantum Preshared Key (PPK) section for a specific secret.
+
+	Postquantum Preshared Key (PPK) section for a specific secret. Each PPK is
+	defined	in a unique section having the _ppk_ prefix.
+
+secrets.ppk<suffix>.secret =
+	Value of the PPK.
+
+	Value of the PPK. It may either be an ASCII string,	a hex encoded string if
+	it has a _0x_ prefix or a Base64 encoded string if it has a _0s_ prefix in
+	its value. Should have at least 256 bits of entropy for 128-bit security.
+
+secrets.ppk<suffix>.id<suffix> =
+	PPK identity the PPK belongs to.
+
+	PPK identity the PPK belongs to. Multiple unique identities
 	may be specified, each having an _id_ prefix, if a secret is shared between
 	multiple peers.
 

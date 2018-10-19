@@ -1,8 +1,9 @@
 /*
+ * Copyright (C) 2015-2018 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2009 Andreas Steffen
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,6 +16,8 @@
  * for more details.
  */
 
+#include <time.h>
+
 #include "revocation_validator.h"
 
 #include <utils/debug.h>
@@ -24,6 +27,7 @@
 #include <credentials/certificates/ocsp_response.h>
 #include <credentials/sets/ocsp_response_wrapper.h>
 #include <selectors/traffic_selector.h>
+#include <threading/spinlock.h>
 
 typedef struct private_revocation_validator_t private_revocation_validator_t;
 
@@ -47,6 +51,10 @@ struct private_revocation_validator_t {
 	 */
 	bool enable_crl;
 
+	/**
+	 * Lock to access flags
+	 */
+	spinlock_t *lock;
 };
 
 /**
@@ -56,7 +64,7 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 								 certificate_t *issuer)
 {
 	certificate_t *request, *response;
-	chunk_t send, receive;
+	chunk_t send, receive = chunk_empty;
 
 	/* TODO: requestor name, signature */
 	request = lib->creds->create(lib->creds,
@@ -84,6 +92,7 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 							FETCH_END) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "ocsp request to %s failed", url);
+		chunk_free(&receive);
 		chunk_free(&send);
 		return NULL;
 	}
@@ -351,13 +360,10 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 	{
 		valid = VALIDATION_FAILED;
 	}
-	if (auth)
-	{
-		auth->add(auth, AUTH_RULE_OCSP_VALIDATION, valid);
-		if (valid == VALIDATION_GOOD)
-		{	/* successful OCSP check fulfills also CRL constraint */
-			auth->add(auth, AUTH_RULE_CRL_VALIDATION, VALIDATION_GOOD);
-		}
+	auth->add(auth, AUTH_RULE_OCSP_VALIDATION, valid);
+	if (valid == VALIDATION_GOOD)
+	{	/* successful OCSP check fulfills also CRL constraint */
+		auth->add(auth, AUTH_RULE_CRL_VALIDATION, VALIDATION_GOOD);
 	}
 	DESTROY_IF(best);
 	return valid;
@@ -369,12 +375,13 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 static certificate_t* fetch_crl(char *url)
 {
 	certificate_t *crl;
-	chunk_t chunk;
+	chunk_t chunk = chunk_empty;
 
 	DBG1(DBG_CFG, "  fetching crl from '%s' ...", url);
 	if (lib->fetcher->fetch(lib->fetcher, url, &chunk, FETCH_END) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "crl fetching failed");
+		chunk_free(&chunk);
 		return NULL;
 	}
 	crl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,
@@ -417,11 +424,11 @@ static bool verify_crl(certificate_t *crl)
 /**
  * Report the given CRL's validity and cache it if valid and requested
  */
-static bool is_crl_valid(certificate_t *crl, bool cache)
+static bool is_crl_valid(certificate_t *crl, time_t now, bool cache)
 {
 	time_t valid_until;
 
-	if (crl->get_validity(crl, NULL, NULL, &valid_until))
+	if (crl->get_validity(crl, &now, NULL, &valid_until))
 	{
 		DBG1(DBG_CFG, "  crl is valid: until %T", &valid_until, FALSE);
 		if (cache)
@@ -435,6 +442,25 @@ static bool is_crl_valid(certificate_t *crl, bool cache)
 }
 
 /**
+ * Check if the CRL should be used yet
+ */
+static bool is_crl_not_valid_yet(certificate_t *crl, time_t now)
+{
+	time_t this_update;
+
+	if (!crl->get_validity(crl, &now, &this_update, NULL))
+	{
+		if (this_update > now)
+		{
+			DBG1(DBG_CFG, "  crl is not valid: until %T", &this_update, FALSE);
+			return TRUE;
+		}
+		/* we accept stale CRLs */
+	}
+	return FALSE;
+}
+
+/**
  * Get the better of two CRLs, and check for usable CRL info
  */
 static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
@@ -442,7 +468,7 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 					bool cache, crl_t *base)
 {
 	enumerator_t *enumerator;
-	time_t revocation;
+	time_t now, revocation;
 	crl_reason_t reason;
 	chunk_t subject_serial, serial;
 	crl_t *crl = (crl_t*)cand;
@@ -472,6 +498,12 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 		cand->destroy(cand);
 		return best;
 	}
+	now = time(NULL);
+	if (is_crl_not_valid_yet(cand, now))
+	{
+		cand->destroy(cand);
+		return best;
+	}
 
 	subject_serial = chunk_skip_zero(subject->get_serial(subject));
 	enumerator = crl->create_enumerator(crl);
@@ -488,7 +520,7 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 				/* if the cert is on hold, a newer CRL might not contain it */
 				*valid = VALIDATION_ON_HOLD;
 			}
-			is_crl_valid(cand, cache);
+			is_crl_valid(cand, now, cache);
 			DBG1(DBG_CFG, "certificate was revoked on %T, reason: %N",
 				 &revocation, TRUE, crl_reason_names, reason);
 			enumerator->destroy(enumerator);
@@ -503,7 +535,7 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 	{
 		DESTROY_IF(best);
 		best = cand;
-		if (is_crl_valid(best, cache))
+		if (is_crl_valid(best, now, cache))
 		{
 			*valid = VALIDATION_GOOD;
 		}
@@ -749,18 +781,15 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	{
 		valid = VALIDATION_FAILED;
 	}
-	if (auth)
+	if (valid == VALIDATION_SKIPPED)
+	{	/* if we skipped CRL validation, we use the result of OCSP for
+		 * constraint checking */
+		auth->add(auth, AUTH_RULE_CRL_VALIDATION,
+				  auth->get(auth, AUTH_RULE_OCSP_VALIDATION));
+	}
+	else
 	{
-		if (valid == VALIDATION_SKIPPED)
-		{	/* if we skipped CRL validation, we use the result of OCSP for
-			 * constraint checking */
-			auth->add(auth, AUTH_RULE_CRL_VALIDATION,
-					  auth->get(auth, AUTH_RULE_OCSP_VALIDATION));
-		}
-		else
-		{
-			auth->add(auth, AUTH_RULE_CRL_VALIDATION, valid);
-		}
+		auth->add(auth, AUTH_RULE_CRL_VALIDATION, valid);
 	}
 	DESTROY_IF(best);
 	return valid;
@@ -771,17 +800,23 @@ METHOD(cert_validator_t, validate, bool,
 	certificate_t *issuer, bool online, u_int pathlen, bool anchor,
 	auth_cfg_t *auth)
 {
-	if (online && (this->enable_ocsp || this->enable_crl) &&
+	bool enable_ocsp, enable_crl;
+
+	this->lock->lock(this->lock);
+	enable_ocsp = this->enable_ocsp;
+	enable_crl = this->enable_crl;
+	this->lock->unlock(this->lock);
+
+	if (online && (enable_ocsp || enable_crl) &&
 		subject->get_type(subject) == CERT_X509 &&
 		issuer->get_type(issuer) == CERT_X509)
 	{
 		DBG1(DBG_CFG, "checking certificate status of \"%Y\"",
 					   subject->get_subject(subject));
 
-		if (this->enable_ocsp)
+		if (enable_ocsp)
 		{
-			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer,
-							   pathlen ? NULL : auth))
+			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth))
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
@@ -803,11 +838,14 @@ METHOD(cert_validator_t, validate, bool,
 					break;
 			}
 		}
-
-		if (this->enable_crl)
+		else
 		{
-			switch (check_crl((x509_t*)subject, (x509_t*)issuer,
-							  pathlen ? NULL : auth))
+			auth->add(auth, AUTH_RULE_OCSP_VALIDATION, VALIDATION_SKIPPED);
+		}
+
+		if (enable_crl)
+		{
+			switch (check_crl((x509_t*)subject, (x509_t*)issuer, auth))
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
@@ -827,6 +865,11 @@ METHOD(cert_validator_t, validate, bool,
 					break;
 			}
 		}
+		else
+		{
+			auth->add(auth, AUTH_RULE_CRL_VALIDATION,
+					  auth->get(auth, AUTH_RULE_OCSP_VALIDATION));
+		}
 
 		lib->credmgr->call_hook(lib->credmgr, CRED_HOOK_VALIDATION_FAILED,
 								subject);
@@ -834,9 +877,35 @@ METHOD(cert_validator_t, validate, bool,
 	return TRUE;
 }
 
+METHOD(revocation_validator_t, reload, void,
+	private_revocation_validator_t *this)
+{
+	bool enable_ocsp, enable_crl;
+
+	enable_ocsp = lib->settings->get_bool(lib->settings,
+							"%s.plugins.revocation.enable_ocsp", TRUE, lib->ns);
+	enable_crl  = lib->settings->get_bool(lib->settings,
+							"%s.plugins.revocation.enable_crl",  TRUE, lib->ns);
+
+	this->lock->lock(this->lock);
+	this->enable_ocsp = enable_ocsp;
+	this->enable_crl = enable_crl;
+	this->lock->unlock(this->lock);
+
+	if (!enable_ocsp)
+	{
+		DBG1(DBG_LIB, "all OCSP validation disabled");
+	}
+	if (!enable_crl)
+	{
+		DBG1(DBG_LIB, "all CRL validation disabled");
+	}
+}
+
 METHOD(revocation_validator_t, destroy, void,
 	private_revocation_validator_t *this)
 {
+	this->lock->destroy(this->lock);
 	free(this);
 }
 
@@ -850,21 +919,13 @@ revocation_validator_t *revocation_validator_create()
 	INIT(this,
 		.public = {
 			.validator.validate = _validate,
+			.reload = _reload,
 			.destroy = _destroy,
 		},
-		.enable_ocsp = lib->settings->get_bool(lib->settings,
-							"%s.plugins.revocation.enable_ocsp", TRUE, lib->ns),
-		.enable_crl  = lib->settings->get_bool(lib->settings,
-							"%s.plugins.revocation.enable_crl",  TRUE, lib->ns),
+		.lock = spinlock_create(),
 	);
 
-	if (!this->enable_ocsp)
-	{
-		DBG1(DBG_LIB, "all OCSP validation disabled");
-	}
-	if (!this->enable_crl)
-	{
-		DBG1(DBG_LIB, "all CRL validation disabled");
-	}
+	reload(this);
+
 	return &this->public;
 }

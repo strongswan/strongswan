@@ -276,7 +276,7 @@ METHOD(ntru_private_key_t, decrypt, bool,
 	}
 	if (!msg_rep_good)
 	{
-		DBG1(DBG_LIB, "decryption failed due to unsufficient minimum weight");
+		DBG1(DBG_LIB, "decryption failed due to insufficient minimum weight");
 		success = FALSE;
 	}
 

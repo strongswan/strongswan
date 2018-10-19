@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -43,6 +43,8 @@ enum shared_key_type_t {
 	SHARED_PIN,
 	/** Calculated NT Hash = MD4(UTF-16LE(password)) */
 	SHARED_NT_HASH,
+	/** Postquantum Preshared Key */
+	SHARED_PPK,
 };
 
 /**

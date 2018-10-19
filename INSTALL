@@ -1,18 +1,18 @@
-                 ---------------------------
-                  strongSwan - Installation
-                 ---------------------------
+                -------------------------
+                strongSwan - Installation
+                -------------------------
 
 
 Contents
 --------
 
-   1.   Overview
-   2.   Required packages
-   3.   Optional packages
-   3.1   HTTP fetcher
-   3.2   LDAP
-   3.3   Other pluggable modules
-   4.   Kernel configuration
+    1.   Overview
+    2.   Required packages
+    3.   Optional packages
+    3.1   HTTP fetcher
+    3.2   LDAP
+    3.3   Other pluggable modules
+    4.   Kernel configuration
 
 1.  Overview
     --------
@@ -104,7 +104,7 @@ Contents
     In order to activate the use of the libldap library in strongSwan you must
     enable the ./configure switch:
 
-       ./configure [...] --enable-ldap
+      ./configure [...] --enable-ldap
 
     LDAP Protocol version 2 is not supported anymore, --enable-ldap uses always
     version 3 of the LDAP protocol
@@ -144,5 +144,5 @@ Contents
 
     For a more up-to-date list of recommended modules refer to:
 
-     * http://wiki.strongswan.org/projects/strongswan/wiki/KernelModules
+      * http://wiki.strongswan.org/projects/strongswan/wiki/KernelModules
 

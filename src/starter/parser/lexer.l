@@ -1,7 +1,7 @@
 %{
 /*
  * Copyright (C) 2013-2014 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,7 +30,7 @@ static void include_files(parser_helper_t *ctx);
 /* use start conditions stack */
 %option stack
 
-/* do not declare unneded functions */
+/* do not declare unneeded functions */
 %option noinput noyywrap
 
 /* don't use global variables, and interact properly with bison */

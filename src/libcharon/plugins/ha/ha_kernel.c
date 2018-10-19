@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009-2011 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -240,7 +240,7 @@ static void enable_disable(private_ha_kernel_t *this, u_int segment,
 }
 
 /**
- * Get the currenlty active segments in the kernel for a clusterip file
+ * Get the currently active segments in the kernel for a clusterip file
  */
 static segment_mask_t get_active(private_ha_kernel_t *this, char *file)
 {

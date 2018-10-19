@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011-2012 Sansar Choinyambuu
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -261,8 +261,9 @@ static const int tm_leap_1970 = 477;
  */
 bool measurement_time_from_utc(time_t *measurement_time, chunk_t utc_time)
 {
-	int tm_year, tm_mon, tm_day, tm_days, tm_hour, tm_min, tm_sec, tm_secs;
+	int tm_year, tm_mon, tm_day, tm_hour, tm_min, tm_sec;
 	int tm_leap_4, tm_leap_100, tm_leap_400, tm_leap;
+	time_t tm_days, tm_secs;
 	char buf[BUF_LEN];
 
 	if (memeq(utc_undefined_time_str, utc_time.ptr, utc_time.len))
@@ -278,12 +279,24 @@ bool measurement_time_from_utc(time_t *measurement_time, chunk_t utc_time)
 	}
 
 	/* representation of months as 0..11 */
+	if (tm_mon < 1 || tm_mon > 12)
+	{
+		return FALSE;
+	}
 	tm_mon--;
 
 	/* representation of days as 0..30 */
+	if (tm_day < 1 || tm_day > 31)
+	{
+		return FALSE;
+	}
 	tm_day--;
 
 	/* number of leap years between last year and 1970? */
+	if (tm_year < 1970)
+	{
+		return FALSE;
+	}
 	tm_leap_4 = (tm_year - 1) / 4;
 	tm_leap_100 = tm_leap_4 / 25;
 	tm_leap_400 = tm_leap_100 / 4;
@@ -325,6 +338,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	if (this->value.len < PTS_SIMPLE_COMP_EVID_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for Simple Component Evidence");
+		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
 

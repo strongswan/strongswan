@@ -890,9 +890,14 @@ static kernel_algorithm_t encryption_algs[] = {
 	{ENCR_AES_GCM_ICV8,			SADB_X_EALG_AES_GCM_ICV8	},
 	{ENCR_AES_GCM_ICV12,		SADB_X_EALG_AES_GCM_ICV12	},
 	{ENCR_AES_GCM_ICV16,		SADB_X_EALG_AES_GCM_ICV16	},
+#elif defined(SADB_X_EALG_AES_GCM) /* macOS */
+	{ENCR_AES_GCM_ICV16,		SADB_X_EALG_AES_GCM			},
 #endif
 #ifdef SADB_X_EALG_CAMELLIACBC
 	{ENCR_CAMELLIA_CBC,			SADB_X_EALG_CAMELLIACBC		},
+#endif
+#ifdef SADB_X_EALG_CHACHA20POLY1305
+	{ENCR_CHACHA20_POLY1305,	SADB_X_EALG_CHACHA20POLY1305},
 #endif
 	{END_OF_LIST,				0							},
 };
@@ -2456,6 +2461,45 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 }
 
 /**
+ * Check if any significant data has changed to warrant sending an update to
+ * the kernel.
+ */
+static bool policy_update_required(policy_sa_t *current, policy_sa_t *updated)
+{
+	if (current->type != updated->type
+#ifdef HAVE_STRUCT_SADB_X_POLICY_SADB_X_POLICY_PRIORITY
+		|| current->priority != updated->priority
+#endif
+		)
+	{
+		return TRUE;
+	}
+	if (current->type == POLICY_IPSEC)
+	{
+		ipsec_sa_cfg_t *cur = &current->sa->cfg, *upd = &updated->sa->cfg;
+
+		/* we don't use ipsec_sa_cfg_equals() here as e.g. SPIs are not
+		 * relevant for this kernel interface, so we don't have to update the
+		 * policy during a rekeying */
+		if (cur->mode != upd->mode ||
+			cur->reqid != upd->reqid ||
+			cur->esp.use != upd->esp.use ||
+			cur->ah.use != upd->ah.use ||
+			cur->ipcomp.transform != upd->ipcomp.transform)
+		{
+			return TRUE;
+		}
+		if (cur->mode == MODE_TUNNEL &&
+			(!current->sa->src->ip_equals(current->sa->src, updated->sa->src) ||
+			 !current->sa->dst->ip_equals(current->sa->dst, updated->sa->dst)))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
  * Add or update a policy in the kernel.
  *
  * Note: The mutex has to be locked when entering this function.
@@ -2629,7 +2673,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	kernel_ipsec_manage_policy_t *data)
 {
 	policy_entry_t *policy, *found = NULL;
-	policy_sa_t *assigned_sa, *current_sa;
+	policy_sa_t *assigned_sa, *current_sa = NULL;
 	enumerator_t *enumerator;
 	bool update = TRUE;
 
@@ -2691,6 +2735,13 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	}
 	policy->used_by->insert_before(policy->used_by, enumerator, assigned_sa);
 	enumerator->destroy(enumerator);
+
+	if (update && current_sa)
+	{	/* check if there are actually any relevant changes, if not, we don't
+		 * send an update to the kernel as e.g. FreeBSD doesn't do that
+		 * atomically, causing unnecessary traffic loss during rekeyings */
+		update = policy_update_required(current_sa, assigned_sa);
+	}
 
 	if (!update)
 	{	/* we don't update the policy if the priority is lower than that of the
@@ -2889,22 +2940,28 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		return SUCCESS;
 	}
 	policy->used_by->remove(policy->used_by, to_remove, NULL);
-	mapping = to_remove;
 
 	if (policy->used_by->get_count(policy->used_by) > 0)
 	{	/* policy is used by more SAs, keep in kernel */
 		DBG2(DBG_KNL, "policy still used by another CHILD_SA, not removed");
-		policy_sa_destroy(mapping, id->dir, this);
+
+		if (is_installed)
+		{	/* check if there are actually any relevant changes, if not, we do
+			 * not send an update to the kernel as e.g. FreeBSD doesn't do that
+			 * atomically, causing unnecessary traffic loss during rekeyings */
+			policy->used_by->get_first(policy->used_by, (void**)&mapping);
+			is_installed = policy_update_required(mapping, to_remove);
+		}
+		policy_sa_destroy(to_remove, id->dir, this);
 
 		if (!is_installed)
-		{	/* no need to update as the policy was not installed for this SA */
+		{	/* no need to update as the policy */
 			this->mutex->unlock(this->mutex);
 			return SUCCESS;
 		}
 
 		DBG2(DBG_KNL, "updating policy %R === %R %N", id->src_ts, id->dst_ts,
 			 policy_dir_names, id->dir);
-		policy->used_by->get_first(policy->used_by, (void**)&mapping);
 		if (add_policy_internal(this, policy, mapping, TRUE) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "unable to update policy %R === %R %N",
@@ -2926,7 +2983,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	pol->sadb_x_policy_exttype = SADB_X_EXT_POLICY;
 	pol->sadb_x_policy_len = PFKEY_LEN(sizeof(struct sadb_x_policy));
 	pol->sadb_x_policy_dir = dir2kernel(id->dir);
-	pol->sadb_x_policy_type = type2kernel(mapping->type);
+	pol->sadb_x_policy_type = type2kernel(to_remove->type);
 	PFKEY_EXT_ADD(msg, pol);
 
 	add_addr_ext(msg, policy->src.net, SADB_EXT_ADDRESS_SRC, policy->src.proto,
@@ -2949,7 +3006,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	}
 
 	this->policies->remove(this->policies, found, NULL);
-	policy_sa_destroy(mapping, id->dir, this);
+	policy_sa_destroy(to_remove, id->dir, this);
 	policy_entry_destroy(policy, this);
 	this->mutex->unlock(this->mutex);
 

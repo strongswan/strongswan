@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  * Copyright (C) 2008 Dan Williams
  *
  * Based on NetworkManager's vpnc plugin

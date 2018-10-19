@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -59,7 +59,7 @@ struct private_isakmp_vendor_t {
 	ike_sa_t *ike_sa;
 
 	/**
-	 * Are we the inititator of this task
+	 * Are we the initiator of this task
 	 */
 	bool initiator;
 

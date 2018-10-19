@@ -6,8 +6,6 @@ Host *
 	StrictHostKeyChecking no
 	UserKnownHostsFile /dev/null
 	GSSAPIAuthentication yes
-	# faster encryption
-	Ciphers arcfour
 	# share multiple sessions
 	ControlMaster auto
 	ControlPath /tmp/ssh-uml-%r@%h:%p

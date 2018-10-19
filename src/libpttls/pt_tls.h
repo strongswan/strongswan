@@ -69,7 +69,7 @@ enum pt_tls_message_type_t {
 extern enum_name_t *pt_tls_message_type_names;
 
 /**
- * Result code for a single SASL mechansim, as sent in PT_TLS_SASL_RESULT
+ * Result code for a single SASL mechanism, as sent in PT_TLS_SASL_RESULT
  */
 enum pt_tls_sasl_result_t {
 	PT_TLS_SASL_RESULT_SUCCESS = 0,

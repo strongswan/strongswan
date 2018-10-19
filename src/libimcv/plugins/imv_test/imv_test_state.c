@@ -173,10 +173,14 @@ METHOD(imv_state_t, get_contracts, seg_contract_manager_t*,
 	return this->contracts;
 }
 
-METHOD(imv_state_t, change_state, void,
+METHOD(imv_state_t, change_state, TNC_ConnectionState,
 	private_imv_test_state_t *this, TNC_ConnectionState new_state)
 {
+	TNC_ConnectionState old_state;
+
+	old_state = this->state;
 	this->state = new_state;
+	return old_state;
 }
 
 METHOD(imv_state_t, get_recommendation, void,
@@ -225,6 +229,20 @@ METHOD(imv_state_t, get_remediation_instructions, bool,
 {
 	return FALSE;
 }
+
+METHOD(imv_state_t, reset, void,
+	private_imv_test_state_t *this)
+{
+	DESTROY_IF(this->reason_string);
+	this->reason_string = NULL;
+	this->rec  = TNC_IMV_ACTION_RECOMMENDATION_NO_RECOMMENDATION;
+	this->eval = TNC_IMV_EVALUATION_RESULT_DONT_KNOW;
+
+	this->imcs->destroy_function(this->imcs, free);
+	this->imcs = linked_list_create();
+
+}
+
 
 METHOD(imv_state_t, destroy, void,
 	private_imv_test_state_t *this)
@@ -326,6 +344,7 @@ imv_state_t *imv_test_state_create(TNC_ConnectionID connection_id)
 				.update_recommendation = _update_recommendation,
 				.get_reason_string = _get_reason_string,
 				.get_remediation_instructions = _get_remediation_instructions,
+				.reset = _reset,
 				.destroy = _destroy,
 			},
 			.add_imc = _add_imc,

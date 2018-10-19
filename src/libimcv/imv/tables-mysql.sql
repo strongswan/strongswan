@@ -182,7 +182,9 @@ CREATE TABLE `devices` (
   `description` VARCHAR(100) DEFAULT "",
   `value` VARCHAR(256) NOT NULL,
   `product` INTEGER REFERENCES `products`(`id`),
-  `created` INTEGER
+  `trusted` INTEGER DEFAULT 0,
+  `created` INTEGER,
+  `inactive` INTEGER DEFAULT 0
 );
 
 DROP TABLE IF EXISTS `identities`;

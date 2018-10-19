@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -30,7 +30,7 @@
 #include <collections/linked_list.h>
 #include <collections/hashtable.h>
 
-/** Intervall to check for expired sessions, in seconds */
+/** Interval to check for expired sessions, in seconds */
 #define CLEANUP_INTERVAL 30
 
 typedef struct private_fast_dispatcher_t private_fast_dispatcher_t;

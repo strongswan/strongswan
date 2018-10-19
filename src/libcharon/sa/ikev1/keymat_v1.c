@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -219,7 +219,6 @@ static aead_t *create_aead(proposal_t *proposal, prf_t *prf, chunk_t skeyid_e,
 			 encryption_algorithm_names, alg, key_size);
 		return NULL;
 	}
-	key_size = crypter->get_key_size(crypter);
 	if (!expand_skeyid_e(skeyid_e, crypter->get_key_size(crypter), prf, ka))
 	{
 		return NULL;

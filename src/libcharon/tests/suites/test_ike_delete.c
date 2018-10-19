@@ -40,7 +40,7 @@ START_TEST(test_regular)
 	}
 	assert_hook_not_called(ike_updown);
 	assert_hook_not_called(child_updown);
-	call_ikesa(a, delete);
+	call_ikesa(a, delete, FALSE);
 	assert_ike_sa_state(a, IKE_DELETING);
 	assert_hook();
 	assert_hook();
@@ -81,9 +81,9 @@ START_TEST(test_collision)
 
 	assert_hook_not_called(ike_updown);
 	assert_hook_not_called(child_updown);
-	call_ikesa(a, delete);
+	call_ikesa(a, delete, FALSE);
 	assert_ike_sa_state(a, IKE_DELETING);
-	call_ikesa(b, delete);
+	call_ikesa(b, delete, FALSE);
 	assert_ike_sa_state(b, IKE_DELETING);
 	assert_hook();
 	assert_hook();

@@ -74,6 +74,11 @@ struct private_imc_agent_t {
 	rwlock_t *connection_lock;
 
 	/**
+	 * Is the transport protocol PT-TLS?
+	 */
+	bool has_pt_tls;
+
+	/**
 	 * Inform a TNCC about the set of message types the IMC is able to receive
 	 *
 	 * @param imc_id			IMC ID assigned by TNCC
@@ -372,6 +377,8 @@ METHOD(imc_agent_t, create_state, TNC_Result,
 	DBG2(DBG_IMC, "  over %s %s with maximum PA-TNC message size of %u bytes",
 				  t_p ? t_p:"?", t_v ? t_v :"?", max_msg_len);
 
+	this->has_pt_tls = streq(t_p, "IF-T for TLS");
+
 	free(tnccs_p);
 	free(tnccs_v);
 	free(t_p);
@@ -403,6 +410,7 @@ METHOD(imc_agent_t, change_state, TNC_Result,
 							   imc_state_t **state_p)
 {
 	imc_state_t *state;
+	TNC_ConnectionState old_state;
 
 	switch (new_state)
 	{
@@ -418,13 +426,20 @@ METHOD(imc_agent_t, change_state, TNC_Result,
 							  this->id, this->name, connection_id);
 				return TNC_RESULT_FATAL;
 			}
-			state->change_state(state, new_state);
+			old_state = state->change_state(state, new_state);
 			DBG2(DBG_IMC, "IMC %u \"%s\" changed state of Connection ID %u to '%N'",
 						  this->id, this->name, connection_id,
 						  TNC_Connection_State_names, new_state);
 			if (state_p)
 			{
 				*state_p = state;
+			}
+			if (new_state == TNC_CONNECTION_STATE_HANDSHAKE &&
+				old_state != TNC_CONNECTION_STATE_CREATE)
+			{
+				state->reset(state);
+				DBG2(DBG_IMC, "IMC %u \"%s\" reset state of Connection ID %u",
+							   this->id, this->name, connection_id);
 			}
 			break;
 		case TNC_CONNECTION_STATE_CREATE:
@@ -531,6 +546,12 @@ METHOD(imc_agent_t, get_non_fatal_attr_types, linked_list_t*,
 	return this->non_fatal_attr_types;
 }
 
+METHOD(imc_agent_t, has_pt_tls, bool,
+	private_imc_agent_t *this)
+{
+	return	this->has_pt_tls;
+}
+
 METHOD(imc_agent_t, destroy, void,
 	private_imc_agent_t *this)
 {
@@ -575,6 +596,7 @@ imc_agent_t *imc_agent_create(const char *name,
 			.create_id_enumerator = _create_id_enumerator,
 			.add_non_fatal_attr_type = _add_non_fatal_attr_type,
 			.get_non_fatal_attr_types = _get_non_fatal_attr_types,
+			.has_pt_tls = _has_pt_tls,
 			.destroy = _destroy,
 		},
 		.name = name,

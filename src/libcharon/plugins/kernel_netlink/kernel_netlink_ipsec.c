@@ -1131,7 +1131,7 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 static bool receive_events(private_kernel_netlink_ipsec_t *this, int fd,
 						   watcher_event_t event)
 {
-	char response[1024];
+	char response[netlink_get_buflen()];
 	struct nlmsghdr *hdr = (struct nlmsghdr*)response;
 	struct sockaddr_nl addr;
 	socklen_t addr_len = sizeof(addr);
@@ -1336,6 +1336,23 @@ static bool add_mark(struct nlmsghdr *hdr, int buflen, mark_t mark)
 }
 
 /**
+ * Add a uint32 attribute to message
+ */
+static bool add_uint32(struct nlmsghdr *hdr, int buflen,
+					   enum xfrm_attr_type_t type, uint32_t value)
+{
+	uint32_t *xvalue;
+
+	xvalue = netlink_reserve(hdr, buflen, type, sizeof(*xvalue));
+	if (!xvalue)
+	{
+		return FALSE;
+	}
+	*xvalue = value;
+	return TRUE;
+}
+
+/**
  * Check if kernel supports HW offload
  */
 static void netlink_find_offload_feature(const char *ifname, int query_socket)
@@ -1354,7 +1371,8 @@ static void netlink_find_offload_feature(const char *ifname, int query_socket)
 		.cmd = ETHTOOL_GSSET_INFO,
 		.sset_mask = 1ULL << ETH_SS_FEATURES,
 	);
-	strcpy(ifr.ifr_name, ifname);
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 	ifr.ifr_data = (void*)sset_info;
 
 	err = ioctl(query_socket, SIOCETHTOOL, &ifr);
@@ -1369,7 +1387,8 @@ static void netlink_find_offload_feature(const char *ifname, int query_socket)
 		.cmd = ETHTOOL_GSTRINGS,
 		.string_set = ETH_SS_FEATURES,
 	);
-	strcpy(ifr.ifr_name, ifname);
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 	ifr.ifr_data = (void*)cmd;
 
 	err = ioctl(query_socket, SIOCETHTOOL, &ifr);
@@ -1433,7 +1452,8 @@ static bool netlink_detect_offload(const char *ifname)
 		.cmd = ETHTOOL_GFEATURES,
 		.size = netlink_hw_offload.total_blocks,
 	);
-	strcpy(ifr.ifr_name, ifname);
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 	ifr.ifr_data = (void*)cmd;
 
 	if (ioctl(query_socket, SIOCETHTOOL, &ifr))
@@ -1583,6 +1603,49 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	sa->id.proto = id->proto;
 	sa->family = id->src->get_family(id->src);
 	sa->mode = mode2kernel(mode);
+
+	if (!data->copy_df)
+	{
+		sa->flags |= XFRM_STATE_NOPMTUDISC;
+	}
+
+	if (!data->copy_ecn)
+	{
+		sa->flags |= XFRM_STATE_NOECN;
+	}
+
+	if (data->inbound)
+	{
+		switch (data->copy_dscp)
+		{
+			case DSCP_COPY_YES:
+			case DSCP_COPY_IN_ONLY:
+				sa->flags |= XFRM_STATE_DECAP_DSCP;
+				break;
+			default:
+				break;
+		}
+	}
+	else
+	{
+		switch (data->copy_dscp)
+		{
+			case DSCP_COPY_IN_ONLY:
+			case DSCP_COPY_NO:
+			{
+				/* currently the only extra flag */
+				if (!add_uint32(hdr, sizeof(request), XFRMA_SA_EXTRA_FLAGS,
+								XFRM_SA_XFLAG_DONT_ENCAP_DSCP))
+				{
+					goto failed;
+				}
+				break;
+			}
+			default:
+				break;
+		}
+	}
+
 	switch (mode)
 	{
 		case MODE_TUNNEL:
@@ -1826,17 +1889,23 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		goto failed;
 	}
 
-	if (data->tfc && id->proto == IPPROTO_ESP && mode == MODE_TUNNEL)
-	{	/* the kernel supports TFC padding only for tunnel mode ESP SAs */
-		uint32_t *tfcpad;
-
-		tfcpad = netlink_reserve(hdr, sizeof(request), XFRMA_TFCPAD,
-								 sizeof(*tfcpad));
-		if (!tfcpad)
+	if (ipcomp == IPCOMP_NONE && (data->mark.value | data->mark.mask))
+	{
+		if (!add_uint32(hdr, sizeof(request), XFRMA_SET_MARK,
+						data->mark.value) ||
+			!add_uint32(hdr, sizeof(request), XFRMA_SET_MARK_MASK,
+						data->mark.mask))
 		{
 			goto failed;
 		}
-		*tfcpad = data->tfc;
+	}
+
+	if (data->tfc && id->proto == IPPROTO_ESP && mode == MODE_TUNNEL)
+	{	/* the kernel supports TFC padding only for tunnel mode ESP SAs */
+		if (!add_uint32(hdr, sizeof(request), XFRMA_TFCPAD, data->tfc))
+		{
+			goto failed;
+		}
 	}
 
 	if (id->proto != IPPROTO_COMP)

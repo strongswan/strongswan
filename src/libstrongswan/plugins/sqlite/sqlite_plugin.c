@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -61,7 +61,7 @@ METHOD(plugin_t, destroy, void,
 plugin_t *sqlite_plugin_create()
 {
 	private_sqlite_plugin_t *this;
-	int threadsave = 0;
+	int threadsafe = 0;
 
 	INIT(this,
 		.public = {
@@ -74,10 +74,10 @@ plugin_t *sqlite_plugin_create()
 	);
 
 #if SQLITE_VERSION_NUMBER >= 3005000
-	threadsave = sqlite3_threadsafe();
+	threadsafe = sqlite3_threadsafe();
 #endif
 	DBG2(DBG_LIB, "using SQLite %s, thread safety %d",
-		 sqlite3_libversion(), threadsave);
+		 sqlite3_libversion(), threadsafe);
 
 	return &this->public.plugin;
 }

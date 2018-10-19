@@ -249,7 +249,7 @@ static bool have_vips_from_pool(mem_pool_t *pool, linked_list_t *vips)
 	{
 		end = chunk_clone(start);
 
-		/* mem_pool is currenty limited to 2^31 addresses, so 32-bit
+		/* mem_pool is currently limited to 2^31 addresses, so 32-bit
 		 * calculations should be sufficient. */
 		size = untoh32(start.ptr + start.len - sizeof(size));
 		htoun32(end.ptr + end.len - sizeof(size), size + pool->get_size(pool));
@@ -705,7 +705,7 @@ CALLBACK(get_pools, vici_message_t*,
 			i = 0;
 			builder->begin_section(builder, "leases");
 			leases = vips->create_lease_enumerator(vips);
-			while (leases && leases->enumerate(leases, &uid, &lease, &on))
+			while (leases->enumerate(leases, &uid, &lease, &on))
 			{
 				snprintf(buf, sizeof(buf), "%d", i++);
 				builder->begin_section(builder, buf);

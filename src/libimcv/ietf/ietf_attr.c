@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Andreas Steffen
+ * Copyright (C) 2011-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -30,9 +30,7 @@
 #include "ietf/swima/ietf_swima_attr_sw_ev.h"
 #include "generic/generic_attr_bool.h"
 
-
-ENUM_BEGIN(ietf_attr_names, IETF_ATTR_TESTING,
-							IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED,
+ENUM(ietf_attr_names, IETF_ATTR_TESTING, IETF_ATTR_SRC_METADATA_RESP,
 	"Testing",
 	"Attribute Request",
 	"Product Information",
@@ -46,10 +44,6 @@ ENUM_BEGIN(ietf_attr_names, IETF_ATTR_TESTING,
 	"Remediation Instructions",
 	"Forwarding Enabled",
 	"Factory Default Password Enabled",
-);
-ENUM_NEXT(ietf_attr_names,  IETF_ATTR_SWIMA_REQUEST,
-							IETF_ATTR_SRC_METADATA_RESP,
-							IETF_ATTR_FACTORY_DEFAULT_PWD_ENABLED,
 	"SWIMA Request",
 	"SW Identifier Inventory",
 	"SW Identifier Events",
@@ -60,7 +54,6 @@ ENUM_NEXT(ietf_attr_names,  IETF_ATTR_SWIMA_REQUEST,
 	"SW Source Metadata Request",
 	"SW Source Metadata Response",
 );
-ENUM_END(ietf_attr_names,	IETF_ATTR_SRC_METADATA_RESP);
 
 /**
  * See header

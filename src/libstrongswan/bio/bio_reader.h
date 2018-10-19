@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
@@ -142,7 +142,7 @@ struct bio_reader_t {
 	 * Read a chunk of len bytes from the end of the buffer, reduce remaining.
 	 *
 	 * @param len		number of bytes to read
-	 * @param res		ponter to result, not cloned
+	 * @param res		pointer to result, not cloned
 	 * @return			TRUE if data read successfully
 	 */
 	bool (*read_data_end)(bio_reader_t *this, uint32_t len, chunk_t *res);

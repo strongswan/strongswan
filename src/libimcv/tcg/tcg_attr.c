@@ -31,9 +31,6 @@
 #include "tcg/pts/tcg_pts_attr_file_meas.h"
 #include "tcg/pts/tcg_pts_attr_req_file_meta.h"
 #include "tcg/pts/tcg_pts_attr_unix_file_meta.h"
-#include "tcg/swid/tcg_swid_attr_req.h"
-#include "tcg/swid/tcg_swid_attr_tag_id_inv.h"
-#include "tcg/swid/tcg_swid_attr_tag_inv.h"
 #include "tcg/seg/tcg_seg_attr_max_size.h"
 #include "tcg/seg/tcg_seg_attr_seg_env.h"
 #include "tcg/seg/tcg_seg_attr_next_seg.h"
@@ -189,12 +186,6 @@ pa_tnc_attr_t* tcg_attr_create_from_data(uint32_t type, size_t length, chunk_t v
 {
 	switch (type)
 	{
-		case TCG_SWID_REQUEST:
-			return tcg_swid_attr_req_create_from_data(length, value);
-		case TCG_SWID_TAG_ID_INVENTORY:
-			return tcg_swid_attr_tag_id_inv_create_from_data(length, value);
-		case TCG_SWID_TAG_INVENTORY:
-			return tcg_swid_attr_tag_inv_create_from_data(length, value);
 		case TCG_SEG_MAX_ATTR_SIZE_REQ:
 			return tcg_seg_attr_max_size_create_from_data(length, value, TRUE);
 		case TCG_SEG_MAX_ATTR_SIZE_RESP:
@@ -253,6 +244,9 @@ pa_tnc_attr_t* tcg_attr_create_from_data(uint32_t type, size_t length, chunk_t v
 		case TCG_PTS_UNIX_FILE_META:
 			return tcg_pts_attr_unix_file_meta_create_from_data(length, value);
 		/* unsupported TCG/SWID attributes */
+		case TCG_SWID_REQUEST:
+		case TCG_SWID_TAG_ID_INVENTORY:
+		case TCG_SWID_TAG_INVENTORY:
 		case TCG_SWID_TAG_ID_EVENTS:
 		case TCG_SWID_TAG_EVENTS:
 		case TCG_SWID_SUBSCRIPTION_STATUS_REQ:

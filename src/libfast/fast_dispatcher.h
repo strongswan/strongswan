@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -24,7 +24,7 @@
  *
  * The application has a global context and a session context. The global
  * context is accessed from all sessions simultaneously and therefore
- * needs to be threadsave. Often a database wrapper is the global context.
+ * needs to be threadsafe. Often a database wrapper is the global context.
  * The session context is instantiated per session. Sessions are managed
  * automatically through session cookies. The session context is kept alive
  * until the session times out. It must implement the context_t interface and
@@ -83,7 +83,7 @@ struct fast_dispatcher_t {
 	 * The first controller added serves as default controller. Client's
 	 * get redirected to it if no other controller matches.
 	 *
-	 * @param constructor	constructor function to the conntroller
+	 * @param constructor	constructor function to the controller
 	 * @param param			param to pass to constructor
 	 */
 	void (*add_controller)(fast_dispatcher_t *this,

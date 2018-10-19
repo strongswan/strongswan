@@ -108,6 +108,10 @@ charon.plugins.eap-radius.servers {}
 charon.plugins.eap-radius.sockets = 1
 	Number of sockets (ports) to use, increase for high load.
 
+charon.plugins.eap-radius.station_id_with_port = yes
+	Whether to include the UDP port in the Called- and Calling-Station-Id
+	RADIUS attributes.
+
 charon.plugins.eap-radius.xauth {}
 	Section to configure multiple XAuth authentication rounds via RADIUS.
 

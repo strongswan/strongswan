@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG

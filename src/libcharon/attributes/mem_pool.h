@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -31,7 +31,7 @@ typedef enum mem_pool_op_t mem_pool_op_t;
  * In-memory IP pool acquire operation.
  */
 enum mem_pool_op_t {
-	/** Check for an exsiting lease */
+	/** Check for an existing lease */
 	MEM_POOL_EXISTING,
 	/** Get a new lease */
 	MEM_POOL_NEW,

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -101,7 +101,7 @@ METHOD(job_t, execute, job_requeue_t,
 			{
 				DBG1(DBG_JOB, "deleting IKE_SA after %d seconds "
 					 "of CHILD_SA inactivity", this->timeout);
-				status = ike_sa->delete(ike_sa);
+				status = ike_sa->delete(ike_sa, FALSE);
 			}
 			else
 			{

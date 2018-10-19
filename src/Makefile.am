@@ -88,10 +88,6 @@ if USE_CONFTEST
   SUBDIRS += conftest
 endif
 
-if USE_DUMM
-  SUBDIRS += dumm
-endif
-
 if USE_FAST
   SUBDIRS += libfast
 endif

@@ -27,12 +27,20 @@
 /**
  * Described in header.
  */
-void libtpmtss_init(void)
+bool libtpmtss_init(void)
 {
-	/* empty */
+	return tpm_tss_tss2_init();
 }
 
-typedef tpm_tss_t*(*tpm_tss_create)();
+/**
+ * Described in header.
+ */
+void libtpmtss_deinit(void)
+{
+	tpm_tss_tss2_deinit();
+}
+
+typedef tpm_tss_t*(*tpm_tss_create)(void);
 
 /**
  * See header.

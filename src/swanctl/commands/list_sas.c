@@ -266,6 +266,10 @@ CALLBACK(ike_sa, int,
 			}
 			printf("/%s", ike->get(ike, "prf-alg"));
 			printf("/%s", ike->get(ike, "dh-group"));
+			if (streq(ike->get(ike, "ppk"), "yes"))
+			{
+				printf("/PPK");
+			}
 			printf("\n");
 		}
 

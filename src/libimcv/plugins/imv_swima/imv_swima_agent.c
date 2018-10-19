@@ -187,11 +187,17 @@ static TNC_Result receive_msg(private_imv_swima_agent_t *this,
 				}
 				description = reader->peek(reader);
 				if (description.len)
-				{ 
+				{
 					DBG1(DBG_IMV, "  description: %.*s", description.len,
 														 description.ptr);
 				}
 				reader->destroy(reader);
+				if (error_code.type == PA_ERROR_SWIMA_SUBSCRIPTION_DENIED)
+				{
+					swima_state->set_subscription(swima_state, FALSE);
+					DBG1(DBG_IMV, "SWIMA subscription %u cleared",
+								   swima_state->get_request_id(swima_state));
+				}
 				break;
 			}
 			case IETF_ATTR_SW_ID_INVENTORY:
@@ -474,7 +480,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		seg_contract_t *contract;
 		seg_contract_manager_t *contracts;
 		swima_inventory_t *targets;
-		uint32_t earliest_eid = 0;
+		uint32_t old_request_id = 0, earliest_eid = 0;
 		char buf[BUF_LEN];
 
 		enumerator = session->create_workitem_enumerator(session);
@@ -487,7 +493,13 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				{
 					continue;
 				}
-				
+
+				earliest_eid = workitem->get_arg_int(workitem);
+				request_id = workitem->get_id(workitem);
+				workitem->set_imv_id(workitem, imv_id);
+				no_workitems = FALSE;
+				old_request_id = swima_state->get_request_id(swima_state);
+
 				flags = IETF_SWIMA_ATTR_REQ_FLAG_NONE;
 				if (strchr(workitem->get_arg_str(workitem), 'R'))
 				{
@@ -496,47 +508,57 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 				if (strchr(workitem->get_arg_str(workitem), 'S'))
 				{
 					flags |= IETF_SWIMA_ATTR_REQ_FLAG_S;
+					swima_state->set_subscription(swima_state, TRUE);
+					if (!old_request_id)
+					{
+						DBG1(DBG_IMV, "SWIMA subscription %u requested",
+									   request_id);
+					}
 				}
 				if (strchr(workitem->get_arg_str(workitem), 'C'))
 				{
 					flags |= IETF_SWIMA_ATTR_REQ_FLAG_C;
+					swima_state->set_subscription(swima_state, FALSE);
 				}
-				earliest_eid = workitem->get_arg_int(workitem);
 
-				/* Determine maximum PA-TNC attribute segment size */
-				max_seg_size = state->get_max_msg_len(state)
-								- PA_TNC_HEADER_SIZE 
-								- PA_TNC_ATTR_HEADER_SIZE
-								- TCG_SEG_ATTR_SEG_ENV_HEADER;
+				if (!old_request_id)
+				{
+					/* Determine maximum PA-TNC attribute segment size */
+					max_seg_size = state->get_max_msg_len(state)
+									- PA_TNC_HEADER_SIZE
+									- PA_TNC_ATTR_HEADER_SIZE
+									- TCG_SEG_ATTR_SEG_ENV_HEADER;
 
-				/* Announce support of PA-TNC segmentation to IMC */
-				contract = seg_contract_create(msg_types[0], max_attr_size,
-									max_seg_size, TRUE, imv_id, FALSE);
-				contract->get_info_string(contract, buf, BUF_LEN, TRUE);
-				DBG2(DBG_IMV, "%s", buf);
-				contracts = state->get_contracts(state);
-				contracts->add_contract(contracts, contract);
-				attr = tcg_seg_attr_max_size_create(max_attr_size,
-													max_seg_size, TRUE);
-				out_msg->add_attribute(out_msg, attr);
+					/* Announce support of PA-TNC segmentation to IMC */
+					contract = seg_contract_create(msg_types[0], max_attr_size,
+										max_seg_size, TRUE, imv_id, FALSE);
+					contract->get_info_string(contract, buf, BUF_LEN, TRUE);
+					DBG2(DBG_IMV, "%s", buf);
+					contracts = state->get_contracts(state);
+					contracts->add_contract(contracts, contract);
+					attr = tcg_seg_attr_max_size_create(max_attr_size,
+														max_seg_size, TRUE);
+					out_msg->add_attribute(out_msg, attr);
+				}
 
-				/* Issue a SWID request */
-				request_id = workitem->get_id(workitem);
-				swima_state->set_request_id(swima_state, request_id);
-				attr = ietf_swima_attr_req_create(flags, request_id);
+				if (!old_request_id ||
+					!swima_state->get_subscription(swima_state))
+				{
+					/* Issue a SWID request */
+					swima_state->set_request_id(swima_state, request_id);
+					attr = ietf_swima_attr_req_create(flags, request_id);
 
-				/* Request software identifier events */
-				targets = swima_inventory_create();
-				targets->set_eid(targets, earliest_eid, 0);
-				cast_attr = (ietf_swima_attr_req_t*)attr;
-				cast_attr->set_targets(cast_attr, targets);
-				targets->destroy(targets);
+					/* Request software identifier events */
+					targets = swima_inventory_create();
+					targets->set_eid(targets, earliest_eid, 0);
+					cast_attr = (ietf_swima_attr_req_t*)attr;
+					cast_attr->set_targets(cast_attr, targets);
+					targets->destroy(targets);
 
-				out_msg->add_attribute(out_msg, attr);
-				workitem->set_imv_id(workitem, imv_id);
-				no_workitems = FALSE;
-				DBG2(DBG_IMV, "IMV %d issues sw request %d with earliest eid %d",
-							   imv_id, request_id, earliest_eid);
+					out_msg->add_attribute(out_msg, attr);
+					DBG2(DBG_IMV, "IMV %d issues sw request %d with earliest "
+								  "eid %d", imv_id, request_id, earliest_eid);
+				}
 				break;
 			}
 			enumerator->destroy(enumerator);
@@ -565,7 +587,7 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 		TNC_IMV_Action_Recommendation rec;
 		char result_str[BUF_LEN], *format = NULL, *cmd = NULL, *command;
 		char *target_str, *error_str = "";
-		int sw_id_count, tag_count, i, res;
+		int sw_id_count, tag_count, i, res, written;
 		json_object *jrequest, *jresponse, *jvalue;
 		ietf_swima_attr_req_t *cast_attr;
 		swima_inventory_t *targets;
@@ -617,15 +639,23 @@ METHOD(imv_agent_if_t, batch_ending, TNC_Result,
 														  &tag_count);
 						if (format)
 						{
-							snprintf(result_str, BUF_LEN, format,
+							written = snprintf(result_str, BUF_LEN, format,
 								sw_id_count, (sw_id_count == 1) ? "" : "s",
 								tag_count,   (tag_count   == 1) ? "" : "s");
 						}
 						else
 						{
-							snprintf(result_str, BUF_LEN, "received %d SWID tag"
-								"%s", tag_count, (tag_count == 1) ? "" : "s");
+							written = snprintf(result_str, BUF_LEN,
+								"received %d SWID tag%s",
+								tag_count, (tag_count == 1) ? "" : "s");
 
+						}
+						if (swima_state->get_subscription(swima_state) &&
+							written > 0 && written < BUF_LEN)
+						{
+							snprintf(result_str + written, BUF_LEN - written,
+								" from subscription %u",
+								swima_state->get_request_id(swima_state));
 						}
 						session->remove_workitem(session, enumerator);
 

@@ -3,13 +3,18 @@ language: c
 sudo: required
 dist: trusty
 
+# don't build tags separately
+if: tag IS blank
+
 compiler:
   - gcc
   - clang
 
+cache: ccache
+
 before_install:
-  - ./scripts/test.sh deps
-  - ./scripts/test.sh pydeps
+  - travis_retry ./scripts/test.sh deps
+  - travis_retry ./scripts/test.sh pydeps
 
 before_script:
   - sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0 || true
@@ -31,9 +36,14 @@ env:
     - LEAK_DETECTIVE=no
     - MONOLITHIC=no
   matrix:
+    - TEST=all
+    - TEST=all MONOLITHIC=yes
+    - TEST=all LEAK_DETECTIVE=yes
     - TEST=default
     - TEST=default MONOLITHIC=yes
     - TEST=default LEAK_DETECTIVE=yes
+    - TEST=botan
+    - TEST=botan LEAK_DETECTIVE=yes
     - TEST=openssl
     - TEST=openssl LEAK_DETECTIVE=yes
     - TEST=gcrypt
@@ -41,18 +51,27 @@ env:
     # we can't test Vstr as negative int args are not properly passed to CBs
     - TEST=printf-builtin
     - TEST=printf-builtin LEAK_DETECTIVE=yes
-    - TEST=all
-    - TEST=all MONOLITHIC=yes
-    - TEST=all LEAK_DETECTIVE=yes
 
 matrix:
   include:
+    - compiler: clang
+      os: osx
+      env: TEST=osx
+    - compiler: gcc
+      env: TEST=sonarcloud
+      git:
+        depth: false
+      addons:
+        sonarcloud:
+          organization: "strongswan"
+    - compiler: gcc
+      env: TEST=coverage
+    - compiler: clang
+      env: TEST=fuzzing MONOLITHIC=yes
     - compiler: gcc
       env: TEST=dist
     - compiler: gcc
       env: TEST=apidoc
-    - compiler: gcc
-      env: TEST=coverage
     - compiler: gcc
       env: TEST=win64 MONOLITHIC=yes
     # this does not work on 14.04 due to a missing @4 decoration for
@@ -60,8 +79,3 @@ matrix:
     - compiler: gcc
       env: TEST=win32 MONOLITHIC=yes
       dist: precise
-    - compiler: clang
-      env: TEST=fuzzing MONOLITHIC=yes
-    - compiler: clang
-      os: osx
-      env: TEST=osx

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tobias Brunner
+ * Copyright (C) 2007-2018 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -126,12 +126,12 @@ struct private_peer_cfg_t {
 	uint32_t over_time;
 
 	/**
-	 * DPD check intervall
+	 * DPD check interval
 	 */
 	uint32_t dpd;
 
 	/**
-	 * DPD timeout intervall (used for IKEv1 only)
+	 * DPD timeout interval (used for IKEv1 only)
 	 */
 	uint32_t dpd_timeout;
 
@@ -154,6 +154,16 @@ struct private_peer_cfg_t {
 	 * remote authentication configs (constraints)
 	 */
 	linked_list_t *remote_auth;
+
+	/**
+	 * PPK ID
+	 */
+	identification_t *ppk_id;
+
+	/**
+	 * Whether a PPK is required
+	 */
+	bool ppk_required;
 
 #ifdef ME
 	/**
@@ -258,47 +268,43 @@ METHOD(peer_cfg_t, replace_child_cfgs, enumerator_t*,
 	private_peer_cfg_t *this, peer_cfg_t *other_pub)
 {
 	private_peer_cfg_t *other = (private_peer_cfg_t*)other_pub;
-	linked_list_t *removed, *added;
+	linked_list_t *new_cfgs, *removed, *added;
 	enumerator_t *mine, *others;
 	child_cfg_t *my_cfg, *other_cfg;
 	child_cfgs_replace_enumerator_t *enumerator;
 	bool found;
 
-	removed = linked_list_create();
+	added = linked_list_create();
 
 	other->lock->read_lock(other->lock);
-	added = linked_list_create_from_enumerator(
+	new_cfgs = linked_list_create_from_enumerator(
 					other->child_cfgs->create_enumerator(other->child_cfgs));
-	added->invoke_offset(added, offsetof(child_cfg_t, get_ref));
+	new_cfgs->invoke_offset(new_cfgs, offsetof(child_cfg_t, get_ref));
 	other->lock->unlock(other->lock);
 
 	this->lock->write_lock(this->lock);
-	others = added->create_enumerator(added);
-	mine = this->child_cfgs->create_enumerator(this->child_cfgs);
-	while (mine->enumerate(mine, &my_cfg))
+	removed = this->child_cfgs;
+	this->child_cfgs = new_cfgs;
+	others = new_cfgs->create_enumerator(new_cfgs);
+	mine = removed->create_enumerator(removed);
+	while (others->enumerate(others, &other_cfg))
 	{
 		found = FALSE;
-		while (others->enumerate(others, &other_cfg))
+		while (mine->enumerate(mine, &my_cfg))
 		{
 			if (my_cfg->equals(my_cfg, other_cfg))
 			{
-				added->remove_at(added, others);
-				other_cfg->destroy(other_cfg);
+				removed->remove_at(removed, mine);
+				my_cfg->destroy(my_cfg);
 				found = TRUE;
 				break;
 			}
 		}
-		added->reset_enumerator(added, others);
+		removed->reset_enumerator(removed, mine);
 		if (!found)
 		{
-			this->child_cfgs->remove_at(this->child_cfgs, mine);
-			removed->insert_last(removed, my_cfg);
+			added->insert_last(added, other_cfg->get_ref(other_cfg));
 		}
-	}
-	while (others->enumerate(others, &other_cfg))
-	{
-		this->child_cfgs->insert_last(this->child_cfgs,
-									  other_cfg->get_ref(other_cfg));
 	}
 	others->destroy(others);
 	mine->destroy(mine);
@@ -379,7 +385,7 @@ static int get_ts_match(child_cfg_t *cfg, bool local,
 	int match = 0, round;
 
 	/* fetch configured TS list, narrowing dynamic TS */
-	cfg_list = cfg->get_traffic_selectors(cfg, local, NULL, hosts);
+	cfg_list = cfg->get_traffic_selectors(cfg, local, NULL, hosts, TRUE);
 
 	/* use a round counter to rate leading TS with higher priority */
 	round = sup_list->get_count(sup_list);
@@ -581,6 +587,18 @@ METHOD(peer_cfg_t, create_auth_cfg_enumerator, enumerator_t*,
 	return this->remote_auth->create_enumerator(this->remote_auth);
 }
 
+METHOD(peer_cfg_t, get_ppk_id, identification_t*,
+	private_peer_cfg_t *this)
+{
+	return this->ppk_id;
+}
+
+METHOD(peer_cfg_t, ppk_required, bool,
+	private_peer_cfg_t *this)
+{
+	return this->ppk_required;
+}
+
 #ifdef ME
 METHOD(peer_cfg_t, is_mediation, bool,
 	private_peer_cfg_t *this)
@@ -655,6 +673,14 @@ static bool auth_cfg_equal(private_peer_cfg_t *this, private_peer_cfg_t *other)
 	return equal;
 }
 
+/**
+ * Check if two identities are equal, or both are not set
+ */
+static bool id_equal(identification_t *this, identification_t *other)
+{
+	return this == other || (this && other && this->equals(this, other));
+}
+
 METHOD(peer_cfg_t, equals, bool,
 	private_peer_cfg_t *this, private_peer_cfg_t *other)
 {
@@ -688,13 +714,13 @@ METHOD(peer_cfg_t, equals, bool,
 		this->dpd == other->dpd &&
 		this->aggressive == other->aggressive &&
 		this->pull_mode == other->pull_mode &&
-		auth_cfg_equal(this, other)
+		auth_cfg_equal(this, other) &&
+		this->ppk_required == other->ppk_required &&
+		id_equal(this->ppk_id, other->ppk_id)
 #ifdef ME
 		&& this->mediation == other->mediation &&
 		streq(this->mediated_by, other->mediated_by) &&
-		(this->peer_id == other->peer_id ||
-		 (this->peer_id && other->peer_id &&
-		  this->peer_id->equals(this->peer_id, other->peer_id)))
+		id_equal(this->peer_id, other->peer_id)
 #endif /* ME */
 		);
 }
@@ -724,6 +750,7 @@ METHOD(peer_cfg_t, destroy, void,
 		DESTROY_IF(this->peer_id);
 		free(this->mediated_by);
 #endif /* ME */
+		DESTROY_IF(this->ppk_id);
 		this->lock->destroy(this->lock);
 		free(this->name);
 		free(this);
@@ -778,6 +805,8 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 			.create_pool_enumerator = _create_pool_enumerator,
 			.add_auth_cfg = _add_auth_cfg,
 			.create_auth_cfg_enumerator = _create_auth_cfg_enumerator,
+			.get_ppk_id = _get_ppk_id,
+			.ppk_required = _ppk_required,
 			.equals = (void*)_equals,
 			.get_ref = _get_ref,
 			.destroy = _destroy,
@@ -803,6 +832,8 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 		.pull_mode = !data->push_mode,
 		.dpd = data->dpd,
 		.dpd_timeout = data->dpd_timeout,
+		.ppk_id = data->ppk_id,
+		.ppk_required = data->ppk_required,
 		.vips = linked_list_create(),
 		.pools = linked_list_create(),
 		.local_auth = linked_list_create(),

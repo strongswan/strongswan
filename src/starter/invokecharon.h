@@ -1,6 +1,9 @@
-/* strongSwan charon launcher
- * Copyright (C) 2001-2002 Mathieu Lafon - Arkoon Network Security
- * Copyright (C) 2006 Martin Willi - Hochschule fuer Technik Rapperswil
+/*
+ * Copyright (C) 2006 Martin Willi
+ * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) 2001-2002 Mathieu Lafon
+ * Arkoon Network Security
  *
  * Ported from invokepluto.h to fit charons needs.
  *

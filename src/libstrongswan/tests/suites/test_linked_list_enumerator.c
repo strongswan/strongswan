@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -144,11 +144,12 @@ START_TEST(test_insert_before_ends)
 	int round;
 
 	enumerator = list->create_enumerator(list);
+	/* this does not change the enumerator position, which points to 1 */
 	list->insert_before(list, enumerator, (void*)0);
 	ck_assert_int_eq(list->get_count(list), 6);
 	ck_assert(list->get_first(list, (void*)&x) == SUCCESS);
 	ck_assert_int_eq(x, 0);
-	round = 0;
+	round = 1;
 	while (enumerator->enumerate(enumerator, &x))
 	{
 		ck_assert_int_eq(round, x);
@@ -177,8 +178,13 @@ START_TEST(test_insert_before_empty)
 	ck_assert_int_eq(x, 1);
 	ck_assert(list->get_last(list, (void*)&x) == SUCCESS);
 	ck_assert_int_eq(x, 1);
-	ck_assert(enumerator->enumerate(enumerator, &x));
+	ck_assert(!enumerator->enumerate(enumerator, &x));
+	list->insert_before(list, enumerator, (void*)2);
+	ck_assert_int_eq(list->get_count(list), 2);
+	ck_assert(list->get_first(list, (void*)&x) == SUCCESS);
 	ck_assert_int_eq(x, 1);
+	ck_assert(list->get_last(list, (void*)&x) == SUCCESS);
+	ck_assert_int_eq(x, 2);
 	ck_assert(!enumerator->enumerate(enumerator, NULL));
 	enumerator->destroy(enumerator);
 }
@@ -221,6 +227,43 @@ START_TEST(test_remove_at)
 }
 END_TEST
 
+START_TEST(test_remove_at_multi)
+{
+	enumerator_t *enumerator;
+	intptr_t x;
+	int round;
+
+	round = 1;
+	enumerator = list->create_enumerator(list);
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		ck_assert_int_eq(round, x);
+		if (round == 2 || round == 5)
+		{
+			list->remove_at(list, enumerator);
+		}
+		round++;
+	}
+	ck_assert_int_eq(list->get_count(list), 3);
+	list->reset_enumerator(list, enumerator);
+	round = 1;
+	while (enumerator->enumerate(enumerator, &x))
+	{
+		if (round == 2)
+		{	/* skip removed item */
+			round++;
+		}
+		ck_assert_int_eq(round, x);
+		list->remove_at(list, enumerator);
+		round++;
+	}
+	ck_assert_int_eq(list->get_count(list), 0);
+	list->reset_enumerator(list, enumerator);
+	ck_assert(!enumerator->enumerate(enumerator, &x));
+	enumerator->destroy(enumerator);
+}
+END_TEST
+
 START_TEST(test_remove_at_ends)
 {
 	enumerator_t *enumerator;
@@ -228,14 +271,14 @@ START_TEST(test_remove_at_ends)
 
 	enumerator = list->create_enumerator(list);
 	list->remove_at(list, enumerator);
-	ck_assert_int_eq(list->get_count(list), 5);
+	ck_assert_int_eq(list->get_count(list), 4);
 	ck_assert(list->get_first(list, (void*)&x) == SUCCESS);
-	ck_assert_int_eq(x, 1);
+	ck_assert_int_eq(x, 2);
 	while (enumerator->enumerate(enumerator, &x))
 	{
 	}
 	list->remove_at(list, enumerator);
-	ck_assert_int_eq(list->get_count(list), 5);
+	ck_assert_int_eq(list->get_count(list), 4);
 	ck_assert(list->get_last(list, (void*)&x) == SUCCESS);
 	ck_assert_int_eq(x, 5);
 	enumerator->destroy(enumerator);
@@ -254,14 +297,12 @@ START_TEST(test_insert_before_remove_at)
 	{
 		ck_assert_int_eq(round, x);
 		if (round == 2)
-		{	/* this replaces the current item, as insert_before does not change
-			 * the enumerator position */
+		{	/* this replaces the current item */
 			list->insert_before(list, enumerator, (void*)42);
 			list->remove_at(list, enumerator);
 		}
 		else if (round == 4)
-		{	/* this does not replace the item, as remove_at moves the enumerator
-			 * position to the previous item */
+		{	/* same here, the order of calls does not matter */
 			list->remove_at(list, enumerator);
 			list->insert_before(list, enumerator, (void*)21);
 		}
@@ -276,13 +317,9 @@ START_TEST(test_insert_before_remove_at)
 		{	/* check replaced item */
 			ck_assert_int_eq(42, x);
 		}
-		else if (round == 3)
-		{	/* check misplaced item */
-			ck_assert_int_eq(21, x);
-		}
 		else if (round == 4)
-		{	/* check misplaced item */
-			ck_assert_int_eq(3, x);
+		{	/* check replace item */
+			ck_assert_int_eq(21, x);
 		}
 		else
 		{
@@ -348,6 +385,7 @@ Suite *linked_list_enumerator_suite_create()
 	tc = tcase_create("modify");
 	tcase_add_checked_fixture(tc, setup_list, teardown_list);
 	tcase_add_test(tc, test_remove_at);
+	tcase_add_test(tc, test_remove_at_multi);
 	tcase_add_test(tc, test_remove_at_ends);
 	tcase_add_test(tc, test_insert_before_remove_at);
 	suite_add_tcase(s, tc);

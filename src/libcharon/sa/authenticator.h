@@ -1,8 +1,8 @@
 /*
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
- * Copyright (C) 2008 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -155,6 +155,17 @@ struct authenticator_t {
 	 *						- NEED_MORE if another exchange required
 	 */
 	status_t (*build)(authenticator_t *this, message_t *message);
+
+	/**
+	 * Optional method to set a Postquantum Preshared Key (PPK) to be used
+	 * during authentication.
+	 *
+	 * Has to be called before the final call to process()/build().
+	 *
+	 * @param ppk			PPK to use
+	 * @param no_ppk_auth	whether to add a NO_PPK_AUTH notify in build()
+	 */
+	void (*use_ppk)(authenticator_t *this, chunk_t ppk, bool no_ppk_auth);
 
 	/**
 	 * Check if the authenticator is capable of mutual authentication.

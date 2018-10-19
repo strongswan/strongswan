@@ -2,7 +2,7 @@
  * Copyright (C) 2012-2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -59,6 +59,7 @@ enum android_vpn_state_t {
 	CHARONSERVICE_PEER_AUTH_ERROR,
 	CHARONSERVICE_LOOKUP_ERROR,
 	CHARONSERVICE_UNREACHABLE_ERROR,
+	CHARONSERVICE_CERTIFICATE_UNAVAILABLE,
 	CHARONSERVICE_GENERIC_ERROR,
 };
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -32,7 +32,7 @@
 /**
  * General purpose netlink buffer.
  *
- * Some platforms require an enforced aligment to four bytes (e.g. ARM).
+ * Some platforms require an enforced alignment to four bytes (e.g. ARM).
  */
 typedef union {
 	struct nlmsghdr hdr;
@@ -100,5 +100,12 @@ void netlink_add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
  * @return				buffer to len bytes of attribute data, NULL on error
  */
 void* netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len);
+
+/**
+ * Determine buffer size for received messages (e.g. events).
+ *
+ * @return				buffer size
+ */
+u_int netlink_get_buflen();
 
 #endif /* KERNEL_NETLINK_SHARED_H_ */

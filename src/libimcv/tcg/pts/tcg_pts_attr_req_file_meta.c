@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011-2012 Sansar Choinyambuu
- * Copyright (C) 2011-2014 Andreas Steffen
+ * Copyright (C) 2011-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -165,6 +165,7 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	if (this->value.len < PTS_REQ_FILE_META_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for Request File Metadata");
+		return FAILED;
 	}
 
 	reader = bio_reader_create(this->value);

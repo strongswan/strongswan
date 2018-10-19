@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2014 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2014-2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -452,9 +452,10 @@ static void verify_sections(linked_list_t *verifier, char *parent)
 
 	enumerator = settings->create_section_enumerator(settings, parent);
 	ver = verifier->create_enumerator(verifier);
-	while (enumerator->enumerate(enumerator, &section) &&
-		   ver->enumerate(ver, &current))
+	while (enumerator->enumerate(enumerator, &section))
 	{
+		ck_assert_msg(ver->enumerate(ver, &current),
+					  "no more sections expected, found %s", section);
 		ck_assert_str_eq(section, current);
 		verifier->remove_at(verifier, ver);
 	}
@@ -498,10 +499,11 @@ static void verify_key_values(linked_list_t *keys, linked_list_t *values,
 	enumerator = settings->create_key_value_enumerator(settings, parent);
 	enum_keys = keys->create_enumerator(keys);
 	enum_values = values->create_enumerator(values);
-	while (enumerator->enumerate(enumerator, &key, &value) &&
-		   enum_keys->enumerate(enum_keys, &current_key) &&
-		   enum_values->enumerate(enum_values, &current_value))
+	while (enumerator->enumerate(enumerator, &key, &value))
 	{
+		ck_assert_msg(enum_keys->enumerate(enum_keys, &current_key),
+					  "no more key/value expected, found %s = %s", key, value);
+		ck_assert(enum_values->enumerate(enum_values, &current_value));
 		ck_assert_str_eq(current_key, key);
 		ck_assert_str_eq(current_value, value);
 		keys->remove_at(keys, enum_keys);
@@ -519,8 +521,8 @@ START_TEST(test_key_value_enumerator)
 {
 	linked_list_t *keys, *values;
 
-	keys = linked_list_create_with_items("key1", "key2", "empty", "key3", NULL);
-	values = linked_list_create_with_items("val1", "with space", "", "string with\nnewline", NULL);
+	keys = linked_list_create_with_items("key1", "key2", "empty", "key3", "key4", "key5", NULL);
+	values = linked_list_create_with_items("val1", "with space", "", "string with\nnewline", "multi line\nstring", "escaped newline", NULL);
 	verify_key_values(keys, values, "main");
 
 	keys = linked_list_create_with_items("key", "key2", "subsub", NULL);
@@ -894,7 +896,6 @@ START_TEST(test_load_string)
 }
 END_TEST
 
-
 START_TEST(test_load_string_section)
 {
 	char *content =
@@ -914,13 +915,6 @@ START_TEST(test_load_string_section)
 	ck_assert(settings->load_string_section(settings, include_content2, TRUE, "main.sub1"));
 	verify_include();
 
-	/* invalid strings are a failure */
-	ck_assert(!settings->load_string_section(settings, "conf {", TRUE, ""));
-	/* NULL or empty strings are OK though */
-	ck_assert(settings->load_string_section(settings, "", TRUE, ""));
-	ck_assert(settings->load_string_section(settings, NULL, TRUE, ""));
-	verify_include();
-
 	ck_assert(settings->load_string_section(settings, include_content2, FALSE, "main"));
 	verify_null("main.key1");
 	verify_string("v2", "main.key2");
@@ -931,6 +925,56 @@ START_TEST(test_load_string_section)
 	ck_assert(settings->load_string_section(settings, include_content2, TRUE, "main.sub2"));
 	verify_string("v2", "main.sub2.key2");
 	verify_string("val", "main.sub2.sub1.key");
+}
+END_TEST
+
+START_TEST(test_load_string_section_null)
+{
+	linked_list_t *keys, *values;
+
+	char *content =
+		"main {\n"
+		"	key1 = val1\n"
+		"	key2 = val2\n"
+		"	none = x\n"
+		"	sub1 {\n"
+		"		include = value\n"
+		"		key2 = value2\n"
+		"	}\n"
+		"}";
+
+	settings = settings_create_string(content);
+
+	ck_assert(settings->load_string_section(settings, include_content1, TRUE, ""));
+	ck_assert(settings->load_string_section(settings, include_content2, TRUE, "main.sub1"));
+	verify_include();
+
+	/* invalid strings are a failure */
+	ck_assert(!settings->load_string_section(settings, "conf {", TRUE, ""));
+	/* NULL or empty strings are OK though when merging */
+	ck_assert(settings->load_string_section(settings, "", TRUE, ""));
+	ck_assert(settings->load_string_section(settings, NULL, TRUE, ""));
+	verify_include();
+
+	/* they do purge the settings if merge is not TRUE */
+	ck_assert(settings->load_string_section(settings, "", FALSE, "main"));
+	verify_null("main.key1");
+	verify_null("main.sub1.key2");
+
+	keys = linked_list_create_with_items(NULL);
+	verify_sections(keys, "main");
+
+	keys = linked_list_create_with_items(NULL);
+	values = linked_list_create_with_items(NULL);
+	verify_key_values(keys, values, "main");
+
+	keys = linked_list_create_with_items("main", NULL);
+	verify_sections(keys, "");
+
+	ck_assert(settings->load_string_section(settings, NULL, FALSE, ""));
+
+	keys = linked_list_create_with_items(NULL);
+	verify_sections(keys, "");
 }
 END_TEST
 
@@ -1037,6 +1081,50 @@ START_TEST(test_add_fallback)
 }
 END_TEST
 
+START_TEST(test_fallback_resolution)
+{
+	linked_list_t *keys, *values;
+
+	settings->destroy(settings);
+	create_settings(chunk_from_str(
+		"base {\n"
+		"	sub {\n"
+		"		key1 = val1\n"
+		"		key2 = val2\n"
+		"		key5 = val5\n"
+		"		subsub {\n"
+		"			subkey1 = subval1\n"
+		"		}\n"
+		"	}\n"
+		"}\n"
+		"other {\n"
+		"	sub {\n"
+		"		key3 = val3\n"
+		"		key4 = val4\n"
+		"	}\n"
+		"}\n"
+		"main {\n"
+		"	sub {\n"
+		"		key4=\n"
+		"		key5 = \n"
+		"	}\n"
+		"}"));
+
+	settings->add_fallback(settings, "other", "base");
+	settings->add_fallback(settings, "main.sub", "other.sub");
+
+	verify_string("val1", "main.sub.key1");
+	verify_string("val3", "main.sub.key3");
+	verify_null("main.sub.key4");
+	verify_null("main.sub.key5");
+	verify_string("subval1", "main.sub.subsub.subkey1");
+
+	keys = linked_list_create_with_items("key3", "key1", "key2", NULL);
+	values = linked_list_create_with_items("val3", "val1", "val2", NULL);
+	verify_key_values(keys, values, "main.sub");
+}
+END_TEST
+
 START_TEST(test_add_fallback_printf)
 {
 	settings->add_fallback(settings, "%s.sub1", "sub", "main");
@@ -1048,6 +1136,264 @@ START_TEST(test_add_fallback_printf)
 	verify_string("val1", "main.sub2.key1");
 	verify_string("subval2", "main.sub2.key2");
 	verify_string("subsubval1", "main.sub2.subsub.subkey1");
+}
+END_TEST
+
+START_TEST(test_references)
+{
+	linked_list_t *keys, *values;
+
+	create_settings(chunk_from_str(
+		"main {\n"
+		"	sub1 {\n"
+		"		key1 = sub1val1\n"
+		"		key2 = sub1val2\n"
+		"		key4 = sub1val4\n"
+		"		subsub {\n"
+		"			subkey1 = sub1subsubval1\n"
+		"			subkey2 = sub1subsubval2\n"
+		"		}\n"
+		"		subsub1 {\n"
+		"			subkey1 = sub1subsub1val1\n"
+		"		}\n"
+		"	}\n"
+		"	sub2 : main.sub1 {\n"
+		"	    key2 = sub2val2\n"
+		"		key3 = sub2val3\n"
+		"		key4 =\n"
+		"		subsub {\n"
+		"			subkey1 = sub2subsubval1\n"
+		"			subkey3 = sub2subsubval3\n"
+		"		}\n"
+		"	}\n"
+		"}"));
+
+	verify_string("sub1val1", "main.sub2.key1");
+	verify_string("sub2val2", "main.sub2.key2");
+	verify_string("sub2val3", "main.sub2.key3");
+	verify_null("main.sub2.key4");
+	verify_string("sub2subsubval1", "main.sub2.subsub.subkey1");
+	verify_string("sub1subsubval2", "main.sub2.subsub.subkey2");
+	verify_string("sub2subsubval3", "main.sub2.subsub.subkey3");
+	verify_string("sub1subsub1val1", "main.sub2.subsub1.subkey1");
+
+	keys = linked_list_create_with_items("subsub", "subsub1", NULL);
+	verify_sections(keys, "main.sub2");
+
+	keys = linked_list_create_with_items("key2", "key3", "key1", NULL);
+	values = linked_list_create_with_items("sub2val2", "sub2val3", "sub1val1", NULL);
+	verify_key_values(keys, values, "main.sub2");
+
+	keys = linked_list_create_with_items("subkey1", "subkey3", "subkey2", NULL);
+	values = linked_list_create_with_items("sub2subsubval1", "sub2subsubval3", "sub1subsubval2", NULL);
+	verify_key_values(keys, values, "main.sub2.subsub");
+}
+END_TEST
+
+START_TEST(test_references_templates)
+{
+	create_settings(chunk_from_str(
+		"sub-def {\n"
+		"	key1 = sub1val1\n"
+		"	key2 = sub1val2\n"
+		"	subsub {\n"
+		"		subkey1 = sub1subsubval1\n"
+		"	}\n"
+		"}\n"
+		"subsub-def {\n"
+		"	subkey1 = sub1subval1\n"
+		"	subkey2 = sub1subval1\n"
+		"}\n"
+		"main {\n"
+		"	sub1 : sub-def {\n"
+		"		key1 = mainsub1val1\n"
+		"		subsub : subsub-def {\n"
+		"			subkey1 = mainsub1subval1\n"
+		"		}\n"
+		"		subsub1 {\n"
+		"			subkey1 = mainsub1sub1val1\n"
+		"		}\n"
+		"	}\n"
+		"	sub2 : sub-def {\n"
+		"	    key2 = mainsub2val2\n"
+		"		key3 = mainsub2val3\n"
+		"		subsub {\n"
+		"			subkey3 = mainsub2subsubval3\n"
+		"		}\n"
+		"	}\n"
+		"}"));
+
+	verify_string("mainsub1val1", "main.sub1.key1");
+	verify_string("sub1val2", "main.sub1.key2");
+	verify_string("mainsub1subval1", "main.sub1.subsub.subkey1");
+	verify_string("sub1subval1", "main.sub1.subsub.subkey2");
+	verify_string("mainsub1sub1val1", "main.sub1.subsub1.subkey1");
+	verify_string("sub1val1", "main.sub2.key1");
+	verify_string("mainsub2val2", "main.sub2.key2");
+	verify_string("mainsub2val3", "main.sub2.key3");
+	verify_string("sub1subsubval1", "main.sub2.subsub.subkey1");
+	verify_null("main.sub2.subsub.subkey2");
+	verify_string("mainsub2subsubval3", "main.sub2.subsub.subkey3");
+}
+END_TEST
+
+START_TEST(test_references_order)
+{
+	linked_list_t *keys, *values;
+
+	create_settings(chunk_from_str(
+		"main {\n"
+		"	sub1 {\n"
+		"		key1 = sub1val1\n"
+		"		key2 = sub1val2\n"
+		"		subsub1 {\n"
+		"		}\n"
+		"	}\n"
+		"	sub2 {\n"
+		"	    key2 = sub2val2\n"
+		"		key3 = sub2val3\n"
+		"		subsub2 {\n"
+		"		}\n"
+		"	}\n"
+		"	sub3 : main.sub1, main.sub2 {\n"
+		"	    key3 = sub3val3\n"
+		"	}\n"
+		"	sub4 : main.sub2, main.sub1 {\n"
+		"	    key3 = sub4val3\n"
+		"	}\n"
+		"}"));
+
+	verify_string("sub1val2", "main.sub3.key2");
+	verify_string("sub3val3", "main.sub3.key3");
+	verify_string("sub2val2", "main.sub4.key2");
+	verify_string("sub4val3", "main.sub4.key3");
+
+	/* the order of referenced keys/subsections depends on the reference
+	 * statement's order */
+	keys = linked_list_create_with_items("subsub1", "subsub2", NULL);
+	verify_sections(keys, "main.sub3");
+
+	keys = linked_list_create_with_items("subsub2", "subsub1", NULL);
+	verify_sections(keys, "main.sub4");
+
+	/* local keys are always enumerated first */
+	keys = linked_list_create_with_items("key3", "key1", "key2", NULL);
+	values = linked_list_create_with_items("sub3val3", "sub1val1", "sub1val2", NULL);
+	verify_key_values(keys, values, "main.sub3");
+
+	keys = linked_list_create_with_items("key3", "key2", "key1", NULL);
+	values = linked_list_create_with_items("sub4val3", "sub2val2", "sub1val1", NULL);
+	verify_key_values(keys, values, "main.sub4");
+}
+END_TEST
+
+START_TEST(test_references_resolution)
+{
+	linked_list_t *keys, *values;
+
+	create_settings(chunk_from_str(
+		"sec-a {\n"
+		"	sub1 {\n"
+		"		a1 = val-a1\n"
+		"		key = sec-a-val1\n"
+		"		sub-a {\n"
+		"		}\n"
+		"	}\n"
+		"}\n"
+		"sec-b : sec-a {\n"
+		"	sub1 {\n"
+		"		b1 = val-b1\n"
+		"		key = sec-b-val1\n"
+		"		sub-b1 {\n"
+		"		}\n"
+		"	}\n"
+		"	sub2 {\n"
+		"		b2 = val-b2\n"
+		"		key = sec-b-val2\n"
+		"		sub-b2 {\n"
+		"		}\n"
+		"	}\n"
+		"}\n"
+		"sec-c : sec-b {\n"
+		"	sub2 : sec-b.sub1 {\n"
+		"		c2 = val-c2\n"
+		"		key = sec-c-val2\n"
+		"		sub-c2 {\n"
+		"		}\n"
+		"	}\n"
+		"}"));
+
+	verify_string("sec-c-val2", "sec-c.sub2.key");
+	settings_remove_value(settings, "sec-c.sub2.key");
+	verify_string("sec-b-val1", "sec-c.sub2.key");
+	settings_remove_value(settings, "sec-b.sub1.key");
+	verify_string("sec-a-val1", "sec-c.sub2.key");
+	settings_remove_value(settings, "sec-a.sub1.key");
+	verify_string("sec-b-val2", "sec-c.sub2.key");
+	settings_remove_value(settings, "sec-b.sub2.key");
+	verify_null("sec-c.sub2.key");
+
+	keys = linked_list_create_with_items("sub-c2", "sub-b1", "sub-a", "sub-b2", NULL);
+	verify_sections(keys, "sec-c.sub2");
+
+	keys = linked_list_create_with_items("c2", "b1", "a1", "b2", NULL);
+	values = linked_list_create_with_items("val-c2", "val-b1", "val-a1", "val-b2", NULL);
+	verify_key_values(keys, values, "sec-c.sub2");
+}
+END_TEST
+
+START_TEST(test_references_fallback)
+{
+	linked_list_t *keys, *values;
+
+#define test_references_fallback_base_settings \
+		"lib {\n" \
+		"	key1 = libval1\n" \
+		"	keylib = libval\n" \
+		"	sub {\n" \
+		"		key1 = libsubval1\n" \
+		"	}\n" \
+		"	libsub {\n" \
+		"	}\n" \
+		"}\n" \
+		"other {\n" \
+		"	key1 = otherval1\n" \
+		"	keyother = otherval\n" \
+		"	sub {\n" \
+		"		key1 = othersubval1\n" \
+		"	}\n" \
+		"	othersub {\n" \
+		"	}\n" \
+		"}\n"
+
+	create_settings(chunk_from_str(
+		test_references_fallback_base_settings "app : other {}"));
+
+	/* references have precedence over fallbacks */
+	settings->add_fallback(settings, "app", "lib");
+	verify_string("otherval1", "app.key1");
+	verify_string("libval", "app.keylib");
+	verify_string("othersubval1", "app.sub.key1");
+
+	keys = linked_list_create_with_items("sub", "othersub", "libsub", NULL);
+	verify_sections(keys, "app");
+
+	keys = linked_list_create_with_items("key1", "keyother", "keylib", NULL);
+	values = linked_list_create_with_items("otherval1", "otherval", "libval", NULL);
+	verify_key_values(keys, values, "app");
+
+	/* fallbacks are unaffected when reloading configs with references */
+	ck_assert(settings->load_string_section(settings,
+		test_references_fallback_base_settings "app {}", FALSE, ""));
+	verify_string("libval1", "app.key1");
+	verify_string("libval", "app.keylib");
+	verify_string("libsubval1", "app.sub.key1");
+
+	ck_assert(settings->load_string_section(settings,
+		test_references_fallback_base_settings "app : other {}", FALSE, ""));
+	verify_string("otherval1", "app.key1");
+	verify_string("libval", "app.keylib");
+	verify_string("othersubval1", "app.sub.key1");
 }
 END_TEST
 
@@ -1109,6 +1455,31 @@ START_TEST(test_valid)
 		"}\n");
 	ck_assert(chunk_write(contents, path, 0022, TRUE));
 	ck_assert(settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"equals = a setting with = and { character");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(settings->load_files(settings, path, FALSE));
+	verify_string("a setting with = and { character", "equals");
+
+	contents = chunk_from_str(
+		"ref { key = value }\nvalid:ref {}");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(settings->load_files(settings, path, FALSE));
+	verify_string("value", "valid.key");
+
+	contents = chunk_from_str(
+		"ref { key = value }\nvalid\n:\nref {}");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(settings->load_files(settings, path, FALSE));
+	verify_string("value", "valid.key");
+
+	contents = chunk_from_str(
+		"ref { key = value }\nother { key1 = value1 }\nvalid\n:\nref\n\t,\nother {}");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(settings->load_files(settings, path, FALSE));
+	verify_string("value", "valid.key");
+	verify_string("value1", "valid.key1");
 }
 END_TEST
 
@@ -1148,9 +1519,122 @@ START_TEST(test_invalid)
 	ck_assert(!settings->load_files(settings, path, FALSE));
 
 	contents = chunk_from_str(
-		"only = a single setting = per line");
+		"\"unexpected\" = string");
 	ck_assert(chunk_write(contents, path, 0022, TRUE));
 	ck_assert(!settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"incorrect :: ref {}");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(!settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"/var/log/daemon.log { dmn = 1 }");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(!settings->load_files(settings, path, FALSE));
+
+	contents = chunk_from_str(
+		"filelog { /var/log/daemon.log = 1 }");
+	ck_assert(chunk_write(contents, path, 0022, TRUE));
+	ck_assert(!settings->load_files(settings, path, FALSE));
+}
+END_TEST
+
+START_SETUP(setup_crlf_config)
+{
+	chunk_t inc1 = chunk_from_str(
+		"main {\r\n"
+		"	key1 = n1\r\n"
+		"	key2 = n2\n"
+		"	key3 = val3\n"
+		"	none = \n"
+		"	sub1 {\n"
+		"		key3 = value\n"
+		"	}\n"
+		"	sub2 {\n"
+		"		sub3 = val3\n"
+		"	}\n"
+		"	include " include2 "\n"
+		"}");
+	chunk_t inc2 = chunk_from_str(
+		"key2 = v2\n"
+		"sub1 {\n"
+		"	key = val\n"
+		"}");
+	ck_assert(chunk_write(inc1, include1, 0022, TRUE));
+	ck_assert(chunk_write(inc2, include2, 0022, TRUE));
+}
+END_SETUP
+
+START_TEST(test_crlf)
+{
+	chunk_t contents = chunk_from_str(
+		"main {\r\n"
+		"	key1 = val1\r\n"
+		"	none =\r\n"
+		"	sub1 {\r\n"
+		"		key2 = v2\r\n"
+		"		# key2 = v3\r\n"
+		"		sub1 {\r\n"
+		"			key = val\r\n"
+		"		}\r\n"
+		"	}\r\n"
+		"}");
+
+	create_settings(contents);
+
+	verify_string("val1", "main.key1");
+	verify_string("v2", "main.sub1.key2");
+	verify_string("val", "main.sub1.sub1.key");
+	verify_null("main.none");
+}
+END_TEST
+
+START_TEST(test_crlf_string)
+{
+	chunk_t contents = chunk_from_str(
+		"main {\r\n"
+		"	key1 = \"new\r\nline\"\r\n"
+		"	key2 = \"joi\\\r\nned\"\r\n"
+		"	none =\r\n"
+		"	sub1 {\r\n"
+		"		key2 = v2\r\n"
+		"		sub1 {\r\n"
+		"			key = val\r\n"
+		"		}\r\n"
+		"	}\r\n"
+		"}");
+
+	create_settings(contents);
+
+	verify_string("new\nline", "main.key1");
+	verify_string("joined", "main.key2");
+	verify_string("v2", "main.sub1.key2");
+	verify_string("val", "main.sub1.sub1.key");
+	verify_null("main.none");
+}
+END_TEST
+
+START_TEST(test_crlf_include)
+{
+	chunk_t contents = chunk_from_str(
+		"main {\r\n"
+		"	key1 = val1\r\n"
+		"	none =\r\n"
+		"	sub1 {\r\n"
+		"		key2 = v2\r\n"
+		"		sub1 {\r\n"
+		"			key = val\r\n"
+		"		}\r\n"
+		"	}\r\n"
+		"}");
+
+	create_settings(contents);
+
+	verify_string("val1", "main.key1");
+	verify_string("v2", "main.sub1.key2");
+	verify_string("val", "main.sub1.sub1.key");
+	verify_null("main.none");
 }
 END_TEST
 
@@ -1222,12 +1706,23 @@ Suite *settings_suite_create()
 	tcase_add_checked_fixture(tc, setup_include_config, teardown_config);
 	tcase_add_test(tc, test_load_string);
 	tcase_add_test(tc, test_load_string_section);
+	tcase_add_test(tc, test_load_string_section_null);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("fallback");
 	tcase_add_checked_fixture(tc, setup_fallback_config, teardown_config);
 	tcase_add_test(tc, test_add_fallback);
+	tcase_add_test(tc, test_fallback_resolution);
 	tcase_add_test(tc, test_add_fallback_printf);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("references");
+	tcase_add_checked_fixture(tc, NULL, teardown_config);
+	tcase_add_test(tc, test_references);
+	tcase_add_test(tc, test_references_templates);
+	tcase_add_test(tc, test_references_order);
+	tcase_add_test(tc, test_references_resolution);
+	tcase_add_test(tc, test_references_fallback);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("strings");
@@ -1239,6 +1734,13 @@ Suite *settings_suite_create()
 	tcase_add_checked_fixture(tc, setup_base_config, teardown_config);
 	tcase_add_test(tc, test_valid);
 	tcase_add_test(tc, test_invalid);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("crlf");
+	tcase_add_checked_fixture(tc, setup_crlf_config, teardown_include_config);
+	tcase_add_test(tc, test_crlf);
+	tcase_add_test(tc, test_crlf_string);
+	tcase_add_test(tc, test_crlf_include);
 	suite_add_tcase(s, tc);
 
 	return s;

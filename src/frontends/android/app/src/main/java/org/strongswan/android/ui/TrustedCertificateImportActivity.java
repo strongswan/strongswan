@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -18,6 +18,7 @@ package org.strongswan.android.ui;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -44,14 +45,6 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 {
 	private static final int OPEN_DOCUMENT = 0;
 	private static final String DIALOG_TAG = "Dialog";
-
-	/* same as those listed in the manifest */
-	private static final String[] ACCEPTED_MIME_TYPES = {
-		"application/x-x509-ca-cert",
-		"application/x-x509-server-cert",
-		"application/x-pem-file",
-		"application/pkix-cert"
-	};
 	private Uri mCertificateUri;
 
 	@TargetApi(Build.VERSION_CODES.KITKAT)
@@ -75,8 +68,15 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		{
 			Intent openIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 			openIntent.setType("*/*");
-			openIntent.putExtra(Intent.EXTRA_MIME_TYPES, ACCEPTED_MIME_TYPES);
-			startActivityForResult(openIntent, OPEN_DOCUMENT);
+			try
+			{
+				startActivityForResult(openIntent, OPEN_DOCUMENT);
+			}
+			catch (ActivityNotFoundException e)
+			{	/* some devices are unable to browse for files */
+				finish();
+				return;
+			}
 		}
 	}
 

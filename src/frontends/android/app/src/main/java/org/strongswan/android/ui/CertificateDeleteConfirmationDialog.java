@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,8 +15,8 @@
 
 package org.strongswan.android.ui;
 
-import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
@@ -43,12 +43,12 @@ public class CertificateDeleteConfirmationDialog extends AppCompatDialogFragment
 	}
 
 	@Override
-	public void onAttach(Activity activity)
+	public void onAttach(Context context)
 	{
-		super.onAttach(activity);
-		if (activity instanceof OnCertificateDeleteListener)
+		super.onAttach(context);
+		if (context instanceof OnCertificateDeleteListener)
 		{
-			mListener = (OnCertificateDeleteListener)activity;
+			mListener = (OnCertificateDeleteListener)context;
 		}
 	}
 

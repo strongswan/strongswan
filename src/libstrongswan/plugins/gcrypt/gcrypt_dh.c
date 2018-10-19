@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2010 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -195,8 +195,8 @@ METHOD(diffie_hellman_t, destroy, void,
 /*
  * Generic internal constructor
  */
-gcrypt_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
-							chunk_t g, chunk_t p)
+static gcrypt_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
+								   chunk_t g, chunk_t p)
 {
 	private_gcrypt_dh_t *this;
 	gcry_error_t err;
