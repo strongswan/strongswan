@@ -371,6 +371,76 @@ METHOD(private_key_t, get_keysize, int,
 	return this->pubkey->get_keysize(this->pubkey);
 }
 
+/**
+ * Private data for RSA scheme enumerator
+ */
+typedef struct {
+	enumerator_t public;
+	int index;
+	bool reverse;
+} scheme_enumerator_t;
+
+static signature_params_t rsa_schemes[] = {
+	{ .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256 },
+	{ .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512 },
+};
+
+METHOD(enumerator_t, enumerate_rsa_scheme, bool,
+	scheme_enumerator_t *this, va_list args)
+{
+	signature_params_t **params;
+
+	VA_ARGS_VGET(args, params);
+
+	if ((this->reverse && --this->index >= 0) ||
+	   (!this->reverse && ++this->index < countof(rsa_schemes)))
+	{
+		*params = &rsa_schemes[this->index];
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Create an enumerator for the supported RSA signature schemes
+ */
+static enumerator_t *create_rsa_enumerator(private_agent_private_key_t *this)
+{
+	scheme_enumerator_t *enumerator;
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_rsa_scheme,
+			.destroy = (void*)free,
+		},
+		.index = -1,
+		.reverse = FALSE,
+	);
+	/* propose SHA-512 first for larger keys */
+	if (get_keysize(this) > 3072)
+	{
+		enumerator->index = countof(rsa_schemes);
+		enumerator->reverse = TRUE;
+	}
+	return &enumerator->public;
+}
+
+METHOD(private_key_t, supported_signature_schemes, enumerator_t*,
+	private_agent_private_key_t *this)
+{
+	switch (get_type(this))
+	{
+		case KEY_RSA:
+			return create_rsa_enumerator(this);
+		case KEY_ECDSA:
+			return signature_schemes_for_key(KEY_ECDSA, get_keysize(this));
+		default:
+			break;
+	}
+	return enumerator_create_empty();
+}
+
 METHOD(private_key_t, get_public_key, public_key_t*,
 	private_agent_private_key_t *this)
 {
@@ -444,6 +514,7 @@ agent_private_key_t *agent_private_key_open(key_type_t type, va_list args)
 		.public = {
 			.key = {
 				.get_type = _get_type,
+				.supported_signature_schemes = _supported_signature_schemes,
 				.sign = _sign,
 				.decrypt = _decrypt,
 				.get_keysize = _get_keysize,
