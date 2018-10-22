@@ -248,6 +248,12 @@ static bool scheme_supported(private_agent_private_key_t *this,
 					break;
 			}
 			return FALSE;
+		case KEY_ED25519:
+			*prefix = "ssh-ed25519";
+			return scheme == SIGN_ED25519;
+		case KEY_ED448:
+			*prefix = "ssh-ed448";
+			return scheme == SIGN_ED448;
 		case KEY_ECDSA:
 			return scheme == SIGN_ECDSA_256 ||
 				   scheme == SIGN_ECDSA_384 ||
@@ -261,6 +267,7 @@ METHOD(private_key_t, sign, bool,
 	private_agent_private_key_t *this, signature_scheme_t scheme, void *params,
 	chunk_t data, chunk_t *signature)
 {
+	key_type_t type;
 	uint32_t len, flags = 0;
 	char buf[2048], *prefix = NULL;
 	chunk_t blob;
@@ -321,9 +328,9 @@ METHOD(private_key_t, sign, bool,
 		DBG1(DBG_LIB, "ssh-agent didn't return requested %s signature", prefix);
 		return FALSE;
 	}
-
-	if (this->pubkey->get_type(this->pubkey) == KEY_RSA)
-	{	/* for RSA, the signature has no special encoding */
+	type = this->pubkey->get_type(this->pubkey);
+	if (type == KEY_RSA || type == KEY_ED25519 || type == KEY_ED448)
+	{	/* for RSA/EdDSA, the signature has no special encoding */
 		blob = read_string(&blob);
 		if (blob.len)
 		{
@@ -429,12 +436,16 @@ static enumerator_t *create_rsa_enumerator(private_agent_private_key_t *this)
 METHOD(private_key_t, supported_signature_schemes, enumerator_t*,
 	private_agent_private_key_t *this)
 {
-	switch (get_type(this))
+	key_type_t type = get_type(this);
+
+	switch (type)
 	{
 		case KEY_RSA:
 			return create_rsa_enumerator(this);
+		case KEY_ED25519:
+		case KEY_ED448:
 		case KEY_ECDSA:
-			return signature_schemes_for_key(KEY_ECDSA, get_keysize(this));
+			return signature_schemes_for_key(type, get_keysize(this));
 		default:
 			break;
 	}
