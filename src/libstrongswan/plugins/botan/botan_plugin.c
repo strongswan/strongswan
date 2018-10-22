@@ -36,6 +36,8 @@
 #include "botan_ec_diffie_hellman.h"
 #include "botan_ec_public_key.h"
 #include "botan_ec_private_key.h"
+#include "botan_ed_public_key.h"
+#include "botan_ed_private_key.h"
 #include "botan_gcm.h"
 #include "botan_util_keys.h"
 #include "botan_x25519.h"
@@ -168,7 +170,8 @@ METHOD(plugin_t, get_features, int,
 #endif /* BOTAN_HAS_HMAC */
 
 		/* generic key loaders */
-#if defined (BOTAN_HAS_RSA) || defined(BOTAN_HAS_ECDSA)
+#if defined (BOTAN_HAS_RSA) || defined(BOTAN_HAS_ECDSA) || \
+	defined(BOTAN_HAS_ED25519)
 		PLUGIN_REGISTER(PUBKEY, botan_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
 #ifdef BOTAN_HAS_RSA
@@ -177,6 +180,9 @@ METHOD(plugin_t, get_features, int,
 #ifdef BOTAN_HAS_ECDSA
 			PLUGIN_PROVIDE(PUBKEY, KEY_ECDSA),
 #endif
+#ifdef BOTAN_HAS_ED25519
+			PLUGIN_PROVIDE(PUBKEY, KEY_ED25519),
+#endif
 		PLUGIN_REGISTER(PRIVKEY, botan_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 #ifdef BOTAN_HAS_RSA
@@ -184,6 +190,9 @@ METHOD(plugin_t, get_features, int,
 #endif
 #ifdef BOTAN_HAS_ECDSA
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ECDSA),
+#endif
+#ifdef BOTAN_HAS_ED25519
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ED25519),
 #endif
 #endif
 		/* RSA */
@@ -271,6 +280,21 @@ METHOD(plugin_t, get_features, int,
 #endif
 #endif /* BOTAN_HAS_EMSA1 */
 #endif /* BOTAN_HAS_ECDSA */
+
+#ifdef BOTAN_HAS_ED25519
+		/* EdDSA private/public key loading */
+		PLUGIN_REGISTER(PUBKEY, botan_ed_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ED25519),
+		PLUGIN_REGISTER(PRIVKEY, botan_ed_private_key_load, TRUE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ED25519),
+		PLUGIN_REGISTER(PRIVKEY_GEN, botan_ed_private_key_gen, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ED25519),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ED25519),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ED25519),
+		/* register a pro forma identity hasher, never instantiated */
+		PLUGIN_REGISTER(HASHER, return_null),
+			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
+#endif
 
 		/* random numbers */
 #if BOTAN_HAS_SYSTEM_RNG

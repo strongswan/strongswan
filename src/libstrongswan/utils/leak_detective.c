@@ -619,6 +619,7 @@ static char *whitelist[] = {
 	"botan_privkey_create_ecdsa",
 	"botan_privkey_create_ecdh",
 	"botan_privkey_load_ecdh",
+	"botan_privkey_load",
 };
 
 /**

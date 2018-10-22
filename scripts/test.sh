@@ -80,7 +80,7 @@ gcrypt)
 	DEPS="libgcrypt11-dev"
 	;;
 botan)
-	CONFIG="--disable-defaults --enable-pki --enable-botan"
+	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem"
 	# we can't use the old package that comes with Ubuntu so we build from
 	# the current master until 2.8.0 is released and then probably switch to
 	# that unless we need newer features (at least 2.7.0 plus PKCS#1 patch is
