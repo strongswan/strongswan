@@ -69,9 +69,7 @@ static bool verify_signature(private_botan_ec_public_key_t *this,
 	const char* hash_and_padding, int signature_format, size_t keylen,
 	chunk_t data, chunk_t signature)
 {
-	botan_pk_op_verify_t verify_op;
 	chunk_t sig = signature;
-	bool valid = FALSE;
 
 	if (signature_format == SIG_FORMAT_DER_SEQUENCE)
 	{
@@ -104,22 +102,7 @@ static bool verify_signature(private_botan_ec_public_key_t *this,
 		memcpy(sig.ptr + (keylen - r.len), r.ptr, r.len);
 		memcpy(sig.ptr + keylen + (keylen - s.len), s.ptr, s.len);
 	}
-
-	if (botan_pk_op_verify_create(&verify_op, this->key, hash_and_padding, 0))
-	{
-		return FALSE;
-	}
-
-	if (botan_pk_op_verify_update(verify_op, data.ptr, data.len))
-	{
-		botan_pk_op_verify_destroy(verify_op);
-		return FALSE;
-	}
-
-	valid = !(botan_pk_op_verify_finish(verify_op, sig.ptr, sig.len));
-
-	botan_pk_op_verify_destroy(verify_op);
-	return valid;
+	return botan_verify_signature(this->key, hash_and_padding, data, sig);
 }
 
 METHOD(public_key_t, get_type, key_type_t,
