@@ -421,7 +421,7 @@ METHOD(tpm_tss_t, get_version_info, chunk_t,
 }
 
 /**
- * read the public key portion of a TSS 2.0 AIK key from NVRAM
+ * read the public key portion of a TSS 2.0 key from NVRAM
  */
 bool read_public(private_tpm_tss_tss2_t *this, TPMI_DH_OBJECT handle,
 	TPM2B_PUBLIC *public)
@@ -471,9 +471,9 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 	}
 
 	aik_blob = chunk_create((u_char*)&public, sizeof(public));
-	DBG3(DBG_LIB, "%s AIK public key blob: %B", LABEL, &aik_blob);
+	DBG3(DBG_LIB, "%s public key blob: %B", LABEL, &aik_blob);
 
-	/* convert TSS 2.0 AIK public key blot into PKCS#1 format */
+	/* convert TSS 2.0 public key blot into PKCS#1 format */
 	switch (public.t.publicArea.type)
 	{
 		case TPM_ALG_RSA:
@@ -490,12 +490,12 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			aik_modulus = chunk_create(rsa->t.buffer, rsa->t.size);
 			aik_exponent = chunk_from_chars(0x01, 0x00, 0x01);
 
-			/* subjectPublicKeyInfo encoding of AIK RSA key */
+			/* subjectPublicKeyInfo encoding of RSA public key */
 			if (!lib->encoding->encode(lib->encoding, PUBKEY_SPKI_ASN1_DER,
 					NULL, &aik_pubkey, CRED_PART_RSA_MODULUS, aik_modulus,
 					CRED_PART_RSA_PUB_EXP, aik_exponent, CRED_PART_END))
 			{
-				DBG1(DBG_PTS, "%s subjectPublicKeyInfo encoding of AIK key "
+				DBG1(DBG_PTS, "%s subjectPublicKeyInfo encoding of public key "
 							  "failed", LABEL);
 				return chunk_empty;
 			}
@@ -526,7 +526,7 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			pos += ecc->x.t.size;
 			/* copy y coordinate of ECC point */
 			memcpy(pos, ecc->y.t.buffer, ecc->y.t.size);
-			/* subjectPublicKeyInfo encoding of AIK ECC key */
+			/* subjectPublicKeyInfo encoding of ECC public key */
 			aik_pubkey = asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_wrap(ASN1_SEQUENCE, "mm",
 								asn1_build_known_oid(OID_EC_PUBLICKEY),
@@ -536,10 +536,10 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			break;
 		}
 		default:
-			DBG1(DBG_PTS, "%s unsupported AIK key type", LABEL);
+			DBG1(DBG_PTS, "%s unsupported key type", LABEL);
 			return chunk_empty;
 	}
-	DBG1(DBG_PTS, "AIK signature algorithm is %N with %N hash",
+	DBG1(DBG_PTS, "signature algorithm is %N with %N hash",
 		 tpm_alg_id_names, sig_alg, tpm_alg_id_names, digest_alg);
 	return aik_pubkey;
 }
@@ -624,7 +624,7 @@ METHOD(tpm_tss_t, supported_signature_schemes, enumerator_t*,
 			break;
 		}
 		default:
-			DBG1(DBG_PTS, "%s unsupported AIK key type", LABEL);
+			DBG1(DBG_PTS, "%s unsupported key type", LABEL);
 			return enumerator_create_empty();
 	}
 	return enumerator_create_single(signature_params_clone(&supported_scheme),
