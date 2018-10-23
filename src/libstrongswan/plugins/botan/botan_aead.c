@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2018 Atanas Filyanov
  * Rohde & Schwarz Cybersecurity GmbH
  *
@@ -21,23 +24,24 @@
  * THE SOFTWARE.
  */
 
-#include "botan_gcm.h"
+#include "botan_aead.h"
 
 #include <botan/build.h>
 
-#ifdef BOTAN_HAS_AES
-#ifdef BOTAN_HAS_AEAD_GCM
+#if (defined(BOTAN_HAS_AES) && defined(BOTAN_HAS_AEAD_GCM)) || \
+	defined(BOTAN_HAS_AEAD_CHACHA20_POLY1305)
 
 #include <crypto/iv/iv_gen_seq.h>
 
 #include <botan/ffi.h>
 
 /**
- * as defined in RFC 4106
+ * As defined in RFC 4106 (GCM) and RFC 7634 (ChaPoly)
  */
-#define IV_LEN		8
-#define SALT_LEN	4
-#define NONCE_LEN	(IV_LEN + SALT_LEN)
+#define IV_LEN			8
+#define SALT_LEN		4
+#define NONCE_LEN		(IV_LEN + SALT_LEN)
+#define CHAPOLY_KEY_LEN	32
 
 typedef struct private_aead_t private_aead_t;
 
@@ -77,8 +81,8 @@ struct private_aead_t {
 /**
  * Do the actual en/decryption
  */
-static bool crypt(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
-				  u_char *out, uint32_t init_flag)
+static bool do_crypt(private_aead_t *this, chunk_t data, chunk_t assoc,
+					 chunk_t iv, u_char *out, uint32_t init_flag)
 {
 	botan_cipher_t cipher;
 	uint8_t nonce[NONCE_LEN];
@@ -149,7 +153,8 @@ METHOD(aead_t, encrypt, bool,
 		*encrypted = chunk_alloc(plain.len + this->icv_size);
 		out = encrypted->ptr;
 	}
-	return crypt(this, plain, assoc, iv, out, BOTAN_CIPHER_INIT_FLAG_ENCRYPT);
+	return do_crypt(this, plain, assoc, iv, out,
+					BOTAN_CIPHER_INIT_FLAG_ENCRYPT);
 }
 
 METHOD(aead_t, decrypt, bool,
@@ -170,8 +175,8 @@ METHOD(aead_t, decrypt, bool,
 		*plain = chunk_alloc(encrypted.len);
 		out = plain->ptr;
 	}
-	return crypt(this, encrypted, assoc, iv, out,
-				 BOTAN_CIPHER_INIT_FLAG_DECRYPT);
+	return do_crypt(this, encrypted, assoc, iv, out,
+					BOTAN_CIPHER_INIT_FLAG_DECRYPT);
 }
 
 METHOD(aead_t, get_block_size, size_t,
@@ -224,11 +229,78 @@ METHOD(aead_t, destroy, void,
 	free(this);
 }
 
+#if defined(BOTAN_HAS_AES) && defined(BOTAN_HAS_AEAD_GCM)
+
+/**
+ * Determine the cipher name and ICV size for the given algorithm and key size
+ */
+static bool determine_gcm_params(private_aead_t *this,
+								 encryption_algorithm_t algo, size_t key_size)
+{
+	switch (algo)
+	{
+		case ENCR_AES_GCM_ICV8:
+			switch (key_size)
+			{
+				case 16:
+					this->cipher_name = "AES-128/GCM(8)";
+					break;
+				case 24:
+					this->cipher_name = "AES-192/GCM(8)";
+					break;
+				case 32:
+					this->cipher_name = "AES-256/GCM(8)";
+					break;
+				default:
+					return FALSE;
+			}
+			this->icv_size = 8;
+			return TRUE;
+		case ENCR_AES_GCM_ICV12:
+			switch (key_size)
+			{
+				case 16:
+					this->cipher_name = "AES-128/GCM(12)";
+					break;
+				case 24:
+					this->cipher_name = "AES-192/GCM(12)";
+					break;
+				case 32:
+					this->cipher_name = "AES-256/GCM(12)";
+					break;
+				default:
+					return FALSE;
+			}
+			this->icv_size = 12;
+			return TRUE;
+		case ENCR_AES_GCM_ICV16:
+			switch (key_size)
+			{
+				case 16:
+					this->cipher_name = "AES-128/GCM";
+					break;
+				case 24:
+					this->cipher_name = "AES-192/GCM";
+					break;
+				case 32:
+					this->cipher_name = "AES-256/GCM";
+					break;
+				default:
+					return FALSE;
+			}
+			this->icv_size = 16;
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+#endif
+
 /*
  * Described in header
  */
-aead_t *botan_gcm_create(encryption_algorithm_t algo, size_t key_size,
-						 size_t salt_size)
+aead_t *botan_aead_create(encryption_algorithm_t algo, size_t key_size,
+						  size_t salt_size)
 {
 	private_aead_t *this;
 
@@ -248,76 +320,39 @@ aead_t *botan_gcm_create(encryption_algorithm_t algo, size_t key_size,
 
 	if (salt_size && salt_size != SALT_LEN)
 	{
-		/* currently not supported */
 		free(this);
 		return NULL;
 	}
 
 	switch (algo)
 	{
+#if defined(BOTAN_HAS_AES) && defined(BOTAN_HAS_AEAD_GCM)
 		case ENCR_AES_GCM_ICV8:
-			switch (key_size)
-			{
-				case 0:
-					key_size = 16;
-					/* FALL */
-				case 16:
-					this->cipher_name = "AES-128/GCM(8)";
-					break;
-				case 24:
-					this->cipher_name = "AES-192/GCM(8)";
-					break;
-				case 32:
-					this->cipher_name = "AES-256/GCM(8)";
-					break;
-				default:
-					free(this);
-					return NULL;
-			}
-			this->icv_size = 8;
-			break;
 		case ENCR_AES_GCM_ICV12:
-			switch (key_size)
-			{
-				case 0:
-					key_size = 16;
-					/* FALL */
-				case 16:
-					this->cipher_name = "AES-128/GCM(12)";
-					break;
-				case 24:
-					this->cipher_name = "AES-192/GCM(12)";
-					break;
-				case 32:
-					this->cipher_name = "AES-256/GCM(12)";
-					break;
-				default:
-					free(this);
-					return NULL;
-			}
-			this->icv_size = 12;
-			break;
 		case ENCR_AES_GCM_ICV16:
-			switch (key_size)
+			if (!key_size)
 			{
-				case 0:
-					key_size = 16;
-					/* FALL */
-				case 16:
-					this->cipher_name = "AES-128/GCM";
-					break;
-				case 24:
-					this->cipher_name = "AES-192/GCM";
-					break;
-				case 32:
-					this->cipher_name = "AES-256/GCM";
-					break;
-				default:
-					free(this);
-					return NULL;
+				key_size = 16;
 			}
+			if (!determine_gcm_params(this, algo, key_size))
+			{
+				free(this);
+				return NULL;
+			}
+			break;
+#endif
+#ifdef BOTAN_HAS_AEAD_CHACHA20_POLY1305
+		case ENCR_CHACHA20_POLY1305:
+			if (key_size && key_size != CHAPOLY_KEY_LEN)
+			{
+				free(this);
+				return NULL;
+			}
+			key_size = CHAPOLY_KEY_LEN;
+			this->cipher_name = "ChaCha20Poly1305";
 			this->icv_size = 16;
 			break;
+#endif
 		default:
 			free(this);
 			return NULL;
@@ -329,5 +364,4 @@ aead_t *botan_gcm_create(encryption_algorithm_t algo, size_t key_size,
 	return &this->public;
 }
 
-#endif
 #endif

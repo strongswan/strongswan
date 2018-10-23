@@ -38,7 +38,7 @@
 #include "botan_ec_private_key.h"
 #include "botan_ed_public_key.h"
 #include "botan_ed_private_key.h"
-#include "botan_gcm.h"
+#include "botan_aead.h"
 #include "botan_util_keys.h"
 #include "botan_x25519.h"
 
@@ -110,9 +110,12 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 24),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 32),
 	#endif
+#endif
+
+		/* AEAD */
+		PLUGIN_REGISTER(AEAD, botan_aead_create),
+#ifdef BOTAN_HAS_AES
 	#ifdef BOTAN_HAS_AEAD_GCM
-			/* AES GCM */
-			PLUGIN_REGISTER(AEAD, botan_gcm_create),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 16),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 24),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 32),
@@ -121,6 +124,10 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV12, 32),
 	#endif
 #endif
+#ifdef BOTAN_HAS_AEAD_CHACHA20_POLY1305
+			PLUGIN_PROVIDE(AEAD, ENCR_CHACHA20_POLY1305, 32),
+#endif
+
 		/* hashers */
 		PLUGIN_REGISTER(HASHER, botan_hasher_create),
 #ifdef BOTAN_HAS_MD5
