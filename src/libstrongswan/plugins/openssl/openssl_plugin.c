@@ -395,7 +395,7 @@ static private_key_t *openssl_private_key_connect(key_type_t type,
 		}
 		break;
 	}
-	if (!keyid.len || keyid.len > 40)
+	if (!keyid.len)
 	{
 		return NULL;
 	}
