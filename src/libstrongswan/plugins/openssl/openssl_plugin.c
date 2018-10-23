@@ -405,7 +405,7 @@ static private_key_t *openssl_private_key_connect(key_type_t type,
 	{
 		snprintf(keyname, sizeof(keyname), "%d:", slot);
 	}
-	if (sizeof(keyname) - strlen(keyname) <= keyid.len * 4 / 3 + 1)
+	if (sizeof(keyname) - strlen(keyname) <= keyid.len * 2 + 1)
 	{
 		return NULL;
 	}
