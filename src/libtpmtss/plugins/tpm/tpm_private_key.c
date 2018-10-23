@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Tobias Brunner
- * Copyright (C) 2017 Andreas Steffen
+ * Copyright (C) 2017-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it

@@ -65,6 +65,12 @@ struct private_tpm_tss_tss2_t {
 	 * List of supported algorithms
 	 */
 	TPM2_ALG_ID supported_algs[TPM2_PT_ALGORITHM_SET];
+
+	/**
+	 * Is TPM FIPS 186-4 compliant ?
+	 */
+	bool fips_186_4;
+
 };
 
 /**
@@ -153,6 +159,7 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 	TPMS_TAGGED_PROPERTY tp;
 	TPMI_YES_NO more_data;
 	TPM2_ALG_ID alg;
+	bool fips_140_2 = FALSE;
 	uint32_t rval, i, offset, revision = 0, year = 0;
 	size_t len = BUF_LEN;
 	char buf[BUF_LEN], manufacturer[5], vendor_string[17];
@@ -194,12 +201,25 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 				offset = 4 * (tp.property - TPM2_PT_VENDOR_STRING_1);
 				htoun32(vendor_string + offset, tp.value);
 				break;
+			case TPM2_PT_MODES:
+				if (tp.value & TPMA_MODES_FIPS_140_2)
+				{
+					this->fips_186_4 = fips_140_2 = TRUE;
+				}
+				break;
 			default:
 				break;
 		}
 	}
-	DBG2(DBG_PTS, "%s manufacturer: %s (%s) rev: %05.2f %u", LABEL, manufacturer,
-		 vendor_string, (float)revision/100, year);
+
+	if (!fips_140_2)
+	{
+		this->fips_186_4 = lib->settings->get_bool(lib->settings,
+					"%s.plugins.tpm.fips_186_4", FALSE, lib->ns);
+	}
+	DBG2(DBG_PTS, "%s manufacturer: %s (%s) rev: %05.2f %u %s", LABEL,
+		 manufacturer, vendor_string, (float)revision/100, year,
+		 fips_140_2 ? "FIPS 140-2" : (this->fips_186_4 ? "FIPS 186-4" : ""));
 
 	/* get supported algorithms */
 	rval = Tss2_Sys_GetCapability(this->sys_context, 0, TPM2_CAP_ALGS,
@@ -505,10 +525,14 @@ METHOD(tpm_tss_t, supported_signature_schemes, enumerator_t*,
 			{
 				case TPM2_ALG_RSAPSS:
 				{
+					ssize_t salt_len;
+
+					salt_len = this->fips_186_4 ? RSA_PSS_SALT_LEN_DEFAULT :
+												  RSA_PSS_SALT_LEN_MAX;
 					rsa_pss_params_t pss_params = {
 						.hash = digest,
 						.mgf1_hash = digest,
-						.salt_len = RSA_PSS_SALT_LEN_MAX,
+						.salt_len = salt_len,
 					};
 					supported_scheme = (signature_params_t){
 						.scheme = SIGN_RSA_EMSA_PSS,
