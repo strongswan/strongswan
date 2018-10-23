@@ -28,7 +28,8 @@
 
 #include <botan/build.h>
 
-#if (defined(BOTAN_HAS_AES) && defined(BOTAN_HAS_AEAD_GCM)) || \
+#if (defined(BOTAN_HAS_AES) && \
+		(defined(BOTAN_HAS_AEAD_GCM) || defined(BOTAN_HAS_AEAD_CCM))) || \
 	defined(BOTAN_HAS_AEAD_CHACHA20_POLY1305)
 
 #include <crypto/iv/iv_gen_seq.h>
@@ -40,8 +41,11 @@
  */
 #define IV_LEN			8
 #define SALT_LEN		4
-#define NONCE_LEN		(IV_LEN + SALT_LEN)
 #define CHAPOLY_KEY_LEN	32
+/**
+ * As defined in RFC 4309
+ */
+#define CCM_SALT_LEN	3
 
 typedef struct private_aead_t private_aead_t;
 
@@ -60,7 +64,7 @@ struct private_aead_t {
 	/**
 	 * Salt value
 	 */
-	char salt[SALT_LEN];
+	chunk_t salt;
 
 	/**
 	 * Size of the integrity check value
@@ -85,11 +89,8 @@ static bool do_crypt(private_aead_t *this, chunk_t data, chunk_t assoc,
 					 chunk_t iv, u_char *out, uint32_t init_flag)
 {
 	botan_cipher_t cipher;
-	uint8_t nonce[NONCE_LEN];
 	size_t output_written = 0, input_consumed = 0;
-
-	memcpy(nonce, this->salt, SALT_LEN);
-	memcpy(nonce + SALT_LEN, iv.ptr, IV_LEN);
+	chunk_t nonce;
 
 	if (botan_cipher_init(&cipher, this->cipher_name, init_flag))
 	{
@@ -109,7 +110,9 @@ static bool do_crypt(private_aead_t *this, chunk_t data, chunk_t assoc,
 		return FALSE;
 	}
 
-	if (botan_cipher_start(cipher, nonce, NONCE_LEN))
+	nonce = chunk_cata("cc", this->salt, iv);
+
+	if (botan_cipher_start(cipher, nonce.ptr, nonce.len))
 	{
 		botan_cipher_destroy(cipher);
 		return FALSE;
@@ -206,7 +209,7 @@ METHOD(aead_t, get_iv_gen, iv_gen_t*,
 METHOD(aead_t, get_key_size, size_t,
 	private_aead_t *this)
 {
-	return this->key.len + SALT_LEN;
+	return this->key.len + this->salt.len;
 }
 
 METHOD(aead_t, set_key, bool,
@@ -216,7 +219,7 @@ METHOD(aead_t, set_key, bool,
 	{
 		return FALSE;
 	}
-	memcpy(this->salt, key.ptr + key.len - SALT_LEN, SALT_LEN);
+	memcpy(this->salt.ptr, key.ptr + key.len - this->salt.len, this->salt.len);
 	memcpy(this->key.ptr, key.ptr, this->key.len);
 	return TRUE;
 }
@@ -225,76 +228,76 @@ METHOD(aead_t, destroy, void,
 	private_aead_t *this)
 {
 	chunk_clear(&this->key);
+	chunk_clear(&this->salt);
 	this->iv_gen->destroy(this->iv_gen);
 	free(this);
 }
 
-#if defined(BOTAN_HAS_AES) && defined(BOTAN_HAS_AEAD_GCM)
+#ifdef BOTAN_HAS_AES
+#if defined(BOTAN_HAS_AEAD_GCM) || defined(BOTAN_HAS_AEAD_GCM)
+
+static struct {
+	encryption_algorithm_t algo;
+	size_t key_size;
+	char *name;
+	size_t icv_size;
+} aes_modes[] = {
+	{ ENCR_AES_GCM_ICV8,  16, "AES-128/GCM(8)",     8 },
+	{ ENCR_AES_GCM_ICV8,  24, "AES-192/GCM(8)",     8 },
+	{ ENCR_AES_GCM_ICV8,  32, "AES-256/GCM(8)",     8 },
+	{ ENCR_AES_GCM_ICV12, 16, "AES-128/GCM(12)",   12 },
+	{ ENCR_AES_GCM_ICV12, 24, "AES-192/GCM(12)",   12 },
+	{ ENCR_AES_GCM_ICV12, 32, "AES-256/GCM(12)",   12 },
+	{ ENCR_AES_GCM_ICV16, 16, "AES-128/GCM(16)",   16 },
+	{ ENCR_AES_GCM_ICV16, 24, "AES-192/GCM(16)",   16 },
+	{ ENCR_AES_GCM_ICV16, 32, "AES-256/GCM(16)",   16 },
+	{ ENCR_AES_CCM_ICV8,  16, "AES-128/CCM(8,4)",   8 },
+	{ ENCR_AES_CCM_ICV8,  24, "AES-192/CCM(8,4)",   8 },
+	{ ENCR_AES_CCM_ICV8,  32, "AES-256/CCM(8,4)",   8 },
+	{ ENCR_AES_CCM_ICV12, 16, "AES-128/CCM(12,4)", 12 },
+	{ ENCR_AES_CCM_ICV12, 24, "AES-192/CCM(12,4)", 12 },
+	{ ENCR_AES_CCM_ICV12, 32, "AES-256/CCM(12,4)", 12 },
+	{ ENCR_AES_CCM_ICV16, 16, "AES-128/CCM(16,4)", 16 },
+	{ ENCR_AES_CCM_ICV16, 24, "AES-192/CCM(16,4)", 16 },
+	{ ENCR_AES_CCM_ICV16, 32, "AES-256/CCM(16,4)", 16 },
+};
 
 /**
  * Determine the cipher name and ICV size for the given algorithm and key size
  */
-static bool determine_gcm_params(private_aead_t *this,
+static bool determine_aes_params(private_aead_t *this,
 								 encryption_algorithm_t algo, size_t key_size)
 {
-	switch (algo)
+	int i;
+
+	for (i = 0; i < countof(aes_modes); i++)
 	{
-		case ENCR_AES_GCM_ICV8:
-			switch (key_size)
-			{
-				case 16:
-					this->cipher_name = "AES-128/GCM(8)";
-					break;
-				case 24:
-					this->cipher_name = "AES-192/GCM(8)";
-					break;
-				case 32:
-					this->cipher_name = "AES-256/GCM(8)";
-					break;
-				default:
-					return FALSE;
-			}
-			this->icv_size = 8;
+		if (aes_modes[i].algo == algo &&
+			aes_modes[i].key_size == key_size)
+		{
+			this->cipher_name = aes_modes[i].name;
+			this->icv_size = aes_modes[i].icv_size;
 			return TRUE;
-		case ENCR_AES_GCM_ICV12:
-			switch (key_size)
-			{
-				case 16:
-					this->cipher_name = "AES-128/GCM(12)";
-					break;
-				case 24:
-					this->cipher_name = "AES-192/GCM(12)";
-					break;
-				case 32:
-					this->cipher_name = "AES-256/GCM(12)";
-					break;
-				default:
-					return FALSE;
-			}
-			this->icv_size = 12;
-			return TRUE;
-		case ENCR_AES_GCM_ICV16:
-			switch (key_size)
-			{
-				case 16:
-					this->cipher_name = "AES-128/GCM";
-					break;
-				case 24:
-					this->cipher_name = "AES-192/GCM";
-					break;
-				case 32:
-					this->cipher_name = "AES-256/GCM";
-					break;
-				default:
-					return FALSE;
-			}
-			this->icv_size = 16;
-			return TRUE;
-		default:
-			return FALSE;
+		}
 	}
+	return FALSE;
 }
+
 #endif
+#endif
+
+/**
+ * Check the given salt size, set it if not set
+ */
+static bool check_salt_size(size_t expected, size_t *salt_size)
+{
+	if (*salt_size)
+	{
+		return *salt_size == expected;
+	}
+	*salt_size = expected;
+	return TRUE;
+}
 
 /*
  * Described in header
@@ -318,15 +321,10 @@ aead_t *botan_aead_create(encryption_algorithm_t algo, size_t key_size,
 		},
 	);
 
-	if (salt_size && salt_size != SALT_LEN)
-	{
-		free(this);
-		return NULL;
-	}
-
 	switch (algo)
 	{
-#if defined(BOTAN_HAS_AES) && defined(BOTAN_HAS_AEAD_GCM)
+#ifdef BOTAN_HAS_AES
+#ifdef BOTAN_HAS_AEAD_GCM
 		case ENCR_AES_GCM_ICV8:
 		case ENCR_AES_GCM_ICV12:
 		case ENCR_AES_GCM_ICV16:
@@ -334,21 +332,43 @@ aead_t *botan_aead_create(encryption_algorithm_t algo, size_t key_size,
 			{
 				key_size = 16;
 			}
-			if (!determine_gcm_params(this, algo, key_size))
+			if (!check_salt_size(SALT_LEN, &salt_size) ||
+				!determine_aes_params(this, algo, key_size))
 			{
 				free(this);
 				return NULL;
 			}
 			break;
 #endif
-#ifdef BOTAN_HAS_AEAD_CHACHA20_POLY1305
-		case ENCR_CHACHA20_POLY1305:
-			if (key_size && key_size != CHAPOLY_KEY_LEN)
+#ifdef BOTAN_HAS_AEAD_CCM
+		case ENCR_AES_CCM_ICV8:
+		case ENCR_AES_CCM_ICV12:
+		case ENCR_AES_CCM_ICV16:
+			if (!key_size)
+			{
+				key_size = 16;
+			}
+			if (!check_salt_size(CCM_SALT_LEN, &salt_size) ||
+				!determine_aes_params(this, algo, key_size))
 			{
 				free(this);
 				return NULL;
 			}
-			key_size = CHAPOLY_KEY_LEN;
+			break;
+#endif
+#endif
+#ifdef BOTAN_HAS_AEAD_CHACHA20_POLY1305
+		case ENCR_CHACHA20_POLY1305:
+			if (!key_size)
+			{
+				key_size = CHAPOLY_KEY_LEN;
+			}
+			if (key_size != CHAPOLY_KEY_LEN ||
+				!check_salt_size(SALT_LEN, &salt_size))
+			{
+				free(this);
+				return NULL;
+			}
 			this->cipher_name = "ChaCha20Poly1305";
 			this->icv_size = 16;
 			break;
@@ -359,6 +379,7 @@ aead_t *botan_aead_create(encryption_algorithm_t algo, size_t key_size,
 	}
 
 	this->key = chunk_alloc(key_size);
+	this->salt = chunk_alloc(salt_size);
 	this->iv_gen = iv_gen_seq_create();
 
 	return &this->public;
