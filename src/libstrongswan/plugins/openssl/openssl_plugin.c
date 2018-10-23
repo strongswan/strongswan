@@ -370,7 +370,7 @@ static private_key_t *openssl_private_key_connect(key_type_t type,
 #ifndef OPENSSL_NO_ENGINE
 	char *engine_id = NULL;
 	char keyname[BUF_LEN];
-	chunk_t keyid = chunk_empty;;
+	chunk_t keyid = chunk_empty;
 	EVP_PKEY *key;
 	ENGINE *engine;
 	int slot = -1;
