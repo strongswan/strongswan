@@ -103,6 +103,7 @@ METHOD(plugin_t, get_features, int,
 #endif
 
 		/* crypters */
+#if defined(BOTAN_HAS_AES) && defined(BOTAN_HAS_MODE_CBC)
 		PLUGIN_REGISTER(CRYPTER, botan_crypter_create),
 #ifdef BOTAN_HAS_AES
 	#ifdef BOTAN_HAS_MODE_CBC
@@ -111,8 +112,12 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 32),
 	#endif
 #endif
+#endif
 
 		/* AEAD */
+#if (defined(BOTAN_HAS_AES) && \
+		(defined(BOTAN_HAS_AEAD_GCM) || defined(BOTAN_HAS_AEAD_CCM))) || \
+	defined(BOTAN_HAS_AEAD_CHACHA20_POLY1305)
 		PLUGIN_REGISTER(AEAD, botan_aead_create),
 #ifdef BOTAN_HAS_AES
 	#ifdef BOTAN_HAS_AEAD_GCM
@@ -140,6 +145,7 @@ METHOD(plugin_t, get_features, int,
 #endif
 #ifdef BOTAN_HAS_AEAD_CHACHA20_POLY1305
 			PLUGIN_PROVIDE(AEAD, ENCR_CHACHA20_POLY1305, 32),
+#endif
 #endif
 
 		/* hashers */
