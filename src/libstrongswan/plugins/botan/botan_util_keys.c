@@ -106,19 +106,27 @@ public_key_t *botan_public_key_load(key_type_t type, va_list args)
 		return NULL;
 	}
 
+#ifdef BOTAN_HAS_RSA
 	if (streq(name, "RSA") && (type == KEY_ANY || type == KEY_RSA))
 	{
 		this = (public_key_t*)botan_rsa_public_key_adopt(pubkey);
 	}
-	else if (streq(name, "ECDSA") && (type == KEY_ANY || type == KEY_ECDSA))
+	else
+#endif
+#ifdef BOTAN_HAS_ECDSA
+	if (streq(name, "ECDSA") && (type == KEY_ANY || type == KEY_ECDSA))
 	{
 		this = (public_key_t*)botan_ec_public_key_adopt(pubkey);
 	}
-	else if (streq(name, "Ed25519") && (type == KEY_ANY || type == KEY_ED25519))
+	else
+#endif
+#ifdef BOTAN_HAS_ED25519
+	if (streq(name, "Ed25519") && (type == KEY_ANY || type == KEY_ED25519))
 	{
 		this = botan_ed_public_key_adopt(pubkey);
 	}
 	else
+#endif
 	{
 		botan_pubkey_destroy(pubkey);
 	}
@@ -126,6 +134,7 @@ public_key_t *botan_public_key_load(key_type_t type, va_list args)
 	return this;
 }
 
+#ifdef BOTAN_HAS_ECDSA
 /**
  * Determine the curve OID from a PKCS#8 structure
  */
@@ -145,6 +154,7 @@ static int determine_ec_oid(chunk_t pkcs8)
 	}
 	return oid;
 }
+#endif
 
 /*
  * Described in header
@@ -157,7 +167,6 @@ private_key_t *botan_private_key_load(key_type_t type, va_list args)
 	chunk_t blob = chunk_empty;
 	botan_rng_t rng;
 	char *name;
-	int oid;
 
 	while (TRUE)
 	{
@@ -197,22 +206,32 @@ private_key_t *botan_private_key_load(key_type_t type, va_list args)
 		botan_privkey_destroy(key);
 		return NULL;
 	}
+
+#ifdef BOTAN_HAS_RSA
 	if (streq(name, "RSA") && (type == KEY_ANY || type == KEY_RSA))
 	{
 		this = (private_key_t*)botan_rsa_private_key_adopt(key);
 	}
-	else if (streq(name, "ECDSA") && (type == KEY_ANY || type == KEY_ECDSA))
+	else
+#endif
+#ifdef BOTAN_HAS_ECDSA
+	if (streq(name, "ECDSA") && (type == KEY_ANY || type == KEY_ECDSA))
 	{
-		oid = determine_ec_oid(blob);
+		int oid = determine_ec_oid(blob);
 		if (oid != OID_UNKNOWN)
 		{
 			this = (private_key_t*)botan_ec_private_key_adopt(key, oid);
 		}
 	}
-	else if (streq(name, "Ed25519") && (type == KEY_ANY || type == KEY_ED25519))
+	else
+#endif
+#ifdef BOTAN_HAS_ED25519
+	if (streq(name, "Ed25519") && (type == KEY_ANY || type == KEY_ED25519))
 	{
 		this = botan_ed_private_key_adopt(key);
 	}
+#endif
+
 	if (!this)
 	{
 		botan_privkey_destroy(key);
