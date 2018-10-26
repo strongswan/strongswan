@@ -1,3 +1,29 @@
+strongswan-5.7.2
+----------------
+
+- Private key implementations may optionally provide a list of supported
+  signature schemes, which is used by the tpm plugin because for each key on a
+  TPM 2.0 the hash algorithm and for RSA also the padding scheme is predefined.
+
+- For RSA with PSS padding, the TPM 2.0 specification mandates the maximum salt
+  length (as defined by the length of the key and hash).  However, if the TPM is
+  FIPS-168-4 compliant, the salt length equals the hash length.  This is assumed
+  for FIPS-140-2 compliant TPMs, but if that's not the case, it might be
+  necessary to manually enable charon.plugins.tpm.fips_186_4 if the TPM doesn't
+  use the maximum salt length.
+
+- Added support for RSA signatures with SHA-256 and SHA-512 to the agent plugin.
+  For older versions of ssh/gpg-agent that only support SHA-1, IKEv2 signature
+  authentication has to be disabled via charon.signature_authentication.
+
+- The sshkey and agent plugins support Ed25519/Ed448 SSH keys and signatures.
+
+- Ed25519, ChaCha20/Poly1305 and AES-CCM were added to the botan plugin.
+
+- The mysql plugin now properly handles database connections with transactions
+  under heavy load.
+
+
 strongswan-5.7.1
 ----------------
 
