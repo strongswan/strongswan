@@ -65,7 +65,8 @@ void set_file_mode(FILE *stream, cred_encoding_type_t enc);
  * @param digest	hash algorithm (if HASH_UNKNOWN a default is determined
  *					based on the key)
  * @param pss		use PSS padding for RSA keys
- * @return			allocated signature scheme and parameters
+ * @return			allocated signature scheme and parameters (NULL if none
+ *					found)
  */
 signature_params_t *get_signature_scheme(private_key_t *private,
 										 hash_algorithm_t digest, bool pss);

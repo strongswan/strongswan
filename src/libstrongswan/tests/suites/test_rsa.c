@@ -40,7 +40,7 @@ static signature_scheme_t schemes[] = {
 static rsa_pss_params_t default_pss_params = {
 	.hash = HASH_SHA256,
 	.mgf1_hash = HASH_SHA256,
-	.salt_len = RSA_PSS_SALT_LEN_DEFAULT,
+	.salt_len = HASH_SIZE_SHA256,
 };
 
 /**

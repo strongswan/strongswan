@@ -390,6 +390,12 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 	return aik_pubkey;
 }
 
+METHOD(tpm_tss_t, supported_signature_schemes, enumerator_t*,
+	private_tpm_tss_trousers_t *this, uint32_t handle)
+{
+	return enumerator_create_empty();
+}
+
 METHOD(tpm_tss_t, read_pcr, bool,
 	private_tpm_tss_trousers_t *this, uint32_t pcr_num, chunk_t *pcr_value,
 	hash_algorithm_t alg)
@@ -642,6 +648,7 @@ tpm_tss_t *tpm_tss_trousers_create()
 				.get_version_info = _get_version_info,
 				.generate_aik = _generate_aik,
 				.get_public = _get_public,
+				.supported_signature_schemes = _supported_signature_schemes,
 				.read_pcr = _read_pcr,
 				.extend_pcr = _extend_pcr,
 				.quote = _quote,

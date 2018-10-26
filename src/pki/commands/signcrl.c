@@ -399,6 +399,12 @@ static int sign_crl()
 	chunk_increment(crl_serial);
 
 	scheme = get_signature_scheme(private, digest, pss);
+	if (!scheme)
+	{
+		error = "no signature scheme found";
+		goto error;
+	}
+
 	enumerator = enumerator_create_filter(list->create_enumerator(list),
 										  filter, NULL, NULL);
 	crl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,

@@ -205,12 +205,7 @@ static bool verify_emsa_pss_signature(private_gmp_rsa_public_key_t *this,
 	{
 		goto error;
 	}
-	/* determine salt length */
-	salt.len = hash.len;
-	if (params->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
-	{
-		salt.len = params->salt_len;
-	}
+	salt.len = params->salt_len;
 	/* verify general structure of EM */
 	maskbits = (8 * em.len) - embits;
 	if (em.len < (hash.len + salt.len + 2) || em.ptr[em.len-1] != 0xbc ||

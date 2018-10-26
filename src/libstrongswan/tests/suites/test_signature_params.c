@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Tobias Brunner
+ * Copyright (C) 2017-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -138,27 +138,27 @@ static struct {
 					   0xa1,0x1c,0x30,0x1a,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x08,0x30,
 					   0x0d,0x06,0x09,0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x01,0x05,0x00,0xa2,0x03,
 					   0x02,0x01,0x20),
-		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = RSA_PSS_SALT_LEN_DEFAULT, }},
+		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = HASH_SIZE_SHA256, }},
 	/* default salt length: SHA-1 */
 	{ chunk_from_chars(0x30,0x0d,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x0a,0x30,0x00),
-		{ .hash = HASH_SHA1, .mgf1_hash = HASH_SHA1, .salt_len = RSA_PSS_SALT_LEN_DEFAULT, }},
+		{ .hash = HASH_SHA1, .mgf1_hash = HASH_SHA1, .salt_len = HASH_SIZE_SHA1, }},
 	/* default salt length: SHA-224 */
 	{ chunk_from_chars(0x30,0x23,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x0a,0x30,0x16,0xa0,
 					   0x0f,0x30,0x0d,0x06,0x09,0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x04,0x05,0x00,
 					   0xa2,0x03,0x02,0x01,0x1c),
-		{ .hash = HASH_SHA224, .mgf1_hash = HASH_SHA1, .salt_len = RSA_PSS_SALT_LEN_DEFAULT, }},
+		{ .hash = HASH_SHA224, .mgf1_hash = HASH_SHA1, .salt_len = HASH_SIZE_SHA224, }},
 	/* default salt length: SHA-384 */
 	{ chunk_from_chars(0x30,0x23,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x0a,0x30,0x16,0xa0,
 					   0x0f,0x30,0x0d,0x06,0x09,0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x02,0x05,0x00,
 					   0xa2,0x03,0x02,0x01,0x30),
-		{ .hash = HASH_SHA384, .mgf1_hash = HASH_SHA1, .salt_len = RSA_PSS_SALT_LEN_DEFAULT, }},
+		{ .hash = HASH_SHA384, .mgf1_hash = HASH_SHA1, .salt_len = HASH_SIZE_SHA384, }},
 	/* SHA-512 */
 	{ chunk_from_chars(0x30,0x41,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x0a,0x30,0x34,0xa0,
 					   0x0f,0x30,0x0d,0x06,0x09,0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x03,0x05,0x00,
 					   0xa1,0x1c,0x30,0x1a,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x08,0x30,
 					   0x0d,0x06,0x09,0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x03,0x05,0x00,0xa2,0x03,
 					   0x02,0x01,0x40),
-	  { .hash = HASH_SHA512, .mgf1_hash = HASH_SHA512, .salt_len = RSA_PSS_SALT_LEN_DEFAULT, }},
+	  { .hash = HASH_SHA512, .mgf1_hash = HASH_SHA512, .salt_len = HASH_SIZE_SHA512, }},
 	/* SHA-256, no salt */
 	{ chunk_from_chars(0x30,0x41,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x0a,0x30,0x34,0xa0,
 					   0x0f,0x30,0x0d,0x06,0x09,0x60,0x86,0x48,0x01,0x65,0x03,0x04,0x02,0x01,0x05,0x00,
@@ -199,6 +199,8 @@ rsa_pss_params_t rsa_pss_build_invalid_tests[] = {
 	{ .hash = HASH_UNKNOWN, .mgf1_hash = HASH_SHA1, .salt_len = HASH_SIZE_SHA1, },
 	/* invalid mgf */
 	{ .hash = HASH_SHA256, .mgf1_hash = HASH_UNKNOWN, .salt_len = HASH_SIZE_SHA256, },
+	/* undetermined salt */
+	{ .hash = HASH_UNKNOWN, .mgf1_hash = HASH_SHA1, .salt_len = RSA_PSS_SALT_LEN_DEFAULT, },
 };
 
 START_TEST(test_rsa_pss_params_build_invalid)
@@ -206,6 +208,49 @@ START_TEST(test_rsa_pss_params_build_invalid)
 	chunk_t params;
 
 	ck_assert(!rsa_pss_params_build(&rsa_pss_build_invalid_tests[_i], &params));
+}
+END_TEST
+
+
+static struct {
+	ssize_t expected;
+	size_t modbits;
+	rsa_pss_params_t params;
+} rsa_pss_salt_len_tests[] = {
+	{ HASH_SIZE_SHA256, 0,
+		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = RSA_PSS_SALT_LEN_DEFAULT, }},
+	{ HASH_SIZE_SHA256, 3072,
+		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = RSA_PSS_SALT_LEN_DEFAULT, }},
+	{ -1, 0,
+		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = RSA_PSS_SALT_LEN_MAX, }},
+	{ 0, 256,
+		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = RSA_PSS_SALT_LEN_MAX, }},
+	{ 350, 3071,
+		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = RSA_PSS_SALT_LEN_MAX, }},
+	{ 350, 3072,
+		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = RSA_PSS_SALT_LEN_MAX, }},
+	{ 350, 3073,
+		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = RSA_PSS_SALT_LEN_MAX, }},
+	{ 478, 4096,
+		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = RSA_PSS_SALT_LEN_MAX, }},
+	{ 10, 0,
+		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = 10, }},
+	{ 10, 3072,
+		{ .hash = HASH_SHA256, .mgf1_hash = HASH_SHA256, .salt_len = 10, }},
+};
+
+START_TEST(test_rsa_pss_params_set_salt_len)
+{
+	if (rsa_pss_params_set_salt_len(&rsa_pss_salt_len_tests[_i].params,
+									rsa_pss_salt_len_tests[_i].modbits))
+	{
+		ck_assert_int_eq(rsa_pss_salt_len_tests[_i].expected,
+						 rsa_pss_salt_len_tests[_i].params.salt_len);
+	}
+	else
+	{
+		ck_assert(rsa_pss_salt_len_tests[_i].expected < 0);
+	}
 }
 END_TEST
 
@@ -428,6 +473,10 @@ Suite *signature_params_suite_create()
 	tc = tcase_create("rsa/pss build");
 	tcase_add_loop_test(tc, test_rsa_pss_params_build, 0, countof(rsa_pss_build_tests));
 	tcase_add_loop_test(tc, test_rsa_pss_params_build_invalid, 0, countof(rsa_pss_build_invalid_tests));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("rsa/pss salt len");
+	tcase_add_loop_test(tc, test_rsa_pss_params_set_salt_len, 0, countof(rsa_pss_salt_len_tests));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("params compare");

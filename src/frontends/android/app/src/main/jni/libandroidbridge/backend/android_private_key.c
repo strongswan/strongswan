@@ -135,11 +135,7 @@ static bool set_pss_params(private_private_key_t *this, JNIEnv *env,
 	{
 		return FALSE;
 	}
-	slen = hasher_hash_size(pss->hash);
-	if (pss->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
-	{
-		slen = pss->salt_len;
-	}
+	slen = pss->salt_len;
 	obj = (*env)->NewObject(env, cls, method_id, jhash, jmgf1, obj, slen, 1);
 	if (!obj)
 	{

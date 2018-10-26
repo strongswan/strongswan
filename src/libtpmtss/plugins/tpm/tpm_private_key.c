@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2017 Andreas Steffen
+ * Copyright (C) 2018 Tobias Brunner
+ * Copyright (C) 2017-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -73,6 +74,12 @@ METHOD(private_key_t, get_keysize, int,
 	private_tpm_private_key_t *this)
 {
 	return this->pubkey->get_keysize(this->pubkey);
+}
+
+METHOD(private_key_t, supported_signature_schemes, enumerator_t*,
+	private_tpm_private_key_t *this)
+{
+	return this->tpm->supported_signature_schemes(this->tpm, this->handle);
 }
 
 METHOD(private_key_t, sign, bool,
@@ -201,6 +208,7 @@ tpm_private_key_t *tpm_private_key_connect(key_type_t type, va_list args)
 				.sign = _sign,
 				.decrypt = _decrypt,
 				.get_keysize = _get_keysize,
+				.supported_signature_schemes = _supported_signature_schemes,
 				.get_public_key = _get_public_key,
 				.equals = private_key_equals,
 				.belongs_to = private_key_belongs_to,
