@@ -23,9 +23,11 @@ libstrongswan_botan_la_SOURCES = \
 	botan_ec_diffie_hellman.h botan_ec_diffie_hellman.c \
 	botan_ec_public_key.h botan_ec_public_key.c \
 	botan_ec_private_key.h botan_ec_private_key.c \
+	botan_ed_public_key.h botan_ed_public_key.c \
+	botan_ed_private_key.h botan_ed_private_key.c \
 	botan_util.h botan_util.c \
 	botan_util_keys.h botan_util_keys.c \
-	botan_gcm.h botan_gcm.c \
+	botan_aead.h botan_aead.c \
 	botan_x25519.h botan_x25519.c
 
 libstrongswan_botan_la_LDFLAGS = -module -avoid-version

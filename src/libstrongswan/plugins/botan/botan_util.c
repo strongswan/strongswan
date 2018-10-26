@@ -252,6 +252,32 @@ bool botan_get_signature(botan_privkey_t key, const char *scheme,
 /*
  * Described in header
  */
+bool botan_verify_signature(botan_pubkey_t key, const char *scheme,
+							chunk_t data, chunk_t signature)
+{
+	botan_pk_op_verify_t verify_op;
+	bool valid = FALSE;
+
+	if (botan_pk_op_verify_create(&verify_op, key, scheme, 0))
+	{
+		return FALSE;
+	}
+
+	if (botan_pk_op_verify_update(verify_op, data.ptr, data.len))
+	{
+		botan_pk_op_verify_destroy(verify_op);
+		return FALSE;
+	}
+
+	valid =	!botan_pk_op_verify_finish(verify_op, signature.ptr, signature.len);
+
+	botan_pk_op_verify_destroy(verify_op);
+	return valid;
+}
+
+/*
+ * Described in header
+ */
 bool botan_dh_key_derivation(botan_privkey_t key, chunk_t pub, chunk_t *secret)
 {
 	botan_pk_op_ka_t ka;

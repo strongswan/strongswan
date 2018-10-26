@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2018 Atanas Filyanov
  * Rohde & Schwarz Cybersecurity GmbH
  *
@@ -22,14 +25,14 @@
  */
 
 /**
- * Implements the aead_t interface using Botan in GCM mode.
+ * Implements the aead_t interface using Botan.
  *
- * @defgroup botan_gcm botan_gcm
+ * @defgroup botan_aead botan_aead
  * @{ @ingroup botan_p
  */
 
-#ifndef BOTAN_GCM_H_
-#define BOTAN_GCM_H_
+#ifndef BOTAN_AEAD_H_
+#define BOTAN_AEAD_H_
 
 #include <crypto/aead.h>
 
@@ -41,7 +44,7 @@
  * @param salt_size		size of implicit salt length
  * @return				aead_t object, NULL if not supported
  */
-aead_t *botan_gcm_create(encryption_algorithm_t algo, size_t key_size,
-						 size_t salt_size);
+aead_t *botan_aead_create(encryption_algorithm_t algo, size_t key_size,
+						  size_t salt_size);
 
-#endif /** BOTAN_GCM_H_ @}*/
+#endif /** BOTAN_AEAD_H_ @}*/

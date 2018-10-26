@@ -25,6 +25,10 @@
 
 #include "botan_crypter.h"
 
+#include <botan/build.h>
+
+#if defined(BOTAN_HAS_AES) && defined(BOTAN_HAS_MODE_CBC)
+
 #include <botan/ffi.h>
 
 typedef struct private_botan_crypter_t private_botan_crypter_t;
@@ -189,3 +193,5 @@ botan_crypter_t *botan_crypter_create(encryption_algorithm_t algo,
 	this->key = chunk_alloc(key_size);
 	return &this->public;
 }
+
+#endif
