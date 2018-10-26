@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -68,6 +68,42 @@ static bool build_public_key(chunk_t *encoding, va_list args)
 
 		writer->write_data32(writer, e);
 		writer->write_data32(writer, n);
+		*encoding = chunk_to_base64(writer->get_buf(writer), NULL);
+		writer->destroy(writer);
+		return TRUE;
+	}
+	else if (cred_encoding_args(args, CRED_PART_EDDSA_PUB_ASN1_DER, &n,
+								CRED_PART_END))
+	{
+		chunk_t alg;
+		char *prefix;
+		int oid;
+
+		/* parse subjectPublicKeyInfo */
+		if (asn1_unwrap(&n, &n) != ASN1_SEQUENCE)
+		{
+			return FALSE;
+		}
+		oid = asn1_parse_algorithmIdentifier(n, 1, NULL);
+		switch (oid)
+		{
+			case OID_ED25519:
+				prefix = "ssh-ed25519";
+				break;
+			case OID_ED448:
+				prefix = "ssh-ed448";
+				break;
+			default:
+				return FALSE;
+		}
+		if (asn1_unwrap(&n, &alg) != ASN1_SEQUENCE ||
+			asn1_unwrap(&n, &n) != ASN1_BIT_STRING || !n.len)
+		{
+			return FALSE;
+		}
+		writer = bio_writer_create(0);
+		writer->write_data32(writer, chunk_from_str(prefix));
+		writer->write_data32(writer, chunk_skip(n, 1));
 		*encoding = chunk_to_base64(writer->get_buf(writer), NULL);
 		writer->destroy(writer);
 		return TRUE;

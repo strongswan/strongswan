@@ -156,6 +156,8 @@ enum builder_part_t {
 	BUILD_SHARES,
 	/** minimum number of participating private key shares */
 	BUILD_THRESHOLD,
+	/** EdDSA public key blob */
+	BUILD_EDDSA_PUB,
 	/** DER encoded ASN.1 EdDSA private key */
 	BUILD_EDDSA_PRIV_ASN1_DER,
 	/** end of variable argument builder list */
