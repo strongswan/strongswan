@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Tobias Brunner
+ * Copyright (C) 2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2018 René Korthaus
@@ -114,6 +115,18 @@ METHOD(public_key_t, verify, bool,
 										  data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
 			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-512)",
+										  data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_224:
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-3(224)",
+										  data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_256:
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-3(256))",
+										  data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_384:
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-3(384))",
+										  data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_512:
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-3(512))",
 										  data, signature);
 		case SIGN_RSA_EMSA_PSS:
 			return verify_emsa_pss_signature(this, params, data, signature);

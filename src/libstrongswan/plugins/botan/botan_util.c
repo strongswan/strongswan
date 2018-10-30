@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Tobias Brunner
+ * Copyright (C) 2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2018 René Korthaus
@@ -67,6 +68,14 @@ const char *botan_get_hash(hash_algorithm_t hash)
 			return "SHA-384";
 		case HASH_SHA512:
 			return "SHA-512";
+		case HASH_SHA3_224:
+			return "SHA-3(224)";
+		case HASH_SHA3_256:
+			return "SHA-3(256)";
+		case HASH_SHA3_384:
+			return "SHA-3(384)";
+		case HASH_SHA3_512:
+			return "SHA-3(512)";
 		default:
 			return NULL;
 	}
