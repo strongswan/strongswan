@@ -291,7 +291,11 @@ METHOD(certificate_t, issued_by, bool,
 	chunk_t fingerprint, tbs;
 	public_key_t *key;
 	x509_t *x509;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	const ASN1_BIT_STRING *sig;
+#else
 	ASN1_BIT_STRING *sig;
+#endif
 	bool valid;
 
 	if (issuer->get_type(issuer) != CERT_X509)
@@ -512,7 +516,7 @@ static bool parse_extensions(private_openssl_crl_t *this)
 	bool ok;
 	int i, num;
 	X509_EXTENSION *ext;
-	STACK_OF(X509_EXTENSION) *extensions;
+	const STACK_OF(X509_EXTENSION) *extensions;
 
 	extensions = X509_CRL_get0_extensions(this->crl);
 	if (extensions)
@@ -567,7 +571,11 @@ static bool parse_crl(private_openssl_crl_t *this)
 {
 	const unsigned char *ptr = this->encoding.ptr;
 	chunk_t sig_scheme;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	const X509_ALGOR *alg;
+#else
 	X509_ALGOR *alg;
+#endif
 
 	this->crl = d2i_X509_CRL(NULL, &ptr, this->encoding.len);
 	if (!this->crl)
@@ -576,7 +584,7 @@ static bool parse_crl(private_openssl_crl_t *this)
 	}
 
 	X509_CRL_get0_signature(this->crl, NULL, &alg);
-	sig_scheme = openssl_i2chunk(X509_ALGOR, alg);
+	sig_scheme = openssl_i2chunk(X509_ALGOR, (X509_ALGOR*)alg);
 	INIT(this->scheme);
 	if (!signature_params_parse(sig_scheme, 0, this->scheme))
 	{
