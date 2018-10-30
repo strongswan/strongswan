@@ -26,6 +26,7 @@
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #define OBJ_get0_data(o) ((o)->data)
 #define OBJ_length(o) ((o)->length)
+#define ASN1_STRING_get0_data(a) ASN1_STRING_data(a)
 #endif
 
 /**
@@ -168,7 +169,8 @@ chunk_t openssl_asn1_str2chunk(ASN1_STRING *asn1)
 {
 	if (asn1)
 	{
-		return chunk_create(ASN1_STRING_data(asn1), ASN1_STRING_length(asn1));
+		return chunk_create((u_char*)ASN1_STRING_get0_data(asn1),
+							ASN1_STRING_length(asn1));
 	}
 	return chunk_empty;
 }
