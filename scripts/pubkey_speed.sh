@@ -35,4 +35,6 @@ function ecdsatestall {
 rsatestall "gmp gcrypt pem pkcs1"
 rsatestall "gcrypt pem pkcs1"
 rsatestall "openssl pem"
+rsatestall "botan pem"
 ecdsatestall "openssl pem"
+ecdsatestall "botan pem"
