@@ -2257,6 +2257,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	uint32_t replay_esn_len = 0;
 	kernel_ipsec_del_sa_t del = { 0 };
 	status_t status = FAILED;
+	traffic_selector_t *ts;
 	char markstr[32] = "";
 
 	/* if IPComp is used, we first update the IPComp SA */
@@ -2360,10 +2361,26 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	if (!id->src->ip_equals(id->src, data->new_src))
 	{
 		host2xfrm(data->new_src, &sa->saddr);
+
+		ts = selector2ts(&sa->sel, TRUE);
+		if (ts && ts->is_host(ts, id->src))
+		{
+			ts->set_address(ts, data->new_src);
+			ts2subnet(ts, &sa->sel.saddr, &sa->sel.prefixlen_s);
+		}
+		DESTROY_IF(ts);
 	}
 	if (!id->dst->ip_equals(id->dst, data->new_dst))
 	{
 		host2xfrm(data->new_dst, &sa->id.daddr);
+
+		ts = selector2ts(&sa->sel, FALSE);
+		if (ts && ts->is_host(ts, id->dst))
+		{
+			ts->set_address(ts, data->new_dst);
+			ts2subnet(ts, &sa->sel.daddr, &sa->sel.prefixlen_d);
+		}
+		DESTROY_IF(ts);
 	}
 
 	rta = XFRM_RTA(out_hdr, struct xfrm_usersa_info);
