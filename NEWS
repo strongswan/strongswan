@@ -18,7 +18,7 @@ strongswan-5.7.2
 
 - The sshkey and agent plugins support Ed25519/Ed448 SSH keys and signatures.
 
-- Ed25519, ChaCha20/Poly1305 and AES-CCM were added to the botan plugin.
+- Ed25519, ChaCha20/Poly1305, SHA-3 and AES-CCM were added to the botan plugin.
 
 - The mysql plugin now properly handles database connections with transactions
   under heavy load.
