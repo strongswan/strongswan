@@ -370,8 +370,8 @@ END_TEST
 
 /**
  * Check that the responder handles hard expires properly while waiting for the
- * delete after a rekeying (e.g. if the initiator of the rekeying fails to
- * delete the CHILD_SA for some reason).
+ * delete after a rekeying (e.g. if the rekey settings are tight or the
+ * CREATE_CHILD_SA response is delayed).
  */
 START_TEST(test_regular_responder_handle_hard_expire)
 {
@@ -405,28 +405,22 @@ START_TEST(test_regular_responder_handle_hard_expire)
 
 	/* we don't expect this to get called anymore */
 	assert_hook_not_called(child_rekey);
-	/* this is similar to a regular delete collision */
-	assert_single_payload(OUT, PLV2_DELETE);
+	/* this is similar to a regular delete collision, but we don't actually
+	 * want to send a delete back as that might conflict with a delayed
+	 * CREATE_CHILD_SA response */
 	call_ikesa(b, delete_child_sa, PROTO_ESP, 2, TRUE);
-	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
-	/* since the SAs expired they would not actually be installed in the kernel
-	 * anymore and since we have not yet installed a new outbound SA this
-	 * will result in dropped packets and possibly acquires */
-	assert_ipsec_sas_installed(b, 1, 2, 4);
+	assert_child_sa_count(b, 1);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	/* the expire causes the outbound SA to get installed */
+	assert_ipsec_sas_installed(b, 3, 4);
 
 	/* INFORMATIONAL { D } --> */
+	assert_no_jobs_scheduled();
 	assert_single_payload(IN, PLV2_DELETE);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
-	assert_ipsec_sas_installed(b, 1, 2, 4);
-	/* <-- INFORMATIONAL { D } */
-	assert_single_payload(IN, PLV2_DELETE);
-	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
-	assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
-	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
-	assert_ipsec_sas_installed(a, 1, 2, 3, 4);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, 3, 4);
+	assert_scheduler();
 	/* <-- INFORMATIONAL { } */
 	assert_jobs_scheduled(1);
 	assert_message_empty(IN);
@@ -436,23 +430,11 @@ START_TEST(test_regular_responder_handle_hard_expire)
 	assert_child_sa_count(a, 2);
 	assert_ipsec_sas_installed(a, 1, 3, 4);
 	assert_scheduler();
-	/* INFORMATIONAL { } --> */
-	assert_jobs_scheduled(1);
-	assert_message_empty(IN);
-	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
-	assert_child_sa_state(b, 2, CHILD_DELETED, CHILD_OUTBOUND_NONE);
-	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
-	assert_child_sa_count(b, 2);
-	assert_ipsec_sas_installed(b, 2, 3, 4);
-	assert_scheduler();
 
-	/* simulate the execution of the scheduled jobs */
+	/* simulate the execution of the scheduled job */
 	destroy_rekeyed(a, 1);
 	assert_child_sa_count(a, 1);
 	assert_ipsec_sas_installed(a, 3, 4);
-	destroy_rekeyed(b, 2);
-	assert_child_sa_count(b, 1);
-	assert_ipsec_sas_installed(b, 3, 4);
 
 	/* child_rekey/child_updown */
 	assert_hook();
