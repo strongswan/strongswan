@@ -98,11 +98,9 @@ all|coverage|sonarcloud)
 			--disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-padlock --disable-fuzzing
 			--disable-osx-attr --disable-tkm --disable-uci
-			--disable-systemd --disable-soup --disable-unwind-backtraces
+			--disable-soup --disable-unwind-backtraces
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
-	# Ubuntu 14.04 does not provide libnm
-	CONFIG="$CONFIG --disable-nm"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
 	if test "$TEST" != "coverage"; then
@@ -113,8 +111,8 @@ all|coverage|sonarcloud)
 	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
-		  libpcsclite-dev libpam0g-dev binutils-dev libunwind8-dev
-		  libjson0-dev iptables-dev python-pip libtspi-dev"
+		  libpcsclite-dev libpam0g-dev binutils-dev libunwind8-dev libnm-dev
+		  libjson0-dev iptables-dev python-pip libtspi-dev libsystemd-dev"
 	PYDEPS="pytest"
 	if test "$1" = "deps"; then
 		build_botan
@@ -130,7 +128,8 @@ win*)
 			--enable-updown --enable-ext-auth --enable-libipsec
 			--enable-tnccs-20 --enable-imc-attestation --enable-imv-attestation
 			--enable-imc-os --enable-imv-os --enable-tnc-imv --enable-tnc-imc
-			--enable-pki --enable-swanctl --enable-socket-win"
+			--enable-pki --enable-swanctl --enable-socket-win
+			--enable-kernel-iph --enable-kernel-wfp --enable-winhttp"
 	# no make check for Windows binaries unless we run on a windows host
 	if test "$APPVEYOR" != "True"; then
 		TARGET=
@@ -144,20 +143,13 @@ win*)
 	DEPS="gcc-mingw-w64-base"
 	case "$TEST" in
 	win64)
-		# headers on 12.04 are too old, so we only build the plugins here
-		CONFIG="--host=x86_64-w64-mingw32 $CONFIG --enable-dbghelp-backtraces
-				--enable-kernel-iph --enable-kernel-wfp --enable-winhttp"
+		CONFIG="--host=x86_64-w64-mingw32 $CONFIG --enable-dbghelp-backtraces"
 		DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev $DEPS"
 		CC="x86_64-w64-mingw32-gcc"
-		# apply patch to MinGW headers
-		if test "$APPVEYOR" != "True" -a -z "$1"; then
-			sudo patch -f -p 4 -d /usr/share/mingw-w64/include < src/libcharon/plugins/kernel_wfp/mingw-w64-4.8.1.diff
-		fi
 		;;
 	win32)
 		CONFIG="--host=i686-w64-mingw32 $CONFIG"
-		# currently only works on 12.04, so use mingw-w64-dev instead of mingw-w64-i686-dev
-		DEPS="gcc-mingw-w64-i686 binutils-mingw-w64-i686 mingw-w64-dev $DEPS"
+		DEPS="gcc-mingw-w64-i686 binutils-mingw-w64-i686 mingw-w64-i686-dev $DEPS"
 		CC="i686-w64-mingw32-gcc"
 		;;
 	esac
