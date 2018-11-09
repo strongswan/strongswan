@@ -49,7 +49,8 @@ build_tss2()
 	curl -L $TSS2_SRC | tar xz -C $TRAVIS_BUILD_DIR/.. &&
 	cd $TSS2_DIR &&
 	./configure &&
-	sudo make -j4 install >/dev/null &&
+	make -j4 >/dev/null &&
+	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
 	cd -
 }
