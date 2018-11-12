@@ -1,5 +1,4 @@
-moon::ipsec stop
-sun::ipsec stop
-moon::iptables-restore < /etc/iptables.flush
-sun::iptables-restore < /etc/iptables.flush
-
+moon::systemctl stop strongswan-swanctl
+sun::systemctl stop strongswan-swanctl
+moon::rm /etc/swanctl/x509/moonCert.der
+sun::rm /etc/swanctl/x509/sunCert.der
