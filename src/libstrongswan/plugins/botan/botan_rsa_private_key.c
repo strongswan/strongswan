@@ -625,7 +625,7 @@ botan_rsa_private_key_t *botan_rsa_private_key_load(key_type_t type,
 
 	if (n.ptr && e.ptr && d.ptr)
 	{
-		botan_mp_t n_mp, e_mp, d_mp, p_mp, q_mp;
+		botan_mp_t n_mp, e_mp, d_mp, p_mp = NULL, q_mp = NULL;
 
 		if (!chunk_to_botan_mp(n, &n_mp))
 		{
