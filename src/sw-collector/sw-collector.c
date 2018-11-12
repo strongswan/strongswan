@@ -27,7 +27,7 @@
 #include "sw_collector_history.h"
 #include "sw_collector_rest_api.h"
 #include "sw_collector_dpkg.h"
-#
+
 #include <library.h>
 #include <utils/debug.h>
 #include <utils/lexparser.h>
@@ -165,7 +165,6 @@ static collector_op_t do_args(int argc, char *argv[], bool *full_tags,
 			case 'h':
 				usage();
 				exit(SUCCESS);
-				break;
 			case 'C':
 				op = COLLECTOR_OP_CHECK;
 				continue;

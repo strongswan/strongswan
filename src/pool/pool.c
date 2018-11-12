@@ -710,7 +710,6 @@ static enumerator_t *create_lease_query(char *filter, array_t **to_free)
 			default:
 				fprintf(stderr, "invalid filter string.\n");
 				exit(EXIT_FAILURE);
-				break;
 		}
 	}
 	query = db->query(db,
@@ -1142,7 +1141,6 @@ static void do_args(int argc, char *argv[])
 			default:
 				usage();
 				exit(EXIT_FAILURE);
-				break;
 		}
 		break;
 	}
