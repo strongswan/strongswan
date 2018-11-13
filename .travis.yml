@@ -29,6 +29,7 @@ after_success:
 
 after_failure:
   - cat config.log
+  - sleep 1
 
 env:
   global:
