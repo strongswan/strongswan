@@ -55,17 +55,17 @@ env:
 
 matrix:
   include:
-    - compiler: clang
-      os: osx
-      env: TEST=osx
     - compiler: gcc
       env: TEST=sonarcloud
-      if: env(SONAR_TOKEN) IS present
+      if: type = push
       git:
         depth: false
       addons:
         sonarcloud:
           organization: "strongswan"
+    - compiler: clang
+      os: osx
+      env: TEST=osx
     - compiler: gcc
       env: TEST=coverage
     - compiler: clang
