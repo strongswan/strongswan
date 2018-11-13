@@ -55,26 +55,20 @@ env:
 
 matrix:
   include:
-    - compiler: gcc
-      env: TEST=sonarcloud
+    - env: TEST=sonarcloud
       if: type = push
       git:
         depth: false
       addons:
         sonarcloud:
           organization: "strongswan"
-    - compiler: clang
+    - env: TEST=osx
+      compiler: clang
       os: osx
-      env: TEST=osx
-    - compiler: gcc
-      env: TEST=coverage
-    - compiler: clang
-      env: TEST=fuzzing MONOLITHIC=yes
-    - compiler: gcc
-      env: TEST=dist
-    - compiler: gcc
-      env: TEST=apidoc
-    - compiler: gcc
-      env: TEST=win64 MONOLITHIC=yes
-    - compiler: gcc
-      env: TEST=win32 MONOLITHIC=yes
+    - env: TEST=coverage
+    - env: TEST=fuzzing MONOLITHIC=yes
+      compiler: clang
+    - env: TEST=dist
+    - env: TEST=apidoc
+    - env: TEST=win64 MONOLITHIC=yes
+    - env: TEST=win32 MONOLITHIC=yes
