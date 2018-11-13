@@ -284,6 +284,7 @@ sonarcloud)
 		-Dsonar.projectKey=strongswan \
 		-Dsonar.projectVersion=$(git describe)+${TRAVIS_BUILD_NUMBER} \
 		-Dsonar.sources=. \
+		-Dsonar.cfamily.threads=2 \
 		-Dsonar.cfamily.build-wrapper-output=bw-output || exit $?
 	;;
 *)
