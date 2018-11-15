@@ -29,7 +29,8 @@ libstrongswan_openssl_la_SOURCES = \
 	openssl_pkcs12.c openssl_pkcs12.h \
 	openssl_rng.c openssl_rng.h \
 	openssl_hmac.c openssl_hmac.h \
-	openssl_gcm.c openssl_gcm.h
+	openssl_gcm.c openssl_gcm.h \
+	openssl_x_diffie_hellman.c openssl_x_diffie_hellman.h
 
 libstrongswan_openssl_la_LDFLAGS = -module -avoid-version
 libstrongswan_openssl_la_LIBADD  = $(OPENSSL_LIB)

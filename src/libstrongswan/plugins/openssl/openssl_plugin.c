@@ -47,6 +47,7 @@
 #include "openssl_rng.h"
 #include "openssl_hmac.h"
 #include "openssl_gcm.h"
+#include "openssl_x_diffie_hellman.h"
 
 #ifndef FIPS_MODE
 #define FIPS_MODE 0
@@ -594,7 +595,14 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, ECP_384_BP),
 			PLUGIN_PROVIDE(DH, ECP_512_BP),
 			PLUGIN_PROVIDE(DH, ECP_224_BP),
-#endif
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL
+		PLUGIN_REGISTER(DH, openssl_x_diffie_hellman_create),
+			/* available since 1.1.0a, but we require 1.1.1 features */
+			PLUGIN_PROVIDE(DH, CURVE_25519),
+			/* available since 1.1.1 */
+			PLUGIN_PROVIDE(DH, CURVE_448),
+#endif /* OPENSSL_VERSION_NUMBER */
+#endif /* OPENSSL_NO_ECDH */
 #ifndef OPENSSL_NO_DH
 		/* MODP DH groups */
 		PLUGIN_REGISTER(DH, openssl_diffie_hellman_create),
