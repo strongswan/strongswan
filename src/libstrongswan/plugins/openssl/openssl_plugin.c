@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -48,6 +48,8 @@
 #include "openssl_hmac.h"
 #include "openssl_gcm.h"
 #include "openssl_x_diffie_hellman.h"
+#include "openssl_ed_public_key.h"
+#include "openssl_ed_private_key.h"
 
 #ifndef FIPS_MODE
 #define FIPS_MODE 0
@@ -308,6 +310,11 @@ static private_key_t *openssl_private_key_load(key_type_t type, va_list args)
 				case EVP_PKEY_EC:
 					return openssl_ec_private_key_create(key, FALSE);
 #endif
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
+				case EVP_PKEY_ED25519:
+				case EVP_PKEY_ED448:
+					return openssl_ed_private_key_create(key, FALSE);
+#endif /* OPENSSL_VERSION_NUMBER */
 				default:
 					EVP_PKEY_free(key);
 					break;
@@ -455,6 +462,11 @@ static private_key_t *openssl_private_key_connect(key_type_t type,
 		case EVP_PKEY_EC:
 			return openssl_ec_private_key_create(key, TRUE);
 #endif
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
+		case EVP_PKEY_ED25519:
+		case EVP_PKEY_ED448:
+			return openssl_ed_private_key_create(key, TRUE);
+#endif /* OPENSSL_VERSION_NUMBER */
 		default:
 			EVP_PKEY_free(key);
 			break;
@@ -595,13 +607,6 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, ECP_384_BP),
 			PLUGIN_PROVIDE(DH, ECP_512_BP),
 			PLUGIN_PROVIDE(DH, ECP_224_BP),
-#if OPENSSL_VERSION_NUMBER >= 0x1010100fL
-		PLUGIN_REGISTER(DH, openssl_x_diffie_hellman_create),
-			/* available since 1.1.0a, but we require 1.1.1 features */
-			PLUGIN_PROVIDE(DH, CURVE_25519),
-			/* available since 1.1.1 */
-			PLUGIN_PROVIDE(DH, CURVE_448),
-#endif /* OPENSSL_VERSION_NUMBER */
 #endif /* OPENSSL_NO_ECDH */
 #ifndef OPENSSL_NO_DH
 		/* MODP DH groups */
@@ -707,6 +712,30 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_521),
 #endif
 #endif /* OPENSSL_NO_ECDSA */
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
+		PLUGIN_REGISTER(DH, openssl_x_diffie_hellman_create),
+			/* available since 1.1.0a, but we require 1.1.1 features */
+			PLUGIN_PROVIDE(DH, CURVE_25519),
+			/* available since 1.1.1 */
+			PLUGIN_PROVIDE(DH, CURVE_448),
+		/* EdDSA private/public key loading */
+		PLUGIN_REGISTER(PUBKEY, openssl_ed_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ED25519),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ED448),
+		PLUGIN_REGISTER(PRIVKEY, openssl_ed_private_key_load, TRUE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ED25519),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ED448),
+		PLUGIN_REGISTER(PRIVKEY_GEN, openssl_ed_private_key_gen, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ED25519),
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ED448),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ED25519),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ED448),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ED25519),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ED448),
+		/* register a pro forma identity hasher, never instantiated */
+		PLUGIN_REGISTER(HASHER, return_null),
+			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
+#endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC */
 		/* generic key loader */
 		PLUGIN_REGISTER(PRIVKEY, openssl_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),

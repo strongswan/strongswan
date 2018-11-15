@@ -280,7 +280,7 @@ START_TEST(test_ed25519_sign)
 					BUILD_BLOB_ASN1_DER, sig_tests[_i].key, BUILD_END);
 	ck_assert(key != NULL);
 	ck_assert(key->get_encoding(key, PRIVKEY_ASN1_DER, &encoding));
-	ck_assert(chunk_equals(encoding, sig_tests[_i].key));
+	ck_assert_chunk_eq(encoding, sig_tests[_i].key);
 	chunk_free(&encoding);
 
 	/* load public key */
@@ -288,7 +288,7 @@ START_TEST(test_ed25519_sign)
 					BUILD_BLOB_ASN1_DER, sig_tests[_i].pubkey, BUILD_END);
 	ck_assert(pubkey != NULL);
 	ck_assert(pubkey->get_encoding(pubkey, PUBKEY_SPKI_ASN1_DER, &encoding));
-	ck_assert(chunk_equals(encoding, sig_tests[_i].pubkey));
+	ck_assert_chunk_eq(encoding, sig_tests[_i].pubkey);
 	chunk_free(&encoding);
 
 	/* compare public keys */
@@ -299,7 +299,7 @@ START_TEST(test_ed25519_sign)
 	/* sign */
 	ck_assert(key->sign(key, SIGN_ED25519, NULL, sig_tests[_i].msg, &sig));
 	ck_assert(sig.len == 64);
-	ck_assert(chunk_equals(sig, sig_tests[_i].sig));
+	ck_assert_chunk_eq(sig, sig_tests[_i].sig);
 
 	/* verify */
 	ck_assert(pubkey->verify(pubkey, SIGN_ED25519, NULL, sig_tests[_i].msg,
@@ -364,7 +364,7 @@ START_TEST(test_ed25519_gen)
 	ck_assert(pubkey->get_fingerprint(pubkey, KEYID_PUBKEY_SHA1, &fp_pub));
 	ck_assert(pubkey->get_fingerprint(pubkey, KEYID_PUBKEY_SHA1, &fp_pub));
 	ck_assert(fp_pub.ptr != NULL);
-	ck_assert(chunk_equals(fp_pub, fp_priv));
+	ck_assert_chunk_eq(fp_pub, fp_priv);
 
 	/* clone public key */
 	pubkey2 = pubkey->get_ref(pubkey);
