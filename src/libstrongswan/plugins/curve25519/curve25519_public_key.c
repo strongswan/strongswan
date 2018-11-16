@@ -49,6 +49,13 @@ METHOD(public_key_t, get_type, key_type_t,
 	return KEY_ED25519;
 }
 
+/* L = 2^252+27742317777372353535851937790883648493 in little-endian form */
+static chunk_t curve25519_order = chunk_from_chars(
+								0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+								0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+								0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+								0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10);
+
 METHOD(public_key_t, verify, bool,
 	private_curve25519_public_key_t *this, signature_scheme_t scheme,
 	void *params, chunk_t data, chunk_t signature)
@@ -93,6 +100,20 @@ METHOD(public_key_t, verify, bool,
 	if (!d)
 	{
 		return FALSE;
+	}
+	/* make sure 0 <= s < L, as per RFC 8032, section 5.1.7 to prevent signature
+	 * malleability.  Due to the three-bit check above (forces s < 2^253) there
+	 * is not that much room, but adding L once works with most signatures */
+	for (i = 31; ; i--)
+	{
+		if (sig[i+32] < curve25519_order.ptr[i])
+		{
+			break;
+		}
+		else if (sig[i+32] > curve25519_order.ptr[i] || i == 0)
+		{
+			return FALSE;
+		}
 	}
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
