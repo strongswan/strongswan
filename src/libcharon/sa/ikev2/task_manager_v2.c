@@ -1568,8 +1568,6 @@ METHOD(task_manager_t, process_message, status_t,
 		/* add a timeout if peer does not establish it completely */
 		schedule_delete_job = TRUE;
 	}
-	this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
-								time_monotonic(NULL));
 
 	mid = msg->get_message_id(msg);
 	if (msg->get_request(msg))
@@ -1587,6 +1585,11 @@ METHOD(task_manager_t, process_message, status_t,
 			status = handle_fragment(this, &this->responding.defrag, msg);
 			if (status != SUCCESS)
 			{
+				if (status == NEED_MORE)
+				{
+					this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+												time_monotonic(NULL));
+				}
 				return status;
 			}
 			charon->bus->message(charon->bus, msg, TRUE, TRUE);
@@ -1597,6 +1600,8 @@ METHOD(task_manager_t, process_message, status_t,
 			switch (process_request(this, msg))
 			{
 				case SUCCESS:
+					this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+												time_monotonic(NULL));
 					this->responding.mid++;
 					break;
 				case NEED_MORE:
@@ -1613,10 +1618,17 @@ METHOD(task_manager_t, process_message, status_t,
 			status = handle_fragment(this, &this->responding.defrag, msg);
 			if (status != SUCCESS)
 			{
+				if (status == NEED_MORE)
+				{
+					this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+												time_monotonic(NULL));
+				}
 				return status;
 			}
 			DBG1(DBG_IKE, "received retransmit of request with ID %d, "
 				 "retransmitting response", mid);
+			this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+										time_monotonic(NULL));
 			charon->bus->alert(charon->bus, ALERT_RETRANSMIT_RECEIVE, msg);
 			send_packets(this, this->responding.packets,
 						 msg->get_destination(msg), msg->get_source(msg));
@@ -1646,6 +1658,11 @@ METHOD(task_manager_t, process_message, status_t,
 			status = handle_fragment(this, &this->initiating.defrag, msg);
 			if (status != SUCCESS)
 			{
+				if (status == NEED_MORE)
+				{
+					this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+												time_monotonic(NULL));
+				}
 				return status;
 			}
 			charon->bus->message(charon->bus, msg, TRUE, TRUE);
@@ -1658,6 +1675,8 @@ METHOD(task_manager_t, process_message, status_t,
 				flush(this);
 				return DESTROY_ME;
 			}
+			this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
+										time_monotonic(NULL));
 		}
 		else
 		{
