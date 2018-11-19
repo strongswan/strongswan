@@ -100,9 +100,7 @@ enum task_type_t {
 	/** IKEv1 NAT detection */
 	TASK_ISAKMP_NATD,
 	/** IKEv1 DPD */
-	TASK_ISAKMP_R_U_THERE,
-	/** IKEv1 DPD response */
-	TASK_ISAKMP_R_U_THERE_ACK,
+	TASK_ISAKMP_DPD,
 	/** IKEv1 pre-authentication certificate handling */
 	TASK_ISAKMP_CERT_PRE,
 	/** IKEv1 post-authentication certificate handling */

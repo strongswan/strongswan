@@ -544,7 +544,7 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
-				if (activate_task(this, TASK_ISAKMP_R_U_THERE_ACK))
+				if (activate_task(this, TASK_ISAKMP_DPD))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
@@ -563,12 +563,6 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
-				if (activate_task(this, TASK_ISAKMP_R_U_THERE))
-				{
-					exchange = INFORMATIONAL_V1;
-					new_mid = TRUE;
-					break;
-				}
 				break;
 			case IKE_REKEYING:
 				if (activate_task(this, TASK_ISAKMP_DELETE))
@@ -577,13 +571,7 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
-				if (activate_task(this, TASK_ISAKMP_R_U_THERE))
-				{
-					exchange = INFORMATIONAL_V1;
-					new_mid = TRUE;
-					break;
-				}
-				if (activate_task(this, TASK_ISAKMP_R_U_THERE_ACK))
+				if (activate_task(this, TASK_ISAKMP_DPD))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;

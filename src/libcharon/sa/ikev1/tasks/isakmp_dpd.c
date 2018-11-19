@@ -81,7 +81,7 @@ METHOD(task_t, process, status_t,
 METHOD(task_t, get_type, task_type_t,
 	private_isakmp_dpd_t *this)
 {
-	return this->type == DPD_R_U_THERE ? TASK_ISAKMP_R_U_THERE : TASK_ISAKMP_R_U_THERE_ACK;
+	return TASK_ISAKMP_DPD;
 }
 
 METHOD(task_t, migrate, void,
