@@ -1967,6 +1967,8 @@ static void adopt_children_and_vips(ike_sa_t *old, ike_sa_t *new)
 	}
 	enumerator->destroy(enumerator);
 
+	new->adopt_child_tasks(new, old);
+
 	enumerator = old->create_virtual_ip_enumerator(old, FALSE);
 	while (enumerator->enumerate(enumerator, &vip))
 	{
