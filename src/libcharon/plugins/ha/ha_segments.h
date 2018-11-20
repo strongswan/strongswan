@@ -83,6 +83,13 @@ struct ha_segments_t {
 	bool (*is_active)(ha_segments_t *this, u_int segment);
 
 	/**
+	 * Return the number of segments
+	 *
+	 * @return			number of segments
+	 */
+	u_int (*count)(ha_segments_t *this);
+
+	/**
 	 * Destroy a ha_segments_t.
 	 */
 	void (*destroy)(ha_segments_t *this);
