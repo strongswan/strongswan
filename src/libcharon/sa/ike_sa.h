@@ -1148,6 +1148,13 @@ struct ike_sa_t {
 	void (*queue_task_delayed)(ike_sa_t *this, task_t *task, uint32_t delay);
 
 	/**
+	 * Adopt child creating tasks from the given IKE_SA.
+	 *
+	 * @param other			other IKE_SA to adopt tasks from
+	 */
+	void (*adopt_child_tasks)(ike_sa_t *this, ike_sa_t *other);
+
+	/**
 	 * Inherit required attributes to new SA before rekeying.
 	 *
 	 * Some properties of the SA must be applied before starting IKE_SA
