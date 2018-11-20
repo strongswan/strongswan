@@ -165,7 +165,7 @@ static bool responsible_for(private_ha_attribute_t *this, int offset)
 {
 	u_int segment;
 
-	segment = this->kernel->get_segment_int(this->kernel, offset);
+	segment = offset % this->segments->count(this->segments) + 1;
 	return this->segments->is_active(this->segments, segment);
 }
 
