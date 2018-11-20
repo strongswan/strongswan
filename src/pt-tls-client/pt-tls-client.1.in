@@ -1,4 +1,4 @@
-.TH PT-TLS-CLIENT 1 "2017-07-15" "@PACKAGE_VERSION@" "strongSwan"
+.TH PT-TLS-CLIENT 1 "2018-11-20" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -9,7 +9,7 @@ pt-tls-client \- Simple client using PT-TLS to collect integrity information
 .SY "pt-tls-client"
 .BI \-\-connect
 .IR hostname |\fIaddress
-.OP \-\-port hex
+.OP \-\-port port
 .RB [ \-\-certid
 .IR hex |\fB\-\-cert
 .IR file ]+
