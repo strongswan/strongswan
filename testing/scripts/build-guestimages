@@ -76,12 +76,7 @@ do
 
 		for service in "apache2 slapd bind9"
 		do
-			if [ "$BASEIMGSUITE" == "wheezy" ]
-			then
-				execute_chroot "update-rc.d $service defaults" 0
-			else
-				execute_chroot "systemctl enable $service" 0
-			fi
+			execute_chroot "systemctl enable $service" 0
 		done
 	fi
 	sync

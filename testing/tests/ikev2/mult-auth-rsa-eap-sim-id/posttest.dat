@@ -1,4 +1,4 @@
 moon::ipsec stop
 carol::ipsec stop
 dave::ipsec stop
-alice::killall radiusd
+alice::killall freeradius

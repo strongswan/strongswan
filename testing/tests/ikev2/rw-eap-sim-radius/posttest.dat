@@ -1,7 +1,7 @@
 moon::ipsec stop
 carol::ipsec stop
 dave::ipsec stop
-alice::killall radiusd
+alice::killall freeradius
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush
 dave::iptables-restore < /etc/iptables.flush

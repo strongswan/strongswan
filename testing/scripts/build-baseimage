@@ -12,29 +12,34 @@ running_any $STRONGSWANHOSTS && die "Please stop test environment before running
 check_commands debootstrap mkfs.ext3 partprobe qemu-img qemu-nbd sfdisk
 
 # package includes/excludes
-INC=automake,autoconf,libtool,bison,flex,gperf,pkg-config,gettext,less
+INC=automake,autoconf,libtool,bison,flex,gperf,pkg-config,gettext,less,locales
 INC=$INC,build-essential,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,ethtool
 INC=$INC,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc
 INC=$INC,openssl,vim,sqlite3,conntrack,gdb,cmake,libltdl-dev,liblog4cxx10-dev
-INC=$INC,libboost-thread-dev,libboost-system-dev,git-core,iperf,htop,screen
+INC=$INC,libboost-thread-dev,libboost-system-dev,git-core,iperf,htop
 INC=$INC,gnat,gprbuild,acpid,acpi-support-base,libldns-dev,libunbound-dev
 INC=$INC,dnsutils,libsoup2.4-dev,ca-certificates,unzip,libsystemd-dev
 INC=$INC,python,python-setuptools,python-dev,python-pip,apt-transport-https
-INC=$INC,libjson0-dev,libxslt1-dev,libapache2-mod-wsgi,iptables-dev
+INC=$INC,libjson-c-dev,libxslt1-dev,libapache2-mod-wsgi,iptables-dev
+INC=$INC,libxerces-c-dev,libgcrypt20-dev,traceroute
 case "$BASEIMGSUITE" in
-wheezy)
-	INC=$INC,libxerces-c2-dev,libahven3-dev,libxmlada4.1-dev,libgmpada3-dev
-	INC=$INC,libalog0.4.1-base-dev
-	;;
 jessie)
-	INC=$INC,libxerces-c-dev,libahven4-dev,libxmlada5-dev,libgmpada5-dev
-	INC=$INC,libalog1-dev,libgcrypt20-dev
+	INC=$INC,libahven4-dev,libxmlada5-dev,libgmpada5-dev
+	INC=$INC,libalog1-dev
+	;;
+stretch)
+	INC=$INC,libahven5-dev,libxmlada-schema6-dev,libgmpada6-dev
+	INC=$INC,libalog2-dev
 	;;
 *)
 	echo_warn "Package list for '$BASEIMGSUITE' might has to be updated"
 esac
-SERVICES="apache2 dbus isc-dhcp-server slapd bind9"
+SERVICES="apache2 dbus isc-dhcp-server slapd bind9 freeradius"
 INC=$INC,${SERVICES// /,}
+# packages to install via APT, for SWIMA tests
+APT="tmux"
+# additional services to disable
+SERVICES="$SERVICES systemd-timesyncd.service"
 
 CACHEDIR=$BUILDDIR/cache
 APTCACHE=$LOOPDIR/var/cache/apt/archives
@@ -86,6 +91,13 @@ execute "debootstrap --arch=$BASEIMGARCH --include=$INC $BASEIMGSUITE $LOOPDIR $
 execute "mount -t proc none $LOOPDIR/proc" 0
 do_on_exit graceful_umount $LOOPDIR/proc
 
+log_action "Generating locales"
+cat > $LOOPDIR/etc/locale.gen << EOF
+de_CH.UTF-8 UTF-8
+en_US.UTF-8 UTF-8
+EOF
+execute_chroot "locale-gen"
+
 log_action "Downloading signing key for custom apt repo"
 execute_chroot "wget -q $BASEIMGEXTKEY -O /tmp/key"
 log_action "Installing signing key for custom apt repo"
@@ -107,18 +119,15 @@ log_status $?
 
 log_action "Update package sources"
 execute_chroot "apt-get update"
+log_action "Install packages via APT"
+execute_chroot "apt-get -y install $APT"
 log_action "Install packages from custom repo"
 execute_chroot "apt-get -y upgrade"
 
 for service in $SERVICES
 do
 	log_action "Disabling service $service"
-	if [ "$BASEIMGSUITE" == "wheezy" ]
-	then
-		execute_chroot "update-rc.d -f $service remove"
-	else
-		execute_chroot "systemctl disable $service"
-	fi
+	execute_chroot "systemctl disable $service"
 done
 
 log_action "Disabling root password"
