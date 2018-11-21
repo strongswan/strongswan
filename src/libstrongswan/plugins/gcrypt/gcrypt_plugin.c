@@ -43,10 +43,12 @@ struct private_gcrypt_plugin_t {
 	gcrypt_plugin_t public;
 };
 
+#if GCRYPT_VERSION_NUMBER < 0x010600
 /**
  * Define gcrypt multi-threading callbacks as gcry_threads_pthread
  */
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
+#endif
 
 METHOD(plugin_t, get_name, char*,
 	private_gcrypt_plugin_t *this)
@@ -163,7 +165,9 @@ plugin_t *gcrypt_plugin_create()
 {
 	private_gcrypt_plugin_t *this;
 
+#if GCRYPT_VERSION_NUMBER < 0x010600
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+#endif
 
 	if (!gcry_check_version(GCRYPT_VERSION))
 	{
