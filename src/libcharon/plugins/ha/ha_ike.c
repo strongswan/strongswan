@@ -73,7 +73,7 @@ static ike_extension_t copy_extension(ike_sa_t *ike_sa, ike_extension_t ext)
 METHOD(listener_t, ike_keys, bool,
 	private_ha_ike_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
 	chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey,
-	shared_key_t *shared)
+	shared_key_t *shared, auth_method_t method)
 {
 	ha_message_t *m;
 	chunk_t secret;
@@ -140,6 +140,10 @@ METHOD(listener_t, ike_keys, bool,
 		if (shared)
 		{
 			m->add_attribute(m, HA_PSK, shared->get_key(shared));
+		}
+		else
+		{
+			m->add_attribute(m, HA_AUTH_METHOD, method);
 		}
 	}
 	m->add_attribute(m, HA_REMOTE_ADDR, ike_sa->get_other_host(ike_sa));
