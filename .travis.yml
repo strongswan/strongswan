@@ -83,6 +83,8 @@ matrix:
     - env: TEST=botan LEAK_DETECTIVE=yes
     - env: TEST=openssl
     - env: TEST=openssl LEAK_DETECTIVE=yes
+    - env: TEST=openssl-1.0
+    - env: TEST=openssl-1.0 LEAK_DETECTIVE=yes
     - env: TEST=gcrypt
     - env: TEST=gcrypt LEAK_DETECTIVE=yes
     - env: TEST=apidoc

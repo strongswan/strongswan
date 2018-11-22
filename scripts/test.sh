@@ -11,6 +11,8 @@ build_botan()
 		return
 	fi
 
+	echo "$ build_botan()"
+
 	# if the leak detective is enabled we have to disable threading support
 	# (used for std::async) as that causes invalid frees somehow, the
 	# locking allocator causes a static leak via the first function that
@@ -43,7 +45,9 @@ build_tss2()
 		return
 	fi
 
-	# the default version of libgcrypt in Ubuntu 14.04 is too old
+	echo "$ build_tss2()"
+
+	# the default version of libgcrypt in Ubuntu 16.04 is too old
 	sudo apt-get update -qq && \
 	sudo apt-get install -qq libgcrypt20-dev &&
 	curl -L $TSS2_SRC | tar xz -C $TRAVIS_BUILD_DIR/.. &&
@@ -53,6 +57,42 @@ build_tss2()
 	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
 	cd -
+}
+
+build_openssl()
+{
+	SSL_REV=1.1.1a
+	SSL_PKG=openssl-$SSL_REV
+	SSL_DIR=$TRAVIS_BUILD_DIR/../$SSL_PKG
+	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
+	SSL_INS=/usr/local/ssl
+	SSL_OPT="shared no-tls no-dtls no-ssl3 no-zlib no-comp no-idea no-psk no-srp
+			 no-stdio no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
+
+	if test -d "$SSL_DIR"; then
+		return
+	fi
+
+	echo "$ build_openssl()"
+
+	curl -L $SSL_SRC | tar xz -C $TRAVIS_BUILD_DIR/.. &&
+	cd $SSL_DIR &&
+	./config --prefix=$SSL_INS --openssldir=$SSL_INS $SSL_OPT &&
+	make -j4 >/dev/null &&
+	sudo make install_sw >/dev/null &&
+	echo $SSL_INS/lib | sudo tee /etc/ld.so.conf.d/openssl-$SSL_REV.conf >/dev/null &&
+	sudo ldconfig || exit $?
+	cd -
+}
+
+use_custom_openssl()
+{
+	CFLAGS="$CFLAGS -I/usr/local/ssl/include"
+	LDFLAGS="$LDFLAGS -L/usr/local/ssl/lib"
+	export LDFLAGS
+	if test "$1" = "deps"; then
+		build_openssl
+	fi
 }
 
 if test -z $TRAVIS_BUILD_DIR; then
@@ -72,9 +112,13 @@ default)
 	# should be the default, but lets make sure
 	CONFIG="--with-printf-hooks=glibc"
 	;;
-openssl)
-	CONFIG="--disable-defaults --enable-pki --enable-openssl"
+openssl*)
+	CONFIG="--disable-defaults --enable-pki --enable-openssl --enable-pem"
 	DEPS="libssl-dev"
+	if test "$TEST" != "openssl-1.0"; then
+		DEPS=""
+		use_custom_openssl $1
+	fi
 	;;
 gcrypt)
 	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1"
@@ -119,6 +163,7 @@ all|coverage|sonarcloud)
 		build_botan
 		build_tss2
 	fi
+	use_custom_openssl $1
 	;;
 win*)
 	CONFIG="--disable-defaults --enable-svc --enable-ikev2
