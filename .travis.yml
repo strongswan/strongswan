@@ -38,7 +38,7 @@ env:
 matrix:
   include:
     - env: TEST=sonarcloud
-      if: type = push
+      if: type = push AND env(SONAR_TOKEN) IS present
       git:
         depth: false
       addons:
