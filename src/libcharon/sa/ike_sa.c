@@ -1747,6 +1747,12 @@ METHOD(ike_sa_t, remove_child_sa, void,
 	array_remove_at(this->child_sas, ce->inner);
 }
 
+METHOD(ike_sa_t, remove_child_tasks, linked_list_t *,
+	private_ike_sa_t *this)
+{
+	return this->task_manager->remove_child_tasks(this->task_manager);
+}
+
 METHOD(ike_sa_t, rekey_child_sa, status_t,
 	private_ike_sa_t *this, protocol_id_t protocol, uint32_t spi)
 {
@@ -3040,6 +3046,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.get_child_count = _get_child_count,
 			.create_child_sa_enumerator = _create_child_sa_enumerator,
 			.remove_child_sa = _remove_child_sa,
+			.remove_child_tasks = _remove_child_tasks,
 			.rekey_child_sa = _rekey_child_sa,
 			.delete_child_sa = _delete_child_sa,
 			.destroy_child_sa = _destroy_child_sa,

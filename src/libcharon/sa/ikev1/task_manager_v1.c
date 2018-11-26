@@ -1895,7 +1895,7 @@ METHOD(task_manager_t, adopt_tasks, void,
  * Migrates child-creating tasks from src to dst
  */
 static void migrate_child_tasks(private_task_manager_t *this,
-								linked_list_t *src, linked_list_t *dst)
+								linked_list_t *src, linked_list_t *dst, bool migrate)
 {
 	enumerator_t *enumerator;
 	task_t *task;
@@ -1906,7 +1906,8 @@ static void migrate_child_tasks(private_task_manager_t *this,
 		if (task->get_type(task) == TASK_QUICK_MODE)
 		{
 			src->remove_at(src, enumerator);
-			task->migrate(task, this->ike_sa);
+			if (migrate)
+				task->migrate(task, this->ike_sa);
 			dst->insert_last(dst, task);
 		}
 	}
@@ -1919,9 +1920,20 @@ METHOD(task_manager_t, adopt_child_tasks, void,
 	private_task_manager_t *other = (private_task_manager_t*)other_public;
 
 	/* move active child tasks from other to this */
-	migrate_child_tasks(this, other->active_tasks, this->queued_tasks);
+	migrate_child_tasks(this, other->active_tasks, this->queued_tasks, TRUE);
 	/* do the same for queued tasks */
-	migrate_child_tasks(this, other->queued_tasks, this->queued_tasks);
+	migrate_child_tasks(this, other->queued_tasks, this->queued_tasks, TRUE);
+}
+
+METHOD(task_manager_t, remove_child_tasks, linked_list_t *,
+		private_task_manager_t *this)
+{
+	linked_list_t *child_tasks = linked_list_create();
+
+	migrate_child_tasks(this, this->active_tasks, child_tasks, FALSE);
+	migrate_child_tasks(this, this->queued_tasks, child_tasks, FALSE);
+
+	return child_tasks;
 }
 
 METHOD(task_manager_t, busy, bool,
@@ -2048,6 +2060,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.reset = _reset,
 				.adopt_tasks = _adopt_tasks,
 				.adopt_child_tasks = _adopt_child_tasks,
+				.remove_child_tasks = _remove_child_tasks,
 				.busy = _busy,
 				.create_task_enumerator = _create_task_enumerator,
 				.flush = _flush,

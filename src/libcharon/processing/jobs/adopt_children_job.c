@@ -59,12 +59,13 @@ METHOD(job_t, execute, job_requeue_t,
 	identification_t *my_id, *other_id, *xauth;
 	host_t *me, *other, *vip;
 	peer_cfg_t *cfg;
-	linked_list_t *children, *vips;
+	linked_list_t *children, *vips, *child_tasks;
 	enumerator_t *enumerator, *subenum;
 	ike_sa_id_t *id;
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	uint32_t unique;
+	task_t *child_task;
 
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->id);
 	if (ike_sa)
@@ -127,6 +128,17 @@ METHOD(job_t, execute, job_requeue_t,
 					 * it does trigger an assign_vips(FALSE) event, so we also
 					 * trigger one below */
 					ike_sa->clear_virtual_ips(ike_sa, FALSE);
+
+					child_tasks = ike_sa->remove_child_tasks(ike_sa);
+					if (child_tasks->get_count(child_tasks) > 0)
+					{
+						while (child_tasks->remove_first(child_tasks, (void**)&child_task) == SUCCESS)
+						{
+							this->public.queue_task(this, child_task);
+						}
+					}
+					child_tasks->destroy(child_tasks);
+
 					if (children->get_count(children) || vips->get_count(vips))
 					{
 						DBG1(DBG_IKE, "detected reauth of existing IKE_SA, "

@@ -968,6 +968,13 @@ struct ike_sa_t {
 	void (*remove_child_sa) (ike_sa_t *this, enumerator_t *enumerator);
 
 	/**
+	 * Remove all active or queued CHILD_SA-creating tasks from this' manager.
+	 *
+	 * @return linked_list
+	 */
+	linked_list_t* (*remove_child_tasks)(ike_sa_t *this);
+
+	/**
 	 * Rekey the CHILD SA with the specified reqid.
 	 *
 	 * Looks for a CHILD SA owned by this IKE_SA, and start the rekeing.

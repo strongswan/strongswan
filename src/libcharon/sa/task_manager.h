@@ -228,6 +228,14 @@ struct task_manager_t {
 	void (*adopt_tasks) (task_manager_t *this, task_manager_t *other);
 
 	/**
+	 * Remove all active or queued CHILD_SA-creating tasks from this
+	 *
+	 * The tasks are not yet migrate to any new IKE_SA. The caller is responsible
+	 * to free the list.
+	 */
+	linked_list_t * (*remove_child_tasks) (task_manager_t *this);
+
+	/**
 	 * Migrate all active or queued CHILD_SA-creating tasks from other to this.
 	 *
 	 * @param other			manager which gives away its tasks
