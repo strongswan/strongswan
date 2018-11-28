@@ -2721,6 +2721,12 @@ METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
 	return this->task_manager->create_task_enumerator(this->task_manager, queue);
 }
 
+METHOD(ike_sa_t, remove_task, void,
+	private_ike_sa_t *this, enumerator_t *enumerator)
+{
+	return this->task_manager->remove_task(this->task_manager, enumerator);
+}
+
 METHOD(ike_sa_t, flush_queue, void,
 	private_ike_sa_t *this, task_queue_t queue)
 {
@@ -3063,6 +3069,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.create_attribute_enumerator = _create_attribute_enumerator,
 			.set_kmaddress = _set_kmaddress,
 			.create_task_enumerator = _create_task_enumerator,
+			.remove_task = _remove_task,
 			.flush_queue = _flush_queue,
 			.queue_task = _queue_task,
 			.queue_task_delayed = _queue_task_delayed,

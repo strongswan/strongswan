@@ -1125,6 +1125,16 @@ struct ike_sa_t {
 	enumerator_t* (*create_task_enumerator)(ike_sa_t *this, task_queue_t queue);
 
 	/**
+	 * Remove the task the given enumerator points to.
+	 *
+	 * @note This should be used with caution, in partciular, for tasks in the
+	 * active and passive queues.
+	 *
+	 * @param enumerator	enumerator created with the method above
+	 */
+	void (*remove_task)(ike_sa_t *this, enumerator_t *enumerator);
+
+	/**
 	 * Flush a task queue, cancelling all tasks in it.
 	 *
 	 * @param queue			queue type to flush
