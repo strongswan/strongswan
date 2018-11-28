@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Tobias Brunner
+ * Copyright (C) 2007-2018 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -1984,19 +1984,86 @@ METHOD(task_manager_t, reset, void,
 	}
 }
 
+/**
+ * Data for a task queue enumerator
+ */
+typedef struct {
+	enumerator_t public;
+	task_queue_t queue;
+	enumerator_t *inner;
+} task_enumerator_t;
+
+METHOD(enumerator_t, task_enumerator_destroy, void,
+	task_enumerator_t *this)
+{
+	this->inner->destroy(this->inner);
+	free(this);
+}
+
+METHOD(enumerator_t, task_enumerator_enumerate, bool,
+	task_enumerator_t *this, va_list args)
+{
+	task_t **task;
+
+	VA_ARGS_VGET(args, task);
+	return this->inner->enumerate(this->inner, task);
+}
+
 METHOD(task_manager_t, create_task_enumerator, enumerator_t*,
 	private_task_manager_t *this, task_queue_t queue)
 {
+	task_enumerator_t *enumerator;
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _task_enumerator_enumerate,
+			.destroy = _task_enumerator_destroy,
+		},
+		.queue = queue,
+	);
 	switch (queue)
 	{
 		case TASK_QUEUE_ACTIVE:
-			return this->active_tasks->create_enumerator(this->active_tasks);
+			enumerator->inner = this->active_tasks->create_enumerator(
+														this->active_tasks);
+			break;
 		case TASK_QUEUE_PASSIVE:
-			return this->passive_tasks->create_enumerator(this->passive_tasks);
+			enumerator->inner = this->passive_tasks->create_enumerator(
+														this->passive_tasks);
+			break;
 		case TASK_QUEUE_QUEUED:
-			return this->queued_tasks->create_enumerator(this->queued_tasks);
+			enumerator->inner = this->queued_tasks->create_enumerator(
+														this->queued_tasks);
+			break;
 		default:
-			return enumerator_create_empty();
+			enumerator->inner = enumerator_create_empty();
+			break;
+	}
+	return &enumerator->public;
+}
+
+METHOD(task_manager_t, remove_task, void,
+	private_task_manager_t *this, enumerator_t *enumerator_public)
+{
+	task_enumerator_t *enumerator = (task_enumerator_t*)enumerator_public;
+
+	switch (enumerator->queue)
+	{
+		case TASK_QUEUE_ACTIVE:
+			this->active_tasks->remove_at(this->active_tasks,
+										  enumerator->inner);
+			break;
+		case TASK_QUEUE_PASSIVE:
+			this->passive_tasks->remove_at(this->passive_tasks,
+										   enumerator->inner);
+			break;
+		case TASK_QUEUE_QUEUED:
+			this->queued_tasks->remove_at(this->queued_tasks,
+										  enumerator->inner);
+			break;
+		default:
+			break;
 	}
 }
 
@@ -2050,6 +2117,7 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.adopt_child_tasks = _adopt_child_tasks,
 				.busy = _busy,
 				.create_task_enumerator = _create_task_enumerator,
+				.remove_task = _remove_task,
 				.flush = _flush,
 				.flush_queue = _flush_queue,
 				.destroy = _destroy,

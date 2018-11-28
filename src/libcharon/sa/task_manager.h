@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Tobias Brunner
+ * Copyright (C) 2013-2018 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -283,6 +283,16 @@ struct task_manager_t {
 	 */
 	enumerator_t* (*create_task_enumerator)(task_manager_t *this,
 											task_queue_t queue);
+
+	/**
+	 * Remove the task the given enumerator points to.
+	 *
+	 * @note This should be used with caution, in partciular, for tasks in the
+	 * active and passive queues.
+	 *
+	 * @param enumerator	enumerator created with the method above
+	 */
+	void (*remove_task)(task_manager_t *this, enumerator_t *enumerator);
 
 	/**
 	 * Flush all tasks, regardless of the queue.

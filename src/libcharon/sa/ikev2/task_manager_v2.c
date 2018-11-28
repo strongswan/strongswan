@@ -2186,17 +2186,39 @@ METHOD(task_manager_t, reset, void,
 	this->reset = TRUE;
 }
 
-CALLBACK(filter_queued, bool,
-	void *unused, enumerator_t *orig, va_list args)
-{
+/**
+ * Data for a task queue enumerator
+ */
+typedef struct {
+	enumerator_t public;
+	task_queue_t queue;
+	enumerator_t *inner;
 	queued_task_t *queued;
+} task_enumerator_t;
+
+METHOD(enumerator_t, task_enumerator_destroy, void,
+	task_enumerator_t *this)
+{
+	this->inner->destroy(this->inner);
+	free(this);
+}
+
+METHOD(enumerator_t, task_enumerator_enumerate, bool,
+	task_enumerator_t *this, va_list args)
+{
 	task_t **task;
 
 	VA_ARGS_VGET(args, task);
-
-	if (orig->enumerate(orig, &queued))
+	if (this->queue == TASK_QUEUE_QUEUED)
 	{
-		*task = queued->task;
+		if (this->inner->enumerate(this->inner, &this->queued))
+		{
+			*task = this->queued->task;
+			return TRUE;
+		}
+	}
+	else if (this->inner->enumerate(this->inner, task))
+	{
 		return TRUE;
 	}
 	return FALSE;
@@ -2205,18 +2227,54 @@ CALLBACK(filter_queued, bool,
 METHOD(task_manager_t, create_task_enumerator, enumerator_t*,
 	private_task_manager_t *this, task_queue_t queue)
 {
+	task_enumerator_t *enumerator;
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _task_enumerator_enumerate,
+			.destroy = _task_enumerator_destroy,
+		},
+		.queue = queue,
+	);
 	switch (queue)
 	{
 		case TASK_QUEUE_ACTIVE:
-			return array_create_enumerator(this->active_tasks);
+			enumerator->inner = array_create_enumerator(this->active_tasks);
+			break;
 		case TASK_QUEUE_PASSIVE:
-			return array_create_enumerator(this->passive_tasks);
+			enumerator->inner = array_create_enumerator(this->passive_tasks);
+			break;
 		case TASK_QUEUE_QUEUED:
-			return enumerator_create_filter(
-									array_create_enumerator(this->queued_tasks),
-									filter_queued, NULL, NULL);
+			enumerator->inner = array_create_enumerator(this->queued_tasks);
+			break;
 		default:
-			return enumerator_create_empty();
+			enumerator->inner = enumerator_create_empty();
+			break;
+	}
+	return &enumerator->public;
+}
+
+METHOD(task_manager_t, remove_task, void,
+	private_task_manager_t *this, enumerator_t *enumerator_public)
+{
+	task_enumerator_t *enumerator = (task_enumerator_t*)enumerator_public;
+
+	switch (enumerator->queue)
+	{
+		case TASK_QUEUE_ACTIVE:
+			array_remove_at(this->active_tasks, enumerator->inner);
+			break;
+		case TASK_QUEUE_PASSIVE:
+			array_remove_at(this->passive_tasks, enumerator->inner);
+			break;
+		case TASK_QUEUE_QUEUED:
+			array_remove_at(this->queued_tasks, enumerator->inner);
+			free(enumerator->queued);
+			enumerator->queued = NULL;
+			break;
+		default:
+			break;
 	}
 }
 
@@ -2269,6 +2327,7 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 				.adopt_child_tasks = _adopt_child_tasks,
 				.busy = _busy,
 				.create_task_enumerator = _create_task_enumerator,
+				.remove_task = _remove_task,
 				.flush = _flush,
 				.flush_queue = _flush_queue,
 				.destroy = _destroy,
