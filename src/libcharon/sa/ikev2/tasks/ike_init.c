@@ -890,6 +890,20 @@ METHOD(task_t, pre_process_i, status_t,
 
 			switch (type)
 			{
+				case COOKIE:
+				{
+					chunk_t cookie;
+
+					cookie = notify->get_notification_data(notify);
+					if (chunk_equals(cookie, this->cookie))
+					{
+						DBG1(DBG_IKE, "ignore response with duplicate COOKIE "
+							 "notify");
+						enumerator->destroy(enumerator);
+						return FAILED;
+					}
+					break;
+				}
 				case REDIRECT:
 				{
 					identification_t *gateway;
