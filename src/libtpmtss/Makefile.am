@@ -20,12 +20,17 @@ if USE_TROUSERS
 libtpmtss_la_LIBADD += -ltspi
 endif
 
+if USE_IBMTSS
+libtpmtss_la_LIBADD += -libmtss
+endif
+
 libtpmtss_la_SOURCES = \
 	tpm_tss.h tpm_tss.c \
 	tpm_tss_quote_info.h tpm_tss_quote_info.c \
 	tpm_tss_trousers.h tpm_tss_trousers.c \
 	tpm_tss_tss2.h tpm_tss_tss2_v1.c tpm_tss_tss2_v2.c \
-	tpm_tss_tss2_names.h tpm_tss_tss2_names_v1.c tpm_tss_tss2_names_v2.c
+	tpm_tss_tss2_names.h tpm_tss_tss2_names_v1.c tpm_tss_tss2_names_v2.c \
+	tpm_tss_ibmtss.h tpm_tss_ibmtss.c
 
 if MONOLITHIC
 SUBDIRS =
