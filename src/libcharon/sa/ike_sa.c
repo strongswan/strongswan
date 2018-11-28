@@ -1996,8 +1996,7 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 	/* adopt any active or queued CHILD-creating tasks */
 	if (status != DESTROY_ME)
 	{
-		task_manager_t *other_tasks = ((private_ike_sa_t*)new)->task_manager;
-		other_tasks->adopt_child_tasks(other_tasks, this->task_manager);
+		new->adopt_child_tasks(new, &this->public);
 		if (new->get_state(new) == IKE_CREATED)
 		{
 			status = new->initiate(new, NULL, 0, NULL, NULL);
@@ -2745,13 +2744,34 @@ METHOD(ike_sa_t, queue_task_delayed, void,
 	this->task_manager->queue_task_delayed(this->task_manager, task, delay);
 }
 
-METHOD(ike_sa_t, adopt_child_tasks, void,
-	private_ike_sa_t *this, ike_sa_t *other_public)
+/**
+ * Migrate and queue child-creating tasks from another IKE_SA
+ */
+static void migrate_child_tasks(private_ike_sa_t *this, ike_sa_t *other,
+								task_queue_t queue)
 {
-	private_ike_sa_t *other = (private_ike_sa_t*)other_public;
+	enumerator_t *enumerator;
+	task_t *task;
 
-	this->task_manager->adopt_child_tasks(this->task_manager,
-										  other->task_manager);
+	enumerator = other->create_task_enumerator(other, queue);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == TASK_CHILD_CREATE ||
+			task->get_type(task) == TASK_QUICK_MODE)
+		{
+			other->remove_task(other, enumerator);
+			task->migrate(task, &this->public);
+			queue_task(this, task);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+METHOD(ike_sa_t, adopt_child_tasks, void,
+	private_ike_sa_t *this, ike_sa_t *other)
+{
+	migrate_child_tasks(this, other, TASK_QUEUE_ACTIVE);
+	migrate_child_tasks(this, other, TASK_QUEUE_QUEUED);
 }
 
 METHOD(ike_sa_t, inherit_pre, void,

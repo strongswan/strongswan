@@ -2076,61 +2076,6 @@ METHOD(task_manager_t, adopt_tasks, void,
 	}
 }
 
-/**
- * Migrates child-creating tasks from other to this
- */
-static void migrate_child_tasks(private_task_manager_t *this,
-								private_task_manager_t *other,
-								task_queue_t queue)
-{
-	enumerator_t *enumerator;
-	array_t *array;
-	task_t *task;
-
-	switch (queue)
-	{
-		case TASK_QUEUE_ACTIVE:
-			array = other->active_tasks;
-			break;
-		case TASK_QUEUE_QUEUED:
-			array = other->queued_tasks;
-			break;
-		default:
-			return;
-	}
-
-	enumerator = array_create_enumerator(array);
-	while (enumerator->enumerate(enumerator, &task))
-	{
-		queued_task_t *queued = NULL;
-
-		if (queue == TASK_QUEUE_QUEUED)
-		{
-			queued = (queued_task_t*)task;
-			task = queued->task;
-		}
-		if (task->get_type(task) == TASK_CHILD_CREATE)
-		{
-			array_remove_at(array, enumerator);
-			task->migrate(task, this->ike_sa);
-			queue_task(this, task);
-			free(queued);
-		}
-	}
-	enumerator->destroy(enumerator);
-}
-
-METHOD(task_manager_t, adopt_child_tasks, void,
-	private_task_manager_t *this, task_manager_t *other_public)
-{
-	private_task_manager_t *other = (private_task_manager_t*)other_public;
-
-	/* move active child tasks from other to this */
-	migrate_child_tasks(this, other, TASK_QUEUE_ACTIVE);
-	/* do the same for queued tasks */
-	migrate_child_tasks(this, other, TASK_QUEUE_QUEUED);
-}
-
 METHOD(task_manager_t, busy, bool,
 	private_task_manager_t *this)
 {
@@ -2324,7 +2269,6 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 				.get_mid = _get_mid,
 				.reset = _reset,
 				.adopt_tasks = _adopt_tasks,
-				.adopt_child_tasks = _adopt_child_tasks,
 				.busy = _busy,
 				.create_task_enumerator = _create_task_enumerator,
 				.remove_task = _remove_task,

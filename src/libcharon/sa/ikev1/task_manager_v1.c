@@ -1891,39 +1891,6 @@ METHOD(task_manager_t, adopt_tasks, void,
 	}
 }
 
-/**
- * Migrates child-creating tasks from src to dst
- */
-static void migrate_child_tasks(private_task_manager_t *this,
-								linked_list_t *src, linked_list_t *dst)
-{
-	enumerator_t *enumerator;
-	task_t *task;
-
-	enumerator = src->create_enumerator(src);
-	while (enumerator->enumerate(enumerator, &task))
-	{
-		if (task->get_type(task) == TASK_QUICK_MODE)
-		{
-			src->remove_at(src, enumerator);
-			task->migrate(task, this->ike_sa);
-			dst->insert_last(dst, task);
-		}
-	}
-	enumerator->destroy(enumerator);
-}
-
-METHOD(task_manager_t, adopt_child_tasks, void,
-	private_task_manager_t *this, task_manager_t *other_public)
-{
-	private_task_manager_t *other = (private_task_manager_t*)other_public;
-
-	/* move active child tasks from other to this */
-	migrate_child_tasks(this, other->active_tasks, this->queued_tasks);
-	/* do the same for queued tasks */
-	migrate_child_tasks(this, other->queued_tasks, this->queued_tasks);
-}
-
 METHOD(task_manager_t, busy, bool,
 	private_task_manager_t *this)
 {
@@ -2114,7 +2081,6 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.get_mid = _get_mid,
 				.reset = _reset,
 				.adopt_tasks = _adopt_tasks,
-				.adopt_child_tasks = _adopt_child_tasks,
 				.busy = _busy,
 				.create_task_enumerator = _create_task_enumerator,
 				.remove_task = _remove_task,
