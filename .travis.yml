@@ -38,7 +38,7 @@ env:
 matrix:
   include:
     - env: TEST=sonarcloud
-      if: type = push
+      if: type = push AND env(SONAR_TOKEN) IS present
       git:
         depth: false
       addons:
@@ -78,22 +78,13 @@ matrix:
     - env: TEST=printf-builtin LEAK_DETECTIVE=yes
     - env: TEST=printf-builtin LEAK_DETECTIVE=yes
       compiler: clang
+    # the crypto plugins are build-tested with clang via "all" above
     - env: TEST=botan
-    - env: TEST=botan
-      compiler: clang
     - env: TEST=botan LEAK_DETECTIVE=yes
-    - env: TEST=botan LEAK_DETECTIVE=yes
-      compiler: clang
     - env: TEST=openssl
-    - env: TEST=openssl
-      compiler: clang
     - env: TEST=openssl LEAK_DETECTIVE=yes
-    - env: TEST=openssl LEAK_DETECTIVE=yes
-      compiler: clang
+    - env: TEST=openssl-1.0
+    - env: TEST=openssl-1.0 LEAK_DETECTIVE=yes
     - env: TEST=gcrypt
-    - env: TEST=gcrypt
-      compiler: clang
     - env: TEST=gcrypt LEAK_DETECTIVE=yes
-    - env: TEST=gcrypt LEAK_DETECTIVE=yes
-      compiler: clang
     - env: TEST=apidoc

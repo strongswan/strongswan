@@ -587,6 +587,11 @@ static char *whitelist[] = {
 	"OPENSSL_load_builtin_modules",
 	"CONF_modules_load_file",
 	"CONF_module_add",
+	"RAND_DRBG_bytes",
+	"RAND_DRBG_generate",
+	"RAND_DRBG_get0_master",
+	"RAND_DRBG_get0_private",
+	"RAND_DRBG_get0_public",
 	/* OpenSSL libssl */
 	"SSL_COMP_get_compression_methods",
 	/* NSPR */
