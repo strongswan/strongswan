@@ -356,7 +356,7 @@ static IWbemServices *ConnectToAdapterService()
 	return pSvc;
 }
 
-static int DoExec( IWbemServices *pSvc, int iface_idx, wchar_t *method, wchar_t *param1, VARIANT *vParam1 )
+static int DoExec( IWbemServices *pSvc, int iface_idx, wchar_t *method, wchar_t *param1, VARIANT *vParam1, wchar_t *param2, VARIANT *vParam2 )
 {
 	HRESULT hres = 0;
 	IWbemClassObject *pNetAdaptCfg = NULL;
@@ -410,6 +410,16 @@ static int DoExec( IWbemServices *pSvc, int iface_idx, wchar_t *method, wchar_t 
 			break;
 		}
 
+		if ( param2 != NULL && vParam2 != NULL )
+		{
+			hres = pNetAdaptCfgInst->lpVtbl->Put( pNetAdaptCfgInst, param2, 0, vParam2, 0 );
+			if ( FAILED( hres ) )
+			{
+				DBG1( DBG_IKE, "Put()[2] failed. Error code = 0x%08X", hres );
+				break;
+			}
+		}
+
 		swprintf_s( fmt_buf, _countof( fmt_buf ), L"Win32_NetWorkAdapterConfiguration.Index='%d'", iface_idx );
 		netadaptcfgIdx = SysAllocString( fmt_buf );
 		if ( netadaptcfgIdx == NULL )
@@ -449,7 +459,7 @@ static int DoExec( IWbemServices *pSvc, int iface_idx, wchar_t *method, wchar_t 
 	return res;
 }
 
-static int SetAdapterDnsServersList( IWbemServices *pSvc, int iface_idx, SAFEARRAY *dnsServers )
+static int SetDNSServerSearchOrder( IWbemServices *pSvc, int iface_idx, SAFEARRAY *dnsServers )
 {
 	VARIANT vDnsServers;
 	int res = 1;
@@ -460,10 +470,35 @@ static int SetAdapterDnsServersList( IWbemServices *pSvc, int iface_idx, SAFEARR
 	vDnsServers.parray = dnsServers;
 
 	// OK, execute it
-	res = DoExec( pSvc, iface_idx, L"SetDNSServerSearchOrder", L"DNSServerSearchOrder", &vDnsServers );
+	res = DoExec( pSvc, iface_idx, L"SetDNSServerSearchOrder", L"DNSServerSearchOrder", &vDnsServers, NULL, NULL );
 
 	// Cleanup
 	VariantClear( &vDnsServers );
+
+	return res;
+}
+
+static int SetDynamicDNSRegistration( IWbemServices *pSvc, int iface_idx, BOOL FullDNSRegistrationEnabled, BOOL DomainDNSRegistrationEnabled )
+{
+	VARIANT vFullDNSRegistrationEnabled, vDomainDNSRegistrationEnabled;
+	int res = 1;
+
+	// Make the bool variant for param 1
+	VariantInit( &vFullDNSRegistrationEnabled );
+	vFullDNSRegistrationEnabled.vt = VT_BOOL;
+	vFullDNSRegistrationEnabled.boolVal = FullDNSRegistrationEnabled ? VARIANT_TRUE : VARIANT_FALSE;
+
+	// Make the bool variant for param 2
+	VariantInit( &vDomainDNSRegistrationEnabled );
+	vDomainDNSRegistrationEnabled.vt = VT_BOOL;
+	vDomainDNSRegistrationEnabled.boolVal = DomainDNSRegistrationEnabled ? VARIANT_TRUE : VARIANT_FALSE;
+
+	// OK, execute it
+	res = DoExec( pSvc, iface_idx, L"SetDynamicDNSRegistration", L"FullDNSRegistrationEnabled", &vFullDNSRegistrationEnabled, L"DomainDNSRegistrationEnabled", &vDomainDNSRegistrationEnabled );
+
+	// Cleanup
+	VariantClear( &vFullDNSRegistrationEnabled );
+	VariantClear( &vDomainDNSRegistrationEnabled );
 
 	return res;
 }
@@ -547,10 +582,15 @@ static bool add_dns_server(private_windows_dns_handler_t *this, host_t *ip)
 			break;
 		}
 
-		// Set the DNS servers list into the adapter (takes ownership of dns_servers_arr)
-		res = SetAdapterDnsServersList( pSvc, iface_idx, dns_servers_arr );
+		// Disable dynamic DNS registration
+		res = SetDynamicDNSRegistration( pSvc, iface_idx, FALSE, FALSE );
 		if ( res != 0 )
-			DBG1( DBG_IKE, "Add DNS server %H to adapter: %s", ip, ErrToStr( res ) );
+			DBG1( DBG_IKE, "Set dynamic DNS registration to adapter failed: %s", ErrToStr( res ) );
+
+		// Set the DNS servers list into the adapter (takes ownership of dns_servers_arr)
+		res = SetDNSServerSearchOrder( pSvc, iface_idx, dns_servers_arr );
+		if ( res != 0 )
+			DBG1( DBG_IKE, "Add DNS server %H to adapter failed: %s", ip, ErrToStr( res ) );
 
 	} while ( 0 );
 
@@ -639,7 +679,7 @@ static bool remove_dns_server(private_windows_dns_handler_t *this, host_t *ip)
 		}
 
 		// Set the DNS servers list into the adapter (takes ownership of dns_servers_arr)
-		res = SetAdapterDnsServersList( pSvc, iface_idx, dns_servers_arr );
+		res = SetDNSServerSearchOrder( pSvc, iface_idx, dns_servers_arr );
 		if ( res != 0 )
 			DBG1( DBG_IKE, "Remove DNS server %H from adapter: %s", ip, ErrToStr( res ) );
 
@@ -699,7 +739,7 @@ static bool set_dns_suffix( wchar_t *suffix )
 		}
 
 		// OK, execute it
-		res = DoExec( pSvc, ifaceIdx, L"SetDNSDomain", L"DNSDomain", &vSuffix );
+		res = DoExec( pSvc, ifaceIdx, L"SetDNSDomain", L"DNSDomain", &vSuffix, NULL, NULL );
 	} while ( 0 );
 
 	// Cleanup
@@ -832,8 +872,6 @@ METHOD(attribute_handler_t, release, void,
 	private_windows_dns_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
-	bool handled;
-
 	if ( type == INTERNAL_IP4_DNS ||
 		 type == INTERNAL_IP6_DNS )
 	{
@@ -859,8 +897,7 @@ METHOD(attribute_handler_t, release, void,
 				DBG1( DBG_IKE, "%H count is 0, doing remove", ip );
 				this->servers->remove( this->servers, server, NULL );
 				server_destroy( server );
-				handled = remove_dns_server( this, ip );
-				if ( !handled )
+				if ( !remove_dns_server( this, ip ) )
 				{
 					DBG1( DBG_IKE, "removing DNS server failed" );
 				}
@@ -868,13 +905,11 @@ METHOD(attribute_handler_t, release, void,
 			else
 			{
 				DBG1( DBG_IKE, "%H still in servers list, count = %d", ip, server->count );
-				handled = TRUE;
 			}
 		}
 		else
 		{
 			DBG1( DBG_IKE, "DNS server %H not in servers list - nothing more to do", ip );
-			handled = TRUE;
 		}
 
 		this->mutex->unlock( this->mutex );
@@ -900,14 +935,12 @@ METHOD(attribute_handler_t, release, void,
 		if ( this->suffix.count == 0 )
 		{
 			DBG1( DBG_IKE, "No suffixes assigned to the TAP adapter - nothing to do" );
-			handled = TRUE;
 		}
 		else
 		{
 			if ( strcmp( this->suffix.suffix, suffix ) != 0 )
 			{
 				DBG1( DBG_IKE, "Suffix %s is not assigned to the TAP adapter - nothing to do", suffix );
-				handled = TRUE;
 			}
 			else
 			{
@@ -916,8 +949,7 @@ METHOD(attribute_handler_t, release, void,
 				{
 					DBG1( DBG_IKE, "Suffix count is 0 - doing remove" );
 
-					handled = set_dns_suffix( L"" );
-					if ( !handled )
+					if ( !set_dns_suffix( L"" ) )
 					{
 						DBG1( DBG_IKE, "removing DNS suffix failed" );
 					}
@@ -925,7 +957,6 @@ METHOD(attribute_handler_t, release, void,
 				else
 				{
 					DBG1( DBG_IKE, "Suffix count is %d - nothing more to do", this->suffix.count );
-					handled = TRUE;
 				}
 			}
 		}
