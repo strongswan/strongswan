@@ -348,6 +348,9 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
+	/* register this again after loading plugins to avoid issues with libraries
+	 * that register atexit() handlers */
+	atexit(libcharon_deinit);
 	if (!lib->caps->drop(lib->caps))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
