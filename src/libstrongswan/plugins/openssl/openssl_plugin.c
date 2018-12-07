@@ -439,6 +439,7 @@ static private_key_t *openssl_private_key_connect(key_type_t type,
 	if (!login(engine, keyid))
 	{
 		DBG1(DBG_LIB, "login to engine '%s' failed", engine_id);
+		ENGINE_finish(engine);
 		ENGINE_free(engine);
 		return NULL;
 	}
@@ -447,9 +448,11 @@ static private_key_t *openssl_private_key_connect(key_type_t type,
 	{
 		DBG1(DBG_LIB, "failed to load private key with ID '%s' from "
 			 "engine '%s'", keyname, engine_id);
+		ENGINE_finish(engine);
 		ENGINE_free(engine);
 		return NULL;
 	}
+	ENGINE_finish(engine);
 	ENGINE_free(engine);
 
 	switch (EVP_PKEY_base_id(key))
