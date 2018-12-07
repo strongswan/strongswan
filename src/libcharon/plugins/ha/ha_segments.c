@@ -433,6 +433,12 @@ METHOD(ha_segments_t, is_active, bool,
 	return (this->active & SEGMENTS_BIT(segment)) != 0;
 }
 
+METHOD(ha_segments_t, count, u_int,
+	private_ha_segments_t *this)
+{
+	return this->count;
+}
+
 METHOD(ha_segments_t, destroy, void,
 	private_ha_segments_t *this)
 {
@@ -459,6 +465,7 @@ ha_segments_t *ha_segments_create(ha_socket_t *socket, ha_kernel_t *kernel,
 			.deactivate = _deactivate,
 			.handle_status = _handle_status,
 			.is_active = _is_active,
+			.count = _count,
 			.destroy = _destroy,
 		},
 		.socket = socket,
