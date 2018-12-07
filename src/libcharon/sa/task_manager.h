@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Tobias Brunner
+ * Copyright (C) 2013-2018 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -228,13 +228,6 @@ struct task_manager_t {
 	void (*adopt_tasks) (task_manager_t *this, task_manager_t *other);
 
 	/**
-	 * Migrate all active or queued CHILD_SA-creating tasks from other to this.
-	 *
-	 * @param other			manager which gives away its tasks
-	 */
-	void (*adopt_child_tasks) (task_manager_t *this, task_manager_t *other);
-
-	/**
 	 * Increment a message ID counter, in- or outbound.
 	 *
 	 * If a message is processed outside of the manager, this call increments
@@ -283,6 +276,16 @@ struct task_manager_t {
 	 */
 	enumerator_t* (*create_task_enumerator)(task_manager_t *this,
 											task_queue_t queue);
+
+	/**
+	 * Remove the task the given enumerator points to.
+	 *
+	 * @note This should be used with caution, in partciular, for tasks in the
+	 * active and passive queues.
+	 *
+	 * @param enumerator	enumerator created with the method above
+	 */
+	void (*remove_task)(task_manager_t *this, enumerator_t *enumerator);
 
 	/**
 	 * Flush all tasks, regardless of the queue.

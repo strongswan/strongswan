@@ -1996,8 +1996,7 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 	/* adopt any active or queued CHILD-creating tasks */
 	if (status != DESTROY_ME)
 	{
-		task_manager_t *other_tasks = ((private_ike_sa_t*)new)->task_manager;
-		other_tasks->adopt_child_tasks(other_tasks, this->task_manager);
+		new->adopt_child_tasks(new, &this->public);
 		if (new->get_state(new) == IKE_CREATED)
 		{
 			status = new->initiate(new, NULL, 0, NULL, NULL);
@@ -2721,6 +2720,12 @@ METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
 	return this->task_manager->create_task_enumerator(this->task_manager, queue);
 }
 
+METHOD(ike_sa_t, remove_task, void,
+	private_ike_sa_t *this, enumerator_t *enumerator)
+{
+	return this->task_manager->remove_task(this->task_manager, enumerator);
+}
+
 METHOD(ike_sa_t, flush_queue, void,
 	private_ike_sa_t *this, task_queue_t queue)
 {
@@ -2737,6 +2742,36 @@ METHOD(ike_sa_t, queue_task_delayed, void,
 	private_ike_sa_t *this, task_t *task, uint32_t delay)
 {
 	this->task_manager->queue_task_delayed(this->task_manager, task, delay);
+}
+
+/**
+ * Migrate and queue child-creating tasks from another IKE_SA
+ */
+static void migrate_child_tasks(private_ike_sa_t *this, ike_sa_t *other,
+								task_queue_t queue)
+{
+	enumerator_t *enumerator;
+	task_t *task;
+
+	enumerator = other->create_task_enumerator(other, queue);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == TASK_CHILD_CREATE ||
+			task->get_type(task) == TASK_QUICK_MODE)
+		{
+			other->remove_task(other, enumerator);
+			task->migrate(task, &this->public);
+			queue_task(this, task);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+METHOD(ike_sa_t, adopt_child_tasks, void,
+	private_ike_sa_t *this, ike_sa_t *other)
+{
+	migrate_child_tasks(this, other, TASK_QUEUE_ACTIVE);
+	migrate_child_tasks(this, other, TASK_QUEUE_QUEUED);
 }
 
 METHOD(ike_sa_t, inherit_pre, void,
@@ -3054,9 +3089,11 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.create_attribute_enumerator = _create_attribute_enumerator,
 			.set_kmaddress = _set_kmaddress,
 			.create_task_enumerator = _create_task_enumerator,
+			.remove_task = _remove_task,
 			.flush_queue = _flush_queue,
 			.queue_task = _queue_task,
 			.queue_task_delayed = _queue_task_delayed,
+			.adopt_child_tasks = _adopt_child_tasks,
 #ifdef ME
 			.act_as_mediation_server = _act_as_mediation_server,
 			.get_server_reflexive_host = _get_server_reflexive_host,
