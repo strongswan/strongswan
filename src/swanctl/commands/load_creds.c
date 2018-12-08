@@ -908,21 +908,21 @@ int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
 
 	get_creds(&ctx);
 
-	load_certs(&ctx, "x509",     SWANCTL_X509DIR);
-	load_certs(&ctx, "x509ca",   SWANCTL_X509CADIR);
-	load_certs(&ctx, "x509ocsp", SWANCTL_X509OCSPDIR);
-	load_certs(&ctx, "x509aa",   SWANCTL_X509AADIR);
-	load_certs(&ctx, "x509ac",   SWANCTL_X509ACDIR);
-	load_certs(&ctx, "x509crl",  SWANCTL_X509CRLDIR);
-	load_certs(&ctx, "pubkey",   SWANCTL_PUBKEYDIR);
+	load_certs(&ctx, "x509",     swanctl_x509_dir());
+	load_certs(&ctx, "x509ca",   swanctl_x509ca_dir());
+	load_certs(&ctx, "x509ocsp", swanctl_x509ocsp_dir());
+	load_certs(&ctx, "x509aa",   swanctl_x509aa_dir());
+	load_certs(&ctx, "x509ac",   swanctl_x509ac_dir());
+	load_certs(&ctx, "x509crl",  swanctl_x509crl_dir());
+	load_certs(&ctx, "pubkey",   swanctl_pubkey_dir());
 
-	load_keys(&ctx, "private", SWANCTL_PRIVATEDIR);
-	load_keys(&ctx, "rsa",     SWANCTL_RSADIR);
-	load_keys(&ctx, "ecdsa",   SWANCTL_ECDSADIR);
-	load_keys(&ctx, "bliss",   SWANCTL_BLISSDIR);
-	load_keys(&ctx, "pkcs8",   SWANCTL_PKCS8DIR);
+	load_keys(&ctx, "private", swanctl_private_dir());
+	load_keys(&ctx, "rsa",     swanctl_rsa_dir());
+	load_keys(&ctx, "ecdsa",   swanctl_ecdsa_dir());
+	load_keys(&ctx, "bliss",   swanctl_bliss_dir());
+	load_keys(&ctx, "pkcs8",   swanctl_pkcs8_dir());
 
-	load_containers(&ctx, "pkcs12", SWANCTL_PKCS12DIR);
+	load_containers(&ctx, "pkcs12", swanctl_pkcs12_dir());
 
 	load_tokens(&ctx);
 
@@ -946,7 +946,7 @@ static int load_creds(vici_conn_t *conn)
 	bool clear = FALSE, noprompt = FALSE;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	settings_t *cfg;
-	char *arg, *file = SWANCTL_CONF;
+	char *arg, *file = swanctl_conf();
 	int ret;
 
 	while (TRUE)

@@ -13,11 +13,15 @@
  * for more details.
  */
 
+#include "swanctl.h"
 #include "command.h"
 
 #include <unistd.h>
 
 #include <library.h>
+
+/* Root directory for swanctl conf files */
+char *swanctl_dir;
 
 /**
  * Cleanup library atexit()
@@ -34,6 +38,7 @@ static void cleanup()
 int main(int argc, char *argv[])
 {
 	atexit(cleanup);
+	swanctl_dir = getenv("SWANCTL_DIR") ?: SWANCTLDIR;
 	if (!library_init(NULL, "swanctl"))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);

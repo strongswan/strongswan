@@ -251,7 +251,7 @@ static int load_pools(vici_conn_t *conn)
 {
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	settings_t *cfg;
-	char *arg, *file = SWANCTL_CONF;
+	char *arg, *file = swanctl_conf();
 	int ret;
 
 	while (TRUE)

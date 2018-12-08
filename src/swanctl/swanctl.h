@@ -22,77 +22,167 @@
  * @{
  */
 
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <unistd.h>
+
 #ifndef SWANCTL_H_
 #define SWANCTL_H_
+
+extern char *swanctl_dir;
 
 /**
  * Configuration file for connections, etc.
  */
-#define SWANCTL_CONF SWANCTLDIR "/swanctl.conf"
+static inline char *swanctl_conf() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/swanctl.conf", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for X.509 end entity certs
  */
-#define SWANCTL_X509DIR SWANCTLDIR "/x509"
+static inline char *swanctl_x509_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/x509", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for X.509 CA certs
  */
-#define SWANCTL_X509CADIR SWANCTLDIR "/x509ca"
+static inline char *swanctl_x509ca_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/x509ca", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for X.509 Attribute Authority certs
  */
-#define SWANCTL_X509AADIR SWANCTLDIR "/x509aa"
+static inline char *swanctl_x509aa_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/x509aa", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for X.509 OCSP Signer certs
  */
-#define SWANCTL_X509OCSPDIR SWANCTLDIR "/x509ocsp"
+static inline char *swanctl_x509ocsp_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/x509ocsp", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for X.509 CRLs
  */
-#define SWANCTL_X509CRLDIR SWANCTLDIR "/x509crl"
+static inline char *swanctl_x509crl_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/x509crl", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for X.509 Attribute certificates
  */
-#define SWANCTL_X509ACDIR SWANCTLDIR "/x509ac"
+static inline char *swanctl_x509ac_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/x509ac", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for raw public keys
  */
-#define SWANCTL_PUBKEYDIR SWANCTLDIR "/pubkey"
+static inline char *swanctl_pubkey_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/pubkey", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for private keys
  */
-#define SWANCTL_PRIVATEDIR SWANCTLDIR "/private"
+static inline char *swanctl_private_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/private", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for RSA private keys
  */
-#define SWANCTL_RSADIR SWANCTLDIR "/rsa"
+static inline char *swanctl_rsa_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/rsa", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for ECDSA private keys
  */
-#define SWANCTL_ECDSADIR SWANCTLDIR "/ecdsa"
+static inline char *swanctl_ecdsa_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/ecdsa", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for BLISS private keys
  */
-#define SWANCTL_BLISSDIR SWANCTLDIR "/bliss"
+static inline char *swanctl_bliss_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/bliss", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for PKCS#8 encoded private keys
  */
-#define SWANCTL_PKCS8DIR SWANCTLDIR "/pkcs8"
+static inline char *swanctl_pkcs8_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/pkcs8", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 /**
  * Directory for PKCS#12 containers
  */
-#define SWANCTL_PKCS12DIR SWANCTLDIR "/pkcs12"
+static inline char *swanctl_pkcs12_dir() {
+  static char *path;
+  if (path == NULL && asprintf(&path, "%s/pkcs12", swanctl_dir) == -1) {
+    exit(1);
+  }
+  return path;
+}
 
 #endif /** SWANCTL_H_ @}*/
