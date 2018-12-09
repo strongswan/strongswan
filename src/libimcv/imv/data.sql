@@ -689,7 +689,7 @@ INSERT INTO files (				/*  1 */
 INSERT INTO files (				/*  2 */
   name, dir
 ) VALUES (
- 'libcrypto.so.1.0.0', 11
+ 'libcrypto.so.1.1', 11
 );
 
 INSERT INTO files (				/*  3 */
@@ -701,7 +701,7 @@ INSERT INTO files (				/*  3 */
 INSERT INTO files (				/*  4 */
   name, dir
 ) VALUES (
- 'libssl.so.1.0.0', 11
+ 'libssl.so.1.1', 11
 );
 
 INSERT INTO files (				/*  5 */
@@ -1701,13 +1701,13 @@ INSERT INTO policies (			/* 11 */
 INSERT INTO policies (			/*  12 */
   type, name, file, rec_fail, rec_noresult
 ) VALUES (
-  6, 'Measure /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0', 2, 2, 2
+  6, 'Measure /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1', 2, 2, 2
 );
 
 INSERT INTO policies (			/* 13 */
   type, name, file, rec_fail, rec_noresult
 ) VALUES (
-  6, 'Measure /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0', 4, 2, 2
+  6, 'Measure /usr/lib/x86_64-linux-gnu/libssl.so.1.1', 4, 2, 2
 );
 
 INSERT INTO policies (			/* 14 */
