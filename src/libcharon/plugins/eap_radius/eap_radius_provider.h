@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
  *
@@ -54,6 +57,14 @@ struct eap_radius_provider_t {
 	 */
 	void (*add_attribute)(eap_radius_provider_t *this, uint32_t id,
 						  configuration_attribute_type_t type, chunk_t data);
+
+	/**
+	 * Clears any unclaimed IP addresses and attributes for the given IKE_SA.
+	 *
+	 * @param id			IKE_SA unique identifier
+	 * @return				enumerator over unclaimed IP addresses, if any
+	 */
+	enumerator_t *(*clear_unclaimed)(eap_radius_provider_t *this, uint32_t id);
 
 	/**
 	 * Destroy a eap_radius_provider_t.
