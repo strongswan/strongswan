@@ -561,6 +561,14 @@ eap_radius_provider_t *eap_radius_provider_create()
 			},
 		);
 
+		if (lib->settings->get_bool(lib->settings,
+							"%s.plugins.eap-radius.accounting", FALSE, lib->ns))
+		{
+			/* if RADIUS accounting is enabled, keep unclaimed IPs around until
+			 * the Accounting-Stop message is sent */
+			this->listener.public.message = NULL;
+		}
+
 		charon->bus->add_listener(charon->bus, &this->listener.public);
 
 		singleton = &this->public;
