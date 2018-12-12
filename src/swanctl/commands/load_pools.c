@@ -251,7 +251,7 @@ static int load_pools(vici_conn_t *conn)
 {
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	settings_t *cfg;
-	char *arg, *file = SWANCTL_CONF;
+	char *arg, *file = NULL;
 	int ret;
 
 	while (TRUE)
@@ -277,10 +277,9 @@ static int load_pools(vici_conn_t *conn)
 		break;
 	}
 
-	cfg = settings_create(file);
+	cfg = load_swanctl_conf(file);
 	if (!cfg)
 	{
-		fprintf(stderr, "parsing '%s' failed\n", file);
 		return EINVAL;
 	}
 
