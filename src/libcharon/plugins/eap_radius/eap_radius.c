@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -156,7 +156,7 @@ void eap_radius_build_attributes(radius_message_t *request)
 {
 	ike_sa_t *ike_sa;
 	host_t *host;
-	char buf[40], *station_id_fmt;;
+	char buf[40], *station_id_fmt, *session_id;
 	uint32_t value;
 	chunk_t chunk;
 
@@ -202,6 +202,14 @@ void eap_radius_build_attributes(radius_message_t *request)
 		host = ike_sa->get_other_host(ike_sa);
 		snprintf(buf, sizeof(buf), station_id_fmt, host);
 		request->add(request, RAT_CALLING_STATION_ID, chunk_from_str(buf));
+
+		session_id = eap_radius_accounting_session_id(ike_sa);
+		if (session_id)
+		{
+			request->add(request, RAT_ACCT_SESSION_ID,
+						 chunk_from_str(session_id));
+			free(session_id);
+		}
 	}
 }
 

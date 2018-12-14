@@ -1070,8 +1070,27 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 	return &this->public;
 }
 
-/**
- * See header
+/*
+ * Described in header
+ */
+char *eap_radius_accounting_session_id(ike_sa_t *ike_sa)
+{
+	entry_t *entry;
+	char *sid = NULL;
+
+	if (singleton)
+	{
+		singleton->mutex->lock(singleton->mutex);
+		entry = get_or_create_entry(singleton, ike_sa->get_id(ike_sa),
+									ike_sa->get_unique_id(ike_sa));
+		sid = strdup(entry->sid);
+		singleton->mutex->unlock(singleton->mutex);
+	}
+	return sid;
+}
+
+/*
+ * Described in header
  */
 void eap_radius_accounting_start_interim(ike_sa_t *ike_sa, uint32_t interval)
 {
