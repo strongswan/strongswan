@@ -12,16 +12,40 @@ strongswan-5.7.2
   necessary to manually enable charon.plugins.tpm.fips_186_4 if the TPM doesn't
   use the maximum salt length.
 
+- swanctl now accesses directories for credentials relative to swanctl.conf, in
+  particular, when it's loaded from a custom location via --file argument.  The
+  base directory that's used if --file is not given is configurable at runtime
+  via SWANCTL_DIR environment variable.
+
+- With RADIUS Accounting enabled, the eap-radius plugin adds the session ID to
+  Access-Request messages, simplifying associating database entries for IP
+  leases and accounting with sessions.
+
+- IPs assigned by RADIUS servers are included in Accounting-Stop even if clients
+  don't claim them, allowing releasing them early on connection errors.
+
+- Selectors installed on transport mode SAs by the kernel-netlink plugin are
+  updated on IP address changes (e.g. via MOBIKE).
+
 - Added support for RSA signatures with SHA-256 and SHA-512 to the agent plugin.
   For older versions of ssh/gpg-agent that only support SHA-1, IKEv2 signature
   authentication has to be disabled via charon.signature_authentication.
 
 - The sshkey and agent plugins support Ed25519/Ed448 SSH keys and signatures.
 
+- The openssl plugin supports X25519/X448 Diffie-Hellman and Ed25519/Ed448 keys
+  and signatures when built against OpenSSL 1.1.1.
+
 - Ed25519, ChaCha20/Poly1305, SHA-3 and AES-CCM were added to the botan plugin.
 
 - The mysql plugin now properly handles database connections with transactions
   under heavy load.
+
+- IP addresses in HA pools are now distributed evenly among all segments.
+
+- On newer FreeBSD kernels, the kernel-pfkey plugin reads the reqid directly
+  from SADB_ACQUIRE messages, i.e. not requiring previous policy installation by
+  the plugin, e.g. for compatibility with if_ipsec(4) VTIs.
 
 
 strongswan-5.7.1
