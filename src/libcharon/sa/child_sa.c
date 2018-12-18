@@ -978,7 +978,7 @@ static void prepare_sa_cfg(private_child_sa_t *this, ipsec_sa_cfg_t *my_sa,
 }
 
 /**
- * Install inbound policie(s): in, fwd
+ * Install inbound policies: in, fwd
  */
 static status_t install_policies_inbound(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
@@ -1012,7 +1012,7 @@ static status_t install_policies_inbound(private_child_sa_t *this,
 }
 
 /**
- * Install outbound policie(s): out, [fwd]
+ * Install outbound policies: out, [fwd]
  */
 static status_t install_policies_outbound(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,

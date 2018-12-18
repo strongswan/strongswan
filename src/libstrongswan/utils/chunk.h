@@ -332,7 +332,7 @@ static inline bool chunk_equals_ptr(chunk_t *a, chunk_t *b)
 }
 
 /**
- * Increment a chunk, as it would reprensent a network order integer.
+ * Increment a chunk, as it would represent a network order integer.
  *
  * @param chunk			chunk to increment
  * @return				TRUE if an overflow occurred

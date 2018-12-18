@@ -53,7 +53,7 @@ METHOD(rng_t, get_bytes, bool,
 {
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL
 	if (this->quality > RNG_WEAK)
-	{	/* use a separate DRBG for data we wan't to keep private, compared
+	{	/* use a separate DRBG for data we want to keep private, compared
 		 * to e.g. nonces */
 		return RAND_priv_bytes((char*)buffer, bytes) == 1;
 	}
