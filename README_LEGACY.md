@@ -8,7 +8,7 @@ This document is just a short introduction of the **ipsec** command which uses
 the legacy **stroke** configuration interface. The current **swanctl** command
 using the modern [**vici**](src/libcharon/plugins/vici/README.md) *Versatile IKE
 Configuration Interface* is described [**here**](README.md). For more detailed
-information consult the man pages and [**our wiki**](http://wiki.strongswan.org).
+information consult the man pages and [**our wiki**](https://wiki.strongswan.org).
 
 
 ## Quickstart ##

@@ -9,7 +9,7 @@ which uses the modern [**vici**](src/libcharon/plugins/vici/README.md) *Versatil
 IKE Configuration Interface*. The deprecated **ipsec** command using the legacy
 **stroke** configuration interface is described [**here**](README_LEGACY.md).
 For more detailed information consult the man pages and
-[**our wiki**](http://wiki.strongswan.org).
+[**our wiki**](https://wiki.strongswan.org).
 
 
 ## Quickstart ##
