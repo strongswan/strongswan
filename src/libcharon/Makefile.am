@@ -572,6 +572,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_KERNEL_SYSCFG
+  SUBDIRS += plugins/kernel_syscfg
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/kernel_syscfg/libstrongswan-kernel-syscfg.la
+endif
+endif
+
 if USE_KERNEL_NETLINK
   SUBDIRS += plugins/kernel_netlink
 if MONOLITHIC

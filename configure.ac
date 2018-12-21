@@ -216,6 +216,7 @@ ARG_ENABL_SET([xauth-noauth],   [enable XAuth pseudo-backend that does not actua
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
+ARG_ENABL_SET([kernel-syscfg],  [enable the System Configuration kernel interface.])
 ARG_ENABL_SET([kernel-iph],     [enable the Windows IP Helper based networking backend.])
 ARG_ENABL_SET([kernel-libipsec],[enable the libipsec kernel interface.])
 ARG_ENABL_SET([kernel-wfp],     [enable the Windows Filtering Platform IPsec backend.])
@@ -1438,6 +1439,7 @@ ADD_PLUGIN([kernel-wfp],           [c charon])
 ADD_PLUGIN([kernel-iph],           [c charon])
 ADD_PLUGIN([kernel-pfkey],         [c charon starter nm cmd])
 ADD_PLUGIN([kernel-pfroute],       [c charon starter nm cmd])
+ADD_PLUGIN([kernel-syscfg],        [c charon starter nm cmd])
 ADD_PLUGIN([kernel-netlink],       [c charon starter nm cmd])
 ADD_PLUGIN([resolve],              [c charon cmd])
 ADD_PLUGIN([save-keys],            [c])
@@ -1614,6 +1616,7 @@ AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
 AM_CONDITIONAL(USE_KERNEL_NETLINK, test x$kernel_netlink = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFKEY, test x$kernel_pfkey = xtrue)
 AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
+AM_CONDITIONAL(USE_KERNEL_SYSCFG, test x$kernel_syscfg = xtrue)
 AM_CONDITIONAL(USE_KERNEL_LIBIPSEC, test x$kernel_libipsec = xtrue)
 AM_CONDITIONAL(USE_KERNEL_WFP, test x$kernel_wfp = xtrue)
 AM_CONDITIONAL(USE_KERNEL_IPH, test x$kernel_iph = xtrue)
@@ -1957,6 +1960,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/kernel_netlink/Makefile
 	src/libcharon/plugins/kernel_pfkey/Makefile
 	src/libcharon/plugins/kernel_pfroute/Makefile
+	src/libcharon/plugins/kernel_syscfg/Makefile
 	src/libcharon/plugins/kernel_libipsec/Makefile
 	src/libcharon/plugins/kernel_wfp/Makefile
 	src/libcharon/plugins/kernel_iph/Makefile
