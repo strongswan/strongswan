@@ -40,6 +40,9 @@
 #include <collections/linked_list.h>
 #include <processing/jobs/callback_job.h>
 
+#include <CoreFoundation/CoreFoundation.h>
+#include <SystemConfiguration/SystemConfiguration.h>
+
 #ifndef HAVE_STRUCT_SOCKADDR_SA_LEN
 #error Cannot compile this plugin on systems where 'struct sockaddr' has no sa_len member.
 #endif
@@ -97,20 +100,11 @@ typedef struct iface_entry_t iface_entry_t;
  */
 struct iface_entry_t {
 
-	/** interface index */
-	int ifindex;
-
 	/** name of the interface */
 	char ifname[IFNAMSIZ];
 
-	/** interface flags, as in netdevice(7) SIOCGIFFLAGS */
-	u_int flags;
-
 	/** list of addresses as host_t */
 	linked_list_t *addrs;
-
-	/** TRUE if usable by config */
-	bool usable;
 };
 
 /**
@@ -127,7 +121,7 @@ static void iface_entry_destroy(iface_entry_t *this)
  */
 static inline bool iface_entry_up(iface_entry_t *iface)
 {
-	return (iface->flags & IFF_UP) == IFF_UP;
+	return TRUE;
 }
 
 /**
@@ -135,7 +129,7 @@ static inline bool iface_entry_up(iface_entry_t *iface)
  */
 static inline bool iface_entry_up_and_usable(iface_entry_t *iface)
 {
-	return iface->usable && iface_entry_up(iface);
+	return TRUE;
 }
 
 typedef struct addr_map_entry_t addr_map_entry_t;
@@ -169,7 +163,7 @@ static u_int addr_map_entry_hash(addr_map_entry_t *this)
  */
 static bool addr_map_entry_equals(addr_map_entry_t *a, addr_map_entry_t *b)
 {
-	return a->iface->ifindex == b->iface->ifindex &&
+	return streq(a->iface->ifname, b->iface->ifname) &&
 		   a->ip->ip_equals(a->ip, b->ip);
 }
 
@@ -481,6 +475,32 @@ struct private_kernel_syscfg_net_t
 	 * whether to actually install virtual IPs
 	 */
 	bool install_virtual_ip;
+
+	/**
+	 * runloop source which generates IP change events
+	 */
+	CFRunLoopSourceRef runloop_source;
+
+	/**
+	 * runloop reference
+	 */
+	CFRunLoopRef runloop_ref;
+
+	/**
+	 * thread that runs the runloop
+	 */
+	thread_t *runloop;
+
+	/**
+	 * system configuration store handle
+	 */
+	SCDynamicStoreRef dynamic_store;
+
+	/**
+	 * patters and pattern list for system configuration
+	 */
+	CFStringRef patterns[2];
+	CFArrayRef pattern_list;
 };
 
 
@@ -728,311 +748,6 @@ static enumerator_t *create_rtmsg_enumerator(struct rt_msghdr *hdr)
 }
 
 /**
- * Create a safe enumerator over sockaddrs in ifa_msghdr
- */
-static enumerator_t *create_ifamsg_enumerator(struct ifa_msghdr *hdr)
-{
-	return create_rt_enumerator(hdr->ifam_addrs, hdr->ifam_msglen - sizeof(*hdr),
-								(struct sockaddr *)(hdr + 1));
-}
-
-/**
- * Process an RTM_*ADDR message from the kernel
- */
-static void process_addr(private_kernel_syscfg_net_t *this,
-						 struct ifa_msghdr *ifa)
-{
-	struct sockaddr *sockaddr;
-	host_t *host = NULL;
-	enumerator_t *ifaces, *addrs;
-	iface_entry_t *iface;
-	addr_entry_t *addr;
-	bool found = FALSE, changed = FALSE, roam = FALSE;
-	enumerator_t *enumerator;
-	char *ifname = NULL;
-	int type;
-
-	enumerator = create_ifamsg_enumerator(ifa);
-	while (enumerator->enumerate(enumerator, &type, &sockaddr))
-	{
-		if (type == RTAX_IFA)
-		{
-			host = host_create_from_sockaddr(sockaddr);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	if (!host || host->is_anyaddr(host))
-	{
-		DESTROY_IF(host);
-		return;
-	}
-
-	this->lock->write_lock(this->lock);
-	ifaces = this->ifaces->create_enumerator(this->ifaces);
-	while (ifaces->enumerate(ifaces, &iface))
-	{
-		if (iface->ifindex == ifa->ifam_index)
-		{
-			addrs = iface->addrs->create_enumerator(iface->addrs);
-			while (addrs->enumerate(addrs, &addr))
-			{
-				if (host->ip_equals(host, addr->ip))
-				{
-					found = TRUE;
-					if (ifa->ifam_type == RTM_DELADDR)
-					{
-						iface->addrs->remove_at(iface->addrs, addrs);
-						if (!addr->virtual && iface->usable)
-						{
-							changed = TRUE;
-							DBG1(DBG_KNL, "%H disappeared from %s",
-								 host, iface->ifname);
-						}
-						addr_map_entry_remove(addr, iface, this);
-						addr_entry_destroy(addr);
-					}
-				}
-			}
-			addrs->destroy(addrs);
-
-			if (!found && ifa->ifam_type == RTM_NEWADDR)
-			{
-				INIT(addr,
-					.ip = host->clone(host),
-				);
-				changed = TRUE;
-				ifname = strdup(iface->ifname);
-				iface->addrs->insert_last(iface->addrs, addr);
-				addr_map_entry_add(this, addr, iface);
-				if (iface->usable)
-				{
-					DBG1(DBG_KNL, "%H appeared on %s", host, iface->ifname);
-				}
-			}
-
-			if (changed && iface_entry_up_and_usable(iface))
-			{
-				roam = TRUE;
-			}
-			break;
-		}
-	}
-	ifaces->destroy(ifaces);
-	this->lock->unlock(this->lock);
-	host->destroy(host);
-
-	if (roam && ifname)
-	{
-		queue_route_reinstall(this, ifname);
-	}
-	else
-	{
-		free(ifname);
-	}
-
-	if (roam)
-	{
-		fire_roam_event(this, TRUE);
-	}
-}
-
-/**
- * Re-initialize address list of an interface if it changes state
- */
-static void repopulate_iface(private_kernel_syscfg_net_t *this,
-							 iface_entry_t *iface)
-{
-	struct ifaddrs *ifap, *ifa;
-	addr_entry_t *addr, *vaddr = NULL;
-
-	while (iface->addrs->remove_last(iface->addrs, (void**)&addr) == SUCCESS)
-	{
-		addr_map_entry_remove(addr, iface, this);
-		/* Check for the virtual IP address. If we see it, we will save it so we
-		   can set it later when the address list is rebuilt. Note that we only
-		   save one, so the last virtual address is the one we will use. */
-		if (addr->virtual)
-		{
-			if (vaddr)
-			{
-				addr_entry_destroy(vaddr);
-			}
-			vaddr = addr;
-		}
-		else
-		{
-			addr_entry_destroy(addr);
-		}
-	}
-
-	if (getifaddrs(&ifap) == 0)
-	{
-		for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next)
-		{
-			if (ifa->ifa_addr && streq(ifa->ifa_name, iface->ifname))
-			{
-				switch (ifa->ifa_addr->sa_family)
-				{
-					case AF_INET:
-					case AF_INET6:
-						INIT(addr,
-							.ip = host_create_from_sockaddr(ifa->ifa_addr),
-						);
-						if (vaddr && addr->ip->ip_equals(addr->ip, vaddr->ip))
-						{
-							addr->virtual = TRUE;
-						}
-						iface->addrs->insert_last(iface->addrs, addr);
-						addr_map_entry_add(this, addr, iface);
-						break;
-					default:
-						break;
-				}
-			}
-		}
-		freeifaddrs(ifap);
-	}
-	if (vaddr)
-	{
-		addr_entry_destroy(vaddr);
-	}
-}
-
-/**
- * Process an RTM_IFINFO message from the kernel
- */
-static void process_link(private_kernel_syscfg_net_t *this,
-						 struct if_msghdr *msg)
-{
-	enumerator_t *enumerator;
-	iface_entry_t *iface;
-	bool roam = FALSE, found = FALSE, update_routes = FALSE;
-
-	this->lock->write_lock(this->lock);
-	enumerator = this->ifaces->create_enumerator(this->ifaces);
-	while (enumerator->enumerate(enumerator, &iface))
-	{
-		if (iface->ifindex == msg->ifm_index)
-		{
-			if (iface->usable)
-			{
-				if (!(iface->flags & IFF_UP) && (msg->ifm_flags & IFF_UP))
-				{
-					roam = update_routes = TRUE;
-					DBG1(DBG_KNL, "interface %s activated", iface->ifname);
-				}
-				else if ((iface->flags & IFF_UP) && !(msg->ifm_flags & IFF_UP))
-				{
-					roam = TRUE;
-					DBG1(DBG_KNL, "interface %s deactivated", iface->ifname);
-				}
-			}
-#ifdef __APPLE__
-			/* There seems to be a race condition on 10.10, where we get
-			 * the RTM_IFINFO, but getifaddrs() does not return the virtual
-			 * IP installed on a tun device, but we also don't get a
-			 * RTM_NEWADDR. We therefore could miss the new address, letting
-			 * virtual IP installation fail. Delaying getifaddrs() helps,
-			 * but is obviously not a clean fix. */
-			usleep(50000);
-#endif
-			iface->flags = msg->ifm_flags;
-			repopulate_iface(this, iface);
-			found = TRUE;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	if (!found)
-	{
-		INIT(iface,
-			.ifindex = msg->ifm_index,
-			.flags = msg->ifm_flags,
-			.addrs = linked_list_create(),
-		);
-#ifdef __APPLE__
-		/* Similar to the issue described above, on 10.13 we need this delay as
-		 * we might otherwise not be able to convert the index to a name yet. */
-		usleep(50000);
-#endif
-		if (if_indextoname(iface->ifindex, iface->ifname))
-		{
-			DBG1(DBG_KNL, "interface %s appeared", iface->ifname);
-			iface->usable = charon->kernel->is_interface_usable(charon->kernel,
-																iface->ifname);
-			repopulate_iface(this, iface);
-			this->ifaces->insert_last(this->ifaces, iface);
-			if (iface->usable)
-			{
-				roam = update_routes = TRUE;
-			}
-		}
-		else
-		{
-			free(iface);
-		}
-	}
-	this->lock->unlock(this->lock);
-
-	if (update_routes)
-	{
-		queue_route_reinstall(this, strdup(iface->ifname));
-	}
-
-	if (roam)
-	{
-		fire_roam_event(this, TRUE);
-	}
-}
-
-#ifdef HAVE_RTM_IFANNOUNCE
-
-/**
- * Process an RTM_IFANNOUNCE message from the kernel
- */
-static void process_announce(private_kernel_syscfg_net_t *this,
-							 struct if_announcemsghdr *msg)
-{
-	enumerator_t *enumerator;
-	iface_entry_t *iface;
-
-	if (msg->ifan_what != IFAN_DEPARTURE)
-	{
-		/* we handle new interfaces in process_link() */
-		return;
-	}
-
-	this->lock->write_lock(this->lock);
-	enumerator = this->ifaces->create_enumerator(this->ifaces);
-	while (enumerator->enumerate(enumerator, &iface))
-	{
-		if (iface->ifindex == msg->ifan_index)
-		{
-			DBG1(DBG_KNL, "interface %s disappeared", iface->ifname);
-			this->ifaces->remove_at(this->ifaces, enumerator);
-			iface_entry_destroy(iface);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
-}
-
-#endif /* HAVE_RTM_IFANNOUNCE */
-
-/**
- * Process an RTM_*ROUTE message from the kernel
- */
-static void process_route(private_kernel_syscfg_net_t *this,
-						  struct rt_msghdr *msg)
-{
-
-}
-
-/**
  * Receives PF_ROUTE messages from kernel
  */
 static bool receive_events(private_kernel_syscfg_net_t *this, int fd,
@@ -1108,19 +823,14 @@ static bool receive_events(private_kernel_syscfg_net_t *this, int fd,
 	{
 		case RTM_NEWADDR:
 		case RTM_DELADDR:
-			process_addr(this, &msg.ifam);
-			break;
 		case RTM_IFINFO:
-			process_link(this, &msg.ifm);
 			break;
 #ifdef HAVE_RTM_IFANNOUNCE
 		case RTM_IFANNOUNCE:
-			process_announce(this, &msg.ifanm);
 			break;
 #endif /* HAVE_RTM_IFANNOUNCE */
 		case RTM_ADD:
 		case RTM_DELETE:
-			process_route(this, &msg.rtm);
 			break;
 		default:
 			break;
@@ -1133,8 +843,6 @@ static bool receive_events(private_kernel_syscfg_net_t *this, int fd,
 		this->reply = realloc(this->reply, msg.rtm.rtm_msglen);
 		memcpy(this->reply, &msg, msg.rtm.rtm_msglen);
 	}
-	/* signal on any event, add_ip()/del_ip() might wait for it */
-	this->condvar->broadcast(this->condvar);
 	this->mutex->unlock(this->mutex);
 
 	return TRUE;
@@ -1208,18 +916,6 @@ CALLBACK(filter_interfaces, bool,
 
 	while (orig->enumerate(orig, &iface))
 	{
-		if (!(data->which & ADDR_TYPE_IGNORED) && !iface->usable)
-		{	/* skip interfaces excluded by config */
-			continue;
-		}
-		if (!(data->which & ADDR_TYPE_LOOPBACK) && (iface->flags & IFF_LOOPBACK))
-		{	/* ignore loopback devices */
-			continue;
-		}
-		if (!(data->which & ADDR_TYPE_DOWN) && !(iface->flags & IFF_UP))
-		{	/* skip interfaces not up */
-			continue;
-		}
 		*out = iface;
 		return TRUE;
 	}
@@ -2051,91 +1747,548 @@ METHOD(kernel_net_t, create_local_subnet_enumerator, enumerator_t*,
 	return &enumerator->public;
 }
 
-/**
- * Initialize a list of local addresses.
- */
-static status_t init_address_list(private_kernel_syscfg_net_t *this)
+/* Extract the string from the CFStringRef into the given C string buffer */
+static status_t to_char_str( CFStringRef str_ref, char *buf, size_t buf_len )
 {
-	struct ifaddrs *ifap, *ifa;
-	iface_entry_t *iface, *current;
+	CFStringEncoding encoding = kCFStringEncodingMacRoman;
+	CFIndex len, max_size;
+
+	len = CFStringGetLength( str_ref );
+	if ( len <= 0 )
+	{
+		return FAILED;
+	}
+
+	max_size = CFStringGetMaximumSizeForEncoding( len, encoding );
+	if ( max_size <= 0 )
+	{
+		return FAILED;
+	}
+	max_size += 1;
+	if ( max_size > buf_len )
+	{
+		DBG1(DBG_KNL, "can't copy string ref, buffer size %d given, %d required", buf_len, max_size);
+		return FAILED;
+	}
+
+	if ( !CFStringGetCString( str_ref, buf, max_size, encoding ) )
+	{
+		return FAILED;
+	}
+
+	return SUCCESS;
+}
+
+/* ifname is assumed to be at least IFNAMSIZ + 1 bytes */
+static status_t parse_key_ref( CFStringRef key_ref, char *ifname, int *family )
+{
+	CFRange range;
+	CFStringRef ifname_ref;
+	static CFStringRef prefix = CFSTR("State:/Network/Interface/");
+	CFIndex prefix_len = CFStringGetLength( prefix );
+	static CFStringRef suffix = CFSTR("/IPv4");
+	CFIndex suffix_len = CFStringGetLength( suffix );
+
+	if ( !CFStringHasPrefix( key_ref, CFSTR("State:/Network/Interface/") ) )
+	{
+		/* The key is not correct - ignore */
+		 return FAILED;
+	}
+
+	if ( CFStringHasSuffix( key_ref, CFSTR("/IPv4") ) )
+	{
+		*family = AF_INET;
+	}
+	else if ( CFStringHasSuffix( key_ref, CFSTR("/IPv6") ) )
+	{
+		*family = AF_INET6;
+	}
+	else
+	{
+		/* The key is not correct - ignore */
+		return FAILED;
+	}
+
+	/* Extract the interface name substring */
+	range.location = prefix_len;
+	range.length = CFStringGetLength( key_ref ) - prefix_len - suffix_len;
+	ifname_ref = CFStringCreateWithSubstring( NULL, key_ref, range );
+	return to_char_str( ifname_ref, ifname, IFNAMSIZ );
+}
+
+static bool ignore_address( CFStringRef addr_ref )
+{
+	/* Ignore link local addresses */
+	CFRange range = CFStringFind( addr_ref, CFSTR("fe80"), 0 );
+	if ( range.location == 0 )
+	{
+		/* Ignoring IPv6 link local address */
+		return TRUE;
+	}
+	/* Ignore automatic private IP addresses */
+	range = CFStringFind( addr_ref, CFSTR("169.254"), 0 );
+	if ( range.location == 0 )
+	{
+		/* Ignoring IPv4 automatic private IP addresses */
+		return TRUE;
+	}
+	/* Don't ignore the address */
+	return FALSE;
+}
+
+static linked_list_t *addrs_from_dict( CFDictionaryRef dict_ref, int family )
+{
+	CFArrayRef addrs_ref = NULL;
+	linked_list_t *result = NULL;
+
+	/* Our result will be a linked list of host_t objects */
+	result = linked_list_create();
+	if (!result)
+	{
+		return NULL;
+	}
+
+	/* It's possible to be called with no dictionary reference. In this case we
+	 * still want to return the empty linked list. */
+	if (!dict_ref)
+	{
+		return result;
+	}
+
+	/* Extract the addresses and add them to the host_t object linked list */
+	addrs_ref = (CFArrayRef)CFDictionaryGetValue( dict_ref, family == AF_INET ? kSCPropNetIPv4Addresses : kSCPropNetIPv6Addresses );
+	if ( addrs_ref )
+	{
+		CFStringRef addr_ref = NULL;
+		host_t *host;
+		CFIndex idx, count;
+		char addr_str[64];
+
+		//CFShow(addrs_ref);
+		count = CFArrayGetCount( addrs_ref );
+		for ( idx = 0; idx < count; idx++ )
+		{
+			/* Get the next entry in the array - it's a string ref */
+			addr_ref = (CFStringRef)CFArrayGetValueAtIndex( addrs_ref, idx );
+
+			/* Ensure it's one we are interested in */
+			if ( ignore_address( addr_ref ) )
+			{
+				continue;
+			}
+
+			/* Convert to a C string */
+			if ( to_char_str( addr_ref, addr_str, sizeof(addr_str) ) != SUCCESS )
+			{
+				continue;
+			}
+
+			/* Create the host object */
+			host = host_create_from_string(addr_str, 0);
+			if ( host == NULL )
+			{
+				continue;
+			}
+
+			/* And add it to the linked list */
+			result->insert_last(result, host);
+		}
+	}
+
+	return result;
+}
+
+static void dump_addresses(private_kernel_syscfg_net_t *this)
+{
+	iface_entry_t *iface;
 	addr_entry_t *addr;
 	enumerator_t *ifaces, *addrs;
 
 	DBG2(DBG_KNL, "known interfaces and IP addresses:");
 
-	if (getifaddrs(&ifap) < 0)
-	{
-		DBG1(DBG_KNL, "  failed to get interfaces!");
-		return FAILED;
-	}
+	this->lock->write_lock(this->lock);
 
-	for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next)
-	{
-		if (ifa->ifa_addr == NULL)
-		{
-			continue;
-		}
-		switch(ifa->ifa_addr->sa_family)
-		{
-			case AF_LINK:
-			case AF_INET:
-			case AF_INET6:
-			{
-				iface = NULL;
-				ifaces = this->ifaces->create_enumerator(this->ifaces);
-				while (ifaces->enumerate(ifaces, &current))
-				{
-					if (streq(current->ifname, ifa->ifa_name))
-					{
-						iface = current;
-						break;
-					}
-				}
-				ifaces->destroy(ifaces);
-
-				if (!iface)
-				{
-					INIT(iface,
-						.ifindex = if_nametoindex(ifa->ifa_name),
-						.flags = ifa->ifa_flags,
-						.addrs = linked_list_create(),
-						.usable = charon->kernel->is_interface_usable(
-												charon->kernel, ifa->ifa_name),
-					);
-					memcpy(iface->ifname, ifa->ifa_name, IFNAMSIZ);
-					this->ifaces->insert_last(this->ifaces, iface);
-				}
-
-				if (ifa->ifa_addr->sa_family != AF_LINK)
-				{
-					INIT(addr,
-						.ip = host_create_from_sockaddr(ifa->ifa_addr),
-					);
-					iface->addrs->insert_last(iface->addrs, addr);
-					addr_map_entry_add(this, addr, iface);
-				}
-			}
-		}
-	}
-	freeifaddrs(ifap);
-
+	/* Dump out the interfaces and addresses */
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
 	while (ifaces->enumerate(ifaces, &iface))
 	{
-		if (iface->usable && iface->flags & IFF_UP)
+		DBG2(DBG_KNL, "  %s", iface->ifname);
+		addrs = iface->addrs->create_enumerator(iface->addrs);
+		while (addrs->enumerate(addrs, (void**)&addr))
 		{
-			DBG2(DBG_KNL, "  %s", iface->ifname);
-			addrs = iface->addrs->create_enumerator(iface->addrs);
-			while (addrs->enumerate(addrs, (void**)&addr))
-			{
-				DBG2(DBG_KNL, "    %H", addr->ip);
-			}
-			addrs->destroy(addrs);
+			DBG2(DBG_KNL, "    %H", addr->ip);
+		}
+		addrs->destroy(addrs);
+	}
+	ifaces->destroy(ifaces);
+
+	this->lock->unlock(this->lock);
+}
+
+static void update_ipaddrs_from_key( CFStringRef key_ref, CFDictionaryRef dict_ref, private_kernel_syscfg_net_t *this, bool init )
+{
+	char ifname[IFNAMSIZ + 1] = {0};
+	int family = 0;
+
+	enumerator_t *ifaces = NULL;
+	iface_entry_t *iface = NULL, *iface_current = NULL;
+	bool changed = FALSE;
+
+	linked_list_t *hosts_list = NULL;
+	enumerator_t *hosts = NULL;
+	host_t *host = NULL;
+
+	enumerator_t *addrs = NULL;
+	addr_entry_t *addr = NULL;
+
+	bool found;
+
+	/* Sanity checks. Note that it's OK if dict_ref is NULL */
+	if ( !key_ref || CFGetTypeID(key_ref) != CFStringGetTypeID() ||
+		 (dict_ref && CFGetTypeID( dict_ref ) != CFDictionaryGetTypeID()) ||
+		 !this )
+	{
+		DBG1(DBG_KNL, "update_ipaddrs_from_key: invalid parameter");
+		return;
+	}
+
+	//DBG1(DBG_KNL, "update_ipaddrs_from_key:");
+	//CFShow(key_ref);
+
+
+	if ( parse_key_ref( key_ref, ifname, &family ) != SUCCESS )
+	{
+		DBG1(DBG_KNL, "update_ipaddrs_from_key: malformed key");
+		return;
+	}
+
+	/* Ignore the loopback interface */
+	if ( ifname[0] == 'l' && ifname[1] == 'o' )
+	{
+		return;
+	}
+
+	/* Create a linked list of hosts from the given dictionary ref */
+	hosts_list = addrs_from_dict( dict_ref, family );
+	if (!hosts_list)
+	{
+		DBG1(DBG_KNL, "update_ipaddrs_from_key: failed to create hosts list");
+		return;
+	}
+
+	this->lock->write_lock(this->lock);
+
+	/* If this interface is not known, create it and add it to our list */
+	ifaces = this->ifaces->create_enumerator(this->ifaces);
+	while (ifaces->enumerate(ifaces, &iface_current))
+	{
+		if (streq(iface_current->ifname, ifname))
+		{
+			iface = iface_current;
+			break;
 		}
 	}
 	ifaces->destroy(ifaces);
 
+	if (!iface)
+	{
+		INIT(iface,
+			 .addrs = linked_list_create(),
+			 );
+		memcpy(iface->ifname, ifname, IFNAMSIZ);
+		this->ifaces->insert_last(this->ifaces, iface);
+	}
+
+	/* Determine what has changed on the interface. Anything that was in the
+	 * current IP address list that is not in the new IP address list has been
+	 * removed. Anything that is in the new IP address list that was not in the
+	 * current IP address list has been added. */
+
+	/* Note that the key we get is for either IPv4 or IPv6. That means when we
+	 * get the addresses for the key, we only get IPv4 or IPv6 addresses.
+	 * Therefore, we only look for changes for the appropriate family in the
+	 * code below. */
+
+	/* Determine if any addresses have been removed */
+	addrs = iface->addrs->create_enumerator(iface->addrs);
+	while (addrs->enumerate(addrs, &addr))
+	{
+		if ( addr->ip->get_family(addr->ip) != family)
+		{
+			continue;
+		}
+
+		found = FALSE;
+		hosts = hosts_list->create_enumerator(hosts_list);
+		while (hosts->enumerate(hosts, &host))
+		{
+			if (host->ip_equals(host, addr->ip))
+			{
+				found = TRUE;
+				break;
+			}
+		}
+		hosts->destroy(hosts);
+
+		if (!found)
+		{
+			iface->addrs->remove_at(iface->addrs, addrs);
+			if (!addr->virtual)
+			{
+				DBG1(DBG_KNL, "%H disappeared from %s", addr->ip, ifname);
+			}
+			addr_map_entry_remove(addr, iface, this);
+			addr_entry_destroy(addr);
+			this->condvar->broadcast(this->condvar);
+			changed = TRUE;
+		}
+	}
+	addrs->destroy(addrs);
+
+	/* Determine if any addresses have been added */
+	hosts = hosts_list->create_enumerator(hosts_list);
+	while (hosts->enumerate(hosts, &host))
+	{
+		found = FALSE;
+		addrs = iface->addrs->create_enumerator(iface->addrs);
+		while (addrs->enumerate(addrs, &addr))
+		{
+			if ( addr->ip->get_family(addr->ip) != family)
+			{
+				continue;
+			}
+
+			if (host->ip_equals(host, addr->ip))
+			{
+				found = TRUE;
+				break;
+			}
+		}
+		addrs->destroy(addrs);
+
+		if (!found)
+		{
+			INIT(addr,
+				 .ip = host->clone(host),
+				 );
+			iface->addrs->insert_last(iface->addrs, addr);
+			addr_map_entry_add(this, addr, iface);
+			this->condvar->broadcast(this->condvar);
+			changed = TRUE;
+			if (!init)
+			{
+				DBG1(DBG_KNL, "%H appeared on %s", host, iface->ifname);
+			}
+		}
+	}
+	hosts->destroy(hosts);
+
+	this->lock->unlock(this->lock);
+	hosts_list->destroy(hosts_list);
+
+	if (!init)
+	{
+		dump_addresses(this);
+	}
+
+	if (changed)
+	{
+		queue_route_reinstall(this, strdup(ifname));
+		fire_roam_event(this, TRUE);
+	}
+}
+
+static void update_ipaddrs_from_key_init( const void *key, const void *value, void *context )
+{
+	update_ipaddrs_from_key( (CFStringRef)key, (CFDictionaryRef)value, (private_kernel_syscfg_net_t *)context, TRUE );
+}
+
+/**
+ * Create a search pattern list that finds all IPv4 and IPv6 changes. This
+ * pattern list constains two patterns, one for IPv4 and another for IPv6.
+ */
+static status_t create_pattern_list(private_kernel_syscfg_net_t *this)
+{
+	/* This pattern is State:/Network/Interface/[^/]+/IPv4 */
+	this->patterns[0] = SCDynamicStoreKeyCreateNetworkInterfaceEntity( NULL, kSCDynamicStoreDomainState, kSCCompAnyRegex, kSCEntNetIPv4 );
+	if ( this->patterns[0] == NULL )
+	{
+		DBG1(DBG_KNL, "Failed to create IPv4 pattern");
+		return FAILED;
+	}
+
+	/* This pattern is State:/Network/Interface/[^/]+/IPv6 */
+	this->patterns[1] = SCDynamicStoreKeyCreateNetworkInterfaceEntity( NULL, kSCDynamicStoreDomainState, kSCCompAnyRegex, kSCEntNetIPv6 );
+	if ( this->patterns[1] == NULL )
+	{
+		DBG1(DBG_KNL, "Failed to create IPv6 pattern");
+		return FAILED;
+	}
+
+	this->pattern_list = CFArrayCreate( NULL, (const void **)this->patterns, 2, &kCFTypeArrayCallBacks );
+	if ( this->pattern_list == NULL )
+	{
+		DBG1(DBG_KNL, "Failed to create pattern list");
+		return FAILED;
+	}
+
 	return SUCCESS;
+}
+
+static void destroy_pattern_list(private_kernel_syscfg_net_t *this)
+{
+	if ( this->pattern_list )
+	{
+		CFRelease( this->pattern_list );
+		this->pattern_list = NULL;
+	}
+
+	if ( this->patterns[1] )
+	{
+		CFRelease( this->patterns[1] );
+		this->patterns[1] = NULL;
+	}
+
+	if ( this->patterns[0] )
+	{
+		CFRelease( this->patterns[0] );
+		this->patterns[0] = NULL;
+	}
+}
+
+static void ipchange_callback( SCDynamicStoreRef store, CFArrayRef changed_keys, void *info )
+{
+	CFStringRef key = NULL;
+	CFPropertyListRef prop_list = NULL;
+	CFIndex idx, count = CFArrayGetCount( changed_keys );
+	private_kernel_syscfg_net_t *this = (private_kernel_syscfg_net_t *)info;
+
+	/* One or more IP addresses have been added or removed. We are given an
+	 * array of changed System Configuration keys that have changed (we are not
+	 * given the actual changes - we need to figure that out). For each of the
+	 * changed keys we get the the addresses under that key and then call the
+	 * function to figure out what changed. */
+	for ( idx = 0; idx < count; idx++ )
+	{
+		/* Get the next changed key */
+		key = (CFStringRef)CFArrayGetValueAtIndex( changed_keys, idx );
+
+		/* Get the IP addresses under the changed key. These are returned as a
+		 * propertly list ref, which is just a form of a dictionary ref. */
+		prop_list = SCDynamicStoreCopyValue( this->dynamic_store, key );
+
+		/* This function will figure out that addresses have actually changed
+		 * (been added or deleted). Note that it's possible for prop_list to be
+		 * NULL at this point, which means there are no addresses under the
+		 * changed key. This is fine as update_ipaddrs_from_key() handles that
+		 * case. */
+		update_ipaddrs_from_key( key, (CFDictionaryRef)prop_list, this, FALSE );
+		if (prop_list)
+		{
+			CFRelease( prop_list );
+		}
+	}
+}
+
+/**
+ * Create a connection to the System Configuration dynamic store, register our
+ * pattern list and create a runloop source that can be added to our runloop and
+ * will get notified when IP address changes occur.
+ */
+static status_t create_dynamic_store(private_kernel_syscfg_net_t *this)
+{
+	/* Create a connection to the dynamic store */
+	SCDynamicStoreContext context = { 0, this, NULL, NULL, NULL };
+	this->dynamic_store = SCDynamicStoreCreate( NULL, CFSTR("strongswan_ipchange"), ipchange_callback, &context );
+	if ( this->dynamic_store == NULL )
+	{
+		DBG1(DBG_KNL, "Failed to create dynamic store for IP address changes");
+		return FAILED;
+	}
+
+	return SUCCESS;
+}
+
+static void destroy_dynamic_store(private_kernel_syscfg_net_t *this)
+{
+	if (this->dynamic_store)
+	{
+		CFRelease( this->dynamic_store );
+		this->dynamic_store = NULL;
+	}
+}
+
+/**
+ * Create a connection to the System Configuration dynamic store, register our
+ * pattern list and create a runloop source that can be added to our runloop and
+ * will get notified when IP address changes occur.
+ */
+static status_t create_runloop_source(private_kernel_syscfg_net_t *this)
+{
+	/* Tell the dynamic store to watch for changes using our pattern list */
+	if ( !SCDynamicStoreSetNotificationKeys( this->dynamic_store, NULL, this->pattern_list ) )
+	{
+		DBG1(DBG_KNL, "Failed to register pattern list with dynamic store");
+		return FAILED;
+	}
+
+	/* Create a run loop source for the dynamic store */
+	this->runloop_source = SCDynamicStoreCreateRunLoopSource( NULL, this->dynamic_store, 0 );
+	if ( this->runloop_source == NULL )
+	{
+		DBG1(DBG_KNL, "Failed to create runloop source from dynamic store");
+		return FAILED;
+	}
+
+	return SUCCESS;
+}
+
+static void destroy_runloop_source(private_kernel_syscfg_net_t *this)
+{
+	if (this->runloop_source)
+	{
+		CFRelease(this->runloop_source);
+		this->runloop_source = NULL;
+	}
+}
+
+/**
+ * Initialize a list of local addresses from the System Configuration.
+ */
+static status_t init_address_list(private_kernel_syscfg_net_t *this)
+{
+	CFDictionaryRef initial_keys = NULL;
+
+	/* Get the keys that match our pattern list from the System Configuration
+	 * framework */
+	initial_keys = SCDynamicStoreCopyMultiple( this->dynamic_store, NULL, this->pattern_list );
+	if ( initial_keys == NULL )
+	{
+		DBG1(DBG_KNL, "  failed to get initial keys!");
+		return FAILED;
+	}
+
+	/* Extract the interfaces and addresses from the keys. This function calls
+	 * the specified function for every matching initial key. */
+	CFDictionaryApplyFunction( initial_keys, update_ipaddrs_from_key_init, this );
+	CFRelease( initial_keys );
+
+	dump_addresses(this);
+
+	return SUCCESS;
+}
+
+static void *runloop_run(void *info)
+{
+	private_kernel_syscfg_net_t *this = (private_kernel_syscfg_net_t *)info;
+
+	this->runloop_ref = CFRunLoopGetCurrent();
+	CFRunLoopAddSource(this->runloop_ref, this->runloop_source, kCFRunLoopDefaultMode);
+
+	CFRunLoopRun();
+
+	CFRunLoopSourceInvalidate(this->runloop_source);
+	return 0;
 }
 
 METHOD(kernel_net_t, destroy, void,
@@ -2155,6 +2308,16 @@ METHOD(kernel_net_t, destroy, void,
 	enumerator->destroy(enumerator);
 	this->routes->destroy(this->routes);
 	this->routes_lock->destroy(this->routes_lock);
+
+	if (this->runloop_ref)
+	{
+		CFRunLoopStop( this->runloop_ref );
+		this->runloop->join(this->runloop);
+	}
+
+	destroy_runloop_source( this );
+	destroy_pattern_list( this );
+	destroy_dynamic_store( this );
 
 	if (this->socket != -1)
 	{
@@ -2227,9 +2390,47 @@ kernel_syscfg_net_t *kernel_syscfg_net_create()
 						"%s.plugins.kernel-syscfg.vip_wait", 1000, lib->ns),
 		.install_virtual_ip = lib->settings->get_bool(lib->settings,
 						"%s.install_virtual_ip", TRUE, lib->ns),
+		.runloop_source = NULL,
+		.runloop_ref = NULL,
+		.runloop = NULL,
+		.patterns = { NULL, NULL },
+		.pattern_list = NULL,
+		.dynamic_store = NULL,
 	);
 	timerclear(&this->last_route_reinstall);
 	timerclear(&this->next_roam);
+
+	/* create the dynamic store */
+	if ( create_dynamic_store( this ) != SUCCESS )
+	{
+		DBG1(DBG_KNL, "unable to create dynamic store");
+		destroy(this);
+		return NULL;
+	}
+
+	/* create the pattern list */
+	if ( create_pattern_list( this ) != SUCCESS )
+	{
+		DBG1(DBG_KNL, "unable to create pattern list");
+		destroy(this);
+		return NULL;
+	}
+
+	/* create the runloop source */
+	if ( create_runloop_source( this ) != SUCCESS )
+	{
+		DBG1(DBG_KNL, "unable to create runloop source");
+		destroy(this);
+		return NULL;
+	}
+
+	/* Get the initial interfaces and addresses */
+	if ( init_address_list( this ) != SUCCESS )
+	{
+		DBG1(DBG_KNL, "unable to get interface list");
+		destroy(this);
+		return NULL;
+	}
 
 	/* create a PF_ROUTE socket to communicate with the kernel */
 	this->socket = socket(PF_ROUTE, SOCK_RAW, AF_UNSPEC);
@@ -2251,14 +2452,12 @@ kernel_syscfg_net_t *kernel_syscfg_net_create()
 	}
 	else
 	{
+		/* Add the PF route socket to the watcher so we can respond to route changes */
 		lib->watcher->add(lib->watcher, this->socket, WATCHER_READ,
 						  (watcher_cb_t)receive_events, this);
-	}
-	if (init_address_list(this) != SUCCESS)
-	{
-		DBG1(DBG_KNL, "unable to get interface list");
-		destroy(this);
-		return NULL;
+
+		/* Start a thread that will watch for IP address changes */
+		this->runloop = thread_create(runloop_run, this);
 	}
 
 	return &this->public;
