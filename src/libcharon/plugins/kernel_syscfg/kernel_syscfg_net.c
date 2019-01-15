@@ -1400,6 +1400,26 @@ static host_t *get_route(private_kernel_syscfg_net_t *this, bool nexthop,
 	bool failed = FALSE;
 	int type;
 
+	if ( src )
+	{
+		DBG1(DBG_KNL, "get_route: dest=%H src=%H", dest, src);
+
+		/* We were given a source interface, make sure it exists. If it doesn't
+		 * then there's no way we could find a route that uses it. */
+		this->mutex->lock(this->mutex);
+		failed = get_interface_name(this, src, NULL);
+		this->mutex->unlock(this->mutex);
+		if (failed)
+		{
+			DBG1(DBG_KNL, "interface for source address %H not found", src);
+			return NULL;
+		}
+	}
+	else
+	{
+		DBG1(DBG_KNL, "get_route: dest=%H src=(null)", dest);
+	}
+
 retry:
 	msg.hdr.rtm_msglen = sizeof(struct rt_msghdr);
 	for (type = 0; type < RTAX_MAX; type++)
@@ -1435,10 +1455,12 @@ retry:
 		{
 			if (this->condvar->timed_wait(this->condvar, this->mutex, 1000))
 			{	/* timed out? */
+				DBG1(DBG_KNL, "get_route: timed out waiting for condition variable");
 				break;
 			}
 			if (!this->reply)
 			{
+				DBG1(DBG_KNL, "get_route: no reply");
 				continue;
 			}
 			enumerator = create_rtmsg_enumerator(this->reply);
@@ -1484,6 +1506,7 @@ retry:
 	}
 	else
 	{
+		DBG1(DBG_KNL, "get_route: failed");
 		failed = TRUE;
 	}
 	free(this->reply);
@@ -1517,6 +1540,7 @@ retry:
 
 		if (!host)
 		{
+			DBG1(DBG_KNL, "get_route: no host found");
 			return NULL;
 		}
 		this->lock->read_lock(this->lock);
@@ -1537,6 +1561,7 @@ retry:
 METHOD(kernel_net_t, get_source_addr, host_t*,
 	private_kernel_syscfg_net_t *this, host_t *dest, host_t *src)
 {
+	DBG1(DBG_KNL, "get_source_addr");
 	return get_route(this, FALSE, dest, src, NULL);
 }
 
@@ -1544,6 +1569,7 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	private_kernel_syscfg_net_t *this, host_t *dest, int prefix, host_t *src,
 	char **iface)
 {
+	DBG1(DBG_KNL, "get_nexthop");
 	if (iface)
 	{
 		*iface = NULL;
