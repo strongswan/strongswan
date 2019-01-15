@@ -843,6 +843,8 @@ static bool receive_events(private_kernel_syscfg_net_t *this, int fd,
 		this->reply = realloc(this->reply, msg.rtm.rtm_msglen);
 		memcpy(this->reply, &msg, msg.rtm.rtm_msglen);
 	}
+	/* signal on any event, get_route() might wait for it */
+	this->condvar->broadcast(this->condvar);
 	this->mutex->unlock(this->mutex);
 
 	return TRUE;
