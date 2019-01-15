@@ -151,7 +151,7 @@ static CFStringRef create_dns_path(SCDynamicStoreRef store)
 		if (service)
 		{
 			path = CFStringCreateWithFormat(NULL, NULL,
-								CFSTR("Setup:/Network/Service/%@/DNS"), service);
+								CFSTR("State:/Network/Service/%@/DNS"), service);
 		}
 		else
 		{
