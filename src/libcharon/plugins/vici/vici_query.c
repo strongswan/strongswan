@@ -914,6 +914,8 @@ CALLBACK(list_conns, vici_message_t*,
 				b->add_kv(b, "interface", "%s", interface);
 			}
 
+			b->add_kv(b, "if_id", "%u", child_cfg->get_if_id(child_cfg));
+
 			manual_prio = child_cfg->get_manual_prio(child_cfg);
 			if (manual_prio)
 			{

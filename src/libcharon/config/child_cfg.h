@@ -227,6 +227,13 @@ struct child_cfg_t {
 	uint32_t (*get_reqid)(child_cfg_t *this);
 
 	/**
+	 * Optional virtual XFRM interface ID
+	 *
+	 * @return				id
+	 */
+	uint32_t (*get_if_id)(child_cfg_t *this);
+
+	/**
 	 * Optional mark to set on policies/SAs.
 	 *
 	 * @param inbound		TRUE for inbound, FALSE for outbound
@@ -382,6 +389,8 @@ struct child_cfg_create_t {
 	hw_offload_t hw_offload;
 	/** How to handle the DS header field in tunnel mode */
 	dscp_copy_t copy_dscp;
+	/** virtual XFRM interface ID */
+	uint32_t if_id;
 };
 
 /**

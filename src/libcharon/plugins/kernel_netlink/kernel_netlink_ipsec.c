@@ -1884,6 +1884,10 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		 * checks it marks them "checksum ok" so OA isn't needed. */
 	}
 
+	if (!add_uint32(hdr, sizeof(request), XFRMA_IF_ID, data->if_id))
+	{
+		goto failed;
+	}
 	if (!add_mark(hdr, sizeof(request), id->mark))
 	{
 		goto failed;

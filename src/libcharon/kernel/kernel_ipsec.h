@@ -109,6 +109,8 @@ struct kernel_ipsec_add_sa_t {
 	bool inbound;
 	/** TRUE if an SPI has already been allocated for this SA */
 	bool update;
+	/** virtual XFRM interface ID */
+	uint32_t if_id;
 };
 
 /**

@@ -528,6 +528,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   tfc = %d", cfg->tfc);
 	DBG2(DBG_CFG, "   priority = %d", cfg->priority);
 	DBG2(DBG_CFG, "   interface = %s", cfg->interface);
+	DBG2(DBG_CFG, "   if_id = %u", cfg->if_id);
 	DBG2(DBG_CFG, "   mark_in = %u/%u",
 		 cfg->mark_in.value, cfg->mark_in.mask);
 	DBG2(DBG_CFG, "   mark_in_sa = %u", has_opt(OPT_MARK_IN_SA));
@@ -1659,6 +1660,7 @@ CALLBACK(child_kv, bool,
 		{ "ipcomp",				parse_opt_ipcomp,	&child->cfg.options					},
 		{ "inactivity",			parse_time,			&child->cfg.inactivity				},
 		{ "reqid",				parse_uint32,		&child->cfg.reqid					},
+		{ "if_id",				parse_uint32,		&child->cfg.if_id					},
 		{ "mark_in",			parse_mark,			&child->cfg.mark_in					},
 		{ "mark_in_sa",			parse_opt_mark_in,	&child->cfg.options					},
 		{ "mark_out",			parse_mark,			&child->cfg.mark_out				},

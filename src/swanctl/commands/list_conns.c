@@ -84,7 +84,7 @@ CALLBACK(children_sn, int,
 {
 	hashtable_t *child;
 	char *mode, *interface, *priority;
-	char *rekey_time, *rekey_bytes, *rekey_packets, *dpd_action, *dpd_delay;
+	char *rekey_time, *rekey_bytes, *rekey_packets, *dpd_action, *dpd_delay, *if_id;
 	bool no_time, no_bytes, no_packets, no_dpd, or = FALSE;
 	int ret;
 
@@ -142,6 +142,12 @@ CALLBACK(children_sn, int,
 		if (interface)
 		{
 			printf("    interface: %s\n", interface);
+		}
+
+		if_id = child->get(child, "if_id");
+		if (if_id)
+		{
+			printf("    xfrm interface: %s\n", if_id);
 		}
 
 		priority = child->get(child, "priority");

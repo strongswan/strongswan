@@ -898,6 +898,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.initiator = initiator,
 		.inbound = inbound,
 		.update = update,
+		.if_id = this->config->get_if_id(this->config),
 	};
 
 	if (sa.mark.value == MARK_SAME)
