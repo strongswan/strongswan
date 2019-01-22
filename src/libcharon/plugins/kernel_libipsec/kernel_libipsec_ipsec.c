@@ -378,11 +378,11 @@ static void remove_exclude_route(private_kernel_libipsec_ipsec_t *this,
 	this->excludes->remove(this->excludes, route->exclude, NULL);
 
 	dst = route->exclude->dst;
-	DBG2(DBG_KNL, "uninstalling exclude route for %H src %H",
-		 dst, route->exclude->src);
-	if (charon->kernel->get_interface(charon->kernel, route->exclude->src,
-									  &if_name) &&
-		charon->kernel->del_route(charon->kernel, dst->get_address(dst),
+	charon->kernel->get_interface(charon->kernel, route->exclude->src,
+								  &if_name);
+	DBG2(DBG_KNL, "uninstalling exclude route for %H src %H on iface %s",
+		 dst, route->exclude->src, if_name ? if_name : "(unknown)");
+	if (charon->kernel->del_route(charon->kernel, dst->get_address(dst),
 								  dst->get_family(dst) == AF_INET ? 32 : 128,
 								  route->exclude->gtw, route->exclude->src,
 								  if_name) != SUCCESS)

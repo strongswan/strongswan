@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
+ * Copyright (C) 2019 Sophos Inc
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -13,13 +14,44 @@
  * for more details.
  */
 
+/*
+ * Theory of Operation
+ * The dictionary associated with the State:/Network/Global/DNS dynamic store
+ * key contains what the current DNS configuration. This key is not modifiable.
+ * In order to use the DNS servers and suffix specified for the tunnel, we want
+ * to create a State:/Network/Service/<service-id>/DNS key which contains the
+ * tunnel DNS settings. However, that is not enough because the system will not
+ * use this key as it is not the primary DNS key. Further, there is no direct
+ * way to make it the primary DNS key. To do that, we also need to create a
+ * State:/Network/Service/<service-id>/IPv4 key and add an OverridePrimary key
+ * to it. This will make the IPv4 key primary for IPv4, and also the
+ * corresponding DNS key primary for DNS. In order to not break network
+ * connectivity on the system, the IPv4 key we create will be an exact copy of
+ * the IPv4 key of the active interface at the time the tunnel is established
+ * (the only exception being the addition of the OverridePrimary key). Likewise,
+ * in order to allow failover to the existing DNS servers in case the tunnel
+ * DNS server(s) are unavailable, the DNS key we create will be a copy of the
+ * DNS key of the active interface with the tunnel DNS servers added.
+ *
+ * Because we don't want these keys to exist beyond the scope of the tunnel,
+ * they will be regenerated every time a DNS server or suffix is added or
+ * removed. In the event that the DNS key generation results in no subkeys (i.e.
+ * there are no DNS servers or suffix), the keys will be removed.
+ */
+
 #include "osx_attr_handler.h"
 
 #include <networking/host.h>
 #include <utils/debug.h>
 #include <threading/mutex.h>
 
+#include <SystemConfiguration/SystemConfiguration.h>
 #include <SystemConfiguration/SCDynamicStore.h>
+
+#define SERVICE_ID  "strongswan"
+static CFStringRef service_id = CFSTR(SERVICE_ID);
+
+#define RELEASE_IF(ref) if (ref) { CFRelease(ref); ref = NULL; }
 
 typedef struct private_osx_attr_handler_t private_osx_attr_handler_t;
 
@@ -30,8 +62,6 @@ typedef struct private_osx_attr_handler_t private_osx_attr_handler_t;
 typedef struct {
 	/** address */
 	host_t *ip;
-	/** reference count */
-	int count;
 } server_t;
 
 /**
@@ -52,20 +82,15 @@ static void find_server( linked_list_t *servers, host_t *ip, server_t **found )
 	server_t *server = NULL;
 	*found = NULL;
 
-	DBG1(DBG_CFG, "find_server: looking for %H in servers %p", ip, servers);
 	enumerator = servers->create_enumerator( servers );
-	DBG1(DBG_CFG, "find_server: beginning iteration");
 	while ( enumerator->enumerate( enumerator, &server ) )
 	{
-		DBG1(DBG_CFG, "find_server: checking %H, %H", ip, server->ip);
 		if ( ip->ip_equals( ip, server->ip ) )
 		{
-			DBG1(DBG_CFG, "find_server: %H matches", ip);
 			*found = server;
 			break;
 		}
 	}
-	DBG1(DBG_CFG, "find_server: destroying enumerator");
 	enumerator->destroy( enumerator );
 }
 
@@ -75,8 +100,6 @@ static void find_server( linked_list_t *servers, host_t *ip, server_t **found )
 typedef struct {
 	/** suffix */
 	char *suffix;
-	/** reference count */
-	int count;
 } suffix_t;
 
 /**
@@ -136,41 +159,137 @@ struct private_osx_attr_handler_t {
 };
 
 /**
- * Create a path to the DNS configuration of the Primary IPv4 Service
+ * Return a string description of the specified CFErrorRef. Note that this
+ * string is kept in a static buffer and therefore is not thread safe.
  */
-static CFStringRef create_dns_path(SCDynamicStoreRef store)
+static const char *last_err_str()
 {
-	CFStringRef service, path = NULL;
+	static char buf[512];
+	CFStringRef str_ref = NULL;
+	CFErrorRef err_ref = NULL;
+
+	do
+	{
+		memset(buf, 0, sizeof(buf));
+
+		err_ref = SCCopyLastError();
+		if ( !err_ref )
+		{
+			break;
+		}
+
+		str_ref = CFErrorCopyDescription( err_ref );
+		if ( !str_ref )
+		{
+			break;
+		}
+
+		CFStringGetCString( str_ref, buf, sizeof(buf), kCFStringEncodingUTF8 );
+
+	} while ( 0 );
+
+	RELEASE_IF( str_ref );
+	RELEASE_IF( err_ref );
+
+	return buf;
+}
+
+/**
+ * Return the path to the primary service. Any non-NULL returned CFStringRef
+ * must be freed by calling CFRelease.
+ */
+static CFStringRef get_primary_service(SCDynamicStoreRef store)
+{
+	CFStringRef service = NULL;
 	CFDictionaryRef dict;
 
-	/* get primary service */
+	/* Open the global IPv4 key */
 	dict = SCDynamicStoreCopyValue(store, CFSTR("State:/Network/Global/IPv4"));
 	if (dict)
 	{
-		service = CFDictionaryGetValue(dict, CFSTR("PrimaryService"));
-		if (service)
+		/* The PrimaryService subkey is what we are interested in */
+		CFStringRef value = CFDictionaryGetValue(dict, CFSTR("PrimaryService"));
+		if (!value)
 		{
-			path = CFStringCreateWithFormat(NULL, NULL,
-								CFSTR("State:/Network/Service/%@/DNS"), service);
+			DBG1(DBG_KNL, "Global IPv4 SystemConfiguration PrimaryService not known");
 		}
-		else
+		service = CFStringCreateCopy( NULL, value );
+		if (!service)
 		{
-			DBG1(DBG_CFG, "SystemConfiguration PrimaryService not known");
+			DBG1(DBG_KNL, "Failed to copy PrimaryService value");
 		}
 		CFRelease(dict);
 	}
 	else
 	{
-		DBG1(DBG_CFG, "getting global IPv4 SystemConfiguration failed");
+		DBG1(DBG_KNL, "getting global IPv4 SystemConfiguration failed");
 	}
-	return path;
+
+	return service;
 }
 
 /**
- * Create a mutable dictionary from path, a new one if not found
+ * Build the path to the IPv4 key for the specified service. The returned
+ * CFStringRef must be freed by calling CFRelease.
  */
-static CFMutableDictionaryRef get_dictionary(SCDynamicStoreRef store,
-											 CFStringRef path)
+static CFStringRef create_ipv4_key(CFStringRef service)
+{
+	CFStringRef key = NULL;
+	if (service)
+	{
+		key = CFStringCreateWithFormat(NULL, NULL, CFSTR("State:/Network/Service/%@/IPv4"), service);
+		if (!key)
+		{
+			DBG1(DBG_KNL, "Failed to create IPv4 key");
+		}
+	}
+	return key;
+}
+
+/**
+ * Build the path to the IPv6 key for the specified service. The returned
+ * CFStringRef must be freed by calling CFRelease.
+ */
+static CFStringRef create_ipv6_key(CFStringRef service)
+{
+	CFStringRef key = NULL;
+	if (service)
+	{
+		key = CFStringCreateWithFormat(NULL, NULL, CFSTR("State:/Network/Service/%@/IPv6"), service);
+		if (!key)
+		{
+			DBG1(DBG_KNL, "Failed to create IPv6 key");
+		}
+	}
+	return key;
+}
+
+/**
+ * Build the path to the DNS key for the specified service. The returned
+ * CFStringRef must be freed by calling CFRelease.
+ */
+static CFStringRef create_dns_key(CFStringRef service)
+{
+	CFStringRef key = NULL;
+	if (service)
+	{
+		key = CFStringCreateWithFormat(NULL, NULL, CFSTR("State:/Network/Service/%@/DNS"), service);
+		if (!key)
+		{
+			DBG1(DBG_KNL, "Failed to create DNS key");
+		}
+	}
+	return key;
+}
+
+/**
+ * Open a mutable dictionary from path. If it doesn't yet exist, optionally
+ * create a new one. The returned CFMutableDictionaryRef must be freed by
+ * calling CFRelease.
+ */
+static CFMutableDictionaryRef open_mutable_dict(SCDynamicStoreRef store,
+												CFStringRef path,
+												bool create)
 {
 	CFDictionaryRef dict;
 	CFMutableDictionaryRef mut = NULL;
@@ -184,7 +303,7 @@ static CFMutableDictionaryRef get_dictionary(SCDynamicStoreRef store,
 		}
 		CFRelease(dict);
 	}
-	if (!mut)
+	if (!mut && create)
 	{
 		mut = CFDictionaryCreateMutable(NULL, 0,
 										&kCFTypeDictionaryKeyCallBacks,
@@ -193,135 +312,316 @@ static CFMutableDictionaryRef get_dictionary(SCDynamicStoreRef store,
 	return mut;
 }
 
-/**
- * Create a mutable array from dictionary path, a new one if not found
- */
-static CFMutableArrayRef get_array_from_dict(CFDictionaryRef dict,
-											 CFStringRef name)
+static bool key_exists( SCDynamicStoreRef store, CFStringRef key )
 {
-	CFArrayRef arr;
+	CFPropertyListRef pl;
 
-	arr = CFDictionaryGetValue(dict, name);
-	if (arr && CFGetTypeID(arr) == CFArrayGetTypeID())
+	if (!store || !key)
 	{
-		return CFArrayCreateMutableCopy(NULL, 0, arr);
+		return FALSE;
 	}
-	return CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
+
+	pl = SCDynamicStoreCopyValue(store, key);
+	if (pl)
+	{
+		CFRelease(pl);
+		return TRUE;
+	}
+	return FALSE;
 }
 
-static bool manage_dns_arr_setting(const char *setting, const char *value, bool add)
+static CFMutableDictionaryRef build_dns_dict(private_osx_attr_handler_t *this)
 {
-	SCDynamicStoreRef store = NULL;
-	CFStringRef path = NULL, cf_value = NULL, cf_setting = NULL;;
+	/* Build a DNS dictionary from the current known DNS addresses and suffixes.
+	 * If no addresses or suffixes are currently known, then return NULL. */
 	CFMutableDictionaryRef dict = NULL;
-	CFMutableArrayRef arr = NULL;
-	CFIndex i = 0;
-	bool success = FALSE;
+	int servers_count = this->servers->get_count(this->servers);
+	int suffixes_count = this->suffixes->get_count(this->suffixes);
+	if ( servers_count == 0 && suffixes_count == 0 )
+	{
+		/* Expected result when nothing to build */
+		return NULL;
+	}
 
 	do
 	{
-		cf_setting = CFStringCreateWithCString(NULL, setting, kCFStringEncodingUTF8);
-		if (cf_setting == NULL)
+		/* Create the mutable dictionary */
+		dict = CFDictionaryCreateMutable(NULL, 0,
+										 &kCFTypeDictionaryKeyCallBacks,
+										 &kCFTypeDictionaryValueCallBacks);
+		if (!dict)
 		{
-			DBG1(DBG_CFG, "Failed to create CF string from setting '%s'", setting);
+			DBG1(DBG_KNL, "failed to create mutable dictionary for DNS: %s", last_err_str());
 			break;
 		}
 
-		cf_value = CFStringCreateWithCString(NULL, value, kCFStringEncodingUTF8);
-		if (cf_value == NULL)
+		/* Add in the DNS servers */
+		if (servers_count > 0)
 		{
-			DBG1(DBG_CFG, "Failed to create CF string from value '%s'", value);
-			break;
-		}
-
-		store = SCDynamicStoreCreate(NULL, CFSTR("osx-attr"), NULL, NULL);
-		if (store == NULL)
-		{
-			DBG1(DBG_CFG, "Failed to create dynamic store for osx-attr");
-			break;
-		}
-
-		path = create_dns_path(store);
-		if (path == NULL)
-		{
-			/* error already logged */
-			break;
-		}
-
-		dict = get_dictionary(store, path);
-		if (dict == NULL)
-		{
-			DBG1(DBG_CFG, "Failed to get dictionary");
-			break;
-		}
-
-		arr = get_array_from_dict(dict, cf_setting);
-		if (arr == NULL)
-		{
-			DBG1(DBG_CFG, "Failed to get %s array from dictionary", setting);
-			break;
-		}
-
-		i = CFArrayGetFirstIndexOfValue(arr, CFRangeMake(0, CFArrayGetCount(arr)), cf_value);
-
-		if ( add )
-		{
-			if ( i >= 0 )
+			server_t *server = NULL;
+			char buf[64];
+			enumerator_t *enumerator;
+			CFStringRef dns_server_ref = NULL;
+			CFMutableArrayRef array_ref = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
+			if (!array_ref)
 			{
-				DBG1(DBG_CFG, "%s %s already exists - nothing to add", setting, value);
-				success = TRUE;
+				DBG1(DBG_KNL, "failed to create array for DNS servers");
 				break;
 			}
 
-			DBG1(DBG_CFG, "adding %s %s", setting, value);
-			CFArrayInsertValueAtIndex(arr, 0, cf_value);
-		}
-		else
-		{
-			if ( i == -1 )
+			enumerator = this->servers->create_enumerator( this->servers );
+			while ( enumerator->enumerate( enumerator, &server ) )
 			{
-				DBG1(DBG_CFG, "%s %s does not exist - nothing to remove", setting, value);
-				success = TRUE;
+				snprintf(buf, sizeof(buf), "%H", server->ip);
+
+				dns_server_ref = CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);
+				if (!dns_server_ref)
+				{
+					DBG1(DBG_KNL, "Failed to create CF string from DNS server '%s'", buf);
+					break;
+				}
+				CFArrayAppendValue(array_ref, dns_server_ref);
+				CFRelease(dns_server_ref);
+
+			}
+			enumerator->destroy( enumerator );
+
+			CFDictionarySetValue(dict, CFSTR("ServerAddresses"), array_ref);
+			CFRelease(array_ref);
+		}
+
+		/* Add in the DNS suffixes */
+		if (suffixes_count > 0)
+		{
+			suffix_t *suffix = NULL;
+			enumerator_t *enumerator;
+			CFStringRef dns_suffix_ref = NULL;
+			CFMutableArrayRef array_ref = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
+			if (!array_ref)
+			{
+				DBG1(DBG_KNL, "failed to create array for DNS suffixes");
 				break;
 			}
 
-			DBG1(DBG_CFG, "removing %s %s", setting, value);
-			CFArrayRemoveValueAtIndex(arr, i);
+			enumerator = this->suffixes->create_enumerator( this->suffixes );
+			while ( enumerator->enumerate( enumerator, &suffix ) )
+			{
+				dns_suffix_ref = CFStringCreateWithCString(NULL, suffix->suffix, kCFStringEncodingUTF8);
+				if (!dns_suffix_ref)
+				{
+					DBG1(DBG_KNL, "Failed to create CF string from DNS suffix '%s'", suffix->suffix);
+					break;
+				}
+				CFArrayAppendValue(array_ref, dns_suffix_ref);
+				CFRelease(dns_suffix_ref);
+
+			}
+			enumerator->destroy( enumerator );
+
+			CFDictionarySetValue(dict, CFSTR("SearchDomains"), array_ref);
+			CFRelease(array_ref);
 		}
-
-		CFDictionarySetValue(dict, cf_setting, arr);
-		success = SCDynamicStoreSetValue(store, path, dict);
-
 	} while ( 0 );
 
-	if (cf_setting) CFRelease(cf_setting);
-	if (cf_value) CFRelease(cf_value);
-	if (arr) CFRelease(arr);
-	if (dict) CFRelease(dict);
-	if (path) CFRelease(path);
-	if (store) CFRelease(store);
+	return dict;
+}
 
-	if (!success)
+static bool copy_ip_key( SCDynamicStoreRef store, CFStringRef src_key, CFStringRef dst_key )
+{
+	CFMutableDictionaryRef dict = NULL;
+	int one = 1;
+	CFNumberRef one_ref = NULL;
+	bool success = FALSE;
+
+	/* Nothing to copy if src does not exist (and that's OK as far as we're
+	 * concerned). */
+	if (!key_exists(store, src_key))
 	{
-		if ( add )
-			DBG1(DBG_CFG, "adding %s %s to SystemConfiguration failed", setting, value);
-		else
-			DBG1(DBG_CFG, "removing %s %s from SystemConfiguration failed", setting, value);
+		return TRUE;
 	}
+
+	do
+	{
+		/* Open a mutable copy of the source dictionary. */
+		dict = open_mutable_dict( store, src_key, FALSE );
+		if (!dict)
+		{
+			/* We failed to get a mutable dictionary object for the IPv4
+			 * key, which means we can't copy it so there's really nothing
+			 * more to do. */
+			DBG1(DBG_KNL, "Failed to open source dictionary");
+			break;
+		}
+
+		/* Tedious. Create the number 1 into an object that we can pass into
+		 * the IPv4/IPv6 dictionaries. */
+		one_ref = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &one);
+		if (!one_ref)
+		{
+			DBG1(DBG_KNL, "Failed to create number ref: %s", last_err_str());
+			break;
+		}
+
+		/* Set the OverridePrimary flags, which indicates to the System
+		 * Configuration that this new service should be the primary. */
+		CFDictionarySetValue(dict, CFSTR("OverridePrimary"), one_ref);
+
+		/* Write the modified dictionary into the store for the destination. */
+		if ( !SCDynamicStoreSetValue(store, dst_key, dict) )
+		{
+			DBG1(DBG_KNL, "Failed to set settings to dynamic store: %s", last_err_str());
+			break;
+		}
+
+		sleep(2);
+
+		success = TRUE;
+	} while ( 0 );
+
+	RELEASE_IF( one_ref );
+	RELEASE_IF( dict );
+
 	return success;
 }
 
-static bool manage_dns_server(private_osx_attr_handler_t *this, host_t *ip, bool add)
+/**
+ * Updates (adds or removes as necessary) our DNS settings to the System
+ * Configuration. If we have any DNS servers or suffixes, we will write our
+ * service entries to the System Configuration. If we do not have any DNS
+ * servers or suffixes, we will remove our service entries from the System
+ * Configuration.
+ */
+static bool update_dns_settings( private_osx_attr_handler_t *this )
 {
-	char buf[64];
+	bool success = FALSE, exists = FALSE;
+	SCDynamicStoreRef store = NULL;
+	CFStringRef primary_service = NULL;
+	CFStringRef src_dns_key = NULL, dst_dns_key = NULL;
+	CFStringRef src_ipv4_key = NULL, dst_ipv4_key = NULL;
+	CFStringRef src_ipv6_key = NULL, dst_ipv6_key = NULL;
+	CFMutableDictionaryRef dns_dict = NULL;
 
-	snprintf(buf, sizeof(buf), "%H", ip);
-	return manage_dns_arr_setting("ServerAddresses", buf, add);
-}
+	do
+	{
+		/* Can't do anything without first opening the store */
+		store = SCDynamicStoreCreate(NULL, CFSTR("osx-attr"), NULL, NULL);
+		if (store == NULL)
+		{
+			DBG1(DBG_KNL, "Failed to create dynamic store for osx-attr");
+			break;
+		}
 
-static bool manage_dns_suffix( char *suffix, bool add )
-{
-	return manage_dns_arr_setting("SearchDomains", suffix, add);
+		/* Create our destination keys */
+		dst_dns_key = create_dns_key( service_id );
+		dst_ipv4_key = create_ipv4_key( service_id );
+		dst_ipv6_key = create_ipv6_key( service_id );
+		if (!dst_dns_key || !dst_ipv4_key || !dst_ipv6_key)
+		{
+			DBG1(DBG_KNL, "Failed to create destination DNS key");
+			break;
+		}
+
+		/* Create the DNS dictionary we will write to System Configuration. If
+		 * we fail to create the dictionary, we will ensure that our service
+		 * entries are removed from System Configuration. */
+		dns_dict = build_dns_dict( this );
+		if (!dns_dict)
+		{
+			DBG2(DBG_KNL, "Removing service keys from System Configuration");
+
+			success = true;
+			/* No DNS dictionary built, remove all our keys */
+			if ( key_exists( store, dst_dns_key ) &&
+				 !SCDynamicStoreRemoveValue( store, dst_dns_key ) )
+			{
+				DBG1(DBG_KNL, "Failed to remove destination DNS key");
+				success = false;
+			}
+			if ( key_exists( store, dst_ipv4_key ) &&
+				 !SCDynamicStoreRemoveValue( store, dst_ipv4_key ) )
+			{
+				DBG1(DBG_KNL, "Failed to remove destination IPv4 key");
+				success = false;
+			}
+			if ( key_exists( store, dst_ipv6_key ) &&
+				 !SCDynamicStoreRemoveValue( store, dst_ipv6_key ) )
+			{
+				DBG1(DBG_KNL, "Failed to remove destination IPv6 key");
+				success = false;
+			}
+			sleep(2);
+			break;
+		}
+
+		/* We built our DNS dictionary. If our service DNS key does not already
+		 * exist then we need to create it and the IPv4/IPv6 keys as well after
+		 * we write the DNS dictionary.
+		 */
+		exists = key_exists(store, dst_dns_key);
+
+		/* Write the DNS dictionary. */
+		if ( !SCDynamicStoreSetValue(store, dst_dns_key, dns_dict) )
+		{
+			DBG1(DBG_KNL, "Failed to set DNS settings to dynamic store: %s", last_err_str());
+			break;
+		}
+
+		DBG2(DBG_KNL, "Successfully wrote DNS server settings to System Configuration");
+
+		if (!exists)
+		{
+			/* Get the primary service. This will be used to create our source
+			 * keys. */
+			primary_service = get_primary_service( store );
+			if (!primary_service)
+			{
+				DBG1(DBG_KNL, "Failed to find primary service");
+				break;
+			}
+
+			/* Build the rest of our source and destination keys */
+			src_dns_key = create_dns_key( primary_service );
+			src_ipv4_key = create_ipv4_key( primary_service );
+			src_ipv6_key = create_ipv6_key( primary_service );
+			if (!src_dns_key || !src_ipv4_key || !src_ipv6_key ||
+				!dst_ipv4_key || !dst_ipv6_key)
+			{
+				/* Log already generated */
+				break;
+			}
+
+			/* Copy the IPv4 and IPv6 keys. This function will also set the
+			 * OverridePrimary flag. */
+			if ( !copy_ip_key(store, src_ipv4_key, dst_ipv4_key) )
+			{
+				DBG1(DBG_KNL, "Failed to copy IPv4 to our service key");
+				break;
+			}
+			DBG2(DBG_KNL, "Successfully wrote IPv4 server settings to System Configuration");
+
+			if ( !copy_ip_key(store, src_ipv6_key, dst_ipv6_key) )
+			{
+				DBG1(DBG_KNL, "Failed to copy IPv6 to our service key");
+				break;
+			}
+			DBG2(DBG_KNL, "Successfully wrote IPv6 server settings to System Configuration");
+		}
+
+		/* Jolly good */
+		success = TRUE;
+
+	} while ( 0 );
+
+	RELEASE_IF(src_dns_key);
+	RELEASE_IF(src_ipv4_key);
+	RELEASE_IF(src_ipv6_key);
+	RELEASE_IF(dst_dns_key);
+	RELEASE_IF(dst_ipv4_key);
+	RELEASE_IF(dst_ipv6_key);
+	RELEASE_IF(dns_dict);
+	RELEASE_IF(store);
+
+	return success;
 }
 
 METHOD(attribute_handler_t, handle, bool,
@@ -333,7 +633,7 @@ METHOD(attribute_handler_t, handle, bool,
 	if ( type == INTERNAL_IP6_DNS )
 	{
 		/* We don't handle this yet - TBD */
-		DBG1(DBG_CFG, "IPv6 DNS not yet stupported");
+		DBG1(DBG_KNL, "IPv6 DNS not yet stupported");
 		return FALSE;
 	}
 
@@ -348,38 +648,24 @@ METHOD(attribute_handler_t, handle, bool,
 			return FALSE;
 		}
 
-		DBG1(DBG_CFG, "Adding DNS server %H", ip);
-
 		this->mutex->lock( this->mutex );
 
-		// Check if we've already added this server
-		find_server(this->servers, ip, &entry);
-		if ( entry )
+		DBG2(DBG_KNL, "Adding DNS server %H to System Configuration", ip);
+
+		INIT( entry,
+			  .ip = ip->clone( ip ),
+			  );
+		this->servers->insert_last( this->servers, entry );
+		handled = update_dns_settings(this);
+		if ( !handled )
 		{
-			DBG1(DBG_CFG, "Found entry %p, count = %d", entry, entry->count);
-			// Yep. Just increment the reference count
-			entry->count++;
-			DBG1(DBG_CFG, "%H already in servers list, count = %d", ip, entry->count);
-			handled = TRUE;
+			DBG1(DBG_KNL, "adding DNS server failed");
+			this->servers->remove( this->servers, entry, NULL );
+			server_destroy( entry );
 		}
 		else
 		{
-			// Nope. Do the add
-			DBG1(DBG_CFG, "%H not in servers list, doing add", ip);
-			handled = manage_dns_server( this, ip, true );
-
-			if ( handled )
-			{
-				INIT( entry,
-					 .ip = ip->clone( ip ),
-					 .count = 1
-					 );
-				this->servers->insert_last( this->servers, entry );
-			}
-			else
-			{
-				DBG1(DBG_CFG, "adding DNS server failed");
-			}
+			DBG2(DBG_KNL, "DNS server %H added to System Configuration", ip);
 		}
 
 		this->mutex->unlock( this->mutex );
@@ -395,42 +681,32 @@ METHOD(attribute_handler_t, handle, bool,
 		// Maximum domain name length is 253
 		if ( data.len > 253 )
 		{
-			DBG1(DBG_CFG, "Given domain name length of %d is too big", data.len);
+			DBG1(DBG_KNL, "Given domain name length of %d is too big", data.len);
 			return FALSE;
 		}
 
 		memcpy( suffix, data.ptr, data.len );
-		DBG1(DBG_CFG, "Adding DNS suffix %s", suffix);
+
+		DBG2(DBG_KNL, "Handling DNS suffix %s", suffix);
 
 		this->mutex->lock( this->mutex );
 
-		// Check if we've already added this suffix
-		find_suffix(this->suffixes, suffix, &entry);
-		if ( entry )
+		DBG2(DBG_KNL, "Adding DNS suffix %s to System Configuration", suffix);
+
+		INIT( entry,
+			  .suffix = strdup(suffix),
+			  );
+		this->suffixes->insert_last( this->suffixes, entry );
+		handled = update_dns_settings(this);
+		if ( !handled )
 		{
-			// Yep. Just increment the reference count
-			entry->count++;
-			DBG1(DBG_CFG, "%s already in suffixes list, count = %d", suffix, entry->count);
-			handled = TRUE;
+			DBG1(DBG_KNL, "adding DNS suffix failed");
+			this->suffixes->remove( this->suffixes, entry, NULL );
+			suffix_destroy( entry );
 		}
 		else
 		{
-			// Nope. Do the add
-			DBG1(DBG_CFG, "%s not in suffixes list, doing add", suffix);
-			handled = manage_dns_suffix( suffix, true );
-
-			if ( handled )
-			{
-				INIT( entry,
-					 .suffix = strdup(suffix),
-					 .count = 1
-					 );
-				this->suffixes->insert_last( this->suffixes, entry );
-			}
-			else
-			{
-				DBG1(DBG_CFG, "adding DNS suffix failed");
-			}
+			DBG2(DBG_KNL, "DNS suffix %s added to System Configuration", suffix);
 		}
 
 		this->mutex->unlock( this->mutex );
@@ -443,12 +719,10 @@ METHOD(attribute_handler_t, release, void,
 	private_osx_attr_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
-	bool handled = FALSE;
-
 	if ( type == INTERNAL_IP6_DNS )
 	{
 		/* We don't handle this yet - TBD */
-		DBG1(DBG_CFG, "IPv6 DNS not yet stupported");
+		DBG1(DBG_KNL, "IPv6 DNS not yet stupported");
 		return;
 	}
 
@@ -463,39 +737,28 @@ METHOD(attribute_handler_t, release, void,
 			return;
 		}
 
-		DBG1(DBG_CFG, "Removing DNS server %H", ip);
+		DBG2(DBG_KNL, "Removing DNS server %H", ip);
 
-		DBG1(DBG_CFG, "Locking mutex %p", this->mutex);
 		this->mutex->lock( this->mutex );
 
 		// Find the server
-		DBG1(DBG_CFG, "Finding %H in servers %p", ip, this->servers);
 		find_server( this->servers, ip, &entry );
 		if ( entry )
 		{
-			DBG1(DBG_CFG, "Found entry %p, count = %d", entry, entry->count);
-			entry->count--;
-			if ( entry->count == 0 )
+			this->servers->remove( this->servers, entry, NULL );
+			server_destroy( entry );
+			if ( !update_dns_settings(this) )
 			{
-				DBG1(DBG_CFG, "%H count is 0, doing remove", ip);
-				this->servers->remove( this->servers, entry, NULL );
-				server_destroy( entry );
-				handled = manage_dns_server( this, ip, false );
-				if ( !handled )
-				{
-					DBG1(DBG_CFG, "removing DNS server failed");
-				}
+				DBG1(DBG_KNL, "removing DNS server failed");
 			}
 			else
 			{
-				DBG1(DBG_CFG, "%H still in servers list, count = %d", ip, entry->count);
-				handled = TRUE;
+				DBG2(DBG_KNL, "DNS server %H removed from System Configuration", ip);
 			}
 		}
 		else
 		{
-			DBG1(DBG_CFG, "DNS server %H not in servers list - nothing more to do", ip);
-			handled = TRUE;
+			DBG2(DBG_KNL, "DNS server %H not in servers list - nothing more to do", ip);
 		}
 
 		this->mutex->unlock( this->mutex );
@@ -510,12 +773,13 @@ METHOD(attribute_handler_t, release, void,
 		// Maximum domain name length is 253
 		if ( data.len > 253 )
 		{
-			DBG1(DBG_CFG, "Given domain name length of %d is too big", data.len);
+			DBG1(DBG_KNL, "Given domain name length of %d is too big", data.len);
 			return;
 		}
 
 		memcpy( suffix, data.ptr, data.len );
-		DBG1(DBG_CFG, "Removing DNS suffix %s", suffix);
+
+		DBG2(DBG_KNL, "Removing DNS suffix %s", suffix);
 
 		this->mutex->lock( this->mutex );
 
@@ -523,28 +787,20 @@ METHOD(attribute_handler_t, release, void,
 		find_suffix( this->suffixes, suffix, &entry );
 		if ( entry )
 		{
-			entry->count--;
-			if ( entry->count == 0 )
+			this->suffixes->remove( this->suffixes, entry, NULL );
+			suffix_destroy( entry );
+			if ( ! update_dns_settings(this) )
 			{
-				DBG1(DBG_CFG, "%s count is 0, doing remove", suffix);
-				this->suffixes->remove( this->suffixes, entry, NULL );
-				suffix_destroy( entry );
-				handled = manage_dns_suffix( suffix, false );
-				if ( !handled )
-				{
-					DBG1(DBG_CFG, "removing DNS suffix failed");
-				}
+				DBG1(DBG_KNL, "removing DNS suffix failed");
 			}
 			else
 			{
-				DBG1(DBG_CFG, "%s still in suffixes list, count = %d", suffix, entry->count);
-				handled = TRUE;
+				DBG2(DBG_KNL, "DNS suffix %s removed from System Configuration", suffix);
 			}
 		}
 		else
 		{
-			DBG1(DBG_CFG, "DNS suffix %s not in suffixes list - nothing more to do", suffix);
-			handled = TRUE;
+			DBG2(DBG_KNL, "DNS suffix %s not in suffixes list - nothing more to do", suffix);
 		}
 
 		this->mutex->unlock( this->mutex );

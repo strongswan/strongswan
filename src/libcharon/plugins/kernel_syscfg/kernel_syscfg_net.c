@@ -257,9 +257,13 @@ static u_int route_entry_hash(route_entry_t *this)
  */
 static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
 {
-	if (a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
-		chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen)
+	if (chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen)
 	{
+		/* Only check interface if both have it specified */
+		if (a->if_name && b->if_name && !streq(a->if_name, b->if_name))
+		{
+			return FALSE;
+		}
 		return (!a->gateway && !b->gateway) || (a->gateway && b->gateway &&
 					a->gateway->ip_equals(a->gateway, b->gateway));
 	}
@@ -344,10 +348,8 @@ static tun_entry_t *tun_entry_find(linked_list_t *tuns, host_t *ip)
 		addr = entry->tun->get_address(entry->tun, NULL);
 		if (addr)
 		{
-			DBG2(DBG_KNL, "checking for %s:%H", name, addr);
 			if (addr->ip_equals(addr, ip) || IGNORE_VIP_CHANGES)
 			{
-				DBG2(DBG_KNL, "%s:%H matches", name, addr);
 				found = TRUE;
 				break;
 			}
@@ -1264,6 +1266,7 @@ static status_t manage_route(private_kernel_syscfg_net_t *this, int op,
 	dst = host_create_from_chunk(AF_UNSPEC, dst_net, 0);
 	if (!dst)
 	{
+		DBG1(DBG_KNL, "failed to create host from chunk");
 		return FAILED;
 	}
 
@@ -1402,22 +1405,16 @@ static host_t *get_route(private_kernel_syscfg_net_t *this, bool nexthop,
 
 	if ( src )
 	{
-		DBG1(DBG_KNL, "get_route: dest=%H src=%H", dest, src);
-
 		/* We were given a source interface, make sure it exists. If it doesn't
 		 * then there's no way we could find a route that uses it. */
 		this->mutex->lock(this->mutex);
-		failed = get_interface_name(this, src, NULL);
+		failed = !get_interface_name(this, src, NULL);
 		this->mutex->unlock(this->mutex);
 		if (failed)
 		{
 			DBG1(DBG_KNL, "interface for source address %H not found", src);
 			return NULL;
 		}
-	}
-	else
-	{
-		DBG1(DBG_KNL, "get_route: dest=%H src=(null)", dest);
 	}
 
 retry:
@@ -1506,7 +1503,7 @@ retry:
 	}
 	else
 	{
-		DBG1(DBG_KNL, "get_route: failed");
+		DBG1(DBG_KNL, "get_route: send failed");
 		failed = TRUE;
 	}
 	free(this->reply);
@@ -1540,7 +1537,7 @@ retry:
 
 		if (!host)
 		{
-			DBG1(DBG_KNL, "get_route: no host found");
+			DBG2(DBG_KNL, "get_route: no host found");
 			return NULL;
 		}
 		this->lock->read_lock(this->lock);
@@ -1550,6 +1547,7 @@ retry:
 		if (!entry)
 		{
 			host->destroy(host);
+			DBG2(DBG_KNL, "get_route: host %H not matched", host);
 			return NULL;
 		}
 	}
@@ -1561,7 +1559,6 @@ retry:
 METHOD(kernel_net_t, get_source_addr, host_t*,
 	private_kernel_syscfg_net_t *this, host_t *dest, host_t *src)
 {
-	DBG1(DBG_KNL, "get_source_addr");
 	return get_route(this, FALSE, dest, src, NULL);
 }
 
@@ -1569,7 +1566,6 @@ METHOD(kernel_net_t, get_nexthop, host_t*,
 	private_kernel_syscfg_net_t *this, host_t *dest, int prefix, host_t *src,
 	char **iface)
 {
-	DBG1(DBG_KNL, "get_nexthop");
 	if (iface)
 	{
 		*iface = NULL;
@@ -1960,7 +1956,7 @@ static void update_ipaddrs_from_key( CFStringRef key_ref, CFDictionaryRef dict_r
 
 	enumerator_t *ifaces = NULL;
 	iface_entry_t *iface = NULL, *iface_current = NULL;
-	bool changed = FALSE;
+	bool found = FALSE, roam = FALSE, update_routes = FALSE;
 
 	linked_list_t *hosts_list = NULL;
 	enumerator_t *hosts = NULL;
@@ -1968,8 +1964,6 @@ static void update_ipaddrs_from_key( CFStringRef key_ref, CFDictionaryRef dict_r
 
 	enumerator_t *addrs = NULL;
 	addr_entry_t *addr = NULL;
-
-	bool found;
 
 	/* Sanity checks. Note that it's OK if dict_ref is NULL */
 	if ( !key_ref || CFGetTypeID(key_ref) != CFStringGetTypeID() ||
@@ -2068,7 +2062,10 @@ static void update_ipaddrs_from_key( CFStringRef key_ref, CFDictionaryRef dict_r
 			addr_map_entry_remove(addr, iface, this);
 			addr_entry_destroy(addr);
 			this->condvar->broadcast(this->condvar);
-			changed = TRUE;
+			if (!init)
+			{
+				roam = TRUE;
+			}
 		}
 	}
 	addrs->destroy(addrs);
@@ -2102,10 +2099,10 @@ static void update_ipaddrs_from_key( CFStringRef key_ref, CFDictionaryRef dict_r
 			iface->addrs->insert_last(iface->addrs, addr);
 			addr_map_entry_add(this, addr, iface);
 			this->condvar->broadcast(this->condvar);
-			changed = TRUE;
 			if (!init)
 			{
 				DBG1(DBG_KNL, "%H appeared on %s", host, iface->ifname);
+				roam = update_routes = TRUE;
 			}
 		}
 	}
@@ -2114,15 +2111,19 @@ static void update_ipaddrs_from_key( CFStringRef key_ref, CFDictionaryRef dict_r
 	this->lock->unlock(this->lock);
 	hosts_list->destroy(hosts_list);
 
-	if (!init)
-	{
-		dump_addresses(this);
-	}
-
-	if (changed)
+	if (update_routes)
 	{
 		queue_route_reinstall(this, strdup(ifname));
+	}
+
+	if (roam)
+	{
 		fire_roam_event(this, TRUE);
+
+		if (!init)
+		{
+			dump_addresses(this);
+		}
 	}
 }
 
