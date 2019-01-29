@@ -520,4 +520,16 @@ child_sa_t * child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 							 uint32_t reqid, bool encap,
 							 u_int mark_in, u_int mark_out);
 
+/**
+ * Check if two CHILD_SAs have the same traffic selector.
+ *
+ * @param child1			first child_sa_t object to compare
+ * @param child2			second child_sa_t object to compare
+ * @param local				TRUE to to compare local traffic selector, FALSE for remote
+ * @return					TRUE if both chidl_sa_t objects have the same
+ *						traffic selectors
+ */
+
+bool child_sa_have_equal_ts(child_sa_t *child1, child_sa_t *child2, bool local);
+
 #endif /** CHILD_SA_H_ @}*/

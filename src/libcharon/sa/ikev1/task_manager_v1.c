@@ -1732,30 +1732,9 @@ METHOD(task_manager_t, queue_child, void,
 }
 
 /**
- * Check if two CHILD_SAs have the same traffic selector
+ * Check if a CHILD_SA is redundant and older, and if we should delete instead of rekey
  */
-static bool have_equal_ts(child_sa_t *child1, child_sa_t *child2, bool local)
-{
-	enumerator_t *e1, *e2;
-	traffic_selector_t *ts1, *ts2;
-	bool equal = FALSE;
-
-	e1 = child1->create_ts_enumerator(child1, local);
-	e2 = child2->create_ts_enumerator(child2, local);
-	if (e1->enumerate(e1, &ts1) && e2->enumerate(e2, &ts2))
-	{
-		equal = ts1->equals(ts1, ts2);
-	}
-	e2->destroy(e2);
-	e1->destroy(e1);
-
-	return equal;
-}
-
-/**
- * Check if a CHILD_SA is redundant and we should delete instead of rekey
- */
-static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
+static bool is_redundant_and_older(private_task_manager_t *this, child_sa_t *child_sa)
 {
 	enumerator_t *enumerator;
 	child_sa_t *current;
@@ -1766,12 +1745,12 @@ static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
 	{
 		if (current->get_state(current) == CHILD_INSTALLED &&
 			streq(current->get_name(current), child_sa->get_name(child_sa)) &&
-			have_equal_ts(current, child_sa, TRUE) &&
-			have_equal_ts(current, child_sa, FALSE) &&
+			child_sa_have_equal_ts(current, child_sa, TRUE) &&
+			child_sa_have_equal_ts(current, child_sa, FALSE) &&
 			current->get_lifetime(current, FALSE) >
 				child_sa->get_lifetime(child_sa, FALSE))
 		{
-			DBG1(DBG_IKE, "deleting redundant CHILD_SA %s{%d}",
+			DBG2(DBG_IKE, "detected redundant and older CHILD_SA %s{%d}",
 				 child_sa->get_name(child_sa),
 				 child_sa->get_unique_id(child_sa));
 			redundant = TRUE;
@@ -1812,12 +1791,15 @@ METHOD(task_manager_t, queue_child_rekey, void,
 	}
 	if (child_sa && child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
-		if (is_redundant(this, child_sa))
+		if (is_redundant_and_older(this, child_sa))
 		{
-			child_sa->set_state(child_sa, CHILD_REKEYED);
 			if (lib->settings->get_bool(lib->settings, "%s.delete_rekeyed",
 										FALSE, lib->ns))
 			{
+				DBG1(DBG_IKE, "deleting redundant CHILD_SA %s{%d}",
+					 child_sa->get_name(child_sa),
+					 child_sa->get_unique_id(child_sa));
+				child_sa->set_state(child_sa, CHILD_REKEYED);
 				queue_task(this, (task_t*)quick_delete_create(this->ike_sa,
 												protocol, spi, FALSE, FALSE));
 			}

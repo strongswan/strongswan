@@ -83,6 +83,35 @@ struct private_quick_delete_t {
 };
 
 /**
+ * Check if a CHILD_SA is redundant, regardless if newer or older.
+ */
+static bool is_redundant(private_quick_delete_t *this, child_sa_t *child_sa)
+{
+	enumerator_t *enumerator;
+	child_sa_t *current;
+	bool redundant = FALSE;
+
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, &current))
+	{
+		if (current->get_state(current) == CHILD_INSTALLED &&
+			streq(current->get_name(current), child_sa->get_name(child_sa)) &&
+			child_sa_have_equal_ts(current, child_sa, TRUE) &&
+			child_sa_have_equal_ts(current, child_sa, FALSE))
+		{
+			DBG2(DBG_IKE, "detected redundant CHILD_SA %s{%d}",
+				 child_sa->get_name(child_sa),
+				 child_sa->get_unique_id(child_sa));
+			redundant = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return redundant;
+}
+
+/**
  * Delete the specified CHILD_SA, if found
  */
 static bool delete_child(private_quick_delete_t *this, protocol_id_t protocol,
@@ -138,7 +167,10 @@ static bool delete_child(private_quick_delete_t *this, protocol_id_t protocol,
 	child_sa->set_state(child_sa, CHILD_DELETED);
 	if (!rekeyed)
 	{
-		charon->bus->child_updown(charon->bus, child_sa, FALSE);
+		if (!is_redundant(this, child_sa))
+		{
+			charon->bus->child_updown(charon->bus, child_sa, FALSE);
+		}
 
 		if (remote_close)
 		{

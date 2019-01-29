@@ -1901,3 +1901,24 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	}
 	return &this->public;
 }
+
+/**
+ * Described in header.
+ */
+bool child_sa_have_equal_ts(child_sa_t *child1, child_sa_t *child2, bool local)
+{
+	enumerator_t *e1, *e2;
+	traffic_selector_t *ts1, *ts2;
+	bool equal = FALSE;
+
+	e1 = child1->create_ts_enumerator(child1, local);
+	e2 = child2->create_ts_enumerator(child2, local);
+	if (e1->enumerate(e1, &ts1) && e2->enumerate(e2, &ts2))
+	{
+		equal = ts1->equals(ts1, ts2);
+	}
+	e2->destroy(e2);
+	e1->destroy(e1);
+
+	return equal;
+}
