@@ -705,7 +705,7 @@ void netlink_add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 	rta->rta_type = rta_type;
 	rta->rta_len = RTA_LENGTH(data.len);
 	memcpy(RTA_DATA(rta), data.ptr, data.len);
-	hdr->nlmsg_len = NLMSG_ALIGN(hdr->nlmsg_len) + rta->rta_len;
+	hdr->nlmsg_len = NLMSG_ALIGN(hdr->nlmsg_len) + RTA_ALIGN(rta->rta_len);
 }
 
 /**
@@ -724,7 +724,7 @@ void* netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len)
 	rta = ((void*)hdr) + NLMSG_ALIGN(hdr->nlmsg_len);
 	rta->rta_type = type;
 	rta->rta_len = RTA_LENGTH(len);
-	hdr->nlmsg_len = NLMSG_ALIGN(hdr->nlmsg_len) + rta->rta_len;
+	hdr->nlmsg_len = NLMSG_ALIGN(hdr->nlmsg_len) + RTA_ALIGN(rta->rta_len);
 
 	return RTA_DATA(rta);
 }
