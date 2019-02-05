@@ -207,6 +207,7 @@ static conn_t *conn_get(private_mysql_database_t *this, transaction_t **trans)
 	conn_t *current, *found = NULL;
 	enumerator_t *enumerator;
 	transaction_t *transaction;
+	my_bool no = 0;
 
 	thread_initialize();
 
@@ -256,6 +257,9 @@ static conn_t *conn_get(private_mysql_database_t *this, transaction_t **trans)
 			.in_use = TRUE,
 			.mysql = mysql_init(NULL),
 		);
+
+		mysql_options(found->mysql, MYSQL_REPORT_DATA_TRUNCATION, &no);
+
 		if (!mysql_real_connect(found->mysql, this->host, this->username,
 								this->password, this->database, this->port,
 								NULL, 0))
