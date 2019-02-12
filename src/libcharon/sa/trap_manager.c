@@ -293,7 +293,7 @@ METHOD(trap_manager_t, install, bool,
 	this->lock->unlock(this->lock);
 
 	/* create and route CHILD_SA */
-	child_sa = child_sa_create(me, other, child, 0, FALSE, 0, 0);
+	child_sa = child_sa_create(me, other, child, 0, FALSE, 0, 0, 0, 0);
 
 	list = linked_list_create_with_items(me, NULL);
 	my_ts = child->get_traffic_selectors(child, TRUE, NULL, list, FALSE);

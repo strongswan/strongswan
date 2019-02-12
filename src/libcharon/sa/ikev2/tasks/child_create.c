@@ -1110,7 +1110,7 @@ METHOD(task_t, build_i, status_t,
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
 			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY),
-			this->mark_in, this->mark_out);
+			this->mark_in, this->mark_out, 0, 0);
 
 	if (this->reqid)
 	{
@@ -1395,7 +1395,7 @@ METHOD(task_t, build_r, status_t,
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
 			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY),
-			this->mark_in, this->mark_out);
+			this->mark_in, this->mark_out, 0, 0);
 
 	if (this->ipcomp_received != IPCOMP_NONE)
 	{

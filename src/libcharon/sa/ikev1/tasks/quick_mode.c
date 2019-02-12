@@ -845,7 +845,8 @@ METHOD(task_t, build_i, status_t,
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
 									this->config, this->reqid, this->udp,
-									this->mark_in, this->mark_out);
+									this->mark_in, this->mark_out,
+									0, 0);
 
 			if (this->udp && this->mode == MODE_TRANSPORT)
 			{
@@ -1185,7 +1186,8 @@ METHOD(task_t, process_r, status_t,
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
 									this->config, this->reqid, this->udp,
-									this->mark_in, this->mark_out);
+									this->mark_in, this->mark_out,
+									0, 0);
 
 			tsi = linked_list_create_with_items(this->tsi, NULL);
 			tsr = linked_list_create_with_items(this->tsr, NULL);

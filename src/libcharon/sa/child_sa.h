@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Tobias Brunner
+ * Copyright (C) 2006-2019 Tobias Brunner
  * Copyright (C) 2006-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * HSR Hochschule fuer Technik Rapperswil
@@ -361,6 +361,14 @@ struct child_sa_t {
 	mark_t (*get_mark)(child_sa_t *this, bool inbound);
 
 	/**
+	 * Get the interface ID used with this CHILD_SA.
+	 *
+	 * @param inbound		TRUE to get inbound ID, FALSE for outbound
+	 * @return				interface ID used with this CHILD_SA
+	 */
+	uint32_t (*get_if_id)(child_sa_t *this, bool inbound);
+
+	/**
 	 * Create an enumerator over traffic selectors of one side.
 	 *
 	 * @param local		TRUE for own traffic selectors, FALSE for remote.
@@ -514,10 +522,13 @@ struct child_sa_t {
  * @param encap				TRUE to enable UDP encapsulation (NAT traversal)
  * @param mark_in			explicit inbound mark value to use, 0 for config
  * @param mark_out			explicit outbound mark value to use, 0 for config
+ * @param if_id_in			explicit inbound interface ID to use, 0 for config
+ * @param if_id_out			explicit outbound interface ID to use, 0 for config
  * @return					child_sa_t object
  */
 child_sa_t * child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 							 uint32_t reqid, bool encap,
-							 u_int mark_in, u_int mark_out);
+							 uint32_t mark_in, uint32_t mark_out,
+							 uint32_t if_id_in, uint32_t if_id_out);
 
 #endif /** CHILD_SA_H_ @}*/
