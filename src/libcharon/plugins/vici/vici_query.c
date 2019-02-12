@@ -155,6 +155,7 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 {
 	time_t t;
 	uint64_t bytes, packets;
+	uint32_t if_id;
 	uint16_t alg, ks;
 	proposal_t *proposal;
 	enumerator_t *enumerator;
@@ -185,6 +186,16 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 		}
 		add_mark(b, child->get_mark(child, TRUE), "mark-in", "mark-mask-in");
 		add_mark(b, child->get_mark(child, FALSE), "mark-out", "mark-mask-out");
+		if_id = child->get_if_id(child, TRUE);
+		if (if_id)
+		{
+			b->add_kv(b, "if-id-in", "%.8x", if_id);
+		}
+		if_id = child->get_if_id(child, FALSE);
+		if (if_id)
+		{
+			b->add_kv(b, "if-id-out", "%.8x", if_id);
+		}
 		proposal = child->get_proposal(child);
 		if (proposal)
 		{

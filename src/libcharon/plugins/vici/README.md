@@ -813,6 +813,8 @@ command.
 					mark-mask-in = <hex encoded inbound Netfilter mark mask>
 					mark-out = <hex encoded outbound Netfilter mark value>
 					mark-mask-out = <hex encoded outbound Netfilter mark mask>
+					if-id-in = <hex encoded inbound XFRM interface ID>
+					if-id-out = <hex encoded outbound XFRM interface ID>
 					encr-alg = <ESP encryption algorithm name, if any>
 					encr-keysize = <ESP encryption key size, if applicable>
 					integ-alg = <ESP or AH integrity algorithm name, if any>
