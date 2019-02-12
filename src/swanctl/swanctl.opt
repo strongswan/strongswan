@@ -916,6 +916,24 @@ connections.<conn>.children.<child>.mark_out = 0/0x00000000
 	An additional mask may be appended to the mark, separated by _/_. The
 	default mask if omitted is 0xffffffff.
 
+connections.<conn>.children.<child>.if_id_in = 0
+	Inbound XFRM interface ID.
+
+	XFRM interface ID set on inbound policies/SA. This allows installing
+	duplicate policies/SAs and associates them with an interface with the same
+	ID. The special value _%unique_ sets a unique interface ID on each CHILD_SA
+	instance, beyond that the value _%unique-dir_ assigns a different unique
+	interface ID for each CHILD_SA direction (in/out).
+
+connections.<conn>.children.<child>.if_id_out = 0
+	Outbound XFRM interface ID.
+
+	XFRM interface ID set on outbound policies/SA. This allows installing
+	duplicate policies/SAs and associates them with an interface with the same
+	ID. The special value _%unique_ sets a unique interface ID on each CHILD_SA
+	instance, beyond that the value _%unique-dir_ assigns a different unique
+	interface ID for each CHILD_SA direction (in/out).
+
 connections.<conn>.children.<child>.set_mark_in = 0/0x00000000
 	Netfilter mark applied to packets after the inbound IPsec SA processed them.
 

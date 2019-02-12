@@ -528,6 +528,8 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   tfc = %d", cfg->tfc);
 	DBG2(DBG_CFG, "   priority = %d", cfg->priority);
 	DBG2(DBG_CFG, "   interface = %s", cfg->interface);
+	DBG2(DBG_CFG, "   if_id_in = %u", cfg->if_id_in);
+	DBG2(DBG_CFG, "   if_id_out = %u", cfg->if_id_out);
 	DBG2(DBG_CFG, "   mark_in = %u/%u",
 		 cfg->mark_in.value, cfg->mark_in.mask);
 	DBG2(DBG_CFG, "   mark_in_sa = %u", has_opt(OPT_MARK_IN_SA));
@@ -1221,6 +1223,21 @@ CALLBACK(parse_set_mark, bool,
 }
 
 /**
+ * Parse interface ID
+ */
+CALLBACK(parse_if_id, bool,
+	uint32_t *out, chunk_t v)
+{
+	char buf[32];
+
+	if (!vici_stringify(v, buf, sizeof(buf)))
+	{
+		return FALSE;
+	}
+	return if_id_from_string(buf, out);
+}
+
+/**
  * Parse TFC padding option
  */
 CALLBACK(parse_tfc, bool,
@@ -1688,6 +1705,8 @@ CALLBACK(child_kv, bool,
 		{ "copy_df",			parse_opt_copy_df,	&child->cfg.options					},
 		{ "copy_ecn",			parse_opt_copy_ecn,	&child->cfg.options					},
 		{ "copy_dscp",			parse_copy_dscp,	&child->cfg.copy_dscp				},
+		{ "if_id_in",			parse_if_id,		&child->cfg.if_id_in				},
+		{ "if_id_out",			parse_if_id,		&child->cfg.if_id_out				},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
