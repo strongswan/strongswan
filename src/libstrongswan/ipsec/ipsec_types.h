@@ -240,4 +240,20 @@ enum mark_op_t {
  */
 bool mark_from_string(const char *value, mark_op_t ops, mark_t *mark);
 
+/**
+ * Special interface ID values to allocate a unique ID for each CHILD_SA/dir
+ */
+#define IF_ID_UNIQUE (0xFFFFFFFF)
+#define IF_ID_UNIQUE_DIR (0xFFFFFFFE)
+#define IF_ID_IS_UNIQUE(m) ((m) == IF_ID_UNIQUE || (m) == IF_ID_UNIQUE_DIR)
+
+/**
+ * Try to parse an interface ID from the given string.
+ *
+ * @param value		string to parse
+ * @param if_id		interface ID to fill
+ * @return			TRUE if parsing was successful
+ */
+bool if_id_from_string(const char *value, uint32_t *if_id);
+
 #endif /** IPSEC_TYPES_H_ @}*/

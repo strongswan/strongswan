@@ -941,6 +941,49 @@ START_TEST(test_mark_from_string)
 END_TEST
 
 /*******************************************************************************
+ * if_id_from_string
+ */
+
+static struct {
+	char *s;
+	bool ok;
+	uint32_t i;
+} if_id_data[] = {
+	{NULL,			FALSE,	0 },
+	{"",			TRUE,	0 },
+	{"/",			FALSE,	0 },
+	{"42",			TRUE,	42 },
+	{"0x42",		TRUE,	0x42 },
+	{"x",			FALSE,	0 },
+	{"42/",			FALSE,	0 },
+	{"42/0",		FALSE,	0 },
+	{"%unique",		TRUE,	IF_ID_UNIQUE },
+	{"%unique/",	FALSE,	0},
+	{"%unique0xffffffffff",	FALSE,	0},
+	{"0xffffffff",	TRUE,	IF_ID_UNIQUE},
+	{"%unique-dir",	TRUE,	IF_ID_UNIQUE_DIR},
+	{"%unique-dir/",FALSE,	0},
+	{"0xfffffffe",	TRUE,	IF_ID_UNIQUE_DIR},
+	{"%unique-",	FALSE,	0},
+	{"%unique-foo",	FALSE,	0},
+};
+
+START_TEST(test_if_id_from_string)
+{
+	uint32_t if_id;
+
+	if (if_id_from_string(if_id_data[_i].s, &if_id))
+	{
+		ck_assert_int_eq(if_id, if_id_data[_i].i);
+	}
+	else
+	{
+		ck_assert(!if_id_data[_i].ok);
+	}
+}
+END_TEST
+
+/*******************************************************************************
  * signature_schemes_for_key
  */
 
@@ -1085,6 +1128,10 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("mark_from_string");
 	tcase_add_loop_test(tc, test_mark_from_string, 0, countof(mark_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("if_id_from_string");
+	tcase_add_loop_test(tc, test_if_id_from_string, 0, countof(if_id_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("signature_schemes_for_key");

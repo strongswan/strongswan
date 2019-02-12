@@ -147,3 +147,44 @@ bool mark_from_string(const char *value, mark_op_t ops, mark_t *mark)
 	}
 	return TRUE;
 }
+
+/*
+ * See header
+ */
+bool if_id_from_string(const char *value, uint32_t *if_id)
+{
+	char *endptr;
+
+	if (!value)
+	{
+		return FALSE;
+	}
+	if (strcasepfx(value, "%unique"))
+	{
+		endptr = (char*)value + strlen("%unique");
+		if (strcasepfx(endptr, "-dir"))
+		{
+			*if_id = IF_ID_UNIQUE_DIR;
+			endptr += strlen("-dir");
+		}
+		else if (!*endptr)
+		{
+			*if_id = IF_ID_UNIQUE;
+		}
+		else
+		{
+			DBG1(DBG_APP, "invalid interface ID: %s", value);
+			return FALSE;
+		}
+	}
+	else
+	{
+		*if_id = strtoul(value, &endptr, 0);
+	}
+	if (*endptr)
+	{
+		DBG1(DBG_APP, "invalid interface ID: %s", value);
+		return FALSE;
+	}
+	return TRUE;
+}
