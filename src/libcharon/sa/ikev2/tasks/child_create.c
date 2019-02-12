@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Tobias Brunner
+ * Copyright (C) 2008-2019 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -176,12 +176,22 @@ struct private_child_create_t {
 	/**
 	 * Explicit inbound mark value
 	 */
-	u_int mark_in;
+	uint32_t mark_in;
 
 	/**
 	 * Explicit outbound mark value
 	 */
-	u_int mark_out;
+	uint32_t mark_out;
+
+	/**
+	 * Explicit inbound interface ID to use, if any
+	 */
+	uint32_t if_id_in;
+
+	/**
+	 * Explicit outbound interface ID to use, if any
+	 */
+	uint32_t if_id_out;
 
 	/**
 	 * CHILD_SA which gets established
@@ -1110,7 +1120,7 @@ METHOD(task_t, build_i, status_t,
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
 			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY),
-			this->mark_in, this->mark_out, 0, 0);
+			this->mark_in, this->mark_out, this->if_id_in, this->if_id_out);
 
 	if (this->reqid)
 	{
@@ -1395,7 +1405,7 @@ METHOD(task_t, build_r, status_t,
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
 			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY),
-			this->mark_in, this->mark_out, 0, 0);
+			this->mark_in, this->mark_out, this->if_id_in, this->if_id_out);
 
 	if (this->ipcomp_received != IPCOMP_NONE)
 	{
@@ -1664,10 +1674,17 @@ METHOD(child_create_t, use_reqid, void,
 }
 
 METHOD(child_create_t, use_marks, void,
-	private_child_create_t *this, u_int in, u_int out)
+	private_child_create_t *this, uint32_t in, uint32_t out)
 {
 	this->mark_in = in;
 	this->mark_out = out;
+}
+
+METHOD(child_create_t, use_if_ids, void,
+	private_child_create_t *this, uint32_t in, uint32_t out)
+{
+	this->if_id_in = in;
+	this->if_id_out = out;
 }
 
 METHOD(child_create_t, use_dh_group, void,
@@ -1748,6 +1765,8 @@ METHOD(task_t, migrate, void,
 	this->reqid = 0;
 	this->mark_in = 0;
 	this->mark_out = 0;
+	this->if_id_in = 0;
+	this->if_id_out = 0;
 	this->established = FALSE;
 }
 
@@ -1797,6 +1816,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			.get_lower_nonce = _get_lower_nonce,
 			.use_reqid = _use_reqid,
 			.use_marks = _use_marks,
+			.use_if_ids = _use_if_ids,
 			.use_dh_group = _use_dh_group,
 			.task = {
 				.get_type = _get_type,
