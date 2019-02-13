@@ -24,13 +24,6 @@ libstrongswan_kernel_netlink_la_LIBADD = $(DLLIB)
 
 libstrongswan_kernel_netlink_la_LDFLAGS = -module -avoid-version
 
-ipsec_PROGRAMS = xfrmi
-xfrmi_SOURCES = xfrmi.c
-xfrmi_LDADD = \
-	libstrongswan-kernel-netlink.la \
-	$(top_builddir)/src/libstrongswan/libstrongswan.la \
-	$(top_builddir)/src/libcharon/libcharon.la
-
 TESTS = kernel_netlink_tests
 
 check_PROGRAMS = $(TESTS)

@@ -2009,6 +2009,7 @@ AC_CONFIG_FILES([
 	src/sw-collector/Makefile
 	src/sec-updater/Makefile
 	src/swanctl/Makefile
+	src/xfrmi/Makefile
 	scripts/Makefile
 	testing/Makefile
 ])
