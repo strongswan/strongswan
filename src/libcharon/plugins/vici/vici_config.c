@@ -2162,8 +2162,8 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 				while (array_remove(ikeids, ARRAY_HEAD, &id))
 				{
 					DBG1(DBG_CFG, "closing IKE_SA #%u", id);
-					charon->controller->terminate_ike(charon->controller, FALSE,
-													  id, NULL, NULL, 0);
+					charon->controller->terminate_ike(charon->controller, id,
+													  FALSE, NULL, NULL, 0);
 				}
 				array_destroy(ikeids);
 			}
