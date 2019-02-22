@@ -300,7 +300,7 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 				"JOIN identities AS m ON sm.identity = m.id "
 				"JOIN shared_secret_identity AS so ON s.id = so.shared_secret "
 				"JOIN identities AS o ON so.identity = o.id "
-				"WHERE m.type = ? AND m.data = ? AND o.type = ? AND o.data = ? "
+				"WHERE m.type = ? AND m.data = IFNULL(?,'%any') AND o.type = ? AND o.data = ? "
 				"AND (? OR s.type = ?)",
 				DB_INT, me->get_type(me), DB_BLOB, me->get_encoding(me),
 				DB_INT, other->get_type(other), DB_BLOB, other->get_encoding(other),
