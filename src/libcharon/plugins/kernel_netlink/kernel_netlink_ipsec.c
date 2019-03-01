@@ -2846,10 +2846,12 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	 * - this is an outbound policy (to just get one for each child)
 	 * - routing is not disabled via strongswan.conf
 	 * - the selector is not for a specific protocol/port
+	 * - no XFRM interface ID is configured
 	 * - we are in tunnel/BEET mode or install a bypass policy
 	 */
 	if (policy->direction == POLICY_OUT && this->install_routes &&
-		!policy->sel.proto && !policy->sel.dport && !policy->sel.sport)
+		!policy->sel.proto && !policy->sel.dport && !policy->sel.sport &&
+		!policy->if_id)
 	{
 		if (mapping->type == POLICY_PASS ||
 		   (mapping->type == POLICY_IPSEC && ipsec->cfg.mode != MODE_TRANSPORT))
