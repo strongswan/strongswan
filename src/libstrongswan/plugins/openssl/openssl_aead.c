@@ -239,6 +239,9 @@ aead_t *openssl_aead_create(encryption_algorithm_t algo,
 		case ENCR_AES_GCM_ICV16:
 			this->icv_size = 16;
 			break;
+		case ENCR_CHACHA20_POLY1305:
+			this->icv_size = 16;
+			break;
 		default:
 			free(this);
 			return NULL;
@@ -275,6 +278,22 @@ aead_t *openssl_aead_create(encryption_algorithm_t algo,
 					return NULL;
 			}
 			break;
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL && !defined(OPENSSL_NO_CHACHA)
+		case ENCR_CHACHA20_POLY1305:
+			switch (key_size)
+			{
+				case 0:
+					key_size = 32;
+					/* FALL */
+				case 32:
+					this->cipher = EVP_chacha20_poly1305();
+					break;
+				default:
+					free(this);
+					return NULL;
+			}
+			break;
+#endif /* OPENSSL_NO_CHACHA */
 		default:
 			free(this);
 			return NULL;
