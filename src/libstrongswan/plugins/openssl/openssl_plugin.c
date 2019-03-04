@@ -46,7 +46,7 @@
 #include "openssl_pkcs12.h"
 #include "openssl_rng.h"
 #include "openssl_hmac.h"
-#include "openssl_gcm.h"
+#include "openssl_aead.h"
 #include "openssl_x_diffie_hellman.h"
 #include "openssl_ed_public_key.h"
 #include "openssl_ed_private_key.h"
@@ -583,7 +583,7 @@ METHOD(plugin_t, get_features, int,
 #if OPENSSL_VERSION_NUMBER >= 0x1000100fL
 #ifndef OPENSSL_NO_AES
 		/* AES GCM */
-		PLUGIN_REGISTER(AEAD, openssl_gcm_create),
+		PLUGIN_REGISTER(AEAD, openssl_aead_create),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 16),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 24),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 32),
