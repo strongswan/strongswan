@@ -1592,7 +1592,7 @@ METHOD(child_sa_t, update, status_t,
 				del_policies_outbound(this, this->my_addr, this->other_addr,
 						old_my_ts ?: my_ts, old_other_ts ?: other_ts,
 						&my_sa, &other_sa, POLICY_DROP,
-						POLICY_PRIORITY_DEFAULT, 0);
+						POLICY_PRIORITY_DEFAULT, manual_prio);
 			}
 
 			DESTROY_IF(old_my_ts);
