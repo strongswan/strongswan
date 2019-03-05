@@ -47,6 +47,8 @@
     <string name="no_profiles">Brak profilu VPN</string>
     <string name="add_profile">Dodaj profil VPN</string>
     <string name="edit_profile">Edytuj</string>
+    <string name="copy_profile">Copy</string>
+    <string name="copied_name">%1$s (Copy)</string>
     <string name="delete_profile">Usuń</string>
     <string name="select_profiles">Wybierz profile</string>
     <string name="profiles_deleted">Wybrane profile usunięte</string>

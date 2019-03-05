@@ -45,6 +45,8 @@
     <string name="no_profiles">Немає VPN профілів</string>
     <string name="add_profile">Додати VPN профіль</string>
     <string name="edit_profile">Редагувати</string>
+    <string name="copy_profile">Copy</string>
+    <string name="copied_name">%1$s (Copy)</string>
     <string name="delete_profile">Видалити</string>
     <string name="select_profiles">Обрати профіль</string>
     <string name="profiles_deleted">Обрані профілі видалено</string>

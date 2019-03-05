@@ -44,6 +44,8 @@
     <string name="no_profiles">沒有設定檔</string>
     <string name="add_profile">新增VPN設定檔</string>
     <string name="edit_profile">編輯</string>
+    <string name="copy_profile">Copy</string>
+    <string name="copied_name">%1$s (Copy)</string>
     <string name="delete_profile">刪除</string>
     <string name="select_profiles">選擇設定檔</string>
     <string name="profiles_deleted">選擇的設定檔已經刪除</string>

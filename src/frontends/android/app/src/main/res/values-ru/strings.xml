@@ -44,6 +44,8 @@
     <string name="no_profiles">VPN профили не обнаружены.</string>
     <string name="add_profile">Добавить VPN профиль</string>
     <string name="edit_profile">Редактировать</string>
+    <string name="copy_profile">Copy</string>
+    <string name="copied_name">%1$s (Copy)</string>
     <string name="delete_profile">Удалить</string>
     <string name="select_profiles">Выбрать профили</string>
     <string name="profiles_deleted">Выбранные профили удалены</string>
