@@ -838,8 +838,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		{
 			try
 			{
-				mBuilder.addDnsServer(address);
-				mCache.recordAddressFamily(address);
+				mCache.addDnsServer(address);
 			}
 			catch (IllegalArgumentException ex)
 			{
@@ -1073,8 +1072,9 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		private final int mSplitTunneling;
 		private final SelectedAppsHandling mAppHandling;
 		private final SortedSet<String> mSelectedApps;
+		private final List<InetAddress> mDnsServers = new ArrayList<>();
 		private int mMtu;
-		private boolean mIPv4Seen, mIPv6Seen;
+		private boolean mIPv4Seen, mIPv6Seen, mDnsServersConfigured;
 
 		public BuilderCache(VpnProfile profile)
 		{
@@ -1111,6 +1111,23 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			}
 			mAppHandling = appHandling;
 
+			if (profile.getDnsServers() != null)
+			{
+				for (String server : profile.getDnsServers().split("\\s+"))
+				{
+					try
+					{
+						mDnsServers.add(InetAddress.getByName(server));
+						recordAddressFamily(server);
+						mDnsServersConfigured = true;
+					}
+					catch (UnknownHostException e)
+					{
+						e.printStackTrace();
+					}
+				}
+			}
+
 			/* set a default MTU, will be set by the daemon for regular interfaces */
 			Integer mtu = profile.getMTU();
 			mMtu = mtu == null ? Constants.MTU_MAX : mtu;
@@ -1126,6 +1143,25 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			catch (UnknownHostException ex)
 			{
 				ex.printStackTrace();
+			}
+		}
+
+		public void addDnsServer(String address)
+		{
+			/* ignore received DNS servers if any were configured */
+			if (mDnsServersConfigured)
+			{
+				return;
+			}
+
+			try
+			{
+				mDnsServers.add(InetAddress.getByName(address));
+				recordAddressFamily(address);
+			}
+			catch (UnknownHostException e)
+			{
+				e.printStackTrace();
 			}
 		}
 
@@ -1178,6 +1214,10 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			for (IPRange address : mAddresses)
 			{
 				builder.addAddress(address.getFrom(), address.getPrefix());
+			}
+			for (InetAddress server : mDnsServers)
+			{
+				builder.addDnsServer(server);
 			}
 			/* add routes depending on whether split tunneling is allowed or not,
 			 * that is, whether we have to handle and block non-VPN traffic */
