@@ -72,7 +72,6 @@ import org.strongswan.android.utils.Constants;
 import org.strongswan.android.utils.IPRangeSet;
 import org.strongswan.android.utils.Utils;
 
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -915,7 +914,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		{
 			try
 			{
-				InetAddress.getByName(addr);
+				Utils.parseInetAddress(addr);
 			}
 			catch (UnknownHostException e)
 			{

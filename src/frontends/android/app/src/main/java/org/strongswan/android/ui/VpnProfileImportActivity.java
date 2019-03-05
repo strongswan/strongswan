@@ -65,7 +65,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.security.KeyStore;
@@ -634,7 +633,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			{
 				try
 				{
-					InetAddress.getByName(addr);
+					Utils.parseInetAddress(addr);
 				}
 				catch (UnknownHostException e)
 				{

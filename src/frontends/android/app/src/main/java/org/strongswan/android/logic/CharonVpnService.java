@@ -58,6 +58,7 @@ import org.strongswan.android.utils.Constants;
 import org.strongswan.android.utils.IPRange;
 import org.strongswan.android.utils.IPRangeSet;
 import org.strongswan.android.utils.SettingsWriter;
+import org.strongswan.android.utils.Utils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -1117,7 +1118,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				{
 					try
 					{
-						mDnsServers.add(InetAddress.getByName(server));
+						mDnsServers.add(Utils.parseInetAddress(server));
 						recordAddressFamily(server);
 						mDnsServersConfigured = true;
 					}
@@ -1156,7 +1157,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 
 			try
 			{
-				mDnsServers.add(InetAddress.getByName(address));
+				mDnsServers.add(Utils.parseInetAddress(address));
 				recordAddressFamily(address);
 			}
 			catch (UnknownHostException e)
@@ -1341,7 +1342,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 
 		private boolean isIPv6(String address) throws UnknownHostException
 		{
-			InetAddress addr = InetAddress.getByName(address);
+			InetAddress addr = Utils.parseInetAddress(address);
 			if (addr instanceof Inet4Address)
 			{
 				return false;
