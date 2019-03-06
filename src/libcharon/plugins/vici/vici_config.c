@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2015-2018 Tobias Brunner
+ * Copyright (C) 2015-2019 Tobias Brunner
  * Copyright (C) 2015-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -1128,6 +1128,22 @@ CALLBACK(parse_time, bool,
 }
 
 /**
+ * Parse a relative time (32-bit)
+ */
+CALLBACK(parse_time32, bool,
+	uint32_t *out, chunk_t v)
+{
+	uint64_t time;
+
+	if (parse_time(&time, v))
+	{
+		*out = time;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Parse byte volume
  */
 CALLBACK(parse_bytes, bool,
@@ -1657,7 +1673,7 @@ CALLBACK(child_kv, bool,
 		{ "start_action",		parse_action,		&child->cfg.start_action			},
 		{ "close_action",		parse_action,		&child->cfg.close_action			},
 		{ "ipcomp",				parse_opt_ipcomp,	&child->cfg.options					},
-		{ "inactivity",			parse_time,			&child->cfg.inactivity				},
+		{ "inactivity",			parse_time32,		&child->cfg.inactivity				},
 		{ "reqid",				parse_uint32,		&child->cfg.reqid					},
 		{ "mark_in",			parse_mark,			&child->cfg.mark_in					},
 		{ "mark_in_sa",			parse_opt_mark_in,	&child->cfg.options					},
