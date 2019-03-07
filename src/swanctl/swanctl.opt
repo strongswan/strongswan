@@ -804,7 +804,7 @@ connections.<conn>.children.<child>.rand_packets = life_packets - rekey_packets
 connections.<conn>.children.<child>.updown =
 	Updown script to invoke on CHILD_SA up and down events.
 
-connections.<conn>.children.<child>.hostaccess = yes
+connections.<conn>.children.<child>.hostaccess = no
 	Hostaccess variable to pass to **updown** script.
 
 connections.<conn>.children.<child>.mode = tunnel
