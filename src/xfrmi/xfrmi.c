@@ -33,8 +33,6 @@ enum {
 #define IFLA_XFRM_MAX (__IFLA_XFRM_MAX - 1)
 #endif
 
-#define NLMSG_TAIL(nlh) ((void*)(((char*)nlh) + NLMSG_ALIGN(nlh->nlmsg_len)))
-
 /**
  * Create an XFRM interface with the given ID and underlying interface
  */
@@ -66,25 +64,20 @@ static int add_xfrm_interface(char *name, uint32_t xfrm_id, uint32_t ifindex)
 	netlink_add_attribute(hdr, IFLA_IFNAME, chunk_from_str(name),
 						  sizeof(request));
 
-	/* the following attributes are nested under this one */
-	linkinfo = netlink_reserve(hdr, sizeof(request), IFLA_LINKINFO, 0);
-	linkinfo = (void*)linkinfo - RTA_LENGTH(0);
+	linkinfo = netlink_nested_start(hdr, sizeof(request), IFLA_LINKINFO);
 
 	netlink_add_attribute(hdr, IFLA_INFO_KIND, chunk_from_str("xfrm"),
 						  sizeof(request));
 
-	/* the following attributes are nested under this one */
-	info_data = netlink_reserve(hdr, sizeof(request), IFLA_INFO_DATA, 0);
-	info_data = (void*)info_data - RTA_LENGTH(0);
+	info_data = netlink_nested_start(hdr, sizeof(request), IFLA_INFO_DATA);
 
 	netlink_add_attribute(hdr, IFLA_XFRM_IF_ID, chunk_from_thing(xfrm_id),
 						  sizeof(request));
 	netlink_add_attribute(hdr, IFLA_XFRM_LINK, chunk_from_thing(ifindex),
 						  sizeof(request));
 
-	info_data->rta_len = NLMSG_TAIL(hdr) - (void*)info_data;
-
-	linkinfo->rta_len = NLMSG_TAIL(hdr) - (void*)linkinfo;
+	netlink_nested_end(hdr, info_data);
+	netlink_nested_end(hdr, linkinfo);
 
 	switch (socket->send_ack(socket, hdr))
 	{
@@ -184,14 +177,12 @@ static int list_xfrm_interfaces()
 	msg = NLMSG_DATA(hdr);
 	msg->ifi_family = AF_UNSPEC;
 
-	/* the following attributes are nested under this one */
-	linkinfo = netlink_reserve(hdr, sizeof(request), IFLA_LINKINFO, 0);
-	linkinfo = (void*)linkinfo - RTA_LENGTH(0);
+	linkinfo = netlink_nested_start(hdr, sizeof(request), IFLA_LINKINFO);
 
 	netlink_add_attribute(hdr, IFLA_INFO_KIND, chunk_from_str("xfrm"),
 						  sizeof(request));
 
-	linkinfo->rta_len = NLMSG_TAIL(hdr) - (void*)linkinfo;
+	netlink_nested_end(hdr, linkinfo);
 
 	if (socket->send(socket, hdr, &out, &len) != SUCCESS)
 	{
