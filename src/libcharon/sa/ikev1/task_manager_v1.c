@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2018 Tobias Brunner
+ * Copyright (C) 2007-2019 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -1752,26 +1752,27 @@ static bool have_equal_ts(child_sa_t *child1, child_sa_t *child2, bool local)
 	return equal;
 }
 
-/**
- * Check if a CHILD_SA is redundant and we should delete instead of rekey
+/*
+ * Described in header
  */
-static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
+bool ikev1_child_sa_is_redundant(ike_sa_t *ike_sa, child_sa_t *child_sa,
+								 bool (*cmp)(child_sa_t*,child_sa_t*))
 {
 	enumerator_t *enumerator;
 	child_sa_t *current;
 	bool redundant = FALSE;
 
-	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current->get_state(current) == CHILD_INSTALLED &&
+		if (current != child_sa &&
+			current->get_state(current) == CHILD_INSTALLED &&
 			streq(current->get_name(current), child_sa->get_name(child_sa)) &&
 			have_equal_ts(current, child_sa, TRUE) &&
 			have_equal_ts(current, child_sa, FALSE) &&
-			current->get_lifetime(current, FALSE) >
-				child_sa->get_lifetime(child_sa, FALSE))
+			(!cmp || cmp(child_sa, current)))
 		{
-			DBG1(DBG_IKE, "deleting redundant CHILD_SA %s{%d}",
+			DBG1(DBG_IKE, "detected redundant CHILD_SA %s{%d}",
 				 child_sa->get_name(child_sa),
 				 child_sa->get_unique_id(child_sa));
 			redundant = TRUE;
@@ -1781,6 +1782,16 @@ static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
 	enumerator->destroy(enumerator);
 
 	return redundant;
+}
+
+/**
+ * Compare the rekey times of two CHILD_SAs, a CHILD_SA is redundant if it is
+ * rekeyed sooner than another.
+ */
+static bool is_rekeyed_sooner(child_sa_t *is_redundant, child_sa_t *other)
+{
+	return other->get_lifetime(other, FALSE) >
+				is_redundant->get_lifetime(is_redundant, FALSE);
 }
 
 /**
@@ -1812,7 +1823,8 @@ METHOD(task_manager_t, queue_child_rekey, void,
 	}
 	if (child_sa && child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
-		if (is_redundant(this, child_sa))
+		if (ikev1_child_sa_is_redundant(this->ike_sa, child_sa,
+										is_rekeyed_sooner))
 		{
 			child_sa->set_state(child_sa, CHILD_REKEYED);
 			if (lib->settings->get_bool(lib->settings, "%s.delete_rekeyed",

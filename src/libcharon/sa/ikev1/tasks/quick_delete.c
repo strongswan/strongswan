@@ -38,6 +38,7 @@
 
 #include <daemon.h>
 #include <encoding/payloads/delete_payload.h>
+#include <sa/ikev1/task_manager_v1.h>
 
 typedef struct private_quick_delete_t private_quick_delete_t;
 
@@ -106,6 +107,10 @@ static bool delete_child(private_quick_delete_t *this, protocol_id_t protocol,
 	}
 
 	rekeyed = child_sa->get_state(child_sa) == CHILD_REKEYED;
+	if (!rekeyed)
+	{
+		rekeyed = ikev1_child_sa_is_redundant(this->ike_sa, child_sa, NULL);
+	}
 	child_sa->set_state(child_sa, CHILD_DELETING);
 
 	my_ts = linked_list_create_from_enumerator(
