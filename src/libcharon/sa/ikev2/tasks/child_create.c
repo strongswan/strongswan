@@ -1574,8 +1574,8 @@ METHOD(task_t, process_i, status_t,
 					}
 					if (this->retry)
 					{
-						DBG1(DBG_IKE, "already retried with DH group %N, ignore"
-							 "requested %N", diffie_hellman_group_names,
+						DBG1(DBG_IKE, "already retried with DH group %N, "
+							 "ignore requested %N", diffie_hellman_group_names,
 							 this->dh_group, diffie_hellman_group_names, group);
 						handle_child_sa_failure(this, message);
 						/* an error in CHILD_SA creation is not critical */
