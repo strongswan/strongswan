@@ -1,3 +1,9 @@
+strongswan-5.8.0
+----------------
+
+- The openssl plugin supports ChaCha20-Poly1305 when built with OpenSSL 1.1.0.
+
+
 strongswan-5.7.2
 ----------------
 
