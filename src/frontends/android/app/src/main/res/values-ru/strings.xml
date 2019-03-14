@@ -44,6 +44,8 @@
     <string name="no_profiles">VPN профили не обнаружены.</string>
     <string name="add_profile">Добавить VPN профиль</string>
     <string name="edit_profile">Редактировать</string>
+    <string name="copy_profile">Copy</string>
+    <string name="copied_name">%1$s (Copy)</string>
     <string name="delete_profile">Удалить</string>
     <string name="select_profiles">Выбрать профили</string>
     <string name="profiles_deleted">Выбранные профили удалены</string>
@@ -80,6 +82,8 @@
     <string name="profile_remote_id_label">Server identity</string>
     <string name="profile_remote_id_hint">Defaults to the configured server. Custom values are explicitly sent to the server and enforced during authentication</string>
     <string name="profile_remote_id_hint_gateway">Defaults to \"%1$s\". Custom values are explicitly sent to the server and enforced during authentication</string>
+    <string name="profile_dns_servers_label">DNS servers</string>
+    <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\", defaults to those received from the VPN server)</string>
     <string name="profile_mtu_label">MTU of the VPN tunnel device</string>
     <string name="profile_mtu_hint">In case the default value is unsuitable for a particular network</string>
     <string name="profile_port_label">Server port</string>
@@ -133,6 +137,7 @@
     <string name="alert_text_nocertfound">Пожалуйста выберите один <i>Выбрать автоматически</i></string>
     <string name="alert_text_out_of_range">Please enter a number in the range from %1$d - %2$d</string>
     <string name="alert_text_no_subnets">Please enter valid subnets and/or IP addresses, separated by spaces</string>
+    <string name="alert_text_no_ips">Please enter valid IP addresses, separated by spaces</string>
     <string name="alert_text_no_proposal">Please enter a valid list of algorithms, separated by hyphens</string>
     <string name="tnc_notice_title">EAP-TNC may affect your privacy</string>
     <string name="tnc_notice_subtitle">Device data is sent to the server operator</string>

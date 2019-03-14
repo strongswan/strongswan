@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Tobias Brunner
+ * Copyright (C) 2012-2019 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -39,7 +39,7 @@ public class VpnProfile implements Cloneable
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
 	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets, mSelectedApps;
-	private String mIkeProposal, mEspProposal;
+	private String mIkeProposal, mEspProposal, mDnsServers;
 	private Integer mMTU, mPort, mSplitTunneling, mNATKeepAlive, mFlags;
 	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
 	private VpnType mVpnType;
@@ -138,6 +138,16 @@ public class VpnProfile implements Cloneable
 	public void setEspProposal(String proposal)
 	{
 		this.mEspProposal = proposal;
+	}
+
+	public String getDnsServers()
+	{
+		return mDnsServers;
+	}
+
+	public void setDnsServers(String dns)
+	{
+		this.mDnsServers = dns;
 	}
 
 	public String getUsername()

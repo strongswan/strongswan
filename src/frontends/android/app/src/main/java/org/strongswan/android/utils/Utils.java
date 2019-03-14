@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 Tobias Brunner
+ * Copyright (C) 2014-2019 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,6 +15,9 @@
 
 package org.strongswan.android.utils;
 
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 public class Utils
 {
@@ -46,4 +49,29 @@ public class Utils
 	 * @return true if valid
 	 */
 	public native static boolean isProposalValid(boolean ike, String proposal);
+
+	/**
+	 * Parse an IP address without doing a name lookup
+	 *
+	 * @param address IP address string
+	 * @return address bytes if valid
+	 */
+	private native static byte[] parseInetAddressBytes(String address);
+
+	/**
+	 * Parse an IP address without doing a name lookup (as compared to InetAddress.fromName())
+	 *
+	 * @param address IP address string
+	 * @return address if valid
+	 * @throws UnknownHostException if address is invalid
+	 */
+	public static InetAddress parseInetAddress(String address) throws UnknownHostException
+	{
+		byte[] bytes = parseInetAddressBytes(address);
+		if (bytes == null)
+		{
+			throw new UnknownHostException();
+		}
+		return InetAddress.getByAddress(bytes);
+	}
 }

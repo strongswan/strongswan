@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Tobias Brunner
+ * Copyright (C) 2016-2019 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -74,6 +74,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.UUID;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -522,6 +523,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 
 		profile.setIkeProposal(getProposal(obj, "ike-proposal", true));
 		profile.setEspProposal(getProposal(obj, "esp-proposal", false));
+		profile.setDnsServers(getAddressList(obj, "dns-servers"));
 		profile.setMTU(getInteger(obj, "mtu", Constants.MTU_MIN, Constants.MTU_MAX));
 		profile.setNATKeepAlive(getInteger(obj, "nat-keepalive", Constants.NAT_KEEPALIVE_MIN, Constants.NAT_KEEPALIVE_MAX));
 		JSONObject split = obj.optJSONObject("split-tunneling");
@@ -601,6 +603,44 @@ public class VpnProfileImportActivity extends AppCompatActivity
 												  "split-tunneling." + key));
 			}
 			return ranges.toString();
+		}
+		return null;
+	}
+
+	private String getAddressList(JSONObject obj, String key) throws JSONException
+	{
+		ArrayList<String> addrs = new ArrayList<>();
+		JSONArray arr = obj.optJSONArray(key);
+		if (arr != null)
+		{
+			for (int i = 0; i < arr.length(); i++)
+			{
+				String addr = arr.getString(i).replace(" ", "");
+				addrs.add(addr);
+			}
+		}
+		else
+		{
+			String value = obj.optString(key, null);
+			if (!TextUtils.isEmpty(value))
+			{
+				Collections.addAll(addrs, value.split("\\s+"));
+			}
+		}
+		if (addrs.size() > 0)
+		{
+			for (String addr : addrs)
+			{
+				try
+				{
+					Utils.parseInetAddress(addr);
+				}
+				catch (UnknownHostException e)
+				{
+					throw new JSONException(getString(R.string.profile_import_failed_value, key));
+				}
+			}
+			return TextUtils.join(" ", addrs);
 		}
 		return null;
 	}

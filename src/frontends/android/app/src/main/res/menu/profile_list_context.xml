@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012 Tobias Brunner
+    Copyright (C) 2012-2019 Tobias Brunner
     HSR Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
@@ -17,6 +17,9 @@
 
     <item android:id="@+id/edit_profile"
         android:title="@string/edit_profile" />
+
+    <item android:id="@+id/copy_profile"
+        android:title="@string/copy_profile" />
 
     <item android:id="@+id/delete_profile"
         android:title="@string/delete_profile" />

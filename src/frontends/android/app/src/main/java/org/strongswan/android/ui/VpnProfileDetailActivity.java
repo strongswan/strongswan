@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Tobias Brunner
+ * Copyright (C) 2012-2019 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -72,6 +72,7 @@ import org.strongswan.android.utils.Constants;
 import org.strongswan.android.utils.IPRangeSet;
 import org.strongswan.android.utils.Utils;
 
+import java.net.UnknownHostException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.SortedSet;
@@ -138,6 +139,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private EditText mEspProposal;
 	private TextView mProfileIdLabel;
 	private TextView mProfileId;
+	private MultiAutoCompleteTextView mDnsServers;
+	private TextInputLayoutHelper mDnsServersWrap;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -176,6 +179,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		mRemoteId = (MultiAutoCompleteTextView)findViewById(R.id.remote_id);
 		mRemoteIdWrap = (TextInputLayoutHelper) findViewById(R.id.remote_id_wrap);
+		mDnsServers = (MultiAutoCompleteTextView)findViewById(R.id.dns_servers);
+		mDnsServersWrap = (TextInputLayoutHelper) findViewById(R.id.dns_servers_wrap);
 		mMTU = (EditText)findViewById(R.id.mtu);
 		mMTUWrap = (TextInputLayoutHelper) findViewById(R.id.mtu_wrap);
 		mPort = (EditText)findViewById(R.id.port);
@@ -573,7 +578,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				   (flags != null && flags != 0) || (st != null && st != 0) ||
 				   mProfile.getIncludedSubnets() != null || mProfile.getExcludedSubnets() != null ||
 				   mProfile.getSelectedAppsHandling() != SelectedAppsHandling.SELECTED_APPS_DISABLE ||
-				   mProfile.getIkeProposal() != null || mProfile.getEspProposal() != null;
+				   mProfile.getIkeProposal() != null || mProfile.getEspProposal() != null ||
+				   mProfile.getDnsServers() != null;
 		}
 		mShowAdvanced.setVisibility(!show ? View.VISIBLE : View.GONE);
 		mAdvancedSettings.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -683,6 +689,11 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			mEspProposalWrap.setError(getString(R.string.alert_text_no_proposal));
 			valid = false;
 		}
+		if (!validateAddresses(mDnsServers))
+		{
+			mDnsServersWrap.setError(getString(R.string.alert_text_no_ips));
+			valid = false;
+		}
 		return valid;
 	}
 
@@ -737,6 +748,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mProfile.setIkeProposal(ike.isEmpty() ? null : ike);
 		String esp = mEspProposal.getText().toString().trim();
 		mProfile.setEspProposal(esp.isEmpty() ? null : esp);
+		String dns = mDnsServers.getText().toString().trim();
+		mProfile.setDnsServers(dns.isEmpty() ? null : dns);
 	}
 
 	/**
@@ -772,6 +785,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mSelectedApps = mProfile.getSelectedAppsSet();
 				mIkeProposal.setText(mProfile.getIkeProposal());
 				mEspProposal.setText(mProfile.getEspProposal());
+				mDnsServers.setText(mProfile.getDnsServers());
 				mProfileId.setText(mProfile.getUUID().toString());
 				flags = mProfile.getFlags();
 				useralias = mProfile.getUserCertificateAlias();
@@ -882,6 +896,32 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	{
 		String value = view.getText().toString().trim();
 		return value.isEmpty() || IPRangeSet.fromString(value) != null;
+	}
+
+	/**
+	 * Check that the value in the given text box is a valid list of IP addresses
+	 *
+	 * @param view text box
+	 */
+	private boolean validateAddresses(EditText view)
+	{
+		String value = view.getText().toString().trim();
+		if (value.isEmpty())
+		{
+			return true;
+		}
+		for (String addr : value.split("\\s+"))
+		{
+			try
+			{
+				Utils.parseInetAddress(addr);
+			}
+			catch (UnknownHostException e)
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**

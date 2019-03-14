@@ -44,6 +44,8 @@
     <string name="no_profiles">无配置.</string>
     <string name="add_profile">添加VPN配置</string>
     <string name="edit_profile">编辑</string>
+    <string name="copy_profile">Copy</string>
+    <string name="copied_name">%1$s (Copy)</string>
     <string name="delete_profile">删除</string>
     <string name="select_profiles">选择配置</string>
     <string name="profiles_deleted">所选配置已删除</string>
@@ -133,6 +135,7 @@
     <string name="alert_text_nocertfound">请选择一项或激活 <i>自动选择</i></string>
     <string name="alert_text_out_of_range">请输入一个数字范围从%1$d到%2$d</string>
     <string name="alert_text_no_subnets">Please enter valid subnets and/or IP addresses, separated by spaces</string>
+    <string name="alert_text_no_ips">Please enter valid IP addresses, separated by spaces</string>
     <string name="alert_text_no_proposal">Please enter a valid list of algorithms, separated by hyphens</string>
     <string name="tnc_notice_title">EAP-TNC可能会影响您的隐私</string>
     <string name="tnc_notice_subtitle">设备数据已被发送至服务器管理员</string>
