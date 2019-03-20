@@ -352,6 +352,11 @@ METHOD(trap_manager_t, uninstall, bool,
 	entry_t *entry, *found = NULL;
 
 	this->lock->write_lock(this->lock);
+	while (this->installing)
+	{
+		this->condvar->wait(this->condvar, this->lock);
+	}
+
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
