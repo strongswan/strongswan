@@ -167,6 +167,7 @@ static bool lookup_uid_gid()
 /**
  * Handle SIGSEGV/SIGILL signals raised by threads
  */
+#ifndef DISABLE_SIGNAL_HANDLER
 static void segv_handler(int signal)
 {
 	backtrace_t *backtrace;
@@ -180,6 +181,7 @@ static void segv_handler(int signal)
 	DBG1(DBG_DMN, "killing ourself, received critical signal");
 	abort();
 }
+#endif /* DISABLE_SIGNAL_HANDLER */
 
 /**
  * Check/create PID file, return TRUE if already running
@@ -438,17 +440,22 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
-	/* add handler for SEGV and ILL,
+	/* add handler for fatal signals,
 	 * INT, TERM and HUP are handled by sigwaitinfo() in run() */
-	action.sa_handler = segv_handler;
 	action.sa_flags = 0;
 	sigemptyset(&action.sa_mask);
 	sigaddset(&action.sa_mask, SIGINT);
 	sigaddset(&action.sa_mask, SIGTERM);
 	sigaddset(&action.sa_mask, SIGHUP);
+
+	/* optionally let the external system handle fatal signals */
+#ifndef DISABLE_SIGNAL_HANDLER
+	action.sa_handler = segv_handler;
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
 	sigaction(SIGBUS, &action, NULL);
+#endif /* DISABLE_SIGNAL_HANDLER */
+
 	action.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &action, NULL);
 
