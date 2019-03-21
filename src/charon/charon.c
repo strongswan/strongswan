@@ -446,9 +446,18 @@ int main(int argc, char *argv[])
 	sigaddset(&action.sa_mask, SIGINT);
 	sigaddset(&action.sa_mask, SIGTERM);
 	sigaddset(&action.sa_mask, SIGHUP);
+
+	/*
+	 * By default, charon internally handles the SIGSEGV, SIGILL, and SIGBUS
+	 * signals raised by threads (segv_handler). Make this configurable so
+	 * that the signal handling can be done either internally or externally.
+	 */
+#ifndef USE_EXT_SIG_HANDLER
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
 	sigaction(SIGBUS, &action, NULL);
+#endif /* USE_EXT_SIG_HANDLER */
+
 	action.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &action, NULL);
 

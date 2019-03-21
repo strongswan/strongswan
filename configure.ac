@@ -320,6 +320,7 @@ ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
 ARG_ENABL_SET([lock-profiler],  [enable lock/mutex profiling code.])
 ARG_ENABL_SET([log-thread-ids], [use thread ID, if available, instead of an incremented value starting from 1, to identify threads.])
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
+ARG_ENABL_SET([ext-sig-hdlr],   [enable external handling of SIGSEGV, SIGILL, and SIGBUS signals raised by threads])
 
 # ===================================
 #  option to disable default options
@@ -1783,6 +1784,9 @@ if test x$fuzzing = xtrue; then
 fi
 if test x$imc_swima = xtrue -o x$imv_swima = xtrue; then
 	AC_DEFINE([USE_JSON], [], [build code for JSON])
+fi
+if test x$ext_sig_hdlr = xtrue; then
+	AC_DEFINE([USE_EXT_SIG_HANDLER], [], [enable external handling of SIGSEGV, SIGILL, and SIGBUS signals])
 fi
 
 # ====================================================
