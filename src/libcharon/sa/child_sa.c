@@ -1784,13 +1784,11 @@ static host_t* get_proxy_addr(child_cfg_t *config, host_t *ike, bool local)
 	return host;
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
-child_sa_t * child_sa_create(host_t *me, host_t* other,
-							 child_cfg_t *config, uint32_t reqid, bool encap,
-							 uint32_t mark_in, uint32_t mark_out,
-							 uint32_t if_id_in, uint32_t if_id_out)
+child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
+							child_sa_create_t *data)
 {
 	private_child_sa_t *this;
 	static refcount_t unique_id = 0, unique_mark = 0;
@@ -1839,7 +1837,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.create_policy_enumerator = _create_policy_enumerator,
 			.destroy = _destroy,
 		},
-		.encap = encap,
+		.encap = data->encap,
 		.ipcomp = IPCOMP_NONE,
 		.state = CHILD_CREATED,
 		.my_ts = array_create(0, 0),
@@ -1852,8 +1850,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		.unique_id = ref_get(&unique_id),
 		.mark_in = config->get_mark(config, TRUE),
 		.mark_out = config->get_mark(config, FALSE),
-		.if_id_in = config->get_if_id(config, TRUE),
-		.if_id_out = config->get_if_id(config, FALSE),
+		.if_id_in = config->get_if_id(config, TRUE) ?: data->if_id_in_def,
+		.if_id_out = config->get_if_id(config, FALSE) ?: data->if_id_out_def,
 		.install_time = time_monotonic(NULL),
 		.policies_fwd_out = config->has_option(config, OPT_FWD_OUT_POLICIES),
 	);
@@ -1861,21 +1859,21 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->config = config;
 	config->get_ref(config);
 
-	if (mark_in)
+	if (data->mark_in)
 	{
-		this->mark_in.value = mark_in;
+		this->mark_in.value = data->mark_in;
 	}
-	if (mark_out)
+	if (data->mark_out)
 	{
-		this->mark_out.value = mark_out;
+		this->mark_out.value = data->mark_out;
 	}
-	if (if_id_in)
+	if (data->if_id_in)
 	{
-		this->if_id_in = if_id_in;
+		this->if_id_in = data->if_id_in;
 	}
-	if (if_id_out)
+	if (data->if_id_out)
 	{
-		this->if_id_out = if_id_out;
+		this->if_id_out = data->if_id_out;
 	}
 
 	allocate_unique_if_ids(&this->if_id_in, &this->if_id_out);
@@ -1911,7 +1909,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		 * replace the temporary SA on the kernel level. Rekeying such an SA
 		 * requires an explicit reqid, as the cache currently knows the original
 		 * selectors only for that reqid. */
-		this->reqid = reqid;
+		this->reqid = data->reqid;
 	}
 	else
 	{

@@ -26,6 +26,7 @@
 typedef enum child_sa_state_t child_sa_state_t;
 typedef enum child_sa_outbound_state_t child_sa_outbound_state_t;
 typedef struct child_sa_t child_sa_t;
+typedef struct child_sa_create_t child_sa_create_t;
 
 #include <library.h>
 #include <crypto/prf_plus.h>
@@ -513,22 +514,39 @@ struct child_sa_t {
 };
 
 /**
+ * Data passed to the constructor of a child_sa_t object.
+ */
+struct child_sa_create_t {
+	/** Optional reqid of old CHILD_SA when rekeying */
+	uint32_t reqid;
+	/** Optional inbound mark when rekeying */
+	uint32_t mark_in;
+	/** Optional outbound mark when rekeying */
+	uint32_t mark_out;
+	/** Optional inbound interface ID when rekeying */
+	uint32_t if_id_in;
+	/** Optional outbound interface ID when rekeying */
+	uint32_t if_id_out;
+	/** Optional default inbound interface ID, if neither if_id_in, nor config
+	 * sets one */
+	uint32_t if_id_in_def;
+	/** Optional default outbound interface ID, if neither if_id_out, nor config
+	 * sets one */
+	uint32_t if_id_out_def;
+	/** TRUE to enable UDP encapsulation (NAT traversal) */
+	bool encap;
+};
+
+/**
  * Constructor to create a child SA negotiated with IKE.
  *
  * @param me				own address
  * @param other				remote address
  * @param config			config to use for this CHILD_SA
- * @param reqid				reqid of old CHILD_SA when rekeying, 0 otherwise
- * @param encap				TRUE to enable UDP encapsulation (NAT traversal)
- * @param mark_in			explicit inbound mark value to use, 0 for config
- * @param mark_out			explicit outbound mark value to use, 0 for config
- * @param if_id_in			explicit inbound interface ID to use, 0 for config
- * @param if_id_out			explicit outbound interface ID to use, 0 for config
+ * @param data				data for this CHILD_SA
  * @return					child_sa_t object
  */
-child_sa_t * child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
-							 uint32_t reqid, bool encap,
-							 uint32_t mark_in, uint32_t mark_out,
-							 uint32_t if_id_in, uint32_t if_id_out);
+child_sa_t *child_sa_create(host_t *me, host_t *other,	child_cfg_t *config,
+							child_sa_create_t *data);
 
 #endif /** CHILD_SA_H_ @}*/
