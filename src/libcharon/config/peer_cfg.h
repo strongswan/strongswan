@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2018 Tobias Brunner
+ * Copyright (C) 2007-2019 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -312,6 +312,14 @@ struct peer_cfg_t {
 	enumerator_t* (*create_pool_enumerator)(peer_cfg_t *this);
 
 	/**
+	 * Optional interface ID to set on policies/SAs.
+	 *
+	 * @param inbound		TRUE for inbound, FALSE for outbound
+	 * @return				interface ID
+	 */
+	uint32_t (*get_if_id)(peer_cfg_t *this, bool inbound);
+
+	/**
 	 * Get the PPK ID to use with this peer.
 	 *
 	 * @return				PPK id
@@ -407,6 +415,10 @@ struct peer_cfg_create_t {
 	uint32_t dpd;
 	/** DPD timeout interval (IKEv1 only), if 0 default applies */
 	uint32_t dpd_timeout;
+	/** Optional inbound interface ID */
+	uint32_t if_id_in;
+	/** Optional outbound interface ID */
+	uint32_t if_id_out;
 	/** Postquantum Preshared Key ID (adopted) */
 	identification_t *ppk_id;
 	/** TRUE if a PPK is required, FALSE if it's optional */
