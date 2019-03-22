@@ -984,6 +984,41 @@ START_TEST(test_if_id_from_string)
 END_TEST
 
 /*******************************************************************************
+ * allocate_unique_if_ids
+ */
+
+static struct {
+	uint32_t in;
+	uint32_t out;
+	uint32_t exp_in;
+	uint32_t exp_out;
+} unique_if_id_data[] = {
+	{0,	0, 0, 0 },
+	{42, 42, 42, 42 },
+	{42, 1337, 42, 1337 },
+	/* each call increases the internal counter by 1 or 2*/
+	{IF_ID_UNIQUE, 42, 1, 42 },
+	{42, IF_ID_UNIQUE, 42, 2 },
+	{IF_ID_UNIQUE_DIR, 42, 3, 42 },
+	{42, IF_ID_UNIQUE_DIR, 42, 4 },
+	{IF_ID_UNIQUE, IF_ID_UNIQUE, 5, 5 },
+	{IF_ID_UNIQUE_DIR, IF_ID_UNIQUE, 6, 7 },
+	{IF_ID_UNIQUE, IF_ID_UNIQUE_DIR, 8, 9 },
+	{IF_ID_UNIQUE_DIR, IF_ID_UNIQUE_DIR, 10, 11 },
+};
+
+START_TEST(test_allocate_unique_if_ids)
+{
+	uint32_t if_id_in = unique_if_id_data[_i].in,
+			 if_id_out = unique_if_id_data[_i].out;
+
+	allocate_unique_if_ids(&if_id_in, &if_id_out);
+	ck_assert_int_eq(if_id_in, unique_if_id_data[_i].exp_in);
+	ck_assert_int_eq(if_id_out, unique_if_id_data[_i].exp_out);
+}
+END_TEST
+
+/*******************************************************************************
  * signature_schemes_for_key
  */
 
@@ -1132,6 +1167,10 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("if_id_from_string");
 	tcase_add_loop_test(tc, test_if_id_from_string, 0, countof(if_id_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("allocate_unique_if_ids");
+	tcase_add_loop_test(tc, test_allocate_unique_if_ids, 0, countof(unique_if_id_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("signature_schemes_for_key");

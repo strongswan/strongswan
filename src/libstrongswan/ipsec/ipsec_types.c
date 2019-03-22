@@ -149,7 +149,7 @@ bool mark_from_string(const char *value, mark_op_t ops, mark_t *mark)
 }
 
 /*
- * See header
+ * Described in header
  */
 bool if_id_from_string(const char *value, uint32_t *if_id)
 {
@@ -187,4 +187,32 @@ bool if_id_from_string(const char *value, uint32_t *if_id)
 		return FALSE;
 	}
 	return TRUE;
+}
+
+/*
+ * Described in header
+ */
+void allocate_unique_if_ids(uint32_t *in, uint32_t *out)
+{
+	static refcount_t unique_if_id = 0;
+
+	if (IF_ID_IS_UNIQUE(*in) || IF_ID_IS_UNIQUE(*out))
+	{
+		refcount_t if_id = 0;
+		bool unique_dir = *in == IF_ID_UNIQUE_DIR ||
+						  *out == IF_ID_UNIQUE_DIR;
+
+		if (!unique_dir)
+		{
+			if_id = ref_get(&unique_if_id);
+		}
+		if (IF_ID_IS_UNIQUE(*in))
+		{
+			*in = unique_dir ? ref_get(&unique_if_id) : if_id;
+		}
+		if (IF_ID_IS_UNIQUE(*out))
+		{
+			*out = unique_dir ? ref_get(&unique_if_id) : if_id;
+		}
+	}
 }

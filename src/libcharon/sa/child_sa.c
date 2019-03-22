@@ -1793,7 +1793,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 							 uint32_t if_id_in, uint32_t if_id_out)
 {
 	private_child_sa_t *this;
-	static refcount_t unique_id = 0, unique_mark = 0, unique_if_id = 0;
+	static refcount_t unique_id = 0, unique_mark = 0;
 
 	INIT(this,
 		.public = {
@@ -1878,6 +1878,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		this->if_id_out = if_id_out;
 	}
 
+	allocate_unique_if_ids(&this->if_id_in, &this->if_id_out);
+
 	if (MARK_IS_UNIQUE(this->mark_in.value) ||
 		MARK_IS_UNIQUE(this->mark_out.value))
 	{
@@ -1896,27 +1898,6 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		if (MARK_IS_UNIQUE(this->mark_out.value))
 		{
 			this->mark_out.value = unique_dir ? ref_get(&unique_mark) : mark;
-		}
-	}
-
-	if (IF_ID_IS_UNIQUE(this->if_id_in) ||
-		IF_ID_IS_UNIQUE(this->if_id_out))
-	{
-		refcount_t if_id = 0;
-		bool unique_dir = this->if_id_in == IF_ID_UNIQUE_DIR ||
-						  this->if_id_out == IF_ID_UNIQUE_DIR;
-
-		if (!unique_dir)
-		{
-			if_id = ref_get(&unique_if_id);
-		}
-		if (IF_ID_IS_UNIQUE(this->if_id_in))
-		{
-			this->if_id_in = unique_dir ? ref_get(&unique_if_id) : if_id;
-		}
-		if (IF_ID_IS_UNIQUE(this->if_id_out))
-		{
-			this->if_id_out = unique_dir ? ref_get(&unique_if_id) : if_id;
 		}
 	}
 

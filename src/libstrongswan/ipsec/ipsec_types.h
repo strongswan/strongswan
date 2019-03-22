@@ -256,4 +256,12 @@ bool mark_from_string(const char *value, mark_op_t ops, mark_t *mark);
  */
 bool if_id_from_string(const char *value, uint32_t *if_id);
 
+/**
+ * Allocate up to two unique interface IDs depending on the given values.
+ *
+ * @param[out] in	inbound interface ID
+ * @param[out] out	outbound interface ID
+ */
+void allocate_unique_if_ids(uint32_t *in, uint32_t *out);
+
 #endif /** IPSEC_TYPES_H_ @}*/
