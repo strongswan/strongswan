@@ -772,6 +772,8 @@ command.
 			nat-remote = <yes, if remote endpoint is behind a NAT>
 			nat-fake = <yes, if NAT situation has been faked as responder>
 			nat-any = <yes, if any endpoint is behind a NAT (also if faked)>
+			if-id-in = <hex encoded default inbound XFRM interface ID>
+			if-id-out = <hex encoded default outbound XFRM interface ID>
 			encr-alg = <IKE encryption algorithm string>
 			encr-keysize = <key size for encr-alg, if applicable>
 			integ-alg = <IKE integrity algorithm string>

@@ -280,6 +280,18 @@ connections.<conn>.pools =
 	other configuration attributes from. Each name references a pool by name
 	from either the **pools** section or an external pool.
 
+connections.<conn>.if_id_in = 0
+	Default inbound XFRM interface ID for children.
+
+	XFRM interface ID set on inbound policies/SA, can be overridden by child
+	config, see there for details.
+
+connections.<conn>.if_id_out = 0
+	Default outbound XFRM interface ID for children.
+
+	XFRM interface ID set on outbound policies/SA, can be overridden by child
+	cofnig, see there for details.
+
 connections.<conn>.mediation = no
 	Whether this connection is a mediation connection.
 

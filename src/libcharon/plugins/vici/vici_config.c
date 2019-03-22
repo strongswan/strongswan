@@ -327,6 +327,8 @@ typedef struct {
 	uint64_t over_time;
 	uint64_t rand_time;
 	uint8_t dscp;
+	uint32_t if_id_in;
+	uint32_t if_id_out;
 #ifdef ME
 	bool mediation;
 	char *mediated_by;
@@ -421,6 +423,8 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  over_time = %llu", data->over_time);
 	DBG2(DBG_CFG, "  rand_time = %llu", data->rand_time);
 	DBG2(DBG_CFG, "  proposals = %#P", data->proposals);
+	DBG2(DBG_CFG, "  if_id_in = %u", data->if_id_in);
+	DBG2(DBG_CFG, "  if_id_out = %u", data->if_id_out);
 #ifdef ME
 	DBG2(DBG_CFG, "  mediation = %u", data->mediation);
 	if (data->mediated_by)
@@ -1785,6 +1789,8 @@ CALLBACK(peer_kv, bool,
 		{ "rand_time",		parse_time,			&peer->rand_time			},
 		{ "ppk_id",			parse_peer_id,		&peer->ppk_id				},
 		{ "ppk_required",	parse_bool,			&peer->ppk_required			},
+		{ "if_id_in",		parse_if_id,		&peer->if_id_in				},
+		{ "if_id_out",		parse_if_id,		&peer->if_id_out			},
 #ifdef ME
 		{ "mediation",		parse_bool,			&peer->mediation			},
 		{ "mediated_by",	parse_string,		&peer->mediated_by			},
@@ -2523,6 +2529,8 @@ CALLBACK(config_sn, bool,
 		.dpd_timeout = peer.dpd_timeout,
 		.ppk_id = peer.ppk_id ? peer.ppk_id->clone(peer.ppk_id) : NULL,
 		.ppk_required = peer.ppk_required,
+		.if_id_in = peer.if_id_in,
+		.if_id_out = peer.if_id_out,
 	};
 #ifdef ME
 	cfg.mediation = peer.mediation;

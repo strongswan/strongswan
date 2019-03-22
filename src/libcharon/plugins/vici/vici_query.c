@@ -354,6 +354,7 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	ike_sa_id_t *id;
 	identification_t *eap;
 	proposal_t *proposal;
+	uint32_t if_id;
 	uint16_t alg, ks;
 	host_t *host;
 
@@ -399,6 +400,17 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	add_condition(b, ike_sa, "nat-remote", COND_NAT_THERE);
 	add_condition(b, ike_sa, "nat-fake", COND_NAT_FAKE);
 	add_condition(b, ike_sa, "nat-any", COND_NAT_ANY);
+
+	if_id = ike_sa->get_if_id(ike_sa, TRUE);
+	if (if_id)
+	{
+		b->add_kv(b, "if-id-in", "%.8x", if_id);
+	}
+	if_id = ike_sa->get_if_id(ike_sa, FALSE);
+	if (if_id)
+	{
+		b->add_kv(b, "if-id-out", "%.8x", if_id);
+	}
 
 	proposal = ike_sa->get_proposal(ike_sa);
 	if (proposal)
