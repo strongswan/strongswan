@@ -127,3 +127,5 @@ build: configure
 
 install: build
 	cd $(BUILDDIR) && make -j install
+	# for Python-based updown scripts
+	pip install python-daemon
