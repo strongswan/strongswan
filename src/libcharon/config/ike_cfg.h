@@ -25,6 +25,7 @@
 
 typedef enum ike_version_t ike_version_t;
 typedef enum fragmentation_t fragmentation_t;
+typedef enum childless_t childless_t;
 typedef struct ike_cfg_t ike_cfg_t;
 typedef struct ike_cfg_create_t ike_cfg_create_t;
 
@@ -59,6 +60,18 @@ enum fragmentation_t {
 	FRAGMENTATION_YES,
 	/** force use of fragmentation (even for the first message for IKEv1) */
 	FRAGMENTATION_FORCE,
+};
+
+/**
+ * Childless IKE_SAs (RFC 6023)
+ */
+enum childless_t {
+	/** Allow childless IKE_SAs as responder, but initiate regular IKE_SAs */
+	CHILDLESS_ALLOW,
+	/** Don't accept childless IKE_SAs as responder, don't initiate them */
+	CHILDLESS_NEVER,
+	/** Only accept the creation of childless IKE_SAs (also as responder) */
+	CHILDLESS_FORCE,
 };
 
 /**
@@ -204,11 +217,18 @@ struct ike_cfg_t {
 	bool (*force_encap) (ike_cfg_t *this);
 
 	/**
-	 * Use proprietary IKEv1 fragmentation
+	 * Use IKE fragmentation
 	 *
 	 * @return				TRUE to use fragmentation
 	 */
 	fragmentation_t (*fragmentation) (ike_cfg_t *this);
+
+	/**
+	 * Whether to initiate/accept childless IKE_SAs
+	 *
+	 * @return				initiate/accept childless IKE_SAs
+	 */
+	childless_t (*childless)(ike_cfg_t *this);
 
 	/**
 	 * Get the DH group to use for IKE_SA setup.
@@ -266,6 +286,8 @@ struct ike_cfg_create_t {
 	bool force_encap;
 	/** Use IKE fragmentation */
 	fragmentation_t fragmentation;
+	/** Childless IKE_SA configuration */
+	childless_t childless;
 	/** DSCP value to send IKE packets with */
 	uint8_t dscp;
 };

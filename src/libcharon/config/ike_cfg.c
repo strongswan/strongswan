@@ -101,9 +101,14 @@ struct private_ike_cfg_t {
 	bool force_encap;
 
 	/**
-	 * use IKEv1 fragmentation
+	 * use IKE fragmentation
 	 */
 	fragmentation_t fragmentation;
+
+	/**
+	 * childless IKE_SAs
+	 */
+	childless_t childless;
 
 	/**
 	 * DSCP value to use on sent IKE packets
@@ -138,6 +143,12 @@ METHOD(ike_cfg_t, fragmentation, fragmentation_t,
 	private_ike_cfg_t *this)
 {
 	return this->fragmentation;
+}
+
+METHOD(ike_cfg_t, childless, childless_t,
+	private_ike_cfg_t *this)
+{
+	return this->childless;
 }
 
 /**
@@ -424,6 +435,7 @@ METHOD(ike_cfg_t, equals, bool,
 		this->certreq == other->certreq &&
 		this->force_encap == other->force_encap &&
 		this->fragmentation == other->fragmentation &&
+		this->childless == other->childless &&
 		streq(this->me, other->me) &&
 		streq(this->other, other->other) &&
 		this->my_port == other->my_port &&
@@ -622,6 +634,7 @@ ike_cfg_t *ike_cfg_create(ike_cfg_create_t *data)
 			.send_certreq = _send_certreq,
 			.force_encap = _force_encap_,
 			.fragmentation = _fragmentation,
+			.childless = _childless,
 			.resolve_me = _resolve_me,
 			.resolve_other = _resolve_other,
 			.match_me = _match_me,
@@ -645,6 +658,7 @@ ike_cfg_t *ike_cfg_create(ike_cfg_create_t *data)
 		.certreq = !data->no_certreq,
 		.force_encap = data->force_encap,
 		.fragmentation = data->fragmentation,
+		.childless = data->childless,
 		.me = strdup(data->local),
 		.my_ranges = linked_list_create(),
 		.my_hosts = linked_list_create(),
