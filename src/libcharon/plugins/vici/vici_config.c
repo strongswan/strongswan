@@ -2382,6 +2382,7 @@ CALLBACK(config_sn, bool,
 	enumerator_t *enumerator;
 	peer_cfg_create_t cfg;
 	peer_cfg_t *peer_cfg;
+	ike_cfg_create_t ike;
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
 	auth_data_t *auth;
@@ -2509,10 +2510,18 @@ CALLBACK(config_sn, bool,
 
 	log_peer_data(&peer);
 
-	ike_cfg = ike_cfg_create(peer.version, peer.send_certreq, peer.encap,
-						peer.local_addrs, peer.local_port,
-						peer.remote_addrs, peer.remote_port,
-						peer.fragmentation, peer.dscp);
+	ike = (ike_cfg_create_t){
+		.version = peer.version,
+		.local = peer.local_addrs,
+		.local_port = peer.local_port,
+		.remote = peer.remote_addrs,
+		.remote_port = peer.remote_port,
+		.no_certreq = !peer.send_certreq,
+		.force_encap = peer.encap,
+		.fragmentation = peer.fragmentation,
+		.dscp = peer.dscp,
+	};
+	ike_cfg = ike_cfg_create(&ike);
 
 	cfg = (peer_cfg_create_t){
 		.cert_policy = peer.send_cert,
