@@ -3,6 +3,13 @@ strongswan-5.8.0
 
 - The openssl plugin supports ChaCha20-Poly1305 when built with OpenSSL 1.1.0.
 
+- The PB-TNC finite state machine according to section 3.2 of RFC 5793 was not
+  correctly implemented when sending either a CRETRY or SRETRY batch. These
+  batches can only be sent in the "Decided" state and a CRETRY batch can
+  immediately carry all messages usually transported by a CDATA batch. It is
+  currently not possible to send a SRETRY batch since full-duplex mode for
+  PT-TLS transport is not supported.
+
 
 strongswan-5.7.2
 ----------------
