@@ -310,6 +310,7 @@ typedef struct {
 	uint64_t dpd_delay;
 	uint64_t dpd_timeout;
 	fragmentation_t fragmentation;
+	childless_t childless;
 	unique_policy_t unique;
 	uint32_t keyingtries;
 	uint32_t local_port;
@@ -416,6 +417,7 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  dpd_delay = %llu", data->dpd_delay);
 	DBG2(DBG_CFG, "  dpd_timeout = %llu", data->dpd_timeout);
 	DBG2(DBG_CFG, "  fragmentation = %u",  data->fragmentation);
+	DBG2(DBG_CFG, "  childless = %u",  data->childless);
 	DBG2(DBG_CFG, "  unique = %N", unique_policy_names, data->unique);
 	DBG2(DBG_CFG, "  keyingtries = %u", data->keyingtries);
 	DBG2(DBG_CFG, "  reauth_time = %llu", data->reauth_time);
@@ -1562,6 +1564,27 @@ CALLBACK(parse_frag, bool,
 }
 
 /**
+ * Parse a childless_t
+ */
+CALLBACK(parse_childless, bool,
+	childless_t *out, chunk_t v)
+{
+	enum_map_t map[] = {
+		{ "allow",		CHILDLESS_ALLOW		},
+		{ "never",		CHILDLESS_NEVER		},
+		{ "force",		CHILDLESS_FORCE		},
+	};
+	int d;
+
+	if (parse_map(map, countof(map), &d, v))
+	{
+		*out = d;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Parse a cert_policy_t
  */
 CALLBACK(parse_send_cert, bool,
@@ -1777,6 +1800,7 @@ CALLBACK(peer_kv, bool,
 		{ "dpd_delay",		parse_time,			&peer->dpd_delay			},
 		{ "dpd_timeout",	parse_time,			&peer->dpd_timeout			},
 		{ "fragmentation",	parse_frag,			&peer->fragmentation		},
+		{ "childless",		parse_childless,	&peer->childless			},
 		{ "send_certreq",	parse_bool,			&peer->send_certreq			},
 		{ "send_cert",		parse_send_cert,	&peer->send_cert			},
 		{ "keyingtries",	parse_uint32,		&peer->keyingtries			},
@@ -2519,6 +2543,7 @@ CALLBACK(config_sn, bool,
 		.no_certreq = !peer.send_certreq,
 		.force_encap = peer.encap,
 		.fragmentation = peer.fragmentation,
+		.childless = peer.childless,
 		.dscp = peer.dscp,
 	};
 	ike_cfg = ike_cfg_create(&ike);
