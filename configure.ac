@@ -1819,7 +1819,7 @@ AC_CONFIG_FILES([
 	man/Makefile
 	init/Makefile
 	init/systemd/Makefile
-	init/systemd-swanctl/Makefile
+	init/systemd-starter/Makefile
 	src/Makefile
 	src/include/Makefile
 	src/libstrongswan/Makefile
