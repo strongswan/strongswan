@@ -13,11 +13,11 @@ carol::iptables-restore < /etc/iptables.rules
 dave::iptables-restore < /etc/iptables.rules
 alice::iptables-restore < /etc/iptables.rules
 venus::iptables-restore < /etc/iptables.rules
-moon::systemctl start strongswan-swanctl
-carol::systemctl start strongswan-swanctl
-dave::systemctl start strongswan-swanctl
-alice::systemctl start strongswan-swanctl
-venus::systemctl start strongswan-swanctl
+moon::systemctl start strongswan
+carol::systemctl start strongswan
+dave::systemctl start strongswan
+alice::systemctl start strongswan
+venus::systemctl start strongswan
 moon::expect-connection int
 moon::expect-connection ext
 carol::expect-connection home

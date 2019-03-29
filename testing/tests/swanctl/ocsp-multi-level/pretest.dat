@@ -1,6 +1,6 @@
-moon::systemctl start strongswan-swanctl
-carol::systemctl start strongswan-swanctl
-dave::systemctl start strongswan-swanctl
+moon::systemctl start strongswan
+carol::systemctl start strongswan
+dave::systemctl start strongswan
 moon::expect-connection research
 carol::expect-connection home
 carol::swanctl --initiate --child alice 2> /dev/null

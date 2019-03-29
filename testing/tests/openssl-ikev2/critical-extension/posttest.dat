@@ -1,4 +1,4 @@
-moon::systemctl stop strongswan-swanctl
-sun::systemctl stop strongswan-swanctl
+moon::systemctl stop strongswan
+sun::systemctl stop strongswan
 moon::rm /etc/swanctl/x509/moonCert.der
 sun::rm /etc/swanctl/x509/sunCert.der
