@@ -317,6 +317,10 @@ METHOD(task_t, build_i, status_t,
 		{
 			message->add_payload(message, (payload_t*)cp);
 		}
+		else
+		{	/* we don't expect a CFG_REPLY */
+			return SUCCESS;
+		}
 	}
 	return NEED_MORE;
 }
