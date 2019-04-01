@@ -7,7 +7,7 @@ dave::iptables-restore < /etc/iptables.flush
 carol::rm /etc/ipsec.d/acerts/carol-sales.pem
 dave::rm /etc/ipsec.d/acerts/dave-expired-aa.pem
 dave::rm /etc/ipsec.d/acerts/dave-marketing.pem
-moon::rm /etc/ipsec.d/private/aa-expired.pem
-moon::rm /etc/ipsec.d/private/aa.pem
-moon::rm /etc/ipsec.d/aacerts/aa-expired.pem
-moon::rm /etc/ipsec.d/aacerts/aa.pem
+moon::rm /etc/ipsec.d/private/aaKey-expired.pem
+moon::rm /etc/ipsec.d/private/aaKey.pem
+moon::rm /etc/ipsec.d/aacerts/aaCert-expired.pem
+moon::rm /etc/ipsec.d/aacerts/aaCert.pem

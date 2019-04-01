@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /etc/openssl
+cd /etc/ca
 
 echo "Content-type: application/ocsp-response"
 echo ""

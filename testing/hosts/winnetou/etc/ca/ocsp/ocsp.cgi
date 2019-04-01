@@ -1,11 +1,11 @@
 #!/bin/bash
 
-cd /etc/openssl
+cd /etc/ca
 
 echo "Content-type: application/ocsp-response"
 echo ""
 
 cat | /usr/bin/openssl ocsp -index index.txt -CA strongswanCert.pem \
-	-rkey winnetouKey.pem -rsigner winnetouCert.pem \
+	-rkey ocspKey.pem -rsigner ocspCert.pem \
 	-nmin 5 \
 	-reqin /dev/stdin -respout /dev/stdout | cat
