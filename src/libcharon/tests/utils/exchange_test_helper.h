@@ -109,6 +109,8 @@ struct exchange_test_sa_conf_t {
 		char *ike;
 		/** ESP proposal */
 		char *esp;
+		/** Support for childless IKE_SAs */
+		childless_t childless;
 	} initiator, responder;
 };
 

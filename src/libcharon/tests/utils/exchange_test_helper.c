@@ -100,11 +100,14 @@ static ike_cfg_t *create_ike_cfg(bool initiator, exchange_test_sa_conf_t *conf)
 	ike_cfg_t *ike_cfg;
 	char *proposal = NULL;
 
-	ike_cfg = ike_cfg_create(&ike);
 	if (conf)
 	{
+		ike.childless = initiator ? conf->initiator.childless
+								  : conf->responder.childless;
 		proposal = initiator ? conf->initiator.ike : conf->responder.ike;
 	}
+
+	ike_cfg = ike_cfg_create(&ike);
 	if (proposal)
 	{
 		ike_cfg->add_proposal(ike_cfg,
