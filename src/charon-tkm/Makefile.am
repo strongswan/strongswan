@@ -29,6 +29,7 @@ PLUGINS = \
 	pem \
 	socket-default \
 	openssl \
+	wolfssl \
 	stroke
 
 all: build_charon

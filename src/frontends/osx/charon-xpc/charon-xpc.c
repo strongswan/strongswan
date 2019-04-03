@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 								"charon-xpc.plugins.osx-attr.append", "no");
 	if (!charon->initialize(charon,
 			lib->settings->get_str(lib->settings, "charon-xpc.load",
-				"nonce pkcs1 openssl keychain ctr ccm gcm kernel-libipsec "
+				"nonce pkcs1 openssl wolfssl keychain ctr ccm gcm kernel-libipsec "
 				"kernel-pfroute socket-default eap-identity eap-mschapv2 "
 				"eap-md5 xauth-generic osx-attr")))
 	{
