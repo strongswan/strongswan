@@ -324,6 +324,7 @@ apidoc)
 		cat make.warnings
 		exit 1
 	fi
+	rm make.warnings
 	;;
 sonarcloud)
 	sonar-scanner \
@@ -332,7 +333,16 @@ sonarcloud)
 		-Dsonar.sources=. \
 		-Dsonar.cfamily.threads=2 \
 		-Dsonar.cfamily.build-wrapper-output=bw-output || exit $?
+	rm -r bw-output .scannerwork
 	;;
 *)
 	;;
 esac
+
+# ensure there are no unignored build artifacts (or other changes) in the Git repo
+unclean="$(git status --porcelain)"
+if test -n "$unclean"; then
+	echo "Unignored build artifacts or other changes:"
+	echo "$unclean"
+	exit 1
+fi
