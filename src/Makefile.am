@@ -143,3 +143,7 @@ endif
 if USE_TPM
   SUBDIRS += tpm_extendpcr
 endif
+
+if USE_KERNEL_NETLINK
+  SUBDIRS += xfrmi
+endif

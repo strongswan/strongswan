@@ -155,6 +155,7 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 {
 	time_t t;
 	uint64_t bytes, packets;
+	uint32_t if_id;
 	uint16_t alg, ks;
 	proposal_t *proposal;
 	enumerator_t *enumerator;
@@ -185,6 +186,16 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 		}
 		add_mark(b, child->get_mark(child, TRUE), "mark-in", "mark-mask-in");
 		add_mark(b, child->get_mark(child, FALSE), "mark-out", "mark-mask-out");
+		if_id = child->get_if_id(child, TRUE);
+		if (if_id)
+		{
+			b->add_kv(b, "if-id-in", "%.8x", if_id);
+		}
+		if_id = child->get_if_id(child, FALSE);
+		if (if_id)
+		{
+			b->add_kv(b, "if-id-out", "%.8x", if_id);
+		}
 		proposal = child->get_proposal(child);
 		if (proposal)
 		{
@@ -343,6 +354,7 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	ike_sa_id_t *id;
 	identification_t *eap;
 	proposal_t *proposal;
+	uint32_t if_id;
 	uint16_t alg, ks;
 	host_t *host;
 
@@ -388,6 +400,17 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	add_condition(b, ike_sa, "nat-remote", COND_NAT_THERE);
 	add_condition(b, ike_sa, "nat-fake", COND_NAT_FAKE);
 	add_condition(b, ike_sa, "nat-any", COND_NAT_ANY);
+
+	if_id = ike_sa->get_if_id(ike_sa, TRUE);
+	if (if_id)
+	{
+		b->add_kv(b, "if-id-in", "%.8x", if_id);
+	}
+	if_id = ike_sa->get_if_id(ike_sa, FALSE);
+	if (if_id)
+	{
+		b->add_kv(b, "if-id-out", "%.8x", if_id);
+	}
 
 	proposal = ike_sa->get_proposal(ike_sa);
 	if (proposal)

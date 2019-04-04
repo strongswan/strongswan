@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Tobias Brunner
+ * Copyright (C) 2006-2019 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -296,6 +296,16 @@ struct private_ike_sa_t {
 	 * Timestamps of redirect attempts to handle loops
 	 */
 	array_t *redirected_at;
+
+	/**
+	 * Inbound interface ID
+	 */
+	uint32_t if_id_in;
+
+	/**
+	 * Outbound interface ID
+	 */
+	uint32_t if_id_out;
 };
 
 /**
@@ -419,11 +429,15 @@ METHOD(ike_sa_t, set_peer_cfg, void,
 	DESTROY_IF(this->peer_cfg);
 	this->peer_cfg = peer_cfg;
 
-	if (this->ike_cfg == NULL)
+	if (!this->ike_cfg)
 	{
 		this->ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 		this->ike_cfg->get_ref(this->ike_cfg);
 	}
+
+	this->if_id_in = peer_cfg->get_if_id(peer_cfg, TRUE);
+	this->if_id_out = peer_cfg->get_if_id(peer_cfg, FALSE);
+	allocate_unique_if_ids(&this->if_id_in, &this->if_id_out);
 }
 
 METHOD(ike_sa_t, get_auth_cfg, auth_cfg_t*,
@@ -1656,6 +1670,12 @@ METHOD(ike_sa_t, set_other_id, void,
 	this->other_id = other;
 }
 
+METHOD(ike_sa_t, get_if_id, uint32_t,
+	private_ike_sa_t *this, bool inbound)
+{
+	return inbound ? this->if_id_in : this->if_id_out;
+}
+
 METHOD(ike_sa_t, add_child_sa, void,
 	private_ike_sa_t *this, child_sa_t *child_sa)
 {
@@ -2810,6 +2830,8 @@ METHOD(ike_sa_t, inherit_post, void,
 	this->other_host = other->other_host->clone(other->other_host);
 	this->my_id = other->my_id->clone(other->my_id);
 	this->other_id = other->other_id->clone(other->other_id);
+	this->if_id_in = other->if_id_in;
+	this->if_id_out = other->if_id_out;
 
 	/* apply assigned virtual IPs... */
 	while (array_remove(other->my_vips, ARRAY_HEAD, &vip))
@@ -3087,6 +3109,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.create_virtual_ip_enumerator = _create_virtual_ip_enumerator,
 			.add_configuration_attribute = _add_configuration_attribute,
 			.create_attribute_enumerator = _create_attribute_enumerator,
+			.get_if_id = _get_if_id,
 			.set_kmaddress = _set_kmaddress,
 			.create_task_enumerator = _create_task_enumerator,
 			.remove_task = _remove_task,

@@ -59,6 +59,10 @@ log_action "Mounting $SWANDIR as /root/strongswan"
 execute "bindfs -u $SRCUID -g $SRCGID $SWANDIR $LOOPDIR/root/strongswan"
 do_on_exit umount $LOOPDIR/root/strongswan
 
+log_action "Copy /etc/resolv.conf"
+execute "cp /etc/resolv.conf $LOOPDIR/etc/resolv.conf"
+do_on_exit rm $LOOPDIR/etc/resolv.conf
+
 log_action "Remove SWID tags of previous versions"
 execute_chroot "find /usr/local/share -path '*strongswan*' -name *.swidtag -delete"
 

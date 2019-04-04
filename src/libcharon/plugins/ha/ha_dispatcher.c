@@ -743,10 +743,11 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		return;
 	}
 
+	child_sa_create_t data = {
+		.encap = ike_sa->has_condition(ike_sa, COND_NAT_ANY),
+	};
 	child_sa = child_sa_create(ike_sa->get_my_host(ike_sa),
-							   ike_sa->get_other_host(ike_sa), config, 0,
-							   ike_sa->has_condition(ike_sa, COND_NAT_ANY),
-							   0, 0);
+							   ike_sa->get_other_host(ike_sa), config, &data);
 	child_sa->set_mode(child_sa, mode);
 	child_sa->set_protocol(child_sa, PROTO_ESP);
 	child_sa->set_ipcomp(child_sa, ipcomp);

@@ -258,6 +258,7 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 	host_t *me, *other, *host;
 	char *iface;
 	uint8_t mask;
+	uint32_t if_id;
 	mark_t mark;
 	bool is_host, is_ipv6;
 	int out;
@@ -355,6 +356,16 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 	{
 		push_env(envp, countof(envp), "PLUTO_MARK_OUT=%u/0x%08x",
 				 mark.value, mark.mask);
+	}
+	if_id = child_sa->get_if_id(child_sa, TRUE);
+	if (if_id)
+	{
+		push_env(envp, countof(envp), "PLUTO_IF_ID_IN=%u", if_id);
+	}
+	if_id = child_sa->get_if_id(child_sa, FALSE);
+	if (if_id)
+	{
+		push_env(envp, countof(envp), "PLUTO_IF_ID_OUT=%u", if_id);
 	}
 	if (ike_sa->has_condition(ike_sa, COND_NAT_ANY))
 	{

@@ -1843,6 +1843,8 @@ METHOD(task_manager_t, queue_child_rekey, void,
 			task->use_reqid(task, child_sa->get_reqid(child_sa));
 			task->use_marks(task, child_sa->get_mark(child_sa, TRUE).value,
 							child_sa->get_mark(child_sa, FALSE).value);
+			task->use_if_ids(task, child_sa->get_if_id(child_sa, TRUE),
+							 child_sa->get_if_id(child_sa, FALSE));
 			task->rekey(task, child_sa->get_spi(child_sa, TRUE));
 
 			queue_task(this, &task->task);

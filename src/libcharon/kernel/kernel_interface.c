@@ -199,6 +199,10 @@ typedef struct {
 	mark_t mark_in;
 	/** outbound mark used for SA */
 	mark_t mark_out;
+	/** inbound interface ID used for SA */
+	uint32_t if_id_in;
+	/** outbound interface ID used for SA */
+	uint32_t if_id_out;
 	/** local traffic selectors */
 	array_t *local;
 	/** remote traffic selectors */
@@ -222,7 +226,9 @@ static u_int hash_reqid(reqid_entry_t *entry)
 {
 	return chunk_hash_inc(chunk_from_thing(entry->reqid),
 				chunk_hash_inc(chunk_from_thing(entry->mark_in),
-					chunk_hash(chunk_from_thing(entry->mark_out))));
+					chunk_hash_inc(chunk_from_thing(entry->mark_out),
+						chunk_hash_inc(chunk_from_thing(entry->if_id_in),
+							chunk_hash(chunk_from_thing(entry->if_id_out))))));
 }
 
 /**
@@ -234,7 +240,9 @@ static bool equals_reqid(reqid_entry_t *a, reqid_entry_t *b)
 		   a->mark_in.value == b->mark_in.value &&
 		   a->mark_in.mask == b->mark_in.mask &&
 		   a->mark_out.value == b->mark_out.value &&
-		   a->mark_out.mask == b->mark_out.mask;
+		   a->mark_out.mask == b->mark_out.mask &&
+		   a->if_id_in == b->if_id_in &&
+		   a->if_id_out == b->if_id_out;
 }
 
 /**
@@ -262,7 +270,9 @@ static u_int hash_reqid_by_ts(reqid_entry_t *entry)
 {
 	return hash_ts_array(entry->local, hash_ts_array(entry->remote,
 			chunk_hash_inc(chunk_from_thing(entry->mark_in),
-				chunk_hash(chunk_from_thing(entry->mark_out)))));
+				chunk_hash_inc(chunk_from_thing(entry->mark_out),
+					chunk_hash_inc(chunk_from_thing(entry->if_id_in),
+						chunk_hash(chunk_from_thing(entry->if_id_out)))))));
 }
 
 /**
@@ -301,7 +311,9 @@ static bool equals_reqid_by_ts(reqid_entry_t *a, reqid_entry_t *b)
 		   a->mark_in.value == b->mark_in.value &&
 		   a->mark_in.mask == b->mark_in.mask &&
 		   a->mark_out.value == b->mark_out.value &&
-		   a->mark_out.mask == b->mark_out.mask;
+		   a->mark_out.mask == b->mark_out.mask &&
+		   a->if_id_in == b->if_id_in &&
+		   a->if_id_out == b->if_id_out;
 }
 
 /**
@@ -328,7 +340,8 @@ static array_t *array_from_ts_list(linked_list_t *list)
 METHOD(kernel_interface_t, alloc_reqid, status_t,
 	private_kernel_interface_t *this,
 	linked_list_t *local_ts, linked_list_t *remote_ts,
-	mark_t mark_in, mark_t mark_out, uint32_t *reqid)
+	mark_t mark_in, mark_t mark_out, uint32_t if_id_in, uint32_t if_id_out,
+	uint32_t *reqid)
 {
 	static uint32_t counter = 0;
 	reqid_entry_t *entry = NULL, *tmpl;
@@ -339,6 +352,8 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 		.remote = array_from_ts_list(remote_ts),
 		.mark_in = mark_in,
 		.mark_out = mark_out,
+		.if_id_in = if_id_in,
+		.if_id_out = if_id_out,
 		.reqid = *reqid,
 	);
 
@@ -381,12 +396,14 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 
 METHOD(kernel_interface_t, release_reqid, status_t,
 	private_kernel_interface_t *this, uint32_t reqid,
-	mark_t mark_in, mark_t mark_out)
+	mark_t mark_in, mark_t mark_out, uint32_t if_id_in, uint32_t if_id_out)
 {
 	reqid_entry_t *entry, tmpl = {
 		.reqid = reqid,
 		.mark_in = mark_in,
 		.mark_out = mark_out,
+		.if_id_in = if_id_in,
+		.if_id_out = if_id_out,
 	};
 
 	this->mutex->lock(this->mutex);

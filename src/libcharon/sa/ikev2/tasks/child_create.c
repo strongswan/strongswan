@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Tobias Brunner
+ * Copyright (C) 2008-2019 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -169,19 +169,9 @@ struct private_child_create_t {
 	uint16_t other_cpi;
 
 	/**
-	 * reqid to use if we are rekeying
+	 * Data collected to create the CHILD_SA
 	 */
-	uint32_t reqid;
-
-	/**
-	 * Explicit inbound mark value
-	 */
-	u_int mark_in;
-
-	/**
-	 * Explicit outbound mark value
-	 */
-	u_int mark_out;
+	child_sa_create_t child;
 
 	/**
 	 * CHILD_SA which gets established
@@ -217,7 +207,10 @@ static void schedule_delayed_retry(private_child_create_t *this)
 	task = child_create_create(this->ike_sa,
 							   this->config->get_ref(this->config), FALSE,
 							   this->packet_tsi, this->packet_tsr);
-	task->use_reqid(task, this->reqid);
+	task->use_reqid(task, this->child.reqid);
+	task->use_marks(task, this->child.mark_in, this->child.mark_out);
+	task->use_if_ids(task, this->child.if_id_in, this->child.if_id_out);
+
 	DBG1(DBG_IKE, "creating CHILD_SA failed, trying again in %d seconds",
 		 retry);
 	this->ike_sa->queue_task_delayed(this->ike_sa, (task_t*)task, retry);
@@ -1107,16 +1100,18 @@ METHOD(task_t, build_i, status_t,
 												  this->dh_group == MODP_NONE);
 	this->mode = this->config->get_mode(this->config);
 
+	this->child.if_id_in_def = this->ike_sa->get_if_id(this->ike_sa, TRUE);
+	this->child.if_id_out_def = this->ike_sa->get_if_id(this->ike_sa, FALSE);
+	this->child.encap = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
-			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
-			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY),
-			this->mark_in, this->mark_out);
+									 this->ike_sa->get_other_host(this->ike_sa),
+									 this->config, &this->child);
 
-	if (this->reqid)
+	if (this->child.reqid)
 	{
 		DBG0(DBG_IKE, "establishing CHILD_SA %s{%d} reqid %d",
 			 this->child_sa->get_name(this->child_sa),
-			 this->child_sa->get_unique_id(this->child_sa), this->reqid);
+			 this->child_sa->get_unique_id(this->child_sa), this->child.reqid);
 	}
 	else
 	{
@@ -1392,10 +1387,12 @@ METHOD(task_t, build_r, status_t,
 	}
 	enumerator->destroy(enumerator);
 
+	this->child.if_id_in_def = this->ike_sa->get_if_id(this->ike_sa, TRUE);
+	this->child.if_id_out_def = this->ike_sa->get_if_id(this->ike_sa, FALSE);
+	this->child.encap = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
-			this->ike_sa->get_other_host(this->ike_sa), this->config, this->reqid,
-			this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY),
-			this->mark_in, this->mark_out);
+									 this->ike_sa->get_other_host(this->ike_sa),
+									 this->config, &this->child);
 
 	if (this->ipcomp_received != IPCOMP_NONE)
 	{
@@ -1660,14 +1657,21 @@ METHOD(task_t, process_i, status_t,
 METHOD(child_create_t, use_reqid, void,
 	private_child_create_t *this, uint32_t reqid)
 {
-	this->reqid = reqid;
+	this->child.reqid = reqid;
 }
 
 METHOD(child_create_t, use_marks, void,
-	private_child_create_t *this, u_int in, u_int out)
+	private_child_create_t *this, uint32_t in, uint32_t out)
 {
-	this->mark_in = in;
-	this->mark_out = out;
+	this->child.mark_in = in;
+	this->child.mark_out = out;
+}
+
+METHOD(child_create_t, use_if_ids, void,
+	private_child_create_t *this, uint32_t in, uint32_t out)
+{
+	this->child.if_id_in = in;
+	this->child.if_id_out = out;
 }
 
 METHOD(child_create_t, use_dh_group, void,
@@ -1745,10 +1749,8 @@ METHOD(task_t, migrate, void,
 	this->ipcomp = IPCOMP_NONE;
 	this->ipcomp_received = IPCOMP_NONE;
 	this->other_cpi = 0;
-	this->reqid = 0;
-	this->mark_in = 0;
-	this->mark_out = 0;
 	this->established = FALSE;
+	this->child = (child_sa_create_t){};
 }
 
 METHOD(task_t, destroy, void,
@@ -1797,6 +1799,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			.get_lower_nonce = _get_lower_nonce,
 			.use_reqid = _use_reqid,
 			.use_marks = _use_marks,
+			.use_if_ids = _use_if_ids,
 			.use_dh_group = _use_dh_group,
 			.task = {
 				.get_type = _get_type,

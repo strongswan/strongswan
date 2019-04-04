@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2018 Tobias Brunner
+ * Copyright (C) 2007-2019 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -154,6 +154,16 @@ struct private_peer_cfg_t {
 	 * remote authentication configs (constraints)
 	 */
 	linked_list_t *remote_auth;
+
+	/**
+	 * Optionl interface ID to use for inbound CHILD_SA
+	 */
+	uint32_t if_id_in;
+
+	/**
+	 * Optionl interface ID to use for outbound CHILD_SA
+	 */
+	uint32_t if_id_out;
 
 	/**
 	 * PPK ID
@@ -587,6 +597,12 @@ METHOD(peer_cfg_t, create_auth_cfg_enumerator, enumerator_t*,
 	return this->remote_auth->create_enumerator(this->remote_auth);
 }
 
+METHOD(peer_cfg_t, get_if_id, uint32_t,
+	private_peer_cfg_t *this, bool inbound)
+{
+	return inbound ? this->if_id_in : this->if_id_out;
+}
+
 METHOD(peer_cfg_t, get_ppk_id, identification_t*,
 	private_peer_cfg_t *this)
 {
@@ -715,6 +731,8 @@ METHOD(peer_cfg_t, equals, bool,
 		this->aggressive == other->aggressive &&
 		this->pull_mode == other->pull_mode &&
 		auth_cfg_equal(this, other) &&
+		this->if_id_in == other->if_id_in &&
+		this->if_id_out == other->if_id_out &&
 		this->ppk_required == other->ppk_required &&
 		id_equal(this->ppk_id, other->ppk_id)
 #ifdef ME
@@ -805,6 +823,7 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 			.create_pool_enumerator = _create_pool_enumerator,
 			.add_auth_cfg = _add_auth_cfg,
 			.create_auth_cfg_enumerator = _create_auth_cfg_enumerator,
+			.get_if_id = _get_if_id,
 			.get_ppk_id = _get_ppk_id,
 			.ppk_required = _ppk_required,
 			.equals = (void*)_equals,
@@ -832,6 +851,8 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 		.pull_mode = !data->push_mode,
 		.dpd = data->dpd,
 		.dpd_timeout = data->dpd_timeout,
+		.if_id_in = data->if_id_in,
+		.if_id_out = data->if_id_out,
 		.ppk_id = data->ppk_id,
 		.ppk_required = data->ppk_required,
 		.vips = linked_list_create(),

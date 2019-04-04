@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Tobias Brunner
+ * Copyright (C) 2008-2019 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -112,6 +112,16 @@ struct private_child_cfg_t {
 	 * Reqid to install CHILD_SA with
 	 */
 	uint32_t reqid;
+
+	/**
+	 * Optionl interface ID to use for inbound CHILD_SA
+	 */
+	uint32_t if_id_in;
+
+	/**
+	 * Optionl interface ID to use for outbound CHILD_SA
+	 */
+	uint32_t if_id_out;
 
 	/**
 	 * Optional mark to install inbound CHILD_SA with
@@ -551,6 +561,12 @@ METHOD(child_cfg_t, get_reqid, uint32_t,
 	return this->reqid;
 }
 
+METHOD(child_cfg_t, get_if_id, uint32_t,
+	private_child_cfg_t *this, bool inbound)
+{
+	return inbound ? this->if_id_in : this->if_id_out;
+}
+
 METHOD(child_cfg_t, get_mark, mark_t,
 	private_child_cfg_t *this, bool inbound)
 {
@@ -632,6 +648,8 @@ METHOD(child_cfg_t, equals, bool,
 		LIFETIME_EQUALS(this->lifetime, other->lifetime) &&
 		this->inactivity == other->inactivity &&
 		this->reqid == other->reqid &&
+		this->if_id_in == other->if_id_in &&
+		this->if_id_out == other->if_id_out &&
 		this->mark_in.value == other->mark_in.value &&
 		this->mark_in.mask == other->mark_in.mask &&
 		this->mark_out.value == other->mark_out.value &&
@@ -695,6 +713,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_dh_group = _get_dh_group,
 			.get_inactivity = _get_inactivity,
 			.get_reqid = _get_reqid,
+			.get_if_id = _get_if_id,
 			.get_mark = _get_mark,
 			.get_set_mark = _get_set_mark,
 			.get_tfc = _get_tfc,
@@ -713,6 +732,8 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 		.options = data->options,
 		.updown = strdupnull(data->updown),
 		.reqid = data->reqid,
+		.if_id_in = data->if_id_in,
+		.if_id_out = data->if_id_out,
 		.mode = data->mode,
 		.start_action = data->start_action,
 		.dpd_action = data->dpd_action,

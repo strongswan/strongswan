@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Tobias Brunner
+ * Copyright (C) 2008-2019 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -227,6 +227,14 @@ struct child_cfg_t {
 	uint32_t (*get_reqid)(child_cfg_t *this);
 
 	/**
+	 * Optional interface ID to set on policies/SAs.
+	 *
+	 * @param inbound		TRUE for inbound, FALSE for outbound
+	 * @return				interface ID
+	 */
+	uint32_t (*get_if_id)(child_cfg_t *this, bool inbound);
+
+	/**
 	 * Optional mark to set on policies/SAs.
 	 *
 	 * @param inbound		TRUE for inbound, FALSE for outbound
@@ -350,6 +358,10 @@ struct child_cfg_create_t {
 	child_cfg_option_t options;
 	/** Specific reqid to use for CHILD_SA, 0 for auto assignment */
 	uint32_t reqid;
+	/** Optional inbound interface ID */
+	uint32_t if_id_in;
+	/** Optional outbound interface ID */
+	uint32_t if_id_out;
 	/** Optional inbound mark */
 	mark_t mark_in;
 	/** Optional outbound mark */
