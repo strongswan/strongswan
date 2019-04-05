@@ -34,17 +34,17 @@ typedef struct private_wolfssl_hasher_t private_wolfssl_hasher_t;
 struct private_wolfssl_hasher_t {
 
 	/**
-	 * Public part of this class.
+	 * Public interface
 	 */
 	wolfssl_hasher_t public;
 
 	/**
-	 * the hasher to use
+	 * The hasher to use
 	 */
 	wc_HashAlg hasher;
 
 	/**
-	 * the hash algiorithm
+	 * The hash algorithm
 	 */
 	enum wc_HashType type;
 };
@@ -128,6 +128,5 @@ wolfssl_hasher_t *wolfssl_hasher_create(hash_algorithm_t algo)
 		destroy(this);
 		return NULL;
 	}
-
 	return &this->public;
 }

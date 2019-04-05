@@ -34,7 +34,7 @@
 #include <utils/debug.h>
 
 #include <wolfssl/wolfcrypt/ecc.h>
-
+#include <wolfssl/wolfcrypt/asn.h>
 
 typedef struct private_wolfssl_ec_private_key_t private_wolfssl_ec_private_key_t;
 
@@ -42,8 +42,9 @@ typedef struct private_wolfssl_ec_private_key_t private_wolfssl_ec_private_key_t
  * Private data of a wolfssl_ec_private_key_t object.
  */
 struct private_wolfssl_ec_private_key_t {
+
 	/**
-	 * Public interface for this signer.
+	 * Public interface
 	 */
 	wolfssl_ec_private_key_t public;
 
@@ -63,7 +64,7 @@ struct private_wolfssl_ec_private_key_t {
 	WC_RNG rng;
 
 	/**
-	 * reference count
+	 * Reference count
 	 */
 	refcount_t ref;
 };
@@ -97,7 +98,6 @@ static bool build_signature(private_wolfssl_ec_private_key_t *this,
 
 	mp_free(&s);
 	mp_free(&r);
-	
 	return success;
 }
 
@@ -105,16 +105,17 @@ static bool build_signature(private_wolfssl_ec_private_key_t *this,
  * Build a RFC 4754 signature for a specified curve and hash algorithm
  */
 static bool build_curve_signature(private_wolfssl_ec_private_key_t *this,
-		signature_scheme_t scheme, enum wc_HashType hash, ecc_curve_id curve_id,
-		chunk_t data, chunk_t *signature)
+								  signature_scheme_t scheme,
+								  enum wc_HashType hash, ecc_curve_id curve_id,
+								  chunk_t data, chunk_t *signature)
 {
-	bool success = FALSE;
 	chunk_t dgst = chunk_empty;
+	bool success = FALSE;
 
 	if (curve_id != this->ec.dp->id)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported by private key",
-			signature_scheme_names, scheme);
+			 signature_scheme_names, scheme);
 		return FALSE;
 	}
 	if (wolfssl_hash_chunk(hash, data, &dgst))
@@ -129,20 +130,19 @@ static bool build_curve_signature(private_wolfssl_ec_private_key_t *this,
  * Build a DER encoded signature as in RFC 3279
  */
 static bool build_der_signature(private_wolfssl_ec_private_key_t *this,
-		enum wc_HashType hash, chunk_t data, chunk_t *signature)
+								enum wc_HashType hash, chunk_t data,
+								chunk_t *signature)
 {
-	bool success = FALSE;
 	chunk_t dgst = chunk_empty;
-	int ret;
+	bool success = FALSE;
 	word32 len;
 
 	if (wolfssl_hash_chunk(hash, data, &dgst))
 	{
-		*signature = chunk_alloc(this->ec.dp->size * 2 + 10);
+		*signature = chunk_alloc(wc_ecc_sig_size(&this->ec));
 		len = signature->len;
-		ret = wc_ecc_sign_hash(dgst.ptr, dgst.len, signature->ptr, &len,
-							   &this->rng, &this->ec);
-		if (ret == 0)
+		if (wc_ecc_sign_hash(dgst.ptr, dgst.len, signature->ptr, &len,
+							   &this->rng, &this->ec) == 0)
 		{
 			signature->len = len;
 			success = TRUE;
@@ -152,7 +152,6 @@ static bool build_der_signature(private_wolfssl_ec_private_key_t *this,
 			chunk_free(signature);
 		}
 	}
-
 	chunk_free(&dgst);
 	return success;
 }
@@ -165,40 +164,40 @@ METHOD(private_key_t, sign, bool,
 	{
 		case SIGN_ECDSA_WITH_NULL:
 			return build_signature(this, data, signature);
-	#ifndef NO_SHA
+#ifndef NO_SHA
 		case SIGN_ECDSA_WITH_SHA1_DER:
 			return build_der_signature(this, WC_HASH_TYPE_SHA, data, signature);
-	#endif
-	#ifndef NO_SHA256
+#endif
+#ifndef NO_SHA256
 		case SIGN_ECDSA_WITH_SHA256_DER:
 			return build_der_signature(this, WC_HASH_TYPE_SHA256, data,
 									   signature);
-	#endif
-	#ifdef WOLFSSL_SHA384
+#endif
+#ifdef WOLFSSL_SHA384
 		case SIGN_ECDSA_WITH_SHA384_DER:
 			return build_der_signature(this, WC_HASH_TYPE_SHA384, data,
 									   signature);
-	#endif
-	#ifdef WOLFSSL_SHA512
+#endif
+#ifdef WOLFSSL_SHA512
 		case SIGN_ECDSA_WITH_SHA512_DER:
 			return build_der_signature(this, WC_HASH_TYPE_SHA512, data,
 									   signature);
-	#endif
-	#ifndef NO_SHA256
+#endif
+#ifndef NO_SHA256
 		case SIGN_ECDSA_256:
 			return build_curve_signature(this, scheme, WC_HASH_TYPE_SHA256,
 										 ECC_SECP256R1, data, signature);
-	#endif
-	#ifdef WOLFSSL_SHA384
+#endif
+#ifdef WOLFSSL_SHA384
 		case SIGN_ECDSA_384:
 			return build_curve_signature(this, scheme, WC_HASH_TYPE_SHA384,
 										 ECC_SECP384R1, data, signature);
-	#endif
-	#ifdef WOLFSSL_SHA512
+#endif
+#ifdef WOLFSSL_SHA512
 		case SIGN_ECDSA_521:
 			return build_curve_signature(this, scheme, WC_HASH_TYPE_SHA512,
 										 ECC_SECP521R1, data, signature);
-	#endif
+#endif
 		default:
 			DBG1(DBG_LIB, "signature scheme %N not supported",
 				 signature_scheme_names, scheme);
@@ -231,16 +230,18 @@ METHOD(private_key_t, get_public_key, public_key_t*,
 {
 	public_key_t *public;
 	chunk_t key;
-	int ret;
+	int len;
 
-	key = chunk_alloc((this->keysize + 7) / 8 * 5);
-	ret = wc_EccPublicKeyToDer(&this->ec, key.ptr, key.len, 1);
-	if (ret < 0)
+	/* space for algorithmIdentifier/bitString + one byte for the point type */
+	key = chunk_alloc(2 * this->ec.dp->size + 2 * MAX_SEQ_SZ + 2 * MAX_ALGO_SZ +
+					  TRAILING_ZERO + 1);
+	len = wc_EccPublicKeyToDer(&this->ec, key.ptr, key.len, 1);
+	if (len < 0)
 	{
 		chunk_free(&key);
 		return NULL;
 	}
-	key.len = ret;
+	key.len = len;
 
 	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ECDSA,
 								BUILD_BLOB_ASN1_DER, key, BUILD_END);
@@ -259,20 +260,23 @@ METHOD(private_key_t, get_encoding, bool,
 	private_wolfssl_ec_private_key_t *this, cred_encoding_type_t type,
 	chunk_t *encoding)
 {
+	bool success = TRUE;
+	int len;
+
 	switch (type)
 	{
 		case PRIVKEY_ASN1_DER:
 		case PRIVKEY_PEM:
-		{
-			bool success = TRUE;
-
-			*encoding = chunk_alloc(this->keysize * 4 + 30);
-			if (wc_EccPrivateKeyToDer(&this->ec, encoding->ptr,
-									  encoding->len) < 0)
+			/* include space for parameters, public key and contexts */
+			*encoding = chunk_alloc(3 * this->ec.dp->size + 4 * MAX_SEQ_SZ +
+									MAX_VERSION_SZ + MAX_ALGO_SZ);
+			len = wc_EccKeyToDer(&this->ec, encoding->ptr, encoding->len);
+			if (len < 0)
 			{
 				chunk_free(encoding);
 				return FALSE;
 			}
+			encoding->len = len;
 
 			if (type == PRIVKEY_PEM)
 			{
@@ -284,7 +288,6 @@ METHOD(private_key_t, get_encoding, bool,
 				chunk_clear(&asn1_encoding);
 			}
 			return success;
-		}
 		default:
 			return FALSE;
 	}
@@ -338,16 +341,15 @@ static private_wolfssl_ec_private_key_t *create_empty(void)
 
 	if (wc_InitRng(&this->rng) < 0)
 	{
-		DBG1(DBG_LIB, "Random number generation init failed");
+		DBG1(DBG_LIB, "RNG init failed");
 		free(this);
 		return NULL;
 	}
-
 	return this;
 }
 
 /*
- * See header.
+ * Described in header
  */
 wolfssl_ec_private_key_t *wolfssl_ec_private_key_gen(key_type_t type,
 													 va_list args)
@@ -375,6 +377,11 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_gen(key_type_t type,
 		return NULL;
 	}
 	this = create_empty();
+	if (!this)
+	{
+		return NULL;
+	}
+
 	this->keysize = key_size;
 	switch (key_size)
 	{
@@ -396,25 +403,23 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_gen(key_type_t type,
 	if (wc_ecc_make_key_ex(&this->rng, (key_size + 7) / 8, &this->ec,
 						   curve_id) < 0)
 	{
-		DBG1(DBG_LIB, "EC private key generation failed", key_size);
+		DBG1(DBG_LIB, "EC private key generation failed");
 		destroy(this);
 		return NULL;
 	}
 	return &this->public;
 }
 
-/**
- * See header.
+/*
+ * Described in header
  */
 wolfssl_ec_private_key_t *wolfssl_ec_private_key_load(key_type_t type,
 													  va_list args)
 {
 	private_wolfssl_ec_private_key_t *this;
-	chunk_t params = chunk_empty;
-	chunk_t key = chunk_empty;
-	chunk_t alg_id = chunk_empty;
+	chunk_t params = chunk_empty, key = chunk_empty;
 	word32 idx;
-	int oid;
+	int oid = OID_UNKNOWN;
 
 	while (TRUE)
 	{
@@ -433,12 +438,15 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_load(key_type_t type,
 		}
 		break;
 	}
-	if (key.ptr == NULL)
+	if (!key.ptr)
 	{
 		return NULL;
 	}
-
 	this = create_empty();
+	if (!this)
+	{
+		return NULL;
+	}
 
 	idx = 0;
 	if (wc_EccPrivateKeyDecode(key.ptr, &idx, &this->ec, key.len) < 0)
@@ -463,9 +471,7 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_load(key_type_t type,
 
 	if (params.ptr)
 	{
-		/* if ECParameters is passed, check we guessed correct */
-		alg_id = asn1_algorithmIdentifier_params(OID_EC_PUBLICKEY,
-												 chunk_clone(params));
+		/* if ECParameters is passed, ensure we guessed correctly */
 		if (asn1_unwrap(&params, &params) == ASN1_OID)
 		{
 			oid = asn1_known_oid(params);
@@ -494,7 +500,6 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_load(key_type_t type,
 					break;
 			}
 		}
-		chunk_free(&alg_id);
 		if (oid == OID_UNKNOWN)
 		{
 			DBG1(DBG_LIB, "parameters do not match private key data");
@@ -502,7 +507,7 @@ wolfssl_ec_private_key_t *wolfssl_ec_private_key_load(key_type_t type,
 			return NULL;
 		}
 	}
-
 	return &this->public;
 }
+
 #endif /* HAVE_ECC_SIGN */

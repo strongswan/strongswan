@@ -63,24 +63,9 @@ struct private_wolfssl_ec_diffie_hellman_t {
 	ecc_key key;
 
 	/**
-	 * Other public key
-	 */
-	ecc_point *pub_key;
-
-	/**
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
-
-	/**
-	 * Random number generator
-	 */
-	WC_RNG rng;
-
-	/**
-	 * True if shared secret is computed
-	 */
-	bool computed;
 };
 
 /**
@@ -90,9 +75,13 @@ struct private_wolfssl_ec_diffie_hellman_t {
 static bool chunk2ecp(chunk_t chunk, ecc_point *point)
 {
 	if (!wolfssl_mp_split(chunk, point->x, point->y))
+	{
 		return FALSE;
+	}
 	if (mp_set(point->z, 1) != 0)
+	{
 		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -113,23 +102,20 @@ static bool ecp2chunk(int keysize, ecc_point *point, chunk_t *chunk,
 	return wolfssl_mp_cat(keysize, point->x, y, chunk);
 }
 
-
 /**
  * Perform the elliptic curve scalar multiplication.
  */
 static bool wolfssl_ecc_multiply(const ecc_set_type *ecc_set, mp_int *scalar,
-								 ecc_point* point, ecc_point* r)
+								 ecc_point *point, ecc_point *r)
 {
-	int ret;
 	mp_int a, prime;
+	int ret;
 
-	ret = mp_init(&a);
-	if (ret != 0)
+	if (mp_init(&a) != 0)
 	{
 		return FALSE;
 	}
-	ret = mp_init(&prime);
-	if (ret != 0)
+	if (mp_init(&prime) != 0)
 	{
 		mp_free(&a);
 		return FALSE;
@@ -142,7 +128,7 @@ static bool wolfssl_ecc_multiply(const ecc_set_type *ecc_set, mp_int *scalar,
 	}
 	if (ret == 0)
 	{
-		/* Multiply the point by our secret */
+		/* multiply the point by our secret */
 		ret = wc_ecc_mulmod(scalar, point, r, &a, &prime, 1);
 	}
 
@@ -164,24 +150,24 @@ static bool wolfssl_ecc_multiply(const ecc_set_type *ecc_set, mp_int *scalar,
  *   Diffie-Hellman public value."
  */
 static bool compute_shared_key(private_wolfssl_ec_diffie_hellman_t *this,
-							   chunk_t *shared_secret)
+							   ecc_point *pub_key, chunk_t *shared_secret)
 {
-	bool success = FALSE;
 	ecc_point* secret;
 	bool x_coordinate_only;
+	bool success = FALSE;
 
 	if ((secret = wc_ecc_new_point()) == NULL)
 	{
 		return FALSE;
 	}
 
-	if (wolfssl_ecc_multiply(this->key.dp, &this->key.k, this->pub_key, secret))
+	if (wolfssl_ecc_multiply(this->key.dp, &this->key.k, pub_key, secret))
 	{
 		/*
-	 	* The default setting ecp_x_coordinate_only = TRUE
-	 	* applies the following errata for RFC 4753:
-	 	* http://www.rfc-editor.org/errata_search.php?eid=9
-	 	*/
+		 * The default setting ecp_x_coordinate_only = TRUE
+		 * applies the following errata for RFC 4753:
+		 * http://www.rfc-editor.org/errata_search.php?eid=9
+		 */
 		x_coordinate_only = lib->settings->get_bool(lib->settings,
 									 "%s.ecp_x_coordinate_only", TRUE, lib->ns);
 		success = ecp2chunk(this->keysize, secret, shared_secret,
@@ -195,26 +181,35 @@ static bool compute_shared_key(private_wolfssl_ec_diffie_hellman_t *this,
 METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_wolfssl_ec_diffie_hellman_t *this, chunk_t value)
 {
+	ecc_point *pub_key;
+
 	if (!diffie_hellman_verify_value(this->group, value))
 	{
 		return FALSE;
 	}
 
-	if (!chunk2ecp(value, this->pub_key))
+	if ((pub_key = wc_ecc_new_point()) == NULL)
+	{
+		return FALSE;
+	}
+
+	if (!chunk2ecp(value, pub_key))
 	{
 		DBG1(DBG_LIB, "ECDH public value is malformed");
+		wc_ecc_del_point(pub_key);
 		return FALSE;
 	}
 
 	chunk_clear(&this->shared_secret);
 
-	if (!compute_shared_key(this, &this->shared_secret))
+	if (!compute_shared_key(this, pub_key, &this->shared_secret))
 	{
 		DBG1(DBG_LIB, "ECDH shared secret computation failed");
+		chunk_clear(&this->shared_secret);
+		wc_ecc_del_point(pub_key);
 		return FALSE;
 	}
-
-	this->computed = TRUE;
+	wc_ecc_del_point(pub_key);
 	return TRUE;
 }
 
@@ -237,7 +232,7 @@ METHOD(diffie_hellman_t, set_private_value, bool,
 	}
 
 	ret = mp_read_unsigned_bin(&this->key.k, value.ptr, value.len);
-	/* Get base point */
+	/* get base point */
 	if (ret == 0)
 	{
 		ret = mp_read_radix(base->x, this->key.dp->Gx, MP_RADIX_HEX);
@@ -252,7 +247,7 @@ METHOD(diffie_hellman_t, set_private_value, bool,
 	}
 	if (ret == 0)
 	{
-		/* Calculate public key */
+		/* calculate public key */
 		success = wolfssl_ecc_multiply(this->key.dp, &this->key.k, base,
 									   &this->key.pubkey);
 	}
@@ -265,7 +260,7 @@ METHOD(diffie_hellman_t, set_private_value, bool,
 METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_wolfssl_ec_diffie_hellman_t *this, chunk_t *secret)
 {
-	if (!this->computed)
+	if (!this->shared_secret.len)
 	{
 		return FALSE;
 	}
@@ -282,19 +277,18 @@ METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
 METHOD(diffie_hellman_t, destroy, void,
 	private_wolfssl_ec_diffie_hellman_t *this)
 {
-	wc_FreeRng(&this->rng);
-	wc_ecc_del_point(this->pub_key);
 	wc_ecc_free(&this->key);
 	chunk_clear(&this->shared_secret);
 	free(this);
 }
 
 /*
- * Described in header.
+ * Described in header
  */
 wolfssl_ec_diffie_hellman_t *wolfssl_ec_diffie_hellman_create(diffie_hellman_group_t group)
 {
 	private_wolfssl_ec_diffie_hellman_t *this;
+	WC_RNG rng;
 
 	INIT(this,
 		.public = {
@@ -313,21 +307,6 @@ wolfssl_ec_diffie_hellman_t *wolfssl_ec_diffie_hellman_create(diffie_hellman_gro
 	if (wc_ecc_init(&this->key) != 0)
 	{
 		DBG1(DBG_LIB, "key init failed, ecdh create failed");
-		free(this);
-		return NULL;
-	}
-	if ((this->pub_key = wc_ecc_new_point()) == NULL)
-	{
-		wc_ecc_free(&this->key);
-		DBG1(DBG_LIB, "pub_key init failed, ecdh create failed");
-		free(this);
-		return NULL;
-	}
-	if (wc_InitRng(&this->rng) != 0)
-	{
-		wc_ecc_del_point(this->pub_key);
-		wc_ecc_free(&this->key);
-		DBG1(DBG_LIB, "RNG init failed, ecdh create failed");
 		free(this);
 		return NULL;
 	}
@@ -373,19 +352,26 @@ wolfssl_ec_diffie_hellman_t *wolfssl_ec_diffie_hellman_create(diffie_hellman_gro
 			break;
 #endif
 		default:
-			DBG1(DBG_LIB, "EC group not supported");
 			destroy(this);
 			return NULL;
 	}
 
-	/* generate an EC private (public) key */
-	if (wc_ecc_make_key_ex(&this->rng, this->keysize, &this->key,
-						   this->curve_id) != 0)
+	if (wc_InitRng(&rng) != 0)
 	{
-		DBG1(DBG_LIB, "Make key failed, wolfssl ECDH create failed");
+		DBG1(DBG_LIB, "RNG init failed, ecdh create failed");
 		destroy(this);
 		return NULL;
 	}
+
+	/* generate an EC private (public) key */
+	if (wc_ecc_make_key_ex(&rng, this->keysize, &this->key,
+						   this->curve_id) != 0)
+	{
+		DBG1(DBG_LIB, "make key failed, wolfssl ECDH create failed");
+		destroy(this);
+		return NULL;
+	}
+	wc_FreeRng(&rng);
 
 	return &this->public;
 }

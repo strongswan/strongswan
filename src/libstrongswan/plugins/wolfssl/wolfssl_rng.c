@@ -37,7 +37,7 @@ typedef struct private_wolfssl_rng_t private_wolfssl_rng_t;
 wolfSSL_Mutex globalRngMutex;
 #endif
 static WC_RNG globalRng;
-static int globalRngInit = 0;
+static bool globalRngInit;
 
 /**
  * Private data of wolfssl_rng_t
@@ -67,7 +67,7 @@ METHOD(rng_t, get_bytes, bool,
 		ret = wc_LockMutex(&globalRngMutex);
 		if (ret != 0)
 		{
-			DBG1(DBG_LIB, "Locking failed, get bytes failed");
+			DBG1(DBG_LIB, "locking failed, get bytes failed");
 			return FALSE;
 		}
 	}
@@ -107,7 +107,7 @@ METHOD(rng_t, destroy, void,
 }
 
 /*
- * Described in header.
+ * Described in header
  */
 wolfssl_rng_t *wolfssl_rng_create(rng_quality_t quality)
 {
@@ -129,7 +129,7 @@ wolfssl_rng_t *wolfssl_rng_create(rng_quality_t quality)
 		this->rng = malloc(sizeof(*this->rng));
 		if (wc_InitRng(this->rng) != 0)
 		{
-			DBG1(DBG_LIB, "Init RNG failed, rng create failed");
+			DBG1(DBG_LIB, "init RNG failed, rng create failed");
 			free(this->rng);
 			free(this);
 			return NULL;
@@ -139,7 +139,7 @@ wolfssl_rng_t *wolfssl_rng_create(rng_quality_t quality)
 }
 
 /*
- * Described in header.
+ * Described in header
  */
 int wolfssl_rng_global_init()
 {
@@ -150,25 +150,24 @@ int wolfssl_rng_global_init()
 		ret = wc_InitRng(&globalRng);
 		if (ret != 0)
 		{
-			DBG1(DBG_LIB, "Init RNG failed, rng global init failed");
+			DBG1(DBG_LIB, "init RNG failed, rng global init failed");
 		}
 #ifndef SINGLE_THREADED
 		else if ((ret = wc_InitMutex(&globalRngMutex)) != 0)
 		{
-			DBG1(DBG_LIB, "Init Mutex failed, rng global init failed");
+			DBG1(DBG_LIB, "init Mutex failed, rng global init failed");
 		}
 #endif
 		else
 		{
-			globalRngInit = 1;
+			globalRngInit = TRUE;
 		}
 	}
-
 	return ret == 0;
 }
 
 /*
- * Described in header.
+ * Described in header
  */
 void wolfssl_rng_global_final()
 {
@@ -178,7 +177,7 @@ void wolfssl_rng_global_final()
 		wc_FreeMutex(&globalRngMutex);
 #endif
 		wc_FreeRng(&globalRng);
-		globalRngInit = 0;
+		globalRngInit = FALSE;
 	}
 }
 

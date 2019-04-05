@@ -29,6 +29,7 @@
 #include <utils/debug.h>
 
 #include <wolfssl/wolfcrypt/ed25519.h>
+#include <wolfssl/wolfcrypt/asn.h>
 
 typedef struct private_private_key_t private_private_key_t;
 
@@ -48,16 +49,10 @@ struct private_private_key_t {
 	ed25519_key key;
 
 	/**
-	 * Key type
-	 */
-	key_type_t type;
-
-	/**
-	 * reference count
+	 * Reference count
 	 */
 	refcount_t ref;
 };
-
 
 /* from ed public key */
 bool wolfssl_ed_fingerprint(ed25519_key *key, cred_encoding_type_t type,
@@ -68,17 +63,17 @@ METHOD(private_key_t, sign, bool,
 	void *params, chunk_t data, chunk_t *signature)
 {
 	word32 len;
-	int ret;
 	byte dummy[1];
+	int ret;
 
-	if (this->type == KEY_ED25519 && scheme != SIGN_ED25519)
+	if (scheme != SIGN_ED25519)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported by %N key",
-			 signature_scheme_names, scheme, key_type_names, this->type);
+			 signature_scheme_names, scheme, key_type_names, KEY_ED25519);
 		return FALSE;
 	}
 
-	if (data.ptr == NULL && data.len == 0)
+	if (!data.ptr && !data.len)
 	{
 		data.ptr = dummy;
 	}
@@ -86,7 +81,7 @@ METHOD(private_key_t, sign, bool,
 	len = ED25519_SIG_SIZE;
 	*signature = chunk_alloc(len);
 	ret = wc_ed25519_sign_msg(data.ptr, data.len, signature->ptr, &len,
-							   &this->key);
+							  &this->key);
 	return ret == 0;
 }
 
@@ -107,7 +102,7 @@ METHOD(private_key_t, get_keysize, int,
 METHOD(private_key_t, get_type, key_type_t,
 	private_private_key_t *this)
 {
-	return this->type;
+	return KEY_ED25519;
 }
 
 METHOD(private_key_t, get_public_key, public_key_t*,
@@ -117,14 +112,12 @@ METHOD(private_key_t, get_public_key, public_key_t*,
 	chunk_t key;
 	word32 len = ED25519_PUB_KEY_SIZE;
 
-	/* Allocate on stack */
 	key = chunk_alloca(len);
 	if (wc_ed25519_export_public(&this->key, key.ptr, &len) != 0)
 	{
-		chunk_free(&key);
 		return NULL;
 	}
-	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, this->type,
+	public = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ED25519,
 								BUILD_EDDSA_PUB, key, BUILD_END);
 	return public;
 }
@@ -148,7 +141,9 @@ METHOD(private_key_t, get_encoding, bool,
 		{
 			bool success = TRUE;
 
-			*encoding = chunk_alloc(ED25519_PRV_KEY_SIZE + 20);
+			/* +4 is for the two octet strings */
+			*encoding = chunk_alloc(ED25519_PRV_KEY_SIZE + 2 * MAX_SEQ_SZ +
+									MAX_VERSION_SZ + MAX_ALGO_SZ + 4);
 			ret = wc_Ed25519PrivateKeyToDer(&this->key, encoding->ptr,
 											encoding->len);
 			if (ret < 0)
@@ -195,7 +190,7 @@ METHOD(private_key_t, destroy, void,
 /**
  * Internal generic constructor
  */
-static private_private_key_t *create_internal(key_type_t type)
+static private_private_key_t *create_internal()
 {
 	private_private_key_t *this;
 
@@ -214,7 +209,6 @@ static private_private_key_t *create_internal(key_type_t type)
 			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
-		.type = type,
 		.ref = 1,
 	);
 
@@ -235,12 +229,6 @@ private_key_t *wolfssl_ed_private_key_gen(key_type_t type, va_list args)
 	WC_RNG rng;
 	int ret;
 
-	if (wc_InitRng(&rng) != 0)
-	{
-		DBG1(DBG_LIB, "initializing random failed");
-		return NULL;
-	}
-
 	while (TRUE)
 	{
 		switch (va_arg(args, builder_part_t))
@@ -257,29 +245,50 @@ private_key_t *wolfssl_ed_private_key_gen(key_type_t type, va_list args)
 		break;
 	}
 
-	switch (type)
-	{
-		case KEY_ED25519:
-			break;
-		default:
-			return NULL;
-	}
-	this = create_internal(type);
-	if (this == NULL)
+	this = create_internal();
+	if (!this)
 	{
 		return NULL;
 	}
 
+	if (wc_InitRng(&rng) != 0)
+	{
+		DBG1(DBG_LIB, "initializing random failed");
+		destroy(this);
+		return NULL;
+	}
 	ret = wc_ed25519_make_key(&rng, ED25519_KEY_SIZE, &this->key);
 	wc_FreeRng(&rng);
+
 	if (ret < 0)
 	{
 		DBG1(DBG_LIB, "generating %N key failed", key_type_names, type);
 		destroy(this);
 		return NULL;
 	}
-
 	return &this->public;
+}
+
+/**
+ * Fix the internal state if only the private key is set
+ */
+static int set_public_key(private_private_key_t *this)
+{
+	int ret = 0;
+
+	if (!this->key.pubKeySet)
+	{
+		ret = wc_ed25519_make_public(&this->key, this->key.p,
+									 ED25519_PUB_KEY_SIZE);
+		if (ret == 0)
+		{
+			/* put public key after private key in the same buffer */
+			memmove(this->key.k + ED25519_KEY_SIZE, this->key.p,
+					ED25519_PUB_KEY_SIZE);
+			this->key.pubKeySet = 1;
+		}
+	}
+	return ret;
 }
 
 /*
@@ -309,40 +318,31 @@ private_key_t *wolfssl_ed_private_key_load(key_type_t type, va_list args)
 		}
 		break;
 	}
-	this = create_internal(type);
-	if (this == NULL)
+	this = create_internal();
+	if (!this)
 	{
 		return NULL;
 	}
 
 	if (priv.len)
 	{
-		/* Check for ASN.1 wrapped key (Octet String == 0x04) */
+		/* check for ASN.1 wrapped key (Octet String == 0x04) */
 		if (priv.len == ED25519_KEY_SIZE + 2 && priv.ptr[0] == 0x04 &&
 												priv.ptr[1] == ED25519_KEY_SIZE)
 		{
 			priv = chunk_skip(priv, 2);
 		}
 		ret = wc_ed25519_import_private_only(priv.ptr, priv.len, &this->key);
-		if (ret == 0)
-		{
-			ret = wc_ed25519_make_public(&this->key, this->key.p,
-										 ED25519_PUB_KEY_SIZE);
-		}
-		if (ret == 0)
-		{
-			/* Fix internal state now public key set */
-			memmove(this->key.k + ED25519_KEY_SIZE, this->key.p,
-					ED25519_PUB_KEY_SIZE);
-			this->key.pubKeySet = 1;
-		}
 	}
 	else if (blob.len)
 	{
 		idx = 0;
 		ret = wc_Ed25519PrivateKeyDecode(blob.ptr, &idx, &this->key, blob.len);
 	}
-
+	if (ret == 0)
+	{
+		ret = set_public_key(this);
+	}
 	if (ret != 0)
 	{
 		destroy(this);

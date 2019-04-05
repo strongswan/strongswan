@@ -28,20 +28,22 @@
 #include "wolfssl_rsa_public_key.h"
 #include "wolfssl_util.h"
 
-#include <crypto/hashers/hasher.h>
 #include <utils/debug.h>
+#include <crypto/hashers/hasher.h>
 #include <credentials/keys/signature_params.h>
 
 #include <wolfssl/wolfcrypt/rsa.h>
+#include <wolfssl/wolfcrypt/asn.h>
 
 typedef struct private_wolfssl_rsa_private_key_t private_wolfssl_rsa_private_key_t;
 
 /**
- * Private data of a wolfssl_rsa_private_key_t object.
+ * Private data of a wolfssl_rsa_private_key_t object
  */
 struct private_wolfssl_rsa_private_key_t {
+
 	/**
-	 * Public interface for this signer.
+	 * Public interface
 	 */
 	wolfssl_rsa_private_key_t public;
 
@@ -56,14 +58,14 @@ struct private_wolfssl_rsa_private_key_t {
 	WC_RNG rng;
 
 	/**
-	 * reference count
+	 * Reference count
 	 */
 	refcount_t ref;
 };
 
 /* implemented in rsa public key */
+bool wolfssl_rsa_encode_public(RsaKey *rsa, chunk_t *encoding);
 bool wolfssl_rsa_fingerprint(RsaKey *rsa, cred_encoding_type_t type, chunk_t *fp);
-
 
 /**
  * Build RSA signature
@@ -88,8 +90,8 @@ static bool build_emsa_pkcs1_signature(private_wolfssl_rsa_private_key_t *this,
 									   chunk_t *sig)
 {
 	bool success = FALSE;
-	chunk_t dgst, encDgst;
-	int ret;
+	chunk_t dgst, digestInfo;
+	int len;
 
 	*sig = chunk_alloc(wc_RsaEncryptSize(&this->rsa));
 
@@ -99,16 +101,15 @@ static bool build_emsa_pkcs1_signature(private_wolfssl_rsa_private_key_t *this,
 	}
 	else if (wolfssl_hash_chunk(hash, data, &dgst))
 	{
-		encDgst = chunk_alloc(dgst.len + 20);
-		ret = wc_EncodeSignature(encDgst.ptr, dgst.ptr, dgst.len,
+		digestInfo = chunk_alloc(MAX_DER_DIGEST_SZ);
+		len = wc_EncodeSignature(digestInfo.ptr, dgst.ptr, dgst.len,
 								 wc_HashGetOID(hash));
-		if (ret > 0)
+		if (len > 0)
 		{
-			encDgst.len = ret;
-			success = build_signature(this, hash, encDgst, sig);
+			digestInfo.len = len;
+			success = build_signature(this, hash, digestInfo, sig);
 		}
-
-		chunk_free(&encDgst);
+		chunk_free(&digestInfo);
 		chunk_free(&dgst);
 	}
 
@@ -130,8 +131,7 @@ static bool build_emsa_pss_signature(private_wolfssl_rsa_private_key_t *this,
 	bool success = FALSE;
 	chunk_t dgst = chunk_empty;
 	enum wc_HashType hash;
-	int mgf;
-	int ret;
+	int mgf, ret;
 
 	if (!wolfssl_hash2type(params->hash, &hash))
 	{
@@ -215,7 +215,7 @@ METHOD(private_key_t, sign, bool,
 			return build_emsa_pss_signature(this, params, data, signature);
 #endif
 		default:
-			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
+			DBG1(DBG_LIB, "signature scheme %N not supported via wolfssl",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -227,7 +227,6 @@ METHOD(private_key_t, decrypt, bool,
 {
 	int padding, mgf, len;
 	enum wc_HashType hash;
-	char *decrypted;
 
 	switch (scheme)
 	{
@@ -279,16 +278,16 @@ METHOD(private_key_t, decrypt, bool,
 			return FALSE;
 	}
 	len = wc_RsaEncryptSize(&this->rsa);
-	decrypted = malloc(len);
-	len = wc_RsaPrivateDecrypt_ex(crypto.ptr, crypto.len, decrypted, len,
+	*plain = chunk_alloc(len);
+	len = wc_RsaPrivateDecrypt_ex(crypto.ptr, crypto.len, plain->ptr, len,
 								  &this->rsa, padding, hash, mgf, NULL, 0);
 	if (len < 0)
 	{
 		DBG1(DBG_LIB, "RSA decryption failed");
-		free(decrypted);
+		chunk_free(plain);
 		return FALSE;
 	}
-	*plain = chunk_create(decrypted, len);
+	plain->len = len;
 	return TRUE;
 }
 
@@ -301,15 +300,16 @@ METHOD(private_key_t, get_keysize, int,
 METHOD(private_key_t, get_public_key, public_key_t*,
 	private_wolfssl_rsa_private_key_t *this)
 {
-	chunk_t enc;
 	public_key_t *key;
-	int len = wc_RsaEncryptSize(&this->rsa) * 2 + 20;
+	chunk_t enc;
 
-	enc = chunk_alloc(len);
-	enc.len = wc_RsaKeyToPublicDer(&this->rsa, enc.ptr, len);
+	if (!wolfssl_rsa_encode_public(&this->rsa, &enc))
+	{
+		return NULL;
+	}
 	key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 							 BUILD_BLOB_ASN1_DER, enc, BUILD_END);
-	free(enc.ptr);
+	chunk_free(&enc);
 	return key;
 }
 
@@ -330,8 +330,11 @@ METHOD(private_key_t, get_encoding, bool,
 		case PRIVKEY_PEM:
 		{
 			bool success = TRUE;
-			int len = wc_RsaEncryptSize(&this->rsa) * 5 + 20;
+			int len;
 
+			/* n and d are of keysize length, p and q plus the three CRT
+			 * params roughtly half that, the version and e are small */
+			len = wc_RsaEncryptSize(&this->rsa) * 5 + MAX_SEQ_SZ;
 			*encoding = chunk_alloc(len);
 			len = wc_RsaKeyToDer(&this->rsa, encoding->ptr, len);
 			if (len < 0)
@@ -405,13 +408,13 @@ static private_wolfssl_rsa_private_key_t *create_empty()
 
 	if (wc_InitRng(&this->rng) != 0)
 	{
-		DBG1(DBG_LIB, "Init RNG failed, rsa private key create failed\n");
+		DBG1(DBG_LIB, "init RNG failed, rsa private key create failed");
 		free(this);
 		return NULL;
 	}
 	if (wc_InitRsaKey(&this->rsa, NULL) != 0)
 	{
-		DBG1(DBG_LIB, "Init RSA failed, rsa private key create failed\n");
+		DBG1(DBG_LIB, "init RSA failed, rsa private key create failed");
 		wc_FreeRng(&this->rng);
 		free(this);
 		return NULL;
@@ -422,7 +425,7 @@ static private_wolfssl_rsa_private_key_t *create_empty()
 }
 
 /*
- * See header.
+ * Described in header
  */
 wolfssl_rsa_private_key_t *wolfssl_rsa_private_key_gen(key_type_t type,
 													   va_list args)
@@ -450,7 +453,7 @@ wolfssl_rsa_private_key_t *wolfssl_rsa_private_key_gen(key_type_t type,
 	}
 
 	this = create_empty();
-	if (this == NULL)
+	if (!this)
 	{
 		return NULL;
 	}
@@ -463,12 +466,14 @@ wolfssl_rsa_private_key_t *wolfssl_rsa_private_key_gen(key_type_t type,
 	return &this->public;
 }
 
-static bool wolfssl_mp_rand(mp_int* n, WC_RNG* rng, mp_int* r)
+/**
+ * Allocate a random number in the range [0, n-1]
+ */
+static bool wolfssl_mp_rand(mp_int *n, WC_RNG *rng, mp_int *r)
 {
-	int len;
-	int ret;
+	int len, ret;
 
-	/* Ensure the number has enough memory. */
+	/* ensure the number has enough memory. */
 	ret = mp_set_bit(r, mp_count_bits(n));
 	if (ret == 0)
 	{
@@ -479,7 +484,6 @@ static bool wolfssl_mp_rand(mp_int* n, WC_RNG* rng, mp_int* r)
 	{
 		ret = mp_mod(r, n, r);
 	}
-
 	return ret == 0;
 }
 
@@ -492,16 +496,15 @@ static bool calculate_pq(mp_int *n, mp_int *e, mp_int *d, mp_int *p, mp_int *q,
 {
 	int i, t, j;
 	bool success = FALSE;
-	mp_int* k = p;
-	mp_int* r = p;
-	mp_int* n1 = q;
-	mp_int* g = t2;
-	mp_int* y = t2;
-	mp_int* x = t1;
-
+	mp_int *k = p;
+	mp_int *r = p;
+	mp_int *n1 = q;
+	mp_int *g = t2;
+	mp_int *y = t2;
+	mp_int *x = t1;
 
 	/* k = (d * e) - 1 */
-	if (mp_mul(k, d, e) != 0)
+	if (mp_mul(d, e, k) != 0)
 	{
 		goto error;
 	}
@@ -515,7 +518,7 @@ static bool calculate_pq(mp_int *n, mp_int *e, mp_int *d, mp_int *p, mp_int *q,
 		goto error;
 	}
 	/* k = 2^t * r, where r is the largest odd integer dividing k, and t >= 1 */
-	if (mp_copy(r, k) != 0)
+	if (mp_copy(k, r) != 0)
 	{
 		goto error;
 	}
@@ -562,14 +565,14 @@ static bool calculate_pq(mp_int *n, mp_int *e, mp_int *d, mp_int *p, mp_int *q,
 				break;
 			}
 			/* y = x */
-			if (mp_copy(y, x) != 0)
+			if (mp_copy(x, y) != 0)
 			{
 				goto error;
 			}
 		}
 	}
 	goto error;
-	
+
 done:
 	/* p = gcd(y-1, n) */
 	if (mp_sub_d(y, 1, y) != 0)
@@ -587,7 +590,7 @@ done:
 	}
 
 	success = TRUE;
-	
+
 error:
 	return success;
 }
@@ -596,20 +599,12 @@ error:
  * Calculates dp = d (mod p-1) or dq = d (mod q-1) for the Chinese remainder
  * algorithm.
  */
-static int dmodpq1(mp_int *d, mp_int *pq, mp_int *res)
+static bool dmodpq1(mp_int *d, mp_int *pq, mp_int *res)
 {
-	/* p|q - 1 */
-	if (mp_sub_d(pq, 1, res) != 0)
-	{
-		return FALSE;
-	}
-	/* d (mod p|q -1) */
-	if (mp_mod(d, res, res) != 0)
-	{
-		return FALSE;
-	}
-
-	return TRUE;
+	/* p|q - 1
+	 * d (mod p|q -1) */
+	return mp_sub_d(pq, 1, res) == 0 &&
+		   mp_mod(d, res, res) == 0;
 }
 
 /**
@@ -622,7 +617,7 @@ static int qinv(mp_int *q, mp_int *p, mp_int *res)
 }
 
 /*
- * See header
+ * Described in header
  */
 wolfssl_rsa_private_key_t *wolfssl_rsa_private_key_load(key_type_t type,
 														va_list args)
@@ -673,7 +668,7 @@ wolfssl_rsa_private_key_t *wolfssl_rsa_private_key_load(key_type_t type,
 	}
 
 	this = create_empty();
-	if (this == NULL)
+	if (!this)
 	{
 		return NULL;
 	}
@@ -716,7 +711,6 @@ wolfssl_rsa_private_key_t *wolfssl_rsa_private_key_load(key_type_t type,
 							   &this->rsa.p, &this->rsa.q, &this->rsa.dP,
 							   &this->rsa.dQ, &this->rng))
 		{
-			DBG1(DBG_LIB, "calculate pq failed, rsa private key load failed\n");
 			goto error;
 		}
 		if (exp1.ptr)

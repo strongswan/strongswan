@@ -101,6 +101,7 @@ plugins = \
 	plugins/updown.opt \
 	plugins/vici.opt \
 	plugins/whitelist.opt \
+	plugins/wolfssl.opt \
 	plugins/xauth-eap.opt \
 	plugins/xauth-pam.opt
 

@@ -47,9 +47,10 @@ struct wolfssl_ec_diffie_hellman_t {
  * Creates a new wolfssl_ec_diffie_hellman_t object.
  *
  * @param group			EC Diffie Hellman group number to use
- * @return				wolfssl_ec_diffie_hellman_t object, NULL if not supported
+ * @return				wolfssl_ec_diffie_hellman_t object, NULL if not
+ *						supported
  */
-wolfssl_ec_diffie_hellman_t *wolfssl_ec_diffie_hellman_create(diffie_hellman_group_t group);
+wolfssl_ec_diffie_hellman_t *wolfssl_ec_diffie_hellman_create(
+												diffie_hellman_group_t group);
 
 #endif /** WOLFSSL_EC_DIFFIE_HELLMAN_H_ @}*/
-

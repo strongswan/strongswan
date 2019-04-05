@@ -31,7 +31,7 @@
 
 #include <wolfssl/wolfcrypt/ecc.h>
 #include <wolfssl/wolfcrypt/hash.h>
-
+#include <wolfssl/wolfcrypt/asn.h>
 
 typedef struct private_wolfssl_ec_public_key_t private_wolfssl_ec_public_key_t;
 
@@ -39,8 +39,9 @@ typedef struct private_wolfssl_ec_public_key_t private_wolfssl_ec_public_key_t;
  * Private data structure with signing context.
  */
 struct private_wolfssl_ec_public_key_t {
+
 	/**
-	 * Public interface for this signer.
+	 * Public interface
 	 */
 	wolfssl_ec_public_key_t public;
 
@@ -55,7 +56,7 @@ struct private_wolfssl_ec_public_key_t {
 	ecc_key ec;
 
 	/**
-	 * reference counter
+	 * Reference count
 	 */
 	refcount_t ref;
 };
@@ -66,8 +67,7 @@ struct private_wolfssl_ec_public_key_t {
 static bool verify_signature(private_wolfssl_ec_public_key_t *this,
 							 chunk_t hash, chunk_t signature)
 {
-	int stat = 1;
-	int ret = -1;
+	int stat = 1, ret = -1;
 	mp_int r, s;
 
 	if (mp_init(&r) < 0)
@@ -85,10 +85,8 @@ static bool verify_signature(private_wolfssl_ec_public_key_t *this,
 		ret = wc_ecc_verify_hash_ex(&r, &s, hash.ptr, hash.len, &stat,
 									&this->ec);
 	}
-
 	mp_free(&s);
 	mp_free(&r);
-
 	return ret == 0 && stat == 1;
 }
 
@@ -96,8 +94,9 @@ static bool verify_signature(private_wolfssl_ec_public_key_t *this,
  * Verify a RFC 4754 signature for a specified curve and hash algorithm
  */
 static bool verify_curve_signature(private_wolfssl_ec_public_key_t *this,
-		signature_scheme_t scheme, enum wc_HashType hash, ecc_curve_id curve_id,
-		chunk_t data, chunk_t signature)
+								   signature_scheme_t scheme,
+								   enum wc_HashType hash, ecc_curve_id curve_id,
+								   chunk_t data, chunk_t signature)
 {
 	bool success = FALSE;
 	chunk_t dgst;
@@ -122,30 +121,20 @@ static bool verify_curve_signature(private_wolfssl_ec_public_key_t *this,
  * Verification of a DER encoded signature as in RFC 3279
  */
 static bool verify_der_signature(private_wolfssl_ec_public_key_t *this,
-		enum wc_HashType hash, chunk_t data, chunk_t signature)
+								 enum wc_HashType hash, chunk_t data,
+								 chunk_t signature)
 {
-	bool success = FALSE;
 	chunk_t dgst;
-	int stat = 1;
-	int ret;
+	int stat = 1, ret = -1;
 
-	/* remove any preceding 0-bytes from signature */
-	while (signature.len && signature.ptr[0] == 0x00)
-	{
-		signature = chunk_skip(signature, 1);
-	}
+	signature = chunk_skip_zero(signature);
 	if (wolfssl_hash_chunk(hash, data, &dgst))
 	{
 		ret = wc_ecc_verify_hash(signature.ptr, signature.len, dgst.ptr,
 								 dgst.len, &stat, &this->ec);
-		if (ret == 0 && stat == 1)
-		{
-			success = TRUE;
-		}
 	}
-
 	chunk_free(&dgst);
-	return success;
+	return ret == 0 && stat == 1;
 }
 
 METHOD(public_key_t, get_type, key_type_t,
@@ -160,45 +149,45 @@ METHOD(public_key_t, verify, bool,
 {
 	switch (scheme)
 	{
-	#ifndef NO_SHA
+#ifndef NO_SHA
 		case SIGN_ECDSA_WITH_SHA1_DER:
 			return verify_der_signature(this, WC_HASH_TYPE_SHA, data,
 										signature);
-	#endif
-	#ifndef NO_SHA256
+#endif
+#ifndef NO_SHA256
 		case SIGN_ECDSA_WITH_SHA256_DER:
 			return verify_der_signature(this, WC_HASH_TYPE_SHA256, data,
 										signature);
-	#endif
-	#ifdef WOLFSSL_SHA384
+#endif
+#ifdef WOLFSSL_SHA384
 		case SIGN_ECDSA_WITH_SHA384_DER:
 			return verify_der_signature(this, WC_HASH_TYPE_SHA384, data,
 										signature);
-	#endif
-	#ifdef WOLFSSL_SHA512
+#endif
+#ifdef WOLFSSL_SHA512
 		case SIGN_ECDSA_WITH_SHA512_DER:
 			return verify_der_signature(this, WC_HASH_TYPE_SHA512, data,
 										signature);
-	#endif
+#endif
 		case SIGN_ECDSA_WITH_NULL:
 			return verify_signature(this, data, signature);
-	#ifndef NO_SHA256
+#ifndef NO_SHA256
 		case SIGN_ECDSA_256:
 			return verify_curve_signature(this, scheme, WC_HASH_TYPE_SHA256,
 										  ECC_SECP256R1, data, signature);
-	#endif
-	#ifdef WOLFSSL_SHA384
+#endif
+#ifdef WOLFSSL_SHA384
 		case SIGN_ECDSA_384:
 			return verify_curve_signature(this, scheme, WC_HASH_TYPE_SHA384,
 										  ECC_SECP384R1, data, signature);
-	#endif
-	#ifdef WOLFSSL_SHA512
+#endif
+#ifdef WOLFSSL_SHA512
 		case SIGN_ECDSA_521:
 			return verify_curve_signature(this, scheme, WC_HASH_TYPE_SHA512,
 										  ECC_SECP521R1, data, signature);
-	#endif
+#endif
 		default:
-			DBG1(DBG_LIB, "signature scheme %N not supported in EC",
+			DBG1(DBG_LIB, "signature scheme %N not supported via wolfssl",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -219,51 +208,51 @@ METHOD(public_key_t, get_keysize, int,
 }
 
 /**
- * Calculate fingerprint from a EC_KEY, also used in ec private key.
+ * Calculate fingerprint from an EC key, also used in ec private key.
  */
 bool wolfssl_ec_fingerprint(ecc_key *ec, cred_encoding_type_t type, chunk_t *fp)
 {
 	hasher_t *hasher;
 	chunk_t key;
-	int ret;
-	bool success;
+	int len;
 
 	if (lib->encoding->get_cache(lib->encoding, type, ec, fp))
 	{
 		return TRUE;
 	}
 
-	key = chunk_alloc(ec->dp->size * 4 + 30);
-	ret = wc_EccPublicKeyToDer(ec, key.ptr, key.len, 1);
-	if (ret < 0)
-	{
-		free(key.ptr);
-		return FALSE;
-	}
-	key.len = ret;
-
 	switch (type)
 	{
 		case KEYID_PUBKEY_SHA1:
+		case KEYID_PUBKEY_INFO_SHA1:
+			/* need an additional byte for the point type */
+			len = ec->dp->size * 2 + 1;
+			if (type == KEYID_PUBKEY_INFO_SHA1)
+			{
+				/* additional space for algorithmIdentifier/bitString */
+				len += 2 * MAX_SEQ_SZ + 2 * MAX_ALGO_SZ + TRAILING_ZERO;
+			}
+			key = chunk_alloca(len);
+			len = wc_EccPublicKeyToDer(ec, key.ptr, key.len,
+									   type == KEYID_PUBKEY_INFO_SHA1);
 			break;
 		default:
-			success = lib->encoding->encode(lib->encoding, type, ec, fp,
-											CRED_PART_ECDSA_PUB_ASN1_DER, key,
-											CRED_PART_END);
-			chunk_free(&key);
-			return success;
+			return FALSE;
 	}
+	if (len < 0)
+	{
+		return FALSE;
+	}
+	key.len = len;
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher || !hasher->allocate_hash(hasher, key, fp))
 	{
-		DBG1(DBG_LIB, "SHA1 hash algorithm not supported, fingerprinting failed");
+		DBG1(DBG_LIB, "SHA1 not supported, fingerprinting failed");
 		DESTROY_IF(hasher);
-		free(key.ptr);
 		return FALSE;
 	}
 	hasher->destroy(hasher);
-	free(key.ptr);
 	lib->encoding->cache(lib->encoding, type, ec, *fp);
 	return TRUE;
 }
@@ -280,18 +269,20 @@ METHOD(public_key_t, get_encoding, bool,
 	chunk_t *encoding)
 {
 	bool success = TRUE;
-	int ret;
+	int len;
 
-	*encoding = chunk_alloc(this->ec.dp->size * 2 + 30);
-	ret = wc_EccPublicKeyToDer(&this->ec, encoding->ptr, encoding->len, 1);
-	if (ret < 0)
+	/* space for algorithmIdentifier/bitString + one byte for the point type */
+	*encoding = chunk_alloc(2 * this->ec.dp->size + 2 * MAX_SEQ_SZ +
+							2 * MAX_ALGO_SZ + TRAILING_ZERO + 1);
+	len = wc_EccPublicKeyToDer(&this->ec, encoding->ptr, encoding->len, 1);
+	if (len < 0)
 	{
 		chunk_free(encoding);
 		return FALSE;
 	}
-	encoding->len = ret;
+	encoding->len = len;
 
-	if (type != PUBKEY_ASN1_DER)
+	if (type != PUBKEY_SPKI_ASN1_DER)
 	{
 		chunk_t asn1_encoding = *encoding;
 
@@ -351,12 +342,11 @@ static private_wolfssl_ec_public_key_t *create_empty()
 		free(this);
 		return NULL;
 	}
-
 	return this;
 }
 
-/**
- * See header.
+/*
+ * Described in header
  */
 wolfssl_ec_public_key_t *wolfssl_ec_public_key_load(key_type_t type,
 													va_list args)
@@ -365,11 +355,6 @@ wolfssl_ec_public_key_t *wolfssl_ec_public_key_load(key_type_t type,
 	chunk_t blob = chunk_empty;
 	word32 idx;
 	int ret;
-
-	if (type != KEY_ECDSA)
-	{
-		return NULL;
-	}
 
 	while (TRUE)
 	{
@@ -386,6 +371,11 @@ wolfssl_ec_public_key_t *wolfssl_ec_public_key_load(key_type_t type,
 		break;
 	}
 	this = create_empty();
+	if (!this)
+	{
+		return NULL;
+	}
+
 	idx = 0;
 	ret = wc_EccPublicKeyDecode(blob.ptr, &idx, &this->ec, blob.len);
 	if (ret < 0)
@@ -409,5 +399,5 @@ wolfssl_ec_public_key_t *wolfssl_ec_public_key_load(key_type_t type,
 	}
 	return &this->public;
 }
-#endif /* HAVE_ECC_VERIFY */
 
+#endif /* HAVE_ECC_VERIFY */

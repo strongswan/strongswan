@@ -45,20 +45,18 @@
 #define FIPS_MODE 0
 #endif
 
-
 typedef struct private_wolfssl_plugin_t private_wolfssl_plugin_t;
 
 /**
- * private data of wolfssl_plugin
+ * Private data of wolfssl_plugin
  */
 struct private_wolfssl_plugin_t {
 
 	/**
-	 * public functions
+	 * Public interface
 	 */
 	wolfssl_plugin_t public;
 };
-
 
 METHOD(plugin_t, get_name, char*,
 	private_wolfssl_plugin_t *this)
@@ -424,30 +422,29 @@ METHOD(plugin_t, destroy, void,
 }
 
 /*
- * see header file
+ * Described in header
  */
 plugin_t *wolfssl_plugin_create()
 {
 	private_wolfssl_plugin_t *this;
-	int fips_mode;
+	bool fips_mode;
 
-	fips_mode = lib->settings->get_int(lib->settings,
-							"%s.plugins.wolfssl.fips_mode", FIPS_MODE, lib->ns);
+	fips_mode = lib->settings->get_bool(lib->settings,
+								"%s.plugins.wolfssl.fips_mode", FALSE, lib->ns);
 #ifdef HAVE_FIPS
 	if (fips_mode)
 	{
-		int ret = wolfCrypt_GetStatus_fips(); 
+		int ret = wolfCrypt_GetStatus_fips();
 		if (ret != 0)
 		{
-			DBG1(DBG_LIB, "wolfssl FIPS mode(%d) unavailable (%d)", fips_mode,
-				 ret);
+			DBG1(DBG_LIB, "wolfssl FIPS mode unavailable (%d)", ret);
 			return NULL;
 		}
 	}
 #else
 	if (fips_mode)
 	{
-		DBG1(DBG_LIB, "wolfssl FIPS mode(%d) unavailable", fips_mode);
+		DBG1(DBG_LIB, "wolfssl FIPS mode unavailable");
 		return NULL;
 	}
 #endif

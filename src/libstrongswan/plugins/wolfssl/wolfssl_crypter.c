@@ -46,8 +46,7 @@ struct private_wolfssl_crypter_t {
 	/**
 	 * wolfSSL cipher
 	 */
-	union
-	{
+	union {
 #if !defined(NO_AES) && (!defined(NO_AES_CBC) || defined(WOLFSSL_AES_COUNTER))
 		Aes aes;
 #endif
@@ -65,7 +64,7 @@ struct private_wolfssl_crypter_t {
 	 */
 	encryption_algorithm_t alg;
 
-	/** 
+	/**
 	 * Private key
 	 */
 	chunk_t key;
@@ -73,17 +72,7 @@ struct private_wolfssl_crypter_t {
 	/**
 	 * Salt value
 	 */
-	char salt[CTR_SALT_LEN];
-
-	/**
-	 * Length of the salt
-	 */
-	size_t salt_len;
-
-	/**
-	 * Size of key
-	 */
-	size_t key_size;
+	chunk_t salt;
 
 	/**
 	 * Size of block
@@ -114,10 +103,10 @@ METHOD(crypter_t, decrypt, bool,
 		out = dst->ptr;
 	}
 
-	if (this->salt_len > 0)
+	if (this->salt.len > 0)
 	{
-		memcpy(nonce, this->salt, this->salt_len);
-		memcpy(nonce + this->salt_len, iv.ptr, this->iv_size);
+		memcpy(nonce, this->salt.ptr, this->salt.len);
+		memcpy(nonce + this->salt.len, iv.ptr, this->iv_size);
 		nonce[AES_BLOCK_SIZE - 1] = 1;
 	}
 
@@ -212,6 +201,7 @@ METHOD(crypter_t, decrypt, bool,
 			break;
 	}
 
+	memwipe(nonce, sizeof(nonce));
 	return success;
 }
 
@@ -233,10 +223,10 @@ METHOD(crypter_t, encrypt, bool,
 		out = dst->ptr;
 	}
 
-	if (this->salt_len > 0)
+	if (this->salt.len > 0)
 	{
-		memcpy(nonce, this->salt, this->salt_len);
-		memcpy(nonce + this->salt_len, iv.ptr, this->iv_size);
+		memcpy(nonce, this->salt.ptr, this->salt.len);
+		memcpy(nonce + this->salt.len, iv.ptr, this->iv_size);
 		nonce[AES_BLOCK_SIZE - 1] = 1;
 	}
 
@@ -348,7 +338,7 @@ METHOD(crypter_t, get_iv_size, size_t,
 METHOD(crypter_t, get_key_size, size_t,
 	private_wolfssl_crypter_t *this)
 {
-	return this->key.len + this->salt_len;
+	return this->key.len + this->salt.len;
 }
 
 METHOD(crypter_t, set_key, bool,
@@ -358,7 +348,7 @@ METHOD(crypter_t, set_key, bool,
 	{
 		return FALSE;
 	}
-	memcpy(this->salt, key.ptr + key.len - this->salt_len, this->salt_len);
+	memcpy(this->salt.ptr, key.ptr + key.len - this->salt.len, this->salt.len);
 	memcpy(this->key.ptr, key.ptr, this->key.len);
 	return TRUE;
 }
@@ -367,6 +357,7 @@ METHOD(crypter_t, destroy, void,
 	private_wolfssl_crypter_t *this)
 {
 	chunk_clear(&this->key);
+	chunk_clear(&this->salt);
 	switch (this->alg)
 	{
 #if !defined(NO_AES) && !defined(NO_AES_CBC)
@@ -379,18 +370,9 @@ METHOD(crypter_t, destroy, void,
 			wc_AesFree(&this->cipher.aes);
 			break;
 #endif
-#ifdef HAVE_CAMELLIA
-		case ENCR_CAMELLIA_CBC:
-			break;
-#endif
 #ifndef NO_DES3
 		case ENCR_3DES:
 			wc_Des3Free(&this->cipher.des3);
-			break;
-		case ENCR_DES:
-	#ifdef WOLFSSL_DES_ECB
-		case ENCR_DES_ECB:
-	#endif
 			break;
 #endif
 		default:
@@ -424,6 +406,7 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 			{
 				case 0:
 					key_size = 16;
+					/* fall-through */
 				case 16:
 				case 24:
 				case 32:
@@ -441,6 +424,7 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 			{
 				case 0:
 					key_size = 16;
+					/* fall-through */
 				case 16:
 				case 24:
 				case 32:
@@ -459,6 +443,7 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 			{
 				case 0:
 					key_size = 16;
+					/* fall-through */
 				case 16:
 				case 24:
 				case 32:
@@ -480,24 +465,16 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 			iv_size = DES_BLOCK_SIZE;
 			break;
 		case ENCR_DES:
-			if (key_size != 8)
-			{
-				return NULL;
-			}
-			block_size = DES_BLOCK_SIZE;
-			iv_size = DES_BLOCK_SIZE;
-			break;
 	#ifdef WOLFSSL_DES_ECB
 		case ENCR_DES_ECB:
+	#endif
 			if (key_size != 8)
 			{
 				return NULL;
 			}
-			key_size = DES_BLOCK_SIZE;
 			block_size = DES_BLOCK_SIZE;
 			iv_size = DES_BLOCK_SIZE;
 			break;
-	#endif
 #endif
 		default:
 			return NULL;
@@ -516,10 +493,8 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 			},
 		},
 		.alg = algo,
-		.key_size = key_size,
 		.block_size = block_size,
 		.iv_size = iv_size,
-		.salt_len = salt_len,
 	);
 
 	switch (algo)
@@ -534,18 +509,9 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 			ret = wc_AesInit(&this->cipher.aes, NULL, INVALID_DEVID);
 			break;
 #endif
-#ifdef HAVE_CAMELLIA
-		case ENCR_CAMELLIA_CBC:
-			break;
-#endif
 #ifndef NO_DES3
 		case ENCR_3DES:
 			ret = wc_Des3Init(&this->cipher.des3, NULL, INVALID_DEVID);
-			break;
-		case ENCR_DES:
-	#ifdef WOLFSSL_DES_ECB
-		case ENCR_DES_ECB:
-	#endif
 			break;
 #endif
 		default:
@@ -558,7 +524,7 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 	}
 
 	this->key = chunk_alloc(key_size);
+	this->salt = chunk_alloc(salt_len);
 
 	return &this->public;
 }
-

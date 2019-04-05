@@ -33,7 +33,7 @@ typedef struct wolfssl_crypter_t wolfssl_crypter_t;
 #include <crypto/crypters/crypter.h>
 
 /**
- * Implementation of crypters using wolfssl.
+ * Implementation of crypters using wolfSSL.
  */
 struct wolfssl_crypter_t {
 
@@ -51,6 +51,6 @@ struct wolfssl_crypter_t {
  * @return				wolfssl_crypter_t, NULL if not supported
  */
 wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
-										size_t key_size);
+										  size_t key_size);
 
 #endif /** WOLFSSL_CRYPTER_H_ @}*/

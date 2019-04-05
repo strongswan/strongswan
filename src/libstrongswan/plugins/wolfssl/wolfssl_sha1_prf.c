@@ -37,7 +37,7 @@ typedef struct private_wolfssl_sha1_prf_t private_wolfssl_sha1_prf_t;
 struct private_wolfssl_sha1_prf_t {
 
 	/**
-	 * Public wolfssl_sha1_prf_t interface.
+	 * Public wolfssl_sha1_prf_t interface
 	 */
 	wolfssl_sha1_prf_t public;
 
@@ -65,7 +65,6 @@ METHOD(prf_t, get_bytes, bool,
 		hash[3] = htonl(this->sha1.digest[3]);
 		hash[4] = htonl(this->sha1.digest[4]);
 	}
-
 	return TRUE;
 }
 
@@ -134,17 +133,12 @@ METHOD(prf_t, destroy, void,
 	free(this);
 }
 
-/**
- * See header
+/*
+ * Described in header
  */
 wolfssl_sha1_prf_t *wolfssl_sha1_prf_create(pseudo_random_function_t algo)
 {
 	private_wolfssl_sha1_prf_t *this;
-
-	if (algo != PRF_KEYED_SHA1)
-	{
-		return NULL;
-	}
 
 	INIT(this,
 		.public = {
@@ -164,7 +158,6 @@ wolfssl_sha1_prf_t *wolfssl_sha1_prf_create(pseudo_random_function_t algo)
 		free(this);
 		return NULL;
 	}
-
 	return &this->public;
 }
 

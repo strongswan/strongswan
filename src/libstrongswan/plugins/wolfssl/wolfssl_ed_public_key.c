@@ -27,8 +27,10 @@
 #include "wolfssl_ed_public_key.h"
 
 #include <utils/debug.h>
+#include <asn1/asn1.h>
 
 #include <wolfssl/wolfcrypt/ed25519.h>
+#include <wolfssl/wolfcrypt/asn.h>
 
 typedef struct private_public_key_t private_public_key_t;
 
@@ -48,39 +50,32 @@ struct private_public_key_t {
 	ed25519_key key;
 
 	/**
-	 * Key type
-	 */
-	key_type_t type;
-
-	/**
-	 * Reference counter
+	 * Reference count
 	 */
 	refcount_t ref;
 };
 
-
 METHOD(public_key_t, get_type, key_type_t,
 	private_public_key_t *this)
 {
-	return this->type;
+	return KEY_ED25519;
 }
 
 METHOD(public_key_t, verify, bool,
 	private_public_key_t *this, signature_scheme_t scheme,
 	void *params, chunk_t data, chunk_t signature)
 {
-	int ret;
-	int res;
 	byte dummy[1];
+	int ret, res;
 
-	if (this->type == KEY_ED25519 && scheme != SIGN_ED25519)
+	if (scheme != SIGN_ED25519)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported by %N key",
-			 signature_scheme_names, scheme, key_type_names, this->type);
+			 signature_scheme_names, scheme, key_type_names, KEY_ED25519);
 		return FALSE;
 	}
 
-	if (data.ptr == NULL && data.len == 0)
+	if (!data.ptr && !data.len)
 	{
 		data.ptr = dummy;
 	}
@@ -106,6 +101,25 @@ METHOD(public_key_t, get_keysize, int,
 }
 
 /**
+ * Encode the given public key as ASN.1 DER with algorithm identifier
+ */
+static bool encode_pubkey(ed25519_key *key, chunk_t *encoding)
+{
+	int ret;
+
+	/* account for algorithmIdentifier/bitString */
+	*encoding = chunk_alloc(ED25519_PUB_KEY_SIZE + 2 * MAX_SEQ_SZ +
+							MAX_ALGO_SZ + TRAILING_ZERO);
+	ret = wc_Ed25519PublicKeyToDer(key, encoding->ptr, encoding->len, 1);
+	if (ret < 0)
+	{
+		return FALSE;
+	}
+	encoding->len = ret;
+	return TRUE;
+}
+
+/**
  * Calculate fingerprint from an EdDSA key, also used in ed private key.
  */
 bool wolfssl_ed_fingerprint(ed25519_key *key, cred_encoding_type_t type,
@@ -114,7 +128,7 @@ bool wolfssl_ed_fingerprint(ed25519_key *key, cred_encoding_type_t type,
 	hasher_t *hasher;
 	chunk_t blob;
 	word32 len;
-	int ret;
+	bool success = FALSE;
 
 	if (lib->encoding->get_cache(lib->encoding, type, key, fp))
 	{
@@ -124,21 +138,17 @@ bool wolfssl_ed_fingerprint(ed25519_key *key, cred_encoding_type_t type,
 	{
 		case KEYID_PUBKEY_SHA1:
 			len = ED25519_PUB_KEY_SIZE;
-			blob = chunk_alloca(len);
+			blob = chunk_alloc(len);
 			if (wc_ed25519_export_public(key, blob.ptr, &len) != 0)
 			{
 				return FALSE;
 			}
 			break;
 		case KEYID_PUBKEY_INFO_SHA1:
-			len = ED25519_PUB_KEY_SIZE + 40;
-			blob = chunk_alloca(len);
-			ret = wc_Ed25519PublicKeyToDer(key, blob.ptr, blob.len, 1);
-			if (ret < 0)
+			if (!encode_pubkey(key, &blob))
 			{
 				return FALSE;
 			}
-			blob.len = ret;
 			break;
 		default:
 			return FALSE;
@@ -147,12 +157,15 @@ bool wolfssl_ed_fingerprint(ed25519_key *key, cred_encoding_type_t type,
 	if (!hasher || !hasher->allocate_hash(hasher, blob, fp))
 	{
 		DBG1(DBG_LIB, "SHA1 not supported, fingerprinting failed");
-		DESTROY_IF(hasher);
-		return FALSE;
 	}
-	hasher->destroy(hasher);
-	lib->encoding->cache(lib->encoding, type, key, *fp);
-	return TRUE;
+	else
+	{
+		lib->encoding->cache(lib->encoding, type, key, *fp);
+		success = TRUE;
+	}
+	DESTROY_IF(hasher);
+	chunk_free(&blob);
+	return success;
 }
 
 METHOD(public_key_t, get_fingerprint, bool,
@@ -165,15 +178,11 @@ METHOD(public_key_t, get_encoding, bool,
 	private_public_key_t *this, cred_encoding_type_t type, chunk_t *encoding)
 {
 	bool success = TRUE;
-	int ret;
 
-	*encoding = chunk_alloc(ED25519_PUB_KEY_SIZE + 32);
-	ret = wc_Ed25519PublicKeyToDer(&this->key, encoding->ptr, encoding->len, 1);
-	if (ret < 0)
+	if (!encode_pubkey(&this->key, encoding))
 	{
 		return FALSE;
 	}
-	encoding->len = ret;
 
 	if (type != PUBKEY_SPKI_ASN1_DER)
 	{
@@ -182,7 +191,7 @@ METHOD(public_key_t, get_encoding, bool,
 		success = lib->encoding->encode(lib->encoding, type,
 								NULL, encoding, CRED_PART_EDDSA_PUB_ASN1_DER,
 								asn1_encoding, CRED_PART_END);
-		chunk_clear(&asn1_encoding);
+		chunk_free(&asn1_encoding);
 	}
 	return success;
 }
@@ -208,7 +217,7 @@ METHOD(public_key_t, destroy, void,
 /**
  * Generic private constructor
  */
-static private_public_key_t *create_empty(key_type_t type)
+static private_public_key_t *create_empty()
 {
 	private_public_key_t *this;
 
@@ -225,15 +234,14 @@ static private_public_key_t *create_empty(key_type_t type)
 			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
-		.type = type,
 		.ref = 1,
 	);
+
 	if (wc_ed25519_init(&this->key) != 0)
 	{
 		free(this);
 		return NULL;
 	}
-
 	return this;
 }
 
@@ -265,8 +273,8 @@ public_key_t *wolfssl_ed_public_key_load(key_type_t type, va_list args)
 		break;
 	}
 
-	this = create_empty(type);
-	if (this == NULL)
+	this = create_empty();
+	if (!this)
 	{
 		return NULL;
 	}

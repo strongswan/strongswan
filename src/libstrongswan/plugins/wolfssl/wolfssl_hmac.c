@@ -77,10 +77,10 @@ METHOD(mac_t, get_mac, bool,
 	if (this->key_set)
 	{
 		ret = wc_HmacUpdate(&this->hmac, data.ptr, data.len);
-	}
-	if (ret == 0 && out != NULL)
-	{
-		ret = wc_HmacFinal(&this->hmac, out);
+		if (ret == 0 && out)
+		{
+			ret = wc_HmacFinal(&this->hmac, out);
+		}
 	}
 	return ret == 0;
 }
@@ -121,14 +121,12 @@ static mac_t *hmac_create(hash_algorithm_t algo)
 		.type = type,
 	);
 
-	
 	if (wc_HmacInit(&this->hmac, NULL, INVALID_DEVID) != 0)
 	{
 		DBG1(DBG_LIB, "HMAC init failed, hmac create failed\n");
 		free(this);
 		return NULL;
 	}
-
 	return &this->public;
 }
 

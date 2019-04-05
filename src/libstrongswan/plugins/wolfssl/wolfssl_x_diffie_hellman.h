@@ -41,4 +41,3 @@
 diffie_hellman_t *wolfssl_x_diffie_hellman_create(diffie_hellman_group_t group);
 
 #endif /** WOLFSSL_X_DIFFIE_HELLMAN_H_ @}*/
-

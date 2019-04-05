@@ -27,21 +27,23 @@
 #include "wolfssl_rsa_public_key.h"
 #include "wolfssl_util.h"
 
-#include <crypto/hashers/hasher.h>
 #include <utils/debug.h>
+#include <asn1/asn1.h>
+#include <crypto/hashers/hasher.h>
 #include <credentials/keys/signature_params.h>
 
 #include <wolfssl/wolfcrypt/rsa.h>
-
+#include <wolfssl/wolfcrypt/asn.h>
 
 typedef struct private_wolfssl_rsa_public_key_t private_wolfssl_rsa_public_key_t;
 
 /**
- * Private data structure with signing context.
+ * Private data
  */
 struct private_wolfssl_rsa_public_key_t {
+
 	/**
-	 * Public interface for this signer.
+	 * Public interface
 	 */
 	wolfssl_rsa_public_key_t public;
 
@@ -56,11 +58,10 @@ struct private_wolfssl_rsa_public_key_t {
 	WC_RNG rng;
 
 	/**
-	 * reference counter
+	 * Reference counter
 	 */
 	refcount_t ref;
 };
-
 
 /**
  * Verify RSA signature
@@ -70,7 +71,7 @@ static bool verify_signature(private_wolfssl_rsa_public_key_t *this,
 {
 	bool success = FALSE;
 	int len = wc_RsaEncryptSize(&this->rsa);
-	u_char *buf;
+	chunk_t padded;
 	u_char *p;
 
 	if (signature.len > len)
@@ -78,17 +79,13 @@ static bool verify_signature(private_wolfssl_rsa_public_key_t *this,
 		signature = chunk_skip(signature, signature.len - len);
 	}
 
-	buf = malloc(len);
-	memcpy(buf + len - signature.len, signature.ptr, signature.len);
-	memset(buf, 0, len - signature.len);
+	padded = chunk_copy_pad(chunk_alloca(len), signature, 0x00);
 
-	len = wc_RsaSSL_VerifyInline(buf, len, &p, &this->rsa);
+	len = wc_RsaSSL_VerifyInline(padded.ptr, len, &p, &this->rsa);
 	if (len > 0)
 	{
 		success = chunk_equals_const(data, chunk_create(p, len));
 	}
-	free(buf);
-
 	return success;
 }
 
@@ -99,24 +96,23 @@ static bool verify_emsa_pkcs1_signature(private_wolfssl_rsa_public_key_t *this,
 										enum wc_HashType hash, chunk_t data,
 										chunk_t signature)
 {
+	chunk_t dgst, digestInfo;
 	bool success = FALSE;
-	chunk_t dgst = chunk_empty, encDgst;
 	int len;
 
-	encDgst = chunk_alloc(wc_HashGetDigestSize(hash) + 20);
 	if (wolfssl_hash_chunk(hash, data, &dgst))
 	{
-		len = wc_EncodeSignature(encDgst.ptr, dgst.ptr, dgst.len,
+		digestInfo = chunk_alloc(MAX_DER_DIGEST_SZ);
+		len = wc_EncodeSignature(digestInfo.ptr, dgst.ptr, dgst.len,
 								 wc_HashGetOID(hash));
 		if (len > 0)
 		{
-			encDgst.len = len;
-			success = verify_signature(this, encDgst, signature);
+			digestInfo.len = len;
+			success = verify_signature(this, digestInfo, signature);
 		}
+		chunk_free(&digestInfo);
+		chunk_free(&dgst);
 	}
-
-	chunk_free(&encDgst);
-	chunk_free(&dgst);
 	return success;
 }
 
@@ -128,13 +124,11 @@ static bool verify_emsa_pss_signature(private_wolfssl_rsa_public_key_t *this,
 									  rsa_pss_params_t *params, chunk_t data,
 									  chunk_t signature)
 {
-	chunk_t dgst = chunk_empty;
+	chunk_t dgst, padded;
 	enum wc_HashType hash;
-	int mgf;
-	bool success = FALSE;
-	int len = 0;
-	u_char *buf = NULL;
 	u_char *p;
+	int mgf, len = 0;
+	bool success = FALSE;
 
 	if (!wolfssl_hash2type(params->hash, &hash))
 	{
@@ -144,34 +138,25 @@ static bool verify_emsa_pss_signature(private_wolfssl_rsa_public_key_t *this,
 	{
 		return FALSE;
 	}
-
-	if (wolfssl_hash_chunk(hash, data, &dgst))
+	if (!wolfssl_hash_chunk(hash, data, &dgst))
 	{
-		len = wc_RsaEncryptSize(&this->rsa);
-		if (signature.len > len)
-		{
-			signature = chunk_skip(signature, signature.len - len);
-		}
-
-		buf = malloc(len);
-		memcpy(buf + len - signature.len, signature.ptr, signature.len);
-		memset(buf, 0, len - signature.len);
-
-		len = wc_RsaPSS_VerifyInline_ex(buf, len, &p, hash, mgf,
-										params->salt_len, &this->rsa);
-		if (len > 0)
-		{
-			success = wc_RsaPSS_CheckPadding_ex(dgst.ptr, dgst.len, p, len,
-					hash, params->salt_len, mp_count_bits(&this->rsa.n)) == 0;
-		}
+		return FALSE;
 	}
+	len = wc_RsaEncryptSize(&this->rsa);
+	if (signature.len > len)
+	{
+		signature = chunk_skip(signature, signature.len - len);
+	}
+	padded = chunk_copy_pad(chunk_alloca(len), signature, 0x00);
 
+	len = wc_RsaPSS_VerifyInline_ex(padded.ptr, len, &p, hash, mgf,
+									params->salt_len, &this->rsa);
+	if (len > 0)
+	{
+		success = wc_RsaPSS_CheckPadding_ex(dgst.ptr, dgst.len, p, len, hash,
+							params->salt_len, mp_count_bits(&this->rsa.n)) == 0;
+	}
 	chunk_free(&dgst);
-	if (buf != NULL)
-	{
-		free(buf);
-	}
-
 	return success;
 }
 #endif
@@ -213,7 +198,7 @@ METHOD(public_key_t, verify, bool,
 			return verify_emsa_pss_signature(this, params, data, signature);
 #endif
 		default:
-			DBG1(DBG_LIB, "signature scheme %N not supported in RSA",
+			DBG1(DBG_LIB, "signature scheme %N not supported via wolfssl",
 				 signature_scheme_names, scheme);
 			return FALSE;
 	}
@@ -225,7 +210,6 @@ METHOD(public_key_t, encrypt, bool,
 {
 	int padding, mgf, len;
 	enum wc_HashType hash;
-	char *encrypted;
 
 	switch (scheme)
 	{
@@ -277,17 +261,17 @@ METHOD(public_key_t, encrypt, bool,
 			return FALSE;
 	}
 	len = wc_RsaEncryptSize(&this->rsa);
-	encrypted = malloc(len);
-	len = wc_RsaPublicEncrypt_ex(plain.ptr, plain.len, encrypted, len,
+	*crypto = chunk_alloc(len);
+	len = wc_RsaPublicEncrypt_ex(plain.ptr, plain.len, crypto->ptr, len,
 								 &this->rsa, &this->rng, padding, hash, mgf,
 								 NULL, 0);
 	if (len < 0)
 	{
 		DBG1(DBG_LIB, "RSA encryption failed");
-		free(encrypted);
+		chunk_free(crypto);
 		return FALSE;
 	}
-	*crypto = chunk_create(encrypted, len);
+	crypto->len = len;
 	return TRUE;
 }
 
@@ -298,6 +282,25 @@ METHOD(public_key_t, get_keysize, int,
 }
 
 /**
+ * Encode the given public key as ASN.1 DER with algorithm identifier
+ */
+bool wolfssl_rsa_encode_public(RsaKey *rsa, chunk_t *encoding)
+{
+	int len;
+
+	len = wc_RsaEncryptSize(rsa) * 2 + 4 * MAX_SEQ_SZ + MAX_ALGO_SZ;
+	*encoding = chunk_alloc(len);
+	len = wc_RsaKeyToPublicDer(rsa, encoding->ptr, len);
+	if (len < 0)
+	{
+		chunk_free(encoding);
+		return FALSE;
+	}
+	encoding->len = len;
+	return TRUE;
+}
+
+/**
  * Calculate fingerprint from a RSA key, also used in rsa private key.
  */
 bool wolfssl_rsa_fingerprint(RsaKey *rsa, cred_encoding_type_t type,
@@ -305,7 +308,7 @@ bool wolfssl_rsa_fingerprint(RsaKey *rsa, cred_encoding_type_t type,
 {
 	hasher_t *hasher;
 	chunk_t key;
-	int len;
+	bool success = FALSE;
 
 	if (lib->encoding->get_cache(lib->encoding, type, rsa, fp))
 	{
@@ -314,45 +317,47 @@ bool wolfssl_rsa_fingerprint(RsaKey *rsa, cred_encoding_type_t type,
 	switch (type)
 	{
 		case KEYID_PUBKEY_SHA1:
-			len = wc_RsaEncryptSize(rsa) * 2 + 20;
-			key = chunk_alloc(len);
-			len = wc_RsaKeyToPublicDer(rsa, key.ptr, len);
-			break;
-		default:
 		{
 			chunk_t n = chunk_empty, e = chunk_empty;
-			bool success = FALSE;
 
-			if (wolfssl_mp2chunk(&rsa->n, &n) && wolfssl_mp2chunk(&rsa->e, &e))
+			if (wolfssl_mp2chunk(&rsa->n, &n) &&
+				wolfssl_mp2chunk(&rsa->e, &e))
 			{
-				success = lib->encoding->encode(lib->encoding, type, rsa, fp,
-									CRED_PART_RSA_MODULUS, n,
-									CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
+				key = asn1_wrap(ASN1_SEQUENCE, "mm",
+								asn1_integer("m", n),
+								asn1_integer("m", e));
 			}
-			chunk_free(&n);
-			chunk_free(&e);
-			return success;
+			else
+			{
+				chunk_free(&n);
+				chunk_free(&e);
+				return FALSE;
+			}
+			break;
 		}
+		case KEYID_PUBKEY_INFO_SHA1:
+			if (!wolfssl_rsa_encode_public(rsa, &key))
+			{
+				return FALSE;
+			}
+			break;
+		default:
+			return FALSE;
 	}
-	if (len < 0)
-	{
-		chunk_free(&key);
-		return FALSE;
-	}
-	key.len = len;
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
 	if (!hasher || !hasher->allocate_hash(hasher, key, fp))
 	{
-		DBG1(DBG_LIB, "SHA1 hash algorithm not supported, fingerprinting failed");
-		DESTROY_IF(hasher);
-		free(key.ptr);
-		return FALSE;
+		DBG1(DBG_LIB, "SHA1 not supported, fingerprinting failed");
 	}
-	free(key.ptr);
-	hasher->destroy(hasher);
-	lib->encoding->cache(lib->encoding, type, rsa, *fp);
-	return TRUE;
+	else
+	{
+		lib->encoding->cache(lib->encoding, type, rsa, *fp);
+		success = TRUE;
+	}
+	DESTROY_IF(hasher);
+	chunk_free(&key);
+	return success;
 }
 
 METHOD(public_key_t, get_fingerprint, bool,
@@ -366,39 +371,24 @@ METHOD(public_key_t, get_encoding, bool,
 	private_wolfssl_rsa_public_key_t *this, cred_encoding_type_t type,
 	chunk_t *encoding)
 {
+	chunk_t n = chunk_empty, e = chunk_empty;
 	bool success = FALSE;
-	int len;
 
-	switch (type)
+	if (type == PUBKEY_SPKI_ASN1_DER)
 	{
-		case PUBKEY_ASN1_DER:
-			len = wc_RsaEncryptSize(&this->rsa) * 2 + 20;
-			*encoding = chunk_alloc(len);
-			len = wc_RsaKeyToPublicDer(&this->rsa, encoding->ptr, len);
-			if (len < 0)
-			{
-				DBG1(DBG_LIB, "Public Der failed, get encoding failed");
-				chunk_free(encoding);
-				return FALSE;
-			}
-			encoding->len = len;
-			return TRUE;
-		default:
-		{
-			chunk_t n = chunk_empty, e = chunk_empty;
-
-			if (wolfssl_mp2chunk(&this->rsa.n, &n) &&
-				wolfssl_mp2chunk(&this->rsa.e, &e))
-			{
-				success = lib->encoding->encode(lib->encoding, type, NULL,
-									encoding, CRED_PART_RSA_MODULUS, n,
-									CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
-			}
-			chunk_free(&n);
-			chunk_free(&e);
-			return success;
-		}
+		return wolfssl_rsa_encode_public(&this->rsa, encoding);
 	}
+
+	if (wolfssl_mp2chunk(&this->rsa.n, &n) &&
+		wolfssl_mp2chunk(&this->rsa.e, &e))
+	{
+		success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
+									CRED_PART_RSA_MODULUS, n,
+									CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
+	}
+	chunk_free(&n);
+	chunk_free(&e);
+	return success;
 }
 
 METHOD(public_key_t, get_ref, public_key_t*,
@@ -447,13 +437,13 @@ static private_wolfssl_rsa_public_key_t *create_empty()
 
 	if (wc_InitRng(&this->rng) != 0)
 	{
-		DBG1(DBG_LIB, "Init RNG, rsa public key load failed");
+		DBG1(DBG_LIB, "init RNG failed, rsa public key load failed");
 		free(this);
 		return NULL;
 	}
 	if (wc_InitRsaKey(&this->rsa, NULL) != 0)
 	{
-		DBG1(DBG_LIB, "Init RSA, rsa public key load failed");
+		DBG1(DBG_LIB, "init RSA failed, rsa public key load failed");
 		wc_FreeRng(&this->rng);
 		free(this);
 		return NULL;
@@ -461,8 +451,8 @@ static private_wolfssl_rsa_public_key_t *create_empty()
 	return this;
 }
 
-/**
- * See header.
+/*
+ * Described in header
  */
 wolfssl_rsa_public_key_t *wolfssl_rsa_public_key_load(key_type_t type,
 													  va_list args)
@@ -494,7 +484,7 @@ wolfssl_rsa_public_key_t *wolfssl_rsa_public_key_load(key_type_t type,
 	}
 
 	this = create_empty();
-	if (this == NULL)
+	if (!this)
 	{
 		return NULL;
 	}
@@ -509,7 +499,6 @@ wolfssl_rsa_public_key_t *wolfssl_rsa_public_key_load(key_type_t type,
 				if (wc_RsaPublicKeyDecode(blob.ptr, &idx, &this->rsa,
 										  blob.len) != 0)
 				{
-					DBG1(DBG_LIB, "Public , rsa public key load failed");
 					destroy(this);
 					return NULL;
 				}

@@ -37,6 +37,7 @@ typedef struct private_wolfssl_diffie_hellman_t private_wolfssl_diffie_hellman_t
  * Private data of an wolfssl_diffie_hellman_t object.
  */
 struct private_wolfssl_diffie_hellman_t {
+
 	/**
 	 * Public wolfssl_diffie_hellman_t interface.
 	 */
@@ -51,11 +52,6 @@ struct private_wolfssl_diffie_hellman_t {
 	 * Diffie Hellman object
 	 */
 	DhKey dh;
-
-	/**
-	 * Random number generator to use with RSA operations.
-	 */
-	WC_RNG rng;
 
 	/**
 	 * Length of public values
@@ -76,40 +72,25 @@ struct private_wolfssl_diffie_hellman_t {
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
-
-	/**
-	 * True if shared secret is computed
-	 */
-	bool computed;
 };
 
 METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_wolfssl_diffie_hellman_t *this, chunk_t *value)
 {
-	/* Front pad the value with zeros to length of prime */
-	*value = chunk_alloc(this->len);
-	memset(value->ptr, 0, value->len - this->pub.len);
-	memcpy(value->ptr + value->len - this->pub.len, this->pub.ptr,
-		   this->pub.len);
+	*value = chunk_copy_pad(chunk_alloc(this->len), this->pub, 0x00);
 	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_wolfssl_diffie_hellman_t *this, chunk_t *secret)
 {
-	if (!this->computed)
+	if (!this->shared_secret.len)
 	{
 		return FALSE;
 	}
-
-	/* Front pad with zeros to length of prime */
-	*secret = chunk_alloc(this->len);
-	memset(secret->ptr, 0, secret->len);
-	memcpy(secret->ptr + secret->len - this->shared_secret.len,
-		   this->shared_secret.ptr, this->shared_secret.len);
+	*secret = chunk_copy_pad(chunk_alloc(this->len), this->shared_secret, 0x00);
 	return TRUE;
 }
-
 
 METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_wolfssl_diffie_hellman_t *this, chunk_t value)
@@ -122,17 +103,15 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 	}
 
 	chunk_clear(&this->shared_secret);
-	this->shared_secret.ptr = malloc(this->len);
-	memset(this->shared_secret.ptr, 0xFF, this->shared_secret.len);
-	len = this->shared_secret.len;
+	this->shared_secret = chunk_alloc(this->len);
 	if (wc_DhAgree(&this->dh, this->shared_secret.ptr, &len, this->priv.ptr,
 				   this->priv.len, value.ptr, value.len) != 0)
 	{
 		DBG1(DBG_LIB, "DH shared secret computation failed");
+		chunk_free(&this->shared_secret);
 		return FALSE;
 	}
 	this->shared_secret.len = len;
-	this->computed = TRUE;
 	return TRUE;
 }
 
@@ -142,18 +121,17 @@ METHOD(diffie_hellman_t, set_private_value, bool,
 	bool success = FALSE;
 	chunk_t g;
 	word32 len;
-	int ret;
 
 	chunk_clear(&this->priv);
 	this->priv = chunk_clone(value);
 
-	/* Calculate public value - g^priv mod p */
+	/* calculate public value - g^priv mod p */
 	if (wolfssl_mp2chunk(&this->dh.g, &g))
 	{
 		len = this->pub.len;
-		ret = wc_DhAgree(&this->dh, this->pub.ptr, &len, this->priv.ptr,
-						 this->priv.len, g.ptr, g.len);
-		if (ret == 0) {
+		if (wc_DhAgree(&this->dh, this->pub.ptr, &len, this->priv.ptr,
+						 this->priv.len, g.ptr, g.len) == 0)
+		{
 			this->pub.len = len;
 			success = TRUE;
 		}
@@ -169,31 +147,9 @@ METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
 	return this->group;
 }
 
-/**
- * Lookup the modulus in modulo table
- */
-static status_t set_modulus(private_wolfssl_diffie_hellman_t *this)
-{
-	diffie_hellman_params_t *params = diffie_hellman_get_params(this->group);
-	if (!params)
-	{
-		return NOT_FOUND;
-	}
-
-	this->len = params->prime.len;
-	if (wc_DhSetKey(&this->dh, params->prime.ptr, params->prime.len,
-					params->generator.ptr, params->generator.len) != 0)
-	{
-		return FAILED;
-	}
-
-	return SUCCESS;
-}
-
 METHOD(diffie_hellman_t, destroy, void,
 	private_wolfssl_diffie_hellman_t *this)
 {
-	wc_FreeRng(&this->rng);
 	wc_FreeDhKey(&this->dh);
 	chunk_clear(&this->pub);
 	chunk_clear(&this->priv);
@@ -241,14 +197,15 @@ static int wolfssl_priv_key_size(int len)
 	return len / 20;
 }
 
-/*
- * Described in header.
+/**
+ * Generic internal constructor
  */
-wolfssl_diffie_hellman_t *wolfssl_diffie_hellman_create(
-											diffie_hellman_group_t group, ...)
+static wolfssl_diffie_hellman_t *create_generic(diffie_hellman_group_t group,
+												chunk_t g, chunk_t p)
 {
 	private_wolfssl_diffie_hellman_t *this;
 	word32 privLen, pubLen;
+	WC_RNG rng;
 
 	INIT(this,
 		.public = {
@@ -261,47 +218,26 @@ wolfssl_diffie_hellman_t *wolfssl_diffie_hellman_create(
 				.destroy = _destroy,
 			},
 		},
+		.group = group,
+		.len = p.len,
 	);
 
-	if (wc_InitRng(&this->rng) != 0)
-	{
-		free(this);
-		return NULL;
-	}
 	if (wc_InitDhKey(&this->dh) != 0)
 	{
-		wc_FreeRng(&this->rng);
 		free(this);
 		return NULL;
 	}
 
-	this->group = group;
-	this->computed = FALSE;
-	this->priv = chunk_empty;
-	this->pub = chunk_empty;
-	this->shared_secret = chunk_empty;
-
-
-	if (group == MODP_CUSTOM)
+	if (wc_DhSetKey(&this->dh, p.ptr, p.len, g.ptr, g.len) != 0)
 	{
-		chunk_t g, p;
-
-		VA_ARGS_GET(group, g, p);
-		this->len = p.len;
-		if (wc_DhSetKey(&this->dh, p.ptr, p.len, g.ptr, g.len) != 0)
-		{
-			destroy(this);
-			return NULL;
-		}
+		destroy(this);
+		return NULL;
 	}
-	else
+
+	if (wc_InitRng(&rng) != 0)
 	{
-		/* find a modulus according to group */
-		if (set_modulus(this) != SUCCESS)
-		{
-			destroy(this);
-			return NULL;
-		}
+		destroy(this);
+		return NULL;
 	}
 
 	this->priv = chunk_alloc(wolfssl_priv_key_size(this->len));
@@ -309,16 +245,41 @@ wolfssl_diffie_hellman_t *wolfssl_diffie_hellman_create(
 	privLen = this->priv.len;
 	pubLen = this->pub.len;
 	/* generate my public and private values */
-	if (wc_DhGenerateKeyPair(&this->dh, &this->rng, this->priv.ptr, &privLen,
+	if (wc_DhGenerateKeyPair(&this->dh, &rng, this->priv.ptr, &privLen,
 							 this->pub.ptr, &pubLen) != 0)
 	{
+		wc_FreeRng(&rng);
 		destroy(this);
 		return NULL;
 	}
 	this->pub.len = pubLen;
 	this->priv.len = privLen;
+	wc_FreeRng(&rng);
 
 	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+wolfssl_diffie_hellman_t *wolfssl_diffie_hellman_create(
+											diffie_hellman_group_t group, ...)
+{
+	diffie_hellman_params_t *params;
+	chunk_t g, p;
+
+	if (group == MODP_CUSTOM)
+	{
+		VA_ARGS_GET(group, g, p);
+		return create_generic(group, g, p);
+	}
+	params = diffie_hellman_get_params(group);
+	if (!params)
+	{
+		return NULL;
+	}
+	/* wolfSSL doesn't support optimized exponent sizes according to RFC 3526 */
+	return create_generic(group, params->generator, params->prime);
 }
 
 #endif /* NO_DH */

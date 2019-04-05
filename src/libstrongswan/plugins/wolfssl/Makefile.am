@@ -1,6 +1,5 @@
 AM_CPPFLAGS = \
-	-I$(top_srcdir)/src/libstrongswan \
-	-DFIPS_MODE=${fips_mode}
+	-I$(top_srcdir)/src/libstrongswan
 
 AM_CFLAGS = \
 	$(PLUGIN_CFLAGS)

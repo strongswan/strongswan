@@ -48,7 +48,7 @@ struct wolfssl_sha1_prf_t {
  * Creates a new wolfssl_sha1_prf_t.
  *
  * @param algo		algorithm, must be PRF_KEYED_SHA1
- * @return			sha1_keyed_prf_tobject
+ * @return			wolfssl_sha1_prf_t object
  */
 wolfssl_sha1_prf_t *wolfssl_sha1_prf_create(pseudo_random_function_t algo);
 

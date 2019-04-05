@@ -28,8 +28,8 @@
 #include <wolfssl/wolfcrypt/hash.h>
 #include <wolfssl/wolfcrypt/rsa.h>
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
 bool wolfssl_hash_chunk(int hash_type, chunk_t data, chunk_t *hash)
 {
@@ -45,8 +45,8 @@ bool wolfssl_hash_chunk(int hash_type, chunk_t data, chunk_t *hash)
 	return TRUE;
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
 bool wolfssl_mp2chunk(mp_int *mp, chunk_t *chunk)
 {
@@ -63,8 +63,8 @@ bool wolfssl_mp2chunk(mp_int *mp, chunk_t *chunk)
 	return FALSE;
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
 bool wolfssl_mp_split(chunk_t chunk, mp_int *a, mp_int *b)
 {
@@ -82,12 +82,11 @@ bool wolfssl_mp_split(chunk_t chunk, mp_int *a, mp_int *b)
 	{
 		ret = mp_read_unsigned_bin(b, chunk.ptr + len, len);
 	}
-
 	return ret == 0;
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
 bool wolfssl_mp_cat(int len, mp_int *a, mp_int *b, chunk_t *chunk)
 {
@@ -109,85 +108,84 @@ bool wolfssl_mp_cat(int len, mp_int *a, mp_int *b, chunk_t *chunk)
 		memset(chunk->ptr + len, 0, len - sz);
 		ret = mp_to_unsigned_bin(b, chunk->ptr + 2 * len - sz);
 	}
-
 	return ret == 0;
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
 bool wolfssl_hash2type(hash_algorithm_t hash, enum wc_HashType *type)
 {
 	switch (hash)
 	{
-	#ifndef NO_MD5
+#ifndef NO_MD5
 		case HASH_MD5:
 			*type = WC_HASH_TYPE_MD5;
 			break;
-	#endif
-	#ifndef NO_SHA
+#endif
+#ifndef NO_SHA
 		case HASH_SHA1:
 			*type = WC_HASH_TYPE_SHA;
 			break;
-	#endif
-	#ifdef WOLFSSL_SHA224
+#endif
+#ifdef WOLFSSL_SHA224
 		case HASH_SHA224:
 			*type = WC_HASH_TYPE_SHA224;
 			break;
-	#endif
-	#ifndef NO_SHA256
+#endif
+#ifndef NO_SHA256
 		case HASH_SHA256:
 			*type = WC_HASH_TYPE_SHA256;
 			break;
-	#endif
-	#ifdef WOLFSSL_SHA384
+#endif
+#ifdef WOLFSSL_SHA384
 		case HASH_SHA384:
 			*type = WC_HASH_TYPE_SHA384;
 			break;
-	#endif
-	#ifdef WOLFSSL_SHA512
+#endif
+#ifdef WOLFSSL_SHA512
 		case HASH_SHA512:
 			*type = WC_HASH_TYPE_SHA512;
 			break;
-	#endif
+#endif
 		default:
 			return FALSE;
 	}
 	return TRUE;
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
 bool wolfssl_hash2mgf1(hash_algorithm_t hash, int *mgf1)
 {
 	switch (hash)
 	{
-	#ifndef NO_SHA
+#ifndef NO_SHA
 		case HASH_SHA1:
 			*mgf1 = WC_MGF1SHA1;
 			break;
-	#endif
-	#ifdef WOLFSSL_SHA224
+#endif
+#ifdef WOLFSSL_SHA224
 		case HASH_SHA224:
 			*mgf1 = WC_MGF1SHA224;
 			break;
-	#endif
-	#ifndef NO_SHA256
+#endif
+#ifndef NO_SHA256
 		case HASH_SHA256:
 			*mgf1 = WC_MGF1SHA256;
 			break;
-	#endif
-	#ifdef WOLFSSL_SHA384
+#endif
+#ifdef WOLFSSL_SHA384
 		case HASH_SHA384:
 			*mgf1 = WC_MGF1SHA384;
 			break;
-	#endif
-	#ifdef WOLFSSL_SHA512
+#endif
+#ifdef WOLFSSL_SHA512
 		case HASH_SHA512:
 			*mgf1 = WC_MGF1SHA512;
 			break;
-	#endif
+#endif
 		default:
 			return FALSE;
 	}
