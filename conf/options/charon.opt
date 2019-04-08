@@ -160,6 +160,13 @@ charon.ignore_acquire_ts = no
 	config will	be sent. This always happens for IKEv1 connections as the
 	protocol only supports one set of traffic selectors per CHILD_SA.
 
+charon.ike_spi_label = 0x0
+	Fixed SPI "label" bits to be set to SPIs chosen for new IKE SAs.
+
+charon.ike_spi_label_mask = 0x0
+	The bitmask applied to ike_spi_label when set to SPIs chosen for new
+	IKE SAs. Default is 0x0, meaning, no label is assigned to new IKE SA SPIs.
+
 charon.ikesa_limit = 0
 	Maximum number of IKE_SAs that can be established at the same time before
 	new connection attempts are blocked.

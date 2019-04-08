@@ -42,6 +42,10 @@
 /* the default number of segments (MUST be a power of 2) */
 #define DEFAULT_SEGMENT_COUNT 1
 
+/* the default SPI label/mask fed to spi_get on new IKE SAs */
+#define DEFAULT_IKE_SPI_LABEL 0x0
+#define DEFAULT_IKE_SPI_LABEL_MASK 0x0
+
 typedef struct entry_t entry_t;
 
 /**
@@ -412,6 +416,12 @@ struct private_ike_sa_manager_t {
 	 * Lock to access the RNG instance and the callback
 	 */
 	rwlock_t *spi_lock;
+
+	/**
+	 * SPI Label - bits fed into SPI generation upon new IKA_SAs (NBO)
+	 */
+	uint64_t spi_label;
+	uint64_t spi_label_mask;
 
 	/**
 	 * reuse existing IKE_SAs in checkout_by_config
@@ -1010,6 +1020,11 @@ static uint64_t get_spi(private_ike_sa_manager_t *this)
 		spi = 0;
 	}
 	this->spi_lock->unlock(this->spi_lock);
+
+	if (spi)
+	{
+		spi = (spi & ~this->spi_label_mask) | this->spi_label;
+	}
 	return spi;
 }
 
@@ -2339,6 +2354,7 @@ static u_int get_nearest_powerof2(u_int n)
 ike_sa_manager_t *ike_sa_manager_create()
 {
 	private_ike_sa_manager_t *this;
+	char *spi_str;
 	u_int i;
 
 	INIT(this,
@@ -2372,6 +2388,17 @@ ike_sa_manager_t *ike_sa_manager_create()
 		return NULL;
 	}
 	this->spi_lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+
+	spi_str = lib->settings->get_str(lib->settings,
+									 "%s.ike_spi_label", NULL, lib->ns);
+	this->spi_label = settings_value_as_uint64(spi_str,
+											   DEFAULT_IKE_SPI_LABEL);
+	spi_str = lib->settings->get_str(lib->settings,
+									 "%s.ike_spi_label_mask", NULL, lib->ns);
+	this->spi_label_mask = settings_value_as_uint64(spi_str,
+													DEFAULT_IKE_SPI_LABEL_MASK);
+	this->spi_label = htobe64(this->spi_label & this->spi_label_mask);
+	this->spi_label_mask = htobe64(this->spi_label_mask);
 
 	this->ikesa_limit = lib->settings->get_int(lib->settings,
 											   "%s.ikesa_limit", 0, lib->ns);
