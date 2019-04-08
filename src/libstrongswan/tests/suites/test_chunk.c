@@ -574,6 +574,40 @@ START_TEST(test_increment)
 END_TEST
 
 /*******************************************************************************
+ * chunk_copy_pad tests
+ */
+
+static struct {
+	size_t len;
+	u_char chr;
+	chunk_t src;
+	chunk_t exp;
+} copy_pad_data[] = {
+	{0, 0x00, { NULL, 0 }, { NULL, 0 }},
+	{4, 0x00, { NULL, 0 }, chunk_from_chars(0x00,0x00,0x00,0x00)},
+	{0, 0x00, chunk_from_chars(0x01), { NULL, 0 }},
+	{1, 0x00, chunk_from_chars(0x01), chunk_from_chars(0x01)},
+	{2, 0x00, chunk_from_chars(0x01), chunk_from_chars(0x00,0x01)},
+	{3, 0x00, chunk_from_chars(0x01), chunk_from_chars(0x00,0x00,0x01)},
+	{4, 0x00, chunk_from_chars(0x01), chunk_from_chars(0x00,0x00,0x00,0x01)},
+	{4, 0x02, chunk_from_chars(0x01), chunk_from_chars(0x02,0x02,0x02,0x01)},
+	{1, 0x00, chunk_from_chars(0x01,0x02,0x03,0x04), chunk_from_chars(0x04)},
+	{2, 0x00, chunk_from_chars(0x01,0x02,0x03,0x04), chunk_from_chars(0x03,0x04)},
+	{3, 0x00, chunk_from_chars(0x01,0x02,0x03,0x04), chunk_from_chars(0x02,0x03,0x04)},
+	{4, 0x00, chunk_from_chars(0x01,0x02,0x03,0x04), chunk_from_chars(0x01,0x02,0x03,0x04)},
+};
+
+START_TEST(test_copy_pad)
+{
+	chunk_t chunk;
+
+	chunk = chunk_copy_pad(chunk_alloca(copy_pad_data[_i].len),
+						   copy_pad_data[_i].src, copy_pad_data[_i].chr);
+	ck_assert_chunk_eq(chunk, copy_pad_data[_i].exp);
+}
+END_TEST
+
+/*******************************************************************************
  * chunk_printable tests
  */
 
@@ -1074,6 +1108,10 @@ Suite *chunk_suite_create()
 
 	tc = tcase_create("chunk_increment");
 	tcase_add_loop_test(tc, test_increment, 0, countof(increment_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("chunk_copy_pad");
+	tcase_add_loop_test(tc, test_copy_pad, 0, countof(copy_pad_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("chunk_printable");
