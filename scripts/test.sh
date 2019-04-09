@@ -34,6 +34,33 @@ build_botan()
 	cd -
 }
 
+build_wolfssl()
+{
+	WOLFSSL_REV=v4.0.0-stable
+	WOLFSSL_DIR=$TRAVIS_BUILD_DIR/../wolfssl
+
+	if test -d "$WOLFSSL_DIR"; then
+		return
+	fi
+
+	echo "$ build_wolfssl()"
+
+	WOLFSSL_CFLAGS="-DWOLFSSL_PUBLIC_MP -DWOLFSSL_DES_ECB"
+	WOLFSSL_CONFIG="--enable-keygen --enable-rsapss --enable-aesccm
+					--enable-aesctr --enable-des3 --enable-camellia
+					--enable-curve25519 --enable-ed25519"
+
+	git clone https://github.com/wolfSSL/wolfssl.git $WOLFSSL_DIR &&
+	cd $WOLFSSL_DIR &&
+	git checkout -qf $WOLFSSL_REV &&
+	./autogen.sh &&
+	./configure C_EXTRA_FLAGS="$WOLFSSL_CFLAGS" $WOLFSSL_CONFIG &&
+	make -j4 >/dev/null &&
+	sudo make install >/dev/null &&
+	sudo ldconfig || exit $?
+	cd -
+}
+
 build_tss2()
 {
 	TSS2_REV=2.1.0
@@ -135,6 +162,14 @@ botan)
 		build_botan
 	fi
 	;;
+wolfssl)
+	CONFIG="--disable-defaults --enable-pki --enable-wolfssl --enable-pem"
+	# build with custom options to enable all the features the plugin supports
+	DEPS=""
+	if test "$1" = "deps"; then
+		build_wolfssl
+	fi
+	;;
 printf-builtin)
 	CONFIG="--with-printf-hooks=builtin"
 	;;
@@ -161,6 +196,7 @@ all|coverage|sonarcloud)
 	PYDEPS="pytest"
 	if test "$1" = "deps"; then
 		build_botan
+		build_wolfssl
 		build_tss2
 	fi
 	use_custom_openssl $1
