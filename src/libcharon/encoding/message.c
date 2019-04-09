@@ -1744,12 +1744,25 @@ static status_t generate_message(private_message_t *this, keymat_t *keymat,
 	{
 		aead = keymat->get_aead(keymat, FALSE);
 	}
-	if (aead && encrypting)
+	if (encrypting)
 	{
-		*encrypted = wrap_payloads(this);
-		(*encrypted)->set_transform(*encrypted, aead);
+		if (aead)
+		{
+			*encrypted = wrap_payloads(this);
+			(*encrypted)->set_transform(*encrypted, aead);
+		}
+		else if (this->exchange_type == INFORMATIONAL ||
+				 this->exchange_type == INFORMATIONAL_V1)
+		{	/* allow sending unencrypted INFORMATIONALs */
+			encrypting = FALSE;
+		}
+		else
+		{
+			DBG1(DBG_ENC, "unable to encrypt payloads without AEAD transform");
+			return FAILED;
+		}
 	}
-	else
+	if (!encrypting)
 	{
 		DBG2(DBG_ENC, "not encrypting payloads");
 		this->is_encrypted = FALSE;
