@@ -490,6 +490,45 @@ static linked_list_t* narrow_ts(private_child_create_t *this, bool local,
 }
 
 /**
+ * Check if requested mode is acceptable
+ */
+static bool check_mode(private_child_create_t *this, host_t *i, host_t *r)
+{
+	switch (this->mode)
+	{
+		case MODE_TRANSPORT:
+			if (!this->config->has_option(this->config, OPT_PROXY_MODE) &&
+				   (!ts_list_is_host(this->tsi, i) ||
+					!ts_list_is_host(this->tsr, r))
+			   )
+			{
+				DBG1(DBG_IKE, "not using transport mode, not host-to-host");
+				return FALSE;
+			}
+			if (this->config->get_mode(this->config) != MODE_TRANSPORT)
+			{
+				return FALSE;
+			}
+			break;
+		case MODE_BEET:
+			if (!ts_list_is_host(this->tsi, NULL) ||
+				!ts_list_is_host(this->tsr, NULL))
+			{
+				DBG1(DBG_IKE, "not using BEET mode, not host-to-host");
+				return FALSE;
+			}
+			if (this->config->get_mode(this->config) != MODE_BEET)
+			{
+				return FALSE;
+			}
+			break;
+		default:
+			break;
+	}
+	return TRUE;
+}
+
+/**
  * Install a CHILD_SA for usage, return value:
  * - FAILED: no acceptable proposal
  * - INVALID_ARG: diffie hellman group unacceptable
@@ -616,47 +655,27 @@ static status_t select_and_install(private_child_create_t *this,
 	{
 		this->tsi = my_ts;
 		this->tsr = other_ts;
+
+		if (!check_mode(this, me, other))
+		{
+			DBG1(DBG_IKE, "%N mode requested by responder is unacceptable",
+				 ipsec_mode_names, this->mode);
+			return FAILED;
+		}
 	}
 	else
 	{
 		this->tsr = my_ts;
 		this->tsi = other_ts;
+
+		if (!check_mode(this, other, me))
+		{
+			this->mode = MODE_TUNNEL;
+		}
 	}
 
 	if (!this->initiator)
 	{
-		/* check if requested mode is acceptable, downgrade if required */
-		switch (this->mode)
-		{
-			case MODE_TRANSPORT:
-				if (!this->config->has_option(this->config, OPT_PROXY_MODE) &&
-					   (!ts_list_is_host(this->tsi, other) ||
-						!ts_list_is_host(this->tsr, me))
-				   )
-				{
-					this->mode = MODE_TUNNEL;
-					DBG1(DBG_IKE, "not using transport mode, not host-to-host");
-				}
-				if (this->config->get_mode(this->config) != MODE_TRANSPORT)
-				{
-					this->mode = MODE_TUNNEL;
-				}
-				break;
-			case MODE_BEET:
-				if (!ts_list_is_host(this->tsi, NULL) ||
-					!ts_list_is_host(this->tsr, NULL))
-				{
-					this->mode = MODE_TUNNEL;
-					DBG1(DBG_IKE, "not using BEET mode, not host-to-host");
-				}
-				if (this->config->get_mode(this->config) != MODE_BEET)
-				{
-					this->mode = MODE_TUNNEL;
-				}
-				break;
-			default:
-				break;
-		}
 		/* use a copy of the traffic selectors, as the POST hook should not
 		 * change payloads */
 		my_ts = this->tsr->clone_offset(this->tsr,
