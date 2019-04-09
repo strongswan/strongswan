@@ -370,6 +370,13 @@ charon.signature_authentication_constraints = yes
 	certificate chain, are also used as constraints against the signature scheme
 	used by peers during IKEv2.
 
+charon.spi_label = 0x0000000000000000
+	Value mixed into the local IKE SPIs after applying _spi_mask_.
+
+charon.spi_mask = 0x0000000000000000
+	Mask applied to local IKE SPIs before mixing in _spi_label_ (bits set will
+	be replaced with _spi_label_).
+
 charon.spi_min = 0xc0000000
 	The lower limit for SPIs requested from the kernel for IPsec SAs.
 
