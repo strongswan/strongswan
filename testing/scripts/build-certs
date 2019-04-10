@@ -2,6 +2,9 @@
 
 echo "Building certificates"
 
+# Disable leak detective when using pki as it produces warnings in tzset
+export LEAK_DETECTIVE_DISABLE=1
+
 # Determine testing directory
 DIR="$(dirname `readlink -f $0`)/.."
 
