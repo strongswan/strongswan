@@ -136,12 +136,27 @@ do
 done
 
 # Convert moon private key and Root CA certificate into DER format
-HOST_KEY=${DIR}/hosts/moon/${SWANCTL_DIR}/rsa/moonKey.pem
-TEST="${TEST_DIR}/tkm/host2host-initiator"
-TEST_KEY=${TEST}/hosts/moon/${TKM_DIR}/moonKey.der
-TEST_CERT=${TEST}/hosts/moon/${TKM_DIR}/strongswanCert.der
-openssl rsa -in ${HOST_KEY} -outform der -out ${TEST_KEY} 2> /dev/null
-openssl x509 -in ${CA_CERT} -outform der -out ${TEST_CERT}
+for t in host2host-initiator host2host-responder host2host-xfrmproxy \
+         net2net-initiator net2net-xfrmproxy xfrmproxy-expire xfrmproxy-rekey
+do
+  HOST_KEY=${DIR}/hosts/moon/${SWANCTL_DIR}/rsa/moonKey.pem
+  TEST="${TEST_DIR}/tkm/${t}"
+  TEST_KEY=${TEST}/hosts/moon/${TKM_DIR}/moonKey.der
+  TEST_CERT=${TEST}/hosts/moon/${TKM_DIR}/strongswanCert.der
+  openssl rsa -in ${HOST_KEY} -outform der -out ${TEST_KEY} 2> /dev/null
+  openssl x509 -in ${CA_CERT} -outform der -out ${TEST_CERT}
+done
+
+# Convert sun private key and Root CA certificate into DER format
+for t in multiple-clients
+do
+  HOST_KEY=${DIR}/hosts/sun/${SWANCTL_DIR}/rsa/sunKey.pem
+  TEST="${TEST_DIR}/tkm/${t}"
+  TEST_KEY=${TEST}/hosts/sun/${TKM_DIR}/sunKey.der
+  TEST_CERT=${TEST}/hosts/sun/${TKM_DIR}/strongswanCert.der
+  openssl rsa -in ${HOST_KEY} -outform der -out ${TEST_KEY} 2> /dev/null
+  openssl x509 -in ${CA_CERT} -outform der -out ${TEST_CERT}
+done
 
 # Put DER-encoded moon private key and Root CA certificate into tkm scenarios
 for t in host2host-initiator host2host-responder host2host-xfrmproxy \
