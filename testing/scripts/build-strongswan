@@ -56,7 +56,7 @@ do_on_exit umount $LOOPDIR/root/shared
 
 mkdir -p $LOOPDIR/root/strongswan
 log_action "Mounting $SWANDIR as /root/strongswan"
-execute "bindfs -u $SRCUID -g $SRCGID $SWANDIR $LOOPDIR/root/strongswan"
+execute "bindfs -u $SRCUID -g $SRCGID --create-for-user=$SRCUID --create-for-group=$SRCGID $SWANDIR $LOOPDIR/root/strongswan"
 do_on_exit umount $LOOPDIR/root/strongswan
 
 log_action "Copy /etc/resolv.conf"
