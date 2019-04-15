@@ -204,10 +204,22 @@ HOST_KEY="${DIR}/hosts/moon/${SWANCTL_DIR}/rsa/moonKey.pem"
 pki --pub --type rsa --in ${HOST_KEY} --outform pem > ${TEST_PUB}
 cp ${TEST_PUB} ${TEST}/hosts/sun/${SWANCTL_DIR}/pubkey
 
+# Put a copy into the ikev2/net2net-dnssec scenario
+TEST="${TEST_DIR}/ikev2/net2net-dnssec"
+cp ${TEST_PUB} ${TEST}/hosts/moon/${IPSEC_DIR}/certs
+
 # Put a copy into the ikev2/net2net-pubkey scenario
 TEST="${TEST_DIR}/ikev2/net2net-pubkey"
 cp ${TEST_PUB} ${TEST}/hosts/moon/${IPSEC_DIR}/certs
 cp ${TEST_PUB} ${TEST}/hosts/sun/${IPSEC_DIR}/certs
+
+# Put a copy into the ikev2/rw-dnssec scenario
+TEST="${TEST_DIR}/ikev2/rw-dnssec"
+cp ${TEST_PUB} ${TEST}/hosts/moon/${IPSEC_DIR}/certs
+
+# Put a copy into the swanctl/rw-dnssec scenario
+TEST="${TEST_DIR}/swanctl/rw-dnssec"
+cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
 
 # Put a copy into the swanctl/rw-pubkey-anon scenario
 TEST="${TEST_DIR}/swanctl/rw-pubkey-anon"
@@ -228,6 +240,10 @@ HOST_KEY="${DIR}/hosts/sun/${SWANCTL_DIR}/rsa/sunKey.pem"
 pki --pub --type rsa --in ${HOST_KEY} --outform pem > ${TEST_PUB}
 cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
 
+# Put a copy into the ikev2/net2net-dnssec scenario
+TEST="${TEST_DIR}/ikev2/net2net-dnssec"
+cp ${TEST_PUB} ${TEST}/hosts/sun/${IPSEC_DIR}/certs
+
 # Put a copy into the ikev2/net2net-pubkey scenario
 TEST="${TEST_DIR}/ikev2/net2net-pubkey"
 cp ${TEST_PUB} ${TEST}/hosts/moon/${IPSEC_DIR}/certs
@@ -237,11 +253,15 @@ cp ${TEST_PUB} ${TEST}/hosts/sun/${IPSEC_DIR}/certs
 TEST="${TEST_DIR}/swanctl/rw-pubkey-anon"
 cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
 
-# Extract the raw carol public key for the swanctl/rw-pubkey-anon scenario
-TEST="${TEST_DIR}/swanctl/rw-pubkey-anon"
+# Extract the raw carol public key for the swanctl/rw-dnssec scenario
+TEST="${TEST_DIR}/swanctl/rw-dnssec"
 TEST_PUB="${TEST}/hosts/carol/${SWANCTL_DIR}/pubkey/carolPub.pem"
 HOST_KEY="${DIR}/hosts/carol/${SWANCTL_DIR}/rsa/carolKey.pem"
 pki --pub --type rsa --in ${HOST_KEY} --outform pem > ${TEST_PUB}
+
+# Put a copy into the swanctl/rw-pubkey-anon scenario
+TEST="${TEST_DIR}/swanctl/rw-pubkey-anon"
+cp ${TEST_PUB} ${TEST}/hosts/carol/${SWANCTL_DIR}/pubkey
 cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
 
 # Put a copy into the swanctl/rw-pubkey-keyid scenario
@@ -249,11 +269,15 @@ TEST="${TEST_DIR}/swanctl/rw-pubkey-keyid"
 cp ${TEST_PUB} ${TEST}/hosts/carol/${SWANCTL_DIR}/pubkey
 cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
 
-# Extract the raw dave public key for the swanctl/rw-pubkey-anon scenario
-TEST="${TEST_DIR}/swanctl/rw-pubkey-anon"
+# Extract the raw dave public key for the swanctl/rw-dnssec scenario
+TEST="${TEST_DIR}/swanctl/rw-dnssec"
 TEST_PUB="${TEST}/hosts/dave/${SWANCTL_DIR}/pubkey/davePub.pem"
 HOST_KEY="${DIR}/hosts/dave/${SWANCTL_DIR}/rsa/daveKey.pem"
 pki --pub --type rsa --in ${HOST_KEY} --outform pem > ${TEST_PUB}
+
+# Put a copy into the swanctl/rw-pubkey-anon scenario
+TEST="${TEST_DIR}/swanctl/rw-pubkey-anon"
+cp ${TEST_PUB} ${TEST}/hosts/dave/${SWANCTL_DIR}/pubkey
 cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
 
 # Put a copy into the swanctl/rw-pubkey-keyid scenario
@@ -326,6 +350,29 @@ cp ${SUN_PKCS12}  "${TEST}/hosts/sun/etc/swanctl/pkcs12"
 TEST="${TEST_DIR}/openssl-ikev2/net2net-pkcs12"
 cp ${MOON_PKCS12} "${TEST}/hosts/moon/etc/swanctl/pkcs12"
 cp ${SUN_PKCS12}  "${TEST}/hosts/sun/etc/swanctl/pkcs12"
+
+################################################################################
+# DNSSEC Zone Files                                                            #
+################################################################################
+
+# Store moon and sun certificates in strongswan.org zone
+ZONE_FILE="${CA_DIR}/db.strongswan.org.certs-and-keys"
+echo "; Automatically generated for inclusion in zone file" > ${ZONE_FILE}
+for h in moon sun
+do
+  HOST_CERT=${DIR}/hosts/${h}/${SWANCTL_DIR}/x509/${h}Cert.pem
+  cert=$(grep --invert-match ^----- ${HOST_CERT}| sed -e 's/^/\t\t\t\t/')
+  echo -e "${h}\tIN\tCERT\t( 1 0 0\n${cert}\n\t\t\t\t)" >> ${ZONE_FILE}
+done
+
+# Store public keys in strongswan.org zone
+echo ";" >> ${ZONE_FILE}
+for h in moon sun carol dave
+do
+  HOST_CERT=${DIR}/hosts/${h}/${SWANCTL_DIR}/x509/${h}Cert.pem
+  pubkey=$(pki --pub --type x509 --in ${HOST_CERT} --outform dnskey | sed 's/\(.\{0,64\}\)/\t\t\t\t\1\n/g')
+  echo -e "${h}\tIN\tIPSECKEY\t( 10 3 2 ${h}.strongswan.org.\n${pubkey}\n\t\t\t\t)" >> ${ZONE_FILE}
+done
 
 # Generate a carol certificate for the swanctl/crl-to-cache scenario with base CDP
 TEST="${TEST_DIR}/swanctl/crl-to-cache"
