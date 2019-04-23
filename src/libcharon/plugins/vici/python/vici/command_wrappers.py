@@ -40,13 +40,30 @@ class CommandWrappers(object):
         """
         return self.streamed_request("terminate", "control-log", sa)
 
+    def rekey(self, sa):
+        """Initiate the rekeying of an SA.
+
+        .. versionadded:: 5.5.2
+
+        :param sa: the SA to rekey
+        :type sa: dict
+        :return: number of matched SAs
+        :rtype: dict
+        """
+        return self.request("rekey", sa)
+
     def redirect(self, sa):
         """Redirect an IKE_SA.
 
+        .. versionchanged:: 5.5.2
+           The number of matched SAs is returned.
+
         :param sa: the SA to redirect
         :type sa: dict
+        :return: number of matched SAs
+        :rtype: dict
         """
-        self.request("redirect", sa)
+        return self.request("redirect", sa)
 
     def install(self, policy):
         """Install a trap, drop or bypass policy defined by a CHILD_SA config.
@@ -114,6 +131,27 @@ class CommandWrappers(object):
         """
         return self.streamed_request("list-certs", "list-cert", filters)
 
+    def list_authorities(self, filters=None):
+        """Retrieve loaded certification authority information.
+
+        .. versionadded:: 5.3.3
+
+        :param filters: retrieve only matching CAs (optional)
+        :type filters: dict
+        :return: generator for loaded CAs as dict
+        :rtype: generator
+        """
+        return self.streamed_request("list-authorities", "list-authority",
+                                     filters)
+
+    def get_authorities(self):
+        """Retrieve certification authority names loaded exclusively over vici.
+
+        :return: CA names
+        :rtype: dict
+        """
+        return self.request("get-authorities")
+
     def load_conn(self, connection):
         """Load a connection definition into the daemon.
 
@@ -141,17 +179,79 @@ class CommandWrappers(object):
     def load_key(self, private_key):
         """Load a private key into the daemon.
 
+        .. versionchanged:: 5.5.3
+           The key identifier of the loaded key is returned.
+
         :param private_key: PEM or DER encoded key
+        :type private_key: dict
+        :return: key identifier
+        :rtype: dict
         """
-        self.request("load-key", private_key)
+        return self.request("load-key", private_key)
+
+    def unload_key(self, key_id):
+        """Unload the private key with the given key identifier.
+
+        .. versionadded:: 5.5.2
+
+        :param key_id: key identifier
+        :type key_id: dict
+        """
+        self.request("unload-key", key_id)
+
+    def get_keys(self):
+        """Retrieve identifiers of private keys loaded exclusively over vici.
+
+        .. versionadded:: 5.5.2
+
+        :return: key identifiers
+        :rtype: dict
+        """
+        return self.request("get-keys")
+
+    def load_token(self, token):
+        """Load a private key located on a token into the daemon.
+
+        .. versionadded:: 5.5.2
+
+        :param token: token details
+        :type token: dict
+        :return: key identifier
+        :rtype: dict
+        """
+        return self.request("load-token", token)
 
     def load_shared(self, secret):
         """Load a shared IKE PSK, EAP or XAuth secret into the daemon.
+
+        .. versionchanged:: 5.5.2
+           A unique identifier may be associated with the secret.
 
         :param secret: shared IKE PSK, EAP or XAuth secret
         :type secret: dict
         """
         self.request("load-shared", secret)
+
+
+    def unload_shared(self, identifier):
+        """Unload a previously loaded shared secret by its unique identifier.
+
+        .. versionadded:: 5.5.2
+
+        :param identifier: unique identifier
+        :type secret: dict
+        """
+        self.request("unload-shared", identifier)
+
+    def get_shared(self):
+        """Retrieve identifiers of shared keys loaded exclusively over vici.
+
+        .. versionadded:: 5.5.2
+
+        :return: identifiers
+        :rtype: dict
+        """
+        return self.request("get-shared")
 
     def flush_certs(self, filter=None):
         """Flush the volatile certificate cache.
@@ -172,6 +272,22 @@ class CommandWrappers(object):
         flushes the credential cache.
         """
         self.request("clear-creds")
+
+    def load_authority(self, ca):
+        """Load a certification authority definition into the daemon.
+
+        :param ca: certification authority definition
+        :type ca: dict
+        """
+        self.request("load-authority", ca)
+
+    def unload_authority(self, ca):
+        """Unload a previously loaded certification authority by name.
+
+        :param ca: certification authority name
+        :type ca: dict
+        """
+        self.request("unload-authority", ca)
 
     def load_pool(self, pool):
         """Load a virtual IP pool.
@@ -204,3 +320,35 @@ class CommandWrappers(object):
         :rtype: dict
         """
         return self.request("get-pools", options)
+
+    def get_algorithms(self):
+        """List of currently loaded algorithms and their implementation.
+
+        .. versionadded:: 5.4.0
+
+        :return: algorithms
+        :rtype: dict
+        """
+        return self.request("get-algorithms")
+
+    def get_counters(self, options=None):
+        """List global or connection-specific counters for several IKE events.
+
+        .. versionadded:: 5.6.1
+
+        :param options: get global counters or those of all or one connection
+        :type options: dict
+        :return: counters
+        :rtype: dict
+        """
+        return self.request("get-counters", options)
+
+    def reset_counters(self, options=None):
+        """Reset global or connection-specific IKE event counters.
+
+        .. versionadded:: 5.6.1
+
+        :param options: reset global counters or those of all or one connection
+        :type options: dict
+        """
+        self.request("reset-counters", options)
