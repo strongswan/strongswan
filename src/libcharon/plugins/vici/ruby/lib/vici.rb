@@ -404,98 +404,21 @@ module Vici
     end
 
     ##
-    # List matching loaded connections. The provided closure is invoked
-    # for each matching connection.
-    def list_conns(match = nil, &block)
-      call_with_event("list-conns", Message.new(match), "list-conn", &block)
+    # Get daemon version information
+    def version
+      call("version")
     end
 
     ##
-    # List matching active SAs. The provided closure is invoked for each
-    # matching SA.
-    def list_sas(match = nil, &block)
-      call_with_event("list-sas", Message.new(match), "list-sa", &block)
+    # Get daemon statistics and information.
+    def stats
+      call("stats")
     end
 
     ##
-    # List matching installed policies. The provided closure is invoked
-    # for each matching policy.
-    def list_policies(match, &block)
-      call_with_event("list-policies", Message.new(match), "list-policy",
-                      &block)
-    end
-
-    ##
-    # List matching loaded certificates. The provided closure is invoked
-    # for each matching certificate definition.
-    def list_certs(match = nil, &block)
-      call_with_event("list-certs", Message.new(match), "list-cert", &block)
-    end
-
-    ##
-    # Load a connection into the daemon.
-    def load_conn(conn)
-      call("load-conn", Message.new(conn))
-    end
-
-    ##
-    # Unload a connection from the daemon.
-    def unload_conn(conn)
-      call("unload-conn", Message.new(conn))
-    end
-
-    ##
-    # Get the names of connections managed by vici.
-    def get_conns()
-      call("get-conns")
-    end
-
-    ##
-    # Flush credential cache.
-    def flush_certs(match = nil)
-      call("flush-certs", Message.new(match))
-    end
-
-    ##
-    # Clear all loaded credentials.
-    def clear_creds()
-      call("clear-creds")
-    end
-
-    ##
-    # Load a certificate into the daemon.
-    def load_cert(cert)
-      call("load-cert", Message.new(cert))
-    end
-
-    ##
-    # Load a private key into the daemon.
-    def load_key(key)
-      call("load-key", Message.new(key))
-    end
-
-    ##
-    # Load a shared key into the daemon.
-    def load_shared(shared)
-      call("load-shared", Message.new(shared))
-    end
-
-    ##
-    # Load a virtual IP / attribute pool
-    def load_pool(pool)
-      call("load-pool", Message.new(pool))
-    end
-
-    ##
-    # Unload a virtual IP / attribute pool
-    def unload_pool(pool)
-      call("unload-pool", Message.new(pool))
-    end
-
-    ##
-    # Get the currently loaded pools.
-    def get_pools(options)
-      call("get-pools", Message.new(options))
+    # Reload strongswan.conf settings.
+    def reload_settings
+      call("reload-settings")
     end
 
     ##
@@ -508,6 +431,12 @@ module Vici
     # Terminate a connection. The provided closure is invoked for each log line.
     def terminate(options, &block)
       call_with_event("terminate", Message.new(options), "control-log", &block)
+    end
+
+    ##
+    # Initiate the rekeying of an SA.
+    def rekey(options)
+      call("rekey", Message.new(options))
     end
 
     ##
@@ -529,21 +458,172 @@ module Vici
     end
 
     ##
-    # Reload strongswan.conf settings.
-    def reload_settings
-      call("reload-settings")
+    # List matching active SAs. The provided closure is invoked for each
+    # matching SA.
+    def list_sas(match = nil, &block)
+      call_with_event("list-sas", Message.new(match), "list-sa", &block)
     end
 
     ##
-    # Get daemon statistics and information.
-    def stats
-      call("stats")
+    # List matching installed policies. The provided closure is invoked
+    # for each matching policy.
+    def list_policies(match, &block)
+      call_with_event("list-policies", Message.new(match), "list-policy",
+                      &block)
     end
 
     ##
-    # Get daemon version information
-    def version
-      call("version")
+    # List matching loaded connections. The provided closure is invoked
+    # for each matching connection.
+    def list_conns(match = nil, &block)
+      call_with_event("list-conns", Message.new(match), "list-conn", &block)
+    end
+
+    ##
+    # Get the names of connections managed by vici.
+    def get_conns()
+      call("get-conns")
+    end
+
+    ##
+    # List matching loaded certificates. The provided closure is invoked
+    # for each matching certificate definition.
+    def list_certs(match = nil, &block)
+      call_with_event("list-certs", Message.new(match), "list-cert", &block)
+    end
+
+    ##
+    # List matching loaded certification authorities. The provided closure is
+    # invoked for each matching certification authority definition.
+    def list_authorities(match = nil, &block)
+      call_with_event("list-authorities", Message.new(match), "list-authority",
+                      &block)
+    end
+
+    ##
+    # Get the names of certification authorities managed by vici.
+    def get_authorities()
+      call("get-authorities")
+    end
+
+    ##
+    # Load a connection into the daemon.
+    def load_conn(conn)
+      call("load-conn", Message.new(conn))
+    end
+
+    ##
+    # Unload a connection from the daemon.
+    def unload_conn(conn)
+      call("unload-conn", Message.new(conn))
+    end
+
+    ##
+    # Load a certificate into the daemon.
+    def load_cert(cert)
+      call("load-cert", Message.new(cert))
+    end
+
+    ##
+    # Load a private key into the daemon.
+    def load_key(key)
+      call("load-key", Message.new(key))
+    end
+
+    ##
+    # Unload a private key from the daemon.
+    def unload_key(key)
+      call("unload-key", Message.new(key))
+    end
+
+    ##
+    # Get the identifiers of private keys loaded via vici.
+    def get_keys()
+      call("get-keys")
+    end
+
+    ##
+    # Load a private key located on a token into the daemon.
+    def load_token(token)
+      call("load-token", Message.new(token))
+    end
+
+    ##
+    # Load a shared key into the daemon.
+    def load_shared(shared)
+      call("load-shared", Message.new(shared))
+    end
+
+    ##
+    # Unload a shared key from the daemon.
+    def unload_shared(shared)
+      call("unload-shared", Message.new(shared))
+    end
+
+    ##
+    # Get the unique identifiers of shared keys loaded via vici.
+    def get_shared()
+      call("get-shared")
+    end
+
+    ##
+    # Flush credential cache.
+    def flush_certs(match = nil)
+      call("flush-certs", Message.new(match))
+    end
+
+    ##
+    # Clear all loaded credentials.
+    def clear_creds()
+      call("clear-creds")
+    end
+
+    ##
+    # Load a certification authority into the daemon.
+    def load_authority(authority)
+      call("load-authority", Message.new(authority))
+    end
+
+    ##
+    # Unload a certification authority from the daemon.
+    def unload_authority(authority)
+      call("unload-authority", Message.new(authority))
+    end
+
+    ##
+    # Load a virtual IP / attribute pool into the daemon.
+    def load_pool(pool)
+      call("load-pool", Message.new(pool))
+    end
+
+    ##
+    # Unload a virtual IP / attribute pool from the daemon.
+    def unload_pool(pool)
+      call("unload-pool", Message.new(pool))
+    end
+
+    ##
+    # Get the currently loaded pools.
+    def get_pools(options)
+      call("get-pools", Message.new(options))
+    end
+
+    ##
+    # Get currently loaded algorithms and their implementation.
+    def get_algorithms()
+      call("get-algorithms")
+    end
+
+    ##
+    # Get global or connection-specific counters for IKE events.
+    def get_counters(options = nil)
+      call("get-counters", Message.new(options))
+    end
+
+    ##
+    # Reset global or connection-specific IKE event counters.
+    def reset_counters(options = nil)
+      call("reset-counters", Message.new(options))
     end
 
     ##
