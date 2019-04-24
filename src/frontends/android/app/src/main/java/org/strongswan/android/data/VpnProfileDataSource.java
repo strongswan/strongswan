@@ -230,7 +230,7 @@ public class VpnProfileDataSource
 				db.beginTransaction();
 				try
 				{
-					Cursor cursor = db.query(TABLE_VPNPROFILE, ALL_COLUMNS, KEY_UUID + " is NULL", null, null, null, null);
+					Cursor cursor = db.query(TABLE_VPNPROFILE, getColumns(16), KEY_UUID + " is NULL", null, null, null, null);
 					for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext())
 					{
 						ContentValues values = new ContentValues();
@@ -248,7 +248,7 @@ public class VpnProfileDataSource
 			if (oldVersion < 17)
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_DNS_SERVERS +
-						" TEXT;");
+						   " TEXT;");
 			}
 		}
 
