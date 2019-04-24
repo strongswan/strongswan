@@ -3,6 +3,9 @@
 # strongSwan VICI protocol. The Connection class provides a high-level
 # interface to issue requests or listen for events.
 #
+#  Copyright (C) 2019 Tobias Brunner
+#  HSR Hochschule fuer Technik Rapperswil
+#
 #  Copyright (C) 2014 Martin Willi
 #  Copyright (C) 2014 revosec AG
 #
@@ -25,7 +28,6 @@
 #  THE SOFTWARE.
 
 module Vici
-
   ##
   # Vici specific exception all others inherit from
   class Error < StandardError
@@ -433,117 +435,115 @@ module Vici
     ##
     # Load a connection into the daemon.
     def load_conn(conn)
-      check_success(@transp.request("load-conn", Message.new(conn)))
+      call("load-conn", Message.new(conn))
     end
 
     ##
     # Unload a connection from the daemon.
     def unload_conn(conn)
-      check_success(@transp.request("unload-conn", Message.new(conn)))
+      call("unload-conn", Message.new(conn))
     end
 
     ##
     # Get the names of connections managed by vici.
     def get_conns()
-      @transp.request("get-conns").root
+      call("get-conns")
     end
 
     ##
     # Flush credential cache.
     def flush_certs(match = nil)
-      check_success(@transp.request("flush-certs", Message.new(match)))
+      call("flush-certs", Message.new(match))
     end
 
     ##
     # Clear all loaded credentials.
     def clear_creds()
-      check_success(@transp.request("clear-creds"))
+      call("clear-creds")
     end
 
     ##
     # Load a certificate into the daemon.
     def load_cert(cert)
-      check_success(@transp.request("load-cert", Message.new(cert)))
+      call("load-cert", Message.new(cert))
     end
 
     ##
     # Load a private key into the daemon.
     def load_key(key)
-      check_success(@transp.request("load-key", Message.new(key)))
+      call("load-key", Message.new(key))
     end
 
     ##
     # Load a shared key into the daemon.
     def load_shared(shared)
-      check_success(@transp.request("load-shared", Message.new(shared)))
+      call("load-shared", Message.new(shared))
     end
 
     ##
     # Load a virtual IP / attribute pool
     def load_pool(pool)
-      check_success(@transp.request("load-pool", Message.new(pool)))
+      call("load-pool", Message.new(pool))
     end
 
     ##
     # Unload a virtual IP / attribute pool
     def unload_pool(pool)
-      check_success(@transp.request("unload-pool", Message.new(pool)))
+      call("unload-pool", Message.new(pool))
     end
 
     ##
     # Get the currently loaded pools.
     def get_pools(options)
-      @transp.request("get-pools", Message.new(options)).root
+      call("get-pools", Message.new(options))
     end
 
     ##
     # Initiate a connection. The provided closure is invoked for each log line.
     def initiate(options, &block)
-      check_success(call_with_event("initiate", Message.new(options),
-                    "control-log", &block))
+      call_with_event("initiate", Message.new(options), "control-log", &block)
     end
 
     ##
     # Terminate a connection. The provided closure is invoked for each log line.
     def terminate(options, &block)
-      check_success(call_with_event("terminate", Message.new(options),
-                    "control-log", &block))
+      call_with_event("terminate", Message.new(options), "control-log", &block)
     end
 
     ##
     # Redirect an IKE_SA.
     def redirect(options)
-      check_success(@transp.request("redirect", Message.new(options)))
+      call("redirect", Message.new(options))
     end
 
     ##
     # Install a shunt/route policy.
     def install(policy)
-      check_success(@transp.request("install", Message.new(policy)))
+      call("install", Message.new(policy))
     end
 
     ##
     # Uninstall a shunt/route policy.
     def uninstall(policy)
-      check_success(@transp.request("uninstall", Message.new(policy)))
+      call("uninstall", Message.new(policy))
     end
 
     ##
     # Reload strongswan.conf settings.
     def reload_settings
-      check_success(@transp.request("reload-settings", nil))
+      call("reload-settings")
     end
 
     ##
     # Get daemon statistics and information.
     def stats
-      @transp.request("stats", nil).root
+      call("stats")
     end
 
     ##
     # Get daemon version information
     def version
-      @transp.request("version", nil).root
+      call("version")
     end
 
     ##
@@ -574,6 +574,13 @@ module Vici
     end
 
     ##
+    # Issue a command request. Checks if the reply of a command indicates
+    # "success", otherwise raises a CommandExecError exception.
+    def call(command, request = nil)
+      check_success(@transp.request(command, request))
+    end
+
+    ##
     # Issue a command request, but register for a specific event while the
     # command is active. VICI uses this mechanism to stream potentially large
     # data objects continuously. The provided closure is invoked for all
@@ -590,7 +597,7 @@ module Vici
       ensure
         @transp.unregister(event, method(:call_event))
       end
-      reply
+      check_success(reply)
     end
 
     ##
@@ -598,7 +605,7 @@ module Vici
     # CommandExecError exception
     def check_success(reply)
       root = reply.root
-      if root["success"] != "yes"
+      if root.key?("success") && root["success"] != "yes"
         raise CommandExecError, root["errmsg"]
       end
       root
