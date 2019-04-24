@@ -78,12 +78,10 @@ module Vici
   class StopEventListening < Exception
   end
 
-
   ##
   # The Message class provides the low level encoding and decoding of vici
   # protocol messages. Directly using this class is usually not required.
   class Message
-
     SECTION_START = 1
     SECTION_END = 2
     KEY_VALUE = 3
@@ -92,8 +90,8 @@ module Vici
     LIST_END = 6
 
     def initialize(data = "")
-      if data == nil
-        @root = Hash.new()
+      if data.nil?
+        @root = {}
       elsif data.is_a?(Hash)
         @root = data
       else
@@ -104,18 +102,14 @@ module Vici
     ##
     # Get the raw byte encoding of an on-the-wire message
     def encoding
-      if @encoded == nil
-        @encoded = encode(@root)
-      end
+      @encoded = encode(@root) if @encoded.nil?
       @encoded
     end
 
     ##
     # Get the root element of the parsed ruby data structures
     def root
-      if @root == nil
-        @root = parse(@encoded)
-      end
+      @root = parse(@encoded) if @root.nil?
       @root
     end
 
@@ -126,9 +120,7 @@ module Vici
     end
 
     def encode_value(value)
-      if value.class != String
-        value = value.to_s
-      end
+      value = value.to_s if value.class != String
       [value.length].pack("n") << value
     end
 
@@ -152,18 +144,13 @@ module Vici
     def encode(node)
       encoding = ""
       node.each do |key, value|
-        case value.class
-          when String, Fixnum, true, false
-            encoding = encode_kv(encoding, key, value)
-          else
-            if value.is_a?(Hash)
-              encoding = encode_section(encoding, key, value)
-            elsif value.is_a?(Array)
-              encoding = encode_list(encoding, key, value)
-            else
-              encoding = encode_kv(encoding, key, value)
-            end
-        end
+        encoding = if value.is_a?(Hash)
+                     encode_section(encoding, key, value)
+                   elsif value.is_a?(Array)
+                     encode_list(encoding, key, value)
+                   else
+                     encode_kv(encoding, key, value)
+                   end
       end
       encoding
     end
@@ -171,63 +158,57 @@ module Vici
     def parse_name(encoding)
       len = encoding.unpack("c")[0]
       name = encoding[1, len]
-      return encoding[(1 + len)..-1], name
+      [encoding[(1 + len)..-1], name]
     end
 
     def parse_value(encoding)
       len = encoding.unpack("n")[0]
       value = encoding[2, len]
-      return encoding[(2 + len)..-1], value
+      [encoding[(2 + len)..-1], value]
     end
 
     def parse(encoding)
-      stack = [Hash.new]
+      stack = [{}]
       list = nil
-      while encoding.length != 0 do
+      until encoding.empty?
         type = encoding.unpack("c")[0]
         encoding = encoding[1..-1]
         case type
-          when SECTION_START
-            encoding, name = parse_name(encoding)
-            stack.push(stack[-1][name] = Hash.new)
-          when SECTION_END
-            if stack.length() == 1
-              raise ParseError, "unexpected section end"
-            end
-            stack.pop()
-          when KEY_VALUE
-            encoding, name = parse_name(encoding)
-            encoding, value = parse_value(encoding)
-            stack[-1][name] = value
-          when LIST_START
-            encoding, name = parse_name(encoding)
-            stack[-1][name] = []
-            list = name
-          when LIST_ITEM
-            raise ParseError, "unexpected list item" if list == nil
-            encoding, value = parse_value(encoding)
-            stack[-1][list].push(value)
-          when LIST_END
-            raise ParseError, "unexpected list end" if list == nil
-            list = nil
-          else
-            raise ParseError, "invalid type: #{type}"
+        when SECTION_START
+          encoding, name = parse_name(encoding)
+          stack.push(stack[-1][name] = {})
+        when SECTION_END
+          raise ParseError, "unexpected section end" if stack.length == 1
+          stack.pop
+        when KEY_VALUE
+          encoding, name = parse_name(encoding)
+          encoding, value = parse_value(encoding)
+          stack[-1][name] = value
+        when LIST_START
+          encoding, name = parse_name(encoding)
+          stack[-1][name] = []
+          list = name
+        when LIST_ITEM
+          raise ParseError, "unexpected list item" if list.nil?
+          encoding, value = parse_value(encoding)
+          stack[-1][list].push(value)
+        when LIST_END
+          raise ParseError, "unexpected list end" if list.nil?
+          list = nil
+        else
+          raise ParseError, "invalid type: #{type}"
         end
       end
-      if stack.length() > 1
-        raise ParseError, "unexpected message end"
-      end
+      raise ParseError, "unexpected message end" if stack.length > 1
       stack[0]
     end
   end
-
 
   ##
   # The Transport class implements to low level segmentation of packets
   # to the underlying transport stream.  Directly using this class is usually
   # not required.
   class Transport
-
     CMD_REQUEST = 0
     CMD_RESPONSE = 1
     CMD_UNKNOWN = 2
@@ -241,18 +222,16 @@ module Vici
     # Create a transport layer using a provided socket for communication.
     def initialize(socket)
       @socket = socket
-      @events = Hash.new
+      @events = {}
     end
 
     ##
     # Receive data from socket, until len bytes read
     def recv_all(len)
       encoding = ""
-      while encoding.length < len do
+      while encoding.length < len
         data = @socket.recv(len - encoding.length)
-        if data.empty?
-          raise TransportError, "connection closed"
-        end
+        raise TransportError, "connection closed" if data.empty?
         encoding << data
       end
       encoding
@@ -262,9 +241,7 @@ module Vici
     # Send data to socket, until all bytes sent
     def send_all(encoding)
       len = 0
-      while len < encoding.length do
-        len += @socket.send(encoding[len..-1], 0)
-      end
+      len += @socket.send(encoding[len..-1], 0) while len < encoding.length
     end
 
     ##
@@ -272,12 +249,8 @@ module Vici
     # specifies the message, the optional label and message get appended.
     def write(type, label, message)
       encoding = ""
-      if label
-        encoding << label.length << label
-      end
-      if message
-        encoding << message.encoding
-      end
+      encoding << label.length << label if label
+      encoding << message.encoding if message
       send_all([encoding.length + 1, type].pack("Nc") + encoding)
     end
 
@@ -290,18 +263,20 @@ module Vici
       type = encoding.unpack("c")[0]
       len = 1
       case type
-        when CMD_REQUEST, EVENT_REGISTER, EVENT_UNREGISTER, EVENT
-          label = encoding[2, encoding[1].unpack("c")[0]]
-          len += label.length + 1
-        when CMD_RESPONSE, CMD_UNKNOWN, EVENT_CONFIRM, EVENT_UNKNOWN
-          label = nil
-        else
-          raise TransportError, "invalid message: #{type}"
+      when CMD_REQUEST, EVENT_REGISTER, EVENT_UNREGISTER, EVENT
+        label = encoding[2, encoding[1].unpack("c")[0]]
+        len += label.length + 1
+      when CMD_RESPONSE, CMD_UNKNOWN, EVENT_CONFIRM, EVENT_UNKNOWN
+        label = nil
+      else
+        raise TransportError, "invalid message: #{type}"
       end
-      if encoding.length == len
-        return type, label, Message.new
-      end
-      return type, label, Message.new(encoding[len..-1])
+      message = if encoding.length == len
+                  Message.new
+                else
+                  Message.new(encoding[len..-1])
+                end
+      [type, label, message]
     end
 
     def dispatch_event(name, message)
@@ -312,22 +287,17 @@ module Vici
 
     def read_and_dispatch_event
       type, label, message = read
-      p
-      if type == EVENT
-        dispatch_event(label, message)
-      else
-        raise TransportError, "unexpected message: #{type}"
-      end
+      raise TransportError, "unexpected message: #{type}" if type != EVENT
+
+      dispatch_event(label, message)
     end
 
     def read_and_dispatch_events
       loop do
         type, label, message = read
-        if type == EVENT
-          dispatch_event(label, message)
-        else
-          return type, label, message
-        end
+        return type, label, message if type != EVENT
+
+        dispatch_event(label, message)
       end
     end
 
@@ -336,14 +306,14 @@ module Vici
     # the reply message on success.
     def request(name, message = nil)
       write(CMD_REQUEST, name, message)
-      type, label, message = read_and_dispatch_events
+      type, _label, message = read_and_dispatch_events
       case type
-        when CMD_RESPONSE
-          return message
-        when CMD_UNKNOWN
-          raise CommandUnknownError, name
-        else
-          raise CommandError, "invalid response for #{name}"
+      when CMD_RESPONSE
+        return message
+      when CMD_UNKNOWN
+        raise CommandUnknownError, name
+      else
+        raise CommandError, "invalid response for #{name}"
       end
     end
 
@@ -351,18 +321,18 @@ module Vici
     # Register a handler method for the given event name
     def register(name, handler)
       write(EVENT_REGISTER, name, nil)
-      type, label, message = read_and_dispatch_events
+      type, _label, _message = read_and_dispatch_events
       case type
-        when EVENT_CONFIRM
-          if @events.has_key?(name)
-            @events[name] += [handler]
-          else
-            @events[name] = [handler];
-          end
-        when EVENT_UNKNOWN
-          raise EventUnknownError, name
+      when EVENT_CONFIRM
+        if @events.key?(name)
+          @events[name] += [handler]
         else
-          raise EventError, "invalid response for #{name} register"
+          @events[name] = [handler]
+        end
+      when EVENT_UNKNOWN
+        raise EventUnknownError, name
+      else
+        raise EventError, "invalid response for #{name} register"
       end
     end
 
@@ -370,18 +340,17 @@ module Vici
     # Unregister a handler method for the given event name
     def unregister(name, handler)
       write(EVENT_UNREGISTER, name, nil)
-      type, label, message = read_and_dispatch_events
+      type, _label, _message = read_and_dispatch_events
       case type
-        when EVENT_CONFIRM
-          @events[name] -= [handler]
-        when EVENT_UNKNOWN
-          raise EventUnknownError, name
-        else
-          raise EventError, "invalid response for #{name} unregister"
+      when EVENT_CONFIRM
+        @events[name] -= [handler]
+      when EVENT_UNKNOWN
+        raise EventUnknownError, name
+      else
+        raise EventError, "invalid response for #{name} unregister"
       end
     end
   end
-
 
   ##
   # The Connection class provides the high-level interface to monitor, configure
@@ -395,11 +364,10 @@ module Vici
   # Non-String values that are not a Hash nor an Array get converted with .to_s
   # during encoding.
   class Connection
-
+    ##
+    # Create a connection, optionally using the given socket
     def initialize(socket = nil)
-      if socket == nil
-        socket = UNIXSocket.new("/var/run/charon.vici")
-      end
+      socket = UNIXSocket.new("/var/run/charon.vici") if socket.nil?
       @transp = Transport.new(socket)
     end
 
@@ -481,7 +449,7 @@ module Vici
 
     ##
     # Get the names of connections managed by vici.
-    def get_conns()
+    def get_conns
       call("get-conns")
     end
 
@@ -502,7 +470,7 @@ module Vici
 
     ##
     # Get the names of certification authorities managed by vici.
-    def get_authorities()
+    def get_authorities
       call("get-authorities")
     end
 
@@ -538,7 +506,7 @@ module Vici
 
     ##
     # Get the identifiers of private keys loaded via vici.
-    def get_keys()
+    def get_keys
       call("get-keys")
     end
 
@@ -562,7 +530,7 @@ module Vici
 
     ##
     # Get the unique identifiers of shared keys loaded via vici.
-    def get_shared()
+    def get_shared
       call("get-shared")
     end
 
@@ -574,7 +542,7 @@ module Vici
 
     ##
     # Clear all loaded credentials.
-    def clear_creds()
+    def clear_creds
       call("clear-creds")
     end
 
@@ -610,7 +578,7 @@ module Vici
 
     ##
     # Get currently loaded algorithms and their implementation.
-    def get_algorithms()
+    def get_algorithms
       call("get-algorithms")
     end
 
@@ -667,7 +635,7 @@ module Vici
     # event messages.
     def call_with_event(command, request, event, &block)
       self.class.instance_eval do
-        define_method(:call_event) do |label, message|
+        define_method(:call_event) do |_label, message|
           block.call(message.root)
         end
       end
@@ -688,6 +656,7 @@ module Vici
       if root.key?("success") && root["success"] != "yes"
         raise CommandExecError, root["errmsg"]
       end
+
       root
     end
   end
