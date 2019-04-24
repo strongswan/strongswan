@@ -532,8 +532,8 @@ START_TEST(test_ed25519_fail)
 							  chunk_empty));
 
 	/* RFC 8032, section 5.1.7 requires that 0 <= s < L to prevent signature
-	 * malleability.  Only a warning because Botan and OpenSSL are both
-	 * vulnerable to this. */
+	 * malleability.  Only a warning because Botan, OpenSSL and wolfSSL are
+	 * all vulnerable to this. */
 	if (pubkey->verify(pubkey, SIGN_ED25519, NULL, sig_tests[0].msg,
 					   malleable_sig))
 	{

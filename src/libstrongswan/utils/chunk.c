@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2013 Tobias Brunner
+ * Copyright (C) 2008-2019 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -750,6 +750,26 @@ bool chunk_increment(chunk_t chunk)
 		}
 	}
 	return TRUE;
+}
+
+/*
+ * Described in header
+ */
+chunk_t chunk_copy_pad(chunk_t dst, chunk_t src, u_char chr)
+{
+	if (dst.ptr)
+	{
+		if (dst.len > src.len)
+		{
+			memcpy(dst.ptr + dst.len - src.len, src.ptr, src.len);
+			memset(dst.ptr, chr, dst.len - src.len);
+		}
+		else
+		{
+			memcpy(dst.ptr, src.ptr + src.len - dst.len, dst.len);
+		}
+	}
+	return dst;
 }
 
 /**

@@ -81,6 +81,8 @@ matrix:
     # the crypto plugins are build-tested with clang via "all" above
     - env: TEST=botan
     - env: TEST=botan LEAK_DETECTIVE=yes
+    - env: TEST=wolfssl
+    - env: TEST=wolfssl LEAK_DETECTIVE=yes
     - env: TEST=openssl
     - env: TEST=openssl LEAK_DETECTIVE=yes
     - env: TEST=openssl-1.0
