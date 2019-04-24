@@ -127,6 +127,7 @@ METHOD(simaka_provider_t, get_quintuplet, bool,
 	{
 		return FALSE;
 	}
+	chunk_increment(chunk_create(this->sqn, AKA_SQN_LEN));
 	return TRUE;
 }
 
