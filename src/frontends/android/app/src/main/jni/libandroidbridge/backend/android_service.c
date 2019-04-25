@@ -742,6 +742,13 @@ static job_requeue_t initiate(private_android_service_t *this)
 	proposal_t *proposal;
 	ike_sa_t *ike_sa;
 	auth_cfg_t *auth;
+	ike_cfg_create_t ike = {
+		.version = IKEV2,
+		.local = "0.0.0.0",
+		.local_port = charon->socket->get_port(charon->socket, FALSE),
+		.foce_encap = TRUE,
+		.fragmentation = FRAGMENTATION_YES,
+	};
 	peer_cfg_create_t peer = {
 		.cert_policy = CERT_ALWAYS_SEND,
 		.unique = UNIQUE_REPLACE,
@@ -761,23 +768,20 @@ static job_requeue_t initiate(private_android_service_t *this)
 		.dpd_action = ACTION_RESTART,
 		.close_action = ACTION_RESTART,
 	};
-	char *type, *server, *remote_id;
-	int port;
-	bool certreq;
+	char *type, *remote_id;
 
 	if (android_sdk_version >= ANDROID_LOLLIPOP)
 	{   /* only try once and notify the GUI on Android 5+ where we have a blocking TUN device */
 		peer.keyingtries = 1;
 	}
 
-	server = this->settings->get_str(this->settings, "connection.server", NULL);
-	port = this->settings->get_int(this->settings, "connection.port",
-								   IKEV2_UDP_PORT);
-	certreq = this->settings->get_bool(this->settings, "connection.certreq",
-									   TRUE);
-	ike_cfg = ike_cfg_create(IKEV2, certreq, TRUE, "0.0.0.0",
-							 charon->socket->get_port(charon->socket, FALSE),
-							 server, port, FRAGMENTATION_YES, 0);
+	ike.remote = this->settings->get_str(this->settings, "connection.server",
+										 NULL);
+	ike.remote_port = this->settings->get_int(this->settings, "connection.port",
+											  IKEV2_UDP_PORT);
+	ike.no_certreq = !this->settings->get_bool(this->settings,
+											   "connection.certreq", TRUE);
+	ike_cfg = ike_cfg_create(&ike);
 	proposal = parse_proposal(this, PROTO_IKE, "connection.ike_proposal");
 	if (proposal)
 	{

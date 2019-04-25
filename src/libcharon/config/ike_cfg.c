@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Tobias Brunner
+ * Copyright (C) 2012-2019 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -101,9 +101,14 @@ struct private_ike_cfg_t {
 	bool force_encap;
 
 	/**
-	 * use IKEv1 fragmentation
+	 * use IKE fragmentation
 	 */
 	fragmentation_t fragmentation;
+
+	/**
+	 * childless IKE_SAs
+	 */
+	childless_t childless;
 
 	/**
 	 * DSCP value to use on sent IKE packets
@@ -138,6 +143,12 @@ METHOD(ike_cfg_t, fragmentation, fragmentation_t,
 	private_ike_cfg_t *this)
 {
 	return this->fragmentation;
+}
+
+METHOD(ike_cfg_t, childless, childless_t,
+	private_ike_cfg_t *this)
+{
+	return this->childless;
 }
 
 /**
@@ -424,6 +435,7 @@ METHOD(ike_cfg_t, equals, bool,
 		this->certreq == other->certreq &&
 		this->force_encap == other->force_encap &&
 		this->fragmentation == other->fragmentation &&
+		this->childless == other->childless &&
 		streq(this->me, other->me) &&
 		streq(this->other, other->other) &&
 		this->my_port == other->my_port &&
@@ -609,13 +621,10 @@ bool ike_cfg_has_address(ike_cfg_t *cfg, host_t *addr, bool local)
 	return found;
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
-ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
-						  char *me, uint16_t my_port,
-						  char *other, uint16_t other_port,
-						  fragmentation_t fragmentation, uint8_t dscp)
+ike_cfg_t *ike_cfg_create(ike_cfg_create_t *data)
 {
 	private_ike_cfg_t *this;
 
@@ -625,6 +634,7 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 			.send_certreq = _send_certreq,
 			.force_encap = _force_encap_,
 			.fragmentation = _fragmentation,
+			.childless = _childless,
 			.resolve_me = _resolve_me,
 			.resolve_other = _resolve_other,
 			.match_me = _match_me,
@@ -644,24 +654,25 @@ ike_cfg_t *ike_cfg_create(ike_version_t version, bool certreq, bool force_encap,
 			.destroy = _destroy,
 		},
 		.refcount = 1,
-		.version = version,
-		.certreq = certreq,
-		.force_encap = force_encap,
-		.fragmentation = fragmentation,
-		.me = strdup(me),
+		.version = data->version,
+		.certreq = !data->no_certreq,
+		.force_encap = data->force_encap,
+		.fragmentation = data->fragmentation,
+		.childless = data->childless,
+		.me = strdup(data->local),
 		.my_ranges = linked_list_create(),
 		.my_hosts = linked_list_create(),
-		.other = strdup(other),
+		.other = strdup(data->remote),
 		.other_ranges = linked_list_create(),
 		.other_hosts = linked_list_create(),
-		.my_port = my_port,
-		.other_port = other_port,
-		.dscp = dscp,
+		.my_port = data->local_port,
+		.other_port = data->remote_port,
+		.dscp = data->dscp,
 		.proposals = linked_list_create(),
 	);
 
-	parse_addresses(me, this->my_hosts, this->my_ranges);
-	parse_addresses(other, this->other_hosts, this->other_ranges);
+	parse_addresses(data->local, this->my_hosts, this->my_ranges);
+	parse_addresses(data->remote, this->other_hosts, this->other_ranges);
 
 	return &this->public;
 }

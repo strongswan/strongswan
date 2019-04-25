@@ -686,8 +686,12 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
 	peer_cfg_t *peer_cfg;
-	char local[32], *remote;
+	char local[32];
 	host_t *addr;
+	ike_cfg_create_t ike = {
+		.version = this->version,
+		.remote_port = IKEV2_UDP_PORT,
+	};
 	peer_cfg_create_t peer = {
 		.cert_policy = CERT_SEND_IF_ASKED,
 		.unique = UNIQUE_NO,
@@ -726,28 +730,25 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 		{
 			snprintf(local, sizeof(local), "%s", this->initiator);
 		}
-		remote = this->responder;
+		ike.remote = this->responder;
 	}
 	else
 	{
 		snprintf(local, sizeof(local), "%s", this->responder);
-		remote = this->initiator;
+		ike.remote = this->initiator;
 	}
 
+	ike.local = local;
 	if (this->port && num)
 	{
-		ike_cfg = ike_cfg_create(this->version, TRUE, FALSE,
-								 local, this->port + num - 1,
-								 remote, IKEV2_NATT_PORT,
-								 FRAGMENTATION_NO, 0);
+		ike.local_port = this->port + num - 1;
+		ike.remote_port = IKEV2_NATT_PORT;
 	}
 	else
 	{
-		ike_cfg = ike_cfg_create(this->version, TRUE, FALSE, local,
-								 charon->socket->get_port(charon->socket, FALSE),
-								 remote, IKEV2_UDP_PORT,
-								 FRAGMENTATION_NO, 0);
+		ike.local_port = charon->socket->get_port(charon->socket, FALSE);
 	}
+	ike_cfg = ike_cfg_create(&ike);
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
 	peer_cfg = peer_cfg_create("load-test", ike_cfg, &peer);
 

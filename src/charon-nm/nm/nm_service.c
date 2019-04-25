@@ -381,8 +381,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	NMSettingVpn *vpn;
 	enumerator_t *enumerator;
 	identification_t *user = NULL, *gateway = NULL;
-	const char *address, *str;
-	bool virtual, encap, proposal;
+	const char *str;
+	bool virtual, proposal;
 	proposal_t *prop;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
@@ -394,6 +394,13 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	certificate_t *cert = NULL;
 	x509_t *x509;
 	bool agent = FALSE, smartcard = FALSE, loose_gateway_id = FALSE;
+	ike_cfg_create_t ike = {
+		.version = IKEV2,
+		.local = "%any",
+		.local_port = charon->socket->get_port(charon->socket, FALSE),
+		.remote_port = IKEV2_UDP_PORT,
+		.fragmentation = FRAGMENTATION_YES,
+	};
 	peer_cfg_create_t peer = {
 		.cert_policy = CERT_SEND_IF_ASKED,
 		.unique = UNIQUE_REPLACE,
@@ -430,8 +437,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		 priv->name);
 	DBG4(DBG_CFG, "%s",
 		 nm_setting_to_string(NM_SETTING(vpn)));
-	address = nm_setting_vpn_get_data_item(vpn, "address");
-	if (!address || !*address)
+	ike.remote = (char*)nm_setting_vpn_get_data_item(vpn, "address");
+	if (!ike.remote || !*ike.remote)
 	{
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
 					"Gateway address missing.");
@@ -440,7 +447,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	str = nm_setting_vpn_get_data_item(vpn, "virtual");
 	virtual = streq(str, "yes");
 	str = nm_setting_vpn_get_data_item(vpn, "encap");
-	encap = streq(str, "yes");
+	ike.force_encap = streq(str, "yes");
 	str = nm_setting_vpn_get_data_item(vpn, "ipcomp");
 	child.options |= streq(str, "yes") ? OPT_IPCOMP : 0;
 	str = nm_setting_vpn_get_data_item(vpn, "method");
@@ -503,7 +510,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		 * of the gateway as its identity. This identity will be used for
 		 * certificate lookup and requires the configured IP/DNS to be
 		 * included in the gateway certificate. */
-		gateway = identification_create_from_string((char*)address);
+		gateway = identification_create_from_string(ike.remote);
 		DBG1(DBG_CFG, "using CA certificate, gateway identity '%Y'", gateway);
 		loose_gateway_id = TRUE;
 	}
@@ -634,10 +641,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	/**
 	 * Set up configurations
 	 */
-	ike_cfg = ike_cfg_create(IKEV2, TRUE, encap, "%any",
-							 charon->socket->get_port(charon->socket, FALSE),
-							(char*)address, IKEV2_UDP_PORT,
-							 FRAGMENTATION_YES, 0);
+	ike_cfg = ike_cfg_create(&ike);
 
 	str = nm_setting_vpn_get_data_item(vpn, "proposal");
 	proposal = streq(str, "yes");

@@ -161,6 +161,11 @@ enum ike_extension_t {
 	 * Postquantum Preshared Keys, draft-ietf-ipsecme-qr-ikev2
 	 */
 	EXT_PPK = (1<<15),
+
+	/**
+	 * Responder accepts childless IKE_SAs, RFC 6023
+	 */
+	EXT_IKE_CHILDLESS = (1<<16),
 };
 
 /**
