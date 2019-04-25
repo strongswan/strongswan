@@ -1539,7 +1539,7 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
 	private_proposal_substructure_t *this;
 
 	this = (private_proposal_substructure_t*)
-							proposal_substructure_create(PLV2_SECURITY_ASSOCIATION);
+						proposal_substructure_create(PLV2_PROPOSAL_SUBSTRUCTURE);
 	set_from_proposal_v2(this, proposal);
 	set_data(this, proposal);
 
