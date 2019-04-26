@@ -1,6 +1,30 @@
 strongswan-5.8.0
 ----------------
 
+- The systemd service units have been renamed. The modern unit, which was called
+  strongswan-swanctl, is now called strongswan (the previous name is configured
+  as alias). The legacy unit is now called strongswan-starter.
+
+- Support for XFRM interfaces (available since Linux 4.19) has been added.
+  Configuration is possible via swanctl.conf.  Interfaces may be created
+  dynamically via updown/vici scripts, or statically before or after
+  establishing the SAs. Routes must be added manually as needed (the daemon will
+  not install any routes for outbound policies with an interface ID).
+
+- Initiation of childless IKE_SAs is supported (RFC 6023). If enabled and
+  supported by the responder, no CHILD_SA is established during IKE_AUTH. This
+  allows using a separate DH exchange even for the first CHILD_SA, which is
+  otherwise created with keys derived from the IKE_SA's key material.
+
+- The NetworkManager backend and plugin support IPv6.
+
+- The new wolfssl plugin is a wrapper around the wolfSSL crypto library. Thanks
+  to Sean Parkinson of wolfSSL Inc. for the initial patch.
+
+- IKE SPIs may optionally be labeled via the charon.spi_mask|label options. This
+  feature was extracted from charon-tkm, however, now applies the mask/label in
+  network order.
+
 - The openssl plugin supports ChaCha20-Poly1305 when built with OpenSSL 1.1.0.
 
 - The PB-TNC finite state machine according to section 3.2 of RFC 5793 was not
@@ -9,6 +33,18 @@ strongswan-5.8.0
   immediately carry all messages usually transported by a CDATA batch. It is
   currently not possible to send a SRETRY batch since full-duplex mode for
   PT-TLS transport is not supported.
+
+- Instead of marking virtual IPv6 addresses as deprecated, the kernel-netlink
+  plugin uses address labels to avoid their use for non-VPN traffic.
+
+- The agent plugin creates sockets to the ssh/gpg-agent dynamically and does not
+  keep them open, which otherwise can prevent the agent from getting terminated.
+
+- To avoid broadcast loops the forecast plugin now only reinjects packets that
+  are marked or received from the configured interface.
+
+- UTF-8 encoded passwords are supported via EAP-MSCHAPv2, which internally uses
+  an UTF-16LE encoding to calculate the NT hash.
 
 
 strongswan-5.7.2
