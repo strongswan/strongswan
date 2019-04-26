@@ -448,10 +448,10 @@ with the same name gets updated or replaced.
 		<IKE_SA config name> = {
 			# IKE configuration parameters with authentication and CHILD_SA
 			# subsections. Refer to swanctl.conf(5) for details.
-		} => {
-			success = <yes or no>
-			errmsg = <error string on failure>
 		}
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
 	}
 
 ### unload-conn() ###
@@ -603,10 +603,10 @@ authority with the same name gets replaced.
 		<certification authority name> = {
 			# certification authority parameters
 			# refer to swanctl.conf(5) for details.
-		} => {
-			success = <yes or no>
-			errmsg = <error string on failure>
 		}
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
 	}
 
 ### unload-authority() ###
