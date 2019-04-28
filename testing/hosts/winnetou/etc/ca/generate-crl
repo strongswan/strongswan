@@ -8,6 +8,9 @@ ROOT="/var/www"
 # strongSwan Root CA
 cd /etc/ca
 
+# copy default web page
+cp index.html ${ROOT}
+
 # copy strongsSwan CA certificate
 cp strongswanCert.pem ${ROOT}
 cp strongswanCert.der ${ROOT}
