@@ -114,6 +114,8 @@ pki --self --type rsa --in ${CA_KEY} --not-before "${START}" --not-after "${CA_E
 for h in ${HOSTS}
 do
   HOST_DIR="${DIR}/hosts/${h}"
+  mkdir -p ${HOST_DIR}/${IPSEC_DIR}/cacerts
+  mkdir -p ${HOST_DIR}/${SWANCTL_DIR}/x509ca
   cp ${CA_CERT} ${HOST_DIR}/${IPSEC_DIR}/cacerts
   cp ${CA_CERT} ${HOST_DIR}/${SWANCTL_DIR}/x509ca
 done
@@ -138,9 +140,11 @@ for h in ${HOSTS}
 do
   HOST_DIR="${DIR}/hosts/${h}"
   HOST_KEY="${HOST_DIR}/${IPSEC_DIR}/private/${h}Key.pem"
+  mkdir -p ${HOST_DIR}/${IPSEC_DIR}/private
   pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${HOST_KEY}
 
   # Put a copy into swanctl directory tree
+  mkdir -p ${HOST_DIR}/${SWANCTL_DIR}/rsa
   cp ${HOST_KEY} ${HOST_DIR}/${SWANCTL_DIR}/rsa
 
   # Convert host key into DER format
@@ -308,6 +312,7 @@ issue_cert()
   HOST_DIR="${DIR}/hosts/${2}"
   HOST_KEY="${HOST_DIR}/${IPSEC_DIR}/private/${2}Key.pem"
   HOST_CERT="${HOST_DIR}/${IPSEC_DIR}/certs/${2}Cert.pem"
+  mkdir -p ${HOST_DIR}/${IPSEC_DIR}/certs
   pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
       --in ${HOST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${3} \
       --serial ${1} --dn "C=CH, O=${PROJECT},${OU} CN=${3}" \
@@ -315,6 +320,7 @@ issue_cert()
   cp ${HOST_CERT} ${CA_DIR}/certs/${1}.pem
 
   # Put a certificate copy into swanctl directory tree
+  mkdir -p ${HOST_DIR}/${SWANCTL_DIR}/x509
   cp ${HOST_CERT} ${HOST_DIR}/${SWANCTL_DIR}/x509
 }
 
