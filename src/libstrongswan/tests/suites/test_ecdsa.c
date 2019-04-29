@@ -53,7 +53,7 @@ static void test_good_sig(private_key_t *privkey, public_key_t *pubkey)
 			continue;
 		}
 		if (schemes[i].key_size != 0 &&
-			 schemes[i].key_size != privkey->get_keysize(privkey))
+			schemes[i].key_size != privkey->get_keysize(privkey))
 		{
 			continue;
 		}
@@ -109,7 +109,7 @@ static void test_bad_sigs(public_key_t *pubkey)
 	for (s = 0; s < countof(schemes); s++)
 	{
 		if (schemes[s].key_size != 0 &&
-			 schemes[s].key_size != pubkey->get_keysize(pubkey))
+			schemes[s].key_size != pubkey->get_keysize(pubkey))
 		{
 			continue;
 		}
