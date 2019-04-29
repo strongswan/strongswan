@@ -109,7 +109,7 @@ static void test_bad_sigs(public_key_t *pubkey)
 	for (s = 0; s < countof(schemes); s++)
 	{
 		if (schemes[s].key_size != 0 &&
-			schemes[s].scheme != pubkey->get_keysize(pubkey))
+			schemes[s].key_size != pubkey->get_keysize(pubkey))
 		{
 			continue;
 		}
