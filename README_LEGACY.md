@@ -1144,7 +1144,7 @@ keys are safe.
 
 On a mobile laptop computer the situation is quite different.  The computer can
 be stolen or the user may leave it unattended so that unauthorized persons
-can get access to it.  In theses cases it would be preferable not to keep any
+can get access to it.  In these cases it would be preferable not to keep any
 passphrases openly in `/etc/ipsec.secrets` but to prompt for them interactively
 instead.  This is easily done by defining
 

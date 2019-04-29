@@ -2560,7 +2560,7 @@ static bool is_current_path_valid(private_ike_sa_t *this)
 }
 
 /**
- * Check if we have any path avialable for this IKE SA.
+ * Check if we have any path available for this IKE SA.
  */
 static bool is_any_path_valid(private_ike_sa_t *this)
 {

@@ -249,7 +249,7 @@ static status_t do_sasl(private_pt_tls_client_t *this, sasl_mechanism_t *sasl)
 			case INVALID_STATE:
 				break;
 			case SUCCESS:
-				/* shoudln't happen, continue until we get a result */
+				/* shouldn't happen, continue until we get a result */
 			case NEED_MORE:
 				writer->write_data(writer, data);
 				free(data.ptr);

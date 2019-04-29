@@ -615,7 +615,7 @@ static inline void encode_utf16le_single(chunk_t *utf16, uint16_t c)
 
 /**
  * Encode the given code point as UTF-16LE where utf16 points to and advance
- * the position.  Invalid code points are ingored.
+ * the position.  Invalid code points are ignored.
  */
 static inline void encode_utf16le(chunk_t *utf16, uint32_t c)
 {

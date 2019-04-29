@@ -138,7 +138,7 @@ enum encoding_type_t {
 	FLAG,
 
 	/**
-	 * Representating a length field of a payload.
+	 * Representing a length field of a payload.
 	 *
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
@@ -151,7 +151,7 @@ enum encoding_type_t {
 	PAYLOAD_LENGTH,
 
 	/**
-	 * Representating a length field of a header.
+	 * Representing a length field of a header.
 	 *
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
@@ -164,7 +164,7 @@ enum encoding_type_t {
 	HEADER_LENGTH,
 
 	/**
-	 * Representating a spi size field.
+	 * Representing a spi size field.
 	 *
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
@@ -177,7 +177,7 @@ enum encoding_type_t {
 	SPI_SIZE,
 
 	/**
-	 * Representating a spi field.
+	 * Representing a spi field.
 	 *
 	 * When generating the content of the chunkt pointing to
 	 * is written.
@@ -256,7 +256,7 @@ enum encoding_type_t {
 	ATTRIBUTE_VALUE,
 
 	/**
-	 * Representating a Traffic selector type field.
+	 * Representing a Traffic selector type field.
 	 *
 	 * When generating it must be changed from host to network order.
 	 * The value is read from the associated data struct.
@@ -269,7 +269,7 @@ enum encoding_type_t {
 	TS_TYPE,
 
 	/**
-	 * Representating an address field in a traffic selector.
+	 * Representing an address field in a traffic selector.
 	 *
 	 * Depending on the last field of type TS_TYPE
 	 * this field is either 4 or 16 byte long.
@@ -287,7 +287,7 @@ enum encoding_type_t {
 	CHUNK_DATA,
 
 	/**
-	 * Representating an IKE_SPI field in an IKEv2 Header.
+	 * Representing an IKE_SPI field in an IKEv2 Header.
 	 *
 	 * When generating the value of the uint64_t pointing to
 	 * is written (host and networ order is not changed).
@@ -297,7 +297,7 @@ enum encoding_type_t {
 	IKE_SPI,
 
 	/**
-	 * Representating an encrypted IKEv1 message.
+	 * Representing an encrypted IKEv1 message.
 	 */
 	ENCRYPTED_DATA,
 

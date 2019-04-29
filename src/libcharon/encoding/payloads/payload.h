@@ -188,7 +188,7 @@ enum payload_type_t {
 	PLV2_TS_INITIATOR = 44,
 
 	/**
-	 * Traffic selector for the original responser (TSr).
+	 * Traffic selector for the original responder (TSr).
 	 */
 	PLV2_TS_RESPONDER = 45,
 

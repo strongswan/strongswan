@@ -333,7 +333,7 @@ METHOD(private_key_t, get_encoding, bool,
 			int len;
 
 			/* n and d are of keysize length, p and q plus the three CRT
-			 * params roughtly half that, the version and e are small */
+			 * params roughly half that, the version and e are small */
 			len = wc_RsaEncryptSize(&this->rsa) * 5 + MAX_SEQ_SZ;
 			*encoding = chunk_alloc(len);
 			len = wc_RsaKeyToDer(&this->rsa, encoding->ptr, len);
