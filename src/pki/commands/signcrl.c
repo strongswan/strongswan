@@ -416,9 +416,6 @@ static int sign_crl()
 			BUILD_CRL_DISTRIBUTION_POINTS, cdps, BUILD_BASE_CRL, baseCrlNumber,
 			BUILD_END);
 	enumerator->destroy(enumerator);
-	lastenum->destroy(lastenum);
-	DESTROY_IF((certificate_t*)lastcrl);
-	free(crl_serial.ptr);
 
 	if (!crl)
 	{
@@ -442,9 +439,12 @@ error:
 	DESTROY_IF(private);
 	DESTROY_IF(ca);
 	DESTROY_IF(crl);
+	DESTROY_IF(lastenum);
+	DESTROY_IF((certificate_t*)lastcrl);
 	signature_params_destroy(scheme);
 	free(encoding.ptr);
 	free(baseCrlNumber.ptr);
+	free(crl_serial.ptr);
 	list->destroy_function(list, (void*)revoked_destroy);
 	cdps->destroy_function(cdps, (void*)x509_cdp_destroy);
 	if (error)
