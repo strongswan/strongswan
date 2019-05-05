@@ -16,7 +16,9 @@ V	EE_EXPIRATION		0F	unknown	/C=CH/O=strongSwan Project/OU=SHA-512/CN=dave@strong
 V	EE_EXPIRATION		10	unknown	/C=CH/O=strongSwan Project/OU=OCSP/CN=carol@strongswan.org
 V	EE_EXPIRATION		11	unknown	/C=CH/O=strongSwan Project/OU=OCSP Signing Authority/CN=ocsp.strongswan.org
 V	EE_EXPIRATION		12	unknown	/C=CH/O=strongSwan Project/OU=Virtual VPN Gateway/CN=mars.strongswan.org
-V	EE_EXPIRATION		13	unknown	/C=CH/O=strongSwan Project/CN=winnetou.strongswan.org
-V	EE_EXPIRATION		14	unknown	/C=CH/O=strongSwan Project/CN=aaa.strongswan.org
-V	IM_EXPIRATION		15	unknown	/C=CH/O=strongSwan Project/CN=strongSwan Attribute Authority
-V	SH_EXPIRATION		16	unknown	/C=CH/O=strongSwan Project/CN=strongSwan Legacy AA
+V	EE_EXPIRATION		13	unknown	/C=CH/O=strongSwan Project/OU=Critical Extension/CN=moon.strongswan.org
+V	EE_EXPIRATION		14	unknown	/C=CH/O=strongSwan Project/OU=Critical Extension/CN=sun.strongswan.org
+V	EE_EXPIRATION		15	unknown	/C=CH/O=strongSwan Project/CN=winnetou.strongswan.org
+V	EE_EXPIRATION		16	unknown	/C=CH/O=strongSwan Project/CN=aaa.strongswan.org
+V	IM_EXPIRATION		17	unknown	/C=CH/O=strongSwan Project/CN=strongSwan Attribute Authority
+V	SH_EXPIRATION		18	unknown	/C=CH/O=strongSwan Project/CN=strongSwan Legacy AA

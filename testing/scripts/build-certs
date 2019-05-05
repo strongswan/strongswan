@@ -121,6 +121,7 @@ do
 done
 
 # Put a copy onto the alice FreeRADIUS server
+mkdir -p ${DIR}/hosts/alice/etc/raddb/certs
 cp ${CA_CERT} ${DIR}/hosts/alice/etc/raddb/certs
 
 # Convert strongSwan Root CA certificate into DER format
@@ -132,6 +133,8 @@ pki --signcrl --cakey ${CA_KEY} --cacert ${CA_CERT} \
 
 # Put a CRL copy into the ikev2/crl-ldap scenario to be used as a stale crl
 TEST="${TEST_DIR}/ikev2/crl-ldap"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/crls
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/crls
 cp ${CA_LAST_CRL} ${TEST}/hosts/carol/${IPSEC_DIR}/crls/stale.crl
 cp ${CA_LAST_CRL} ${TEST}/hosts/moon/${IPSEC_DIR}/crls/stale.crl
 
@@ -157,48 +160,33 @@ for t in host2host-initiator host2host-responder host2host-xfrmproxy \
          net2net-initiator net2net-xfrmproxy xfrmproxy-expire xfrmproxy-rekey
 do
   TEST="${TEST_DIR}/tkm/${t}"
-  cp ${CA_DIR}/keys/moonKey.der ${CA_CERT_DER} ${TEST}/hosts/moon/${TKM_DIR}
-done
-
-# Put DER_encoded sun private key and Root CA certificate into tkm scenarios
-for t in multiple-clients
-do
-  TEST="${TEST_DIR}/tkm/${t}"
-  cp ${CA_DIR}/keys/sunKey.der ${CA_CERT_DER} ${TEST}/hosts/sun/${TKM_DIR}
-done
-
-# Put DER-encoded moon private key and Root CA certificate into tkm scenarios
-for t in host2host-initiator host2host-responder host2host-xfrmproxy \
-         net2net-initiator net2net-xfrmproxy xfrmproxy-expire xfrmproxy-rekey
-do
-  TEST="${TEST_DIR}/tkm/${t}"
   mkdir -p ${TEST}/hosts/moon/${TKM_DIR}
   cp ${CA_DIR}/keys/moonKey.der ${CA_CERT_DER} ${TEST}/hosts/moon/${TKM_DIR}
 done
 
 # Put DER_encoded sun private key and Root CA certificate into tkm scenarios
-for t in multiple-clients
-do
-  TEST="${TEST_DIR}/tkm/${t}"
-  mkdir -p ${TEST}/hosts/sun/${TKM_DIR}
-  cp ${CA_DIR}/keys/sunKey.der ${CA_CERT_DER} ${TEST}/hosts/sun/${TKM_DIR}
-done
+TEST="${TEST_DIR}/tkm/multiple-clients"
+mkdir -p ${TEST}/hosts/sun/${TKM_DIR}
+cp ${CA_DIR}/keys/sunKey.der ${CA_CERT_DER} ${TEST}/hosts/sun/${TKM_DIR}
 
 # Convert moon private key into unencrypted PKCS#8 format
 TEST="${TEST_DIR}/ikev2/rw-pkcs8"
-HOST_KEY=${DIR}/hosts/moon/${SWANCTL_DIR}/rsa/moonKey.pem
-TEST_KEY=${TEST}/hosts/moon/${IPSEC_DIR}/private/moonKey.pem
+HOST_KEY="${DIR}/hosts/moon/${SWANCTL_DIR}/rsa/moonKey.pem"
+TEST_KEY="${TEST}/hosts/moon/${IPSEC_DIR}/private/moonKey.pem"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/private
 openssl pkcs8 -in ${HOST_KEY} -nocrypt -topk8 -out ${TEST_KEY}
 
 # Convert carol private key into v1.5 DES encrypted PKCS#8 format
-HOST_KEY=${DIR}/hosts/carol/${SWANCTL_DIR}/rsa/carolKey.pem
-TEST_KEY=${TEST}/hosts/carol/${IPSEC_DIR}/private/carolKey.pem
+HOST_KEY="${DIR}/hosts/carol/${SWANCTL_DIR}/rsa/carolKey.pem"
+TEST_KEY="${TEST}/hosts/carol/${IPSEC_DIR}/private/carolKey.pem"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
 openssl pkcs8 -in ${HOST_KEY} -nocrypt -topk8 -v1 PBE-MD5-DES \
               -passout "pass:nH5ZQEWtku0RJEZ6" -out ${TEST_KEY}
 
 # Convert dave private key into v2.0 AES-128 encrypted PKCS#8 format
-HOST_KEY=${DIR}/hosts/dave/${SWANCTL_DIR}/rsa/daveKey.pem
-TEST_KEY=${TEST}/hosts/dave/${IPSEC_DIR}/private/daveKey.pem
+HOST_KEY="${DIR}/hosts/dave/${SWANCTL_DIR}/rsa/daveKey.pem"
+TEST_KEY="${TEST}/hosts/dave/${IPSEC_DIR}/private/daveKey.pem"
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/private
 openssl pkcs8 -in ${HOST_KEY} -nocrypt -topk8  -v2 aes128 \
               -passout "pass:OJlNZBx+80dLh4wC6fw5LmBd" -out ${TEST_KEY}
 
@@ -210,37 +198,39 @@ openssl pkcs8 -in ${HOST_KEY} -nocrypt -topk8  -v2 aes128 \
 TEST="${TEST_DIR}/swanctl/net2net-pubkey"
 TEST_PUB="${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey/moonPub.pem"
 HOST_KEY="${DIR}/hosts/moon/${SWANCTL_DIR}/rsa/moonKey.pem"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/pubkey
 pki --pub --type rsa --in ${HOST_KEY} --outform pem > ${TEST_PUB}
 cp ${TEST_PUB} ${TEST}/hosts/sun/${SWANCTL_DIR}/pubkey
 
-# Put a copy into the ikev2/net2net-dnssec scenario
-TEST="${TEST_DIR}/ikev2/net2net-dnssec"
-cp ${TEST_PUB} ${TEST}/hosts/moon/${IPSEC_DIR}/certs
+# Put a copy into the  following ikev2 scenarios
+for t in net2net-dnssec net2net-pubkey rw-dnssec
+do
+  TEST="${TEST_DIR}/ikev2/${t}"
+  mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/certs
+  cp ${TEST_PUB} ${TEST}/hosts/moon/${IPSEC_DIR}/certs
+done
 
 # Put a copy into the ikev2/net2net-pubkey scenario
 TEST="${TEST_DIR}/ikev2/net2net-pubkey"
-cp ${TEST_PUB} ${TEST}/hosts/moon/${IPSEC_DIR}/certs
+mkdir -p ${TEST}/hosts/sun/${IPSEC_DIR}/certs
 cp ${TEST_PUB} ${TEST}/hosts/sun/${IPSEC_DIR}/certs
-
-# Put a copy into the ikev2/rw-dnssec scenario
-TEST="${TEST_DIR}/ikev2/rw-dnssec"
-cp ${TEST_PUB} ${TEST}/hosts/moon/${IPSEC_DIR}/certs
 
 # Put a copy into the swanctl/rw-dnssec scenario
 TEST="${TEST_DIR}/swanctl/rw-dnssec"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
 cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
 
-# Put a copy into the swanctl/rw-pubkey-anon scenario
-TEST="${TEST_DIR}/swanctl/rw-pubkey-anon"
-cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
-cp ${TEST_PUB} ${TEST}/hosts/carol/${SWANCTL_DIR}/pubkey
-cp ${TEST_PUB} ${TEST}/hosts/dave/${SWANCTL_DIR}/pubkey
-
-# Put a copy into the swanctl/rw-pubkey-keyid scenario
-TEST="${TEST_DIR}/swanctl/rw-pubkey-keyid"
-cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
-cp ${TEST_PUB} ${TEST}/hosts/carol/${SWANCTL_DIR}/pubkey
-cp ${TEST_PUB} ${TEST}/hosts/dave/${SWANCTL_DIR}/pubkey
+# Put a copy into the following swanctl scenarios
+for t in rw-pubkey-anon rw-pubkey-keyid
+do
+  TEST="${TEST_DIR}/swanctl/${t}"
+  for h in moon carol dave
+  do
+    mkdir -p ${TEST}/hosts/${h}/${SWANCTL_DIR}/pubkey
+    cp ${TEST_PUB} ${TEST}/hosts/${h}/${SWANCTL_DIR}/pubkey
+  done
+done
 
 # Extract the raw sun public key for the swanctl/net2net-pubkey scenario
 TEST="${TEST_DIR}/swanctl/net2net-pubkey"
@@ -251,6 +241,7 @@ cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
 
 # Put a copy into the ikev2/net2net-dnssec scenario
 TEST="${TEST_DIR}/ikev2/net2net-dnssec"
+mkdir -p ${TEST}/hosts/sun/${IPSEC_DIR}/certs
 cp ${TEST_PUB} ${TEST}/hosts/sun/${IPSEC_DIR}/certs
 
 # Put a copy into the ikev2/net2net-pubkey scenario
@@ -266,6 +257,7 @@ cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
 TEST="${TEST_DIR}/swanctl/rw-dnssec"
 TEST_PUB="${TEST}/hosts/carol/${SWANCTL_DIR}/pubkey/carolPub.pem"
 HOST_KEY="${DIR}/hosts/carol/${SWANCTL_DIR}/rsa/carolKey.pem"
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/pubkey
 pki --pub --type rsa --in ${HOST_KEY} --outform pem > ${TEST_PUB}
 
 # Put a copy into the swanctl/rw-pubkey-anon scenario
@@ -282,6 +274,7 @@ cp ${TEST_PUB} ${TEST}/hosts/moon/${SWANCTL_DIR}/pubkey
 TEST="${TEST_DIR}/swanctl/rw-dnssec"
 TEST_PUB="${TEST}/hosts/dave/${SWANCTL_DIR}/pubkey/davePub.pem"
 HOST_KEY="${DIR}/hosts/dave/${SWANCTL_DIR}/rsa/daveKey.pem"
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/pubkey
 pki --pub --type rsa --in ${HOST_KEY} --outform pem > ${TEST_PUB}
 
 # Put a copy into the swanctl/rw-pubkey-anon scenario
@@ -337,7 +330,8 @@ issue_cert 07 bob bob@strongswan.org Research
 TEST="${TEST_DIR}/ikev2/net2net-pkcs12"
 HOST_KEY="${DIR}/hosts/moon/${SWANCTL_DIR}/rsa/moonKey.pem"
 HOST_CERT="${DIR}/hosts/moon/${SWANCTL_DIR}/x509/moonCert.pem"
-MOON_PKCS12="${TEST}/hosts/moon/etc/ipsec.d/private/moonCert.p12"
+MOON_PKCS12="${TEST}/hosts/moon/${IPSEC_DIR}/private/moonCert.p12"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/private
 openssl pkcs12 -export -inkey ${HOST_KEY} -in ${HOST_CERT} -name "moon" \
         -certfile ${CA_CERT} -caname "strongSwan Root CA" \
         -aes128 -passout "pass:kUqd8O7mzbjXNJKQ" > ${MOON_PKCS12} 2> /dev/null
@@ -345,22 +339,21 @@ openssl pkcs12 -export -inkey ${HOST_KEY} -in ${HOST_CERT} -name "moon" \
 # Create PKCS#12 file for sun
 HOST_KEY="${DIR}/hosts/sun/${SWANCTL_DIR}/rsa/sunKey.pem"
 HOST_CERT="${DIR}/hosts/sun/${SWANCTL_DIR}/x509/sunCert.pem"
-SUN_PKCS12="${TEST}/hosts/sun/etc/ipsec.d/private/sunCert.p12"
+SUN_PKCS12="${TEST}/hosts/sun/${IPSEC_DIR}/private/sunCert.p12"
+mkdir -p ${TEST}/hosts/sun/${IPSEC_DIR}/private
 openssl pkcs12 -export -inkey ${HOST_KEY} -in ${HOST_CERT} -name "sun" \
         -certfile ${CA_CERT} -caname "strongSwan Root CA" \
         -aes128 -passout "pass:IxjQVCF3JGI+MoPi" > ${SUN_PKCS12} 2> /dev/null
 
 # Put a PKCS#12 copy into the botan/net2net-pkcs12 scenario
-TEST="${TEST_DIR}/botan/net2net-pkcs12"
-mkdir -p "${TEST}/hosts/moon/etc/swanctl/pkcs12"
-cp ${MOON_PKCS12} "${TEST}/hosts/moon/etc/swanctl/pkcs12"
-mkdir -p "${TEST}/hosts/sun/etc/swanctl/pkcs12"
-cp ${SUN_PKCS12}  "${TEST}/hosts/sun/etc/swanctl/pkcs12"
-
-# Put a PKCS#12 copy into the openssl-ikev2/net2net-pkcs12 scenario
-TEST="${TEST_DIR}/openssl-ikev2/net2net-pkcs12"
-cp ${MOON_PKCS12} "${TEST}/hosts/moon/etc/swanctl/pkcs12"
-cp ${SUN_PKCS12}  "${TEST}/hosts/sun/etc/swanctl/pkcs12"
+for t in botan/net2net-pkcs12 openssl-ikev2/net2net-pkcs12
+do
+  TEST="${TEST_DIR}/${t}"
+  mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs12
+  mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/pkcs12
+  cp ${MOON_PKCS12} ${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs12
+  cp ${SUN_PKCS12}  ${TEST}/hosts/sun/${SWANCTL_DIR}/pkcs12
+done
 
 ################################################################################
 # DNSSEC Zone Files                                                            #
@@ -390,6 +383,7 @@ TEST="${TEST_DIR}/swanctl/crl-to-cache"
 TEST_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carolCert.pem"
 HOST_KEY="${DIR}/hosts/carol/${SWANCTL_DIR}/rsa/carolKey.pem"
 CN="carol@strongswan.org"
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_BASE_CDP} --type rsa \
     --in ${HOST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
     --serial 01 --dn "C=CH, O=${PROJECT}, OU=Research, CN=${CN}" \
@@ -399,6 +393,7 @@ pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_BASE_CDP} --type rs
 TEST_CERT="${TEST}/hosts/moon/${SWANCTL_DIR}/x509/moonCert.pem"
 HOST_KEY="${DIR}/hosts/moon/${SWANCTL_DIR}/rsa/moonKey.pem"
 CN="moon.strongswan.org"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_BASE_CDP} --type rsa \
     --in ${HOST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
     --serial 03 --dn "C=CH, O=${PROJECT}, CN=${CN}" \
@@ -411,22 +406,18 @@ openssl rsa -in ${HOST_KEY} -aes128 --passout pass:${KEY_PWD} -out ${HOST_KEY} \
         2> /dev/null
 
 # Put a copy into the ikev2/dynamic-initiator scenario
-TEST="${TEST_DIR}/ikev2/dynamic-initiator"
-cp ${HOST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
-cp ${CA_DIR}/certs/01.pem ${TEST}/hosts/dave/${IPSEC_DIR}/certs/carolCert.pem
-
-# Put a copy into the ikev1/dynamic-initiator scenario
-TEST="${TEST_DIR}/ikev1/dynamic-initiator"
-cp ${HOST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
-cp ${CA_DIR}/certs/01.pem ${TEST}/hosts/dave/${IPSEC_DIR}/certs/carolCert.pem
-
-# Put a copy into the ikev1/dynamic-responder scenario
-TEST="${TEST_DIR}/ikev1/dynamic-responder"
-cp ${HOST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
-cp ${CA_DIR}/certs/01.pem ${TEST}/hosts/dave/${IPSEC_DIR}/certs/carolCert.pem
+for t in ikev2/dynamic-initiator ikev1/dynamic-initiator ikev1/dynamic-responder
+do
+  TEST="${TEST_DIR}/${t}"
+  mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/private
+  mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/certs
+  cp ${HOST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
+  cp ${CA_DIR}/certs/01.pem ${TEST}/hosts/dave/${IPSEC_DIR}/certs/carolCert.pem
+done
 
 # Put a copy into the swanctl/rw-cert scenario
 TEST="${TEST_DIR}/swanctl/rw-cert"
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
 cp ${HOST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
 
 # Generate another carol certificate and revoke it
@@ -435,6 +426,8 @@ TEST_KEY="${TEST}/hosts/carol/${IPSEC_DIR}/private/carolKey.pem"
 TEST_CERT="${TEST}/hosts/carol/${IPSEC_DIR}/certs/carolCert.pem"
 CN="carol@strongswan.org"
 SERIAL="08"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -447,6 +440,8 @@ cp ${CA_CRL} ${CA_LAST_CRL}
 
 # Put a copy into the ikev2/ocsp-revoked scenario
 TEST="${TEST_DIR}/ikev2/ocsp-revoked"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 cp ${TEST_KEY}  ${TEST}/hosts/carol/${IPSEC_DIR}/private
 cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 
@@ -455,6 +450,8 @@ TEST="${TEST_DIR}/ikev2/two-certs"
 TEST_KEY="${TEST}/hosts/carol/${IPSEC_DIR}/private/carolKey-002.pem"
 TEST_CERT="${TEST}/hosts/carol/${IPSEC_DIR}/certs/carolCert-002.pem"
 SERIAL="09"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -470,6 +467,7 @@ cp ${TEST_CERT} ${CA_DIR}/certs/${SERIAL}.pem
 TEST="${TEST_DIR}/ikev2/multi-level-ca-revoked"
 TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/cacerts/researchCert.pem"
 SERIAL="0A"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts/
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${RESEARCH_KEY}
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --in ${RESEARCH_KEY} --not-before "${START}" --not-after "${IM_END}" --ca \
@@ -488,57 +486,30 @@ pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --outform pem > ${RESEARCH_CERT}
 cp ${RESEARCH_CERT} ${CA_DIR}/certs/${SERIAL}.pem
 
-# Put a certificate copy into the ikev1/multi-level-ca scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca"
-cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
+# Put a certificate copy into the following scenarios
+for t in ikev1/multi-level-ca ikev2/multi-level-ca ikev2/multi-level-ca-ldap \
+         ikev2/multi-level-ca-pathlen ikev2/multi-level-ca-strict \
+         ikev2/ocsp-multi-level ikev2/ocsp-strict-ifuri
+do
+  TEST="${TEST_DIR}/${t}"
+  mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
+  cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
+done
 
-# Put a certificate copy into the ikev1/multi-level-ca-cr-init scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca-cr-init"
-cp ${RESEARCH_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/cacerts
+for t in ikev1/multi-level-ca-cr-init ikev1/multi-level-ca-cr-resp \
+         ikev2/multi-level-ca-cr-init ikev2/multi-level-ca-cr-resp
+do
+  TEST="${TEST_DIR}/${t}"
+  mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/cacerts
+  cp ${RESEARCH_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/cacerts
+done
 
-# Put a certificate copy into the ikev1/multi-level-ca-cr-resp scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca-cr-resp"
-cp ${RESEARCH_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/multi-level-ca scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca"
-cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/multi-level-ca-ldap scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-ldap"
-cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/multi-level-ca-cr-init scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-cr-init"
-cp ${RESEARCH_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/multi-level-ca-cr-resp scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-cr-resp"
-cp ${RESEARCH_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/multi-level-ca-pathlen scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-pathlen"
-cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/multi-level-ca-strict scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-strict"
-cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/ocsp-multi-level scenario
-TEST="${TEST_DIR}/ikev2/ocsp-multi-level"
-cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/ocsp-strict-ifuri scenario
-TEST="${TEST_DIR}/ikev2/ocsp-strict-ifuri"
-cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the swanctl/multi-level-ca scenario
-TEST="${TEST_DIR}/swanctl/multi-level-ca"
-cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
-
-# Put a certificate copy into the swanctl/ocsp-multi-level scenario
-TEST="${TEST_DIR}/swanctl/ocsp-multi-level"
-cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+for t in multi-level-ca ocsp-multi-level
+do
+  TEST="${TEST_DIR}/swanctl/${t}"
+  mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+  cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+done
 
 # Convert Research CA certificate into DER format
 openssl x509 -in ${RESEARCH_CERT} -outform der -out ${RESEARCH_CERT_DER}
@@ -546,6 +517,7 @@ openssl x509 -in ${RESEARCH_CERT} -outform der -out ${RESEARCH_CERT_DER}
 # Generate Research CA with the same private key as above but invalid CDP
 TEST="${TEST_DIR}/ikev2/multi-level-ca-skipped"
 TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/cacerts/researchCert.pem"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --type rsa \
     --crl "http://crl.strongswan.org/not-available.crl" \
     --in ${RESEARCH_KEY} --not-before "${START}" --not-after "${IM_END}" --ca \
@@ -565,53 +537,28 @@ pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --outform pem > ${SALES_CERT}
 cp ${SALES_CERT} ${CA_DIR}/certs/${SERIAL}.pem
 
-# Put a certificate copy into the ikev1/multi-level-ca scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca"
-cp ${SALES_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
+# Put a certificate copy into the following scenarios
+for t in ikev1/multi-level-ca ikev2/multi-level-ca ikev2/multi-level-ca-ldap \
+         ikev2/multi-level-ca-strict ikev2/ocsp-multi-level \
+         ikev2/ocsp-multi-level ikev2/ocsp-strict-ifuri
+do
+  TEST="${TEST_DIR}/${t}"
+  cp ${SALES_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
+done
 
-# Put a certificate copy into the ikev1/multi-level-ca-cr-init scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca-cr-init"
-cp ${SALES_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/cacerts
+for t in ikev1/multi-level-ca-cr-init ikev1/multi-level-ca-cr-resp \
+         ikev2/multi-level-ca-cr-init ikev2/multi-level-ca-cr-resp
+do
+  TEST="${TEST_DIR}/${t}"
+  mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/cacerts
+  cp ${SALES_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/cacerts
+done
 
-# Put a certificate copy into the ikev1/multi-level-ca-cr-resp scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca-cr-resp"
-cp ${SALES_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/multi-level-ca scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca"
-cp ${SALES_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/multi-level-ca-ldap scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-ldap"
-cp ${SALES_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/multi-level-ca-cr-init scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-cr-init"
-cp ${SALES_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/multi-level-ca-cr-resp scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-cr-resp"
-cp ${SALES_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/multi-level-ca-strict scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-strict"
-cp ${SALES_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/ocsp-multi-level scenario
-TEST="${TEST_DIR}/ikev2/ocsp-multi-level"
-cp ${SALES_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the ikev2/ocsp-struct.ifuri scenario
-TEST="${TEST_DIR}/ikev2/ocsp-strict-ifuri"
-cp ${SALES_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
-
-# Put a certificate copy into the swanctl/multi-level-ca scenario
-TEST="${TEST_DIR}/swanctl/multi-level-ca"
-cp ${SALES_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
-
-# Put a certificate copy into the swanctl/ocsp-multi-level scenario
-TEST="${TEST_DIR}/swanctl/ocsp-multi-level"
-cp ${SALES_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+for t in multi-level-ca ocsp-multi-level
+do
+  TEST="${TEST_DIR}/swanctl/${t}"
+  cp ${SALES_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+done
 
 # Convert Sales CA certificate into DER format
 openssl x509 -in ${SALES_CERT} -outform der -out ${SALES_CERT_DER}
@@ -623,6 +570,8 @@ TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/certs/moonCert-sha224.pem"
 KEY_PWD="gOQHdrSWeFuiZtYPetWuyzHW"
 CN="moon.strongswan.org"
 SERIAL="0D"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -638,6 +587,8 @@ TEST_CERT="${TEST}/hosts/carol/${IPSEC_DIR}/certs/carolCert-sha384.pem"
 KEY_PWD="ITP/H4lSHqGpUGmCpgNDklbzTNV+swjA"
 CN="carol@strongswan.org"
 SERIAL="0E"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -653,6 +604,8 @@ TEST_CERT="${TEST}/hosts/dave/${IPSEC_DIR}/certs/daveCert-sha512.pem"
 KEY_PWD="MeFnDN7VUbj+qU/bkgRIFvbCketIk2wrrs5Ii8297N2v"
 CN="dave@strongswan.org"
 SERIAL="0F"
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -668,6 +621,8 @@ TEST_KEY="${TEST}/hosts/carol/${IPSEC_DIR}/private/carolKey.pem"
 TEST_CERT="${TEST}/hosts/carol/${IPSEC_DIR}/certs/carolCert.pem"
 CN="carol@strongswan.org"
 SERIAL="10"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -677,18 +632,19 @@ cp ${TEST_CERT} ${CA_DIR}/certs/${SERIAL}.pem
 
 # Put a copy into the ikev2/ocsp-timeouts-good scenario
 TEST="${TEST_DIR}/ikev2/ocsp-timeouts-good"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 cp ${TEST_KEY}  ${TEST}/hosts/carol/${IPSEC_DIR}/private
 cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 
 # Put a copy into the swanctl/ocsp-signer-cert scenario
-TEST="${TEST_DIR}/swanctl/ocsp-signer-cert"
-cp ${TEST_KEY}  ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
-cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
-
-# Put a copy into the swanctl/ocsp-disabled scenario
-TEST="${TEST_DIR}/swanctl/ocsp-disabled"
-cp ${TEST_KEY}  ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
-cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+for t in ocsp-signer-cert ocsp-disabled
+do
+  cd "${TEST_DIR}/swanctl/${t}/hosts/carol/${SWANCTL_DIR}"
+  mkdir -p rsa x509
+  cp ${TEST_KEY} rsa
+  cp ${TEST_CERT} x509
+done
 
 # Generate an OCSP Signing certificate for the strongSwan Root CA
 TEST_KEY="${CA_DIR}/ocspKey.pem"
@@ -715,6 +671,8 @@ pki --self --type rsa --in ${TEST_KEY} --flag ocspSigning \
 
 # Copy self-signed OCSP Signing certificate to ikev2/ocsp-local-cert scenario
 TEST="${TEST_DIR}/ikev2/ocsp-local-cert"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/ocspcerts
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/ocspcerts
 cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/ocspcerts
 cp ${TEST_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/ocspcerts
 
@@ -753,11 +711,57 @@ do
   done
 done
 
+# Generate moon certificate with an unsupported critical X.509 extension
+TEST="${TEST_DIR}/ikev2/critical-extension"
+TEST_KEY="${TEST}/hosts/moon/${IPSEC_DIR}/private/moonKey.pem"
+TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/certs/moonCert.pem"
+CN="moon.strongswan.org"
+SERIAL="13"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/certs
+pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
+pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
+    --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
+    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=Critical Extension, CN=${CN}" \
+    --critical 1.3.6.1.4.1.36906.1 --flag serverAuth \
+    --outform pem > ${TEST_CERT}
+cp ${TEST_CERT} ${CA_DIR}/certs/${SERIAL}.pem
+
+# Put a copy in the openssl-ikev2/critical extension scenario
+TEST="${TEST_DIR}/openssl-ikev2/critical-extension"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+cp ${TEST_KEY} ${TEST}/hosts/moon/${SWANCTL_DIR}/rsa
+cp ${TEST_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+
+# Generate sun certificate with an unsupported critical X.509 extension
+TEST="${TEST_DIR}/ikev2/critical-extension"
+TEST_KEY="${TEST}/hosts/sun/${IPSEC_DIR}/private/sunKey.pem"
+TEST_CERT="${TEST}/hosts/sun/${IPSEC_DIR}/certs/sunCert.pem"
+CN="sun.strongswan.org"
+SERIAL="14"
+mkdir -p ${TEST}/hosts/sun/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/sun/${IPSEC_DIR}/certs
+pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
+pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
+    --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
+    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=Critical Extension, CN=${CN}" \
+    --critical 1.3.6.1.4.1.36906.1 --flag serverAuth \
+    --outform pem > ${TEST_CERT}
+cp ${TEST_CERT} ${CA_DIR}/certs/${SERIAL}.pem
+
+# Put a copy in the openssl-ikev2/critical extension scenario
+TEST="${TEST_DIR}/openssl-ikev2/critical-extension"
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509
+cp ${TEST_KEY} ${TEST}/hosts/sun/${SWANCTL_DIR}/rsa
+cp ${TEST_CERT} ${TEST}/hosts/sun/${SWANCTL_DIR}/x509
+
 # Generate winnetou server certificate
 HOST_KEY="${CA_DIR}/winnetouKey.pem"
 HOST_CERT="${CA_DIR}/winnetouCert.pem"
 CN="winnetou.strongswan.org"
-SERIAL="13"
+SERIAL="15"
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${HOST_KEY}
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --in ${HOST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -770,7 +774,7 @@ TEST="${TEST_DIR}/tnc/tnccs-20-pdp-eap"
 TEST_KEY="${TEST}/hosts/alice/${SWANCTL_DIR}/rsa/aaaKey.pem"
 TEST_CERT="${TEST}/hosts/alice/${SWANCTL_DIR}/x509/aaaCert.pem"
 CN="aaa.strongswan.org"
-SERIAL="14"
+SERIAL="16"
 cd "${TEST}/hosts/alice/${SWANCTL_DIR}"
 mkdir -p rsa x509
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
@@ -801,7 +805,10 @@ TEST="${TEST_DIR}/ikev2/acert-cached"
 TEST_KEY="${TEST}/hosts/moon/${IPSEC_DIR}/private/aaKey.pem"
 TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/aacerts/aaCert.pem"
 CN="strongSwan Attribute Authority"
-SERIAL="15"
+SERIAL="17"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/aacerts
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/acerts
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${IM_END}" \
@@ -810,30 +817,34 @@ pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
 cp ${TEST_CERT} ${CA_DIR}/certs/${SERIAL}.pem
 
 # Generate carol's attribute certificate for sales and finance
-ACERT=${TEST}/hosts/moon/${IPSEC_DIR}/acerts/carol-sales-finance.pem
+ACERT="${TEST}/hosts/moon/${IPSEC_DIR}/acerts/carol-sales-finance.pem"
 pki --acert --issuerkey ${TEST_KEY} --issuercert ${TEST_CERT} \
     --in ${CA_DIR}/certs/01.pem --group sales --group finance \
     --not-before "${START}" --not-after "${EE_END}" --outform pem > ${ACERT}
 
 # Generate dave's expired attribute certificate for sales
-ACERT=${TEST}/hosts/moon/${IPSEC_DIR}/acerts/dave-sales-expired.pem
+ACERT="${TEST}/hosts/moon/${IPSEC_DIR}/acerts/dave-sales-expired.pem"
 pki --acert --issuerkey ${TEST_KEY} --issuercert ${TEST_CERT} \
     --in ${CA_DIR}/certs/02.pem --group sales \
     --not-before "${START}" --not-after "${SH_END}" --outform pem  > ${ACERT}
 
 # Generate dave's attribute certificate for marketing
-ACERT_DM=${TEST}/hosts/moon/${IPSEC_DIR}/acerts/dave-marketing.pem
+ACERT_DM="${TEST}/hosts/moon/${IPSEC_DIR}/acerts/dave-marketing.pem"
 pki --acert --issuerkey ${TEST_KEY} --issuercert ${TEST_CERT} \
     --in ${CA_DIR}/certs/02.pem --group marketing \
     --not-before "${SH_END}" --not-after "${EE_END}" --outform pem > ${ACERT_DM}
 
 # Put a copy into the ikev2/acert-fallback scenario
 TEST="${TEST_DIR}/ikev2/acert-fallback"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/aacerts
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/acerts
 cp ${TEST_KEY}  ${TEST}/hosts/moon/${IPSEC_DIR}/private
 cp ${TEST_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/aacerts
 
 # Generate carol's expired attribute certificate for finance
 ACERT=${TEST}/hosts/carol/${IPSEC_DIR}/acerts/carol-finance-expired.pem
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/acerts
 pki --acert --issuerkey ${TEST_KEY} --issuercert ${TEST_CERT} \
     --in ${CA_DIR}/certs/01.pem --group finance \
     --not-before "${START}" --not-after "${SH_END}" --outform pem  > ${ACERT}
@@ -846,6 +857,10 @@ pki --acert --issuerkey ${TEST_KEY} --issuercert ${TEST_CERT} \
 
 # Put a copy into the ikev2/acert-inline scenarion
 TEST="${TEST_DIR}/ikev2/acert-inline"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/aacerts
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/acerts
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/acerts
 cp ${TEST_KEY}  ${TEST}/hosts/moon/${IPSEC_DIR}/private
 cp ${TEST_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/aacerts
 cp ${ACERT_CS}  ${TEST}/hosts/carol/${IPSEC_DIR}/acerts
@@ -855,7 +870,7 @@ cp ${ACERT_DM}  ${TEST}/hosts/dave/${IPSEC_DIR}/acerts
 CN="strongSwan Legacy AA"
 TEST_KEY="${TEST}/hosts/moon/${IPSEC_DIR}/private/aaKey-expired.pem"
 TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/aacerts/aaCert-expired.pem"
-SERIAL="16"
+SERIAL="18"
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${SH_END}" \
@@ -865,6 +880,7 @@ cp ${TEST_CERT} ${CA_DIR}/certs/${SERIAL}.pem
 
 # Genrate dave's attribute certificate for sales from expired AA
 ACERT=${TEST}/hosts/dave/${IPSEC_DIR}/acerts/dave-expired-aa.pem
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/acerts
 pki --acert --issuerkey ${TEST_KEY} --issuercert ${TEST_CERT} \
     --in ${CA_DIR}/certs/02.pem --group sales \
     --not-before "${START}" --not-after "${EE_END}" --outform pem > ${ACERT}
@@ -890,6 +906,8 @@ TEST_KEY="${TEST}/hosts/carol/${IPSEC_DIR}/private/carolKey.pem"
 TEST_CERT="${TEST}/hosts/carol/${IPSEC_DIR}/certs/carolCert.pem"
 CN="carol@strongswan.org"
 SERIAL="01"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${RESEARCH_KEY} --cacert ${RESEARCH_CERT} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -901,74 +919,35 @@ cp ${TEST_CERT} ${RESEARCH_DIR}/certs/${SERIAL}.pem
 openssl rsa -in ${TEST_KEY} -outform der \
             -out ${RESEARCH_DIR}/keys/${SERIAL}.der 2> /dev/null
 
-# Put a copy in the ikev2/multilevel-ca-cr-init scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-cr-init"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
+# Put a copy in the following scenarios
+for t in ikev2/multi-level-ca-cr-init ikev2/multi-level-ca-cr-resp \
+         ikev2/multi-level-ca-ldap ikev2/multi-level-ca-loop \
+         ikev2/multi-level-ca-revoked ikev2/multi-level-ca-skipped \
+         ikev2/multi-level-ca-strict ikev2/ocsp-multi-level \
+         ikev1/multi-level-ca ikev1/multi-level-ca-cr-init \
+         ikev1/multi-level-ca-cr-resp
+do
+  TEST="${TEST_DIR}/${t}"
+  mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+  mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
+  cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
+  cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
+done
 
-# Put a copy in the ikev2/multilevel-ca-cr-resp scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-cr-resp"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev2/multilevel-ca-ldap scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-ldap"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev2/multilevel-ca-ldap scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-loop"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev2/multilevel-ca-revoked scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-revoked"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev2/multilevel-ca-skipped scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-skipped"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev2/multilevel-ca-strict scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-strict"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev2/ocsp-multilevel scenario
-TEST="${TEST_DIR}/ikev2/ocsp-multi-level"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev1/multilevel-ca scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev1/multilevel-ca-cr-init scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca-cr-init"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev1/multilevel-ca-cr-resp scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca-cr-resp"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
-
-# Put a copy in the swanctl/multilevel-ca scenario
-TEST="${TEST_DIR}/swanctl/multi-level-ca"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
-cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
-
-# Put a copy in the swanctl/ocsp-multilevel scenario
-TEST="${TEST_DIR}/swanctl/ocsp-multi-level"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
-cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+for t in multi-level-ca ocsp-multi-level
+do
+  TEST="${TEST_DIR}/swanctl/${t}"
+  mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
+  mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+  cp ${TEST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
+  cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+done
 
 # Generate a carol research certificate without a CDP
 TEST="${TEST_DIR}/ikev2/ocsp-strict-ifuri"
 TEST_CERT="${TEST}/hosts/carol/${IPSEC_DIR}/certs/carolCert.pem"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
 pki --issue --cakey ${RESEARCH_KEY} --cacert ${RESEARCH_CERT} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
     --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=Research, CN=${CN}" \
@@ -992,6 +971,7 @@ cp ${TEST_CERT} ${RESEARCH_DIR}/certs/${SERIAL}.pem
 TEST="${TEST_DIR}/ikev2/multi-level-ca-loop"
 TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/cacerts/sales_by_researchCert.pem"
 SERIAL="03"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
 pki --issue --cakey ${RESEARCH_KEY} --cacert ${RESEARCH_CERT} --type rsa \
     --in ${SALES_KEY} --not-before "${START}" --not-after "${EE_END}" --ca \
     --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=Sales, CN=Sales CA" \
@@ -1020,6 +1000,8 @@ TEST_KEY="${TEST}/hosts/carol/${IPSEC_DIR}/private/carolKey.pem"
 TEST_CERT="${TEST}/hosts/carol/${IPSEC_DIR}/certs/carolCert.pem"
 CN="carol@strongswan.org"
 SERIAL="01"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${DUCK_KEY} --cacert ${DUCK_CERT} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1041,6 +1023,8 @@ TEST_KEY="${TEST}/hosts/dave/${IPSEC_DIR}/private/daveKey.pem"
 TEST_CERT="${TEST}/hosts/dave/${IPSEC_DIR}/certs/daveCert.pem"
 CN="dave@strongswan.org"
 SERIAL="01"
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${SALES_KEY} --cacert ${SALES_CERT} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1052,59 +1036,33 @@ cp ${TEST_CERT} ${SALES_DIR}/certs/${SERIAL}.pem
 openssl rsa -in ${TEST_KEY} -outform der \
             -out ${SALES_DIR}/keys/${SERIAL}.der 2> /dev/null
 
-# Put a copy in the ikev2/multilevel-ca-cr-init scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-cr-init"
-cp ${TEST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs
+# Put a copy in the following scenarios
+for t in ikev2/multi-level-ca-cr-init ikev2/multi-level-ca-cr-resp \
+         ikev2/multi-level-ca-ldap ikev2/multi-level-ca-strict \
+         ikev2/ocsp-multi-level ikev1/multi-level-ca \
+         ikev1/multi-level-ca-cr-init ikev1/multi-level-ca-cr-resp
+do
+  TEST="${TEST_DIR}/${t}"
+  mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/private
+  mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/certs
+  cp ${TEST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
+  cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs
+done
 
-# Put a copy in the ikev2/multilevel-ca-cr-resp scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-cr-resp"
-cp ${TEST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev2/multilevel-ca-ldap scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-ldap"
-cp ${TEST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev2/multilevel-ca-strict scenario
-TEST="${TEST_DIR}/ikev2/multi-level-ca-strict"
-cp ${TEST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev2/ocsp-multilevel scenario
-TEST="${TEST_DIR}/ikev2/ocsp-multi-level"
-cp ${TEST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev1/multilevel-ca scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca"
-cp ${TEST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev1/multilevel-ca-cr-init scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca-cr-init"
-cp ${TEST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs
-
-# Put a copy in the ikev1/multilevel-ca-cr-resp scenario
-TEST="${TEST_DIR}/ikev1/multi-level-ca-cr-resp"
-cp ${TEST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private
-cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs
-
-# Put a copy in the swanctl/multilevel-ca scenario
-TEST="${TEST_DIR}/swanctl/multi-level-ca"
-cp ${TEST_KEY} ${TEST}/hosts/dave/${SWANCTL_DIR}/rsa
-cp ${TEST_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
-
-# Put a copy in the swanctl/ocsp-multilevel scenario
-TEST="${TEST_DIR}/swanctl/ocsp-multi-level"
-cp ${TEST_KEY} ${TEST}/hosts/dave/${SWANCTL_DIR}/rsa
-cp ${TEST_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
+for t in multi-level-ca ocsp-multi-level
+do
+  TEST="${TEST_DIR}/swanctl/${t}"
+  mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/rsa
+  mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
+  cp ${TEST_KEY} ${TEST}/hosts/dave/${SWANCTL_DIR}/rsa
+  cp ${TEST_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
+done
 
 # Generate a dave sales certificate with an inactive OCSP URI and no CDP
 TEST="${TEST_DIR}/ikev2/ocsp-strict-ifuri"
 TEST_CERT="${TEST}/hosts/dave/${IPSEC_DIR}/certs/daveCert.pem"
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/certs
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/private
 pki --issue --cakey ${SALES_KEY} --cacert ${SALES_CERT} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
     --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=Sales, CN=${CN}" \
@@ -1128,6 +1086,7 @@ cp ${TEST_CERT} ${SALES_DIR}/certs/${SERIAL}.pem
 TEST="${TEST_DIR}/ikev2/multi-level-ca-loop"
 TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/cacerts/research_by_salesCert.pem"
 SERIAL="03"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
 pki --issue --cakey ${SALES_KEY} --cacert ${SALES_CERT} --type rsa \
     --in ${RESEARCH_KEY} --not-before "${START}" --not-after "${EE_END}" --ca \
     --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=Research, CN=Research CA" \
@@ -1150,16 +1109,24 @@ pki --self --type ecdsa --in ${ECDSA_KEY} \
     --outform pem > ${ECDSA_CERT}
 
 # Put a copy in the openssl-ikev2/ecdsa-certs scenario
-TEST="${TEST_DIR}/openssl-ikev2/ecdsa-certs"
-cp ${ECDSA_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
-cp ${ECDSA_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
-cp ${ECDSA_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509ca
+for t in ecdsa-certs ecdsa-pkcs8
+do
+  TEST="${TEST_DIR}/openssl-ikev2/${t}"
+  for h in moon carol dave
+  do
+    mkdir -p ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+    cp ${ECDSA_CERT} ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+  done
+done
 
 # Generate a moon ECDSA 521 bit certificate
+TEST="${TEST_DIR}/openssl-ikev2/ecdsa-certs"
 MOON_KEY="${TEST}/hosts/moon/${SWANCTL_DIR}/ecdsa/moonKey.pem"
 MOON_CERT="${TEST}/hosts/moon/${SWANCTL_DIR}/x509/moonCert.pem"
 CN="moon.strongswan.org"
 SERIAL="01"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/ecdsa
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
 pki --gen --type ecdsa --size 521 --outform pem > ${MOON_KEY}
 pki --issue --cakey ${ECDSA_KEY} --cacert ${ECDSA_CERT} --type ecdsa \
     --in ${MOON_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1172,6 +1139,8 @@ CAROL_KEY="${TEST}/hosts/carol/${SWANCTL_DIR}/ecdsa/carolKey.pem"
 CAROL_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carolCert.pem"
 CN="carol@strongswan.org"
 SERIAL="02"
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/ecdsa
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
 pki --gen --type ecdsa --size 256 --outform pem > ${CAROL_KEY}
 pki --issue --cakey ${ECDSA_KEY} --cacert ${ECDSA_CERT} --type ecdsa \
     --in ${CAROL_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1184,6 +1153,8 @@ DAVE_KEY="${TEST}/hosts/dave/${SWANCTL_DIR}/ecdsa/daveKey.pem"
 DAVE_CERT="${TEST}/hosts/dave/${SWANCTL_DIR}/x509/daveCert.pem"
 CN="dave@strongswan.org"
 SERIAL="03"
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/ecdsa
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
 pki --gen --type ecdsa --size 384 --outform pem > ${DAVE_KEY}
 pki --issue --cakey ${ECDSA_KEY} --cacert ${ECDSA_CERT} --type ecdsa \
     --in ${DAVE_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1191,30 +1162,33 @@ pki --issue --cakey ${ECDSA_KEY} --cacert ${ECDSA_CERT} --type ecdsa \
     --crl ${ECDSA_CDP} --outform pem > ${DAVE_CERT}
 cp ${DAVE_CERT} ${ECDSA_DIR}/certs/${SERIAL}.pem
 
-# Put CA and EE certificate copies in the openssl-ikev2/rw-ecdsa-pkcs8 scenario
+# Put CA and EE certificate copies in the openssl-ikev2/ecdsa-pkcs8 scenario
 TEST="${TEST_DIR}/openssl-ikev2/ecdsa-pkcs8"
-cp ${ECDSA_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
 cp ${MOON_CERT}  ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
-cp ${ECDSA_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
 cp ${CAROL_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
-cp ${ECDSA_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509ca
 cp ${DAVE_CERT}  ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
 
 # Convert moon private key into unencrypted PKCS#8 format
-TEST_KEY=${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs8/moonKey.pem
+TEST_KEY="${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs8/moonKey.pem"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs8
 openssl pkcs8 -in ${MOON_KEY} -nocrypt -topk8 -out ${TEST_KEY}
 
 # Convert carol private key into v1.5 DES encrypted PKCS#8 format
-TEST_KEY=${TEST}/hosts/carol/${SWANCTL_DIR}/pkcs8/carolKey.pem
+TEST_KEY="${TEST}/hosts/carol/${SWANCTL_DIR}/pkcs8/carolKey.pem"
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/pkcs8
 openssl pkcs8 -in ${CAROL_KEY} -nocrypt -topk8 -v1 PBE-MD5-DES \
               -passout "pass:nH5ZQEWtku0RJEZ6" -out ${TEST_KEY}
 
 # Convert dave private key into v2.0 AES-128 encrypted PKCS#8 format
-TEST_KEY=${TEST}/hosts/dave/${SWANCTL_DIR}/pkcs8/daveKey.pem
+TEST_KEY="${TEST}/hosts/dave/${SWANCTL_DIR}/pkcs8/daveKey.pem"
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/pkcs8
 openssl pkcs8 -in ${DAVE_KEY} -nocrypt -topk8  -v2 aes128 \
               -passout "pass:OJlNZBx+80dLh4wC6fw5LmBd" -out ${TEST_KEY}
 
-# Put CA and EE certificate copies in the openssl-ikev1/rw-ecdsa-certs scenario
+# Put CA and EE certificate copies in the openssl-ikev1/ecdsa-certs scenario
 TEST="${TEST_DIR}/openssl-ikev1/ecdsa-certs"
 cd ${TEST}/hosts/moon/${SWANCTL_DIR}
 mkdir -p ecdsa x509 x509ca
@@ -1359,6 +1333,8 @@ pki --self --type rsa --in ${SHA3_RSA_KEY} --digest sha3_256 \
 
 # Put a copy in the swanctl/net2net-sha3-rsa-cert scenario
 TEST="${TEST_DIR}/swanctl/net2net-sha3-rsa-cert"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509ca
 cp ${SHA3_RSA_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
 cp ${SHA3_RSA_CERT} ${TEST}/hosts/sun/${SWANCTL_DIR}/x509ca
 
@@ -1367,6 +1343,8 @@ SUN_KEY="${TEST}/hosts/sun/${SWANCTL_DIR}/rsa/sunKey.pem"
 SUN_CERT="${TEST}/hosts/sun/${SWANCTL_DIR}/x509/sunCert.pem"
 CN="sun.strongswan.org"
 SERIAL="01"
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${SUN_KEY}
 pki --issue --cakey ${SHA3_RSA_KEY} --cacert ${SHA3_RSA_CERT} --type rsa \
     --in ${SUN_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1379,6 +1357,8 @@ MOON_KEY="${TEST}/hosts/moon/${SWANCTL_DIR}/rsa/moonKey.pem"
 MOON_CERT="${TEST}/hosts/moon/${SWANCTL_DIR}/x509/moonCert.pem"
 CN="moon.strongswan.org"
 SERIAL="02"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${MOON_KEY}
 pki --issue --cakey ${SHA3_RSA_KEY} --cacert ${SHA3_RSA_CERT} --type rsa \
     --in ${MOON_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1401,17 +1381,18 @@ cp ${SHA3_RSA_CERT} x509ca
 
 # Put a copy in the swanctl/rw-eap-tls-sha3-rsa scenario
 TEST="${TEST_DIR}/swanctl/rw-eap-tls-sha3-rsa"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
 cp ${MOON_KEY} ${TEST}/hosts/moon/${SWANCTL_DIR}/rsa
 cp ${MOON_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
-cp ${SHA3_RSA_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
-cp ${SHA3_RSA_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
-cp ${SHA3_RSA_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509ca
 
 # Generate a carol SHA3-RSA certificate
 TEST_KEY="${TEST}/hosts/carol/${SWANCTL_DIR}/rsa/carolKey.pem"
 TEST_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carolCert.pem"
 CN="carol@strongswan.org"
 SERIAL="03"
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${SHA3_RSA_KEY} --cacert ${SHA3_RSA_CERT} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1424,12 +1405,20 @@ TEST_KEY="${TEST}/hosts/dave/${SWANCTL_DIR}/rsa/daveKey.pem"
 TEST_CERT="${TEST}/hosts/dave/${SWANCTL_DIR}/x509/daveCert.pem"
 CN="dave@strongswan.org"
 SERIAL="04"
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${SHA3_RSA_KEY} --cacert ${SHA3_RSA_CERT} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
     --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=SHA-3, CN=${CN}" \
     --crl ${SHA3_RSA_CDP} --digest sha3_256 --outform pem > ${TEST_CERT}
 cp ${TEST_CERT} ${SHA3_RSA_DIR}/certs/${SERIAL}.pem
+
+for h in moon carol dave
+do
+  mkdir -p ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+  cp ${SHA3_RSA_CERT} ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+done
 
 ################################################################################
 # strongSwan Ed25519 Root CA                                                   #
@@ -1446,6 +1435,8 @@ pki --self --type ed25519 --in ${ED25519_KEY} \
 
 # Put a copy in the swanctl/net2net-ed25519 scenario
 TEST="${TEST_DIR}/swanctl/net2net-ed25519"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509ca
 cp ${ED25519_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
 cp ${ED25519_CERT} ${TEST}/hosts/sun/${SWANCTL_DIR}/x509ca
 
@@ -1454,6 +1445,8 @@ SUN_KEY="${TEST}/hosts/sun/${SWANCTL_DIR}/pkcs8/sunKey.pem"
 SUN_CERT="${TEST}/hosts/sun/${SWANCTL_DIR}/x509/sunCert.pem"
 CN="sun.strongswan.org"
 SERIAL="01"
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/pkcs8
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509
 pki --gen --type ed25519 --outform pem > ${SUN_KEY}
 pki --issue --cakey ${ED25519_KEY} --cacert ${ED25519_CERT} --type ed25519 \
     --in ${SUN_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1467,6 +1460,8 @@ MOON_KEY="${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs8/moonKey.pem"
 MOON_CERT="${TEST}/hosts/moon/${SWANCTL_DIR}/x509/moonCert.pem"
 CN="moon.strongswan.org"
 SERIAL="02"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs8
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
 pki --gen --type ed25519 --outform pem > ${MOON_KEY}
 pki --issue --cakey ${ED25519_KEY} --cacert ${ED25519_CERT} --type ed25519 \
     --in ${MOON_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1490,11 +1485,13 @@ cp ${ED25519_CERT} x509ca
 
 # Put a copy in the ikev2/net2net-ed25519 scenario
 TEST="${TEST_DIR}/ikev2/net2net-ed25519"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}
 cd ${TEST}/hosts/moon/${IPSEC_DIR}
 mkdir -p cacerts certs private
 cp ${MOON_KEY}     private
 cp ${MOON_CERT}    certs
 cp ${ED25519_CERT} cacerts
+mkdir -p ${TEST}/hosts/sun/${IPSEC_DIR}
 cd ${TEST}/hosts/sun/${IPSEC_DIR}
 mkdir -p cacerts certs private
 cp ${SUN_KEY}      private
@@ -1503,17 +1500,24 @@ cp ${ED25519_CERT} cacerts
 
 # Put a copy in the swanctl/rw-ed25519-certpol scenario
 TEST="${TEST_DIR}/swanctl/rw-ed25519-certpol"
-cp ${MOON_KEY}     ${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs8
-cp ${MOON_CERT}    ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
-cp ${ED25519_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
-cp ${ED25519_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
-cp ${ED25519_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509ca
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs8
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+cp ${MOON_KEY}  ${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs8
+cp ${MOON_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+
+for h in moon carol dave
+do
+  mkdir -p ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+  cp ${ED25519_CERT} ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+done
 
 # Generate a carol Ed25519 certificate
 TEST_KEY="${TEST}/hosts/carol/${SWANCTL_DIR}/pkcs8/carolKey.pem"
 TEST_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carolCert.pem"
 CN="carol@strongswan.org"
 SERIAL="03"
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/pkcs8
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
 pki --gen --type ed25519 --outform pem > ${TEST_KEY}
 pki --issue --cakey ${ED25519_KEY} --cacert ${ED25519_CERT} --type ed25519 \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1527,6 +1531,8 @@ TEST_KEY="${TEST}/hosts/dave/${SWANCTL_DIR}/pkcs8/daveKey.pem"
 TEST_CERT="${TEST}/hosts/dave/${SWANCTL_DIR}/x509/daveCert.pem"
 CN="dave@strongswan.org"
 SERIAL="04"
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/pkcs8
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
 pki --gen --type ed25519 --outform pem > ${TEST_KEY}
 pki --issue --cakey ${ED25519_KEY} --cacert ${ED25519_CERT} --type ed25519 \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1548,14 +1554,18 @@ pki --self --type rsa --in ${MONSTER_KEY} \
 
 # Put a copy in the ikev2/after-2038-certs scenario
 TEST="${TEST_DIR}/ikev2/after-2038-certs"
-cp ${MONSTER_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts/
-cp ${MONSTER_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/cacerts/
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/cacerts
+cp ${MONSTER_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts
+cp ${MONSTER_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/cacerts
 
 # Generate a moon Monster certificate
 TEST_KEY="${TEST}/hosts/moon/${IPSEC_DIR}/private/moonKey.pem"
 TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/certs/moonCert.pem"
 CN="moon.strongswan.org"
 SERIAL="01"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${MONSTER_EE_RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${MONSTER_KEY} --cacert ${MONSTER_CERT} --type rsa \
     --in ${TEST_KEY} --san ${CN} \
@@ -1569,6 +1579,8 @@ TEST_KEY="${TEST}/hosts/carol/${IPSEC_DIR}/private/carolKey.pem"
 TEST_CERT="${TEST}/hosts/carol/${IPSEC_DIR}/certs/carolCert.pem"
 CN="carol@strongswan.org"
 SERIAL="02"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${MONSTER_EE_RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${MONSTER_KEY} --cacert ${MONSTER_CERT} --type rsa \
     --in ${TEST_KEY} --san ${CN} \
@@ -1587,23 +1599,23 @@ pki --self --type bliss --in ${BLISS_KEY} --digest sha3_512 \
     --not-before "${START}" --not-after "${CA_END}" --ca \
     --dn "C=CH, O=${PROJECT}, CN=strongSwan BLISS Root CA" > ${BLISS_CERT}
 
-# Put a copy in the ikev2/rw-newhope-bliss scenario
-TEST="${TEST_DIR}/ikev2/rw-newhope-bliss"
-cp ${BLISS_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/cacerts/
-cp ${BLISS_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/cacerts/
-cp ${BLISS_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts/
+# Put a copy in the following scenarios
+for t in rw-newhope-bliss rw-ntru-bliss
+do
+  TEST="${TEST_DIR}/ikev2/${t}"
+  for h in moon carol dave
+  do
+    mkdir -p ${TEST}/hosts/${h}/${IPSEC_DIR}/cacerts
+    cp ${BLISS_CERT} ${TEST}/hosts/${h}/${IPSEC_DIR}/cacerts
+  done
+done
 
-# Put a copy in the ikev2/rw-ntru-bliss scenario
-TEST="${TEST_DIR}/ikev2/rw-ntru-bliss"
-cp ${BLISS_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/cacerts/
-cp ${BLISS_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/cacerts/
-cp ${BLISS_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/cacerts/
-
-# Put a copy in the swanctl/rw-ntru-bliss scenario
 TEST="${TEST_DIR}/swanctl/rw-ntru-bliss"
-cp ${BLISS_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca/
-cp ${BLISS_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509ca/
-cp ${BLISS_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca/
+for h in moon carol dave
+do
+   mkdir -p ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+   cp ${BLISS_CERT} ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+done
 
 # Generate a carol BLISS certificate with 128 bit security strength
 TEST="${TEST_DIR}/ikev2/rw-newhope-bliss"
@@ -1611,6 +1623,8 @@ TEST_KEY="${TEST}/hosts/carol/${IPSEC_DIR}/private/carolKey.der"
 TEST_CERT="${TEST}/hosts/carol/${IPSEC_DIR}/certs/carolCert.der"
 CN="carol@strongswan.org"
 SERIAL="01"
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 pki --gen --type bliss --size 1 > ${TEST_KEY}
 pki --issue --cakey ${BLISS_KEY} --cacert ${BLISS_CERT} --type bliss \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1620,13 +1634,17 @@ cp ${TEST_CERT} ${BLISS_DIR}/certs/${SERIAL}.der
 
 # Put a copy in the ikev2/rw-ntru-bliss scenario
 TEST="${TEST_DIR}/ikev2/rw-ntru-bliss"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private/
-cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs/
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
+cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
+cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 
 # Put a copy in the swanctl/rw-ntru-bliss scenario
 TEST="${TEST_DIR}/swanctl/rw-ntru-bliss"
-cp ${TEST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/bliss/
-cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509/
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/bliss
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+cp ${TEST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/bliss
+cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
 
 # Generate a dave BLISS certificate with 160 bit security strength
 TEST="${TEST_DIR}/ikev2/rw-newhope-bliss"
@@ -1634,6 +1652,8 @@ TEST_KEY="${TEST}/hosts/dave/${IPSEC_DIR}/private/daveKey.der"
 TEST_CERT="${TEST}/hosts/dave/${IPSEC_DIR}/certs/daveCert.der"
 CN="dave@strongswan.org"
 SERIAL="02"
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/certs
 pki --gen --type bliss --size 3 > ${TEST_KEY}
 pki --issue --cakey ${BLISS_KEY} --cacert ${BLISS_CERT} --type bliss \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1643,11 +1663,15 @@ cp ${TEST_CERT} ${BLISS_DIR}/certs/${SERIAL}.der
 
 # Put a copy in the ikev2/rw-ntru-bliss scenario
 TEST="${TEST_DIR}/ikev2/rw-ntru-bliss"
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/certs
 cp ${TEST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private/
 cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs/
 
 # Put a copy in the swanctl/rw-ntru-bliss scenario
 TEST="${TEST_DIR}/swanctl/rw-ntru-bliss"
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/bliss
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
 cp ${TEST_KEY} ${TEST}/hosts/dave/${SWANCTL_DIR}/bliss/
 cp ${TEST_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509/
 
@@ -1657,6 +1681,8 @@ TEST_KEY="${TEST}/hosts/moon/${IPSEC_DIR}/private/moonKey.der"
 TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/certs/moonCert.der"
 CN="moon.strongswan.org"
 SERIAL="03"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/certs
 pki --gen --type bliss --size 4 > ${TEST_KEY}
 pki --issue --cakey ${BLISS_KEY} --cacert ${BLISS_CERT} --type bliss \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
@@ -1666,11 +1692,15 @@ cp ${TEST_CERT} ${BLISS_DIR}/certs/${SERIAL}.der
 
 # Put a copy in the ikev2/rw-ntru-bliss scenario
 TEST="${TEST_DIR}/ikev2/rw-ntru-bliss"
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/private
+mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/certs
 cp ${TEST_KEY} ${TEST}/hosts/moon/${IPSEC_DIR}/private/
 cp ${TEST_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/certs/
 
 # Put a copy in the swanctl/rw-ntru-bliss scenario
 TEST="${TEST_DIR}/swanctl/rw-ntru-bliss"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/bliss
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
 cp ${TEST_KEY} ${TEST}/hosts/moon/${SWANCTL_DIR}/bliss/
 cp ${TEST_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509/
 

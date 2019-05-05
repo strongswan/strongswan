@@ -1,5 +1,3 @@
-moon::rm /etc/swanctl/x509/moonCert.pem
-sun::rm /etc/swanctl/x509/sunCert.pem
 moon::systemctl start strongswan
 sun::systemctl start strongswan
 moon::expect-connection gw-gw
