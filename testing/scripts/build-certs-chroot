@@ -1874,3 +1874,19 @@ do
         ${TEST_DATA}.in > ${TEST_DATA}
   done
 done
+
+################################################################################
+# Raw RSA keys                                                                 #
+################################################################################
+
+MOON_PUB_DNS=`pki --pub --type rsa --outform dnskey --in ${MOON_KEY}`
+#
+SUN_PUB_DNS=`pki --pub --type rsa --outform dnskey --in ${SUN_KEY}`
+#
+for h in moon sun
+do
+  TEST_DATA="${TEST_DIR}/ikev2/net2net-rsa/hosts/${h}/etc/ipsec.conf"
+  sed -e "s|MOON_PUB_DNS|${MOON_PUB_DNS}|g" \
+      -e "s|SUN_PUB_DNS|${SUN_PUB_DNS}|g" \
+      ${TEST_DATA}.in > ${TEST_DATA}
+done
