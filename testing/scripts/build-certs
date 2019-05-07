@@ -39,3 +39,10 @@ do_on_exit umount $LOOPDIR/root/testing
 
 log_action "Building certificates"
 execute_chroot "/root/testing/scripts/build-certs-chroot"
+
+# rebuild the guest images to generate the CRLs on winnetou
+if [ -z "$2" ]; then
+	# cleanup before mounting guest images
+	on_exit
+	$DIR/scripts/build-guestimages
+fi
