@@ -141,6 +141,7 @@ default)
 	;;
 openssl*)
 	CONFIG="--disable-defaults --enable-pki --enable-openssl --enable-pem"
+	export TESTS_PLUGINS="test-vectors pem openssl!"
 	DEPS="libssl-dev"
 	if test "$TEST" != "openssl-1.0"; then
 		DEPS=""
@@ -149,10 +150,12 @@ openssl*)
 	;;
 gcrypt)
 	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1"
+	export TESTS_PLUGINS="test-vectors pkcs1 gcrypt!"
 	DEPS="libgcrypt11-dev"
 	;;
 botan)
 	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem"
+	export TESTS_PLUGINS="test-vectors pem botan!"
 	# we can't use the old package that comes with Ubuntu so we build from
 	# the current master until 2.8.0 is released and then probably switch to
 	# that unless we need newer features (at least 2.7.0 plus PKCS#1 patch is
@@ -164,6 +167,7 @@ botan)
 	;;
 wolfssl)
 	CONFIG="--disable-defaults --enable-pki --enable-wolfssl --enable-pem"
+	export TESTS_PLUGINS="test-vectors pem wolfssl!"
 	# build with custom options to enable all the features the plugin supports
 	DEPS=""
 	if test "$1" = "deps"; then
