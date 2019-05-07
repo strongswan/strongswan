@@ -4,8 +4,7 @@ ipsec_PROGRAMS = starter
 starter_SOURCES = \
 starter.c files.h \
 args.c args.h confread.c confread.h keywords.c keywords.h cmp.c cmp.h \
-invokecharon.c invokecharon.h starterstroke.c starterstroke.h \
-netkey.c netkey.h klips.c klips.h
+invokecharon.c invokecharon.h starterstroke.c starterstroke.h
 
 # parser is also used by tests
 noinst_LTLIBRARIES = libstarter.la
