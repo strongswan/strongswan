@@ -77,6 +77,8 @@ static inline void X509_get0_signature(ASN1_BIT_STRING **psig, X509_ALGOR **palg
 #define X509v3_addr_get_afi v3_addr_get_afi
 #define X509v3_addr_get_range v3_addr_get_range
 #define X509v3_addr_is_canonical v3_addr_is_canonical
+#define X509_get0_notBefore X509_get_notBefore
+#define X509_get0_notAfter X509_get_notAfter
 #endif
 
 typedef struct private_openssl_x509_t private_openssl_x509_t;
@@ -1137,8 +1139,8 @@ static bool parse_certificate(private_openssl_x509_t *this)
 		return FALSE;
 	}
 
-	this->notBefore = openssl_asn1_to_time(X509_get_notBefore(this->x509));
-	this->notAfter = openssl_asn1_to_time(X509_get_notAfter(this->x509));
+	this->notBefore = openssl_asn1_to_time(X509_get0_notBefore(this->x509));
+	this->notAfter = openssl_asn1_to_time(X509_get0_notAfter(this->x509));
 
 	/* while X509_ALGOR_cmp() is declared in the headers of older OpenSSL
 	 * versions, at least on Ubuntu 14.04 it is not actually defined */
