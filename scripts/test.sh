@@ -94,7 +94,8 @@ build_openssl()
 	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
 	SSL_INS=/usr/local/ssl
 	SSL_OPT="shared no-tls no-dtls no-ssl3 no-zlib no-comp no-idea no-psk no-srp
-			 no-stdio no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
+			 no-stdio no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128
+			 --api=1.1.0"
 
 	if test -d "$SSL_DIR"; then
 		return
