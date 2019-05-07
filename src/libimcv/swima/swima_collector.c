@@ -437,7 +437,8 @@ static bool collect_tags(private_swima_collector_t *this, char *pathname,
 
 		sw_locator = chunk_empty;
 		pos = strstr(pathname, "/swidtag");
-		if (pos && asprintf(&uri, "file://%.*s", pos - pathname, pathname) > 0)
+		if (pos &&
+			asprintf(&uri, "file://%.*s", (int)(pos - pathname), pathname) > 0)
 		{
 			sw_locator = chunk_from_str(uri);
 		}
