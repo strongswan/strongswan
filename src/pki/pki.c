@@ -427,6 +427,8 @@ static void remove_callback()
  */
 int main(int argc, char *argv[])
 {
+	char *plugins;
+
 	atexit(library_deinit);
 	if (!library_init(NULL, "pki"))
 	{
@@ -438,8 +440,12 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "integrity check of pki failed\n");
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
-	if (!lib->plugins->load(lib->plugins,
-			lib->settings->get_str(lib->settings, "pki.load", PLUGINS)))
+	plugins = getenv("PKI_PLUGINS");
+	if (!plugins)
+	{
+		plugins = lib->settings->get_str(lib->settings, "pki.load", PLUGINS);
+	}
+	if (!lib->plugins->load(lib->plugins, plugins))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}

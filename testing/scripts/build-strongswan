@@ -88,9 +88,15 @@ cp $RECPDIR/$RECIPE $SHAREDDIR/build-strongswan
 log_action "Installing from recipe $RECIPE"
 execute_chroot "make SRCDIR=/root/strongswan BUILDDIR=/root/shared/build-strongswan -f /root/shared/build-strongswan/$RECIPE"
 
-# requild the guest images if we modified the root image
+# rebuild the guest images after we modified the root image
 if [ -z "$2" ]; then
 	# cleanup before mounting guest images
 	on_exit
-	$DIR/build-guestimages
+	# building the guest images without certificates fails on winnetou
+	if [ ! -f "$DIR/../hosts/winnetou/etc/ca/strongswanCert.pem" ]; then
+		# this also re-builds the guest images
+		$DIR/build-certs
+	else
+		$DIR/build-guestimages
+	fi
 fi
