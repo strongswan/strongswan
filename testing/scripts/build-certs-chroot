@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -o errexit
+
 echo "Building certificates"
 
 # Disable leak detective when using pki as it produces warnings in tzset
