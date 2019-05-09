@@ -296,6 +296,22 @@ charon.processor.priority_threads {}
 	Section to configure the number of reserved threads per priority class
 	see JOB PRIORITY MANAGEMENT in **strongswan.conf**(5).
 
+charon.rdn_matching = strict
+	How RDNs in subject DNs of certificates are matched against configured
+	identities (_strict_, _reordered_, or _relaxed_).
+
+	How RDNs in subject DNs of certificates are matched against configured
+	identities. Possible values are _strict_ (the default), _reordered_, and
+	_relaxed_. With _strict_ the number, type and order of all RDNs has to
+	match, wildcards (*) for the values of RDNs are allowed (that's the case
+	for all three variants). Using _reordered_ also matches DNs if the RDNs
+	appear in a different order, the number and type still has to match.
+	Finally, _relaxed_ also allows matches of DNs that contain more RDNs than
+	the configured identity (missing RDNs are treated like a wildcard match).
+
+	Note that _reordered_ and _relaxed_ impose a considerable overhead on memory
+	usage and runtime, in particular, for mismatches, compared to _static_.
+
 charon.receive_delay = 0
 	Delay in ms for receiving packets, to simulate larger RTT.
 
