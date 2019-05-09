@@ -416,6 +416,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	{
 		chunk_clear(&g_xy);
 		chunk_clear(&data);
+		chunk_clear(&skeyid);
 		return FALSE;
 	}
 	chunk_clear(&data);
@@ -427,6 +428,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	{
 		chunk_clear(&g_xy);
 		chunk_clear(&data);
+		chunk_clear(&skeyid);
 		return FALSE;
 	}
 	chunk_clear(&data);
@@ -438,6 +440,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	{
 		chunk_clear(&g_xy);
 		chunk_clear(&data);
+		chunk_clear(&skeyid);
 		return FALSE;
 	}
 	chunk_clear(&data);
