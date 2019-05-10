@@ -1620,13 +1620,13 @@ do
     mkdir -p ${TEST}/hosts/${h}/${IPSEC_DIR}/cacerts
     cp ${BLISS_CERT} ${TEST}/hosts/${h}/${IPSEC_DIR}/cacerts
   done
-done
 
-TEST="${TEST_DIR}/swanctl/rw-ntru-bliss"
-for h in moon carol dave
-do
-   mkdir -p ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
-   cp ${BLISS_CERT} ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+  TEST="${TEST_DIR}/swanctl/${t}"
+  for h in moon carol dave
+  do
+    mkdir -p ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+    cp ${BLISS_CERT} ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+  done
 done
 
 # Generate a carol BLISS certificate with 128 bit security strength
@@ -1651,12 +1651,15 @@ mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 cp ${TEST_KEY} ${TEST}/hosts/carol/${IPSEC_DIR}/private
 cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 
-# Put a copy in the swanctl/rw-ntru-bliss scenario
-TEST="${TEST_DIR}/swanctl/rw-ntru-bliss"
-mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/bliss
-mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
-cp ${TEST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/bliss
-cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+# Put a copy in the swanctl scenarios
+for t in rw-newhope-bliss rw-ntru-bliss
+do
+  TEST="${TEST_DIR}/swanctl/${t}"
+  mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/bliss
+  mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+  cp ${TEST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/bliss
+  cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+done
 
 # Generate a dave BLISS certificate with 160 bit security strength
 TEST="${TEST_DIR}/ikev2/rw-newhope-bliss"
@@ -1680,12 +1683,15 @@ mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/certs
 cp ${TEST_KEY} ${TEST}/hosts/dave/${IPSEC_DIR}/private/
 cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs/
 
-# Put a copy in the swanctl/rw-ntru-bliss scenario
-TEST="${TEST_DIR}/swanctl/rw-ntru-bliss"
-mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/bliss
-mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
-cp ${TEST_KEY} ${TEST}/hosts/dave/${SWANCTL_DIR}/bliss/
-cp ${TEST_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509/
+# Put a copy in the swanctl scenarios
+for t in rw-newhope-bliss rw-ntru-bliss
+do
+  TEST="${TEST_DIR}/swanctl/${t}"
+  mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/bliss
+  mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
+  cp ${TEST_KEY} ${TEST}/hosts/dave/${SWANCTL_DIR}/bliss/
+  cp ${TEST_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509/
+done
 
 # Generate a moon BLISS certificate with 192 bit security strength
 TEST="${TEST_DIR}/ikev2/rw-newhope-bliss"
@@ -1709,12 +1715,15 @@ mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/certs
 cp ${TEST_KEY} ${TEST}/hosts/moon/${IPSEC_DIR}/private/
 cp ${TEST_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/certs/
 
-# Put a copy in the swanctl/rw-ntru-bliss scenario
-TEST="${TEST_DIR}/swanctl/rw-ntru-bliss"
-mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/bliss
-mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
-cp ${TEST_KEY} ${TEST}/hosts/moon/${SWANCTL_DIR}/bliss/
-cp ${TEST_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509/
+# Put a copy in the swanctl scenarios
+for t in rw-newhope-bliss rw-ntru-bliss
+do
+  TEST="${TEST_DIR}/swanctl/${t}"
+  mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/bliss
+  mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+  cp ${TEST_KEY} ${TEST}/hosts/moon/${SWANCTL_DIR}/bliss/
+  cp ${TEST_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509/
+done
 
 ################################################################################
 # SQL Data                                                                     #
