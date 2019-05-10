@@ -46,6 +46,11 @@ strongswan-5.8.0
 - UTF-8 encoded passwords are supported via EAP-MSCHAPv2, which internally uses
   an UTF-16LE encoding to calculate the NT hash.
 
+- Adds the build-certs script to generate the keys and certificates used for
+  regression tests dynamically.  They are built with the pki version installed
+  in the KVM root image so it's not necessary to have an up-to-date version with
+  all required plugins installed on the host system.
+
 
 strongswan-5.7.2
 ----------------
