@@ -412,13 +412,13 @@ METHOD(task_t, process_r, status_t,
 
 			if (!this->ph1->create_hasher(this->ph1))
 			{
-				return send_notify(this, INVALID_KEY_INFORMATION);
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			if (!this->proposal->get_algorithm(this->proposal,
 										DIFFIE_HELLMAN_GROUP, &group, NULL))
 			{
 				DBG1(DBG_IKE, "DH group selection failed");
-				return send_notify(this, INVALID_KEY_INFORMATION);
+				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			if (!this->ph1->create_dh(this->ph1, group))
 			{
