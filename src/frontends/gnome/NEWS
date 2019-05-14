@@ -1,3 +1,8 @@
+NetworkManager-strongswan-1.4.5
+-------------------------------
+
+- Enables the IPv6 tab in the connection dialog
+
 NetworkManager-strongswan-1.4.4
 -------------------------------
 
