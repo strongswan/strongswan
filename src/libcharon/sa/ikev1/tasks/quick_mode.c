@@ -49,6 +49,7 @@
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/id_payload.h>
 #include <encoding/payloads/payload.h>
+#include <sa/ikev1/task_manager_v1.h>
 #include <sa/ikev1/tasks/informational.h>
 #include <sa/ikev1/tasks/quick_delete.h>
 #include <processing/jobs/inactivity_job.h>
@@ -420,7 +421,7 @@ static bool install(private_quick_mode_t *this)
 								this->rekey, TRUE, FALSE));
 		}
 	}
-	else
+	else if (!ikev1_child_sa_is_redundant(this->ike_sa, this->child_sa, NULL))
 	{
 		charon->bus->child_updown(charon->bus, this->child_sa, TRUE);
 	}
