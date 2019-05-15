@@ -685,7 +685,7 @@ METHOD(task_t, process_i, status_t,
 			{
 				DBG1(DBG_IKE, "IDir payload missing");
 				charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
-				return send_notify(this, INVALID_PAYLOAD_TYPE);
+				return send_delete(this);
 			}
 			id = id_payload->get_identification(id_payload);
 			cid = this->ph1->get_id(this->ph1, this->peer_cfg, FALSE);
