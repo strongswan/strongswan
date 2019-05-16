@@ -1218,6 +1218,21 @@ METHOD(task_t, process_r, status_t,
 				}
 				return SUCCESS;
 			}
+			if (!this->rekey)
+			{
+				/* do another check in case SAs were created since we handled
+				 * the QM request, this is consistent with the rekey check
+				 * before installation on the initiator */
+				check_for_rekeyed_child(this, TRUE);
+				if (this->rekey)
+				{
+					this->child_sa->destroy(this->child_sa);
+					this->child_sa = child_sa_create(
+									this->ike_sa->get_my_host(this->ike_sa),
+									this->ike_sa->get_other_host(this->ike_sa),
+									this->config, &this->child);
+				}
+			}
 			if (!install(this))
 			{
 				ike_sa_t *ike_sa = this->ike_sa;
