@@ -166,6 +166,8 @@ ecp384bp,         DIFFIE_HELLMAN_GROUP, ECP_384_BP,                0
 ecp512bp,         DIFFIE_HELLMAN_GROUP, ECP_512_BP,                0
 curve25519,       DIFFIE_HELLMAN_GROUP, CURVE_25519,               0
 x25519,           DIFFIE_HELLMAN_GROUP, CURVE_25519,               0
+curve448,         DIFFIE_HELLMAN_GROUP, CURVE_448,                 0
+x448,             DIFFIE_HELLMAN_GROUP, CURVE_448,                 0
 ntru112,          DIFFIE_HELLMAN_GROUP, NTRU_112_BIT,              0
 ntru128,          DIFFIE_HELLMAN_GROUP, NTRU_128_BIT,              0
 ntru192,          DIFFIE_HELLMAN_GROUP, NTRU_192_BIT,              0
