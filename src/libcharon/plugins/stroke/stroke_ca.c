@@ -208,6 +208,11 @@ CALLBACK(certs_filter, bool,
 					return TRUE;
 				}
 			}
+			else
+			{
+				public->destroy(public);
+				continue;
+			}
 			public->destroy(public);
 		}
 		else if (data->key != KEY_ANY)
