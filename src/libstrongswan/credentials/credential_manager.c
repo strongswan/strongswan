@@ -1133,6 +1133,7 @@ static private_key_t *get_private_by_cert(private_credential_manager_t *this,
 			keyid = identification_create_from_encoding(ID_KEY_ID, chunk);
 			private = get_private_by_keyid(this, type, keyid);
 			keyid->destroy(keyid);
+			free(chunk.ptr);
 		}
 		public->destroy(public);
 	}
