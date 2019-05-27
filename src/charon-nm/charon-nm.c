@@ -109,6 +109,7 @@ static void run()
 	}
 }
 
+#ifndef DISABLE_SIGNAL_HANDLER
 /**
  * Handle SIGSEGV/SIGILL signals raised by threads
  */
@@ -124,6 +125,7 @@ static void segv_handler(int signal)
 	DBG1(DBG_DMN, "killing ourself, received critical signal");
 	abort();
 }
+#endif /* DISABLE_SIGNAL_HANDLER */
 
 /**
  * Lookup UID and GID
@@ -227,14 +229,22 @@ int main(int argc, char *argv[])
 
 	/* add handler for SEGV and ILL,
 	 * INT and TERM are handled by sigwaitinfo() in run() */
-	action.sa_handler = segv_handler;
 	action.sa_flags = 0;
 	sigemptyset(&action.sa_mask);
 	sigaddset(&action.sa_mask, SIGINT);
 	sigaddset(&action.sa_mask, SIGTERM);
+
+	/*
+	 * Let the external system handle the SIGSEGV, SIGILL, and SIGBUS
+	 * signals if DISABLE_SIGNAL_HANDLER is defined.
+	 */
+#ifndef DISABLE_SIGNAL_HANDLER
+	action.sa_handler = segv_handler;
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
 	sigaction(SIGBUS, &action, NULL);
+#endif /* DISABLE_SIGNAL_HANDLER */
+
 	action.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &action, NULL);
 

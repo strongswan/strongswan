@@ -167,6 +167,7 @@ static bool lookup_uid_gid()
 /**
  * Handle SIGSEGV/SIGILL signals raised by threads
  */
+#ifndef DISABLE_SIGNAL_HANDLER
 static void segv_handler(int signal)
 {
 	backtrace_t *backtrace;
@@ -180,6 +181,7 @@ static void segv_handler(int signal)
 	DBG1(DBG_DMN, "killing ourself, received critical signal");
 	abort();
 }
+#endif /* DISABLE_SIGNAL_HANDLER */
 
 /**
  * Check/create PID file, return TRUE if already running
@@ -440,7 +442,6 @@ int main(int argc, char *argv[])
 
 	/* add handler for SEGV and ILL,
 	 * INT, TERM and HUP are handled by sigwaitinfo() in run() */
-	action.sa_handler = segv_handler;
 	action.sa_flags = 0;
 	sigemptyset(&action.sa_mask);
 	sigaddset(&action.sa_mask, SIGINT);
@@ -448,15 +449,15 @@ int main(int argc, char *argv[])
 	sigaddset(&action.sa_mask, SIGHUP);
 
 	/*
-	 * By default, charon internally handles the SIGSEGV, SIGILL, and SIGBUS
-	 * signals raised by threads (segv_handler). Make this configurable so
-	 * that the signal handling can be done either internally or externally.
+	 * Let the external system handle the SIGSEGV, SIGILL, and SIGBUS
+	 * signals if DISABLE_SIGNAL_HANDLER is defined.
 	 */
-#ifndef USE_EXT_SIG_HANDLER
+#ifndef DISABLE_SIGNAL_HANDLER
+	action.sa_handler = segv_handler;
 	sigaction(SIGSEGV, &action, NULL);
 	sigaction(SIGILL, &action, NULL);
 	sigaction(SIGBUS, &action, NULL);
-#endif /* USE_EXT_SIG_HANDLER */
+#endif /* DISABLE_SIGNAL_HANDLER */
 
 	action.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &action, NULL);
