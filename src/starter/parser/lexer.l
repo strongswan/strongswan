@@ -17,7 +17,7 @@
 #include <utils/parser_helper.h>
 #include <parser/conf_parser.h>
 
-#include "parser.h"
+#include <parser/parser.h>
 
 bool conf_parser_open_next_file(parser_helper_t *ctx);
 
