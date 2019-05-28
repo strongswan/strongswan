@@ -687,7 +687,7 @@ int main (int argc, char **argv)
 					{
 						for (conn2 = new_cfg->conn_first; conn2; conn2 = conn2->next)
 						{
-							if (conn2->state == STATE_TO_ADD && starter_cmp_conn(conn, conn2))
+							if (streq(conn2->name, conn->name))
 							{
 								conn->state = STATE_REPLACED;
 								conn2->state = STATE_ADDED;
