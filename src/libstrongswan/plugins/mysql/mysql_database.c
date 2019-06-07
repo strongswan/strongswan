@@ -131,9 +131,13 @@ typedef struct {
  */
 static void conn_release(private_mysql_database_t *this, conn_t *conn)
 {
-	this->mutex->lock(this->mutex);
-	conn->in_use = FALSE;
-	this->mutex->unlock(this->mutex);
+	/* do not release the connection while transactions are using it */
+	if (!this->transaction->get(this->transaction))
+	{
+		this->mutex->lock(this->mutex);
+		conn->in_use = FALSE;
+		this->mutex->unlock(this->mutex);
+	}
 }
 
 /**

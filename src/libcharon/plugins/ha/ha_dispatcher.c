@@ -138,6 +138,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	chunk_t dh_local = chunk_empty, dh_remote = chunk_empty, psk = chunk_empty;
 	host_t *other = NULL;
 	bool ok = FALSE;
+	auth_method_t method = AUTH_RSA;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -197,6 +198,8 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 			case HA_ALG_DH:
 				dh_grp = value.u16;
 				break;
+			case HA_AUTH_METHOD:
+				method = value.u16;
 			default:
 				break;
 		}
@@ -238,7 +241,6 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		{
 			keymat_v1_t *keymat_v1 = (keymat_v1_t*)ike_sa->get_keymat(ike_sa);
 			shared_key_t *shared = NULL;
-			auth_method_t method = AUTH_RSA;
 
 			if (psk.len)
 			{
@@ -741,10 +743,11 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		return;
 	}
 
+	child_sa_create_t data = {
+		.encap = ike_sa->has_condition(ike_sa, COND_NAT_ANY),
+	};
 	child_sa = child_sa_create(ike_sa->get_my_host(ike_sa),
-							   ike_sa->get_other_host(ike_sa), config, 0,
-							   ike_sa->has_condition(ike_sa, COND_NAT_ANY),
-							   0, 0);
+							   ike_sa->get_other_host(ike_sa), config, &data);
 	child_sa->set_mode(child_sa, mode);
 	child_sa->set_protocol(child_sa, PROTO_ESP);
 	child_sa->set_ipcomp(child_sa, ipcomp);

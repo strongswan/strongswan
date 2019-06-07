@@ -105,7 +105,8 @@ CONFIG_OPTS = \
 	--enable-newhope \
 	--enable-systemd \
 	--enable-counters \
-	--enable-save-keys
+	--enable-save-keys \
+	--enable-python-eggs-install
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 
@@ -126,3 +127,5 @@ build: configure
 
 install: build
 	cd $(BUILDDIR) && make -j install
+	# for Python-based updown scripts
+	pip install python-daemon

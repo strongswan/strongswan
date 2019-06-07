@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Tobias Brunner
+ * Copyright (C) 2008-2019 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -89,6 +89,28 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
  */
 void netlink_add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 						   size_t buflen);
+
+/**
+ * Creates an rtattr under which other rtattrs are nested to the given netlink
+ * message.
+ *
+ * The returned pointer has to be passed to netlink_nested_end() after the
+ * nested attributes have been added to the message.
+ *
+ * @param hdr			netlink message
+ * @param buflen		size of full netlink buffer
+ * @param type			RTA type
+ * @return				attribute pointer
+ */
+void *netlink_nested_start(struct nlmsghdr *hdr, size_t buflen, int type);
+
+/**
+ * Updates the length of the given attribute after nested attributes were added.
+ *
+ * @param hdr			netlink message
+ * @param attr			attribute returned from netlink_nested_start()
+ */
+void netlink_nested_end(struct nlmsghdr *hdr, void *attr);
 
 /**
  * Reserve space in a netlink message for given size and type, returning buffer.

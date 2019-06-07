@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Tobias Brunner
+ * Copyright (C) 2015-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2012 Martin Willi
@@ -17,6 +17,7 @@
  */
 
 #include "eap_radius_accounting.h"
+#include "eap_radius_provider.h"
 #include "eap_radius_plugin.h"
 
 #include <time.h>
@@ -461,6 +462,37 @@ static void add_ike_sa_parameters(private_eap_radius_accounting_t *this,
 }
 
 /**
+ * Add any unclaimed IP addresses to the message
+ */
+static void add_unclaimed_ips(radius_message_t *message, ike_sa_t *ike_sa)
+{
+	eap_radius_provider_t *provider;
+	enumerator_t *enumerator;
+	host_t *vip;
+
+	provider = eap_radius_provider_get();
+	enumerator = provider->clear_unclaimed(provider,
+										   ike_sa->get_unique_id(ike_sa));
+	while (enumerator->enumerate(enumerator, &vip))
+	{
+		switch (vip->get_family(vip))
+		{
+			case AF_INET:
+				message->add(message, RAT_FRAMED_IP_ADDRESS,
+							 vip->get_address(vip));
+				break;
+			case AF_INET6:
+				message->add(message, RAT_FRAMED_IPV6_ADDRESS,
+							 vip->get_address(vip));
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Add the Class attributes received in the Access-Accept message to the
  * RADIUS accounting message
  */
@@ -790,6 +822,7 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 					 chunk_create(entry->sid, strlen(entry->sid)));
 		add_class_attributes(message, entry);
 		add_ike_sa_parameters(this, message, ike_sa);
+		add_unclaimed_ips(message, ike_sa);
 
 		value = htonl(entry->usage.bytes.sent);
 		message->add(message, RAT_ACCT_OUTPUT_OCTETS, chunk_from_thing(value));
@@ -815,7 +848,6 @@ static void send_stop(private_eap_radius_accounting_t *this, ike_sa_t *ike_sa)
 
 		value = htonl(time_monotonic(NULL) - entry->created);
 		message->add(message, RAT_ACCT_SESSION_TIME, chunk_from_thing(value));
-
 
 		value = htonl(entry->cause);
 		message->add(message, RAT_ACCT_TERMINATE_CAUSE, chunk_from_thing(value));
@@ -1070,8 +1102,27 @@ eap_radius_accounting_t *eap_radius_accounting_create()
 	return &this->public;
 }
 
-/**
- * See header
+/*
+ * Described in header
+ */
+char *eap_radius_accounting_session_id(ike_sa_t *ike_sa)
+{
+	entry_t *entry;
+	char *sid = NULL;
+
+	if (singleton)
+	{
+		singleton->mutex->lock(singleton->mutex);
+		entry = get_or_create_entry(singleton, ike_sa->get_id(ike_sa),
+									ike_sa->get_unique_id(ike_sa));
+		sid = strdup(entry->sid);
+		singleton->mutex->unlock(singleton->mutex);
+	}
+	return sid;
+}
+
+/*
+ * Described in header
  */
 void eap_radius_accounting_start_interim(ike_sa_t *ike_sa, uint32_t interval)
 {

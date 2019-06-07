@@ -2,7 +2,7 @@ carol::cat /var/log/daemon.log::server requested EAP_TTLS authentication::YES
 carol::cat /var/log/daemon.log::allow mutual EAP-only authentication::YES
 carol::cat /var/log/daemon.log::server requested EAP_MD5 authentication::YES
 carol::cat /var/log/daemon.log::EAP method EAP_TTLS succeeded, MSK established::YES
-carol::cat /var/log/daemon.log::authentication of 'C=CH, O=Linux strongSwan, CN=moon.strongswan.org' with EAP successful::YES
+carol::cat /var/log/daemon.log::authentication of 'C=CH, O=strongSwan Project, CN=moon.strongswan.org' with EAP successful::YES
 dave:: cat /var/log/daemon.log::server requested EAP_TTLS authentication::YES
 dave:: cat /var/log/daemon.log::allow mutual EAP-only authentication::YES
 dave:: cat /var/log/daemon.log::server requested EAP_MD5 authentication::YES

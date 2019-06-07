@@ -36,6 +36,10 @@ sub terminate {
     return request_vars_res('terminate', @_);
 }
 
+sub rekey {
+    return request_vars_res('rekey', @_);
+}
+
 sub redirect {
     return request_vars_res('redirect', @_);
 }
@@ -89,11 +93,31 @@ sub load_cert {
 }
 
 sub load_key {
-    return request_vars_res('load-key', @_);
+    return request_vars('load-key', @_);
+}
+
+sub unload_key {
+    return request_vars_res('unload-key', @_);
+}
+
+sub get_keys {
+    return request('get-keys', @_);
+}
+
+sub load_token {
+    return request_vars('load-token', @_);
 }
 
 sub load_shared {
     return request_vars_res('load-shared', @_);
+}
+
+sub unload_shared {
+    return request_vars_res('unload-shared', @_);
+}
+
+sub get_shared {
+    return request('get-shared', @_);
 }
 
 sub flush_certs {
@@ -128,11 +152,24 @@ sub get_algorithms {
     return request('get-algorithms', @_);
 }
 
+sub get_counters {
+    return request_vars('get-counters', @_);
+}
+
+sub reset_counters {
+    return request_vars_res('reset-counters', @_);
+}
+
 # Private functions
 
 sub request {
     my ($command, $self) = @_;
     return $self->{'Packet'}->request($command);
+}
+
+sub request_vars {
+    my ($command, $self, $vars) = @_;
+    return $self->{'Packet'}->request($command, $vars);
 }
 
 sub request_res {

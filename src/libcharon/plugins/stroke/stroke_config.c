@@ -260,36 +260,40 @@ static void swap_ends(stroke_msg_t *msg)
  */
 static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg)
 {
+	ike_cfg_create_t ike;
 	ike_cfg_t *ike_cfg;
-	uint16_t ikeport;
 	char me[256], other[256];
 
 	swap_ends(msg);
 
+	ike = (ike_cfg_create_t){
+		.version = msg->add_conn.version,
+		.local = msg->add_conn.me.address,
+		.local_port = msg->add_conn.me.ikeport,
+		.remote = msg->add_conn.other.address,
+		.remote_port = msg->add_conn.other.ikeport,
+		.no_certreq = msg->add_conn.other.sendcert == CERT_NEVER_SEND,
+		.force_encap = msg->add_conn.force_encap,
+		.fragmentation = msg->add_conn.fragmentation,
+		.dscp = msg->add_conn.ikedscp,
+	};
 	if (msg->add_conn.me.allow_any)
 	{
 		snprintf(me, sizeof(me), "%s,0.0.0.0/0,::/0",
 				 msg->add_conn.me.address);
+		ike.local = me;
 	}
 	if (msg->add_conn.other.allow_any)
 	{
 		snprintf(other, sizeof(other), "%s,0.0.0.0/0,::/0",
 				 msg->add_conn.other.address);
+		ike.remote = other;
 	}
-	ikeport = msg->add_conn.me.ikeport;
-	ikeport = (ikeport == IKEV2_UDP_PORT) ?
-			   charon->socket->get_port(charon->socket, FALSE) : ikeport;
-	ike_cfg = ike_cfg_create(msg->add_conn.version,
-							 msg->add_conn.other.sendcert != CERT_NEVER_SEND,
-							 msg->add_conn.force_encap,
-							 msg->add_conn.me.allow_any ?
-								me : msg->add_conn.me.address,
-							 ikeport,
-							 msg->add_conn.other.allow_any ?
-								other : msg->add_conn.other.address,
-							 msg->add_conn.other.ikeport,
-							 msg->add_conn.fragmentation,
-							 msg->add_conn.ikedscp);
+	if (ike.local_port == IKEV2_UDP_PORT)
+	{
+		ike.local_port = charon->socket->get_port(charon->socket, FALSE);
+	}
+	ike_cfg = ike_cfg_create(&ike);
 
 	if (!add_proposals(this, msg->add_conn.algorithms.ike, ike_cfg,
 					   NULL, PROTO_IKE))

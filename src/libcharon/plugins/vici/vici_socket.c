@@ -481,7 +481,7 @@ static bool do_read(private_vici_socket_t *this, entry_t *entry,
 }
 
 /**
- * Callback processing incoming requestes in strict order
+ * Callback processing incoming requests in strict order
  */
 CALLBACK(process_queue, job_requeue_t,
 	entry_selector_t *sel)

@@ -111,6 +111,40 @@ static bool build_signature_auth_data(chunk_t *auth_data,
 }
 
 /**
+ * Check if the given scheme is supported by the key and, if so, add it to the
+ * first array (we add the scheme supported by the key in case the parameters
+ * are different)
+ */
+static void add_scheme_if_supported(array_t *selected, array_t *supported,
+									signature_params_t *config)
+{
+	signature_params_t *sup;
+	int i;
+
+	if (!supported)
+	{
+		array_insert(selected, ARRAY_TAIL, signature_params_clone(config));
+		return;
+	}
+
+	for (i = 0; i < array_count(supported); i++)
+	{
+		array_get(supported, i, &sup);
+		if (signature_params_comply(sup, config))
+		{
+			array_insert(selected, ARRAY_TAIL, signature_params_clone(sup));
+			return;
+		}
+	}
+}
+
+CALLBACK(destroy_scheme, void,
+	signature_params_t *params, int idx, void *user)
+{
+	signature_params_destroy(params);
+}
+
+/**
  * Selects possible signature schemes based on our configuration, the other
  * peer's capabilities and the private key
  */
@@ -123,10 +157,32 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 	auth_rule_t rule;
 	key_type_t key_type;
 	bool have_config = FALSE;
-	array_t *selected;
+	array_t *supported = NULL, *selected;
 
 	selected = array_create(0, 0);
 	key_type = private->get_type(private);
+
+	if (private->supported_signature_schemes)
+	{
+		enumerator = private->supported_signature_schemes(private);
+		while (enumerator->enumerate(enumerator, &config))
+		{
+			if (keymat->hash_algorithm_supported(keymat,
+								hasher_from_signature_scheme(config->scheme,
+															 config->params)))
+			{
+				array_insert_create(&supported, ARRAY_TAIL,
+									signature_params_clone(config));
+			}
+		}
+		enumerator->destroy(enumerator);
+
+		if (!supported)
+		{
+			return selected;
+		}
+	}
+
 	enumerator = auth->create_enumerator(auth);
 	while (enumerator->enumerate(enumerator, &rule, &config))
 	{
@@ -134,21 +190,32 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 		{
 			continue;
 		}
-		have_config = TRUE;
 		if (key_type == key_type_from_signature_scheme(config->scheme) &&
 			keymat->hash_algorithm_supported(keymat,
 								hasher_from_signature_scheme(config->scheme,
 															 config->params)))
 		{
-			array_insert(selected, ARRAY_TAIL, signature_params_clone(config));
+			add_scheme_if_supported(selected, supported, config);
 		}
+		have_config = TRUE;
 	}
 	enumerator->destroy(enumerator);
 
-	if (!have_config)
+	if (have_config)
 	{
-		/* if no specific configuration, find schemes appropriate for the key
-		 * and supported by the other peer */
+		array_destroy_function(supported, destroy_scheme, NULL);
+	}
+	else
+	{
+		/* if we have no config, return either whatever schemes the key (and
+		 * peer) support or.. */
+		if (supported)
+		{
+			array_destroy(selected);
+			return supported;
+		}
+
+		/* ...find schemes appropriate for the key and supported by the peer */
 		enumerator = signature_schemes_for_key(key_type,
 											   private->get_keysize(private));
 		while (enumerator->enumerate(enumerator, &config))
@@ -205,12 +272,6 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 		}
 	}
 	return selected;
-}
-
-CALLBACK(destroy_scheme, void,
-	signature_params_t *params, int idx, void *user)
-{
-	signature_params_destroy(params);
 }
 
 /**
@@ -310,9 +371,9 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 		if (params->scheme == SIGN_RSA_EMSA_PSS)
 		{
 			rsa_pss_params_t *pss = params->params;
-			DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N_%N %s", id,
-				 signature_scheme_names, params->scheme,
-				 hash_algorithm_short_names_upper, pss->hash,
+			DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N_%N_SALT_%zd "
+				 "%s", id, signature_scheme_names, params->scheme,
+				 hash_algorithm_short_names_upper, pss->hash, pss->salt_len,
 				 status == SUCCESS ? "successful" : "failed");
 		}
 		else
@@ -586,9 +647,9 @@ METHOD(authenticator_t, process, status_t,
 			else if (params->scheme == SIGN_RSA_EMSA_PSS)
 			{
 				rsa_pss_params_t *pss = params->params;
-				DBG1(DBG_IKE, "authentication of '%Y' with %N_%N successful",
-					 id, signature_scheme_names, params->scheme,
-					 hash_algorithm_short_names_upper, pss->hash);
+				DBG1(DBG_IKE, "authentication of '%Y' with %N_%N_SALT_%zd "
+					 "successful", id, signature_scheme_names, params->scheme,
+					 hash_algorithm_short_names_upper, pss->hash, pss->salt_len);
 			}
 			else
 			{

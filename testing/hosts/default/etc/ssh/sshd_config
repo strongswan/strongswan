@@ -1,7 +1,7 @@
 Port 22
 Protocol 2
+Ciphers aes128-gcm@openssh.com
 HostKey /etc/ssh/ssh_host_rsa_key
-HostKey /etc/ssh/ssh_host_dsa_key
 HostKey /etc/ssh/ssh_host_ecdsa_key
 UsePrivilegeSeparation no
 PermitRootLogin yes

@@ -582,6 +582,16 @@ static char *whitelist[] = {
 	"OPENSSL_init_crypto",
 	"CRYPTO_THREAD_lock_new",
 	"ERR_add_error_data",
+	"ERR_set_mark",
+	"ENGINE_load_builtin_engines",
+	"OPENSSL_load_builtin_modules",
+	"CONF_modules_load_file",
+	"CONF_module_add",
+	"RAND_DRBG_bytes",
+	"RAND_DRBG_generate",
+	"RAND_DRBG_get0_master",
+	"RAND_DRBG_get0_private",
+	"RAND_DRBG_get0_public",
 	/* OpenSSL libssl */
 	"SSL_COMP_get_compression_methods",
 	/* NSPR */
@@ -619,6 +629,7 @@ static char *whitelist[] = {
 	"botan_privkey_create_ecdsa",
 	"botan_privkey_create_ecdh",
 	"botan_privkey_load_ecdh",
+	"botan_privkey_load",
 };
 
 /**
@@ -673,7 +684,8 @@ static int print_traces(private_leak_detective_t *this,
 	int leaks = 0;
 	memory_header_t *hdr;
 	enumerator_t *enumerator;
-	hashtable_t *entries;
+	hashtable_t *entries, *ignored = NULL;
+	backtrace_t *bt;
 	struct {
 		/** associated backtrace */
 		backtrace_t *backtrace;
@@ -688,15 +700,32 @@ static int print_traces(private_leak_detective_t *this,
 
 	entries = hashtable_create((hashtable_hash_t)hash,
 							   (hashtable_equals_t)equals, 1024);
+	if (whitelisted)
+	{
+		ignored = hashtable_create((hashtable_hash_t)hash,
+								   (hashtable_equals_t)equals, 1024);
+	}
+
 	lock->lock(lock);
 	for (hdr = first_header.next; hdr != NULL; hdr = hdr->next)
 	{
-		if (whitelisted &&
-			hdr->backtrace->contains_function(hdr->backtrace,
-											  whitelist, countof(whitelist)))
+		if (whitelisted)
 		{
-			(*whitelisted)++;
-			continue;
+			bt = ignored->get(ignored, hdr->backtrace);
+			if (!bt)
+			{
+				if (hdr->backtrace->contains_function(hdr->backtrace, whitelist,
+													  countof(whitelist)))
+				{
+					bt = hdr->backtrace;
+					ignored->put(ignored, bt, bt);
+				}
+			}
+			if (bt)
+			{
+				(*whitelisted)++;
+				continue;
+			}
 		}
 		entry = entries->get(entries, hdr->backtrace);
 		if (entry)
@@ -720,6 +749,7 @@ static int print_traces(private_leak_detective_t *this,
 		leaks++;
 	}
 	lock->unlock(lock);
+	DESTROY_IF(ignored);
 
 	enumerator = entries->create_enumerator(entries);
 	while (enumerator->enumerate(enumerator, NULL, &entry))

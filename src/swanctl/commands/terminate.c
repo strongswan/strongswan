@@ -150,7 +150,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		terminate, 't', "terminate", "terminate a connection",
-		{"--child <name> | --ike <name | --child-id <id> | --ike-id <id>",
+		{"--child <name> | --ike <name> | --child-id <id> | --ike-id <id>",
 		 "[--timeout <s>] [--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},

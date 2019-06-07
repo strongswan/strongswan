@@ -101,6 +101,18 @@ bool botan_get_signature(botan_privkey_t key, const char *scheme,
 						 chunk_t data, chunk_t *signature);
 
 /**
+ * Verify the given signature using the provided data and key with the specified
+ * signature scheme (hash/padding).
+ *
+ * @param key		private key object
+ * @param scheme	hash/padding algorithm
+ * @param data		signed data
+ * @param signature	signature to verify
+ */
+bool botan_verify_signature(botan_pubkey_t key, const char* scheme,
+							chunk_t data, chunk_t signature);
+
+/**
  * Do the Diffie-Hellman key derivation using the given private key and public
  * value.
  *

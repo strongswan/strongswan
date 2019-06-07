@@ -106,9 +106,12 @@ static void load_certs(load_ctx_t *ctx, char *type_str, char *dir)
 	x509_flag_t flag;
 	struct stat st;
 	chunk_t *map;
-	char *path;
+	char *path, buf[PATH_MAX];
 
 	vici_cert_info_from_str(type_str, &type, &flag);
+
+	snprintf(buf, sizeof(buf), "%s%s%s", swanctl_dir, DIRECTORY_SEPARATOR, dir);
+	dir = buf;
 
 	enumerator = enumerator_create_directory(dir);
 	if (enumerator)
@@ -428,7 +431,10 @@ static void load_keys(load_ctx_t *ctx, char *type, char *dir)
 	enumerator_t *enumerator;
 	struct stat st;
 	chunk_t *map;
-	char *path, *rel;
+	char *path, *rel, buf[PATH_MAX];
+
+	snprintf(buf, sizeof(buf), "%s%s%s", swanctl_dir, DIRECTORY_SEPARATOR, dir);
+	dir = buf;
 
 	enumerator = enumerator_create_directory(dir);
 	if (enumerator)
@@ -535,7 +541,10 @@ static void load_containers(load_ctx_t *ctx, char *type, char *dir)
 	enumerator_t *enumerator;
 	struct stat st;
 	chunk_t *map;
-	char *path, *rel;
+	char *path, *rel, buf[PATH_MAX];
+
+	snprintf(buf, sizeof(buf), "%s%s%s", swanctl_dir, DIRECTORY_SEPARATOR, dir);
+	dir = buf;
 
 	enumerator = enumerator_create_directory(dir);
 	if (enumerator)
@@ -946,7 +955,7 @@ static int load_creds(vici_conn_t *conn)
 	bool clear = FALSE, noprompt = FALSE;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	settings_t *cfg;
-	char *arg, *file = SWANCTL_CONF;
+	char *arg, *file = NULL;
 	int ret;
 
 	while (TRUE)
@@ -978,10 +987,9 @@ static int load_creds(vici_conn_t *conn)
 		break;
 	}
 
-	cfg = settings_create(file);
+	cfg = load_swanctl_conf(file);
 	if (!cfg)
 	{
-		fprintf(stderr, "parsing '%s' failed\n", file);
 		return EINVAL;
 	}
 

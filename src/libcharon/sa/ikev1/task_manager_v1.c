@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2016 Tobias Brunner
+ * Copyright (C) 2007-2019 Tobias Brunner
  * Copyright (C) 2007-2011 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -544,6 +544,12 @@ METHOD(task_manager_t, initiate, status_t,
 					new_mid = TRUE;
 					break;
 				}
+				if (activate_task(this, TASK_ISAKMP_DPD))
+				{
+					exchange = INFORMATIONAL_V1;
+					new_mid = TRUE;
+					break;
+				}
 				if (!mode_config_expected(this) &&
 					activate_task(this, TASK_QUICK_MODE))
 				{
@@ -552,12 +558,6 @@ METHOD(task_manager_t, initiate, status_t,
 					break;
 				}
 				if (activate_task(this, TASK_INFORMATIONAL))
-				{
-					exchange = INFORMATIONAL_V1;
-					new_mid = TRUE;
-					break;
-				}
-				if (activate_task(this, TASK_ISAKMP_DPD))
 				{
 					exchange = INFORMATIONAL_V1;
 					new_mid = TRUE;
@@ -1121,7 +1121,15 @@ static status_t process_request(private_task_manager_t *this,
 		}
 	}
 	else
-	{	/* We don't send a response, so don't retransmit one if we get
+	{
+		if (this->responding.retransmitted > 1)
+		{
+			packet_t *packet = NULL;
+			array_get(this->responding.packets, 0, &packet);
+			charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_CLEARED,
+							   packet);
+		}
+		/* We don't send a response, so don't retransmit one if we get
 		 * the same message again. */
 		clear_packets(this->responding.packets);
 	}
@@ -1744,26 +1752,27 @@ static bool have_equal_ts(child_sa_t *child1, child_sa_t *child2, bool local)
 	return equal;
 }
 
-/**
- * Check if a CHILD_SA is redundant and we should delete instead of rekey
+/*
+ * Described in header
  */
-static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
+bool ikev1_child_sa_is_redundant(ike_sa_t *ike_sa, child_sa_t *child_sa,
+								 bool (*cmp)(child_sa_t*,child_sa_t*))
 {
 	enumerator_t *enumerator;
 	child_sa_t *current;
 	bool redundant = FALSE;
 
-	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		if (current->get_state(current) == CHILD_INSTALLED &&
+		if (current != child_sa &&
+			current->get_state(current) == CHILD_INSTALLED &&
 			streq(current->get_name(current), child_sa->get_name(child_sa)) &&
 			have_equal_ts(current, child_sa, TRUE) &&
 			have_equal_ts(current, child_sa, FALSE) &&
-			current->get_lifetime(current, FALSE) >
-				child_sa->get_lifetime(child_sa, FALSE))
+			(!cmp || cmp(child_sa, current)))
 		{
-			DBG1(DBG_IKE, "deleting redundant CHILD_SA %s{%d}",
+			DBG1(DBG_IKE, "detected redundant CHILD_SA %s{%d}",
 				 child_sa->get_name(child_sa),
 				 child_sa->get_unique_id(child_sa));
 			redundant = TRUE;
@@ -1773,6 +1782,16 @@ static bool is_redundant(private_task_manager_t *this, child_sa_t *child_sa)
 	enumerator->destroy(enumerator);
 
 	return redundant;
+}
+
+/**
+ * Compare the rekey times of two CHILD_SAs, a CHILD_SA is redundant if it is
+ * rekeyed sooner than another.
+ */
+static bool is_rekeyed_sooner(child_sa_t *is_redundant, child_sa_t *other)
+{
+	return other->get_lifetime(other, FALSE) >
+				is_redundant->get_lifetime(is_redundant, FALSE);
 }
 
 /**
@@ -1804,7 +1823,8 @@ METHOD(task_manager_t, queue_child_rekey, void,
 	}
 	if (child_sa && child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
-		if (is_redundant(this, child_sa))
+		if (ikev1_child_sa_is_redundant(this->ike_sa, child_sa,
+										is_rekeyed_sooner))
 		{
 			child_sa->set_state(child_sa, CHILD_REKEYED);
 			if (lib->settings->get_bool(lib->settings, "%s.delete_rekeyed",
@@ -1823,6 +1843,8 @@ METHOD(task_manager_t, queue_child_rekey, void,
 			task->use_reqid(task, child_sa->get_reqid(child_sa));
 			task->use_marks(task, child_sa->get_mark(child_sa, TRUE).value,
 							child_sa->get_mark(child_sa, FALSE).value);
+			task->use_if_ids(task, child_sa->get_if_id(child_sa, TRUE),
+							 child_sa->get_if_id(child_sa, FALSE));
 			task->rekey(task, child_sa->get_spi(child_sa, TRUE));
 
 			queue_task(this, &task->task);
@@ -1881,39 +1903,6 @@ METHOD(task_manager_t, adopt_tasks, void,
 		task->migrate(task, this->ike_sa);
 		this->queued_tasks->insert_first(this->queued_tasks, task);
 	}
-}
-
-/**
- * Migrates child-creating tasks from src to dst
- */
-static void migrate_child_tasks(private_task_manager_t *this,
-								linked_list_t *src, linked_list_t *dst)
-{
-	enumerator_t *enumerator;
-	task_t *task;
-
-	enumerator = src->create_enumerator(src);
-	while (enumerator->enumerate(enumerator, &task))
-	{
-		if (task->get_type(task) == TASK_QUICK_MODE)
-		{
-			src->remove_at(src, enumerator);
-			task->migrate(task, this->ike_sa);
-			dst->insert_last(dst, task);
-		}
-	}
-	enumerator->destroy(enumerator);
-}
-
-METHOD(task_manager_t, adopt_child_tasks, void,
-	private_task_manager_t *this, task_manager_t *other_public)
-{
-	private_task_manager_t *other = (private_task_manager_t*)other_public;
-
-	/* move active child tasks from other to this */
-	migrate_child_tasks(this, other->active_tasks, this->queued_tasks);
-	/* do the same for queued tasks */
-	migrate_child_tasks(this, other->queued_tasks, this->queued_tasks);
 }
 
 METHOD(task_manager_t, busy, bool,
@@ -1976,19 +1965,86 @@ METHOD(task_manager_t, reset, void,
 	}
 }
 
+/**
+ * Data for a task queue enumerator
+ */
+typedef struct {
+	enumerator_t public;
+	task_queue_t queue;
+	enumerator_t *inner;
+} task_enumerator_t;
+
+METHOD(enumerator_t, task_enumerator_destroy, void,
+	task_enumerator_t *this)
+{
+	this->inner->destroy(this->inner);
+	free(this);
+}
+
+METHOD(enumerator_t, task_enumerator_enumerate, bool,
+	task_enumerator_t *this, va_list args)
+{
+	task_t **task;
+
+	VA_ARGS_VGET(args, task);
+	return this->inner->enumerate(this->inner, task);
+}
+
 METHOD(task_manager_t, create_task_enumerator, enumerator_t*,
 	private_task_manager_t *this, task_queue_t queue)
 {
+	task_enumerator_t *enumerator;
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _task_enumerator_enumerate,
+			.destroy = _task_enumerator_destroy,
+		},
+		.queue = queue,
+	);
 	switch (queue)
 	{
 		case TASK_QUEUE_ACTIVE:
-			return this->active_tasks->create_enumerator(this->active_tasks);
+			enumerator->inner = this->active_tasks->create_enumerator(
+														this->active_tasks);
+			break;
 		case TASK_QUEUE_PASSIVE:
-			return this->passive_tasks->create_enumerator(this->passive_tasks);
+			enumerator->inner = this->passive_tasks->create_enumerator(
+														this->passive_tasks);
+			break;
 		case TASK_QUEUE_QUEUED:
-			return this->queued_tasks->create_enumerator(this->queued_tasks);
+			enumerator->inner = this->queued_tasks->create_enumerator(
+														this->queued_tasks);
+			break;
 		default:
-			return enumerator_create_empty();
+			enumerator->inner = enumerator_create_empty();
+			break;
+	}
+	return &enumerator->public;
+}
+
+METHOD(task_manager_t, remove_task, void,
+	private_task_manager_t *this, enumerator_t *enumerator_public)
+{
+	task_enumerator_t *enumerator = (task_enumerator_t*)enumerator_public;
+
+	switch (enumerator->queue)
+	{
+		case TASK_QUEUE_ACTIVE:
+			this->active_tasks->remove_at(this->active_tasks,
+										  enumerator->inner);
+			break;
+		case TASK_QUEUE_PASSIVE:
+			this->passive_tasks->remove_at(this->passive_tasks,
+										   enumerator->inner);
+			break;
+		case TASK_QUEUE_QUEUED:
+			this->queued_tasks->remove_at(this->queued_tasks,
+										  enumerator->inner);
+			break;
+		default:
+			break;
 	}
 }
 
@@ -2039,9 +2095,9 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 				.get_mid = _get_mid,
 				.reset = _reset,
 				.adopt_tasks = _adopt_tasks,
-				.adopt_child_tasks = _adopt_child_tasks,
 				.busy = _busy,
 				.create_task_enumerator = _create_task_enumerator,
+				.remove_task = _remove_task,
 				.flush = _flush,
 				.flush_queue = _flush_queue,
 				.destroy = _destroy,

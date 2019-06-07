@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Tobias Brunner
+ * Copyright (C) 2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2018 René Korthaus
@@ -69,33 +70,6 @@ struct private_botan_rsa_public_key_t {
 bool botan_emsa_pss_identifier(rsa_pss_params_t *params, char *id, size_t len);
 
 /**
- * Verify RSA signature
- */
-static bool verify_rsa_signature(private_botan_rsa_public_key_t *this,
-								 const char* hash_and_padding, chunk_t data,
-								 chunk_t signature)
-{
-	botan_pk_op_verify_t verify_op;
-	bool valid = FALSE;
-
-	if (botan_pk_op_verify_create(&verify_op, this->key, hash_and_padding, 0))
-	{
-		return FALSE;
-	}
-
-	if (botan_pk_op_verify_update(verify_op, data.ptr, data.len))
-	{
-		botan_pk_op_verify_destroy(verify_op);
-		return FALSE;
-	}
-
-	valid =	!botan_pk_op_verify_finish(verify_op, signature.ptr, signature.len);
-
-	botan_pk_op_verify_destroy(verify_op);
-	return valid;
-}
-
-/**
  * Verification of an EMSA PSS signature described in PKCS#1
  */
 static bool verify_emsa_pss_signature(private_botan_rsa_public_key_t *this,
@@ -109,7 +83,7 @@ static bool verify_emsa_pss_signature(private_botan_rsa_public_key_t *this,
 	{
 		return FALSE;
 	}
-	return verify_rsa_signature(this, hash_and_padding, data, signature);
+	return botan_verify_signature(this->key, hash_and_padding, data, signature);
 }
 
 METHOD(public_key_t, get_type, key_type_t,
@@ -125,23 +99,35 @@ METHOD(public_key_t, verify, bool,
 	switch (scheme)
 	{
 		case SIGN_RSA_EMSA_PKCS1_NULL:
-			return verify_rsa_signature(this, "EMSA_PKCS1(Raw)", data,
-										signature);
+			return botan_verify_signature(this->key, "EMSA_PKCS1(Raw)", data,
+										  signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
-			return verify_rsa_signature(this, "EMSA_PKCS1(SHA-1)", data,
-										signature);
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-1)", data,
+										  signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_224:
-			return verify_rsa_signature(this, "EMSA_PKCS1(SHA-224)",
-										data, signature);
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-224)",
+										  data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_256:
-			return verify_rsa_signature(this, "EMSA_PKCS1(SHA-256)",
-										data, signature);
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-256)",
+										  data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_384:
-			return verify_rsa_signature(this, "EMSA_PKCS1(SHA-384)",
-										data, signature);
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-384)",
+										  data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
-			return verify_rsa_signature(this, "EMSA_PKCS1(SHA-512)",
-										data, signature);
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-512)",
+										  data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_224:
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-3(224)",
+										  data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_256:
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-3(256))",
+										  data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_384:
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-3(384))",
+										  data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_512:
+			return botan_verify_signature(this->key, "EMSA_PKCS1(SHA-3(512))",
+										  data, signature);
 		case SIGN_RSA_EMSA_PSS:
 			return verify_emsa_pss_signature(this, params, data, signature);
 		default:

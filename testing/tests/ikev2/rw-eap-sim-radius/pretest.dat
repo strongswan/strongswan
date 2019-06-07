@@ -1,13 +1,9 @@
 moon::iptables-restore < /etc/iptables.rules
 carol::iptables-restore < /etc/iptables.rules
 dave::iptables-restore < /etc/iptables.rules
-alice::cat /etc/freeradius/clients.conf
-alice::cat /etc/freeradius/eap.conf
-alice::cat /etc/freeradius/proxy.conf
-alice::cat /etc/freeradius/triplets.dat
 carol::cat /etc/ipsec.d/triplets.dat
 dave::cat /etc/ipsec.d/triplets.dat
-alice::radiusd
+alice::freeradius
 moon::ipsec start
 carol::ipsec start
 dave::ipsec start

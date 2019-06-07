@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2012-2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2012 Aleksandr Grinberg
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,7 +27,6 @@
 #include <utils/debug.h>
 
 #include <openssl/rand.h>
-#include <openssl/err.h>
 
 #include "openssl_rng.h"
 
@@ -49,6 +51,13 @@ struct private_openssl_rng_t {
 METHOD(rng_t, get_bytes, bool,
 	private_openssl_rng_t *this, size_t bytes, uint8_t *buffer)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL
+	if (this->quality > RNG_WEAK)
+	{	/* use a separate DRBG for data we want to keep private, compared
+		 * to e.g. nonces */
+		return RAND_priv_bytes((char*)buffer, bytes) == 1;
+	}
+#endif
 	return RAND_bytes((char*)buffer, bytes) == 1;
 }
 

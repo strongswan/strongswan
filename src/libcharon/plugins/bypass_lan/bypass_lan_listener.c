@@ -64,6 +64,7 @@ typedef struct {
 	private_bypass_lan_listener_t *listener;
 	host_t *net;
 	uint8_t mask;
+	char *iface;
 	child_cfg_t *cfg;
 } bypass_policy_t;
 
@@ -85,6 +86,7 @@ static void bypass_policy_destroy(bypass_policy_t *this)
 		ts->destroy(ts);
 	}
 	this->net->destroy(this->net);
+	free(this->iface);
 	free(this);
 }
 
@@ -126,6 +128,7 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 	enumerator_t *enumerator;
 	hashtable_t *seen;
 	bypass_policy_t *found, *lookup;
+	traffic_selector_t *ts;
 	host_t *net;
 	uint8_t mask;
 	char *iface;
@@ -146,6 +149,7 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 		INIT(lookup,
 			.net = net->clone(net),
 			.mask = mask,
+			.iface = strdupnull(iface),
 		);
 		found = seen->put(seen, lookup, lookup);
 		if (found)
@@ -160,7 +164,6 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 				.mode = MODE_PASS,
 			};
 			child_cfg_t *cfg;
-			traffic_selector_t *ts;
 			char name[128];
 
 			ts = traffic_selector_create_from_subnet(net->clone(net), mask,
@@ -176,6 +179,7 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 			INIT(found,
 				.net = net->clone(net),
 				.mask = mask,
+				.iface = strdupnull(iface),
 				.cfg = cfg,
 			);
 			this->policies->put(this->policies, found, found);
@@ -186,10 +190,28 @@ static job_requeue_t update_bypass(private_bypass_lan_listener_t *this)
 	enumerator = this->policies->create_enumerator(this->policies);
 	while (enumerator->enumerate(enumerator, NULL, &lookup))
 	{
-		if (!seen->get(seen, lookup))
+		found = seen->get(seen, lookup);
+		if (!found)
 		{
 			this->policies->remove_at(this->policies, enumerator);
 			bypass_policy_destroy(lookup);
+		}
+		else if (!streq(lookup->iface, found->iface))
+		{	/* if the subnet is on multiple interfaces, we only get the last
+			 * one (hopefully, they are enumerated in a consistent order) */
+			ts = traffic_selector_create_from_subnet(
+												lookup->net->clone(lookup->net),
+												lookup->mask, 0, 0, 65535);
+			DBG1(DBG_IKE, "interface change for bypass policy for %R (from %s "
+				 "to %s)", ts, lookup->iface, found->iface);
+			ts->destroy(ts);
+			free(lookup->iface);
+			lookup->iface = strdupnull(found->iface);
+			/* there is currently no API to update shunts, so we remove and
+			 * reinstall it to update the route */
+			charon->shunts->uninstall(charon->shunts, "bypass-lan",
+									  lookup->cfg->get_name(lookup->cfg));
+			charon->shunts->install(charon->shunts, "bypass-lan", lookup->cfg);
 		}
 	}
 	enumerator->destroy(enumerator);

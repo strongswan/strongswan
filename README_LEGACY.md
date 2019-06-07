@@ -8,7 +8,7 @@ This document is just a short introduction of the **ipsec** command which uses
 the legacy **stroke** configuration interface. The current **swanctl** command
 using the modern [**vici**](src/libcharon/plugins/vici/README.md) *Versatile IKE
 Configuration Interface* is described [**here**](README.md). For more detailed
-information consult the man pages and [**our wiki**](http://wiki.strongswan.org).
+information consult the man pages and [**our wiki**](https://wiki.strongswan.org).
 
 
 ## Quickstart ##
@@ -1144,7 +1144,7 @@ keys are safe.
 
 On a mobile laptop computer the situation is quite different.  The computer can
 be stolen or the user may leave it unattended so that unauthorized persons
-can get access to it.  In theses cases it would be preferable not to keep any
+can get access to it.  In these cases it would be preferable not to keep any
 passphrases openly in `/etc/ipsec.secrets` but to prompt for them interactively
 instead.  This is easily done by defining
 

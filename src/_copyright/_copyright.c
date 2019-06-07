@@ -84,11 +84,9 @@ main(int argc, char *argv[])
 		case 'h':	/* help */
 			printf("%s\n", usage);
 			exit(0);
-			break;
 		case 'v':	/* version */
 			printf("%s strongSwan "VERSION"\n", me);
 			exit(0);
-			break;
 		case '?':
 		default:
 			errflg = 1;

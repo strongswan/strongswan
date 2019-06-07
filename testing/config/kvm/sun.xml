@@ -7,7 +7,7 @@
   <os>
     <type arch='x86_64' machine='pc'>hvm</type>
 	<kernel>/var/run/kvm-swan-kernel</kernel>
-    <cmdline>root=/dev/vda1 loglevel=1 console=hvc0</cmdline>
+    <cmdline>root=/dev/vda1 loglevel=1 console=hvc0 net.ifnames=0</cmdline>
     <boot dev='hd'/>
   </os>
   <cpu>

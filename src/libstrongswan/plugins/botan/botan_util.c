@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Tobias Brunner
+ * Copyright (C) 2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2018 René Korthaus
@@ -67,6 +68,14 @@ const char *botan_get_hash(hash_algorithm_t hash)
 			return "SHA-384";
 		case HASH_SHA512:
 			return "SHA-512";
+		case HASH_SHA3_224:
+			return "SHA-3(224)";
+		case HASH_SHA3_256:
+			return "SHA-3(256)";
+		case HASH_SHA3_384:
+			return "SHA-3(384)";
+		case HASH_SHA3_512:
+			return "SHA-3(512)";
 		default:
 			return NULL;
 	}
@@ -247,6 +256,32 @@ bool botan_get_signature(botan_privkey_t key, const char *scheme,
 	botan_rng_destroy(rng);
 	botan_pk_op_sign_destroy(sign_op);
 	return TRUE;
+}
+
+/*
+ * Described in header
+ */
+bool botan_verify_signature(botan_pubkey_t key, const char *scheme,
+							chunk_t data, chunk_t signature)
+{
+	botan_pk_op_verify_t verify_op;
+	bool valid = FALSE;
+
+	if (botan_pk_op_verify_create(&verify_op, key, scheme, 0))
+	{
+		return FALSE;
+	}
+
+	if (botan_pk_op_verify_update(verify_op, data.ptr, data.len))
+	{
+		botan_pk_op_verify_destroy(verify_op);
+		return FALSE;
+	}
+
+	valid =	!botan_pk_op_verify_finish(verify_op, signature.ptr, signature.len);
+
+	botan_pk_op_verify_destroy(verify_op);
+	return valid;
 }
 
 /*

@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2015-2018 Tobias Brunner
+ * Copyright (C) 2015-2019 Tobias Brunner
  * Copyright (C) 2015-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -310,6 +310,7 @@ typedef struct {
 	uint64_t dpd_delay;
 	uint64_t dpd_timeout;
 	fragmentation_t fragmentation;
+	childless_t childless;
 	unique_policy_t unique;
 	uint32_t keyingtries;
 	uint32_t local_port;
@@ -327,6 +328,8 @@ typedef struct {
 	uint64_t over_time;
 	uint64_t rand_time;
 	uint8_t dscp;
+	uint32_t if_id_in;
+	uint32_t if_id_out;
 #ifdef ME
 	bool mediation;
 	char *mediated_by;
@@ -414,6 +417,7 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  dpd_delay = %llu", data->dpd_delay);
 	DBG2(DBG_CFG, "  dpd_timeout = %llu", data->dpd_timeout);
 	DBG2(DBG_CFG, "  fragmentation = %u",  data->fragmentation);
+	DBG2(DBG_CFG, "  childless = %u",  data->childless);
 	DBG2(DBG_CFG, "  unique = %N", unique_policy_names, data->unique);
 	DBG2(DBG_CFG, "  keyingtries = %u", data->keyingtries);
 	DBG2(DBG_CFG, "  reauth_time = %llu", data->reauth_time);
@@ -421,6 +425,8 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  over_time = %llu", data->over_time);
 	DBG2(DBG_CFG, "  rand_time = %llu", data->rand_time);
 	DBG2(DBG_CFG, "  proposals = %#P", data->proposals);
+	DBG2(DBG_CFG, "  if_id_in = %u", data->if_id_in);
+	DBG2(DBG_CFG, "  if_id_out = %u", data->if_id_out);
 #ifdef ME
 	DBG2(DBG_CFG, "  mediation = %u", data->mediation);
 	if (data->mediated_by)
@@ -528,6 +534,8 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   tfc = %d", cfg->tfc);
 	DBG2(DBG_CFG, "   priority = %d", cfg->priority);
 	DBG2(DBG_CFG, "   interface = %s", cfg->interface);
+	DBG2(DBG_CFG, "   if_id_in = %u", cfg->if_id_in);
+	DBG2(DBG_CFG, "   if_id_out = %u", cfg->if_id_out);
 	DBG2(DBG_CFG, "   mark_in = %u/%u",
 		 cfg->mark_in.value, cfg->mark_in.mask);
 	DBG2(DBG_CFG, "   mark_in_sa = %u", has_opt(OPT_MARK_IN_SA));
@@ -733,7 +741,7 @@ CALLBACK(parse_ts, bool,
 		if (host_create_from_range(buf, &lower, &upper))
 		{
 			type = (lower->get_family(lower) == AF_INET) ?
-						 		TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE;
+								TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE;
 			ts = traffic_selector_create_from_bytes(proto, type,
 								lower->get_address(lower), from,
 								upper->get_address(upper), to);
@@ -1128,6 +1136,22 @@ CALLBACK(parse_time, bool,
 }
 
 /**
+ * Parse a relative time (32-bit)
+ */
+CALLBACK(parse_time32, bool,
+	uint32_t *out, chunk_t v)
+{
+	uint64_t time;
+
+	if (parse_time(&time, v))
+	{
+		*out = time;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Parse byte volume
  */
 CALLBACK(parse_bytes, bool,
@@ -1202,6 +1226,21 @@ CALLBACK(parse_set_mark, bool,
 		return FALSE;
 	}
 	return mark_from_string(buf, MARK_OP_SAME, out);
+}
+
+/**
+ * Parse interface ID
+ */
+CALLBACK(parse_if_id, bool,
+	uint32_t *out, chunk_t v)
+{
+	char buf[32];
+
+	if (!vici_stringify(v, buf, sizeof(buf)))
+	{
+		return FALSE;
+	}
+	return if_id_from_string(buf, out);
 }
 
 /**
@@ -1525,6 +1564,27 @@ CALLBACK(parse_frag, bool,
 }
 
 /**
+ * Parse a childless_t
+ */
+CALLBACK(parse_childless, bool,
+	childless_t *out, chunk_t v)
+{
+	enum_map_t map[] = {
+		{ "allow",		CHILDLESS_ALLOW		},
+		{ "never",		CHILDLESS_NEVER		},
+		{ "force",		CHILDLESS_FORCE		},
+	};
+	int d;
+
+	if (parse_map(map, countof(map), &d, v))
+	{
+		*out = d;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
  * Parse a cert_policy_t
  */
 CALLBACK(parse_send_cert, bool,
@@ -1657,7 +1717,7 @@ CALLBACK(child_kv, bool,
 		{ "start_action",		parse_action,		&child->cfg.start_action			},
 		{ "close_action",		parse_action,		&child->cfg.close_action			},
 		{ "ipcomp",				parse_opt_ipcomp,	&child->cfg.options					},
-		{ "inactivity",			parse_time,			&child->cfg.inactivity				},
+		{ "inactivity",			parse_time32,		&child->cfg.inactivity				},
 		{ "reqid",				parse_uint32,		&child->cfg.reqid					},
 		{ "mark_in",			parse_mark,			&child->cfg.mark_in					},
 		{ "mark_in_sa",			parse_opt_mark_in,	&child->cfg.options					},
@@ -1672,6 +1732,8 @@ CALLBACK(child_kv, bool,
 		{ "copy_df",			parse_opt_copy_df,	&child->cfg.options					},
 		{ "copy_ecn",			parse_opt_copy_ecn,	&child->cfg.options					},
 		{ "copy_dscp",			parse_copy_dscp,	&child->cfg.copy_dscp				},
+		{ "if_id_in",			parse_if_id,		&child->cfg.if_id_in				},
+		{ "if_id_out",			parse_if_id,		&child->cfg.if_id_out				},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
@@ -1738,6 +1800,7 @@ CALLBACK(peer_kv, bool,
 		{ "dpd_delay",		parse_time,			&peer->dpd_delay			},
 		{ "dpd_timeout",	parse_time,			&peer->dpd_timeout			},
 		{ "fragmentation",	parse_frag,			&peer->fragmentation		},
+		{ "childless",		parse_childless,	&peer->childless			},
 		{ "send_certreq",	parse_bool,			&peer->send_certreq			},
 		{ "send_cert",		parse_send_cert,	&peer->send_cert			},
 		{ "keyingtries",	parse_uint32,		&peer->keyingtries			},
@@ -1750,6 +1813,8 @@ CALLBACK(peer_kv, bool,
 		{ "rand_time",		parse_time,			&peer->rand_time			},
 		{ "ppk_id",			parse_peer_id,		&peer->ppk_id				},
 		{ "ppk_required",	parse_bool,			&peer->ppk_required			},
+		{ "if_id_in",		parse_if_id,		&peer->if_id_in				},
+		{ "if_id_out",		parse_if_id,		&peer->if_id_out			},
 #ifdef ME
 		{ "mediation",		parse_bool,			&peer->mediation			},
 		{ "mediated_by",	parse_string,		&peer->mediated_by			},
@@ -2162,8 +2227,8 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 				while (array_remove(ikeids, ARRAY_HEAD, &id))
 				{
 					DBG1(DBG_CFG, "closing IKE_SA #%u", id);
-					charon->controller->terminate_ike(charon->controller, FALSE,
-													  id, NULL, NULL, 0);
+					charon->controller->terminate_ike(charon->controller, id,
+													  FALSE, NULL, NULL, 0);
 				}
 				array_destroy(ikeids);
 			}
@@ -2341,6 +2406,7 @@ CALLBACK(config_sn, bool,
 	enumerator_t *enumerator;
 	peer_cfg_create_t cfg;
 	peer_cfg_t *peer_cfg;
+	ike_cfg_create_t ike;
 	ike_cfg_t *ike_cfg;
 	child_cfg_t *child_cfg;
 	auth_data_t *auth;
@@ -2468,10 +2534,19 @@ CALLBACK(config_sn, bool,
 
 	log_peer_data(&peer);
 
-	ike_cfg = ike_cfg_create(peer.version, peer.send_certreq, peer.encap,
-						peer.local_addrs, peer.local_port,
-						peer.remote_addrs, peer.remote_port,
-						peer.fragmentation, peer.dscp);
+	ike = (ike_cfg_create_t){
+		.version = peer.version,
+		.local = peer.local_addrs,
+		.local_port = peer.local_port,
+		.remote = peer.remote_addrs,
+		.remote_port = peer.remote_port,
+		.no_certreq = !peer.send_certreq,
+		.force_encap = peer.encap,
+		.fragmentation = peer.fragmentation,
+		.childless = peer.childless,
+		.dscp = peer.dscp,
+	};
+	ike_cfg = ike_cfg_create(&ike);
 
 	cfg = (peer_cfg_create_t){
 		.cert_policy = peer.send_cert,
@@ -2488,13 +2563,18 @@ CALLBACK(config_sn, bool,
 		.dpd_timeout = peer.dpd_timeout,
 		.ppk_id = peer.ppk_id ? peer.ppk_id->clone(peer.ppk_id) : NULL,
 		.ppk_required = peer.ppk_required,
+		.if_id_in = peer.if_id_in,
+		.if_id_out = peer.if_id_out,
 	};
 #ifdef ME
 	cfg.mediation = peer.mediation;
 	if (peer.mediated_by)
 	{
 		cfg.mediated_by = peer.mediated_by;
-		cfg.peer_id = peer.peer_id->clone(peer.peer_id);
+		if (peer.peer_id)
+		{
+			cfg.peer_id = peer.peer_id->clone(peer.peer_id);
+		}
 	}
 #endif /* ME */
 	peer_cfg = peer_cfg_create(name, ike_cfg, &cfg);

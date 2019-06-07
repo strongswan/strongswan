@@ -4,5 +4,7 @@ dave::ipsec start
 moon::expect-connection alice
 carol::expect-connection alice
 carol::ipsec up alice
+carol::ipsec up venus
 dave::expect-connection venus
 dave::ipsec up venus
+dave::ipsec up alice

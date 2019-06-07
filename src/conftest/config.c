@@ -107,14 +107,21 @@ static ike_cfg_t *load_ike_config(private_config_t *this,
 	ike_cfg_t *ike_cfg;
 	proposal_t *proposal;
 	char *token;
+	ike_cfg_create_t ike = {
+		.version = IKEV2,
+		.local = settings->get_str(settings, "configs.%s.lhost",
+								   "%any", config),
+		.local_port = settings->get_int(settings, "configs.%s.lport",
+									500, config),
+		.remote = settings->get_str(settings, "configs.%s.rhost",
+									"%any", config),
+		.remote_port = settings->get_int(settings, "configs.%s.rport",
+									500, config),
+		.force_encap = settings->get_bool(settings, "configs.%s.fake_nat",
+									FALSE, config),
+	};
 
-	ike_cfg = ike_cfg_create(IKEV2, TRUE,
-		settings->get_bool(settings, "configs.%s.fake_nat", FALSE, config),
-		settings->get_str(settings, "configs.%s.lhost", "%any", config),
-		settings->get_int(settings, "configs.%s.lport", 500, config),
-		settings->get_str(settings, "configs.%s.rhost", "%any", config),
-		settings->get_int(settings, "configs.%s.rport", 500, config),
-		FRAGMENTATION_NO, 0);
+	ike_cfg = ike_cfg_create(&ike);
 	token = settings->get_str(settings, "configs.%s.proposal", NULL, config);
 	if (token)
 	{

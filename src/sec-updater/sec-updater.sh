@@ -4,11 +4,11 @@ DIR="/etc/pts"
 DISTS_DIR="$DIR/dists"
 DATE=`date +%Y%m%d-%H%M`
 UBUNTU="http://security.ubuntu.com/ubuntu"
-UBUNTU_VERSIONS="xenial"
+UBUNTU_VERSIONS="bionic xenial"
 UBUNTU_DIRS="main multiverse restricted universe"
 UBUNTU_ARCH="binary-amd64"
 DEBIAN="http://security.debian.org"
-DEBIAN_VERSIONS="jessie wheezy"
+DEBIAN_VERSIONS="stretch jessie wheezy"
 DEBIAN_DIRS="main contrib non-free"
 DEBIAN_ARCH="binary-amd64 binary-armhf"
 RASPIAN="http://archive.raspberrypi.org/debian"
@@ -48,8 +48,14 @@ do
     mkdir -p $v-updates/$a
     for d in $DEBIAN_DIRS
     do
-      wget -nv $DEBIAN/dists/$v/updates/$d/$a/Packages.bz2  -O $v-updates/$a/Packages-$d.bz2
-      bunzip2 -f $v-updates/$a/Packages-$d.bz2
+      if [ $v = "stretch" ]
+      then
+        wget -nv $DEBIAN/dists/$v/updates/$d/$a/Packages.xz  -O $v-updates/$a/Packages-$d.xz
+        unxz -f $v-updates/$a/Packages-$d.xz
+      else
+        wget -nv $DEBIAN/dists/$v/updates/$d/$a/Packages.bz2  -O $v-updates/$a/Packages-$d.bz2
+        bunzip2 -f $v-updates/$a/Packages-$d.bz2
+      fi
     done
   done
 done
@@ -70,6 +76,28 @@ do
 done
 
 # Run sec-updater in distribution information
+
+for f in bionic-security/binary-amd64/*
+do
+  echo "security: $f"
+  $CMD --os "Ubuntu 18.04" --arch "x86_64" --file $f --security \
+       --uri $UBUNTU >> $CMD_LOG 2>&1
+  if [ $? -eq 0 ]
+  then
+    DEL_LOG=0
+  fi
+done
+
+for f in bionic-updates/binary-amd64/*
+do
+  echo "updates:  $f"
+  $CMD --os "Ubuntu 18.04" --arch "x86_64" --file $f \
+       --uri $UBUNTU >> $CMD_LOG 2>&1
+  if [ $? -eq 0 ]
+  then
+    DEL_LOG=0
+  fi
+done
 
 for f in xenial-security/binary-amd64/*
 do
@@ -93,6 +121,17 @@ do
   fi
 done
 
+for f in stretch-updates/binary-amd64/*
+do
+  echo "security: $f"
+  $CMD --os "Debian 9.0" --arch "x86_64" --file $f --security \
+       --uri $DEBIAN >> $CMD_LOG 2>&1
+  if [ $? -eq 0 ]
+  then
+    DEL_LOG=0
+  fi
+done
+
 for f in jessie-updates/binary-amd64/*
 do
   echo "security: $f"
@@ -108,6 +147,17 @@ for f in wheezy-updates/binary-amd64/*
 do
   echo "security: $f"
   $CMD --os "Debian 7.0" --arch "x86_64" --file $f --security \
+       --uri $DEBIAN >> $CMD_LOG 2>&1
+  if [ $? -eq 0 ]
+  then
+    DEL_LOG=0
+  fi
+done
+
+for f in stretch-updates/binary-armhf/*
+do
+  echo "security: $f"
+  $CMD --os "Debian 9.0" --arch "armhf" --file $f --security \
        --uri $DEBIAN >> $CMD_LOG 2>&1
   if [ $? -eq 0 ]
   then

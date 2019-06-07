@@ -154,7 +154,7 @@ connections.<conn>.dpd_timeout = 0s
 	specified; this option has no effect on connections using IKE2.
 
 connections.<conn>.fragmentation = yes
-	Use IKE UDP datagram fragmentation.  (_yes_, _accept_, _no_ or _force_).
+	Use IKE UDP datagram fragmentation (_yes_, _accept_, _no_ or _force_).
 
 	Use IKE fragmentation (proprietary IKEv1 extension or RFC 7383 IKEv2
 	fragmentation).  Acceptable  values  are _yes_ (the	default), _accept_,
@@ -167,6 +167,21 @@ connections.<conn>.fragmentation = yes
 
 	Note that fragmented IKE messages sent by a peer are always accepted
 	irrespective of the value of this option (even when set to _no_).
+
+connections.<conn>.childless = allow
+	Use childless IKE_SA initiation (_allow_, _force_ or _never_).
+
+	Use childless IKE_SA initiation (RFC 6023) for IKEv2.  Acceptable values
+	are _allow_ (the default), _force_ and _never_. If set to _allow_,
+	responders will accept childless IKE_SAs (as indicated via notify in the
+	IKE_SA_INIT response) while initiators continue to create regular IKE_SAs
+	with the first CHILD_SA created during IKE_AUTH, unless the IKE_SA is
+	initiated explicitly without any children (which will fail if the responder
+	does not support or has disabled this extension).  If set to _force_, only
+	childless initiation is accepted and the first CHILD_SA is created with a
+	separate CREATE_CHILD_SA exchange (e.g. to use an independent DH exchange
+	for all CHILD_SAs).  Finally, setting the option to _never_ disables support
+	for childless IKE_SAs as responder.
 
 connections.<conn>.send_certreq = yes
 	Send certificate requests payloads (_yes_ or _no_).
@@ -279,6 +294,18 @@ connections.<conn>.pools =
 	Comma separated list of named IP pools to allocate virtual IP addresses and
 	other configuration attributes from. Each name references a pool by name
 	from either the **pools** section or an external pool.
+
+connections.<conn>.if_id_in = 0
+	Default inbound XFRM interface ID for children.
+
+	XFRM interface ID set on inbound policies/SA, can be overridden by child
+	config, see there for details.
+
+connections.<conn>.if_id_out = 0
+	Default outbound XFRM interface ID for children.
+
+	XFRM interface ID set on outbound policies/SA, can be overridden by child
+	config, see there for details.
 
 connections.<conn>.mediation = no
 	Whether this connection is a mediation connection.
@@ -804,7 +831,7 @@ connections.<conn>.children.<child>.rand_packets = life_packets - rekey_packets
 connections.<conn>.children.<child>.updown =
 	Updown script to invoke on CHILD_SA up and down events.
 
-connections.<conn>.children.<child>.hostaccess = yes
+connections.<conn>.children.<child>.hostaccess = no
 	Hostaccess variable to pass to **updown** script.
 
 connections.<conn>.children.<child>.mode = tunnel
@@ -946,6 +973,26 @@ connections.<conn>.children.<child>.set_mark_out = 0/0x00000000
 
 	Setting marks in XFRM output is supported since Linux 4.14. Setting a mask
 	requires at least Linux 4.19.
+
+connections.<conn>.children.<child>.if_id_in = 0
+	Inbound XFRM interface ID.
+
+	XFRM interface ID set on inbound policies/SA. This allows installing
+	duplicate policies/SAs and associates them with an interface with the same
+	ID. The special value _%unique_ sets a unique interface ID on each CHILD_SA
+	instance, beyond that the value _%unique-dir_ assigns a different unique
+	interface ID for each CHILD_SA direction (in/out).
+
+connections.<conn>.children.<child>.if_id_out = 0
+	Outbound XFRM interface ID.
+
+	XFRM interface ID set on outbound policies/SA. This allows installing
+	duplicate policies/SAs and associates them with an interface with the same
+	ID. The special value _%unique_ sets a unique interface ID on each CHILD_SA
+	instance, beyond that the value _%unique-dir_ assigns a different unique
+	interface ID for each CHILD_SA direction (in/out).
+
+	The daemon will not install routes for CHILD_SAs that have this option set.
 
 connections.<conn>.children.<child>.tfc_padding = 0
 	Traffic Flow Confidentiality padding.

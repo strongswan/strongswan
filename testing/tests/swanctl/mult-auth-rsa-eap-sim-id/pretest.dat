@@ -1,13 +1,9 @@
-alice::cat /etc/freeradius/clients.conf
-alice::cat /etc/freeradius/eap.conf
-alice::cat /etc/freeradius/proxy.conf
-alice::cat /etc/freeradius/triplets.dat
 carol::cat /etc/ipsec.d/triplets.dat
 dave::cat /etc/ipsec.d/triplets.dat
-alice::radiusd
-moon::systemctl start strongswan-swanctl
-carol::systemctl start strongswan-swanctl
-dave::systemctl start strongswan-swanctl
+alice::freeradius
+moon::systemctl start strongswan
+carol::systemctl start strongswan
+dave::systemctl start strongswan
 moon::expect-connection rw
 carol::expect-connection home
 carol::swanctl --initiate --child home 2> /dev/null

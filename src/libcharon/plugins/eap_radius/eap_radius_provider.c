@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2013 Martin Willi
  * Copyright (C) 2013 revosec AG
  *
@@ -131,7 +134,7 @@ static entry_t* get_or_create_entry(hashtable_t *hashtable, uintptr_t id)
 }
 
 /**
- * Put an entry to hashtable, or destroy it ife empty
+ * Put an entry to hashtable, or destroy it if empty
  */
 static void put_or_destroy_entry(hashtable_t *hashtable, entry_t *entry)
 {
@@ -494,6 +497,24 @@ METHOD(eap_radius_provider_t, add_attribute, void,
 	this->listener.mutex->unlock(this->listener.mutex);
 }
 
+METHOD(eap_radius_provider_t, clear_unclaimed, enumerator_t*,
+	private_eap_radius_provider_t *this, uint32_t id)
+{
+	entry_t *entry;
+
+	this->listener.mutex->lock(this->listener.mutex);
+	entry = this->listener.unclaimed->remove(this->listener.unclaimed,
+											 (void*)(uintptr_t)id);
+	this->listener.mutex->unlock(this->listener.mutex);
+	if (!entry)
+	{
+		return enumerator_create_empty();
+	}
+	return enumerator_create_cleaner(
+					entry->addrs->create_enumerator(entry->addrs),
+					(void*)destroy_entry, entry);
+}
+
 METHOD(eap_radius_provider_t, destroy, void,
 	private_eap_radius_provider_t *this)
 {
@@ -523,6 +544,7 @@ eap_radius_provider_t *eap_radius_provider_create()
 				},
 				.add_framed_ip = _add_framed_ip,
 				.add_attribute = _add_attribute,
+				.clear_unclaimed = _clear_unclaimed,
 				.destroy = _destroy,
 			},
 			.listener = {
@@ -538,6 +560,14 @@ eap_radius_provider_t *eap_radius_provider_create()
 				.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 			},
 		);
+
+		if (lib->settings->get_bool(lib->settings,
+							"%s.plugins.eap-radius.accounting", FALSE, lib->ns))
+		{
+			/* if RADIUS accounting is enabled, keep unclaimed IPs around until
+			 * the Accounting-Stop message is sent */
+			this->listener.public.message = NULL;
+		}
 
 		charon->bus->add_listener(charon->bus, &this->listener.public);
 

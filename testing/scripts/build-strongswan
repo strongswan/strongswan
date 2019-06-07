@@ -56,8 +56,12 @@ do_on_exit umount $LOOPDIR/root/shared
 
 mkdir -p $LOOPDIR/root/strongswan
 log_action "Mounting $SWANDIR as /root/strongswan"
-execute "bindfs -u $SRCUID -g $SRCGID $SWANDIR $LOOPDIR/root/strongswan"
+execute "bindfs -u $SRCUID -g $SRCGID --create-for-user=$SRCUID --create-for-group=$SRCGID $SWANDIR $LOOPDIR/root/strongswan"
 do_on_exit umount $LOOPDIR/root/strongswan
+
+log_action "Copy /etc/resolv.conf"
+execute "cp /etc/resolv.conf $LOOPDIR/etc/resolv.conf"
+do_on_exit rm $LOOPDIR/etc/resolv.conf
 
 log_action "Remove SWID tags of previous versions"
 execute_chroot "find /usr/local/share -path '*strongswan*' -name *.swidtag -delete"
@@ -84,9 +88,15 @@ cp $RECPDIR/$RECIPE $SHAREDDIR/build-strongswan
 log_action "Installing from recipe $RECIPE"
 execute_chroot "make SRCDIR=/root/strongswan BUILDDIR=/root/shared/build-strongswan -f /root/shared/build-strongswan/$RECIPE"
 
-# requild the guest images if we modified the root image
+# rebuild the guest images after we modified the root image
 if [ -z "$2" ]; then
 	# cleanup before mounting guest images
 	on_exit
-	$DIR/build-guestimages
+	# building the guest images without certificates fails on winnetou
+	if [ ! -f "$DIR/../hosts/winnetou/etc/ca/strongswanCert.pem" ]; then
+		# this also re-builds the guest images
+		$DIR/build-certs
+	else
+		$DIR/build-guestimages
+	fi
 fi

@@ -414,6 +414,16 @@ struct private_ike_sa_manager_t {
 	rwlock_t *spi_lock;
 
 	/**
+	 * Mask applied to local SPIs before mixing in the label
+	 */
+	uint64_t spi_mask;
+
+	/**
+	 * Label applied to local SPIs
+	 */
+	uint64_t spi_label;
+
+	/**
 	 * reuse existing IKE_SAs in checkout_by_config
 	 */
 	bool reuse_ikesa;
@@ -1010,6 +1020,11 @@ static uint64_t get_spi(private_ike_sa_manager_t *this)
 		spi = 0;
 	}
 	this->spi_lock->unlock(this->spi_lock);
+
+	if (spi)
+	{
+		spi = (spi & ~this->spi_mask) | this->spi_label;
+	}
 	return spi;
 }
 
@@ -1967,6 +1982,8 @@ static void adopt_children_and_vips(ike_sa_t *old, ike_sa_t *new)
 	}
 	enumerator->destroy(enumerator);
 
+	new->adopt_child_tasks(new, old);
+
 	enumerator = old->create_virtual_ip_enumerator(old, FALSE);
 	while (enumerator->enumerate(enumerator, &vip))
 	{
@@ -2337,6 +2354,7 @@ static u_int get_nearest_powerof2(u_int n)
 ike_sa_manager_t *ike_sa_manager_create()
 {
 	private_ike_sa_manager_t *this;
+	char *spi_val;
 	u_int i;
 
 	INIT(this,
@@ -2370,6 +2388,20 @@ ike_sa_manager_t *ike_sa_manager_create()
 		return NULL;
 	}
 	this->spi_lock = rwlock_create(RWLOCK_TYPE_DEFAULT);
+	spi_val = lib->settings->get_str(lib->settings, "%s.spi_mask", NULL,
+									 lib->ns);
+	this->spi_mask = settings_value_as_uint64(spi_val, 0);
+	spi_val = lib->settings->get_str(lib->settings, "%s.spi_label", NULL,
+									 lib->ns);
+	this->spi_label = settings_value_as_uint64(spi_val, 0);
+	if (this->spi_mask || this->spi_label)
+	{
+		DBG1(DBG_IKE, "using SPI label 0x%.16"PRIx64" and mask 0x%.16"PRIx64,
+			 this->spi_label, this->spi_mask);
+		/* the allocated SPI is assumed to be in network order */
+		this->spi_mask = htobe64(this->spi_mask);
+		this->spi_label = htobe64(this->spi_label);
+	}
 
 	this->ikesa_limit = lib->settings->get_int(lib->settings,
 											   "%s.ikesa_limit", 0, lib->ns);

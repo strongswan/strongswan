@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Tobias Brunner
+ * Copyright (C) 2006-2019 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -296,6 +296,16 @@ struct private_ike_sa_t {
 	 * Timestamps of redirect attempts to handle loops
 	 */
 	array_t *redirected_at;
+
+	/**
+	 * Inbound interface ID
+	 */
+	uint32_t if_id_in;
+
+	/**
+	 * Outbound interface ID
+	 */
+	uint32_t if_id_out;
 };
 
 /**
@@ -419,11 +429,15 @@ METHOD(ike_sa_t, set_peer_cfg, void,
 	DESTROY_IF(this->peer_cfg);
 	this->peer_cfg = peer_cfg;
 
-	if (this->ike_cfg == NULL)
+	if (!this->ike_cfg)
 	{
 		this->ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
 		this->ike_cfg->get_ref(this->ike_cfg);
 	}
+
+	this->if_id_in = peer_cfg->get_if_id(peer_cfg, TRUE);
+	this->if_id_out = peer_cfg->get_if_id(peer_cfg, FALSE);
+	allocate_unique_if_ids(&this->if_id_in, &this->if_id_out);
 }
 
 METHOD(ike_sa_t, get_auth_cfg, auth_cfg_t*,
@@ -1656,6 +1670,12 @@ METHOD(ike_sa_t, set_other_id, void,
 	this->other_id = other;
 }
 
+METHOD(ike_sa_t, get_if_id, uint32_t,
+	private_ike_sa_t *this, bool inbound)
+{
+	return inbound ? this->if_id_in : this->if_id_out;
+}
+
 METHOD(ike_sa_t, add_child_sa, void,
 	private_ike_sa_t *this, child_sa_t *child_sa)
 {
@@ -1996,8 +2016,7 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 	/* adopt any active or queued CHILD-creating tasks */
 	if (status != DESTROY_ME)
 	{
-		task_manager_t *other_tasks = ((private_ike_sa_t*)new)->task_manager;
-		other_tasks->adopt_child_tasks(other_tasks, this->task_manager);
+		new->adopt_child_tasks(new, &this->public);
 		if (new->get_state(new) == IKE_CREATED)
 		{
 			status = new->initiate(new, NULL, 0, NULL, NULL);
@@ -2404,7 +2423,9 @@ METHOD(ike_sa_t, retransmit, status_t,
 			}
 			case IKE_DELETING:
 				DBG1(DBG_IKE, "proper IKE_SA delete failed, peer not responding");
-				if (has_condition(this, COND_REAUTHENTICATING))
+				if (has_condition(this, COND_REAUTHENTICATING) &&
+					!lib->settings->get_bool(lib->settings,
+										"%s.make_before_break", FALSE, lib->ns))
 				{
 					DBG1(DBG_IKE, "delete during reauthentication failed, "
 						 "trying to reestablish IKE_SA anyway");
@@ -2539,7 +2560,7 @@ static bool is_current_path_valid(private_ike_sa_t *this)
 }
 
 /**
- * Check if we have any path avialable for this IKE SA.
+ * Check if we have any path available for this IKE SA.
  */
 static bool is_any_path_valid(private_ike_sa_t *this)
 {
@@ -2719,6 +2740,12 @@ METHOD(ike_sa_t, create_task_enumerator, enumerator_t*,
 	return this->task_manager->create_task_enumerator(this->task_manager, queue);
 }
 
+METHOD(ike_sa_t, remove_task, void,
+	private_ike_sa_t *this, enumerator_t *enumerator)
+{
+	return this->task_manager->remove_task(this->task_manager, enumerator);
+}
+
 METHOD(ike_sa_t, flush_queue, void,
 	private_ike_sa_t *this, task_queue_t queue)
 {
@@ -2735,6 +2762,36 @@ METHOD(ike_sa_t, queue_task_delayed, void,
 	private_ike_sa_t *this, task_t *task, uint32_t delay)
 {
 	this->task_manager->queue_task_delayed(this->task_manager, task, delay);
+}
+
+/**
+ * Migrate and queue child-creating tasks from another IKE_SA
+ */
+static void migrate_child_tasks(private_ike_sa_t *this, ike_sa_t *other,
+								task_queue_t queue)
+{
+	enumerator_t *enumerator;
+	task_t *task;
+
+	enumerator = other->create_task_enumerator(other, queue);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == TASK_CHILD_CREATE ||
+			task->get_type(task) == TASK_QUICK_MODE)
+		{
+			other->remove_task(other, enumerator);
+			task->migrate(task, &this->public);
+			queue_task(this, task);
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+METHOD(ike_sa_t, adopt_child_tasks, void,
+	private_ike_sa_t *this, ike_sa_t *other)
+{
+	migrate_child_tasks(this, other, TASK_QUEUE_ACTIVE);
+	migrate_child_tasks(this, other, TASK_QUEUE_QUEUED);
 }
 
 METHOD(ike_sa_t, inherit_pre, void,
@@ -2773,6 +2830,8 @@ METHOD(ike_sa_t, inherit_post, void,
 	this->other_host = other->other_host->clone(other->other_host);
 	this->my_id = other->my_id->clone(other->my_id);
 	this->other_id = other->other_id->clone(other->other_id);
+	this->if_id_in = other->if_id_in;
+	this->if_id_out = other->if_id_out;
 
 	/* apply assigned virtual IPs... */
 	while (array_remove(other->my_vips, ARRAY_HEAD, &vip))
@@ -3050,11 +3109,14 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.create_virtual_ip_enumerator = _create_virtual_ip_enumerator,
 			.add_configuration_attribute = _add_configuration_attribute,
 			.create_attribute_enumerator = _create_attribute_enumerator,
+			.get_if_id = _get_if_id,
 			.set_kmaddress = _set_kmaddress,
 			.create_task_enumerator = _create_task_enumerator,
+			.remove_task = _remove_task,
 			.flush_queue = _flush_queue,
 			.queue_task = _queue_task,
 			.queue_task_delayed = _queue_task_delayed,
+			.adopt_child_tasks = _adopt_child_tasks,
 #ifdef ME
 			.act_as_mediation_server = _act_as_mediation_server,
 			.get_server_reflexive_host = _get_server_reflexive_host,

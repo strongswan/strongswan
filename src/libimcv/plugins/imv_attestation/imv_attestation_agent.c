@@ -249,8 +249,6 @@ static TNC_Result receive_msg(private_imv_attestation_agent_t *this,
 									   os_name.len, os_name.ptr);
 					}
 					break;
-
-					break;
 				}
 				case IETF_ATTR_STRING_VERSION:
 				{

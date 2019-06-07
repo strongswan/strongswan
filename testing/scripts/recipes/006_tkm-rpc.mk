@@ -2,7 +2,7 @@
 
 PKG = tkm-rpc
 SRC = http://git.codelabs.ch/git/$(PKG).git
-REV = 9a70e4f88e054d7a2a8fd35245e147880bce4809
+REV = 075d22871cf81d497aac656c7f03a513278b641c
 
 PREFIX = /usr/local/ada
 
@@ -10,14 +10,15 @@ export ADA_PROJECT_PATH=$(PREFIX)/lib/gnat
 
 all: install
 
-$(PKG):
-	git clone $(SRC) $(PKG)
+.$(PKG)-cloned:
+	[ -d $(PKG) ] || git clone $(SRC) $(PKG)
+	@touch $@
 
-.$(PKG)-cloned-$(REV): $(PKG)
+.$(PKG)-checkout-$(REV): .$(PKG)-cloned
 	cd $(PKG) && git fetch && git checkout $(REV)
 	@touch $@
 
-.$(PKG)-built-$(REV): .$(PKG)-cloned-$(REV)
+.$(PKG)-built-$(REV): .$(PKG)-checkout-$(REV)
 	cd $(PKG) && make
 	@touch $@
 

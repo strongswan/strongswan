@@ -31,7 +31,7 @@ To check out the master branch, use:
 
 or using HTTP:
 
-    git clone http://git.strongswan.org/strongswan.git
+    git clone https://git.strongswan.org/strongswan.git
 
 After a successful check out, give the autotools a try:
 
@@ -58,5 +58,5 @@ strongSwan wiki
 A wiki for users and developers, including ticket system and source browser
 is available at
 
-    http://wiki.strongswan.org
+    https://wiki.strongswan.org
 

@@ -24,6 +24,11 @@ config_includedir = $(ipseclibdir)/include
 nodist_config_include_HEADERS = config.h
 endif
 
+# we can't (and shouldn't) install/uninstall system files during make distcheck,
+# so override the autodetected path for systemd units
+AM_DISTCHECK_CONFIGURE_FLAGS = \
+	--with-systemdsystemunitdir='$$(prefix)/lib/systemd/system'
+
 # we leave config files behind intentionally so prevent distcheck from complaining
 distuninstallcheck_listfiles = find . -type f \! -name '*.conf' \! -name '*.secrets' -print
 

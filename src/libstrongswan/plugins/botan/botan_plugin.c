@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Tobias Brunner
+ * Copyright (C) 2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2018 René Korthaus
@@ -36,7 +37,9 @@
 #include "botan_ec_diffie_hellman.h"
 #include "botan_ec_public_key.h"
 #include "botan_ec_private_key.h"
-#include "botan_gcm.h"
+#include "botan_ed_public_key.h"
+#include "botan_ed_private_key.h"
+#include "botan_aead.h"
 #include "botan_util_keys.h"
 #include "botan_x25519.h"
 
@@ -101,6 +104,7 @@ METHOD(plugin_t, get_features, int,
 #endif
 
 		/* crypters */
+#if defined(BOTAN_HAS_AES) && defined(BOTAN_HAS_MODE_CBC)
 		PLUGIN_REGISTER(CRYPTER, botan_crypter_create),
 #ifdef BOTAN_HAS_AES
 	#ifdef BOTAN_HAS_MODE_CBC
@@ -108,17 +112,43 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 24),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 32),
 	#endif
+#endif
+#endif
+
+		/* AEAD */
+#if (defined(BOTAN_HAS_AES) && \
+		(defined(BOTAN_HAS_AEAD_GCM) || defined(BOTAN_HAS_AEAD_CCM))) || \
+	defined(BOTAN_HAS_AEAD_CHACHA20_POLY1305)
+		PLUGIN_REGISTER(AEAD, botan_aead_create),
+#ifdef BOTAN_HAS_AES
 	#ifdef BOTAN_HAS_AEAD_GCM
-			/* AES GCM */
-			PLUGIN_REGISTER(AEAD, botan_gcm_create),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 16),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 24),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV16, 32),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV12, 16),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV12, 24),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV12, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8,  16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8,  24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8,  32),
+	#endif
+	#ifdef BOTAN_HAS_AEAD_CCM
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV16, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV16, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV16, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV12, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV12, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV12, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV8,  16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV8,  24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV8,  32),
 	#endif
 #endif
+#ifdef BOTAN_HAS_AEAD_CHACHA20_POLY1305
+			PLUGIN_PROVIDE(AEAD, ENCR_CHACHA20_POLY1305, 32),
+#endif
+#endif
+
 		/* hashers */
 		PLUGIN_REGISTER(HASHER, botan_hasher_create),
 #ifdef BOTAN_HAS_MD5
@@ -135,6 +165,13 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(HASHER, HASH_SHA384),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA512),
 #endif
+#ifdef BOTAN_HAS_SHA3
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_224),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_256),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_384),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_512),
+#endif
+
 		/* prfs */
 #ifdef BOTAN_HAS_HMAC
 		PLUGIN_REGISTER(PRF, botan_hmac_prf_create),
@@ -168,7 +205,8 @@ METHOD(plugin_t, get_features, int,
 #endif /* BOTAN_HAS_HMAC */
 
 		/* generic key loaders */
-#if defined (BOTAN_HAS_RSA) || defined(BOTAN_HAS_ECDSA)
+#if defined (BOTAN_HAS_RSA) || defined(BOTAN_HAS_ECDSA) || \
+	defined(BOTAN_HAS_ED25519)
 		PLUGIN_REGISTER(PUBKEY, botan_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
 #ifdef BOTAN_HAS_RSA
@@ -177,6 +215,9 @@ METHOD(plugin_t, get_features, int,
 #ifdef BOTAN_HAS_ECDSA
 			PLUGIN_PROVIDE(PUBKEY, KEY_ECDSA),
 #endif
+#ifdef BOTAN_HAS_ED25519
+			PLUGIN_PROVIDE(PUBKEY, KEY_ED25519),
+#endif
 		PLUGIN_REGISTER(PRIVKEY, botan_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 #ifdef BOTAN_HAS_RSA
@@ -184,6 +225,9 @@ METHOD(plugin_t, get_features, int,
 #endif
 #ifdef BOTAN_HAS_ECDSA
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ECDSA),
+#endif
+#ifdef BOTAN_HAS_ED25519
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ED25519),
 #endif
 #endif
 		/* RSA */
@@ -217,6 +261,16 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA2_512),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA2_384),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA2_512),
+#endif
+#ifdef BOTAN_HAS_SHA3
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA3_224),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA3_256),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA3_384),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA3_512),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA3_224),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA3_256),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA3_384),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA3_512),
 #endif
 #endif
 #ifdef BOTAN_HAS_EMSA_PSSR
@@ -271,6 +325,21 @@ METHOD(plugin_t, get_features, int,
 #endif
 #endif /* BOTAN_HAS_EMSA1 */
 #endif /* BOTAN_HAS_ECDSA */
+
+#ifdef BOTAN_HAS_ED25519
+		/* EdDSA private/public key loading */
+		PLUGIN_REGISTER(PUBKEY, botan_ed_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ED25519),
+		PLUGIN_REGISTER(PRIVKEY, botan_ed_private_key_load, TRUE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ED25519),
+		PLUGIN_REGISTER(PRIVKEY_GEN, botan_ed_private_key_gen, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ED25519),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ED25519),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ED25519),
+		/* register a pro forma identity hasher, never instantiated */
+		PLUGIN_REGISTER(HASHER, return_null),
+			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
+#endif
 
 		/* random numbers */
 #if BOTAN_HAS_SYSTEM_RNG

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -48,6 +49,13 @@ METHOD(public_key_t, get_type, key_type_t,
 	return KEY_ED25519;
 }
 
+/* L = 2^252+27742317777372353535851937790883648493 in little-endian form */
+static chunk_t curve25519_order = chunk_from_chars(
+								0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+								0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+								0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+								0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10);
+
 METHOD(public_key_t, verify, bool,
 	private_curve25519_public_key_t *this, signature_scheme_t scheme,
 	void *params, chunk_t data, chunk_t signature)
@@ -92,6 +100,20 @@ METHOD(public_key_t, verify, bool,
 	if (!d)
 	{
 		return FALSE;
+	}
+	/* make sure 0 <= s < L, as per RFC 8032, section 5.1.7 to prevent signature
+	 * malleability.  Due to the three-bit check above (forces s < 2^253) there
+	 * is not that much room, but adding L once works with most signatures */
+	for (i = 31; ; i--)
+	{
+		if (sig[i+32] < curve25519_order.ptr[i])
+		{
+			break;
+		}
+		else if (sig[i+32] > curve25519_order.ptr[i] || i == 0)
+		{
+			return FALSE;
+		}
 	}
 
 	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA512);
@@ -200,49 +222,15 @@ static const asn1Object_t pubkeyObjects[] = {
 #define ED25519_SUBJECT_PUBLIC_KEY				2
 
 /**
- * See header.
+ * Parse the ASN.1-encoded subjectPublicKeyInfo
  */
-curve25519_public_key_t *curve25519_public_key_load(key_type_t type,
-													va_list args)
+static bool parse_public_key_info(private_curve25519_public_key_t *this,
+								  chunk_t blob)
 {
-	private_curve25519_public_key_t *this;
-	chunk_t blob = chunk_empty, object;
 	asn1_parser_t *parser;
+	chunk_t object;
 	bool success = FALSE;
 	int objectID, oid;
-
-	while (TRUE)
-	{
-		switch (va_arg(args, builder_part_t))
-		{
-			case BUILD_BLOB_ASN1_DER:
-				blob = va_arg(args, chunk_t);
-				continue;
-			case BUILD_END:
-				break;
-			default:
-				return NULL;
-		}
-		break;
-	}
-
-	INIT(this,
-		.public = {
-			.key = {
-				.get_type = _get_type,
-				.verify = _verify,
-				.encrypt = _encrypt_,
-				.equals = public_key_equals,
-				.get_keysize = _get_keysize,
-				.get_fingerprint = _get_fingerprint,
-				.has_fingerprint = public_key_has_fingerprint,
-				.get_encoding = _get_encoding,
-				.get_ref = _get_ref,
-				.destroy = _destroy,
-			},
-		},
-		.ref = 1,
-	);
 
 	parser = asn1_parser_create(pubkeyObjects, blob);
 
@@ -276,7 +264,59 @@ curve25519_public_key_t *curve25519_public_key_load(key_type_t type,
 
 end:
 	parser->destroy(parser);
-	if (!success)
+	return success;
+}
+
+/**
+ * See header.
+ */
+curve25519_public_key_t *curve25519_public_key_load(key_type_t type,
+													va_list args)
+{
+	private_curve25519_public_key_t *this;
+	chunk_t asn1 = chunk_empty, blob = chunk_empty;
+
+	while (TRUE)
+	{
+		switch (va_arg(args, builder_part_t))
+		{
+			case BUILD_BLOB_ASN1_DER:
+				asn1 = va_arg(args, chunk_t);
+				continue;
+			case BUILD_EDDSA_PUB:
+				blob = va_arg(args, chunk_t);
+				continue;
+			case BUILD_END:
+				break;
+			default:
+				return NULL;
+		}
+		break;
+	}
+
+	INIT(this,
+		.public = {
+			.key = {
+				.get_type = _get_type,
+				.verify = _verify,
+				.encrypt = _encrypt_,
+				.equals = public_key_equals,
+				.get_keysize = _get_keysize,
+				.get_fingerprint = _get_fingerprint,
+				.has_fingerprint = public_key_has_fingerprint,
+				.get_encoding = _get_encoding,
+				.get_ref = _get_ref,
+				.destroy = _destroy,
+			},
+		},
+		.ref = 1,
+	);
+
+	if (blob.len == ED25519_KEY_LEN)
+	{
+		this->pubkey = chunk_clone(blob);
+	}
+	else if (!asn1.len || !parse_public_key_info(this, asn1))
 	{
 		destroy(this);
 		return NULL;

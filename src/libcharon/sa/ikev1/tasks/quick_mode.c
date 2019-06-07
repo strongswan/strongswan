@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Tobias Brunner
+ * Copyright (C) 2012-2019 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2011 Martin Willi
@@ -151,19 +151,9 @@ struct private_quick_mode_t {
 	uint64_t lifebytes;
 
 	/**
-	 * Reqid to use, 0 for auto-allocate
+	 * Data collected to create the CHILD_SA
 	 */
-	uint32_t reqid;
-
-	/**
-	 * Explicit inbound mark value to use, if any
-	 */
-	u_int mark_in;
-
-	/**
-	 * Explicit inbound mark value to use, if any
-	 */
-	u_int mark_out;
+	child_sa_create_t child;
 
 	/**
 	 * SPI of SA we rekey
@@ -184,11 +174,6 @@ struct private_quick_mode_t {
 	 * SA protocol (ESP|AH) negotiated
 	 */
 	protocol_id_t proto;
-
-	/**
-	 * Use UDP encapsulation
-	 */
-	bool udp;
 
 	/**
 	 * Message ID of handled quick mode exchange
@@ -627,7 +612,7 @@ static bool get_ts(private_quick_mode_t *this, message_t *message)
 		tsr = traffic_selector_create_from_subnet(hsr->clone(hsr),
 					hsr->get_family(hsr) == AF_INET ? 32 : 128, 0, 0, 65535);
 	}
-	if (this->mode == MODE_TRANSPORT && this->udp &&
+	if (this->mode == MODE_TRANSPORT && this->child.encap &&
 	   (!tsi->is_host(tsi, hsi) || !tsr->is_host(tsr, hsr)))
 	{	/* change TS in case of a NAT in transport mode */
 		DBG2(DBG_IKE, "changing received traffic selectors %R=== %R due to NAT",
@@ -839,15 +824,19 @@ METHOD(task_t, build_i, status_t,
 			diffie_hellman_group_t group;
 			encap_t encap;
 
-			this->udp = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
 			this->mode = this->config->get_mode(this->config);
+			this->child.if_id_in_def = this->ike_sa->get_if_id(this->ike_sa,
+															   TRUE);
+			this->child.if_id_out_def = this->ike_sa->get_if_id(this->ike_sa,
+																FALSE);
+			this->child.encap = this->ike_sa->has_condition(this->ike_sa,
+															COND_NAT_ANY);
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
-									this->config, this->reqid, this->udp,
-									this->mark_in, this->mark_out);
+									this->config, &this->child);
 
-			if (this->udp && this->mode == MODE_TRANSPORT)
+			if (this->child.encap && this->mode == MODE_TRANSPORT)
 			{
 				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
 				add_nat_oa_payloads(this, message);
@@ -914,7 +903,7 @@ METHOD(task_t, build_i, status_t,
 			}
 
 			get_lifetimes(this);
-			encap = get_encap(this->ike_sa, this->udp);
+			encap = get_encap(this->ike_sa, this->child.encap);
 			sa_payload = sa_payload_create_from_proposals_v1(list,
 								this->lifetime, this->lifebytes, AUTH_NONE,
 								this->mode, encap, this->cpi_i);
@@ -1026,7 +1015,7 @@ static void check_for_rekeyed_child(private_quick_mode_t *this, bool responder)
 
 	name = this->config->get_name(this->config);
 	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
-	while (this->reqid == 0 && enumerator->enumerate(enumerator, &child_sa))
+	while (!this->child.reqid && enumerator->enumerate(enumerator, &child_sa))
 	{
 		if (streq(child_sa->get_name(child_sa), name))
 		{
@@ -1041,12 +1030,16 @@ static void check_for_rekeyed_child(private_quick_mode_t *this, bool responder)
 						remote->equals(remote, other_ts) &&
 						this->proposal->equals(this->proposal, proposal))
 					{
-						this->reqid = child_sa->get_reqid(child_sa);
 						this->rekey = child_sa->get_spi(child_sa, TRUE);
-						this->mark_in = child_sa->get_mark(child_sa,
-															TRUE).value;
-						this->mark_out = child_sa->get_mark(child_sa,
-															FALSE).value;
+						this->child.reqid = child_sa->get_reqid(child_sa);
+						this->child.mark_in = child_sa->get_mark(child_sa,
+																 TRUE).value;
+						this->child.mark_out = child_sa->get_mark(child_sa,
+																  FALSE).value;
+						this->child.if_id_in = child_sa->get_if_id(child_sa,
+																   TRUE);
+						this->child.if_id_out = child_sa->get_if_id(child_sa,
+																	FALSE);
 						child_sa->set_state(child_sa, CHILD_REKEYING);
 						DBG1(DBG_IKE, "detected rekeying of CHILD_SA %s{%u}",
 							 child_sa->get_name(child_sa),
@@ -1089,7 +1082,8 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 
-			this->mode = sa_payload->get_encap_mode(sa_payload, &this->udp);
+			this->mode = sa_payload->get_encap_mode(sa_payload,
+													&this->child.encap);
 
 			if (!get_ts(this, message))
 			{
@@ -1110,14 +1104,17 @@ METHOD(task_t, process_r, status_t,
 				this->tsi = select_ts(this, FALSE, tsi);
 				this->tsr = select_ts(this, TRUE, tsr);
 			}
-			tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
-			tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 			if (!this->config || !this->tsi || !this->tsr ||
 				this->mode != this->config->get_mode(this->config))
 			{
-				DBG1(DBG_IKE, "no matching CHILD_SA config found");
+				DBG1(DBG_IKE, "no matching CHILD_SA config found for "
+					 "%#R === %#R", tsi, tsr);
+				tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+				tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 				return send_notify(this, INVALID_ID_INFORMATION);
 			}
+			tsi->destroy_offset(tsi, offsetof(traffic_selector_t, destroy));
+			tsr->destroy_offset(tsr, offsetof(traffic_selector_t, destroy));
 
 			if (this->config->has_option(this->config, OPT_IPCOMP))
 			{
@@ -1177,12 +1174,14 @@ METHOD(task_t, process_r, status_t,
 			}
 
 			check_for_rekeyed_child(this, TRUE);
-
+			this->child.if_id_in_def = this->ike_sa->get_if_id(this->ike_sa,
+															   TRUE);
+			this->child.if_id_out_def = this->ike_sa->get_if_id(this->ike_sa,
+																FALSE);
 			this->child_sa = child_sa_create(
 									this->ike_sa->get_my_host(this->ike_sa),
 									this->ike_sa->get_other_host(this->ike_sa),
-									this->config, this->reqid, this->udp,
-									this->mark_in, this->mark_out);
+									this->config, &this->child);
 
 			tsi = linked_list_create_with_items(this->tsi, NULL);
 			tsr = linked_list_create_with_items(this->tsr, NULL);
@@ -1274,13 +1273,13 @@ METHOD(task_t, build_r, status_t,
 				}
 			}
 
-			if (this->udp && this->mode == MODE_TRANSPORT)
+			if (this->child.encap && this->mode == MODE_TRANSPORT)
 			{
 				/* TODO-IKEv1: disable NAT-T for TRANSPORT mode by default? */
 				add_nat_oa_payloads(this, message);
 			}
 
-			encap = get_encap(this->ike_sa, this->udp);
+			encap = get_encap(this->ike_sa, this->child.encap);
 			sa_payload = sa_payload_create_from_proposal_v1(this->proposal,
 								this->lifetime, this->lifebytes, AUTH_NONE,
 								this->mode, encap, this->cpi_r);
@@ -1405,14 +1404,21 @@ METHOD(quick_mode_t, get_mid, uint32_t,
 METHOD(quick_mode_t, use_reqid, void,
 	private_quick_mode_t *this, uint32_t reqid)
 {
-	this->reqid = reqid;
+	this->child.reqid = reqid;
 }
 
 METHOD(quick_mode_t, use_marks, void,
-	private_quick_mode_t *this, u_int in, u_int out)
+	private_quick_mode_t *this, uint32_t in, uint32_t out)
 {
-	this->mark_in = in;
-	this->mark_out = out;
+	this->child.mark_in = in;
+	this->child.mark_out = out;
+}
+
+METHOD(quick_mode_t, use_if_ids, void,
+	private_quick_mode_t *this, uint32_t in, uint32_t out)
+{
+	this->child.if_id_in = in;
+	this->child.if_id_out = out;
 }
 
 METHOD(quick_mode_t, rekey, void,
@@ -1443,8 +1449,7 @@ METHOD(task_t, migrate, void,
 	this->dh = NULL;
 	this->spi_i = 0;
 	this->spi_r = 0;
-	this->mark_in = 0;
-	this->mark_out = 0;
+	this->child = (child_sa_create_t){};
 
 	if (!this->initiator)
 	{
@@ -1485,6 +1490,7 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 			.get_mid = _get_mid,
 			.use_reqid = _use_reqid,
 			.use_marks = _use_marks,
+			.use_if_ids = _use_if_ids,
 			.rekey = _rekey,
 		},
 		.ike_sa = ike_sa,

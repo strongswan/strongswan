@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Tobias Brunner
+ * Copyright (C) 2006-2019 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -152,6 +152,16 @@ struct private_child_sa_t {
 	 * Whether FWD policieis in the outbound direction should be installed
 	 */
 	bool policies_fwd_out;
+
+	/**
+	 * Inbound interface ID
+	 */
+	uint32_t if_id_in;
+
+	/**
+	 * Outbound interface ID
+	 */
+	uint32_t if_id_out;
 
 	/**
 	 * inbound mark used for this child_sa
@@ -539,6 +549,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 				.spi = this->my_spi,
 				.proto = proto_ike2ip(this->protocol),
 				.mark = mark_in_sa(this),
+				.if_id = this->if_id_in,
 			};
 			kernel_ipsec_query_sa_t query = {};
 
@@ -572,6 +583,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 				.spi = this->other_spi,
 				.proto = proto_ike2ip(this->protocol),
 				.mark = this->mark_out,
+				.if_id = this->if_id_out,
 			};
 			kernel_ipsec_query_sa_t query = {};
 
@@ -619,6 +631,7 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 				.src_ts = other_ts,
 				.dst_ts = my_ts,
 				.mark = this->mark_in,
+				.if_id = this->if_id_in,
 			};
 			kernel_ipsec_query_policy_t query = {};
 
@@ -644,6 +657,7 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 				.src_ts = my_ts,
 				.dst_ts = other_ts,
 				.mark = this->mark_out,
+				.if_id = this->if_id_out,
 				.interface = this->config->get_interface(this->config),
 			};
 			kernel_ipsec_query_policy_t query = {};
@@ -707,11 +721,13 @@ METHOD(child_sa_t, get_usestats, void,
 METHOD(child_sa_t, get_mark, mark_t,
 	private_child_sa_t *this, bool inbound)
 {
-	if (inbound)
-	{
-		return this->mark_in;
-	}
-	return this->mark_out;
+	return inbound ? this->mark_in : this->mark_out;
+}
+
+METHOD(child_sa_t, get_if_id, uint32_t,
+	private_child_sa_t *this, bool inbound)
+{
+	return inbound ? this->if_id_in : this->if_id_out;
 }
 
 METHOD(child_sa_t, get_lifetime, time_t,
@@ -832,7 +848,8 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 	if (!this->reqid_allocated && !this->static_reqid)
 	{
 		status = charon->kernel->alloc_reqid(charon->kernel, my_ts, other_ts,
-								this->mark_in, this->mark_out, &this->reqid);
+								this->mark_in, this->mark_out, this->if_id_in,
+								this->if_id_out, &this->reqid);
 		if (status != SUCCESS)
 		{
 			my_ts->destroy(my_ts);
@@ -872,6 +889,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.spi = spi,
 		.proto = proto_ike2ip(this->protocol),
 		.mark = inbound ? mark_in_sa(this) : this->mark_out,
+		.if_id = inbound ? this->if_id_in : this->if_id_out,
 	};
 	sa = (kernel_ipsec_add_sa_t){
 		.reqid = this->reqid,
@@ -978,7 +996,7 @@ static void prepare_sa_cfg(private_child_sa_t *this, ipsec_sa_cfg_t *my_sa,
 }
 
 /**
- * Install inbound policie(s): in, fwd
+ * Install inbound policies: in, fwd
  */
 static status_t install_policies_inbound(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
@@ -991,6 +1009,7 @@ static status_t install_policies_inbound(private_child_sa_t *this,
 		.src_ts = other_ts,
 		.dst_ts = my_ts,
 		.mark = this->mark_in,
+		.if_id = this->if_id_in,
 	};
 	kernel_ipsec_manage_policy_t in_policy = {
 		.type = type,
@@ -1012,7 +1031,7 @@ static status_t install_policies_inbound(private_child_sa_t *this,
 }
 
 /**
- * Install outbound policie(s): out, [fwd]
+ * Install outbound policies: out, [fwd]
  */
 static status_t install_policies_outbound(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
@@ -1025,6 +1044,7 @@ static status_t install_policies_outbound(private_child_sa_t *this,
 		.src_ts = my_ts,
 		.dst_ts = other_ts,
 		.mark = this->mark_out,
+		.if_id = this->if_id_out,
 		.interface = this->config->get_interface(this->config),
 	};
 	kernel_ipsec_manage_policy_t out_policy = {
@@ -1098,6 +1118,7 @@ static void del_policies_inbound(private_child_sa_t *this,
 		.src_ts = other_ts,
 		.dst_ts = my_ts,
 		.mark = this->mark_in,
+		.if_id = this->if_id_in,
 	};
 	kernel_ipsec_manage_policy_t in_policy = {
 		.type = type,
@@ -1131,6 +1152,7 @@ static void del_policies_outbound(private_child_sa_t *this,
 		.src_ts = my_ts,
 		.dst_ts = other_ts,
 		.mark = this->mark_out,
+		.if_id = this->if_id_out,
 		.interface = this->config->get_interface(this->config),
 	};
 	kernel_ipsec_manage_policy_t out_policy = {
@@ -1228,7 +1250,8 @@ METHOD(child_sa_t, install_policies, status_t,
 									array_create_enumerator(this->other_ts));
 		status = charon->kernel->alloc_reqid(
 							charon->kernel, my_ts_list, other_ts_list,
-							this->mark_in, this->mark_out, &this->reqid);
+							this->mark_in, this->mark_out, this->if_id_in,
+							this->if_id_out, &this->reqid);
 		my_ts_list->destroy(my_ts_list);
 		other_ts_list->destroy(other_ts_list);
 		if (status != SUCCESS)
@@ -1403,6 +1426,7 @@ METHOD(child_sa_t, remove_outbound, void,
 		.spi = this->other_spi,
 		.proto = proto_ike2ip(this->protocol),
 		.mark = this->mark_out,
+		.if_id = this->if_id_out,
 	};
 	kernel_ipsec_del_sa_t sa = {
 		.cpi = this->other_cpi,
@@ -1453,6 +1477,7 @@ static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 			.spi = this->my_spi,
 			.proto = proto_ike2ip(this->protocol),
 			.mark = mark_in_sa(this),
+			.if_id = this->if_id_in,
 		};
 		kernel_ipsec_update_sa_t sa = {
 			.cpi = this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
@@ -1477,6 +1502,7 @@ static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 			.spi = this->other_spi,
 			.proto = proto_ike2ip(this->protocol),
 			.mark = this->mark_out,
+			.if_id = this->if_id_out,
 		};
 		kernel_ipsec_update_sa_t sa = {
 			.cpi = this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
@@ -1592,7 +1618,7 @@ METHOD(child_sa_t, update, status_t,
 				del_policies_outbound(this, this->my_addr, this->other_addr,
 						old_my_ts ?: my_ts, old_other_ts ?: other_ts,
 						&my_sa, &other_sa, POLICY_DROP,
-						POLICY_PRIORITY_DEFAULT, 0);
+						POLICY_PRIORITY_DEFAULT, manual_prio);
 			}
 
 			DESTROY_IF(old_my_ts);
@@ -1679,6 +1705,7 @@ METHOD(child_sa_t, destroy, void,
 			.spi = this->my_spi,
 			.proto = proto_ike2ip(this->protocol),
 			.mark = mark_in_sa(this),
+			.if_id = this->if_id_in,
 		};
 		kernel_ipsec_del_sa_t sa = {
 			.cpi = this->my_cpi,
@@ -1693,6 +1720,7 @@ METHOD(child_sa_t, destroy, void,
 			.spi = this->other_spi,
 			.proto = proto_ike2ip(this->protocol),
 			.mark = this->mark_out,
+			.if_id = this->if_id_out,
 		};
 		kernel_ipsec_del_sa_t sa = {
 			.cpi = this->other_cpi,
@@ -1703,7 +1731,8 @@ METHOD(child_sa_t, destroy, void,
 	if (this->reqid_allocated)
 	{
 		if (charon->kernel->release_reqid(charon->kernel,
-						this->reqid, this->mark_in, this->mark_out) != SUCCESS)
+						this->reqid, this->mark_in, this->mark_out,
+						this->if_id_in, this->if_id_out) != SUCCESS)
 		{
 			DBG1(DBG_CHD, "releasing reqid %u failed", this->reqid);
 		}
@@ -1755,16 +1784,14 @@ static host_t* get_proxy_addr(child_cfg_t *config, host_t *ike, bool local)
 	return host;
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
-child_sa_t * child_sa_create(host_t *me, host_t* other,
-							 child_cfg_t *config, uint32_t reqid, bool encap,
-							 u_int mark_in, u_int mark_out)
+child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
+							child_sa_create_t *data)
 {
 	private_child_sa_t *this;
 	static refcount_t unique_id = 0, unique_mark = 0;
-	refcount_t mark = 0;
 
 	INIT(this,
 		.public = {
@@ -1787,6 +1814,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.get_installtime = _get_installtime,
 			.get_usestats = _get_usestats,
 			.get_mark = _get_mark,
+			.get_if_id = _get_if_id,
 			.has_encap = _has_encap,
 			.get_ipcomp = _get_ipcomp,
 			.set_ipcomp = _set_ipcomp,
@@ -1809,7 +1837,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 			.create_policy_enumerator = _create_policy_enumerator,
 			.destroy = _destroy,
 		},
-		.encap = encap,
+		.encap = data->encap,
 		.ipcomp = IPCOMP_NONE,
 		.state = CHILD_CREATED,
 		.my_ts = array_create(0, 0),
@@ -1822,6 +1850,8 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		.unique_id = ref_get(&unique_id),
 		.mark_in = config->get_mark(config, TRUE),
 		.mark_out = config->get_mark(config, FALSE),
+		.if_id_in = config->get_if_id(config, TRUE) ?: data->if_id_in_def,
+		.if_id_out = config->get_if_id(config, FALSE) ?: data->if_id_out_def,
 		.install_time = time_monotonic(NULL),
 		.policies_fwd_out = config->has_option(config, OPT_FWD_OUT_POLICIES),
 	);
@@ -1829,22 +1859,31 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 	this->config = config;
 	config->get_ref(config);
 
-	if (mark_in)
+	if (data->mark_in)
 	{
-		this->mark_in.value = mark_in;
+		this->mark_in.value = data->mark_in;
 	}
-	if (mark_out)
+	if (data->mark_out)
 	{
-		this->mark_out.value = mark_out;
+		this->mark_out.value = data->mark_out;
 	}
+	if (data->if_id_in)
+	{
+		this->if_id_in = data->if_id_in;
+	}
+	if (data->if_id_out)
+	{
+		this->if_id_out = data->if_id_out;
+	}
+
+	allocate_unique_if_ids(&this->if_id_in, &this->if_id_out);
 
 	if (MARK_IS_UNIQUE(this->mark_in.value) ||
 		MARK_IS_UNIQUE(this->mark_out.value))
 	{
-		bool unique_dir;
-
-		unique_dir = this->mark_in.value == MARK_UNIQUE_DIR ||
-					 this->mark_out.value == MARK_UNIQUE_DIR;
+		refcount_t mark = 0;
+		bool unique_dir = this->mark_in.value == MARK_UNIQUE_DIR ||
+						  this->mark_out.value == MARK_UNIQUE_DIR;
 
 		if (!unique_dir)
 		{
@@ -1852,19 +1891,11 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		}
 		if (MARK_IS_UNIQUE(this->mark_in.value))
 		{
-			if (unique_dir)
-			{
-				mark = ref_get(&unique_mark);
-			}
-			this->mark_in.value = mark;
+			this->mark_in.value = unique_dir ? ref_get(&unique_mark) : mark;
 		}
 		if (MARK_IS_UNIQUE(this->mark_out.value))
 		{
-			if (unique_dir)
-			{
-				mark = ref_get(&unique_mark);
-			}
-			this->mark_out.value = mark;
+			this->mark_out.value = unique_dir ? ref_get(&unique_mark) : mark;
 		}
 	}
 
@@ -1878,7 +1909,7 @@ child_sa_t * child_sa_create(host_t *me, host_t* other,
 		 * replace the temporary SA on the kernel level. Rekeying such an SA
 		 * requires an explicit reqid, as the cache currently knows the original
 		 * selectors only for that reqid. */
-		this->reqid = reqid;
+		this->reqid = data->reqid;
 	}
 	else
 	{

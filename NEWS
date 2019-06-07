@@ -1,3 +1,107 @@
+strongswan-5.8.0
+----------------
+
+- The systemd service units have been renamed. The modern unit, which was called
+  strongswan-swanctl, is now called strongswan (the previous name is configured
+  as alias). The legacy unit is now called strongswan-starter.
+
+- Support for XFRM interfaces (available since Linux 4.19) has been added.
+  Configuration is possible via swanctl.conf.  Interfaces may be created
+  dynamically via updown/vici scripts, or statically before or after
+  establishing the SAs. Routes must be added manually as needed (the daemon will
+  not install any routes for outbound policies with an interface ID).
+
+- Initiation of childless IKE_SAs is supported (RFC 6023). If enabled and
+  supported by the responder, no CHILD_SA is established during IKE_AUTH. This
+  allows using a separate DH exchange even for the first CHILD_SA, which is
+  otherwise created with keys derived from the IKE_SA's key material.
+
+- The NetworkManager backend and plugin support IPv6.
+
+- The new wolfssl plugin is a wrapper around the wolfSSL crypto library. Thanks
+  to Sean Parkinson of wolfSSL Inc. for the initial patch.
+
+- IKE SPIs may optionally be labeled via the charon.spi_mask|label options. This
+  feature was extracted from charon-tkm, however, now applies the mask/label in
+  network order.
+
+- The openssl plugin supports ChaCha20-Poly1305 when built with OpenSSL 1.1.0.
+
+- The PB-TNC finite state machine according to section 3.2 of RFC 5793 was not
+  correctly implemented when sending either a CRETRY or SRETRY batch. These
+  batches can only be sent in the "Decided" state and a CRETRY batch can
+  immediately carry all messages usually transported by a CDATA batch. It is
+  currently not possible to send a SRETRY batch since full-duplex mode for
+  PT-TLS transport is not supported.
+
+- Instead of marking virtual IPv6 addresses as deprecated, the kernel-netlink
+  plugin uses address labels to avoid their use for non-VPN traffic.
+
+- The agent plugin creates sockets to the ssh/gpg-agent dynamically and does not
+  keep them open, which otherwise can prevent the agent from getting terminated.
+
+- To avoid broadcast loops the forecast plugin now only reinjects packets that
+  are marked or received from the configured interface.
+
+- UTF-8 encoded passwords are supported via EAP-MSCHAPv2, which internally uses
+  an UTF-16LE encoding to calculate the NT hash.
+
+- Adds the build-certs script to generate the keys and certificates used for
+  regression tests dynamically.  They are built with the pki version installed
+  in the KVM root image so it's not necessary to have an up-to-date version with
+  all required plugins installed on the host system.
+
+
+strongswan-5.7.2
+----------------
+
+- Private key implementations may optionally provide a list of supported
+  signature schemes, which is used by the tpm plugin because for each key on a
+  TPM 2.0 the hash algorithm and for RSA also the padding scheme is predefined.
+
+- For RSA with PSS padding, the TPM 2.0 specification mandates the maximum salt
+  length (as defined by the length of the key and hash).  However, if the TPM is
+  FIPS-168-4 compliant, the salt length equals the hash length.  This is assumed
+  for FIPS-140-2 compliant TPMs, but if that's not the case, it might be
+  necessary to manually enable charon.plugins.tpm.fips_186_4 if the TPM doesn't
+  use the maximum salt length.
+
+- swanctl now accesses directories for credentials relative to swanctl.conf, in
+  particular, when it's loaded from a custom location via --file argument.  The
+  base directory that's used if --file is not given is configurable at runtime
+  via SWANCTL_DIR environment variable.
+
+- With RADIUS Accounting enabled, the eap-radius plugin adds the session ID to
+  Access-Request messages, simplifying associating database entries for IP
+  leases and accounting with sessions.
+
+- IPs assigned by RADIUS servers are included in Accounting-Stop even if clients
+  don't claim them, allowing releasing them early on connection errors.
+
+- Selectors installed on transport mode SAs by the kernel-netlink plugin are
+  updated on IP address changes (e.g. via MOBIKE).
+
+- Added support for RSA signatures with SHA-256 and SHA-512 to the agent plugin.
+  For older versions of ssh/gpg-agent that only support SHA-1, IKEv2 signature
+  authentication has to be disabled via charon.signature_authentication.
+
+- The sshkey and agent plugins support Ed25519/Ed448 SSH keys and signatures.
+
+- The openssl plugin supports X25519/X448 Diffie-Hellman and Ed25519/Ed448 keys
+  and signatures when built against OpenSSL 1.1.1.
+
+- Ed25519, ChaCha20/Poly1305, SHA-3 and AES-CCM were added to the botan plugin.
+
+- The mysql plugin now properly handles database connections with transactions
+  under heavy load.
+
+- IP addresses in HA pools are now distributed evenly among all segments.
+
+- On newer FreeBSD kernels, the kernel-pfkey plugin reads the reqid directly
+  from SADB_ACQUIRE messages, i.e. not requiring previous policy installation by
+  the plugin, e.g. for compatibility with if_ipsec(4) VTIs.
+
+
 strongswan-5.7.1
 ----------------
 
@@ -1031,7 +1135,7 @@ strongswan-5.0.3
   charon-tkm does not result in the compromise of cryptographic keys.
   The extracted functionality has been implemented from scratch in a minimal TCB
   (trusted computing base) in the Ada programming language. Further information
-  can be found at http://www.codelabs.ch/tkm/.
+  can be found at https://www.codelabs.ch/tkm/.
 
 strongswan-5.0.2
 ----------------
@@ -1169,7 +1273,7 @@ strongswan-5.0.0
   pluto, but currently does not support AH or bundled AH+ESP SAs. Beside
   RSA/ECDSA, PSK and XAuth, charon also supports the Hybrid authentication
   mode. Information for interoperability and migration is available at
-  http://wiki.strongswan.org/projects/strongswan/wiki/CharonPlutoIKEv1.
+  https://wiki.strongswan.org/projects/strongswan/wiki/CharonPlutoIKEv1.
 
 - Charon's bus_t has been refactored so that loggers and other listeners are
   now handled separately.  The single lock was previously cause for deadlocks
@@ -1600,7 +1704,7 @@ strongswan-4.4.0
 - The IKEv2 High Availability plugin has been integrated. It provides
   load sharing and failover capabilities in a cluster of currently two nodes,
   based on an extend ClusterIP kernel module. More information is available at
-  http://wiki.strongswan.org/projects/strongswan/wiki/HighAvailability.
+  https://wiki.strongswan.org/projects/strongswan/wiki/HighAvailability.
   The development of the High Availability functionality was sponsored by
   secunet Security Networks AG.
 
@@ -2308,7 +2412,7 @@ strongswan-4.1.7
 
 - Preview of strongSwan Manager, a web based configuration and monitoring
   application. It uses a new XML control interface to query the IKEv2 daemon
-  (see http://wiki.strongswan.org/wiki/Manager).
+  (see https://wiki.strongswan.org/wiki/Manager).
 
 - Experimental SQLite configuration backend which will provide the configuration
   interface for strongSwan Manager in future releases.

@@ -231,7 +231,6 @@ static status_t do_sasl(private_pt_tls_client_t *this, sasl_mechanism_t *sasl)
 								reader->destroy(reader);
 								return FAILED;
 						}
-						break;
 					case PT_TLS_SASL_RESULT_MECH_FAILURE:
 					case PT_TLS_SASL_RESULT_FAILURE:
 						/* non-fatal failure, try again */
@@ -250,7 +249,7 @@ static status_t do_sasl(private_pt_tls_client_t *this, sasl_mechanism_t *sasl)
 			case INVALID_STATE:
 				break;
 			case SUCCESS:
-				/* shoudln't happen, continue until we get a result */
+				/* shouldn't happen, continue until we get a result */
 			case NEED_MORE:
 				writer->write_data(writer, data);
 				free(data.ptr);

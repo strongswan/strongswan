@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Tobias Brunner
+ * Copyright (C) 2008-2019 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -433,6 +433,13 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	{
 		message->add_notify(message, FALSE, USE_PPK, chunk_empty);
 	}
+	/* notify the peer if we accept childless IKE_SAs */
+	if (!this->old_sa && !this->initiator &&
+		 ike_cfg->childless(ike_cfg) != CHILDLESS_NEVER)
+	{
+		message->add_notify(message, FALSE, CHILDLESS_IKEV2_SUPPORTED,
+							chunk_empty);
+	}
 	return TRUE;
 }
 
@@ -576,6 +583,13 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 						{
 							this->ike_sa->enable_extension(this->ike_sa,
 														   EXT_IKE_REDIRECTION);
+						}
+						break;
+					case CHILDLESS_IKEV2_SUPPORTED:
+						if (this->initiator && !this->old_sa)
+						{
+							this->ike_sa->enable_extension(this->ike_sa,
+														   EXT_IKE_CHILDLESS);
 						}
 						break;
 					default:
@@ -773,7 +787,7 @@ static bool derive_keys(private_ike_init_t *this,
 		return FALSE;
 	}
 	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, chunk_empty,
-						  nonce_i, nonce_r, this->old_sa, NULL);
+						  nonce_i, nonce_r, this->old_sa, NULL, AUTH_NONE);
 	return TRUE;
 }
 
@@ -890,6 +904,20 @@ METHOD(task_t, pre_process_i, status_t,
 
 			switch (type)
 			{
+				case COOKIE:
+				{
+					chunk_t cookie;
+
+					cookie = notify->get_notification_data(notify);
+					if (chunk_equals(cookie, this->cookie))
+					{
+						DBG1(DBG_IKE, "ignore response with duplicate COOKIE "
+							 "notify");
+						enumerator->destroy(enumerator);
+						return FAILED;
+					}
+					break;
+				}
 				case REDIRECT:
 				{
 					identification_t *gateway;

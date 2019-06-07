@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2018 Tobias Brunner
+    Copyright (C) 2012-2019 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
     HSR Hochschule fuer Technik Rapperswil
@@ -47,6 +47,8 @@
     <string name="no_profiles">Keine VPN Profile vorhanden.</string>
     <string name="add_profile">Profil hinzufügen</string>
     <string name="edit_profile">Bearbeiten</string>
+    <string name="copy_profile">Kopieren</string>
+    <string name="copied_name">%1$s (Kopie)</string>
     <string name="delete_profile">Löschen</string>
     <string name="select_profiles">Profile auswählen</string>
     <string name="profiles_deleted">Ausgewählte Profile gelöscht</string>
@@ -83,6 +85,8 @@
     <string name="profile_remote_id_label">Server-Identität</string>
     <string name="profile_remote_id_hint">Standardwert ist der konfigurierte Server. Eigene Werte werden explizit an den Server gesendet und während der Authentifizierung erzwungen</string>
     <string name="profile_remote_id_hint_gateway">Standardwert ist \"%1$s\". Eigene Werte werden explizit an den Server gesendet und während der Authentifizierung erzwungen</string>
+    <string name="profile_dns_servers_label">DNS Server</string>
+    <string name="profile_dns_servers_hint">Benutzerdefinierte DNS Server bei Verbindung zum VPN (mit Leerzeichen getrennt, z.B.. \"8.8.8.8 2001:4860:4860::8888\", standardmässig werden die vom VPN Server erhaltenen Server verwendet)</string>
     <string name="profile_mtu_label">MTU des VPN Tunnel-Device</string>
     <string name="profile_mtu_hint">Falls der Standardwert in einem bestimmten Netzwerk nicht geeignet ist</string>
     <string name="profile_port_label">Server Port</string>
@@ -136,6 +140,7 @@
     <string name="alert_text_nocertfound">Bitte wählen Sie eines aus oder aktivieren Sie <i>Automatisch wählen</i></string>
     <string name="alert_text_out_of_range">Bitte geben Sie eine Nummer von %1$d - %2$d ein</string>
     <string name="alert_text_no_subnets">Bitte geben Sie mit Leerzeichen getrennte, gültige Subnetzte und/oder IP-Adressen ein</string>
+    <string name="alert_text_no_ips">Bitte geben Sie mit Leerzeichen getrennte, gültige IP-Adressen ein</string>
     <string name="alert_text_no_proposal">Bitte geben Sie eine mit Bindestrichen getrennte, gültige Liste von Algorithmen ein</string>
     <string name="tnc_notice_title">EAP-TNC kann Ihre Privatsphäre beeinträchtigen</string>
     <string name="tnc_notice_subtitle">Gerätedaten werden an den Server-Betreiber gesendet</string>

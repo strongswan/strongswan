@@ -55,6 +55,8 @@ struct kernel_ipsec_sa_id_t {
 	uint8_t proto;
 	/** Optional mark */
 	mark_t mark;
+	/** Optional interface ID */
+	uint32_t if_id;
 };
 
 /**
@@ -154,6 +156,8 @@ struct kernel_ipsec_policy_id_t {
 	traffic_selector_t *dst_ts;
 	/** Optional mark */
 	mark_t mark;
+	/** Optional interface ID */
+	uint32_t if_id;
 	/** Network interface restricting policy */
 	char *interface;
 };

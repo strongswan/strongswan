@@ -19,7 +19,7 @@
 #  initialize & set some vars
 # ============================
 
-AC_INIT([strongSwan],[5.7.1])
+AC_INIT([strongSwan],[5.8.0])
 AM_INIT_AUTOMAKE(m4_esyscmd([
 	echo tar-ustar
 	echo subdir-objects
@@ -145,6 +145,7 @@ ARG_ENABL_SET([newhope],        [enable New Hope crypto plugin.])
 ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
 ARG_ENABL_SET([ntru],           [enables the NTRU crypto plugin.])
 ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
+ARG_ENABL_SET([wolfssl],        [enables the wolfSSL crypto plugin.])
 ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
 ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
 ARG_DISBL_SET([rc2],            [disable RC2 software implementation plugin.])
@@ -446,7 +447,7 @@ if test x$imc_test = xtrue -o x$imv_test = xtrue -o x$imc_scanner = xtrue -o x$i
 fi
 
 if test x$fips_prf = xtrue; then
-	if test x$openssl = xfalse; then
+	if test x$openssl = xfalse -a x$wolfssl = xfalse; then
 		sha1=true;
 	fi
 fi
@@ -1138,6 +1139,14 @@ if test x$openssl = xtrue; then
 	AC_CHECK_HEADER([openssl/evp.h],,[AC_MSG_ERROR([OpenSSL header openssl/evp.h not found!])])
 fi
 
+if test x$wolfssl = xtrue; then
+	wolfssl_lib=wolfssl
+	AC_CHECK_LIB([$wolfssl_lib],[wolfSSL_Init],[LIBS="$LIBS"],
+		[AC_MSG_ERROR([wolfSSL lib$wolfssl_lib not found])],[$DLLIB])
+	AC_SUBST(WOLFSSL_LIB, [-l$wolfssl_lib])
+	AC_CHECK_HEADER([wolfssl/options.h],,[AC_MSG_ERROR([wolfSSL header wolfssl/options.h not found!])])
+fi
+
 if test x$gcrypt = xtrue; then
 	AC_CHECK_LIB([gcrypt],[gcry_control],[LIBS="$LIBS"],[AC_MSG_ERROR([gcrypt library not found])],[-lgpg-error])
 	AC_CHECK_HEADER([gcrypt.h],,[AC_MSG_ERROR([gcrypt header gcrypt.h not found!])])
@@ -1294,6 +1303,9 @@ if test x$fuzzing = xtrue; then
 	else
 		# required for libFuzzer
 		FUZZING_LDFLAGS="-stdlib=libc++ -lstdc++"
+		if test "$SANITIZER" = "coverage"; then
+			FUZZING_LDFLAGS="$FUZZING_LDFLAGS -lm"
+		fi
 		AC_SUBST(FUZZING_LDFLAGS)
 	fi
 fi
@@ -1311,7 +1323,7 @@ fi
 AM_CONDITIONAL(RUBY_GEMS_INSTALL, [test "x$ruby_gems_install" = xtrue])
 
 if test x$python_eggs = xtrue; then
-	PYTHON_PACKAGE_VERSION=`echo "$PACKAGE_VERSION" | $SED 's/dr/dev/'`
+	PYTHON_PACKAGE_VERSION=`echo "$PACKAGE_VERSION" | $SED 's/dr/.dev/'`
 	AC_SUBST([PYTHON_PACKAGE_VERSION])
 	if test x$python_eggs_install = xtrue; then
 		AC_PATH_PROG([EASY_INSTALL], [easy_install], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
@@ -1407,6 +1419,7 @@ ADD_PLUGIN([ipseckey],             [c charon])
 ADD_PLUGIN([pem],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen fuzz])
 ADD_PLUGIN([padlock],              [s charon])
 ADD_PLUGIN([openssl],              [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([wolfssl],              [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([gcrypt],               [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([botan],                [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([af-alg],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
@@ -1579,6 +1592,7 @@ AM_CONDITIONAL(USE_MYSQL, test x$mysql = xtrue)
 AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
 AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
+AM_CONDITIONAL(USE_WOLFSSL, test x$wolfssl = xtrue)
 AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
 AM_CONDITIONAL(USE_BOTAN, test x$botan = xtrue)
 AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
@@ -1811,7 +1825,7 @@ AC_CONFIG_FILES([
 	man/Makefile
 	init/Makefile
 	init/systemd/Makefile
-	init/systemd-swanctl/Makefile
+	init/systemd-starter/Makefile
 	src/Makefile
 	src/include/Makefile
 	src/libstrongswan/Makefile
@@ -1860,6 +1874,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/sqlite/Makefile
 	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
+	src/libstrongswan/plugins/wolfssl/Makefile
 	src/libstrongswan/plugins/gcrypt/Makefile
 	src/libstrongswan/plugins/botan/Makefile
 	src/libstrongswan/plugins/agent/Makefile
@@ -2014,6 +2029,7 @@ AC_CONFIG_FILES([
 	src/sw-collector/Makefile
 	src/sec-updater/Makefile
 	src/swanctl/Makefile
+	src/xfrmi/Makefile
 	scripts/Makefile
 	testing/Makefile
 ])

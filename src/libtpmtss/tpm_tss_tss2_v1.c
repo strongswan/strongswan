@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
  * Copyright (C) 2016-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -24,9 +25,9 @@
 
 #include <tpm20.h>
 
-#ifdef TSS2_TCTI_TABRMD_V1
+#ifdef TSS2_TCTI_TABRMD
 #include <tcti/tcti-tabrmd.h>
-#endif /* TSS2_TCTI_TABRMD_V1 */
+#endif /* TSS2_TCTI_TABRMD */
 
 #ifdef TSS2_TCTI_SOCKET
 #include <tcti_socket.h>
@@ -68,6 +69,12 @@ struct private_tpm_tss_tss2_t {
 	 * List of supported algorithms
 	 */
 	TPM_ALG_ID supported_algs[TPM_PT_ALGORITHM_SET];
+
+	/**
+	 * Is TPM FIPS 186-4 compliant ?
+	 */
+	bool fips_186_4;
+
 };
 
 /**
@@ -153,6 +160,7 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 	TPMS_TAGGED_PROPERTY tp;
 	TPMI_YES_NO more_data;
 	TPM_ALG_ID alg;
+	bool fips_140_2 = FALSE;
 	uint32_t rval, i, offset, revision = 0, year = 0;
 	size_t len = BUF_LEN;
 	char buf[BUF_LEN], manufacturer[5], vendor_string[17];
@@ -193,12 +201,25 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 				offset = 4 * (tp.property - TPM_PT_VENDOR_STRING_1);
 				htoun32(vendor_string + offset, tp.value);
 				break;
+			case TPM_PT_MODES:
+				if (tp.value & TPMA_MODES_FIPS_140_2)
+				{
+					this->fips_186_4 = fips_140_2 = TRUE;
+				}
+				break;
 			default:
 				break;
 		}
 	}
-	DBG2(DBG_PTS, "%s manufacturer: %s (%s) rev: %05.2f %u", LABEL, manufacturer,
-		 vendor_string, (float)revision/100, year);
+
+	if (!fips_140_2)
+	{
+		this->fips_186_4 = lib->settings->get_bool(lib->settings,
+					"%s.plugins.tpm.fips_186_4", FALSE, lib->ns);
+	}
+	DBG2(DBG_PTS, "%s manufacturer: %s (%s) rev: %05.2f %u %s", LABEL,
+		 manufacturer, vendor_string, (float)revision/100, year,
+		 fips_140_2 ? "FIPS 140-2" : (this->fips_186_4 ? "FIPS 186-4" : ""));
 
 	/* get supported algorithms */
 	rval = Tss2_Sys_GetCapability(this->sys_context, 0, TPM_CAP_ALGS,
@@ -400,7 +421,7 @@ METHOD(tpm_tss_t, get_version_info, chunk_t,
 }
 
 /**
- * read the public key portion of a TSS 2.0 AIK key from NVRAM
+ * read the public key portion of a TSS 2.0 key from NVRAM
  */
 bool read_public(private_tpm_tss_tss2_t *this, TPMI_DH_OBJECT handle,
 	TPM2B_PUBLIC *public)
@@ -450,9 +471,9 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 	}
 
 	aik_blob = chunk_create((u_char*)&public, sizeof(public));
-	DBG3(DBG_LIB, "%s AIK public key blob: %B", LABEL, &aik_blob);
+	DBG3(DBG_LIB, "%s public key blob: %B", LABEL, &aik_blob);
 
-	/* convert TSS 2.0 AIK public key blot into PKCS#1 format */
+	/* convert TSS 2.0 public key blot into PKCS#1 format */
 	switch (public.t.publicArea.type)
 	{
 		case TPM_ALG_RSA:
@@ -460,6 +481,7 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			TPM2B_PUBLIC_KEY_RSA *rsa;
 			TPMT_RSA_SCHEME *scheme;
 			chunk_t aik_exponent, aik_modulus;
+			uint32_t exponent;
 
 			scheme = &public.t.publicArea.parameters.rsaDetail.scheme;
 			sig_alg   = scheme->scheme;
@@ -467,14 +489,22 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 
 			rsa = &public.t.publicArea.unique.rsa;
 			aik_modulus = chunk_create(rsa->t.buffer, rsa->t.size);
-			aik_exponent = chunk_from_chars(0x01, 0x00, 0x01);
+			exponent = public.t.publicArea.parameters.rsaDetail.exponent;
+			if (!exponent)
+			{
+				aik_exponent = chunk_from_chars(0x01, 0x00, 0x01);
+			}
+			else
+			{
+				aik_exponent = chunk_from_thing(exponent);
+			}
 
-			/* subjectPublicKeyInfo encoding of AIK RSA key */
+			/* subjectPublicKeyInfo encoding of RSA public key */
 			if (!lib->encoding->encode(lib->encoding, PUBKEY_SPKI_ASN1_DER,
 					NULL, &aik_pubkey, CRED_PART_RSA_MODULUS, aik_modulus,
 					CRED_PART_RSA_PUB_EXP, aik_exponent, CRED_PART_END))
 			{
-				DBG1(DBG_PTS, "%s subjectPublicKeyInfo encoding of AIK key "
+				DBG1(DBG_PTS, "%s subjectPublicKeyInfo encoding of public key "
 							  "failed", LABEL);
 				return chunk_empty;
 			}
@@ -505,7 +535,7 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			pos += ecc->x.t.size;
 			/* copy y coordinate of ECC point */
 			memcpy(pos, ecc->y.t.buffer, ecc->y.t.size);
-			/* subjectPublicKeyInfo encoding of AIK ECC key */
+			/* subjectPublicKeyInfo encoding of ECC public key */
 			aik_pubkey = asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_wrap(ASN1_SEQUENCE, "mm",
 								asn1_build_known_oid(OID_EC_PUBLICKEY),
@@ -515,12 +545,99 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			break;
 		}
 		default:
-			DBG1(DBG_PTS, "%s unsupported AIK key type", LABEL);
+			DBG1(DBG_PTS, "%s unsupported key type", LABEL);
 			return chunk_empty;
 	}
-	DBG1(DBG_PTS, "AIK signature algorithm is %N with %N hash",
+	DBG1(DBG_PTS, "signature algorithm is %N with %N hash",
 		 tpm_alg_id_names, sig_alg, tpm_alg_id_names, digest_alg);
 	return aik_pubkey;
+}
+
+METHOD(tpm_tss_t, supported_signature_schemes, enumerator_t*,
+	private_tpm_tss_tss2_t *this, uint32_t handle)
+{
+	TPM2B_PUBLIC public = { { 0, } };
+	hash_algorithm_t digest;
+	signature_params_t supported_scheme;
+
+	if (!read_public(this, handle, &public))
+	{
+		return enumerator_create_empty();
+	}
+
+	switch (public.t.publicArea.type)
+	{
+		case TPM_ALG_RSA:
+		{
+			TPMS_RSA_PARMS *rsa;
+			TPMT_RSA_SCHEME *scheme;
+
+			rsa = &public.t.publicArea.parameters.rsaDetail;
+			scheme = &rsa->scheme;
+			digest = hash_alg_from_tpm_alg_id(scheme->details.anySig.hashAlg);
+
+			switch (scheme->scheme)
+			{
+				case TPM_ALG_RSAPSS:
+				{
+					ssize_t salt_len;
+
+					salt_len = this->fips_186_4 ? RSA_PSS_SALT_LEN_DEFAULT :
+												  RSA_PSS_SALT_LEN_MAX;
+					rsa_pss_params_t pss_params = {
+						.hash = digest,
+						.mgf1_hash = digest,
+						.salt_len = salt_len,
+					};
+					supported_scheme = (signature_params_t){
+						.scheme = SIGN_RSA_EMSA_PSS,
+						.params = &pss_params,
+					};
+					if (!rsa_pss_params_set_salt_len(&pss_params, rsa->keyBits))
+					{
+						return enumerator_create_empty();
+					}
+					break;
+				}
+				case TPM_ALG_RSASSA:
+					supported_scheme = (signature_params_t){
+						.scheme = signature_scheme_from_oid(
+									hasher_signature_algorithm_to_oid(digest,
+																	  KEY_RSA)),
+					};
+					break;
+				default:
+					return enumerator_create_empty();
+			}
+			break;
+		}
+		case TPM_ALG_ECC:
+		{
+			TPMT_ECC_SCHEME *scheme;
+
+			scheme = &public.t.publicArea.parameters.eccDetail.scheme;
+			digest = hash_alg_from_tpm_alg_id(scheme->details.anySig.hashAlg);
+
+			switch (scheme->scheme)
+			{
+				case TPM_ALG_ECDSA:
+					supported_scheme = (signature_params_t){
+						.scheme = signature_scheme_from_oid(
+									hasher_signature_algorithm_to_oid(digest,
+																	KEY_ECDSA)),
+					};
+					break;
+				default:
+					return enumerator_create_empty();
+			}
+			break;
+		}
+		default:
+			DBG1(DBG_PTS, "%s unsupported key type", LABEL);
+			return enumerator_create_empty();
+	}
+	return enumerator_create_single(signature_params_clone(&supported_scheme),
+									(void*)signature_params_destroy);
 }
 
 /**
@@ -809,7 +926,7 @@ METHOD(tpm_tss_t, quote, bool,
 			DBG1(DBG_PTS, "%s unsupported %N signature algorithm",
 						   LABEL, tpm_alg_id_names, sig.sigAlg);
 			return FALSE;
-	};
+	}
 
 	DBG2(DBG_PTS, "PCR digest algorithm is %N", tpm_alg_id_names, hash_alg);
 	pcr_digest_alg = hash_alg_from_tpm_alg_id(hash_alg);
@@ -1036,7 +1153,7 @@ METHOD(tpm_tss_t, sign, bool,
 			DBG1(DBG_PTS, "%s unsupported %N signature scheme",
 						   LABEL, signature_scheme_names, scheme);
 			return FALSE;
-	};
+	}
 
 	return TRUE;
 }
@@ -1174,6 +1291,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 			.get_version_info = _get_version_info,
 			.generate_aik = _generate_aik,
 			.get_public = _get_public,
+			.supported_signature_schemes = _supported_signature_schemes,
 			.read_pcr = _read_pcr,
 			.extend_pcr = _extend_pcr,
 			.quote = _quote,

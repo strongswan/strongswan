@@ -120,20 +120,23 @@ static bool add_file_list_key(vici_req_t *req, char *key, char *value)
 			{
 				if (streq(key, "certs"))
 				{
-					snprintf(buf, sizeof(buf), "%s%s%s",
-							 SWANCTL_X509DIR, DIRECTORY_SEPARATOR, token);
+					snprintf(buf, sizeof(buf), "%s%s%s%s%s", swanctl_dir,
+							 DIRECTORY_SEPARATOR, SWANCTL_X509DIR,
+							 DIRECTORY_SEPARATOR, token);
 					token = buf;
 				}
 				else if (streq(key, "cacerts"))
 				{
-					snprintf(buf, sizeof(buf), "%s%s%s",
-							 SWANCTL_X509CADIR, DIRECTORY_SEPARATOR, token);
+					snprintf(buf, sizeof(buf), "%s%s%s%s%s", swanctl_dir,
+							 DIRECTORY_SEPARATOR, SWANCTL_X509CADIR,
+							 DIRECTORY_SEPARATOR, token);
 					token = buf;
 				}
 				else if (streq(key, "pubkeys"))
 				{
-					snprintf(buf, sizeof(buf), "%s%s%s",
-							 SWANCTL_PUBKEYDIR, DIRECTORY_SEPARATOR, token);
+					snprintf(buf, sizeof(buf), "%s%s%s%s%s", swanctl_dir,
+							 DIRECTORY_SEPARATOR, SWANCTL_PUBKEYDIR,
+							 DIRECTORY_SEPARATOR, token);
 					token = buf;
 				}
 			}
@@ -425,7 +428,7 @@ static int load_conns(vici_conn_t *conn)
 {
 	command_format_options_t format = COMMAND_FORMAT_NONE;
 	settings_t *cfg;
-	char *arg, *file = SWANCTL_CONF;
+	char *arg, *file = NULL;
 	int ret;
 
 	while (TRUE)
@@ -451,10 +454,9 @@ static int load_conns(vici_conn_t *conn)
 		break;
 	}
 
-	cfg = settings_create(file);
+	cfg = load_swanctl_conf(file);
 	if (!cfg)
 	{
-		fprintf(stderr, "parsing '%s' failed\n", file);
 		return EINVAL;
 	}
 

@@ -32,6 +32,11 @@ static void include_files(parser_helper_t *ctx);
 /* do not declare unneeded functions */
 %option noinput noyywrap
 
+/* do not include unistd.h as it might conflict with our scanner states */
+%option nounistd
+/* due to that disable interactive mode, which requires isatty() */
+%option never-interactive
+
 /* don't use global variables, and interact properly with bison */
 %option reentrant bison-bridge
 

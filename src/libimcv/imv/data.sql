@@ -574,6 +574,30 @@ INSERT INTO products (      /* 96 */
  'Ubuntu 18.04 x86_64'
 );
 
+INSERT INTO products (      /* 97 */
+  name
+) VALUES (
+ 'Debian 9.5 i686'
+);
+
+INSERT INTO products (      /* 98 */
+  name
+) VALUES (
+ 'Debian 9.5 x86_64'
+);
+
+INSERT INTO products (      /* 99 */
+  name
+) VALUES (
+ 'Debian 9.6 x86_64'
+);
+
+INSERT INTO products (      /* 100 */
+  name
+) VALUES (
+ 'Debian 9.7 x86_64'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -671,7 +695,7 @@ INSERT INTO files (				/*  1 */
 INSERT INTO files (				/*  2 */
   name, dir
 ) VALUES (
- 'libcrypto.so.1.0.0', 11
+ 'libcrypto.so.1.1', 11
 );
 
 INSERT INTO files (				/*  3 */
@@ -683,7 +707,7 @@ INSERT INTO files (				/*  3 */
 INSERT INTO files (				/*  4 */
   name, dir
 ) VALUES (
- 'libssl.so.1.0.0', 11
+ 'libssl.so.1.1', 11
 );
 
 INSERT INTO files (				/*  5 */
@@ -1147,6 +1171,12 @@ INSERT INTO groups_product_defaults (
 INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
+  4, 97
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
   5, 2
 );
 
@@ -1262,6 +1292,24 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   5, 95
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 98
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 99
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 100
 );
 
 INSERT INTO groups_product_defaults (
@@ -1665,13 +1713,13 @@ INSERT INTO policies (			/* 11 */
 INSERT INTO policies (			/*  12 */
   type, name, file, rec_fail, rec_noresult
 ) VALUES (
-  6, 'Measure /usr/lib/x86_64-linux-gnu/libcrypto.so.1.0.0', 2, 2, 2
+  6, 'Measure /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1', 2, 2, 2
 );
 
 INSERT INTO policies (			/* 13 */
   type, name, file, rec_fail, rec_noresult
 ) VALUES (
-  6, 'Measure /usr/lib/x86_64-linux-gnu/libssl.so.1.0.0', 4, 2, 2
+  6, 'Measure /usr/lib/x86_64-linux-gnu/libssl.so.1.1', 4, 2, 2
 );
 
 INSERT INTO policies (			/* 14 */

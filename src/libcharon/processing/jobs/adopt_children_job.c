@@ -53,6 +53,36 @@ METHOD(job_t, destroy, void,
 	free(this);
 }
 
+METHOD(adopt_children_job_t, queue_task, void,
+	private_adopt_children_job_t *this, task_t *task)
+{
+	array_insert_create(&this->tasks, ARRAY_TAIL, task);
+}
+
+/**
+ * Adopt child-creating tasks from the given IKE_SA
+ */
+static u_int adopt_child_tasks(private_adopt_children_job_t *this,
+							   ike_sa_t *ike_sa, task_queue_t queue)
+{
+	enumerator_t *tasks;
+	task_t *task;
+	u_int count = 0;
+
+	tasks = ike_sa->create_task_enumerator(ike_sa, queue);
+	while (tasks->enumerate(tasks, &task))
+	{
+		if (task->get_type(task) == TASK_QUICK_MODE)
+		{
+			ike_sa->remove_task(ike_sa, tasks);
+			queue_task(this, task);
+			count++;
+		}
+	}
+	tasks->destroy(tasks);
+	return count;
+}
+
 METHOD(job_t, execute, job_requeue_t,
 	private_adopt_children_job_t *this)
 {
@@ -65,6 +95,7 @@ METHOD(job_t, execute, job_requeue_t,
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	uint32_t unique;
+	u_int tasks = 0;
 
 	ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager, this->id);
 	if (ike_sa)
@@ -127,11 +158,17 @@ METHOD(job_t, execute, job_requeue_t,
 					 * it does trigger an assign_vips(FALSE) event, so we also
 					 * trigger one below */
 					ike_sa->clear_virtual_ips(ike_sa, FALSE);
-					if (children->get_count(children) || vips->get_count(vips))
+
+					tasks += adopt_child_tasks(this, ike_sa, TASK_QUEUE_ACTIVE);
+					tasks += adopt_child_tasks(this, ike_sa, TASK_QUEUE_QUEUED);
+
+					if (children->get_count(children) || tasks ||
+						vips->get_count(vips))
 					{
 						DBG1(DBG_IKE, "detected reauth of existing IKE_SA, "
-							 "adopting %d children and %d virtual IPs",
-							 children->get_count(children), vips->get_count(vips));
+							 "adopting %d children, %d child tasks, and %d "
+							 "virtual IPs", children->get_count(children),
+							 tasks, vips->get_count(vips));
 					}
 					if (ike_sa->get_state(ike_sa) == IKE_PASSIVE)
 					{
@@ -152,7 +189,8 @@ METHOD(job_t, execute, job_requeue_t,
 					charon->ike_sa_manager->checkin(
 											charon->ike_sa_manager, ike_sa);
 				}
-				if (children->get_count(children) || vips->get_count(vips))
+				if (children->get_count(children) || tasks ||
+					vips->get_count(vips))
 				{
 					break;
 				}
@@ -235,12 +273,6 @@ METHOD(job_t, get_priority, job_priority_t,
 	private_adopt_children_job_t *this)
 {
 	return JOB_PRIO_HIGH;
-}
-
-METHOD(adopt_children_job_t, queue_task, void,
-	private_adopt_children_job_t *this, task_t *task)
-{
-	array_insert_create(&this->tasks, ARRAY_TAIL, task);
 }
 
 /**

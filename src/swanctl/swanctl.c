@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
@@ -13,17 +16,55 @@
  * for more details.
  */
 
+#include "swanctl.h"
 #include "command.h"
 
 #include <unistd.h>
 
 #include <library.h>
 
+/*
+ * Described in header
+ */
+char *swanctl_dir;
+
+/*
+ * Described in header
+ */
+settings_t *load_swanctl_conf(char *file)
+{
+	settings_t *cfg;
+	char buf[PATH_MAX];
+
+	if (!file)
+	{
+		if (!strlen(swanctl_dir))
+		{
+			free(swanctl_dir);
+			swanctl_dir = strdup(getcwd(buf, sizeof(buf)));
+		}
+		file = buf;
+		snprintf(buf, sizeof(buf), "%s%s%s", swanctl_dir,
+				 DIRECTORY_SEPARATOR, SWANCTL_CONF);
+	}
+
+	cfg = settings_create(file);
+	if (!cfg)
+	{
+		fprintf(stderr, "parsing '%s' failed\n", file);
+		return NULL;
+	}
+	free(swanctl_dir);
+	swanctl_dir = path_dirname(file);
+	return cfg;
+}
+
 /**
  * Cleanup library atexit()
  */
 static void cleanup()
 {
+	free(swanctl_dir);
 	lib->processor->cancel(lib->processor);
 	library_deinit();
 }
@@ -49,6 +90,9 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
+
+	swanctl_dir = strdup(getenv("SWANCTL_DIR") ?: SWANCTLDIR);
+
 	dbg_default_set_level(0);
 	lib->processor->set_threads(lib->processor, 4);
 	dbg_default_set_level(1);

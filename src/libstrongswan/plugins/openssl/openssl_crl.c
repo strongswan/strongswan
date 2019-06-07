@@ -57,6 +57,9 @@ static inline void X509_CRL_get0_signature(const X509_CRL *crl, ASN1_BIT_STRING 
 #define X509_REVOKED_get0_serialNumber(r) ({ (r)->serialNumber; })
 #define X509_REVOKED_get0_revocationDate(r) ({ (r)->revocationDate; })
 #define X509_CRL_get0_extensions(c) ({ (c)->crl->extensions; })
+#define ASN1_STRING_get0_data(a) ASN1_STRING_data(a)
+#define X509_CRL_get0_lastUpdate(c) X509_CRL_get_lastUpdate(c)
+#define X509_CRL_get0_nextUpdate(c) X509_CRL_get_nextUpdate(c)
 #endif
 
 typedef struct private_openssl_crl_t private_openssl_crl_t;
@@ -193,7 +196,7 @@ METHOD(enumerator_t, crl_enumerate, bool,
 				if (ASN1_STRING_type(crlrsn) == V_ASN1_ENUMERATED &&
 					ASN1_STRING_length(crlrsn) == 1)
 				{
-					*reason = *ASN1_STRING_data(crlrsn);
+					*reason = *ASN1_STRING_get0_data(crlrsn);
 				}
 				ASN1_STRING_free(crlrsn);
 			}
@@ -288,7 +291,11 @@ METHOD(certificate_t, issued_by, bool,
 	chunk_t fingerprint, tbs;
 	public_key_t *key;
 	x509_t *x509;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	const ASN1_BIT_STRING *sig;
+#else
 	ASN1_BIT_STRING *sig;
+#endif
 	bool valid;
 
 	if (issuer->get_type(issuer) != CERT_X509)
@@ -509,7 +516,7 @@ static bool parse_extensions(private_openssl_crl_t *this)
 	bool ok;
 	int i, num;
 	X509_EXTENSION *ext;
-	STACK_OF(X509_EXTENSION) *extensions;
+	const STACK_OF(X509_EXTENSION) *extensions;
 
 	extensions = X509_CRL_get0_extensions(this->crl);
 	if (extensions)
@@ -564,7 +571,11 @@ static bool parse_crl(private_openssl_crl_t *this)
 {
 	const unsigned char *ptr = this->encoding.ptr;
 	chunk_t sig_scheme;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	const X509_ALGOR *alg;
+#else
 	X509_ALGOR *alg;
+#endif
 
 	this->crl = d2i_X509_CRL(NULL, &ptr, this->encoding.len);
 	if (!this->crl)
@@ -573,7 +584,7 @@ static bool parse_crl(private_openssl_crl_t *this)
 	}
 
 	X509_CRL_get0_signature(this->crl, NULL, &alg);
-	sig_scheme = openssl_i2chunk(X509_ALGOR, alg);
+	sig_scheme = openssl_i2chunk(X509_ALGOR, (X509_ALGOR*)alg);
 	INIT(this->scheme);
 	if (!signature_params_parse(sig_scheme, 0, this->scheme))
 	{
@@ -588,8 +599,8 @@ static bool parse_crl(private_openssl_crl_t *this)
 	{
 		return FALSE;
 	}
-	this->thisUpdate = openssl_asn1_to_time(X509_CRL_get_lastUpdate(this->crl));
-	this->nextUpdate = openssl_asn1_to_time(X509_CRL_get_nextUpdate(this->crl));
+	this->thisUpdate = openssl_asn1_to_time(X509_CRL_get0_lastUpdate(this->crl));
+	this->nextUpdate = openssl_asn1_to_time(X509_CRL_get0_nextUpdate(this->crl));
 
 	return parse_extensions(this);
 }

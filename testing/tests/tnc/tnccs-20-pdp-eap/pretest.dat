@@ -18,10 +18,10 @@ alice::cd /usr/local/share/strongswan/templates/database/imv; cat tables.sql dat
 alice::chgrp -R www-data /etc/db.d/config.db; chmod -R g+w /etc/db.d/config.db
 alice::/usr/local/bin/init_tnc
 alice::systemctl start apache2
-alice::systemctl start strongswan-swanctl
-moon::systemctl start strongswan-swanctl
-dave::systemctl start strongswan-swanctl
-carol::systemctl start strongswan-swanctl
+alice::systemctl start strongswan
+moon::systemctl start strongswan
+dave::systemctl start strongswan
+carol::systemctl start strongswan
 moon::expect-connection rw-allow
 moon::expect-connection rw-isolate
 dave::expect-connection home

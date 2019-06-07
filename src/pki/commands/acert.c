@@ -228,6 +228,11 @@ static int acert()
 		goto end;
 	}
 	scheme = get_signature_scheme(private, digest, pss);
+	if (!scheme)
+	{
+		error = "no signature scheme found";
+		goto end;
+	}
 
 	ac = lib->creds->create(lib->creds,
 							CRED_CERTIFICATE, CERT_X509_AC,

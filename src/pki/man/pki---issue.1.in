@@ -1,4 +1,4 @@
-.TH "PKI \-\-ISSUE" 1 "2016-12-13" "@PACKAGE_VERSION@" "strongSwan"
+.TH "PKI \-\-ISSUE" 1 "2019-05-06" "@PACKAGE_VERSION@" "strongSwan"
 .
 .SH "NAME"
 .
@@ -24,9 +24,10 @@ pki \-\-issue \- Issue a certificate using a CA certificate and key
 .OP \-\-crl uri\ \fR[\fB\-\-crlissuer\ \fIissuer\fR]
 .OP \-\-ocsp uri
 .OP \-\-pathlen len
-.OP \-\-nc-permitted name
 .OP \-\-addrblock block
+.OP \-\-nc-permitted name
 .OP \-\-nc-excluded name
+.OP \-\-critical oid
 .OP \-\-policy\-mapping mapping
 .OP \-\-policy\-explicit len
 .OP \-\-policy\-inhibit len
@@ -180,6 +181,9 @@ the
 or
 .B email:
 prefix to force a constraint type.
+.TP
+.BI "\-X, \-\-critical " oid
+Add a critical extension with the given OID.
 .TP
 .BI "\-M, \-\-policy-mapping " issuer-oid:subject-oid
 Add policyMapping from issuer to subject OID.

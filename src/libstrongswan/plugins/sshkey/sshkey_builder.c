@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2014 Tobias Brunner
+ * Copyright (C) 2013-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -89,6 +89,34 @@ static sshkey_public_key_t *parse_public_key(chunk_t blob)
 		return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_RSA,
 						BUILD_RSA_MODULUS, n, BUILD_RSA_PUB_EXP, e, BUILD_END);
 	}
+	else if (chunk_equals(format, chunk_from_str("ssh-ed25519")))
+	{
+		chunk_t blob;
+
+		if (!reader->read_data32(reader, &blob))
+		{
+			DBG1(DBG_LIB, "invalid Ed25519 key in SSH key");
+			reader->destroy(reader);
+			return NULL;
+		}
+		reader->destroy(reader);
+		return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ED25519,
+								  BUILD_EDDSA_PUB, blob, BUILD_END);
+	}
+	else if (chunk_equals(format, chunk_from_str("ssh-ed448")))
+	{
+		chunk_t blob;
+
+		if (!reader->read_data32(reader, &blob))
+		{
+			DBG1(DBG_LIB, "invalid Ed448 key in SSH key");
+			reader->destroy(reader);
+			return NULL;
+		}
+		reader->destroy(reader);
+		return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, KEY_ED448,
+								  BUILD_EDDSA_PUB, blob, BUILD_END);
+	}
 	else if (format.len > strlen(ECDSA_PREFIX) &&
 			 strpfx(format.ptr, ECDSA_PREFIX))
 	{
@@ -140,8 +168,9 @@ static sshkey_public_key_t *load_from_stream(FILE *file)
 	char line[1024], *token;
 
 	while (!public && fgets(line, sizeof(line), file))
-	{	/* the format is: ssh-rsa|ecdsa-... <key(base64)> <identifier> */
-		if (!strpfx(line, "ssh-rsa") && !strpfx(line, ECDSA_PREFIX))
+	{	/* the format is: ssh-<key-type> <key(base64)> <identifier> */
+		if (!strpfx(line, "ssh-rsa") && !strpfx(line, ECDSA_PREFIX) &&
+			!strpfx(line, "ssh-ed25519") && !strpfx(line, "ssh-ed448"))
 		{
 			continue;
 		}

@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
- * Copyright (C) 2008 Tobias Brunner
+ *
+ * Copyright (C) 2008-2019 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -687,8 +688,8 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 	return &this->public;
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
 void netlink_add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 						  size_t buflen)
@@ -705,13 +706,14 @@ void netlink_add_attribute(struct nlmsghdr *hdr, int rta_type, chunk_t data,
 	rta->rta_type = rta_type;
 	rta->rta_len = RTA_LENGTH(data.len);
 	memcpy(RTA_DATA(rta), data.ptr, data.len);
-	hdr->nlmsg_len = NLMSG_ALIGN(hdr->nlmsg_len) + rta->rta_len;
+	hdr->nlmsg_len = NLMSG_ALIGN(hdr->nlmsg_len) + RTA_ALIGN(rta->rta_len);
 }
 
 /**
- * Described in header.
+ * Add an attribute to the given Netlink message
  */
-void* netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len)
+static struct rtattr *add_rtattr(struct nlmsghdr *hdr, int buflen, int type,
+								 int len)
 {
 	struct rtattr *rta;
 
@@ -724,7 +726,44 @@ void* netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len)
 	rta = ((void*)hdr) + NLMSG_ALIGN(hdr->nlmsg_len);
 	rta->rta_type = type;
 	rta->rta_len = RTA_LENGTH(len);
-	hdr->nlmsg_len = NLMSG_ALIGN(hdr->nlmsg_len) + rta->rta_len;
+	hdr->nlmsg_len = NLMSG_ALIGN(hdr->nlmsg_len) + RTA_ALIGN(rta->rta_len);
+	return rta;
+}
 
+/*
+ * Described in header
+ */
+void *netlink_nested_start(struct nlmsghdr *hdr, size_t buflen, int type)
+{
+	return add_rtattr(hdr, buflen, type, 0);
+}
+
+/*
+ * Described in header
+ */
+void netlink_nested_end(struct nlmsghdr *hdr, void *attr)
+{
+	struct rtattr *rta = attr;
+	void *end;
+
+	if (attr)
+	{
+		end = (char*)hdr + NLMSG_ALIGN(hdr->nlmsg_len);
+		rta->rta_len = end - attr;
+	}
+}
+
+/*
+ * Described in header
+ */
+void *netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len)
+{
+	struct rtattr *rta;
+
+	rta = add_rtattr(hdr, buflen, type, len);
+	if (!rta)
+	{
+		return NULL;
+	}
 	return RTA_DATA(rta);
 }

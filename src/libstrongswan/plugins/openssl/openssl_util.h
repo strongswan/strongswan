@@ -109,7 +109,7 @@ chunk_t openssl_asn1_obj2chunk(ASN1_OBJECT *asn1);
  * @param asn1		asn1 string to convert
  * @return			chunk, pointing into asn1 string
  */
-chunk_t openssl_asn1_str2chunk(ASN1_STRING *asn1);
+chunk_t openssl_asn1_str2chunk(const ASN1_STRING *asn1);
 
 /**
  * Convert an openssl X509_NAME to a identification_t of type ID_DER_ASN1_DN.
@@ -133,7 +133,7 @@ int openssl_asn1_known_oid(ASN1_OBJECT *obj);
  * @param time		openssl ASN1_TIME
  * @returns			time_t, 0 on error
  */
-time_t openssl_asn1_to_time(ASN1_TIME *time);
+time_t openssl_asn1_to_time(const ASN1_TIME *time);
 
 /**
  * Compatibility macros

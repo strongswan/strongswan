@@ -464,7 +464,7 @@ jQuery.extend({
 			elem.tagName && elem.ownerDocument && !elem.ownerDocument.body;
 	},
 
-	// Evalulates a script in a global context
+	// Evaluates a script in a global context
 	// Evaluates Async. in Safari 2 :-(
 	globalEval: function( data ) {
 		data = jQuery.trim( data );

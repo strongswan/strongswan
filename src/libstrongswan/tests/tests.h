@@ -52,5 +52,6 @@ TEST_SUITE_DEPEND(mgf1_sha256_suite_create, XOF, XOF_MGF1_SHA256)
 TEST_SUITE_DEPEND(ntru_suite_create, DH, NTRU_112_BIT)
 TEST_SUITE_DEPEND(fetch_http_suite_create, FETCHER, "http://")
 TEST_SUITE_DEPEND(ed25519_suite_create, PRIVKEY_GEN, KEY_ED25519)
+TEST_SUITE_DEPEND(ed448_suite_create, PRIVKEY_GEN, KEY_ED448)
 TEST_SUITE(signature_params_suite_create)
 

@@ -348,6 +348,9 @@ int main(int argc, char *argv[])
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}
+	/* register this again after loading plugins to avoid issues with libraries
+	 * that register atexit() handlers */
+	atexit(libcharon_deinit);
 	if (!lib->caps->drop(lib->caps))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
@@ -358,9 +361,6 @@ int main(int argc, char *argv[])
 	creds = cmd_creds_create();
 	atexit(cleanup_creds);
 
-	/* handle all arguments */
-	handle_arguments(argc, argv, FALSE);
-
 	if (uname(&utsname) != 0)
 	{
 		memset(&utsname, 0, sizeof(utsname));
@@ -368,6 +368,9 @@ int main(int argc, char *argv[])
 	DBG1(DBG_DMN, "Starting charon-cmd IKE client (strongSwan %s, %s %s, %s)",
 		 VERSION, utsname.sysname, utsname.release, utsname.machine);
 	lib->plugins->status(lib->plugins, LEVEL_CTRL);
+
+	/* handle all arguments */
+	handle_arguments(argc, argv, FALSE);
 
 	/* add handler for SEGV and ILL,
 	 * INT, TERM and HUP are handled by sigwaitinfo() in run() */

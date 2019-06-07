@@ -1,3 +1,5 @@
 A summary of changes is available in the NEWS file. For a more
-detailed Changelog, use the repository (see HACKING) or the
-online interface available at http://git.strongswan.org.
+detailed Changelog, refer to the completed versions on the project's roadmap
+(https://wiki.strongswan.org/projects/strongswan/roadmap) or use the Git
+repository (see HACKING) or its web interface available at
+https://git.strongswan.org.

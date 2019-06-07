@@ -187,11 +187,7 @@ static bool sign_pkcs1(private_gcrypt_rsa_private_key_t *this,
 		}
 		else
 		{
-			u_int slen = hasher_hash_size(hash_algorithm);
-			if (pss->salt_len > RSA_PSS_SALT_LEN_DEFAULT)
-			{
-				slen = pss->salt_len;
-			}
+			u_int slen = pss->salt_len;
 			err = gcry_sexp_build(&in, NULL,
 							"(data(flags pss)(salt-length %u)(hash %s %b))",
 							slen, hash_name, hash.len, hash.ptr);

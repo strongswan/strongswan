@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2017 Lubomir Rintel
  *
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2019 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -51,21 +51,54 @@ typedef struct {
 				NM_TYPE_STRONGSWAN_PLUGIN, NMStrongswanPluginPrivate))
 
 /**
- * convert enumerated handler chunks to a UINT_ARRAY GValue
+ * Convert an address chunk to a GValue
  */
-static GVariant* handler_to_variant(nm_handler_t *handler,
+static GVariant *addr_to_variant(chunk_t addr)
+{
+	GVariantBuilder builder;
+	int i;
+
+	switch (addr.len)
+	{
+		case 4:
+			return g_variant_new_uint32 (*(uint32_t*)addr.ptr);
+		case 16:
+			g_variant_builder_init (&builder, G_VARIANT_TYPE ("ay"));
+			for (i = 0; i < addr.len; i++)
+			{
+				g_variant_builder_add (&builder, "y", addr.ptr[i]);
+
+			}
+			return g_variant_builder_end (&builder);
+		default:
+			return NULL;
+	}
+}
+
+/**
+ * Convert a host to a GValue
+ */
+static GVariant *host_to_variant(host_t *host)
+{
+	return addr_to_variant(host->get_address(host));
+}
+
+/**
+ * Convert enumerated handler chunks to a GValue
+ */
+static GVariant* handler_to_variant(nm_handler_t *handler, char *variant_type,
 							 configuration_attribute_type_t type)
 {
 	GVariantBuilder builder;
 	enumerator_t *enumerator;
-	chunk_t chunk;
+	chunk_t *chunk;
 
-	g_variant_builder_init (&builder, G_VARIANT_TYPE ("au"));
+	g_variant_builder_init (&builder, G_VARIANT_TYPE (variant_type));
 
 	enumerator = handler->create_enumerator(handler, type);
 	while (enumerator->enumerate(enumerator, &chunk))
 	{
-		g_variant_builder_add (&builder, "u", *(uint32_t*)chunk.ptr);
+		g_variant_builder_add_value (&builder, addr_to_variant(*chunk));
 	}
 	enumerator->destroy(enumerator);
 
@@ -73,57 +106,132 @@ static GVariant* handler_to_variant(nm_handler_t *handler,
 }
 
 /**
- * signal IPv4 config to NM, set connection as established
+ * Signal IP config to NM, set connection as established
  */
-static void signal_ipv4_config(NMVpnServicePlugin *plugin,
-							   ike_sa_t *ike_sa, child_sa_t *child_sa)
+static void signal_ip_config(NMVpnServicePlugin *plugin,
+							 ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
 	NMStrongswanPluginPrivate *priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
-	GVariantBuilder builder;
+	GVariantBuilder builder, ip4builder, ip6builder;
+	GVariant *ip4config, *ip6config;
 	enumerator_t *enumerator;
-	host_t *me, *other;
+	host_t *me, *other, *vip4 = NULL, *vip6 = NULL;
 	nm_handler_t *handler;
 
 	g_variant_builder_init (&builder, G_VARIANT_TYPE_VARDICT);
+	g_variant_builder_init (&ip4builder, G_VARIANT_TYPE_VARDICT);
+	g_variant_builder_init (&ip6builder, G_VARIANT_TYPE_VARDICT);
 
 	handler = priv->handler;
 
 	/* NM apparently requires to know the gateway */
 	other = ike_sa->get_other_host(ike_sa);
-	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_EXT_GATEWAY,
-	                       g_variant_new_uint32 (*(uint32_t*)other->get_address(other).ptr));
+	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_CONFIG_EXT_GATEWAY,
+	                       host_to_variant(other));
 
-	/* NM installs this IP address on the interface above, so we use the VIP if
-	 * we got one.
-	 */
+	/* pass the first virtual IPs we got or use the physical IP */
 	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, TRUE);
-	if (!enumerator->enumerate(enumerator, &me))
+	while (enumerator->enumerate(enumerator, &me))
 	{
-		me = ike_sa->get_my_host(ike_sa);
+		switch (me->get_family(me))
+		{
+			case AF_INET:
+				if (!vip4)
+				{
+					vip4 = me;
+				}
+				break;
+			case AF_INET6:
+				if (!vip6)
+				{
+					vip6 = me;
+				}
+				break;
+		}
 	}
 	enumerator->destroy(enumerator);
-	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_ADDRESS,
-	                       g_variant_new_uint32 (*(uint32_t*)other->get_address(me).ptr));
+	if (!vip4 && !vip6)
+	{
+		me = ike_sa->get_my_host(ike_sa);
+		switch (me->get_family(me))
+		{
+			case AF_INET:
+				vip4 = me;
+				break;
+			case AF_INET6:
+				vip6 = me;
+				break;
+		}
+	}
 
-	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_PREFIX,
-	                       g_variant_new_uint32 (me->get_address(me).len * 8));
+	if (vip4)
+	{
+		g_variant_builder_add (&ip4builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_ADDRESS,
+							   host_to_variant(vip4));
+		g_variant_builder_add (&ip4builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_PREFIX,
+							   g_variant_new_uint32 (vip4->get_address(vip4).len * 8));
 
-	/* prevent NM from changing the default route. we set our own route in our
-	 * own routing table
-	 */
-	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_NEVER_DEFAULT,
-	                       g_variant_new_boolean (TRUE));
+		/* prevent NM from changing the default route. we set our own route in our
+		 * own routing table
+		 */
+		g_variant_builder_add (&ip4builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_NEVER_DEFAULT,
+							   g_variant_new_boolean (TRUE));
 
+		g_variant_builder_add (&ip4builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_DNS,
+							   handler_to_variant(handler, "au", INTERNAL_IP4_DNS));
 
-	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_DNS,
-	                       handler_to_variant(handler, INTERNAL_IP4_DNS));
+		g_variant_builder_add (&ip4builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_NBNS,
+							   handler_to_variant(handler, "au", INTERNAL_IP4_NBNS));
+	}
 
-	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_IP4_CONFIG_NBNS,
-	                       handler_to_variant(handler, INTERNAL_IP4_NBNS));
+	if (vip6)
+	{
+		g_variant_builder_add (&ip6builder, "{sv}", NM_VPN_PLUGIN_IP6_CONFIG_ADDRESS,
+							   host_to_variant(vip6));
+		g_variant_builder_add (&ip6builder, "{sv}", NM_VPN_PLUGIN_IP6_CONFIG_PREFIX,
+							   g_variant_new_uint32 (vip6->get_address(vip6).len * 8));
+		g_variant_builder_add (&ip6builder, "{sv}", NM_VPN_PLUGIN_IP6_CONFIG_NEVER_DEFAULT,
+							   g_variant_new_boolean (TRUE));
+		g_variant_builder_add (&ip6builder, "{sv}", NM_VPN_PLUGIN_IP6_CONFIG_DNS,
+							   handler_to_variant(handler, "aay", INTERNAL_IP6_DNS));
+		/* NM_VPN_PLUGIN_IP6_CONFIG_NBNS is not defined */
+	}
+
+	ip4config = g_variant_builder_end (&ip4builder);
+	if (g_variant_n_children (ip4config))
+	{
+		g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_CONFIG_HAS_IP4,
+							   g_variant_new_boolean (TRUE));
+	}
+	else
+	{
+		g_variant_unref (ip4config);
+		ip4config = NULL;
+	}
+
+	ip6config = g_variant_builder_end (&ip6builder);
+	if (g_variant_n_children (ip6config))
+	{
+		g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_CONFIG_HAS_IP6,
+							   g_variant_new_boolean (TRUE));
+	}
+	else
+	{
+		g_variant_unref (ip6config);
+		ip6config = NULL;
+	}
 
 	handler->reset(handler);
 
-	nm_vpn_service_plugin_set_ip4_config(plugin, g_variant_builder_end (&builder));
+	nm_vpn_service_plugin_set_config (plugin, g_variant_builder_end (&builder));
+	if (ip4config)
+	{
+		nm_vpn_service_plugin_set_ip4_config (plugin, ip4config);
+	}
+	if (ip6config)
+	{
+		nm_vpn_service_plugin_set_ip6_config (plugin, ip6config);
+	}
 }
 
 /**
@@ -184,7 +292,7 @@ static bool child_updown(listener_t *listener, ike_sa_t *ike_sa,
 		{	/* disable initiate-failure-detection hooks */
 			private->listener.ike_state_change = NULL;
 			private->listener.child_state_change = NULL;
-			signal_ipv4_config(private->plugin, ike_sa, child_sa);
+			signal_ip_config(private->plugin, ike_sa, child_sa);
 		}
 		else
 		{
@@ -273,8 +381,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	NMSettingVpn *vpn;
 	enumerator_t *enumerator;
 	identification_t *user = NULL, *gateway = NULL;
-	const char *address, *str;
-	bool virtual, encap, proposal;
+	const char *str;
+	bool virtual, proposal;
 	proposal_t *prop;
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
@@ -286,6 +394,13 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	certificate_t *cert = NULL;
 	x509_t *x509;
 	bool agent = FALSE, smartcard = FALSE, loose_gateway_id = FALSE;
+	ike_cfg_create_t ike = {
+		.version = IKEV2,
+		.local = "%any",
+		.local_port = charon->socket->get_port(charon->socket, FALSE),
+		.remote_port = IKEV2_UDP_PORT,
+		.fragmentation = FRAGMENTATION_YES,
+	};
 	peer_cfg_create_t peer = {
 		.cert_policy = CERT_SEND_IF_ASKED,
 		.unique = UNIQUE_REPLACE,
@@ -322,8 +437,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		 priv->name);
 	DBG4(DBG_CFG, "%s",
 		 nm_setting_to_string(NM_SETTING(vpn)));
-	address = nm_setting_vpn_get_data_item(vpn, "address");
-	if (!address || !*address)
+	ike.remote = (char*)nm_setting_vpn_get_data_item(vpn, "address");
+	if (!ike.remote || !*ike.remote)
 	{
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
 					"Gateway address missing.");
@@ -332,7 +447,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	str = nm_setting_vpn_get_data_item(vpn, "virtual");
 	virtual = streq(str, "yes");
 	str = nm_setting_vpn_get_data_item(vpn, "encap");
-	encap = streq(str, "yes");
+	ike.force_encap = streq(str, "yes");
 	str = nm_setting_vpn_get_data_item(vpn, "ipcomp");
 	child.options |= streq(str, "yes") ? OPT_IPCOMP : 0;
 	str = nm_setting_vpn_get_data_item(vpn, "method");
@@ -395,7 +510,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		 * of the gateway as its identity. This identity will be used for
 		 * certificate lookup and requires the configured IP/DNS to be
 		 * included in the gateway certificate. */
-		gateway = identification_create_from_string((char*)address);
+		gateway = identification_create_from_string(ike.remote);
 		DBG1(DBG_CFG, "using CA certificate, gateway identity '%Y'", gateway);
 		loose_gateway_id = TRUE;
 	}
@@ -526,10 +641,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	/**
 	 * Set up configurations
 	 */
-	ike_cfg = ike_cfg_create(IKEV2, TRUE, encap, "0.0.0.0",
-							 charon->socket->get_port(charon->socket, FALSE),
-							(char*)address, IKEV2_UDP_PORT,
-							 FRAGMENTATION_YES, 0);
+	ike_cfg = ike_cfg_create(&ike);
 
 	str = nm_setting_vpn_get_data_item(vpn, "proposal");
 	proposal = streq(str, "yes");
@@ -564,7 +676,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	peer_cfg = peer_cfg_create(priv->name, ike_cfg, &peer);
 	if (virtual)
 	{
-		peer_cfg->add_virtual_ip(peer_cfg, host_create_from_string("0.0.0.0", 0));
+		peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
+		peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
 	}
 	auth = auth_cfg_create();
 	auth->add(auth, AUTH_RULE_AUTH_CLASS, auth_class);
@@ -612,9 +725,9 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	}
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
-	ts = traffic_selector_create_from_string(0, TS_IPV4_ADDR_RANGE,
-											 "0.0.0.0", 0,
-											 "255.255.255.255", 65535);
+	ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
+	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+	ts = traffic_selector_create_from_cidr("::/0", 0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 

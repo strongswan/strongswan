@@ -156,6 +156,8 @@ enum ha_message_attribute_t {
 	HA_PSK,
 	/** chunk_t, IV for next IKEv1 message */
 	HA_IV,
+	/** uint16_t, auth_method_t for IKEv1 key derivation */
+	HA_AUTH_METHOD,
 };
 
 /**

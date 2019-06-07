@@ -251,7 +251,8 @@ METHOD(phase1_t, derive_keys, bool,
 		return FALSE;
 	}
 	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, this->dh_value,
-						  this->nonce_i, this->nonce_r, NULL, shared_key);
+						  this->nonce_i, this->nonce_r, NULL, shared_key,
+						  method);
 	DESTROY_IF(shared_key);
 	return TRUE;
 }

@@ -4,6 +4,6 @@ moon::ipsec status 2> /dev/null::host-host.*INSTALLED, TRANSPORT::YES
 sun:: ipsec status 2> /dev/null::host-host.*INSTALLED, TRANSPORT::YES
 moon::ip xfrm state::mode transport::YES
 sun:: ip xfrm state::mode transport::YES
-moon::ping6 -c 1 -p deadbeef ip6-sun.strongswan.org::64 bytes from ip6-sun.strongswan.org: icmp_seq=1::YES
+moon::ping6 -c 1 -p deadbeef ip6-sun.strongswan.org::64 bytes from ip6-sun.strongswan.org.*: icmp_seq=1::YES
 sun::tcpdump::IP6 ip6-moon.strongswan.org > ip6-sun.strongswan.org: ESP::YES
 sun::tcpdump::IP6 ip6-sun.strongswan.org > ip6-moon.strongswan.org: ESP::YES

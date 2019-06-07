@@ -88,11 +88,13 @@ struct listener_t {
 	 * @param nonce_r	responder's nonce
 	 * @param rekey		IKE_SA we are rekeying, if any (IKEv2 only)
 	 * @param shared	shared key used for key derivation (IKEv1-PSK only)
+	 * @param method	auth method for key derivation (IKEv1-non-PSK only)
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*ike_keys)(listener_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
 					 chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r,
-					 ike_sa_t *rekey, shared_key_t *shared);
+					 ike_sa_t *rekey, shared_key_t *shared,
+					 auth_method_t method);
 
 	/**
 	 * Hook called with derived IKE_SA keys.

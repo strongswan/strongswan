@@ -142,9 +142,13 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 {
 	ike_cfg_t *ike_cfg;
 	peer_cfg_t *peer_cfg;
-	uint16_t local_port, remote_port = IKEV2_UDP_PORT;
-	ike_version_t version = IKE_ANY;
 	proposal_t *proposal;
+	ike_cfg_create_t ike = {
+		.local = "0.0.0.0",
+		.remote = this->host,
+		.remote_port = IKEV2_UDP_PORT,
+		.fragmentation = FRAGMENTATION_YES,
+	};
 	peer_cfg_create_t peer = {
 		.cert_policy = CERT_SEND_IF_ASKED,
 		.unique = UNIQUE_REPLACE,
@@ -161,7 +165,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 		case PROF_V2_PUB:
 		case PROF_V2_EAP:
 		case PROF_V2_PUB_EAP:
-			version = IKEV2;
+			ike.version = IKEV2;
 			break;
 		case PROF_V1_PUB_AM:
 		case PROF_V1_XAUTH_AM:
@@ -173,17 +177,16 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 		case PROF_V1_XAUTH:
 		case PROF_V1_XAUTH_PSK:
 		case PROF_V1_HYBRID:
-			version = IKEV1;
+			ike.version = IKEV1;
 			break;
 	}
 
-	local_port = charon->socket->get_port(charon->socket, FALSE);
-	if (local_port != IKEV2_UDP_PORT)
+	ike.local_port = charon->socket->get_port(charon->socket, FALSE);
+	if (ike.local_port != IKEV2_UDP_PORT)
 	{
-		remote_port = IKEV2_NATT_PORT;
+		ike.remote_port = IKEV2_NATT_PORT;
 	}
-	ike_cfg = ike_cfg_create(version, TRUE, FALSE, "0.0.0.0", local_port,
-					this->host, remote_port, FRAGMENTATION_NO, 0);
+	ike_cfg = ike_cfg_create(&ike);
 	if (this->ike_proposals->get_count(this->ike_proposals))
 	{
 		while (this->ike_proposals->remove_first(this->ike_proposals,

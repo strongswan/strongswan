@@ -44,6 +44,8 @@
     <string name="no_profiles">沒有設定檔</string>
     <string name="add_profile">新增VPN設定檔</string>
     <string name="edit_profile">編輯</string>
+    <string name="copy_profile">Copy</string>
+    <string name="copied_name">%1$s (Copy)</string>
     <string name="delete_profile">刪除</string>
     <string name="select_profiles">選擇設定檔</string>
     <string name="profiles_deleted">選擇的設定檔已經刪除</string>
@@ -80,6 +82,8 @@
     <string name="profile_remote_id_label">伺服器ID</string>
     <string name="profile_remote_id_hint">預設為已設定的伺服器位置。自訂值會在授權期間送到伺服器</string>
     <string name="profile_remote_id_hint_gateway">預設為 \"%1$s\"。自訂值會在授權期間送到伺服器</string>
+    <string name="profile_dns_servers_label">DNS servers</string>
+    <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\", defaults to those received from the VPN server)</string>
     <string name="profile_mtu_label">VPN通道裝置的MTU值</string>
     <string name="profile_mtu_hint">如果在某個網路下預設值不適合</string>
     <string name="profile_port_label">伺服器Port</string>
@@ -133,6 +137,7 @@
     <string name="alert_text_nocertfound">請選擇一項或啟動 <i>自動選擇</i></string>
     <string name="alert_text_out_of_range">請輸入一個數字範圍從%1$d到%2$d</string>
     <string name="alert_text_no_subnets">Please enter valid subnets and/or IP addresses, separated by spaces</string>
+    <string name="alert_text_no_ips">Please enter valid IP addresses, separated by spaces</string>
     <string name="alert_text_no_proposal">Please enter a valid list of algorithms, separated by hyphens</string>
     <string name="tnc_notice_title">EAP-TNC可能會影響您的隱私安全</string>
     <string name="tnc_notice_subtitle">裝置資料已經發送給伺服器管理者</string>

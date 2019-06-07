@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Tobias Brunner
+ * Copyright (C) 2017-2018 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2012 Martin Willi
@@ -48,6 +48,14 @@ struct eap_radius_accounting_t {
  * Create a eap_radius_accounting instance.
  */
 eap_radius_accounting_t *eap_radius_accounting_create();
+
+/**
+ * Get the Accounting session ID for the given IKE_SA.
+ *
+ * @param ike_sa			IKE_SA for which to determine the session ID
+ * @return					allocated session ID
+ */
+char *eap_radius_accounting_session_id(ike_sa_t *ike_sa);
 
 /**
  * Schedule Accounting interim updates for the given IKE_SA.

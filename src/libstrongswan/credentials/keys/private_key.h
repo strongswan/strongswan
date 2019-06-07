@@ -40,6 +40,19 @@ struct private_key_t {
 	key_type_t (*get_type)(private_key_t *this);
 
 	/**
+	 * Get signature schemes supported by this key.
+	 *
+	 * This is useful for keys that only support certain hash algorithms or
+	 * require specific parameters for RSA/PSS signatures.
+	 *
+	 * @note Implementing this method is optional. If multiple schemes are
+	 * returned, they should be ordered by decreasing preference.
+	 *
+	 * @return			enumerator over signature_params_t*
+	 */
+	enumerator_t *(*supported_signature_schemes)(private_key_t *this);
+
+	/**
 	 * Create a signature over a chunk of data.
 	 *
 	 * @param scheme	signature scheme to use

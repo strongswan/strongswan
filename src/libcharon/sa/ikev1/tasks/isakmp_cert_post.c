@@ -287,7 +287,6 @@ METHOD(task_t, process_i, status_t,
 				default:
 					return FAILED;
 			}
-			break;
 		}
 		case AGGRESSIVE:
 		{

@@ -16,7 +16,7 @@
 #include <crypto/crypto_tester.h>
 
 /**
- * From RFC 8037
+ * From RFC 7748
  */
 dh_test_vector_t curve25519_1 = {
 	.group = CURVE_25519, .priv_len = 32, .pub_len = 32, .shared_len = 32,

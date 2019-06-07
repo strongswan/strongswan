@@ -551,6 +551,7 @@ static signature_params_t *create_rsa_pss_constraint(char *token)
 			.scheme = SIGN_RSA_EMSA_PSS,
 			.params = &pss,
 		};
+		rsa_pss_params_set_salt_len(&pss, 0);
 		params = signature_params_clone(&pss_params);
 	}
 	return params;

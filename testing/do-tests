@@ -51,11 +51,15 @@ subdir_cnt="0"
 ##############################################################################
 # parse optional arguments
 #
-while getopts "v" opt
+while getopts "vt" opt
 do
 	case "$opt" in
 	v)
 		verbose=YES
+		timestamps=YES
+		;;
+	t)
+		timestamps=YES
 		;;
 	esac
 done
@@ -64,7 +68,7 @@ shift $((OPTIND-1))
 
 function print_time()
 {
-	[ "$verbose" == "YES" ] && echo "$(date +%T.%N) ~ "
+	[ "$timestamps" == "YES" ] && echo "$(date +%T.%N) ~ "
 }
 
 ##############################################################################
@@ -689,20 +693,24 @@ do
 	do
 	    eval HOSTLOGIN=root@\$ipv4_${host}
 
-	    for file in clients.conf eap.conf radiusd.conf proxy.conf users
-	    do
-		scp $SSHCONF $HOSTLOGIN:/etc/freeradius/$file \
-		    $TESTRESULTDIR/${host}.$file  > /dev/null 2>&1
-	    done
+		RADIUS_DIR=/etc/freeradius/3.0
+		RADIUS_EAP_FILE=mods-enabled/eap
+		RADIUS_EAP_NAME=eap
+		if [ "$BASEIMGSUITE" == "jessie" ]
+		then
+			RADIUS_DIR=/etc/freeradius
+			RADIUS_EAP_FILE=eap.conf
+			RADIUS_EAP_NAME=eap.conf
+		fi
 
-		scp $SSHCONF $HOSTLOGIN:/etc/strongswan.conf \
-		    $TESTRESULTDIR/${host}.strongswan.conf  > /dev/null 2>&1
+		for file in clients.conf radiusd.conf proxy.conf users sites-enabled/default sites-enabled/inner-tunnel $RADIUS_EAP_FILE
+	    do
+		scp $SSHCONF $HOSTLOGIN:$RADIUS_DIR/$file \
+		    $TESTRESULTDIR/${host}.$(basename $file) > /dev/null 2>&1
+	    done
 
 	    scp $SSHCONF $HOSTLOGIN:/var/log/freeradius/radius.log \
 		$TESTRESULTDIR/${host}.radius.log  > /dev/null 2>&1
-
-	    ssh $SSHCONF $HOSTLOGIN grep imcv /var/log/daemon.log \
-		>> $TESTRESULTDIR/${host}.daemon.log 2>/dev/null
 
 	    chmod a+r $TESTRESULTDIR/*
 	    cat >> $TESTRESULTDIR/index.html <<@EOF
@@ -713,14 +721,14 @@ do
 	  <ul>
 	    <li><a href="$host.clients.conf">clients.conf</a></li>
 	    <li><a href="$host.radiusd.conf">radiusd.conf</a></li>
-	    <li><a href="$host.strongswan.conf">strongswan.conf</a></li>
+	    <li><a href="$host.$RADIUS_EAP_NAME">$RADIUS_EAP_NAME</a></li>
 	  </ul>
 	</td>
 	<td valign="top">
 	  <ul>
-	    <li><a href="$host.eap.conf">eap.conf</a></li>
+	    <li><a href="$host.default">sites-enabled/default</a></li>
+	    <li><a href="$host.inner-tunnel">sites-enabled/inner-tunnel</a></li>
 	    <li><a href="$host.radius.log">radius.log</a></li>
-	    <li><a href="$host.daemon.log">daemon.log</a></li>
 	  </ul>
       </td>
 	<td valign="top">

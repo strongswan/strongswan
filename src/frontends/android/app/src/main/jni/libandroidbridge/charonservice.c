@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Tobias Brunner
+ * Copyright (C) 2012-2019 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -757,4 +757,35 @@ JNI_METHOD_P(org_strongswan_android_utils, Utils, isProposalValid, jboolean,
 	free(str);
 	library_deinit();
 	return valid;
+}
+
+/**
+ * Utility function to parse an IP address from a string (static, so `this` is the class)
+ */
+JNI_METHOD_P(org_strongswan_android_utils, Utils, parseInetAddressBytes, jbyteArray,
+	jstring address)
+{
+	jbyteArray bytes;
+	host_t *host;
+	char *str;
+
+	dbg = dbg_android;
+
+	if (!library_init(NULL, "charon"))
+	{
+		library_deinit();
+		return NULL;
+	}
+	str = androidjni_convert_jstring(env, address);
+	host = host_create_from_string(str, 0);
+	if (!host)
+	{
+		free(str);
+		return NULL;
+	}
+	bytes = byte_array_from_chunk(env, host->get_address(host));
+	host->destroy(host);
+	free(str);
+	library_deinit();
+	return bytes;
 }

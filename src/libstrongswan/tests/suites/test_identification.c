@@ -467,6 +467,8 @@ START_TEST(test_equals)
 							 "C=CH, E=moon@strongswan.org, CN=moon");
 
 	ck_assert(id_equals(a, "C=CH, E=moon@strongswan.org, CN=moon"));
+	ck_assert(id_equals(a, "C=CH, email=moon@strongswan.org, CN=moon"));
+	ck_assert(id_equals(a, "C=CH, emailAddress=moon@strongswan.org, CN=moon"));
 	ck_assert(id_equals(a, "C==CH , E==moon@strongswan.org , CN==moon"));
 	ck_assert(id_equals(a, "  C=CH, E=moon@strongswan.org, CN=moon  "));
 	ck_assert(id_equals(a, "C=ch, E=moon@STRONGSWAN.ORG, CN=Moon"));
@@ -631,6 +633,8 @@ START_TEST(test_matches)
 	a = identification_create_from_string("C=CH, E=moon@strongswan.org, CN=moon");
 
 	ck_assert(id_matches(a, "C=CH, E=moon@strongswan.org, CN=moon", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "C=CH, email=moon@strongswan.org, CN=moon", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "C=CH, emailAddress=moon@strongswan.org, CN=moon", ID_MATCH_PERFECT));
 	ck_assert(id_matches(a, "C=CH, E=*@strongswan.org, CN=moon", ID_MATCH_NONE));
 	ck_assert(id_matches(a, "C=CH, E=*, CN=moon", ID_MATCH_ONE_WILDCARD));
 	ck_assert(id_matches(a, "C=CH, E=*, CN=*", ID_MATCH_ONE_WILDCARD - 1));

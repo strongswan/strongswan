@@ -41,8 +41,6 @@
 #include "files.h"
 #include "starterstroke.h"
 #include "invokecharon.h"
-#include "netkey.h"
-#include "klips.h"
 #include "cmp.h"
 
 #ifndef LOG_AUTHPRIV
@@ -521,19 +519,6 @@ int main (int argc, char **argv)
 		cleanup();
 		exit(LSB_RC_INVALID_ARGUMENT);
 	}
-
-#ifndef SKIP_KERNEL_IPSEC_MODPROBES
-	/* determine if we have a native netkey IPsec stack */
-	if (!starter_netkey_init())
-	{
-		DBG1(DBG_APP, "no netkey IPsec stack detected");
-		if (!starter_klips_init())
-		{
-			DBG1(DBG_APP, "no KLIPS IPsec stack detected");
-			DBG1(DBG_APP, "no known IPsec stack detected, ignoring!");
-		}
-	}
-#endif
 
 	last_reload = time_monotonic(NULL);
 

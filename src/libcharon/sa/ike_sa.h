@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Tobias Brunner
+ * Copyright (C) 2006-2019 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -161,6 +161,11 @@ enum ike_extension_t {
 	 * Postquantum Preshared Keys, draft-ietf-ipsecme-qr-ikev2
 	 */
 	EXT_PPK = (1<<15),
+
+	/**
+	 * Responder accepts childless IKE_SAs, RFC 6023
+	 */
+	EXT_IKE_CHILDLESS = (1<<16),
 };
 
 /**
@@ -1069,6 +1074,14 @@ struct ike_sa_t {
 	void (*clear_virtual_ips) (ike_sa_t *this, bool local);
 
 	/**
+	 * Get interface ID to use as default for children of this IKE_SA.
+	 *
+	 * @param inbound		TRUE for inbound interface ID
+	 * @return				interface ID
+	 */
+	uint32_t (*get_if_id)(ike_sa_t *this, bool inbound);
+
+	/**
 	 * Create an enumerator over virtual IPs.
 	 *
 	 * @param local			TRUE to get local virtual IP, FALSE for remote
@@ -1125,6 +1138,16 @@ struct ike_sa_t {
 	enumerator_t* (*create_task_enumerator)(ike_sa_t *this, task_queue_t queue);
 
 	/**
+	 * Remove the task the given enumerator points to.
+	 *
+	 * @note This should be used with caution, in partciular, for tasks in the
+	 * active and passive queues.
+	 *
+	 * @param enumerator	enumerator created with the method above
+	 */
+	void (*remove_task)(ike_sa_t *this, enumerator_t *enumerator);
+
+	/**
 	 * Flush a task queue, cancelling all tasks in it.
 	 *
 	 * @param queue			queue type to flush
@@ -1146,6 +1169,13 @@ struct ike_sa_t {
 	 * @param delay			minimum delay in s before initiating the task
 	 */
 	void (*queue_task_delayed)(ike_sa_t *this, task_t *task, uint32_t delay);
+
+	/**
+	 * Adopt child creating tasks from the given IKE_SA.
+	 *
+	 * @param other			other IKE_SA to adopt tasks from
+	 */
+	void (*adopt_child_tasks)(ike_sa_t *this, ike_sa_t *other);
 
 	/**
 	 * Inherit required attributes to new SA before rekeying.

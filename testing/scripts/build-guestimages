@@ -65,8 +65,9 @@ do
 		echo "/testresults /var/www/testresults 9p trans=virtio,version=9p2000.L 0 0" >> $LOOPDIR/etc/fstab
 		execute_chroot "a2enmod -q cgid" 0
 		execute_chroot "a2enmod -q rewrite" 0
-		execute_chroot "ln -s /etc/openssl/certs /var/www/certs" 0
-		execute_chroot "/etc/openssl/generate-crl" 0
+		execute_chroot "mkdir /var/www/certs" 0
+		execute_chroot "mkdir /var/www/certs/research /var/www/certs/sales" 0
+		execute_chroot "/etc/ca/generate-crl" 0
 		execute_chroot "rm -rf /var/lib/ldap/*" 0
 		execute_chroot "slapadd -l /etc/ldap/ldif.txt -f /etc/ldap/slapd.conf" 0
 		execute_chroot "chown -R openldap:openldap /var/lib/ldap" 0
@@ -76,12 +77,7 @@ do
 
 		for service in "apache2 slapd bind9"
 		do
-			if [ "$BASEIMGSUITE" == "wheezy" ]
-			then
-				execute_chroot "update-rc.d $service defaults" 0
-			else
-				execute_chroot "systemctl enable $service" 0
-			fi
+			execute_chroot "systemctl enable $service" 0
 		done
 	fi
 	sync

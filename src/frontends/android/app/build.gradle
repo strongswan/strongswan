@@ -2,14 +2,13 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 26
-    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "org.strongswan.android"
         minSdkVersion 15
         targetSdkVersion 26
-        versionCode 58
-        versionName "2.0.1"
+        versionCode 64
+        versionName "2.1.1"
     }
 
     sourceSets.main {

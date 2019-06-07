@@ -76,7 +76,7 @@ public class IPRange implements Comparable<IPRange>
 
 	public IPRange(String from, String to) throws UnknownHostException
 	{
-		this(InetAddress.getByName(from), InetAddress.getByName(to));
+		this(Utils.parseInetAddress(from), Utils.parseInetAddress(to));
 	}
 
 	public IPRange(InetAddress from, InetAddress to)
@@ -106,7 +106,7 @@ public class IPRange implements Comparable<IPRange>
 
 	public IPRange(String base, int prefix) throws UnknownHostException
 	{
-		this(InetAddress.getByName(base), prefix);
+		this(Utils.parseInetAddress(base), prefix);
 	}
 
 	public IPRange(InetAddress base, int prefix)

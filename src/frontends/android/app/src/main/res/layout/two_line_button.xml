@@ -19,6 +19,7 @@
     android:minHeight="?android:attr/listPreferredItemHeight"
     android:background="?android:attr/selectableItemBackground"
     android:mode="twoLine"
+    android:focusable="true"
     android:padding="10dp" >
 
     <TextView

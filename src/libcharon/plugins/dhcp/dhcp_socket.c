@@ -489,6 +489,16 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 	offer = host_create_from_chunk(AF_INET,
 					chunk_from_thing(dhcp->your_address), 0);
 
+	if (offer->is_anyaddr(offer))
+	{
+		server = host_create_from_chunk(AF_INET,
+					chunk_from_thing(dhcp->server_address), 0);
+		DBG1(DBG_CFG, "ignoring DHCP OFFER %+H from %H", offer, server);
+		server->destroy(server);
+		offer->destroy(offer);
+		return;
+	}
+
 	this->mutex->lock(this->mutex);
 	enumerator = this->discover->create_enumerator(this->discover);
 	while (enumerator->enumerate(enumerator, &transaction))

@@ -250,7 +250,7 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 #define PSS_PARAMS(bits) static rsa_pss_params_t pss_params_sha##bits = { \
 	.hash = HASH_SHA##bits, \
 	.mgf1_hash = HASH_SHA##bits, \
-	.salt_len = RSA_PSS_SALT_LEN_DEFAULT, \
+	.salt_len = HASH_SIZE_SHA##bits, \
 }
 
 PSS_PARAMS(256);

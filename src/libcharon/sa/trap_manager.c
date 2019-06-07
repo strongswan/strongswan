@@ -293,7 +293,14 @@ METHOD(trap_manager_t, install, bool,
 	this->lock->unlock(this->lock);
 
 	/* create and route CHILD_SA */
-	child_sa = child_sa_create(me, other, child, 0, FALSE, 0, 0);
+	child_sa_create_t child_data = {
+		/* TODO: no reason to allocate unique interface IDs, there is currently
+		 * no event to use them upon trap installation and we'd also have to
+		 * pass them in a later initiate() call */
+		.if_id_in_def = peer->get_if_id(peer, TRUE),
+		.if_id_out_def = peer->get_if_id(peer, FALSE),
+	};
+	child_sa = child_sa_create(me, other, child, &child_data);
 
 	list = linked_list_create_with_items(me, NULL);
 	my_ts = child->get_traffic_selectors(child, TRUE, NULL, list, FALSE);
@@ -352,6 +359,10 @@ METHOD(trap_manager_t, uninstall, bool,
 	entry_t *entry, *found = NULL;
 
 	this->lock->write_lock(this->lock);
+	while (this->installing)
+	{
+		this->condvar->wait(this->condvar, this->lock);
+	}
 	enumerator = this->traps->create_enumerator(this->traps);
 	while (enumerator->enumerate(enumerator, &entry))
 	{

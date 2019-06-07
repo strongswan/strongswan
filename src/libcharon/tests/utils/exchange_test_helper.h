@@ -58,6 +58,23 @@ struct exchange_test_helper_t {
 						 ike_sa_t **resp, exchange_test_sa_conf_t *conf);
 
 	/**
+	 * Similar to establish_sa() but does only create the SA and config
+	 * objects, no exchanges are initiated/handled.  The returned child_cfg
+	 * object is that created for the initiator to be used for a call to
+	 * initiate(). The config objects for the responder are managed and
+	 * provided by an internal config backend.
+	 *
+	 * Note that the responder SPIs are not yet set.
+	 *
+	 * @param[out] init		IKE_SA of the initiator
+	 * @param[out] resp		IKE_SA of the responder
+	 * @param conf			configuration for SAs
+	 * @return				child_cfg for the initiator
+	 */
+	child_cfg_t *(*create_sa)(exchange_test_helper_t *this, ike_sa_t **init,
+							  ike_sa_t **resp, exchange_test_sa_conf_t *conf);
+
+	/**
 	 * Pass a message to the given IKE_SA for processing, setting the IKE_SA on
 	 * the bus while processing the message.
 	 *
@@ -92,6 +109,8 @@ struct exchange_test_sa_conf_t {
 		char *ike;
 		/** ESP proposal */
 		char *esp;
+		/** Support for childless IKE_SAs */
+		childless_t childless;
 	} initiator, responder;
 };
 

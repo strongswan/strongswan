@@ -455,6 +455,7 @@ int main(int argc, char **argv)
 
 	/* distinguished name for requested certificate, ASCII format */
 	char *distinguishedName = NULL;
+	char default_distinguished_name[BUF_LEN];
 
 	/* challenge password */
 	char challenge_password_buffer[MAX_PASSWORD_LENGTH];
@@ -1105,16 +1106,16 @@ int main(int argc, char **argv)
 	{
 		if (distinguishedName == NULL)
 		{
-			char buf[BUF_LEN];
-			int n = sprintf(buf, DEFAULT_DN);
+			int n = sprintf(default_distinguished_name, DEFAULT_DN);
 
 			/* set the common name to the hostname */
-			if (gethostname(buf + n, BUF_LEN - n) || strlen(buf) == n)
+			if (gethostname(default_distinguished_name + n, BUF_LEN - n) ||
+				strlen(default_distinguished_name) == n)
 			{
 				exit_scepclient("no hostname defined, use "
 								"--dn <distinguished name> option");
 			}
-			distinguishedName = buf;
+			distinguishedName = default_distinguished_name;
 		}
 
 		DBG2(DBG_APP, "dn: '%s'", distinguishedName);

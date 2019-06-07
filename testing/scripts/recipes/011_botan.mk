@@ -2,8 +2,7 @@
 
 PKG = botan
 SRC = https://github.com/randombit/$(PKG).git
-# will have to be changed to the 2.8.0 tag later
-REV = 1872f899716854927ecc68022fac318735be8824
+REV = 2.10.0
 
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
@@ -15,14 +14,15 @@ CONFIG_OPTS = \
 
 all: install
 
-$(PKG):
-	git clone $(SRC) $(PKG)
+.$(PKG)-cloned:
+	[ -d $(PKG) ] || git clone $(SRC) $(PKG)
+	@touch $@
 
-.$(PKG)-cloned-$(REV): $(PKG)
+.$(PKG)-checkout-$(REV): .$(PKG)-cloned
 	cd $(PKG) && git fetch && git checkout $(REV)
 	@touch $@
 
-.$(PKG)-built-$(REV): .$(PKG)-cloned-$(REV)
+.$(PKG)-built-$(REV): .$(PKG)-checkout-$(REV)
 	cd $(PKG) && python ./configure.py $(CONFIG_OPTS) && make -j $(NUM_CPUS)
 	@touch $@
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -264,7 +264,30 @@ static hash_algorithm_t get_default_digest(private_key_t *private)
 signature_params_t *get_signature_scheme(private_key_t *private,
 										 hash_algorithm_t digest, bool pss)
 {
-	signature_params_t *scheme;
+	signature_params_t *scheme, *selected = NULL;
+	enumerator_t *enumerator;
+
+	if (private->supported_signature_schemes)
+	{
+		enumerator = private->supported_signature_schemes(private);
+		while (enumerator->enumerate(enumerator, &scheme))
+		{
+			if (private->get_type(private) == KEY_RSA &&
+				pss != (scheme->scheme == SIGN_RSA_EMSA_PSS))
+			{
+				continue;
+			}
+			if (digest == HASH_UNKNOWN ||
+				digest == hasher_from_signature_scheme(scheme->scheme,
+													   scheme->params))
+			{
+				selected = signature_params_clone(scheme);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+		return selected;
+	}
 
 	if (digest == HASH_UNKNOWN)
 	{
@@ -281,6 +304,7 @@ signature_params_t *get_signature_scheme(private_key_t *private,
 			.scheme = SIGN_RSA_EMSA_PSS,
 			.params = &pss_params,
 		};
+		rsa_pss_params_set_salt_len(&pss_params, 0);
 		scheme = signature_params_clone(&pss_scheme);
 	}
 	else
@@ -403,6 +427,8 @@ static void remove_callback()
  */
 int main(int argc, char *argv[])
 {
+	char *plugins;
+
 	atexit(library_deinit);
 	if (!library_init(NULL, "pki"))
 	{
@@ -414,8 +440,12 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "integrity check of pki failed\n");
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
-	if (!lib->plugins->load(lib->plugins,
-			lib->settings->get_str(lib->settings, "pki.load", PLUGINS)))
+	plugins = getenv("PKI_PLUGINS");
+	if (!plugins)
+	{
+		plugins = lib->settings->get_str(lib->settings, "pki.load", PLUGINS);
+	}
+	if (!lib->plugins->load(lib->plugins, plugins))
 	{
 		exit(SS_RC_INITIALIZATION_FAILED);
 	}

@@ -26,6 +26,7 @@
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #define OBJ_get0_data(o) ((o)->data)
 #define OBJ_length(o) ((o)->length)
+#define ASN1_STRING_get0_data(a) ASN1_STRING_data((ASN1_STRING*)a)
 #endif
 
 /**
@@ -164,11 +165,12 @@ chunk_t openssl_asn1_obj2chunk(ASN1_OBJECT *asn1)
 /**
  * Described in header.
  */
-chunk_t openssl_asn1_str2chunk(ASN1_STRING *asn1)
+chunk_t openssl_asn1_str2chunk(const ASN1_STRING *asn1)
 {
 	if (asn1)
 	{
-		return chunk_create(ASN1_STRING_data(asn1), ASN1_STRING_length(asn1));
+		return chunk_create((u_char*)ASN1_STRING_get0_data(asn1),
+							ASN1_STRING_length(asn1));
 	}
 	return chunk_empty;
 }
@@ -212,7 +214,7 @@ int openssl_asn1_known_oid(ASN1_OBJECT *obj)
 /**
  * Described in header.
  */
-time_t openssl_asn1_to_time(ASN1_TIME *time)
+time_t openssl_asn1_to_time(const ASN1_TIME *time)
 {
 	chunk_t chunk;
 

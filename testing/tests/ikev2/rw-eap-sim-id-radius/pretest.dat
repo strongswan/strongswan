@@ -1,8 +1,7 @@
 moon::iptables-restore < /etc/iptables.rules
 carol::iptables-restore < /etc/iptables.rules
-alice::cat /etc/freeradius/triplets.dat
 carol::cat /etc/ipsec.d/triplets.dat
-alice::radiusd
+alice::freeradius
 moon::ipsec start
 carol::ipsec start
 moon::expect-connection rw-eap

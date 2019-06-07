@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Tobias Brunner
+ * Copyright (C) 2006-2019 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008-2016 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
@@ -261,27 +261,6 @@ static kernel_algorithm_t compression_algs[] = {
 };
 
 /**
- * IPsec HW offload state in kernel
- */
-typedef enum {
-	NL_OFFLOAD_UNKNOWN,
-	NL_OFFLOAD_UNSUPPORTED,
-	NL_OFFLOAD_SUPPORTED
-} nl_offload_state_t;
-
-/**
- * Global metadata used for IPsec HW offload
- */
-static struct {
-	/** bit in feature set */
-	u_int bit;
-	/** total number of device feature blocks */
-	u_int total_blocks;
-	/** determined HW offload state */
-	nl_offload_state_t state;
-} netlink_hw_offload;
-
-/**
  * Look up a kernel algorithm name and its key size
  */
 static const char* lookup_algorithm(transform_type_t type, int ikev2)
@@ -451,6 +430,9 @@ struct ipsec_sa_t {
 	/** Optional mark */
 	mark_t mark;
 
+	/** Optional mark */
+	uint32_t if_id;
+
 	/** Description of this SA */
 	ipsec_sa_cfg_t cfg;
 
@@ -466,7 +448,8 @@ static u_int ipsec_sa_hash(ipsec_sa_t *sa)
 	return chunk_hash_inc(sa->src->get_address(sa->src),
 						  chunk_hash_inc(sa->dst->get_address(sa->dst),
 						  chunk_hash_inc(chunk_from_thing(sa->mark),
-						  chunk_hash(chunk_from_thing(sa->cfg)))));
+						  chunk_hash_inc(chunk_from_thing(sa->if_id),
+						  chunk_hash(chunk_from_thing(sa->cfg))))));
 }
 
 /**
@@ -478,6 +461,7 @@ static bool ipsec_sa_equals(ipsec_sa_t *sa, ipsec_sa_t *other_sa)
 		   sa->dst->ip_equals(sa->dst, other_sa->dst) &&
 		   sa->mark.value == other_sa->mark.value &&
 		   sa->mark.mask == other_sa->mark.mask &&
+		   sa->if_id == other_sa->if_id &&
 		   ipsec_sa_cfg_equals(&sa->cfg, &other_sa->cfg);
 }
 
@@ -486,13 +470,14 @@ static bool ipsec_sa_equals(ipsec_sa_t *sa, ipsec_sa_t *other_sa)
  */
 static ipsec_sa_t *ipsec_sa_create(private_kernel_netlink_ipsec_t *this,
 								   host_t *src, host_t *dst, mark_t mark,
-								   ipsec_sa_cfg_t *cfg)
+								   uint32_t if_id, ipsec_sa_cfg_t *cfg)
 {
 	ipsec_sa_t *sa, *found;
 	INIT(sa,
 		.src = src,
 		.dst = dst,
 		.mark = mark,
+		.if_id = if_id,
 		.cfg = *cfg,
 	);
 	found = this->sas->get(this->sas, sa);
@@ -567,7 +552,7 @@ struct policy_sa_out_t {
 static policy_sa_t *policy_sa_create(private_kernel_netlink_ipsec_t *this,
 	policy_dir_t dir, policy_type_t type, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts, mark_t mark,
-	ipsec_sa_cfg_t *cfg)
+	uint32_t if_id, ipsec_sa_cfg_t *cfg)
 {
 	policy_sa_t *policy;
 
@@ -585,7 +570,7 @@ static policy_sa_t *policy_sa_create(private_kernel_netlink_ipsec_t *this,
 		INIT(policy, .priority = 0);
 	}
 	policy->type = type;
-	policy->sa = ipsec_sa_create(this, src, dst, mark, cfg);
+	policy->sa = ipsec_sa_create(this, src, dst, mark, if_id, cfg);
 	return policy;
 }
 
@@ -631,6 +616,9 @@ struct policy_entry_t {
 	/** Optional mark */
 	uint32_t mark;
 
+	/** Optional interface ID */
+	uint32_t if_id;
+
 	/** Associated route installed for this policy */
 	route_entry_t *route;
 
@@ -672,7 +660,8 @@ static void policy_entry_destroy(private_kernel_netlink_ipsec_t *this,
 static u_int policy_hash(policy_entry_t *key)
 {
 	chunk_t chunk = chunk_from_thing(key->sel);
-	return chunk_hash_inc(chunk, chunk_hash(chunk_from_thing(key->mark)));
+	return chunk_hash_inc(chunk, chunk_hash_inc(chunk_from_thing(key->mark),
+						  chunk_hash(chunk_from_thing(key->if_id))));
 }
 
 /**
@@ -682,6 +671,7 @@ static bool policy_equals(policy_entry_t *key, policy_entry_t *other_key)
 {
 	return memeq(&key->sel, &other_key->sel, sizeof(struct xfrm_selector)) &&
 		   key->mark == other_key->mark &&
+		   key->if_id == other_key->if_id &&
 		   key->direction == other_key->direction;
 }
 
@@ -1352,6 +1342,31 @@ static bool add_uint32(struct nlmsghdr *hdr, int buflen,
 	return TRUE;
 }
 
+/* ETHTOOL_GSSET_INFO is available since 2.6.34 and ETH_SS_FEATURES (enum) and
+ * ETHTOOL_GFEATURES since 2.6.39, so check for the latter */
+#ifdef ETHTOOL_GFEATURES
+
+/**
+ * IPsec HW offload state in kernel
+ */
+typedef enum {
+	NL_OFFLOAD_UNKNOWN,
+	NL_OFFLOAD_UNSUPPORTED,
+	NL_OFFLOAD_SUPPORTED
+} nl_offload_state_t;
+
+/**
+ * Global metadata used for IPsec HW offload
+ */
+static struct {
+	/** bit in feature set */
+	u_int bit;
+	/** total number of device feature blocks */
+	u_int total_blocks;
+	/** determined HW offload state */
+	nl_offload_state_t state;
+} netlink_hw_offload;
+
 /**
  * Check if kernel supports HW offload
  */
@@ -1479,6 +1494,15 @@ out:
 	return ret;
 }
 
+#else
+
+static bool netlink_detect_offload(const char *ifname)
+{
+	return FALSE;
+}
+
+#endif
+
 /**
  * There are 3 HW offload configuration values:
  * 1. HW_OFFLOAD_NO   : Do not configure HW offload.
@@ -1564,6 +1588,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			.spi = htonl(ntohs(data->cpi)),
 			.proto = IPPROTO_COMP,
 			.mark = id->mark,
+			.if_id = id->if_id,
 		};
 		kernel_ipsec_add_sa_t ipcomp_sa = {
 			.reqid = data->reqid,
@@ -1889,6 +1914,11 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		goto failed;
 	}
 
+	if (id->if_id && !add_uint32(hdr, sizeof(request), XFRMA_IF_ID, id->if_id))
+	{
+		goto failed;
+	}
+
 	if (ipcomp == IPCOMP_NONE && (data->mark.value | data->mark.mask))
 	{
 		if (!add_uint32(hdr, sizeof(request), XFRMA_SET_MARK,
@@ -2021,6 +2051,10 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 	{
 		return;
 	}
+	if (sa->if_id && !add_uint32(hdr, sizeof(request), XFRMA_IF_ID, sa->if_id))
+	{
+		return;
+	}
 
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
@@ -2116,6 +2150,10 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	sa_id->family = id->dst->get_family(id->dst);
 
 	if (!add_mark(hdr, sizeof(request), id->mark))
+	{
+		return FAILED;
+	}
+	if (id->if_id && !add_uint32(hdr, sizeof(request), XFRMA_IF_ID, id->if_id))
 	{
 		return FAILED;
 	}
@@ -2223,6 +2261,10 @@ METHOD(kernel_ipsec_t, del_sa, status_t,
 	{
 		return FAILED;
 	}
+	if (id->if_id && !add_uint32(hdr, sizeof(request), XFRMA_IF_ID, id->if_id))
+	{
+		return FAILED;
+	}
 
 	switch (this->socket_xfrm->send_ack(this->socket_xfrm, hdr))
 	{
@@ -2257,6 +2299,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	uint32_t replay_esn_len = 0;
 	kernel_ipsec_del_sa_t del = { 0 };
 	status_t status = FAILED;
+	traffic_selector_t *ts;
 	char markstr[32] = "";
 
 	/* if IPComp is used, we first update the IPComp SA */
@@ -2268,6 +2311,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 			.spi = htonl(ntohs(data->cpi)),
 			.proto = IPPROTO_COMP,
 			.mark = id->mark,
+			.if_id = id->if_id,
 		};
 		kernel_ipsec_update_sa_t ipcomp = {
 			.new_src = data->new_src,
@@ -2295,6 +2339,10 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	sa_id->family = id->dst->get_family(id->dst);
 
 	if (!add_mark(hdr, sizeof(request), id->mark))
+	{
+		return FAILED;
+	}
+	if (id->if_id && !add_uint32(hdr, sizeof(request), XFRMA_IF_ID, id->if_id))
 	{
 		return FAILED;
 	}
@@ -2360,10 +2408,26 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	if (!id->src->ip_equals(id->src, data->new_src))
 	{
 		host2xfrm(data->new_src, &sa->saddr);
+
+		ts = selector2ts(&sa->sel, TRUE);
+		if (ts && ts->is_host(ts, id->src))
+		{
+			ts->set_address(ts, data->new_src);
+			ts2subnet(ts, &sa->sel.saddr, &sa->sel.prefixlen_s);
+		}
+		DESTROY_IF(ts);
 	}
 	if (!id->dst->ip_equals(id->dst, data->new_dst))
 	{
 		host2xfrm(data->new_dst, &sa->id.daddr);
+
+		ts = selector2ts(&sa->sel, FALSE);
+		if (ts && ts->is_host(ts, id->dst))
+		{
+			ts->set_address(ts, data->new_dst);
+			ts2subnet(ts, &sa->sel.daddr, &sa->sel.prefixlen_d);
+		}
+		DESTROY_IF(ts);
 	}
 
 	rta = XFRM_RTA(out_hdr, struct xfrm_usersa_info);
@@ -2756,6 +2820,12 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 		policy_change_done(this, policy);
 		return FAILED;
 	}
+	if (ipsec->if_id &&
+		!add_uint32(hdr, sizeof(request), XFRMA_IF_ID, ipsec->if_id))
+	{
+		policy_change_done(this, policy);
+		return FAILED;
+	}
 	this->mutex->unlock(this->mutex);
 
 	status = this->socket_xfrm->send_ack(this->socket_xfrm, hdr);
@@ -2776,10 +2846,12 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	 * - this is an outbound policy (to just get one for each child)
 	 * - routing is not disabled via strongswan.conf
 	 * - the selector is not for a specific protocol/port
+	 * - no XFRM interface ID is configured
 	 * - we are in tunnel/BEET mode or install a bypass policy
 	 */
 	if (policy->direction == POLICY_OUT && this->install_routes &&
-		!policy->sel.proto && !policy->sel.dport && !policy->sel.sport)
+		!policy->sel.proto && !policy->sel.dport && !policy->sel.sport &&
+		!policy->if_id)
 	{
 		if (mapping->type == POLICY_PASS ||
 		   (mapping->type == POLICY_IPSEC && ipsec->cfg.mode != MODE_TRANSPORT))
@@ -2807,6 +2879,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	INIT(policy,
 		.sel = ts2selector(id->src_ts, id->dst_ts, id->interface),
 		.mark = id->mark.value & id->mark.mask,
+		.if_id = id->if_id,
 		.direction = id->dir,
 		.reqid = data->sa->reqid,
 	);
@@ -2852,7 +2925,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 
 	/* cache the assigned IPsec SA */
 	assigned_sa = policy_sa_create(this, id->dir, data->type, data->src,
-						data->dst, id->src_ts, id->dst_ts, id->mark, data->sa);
+								   data->dst, id->src_ts, id->dst_ts, id->mark,
+								   id->if_id, data->sa);
 	assigned_sa->auto_priority = get_priority(policy, data->prio, id->interface);
 	assigned_sa->priority = this->get_priority ? this->get_priority(id, data)
 											   : data->manual_prio;
@@ -2950,6 +3024,10 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	{
 		return FAILED;
 	}
+	if (id->if_id && !add_uint32(hdr, sizeof(request), XFRMA_IF_ID, id->if_id))
+	{
+		return FAILED;
+	}
 
 	if (this->socket_xfrm->send(this->socket_xfrm, hdr, &out, &len) == SUCCESS)
 	{
@@ -3018,6 +3096,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		.src = data->src,
 		.dst = data->dst,
 		.mark = id->mark,
+		.if_id = id->if_id,
 		.cfg = *data->sa,
 	};
 	char markstr[32] = "";
@@ -3033,6 +3112,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	memset(&policy, 0, sizeof(policy_entry_t));
 	policy.sel = ts2selector(id->src_ts, id->dst_ts, id->interface);
 	policy.mark = id->mark.value & id->mark.mask;
+	policy.if_id = id->if_id;
 	policy.direction = id->dir;
 
 	/* find the policy */
@@ -3119,6 +3199,11 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	policy_id->dir = id->dir;
 
 	if (!add_mark(hdr, sizeof(request), id->mark))
+	{
+		policy_change_done(this, current);
+		return FAILED;
+	}
+	if (id->if_id && !add_uint32(hdr, sizeof(request), XFRMA_IF_ID, id->if_id))
 	{
 		policy_change_done(this, current);
 		return FAILED;
