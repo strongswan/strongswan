@@ -991,6 +991,19 @@ static status_t manage_route(private_kernel_iph_net_t *this, bool add,
 	if (add)
 	{
 		ret = CreateIpForwardEntry2(&row);
+		if (ret == ERROR_OBJECT_ALREADY_EXISTS)
+		{
+			DBG1(DBG_KNL, "route exists, attempting to remove");
+			ULONG dret = DeleteIpForwardEntry2(&row);
+			if (dret != NO_ERROR)
+			{
+				DBG1(DBG_KNL, "removing route failed: 0x%08lx", dret);
+			}
+			else
+			{
+				ret = CreateIpForwardEntry2(&row);
+			}
+		}
 	}
 	else
 	{
