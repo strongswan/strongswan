@@ -829,7 +829,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	if (!gateway || gateway->get_type(gateway) == ID_ANY)
 	{
 		DESTROY_IF(gateway);
-		gateway = identification_create_from_string(server);
+		gateway = identification_create_from_string(ike.remote);
 		/* only use this if remote ID was not configured explicitly */
 		auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
 	}
