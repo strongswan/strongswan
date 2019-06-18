@@ -746,7 +746,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 		.version = IKEV2,
 		.local = "0.0.0.0",
 		.local_port = charon->socket->get_port(charon->socket, FALSE),
-		.foce_encap = TRUE,
+		.force_encap = TRUE,
 		.fragmentation = FRAGMENTATION_YES,
 	};
 	peer_cfg_create_t peer = {
@@ -829,7 +829,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	if (!gateway || gateway->get_type(gateway) == ID_ANY)
 	{
 		DESTROY_IF(gateway);
-		gateway = identification_create_from_string(server);
+		gateway = identification_create_from_string(gateway);
 		/* only use this if remote ID was not configured explicitly */
 		auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
 	}
