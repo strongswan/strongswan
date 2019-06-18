@@ -746,7 +746,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 		.version = IKEV2,
 		.local = "0.0.0.0",
 		.local_port = charon->socket->get_port(charon->socket, FALSE),
-		.foce_encap = TRUE,
+		.force_encap = TRUE,
 		.fragmentation = FRAGMENTATION_YES,
 	};
 	peer_cfg_create_t peer = {
