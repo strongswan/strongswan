@@ -113,7 +113,6 @@ static gboolean get_secrets(const char *type, const char *uuid, const char *name
 	NMAVpnPasswordDialog *dialog;
 	char *prompt, *pw = NULL;
 	const char *new_pw = NULL;
-	guint32 minlen = 0;
 
 	if (!(flags & NM_SETTING_SECRET_FLAG_NOT_SAVED) &&
 		!(flags & NM_SETTING_SECRET_FLAG_NOT_REQUIRED))
@@ -144,9 +143,8 @@ static gboolean get_secrets(const char *type, const char *uuid, const char *name
 	}
 	else if (!strcmp(type, "psk"))
 	{
-		prompt = g_strdup_printf (_("Pre-shared key required to establish VPN connection '%s' (min. 20 characters)."),
+		prompt = g_strdup_printf (_("Pre-shared key required to establish VPN connection '%s'."),
 								  name);
-		minlen = 20;
 	}
 	else /* smartcard */
 	{
@@ -192,11 +190,7 @@ too_short_retry:
 	if (nma_vpn_password_dialog_run_and_block (dialog))
 	{
 		new_pw = nma_vpn_password_dialog_get_password(dialog);
-		if (new_pw && minlen && strlen(new_pw) < minlen)
-		{
-			goto too_short_retry;
-		}
-		else if (new_pw)
+		if (new_pw)
 		{
 			*out_pw = g_strdup (new_pw);
 		}
