@@ -14,8 +14,7 @@ ipsec_sa.c ipsec_sa.h \
 ipsec_sa_mgr.c ipsec_sa_mgr.h
 
 libipsec_la_LIBADD = \
-	$(top_builddir)/src/libstrongswan/libstrongswan.la \
-	$(top_builddir)/src/libcharon/libcharon.la
+	$(top_builddir)/src/libstrongswan/libstrongswan.la
 
 if USE_WINDOWS
   libipsec_la_LIBADD += -lws2_32
