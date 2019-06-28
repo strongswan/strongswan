@@ -18,6 +18,7 @@
 
 #include <utils/debug.h>
 #include <library.h>
+#include <daemon.h>
 #include <threading/rwlock.h>
 #include <collections/blocking_queue.h>
 #include <processing/jobs/callback_job.h>
@@ -193,6 +194,7 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 	ip_packet_t *packet;
 	ipsec_sa_t *sa;
 	host_t *src, *dst;
+	traffic_selector_t *src_ts, *dst_ts;
 
 	packet = (ip_packet_t*)this->outbound_queue->dequeue(this->outbound_queue);
 
@@ -209,12 +211,20 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 	sa = ipsec->sas->checkout_by_reqid(ipsec->sas, policy->get_reqid(policy),
 									   FALSE);
 	if (!sa)
-	{	/* TODO-IPSEC: send an acquire to uppper layer */
-		DBG1(DBG_ESP, "could not find an outbound IPsec SA for reqid {%u}, "
-			 "dropping packet", policy->get_reqid(policy));
-		packet->destroy(packet);
-		policy->destroy(policy);
-		return JOB_REQUEUE_DIRECT;
+	{
+		src_ts = policy->get_source_ts(policy);
+		dst_ts = policy->get_destination_ts(policy);
+		charon->kernel->acquire(charon->kernel, policy->get_reqid(policy), src_ts->clone(src_ts), dst_ts->clone(dst_ts));
+		sa = ipsec->sas->checkout_by_reqid(ipsec->sas, policy->get_reqid(policy),
+							     FALSE);
+		if (!sa)
+		{	/* TODO-IPSEC: send an acquire to uppper layer */
+			DBG1(DBG_ESP, "could not find an outbound IPsec SA for reqid {%u}, "
+				 "dropping packet", policy->get_reqid(policy));
+			packet->destroy(packet);
+			policy->destroy(policy);
+			return JOB_REQUEUE_DIRECT;
+		}
 	}
 	src = sa->get_source(sa);
 	dst = sa->get_destination(sa);
