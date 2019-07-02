@@ -215,7 +215,7 @@ METHOD(public_key_t, get_keysize, int,
 		return 0;
 	}
 
-	if (botan_pubkey_rsa_get_n(n, this->key) ||
+	if (botan_pubkey_get_field(n, this->key, "n") ||
 		botan_mp_num_bits(n, &bits))
 	{
 		botan_mp_destroy(n);

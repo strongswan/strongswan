@@ -626,8 +626,7 @@ static char *whitelist[] = {
 	"TNC_IMV_NotifyConnectionChange",
 	/* Botan */
 	"botan_public_key_load",
-	"botan_privkey_create_ecdsa",
-	"botan_privkey_create_ecdh",
+	"botan_privkey_create",
 	"botan_privkey_load_ecdh",
 	"botan_privkey_load",
 };

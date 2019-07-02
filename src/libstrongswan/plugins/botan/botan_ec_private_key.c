@@ -336,7 +336,7 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 
 	this = create_empty(oid);
 
-	if (botan_privkey_create_ecdsa(&this->key, rng, curve))
+	if (botan_privkey_create(&this->key, "ECDSA", curve, rng))
 	{
 		DBG1(DBG_LIB, "EC private key generation failed");
 		botan_rng_destroy(rng);

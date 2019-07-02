@@ -157,8 +157,10 @@ START_TEST(test_gen)
 	privkey = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 								 BUILD_KEY_SIZE, key_sizes[_i], BUILD_END);
 	ck_assert(privkey != NULL);
+	ck_assert_int_eq(key_sizes[_i], privkey->get_keysize(privkey));
 	pubkey = privkey->get_public_key(privkey);
 	ck_assert(pubkey != NULL);
+	ck_assert_int_eq(key_sizes[_i], pubkey->get_keysize(pubkey));
 
 	test_good_sig(privkey, pubkey);
 
