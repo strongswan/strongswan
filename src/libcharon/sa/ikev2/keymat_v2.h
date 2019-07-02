@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Tobias Brunner
+ * Copyright (C) 2011-2019 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -90,6 +90,7 @@ struct keymat_v2_t {
 							  chunk_t nonce_i, chunk_t nonce_r,
 							  chunk_t *encr_i, chunk_t *integ_i,
 							  chunk_t *encr_r, chunk_t *integ_r);
+
 	/**
 	 * Get SKd to pass to derive_ikey_keys() during rekeying.
 	 *
@@ -97,6 +98,21 @@ struct keymat_v2_t {
 	 * @return			PRF function to derive keymat
 	 */
 	pseudo_random_function_t (*get_skd)(keymat_v2_t *this, chunk_t *skd);
+
+	/**
+	 * Generate data for signed octets when using IKE_INTEMEDIATE exchanges.
+	 *
+	 * The supplied chunk must contain the IKE header until the end of the
+	 * Encrypted Payload header followed by the plaintext contents of the
+	 * latter.
+	 *
+	 * @param verify		TRUE as recipient, FALSE as sender
+	 * @param data			IKE_INTERMEDIATE packet data
+	 * @param[out] auth		IntAuth data to be used later with get_auth_octets()
+	 * @return				TRUE if octets created successfully
+	 */
+	bool (*get_int_auth)(keymat_v2_t *this, bool verify, chunk_t data,
+						 chunk_t *auth);
 
 	/**
 	 * Generate octets to use for authentication procedure (RFC4306 2.15).

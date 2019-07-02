@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
+ * Copyright (C) 2015-2019 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -319,6 +319,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 	this->prf_alg = alg;
+	DESTROY_IF(this->prf);
 	this->prf = lib->crypto->create_prf(lib->crypto, alg);
 	if (this->prf == NULL)
 	{
@@ -716,6 +717,24 @@ METHOD(keymat_t, get_aead, aead_t*,
 	return in ? this->aead_in : this->aead_out;
 }
 
+METHOD(keymat_v2_t, get_int_auth, bool,
+	private_keymat_v2_t *this, bool verify, chunk_t data, chunk_t *auth)
+{
+	chunk_t skp;
+
+	skp = verify ? this->skp_verify : this->skp_build;
+
+	DBG3(DBG_IKE, "IntAuth_A|P %B", &data);
+	DBG4(DBG_IKE, "SK_p %B", &skp);
+	if (!this->prf->set_key(this->prf, skp) ||
+		!this->prf->allocate_bytes(this->prf, data, auth))
+	{
+		return FALSE;
+	}
+	DBG3(DBG_IKE, "IntAuth = prf(Sk_px, data) %B", auth);
+	return TRUE;
+}
+
 METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
 	chunk_t nonce, chunk_t ppk, identification_t *id, char reserved[3],
@@ -809,7 +828,6 @@ failure:
 	chunk_free(&octets);
 	chunk_free(&key);
 	return success;
-
 }
 
 METHOD(keymat_v2_t, hash_algorithm_supported, bool,
@@ -865,6 +883,7 @@ keymat_v2_t *keymat_v2_create(bool initiator)
 			.derive_ike_keys_ppk = _derive_ike_keys_ppk,
 			.derive_child_keys = _derive_child_keys,
 			.get_skd = _get_skd,
+			.get_int_auth = _get_int_auth,
 			.get_auth_octets = _get_auth_octets,
 			.get_psk_sig = _get_psk_sig,
 			.add_hash_algorithm = _add_hash_algorithm,

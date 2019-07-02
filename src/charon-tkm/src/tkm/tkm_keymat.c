@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
+ * Copyright (C) 2015-2019 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  * HSR Hochschule fuer Technik Rapperswil
@@ -245,6 +245,13 @@ METHOD(keymat_t, get_aead, aead_t*,
 	return this->aead;
 }
 
+METHOD(keymat_v2_t, get_int_auth, bool,
+	private_tkm_keymat_t *this, bool verify, chunk_t data, chunk_t *auth)
+{
+	DBG1(DBG_IKE, "TKM doesn't support IntAuth calculation");
+	return FALSE;
+}
+
 METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_tkm_keymat_t *this, bool verify, chunk_t ike_sa_init,
 	chunk_t nonce, chunk_t ppk, identification_t *id, char reserved[3],
@@ -387,6 +394,7 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 				.derive_ike_keys_ppk = (void*)return_false,
 				.derive_child_keys = _derive_child_keys,
 				.get_skd = _get_skd,
+				.get_int_auth = _get_int_auth,
 				.get_auth_octets = _get_auth_octets,
 				.get_psk_sig = _get_psk_sig,
 				.add_hash_algorithm = _add_hash_algorithm,
