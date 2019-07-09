@@ -33,7 +33,7 @@ typedef struct pts_component_t pts_component_t;
 #include <bio/bio_writer.h>
 
 /**
- * PTS Functional Component Interface 
+ * PTS Functional Component Interface
  */
 struct pts_component_t {
 

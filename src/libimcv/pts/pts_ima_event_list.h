@@ -57,7 +57,7 @@ struct pts_ima_event_list_t {
 	 *
 	 * @param measurement	Measurement hash
 	 * @param algo			Algorithm used to hash files
-	 " @param name			Event name (absolute filename or boot_aggregate) 
+	 " @param name			Event name (absolute filename or boot_aggregate)
 	 * @return				Return code
 	 */
 	status_t (*get_next)(pts_ima_event_list_t *this, chunk_t *measurement,

@@ -47,11 +47,11 @@ extern enum_name_t *pts_meas_algorithm_names;
  * see section 3.8.5 of PTS Protocol: Binding to TNC IF-M Specification
  *
  *					   1
- *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |1|2|3|R|R|R|R|R|R|R|R|R|R|R|R|R|
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  
+ *
  */
 
 /**

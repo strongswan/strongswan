@@ -146,7 +146,7 @@ METHOD(ntru_private_key_t, get_encoding, chunk_t,
 	return this->encoding;
 }
 
-/** 
+/**
  * Checks that the number of 0, +1, and -1 trinary ring elements meet or exceed
  * a minimum weight.
  *
@@ -596,7 +596,7 @@ static bool ring_inv(uint16_t *a, uint16_t N, uint16_t q, uint16_t *t,
 			f[i] ^= g[i];
 		}
 		if (deg_c > deg_b)
-		{	
+		{
 			deg_b = deg_c;
 		}
 		for (i = 0; i <= deg_c; i++)
@@ -633,7 +633,7 @@ static bool ring_inv(uint16_t *a, uint16_t N, uint16_t q, uint16_t *t,
 		t[0] = t[0] + 2;
 		ring_mult_c(t2, t, N, q, a_inv);
 	}
-	
+
 	return TRUE;
 }
 
@@ -692,7 +692,7 @@ ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
 	t = malloc(t_len);
 	t1 = t + 2 * params->N;
 
-	/* extend sparse private key polynomial f to N array elements */ 
+	/* extend sparse private key polynomial f to N array elements */
 	this->privkey->get_array(this->privkey, t1);
 
 	/* set mask for large modulus */
@@ -707,7 +707,7 @@ ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
 
 	/* use the public key array as a temporary buffer */
 	t2 = this->pubkey;
- 
+
 	/* find f^-1 in (Z/qZ)[X]/(X^N - 1) */
 	if (!ring_inv(t1, params->N, params->q, t, t2))
 	{
@@ -743,7 +743,7 @@ ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
 	chunk_clear(&seed);
 	memwipe(t, t_len);
 	free(t);
-	
+
 	/* generate private key encoding */
 	generate_encoding(this);
 
@@ -821,7 +821,7 @@ ntru_private_key_t *ntru_private_key_create_from_data(ntru_drbg_t *drbg,
             privkey_packed_indices_len <= privkey_packed_trits_len)
 		{
 			tag = NTRU_PRIVKEY_INDICES_TAG;
-		}		
+		}
 		else
 		{
 			tag = NTRU_PRIVKEY_TRITS_TAG;
@@ -858,7 +858,7 @@ ntru_private_key_t *ntru_private_key_create_from_data(ntru_drbg_t *drbg,
 	indices = malloc(2 * dF * sizeof(uint16_t));
 
 	/* unpack the private key */
-	privkey_packed = data.ptr + header_len + pubkey_packed_len;	
+	privkey_packed = data.ptr + header_len + pubkey_packed_len;
 	if (tag == NTRU_PRIVKEY_TRITS_TAG)
 	{
 		ntru_packed_trits_2_indices(privkey_packed, params->N,

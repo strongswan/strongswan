@@ -140,7 +140,7 @@ processing/jobs/dpd_timeout_job.c processing/jobs/dpd_timeout_job.h \
 processing/jobs/adopt_children_job.c processing/jobs/adopt_children_job.h
 
 libcharon_la_SOURCES += \
-    bus/listeners/sys_logger.c bus/listeners/sys_logger.h
+	bus/listeners/sys_logger.c bus/listeners/sys_logger.h
 
 LOCAL_SRC_FILES := $(filter %.c,$(libcharon_la_SOURCES))
 

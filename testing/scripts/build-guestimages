@@ -56,7 +56,7 @@ do
 		execute_chroot "chgrp www-data /etc/pts" 0
 		execute_chroot "chmod g+w /etc/pts" 0
 	fi
-    if [ "$host" = "winnetou" ]
+	if [ "$host" = "winnetou" ]
 	then
 		execute "mkdir $LOOPDIR/var/log/apache2/ocsp" 0
 		execute "cp -rf $DIR/../images $LOOPDIR/var/www/" 0

@@ -104,7 +104,7 @@ ENUM_END(tpm_ecc_curve_names, TPM_ECC_SM2_P256);
 
 #else /* TSS_TSS2_V1 */
 
-#ifndef TSS_TSS2_V2 
+#ifndef TSS_TSS2_V2
 
 /**
  * TPM 2.0 algorithm ID names
