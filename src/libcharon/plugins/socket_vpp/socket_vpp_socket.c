@@ -41,6 +41,11 @@ struct private_socket_vpp_socket_t {
     uint16_t port;
 
     /**
+     * Configured port for NAT-T
+     */
+    uint16_t natt;
+
+    /**
      * maximum packet size to receive
      */
     int max_packet;
@@ -257,6 +262,70 @@ METHOD(socket_t, destroy, void,
     free(this);
 }
 
+static int register_punt_port(private_socket_vpp_socket_t *this, uint16_t port, char *read_path)
+{
+    char *out;
+    int out_len;
+    vl_api_punt_socket_register_t *mp;
+    vl_api_punt_socket_register_reply_t *rmp;
+
+    /* Register IPv4 punt socket for IKEv2 port in VPP */
+    mp = vl_msg_api_alloc(sizeof(*mp));
+    memset(mp, 0, sizeof(*mp));
+    mp->_vl_msg_id = ntohs(VL_API_PUNT_SOCKET_REGISTER);
+    mp->header_version = ntohl(1);
+    mp->is_ip4 = 1;
+    mp->l4_protocol = IPPROTO_UDP;
+    mp->l4_port = ntohs(port);
+    strncpy(mp->pathname, read_path, 107);
+    if (this->vac->send(this->vac, (char*)mp, sizeof(*mp), &out, &out_len))
+    {
+        DBG1(DBG_LIB, "send register vpp ip4 punt socket fail on port %d", port);
+        return -1;
+    }
+    rmp = (void *)out;
+    if (rmp->retval)
+    {
+        DBG1(DBG_LIB, "register vpp ip4 punt socket fail on port %d with ret %d", port, ntohl(rmp->retval));
+        return -1;
+    }
+    /* Register IPv6 punt socket for IKEv2 port in VPP */
+    mp->is_ip4=0;
+    if (this->vac->send(this->vac, (char*)mp, sizeof(*mp), &out, &out_len))
+    {
+        DBG1(DBG_LIB, "send register vpp ip6 punt socket fail on port %d", port);
+        return -1;
+    }
+    rmp = (void *)out;
+    if (rmp->retval)
+    {
+        DBG1(DBG_LIB, "register vpp ip6 punt socket fail on port %d with ret %d", port, ntohl(rmp->retval));
+        return -1;
+    }
+    DBG3(DBG_LIB, "Registered vpp punt socket on port %d successfully with returned write path: %s", port, rmp->pathname);
+
+    this->sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+    if (this->sock < 0)
+    {
+        DBG1(DBG_LIB, "opening vpp socket failed: %m");
+        return -1;
+    }
+
+    /* There should be only one write path returned by VPP */
+    if (this->write_addr.sun_family == 0)
+    {
+        strncpy(this->write_addr.sun_path, rmp->pathname, sizeof(this->write_addr.sun_path));
+        this->write_addr.sun_family = AF_UNIX;
+    }
+    else if (strncmp(this->write_addr.sun_path, rmp->pathname, sizeof(this->write_addr.sun_path)) != 0)
+    {
+        DBG1(DBG_LIB, "More than one write path returned by VPP. Previous one is: %s, now is: %s", this->write_addr.sun_path, rmp->pathname);
+        return -1;
+    }
+
+    return 0;
+}
+
 /*
  * See header for description
  */
@@ -281,63 +350,43 @@ socket_vpp_socket_t *socket_vpp_socket_create()
         .max_packet = lib->settings->get_int(lib->settings,
                             "%s.max_packet", PACKET_MAX_DEFAULT, lib->ns),
         .port = lib->settings->get_int(lib->settings, "%s.port",
-                            CHARON_UDP_PORT, lib->ns),
+                            IKEV2_UDP_PORT, lib->ns),
+        .natt = lib->settings->get_int(lib->settings, "%s.port_nat_t",
+                            IKEV2_NATT_PORT, lib->ns),
     );
-
-    read_path = lib->settings->get_str(lib->settings,
-                        "%s.plugins.socket-vpp.path", READ_PATH, lib->ns);
 
     this->vac = lib->get(lib, "kernel-vpp-vac");
     if (!this->vac)
     {
         DBG1(DBG_LIB, "no vac available (plugin missing?)");
     }
-    /* Register IPv4 punt socket for IKEv2 port in VPP */
-    mp = vl_msg_api_alloc(sizeof(*mp));
-    memset(mp, 0, sizeof(*mp));
-    mp->_vl_msg_id = ntohs(VL_API_PUNT_SOCKET_REGISTER);
-    mp->header_version = ntohl(1);
-    mp->is_ip4 = 1;
-    mp->l4_protocol = IPPROTO_UDP;
-    mp->l4_port = ntohs(this->port);
-    strncpy(mp->pathname, read_path, 107);
-    if (this->vac->send(this->vac, (char*)mp, sizeof(*mp), &out, &out_len))
-    {
-        DBG1(DBG_LIB, "send register vpp ip4 punt socket faield");
-        return NULL;
-    }
-    rmp = (void *)out;
-    if (rmp->retval)
-    {
-        DBG1(DBG_LIB, "register vpp ip4 punt socket faield %d", ntohl(rmp->retval));
-        return NULL;
-    }
-    /* Register IPv6 punt socket for IKEv2 port in VPP */
-    mp->is_ip4 = 0;
-    if (this->vac->send(this->vac, (char*)mp, sizeof(*mp), &out, &out_len))
-    {
-        DBG1(DBG_LIB, "send register vpp ip6 punt socket faield");
-        return NULL;
-    }
-    rmp = (void *)out;
-    if (rmp->retval)
-    {
-        DBG1(DBG_LIB, "register vpp ip6 punt socket faield %d", ntohl(rmp->retval));
-        return NULL;
-    }
-    DBG3(DBG_LIB, "vpp punt socket %s", rmp->pathname);
 
-    this->sock = socket(AF_UNIX, SOCK_DGRAM, 0);
-    if (this->sock < 0)
-    {
-        DBG1(DBG_LIB, "opening vpp socket failed: %m");
-        return NULL;
-    }
-
+    read_path = lib->settings->get_str(lib->settings,
+                            "%s.plugins.socket-vpp.path", READ_PATH, lib->ns);
     memset(&this->write_addr, 0, sizeof(this->write_addr));
-    strncpy(this->write_addr.sun_path, rmp->pathname, sizeof(this->write_addr.sun_path));
-    this->write_addr.sun_family = AF_UNIX;
 
+    if (this->port && (register_punt_port(this, this->port, read_path) != 0))
+    {
+    	DBG1(DBG_LIB, "Register punt port %d fail", this->port);
+    	return NULL;
+    }
+
+    if (this->natt)
+    {
+    	if (this->natt == this->port)
+    	{
+    		DBG1(DBG_LIB, "IKE NAT Port (%d) cannot be the same as IKE Port (%d)", this->natt, this->port);
+    		return NULL;
+    	}
+
+    	if (register_punt_port(this, this->natt, read_path) != 0)
+    	{
+    		DBG1(DBG_LIB, "Register punt port %d fail", this->port);
+    		return NULL;
+    	}
+    }
+
+    /* Bind read path */
     memset(&this->read_addr, 0, sizeof(this->read_addr));
     strncpy(this->read_addr.sun_path, read_path, sizeof(this->read_addr.sun_path));
     this->read_addr.sun_family = AF_UNIX;

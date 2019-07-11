@@ -432,19 +432,13 @@ error:
     return rv;
 }
 
-/**
- * Add or remove a bypass policy
- */
-static status_t manage_bypass(bool add, uint32_t spd_id)
+static int bypass_port(bool add, uint32_t spd_id, uint16_t port)
 {
     vl_api_ipsec_spd_add_del_entry_t *mp;
     vl_api_ipsec_spd_add_del_entry_reply_t *rmp;
     char *out = NULL;
     int out_len;
     status_t rv = FAILED;
-    uint16_t port;
-
-    port = lib->settings->get_int(lib->settings, "%s.port", CHARON_UDP_PORT, lib->ns);
 
     mp = vl_msg_api_alloc (sizeof (*mp));
     memset(mp, 0, sizeof(*mp));
@@ -535,10 +529,44 @@ static status_t manage_bypass(bool add, uint32_t spd_id)
         goto error;
     }
     rv = SUCCESS;
+
 error:
     free(out);
     vl_msg_api_free(mp);
+
     return rv;
+}
+
+/**
+ * Add or remove a bypass policy
+ */
+static status_t manage_bypass(bool add, uint32_t spd_id)
+{
+    uint16_t port;
+    status_t rv;
+
+    port = lib->settings->get_int(lib->settings, "%s.port", IKEV2_UDP_PORT, lib->ns);
+
+    if (port)
+    {
+        rv = bypass_port(add, spd_id, port);
+        if (rv != SUCCESS)
+        {
+            return rv;
+        }
+    }
+
+    port = lib->settings->get_int(lib->settings, "%s.port_nat_t", IKEV2_NATT_PORT, lib->ns);
+    if (port)
+    {
+        rv = bypass_port(add, spd_id, port);
+        if (rv != SUCCESS)
+        {
+            return rv;
+        }
+    }
+
+    return SUCCESS;
 }
 
 /**
