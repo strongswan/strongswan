@@ -3,6 +3,7 @@
 #include <vlibapi/api.h>
 #include <vlibmemory/api.h>
 #include <vpp/api/vpe_msg_enum.h>
+#include <vnet/ipsec/ipsec.h>
 #include <collections/hashtable.h>
 #include <threading/mutex.h>
 
@@ -788,6 +789,15 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
     chunk_t src, dst;
     kernel_ipsec_sa_id_t *sa_id;
     sa_t *sa;
+    int key_len = data->enc_key.len;
+
+    if ((data->enc_alg == ENCR_AES_CTR) ||
+        (data->enc_alg == ENCR_AES_GCM_ICV8) ||
+        (data->enc_alg == ENCR_AES_GCM_ICV12) ||
+        (data->enc_alg == ENCR_AES_GCM_ICV16)){
+        static const int SALT_SIZE = 4; /* See how enc_size is calculated at keymat_v2.derive_child_keys */
+        key_len = key_len - SALT_SIZE;
+    }
 
     mp = vl_msg_api_alloc(sizeof(*mp));
     memset(mp, 0, sizeof(*mp));
@@ -799,27 +809,68 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
     switch (data->enc_alg)
     {
         case ENCR_NULL:
-            ca = 0;
+            ca = IPSEC_CRYPTO_ALG_NONE;
             break;
         case ENCR_AES_CBC:
-            switch (data->enc_key.len * 8)
+            switch (key_len * 8)
             {
                 case 128:
-                    ca = 1;
+                    ca = IPSEC_CRYPTO_ALG_AES_CBC_128;
                     break;
                 case 192:
-                    ca = 2;
+                    ca = IPSEC_CRYPTO_ALG_AES_CBC_192;
                     break;
                 case 256:
-                    ca = 3;
+                    ca = IPSEC_CRYPTO_ALG_AES_CBC_256;
                     break;
                 default:
+                    DBG1(DBG_KNL, "Key length %d is not supported by VPP!", key_len * 8);
+                    break;
+            }
+            break;
+        case ENCR_AES_CTR:
+            switch (key_len * 8)
+            {
+                case 128:
+                    ca = IPSEC_CRYPTO_ALG_AES_CTR_128;
+                    break;
+                case 192:
+                    ca = IPSEC_CRYPTO_ALG_AES_CTR_192;
+                    break;
+                case 256:
+                    ca = IPSEC_CRYPTO_ALG_AES_CTR_256;
+                    break;
+                default:
+                    DBG1(DBG_KNL, "Key length %d is not supported by VPP!", key_len * 8);
                     goto error;
                     break;
             }
             break;
+        case ENCR_AES_GCM_ICV8:
+        case ENCR_AES_GCM_ICV12:
+        case ENCR_AES_GCM_ICV16:
+            switch (key_len * 8)
+            {
+                case 128:
+                    ca = IPSEC_CRYPTO_ALG_AES_GCM_128;
+                    break;
+                case 192:
+                    ca = IPSEC_CRYPTO_ALG_AES_GCM_192;
+                    break;
+                case 256:
+                    ca = IPSEC_CRYPTO_ALG_AES_GCM_256;
+                    break;
+                default:
+                    DBG1(DBG_KNL, "Key length %d is not supported by VPP!", key_len * 8);
+                    goto error;
+                    break;
+            }
+            break;
+        case ENCR_DES:
+            ca = IPSEC_CRYPTO_ALG_DES_CBC;
+            break;
         case ENCR_3DES:
-            ca = 4;
+            ca = IPSEC_CRYPTO_ALG_3DES_CBC;
             break;
         default:
             DBG1(DBG_KNL, "algorithm %N not supported by VPP!",
@@ -834,22 +885,25 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
     switch (data->int_alg)
     {
         case AUTH_UNDEFINED:
-            ia = 0;
+            ia = IPSEC_INTEG_ALG_NONE;
             break;
         case AUTH_HMAC_MD5_96:
-            ia = 1;
+            ia = IPSEC_INTEG_ALG_MD5_96;
             break;
         case AUTH_HMAC_SHA1_96:
-            ia = 2;
+            ia = IPSEC_INTEG_ALG_SHA1_96;
+            break;
+        case AUTH_HMAC_SHA2_256_96:
+            ia = IPSEC_INTEG_ALG_SHA_256_96;
             break;
         case AUTH_HMAC_SHA2_256_128:
-            ia = 4;
+            ia = IPSEC_INTEG_ALG_SHA_256_128;
             break;
         case AUTH_HMAC_SHA2_384_192:
-            ia = 5;
+            ia = IPSEC_INTEG_ALG_SHA_384_192;
             break;
         case AUTH_HMAC_SHA2_512_256:
-            ia = 6;
+            ia = IPSEC_INTEG_ALG_SHA_512_256;
             break;
         default:
             DBG1(DBG_KNL, "algorithm %N not supported by VPP!",
