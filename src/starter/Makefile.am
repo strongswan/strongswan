@@ -54,7 +54,8 @@ keywords.h: $(srcdir)/keywords.h.in
 
 keywords.c:	$(srcdir)/keywords.txt keywords.h
 		$(AM_V_GEN) \
-		$(GPERF) -m 10 -C -G -D -t < $(srcdir)/keywords.txt > $@
+		$(GPERF) -m 10 -C -G -D -t \
+			--output-file=$@ $<
 
 install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d" || true
