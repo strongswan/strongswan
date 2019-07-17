@@ -1,4 +1,5 @@
 AM_CPPFLAGS = @CPPFLAGS@ \
+	@FUZZING_CFLAGS@ \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libimcv \
 	-I$(top_srcdir)/src/libtncif \
