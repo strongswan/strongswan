@@ -38,9 +38,9 @@ struct private_tnc_ifmap_soap_msg_t {
 	tnc_ifmap_http_t *http;
 
 	/**
-	 * TLS socket
+	 * TLS session
 	 */
-	tls_socket_t *tls;
+	tls_session_t *tls;
 
 	/**
 	 * XML Document
@@ -78,7 +78,8 @@ METHOD(tnc_ifmap_soap_msg_t, post, bool,
 	xmlNodePtr env, body, cur, response;
 	xmlNsPtr ns;
 	xmlChar *xml_str, *errorCode, *errorString;
-	int xml_len, len, written;
+	int xml_len, len;
+	bool success;
 	chunk_t xml, http;
 	char buf[4096] = { 0 };
 	status_t status;
@@ -111,9 +112,9 @@ METHOD(tnc_ifmap_soap_msg_t, post, bool,
 		{
 			break;
 		}
-		written = this->tls->write(this->tls, http.ptr, http.len);
+		success = this->tls->write(this->tls, http.ptr, http.len);
 		free(http.ptr);
-		if (written != http.len)
+		if (!success)
 		{
 			status = FAILED;
 			break;
@@ -132,7 +133,7 @@ METHOD(tnc_ifmap_soap_msg_t, post, bool,
 	do
 	{
 		/* reduce size so the buffer is null-terminated */
-		len = this->tls->read(this->tls, buf, sizeof(buf)-1, TRUE);
+		len = this->tls->read(this->tls, buf, sizeof(buf)-1);
 		if (len <= 0)
 		{
 			return FALSE;
@@ -239,7 +240,7 @@ METHOD(tnc_ifmap_soap_msg_t, destroy, void,
  * See header
  */
 tnc_ifmap_soap_msg_t *tnc_ifmap_soap_msg_create(char *uri, chunk_t user_pass,
-												tls_socket_t *tls)
+												tls_session_t *tls)
 {
 	private_tnc_ifmap_soap_msg_t *this;
 

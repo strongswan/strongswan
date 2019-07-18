@@ -15,14 +15,14 @@
 
 /**
  * @defgroup tnc_ifmap_soap_msg tnc_ifmap_soap_msg
- * @{ @ingroup tnc_ifmap 
+ * @{ @ingroup tnc_ifmap
  */
 
 #ifndef TNC_IFMAP_SOAP_MSG_H_
 #define TNC_IFMAP_SOAP_MSG_H_
 
 #include <library.h>
-#include <tls_socket.h>
+#include <tls_session.h>
 
 #include <libxml/parser.h>
 
@@ -54,9 +54,9 @@ struct tnc_ifmap_soap_msg_t {
  *
  * @param uri			HTTPS URI with https:// prefix removed
  * @param user_pass		Optional username:password for HTTP Basic Authentication
- * @param tls			TLS socket protecting the SOAP message
+ * @param tls			TLS session protecting the SOAP message
  */
 tnc_ifmap_soap_msg_t *tnc_ifmap_soap_msg_create(char *uri, chunk_t user_pass,
-												tls_socket_t *tls);
+												tls_session_t *tls);
 
 #endif /** TNC_IFMAP_SOAP_MSG_H_ @}*/

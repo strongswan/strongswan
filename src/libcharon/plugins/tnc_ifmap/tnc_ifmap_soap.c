@@ -20,17 +20,11 @@
 #include <credentials/sets/mem_cred.h>
 #include <daemon.h>
 
-#include <tls_socket.h>
-
-#include <errno.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+#include <tls_session.h>
 
 #define IFMAP_NS		"http://www.trustedcomputinggroup.org/2010/IFMAP/2"
 #define IFMAP_META_NS	"http://www.trustedcomputinggroup.org/2010/IFMAP-METADATA/2"
 #define IFMAP_URI		"https://localhost:8444/imap"
-#define IFMAP_NO_FD		-1
 
 typedef struct private_tnc_ifmap_soap_t private_tnc_ifmap_soap_t;
 
@@ -80,19 +74,9 @@ struct private_tnc_ifmap_soap_t {
 	chunk_t user_pass;
 
 	/**
-	 * IF-MAP Server (IP address and port)
+	 * TLS session
 	 */
-	host_t *host;
-
-	/**
-	 * TLS socket
-	 */
-	tls_socket_t *tls;
-
-	/**
-	 * File descriptor for secure TCP socket
-	 */
-	int fd;
+	tls_session_t *tls;
 
 	/**
 	 * In memory credential set
@@ -706,12 +690,7 @@ METHOD(tnc_ifmap_soap_t, destroy, void,
 			free(this->device_name);
 		}
 		DESTROY_IF(this->tls);
-		DESTROY_IF(this->host);
 
-		if (this->fd != IFMAP_NO_FD)
-		{
-			close(this->fd);
-		}
 		lib->credmgr->remove_set(lib->credmgr, &this->creds->set);
 		this->creds->destroy(this->creds);
 		free(this->user_pass.ptr);
@@ -728,6 +707,7 @@ static bool soap_init(private_tnc_ifmap_soap_t *this)
 	certificate_t *cert;
 	private_key_t *key;
 	identification_t *server_id, *client_id = NULL;
+	host_t *host;
 
 	/* getting configuration parameters from strongswan.conf */
 	server_uri =  lib->settings->get_str(lib->settings,
@@ -850,37 +830,23 @@ static bool soap_init(private_tnc_ifmap_soap_t *this)
 		}
 	}
 
-	/* open TCP socket and connect to MAP server */
-	this->host = host_create_from_dns(server_str, 0, port);
-	if (!this->host)
-	{
-		DBG1(DBG_TNC, "resolving hostname %s failed", server_str);
-		free(server_str);
-		return FALSE;
-	}
+	/* resolve server hostname */
+	host = host_create_from_dns(server_str, 0, port);
 	free(server_str);
 
-	this->fd = socket(this->host->get_family(this->host), SOCK_STREAM, 0);
-	if (this->fd == IFMAP_NO_FD)
+	if (!host)
 	{
-		DBG1(DBG_TNC, "opening socket failed: %s", strerror(errno));
+		DBG1(DBG_TLS, "resolving server hostname %s failed", server_str);
 		return FALSE;
 	}
 
-	if (connect(this->fd, this->host->get_sockaddr(this->host),
-						 *this->host->get_sockaddr_len(this->host)) == -1)
-	{
-		DBG1(DBG_TNC, "connecting to %#H failed: %s",
-					   this->host, strerror(errno));
-		return FALSE;
-	}
+	/* create TLS session */
+	this->tls = tls_session_create(host, server_id, client_id, TLS_1_2);
+	host->destroy(host);
 
-	/* open TLS socket */
-	this->tls = tls_socket_create(FALSE, server_id, client_id, this->fd,
-								  NULL, TLS_1_2, FALSE);
 	if (!this->tls)
 	{
-		DBG1(DBG_TNC, "creating TLS socket failed");
+		DBG1(DBG_TNC, "creating TLS session failed");
 		return FALSE;
 	}
 
@@ -909,7 +875,6 @@ tnc_ifmap_soap_t *tnc_ifmap_soap_create()
 			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
-		.fd = IFMAP_NO_FD,
 		.creds = mem_cred_create(),
 		.ref = 1,
 	);
