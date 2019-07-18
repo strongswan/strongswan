@@ -650,7 +650,7 @@ AC_CHECK_FUNC(
 )
 
 AC_CHECK_FUNCS(prctl mallinfo getpass closefrom getpwnam_r getgrnam_r getpwuid_r)
-AC_CHECK_FUNCS(fmemopen funopen mmap memrchr setlinebuf strptime dirfd sigwaitinfo)
+AC_CHECK_FUNCS(fmemopen funopen mmap memrchr setlinebuf strptime dirfd sigwaitinfo explicit_bzero)
 
 AC_CHECK_FUNC([syslog], [
 	AC_DEFINE([HAVE_SYSLOG], [], [have syslog(3) and friends])
