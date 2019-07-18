@@ -674,11 +674,8 @@ static bool compare_dn(chunk_t t_dn, chunk_t o_dn, int *wc)
 		}
 		else
 		{
-			if (t_data.len != o_data.len)
-			{
-				break;
-			}
-			if (t_type == o_type &&
+
+			if (t_data.len == o_data.len && t_type == o_type &&
 				(t_type == ASN1_PRINTABLESTRING ||
 				 (t_type == ASN1_IA5STRING &&
 				  asn1_known_oid(t_oid) == OID_EMAIL_ADDRESS)))
@@ -688,12 +685,30 @@ static bool compare_dn(chunk_t t_dn, chunk_t o_dn, int *wc)
 					break;
 				}
 			}
-			else
+			else if (t_type == ASN1_BMPSTRING && o_type == ASN1_UTF8STRING)
+			{
+				if (!strutfwcscmp(o_data.ptr, o_data.len, (char16_t*)t_data.ptr, t_data.len/sizeof(char16_t)))
+				{
+					break;
+				}
+			}
+			else if (t_type == ASN1_UTF8STRING && o_type == ASN1_BMPSTRING)
+			{
+				if (!strutfwcscmp(t_data.ptr, t_data.len, (char16_t*)o_data.ptr, o_data.len/sizeof(char16_t)))
+				{
+					break;
+				}
+			}
+			else if (t_data.len == o_data.len)
 			{	/* respect case and length for everything else */
 				if (!memeq(t_data.ptr, o_data.ptr, t_data.len))
 				{
 					break;
 				}
+			}
+			else
+			{
+				break;
 			}
 		}
 		/* the enumerator returns FALSE on parse error, we are finished

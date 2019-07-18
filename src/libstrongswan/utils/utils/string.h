@@ -100,4 +100,16 @@ char *translate(char *str, const char *from, const char *to);
  */
 char *strreplace(const char *str, const char *search, const char *replace);
 
+
+/**
+ * Test two strings for equality, one in UTF-8 format, and the other in UTF-16 format.
+ *
+ * @param str1		first string, in UTF-8 format
+ * @param len1		length in bytes of first string
+ * @param str2		second string, in UTF-16 format
+ * @param len2		length of second string, in units of 16 bits.
+ */
+bool strutfwcscmp(const char *str1, size_t len1, const char16_t* str2, size_t len2);
+
+
 #endif /** STRING_H_ @} */

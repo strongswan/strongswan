@@ -47,6 +47,14 @@
 # include <signal.h>
 #endif
 
+#ifdef HAVE_CHAR16_IN_UCHAR_H
+# include <uchar.h>
+#else
+#include <stdint.h>
+typedef uint16_t char16_t;
+typedef uint32_t char32_t;
+#endif
+
 #include "utils/types.h"
 #include "enum.h"
 #include "utils/atomics.h"
