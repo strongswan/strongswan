@@ -17,10 +17,10 @@ package org.strongswan.android.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v4.content.pm.ShortcutInfoCompat;
-import android.support.v4.content.pm.ShortcutManagerCompat;
-import android.support.v4.graphics.drawable.IconCompat;
-import android.support.v7.app.AppCompatActivity;
+import androidx.core.content.pm.ShortcutInfoCompat;
+import androidx.core.content.pm.ShortcutManagerCompat;
+import androidx.core.graphics.drawable.IconCompat;
+import androidx.appcompat.app.AppCompatActivity;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;

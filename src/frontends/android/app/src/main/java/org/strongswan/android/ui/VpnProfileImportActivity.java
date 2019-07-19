@@ -16,21 +16,21 @@
 package org.strongswan.android.ui;
 
 import android.app.Activity;
-import android.app.LoaderManager;
+import androidx.loader.app.LoaderManager;
 import android.content.ActivityNotFoundException;
-import android.content.AsyncTaskLoader;
+import androidx.loader.content.AsyncTaskLoader;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.Loader;
+import androidx.loader.content.Loader;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
-import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.appcompat.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.view.Menu;
@@ -95,7 +95,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	private TrustedCertificateEntry mUserCertEntry;
 	private String mUserCertLoading;
 	private boolean mHideImport;
-	private android.support.v4.widget.ContentLoadingProgressBar mProgressBar;
+	private androidx.core.widget.ContentLoadingProgressBar mProgressBar;
 	private TextView mExistsWarning;
 	private ViewGroup mBasicDataGroup;
 	private TextView mName;
@@ -191,7 +191,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		mUserCertificate.setVisibility(View.GONE);
 		mRemoteCertificate.setVisibility(View.GONE);
 
-		mSelectUserCert.setOnClickListener(new SelectUserCertOnClickListener());
+		mSelectUserCert.setOnClickListener(new SelectUserCertOnClickListener(this));
 		mImportUserCert.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v)
@@ -229,7 +229,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			mUserCertLoading = savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
 			if (mUserCertLoading != null)
 			{
-				getLoaderManager().initLoader(USER_CERT_LOADER, null, mUserCertificateLoaderCallbacks);
+				LoaderManager.getInstance(this).initLoader(USER_CERT_LOADER, null, mUserCertificateLoaderCallbacks);
 			}
 			mImportUserCert.setEnabled(!savedInstanceState.getBoolean(PKCS12_INSTALLED));
 		}
@@ -312,7 +312,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 
 		Bundle args = new Bundle();
 		args.putParcelable(PROFILE_URI, uri);
-		getLoaderManager().initLoader(PROFILE_LOADER, args, mProfileLoaderCallbacks);
+		LoaderManager.getInstance(this).initLoader(PROFILE_LOADER, args, mProfileLoaderCallbacks);
 	}
 
 	public void handleProfile(ProfileLoadResult data)
@@ -400,7 +400,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			if (mUserCertLoading == null)
 			{
 				mUserCertLoading = getString(R.string.profile_cert_alias, mProfile.getName());
-				getLoaderManager().initLoader(USER_CERT_LOADER, null, mUserCertificateLoaderCallbacks);
+				LoaderManager.getInstance(this).initLoader(USER_CERT_LOADER, null, mUserCertificateLoaderCallbacks);
 			}
 			updateUserCertView();
 		}
@@ -874,6 +874,10 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	 */
 	private class SelectUserCertOnClickListener implements View.OnClickListener, KeyChainAliasCallback
 	{
+		private VpnProfileImportActivity app;
+		public SelectUserCertOnClickListener(VpnProfileImportActivity app) {
+			this.app = app;
+		}
 		@Override
 		public void onClick(View v)
 		{
@@ -902,7 +906,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 					updateUserCertView();
 					if (alias != null)
 					{	/* otherwise the dialog was canceled, the request denied */
-						getLoaderManager().restartLoader(USER_CERT_LOADER, null, mUserCertificateLoaderCallbacks);
+						LoaderManager.getInstance(app).restartLoader(USER_CERT_LOADER, null, mUserCertificateLoaderCallbacks);
 					}
 				}
 			});

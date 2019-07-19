@@ -35,7 +35,7 @@
             android:hint="@string/profile_gateway_label"
             app:helper_text="@string/profile_gateway_hint" >
 
-            <android.support.design.widget.TextInputEditText
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/gateway"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -75,7 +75,7 @@
                 android:layout_height="wrap_content"
                 android:hint="@string/profile_username_label" >
 
-                <android.support.design.widget.TextInputEditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/username"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -92,7 +92,7 @@
                 android:hint="@string/profile_password_label"
                 app:helper_text="@string/profile_password_hint" >
 
-                <android.support.design.widget.TextInputEditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/password"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -237,7 +237,7 @@
                 android:hint="@string/profile_mtu_label"
                 app:helper_text="@string/profile_mtu_hint" >
 
-                <android.support.design.widget.TextInputEditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/mtu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -253,7 +253,7 @@
                 android:hint="@string/profile_port_label"
                 app:helper_text="@string/profile_port_hint" >
 
-                <android.support.design.widget.TextInputEditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/port"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -269,7 +269,7 @@
                 android:hint="@string/profile_nat_keepalive_label"
                 app:helper_text="@string/profile_nat_keepalive_hint" >
 
-                <android.support.design.widget.TextInputEditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/nat_keepalive"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -389,7 +389,7 @@
                 android:hint="@string/profile_included_subnets_label"
                 app:helper_text="@string/profile_included_subnets_hint" >
 
-                <android.support.design.widget.TextInputEditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/included_subnets"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -405,7 +405,7 @@
                 android:hint="@string/profile_excluded_subnets_label"
                 app:helper_text="@string/profile_excluded_subnets_hint" >
 
-                <android.support.design.widget.TextInputEditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/excluded_subnets"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -475,7 +475,7 @@
                 android:hint="@string/profile_proposals_ike_label"
                 app:helper_text="@string/profile_proposals_ike_hint" >
 
-                <android.support.design.widget.TextInputEditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/ike_proposal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -491,7 +491,7 @@
                 android:hint="@string/profile_proposals_esp_label"
                 app:helper_text="@string/profile_proposals_esp_hint" >
 
-                <android.support.design.widget.TextInputEditText
+                <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/esp_proposal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

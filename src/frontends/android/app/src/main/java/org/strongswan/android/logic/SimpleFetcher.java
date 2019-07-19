@@ -15,7 +15,7 @@
 
 package org.strongswan.android.logic;
 
-import android.support.annotation.Keep;
+import androidx.annotation.Keep;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
