@@ -2,7 +2,7 @@
 
 PKG = tkm
 SRC = https://git.codelabs.ch/git/$(PKG).git
-REV = b99aeb158b7701ea4a77184bff5ff38f8e26013a
+REV = fadff7fd8c454ae46177924fde56600081ddf4d5
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 

@@ -1,12 +1,10 @@
 #!/usr/bin/make
 
-PKG = tkm-rpc
-SRC = https://git.codelabs.ch/git/$(PKG).git
-REV = a681aa8694412f16a44a7fba2eeb67cb3d43caf6
+PKG = spark-crypto
+SRC = https://git.codelabs.ch/spark-crypto.git
+REV = c97939b6cdd5e5f19847cf8d1abb7575e1c01df7
 
-PREFIX = /usr/local/ada
-
-export ADA_PROJECT_PATH=$(PREFIX)/lib/gnat
+DESTDIR = /usr/local/ada/lib/gnat
 
 all: install
 
@@ -19,8 +17,8 @@ all: install
 	@rm -f .$(PKG)-checkout-* && touch $@
 
 .$(PKG)-built-$(REV): .$(PKG)-checkout-$(REV)
-	cd $(PKG) && make
+	cd $(PKG) && make NO_SPARK=1 NO_TESTS=1 NO_APIDOC=1
 	@rm -f .$(PKG)-built-* && touch $@
 
 install: .$(PKG)-built-$(REV)
-	cd $(PKG) && make PREFIX=$(PREFIX) install
+	cd $(PKG) && make NO_SPARK=1 NO_TESTS=1 NO_APIDOC=1 DESTDIR=$(DESTDIR) install
