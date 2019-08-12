@@ -36,7 +36,7 @@ build_botan()
 
 build_wolfssl()
 {
-	WOLFSSL_REV=v4.0.0-stable
+	WOLFSSL_REV=v4.1.0-stable
 	WOLFSSL_DIR=$TRAVIS_BUILD_DIR/../wolfssl
 
 	if test -d "$WOLFSSL_DIR"; then
