@@ -296,6 +296,10 @@ charon.processor.priority_threads {}
 	Section to configure the number of reserved threads per priority class
 	see JOB PRIORITY MANAGEMENT in **strongswan.conf**(5).
 
+charon.proposal_whitelist =
+	Comma separated list of proposal keywords that are accepted in
+	configurations (doesn't affect the algorithms in the default proposal).
+
 charon.receive_delay = 0
 	Delay in ms for receiving packets, to simulate larger RTT.
 

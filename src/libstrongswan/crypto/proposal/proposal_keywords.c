@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2019 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@
 #include "proposal_keywords_static.h"
 
 #include <collections/linked_list.h>
+#include <collections/hashtable.h>
 #include <threading/rwlock.h>
 
 typedef struct private_proposal_keywords_t private_proposal_keywords_t;
@@ -46,22 +47,27 @@ typedef struct private_proposal_keywords_t private_proposal_keywords_t;
 struct private_proposal_keywords_t {
 
 	/**
-	 * public interface
+	 * Public interface.
 	 */
 	proposal_keywords_t public;
 
 	/**
-	 * registered tokens, as proposal_token_t
+	 * Registered tokens, as proposal_token_t.
 	 */
 	linked_list_t * tokens;
 
 	/**
-	 * registered algname parsers, as proposal_algname_parser_t
+	 * Registered algname parsers, as proposal_algname_parser_t.
 	 */
 	linked_list_t *parsers;
 
 	/**
-	 * rwlock to lock access to modules
+	 * Whitelisted algorithm tokens.
+	 */
+	hashtable_t *whitelist;
+
+	/**
+	 * Lock for safe access to containers.
 	 */
 	rwlock_t *lock;
 };
@@ -120,6 +126,11 @@ METHOD(proposal_keywords_t, get_token, const proposal_token_t*,
 {
 	const proposal_token_t *token;
 
+	if (this->whitelist && !this->whitelist->get(this->whitelist, str))
+	{
+		return NULL;
+	}
+
 	token = proposal_get_token_static(str, strlen(str));
 	if (!token)
 	{
@@ -163,6 +174,7 @@ METHOD(proposal_keywords_t, destroy, void,
 {
 	proposal_token_t *token;
 
+	DESTROY_FUNCTION_IF(this->whitelist, (void*)free);
 	while (this->tokens->remove_first(this->tokens, (void**)&token) == SUCCESS)
 	{
 		free(token->name);
@@ -180,6 +192,8 @@ METHOD(proposal_keywords_t, destroy, void,
 proposal_keywords_t *proposal_keywords_create()
 {
 	private_proposal_keywords_t *this;
+	enumerator_t *enumerator;
+	char *whitelist, *token;
 
 	INIT(this,
 		.public = {
@@ -192,6 +206,21 @@ proposal_keywords_t *proposal_keywords_create()
 		.parsers = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
+
+	whitelist = lib->settings->get_str(lib->settings, "%s.proposal_whitelist",
+									   NULL, lib->ns);
+	if (whitelist)
+	{
+		this->whitelist = hashtable_create(hashtable_hash_str,
+										   hashtable_equals_str, 16);
+		enumerator = enumerator_create_token(whitelist, ",", " ");
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			token = strdup(token);
+			this->whitelist->put(this->whitelist, token, token);
+		}
+		enumerator->destroy(enumerator);
+	}
 
 	return &this->public;
 }
