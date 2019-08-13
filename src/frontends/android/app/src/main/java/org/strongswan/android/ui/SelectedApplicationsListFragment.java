@@ -20,12 +20,6 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.ListFragment;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.AsyncTaskLoader;
-import android.support.v4.content.Loader;
-import android.support.v7.widget.SearchView;
 import android.text.TextUtils;
 import android.util.Pair;
 import android.view.Menu;
@@ -45,6 +39,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.widget.SearchView;
+import androidx.fragment.app.ListFragment;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.AsyncTaskLoader;
+import androidx.loader.content.Loader;
 
 public class SelectedApplicationsListFragment extends ListFragment implements LoaderManager.LoaderCallbacks<Pair<List<SelectedApplicationEntry>, List<String>>>, SearchView.OnQueryTextListener
 {

@@ -18,9 +18,10 @@ package org.strongswan.android.ui.adapter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
-import android.support.annotation.NonNull;
 
 import java.text.Collator;
+
+import androidx.annotation.NonNull;
 
 public class SelectedApplicationEntry implements Comparable<SelectedApplicationEntry>
 {

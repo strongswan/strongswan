@@ -15,8 +15,6 @@
 
 package org.strongswan.android.logic;
 
-import android.support.annotation.Keep;
-
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -33,6 +31,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import androidx.annotation.Keep;
 
 @Keep
 public class SimpleFetcher

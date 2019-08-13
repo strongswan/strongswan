@@ -26,11 +26,6 @@ import android.os.Bundle;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
-import android.support.v4.app.LoaderManager;
-import android.support.v4.content.AsyncTaskLoader;
-import android.support.v4.content.Loader;
-import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.view.Menu;
@@ -79,6 +74,12 @@ import java.util.UUID;
 
 import javax.net.ssl.SSLHandshakeException;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.AsyncTaskLoader;
+import androidx.loader.content.Loader;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 public class VpnProfileImportActivity extends AppCompatActivity
 {
 	private static final String PKCS12_INSTALLED = "PKCS12_INSTALLED";
@@ -95,7 +96,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	private TrustedCertificateEntry mUserCertEntry;
 	private String mUserCertLoading;
 	private boolean mHideImport;
-	private android.support.v4.widget.ContentLoadingProgressBar mProgressBar;
+	private androidx.core.widget.ContentLoadingProgressBar mProgressBar;
 	private TextView mExistsWarning;
 	private ViewGroup mBasicDataGroup;
 	private TextView mName;

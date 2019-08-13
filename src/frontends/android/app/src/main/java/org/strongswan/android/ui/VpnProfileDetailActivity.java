@@ -27,10 +27,6 @@ import android.os.Bundle;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
-import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.AppCompatDialogFragment;
 import android.text.Editable;
 import android.text.Html;
 import android.text.SpannableString;
@@ -78,6 +74,11 @@ import java.util.ArrayList;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDialogFragment;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class VpnProfileDetailActivity extends AppCompatActivity
 {

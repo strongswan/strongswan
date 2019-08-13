@@ -24,8 +24,6 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.v4.app.Fragment;
-import android.support.v4.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -40,6 +38,9 @@ import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.VpnStateService.VpnStateListener;
+
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
 
 public class VpnStateFragment extends Fragment implements VpnStateListener
 {
