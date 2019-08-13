@@ -143,7 +143,10 @@ public class TextInputLayoutHelper extends TextInputLayout
 	 */
 	public void setHelperText(CharSequence text)
 	{
-		mHelperText.setText(text);
+		if (mHelperText != null)
+		{
+			mHelperText.setText(text);
+		}
 	}
 
 	private void showHelper(boolean show)
