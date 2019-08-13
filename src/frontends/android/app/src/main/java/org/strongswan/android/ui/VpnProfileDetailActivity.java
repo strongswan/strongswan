@@ -78,6 +78,7 @@ import java.util.UUID;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDialogFragment;
+import androidx.core.text.HtmlCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class VpnProfileDetailActivity extends AppCompatActivity
@@ -1036,7 +1037,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		{
 			return new AlertDialog.Builder(getActivity())
 				.setTitle(R.string.tnc_notice_title)
-				.setMessage(Html.fromHtml(getString(R.string.tnc_notice_details)))
+				.setMessage(HtmlCompat.fromHtml(getString(R.string.tnc_notice_details), HtmlCompat.FROM_HTML_MODE_LEGACY))
 				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int id)
