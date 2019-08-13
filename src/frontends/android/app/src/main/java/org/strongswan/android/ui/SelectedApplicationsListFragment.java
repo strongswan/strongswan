@@ -74,7 +74,7 @@ public class SelectedApplicationsListFragment extends ListFragment implements Lo
 		}
 		mSelection = new TreeSet<>(selection);
 
-		getLoaderManager().initLoader(0, null, this);
+		LoaderManager.getInstance(this).initLoader(0, null, this);
 	}
 
 	@Override

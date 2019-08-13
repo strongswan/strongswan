@@ -18,6 +18,7 @@ package org.strongswan.android.ui;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.ListFragment;
+import android.support.v4.app.LoaderManager;
 import android.support.v4.app.LoaderManager.LoaderCallbacks;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
@@ -79,7 +80,7 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 			mSource = (TrustedCertificateSource)arguments.getSerializable(EXTRA_CERTIFICATE_SOURCE);
 		}
 
-		getLoaderManager().initLoader(0, null, this);
+		LoaderManager.getInstance(this).initLoader(0, null, this);
 	}
 
 	@Override
