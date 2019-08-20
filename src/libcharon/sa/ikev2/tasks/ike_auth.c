@@ -82,6 +82,21 @@ struct private_ike_auth_t {
 	packet_t *other_packet;
 
 	/**
+	 * IntAuth data from IKE_INTERMEDIATE exchanges: IntAuth_i | IntAuth_r | MID
+	 */
+	chunk_t int_auth;
+
+	/**
+	 * Pointer for IntAuth_i into int_auth
+	 */
+	chunk_t int_auth_i;
+
+	/**
+	 * Pointer for IntAuth_r into int_auth
+	 */
+	chunk_t int_auth_r;
+
+	/**
 	 * Reserved bytes of ID payload
 	 */
 	char reserved[3];
@@ -191,6 +206,61 @@ static status_t collect_other_init_data(private_ike_auth_t *this,
 	/* keep a copy of the received packet */
 	this->other_packet = message->get_packet(message);
 	return NEED_MORE;
+}
+
+/**
+ * Collect IntAuth data for IKE_INTERMEDIATE exchanges.
+ */
+static status_t collect_int_auth_data(private_ike_auth_t *this, bool verify,
+									  message_t *message)
+{
+	keymat_v2_t *keymat;
+	chunk_t int_auth_ap, prev = chunk_empty, int_auth;
+
+	if (!message->get_plain(message, &int_auth_ap))
+	{
+		return FAILED;
+	}
+	if (this->int_auth.len)
+	{
+		prev = this->initiator != verify ? this->int_auth_i : this->int_auth_r;
+	}
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
+	if (!keymat->get_int_auth(keymat, verify, int_auth_ap, prev, &int_auth))
+	{
+		chunk_free(&int_auth_ap);
+		return FAILED;
+	}
+	chunk_free(&int_auth_ap);
+
+	if (!this->int_auth.len)
+	{	/* IntAuth consists of IntAuth_i | IntAuth_r | MID */
+		this->int_auth = chunk_alloc(int_auth.len * 2 + sizeof(uint32_t));
+		this->int_auth_i = chunk_create(this->int_auth.ptr, int_auth.len);
+		memset(this->int_auth.ptr, 0, this->int_auth.len);
+		prev = this->int_auth_i;
+	}
+	else if (!this->int_auth_r.len)
+	{
+		this->int_auth_r = chunk_create(this->int_auth.ptr + int_auth.len,
+										int_auth.len);
+		prev = this->int_auth_r;
+	}
+	memcpy(prev.ptr, int_auth.ptr, int_auth.len);
+	chunk_free(&int_auth);
+	return NEED_MORE;
+}
+
+/**
+ * Set the MID in the IntAuth data to that of the first IKE_AUTH message.
+ */
+static void set_ike_auth_mid(private_ike_auth_t *this, message_t *message)
+{
+	if (this->int_auth.len)
+	{
+		htoun32(this->int_auth.ptr + this->int_auth.len - sizeof(uint32_t),
+				message->get_message_id(message));
+	}
 }
 
 /**
@@ -627,6 +697,8 @@ METHOD(task_t, build_i, status_t,
 			charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 			return FAILED;
 		}
+		/* set MID in IntAuth data if used */
+		set_ike_auth_mid(this, message);
 	}
 
 	if (!this->do_another_auth && !this->my_auth)
@@ -700,6 +772,10 @@ METHOD(task_t, build_i, status_t,
 			charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 			return FAILED;
 		}
+		if (this->int_auth.ptr && this->my_auth->set_int_auth)
+		{
+			this->my_auth->set_int_auth(this->my_auth, this->int_auth);
+		}
 	}
 	/* for authentication methods that return NEED_MORE, the PPK will be reset
 	 * in process_i() for messages without PPK_ID notify, so we always set it
@@ -751,6 +827,8 @@ METHOD(task_t, post_build_i, status_t,
 	{
 		case IKE_SA_INIT:
 			return collect_my_init_data(this, message);
+		case IKE_INTERMEDIATE:
+			return collect_int_auth_data(this, FALSE, message);
 		default:
 			return NEED_MORE;
 	}
@@ -767,6 +845,8 @@ METHOD(task_t, process_r, status_t,
 	{
 		case IKE_SA_INIT:
 			return collect_other_init_data(this, message);
+		case IKE_INTERMEDIATE:
+			return collect_int_auth_data(this, TRUE, message);
 		case IKE_AUTH:
 			break;
 		default:
@@ -808,6 +888,8 @@ METHOD(task_t, process_r, status_t,
 		{
 			this->initial_contact = TRUE;
 		}
+		/* set MID in IntAuth data if used */
+		set_ike_auth_mid(this, message);
 		this->first_auth = TRUE;
 	}
 
@@ -878,6 +960,10 @@ METHOD(task_t, process_r, status_t,
 		{
 			this->authentication_failed = TRUE;
 			return NEED_MORE;
+		}
+		if (this->int_auth.ptr && this->other_auth->set_int_auth)
+		{
+			this->other_auth->set_int_auth(this->other_auth, this->int_auth);
 		}
 	}
 	if (message->get_payload(message, PLV2_AUTH) &&
@@ -1067,6 +1153,10 @@ METHOD(task_t, build_r, status_t,
 			{
 				goto local_auth_failed;
 			}
+			if (this->int_auth.ptr && this->my_auth->set_int_auth)
+			{
+				this->my_auth->set_int_auth(this->my_auth, this->int_auth);
+			}
 		}
 	}
 
@@ -1189,6 +1279,8 @@ METHOD(task_t, post_build_r, status_t,
 	{
 		case IKE_SA_INIT:
 			return collect_my_init_data(this, message);
+		case IKE_INTERMEDIATE:
+			return collect_int_auth_data(this, FALSE, message);
 		default:
 			return NEED_MORE;
 	}
@@ -1269,6 +1361,8 @@ METHOD(task_t, process_i, status_t,
 				this->ike_sa->enable_extension(this->ike_sa, EXT_MULTIPLE_AUTH);
 			}
 			return collect_other_init_data(this, message);
+		case IKE_INTERMEDIATE:
+			return collect_int_auth_data(this, TRUE, message);
 		case IKE_AUTH:
 			break;
 		default:
@@ -1373,6 +1467,11 @@ METHOD(task_t, process_i, status_t,
 				if (!this->other_auth)
 				{
 					goto peer_auth_failed;
+				}
+				if (this->int_auth.ptr && this->other_auth->set_int_auth)
+				{
+					this->other_auth->set_int_auth(this->other_auth,
+												   this->int_auth);
 				}
 			}
 			else
@@ -1528,6 +1627,9 @@ METHOD(task_t, migrate, void,
 	clear_ppk(this);
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
+	chunk_free(&this->int_auth);
+	this->int_auth_i = chunk_empty;
+	this->int_auth_r = chunk_empty;
 	DESTROY_IF(this->my_packet);
 	DESTROY_IF(this->other_packet);
 	DESTROY_IF(this->peer_cfg);
@@ -1556,6 +1658,7 @@ METHOD(task_t, destroy, void,
 	clear_ppk(this);
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
+	chunk_free(&this->int_auth);
 	DESTROY_IF(this->my_packet);
 	DESTROY_IF(this->other_packet);
 	DESTROY_IF(this->my_auth);
