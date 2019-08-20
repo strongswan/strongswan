@@ -431,7 +431,10 @@ METHOD(generator_t, get_chunk, chunk_t,
 {
 	chunk_t data;
 
-	*lenpos = (uint32_t*)(this->buffer + this->header_length_offset);
+	if (lenpos)
+	{
+		*lenpos = (uint32_t*)(this->buffer + this->header_length_offset);
+	}
 	data = chunk_create(this->buffer, get_length(this));
 	if (this->debug)
 	{
