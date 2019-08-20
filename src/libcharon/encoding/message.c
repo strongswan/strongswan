@@ -1979,6 +1979,80 @@ METHOD(message_t, generate, status_t,
 	return SUCCESS;
 }
 
+METHOD(message_t, get_plain, bool,
+	private_message_t *this, chunk_t *plain)
+{
+	generator_t *generator, *enc_generator;
+	enumerator_t *enumerator;
+	ike_header_t *ike_header;
+	payload_t *payload;
+	encrypted_payload_t *encrypted;
+	chunk_t int_auth_a, enc_header, int_auth_p;
+	struct {
+		uint8_t next_payload;
+		uint8_t flags;
+		uint16_t length;
+	} __attribute__((packed)) header = {};
+	uint32_t *lenpos;
+
+	if (this->major_version == IKEV1_MAJOR_VERSION ||
+		this->exchange_type != IKE_INTERMEDIATE)
+	{
+		return FALSE;
+	}
+
+	/* we expect to be called after the message has either been parsed
+	 * or already generated once, so we don't modify payload order */
+	generator = generator_create_no_dbg();
+	ike_header = create_header(this);
+	payload = (payload_t*)ike_header;
+	/* for parsed messages the payloads were already extracted from the
+	 * encrypted payload, if there were any unprotected paylaods we wouldn't
+	 * know. lets assume there aren't any (also for sent messages) */
+	payload->set_next_type(payload, PLV2_ENCRYPTED);
+
+	generator->generate_payload(generator, payload);
+	int_auth_a = generator->get_chunk(generator, &lenpos);
+
+	enc_generator = generator_create_no_dbg();
+	this->payloads->get_first(this->payloads, (void**)&payload);
+	if (payload && payload->get_type(payload) == PLV2_ENCRYPTED)
+	{	/* we have to generate only the contents of this payload,
+		 * not the payload itself, the header is added manually */
+		this->payloads->get_first(this->payloads, (void**)&payload);
+		encrypted = (encrypted_payload_t*)payload;
+
+		encrypted->generate_payloads(encrypted, enc_generator);
+
+		header.next_payload = payload->get_next_type(payload);
+	}
+	else
+	{	/* as mentioned above, assume all received payloads were contained in an
+		 * encrypted payload */
+		enumerator = create_payload_enumerator(this);
+		while (enumerator->enumerate(enumerator, &payload))
+		{
+			enc_generator->generate_payload(enc_generator, payload);
+		}
+		enumerator->destroy(enumerator);
+
+		header.next_payload = this->first_payload;
+	}
+	int_auth_p = enc_generator->get_chunk(enc_generator, NULL);
+
+	/* FIXME: copy flags */
+	enc_header = chunk_from_thing(header);
+	header.length = htons(enc_header.len + int_auth_p.len);
+
+	htoun32(lenpos, int_auth_a.len + enc_header.len + int_auth_p.len);
+	*plain = chunk_cat("ccc", int_auth_a, enc_header, int_auth_p);
+
+	enc_generator->destroy(enc_generator);
+	generator->destroy(generator);
+	ike_header->destroy(ike_header);
+	return TRUE;
+}
+
 /**
  * Creates a (basic) clone of the given message
  */
@@ -3116,6 +3190,7 @@ message_t *message_create_from_packet(packet_t *packet)
 			.get_packet = _get_packet,
 			.get_packet_data = _get_packet_data,
 			.get_fragments = _get_fragments,
+			.get_plain = _get_plain,
 			.destroy = _destroy,
 		},
 		.exchange_type = EXCHANGE_TYPE_UNDEFINED,
