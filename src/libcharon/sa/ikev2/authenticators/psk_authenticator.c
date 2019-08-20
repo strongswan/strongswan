@@ -85,8 +85,8 @@ METHOD(authenticator_t, build, status_t,
 		return NOT_FOUND;
 	}
 	if (!keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init, this->nonce,
-							 key->get_key(key), this->ppk, my_id,
-							 this->reserved, &auth_data))
+							 chunk_empty, key->get_key(key), this->ppk,
+							 my_id, this->reserved, &auth_data))
 	{
 		key->destroy(key);
 		return FAILED;
@@ -102,8 +102,8 @@ METHOD(authenticator_t, build, status_t,
 	if (this->no_ppk_auth)
 	{
 		if (!keymat->get_psk_sig(keymat, FALSE, this->ike_sa_init, this->nonce,
-							 key->get_key(key), chunk_empty, my_id,
-							 this->reserved, &auth_data))
+							 chunk_empty, key->get_key(key), chunk_empty,
+							 my_id, this->reserved, &auth_data))
 		{
 			DBG1(DBG_IKE, "failed adding NO_PPK_AUTH notify");
 			key->destroy(key);
@@ -159,8 +159,8 @@ METHOD(authenticator_t, process, status_t,
 		keys_found++;
 
 		if (!keymat->get_psk_sig(keymat, TRUE, this->ike_sa_init, this->nonce,
-								 key->get_key(key), this->ppk, other_id,
-								 this->reserved, &auth_data))
+								 chunk_empty, key->get_key(key), this->ppk,
+								 other_id, this->reserved, &auth_data))
 		{
 			continue;
 		}
