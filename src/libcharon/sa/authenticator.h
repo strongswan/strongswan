@@ -168,6 +168,16 @@ struct authenticator_t {
 	void (*use_ppk)(authenticator_t *this, chunk_t ppk, bool no_ppk_auth);
 
 	/**
+	 * Optional method to set authentication data for IKE_INTERMEDIATE
+	 * exchanges.
+	 *
+	 * Has to be called before the final call to process()/build().
+	 *
+	 * @param int_auth		concatenated IntAuth_I|R data
+	 */
+	void (*set_int_auth)(authenticator_t *this, chunk_t int_auth);
+
+	/**
 	 * Check if the authenticator is capable of mutual authentication.
 	 *
 	 * Some authenticator authenticate both peers, e.g. EAP. To support
