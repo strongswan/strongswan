@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Tobias Brunner
+ * Copyright (C) 2012-2019 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -79,6 +79,11 @@ struct private_ike_auth_t {
 	 * IKE_SA_INIT message sent by peer
 	 */
 	packet_t *other_packet;
+
+	/**
+	 * IntAuth data from IKE_INTERMEDIATE exchanges
+	 */
+	chunk_t int_auth;
 
 	/**
 	 * Reserved bytes of ID payload
@@ -194,6 +199,42 @@ static status_t collect_other_init_data(private_ike_auth_t *this,
 
 	/* keep a copy of the received packet */
 	this->other_packet = message->get_packet(message);
+	return NEED_MORE;
+}
+
+/**
+ * Collect IntAuth_I|R data for IKE_INTERMEDIATE exchanges
+ */
+static status_t collect_int_auth_data(private_ike_auth_t *this, bool verify,
+									  message_t *message)
+{
+	keymat_v2_t *keymat;
+	chunk_t int_auth_ap, int_auth;
+	packet_t *packet;
+
+	if (!verify)
+	{
+		/* pre-generate our own message */
+		if (this->ike_sa->generate_message(this->ike_sa, message,
+										   &packet) != SUCCESS)
+		{
+			return FAILED;
+		}
+		packet->destroy(packet);
+	}
+
+	if (!message->get_plain(message, &int_auth_ap))
+	{
+		return FAILED;
+	}
+	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
+	if (!keymat->get_int_auth(keymat, verify, int_auth_ap, &int_auth))
+	{
+		chunk_free(&int_auth_ap);
+		return FAILED;
+	}
+	chunk_free(&int_auth_ap);
+	this->int_auth = chunk_cat("mm", this->int_auth, int_auth);
 	return NEED_MORE;
 }
 
@@ -598,6 +639,8 @@ METHOD(task_t, build_i, status_t,
 	{
 		case IKE_SA_INIT:
 			return collect_my_init_data(this, message);
+		case IKE_INTERMEDIATE:
+			return collect_int_auth_data(this, FALSE, message);
 		case IKE_AUTH:
 			if (!this->first_auth)
 			{	/* some special handling for the first IKE_AUTH message below */
@@ -706,6 +749,10 @@ METHOD(task_t, build_i, status_t,
 			charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 			return FAILED;
 		}
+		if (this->int_auth.ptr && this->my_auth->set_int_auth)
+		{
+			this->my_auth->set_int_auth(this->my_auth, this->int_auth);
+		}
 	}
 	/* for authentication methods that return NEED_MORE, the PPK will be reset
 	 * in process_i() for messages without PPK_ID notify, so we always set it
@@ -761,6 +808,8 @@ METHOD(task_t, process_r, status_t,
 	{
 		case IKE_SA_INIT:
 			return collect_other_init_data(this, message);
+		case IKE_INTERMEDIATE:
+			return collect_int_auth_data(this, TRUE, message);
 		case IKE_AUTH:
 			break;
 		default:
@@ -873,6 +922,10 @@ METHOD(task_t, process_r, status_t,
 			this->authentication_failed = TRUE;
 			return NEED_MORE;
 		}
+		if (this->int_auth.ptr && this->other_auth->set_int_auth)
+		{
+			this->other_auth->set_int_auth(this->other_auth, this->int_auth);
+		}
 	}
 	if (message->get_payload(message, PLV2_AUTH) &&
 		is_first_round(this, FALSE))
@@ -978,6 +1031,8 @@ METHOD(task_t, build_r, status_t,
 									chunk_empty);
 			}
 			return collect_my_init_data(this, message);
+		case IKE_INTERMEDIATE:
+			return collect_int_auth_data(this, FALSE, message);
 		case IKE_AUTH:
 			break;
 		default:
@@ -1060,6 +1115,10 @@ METHOD(task_t, build_r, status_t,
 			if (!this->my_auth)
 			{
 				goto local_auth_failed;
+			}
+			if (this->int_auth.ptr && this->my_auth->set_int_auth)
+			{
+				this->my_auth->set_int_auth(this->my_auth, this->int_auth);
 			}
 		}
 	}
@@ -1258,6 +1317,8 @@ METHOD(task_t, process_i, status_t,
 				this->ike_sa->enable_extension(this->ike_sa, EXT_MULTIPLE_AUTH);
 			}
 			return collect_other_init_data(this, message);
+		case IKE_INTERMEDIATE:
+			return collect_int_auth_data(this, TRUE, message);
 		case IKE_AUTH:
 			break;
 		default:
@@ -1362,6 +1423,11 @@ METHOD(task_t, process_i, status_t,
 				if (!this->other_auth)
 				{
 					goto peer_auth_failed;
+				}
+				if (this->int_auth.ptr && this->other_auth->set_int_auth)
+				{
+					this->other_auth->set_int_auth(this->other_auth,
+												   this->int_auth);
 				}
 			}
 			else
@@ -1524,6 +1590,7 @@ METHOD(task_t, migrate, void,
 	clear_ppk(this);
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
+	chunk_free(&this->int_auth);
 	DESTROY_IF(this->my_packet);
 	DESTROY_IF(this->other_packet);
 	DESTROY_IF(this->peer_cfg);
@@ -1552,6 +1619,7 @@ METHOD(task_t, destroy, void,
 	clear_ppk(this);
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
+	chunk_free(&this->int_auth);
 	DESTROY_IF(this->my_packet);
 	DESTROY_IF(this->other_packet);
 	DESTROY_IF(this->my_auth);
