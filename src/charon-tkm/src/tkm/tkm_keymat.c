@@ -392,8 +392,8 @@ METHOD(keymat_v2_t, get_int_auth, bool,
 
 METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_tkm_keymat_t *this, bool verify, chunk_t ike_sa_init,
-	chunk_t nonce, chunk_t ppk, identification_t *id, char reserved[3],
-	chunk_t *octets, array_t *schemes)
+	chunk_t nonce, chunk_t int_auth, chunk_t ppk, identification_t *id,
+	char reserved[3], chunk_t *octets, array_t *schemes)
 {
 	sign_info_t *sign;
 
@@ -435,8 +435,8 @@ METHOD(keymat_v2_t, get_skd, pseudo_random_function_t,
 
 METHOD(keymat_v2_t, get_psk_sig, bool,
 	private_tkm_keymat_t *this, bool verify, chunk_t ike_sa_init, chunk_t nonce,
-	chunk_t secret, chunk_t ppk, identification_t *id, char reserved[3],
-	chunk_t *sig)
+	chunk_t int_auth, chunk_t secret, chunk_t ppk, identification_t *id,
+	char reserved[3], chunk_t *sig)
 {
 	return FALSE;
 }
