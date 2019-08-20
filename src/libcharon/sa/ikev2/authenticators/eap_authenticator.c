@@ -484,8 +484,8 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
-	if (!keymat->get_psk_sig(keymat, TRUE, init, nonce, this->msk, this->ppk,
-							 other_id, this->reserved, &auth_data))
+	if (!keymat->get_psk_sig(keymat, TRUE, init, nonce, chunk_empty, this->msk,
+							 this->ppk, other_id, this->reserved, &auth_data))
 	{
 		return FALSE;
 	}
@@ -530,8 +530,8 @@ static bool build_auth(private_eap_authenticator_t *this, message_t *message,
 	DBG1(DBG_IKE, "authentication of '%Y' (myself) with %N",
 		 my_id, auth_class_names, AUTH_CLASS_EAP);
 
-	if (!keymat->get_psk_sig(keymat, FALSE, init, nonce, this->msk, this->ppk,
-							 my_id, this->reserved, &auth_data))
+	if (!keymat->get_psk_sig(keymat, FALSE, init, nonce, chunk_empty, this->msk,
+							 this->ppk, my_id, this->reserved, &auth_data))
 	{
 		return FALSE;
 	}
@@ -543,8 +543,9 @@ static bool build_auth(private_eap_authenticator_t *this, message_t *message,
 
 	if (this->no_ppk_auth)
 	{
-		if (!keymat->get_psk_sig(keymat, FALSE, init, nonce, this->msk,
-							chunk_empty, my_id, this->reserved, &auth_data))
+		if (!keymat->get_psk_sig(keymat, FALSE, init, nonce, chunk_empty,
+								 this->msk, chunk_empty, my_id, this->reserved,
+								 &auth_data))
 		{
 			DBG1(DBG_IKE, "failed adding NO_PPK_AUTH notify");
 			return FALSE;
