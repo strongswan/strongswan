@@ -737,8 +737,8 @@ METHOD(keymat_v2_t, get_int_auth, bool,
 
 METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
-	chunk_t nonce, chunk_t ppk, identification_t *id, char reserved[3],
-	chunk_t *octets, array_t *schemes)
+	chunk_t nonce, chunk_t int_auth, chunk_t ppk, identification_t *id,
+	char reserved[3], chunk_t *octets, array_t *schemes)
 {
 	chunk_t chunk, idx;
 	chunk_t skp_ppk = chunk_empty;
@@ -769,8 +769,9 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 		return FALSE;
 	}
 	chunk_clear(&skp_ppk);
-	*octets = chunk_cat("ccm", ike_sa_init, nonce, chunk);
-	DBG3(DBG_IKE, "octets = message + nonce + prf(Sk_px, IDx') %B", octets);
+	*octets = chunk_cat("ccmc", ike_sa_init, nonce, chunk, int_auth);
+	DBG3(DBG_IKE, "octets = message + nonce + prf(Sk_px, IDx') + IntAuth %B",
+		 octets);
 	return TRUE;
 }
 
@@ -781,9 +782,9 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 #define IKEV2_KEY_PAD_LENGTH 17
 
 METHOD(keymat_v2_t, get_psk_sig, bool,
-	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init, chunk_t nonce,
-	chunk_t secret, chunk_t ppk, identification_t *id, char reserved[3],
-	chunk_t *sig)
+	private_keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
+	chunk_t nonce, chunk_t int_auth, chunk_t secret, chunk_t ppk,
+	identification_t *id, char reserved[3], chunk_t *sig)
 {
 	chunk_t skp_ppk = chunk_empty, key = chunk_empty, octets = chunk_empty;
 	chunk_t key_pad;
@@ -801,8 +802,8 @@ METHOD(keymat_v2_t, get_psk_sig, bool,
 			secret = skp_ppk;
 		}
 	}
-	if (!get_auth_octets(this, verify, ike_sa_init, nonce, ppk, id, reserved,
-						 &octets, NULL))
+	if (!get_auth_octets(this, verify, ike_sa_init, nonce, int_auth, ppk, id,
+						 reserved, &octets, NULL))
 	{
 		goto failure;
 	}
