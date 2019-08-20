@@ -122,21 +122,23 @@ struct keymat_v2_t {
 	 * the get_psk_sig() method instead.
 	 *
 	 * @param verify		TRUE to create for verification, FALSE to sign
-	 * @param ike_sa_init	encoded ike_sa_init message
+	 * @param ike_sa_init	encoded IKE_SA_INIT message
 	 * @param nonce			nonce value
+	 * @param int_auth		concatenated data of IKE_INTERMEDIATE exchanges
 	 * @param ppk			optional postquantum preshared key
 	 * @param id			identity
 	 * @param reserved		reserved bytes of id_payload
-	 * @param octests		chunk receiving allocated auth octets
+	 * @param octets		chunk receiving allocated auth octets
 	 * @param schemes		array containing signature schemes
 	 * 						(signature_params_t*) in case they need to be
 	 *						modified by the keymat implementation
 	 * @return				TRUE if octets created successfully
 	 */
 	bool (*get_auth_octets)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
-							chunk_t nonce, chunk_t ppk, identification_t *id,
-							char reserved[3], chunk_t *octets,
-							array_t *schemes);
+							chunk_t nonce, chunk_t int_auth, chunk_t ppk,
+							identification_t *id, char reserved[3],
+							chunk_t *octets, array_t *schemes);
+
 	/**
 	 * Build the shared secret signature used for PSK and EAP authentication.
 	 *
@@ -145,8 +147,9 @@ struct keymat_v2_t {
 	 * used as secret (used for EAP methods without MSK).
 	 *
 	 * @param verify		TRUE to create for verification, FALSE to sign
-	 * @param ike_sa_init	encoded ike_sa_init message
+	 * @param ike_sa_init	encoded IKE_SA_INIT message
 	 * @param nonce			nonce value
+	 * @param int_auth		concatenated data of IKE_INTERMEDIATE exchanges
 	 * @param secret		optional secret to include into signature
 	 * @param ppk			optional postquantum preshared key
 	 * @param id			identity
@@ -155,8 +158,9 @@ struct keymat_v2_t {
 	 * @return				TRUE if signature created successfully
 	 */
 	bool (*get_psk_sig)(keymat_v2_t *this, bool verify, chunk_t ike_sa_init,
-						chunk_t nonce, chunk_t secret, chunk_t ppk,
-						identification_t *id, char reserved[3], chunk_t *sig);
+						chunk_t nonce, chunk_t int_auth, chunk_t secret,
+						chunk_t ppk, identification_t *id, char reserved[3],
+						chunk_t *sig);
 
 	/**
 	 * Add a hash algorithm supported by the peer for signature authentication.
