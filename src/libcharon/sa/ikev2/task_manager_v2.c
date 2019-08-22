@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2018 Tobias Brunner
+ * Copyright (C) 2007-2019 Tobias Brunner
  * Copyright (C) 2007-2010 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -836,6 +836,31 @@ static status_t process_response(private_task_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 
+	enumerator = array_create_enumerator(this->active_tasks);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (!task->post_process)
+		{
+			continue;
+		}
+		switch (task->post_process(task, message))
+		{
+			case SUCCESS:
+				array_remove_at(this->active_tasks, enumerator);
+				task->destroy(task);
+				break;
+			case NEED_MORE:
+				break;
+			default:
+				/* critical failure, destroy IKE_SA */
+				array_remove_at(this->active_tasks, enumerator);
+				enumerator->destroy(enumerator);
+				task->destroy(task);
+				return DESTROY_ME;
+		}
+	}
+	enumerator->destroy(enumerator);
+
 	this->initiating.mid++;
 	this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	clear_packets(this->initiating.packets);
@@ -1304,6 +1329,31 @@ static status_t process_request(private_task_manager_t *this,
 				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 				/* FALL */
 			case DESTROY_ME:
+				/* critical failure, destroy IKE_SA */
+				array_remove_at(this->passive_tasks, enumerator);
+				enumerator->destroy(enumerator);
+				task->destroy(task);
+				return DESTROY_ME;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	enumerator = array_create_enumerator(this->passive_tasks);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (!task->post_process)
+		{
+			continue;
+		}
+		switch (task->post_process(task, message))
+		{
+			case SUCCESS:
+				array_remove_at(this->passive_tasks, enumerator);
+				task->destroy(task);
+				break;
+			case NEED_MORE:
+				break;
+			default:
 				/* critical failure, destroy IKE_SA */
 				array_remove_at(this->passive_tasks, enumerator);
 				enumerator->destroy(enumerator);
