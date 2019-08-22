@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2018 Tobias Brunner
+ * Copyright (C) 2007-2019 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -183,6 +183,18 @@ struct task_t {
 	 *						- SUCCESS if verification is successful
 	 */
 	status_t (*pre_process) (task_t *this, message_t *message);
+
+	/**
+	 * Called after a message has been processed (optional to implement).
+	 *
+	 * @param message		processed message
+	 * @return
+	 *						- SUCCESS if task completed
+	 *						- NEED_MORE if another call to build/process needed
+	 *						- Anything else will result in the destruction of
+	 *						  the IKE_SA
+	 */
+	status_t (*post_process) (task_t *this, message_t *message);
 
 	/**
 	 * Get the type of the task implementation.
