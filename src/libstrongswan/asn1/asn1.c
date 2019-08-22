@@ -851,15 +851,14 @@ chunk_t asn1_bitstring(const char *mode, chunk_t content)
  */
 chunk_t asn1_integer(const char *mode, chunk_t content)
 {
-	chunk_t object;
+	chunk_t zero = chunk_from_chars(0x00), object;
 	size_t len;
 	u_char *pos;
 	bool move;
 
-
 	if (content.len == 0)
 	{	/* make sure 0 is encoded properly */
-		content = chunk_from_chars(0x00);
+		content = zero;
 		move = FALSE;
 	}
 	else
