@@ -50,12 +50,12 @@ keywords.h: $(srcdir)/keywords.h.in
 		$(AM_V_GEN) \
 		sed \
 		-e "s:\@GPERF_LEN_TYPE\@:$(GPERF_LEN_TYPE):" \
-		$< > $@
+		$(srcdir)/keywords.h.in > $@
 
 keywords.c:	$(srcdir)/keywords.txt keywords.h
 		$(AM_V_GEN) \
 		$(GPERF) -m 10 -C -G -D -t \
-			--output-file=$@ $<
+			--output-file=$@ $(srcdir)/keywords.txt
 
 install-exec-local :
 		test -e "$(DESTDIR)${sysconfdir}/ipsec.d" || $(INSTALL) -d "$(DESTDIR)$(sysconfdir)/ipsec.d" || true
