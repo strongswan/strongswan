@@ -24,7 +24,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.SystemClock;
-import android.support.v4.content.ContextCompat;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
@@ -40,6 +39,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
+
+import androidx.core.content.ContextCompat;
 
 public class VpnStateService extends Service
 {

@@ -39,7 +39,6 @@ import org.strongswan.android.utils.Constants;
 @TargetApi(Build.VERSION_CODES.N)
 public class VpnTileService extends TileService implements VpnStateService.VpnStateListener
 {
-	private boolean mListening;
 	private VpnProfileDataSource mDataSource;
 	private VpnStateService mService;
 	private final ServiceConnection mServiceConnection = new ServiceConnection()
@@ -54,7 +53,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		public void onServiceConnected(ComponentName name, IBinder service)
 		{
 			mService = ((VpnStateService.LocalBinder)service).getService();
-			if (mListening)
+			if (mDataSource != null)
 			{
 				mService.registerListener(VpnTileService.this);
 				updateTile();
@@ -70,27 +69,27 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		Context context = getApplicationContext();
 		context.bindService(new Intent(context, VpnStateService.class),
 							mServiceConnection, Service.BIND_AUTO_CREATE);
-
-		mDataSource = new VpnProfileDataSource(this);
-		mDataSource.open();
 	}
 
 	@Override
 	public void onDestroy()
 	{
 		super.onDestroy();
+
 		if (mService != null)
 		{
 			getApplicationContext().unbindService(mServiceConnection);
 		}
-		mDataSource.close();
 	}
 
 	@Override
 	public void onStartListening()
 	{
 		super.onStartListening();
-		mListening = true;
+
+		mDataSource = new VpnProfileDataSource(this);
+		mDataSource.open();
+
 		if (mService != null)
 		{
 			mService.registerListener(this);
@@ -102,11 +101,14 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 	public void onStopListening()
 	{
 		super.onStopListening();
-		mListening = false;
+
 		if (mService != null)
 		{
 			mService.unregisterListener(this);
 		}
+
+		mDataSource.close();
+		mDataSource = null;
 	}
 
 	private VpnProfile getProfile()
