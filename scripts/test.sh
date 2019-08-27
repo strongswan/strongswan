@@ -270,6 +270,26 @@ osx)
 	export CPPFLAGS
 	export LDFLAGS
 	;;
+freebsd)
+	# use the options of the FreeBSD port (including options), except smp,
+	# which requires a patch but is deprecated anyway, only using the builtin
+	# printf hooks
+	CONFIG="--enable-kernel-pfkey --enable-kernel-pfroute --disable-scripts
+			--disable-kernel-netlink --enable-openssl --enable-eap-identity
+			--enable-eap-md5 --enable-eap-tls --enable-eap-mschapv2
+			--enable-eap-peap --enable-eap-ttls --enable-md4 --enable-blowfish
+			--enable-addrblock --enable-whitelist --enable-cmd --enable-curl
+			--enable-eap-aka --enable-eap-aka-3gpp2 --enable-eap-dynamic
+			--enable-eap-radius --enable-eap-sim --enable-eap-sim-file
+			--enable-gcm --enable-ipseckey --enable-kernel-libipsec
+			--enable-load-tester --enable-ldap --enable-mediation
+			--enable-mysql --enable-sqlite --enable-tpm	--enable-unbound
+			--enable-unity --enable-xauth-eap --enable-xauth-pam
+			--with-printf-hooks=builtin --enable-attr-sql --enable-sql"
+	DEPS="gmp openldap-client libxml2 mysql80-client sqlite3 unbound ldns"
+	export GPERF=/usr/local/bin/gperf
+	export LEX=/usr/local/bin/flex
+	;;
 fuzzing)
 	CFLAGS="$CFLAGS -DNO_CHECK_MEMWIPE"
 	CONFIG="--enable-fuzzing --enable-static --disable-shared --disable-scripts
@@ -317,6 +337,10 @@ if test "$1" = "deps"; then
 		# workaround for issue #6352
 		brew uninstall --force libtool && brew install libtool && \
 		brew install $DEPS
+		;;
+	freebsd)
+		pkg install -y automake autoconf libtool pkgconf && \
+		pkg install -y bison flex gperf gettext $DEPS
 		;;
 	esac
 	exit $?

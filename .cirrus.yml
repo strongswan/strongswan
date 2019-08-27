@@ -1,0 +1,13 @@
+freebsd_instance:
+  image: freebsd-12-0-release-amd64
+
+env:
+  TESTS_REDUCED_KEYLENGTHS: yes
+  LEAK_DETECTIVE: no
+  MONOLITHIC: no
+  TEST: freebsd
+  TRAVIS_OS_NAME: freebsd
+
+task:
+  install_script: ./scripts/test.sh deps
+  script: ./scripts/test.sh
