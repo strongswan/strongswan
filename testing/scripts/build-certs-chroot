@@ -129,7 +129,7 @@ cp ${CA_CERT} ${DIR}/hosts/alice/etc/raddb/certs
 # Convert strongSwan Root CA certificate into DER format
 openssl x509 -in ${CA_CERT} -outform der -out ${CA_CERT_DER}
 
-# Gernerate a stale CRL
+# Generate a stale CRL
 pki --signcrl --cakey ${CA_KEY} --cacert ${CA_CERT} \
     --this-update "${START}" --lifetime 1 > ${CA_LAST_CRL}
 
@@ -857,7 +857,7 @@ pki --acert --issuerkey ${TEST_KEY} --issuercert ${TEST_CERT} \
     --in ${CA_DIR}/certs/01.pem --group sales \
     --not-before "${SH_END}" --not-after "${EE_END}" --outform pem > ${ACERT_CS}
 
-# Put a copy into the ikev2/acert-inline scenarion
+# Put a copy into the ikev2/acert-inline scenario
 TEST="${TEST_DIR}/ikev2/acert-inline"
 mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/private
 mkdir -p ${TEST}/hosts/moon/${IPSEC_DIR}/aacerts
@@ -880,7 +880,7 @@ pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --outform pem > ${TEST_CERT}
 cp ${TEST_CERT} ${CA_DIR}/certs/${SERIAL}.pem
 
-# Genrate dave's attribute certificate for sales from expired AA
+# Generate dave's attribute certificate for sales from expired AA
 ACERT=${TEST}/hosts/dave/${IPSEC_DIR}/acerts/dave-expired-aa.pem
 mkdir -p ${TEST}/hosts/dave/${IPSEC_DIR}/acerts
 pki --acert --issuerkey ${TEST_KEY} --issuercert ${TEST_CERT} \

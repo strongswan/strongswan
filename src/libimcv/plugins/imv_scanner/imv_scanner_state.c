@@ -66,7 +66,7 @@ struct private_imv_scanner_state_t {
 	uint32_t action_flags;
 
 	/**
-	 * IMV database session associatied with TNCCS connection
+	 * IMV database session associated with TNCCS connection
 	 */
 	imv_session_t *session;
 

@@ -62,7 +62,7 @@ struct ocsp_response_t {
 	 * @param revocation_time	receives time of revocation, if revoked
 	 * @param revocation_reason	receives reason of revocation, if revoked
 	 * @param this_update		creation time of revocation list
-	 * @param next_update		exptected time of next revocation list
+	 * @param next_update		expected time of next revocation list
 	 * @return					certificate revocation status
 	 */
 	cert_validation_t (*get_status)(ocsp_response_t *this,

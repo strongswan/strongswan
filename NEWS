@@ -1966,7 +1966,7 @@ strongswan-4.3.1
   fuzzing techniques: 1) Sending a malformed IKE_SA_INIT request leaved an
   incomplete state which caused a null pointer dereference if a subsequent
   CREATE_CHILD_SA request was sent. 2) Sending an IKE_AUTH request with either
-  a missing TSi or TSr payload caused a null pointer derefence because the
+  a missing TSi or TSr payload caused a null pointer dereference because the
   checks for TSi and TSr were interchanged. The IKEv2 fuzzer used was
   developed by the Orange Labs vulnerability research team. The tool was
   initially written by Gabriel Campana and is now maintained by Laurent Butti.
