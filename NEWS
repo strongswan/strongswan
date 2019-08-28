@@ -1,3 +1,20 @@
+strongswan-5.8.1
+----------------
+
+- RDNs in Distinguished Names can now optionally be matched less strict. The
+  global option charon.rdn_matching takes two alternative values that cause the
+  matching algorithm to either ignore the order of matched RDNs or additionally
+  accept DNs that contain more RDNs than configured (unmatched RDNs are treated
+  like wildcard matches).
+
+- The updown plugin now passes the same interface to the script that is also
+  used for the automatically installed routes, i.e. the interface over which the
+  peer is reached instead of the interface on which the local address is found.
+
+- TPM 2.0 contexts are now protected by a mutex to prevent issues if multiple
+  IKE_SAs use the same private key concurrently.
+
+
 strongswan-5.8.0
 ----------------
 
