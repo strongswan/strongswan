@@ -362,7 +362,7 @@ METHOD(task_t, process_r, status_t,
 		{
 			linked_list_t *list;
 			sa_payload_t *sa_payload;
-			bool private, prefer_configured;
+			proposal_selection_flag_t flags = 0;
 
 			this->ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 			DBG0(DBG_IKE, "%H is initiating a Main Mode IKE_SA",
@@ -386,12 +386,17 @@ METHOD(task_t, process_r, status_t,
 			}
 
 			list = sa_payload->get_proposals(sa_payload);
-			private = this->ike_sa->supports_extension(this->ike_sa,
-													   EXT_STRONGSWAN);
-			prefer_configured = lib->settings->get_bool(lib->settings,
-							"%s.prefer_configured_proposals", TRUE, lib->ns);
+			if (this->ike_sa->supports_extension(this->ike_sa , EXT_STRONGSWAN))
+			{
+				flags |= PROPOSAL_ALLOW_PRIVATE;
+			}
+			if (lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns))
+			{
+				flags |= PROPOSAL_PREFER_CONFIGURED;
+			}
 			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
-											list, private, prefer_configured);
+											list, flags);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{
@@ -624,8 +629,8 @@ METHOD(task_t, process_i, status_t,
 			linked_list_t *list;
 			sa_payload_t *sa_payload;
 			auth_method_t method;
+			proposal_selection_flag_t flags = PROPOSAL_PREFER_CONFIGURED;
 			uint32_t lifetime;
-			bool private;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													PLV1_SECURITY_ASSOCIATION);
@@ -635,10 +640,12 @@ METHOD(task_t, process_i, status_t,
 				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 			list = sa_payload->get_proposals(sa_payload);
-			private = this->ike_sa->supports_extension(this->ike_sa,
-														   EXT_STRONGSWAN);
+			if (this->ike_sa->supports_extension(this->ike_sa , EXT_STRONGSWAN))
+			{
+				flags |= PROPOSAL_ALLOW_PRIVATE;
+			}
 			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
-															list, private, TRUE);
+															list, flags);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{

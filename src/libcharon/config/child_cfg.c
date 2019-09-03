@@ -234,13 +234,13 @@ METHOD(child_cfg_t, get_proposals, linked_list_t*,
 }
 
 METHOD(child_cfg_t, select_proposal, proposal_t*,
-	private_child_cfg_t*this, linked_list_t *proposals, bool strip_dh,
-	bool private, bool prefer_self)
+	private_child_cfg_t*this, linked_list_t *proposals,
+	proposal_selection_flag_t flags)
 {
 	enumerator_t *prefer_enum, *match_enum;
 	proposal_t *proposal, *match, *selected = NULL;
 
-	if (prefer_self)
+	if (flags & PROPOSAL_PREFER_CONFIGURED)
 	{
 		prefer_enum = this->proposals->create_enumerator(this->proposals);
 		match_enum = proposals->create_enumerator(proposals);
@@ -254,11 +254,11 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 	while (prefer_enum->enumerate(prefer_enum, &proposal))
 	{
 		proposal = proposal->clone(proposal);
-		if (strip_dh)
+		if (flags & PROPOSAL_STRIP_DH)
 		{
 			proposal->strip_dh(proposal, MODP_NONE);
 		}
-		if (prefer_self)
+		if (flags & PROPOSAL_PREFER_CONFIGURED)
 		{
 			proposals->reset_enumerator(proposals, match_enum);
 		}
@@ -269,11 +269,11 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 		while (match_enum->enumerate(match_enum, &match))
 		{
 			match = match->clone(match);
-			if (strip_dh)
+			if (flags & PROPOSAL_STRIP_DH)
 			{
 				match->strip_dh(match, MODP_NONE);
 			}
-			selected = proposal->select(proposal, match, prefer_self, private);
+			selected = proposal->select(proposal, match, flags);
 			match->destroy(match);
 			if (selected)
 			{

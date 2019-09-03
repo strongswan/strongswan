@@ -374,8 +374,8 @@ METHOD(task_t, process_r, status_t,
 			id_payload_t *id_payload;
 			identification_t *id;
 			linked_list_t *list;
+			proposal_selection_flag_t flags = 0;
 			uint16_t group;
-			bool prefer_configured;
 
 			this->ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 			DBG0(DBG_IKE, "%H is initiating a Aggressive Mode IKE_SA",
@@ -399,10 +399,13 @@ METHOD(task_t, process_r, status_t,
 			}
 
 			list = sa_payload->get_proposals(sa_payload);
-			prefer_configured = lib->settings->get_bool(lib->settings,
-							"%s.prefer_configured_proposals", TRUE, lib->ns);
-			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
-												list, FALSE, prefer_configured);
+			if (lib->settings->get_bool(lib->settings,
+						"%s.prefer_configured_proposals", TRUE, lib->ns))
+			{
+				flags = PROPOSAL_PREFER_CONFIGURED;
+			}
+			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg, list,
+															flags);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{
@@ -641,8 +644,8 @@ METHOD(task_t, process_i, status_t,
 			return send_notify(this, INVALID_PAYLOAD_TYPE);
 		}
 		list = sa_payload->get_proposals(sa_payload);
-		this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
-														list, FALSE, TRUE);
+		this->proposal = this->ike_cfg->select_proposal(this->ike_cfg, list,
+													PROPOSAL_PREFER_CONFIGURED);
 		list->destroy_offset(list, offsetof(proposal_t, destroy));
 		if (!this->proposal)
 		{

@@ -338,8 +338,8 @@ METHOD(proposal_t, strip_dh, void,
  * Select a matching proposal from this and other.
  */
 static bool select_algo(private_proposal_t *this, proposal_t *other,
-						transform_type_t type, bool priv, bool log,
-						uint16_t *alg, uint16_t *ks)
+						transform_type_t type, proposal_selection_flag_t flags,
+						bool log, uint16_t *alg, uint16_t *ks)
 {
 	enumerator_t *e1, *e2;
 	uint16_t alg1, alg2, ks1, ks2;
@@ -390,7 +390,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 		{
 			if (alg1 == alg2 && ks1 == ks2)
 			{
-				if (!priv && alg1 >= 1024)
+				if (!(flags & PROPOSAL_ALLOW_PRIVATE) && alg1 >= 1024)
 				{
 					if (log)
 					{
@@ -417,7 +417,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
  * is stored there and errors are logged.
  */
 static bool select_algos(private_proposal_t *this, proposal_t *other,
-						 proposal_t *selected, bool private)
+						 proposal_t *selected, proposal_selection_flag_t flags)
 {
 	transform_type_t type;
 	array_t *types;
@@ -434,7 +434,7 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 		{
 			continue;
 		}
-		if (select_algo(this, other, type, private, selected != NULL, &alg, &ks))
+		if (select_algo(this, other, type, flags, selected != NULL, &alg, &ks))
 		{
 			if (alg == 0 && type != EXTENDED_SEQUENCE_NUMBERS)
 			{	/* 0 is "valid" for extended sequence numbers, for other
@@ -468,8 +468,8 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 }
 
 METHOD(proposal_t, select_proposal, proposal_t*,
-	private_proposal_t *this, proposal_t *other, bool other_remote,
-	bool private)
+	private_proposal_t *this, proposal_t *other,
+	proposal_selection_flag_t flags)
 {
 	proposal_t *selected;
 
@@ -481,7 +481,7 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 		return NULL;
 	}
 
-	if (other_remote)
+	if (flags & PROPOSAL_PREFER_CONFIGURED)
 	{
 		selected = proposal_create(this->protocol, other->get_number(other));
 		selected->set_spi(selected, other->get_spi(other));
@@ -492,7 +492,7 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 		selected->set_spi(selected, this->spi);
 	}
 
-	if (!select_algos(this, other, selected, private))
+	if (!select_algos(this, other, selected, flags))
 	{
 		selected->destroy(selected);
 		return NULL;
@@ -502,13 +502,14 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 }
 
 METHOD(proposal_t, matches, bool,
-	private_proposal_t *this, proposal_t *other, bool private)
+	private_proposal_t *this, proposal_t *other,
+	proposal_selection_flag_t flags)
 {
 	if (this->protocol != other->get_protocol(other))
 	{
 		return FALSE;
 	}
-	return select_algos(this, other, NULL, private);
+	return select_algos(this, other, NULL, flags);
 }
 
 METHOD(proposal_t, get_protocol, protocol_id_t,

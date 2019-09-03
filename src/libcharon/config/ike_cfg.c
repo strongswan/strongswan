@@ -329,7 +329,8 @@ METHOD(ike_cfg_t, has_proposal, bool,
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->matches(proposal, match, private))
+		if (proposal->matches(proposal, match,
+							  private ? PROPOSAL_ALLOW_PRIVATE : 0))
 		{
 			enumerator->destroy(enumerator);
 			return TRUE;
@@ -340,13 +341,13 @@ METHOD(ike_cfg_t, has_proposal, bool,
 }
 
 METHOD(ike_cfg_t, select_proposal, proposal_t*,
-	private_ike_cfg_t *this, linked_list_t *proposals, bool private,
-	bool prefer_self)
+	private_ike_cfg_t *this, linked_list_t *proposals,
+	proposal_selection_flag_t flags)
 {
 	enumerator_t *prefer_enum, *match_enum;
 	proposal_t *proposal, *match, *selected = NULL;
 
-	if (prefer_self)
+	if (flags & PROPOSAL_PREFER_CONFIGURED)
 	{
 		prefer_enum = this->proposals->create_enumerator(this->proposals);
 		match_enum = proposals->create_enumerator(proposals);
@@ -359,7 +360,7 @@ METHOD(ike_cfg_t, select_proposal, proposal_t*,
 
 	while (prefer_enum->enumerate(prefer_enum, (void**)&proposal))
 	{
-		if (prefer_self)
+		if (flags & PROPOSAL_PREFER_CONFIGURED)
 		{
 			proposals->reset_enumerator(proposals, match_enum);
 		}
@@ -369,7 +370,7 @@ METHOD(ike_cfg_t, select_proposal, proposal_t*,
 		}
 		while (match_enum->enumerate(match_enum, (void**)&match))
 		{
-			selected = proposal->select(proposal, match, prefer_self, private);
+			selected = proposal->select(proposal, match, flags);
 			if (selected)
 			{
 				DBG2(DBG_CFG, "received proposals: %#P", proposals);

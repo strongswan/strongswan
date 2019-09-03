@@ -186,12 +186,11 @@ struct ike_cfg_t {
 	 * Returned proposal must be destroyed after use.
 	 *
 	 * @param proposals		list of proposals to select from
-	 * @param private		accept algorithms from a private range
-	 * @param prefer_self	whether to prefer configured or supplied proposals
+	 * @param flags			flags to consider during proposal selection
 	 * @return				selected proposal, or NULL if none matches.
 	 */
 	proposal_t *(*select_proposal) (ike_cfg_t *this, linked_list_t *proposals,
-									bool private, bool prefer_self);
+									proposal_selection_flag_t flags);
 
 	/**
 	 * Check if the config has a matching proposal.

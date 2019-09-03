@@ -453,17 +453,21 @@ static void process_sa_payload(private_ike_init_t *this, message_t *message,
 	enumerator_t *enumerator;
 	linked_list_t *proposal_list;
 	host_t *me, *other;
-	bool private, prefer_configured;
+	proposal_selection_flag_t flags = 0;
 
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 
 	proposal_list = sa_payload->get_proposals(sa_payload);
-	private = this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN);
-	prefer_configured = lib->settings->get_bool(lib->settings,
-							"%s.prefer_configured_proposals", TRUE, lib->ns);
-
-	this->proposal = ike_cfg->select_proposal(ike_cfg, proposal_list, private,
-											  prefer_configured);
+	if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
+	{
+		flags |= PROPOSAL_ALLOW_PRIVATE;
+	}
+	if (lib->settings->get_bool(lib->settings, "%s.prefer_configured_proposals",
+								TRUE, lib->ns))
+	{
+		flags |= PROPOSAL_PREFER_CONFIGURED;
+	}
+	this->proposal = ike_cfg->select_proposal(ike_cfg, proposal_list, flags);
 	if (!this->proposal)
 	{
 		if (!this->initiator && !this->old_sa)
@@ -481,7 +485,7 @@ static void process_sa_payload(private_ike_init_t *this, message_t *message,
 				DBG1(DBG_IKE, "no matching proposal found, trying alternative "
 					 "config");
 				this->proposal = cfg->select_proposal(cfg, proposal_list,
-													private, prefer_configured);
+													  flags);
 				if (this->proposal)
 				{
 					alt_cfg = cfg->get_ref(cfg);

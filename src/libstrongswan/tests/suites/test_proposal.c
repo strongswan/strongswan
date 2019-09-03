@@ -121,7 +121,7 @@ START_TEST(test_select)
 									   select_data[_i].self);
 	other = proposal_create_from_string(select_data[_i].proto,
 										select_data[_i].other);
-	selected = self->select(self, other, TRUE, FALSE);
+	selected = self->select(self, other, PROPOSAL_PREFER_CONFIGURED);
 	if (select_data[_i].expected)
 	{
 		expected = proposal_create_from_string(select_data[_i].proto,
@@ -149,12 +149,12 @@ START_TEST(test_select_spi)
 	other = proposal_create_from_string(PROTO_ESP, "aes128-sha256-modp3072");
 	other->set_spi(other, 0x12345678);
 
-	selected = self->select(self, other, TRUE, FALSE);
+	selected = self->select(self, other, PROPOSAL_PREFER_CONFIGURED);
 	ck_assert(selected);
 	ck_assert_int_eq(selected->get_spi(selected), other->get_spi(other));
 	selected->destroy(selected);
 
-	selected = self->select(self, other, FALSE, FALSE);
+	selected = self->select(self, other, 0);
 	ck_assert(selected);
 	ck_assert_int_eq(selected->get_spi(selected), self->get_spi(self));
 	selected->destroy(selected);
@@ -267,7 +267,7 @@ START_TEST(test_unknown_transform_types_select_fail)
 	other = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
 	other->add_algorithm(other, 242, 42, 0);
 
-	selected = self->select(self, other, TRUE, FALSE);
+	selected = self->select(self, other, PROPOSAL_PREFER_CONFIGURED);
 	ck_assert(!selected);
 	other->destroy(other);
 	self->destroy(self);
@@ -283,7 +283,7 @@ START_TEST(test_unknown_transform_types_select_fail_subtype)
 	other = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
 	other->add_algorithm(other, 242, 42, 0);
 
-	selected = self->select(self, other, TRUE, FALSE);
+	selected = self->select(self, other, PROPOSAL_PREFER_CONFIGURED);
 	ck_assert(!selected);
 	other->destroy(other);
 	self->destroy(self);
@@ -300,7 +300,7 @@ START_TEST(test_unknown_transform_types_select_success)
 	other->add_algorithm(other, 242, 42, 128);
 	other->add_algorithm(other, 242, 1, 0);
 
-	selected = self->select(self, other, TRUE, FALSE);
+	selected = self->select(self, other, PROPOSAL_PREFER_CONFIGURED);
 	ck_assert(selected);
 	assert_proposal_eq(selected, "IKE:AES_CBC_128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/ECP_256/UNKNOWN_242_42_128");
 	selected->destroy(selected);

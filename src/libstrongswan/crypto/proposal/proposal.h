@@ -23,6 +23,7 @@
 #define PROPOSAL_H_
 
 typedef enum protocol_id_t protocol_id_t;
+typedef enum proposal_selection_flag_t proposal_selection_flag_t;
 typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
 typedef struct proposal_t proposal_t;
 
@@ -50,6 +51,18 @@ enum protocol_id_t {
  * enum names for protocol_id_t
  */
 extern enum_name_t *protocol_id_names;
+
+/**
+ * Flags for selecting proposals
+ */
+enum proposal_selection_flag_t {
+	/** Accept algorithms from a private range. */
+	PROPOSAL_ALLOW_PRIVATE = (1<<0),
+	/** Whether to prefer configured or supplied proposals. */
+	PROPOSAL_PREFER_CONFIGURED = (1<<1),
+	/** Whether to strip out diffie hellman groups */
+	PROPOSAL_STRIP_DH = (1<<2),
+};
 
 /**
  * Stores a set of algorithms used for an SA.
@@ -132,15 +145,16 @@ struct proposal_t {
 	 * compared. If they have at least one algorithm of each type
 	 * in common, a resulting proposal of this kind is created.
 	 *
+	 * If the flag PROPOSAL_PREFER_CONFIGURED is set, other is expected to be
+	 * the remote proposal from which to copy SPI and proposal number to the
+	 * result, otherwise copy from this proposal.
+	 *
 	 * @param other			proposal to compare against
-	 * @param other_remote	whether other is the remote proposal from which to
-	 *						copy SPI and proposal number to the result,
-	 *						otherwise copy from this proposal
-	 * @param private		accepts algorithms allocated in a private range
+	 * @param flags			flags to consider during proposal selection
 	 * @return				selected proposal, NULL if proposals don't match
 	 */
 	proposal_t *(*select)(proposal_t *this, proposal_t *other,
-						  bool other_remote, bool private);
+						  proposal_selection_flag_t flags);
 
 	/**
 	 * Check if the given proposal matches this proposal.
@@ -148,10 +162,11 @@ struct proposal_t {
 	 * This is similar to select, but no resulting proposal is selected.
 	 *
 	 * @param other			proposal to compare against
-	 * @param private		accepts algorithms allocated in a private range
+	 * @param flags			flags to consider during proposal selection
 	 * @return				TRUE if the proposals match
 	 */
-	bool (*matches)(proposal_t *this, proposal_t *other, bool private);
+	bool (*matches)(proposal_t *this, proposal_t *other,
+					proposal_selection_flag_t flags);
 
 	/**
 	 * Get the protocol ID of the proposal.
