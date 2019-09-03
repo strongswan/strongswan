@@ -310,7 +310,7 @@ charon.rdn_matching = strict
 	the configured identity (missing RDNs are treated like a wildcard match).
 
 	Note that _reordered_ and _relaxed_ impose a considerable overhead on memory
-	usage and runtime, in particular, for mismatches, compared to _static_.
+	usage and runtime, in particular, for mismatches, compared to _strict_.
 
 charon.receive_delay = 0
 	Delay in ms for receiving packets, to simulate larger RTT.
