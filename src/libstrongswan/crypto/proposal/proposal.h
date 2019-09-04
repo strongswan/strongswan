@@ -58,8 +58,8 @@ extern enum_name_t *protocol_id_names;
 enum proposal_selection_flag_t {
 	/** Accept algorithms from a private range. */
 	PROPOSAL_ALLOW_PRIVATE = (1<<0),
-	/** Whether to prefer configured or supplied proposals. */
-	PROPOSAL_PREFER_CONFIGURED = (1<<1),
+	/** Whether to prefer configured (default) or supplied proposals. */
+	PROPOSAL_PREFER_SUPPLIED = (1<<1),
 	/** Whether to skip and ignore diffie hellman groups. */
 	PROPOSAL_SKIP_DH = (1<<2),
 };
@@ -145,7 +145,7 @@ struct proposal_t {
 	 * compared. If they have at least one algorithm of each type
 	 * in common, a resulting proposal of this kind is created.
 	 *
-	 * If the flag PROPOSAL_PREFER_CONFIGURED is set, other is expected to be
+	 * Unless the flag PROPOSAL_PREFER_SUPPLIED is set, other is expected to be
 	 * the remote proposal from which to copy SPI and proposal number to the
 	 * result, otherwise copy from this proposal.
 	 *
@@ -255,7 +255,19 @@ proposal_t *proposal_create_default_aead(protocol_id_t protocol);
  * @param algs				algorithms as string
  * @return					proposal_t object
  */
-proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs);
+proposal_t *proposal_create_from_string(protocol_id_t protocol,
+										const char *algs);
+
+/**
+ * Select a common proposal from the given lists of proposals.
+ *
+ * @param configured		list of configured/local proposals
+ * @param supplied			list of supplied/remote proposals
+ * @param flags				flags to consider during proposal selection
+ * @return					selected proposal, or NULL (allocated)
+ */
+proposal_t *proposal_select(linked_list_t *configured, linked_list_t *supplied,
+							proposal_selection_flag_t flags);
 
 /**
  * printf hook function for proposal_t.

@@ -568,10 +568,10 @@ static status_t select_and_install(private_child_create_t *this,
 	{
 		flags |= PROPOSAL_ALLOW_PRIVATE;
 	}
-	if (lib->settings->get_bool(lib->settings, "%s.prefer_configured_proposals",
-								TRUE, lib->ns))
+	if (!lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns))
 	{
-		flags |= PROPOSAL_PREFER_CONFIGURED;
+		flags |= PROPOSAL_PREFER_SUPPLIED;
 	}
 	this->proposal = this->config->select_proposal(this->config,
 												   this->proposals, flags);

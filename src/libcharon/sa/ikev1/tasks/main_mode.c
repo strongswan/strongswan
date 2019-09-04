@@ -390,10 +390,10 @@ METHOD(task_t, process_r, status_t,
 			{
 				flags |= PROPOSAL_ALLOW_PRIVATE;
 			}
-			if (lib->settings->get_bool(lib->settings,
+			if (!lib->settings->get_bool(lib->settings,
 							"%s.prefer_configured_proposals", TRUE, lib->ns))
 			{
-				flags |= PROPOSAL_PREFER_CONFIGURED;
+				flags |= PROPOSAL_PREFER_SUPPLIED;
 			}
 			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg,
 											list, flags);
@@ -629,7 +629,7 @@ METHOD(task_t, process_i, status_t,
 			linked_list_t *list;
 			sa_payload_t *sa_payload;
 			auth_method_t method;
-			proposal_selection_flag_t flags = PROPOSAL_PREFER_CONFIGURED;
+			proposal_selection_flag_t flags = 0;
 			uint32_t lifetime;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,

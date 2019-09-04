@@ -462,10 +462,10 @@ static void process_sa_payload(private_ike_init_t *this, message_t *message,
 	{
 		flags |= PROPOSAL_ALLOW_PRIVATE;
 	}
-	if (lib->settings->get_bool(lib->settings, "%s.prefer_configured_proposals",
-								TRUE, lib->ns))
+	if (!lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns))
 	{
-		flags |= PROPOSAL_PREFER_CONFIGURED;
+		flags |= PROPOSAL_PREFER_SUPPLIED;
 	}
 	this->proposal = ike_cfg->select_proposal(ike_cfg, proposal_list, flags);
 	if (!this->proposal)

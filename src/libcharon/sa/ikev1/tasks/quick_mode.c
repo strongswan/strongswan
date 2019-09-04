@@ -1136,10 +1136,10 @@ METHOD(task_t, process_r, status_t,
 			{
 				flags |= PROPOSAL_ALLOW_PRIVATE;
 			}
-			if (lib->settings->get_bool(lib->settings,
+			if (!lib->settings->get_bool(lib->settings,
 							"%s.prefer_configured_proposals", TRUE, lib->ns))
 			{
-				flags |= PROPOSAL_PREFER_CONFIGURED;
+				flags |= PROPOSAL_PREFER_SUPPLIED;
 			}
 			this->proposal = this->config->select_proposal(this->config, list,
 														   flags);
@@ -1345,7 +1345,7 @@ METHOD(task_t, process_i, status_t,
 		{
 			sa_payload_t *sa_payload;
 			linked_list_t *list = NULL;
-			proposal_selection_flag_t flags = PROPOSAL_PREFER_CONFIGURED;
+			proposal_selection_flag_t flags = 0;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													PLV1_SECURITY_ASSOCIATION);

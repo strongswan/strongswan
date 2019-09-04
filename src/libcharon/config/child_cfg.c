@@ -237,54 +237,7 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 	private_child_cfg_t*this, linked_list_t *proposals,
 	proposal_selection_flag_t flags)
 {
-	enumerator_t *prefer_enum, *match_enum;
-	proposal_t *proposal, *match, *selected = NULL;
-
-	if (flags & PROPOSAL_PREFER_CONFIGURED)
-	{
-		prefer_enum = this->proposals->create_enumerator(this->proposals);
-		match_enum = proposals->create_enumerator(proposals);
-	}
-	else
-	{
-		prefer_enum = proposals->create_enumerator(proposals);
-		match_enum = this->proposals->create_enumerator(this->proposals);
-	}
-
-	while (prefer_enum->enumerate(prefer_enum, &proposal))
-	{
-		if (flags & PROPOSAL_PREFER_CONFIGURED)
-		{
-			proposals->reset_enumerator(proposals, match_enum);
-		}
-		else
-		{
-			this->proposals->reset_enumerator(this->proposals, match_enum);
-		}
-		while (match_enum->enumerate(match_enum, &match))
-		{
-			selected = proposal->select(proposal, match, flags);
-			if (selected)
-			{
-				DBG2(DBG_CFG, "received proposals: %#P", proposals);
-				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
-				DBG1(DBG_CFG, "selected proposal: %P", selected);
-				break;
-			}
-		}
-		if (selected)
-		{
-			break;
-		}
-	}
-	prefer_enum->destroy(prefer_enum);
-	match_enum->destroy(match_enum);
-	if (!selected)
-	{
-		DBG1(DBG_CFG, "received proposals: %#P", proposals);
-		DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);
-	}
-	return selected;
+	return proposal_select(this->proposals, proposals, flags);
 }
 
 METHOD(child_cfg_t, add_traffic_selector, void,

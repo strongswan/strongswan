@@ -485,15 +485,15 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 		return NULL;
 	}
 
-	if (flags & PROPOSAL_PREFER_CONFIGURED)
-	{
-		selected = proposal_create(this->protocol, other->get_number(other));
-		selected->set_spi(selected, other->get_spi(other));
-	}
-	else
+	if (flags & PROPOSAL_PREFER_SUPPLIED)
 	{
 		selected = proposal_create(this->protocol, this->number);
 		selected->set_spi(selected, this->spi);
+	}
+	else
+	{
+		selected = proposal_create(this->protocol, other->get_number(other));
+		selected->set_spi(selected, other->get_spi(other));
 	}
 
 	if (!select_algos(this, other, selected, flags))
@@ -1345,4 +1345,60 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 	}
 
 	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+proposal_t *proposal_select(linked_list_t *configured, linked_list_t *supplied,
+							proposal_selection_flag_t flags)
+{
+	enumerator_t *prefer_enum, *match_enum;
+	proposal_t *proposal, *match, *selected = NULL;
+
+	if (flags & PROPOSAL_PREFER_SUPPLIED)
+	{
+		prefer_enum = supplied->create_enumerator(supplied);
+		match_enum = configured->create_enumerator(configured);
+	}
+	else
+	{
+		prefer_enum = configured->create_enumerator(configured);
+		match_enum = supplied->create_enumerator(supplied);
+	}
+
+	while (prefer_enum->enumerate(prefer_enum, &proposal))
+	{
+		if (flags & PROPOSAL_PREFER_SUPPLIED)
+		{
+			configured->reset_enumerator(configured, match_enum);
+		}
+		else
+		{
+			supplied->reset_enumerator(supplied, match_enum);
+		}
+		while (match_enum->enumerate(match_enum, &match))
+		{
+			selected = proposal->select(proposal, match, flags);
+			if (selected)
+			{
+				DBG2(DBG_CFG, "received proposals: %#P", supplied);
+				DBG2(DBG_CFG, "configured proposals: %#P", configured);
+				DBG1(DBG_CFG, "selected proposal: %P", selected);
+				break;
+			}
+		}
+		if (selected)
+		{
+			break;
+		}
+	}
+	prefer_enum->destroy(prefer_enum);
+	match_enum->destroy(match_enum);
+	if (!selected)
+	{
+		DBG1(DBG_CFG, "received proposals: %#P", supplied);
+		DBG1(DBG_CFG, "configured proposals: %#P", configured);
+	}
+	return selected;
 }

@@ -399,10 +399,10 @@ METHOD(task_t, process_r, status_t,
 			}
 
 			list = sa_payload->get_proposals(sa_payload);
-			if (lib->settings->get_bool(lib->settings,
+			if (!lib->settings->get_bool(lib->settings,
 						"%s.prefer_configured_proposals", TRUE, lib->ns))
 			{
-				flags = PROPOSAL_PREFER_CONFIGURED;
+				flags = PROPOSAL_PREFER_SUPPLIED;
 			}
 			this->proposal = this->ike_cfg->select_proposal(this->ike_cfg, list,
 															flags);
@@ -644,8 +644,7 @@ METHOD(task_t, process_i, status_t,
 			return send_notify(this, INVALID_PAYLOAD_TYPE);
 		}
 		list = sa_payload->get_proposals(sa_payload);
-		this->proposal = this->ike_cfg->select_proposal(this->ike_cfg, list,
-													PROPOSAL_PREFER_CONFIGURED);
+		this->proposal = this->ike_cfg->select_proposal(this->ike_cfg, list, 0);
 		list->destroy_offset(list, offsetof(proposal_t, destroy));
 		if (!this->proposal)
 		{

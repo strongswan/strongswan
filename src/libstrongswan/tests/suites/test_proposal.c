@@ -126,8 +126,7 @@ START_TEST(test_select)
 									   select_data[_i].self);
 	other = proposal_create_from_string(select_data[_i].proto,
 										select_data[_i].other);
-	selected = self->select(self, other,
-							select_data[_i].flags | PROPOSAL_PREFER_CONFIGURED);
+	selected = self->select(self, other, select_data[_i].flags);
 	if (select_data[_i].expected)
 	{
 		expected = proposal_create_from_string(select_data[_i].proto,
@@ -155,12 +154,12 @@ START_TEST(test_select_spi)
 	other = proposal_create_from_string(PROTO_ESP, "aes128-sha256-modp3072");
 	other->set_spi(other, 0x12345678);
 
-	selected = self->select(self, other, PROPOSAL_PREFER_CONFIGURED);
+	selected = self->select(self, other, 0);
 	ck_assert(selected);
 	ck_assert_int_eq(selected->get_spi(selected), other->get_spi(other));
 	selected->destroy(selected);
 
-	selected = self->select(self, other, 0);
+	selected = self->select(self, other, PROPOSAL_PREFER_SUPPLIED);
 	ck_assert(selected);
 	ck_assert_int_eq(selected->get_spi(selected), self->get_spi(self));
 	selected->destroy(selected);
@@ -183,21 +182,95 @@ START_TEST(test_matches)
 		ck_assert(self->matches(self, other, select_data[_i].flags));
 		ck_assert(other->matches(other, self, select_data[_i].flags));
 		ck_assert(self->matches(self, other,
-				  select_data[_i].flags | PROPOSAL_PREFER_CONFIGURED));
+				  select_data[_i].flags | PROPOSAL_PREFER_SUPPLIED));
 		ck_assert(other->matches(other, self,
-				  select_data[_i].flags | PROPOSAL_PREFER_CONFIGURED));
+				  select_data[_i].flags | PROPOSAL_PREFER_SUPPLIED));
 	}
 	else
 	{
 		ck_assert(!self->matches(self, other, select_data[_i].flags));
 		ck_assert(!other->matches(other, self, select_data[_i].flags));
 		ck_assert(!self->matches(self, other,
-				  select_data[_i].flags | PROPOSAL_PREFER_CONFIGURED));
+				  select_data[_i].flags | PROPOSAL_PREFER_SUPPLIED));
 		ck_assert(!other->matches(other, self,
-				  select_data[_i].flags | PROPOSAL_PREFER_CONFIGURED));
+				  select_data[_i].flags | PROPOSAL_PREFER_SUPPLIED));
 	}
 	other->destroy(other);
 	self->destroy(self);
+}
+END_TEST
+
+static struct {
+	protocol_id_t proto;
+	char *self[5];
+	char *other[5];
+	char *expected;
+	proposal_selection_flag_t flags;
+} select_proposal_data[] = {
+	{ PROTO_ESP, {}, {}, NULL },
+	{ PROTO_ESP, { "aes128" }, {}, NULL },
+	{ PROTO_ESP, {}, { "aes128" }, NULL },
+	{ PROTO_ESP, { "aes128" }, { "aes256" }, NULL },
+	{ PROTO_ESP, { "aes128" }, { "aes128" }, "aes128" },
+	{ PROTO_ESP, { "aes128", "aes256" }, { "aes256", "aes128" }, "aes128" },
+	{ PROTO_ESP, { "aes128", "aes256" }, { "aes256", "aes128" }, "aes256",
+		PROPOSAL_PREFER_SUPPLIED },
+	{ PROTO_ESP, { "aes128-modp1024", "aes256-modp1024" },
+				 { "aes256-modp2048", "aes128-modp2048" }, NULL },
+	{ PROTO_ESP, { "aes128-modp1024", "aes256-modp1024" },
+				 { "aes256-modp2048", "aes128-modp2048" }, "aes128",
+		PROPOSAL_SKIP_DH },
+	{ PROTO_ESP, { "aes128-modp1024", "aes256-modp1024" },
+				 { "aes256-modp2048", "aes128-modp2048" }, "aes256",
+		PROPOSAL_PREFER_SUPPLIED | PROPOSAL_SKIP_DH },
+};
+
+START_TEST(test_select_proposal)
+{
+	linked_list_t *self, *other;
+	proposal_t *proposal, *selected, *expected;
+	int i;
+
+	self = linked_list_create();
+	other = linked_list_create();
+
+	for (i = 0; i < countof(select_proposal_data[_i].self); i++)
+	{
+		if (!select_proposal_data[_i].self[i])
+		{
+			break;
+		}
+		proposal = proposal_create_from_string(select_proposal_data[_i].proto,
+											select_proposal_data[_i].self[i]);
+		self->insert_last(self, proposal);
+	}
+	for (i = 0; i < countof(select_proposal_data[_i].other); i++)
+	{
+		if (!select_proposal_data[_i].other[i])
+		{
+			break;
+		}
+		proposal = proposal_create_from_string(select_proposal_data[_i].proto,
+											select_proposal_data[_i].other[i]);
+		other->insert_last(other, proposal);
+	}
+	selected = proposal_select(self, other, select_proposal_data[_i].flags);
+	if (select_proposal_data[_i].expected)
+	{
+		expected = proposal_create_from_string(select_proposal_data[_i].proto,
+											select_proposal_data[_i].expected);
+		ck_assert(selected);
+		ck_assert_msg(expected->equals(expected, selected), "proposal %P does "
+					  "not match expected %P", selected, expected);
+		expected->destroy(expected);
+	}
+	else
+	{
+		ck_assert(!selected);
+	}
+	DESTROY_IF(selected);
+	other->destroy_offset(other, offsetof(proposal_t, destroy));
+	self->destroy_offset(self, offsetof(proposal_t, destroy));
 }
 END_TEST
 
@@ -281,7 +354,7 @@ START_TEST(test_unknown_transform_types_select_fail)
 	other = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
 	other->add_algorithm(other, 242, 42, 0);
 
-	selected = self->select(self, other, PROPOSAL_PREFER_CONFIGURED);
+	selected = self->select(self, other, 0);
 	ck_assert(!selected);
 	other->destroy(other);
 	self->destroy(self);
@@ -297,7 +370,7 @@ START_TEST(test_unknown_transform_types_select_fail_subtype)
 	other = proposal_create_from_string(PROTO_IKE, "aes128-sha256-ecp256");
 	other->add_algorithm(other, 242, 42, 0);
 
-	selected = self->select(self, other, PROPOSAL_PREFER_CONFIGURED);
+	selected = self->select(self, other, 0);
 	ck_assert(!selected);
 	other->destroy(other);
 	self->destroy(self);
@@ -314,7 +387,7 @@ START_TEST(test_unknown_transform_types_select_success)
 	other->add_algorithm(other, 242, 42, 128);
 	other->add_algorithm(other, 242, 1, 0);
 
-	selected = self->select(self, other, PROPOSAL_PREFER_CONFIGURED);
+	selected = self->select(self, other, 0);
 	ck_assert(selected);
 	assert_proposal_eq(selected, "IKE:AES_CBC_128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_256/ECP_256/UNKNOWN_242_42_128");
 	selected->destroy(selected);
@@ -356,6 +429,11 @@ Suite *proposal_suite_create()
 
 	tc = tcase_create("matches");
 	tcase_add_loop_test(tc, test_matches, 0, countof(select_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("select_proposal");
+	tcase_add_loop_test(tc, test_select_proposal, 0,
+						countof(select_proposal_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("promote_dh_group");
