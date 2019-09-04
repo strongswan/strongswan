@@ -562,7 +562,7 @@ static status_t select_and_install(private_child_create_t *this,
 
 	if (no_dh)
 	{
-		flags |= PROPOSAL_STRIP_DH;
+		flags |= PROPOSAL_SKIP_DH;
 	}
 	if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
 	{

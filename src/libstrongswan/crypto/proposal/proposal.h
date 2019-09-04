@@ -60,8 +60,8 @@ enum proposal_selection_flag_t {
 	PROPOSAL_ALLOW_PRIVATE = (1<<0),
 	/** Whether to prefer configured or supplied proposals. */
 	PROPOSAL_PREFER_CONFIGURED = (1<<1),
-	/** Whether to strip out diffie hellman groups */
-	PROPOSAL_STRIP_DH = (1<<2),
+	/** Whether to skip and ignore diffie hellman groups. */
+	PROPOSAL_SKIP_DH = (1<<2),
 };
 
 /**

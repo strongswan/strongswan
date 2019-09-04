@@ -434,6 +434,10 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 		{
 			continue;
 		}
+		if (type == DIFFIE_HELLMAN_GROUP && (flags & PROPOSAL_SKIP_DH))
+		{
+			continue;
+		}
 		if (select_algo(this, other, type, flags, selected != NULL, &alg, &ks))
 		{
 			if (alg == 0 && type != EXTENDED_SEQUENCE_NUMBERS)

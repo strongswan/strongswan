@@ -88,6 +88,7 @@ static struct {
 	char *self;
 	char *other;
 	char *expected;
+	proposal_selection_flag_t flags;
 } select_data[] = {
 	{ PROTO_ESP, "aes128", "aes128", "aes128" },
 	{ PROTO_ESP, "aes128", "aes256", NULL },
@@ -96,7 +97,11 @@ static struct {
 	{ PROTO_ESP, "aes128-aes256-sha1-sha256", "aes256-aes128-sha256-sha1", "aes128-sha1" },
 	{ PROTO_ESP, "aes256-aes128-sha256-sha1", "aes128-aes256-sha1-sha256", "aes256-sha256" },
 	{ PROTO_ESP, "aes128-sha256-modp3072", "aes128-sha256", NULL },
+	{ PROTO_ESP, "aes128-sha256-modp3072", "aes128-sha256", "aes128-sha256", PROPOSAL_SKIP_DH },
 	{ PROTO_ESP, "aes128-sha256", "aes128-sha256-modp3072", NULL },
+	{ PROTO_ESP, "aes128-sha256", "aes128-sha256-modp3072", "aes128-sha256", PROPOSAL_SKIP_DH },
+	{ PROTO_ESP, "aes128-sha256-modp3072", "aes128-sha256-modp3072", "aes128-sha256", PROPOSAL_SKIP_DH },
+	{ PROTO_ESP, "aes128-sha256-modp3072", "aes128-sha256-ecp256", "aes128-sha256", PROPOSAL_SKIP_DH },
 	{ PROTO_ESP, "aes128-sha256-modp3072", "aes128-sha256-modpnone", NULL },
 	{ PROTO_ESP, "aes128-sha256-modpnone", "aes128-sha256-modp3072", NULL },
 	{ PROTO_ESP, "aes128-sha256-modp3072-modpnone", "aes128-sha256", "aes128-sha256" },
@@ -121,7 +126,8 @@ START_TEST(test_select)
 									   select_data[_i].self);
 	other = proposal_create_from_string(select_data[_i].proto,
 										select_data[_i].other);
-	selected = self->select(self, other, PROPOSAL_PREFER_CONFIGURED);
+	selected = self->select(self, other,
+							select_data[_i].flags | PROPOSAL_PREFER_CONFIGURED);
 	if (select_data[_i].expected)
 	{
 		expected = proposal_create_from_string(select_data[_i].proto,
@@ -174,13 +180,21 @@ START_TEST(test_matches)
 										select_data[_i].other);
 	if (select_data[_i].expected)
 	{
-		ck_assert(self->matches(self, other, FALSE));
-		ck_assert(other->matches(other, self, FALSE));
+		ck_assert(self->matches(self, other, select_data[_i].flags));
+		ck_assert(other->matches(other, self, select_data[_i].flags));
+		ck_assert(self->matches(self, other,
+				  select_data[_i].flags | PROPOSAL_PREFER_CONFIGURED));
+		ck_assert(other->matches(other, self,
+				  select_data[_i].flags | PROPOSAL_PREFER_CONFIGURED));
 	}
 	else
 	{
-		ck_assert(!self->matches(self, other, FALSE));
-		ck_assert(!other->matches(other, self, FALSE));
+		ck_assert(!self->matches(self, other, select_data[_i].flags));
+		ck_assert(!other->matches(other, self, select_data[_i].flags));
+		ck_assert(!self->matches(self, other,
+				  select_data[_i].flags | PROPOSAL_PREFER_CONFIGURED));
+		ck_assert(!other->matches(other, self,
+				  select_data[_i].flags | PROPOSAL_PREFER_CONFIGURED));
 	}
 	other->destroy(other);
 	self->destroy(self);
