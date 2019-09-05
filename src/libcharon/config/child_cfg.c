@@ -209,16 +209,18 @@ METHOD(child_cfg_t, get_proposals, linked_list_t*,
 {
 	enumerator_t *enumerator;
 	proposal_t *current;
+	proposal_selection_flag_t flags = 0;
 	linked_list_t *proposals = linked_list_create();
+
+	if (strip_dh)
+	{
+		flags |= PROPOSAL_SKIP_DH;
+	}
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		current = current->clone(current);
-		if (strip_dh)
-		{
-			current->strip_dh(current, MODP_NONE);
-		}
+		current = current->clone(current, flags);
 		if (proposals->find_first(proposals, match_proposal, NULL, current))
 		{
 			current->destroy(current);

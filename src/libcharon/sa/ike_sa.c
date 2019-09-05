@@ -610,7 +610,7 @@ METHOD(ike_sa_t, set_proposal, void,
 	private_ike_sa_t *this, proposal_t *proposal)
 {
 	DESTROY_IF(this->proposal);
-	this->proposal = proposal->clone(proposal);
+	this->proposal = proposal->clone(proposal, 0);
 }
 
 METHOD(ike_sa_t, set_message_id, void,

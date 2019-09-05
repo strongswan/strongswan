@@ -458,9 +458,9 @@ static void process_sa_payload(private_ike_init_t *this, message_t *message,
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 
 	proposal_list = sa_payload->get_proposals(sa_payload);
-	if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
+	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
 	{
-		flags |= PROPOSAL_ALLOW_PRIVATE;
+		flags |= PROPOSAL_SKIP_PRIVATE;
 	}
 	if (!lib->settings->get_bool(lib->settings,
 							"%s.prefer_configured_proposals", TRUE, lib->ns))

@@ -1132,9 +1132,9 @@ METHOD(task_t, process_r, status_t,
 				DESTROY_IF(list);
 				list = sa_payload->get_proposals(sa_payload);
 			}
-			if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
+			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
 			{
-				flags |= PROPOSAL_ALLOW_PRIVATE;
+				flags |= PROPOSAL_SKIP_PRIVATE;
 			}
 			if (!lib->settings->get_bool(lib->settings,
 							"%s.prefer_configured_proposals", TRUE, lib->ns))
@@ -1370,9 +1370,9 @@ METHOD(task_t, process_i, status_t,
 				DESTROY_IF(list);
 				list = sa_payload->get_proposals(sa_payload);
 			}
-			if (this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
+			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
 			{
-				flags |= PROPOSAL_ALLOW_PRIVATE;
+				flags |= PROPOSAL_SKIP_PRIVATE;
 			}
 			this->proposal = this->config->select_proposal(this->config, list,
 														   flags);

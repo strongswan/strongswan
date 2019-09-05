@@ -374,7 +374,7 @@ METHOD(task_t, process_r, status_t,
 			id_payload_t *id_payload;
 			identification_t *id;
 			linked_list_t *list;
-			proposal_selection_flag_t flags = 0;
+			proposal_selection_flag_t flags = PROPOSAL_SKIP_PRIVATE;
 			uint16_t group;
 
 			this->ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);

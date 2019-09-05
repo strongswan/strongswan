@@ -390,7 +390,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 		{
 			if (alg1 == alg2 && ks1 == ks2)
 			{
-				if (!(flags & PROPOSAL_ALLOW_PRIVATE) && alg1 >= 1024)
+				if ((flags & PROPOSAL_SKIP_PRIVATE) && alg1 >= 1024)
 				{
 					if (log)
 					{
@@ -604,25 +604,27 @@ METHOD(proposal_t, equals, bool,
 }
 
 METHOD(proposal_t, clone_, proposal_t*,
-	private_proposal_t *this)
+	private_proposal_t *this, proposal_selection_flag_t flags)
 {
 	private_proposal_t *clone;
 	enumerator_t *enumerator;
 	entry_t *entry;
-	transform_type_t *type;
 
 	clone = (private_proposal_t*)proposal_create(this->protocol, 0);
 
 	enumerator = array_create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
+		if (entry->alg >= 1024 && (flags & PROPOSAL_SKIP_PRIVATE))
+		{
+			continue;
+		}
+		if (entry->type == DIFFIE_HELLMAN_GROUP && (flags & PROPOSAL_SKIP_DH))
+		{
+			continue;
+		}
 		array_insert(clone->transforms, ARRAY_TAIL, entry);
-	}
-	enumerator->destroy(enumerator);
-	enumerator = array_create_enumerator(this->types);
-	while (enumerator->enumerate(enumerator, &type))
-	{
-		array_insert(clone->types, ARRAY_TAIL, type);
+		add_type(clone->types, entry->type);
 	}
 	enumerator->destroy(enumerator);
 

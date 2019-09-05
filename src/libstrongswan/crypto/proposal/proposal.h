@@ -56,10 +56,10 @@ extern enum_name_t *protocol_id_names;
  * Flags for selecting proposals
  */
 enum proposal_selection_flag_t {
-	/** Accept algorithms from a private range. */
-	PROPOSAL_ALLOW_PRIVATE = (1<<0),
 	/** Whether to prefer configured (default) or supplied proposals. */
-	PROPOSAL_PREFER_SUPPLIED = (1<<1),
+	PROPOSAL_PREFER_SUPPLIED = (1<<0),
+	/** Whether to skip and ignore algorithms from a private range. */
+	PROPOSAL_SKIP_PRIVATE = (1<<1),
 	/** Whether to skip and ignore diffie hellman groups. */
 	PROPOSAL_SKIP_DH = (1<<2),
 };
@@ -207,9 +207,10 @@ struct proposal_t {
 	/**
 	 * Clone a proposal.
 	 *
+	 * @param flags			flags to consider during cloning
 	 * @return				clone of proposal
 	 */
-	proposal_t *(*clone) (proposal_t *this);
+	proposal_t *(*clone)(proposal_t *this, proposal_selection_flag_t flags);
 
 	/**
 	 * Destroys the proposal object.

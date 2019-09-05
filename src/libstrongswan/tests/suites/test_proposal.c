@@ -410,6 +410,44 @@ START_TEST(test_chacha20_poly1305_key_length)
 }
 END_TEST
 
+static struct {
+	protocol_id_t proto;
+	char *orig;
+	char *expected;
+	proposal_selection_flag_t flags;
+} clone_data[] = {
+	{ PROTO_ESP, "aes128", "aes128" },
+	{ PROTO_ESP, "aes128-serpent", "aes128-serpent" },
+	{ PROTO_ESP, "aes128-serpent", "aes128", PROPOSAL_SKIP_PRIVATE },
+	{ PROTO_ESP, "aes128-sha256-modp3072", "aes128-sha256-modp3072" },
+	{ PROTO_ESP, "aes128-sha256-modp3072", "aes128-sha256", PROPOSAL_SKIP_DH },
+	{ PROTO_ESP, "aes128-serpent-modp3072", "aes128-serpent",
+		PROPOSAL_SKIP_DH },
+	{ PROTO_ESP, "aes128-serpent-modp3072", "aes128",
+		PROPOSAL_SKIP_PRIVATE | PROPOSAL_SKIP_DH },
+};
+
+START_TEST(test_clone)
+{
+	proposal_t *orig, *result, *expected;
+
+	orig = proposal_create_from_string(clone_data[_i].proto,
+									   clone_data[_i].orig);
+	orig->set_spi(orig, 0x12345678);
+
+	result = orig->clone(orig, clone_data[_i].flags);
+
+	expected = proposal_create_from_string(clone_data[_i].proto,
+										   clone_data[_i].expected);
+	ck_assert_msg(expected->equals(expected, result), "proposal %P does "
+				  "not match expected %P", result, expected);
+	ck_assert_int_eq(orig->get_spi(orig), result->get_spi(result));
+
+	expected->destroy(expected);
+	result->destroy(result);
+	orig->destroy(orig);
+}
+END_TEST
 
 Suite *proposal_suite_create()
 {
@@ -452,6 +490,10 @@ Suite *proposal_suite_create()
 
 	tc = tcase_create("chacha20/poly1305");
 	tcase_add_test(tc, test_chacha20_poly1305_key_length);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("clone");
+	tcase_add_loop_test(tc, test_clone, 0, countof(clone_data));
 	suite_add_tcase(s, tc);
 
 	return s;
