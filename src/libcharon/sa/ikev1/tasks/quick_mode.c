@@ -802,7 +802,7 @@ static linked_list_t *get_proposals(private_quick_mode_t *this,
 				proposal->destroy(proposal);
 				continue;
 			}
-			proposal->strip_dh(proposal, group);
+			proposal->promote_dh_group(proposal, group);
 		}
 		proposal->set_spi(proposal, this->spi_i);
 	}
