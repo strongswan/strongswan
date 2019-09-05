@@ -132,13 +132,6 @@ struct proposal_t {
 	bool (*promote_dh_group)(proposal_t *this, diffie_hellman_group_t group);
 
 	/**
-	 * Strip DH groups from proposal to use it without PFS.
-	 *
-	 * @param keep			group to keep (MODP_NONE to remove all)
-	 */
-	void (*strip_dh)(proposal_t *this, diffie_hellman_group_t keep);
-
-	/**
 	 * Compare two proposal, and select a matching subset.
 	 *
 	 * If the proposals are for the same protocols (AH/ESP), they are

@@ -302,38 +302,6 @@ METHOD(proposal_t, promote_dh_group, bool,
 	return found;
 }
 
-METHOD(proposal_t, strip_dh, void,
-	private_proposal_t *this, diffie_hellman_group_t keep)
-{
-	enumerator_t *enumerator;
-	entry_t *entry;
-	bool found = FALSE;
-
-	enumerator = array_create_enumerator(this->transforms);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		if (entry->type == DIFFIE_HELLMAN_GROUP)
-		{
-			if (entry->alg != keep)
-			{
-				array_remove_at(this->transforms, enumerator);
-			}
-			else
-			{
-				found = TRUE;
-			}
-		}
-	}
-	enumerator->destroy(enumerator);
-	array_compress(this->transforms);
-
-	if (keep == MODP_NONE || !found)
-	{
-		remove_type(this, DIFFIE_HELLMAN_GROUP);
-		array_compress(this->types);
-	}
-}
-
 /**
  * Select a matching proposal from this and other.
  */
@@ -961,7 +929,6 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 			.get_algorithm = _get_algorithm,
 			.has_dh_group = _has_dh_group,
 			.promote_dh_group = _promote_dh_group,
-			.strip_dh = _strip_dh,
 			.select = _select_proposal,
 			.matches = _matches,
 			.get_protocol = _get_protocol,
