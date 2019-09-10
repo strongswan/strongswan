@@ -88,7 +88,7 @@ build_tss2()
 
 build_openssl()
 {
-	SSL_REV=1.1.1c
+	SSL_REV=1.1.1d
 	SSL_PKG=openssl-$SSL_REV
 	SSL_DIR=$TRAVIS_BUILD_DIR/../$SSL_PKG
 	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
