@@ -386,7 +386,9 @@ METHOD(task_t, process_r, status_t,
 			}
 
 			list = sa_payload->get_proposals(sa_payload);
-			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
+			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN)
+				&& !lib->settings->get_bool(lib->settings,
+									"%s.accept_private_algs", FALSE, lib->ns))
 			{
 				flags |= PROPOSAL_SKIP_PRIVATE;
 			}
@@ -641,7 +643,9 @@ METHOD(task_t, process_i, status_t,
 				return send_notify(this, INVALID_PAYLOAD_TYPE);
 			}
 			list = sa_payload->get_proposals(sa_payload);
-			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
+			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN)
+				&& !lib->settings->get_bool(lib->settings,
+									"%s.accept_private_algs", FALSE, lib->ns))
 			{
 				flags |= PROPOSAL_SKIP_PRIVATE;
 			}

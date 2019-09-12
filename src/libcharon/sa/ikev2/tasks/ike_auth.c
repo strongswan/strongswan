@@ -330,7 +330,9 @@ static bool load_cfg_candidates(private_ike_auth_t *this)
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
 	ike_proposal = this->ike_sa->get_proposal(this->ike_sa);
-	private = this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN);
+	private = this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN) ||
+			  lib->settings->get_bool(lib->settings, "%s.accept_private_algs",
+									  FALSE, lib->ns);
 
 	DBG1(DBG_CFG, "looking for peer configs matching %H[%Y]...%H[%Y]",
 		 me, my_id, other, other_id);

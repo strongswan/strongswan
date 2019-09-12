@@ -8,6 +8,10 @@ charon {}
 	**charon-cmd** instead of **charon**). For many options defaults can be
 	defined in the **libstrongswan** section.
 
+charon.accept_private_algs = no
+	Deliberately violate the IKE standard's requirement and allow the use of
+	private algorithm identifiers, even if the peer implementation is unknown.
+
 charon.accept_unencrypted_mainmode_messages = no
 	Accept unencrypted ID and HASH payloads in IKEv1 Main Mode.
 

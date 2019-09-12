@@ -564,7 +564,9 @@ static status_t select_and_install(private_child_create_t *this,
 	{
 		flags |= PROPOSAL_SKIP_DH;
 	}
-	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN))
+	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN) &&
+		!lib->settings->get_bool(lib->settings, "%s.accept_private_algs",
+								 FALSE, lib->ns))
 	{
 		flags |= PROPOSAL_SKIP_PRIVATE;
 	}
