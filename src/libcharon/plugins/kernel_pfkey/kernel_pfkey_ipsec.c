@@ -1760,6 +1760,17 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			sa->sadb_sa_replay = min((data->replay_window + 7) / 8, UINT8_MAX);
 #endif
 		}
+		if (data->esn)
+		{
+#ifdef SADB_X_SAFLAGS_ESN
+			DBG2(DBG_KNL, "  using extended sequence numbers (ESN)");
+			sa->sadb_sa_flags |= SADB_X_SAFLAGS_ESN;
+#else
+			DBG1(DBG_KNL, "extended sequence numbers (ESN) not supported by "
+				 "kernel!");
+			return FAILED;
+#endif
+		}
 		sa->sadb_sa_auth = lookup_algorithm(INTEGRITY_ALGORITHM, data->int_alg);
 		sa->sadb_sa_encrypt = lookup_algorithm(ENCRYPTION_ALGORITHM,
 											   data->enc_alg);
