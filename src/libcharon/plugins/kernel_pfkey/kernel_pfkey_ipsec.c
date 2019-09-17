@@ -1766,6 +1766,14 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 	PFKEY_EXT_ADD(msg, sa);
 
+#ifdef SADB_X_SAFLAGS_ESN
+	if (id->proto != IPPROTO_COMP && data->esn)
+	{
+		DBG2(DBG_KNL, "  using extended sequence numbers (ESN)");
+		sa->sadb_sa_flags |= SADB_X_SAFLAGS_ESN;
+	}
+#endif
+
 #ifdef SADB_X_EXT_SA_REPLAY
 	if (data->inbound)
 	{
