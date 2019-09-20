@@ -680,7 +680,7 @@ METHOD(daemon_t, set_level, void,
 				entry->logger.custom->set_level(entry->logger.custom, group,
 												level);
 				charon->bus->add_logger(charon->bus,
-										&entry->logger.sys->logger);
+										&entry->logger.custom->logger);
 				break;
 		}
 	}
