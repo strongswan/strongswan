@@ -439,12 +439,12 @@ struct private_kernel_netlink_net_t {
 	/**
 	 * routing table to install routes
 	 */
-	int routing_table;
+	uint32_t routing_table;
 
 	/**
 	 * priority of used routing table
 	 */
-	int routing_table_prio;
+	uint32_t routing_table_prio;
 
 	/**
 	 * installed routes
@@ -1400,7 +1400,8 @@ static void process_addr(private_kernel_netlink_net_t *this,
 /**
  * process RTM_NEWROUTE and RTM_DELROUTE from kernel
  */
-static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *hdr)
+static void process_route(private_kernel_netlink_net_t *this,
+						  struct nlmsghdr *hdr)
 {
 	struct rtmsg* msg = NLMSG_DATA(hdr);
 	struct rtattr *rta = RTM_RTA(msg);
@@ -1423,6 +1424,16 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 	{
 		switch (rta->rta_type)
 		{
+#ifdef HAVE_RTA_TABLE
+			case RTA_TABLE:
+				/* also check against extended table ID */
+				if (RTA_PAYLOAD(rta) == sizeof(uint32_t) &&
+					this->routing_table == *(uint32_t*)RTA_DATA(rta))
+				{
+					return;
+				}
+				break;
+#endif /* HAVE_RTA_TABLE */
 			case RTA_PREFSRC:
 				DESTROY_IF(host);
 				host = host_create_from_chunk(msg->rtm_family,
@@ -1463,13 +1474,13 @@ static void process_route(private_kernel_netlink_net_t *this, struct nlmsghdr *h
 /**
  * process RTM_NEW|DELRULE from kernel
  */
-static void process_rule(private_kernel_netlink_net_t *this, struct nlmsghdr *hdr)
+static void process_rule(private_kernel_netlink_net_t *this,
+						 struct nlmsghdr *hdr)
 {
 #ifdef HAVE_LINUX_FIB_RULES_H
 	struct rtmsg* msg = NLMSG_DATA(hdr);
 	struct rtattr *rta = RTM_RTA(msg);
 	size_t rtasize = RTM_PAYLOAD(hdr);
-	uint32_t table = 0;
 
 	/* ignore rules added by us or in the local routing table (local addrs) */
 	if (msg->rtm_table && (msg->rtm_table == this->routing_table ||
@@ -1483,17 +1494,15 @@ static void process_rule(private_kernel_netlink_net_t *this, struct nlmsghdr *hd
 		switch (rta->rta_type)
 		{
 			case FRA_TABLE:
-				if (RTA_PAYLOAD(rta) == sizeof(table))
+				/* also check against extended table ID */
+				if (RTA_PAYLOAD(rta) == sizeof(uint32_t) &&
+					this->routing_table == *(uint32_t*)RTA_DATA(rta))
 				{
-					table = *(uint32_t*)RTA_DATA(rta);
+					return;
 				}
 				break;
 		}
 		rta = RTA_NEXT(rta, rtasize);
-	}
-	if (table && table == this->routing_table)
-	{	/* also check against extended table ID */
-		return;
 	}
 	fire_roam_event(this, FALSE);
 #endif
@@ -2662,11 +2671,24 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 	msg = NLMSG_DATA(hdr);
 	msg->rtm_family = src_ip->get_family(src_ip);
 	msg->rtm_dst_len = prefixlen;
-	msg->rtm_table = this->routing_table;
 	msg->rtm_protocol = RTPROT_STATIC;
 	msg->rtm_type = RTN_UNICAST;
 	msg->rtm_scope = RT_SCOPE_UNIVERSE;
 
+	if (this->routing_table < 256)
+	{
+		msg->rtm_table = this->routing_table;
+	}
+	else
+	{
+#ifdef HAVE_RTA_TABLE
+		chunk = chunk_from_thing(this->routing_table);
+		netlink_add_attribute(hdr, RTA_TABLE, chunk, sizeof(request));
+#else
+		DBG1(DBG_KNL, "routing table IDs > 255 are not supported");
+		return FAILED;
+#endif /* HAVE_RTA_TABLE */
+	}
 	netlink_add_attribute(hdr, RTA_DST, dst_net, sizeof(request));
 	chunk = src_ip->get_address(src_ip);
 	netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
@@ -2962,12 +2984,25 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
 
 	msg = NLMSG_DATA(hdr);
-	msg->rtm_table = table;
 	msg->rtm_family = family;
 	msg->rtm_protocol = RTPROT_BOOT;
 	msg->rtm_scope = RT_SCOPE_UNIVERSE;
 	msg->rtm_type = RTN_UNICAST;
 
+	if (this->routing_table < 256)
+	{
+		msg->rtm_table = table;
+	}
+	else
+	{
+#ifdef HAVE_LINUX_FIB_RULES_H
+		chunk = chunk_from_thing(table);
+		netlink_add_attribute(hdr, FRA_TABLE, chunk, sizeof(request));
+#else
+		DBG1(DBG_KNL, "routing table IDs > 255 are not supported");
+		return FAILED;
+#endif /* HAVE_LINUX_FIB_RULES_H */
+	}
 	chunk = chunk_from_thing(prio);
 	netlink_add_attribute(hdr, RTA_PRIORITY, chunk, sizeof(request));
 
@@ -2996,7 +3031,7 @@ static status_t manage_rule(private_kernel_netlink_net_t *this, int nlmsg_type,
 		}
 #else
 		DBG1(DBG_KNL, "setting firewall mark on routing rule is not supported");
-#endif
+#endif /* HAVE_LINUX_FIB_RULES_H */
 	}
 	return this->socket->send_ack(this->socket, hdr);
 }
