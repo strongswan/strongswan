@@ -25,8 +25,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_RSA_PRIVATE_KEY_H_
-#define WOLFSSL_RSA_PRIVATE_KEY_H_
+#ifndef WOLFSSL_PLUGIN_RSA_PRIVATE_KEY_H_
+#define WOLFSSL_PLUGIN_RSA_PRIVATE_KEY_H_
 
 #include <credentials/builder.h>
 #include <credentials/keys/private_key.h>
@@ -68,4 +68,4 @@ wolfssl_rsa_private_key_t *wolfssl_rsa_private_key_gen(key_type_t type,
 wolfssl_rsa_private_key_t *wolfssl_rsa_private_key_load(key_type_t type,
 														va_list args);
 
-#endif /** WOLFSSL_RSA_PRIVATE_KEY_H_ @}*/
+#endif /** WOLFSSL_PLUGIN_RSA_PRIVATE_KEY_H_ @}*/

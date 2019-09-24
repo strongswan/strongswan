@@ -25,8 +25,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_RNG_H_
-#define WOLFSSL_RNG_H_
+#ifndef WOLFSSL_PLUGIN_RNG_H_
+#define WOLFSSL_PLUGIN_RNG_H_
 
 #include <library.h>
 
@@ -63,4 +63,4 @@ int wolfssl_rng_global_init();
  */
 void wolfssl_rng_global_final();
 
-#endif /** WOLFSSL_RNG_H_ @}*/
+#endif /** WOLFSSL_PLUGIN_RNG_H_ @}*/

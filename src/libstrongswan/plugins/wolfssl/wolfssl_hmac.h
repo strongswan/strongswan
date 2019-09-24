@@ -27,8 +27,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_HMAC_H_
-#define WOLFSSL_HMAC_H_
+#ifndef WOLFSSL_PLUGIN_HMAC_H_
+#define WOLFSSL_PLUGIN_HMAC_H_
 
 #include <crypto/prfs/prf.h>
 #include <crypto/signers/signer.h>
@@ -49,4 +49,4 @@ prf_t *wolfssl_hmac_prf_create(pseudo_random_function_t algo);
  */
 signer_t *wolfssl_hmac_signer_create(integrity_algorithm_t algo);
 
-#endif /** WOLFSSL_HMAC_H_ @}*/
+#endif /** WOLFSSL_PLUGIN_HMAC_H_ @}*/

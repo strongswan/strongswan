@@ -25,8 +25,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_EC_PUBLIC_KEY_H_
-#define WOLFSSL_EC_PUBLIC_KEY_H_
+#ifndef WOLFSSL_PLUGIN_EC_PUBLIC_KEY_H_
+#define WOLFSSL_PLUGIN_EC_PUBLIC_KEY_H_
 
 typedef struct wolfssl_ec_public_key_t wolfssl_ec_public_key_t;
 
@@ -56,4 +56,4 @@ struct wolfssl_ec_public_key_t {
 wolfssl_ec_public_key_t *wolfssl_ec_public_key_load(key_type_t type,
 													va_list args);
 
-#endif /** WOLFSSL_EC_PUBLIC_KEY_H_ @}*/
+#endif /** WOLFSSL_PLUGIN_EC_PUBLIC_KEY_H_ @}*/

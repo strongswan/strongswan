@@ -27,8 +27,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_X_DIFFIE_HELLMAN_H_
-#define WOLFSSL_X_DIFFIE_HELLMAN_H_
+#ifndef WOLFSSL_PLUGIN_X_DIFFIE_HELLMAN_H_
+#define WOLFSSL_PLUGIN_X_DIFFIE_HELLMAN_H_
 
 #include <library.h>
 
@@ -40,4 +40,4 @@
  */
 diffie_hellman_t *wolfssl_x_diffie_hellman_create(diffie_hellman_group_t group);
 
-#endif /** WOLFSSL_X_DIFFIE_HELLMAN_H_ @}*/
+#endif /** WOLFSSL_PLUGIN_X_DIFFIE_HELLMAN_H_ @}*/

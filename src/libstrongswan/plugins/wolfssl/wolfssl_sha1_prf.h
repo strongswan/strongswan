@@ -25,8 +25,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_SHA1_PRF_H_
-#define WOLFSSL_SHA1_PRF_H_
+#ifndef WOLFSSL_PLUGIN_SHA1_PRF_H_
+#define WOLFSSL_PLUGIN_SHA1_PRF_H_
 
 typedef struct wolfssl_sha1_prf_t wolfssl_sha1_prf_t;
 
@@ -52,4 +52,4 @@ struct wolfssl_sha1_prf_t {
  */
 wolfssl_sha1_prf_t *wolfssl_sha1_prf_create(pseudo_random_function_t algo);
 
-#endif /** WOLFSSL_SHA1_PRF_H_ @}*/
+#endif /** WOLFSSL_PLUGIN_SHA1_PRF_H_ @}*/
