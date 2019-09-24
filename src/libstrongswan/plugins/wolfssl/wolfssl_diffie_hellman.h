@@ -25,8 +25,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_DIFFIE_HELLMAN_H_
-#define WOLFSSL_DIFFIE_HELLMAN_H_
+#ifndef PLUGIN_WOLFSSL_DIFFIE_HELLMAN_H_
+#define PLUGIN_WOLFSSL_DIFFIE_HELLMAN_H_
 
 typedef struct wolfssl_diffie_hellman_t wolfssl_diffie_hellman_t;
 
@@ -53,5 +53,5 @@ struct wolfssl_diffie_hellman_t {
 wolfssl_diffie_hellman_t *wolfssl_diffie_hellman_create(
 											diffie_hellman_group_t group, ...);
 
-#endif /** WOLFSSL_DIFFIE_HELLMAN_H_ @}*/
+#endif /** PLUGIN_WOLFSSL_DIFFIE_HELLMAN_H_ @}*/
 

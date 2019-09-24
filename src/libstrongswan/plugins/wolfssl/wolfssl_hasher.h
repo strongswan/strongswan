@@ -25,8 +25,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_HASHER_H_
-#define WOLFSSL_HASHER_H_
+#ifndef PLUGIN_WOLFSSL_HASHER_H_
+#define PLUGIN_WOLFSSL_HASHER_H_
 
 typedef struct wolfssl_hasher_t wolfssl_hasher_t;
 
@@ -51,4 +51,4 @@ struct wolfssl_hasher_t {
  */
 wolfssl_hasher_t *wolfssl_hasher_create(hash_algorithm_t algo);
 
-#endif /** WOLFSSL_HASHER_H_ @}*/
+#endif /** PLUGIN_WOLFSSL_HASHER_H_ @}*/

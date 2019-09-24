@@ -20,8 +20,8 @@
  * THE SOFTWARE.
  */
 
-#ifndef WOLFSSL_COMMON_H_
-#define WOLFSSL_COMMON_H_
+#ifndef PLUGIN_WOLFSSL_COMMON_H_
+#define PLUGIN_WOLFSSL_COMMON_H_
 
 #include <library.h>
 
@@ -41,11 +41,32 @@
 /* PARSE_ERROR is an enum entry in wolfSSL - not used in this plugin */
 #define PARSE_ERROR	WOLFSSL_PARSE_EROR
 
+/* remap these enum's from compatibility layer to avoid name conflicts */
+#define ASN1_BOOLEAN         REMAP_ASN1_BOOLEAN
+#define ASN1_OID             REMAP_ASN1_OID
+#define ASN1_INTEGER         REMAP_ASN1_INTEGER
+#define ASN1_BIT_STRING      REMAP_ASN1_BIT_STRING
+#define ASN1_IA5STRING       REMAP_ASN1_IA5STRING
+#define ASN1_OCTET_STRING    REMAP_ASN1_OCTET_STRING
+#define ASN1_UTCTIME         REMAP_ASN1_UTCTIME
+#define ASN1_GENERALIZEDTIME REMAP_ASN1_GENERALIZEDTIME
+
 #ifndef WOLFSSL_USER_SETTINGS
 	#include <wolfssl/options.h>
 #endif
 #include <wolfssl/ssl.h>
 
+#undef ASN1_BOOLEAN
+#undef ASN1_OID
+#undef ASN1_INTEGER
+#undef ASN1_BIT_STRING
+#undef ASN1_IA5STRING
+#undef ASN1_OCTET_STRING
+#undef ASN1_UTCTIME
+#undef ASN1_GENERALIZEDTIME
+
+/* eliminate macro conflicts */
+#undef RNG
 #undef PARSE_ERROR
 
-#endif /* WOLFSSL_COMMON_H_ */
+#endif /* PLUGIN_WOLFSSL_COMMON_H_ */

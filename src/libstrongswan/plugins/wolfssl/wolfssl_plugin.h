@@ -28,8 +28,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_PLUGIN_H_
-#define WOLFSSL_PLUGIN_H_
+#ifndef PLUGIN_WOLFSSL_PLUGIN_H_
+#define PLUGIN_WOLFSSL_PLUGIN_H_
 
 #include <plugins/plugin.h>
 
@@ -46,4 +46,4 @@ struct wolfssl_plugin_t {
 	plugin_t plugin;
 };
 
-#endif /** WOLFSSL_PLUGIN_H_ @}*/
+#endif /** PLUGIN_WOLFSSL_PLUGIN_H_ @}*/
