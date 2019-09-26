@@ -63,7 +63,7 @@ build_wolfssl()
 
 build_tss2()
 {
-	TSS2_REV=2.1.0
+	TSS2_REV=2.3.1
 	TSS2_PKG=tpm2-tss-$TSS2_REV
 	TSS2_DIR=$TRAVIS_BUILD_DIR/../$TSS2_PKG
 	TSS2_SRC=https://github.com/tpm2-software/tpm2-tss/releases/download/$TSS2_REV/$TSS2_PKG.tar.gz
@@ -79,7 +79,7 @@ build_tss2()
 	sudo apt-get install -qq libgcrypt20-dev &&
 	curl -L $TSS2_SRC | tar xz -C $TRAVIS_BUILD_DIR/.. &&
 	cd $TSS2_DIR &&
-	./configure &&
+	./configure --disable-doxygen-doc &&
 	make -j4 >/dev/null &&
 	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
