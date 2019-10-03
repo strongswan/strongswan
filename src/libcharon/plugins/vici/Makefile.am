@@ -47,6 +47,12 @@ libvici_la_SOURCES = \
 libvici_la_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 
 
+if USE_DEV_HEADERS
+vici_includedir = ${dev_headers}/vici
+vici_include_HEADERS = libvici.h
+endif
+
+
 TESTS = vici_tests
 
 check_PROGRAMS = $(TESTS)
