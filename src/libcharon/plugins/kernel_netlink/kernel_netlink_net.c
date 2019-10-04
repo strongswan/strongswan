@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Tobias Brunner
+ * Copyright (C) 2008-2019 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -1607,6 +1607,14 @@ CALLBACK(filter_addresses, bool,
 			addr->scope >= RT_SCOPE_LINK)
 		{	/* skip deprecated addresses or those with an unusable scope */
 			continue;
+		}
+		if (addr->ip->get_family(addr->ip) == AF_INET6)
+		{	/* handle temporary IPv6 addresses according to config */
+			bool temporary = (addr->flags & IFA_F_TEMPORARY) == IFA_F_TEMPORARY;
+			if (data->this->prefer_temporary_addrs != temporary)
+			{
+				continue;
+			}
 		}
 		*out = addr->ip;
 		return TRUE;

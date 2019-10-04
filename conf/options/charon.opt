@@ -286,8 +286,16 @@ charon.prefer_configured_proposals = yes
 	notifies).
 
 charon.prefer_temporary_addrs = no
-	By default public IPv6 addresses are preferred over temporary ones (RFC
-	4941), to make connections more stable. Enable this option to reverse this.
+	Controls whether permanent or temporary IPv6 addresses are used as source,
+	or announced as additional addresses if MOBIKE is used.
+
+	By default, permanent IPv6 source addresses are preferred over temporary
+	ones (RFC 4941), to make connections more stable. Enable this option to
+	reverse this.
+
+	It also affects which IPv6 addresses are announced as additional addresses
+	if MOBIKE is used.  If the option is disabled, only permanent addresses are
+	sent, and only temporary ones if it is enabled.
 
 charon.process_route = yes
 	Process RTM_NEWROUTE and RTM_DELROUTE events.
