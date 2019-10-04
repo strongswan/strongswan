@@ -1716,6 +1716,7 @@ METHOD(listener_t, child_updown, bool,
 {
 	vici_builder_t *b;
 	time_t now;
+	char buf[BUF_LEN];
 
 	if (!this->dispatcher->has_event_listeners(this->dispatcher, "child-updown"))
 	{
@@ -1734,7 +1735,10 @@ METHOD(listener_t, child_updown, bool,
 	list_ike(this, b, ike_sa, now);
 	b->begin_section(b, "child-sas");
 
-	b->begin_section(b, child_sa->get_name(child_sa));
+	snprintf(buf, sizeof(buf), "%s-%u", child_sa->get_name(child_sa),
+			 child_sa->get_unique_id(child_sa));
+
+	b->begin_section(b, buf);
 	list_child(this, b, child_sa, now);
 	b->end_section(b);
 
