@@ -20,6 +20,7 @@ the code, you need the following tools:
     - lex/flex
     - yacc/bison
     - gperf
+    - libgmp3-dev
 
     Optionally:
     - lcov/genhtml
