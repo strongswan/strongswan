@@ -1603,8 +1603,9 @@ CALLBACK(filter_addresses, bool,
 		{	/* address is regular, but not requested */
 			continue;
 		}
-		if (addr->scope >= RT_SCOPE_LINK)
-		{	/* skip addresses with a unusable scope */
+		if (addr->flags & IFA_F_DEPRECATED ||
+			addr->scope >= RT_SCOPE_LINK)
+		{	/* skip deprecated addresses or those with an unusable scope */
 			continue;
 		}
 		*out = addr->ip;
