@@ -28,7 +28,6 @@ import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
 import android.text.Editable;
-import android.text.Html;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextUtils;
@@ -632,14 +631,14 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private boolean verifyInput()
 	{
 		boolean valid = true;
-		if (mGateway.getText().toString().trim().isEmpty())
+		if (getString(mGateway) == null)
 		{
 			mGatewayWrap.setError(getString(R.string.alert_text_no_input_gateway));
 			valid = false;
 		}
 		if (mVpnType.has(VpnTypeFeature.USER_PASS))
 		{
-			if (mUsername.getText().toString().trim().isEmpty())
+			if (getString(mUsername) == null)
 			{
 				mUsernameWrap.setError(getString(R.string.alert_text_no_input_username));
 				valid = false;
@@ -705,17 +704,15 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private void updateProfileData()
 	{
 		/* the name is optional, we default to the gateway if none is given */
-		String name = mName.getText().toString().trim();
-		String gateway = mGateway.getText().toString().trim();
-		mProfile.setName(name.isEmpty() ? gateway : name);
+		String name = getString(mName);
+		String gateway = getString(mGateway);
+		mProfile.setName(name == null ? gateway : name);
 		mProfile.setGateway(gateway);
 		mProfile.setVpnType(mVpnType);
 		if (mVpnType.has(VpnTypeFeature.USER_PASS))
 		{
-			mProfile.setUsername(mUsername.getText().toString().trim());
-			String password = mPassword.getText().toString().trim();
-			password = password.isEmpty() ? null : password;
-			mProfile.setPassword(password);
+			mProfile.setUsername(getString(mUsername));
+			mProfile.setPassword(getString(mPassword));
 		}
 		if (mVpnType.has(VpnTypeFeature.CERTIFICATE))
 		{
@@ -724,8 +721,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		}
 		String certAlias = mCheckAuto.isChecked() ? null : mCertEntry.getAlias();
 		mProfile.setCertificateAlias(certAlias);
-		String remote_id = mRemoteId.getText().toString().trim();
-		mProfile.setRemoteId(remote_id.isEmpty() ? null : remote_id);
+		mProfile.setRemoteId(getString(mRemoteId));
 		mProfile.setMTU(getInteger(mMTU));
 		mProfile.setPort(getInteger(mPort));
 		mProfile.setNATKeepAlive(getInteger(mNATKeepalive));
@@ -736,22 +732,17 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		flags |= mStrictRevocation.isChecked() ? VpnProfile.FLAGS_STRICT_REVOCATION : 0;
 		flags |= mRsaPss.isChecked() ? VpnProfile.FLAGS_RSA_PSS : 0;
 		mProfile.setFlags(flags);
-		String included = mIncludedSubnets.getText().toString().trim();
-		mProfile.setIncludedSubnets(included.isEmpty() ? null : included);
-		String excluded = mExcludedSubnets.getText().toString().trim();
-		mProfile.setExcludedSubnets(excluded.isEmpty() ? null : excluded);
+		mProfile.setIncludedSubnets(getString(mIncludedSubnets));
+		mProfile.setExcludedSubnets(getString(mExcludedSubnets));
 		int st = 0;
 		st |= mBlockIPv4.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4 : 0;
 		st |= mBlockIPv6.isChecked() ? VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6 : 0;
 		mProfile.setSplitTunneling(st == 0 ? null : st);
 		mProfile.setSelectedAppsHandling(mSelectedAppsHandling);
 		mProfile.setSelectedApps(mSelectedApps);
-		String ike = mIkeProposal.getText().toString().trim();
-		mProfile.setIkeProposal(ike.isEmpty() ? null : ike);
-		String esp = mEspProposal.getText().toString().trim();
-		mProfile.setEspProposal(esp.isEmpty() ? null : esp);
-		String dns = mDnsServers.getText().toString().trim();
-		mProfile.setDnsServers(dns.isEmpty() ? null : dns);
+		mProfile.setIkeProposal(getString(mIkeProposal));
+		mProfile.setEspProposal(getString(mEspProposal));
+		mProfile.setDnsServers(getString(mDnsServers));
 	}
 
 	/**
@@ -844,6 +835,17 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			ArrayList<String> selectedApps = savedInstanceState.getStringArrayList(VpnProfileDataSource.KEY_SELECTED_APPS_LIST);
 			mSelectedApps = new TreeSet<>(selectedApps);
 		}
+	}
+
+	/**
+	 * Get the string value in the given text box or null if empty
+	 *
+	 * @param view text box
+	 */
+	private String getString(EditText view)
+	{
+		String value = view.getText().toString().trim();
+		return value.isEmpty() ? null : value;
 	}
 
 	/**
