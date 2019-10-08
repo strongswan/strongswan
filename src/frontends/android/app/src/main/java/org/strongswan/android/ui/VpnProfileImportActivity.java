@@ -505,6 +505,8 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		JSONObject local = obj.optJSONObject("local");
 		if (local != null)
 		{
+			profile.setLocalId(local.optString("id", null));
+
 			if (type.has(VpnTypeFeature.USER_PASS))
 			{
 				profile.setUsername(local.optString("eap_id", null));
@@ -512,7 +514,6 @@ public class VpnProfileImportActivity extends AppCompatActivity
 
 			if (type.has(VpnTypeFeature.CERTIFICATE))
 			{
-				profile.setLocalId(local.optString("id", null));
 				profile.PKCS12 = decodeBase64(local.optString("p12", null));
 
 				if (local.optBoolean("rsa-pss", false))
