@@ -889,7 +889,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			{
 				alias = getString(R.string.profile_cert_alias, mProfile.getName());
 			}
-			KeyChain.choosePrivateKeyAlias(VpnProfileImportActivity.this, this, new String[] { "RSA" }, null, null, -1, alias);
+			KeyChain.choosePrivateKeyAlias(VpnProfileImportActivity.this, this, null, null, null, -1, alias);
 		}
 
 		@Override

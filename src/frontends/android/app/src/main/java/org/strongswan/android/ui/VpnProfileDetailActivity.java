@@ -925,7 +925,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		public void onClick(View v)
 		{
 			String useralias = mUserCertEntry != null ? mUserCertEntry.getAlias() : null;
-			KeyChain.choosePrivateKeyAlias(VpnProfileDetailActivity.this, this, new String[] { "RSA" }, null, null, -1, useralias);
+			KeyChain.choosePrivateKeyAlias(VpnProfileDetailActivity.this, this, null, null, null, -1, useralias);
 		}
 
 		@Override
