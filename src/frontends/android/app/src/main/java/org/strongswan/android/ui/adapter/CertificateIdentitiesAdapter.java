@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2019 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -16,16 +16,9 @@
 package org.strongswan.android.ui.adapter;
 
 import android.content.Context;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.TextView;
 
-import org.strongswan.android.R;
 import org.strongswan.android.security.TrustedCertificateEntry;
-
-import java.util.List;
 
 public class CertificateIdentitiesAdapter extends ArrayAdapter<String>
 {
@@ -51,14 +44,8 @@ public class CertificateIdentitiesAdapter extends ArrayAdapter<String>
 
 	private void extractIdentities()
 	{
-		if (mCertificate == null)
+		if (mCertificate != null)
 		{
-			add(getContext().getString(R.string.profile_user_select_id_init));
-		}
-		else
-		{
-			add(String.format(getContext().getString(R.string.profile_user_select_id_default),
-							  mCertificate.getCertificate().getSubjectDN().getName()));
 			addAll(mCertificate.getSubjectAltNames());
 		}
 	}

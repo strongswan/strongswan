@@ -70,9 +70,6 @@
     <string name="profile_user_certificate_label">用户证书</string>
     <string name="profile_user_select_certificate_label">选择用户证书</string>
     <string name="profile_user_select_certificate">选择指定的用户证书</string>
-    <string name="profile_user_select_id_label">用户ID</string>
-    <string name="profile_user_select_id_init">首先选择一个证书</string>
-    <string name="profile_user_select_id_default">默认(%1$s)</string>
     <string name="profile_ca_label">CA证书</string>
     <string name="profile_ca_auto_label">自动选择</string>
     <string name="profile_ca_select_certificate_label">选择CA证书</string>
@@ -82,6 +79,9 @@
     <string name="profile_remote_id_label">服务器ID</string>
     <string name="profile_remote_id_hint">默认为已配置的服务器地址。自义定值将在鉴权期间被显式地发送至服务器</string>
     <string name="profile_remote_id_hint_gateway">默认为 \"%1$s\"。自义定值将在鉴权期间被显式地发送至服务器</string>
+    <string name="profile_local_id_label">Client identity</string>
+    <string name="profile_local_id_hint_user">Defaults to the configured username. Custom values may be used if expected/required by the server</string>
+    <string name="profile_local_id_hint_cert">Defaults to the certificate\'s subject identity. Custom values may be used if expected/required by the server. Note that these usually must be confirmed by the certificate (auto-completion is provided for the certificate\'s alternative identities, if any)</string>
     <string name="profile_dns_servers_label">DNS servers</string>
     <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\"), defaults to those received from the VPN server</string>
     <string name="profile_mtu_label">VPN隧道设备的MTU值</string>

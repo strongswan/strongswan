@@ -71,9 +71,6 @@
     <string name="profile_user_certificate_label">Сертифікат користувача</string>
     <string name="profile_user_select_certificate_label">Виберіть сертифікат користувача</string>
     <string name="profile_user_select_certificate">Вибрати спеціальний сертифікат користувача</string>
-    <string name="profile_user_select_id_label">User identity</string>
-    <string name="profile_user_select_id_init">Select a certificate first</string>
-    <string name="profile_user_select_id_default">Default (%1$s)</string>
     <string name="profile_ca_label">Сертифікат CA</string>
     <string name="profile_ca_auto_label">Вибрати автоматично</string>
     <string name="profile_ca_select_certificate_label">Вибрати сертифікат CA</string>
@@ -83,6 +80,9 @@
     <string name="profile_remote_id_label">Server identity</string>
     <string name="profile_remote_id_hint">Defaults to the configured server. Custom values are explicitly sent to the server and enforced during authentication</string>
     <string name="profile_remote_id_hint_gateway">Defaults to \"%1$s\". Custom values are explicitly sent to the server and enforced during authentication</string>
+    <string name="profile_local_id_label">Client identity</string>
+    <string name="profile_local_id_hint_user">Defaults to the configured username. Custom values may be used if expected/required by the server</string>
+    <string name="profile_local_id_hint_cert">Defaults to the certificate\'s subject identity. Custom values may be used if expected/required by the server. Note that these usually must be confirmed by the certificate (auto-completion is provided for the certificate\'s alternative identities, if any)</string>
     <string name="profile_dns_servers_label">DNS servers</string>
     <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\"), defaults to those received from the VPN server</string>
     <string name="profile_mtu_label">MTU of the VPN tunnel device</string>

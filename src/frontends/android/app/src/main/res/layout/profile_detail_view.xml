@@ -73,6 +73,7 @@
                 android:id="@+id/username_wrap"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
                 android:hint="@string/profile_username_label" >
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -121,20 +122,6 @@
             <include
                 android:id="@+id/select_user_certificate"
                 layout="@layout/two_line_button" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:layout_marginLeft="4dp"
-                android:textSize="12sp"
-                android:text="@string/profile_user_select_id_label" />
-
-            <Spinner
-                android:id="@+id/select_user_id"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:spinnerMode="dropdown" />
 
         </LinearLayout>
 
@@ -209,6 +196,23 @@
                     android:singleLine="true"
                     android:inputType="textNoSuggestions"
                     android:completionThreshold="1" />
+
+            </org.strongswan.android.ui.widget.TextInputLayoutHelper>
+
+            <org.strongswan.android.ui.widget.TextInputLayoutHelper
+                android:id="@+id/local_id_wrap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/profile_local_id_label"
+                app:helper_text="@string/profile_local_id_hint_user" >
+
+                <MultiAutoCompleteTextView
+                    android:id="@+id/local_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:singleLine="true"
+                    android:inputType="textNoSuggestions"
+                    android:completionThreshold="0" />
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 

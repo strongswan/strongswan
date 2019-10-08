@@ -73,9 +73,6 @@
     <string name="profile_user_certificate_label">Benutzer-Zertifikat</string>
     <string name="profile_user_select_certificate_label">Benutzer-Zertifikat auswählen</string>
     <string name="profile_user_select_certificate">Wählen Sie ein bestimmtes Benutzer-Zertifikat</string>
-    <string name="profile_user_select_id_label">Benutzer-Identität</string>
-    <string name="profile_user_select_id_init">Wählen Sie zuerst ein Benutzer-Zertifikat</string>
-    <string name="profile_user_select_id_default">Standardwert (%1$s)</string>
     <string name="profile_ca_label">CA-Zertifikat</string>
     <string name="profile_ca_auto_label">Automatisch wählen</string>
     <string name="profile_ca_select_certificate_label">CA-Zertifikat auswählen</string>
@@ -85,6 +82,9 @@
     <string name="profile_remote_id_label">Server-Identität</string>
     <string name="profile_remote_id_hint">Standardwert ist der konfigurierte Server. Eigene Werte werden explizit an den Server gesendet und während der Authentifizierung erzwungen</string>
     <string name="profile_remote_id_hint_gateway">Standardwert ist \"%1$s\". Eigene Werte werden explizit an den Server gesendet und während der Authentifizierung erzwungen</string>
+    <string name="profile_local_id_label">Client-Identität</string>
+    <string name="profile_local_id_hint_user">Standardwert ist der konfigurierte Benutzername. Eigene Werte können verwendet werden, falls der Server diese erwartet/benötigt</string>
+    <string name="profile_local_id_hint_cert">Standardwert ist die Inhaber-Identität des Zertifkats. Eigene Werte können verwendet werden, falls der Server diese erwartet/benötigt. Zu beachten ist, dass diese üblicherweise vom Zertifikat bestätigt werden müssen (für die alternativen Identitäten des Zertifikats, falls vorhanden, wird eine Auto-Vervollständigung angeboten)</string>
     <string name="profile_dns_servers_label">DNS Server</string>
     <string name="profile_dns_servers_hint">Benutzerdefinierte DNS Server bei Verbindung zum VPN (mit Leerzeichen getrennt, z.B.. \"8.8.8.8 2001:4860:4860::8888\"), standardmässig werden die vom VPN Server erhaltenen Server verwendet</string>
     <string name="profile_mtu_label">MTU des VPN Tunnel-Device</string>
