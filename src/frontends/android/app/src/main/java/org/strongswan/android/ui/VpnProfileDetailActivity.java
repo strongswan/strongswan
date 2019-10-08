@@ -216,9 +216,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		final SpaceTokenizer spaceTokenizer = new SpaceTokenizer();
 		mName.setTokenizer(spaceTokenizer);
 		mRemoteId.setTokenizer(spaceTokenizer);
-		final ArrayAdapter<String> completeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line);
-		mName.setAdapter(completeAdapter);
-		mRemoteId.setAdapter(completeAdapter);
+		final ArrayAdapter<String> gatewayAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line);
+		mName.setAdapter(gatewayAdapter);
+		mRemoteId.setAdapter(gatewayAdapter);
 
 		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
 		{
@@ -237,8 +237,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			@Override
 			public void afterTextChanged(Editable s)
 			{
-				completeAdapter.clear();
-				completeAdapter.add(mGateway.getText().toString());
+				gatewayAdapter.clear();
+				gatewayAdapter.add(mGateway.getText().toString());
 				if (TextUtils.isEmpty(mGateway.getText()))
 				{
 					mNameWrap.setHelperText(getString(R.string.profile_name_hint));
