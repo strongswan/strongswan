@@ -140,7 +140,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private EditText mEspProposal;
 	private TextView mProfileIdLabel;
 	private TextView mProfileId;
-	private MultiAutoCompleteTextView mDnsServers;
+	private EditText mDnsServers;
 	private TextInputLayoutHelper mDnsServersWrap;
 
 	@Override
@@ -180,8 +180,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		mRemoteId = (MultiAutoCompleteTextView)findViewById(R.id.remote_id);
 		mRemoteIdWrap = (TextInputLayoutHelper) findViewById(R.id.remote_id_wrap);
-		mDnsServers = (MultiAutoCompleteTextView)findViewById(R.id.dns_servers);
-		mDnsServersWrap = (TextInputLayoutHelper) findViewById(R.id.dns_servers_wrap);
+		mDnsServers = findViewById(R.id.dns_servers);
+		mDnsServersWrap = findViewById(R.id.dns_servers_wrap);
 		mMTU = (EditText)findViewById(R.id.mtu);
 		mMTUWrap = (TextInputLayoutHelper) findViewById(R.id.mtu_wrap);
 		mPort = (EditText)findViewById(R.id.port);

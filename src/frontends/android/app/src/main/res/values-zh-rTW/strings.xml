@@ -83,7 +83,7 @@
     <string name="profile_remote_id_hint">預設為已設定的伺服器位置。自訂值會在授權期間送到伺服器</string>
     <string name="profile_remote_id_hint_gateway">預設為 \"%1$s\"。自訂值會在授權期間送到伺服器</string>
     <string name="profile_dns_servers_label">DNS servers</string>
-    <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\", defaults to those received from the VPN server)</string>
+    <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\"), defaults to those received from the VPN server</string>
     <string name="profile_mtu_label">VPN通道裝置的MTU值</string>
     <string name="profile_mtu_hint">如果在某個網路下預設值不適合</string>
     <string name="profile_port_label">伺服器Port</string>

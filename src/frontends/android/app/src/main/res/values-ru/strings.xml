@@ -83,7 +83,7 @@
     <string name="profile_remote_id_hint">Defaults to the configured server. Custom values are explicitly sent to the server and enforced during authentication</string>
     <string name="profile_remote_id_hint_gateway">Defaults to \"%1$s\". Custom values are explicitly sent to the server and enforced during authentication</string>
     <string name="profile_dns_servers_label">DNS servers</string>
-    <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\", defaults to those received from the VPN server)</string>
+    <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\"), defaults to those received from the VPN server</string>
     <string name="profile_mtu_label">MTU of the VPN tunnel device</string>
     <string name="profile_mtu_hint">In case the default value is unsuitable for a particular network</string>
     <string name="profile_port_label">Server port</string>

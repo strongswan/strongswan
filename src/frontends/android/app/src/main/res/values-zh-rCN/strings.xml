@@ -82,6 +82,8 @@
     <string name="profile_remote_id_label">服务器ID</string>
     <string name="profile_remote_id_hint">默认为已配置的服务器地址。自义定值将在鉴权期间被显式地发送至服务器</string>
     <string name="profile_remote_id_hint_gateway">默认为 \"%1$s\"。自义定值将在鉴权期间被显式地发送至服务器</string>
+    <string name="profile_dns_servers_label">DNS servers</string>
+    <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\"), defaults to those received from the VPN server</string>
     <string name="profile_mtu_label">VPN隧道设备的MTU值</string>
     <string name="profile_mtu_hint">假如在某一网络下默认值不合适</string>
     <string name="profile_port_label">服务器端口</string>
