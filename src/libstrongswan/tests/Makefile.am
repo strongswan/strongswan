@@ -2,8 +2,7 @@ check_LTLIBRARIES = libtest.la
 
 libtest_la_SOURCES = \
   test_suite.c test_suite.h \
-  test_runner.c test_runner.h \
-  utils/test_rng.c utils/test_rng.h
+  test_runner.c test_runner.h
 
 libtest_la_CFLAGS = \
   -I$(top_srcdir)/src/libstrongswan \
@@ -54,7 +53,7 @@ libstrongswan_tests_SOURCES = tests.h tests.c \
   suites/test_asn1.c \
   suites/test_asn1_parser.c \
   suites/test_printf.c \
-  suites/test_test_rng.c \
+  suites/test_rng_tester.c \
   suites/test_mgf1.c \
   suites/test_ntru.c \
   suites/test_ed25519.c \

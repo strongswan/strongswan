@@ -15,10 +15,10 @@
 
 #include "test_suite.h"
 
-#include <tests/utils/test_rng.h>
 #include <utils/test.h>
+#include <crypto/rngs/rng_tester.h>
 
-START_TEST(test_test_rng)
+START_TEST(test_rng_tester)
 {
 	rng_t *entropy;
 	chunk_t in, in1, in2, out;
@@ -27,7 +27,7 @@ START_TEST(test_test_rng)
 	in2 = chunk_from_chars(0x07, 0x08);
 	in = chunk_cat("cc", in1, in2);
 
-	entropy = test_rng_create(in);
+	entropy = rng_tester_create(in);
 	ck_assert(entropy->allocate_bytes(entropy, 6, &out));
 	ck_assert(chunk_equals(in1, out));
 	ck_assert(entropy->get_bytes(entropy, 2, out.ptr));
@@ -41,15 +41,15 @@ START_TEST(test_test_rng)
 END_TEST
 
 
-Suite *test_rng_suite_create()
+Suite *rng_tester_suite_create()
 {
 	Suite *s;
 	TCase *tc;
 
-	s = suite_create("test_rng");
+	s = suite_create("rng_tester");
 
-	tc = tcase_create("test_rng");
-	tcase_add_test(tc, test_test_rng);
+	tc = tcase_create("rng_tester");
+	tcase_add_test(tc, test_rng_tester);
 	suite_add_tcase(s, tc);
 
 	return s;

@@ -13,7 +13,7 @@
  * for more details.
  */
 
-#include "test_rng.h"
+#include "rng_tester.h"
 
 typedef struct private_rng_t private_rng_t;
 
@@ -69,7 +69,7 @@ METHOD(rng_t, destroy, void,
 /*
  * Described in header.
  */
-rng_t *test_rng_create(chunk_t entropy)
+rng_t *rng_tester_create(chunk_t entropy)
 {
 	private_rng_t *this;
 

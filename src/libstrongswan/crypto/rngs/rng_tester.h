@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Andreas Steffen
+ * Copyright (C) 2013-2019 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,23 +14,23 @@
  */
 
 /**
- * rng_t providing NIST SP 800-90A entropy test vectors
+ * rng_t providing deterministic output (DO NOT USE IN PRODUCTIVE SYSTEMS!!!)
  *
- * @defgroup test_rng test_rng
- * @{ @ingroup test_utils
+ * @defgroup rng_tester rng_tester
+ * @{ @ingroup crypto
  */
 
-#ifndef TEST_RNG_H_
-#define TEST_RNG_H_
+#ifndef RNG_TESTER_H_
+#define RNG_TESTER_H_
 
 #include <library.h>
 
 /**
- * Creates a test_rng_t instance.
+ * Creates a rng_tester_t instance.
  *
- * @param entropy	entropy test vector
- * @return			created test_rng_t
+ * @param entropy	deterministic output
+ * @return			created rng_tester_t
  */
-rng_t *test_rng_create(chunk_t entropy);
+rng_t *rng_tester_create(chunk_t entropy);
 
-#endif /** TEST_RNG_H_ @} */
+#endif /** RNG_TESTER_H_ @} */
