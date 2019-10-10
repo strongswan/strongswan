@@ -58,7 +58,7 @@ struct private_ntru_private_key_t {
 	/**
 	 * Deterministic Random Bit Generator
 	 */
-	ntru_drbg_t *drbg;
+	drbg_t *drbg;
 
 };
 
@@ -640,7 +640,7 @@ static bool ring_inv(uint16_t *a, uint16_t N, uint16_t q, uint16_t *t,
 /*
  * Described in header.
  */
-ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
+ntru_private_key_t *ntru_private_key_create(drbg_t *drbg,
 											const ntru_param_set_t *params)
 {
 	private_ntru_private_key_t *this;
@@ -671,8 +671,7 @@ ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
 	seed =chunk_alloc(params->sec_strength_len + 8);
 
 	/* get random seed for generating trinary F as a list of indices */
-	if (!drbg->generate(drbg, params->sec_strength_len * BITS_PER_BYTE,
-							  seed.len, seed.ptr))
+	if (!drbg->generate(drbg, seed.len, seed.ptr))
 	{
 		goto err;
 	}
@@ -715,8 +714,7 @@ ntru_private_key_t *ntru_private_key_create(ntru_drbg_t *drbg,
 	}
 
 	/* get random seed for generating trinary g as a list of indices */
- 	if (!drbg->generate(drbg, params->sec_strength_len * BITS_PER_BYTE,
-							  seed.len, seed.ptr))
+ 	if (!drbg->generate(drbg, seed.len, seed.ptr))
 	{
 		goto err;
 	}
@@ -760,7 +758,7 @@ err:
 /*
  * Described in header.
  */
-ntru_private_key_t *ntru_private_key_create_from_data(ntru_drbg_t *drbg,
+ntru_private_key_t *ntru_private_key_create_from_data(drbg_t *drbg,
 													  chunk_t data)
 {
 	private_ntru_private_key_t *this;
