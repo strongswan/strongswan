@@ -168,6 +168,33 @@ METHOD(task_t, process_r, status_t,
 	return NEED_MORE;
 }
 
+/**
+ * Check if we are currently deleting this IKE_SA in a break-before-make reauth.
+ */
+static bool is_reauthenticating(private_ike_delete_t *this)
+{
+	enumerator_t *tasks;
+	task_t *task;
+
+	if (!this->ike_sa->has_condition(this->ike_sa, COND_REAUTHENTICATING))
+	{
+		return FALSE;
+	}
+
+	tasks = this->ike_sa->create_task_enumerator(this->ike_sa,
+												 TASK_QUEUE_ACTIVE);
+	while (tasks->enumerate(tasks, &task))
+	{
+		if (task->get_type(task) == TASK_IKE_REAUTH)
+		{
+			tasks->destroy(tasks);
+			return TRUE;
+		}
+	}
+	tasks->destroy(tasks);
+	return FALSE;
+}
+
 METHOD(task_t, build_r, status_t,
 	private_ike_delete_t *this, message_t *message)
 {
@@ -177,6 +204,18 @@ METHOD(task_t, build_r, status_t,
 	{	/* invoke ike_down() hook if SA has not been rekeyed */
 		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
 	}
+
+	/* if we are currently deleting this IKE_SA due to a break-before-make
+	 * reauthentication, make sure to not just silently destroy the SA if
+	 * the peer concurrently deletes it */
+	if (is_reauthenticating(this))
+	{
+		if (this->ike_sa->reestablish(this->ike_sa) != SUCCESS)
+		{
+			DBG1(DBG_IKE, "reauthenticating IKE_SA failed");
+		}
+	}
+
 	/* completed, delete IKE_SA by returning DESTROY_ME */
 	return DESTROY_ME;
 }
