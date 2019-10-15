@@ -849,6 +849,7 @@ static void list_algs(FILE *out)
 	hash_algorithm_t hash;
 	pseudo_random_function_t prf;
 	ext_out_function_t xof;
+	drbg_type_t drbg;
 	diffie_hellman_group_t group;
 	rng_quality_t quality;
 	const char *plugin_name;
@@ -902,6 +903,14 @@ static void list_algs(FILE *out)
 	while (enumerator->enumerate(enumerator, &xof, &plugin_name))
 	{
 		print_alg(out, &len, ext_out_function_names, xof, plugin_name);
+	}
+	enumerator->destroy(enumerator);
+	fprintf(out, "\n  drbg:      ");
+	len = 13;
+	enumerator = lib->crypto->create_drbg_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &drbg, &plugin_name))
+	{
+		print_alg(out, &len, drbg_type_names, drbg, plugin_name);
 	}
 	enumerator->destroy(enumerator);
 	fprintf(out, "\n  dh-group:  ");
