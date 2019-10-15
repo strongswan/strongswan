@@ -169,7 +169,7 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 
 		public TrustedCertificatesPagerAdapter(FragmentManager fm, Context context)
 		{
-			super(fm);
+			super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
 			mTabs = new TrustedCertificatesTab[]{
 				new TrustedCertificatesTab(context.getString(R.string.system_tab), TrustedCertificateSource.SYSTEM),
 				new TrustedCertificatesTab(context.getString(R.string.user_tab), TrustedCertificateSource.USER),
