@@ -692,12 +692,27 @@ struct pfkey_msg_t
 			struct sadb_x_kmprivate *x_kmprivate;	/* SADB_X_EXT_KMPRIVATE */
 			struct sadb_x_policy *x_policy;			/* SADB_X_EXT_POLICY */
 			struct sadb_x_sa2 *x_sa2;				/* SADB_X_EXT_SA2 */
+#if defined(__linux__) || defined (__FreeBSD__)
 			struct sadb_x_nat_t_type *x_natt_type;	/* SADB_X_EXT_NAT_T_TYPE */
 			struct sadb_x_nat_t_port *x_natt_sport;	/* SADB_X_EXT_NAT_T_SPORT */
 			struct sadb_x_nat_t_port *x_natt_dport;	/* SADB_X_EXT_NAT_T_DPORT */
+#ifdef __linux__
 			struct sadb_address *x_natt_oa;			/* SADB_X_EXT_NAT_T_OA */
 			struct sadb_x_sec_ctx *x_sec_ctx;		/* SADB_X_EXT_SEC_CTX */
 			struct sadb_x_kmaddress *x_kmaddress;	/* SADB_X_EXT_KMADDRESS */
+#else
+			struct sadb_address *x_natt_oai;		/* SADB_X_EXT_NAT_T_OAI */
+			struct sadb_address *x_natt_oar;		/* SADB_X_EXT_NAT_T_OAR */
+#ifdef SADB_X_EXT_NAT_T_FRAG
+			struct sadb_x_nat_t_frag *x_natt_frag;	/* SADB_X_EXT_NAT_T_FRAG */
+#ifdef SADB_X_EXT_SA_REPLAY
+			struct sadb_x_sa_replay *x_replay;		/* SADB_X_EXT_SA_REPLAY */
+			struct sadb_address *x_new_addr_src;	/* SADB_X_EXT_NEW_ADDRESS_SRC */
+			struct sadb_address *x_new_addr_dst;	/* SADB_X_EXT_NEW_ADDRESS_DST */
+#endif
+#endif
+#endif /* __linux__ */
+#endif /* __linux__ || __FreeBSD__ */
 		} __attribute__((__packed__));
 	};
 };
@@ -723,12 +738,34 @@ ENUM(sadb_ext_type_names, SADB_EXT_RESERVED, SADB_EXT_MAX,
 	"SADB_X_EXT_KMPRIVATE",
 	"SADB_X_EXT_POLICY",
 	"SADB_X_EXT_SA2",
+#ifdef __APPLE__
+	"SADB_EXT_SESSION_ID",
+	"SADB_EXT_SASTAT",
+	"SADB_X_EXT_IPSECIF",
+	"SADB_X_EXT_ADDR_RANGE_SRC_START",
+	"SADB_X_EXT_ADDR_RANGE_SRC_END",
+	"SADB_X_EXT_ADDR_RANGE_DST_START",
+	"SADB_X_EXT_ADDR_RANGE_DST_END",
+	"SADB_EXT_MIGRATE_ADDRESS_SRC",
+	"SADB_EXT_MIGRATE_ADDRESS_DST",
+	"SADB_X_EXT_MIGRATE_IPSECIF",
+#else
 	"SADB_X_EXT_NAT_T_TYPE",
 	"SADB_X_EXT_NAT_T_SPORT",
 	"SADB_X_EXT_NAT_T_DPORT",
+#ifdef __linux__
 	"SADB_X_EXT_NAT_T_OA",
 	"SADB_X_EXT_SEC_CTX",
-	"SADB_X_EXT_KMADDRESS"
+	"SADB_X_EXT_KMADDRESS",
+#else
+	"SADB_X_EXT_NAT_T_OAI",
+	"SADB_X_EXT_NAT_T_OAR",
+	"SADB_X_EXT_NAT_T_FRAG",
+	"SADB_X_EXT_SA_REPLAY",
+	"SADB_X_EXT_NEW_ADDRESS_SRC",
+	"SADB_X_EXT_NEW_ADDRESS_DST",
+#endif /* __linux__ */
+#endif /* __APPLE__ */
 );
 
 /**
