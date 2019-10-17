@@ -86,43 +86,6 @@ build_tss2()
 	cd -
 }
 
-build_openssl()
-{
-	SSL_REV=1.1.1d
-	SSL_PKG=openssl-$SSL_REV
-	SSL_DIR=$TRAVIS_BUILD_DIR/../$SSL_PKG
-	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
-	SSL_INS=/usr/local/ssl
-	SSL_OPT="shared no-tls no-dtls no-ssl3 no-zlib no-comp no-idea no-psk no-srp
-			 no-stdio no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128
-			 --api=1.1.0"
-
-	if test -d "$SSL_DIR"; then
-		return
-	fi
-
-	echo "$ build_openssl()"
-
-	curl -L $SSL_SRC | tar xz -C $TRAVIS_BUILD_DIR/.. &&
-	cd $SSL_DIR &&
-	./config --prefix=$SSL_INS --openssldir=$SSL_INS $SSL_OPT &&
-	make -j4 >/dev/null &&
-	sudo make install_sw >/dev/null &&
-	echo $SSL_INS/lib | sudo tee /etc/ld.so.conf.d/openssl-$SSL_REV.conf >/dev/null &&
-	sudo ldconfig || exit $?
-	cd -
-}
-
-use_custom_openssl()
-{
-	CFLAGS="$CFLAGS -I/usr/local/ssl/include"
-	LDFLAGS="$LDFLAGS -L/usr/local/ssl/lib"
-	export LDFLAGS
-	if test "$1" = "deps"; then
-		build_openssl
-	fi
-}
-
 if test -z $TRAVIS_BUILD_DIR; then
 	TRAVIS_BUILD_DIR=$PWD
 fi
@@ -144,10 +107,6 @@ openssl*)
 	CONFIG="--disable-defaults --enable-pki --enable-openssl --enable-pem"
 	export TESTS_PLUGINS="test-vectors pem openssl!"
 	DEPS="libssl-dev"
-	if test "$TEST" != "openssl-1.0"; then
-		DEPS=""
-		use_custom_openssl $1
-	fi
 	;;
 gcrypt)
 	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1"
@@ -197,14 +156,13 @@ all|coverage|sonarcloud)
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libpcsclite-dev libpam0g-dev binutils-dev libunwind8-dev libnm-dev
-		  libjson0-dev iptables-dev python-pip libtspi-dev libsystemd-dev"
+		  libjson-c-dev iptables-dev python-pip libtspi-dev libsystemd-dev"
 	PYDEPS="pytest"
 	if test "$1" = "deps"; then
 		build_botan
 		build_wolfssl
 		build_tss2
 	fi
-	use_custom_openssl $1
 	;;
 win*)
 	CONFIG="--disable-defaults --enable-svc --enable-ikev2
@@ -374,6 +332,12 @@ esac
 echo "$ make $TARGET"
 case "$TEST" in
 sonarcloud)
+	# there is an issue with the platform detection that causes sonarqube to
+	# fail on bionic with "ERROR: ld.so: object '...libinterceptor-${PLATFORM}.so'
+	# from LD_PRELOAD cannot be preloaded (cannot open shared object file)"
+	# https://jira.sonarsource.com/browse/CPP-2027
+	BW_PATH=$(dirname $(which build-wrapper-linux-x86-64))
+	cp $BW_PATH/libinterceptor-x86_64.so $BW_PATH/libinterceptor-haswell.so
 	# without target, coverage is currently not supported anyway because
 	# sonarqube only supports gcov, not lcov
 	build-wrapper-linux-x86-64 --out-dir bw-output make -j4 || exit $?

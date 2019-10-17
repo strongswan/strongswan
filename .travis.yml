@@ -1,7 +1,7 @@
 language: c
 
 sudo: required
-dist: xenial
+dist: bionic
 
 # don't build tags separately
 if: tag IS blank
@@ -50,6 +50,11 @@ matrix:
     - env: TEST=all
     - env: TEST=all
       compiler: clang
+    - env: TEST=all
+      dist: xenial
+    - env: TEST=all
+      dist: xenial
+      compiler: clang
     - env: TEST=all MONOLITHIC=yes
     - env: TEST=all MONOLITHIC=yes
       compiler: clang
@@ -86,7 +91,9 @@ matrix:
     - env: TEST=openssl
     - env: TEST=openssl LEAK_DETECTIVE=yes
     - env: TEST=openssl-1.0
+      dist: xenial
     - env: TEST=openssl-1.0 LEAK_DETECTIVE=yes
+      dist: xenial
     - env: TEST=gcrypt
     - env: TEST=gcrypt LEAK_DETECTIVE=yes
     - env: TEST=apidoc
