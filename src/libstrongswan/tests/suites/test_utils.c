@@ -548,6 +548,63 @@ START_TEST(test_memstr)
 END_TEST
 
 /*******************************************************************************
+ * memwipe
+ */
+
+START_TEST(test_memwipe_null)
+{
+	memwipe(NULL, 16);
+}
+END_TEST
+
+static inline bool test_wiped_memory(char *buf, size_t len)
+{
+	int i;
+
+	/* comparing two bytes at once reduces the chances of conflicts if memory
+	 * got overwritten already */
+	for (i = 0; i < len; i += 2)
+	{
+		if (buf[i] != 0 && buf[i] == i &&
+			buf[i+1] != 0 && buf[i+1] == i+1)
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+START_TEST(test_memwipe_stack)
+{
+	char buf[64];
+	int i;
+
+	for (i = 0; i < sizeof(buf); i++)
+	{
+		buf[i] = i;
+	}
+	memwipe(buf, sizeof(buf));
+	ck_assert(test_wiped_memory(buf, sizeof(buf)));
+}
+END_TEST
+
+START_TEST(test_memwipe_heap)
+{
+	size_t len = 64;
+	char *buf = malloc(len);
+	int i;
+
+	for (i = 0; i < len; i++)
+	{
+		buf[i] = i;
+	}
+	memwipe(buf, len);
+	ck_assert(test_wiped_memory(buf, len));
+	free(buf);
+}
+END_TEST
+
+/*******************************************************************************
  * utils_memrchr
  */
 
@@ -1130,6 +1187,12 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("memstr");
 	tcase_add_loop_test(tc, test_memstr, 0, countof(memstr_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("memwipe");
+	tcase_add_test(tc, test_memwipe_null);
+	tcase_add_test(tc, test_memwipe_stack);
+	tcase_add_test(tc, test_memwipe_heap);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("utils_memrchr");

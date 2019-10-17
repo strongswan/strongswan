@@ -87,7 +87,13 @@ static inline void *memset_noop(void *s, int c, size_t n)
 void memxor(uint8_t dest[], const uint8_t src[], size_t n);
 
 #ifdef HAVE_EXPLICIT_BZERO
-#define memwipe(ptr, n) explicit_bzero(ptr, n)
+static inline void memwipe(void *ptr, size_t n)
+{
+	if (ptr)
+	{
+		explicit_bzero(ptr, n);
+	}
+}
 #else /* HAVE_EXPLICIT_BZERO */
 /**
  * Safely overwrite n bytes of memory at ptr with zero, non-inlining variant.
