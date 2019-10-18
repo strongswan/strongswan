@@ -103,12 +103,12 @@ METHOD(prf_plus_t, get_bytes, bool,
 METHOD(prf_plus_t, allocate_bytes, bool,
 	private_prf_plus_t *this, size_t length, chunk_t *chunk)
 {
-	if (length)
+	*chunk = chunk_alloc(length);
+	if (!get_bytes(this, length, chunk->ptr))
 	{
-		*chunk = chunk_alloc(length);
-		return get_bytes(this, length, chunk->ptr);
+		chunk_free(chunk);
+		return FALSE;
 	}
-	*chunk = chunk_empty;
 	return TRUE;
 }
 
