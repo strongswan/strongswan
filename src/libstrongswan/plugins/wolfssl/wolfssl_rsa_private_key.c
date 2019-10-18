@@ -419,7 +419,9 @@ static private_wolfssl_rsa_private_key_t *create_empty()
 		free(this);
 		return NULL;
 	}
+#ifdef WC_RSA_BLINDING
 	this->rsa.rng = &this->rng;
+#endif
 
 	return this;
 }
