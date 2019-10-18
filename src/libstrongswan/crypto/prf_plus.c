@@ -20,6 +20,8 @@
 
 typedef struct private_prf_plus_t private_prf_plus_t;
 
+typedef bool (*apply_prf_t)(private_prf_plus_t *this);
+
 /**
  * Private data of an prf_plus_t object.
  *
@@ -42,7 +44,7 @@ struct private_prf_plus_t {
 	chunk_t seed;
 
 	/**
-	 * Octet which will be appended to the seed, 0 if not used
+	 * Octet which will be appended to the seed if a counter is used.
 	 */
 	uint8_t counter;
 
@@ -55,7 +57,40 @@ struct private_prf_plus_t {
 	 * Buffer to store current PRF result.
 	 */
 	chunk_t buffer;
+
+	/**
+	 * The prf application method depending on whether a counter is used.
+	 */
+	apply_prf_t apply_prf;
 };
+
+/**
+ * Apply the PRF using the running counter
+ */
+static bool apply_prf_counter(private_prf_plus_t *this)
+{
+	if (!this->prf->get_bytes(this->prf, this->seed, NULL) ||
+		!this->prf->get_bytes(this->prf, chunk_from_thing(this->counter),
+							  this->buffer.ptr))
+	{
+		return FALSE;
+	}
+	this->counter++;
+	if (!this->counter)
+	{	/* according to RFC 7296, section 2.13, prf+ is undefined once the
+		 * counter wrapped, so let's fail for future calls */
+		this->apply_prf = (void*)return_false;
+	}
+	return TRUE;
+}
+
+/**
+ * Apply the PRF using the running counter
+ */
+static bool apply_prf(private_prf_plus_t *this)
+{
+	return this->prf->get_bytes(this->prf, this->seed, this->buffer.ptr);
+}
 
 METHOD(prf_plus_t, get_bytes, bool,
 	private_prf_plus_t *this, size_t length, uint8_t *buffer)
@@ -70,23 +105,9 @@ METHOD(prf_plus_t, get_bytes, bool,
 			{
 				return FALSE;
 			}
-			if (this->counter)
+			if (!this->apply_prf(this))
 			{
-				if (!this->prf->get_bytes(this->prf, this->seed, NULL) ||
-					!this->prf->get_bytes(this->prf,
-							chunk_from_thing(this->counter), this->buffer.ptr))
-				{
-					return FALSE;
-				}
-				this->counter++;
-			}
-			else
-			{
-				if (!this->prf->get_bytes(this->prf, this->seed,
-										  this->buffer.ptr))
-				{
-					return FALSE;
-				}
+				return FALSE;
 			}
 			this->used = 0;
 		}
@@ -136,28 +157,14 @@ prf_plus_t *prf_plus_create(prf_t *prf, bool counter, chunk_t seed)
 		.prf = prf,
 		.seed = chunk_clone(seed),
 		.buffer = chunk_alloc(prf->get_block_size(prf)),
+		.apply_prf = counter ? apply_prf_counter : apply_prf,
+		.counter = 0x01,
 	);
 
-	if (counter)
+	if (!this->apply_prf(this))
 	{
-		this->counter = 0x01;
-		if (!this->prf->get_bytes(this->prf, this->seed, NULL) ||
-			!this->prf->get_bytes(this->prf, chunk_from_thing(this->counter),
-								  this->buffer.ptr))
-		{
-			destroy(this);
-			return NULL;
-		}
-		this->counter++;
+		destroy(this);
+		return NULL;
 	}
-	else
-	{
-		if (!this->prf->get_bytes(this->prf, this->seed, this->buffer.ptr))
-		{
-			destroy(this);
-			return NULL;
-		}
-	}
-
 	return &this->public;
 }
