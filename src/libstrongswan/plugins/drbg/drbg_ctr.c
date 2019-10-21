@@ -94,7 +94,6 @@ static bool encrypt_ctr(private_drbg_ctr_t *this, chunk_t out)
 	chunk_t bl = chunk_alloca(this->value.len);
 	chunk_t block;
 	size_t delta, pos = 0;
-	int bit;
 
 	/* Initialize IV to all zeroes for ECB mode */
 	memset(iv.ptr, 0x00, iv.len);
