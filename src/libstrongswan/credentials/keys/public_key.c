@@ -126,6 +126,7 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 		case OID_MD5:
 			return SIGN_RSA_EMSA_PKCS1_MD5;
 		case OID_SHA1_WITH_RSA:
+		case OID_SHA1_WITH_RSA_OIW:
 		case OID_SHA1:
 			return SIGN_RSA_EMSA_PKCS1_SHA1;
 		case OID_SHA224_WITH_RSA:
