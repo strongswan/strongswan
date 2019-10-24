@@ -205,16 +205,16 @@ CALLBACK(match_proposal, bool,
 }
 
 METHOD(child_cfg_t, get_proposals, linked_list_t*,
-	private_child_cfg_t *this, bool strip_dh)
+	private_child_cfg_t *this, bool strip_ke)
 {
 	enumerator_t *enumerator;
 	proposal_t *current;
 	proposal_selection_flag_t flags = 0;
 	linked_list_t *proposals = linked_list_create();
 
-	if (strip_dh)
+	if (strip_ke)
 	{
-		flags |= PROPOSAL_SKIP_DH;
+		flags |= PROPOSAL_SKIP_KE;
 	}
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
@@ -473,23 +473,24 @@ METHOD(child_cfg_t, get_close_action, action_t,
 	return this->close_action;
 }
 
-METHOD(child_cfg_t, get_dh_group, diffie_hellman_group_t,
+METHOD(child_cfg_t, get_ke_method, key_exchange_method_t,
 	private_child_cfg_t *this)
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
-	uint16_t dh_group = MODP_NONE;
+	uint16_t method = MODP_NONE;
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &dh_group, NULL))
+		if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD, &method,
+									NULL))
 		{
 			break;
 		}
 	}
 	enumerator->destroy(enumerator);
-	return dh_group;
+	return method;
 }
 
 METHOD(child_cfg_t, get_inactivity, uint32_t,
@@ -653,7 +654,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_dpd_action = _get_dpd_action,
 			.get_close_action = _get_close_action,
 			.get_lifetime = _get_lifetime,
-			.get_dh_group = _get_dh_group,
+			.get_ke_method = _get_ke_method,
 			.get_inactivity = _get_inactivity,
 			.get_reqid = _get_reqid,
 			.get_if_id = _get_if_id,

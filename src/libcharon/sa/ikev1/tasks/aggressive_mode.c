@@ -253,7 +253,7 @@ METHOD(task_t, build_i, status_t,
 
 			message->add_payload(message, &sa_payload->payload_interface);
 
-			group = this->ike_cfg->get_dh_group(this->ike_cfg);
+			group = this->ike_cfg->get_ke_method(this->ike_cfg);
 			if (group == MODP_NONE)
 			{
 				DBG1(DBG_IKE, "DH group selection failed");
@@ -262,7 +262,7 @@ METHOD(task_t, build_i, status_t,
 			if (!this->ph1->create_dh(this->ph1, group))
 			{
 				DBG1(DBG_IKE, "DH group %N not supported",
-					 diffie_hellman_group_names, group);
+					 key_exchange_method_names, group);
 				return FAILED;
 			}
 			if (!this->ph1->add_nonce_ke(this->ph1, message))
@@ -438,7 +438,7 @@ METHOD(task_t, process_r, status_t,
 			}
 
 			if (!this->proposal->get_algorithm(this->proposal,
-										DIFFIE_HELLMAN_GROUP, &group, NULL))
+										KEY_EXCHANGE_METHOD, &group, NULL))
 			{
 				DBG1(DBG_IKE, "DH group selection failed");
 				return send_notify(this, INVALID_KEY_INFORMATION);

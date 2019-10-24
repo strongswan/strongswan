@@ -409,7 +409,7 @@ struct private_tls_crypto_t {
 typedef struct {
 	tls_cipher_suite_t suite;
 	key_type_t key;
-	diffie_hellman_group_t dh;
+	key_exchange_method_t dh;
 	hash_algorithm_t hash;
 	pseudo_random_function_t prf;
 	integrity_algorithm_t mac;
@@ -775,21 +775,21 @@ static void filter_key_exchange_config_suites(private_tls_crypto_t *this,
 			while (enumerator->enumerate(enumerator, &token))
 			{
 				if (strcaseeq(token, "ecdhe-ecdsa") &&
-					diffie_hellman_group_is_ec(suites[i].dh) &&
+					key_exchange_is_ecdh(suites[i].dh) &&
 					suites[i].key == KEY_ECDSA)
 				{
 					suites[remaining++] = suites[i];
 					break;
 				}
 				if (strcaseeq(token, "ecdhe-rsa") &&
-					diffie_hellman_group_is_ec(suites[i].dh) &&
+					key_exchange_is_ecdh(suites[i].dh) &&
 					suites[i].key == KEY_RSA)
 				{
 					suites[remaining++] = suites[i];
 					break;
 				}
 				if (strcaseeq(token, "dhe-rsa") &&
-					!diffie_hellman_group_is_ec(suites[i].dh) &&
+					!key_exchange_is_ecdh(suites[i].dh) &&
 					suites[i].dh != MODP_NONE &&
 					suites[i].key == KEY_RSA)
 				{
@@ -989,7 +989,7 @@ static void filter_unsupported_suites(suite_algs_t suites[], int *count)
 	filter_suite(suites, count, offsetof(suite_algs_t, hash),
 				 lib->crypto->create_hasher_enumerator);
 	filter_suite(suites, count, offsetof(suite_algs_t, dh),
-				 lib->crypto->create_dh_enumerator);
+				 lib->crypto->create_ke_enumerator);
 }
 
 /**
@@ -1194,7 +1194,7 @@ METHOD(tls_crypto_t, select_cipher_suite, tls_cipher_suite_t,
 	return 0;
 }
 
-METHOD(tls_crypto_t, get_dh_group, diffie_hellman_group_t,
+METHOD(tls_crypto_t, get_dh_group, key_exchange_method_t,
 	private_tls_crypto_t *this)
 {
 	suite_algs_t *algs;
@@ -1286,7 +1286,7 @@ static signature_scheme_t hashsig_to_scheme(key_type_t type,
  * Mapping groups to TLS named curves
  */
 static struct {
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 	tls_named_curve_t curve;
 } curves[] = {
 	{ ECP_256_BIT, TLS_SECP256R1},
@@ -1299,7 +1299,7 @@ static struct {
 CALLBACK(group_filter, bool,
 	void *null, enumerator_t *orig, va_list args)
 {
-	diffie_hellman_group_t group, *out;
+	key_exchange_method_t group, *out;
 	tls_named_curve_t *curve;
 	char *plugin;
 	int i;
@@ -1331,7 +1331,7 @@ METHOD(tls_crypto_t, create_ec_enumerator, enumerator_t*,
 	private_tls_crypto_t *this)
 {
 	return enumerator_create_filter(
-							lib->crypto->create_dh_enumerator(lib->crypto),
+							lib->crypto->create_ke_enumerator(lib->crypto),
 							group_filter, NULL, NULL);
 }
 

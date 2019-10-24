@@ -71,7 +71,7 @@ static ike_extension_t copy_extension(ike_sa_t *ike_sa, ike_extension_t ext)
 }
 
 METHOD(listener_t, ike_keys, bool,
-	private_ha_ike_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, key_exchange_t *dh,
 	chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey,
 	shared_key_t *shared, auth_method_t method)
 {
@@ -121,7 +121,7 @@ METHOD(listener_t, ike_keys, bool,
 	{
 		m->add_attribute(m, HA_ALG_PRF, alg);
 	}
-	if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP, &alg, NULL))
+	if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD, &alg, NULL))
 	{
 		m->add_attribute(m, HA_ALG_DH, alg);
 	}
@@ -131,7 +131,7 @@ METHOD(listener_t, ike_keys, bool,
 	chunk_clear(&secret);
 	if (ike_sa->get_version(ike_sa) == IKEV1)
 	{
-		if (dh->get_my_public_value(dh, &secret))
+		if (dh->get_public_key(dh, &secret))
 		{
 			m->add_attribute(m, HA_LOCAL_DH, secret);
 			chunk_free(&secret);

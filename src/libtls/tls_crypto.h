@@ -418,9 +418,9 @@ struct tls_crypto_t {
 	/**
 	 * Get the Diffie-Hellman group to use, if any.
 	 *
-	 * @return				Diffie Hellman group, ord MODP_NONE
+	 * @return				Diffie-Hellman group, or MODP_NONE
 	 */
-	diffie_hellman_group_t (*get_dh_group)(tls_crypto_t *this);
+	key_exchange_method_t (*get_dh_group)(tls_crypto_t *this);
 
 	/**
 	 * Write the list of supported hash/sig algorithms to writer.
@@ -432,7 +432,7 @@ struct tls_crypto_t {
 	/**
 	 * Create an enumerator over supported ECDH groups.
 	 *
-	 * Enumerates over (diffie_hellman_group_t, tls_named_curve_t)
+	 * Enumerates over (key_exchange_method_t, tls_named_curve_t)
 	 *
 	 * @return				enumerator
 	 */

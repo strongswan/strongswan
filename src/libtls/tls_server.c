@@ -117,7 +117,7 @@ struct private_tls_server_t {
 	/**
 	 * DHE exchange
 	 */
-	diffie_hellman_t *dh;
+	key_exchange_t *dh;
 
 	/**
 	 * Selected TLS cipher suite
@@ -474,7 +474,7 @@ static status_t process_key_exchange_dhe(private_tls_server_t *this,
 	this->crypto->append_handshake(this->crypto,
 								   TLS_CLIENT_KEY_EXCHANGE, reader->peek(reader));
 
-	ec = diffie_hellman_group_is_ec(this->dh->get_dh_group(this->dh));
+	ec = key_exchange_is_ecdh(this->dh->get_method(this->dh));
 	if ((ec && !reader->read_data8(reader, &pub)) ||
 		(!ec && (!reader->read_data16(reader, &pub) || pub.len == 0)))
 	{
@@ -494,7 +494,7 @@ static status_t process_key_exchange_dhe(private_tls_server_t *this,
 		}
 		pub = chunk_skip(pub, 1);
 	}
-	if (!this->dh->set_other_public_value(this->dh, pub))
+	if (!this->dh->set_public_key(this->dh, pub))
 	{
 		DBG1(DBG_TLS, "applying DH public value failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
@@ -806,9 +806,9 @@ static status_t send_certificate_request(private_tls_server_t *this,
  * Get the TLS curve of a given EC DH group
  */
 static tls_named_curve_t ec_group_to_curve(private_tls_server_t *this,
-										   diffie_hellman_group_t group)
+										   key_exchange_method_t group)
 {
-	diffie_hellman_group_t current;
+	key_exchange_method_t current;
 	tls_named_curve_t curve;
 	enumerator_t *enumerator;
 
@@ -878,13 +878,13 @@ static bool find_supported_curve(private_tls_server_t *this,
  */
 static status_t send_server_key_exchange(private_tls_server_t *this,
 							tls_handshake_type_t *type, bio_writer_t *writer,
-							diffie_hellman_group_t group)
+							key_exchange_method_t group)
 {
 	diffie_hellman_params_t *params = NULL;
 	tls_named_curve_t curve;
 	chunk_t chunk;
 
-	if (diffie_hellman_group_is_ec(group))
+	if (key_exchange_is_ecdh(group))
 	{
 		curve = ec_group_to_curve(this, group);
 		if (!curve || (!peer_supports_curve(this, curve) &&
@@ -904,23 +904,23 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 		if (!params)
 		{
 			DBG1(DBG_TLS, "no parameters found for DH group %N",
-				 diffie_hellman_group_names, group);
+				 key_exchange_method_names, group);
 			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 			return NEED_MORE;
 		}
-		DBG2(DBG_TLS, "selected DH group %N", diffie_hellman_group_names, group);
+		DBG2(DBG_TLS, "selected DH group %N", key_exchange_method_names, group);
 		writer->write_data16(writer, params->prime);
 		writer->write_data16(writer, params->generator);
 	}
-	this->dh = lib->crypto->create_dh(lib->crypto, group);
+	this->dh = lib->crypto->create_ke(lib->crypto, group);
 	if (!this->dh)
 	{
 		DBG1(DBG_TLS, "DH group %N not supported",
-			 diffie_hellman_group_names, group);
+			 key_exchange_method_names, group);
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	if (!this->dh->get_my_public_value(this->dh, &chunk))
+	if (!this->dh->get_public_key(this->dh, &chunk))
 	{
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
@@ -993,7 +993,7 @@ static status_t send_finished(private_tls_server_t *this,
 METHOD(tls_handshake_t, build, status_t,
 	private_tls_server_t *this, tls_handshake_type_t *type, bio_writer_t *writer)
 {
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 
 	switch (this->state)
 	{

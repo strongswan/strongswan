@@ -44,12 +44,12 @@ struct private_wolfssl_diffie_hellman_t {
 	wolfssl_diffie_hellman_t public;
 
 	/**
-	 * Diffie Hellman group number.
+	 * Diffie-Hellman group number.
 	 */
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 
 	/**
-	 * Diffie Hellman object
+	 * Diffie-Hellman object
 	 */
 	DhKey dh;
 
@@ -74,14 +74,14 @@ struct private_wolfssl_diffie_hellman_t {
 	chunk_t shared_secret;
 };
 
-METHOD(diffie_hellman_t, get_my_public_value, bool,
+METHOD(key_exchange_t, get_public_key, bool,
 	private_wolfssl_diffie_hellman_t *this, chunk_t *value)
 {
 	*value = chunk_copy_pad(chunk_alloc(this->len), this->pub, 0x00);
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, bool,
+METHOD(key_exchange_t, get_shared_secret, bool,
 	private_wolfssl_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->shared_secret.len)
@@ -92,12 +92,12 @@ METHOD(diffie_hellman_t, get_shared_secret, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, set_other_public_value, bool,
+METHOD(key_exchange_t, set_public_key, bool,
 	private_wolfssl_diffie_hellman_t *this, chunk_t value)
 {
 	word32 len;
 
-	if (!diffie_hellman_verify_value(this->group, value))
+	if (!key_exchange_verify_pubkey(this->group, value))
 	{
 		return FALSE;
 	}
@@ -115,7 +115,7 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, set_private_value, bool,
+METHOD(key_exchange_t, set_private_key, bool,
 	private_wolfssl_diffie_hellman_t *this, chunk_t value)
 {
 	bool success = FALSE;
@@ -141,13 +141,13 @@ METHOD(diffie_hellman_t, set_private_value, bool,
 	return success;
 }
 
-METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
+METHOD(key_exchange_t, get_method, key_exchange_method_t,
 	private_wolfssl_diffie_hellman_t *this)
 {
 	return this->group;
 }
 
-METHOD(diffie_hellman_t, destroy, void,
+METHOD(key_exchange_t, destroy, void,
 	private_wolfssl_diffie_hellman_t *this)
 {
 	wc_FreeDhKey(&this->dh);
@@ -200,7 +200,7 @@ static int wolfssl_priv_key_size(int len)
 /**
  * Generic internal constructor
  */
-static wolfssl_diffie_hellman_t *create_generic(diffie_hellman_group_t group,
+static wolfssl_diffie_hellman_t *create_generic(key_exchange_method_t group,
 												chunk_t g, chunk_t p)
 {
 	private_wolfssl_diffie_hellman_t *this;
@@ -209,12 +209,12 @@ static wolfssl_diffie_hellman_t *create_generic(diffie_hellman_group_t group,
 
 	INIT(this,
 		.public = {
-			.dh = {
+			.ke = {
 				.get_shared_secret = _get_shared_secret,
-				.set_other_public_value = _set_other_public_value,
-				.get_my_public_value = _get_my_public_value,
-				.set_private_value = _set_private_value,
-				.get_dh_group = _get_dh_group,
+				.set_public_key = _set_public_key,
+				.get_public_key = _get_public_key,
+				.set_private_key = _set_private_key,
+				.get_method = _get_method,
 				.destroy = _destroy,
 			},
 		},
@@ -263,7 +263,7 @@ static wolfssl_diffie_hellman_t *create_generic(diffie_hellman_group_t group,
  * Described in header
  */
 wolfssl_diffie_hellman_t *wolfssl_diffie_hellman_create(
-											diffie_hellman_group_t group, ...)
+											key_exchange_method_t group, ...)
 {
 	diffie_hellman_params_t *params;
 	chunk_t g, p;

@@ -31,19 +31,19 @@ typedef struct pkcs11_dh_t pkcs11_dh_t;
 struct pkcs11_dh_t {
 
 	/**
-	 * Implements diffie_hellman_t interface.
+	 * Implements key_exchange_t interface.
 	 */
-	diffie_hellman_t dh;
+	key_exchange_t ke;
 };
 
 /**
  * Creates a new pkcs11_dh_t object.
  *
- * @param group			Diffie Hellman group number to use
+ * @param group			Diffie-Hellman group number to use
  * @param ...			expects generator and prime as chunk_t if MODP_CUSTOM
  * @return				pkcs11_dh_t object, NULL if not supported
  */
-pkcs11_dh_t *pkcs11_dh_create(diffie_hellman_group_t group, ...);
+pkcs11_dh_t *pkcs11_dh_create(key_exchange_method_t group, ...);
 
 #endif /** PKCS11_DH_H_ @}*/
 

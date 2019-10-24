@@ -45,7 +45,7 @@ struct private_pubkey_v1_authenticator_t {
 	/**
 	 * DH key exchange
 	 */
-	diffie_hellman_t *dh;
+	key_exchange_t *dh;
 
 	/**
 	 * Others DH public value
@@ -95,7 +95,7 @@ METHOD(authenticator_t, build, status_t,
 		return NOT_FOUND;
 	}
 
-	if (!this->dh->get_my_public_value(this->dh, &dh))
+	if (!this->dh->get_public_key(this->dh, &dh))
 	{
 		private->destroy(private);
 		return FAILED;
@@ -180,7 +180,7 @@ METHOD(authenticator_t, process, status_t,
 	}
 
 	id = this->ike_sa->get_other_id(this->ike_sa);
-	if (!this->dh->get_my_public_value(this->dh, &dh))
+	if (!this->dh->get_public_key(this->dh, &dh))
 	{
 		return FAILED;
 	}
@@ -237,7 +237,7 @@ METHOD(authenticator_t, destroy, void,
  * Described in header.
  */
 pubkey_v1_authenticator_t *pubkey_v1_authenticator_create(ike_sa_t *ike_sa,
-										bool initiator, diffie_hellman_t *dh,
+										bool initiator, key_exchange_t *dh,
 										chunk_t dh_value, chunk_t sa_payload,
 										chunk_t id_payload, key_type_t type)
 {
