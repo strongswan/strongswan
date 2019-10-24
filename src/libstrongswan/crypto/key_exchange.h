@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2019 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -16,21 +16,21 @@
  */
 
 /**
- * @defgroup diffie_hellman diffie_hellman
+ * @defgroup key_exchange key_exchange
  * @{ @ingroup crypto
  */
 
-#ifndef DIFFIE_HELLMAN_H_
-#define DIFFIE_HELLMAN_H_
+#ifndef KEY_EXCHANGE_H_
+#define KEY_EXCHANGE_H_
 
-typedef enum diffie_hellman_group_t diffie_hellman_group_t;
-typedef struct diffie_hellman_t diffie_hellman_t;
+typedef enum key_exchange_method_t key_exchange_method_t;
+typedef struct key_exchange_t key_exchange_t;
 typedef struct diffie_hellman_params_t diffie_hellman_params_t;
 
 #include <library.h>
 
 /**
- * Diffie-Hellman group.
+ * Key exchange method.
  *
  * The modulus (or group) to use for a Diffie-Hellman calculation.
  * See IKEv2 RFC 3.3.2 and RFC 3526.
@@ -39,7 +39,7 @@ typedef struct diffie_hellman_params_t diffie_hellman_params_t;
  * ECC Brainpool groups are defined in RFC 6954.
  * Curve25519 and Curve448 groups are defined in RFC 8031.
  */
-enum diffie_hellman_group_t {
+enum key_exchange_method_t {
 	MODP_NONE     =  0,
 	MODP_768_BIT  =  1,
 	MODP_1024_BIT =  2,
@@ -78,80 +78,75 @@ enum diffie_hellman_group_t {
 };
 
 /**
- * enum name for diffie_hellman_group_t.
+ * enum name for key_exchange_method_t.
  */
-extern enum_name_t *diffie_hellman_group_names;
+extern enum_name_t *key_exchange_method_names;
 
 /**
- * enum names for diffie_hellman_group_t (matching proposal keywords).
+ * enum names for key_exchange_method_t (matching proposal keywords).
  */
-extern enum_name_t *diffie_hellman_group_names_short;
+extern enum_name_t *key_exchange_method_names_short;
 
 /**
- * Implementation of the Diffie-Hellman algorithm, as in RFC2631.
+ * Implementation of a key exchange algorithms (e.g. Diffie-Hellman).
  */
-struct diffie_hellman_t {
+struct key_exchange_t {
 
 	/**
-	 * Returns the shared secret of this diffie hellman exchange.
+	 * Returns the shared secret of this key exchange method.
 	 *
-	 * Space for returned secret is allocated and must be freed by the caller.
-	 *
-	 * @param secret	shared secret will be written into this chunk
+	 * @param secret	shared secret (allocated)
 	 * @return			TRUE if shared secret computed successfully
 	 */
-	bool (*get_shared_secret)(diffie_hellman_t *this, chunk_t *secret)
+	bool (*get_shared_secret)(key_exchange_t *this, chunk_t *secret)
 		__attribute__((warn_unused_result));
 
 	/**
-	 * Sets the public value of partner.
+	 * Sets the public key from the peer.
 	 *
-	 * Chunk gets cloned and can be destroyed afterwards.
-	 *
-	 * @param value		public value of partner
-	 * @return			TRUE if other public value verified and set
+	 * @param value		public key of peer
+	 * @return			TRUE if other public key verified and set
 	 */
-	bool (*set_other_public_value)(diffie_hellman_t *this, chunk_t value)
+	bool (*set_public_key)(key_exchange_t *this, chunk_t value)
 		__attribute__((warn_unused_result));
 
 	/**
-	 * Gets the own public value to transmit.
+	 * Gets the own public key to transmit.
 	 *
-	 * Space for returned chunk is allocated and must be freed by the caller.
-	 *
-	 * @param value		public value of caller is stored at this location
-	 * @return			TRUE if public value retrieved
+	 * @param value		public key (allocated)
+	 * @return			TRUE if public key retrieved
 	 */
-	bool (*get_my_public_value) (diffie_hellman_t *this, chunk_t *value)
+	bool (*get_public_key)(key_exchange_t *this, chunk_t *value)
 		__attribute__((warn_unused_result));
 
 	/**
-	 * Set an explicit own private value to use.
+	 * Set an explicit own private key to use.
 	 *
 	 * Calling this method is usually not required, as the DH backend generates
 	 * an appropriate private value itself. It is optional to implement, and
-	 * used mostly for testing purposes.
+	 * used mostly for testing purposes.  The private key may be the actual key
+	 * or a seed for a DRBG.
 	 *
-	 * @param value		private value to set
+	 * @param value		private key value to set
 	 */
-	bool (*set_private_value)(diffie_hellman_t *this, chunk_t value)
+	bool (*set_private_key)(key_exchange_t *this, chunk_t value)
 		__attribute__((warn_unused_result));
 
 	/**
-	 * Get the DH group used.
+	 * Get the key exchange method used.
 	 *
-	 * @return			DH group set in construction
+	 * @return			key exchange method set in construction
 	 */
-	diffie_hellman_group_t (*get_dh_group) (diffie_hellman_t *this);
+	key_exchange_method_t (*get_method)(key_exchange_t *this);
 
 	/**
-	 * Destroys a diffie_hellman_t object.
+	 * Destroys a key_exchange_t object.
 	 */
-	void (*destroy) (diffie_hellman_t *this);
+	void (*destroy)(key_exchange_t *this);
 };
 
 /**
- * Parameters for a specific diffie hellman group.
+ * Parameters for a specific Diffie-Hellman group.
  */
 struct diffie_hellman_params_t {
 
@@ -182,31 +177,31 @@ struct diffie_hellman_params_t {
 void diffie_hellman_init();
 
 /**
- * Get the parameters associated with the specified diffie hellman group.
+ * Get the parameters associated with the specified Diffie-Hellman group.
  *
  * Before calling this method, use diffie_hellman_init() to initialize the
  * DH group table. This is usually done by library_init().
  *
- * @param group			DH group
+ * @param ke			key exchange method (DH group)
  * @return				The parameters or NULL, if the group is not supported
  */
-diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group);
+diffie_hellman_params_t *diffie_hellman_get_params(key_exchange_method_t ke);
 
 /**
- * Check if a given DH group is an ECDH group
+ * Check if a given key exchange method is an ECDH group.
  *
- * @param group			group to check
- * @return				TRUE if group is an ECP group
+ * @param ke			key exchange method to check
+ * @return				TRUE if key exchange method is an ECP group
  */
-bool diffie_hellman_group_is_ec(diffie_hellman_group_t group);
+bool key_exchange_is_ecdh(key_exchange_method_t ke);
 
 /**
- * Check if a diffie hellman public value is valid for given group.
+ * Check if a public key is valid for given key exchange method.
  *
- * @param group			group the value is used in
- * @param value			public DH value to check
- * @return				TRUE if value looks valid for group
+ * @param ke			key exchange method
+ * @param value			public key to check
+ * @return				TRUE if value looks valid
  */
-bool diffie_hellman_verify_value(diffie_hellman_group_t group, chunk_t value);
+bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value);
 
-#endif /** DIFFIE_HELLMAN_H_ @}*/
+#endif /** KEY_EXCHANGE_H_ @}*/

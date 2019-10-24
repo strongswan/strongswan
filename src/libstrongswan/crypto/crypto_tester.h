@@ -34,7 +34,7 @@ typedef struct prf_test_vector_t prf_test_vector_t;
 typedef struct xof_test_vector_t xof_test_vector_t;
 typedef struct drbg_test_vector_t drbg_test_vector_t;
 typedef struct rng_test_vector_t rng_test_vector_t;
-typedef struct dh_test_vector_t dh_test_vector_t;
+typedef struct ke_test_vector_t ke_test_vector_t;
 
 struct crypter_test_vector_t {
 	/** encryption algorithm this vector tests */
@@ -159,20 +159,20 @@ struct rng_test_vector_t {
 	void *user;
 };
 
-struct dh_test_vector_t {
-	/** diffie hellman group to test */
-	diffie_hellman_group_t group;
-	/** private value of alice */
+struct ke_test_vector_t {
+	/** key exchange method to test */
+	key_exchange_method_t method;
+	/** private key of alice */
 	u_char *priv_a;
-	/** private value of bob */
+	/** private key of bob */
 	u_char *priv_b;
-	/** length of private values */
+	/** length of private keys */
 	size_t priv_len;
-	/** expected public value of alice */
+	/** expected public key of alice */
 	u_char *pub_a;
-	/** expected public value of bob */
+	/** expected public key of bob */
 	u_char *pub_b;
-	/** size of public values */
+	/** size of public keys */
 	size_t pub_len;
 	/** expected shared secret */
 	u_char *shared;
@@ -279,15 +279,15 @@ struct crypto_tester_t {
 					 rng_constructor_t create,
 					 u_int *speed, const char *plugin_name);
 	/**
-	 * Test a Diffie-Hellman implementation.
+	 * Test a key exchange implementation.
 	 *
-	 * @param group			group to test
-	 * @param create		constructor function for the DH backend
-	 * @param speed			speed test result, NULL to omit
+	 * @param ke			key exchange method to test
+	 * @param create		constructor function for the key exchange method
+	 * @param speed			speeed test result, NULL to omit
 	 * @return				TRUE if test passed
 	 */
-	bool (*test_dh)(crypto_tester_t *this, diffie_hellman_group_t group,
-					dh_constructor_t create,
+	bool (*test_ke)(crypto_tester_t *this, key_exchange_method_t ke,
+					ke_constructor_t create,
 					u_int *speed, const char *plugin_name);
 
 	/**
@@ -351,7 +351,7 @@ struct crypto_tester_t {
 	 *
 	 * @param vector		pointer to test vector
 	 */
-	void (*add_dh_vector)(crypto_tester_t *this, dh_test_vector_t *vector);
+	void (*add_ke_vector)(crypto_tester_t *this, ke_test_vector_t *vector);
 
 	/**
 	 * Destroy a crypto_tester_t.
