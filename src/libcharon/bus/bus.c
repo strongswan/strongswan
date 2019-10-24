@@ -573,7 +573,7 @@ METHOD(bus_t, message, void,
 }
 
 METHOD(bus_t, ike_keys, void,
-	private_bus_t *this, ike_sa_t *ike_sa, diffie_hellman_t *dh,
+	private_bus_t *this, ike_sa_t *ike_sa, key_exchange_t *dh,
 	chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r,
 	ike_sa_t *rekey, shared_key_t *shared, auth_method_t method)
 {
@@ -638,7 +638,7 @@ METHOD(bus_t, ike_derived_keys, void,
 
 METHOD(bus_t, child_keys, void,
 	private_bus_t *this, child_sa_t *child_sa, bool initiator,
-	diffie_hellman_t *dh, chunk_t nonce_i, chunk_t nonce_r)
+	key_exchange_t *dh, chunk_t nonce_i, chunk_t nonce_r)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
