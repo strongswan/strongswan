@@ -315,7 +315,7 @@ METHOD(task_t, build_i, status_t,
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			if (!this->proposal->get_algorithm(this->proposal,
-										DIFFIE_HELLMAN_GROUP, &group, NULL))
+										KEY_EXCHANGE_METHOD, &group, NULL))
 			{
 				DBG1(DBG_IKE, "DH group selection failed");
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
@@ -428,7 +428,7 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, INVALID_KEY_INFORMATION);
 			}
 			if (!this->proposal->get_algorithm(this->proposal,
-										DIFFIE_HELLMAN_GROUP, &group, NULL))
+										KEY_EXCHANGE_METHOD, &group, NULL))
 			{
 				DBG1(DBG_IKE, "DH group selection failed");
 				return send_notify(this, INVALID_KEY_INFORMATION);

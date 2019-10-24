@@ -24,14 +24,14 @@
 #ifndef MOCK_DH_H_
 #define MOCK_DH_H_
 
-#include <crypto/diffie_hellman.h>
+#include <crypto/key_exchange.h>
 
 /**
- * Creates a diffie_hellman_t object.
+ * Creates a key_exchange_t object.
  *
- * @param group			Diffie Hellman group, supports MODP_NULL only
+ * @param method		key_exchange method, supports MODP_NULL only
  * @return				created object
  */
-diffie_hellman_t *mock_dh_create(diffie_hellman_group_t group);
+key_exchange_t *mock_dh_create(key_exchange_method_t method);
 
 #endif /** MOCK_DH_H_ @}*/

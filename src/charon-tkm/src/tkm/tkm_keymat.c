@@ -170,10 +170,10 @@ METHOD(keymat_t, get_version, ike_version_t,
 	return IKEV2;
 }
 
-METHOD(keymat_t, create_dh, diffie_hellman_t*,
-	private_tkm_keymat_t *this, diffie_hellman_group_t group)
+METHOD(keymat_t, create_ke, key_exchange_t*,
+	private_tkm_keymat_t *this, key_exchange_method_t ke)
 {
-	return lib->crypto->create_dh(lib->crypto, group);
+	return lib->crypto->create_ke(lib->crypto, ke);
 }
 
 METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
@@ -183,7 +183,7 @@ METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
 }
 
 METHOD(keymat_v2_t, derive_ike_keys, bool,
-	private_tkm_keymat_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+	private_tkm_keymat_t *this, proposal_t *proposal, key_exchange_t *ke,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
@@ -238,7 +238,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	}
 
 	/* Get DH context id */
-	tkm_dh = (tkm_diffie_hellman_t *)dh;
+	tkm_dh = (tkm_diffie_hellman_t *)ke;
 	dh_id = tkm_dh->get_id(tkm_dh);
 
 	if (this->initiator)
@@ -335,16 +335,16 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 }
 
 METHOD(keymat_v2_t, derive_child_keys, bool,
-	private_tkm_keymat_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+	private_tkm_keymat_t *this, proposal_t *proposal, key_exchange_t *ke,
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
 	esa_info_t *esa_info_i, *esa_info_r;
 	dh_id_type dh_id = 0;
 
-	if (dh)
+	if (ke)
 	{
-		dh_id = ((tkm_diffie_hellman_t *)dh)->get_id((tkm_diffie_hellman_t *)dh);
+		dh_id = ((tkm_diffie_hellman_t *)ke)->get_id((tkm_diffie_hellman_t *)ke);
 	}
 
 	INIT(esa_info_i,
@@ -517,7 +517,7 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 			.keymat_v2 = {
 				.keymat = {
 					.get_version = _get_version,
-					.create_dh = _create_dh,
+					.create_ke = _create_ke,
 					.create_nonce_gen = _create_nonce_gen,
 					.get_aead = _get_aead,
 					.destroy = _destroy,

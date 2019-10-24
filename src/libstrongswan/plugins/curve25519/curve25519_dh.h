@@ -31,9 +31,9 @@ typedef struct curve25519_dh_t curve25519_dh_t;
 struct curve25519_dh_t {
 
 	/**
-	 * Implements diffie_hellman_t interface.
+	 * Implements key_exchange_t interface.
 	 */
-	diffie_hellman_t dh;
+	key_exchange_t ke;
 };
 
 /**
@@ -42,6 +42,6 @@ struct curve25519_dh_t {
  * @param group			DH group, CURVE_25519
  * @return				curve25519_dh_t object, NULL on error
  */
-curve25519_dh_t *curve25519_dh_create(diffie_hellman_group_t group);
+curve25519_dh_t *curve25519_dh_create(key_exchange_method_t group);
 
 #endif /** CURVE25519_DH_H_ @}*/

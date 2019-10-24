@@ -47,7 +47,7 @@ struct private_openssl_diffie_hellman_t {
 	/**
 	 * Diffie Hellman group number.
 	 */
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 
 	/**
 	 * Diffie Hellman object
@@ -70,7 +70,7 @@ struct private_openssl_diffie_hellman_t {
 	bool computed;
 };
 
-METHOD(diffie_hellman_t, get_my_public_value, bool,
+METHOD(key_exchange_t, get_public_key, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t *value)
 {
 	const BIGNUM *pubkey;
@@ -82,7 +82,7 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, bool,
+METHOD(key_exchange_t, get_shared_secret, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->computed)
@@ -98,12 +98,12 @@ METHOD(diffie_hellman_t, get_shared_secret, bool,
 }
 
 
-METHOD(diffie_hellman_t, set_other_public_value, bool,
+METHOD(key_exchange_t, set_public_key, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t value)
 {
 	int len;
 
-	if (!diffie_hellman_verify_value(this->group, value))
+	if (!key_exchange_verify_pubkey(this->group, value))
 	{
 		return FALSE;
 	}
@@ -123,7 +123,7 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, set_private_value, bool,
+METHOD(key_exchange_t, set_private_key, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t value)
 {
 	BIGNUM *privkey;
@@ -142,7 +142,7 @@ METHOD(diffie_hellman_t, set_private_value, bool,
 	return FALSE;
 }
 
-METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
+METHOD(key_exchange_t, get_method, key_exchange_method_t,
 	private_openssl_diffie_hellman_t *this)
 {
 	return this->group;
@@ -180,7 +180,7 @@ static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 	return SUCCESS;
 }
 
-METHOD(diffie_hellman_t, destroy, void,
+METHOD(key_exchange_t, destroy, void,
 	private_openssl_diffie_hellman_t *this)
 {
 	BN_clear_free(this->pub_key);
@@ -193,19 +193,19 @@ METHOD(diffie_hellman_t, destroy, void,
  * Described in header.
  */
 openssl_diffie_hellman_t *openssl_diffie_hellman_create(
-											diffie_hellman_group_t group, ...)
+											key_exchange_method_t group, ...)
 {
 	private_openssl_diffie_hellman_t *this;
 	const BIGNUM *privkey;
 
 	INIT(this,
 		.public = {
-			.dh = {
+			.ke = {
 				.get_shared_secret = _get_shared_secret,
-				.set_other_public_value = _set_other_public_value,
-				.get_my_public_value = _get_my_public_value,
-				.set_private_value = _set_private_value,
-				.get_dh_group = _get_dh_group,
+				.set_public_key = _set_public_key,
+				.get_public_key = _get_public_key,
+				.set_private_key = _set_private_key,
+				.get_method = _get_method,
 				.destroy = _destroy,
 			},
 		},
