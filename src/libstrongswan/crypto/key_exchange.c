@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Tobias Brunner
+ * Copyright (C) 2010-2019 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -15,15 +15,15 @@
  * for more details.
  */
 
-#include "diffie_hellman.h"
+#include "key_exchange.h"
 
-ENUM_BEGIN(diffie_hellman_group_names, MODP_NONE, MODP_1024_BIT,
+ENUM_BEGIN(key_exchange_method_names, MODP_NONE, MODP_1024_BIT,
 	"MODP_NONE",
 	"MODP_768",
 	"MODP_1024");
-ENUM_NEXT(diffie_hellman_group_names, MODP_1536_BIT, MODP_1536_BIT, MODP_1024_BIT,
+ENUM_NEXT(key_exchange_method_names, MODP_1536_BIT, MODP_1536_BIT, MODP_1024_BIT,
 	"MODP_1536");
-ENUM_NEXT(diffie_hellman_group_names, MODP_2048_BIT, ECP_521_BIT, MODP_1536_BIT,
+ENUM_NEXT(key_exchange_method_names, MODP_2048_BIT, ECP_521_BIT, MODP_1536_BIT,
 	"MODP_2048",
 	"MODP_3072",
 	"MODP_4096",
@@ -32,7 +32,7 @@ ENUM_NEXT(diffie_hellman_group_names, MODP_2048_BIT, ECP_521_BIT, MODP_1536_BIT,
 	"ECP_256",
 	"ECP_384",
 	"ECP_521");
-ENUM_NEXT(diffie_hellman_group_names, MODP_1024_160, CURVE_448, ECP_521_BIT,
+ENUM_NEXT(key_exchange_method_names, MODP_1024_160, CURVE_448, ECP_521_BIT,
 	"MODP_1024_160",
 	"MODP_2048_224",
 	"MODP_2048_256",
@@ -44,26 +44,26 @@ ENUM_NEXT(diffie_hellman_group_names, MODP_1024_160, CURVE_448, ECP_521_BIT,
 	"ECP_512_BP",
 	"CURVE_25519",
 	"CURVE_448");
-ENUM_NEXT(diffie_hellman_group_names, MODP_NULL, MODP_NULL, CURVE_448,
+ENUM_NEXT(key_exchange_method_names, MODP_NULL, MODP_NULL, CURVE_448,
 	"MODP_NULL");
-ENUM_NEXT(diffie_hellman_group_names, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
+ENUM_NEXT(key_exchange_method_names, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
 	"NTRU_112",
 	"NTRU_128",
 	"NTRU_192",
 	"NTRU_256");
-ENUM_NEXT(diffie_hellman_group_names, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
+ENUM_NEXT(key_exchange_method_names, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
 	"NEWHOPE_128");
-ENUM_NEXT(diffie_hellman_group_names, MODP_CUSTOM, MODP_CUSTOM, NH_128_BIT,
+ENUM_NEXT(key_exchange_method_names, MODP_CUSTOM, MODP_CUSTOM, NH_128_BIT,
 	"MODP_CUSTOM");
-ENUM_END(diffie_hellman_group_names, MODP_CUSTOM);
+ENUM_END(key_exchange_method_names, MODP_CUSTOM);
 
-ENUM_BEGIN(diffie_hellman_group_names_short, MODP_NONE, MODP_1024_BIT,
+ENUM_BEGIN(key_exchange_method_names_short, MODP_NONE, MODP_1024_BIT,
 	"modpnone",
 	"modp768",
 	"modp1024");
-ENUM_NEXT(diffie_hellman_group_names_short, MODP_1536_BIT, MODP_1536_BIT, MODP_1024_BIT,
+ENUM_NEXT(key_exchange_method_names_short, MODP_1536_BIT, MODP_1536_BIT, MODP_1024_BIT,
 	"modp1536");
-ENUM_NEXT(diffie_hellman_group_names_short, MODP_2048_BIT, ECP_521_BIT, MODP_1536_BIT,
+ENUM_NEXT(key_exchange_method_names_short, MODP_2048_BIT, ECP_521_BIT, MODP_1536_BIT,
 	"modp2048",
 	"modp3072",
 	"modp4096",
@@ -72,7 +72,7 @@ ENUM_NEXT(diffie_hellman_group_names_short, MODP_2048_BIT, ECP_521_BIT, MODP_153
 	"ecp256",
 	"ecp384",
 	"ecp521");
-ENUM_NEXT(diffie_hellman_group_names_short, MODP_1024_160, CURVE_448, ECP_521_BIT,
+ENUM_NEXT(key_exchange_method_names_short, MODP_1024_160, CURVE_448, ECP_521_BIT,
 	"modp1024s160",
 	"modp2048s224",
 	"modp2048s256",
@@ -84,27 +84,27 @@ ENUM_NEXT(diffie_hellman_group_names_short, MODP_1024_160, CURVE_448, ECP_521_BI
 	"ecp512bp",
 	"curve25519",
 	"curve448");
-ENUM_NEXT(diffie_hellman_group_names_short, MODP_NULL, MODP_NULL, CURVE_448,
+ENUM_NEXT(key_exchange_method_names_short, MODP_NULL, MODP_NULL, CURVE_448,
 	"modpnull");
-ENUM_NEXT(diffie_hellman_group_names_short, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
+ENUM_NEXT(key_exchange_method_names_short, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
 	"ntru112",
 	"ntru128",
 	"ntru192",
 	"ntru256");
-ENUM_NEXT(diffie_hellman_group_names_short, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
+ENUM_NEXT(key_exchange_method_names_short, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
 	"newhope128");
-ENUM_NEXT(diffie_hellman_group_names_short, MODP_CUSTOM, MODP_CUSTOM, NH_128_BIT,
+ENUM_NEXT(key_exchange_method_names_short, MODP_CUSTOM, MODP_CUSTOM, NH_128_BIT,
 	"modpcustom");
-ENUM_END(diffie_hellman_group_names_short, MODP_CUSTOM);
+ENUM_END(key_exchange_method_names_short, MODP_CUSTOM);
 
 /**
- * List of known diffie hellman group parameters.
+ * List of known Diffie-Hellman group parameters.
  */
 static struct {
 	/* Public part of the struct */
 	diffie_hellman_params_t public;
 	/* The group identifier as specified in IKEv2 */
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 } dh_params[] = {
 	{
 		.group = MODP_768_BIT, .public = {
@@ -474,8 +474,8 @@ static struct {
 	},
 };
 
-/**
- * See header.
+/*
+ * Described in header
  */
 void diffie_hellman_init()
 {
@@ -499,16 +499,16 @@ void diffie_hellman_init()
 	}
 }
 
-/**
- * Described in header.
+/*
+ * Described in header
  */
-diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group)
+diffie_hellman_params_t *diffie_hellman_get_params(key_exchange_method_t ke)
 {
 	int i;
 
 	for (i = 0; i < countof(dh_params); i++)
 	{
-		if (dh_params[i].group == group)
+		if (dh_params[i].group == ke)
 		{
 			return &dh_params[i].public;
 		}
@@ -516,12 +516,12 @@ diffie_hellman_params_t *diffie_hellman_get_params(diffie_hellman_group_t group)
 	return NULL;
 }
 
-/**
- * See header.
+/*
+ * Described in header
  */
-bool diffie_hellman_group_is_ec(diffie_hellman_group_t group)
+bool key_exchange_is_ecdh(key_exchange_method_t ke)
 {
-	switch (group)
+	switch (ke)
 	{
 		case ECP_256_BIT:
 		case ECP_384_BIT:
@@ -540,15 +540,15 @@ bool diffie_hellman_group_is_ec(diffie_hellman_group_t group)
 	}
 }
 
-/**
- * See header.
+/*
+ * Described in header
  */
-bool diffie_hellman_verify_value(diffie_hellman_group_t group, chunk_t value)
+bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 {
 	diffie_hellman_params_t *params;
 	bool valid = FALSE;
 
-	switch (group)
+	switch (ke)
 	{
 		case MODP_768_BIT:
 		case MODP_1024_BIT:
@@ -561,7 +561,7 @@ bool diffie_hellman_verify_value(diffie_hellman_group_t group, chunk_t value)
 		case MODP_1024_160:
 		case MODP_2048_224:
 		case MODP_2048_256:
-			params = diffie_hellman_get_params(group);
+			params = diffie_hellman_get_params(ke);
 			if (params)
 			{
 				valid = value.len == params->prime.len;
@@ -609,12 +609,12 @@ bool diffie_hellman_verify_value(diffie_hellman_group_t group, chunk_t value)
 		case MODP_NONE:
 			/* fail */
 			break;
-		/* compile-warn unhandled groups, fail verification */
+		/* compile-warn unhandled methods, fail verification */
 	}
 	if (!valid)
 	{
 		DBG1(DBG_ENC, "invalid DH public value size (%zu bytes) for %N",
-			 value.len, diffie_hellman_group_names, group);
+			 value.len, key_exchange_method_names, ke);
 	}
 	return valid;
 }

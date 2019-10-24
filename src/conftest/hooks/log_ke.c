@@ -47,7 +47,7 @@ METHOD(listener_t, message, bool,
 			{
 				ke = (ke_payload_t*)payload;
 				DBG1(DBG_CFG, "received DH group %N",
-					 diffie_hellman_group_names, ke->get_dh_group_number(ke));
+					 key_exchange_method_names, ke->get_key_exchange_method(ke));
 			}
 		}
 		enumerator->destroy(enumerator);

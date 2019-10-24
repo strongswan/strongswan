@@ -582,7 +582,7 @@ static void test_tls(tls_version_t version, uint16_t port, bool cauth, u_int i)
 static void test_tls_ke_groups(tls_version_t version, uint16_t port, bool cauth,
 							   u_int i)
 {
-	diffie_hellman_group_t *groups;
+	key_exchange_method_t *groups;
 	char curve[128];
 	int count;
 
@@ -592,7 +592,7 @@ static void test_tls_ke_groups(tls_version_t version, uint16_t port, bool cauth,
 
 	count = tls_crypto_get_supported_groups(&groups);
 	ck_assert(i < count);
-	snprintf(curve, sizeof(curve), "%N", diffie_hellman_group_names_short,
+	snprintf(curve, sizeof(curve), "%N", key_exchange_method_names_short,
 			 groups[i]);
 	lib->settings->set_str(lib->settings, "%s.tls.ke_group", curve, lib->ns);
 
