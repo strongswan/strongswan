@@ -310,7 +310,7 @@ METHOD(ike_cfg_t, get_proposals, linked_list_t*,
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		current = current->clone(current);
+		current = current->clone(current, 0);
 		proposals->insert_last(proposals, current);
 	}
 	enumerator->destroy(enumerator);
@@ -329,7 +329,8 @@ METHOD(ike_cfg_t, has_proposal, bool,
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (proposal->matches(proposal, match, private))
+		if (proposal->matches(proposal, match,
+							  private ? 0 : PROPOSAL_SKIP_PRIVATE))
 		{
 			enumerator->destroy(enumerator);
 			return TRUE;
@@ -340,57 +341,10 @@ METHOD(ike_cfg_t, has_proposal, bool,
 }
 
 METHOD(ike_cfg_t, select_proposal, proposal_t*,
-	private_ike_cfg_t *this, linked_list_t *proposals, bool private,
-	bool prefer_self)
+	private_ike_cfg_t *this, linked_list_t *proposals,
+	proposal_selection_flag_t flags)
 {
-	enumerator_t *prefer_enum, *match_enum;
-	proposal_t *proposal, *match, *selected = NULL;
-
-	if (prefer_self)
-	{
-		prefer_enum = this->proposals->create_enumerator(this->proposals);
-		match_enum = proposals->create_enumerator(proposals);
-	}
-	else
-	{
-		prefer_enum = proposals->create_enumerator(proposals);
-		match_enum = this->proposals->create_enumerator(this->proposals);
-	}
-
-	while (prefer_enum->enumerate(prefer_enum, (void**)&proposal))
-	{
-		if (prefer_self)
-		{
-			proposals->reset_enumerator(proposals, match_enum);
-		}
-		else
-		{
-			this->proposals->reset_enumerator(this->proposals, match_enum);
-		}
-		while (match_enum->enumerate(match_enum, (void**)&match))
-		{
-			selected = proposal->select(proposal, match, prefer_self, private);
-			if (selected)
-			{
-				DBG2(DBG_CFG, "received proposals: %#P", proposals);
-				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
-				DBG1(DBG_CFG, "selected proposal: %P", selected);
-				break;
-			}
-		}
-		if (selected)
-		{
-			break;
-		}
-	}
-	prefer_enum->destroy(prefer_enum);
-	match_enum->destroy(match_enum);
-	if (!selected)
-	{
-		DBG1(DBG_CFG, "received proposals: %#P", proposals);
-		DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);
-	}
-	return selected;
+	return proposal_select(this->proposals, proposals, flags);
 }
 
 METHOD(ike_cfg_t, get_dh_group, diffie_hellman_group_t,

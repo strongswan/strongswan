@@ -429,7 +429,7 @@ METHOD(child_sa_t, get_proposal, proposal_t*,
 METHOD(child_sa_t, set_proposal, void,
 	   private_child_sa_t *this, proposal_t *proposal)
 {
-	this->proposal = proposal->clone(proposal);
+	this->proposal = proposal->clone(proposal, 0);
 }
 
 METHOD(child_sa_t, create_ts_enumerator, enumerator_t*,

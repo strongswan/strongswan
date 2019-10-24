@@ -749,7 +749,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 		ike.local_port = charon->socket->get_port(charon->socket, FALSE);
 	}
 	ike_cfg = ike_cfg_create(&ike);
-	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal));
+	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal, 0));
 	peer_cfg = peer_cfg_create("load-test", ike_cfg, &peer);
 
 	if (this->vip)
@@ -784,7 +784,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	}
 
 	child_cfg = child_cfg_create("load-test", &child);
-	child_cfg->add_proposal(child_cfg, this->esp->clone(this->esp));
+	child_cfg->add_proposal(child_cfg, this->esp->clone(this->esp, 0));
 
 	if (num)
 	{	/* initiator */

@@ -23,6 +23,7 @@
 #define PROPOSAL_H_
 
 typedef enum protocol_id_t protocol_id_t;
+typedef enum proposal_selection_flag_t proposal_selection_flag_t;
 typedef enum extended_sequence_numbers_t extended_sequence_numbers_t;
 typedef struct proposal_t proposal_t;
 
@@ -50,6 +51,18 @@ enum protocol_id_t {
  * enum names for protocol_id_t
  */
 extern enum_name_t *protocol_id_names;
+
+/**
+ * Flags for selecting proposals
+ */
+enum proposal_selection_flag_t {
+	/** Whether to prefer configured (default) or supplied proposals. */
+	PROPOSAL_PREFER_SUPPLIED = (1<<0),
+	/** Whether to skip and ignore algorithms from a private range. */
+	PROPOSAL_SKIP_PRIVATE = (1<<1),
+	/** Whether to skip and ignore diffie hellman groups. */
+	PROPOSAL_SKIP_DH = (1<<2),
+};
 
 /**
  * Stores a set of algorithms used for an SA.
@@ -119,28 +132,22 @@ struct proposal_t {
 	bool (*promote_dh_group)(proposal_t *this, diffie_hellman_group_t group);
 
 	/**
-	 * Strip DH groups from proposal to use it without PFS.
-	 *
-	 * @param keep			group to keep (MODP_NONE to remove all)
-	 */
-	void (*strip_dh)(proposal_t *this, diffie_hellman_group_t keep);
-
-	/**
 	 * Compare two proposal, and select a matching subset.
 	 *
 	 * If the proposals are for the same protocols (AH/ESP), they are
 	 * compared. If they have at least one algorithm of each type
 	 * in common, a resulting proposal of this kind is created.
 	 *
+	 * Unless the flag PROPOSAL_PREFER_SUPPLIED is set, other is expected to be
+	 * the remote proposal from which to copy SPI and proposal number to the
+	 * result, otherwise copy from this proposal.
+	 *
 	 * @param other			proposal to compare against
-	 * @param other_remote	whether other is the remote proposal from which to
-	 *						copy SPI and proposal number to the result,
-	 *						otherwise copy from this proposal
-	 * @param private		accepts algorithms allocated in a private range
+	 * @param flags			flags to consider during proposal selection
 	 * @return				selected proposal, NULL if proposals don't match
 	 */
 	proposal_t *(*select)(proposal_t *this, proposal_t *other,
-						  bool other_remote, bool private);
+						  proposal_selection_flag_t flags);
 
 	/**
 	 * Check if the given proposal matches this proposal.
@@ -148,10 +155,11 @@ struct proposal_t {
 	 * This is similar to select, but no resulting proposal is selected.
 	 *
 	 * @param other			proposal to compare against
-	 * @param private		accepts algorithms allocated in a private range
+	 * @param flags			flags to consider during proposal selection
 	 * @return				TRUE if the proposals match
 	 */
-	bool (*matches)(proposal_t *this, proposal_t *other, bool private);
+	bool (*matches)(proposal_t *this, proposal_t *other,
+					proposal_selection_flag_t flags);
 
 	/**
 	 * Get the protocol ID of the proposal.
@@ -192,9 +200,10 @@ struct proposal_t {
 	/**
 	 * Clone a proposal.
 	 *
+	 * @param flags			flags to consider during cloning
 	 * @return				clone of proposal
 	 */
-	proposal_t *(*clone) (proposal_t *this);
+	proposal_t *(*clone)(proposal_t *this, proposal_selection_flag_t flags);
 
 	/**
 	 * Destroys the proposal object.
@@ -240,7 +249,19 @@ proposal_t *proposal_create_default_aead(protocol_id_t protocol);
  * @param algs				algorithms as string
  * @return					proposal_t object
  */
-proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs);
+proposal_t *proposal_create_from_string(protocol_id_t protocol,
+										const char *algs);
+
+/**
+ * Select a common proposal from the given lists of proposals.
+ *
+ * @param configured		list of configured/local proposals
+ * @param supplied			list of supplied/remote proposals
+ * @param flags				flags to consider during proposal selection
+ * @return					selected proposal, or NULL (allocated)
+ */
+proposal_t *proposal_select(linked_list_t *configured, linked_list_t *supplied,
+							proposal_selection_flag_t flags);
 
 /**
  * printf hook function for proposal_t.

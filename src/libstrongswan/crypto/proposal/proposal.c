@@ -302,44 +302,12 @@ METHOD(proposal_t, promote_dh_group, bool,
 	return found;
 }
 
-METHOD(proposal_t, strip_dh, void,
-	private_proposal_t *this, diffie_hellman_group_t keep)
-{
-	enumerator_t *enumerator;
-	entry_t *entry;
-	bool found = FALSE;
-
-	enumerator = array_create_enumerator(this->transforms);
-	while (enumerator->enumerate(enumerator, &entry))
-	{
-		if (entry->type == DIFFIE_HELLMAN_GROUP)
-		{
-			if (entry->alg != keep)
-			{
-				array_remove_at(this->transforms, enumerator);
-			}
-			else
-			{
-				found = TRUE;
-			}
-		}
-	}
-	enumerator->destroy(enumerator);
-	array_compress(this->transforms);
-
-	if (keep == MODP_NONE || !found)
-	{
-		remove_type(this, DIFFIE_HELLMAN_GROUP);
-		array_compress(this->types);
-	}
-}
-
 /**
  * Select a matching proposal from this and other.
  */
 static bool select_algo(private_proposal_t *this, proposal_t *other,
-						transform_type_t type, bool priv, bool log,
-						uint16_t *alg, uint16_t *ks)
+						transform_type_t type, proposal_selection_flag_t flags,
+						bool log, uint16_t *alg, uint16_t *ks)
 {
 	enumerator_t *e1, *e2;
 	uint16_t alg1, alg2, ks1, ks2;
@@ -390,7 +358,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 		{
 			if (alg1 == alg2 && ks1 == ks2)
 			{
-				if (!priv && alg1 >= 1024)
+				if ((flags & PROPOSAL_SKIP_PRIVATE) && alg1 >= 1024)
 				{
 					if (log)
 					{
@@ -417,7 +385,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
  * is stored there and errors are logged.
  */
 static bool select_algos(private_proposal_t *this, proposal_t *other,
-						 proposal_t *selected, bool private)
+						 proposal_t *selected, proposal_selection_flag_t flags)
 {
 	transform_type_t type;
 	array_t *types;
@@ -434,7 +402,11 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 		{
 			continue;
 		}
-		if (select_algo(this, other, type, private, selected != NULL, &alg, &ks))
+		if (type == DIFFIE_HELLMAN_GROUP && (flags & PROPOSAL_SKIP_DH))
+		{
+			continue;
+		}
+		if (select_algo(this, other, type, flags, selected != NULL, &alg, &ks))
 		{
 			if (alg == 0 && type != EXTENDED_SEQUENCE_NUMBERS)
 			{	/* 0 is "valid" for extended sequence numbers, for other
@@ -468,8 +440,8 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 }
 
 METHOD(proposal_t, select_proposal, proposal_t*,
-	private_proposal_t *this, proposal_t *other, bool other_remote,
-	bool private)
+	private_proposal_t *this, proposal_t *other,
+	proposal_selection_flag_t flags)
 {
 	proposal_t *selected;
 
@@ -481,18 +453,18 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 		return NULL;
 	}
 
-	if (other_remote)
-	{
-		selected = proposal_create(this->protocol, other->get_number(other));
-		selected->set_spi(selected, other->get_spi(other));
-	}
-	else
+	if (flags & PROPOSAL_PREFER_SUPPLIED)
 	{
 		selected = proposal_create(this->protocol, this->number);
 		selected->set_spi(selected, this->spi);
 	}
+	else
+	{
+		selected = proposal_create(this->protocol, other->get_number(other));
+		selected->set_spi(selected, other->get_spi(other));
+	}
 
-	if (!select_algos(this, other, selected, private))
+	if (!select_algos(this, other, selected, flags))
 	{
 		selected->destroy(selected);
 		return NULL;
@@ -502,13 +474,14 @@ METHOD(proposal_t, select_proposal, proposal_t*,
 }
 
 METHOD(proposal_t, matches, bool,
-	private_proposal_t *this, proposal_t *other, bool private)
+	private_proposal_t *this, proposal_t *other,
+	proposal_selection_flag_t flags)
 {
 	if (this->protocol != other->get_protocol(other))
 	{
 		return FALSE;
 	}
-	return select_algos(this, other, NULL, private);
+	return select_algos(this, other, NULL, flags);
 }
 
 METHOD(proposal_t, get_protocol, protocol_id_t,
@@ -599,25 +572,27 @@ METHOD(proposal_t, equals, bool,
 }
 
 METHOD(proposal_t, clone_, proposal_t*,
-	private_proposal_t *this)
+	private_proposal_t *this, proposal_selection_flag_t flags)
 {
 	private_proposal_t *clone;
 	enumerator_t *enumerator;
 	entry_t *entry;
-	transform_type_t *type;
 
 	clone = (private_proposal_t*)proposal_create(this->protocol, 0);
 
 	enumerator = array_create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
+		if (entry->alg >= 1024 && (flags & PROPOSAL_SKIP_PRIVATE))
+		{
+			continue;
+		}
+		if (entry->type == DIFFIE_HELLMAN_GROUP && (flags & PROPOSAL_SKIP_DH))
+		{
+			continue;
+		}
 		array_insert(clone->transforms, ARRAY_TAIL, entry);
-	}
-	enumerator->destroy(enumerator);
-	enumerator = array_create_enumerator(this->types);
-	while (enumerator->enumerate(enumerator, &type))
-	{
-		array_insert(clone->types, ARRAY_TAIL, type);
+		add_type(clone->types, entry->type);
 	}
 	enumerator->destroy(enumerator);
 
@@ -954,7 +929,6 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number)
 			.get_algorithm = _get_algorithm,
 			.has_dh_group = _has_dh_group,
 			.promote_dh_group = _promote_dh_group,
-			.strip_dh = _strip_dh,
 			.select = _select_proposal,
 			.matches = _matches,
 			.get_protocol = _get_protocol,
@@ -1340,4 +1314,60 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 	}
 
 	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+proposal_t *proposal_select(linked_list_t *configured, linked_list_t *supplied,
+							proposal_selection_flag_t flags)
+{
+	enumerator_t *prefer_enum, *match_enum;
+	proposal_t *proposal, *match, *selected = NULL;
+
+	if (flags & PROPOSAL_PREFER_SUPPLIED)
+	{
+		prefer_enum = supplied->create_enumerator(supplied);
+		match_enum = configured->create_enumerator(configured);
+	}
+	else
+	{
+		prefer_enum = configured->create_enumerator(configured);
+		match_enum = supplied->create_enumerator(supplied);
+	}
+
+	while (prefer_enum->enumerate(prefer_enum, &proposal))
+	{
+		if (flags & PROPOSAL_PREFER_SUPPLIED)
+		{
+			configured->reset_enumerator(configured, match_enum);
+		}
+		else
+		{
+			supplied->reset_enumerator(supplied, match_enum);
+		}
+		while (match_enum->enumerate(match_enum, &match))
+		{
+			selected = proposal->select(proposal, match, flags);
+			if (selected)
+			{
+				DBG2(DBG_CFG, "received proposals: %#P", supplied);
+				DBG2(DBG_CFG, "configured proposals: %#P", configured);
+				DBG1(DBG_CFG, "selected proposal: %P", selected);
+				break;
+			}
+		}
+		if (selected)
+		{
+			break;
+		}
+	}
+	prefer_enum->destroy(prefer_enum);
+	match_enum->destroy(match_enum);
+	if (!selected)
+	{
+		DBG1(DBG_CFG, "received proposals: %#P", supplied);
+		DBG1(DBG_CFG, "configured proposals: %#P", configured);
+	}
+	return selected;
 }
