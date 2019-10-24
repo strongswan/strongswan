@@ -112,7 +112,7 @@ struct private_tls_peer_t {
 	/**
 	 * DHE exchange
 	 */
-	diffie_hellman_t *dh;
+	key_exchange_t *dh;
 
 	/**
 	 * Resuming a session?
@@ -384,7 +384,7 @@ static status_t process_modp_key_exchange(private_tls_peer_t *this,
 	public->destroy(public);
 	free(chunk.ptr);
 
-	this->dh = lib->crypto->create_dh(lib->crypto, MODP_CUSTOM,
+	this->dh = lib->crypto->create_ke(lib->crypto, MODP_CUSTOM,
 									  generator, prime);
 	if (!this->dh)
 	{
@@ -392,7 +392,7 @@ static status_t process_modp_key_exchange(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	if (!this->dh->set_other_public_value(this->dh, pub))
+	if (!this->dh->set_public_key(this->dh, pub))
 	{
 		DBG1(DBG_TLS, "applying DH public value failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
@@ -406,10 +406,10 @@ static status_t process_modp_key_exchange(private_tls_peer_t *this,
 /**
  * Get the EC group for a TLS named curve
  */
-static diffie_hellman_group_t curve_to_ec_group(private_tls_peer_t *this,
-												tls_named_curve_t curve)
+static key_exchange_method_t curve_to_ec_group(private_tls_peer_t *this,
+											   tls_named_curve_t curve)
 {
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 	tls_named_curve_t current;
 	enumerator_t *enumerator;
 
@@ -432,7 +432,7 @@ static diffie_hellman_group_t curve_to_ec_group(private_tls_peer_t *this,
 static status_t process_ec_key_exchange(private_tls_peer_t *this,
 										bio_reader_t *reader)
 {
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 	public_key_t *public;
 	uint8_t type;
 	uint16_t curve;
@@ -491,11 +491,11 @@ static status_t process_ec_key_exchange(private_tls_peer_t *this,
 	public->destroy(public);
 	free(chunk.ptr);
 
-	this->dh = lib->crypto->create_dh(lib->crypto, group);
+	this->dh = lib->crypto->create_ke(lib->crypto, group);
 	if (!this->dh)
 	{
 		DBG1(DBG_TLS, "DH group %N not supported",
-			 diffie_hellman_group_names, group);
+			 key_exchange_method_names, group);
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
@@ -507,7 +507,7 @@ static status_t process_ec_key_exchange(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	if (!this->dh->set_other_public_value(this->dh, chunk_skip(pub, 1)))
+	if (!this->dh->set_public_key(this->dh, chunk_skip(pub, 1)))
 	{
 		DBG1(DBG_TLS, "applying DH public value failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
@@ -524,7 +524,7 @@ static status_t process_ec_key_exchange(private_tls_peer_t *this,
 static status_t process_key_exchange(private_tls_peer_t *this,
 									 bio_reader_t *reader)
 {
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 
 	this->crypto->append_handshake(this->crypto,
 								TLS_SERVER_KEY_EXCHANGE, reader->peek(reader));
@@ -537,7 +537,7 @@ static status_t process_key_exchange(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
 		return NEED_MORE;
 	}
-	if (diffie_hellman_group_is_ec(group))
+	if (key_exchange_is_ecdh(group))
 	{
 		return process_ec_key_exchange(this, reader);
 	}
@@ -1008,12 +1008,12 @@ static status_t send_key_exchange_dhe(private_tls_peer_t *this,
 	}
 	chunk_clear(&premaster);
 
-	if (!this->dh->get_my_public_value(this->dh, &pub))
+	if (!this->dh->get_public_key(this->dh, &pub))
 	{
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	if (this->dh->get_dh_group(this->dh) == MODP_CUSTOM)
+	if (this->dh->get_method(this->dh) == MODP_CUSTOM)
 	{
 		writer->write_data16(writer, pub);
 	}

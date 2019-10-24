@@ -230,8 +230,8 @@ METHOD(plugin_t, get_features, int,
 	private_load_tester_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_REGISTER(DH, load_tester_diffie_hellman_create),
-			PLUGIN_PROVIDE(DH, MODP_NULL),
+		PLUGIN_REGISTER(KE, load_tester_diffie_hellman_create),
+			PLUGIN_PROVIDE(KE, MODP_NULL),
 				PLUGIN_DEPENDS(CUSTOM, "load-tester"),
 		PLUGIN_CALLBACK((plugin_feature_callback_t)register_load_tester, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "load-tester"),

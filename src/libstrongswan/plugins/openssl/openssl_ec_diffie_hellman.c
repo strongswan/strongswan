@@ -41,7 +41,7 @@ struct private_openssl_ec_diffie_hellman_t {
 	/**
 	 * Diffie Hellman group number.
 	 */
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 
 	/**
 	 * EC private (public) key
@@ -217,10 +217,10 @@ error:
 	return ret;
 }
 
-METHOD(diffie_hellman_t, set_other_public_value, bool,
+METHOD(key_exchange_t, set_public_key, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
 {
-	if (!diffie_hellman_verify_value(this->group, value))
+	if (!key_exchange_verify_pubkey(this->group, value))
 	{
 		return FALSE;
 	}
@@ -242,14 +242,14 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_my_public_value, bool,
+METHOD(key_exchange_t, get_public_key, bool,
 	private_openssl_ec_diffie_hellman_t *this,chunk_t *value)
 {
 	ecp2chunk(this->ec_group, EC_KEY_get0_public_key(this->key), value, FALSE);
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, set_private_value, bool,
+METHOD(key_exchange_t, set_private_key, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
 {
 	EC_POINT *pub = NULL;
@@ -292,7 +292,7 @@ error:
 	return ret;
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, bool,
+METHOD(key_exchange_t, get_shared_secret, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t *secret)
 {
 	if (!this->computed)
@@ -303,13 +303,13 @@ METHOD(diffie_hellman_t, get_shared_secret, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
+METHOD(key_exchange_t, get_method, key_exchange_method_t,
 	private_openssl_ec_diffie_hellman_t *this)
 {
 	return this->group;
 }
 
-METHOD(diffie_hellman_t, destroy, void,
+METHOD(key_exchange_t, destroy, void,
 	private_openssl_ec_diffie_hellman_t *this)
 {
 	if (this->pub_key)
@@ -339,7 +339,7 @@ METHOD(diffie_hellman_t, destroy, void,
  */
 typedef struct {
 	/** DH group */
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 
 	/** The prime p specifying the base field */
 	const chunk_t p;
@@ -535,7 +535,7 @@ failed:
 /**
  * Create an EC_KEY for ECC Brainpool curves as defined above
  */
-static EC_KEY *ec_key_new_brainpool(diffie_hellman_group_t group)
+static EC_KEY *ec_key_new_brainpool(key_exchange_method_t group)
 {
 	bp_curve *curve = NULL;
 	EC_GROUP *ec_group;
@@ -573,7 +573,7 @@ static EC_KEY *ec_key_new_brainpool(diffie_hellman_group_t group)
 /**
  * Create an EC_KEY for ECC Brainpool curves as defined by OpenSSL
  */
-static EC_KEY *ec_key_new_brainpool(diffie_hellman_group_t group)
+static EC_KEY *ec_key_new_brainpool(key_exchange_method_t group)
 {
 	switch (group)
 	{
@@ -595,18 +595,19 @@ static EC_KEY *ec_key_new_brainpool(diffie_hellman_group_t group)
 /*
  * Described in header.
  */
-openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_group_t group)
+openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(
+													key_exchange_method_t group)
 {
 	private_openssl_ec_diffie_hellman_t *this;
 
 	INIT(this,
 		.public = {
-			.dh = {
+			.ke = {
 				.get_shared_secret = _get_shared_secret,
-				.set_other_public_value = _set_other_public_value,
-				.get_my_public_value = _get_my_public_value,
-				.set_private_value = _set_private_value,
-				.get_dh_group = _get_dh_group,
+				.set_public_key = _set_public_key,
+				.get_public_key = _get_public_key,
+				.set_private_key = _set_private_key,
+				.get_method = _get_method,
 				.destroy = _destroy,
 			},
 		},

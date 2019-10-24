@@ -35,7 +35,7 @@ typedef struct crypto_factory_t crypto_factory_t;
 #include <crypto/xofs/xof.h>
 #include <crypto/drbgs/drbg.h>
 #include <crypto/nonce_gen.h>
-#include <crypto/diffie_hellman.h>
+#include <crypto/key_exchange.h>
 #include <crypto/transform.h>
 
 #define CRYPTO_MAX_ALG_LINE          120   /* characters */
@@ -87,12 +87,12 @@ typedef rng_t* (*rng_constructor_t)(rng_quality_t quality);
 typedef nonce_gen_t* (*nonce_gen_constructor_t)();
 
 /**
- * Constructor function for diffie hellman
+ * Constructor function for key exchange methods
  *
- * The DH constructor accepts additional arguments for:
+ * The key exchange method constructor accepts additional arguments for:
  * - MODP_CUSTOM: chunk_t generator, chunk_t prime
  */
-typedef diffie_hellman_t* (*dh_constructor_t)(diffie_hellman_group_t group, ...);
+typedef key_exchange_t* (*ke_constructor_t)(key_exchange_method_t method, ...);
 
 /**
  * Handles crypto modules and creates instances.
@@ -183,15 +183,15 @@ struct crypto_factory_t {
 	nonce_gen_t* (*create_nonce_gen)(crypto_factory_t *this);
 
 	/**
-	 * Create a diffie hellman instance.
+	 * Create a key exchange method instance.
 	 *
-	 * Additional arguments are passed to the DH constructor.
+	 * Additional arguments are passed to the key exchange method constructor.
 	 *
-	 * @param group			diffie hellman group
-	 * @return				diffie_hellman_t instance, NULL if not supported
+	 * @param method		key exchange method
+	 * @return				key_exchange_t instance, NULL if not supported
 	 */
-	diffie_hellman_t* (*create_dh)(crypto_factory_t *this,
-								   diffie_hellman_group_t group, ...);
+	key_exchange_t* (*create_ke)(crypto_factory_t *this,
+								 key_exchange_method_t method, ...);
 
 	/**
 	 * Register a crypter constructor.
@@ -360,22 +360,22 @@ struct crypto_factory_t {
 							 nonce_gen_constructor_t create);
 
 	/**
-	 * Register a diffie hellman constructor.
+	 * Register a key exchange method constructor.
 	 *
-	 * @param group			dh group to constructor
+	 * @param method		key exchange method to constructor
 	 * @param plugin_name	plugin that registered this algorithm
 	 * @param create		constructor function for that algorithm
 	 * @return				TRUE if registered, FALSE if test vector failed
 	 */
-	bool (*add_dh)(crypto_factory_t *this, diffie_hellman_group_t group,
-				   const char *plugin_name, dh_constructor_t create);
+	bool (*add_ke)(crypto_factory_t *this, key_exchange_method_t method,
+				   const char *plugin_name, ke_constructor_t create);
 
 	/**
-	 * Unregister a diffie hellman constructor.
+	 * Unregister a key exchange method constructor.
 	 *
 	 * @param create		constructor function to unregister
 	 */
-	void (*remove_dh)(crypto_factory_t *this, dh_constructor_t create);
+	void (*remove_ke)(crypto_factory_t *this, ke_constructor_t create);
 
 	/**
 	 * Create an enumerator over all registered crypter algorithms.
@@ -427,11 +427,11 @@ struct crypto_factory_t {
 	enumerator_t* (*create_drbg_enumerator)(crypto_factory_t *this);
 
 	/**
-	 * Create an enumerator over all registered diffie hellman groups.
+	 * Create an enumerator over all registered key exchange method.
 	 *
-	 * @return				enumerator over diffie_hellman_group_t, plugin
+	 * @return				enumerator over key_exchange_method_t, plugin
 	 */
-	enumerator_t* (*create_dh_enumerator)(crypto_factory_t *this);
+	enumerator_t* (*create_ke_enumerator)(crypto_factory_t *this);
 
 	/**
 	 * Create an enumerator over all registered random generators.

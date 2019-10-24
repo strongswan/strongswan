@@ -31,9 +31,9 @@ typedef struct ntru_ke_t ntru_ke_t;
 struct ntru_ke_t {
 
 	/**
-	 * Implements diffie_hellman_t interface.
+	 * Implements key_exchange_t interface.
 	 */
-	diffie_hellman_t dh;
+	key_exchange_t ke;
 };
 
 /**
@@ -44,7 +44,7 @@ struct ntru_ke_t {
  * @param p				not used
  * @return				ntru_ke_t object, NULL if not supported
  */
-ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p);
+ntru_ke_t *ntru_ke_create(key_exchange_method_t group, chunk_t g, chunk_t p);
 
 #endif /** NTRU_KE_H_ @}*/
 
