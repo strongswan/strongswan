@@ -80,9 +80,9 @@ struct private_crypto_tester_t {
 	linked_list_t *rng;
 
 	/**
-	 * List of Diffie-Hellman test vectors
+	 * List of key exchange method test vectors
 	 */
-	linked_list_t *dh;
+	linked_list_t *ke;
 
 	/**
 	 * Is a test vector required to pass a test?
@@ -1439,13 +1439,13 @@ failure:
 }
 
 /**
- * Benchmark a DH backend
+ * Benchmark a key exchange backend
  */
-static u_int bench_dh(private_crypto_tester_t *this,
-					  diffie_hellman_group_t group, dh_constructor_t create)
+static u_int bench_ke(private_crypto_tester_t *this,
+					  key_exchange_method_t method, ke_constructor_t create)
 {
 	chunk_t pub = chunk_empty, shared = chunk_empty;
-	diffie_hellman_t *dh;
+	key_exchange_t *ke;
 	struct timespec start;
 	u_int runs;
 
@@ -1453,46 +1453,46 @@ static u_int bench_dh(private_crypto_tester_t *this,
 	start_timing(&start);
 	while (end_timing(&start) < this->bench_time)
 	{
-		dh = create(group);
-		if (!dh)
+		ke = create(method);
+		if (!ke)
 		{
 			return 0;
 		}
-		if (dh->get_my_public_value(dh, &pub) &&
-			dh->set_other_public_value(dh, pub) &&
-			dh->get_shared_secret(dh, &shared))
+		if (ke->get_public_key(ke, &pub) &&
+			ke->set_public_key(ke, pub) &&
+			ke->get_shared_secret(ke, &shared))
 		{
 			runs++;
 		}
 		chunk_free(&pub);
 		chunk_free(&shared);
-		dh->destroy(dh);
+		ke->destroy(ke);
 	}
 	return runs;
 }
 
-METHOD(crypto_tester_t, test_dh, bool,
-	private_crypto_tester_t *this, diffie_hellman_group_t group,
-	dh_constructor_t create, u_int *speed, const char *plugin_name)
+METHOD(crypto_tester_t, test_ke, bool,
+	private_crypto_tester_t *this, key_exchange_method_t method,
+	ke_constructor_t create, u_int *speed, const char *plugin_name)
 {
 	enumerator_t *enumerator;
-	dh_test_vector_t *v;
+	ke_test_vector_t *v;
 	bool failed = FALSE;
 	u_int tested = 0;
 
-	enumerator = this->dh->create_enumerator(this->dh);
+	enumerator = this->ke->create_enumerator(this->ke);
 	while (enumerator->enumerate(enumerator, &v))
 	{
-		diffie_hellman_t *a, *b;
+		key_exchange_t *a, *b;
 		chunk_t apub, bpub, asec, bsec;
 
-		if (v->group != group)
+		if (v->method != method)
 		{
 			continue;
 		}
 
-		a = create(group);
-		b = create(group);
+		a = create(method);
+		b = create(method);
 		if (!a || !b)
 		{
 			DESTROY_IF(a);
@@ -1500,11 +1500,11 @@ METHOD(crypto_tester_t, test_dh, bool,
 			failed = TRUE;
 			tested++;
 			DBG1(DBG_LIB, "disabled %N[%s]: creating instance failed",
-				 diffie_hellman_group_names, group, plugin_name);
+				 key_exchange_method_names, method, plugin_name);
 			break;
 		}
 
-		if (!a->set_private_value || !b->set_private_value)
+		if (!a->set_private_key || !b->set_private_key)
 		{	/* does not support testing */
 			a->destroy(a);
 			b->destroy(b);
@@ -1515,23 +1515,23 @@ METHOD(crypto_tester_t, test_dh, bool,
 
 		apub = bpub = asec = bsec = chunk_empty;
 
-		if (!a->set_private_value(a, chunk_create(v->priv_a, v->priv_len)) ||
-			!b->set_private_value(b, chunk_create(v->priv_b, v->priv_len)))
+		if (!a->set_private_key(a, chunk_create(v->priv_a, v->priv_len)) ||
+			!b->set_private_key(b, chunk_create(v->priv_b, v->priv_len)))
 		{
 			goto failure;
 		}
-		if (!a->get_my_public_value(a, &apub) ||
+		if (!a->get_public_key(a, &apub) ||
 			!chunk_equals(apub, chunk_create(v->pub_a, v->pub_len)))
 		{
 			goto failure;
 		}
-		if (!b->get_my_public_value(b, &bpub) ||
+		if (!b->get_public_key(b, &bpub) ||
 			!chunk_equals(bpub, chunk_create(v->pub_b, v->pub_len)))
 		{
 			goto failure;
 		}
-		if (!a->set_other_public_value(a, bpub) ||
-			!b->set_other_public_value(b, apub))
+		if (!a->set_public_key(a, bpub) ||
+			!b->set_public_key(b, apub))
 		{
 			goto failure;
 		}
@@ -1557,7 +1557,7 @@ failure:
 		if (failed)
 		{
 			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
-				 diffie_hellman_group_names, group, plugin_name, get_name(v));
+				 key_exchange_method_names, method, plugin_name, get_name(v));
 			break;
 		}
 	}
@@ -1566,21 +1566,21 @@ failure:
 	{
 		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found / untestable",
 			 this->required ? "disabled" : "enabled ",
-			 diffie_hellman_group_names, group, plugin_name);
+			 key_exchange_method_names, method, plugin_name);
 		return !this->required;
 	}
 	if (!failed)
 	{
 		if (speed)
 		{
-			*speed = bench_dh(this, group, create);
+			*speed = bench_ke(this, method, create);
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors, %d points",
-				 diffie_hellman_group_names, group, plugin_name, tested, *speed);
+				 key_exchange_method_names, method, plugin_name, tested, *speed);
 		}
 		else
 		{
 			DBG1(DBG_LIB, "enabled  %N[%s]: passed %u test vectors",
-				 diffie_hellman_group_names, group, plugin_name, tested);
+				 key_exchange_method_names, method, plugin_name, tested);
 		}
 	}
 	return !failed;
@@ -1634,10 +1634,10 @@ METHOD(crypto_tester_t, add_rng_vector, void,
 	this->rng->insert_last(this->rng, vector);
 }
 
-METHOD(crypto_tester_t, add_dh_vector, void,
-	private_crypto_tester_t *this, dh_test_vector_t *vector)
+METHOD(crypto_tester_t, add_ke_vector, void,
+	private_crypto_tester_t *this, ke_test_vector_t *vector)
 {
-	this->dh->insert_last(this->dh, vector);
+	this->ke->insert_last(this->ke, vector);
 }
 
 METHOD(crypto_tester_t, destroy, void,
@@ -1651,7 +1651,7 @@ METHOD(crypto_tester_t, destroy, void,
 	this->xof->destroy(this->xof);
 	this->drbg->destroy(this->drbg);
 	this->rng->destroy(this->rng);
-	this->dh->destroy(this->dh);
+	this->ke->destroy(this->ke);
 	free(this);
 }
 
@@ -1672,7 +1672,7 @@ crypto_tester_t *crypto_tester_create()
 			.test_xof = _test_xof,
 			.test_drbg = _test_drbg,
 			.test_rng = _test_rng,
-			.test_dh = _test_dh,
+			.test_ke = _test_ke,
 			.add_crypter_vector = _add_crypter_vector,
 			.add_aead_vector = _add_aead_vector,
 			.add_signer_vector = _add_signer_vector,
@@ -1681,7 +1681,7 @@ crypto_tester_t *crypto_tester_create()
 			.add_xof_vector = _add_xof_vector,
 			.add_drbg_vector = _add_drbg_vector,
 			.add_rng_vector = _add_rng_vector,
-			.add_dh_vector = _add_dh_vector,
+			.add_ke_vector = _add_ke_vector,
 			.destroy = _destroy,
 		},
 		.crypter = linked_list_create(),
@@ -1692,7 +1692,7 @@ crypto_tester_t *crypto_tester_create()
 		.xof = linked_list_create(),
 		.drbg = linked_list_create(),
 		.rng = linked_list_create(),
-		.dh = linked_list_create(),
+		.ke = linked_list_create(),
 
 		.required = lib->settings->get_bool(lib->settings,
 								"%s.crypto_test.required", FALSE, lib->ns),

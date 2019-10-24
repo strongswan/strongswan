@@ -84,10 +84,10 @@ METHOD(keymat_t, get_version, ike_version_t,
 	return IKEV2;
 }
 
-METHOD(keymat_t, create_dh, diffie_hellman_t*,
-	private_keymat_v2_t *this, diffie_hellman_group_t group)
+METHOD(keymat_t, create_ke, key_exchange_t*,
+	private_keymat_v2_t *this, key_exchange_method_t method)
 {
-	return lib->crypto->create_dh(lib->crypto, group);
+	return lib->crypto->create_ke(lib->crypto, method);
 }
 
 METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
@@ -299,7 +299,7 @@ failure:
 }
 
 METHOD(keymat_v2_t, derive_ike_keys, bool,
-	private_keymat_v2_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+	private_keymat_v2_t *this, proposal_t *proposal, key_exchange_t *dh,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
@@ -579,7 +579,7 @@ METHOD(keymat_v2_t, derive_ike_keys_ppk, bool,
 }
 
 METHOD(keymat_v2_t, derive_child_keys, bool,
-	private_keymat_v2_t *this, proposal_t *proposal, diffie_hellman_t *dh,
+	private_keymat_v2_t *this, proposal_t *proposal, key_exchange_t *dh,
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
@@ -857,7 +857,7 @@ keymat_v2_t *keymat_v2_create(bool initiator)
 		.public = {
 			.keymat = {
 				.get_version = _get_version,
-				.create_dh = _create_dh,
+				.create_ke = _create_ke,
 				.create_nonce_gen = _create_nonce_gen,
 				.get_aead = _get_aead,
 				.destroy = _destroy,

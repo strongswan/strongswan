@@ -34,7 +34,7 @@ typedef struct proposal_t proposal_t;
 #include <crypto/transform.h>
 #include <crypto/crypters/crypter.h>
 #include <crypto/signers/signer.h>
-#include <crypto/diffie_hellman.h>
+#include <crypto/key_exchange.h>
 
 /**
  * Protocol ID of a proposal.
@@ -60,8 +60,8 @@ enum proposal_selection_flag_t {
 	PROPOSAL_PREFER_SUPPLIED = (1<<0),
 	/** Whether to skip and ignore algorithms from a private range. */
 	PROPOSAL_SKIP_PRIVATE = (1<<1),
-	/** Whether to skip and ignore diffie hellman groups. */
-	PROPOSAL_SKIP_DH = (1<<2),
+	/** Whether to skip and ignore key exchange methods. */
+	PROPOSAL_SKIP_KE = (1<<2),
 };
 
 /**
@@ -109,21 +109,21 @@ struct proposal_t {
 						   uint16_t *alg, uint16_t *key_size);
 
 	/**
-	 * Check if the proposal has a specific DH group.
+	 * Check if the proposal has a specific key exchange method.
 	 *
-	 * @param group			group to check for
+	 * @param method		key exchange method to check for
 	 * @return				TRUE if algorithm included
 	 */
-	bool (*has_dh_group)(proposal_t *this, diffie_hellman_group_t group);
+	bool (*has_ke_method)(proposal_t *this, key_exchange_method_t method);
 
 	/**
-	 * Move the given DH group to the front of the list if it was contained in
-	 * the proposal.
+	 * Move the given key exchange method to the front of the list if it was
+	 * contained in the proposal.
 	 *
-	 * @param group			group to promote
+	 * @param method		key exchange method to promote
 	 * @return				TRUE if algorithm included
 	 */
-	bool (*promote_dh_group)(proposal_t *this, diffie_hellman_group_t group);
+	bool (*promote_ke_method)(proposal_t *this, key_exchange_method_t method);
 
 	/**
 	 * Compare two proposals and select a matching subset.
