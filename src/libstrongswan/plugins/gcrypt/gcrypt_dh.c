@@ -35,7 +35,7 @@ struct private_gcrypt_dh_t {
 	/**
 	 * Diffie Hellman group number
 	 */
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 
 	/*
 	 * Generator value
@@ -73,13 +73,13 @@ struct private_gcrypt_dh_t {
 	size_t p_len;
 };
 
-METHOD(diffie_hellman_t, set_other_public_value, bool,
+METHOD(key_exchange_t, set_public_key, bool,
 	private_gcrypt_dh_t *this, chunk_t value)
 {
 	gcry_mpi_t p_min_1;
 	gcry_error_t err;
 
-	if (!diffie_hellman_verify_value(this->group, value))
+	if (!key_exchange_verify_pubkey(this->group, value))
 	{
 		return FALSE;
 	}
@@ -138,14 +138,14 @@ static chunk_t export_mpi(gcry_mpi_t value, size_t len)
 	return chunk;
 }
 
-METHOD(diffie_hellman_t, get_my_public_value, bool,
+METHOD(key_exchange_t, get_public_key, bool,
 	private_gcrypt_dh_t *this, chunk_t *value)
 {
 	*value = export_mpi(this->ya, this->p_len);
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, set_private_value, bool,
+METHOD(key_exchange_t, set_private_key, bool,
 	private_gcrypt_dh_t *this, chunk_t value)
 {
 	gcry_error_t err;
@@ -163,7 +163,7 @@ METHOD(diffie_hellman_t, set_private_value, bool,
 	return !err;
 }
 
-METHOD(diffie_hellman_t, get_shared_secret, bool,
+METHOD(key_exchange_t, get_shared_secret, bool,
 	private_gcrypt_dh_t *this, chunk_t *secret)
 {
 	if (!this->zz)
@@ -174,13 +174,13 @@ METHOD(diffie_hellman_t, get_shared_secret, bool,
 	return TRUE;
 }
 
-METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
+METHOD(key_exchange_t, get_method, key_exchange_method_t,
 	private_gcrypt_dh_t *this)
 {
 	return this->group;
 }
 
-METHOD(diffie_hellman_t, destroy, void,
+METHOD(key_exchange_t, destroy, void,
 	private_gcrypt_dh_t *this)
 {
 	gcry_mpi_release(this->p);
@@ -195,7 +195,7 @@ METHOD(diffie_hellman_t, destroy, void,
 /*
  * Generic internal constructor
  */
-static gcrypt_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
+static gcrypt_dh_t *create_generic(key_exchange_method_t group, size_t exp_len,
 								   chunk_t g, chunk_t p)
 {
 	private_gcrypt_dh_t *this;
@@ -205,12 +205,12 @@ static gcrypt_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
 
 	INIT(this,
 		.public = {
-			.dh = {
+			.ke = {
 				.get_shared_secret = _get_shared_secret,
-				.set_other_public_value = _set_other_public_value,
-				.get_my_public_value = _get_my_public_value,
-				.set_private_value = _set_private_value,
-				.get_dh_group = _get_dh_group,
+				.set_public_key = _set_public_key,
+				.get_public_key = _get_public_key,
+				.set_private_key = _set_private_key,
+				.get_method = _get_method,
 				.destroy = _destroy,
 			},
 		},
@@ -272,7 +272,7 @@ static gcrypt_dh_t *create_generic(diffie_hellman_group_t group, size_t exp_len,
 /*
  * Described in header.
  */
-gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
+gcrypt_dh_t *gcrypt_dh_create(key_exchange_method_t group)
 {
 
 	diffie_hellman_params_t *params;
@@ -289,7 +289,7 @@ gcrypt_dh_t *gcrypt_dh_create(diffie_hellman_group_t group)
 /*
  * Described in header.
  */
-gcrypt_dh_t *gcrypt_dh_create_custom(diffie_hellman_group_t group, ...)
+gcrypt_dh_t *gcrypt_dh_create_custom(key_exchange_method_t group, ...)
 {
 	if (group == MODP_CUSTOM)
 	{

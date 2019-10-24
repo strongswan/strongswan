@@ -109,7 +109,7 @@ METHOD(listener_t, message, bool,
 					copy_proposal_algs(proposal, new, ENCRYPTION_ALGORITHM);
 					copy_proposal_algs(proposal, new, INTEGRITY_ALGORITHM);
 					copy_proposal_algs(proposal, new, PSEUDO_RANDOM_FUNCTION);
-					copy_proposal_algs(proposal, new, DIFFIE_HELLMAN_GROUP);
+					copy_proposal_algs(proposal, new, KEY_EXCHANGE_METHOD);
 					copy_proposal_algs(proposal, new, EXTENDED_SEQUENCE_NUMBERS);
 					updated->insert_last(updated, new);
 				}
