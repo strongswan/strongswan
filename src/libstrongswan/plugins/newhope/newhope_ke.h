@@ -31,20 +31,20 @@ typedef struct newhope_ke_t newhope_ke_t;
 struct newhope_ke_t {
 
 	/**
-	 * Implements diffie_hellman_t interface.
+	 * Implements key_exchange_t interface.
 	 */
-	diffie_hellman_t dh;
+	key_exchange_t ke;
 };
 
 /**
  * Creates a new newhope_ke_t object.
  *
- * @param group			New Hope DH group number
+ * @param ke			New Hope key exchange number
  * @param g				not used
  * @param p				not used
  * @return				newhope_ke_t object, NULL if not supported
  */
-newhope_ke_t *newhope_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p);
+newhope_ke_t *newhope_ke_create(key_exchange_method_t ke, chunk_t g, chunk_t p);
 
 #endif /** NEWHOPE_KE_H_ @}*/
 

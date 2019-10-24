@@ -1,0 +1,9 @@
+sun::iptables-restore < /etc/iptables.rules
+moon::iptables-restore < /etc/iptables.rules
+sun::cd /etc/swanctl; rm rsa/sunKey.pem x509/sunCert.pem x509ca/*
+moon::cd /etc/swanctl; rm rsa/moonKey.pem x509/moonCert.pem x509ca/*
+sun::systemctl start strongswan
+moon::systemctl start strongswan
+sun::expect-connection gw-gw
+moon::expect-connection gw-gw
+moon::swanctl --initiate --child net-net 2> /dev/null

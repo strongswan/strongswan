@@ -1,0 +1,7 @@
+moon::swanctl --terminate --ike gw-gw 2> /dev/null
+moon::systemctl stop strongswan
+sun::systemctl stop strongswan
+moon::iptables-restore < /etc/iptables.flush
+sun::iptables-restore < /etc/iptables.flush
+moon::cd /etc/swanctl; rm -r rsa pgp
+sun::cd /etc/swanctl; rm -r rsa pgp
