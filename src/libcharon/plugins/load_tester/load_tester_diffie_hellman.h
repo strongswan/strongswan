@@ -21,7 +21,7 @@
 #ifndef LOAD_TESTER_DIFFIE_HELLMAN_H_
 #define LOAD_TESTER_DIFFIE_HELLMAN_H_
 
-#include <crypto/diffie_hellman.h>
+#include <crypto/key_exchange.h>
 
 typedef struct load_tester_diffie_hellman_t load_tester_diffie_hellman_t;
 
@@ -31,18 +31,18 @@ typedef struct load_tester_diffie_hellman_t load_tester_diffie_hellman_t;
 struct load_tester_diffie_hellman_t {
 
 	/**
-	 * Implements diffie_hellman_t interface.
+	 * Implements key_exchange_t interface.
 	 */
-	diffie_hellman_t dh;
+	key_exchange_t ke;
 };
 
 /**
- * Creates a new gmp_diffie_hellman_t object.
+ * Creates a new load_tester_diffie_hellman_t object.
  *
  * @param group			Diffie Hellman group, supports MODP_NULL only
- * @return				gmp_diffie_hellman_t object
+ * @return				load_tester_diffie_hellman_t object
  */
 load_tester_diffie_hellman_t *load_tester_diffie_hellman_create(
-												diffie_hellman_group_t group);
+												key_exchange_method_t group);
 
 #endif /** LOAD_TESTER_DIFFIE_HELLMAN_H_ @}*/

@@ -34,7 +34,7 @@ typedef struct ike_cfg_create_t ike_cfg_create_t;
 #include <collections/linked_list.h>
 #include <utils/identification.h>
 #include <crypto/proposal/proposal.h>
-#include <crypto/diffie_hellman.h>
+#include <crypto/key_exchange.h>
 
 /**
  * IKE version.
@@ -230,11 +230,11 @@ struct ike_cfg_t {
 	childless_t (*childless)(ike_cfg_t *this);
 
 	/**
-	 * Get the DH group to use for IKE_SA setup.
+	 * Get the key exchange method to use for IKE_SA setup.
 	 *
-	 * @return				dh group to use for initialization
+	 * @return				key exchange method to use for initialization
 	 */
-	diffie_hellman_group_t (*get_dh_group)(ike_cfg_t *this);
+	key_exchange_method_t (*get_ke_method)(ike_cfg_t *this);
 
 	/**
 	 * Check if two IKE configs are equal.

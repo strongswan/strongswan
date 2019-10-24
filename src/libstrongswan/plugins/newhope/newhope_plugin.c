@@ -41,8 +41,8 @@ METHOD(plugin_t, get_features, int,
 	private_newhope_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_REGISTER(DH, newhope_ke_create),
-			PLUGIN_PROVIDE(DH, NH_128_BIT),
+		PLUGIN_REGISTER(KE, newhope_ke_create),
+			PLUGIN_PROVIDE(KE, NH_128_BIT),
 				PLUGIN_DEPENDS(XOF, XOF_SHAKE_128),
 				PLUGIN_DEPENDS(XOF, XOF_CHACHA20),
 	};
