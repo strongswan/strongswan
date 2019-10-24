@@ -23,7 +23,7 @@
 #include <bio/bio_reader.h>
 #include <bio/bio_writer.h>
 #include <sa/ikev2/keymat_v2.h>
-#include <crypto/diffie_hellman.h>
+#include <crypto/key_exchange.h>
 #include <crypto/hashers/hash_algorithm_set.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
@@ -57,12 +57,12 @@ struct private_ike_init_t {
 	/**
 	 * diffie hellman group to use
 	 */
-	diffie_hellman_group_t dh_group;
+	key_exchange_method_t dh_group;
 
 	/**
 	 * diffie hellman key exchange
 	 */
-	diffie_hellman_t *dh;
+	key_exchange_t *dh;
 
 	/**
 	 * Applying DH public value failed?
@@ -332,7 +332,7 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 				proposal->set_spi(proposal, id->get_initiator_spi(id));
 			}
 			/* move the selected DH group to the front of the proposal */
-			if (!proposal->promote_dh_group(proposal, this->dh_group))
+			if (!proposal->promote_ke_method(proposal, this->dh_group))
 			{	/* the proposal does not include the group, move to the back */
 				proposal_list->remove_at(proposal_list, enumerator);
 				other_dh_groups->insert_last(other_dh_groups, proposal);
@@ -362,8 +362,8 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	}
 	message->add_payload(message, (payload_t*)sa_payload);
 
-	ke_payload = ke_payload_create_from_diffie_hellman(PLV2_KEY_EXCHANGE,
-													   this->dh);
+	ke_payload = ke_payload_create_from_key_exchange(PLV2_KEY_EXCHANGE,
+													 this->dh);
 	if (!ke_payload)
 	{
 		DBG1(DBG_IKE, "creating KE payload failed");
@@ -534,7 +534,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 			{
 				ke_payload = (ke_payload_t*)payload;
 
-				this->dh_group = ke_payload->get_dh_group_number(ke_payload);
+				this->dh_group = ke_payload->get_key_exchange_method(ke_payload);
 				break;
 			}
 			case PLV2_NONCE:
@@ -616,20 +616,20 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 	}
 
 	if (ke_payload && this->proposal &&
-		this->proposal->has_dh_group(this->proposal, this->dh_group))
+		this->proposal->has_ke_method(this->proposal, this->dh_group))
 	{
 		if (!this->initiator)
 		{
-			this->dh = this->keymat->keymat.create_dh(
+			this->dh = this->keymat->keymat.create_ke(
 								&this->keymat->keymat, this->dh_group);
 		}
 		else if (this->dh)
 		{
-			this->dh_failed = this->dh->get_dh_group(this->dh) != this->dh_group;
+			this->dh_failed = this->dh->get_method(this->dh) != this->dh_group;
 		}
 		if (this->dh && !this->dh_failed)
 		{
-			this->dh_failed = !this->dh->set_other_public_value(this->dh,
+			this->dh_failed = !this->dh->set_public_key(this->dh,
 								ke_payload->get_key_exchange_data(ke_payload));
 		}
 	}
@@ -664,38 +664,38 @@ METHOD(task_t, build_i, status_t,
 			uint16_t dh_group;
 
 			proposal = this->old_sa->get_proposal(this->old_sa);
-			if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+			if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD,
 										&dh_group, NULL))
 			{
 				this->dh_group = dh_group;
 			}
 			else
 			{	/* this shouldn't happen, but let's be safe */
-				this->dh_group = ike_cfg->get_dh_group(ike_cfg);
+				this->dh_group = ike_cfg->get_ke_method(ike_cfg);
 			}
 		}
 		else
 		{
-			this->dh_group = ike_cfg->get_dh_group(ike_cfg);
+			this->dh_group = ike_cfg->get_ke_method(ike_cfg);
 		}
-		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+		this->dh = this->keymat->keymat.create_ke(&this->keymat->keymat,
 												  this->dh_group);
 		if (!this->dh)
 		{
 			DBG1(DBG_IKE, "configured DH group %N not supported",
-				diffie_hellman_group_names, this->dh_group);
+				key_exchange_method_names, this->dh_group);
 			return FAILED;
 		}
 	}
-	else if (this->dh->get_dh_group(this->dh) != this->dh_group)
+	else if (this->dh->get_method(this->dh) != this->dh_group)
 	{	/* reset DH instance if group changed (INVALID_KE_PAYLOAD) */
 		this->dh->destroy(this->dh);
-		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+		this->dh = this->keymat->keymat.create_ke(&this->keymat->keymat,
 												  this->dh_group);
 		if (!this->dh)
 		{
 			DBG1(DBG_IKE, "requested DH group %N not supported",
-				 diffie_hellman_group_names, this->dh_group);
+				 key_exchange_method_names, this->dh_group);
 			return FAILED;
 		}
 	}
@@ -828,16 +828,16 @@ METHOD(task_t, build_r, status_t,
 	}
 
 	if (this->dh == NULL ||
-		!this->proposal->has_dh_group(this->proposal, this->dh_group))
+		!this->proposal->has_ke_method(this->proposal, this->dh_group))
 	{
 		uint16_t group;
 
-		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
+		if (this->proposal->get_algorithm(this->proposal, KEY_EXCHANGE_METHOD,
 										  &group, NULL))
 		{
 			DBG1(DBG_IKE, "DH group %N unacceptable, requesting %N",
-				 diffie_hellman_group_names, this->dh_group,
-				 diffie_hellman_group_names, group);
+				 key_exchange_method_names, this->dh_group,
+				 key_exchange_method_names, group);
 			this->dh_group = group;
 			group = htons(group);
 			message->add_notify(message, FALSE, INVALID_KE_PAYLOAD,
@@ -975,14 +975,14 @@ METHOD(task_t, process_i, status_t,
 				case INVALID_KE_PAYLOAD:
 				{
 					chunk_t data;
-					diffie_hellman_group_t bad_group;
+					key_exchange_method_t bad_group;
 
 					bad_group = this->dh_group;
 					data = notify->get_notification_data(notify);
 					this->dh_group = ntohs(*((uint16_t*)data.ptr));
 					DBG1(DBG_IKE, "peer didn't accept DH group %N, "
-						 "it requested %N", diffie_hellman_group_names,
-						 bad_group, diffie_hellman_group_names, this->dh_group);
+						 "it requested %N", key_exchange_method_names,
+						 bad_group, key_exchange_method_names, this->dh_group);
 
 					if (this->old_sa == NULL)
 					{	/* reset the IKE_SA if we are not rekeying */
@@ -1063,7 +1063,7 @@ METHOD(task_t, process_i, status_t,
 	}
 
 	if (this->dh == NULL ||
-		!this->proposal->has_dh_group(this->proposal, this->dh_group))
+		!this->proposal->has_ke_method(this->proposal, this->dh_group))
 	{
 		DBG1(DBG_IKE, "peer DH group selection invalid");
 		return FAILED;

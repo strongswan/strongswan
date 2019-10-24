@@ -331,11 +331,11 @@ void exchange_test_helper_init(char *plugins)
 	private_exchange_test_helper_t *this;
 	private_backend_t *backend;
 	plugin_feature_t features[] = {
-		PLUGIN_REGISTER(DH, mock_dh_create),
+		PLUGIN_REGISTER(KE, mock_dh_create),
 			/* we only need to support a limited number of DH groups */
-			PLUGIN_PROVIDE(DH, MODP_2048_BIT),
-			PLUGIN_PROVIDE(DH, MODP_3072_BIT),
-			PLUGIN_PROVIDE(DH, ECP_256_BIT),
+			PLUGIN_PROVIDE(KE, MODP_2048_BIT),
+			PLUGIN_PROVIDE(KE, MODP_3072_BIT),
+			PLUGIN_PROVIDE(KE, ECP_256_BIT),
 		PLUGIN_REGISTER(NONCE_GEN, create_nonce_gen),
 			PLUGIN_PROVIDE(NONCE_GEN),
 				PLUGIN_DEPENDS(RNG, RNG_WEAK),

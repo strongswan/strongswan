@@ -26,12 +26,12 @@
 #include <library.h>
 
 /**
- * Creates a new diffie_hellman_t object.
+ * Creates a new key_exchange_t object.
  *
- * @param group			Diffie Hellman group number to use
+ * @param ke			key exchange method to use
  * @return				object, NULL if not supported
  */
-diffie_hellman_t *openssl_x_diffie_hellman_create(diffie_hellman_group_t group);
+key_exchange_t *openssl_x_diffie_hellman_create(key_exchange_method_t ke);
 
 #endif /** OPENSSL_X_DIFFIE_HELLMAN_H_ @}*/
 

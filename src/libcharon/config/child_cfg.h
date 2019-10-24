@@ -88,10 +88,10 @@ struct child_cfg_t {
 	 *
 	 * Resulting list and all of its proposals must be freed after use.
 	 *
-	 * @param strip_dh		TRUE strip out diffie hellman groups
+	 * @param strip_ke		TRUE strip out key exchange methods
 	 * @return				list of proposals
 	 */
-	linked_list_t* (*get_proposals)(child_cfg_t *this, bool strip_dh);
+	linked_list_t* (*get_proposals)(child_cfg_t *this, bool strip_ke);
 
 	/**
 	 * Select a proposal from a supplied list.
@@ -203,11 +203,11 @@ struct child_cfg_t {
 	action_t (*get_close_action) (child_cfg_t *this);
 
 	/**
-	 * Get the DH group to use for CHILD_SA setup.
+	 * Get the key exchange method to use for CHILD_SA setup.
 	 *
-	 * @return				dh group to use
+	 * @return				key exchange method to use
 	 */
-	diffie_hellman_group_t (*get_dh_group)(child_cfg_t *this);
+	key_exchange_method_t (*get_ke_method)(child_cfg_t *this);
 
 	/**
 	 * Get the inactivity timeout value.

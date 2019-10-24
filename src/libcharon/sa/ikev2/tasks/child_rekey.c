@@ -196,7 +196,7 @@ METHOD(task_t, build_i, status_t,
 									config->get_ref(config), TRUE, NULL, NULL);
 
 		proposal = this->child_sa->get_proposal(this->child_sa);
-		if (proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+		if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD,
 									&dh_group, NULL))
 		{	/* reuse the DH group negotiated previously */
 			this->child_create->use_dh_group(this->child_create, dh_group);

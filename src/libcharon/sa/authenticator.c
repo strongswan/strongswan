@@ -120,7 +120,7 @@ authenticator_t *authenticator_create_verifier(
  * Described in header.
  */
 authenticator_t *authenticator_create_v1(ike_sa_t *ike_sa, bool initiator,
-								auth_method_t auth_method, diffie_hellman_t *dh,
+								auth_method_t auth_method, key_exchange_t *dh,
 								chunk_t dh_value, chunk_t sa_payload,
 								chunk_t id_payload)
 {
