@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Tobias Brunner
+ * Copyright (C) 2007-2020 Tobias Brunner
  * Copyright (C) 2005-2011 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -121,6 +121,9 @@ enum exchange_type_t{
 	 * IKE_SESSION_RESUME (RFC 5723).
 	 */
 	IKE_SESSION_RESUME = 38,
+
+	/* IKE_INTERMEDIATE (RFC 9242) */
+	IKE_INTERMEDIATE = 43,
 
 #ifdef ME
 	/**
