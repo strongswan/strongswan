@@ -1145,6 +1145,23 @@ static status_t pfkey_send_socket(private_kernel_pfkey_ipsec_t *this, int socket
 
 	this->mutex_pfkey->lock(this->mutex_pfkey);
 
+	/* the kernel may broadcast messages not related to our requests (e.g. when
+	 * managing SAs and policies via an external tool), so let's clear the
+	 * receive buffer so there is room for our request and its reply. */
+	while (TRUE)
+	{
+		len = recv(socket, buf, sizeof(buf), MSG_DONTWAIT);
+
+		if (len < 0)
+		{
+			if (errno == EINTR)
+			{	/* interrupted, try again */
+				continue;
+			}
+			break;
+		}
+	}
+
 	/* FIXME: our usage of sequence numbers is probably wrong. check RFC 2367,
 	 * in particular the behavior in response to an SADB_ACQUIRE. */
 	in->sadb_msg_seq = ++this->seq;
