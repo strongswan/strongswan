@@ -56,7 +56,9 @@ ENUM(ike_sa_state_lower_names, IKE_CREATED, IKE_DELETING,
 	"created",
 	"connecting",
 	"established",
+	"passive",
 	"rekeying",
+	"rekeyed",
 	"deleting",
 );
 

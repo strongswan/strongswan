@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Tobias Brunner
+ * Copyright (C) 2009-2019 Tobias Brunner
  * Copyright (C) 2006-2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -59,10 +59,11 @@ typedef struct enum_name_t enum_name_t;
  * by the numerical enum value.
  */
 struct enum_name_t {
-	/** value of the first enum string */
-	int first;
+	/** value of the first enum string, values are expected to be (u_)int, using
+	 * int64_t here instead, however, avoids warnings for large unsigned ints */
+	int64_t first;
 	/** value of the last enum string */
-	int last;
+	int64_t last;
 	/** next enum_name_t in list, or ENUM_FLAG_MAGIC */
 	enum_name_t *next;
 	/** array of strings containing names from first to last */
@@ -77,7 +78,10 @@ struct enum_name_t {
  * @param last	enum value of the last enum string
  * @param ...	a list of strings
  */
-#define ENUM_BEGIN(name, first, last, ...) static enum_name_t name##last = {first, last, NULL, { __VA_ARGS__ }}
+#define ENUM_BEGIN(name, first, last, ...) \
+	static enum_name_t name##last = {first, last + \
+		BUILD_ASSERT(((last)-(first)+1) == countof(((char*[]){__VA_ARGS__}))), \
+		NULL, { __VA_ARGS__ }}
 
 /**
  * Continue a enum name list startetd with ENUM_BEGIN.
@@ -88,7 +92,10 @@ struct enum_name_t {
  * @param prev	enum value of the "last" defined in ENUM_BEGIN/previous ENUM_NEXT
  * @param ...	a list of strings
  */
-#define ENUM_NEXT(name, first, last, prev, ...) static enum_name_t name##last = {first, last, &name##prev, { __VA_ARGS__ }}
+#define ENUM_NEXT(name, first, last, prev, ...) \
+	static enum_name_t name##last = {first, last + \
+		BUILD_ASSERT(((last)-(first)+1) == countof(((char*[]){__VA_ARGS__}))), \
+		&name##prev, { __VA_ARGS__ }}
 
 /**
  * Complete enum name list started with ENUM_BEGIN.
@@ -109,7 +116,8 @@ struct enum_name_t {
  * @param last	enum value of the last enum string
  * @param ...	a list of strings
  */
-#define ENUM(name, first, last, ...) ENUM_BEGIN(name, first, last, __VA_ARGS__); ENUM_END(name, last)
+#define ENUM(name, first, last, ...) \
+	ENUM_BEGIN(name, first, last, __VA_ARGS__); ENUM_END(name, last)
 
 /**
  * Define a enum name with only one range for flags.
@@ -125,8 +133,10 @@ struct enum_name_t {
  * @param ...	a list of strings
  */
 #define ENUM_FLAGS(name, first, last, ...) \
-	static enum_name_t name##last = {first, last, ENUM_FLAG_MAGIC, { __VA_ARGS__ }}; \
-	ENUM_END(name, last)
+	static enum_name_t name##last = {first, last + \
+		BUILD_ASSERT((__builtin_ffs(last)-__builtin_ffs(first)+1) == \
+			countof(((char*[]){__VA_ARGS__}))), \
+		ENUM_FLAG_MAGIC, { __VA_ARGS__ }}; ENUM_END(name, last)
 
 /**
  * Convert a enum value to its string representation.
