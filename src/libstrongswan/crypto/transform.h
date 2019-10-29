@@ -64,6 +64,18 @@ extern enum_name_t *transform_type_names;
 enum_name_t *transform_get_enum_names(transform_type_t type);
 
 /**
+ * Check if the given transform type is used to negotiate a key exchange.
+ *
+ * @param type		type of transform to check
+ * @return			TRUE if the transform type negotiates a key exchange
+ */
+static inline bool is_ke_transform(transform_type_t type)
+{
+	return type == KEY_EXCHANGE_METHOD || (ADDITIONAL_KEY_EXCHANGE_1 <= type &&
+										   type <= ADDITIONAL_KEY_EXCHANGE_7);
+}
+
+/**
  * Extended sequence numbers, as in IKEv2 RFC 3.3.2.
  */
 enum extended_sequence_numbers_t {
