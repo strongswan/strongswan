@@ -407,7 +407,7 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 		{
 			continue;
 		}
-		if (type == KEY_EXCHANGE_METHOD && (flags & PROPOSAL_SKIP_KE))
+		if (is_ke_transform(type) && (flags & PROPOSAL_SKIP_KE))
 		{
 			continue;
 		}
@@ -600,7 +600,7 @@ METHOD(proposal_t, clone_, proposal_t*,
 		{
 			continue;
 		}
-		if (entry->type == KEY_EXCHANGE_METHOD && (flags & PROPOSAL_SKIP_KE))
+		if (is_ke_transform(entry->type) && (flags & PROPOSAL_SKIP_KE))
 		{
 			continue;
 		}
