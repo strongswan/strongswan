@@ -90,11 +90,6 @@ struct ca_section_t {
 	linked_list_t *ocsp;
 
 	/**
-	 * Hashes of certificates issued by this CA
-	 */
-	linked_list_t *hashes;
-
-	/**
 	 * Base URI used for certificates from this CA
 	 */
 	char *certuribase;
@@ -132,7 +127,6 @@ static ca_section_t *ca_section_create(char *name, char *path)
 	ca->path = strdup(path);
 	ca->crl = linked_list_create();
 	ca->ocsp = linked_list_create();
-	ca->hashes = linked_list_create();
 	ca->certuribase = NULL;
 	return ca;
 }
@@ -144,7 +138,6 @@ static void ca_section_destroy(ca_section_t *this)
 {
 	this->crl->destroy_function(this->crl, free);
 	this->ocsp->destroy_function(this->ocsp, free);
-	this->hashes->destroy_offset(this->hashes, offsetof(identification_t, destroy));
 	this->cert->destroy(this->cert);
 	free(this->certuribase);
 	free(this->path);
@@ -607,46 +600,6 @@ static void list_uris(linked_list_t *list, char *label, FILE *out)
 	enumerator->destroy(enumerator);
 }
 
-METHOD(stroke_ca_t, check_for_hash_and_url, void,
-	private_stroke_ca_t *this, certificate_t* cert)
-{
-	ca_section_t *section;
-	enumerator_t *enumerator;
-
-	hasher_t *hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher == NULL)
-	{
-		DBG1(DBG_IKE, "unable to use hash-and-url: sha1 not supported");
-		return;
-	}
-
-	this->lock->write_lock(this->lock);
-	enumerator = this->sections->create_enumerator(this->sections);
-	while (enumerator->enumerate(enumerator, (void**)&section))
-	{
-		if (section->certuribase && cert->issued_by(cert, section->cert, NULL))
-		{
-			chunk_t hash, encoded;
-
-			if (cert->get_encoding(cert, CERT_ASN1_DER, &encoded))
-			{
-				if (hasher->allocate_hash(hasher, encoded, &hash))
-				{
-					section->hashes->insert_last(section->hashes,
-						identification_create_from_encoding(ID_KEY_ID, hash));
-					chunk_free(&hash);
-				}
-				chunk_free(&encoded);
-			}
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
-
-	hasher->destroy(hasher);
-}
-
 METHOD(stroke_ca_t, list, void,
 	private_stroke_ca_t *this, stroke_msg_t *msg, FILE *out)
 {
@@ -726,7 +679,6 @@ stroke_ca_t *stroke_ca_create()
 			.get_cert_ref = _get_cert_ref,
 			.reload_certs = _reload_certs,
 			.replace_certs = _replace_certs,
-			.check_for_hash_and_url = _check_for_hash_and_url,
 			.destroy = _destroy,
 		},
 		.sections = linked_list_create(),
