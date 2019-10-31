@@ -513,6 +513,13 @@ do
   cp ${RESEARCH_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
 done
 
+for t in rw-hash-and-url-multi-level
+do
+  TEST="${TEST_DIR}/swanctl/${t}"
+  mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
+  cp ${RESEARCH_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
+done
+
 # Convert Research CA certificate into DER format
 openssl x509 -in ${RESEARCH_CERT} -outform der -out ${RESEARCH_CERT_DER}
 
@@ -560,6 +567,13 @@ for t in multi-level-ca ocsp-multi-level
 do
   TEST="${TEST_DIR}/swanctl/${t}"
   cp ${SALES_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+done
+
+for t in rw-hash-and-url-multi-level
+do
+  TEST="${TEST_DIR}/swanctl/${t}"
+  mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509ca
+  cp ${SALES_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509ca
 done
 
 # Convert Sales CA certificate into DER format
@@ -936,7 +950,7 @@ do
   cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 done
 
-for t in multi-level-ca ocsp-multi-level
+for t in multi-level-ca rw-hash-and-url-multi-level ocsp-multi-level
 do
   TEST="${TEST_DIR}/swanctl/${t}"
   mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
@@ -1051,7 +1065,7 @@ do
   cp ${TEST_CERT} ${TEST}/hosts/dave/${IPSEC_DIR}/certs
 done
 
-for t in multi-level-ca ocsp-multi-level
+for t in multi-level-ca rw-hash-and-url-multi-level ocsp-multi-level
 do
   TEST="${TEST_DIR}/swanctl/${t}"
   mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/rsa
