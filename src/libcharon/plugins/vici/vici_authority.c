@@ -88,11 +88,6 @@ struct authority_t {
 	linked_list_t *ocsp_uris;
 
 	/**
-	 * Hashes of certificates issued by this CA
-	 */
-	linked_list_t *hashes;
-
-	/**
 	 * Base URI used for certificates from this CA
 	 */
 	char *cert_uri_base;
@@ -109,7 +104,6 @@ static authority_t *authority_create(char *name)
 		.name = strdup(name),
 		.crl_uris = linked_list_create(),
 		.ocsp_uris = linked_list_create(),
-		.hashes = linked_list_create(),
 	);
 
 	return authority;
@@ -122,7 +116,6 @@ static void authority_destroy(authority_t *this)
 {
 	this->crl_uris->destroy_function(this->crl_uris, free);
 	this->ocsp_uris->destroy_function(this->ocsp_uris, free);
-	this->hashes->destroy_offset(this->hashes, offsetof(identification_t, destroy));
 	DESTROY_IF(this->cert);
 	free(this->cert_uri_base);
 	free(this->name);
@@ -738,48 +731,6 @@ METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
 			(void*)create_inner_cdp, data, (void*)cdp_data_destroy);
 }
 
-METHOD(vici_authority_t, check_for_hash_and_url, void,
-	private_vici_authority_t *this, certificate_t* cert)
-{
-	authority_t *authority;
-	enumerator_t *enumerator;
-	hasher_t *hasher;
-
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (hasher == NULL)
-	{
-		DBG1(DBG_CFG, "unable to use hash-and-url: sha1 not supported");
-		return;
-	}
-
-	this->lock->write_lock(this->lock);
-	enumerator = this->authorities->create_enumerator(this->authorities);
-	while (enumerator->enumerate(enumerator, &authority))
-	{
-		if (authority->cert_uri_base &&
-			cert->issued_by(cert, authority->cert, NULL))
-		{
-			chunk_t hash, encoded;
-
-			if (cert->get_encoding(cert, CERT_ASN1_DER, &encoded))
-			{
-				if (hasher->allocate_hash(hasher, encoded, &hash))
-				{
-					authority->hashes->insert_last(authority->hashes,
-						identification_create_from_encoding(ID_KEY_ID, hash));
-					chunk_free(&hash);
-				}
-				chunk_free(&encoded);
-			}
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	this->lock->unlock(this->lock);
-
-	hasher->destroy(hasher);
-}
-
 METHOD(vici_authority_t, destroy, void,
 	private_vici_authority_t *this)
 {
@@ -808,7 +759,6 @@ vici_authority_t *vici_authority_create(vici_dispatcher_t *dispatcher,
 				.create_cdp_enumerator = _create_cdp_enumerator,
 				.cache_cert = (void*)nop,
 			},
-			.check_for_hash_and_url = _check_for_hash_and_url,
 			.destroy = _destroy,
 		},
 		.dispatcher = dispatcher,

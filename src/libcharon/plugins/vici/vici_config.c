@@ -1417,14 +1417,8 @@ CALLBACK(parse_cert_policy, bool,
  */
 static bool add_cert(auth_data_t *auth, auth_rule_t rule, certificate_t *cert)
 {
-	vici_authority_t *authority;
 	vici_cred_t *cred;
 
-	if (rule == AUTH_RULE_SUBJECT_CERT)
-	{
-		authority = auth->request->this->authority;
-		authority->check_for_hash_and_url(authority, cert);
-	}
 	cred = auth->request->this->cred;
 	cert = cred->add_cert(cred, cert);
 	auth->cfg->add(auth->cfg, rule, cert);
