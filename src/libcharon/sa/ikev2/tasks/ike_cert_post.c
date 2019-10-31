@@ -158,7 +158,7 @@ static void add_im_certs(private_ike_cert_post_t *this, auth_cfg_t *auth,
 	{
 		if (type == AUTH_RULE_IM_CERT)
 		{
-			payload = cert_payload_create_from_cert(PLV2_CERTIFICATE, cert);
+			payload = build_cert_payload(this, cert);
 			if (payload)
 			{
 				DBG1(DBG_IKE, "sending issuer cert \"%Y\"",
