@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2019 Tobias Brunner
  * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -694,32 +694,18 @@ static enumerator_t *create_inner_cdp(authority_t *authority, cdp_data_t *data)
 static enumerator_t *create_inner_cdp_hashandurl(authority_t *authority,
 												 cdp_data_t *data)
 {
-	enumerator_t *enumerator = NULL, *hash_enum;
-	identification_t *current;
+	enumerator_t *enumerator = NULL;
 
 	if (!data->id || !authority->cert_uri_base)
 	{
 		return NULL;
 	}
 
-	hash_enum = authority->hashes->create_enumerator(authority->hashes);
-	while (hash_enum->enumerate(hash_enum, &current))
+	if (authority->cert->has_subject(authority->cert, data->id) != ID_MATCH_NONE)
 	{
-		if (current->matches(current, data->id))
-		{
-			char *url, *hash;
-
-			url = malloc(strlen(authority->cert_uri_base) + 40 + 1);
-			strcpy(url, authority->cert_uri_base);
-			hash = chunk_to_hex(current->get_encoding(current), NULL, FALSE).ptr;
-			strncat(url, hash, 40);
-			free(hash);
-
-			enumerator = enumerator_create_single(url, free);
-			break;
-		}
+		enumerator = enumerator_create_single(strdup(authority->cert_uri_base),
+											  free);
 	}
-	hash_enum->destroy(hash_enum);
 	return enumerator;
 }
 

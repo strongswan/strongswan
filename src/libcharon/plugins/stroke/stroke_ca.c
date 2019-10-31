@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2008-2019 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -308,32 +308,18 @@ static enumerator_t *create_inner_cdp(ca_section_t *section, cdp_data_t *data)
  */
 static enumerator_t *create_inner_cdp_hashandurl(ca_section_t *section, cdp_data_t *data)
 {
-	enumerator_t *enumerator = NULL, *hash_enum;
-	identification_t *current;
+	enumerator_t *enumerator = NULL;
 
 	if (!data->id || !section->certuribase)
 	{
 		return NULL;
 	}
 
-	hash_enum = section->hashes->create_enumerator(section->hashes);
-	while (hash_enum->enumerate(hash_enum, &current))
+	if (section->cert->has_subject(section->cert, data->id) != ID_MATCH_NONE)
 	{
-		if (current->matches(current, data->id))
-		{
-			char *url, *hash;
-
-			url = malloc(strlen(section->certuribase) + 40 + 1);
-			strcpy(url, section->certuribase);
-			hash = chunk_to_hex(current->get_encoding(current), NULL, FALSE).ptr;
-			strncat(url, hash, 40);
-			free(hash);
-
-			enumerator = enumerator_create_single(url, free);
-			break;
-		}
+		enumerator = enumerator_create_single(strdup(section->certuribase),
+											  free);
 	}
-	hash_enum->destroy(hash_enum);
 	return enumerator;
 }
 
