@@ -65,14 +65,46 @@ enum key_exchange_method_t {
 	CURVE_25519   = 31,
 	CURVE_448     = 32,
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
-	MODP_NULL = 1024,
-	/** MODP group with custom generator/prime */
+	MODP_NULL          = 1024,
 	/** Parameters defined by IEEE 1363.1, in PRIVATE USE */
-	NTRU_112_BIT = 1030,
-	NTRU_128_BIT = 1031,
-	NTRU_192_BIT = 1032,
-	NTRU_256_BIT = 1033,
-	NH_128_BIT   = 1040,
+	NTRU_112_BIT       = 1030,
+	NTRU_128_BIT       = 1031,
+	NTRU_192_BIT       = 1032,
+	NTRU_256_BIT       = 1033,
+	NH_128_BIT         = 1040,
+	/** NIST round 2 KEM candidates, in PRIVATE USE */
+	KE_BIKE1_L1        = 1050,
+	KE_BIKE1_L3        = 1051,
+	KE_BIKE1_L5        = 1052,
+	KE_BIKE2_L1        = 1053,
+	KE_BIKE2_L3        = 1054,
+	KE_BIKE2_L5        = 1055,
+	KE_BIKE3_L1        = 1056,
+	KE_BIKE3_L3        = 1057,
+	KE_BIKE3_L5        = 1058,
+	KE_FRODO_AES_L1    = 1059,
+	KE_FRODO_AES_L3    = 1060,
+	KE_FRODO_AES_L5    = 1061,
+	KE_FRODO_SHAKE_L1  = 1062,
+	KE_FRODO_SHAKE_L3  = 1063,
+	KE_FRODO_SHAKE_L5  = 1064,
+	KE_KYBER_L1        = 1065,
+	KE_KYBER_L3        = 1066,
+	KE_KYBER_L5        = 1067,
+	KE_NEWHOPE_L1      = 1068,
+	KE_NEWHOPE_L5      = 1069,
+	KE_NTRU_HPS_L1     = 1070,
+	KE_NTRU_HPS_L3     = 1071,
+	KE_NTRU_HPS_L5     = 1072,
+	KE_NTRU_HRSS_L3    = 1073,
+	KE_SABER_L1        = 1074,
+	KE_SABER_L3        = 1075,
+	KE_SABER_L5        = 1076,
+	KE_SIKE_L1         = 1077,
+	KE_SIKE_L2         = 1078,
+	KE_SIKE_L3         = 1079,
+	KE_SIKE_L5         = 1080,
+	/** MODP group with custom generator/prime */
 	/** internally used DH group with additional parameters g and p, outside
 	 * of PRIVATE USE (i.e. IKEv2 DH group range) so it can't be negotiated */
 	MODP_CUSTOM = 65536,
@@ -98,7 +130,7 @@ struct key_exchange_t {
 		__attribute__((warn_unused_result));
 
 	/**
-	 * Sets the public key from the peer.
+	 * Sets the public key received from the peer.
 	 *
 	 * @param value		public key of peer
 	 * @return			TRUE if other public key verified and set
@@ -116,10 +148,10 @@ struct key_exchange_t {
 		__attribute__((warn_unused_result));
 
 	/**
-	 * Set an explicit own private key to use.
+	 * Set a seed used for the derivation of private key material.
 	 *
-	 * Calling this method is usually not required, as the DH backend generates
-	 * an appropriate private value itself. It is optional to implement, and
+	 * Calling this method is usually not required, as the key exchange objects
+	 * generate the private key material themselves. This is optional to implement, and
 	 * used mostly for testing purposes.  The private key may be the actual key
 	 * or a seed for a DRBG.
 	 *
@@ -195,6 +227,13 @@ diffie_hellman_params_t *diffie_hellman_get_params(key_exchange_method_t ke);
  * @return				TRUE if key exchange method is an ECP group
  */
 bool key_exchange_is_ecdh(key_exchange_method_t ke);
+
+/**
+ * Check if the key exchange method is a Key Encapsulation Mechanism (KEM)
+ *
+ * @return			TRUE if KEM used
+ */
+bool key_exchange_is_kem(key_exchange_method_t ke);
 
 /**
  * Check if a public key is valid for given key exchange method.
