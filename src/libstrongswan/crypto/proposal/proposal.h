@@ -190,7 +190,7 @@ struct proposal_t {
 	u_int (*get_number)(proposal_t *this);
 
 	/**
-	 * Check for the eqality of two proposals.
+	 * Check for the equality of two proposals.
 	 *
 	 * @param other			other proposal to check for equality
 	 * @return				TRUE if other equal to this
@@ -229,7 +229,7 @@ proposal_t *proposal_create(protocol_id_t protocol, u_int number);
 proposal_t *proposal_create_default(protocol_id_t protocol);
 
 /**
- * Create a default proposal for supported AEAD algorithms
+ * Create a default proposal for supported AEAD algorithms.
  *
  * @param protocol			protocol, such as PROTO_ESP
  * @return					proposal_t object, NULL if none supported
@@ -239,7 +239,7 @@ proposal_t *proposal_create_default_aead(protocol_id_t protocol);
 /**
  * Create a proposal from a string identifying the algorithms.
  *
- * The string is in the same form as a in the ipsec.conf file.
+ * The string is in the same form as in the ipsec.conf file.
  * E.g.:	aes128-sha2_256-modp2048
  *		  3des-md5
  * An additional '!' at the end of the string forces this proposal,
