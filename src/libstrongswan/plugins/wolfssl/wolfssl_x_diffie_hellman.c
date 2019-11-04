@@ -142,8 +142,8 @@ METHOD(key_exchange_t, get_public_key_25519, bool,
 	return TRUE;
 }
 
-METHOD(key_exchange_t, set_private_key_25519, bool,
-	private_diffie_hellman_t *this, chunk_t value)
+METHOD(key_exchange_t, set_seed_25519, bool,
+	private_diffie_hellman_t *this, chunk_t value, drbg_t *drbg)
 {
 	curve25519_key pub;
 	u_char basepoint[CURVE25519_KEYSIZE] = {9};
@@ -229,8 +229,8 @@ METHOD(key_exchange_t, get_public_key_448, bool,
 	return TRUE;
 }
 
-METHOD(key_exchange_t, set_private_key_448, bool,
-	private_diffie_hellman_t *this, chunk_t value)
+METHOD(key_exchange_t, set_seed_448, bool,
+	private_diffie_hellman_t *this, chunk_t value, drbg_t *drbg)
 {
 	curve448_key pub;
 	u_char basepoint[CURVE448_KEY_SIZE] = {5};
@@ -317,7 +317,7 @@ key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 		this->public.get_shared_secret = _get_shared_secret_25519;
 		this->public.set_public_key = _set_public_key_25519;
 		this->public.get_public_key = _get_public_key_25519;
-		this->public.set_private_key = _set_private_key_25519;
+		this->public.set_seed = _set_seed_25519;
 
 		if (wc_curve25519_init(&this->key.key25519) != 0 ||
 			wc_curve25519_init(&this->pub.key25519) != 0)
@@ -336,7 +336,7 @@ key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 		this->public.get_shared_secret = _get_shared_secret_448;
 		this->public.set_public_key = _set_public_key_448;
 		this->public.get_public_key = _get_public_key_448;
-		this->public.set_private_key = _set_private_key_448;
+		this->public.set_seed = _set_seed_448;
 
 		if (wc_curve448_init(&this->key.key448) != 0 ||
 			wc_curve448_init(&this->pub.key448) != 0)
