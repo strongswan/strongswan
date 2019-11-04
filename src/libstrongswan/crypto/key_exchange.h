@@ -173,9 +173,14 @@ struct diffie_hellman_params_t {
 };
 
 /**
- * Initialize diffie hellman parameters during startup.
+ * Initialize DH parameters and KE token parser during startup.
  */
-void diffie_hellman_init();
+void key_exchange_init();
+
+/**
+ * Deinitialize KE token parser during shutdown.
+ */
+void key_exchange_deinit();
 
 /**
  * Get the parameters associated with the specified Diffie-Hellman group.
