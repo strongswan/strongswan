@@ -145,8 +145,8 @@ METHOD(key_exchange_t, get_public_key, bool,
 	return TRUE;
 }
 
-METHOD(key_exchange_t, set_private_key, bool,
-	private_gcrypt_dh_t *this, chunk_t value)
+METHOD(key_exchange_t, set_seed, bool,
+	private_gcrypt_dh_t *this, chunk_t value, drbg_t *drbg)
 {
 	gcry_error_t err;
 	gcry_mpi_t xa;
@@ -209,7 +209,7 @@ static gcrypt_dh_t *create_generic(key_exchange_method_t group, size_t exp_len,
 				.get_shared_secret = _get_shared_secret,
 				.set_public_key = _set_public_key,
 				.get_public_key = _get_public_key,
-				.set_private_key = _set_private_key,
+				.set_seed = _set_seed,
 				.get_method = _get_method,
 				.destroy = _destroy,
 			},
