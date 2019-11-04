@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2016-2019 Andreas Steffen
  * Copyright (C) 2010-2020 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -161,13 +162,14 @@ struct key_exchange_t {
 	 * Set a seed used for the derivation of private key material.
 	 *
 	 * Calling this method is usually not required, as the key exchange objects
-	 * generate the private key material themselves. This is optional to implement, and
-	 * used mostly for testing purposes.  The private key may be the actual key
-	 * or a seed for a DRBG.
+	 * generate the private key material themselves. This is optional to
+	 * implement, and used mostly for testing purposes.  The private key may be
+	 * the actual key or a DRBG instance.
 	 *
-	 * @param value		private key value to set
+	 * @param value		optional seed value to set (can be chunk_empty)
+	 * @param drbg		optional DRBG (can be NULL)
 	 */
-	bool (*set_private_key)(key_exchange_t *this, chunk_t value)
+	bool (*set_seed)(key_exchange_t *this, chunk_t value, drbg_t *drbg)
 		__attribute__((warn_unused_result));
 
 	/**
