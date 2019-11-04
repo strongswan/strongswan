@@ -337,8 +337,8 @@ static bool ecp2chunk(EC_GROUP *group, EC_POINT *point, chunk_t *chunk)
 	return chunk->len;
 }
 
-METHOD(key_exchange_t, set_private_key, bool,
-	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
+METHOD(key_exchange_t, set_seed, bool,
+	private_openssl_ec_diffie_hellman_t *this, chunk_t value, drbg_t *drbg)
 {
 	BIGNUM *priv = NULL;
 	EC_POINT *pub = NULL;
@@ -390,8 +390,8 @@ METHOD(key_exchange_t, set_private_key, bool,
 
 #else /* OPENSSL_VERSION_NUMBER */
 
-METHOD(key_exchange_t, set_private_key, bool,
-	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
+METHOD(key_exchange_t, set_seed, bool,
+	private_openssl_ec_diffie_hellman_t *this, chunk_t value, drbg_t *drbg)
 {
 	EC_KEY *key = NULL;
 	EC_POINT *pub = NULL;
@@ -460,7 +460,7 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(key_exchange_metho
 				.get_shared_secret = _get_shared_secret,
 				.set_public_key = _set_public_key,
 				.get_public_key = _get_public_key,
-				.set_private_key = _set_private_key,
+				.set_seed = _set_seed,
 				.get_method = _get_method,
 				.destroy = _destroy,
 			},
