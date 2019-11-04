@@ -168,8 +168,8 @@ METHOD(key_exchange_t, get_public_key, bool,
 	return TRUE;
 }
 
-METHOD(key_exchange_t, set_private_key, bool,
-	private_key_exchange_t *this, chunk_t value)
+METHOD(key_exchange_t, set_seed, bool,
+	private_key_exchange_t *this, chunk_t value, drbg_t *drbg)
 {
 	EVP_PKEY_free(this->key);
 	this->key = EVP_PKEY_new_raw_private_key(map_key_type(this->ke), NULL,
@@ -243,7 +243,7 @@ key_exchange_t *openssl_x_diffie_hellman_create(key_exchange_method_t ke)
 			.get_shared_secret = _get_shared_secret,
 			.set_public_key = _set_public_key,
 			.get_public_key = _get_public_key,
-			.set_private_key = _set_private_key,
+			.set_seed = _set_seed,
 			.get_method = _get_method,
 			.destroy = _destroy,
 		},
