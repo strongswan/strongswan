@@ -276,6 +276,7 @@ METHOD(exchange_test_helper_t, establish_sa, void,
 	ike_sa_id_t *id_i, *id_r;
 	ike_sa_t *sa_i, *sa_r;
 	child_cfg_t *child_i;
+	proposal_t *proposal;
 
 	child_i = create_sa(this, init, resp, conf);
 
@@ -293,6 +294,17 @@ METHOD(exchange_test_helper_t, establish_sa, void,
 	/* <-- IKE_SA_INIT */
 	id_i->set_responder_spi(id_i, id_r->get_responder_spi(id_r));
 	process_message(this, sa_i, NULL);
+
+	proposal = sa_i->get_proposal(sa_i);
+	if (proposal->get_algorithm(proposal, ADDITIONAL_KEY_EXCHANGE_1, NULL,
+								NULL))
+	{
+		/* IKE_INTERMEDIATE --> */
+		process_message(this, sa_r, NULL);
+		/* <-- IKE_INTERMEDIATE */
+		process_message(this, sa_i, NULL);
+	}
+
 	/* IKE_AUTH --> */
 	process_message(this, sa_r, NULL);
 	/* <-- IKE_AUTH */
