@@ -1444,8 +1444,8 @@ failure:
 static u_int bench_ke(private_crypto_tester_t *this,
 					  key_exchange_method_t method, ke_constructor_t create)
 {
-	chunk_t pub = chunk_empty, shared = chunk_empty;
-	key_exchange_t *ke;
+	chunk_t a_pub = chunk_empty, b_pub = chunk_empty, shared = chunk_empty;
+	key_exchange_t *a, *b;
 	struct timespec start;
 	u_int runs;
 
@@ -1453,22 +1453,112 @@ static u_int bench_ke(private_crypto_tester_t *this,
 	start_timing(&start);
 	while (end_timing(&start) < this->bench_time)
 	{
-		ke = create(method);
-		if (!ke)
+		a = create(method);
+		b = create(method);
+		if (!a || !b)
 		{
+			DESTROY_IF(a);
+			DESTROY_IF(b);
 			return 0;
 		}
-		if (ke->get_public_key(ke, &pub) &&
-			ke->set_public_key(ke, pub) &&
-			ke->get_shared_secret(ke, &shared))
+		if (a->get_public_key(a, &a_pub) &&
+			b->set_public_key(b,  a_pub) &&
+			b->get_public_key(b, &b_pub) &&
+			a->set_public_key(a,  b_pub) &&
+			a->get_shared_secret(a, &shared))
 		{
 			runs++;
 		}
-		chunk_free(&pub);
+		chunk_free(&a_pub);
+		chunk_free(&b_pub);
 		chunk_free(&shared);
-		ke->destroy(ke);
+		a->destroy(a);
+		b->destroy(b);
 	}
 	return runs;
+}
+
+static bool test_single_ke(key_exchange_method_t method, ke_test_vector_t *v,
+						   ke_constructor_t create)
+{
+	rng_t *entropy = NULL;
+	drbg_t *drbg = NULL;
+	key_exchange_t *a = NULL, *b = NULL;
+	chunk_t a_priv, b_priv, a_pub, b_pub, a_sec, b_sec;
+	bool success = FALSE;
+
+	a_pub = b_pub = a_sec = b_sec = chunk_empty;
+	a = create(method);
+	b = create(method);
+	if (!a || !b)
+	{
+		goto failure;
+	}
+
+	if (key_exchange_is_kem(method))
+	{
+		/* entropy instance will be owned by drbg */
+		entropy = rng_tester_create(v->seed);
+		drbg = lib->crypto->create_drbg(lib->crypto, DRBG_CTR_AES256, 256,
+										entropy, chunk_empty);
+		if (!drbg)
+		{
+			entropy->destroy(entropy);
+			goto failure;
+		}
+		if (!a->set_seed(a, chunk_empty, drbg) ||
+			!b->set_seed(b, chunk_empty, drbg))
+		{
+			goto failure;
+		}
+	}
+	else
+	{
+		/* the seed is the concatenation of both DH private keys */
+		a_priv = chunk_create(v->seed.ptr, v->seed.len/2);
+		b_priv = chunk_create(v->seed.ptr + v->seed.len/2, v->seed.len/2);
+
+		if (!a->set_seed(a, a_priv, NULL) || !b->set_seed(b, b_priv, NULL))
+		{
+			goto failure;
+		}
+	}
+	if (!a->get_public_key(a, &a_pub) || !chunk_equals(a_pub, v->pub_i))
+	{
+		goto failure;
+	}
+	if (!b->set_public_key(b, a_pub))
+	{
+		goto failure;
+	}
+	if (!b->get_shared_secret(b, &b_sec) || !chunk_equals(b_sec, v->shared))
+	{
+		goto failure;
+	}
+	if (!b->get_public_key(b, &b_pub) || !chunk_equals(b_pub, v->pub_r))
+	{
+		goto failure;
+	}
+	if (!a->set_public_key(a, b_pub))
+	{
+		goto failure;
+	}
+	if (!a->get_shared_secret(a, &a_sec) || !chunk_equals(a_sec, v->shared))
+	{
+		goto failure;
+	}
+	success = TRUE;
+
+failure:
+	DESTROY_IF(a);
+	DESTROY_IF(b);
+	chunk_free(&a_pub);
+	chunk_free(&b_pub);
+	chunk_free(&a_sec);
+	chunk_free(&b_sec);
+	DESTROY_IF(drbg);
+
+	return success;
 }
 
 METHOD(crypto_tester_t, test_ke, bool,
@@ -1477,84 +1567,20 @@ METHOD(crypto_tester_t, test_ke, bool,
 {
 	enumerator_t *enumerator;
 	ke_test_vector_t *v;
-	bool failed = FALSE;
+	bool success = TRUE;
 	u_int tested = 0;
 
 	enumerator = this->ke->create_enumerator(this->ke);
 	while (enumerator->enumerate(enumerator, &v))
 	{
-		key_exchange_t *a, *b;
-		chunk_t apub, bpub, asec, bsec;
-
 		if (v->method != method)
 		{
 			continue;
 		}
-
-		a = create(method);
-		b = create(method);
-		if (!a || !b)
-		{
-			DESTROY_IF(a);
-			DESTROY_IF(b);
-			failed = TRUE;
-			tested++;
-			DBG1(DBG_LIB, "disabled %N[%s]: creating instance failed",
-				 key_exchange_method_names, method, plugin_name);
-			break;
-		}
-
-		if (!a->set_private_key || !b->set_private_key)
-		{	/* does not support testing */
-			a->destroy(a);
-			b->destroy(b);
-			continue;
-		}
-		failed = TRUE;
+		success = test_single_ke(method, v, create);
 		tested++;
 
-		apub = bpub = asec = bsec = chunk_empty;
-
-		if (!a->set_private_key(a, chunk_create(v->priv_a, v->priv_len)) ||
-			!b->set_private_key(b, chunk_create(v->priv_b, v->priv_len)))
-		{
-			goto failure;
-		}
-		if (!a->get_public_key(a, &apub) ||
-			!chunk_equals(apub, chunk_create(v->pub_a, v->pub_len)))
-		{
-			goto failure;
-		}
-		if (!b->get_public_key(b, &bpub) ||
-			!chunk_equals(bpub, chunk_create(v->pub_b, v->pub_len)))
-		{
-			goto failure;
-		}
-		if (!a->set_public_key(a, bpub) ||
-			!b->set_public_key(b, apub))
-		{
-			goto failure;
-		}
-		if (!a->get_shared_secret(a, &asec) ||
-			!chunk_equals(asec, chunk_create(v->shared, v->shared_len)))
-		{
-			goto failure;
-		}
-		if (!b->get_shared_secret(b, &bsec) ||
-			!chunk_equals(bsec, chunk_create(v->shared, v->shared_len)))
-		{
-			goto failure;
-		}
-
-		failed = FALSE;
-failure:
-		a->destroy(a);
-		b->destroy(b);
-		chunk_free(&apub);
-		chunk_free(&bpub);
-		chunk_free(&asec);
-		chunk_free(&bsec);
-		if (failed)
+		if (!success)
 		{
 			DBG1(DBG_LIB, "disabled %N[%s]: %s test vector failed",
 				 key_exchange_method_names, method, plugin_name, get_name(v));
@@ -1562,6 +1588,7 @@ failure:
 		}
 	}
 	enumerator->destroy(enumerator);
+
 	if (!tested)
 	{
 		DBG1(DBG_LIB, "%s %N[%s]: no test vectors found / untestable",
@@ -1569,7 +1596,7 @@ failure:
 			 key_exchange_method_names, method, plugin_name);
 		return !this->required;
 	}
-	if (!failed)
+	if (success)
 	{
 		if (speed)
 		{
@@ -1583,7 +1610,7 @@ failure:
 				 key_exchange_method_names, method, plugin_name, tested);
 		}
 	}
-	return !failed;
+	return success;
 }
 
 METHOD(crypto_tester_t, add_crypter_vector, void,
