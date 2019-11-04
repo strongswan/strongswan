@@ -210,8 +210,8 @@ METHOD(key_exchange_t, get_public_key, bool,
 	return ecp2chunk(this->keysize, &this->key.pubkey, value, FALSE);
 }
 
-METHOD(key_exchange_t, set_private_key, bool,
-	private_wolfssl_ec_diffie_hellman_t *this, chunk_t value)
+METHOD(key_exchange_t, set_seed, bool,
+	private_wolfssl_ec_diffie_hellman_t *this, chunk_t value, drbg_t *drbg)
 {
 	bool success = FALSE;
 	ecc_point *base;
@@ -287,7 +287,7 @@ wolfssl_ec_diffie_hellman_t *wolfssl_ec_diffie_hellman_create(key_exchange_metho
 				.get_shared_secret = _get_shared_secret,
 				.set_public_key = _set_public_key,
 				.get_public_key = _get_public_key,
-				.set_private_key = _set_private_key,
+				.set_seed = _set_seed,
 				.get_method = _get_method,
 				.destroy = _destroy,
 			},
