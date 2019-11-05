@@ -346,6 +346,7 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	proposal_t *proposal;
 	enumerator_t *enumerator;
 	ike_cfg_t *ike_cfg;
+	bool additional_ke = FALSE;
 
 	id = this->ike_sa->get_id(this->ike_sa);
 
@@ -370,6 +371,8 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 				proposal_list->remove_at(proposal_list, enumerator);
 				other_dh_groups->insert_last(other_dh_groups, proposal);
 			}
+			additional_ke = additional_ke ||
+							proposal_has_additional_ke(proposal);
 		}
 		enumerator->destroy(enumerator);
 		/* add proposals that don't contain the selected group */
@@ -392,6 +395,7 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 			this->proposal->set_spi(this->proposal, id->get_responder_spi(id));
 		}
 		sa_payload = sa_payload_create_from_proposal_v2(this->proposal);
+		additional_ke = proposal_has_additional_ke(this->proposal);
 	}
 	message->add_payload(message, (payload_t*)sa_payload);
 
@@ -464,6 +468,16 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	{
 		message->add_notify(message, FALSE, CHILDLESS_IKEV2_SUPPORTED,
 							chunk_empty);
+	}
+	if (!this->old_sa && additional_ke)
+	{
+		if (this->initiator ||
+			this->ike_sa->supports_extension(this->ike_sa,
+											 EXT_IKE_INTERMEDIATE))
+		{
+			message->add_notify(message, FALSE, INTERMEDIATE_EXCHANGE_SUPPORTED,
+								chunk_empty);
+		}
 	}
 	return TRUE;
 }
@@ -722,6 +736,13 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 						{
 							this->ike_sa->enable_extension(this->ike_sa,
 														   EXT_IKE_CHILDLESS);
+						}
+						break;
+					case INTERMEDIATE_EXCHANGE_SUPPORTED:
+						if (!this->old_sa)
+						{
+							this->ike_sa->enable_extension(this->ike_sa,
+														   EXT_IKE_INTERMEDIATE);
 						}
 						break;
 					default:
