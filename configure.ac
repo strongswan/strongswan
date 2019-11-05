@@ -153,6 +153,7 @@ ARG_ENABL_SET([md5],            [enable MD5 software implementation plugin.])
 ARG_ENABL_SET([mgf1],           [enable the MGF1 software implementation plugin.])
 ARG_ENABL_SET([ml],             [enable Module-Lattice-based crypto (ML-KEM) plugin.])
 ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
+ARG_ENABL_SET([oqs],            [enable Open Quantum Safe (liboqs) plugin.])
 ARG_DISBL_SET([openssl],        [disable the OpenSSL crypto plugin.])
 ARG_ENABL_SET([wolfssl],        [enables the wolfSSL crypto plugin.])
 ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
@@ -1239,6 +1240,14 @@ if test x$botan = xtrue; then
 	LIBS=$saved_LIBS
 fi
 
+if test x$oqs = xtrue; then
+	saved_LIBS=$LIBS
+	LIBS="-lm"
+	AC_CHECK_LIB([oqs],[OQS_init],,[AC_MSG_ERROR([Open Quantum-Safe library oqs not found])],[])
+	LIBS=$saved_LIBS
+	AC_CHECK_HEADER([oqs/oqs.h],,[AC_MSG_ERROR([Open Quantum-Safe header oqs/oqs.h not found!])])
+fi
+
 if test x$uci = xtrue; then
 	AC_CHECK_LIB([uci],[uci_alloc_context],[LIBS="$LIBS"],[AC_MSG_ERROR([UCI library libuci not found])],[])
 	AC_CHECK_HEADER([uci.h],,[AC_MSG_ERROR([UCI header uci.h not found!])])
@@ -1593,6 +1602,7 @@ ADD_PLUGIN([ctr],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ccm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([gcm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ml],                   [s charon scripts nm cmd])
+ADD_PLUGIN([oqs],                  [s charon scripts nm cmd])
 ADD_PLUGIN([drbg],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([curl],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([files],                [s charon pki scripts nm cmd])
@@ -1762,6 +1772,7 @@ AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
 AM_CONDITIONAL(USE_AF_ALG, test x$af_alg = xtrue)
 AM_CONDITIONAL(USE_DRBG, test x$drbg = xtrue)
 AM_CONDITIONAL(USE_ML, test x$ml = xtrue)
+AM_CONDITIONAL(USE_OQS, test x$oqs = xtrue)
 
 #  charon plugins
 # ----------------
@@ -2042,6 +2053,8 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/af_alg/Makefile
 	src/libstrongswan/plugins/drbg/Makefile
 	src/libstrongswan/plugins/ml/Makefile
+	src/libstrongswan/plugins/oqs/Makefile
+	src/libstrongswan/plugins/oqs/tests/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libstrongswan/tests/Makefile
 	src/libipsec/Makefile
