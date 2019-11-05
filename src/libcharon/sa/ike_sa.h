@@ -167,6 +167,11 @@ enum ike_extension_t {
 	 * Responder accepts childless IKE_SAs, RFC 6023
 	 */
 	EXT_IKE_CHILDLESS = (1<<16),
+
+	/**
+	 * IKE_INTERMEDIATE, draft-ietf-ipsecme-ikev2-intermediate
+	 */
+	EXT_IKE_INTERMEDIATE = (1<<17),
 };
 
 /**
