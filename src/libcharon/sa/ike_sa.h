@@ -161,7 +161,7 @@ enum ike_extension_t {
 	EXT_IKE_MESSAGE_ID_SYNC = (1<<14),
 
 	/**
-	 * Postquantum Preshared Keys, draft-ietf-ipsecme-qr-ikev2
+	 * Postquantum Preshared Keys, RFC 8784
 	 */
 	EXT_PPK = (1<<15),
 
@@ -169,6 +169,11 @@ enum ike_extension_t {
 	 * Responder accepts childless IKE_SAs, RFC 6023
 	 */
 	EXT_IKE_CHILDLESS = (1<<16),
+
+	/**
+	 * IKEv2 Intermediate Exchange, RFC 9242
+	 */
+	EXT_IKE_INTERMEDIATE = (1<<17),
 };
 
 /**
