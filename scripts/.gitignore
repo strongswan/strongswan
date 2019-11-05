@@ -16,3 +16,4 @@ settings-test
 thread_analysis
 tls_test
 timeattack
+nist_kem_kat
