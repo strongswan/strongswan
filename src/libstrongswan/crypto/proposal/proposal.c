@@ -318,7 +318,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 	uint16_t alg1, alg2, ks1, ks2;
 	bool found = FALSE, optional = FALSE;
 
-	if (type == KEY_EXCHANGE_METHOD)
+	if (is_ke_transform(type))
 	{
 		optional = this->protocol == PROTO_ESP || this->protocol == PROTO_AH;
 	}
