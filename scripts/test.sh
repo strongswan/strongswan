@@ -240,7 +240,7 @@ all|codeql|coverage|sonarcloud|no-dbg)
 			--disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-padlock --disable-fuzzing
 			--disable-osx-attr --disable-tkm --disable-uci
-			--disable-unwind-backtraces
+			--disable-oqs --disable-unwind-backtraces
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp
 			--disable-python-eggs-install"
