@@ -50,6 +50,7 @@ extraction:
             --disable-lock-profiler
             --disable-monolithic
             --disable-osx-attr
+            --disable-oqs
             --disable-padlock
             --disable-python-eggs-install
             --disable-socket-win
