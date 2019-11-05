@@ -1409,3 +1409,27 @@ proposal_t *proposal_select(linked_list_t *configured, linked_list_t *supplied,
 	}
 	return selected;
 }
+
+/*
+ * Described in header
+ */
+bool proposal_has_additional_ke(proposal_t *public)
+{
+	private_proposal_t *this = (private_proposal_t*)public;
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool found = FALSE;
+
+	enumerator = array_create_enumerator(this->transforms);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->type != KEY_EXCHANGE_METHOD &&
+			is_ke_transform(entry->type))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
