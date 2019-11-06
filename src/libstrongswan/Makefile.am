@@ -681,6 +681,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_FRODO
+  SUBDIRS += plugins/frodo
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/frodo/libstrongswan-frodo.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC
