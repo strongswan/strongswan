@@ -148,6 +148,7 @@ ARG_ENABL_SET([md4],            [enable MD4 software implementation plugin.])
 ARG_ENABL_SET([md5],            [enable MD5 software implementation plugin.])
 ARG_ENABL_SET([mgf1],           [enable the MGF1 software implementation plugin.])
 ARG_ENABL_SET([ml],             [enable Module-Lattice-based crypto (ML-KEM) plugin.])
+ARG_ENABL_SET([frodo],          [enable FrodoKEM Post Quantum Safe plugin.])
 ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
 ARG_DISBL_SET([openssl],        [disable the OpenSSL crypto plugin.])
 ARG_ENABL_SET([wolfssl],        [enables the wolfSSL crypto plugin.])
@@ -1591,6 +1592,7 @@ ADD_PLUGIN([ctr],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ccm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([gcm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ml],                   [s charon scripts nm cmd])
+ADD_PLUGIN([frodo],                [s charon scripts nm cmd])
 ADD_PLUGIN([drbg],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([curl],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([files],                [s charon pki scripts nm cmd])
@@ -1759,6 +1761,7 @@ AM_CONDITIONAL(USE_GCM, test x$gcm = xtrue)
 AM_CONDITIONAL(USE_AF_ALG, test x$af_alg = xtrue)
 AM_CONDITIONAL(USE_DRBG, test x$drbg = xtrue)
 AM_CONDITIONAL(USE_ML, test x$ml = xtrue)
+AM_CONDITIONAL(USE_FRODO, test x$frodo = xtrue)
 
 #  charon plugins
 # ----------------
@@ -2040,6 +2043,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/af_alg/Makefile
 	src/libstrongswan/plugins/drbg/Makefile
 	src/libstrongswan/plugins/ml/Makefile
+	src/libstrongswan/plugins/frodo/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
 	src/libstrongswan/tests/Makefile
 	src/libipsec/Makefile
