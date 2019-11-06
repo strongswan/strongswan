@@ -154,6 +154,7 @@ ARG_ENABL_SET([mgf1],           [enable the MGF1 software implementation plugin.
 ARG_ENABL_SET([newhope],        [enable New Hope crypto plugin.])
 ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
 ARG_ENABL_SET([ntru],           [enables the NTRU crypto plugin.])
+ARG_ENABL_SET([frodo],          [enable FrodoKEM Post Quantum Safe plugin.])
 ARG_ENABL_SET([oqs],            [enable Open Quantum Safe (liboqs) plugin.])
 ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
 ARG_ENABL_SET([wolfssl],        [enables the wolfSSL crypto plugin.])
@@ -1507,6 +1508,7 @@ ADD_PLUGIN([ctr],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ccm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([gcm],                  [s charon scripts nm cmd])
 ADD_PLUGIN([ntru],                 [s charon scripts nm cmd])
+ADD_PLUGIN([frodo],                [s charon scripts nm cmd])
 ADD_PLUGIN([oqs],                  [s charon scripts nm cmd])
 ADD_PLUGIN([drbg],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([newhope],              [s charon scripts nm cmd])
@@ -1680,6 +1682,7 @@ AM_CONDITIONAL(USE_NEWHOPE, test x$newhope = xtrue)
 AM_CONDITIONAL(USE_BLISS, test x$bliss = xtrue)
 AM_CONDITIONAL(USE_DRBG, test x$drbg = xtrue)
 AM_CONDITIONAL(USE_OQS, test x$oqs = xtrue)
+AM_CONDITIONAL(USE_FRODO, test x$frodo = xtrue)
 
 #  charon plugins
 # ----------------
@@ -1963,6 +1966,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/bliss/tests/Makefile
 	src/libstrongswan/plugins/newhope/Makefile
 	src/libstrongswan/plugins/newhope/tests/Makefile
+	src/libstrongswan/plugins/frodo/Makefile
 	src/libstrongswan/plugins/oqs/Makefile
 	src/libstrongswan/plugins/oqs/tests/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
