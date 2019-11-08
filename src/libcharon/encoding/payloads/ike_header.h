@@ -125,7 +125,7 @@ enum exchange_type_t{
 	IKE_INTERMEDIATE = 43,
 
 	/* IKE_FOLLOWUP_KE (draft-ietf-ipsecme-ikev2-multiple-ke) */
-	IKE_FOLLOWUP_KE = 44,
+	IKE_FOLLOWUP_KE = 138,
 
 #ifdef ME
 	/**
