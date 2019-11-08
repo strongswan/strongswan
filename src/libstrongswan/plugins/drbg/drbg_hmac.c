@@ -206,6 +206,7 @@ METHOD(drbg_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
+		DESTROY_IF(this->entropy);
 		this->prf->destroy(this->prf);
 		chunk_clear(&this->key);
 		chunk_clear(&this->value);
@@ -280,7 +281,6 @@ drbg_hmac_t *drbg_hmac_create(drbg_type_t type, uint32_t strength,
 		},
 		.type = type,
 		.strength = strength,
-		.entropy = entropy,
 		.prf = prf,
 		.key = chunk_alloc(out_len),
 		.value = chunk_alloc(out_len),
@@ -296,7 +296,7 @@ drbg_hmac_t *drbg_hmac_create(drbg_type_t type, uint32_t strength,
 	seed = chunk_alloc(entropy_len + personalization_str.len);
 	DBG2(DBG_LIB, "DRBG requests %u bytes of entropy", entropy_len);
 
-	if (!this->entropy->get_bytes(this->entropy, entropy_len, seed.ptr))
+	if (!entropy->get_bytes(entropy, entropy_len, seed.ptr))
 	{
 		chunk_free(&seed);
 		destroy(this);
@@ -314,6 +314,9 @@ drbg_hmac_t *drbg_hmac_create(drbg_type_t type, uint32_t strength,
 		destroy(this);
 		return NULL;
 	}
+
+	/* ownership of entropy source is transferred to DRBG */
+	this->entropy = entropy;
 
 	return &this->public;
 }

@@ -231,7 +231,6 @@ METHOD(diffie_hellman_t, destroy, void,
 	DESTROY_IF(this->privkey);
 	DESTROY_IF(this->pubkey);
 	this->drbg->destroy(this->drbg);
-	this->entropy->destroy(this->entropy);
 	chunk_free(&this->ciphertext);
 	chunk_clear(&this->shared_secret);
 	free(this);
@@ -294,6 +293,7 @@ ntru_ke_t *ntru_ke_create(diffie_hellman_group_t group, chunk_t g, chunk_t p)
 	DBG1(DBG_LIB, "%u bit %s NTRU parameter set %N selected", strength,
 				   parameter_set, ntru_param_set_id_names, param_set_id);
 
+	/* entropy will be owned by drbg */
 	entropy = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
 	if (!entropy)
 	{

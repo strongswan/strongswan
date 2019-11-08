@@ -715,6 +715,8 @@ START_TEST(test_ntru_privkey)
 	params = TEST_FUNCTION(ntru, ntru_param_set_get_by_id,
 						   privkey_tests[_i].id);
 	strength = params->sec_strength_len * BITS_PER_BYTE;
+
+	/* entropy rng will be owned by drbg */
 	entropy = rng_tester_create(privkey_tests[_i].entropy);
 	drbg = lib->crypto->create_drbg(lib->crypto, DRBG_HMAC_SHA256, strength,
 									entropy, chunk_from_str("IKE NTRU-KE"));
@@ -802,7 +804,6 @@ START_TEST(test_ntru_privkey)
 	privkey->destroy(privkey);
 	pubkey->destroy(pubkey);
 	drbg->destroy(drbg);
-	entropy->destroy(entropy);
 }
 END_TEST
 

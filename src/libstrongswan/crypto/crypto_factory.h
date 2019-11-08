@@ -159,7 +159,7 @@ struct crypto_factory_t {
 	 *
 	 * @param type					DRBG type to use
 	 * @param strength				security strength in bits
-	 * @param entropy				entropy source to be used
+	 * @param entropy				entropy source to be used (adopted)
 	 * @param personalization_str	optional personalization string
 	 * @return						drbg_t instance, NULL if not supported
 	 */

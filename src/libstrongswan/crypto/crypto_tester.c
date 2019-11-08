@@ -1279,7 +1279,6 @@ METHOD(crypto_tester_t, test_drbg, bool,
 
 failure:
 		drbg->destroy(drbg);
-		entropy->destroy(entropy);
 		chunk_free(&out);
 		if (failed)
 		{

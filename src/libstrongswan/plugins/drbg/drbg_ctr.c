@@ -236,6 +236,7 @@ METHOD(drbg_t, destroy, void,
 {
 	if (ref_put(&this->ref))
 	{
+		DESTROY_IF(this->entropy);
 		this->crypter->destroy(this->crypter);
 		chunk_clear(&this->key);
 		chunk_clear(&this->value);
@@ -318,7 +319,6 @@ drbg_ctr_t *drbg_ctr_create(drbg_type_t type, uint32_t strength,
 		},
 		.type = type,
 		.strength = strength,
-		.entropy = entropy,
 		.crypter = crypter,
 		.key = chunk_alloc(key_len),
 		.value = chunk_alloc(out_len),
@@ -333,7 +333,7 @@ drbg_ctr_t *drbg_ctr_create(drbg_type_t type, uint32_t strength,
 	seed = chunk_alloc(seed_len);
 	DBG2(DBG_LIB, "DRBG requests %u bytes of entropy", seed_len);
 
-	if (!this->entropy->get_bytes(this->entropy, seed.len, seed.ptr))
+	if (!entropy->get_bytes(entropy, seed.len, seed.ptr))
 	{
 		chunk_free(&seed);
 		destroy(this);
@@ -350,6 +350,9 @@ drbg_ctr_t *drbg_ctr_create(drbg_type_t type, uint32_t strength,
 		destroy(this);
 		return NULL;
 	}
+
+	/* ownership of entropy source is transferred to DRBG */
+	this->entropy = entropy;
 
 	return &this->public;
 }

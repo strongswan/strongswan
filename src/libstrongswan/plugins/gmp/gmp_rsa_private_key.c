@@ -817,7 +817,7 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 	}
 	key_size = key_size / BITS_PER_BYTE;
 
-	/* Initiate a NIST SP 800-90A DRBG fed by a true random generator */
+	/* Initiate a NIST SP 800-90A DRBG fed by a true rng owned by the drbg */
 	rng = lib->crypto->create_rng(lib->crypto, RNG_TRUE);
 	if (!rng)
 	{
@@ -837,7 +837,6 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 	if (compute_prime(drbg, key_size/2, safe_prime, &p, &p1) != SUCCESS)
 	{
 		drbg->destroy(drbg);
-		rng->destroy(rng);
 		return NULL;
 	}
 	if (compute_prime(drbg, key_size/2, safe_prime, &q, &q1) != SUCCESS)
@@ -845,7 +844,6 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 		mpz_clear(p);
 		mpz_clear(p1);
 		drbg->destroy(drbg);
-		rng->destroy(rng);
 		return NULL;
 	}
 
@@ -930,7 +928,6 @@ gmp_rsa_private_key_t *gmp_rsa_private_key_gen(key_type_t type, va_list args)
 	mpz_clear_sensitive(p1);
 	mpz_clear_sensitive(q1);
 	drbg->destroy(drbg);
-	rng->destroy(rng);
 
 	if (drbg_failed || invert_failed)
 	{
