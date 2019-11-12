@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (C) 2014-2017 Tobias Brunner
+# Copyright (C) 2014-2019 Tobias Brunner
 # HSR Hochschule fuer Technik Rapperswil
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -67,7 +67,7 @@ charon.filelog./var/log/daemon\.log {}
 import sys
 import re
 from textwrap import TextWrapper
-from optparse import OptionParser
+from argparse import ArgumentParser
 from functools import cmp_to_key
 
 class ConfigOption:
@@ -344,21 +344,22 @@ class ManFormatter:
 			else:
 				self.__format_option(option)
 
-options = OptionParser(usage = "Usage: %prog [options] file1 file2\n\n"
-					   "If no filenames are provided the input is read from stdin.")
-options.add_option("-f", "--format", dest="format", type="choice", choices=["conf", "man"],
-				   help="output format: conf, man [default: %default]", default="conf")
-options.add_option("-r", "--root", dest="root", metavar="NAME",
-				   help="root section of which options are printed, "
-				   "if not found everything is printed")
-options.add_option("-n", "--nosort", action="store_false", dest="sort",
-				   default=True, help="do not sort sections alphabetically")
+args = ArgumentParser()
+args.add_argument('file', nargs='*',
+				  help="files to process, omit to read input from stdin")
+args.add_argument("-f", "--format", dest="format", choices=["conf", "man"],
+				  help="output format (default: %(default)s)", default="conf")
+args.add_argument("-r", "--root", dest="root", metavar="NAME",
+				  help="root section of which options are printed; everything"
+				  "is printed if not found")
+args.add_argument("-n", "--nosort", action="store_false", dest="sort",
+				  default=True, help="do not sort sections alphabetically")
 
-(opts, args) = options.parse_args()
+opts = args.parse_args()
 
 parser = Parser(opts.sort)
-if len(args):
-	for filename in args:
+if len(opts.file):
+	for filename in opts.file:
 		try:
 			with open(filename, 'r') as file:
 				parser.parse(file)
