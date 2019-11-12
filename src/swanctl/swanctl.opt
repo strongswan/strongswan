@@ -494,8 +494,14 @@ connections.<conn>.remote<suffix>.round = 0
 connections.<conn>.remote<suffix>.id = %any
 	IKE identity to expect for authentication round.
 
-	IKE identity to expect for authentication round. Refer to the _local_ _id_
-	section for details.
+	IKE identity to expect for authentication round. Refer to the **local**
+	section's **id** keyword for details.
+
+	It's possible to use wildcards to match remote identities (e.g.
+	_*@strongswan.org_, _*.strongswan.org_, or _C=CH,O=strongSwan,CN=*_).
+	Connections with exact matches are preferred. When using distinguished names
+	with wildcards, the _charon.rdn_matching_ option in **strongswan.conf**(5)
+	specifies how RDNs are matched.
 
 connections.<conn>.remote<suffix>.eap_id = id
 	Identity to use as peer identity during EAP authentication.
