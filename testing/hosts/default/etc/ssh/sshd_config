@@ -11,4 +11,5 @@ PermitEmptyPasswords yes
 PrintMotd no
 PrintLastLog no
 UsePAM no
+AcceptEnv LANG LC_*
 AcceptEnv LEAK_DETECTIVE_LOG
