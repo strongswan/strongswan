@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2017 Tobias Brunner
- * Copyright (C) 2015-2018 Andreas Steffen
+ * Copyright (C) 2015-2019 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2014 Martin Willi
@@ -387,6 +387,7 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	proposal_t *proposal;
 	uint32_t if_id;
 	uint16_t alg, ks;
+	int ake;
 	host_t *host;
 
 	b->add_kv(b, "uniqueid", "%u", ike_sa->get_unique_id(ike_sa));
@@ -469,6 +470,19 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 		if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD, &alg, NULL))
 		{
 			b->add_kv(b, "dh-group", "%N", key_exchange_method_names, alg);
+		}
+		for (ake = 1; ake <= 7; ake++)
+		{
+			transform_type_t transform = ADDITIONAL_KEY_EXCHANGE_1 + ake -1;
+			char ake_str[5];
+
+			if (proposal->get_algorithm(proposal, transform, &alg, NULL))
+			{
+
+				sprintf(ake_str, "ake%d", ake);
+				b->add_kv(b, ake_str, "%N", key_exchange_method_names, alg);
+			}
+
 		}
 	}
 	add_condition(b, ike_sa, "ppk", COND_PPK);
@@ -1335,7 +1349,7 @@ CALLBACK(get_algorithms, vici_message_t*,
 	enumerator->destroy(enumerator);
 	b->end_section(b);
 
-	b->begin_section(b, "dh");
+	b->begin_section(b, "ke");
 	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &group, &plugin_name))
 	{

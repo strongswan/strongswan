@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2016 Andreas Steffen
+ * Copyright (C) 2016-2019 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
 
  * This program is free software; you can redistribute it and/or modify it
@@ -239,6 +239,7 @@ CALLBACK(ike_sa, int,
 {
 	if (streq(name, "child-sas"))
 	{
+		int ake;
 		bool is_initiator = streq(ike->get(ike, "initiator"), "yes");
 
 		printf("%s: #%s, %s, IKEv%s, %s_i%s %s_r%s\n",
@@ -290,6 +291,16 @@ CALLBACK(ike_sa, int,
 			}
 			printf("/%s", ike->get(ike, "prf-alg"));
 			printf("/%s", ike->get(ike, "dh-group"));
+			for (ake = 1; ake <= 7; ake++)
+			{
+				char ake_str[5];
+
+				sprintf(ake_str, "ake%d", ake);
+				if (ike->get(ike, ake_str))
+				{
+					printf("/%s", ike->get(ike, ake_str));
+				}
+			}
 			if (streq(ike->get(ike, "ppk"), "yes"))
 			{
 				printf("/PPK");
