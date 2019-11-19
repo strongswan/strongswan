@@ -104,6 +104,7 @@ CONFIG_OPTS = \
 	--enable-bliss \
 	--enable-sha3 \
 	--enable-newhope \
+	--enable-frodo \
 	--enable-systemd \
 	--enable-counters \
 	--enable-save-keys \
