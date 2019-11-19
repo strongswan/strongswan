@@ -201,6 +201,13 @@ else
 SUBDIRS = .
 endif
 
+if USE_LINK_LOCAL_TS
+  SUBDIRS += plugins/link_local_ts
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/link_local_ts/libstrongswan-link-local-ts.la
+endif
+endif
+
 if USE_LOAD_TESTER
   SUBDIRS += plugins/load_tester
 if MONOLITHIC
