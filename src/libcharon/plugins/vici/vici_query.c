@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2020 Tobias Brunner
- * Copyright (C) 2015-2018 Andreas Steffen
+ * Copyright (C) 2015-2019 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2014 Martin Willi
@@ -174,6 +174,27 @@ static void list_label(vici_builder_t *b, child_sa_t *child, child_cfg_t *cfg)
 }
 
 /**
+ * List additional key exchanges
+ */
+static void list_ake(vici_builder_t *b, proposal_t *proposal)
+{
+	transform_type_t transform;
+	char ake_str[5];
+	uint16_t alg;
+	int ake;
+
+	for (ake = 1; ake <= 7; ake++)
+	{
+		transform = ADDITIONAL_KEY_EXCHANGE_1 + ake - 1;
+		if (proposal->get_algorithm(proposal, transform, &alg, NULL))
+		{
+			sprintf(ake_str, "ake%d", ake);
+			b->add_kv(b, ake_str, "%N", key_exchange_method_names, alg);
+		}
+	}
+}
+
+/**
  * List IPsec-related details about a CHILD_SA
  */
 static void list_child_ipsec(vici_builder_t *b, child_sa_t *child)
@@ -236,6 +257,7 @@ static void list_child_ipsec(vici_builder_t *b, child_sa_t *child)
 		{
 			b->add_kv(b, "dh-group", "%N", key_exchange_method_names, alg);
 		}
+		list_ake(b, proposal);
 		if (proposal->get_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS,
 									&alg, NULL) && alg == EXT_SEQ_NUMBERS)
 		{
@@ -494,6 +516,7 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 		{
 			b->add_kv(b, "dh-group", "%N", key_exchange_method_names, alg);
 		}
+		list_ake(b, proposal);
 	}
 	add_condition(b, ike_sa, "ppk", COND_PPK);
 
@@ -1383,7 +1406,7 @@ CALLBACK(get_algorithms, vici_message_t*,
 	enumerator->destroy(enumerator);
 	b->end_section(b);
 
-	b->begin_section(b, "dh");
+	b->begin_section(b, "ke");
 	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &group, &plugin_name))
 	{
