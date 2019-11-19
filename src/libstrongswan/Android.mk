@@ -7,11 +7,13 @@ library.c \
 asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
 collections/array.c \
-collections/linked_list.c crypto/crypters/crypter.c crypto/hashers/hasher.c \
+collections/linked_list.c crypto/crypters/crypter.c \
+crypto/drbgs/drbg.c crypto/hashers/hasher.c \
 crypto/hashers/hash_algorithm_set.c crypto/proposal/proposal.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
 crypto/prfs/prf.c crypto/prfs/mac_prf.c crypto/pkcs5.c \
-crypto/rngs/rng.c crypto/prf_plus.c crypto/signers/signer.c \
+crypto/rngs/rng.c crypto/rngs/rng_tester.c \
+crypto/prf_plus.c crypto/signers/signer.c \
 crypto/signers/mac_signer.c crypto/crypto_factory.c crypto/crypto_tester.c \
 crypto/diffie_hellman.c crypto/aead.c crypto/transform.c \
 crypto/iv/iv_gen.c crypto/iv/iv_gen_rand.c crypto/iv/iv_gen_seq.c \
