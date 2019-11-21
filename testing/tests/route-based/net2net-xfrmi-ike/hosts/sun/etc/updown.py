@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import vici
 import daemon
 import logging
