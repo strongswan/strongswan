@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Tobias Brunner
+ * Copyright (C) 2017-2019 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
  * Copyright (C) 2007-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
@@ -269,6 +269,12 @@ METHOD(ocsp_response_t, create_response_enumerator, enumerator_t*,
 	return enumerator_create_filter(
 				this->responses->create_enumerator(this->responses),
 				filter, NULL, NULL);
+}
+
+METHOD(ocsp_response_t, get_nonce, chunk_t,
+	private_x509_ocsp_response_t *this)
+{
+	return this->nonce;
 }
 
 /**
@@ -871,6 +877,7 @@ static x509_ocsp_response_t *load(chunk_t blob)
 					.get_ref = _get_ref,
 					.destroy = _destroy,
 				},
+				.get_nonce = _get_nonce,
 				.get_status = _get_status,
 				.create_cert_enumerator = _create_cert_enumerator,
 				.create_response_enumerator = _create_response_enumerator,
