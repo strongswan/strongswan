@@ -577,7 +577,9 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				DBG2(DBG_ASN, "  %s", critical ? "TRUE" : "FALSE");
 				break;
 			case BASIC_RESPONSE_EXT_VALUE:
-				if (extn_oid == OID_NONCE)
+				if (extn_oid == OID_NONCE &&
+					asn1_parse_simple_object(&object, ASN1_OCTET_STRING,
+										parser->get_level(parser)+1, "nonce"))
 				{
 					this->nonce = object;
 				}
