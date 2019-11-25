@@ -704,6 +704,23 @@ static status_t process_response(private_task_manager_t *this,
 		return DESTROY_ME;
 	}
 
+	/* handle fatal INVALID_SYNTAX notifies */
+	switch (message->get_exchange_type(message))
+	{
+		case CREATE_CHILD_SA:
+		case INFORMATIONAL:
+			if (message->get_notify(message, INVALID_SYNTAX))
+			{
+				DBG1(DBG_IKE, "received %N notify error, destroying IKE_SA",
+					 notify_type_names, INVALID_SYNTAX);
+				charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+				return DESTROY_ME;
+			}
+			break;
+		default:
+			break;
+	}
+
 	enumerator = array_create_enumerator(this->active_tasks);
 	while (enumerator->enumerate(enumerator, &task))
 	{
