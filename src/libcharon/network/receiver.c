@@ -176,8 +176,8 @@ static void send_notify(message_t *request, int major, exchange_type_t exchange,
 	if (major == IKEV2_MAJOR_VERSION)
 	{
 		response->set_request(response, FALSE);
+		response->set_message_id(response, request->get_message_id(request));
 	}
-	response->set_message_id(response, 0);
 	ike_sa_id = request->get_ike_sa_id(request);
 	ike_sa_id->switch_initiator(ike_sa_id);
 	response->set_ike_sa_id(response, ike_sa_id);
@@ -520,7 +520,8 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			break;
 		default:
 #ifdef USE_IKEV2
-			send_notify(message, IKEV2_MAJOR_VERSION, INFORMATIONAL,
+			send_notify(message, IKEV2_MAJOR_VERSION,
+						message->get_exchange_type(message),
 						INVALID_MAJOR_VERSION, chunk_empty);
 #elif defined(USE_IKEV1)
 			send_notify(message, IKEV1_MAJOR_VERSION, INFORMATIONAL_V1,
