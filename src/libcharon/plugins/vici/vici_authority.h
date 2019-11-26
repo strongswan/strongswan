@@ -37,13 +37,6 @@ struct vici_authority_t {
 	credential_set_t set;
 
 	/**
-	 * Check if a certificate can be made available through hash and URL.
-	 *
-	 * @param cert		end entity certificate
-	 */
-	void (*check_for_hash_and_url)(vici_authority_t *this, certificate_t* cert);
-
-	/**
 	 * Destroy a vici_authority_t.
 	 */
 	void (*destroy)(vici_authority_t *this);

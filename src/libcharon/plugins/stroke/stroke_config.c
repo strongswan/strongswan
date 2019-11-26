@@ -425,10 +425,6 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 			certificate = this->cred->load_peer(this->cred, cert);
 			if (certificate)
 			{
-				if (local)
-				{
-					this->ca->check_for_hash_and_url(this->ca, certificate);
-				}
 				cfg->add(cfg, AUTH_RULE_SUBJECT_CERT, certificate);
 				if (!first)
 				{
