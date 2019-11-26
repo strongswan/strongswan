@@ -1,3 +1,10 @@
+strongswan-5.8.2
+----------------
+
+- Implemented NIST SP-800-90A Deterministic Random Bit Generator (DRBG)
+  based on AES-CTR and SHA2-HMAC modes. Currently used by gmp and ntru plugins.
+
+
 strongswan-5.8.1
 ----------------
 
