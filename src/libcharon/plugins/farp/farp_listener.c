@@ -75,6 +75,8 @@ METHOD(listener_t, child_updown, bool,
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
 	entry_t *entry;
+	const chunk_t full_from = chunk_from_chars(0x00, 0x00, 0x00, 0x00),
+				  full_to   = chunk_from_chars(0xff, 0xff, 0xff, 0xff);
 
 	if (up)
 	{
@@ -88,6 +90,13 @@ METHOD(listener_t, child_updown, bool,
 		while (enumerator->enumerate(enumerator, &ts))
 		{
 			if (ts->get_type(ts) != TS_IPV4_ADDR_RANGE)
+			{
+				continue;
+			}
+			/* ignore 0.0.0.0/0 remote TS because we don't want to
+			 * reply to ARP requests for locally connected subnets */
+			if (chunk_equals(ts->get_from_address(ts), full_from) &&
+				chunk_equals(ts->get_to_address(ts), full_to))
 			{
 				continue;
 			}
