@@ -231,12 +231,6 @@ oqs_kem_t *oqs_kem_create(key_exchange_method_t method)
 
 	switch (method)
 	{
-		case KE_NEWHOPE_L1:
-			kem_alg = OQS_KEM_alg_newhope_512cca;
-			break;
-		case KE_NEWHOPE_L5:
-			kem_alg = OQS_KEM_alg_newhope_1024cca;
-			break;
 		case KE_FRODO_AES_L1:
 			kem_alg = OQS_KEM_alg_frodokem_640_aes;
 			break;
@@ -264,44 +258,11 @@ oqs_kem_t *oqs_kem_create(key_exchange_method_t method)
 		case KE_KYBER_L5:
 			kem_alg = OQS_KEM_alg_kyber_1024;
 			break;
-		case KE_BIKE1_L1:
-			kem_alg = OQS_KEM_alg_bike1_l1;
+		case KE_NEWHOPE_L1:
+			kem_alg = OQS_KEM_alg_newhope_512cca;
 			break;
-		case KE_BIKE1_L3:
-			kem_alg = OQS_KEM_alg_bike1_l3;
-			break;
-		case KE_BIKE1_L5:
-			kem_alg = OQS_KEM_alg_bike1_l5;
-			break;
-		case KE_BIKE2_L1:
-			kem_alg = OQS_KEM_alg_bike2_l1;
-			break;
-		case KE_BIKE2_L3:
-			kem_alg = OQS_KEM_alg_bike2_l3;
-			break;
-		case KE_BIKE2_L5:
-			kem_alg = OQS_KEM_alg_bike2_l5;
-			break;
-		case KE_BIKE3_L1:
-			kem_alg = OQS_KEM_alg_bike3_l1;
-			break;
-		case KE_BIKE3_L3:
-			kem_alg = OQS_KEM_alg_bike3_l3;
-			break;
-		case KE_BIKE3_L5:
-			kem_alg = OQS_KEM_alg_bike3_l5;
-			break;
-		case KE_SIKE_L1:
-			kem_alg = OQS_KEM_alg_sike_p434;
-			break;
-		case KE_SIKE_L2:
-			kem_alg = OQS_KEM_alg_sike_p503;
-			break;
-		case KE_SIKE_L3:
-			kem_alg = OQS_KEM_alg_sike_p610;
-			break;
-		case KE_SIKE_L5:
-			kem_alg = OQS_KEM_alg_sike_p751;
+		case KE_NEWHOPE_L5:
+			kem_alg = OQS_KEM_alg_newhope_1024cca;
 			break;
 		case KE_NTRU_HPS_L1:
 			kem_alg = OQS_KEM_alg_ntru_hps2048509;
@@ -323,6 +284,18 @@ oqs_kem_t *oqs_kem_create(key_exchange_method_t method)
 			break;
 		case KE_SABER_L5:
 			kem_alg = OQS_KEM_alg_saber_firesaber;
+			break;
+		case KE_SIKE_L1:
+			kem_alg = OQS_KEM_alg_sike_p434;
+			break;
+		case KE_SIKE_L2:
+			kem_alg = OQS_KEM_alg_sike_p503;
+			break;
+		case KE_SIKE_L3:
+			kem_alg = OQS_KEM_alg_sike_p610;
+			break;
+		case KE_SIKE_L5:
+			kem_alg = OQS_KEM_alg_sike_p751;
 			break;
 		default:
 			return NULL;
