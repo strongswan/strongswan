@@ -15,7 +15,8 @@
 
 #include "drbg_hmac.h"
 
-#define MAX_DRBG_REQUESTS	0xfffffffe
+#define MAX_DRBG_REQUESTS	0xfffffffe	/* 2^32 - 2 */
+#define MAX_DRBG_BYTES		0x00010000	/* 2^19 bits = 2^16 bytes */
 
 typedef struct private_drbg_hmac_t private_drbg_hmac_t;
 
@@ -158,12 +159,11 @@ METHOD(drbg_t, generate, bool,
 	size_t delta;
 	chunk_t output;
 
-	DBG2(DBG_LIB, "DRBG generates %u pseudorandom bytes", len);
-	if (!out || len == 0)
+	if (len > MAX_DRBG_BYTES)
 	{
+		DBG1(DBG_LIB, "DRBG cannot generate more than %d bytes", MAX_DRBG_BYTES);
 		return FALSE;
 	}
-	output = chunk_create(out, len);
 
 	if (this->reseed_counter > this->max_requests)
 	{
@@ -172,6 +172,14 @@ METHOD(drbg_t, generate, bool,
 			return FALSE;
 		}
 	}
+
+	DBG2(DBG_LIB, "DRBG generates %u pseudorandom bytes", len);
+	if (!out || len == 0)
+	{
+		return FALSE;
+	}
+	output = chunk_create(out, len);
+
 	while (len)
 	{
 		if (!this->prf->get_bytes(this->prf, this->value, this->value.ptr))

@@ -15,7 +15,8 @@
 
 #include "drbg_ctr.h"
 
-#define MAX_DRBG_REQUESTS	0xfffffffe
+#define MAX_DRBG_REQUESTS	0xfffffffe	/* 2^32 - 2 */
+#define MAX_DRBG_BYTES		0x00010000	/* 2^19 bits = 2^16 bytes */
 
 typedef struct private_drbg_ctr_t private_drbg_ctr_t;
 
@@ -189,6 +190,12 @@ METHOD(drbg_t, generate, bool,
 	private_drbg_ctr_t *this, uint32_t len, uint8_t *out)
 {
 	chunk_t output;
+
+	if (len > MAX_DRBG_BYTES)
+	{
+		DBG1(DBG_LIB, "DRBG cannot generate more than %d bytes", MAX_DRBG_BYTES);
+		return FALSE;
+	}
 
 	if (this->reseed_counter > this->max_requests)
 	{
