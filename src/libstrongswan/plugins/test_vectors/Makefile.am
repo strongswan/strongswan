@@ -14,6 +14,7 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors_plugin.h test_vectors_plugin.c test_vectors.h \
 	test_vectors/3des_cbc.c \
 	test_vectors/aes_cbc.c \
+	test_vectors/aes_ecb.c \
 	test_vectors/aes_ctr.c \
 	test_vectors/aes_xcbc.c \
 	test_vectors/aes_cmac.c \

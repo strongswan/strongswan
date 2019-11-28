@@ -90,13 +90,9 @@ METHOD(drbg_t, get_strength, uint32_t,
 
 static bool encrypt_ctr(private_drbg_ctr_t *this, chunk_t out)
 {
-	chunk_t iv = chunk_alloca(this->value.len);
 	chunk_t bl = chunk_alloca(this->value.len);
 	chunk_t block;
 	size_t delta, pos = 0;
-
-	/* Initialize IV to all zeroes for ECB mode */
-	memset(iv.ptr, 0x00, iv.len);
 
 	if (!this->crypter->set_key(this->crypter, this->key))
 	{
@@ -115,7 +111,7 @@ static bool encrypt_ctr(private_drbg_ctr_t *this, chunk_t out)
 		memcpy(block.ptr, this->value.ptr, this->value.len);
 
 		/* ECB encryption */
-		if (!this->crypter->encrypt(this->crypter, block, iv, NULL))
+		if (!this->crypter->encrypt(this->crypter, block, chunk_empty, NULL))
 		{
 			return FALSE;
 		}
@@ -261,15 +257,15 @@ drbg_ctr_t *drbg_ctr_create(drbg_type_t type, uint32_t strength,
 	switch (type)
 	{
 		case DRBG_CTR_AES128:
-			crypter_type = ENCR_AES_CBC;
+			crypter_type = ENCR_AES_ECB;
 			key_len = 16;
 			break;
 		case DRBG_CTR_AES192:
-			crypter_type = ENCR_AES_CBC;
+			crypter_type = ENCR_AES_ECB;
 			key_len = 24;
 			break;
 		case DRBG_CTR_AES256:
-			crypter_type = ENCR_AES_CBC;
+			crypter_type = ENCR_AES_ECB;
 			key_len = 32;
 			break;
 		default:
