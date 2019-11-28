@@ -51,7 +51,6 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/ecpbp.c \
 	test_vectors/curve25519.c \
 	test_vectors/curve448.c \
-	test_vectors/ke_bike.c \
 	test_vectors/ke_frodo.c \
 	test_vectors/ke_kyber.c \
 	test_vectors/ke_newhope.c \
