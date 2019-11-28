@@ -9,7 +9,7 @@ EXTRA_DIST = LICENSE README.rst MANIFEST.in \
 	vici/protocol.py \
 	vici/session.py
 
-$(srcdir)/setup.py: $(srcdir)/setup.py.in
+$(srcdir)/setup.py: $(srcdir)/setup.py.in $(top_builddir)/config.status
 	$(AM_V_GEN) sed \
 	-e "s:@EGG_VERSION@:$(PYTHON_PACKAGE_VERSION):" \
 	$(srcdir)/setup.py.in > $@
