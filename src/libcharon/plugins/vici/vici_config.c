@@ -347,6 +347,7 @@ static void log_auth(auth_cfg_t *auth)
 	union {
 		uintptr_t u;
 		identification_t *id;
+		certificate_t *cert;
 		char *str;
 	} v;
 
@@ -387,6 +388,12 @@ static void log_auth(auth_cfg_t *auth)
 				break;
 			case AUTH_RULE_GROUP:
 				DBG2(DBG_CFG, "   group = %Y", v.id);
+				break;
+			case AUTH_RULE_SUBJECT_CERT:
+				DBG2(DBG_CFG, "   cert = %Y", v.cert->get_subject(v.cert));
+				break;
+			case AUTH_RULE_CA_CERT:
+				DBG2(DBG_CFG, "   cacert = %Y", v.cert->get_subject(v.cert));
 				break;
 			default:
 				break;
