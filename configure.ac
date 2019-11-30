@@ -374,13 +374,12 @@ AC_PROG_LEX
 AC_PROG_YACC
 AM_PATH_PYTHON(,,[:])
 AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
-AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+AC_PATH_PROG([GPERF_TMP], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 
-# because gperf is not needed by end-users we just report it but do not abort on failure
-AC_MSG_CHECKING([gperf version >= 3.0.0])
-if test -x "$GPERF"; then
-	if test "`$GPERF --version | $AWK -F' ' '/^GNU gperf/ { print $3 }' | $AWK -F. '{ print $1 }'`" -ge "3"; then
-		GPERF_OUTPUT="`echo foo | ${GPERF}`"
+if test -x "$GPERF_TMP"; then
+	AC_MSG_CHECKING([gperf version >= 3.0.0])
+	if test "`$GPERF_TMP --version | $AWK -F' ' '/^GNU gperf/ { print $3 }' | $AWK -F. '{ print $1 }'`" -ge "3"; then
+		GPERF_OUTPUT="`echo foo | ${GPERF_TMP}`"
 		AC_COMPILE_IFELSE(
 			[AC_LANG_PROGRAM(
 				[[#include <string.h>
@@ -395,12 +394,15 @@ if test -x "$GPERF"; then
 			)]
 		)
 		AC_SUBST(GPERF_LEN_TYPE)
+		AC_SUBST([GPERF], [$GPERF_TMP])
 		AC_MSG_RESULT([yes])
 	else
 		AC_MSG_RESULT([no])
 	fi
-else
-	AC_MSG_RESULT([not found])
+fi
+
+if ! test -x "$GPERF" -o -f "$srcdir/src/libstrongswan/crypto/proposal/proposal_keywords_static.c"; then
+	AC_MSG_ERROR([gperf version >= 3.0.0 is needed])
 fi
 
 # ========================
