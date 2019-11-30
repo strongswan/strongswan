@@ -19,7 +19,7 @@ the code, you need the following tools:
     - python
     - lex/flex
     - yacc/bison
-    - gperf
+    - gperf (>= 3.x)
 
     Optionally:
     - lcov/genhtml
