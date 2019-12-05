@@ -378,7 +378,7 @@ AC_ARG_VAR([PERL], [the Perl interpreter])
 AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 AC_ARG_VAR([GPERF], [the GNU gperf program])
 
-# because gperf is not needed by end-users we just report it but do not abort on failure
+# because gperf is not needed by end-users we only abort if generated files don't exist
 AC_MSG_CHECKING([gperf version >= 3.0.0])
 if test -x "$GPERF"; then
 	if test "`$GPERF --version | $AWK -F' ' '/^GNU gperf/ { print $3 }' | $AWK -F. '{ print $1 }'`" -ge "3"; then
@@ -403,6 +403,10 @@ if test -x "$GPERF"; then
 	fi
 else
 	AC_MSG_RESULT([not found])
+	GPERF_TEST_FILE="$srcdir/src/libstrongswan/crypto/proposal/proposal_keywords_static.c"
+	if test ! -f "$GPERF_TEST_FILE"; then
+		AC_MSG_ERROR([GNU gperf required to generate e.g. $GPERF_TEST_FILE])
+	fi
 fi
 
 # ========================
