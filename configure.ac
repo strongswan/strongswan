@@ -379,28 +379,24 @@ AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 AC_ARG_VAR([GPERF], [the GNU gperf program])
 
 # because gperf is not needed by end-users we only abort if generated files don't exist
-AC_MSG_CHECKING([gperf version >= 3.0.0])
+AC_MSG_CHECKING([gperf len type])
 if test -x "$GPERF"; then
-	if test "`$GPERF --version | $AWK -F' ' '/^GNU gperf/ { print $3 }' | $AWK -F. '{ print $1 }'`" -ge "3"; then
-		GPERF_OUTPUT="`echo foo | ${GPERF}`"
-		AC_COMPILE_IFELSE(
+	GPERF_OUTPUT="`echo foo | ${GPERF}`"
+	AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM(
+			[[#include <string.h>
+			  const char *in_word_set(const char*, size_t); $GPERF_OUTPUT]])],
+		[GPERF_LEN_TYPE=size_t],
+		[AC_COMPILE_IFELSE(
 			[AC_LANG_PROGRAM(
 				[[#include <string.h>
-				  const char *in_word_set(const char*, size_t); $GPERF_OUTPUT]])],
-			[GPERF_LEN_TYPE=size_t],
-			[AC_COMPILE_IFELSE(
-				[AC_LANG_PROGRAM(
-					[[#include <string.h>
-					  const char *in_word_set(const char*, unsigned); $GPERF_OUTPUT]])],
-				[GPERF_LEN_TYPE=unsigned],
-				[AC_MSG_ERROR([unable to determine gperf len type])]
-			)]
-		)
-		AC_SUBST(GPERF_LEN_TYPE)
-		AC_MSG_RESULT([yes])
-	else
-		AC_MSG_RESULT([no])
-	fi
+				  const char *in_word_set(const char*, unsigned); $GPERF_OUTPUT]])],
+			[GPERF_LEN_TYPE=unsigned],
+			[AC_MSG_ERROR([unable to determine gperf len type])]
+		)]
+	)
+	AC_SUBST(GPERF_LEN_TYPE)
+	AC_MSG_RESULT([$GPERF_LEN_TYPE])
 else
 	AC_MSG_RESULT([not found])
 	GPERF_TEST_FILE="$srcdir/src/libstrongswan/crypto/proposal/proposal_keywords_static.c"
