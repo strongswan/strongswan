@@ -374,7 +374,9 @@ AC_PROG_LEX
 AC_PROG_YACC
 AM_PATH_PYTHON(,,[:])
 AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+AC_ARG_VAR([PERL], [the Perl interpreter])
 AC_PATH_PROG([GPERF], [gperf], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
+AC_ARG_VAR([GPERF], [the GNU gperf program])
 
 # because gperf is not needed by end-users we just report it but do not abort on failure
 AC_MSG_CHECKING([gperf version >= 3.0.0])
