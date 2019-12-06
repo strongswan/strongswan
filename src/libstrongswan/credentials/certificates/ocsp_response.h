@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2019 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -53,6 +54,13 @@ struct ocsp_response_t {
 	 * Implements certificate_t interface
 	 */
 	certificate_t certificate;
+
+	/**
+	 * Get the nonce received with this OCSP response.
+	 *
+	 * @return					nonce in the response (internal data)
+	 */
+	chunk_t (*get_nonce)(ocsp_response_t *this);
 
 	/**
 	 * Check the status of a certificate by this OCSP response.
