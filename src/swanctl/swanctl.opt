@@ -593,6 +593,16 @@ connections.<conn>.remote<suffix>.cacert<suffix>.slot =
 connections.<conn>.remote<suffix>.cacert<suffix>.module =
 	Optional PKCS#11 module name.
 
+connections.<conn>.remote<suffix>.ca_id =
+	Identity in CA certificate to accept for authentication.
+
+	The specified identity must be contained in one (intermediate) CA
+	of the remote peer trustchain, either as subject or as subjectAltName.
+	This has the same effect as specifying _cacerts_ to force clients under
+	a CA to specific connections; it does not require the CA certificate to
+	be available locally, and can be received from the peer during the
+	IKE exchange.
+
 connections.<conn>.remote<suffix>.pubkeys =
 	Comma separated list of raw public keys to accept for authentication.
 

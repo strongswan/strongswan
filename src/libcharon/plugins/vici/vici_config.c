@@ -347,6 +347,7 @@ static void log_auth(auth_cfg_t *auth)
 	union {
 		uintptr_t u;
 		identification_t *id;
+		certificate_t *cert;
 		char *str;
 	} v;
 
@@ -373,6 +374,9 @@ static void log_auth(auth_cfg_t *auth)
 			case AUTH_RULE_IDENTITY:
 				DBG2(DBG_CFG, "   id = %Y", v.id);
 				break;
+			case AUTH_RULE_CA_IDENTITY:
+				DBG2(DBG_CFG, "   ca_id = %Y", v.id);
+				break;
 			case AUTH_RULE_AAA_IDENTITY:
 				DBG2(DBG_CFG, "   aaa_id = %Y", v.id);
 				break;
@@ -384,6 +388,12 @@ static void log_auth(auth_cfg_t *auth)
 				break;
 			case AUTH_RULE_GROUP:
 				DBG2(DBG_CFG, "   group = %Y", v.id);
+				break;
+			case AUTH_RULE_SUBJECT_CERT:
+				DBG2(DBG_CFG, "   cert = %Y", v.cert->get_subject(v.cert));
+				break;
+			case AUTH_RULE_CA_CERT:
+				DBG2(DBG_CFG, "   cacert = %Y", v.cert->get_subject(v.cert));
 				break;
 			default:
 				break;
@@ -1361,6 +1371,15 @@ CALLBACK(parse_ike_id, bool,
 }
 
 /**
+ * Parse CA identity constraint
+ */
+CALLBACK(parse_ca_id, bool,
+	auth_cfg_t *cfg, chunk_t v)
+{
+	return parse_id(cfg, AUTH_RULE_CA_IDENTITY, v);
+}
+
+/**
  * Parse AAA identity
  */
 CALLBACK(parse_aaa_id, bool,
@@ -1755,6 +1774,7 @@ CALLBACK(auth_kv, bool,
 	parse_rule_t rules[] = {
 		{ "auth",			parse_auth,			auth->cfg					},
 		{ "id",				parse_ike_id,		auth->cfg					},
+		{ "ca_id",			parse_ca_id,		auth->cfg					},
 		{ "aaa_id",			parse_aaa_id,		auth->cfg					},
 		{ "eap_id",			parse_eap_id,		auth->cfg					},
 		{ "xauth_id",		parse_xauth_id,		auth->cfg					},
