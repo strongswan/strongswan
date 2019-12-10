@@ -1,8 +1,51 @@
 strongswan-5.8.2
 ----------------
 
+- Identity-based CA constraints are supported via vici/swanctl.conf. They
+  enforce that the remote's certificate chain contains a CA certificate with a
+  specific identity. While similar to the existing CA constraints, they don't
+  require that the CA certificate is locally installed such as intermediate CA
+  certificates received from peers. Compared to wildcard identity matching (e.g.
+  "..., OU=Research, CN=*") this requires less trust in the intermediate CAs (to
+  only issue certificates with legitimate subject DNs) as long as path length
+  basic constraints prevent them from issuing further intermediate CAs.
+
+- Intermediate CA certificates may now be sent in hash-and-URL encoding by
+  configuring a base URL for the parent CA.
+
 - Implemented NIST SP-800-90A Deterministic Random Bit Generator (DRBG)
   based on AES-CTR and SHA2-HMAC modes. Currently used by gmp and ntru plugins.
+
+- Random nonces sent in an OCSP requests are now expected in the corresponding
+  OCSP responses.
+
+- The kernel-netlink plugin ignores deprecated IPv6 addresses for MOBIKE.
+  Whether temporary or permanent IPv6 addresses are included depends on the
+  charon.prefer_temporary_addrs setting.
+
+- Extended Sequence Numbers (ESN) are configured via PF_KEY if supported by the
+  kernel.
+
+- Unique section names are used for CHILD_SAs in vici child-updown events and
+  more information (e.g. statistics) are included for individually deleted
+  CHILD_SAs (in particular for IKEv1).
+
+- So fallbacks to other plugins work properly, creating HMACs via openssl plugin
+  now fails instantly if the underlying hash algorithm isn't supported (e.g.
+  MD5 in FIPS-mode).
+
+- Exponents of RSA keys read from TPM 2.0 via SAPI are now correctly converted.
+
+- Routing table IDs > 255 are supported for custom routes on Linux.
+
+- The D-Bus config file for charon-nm is now installed in
+  $(datadir)/dbus-1/system.d instead of $(sysconfdir)/dbus-1/system.d.
+
+- INVALID_MAJOR_VERSION notifies are now correctly sent in messages of the same
+  exchange type and using the same message ID as the request.
+
+- IKEv2 SAs are immediately destroyed when sending or receiving INVALID_SYNTAX
+  notifies in authenticated messages.
 
 
 strongswan-5.8.1
