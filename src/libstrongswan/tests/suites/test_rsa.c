@@ -44,7 +44,7 @@ static rsa_pss_params_t default_pss_params = {
 };
 
 /**
- * Perform a signature verification "good" test having a keypair
+ * Perform a signature verification "good" test having a key pair
  */
 static void test_good_sig(private_key_t *privkey, public_key_t *pubkey)
 {

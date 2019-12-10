@@ -129,7 +129,7 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 			this->privkey = ntru_private_key_create(this->drbg, this->param_set);
 			if (!this->privkey)
 			{
-				DBG1(DBG_LIB, "NTRU keypair generation failed");
+				DBG1(DBG_LIB, "NTRU key pair generation failed");
 				return FALSE;
 			}
 			this->pubkey = this->privkey->get_public_key(this->privkey);

@@ -658,7 +658,7 @@ static bool loadable_feature_matches(registered_feature_t *a,
 }
 
 /**
- * Returns a compatible plugin feature for the given depencency
+ * Returns a compatible plugin feature for the given dependency
  */
 static bool find_compatible_feature(private_plugin_loader_t *this,
 									plugin_feature_t *dependency)
