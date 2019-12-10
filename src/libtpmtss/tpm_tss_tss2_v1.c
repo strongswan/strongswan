@@ -503,7 +503,7 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 
 			rsa = &public.t.publicArea.unique.rsa;
 			aik_modulus = chunk_create(rsa->t.buffer, rsa->t.size);
-			exponent = public.t.publicArea.parameters.rsaDetail.exponent;
+			exponent = htonl(public.t.publicArea.parameters.rsaDetail.exponent);
 			if (!exponent)
 			{
 				aik_exponent = chunk_from_chars(0x01, 0x00, 0x01);
