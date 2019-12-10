@@ -15,7 +15,7 @@
 
 /**
  * @defgroup drbg_ctr drbg_ctr
- * @{ @ingroup drbg
+ * @{ @ingroup drbg_p
  */
 
 #ifndef DRBG_CTR_H_

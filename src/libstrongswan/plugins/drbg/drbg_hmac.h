@@ -15,7 +15,7 @@
 
 /**
  * @defgroup drbg_hmac drbg_hmac
- * @{ @ingroup drbg
+ * @{ @ingroup drbg_p
  */
 
 #ifndef DRBG_HMAC_H_
