@@ -557,12 +557,15 @@ static char *whitelist[] = {
 	/* libcurl */
 	"Curl_client_write",
 	/* libsoup */
+	"soup_add_timeout",
+	"soup_headers_parse_response",
 	"soup_message_headers_append",
 	"soup_message_headers_clear",
 	"soup_message_headers_get_list",
 	"soup_message_headers_get_one",
 	"soup_session_abort",
 	"soup_session_get_type",
+	"soup_session_remove_feature",
 	/* libldap */
 	"ldap_int_initialize",
 	/* ClearSilver */
