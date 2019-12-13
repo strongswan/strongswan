@@ -3692,8 +3692,8 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	}
 
 	netlink_find_offload_feature(lib->settings->get_str(lib->settings,
-								 "%s.hw_offload_feature_interface", "lo",
-								 lib->ns));
+					"%s.plugins.kernel-netlink.hw_offload_feature_interface",
+					"lo", lib->ns));
 
 	return &this->public;
 }
