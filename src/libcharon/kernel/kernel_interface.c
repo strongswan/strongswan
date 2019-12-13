@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Tobias Brunner
+ * Copyright (C) 2008-2019 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2010 Martin Willi
@@ -125,6 +125,11 @@ struct private_kernel_interface_t {
 	 * Reqid entries indexed by traffic selectors
 	 */
 	hashtable_t *reqids_by_ts;
+
+	/**
+	 * Previously used reqids that have been released
+	 */
+	array_t *released_reqids;
 
 	/**
 	 * mutex for algorithm mappings
@@ -382,7 +387,10 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 		{
 			/* none found, create a new entry, allocating a reqid */
 			entry = tmpl;
-			entry->reqid = ++counter;
+			if (!array_remove(this->released_reqids, ARRAY_HEAD, &entry->reqid))
+			{
+				entry->reqid = ++counter;
+			}
 			this->reqids_by_ts->put(this->reqids_by_ts, entry, entry);
 			this->reqids->put(this->reqids, entry, entry);
 		}
@@ -412,6 +420,8 @@ METHOD(kernel_interface_t, release_reqid, status_t,
 	{
 		if (--entry->refs == 0)
 		{
+			array_insert_create_value(&this->released_reqids, sizeof(uint32_t),
+									  ARRAY_TAIL, &entry->reqid);
 			entry = this->reqids_by_ts->remove(this->reqids_by_ts, entry);
 			if (entry)
 			{
@@ -996,6 +1006,7 @@ METHOD(kernel_interface_t, destroy, void,
 	DESTROY_FUNCTION_IF(this->ifaces_filter, (void*)free);
 	this->reqids->destroy(this->reqids);
 	this->reqids_by_ts->destroy(this->reqids_by_ts);
+	array_destroy(this->released_reqids);
 	this->listeners->destroy(this->listeners);
 	this->mutex->destroy(this->mutex);
 	free(this);
