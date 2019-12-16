@@ -64,17 +64,17 @@ G_DEFINE_TYPE_EXTENDED (StrongswanPluginUi, strongswan_plugin_ui, G_TYPE_OBJECT,
 
 static void strongswan_plugin_ui_widget_interface_init (NMVpnEditorInterface *iface_class);
 
-G_DEFINE_TYPE_EXTENDED (StrongswanPluginUiWidget, strongswan_plugin_ui_widget, G_TYPE_OBJECT, 0,
-						G_IMPLEMENT_INTERFACE (NM_TYPE_VPN_EDITOR,
-											   strongswan_plugin_ui_widget_interface_init))
-
-#define STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), STRONGSWAN_TYPE_PLUGIN_UI_WIDGET, StrongswanPluginUiWidgetPrivate))
-
 typedef struct {
 	GtkBuilder *builder;
 	GtkWidget *widget;
 } StrongswanPluginUiWidgetPrivate;
 
+G_DEFINE_TYPE_EXTENDED (StrongswanPluginUiWidget, strongswan_plugin_ui_widget, G_TYPE_OBJECT, 0,
+						G_ADD_PRIVATE (StrongswanPluginUiWidget)
+						G_IMPLEMENT_INTERFACE (NM_TYPE_VPN_EDITOR,
+											   strongswan_plugin_ui_widget_interface_init))
+
+#define STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE(o) ((StrongswanPluginUiWidgetPrivate*)strongswan_plugin_ui_widget_get_instance_private(o))
 
 #define STRONGSWAN_PLUGIN_UI_ERROR strongswan_plugin_ui_error_quark ()
 
@@ -586,7 +586,7 @@ nm_vpn_plugin_ui_widget_interface_new (NMConnection *connection, GError **error)
 		return NULL;
 	}
 
-	priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (object);
+	priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE ((StrongswanPluginUiWidget*)object);
 	ui_file = g_strdup_printf ("%s/%s", UIDIR, "nm-strongswan-dialog.ui");
 	priv->builder = gtk_builder_new ();
 
@@ -643,8 +643,6 @@ static void
 strongswan_plugin_ui_widget_class_init (StrongswanPluginUiWidgetClass *req_class)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (req_class);
-
-	g_type_class_add_private (req_class, sizeof (StrongswanPluginUiWidgetPrivate));
 
 	object_class->dispose = dispose;
 }
