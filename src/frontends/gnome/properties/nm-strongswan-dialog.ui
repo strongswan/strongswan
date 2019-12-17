@@ -88,6 +88,34 @@
                 <property name="top_attach">1</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkLabel" id="remote-identity-label">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">_Identity:</property>
+                <property name="use_underline">True</property>
+                <property name="xalign">0</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkEntry" id="remote-identity-entry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="tooltip_text" translatable="yes">Defaults to the server address or the server certificate's subject DN (if configured). Custom values are explicitly sent to the server and enforced during authentication.</property>
+                <property name="hexpand">True</property>
+                <property name="primary_icon_activatable">False</property>
+                <property name="secondary_icon_activatable">False</property>
+                <property name="placeholder_text" translatable="yes">(Defaults to address or certificate subject)</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">2</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>
