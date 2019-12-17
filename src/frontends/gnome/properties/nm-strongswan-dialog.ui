@@ -18,7 +18,7 @@
           <object class="GtkLabel" id="gateway-label">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">&lt;b&gt;Gateway&lt;/b&gt;</property>
+            <property name="label" translatable="yes">&lt;b&gt;Server&lt;/b&gt;</property>
             <property name="use_markup">True</property>
             <property name="xalign">0</property>
           </object>
@@ -53,7 +53,7 @@
               <object class="GtkEntry" id="address-entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">An IP address or hostname the Gateway can be contacted.</property>
+                <property name="tooltip_text" translatable="yes">An IP address or hostname of the VPN server.</property>
                 <property name="hexpand">True</property>
                 <property name="primary_icon_activatable">False</property>
                 <property name="secondary_icon_activatable">False</property>
@@ -80,7 +80,7 @@
               <object class="GtkFileChooserButton" id="certificate-button">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="tooltip_text" translatable="yes">Gateway or CA certificate to use for gateway authentication. If none is specified, pre-installed CA certificates are used.</property>
+                <property name="tooltip_text" translatable="yes">Server or CA certificate to use for server authentication. If none is specified, pre-installed CA certificates are used.</property>
                 <property name="hexpand">True</property>
               </object>
               <packing>
@@ -224,7 +224,7 @@
               <object class="GtkEntry" id="user-entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">The username (identity) to use for authentication against the gateway.</property>
+                <property name="tooltip_text" translatable="yes">The username (identity) to use for authentication against the server.</property>
                 <property name="hexpand">True</property>
                 <property name="primary_icon_activatable">False</property>
                 <property name="secondary_icon_activatable">False</property>
@@ -251,7 +251,7 @@
               <object class="GtkEntry" id="passwd-entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">The password to use for authentication against the gateway (min. 20 characters for PSKs).</property>
+                <property name="tooltip_text" translatable="yes">The password to use for authentication against the server (min. 20 characters for PSKs).</property>
                 <property name="hexpand">True</property>
                 <property name="visibility">False</property>
                 <property name="primary_icon_activatable">False</property>
@@ -329,7 +329,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
-                <property name="tooltip_text" translatable="yes">The Gateway may provide addresses from a pool to use for communication in the Gateways network. Check to request such an address.</property>
+                <property name="tooltip_text" translatable="yes">The server may provide addresses from a pool to use for communication in the VPN. Check to request such an address.</property>
                 <property name="use_underline">True</property>
                 <property name="draw_indicator">True</property>
               </object>
