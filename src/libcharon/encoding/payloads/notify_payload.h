@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Tobias Brunner
+ * Copyright (C) 2006-2019 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -159,6 +159,8 @@ enum notify_type_t {
 	PPK_IDENTITY = 16436,
 	/* No Postquantum Preshared Key Auth (draft-ietf-ipsecme-qr-ikev2) */
 	NO_PPK_AUTH = 16437,
+	/* draft-ietf-ipsecme-ikev2-intermediate */
+	INTERMEDIATE_EXCHANGE_SUPPORTED = 16438,
 	/* IKEv1 initial contact */
 	INITIAL_CONTACT_IKEV1 = 24578,
 	/* IKEv1 DPD */
