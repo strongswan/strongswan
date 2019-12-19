@@ -292,8 +292,6 @@ if test "$1" = "deps"; then
 		;;
 	osx)
 		brew update && \
-		# workaround for issue #6352
-		brew uninstall --force libtool && brew install libtool && \
 		brew install $DEPS
 		;;
 	freebsd)
