@@ -14,6 +14,8 @@ setup(
     license="MIT",
     packages=["vici"],
     include_package_data=True,
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
     classifiers=(
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
@@ -24,6 +26,9 @@ setup(
         "Programming Language :: Python :: 3.2",
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "Topic :: Security",
         "Topic :: Software Development :: Libraries",
     )
