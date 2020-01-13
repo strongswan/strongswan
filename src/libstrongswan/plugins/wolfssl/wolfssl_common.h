@@ -38,6 +38,10 @@
 #undef DES_BLOCK_SIZE
 #endif
 
+#ifdef RSA_PSS_SALT_LEN_DEFAULT
+#undef RSA_PSS_SALT_LEN_DEFAULT
+#endif
+
 /* PARSE_ERROR is an enum entry in wolfSSL - not used in this plugin */
 #define PARSE_ERROR	WOLFSSL_PARSE_ERROR
 
