@@ -1,5 +1,6 @@
 EXTRA_DIST = LICENSE README.rst MANIFEST.in \
 	setup.py.in \
+	tox.ini \
 	vici/test/__init__.py \
 	vici/test/test_protocol.py \
 	vici/__init__.py \
