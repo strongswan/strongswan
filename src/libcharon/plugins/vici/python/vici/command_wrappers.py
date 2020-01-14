@@ -232,7 +232,6 @@ class CommandWrappers(object):
         """
         self.request("load-shared", secret)
 
-
     def unload_shared(self, identifier):
         """Unload a previously loaded shared secret by its unique identifier.
 

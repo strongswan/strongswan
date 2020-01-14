@@ -1,7 +1,7 @@
 import pytest
 
-from ..protocol import Packet, Message, FiniteStream
-from ..exception import DeserializationException
+from vici.protocol import Packet, Message, FiniteStream
+from vici.exception import DeserializationException
 
 
 class TestPacket(object):
@@ -70,17 +70,17 @@ class TestMessage(object):
     ser_kv_zero = b"\x03\x0azerolength\x00\x00"
 
     # deserialized messages holding a section
-    des_sec_single = { "section": {} }
-    des_sec_nested = { "outer": { "subsection": {} } }
+    des_sec_single = {"section": {}}
+    des_sec_nested = {"outer": {"subsection": {}}}
 
     # deserialized messages holding a list
-    des_list_0_item = { "empty": [] }
-    des_list_1_item = { "l": [ b"e1" ] }
-    des_list_2_item = { "l": [ b"e1", b"e2" ] }
+    des_list_0_item = {"empty": []}
+    des_list_1_item = {"l": [b"e1"]}
+    des_list_2_item = {"l": [b"e1", b"e2"]}
 
     # deserialized messages with key value pairs
-    des_kv_pair = { "key": b"value" }
-    des_kv_zero = { "zerolength": b"" }
+    des_kv_pair = {"key": b"value"}
+    des_kv_zero = {"zerolength": b""}
 
     def test_section_serialization(self):
         assert Message.serialize(self.des_sec_single) == self.ser_sec_single
@@ -131,7 +131,7 @@ class TestMessage(object):
                 "sub-section": {
                     "key2": b"value2",
                 },
-                "list1": [ "item1", "item2" ],
+                "list1": ["item1", "item2"],
             },
         }
         serialized_message = FiniteStream(Message.serialize(message))
@@ -141,4 +141,4 @@ class TestMessage(object):
         deserialized_section = deserialized_message["section1"]
         assert deserialized_message["key1"] == b"value1"
         assert deserialized_section["sub-section"]["key2"] == b"value2"
-        assert deserialized_section["list1"] == [ b"item1", b"item2" ]
+        assert deserialized_section["list1"] == [b"item1", b"item2"]
