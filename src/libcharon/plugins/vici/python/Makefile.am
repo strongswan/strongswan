@@ -1,6 +1,7 @@
 EXTRA_DIST = LICENSE README.rst MANIFEST.in \
 	setup.py.in \
 	tox.ini \
+	tox.sh \
 	vici/test/__init__.py \
 	vici/test/test_protocol.py \
 	vici/__init__.py \
@@ -36,6 +37,12 @@ if PYTHON_EGGS_INSTALL
 install-exec-local: dist/vici-$(PYTHON_PACKAGE_VERSION)-py$(PYTHON_VERSION).egg
 	$(EASY_INSTALL) $(PYTHONEGGINSTALLDIR) \
 		dist/vici-$(PYTHON_PACKAGE_VERSION)-py$(PYTHON_VERSION).egg
+endif
+
+if USE_TOX
+  TESTS_ENVIRONMENT = export TOX=$(TOX);
+  AM_TESTS_FD_REDIRECT = 1>&2
+  TESTS = tox.sh
 endif
 
 if USE_PY_TEST
