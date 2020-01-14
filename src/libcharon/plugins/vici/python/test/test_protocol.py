@@ -1,7 +1,7 @@
 import pytest
 
-from ..protocol import Packet, Message, FiniteStream
-from ..exception import DeserializationException
+from vici.protocol import Packet, Message, FiniteStream
+from vici.exception import DeserializationException
 
 
 class TestPacket(object):

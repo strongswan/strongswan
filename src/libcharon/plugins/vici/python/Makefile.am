@@ -2,8 +2,8 @@ EXTRA_DIST = LICENSE README.rst MANIFEST.in \
 	setup.py.in \
 	tox.ini \
 	tox.sh \
-	vici/test/__init__.py \
-	vici/test/test_protocol.py \
+	test/__init__.py \
+	test/test_protocol.py \
 	vici/__init__.py \
 	vici/command_wrappers.py \
 	vici/compat.py \
