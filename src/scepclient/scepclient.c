@@ -547,7 +547,7 @@ int main(int argc, char **argv)
 		};
 
 		/* parse next option */
-		int c = getopt_long(argc, argv, "hv+:qi:o:fk:d:s:p:a:u:c:m:t:x:APRCMS", long_opts, NULL);
+		int c = getopt_long(argc, argv, "hv+:ql:i:o:fT:k:d:s:p:a:u:c:m:t:x:APRCMS", long_opts, NULL);
 
 		switch (c)
 		{
