@@ -4,7 +4,7 @@
 build_botan()
 {
 	# same revision used in the build recipe of the testing environment
-	BOTAN_REV=2.13.0
+	BOTAN_REV=0881f2c33ff7 # 2.13.0 + amalgamation patch
 	BOTAN_DIR=$TRAVIS_BUILD_DIR/../botan
 
 	if test -d "$BOTAN_DIR"; then
@@ -36,7 +36,7 @@ build_botan()
 
 build_wolfssl()
 {
-	WOLFSSL_REV=v4.3.0-stable
+	WOLFSSL_REV=87859f9e810b # v4.3.0-stable + IBM Z patch
 	WOLFSSL_DIR=$TRAVIS_BUILD_DIR/../wolfssl
 
 	if test -d "$WOLFSSL_DIR"; then
@@ -147,6 +147,9 @@ all|coverage|sonarcloud)
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
+	if test "$TRAVIS_CPU_ARCH" != "amd64"; then
+		CONFIG="$CONFIG --disable-aesni --disable-rdrand"
+	fi
 	if test "$TEST" != "coverage"; then
 		CONFIG="$CONFIG --disable-coverage"
 	else
@@ -155,7 +158,7 @@ all|coverage|sonarcloud)
 	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
-		  libpcsclite-dev libpam0g-dev binutils-dev libunwind8-dev libnm-dev
+		  libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libjson-c-dev iptables-dev python-pip libtspi-dev libsystemd-dev"
 	PYDEPS="tox"
 	if test "$1" = "deps"; then

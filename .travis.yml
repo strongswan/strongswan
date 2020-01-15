@@ -51,6 +51,12 @@ matrix:
     - env: TEST=all
       compiler: clang
     - env: TEST=all
+      arch: arm64
+    - env: TEST=all
+      arch: ppc64le
+    - env: TEST=all
+      arch: s390x
+    - env: TEST=all
       dist: xenial
     - env: TEST=all
       dist: xenial
