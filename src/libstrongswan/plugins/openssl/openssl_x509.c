@@ -1088,6 +1088,7 @@ static bool parse_certificate(private_openssl_x509_t *this)
 #else
 	X509_ALGOR *alg;
 #endif
+	key_type_t ed_type = KEY_ED448;
 
 	this->x509 = d2i_X509(NULL, &ptr, this->encoding.len);
 	if (!this->x509)
@@ -1127,6 +1128,17 @@ static bool parse_certificate(private_openssl_x509_t *this)
 			chunk = openssl_i2chunk(X509_PUBKEY, X509_get_X509_PUBKEY(this->x509));
 			this->pubkey = lib->creds->create(lib->creds,
 					CRED_PUBLIC_KEY, KEY_ECDSA, BUILD_BLOB_ASN1_DER,
+					chunk, BUILD_END);
+			free(chunk.ptr);
+			break;
+		case OID_ED25519:
+			ed_type = KEY_ED25519;
+			/* fall-through */
+		case OID_ED448:
+			/* for EdDSA, the parsers expect the full subjectPublicKeyInfo */
+			chunk = openssl_i2chunk(X509_PUBKEY, X509_get_X509_PUBKEY(this->x509));
+			this->pubkey = lib->creds->create(lib->creds,
+					CRED_PUBLIC_KEY, ed_type, BUILD_BLOB_ASN1_DER,
 					chunk, BUILD_END);
 			free(chunk.ptr);
 			break;
