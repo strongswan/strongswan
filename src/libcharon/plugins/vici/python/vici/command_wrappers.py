@@ -310,7 +310,7 @@ class CommandWrappers(object):
         """
         self.request("unload-pool", pool_name)
 
-    def get_pools(self, options):
+    def get_pools(self, options=None):
         """Retrieve loaded pools.
 
         :param options: filter by name and/or retrieve leases (optional)
