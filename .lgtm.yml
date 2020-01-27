@@ -1,0 +1,22 @@
+queries:
+  - exclude: cpp/fixme-comment
+  # this rule produces too many false positives due to our custom specifiers and
+  # the use of void pointers in swanctl
+  - exclude: cpp/wrong-type-format-argument
+
+extraction:
+  cpp:
+    configure:
+      command:
+        # follows the "all" build in test.sh (without custom-compiled stuff)
+        - ./autogen.sh
+        - ./configure --enable-all --disable-android-dns --disable-android-log
+            --disable-kernel-pfroute --disable-keychain
+            --disable-lock-profiler --disable-padlock --disable-fuzzing
+            --disable-osx-attr --disable-tkm --disable-uci
+            --disable-soup --disable-unwind-backtraces
+            --disable-svc --disable-dbghelp-backtraces --disable-socket-win
+            --disable-kernel-wfp --disable-kernel-iph --disable-winhttp
+            --disable-af-alg --disable-coverage
+            --disable-python-eggs-install
+            --disable-botan --disable-wolfssl --disable-tss-tss2
