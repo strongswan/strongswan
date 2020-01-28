@@ -114,7 +114,6 @@ class Session(CommandWrappers, object):
                             yield Message.deserialize(response.payload)
                         except GeneratorExit:
                             exited = True
-                            pass
                 else:
                     break
 
