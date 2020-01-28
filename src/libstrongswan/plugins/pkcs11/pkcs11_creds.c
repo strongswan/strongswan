@@ -308,10 +308,10 @@ certificate_t *pkcs11_creds_load(certificate_type_t type, va_list args)
 	while (enumerator->enumerate(enumerator, &p11, &current))
 	{
 		CK_OBJECT_CLASS class = CKO_CERTIFICATE;
-		CK_CERTIFICATE_TYPE type = CKC_X_509;
+		CK_CERTIFICATE_TYPE ck_type = CKC_X_509;
 		CK_ATTRIBUTE tmpl[] = {
 			{CKA_CLASS, &class, sizeof(class)},
-			{CKA_CERTIFICATE_TYPE, &type, sizeof(type)},
+			{CKA_CERTIFICATE_TYPE, &ck_type, sizeof(ck_type)},
 			{CKA_ID, keyid.ptr, keyid.len},
 		};
 		CK_ATTRIBUTE attr[] = {
