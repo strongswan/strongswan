@@ -63,7 +63,7 @@ static uint8_t g[] = {
 /**
  * Predefined random bits from the RAND Corporation book
  */
-static uint8_t a[] = {
+static uint8_t a_def[] = {
 	0x9d, 0xe9, 0xc9, 0xc8, 0xef, 0xd5, 0x78, 0x11,
 	0x48, 0x23, 0x14, 0x01, 0x90, 0x1f, 0x2d, 0x49,
 	0x3f, 0x4c, 0x63, 0x65
@@ -72,7 +72,7 @@ static uint8_t a[] = {
 /**
  * Predefined random bits from the RAND Corporation book
  */
-static uint8_t b[] = {
+static uint8_t b_def[] = {
 	0x75, 0xef, 0xd1, 0x5c, 0x4b, 0x8f, 0x8f, 0x51,
 	0x4e, 0xf3, 0xbc, 0xc3, 0x79, 0x4a, 0x76, 0x5e,
 	0x7e, 0xec, 0x45, 0xe0
@@ -192,8 +192,8 @@ static void step4(u_char x[HASH_SIZE_SHA1])
 	mpz_init(gm);
 
 	mpz_import(xm, HASH_SIZE_SHA1, 1, 1, 1, 0, x);
-	mpz_import(am, sizeof(a), 1, 1, 1, 0, a);
-	mpz_import(bm, sizeof(b), 1, 1, 1, 0, b);
+	mpz_import(am, sizeof(a_def), 1, 1, 1, 0, a_def);
+	mpz_import(bm, sizeof(b_def), 1, 1, 1, 0, b_def);
 	mpz_import(gm, sizeof(g), 1, 1, 1, 0, g);
 
 	mpz_mul_poly(xm, am, xm);
