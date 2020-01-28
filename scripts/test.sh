@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Build script for Travis CI
 
 build_botan()
@@ -280,6 +280,69 @@ apidoc)
 	DEPS="doxygen"
 	CONFIG="--disable-defaults"
 	TARGET=apidoc
+	;;
+lgtm)
+	DEPS="jq"
+
+	if test -z "$1"; then
+		# fall back to the parent of the latest commit (on new branches we might
+		# not have a range, also on duplicate branches)
+		base="${TRAVIS_COMMIT}^"
+		if test -n "$TRAVIS_COMMIT_RANGE"; then
+			base="${TRAVIS_COMMIT_RANGE%...*}"
+			# after rebases, the first commit ID in the range might not be valid
+			git rev-parse -q --verify $base
+			if [ $? != 0 ]; then
+				# this will always compare against master, while the range
+				# otherwise only contains "new" commits
+				base=$(git merge-base origin/master ${TRAVIS_COMMIT})
+			fi
+		fi
+		base=$(git rev-parse $base)
+		project_id=1506185006272
+
+		echo "Starting code review for $TRAVIS_COMMIT (base $base) on lgtm.com"
+		git diff --binary $base > lgtm.patch || exit $?
+		curl -s -X POST --data-binary @lgtm.patch \
+			"https://lgtm.com/api/v1.0/codereviews/${project_id}?base=${base}&external-id=${TRAVIS_BUILD_NUMBER}" \
+			-H 'Content-Type: application/octet-stream' \
+			-H 'Accept: application/json' \
+			-H "Authorization: Bearer ${LGTM_TOKEN}" > lgtm.res || exit $?
+		lgtm_check_url=$(jq -r '."task-result-url"' lgtm.res)
+		if [ "$lgtm_check_url" == "null" ]; then
+			cat lgtm.res | jq
+			exit 1
+		fi
+		lgtm_url=$(jq -r '."task-result"."results-url"' lgtm.res)
+		echo "Progress and full results: ${lgtm_url}"
+
+		echo -n "Waiting for completion: "
+		lgtm_status=pending
+		while [ "$lgtm_status" = "pending" ]; do
+			sleep 15
+			curl -s -X GET "${lgtm_check_url}" \
+				-H 'Accept: application/json' \
+				-H "Authorization: Bearer ${LGTM_TOKEN}" > lgtm.res
+			if [ $? != 0 ]; then
+				echo -n "-"
+				continue
+			fi
+			echo -n "."
+			lgtm_status=$(jq -r '.status' lgtm.res)
+		done
+		echo ""
+
+		if [ "$lgtm_status" != "success" ]; then
+			lgtm_message=$(jq -r '.["status-message"]' lgtm.res)
+			echo "Code review failed: ${lgtm_message}"
+			exit 1
+		fi
+		lgtm_new=$(jq -r '.languages[].new' lgtm.res | awk '{t+=$1} END {print t}')
+		lgtm_fixed=$(jq -r '.languages[].fixed' lgtm.res | awk '{t+=$1} END {print t}')
+		echo -n "Code review complete: "
+		echo -e "\e[1;31m${lgtm_new}\e[0m new alerts, \e[1;32m${lgtm_fixed}\e[0m fixed"
+		exit $lgtm_new
+	fi
 	;;
 *)
 	echo "$0: unknown test $TEST" >&2

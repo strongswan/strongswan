@@ -44,6 +44,10 @@ matrix:
       addons:
         sonarcloud:
           organization: "strongswan"
+    - env: TEST=lgtm
+      if: type = push AND env(LGTM_TOKEN) IS present
+      git:
+        depth: false
     - env: TEST=osx
       compiler: clang
       os: osx
