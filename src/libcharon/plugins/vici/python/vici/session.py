@@ -1,4 +1,3 @@
-import collections
 import socket
 
 from .exception import SessionException, CommandException, EventUnknownException
