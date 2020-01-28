@@ -52,7 +52,7 @@ struct private_eap_aka_3gpp2_functions_t {
 static chunk_t fmk = chunk_from_chars(0x41, 0x48, 0x41, 0x47);
 
 /**
- * Binary represnation of the polynom T^160 + T^5 + T^3 + T^2 + 1
+ * Binary representation of the polynomial T^160 + T^5 + T^3 + T^2 + 1
  */
 static uint8_t g[] = {
 	0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -79,7 +79,7 @@ static uint8_t b_def[] = {
 };
 
 /**
- * Multiplicate two mpz_t with bits interpreted as polynoms.
+ * Multiply two mpz_t with bits interpreted as polynomials.
  */
 static void mpz_mul_poly(mpz_t r, mpz_t a, mpz_t b)
 {
@@ -105,16 +105,16 @@ static void mpz_mul_poly(mpz_t r, mpz_t a, mpz_t b)
 }
 
 /**
- * Calculate the sum of a + b interpreted as polynoms.
+ * Calculate the sum of a + b interpreted as polynomials.
  */
 static void mpz_add_poly(mpz_t res, mpz_t a, mpz_t b)
 {
-	/* addition of polynominals is just the XOR */
+	/* addition of polynomials is just the XOR */
 	mpz_xor(res, a, b);
 }
 
 /**
- * Calculate the remainder of a/b interpreted as polynoms.
+ * Calculate the remainder of a/b interpreted as polynomials.
  */
 static void mpz_mod_poly(mpz_t r, mpz_t a, mpz_t b)
 {
@@ -134,7 +134,7 @@ static void mpz_mod_poly(mpz_t r, mpz_t a, mpz_t b)
 	/* don't do anything if b > a */
 	if (a_bit >= b_bit)
 	{
-		/* shift b left to align up most signaficant "1" to a:
+		/* shift b left to align up most significant "1" to a:
 		 * a = 10001010
 		 * b = 10100000
 		 */
