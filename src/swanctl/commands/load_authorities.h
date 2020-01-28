@@ -13,6 +13,9 @@
  * for more details.
  */
 
+#ifndef LOAD_AUTHORITIES_H_
+#define LOAD_AUTHORITIES_H_
+
 #include "command.h"
 
 /**
@@ -24,3 +27,5 @@
  */
 int load_authorities_cfg(vici_conn_t *conn, command_format_options_t format,
 						 settings_t *cfg);
+
+#endif /** LOAD_AUTHORITIES_H_ */
