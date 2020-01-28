@@ -13,7 +13,6 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 
-import sys
 from argparse import ArgumentParser
 
 def generate_output(plugins):
