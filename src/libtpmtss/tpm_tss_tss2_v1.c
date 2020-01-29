@@ -494,7 +494,8 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 		{
 			TPM2B_PUBLIC_KEY_RSA *rsa;
 			TPMT_RSA_SCHEME *scheme;
-			chunk_t aik_exponent, aik_modulus;
+			chunk_t aik_exponent = chunk_from_chars(0x01, 0x00, 0x01);
+			chunk_t aik_modulus;
 			uint32_t exponent;
 
 			scheme = &public.t.publicArea.parameters.rsaDetail.scheme;
@@ -504,11 +505,7 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			rsa = &public.t.publicArea.unique.rsa;
 			aik_modulus = chunk_create(rsa->t.buffer, rsa->t.size);
 			exponent = htonl(public.t.publicArea.parameters.rsaDetail.exponent);
-			if (!exponent)
-			{
-				aik_exponent = chunk_from_chars(0x01, 0x00, 0x01);
-			}
-			else
+			if (exponent)
 			{
 				aik_exponent = chunk_from_thing(exponent);
 			}
