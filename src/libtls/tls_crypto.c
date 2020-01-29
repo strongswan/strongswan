@@ -1409,6 +1409,8 @@ METHOD(tls_crypto_t, sign, bool,
 {
 	if (this->tls->get_version(this->tls) >= TLS_1_2)
 	{
+		const chunk_t hashsig_def = chunk_from_chars(
+					TLS_HASH_SHA1, TLS_SIG_RSA, TLS_HASH_SHA1, TLS_SIG_ECDSA);
 		signature_scheme_t scheme;
 		bio_reader_t *reader;
 		uint8_t hash, alg;
@@ -1417,8 +1419,7 @@ METHOD(tls_crypto_t, sign, bool,
 
 		if (!hashsig.len)
 		{	/* fallback if none given */
-			hashsig = chunk_from_chars(
-				TLS_HASH_SHA1, TLS_SIG_RSA, TLS_HASH_SHA1, TLS_SIG_ECDSA);
+			hashsig = hashsig_def;
 		}
 		reader = bio_reader_create(hashsig);
 		while (reader->remaining(reader) >= 2)
