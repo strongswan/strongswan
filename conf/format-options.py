@@ -68,8 +68,9 @@ import sys
 import re
 from textwrap import TextWrapper
 from argparse import ArgumentParser
-from functools import cmp_to_key
+from functools import cmp_to_key, total_ordering
 
+@total_ordering
 class ConfigOption:
 	"""Representing a configuration option or described section in strongswan.conf"""
 	def __init__(self, path, default = None, section = False, commented = False, include = False):
@@ -82,6 +83,9 @@ class ConfigOption:
 		self.include = include
 		self.desc = []
 		self.options = []
+
+	def __eq__(self, other):
+		return self.name == other.name
 
 	def __lt__(self, other):
 		return self.name < other.name
