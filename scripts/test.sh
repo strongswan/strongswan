@@ -74,9 +74,6 @@ build_tss2()
 
 	echo "$ build_tss2()"
 
-	# the default version of libgcrypt in Ubuntu 16.04 is too old
-	sudo apt-get update -qq && \
-	sudo apt-get install -qq libgcrypt20-dev &&
 	curl -L $TSS2_SRC | tar xz -C $TRAVIS_BUILD_DIR/.. &&
 	cd $TSS2_DIR &&
 	./configure --disable-doxygen-doc &&
@@ -158,7 +155,7 @@ all|coverage|sonarcloud)
 	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
-		  libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
+		  libpcsclite-dev libpam0g-dev binutils-dev libnm-dev libgcrypt20-dev
 		  libjson-c-dev iptables-dev python-pip libtspi-dev libsystemd-dev"
 	PYDEPS="tox"
 	if test "$1" = "deps"; then
