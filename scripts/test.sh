@@ -5,7 +5,7 @@ build_botan()
 {
 	# same revision used in the build recipe of the testing environment
 	BOTAN_REV=0881f2c33ff7 # 2.13.0 + amalgamation patch
-	BOTAN_DIR=$TRAVIS_BUILD_DIR/../botan
+	BOTAN_DIR=$DEPS_BUILD_DIR/botan
 
 	if test -d "$BOTAN_DIR"; then
 		return
@@ -22,7 +22,8 @@ build_botan()
 					  --disable-modules=locking_allocator"
 	fi
 	# disable some larger modules we don't need for the tests
-	BOTAN_CONFIG="$BOTAN_CONFIG --disable-modules=pkcs11,tls,x509,xmss"
+	BOTAN_CONFIG="$BOTAN_CONFIG --disable-modules=pkcs11,tls,x509,xmss
+				  --prefix=$DEPS_PREFIX"
 
 	git clone https://github.com/randombit/botan.git $BOTAN_DIR &&
 	cd $BOTAN_DIR &&
@@ -37,7 +38,7 @@ build_botan()
 build_wolfssl()
 {
 	WOLFSSL_REV=87859f9e810b # v4.3.0-stable + IBM Z patch
-	WOLFSSL_DIR=$TRAVIS_BUILD_DIR/../wolfssl
+	WOLFSSL_DIR=$DEPS_BUILD_DIR/wolfssl
 
 	if test -d "$WOLFSSL_DIR"; then
 		return
@@ -46,7 +47,8 @@ build_wolfssl()
 	echo "$ build_wolfssl()"
 
 	WOLFSSL_CFLAGS="-DWOLFSSL_PUBLIC_MP -DWOLFSSL_DES_ECB"
-	WOLFSSL_CONFIG="--enable-keygen --enable-rsapss --enable-aesccm
+	WOLFSSL_CONFIG="--prefix=$DEPS_PREFIX
+					--enable-keygen --enable-rsapss --enable-aesccm
 					--enable-aesctr --enable-des3 --enable-camellia
 					--enable-curve25519 --enable-ed25519"
 
@@ -65,7 +67,7 @@ build_tss2()
 {
 	TSS2_REV=2.3.1
 	TSS2_PKG=tpm2-tss-$TSS2_REV
-	TSS2_DIR=$TRAVIS_BUILD_DIR/../$TSS2_PKG
+	TSS2_DIR=$DEPS_BUILD_DIR/$TSS2_PKG
 	TSS2_SRC=https://github.com/tpm2-software/tpm2-tss/releases/download/$TSS2_REV/$TSS2_PKG.tar.gz
 
 	if test -d "$TSS2_DIR"; then
@@ -74,20 +76,18 @@ build_tss2()
 
 	echo "$ build_tss2()"
 
-	curl -L $TSS2_SRC | tar xz -C $TRAVIS_BUILD_DIR/.. &&
+	curl -L $TSS2_SRC | tar xz -C $DEPS_BUILD_DIR &&
 	cd $TSS2_DIR &&
-	./configure --disable-doxygen-doc &&
+	./configure --prefix=$DEPS_PREFIX --disable-doxygen-doc &&
 	make -j4 >/dev/null &&
 	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
 	cd -
 }
 
-if test -z $TRAVIS_BUILD_DIR; then
-	TRAVIS_BUILD_DIR=$PWD
-fi
-
-cd $TRAVIS_BUILD_DIR
+: ${TRAVIS_BUILD_DIR=$PWD}
+: ${DEPS_BUILD_DIR=$TRAVIS_BUILD_DIR/..}
+: ${DEPS_PREFIX=/usr/local}
 
 TARGET=check
 
