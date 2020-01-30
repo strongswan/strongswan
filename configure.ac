@@ -1143,11 +1143,9 @@ if test x$openssl = xtrue; then
 fi
 
 if test x$wolfssl = xtrue; then
-	wolfssl_lib=wolfssl
-	AC_CHECK_LIB([$wolfssl_lib],[wolfSSL_Init],[LIBS="$LIBS"],
-		[AC_MSG_ERROR([wolfSSL lib$wolfssl_lib not found])],[$DLLIB])
-	AC_SUBST(WOLFSSL_LIB, [-l$wolfssl_lib])
-	AC_CHECK_HEADER([wolfssl/options.h],,[AC_MSG_ERROR([wolfSSL header wolfssl/options.h not found!])])
+	PKG_CHECK_MODULES(wolfssl, [wolfssl])
+	AC_SUBST(wolfssl_CFLAGS)
+	AC_SUBST(wolfssl_LIBS)
 fi
 
 if test x$gcrypt = xtrue; then

@@ -2,7 +2,8 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan
 
 AM_CFLAGS = \
-	$(PLUGIN_CFLAGS)
+	$(PLUGIN_CFLAGS) \
+	$(wolfssl_CFLAGS)
 
 if MONOLITHIC
 noinst_LTLIBRARIES = libstrongswan-wolfssl.la
@@ -32,4 +33,4 @@ libstrongswan_wolfssl_la_SOURCES = \
 
 
 libstrongswan_wolfssl_la_LDFLAGS = -module -avoid-version
-libstrongswan_wolfssl_la_LIBADD  = $(WOLFSSL_LIB)
+libstrongswan_wolfssl_la_LIBADD  = $(wolfssl_LIBS)
