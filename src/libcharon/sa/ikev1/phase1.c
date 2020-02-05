@@ -88,7 +88,7 @@ struct private_phase1_t {
 };
 
 /**
- * Get the first authentcation config from peer config
+ * Get the first authentication config from peer config
  */
 static auth_cfg_t *get_auth_cfg(peer_cfg_t *peer_cfg, bool local)
 {

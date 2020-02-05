@@ -48,7 +48,7 @@ struct private_mutex_t {
 	pthread_mutex_t mutex;
 
 	/**
-	 * is this a recursiv emutex, implementing private_r_mutex_t?
+	 * is this a recursive mutex, implementing private_r_mutex_t?
 	 */
 	bool recursive;
 

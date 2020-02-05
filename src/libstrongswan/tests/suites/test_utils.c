@@ -353,7 +353,7 @@ START_TEST(test_strpfx)
 END_TEST
 
 /*******************************************************************************
- * mallac_align/free_align
+ * malloc_align/free_align
  */
 
 START_TEST(test_malloc_align)

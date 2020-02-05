@@ -149,7 +149,7 @@ struct private_child_sa_t {
 	uint32_t unique_id;
 
 	/**
-	 * Whether FWD policieis in the outbound direction should be installed
+	 * Whether FWD policies in the outbound direction should be installed
 	 */
 	bool policies_fwd_out;
 

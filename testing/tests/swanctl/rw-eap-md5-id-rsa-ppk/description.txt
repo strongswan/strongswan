@@ -1,7 +1,7 @@
 The roadwarriors <b>carol</b> and <b>dave</b> set up a connection to gateway <b>moon</b>.
 At the outset the gateway authenticates itself to the clients by sending
 an IKEv2 <b>RSA signature</b> accompanied by a certificate.
-The roadwarrios then use the <i>Extensible Authentication Protocol</i>
+The roadwarriors then use the <i>Extensible Authentication Protocol</i>
 in association with an  <i>MD5</i> challenge and response protocol
 (<b>EAP-MD5</b>) to authenticate against the gateway <b>moon</b> and includes
 a <b>Postquantum Preshared Key (PPK)</b> that's also mixed into the

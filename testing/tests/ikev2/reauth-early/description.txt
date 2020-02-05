@@ -1,5 +1,5 @@
 This scenario tests <b>repeated authentication</b> according to RFC 4478.
-The iniator <b>carol</b> sets a large <b>ikelifetime=20m</b> but the responder
+The initiator <b>carol</b> sets a large <b>ikelifetime=20m</b> but the responder
 <b>moon</b> defining a much shorter <b>ikelifetime=30s</b> proposes this
 value via an AUTH_LIFETIME notification to the initiator. Thus the 
 IKE reauthentication takes places after less than 30s. A ping from

@@ -73,7 +73,7 @@ enum cert_validation_t {
 	VALIDATION_STALE,
 	/** validation failed due to a processing error */
 	VALIDATION_FAILED,
-	/** certificate is on hold (i.e. temporary revokation) */
+	/** certificate is on hold (i.e. temporary revocation) */
 	VALIDATION_ON_HOLD,
 	/** certificate has been revoked */
 	VALIDATION_REVOKED,

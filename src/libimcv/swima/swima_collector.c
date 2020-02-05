@@ -589,7 +589,7 @@ swima_collector_t *swima_collector_create(void)
 	}
 	if (!this->db)
 	{
-		/* Set the event ID epoch and last event ID smanually */
+		/* Set the event ID epoch and last event ID manually */
 		eid_epoch = lib->settings->get_int(lib->settings,
 								"%s.plugins.imc-swima.eid_epoch",
 								 eid_epoch, lib->ns);

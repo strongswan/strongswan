@@ -116,7 +116,7 @@ struct hashtable_t {
 	 * entry, otherwise NULL is returned.
 	 *
 	 * Compared to get() the given match function is used to compare the keys
-	 * for equality.  The hash function does have to be deviced properly in
+	 * for equality.  The hash function does have to be devised properly in
 	 * order to make this work if the match function compares keys differently
 	 * than the equals function provided to the constructor.  This basically
 	 * allows to enumerate all entries with the same hash value.

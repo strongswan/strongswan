@@ -816,7 +816,7 @@ cp ${TEST_KEY} ${TEST_CERT} ${DIR}/hosts/alice/etc/raddb/certs
 # strongSwan Attribute Authority                                               #
 ################################################################################
 
-# Generate Attritbute Authority certificate
+# Generate Attribute Authority certificate
 TEST="${TEST_DIR}/ikev2/acert-cached"
 TEST_KEY="${TEST}/hosts/moon/${IPSEC_DIR}/private/aaKey.pem"
 TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/aacerts/aaCert.pem"
@@ -882,7 +882,7 @@ cp ${TEST_CERT} ${TEST}/hosts/moon/${IPSEC_DIR}/aacerts
 cp ${ACERT_CS}  ${TEST}/hosts/carol/${IPSEC_DIR}/acerts
 cp ${ACERT_DM}  ${TEST}/hosts/dave/${IPSEC_DIR}/acerts
 
-# Generate a short-lived Attritbute Authority certificate
+# Generate a short-lived Attribute Authority certificate
 CN="strongSwan Legacy AA"
 TEST_KEY="${TEST}/hosts/moon/${IPSEC_DIR}/private/aaKey-expired.pem"
 TEST_CERT="${TEST}/hosts/moon/${IPSEC_DIR}/aacerts/aaCert-expired.pem"

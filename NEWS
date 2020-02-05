@@ -188,7 +188,7 @@ strongswan-5.7.0
   for low-exponent keys (i.e. with e=3).  CVE-2018-16151 has been assigned to
   the problem of accepting random bytes after the OID of the hash function in
   such signatures, and CVE-2018-16152 has been assigned to the issue of not
-  verifying that the parameters in the ASN.1 algorithmIdentitifer structure is
+  verifying that the parameters in the ASN.1 algorithmIdentifier structure is
   empty.  Other flaws that don't lead to a vulnerability directly (e.g. not
   checking for at least 8 bytes of padding) have no separate CVE assigned.
 
@@ -694,7 +694,7 @@ strongswan-5.3.3
 
 - In the bliss plugin the c_indices derivation using a SHA-512 based random
   oracle has been fixed, generalized and standardized by employing the MGF1 mask
-  generation function with SHA-512. As a consequence BLISS signatures unsing the
+  generation function with SHA-512. As a consequence BLISS signatures using the
   improved oracle are not compatible with the earlier implementation.
 
 - Support for auto=route with right=%any for transport mode connections has
@@ -1269,7 +1269,7 @@ strongswan-5.0.1
 - The PA-TNC and PB-TNC protocols can now process huge data payloads
   >64 kB by distributing PA-TNC attributes over multiple PA-TNC messages
   and these messages over several PB-TNC batches. As long as no
-  consolidated recommandation from all IMVs can be obtained, the TNC
+  consolidated recommendation from all IMVs can be obtained, the TNC
   server requests more client data by sending an empty SDATA batch.
 
 - The rightgroups2 ipsec.conf option can require group membership during
@@ -1991,7 +1991,7 @@ strongswan-4.3.1
 
 - The nm plugin also accepts CA certificates for gateway authentication. If
   a CA certificate is configured, strongSwan uses the entered gateway address
-  as its idenitity, requiring the gateways certificate to contain the same as
+  as its identity, requiring the gateways certificate to contain the same as
   subjectAltName. This allows a gateway administrator to deploy the same
   certificates to Windows 7 and NetworkManager clients.
 
@@ -2038,7 +2038,7 @@ strongswan-4.3.0
   Initiators and responders can use several authentication rounds (e.g. RSA
   followed by EAP) to authenticate. The new ipsec.conf leftauth/rightauth and
   leftauth2/rightauth2 parameters define own authentication rounds or setup
-  constraints for the remote peer. See the ipsec.conf man page for more detials.
+  constraints for the remote peer. See the ipsec.conf man page for more details.
 
 - If glibc printf hooks (register_printf_function) are not available,
   strongSwan can use the vstr string library to run on non-glibc systems.
@@ -2784,7 +2784,7 @@ strongswan-4.0.4
 
 - Added support for preshared keys in IKEv2. PSK keys configured in
   ipsec.secrets are loaded. The authby parameter specifies the authentication
-  method to authentificate ourself, the other peer may use PSK or RSA.
+  method to authenticate ourself, the other peer may use PSK or RSA.
 
 - Changed retransmission policy to respect the keyingtries parameter.
 
@@ -2922,7 +2922,7 @@ strongswan-2.7.0
   left|rightfirewall keyword causes the automatic insertion
   and deletion of ACCEPT rules for tunneled traffic upon
   the successful setup and teardown of an IPsec SA, respectively.
-  left|rightfirwall can be used with KLIPS under any Linux 2.4
+  left|rightfirewall can be used with KLIPS under any Linux 2.4
   kernel or with NETKEY under a Linux kernel version >= 2.6.16
   in conjunction with iptables >= 1.3.5. For NETKEY under a Linux
   kernel version < 2.6.16 which does not support IPsec policy
@@ -3043,7 +3043,7 @@ strongswan-2.6.0
   to replace the various shell and awk starter scripts (setup, _plutoload,
   _plutostart, _realsetup, _startklips, _confread, and auto). Since
   ipsec.conf is now parsed only once, the starting of multiple tunnels is
-  accelerated tremedously.
+  accelerated tremendously.
 
 - Added support of %defaultroute to the ipsec starter. If the IP address
   changes, a HUP signal to the ipsec starter will automatically
@@ -3177,9 +3177,9 @@ strongswan-2.5.1
 
 - Under the native IPsec of the Linux 2.6 kernel, a %trap eroute
   installed either by setting auto=route in ipsec.conf or by
-  a connection put into hold, generates an XFRM_AQUIRE event
+  a connection put into hold, generates an XFRM_ACQUIRE event
   for each packet that wants to use the not-yet existing
-  tunnel. Up to now each XFRM_AQUIRE event led to an entry in
+  tunnel. Up to now each XFRM_ACQUIRE event led to an entry in
   the Quick Mode queue, causing multiple IPsec SA to be
   established in rapid succession. Starting with strongswan-2.5.1
   only a single IPsec SA is established per host-pair connection.

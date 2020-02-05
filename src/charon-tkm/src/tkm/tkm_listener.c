@@ -45,7 +45,7 @@ struct private_tkm_listener_t {
 /**
  * Return id of remote identity.
  *
- * TODO: Replace this with the lookup for the remote identitiy id.
+ * TODO: Replace this with the lookup for the remote identity id.
  *
  * Currently the reqid of the first child SA in peer config of IKE SA is
  * returned. Might choose wrong reqid if IKE SA has multiple child configs

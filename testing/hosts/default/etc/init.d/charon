@@ -10,7 +10,7 @@
 #                    running in the background
 ### END INIT INFO
 
-# Author: Andreas Steffen <andreas.steffen@strongswa.org>
+# Author: Andreas Steffen <andreas.steffen@strongswan.org>
 #
 # Do NOT "set -e"
 

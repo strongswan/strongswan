@@ -49,7 +49,7 @@
 bool openssl_hash_chunk(int hash_type, chunk_t data, chunk_t *hash);
 
 /**
- * Concatenates two bignums into a chunk, thereby enfocing the length of
+ * Concatenates two bignums into a chunk, thereby enforcing the length of
  * a single BIGNUM, if necessary, by pre-pending it with zeros.
  *
  * Note: this function allocates memory for the chunk

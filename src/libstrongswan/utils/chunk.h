@@ -357,7 +357,7 @@ bool chunk_increment(chunk_t chunk);
  *
  * @param chunk			chunk to check for printability
  * @param sane			pointer where sane version is allocated, or NULL
- * @param replace		character to use for replaceing unprintable characters
+ * @param replace		character to use for replacing unprintable characters
  * @return				TRUE if all characters in chunk are printable
  */
 bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace);

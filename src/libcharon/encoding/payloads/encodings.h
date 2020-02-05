@@ -179,7 +179,7 @@ enum encoding_type_t {
 	/**
 	 * Representing a spi field.
 	 *
-	 * When generating the content of the chunkt pointing to
+	 * When generating the content of the chunk pointing to
 	 * is written.
 	 *
 	 * When parsing SPI_SIZE bytes are read and written into the chunk pointing to.
@@ -248,7 +248,7 @@ enum encoding_type_t {
 	 * this field is available or missing and so parsed/generated
 	 * or not parsed/not generated.
 	 *
-	 * When generating the content of the chunkt pointing to
+	 * When generating the content of the chunk pointing to
 	 * is written.
 	 *
 	 * When parsing SPI_SIZE bytes are read and written into the chunk pointing to.
@@ -274,7 +274,7 @@ enum encoding_type_t {
 	 * Depending on the last field of type TS_TYPE
 	 * this field is either 4 or 16 byte long.
 	 *
-	 * When generating the content of the chunkt pointing to
+	 * When generating the content of the chunk pointing to
 	 * is written.
 	 *
 	 * When parsing 4 or 16 bytes are read and written into the chunk pointing to.
@@ -290,7 +290,7 @@ enum encoding_type_t {
 	 * Representing an IKE_SPI field in an IKEv2 Header.
 	 *
 	 * When generating the value of the uint64_t pointing to
-	 * is written (host and networ order is not changed).
+	 * is written (host and network order is not changed).
 	 *
 	 * When parsing 8 bytes are read and written into the uint64_t pointing to.
 	 */
@@ -302,7 +302,7 @@ enum encoding_type_t {
 	ENCRYPTED_DATA,
 
 	/**
-	 * Reprensenting a field containing a set of wrapped payloads.
+	 * Representing a field containing a set of wrapped payloads.
 	 *
 	 * This type is not used directly, but as an offset to the wrapped payloads.
 	 * The type of the wrapped payload is added to this encoding type.

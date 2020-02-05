@@ -76,7 +76,7 @@ static bool add_file_key_value(vici_req_t *req, char *key, char *value)
 }
 
 /**
- * Translate sletting key/values from a section enumerator into vici
+ * Translate setting key/values from a section enumerator into vici
  * key-values/lists. Destroys the enumerator.
  */
 static bool add_key_values(vici_req_t *req, enumerator_t *enumerator)

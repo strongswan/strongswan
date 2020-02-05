@@ -68,7 +68,7 @@ AC_ARG_ENABLE(
 )
 AC_ARG_WITH(
 	[libnm-glib],
-	AS_HELP_STRING([--without-libnm-glib], [build NetworkManager-strongswan without libnm-glib comatibility]),
+	AS_HELP_STRING([--without-libnm-glib], [build NetworkManager-strongswan without libnm-glib compatibility]),
 	[with_libnm_glib=no],
 	[with_libnm_glib=yes]
 )

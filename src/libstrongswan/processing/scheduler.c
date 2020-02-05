@@ -94,7 +94,7 @@ struct private_scheduler_t {
 };
 
 /**
- * Comparse two timevals, return >0 if a > b, <0 if a < b and =0 if equal
+ * Compares two timevals, return >0 if a > b, <0 if a < b and =0 if equal
  */
 static int timeval_cmp(timeval_t *a, timeval_t *b)
 {

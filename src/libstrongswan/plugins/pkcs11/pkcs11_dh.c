@@ -40,7 +40,7 @@ struct private_pkcs11_dh_t {
 	pkcs11_library_t *lib;
 
 	/**
-	 * Session handle for this objct
+	 * Session handle for this object
 	 */
 	CK_SESSION_HANDLE session;
 

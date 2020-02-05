@@ -48,7 +48,7 @@ struct private_thread_t {
 	thread_t public;
 
 	/**
-	 * Identificator of this thread (human-readable/thread ID).
+	 * Identifier of this thread (human-readable/thread ID).
 	 */
 	u_int id;
 

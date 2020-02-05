@@ -72,7 +72,7 @@ struct private_library_t {
 #define MAX_NAMESPACES 5
 
 /**
- * Additional namespaces registered using __atrribute__((constructor))
+ * Additional namespaces registered using __attribute__((constructor))
  */
 static char *namespaces[MAX_NAMESPACES];
 static int ns_count;

@@ -246,7 +246,7 @@ struct public_key_t {
 };
 
 /**
- * Generic public key equals() implementation, usable by implementors.
+ * Generic public key equals() implementation, usable by implementers.
  *
  * @param public		public key to check
  * @param other			key to compare
@@ -255,7 +255,7 @@ struct public_key_t {
 bool public_key_equals(public_key_t *public, public_key_t *other);
 
 /**
- * Generic public key has_fingerprint() implementation, usable by implementors.
+ * Generic public key has_fingerprint() implementation, usable by implementers.
  *
  * @param public		public key to check
  * @param fingerprint	fingerprint to check

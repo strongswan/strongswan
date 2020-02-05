@@ -73,7 +73,7 @@ struct pts_ima_event_list_t {
 /**
  * Create a PTS IMA runtime file measurement object
  *
- * @param file				Pathname pointing to the IMA runtme measurements
+ * @param file				Pathname pointing to the IMA runtime measurements
  */
 pts_ima_event_list_t* pts_ima_event_list_create(char *file);
 

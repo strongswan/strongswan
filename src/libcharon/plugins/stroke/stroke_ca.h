@@ -63,7 +63,7 @@ struct stroke_ca_t {
 	 * otherwise returns the same certificate.
 	 *
 	 * @param cert		certificate to check
-	 * @return			reference to stored CA certifiate, or original
+	 * @return			reference to stored CA certificate, or original
 	 */
 	certificate_t *(*get_cert_ref)(stroke_ca_t *this, certificate_t *cert);
 

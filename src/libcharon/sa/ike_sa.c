@@ -237,7 +237,7 @@ struct private_ike_sa_t {
 	uint32_t keepalive_interval;
 
 	/**
-	 * The schedueld keep alive job, if any
+	 * The scheduled keep alive job, if any
 	 */
 	send_keepalive_job_t *keepalive_job;
 

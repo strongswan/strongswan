@@ -68,7 +68,7 @@ typedef struct authority_t authority_t;
 struct authority_t {
 
 	/**
-	 * Name of the certification authoritiy
+	 * Name of the certification authority
 	 */
 	char *name;
 

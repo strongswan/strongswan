@@ -315,7 +315,7 @@ struct identification_t {
  * is interpreted as hex encoded binary data for that ID, otherwise the raw
  * string following the prefix is used as identity data, without conversion.
  * To specify a non-standard ID type, the numerical type may be prefixed
- * between curly backets, building a prefix. For instance the "{1}:" prefix
+ * between curly brackets, building a prefix. For instance the "{1}:" prefix
  * defines an ID_IPV4_ADDR type.
  *
  * This constructor never returns NULL. If it does not find a suitable

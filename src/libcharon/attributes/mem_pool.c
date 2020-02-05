@@ -85,7 +85,7 @@ typedef struct {
  * Lease entry.
  */
 typedef struct {
-	/* identitiy reference */
+	/* identity reference */
 	identification_t *id;
 	/* array of online leases, as unique_lease_t */
 	array_t *online;

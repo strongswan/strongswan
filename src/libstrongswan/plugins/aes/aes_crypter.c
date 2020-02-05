@@ -516,7 +516,7 @@ static const uint32_t im_tab[4][256] =
 
 #define nc   (AES_BLOCK_SIZE/4)
 
-// Initialise the key schedule from the user supplied key. The key
+// Initialize the key schedule from the user supplied key. The key
 // length is now specified in bytes - 16, 24 or 32 as appropriate.
 // This corresponds to bit lengths of 128, 192 and 256 bits, and
 // to Nk values of 4, 6 and 8 respectively.

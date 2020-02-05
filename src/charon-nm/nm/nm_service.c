@@ -561,7 +561,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 				return FALSE;
 			}
 		}
-		/* ... or certificate/private key authenitcation */
+		/* ... or certificate/private key authentication */
 		else if ((str = nm_setting_vpn_get_data_item(vpn, "usercert")))
 		{
 			public_key_t *public;

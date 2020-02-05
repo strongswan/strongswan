@@ -91,7 +91,7 @@ METHOD(task_t, process_i, status_t,
 }
 
 /**
- * Check if this delete happened after a rekey collsion
+ * Check if this delete happened after a rekey collision
  */
 static bool after_rekey_collision(private_ike_delete_t *this)
 {

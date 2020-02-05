@@ -62,7 +62,7 @@ static void include_files(parser_helper_t *ctx);
 
 %%
 
-^[\t ]*"version"[^\n]*$	/* eat legacy version delcaration */
+^[\t ]*"version"[^\n]*$	/* eat legacy version declaration */
 ^[\t ]+					return SPACES;
 [\t ]+					/* eat other whitespace */
 [\t ]*#[^\n]*			/* eat comments */

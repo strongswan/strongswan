@@ -1090,7 +1090,7 @@ END_TEST
 
 static void *cancel_run(void *data)
 {
-	/* default cancellability should be TRUE, so don't change it */
+	/* default cancelability should be TRUE, so don't change it */
 	while (TRUE)
 	{
 		sleep(10);
@@ -1152,7 +1152,7 @@ START_TEST(test_cancel_onoff)
 	}
 	for (i = 0; i < THREADS; i++)
 	{
-		/* wait until thread has cleared its cancellability */
+		/* wait until thread has cleared its cancelability */
 		while (cancellable[i])
 		{
 			sched_yield();
@@ -1172,7 +1172,7 @@ static void *cancel_point_run(void *data)
 	thread_cancelability(FALSE);
 	while (TRUE)
 	{
-		/* implicitly enables cancellability */
+		/* implicitly enables cancelability */
 		thread_cancellation_point();
 	}
 	return NULL;

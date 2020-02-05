@@ -432,7 +432,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		.prefixlen = policy->dst.mask,
 	);
 #ifndef __linux__
-	/* on Linux we cant't install a gateway */
+	/* on Linux we can't install a gateway */
 	route->gateway = charon->kernel->get_nexthop(charon->kernel, dst, -1, src,
 												 NULL);
 #endif
