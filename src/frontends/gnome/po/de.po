@@ -1,5 +1,5 @@
 # Translations for NetworkManager-strongswan.
-# Copyright (C) 2010-2019 Tobias Brunner
+# Copyright (C) 2010-2020 Tobias Brunner
 # Copyright (C) 2010 Martin Willi
 # This file is distributed under the same license as the
 # NetworkManager-strongswan package.
@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: NetworkManager-strongswan\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-12-19 17:08+0100\n"
+"POT-Creation-Date: 2020-02-07 16:59+0100\n"
 "PO-Revision-Date: 2019-12-18 17:10+0100\n"
 "Last-Translator: Tobias Brunner\n"
 "Language-Team: de <info@strongswan.org>\n"
@@ -25,25 +25,33 @@ msgstr "IPsec/IKEv2 (strongswan)"
 msgid "IPsec with the IKEv2 key exchange protocol."
 msgstr "IPsec mit dem IKEv2 Protokoll."
 
-#: ../properties/nm-strongswan.c:330
+#: ../properties/nm-strongswan.c:335
+msgid "EAP (Username/Password)"
+msgstr "EAP (Benutzername/Passwort)"
+
+#: ../properties/nm-strongswan.c:336
+msgid "Certificate"
+msgstr "Zertifikat"
+
+#: ../properties/nm-strongswan.c:337
+msgid "EAP-TLS"
+msgstr "EAP-TLS"
+
+#: ../properties/nm-strongswan.c:338
+msgid "Pre-shared key"
+msgstr "Pre-shared Key"
+
+#: ../properties/nm-strongswan.c:365
 msgid "Certificate/private key"
 msgstr "Zertifikat/Privater Schlüssel"
 
-#: ../properties/nm-strongswan.c:331
+#: ../properties/nm-strongswan.c:366
 msgid "Certificate/ssh-agent"
 msgstr "Zertifikat/ssh-agent"
 
-#: ../properties/nm-strongswan.c:332
+#: ../properties/nm-strongswan.c:367
 msgid "Smartcard"
 msgstr "Smartcard"
-
-#: ../properties/nm-strongswan.c:333
-msgid "EAP"
-msgstr "EAP"
-
-#: ../properties/nm-strongswan.c:334
-msgid "Pre-shared key"
-msgstr "Pre-shared Key"
 
 #: ../properties/nm-strongswan-dialog.ui.h:1
 msgid "<b>Server</b>"
@@ -116,14 +124,18 @@ msgid "Ce_rtificate:"
 msgstr "Ze_rtifikat:"
 
 #: ../properties/nm-strongswan-dialog.ui.h:15
+msgid "Certificate _file:"
+msgstr "Z_ertifikatsdatei:"
+
+#: ../properties/nm-strongswan-dialog.ui.h:16
 msgid "Client certificate to use for client authentication."
 msgstr "Zertifikat des Clients für dessen Authentisierung."
 
-#: ../properties/nm-strongswan-dialog.ui.h:16
+#: ../properties/nm-strongswan-dialog.ui.h:17
 msgid "Private _key:"
 msgstr "Privater _Schlüssel:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:17
+#: ../properties/nm-strongswan-dialog.ui.h:18
 msgid ""
 "Private key to use for client authentication. This key has to match the "
 "certificates public key and may be encrypted."
@@ -131,19 +143,19 @@ msgstr ""
 "Privater Schlüssel für die Authentisierung des Clients. Dieser Schlüssel "
 "muss zum konfigurierten Zertifikat passen und kann verschlüsselt sein."
 
-#: ../properties/nm-strongswan-dialog.ui.h:18
+#: ../properties/nm-strongswan-dialog.ui.h:19
 msgid "_Username:"
 msgstr "_Benutzername:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:19
+#: ../properties/nm-strongswan-dialog.ui.h:20
 msgid "The username (identity) to use for authentication against the server."
 msgstr "Benutzername/Identität für die Authentisierung gegenüber dem Server."
 
-#: ../properties/nm-strongswan-dialog.ui.h:20
+#: ../properties/nm-strongswan-dialog.ui.h:21
 msgid "_Password:"
 msgstr "_Passwort:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:21
+#: ../properties/nm-strongswan-dialog.ui.h:22
 msgid ""
 "The password to use for authentication against the server (min. 20 "
 "characters for PSKs)."
@@ -151,23 +163,23 @@ msgstr ""
 "Das Passwort für die Authentisierung gegenüber dem Server (min. 20 Zeichen "
 "für PSKs)."
 
-#: ../properties/nm-strongswan-dialog.ui.h:22
+#: ../properties/nm-strongswan-dialog.ui.h:23
 msgid "(Use icon to change password storage policy)"
 msgstr "(Icon verwenden, um Passwort-Richtlinie zu ändern)"
 
-#: ../properties/nm-strongswan-dialog.ui.h:23
+#: ../properties/nm-strongswan-dialog.ui.h:24
 msgid "_Show password"
 msgstr "Passwort _anzeigen"
 
-#: ../properties/nm-strongswan-dialog.ui.h:24
+#: ../properties/nm-strongswan-dialog.ui.h:25
 msgid "<b>Options</b>"
 msgstr "<b>Optionen</b>"
 
-#: ../properties/nm-strongswan-dialog.ui.h:25
+#: ../properties/nm-strongswan-dialog.ui.h:26
 msgid "Request an _inner IP address"
 msgstr "_Innere IP-Adresse beziehen"
 
-#: ../properties/nm-strongswan-dialog.ui.h:26
+#: ../properties/nm-strongswan-dialog.ui.h:27
 msgid ""
 "The server may provide addresses from a pool to use for communication in the "
 "VPN. Check to request such an address."
@@ -176,11 +188,11 @@ msgstr ""
 "Kommunikation im dahinterliegenden Netz verwenden kann. Aktivieren, um eine "
 "solche Adresse zu beziehen."
 
-#: ../properties/nm-strongswan-dialog.ui.h:27
+#: ../properties/nm-strongswan-dialog.ui.h:28
 msgid "En_force UDP encapsulation"
 msgstr "Erzwingen einer zusätzlichen Einbettung der Datenpakete in _UDP"
 
-#: ../properties/nm-strongswan-dialog.ui.h:28
+#: ../properties/nm-strongswan-dialog.ui.h:29
 msgid ""
 "Some firewalls block ESP traffic. Enforcing UDP capsulation even if no NAT "
 "situation is detected might help in such cases."
@@ -189,11 +201,11 @@ msgstr ""
 "erzwingen einer zustzlichen Einbettung in UDP, auch wenn kein NAT-Router "
 "detektiert wurde, kann in solchen Situationen hilfreich sein."
 
-#: ../properties/nm-strongswan-dialog.ui.h:29
+#: ../properties/nm-strongswan-dialog.ui.h:30
 msgid "Use IP c_ompression"
 msgstr "IP-Pakete k_omprimieren"
 
-#: ../properties/nm-strongswan-dialog.ui.h:30
+#: ../properties/nm-strongswan-dialog.ui.h:31
 msgid ""
 "IPComp compresses raw IP packets before they get encrypted. This saves some "
 "bandwidth, but uses more processing power."
@@ -201,27 +213,27 @@ msgstr ""
 "IPComp komprimiert IP-Pakete, bevor sie verschlüsselt werden. Diese Option "
 "kann Bandbreite sparen, benötigt jedoch zusätzliche Rechenleistung."
 
-#: ../properties/nm-strongswan-dialog.ui.h:31
+#: ../properties/nm-strongswan-dialog.ui.h:32
 msgid "<b>Cipher proposals</b>"
 msgstr "<b>Algorithmen</b>"
 
-#: ../properties/nm-strongswan-dialog.ui.h:32
+#: ../properties/nm-strongswan-dialog.ui.h:33
 msgid "_Enable custom proposals"
 msgstr "_Eigene Algorithmen verwenden"
 
-#: ../properties/nm-strongswan-dialog.ui.h:33
+#: ../properties/nm-strongswan-dialog.ui.h:34
 msgid "_IKE:"
 msgstr "_IKE:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:34
+#: ../properties/nm-strongswan-dialog.ui.h:35
 msgid "A list of proposals for IKE separated by \";\""
 msgstr "Eine Liste von Proposals für IKE getrennt mit \";\""
 
-#: ../properties/nm-strongswan-dialog.ui.h:35
+#: ../properties/nm-strongswan-dialog.ui.h:36
 msgid "_ESP:"
 msgstr "_ESP:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:36
+#: ../properties/nm-strongswan-dialog.ui.h:37
 msgid "A list of proposals for ESP separated by \";\""
 msgstr "Eine Liste von Proposals für ESP getrennt mit \";\""
 
@@ -234,37 +246,37 @@ msgstr ""
 #: ../auth-dialog/main.c:142
 #, c-format
 msgid ""
-"Private key decryption password required to establish VPN connection '%s'."
-msgstr ""
-"Der Private Schlüssel für die Erstellung des VPN-Tunnels '%s' ist durch ein "
-"Passwort geschützt."
-
-#: ../auth-dialog/main.c:147
-#, c-format
-msgid ""
 "Pre-shared key required to establish VPN connection '%s' (min. 20 "
 "characters)."
 msgstr ""
 "Für die Erstellung des VPN-Tunnels '%s' ist ein Pre-shared Key erforderlich "
 "(min. 20 Zeichen)."
 
-#: ../auth-dialog/main.c:153
+#: ../auth-dialog/main.c:150
 #, c-format
 msgid "Smartcard PIN required to establish VPN connection '%s'."
 msgstr ""
 "Die Smartcard für die Erstellung des VPN-Tunnels '%s' ist durch eine PIN "
 "geschützt."
 
-#: ../auth-dialog/main.c:164 ../auth-dialog/main.c:182
-#: ../auth-dialog/main.c:332
+#: ../auth-dialog/main.c:155
+#, c-format
+msgid ""
+"Private key decryption password required to establish VPN connection '%s'."
+msgstr ""
+"Der Private Schlüssel für die Erstellung des VPN-Tunnels '%s' ist durch ein "
+"Passwort geschützt."
+
+#: ../auth-dialog/main.c:167 ../auth-dialog/main.c:185
+#: ../auth-dialog/main.c:328
 msgid "Authenticate VPN"
 msgstr "VPN Authentisierung"
 
-#: ../auth-dialog/main.c:166
+#: ../auth-dialog/main.c:169
 msgid "Password:"
 msgstr "Passwort:"
 
-#: ../auth-dialog/main.c:350
+#: ../auth-dialog/main.c:346
 msgid ""
 "Configuration uses ssh-agent for authentication, but ssh-agent is not "
 "running!"
