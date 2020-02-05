@@ -84,7 +84,7 @@ struct enum_name_t {
 		NULL, { __VA_ARGS__ }}
 
 /**
- * Continue a enum name list startetd with ENUM_BEGIN.
+ * Continue a enum name list started with ENUM_BEGIN.
  *
  * @param name	name of the enum_name list
  * @param first	enum value of the first enum string

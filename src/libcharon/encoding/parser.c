@@ -391,7 +391,7 @@ METHOD(parser_t, parse_payload, status_t,
 
 	/* base pointer for output, avoids casting in every rule */
 	output = pld;
-	/* parse the payload with its own rulse */
+	/* parse the payload with its own rules */
 	rule_count = pld->get_encoding_rules(pld, &this->rules);
 	for (rule_number = 0; rule_number < rule_count; rule_number++)
 	{
@@ -618,7 +618,7 @@ METHOD(parser_t, parse_payload, status_t,
 				return PARSE_ERROR;
 			}
 		}
-		/* process next rulue */
+		/* process next rule */
 		rule++;
 	}
 

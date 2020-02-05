@@ -111,7 +111,7 @@ struct imv_workitem_t {
 	 * Set result string
 	 *
 	 * @param result		Result string
-	 * @return				Action Recommendatino
+	 * @return				Action Recommendation
 	 */
 	 TNC_IMV_Action_Recommendation (*get_result)(imv_workitem_t *this,
 												 char **result);

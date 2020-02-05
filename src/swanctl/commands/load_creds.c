@@ -97,7 +97,7 @@ static bool load_cert(load_ctx_t *ctx, char *dir, certificate_type_t type,
 }
 
 /**
- * Load certficiates from a directory
+ * Load certificates from a directory
  */
 static void load_certs(load_ctx_t *ctx, char *type_str, char *dir)
 {

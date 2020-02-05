@@ -606,7 +606,7 @@ static private_openssl_x509_t *create_empty()
 }
 
 /**
- * parse an extionsion containing GENERAL_NAMES into a list
+ * parse an extension containing GENERAL_NAMES into a list
  */
 static bool parse_generalNames_ext(linked_list_t *list,
 								   X509_EXTENSION *ext)
@@ -698,7 +698,7 @@ static bool parse_keyUsage_ext(private_openssl_x509_t *this,
 			}
 			if (flags & X509v3_KU_KEY_CERT_SIGN)
 			{
-				/* we use the caBasicContraint, MUST be set */
+				/* we use the caBasicConstraint, MUST be set */
 			}
 		}
 		ASN1_BIT_STRING_free(usage);

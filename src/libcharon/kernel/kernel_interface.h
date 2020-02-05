@@ -361,7 +361,7 @@ struct kernel_interface_t {
 	 *
 	 * @param virtual_ip	virtual ip address to remove
 	 * @param prefix		prefix length of the IP to uninstall, -1 for auto
-	 * @param wait			TRUE to wait untily IP is gone
+	 * @param wait			TRUE to wait until IP is gone
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_ip) (kernel_interface_t *this, host_t *virtual_ip,
@@ -433,7 +433,7 @@ struct kernel_interface_t {
 	/**
 	 * Check if interfaces are excluded by config.
 	 *
-	 * @return				TRUE if no interfaces are exclued by config
+	 * @return				TRUE if no interfaces are excluded by config
 	 */
 	bool (*all_interfaces_usable)(kernel_interface_t *this);
 

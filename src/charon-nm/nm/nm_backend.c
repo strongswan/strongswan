@@ -44,7 +44,7 @@ struct nm_backend_t {
 	nm_creds_t *creds;
 
 	/**
-	 * attribute handler regeisterd at the daemon
+	 * attribute handler registered at the daemon
 	 */
 	nm_handler_t *handler;
 };

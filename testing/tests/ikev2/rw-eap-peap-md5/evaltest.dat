@@ -11,7 +11,7 @@ moon:: cat /var/log/daemon.log::EAP_PEAP phase2 authentication of 'carol@strongs
 moon:: cat /var/log/daemon.log::authentication of 'carol@strongswan.org' with EAP successful::YES
 moon:: cat /var/log/daemon.log::EAP method EAP_PEAP failed for peer dave@strongswan.org::YES
 moon:: ipsec status 2> /dev/null::rw-eap\[1]: ESTABLISHED.*CN=moon.strongswan.org.*carol@strongswan.org::YES
-moon:: ipsec status 2> /dev/null::rw-eap\[2]: ESTABLISHED.*CN=moon.strongswan.org.*dave@stronswan.org::NO
+moon:: ipsec status 2> /dev/null::rw-eap\[2]: ESTABLISHED.*CN=moon.strongswan.org.*dave@strongswan.org::NO
 carol::ipsec status 2> /dev/null::home.*ESTABLISHED.*carol@strongswan.org.*CN=moon.strongswan.org::YES
 dave:: ipsec status 2> /dev/null::home.*ESTABLISHED.*dave@strongswan.org.*CN=moon.strongswan.org::NO
 moon:: ipsec status 2> /dev/null::rw-eap[{]1}.*INSTALLED, TUNNEL::YES

@@ -171,7 +171,7 @@ struct fast_request_t {
 	 * server-push functionality.
 	 *
 	 * @param format	printf like format string
-	 * @param ...		argmuent list to format string
+	 * @param ...		argument list to format string
 	 * @return			number of streamed bytes, < 0 if stream closed
 	 */
 	int (*streamf)(fast_request_t *this, char *format, ...);

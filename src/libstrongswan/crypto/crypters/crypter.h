@@ -113,7 +113,7 @@ struct crypter_t {
 	 *
 	 * The length of the iv must equal to get_iv_size(), while the length
 	 * of data must be a multiple of get_block_size().
-	 * If decrpyted is NULL, the encryption is done in-place (overwriting data).
+	 * If decrypted is NULL, the encryption is done in-place (overwriting data).
 	 *
 	 * @param data			data to decrypt
 	 * @param iv			initializing vector

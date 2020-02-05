@@ -129,7 +129,7 @@ static bool load_cert(settings_t *settings, bool trusted)
 }
 
 /**
- * Load certificates from the confiuguration file
+ * Load certificates from the configuration file
  */
 static bool load_certs(settings_t *settings, char *dir)
 {
@@ -163,7 +163,7 @@ static bool load_certs(settings_t *settings, char *dir)
 }
 
 /**
- * Load private keys from the confiuguration file
+ * Load private keys from the configuration file
  */
 static bool load_keys(settings_t *settings, char *dir)
 {

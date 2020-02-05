@@ -639,7 +639,7 @@ following entries are required in `/etc/ipsec.conf`:
 
     conn rw1
         right=%any
-        righsubnet=10.4.0.5/32
+        rightsubnet=10.4.0.5/32
 
     conn rw2
         right=%any

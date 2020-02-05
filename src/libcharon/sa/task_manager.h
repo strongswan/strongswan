@@ -233,7 +233,7 @@ struct task_manager_t {
 	 * If a message is processed outside of the manager, this call increments
 	 * the message ID counters of the task manager.
 	 *
-	 * @param inititate		TRUE to increment the initiating ID
+	 * @param initiate		TRUE to increment the initiating ID
 	 */
 	void (*incr_mid)(task_manager_t *this, bool initiate);
 
@@ -280,7 +280,7 @@ struct task_manager_t {
 	/**
 	 * Remove the task the given enumerator points to.
 	 *
-	 * @note This should be used with caution, in partciular, for tasks in the
+	 * @note This should be used with caution, in particular, for tasks in the
 	 * active and passive queues.
 	 *
 	 * @param enumerator	enumerator created with the method above

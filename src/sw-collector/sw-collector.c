@@ -436,7 +436,7 @@ static bool query_registry(sw_collector_rest_api_t *rest_api, bool installed)
 
 /**
  * List all endpoint software identifiers stored in local collector database
- * that are not registered yet in central collelector database
+ * that are not registered yet in central collector database
  */
 static int unregistered_identifiers(sw_collector_db_t *db,
 									sw_collector_db_query_t type)

@@ -406,7 +406,7 @@ CALLBACK(on_write, bool,
 }
 
 /**
- * Read in available header with data, non-blocking cumulating to buffer
+ * Read in available header with data, non-blocking accumulating to buffer
  */
 static bool do_read(private_vici_socket_t *this, entry_t *entry,
 					stream_t *stream, char *errmsg, size_t errlen)

@@ -248,7 +248,7 @@ enum ike_condition_t {
  * Timing information and statistics to query from an SA
  */
 enum statistic_t {
-	/** Timestamp of SA establishement */
+	/** Timestamp of SA establishment */
 	STAT_ESTABLISHED = 0,
 	/** Timestamp of scheduled rekeying */
 	STAT_REKEY,
@@ -766,7 +766,7 @@ struct ike_sa_t {
 	 * to the CHILD_SA.
 	 *
 	 * @param child_cfg		child config to create CHILD from
-	 * @param reqid			reqid to use for CHILD_SA, 0 assigne uniquely
+	 * @param reqid			reqid to use for CHILD_SA, 0 assign uniquely
 	 * @param tsi			source of triggering packet
 	 * @param tsr			destination of triggering packet.
 	 * @return
@@ -1036,7 +1036,7 @@ struct ike_sa_t {
 	status_t (*reauth) (ike_sa_t *this);
 
 	/**
-	 * Restablish the IKE_SA.
+	 * Reestablish the IKE_SA.
 	 *
 	 * Reestablish an IKE_SA after it has been closed.
 	 *
@@ -1140,7 +1140,7 @@ struct ike_sa_t {
 	/**
 	 * Remove the task the given enumerator points to.
 	 *
-	 * @note This should be used with caution, in partciular, for tasks in the
+	 * @note This should be used with caution, in particular, for tasks in the
 	 * active and passive queues.
 	 *
 	 * @param enumerator	enumerator created with the method above
@@ -1155,7 +1155,7 @@ struct ike_sa_t {
 	void (*flush_queue)(ike_sa_t *this, task_queue_t queue);
 
 	/**
-	 * Queue a task for initiaton to the task manager.
+	 * Queue a task for initiation to the task manager.
 	 *
 	 * @param task			task to queue
 	 */

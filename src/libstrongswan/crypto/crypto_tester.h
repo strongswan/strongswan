@@ -283,7 +283,7 @@ struct crypto_tester_t {
 	 *
 	 * @param group			group to test
 	 * @param create		constructor function for the DH backend
-	 * @param speed			speeed test result, NULL to omit
+	 * @param speed			speed test result, NULL to omit
 	 * @return				TRUE if test passed
 	 */
 	bool (*test_dh)(crypto_tester_t *this, diffie_hellman_group_t group,

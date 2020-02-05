@@ -324,7 +324,7 @@ vici_parse_t vici_parse(vici_res_t *res);
 char* vici_parse_name(vici_res_t *res);
 
 /**
- * Compare name tag / key of a previusly parsed element.
+ * Compare name tag / key of a previously parsed element.
  *
  * This call is valid only after vici_parse() returned VICI_PARSE_KEY_VALUE,
  * VICI_PARSE_BEGIN_SECTION or VICI_PARSE_BEGIN_LIST.

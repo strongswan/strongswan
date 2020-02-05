@@ -322,7 +322,7 @@ static void version(void)
 /**
  * @brief prints the usage of the program to the stderr output
  *
- * If message is set, program is exitet with 1 (error)
+ * If message is set, program is exited with 1 (error)
  * @param message message in case of an error
  */
 static void usage(const char *message)

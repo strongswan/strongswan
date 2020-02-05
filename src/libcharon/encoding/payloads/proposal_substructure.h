@@ -117,7 +117,7 @@ struct proposal_substructure_t {
 	bool (*get_cpi) (proposal_substructure_t *this, uint16_t *cpi);
 
 	/**
-	 * Get proposals contained in a propsal_substructure_t.
+	 * Get proposals contained in a proposal_substructure_t.
 	 *
 	 * @param list		list to add created proposals to
 	 */

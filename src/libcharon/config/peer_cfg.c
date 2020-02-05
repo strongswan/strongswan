@@ -156,12 +156,12 @@ struct private_peer_cfg_t {
 	linked_list_t *remote_auth;
 
 	/**
-	 * Optionl interface ID to use for inbound CHILD_SA
+	 * Optional interface ID to use for inbound CHILD_SA
 	 */
 	uint32_t if_id_in;
 
 	/**
-	 * Optionl interface ID to use for outbound CHILD_SA
+	 * Optional interface ID to use for outbound CHILD_SA
 	 */
 	uint32_t if_id_out;
 

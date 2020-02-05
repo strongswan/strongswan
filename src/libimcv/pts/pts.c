@@ -116,7 +116,7 @@ struct private_pts_t {
 	certificate_t *aik_cert;
 
 	/**
-	 * Primary key referening AIK in database
+	 * Primary key referencing AIK in database
 	 */
 	int aik_id;
 

@@ -63,7 +63,7 @@ struct private_keymat_v2_t {
 	chunk_t skd;
 
 	/**
-	 * Key to build outging authentication data (SKp)
+	 * Key to build outgoing authentication data (SKp)
 	 */
 	chunk_t skp_build;
 

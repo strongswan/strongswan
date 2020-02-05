@@ -27,7 +27,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkAlignment" id="gateway-alignement">
+          <object class="GtkAlignment" id="gateway-alignment">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="left_padding">12</property>
@@ -135,7 +135,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkAlignment" id="client-aligement">
+          <object class="GtkAlignment" id="client-alignment">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="left_padding">12</property>
@@ -351,7 +351,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkAlignment" id="options-alignement">
+          <object class="GtkAlignment" id="options-alignment">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="left_padding">12</property>

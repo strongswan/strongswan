@@ -461,7 +461,7 @@ struct bus_t {
 	 * CHILD_SA migration hook.
 	 *
 	 * @param new		ID of new SA when called for the old, NULL otherwise
-	 * @param uniue		unique ID of new SA when called for the old, 0 otherwise
+	 * @param unique	unique ID of new SA when called for the old, 0 otherwise
 	 */
 	void (*children_migrate)(bus_t *this, ike_sa_id_t *new, uint32_t unique);
 

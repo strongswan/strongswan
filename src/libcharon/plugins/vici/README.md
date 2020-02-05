@@ -1271,7 +1271,7 @@ subdirectory, and gets built and installed if strongSwan has been
 The _Vici::Session_ module provides a _new()_ constructor for a high level
 interface, the underlying _Vici::Packet_ and _Vici::Transport_ classes are
 usually not required to build Perl applications using VICI. The _Vici::Session_
-class provides methods for the supported VICI commands. The auxiliare
+class provides methods for the supported VICI commands. The auxiliary
  _Vici::Message_ class is used to encode configuration parameters sent to
 the daemon and decode data returned by the daemon.
 

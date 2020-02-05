@@ -327,7 +327,7 @@ static void generate_auth_cfg(private_load_tester_config_t *this, char *str,
 		if (this->initiator_id)
 		{
 			if (this->initiator_match && (!local && !num))
-			{	/* as responder, use the secified identity that matches
+			{	/* as responder, use the specified identity that matches
 				 * all used initiator identities, if given. */
 				snprintf(buf, sizeof(buf), this->initiator_match, rnd);
 				id = identification_create_from_string(buf);

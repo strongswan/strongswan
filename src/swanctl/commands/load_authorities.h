@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Andreas Stefffen
+ * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it

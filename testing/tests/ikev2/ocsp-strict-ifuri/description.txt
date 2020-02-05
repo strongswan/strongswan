@@ -11,7 +11,7 @@ contain any URIs. Therefore a strict CRL policy is <b>not</b> enforced and the
 connection setup succeeds, although the certificate status is unknown.
 </p>
 <p>
-The roadwarrrior <b>dave</b> has a certificate from the Sales CA which contains
+The roadwarrior <b>dave</b> has a certificate from the Sales CA which contains
 a single OCSP URI but which is not resolvable. Thus because of  the known URI
 a strict CRL policy is enforced and the unknown certificate status causes the
 connection setup to fail.

@@ -643,7 +643,7 @@ static void free_attrs(object_enumerator_t *this)
 }
 
 /**
- * CKA_EC_POINT is encodeed as ASN.1 octet string, we can't handle that and
+ * CKA_EC_POINT is encoded as ASN.1 octet string, we can't handle that and
  * some tokens actually return them even unwrapped.
  *
  * Because ASN1_OCTET_STRING is 0x04 and uncompressed EC_POINTs also begin with

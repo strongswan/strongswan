@@ -145,7 +145,7 @@ static bool equals_sa(sa_entry_t *a, sa_entry_t *b)
 typedef struct {
 	/** policy source addresses */
 	traffic_selector_t *src;
-	/** policy destinaiton addresses */
+	/** policy destination addresses */
 	traffic_selector_t *dst;
 	/** WFP allocated LUID for inbound filter ID */
 	uint64_t policy_in;

@@ -176,7 +176,7 @@ static bool add_proposals(private_stroke_config_t *this, char *string,
 		{
 			return TRUE;
 		}
-		/* add default porposal to the end if not strict */
+		/* add default proposal to the end if not strict */
 	}
 	if (ike_cfg)
 	{

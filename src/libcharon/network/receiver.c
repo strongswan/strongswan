@@ -302,7 +302,7 @@ static bool cookie_required(private_receiver_t *this,
 		/* We don't disable cookies unless we haven't seen IKE_SA_INITs
 		 * for COOKIE_CALMDOWN_DELAY seconds. This avoids jittering between
 		 * cookie on / cookie off states, which is problematic. Consider the
-		 * following: A legitimiate initiator sends a IKE_SA_INIT while we
+		 * following: A legitimate initiator sends a IKE_SA_INIT while we
 		 * are under a DoS attack. If we toggle our cookie behavior,
 		 * multiple retransmits of this IKE_SA_INIT might get answered with
 		 * and without cookies. The initiator goes on and retries with

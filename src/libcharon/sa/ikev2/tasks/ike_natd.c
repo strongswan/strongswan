@@ -313,7 +313,7 @@ METHOD(task_t, build_i, status_t,
 	/* source may be any, we have 3 possibilities to get our source address:
 	 * 1. It is defined in the config => use the one of the IKE_SA
 	 * 2. We do a routing lookup in the kernel interface
-	 * 3. Include all possbile addresses
+	 * 3. Include all possible addresses
 	 */
 	host = message->get_source(message);
 	if (!host->is_anyaddr(host) || force_encap(ike_cfg))

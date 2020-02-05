@@ -108,7 +108,7 @@ The following CHILD_SA specific configuration options are supported:
   lts:         Local side traffic selectors, comma separated CIDR subnets
   rts:         Remote side traffic selectors, comma separated CIDR subnets
   transport:   Propose IPsec transport mode instead of tunnel mode
-  tfc_padding: Inject Traffic Flow Confidentialty bytes to align packets to the
+  tfc_padding: Inject Traffic Flow Confidentiality bytes to align packets to the
                given length
   proposal:    CHILD_SA proposal list, same syntax as IKE_SA proposal list
 
@@ -271,7 +271,7 @@ Currently, the following hooks are defined with the following options:
     request:          yes to set in request, no in response
     id:               IKEv2 message identifier of message to mangle
     from:             proposal number to mangle
-    to:               new porposal number to set instead of from
+    to:               new proposal number to set instead of from
   set_reserved:       set arbitrary reserved bits/bytes in payloads
     request:          yes to set in request, no in response
     id:               IKEv2 message identifier of message to mangle

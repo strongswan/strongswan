@@ -59,7 +59,7 @@ struct private_x509_ocsp_response_t {
 	chunk_t encoding;
 
 	/**
-	 * data for signature verficiation
+	 * data for signature verification
 	 */
 	chunk_t tbsResponseData;
 

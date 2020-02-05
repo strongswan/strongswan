@@ -1174,7 +1174,7 @@ static void send_auth_failed_informational(private_ike_auth_t *this,
 }
 
 /**
- * Check if strict constraint fullfillment required to continue current auth
+ * Check if strict constraint fulfillment required to continue current auth
  */
 static bool require_strict(private_ike_auth_t *this, bool mutual_eap)
 {

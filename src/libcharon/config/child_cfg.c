@@ -114,12 +114,12 @@ struct private_child_cfg_t {
 	uint32_t reqid;
 
 	/**
-	 * Optionl interface ID to use for inbound CHILD_SA
+	 * Optional interface ID to use for inbound CHILD_SA
 	 */
 	uint32_t if_id_in;
 
 	/**
-	 * Optionl interface ID to use for outbound CHILD_SA
+	 * Optional interface ID to use for outbound CHILD_SA
 	 */
 	uint32_t if_id_out;
 

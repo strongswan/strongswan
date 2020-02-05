@@ -137,7 +137,7 @@ struct private_x509_cert_t {
 	linked_list_t *permitted_names;
 
 	/**
-	 * List of exluced name constraints
+	 * List of excluded name constraints
 	 */
 	linked_list_t *excluded_names;
 
