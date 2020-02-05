@@ -55,12 +55,12 @@ typedef enum task_queue_t task_queue_t;
 /**
  * Interval for mobike routability checks in ms.
  */
-#define ROUTEABILITY_CHECK_INTERVAL 2500
+#define ROUTABILITY_CHECK_INTERVAL 2500
 
 /**
  * Number of routability checks before giving up
  */
-#define ROUTEABILITY_CHECK_TRIES 10
+#define ROUTABILITY_CHECK_TRIES 10
 
 /**
  * Type of task queues the task manager uses to handle tasks
