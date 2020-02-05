@@ -406,15 +406,15 @@ METHOD(task_manager_t, retransmit, status_t,
 				}
 				else if (mobike->is_probing(mobike))
 				{
-					timeout = ROUTEABILITY_CHECK_INTERVAL;
+					timeout = ROUTABILITY_CHECK_INTERVAL;
 				}
 			}
 		}
 		else
-		{	/* for routeability checks, we use a more aggressive behavior */
-			if (this->initiating.retransmitted <= ROUTEABILITY_CHECK_TRIES)
+		{	/* for routability checks, we use a more aggressive behavior */
+			if (this->initiating.retransmitted <= ROUTABILITY_CHECK_TRIES)
 			{
-				timeout = ROUTEABILITY_CHECK_INTERVAL;
+				timeout = ROUTABILITY_CHECK_INTERVAL;
 			}
 			else
 			{
