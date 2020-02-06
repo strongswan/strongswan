@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 Tobias Brunner
+ * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -1004,18 +1004,25 @@ METHOD(proposal_substructure_t, get_proposals, void,
 	enumerator = this->transforms->create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &transform))
 	{
-		if (!proposal)
-		{
-			proposal = proposal_create(this->protocol_id, this->proposal_number);
-			proposal->set_spi(proposal, spi);
-			proposals->insert_last(proposals, proposal);
-		}
 		if (this->type == PLV2_PROPOSAL_SUBSTRUCTURE)
 		{
+			if (!proposal)
+			{
+				proposal = proposal_create(this->protocol_id,
+										   this->proposal_number);
+				proposal->set_spi(proposal, spi);
+				proposals->insert_last(proposals, proposal);
+			}
 			add_to_proposal_v2(proposal, transform);
 		}
 		else
 		{
+			/* create a new proposal for each transform in IKEv1 */
+			proposal = proposal_create_v1(
+							this->protocol_id, this->proposal_number,
+							transform->get_transform_type_or_number(transform));
+			proposal->set_spi(proposal, spi);
+			proposals->insert_last(proposals, proposal);
 			switch (this->protocol_id)
 			{
 				case PROTO_IKE:
@@ -1028,8 +1035,6 @@ METHOD(proposal_substructure_t, get_proposals, void,
 				default:
 					break;
 			}
-			/* create a new proposal for each transform in IKEv1 */
-			proposal = NULL;
 		}
 	}
 	enumerator->destroy(enumerator);
