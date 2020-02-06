@@ -181,20 +181,6 @@ proposal_substructure_t *proposal_substructure_create(payload_type_t type);
  */
 proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
 														proposal_t *proposal);
-/**
- * Creates an IKEv1 proposal_substructure_t from a proposal_t.
- *
- * @param proposal	proposal to build a substruct out of it
- * @param lifetime	lifetime in seconds
- * @param lifebytes	lifebytes, in bytes
- * @param auth		authentication method to use, or AUTH_NONE
- * @param mode		IPsec encapsulation mode, TRANSPORT or TUNNEL
- * @param udp		ENCAP_UDP to use UDP encapsulation
- * @return			proposal_substructure_t object PLV1_PROPOSAL_SUBSTRUCTURE
- */
-proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
-			proposal_t *proposal,  uint32_t lifetime, uint64_t lifebytes,
-			auth_method_t auth, ipsec_mode_t mode, encap_t udp);
 
 /**
  * Creates an IKEv1 proposal_substructure_t from a list of proposal_t.

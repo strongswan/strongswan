@@ -1552,11 +1552,11 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v2(
 }
 
 /**
- * See header.
+ * Creates an IKEv1 proposal_substructure_t from a proposal_t.
  */
-proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
+static proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
 			proposal_t *proposal, uint32_t lifetime, uint64_t lifebytes,
-			auth_method_t auth, ipsec_mode_t mode, encap_t udp)
+			auth_method_t auth, ipsec_mode_t mode, encap_t udp, uint8_t number)
 {
 	private_proposal_substructure_t *this;
 
@@ -1565,12 +1565,12 @@ proposal_substructure_t *proposal_substructure_create_from_proposal_v1(
 	switch (proposal->get_protocol(proposal))
 	{
 		case PROTO_IKE:
-			set_from_proposal_v1_ike(this, proposal, lifetime, auth, 1);
+			set_from_proposal_v1_ike(this, proposal, lifetime, auth, number);
 			break;
 		case PROTO_ESP:
 		case PROTO_AH:
 			set_from_proposal_v1(this, proposal, lifetime,
-								 lifebytes, mode, udp, 1);
+								 lifebytes, mode, udp, number);
 			break;
 		default:
 			break;
@@ -1590,17 +1590,18 @@ proposal_substructure_t *proposal_substructure_create_from_proposals_v1(
 	private_proposal_substructure_t *this = NULL;
 	enumerator_t *enumerator;
 	proposal_t *proposal;
-	int number = 0;
+	int number = 1;
 
 	enumerator = proposals->create_enumerator(proposals);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
 		if (!this)
-		{
+		{	/* as responder the transform number is set and we only have a
+			 * single proposal, start with 1 otherwise */
 			this = (private_proposal_substructure_t*)
 						proposal_substructure_create_from_proposal_v1(
-								proposal, lifetime, lifebytes, auth, mode, udp);
-			++number;
+							proposal, lifetime, lifebytes, auth, mode, udp,
+							proposal->get_transform_number(proposal) ?: number);
 		}
 		else
 		{
