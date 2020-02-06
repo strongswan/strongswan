@@ -1079,8 +1079,8 @@ static uint64_t get_attr(private_proposal_substructure_t *this,
  * Look up a lifetime duration of a given kind in all transforms
  */
 static uint64_t get_life_duration(private_proposal_substructure_t *this,
-				transform_attribute_type_t type_attr, ikev1_life_type_t type,
-				transform_attribute_type_t dur_attr)
+				uint8_t number, transform_attribute_type_t type_attr,
+				ikev1_life_type_t type, transform_attribute_type_t dur_attr)
 {
 	enumerator_t *transforms, *attributes;
 	transform_substructure_t *transform;
@@ -1089,6 +1089,10 @@ static uint64_t get_life_duration(private_proposal_substructure_t *this,
 	transforms = this->transforms->create_enumerator(this->transforms);
 	while (transforms->enumerate(transforms, &transform))
 	{
+		if (transform->get_transform_type_or_number(transform) != number)
+		{
+			continue;
+		}
 		attributes = transform->create_attribute_enumerator(transform);
 		while (attributes->enumerate(attributes, &attr))
 		{
@@ -1113,19 +1117,20 @@ static uint64_t get_life_duration(private_proposal_substructure_t *this,
 }
 
 METHOD(proposal_substructure_t, get_lifetime, uint32_t,
-	private_proposal_substructure_t *this)
+	private_proposal_substructure_t *this, uint8_t transform)
 {
 	uint32_t duration;
 
 	switch (this->protocol_id)
 	{
 		case PROTO_IKE:
-			return get_life_duration(this, TATTR_PH1_LIFE_TYPE,
-						IKEV1_LIFE_TYPE_SECONDS, TATTR_PH1_LIFE_DURATION);
+			return get_life_duration(this, transform, TATTR_PH1_LIFE_TYPE,
+							IKEV1_LIFE_TYPE_SECONDS, TATTR_PH1_LIFE_DURATION);
 		case PROTO_ESP:
 		case PROTO_AH:
-			duration = get_life_duration(this, TATTR_PH2_SA_LIFE_TYPE,
-						IKEV1_LIFE_TYPE_SECONDS, TATTR_PH2_SA_LIFE_DURATION);
+			duration = get_life_duration(this, transform,
+							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_SECONDS,
+							TATTR_PH2_SA_LIFE_DURATION);
 			if (!duration)
 			{	/* default to 8 hours, RFC 2407 */
 				return 28800;
@@ -1137,14 +1142,15 @@ METHOD(proposal_substructure_t, get_lifetime, uint32_t,
 }
 
 METHOD(proposal_substructure_t, get_lifebytes, uint64_t,
-	private_proposal_substructure_t *this)
+	private_proposal_substructure_t *this, uint8_t transform)
 {
 	switch (this->protocol_id)
 	{
 		case PROTO_ESP:
 		case PROTO_AH:
-			return 1000 * get_life_duration(this, TATTR_PH2_SA_LIFE_TYPE,
-					IKEV1_LIFE_TYPE_KILOBYTES, TATTR_PH2_SA_LIFE_DURATION);
+			return 1000 * get_life_duration(this, transform,
+							TATTR_PH2_SA_LIFE_TYPE, IKEV1_LIFE_TYPE_KILOBYTES,
+							TATTR_PH2_SA_LIFE_DURATION);
 		case PROTO_IKE:
 		default:
 			return 0;

@@ -744,8 +744,8 @@ static void apply_lifetimes(private_quick_mode_t *this, sa_payload_t *sa_payload
 	uint32_t lifetime;
 	uint64_t lifebytes;
 
-	lifetime = sa_payload->get_lifetime(sa_payload);
-	lifebytes = sa_payload->get_lifebytes(sa_payload);
+	lifetime = sa_payload->get_lifetime(sa_payload, this->proposal);
+	lifebytes = sa_payload->get_lifebytes(sa_payload, this->proposal);
 	if (this->lifetime != lifetime)
 	{
 		DBG1(DBG_IKE, "received %us lifetime, configured %us",

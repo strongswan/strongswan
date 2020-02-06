@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -131,18 +131,20 @@ struct proposal_substructure_t {
 	enumerator_t* (*create_substructure_enumerator)(proposal_substructure_t *this);
 
 	/**
-	 * Get the (shortest) lifetime of a proposal (IKEv1 only).
+	 * Get the lifetime of a transform (IKEv1 only).
 	 *
+	 * @param transform			transform number
 	 * @return					lifetime, in seconds
 	 */
-	uint32_t (*get_lifetime)(proposal_substructure_t *this);
+	uint32_t (*get_lifetime)(proposal_substructure_t *this, uint8_t transform);
 
 	/**
-	 * Get the (shortest) life duration of a proposal (IKEv1 only).
+	 * Get the life duration of a transform (IKEv1 only).
 	 *
+	 * @param transform			transform number
 	 * @return					life duration, in bytes
 	 */
-	uint64_t (*get_lifebytes)(proposal_substructure_t *this);
+	uint64_t (*get_lifebytes)(proposal_substructure_t *this, uint8_t transform);
 
 	/**
 	 * Get the first authentication method from the proposal (IKEv1 only).

@@ -406,7 +406,8 @@ METHOD(task_t, process_r, status_t,
 			this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 
 			this->method = sa_payload->get_auth_method(sa_payload);
-			this->lifetime = sa_payload->get_lifetime(sa_payload);
+			this->lifetime = sa_payload->get_lifetime(sa_payload,
+													  this->proposal);
 
 			this->state = MM_SA;
 			return NEED_MORE;
@@ -654,7 +655,7 @@ METHOD(task_t, process_i, status_t,
 			}
 			this->ike_sa->set_proposal(this->ike_sa, this->proposal);
 
-			lifetime = sa_payload->get_lifetime(sa_payload);
+			lifetime = sa_payload->get_lifetime(sa_payload, this->proposal);
 			if (lifetime != this->lifetime)
 			{
 				DBG1(DBG_IKE, "received lifetime %us does not match configured "
