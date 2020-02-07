@@ -1530,7 +1530,9 @@ static void set_data(private_proposal_substructure_t *this, proposal_t *proposal
 		default:
 			break;
 	}
-	this->proposal_number = proposal->get_number(proposal);
+	/* default to 1 if no number is set (mainly for IKEv1, for IKEv2 the numbers
+	 * are explicitly set when proposals are added to the SA payload) */
+	this->proposal_number = proposal->get_number(proposal) ?: 1;
 	this->protocol_id = proposal->get_protocol(proposal);
 	compute_length(this);
 }
