@@ -254,7 +254,6 @@ METHOD(listener_t, ike_state_change, bool,
 	if (this->ike_sa == ike_sa && state == IKE_DESTROYING)
 	{
 		signal_failure(this->plugin, NM_VPN_PLUGIN_FAILURE_LOGIN_FAILED);
-		return FALSE;
 	}
 	return TRUE;
 }
@@ -266,7 +265,6 @@ METHOD(listener_t, child_state_change, bool,
 	if (this->ike_sa == ike_sa && state == CHILD_DESTROYING)
 	{
 		signal_failure(this->plugin, NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
-		return FALSE;
 	}
 	return TRUE;
 }
@@ -324,7 +322,6 @@ METHOD(listener_t, child_updown, bool,
 				return TRUE;
 			}
 			signal_failure(this->plugin, NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
-			return FALSE;
 		}
 	}
 	return TRUE;
@@ -840,7 +837,6 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	priv->ike_sa = ike_sa;
 	priv->listener.ike_state_change = _ike_state_change;
 	priv->listener.child_state_change = _child_state_change;
-	charon->bus->add_listener(charon->bus, &priv->listener);
 
 	/**
 	 * Initiate
@@ -848,7 +844,6 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	child_cfg->get_ref(child_cfg);
 	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
 	{
-		charon->bus->remove_listener(charon->bus, &priv->listener);
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
@@ -983,6 +978,7 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 	priv->listener.ike_rekey = _ike_rekey;
 	priv->listener.ike_reestablish_pre = _ike_reestablish_pre;
 	priv->listener.ike_reestablish_post = _ike_reestablish_post;
+	charon->bus->add_listener(charon->bus, &priv->listener);
 	priv->name = NULL;
 }
 
