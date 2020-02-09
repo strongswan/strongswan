@@ -390,6 +390,9 @@ struct route_entry_t {
 
 	/** Destination net prefixlen */
 	uint8_t prefixlen;
+
+	/** Whether the route was installed for a passthrough policy */
+	bool pass;
 };
 
 /**
@@ -410,6 +413,7 @@ static void route_entry_destroy(route_entry_t *this)
 static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
 {
 	if (a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
+		a->pass == b->pass &&
 		a->src_ip->ip_equals(a->src_ip, b->src_ip) &&
 		chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen)
 	{
@@ -2614,6 +2618,7 @@ static void install_route(private_kernel_netlink_ipsec_t *this,
 
 	INIT(route,
 		.prefixlen = policy->sel.prefixlen_d,
+		.pass = mapping->type == POLICY_PASS,
 	);
 
 	if (charon->kernel->get_address_by_ts(charon->kernel, out->src_ts,
@@ -2664,7 +2669,8 @@ static void install_route(private_kernel_netlink_ipsec_t *this,
 			/* uninstall previously installed route */
 			if (charon->kernel->del_route(charon->kernel, old->dst_net,
 										  old->prefixlen, old->gateway,
-										  old->src_ip, old->if_name) != SUCCESS)
+										  old->src_ip, old->if_name,
+										  old->pass) != SUCCESS)
 			{
 				DBG1(DBG_KNL, "error uninstalling route installed with policy "
 					 "%R === %R %N", out->src_ts, out->dst_ts, policy_dir_names,
@@ -2678,7 +2684,8 @@ static void install_route(private_kernel_netlink_ipsec_t *this,
 			 route->gateway, route->src_ip, route->if_name);
 		switch (charon->kernel->add_route(charon->kernel, route->dst_net,
 										  route->prefixlen, route->gateway,
-										  route->src_ip, route->if_name))
+										  route->src_ip, route->if_name,
+										  route->pass))
 		{
 			default:
 				DBG1(DBG_KNL, "unable to install source route for %H",
@@ -3207,7 +3214,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		route_entry_t *route = current->route;
 		if (charon->kernel->del_route(charon->kernel, route->dst_net,
 									  route->prefixlen, route->gateway,
-									  route->src_ip, route->if_name) != SUCCESS)
+									  route->src_ip, route->if_name,
+									  route->pass) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with policy "
 				 "%R === %R %N%s", id->src_ts, id->dst_ts, policy_dir_names,
