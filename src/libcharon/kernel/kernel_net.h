@@ -160,17 +160,18 @@ struct kernel_net_t {
 	/**
 	 * Add a route.
 	 *
-	 * @param dst_net		destination net
-	 * @param prefixlen		destination net prefix length
-	 * @param gateway		gateway for this route
-	 * @param src_ip		source ip of the route
-	 * @param if_name		name of the interface the route is bound to
-	 * @return				SUCCESS if operation completed
-	 *						ALREADY_DONE if the route already exists
+	 * @param dst_net				destination net
+	 * @param prefixlen				destination net prefix length
+	 * @param gateway				gateway for this route
+	 * @param src_ip				source ip of the route
+	 * @param if_name				name of the interface the route is bound to
+	 * @param is_passthrough_policy	if the route to be added is for a passthrough policy or not
+	 * @return						SUCCESS if operation completed
+	 *								ALREADY_DONE if the route already exists
 	 */
 	status_t (*add_route) (kernel_net_t *this, chunk_t dst_net,
 						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
-						   char *if_name);
+						   char *if_name, bool is_passthrough_policy);
 
 	/**
 	 * Delete a route.

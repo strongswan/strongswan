@@ -604,14 +604,14 @@ METHOD(kernel_interface_t, del_ip, status_t,
 
 METHOD(kernel_interface_t, add_route, status_t,
 	private_kernel_interface_t *this, chunk_t dst_net,
-	uint8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name)
+	uint8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name, bool is_passthrough_policy)
 {
 	if (!this->net)
 	{
 		return NOT_SUPPORTED;
 	}
 	return this->net->add_route(this->net, dst_net, prefixlen, gateway,
-								src_ip, if_name);
+								src_ip, if_name, is_passthrough_policy);
 }
 
 METHOD(kernel_interface_t, del_route, status_t,

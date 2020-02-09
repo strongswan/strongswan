@@ -1447,7 +1447,7 @@ static bool install_route(private_kernel_wfp_ipsec_t *this,
 		if (charon->kernel->get_interface(charon->kernel, src, &name))
 		{
 			if (charon->kernel->add_route(charon->kernel,
-						dst->get_address(dst), mask, gtw, src, name) == SUCCESS)
+						dst->get_address(dst), mask, gtw, src, name, FALSE) == SUCCESS)
 			{
 				INIT(route,
 					.dst = dst->clone(dst),

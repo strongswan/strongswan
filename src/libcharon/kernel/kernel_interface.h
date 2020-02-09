@@ -380,7 +380,7 @@ struct kernel_interface_t {
 	 */
 	status_t (*add_route) (kernel_interface_t *this, chunk_t dst_net,
 						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
-						   char *if_name);
+						   char *if_name, bool is_passthrough_policy);
 
 	/**
 	 * Delete a route.

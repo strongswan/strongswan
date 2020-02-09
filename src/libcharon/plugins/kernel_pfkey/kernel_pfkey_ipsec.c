@@ -2332,7 +2332,7 @@ static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
 				charon->kernel->add_route(charon->kernel,
 									dst->get_address(dst),
 									dst->get_family(dst) == AF_INET ? 32 : 128,
-									gtw, src, if_name) == SUCCESS)
+									gtw, src, if_name, FALSE) == SUCCESS)
 			{
 				INIT(exclude,
 					.dst = dst->clone(dst),
@@ -2512,7 +2512,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 
 	switch (charon->kernel->add_route(charon->kernel, route->dst_net,
 									  route->prefixlen, route->gateway,
-									  route->src_ip, route->if_name))
+									  route->src_ip, route->if_name, FALSE))
 	{
 		case ALREADY_DONE:
 			/* route exists, do not uninstall */
