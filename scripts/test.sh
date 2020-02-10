@@ -157,7 +157,7 @@ all|coverage|sonarcloud)
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libpcsclite-dev libpam0g-dev binutils-dev libnm-dev libgcrypt20-dev
 		  libjson-c-dev iptables-dev python-pip libtspi-dev libsystemd-dev"
-	PYDEPS="tox"
+	PYDEPS="tox six>=1.12.0"
 	if test "$1" = "deps"; then
 		build_botan
 		build_wolfssl
