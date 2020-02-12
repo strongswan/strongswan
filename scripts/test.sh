@@ -270,6 +270,17 @@ fuzzing)
 			symbolize=1:handle_segv=1:fast_unwind_on_fatal=0:external_symbolizer_path=/usr/bin/llvm-symbolizer-3.5
 	fi
 	;;
+nm|nm-no-glib)
+	DEPS="gnome-common libsecret-1-dev libgtk-3-dev libnm-dev libnma-dev"
+	if test "$TEST" = "nm"; then
+		DEPS="$DEPS libnm-glib-vpn-dev libnm-gtk-dev"
+	else
+		CONFIG="$CONFIG --without-libnm-glib"
+	fi
+	cd src/frontends/gnome
+	# don't run ./configure with ./autogen.sh
+	export NOCONFIGURE=1
+	;;
 dist)
 	TARGET=distcheck
 	;;

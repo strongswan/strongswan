@@ -93,6 +93,8 @@ matrix:
     - env: TEST=printf-builtin LEAK_DETECTIVE=yes
     - env: TEST=printf-builtin LEAK_DETECTIVE=yes
       compiler: clang
+    - env: TEST=nm
+    - env: TEST=nm-no-glib
     # the crypto plugins are build-tested with clang via "all" above
     - env: TEST=botan
     - env: TEST=botan LEAK_DETECTIVE=yes
