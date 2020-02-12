@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Build script for Travis CI
 
 build_botan()
@@ -306,7 +306,7 @@ lgtm)
 			-H 'Accept: application/json' \
 			-H "Authorization: Bearer ${LGTM_TOKEN}" > lgtm.res || exit $?
 		lgtm_check_url=$(jq -r '."task-result-url"' lgtm.res)
-		if [ "$lgtm_check_url" == "null" ]; then
+		if [ "$lgtm_check_url" = "null" ]; then
 			cat lgtm.res | jq
 			exit 1
 		fi
@@ -337,7 +337,7 @@ lgtm)
 		lgtm_new=$(jq -r '.languages[].new' lgtm.res | awk '{t+=$1} END {print t}')
 		lgtm_fixed=$(jq -r '.languages[].fixed' lgtm.res | awk '{t+=$1} END {print t}')
 		echo -n "Code review complete: "
-		echo -e "\e[1;31m${lgtm_new}\e[0m new alerts, \e[1;32m${lgtm_fixed}\e[0m fixed"
+		printf "%b\n" "\e[1;31m${lgtm_new}\e[0m new alerts, \e[1;32m${lgtm_fixed}\e[0m fixed"
 		exit $lgtm_new
 	fi
 	;;
