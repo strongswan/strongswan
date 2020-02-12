@@ -387,7 +387,7 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 							  NMSettingVpn *vpn, peer_cfg_t *peer_cfg,
 							  GError **err)
 {
-	identification_t *user = NULL;
+	identification_t *id = NULL;
 	certificate_t *cert = NULL;
 	auth_cfg_t *auth;
 	const char *str, *method, *cert_source;
@@ -402,13 +402,13 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 		pin = (char*)nm_setting_vpn_get_secret(vpn, "password");
 		if (pin)
 		{
-			user = find_smartcard_key(priv, pin);
+			id = find_smartcard_key(priv, pin);
 		}
-		if (!user)
+		if (!id)
 		{
 			g_set_error(err, NM_VPN_PLUGIN_ERROR,
 						NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-						"no usable smartcard certificate found.");
+						"No usable smartcard certificate found.");
 			return FALSE;
 		}
 	}
@@ -472,8 +472,8 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 		}
 		if (private)
 		{
-			user = cert->get_subject(cert);
-			user = user->clone(user);
+			id = cert->get_subject(cert);
+			id = id->clone(id);
 			priv->creds->set_cert_and_key(priv->creds, cert, private);
 		}
 		else
@@ -481,6 +481,12 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 			DESTROY_IF(cert);
 			return FALSE;
 		}
+	}
+	else
+	{
+		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+					"Certificate is missing.");
+		return FALSE;
 	}
 
 	auth = auth_cfg_create();
@@ -499,7 +505,19 @@ static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
 	{
 		auth->add(auth, AUTH_RULE_SUBJECT_CERT, cert->get_ref(cert));
 	}
-	auth->add(auth, AUTH_RULE_IDENTITY, user);
+	str = nm_setting_vpn_get_data_item(vpn, "local-identity");
+	if (str)
+	{
+		identification_t *local_id;
+
+		local_id = identification_create_from_string((char*)str);
+		if (local_id)
+		{
+			id->destroy(id);
+			id = local_id;
+		}
+	}
+	auth->add(auth, AUTH_RULE_IDENTITY, id);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
 	return TRUE;
 }
@@ -511,7 +529,7 @@ static bool add_auth_cfg_pw(NMStrongswanPluginPrivate *priv,
 							NMSettingVpn *vpn, peer_cfg_t *peer_cfg,
 							GError **err)
 {
-	identification_t *user = NULL;
+	identification_t *user = NULL, *id = NULL;
 	auth_cfg_t *auth;
 	const char *str, *method;
 
@@ -521,23 +539,37 @@ static bool add_auth_cfg_pw(NMStrongswanPluginPrivate *priv,
 	if (str)
 	{
 		user = identification_create_from_string((char*)str);
-		str = nm_setting_vpn_get_secret(vpn, "password");
-		if (streq(method, "psk") && strlen(str) < 20)
+	}
+	else
+	{
+		user = identification_create_from_string("%any");
+	}
+	str = nm_setting_vpn_get_data_item(vpn, "local-identity");
+	if (str)
+	{
+		id = identification_create_from_string((char*)str);
+	}
+	else
+	{
+		id = user->clone(user);
+	}
+	str = nm_setting_vpn_get_secret(vpn, "password");
+	if (streq(method, "psk"))
+	{
+		if (strlen(str) < 20)
 		{
 			g_set_error(err, NM_VPN_PLUGIN_ERROR,
 						NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
 						"Pre-shared key is too short.");
 			user->destroy(user);
+			id->destroy(id);
 			return FALSE;
 		}
-		priv->creds->set_username_password(priv->creds, user, (char*)str);
+		priv->creds->set_username_password(priv->creds, id, (char*)str);
 	}
 	else
 	{
-		g_set_error(err, NM_VPN_PLUGIN_ERROR,
-					NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-					"Username is missing.");
-		return FALSE;
+		priv->creds->set_username_password(priv->creds, user, (char*)str);
 	}
 
 	auth = auth_cfg_create();
@@ -546,7 +578,8 @@ static bool add_auth_cfg_pw(NMStrongswanPluginPrivate *priv,
 	/* in case EAP-PEAP or EAP-TTLS is used we currently accept any identity */
 	auth->add(auth, AUTH_RULE_AAA_IDENTITY,
 			  identification_create_from_string("%any"));
-	auth->add(auth, AUTH_RULE_IDENTITY, user);
+	auth->add(auth, AUTH_RULE_EAP_IDENTITY, user);
+	auth->add(auth, AUTH_RULE_IDENTITY, id);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
 	return TRUE;
 }
