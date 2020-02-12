@@ -129,9 +129,10 @@ METHOD(enumerator_t, enumerate_dir_enum, bool,
 		{
 			*absolute = this->full;
 		}
-		if (st)
+		if (st && stat(this->full, st))
 		{
-			if (stat(this->full, st))
+			/* try lstat() e.g. if a symlink is not valid anymore */
+			if ((errno != ENOENT && errno != ENOTDIR) || lstat(this->full, st))
 			{
 				DBG1(DBG_LIB, "stat() on '%s' failed: %s", this->full,
 					 strerror(errno));
