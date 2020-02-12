@@ -133,13 +133,21 @@ check_validity (StrongswanPluginUiWidget *self, GError **error)
 		case 3:
 		{
 			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
-			str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
-			if (str && strlen (str) < 20) {
-				g_set_error (error,
-							 STRONGSWAN_PLUGIN_UI_ERROR,
-							 STRONGSWAN_PLUGIN_UI_ERROR_INVALID_PROPERTY,
-							 "password is too short");
-				return FALSE;
+			switch (nma_utils_menu_to_secret_flags(widget))
+			{
+				case NM_SETTING_SECRET_FLAG_NONE:
+				case NM_SETTING_SECRET_FLAG_AGENT_OWNED:
+					str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+					if (str && strlen (str) < 20) {
+						g_set_error (error,
+									 STRONGSWAN_PLUGIN_UI_ERROR,
+									 STRONGSWAN_PLUGIN_UI_ERROR_INVALID_PROPERTY,
+									 "password is too short");
+						return FALSE;
+					}
+					break;
+				default:
+					break;
 			}
 		}
 	}
