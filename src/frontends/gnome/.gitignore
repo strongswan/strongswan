@@ -10,3 +10,4 @@ stamp-h1
 config.guess.cdbs-orig
 config.sub.cdbs-orig
 NetworkManager-strongswan.appdata.xml
+NetworkManager-strongswan.pot
