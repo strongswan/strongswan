@@ -78,6 +78,15 @@ ARG_WITH_SET([systemdsystemunitdir], [$systemdsystemunitdir_default], [directory
 AC_SUBST(systemdsystemunitdir)
 
 AC_ARG_WITH(
+	[dbuspolicydir],
+	AS_HELP_STRING([--with-dbuspolicydir=arg],[directory for D-Bus policies (default: ${dbusdatadir|datarootdir}/dbus-1/system.d)]),
+	[dbuspolicydir="$withval"],
+	[PKG_CHECK_VAR([dbusdatadir], [dbus-1], [datadir], , [dbusdatadir="${datarootdir}"])
+	 dbuspolicydir="${dbusdatadir}/dbus-1/system.d"]
+)
+AC_SUBST(dbuspolicydir)
+
+AC_ARG_WITH(
 	[user],
 	AS_HELP_STRING([--with-user=user],[change user of the daemons to "user" after startup (default is "root").]),
 	[AC_DEFINE_UNQUOTED([IPSEC_USER], "$withval", [username to run daemon with])
@@ -1192,6 +1201,13 @@ if test x$nm = xtrue; then
 	PKG_CHECK_MODULES(nm, [gthread-2.0 libnm])
 	AC_SUBST(nm_CFLAGS)
 	AC_SUBST(nm_LIBS)
+
+	AC_MSG_CHECKING([for D-Bus policy directory])
+	if test -n "$dbuspolicydir" -a "x$dbuspolicydir" != xno; then
+		AC_MSG_RESULT([$dbuspolicydir])
+	else
+		AC_MSG_ERROR([not found (try --with-dbuspolicydir)])
+	fi
 fi
 
 if test x$xauth_pam = xtrue; then
