@@ -62,7 +62,7 @@ Suite *vectors_suite_create()
 
 	tc = tcase_create("transforms");
 	tcase_add_loop_test(tc, test_vectors, 0, countof(tfs));
-	tcase_set_timeout(tc, 20);
+	tcase_set_timeout(tc, 30);
 	suite_add_tcase(s, tc);
 
 	return s;
