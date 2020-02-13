@@ -1200,7 +1200,7 @@ if test x$xauth_pam = xtrue; then
 fi
 
 if test x$connmark = xtrue -o x$forecast = xtrue; then
-	PKG_CHECK_MODULES(libiptc, [libiptc])
+	PKG_CHECK_MODULES(libiptc, [libip4tc])
 	AC_SUBST(libiptc_CFLAGS)
 	AC_SUBST(libiptc_LIBS)
 fi
