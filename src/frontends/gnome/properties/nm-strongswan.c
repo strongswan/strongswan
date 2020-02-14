@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2015 Lubomir Rintel
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2020 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2015 Lubomir Rintel
  * Copyright (C) 2005 David Zeuthen
  * Copyright (C) 2005-2008 Dan Williams
  *
@@ -130,7 +130,7 @@ check_validity (StrongswanPluginUiWidget *self, GError **error)
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo"));
 	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
 	{
-		case 4:
+		case 3:
 		{
 			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
 			str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
@@ -146,57 +146,61 @@ check_validity (StrongswanPluginUiWidget *self, GError **error)
 	return TRUE;
 }
 
-static void update_sensitive (GtkWidget *widget, StrongswanPluginUiWidgetPrivate *priv)
+static void update_user_pass_fields (StrongswanPluginUiWidgetPrivate *priv, gboolean enabled)
 {
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")), enabled);
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")), enabled);
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")), enabled);
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")), enabled);
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")), enabled);
+}
+
+static void update_cert_fields (StrongswanPluginUiWidgetPrivate *priv, gboolean enabled)
+{
+	GtkWidget *widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "cert-combo"));
+	gboolean cert = FALSE, key = FALSE;
+
 	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
 	{
 		default:
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 			/* FALL */
 		case 0:
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")), TRUE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")), TRUE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")), TRUE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")), TRUE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")), FALSE);
+			cert = key = TRUE;
 			break;
 		case 1:
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")), TRUE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")), TRUE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")), FALSE);
+			cert = TRUE;
 			break;
 		case 2:
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")), FALSE);
 			break;
+	}
+
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "cert-label")), enabled);
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "cert-combo")), enabled);
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")), enabled && cert);
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")), enabled && cert);
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")), enabled && key);
+	gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")), enabled && key);
+}
+
+static void update_sensitive (StrongswanPluginUiWidgetPrivate *priv)
+{
+	GtkWidget *widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo"));
+
+	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
+	{
+		default:
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
+			/* FALL */
+		case 0:
 		case 3:
-		case 4:
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-label")), TRUE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry")), TRUE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show")), TRUE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-label")), TRUE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry")), TRUE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-label")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-label")), FALSE);
-			gtk_widget_set_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button")), FALSE);
+			update_user_pass_fields (priv, TRUE);
+			update_cert_fields (priv, FALSE);
+			break;
+		case 1:
+		case 2:
+			update_user_pass_fields (priv, FALSE);
+			update_cert_fields (priv, TRUE);
 			break;
 	}
 
@@ -208,9 +212,10 @@ settings_changed_cb (GtkWidget *widget, gpointer user_data)
 	StrongswanPluginUiWidget *self = STRONGSWAN_PLUGIN_UI_WIDGET (user_data);
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
 
-	if (widget == GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo")))
+	if (widget == GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo")) ||
+		widget == GTK_WIDGET (gtk_builder_get_object (priv->builder, "cert-combo")))
 	{
-		update_sensitive (GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo")), priv);
+		update_sensitive (priv);
 	}
 	g_signal_emit_by_name (STRONGSWAN_PLUGIN_UI_WIDGET (user_data), "changed");
 }
@@ -284,7 +289,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
 	NMSettingVpn *settings;
 	GtkWidget *widget;
-	const char *value;
+	const char *value, *method;
 
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection, NM_TYPE_SETTING_VPN));
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "address-entry"));
@@ -327,14 +332,47 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	init_password_icon (self, settings, "password", "passwd-entry");
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("EAP (Username/Password)"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Certificate"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("EAP-TLS"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Pre-shared key"));
+	method = value = nm_setting_vpn_get_data_item (settings, "method");
+	if (value) {
+		if (g_strcmp0 (value, "eap") == 0) {
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
+		}
+		if (g_strcmp0 (value, "cert") == 0 ||
+			g_strcmp0 (value, "key") == 0 ||
+			g_strcmp0 (value, "agent") == 0 ||
+			g_strcmp0 (value, "smartcard") == 0)
+		{
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 1);
+		}
+		if (g_strcmp0 (value, "eap-tls") == 0) {
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 2);
+		}
+		if (g_strcmp0 (value, "psk") == 0) {
+			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 3);
+		}
+	}
+	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == -1)
+	{
+		gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
+	}
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
+
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "cert-combo"));
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Certificate/private key"));
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Certificate/ssh-agent"));
 	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Smartcard"));
-	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("EAP"));
-	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (widget), _("Pre-shared key"));
-	value = nm_setting_vpn_get_data_item (settings, "method");
+	value = nm_setting_vpn_get_data_item (settings, "cert-source");
+	if (!value) {
+		value = method;
+	}
 	if (value) {
-		if (g_strcmp0 (value, "key") == 0) {
+		if (g_strcmp0 (value, "file") == 0 ||
+			g_strcmp0 (value, "key") == 0)
+		{
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 		}
 		if (g_strcmp0 (value, "agent") == 0) {
@@ -343,19 +381,13 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		if (g_strcmp0 (value, "smartcard") == 0) {
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 2);
 		}
-		if (g_strcmp0 (value, "eap") == 0) {
-			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 3);
-		}
-		if (g_strcmp0 (value, "psk") == 0) {
-			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 4);
-		}
 	}
 	if (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)) == -1)
 	{
 		gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 	}
-	update_sensitive (widget, priv);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
+	update_sensitive (priv);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button"));
 	value = nm_setting_vpn_get_data_item (settings, "usercert");
@@ -464,6 +496,70 @@ save_password_and_flags (NMSettingVpn *settings, GtkBuilder *builder,
 	nm_setting_set_secret_flags (NM_SETTING (settings), secret_key, flags, NULL);
 }
 
+
+static void
+save_file_chooser (NMSettingVpn *settings, GtkBuilder *builder,
+				   const char *name, const char *key)
+{
+	GtkWidget *chooser;
+	char *str;
+
+	chooser = GTK_WIDGET (gtk_builder_get_object (builder, name));
+	str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (chooser));
+	if (str) {
+		nm_setting_vpn_add_data_item (settings, key, str);
+	}
+}
+
+static void
+save_entry (NMSettingVpn *settings, GtkBuilder *builder,
+			const char *name, const char *key)
+{
+	GtkWidget *entry;
+	const char *str;
+
+	entry = GTK_WIDGET (gtk_builder_get_object (builder, name));
+	str = (char *) gtk_entry_get_text (GTK_ENTRY (entry));
+	if (str && strlen (str)) {
+		nm_setting_vpn_add_data_item (settings, key, str);
+	}
+}
+
+static void
+save_cert (NMSettingVpn *settings, GtkBuilder *builder)
+{
+	GtkWidget *widget;
+	gboolean cert = FALSE, key = FALSE;
+	char *str;
+
+	widget = GTK_WIDGET (gtk_builder_get_object (builder, "cert-combo"));
+	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
+	{
+		default:
+		case 0:
+			cert = key = TRUE;
+			str = "file";
+			break;
+		case 1:
+			cert = TRUE;
+			str = "agent";
+			break;
+		case 2:
+			nm_setting_set_secret_flags (NM_SETTING (settings), "password",
+										 NM_SETTING_SECRET_FLAG_NOT_SAVED, NULL);
+			str = "smartcard";
+			break;
+	}
+	nm_setting_vpn_add_data_item (settings, "cert-source", str);
+
+	if (cert) {
+		save_file_chooser (settings, builder, "usercert-button", "usercert");
+	}
+	if (key) {
+		save_file_chooser (settings, builder, "userkey-button", "userkey");
+	}
+}
+
 static gboolean
 update_connection (NMVpnEditor *iface,
 				   NMConnection *connection,
@@ -483,75 +579,30 @@ update_connection (NMVpnEditor *iface,
 	g_object_set (settings, NM_SETTING_VPN_SERVICE_TYPE,
 				  NM_DBUS_SERVICE_STRONGSWAN, NULL);
 
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "address-entry"));
-	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
-	if (str && strlen (str)) {
-		nm_setting_vpn_add_data_item (settings, "address", str);
-	}
-
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "certificate-button"));
-	str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
-	if (str) {
-		nm_setting_vpn_add_data_item (settings, "certificate", str);
-	}
-
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "remote-identity-entry"));
-	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
-	if (str && strlen (str)) {
-		nm_setting_vpn_add_data_item (settings, "remote-identity", str);
-	}
-
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "server-port-entry"));
-	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
-	if (str && strlen (str)) {
-		nm_setting_vpn_add_data_item (settings, "server-port", str);
-	}
+	save_entry (settings, priv->builder, "address-entry", "address");
+	save_file_chooser (settings, priv->builder, "certificate-button", "certificate");
+	save_entry (settings, priv->builder, "remote-identity-entry", "remote-identity");
+	save_entry (settings, priv->builder, "server-port-entry", "server-port");
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo"));
 	switch (gtk_combo_box_get_active (GTK_COMBO_BOX (widget)))
 	{
 		default:
 		case 0:
-			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button"));
-			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
-			if (str) {
-				nm_setting_vpn_add_data_item (settings, "userkey", str);
-			}
-			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button"));
-			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
-			if (str) {
-				nm_setting_vpn_add_data_item (settings, "usercert", str);
-			}
-			str = "key";
-			break;
-		case 1:
-			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button"));
-			str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
-			if (str) {
-				nm_setting_vpn_add_data_item (settings, "usercert", str);
-			}
-			str = "agent";
-			break;
-		case 2:
-			nm_setting_set_secret_flags (NM_SETTING (settings), "password",
-										 NM_SETTING_SECRET_FLAG_NOT_SAVED, NULL);
-			str = "smartcard";
-			break;
-		case 3:
-			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry"));
-			str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
-			if (str && strlen (str)) {
-				nm_setting_vpn_add_data_item (settings, "user", str);
-			}
+			save_entry (settings, priv->builder, "user-entry", "user");
 			save_password_and_flags (settings, priv->builder, "passwd-entry", "password");
 			str = "eap";
 			break;
-		case 4:
-			widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry"));
-			str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
-			if (str && strlen (str)) {
-				nm_setting_vpn_add_data_item (settings, "user", str);
-			}
+		case 1:
+			save_cert (settings, priv->builder);
+			str = "cert";
+			break;
+		case 2:
+			save_cert (settings, priv->builder);
+			str = "eap-tls";
+			break;
+		case 3:
+			save_entry (settings, priv->builder, "user-entry", "user");
 			save_password_and_flags (settings, priv->builder, "passwd-entry", "password");
 			str = "psk";
 			break;

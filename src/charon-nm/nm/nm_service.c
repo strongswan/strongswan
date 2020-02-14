@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2017 Lubomir Rintel
  *
- * Copyright (C) 2013-2019 Tobias Brunner
+ * Copyright (C) 2013-2020 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -373,6 +373,177 @@ static identification_t *find_smartcard_key(NMStrongswanPluginPrivate *priv,
 }
 
 /**
+ * Add a client auth config for certificate authentication
+ */
+static bool add_auth_cfg_cert(NMStrongswanPluginPrivate *priv,
+							  NMSettingVpn *vpn, peer_cfg_t *peer_cfg,
+							  GError **err)
+{
+	identification_t *user = NULL;
+	certificate_t *cert = NULL;
+	auth_cfg_t *auth;
+	const char *str, *method, *cert_source;
+
+	method = nm_setting_vpn_get_data_item(vpn, "method");
+	cert_source = nm_setting_vpn_get_data_item(vpn, "cert-source") ?: method;
+
+	if (streq(cert_source, "smartcard"))
+	{
+		char *pin;
+
+		pin = (char*)nm_setting_vpn_get_secret(vpn, "password");
+		if (pin)
+		{
+			user = find_smartcard_key(priv, pin);
+		}
+		if (!user)
+		{
+			g_set_error(err, NM_VPN_PLUGIN_ERROR,
+						NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+						"no usable smartcard certificate found.");
+			return FALSE;
+		}
+	}
+	/* ... or certificate/private key authentication */
+	else if ((str = nm_setting_vpn_get_data_item(vpn, "usercert")))
+	{
+		public_key_t *public;
+		private_key_t *private = NULL;
+
+		bool agent = streq(cert_source, "agent");
+
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
+								  BUILD_FROM_FILE, str, BUILD_END);
+		if (!cert)
+		{
+			g_set_error(err, NM_VPN_PLUGIN_ERROR,
+						NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+						"Loading peer certificate failed.");
+			return FALSE;
+		}
+		/* try agent */
+		str = nm_setting_vpn_get_secret(vpn, "agent");
+		if (agent && str)
+		{
+			public = cert->get_public_key(cert);
+			if (public)
+			{
+				private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+											 public->get_type(public),
+											 BUILD_AGENT_SOCKET, str,
+											 BUILD_PUBLIC_KEY, public,
+											 BUILD_END);
+				public->destroy(public);
+			}
+			if (!private)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+							"Connecting to SSH agent failed.");
+			}
+		}
+		/* ... or key file */
+		str = nm_setting_vpn_get_data_item(vpn, "userkey");
+		if (!agent && str)
+		{
+			char *secret;
+
+			secret = (char*)nm_setting_vpn_get_secret(vpn, "password");
+			if (secret)
+			{
+				priv->creds->set_key_password(priv->creds, secret);
+			}
+			private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+									KEY_ANY, BUILD_FROM_FILE, str, BUILD_END);
+			if (!private)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+							"Loading private key failed.");
+			}
+		}
+		if (private)
+		{
+			user = cert->get_subject(cert);
+			user = user->clone(user);
+			priv->creds->set_cert_and_key(priv->creds, cert, private);
+		}
+		else
+		{
+			DESTROY_IF(cert);
+			return FALSE;
+		}
+	}
+
+	auth = auth_cfg_create();
+	if (streq(method, "eap-tls"))
+	{
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_EAP);
+		auth->add(auth, AUTH_RULE_EAP_TYPE, EAP_TLS);
+		auth->add(auth, AUTH_RULE_AAA_IDENTITY,
+				  identification_create_from_string("%any"));
+	}
+	else
+	{
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+	}
+	if (cert)
+	{
+		auth->add(auth, AUTH_RULE_SUBJECT_CERT, cert->get_ref(cert));
+	}
+	auth->add(auth, AUTH_RULE_IDENTITY, user);
+	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+	return TRUE;
+}
+
+/**
+ * Add a client auth config for username/password authentication
+ */
+static bool add_auth_cfg_pw(NMStrongswanPluginPrivate *priv,
+							NMSettingVpn *vpn, peer_cfg_t *peer_cfg,
+							GError **err)
+{
+	identification_t *user = NULL;
+	auth_cfg_t *auth;
+	const char *str, *method;
+
+	method = nm_setting_vpn_get_data_item(vpn, "method");
+
+	str = nm_setting_vpn_get_data_item(vpn, "user");
+	if (str)
+	{
+		user = identification_create_from_string((char*)str);
+		str = nm_setting_vpn_get_secret(vpn, "password");
+		if (streq(method, "psk") && strlen(str) < 20)
+		{
+			g_set_error(err, NM_VPN_PLUGIN_ERROR,
+						NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+						"Pre-shared key is too short.");
+			user->destroy(user);
+			return FALSE;
+		}
+		priv->creds->set_username_password(priv->creds, user, (char*)str);
+	}
+	else
+	{
+		g_set_error(err, NM_VPN_PLUGIN_ERROR,
+					NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+					"Username is missing.");
+		return FALSE;
+	}
+
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS,
+			  streq(method, "psk") ? AUTH_CLASS_PSK : AUTH_CLASS_EAP);
+	/* in case EAP-PEAP or EAP-TTLS is used we currently accept any identity */
+	auth->add(auth, AUTH_RULE_AAA_IDENTITY,
+			  identification_create_from_string("%any"));
+	auth->add(auth, AUTH_RULE_IDENTITY, user);
+	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+	return TRUE;
+}
+
+/**
  * Connect function called from NM via DBUS
  */
 static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
@@ -383,8 +554,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	NMSettingConnection *conn;
 	NMSettingVpn *vpn;
 	enumerator_t *enumerator;
-	identification_t *user = NULL, *gateway = NULL;
-	const char *str;
+	identification_t *gateway = NULL;
+	const char *str, *method;
 	bool virtual, proposal;
 	proposal_t *prop;
 	ike_cfg_t *ike_cfg;
@@ -396,7 +567,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	auth_class_t auth_class = AUTH_CLASS_EAP;
 	certificate_t *cert = NULL;
 	x509_t *x509;
-	bool agent = FALSE, smartcard = FALSE, loose_gateway_id = FALSE;
+	bool loose_gateway_id = FALSE;
 	ike_cfg_create_t ike = {
 		.version = IKEV2,
 		.local = "%any",
@@ -458,25 +629,6 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	ike.force_encap = streq(str, "yes");
 	str = nm_setting_vpn_get_data_item(vpn, "ipcomp");
 	child.options |= streq(str, "yes") ? OPT_IPCOMP : 0;
-	str = nm_setting_vpn_get_data_item(vpn, "method");
-	if (streq(str, "psk"))
-	{
-		auth_class = AUTH_CLASS_PSK;
-	}
-	else if (streq(str, "agent"))
-	{
-		auth_class = AUTH_CLASS_PUBKEY;
-		agent = TRUE;
-	}
-	else if (streq(str, "key"))
-	{
-		auth_class = AUTH_CLASS_PUBKEY;
-	}
-	else if (streq(str, "smartcard"))
-	{
-		auth_class = AUTH_CLASS_PUBKEY;
-		smartcard = TRUE;
-	}
 
 	/**
 	 * Register credentials
@@ -528,129 +680,6 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	}
 	DBG1(DBG_CFG, "using gateway identity '%Y'", gateway);
 
-	if (auth_class == AUTH_CLASS_EAP ||
-		auth_class == AUTH_CLASS_PSK)
-	{
-		/* username/password or PSK authentication ... */
-		str = nm_setting_vpn_get_data_item(vpn, "user");
-		if (str)
-		{
-			user = identification_create_from_string((char*)str);
-			str = nm_setting_vpn_get_secret(vpn, "password");
-			if (auth_class == AUTH_CLASS_PSK &&
-				strlen(str) < 20)
-			{
-				g_set_error(err, NM_VPN_PLUGIN_ERROR,
-							NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-							"pre-shared key is too short.");
-				gateway->destroy(gateway);
-				user->destroy(user);
-				return FALSE;
-			}
-			priv->creds->set_username_password(priv->creds, user, (char*)str);
-		}
-	}
-
-	if (auth_class == AUTH_CLASS_PUBKEY)
-	{
-		if (smartcard)
-		{
-			char *pin;
-
-			pin = (char*)nm_setting_vpn_get_secret(vpn, "password");
-			if (pin)
-			{
-				user = find_smartcard_key(priv, pin);
-			}
-			if (!user)
-			{
-				g_set_error(err, NM_VPN_PLUGIN_ERROR,
-							NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-							"no usable smartcard certificate found.");
-				gateway->destroy(gateway);
-				return FALSE;
-			}
-		}
-		/* ... or certificate/private key authentication */
-		else if ((str = nm_setting_vpn_get_data_item(vpn, "usercert")))
-		{
-			public_key_t *public;
-			private_key_t *private = NULL;
-
-			cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-									  BUILD_FROM_FILE, str, BUILD_END);
-			if (!cert)
-			{
-				g_set_error(err, NM_VPN_PLUGIN_ERROR,
-							NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-							"Loading peer certificate failed.");
-				gateway->destroy(gateway);
-				return FALSE;
-			}
-			/* try agent */
-			str = nm_setting_vpn_get_secret(vpn, "agent");
-			if (agent && str)
-			{
-				public = cert->get_public_key(cert);
-				if (public)
-				{
-					private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-												 public->get_type(public),
-												 BUILD_AGENT_SOCKET, str,
-												 BUILD_PUBLIC_KEY, public,
-												 BUILD_END);
-					public->destroy(public);
-				}
-				if (!private)
-				{
-					g_set_error(err, NM_VPN_PLUGIN_ERROR,
-								NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-								"Connecting to SSH agent failed.");
-				}
-			}
-			/* ... or key file */
-			str = nm_setting_vpn_get_data_item(vpn, "userkey");
-			if (!agent && str)
-			{
-				char *secret;
-
-				secret = (char*)nm_setting_vpn_get_secret(vpn, "password");
-				if (secret)
-				{
-					priv->creds->set_key_password(priv->creds, secret);
-				}
-				private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								KEY_ANY, BUILD_FROM_FILE, str, BUILD_END);
-				if (!private)
-				{
-					g_set_error(err, NM_VPN_PLUGIN_ERROR,
-								NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-								"Loading private key failed.");
-				}
-			}
-			if (private)
-			{
-				user = cert->get_subject(cert);
-				user = user->clone(user);
-				priv->creds->set_cert_and_key(priv->creds, cert, private);
-			}
-			else
-			{
-				DESTROY_IF(cert);
-				gateway->destroy(gateway);
-				return FALSE;
-			}
-		}
-	}
-
-	if (!user)
-	{
-		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
-					"Configuration parameters missing.");
-		gateway->destroy(gateway);
-		return FALSE;
-	}
-
 	/**
 	 * Set up configurations
 	 */
@@ -673,7 +702,6 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 				enumerator->destroy(enumerator);
 				ike_cfg->destroy(ike_cfg);
 				gateway->destroy(gateway);
-				user->destroy(user);
 				return FALSE;
 			}
 			ike_cfg->add_proposal(ike_cfg, prop);
@@ -692,10 +720,43 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
 		peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
 	}
-	auth = auth_cfg_create();
-	auth->add(auth, AUTH_RULE_AUTH_CLASS, auth_class);
-	auth->add(auth, AUTH_RULE_IDENTITY, user);
-	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+
+	method = nm_setting_vpn_get_data_item(vpn, "method");
+	if (streq(method, "cert") ||
+		streq(method, "eap-tls") ||
+		streq(method, "key") ||
+		streq(method, "agent") ||
+		streq(method, "smartcard"))
+	{
+		if (!add_auth_cfg_cert (priv, vpn, peer_cfg, err))
+		{
+			peer_cfg->destroy(peer_cfg);
+			ike_cfg->destroy(ike_cfg);
+			gateway->destroy(gateway);
+			return FALSE;
+		}
+	}
+	else if (streq(method, "eap") ||
+			 streq(method, "psk"))
+	{
+		if (!add_auth_cfg_pw(priv, vpn, peer_cfg, err))
+		{
+			peer_cfg->destroy(peer_cfg);
+			ike_cfg->destroy(ike_cfg);
+			gateway->destroy(gateway);
+			return FALSE;
+		}
+	}
+	else
+	{
+		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_BAD_ARGUMENTS,
+					"Configuration parameters missing.");
+		peer_cfg->destroy(peer_cfg);
+		ike_cfg->destroy(ike_cfg);
+		gateway->destroy(gateway);
+		return FALSE;
+	}
+
 	auth = auth_cfg_create();
 	if (auth_class == AUTH_CLASS_PSK)
 	{
@@ -794,58 +855,64 @@ static gboolean need_secrets(NMVpnServicePlugin *plugin, NMConnection *connectio
 							 const char **setting_name, GError **error)
 {
 	NMSettingVpn *settings;
-	const char *method, *path;
+	const char *method, *cert_source, *path;
+	bool need_secret = FALSE;
 
 	settings = NM_SETTING_VPN(nm_connection_get_setting(connection,
 														NM_TYPE_SETTING_VPN));
 	method = nm_setting_vpn_get_data_item(settings, "method");
 	if (method)
 	{
-		if (streq(method, "eap") || streq(method, "psk"))
+		if (streq(method, "cert") ||
+			streq(method, "eap-tls") ||
+			streq(method, "key") ||
+			streq(method, "agent") ||
+			streq(method, "smartcard"))
 		{
-			if (nm_setting_vpn_get_secret(settings, "password"))
+			cert_source = nm_setting_vpn_get_data_item(settings, "cert-source");
+			if (!cert_source)
 			{
-				return FALSE;
+				cert_source = method;
 			}
-		}
-		else if (streq(method, "agent"))
-		{
-			if (nm_setting_vpn_get_secret(settings, "agent"))
+			if (streq(cert_source, "agent"))
 			{
-				return FALSE;
+				need_secret = !nm_setting_vpn_get_secret(settings, "agent");
 			}
-		}
-		else if (streq(method, "key"))
-		{
-			path = nm_setting_vpn_get_data_item(settings, "userkey");
-			if (path)
+			else if (streq(cert_source, "smartcard"))
 			{
-				private_key_t *key;
+				need_secret = !nm_setting_vpn_get_secret(settings, "password");
+			}
+			else
+			{
+				need_secret = TRUE;
+				path = nm_setting_vpn_get_data_item(settings, "userkey");
+				if (path)
+				{
+					private_key_t *key;
 
-				/* try to load/decrypt the private key */
-				key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
-								KEY_ANY, BUILD_FROM_FILE, path, BUILD_END);
-				if (key)
-				{
-					key->destroy(key);
-					return FALSE;
-				}
-				else if (nm_setting_vpn_get_secret(settings, "password"))
-				{
-					return FALSE;
+					/* try to load/decrypt the private key */
+					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+									KEY_ANY, BUILD_FROM_FILE, path, BUILD_END);
+					if (key)
+					{
+						key->destroy(key);
+						need_secret = FALSE;
+					}
+					else if (nm_setting_vpn_get_secret(settings, "password"))
+					{
+						need_secret = FALSE;
+					}
 				}
 			}
 		}
-		else if (streq(method, "smartcard"))
+		else if (streq(method, "eap") ||
+				 streq(method, "psk"))
 		{
-			if (nm_setting_vpn_get_secret(settings, "password"))
-			{
-				return FALSE;
-			}
+			need_secret = !nm_setting_vpn_get_secret(settings, "password");
 		}
 	}
 	*setting_name = NM_SETTING_VPN_SETTING_NAME;
-	return TRUE;
+	return need_secret;
 }
 
 /**
