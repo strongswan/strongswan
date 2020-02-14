@@ -492,14 +492,6 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 			return FALSE;
 		}
 		priv->creds->add_certificate(priv->creds, cert);
-
-		x509 = (x509_t*)cert;
-		if (!(x509->get_flags(x509) & X509_CA))
-		{	/* For a gateway certificate, we use the cert subject as identity. */
-			gateway = cert->get_subject(cert);
-			gateway = gateway->clone(gateway);
-			DBG1(DBG_CFG, "using gateway certificate, identity '%Y'", gateway);
-		}
 	}
 	else
 	{
@@ -507,16 +499,29 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		priv->creds->load_ca_dir(priv->creds, lib->settings->get_str(
 								 lib->settings, "charon-nm.ca_dir", NM_CA_DIR));
 	}
-	if (!gateway)
+
+	str = nm_setting_vpn_get_data_item(vpn, "remote-identity");
+	if (str)
 	{
-		/* If the user configured a CA certificate, we use the IP/DNS
-		 * of the gateway as its identity. This identity will be used for
-		 * certificate lookup and requires the configured IP/DNS to be
-		 * included in the gateway certificate. */
+		gateway = identification_create_from_string((char*)str);
+	}
+	else if (cert)
+	{
+		x509 = (x509_t*)cert;
+		if (!(x509->get_flags(x509) & X509_CA))
+		{	/* for server certificates, we use the subject as identity */
+			gateway = cert->get_subject(cert);
+			gateway = gateway->clone(gateway);
+		}
+	}
+	if (!gateway || gateway->get_type(gateway) == ID_ANY)
+	{
+		/* if the user configured a CA certificate (or an invalid identity),
+		 * we use the IP/hostname of the server */
 		gateway = identification_create_from_string(ike.remote);
-		DBG1(DBG_CFG, "using CA certificate, gateway identity '%Y'", gateway);
 		loose_gateway_id = TRUE;
 	}
+	DBG1(DBG_CFG, "using gateway identity '%Y'", gateway);
 
 	if (auth_class == AUTH_CLASS_EAP ||
 		auth_class == AUTH_CLASS_PSK)

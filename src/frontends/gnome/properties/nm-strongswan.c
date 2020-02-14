@@ -299,6 +299,12 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
 	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
 
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "remote-identity-entry"));
+	value = nm_setting_vpn_get_data_item (settings, "remote-identity");
+	if (value)
+		gtk_entry_set_text (GTK_ENTRY (widget), value);
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
+
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry"));
 	value = nm_setting_vpn_get_data_item (settings, "user");
 	if (value)
@@ -481,6 +487,12 @@ update_connection (NMVpnEditor *iface,
 	str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (widget));
 	if (str) {
 		nm_setting_vpn_add_data_item (settings, "certificate", str);
+	}
+
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "remote-identity-entry"));
+	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+	if (str && strlen (str)) {
+		nm_setting_vpn_add_data_item (settings, "remote-identity", str);
 	}
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "method-combo"));
