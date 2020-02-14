@@ -447,6 +447,11 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 					"Gateway address missing.");
 		return FALSE;
 	}
+	str = nm_setting_vpn_get_data_item(vpn, "server-port");
+	if (str && strlen(str))
+	{
+		ike.remote_port = settings_value_as_int((char*)str, ike.remote_port);
+	}
 	str = nm_setting_vpn_get_data_item(vpn, "virtual");
 	virtual = streq(str, "yes");
 	str = nm_setting_vpn_get_data_item(vpn, "encap");
