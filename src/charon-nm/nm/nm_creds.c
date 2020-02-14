@@ -285,7 +285,7 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 			{
 				goto no_secret;
 			}
-			if (me && !me->equals(me, this->user))
+			if (me && !me->matches(me, this->user))
 			{
 				goto no_secret;
 			}
