@@ -18,10 +18,14 @@ typedef struct socket_vpp_plugin_t socket_vpp_plugin_t;
  */
 struct socket_vpp_plugin_t {
 
-    /**
-     * implements plugin interface
-     */
-    plugin_t plugin;
+	/**
+	 * implements plugin interface
+	 */
+	plugin_t plugin;
 };
 
 #endif /** SOCKET_VPP_PLUGIN_H_ @}*/
+
+/*
+ * fd.io coding-style-patch-verification: CLANG
+ */

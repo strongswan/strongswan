@@ -10,10 +10,10 @@ typedef struct kernel_vpp_ipsec_t kernel_vpp_ipsec_t;
  */
 struct kernel_vpp_ipsec_t {
 
-    /**
-     * Implements kernel_ipsec_t interface
-     */
-    kernel_ipsec_t interface;
+	/**
+	 * Implements kernel_ipsec_t interface
+	 */
+	kernel_ipsec_t interface;
 };
 
 /**
@@ -24,3 +24,7 @@ struct kernel_vpp_ipsec_t {
 kernel_vpp_ipsec_t *kernel_vpp_ipsec_create();
 
 #endif /** KERNEL_VPP_IPSEC_H_ @}*/
+
+/*
+ * fd.io coding-style-patch-verification: CLANG
+ */

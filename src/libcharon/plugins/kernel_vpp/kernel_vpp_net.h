@@ -10,10 +10,10 @@ typedef struct kernel_vpp_net_t kernel_vpp_net_t;
  */
 struct kernel_vpp_net_t {
 
-    /**
-     * Implements kernel_net_t interface
-     */
-    kernel_net_t interface;
+	/**
+	 * Implements kernel_net_t interface
+	 */
+	kernel_net_t interface;
 };
 
 /**
@@ -24,3 +24,7 @@ struct kernel_vpp_net_t {
 kernel_vpp_net_t *kernel_vpp_net_create();
 
 #endif /** KERNEL_VPP_NET_H_ @}*/
+
+/*
+ * fd.io coding-style-patch-verification: CLANG
+ */

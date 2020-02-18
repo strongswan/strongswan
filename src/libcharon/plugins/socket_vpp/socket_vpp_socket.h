@@ -15,10 +15,10 @@ typedef struct socket_vpp_socket_t socket_vpp_socket_t;
  */
 struct socket_vpp_socket_t {
 
-    /**
-     * Implements the socket_t interface.
-     */
-    socket_t socket;
+	/**
+	 * Implements the socket_t interface.
+	 */
+	socket_t socket;
 };
 
 /**
@@ -27,3 +27,7 @@ struct socket_vpp_socket_t {
 socket_vpp_socket_t *socket_vpp_socket_create();
 
 #endif /** SOCKET_VPP_SOCKET_H_ @}*/
+
+/*
+ * fd.io coding-style-patch-verification: CLANG
+ */
