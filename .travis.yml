@@ -1,6 +1,6 @@
 language: c
 
-sudo: required
+os: linux
 dist: bionic
 
 # don't build tags separately
@@ -35,7 +35,7 @@ env:
     - LEAK_DETECTIVE=no
     - MONOLITHIC=no
 
-matrix:
+jobs:
   include:
     - env: TEST=sonarcloud
       if: type = push AND env(SONAR_TOKEN) IS present
