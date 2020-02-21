@@ -41,6 +41,9 @@ jobs:
       if: type = push AND env(SONAR_TOKEN) IS present
       git:
         depth: false
+      cache:
+        directories:
+          - $HOME/.sonar-cache
       addons:
         sonarcloud:
           organization: "strongswan"
