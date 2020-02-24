@@ -14,6 +14,9 @@ struct kernel_vpp_net_t {
 	 * Implements kernel_net_t interface
 	 */
 	kernel_net_t interface;
+
+	/* How do we do this w/o access to the vpp net? */
+	/* uint32_t get_sw_if_index(kernel_vpp_net_t *this, const char *name); */
 };
 
 /**
@@ -27,4 +30,11 @@ kernel_vpp_net_t *kernel_vpp_net_create();
 
 /*
  * fd.io coding-style-patch-verification: CLANG
+ *
+ * Local Variables:
+ * c-file-style: "bsd"
+ * c-basic-offset: 4
+ * tab-width: 4
+ * indent-tabs-mode: t
+ * End:
  */

@@ -14,10 +14,8 @@
 #include <vpp/api/vpe_msg_enum.h>
 
 #define vl_typedefs
-#define vl_endianfun
 #include <vpp/api/vpe_all_api_h.h>
 #undef vl_typedefs
-#undef vl_endianfun
 
 #define READ_PATH "/tmp/strongswan-uds-socket"
 
@@ -114,12 +112,12 @@ METHOD(socket_t, receiver, status_t, private_socket_vpp_socket_t *this,
 		},
 	};
 
-	DBG2(DBG_NET, "waiting for data on vpp sockets");
+	NDBG2("waiting for data on vpp sockets");
 	old = thread_cancelability(TRUE);
 	if (poll(pfd, countof(pfd), -1) <= 0)
 	{
 		thread_cancelability(old);
-		DBG1(DBG_NET, "poll failed");
+		NDBG1("poll failed");
 		return FAILED;
 	}
 	thread_cancelability(old);
@@ -150,23 +148,23 @@ METHOD(socket_t, receiver, status_t, private_socket_vpp_socket_t *this,
 		bytes_read = recvmsg(pfd[0].fd, &msg, 0);
 		if (bytes_read < 0)
 		{
-			DBG1(DBG_NET, "error reading vpp socket: %s", strerror(errno));
+			NDBG1("error reading vpp socket: %s", strerror(errno));
 			return FAILED;
 		}
-		DBG3(DBG_NET, "received vpp packet %b", buf, bytes_read);
+		NDBG3("received vpp packet %b", buf, bytes_read);
 
 		raw = chunk_create(buf, bytes_read);
 		packet = ip_packet_create(raw);
 		if (!packet)
 		{
-			DBG1(DBG_NET, "invalid IP packet read from vpp socket");
+			NDBG1("invalid IP packet read from vpp socket");
 		}
 		src = packet->get_source(packet);
 		dst = packet->get_destination(packet);
 		pkt = packet_create();
 		pkt->set_source(pkt, src);
 		pkt->set_destination(pkt, dst);
-		DBG2(DBG_NET, "received vpp packet: from %#H to %#H", src, dst);
+		NDBG2("received vpp packet: from %#H to %#H", src, dst);
 		data = packet->get_payload(packet);
 		/* remove UDP header */
 		data = chunk_skip(data, 8);
@@ -201,7 +199,7 @@ METHOD(socket_t, sender, status_t, private_socket_vpp_socket_t *this,
 		src->set_port(src, this->port);
 	}
 
-	DBG2(DBG_NET, "sending vpp packet: from %#H to %#H", src, dst);
+	NDBG2("sending vpp packet: from %#H to %#H", src, dst);
 
 	family = dst->get_family(dst);
 
@@ -218,7 +216,7 @@ METHOD(socket_t, sender, status_t, private_socket_vpp_socket_t *this,
 	ip_packet = ip_packet_create_udp_from_data(src, dst, data);
 	if (!ip_packet)
 	{
-		DBG1(DBG_NET, "create IP packet failed");
+		NDBG1("create IP packet failed");
 		return FAILED;
 	}
 	raw = ip_packet->get_encoding(ip_packet);
@@ -238,7 +236,7 @@ METHOD(socket_t, sender, status_t, private_socket_vpp_socket_t *this,
 	bytes_sent = sendmsg(this->sock, &msg, 0);
 	if (bytes_sent < 0)
 	{
-		DBG1(DBG_NET, "error writing to vpp socket: %s", strerror(errno));
+		NDBG1("error writing to vpp socket: %s", strerror(errno));
 		return FAILED;
 	}
 
@@ -274,53 +272,62 @@ register_punt_port(private_socket_vpp_socket_t *this, uint16_t port,
 	vl_api_punt_socket_register_reply_t *rmp;
 
 	/* Register IPv4 punt socket for IKEv2 port in VPP */
-	mp = vl_msg_api_alloc(sizeof(*mp));
-	memset(mp, 0, sizeof(*mp));
-	mp->_vl_msg_id = ntohs(VL_API_PUNT_SOCKET_REGISTER);
-	mp->header_version = ntohl(1);
-	mp->is_ip4 = 1;
-	mp->l4_protocol = IPPROTO_UDP;
-	mp->l4_port = ntohs(port);
-	strncpy(mp->pathname, read_path, 107);
+	mp = vl_msg_api_alloc_zero(sizeof(*mp));
+	mp->_vl_msg_id = htons(VL_API_PUNT_SOCKET_REGISTER);
+	mp->header_version = htonl(1);
+
+	mp->punt.type = PUNT_API_TYPE_L4;
+	vl_api_punt_type_t_endian(&mp->punt.type);
+
+	mp->punt.punt.l4.af = ADDRESS_IP4;
+	vl_api_address_family_t_endian(&mp->punt.punt.l4.af);
+
+	mp->punt.punt.l4.protocol = IP_API_PROTO_UDP;
+	vl_api_ip_proto_t_endian(&mp->punt.punt.l4.protocol);
+
+	mp->punt.punt.l4.port = htons(port);
+	strncpy(mp->pathname, read_path, sizeof(mp->pathname));
 	if (this->vac->send(this->vac, (char *)mp, sizeof(*mp), &out, &out_len))
 	{
-		DBG1(DBG_LIB, "send register vpp ip4 punt socket fail on port %d",
-			 port);
+		LDBG1("send register vpp ip4 punt socket fail on port %d", port);
 		return -1;
 	}
 	rmp = (void *)out;
 	if (rmp->retval)
 	{
-		DBG1(DBG_LIB,
-			 "register vpp ip4 punt socket fail on port %d with ret %d", port,
-			 ntohl(rmp->retval));
+		LDBG1("register vpp ip4 punt socket fail on port %d with rv: %E", port,
+			  rmp->retval);
 		return -1;
 	}
+
 	/* Register IPv6 punt socket for IKEv2 port in VPP */
-	mp->is_ip4 = 0;
+	mp->punt.punt.l4.af = ADDRESS_IP6;
+	vl_api_address_family_t_endian(&mp->punt.punt.l4.af);
+
 	if (this->vac->send(this->vac, (char *)mp, sizeof(*mp), &out, &out_len))
 	{
-		DBG1(DBG_LIB, "send register vpp ip6 punt socket fail on port %d",
-			 port);
+		LDBG1("send register vpp ip6 punt socket fail on port %d", port);
 		return -1;
 	}
 	rmp = (void *)out;
 	if (rmp->retval)
 	{
-		DBG1(DBG_LIB,
-			 "register vpp ip6 punt socket fail on port %d with ret %d", port,
-			 ntohl(rmp->retval));
+		LDBG1("register vpp ip6 punt socket fail on port %d with rv: %E", port,
+			  rmp->retval);
 		return -1;
 	}
-	DBG3(DBG_LIB,
-		 "Registered vpp punt socket on port %d successfully with returned "
-		 "write path: %s",
-		 port, rmp->pathname);
+
+	/* cheat, make sure pathname is NUL terminated */
+	rmp->pathname[sizeof(rmp->pathname) - 1] = 0;
+	LDBG3("Registered vpp punt socket on port %d successfully with "
+		  "returned "
+		  "write path: %s",
+		  port, rmp->pathname);
 
 	this->sock = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (this->sock < 0)
 	{
-		DBG1(DBG_LIB, "opening vpp socket failed: %m");
+		LDBG1("opening vpp socket failed: %m");
 		return -1;
 	}
 
@@ -334,10 +341,9 @@ register_punt_port(private_socket_vpp_socket_t *this, uint16_t port,
 	else if (strncmp(this->write_addr.sun_path, rmp->pathname,
 					 sizeof(this->write_addr.sun_path)) != 0)
 	{
-		DBG1(DBG_LIB,
-			 "More than one write path returned by VPP. Previous one is: %s, "
-			 "now is: %s",
-			 this->write_addr.sun_path, rmp->pathname);
+		LDBG1("More than one write path returned by VPP. Previous one is: %s, "
+			  "now is: %s",
+			  this->write_addr.sun_path, rmp->pathname);
 		return -1;
 	}
 
@@ -351,10 +357,7 @@ socket_vpp_socket_t *
 socket_vpp_socket_create()
 {
 	private_socket_vpp_socket_t *this;
-	char *read_path, *out;
-	int out_len;
-	vl_api_punt_socket_register_t *mp;
-	vl_api_punt_socket_register_reply_t *rmp;
+	char *read_path;
 
 	INIT(this,
 		 .public =
@@ -378,7 +381,7 @@ socket_vpp_socket_create()
 	this->vac = lib->get(lib, "kernel-vpp-vac");
 	if (!this->vac)
 	{
-		DBG1(DBG_LIB, "no vac available (plugin missing?)");
+		LDBG1("no vac available (plugin missing?)");
 	}
 
 	read_path = lib->settings->get_str(
@@ -387,7 +390,7 @@ socket_vpp_socket_create()
 
 	if (this->port && (register_punt_port(this, this->port, read_path) != 0))
 	{
-		DBG1(DBG_LIB, "Register punt port %d fail", this->port);
+		LDBG1("Register punt port %d fail", this->port);
 		return NULL;
 	}
 
@@ -395,15 +398,14 @@ socket_vpp_socket_create()
 	{
 		if (this->natt == this->port)
 		{
-			DBG1(DBG_LIB,
-				 "IKE NAT Port (%d) cannot be the same as IKE Port (%d)",
-				 this->natt, this->port);
+			LDBG1("IKE NAT Port (%d) cannot be the same as IKE Port (%d)",
+				  this->natt, this->port);
 			return NULL;
 		}
 
 		if (register_punt_port(this, this->natt, read_path) != 0)
 		{
-			DBG1(DBG_LIB, "Register punt port %d fail", this->port);
+			LDBG1("Register punt port %d fail", this->port);
 			return NULL;
 		}
 	}
@@ -417,10 +419,12 @@ socket_vpp_socket_create()
 	if (bind(this->sock, (struct sockaddr *)&this->read_addr,
 			 sizeof(this->read_addr)) < 0)
 	{
-		DBG1(DBG_LIB, "binding vpp read socket failed: %m");
+		LDBG1("binding vpp read socket failed: %m");
 		close(this->sock);
 		return NULL;
 	}
+
+	LDBG1("registered punt port");
 	return &this->public;
 }
 

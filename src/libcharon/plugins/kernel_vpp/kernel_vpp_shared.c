@@ -5,22 +5,20 @@
 #include <threading/mutex.h>
 #include <threading/thread.h>
 #include <utils/debug.h>
-#include <vlibapi/api.h>
-#include <vlibmemory/api.h>
-#include <vpp/api/vpe_msg_enum.h>
 
 #include "kernel_vpp_shared.h"
-
-#define vl_typedefs
-#define vl_endianfun
-#include <vpp/api/vpe_all_api_h.h>
-#undef vl_typedefs
-#undef vl_endianfun
 
 typedef struct private_vac_t private_vac_t;
 typedef struct vl_api_header_t vl_api_header_t;
 typedef struct vl_api_rheader_t vl_api_rheader_t;
 typedef struct want_event_reply_t want_event_reply_t;
+
+const char *vpp_api_msg_names[] = {
+#define vl_msg_id(x, y) [x] = #x,
+#include <vpp/api/vpe_all_api_h.h>
+#undef vl_msg_id
+};
+int vpp_api_nmsg_names = sizeof(vpp_api_msg_names) / sizeof(*vpp_api_msg_names);
 
 vac_t *vac;
 
@@ -28,7 +26,6 @@ vac_t *vac;
  * Private variables and functions of vac_t class.
  */
 struct private_vac_t {
-
 	/**
 	 * public part of the vac_t object.
 	 */
@@ -104,7 +101,6 @@ struct private_vac_t {
  * VPP API message header
  */
 struct vl_api_header_t {
-
 	/** message ID */
 	uint16_t _vl_msg_id;
 
@@ -119,7 +115,6 @@ struct vl_api_header_t {
  * VPP API response message header
  */
 struct vl_api_rheader_t {
-
 	/** message ID */
 	uint16_t _vl_msg_id;
 
@@ -131,7 +126,6 @@ struct vl_api_rheader_t {
  * VPP API register event response message header
  */
 struct want_event_reply_t {
-
 	/** message ID */
 	uint16_t _vl_msg_id;
 
@@ -202,7 +196,15 @@ vac_api_handler(private_vac_t *this, void *msg)
 
 	if (l == 0)
 	{
-		DBG2(DBG_KNL, "vac msg ID %d has wrong len %d", id, l);
+		if (id < vpp_api_nmsg_names)
+		{
+			KDBG2("vac msg %s has wrong len %d", vpp_api_msg_names[id], l);
+		}
+		else
+		{
+			KDBG2("vac msg UNKNOWN (%d) has wrong len %d", id, l);
+		}
+
 		vac_free(msg);
 		return;
 	}
@@ -215,7 +217,16 @@ vac_api_handler(private_vac_t *this, void *msg)
 		ip = (void *)msg;
 		seq = (uintptr_t)ip->context;
 	}
-	DBG3(DBG_KNL, "vac read msg ID %d len %d seq %u", id, l, seq);
+
+	if (id < vpp_api_nmsg_names)
+	{
+		KDBG3("vac read msg %s len %d seq %u", vpp_api_msg_names[id], l, seq);
+	}
+	else
+	{
+		KDBG3("vac read msg UNKNOWN (%d) len %d seq %u", id, l, seq);
+	}
+
 	this->entries_lock->lock(this->entries_lock);
 	entry = this->entries->get(this->entries, (void *)seq);
 	if (entry)
@@ -226,7 +237,7 @@ vac_api_handler(private_vac_t *this, void *msg)
 			{
 				entry->complete = TRUE;
 				entry->condvar->signal(entry->condvar);
-				DBG3(DBG_KNL, "vac received control ping");
+				KDBG3("vac received control ping");
 				vac_free(msg);
 				this->entries_lock->unlock(this->entries_lock);
 				return;
@@ -250,7 +261,7 @@ vac_api_handler(private_vac_t *this, void *msg)
 		if (event)
 			event->cb(msg, l, event->ctx);
 		else
-			DBG1(DBG_KNL, "received unknown vac msg seq %u, ignored", seq);
+			KDBG1("received unknown vac msg seq %u, ignored", seq);
 		this->events_lock->unlock(this->events_lock);
 	}
 
@@ -265,11 +276,16 @@ static void *
 vac_rx_thread_fn(private_vac_t *this)
 {
 	svm_queue_t *q;
-	api_main_t *am = &api_main;
 	vl_api_memclnt_keepalive_t *mp;
 	vl_api_memclnt_keepalive_reply_t *rmp;
 	vl_shmem_hdr_t *shmem_hdr;
 	uword msg;
+
+#ifdef HAVE_VLIBAPI_GET_MAIN
+	api_main_t *am = vlibapi_get_main();
+#else
+	api_main_t *am = &api_main;
+#endif
 
 	q = am->vl_input_queue;
 
@@ -285,7 +301,7 @@ vac_rx_thread_fn(private_vac_t *this)
 				this->queue_lock->lock(this->queue_lock);
 				this->terminate_cv->signal(this->terminate_cv);
 				this->queue_lock->unlock(this->queue_lock);
-				DBG3(DBG_KNL, "vac received rx thread exit");
+				KDBG3("vac received rx thread exit");
 				thread_exit(NULL);
 				return NULL;
 				break;
@@ -296,24 +312,23 @@ vac_rx_thread_fn(private_vac_t *this)
 				this->suspend_cv->signal(this->suspend_cv);
 				this->resume_cv->wait(this->resume_cv, this->queue_lock);
 				this->queue_lock->unlock(this->queue_lock);
-				DBG3(DBG_KNL, "vac received rx thread suspend");
+				KDBG3("vac received rx thread suspend");
 				break;
 
 			case VL_API_MEMCLNT_READ_TIMEOUT:
-				DBG3(DBG_KNL, "vac received read timeout");
+				KDBG3("vac received read timeout");
 				vl_msg_api_free((void *)msg);
 				break;
 
 			case VL_API_MEMCLNT_KEEPALIVE:
 				mp = (void *)msg;
-				rmp = vl_msg_api_alloc(sizeof(*rmp));
-				memset(rmp, 0, sizeof(*rmp));
+				rmp = vl_msg_api_alloc_zero(sizeof(*rmp));
 				rmp->_vl_msg_id = ntohs(VL_API_MEMCLNT_KEEPALIVE_REPLY);
 				rmp->context = mp->context;
 				shmem_hdr = am->shmem_hdr;
 				vl_msg_api_send_shmem(shmem_hdr->vl_input_queue, (u8 *)&rmp);
 				vl_msg_api_free((void *)msg);
-				DBG3(DBG_KNL, "vac received keepalive");
+				KDBG3("vac received keepalive");
 				break;
 
 			default:
@@ -331,10 +346,14 @@ METHOD(vac_t, destroy, void, private_vac_t *this)
 	{
 		if (this->rx)
 		{
+#ifdef HAVE_VLIBAPI_GET_MAIN
+			api_main_t *am = vlibapi_get_main();
+#else
 			api_main_t *am = &api_main;
+#endif
 			vl_api_rx_thread_exit_t *ep;
 			bool timed_out;
-			ep = vl_msg_api_alloc(sizeof(*ep));
+			ep = vl_msg_api_alloc_zero(sizeof(*ep));
 			ep->_vl_msg_id = ntohs(VL_API_RX_THREAD_EXIT);
 			vl_msg_api_send_shmem(am->vl_input_queue, (u8 *)&ep);
 			this->queue_lock->lock(this->queue_lock);
@@ -369,7 +388,11 @@ METHOD(vac_t, destroy, void, private_vac_t *this)
 static status_t
 vac_write(private_vac_t *this, char *p, int l, uint32_t ctx)
 {
+#ifdef HAVE_VLIBAPI_GET_MAIN
+	api_main_t *am = vlibapi_get_main();
+#else
 	api_main_t *am = &api_main;
+#endif
 	vl_api_header_t *mp = vl_msg_api_alloc(l);
 	svm_queue_t *q;
 
@@ -385,11 +408,13 @@ vac_write(private_vac_t *this, char *p, int l, uint32_t ctx)
 	q = am->shmem_hdr->vl_input_queue;
 	if (svm_queue_add(q, (u8 *)&mp, 0))
 	{
-		DBG1(DBG_KNL, "vac vpe_api_write failed");
+		KDBG1("vac vpe_api_write failed");
 		vac_free(mp);
 		return FAILED;
 	}
-	DBG3(DBG_KNL, "vac write msg ID %d len %d", ntohs(mp->_vl_msg_id), l);
+
+	int msg_id = ntohs(mp->_vl_msg_id);
+	KDBG3("vac write msg %s len %d", vpp_api_msg_names[msg_id], l);
 
 	return SUCCESS;
 }
@@ -420,9 +445,13 @@ send_vac(private_vac_t *this, char *in, int in_len, char **out, int *out_len,
 	int i;
 
 	this->entries_lock->lock(this->entries_lock);
-	INIT(entry, .condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
-		 .rmsgs = array_create(0, 0), .is_dump = is_dump);
+	/* clang-format off */
+	INIT(entry,
+         .condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+		 .rmsgs = array_create(0, 0),
+         .is_dump = is_dump);
 	this->entries->put(this->entries, (void *)seq, entry);
+	/* clang-format on */
 
 	if (vac_write(this, in, in_len, ctx))
 	{
@@ -435,7 +464,7 @@ send_vac(private_vac_t *this, char *in, int in_len, char **out, int *out_len,
 	{
 		vl_api_control_ping_t *mp;
 		status_t rv;
-		mp = vl_msg_api_alloc(sizeof(*mp));
+		mp = vl_msg_api_alloc_zero(sizeof(*mp));
 		mp->_vl_msg_id = ntohs(VL_API_CONTROL_PING);
 		rv = vac_write(this, (char *)mp, sizeof(*mp), ctx);
 		vl_msg_api_free(mp);
@@ -469,7 +498,7 @@ send_vac(private_vac_t *this, char *in, int in_len, char **out, int *out_len,
 	if (!entry->complete)
 	{
 		destroy_entry(entry);
-		DBG1(DBG_KNL, "vac timeout");
+		KDBG1("vac timeout");
 		return OUT_OF_RES;
 	}
 
@@ -559,14 +588,14 @@ vac_create(char *name)
 
 	if (vl_client_api_map("/vpe-api"))
 	{
-		DBG1(DBG_KNL, "vac unable to map");
+		KDBG1("vac unable to map");
 		destroy(this);
 		return NULL;
 	}
 
 	if (vl_client_connect(name, 0, 32) < 0)
 	{
-		DBG1(DBG_KNL, "vac unable to connect");
+		KDBG1("vac unable to connect");
 		vl_client_api_unmap();
 		destroy(this);
 		return NULL;
@@ -589,4 +618,11 @@ vac_create(char *name)
 
 /*
  * fd.io coding-style-patch-verification: CLANG
+ *
+ * Local Variables:
+ * c-file-style: "bsd"
+ * c-basic-offset: 4
+ * tab-width: 4
+ * indent-tabs-mode: t
+ * End:
  */

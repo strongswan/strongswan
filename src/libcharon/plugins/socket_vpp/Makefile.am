@@ -19,5 +19,6 @@ libstrongswan_socket_vpp_la_SOURCES = \
     socket_vpp_socket.h socket_vpp_socket.c
 
 libstrongswan_socket_vpp_la_LIBADD = $(top_builddir)/src/libipsec/libipsec.la -lvlibmemoryclient -lsvm -lvppinfra -lvlib
+#libstrongswan_socket_vpp_la_LIBADD = -lvlibmemoryclient -lsvm -lvppinfra -lvlib
 
 libstrongswan_socket_vpp_la_LDFLAGS = -module -avoid-version

@@ -1,25 +1,33 @@
+#include <collections/array.h>
+#include <daemon.h>
 #include <threading/mutex.h>
 #include <threading/thread.h>
 #include <utils/debug.h>
+
+#include <processing/jobs/callback_job.h>
+#include <threading/spinlock.h>
+
 #include <vlibapi/api.h>
 #include <vlibmemory/api.h>
 #include <vpp/api/vpe_msg_enum.h>
 
 #define vl_typedefs
-#define vl_endianfun
 #include <vpp/api/vpe_all_api_h.h>
 #undef vl_typedefs
-#undef vl_endianfun
 
 #include "kernel_vpp_net.h"
 #include "kernel_vpp_shared.h"
 
 typedef struct private_kernel_vpp_net_t private_kernel_vpp_net_t;
 
+/** delay before firing roam events (ms) */
+#define ROAM_DELAY 100
+
 /**
  * Private data of kernel_vpp_net implementation.
  */
 struct private_kernel_vpp_net_t {
+
 	/**
 	 * Public interface.
 	 */
@@ -44,6 +52,26 @@ struct private_kernel_vpp_net_t {
 	 * TRUE if interface events enabled
 	 */
 	bool events_on;
+
+	/**
+	 * earliest time of the next roam event
+	 */
+	timeval_t next_roam;
+
+	/**
+	 * roam event due to address change
+	 */
+	bool roam_address;
+
+	/**
+	 * lock to check and update roam event time
+	 */
+	spinlock_t *roam_lock;
+
+	/**
+	 * whether to trigger roam events
+	 */
+	bool roam_events;
 };
 
 /**
@@ -54,8 +82,10 @@ typedef struct {
 	uint32_t index;
 	/** interface name */
 	char if_name[64];
-	/** list of known addresses, as host_t */
-	linked_list_t *addrs;
+	/** array of known addresses, as host_t */
+	array_t *addrs;
+	/** TRUE if not filtered */
+	bool usable;
 	/** TRUE if up */
 	bool up;
 } iface_t;
@@ -85,32 +115,112 @@ typedef struct {
 	uint8_t preference;
 } fib_path_t;
 
+static int
+cmpaddrs(const void *_a, const void *_b)
+{
+	chunk_t a = ((host_t *)_a)->get_address((host_t *)_a);
+	chunk_t b = ((host_t *)_b)->get_address((host_t *)_b);
+
+	if (a.len < b.len)
+		return -1;
+	if (a.len > b.len)
+		return 1;
+	return memcmp(a.ptr, b.ptr, a.len);
+}
+
+static int
+cmpaddrs3(const void *_a, const void *_b, void *_)
+{
+	chunk_t a = ((host_t *)_a)->get_address((host_t *)_a);
+	chunk_t b = ((host_t *)_b)->get_address((host_t *)_b);
+
+	if (a.len < b.len)
+		return -1;
+	if (a.len > b.len)
+		return 1;
+	return memcmp(a.ptr, b.ptr, a.len);
+}
+
+#if 0
+static int
+addrseq(void *_a, void *_b)
+{
+    return cmpaddrs(_a, _b) == 0;
+}
+#endif
+
+/**
+ * callback function that raises the delayed roam event
+ */
+static job_requeue_t
+roam_event(private_kernel_vpp_net_t *this)
+{
+	bool address;
+
+	this->roam_lock->lock(this->roam_lock);
+	address = this->roam_address;
+	this->roam_address = FALSE;
+	this->roam_lock->unlock(this->roam_lock);
+	NDBG1("roam_event: %s", address ? "address-update" : "global");
+	charon->kernel->roam(charon->kernel, address);
+	return JOB_REQUEUE_NONE;
+}
+
+/**
+ * fire a roaming event. we delay it for a bit and fire only one event
+ * for multiple calls. otherwise we would create too many events.
+ */
+static void
+fire_roam_event(private_kernel_vpp_net_t *this, bool address)
+{
+	timeval_t now;
+	job_t *job;
+
+	if (!this->roam_events)
+	{
+		return;
+	}
+
+	NDBG3("fire_roam_event: (schedule) due to %s",
+		  address ? "address-update" : "global");
+
+	time_monotonic(&now);
+	this->roam_lock->lock(this->roam_lock);
+	this->roam_address |= address;
+	if (!timercmp(&now, &this->next_roam, >))
+	{
+		this->roam_lock->unlock(this->roam_lock);
+		return;
+	}
+	timeval_add_ms(&now, ROAM_DELAY);
+	this->next_roam = now;
+	this->roam_lock->unlock(this->roam_lock);
+
+	job = (job_t *)callback_job_create((callback_job_cb_t)roam_event, this,
+									   NULL, NULL);
+	lib->scheduler->schedule_job_ms(lib->scheduler, job, ROAM_DELAY);
+}
+
 /**
  * Get an iface entry for a local address
  */
 static iface_t *
 address2entry(private_kernel_vpp_net_t *this, host_t *ip)
 {
-	enumerator_t *ifaces, *addrs;
-	iface_t *entry, *found = NULL;
-	host_t *host;
+	enumerator_t *ifaces;
+	iface_t *entry;
 
 	ifaces = this->ifaces->create_enumerator(this->ifaces);
-	while (!found && ifaces->enumerate(ifaces, &entry))
+	while (ifaces->enumerate(ifaces, &entry))
 	{
-		addrs = entry->addrs->create_enumerator(entry->addrs);
-		while (!found && addrs->enumerate(addrs, &host))
+		if (array_bsearch(entry->addrs, ip, cmpaddrs, NULL) != -1)
 		{
-			if (host->ip_equals(host, ip))
-			{
-				found = entry;
-			}
+			ifaces->destroy(ifaces);
+			return entry;
 		}
-		addrs->destroy(addrs);
 	}
 	ifaces->destroy(ifaces);
-
-	return found;
+	return NULL;
 }
 
 /**
@@ -124,9 +234,13 @@ manage_route(private_kernel_vpp_net_t *this, bool add, chunk_t dst,
 	int out_len;
 	enumerator_t *enumerator;
 	iface_t *entry;
-	vl_api_ip_add_del_route_t *mp;
-	vl_api_ip_add_del_route_reply_t *rmp;
+	vl_api_ip_route_add_del_t *mp;
+	vl_api_ip_route_add_del_reply_t *rmp;
+	vl_api_fib_path_t *fibp;
 	bool exists = FALSE;
+
+	NDBG3("%s: %s dest %B pfxlen %d gw %H dev %s", __FUNCTION__,
+		  add ? "ADDING" : "REMOVING", &dst, prefixlen, gtw, name);
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
@@ -142,45 +256,58 @@ manage_route(private_kernel_vpp_net_t *this, bool add, chunk_t dst,
 	this->mutex->unlock(this->mutex);
 
 	if (!exists)
-		return NOT_FOUND;
-
-	mp = vl_msg_api_alloc(sizeof(*mp));
-	memset(mp, 0, sizeof(*mp));
-	mp->_vl_msg_id = ntohs(VL_API_IP_ADD_DEL_ROUTE);
-	mp->is_add = add;
-	mp->next_hop_sw_if_index = ntohl(entry->index);
-	mp->dst_address_length = prefixlen;
-	switch (dst.len)
 	{
-	case 4:
-		mp->is_ipv6 = 0;
-		memcpy(mp->dst_address, dst.ptr, dst.len);
-		break;
-	case 16:
-		mp->is_ipv6 = 1;
-		memcpy(mp->dst_address, dst.ptr, dst.len);
-		break;
-	default:
-		vl_msg_api_free(mp);
-		return FAILED;
+		NDBG3("%s: %s NOT FOUND", __FUNCTION__, name);
+		return NOT_FOUND;
 	}
+
+	size_t msg_size = sizeof(*mp) + sizeof(*fibp) * (gtw != NULL);
+	mp = vl_msg_api_alloc_zero(msg_size);
+	mp->_vl_msg_id = VL_API_IP_ROUTE_ADD_DEL;
+	mp->is_add = add;
+
+	/* mp->route.table_id = 0; default table */
+	/* mp->route.stats_index = 0; who knows why we need this */
+	chunk_to_api(dst, &mp->route.prefix.address);
+	mp->route.prefix.len = prefixlen;
 	if (gtw)
 	{
-		chunk_t addr = gtw->get_address(gtw);
-		memcpy(mp->next_hop_address, addr.ptr, addr.len);
+		chunk_t gwc = gtw->get_address(gtw);
+
+		mp->route.n_paths = 1;
+		fibp = mp->route.paths;
+		fibp->sw_if_index = entry->index;
+		fibp->table_id = mp->route.table_id;
+		/* fibp->rpf_id = 0; */
+		/* fibp->weight = 0; */
+		/* fibp->preference = 0; */
+		/* fibp->type = 0; */
+		/* fibp->flags = 0; */
+		/* fibp->n_labels = 0; */
+		if (gwc.len == IPV4_LEN)
+			fibp->proto = FIB_API_PATH_NH_PROTO_IP4;
+		else
+			fibp->proto = FIB_API_PATH_NH_PROTO_IP6;
+		chunk_to_addrun(gwc, &fibp->nh.address);
 	}
-	if (vac->send(vac, (char *)mp, sizeof(*mp), &out, &out_len))
+
+	/* Convert to network order and send */
+	vl_api_ip_route_add_del_t_endian(mp);
+	if (vac->send(vac, (char *)mp, msg_size, &out, &out_len))
 	{
-		DBG1(DBG_KNL, "vac %sing route failed", add ? "add" : "remov");
+		KDBG1("vac %sing route failed", add ? "add" : "remov");
 		vl_msg_api_free(mp);
 		return FAILED;
 	}
+
+	/* Get reply and convert to host order */
 	rmp = (void *)out;
+	vl_api_ip_route_add_del_reply_t_endian(rmp);
+
 	vl_msg_api_free(mp);
 	if (rmp->retval)
 	{
-		DBG1(DBG_KNL, "%s route failed %d", add ? "add" : "delete",
-			 ntohl(rmp->retval));
+		KDBG1("%s route failed: %E", add ? "add" : "delete", rmp->retval);
 		free(out);
 		return FAILED;
 	}
@@ -188,46 +315,7 @@ manage_route(private_kernel_vpp_net_t *this, bool add, chunk_t dst,
 	return SUCCESS;
 }
 
-/**
- * Check if an address or net (addr with prefix net bits) is in
- * subnet (net with net_len net bits)
- */
-static bool
-addr_in_subnet(chunk_t addr, int prefix, chunk_t net, int net_len)
-{
-	static const u_char mask[] = {0x00, 0x80, 0xc0, 0xe0,
-								  0xf0, 0xf8, 0xfc, 0xfe};
-	int byte = 0;
-
-	if (net_len == 0)
-	{ /* any address matches a /0 network */
-		return TRUE;
-	}
-	if (addr.len != net.len || net_len > 8 * net.len || prefix < net_len)
-	{
-		return FALSE;
-	}
-	/* scan through all bytes in network order */
-	while (net_len > 0)
-	{
-		if (net_len < 8)
-		{
-			return (mask[net_len] & addr.ptr[byte]) ==
-				   (mask[net_len] & net.ptr[byte]);
-		}
-		else
-		{
-			if (addr.ptr[byte] != net.ptr[byte])
-			{
-				return FALSE;
-			}
-			byte++;
-			net_len -= 8;
-		}
-	}
-	return TRUE;
-}
-
+#ifdef HAVE_VL_API_IP_ROUTE_LOOKUP
 /**
  * Get a route: If "nexthop" the nexthop is returned, source addr otherwise
  */
@@ -235,111 +323,81 @@ static host_t *
 get_route(private_kernel_vpp_net_t *this, host_t *dest, int prefix,
 		  bool nexthop, char **iface, host_t *src)
 {
+	/* XXX chopps: does nothing with src except clone it */
 	fib_path_t path;
-	char *out, *tmp;
-	int out_len, i, num;
-	vl_api_fib_path_t *fp;
+	char *out;
+	int family, out_len;
 	host_t *addr = NULL;
 	enumerator_t *enumerator;
 	iface_t *entry;
-	int family;
 
 	path.sw_if_index = ~0;
 	path.preference = ~0;
 	path.next_hop = chunk_empty;
 
-	if (dest->get_family(dest) == AF_INET)
+	vl_api_ip_route_lookup_t *mp;
+	vl_api_ip_route_lookup_reply_t *rmp;
+	int addrlen;
+
+	NDBG3("get_route: LOOKUP dest %H pfxlen %d nexthop %d", dest, prefix,
+		  nexthop);
+
+	family = dest->get_family(dest);
+	addrlen = (family == AF_INET) ? IPV4_LEN : IPV6_LEN;
+	if (prefix == -1)
 	{
-		vl_api_ip_fib_dump_t *mp;
-		vl_api_ip_fib_details_t *rmp;
-
-		family = AF_INET;
-		if (prefix == -1)
-			prefix = 32;
-
-		mp = vl_msg_api_alloc(sizeof(*mp));
-		mp->_vl_msg_id = ntohs(VL_API_IP_FIB_DUMP);
-		if (vac->send_dump(vac, (char *)mp, sizeof(*mp), &out, &out_len))
-			return NULL;
-		vl_msg_api_free(mp);
-		tmp = out;
-		while (tmp < (out + out_len))
-		{
-			rmp = (void *)tmp;
-			num = ntohl(rmp->count);
-			if (addr_in_subnet(dest->get_address(dest), prefix,
-							   chunk_create(rmp->address, 4),
-							   rmp->address_length))
-			{
-				fp = rmp->path;
-				for (i = 0; i < num; i++)
-				{
-					if (fp->is_drop)
-					{
-						fp++;
-						continue;
-					}
-					if ((fp->preference < path.preference) ||
-						(path.sw_if_index == ~0))
-					{
-						path.sw_if_index = ntohl(fp->sw_if_index);
-						path.preference = fp->preference;
-						chunk_clear(&path.next_hop);
-						path.next_hop = chunk_create(fp->next_hop, 4);
-					}
-					fp++;
-				}
-			}
-			tmp += sizeof(*rmp) + (sizeof(*fp) * num);
-		}
+		prefix = (family == AF_INET) ? 32 : 128;
 	}
-	else
+
+	mp = vl_msg_api_alloc_zero(sizeof(*mp));
+	mp->_vl_msg_id = VL_API_IP_ROUTE_LOOKUP;
+	/* mp->table_id = 0; default table */
+
+	chunk_to_api(dest->get_address(dest), &mp->prefix.address);
+	mp->prefix.len = prefix;
+
+	/* Convert to network order and send */
+	vl_api_ip_route_lookup_t_endian(mp);
+	if (vac->send(vac, (char *)mp, sizeof(*mp), &out, &out_len))
 	{
-		vl_api_ip6_fib_dump_t *mp;
-		vl_api_ip6_fib_details_t *rmp;
+		return NULL;
+	}
 
-		family = AF_INET6;
-		if (prefix == -1)
-			prefix = 128;
+	vl_msg_api_free(mp);
 
-		mp = vl_msg_api_alloc(sizeof(*mp));
-		mp->_vl_msg_id = ntohs(VL_API_IP6_FIB_DUMP);
-		if (vac->send_dump(vac, (char *)mp, sizeof(*mp), &out, &out_len))
-			return NULL;
-		vl_msg_api_free(mp);
-		tmp = out;
-		while (tmp < (out + out_len))
+	/* Get reply and convert to host order */
+	rmp = (vl_api_ip_route_lookup_reply_t *)out;
+	vl_api_ip_route_lookup_reply_t_endian(rmp);
+
+	vl_api_ip_route_t *route = &rmp->route;
+	vl_api_fib_path_t *nh = route->paths;
+	vl_api_fib_path_t *enh = nh + route->n_paths;
+
+	for (; nh < enh; nh++)
+	{
+		chunk_t chunk = addrun_to_chunk(&nh->nh.address, addrlen);
+		NDBG3("get_route: CANDIDATE for dest %H pfxlen %d nexthop %d: "
+			  "type %d flags 0x%x proto %d sw_if_index %d address %B "
+			  "preference %d weight %d",
+			  dest, prefix, nexthop, nh->type, nh->flags, nh->proto,
+			  nh->sw_if_index, &chunk, nh->preference, nh->weight);
+
+		if ((family == AF_INET && nh->proto != FIB_API_PATH_NH_PROTO_IP4) ||
+			(family == AF_INET6 && nh->proto != FIB_API_PATH_NH_PROTO_IP6) ||
+			(nh->type != FIB_API_PATH_TYPE_NORMAL &&
+			 nh->type != FIB_API_PATH_TYPE_LOCAL))
 		{
-			rmp = (void *)tmp;
-			num = ntohl(rmp->count);
-			if (addr_in_subnet(dest->get_address(dest), prefix,
-							   chunk_create(rmp->address, 16),
-							   rmp->address_length))
-			{
-				fp = rmp->path;
-				for (i = 0; i < num; i++)
-				{
-					if (fp->is_drop)
-					{
-						fp++;
-						continue;
-					}
-					if ((fp->preference < path.preference) ||
-						(path.sw_if_index == ~0))
-					{
-						path.sw_if_index = ntohl(fp->sw_if_index);
-						path.preference = fp->preference;
-						chunk_clear(&path.next_hop);
-						path.next_hop = chunk_create(fp->next_hop, 16);
-					}
-					fp++;
-				}
-			}
-			tmp += sizeof(*rmp) + (sizeof(*fp) * num);
+			continue;
+		}
+		else if ((nh->preference < path.preference) || (path.sw_if_index == ~0))
+		{
+			path.sw_if_index = nh->sw_if_index;
+			path.preference = nh->preference;
+			path.next_hop = addrun_to_chunk(&nh->nh.address, addrlen);
 		}
 	}
 
-	if (path.next_hop.len)
+	if (path.next_hop.len || path.sw_if_index != ~0)
 	{
 		if (nexthop)
 		{
@@ -360,19 +418,238 @@ get_route(private_kernel_vpp_net_t *this, host_t *dest, int prefix,
 				this->mutex->unlock(this->mutex);
 			}
 			addr = host_create_from_chunk(family, path.next_hop, 0);
+
+			NDBG3("get_route: FOUND: dest %H -> nexthop: %H iface: %s", dest,
+				  addr, (iface && *iface) ? *iface : "");
 		}
-		else
+		else if (src)
 		{
-			if (src)
-			{
-				addr = src->clone(src);
-			}
+			/* XXX chopps this is probably bogus */
+			addr = src->clone(src);
 		}
+	}
+	else
+	{
+		if (iface)
+		{
+			*iface = NULL;
+		}
+		NDBG3("get_route: NOTFOUND dest %H pfxlen %d nexthop %d", dest, prefix,
+			  nexthop);
 	}
 
 	free(out);
 	return addr;
 }
+#else
+
+/**
+ * Check if a prefix (covers) contains a prefix (pfx)
+ */
+static inline bool
+prefix_covers_prefix(chunk_t covers, int covlen, chunk_t pfx, int pfxlen)
+{
+	static const u_char mask[] = {0x00, 0x80, 0xc0, 0xe0,
+								  0xf0, 0xf8, 0xfc, 0xfe};
+	int byte = 0;
+
+	if (covlen == 0)
+	{
+		/* any address matches a /0 network */
+		return TRUE;
+	}
+	if (pfxlen < covlen)
+	{
+		return FALSE;
+	}
+
+	ASSERT(covers.len == covers.len);
+	ASSERT(covlen <= 8 * covers.len);
+
+	/* scan through all bytes in network order */
+	while (covlen)
+	{
+		if (covlen < 8)
+		{
+			return (mask[covlen] & pfx.ptr[byte]) ==
+				   (mask[covlen] & covers.ptr[byte]);
+		}
+		else
+		{
+			if (pfx.ptr[byte] != covers.ptr[byte])
+			{
+				return FALSE;
+			}
+			byte++;
+			covlen -= 8;
+		}
+	}
+	return TRUE;
+}
+
+/**
+ * Get a route: If "nexthop" the nexthop is returned, source addr otherwise
+ */
+static host_t *
+get_route(private_kernel_vpp_net_t *this, host_t *dest, int pfxlen,
+		  bool nexthop, char **iface, host_t *src)
+{
+	/*
+	 * No get-route option from VPP so do a dump of the fib and filter on our
+	 * routes
+	 */
+	/* XXX chopps: does nothing with src except clone it */
+	char *out, *walk, *ewalk;
+	int family, out_len;
+	host_t *addr = NULL;
+	enumerator_t *enumerator;
+	iface_t *entry;
+	int best_prefix_len = -1;
+	vl_api_ip_route_dump_t *mp;
+	int addrlen;
+
+	NDBG3("get_route: LOOKUP dest %H pfxlen %d nexthop %d", dest, pfxlen,
+		  nexthop);
+
+	family = dest->get_family(dest);
+	addrlen = (family == AF_INET) ? IPV4_LEN : IPV6_LEN;
+	if (pfxlen == -1)
+	{
+		pfxlen = (family == AF_INET) ? 32 : 128;
+	}
+
+	uint32_t path_if_index = ~0;
+	uint8_t path_pref = ~0;
+	host_t *path_nh = NULL;
+
+	mp = vl_msg_api_alloc_zero(sizeof(*mp));
+	mp->_vl_msg_id = VL_API_IP_ROUTE_DUMP;
+	mp->table.is_ip6 = family == AF_INET6;
+	/* mp->table.table_id = 0; default table */
+
+	/* Convert to network order and send */
+	vl_api_ip_route_dump_t_endian(mp);
+	if (vac->send_dump(vac, (char *)mp, sizeof(*mp), &out, &out_len))
+	{
+		return NULL;
+	}
+
+	vl_msg_api_free(mp);
+
+	walk = out;
+	ewalk = out + out_len;
+	vl_api_fib_path_t *nh, *enh;
+	for (; walk < ewalk; walk = (char *)enh)
+	{
+
+		vl_api_ip_route_details_t *rmp = (vl_api_ip_route_details_t *)walk;
+		vl_api_ip_route_t *route = &rmp->route;
+
+		/* Convert to host order */
+		vl_api_ip_route_t_endian(route);
+
+		nh = route->paths;
+		enh = nh + route->n_paths;
+
+		/* If we already have a better/equal prefix skip this one */
+		if (route->prefix.len <= best_prefix_len)
+		{
+			continue;
+		}
+
+		/* Crazy to allocate memory if the debug isn't going to print */
+		host_t *host_pfx = addr_to_host(&route->prefix.address);
+		NDBG4("get_route: CHECK_PREFIX %H/%d for dest %H/%d", host_pfx,
+			  route->prefix.len, dest, pfxlen);
+		free(host_pfx);
+
+		if (!prefix_covers_prefix(
+				addrun_to_chunk(&route->prefix.address.un, addrlen),
+				route->prefix.len, dest->get_address(dest), pfxlen))
+		{
+			continue;
+		}
+
+		for (; nh < enh; nh++)
+		{
+			host_t *host_nh = addrun_to_host(&nh->nh.address, addrlen);
+			NDBG4("get_route: CANDIDATE for dest %H pfxlen %d nexthop %d: "
+				  "type %d flags 0x%x proto %d sw_if_index %d address %H "
+				  "preference %d weight %d",
+				  dest, pfxlen, nexthop, nh->type, nh->flags, nh->proto,
+				  nh->sw_if_index, host_nh, nh->preference, nh->weight);
+
+			if ((family == AF_INET && nh->proto != FIB_API_PATH_NH_PROTO_IP4) ||
+				(family == AF_INET6 &&
+				 nh->proto != FIB_API_PATH_NH_PROTO_IP6) ||
+				(nh->type != FIB_API_PATH_TYPE_NORMAL &&
+				 nh->type != FIB_API_PATH_TYPE_LOCAL))
+			{
+				free(host_nh);
+				continue;
+			}
+			else if (!path_nh || route->prefix.len > best_prefix_len ||
+					 (nh->preference < path_pref))
+			{
+				best_prefix_len = route->prefix.len;
+				path_if_index = nh->sw_if_index;
+				path_pref = nh->preference;
+
+				free(path_nh);
+				path_nh = host_nh;
+			}
+			else
+			{
+				free(host_nh);
+			}
+		}
+	}
+
+	if (best_prefix_len != -1)
+	{
+		if (nexthop)
+		{
+			if (iface)
+			{
+				*iface = NULL;
+				this->mutex->lock(this->mutex);
+				enumerator = this->ifaces->create_enumerator(this->ifaces);
+				while (enumerator->enumerate(enumerator, &entry))
+				{
+					if (entry->index == path_if_index)
+					{
+						*iface = strdup(entry->if_name);
+						break;
+					}
+				}
+				enumerator->destroy(enumerator);
+				this->mutex->unlock(this->mutex);
+			}
+			addr = path_nh->clone(path_nh);
+
+			NDBG3("get_route: FOUND: dest %H/%d -> nexthop: %H iface: %s", dest,
+				  pfxlen, addr, (iface && *iface) ? *iface : "");
+		}
+		else if (src)
+		{
+			/* XXX chopps this is probably bogus */
+			addr = src->clone(src);
+		}
+	}
+	else
+	{
+		if (iface)
+		{
+			*iface = NULL;
+		}
+		NDBG3("get_route: NOTFOUND dest %H pfxlen %d nexthop %d", dest, pfxlen,
+			  nexthop);
+	}
+	free(path_nh);
+	free(out);
+	return addr;
+}
+#endif
 
 METHOD(enumerator_t, addr_enumerate, bool, addr_enumerator_t *this,
 	   va_list args)
@@ -394,13 +671,16 @@ METHOD(enumerator_t, addr_enumerate, bool, addr_enumerator_t *this,
 			{
 				continue;
 			}
-			this->addrs = entry->addrs->create_enumerator(entry->addrs);
+			this->addrs = array_create_enumerator(entry->addrs);
 		}
 		if (this->addrs->enumerate(this->addrs, host))
 		{
 			return TRUE;
 		}
-		this->addrs->destroy(this->addrs);
+		if (this->addrs)
+		{
+			this->addrs->destroy(this->addrs);
+		}
 		this->addrs = NULL;
 	}
 }
@@ -443,12 +723,15 @@ METHOD(kernel_net_t, create_address_enumerator, enumerator_t *,
 	this->mutex->lock(this->mutex);
 
 	INIT(enumerator,
-		 .public = {.enumerate = enumerator_enumerate_default,
-					.venumerate = _addr_enumerate,
-					.destroy = _addr_destroy},
+		 .public =
+			 {
+				 .enumerate = enumerator_enumerate_default,
+				 .venumerate = _addr_enumerate,
+				 .destroy = _addr_destroy,
+			 },
 		 .which = which,
 		 .ifaces = this->ifaces->create_enumerator(this->ifaces),
-		 .mutex = this->mutex);
+		 .mutex = this->mutex, );
 	return &enumerator->public;
 }
 
@@ -493,7 +776,7 @@ METHOD(kernel_net_t, del_route, status_t, private_kernel_vpp_net_t *this,
 static void
 iface_destroy(iface_t *this)
 {
-	this->addrs->destroy_offset(this->addrs, offsetof(host_t, destroy));
+	array_destroy_offset(this->addrs, offsetof(host_t, destroy));
 	free(this);
 }
 
@@ -505,57 +788,128 @@ METHOD(kernel_net_t, destroy, void, private_kernel_vpp_net_t *this)
 	free(this);
 }
 
+static int
+array_is_equal(array_t *a, array_t *b,
+			   int (*cmp)(const void *, const void *, void *), void *data)
+{
+	int i, count = array_count(a);
+	if (count != array_count(b))
+	{
+		return FALSE;
+	}
+	for (i = 0; i < count; i++)
+	{
+		host_t *ha, *hb;
+		(void)array_get(a, i, (void *)&ha);
+		(void)array_get(b, i, (void *)&hb);
+		if (cmp(ha, hb, data))
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 /**
  * Update addresses for an iface entry
  */
-static void
+static int
 update_addrs(private_kernel_vpp_net_t *this, iface_t *entry)
 {
-	char *out;
-	int out_len, i, num;
+	char *out4 = NULL, *out6 = NULL;
+	int i, out_len4, out_len6;
 	vl_api_ip_address_dump_t *mp;
-	vl_api_ip_address_details_t *rmp;
-	linked_list_t *addrs;
+	vl_api_ip_address_details_t *rmp, *ermp;
+	array_t *addrs;
 	host_t *host;
+	int signal = FALSE;
 
-	mp = vl_msg_api_alloc(sizeof(*mp));
-	mp->_vl_msg_id = ntohs(VL_API_IP_ADDRESS_DUMP);
-	mp->sw_if_index = ntohl(entry->index);
+	NDBG3("interface %s: requesting addresses", entry->if_name);
+
+	mp = vl_msg_api_alloc_zero(sizeof(*mp));
+	mp->_vl_msg_id = VL_API_IP_ADDRESS_DUMP;
+	mp->sw_if_index = entry->index;
+
+	/* Convert to network order and send */
+	vl_api_ip_address_dump_t_endian(mp);
 	mp->is_ipv6 = 0;
-	if (vac->send_dump(vac, (char *)mp, sizeof(*mp), &out, &out_len))
-		return;
-	num = out_len / sizeof(*rmp);
-	addrs = linked_list_create();
-	for (i = 0; i < num; i++)
-	{
-		rmp = (void *)out;
-		out += sizeof(*rmp);
-		host = host_create_from_chunk(AF_INET, chunk_create(rmp->ip, 4), 0);
-		addrs->insert_last(addrs, host);
-	}
-	vl_msg_api_free(mp);
-	free(out);
-	mp = vl_msg_api_alloc(sizeof(*mp));
-	mp->_vl_msg_id = ntohs(VL_API_IP_ADDRESS_DUMP);
-	mp->sw_if_index = ntohl(entry->index);
+	if (vac->send_dump(vac, (char *)mp, sizeof(*mp), &out4, &out_len4))
+		goto out;
 	mp->is_ipv6 = 1;
-	if (vac->send_dump(vac, (char *)mp, sizeof(*mp), &out, &out_len))
-		return;
-	num = out_len / sizeof(*rmp);
-	for (i = 0; i < num; i++)
-	{
-		rmp = (void *)out;
-		out += sizeof(*rmp);
-		host = host_create_from_chunk(AF_INET6, chunk_create(rmp->ip, 16), 0);
-		addrs->insert_last(addrs, host);
-	}
-	vl_msg_api_free(mp);
-	free(out);
+	if (vac->send_dump(vac, (char *)mp, sizeof(*mp), &out6, &out_len6))
+		goto out;
 
-	entry->addrs->destroy(entry->addrs);
-	entry->addrs =
-		linked_list_create_from_enumerator(addrs->create_enumerator(addrs));
-	addrs->destroy(addrs);
+	addrs = array_create(0, (out_len4 + out_len6) / sizeof(*rmp));
+	rmp = (void *)out4;
+	ermp = rmp + (out_len4 / sizeof(*rmp));
+	i = 0;
+	for (; rmp < ermp; rmp++)
+	{
+		/* convert reply to host order */
+		/* XXX this function uses an unimplemented endian conversion for the
+		   prefix. */
+		fixed_vl_api_ip_address_details_t_endian(rmp);
+		host = addr_to_host(&rmp->prefix.address);
+		NDBG3("interface %s: got addr %H", entry->if_name, host);
+		array_insert(addrs, i++, host);
+	}
+
+	rmp = (void *)out6;
+	ermp = rmp + (out_len6 / sizeof(*rmp));
+	for (; rmp < ermp; rmp++)
+	{
+		/* convert reply to host order */
+		fixed_vl_api_ip_address_details_t_endian(rmp);
+		host = addr_to_host(&rmp->prefix.address);
+		NDBG3("interface %s: got addr %H", entry->if_name, host);
+		array_insert(addrs, i++, host);
+	}
+
+	array_sort(addrs, cmpaddrs3, 0);
+
+	int changed = !entry->addrs
+					  ? TRUE
+					  : !array_is_equal(entry->addrs, addrs, cmpaddrs3, NULL);
+
+	if (changed)
+	{
+		/* Would be nice if we had an API to check if this will be filtered */
+		int count;
+		if (entry->addrs)
+		{
+			for (i = 0, count = array_count(entry->addrs); i < count; i++)
+			{
+				(void)array_get(entry->addrs, i, &host);
+				NDBG3("interface %s: OLD ADDR: %H", entry->if_name, host);
+			}
+		}
+		for (i = 0, count = array_count(addrs); i < count; i++)
+		{
+			(void)array_get(addrs, i, &host);
+			NDBG3("interface %s: NEW ADDR: %H", entry->if_name, host);
+		}
+	}
+
+	if (changed && entry->addrs)
+	{
+		array_destroy_offset(entry->addrs, offsetof(host_t, destroy));
+		entry->addrs = addrs;
+		/* Let everyone know something changed */
+		if (entry->usable && entry->up)
+		{
+			signal = TRUE;
+		}
+	}
+	else if (!entry->addrs)
+	{
+		entry->addrs = addrs;
+	}
+out:
+	vl_msg_api_free(mp);
+	free(out4);
+	free(out6);
+
+	return signal;
 }
 
 /**
@@ -569,26 +923,34 @@ event_cb(char *data, int data_len, void *ctx)
 	iface_t *entry;
 	enumerator_t *enumerator;
 
+	/* Get event data and convert to host order */
 	event = (void *)data;
-	DBG3(DBG_NET, "interface event %d", ntohl(event->sw_if_index));
+	vl_api_sw_interface_event_t_endian(event);
+
+	NDBG3("interface event %d", event->sw_if_index);
 	this->mutex->lock(this->mutex);
 	enumerator = this->ifaces->create_enumerator(this->ifaces);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (entry->index == ntohl(event->sw_if_index))
+		if (entry->index == event->sw_if_index)
 		{
+			bool admin_up;
+#ifdef HAVE_VL_API_IF_STATUS_FLAGS_T
+			admin_up = (event->flags & IF_STATUS_API_FLAG_ADMIN_UP) != 0;
+#else
+			admin_up = event->admin_up_down ? TRUE : FALSE;
+#endif
 			if (event->deleted)
 			{
 				this->ifaces->remove_at(this->ifaces, enumerator);
-				DBG2(DBG_NET, "interface deleted %u %s", entry->index,
-					 entry->if_name);
+				NDBG2("interface deleted %u %s", entry->index, entry->if_name);
 				iface_destroy(entry);
 			}
-			else if (entry->up != event->admin_up_down)
+			else if (entry->up != admin_up)
 			{
-				entry->up = event->admin_up_down ? TRUE : FALSE;
-				DBG2(DBG_NET, "interface state changed %u %s %s", entry->index,
-					 entry->if_name, entry->up ? "UP" : "DOWN");
+				entry->up = admin_up;
+				NDBG2("interface state changed %u %s %s", entry->index,
+					  entry->if_name, entry->up ? "UP" : "DOWN");
 			}
 			break;
 		}
@@ -610,28 +972,35 @@ net_update_thread_fn(private_kernel_vpp_net_t *this)
 		char *out;
 		int out_len;
 		vl_api_sw_interface_dump_t *mp;
-		vl_api_sw_interface_details_t *rmp;
-		int i, num;
+		vl_api_sw_interface_details_t *rmp, *ermp;
 		enumerator_t *enumerator;
 		iface_t *entry;
+		int signal = FALSE;
 
-		mp = vl_msg_api_alloc(sizeof(*mp));
-		mp->_vl_msg_id = ntohs(VL_API_SW_INTERFACE_DUMP);
+		mp = vl_msg_api_alloc_zero(sizeof(*mp));
+		mp->_vl_msg_id = VL_API_SW_INTERFACE_DUMP;
 		mp->name_filter_valid = 0;
+
+		/* Convert to network order and send */
+		vl_api_sw_interface_dump_t_endian(mp);
 		rv = vac->send_dump(vac, (char *)mp, sizeof(*mp), &out, &out_len);
 		if (!rv)
 		{
+
 			this->mutex->lock(this->mutex);
 			enumerator = this->ifaces->create_enumerator(this->ifaces);
-			num = out_len / sizeof(*rmp);
-			for (i = 0; i < num; i++)
+			rmp = (void *)out;
+			ermp = rmp + (out_len / sizeof(*rmp));
+			for (; rmp < ermp; rmp++)
 			{
 				bool exists = FALSE;
-				rmp = (void *)out;
-				out += sizeof(*rmp);
+
+				/* Convert reply to host order */
+				vl_api_sw_interface_details_t_endian(rmp);
+
 				while (enumerator->enumerate(enumerator, &entry))
 				{
-					if (entry->index == ntohl(rmp->sw_if_index))
+					if (entry->index == rmp->sw_if_index)
 					{
 						exists = TRUE;
 						break;
@@ -639,15 +1008,28 @@ net_update_thread_fn(private_kernel_vpp_net_t *this)
 				}
 				if (!exists)
 				{
-					INIT(entry, .index = ntohl(rmp->sw_if_index),
-						 .up = rmp->admin_up_down ? TRUE : FALSE,
-						 .addrs = linked_list_create());
+					bool admin_up;
+#ifdef HAVE_VL_API_IF_STATUS_FLAGS_T
+					admin_up = (rmp->flags & IF_STATUS_API_FLAG_ADMIN_UP) != 0;
+#else
+					admin_up = rmp->admin_up_down ? TRUE : FALSE;
+#endif
+					INIT(entry, .index = rmp->sw_if_index, .up = admin_up,
+						 .addrs = NULL, );
 					strncpy(entry->if_name, rmp->interface_name, 64);
-					DBG2(DBG_KNL, "IF %d %s %s", entry->index, entry->if_name,
-						 entry->up ? "UP" : "DOWN");
+					KDBG2("IF %d %s %s", entry->index, entry->if_name,
+						  entry->up ? "UP" : "DOWN");
 					this->ifaces->insert_last(this->ifaces, entry);
+
+					/* XXX chopps: what if config changed? */
+					entry->usable = charon->kernel->is_interface_usable(
+						charon->kernel, entry->if_name);
 				}
-				update_addrs(this, entry);
+
+				if (update_addrs(this, entry))
+				{
+					signal = TRUE;
+				}
 			}
 			enumerator->destroy(enumerator);
 			this->mutex->unlock(this->mutex);
@@ -658,47 +1040,102 @@ net_update_thread_fn(private_kernel_vpp_net_t *this)
 		if (!this->events_on)
 		{
 			vl_api_want_interface_events_t *emp;
+#ifdef HAVE_VLIBAPI_GET_MAIN
+			api_main_t *am = vlibapi_get_main();
+#else
 			api_main_t *am = &api_main;
+#endif
 
-			emp = vl_msg_api_alloc(sizeof(*emp));
-			emp->_vl_msg_id = ntohs(VL_API_WANT_INTERFACE_EVENTS);
+			emp = vl_msg_api_alloc_zero(sizeof(*emp));
+			emp->_vl_msg_id = VL_API_WANT_INTERFACE_EVENTS;
 			emp->enable_disable = 1;
 			emp->pid = am->our_pid;
+
+			/* Convert to network order and register */
+			vl_api_want_interface_events_t_endian(emp);
 			rv = vac->register_event(vac, (char *)emp, sizeof(*emp), event_cb,
 									 VL_API_SW_INTERFACE_EVENT, this);
 			if (!rv)
 				this->events_on = TRUE;
 		}
+		if (signal)
+		{
+			fire_roam_event(this, TRUE);
+		}
 
-		sleep(5);
+		/* XXX chopps: we want events for address changes -- not this */
+		sleep(600);
 	}
 	return NULL;
 }
+
+#if 0
+METHOD(kernel_net_t, get_sw_if_index, uint32_t, private_kernel_vpp_net_t *this,
+	   const char *name)
+{
+	enumerator_t *enumerator;
+	iface_t *entry;
+	bool found = FALSE;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->ifaces->create_enumerator(this->ifaces);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (streq(name, entry->if_name))
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+
+	return found ? entry->index : ~0;
+}
+#endif
 
 kernel_vpp_net_t *
 kernel_vpp_net_create()
 {
 	private_kernel_vpp_net_t *this;
 
-	INIT(this,
-		 .public = {.interface = {.get_interface = _get_interface_name,
-								  .create_address_enumerator =
-									  _create_address_enumerator,
-								  .get_source_addr = _get_source_addr,
-								  .get_nexthop = _get_nexthop,
-								  .add_ip = _add_ip,
-								  .del_ip = _del_ip,
-								  .add_route = _add_route,
-								  .del_route = _del_route,
-								  .destroy = _destroy}},
-		 .mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		 .ifaces = linked_list_create(), .events_on = FALSE);
+	INIT(
+		this,
+		.public =
+			{
+				.interface =
+					{
+						.get_interface = _get_interface_name,
+						.create_address_enumerator = _create_address_enumerator,
+						.get_source_addr = _get_source_addr,
+						.get_nexthop = _get_nexthop,
+						.add_ip = _add_ip,
+						.del_ip = _del_ip,
+						.add_route = _add_route,
+						.del_route = _del_route,
+						.destroy = _destroy,
+					},
+				/* .get_sw_if_index = _get_sw_if_index, */
+			},
+		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.ifaces = linked_list_create(), .events_on = FALSE,
+
+		.roam_lock = spinlock_create(),
+		.roam_events = lib->settings->get_bool(
+			lib->settings, "%s.plugins.kernel-vpp.roam_events", TRUE,
+			lib->ns), );
 
 	this->net_update = thread_create((thread_main_t)net_update_thread_fn, this);
-
 	return &this->public;
 }
 
 /*
  * fd.io coding-style-patch-verification: CLANG
+ *
+ * Local Variables:
+ * c-file-style: "bsd"
+ * c-basic-offset: 4
+ * tab-width: 4
+ * indent-tabs-mode: t
+ * End:
  */

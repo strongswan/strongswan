@@ -20,4 +20,11 @@ struct kernel_vpp_plugin_t {
 
 /*
  * fd.io coding-style-patch-verification: CLANG
+ *
+ * Local Variables:
+ * c-file-style: "bsd"
+ * c-basic-offset: 4
+ * tab-width: 4
+ * indent-tabs-mode: t
+ * End:
  */
