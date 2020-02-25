@@ -2699,7 +2699,7 @@ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
 	   Otherwise we don't need to do this because deletes happen by destination net, ignoring all other parameters
 	   (Except if metrics are used but we don't support that so we can ignore it here)
 	*/
-	if (nlmsg_type == RTM_NEWROUTE && !is_passthrough_route) {
+	if (nlmsg_type == RTM_NEWROUTE && !is_passthrough_route && src_ip) {
 		chunk = src_ip->get_address(src_ip);
 		netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
 		if (gateway && gateway->get_family(gateway) == src_ip->get_family(src_ip))
