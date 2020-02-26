@@ -2661,8 +2661,9 @@ static void install_route(private_kernel_netlink_ipsec_t *this,
 			iface = route->src_ip;
 		}
 		if (!charon->kernel->get_interface(charon->kernel, iface,
-										   &route->if_name))
-		{
+										   &route->if_name) &&
+			!route->pass)
+		{	/* don't require an interface for passthrough policies */
 			route_entry_destroy(route);
 			return;
 		}

@@ -585,7 +585,7 @@ static job_requeue_t reinstall_routes(private_kernel_netlink_net_t *this)
 		net_change_t *change, lookup = {
 			.if_name = route->if_name,
 		};
-		if (route->pass)
+		if (route->pass || !route->if_name)
 		{	/* no need to reinstall these, they don't reference interfaces */
 			continue;
 		}
