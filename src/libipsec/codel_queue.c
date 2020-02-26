@@ -27,7 +27,7 @@ typedef struct private_codel_queue_t private_codel_queue_t;
 /**
  * Timestamp with "good" resolution
  */
-typedef u_int64_t timestamp_t;
+typedef uint64_t timestamp_t;
 
 /**
  * Entry for an packet
