@@ -1379,6 +1379,9 @@ AC_CACHE_CHECK(
 )
 if test "x$ss_cv_static_plugin_constructors" = xyes; then
 	static_plugin_constructors=true
+	if test "$PYTHON" = ":"; then
+		AC_MSG_FAILURE([Python is required to resolve plugin constructors statically])
+	fi
 fi
 
 # ===============================================
