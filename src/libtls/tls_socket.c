@@ -158,9 +158,9 @@ static bool exchange(private_tls_socket_t *this, bool wr, bool block)
 	char buf[CRYPTO_BUF_SIZE], *pos;
 	ssize_t in, out;
 	size_t len;
-	int round = 0, flags;
+	int flags;
 
-	for (round = 0; TRUE; round++)
+	while (TRUE)
 	{
 		while (TRUE)
 		{
