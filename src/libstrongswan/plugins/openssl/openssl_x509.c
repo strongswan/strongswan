@@ -416,10 +416,10 @@ METHOD(certificate_t, issued_by, bool,
 		{
 			return FALSE;
 		}
-		if (!this->issuer->equals(this->issuer, issuer->get_subject(issuer)))
-		{
-			return FALSE;
-		}
+	}
+	if (!this->issuer->equals(this->issuer, issuer->get_subject(issuer)))
+	{
+		return FALSE;
 	}
 	key = issuer->get_public_key(issuer);
 	if (!key)
