@@ -98,7 +98,6 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
-	uint16_t enc_alg, int_alg, key_size;
 	uint64_t nc_id, spi_loc, spi_rem;
 	chunk_t *nonce;
 	tkm_diffie_hellman_t *tkm_dh;
@@ -108,38 +107,6 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	block_len_type block_len;
 	icv_len_type icv_len;
 	iv_len_type iv_len;
-
-	/* Check encryption and integrity algorithms */
-	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &enc_alg,
-								 &key_size))
-	{
-		DBG1(DBG_IKE, "no %N selected", transform_type_names,
-			 ENCRYPTION_ALGORITHM);
-		return FALSE;
-	}
-	if (encryption_algorithm_is_aead(enc_alg))
-	{
-		DBG1(DBG_IKE, "AEAD algorithm %N not supported",
-			 encryption_algorithm_names, enc_alg);
-		return FALSE;
-	}
-	if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &int_alg, NULL))
-	{
-		DBG1(DBG_IKE, "no %N selected", transform_type_names,
-			 INTEGRITY_ALGORITHM);
-		return FALSE;
-	}
-	if (!(enc_alg == ENCR_AES_CBC && key_size == 256 &&
-		  int_alg == AUTH_HMAC_SHA2_512_256))
-	{
-		DBG1(DBG_IKE, "the TKM only supports aes256-sha512 at the moment, "
-			 "please update your configuration");
-		return FALSE;
-	}
-
-	DBG2(DBG_IKE, "using %N for encryption, %N for integrity",
-		 encryption_algorithm_names, enc_alg, integrity_algorithm_names,
-		 int_alg);
 
 	/* Acquire nonce context id */
 	nonce = this->initiator ? &nonce_i : &nonce_r;
