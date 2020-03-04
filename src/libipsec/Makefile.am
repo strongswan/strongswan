@@ -19,6 +19,8 @@ libipsec_la_LIBADD = \
 
 if USE_WINDOWS
   libipsec_la_LIBADD += -lws2_32
+else
+  libipsec_la_LIBADD += -lm
 endif
 
 AM_CPPFLAGS = \
