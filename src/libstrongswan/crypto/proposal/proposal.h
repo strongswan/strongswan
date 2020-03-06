@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Tobias Brunner
+ * Copyright (C) 2009-2020 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -181,7 +181,14 @@ struct proposal_t {
 	 *
 	 * @return				proposal number
 	 */
-	u_int (*get_number)(proposal_t *this);
+	uint8_t (*get_number)(proposal_t *this);
+
+	/**
+	 * Get number of the transform on which this proposal is based (IKEv1 only)
+	 *
+	 * @return				transform number (or 0)
+	 */
+	uint8_t (*get_transform_number)(proposal_t *this);
 
 	/**
 	 * Check for the equality of two proposals.
@@ -212,7 +219,18 @@ struct proposal_t {
  * @param number			proposal number, as encoded in SA payload
  * @return					proposal_t object
  */
-proposal_t *proposal_create(protocol_id_t protocol, u_int number);
+proposal_t *proposal_create(protocol_id_t protocol, uint8_t number);
+
+/**
+ * Create a proposal for IKE, ESP or AH that includes a transform number.
+ *
+ * @param protocol			protocol, such as PROTO_ESP
+ * @param number			proposal number, as encoded in SA payload
+ * @param transform			transform number, as encoded in payload
+ * @return					proposal_t object
+ */
+proposal_t *proposal_create_v1(protocol_id_t protocol, uint8_t number,
+							   uint8_t transform);
 
 /**
  * Create a default proposal.
