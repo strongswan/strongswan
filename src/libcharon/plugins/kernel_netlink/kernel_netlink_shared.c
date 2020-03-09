@@ -2,7 +2,7 @@
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2008-2019 Tobias Brunner
+ * Copyright (C) 2008-2020 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -766,4 +766,64 @@ void *netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len)
 		return NULL;
 	}
 	return RTA_DATA(rta);
+}
+
+/*
+ * Described in header
+ */
+void route_entry_destroy(route_entry_t *this)
+{
+	free(this->if_name);
+	DESTROY_IF(this->src_ip);
+	DESTROY_IF(this->gateway);
+	chunk_free(&this->dst_net);
+	free(this);
+}
+
+/*
+ * Described in header
+ */
+route_entry_t *route_entry_clone(const route_entry_t *this)
+{
+	route_entry_t *route;
+
+	INIT(route,
+		.if_name = strdupnull(this->if_name),
+		.src_ip = this->src_ip ? this->src_ip->clone(this->src_ip) : NULL,
+		.gateway = this->gateway ? this->gateway->clone(this->gateway) : NULL,
+		.dst_net = chunk_clone(this->dst_net),
+		.prefixlen = this->prefixlen,
+		.pass = this->pass,
+	);
+	return route;
+}
+
+/*
+ * Described in header
+ */
+u_int route_entry_hash(const route_entry_t *this)
+{
+	return chunk_hash_inc(chunk_from_thing(this->prefixlen),
+						  chunk_hash(this->dst_net));
+}
+
+/**
+ * Compare two IP addresses, also accept it if both are NULL
+ */
+static bool addrs_null_or_equal(host_t *a, host_t *b)
+{
+	return (!a && !b) || (a && b && a->ip_equals(a, b));
+}
+
+/*
+ * Described in header
+ */
+bool route_entry_equals(const route_entry_t *a, const route_entry_t *b)
+{
+	return streq(a->if_name, b->if_name) &&
+		a->pass == b->pass &&
+		a->prefixlen == b->prefixlen &&
+		chunk_equals(a->dst_net, b->dst_net) &&
+		addrs_null_or_equal(a->src_ip, b->src_ip) &&
+		addrs_null_or_equal(a->gateway, b->gateway);
 }

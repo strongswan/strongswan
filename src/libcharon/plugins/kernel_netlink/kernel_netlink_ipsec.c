@@ -370,59 +370,6 @@ struct private_kernel_netlink_ipsec_t {
 							 kernel_ipsec_manage_policy_t *data);
 };
 
-typedef struct route_entry_t route_entry_t;
-
-/**
- * Installed routing entry
- */
-struct route_entry_t {
-	/** Name of the interface the route is bound to */
-	char *if_name;
-
-	/** Source ip of the route */
-	host_t *src_ip;
-
-	/** Gateway for this route */
-	host_t *gateway;
-
-	/** Destination net */
-	chunk_t dst_net;
-
-	/** Destination net prefixlen */
-	uint8_t prefixlen;
-
-	/** Whether the route was installed for a passthrough policy */
-	bool pass;
-};
-
-/**
- * Destroy a route_entry_t object
- */
-static void route_entry_destroy(route_entry_t *this)
-{
-	free(this->if_name);
-	this->src_ip->destroy(this->src_ip);
-	DESTROY_IF(this->gateway);
-	chunk_free(&this->dst_net);
-	free(this);
-}
-
-/**
- * Compare two route_entry_t objects
- */
-static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
-{
-	if (a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
-		a->pass == b->pass &&
-		a->src_ip->ip_equals(a->src_ip, b->src_ip) &&
-		chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen)
-	{
-		return (!a->gateway && !b->gateway) || (a->gateway && b->gateway &&
-					a->gateway->ip_equals(a->gateway, b->gateway));
-	}
-	return FALSE;
-}
-
 typedef struct ipsec_sa_t ipsec_sa_t;
 
 /**
