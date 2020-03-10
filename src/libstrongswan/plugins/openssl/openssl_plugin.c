@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Tobias Brunner
+ * Copyright (C) 2008-2020 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -50,6 +50,7 @@
 #include "openssl_x_diffie_hellman.h"
 #include "openssl_ed_public_key.h"
 #include "openssl_ed_private_key.h"
+#include "openssl_xof.h"
 
 #ifndef FIPS_MODE
 #define FIPS_MODE 0
@@ -546,13 +547,18 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(HASHER, HASH_SHA384),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA512),
 #endif
-/* SHA3 was added with OpenSSL 1.1.1, it doesn't seem to be possible to
+/* SHA3/SHAKE was added with OpenSSL 1.1.1, it doesn't seem to be possible to
  * disable it, defining the checked var prevents registration, though */
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_SHA3)
 			PLUGIN_PROVIDE(HASHER, HASH_SHA3_224),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA3_256),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA3_384),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA3_512),
+#endif
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_SHAKE)
+		PLUGIN_REGISTER(XOF, openssl_xof_create),
+			PLUGIN_PROVIDE(XOF, XOF_SHAKE_128),
+			PLUGIN_PROVIDE(XOF, XOF_SHAKE_256),
 #endif
 #ifndef OPENSSL_NO_SHA1
 		/* keyed sha1 hasher (aka prf) */
