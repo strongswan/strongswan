@@ -370,55 +370,6 @@ struct private_kernel_netlink_ipsec_t {
 							 kernel_ipsec_manage_policy_t *data);
 };
 
-typedef struct route_entry_t route_entry_t;
-
-/**
- * Installed routing entry
- */
-struct route_entry_t {
-	/** Name of the interface the route is bound to */
-	char *if_name;
-
-	/** Source ip of the route */
-	host_t *src_ip;
-
-	/** Gateway for this route */
-	host_t *gateway;
-
-	/** Destination net */
-	chunk_t dst_net;
-
-	/** Destination net prefixlen */
-	uint8_t prefixlen;
-};
-
-/**
- * Destroy a route_entry_t object
- */
-static void route_entry_destroy(route_entry_t *this)
-{
-	free(this->if_name);
-	this->src_ip->destroy(this->src_ip);
-	DESTROY_IF(this->gateway);
-	chunk_free(&this->dst_net);
-	free(this);
-}
-
-/**
- * Compare two route_entry_t objects
- */
-static bool route_entry_equals(route_entry_t *a, route_entry_t *b)
-{
-	if (a->if_name && b->if_name && streq(a->if_name, b->if_name) &&
-		a->src_ip->ip_equals(a->src_ip, b->src_ip) &&
-		chunk_equals(a->dst_net, b->dst_net) && a->prefixlen == b->prefixlen)
-	{
-		return (!a->gateway && !b->gateway) || (a->gateway && b->gateway &&
-					a->gateway->ip_equals(a->gateway, b->gateway));
-	}
-	return FALSE;
-}
-
 typedef struct ipsec_sa_t ipsec_sa_t;
 
 /**
@@ -2614,89 +2565,97 @@ static void install_route(private_kernel_netlink_ipsec_t *this,
 
 	INIT(route,
 		.prefixlen = policy->sel.prefixlen_d,
+		.pass = mapping->type == POLICY_PASS,
 	);
 
 	if (charon->kernel->get_address_by_ts(charon->kernel, out->src_ts,
-										  &route->src_ip, NULL) == SUCCESS)
+										  &route->src_ip, NULL) != SUCCESS)
 	{
-		if (!ipsec->dst->is_anyaddr(ipsec->dst))
+		if (!route->pass)
 		{
-			route->gateway = charon->kernel->get_nexthop(charon->kernel,
-												ipsec->dst, -1, ipsec->src,
-												&route->if_name);
+			free(route);
+			return;
 		}
-		else
-		{	/* for shunt policies */
-			iface = xfrm2host(policy->sel.family, &policy->sel.daddr, 0);
-			route->gateway = charon->kernel->get_nexthop(charon->kernel,
-												iface, policy->sel.prefixlen_d,
-												route->src_ip, &route->if_name);
-			iface->destroy(iface);
-		}
-		route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
-		memcpy(route->dst_net.ptr, &policy->sel.daddr, route->dst_net.len);
+		/* allow blank source IP for passthrough policies */
+		route->src_ip = host_create_any(policy->sel.family);
+	}
 
-		/* get the interface to install the route for, if we haven't one yet.
-		 * If we have a local address, use it. Otherwise (for shunt policies)
-		 * use the route's source address. */
-		if (!route->if_name)
-		{
-			iface = ipsec->src;
-			if (iface->is_anyaddr(iface))
-			{
-				iface = route->src_ip;
-			}
-			if (!charon->kernel->get_interface(charon->kernel, iface,
-											   &route->if_name))
-			{
-				route_entry_destroy(route);
-				return;
-			}
-		}
-		if (policy->route)
-		{
-			route_entry_t *old = policy->route;
-			if (route_entry_equals(old, route))
-			{
-				route_entry_destroy(route);
-				return;
-			}
-			/* uninstall previously installed route */
-			if (charon->kernel->del_route(charon->kernel, old->dst_net,
-										  old->prefixlen, old->gateway,
-										  old->src_ip, old->if_name) != SUCCESS)
-			{
-				DBG1(DBG_KNL, "error uninstalling route installed with policy "
-					 "%R === %R %N", out->src_ts, out->dst_ts, policy_dir_names,
-					 policy->direction);
-			}
-			route_entry_destroy(old);
-			policy->route = NULL;
-		}
-
-		DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s", out->dst_ts,
-			 route->gateway, route->src_ip, route->if_name);
-		switch (charon->kernel->add_route(charon->kernel, route->dst_net,
-										  route->prefixlen, route->gateway,
-										  route->src_ip, route->if_name))
-		{
-			default:
-				DBG1(DBG_KNL, "unable to install source route for %H",
-					 route->src_ip);
-				/* FALL */
-			case ALREADY_DONE:
-				/* route exists, do not uninstall */
-				route_entry_destroy(route);
-				break;
-			case SUCCESS:
-				/* cache the installed route */
-				policy->route = route;
-				break;
-		}
+	if (!ipsec->dst->is_anyaddr(ipsec->dst))
+	{
+		route->gateway = charon->kernel->get_nexthop(charon->kernel,
+											ipsec->dst, -1, ipsec->src,
+											&route->if_name);
 	}
 	else
+	{	/* for shunt policies */
+		iface = xfrm2host(policy->sel.family, &policy->sel.daddr, 0);
+		route->gateway = charon->kernel->get_nexthop(charon->kernel,
+											iface, policy->sel.prefixlen_d,
+											route->src_ip, &route->if_name);
+		iface->destroy(iface);
+	}
+	route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
+	memcpy(route->dst_net.ptr, &policy->sel.daddr, route->dst_net.len);
+
+	/* get the interface to install the route for, if we haven't one yet.
+	 * If we have a local address, use it. Otherwise (for shunt policies)
+	 * use the route's source address. */
+	if (!route->if_name)
 	{
-		free(route);
+		iface = ipsec->src;
+		if (iface->is_anyaddr(iface))
+		{
+			iface = route->src_ip;
+		}
+		if (!charon->kernel->get_interface(charon->kernel, iface,
+										   &route->if_name) &&
+			!route->pass)
+		{	/* don't require an interface for passthrough policies */
+			route_entry_destroy(route);
+			return;
+		}
+	}
+	if (policy->route)
+	{
+		route_entry_t *old = policy->route;
+		if (route_entry_equals(old, route))
+		{
+			route_entry_destroy(route);
+			return;
+		}
+		/* uninstall previously installed route */
+		if (charon->kernel->del_route(charon->kernel, old->dst_net,
+									  old->prefixlen, old->gateway,
+									  old->src_ip, old->if_name,
+									  old->pass) != SUCCESS)
+		{
+			DBG1(DBG_KNL, "error uninstalling route installed with policy "
+				 "%R === %R %N", out->src_ts, out->dst_ts, policy_dir_names,
+				 policy->direction);
+		}
+		route_entry_destroy(old);
+		policy->route = NULL;
+	}
+
+	DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s", out->dst_ts,
+		 route->gateway, route->src_ip, route->if_name);
+	switch (charon->kernel->add_route(charon->kernel, route->dst_net,
+									  route->prefixlen, route->gateway,
+									  route->src_ip, route->if_name,
+									  route->pass))
+	{
+		default:
+			DBG1(DBG_KNL, "unable to install source route for %H",
+				 route->src_ip);
+			/* FALL */
+		case ALREADY_DONE:
+			/* route exists, do not uninstall */
+			route_entry_destroy(route);
+			break;
+		case SUCCESS:
+			/* cache the installed route */
+			policy->route = route;
+			break;
 	}
 }
 
@@ -3207,7 +3166,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		route_entry_t *route = current->route;
 		if (charon->kernel->del_route(charon->kernel, route->dst_net,
 									  route->prefixlen, route->gateway,
-									  route->src_ip, route->if_name) != SUCCESS)
+									  route->src_ip, route->if_name,
+									  route->pass) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with policy "
 				 "%R === %R %N%s", id->src_ts, id->dst_ts, policy_dir_names,

@@ -1494,7 +1494,7 @@ static status_t manage_route(private_kernel_pfroute_net_t *this, int op,
 
 METHOD(kernel_net_t, add_route, status_t,
 	private_kernel_pfroute_net_t *this, chunk_t dst_net, uint8_t prefixlen,
-	host_t *gateway, host_t *src_ip, char *if_name)
+	host_t *gateway, host_t *src_ip, char *if_name, bool pass)
 {
 	status_t status;
 	route_entry_t *found, route = {
@@ -1523,7 +1523,7 @@ METHOD(kernel_net_t, add_route, status_t,
 
 METHOD(kernel_net_t, del_route, status_t,
 	private_kernel_pfroute_net_t *this, chunk_t dst_net, uint8_t prefixlen,
-	host_t *gateway, host_t *src_ip, char *if_name)
+	host_t *gateway, host_t *src_ip, char *if_name, bool pass)
 {
 	status_t status;
 	route_entry_t *found, route = {

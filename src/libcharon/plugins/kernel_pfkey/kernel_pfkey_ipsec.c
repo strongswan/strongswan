@@ -2332,7 +2332,7 @@ static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
 				charon->kernel->add_route(charon->kernel,
 									dst->get_address(dst),
 									dst->get_family(dst) == AF_INET ? 32 : 128,
-									gtw, src, if_name) == SUCCESS)
+									gtw, src, if_name, FALSE) == SUCCESS)
 			{
 				INIT(exclude,
 					.dst = dst->clone(dst),
@@ -2399,7 +2399,7 @@ static void remove_exclude_route(private_kernel_pfkey_ipsec_t *this,
 									dst->get_address(dst),
 									dst->get_family(dst) == AF_INET ? 32 : 128,
 									route->exclude->gtw, route->exclude->src,
-									if_name) != SUCCESS)
+									if_name, FALSE) != SUCCESS)
 			{
 				DBG1(DBG_KNL, "uninstalling exclude route for %H failed", dst);
 			}
@@ -2479,8 +2479,8 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 		}
 		/* uninstall previously installed route */
 		if (charon->kernel->del_route(charon->kernel, old->dst_net,
-									  old->prefixlen, old->gateway,
-									  old->src_ip, old->if_name) != SUCCESS)
+								old->prefixlen, old->gateway,
+								old->src_ip, old->if_name, FALSE) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with policy "
 				 "%R === %R %N", out->src_ts, out->dst_ts,
@@ -2512,7 +2512,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 
 	switch (charon->kernel->add_route(charon->kernel, route->dst_net,
 									  route->prefixlen, route->gateway,
-									  route->src_ip, route->if_name))
+									  route->src_ip, route->if_name, FALSE))
 	{
 		case ALREADY_DONE:
 			/* route exists, do not uninstall */
@@ -3067,8 +3067,8 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	{
 		route_entry_t *route = policy->route;
 		if (charon->kernel->del_route(charon->kernel, route->dst_net,
-									  route->prefixlen, route->gateway,
-									  route->src_ip, route->if_name) != SUCCESS)
+							route->prefixlen, route->gateway,
+							route->src_ip, route->if_name, FALSE) != SUCCESS)
 		{
 			DBG1(DBG_KNL, "error uninstalling route installed with "
 				 "policy %R === %R %N", id->src_ts, id->dst_ts,
