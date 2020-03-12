@@ -1,3 +1,30 @@
+strongswan-5.8.3
+----------------
+
+- Updates for the NM backend (and plugin), among others: EAP-TLS authentication,
+  configurable local and remote IKE identities, custom server port, redirection
+  and reauthentication support.
+
+- Previously used reqids are now reallocated to workaround an issue on FreeBSD
+  where the daemon can't use reqids > 16383.
+
+- On Linux, throw type routes are installed for passthrough policies. They act
+  as fallbacks on routes in other tables and require less information, so they
+  can be installed earlier and are not affected by updates.
+
+- For IKEv1, the lifetimes of the selected transform are returned to the
+  initiator, which is an issue with peers that propose different lifetimes in
+  different transforms.  We also return the correct transform and proposal IDs.
+
+- IKE_SAs are not re-established anymore if a deletion has been queued.
+
+- Added support for Ed448 keys and certificates via openssl plugin and pki tool.
+  The openssl plugin also supports SHA-3 and SHAKE128/256.
+
+- The use of algorithm IDs from the private use ranges can now be enabled
+  globally, to use them even if no strongSwan vendor ID was exchanged.
+
+
 strongswan-5.8.2
 ----------------
 
