@@ -2,7 +2,7 @@
  * Copyright (C) 2005-2011 Martin Willi
  * Copyright (C) 2011 revosec AG
  *
- * Copyright (C) 2008-2018 Tobias Brunner
+ * Copyright (C) 2008-2021 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -29,6 +29,7 @@
 #include <threading/condvar.h>
 #include <threading/mutex.h>
 #include <threading/rwlock.h>
+#include <collections/array.h>
 #include <collections/linked_list.h>
 #include <crypto/hashers/hasher.h>
 #include <processing/jobs/delete_ike_sa_job.h>
@@ -391,9 +392,24 @@ struct private_ike_sa_manager_t {
 	table_item_t **init_hashes_table;
 
 	/**
-	  * Segments of the "hashes" hash table.
+	 * Segments of the "hashes" hash table.
 	 */
 	segment_t *init_hashes_segments;
+
+	/**
+	 * Configs for which an SA is currently being checked out.
+	 */
+	array_t *config_checkouts;
+
+	/**
+	 * Mutex to protect access to configs.
+	 */
+	mutex_t *config_mutex;
+
+	/**
+	 * Condvar to indicate changes in checkout configs.
+	 */
+	condvar_t *config_condvar;
 
 	/**
 	 * RNG to get random SPIs for our side
@@ -869,6 +885,29 @@ static void remove_half_open(private_ike_sa_manager_t *this, entry_t *entry)
 		item = item->next;
 	}
 	lock->unlock(lock);
+}
+
+/**
+ * Create an entry and put it into the hash table.
+ * Note: The caller has to unlock the segment.
+ */
+static u_int create_and_put_entry(private_ike_sa_manager_t *this,
+								  ike_sa_t *ike_sa, entry_t **entry)
+{
+	ike_sa_id_t *ike_sa_id = ike_sa->get_id(ike_sa);
+	host_t *other = ike_sa->get_other_host(ike_sa);
+
+	*entry = entry_create();
+	(*entry)->ike_sa_id = ike_sa_id->clone(ike_sa_id);
+	(*entry)->ike_sa = ike_sa;
+
+	if (ike_sa->get_state(ike_sa) == IKE_CONNECTING)
+	{
+		(*entry)->half_open = TRUE;
+		(*entry)->other = other->clone(other);
+		put_half_open(this, *entry);
+	}
+	return put_entry(this, *entry);
 }
 
 CALLBACK(id_matches, bool,
@@ -1422,6 +1461,18 @@ out:
 	return ike_sa;
 }
 
+/**
+ * Data used to track checkouts by config.
+ */
+typedef struct {
+	/** The peer config for which an IKE_SA is being checked out. */
+	peer_cfg_t *cfg;
+	/** Number of threads checking out SAs for the same config. */
+	int threads;
+	/** A thread is currently creating/finding an SA for this config. */
+	bool working;
+} config_entry_t;
+
 METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 	private_ike_sa_manager_t *this, peer_cfg_t *peer_cfg)
 {
@@ -1430,16 +1481,53 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 	ike_sa_t *ike_sa = NULL;
 	peer_cfg_t *current_peer;
 	ike_cfg_t *current_ike;
+	config_entry_t *config_entry, *found = NULL;
 	u_int segment;
+	int i;
 
 	DBG2(DBG_MGR, "checkout IKE_SA by config");
 
 	if (!this->reuse_ikesa && peer_cfg->get_ike_version(peer_cfg) != IKEV1)
 	{	/* IKE_SA reuse disabled by config (not possible for IKEv1) */
 		ike_sa = checkout_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
+		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
+
+		segment = create_and_put_entry(this, ike_sa, &entry);
+		entry->checked_out = thread_current();
+		unlock_single_segment(this, segment);
 		charon->bus->set_sa(charon->bus, ike_sa);
 		goto out;
 	}
+
+	this->config_mutex->lock(this->config_mutex);
+	for (i = 0; i < array_count(this->config_checkouts); i++)
+	{
+		array_get(this->config_checkouts, i, &config_entry);
+		if (config_entry->cfg->equals(config_entry->cfg, peer_cfg))
+		{
+			current_ike = config_entry->cfg->get_ike_cfg(config_entry->cfg);
+			if (current_ike->equals(current_ike,
+									peer_cfg->get_ike_cfg(peer_cfg)))
+			{
+				found = config_entry;
+				break;
+			}
+		}
+	}
+	if (!found)
+	{
+		INIT(found,
+			.cfg = peer_cfg->get_ref(peer_cfg),
+		);
+		array_insert_create(&this->config_checkouts, ARRAY_TAIL, found);
+	}
+	found->threads++;
+	while (found->working)
+	{
+		this->config_condvar->wait(this->config_condvar, this->config_mutex);
+	}
+	found->working = TRUE;
+	this->config_mutex->unlock(this->config_mutex);
 
 	enumerator = create_table_enumerator(this);
 	while (enumerator->enumerate(enumerator, &entry, &segment))
@@ -1463,7 +1551,7 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 			{
 				entry->checked_out = thread_current();
 				ike_sa = entry->ike_sa;
-				DBG2(DBG_MGR, "found existing IKE_SA %u with a '%s' config",
+				DBG2(DBG_MGR, "found existing IKE_SA %u with config '%s'",
 						ike_sa->get_unique_id(ike_sa),
 						current_peer->get_name(current_peer));
 				break;
@@ -1475,10 +1563,35 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 	enumerator->destroy(enumerator);
 
 	if (!ike_sa)
-	{	/* no IKE_SA using such a config, hand out a new */
+	{
 		ike_sa = checkout_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
+		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
+
+		segment = create_and_put_entry(this, ike_sa, &entry);
+		entry->checked_out = thread_current();
+		unlock_single_segment(this, segment);
 	}
 	charon->bus->set_sa(charon->bus, ike_sa);
+
+	this->config_mutex->lock(this->config_mutex);
+	found->working = FALSE;
+	found->threads--;
+	if (!found->threads)
+	{
+		for (i = 0; i < array_count(this->config_checkouts); i++)
+		{
+			array_get(this->config_checkouts, i, &config_entry);
+			if (config_entry == found)
+			{
+				array_remove(this->config_checkouts, i, NULL);
+				found->cfg->destroy(found->cfg);
+				free(found);
+				break;
+			}
+		}
+	}
+	this->config_condvar->signal(this->config_condvar);
+	this->config_mutex->unlock(this->config_mutex);
 
 out:
 	if (!ike_sa)
@@ -1784,16 +1897,7 @@ METHOD(ike_sa_manager_t, checkin, void,
 	}
 	else
 	{
-		entry = entry_create();
-		entry->ike_sa_id = ike_sa_id->clone(ike_sa_id);
-		entry->ike_sa = ike_sa;
-		if (ike_sa->get_state(ike_sa) == IKE_CONNECTING)
-		{
-			entry->half_open = TRUE;
-			entry->other = other->clone(other);
-			put_half_open(this, entry);
-		}
-		segment = put_entry(this, entry);
+		segment = create_and_put_entry(this, ike_sa, &entry);
 	}
 	DBG2(DBG_MGR, "checkin of IKE_SA successful");
 
@@ -2326,6 +2430,10 @@ METHOD(ike_sa_manager_t, destroy, void,
 	free(this->connected_peers_segments);
 	free(this->init_hashes_segments);
 
+	array_destroy(this->config_checkouts);
+	this->config_mutex->destroy(this->config_mutex);
+	this->config_condvar->destroy(this->config_condvar);
+
 	this->spi_lock->destroy(this->spi_lock);
 	free(this);
 }
@@ -2448,6 +2556,9 @@ ike_sa_manager_t *ike_sa_manager_create()
 	{
 		this->init_hashes_segments[i].mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
 	}
+
+	this->config_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	this->config_condvar = condvar_create(CONDVAR_TYPE_DEFAULT);
 
 	this->reuse_ikesa = lib->settings->get_bool(lib->settings,
 											"%s.reuse_ikesa", TRUE, lib->ns);
