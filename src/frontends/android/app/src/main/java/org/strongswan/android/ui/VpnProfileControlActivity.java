@@ -31,9 +31,6 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.provider.Settings;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import org.strongswan.android.R;
@@ -317,8 +314,14 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		if (profileInfo.getBoolean(PROFILE_REQUIRES_PASSWORD) &&
 			profileInfo.getString(VpnProfileDataSource.KEY_PASSWORD) == null)
 		{
-			LoginDialog login = new LoginDialog();
-			login.setArguments(profileInfo);
+			LoginDialogFragment login = LoginDialogFragment.newInstance(profileInfo, password -> {
+				if (password == null)
+				{
+					finish();
+				}
+				profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, password);
+				prepareVpnService(profileInfo);
+			});
 			login.show(getSupportFragmentManager(), DIALOG_TAG);
 			return;
 		}
@@ -524,53 +527,6 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				builder.setNegativeButton(android.R.string.cancel, cancelListener);
 			}
 			return builder.create();
-		}
-
-		@Override
-		public void onCancel(DialogInterface dialog)
-		{
-			getActivity().finish();
-		}
-	}
-
-	/**
-	 * Class that displays a login dialog and initiates the selected VPN
-	 * profile if the user confirms the dialog.
-	 */
-	public static class LoginDialog extends AppCompatDialogFragment
-	{
-		@Override
-		public Dialog onCreateDialog(Bundle savedInstanceState)
-		{
-			final Bundle profileInfo = getArguments();
-			LayoutInflater inflater = getActivity().getLayoutInflater();
-			View view = inflater.inflate(R.layout.login_dialog, null);
-			EditText username = (EditText)view.findViewById(R.id.username);
-			username.setText(profileInfo.getString(VpnProfileDataSource.KEY_USERNAME));
-			final EditText password = (EditText)view.findViewById(R.id.password);
-
-			AlertDialog.Builder adb = new AlertDialog.Builder(getActivity());
-			adb.setView(view);
-			adb.setTitle(getString(R.string.login_title));
-			adb.setPositiveButton(R.string.login_confirm, new DialogInterface.OnClickListener()
-			{
-				@Override
-				public void onClick(DialogInterface dialog, int whichButton)
-				{
-					VpnProfileControlActivity activity = (VpnProfileControlActivity)getActivity();
-					profileInfo.putString(VpnProfileDataSource.KEY_PASSWORD, password.getText().toString().trim());
-					activity.prepareVpnService(profileInfo);
-				}
-			});
-			adb.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener()
-			{
-				@Override
-				public void onClick(DialogInterface dialog, int which)
-				{
-					getActivity().finish();
-				}
-			});
-			return adb.create();
 		}
 
 		@Override
