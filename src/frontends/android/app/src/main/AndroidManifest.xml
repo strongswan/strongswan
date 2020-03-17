@@ -60,6 +60,13 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".ui.VpnLoginActivity"
+            android:theme="@style/TransparentActivity"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask" >
+        </activity>
+        <activity
             android:name=".ui.VpnProfileDetailActivity" >
         </activity>
         <activity

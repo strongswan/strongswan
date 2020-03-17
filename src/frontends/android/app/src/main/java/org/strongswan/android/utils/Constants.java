@@ -23,6 +23,11 @@ public final class Constants
 	public static final String VPN_PROFILES_CHANGED = "org.strongswan.android.VPN_PROFILES_CHANGED";
 
 	/**
+	 * Intent action used to pass around an entered password
+	 */
+	public static final String VPN_PASSWORD_ENTERED = "org.strongswan.android.VPN_PASSWORD_ENTERED";
+
+	/**
 	 * Used in the intent above to notify about edits or inserts of a VPN profile (long)
 	 */
 	public static final String VPN_PROFILES_SINGLE = "org.strongswan.android.VPN_PROFILES_SINGLE";
