@@ -504,6 +504,8 @@ static void set_options(char *logfile)
 					"charon.initiator_only", TRUE);
 	lib->settings->set_bool(lib->settings,
 					"charon.close_ike_on_child_failure", TRUE);
+	lib->settings->set_bool(lib->settings,
+					"charon.check_current_path", TRUE);
 	/* setting the source address breaks the VpnService.protect() function which
 	 * uses SO_BINDTODEVICE internally.  the addresses provided to the kernel as
 	 * auxiliary data have precedence over this option causing a routing loop if
