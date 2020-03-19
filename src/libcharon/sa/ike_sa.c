@@ -669,6 +669,7 @@ METHOD(ike_sa_t, send_keepalive, void,
 		packet->set_data(packet, data);
 		DBG1(DBG_IKE, "sending keep alive to %#H", this->other_host);
 		charon->sender->send_no_marker(charon->sender, packet);
+		this->stats[STAT_OUTBOUND] = now;
 		diff = 0;
 	}
 	if (!this->keepalive_job)
