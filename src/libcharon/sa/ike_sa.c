@@ -2708,6 +2708,14 @@ METHOD(ike_sa_t, roam, status_t,
 			this->task_manager->queue_mobike(this->task_manager, FALSE, TRUE);
 			return this->task_manager->initiate(this->task_manager);
 		}
+		if (lib->settings->get_bool(lib->settings,
+								"%s.check_current_path", FALSE, lib->ns) &&
+			!this->task_manager->busy(this->task_manager))
+		{
+			DBG1(DBG_IKE, "checking if current path still works using DPD");
+			this->task_manager->queue_dpd(this->task_manager);
+			return this->task_manager->initiate(this->task_manager);
+		}
 		return SUCCESS;
 	}
 
