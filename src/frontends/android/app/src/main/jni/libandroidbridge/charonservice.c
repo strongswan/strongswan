@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Tobias Brunner
+ * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -45,6 +45,7 @@
 #define ANDROID_RETRANSMIT_TIMEOUT 2.0
 #define ANDROID_RETRANSMIT_BASE 1.4
 #define ANDROID_KEEPALIVE_INTERVAL 45
+#define ANDROID_KEEPALIVE_DPD_MARGIN 20
 
 typedef struct private_charonservice_t private_charonservice_t;
 
@@ -434,6 +435,10 @@ static void initiate(settings_t *settings)
 						"charon.keep_alive",
 						settings->get_int(settings, "global.nat_keepalive",
 										  ANDROID_KEEPALIVE_INTERVAL));
+	/* send DPDs if above interval is exceeded, use a static value for now */
+	lib->settings->set_int(lib->settings,
+						"charon.keep_alive_dpd_margin",
+						ANDROID_KEEPALIVE_DPD_MARGIN);
 
 	/* reload plugins after changing settings */
 	lib->plugins->reload(lib->plugins, NULL);
