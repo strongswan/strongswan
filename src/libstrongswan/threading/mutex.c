@@ -337,7 +337,7 @@ condvar_t *condvar_create(condvar_type_t type)
 				pthread_condattr_t condattr;
 				pthread_condattr_init(&condattr);
 #ifdef HAVE_CONDATTR_CLOCK_MONOTONIC
-				pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC);
+				pthread_condattr_setclock(&condattr, TIME_CLOCK_ID);
 #endif
 				pthread_cond_init(&this->condvar, &condattr);
 				pthread_condattr_destroy(&condattr);
