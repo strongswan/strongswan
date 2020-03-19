@@ -220,6 +220,11 @@ charon.interfaces_use
 charon.keep_alive = 20s
 	NAT keep alive interval.
 
+charon.keep_alive_dpd_margin = 0s
+	Number of seconds the keep alive interval may be exceeded before a DPD is
+	sent instead of a NAT keep alive (0 to disable).  This is only useful if a
+	clock is used that includes time spent suspended (e.g. CLOCK_BOOTTIME).
+
 charon.leak_detective.detailed = yes
 	Includes source file names and line numbers in leak detective output.
 

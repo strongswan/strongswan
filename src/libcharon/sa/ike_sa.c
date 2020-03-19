@@ -237,6 +237,12 @@ struct private_ike_sa_t {
 	uint32_t keepalive_interval;
 
 	/**
+	 * Time the NAT keep alive interval may be exceeded before triggering a DPD
+	 * instead of a NAT keep alive
+	 */
+	uint32_t keepalive_dpd_margin;
+
+	/**
 	 * The scheduled keep alive job, if any
 	 */
 	send_keepalive_job_t *keepalive_job;
@@ -655,7 +661,19 @@ METHOD(ike_sa_t, send_keepalive, void,
 
 	diff = now - last_out;
 
-	if (diff >= this->keepalive_interval)
+	if (this->keepalive_dpd_margin &&
+		diff > (this->keepalive_interval + this->keepalive_dpd_margin))
+	{
+		if (!this->task_manager->busy(this->task_manager))
+		{
+			DBG1(DBG_IKE, "sending DPD instead of keep alive %ds after last "
+				 "outbound message", diff);
+			this->task_manager->queue_dpd(this->task_manager);
+			this->task_manager->initiate(this->task_manager);
+		}
+		diff = 0;
+	}
+	else if (diff >= this->keepalive_interval)
 	{
 		packet_t *packet;
 		chunk_t data;
@@ -3183,6 +3201,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.unique_id = ref_get(&unique_id),
 		.keepalive_interval = lib->settings->get_time(lib->settings,
 								"%s.keep_alive", KEEPALIVE_INTERVAL, lib->ns),
+		.keepalive_dpd_margin = lib->settings->get_time(lib->settings,
+								"%s.keep_alive_dpd_margin", 0, lib->ns),
 		.retry_initiate_interval = lib->settings->get_time(lib->settings,
 								"%s.retry_initiate_interval", 0, lib->ns),
 		.flush_auth_cfg = lib->settings->get_bool(lib->settings,
