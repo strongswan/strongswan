@@ -611,7 +611,7 @@ inline int settings_value_as_int(char *value, int def)
 		{	/* manually detect 0x prefix as we want to avoid octal encoding */
 			base = 16;
 		}
-		intval = strtol(value, &end, base);
+		intval = strtoul(value, &end, base);
 		if (errno == 0 && *end == 0 && end != value)
 		{
 			return intval;
