@@ -1147,9 +1147,6 @@ METHOD(task_t, process_r, status_t,
 														   flags);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 
-			get_lifetimes(this);
-			apply_lifetimes(this, sa_payload);
-
 			if (!this->proposal)
 			{
 				DBG1(DBG_IKE, "no matching proposal found, sending %N",
@@ -1157,6 +1154,9 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			this->spi_i = this->proposal->get_spi(this->proposal);
+
+			get_lifetimes(this);
+			apply_lifetimes(this, sa_payload);
 
 			if (!get_nonce(this, &this->nonce_i, message))
 			{
