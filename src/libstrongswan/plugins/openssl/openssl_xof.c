@@ -48,6 +48,16 @@ struct private_xof_t {
 	 * Internal context
 	 */
 	EVP_MD_CTX *ctx;
+
+	/**
+	 * Current seed
+	 */
+	chunk_t seed;
+
+	/**
+	 * Offset into generated data
+	 */
+	size_t offset;
 };
 
 METHOD(xof_t, get_type, ext_out_function_t,
@@ -59,14 +69,32 @@ METHOD(xof_t, get_type, ext_out_function_t,
 METHOD(xof_t, get_bytes, bool,
 	private_xof_t *this, size_t out_len, uint8_t *buffer)
 {
-	return EVP_DigestFinalXOF(this->ctx, buffer, out_len) == 1;
+	bool success = FALSE;
+	chunk_t data;
+
+	/* we can call EVP_DigestFinalXOF() only once, so to support an arbitrary
+	 * number of calls to get_bytes(), we request all the data we already
+	 * requested previously and just ignore what we already handed out */
+	if (EVP_DigestInit_ex(this->ctx, this->md, NULL) == 1 &&
+		EVP_DigestUpdate(this->ctx, this->seed.ptr, this->seed.len) == 1)
+	{
+		data = chunk_alloc(out_len + this->offset);
+		if (EVP_DigestFinalXOF(this->ctx, data.ptr, data.len) == 1)
+		{
+			memcpy(buffer, data.ptr + this->offset, out_len);
+			this->offset += out_len;
+			success = TRUE;
+		}
+		chunk_clear(&data);
+	}
+	return success;
 }
 
 METHOD(xof_t, allocate_bytes, bool,
 	private_xof_t *this, size_t out_len, chunk_t *chunk)
 {
 	*chunk = chunk_alloc(out_len);
-	return EVP_DigestFinalXOF(this->ctx, chunk->ptr, out_len) == 1;
+	return get_bytes(this, out_len, chunk->ptr);
 }
 
 METHOD(xof_t, get_block_size, size_t,
@@ -84,14 +112,17 @@ METHOD(xof_t, get_seed_size, size_t,
 METHOD(xof_t, set_seed, bool,
 	private_xof_t *this, chunk_t seed)
 {
-	return EVP_DigestInit_ex(this->ctx, this->md, NULL) == 1 &&
-		   EVP_DigestUpdate(this->ctx, seed.ptr, seed.len) == 1;
+	chunk_clear(&this->seed);
+	this->seed = chunk_clone(seed);
+	this->offset = 0;
+	return TRUE;
 }
 
 METHOD(xof_t, destroy, void,
 	private_xof_t *this)
 {
 	EVP_MD_CTX_free(this->ctx);
+	chunk_clear(&this->seed);
 	free(this);
 }
 
