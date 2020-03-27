@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Tobias Brunner
+ * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -23,9 +23,11 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -50,6 +52,7 @@ import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 import org.strongswan.android.ui.MainActivity;
+import org.strongswan.android.ui.VpnLoginActivity;
 import org.strongswan.android.ui.VpnProfileControlActivity;
 import org.strongswan.android.utils.Constants;
 import org.strongswan.android.utils.IPRange;
@@ -73,9 +76,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.SortedSet;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.preference.PreferenceManager;
 
 public class CharonVpnService extends VpnService implements Runnable, VpnStateService.VpnStateListener
@@ -84,9 +94,11 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	private static final String VPN_SERVICE_ACTION = "android.net.VpnService";
 	public static final String DISCONNECT_ACTION = "org.strongswan.android.CharonVpnService.DISCONNECT";
 	private static final String NOTIFICATION_CHANNEL = "org.strongswan.android.CharonVpnService.VPN_STATE_NOTIFICATION";
+	private static final String PASSWORD_CHANNEL = "org.strongswan.android.CharonVpnService.VPN_PASSWORD_NOTIFICATION";
 	public static final String LOG_FILE = "charon.log";
 	public static final String KEY_IS_RETRY = "retry";
 	public static final int VPN_STATE_NOTIFICATION_ID = 1;
+	public static final int PASSWORD_NOTIFICATION_ID = 2;
 
 	private String mLogFile;
 	private String mAppDir;
@@ -101,6 +113,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	private volatile boolean mIsDisconnecting;
 	private volatile boolean mShowNotification;
 	private BuilderAdapter mBuilderAdapter = new BuilderAdapter();
+	private PasswordPrompt mPasswordPrompt = new PasswordPrompt();
 	private Handler mHandler;
 	private VpnStateService mService;
 	private final Object mServiceLock = new Object();
@@ -202,7 +215,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		bindService(new Intent(this, VpnStateService.class),
 					mServiceConnection, Service.BIND_AUTO_CREATE);
 
-		createNotificationChannel();
+		createNotificationChannels();
 	}
 
 	@Override
@@ -286,6 +299,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 						mIsDisconnecting = false;
 
 						SimpleFetcher.enable();
+						mPasswordPrompt.enable();
 						addNotification();
 						mBuilderAdapter.setProfile(mCurrentProfile);
 						if (initializeCharon(mBuilderAdapter, mLogFile, mAppDir, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD),
@@ -356,6 +370,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				setState(State.DISCONNECTING);
 				mIsDisconnecting = true;
 				SimpleFetcher.disable();
+				mPasswordPrompt.disable();
 				deinitializeCharon();
 				Log.i(TAG, "charon stopped");
 				mCurrentProfile = null;
@@ -404,17 +419,25 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	/**
 	 * Create a notification channel for Android 8+
 	 */
-	private void createNotificationChannel()
+	private void createNotificationChannels()
 	{
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
 		{
+			NotificationManager notificationManager = getSystemService(NotificationManager.class);
 			NotificationChannel channel;
+
 			channel = new NotificationChannel(NOTIFICATION_CHANNEL, getString(R.string.permanent_notification_name),
 											  NotificationManager.IMPORTANCE_LOW);
 			channel.setDescription(getString(R.string.permanent_notification_description));
 			channel.setLockscreenVisibility(Notification.VISIBILITY_SECRET);
 			channel.setShowBadge(false);
-			NotificationManager notificationManager = getSystemService(NotificationManager.class);
+			notificationManager.createNotificationChannel(channel);
+
+			channel = new NotificationChannel(PASSWORD_CHANNEL, getString(R.string.password_notification_name),
+											  NotificationManager.IMPORTANCE_HIGH);
+			channel.setDescription(getString(R.string.password_notification_description));
+			channel.setLockscreenVisibility(Notification.VISIBILITY_SECRET);
+			channel.setShowBadge(false);
 			notificationManager.createNotificationChannel(channel);
 		}
 	}
@@ -1355,6 +1378,128 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				return true;
 			}
 			return false;
+		}
+	}
+
+	private class PasswordPrompt
+	{
+		private int PASSWORD_TIMEOUT = 20;
+		private Object mLock = new Object();
+		private CompletableFuture<String> mPassword;
+		private boolean mDisabled;
+		private BroadcastReceiver mPasswordHandler = new BroadcastReceiver()
+		{
+			@RequiresApi(api = Build.VERSION_CODES.N)
+			@Override
+			public void onReceive(Context context, Intent intent)
+			{
+				String password = intent.getStringExtra(VpnProfileDataSource.KEY_PASSWORD);
+				synchronized (mLock)
+				{
+					if (mPassword != null)
+					{
+						mPassword.complete(password);
+						hideNotification();
+					}
+				}
+			}
+		};
+
+		public void enable()
+		{
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+			{
+				IntentFilter passwordFilter = new IntentFilter(Constants.VPN_PASSWORD_ENTERED);
+				LocalBroadcastManager.getInstance(CharonVpnService.this).registerReceiver(mPasswordHandler, passwordFilter);
+			}
+			synchronized (mLock)
+			{
+				mDisabled = false;
+			}
+		}
+
+		public void disable()
+		{
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+			{
+				LocalBroadcastManager.getInstance(CharonVpnService.this).unregisterReceiver(mPasswordHandler);
+			}
+			synchronized (mLock)
+			{
+				mDisabled = true;
+				if (mPassword != null)
+				{
+					hideNotification();
+					mPassword.cancel(true);
+					mPassword = null;
+				}
+			}
+		}
+
+		private void hideNotification()
+		{
+			NotificationManagerCompat manager = NotificationManagerCompat.from(CharonVpnService.this);
+			manager.cancel(PASSWORD_NOTIFICATION_ID);
+		}
+
+		@RequiresApi(api = Build.VERSION_CODES.KITKAT)
+		private Notification buildNotification(boolean publicVersion)
+		{
+			CharonVpnService service = CharonVpnService.this;
+
+			Intent intent = new Intent(service, VpnLoginActivity.class);
+			intent.putExtra(VpnProfileDataSource.KEY_USERNAME, mCurrentProfile.getUsername());
+			PendingIntent pending = PendingIntent.getActivity(service, 0, intent,
+				PendingIntent.FLAG_UPDATE_CURRENT);
+
+			NotificationCompat.Builder builder =
+				new NotificationCompat.Builder(service, PASSWORD_CHANNEL)
+					.setSmallIcon(R.drawable.ic_notification_warning)
+					.setColor(ContextCompat.getColor(service, R.color.warning_text))
+					.setContentTitle(getString(R.string.password_notification_prompt))
+					.setTimeoutAfter(PASSWORD_TIMEOUT * 1000)
+					.setWhen(System.currentTimeMillis() + PASSWORD_TIMEOUT * 1000)
+					.setUsesChronometer(true)
+					.setPriority(NotificationCompat.PRIORITY_HIGH)
+					.setCategory(NotificationCompat.CATEGORY_STATUS)
+					.setFullScreenIntent(pending, true);
+
+			if (!publicVersion)
+			{
+				builder.setContentText(mCurrentProfile.getName());
+				builder.setPublicVersion(buildNotification(true));
+			}
+
+			Notification notification = builder.build();
+			/* hack because even though the documentation says setChronometerCountDown() should exist,
+			 * it currently doesn't, maybe comes with an update to AndroidX */
+			notification.extras.putBoolean("android.chronometerCountDown", true);
+			return notification;
+		}
+
+		@RequiresApi(api = Build.VERSION_CODES.N)
+		public String getPassword()
+		{
+			synchronized (mLock)
+			{
+				if (mDisabled)
+				{
+					return null;
+				}
+				mPassword = new CompletableFuture<>();
+			}
+
+			NotificationManagerCompat manager = NotificationManagerCompat.from(CharonVpnService.this);
+			manager.notify(PASSWORD_NOTIFICATION_ID, buildNotification(false));
+			try
+			{
+				return mPassword.get(PASSWORD_TIMEOUT, TimeUnit.SECONDS);
+			}
+			catch (ExecutionException|InterruptedException|TimeoutException e)
+			{
+				hideNotification();
+			}
+			return null;
 		}
 	}
 

@@ -31,6 +31,9 @@
     <string name="strongswan_shortcut">strongSwan-Verknüpfung</string>
     <string name="permanent_notification_name">VPN Verbindungsstatus</string>
     <string name="permanent_notification_description">Zeigt Informationen zum Verbindungsstatus der VPN Verbindung und dient als permanente Notification dazu, den VPN Dienst im Hintergrund am Laufen zu halten.</string>
+    <string name="password_notification_name">VPN Passwort</string>
+    <string name="password_notification_description">Wird verwendet, um vom Benutzer ein Passwort zu verlangen.</string>
+    <string name="password_notification_prompt">Password benötigt</string>
 
     <!-- Settings -->
     <string name="pref_title">Einstellungen</string>

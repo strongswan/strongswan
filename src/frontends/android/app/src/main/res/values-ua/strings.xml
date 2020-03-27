@@ -29,6 +29,9 @@
     <string name="strongswan_shortcut">strongSwan посилання</string>
     <string name="permanent_notification_name">VPN connection state</string>
     <string name="permanent_notification_description">Provides information about the VPN connection state and serves as permanent notification to keep the VPN service running in the background.</string>
+    <string name="password_notification_name">VPN password</string>
+    <string name="password_notification_description">Used to request a password from the user.</string>
+    <string name="password_notification_prompt">Password required</string>
 
     <!-- Settings -->
     <string name="pref_title">Settings</string>
