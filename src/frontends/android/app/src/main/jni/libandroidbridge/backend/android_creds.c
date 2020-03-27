@@ -251,8 +251,29 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 	private_android_creds_t *this, shared_key_type_t type,
 	identification_t *me, identification_t *other)
 {
-	return this->creds->set.create_shared_enumerator(&this->creds->set,
-													 type, me, other);
+	enumerator_t *enumerator;
+	shared_key_t *shared = NULL;
+	char *pwd;
+
+	enumerator = this->creds->set.create_shared_enumerator(&this->creds->set,
+														   type, me, other);
+	if (enumerator->enumerate(enumerator, &shared, NULL, NULL))
+	{
+		shared = shared->get_ref(shared);
+	}
+	else
+	{
+		pwd = charonservice->get_password(charonservice);
+		if (pwd)
+		{
+			shared = shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
+			free(pwd);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return shared ? enumerator_create_single(shared, (void*)shared->destroy)
+				  : enumerator_create_empty();
 }
 
 METHOD(android_creds_t, load_user_certificate, certificate_t*,
