@@ -390,6 +390,35 @@ failed:
 	return NULL;
 }
 
+METHOD(charonservice_t, get_password, char*,
+	private_charonservice_t *this)
+{
+	JNIEnv *env;
+	jmethodID method_id;
+	jstring jpassword;
+	char *pwd = NULL;
+
+	androidjni_attach_thread(&env);
+
+	method_id = (*env)->GetMethodID(env, android_charonvpnservice_class,
+									"getPassword", "()Ljava/lang/String;");
+	if (!method_id)
+	{
+		goto failed;
+	}
+	jpassword = (*env)->CallObjectMethod(env, this->vpn_service, method_id);
+	if (androidjni_exception_occurred(env) || !jpassword)
+	{
+		goto failed;
+	}
+	pwd = androidjni_convert_jstring(env, jpassword);
+
+failed:
+	androidjni_exception_occurred(env);
+	androidjni_detach_thread();
+	return pwd;
+}
+
 METHOD(charonservice_t, get_vpnservice_builder, vpnservice_builder_t*,
 	private_charonservice_t *this)
 {
@@ -564,6 +593,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
 			.get_trusted_certificates = _get_trusted_certificates,
 			.get_user_certificate = _get_user_certificate,
 			.get_user_key = _get_user_key,
+			.get_password = _get_password,
 			.get_vpnservice_builder = _get_vpnservice_builder,
 			.get_network_manager = _get_network_manager,
 		},

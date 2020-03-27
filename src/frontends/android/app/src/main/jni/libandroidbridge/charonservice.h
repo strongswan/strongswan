@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -142,6 +142,13 @@ struct charonservice_t {
 	 * @return				PrivateKey object, NULL on failure
 	 */
 	private_key_t *(*get_user_key)(charonservice_t *this, public_key_t *pubkey);
+
+	/**
+	 * Get a password from the user via JNI
+	 *
+	 * @return				allocated password, NULL on failure
+	 */
+	char *(*get_password)(charonservice_t *this);
 
 	/**
 	 * Get the current vpnservice_builder_t object

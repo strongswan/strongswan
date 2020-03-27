@@ -793,6 +793,22 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	}
 
 	/**
+	 * Function called via JNI to request a password from the user.
+	 *
+	 * Note that this method is called from a thread of charon's thread pool.
+	 *
+	 * @return the password
+	 */
+	private String getPassword()
+	{
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+		{
+			return mPasswordPrompt.getPassword();
+		}
+		return null;
+	}
+
+	/**
 	 * Initialization of charon, provided by libandroidbridge.so
 	 *
 	 * @param builder BuilderAdapter for this connection
