@@ -311,7 +311,9 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	 */
 	private void startVpnProfile(Bundle profileInfo)
 	{
-		if (profileInfo.getBoolean(PROFILE_REQUIRES_PASSWORD) &&
+		/* only ask for the password here on older Android versions */
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N &&
+			profileInfo.getBoolean(PROFILE_REQUIRES_PASSWORD) &&
 			profileInfo.getString(VpnProfileDataSource.KEY_PASSWORD) == null)
 		{
 			LoginDialogFragment login = LoginDialogFragment.newInstance(profileInfo, password -> {
