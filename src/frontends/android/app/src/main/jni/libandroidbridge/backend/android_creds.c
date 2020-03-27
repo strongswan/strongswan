@@ -263,7 +263,7 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 	}
 	else
 	{
-		pwd = charonservice->get_password(charonservice);
+		pwd = charonservice->get_password(charonservice, type == SHARED_PIN);
 		if (pwd)
 		{
 			shared = shared_key_create(type, chunk_clone(chunk_from_str(pwd)));

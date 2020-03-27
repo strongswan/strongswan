@@ -34,6 +34,7 @@
     <string name="password_notification_name">VPN password</string>
     <string name="password_notification_description">Used to request a password from the user.</string>
     <string name="password_notification_prompt">Password required</string>
+    <string name="password_notification_prompt_pin">PIN required</string>
 
     <!-- Settings -->
     <string name="pref_title">Settings</string>
@@ -196,8 +197,10 @@
 
     <!-- Dialogs -->
     <string name="login_title">Enter password to connect</string>
+    <string name="login_title_pin">Enter PIN to connect</string>
     <string name="login_username">Username</string>
     <string name="login_password">Password</string>
+    <string name="login_pin">PIN</string>
     <string name="login_confirm">Connect</string>
     <string name="error_format">Failed to establish VPN: %1$s.</string>
     <string name="error_lookup_failed">Server address lookup failed</string>

@@ -146,9 +146,10 @@ struct charonservice_t {
 	/**
 	 * Get a password from the user via JNI
 	 *
+	 * @param pin			whether to request a PIN instead of a password
 	 * @return				allocated password, NULL on failure
 	 */
-	char *(*get_password)(charonservice_t *this);
+	char *(*get_password)(charonservice_t *this, bool pin);
 
 	/**
 	 * Get the current vpnservice_builder_t object

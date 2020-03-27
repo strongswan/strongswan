@@ -33,6 +33,8 @@ import androidx.appcompat.app.AppCompatDialogFragment;
  */
 public class LoginDialogFragment extends AppCompatDialogFragment
 {
+	public static final String REQUEST_PIN = "REQUEST_PIN";
+
 	private OnLoginDialogFragmentListener mListener;
 
 	/**
@@ -55,15 +57,19 @@ public class LoginDialogFragment extends AppCompatDialogFragment
 	public Dialog onCreateDialog(Bundle savedInstanceState)
 	{
 		final Bundle profileInfo = getArguments();
+		final boolean pin = profileInfo.getBoolean(REQUEST_PIN);
 		LayoutInflater inflater = getActivity().getLayoutInflater();
-		View view = inflater.inflate(R.layout.login_dialog, null);
-		EditText username = view.findViewById(R.id.username);
-		username.setText(profileInfo.getString(VpnProfileDataSource.KEY_USERNAME));
+		View view = inflater.inflate(pin ? R.layout.login_dialog_pin : R.layout.login_dialog, null);
 		final EditText password = view.findViewById(R.id.password);
+		if (!pin)
+		{
+			EditText username = view.findViewById(R.id.username);
+			username.setText(profileInfo.getString(VpnProfileDataSource.KEY_USERNAME));
+		}
 
 		AlertDialog.Builder adb = new AlertDialog.Builder(getActivity());
 		adb.setView(view);
-		adb.setTitle(getString(R.string.login_title));
+		adb.setTitle(getString(pin ? R.string.login_title_pin : R.string.login_title));
 		adb.setPositiveButton(R.string.login_confirm, (dialog, which) ->
 			mListener.onLoginDialogDismissed(password.getText().toString().trim()));
 		adb.setNegativeButton(android.R.string.cancel, (dialog, which) ->

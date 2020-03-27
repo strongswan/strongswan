@@ -391,7 +391,7 @@ failed:
 }
 
 METHOD(charonservice_t, get_password, char*,
-	private_charonservice_t *this)
+	private_charonservice_t *this, bool pin)
 {
 	JNIEnv *env;
 	jmethodID method_id;
@@ -401,12 +401,13 @@ METHOD(charonservice_t, get_password, char*,
 	androidjni_attach_thread(&env);
 
 	method_id = (*env)->GetMethodID(env, android_charonvpnservice_class,
-									"getPassword", "()Ljava/lang/String;");
+									"getPassword", "(Z)Ljava/lang/String;");
 	if (!method_id)
 	{
 		goto failed;
 	}
-	jpassword = (*env)->CallObjectMethod(env, this->vpn_service, method_id);
+	jpassword = (*env)->CallObjectMethod(env, this->vpn_service, method_id,
+										 pin);
 	if (androidjni_exception_occurred(env) || !jpassword)
 	{
 		goto failed;

@@ -34,6 +34,7 @@
     <string name="password_notification_name">VPN Passwort</string>
     <string name="password_notification_description">Wird verwendet, um vom Benutzer ein Passwort zu verlangen.</string>
     <string name="password_notification_prompt">Password benötigt</string>
+    <string name="password_notification_prompt_pin">PIN benötigt</string>
 
     <!-- Settings -->
     <string name="pref_title">Einstellungen</string>
@@ -195,9 +196,11 @@
     <string name="remediation_instructions_title">Korrekturanweisungen</string>
 
     <!-- Dialogs -->
-    <string name="login_title">Passwort eingeben um zu verbinden</string>
+    <string name="login_title">Passwort eingeben, um zu verbinden</string>
+    <string name="login_title_pin">PIN eingeben, um zu verbinden</string>
     <string name="login_username">Benutzername</string>
     <string name="login_password">Passwort</string>
+    <string name="login_pin">PIN</string>
     <string name="login_confirm">Verbinden</string>
     <string name="error_format">Fehler beim Aufsetzen des VPN: %1$s.</string>
     <string name="error_lookup_failed">Server-Adresse konnte nicht aufgelöst werden</string>

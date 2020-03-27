@@ -31,6 +31,7 @@
     <string name="password_notification_name">VPN password</string>
     <string name="password_notification_description">Used to request a password from the user.</string>
     <string name="password_notification_prompt">Password required</string>
+    <string name="password_notification_prompt_pin">PIN required</string>
 
     <!-- Settings -->
     <string name="pref_title">Settings</string>
@@ -193,8 +194,10 @@
 
     <!-- Dialogs -->
     <string name="login_title">输入密码用于连接</string>
+    <string name="login_title_pin">Enter PIN to connect</string>
     <string name="login_username">用户名</string>
     <string name="login_password">密码</string>
+    <string name="login_pin">PIN</string>
     <string name="login_confirm">连接</string>
     <string name="error_format">无法建立VPN：%1$s。</string>
     <string name="error_lookup_failed">服务器地址查找失败</string>

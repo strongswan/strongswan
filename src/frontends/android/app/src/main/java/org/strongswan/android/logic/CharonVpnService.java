@@ -51,6 +51,7 @@ import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
+import org.strongswan.android.ui.LoginDialogFragment;
 import org.strongswan.android.ui.MainActivity;
 import org.strongswan.android.ui.VpnLoginActivity;
 import org.strongswan.android.ui.VpnProfileControlActivity;
@@ -798,13 +799,14 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 *
 	 * Note that this method is called from a thread of charon's thread pool.
 	 *
+	 * @param pin whether a PIN or a password is requested
 	 * @return the password
 	 */
-	private String getPassword()
+	private String getPassword(boolean pin)
 	{
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
 		{
-			return mPasswordPrompt.getPassword();
+			return mPasswordPrompt.getPassword(pin);
 		}
 		return null;
 	}
@@ -1460,12 +1462,13 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		}
 
 		@RequiresApi(api = Build.VERSION_CODES.KITKAT)
-		private Notification buildNotification(boolean publicVersion)
+		private Notification buildNotification(boolean pin, boolean publicVersion)
 		{
 			CharonVpnService service = CharonVpnService.this;
 
 			Intent intent = new Intent(service, VpnLoginActivity.class);
 			intent.putExtra(VpnProfileDataSource.KEY_USERNAME, mCurrentProfile.getUsername());
+			intent.putExtra(LoginDialogFragment.REQUEST_PIN, pin);
 			PendingIntent pending = PendingIntent.getActivity(service, 0, intent,
 				PendingIntent.FLAG_UPDATE_CURRENT);
 
@@ -1473,7 +1476,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				new NotificationCompat.Builder(service, PASSWORD_CHANNEL)
 					.setSmallIcon(R.drawable.ic_notification_warning)
 					.setColor(ContextCompat.getColor(service, R.color.warning_text))
-					.setContentTitle(getString(R.string.password_notification_prompt))
+					.setContentTitle(getString(pin ? R.string.password_notification_prompt_pin : R.string.password_notification_prompt))
 					.setTimeoutAfter(PASSWORD_TIMEOUT * 1000)
 					.setWhen(System.currentTimeMillis() + PASSWORD_TIMEOUT * 1000)
 					.setUsesChronometer(true)
@@ -1484,7 +1487,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			if (!publicVersion)
 			{
 				builder.setContentText(mCurrentProfile.getName());
-				builder.setPublicVersion(buildNotification(true));
+				builder.setPublicVersion(buildNotification(pin, true));
 			}
 
 			Notification notification = builder.build();
@@ -1495,7 +1498,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		}
 
 		@RequiresApi(api = Build.VERSION_CODES.N)
-		public String getPassword()
+		public String getPassword(boolean pin)
 		{
 			synchronized (mLock)
 			{
@@ -1507,7 +1510,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			}
 
 			NotificationManagerCompat manager = NotificationManagerCompat.from(CharonVpnService.this);
-			manager.notify(PASSWORD_NOTIFICATION_ID, buildNotification(false));
+			manager.notify(PASSWORD_NOTIFICATION_ID, buildNotification(pin, false));
 			try
 			{
 				return mPassword.get(PASSWORD_TIMEOUT, TimeUnit.SECONDS);
