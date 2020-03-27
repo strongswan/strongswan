@@ -307,7 +307,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 						{
 							Log.i(TAG, "charon started");
 
-							if (mCurrentProfile.getVpnType().has(VpnTypeFeature.USER_PASS) &&
+							if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N &&
+								mCurrentProfile.getVpnType().has(VpnTypeFeature.USER_PASS) &&
 								mCurrentProfile.getPassword() == null)
 							{	/* this can happen if Always-on VPN is enabled with an incomplete profile */
 								setError(ErrorState.PASSWORD_MISSING);

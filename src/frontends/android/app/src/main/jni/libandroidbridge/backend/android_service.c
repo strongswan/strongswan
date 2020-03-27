@@ -662,7 +662,10 @@ static void add_auth_cfg_pw(private_android_service_t *this,
 	}
 	auth->add(auth, AUTH_RULE_IDENTITY, id);
 
-	this->creds->add_username_password(this->creds, username, password);
+	if (password)
+	{
+		this->creds->add_username_password(this->creds, username, password);
+	}
 	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
 }
 
