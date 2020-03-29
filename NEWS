@@ -1,3 +1,17 @@
+strongswan-5.8.4
+----------------
+
+- In IKEv1 Quick Mode make sure that a proposal exists before determining
+  lifetimes (fixes crash due to null pointer exception).
+
+- OpenSSL currently doesn't support squeezing bytes out of a SHAKE128/256
+  XOF (eXtended Output Function) multiple times.  Unfortunately,
+  EVP_DigestFinalXOF() completely resets the context and later calls not
+  simply fail, they cause a null-pointer dereference in libcrypto. This
+  fixes the crash at the cost of repeating initializing the whole state
+  and allocating too much data for subsequent calls.
+
+
 strongswan-5.8.3
 ----------------
 
