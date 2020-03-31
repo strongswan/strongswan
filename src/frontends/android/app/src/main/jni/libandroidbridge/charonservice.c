@@ -621,6 +621,14 @@ static void segv_handler(int signal)
 }
 
 /**
+ * Register this logger as default before we have the bus available
+ */
+static void __attribute__ ((constructor))register_logger()
+{
+	dbg = dbg_android;
+}
+
+/**
  * Initialize charon and the libraries via JNI
  */
 JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
@@ -629,9 +637,6 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	struct sigaction action;
 	struct utsname utsname;
 	char *logfile, *appdir, *plugins;
-
-	/* logging for library during initialization, as we have no bus yet */
-	dbg = dbg_android;
 
 	/* initialize library */
 	if (!library_init(NULL, "charon"))
@@ -750,8 +755,6 @@ JNI_METHOD_P(org_strongswan_android_utils, Utils, isProposalValid, jboolean,
 	char *str;
 	bool valid;
 
-	dbg = dbg_android;
-
 	if (!library_init(NULL, "charon"))
 	{
 		library_deinit();
@@ -775,8 +778,6 @@ JNI_METHOD_P(org_strongswan_android_utils, Utils, parseInetAddressBytes, jbyteAr
 	jbyteArray bytes;
 	host_t *host;
 	char *str;
-
-	dbg = dbg_android;
 
 	if (!library_init(NULL, "charon"))
 	{
