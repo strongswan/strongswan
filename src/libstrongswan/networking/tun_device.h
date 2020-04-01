@@ -146,7 +146,16 @@ struct tun_device_t {
 	 * Destroy a tun_device_t
 	 */
 	void (*destroy)(tun_device_t *this);
-
+    
+    /**
+     * close the tunnel device
+     */
+    void ( *close_tun)(tun_device_t *this);
+    
+    /**
+     * open the tunnel device
+     */
+    bool ( *open_tun)(tun_device_t *this);
 };
 
 /**

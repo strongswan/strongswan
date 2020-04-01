@@ -183,7 +183,6 @@ static void process_plain(tun_device_t *tun)
 	if (tun->read_packet(tun, &raw))
 	{
 		ip_packet_t *packet;
-
 		packet = ip_packet_create(raw);
 		if (packet)
 		{
@@ -658,6 +657,17 @@ METHOD(kernel_libipsec_router_t, get_tun_name, char*,
 	return name;
 }
 
+/**
+ * restart the read thread
+*/
+METHOD(kernel_libipsec_router_t, resetread, void,
+	private_kernel_libipsec_router_t *this)
+{
+	lib->processor->queue_job(lib->processor,
+		(job_t*)callback_job_create((callback_job_cb_t)handle_plain, this,
+					NULL, (callback_job_cancel_t)handle_plain_cancel));
+}
+
 METHOD(kernel_libipsec_router_t, destroy, void,
 	private_kernel_libipsec_router_t *this)
 {
@@ -707,6 +717,7 @@ kernel_libipsec_router_t *kernel_libipsec_router_create()
 			},
 			.get_tun_name = _get_tun_name,
 			.destroy = _destroy,
+			.resetread = _resetread,
 		},
 		.tun = {
 			.tun = lib->get(lib, "kernel-libipsec-tun"),

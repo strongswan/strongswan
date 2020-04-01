@@ -244,7 +244,10 @@ CALLBACK(terminate, vici_message_t*,
 		.dispatcher = this->dispatcher,
 		.id = id,
 	};
-
+    
+	tun_device_t *tun = lib->get(lib,"kernel-libipsec-tun");
+	tun->close_tun(tun);
+    
 	child = request->get_str(request, NULL, "child");
 	ike = request->get_str(request, NULL, "ike");
 	child_id = request->get_int(request, 0, "child-id");

@@ -49,6 +49,7 @@
 #include <threading/rwlock_condvar.h>
 #include <collections/array.h>
 #include <collections/linked_list.h>
+#include <plugins/kernel_libipsec/kernel_libipsec_router.h>
 
 #include <pubkey_cert.h>
 
@@ -2331,7 +2332,10 @@ static void merge_config(private_vici_config_t *this, peer_cfg_t *peer_cfg)
 	peer_cfg_t *current;
 	ike_cfg_t *ike_cfg;
 	bool merged = FALSE;
-
+    
+	tun_device_t *tun = lib->get(lib,"kernel-libipsec-tun");
+	tun->open_tun(tun);
+	router->resetread(router);
 	this->lock->write_lock(this->lock);
 	while (this->handling_actions)
 	{

@@ -48,6 +48,11 @@ struct kernel_libipsec_router_t {
 	 * Destroy the given instance
 	 */
 	void (*destroy)(kernel_libipsec_router_t *this);
+    
+    /**
+	 * restart the read thread
+	 */
+	void (*resetread)(kernel_libipsec_router_t *this);
 };
 
 /**
