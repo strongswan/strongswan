@@ -239,7 +239,8 @@ METHOD(condvar_t, wait_, void,
 }
 
 /* use the monotonic clock based version of this function if available */
-#ifdef HAVE_PTHREAD_COND_TIMEDWAIT_MONOTONIC
+#if defined(HAVE_PTHREAD_COND_TIMEDWAIT_MONOTONIC) && \
+	!defined(HAVE_CONDATTR_CLOCK_MONOTONIC)
 #define pthread_cond_timedwait pthread_cond_timedwait_monotonic
 #endif
 
