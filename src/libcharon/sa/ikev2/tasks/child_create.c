@@ -1853,7 +1853,10 @@ METHOD(task_t, migrate, void,
 	{
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
 	}
-
+	if (!this->rekey)
+	{
+		this->dh_group = MODP_NONE;
+	}
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 	this->proposal = NULL;
