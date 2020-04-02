@@ -200,6 +200,14 @@ struct private_task_manager_t {
 	u_int retransmit_tries;
 
 	/**
+	 * Maximum number of tries possible with current retransmission settings
+	 * before overflowing the range of uint32_t, which we use for the timeout.
+	 * Note that UINT32_MAX milliseconds equal nearly 50 days, so that doesn't
+	 * make much sense without retransmit_limit anyway.
+	 */
+	u_int retransmit_tries_max;
+
+	/**
 	 * Retransmission timeout
 	 */
 	double retransmit_timeout;
@@ -355,7 +363,7 @@ static status_t retransmit_packet(private_task_manager_t *this, uint32_t seqnr,
 							u_int mid, u_int retransmitted, array_t *packets)
 {
 	packet_t *packet;
-	uint32_t t, max_jitter;
+	uint32_t t = UINT32_MAX, max_jitter;
 
 	array_get(packets, 0, &packet);
 	if (retransmitted > this->retransmit_tries)
@@ -364,8 +372,12 @@ static status_t retransmit_packet(private_task_manager_t *this, uint32_t seqnr,
 		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_TIMEOUT, packet);
 		return DESTROY_ME;
 	}
-	t = (uint32_t)(this->retransmit_timeout * 1000.0 *
-					pow(this->retransmit_base, retransmitted));
+	if (this->retransmit_tries_max &&
+		retransmitted <= this->retransmit_tries_max)
+	{
+		t = (uint32_t)(this->retransmit_timeout * 1000.0 *
+						pow(this->retransmit_base, retransmitted));
+	}
 	if (this->retransmit_limit)
 	{
 		t = min(t, this->retransmit_limit);
@@ -2141,5 +2153,11 @@ task_manager_v1_t *task_manager_v1_create(ike_sa_t *ike_sa)
 	}
 	this->dpd_send &= 0x7FFFFFFF;
 
+	if (this->retransmit_base > 1)
+	{	/* based on 1000 * timeout * base^try */
+		this->retransmit_tries_max = log(UINT32_MAX/
+										 (1000.0 * this->retransmit_timeout))/
+									 log(this->retransmit_base);
+	}
 	return &this->public;
 }

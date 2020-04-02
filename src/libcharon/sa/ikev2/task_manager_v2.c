@@ -151,6 +151,14 @@ struct private_task_manager_t {
 	u_int retransmit_tries;
 
 	/**
+	 * Maximum number of tries possible with current retransmission settings
+	 * before overflowing the range of uint32_t, which we use for the timeout.
+	 * Note that UINT32_MAX milliseconds equal nearly 50 days, so that doesn't
+	 * make much sense without retransmit_limit anyway.
+	 */
+	u_int retransmit_tries_max;
+
+	/**
 	 * Retransmission timeout
 	 */
 	double retransmit_timeout;
@@ -331,7 +339,7 @@ METHOD(task_manager_t, retransmit, status_t,
 	if (message_id == this->initiating.mid &&
 		array_count(this->initiating.packets))
 	{
-		uint32_t timeout, max_jitter;
+		uint32_t timeout = UINT32_MAX, max_jitter;
 		job_t *job;
 		enumerator_t *enumerator;
 		packet_t *packet;
@@ -357,22 +365,7 @@ METHOD(task_manager_t, retransmit, status_t,
 
 		if (!mobike || !mobike->is_probing(mobike))
 		{
-			if (this->initiating.retransmitted <= this->retransmit_tries)
-			{
-				timeout = (uint32_t)(this->retransmit_timeout * 1000.0 *
-					pow(this->retransmit_base, this->initiating.retransmitted));
-
-				if (this->retransmit_limit)
-				{
-					timeout = min(timeout, this->retransmit_limit);
-				}
-				if (this->retransmit_jitter)
-				{
-					max_jitter = (timeout / 100.0) * this->retransmit_jitter;
-					timeout -= max_jitter * (random() / (RAND_MAX + 1.0));
-				}
-			}
-			else
+			if (this->initiating.retransmitted > this->retransmit_tries)
 			{
 				DBG1(DBG_IKE, "giving up after %d retransmits",
 					 this->initiating.retransmitted - 1);
@@ -380,7 +373,21 @@ METHOD(task_manager_t, retransmit, status_t,
 								   packet);
 				return DESTROY_ME;
 			}
-
+			if (this->retransmit_tries_max &&
+				this->initiating.retransmitted <= this->retransmit_tries_max)
+			{
+				timeout = (uint32_t)(this->retransmit_timeout * 1000.0 *
+					pow(this->retransmit_base, this->initiating.retransmitted));
+			}
+			if (this->retransmit_limit)
+			{
+				timeout = min(timeout, this->retransmit_limit);
+			}
+			if (this->retransmit_jitter)
+			{
+				max_jitter = (timeout / 100.0) * this->retransmit_jitter;
+				timeout -= max_jitter * (random() / (RAND_MAX + 1.0));
+			}
 			if (this->initiating.retransmitted)
 			{
 				DBG1(DBG_IKE, "retransmit %d of request with message ID %d",
@@ -2346,5 +2353,11 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 					"%s.make_before_break", FALSE, lib->ns),
 	);
 
+	if (this->retransmit_base > 1)
+	{	/* based on 1000 * timeout * base^try */
+		this->retransmit_tries_max = log(UINT32_MAX/
+										 (1000.0 * this->retransmit_timeout))/
+									 log(this->retransmit_base);
+	}
 	return &this->public;
 }
