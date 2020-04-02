@@ -39,7 +39,6 @@
  */
 
 #include "tun_device.h"
-
 #include <utils/debug.h>
 #include <threading/thread.h>
 
@@ -727,7 +726,6 @@ METHOD(tun_device_t, read_packet, bool,
     overlapped.hEvent = read_event;
 
 	data = chunk_alloca(get_mtu(this));
-
     /* Read chunk from handle */
 	status = ReadFile(this->tunhandle,
                       &data.ptr,
@@ -866,6 +864,39 @@ METHOD(tun_device_t, destroy, void,
 #endif
 	DESTROY_IF(this->address);
 	free(this);
+}
+ 
+METHOD(tun_device_t, close_tun, void,
+	private_tun_device_t *this)
+{
+#ifdef WIN32
+	/* close file handle */
+	if (this->tunhandle != NULL && this->tunhandle != INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(this->tunhandle);
+        this->tunhandle = NULL ;
+	}
+#else
+	if (this->tunfd > 0)
+	{
+		close(this->tunfd);
+#ifdef __FreeBSD__
+		/* tun(4) says the following: "These network interfaces persist until
+		 * the if_tun.ko module is unloaded, or until removed with the
+		 * ifconfig(8) command."  So simply closing the FD is not enough. */
+		struct ifreq ifr;
+
+		memset(&ifr, 0, sizeof(ifr));
+		strncpy(ifr.ifr_name, this->if_name, IFNAMSIZ);
+		if (ioctl(this->sock, SIOCIFDESTROY, &ifr) < 0)
+		{
+			DBG1(DBG_LIB, "failed to destroy %s: %s", this->if_name,
+				 strerror(errno));
+		}
+#endif
+        this->tunfd = 0 ;
+	}
+#endif
 }
 
 /**
@@ -1116,6 +1147,16 @@ static bool init_tun(private_tun_device_t *this, const char *name_tmpl)
 #endif /* !__APPLE__ */
 }
 
+METHOD(tun_device_t, open_tun, bool,
+	private_tun_device_t *this)
+{
+    bool result = false ;
+    close_tun(this);
+    result = init_tun(this,"ipsec%d");
+    set_mtu(this,TUN_DEFAULT_MTU);
+    return result ;
+}
+
 /*
  * Described in header
  */
@@ -1140,6 +1181,8 @@ tun_device_t *tun_device_create(const char *name_tmpl)
 			.get_address = _get_address,
 			.up = _up,
 			.destroy = _destroy,
+			.close_tun = _close_tun,
+			.open_tun = _open_tun,
 		},
 #ifdef WIN32
 		.tunhandle = NULL,

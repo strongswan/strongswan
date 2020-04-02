@@ -31,7 +31,6 @@
 #include <sa/ikev1/tasks/isakmp_delete.h>
 #include <processing/jobs/adopt_children_job.h>
 #include <processing/jobs/delete_ike_sa_job.h>
-
 typedef struct private_main_mode_t private_main_mode_t;
 
 /**
@@ -296,7 +295,6 @@ METHOD(task_t, build_i, status_t,
 			{
 				return FAILED;
 			}
-
 			this->state = MM_SA;
 			return NEED_MORE;
 		}
