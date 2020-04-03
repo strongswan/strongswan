@@ -125,6 +125,9 @@ enum exchange_type_t{
 	/* IKE_INTERMEDIATE (RFC 9242) */
 	IKE_INTERMEDIATE = 43,
 
+	/* IKE_FOLLOWUP_KE (draft-ietf-ipsecme-ikev2-multiple-ke) */
+	IKE_FOLLOWUP_KE = 44,
+
 #ifdef ME
 	/**
 	 * ME_CONNECT
