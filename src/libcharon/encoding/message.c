@@ -440,6 +440,46 @@ static payload_order_t ike_intermediate_r_order[] = {
 	{PLV2_FRAGMENT,					0},
 };
 
+/**
+ * Message rule for IKE_FOLLOWUP_KE from initiator.
+ */
+static payload_rule_t ike_followup_ke_i_rules[] = {
+/*	payload type					min	max						encr	suff */
+	{PLV2_FRAGMENT,					0,	1,						TRUE,	TRUE},
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
+	{PLV2_KEY_EXCHANGE,				1,	1,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for IKE_FOLLOWUP_KE initiator
+ */
+static payload_order_t ike_followup_ke_i_order[] = {
+/*	payload type					notify type */
+	{PLV2_KEY_EXCHANGE,				0},
+	{PLV2_NOTIFY,					0},
+	{PLV2_FRAGMENT,					0},
+};
+
+/**
+ * Message rule for IKE_FOLLOWUP_KE from responder.
+ */
+static payload_rule_t ike_followup_ke_r_rules[] = {
+/*	payload type					min	max						encr	suff */
+	{PLV2_FRAGMENT,					0,	1,						TRUE,	TRUE},
+	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
+	{PLV2_KEY_EXCHANGE,				1,	1,						TRUE,	FALSE},
+};
+
+/**
+ * payload order for IKE_FOLLOWUP_KE responder
+ */
+static payload_order_t ike_followup_ke_r_order[] = {
+/*	payload type					notify type */
+	{PLV2_KEY_EXCHANGE,				0},
+	{PLV2_NOTIFY,					0},
+	{PLV2_FRAGMENT,					0},
+};
+
 #ifdef ME
 /**
  * Message rule for ME_CONNECT from initiator.
@@ -814,6 +854,14 @@ static message_rule_t message_rules[] = {
 	{IKE_INTERMEDIATE,			FALSE,	TRUE,
 		countof(ike_intermediate_r_rules), ike_intermediate_r_rules,
 		countof(ike_intermediate_r_order), ike_intermediate_r_order,
+	},
+	{IKE_FOLLOWUP_KE,	TRUE,	TRUE,
+		countof(ike_followup_ke_i_rules), ike_followup_ke_i_rules,
+		countof(ike_followup_ke_i_order), ike_followup_ke_i_order,
+	},
+	{IKE_FOLLOWUP_KE,	FALSE,	TRUE,
+		countof(ike_followup_ke_r_rules), ike_followup_ke_r_rules,
+		countof(ike_followup_ke_r_order), ike_followup_ke_r_order,
 	},
 #ifdef ME
 	{ME_CONNECT,		TRUE,	TRUE,
