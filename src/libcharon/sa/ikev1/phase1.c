@@ -629,6 +629,7 @@ METHOD(phase1_t, get_id, identification_t*,
 			if (!me->is_anyaddr(me))
 			{
 				id = identification_create_from_sockaddr(me->get_sockaddr(me));
+				auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
 				auth->add(auth, AUTH_RULE_IDENTITY, id);
 			}
 		}
