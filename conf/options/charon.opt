@@ -120,6 +120,10 @@ charon.flush_auth_cfg = no
 charon.follow_redirects = yes
 	Whether to follow IKEv2 redirects (RFC 5685).
 
+charon.force_eap_only_authentication = no
+	Violate RFC 5998 and use EAP-only authentication even if the peer did not
+	send an EAP_ONLY_AUTHENTICATION notify during IKE_AUTH.
+
 charon.fragment_size = 1280
 	Maximum size (complete IP datagram size in bytes) of a sent IKE fragment
 	when using proprietary IKEv1 or standardized IKEv2 fragmentation, defaults

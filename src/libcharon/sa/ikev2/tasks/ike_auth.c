@@ -1009,9 +1009,19 @@ METHOD(task_t, build_r, status_t,
 			if (!this->ike_sa->supports_extension(this->ike_sa,
 												  EXT_EAP_ONLY_AUTHENTICATION))
 			{
-				DBG1(DBG_IKE, "configured EAP-only authentication, but peer "
-					 "does not support it");
-				goto peer_auth_failed;
+				if (lib->settings->get_bool(lib->settings,
+							"%s.force_eap_only_authentication", FALSE, lib->ns))
+				{
+					DBG1(DBG_IKE, "ignore missing %N notify and use EAP-only "
+						 "authentication", notify_type_names,
+						 EAP_ONLY_AUTHENTICATION);
+				}
+				else
+				{
+					DBG1(DBG_IKE, "configured EAP-only authentication, but "
+						 "peer does not support it");
+					goto peer_auth_failed;
+				}
 			}
 		}
 		else
