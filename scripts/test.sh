@@ -4,7 +4,7 @@
 build_botan()
 {
 	# same revision used in the build recipe of the testing environment
-	BOTAN_REV=0881f2c33ff7 # 2.13.0 + amalgamation patch
+	BOTAN_REV=2.14.0
 	BOTAN_DIR=$DEPS_BUILD_DIR/botan
 
 	if test -d "$BOTAN_DIR"; then
@@ -113,10 +113,6 @@ gcrypt)
 botan)
 	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem"
 	export TESTS_PLUGINS="test-vectors pem botan!"
-	# we can't use the old package that comes with Ubuntu so we build from
-	# the current master until 2.8.0 is released and then probably switch to
-	# that unless we need newer features (at least 2.7.0 plus PKCS#1 patch is
-	# currently required)
 	DEPS=""
 	if test "$1" = "deps"; then
 		build_botan
@@ -153,13 +149,19 @@ all|coverage|sonarcloud)
 		# not actually required but configure checks for it
 		DEPS="$DEPS lcov"
 	fi
+	# Botan requires GCC 5.0, so disable it on Ubuntu 16.04
+	if test -n "$UBUNTU_XENIAL"; then
+		CONFIG="$CONFIG --disable-botan"
+	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libpcsclite-dev libpam0g-dev binutils-dev libnm-dev libgcrypt20-dev
 		  libjson-c-dev iptables-dev python-pip libtspi-dev libsystemd-dev"
 	PYDEPS="tox"
 	if test "$1" = "deps"; then
-		build_botan
+		if test -z "$UBUNTU_XENIAL"; then
+			build_botan
+		fi
 		build_wolfssl
 		build_tss2
 	fi

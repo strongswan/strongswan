@@ -63,9 +63,9 @@ jobs:
       arch: ppc64le
     - env: TEST=all
       arch: s390x
-    - env: TEST=all
+    - env: TEST=all UBUNTU_XENIAL=yes
       dist: xenial
-    - env: TEST=all
+    - env: TEST=all UBUNTU_XENIAL=yes
       dist: xenial
       compiler: clang
     - env: TEST=all MONOLITHIC=yes
@@ -105,9 +105,9 @@ jobs:
     - env: TEST=wolfssl LEAK_DETECTIVE=yes
     - env: TEST=openssl
     - env: TEST=openssl LEAK_DETECTIVE=yes
-    - env: TEST=openssl-1.0
+    - env: TEST=openssl-1.0 UBUNTU_XENIAL=yes
       dist: xenial
-    - env: TEST=openssl-1.0 LEAK_DETECTIVE=yes
+    - env: TEST=openssl-1.0 LEAK_DETECTIVE=yes UBUNTU_XENIAL=yes
       dist: xenial
     - env: TEST=gcrypt
     - env: TEST=gcrypt LEAK_DETECTIVE=yes
