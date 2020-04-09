@@ -220,6 +220,7 @@ METHOD(phase1_t, derive_keys, bool,
 	private_phase1_t *this, peer_cfg_t *peer_cfg, auth_method_t method)
 {
 	shared_key_t *shared_key = NULL;
+	array_t *kes = NULL;
 
 	switch (method)
 	{
@@ -245,9 +246,11 @@ METHOD(phase1_t, derive_keys, bool,
 		DBG1(DBG_IKE, "key derivation for %N failed", auth_method_names, method);
 		return FALSE;
 	}
-	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, this->dh_value,
+	array_insert_create(&kes, ARRAY_HEAD, this->dh);
+	charon->bus->ike_keys(charon->bus, this->ike_sa, kes, this->dh_value,
 						  this->nonce_i, this->nonce_r, NULL, shared_key,
 						  method);
+	array_destroy(kes);
 	DESTROY_IF(shared_key);
 	return TRUE;
 }
