@@ -775,7 +775,7 @@ static bool derive_keys(private_ike_init_t *this,
 	pseudo_random_function_t prf_alg = PRF_UNDEFINED;
 	chunk_t skd = chunk_empty;
 	ike_sa_id_t *id;
-	array_t *kes;
+	array_t *kes = NULL;
 
 	id = this->ike_sa->get_id(this->ike_sa);
 	if (this->old_sa)
@@ -799,9 +799,9 @@ static bool derive_keys(private_ike_init_t *this,
 		array_destroy(kes);
 		return FALSE;
 	}
-	array_destroy(kes);
-	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, chunk_empty,
+	charon->bus->ike_keys(charon->bus, this->ike_sa, kes, chunk_empty,
 						  nonce_i, nonce_r, this->old_sa, NULL, AUTH_NONE);
+	array_destroy(kes);
 	return TRUE;
 }
 

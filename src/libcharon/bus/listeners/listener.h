@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Tobias Brunner
+ * Copyright (C) 2011-2020 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -82,7 +82,7 @@ struct listener_t {
 	 * Hook called with IKE_SA key material.
 	 *
 	 * @param ike_sa	IKE_SA this keymat belongs to
-	 * @param dh		diffie hellman shared secret
+	 * @param kes		array of key_exchange_t*
 	 * @param dh_other	others DH public value (IKEv1 only)
 	 * @param nonce_i	initiator's nonce
 	 * @param nonce_r	responder's nonce
@@ -91,7 +91,7 @@ struct listener_t {
 	 * @param method	auth method for key derivation (IKEv1-non-PSK only)
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
-	bool (*ike_keys)(listener_t *this, ike_sa_t *ike_sa, key_exchange_t *dh,
+	bool (*ike_keys)(listener_t *this, ike_sa_t *ike_sa, array_t *kes,
 					 chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r,
 					 ike_sa_t *rekey, shared_key_t *shared,
 					 auth_method_t method);
@@ -114,13 +114,13 @@ struct listener_t {
 	 * @param ike_sa	IKE_SA the child sa belongs to
 	 * @param child_sa	CHILD_SA this keymat is used for
 	 * @param initiator	initiator of the CREATE_CHILD_SA exchange
-	 * @param dh		diffie hellman shared secret
+	 * @param kes		array of key_exchange_t*, or NULL
 	 * @param nonce_i	initiator's nonce
 	 * @param nonce_r	responder's nonce
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*child_keys)(listener_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
-					   bool initiator, key_exchange_t *dh,
+					   bool initiator, array_t *kes,
 					   chunk_t nonce_i, chunk_t nonce_r);
 
 	/**
