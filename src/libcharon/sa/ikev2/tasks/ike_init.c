@@ -775,6 +775,7 @@ static bool derive_keys(private_ike_init_t *this,
 	pseudo_random_function_t prf_alg = PRF_UNDEFINED;
 	chunk_t skd = chunk_empty;
 	ike_sa_id_t *id;
+	array_t *kes;
 
 	id = this->ike_sa->get_id(this->ike_sa);
 	if (this->old_sa)
@@ -791,11 +792,14 @@ static bool derive_keys(private_ike_init_t *this,
 			id->set_initiator_spi(id, this->proposal->get_spi(this->proposal));
 		}
 	}
-	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
+	array_insert_create(&kes, ARRAY_HEAD, this->dh);
+	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, kes,
 									   nonce_i, nonce_r, id, prf_alg, skd))
 	{
+		array_destroy(kes);
 		return FALSE;
 	}
+	array_destroy(kes);
 	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, chunk_empty,
 						  nonce_i, nonce_r, this->old_sa, NULL, AUTH_NONE);
 	return TRUE;
