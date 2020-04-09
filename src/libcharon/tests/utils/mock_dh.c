@@ -50,7 +50,7 @@ METHOD(key_exchange_t, set_public_key, bool,
 METHOD(key_exchange_t, get_shared_secret, bool,
 	private_diffie_hellman_t *this, chunk_t *secret)
 {
-	*secret = chunk_empty;
+	*secret = chunk_clone(chunk_from_thing(this->method));
 	return TRUE;
 }
 
