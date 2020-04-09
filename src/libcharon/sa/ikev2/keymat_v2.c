@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Tobias Brunner
+ * Copyright (C) 2015-2020 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -237,13 +237,13 @@ static bool set_aead_keys(private_keymat_v2_t *this, uint16_t enc_alg,
 }
 
 METHOD(keymat_v2_t, derive_ike_keys, bool,
-	private_keymat_v2_t *this, proposal_t *proposal, key_exchange_t *dh,
+	private_keymat_v2_t *this, proposal_t *proposal, array_t *kes,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
-	chunk_t skeyseed = chunk_empty, secret, full_nonce, fixed_nonce;
-	chunk_t prf_plus_seed, spi_i, spi_r, keymat = chunk_empty;
-	chunk_t sk_ei = chunk_empty, sk_er = chunk_empty;
+	chunk_t skeyseed = chunk_empty, secret, add_secret = chunk_empty;
+	chunk_t full_nonce, fixed_nonce, prf_plus_seed, spi_i, spi_r;
+	chunk_t keymat = chunk_empty, sk_ei = chunk_empty, sk_er = chunk_empty;
 	chunk_t sk_ai = chunk_empty, sk_ar = chunk_empty, sk_pi, sk_pr;
 	kdf_t *prf = NULL, *prf_plus = NULL;
 	uint16_t prf_alg, key_size, enc_alg, enc_size, int_alg;
@@ -302,13 +302,15 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 
-	if (!dh->get_shared_secret(dh, &secret))
+	if (!key_exchange_concat_secrets(kes, &secret, &add_secret))
 	{
 		return FALSE;
 	}
-	DBG4(DBG_IKE, "shared Diffie Hellman secret %B", &secret);
+	DBG4(DBG_IKE, "key exchange secret %B", &secret);
+	DBG4(DBG_IKE, "additional key exchange secret %B", &add_secret);
 	/* full nonce is used as seed for PRF+ ... */
 	full_nonce = chunk_cat("cc", nonce_i, nonce_r);
+	DBG4(DBG_IKE, "nonces %B", &full_nonce);
 	/* but the PRF may need a fixed key which only uses the first bytes of
 	 * the nonces. */
 	switch (prf_alg)
@@ -342,6 +344,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 				 key_derivation_function_names, KDF_PRF,
 				 pseudo_random_function_names, this->prf_alg);
 			chunk_clear(&secret);
+			chunk_clear(&add_secret);
 			chunk_free(&full_nonce);
 			chunk_free(&fixed_nonce);
 			return FALSE;
@@ -365,11 +368,12 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 				 key_derivation_function_names, KDF_PRF,
 				 pseudo_random_function_names, rekey_function);
 			chunk_clear(&secret);
+			chunk_clear(&add_secret);
 			chunk_free(&full_nonce);
 			chunk_free(&fixed_nonce);
 			return FALSE;
 		}
-		secret = chunk_cat("sc", secret, full_nonce);
+		secret = chunk_cat("scc", secret, full_nonce, add_secret);
 		if (prf->set_param(prf, KDF_PARAM_KEY, secret) &&
 			prf->set_param(prf, KDF_PARAM_SALT, rekey_skd) &&
 			prf->allocate_bytes(prf, 0, &skeyseed))
@@ -380,6 +384,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	}
 	DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
 	chunk_clear(&secret);
+	chunk_clear(&add_secret);
 	chunk_free(&fixed_nonce);
 	DESTROY_IF(prf);
 
@@ -529,12 +534,13 @@ METHOD(keymat_v2_t, derive_ike_keys_ppk, bool,
 }
 
 METHOD(keymat_v2_t, derive_child_keys, bool,
-	private_keymat_v2_t *this, proposal_t *proposal, key_exchange_t *dh,
+	private_keymat_v2_t *this, proposal_t *proposal, array_t *kes,
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
 	uint16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
-	chunk_t seed, secret = chunk_empty, keymat = chunk_empty;
+	chunk_t seed, secret = chunk_empty, add_secret = chunk_empty;
+	chunk_t keymat = chunk_empty;
 	kdf_t *prf_plus;
 
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
@@ -601,15 +607,16 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		int_size /= 8;
 	}
 
-	if (dh)
+	if (kes)
 	{
-		if (!dh->get_shared_secret(dh, &secret))
+		if (!key_exchange_concat_secrets(kes, &secret, &add_secret))
 		{
 			return FALSE;
 		}
-		DBG4(DBG_CHD, "DH secret %B", &secret);
+		DBG4(DBG_CHD, "key exchange secret %B", &secret);
+		DBG4(DBG_CHD, "additional key exchange secret %B", &add_secret);
 	}
-	seed = chunk_cata("scc", secret, nonce_i, nonce_r);
+	seed = chunk_cata("sccs", secret, nonce_i, nonce_r, add_secret);
 	DBG4(DBG_CHD, "seed %B", &seed);
 
 	prf_plus = lib->crypto->create_kdf(lib->crypto, KDF_PRF_PLUS, this->prf_alg);
