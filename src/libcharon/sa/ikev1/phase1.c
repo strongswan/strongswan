@@ -143,11 +143,10 @@ static shared_key_t *lookup_shared_key(private_phase1_t *this,
 
 	if (peer_cfg)
 	{	/* as initiator or aggressive responder, use identities */
-		my_auth = get_auth_cfg(peer_cfg, TRUE);
 		other_auth = get_auth_cfg(peer_cfg, FALSE);
-		if (my_auth && other_auth)
+		if (other_auth)
 		{
-			my_id = my_auth->get(my_auth, AUTH_RULE_IDENTITY);
+			my_id = this->ike_sa->get_my_id(this->ike_sa);
 			if (peer_cfg->use_aggressive(peer_cfg))
 			{
 				other_id = this->ike_sa->get_other_id(this->ike_sa);
@@ -156,10 +155,7 @@ static shared_key_t *lookup_shared_key(private_phase1_t *this,
 			{
 				other_id = other_auth->get(other_auth, AUTH_RULE_IDENTITY);
 			}
-			if (my_id)
-			{
-				shared_key = find_shared_key(my_id, me, other_id, other);
-			}
+			shared_key = find_shared_key(my_id, me, other_id, other);
 		}
 	}
 	else
