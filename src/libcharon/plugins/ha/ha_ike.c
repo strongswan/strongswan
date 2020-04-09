@@ -82,12 +82,13 @@ static void copy_extensions(ha_message_t *m, ike_sa_t *ike_sa)
 }
 
 METHOD(listener_t, ike_keys, bool,
-	private_ha_ike_t *this, ike_sa_t *ike_sa, key_exchange_t *dh,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, array_t *kes,
 	chunk_t dh_other, chunk_t nonce_i, chunk_t nonce_r, ike_sa_t *rekey,
 	shared_key_t *shared, auth_method_t method)
 {
 	ha_message_t *m;
-	chunk_t secret;
+	key_exchange_t *ke;
+	chunk_t secret = chunk_empty, add_secret = chunk_empty;
 	proposal_t *proposal;
 	uint16_t alg, len;
 
@@ -95,8 +96,12 @@ METHOD(listener_t, ike_keys, bool,
 	{	/* do not sync SA between nodes */
 		return TRUE;
 	}
-	if (!dh->get_shared_secret(dh, &secret))
+	if (!key_exchange_concat_secrets(kes, &secret, &add_secret) ||
+		!array_get(kes, ARRAY_HEAD, &ke) ||
+		add_secret.len > 0)
 	{
+		chunk_clear(&secret);
+		chunk_clear(&add_secret);
 		return TRUE;
 	}
 
@@ -142,7 +147,7 @@ METHOD(listener_t, ike_keys, bool,
 	chunk_clear(&secret);
 	if (ike_sa->get_version(ike_sa) == IKEV1)
 	{
-		if (dh->get_public_key(dh, &secret))
+		if (ke->get_public_key(ke, &secret))
 		{
 			m->add_attribute(m, HA_LOCAL_DH, secret);
 			chunk_free(&secret);
