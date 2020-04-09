@@ -233,7 +233,7 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		if (ike_sa->get_version(ike_sa) == IKEV2)
 		{
 			keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
-			array_t *kes;
+			array_t *kes = NULL;
 
 			array_insert_create(&kes, ARRAY_HEAD, dh);
 			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, kes, nonce_i,
