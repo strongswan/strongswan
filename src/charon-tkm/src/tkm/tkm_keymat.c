@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Tobias Brunner
+ * Copyright (C) 2015-2020 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  * HSR Hochschule fuer Technik Rapperswil
@@ -94,19 +94,26 @@ METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
 }
 
 METHOD(keymat_v2_t, derive_ike_keys, bool,
-	private_tkm_keymat_t *this, proposal_t *proposal, key_exchange_t *ke,
+	private_tkm_keymat_t *this, proposal_t *proposal, array_t *kes,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
 	uint64_t nc_id, spi_loc, spi_rem;
 	chunk_t *nonce;
 	tkm_diffie_hellman_t *tkm_dh;
+	key_exchange_t *ke;
 	dh_id_type dh_id;
 	nonce_type nonce_rem;
 	result_type res;
 	block_len_type block_len;
 	icv_len_type icv_len;
 	iv_len_type iv_len;
+
+	if (array_count(kes) != 1)
+	{
+		DBG1(DBG_IKE, "the TKM currently only supports a single key exchange");
+		return FALSE;
+	}
 
 	/* Acquire nonce context id */
 	nonce = this->initiator ? &nonce_i : &nonce_r;
@@ -118,6 +125,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	}
 
 	/* Get DH context id */
+	array_get(kes, ARRAY_HEAD, &ke);
 	tkm_dh = (tkm_diffie_hellman_t *)ke;
 	dh_id = tkm_dh->get_id(tkm_dh);
 
@@ -197,14 +205,15 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 }
 
 METHOD(keymat_v2_t, derive_child_keys, bool,
-	private_tkm_keymat_t *this, proposal_t *proposal, key_exchange_t *ke,
+	private_tkm_keymat_t *this, proposal_t *proposal, array_t *kes,
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
 	esa_info_t *esa_info_i, *esa_info_r;
 	dh_id_type dh_id = 0;
+	key_exchange_t *ke;
 
-	if (ke)
+	if (kes && array_get(kes, ARRAY_HEAD, &ke))
 	{
 		dh_id = ((tkm_diffie_hellman_t *)ke)->get_id((tkm_diffie_hellman_t *)ke);
 	}

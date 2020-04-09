@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Tobias Brunner
+ * Copyright (C) 2015-2020 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -290,12 +290,12 @@ failure:
 }
 
 METHOD(keymat_v2_t, derive_ike_keys, bool,
-	private_keymat_v2_t *this, proposal_t *proposal, key_exchange_t *dh,
+	private_keymat_v2_t *this, proposal_t *proposal, array_t *kes,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
-	chunk_t skeyseed = chunk_empty, secret, full_nonce, fixed_nonce;
-	chunk_t prf_plus_seed, spi_i, spi_r;
+	chunk_t skeyseed = chunk_empty, secret, add_secret = chunk_empty;
+	chunk_t full_nonce, fixed_nonce, prf_plus_seed, spi_i, spi_r;
 	chunk_t sk_ei = chunk_empty, sk_er = chunk_empty;
 	chunk_t sk_ai = chunk_empty, sk_ar = chunk_empty, sk_pi, sk_pr;
 	prf_plus_t *prf_plus = NULL;
@@ -305,7 +305,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	spi_i = chunk_alloca(sizeof(uint64_t));
 	spi_r = chunk_alloca(sizeof(uint64_t));
 
-	if (!dh->get_shared_secret(dh, &secret))
+	if (!key_exchange_concat_secrets(kes, &secret, &add_secret))
 	{
 		return FALSE;
 	}
@@ -316,6 +316,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		DBG1(DBG_IKE, "no %N selected",
 			 transform_type_names, PSEUDO_RANDOM_FUNCTION);
 		chunk_clear(&secret);
+		chunk_clear(&add_secret);
 		return FALSE;
 	}
 	this->prf_alg = alg;
@@ -327,11 +328,14 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			 transform_type_names, PSEUDO_RANDOM_FUNCTION,
 			 pseudo_random_function_names, alg);
 		chunk_clear(&secret);
+		chunk_clear(&add_secret);
 		return FALSE;
 	}
-	DBG4(DBG_IKE, "shared Diffie Hellman secret %B", &secret);
+	DBG4(DBG_IKE, "key exchange secret %B", &secret);
+	DBG4(DBG_IKE, "additional key exchange secret %B", &add_secret);
 	/* full nonce is used as seed for PRF+ ... */
 	full_nonce = chunk_cat("cc", nonce_i, nonce_r);
+	DBG4(DBG_IKE, "nonces %B", &full_nonce);
 	/* but the PRF may need a fixed key which only uses the first bytes of
 	 * the nonces. */
 	switch (alg)
@@ -383,12 +387,13 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			DBG1(DBG_IKE, "PRF of old SA %N not supported!",
 				 pseudo_random_function_names, rekey_function);
 			chunk_clear(&secret);
+			chunk_clear(&add_secret);
 			chunk_free(&full_nonce);
 			chunk_free(&fixed_nonce);
 			chunk_clear(&prf_plus_seed);
 			return FALSE;
 		}
-		secret = chunk_cat("mc", secret, full_nonce);
+		secret = chunk_cat("scc", secret, full_nonce, add_secret);
 		if (rekey_prf->set_key(rekey_prf, rekey_skd) &&
 			rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed) &&
 			rekey_prf->set_key(rekey_prf, skeyseed))
@@ -400,6 +405,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 
 	chunk_clear(&skeyseed);
 	chunk_clear(&secret);
+	chunk_clear(&add_secret);
 	chunk_free(&full_nonce);
 	chunk_free(&fixed_nonce);
 	chunk_clear(&prf_plus_seed);
@@ -586,12 +592,12 @@ METHOD(keymat_v2_t, derive_ike_keys_ppk, bool,
 }
 
 METHOD(keymat_v2_t, derive_child_keys, bool,
-	private_keymat_v2_t *this, proposal_t *proposal, key_exchange_t *dh,
+	private_keymat_v2_t *this, proposal_t *proposal, array_t *kes,
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
 	uint16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
-	chunk_t seed, secret = chunk_empty;
+	chunk_t seed, secret = chunk_empty, add_secret = chunk_empty;
 	prf_plus_t *prf_plus;
 
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
@@ -663,15 +669,16 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		return FALSE;
 	}
 
-	if (dh)
+	if (kes)
 	{
-		if (!dh->get_shared_secret(dh, &secret))
+		if (!key_exchange_concat_secrets(kes, &secret, &add_secret))
 		{
 			return FALSE;
 		}
-		DBG4(DBG_CHD, "DH secret %B", &secret);
+		DBG4(DBG_CHD, "key exchange secret %B", &secret);
+		DBG4(DBG_CHD, "additional key exchange secret %B", &add_secret);
 	}
-	seed = chunk_cata("scc", secret, nonce_i, nonce_r);
+	seed = chunk_cata("sccs", secret, nonce_i, nonce_r, add_secret);
 	DBG4(DBG_CHD, "seed %B", &seed);
 
 	prf_plus = prf_plus_create(this->prf, TRUE, seed);
