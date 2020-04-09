@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2019 Tobias Brunner
+ * Copyright (C) 2010-2020 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -617,4 +617,44 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 			 value.len, key_exchange_method_names, ke);
 	}
 	return valid;
+}
+
+/*
+ * Described in header
+ */
+bool key_exchange_concat_secrets(array_t *kes, chunk_t *first,
+								 chunk_t *others)
+{
+	key_exchange_t *ke;
+	chunk_t secret;
+	int i;
+
+	if (!array_count(kes))
+	{
+		return FALSE;
+	}
+	*first = chunk_empty;
+	*others = chunk_empty;
+	for (i = 0; i < array_count(kes); i++)
+	{
+		if (array_get(kes, i, &ke) &&
+			ke->get_shared_secret(ke, &secret))
+		{
+			if (i == 0)
+			{
+				*first = secret;
+			}
+			else
+			{
+				*others = chunk_cat("ss", *others, secret);
+			}
+		}
+		else
+		{
+			chunk_clear(first);
+			chunk_clear(others);
+			return FALSE;
+		}
+	}
+	return TRUE;
 }
