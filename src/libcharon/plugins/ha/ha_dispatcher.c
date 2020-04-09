@@ -234,9 +234,12 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		if (ike_sa->get_version(ike_sa) == IKEV2)
 		{
 			keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
+			array_t *kes = NULL;
 
-			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, dh, nonce_i,
+			array_insert_create(&kes, ARRAY_HEAD, dh);
+			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, kes, nonce_i,
 							nonce_r, ike_sa->get_id(ike_sa), old_prf, old_skd);
+			array_destroy(kes);
 		}
 		if (ike_sa->get_version(ike_sa) == IKEV1)
 		{
@@ -662,6 +665,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	chunk_t encr_i, integ_i, encr_r, integ_r;
 	linked_list_t *local_ts, *remote_ts;
 	key_exchange_t *dh = NULL;
+	array_t *kes = NULL;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -767,12 +771,13 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	if (secret.len)
 	{
 		dh = ha_diffie_hellman_create(secret, chunk_empty);
+		array_insert_create(&kes, ARRAY_HEAD, dh);
 	}
 	if (ike_sa->get_version(ike_sa) == IKEV2)
 	{
 		keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 
-		ok = keymat_v2->derive_child_keys(keymat_v2, proposal, dh,
+		ok = keymat_v2->derive_child_keys(keymat_v2, proposal, kes,
 						nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r);
 	}
 	if (ike_sa->get_version(ike_sa) == IKEV1)
@@ -786,6 +791,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		ok = keymat_v1->derive_child_keys(keymat_v1, proposal, dh, spi_i, spi_r,
 						nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r);
 	}
+	array_destroy(kes);
 	DESTROY_IF(dh);
 	if (!ok)
 	{
