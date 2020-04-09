@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Tobias Brunner
+ * Copyright (C) 2011-2020 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -44,7 +44,7 @@ struct keymat_v2_t {
 	 * crypters and authentication functions.
 	 *
 	 * @param proposal	selected algorithms
-	 * @param dh		diffie hellman key allocated by create_ke()
+	 * @param kes		array of key_exchange_t* created by create_ke()
 	 * @param nonce_i	initiators nonce value
 	 * @param nonce_r	responders nonce value
 	 * @param id		IKE_SA identifier
@@ -53,7 +53,7 @@ struct keymat_v2_t {
 	 * @return			TRUE on success
 	 */
 	bool (*derive_ike_keys)(keymat_v2_t *this, proposal_t *proposal,
-							key_exchange_t *dh, chunk_t nonce_i,
+							array_t *kes, chunk_t nonce_i,
 							chunk_t nonce_r, ike_sa_id_t *id,
 							pseudo_random_function_t rekey_function,
 							chunk_t rekey_skd);
@@ -77,7 +77,7 @@ struct keymat_v2_t {
 	 * If no PFS is used for the CHILD_SA, dh can be NULL.
 	 *
 	 * @param proposal	selected algorithms
-	 * @param dh		diffie hellman key allocated by create_ke(), or NULL
+	 * @param kes		array of key_exchange_t* created by create_ke(), or NULL
 	 * @param nonce_i	initiators nonce value
 	 * @param nonce_r	responders nonce value
 	 * @param encr_i	chunk to write initiators encryption key to
@@ -87,7 +87,7 @@ struct keymat_v2_t {
 	 * @return			TRUE on success
 	 */
 	bool (*derive_child_keys)(keymat_v2_t *this,
-							  proposal_t *proposal, key_exchange_t *dh,
+							  proposal_t *proposal, array_t *kes,
 							  chunk_t nonce_i, chunk_t nonce_r,
 							  chunk_t *encr_i, chunk_t *integ_i,
 							  chunk_t *encr_r, chunk_t *integ_r);
