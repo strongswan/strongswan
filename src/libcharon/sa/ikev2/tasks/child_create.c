@@ -768,6 +768,8 @@ static status_t select_and_install(private_child_create_t *this,
 			charon->bus->child_derived_keys(charon->bus, this->child_sa,
 											this->initiator, encr_i, encr_r,
 											integ_i, integ_r);
+			charon->bus->child_keys(charon->bus, this->child_sa,
+									this->initiator, kes, nonce_i, nonce_r);
 		}
 	}
 	chunk_clear(&integ_i);
@@ -780,9 +782,6 @@ static status_t select_and_install(private_child_create_t *this,
 	{
 		return status;
 	}
-
-	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
-							this->dh, nonce_i, nonce_r);
 
 #if DEBUG_LEVEL >= 0
 	child_sa_outbound_state_t out_state;

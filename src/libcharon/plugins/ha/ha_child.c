@@ -51,10 +51,10 @@ struct private_ha_child_t {
 
 METHOD(listener_t, child_keys, bool,
 	private_ha_child_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
-	bool initiator, key_exchange_t *dh, chunk_t nonce_i, chunk_t nonce_r)
+	bool initiator, array_t *kes, chunk_t nonce_i, chunk_t nonce_r)
 {
 	ha_message_t *m;
-	chunk_t secret;
+	chunk_t secret, add_secret = chunk_empty;
 	proposal_t *proposal;
 	uint16_t alg, len;
 	linked_list_t *local_ts, *remote_ts;
@@ -101,10 +101,11 @@ METHOD(listener_t, child_keys, bool,
 	}
 	m->add_attribute(m, HA_NONCE_I, nonce_i);
 	m->add_attribute(m, HA_NONCE_R, nonce_r);
-	if (dh && dh->get_shared_secret(dh, &secret))
+	if (kes && key_exchange_concat_secrets(kes, &secret, &add_secret))
 	{
 		m->add_attribute(m, HA_SECRET, secret);
 		chunk_clear(&secret);
+		chunk_clear(&add_secret);
 	}
 
 	local_ts = linked_list_create();
