@@ -545,6 +545,7 @@ static status_t select_and_install(private_child_create_t *this,
 	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
 	linked_list_t *my_ts, *other_ts;
 	host_t *me, *other;
+	array_t *kes = NULL;
 	proposal_selection_flag_t flags = 0;
 
 	if (this->proposals == NULL)
@@ -735,8 +736,12 @@ static status_t select_and_install(private_child_create_t *this,
 		this->ipcomp = IPCOMP_NONE;
 	}
 	status_i = status_o = FAILED;
+	if (this->dh)
+	{
+		array_insert_create(&kes, ARRAY_HEAD, this->dh);
+	}
 	if (this->keymat->derive_child_keys(this->keymat, this->proposal,
-			this->dh, nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r))
+				kes, nonce_i, nonce_r, &encr_i, &integ_i, &encr_r, &integ_r))
 	{
 		if (this->initiator)
 		{
@@ -814,6 +819,7 @@ static status_t select_and_install(private_child_create_t *this,
 	chunk_clear(&integ_r);
 	chunk_clear(&encr_i);
 	chunk_clear(&encr_r);
+	array_destroy(kes);
 
 	if (status != SUCCESS)
 	{

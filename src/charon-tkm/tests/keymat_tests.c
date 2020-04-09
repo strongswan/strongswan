@@ -54,9 +54,12 @@ START_TEST(test_derive_ike_keys)
 	ck_assert(dh->ke.get_public_key(&dh->ke, &pubvalue));
 	ck_assert(dh->ke.set_public_key(&dh->ke, pubvalue));
 
+	array_t *kes = NULL;
+	array_insert_create(&kes, ARRAY_TAIL, dh);
 	fail_unless(keymat->keymat_v2.derive_ike_keys(&keymat->keymat_v2, proposal,
-				&dh->ke, nonce, nonce, ike_sa_id, PRF_UNDEFINED, chunk_empty),
+				kes, nonce, nonce, ike_sa_id, PRF_UNDEFINED, chunk_empty),
 				"Key derivation failed");
+	array_destroy(kes);
 	chunk_free(&nonce);
 
 	aead_t * const aead = keymat->keymat_v2.keymat.get_aead(&keymat->keymat_v2.keymat, TRUE);
@@ -91,11 +94,13 @@ START_TEST(test_derive_child_keys)
 	chunk_t encr_i, encr_r, integ_i, integ_r;
 	chunk_t nonce = chunk_from_chars("test chunk");
 
+	array_t *kes = NULL;
+	array_insert_create(&kes, ARRAY_TAIL, dh);
 	fail_unless(keymat->keymat_v2.derive_child_keys(&keymat->keymat_v2, proposal,
-													&dh->ke,
-													nonce, nonce, &encr_i,
+													kes, nonce, nonce, &encr_i,
 													&integ_i, &encr_r, &integ_r),
 				"Child key derivation failed");
+	array_destroy(kes);
 
 	esa_info_t *info = (esa_info_t *)encr_i.ptr;
 	fail_if(!info, "encr_i does not contain esa information");
