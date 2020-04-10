@@ -145,5 +145,7 @@ if USE_TPM
 endif
 
 if USE_KERNEL_NETLINK
+if USE_LIBCHARON
   SUBDIRS += xfrmi
+endif
 endif
