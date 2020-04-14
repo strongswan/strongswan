@@ -42,6 +42,9 @@ endif
 
 if USE_LIBCHARON
   SUBDIRS += libcharon
+if USE_KERNEL_NETLINK
+  SUBDIRS += xfrmi
+endif
 endif
 
 if USE_FILE_CONFIG
@@ -142,8 +145,4 @@ endif
 
 if USE_TPM
   SUBDIRS += tpm_extendpcr
-endif
-
-if USE_KERNEL_NETLINK
-  SUBDIRS += xfrmi
 endif
