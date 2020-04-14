@@ -243,6 +243,25 @@ METHOD(file_logger_t, open_, void,
 				 this->filename, strerror(errno));
 			return;
 		}
+#ifdef HAVE_CHOWN
+		if (lib->caps->check(lib->caps, CAP_CHOWN))
+		{
+			if (chown(this->filename, lib->caps->get_uid(lib->caps),
+					  lib->caps->get_gid(lib->caps)) != 0)
+			{
+				DBG1(DBG_NET, "changing owner/group for '%s' failed: %s",
+					 this->filename, strerror(errno));
+			}
+		}
+		else
+		{
+			if (chown(this->filename, -1, lib->caps->get_gid(lib->caps)) != 0)
+			{
+				DBG1(DBG_NET, "changing group for '%s' failed: %s",
+					 this->filename, strerror(errno));
+			}
+		}
+#endif /* HAVE_CHOWN */
 #ifdef HAVE_SETLINEBUF
 		if (flush_line)
 		{
