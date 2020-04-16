@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <time.h>
 
 /**
  * Get a tty color escape character for stderr
@@ -442,6 +443,39 @@ static void print_failures(array_t *failures, bool warnings)
 	threads_deinit();
 }
 
+#if defined(CLOCK_THREAD_CPUTIME_ID) && defined(HAVE_CLOCK_GETTIME)
+
+/**
+ * Start a timer
+ */
+static void start_timing(struct timespec *start)
+{
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, start);
+}
+
+/**
+ * End a timer, return ms
+ */
+static double end_timing(struct timespec *start)
+{
+	struct timespec end;
+
+	if (!getenv("TESTS_TIMING"))
+	{
+		return 0;
+	}
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+	return (end.tv_nsec - start->tv_nsec) / 1000000.0 +
+			(end.tv_sec - start->tv_sec) * 1000.0;
+}
+
+#else /* CLOCK_THREAD_CPUTIME_ID */
+
+#define start_timing(start) ((start)->tv_sec = 0, (start)->tv_nsec = 0)
+#define end_timing(...) (0)
+
+#endif /* CLOCK_THREAD_CPUTIME_ID */
+
 /**
  * Run a single test case with fixtures
  */
@@ -449,8 +483,19 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
 {
 	enumerator_t *enumerator;
 	test_function_t *tfun;
-	int passed = 0;
+	double *times;
+	double total_time = 0;
+	int tests = 0, ti = 0, passed = 0;
 	array_t *failures, *warnings;
+
+	/* determine the number of tests we will run */
+	enumerator = array_create_enumerator(tcase->functions);
+	while (enumerator->enumerate(enumerator, &tfun))
+	{
+		tests += tfun->end - tfun->start;
+	}
+	enumerator->destroy(enumerator);
+	times = calloc(tests, sizeof(double));
 
 	failures = array_create(sizeof(failure_t), 0);
 	warnings = array_create(sizeof(failure_t), 0);
@@ -467,10 +512,12 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
 		{
 			if (pre_test(init, cfg))
 			{
+				struct timespec start;
 				bool ok = FALSE;
 				int leaks = 0;
 
 				test_setup_timeout(tcase->timeout);
+				start_timing(&start);
 
 				if (call_fixture(tcase, TRUE))
 				{
@@ -491,6 +538,8 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
 					ok = FALSE;
 				}
 
+				times[ti] = end_timing(&start);
+				total_time += times[ti++];
 				test_setup_timeout(0);
 
 				if (ok)
@@ -530,6 +579,20 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
 	}
 	enumerator->destroy(enumerator);
 
+	if (total_time)
+	{
+		fprintf(stderr, " %s%s%.3f ms%s", tty_escape_get(2, TTY_BOLD),
+				TTY(BLUE), total_time, tty_escape_get(2, TTY_RESET));
+		if (ti > 1)
+		{
+			fprintf(stderr, " %s[", TTY(BLUE));
+			for (ti = 0; ti < tests; ti++)
+			{
+				fprintf(stderr, "%s%.3f ms", times[ti], ti == 0 ? "" : ", ");
+			}
+			fprintf(stderr, "]%s", TTY(DEF));
+		}
+	}
 	fprintf(stderr, "\n");
 
 	print_failures(warnings, TRUE);
