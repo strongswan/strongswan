@@ -44,13 +44,13 @@ struct tls_aead_t {
 	 * gets updated to the IV for the next record.
 	 *
 	 * @param version		TLS version
-	 * @param type			TLS content type
+	 * @param type			TLS content type (may be changed)
 	 * @param seq			record sequence number
 	 * @param data			data to encrypt, encryption result
 	 * @return				TRUE if successfully encrypted
 	 */
 	bool (*encrypt)(tls_aead_t *this, tls_version_t version,
-					tls_content_type_t type, uint64_t seq, chunk_t *data);
+					tls_content_type_t *type, uint64_t seq, chunk_t *data);
 
 	/**
 	 * Decrypt and verify a TLS record.
@@ -59,13 +59,13 @@ struct tls_aead_t {
 	 * length, decryption is done inline.
 	 *
 	 * @param version		TLS version
-	 * @param type			TLS content type
+	 * @param type			TLS content type (may be changed)
 	 * @param seq			record sequence number
 	 * @param data			data to decrypt, decrypted result
 	 * @return				TRUE if successfully decrypted
 	 */
 	bool (*decrypt)(tls_aead_t *this, tls_version_t version,
-					tls_content_type_t type, uint64_t seq, chunk_t *data);
+					tls_content_type_t *type, uint64_t seq, chunk_t *data);
 
 	/**
 	 * Get the authentication key size.
