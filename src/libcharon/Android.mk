@@ -220,10 +220,10 @@ ifneq ($(or $(call plugin_enabled, eap-tls), $(call plugin_enabled, eap-ttls), \
 			$(call plugin_enabled, eap-peap), $(call plugin_enabled, eap-tnc)),)
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../libtls/
 LOCAL_SRC_FILES += $(addprefix ../libtls/, \
-		tls_protection.c tls_compression.c tls_fragmentation.c tls_alert.c \
-		tls_crypto.c tls_prf.c tls_socket.c tls_eap.c tls_cache.c tls_peer.c \
-		tls_aead_expl.c tls_aead_impl.c tls_aead_null.c tls_aead.c \
-		tls_server.c tls.c \
+	tls_protection.c tls_compression.c tls_fragmentation.c tls_alert.c \
+	tls_crypto.c tls_prf.c tls_socket.c tls_eap.c tls_cache.c tls_peer.c \
+	tls_aead_expl.c tls_aead_impl.c tls_aead_null.c tls_aead_seq.c tls_aead.c \
+	tls_server.c tls.c \
 	)
 endif
 

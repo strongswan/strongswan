@@ -11,7 +11,7 @@ ipseclib_LTLIBRARIES = libtls.la
 libtls_la_SOURCES = \
 	tls_protection.c tls_compression.c tls_fragmentation.c tls_alert.c \
 	tls_crypto.c tls_prf.c tls_socket.c tls_eap.c tls_cache.c tls_peer.c \
-	tls_aead_expl.c tls_aead_impl.c tls_aead_null.c tls_aead.c \
+	tls_aead_expl.c tls_aead_impl.c tls_aead_null.c tls_aead_seq.c tls_aead.c \
 	tls_server.c tls.c
 
 libtls_la_LIBADD = \
