@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2020 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
@@ -147,10 +150,27 @@ tls_aead_t *tls_aead_create_null(integrity_algorithm_t mac);
 /**
  * Create a tls_aead instance using real a AEAD cipher.
  *
+ * The sequence number is used as IV directly. The internally used nonce
+ * is derived from the key material. Used for TLS 1.2.
+ *
  * @param encr			AEAD encryption algorithm
  * @param encr_size		encryption key size, in bytes
  * @return				TLS AEAD transform
  */
 tls_aead_t *tls_aead_create_aead(encryption_algorithm_t encr, size_t encr_size);
+
+/**
+ * Create a tls_aead instance using real a AEAD cipher and sequence number
+ * as IV.
+ *
+ * The sequence number XORed with a static value of at least the same length
+ * that is derived from the key material is used as IV. This is what TLS 1.3
+ * and newer uses.
+ *
+ * @param encr			AEAD encryption algorithm
+ * @param encr_size		encryption key size, in bytes
+ * @return				TLS AEAD transform
+ */
+tls_aead_t *tls_aead_create_seq(encryption_algorithm_t encr, size_t encr_size);
 
 #endif /** TLS_AEAD_H_ @}*/
