@@ -21,7 +21,7 @@
  */
 
 /**
- * Implementation of the X25519 Diffie-Hellman algorithm using wolfSSL.
+ * Implementation of the X25519/X448 Diffie-Hellman algorithm using wolfSSL.
  *
  * @defgroup wolfssl_x_diffie_hellman wolfssl_x_diffie_hellman
  * @{ @ingroup wolfssl_p

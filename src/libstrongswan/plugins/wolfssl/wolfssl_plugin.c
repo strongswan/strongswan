@@ -377,10 +377,15 @@ METHOD(plugin_t, get_features, int,
 		#endif
 	#endif /* HAVE_ECC_VERIFY */
 #endif /* HAVE_ECC */
-#ifdef HAVE_CURVE25519
+#if defined (HAVE_CURVE25519) || defined(HAVE_CURVE448)
 		PLUGIN_REGISTER(DH, wolfssl_x_diffie_hellman_create),
+	#ifdef HAVE_CURVE25519
 			PLUGIN_PROVIDE(DH, CURVE_25519),
-#endif
+	#endif
+	#ifdef HAVE_CURVE448
+			PLUGIN_PROVIDE(DH, CURVE_448),
+	#endif
+#endif /* HAVE_CURVE25519 || HAVE_CURVE448 */
 #ifdef HAVE_ED25519
 		/* EdDSA private/public key loading */
 		PLUGIN_REGISTER(PUBKEY, wolfssl_ed_public_key_load, TRUE),
