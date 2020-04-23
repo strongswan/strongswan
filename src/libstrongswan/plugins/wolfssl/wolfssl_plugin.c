@@ -386,24 +386,45 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, CURVE_448),
 	#endif
 #endif /* HAVE_CURVE25519 || HAVE_CURVE448 */
-#ifdef HAVE_ED25519
+#if defined(HAVE_ED25519) || defined(HAVE_ED448)
 		/* EdDSA private/public key loading */
 		PLUGIN_REGISTER(PUBKEY, wolfssl_ed_public_key_load, TRUE),
+	#ifdef HAVE_ED25519
 			PLUGIN_PROVIDE(PUBKEY, KEY_ED25519),
+	#endif
+	#ifdef HAVE_ED448
+			PLUGIN_PROVIDE(PUBKEY, KEY_ED448),
+	#endif
 		PLUGIN_REGISTER(PRIVKEY, wolfssl_ed_private_key_load, TRUE),
+	#ifdef HAVE_ED25519
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ED25519),
+	#endif
+	#ifdef HAVE_ED448
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ED448),
+	#endif
 		PLUGIN_REGISTER(PRIVKEY_GEN, wolfssl_ed_private_key_gen, FALSE),
+	#ifdef HAVE_ED25519
 			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ED25519),
+	#endif
+	#ifdef HAVE_ED448
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ED448),
+	#endif
 	#ifdef HAVE_ED25519_SIGN
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ED25519),
 	#endif
 	#ifdef HAVE_ED25519_VERIFY
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ED25519),
 	#endif
+	#ifdef HAVE_ED448_SIGN
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ED448),
+	#endif
+	#ifdef HAVE_ED448_VERIFY
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ED448),
+	#endif
 		/* register a pro forma identity hasher, never instantiated */
 		PLUGIN_REGISTER(HASHER, return_null),
 			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
-#endif /* HAVE_ED25519 */
+#endif /* HAVE_ED25519 || HAVE_ED448 */
 #ifndef WC_NO_RNG
 		/* generic key loader */
 		PLUGIN_REGISTER(RNG, wolfssl_rng_create),

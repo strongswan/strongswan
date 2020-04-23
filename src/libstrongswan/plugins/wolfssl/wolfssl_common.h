@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2020 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2019 Sean Parkinson, wolfSSL Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -59,6 +62,24 @@
 	#include <wolfssl/options.h>
 #endif
 #include <wolfssl/ssl.h>
+
+/* Special type used to handle EdDSA keys depending on config options */
+#if defined(HAVE_ED25519) || defined(HAVE_ED448)
+#ifdef HAVE_ED25519
+#include <wolfssl/wolfcrypt/ed25519.h>
+#endif
+#ifdef HAVE_ED448
+#include <wolfssl/wolfcrypt/ed448.h>
+#endif
+typedef union {
+#ifdef HAVE_ED25519
+	ed25519_key ed25519;
+#endif
+#ifdef HAVE_ED448
+	ed448_key ed448;
+#endif
+} wolfssl_ed_key;
+#endif /* HAVE_ED25519 || HAVE_ED448 */
 
 #undef PARSE_ERROR
 

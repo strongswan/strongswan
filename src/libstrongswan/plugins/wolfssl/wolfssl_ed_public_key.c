@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2020 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2019 Sean Parkinson, wolfSSL Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,14 +25,20 @@
 
 #include "wolfssl_common.h"
 
-#ifdef HAVE_ED25519
+#if defined(HAVE_ED25519) || defined(HAVE_ED448)
 
 #include "wolfssl_ed_public_key.h"
 
 #include <utils/debug.h>
 #include <asn1/asn1.h>
 
+#ifdef HAVE_ED25519
 #include <wolfssl/wolfcrypt/ed25519.h>
+#endif
+#ifdef HAVE_ED448
+#include <wolfssl/wolfcrypt/ed448.h>
+#endif
+
 #include <wolfssl/wolfcrypt/asn.h>
 
 typedef struct private_public_key_t private_public_key_t;
@@ -47,7 +56,12 @@ struct private_public_key_t {
 	/**
 	 * Key object
 	 */
-	ed25519_key key;
+	wolfssl_ed_key key;
+
+	/**
+	 * Key type
+	 */
+	key_type_t type;
 
 	/**
 	 * Reference count
@@ -58,7 +72,7 @@ struct private_public_key_t {
 METHOD(public_key_t, get_type, key_type_t,
 	private_public_key_t *this)
 {
-	return KEY_ED25519;
+	return this->type;
 }
 
 METHOD(public_key_t, verify, bool,
@@ -66,12 +80,13 @@ METHOD(public_key_t, verify, bool,
 	void *params, chunk_t data, chunk_t signature)
 {
 	byte dummy[1];
-	int ret, res;
+	int ret = -1, res = 0;
 
-	if (scheme != SIGN_ED25519)
+	if ((this->type == KEY_ED25519 && scheme != SIGN_ED25519) ||
+		(this->type == KEY_ED448 && scheme != SIGN_ED448))
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported by %N key",
-			 signature_scheme_names, scheme, key_type_names, KEY_ED25519);
+			 signature_scheme_names, scheme, key_type_names, this->type);
 		return FALSE;
 	}
 
@@ -80,8 +95,20 @@ METHOD(public_key_t, verify, bool,
 		data.ptr = dummy;
 	}
 
-	ret = wc_ed25519_verify_msg(signature.ptr, signature.len, data.ptr,
-								data.len, &res, &this->key);
+	if (this->type == KEY_ED25519)
+	{
+#ifdef HAVE_ED25519
+		ret = wc_ed25519_verify_msg(signature.ptr, signature.len, data.ptr,
+									data.len, &res, &this->key.ed25519);
+#endif
+	}
+	else if (this->type == KEY_ED448)
+	{
+#ifdef HAVE_ED448
+		ret = wc_ed448_verify_msg(signature.ptr, signature.len, data.ptr,
+								  data.len, &res, &this->key.ed448, NULL, 0);
+#endif
+	}
 	return ret == 0 && res == 1;
 }
 
@@ -94,23 +121,59 @@ METHOD(public_key_t, encrypt, bool,
 	return FALSE;
 }
 
+/**
+ * Returns the key size in bytes for the given type, also used in private key.
+ */
+int wolfssl_ed_keysize(key_type_t type)
+{
+	if (type == KEY_ED25519)
+	{
+#ifdef HAVE_ED25519
+		return ED25519_KEY_SIZE * 8;
+#endif
+	}
+	else if (type == KEY_ED448)
+	{
+#ifdef HAVE_ED448
+		return ED448_KEY_SIZE * 8;
+#endif
+	}
+	return 0;
+}
+
 METHOD(public_key_t, get_keysize, int,
 	private_public_key_t *this)
 {
-	return ED25519_KEY_SIZE * 8;
+	return wolfssl_ed_keysize(this->type);
 }
 
 /**
  * Encode the given public key as ASN.1 DER with algorithm identifier
  */
-static bool encode_pubkey(ed25519_key *key, chunk_t *encoding)
+static bool encode_pubkey(wolfssl_ed_key *key, key_type_t type,
+						  chunk_t *encoding)
 {
-	int ret;
+	int ret = -1;
 
 	/* account for algorithmIdentifier/bitString */
-	*encoding = chunk_alloc(ED25519_PUB_KEY_SIZE + 2 * MAX_SEQ_SZ +
-							MAX_ALGO_SZ + TRAILING_ZERO);
-	ret = wc_Ed25519PublicKeyToDer(key, encoding->ptr, encoding->len, 1);
+	if (type == KEY_ED25519)
+	{
+#ifdef HAVE_ED25519
+		*encoding = chunk_alloc(ED25519_PUB_KEY_SIZE + 2 * MAX_SEQ_SZ +
+								MAX_ALGO_SZ + TRAILING_ZERO);
+		ret = wc_Ed25519PublicKeyToDer(&key->ed25519, encoding->ptr,
+									   encoding->len, 1);
+#endif
+	}
+	else if (type == KEY_ED448)
+	{
+#ifdef HAVE_ED448
+		*encoding = chunk_alloc(ED448_PUB_KEY_SIZE + 2 * MAX_SEQ_SZ +
+								MAX_ALGO_SZ + TRAILING_ZERO);
+		ret = wc_Ed448PublicKeyToDer(&key->ed448, encoding->ptr,
+									   encoding->len, 1);
+#endif
+	}
 	if (ret < 0)
 	{
 		return FALSE;
@@ -120,14 +183,48 @@ static bool encode_pubkey(ed25519_key *key, chunk_t *encoding)
 }
 
 /**
+ * Export the raw public key of the given key, also used in ed private key.
+ */
+bool wolfssl_ed_public_key(wolfssl_ed_key *key, key_type_t type, chunk_t *raw)
+{
+	word32 len;
+
+	*raw = chunk_empty;
+	if (type == KEY_ED25519)
+	{
+#ifdef HAVE_ED25519
+		len = ED25519_PUB_KEY_SIZE;
+		*raw = chunk_alloc(len);
+		if (wc_ed25519_export_public(&key->ed25519, raw->ptr, &len) != 0)
+		{
+			chunk_free(raw);
+			return FALSE;
+		}
+#endif
+	}
+	else if (type == KEY_ED448)
+	{
+#ifdef HAVE_ED448
+		len = ED448_PUB_KEY_SIZE;
+		*raw = chunk_alloc(len);
+		if (wc_ed448_export_public(&key->ed448, raw->ptr, &len) != 0)
+		{
+			chunk_free(raw);
+			return FALSE;
+		}
+#endif
+	}
+	return TRUE;
+}
+
+/**
  * Calculate fingerprint from an EdDSA key, also used in ed private key.
  */
-bool wolfssl_ed_fingerprint(ed25519_key *key, cred_encoding_type_t type,
-							chunk_t *fp)
+bool wolfssl_ed_fingerprint(wolfssl_ed_key *key, key_type_t key_type,
+							cred_encoding_type_t type, chunk_t *fp)
 {
 	hasher_t *hasher;
 	chunk_t blob;
-	word32 len;
 	bool success = FALSE;
 
 	if (lib->encoding->get_cache(lib->encoding, type, key, fp))
@@ -137,15 +234,13 @@ bool wolfssl_ed_fingerprint(ed25519_key *key, cred_encoding_type_t type,
 	switch (type)
 	{
 		case KEYID_PUBKEY_SHA1:
-			len = ED25519_PUB_KEY_SIZE;
-			blob = chunk_alloc(len);
-			if (wc_ed25519_export_public(key, blob.ptr, &len) != 0)
+			if (!wolfssl_ed_public_key(key, key_type, &blob))
 			{
 				return FALSE;
 			}
 			break;
 		case KEYID_PUBKEY_INFO_SHA1:
-			if (!encode_pubkey(key, &blob))
+			if (!encode_pubkey(key, key_type, &blob))
 			{
 				return FALSE;
 			}
@@ -171,7 +266,7 @@ bool wolfssl_ed_fingerprint(ed25519_key *key, cred_encoding_type_t type,
 METHOD(public_key_t, get_fingerprint, bool,
 	private_public_key_t *this, cred_encoding_type_t type, chunk_t *fingerprint)
 {
-	return wolfssl_ed_fingerprint(&this->key, type, fingerprint);
+	return wolfssl_ed_fingerprint(&this->key, this->type, type, fingerprint);
 }
 
 METHOD(public_key_t, get_encoding, bool,
@@ -179,7 +274,7 @@ METHOD(public_key_t, get_encoding, bool,
 {
 	bool success = TRUE;
 
-	if (!encode_pubkey(&this->key, encoding))
+	if (!encode_pubkey(&this->key, this->type, encoding))
 	{
 		return FALSE;
 	}
@@ -203,21 +298,70 @@ METHOD(public_key_t, get_ref, public_key_t*,
 	return &this->public;
 }
 
+/**
+ * Destroy an EdDSA key of the given type, also used by ed private key.
+ */
+void wolfssl_ed_destroy(wolfssl_ed_key *key, key_type_t type)
+{
+	if (type == KEY_ED25519)
+	{
+#ifdef HAVE_ED25519
+		wc_ed25519_free(&key->ed25519);
+#endif
+	}
+	else if (type == KEY_ED448)
+	{
+#ifdef HAVE_ED448
+		wc_ed448_free(&key->ed448);
+#endif
+	}
+}
+
 METHOD(public_key_t, destroy, void,
 	private_public_key_t *this)
 {
 	if (ref_put(&this->ref))
 	{
 		lib->encoding->clear_cache(lib->encoding, &this->key);
-		wc_ed25519_free(&this->key);
+		wolfssl_ed_destroy(&this->key, this->type);
 		free(this);
 	}
 }
 
 /**
+ * Initialized an EdDSA key of the given type, also used by ed private key.
+ */
+bool wolfssl_ed_create(wolfssl_ed_key *key, key_type_t type)
+{
+	if (type == KEY_ED25519)
+	{
+#ifdef HAVE_ED25519
+		if (wc_ed25519_init(&key->ed25519) != 0)
+		{
+			return FALSE;
+		}
+#endif
+	}
+	else if (type == KEY_ED448)
+	{
+#ifdef HAVE_ED448
+		if (wc_ed448_init(&key->ed448) != 0)
+		{
+			return FALSE;
+		}
+#endif
+	}
+	else
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Generic private constructor
  */
-static private_public_key_t *create_empty()
+static private_public_key_t *create_empty(key_type_t type)
 {
 	private_public_key_t *this;
 
@@ -234,13 +378,14 @@ static private_public_key_t *create_empty()
 			.get_ref = _get_ref,
 			.destroy = _destroy,
 		},
+		.type = type,
 		.ref = 1,
 	);
 
-	if (wc_ed25519_init(&this->key) != 0)
+	if (!wolfssl_ed_create(&this->key, type))
 	{
 		free(this);
-		return NULL;
+		this = NULL;
 	}
 	return this;
 }
@@ -273,21 +418,44 @@ public_key_t *wolfssl_ed_public_key_load(key_type_t type, va_list args)
 		break;
 	}
 
-	this = create_empty();
+	this = create_empty(type);
 	if (!this)
 	{
 		return NULL;
 	}
 
-	if (pub.len)
+	if (type == KEY_ED25519)
 	{
-		ret = wc_ed25519_import_public(pub.ptr, pub.len, &this->key);
+#ifdef HAVE_ED25519
+		if (pub.len)
+		{
+			ret = wc_ed25519_import_public(pub.ptr, pub.len,
+										   &this->key.ed25519);
+		}
+		else if (blob.len)
+		{
+			idx = 0;
+			ret = wc_Ed25519PublicKeyDecode(blob.ptr, &idx, &this->key.ed25519,
+											blob.len);
+		}
+#endif
 	}
-	else if (blob.len)
+	else if (type == KEY_ED448)
 	{
-		idx = 0;
-		ret = wc_Ed25519PublicKeyDecode(blob.ptr, &idx, &this->key, blob.len);
+#ifdef HAVE_ED448
+		if (pub.len)
+		{
+			ret = wc_ed448_import_public(pub.ptr, pub.len, &this->key.ed448);
+		}
+		else if (blob.len)
+		{
+			idx = 0;
+			ret = wc_Ed448PublicKeyDecode(blob.ptr, &idx, &this->key.ed448,
+										  blob.len);
+		}
+#endif
 	}
+
 	if (ret != 0)
 	{
 		destroy(this);

@@ -34,7 +34,7 @@
 /**
  * Generate an EdDSA private key using wolfSSL.
  *
- * @param type		type of the key, must be KEY_ED25519
+ * @param type		type of the key, must be KEY_ED25519 or KEY_ED448
  * @param args		builder_part_t argument list
  * @return 			generated key, NULL on failure
  */
@@ -45,7 +45,7 @@ private_key_t *wolfssl_ed_private_key_gen(key_type_t type, va_list args);
  *
  * Accepts a BUILD_BLOB_ASN1_DER argument.
  *
- * @param type		type of the key, must be KEY_ED25519
+ * @param type		type of the key, must be KEY_ED25519 or KEY_ED448
  * @param args		builder_part_t argument list
  * @return 			loaded key, NULL on failure
  */

@@ -602,10 +602,11 @@ START_TEST(test_ed448_fail)
 			 "signatures");
 	}
 
-	/* malformed signature */
+	/* malformed signature (most significant 10 bits should always be zero) */
 	sig = chunk_from_thing(sig1);
 	memcpy(sig1, sig_tests[0].sig.ptr, sig_tests[0].sig.len);
-	sig1[113] |= 0xFF;
+	sig1[112] |= 0xc0;
+	sig1[113] |= 0xff;
 	ck_assert(!pubkey->verify(pubkey, SIGN_ED448, NULL, sig_tests[0].msg,
 							  sig));
 
