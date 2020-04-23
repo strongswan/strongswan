@@ -37,7 +37,7 @@ build_botan()
 
 build_wolfssl()
 {
-	WOLFSSL_REV=87859f9e810b # v4.3.0-stable + IBM Z patch
+	WOLFSSL_REV=v4.4.0-stable
 	WOLFSSL_DIR=$DEPS_BUILD_DIR/wolfssl
 
 	if test -d "$WOLFSSL_DIR"; then
@@ -48,9 +48,12 @@ build_wolfssl()
 
 	WOLFSSL_CFLAGS="-DWOLFSSL_PUBLIC_MP -DWOLFSSL_DES_ECB"
 	WOLFSSL_CONFIG="--prefix=$DEPS_PREFIX
+					--disable-crypttests --disable-examples
 					--enable-keygen --enable-rsapss --enable-aesccm
 					--enable-aesctr --enable-des3 --enable-camellia
-					--enable-curve25519 --enable-ed25519"
+					--enable-curve25519 --enable-ed25519
+					--enable-curve448 --enable-ed448
+					--enable-sha3 --enable-shake256"
 
 	git clone https://github.com/wolfSSL/wolfssl.git $WOLFSSL_DIR &&
 	cd $WOLFSSL_DIR &&
