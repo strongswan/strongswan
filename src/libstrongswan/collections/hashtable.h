@@ -24,6 +24,7 @@
 #include <collections/enumerator.h>
 
 typedef struct hashtable_t hashtable_t;
+typedef struct hashlist_t hashlist_t;
 
 /**
  * Prototype for a function that computes the hash code from the given key.
@@ -125,25 +126,6 @@ struct hashtable_t {
 	void *(*get)(hashtable_t *this, const void *key);
 
 	/**
-	 * Returns the first value with a matching key, if the hash table contains
-	 * such an entry, otherwise NULL is returned.
-	 *
-	 * Compared to get() the given match function is used to compare the keys
-	 * for equality.  The hash function does have to be devised specially in
-	 * order to make this work if the match function compares keys differently
-	 * than the equals/comparison function provided to the constructor.
-	 *
-	 * This basically allows to enumerate all entries with the same hash value
-	 * in their key's order.
-	 *
-	 * @param key		the key to match against
-	 * @param match		match function to be used when comparing keys
-	 * @return			the value, NULL if not found
-	 */
-	void *(*get_match)(hashtable_t *this, const void *key,
-					   hashtable_equals_t match);
-
-	/**
 	 * Removes the value with the given key from the hash table and returns the
 	 * removed value (or NULL if no such value existed).
 	 *
@@ -183,8 +165,52 @@ struct hashtable_t {
 };
 
 /**
- * Creates an empty hash table object. Items in buckets are ordered in
- * insertion order.
+ * Class implementing a hash table with ordered keys/items and special query
+ * method.
+ *
+ * @note The ordering only pertains to keys/items in the same bucket (with or
+ * without the same hash value), not to the order when enumerating.
+ *
+ * This is intended to be used with hash functions that intentionally return the
+ * same hash value for different keys so multiple items can be retrieved for a
+ * key.
+ *
+ * It's like storing sorted linked lists in a hash table but with less overhead.
+ */
+struct hashlist_t {
+
+	/**
+	 * Implements the hash table interface.
+	 */
+	hashtable_t ht;
+
+	/**
+	 * Returns the first value with a matching key if the hash table contains
+	 * such an entry, otherwise NULL is returned.
+	 *
+	 * Compared to get() the given match function is used to compare the keys
+	 * for equality.  The hash function does have to be devised specially in
+	 * order to make this work if the match function compares keys differently
+	 * than the equals/comparison function provided to the constructor.
+	 *
+	 * This basically allows to enumerate all entries with the same hash value
+	 * in their key's order.
+	 *
+	 * @param key		the key to match against
+	 * @param match		match function to be used when comparing keys
+	 * @return			the value, NULL if not found
+	 */
+	void *(*get_match)(hashlist_t *this, const void *key,
+					   hashtable_equals_t match);
+
+	/**
+	 * Destroys a hash list object.
+	 */
+	void (*destroy)(hashlist_t *this);
+};
+
+/**
+ * Creates an empty hash table object.
  *
  * @param hash			hash function
  * @param equals		equals function
@@ -195,15 +221,25 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 							  u_int size);
 
 /**
- * Creates an empty hash table object with keys in each bucket sorted according
- * to the given comparison function.
+ * Creates an empty hash list object with each bucket's keys in insertion order.
+ *
+ * @param hash			hash function
+ * @param equals		equals function
+ * @param size			initial size
+ * @return				hashtable_t object
+ */
+hashlist_t *hashlist_create(hashtable_hash_t hash, hashtable_equals_t equals,
+							u_int size);
+
+/**
+ * Creates an empty hash list object with sorted keys in each bucket.
  *
  * @param hash			hash function
  * @param cmp			comparison function
  * @param size			initial size
  * @return				hashtable_t object.
  */
-hashtable_t *hashtable_create_sorted(hashtable_hash_t hash,
-									 hashtable_cmp_t cmp, u_int size);
+hashlist_t *hashlist_create_sorted(hashtable_hash_t hash,
+								   hashtable_cmp_t cmp, u_int size);
 
 #endif /** HASHTABLE_H_ @}*/

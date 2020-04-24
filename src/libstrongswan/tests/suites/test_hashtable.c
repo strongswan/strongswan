@@ -19,17 +19,22 @@
 #include <utils/chunk.h>
 
 /*******************************************************************************
- * string hash table functions
+ * hash table functions
  */
 
-static u_int hash(char *key)
+static u_int hash_match(char *key)
 {
-	return chunk_hash(chunk_from_str(key));
+	return chunk_hash(chunk_create(key, 4));
 }
 
-static bool equals(char *key1, char *key2)
+static bool equal_match(char *key1, char *key2)
 {
-	return streq(key1, key2);
+	if (!strneq(key1, key2, 4))
+	{
+		return FALSE;
+	}
+	/* look for an item with a key < than what we look for */
+	return strcmp(key1, key2) >= 0;
 }
 
 /*******************************************************************************
@@ -38,17 +43,77 @@ static bool equals(char *key1, char *key2)
 
 static hashtable_t *ht;
 
+typedef enum {
+	/* regular string hash table */
+	HASHTABLE_REGULAR,
+	/* regular string hash list */
+	HASHLIST_REGULAR,
+	/* sorted string hash list */
+	HASHLIST_REGULAR_SORTED,
+	REGULAR_MAX,
+	/* hash table with only 4 characters hashed -> one bucket tests */
+	HASHTABLE_FUZZY = REGULAR_MAX,
+	/* hash list with only 4 characters hashed */
+	HASHLIST_FUZZY,
+	/* sorted string hash list with only 4 characters hashed */
+	HASHLIST_FUZZY_SORTED,
+	HASHTABLE_MAX,
+} hashtable_type_t;
+
+/**
+ * Create a specific hash table/list
+ */
+static hashtable_t *create_hashtable(int i)
+{
+	hashlist_t *hl = NULL;
+
+	DESTROY_IF(ht);
+
+	switch (i)
+	{
+		case HASHTABLE_REGULAR:
+			ht = hashtable_create(hashtable_hash_str,
+								  hashtable_equals_str, 0);
+			break;
+		case HASHLIST_REGULAR:
+			hl = hashlist_create(hashtable_hash_str,
+								 hashtable_equals_str, 0);
+			break;
+		case HASHLIST_REGULAR_SORTED:
+			hl = hashlist_create_sorted(hashtable_hash_str,
+									   (hashtable_cmp_t)strcmp, 0);
+			break;
+		case HASHTABLE_FUZZY:
+			ht = hashtable_create((hashtable_hash_t)hash_match,
+								  hashtable_equals_str, 0);
+			break;
+		case HASHLIST_FUZZY:
+			hl = hashlist_create((hashtable_hash_t)hash_match,
+								 hashtable_equals_str, 0);
+			break;
+		case HASHLIST_FUZZY_SORTED:
+			hl = hashlist_create_sorted((hashtable_hash_t)hash_match,
+										(hashtable_cmp_t)strcmp, 0);
+			break;
+	}
+	if (hl)
+	{
+		ht = &hl->ht;
+	}
+	ck_assert_int_eq(ht->get_count(ht), 0);
+	return ht;
+}
+
 START_SETUP(setup_ht)
 {
-	ht = hashtable_create((hashtable_hash_t)hash,
-						  (hashtable_equals_t)equals, 0);
-	ck_assert_int_eq(ht->get_count(ht), 0);
+	create_hashtable(_i);
 }
 END_SETUP
 
 START_TEARDOWN(teardown_ht)
 {
 	ht->destroy(ht);
+	ht = NULL;
 }
 END_TEARDOWN
 
@@ -86,28 +151,13 @@ END_TEST
  * get_match
  */
 
-static u_int hash_match(char *key)
-{
-	return chunk_hash(chunk_create(key, 4));
-}
-
-static bool equal_match(char *key1, char *key2)
-{
-	if (!strneq(key1, key2, 4))
-	{
-		return FALSE;
-	}
-	/* look for an item with a key < than what we look for */
-	return strcmp(key1, key2) >= 0;
-}
-
 START_TEST(test_get_match)
 {
+	hashlist_t *hl;
 	char *k1 = "key1_a", *k2 = "key2", *k3 = "key1_b", *k4 = "key1_c";
 	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value;
 
-	ht = hashtable_create((hashtable_hash_t)hash_match,
-						  (hashtable_equals_t)equals, 0);
+	hl = (hashlist_t*)create_hashtable(HASHLIST_FUZZY);
 
 	ht->put(ht, k1, v1);
 	ht->put(ht, k2, v2);
@@ -118,31 +168,31 @@ START_TEST(test_get_match)
 	ck_assert(streq(ht->get(ht, k3), v3));
 	ck_assert(value == NULL);
 
-	value = ht->get_match(ht, k1, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k1, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v1));
-	value = ht->get_match(ht, k2, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k2, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v2));
-	value = ht->get_match(ht, k3, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k3, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v1));
-	value = ht->get_match(ht, k4, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k4, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v1));
-
-	ht->destroy(ht);
 }
 END_TEST
 
 START_TEST(test_get_match_remove)
 {
+	hashlist_t *hl;
 	char *k1 = "key1_a", *k2 = "key2", *k3 = "key1_b", *k4 = "key1_c";
 	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value;
 
-	ht = hashtable_create((hashtable_hash_t)hash_match,
-						  (hashtable_equals_t)equals, 0);
+	hl = (hashlist_t*)create_hashtable(HASHLIST_FUZZY);
 
+	/* by removing and reinserting the first item we verify that insertion
+	 * order is adhered */
 	ht->put(ht, k1, v1);
 	ht->put(ht, k2, v2);
 	ht->put(ht, k3, v3);
@@ -153,31 +203,30 @@ START_TEST(test_get_match_remove)
 	ck_assert(streq(ht->get(ht, k2), v2));
 	ck_assert(streq(ht->get(ht, k3), v3));
 
-	value = ht->get_match(ht, k1, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k1, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v1));
-	value = ht->get_match(ht, k2, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k2, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v2));
-	value = ht->get_match(ht, k3, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k3, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v3));
-	value = ht->get_match(ht, k4, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k4, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v3));
-
-	ht->destroy(ht);
 }
 END_TEST
 
 START_TEST(test_get_match_sorted)
 {
+	hashlist_t *hl;
 	char *k1 = "key1_a", *k2 = "key2", *k3 = "key1_b", *k4 = "key1_c";
 	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value;
 
-	ht = hashtable_create_sorted((hashtable_hash_t)hash_match,
-								 (hashtable_cmp_t)strcmp, 0);
+	hl = (hashlist_t*)create_hashtable(HASHLIST_FUZZY_SORTED);
 
+	/* since the keys are sorted, the insertion order doesn't matter */
 	ht->put(ht, k3, v3);
 	ht->put(ht, k2, v2);
 	ht->put(ht, k1, v1);
@@ -190,20 +239,18 @@ START_TEST(test_get_match_sorted)
 	ck_assert(streq(ht->get(ht, k3), v3));
 	ck_assert(streq(ht->get(ht, k4), v1));
 
-	value = ht->get_match(ht, k1, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k1, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v1));
-	value = ht->get_match(ht, k2, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k2, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v2));
-	value = ht->get_match(ht, k3, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k3, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v1));
-	value = ht->get_match(ht, k4, (hashtable_equals_t)equal_match);
+	value = hl->get_match(hl, k4, (hashtable_equals_t)equal_match);
 	ck_assert(value != NULL);
 	ck_assert(streq(value, v1));
-
-	ht->destroy(ht);
 }
 END_TEST
 
@@ -251,38 +298,6 @@ END_TEST
 START_TEST(test_remove_one_bucket)
 {
 	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
-
-	ht->destroy(ht);
-	ht = hashtable_create((hashtable_hash_t)hash_match,
-						  (hashtable_equals_t)equals, 0);
-
-	do_remove(k1, k2, k3);
-	do_remove(k3, k2, k1);
-	do_remove(k1, k3, k2);
-}
-END_TEST
-
-START_TEST(test_remove_sorted)
-{
-	char *k1 = "key1", *k2 = "key2", *k3 = "key3";
-
-	ht->destroy(ht);
-	ht = hashtable_create_sorted((hashtable_hash_t)hash,
-								 (hashtable_cmp_t)strcmp, 0);
-
-	do_remove(k1, k2, k3);
-	do_remove(k3, k2, k1);
-	do_remove(k1, k3, k2);
-}
-END_TEST
-
-START_TEST(test_remove_sorted_one_bucket)
-{
-	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
-
-	ht->destroy(ht);
-	ht = hashtable_create_sorted((hashtable_hash_t)hash_match,
-								 (hashtable_cmp_t)strcmp, 0);
 
 	do_remove(k1, k2, k3);
 	do_remove(k3, k2, k1);
@@ -404,14 +419,9 @@ START_TEST(test_remove_at_one_bucket)
 {
 	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
 
-	ht->destroy(ht);
-	ht = hashtable_create((hashtable_hash_t)hash_match,
-						  (hashtable_equals_t)equals, 0);
-
 	do_remove_at(k1, k2, k3);
 }
 END_TEST
-
 
 /*******************************************************************************
  * many items
@@ -432,34 +442,63 @@ static int cmp_int(int *key1, int *key2)
 	return *key1 - *key2;
 }
 
+/**
+ * Create a specific hash table with integers as keys.
+ */
+static hashtable_t *create_int_hashtable(int i)
+{
+	hashlist_t *hl = NULL;
+
+	DESTROY_IF(ht);
+
+	switch (i)
+	{
+		case HASHTABLE_REGULAR:
+			ht = hashtable_create((hashtable_hash_t)hash_int,
+								  (hashtable_equals_t)equals_int, 0);
+			break;
+		case HASHLIST_REGULAR:
+			hl = hashlist_create((hashtable_hash_t)hash_int,
+								 (hashtable_equals_t)equals_int, 0);
+			break;
+		case HASHLIST_REGULAR_SORTED:
+			hl = hashlist_create_sorted((hashtable_hash_t)hash_int,
+										(hashtable_cmp_t)cmp_int, 0);
+			break;
+	}
+	if (hl)
+	{
+		ht = &hl->ht;
+	}
+	ck_assert_int_eq(ht->get_count(ht), 0);
+	return ht;
+}
+
 START_SETUP(setup_ht_many)
 {
-	ht = hashtable_create((hashtable_hash_t)hash_int,
-						  (hashtable_equals_t)equals_int, 0);
-	ck_assert_int_eq(ht->get_count(ht), 0);
+	create_int_hashtable(_i >> 1);
 }
 END_SETUP
 
-START_SETUP(setup_ht_many_cmp)
+START_SETUP(setup_ht_lookups)
 {
-	ht = hashtable_create_sorted((hashtable_hash_t)hash_int,
-								 (hashtable_cmp_t)cmp_int, 0);
-	ck_assert_int_eq(ht->get_count(ht), 0);
+	create_int_hashtable(_i);
 }
 END_SETUP
 
 START_TEARDOWN(teardown_ht_many)
 {
 	ht->destroy_function(ht, (void*)free);
+	ht = NULL;
 }
 END_TEARDOWN
 
 START_TEST(test_many_items)
 {
-	u_int count = 250000;
+	u_int count = 100000;
 	int i, *val, r;
 
-#define GET_VALUE(i) ({ _i == 0 ? i : (count-1-i); })
+#define GET_VALUE(i) ({ (_i % 2) == 0 ? i : (count-1-i); })
 
 	for (i = 0; i < count; i++)
 	{
@@ -587,10 +626,11 @@ Suite *hashtable_suite_create()
 
 	tc = tcase_create("put/get");
 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
-	tcase_add_test(tc, test_put_get);
+	tcase_add_loop_test(tc, test_put_get, 0, HASHTABLE_MAX);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("get_match");
+	tcase_add_checked_fixture(tc, NULL, teardown_ht);
 	tcase_add_test(tc, test_get_match);
 	tcase_add_test(tc, test_get_match_remove);
 	tcase_add_test(tc, test_get_match_sorted);
@@ -598,39 +638,32 @@ Suite *hashtable_suite_create()
 
 	tc = tcase_create("remove");
 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
-	tcase_add_test(tc, test_remove);
-	tcase_add_test(tc, test_remove_one_bucket);
-	tcase_add_test(tc, test_remove_sorted);
-	tcase_add_test(tc, test_remove_sorted_one_bucket);
+	tcase_add_loop_test(tc, test_remove, 0, REGULAR_MAX);
+	tcase_add_loop_test(tc, test_remove_one_bucket, HASHTABLE_FUZZY, HASHTABLE_MAX);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("enumerator");
 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
-	tcase_add_test(tc, test_enumerator);
+	tcase_add_loop_test(tc, test_enumerator, 0, HASHTABLE_MAX);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("remove_at");
 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
-	tcase_add_test(tc, test_remove_at);
-	tcase_add_test(tc, test_remove_at_one_bucket);
+	tcase_add_loop_test(tc, test_remove_at, 0, REGULAR_MAX);
+	tcase_add_loop_test(tc, test_remove_at_one_bucket, HASHTABLE_FUZZY, HASHTABLE_MAX);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("many items");
 	tcase_add_checked_fixture(tc, setup_ht_many, teardown_ht_many);
 	tcase_set_timeout(tc, 10);
-	tcase_add_loop_test(tc, test_many_items, 0, 2);
-	tcase_add_test(tc, test_many_lookups_success);
-	tcase_add_test(tc, test_many_lookups_failure_larger);
-	tcase_add_test(tc, test_many_lookups_failure_smaller);
+	tcase_add_loop_test(tc, test_many_items, 0, REGULAR_MAX << 1);
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("many items sorted");
-	tcase_add_checked_fixture(tc, setup_ht_many_cmp, teardown_ht_many);
-	tcase_set_timeout(tc, 10);
-	tcase_add_loop_test(tc, test_many_items, 0, 2);
-	tcase_add_test(tc, test_many_lookups_success);
-	tcase_add_test(tc, test_many_lookups_failure_larger);
-	tcase_add_test(tc, test_many_lookups_failure_smaller);
+	tc = tcase_create("many lookups");
+	tcase_add_checked_fixture(tc, setup_ht_lookups, teardown_ht_many);
+	tcase_add_loop_test(tc, test_many_lookups_success, 0, REGULAR_MAX);
+	tcase_add_loop_test(tc, test_many_lookups_failure_larger, 0, REGULAR_MAX);
+	tcase_add_loop_test(tc, test_many_lookups_failure_smaller, 0, REGULAR_MAX);
 	suite_add_tcase(s, tc);
 
 	return s;

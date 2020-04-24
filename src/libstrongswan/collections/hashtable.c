@@ -144,6 +144,25 @@ struct private_hashtable_t {
 #endif
 };
 
+typedef struct private_hashlist_t private_hashlist_t;
+
+/**
+ * Private data of a hashlist_t object.
+ */
+struct private_hashlist_t {
+
+	/**
+	 * Public part of hash table.
+	 */
+	hashlist_t public;
+
+	/**
+	 * Inherited private part of hash table (we get the public part too, but
+	 * ignore it).
+	 */
+	private_hashtable_t super;
+};
+
 #ifdef HASHTABLE_PROFILER
 
 #define lookup_start() \
@@ -361,7 +380,7 @@ static inline pair_t *find_key(private_hashtable_t *this, const void *key,
 	while (pair)
 	{
 		lookup_probing();
-		/* when keys are ordered, we compare all items so we can abort earlier
+		/* when keys are sorted, we compare all items so we can abort earlier
 		 * even if the hash does not match, but only as long as we don't
 		 * have a callback */
 		if (!use_callback && this->cmp)
@@ -442,13 +461,6 @@ METHOD(hashtable_t, get, void*,
 	private_hashtable_t *this, const void *key)
 {
 	pair_t *pair = find_key(this, key, NULL, NULL, NULL);
-	return pair ? pair->value : NULL;
-}
-
-METHOD(hashtable_t, get_match, void*,
-	private_hashtable_t *this, const void *key, hashtable_equals_t match)
-{
-	pair_t *pair = find_key(this, key, match, NULL, NULL);
 	return pair ? pair->value : NULL;
 }
 
@@ -595,51 +607,77 @@ static void destroy_internal(private_hashtable_t *this,
 		}
 	}
 	free(this->table);
-	free(this);
 }
 
 METHOD(hashtable_t, destroy, void,
 	private_hashtable_t *this)
 {
 	destroy_internal(this, NULL);
+	free(this);
 }
 
 METHOD(hashtable_t, destroy_function, void,
 	private_hashtable_t *this, void (*fn)(void*,const void*))
 {
 	destroy_internal(this, fn);
+	free(this);
 }
 
-/**
- * Create a hash table
- */
-static private_hashtable_t *hashtable_create_internal(hashtable_hash_t hash,
-													  u_int size)
+METHOD(hashtable_t, create_enumerator_hashlist, enumerator_t*,
+	private_hashlist_t *this)
 {
-	private_hashtable_t *this;
+	return create_enumerator(&this->super);
+}
 
-	INIT(this,
-		.public = {
-			.put = _put,
-			.get = _get,
-			.get_match = _get_match,
-			.remove = _remove_,
-			.remove_at = (void*)_remove_at,
-			.get_count = _get_count,
-			.create_enumerator = _create_enumerator,
-			.destroy = _destroy,
-			.destroy_function = _destroy_function,
-		},
-		.hash = hash,
-	);
+METHOD(hashtable_t, put_hashlist, void*,
+	private_hashlist_t *this, const void *key, void *value)
+{
+	return put(&this->super, key, value);
+}
 
-	init_hashtable(this, size);
+METHOD(hashtable_t, get_hashlist, void*,
+	private_hashlist_t *this, const void *key)
+{
+	return get(&this->super, key);
+}
 
-#ifdef HASHTABLE_PROFILER
-	this->backtrace = backtrace_create(3);
-#endif
+METHOD(hashlist_t, get_match, void*,
+	private_hashlist_t *this, const void *key, hashtable_equals_t match)
+{
+	pair_t *pair = find_key(&this->super, key, match, NULL, NULL);
+	return pair ? pair->value : NULL;
+}
 
-	return this;
+METHOD(hashtable_t, remove_hashlist, void*,
+	private_hashlist_t *this, const void *key)
+{
+	return remove_(&this->super, key);
+}
+
+METHOD(hashtable_t, remove_at_hashlist, void,
+	private_hashlist_t *this, private_enumerator_t *enumerator)
+{
+	remove_at(&this->super, enumerator);
+}
+
+METHOD(hashtable_t, get_count_hashlist, u_int,
+	private_hashlist_t *this)
+{
+	return get_count(&this->super);
+}
+
+METHOD2(hashtable_t, hashlist_t, destroy_hashlist, void,
+	private_hashlist_t *this)
+{
+	destroy_internal(&this->super, NULL);
+	free(this);
+}
+
+METHOD(hashtable_t, destroy_function_hashlist, void,
+	private_hashlist_t *this, void (*fn)(void*,const void*))
+{
+	destroy_internal(&this->super, fn);
+	free(this);
 }
 
 /*
@@ -648,9 +686,78 @@ static private_hashtable_t *hashtable_create_internal(hashtable_hash_t hash,
 hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 							  u_int size)
 {
-	private_hashtable_t *this = hashtable_create_internal(hash, size);
+	private_hashtable_t *this;
 
-	this->equals = equals;
+	INIT(this,
+		.public = {
+			.put = _put,
+			.get = _get,
+			.remove = _remove_,
+			.remove_at = (void*)_remove_at,
+			.get_count = _get_count,
+			.create_enumerator = _create_enumerator,
+			.destroy = _destroy,
+			.destroy_function = _destroy_function,
+		},
+		.hash = hash,
+		.equals = equals,
+	);
+
+	init_hashtable(this, size);
+
+#ifdef HASHTABLE_PROFILER
+	this->backtrace = backtrace_create(3);
+#endif
+
+	return &this->public;
+}
+
+/**
+ * Create a hash table
+ */
+static private_hashlist_t *hashlist_create_internal(hashtable_hash_t hash,
+													u_int size)
+{
+	private_hashlist_t *this;
+
+	INIT(this,
+		.public = {
+			.ht = {
+				.put = _put_hashlist,
+				.get = _get_hashlist,
+				.remove = _remove_hashlist,
+				.remove_at = (void*)_remove_at_hashlist,
+				.get_count = _get_count_hashlist,
+				.create_enumerator = _create_enumerator_hashlist,
+				.destroy = _destroy_hashlist,
+				.destroy_function = _destroy_function_hashlist,
+			},
+			.get_match = _get_match,
+			.destroy = _destroy_hashlist,
+		},
+		.super = {
+			.hash = hash,
+		}
+	);
+
+	init_hashtable(&this->super, size);
+
+#ifdef HASHTABLE_PROFILER
+	this->super.backtrace = backtrace_create(3);
+#endif
+
+	return this;
+}
+
+/*
+ * Described in header
+ */
+hashlist_t *hashlist_create(hashtable_hash_t hash, hashtable_equals_t equals,
+							u_int size)
+{
+	private_hashlist_t *this = hashlist_create_internal(hash, size);
+
+	this->super.equals = equals;
 
 	return &this->public;
 }
@@ -658,12 +765,12 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 /*
  * Described in header
  */
-hashtable_t *hashtable_create_sorted(hashtable_hash_t hash,
-									 hashtable_cmp_t cmp, u_int size)
+hashlist_t *hashlist_create_sorted(hashtable_hash_t hash,
+								   hashtable_cmp_t cmp, u_int size)
 {
-	private_hashtable_t *this = hashtable_create_internal(hash, size);
+	private_hashlist_t *this = hashlist_create_internal(hash, size);
 
-	this->cmp = cmp;
+	this->super.cmp = cmp;
 
 	return &this->public;
 }

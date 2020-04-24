@@ -65,7 +65,7 @@ struct private_plugin_loader_t {
 	/**
 	 * Hashtable for registered features, as registered_feature_t
 	 */
-	hashtable_t *features;
+	hashlist_t *features;
 
 	/**
 	 * Loaded features (stored in reverse order), as provided_feature_t
@@ -911,14 +911,16 @@ static void register_features(private_plugin_loader_t *this,
 		{
 			case FEATURE_PROVIDE:
 				lookup.feature = feature;
-				registered = this->features->get(this->features, &lookup);
+				registered = this->features->ht.get(&this->features->ht,
+													&lookup);
 				if (!registered)
 				{
 					INIT(registered,
 						.feature = feature,
 						.plugins = linked_list_create(),
 					);
-					this->features->put(this->features, registered, registered);
+					this->features->ht.put(&this->features->ht, registered,
+										   registered);
 				}
 				INIT(provided,
 					.entry = entry,
@@ -950,13 +952,13 @@ static void unregister_feature(private_plugin_loader_t *this,
 	registered_feature_t *registered, lookup;
 
 	lookup.feature = provided->feature;
-	registered = this->features->get(this->features, &lookup);
+	registered = this->features->ht.get(&this->features->ht, &lookup);
 	if (registered)
 	{
 		registered->plugins->remove(registered->plugins, provided, NULL);
 		if (registered->plugins->get_count(registered->plugins) == 0)
 		{
-			this->features->remove(this->features, &lookup);
+			this->features->ht.remove(&this->features->ht, &lookup);
 			registered->plugins->destroy(registered->plugins);
 			free(registered);
 		}
@@ -1444,7 +1446,7 @@ plugin_loader_t *plugin_loader_create()
 		},
 		.plugins = linked_list_create(),
 		.loaded = linked_list_create(),
-		.features = hashtable_create(
+		.features = hashlist_create(
 							(hashtable_hash_t)registered_feature_hash,
 							(hashtable_equals_t)registered_feature_equals, 64),
 	);
