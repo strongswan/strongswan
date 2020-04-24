@@ -272,11 +272,13 @@ static void init_hashtable(private_hashtable_t *this, u_int size)
 }
 
 /**
- * Calculate the next bucket using simple linear probing for now.
+ * Calculate the next bucket using quadratic probing (the sequence is h(k) + 1,
+ * h(k) + 3, h(k) + 6, h(k) + 10, ...).
  */
-static inline u_int get_next(private_hashtable_t *this, u_int row)
+static inline u_int get_next(private_hashtable_t *this, u_int row, u_int *p)
 {
-	return (row + 1) & this->mask;
+	*p += 1;
+	return (row + *p) & this->mask;
 }
 
 /**
@@ -287,7 +289,7 @@ static inline pair_t *find_key(private_hashtable_t *this, const void *key,
 								u_int *out_hash, u_int *out_row)
 {
 	pair_t *pair;
-	u_int hash, row, removed, index;
+	u_int hash, row, p = 0, removed, index;
 	bool found_removed = FALSE;
 
 	if (!this->count && !out_hash && !out_row)
@@ -318,7 +320,7 @@ static inline pair_t *find_key(private_hashtable_t *this, const void *key,
 			lookup_success(&this->profile);
 			return pair;
 		}
-		row = get_next(this, row);
+		row = get_next(this, row, &p);
 		index = get_index(this, row);
 	}
 	if (out_hash)
@@ -354,7 +356,7 @@ static inline u_int insert_item(private_hashtable_t *this, u_int row)
 static bool rehash(private_hashtable_t *this, u_int size)
 {
 	pair_t *old_items, *pair;
-	u_int old_count, i, row, index;
+	u_int old_count, i, p, row, index;
 
 	if (size > MAX_SIZE)
 	{
@@ -378,9 +380,9 @@ static bool rehash(private_hashtable_t *this, u_int size)
 			{
 				row = pair->hash & this->mask;
 				index = get_index(this, row);
-				while (index)
+				for (p = 0; index;)
 				{
-					row = get_next(this, row);
+					row = get_next(this, row, &p);
 					index = get_index(this, row);
 				}
 				index = insert_item(this, row);
