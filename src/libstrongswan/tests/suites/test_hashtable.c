@@ -309,6 +309,151 @@ START_TEST(test_remove_at_one_bucket)
 }
 END_TEST
 
+
+/*******************************************************************************
+ * many items
+ */
+
+static u_int hash_int(int *key)
+{
+	return chunk_hash(chunk_create((u_char*)key, sizeof(int)));
+}
+
+static bool equals_int(int *key1, int *key2)
+{
+	return *key1 == *key2;
+}
+
+START_SETUP(setup_ht_many)
+{
+	ht = hashtable_create((hashtable_hash_t)hash_int,
+						  (hashtable_equals_t)equals_int, 0);
+	ck_assert_int_eq(ht->get_count(ht), 0);
+}
+END_SETUP
+
+START_TEARDOWN(teardown_ht_many)
+{
+	ht->destroy_function(ht, (void*)free);
+}
+END_TEARDOWN
+
+START_TEST(test_many_items)
+{
+	u_int count = 250000;
+	int i, *val, r;
+
+	for (i = 0; i < count; i++)
+	{
+		val = malloc_thing(int);
+		*val = i;
+		ht->put(ht, val, val);
+	}
+	for (i = 0; i < count; i++)
+	{
+		val = ht->get(ht, &i);
+		ck_assert_int_eq(i, *val);
+	}
+	for (i = 0; i < count; i++)
+	{
+		free(ht->remove(ht, &i));
+	}
+	for (i = 0; i < count; i++)
+	{
+		val = malloc_thing(int);
+		*val = i;
+		ht->put(ht, val, val);
+	}
+	for (i = 0; i < count/2; i++)
+	{
+		free(ht->remove(ht, &i));
+	}
+	for (i = 0; i < count; i++)
+	{
+		val = malloc_thing(int);
+		*val = i;
+		free(ht->put(ht, val, val));
+	}
+	srandom(666);
+	for (i = 0; i < count; i++)
+	{
+		r = random() % count;
+		ht->get(ht, &r);
+	}
+	for (i = 0; i < count; i++)
+	{
+		free(ht->remove(ht, &i));
+	}
+	for (i = 0; i < 2*count; i++)
+	{
+		val = malloc_thing(int);
+		*val = i;
+		ht->put(ht, val, val);
+		free(ht->remove(ht, val));
+	}
+}
+END_TEST
+
+START_TEST(test_many_lookups_success)
+{
+	u_int count = 25000, lookups = 1000000;
+	int i, *val, r;
+
+	for (i = 0; i < count; i++)
+	{
+		val = malloc_thing(int);
+		*val = i;
+		ht->put(ht, val, val);
+	}
+	srandom(666);
+	for (i = 0; i < lookups; i++)
+	{
+		r = random() % count;
+		ht->get(ht, &r);
+	}
+}
+END_TEST
+
+START_TEST(test_many_lookups_failure_larger)
+{
+	u_int count = 25000, lookups = 1000000;
+	int i, *val, r;
+
+	for (i = 0; i < count; i++)
+	{
+		val = malloc_thing(int);
+		*val = i;
+		ht->put(ht, val, val);
+	}
+	srandom(666);
+	for (i = 0; i < lookups; i++)
+	{
+		r = random() % count + count;
+		ht->get(ht, &r);
+	}
+}
+END_TEST
+
+START_TEST(test_many_lookups_failure_smaller)
+{
+	u_int count = 25000, lookups = 1000000;
+	int i, *val, r;
+
+	for (i = 0; i < count; i++)
+	{
+		val = malloc_thing(int);
+		*val = i + count;
+		ht->put(ht, val, val);
+	}
+	srandom(666);
+	for (i = 0; i < lookups; i++)
+	{
+		r = random() % count;
+		ht->get(ht, &r);
+	}
+}
+END_TEST
+
 Suite *hashtable_suite_create()
 {
 	Suite *s;
@@ -340,6 +485,15 @@ Suite *hashtable_suite_create()
 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
 	tcase_add_test(tc, test_remove_at);
 	tcase_add_test(tc, test_remove_at_one_bucket);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("many items");
+	tcase_add_checked_fixture(tc, setup_ht_many, teardown_ht_many);
+	tcase_set_timeout(tc, 10);
+	tcase_add_test(tc, test_many_items);
+	tcase_add_test(tc, test_many_lookups_success);
+	tcase_add_test(tc, test_many_lookups_failure_larger);
+	tcase_add_test(tc, test_many_lookups_failure_smaller);
 	suite_add_tcase(s, tc);
 
 	return s;
