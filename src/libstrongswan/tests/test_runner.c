@@ -215,7 +215,7 @@ static bool run_test(test_function_t *tfun, int i)
 /**
  * Invoke fixture setup/teardown
  */
-static bool call_fixture(test_case_t *tcase, bool up)
+static bool call_fixture(test_case_t *tcase, bool up, int i)
 {
 	enumerator_t *enumerator;
 	test_fixture_t *fixture;
@@ -230,14 +230,14 @@ static bool call_fixture(test_case_t *tcase, bool up)
 			{
 				if (fixture->setup)
 				{
-					fixture->setup();
+					fixture->setup(i);
 				}
 			}
 			else
 			{
 				if (fixture->teardown)
 				{
-					fixture->teardown();
+					fixture->teardown(i);
 				}
 			}
 		}
@@ -519,18 +519,18 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
 				test_setup_timeout(tcase->timeout);
 				start_timing(&start);
 
-				if (call_fixture(tcase, TRUE))
+				if (call_fixture(tcase, TRUE, i))
 				{
 					if (run_test(tfun, i))
 					{
-						if (call_fixture(tcase, FALSE))
+						if (call_fixture(tcase, FALSE, i))
 						{
 							ok = TRUE;
 						}
 					}
 					else
 					{
-						call_fixture(tcase, FALSE);
+						call_fixture(tcase, FALSE, i);
 					}
 				}
 				if (!post_test(init, ok, failures, tfun->name, i, &leaks))
