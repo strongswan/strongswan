@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2014 Tobias Brunner
+ * Copyright (C) 2008-2020 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -13,13 +13,16 @@
  * for more details.
  */
 
-
 #include "hashtable.h"
 
 #include <utils/chunk.h>
 
+/** The minimum capacity of the hash table (MUST be a power of 2) */
+#define MIN_CAPACITY 8
 /** The maximum capacity of the hash table (MUST be a power of 2) */
 #define MAX_CAPACITY (1 << 30)
+/** Maximum load factor before the hash table is resized */
+#define LOAD_FACTOR 0.75f
 
 typedef struct pair_t pair_t;
 
@@ -27,6 +30,7 @@ typedef struct pair_t pair_t;
  * This pair holds a pointer to the key and value it represents.
  */
 struct pair_t {
+
 	/**
 	 * Key of a hash table item.
 	 */
@@ -71,6 +75,7 @@ typedef struct private_hashtable_t private_hashtable_t;
  *
  */
 struct private_hashtable_t {
+
 	/**
 	 * Public part of hash table.
 	 */
@@ -90,11 +95,6 @@ struct private_hashtable_t {
 	 * The current mask to calculate the row index (capacity - 1).
 	 */
 	u_int mask;
-
-	/**
-	 * The load factor.
-	 */
-	float load_factor;
 
 	/**
 	 * The actual table.
@@ -205,10 +205,9 @@ static u_int get_nearest_powerof2(u_int n)
  */
 static void init_hashtable(private_hashtable_t *this, u_int capacity)
 {
-	capacity = max(1, min(capacity, MAX_CAPACITY));
+	capacity = max(MIN_CAPACITY, min(capacity, MAX_CAPACITY));
 	this->capacity = get_nearest_powerof2(capacity);
 	this->mask = this->capacity - 1;
-	this->load_factor = 0.75;
 
 	this->table = calloc(this->capacity, sizeof(pair_t*));
 }
@@ -218,8 +217,8 @@ static void init_hashtable(private_hashtable_t *this, u_int capacity)
  */
 static void rehash(private_hashtable_t *this)
 {
-	pair_t **old_table;
-	u_int row, old_capacity;
+	pair_t **old_table, *to_move, *pair, *next;
+	u_int row, new_row, old_capacity;
 
 	if (this->capacity >= MAX_CAPACITY)
 	{
@@ -233,91 +232,119 @@ static void rehash(private_hashtable_t *this)
 
 	for (row = 0; row < old_capacity; row++)
 	{
-		pair_t *pair, *next;
-		u_int new_row;
-
-		pair = old_table[row];
-		while (pair)
-		{	/* insert pair at the front of new bucket*/
-			next = pair->next;
-			new_row = pair->hash & this->mask;
-			pair->next = this->table[new_row];
-			this->table[new_row] = pair;
-			pair = next;
+		to_move = old_table[row];
+		while (to_move)
+		{
+			new_row = to_move->hash & this->mask;
+			pair = this->table[new_row];
+			if (pair)
+			{
+				while (pair->next)
+				{
+					pair = pair->next;
+				}
+				pair->next = to_move;
+			}
+			else
+			{
+				this->table[new_row] = to_move;
+			}
+			next = to_move->next;
+			to_move->next = NULL;
+			to_move = next;
 		}
 	}
 	free(old_table);
+}
+
+/**
+ * Find the pair with the given key, optionally returning the hash and previous
+ * (or last) pair in the bucket.
+ */
+static inline pair_t *find_key(private_hashtable_t *this, const void *key,
+							   hashtable_equals_t equals, u_int *out_hash,
+							   pair_t **out_prev)
+{
+	pair_t *pair, *prev = NULL;
+	u_int hash;
+
+	if (!this->count && !out_hash)
+	{	/* no need to calculate the hash if not requested */
+		return NULL;
+	}
+
+	hash = this->hash(key);
+	if (out_hash)
+	{
+		*out_hash = hash;
+	}
+
+	pair = this->table[hash & this->mask];
+	while (pair)
+	{
+		if (hash == pair->hash && equals(key, pair->key))
+		{
+			break;
+		}
+		prev = pair;
+		pair = pair->next;
+	}
+	if (out_prev)
+	{
+		*out_prev = prev;
+	}
+	return pair;
 }
 
 METHOD(hashtable_t, put, void*,
 	private_hashtable_t *this, const void *key, void *value)
 {
 	void *old_value = NULL;
-	pair_t *pair;
-	u_int hash, row;
+	pair_t *pair, *prev = NULL;
+	u_int hash;
 
-	hash = this->hash(key);
-	row = hash & this->mask;
-	pair = this->table[row];
-	while (pair)
-	{	/* search existing bucket for key */
-		if (this->equals(key, pair->key))
-		{
-			old_value = pair->value;
-			pair->value = value;
-			pair->key = key;
-			break;
-		}
-		pair = pair->next;
-	}
-	if (!pair)
-	{	/* insert at the front of bucket */
-		pair = pair_create(key, value, hash);
-		pair->next = this->table[row];
-		this->table[row] = pair;
-		this->count++;
-	}
-	if (this->count >= this->capacity * this->load_factor)
+	if (this->count >= this->capacity * LOAD_FACTOR)
 	{
 		rehash(this);
+	}
+
+	pair = find_key(this, key, this->equals, &hash, &prev);
+	if (pair)
+	{
+		old_value = pair->value;
+		pair->value = value;
+		pair->key = key;
+	}
+	else
+	{
+		pair = pair_create(key, value, hash);
+		if (prev)
+		{
+			prev->next = pair;
+		}
+		else
+		{
+			this->table[hash & this->mask] = pair;
+
+		}
+		this->count++;
 	}
 	return old_value;
 }
 
-static void *get_internal(private_hashtable_t *this, const void *key,
-						  hashtable_equals_t equals)
-{
-	void *value = NULL;
-	pair_t *pair;
-
-	if (!this->count)
-	{	/* no need to calculate the hash */
-		return NULL;
-	}
-
-	pair = this->table[this->hash(key) & this->mask];
-	while (pair)
-	{
-		if (equals(key, pair->key))
-		{
-			value = pair->value;
-			break;
-		}
-		pair = pair->next;
-	}
-	return value;
-}
 
 METHOD(hashtable_t, get, void*,
 	private_hashtable_t *this, const void *key)
 {
-	return get_internal(this, key, this->equals);
+	pair_t *pair = find_key(this, key, this->equals, NULL, NULL);
+	return pair ? pair->value : NULL;
 }
 
 METHOD(hashtable_t, get_match, void*,
 	private_hashtable_t *this, const void *key, hashtable_equals_t match)
 {
-	return get_internal(this, key, match);
+	pair_t *pair = find_key(this, key, match, NULL, NULL);
+	return pair ? pair->value : NULL;
 }
 
 METHOD(hashtable_t, remove_, void*,
@@ -325,29 +352,21 @@ METHOD(hashtable_t, remove_, void*,
 {
 	void *value = NULL;
 	pair_t *pair, *prev = NULL;
-	u_int row;
 
-	row = this->hash(key) & this->mask;
-	pair = this->table[row];
-	while (pair)
+	pair = find_key(this, key, this->equals, NULL, &prev);
+	if (pair)
 	{
-		if (this->equals(key, pair->key))
+		if (prev)
 		{
-			if (prev)
-			{
-				prev->next = pair->next;
-			}
-			else
-			{
-				this->table[row] = pair->next;
-			}
-			value = pair->value;
-			this->count--;
-			free(pair);
-			break;
+			prev->next = pair->next;
 		}
-		prev = pair;
-		pair = pair->next;
+		else
+		{
+			this->table[pair->hash & this->mask] = pair->next;
+		}
+		value = pair->value;
+		free(pair);
+		this->count--;
 	}
 	return value;
 }

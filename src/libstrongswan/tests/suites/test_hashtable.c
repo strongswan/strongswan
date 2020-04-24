@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Tobias Brunner
+ * Copyright (C) 2010-2020 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -135,6 +135,41 @@ START_TEST(test_get_match)
 }
 END_TEST
 
+START_TEST(test_get_match_remove)
+{
+	char *k1 = "key1_a", *k2 = "key2", *k3 = "key1_b", *k4 = "key1_c";
+	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value;
+
+	ht = hashtable_create((hashtable_hash_t)hash_match,
+						  (hashtable_equals_t)equals, 0);
+
+	ht->put(ht, k1, v1);
+	ht->put(ht, k2, v2);
+	ht->put(ht, k3, v3);
+	ht->remove(ht, k1);
+	ht->put(ht, k1, v1);
+	ck_assert_int_eq(ht->get_count(ht), 3);
+	ck_assert(streq(ht->get(ht, k1), v1));
+	ck_assert(streq(ht->get(ht, k2), v2));
+	ck_assert(streq(ht->get(ht, k3), v3));
+
+	value = ht->get_match(ht, k1, (hashtable_equals_t)equal_match);
+	ck_assert(value != NULL);
+	ck_assert(streq(value, v1));
+	value = ht->get_match(ht, k2, (hashtable_equals_t)equal_match);
+	ck_assert(value != NULL);
+	ck_assert(streq(value, v2));
+	value = ht->get_match(ht, k3, (hashtable_equals_t)equal_match);
+	ck_assert(value != NULL);
+	ck_assert(streq(value, v3));
+	value = ht->get_match(ht, k4, (hashtable_equals_t)equal_match);
+	ck_assert(value != NULL);
+	ck_assert(streq(value, v3));
+
+	ht->destroy(ht);
+}
+END_TEST
+
 /*******************************************************************************
  * remove
  */
@@ -179,9 +214,8 @@ START_TEST(test_remove_one_bucket)
 	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
 
 	ht->destroy(ht);
-	/* set a capacity to avoid rehashing, which would change the items' order */
 	ht = hashtable_create((hashtable_hash_t)hash_match,
-						  (hashtable_equals_t)equals, 8);
+						  (hashtable_equals_t)equals, 0);
 
 	do_remove(k1, k2, k3);
 }
@@ -302,9 +336,9 @@ START_TEST(test_remove_at_one_bucket)
 	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
 
 	ht->destroy(ht);
-	/* set a capacity to avoid rehashing, which would change the items' order */
 	ht = hashtable_create((hashtable_hash_t)hash_match,
-						  (hashtable_equals_t)equals, 8);
+						  (hashtable_equals_t)equals, 0);
+
 	do_remove_at(k1, k2, k3);
 }
 END_TEST
@@ -468,6 +502,7 @@ Suite *hashtable_suite_create()
 
 	tc = tcase_create("get_match");
 	tcase_add_test(tc, test_get_match);
+	tcase_add_test(tc, test_get_match_remove);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("remove");
