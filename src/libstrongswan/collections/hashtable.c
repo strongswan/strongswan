@@ -17,10 +17,10 @@
 
 #include <utils/chunk.h>
 
-/** The minimum capacity of the hash table (MUST be a power of 2) */
-#define MIN_CAPACITY 8
-/** The maximum capacity of the hash table (MUST be a power of 2) */
-#define MAX_CAPACITY (1 << 30)
+/** The minimum size of the hash table (MUST be a power of 2) */
+#define MIN_SIZE 8
+/** The maximum size of the hash table (MUST be a power of 2) */
+#define MAX_SIZE (1 << 30)
 /** Maximum load factor before the hash table is resized */
 #define LOAD_FACTOR 0.75f
 
@@ -72,7 +72,6 @@ typedef struct private_hashtable_t private_hashtable_t;
 
 /**
  * Private data of a hashtable_t object.
- *
  */
 struct private_hashtable_t {
 
@@ -87,12 +86,12 @@ struct private_hashtable_t {
 	u_int count;
 
 	/**
-	 * The current capacity of the hash table (always a power of 2).
+	 * The current size of the hash table (always a power of 2).
 	 */
-	u_int capacity;
+	u_int size;
 
 	/**
-	 * The current mask to calculate the row index (capacity - 1).
+	 * The current mask to calculate the row index (size - 1).
 	 */
 	u_int mask;
 
@@ -110,6 +109,11 @@ struct private_hashtable_t {
 	 * The equality function.
 	 */
 	hashtable_equals_t equals;
+
+	/**
+	 * Alternative comparison function.
+	 */
+	hashtable_cmp_t cmp;
 };
 
 typedef struct private_enumerator_t private_enumerator_t;
@@ -203,13 +207,13 @@ static u_int get_nearest_powerof2(u_int n)
 /**
  * Init hash table parameters
  */
-static void init_hashtable(private_hashtable_t *this, u_int capacity)
+static void init_hashtable(private_hashtable_t *this, u_int size)
 {
-	capacity = max(MIN_CAPACITY, min(capacity, MAX_CAPACITY));
-	this->capacity = get_nearest_powerof2(capacity);
-	this->mask = this->capacity - 1;
+	size = max(MIN_SIZE, min(size, MAX_SIZE));
+	this->size = get_nearest_powerof2(size);
+	this->mask = this->size - 1;
 
-	this->table = calloc(this->capacity, sizeof(pair_t*));
+	this->table = calloc(this->size, sizeof(pair_t*));
 }
 
 /**
@@ -218,39 +222,48 @@ static void init_hashtable(private_hashtable_t *this, u_int capacity)
 static void rehash(private_hashtable_t *this)
 {
 	pair_t **old_table, *to_move, *pair, *next;
-	u_int row, new_row, old_capacity;
+	u_int row, new_row, old_size;
 
-	if (this->capacity >= MAX_CAPACITY)
+	if (this->size >= MAX_SIZE)
 	{
 		return;
 	}
 
-	old_capacity = this->capacity;
+	old_size = this->size;
 	old_table = this->table;
 
-	init_hashtable(this, old_capacity << 1);
+	init_hashtable(this, old_size << 1);
 
-	for (row = 0; row < old_capacity; row++)
+	for (row = 0; row < old_size; row++)
 	{
 		to_move = old_table[row];
 		while (to_move)
 		{
+			pair_t *prev = NULL;
+
 			new_row = to_move->hash & this->mask;
 			pair = this->table[new_row];
-			if (pair)
+			while (pair)
 			{
-				while (pair->next)
+				if (this->cmp && this->cmp(to_move->key, pair->key) < 0)
 				{
-					pair = pair->next;
+					break;
 				}
-				pair->next = to_move;
-			}
-			else
-			{
-				this->table[new_row] = to_move;
+				prev = pair;
+				pair = pair->next;
 			}
 			next = to_move->next;
 			to_move->next = NULL;
+			if (prev)
+			{
+				to_move->next = prev->next;
+				prev->next = to_move;
+			}
+			else
+			{
+				to_move->next = this->table[new_row];
+				this->table[new_row] = to_move;
+			}
 			to_move = next;
 		}
 	}
@@ -266,6 +279,7 @@ static inline pair_t *find_key(private_hashtable_t *this, const void *key,
 							   pair_t **out_prev)
 {
 	pair_t *pair, *prev = NULL;
+	bool use_callback = equals != NULL;
 	u_int hash;
 
 	if (!this->count && !out_hash)
@@ -273,6 +287,7 @@ static inline pair_t *find_key(private_hashtable_t *this, const void *key,
 		return NULL;
 	}
 
+	equals = equals ?: this->equals;
 	hash = this->hash(key);
 	if (out_hash)
 	{
@@ -282,7 +297,23 @@ static inline pair_t *find_key(private_hashtable_t *this, const void *key,
 	pair = this->table[hash & this->mask];
 	while (pair)
 	{
-		if (hash == pair->hash && equals(key, pair->key))
+		/* when keys are ordered, we compare all items so we can abort earlier
+		 * even if the hash does not match, but only as long as we don't
+		 * have a callback */
+		if (!use_callback && this->cmp)
+		{
+			int cmp = this->cmp(key, pair->key);
+			if (cmp == 0)
+			{
+				break;
+			}
+			else if (cmp < 0)
+			{	/* no need to continue as the key we search is smaller */
+				pair = NULL;
+				break;
+			}
+		}
+		else if (hash == pair->hash && equals(key, pair->key))
 		{
 			break;
 		}
@@ -303,12 +334,12 @@ METHOD(hashtable_t, put, void*,
 	pair_t *pair, *prev = NULL;
 	u_int hash;
 
-	if (this->count >= this->capacity * LOAD_FACTOR)
+	if (this->count >= this->size * LOAD_FACTOR)
 	{
 		rehash(this);
 	}
 
-	pair = find_key(this, key, this->equals, &hash, &prev);
+	pair = find_key(this, key, NULL, &hash, &prev);
 	if (pair)
 	{
 		old_value = pair->value;
@@ -320,12 +351,13 @@ METHOD(hashtable_t, put, void*,
 		pair = pair_create(key, value, hash);
 		if (prev)
 		{
+			pair->next = prev->next;
 			prev->next = pair;
 		}
 		else
 		{
+			pair->next = this->table[hash & this->mask];
 			this->table[hash & this->mask] = pair;
-
 		}
 		this->count++;
 	}
@@ -336,7 +368,7 @@ METHOD(hashtable_t, put, void*,
 METHOD(hashtable_t, get, void*,
 	private_hashtable_t *this, const void *key)
 {
-	pair_t *pair = find_key(this, key, this->equals, NULL, NULL);
+	pair_t *pair = find_key(this, key, NULL, NULL, NULL);
 	return pair ? pair->value : NULL;
 }
 
@@ -353,7 +385,7 @@ METHOD(hashtable_t, remove_, void*,
 	void *value = NULL;
 	pair_t *pair, *prev = NULL;
 
-	pair = find_key(this, key, this->equals, NULL, &prev);
+	pair = find_key(this, key, NULL, NULL, &prev);
 	if (pair)
 	{
 		if (prev)
@@ -405,7 +437,7 @@ METHOD(enumerator_t, enumerate, bool,
 
 	VA_ARGS_VGET(args, key, value);
 
-	while (this->count && this->row < this->table->capacity)
+	while (this->count && this->row < this->table->size)
 	{
 		this->prev = this->current;
 		if (this->current)
@@ -458,7 +490,7 @@ static void destroy_internal(private_hashtable_t *this,
 	pair_t *pair, *next;
 	u_int row;
 
-	for (row = 0; row < this->capacity; row++)
+	for (row = 0; row < this->size; row++)
 	{
 		pair = this->table[row];
 		while (pair)
@@ -488,11 +520,11 @@ METHOD(hashtable_t, destroy_function, void,
 	destroy_internal(this, fn);
 }
 
-/*
- * Described in header.
+/**
+ * Create a hash table
  */
-hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
-							  u_int capacity)
+static private_hashtable_t *hashtable_create_internal(hashtable_hash_t hash,
+													  u_int size)
 {
 	private_hashtable_t *this;
 
@@ -509,10 +541,35 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
 			.destroy_function = _destroy_function,
 		},
 		.hash = hash,
-		.equals = equals,
 	);
 
-	init_hashtable(this, capacity);
+	init_hashtable(this, size);
+
+	return this;
+}
+
+/*
+ * Described in header
+ */
+hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
+							  u_int size)
+{
+	private_hashtable_t *this = hashtable_create_internal(hash, size);
+
+	this->equals = equals;
+
+	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+hashtable_t *hashtable_create_sorted(hashtable_hash_t hash,
+									 hashtable_cmp_t cmp, u_int size)
+{
+	private_hashtable_t *this = hashtable_create_internal(hash, size);
+
+	this->cmp = cmp;
 
 	return &this->public;
 }

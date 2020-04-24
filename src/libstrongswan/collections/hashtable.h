@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Tobias Brunner
+ * Copyright (C) 2008-2020 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -77,9 +77,22 @@ bool hashtable_equals_ptr(const void *key, const void *other_key);
 bool hashtable_equals_str(const void *key, const void *other_key);
 
 /**
+ * Prototype for a function that compares the two keys in order to sort them.
+ *
+ * @param key			first key (the one we are looking for/inserting)
+ * @param other_key		second key
+ * @return				less than, equal to, or greater than 0 if key is
+ *						less than, equal to, or greater than other_key
+ */
+typedef int (*hashtable_cmp_t)(const void *key, const void *other_key);
+
+/**
  * Class implementing a hash table.
  *
  * General purpose hash table. This hash table is not synchronized.
+ *
+ * @note Any ordering only pertains to keys/items in the same bucket (with or
+ * without the same hash value), not to the order when enumerating.
  */
 struct hashtable_t {
 
@@ -88,7 +101,7 @@ struct hashtable_t {
 	 *
 	 * @return			enumerator over (void *key, void *value)
 	 */
-	enumerator_t *(*create_enumerator) (hashtable_t *this);
+	enumerator_t *(*create_enumerator)(hashtable_t *this);
 
 	/**
 	 * Adds the given value with the given key to the hash table, if there
@@ -100,7 +113,7 @@ struct hashtable_t {
 	 * @param value		the value to store
 	 * @return			NULL if no item was replaced, the old value otherwise
 	 */
-	void *(*put) (hashtable_t *this, const void *key, void *value);
+	void *(*put)(hashtable_t *this, const void *key, void *value);
 
 	/**
 	 * Returns the value with the given key, if the hash table contains such an
@@ -109,24 +122,26 @@ struct hashtable_t {
 	 * @param key		the key of the requested value
 	 * @return			the value, NULL if not found
 	 */
-	void *(*get) (hashtable_t *this, const void *key);
+	void *(*get)(hashtable_t *this, const void *key);
 
 	/**
-	 * Returns the value with a matching key, if the hash table contains such an
-	 * entry, otherwise NULL is returned.
+	 * Returns the first value with a matching key, if the hash table contains
+	 * such an entry, otherwise NULL is returned.
 	 *
 	 * Compared to get() the given match function is used to compare the keys
-	 * for equality.  The hash function does have to be devised properly in
+	 * for equality.  The hash function does have to be devised specially in
 	 * order to make this work if the match function compares keys differently
-	 * than the equals function provided to the constructor.  This basically
-	 * allows to enumerate all entries with the same hash value.
+	 * than the equals/comparison function provided to the constructor.
+	 *
+	 * This basically allows to enumerate all entries with the same hash value
+	 * in their key's order.
 	 *
 	 * @param key		the key to match against
 	 * @param match		match function to be used when comparing keys
 	 * @return			the value, NULL if not found
 	 */
-	void *(*get_match) (hashtable_t *this, const void *key,
-						hashtable_equals_t match);
+	void *(*get_match)(hashtable_t *this, const void *key,
+					   hashtable_equals_t match);
 
 	/**
 	 * Removes the value with the given key from the hash table and returns the
@@ -135,7 +150,7 @@ struct hashtable_t {
 	 * @param key		the key of the value to remove
 	 * @return			the removed value, NULL if not found
 	 */
-	void *(*remove) (hashtable_t *this, const void *key);
+	void *(*remove)(hashtable_t *this, const void *key);
 
 	/**
 	 * Removes the key and value pair from the hash table at which the given
@@ -143,19 +158,19 @@ struct hashtable_t {
 	 *
 	 * @param enumerator	enumerator, from create_enumerator
 	 */
-	void (*remove_at) (hashtable_t *this, enumerator_t *enumerator);
+	void (*remove_at)(hashtable_t *this, enumerator_t *enumerator);
 
 	/**
 	 * Gets the number of items in the hash table.
 	 *
 	 * @return			number of items
 	 */
-	u_int (*get_count) (hashtable_t *this);
+	u_int (*get_count)(hashtable_t *this);
 
 	/**
 	 * Destroys a hash table object.
 	 */
-	void (*destroy) (hashtable_t *this);
+	void (*destroy)(hashtable_t *this);
 
 	/**
 	 * Destroys a hash table object and calls the given function for each
@@ -168,14 +183,27 @@ struct hashtable_t {
 };
 
 /**
- * Creates an empty hash table object.
+ * Creates an empty hash table object. Items in buckets are ordered in
+ * insertion order.
  *
  * @param hash			hash function
  * @param equals		equals function
- * @param capacity		initial capacity
- * @return				hashtable_t object.
+ * @param size			initial size
+ * @return				hashtable_t object
  */
 hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
-							  u_int capacity);
+							  u_int size);
+
+/**
+ * Creates an empty hash table object with keys in each bucket sorted according
+ * to the given comparison function.
+ *
+ * @param hash			hash function
+ * @param cmp			comparison function
+ * @param size			initial size
+ * @return				hashtable_t object.
+ */
+hashtable_t *hashtable_create_sorted(hashtable_hash_t hash,
+									 hashtable_cmp_t cmp, u_int size);
 
 #endif /** HASHTABLE_H_ @}*/

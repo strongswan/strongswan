@@ -170,6 +170,43 @@ START_TEST(test_get_match_remove)
 }
 END_TEST
 
+START_TEST(test_get_match_sorted)
+{
+	char *k1 = "key1_a", *k2 = "key2", *k3 = "key1_b", *k4 = "key1_c";
+	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value;
+
+	ht = hashtable_create_sorted((hashtable_hash_t)hash_match,
+								 (hashtable_cmp_t)strcmp, 0);
+
+	ht->put(ht, k3, v3);
+	ht->put(ht, k2, v2);
+	ht->put(ht, k1, v1);
+	ht->put(ht, k4, v1);
+	ht->remove(ht, k1);
+	ht->put(ht, k1, v1);
+	ck_assert_int_eq(ht->get_count(ht), 4);
+	ck_assert(streq(ht->get(ht, k1), v1));
+	ck_assert(streq(ht->get(ht, k2), v2));
+	ck_assert(streq(ht->get(ht, k3), v3));
+	ck_assert(streq(ht->get(ht, k4), v1));
+
+	value = ht->get_match(ht, k1, (hashtable_equals_t)equal_match);
+	ck_assert(value != NULL);
+	ck_assert(streq(value, v1));
+	value = ht->get_match(ht, k2, (hashtable_equals_t)equal_match);
+	ck_assert(value != NULL);
+	ck_assert(streq(value, v2));
+	value = ht->get_match(ht, k3, (hashtable_equals_t)equal_match);
+	ck_assert(value != NULL);
+	ck_assert(streq(value, v1));
+	value = ht->get_match(ht, k4, (hashtable_equals_t)equal_match);
+	ck_assert(value != NULL);
+	ck_assert(streq(value, v1));
+
+	ht->destroy(ht);
+}
+END_TEST
+
 /*******************************************************************************
  * remove
  */
@@ -206,6 +243,8 @@ START_TEST(test_remove)
 	char *k1 = "key1", *k2 = "key2", *k3 = "key3";
 
 	do_remove(k1, k2, k3);
+	do_remove(k3, k2, k1);
+	do_remove(k1, k3, k2);
 }
 END_TEST
 
@@ -218,6 +257,36 @@ START_TEST(test_remove_one_bucket)
 						  (hashtable_equals_t)equals, 0);
 
 	do_remove(k1, k2, k3);
+	do_remove(k3, k2, k1);
+	do_remove(k1, k3, k2);
+}
+END_TEST
+
+START_TEST(test_remove_sorted)
+{
+	char *k1 = "key1", *k2 = "key2", *k3 = "key3";
+
+	ht->destroy(ht);
+	ht = hashtable_create_sorted((hashtable_hash_t)hash,
+								 (hashtable_cmp_t)strcmp, 0);
+
+	do_remove(k1, k2, k3);
+	do_remove(k3, k2, k1);
+	do_remove(k1, k3, k2);
+}
+END_TEST
+
+START_TEST(test_remove_sorted_one_bucket)
+{
+	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
+
+	ht->destroy(ht);
+	ht = hashtable_create_sorted((hashtable_hash_t)hash_match,
+								 (hashtable_cmp_t)strcmp, 0);
+
+	do_remove(k1, k2, k3);
+	do_remove(k3, k2, k1);
+	do_remove(k1, k3, k2);
 }
 END_TEST
 
@@ -358,10 +427,23 @@ static bool equals_int(int *key1, int *key2)
 	return *key1 == *key2;
 }
 
+static int cmp_int(int *key1, int *key2)
+{
+	return *key1 - *key2;
+}
+
 START_SETUP(setup_ht_many)
 {
 	ht = hashtable_create((hashtable_hash_t)hash_int,
 						  (hashtable_equals_t)equals_int, 0);
+	ck_assert_int_eq(ht->get_count(ht), 0);
+}
+END_SETUP
+
+START_SETUP(setup_ht_many_cmp)
+{
+	ht = hashtable_create_sorted((hashtable_hash_t)hash_int,
+								 (hashtable_cmp_t)cmp_int, 0);
 	ck_assert_int_eq(ht->get_count(ht), 0);
 }
 END_SETUP
@@ -377,35 +459,42 @@ START_TEST(test_many_items)
 	u_int count = 250000;
 	int i, *val, r;
 
+#define GET_VALUE(i) ({ _i == 0 ? i : (count-1-i); })
+
 	for (i = 0; i < count; i++)
 	{
 		val = malloc_thing(int);
-		*val = i;
+		*val = GET_VALUE(i);
 		ht->put(ht, val, val);
 	}
 	for (i = 0; i < count; i++)
 	{
-		val = ht->get(ht, &i);
-		ck_assert_int_eq(i, *val);
+		r = GET_VALUE(i);
+		val = ht->get(ht, &r);
+		ck_assert_int_eq(GET_VALUE(i), *val);
 	}
+	ck_assert_int_eq(count, ht->get_count(ht));
 	for (i = 0; i < count; i++)
 	{
-		free(ht->remove(ht, &i));
+		r = GET_VALUE(i);
+		free(ht->remove(ht, &r));
 	}
+	ck_assert_int_eq(0, ht->get_count(ht));
 	for (i = 0; i < count; i++)
 	{
 		val = malloc_thing(int);
-		*val = i;
+		*val = GET_VALUE(i);
 		ht->put(ht, val, val);
 	}
 	for (i = 0; i < count/2; i++)
 	{
 		free(ht->remove(ht, &i));
 	}
+	ck_assert_int_eq(count/2, ht->get_count(ht));
 	for (i = 0; i < count; i++)
 	{
 		val = malloc_thing(int);
-		*val = i;
+		*val = GET_VALUE(i);
 		free(ht->put(ht, val, val));
 	}
 	srandom(666);
@@ -418,6 +507,7 @@ START_TEST(test_many_items)
 	{
 		free(ht->remove(ht, &i));
 	}
+	ck_assert_int_eq(0, ht->get_count(ht));
 	for (i = 0; i < 2*count; i++)
 	{
 		val = malloc_thing(int);
@@ -503,12 +593,15 @@ Suite *hashtable_suite_create()
 	tc = tcase_create("get_match");
 	tcase_add_test(tc, test_get_match);
 	tcase_add_test(tc, test_get_match_remove);
+	tcase_add_test(tc, test_get_match_sorted);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("remove");
 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
 	tcase_add_test(tc, test_remove);
 	tcase_add_test(tc, test_remove_one_bucket);
+	tcase_add_test(tc, test_remove_sorted);
+	tcase_add_test(tc, test_remove_sorted_one_bucket);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("enumerator");
@@ -525,7 +618,16 @@ Suite *hashtable_suite_create()
 	tc = tcase_create("many items");
 	tcase_add_checked_fixture(tc, setup_ht_many, teardown_ht_many);
 	tcase_set_timeout(tc, 10);
-	tcase_add_test(tc, test_many_items);
+	tcase_add_loop_test(tc, test_many_items, 0, 2);
+	tcase_add_test(tc, test_many_lookups_success);
+	tcase_add_test(tc, test_many_lookups_failure_larger);
+	tcase_add_test(tc, test_many_lookups_failure_smaller);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("many items sorted");
+	tcase_add_checked_fixture(tc, setup_ht_many_cmp, teardown_ht_many);
+	tcase_set_timeout(tc, 10);
+	tcase_add_loop_test(tc, test_many_items, 0, 2);
 	tcase_add_test(tc, test_many_lookups_success);
 	tcase_add_test(tc, test_many_lookups_failure_larger);
 	tcase_add_test(tc, test_many_lookups_failure_smaller);
