@@ -16,6 +16,10 @@
 #include "hashtable.h"
 
 #include <utils/chunk.h>
+#include <utils/debug.h>
+#ifdef HASHTABLE_PROFILER
+#include <utils/backtrace.h>
+#endif
 
 /** The minimum size of the hash table (MUST be a power of 2) */
 #define MIN_SIZE 8
@@ -114,7 +118,63 @@ struct private_hashtable_t {
 	 * Alternative comparison function.
 	 */
 	hashtable_cmp_t cmp;
+
+#ifdef HASHTABLE_PROFILER
+	/**
+	 * Some stats to profile lookups in the table
+	 */
+	struct {
+		size_t count;
+		size_t probes;
+		size_t longest;
+	} success, failure;
+
+	/**
+	 * Stats on the memory usage of the table
+	 */
+	struct {
+		size_t count;
+		size_t size;
+	} max;
+
+	/**
+	 * Keep track of where the hash table was created
+	 */
+	backtrace_t *backtrace;
+#endif
 };
+
+#ifdef HASHTABLE_PROFILER
+
+#define lookup_start() \
+	u_int _lookup_probes = 0;
+
+#define lookup_probing() \
+	_lookup_probes++;
+
+#define _lookup_done(table, result) \
+	table->result.count++; \
+	table->result.probes += _lookup_probes; \
+	table->result.longest = max(table->result.longest, _lookup_probes);
+
+#define lookup_success(table) _lookup_done(table, success);
+#define lookup_failure(table) _lookup_done(table, failure);
+
+#define profile_size(table) \
+	table->max.size = max(table->max.size, table->size);
+#define profile_count(table) \
+	table->max.count = max(table->max.count, table->count);
+
+#else
+
+#define lookup_start(...) {}
+#define lookup_probing(...) {}
+#define lookup_success(...) {}
+#define lookup_failure(...) {}
+#define profile_size(...) {}
+#define profile_count(...) {}
+
+#endif
 
 typedef struct private_enumerator_t private_enumerator_t;
 
@@ -212,6 +272,7 @@ static void init_hashtable(private_hashtable_t *this, u_int size)
 	size = max(MIN_SIZE, min(size, MAX_SIZE));
 	this->size = get_nearest_powerof2(size);
 	this->mask = this->size - 1;
+	profile_size(this);
 
 	this->table = calloc(this->size, sizeof(pair_t*));
 }
@@ -294,9 +355,12 @@ static inline pair_t *find_key(private_hashtable_t *this, const void *key,
 		*out_hash = hash;
 	}
 
+	lookup_start();
+
 	pair = this->table[hash & this->mask];
 	while (pair)
 	{
+		lookup_probing();
 		/* when keys are ordered, we compare all items so we can abort earlier
 		 * even if the hash does not match, but only as long as we don't
 		 * have a callback */
@@ -323,6 +387,14 @@ static inline pair_t *find_key(private_hashtable_t *this, const void *key,
 	if (out_prev)
 	{
 		*out_prev = prev;
+	}
+	if (pair)
+	{
+		lookup_success(this);
+	}
+	else
+	{
+		lookup_failure(this);
 	}
 	return pair;
 }
@@ -360,6 +432,7 @@ METHOD(hashtable_t, put, void*,
 			this->table[hash & this->mask] = pair;
 		}
 		this->count++;
+		profile_count(this);
 	}
 	return old_value;
 }
@@ -490,6 +563,23 @@ static void destroy_internal(private_hashtable_t *this,
 	pair_t *pair, *next;
 	u_int row;
 
+#ifdef HASHTABLE_PROFILER
+	if (this->success.count || this->failure.count)
+	{
+		fprintf(stderr, "%zu elements [max. %zu], %zu buckets [%zu], %zu "
+				"successful / %zu failed lookups, %.4f [%zu] / %.4f "
+				"[%zu] avg. probes in table created at:",
+				this->count, this->max.count, this->size, this->max.size,
+				this->success.count, this->failure.count,
+				(double)this->success.probes/this->success.count,
+				this->success.longest,
+				(double)this->failure.probes/this->failure.count,
+				this->failure.longest);
+		this->backtrace->log(this->backtrace, stderr, TRUE);
+	}
+	this->backtrace->destroy(this->backtrace);
+#endif
+
 	for (row = 0; row < this->size; row++)
 	{
 		pair = this->table[row];
@@ -544,6 +634,10 @@ static private_hashtable_t *hashtable_create_internal(hashtable_hash_t hash,
 	);
 
 	init_hashtable(this, size);
+
+#ifdef HASHTABLE_PROFILER
+	this->backtrace = backtrace_create(3);
+#endif
 
 	return this;
 }
