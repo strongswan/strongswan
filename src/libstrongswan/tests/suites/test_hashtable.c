@@ -358,6 +358,65 @@ START_TEST(test_enumerator)
 }
 END_TEST
 
+START_TEST(test_enumerator_order)
+{
+	char *k1 = "key1", *k2 = "key2", *k3 = "key3", *key;
+	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *v4 = "val4", *value;
+	enumerator_t *enumerator;
+	int count;
+
+	ht->put(ht, k1, v1);
+	ht->put(ht, k2, v2);
+	ht->put(ht, k3, v3);
+
+	count = 0;
+	enumerator = ht->create_enumerator(ht);
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		switch (count)
+		{
+			case 0:
+				ck_assert(streq(key, k1) && streq(value, v1));
+				break;
+			case 1:
+				ck_assert(streq(key, k2) && streq(value, v2));
+				break;
+			case 2:
+				ck_assert(streq(key, k3) && streq(value, v3));
+				break;
+		}
+		count++;
+	}
+	enumerator->destroy(enumerator);
+	ck_assert_int_eq(count, 3);
+
+	value = ht->remove(ht, k2);
+	ht->put(ht, k2, v2);
+	ht->put(ht, k1, v4);
+
+	count = 0;
+	enumerator = ht->create_enumerator(ht);
+	while (enumerator->enumerate(enumerator, &key, &value))
+	{
+		switch (count)
+		{
+			case 0:
+				ck_assert(streq(key, k1) && streq(value, v4));
+				break;
+			case 1:
+				ck_assert(streq(key, k3) && streq(value, v3));
+				break;
+			case 2:
+				ck_assert(streq(key, k2) && streq(value, v2));
+				break;
+		}
+		count++;
+	}
+	enumerator->destroy(enumerator);
+	ck_assert_int_eq(count, 3);
+}
+END_TEST
+
 /*******************************************************************************
  * remove_at
  */
@@ -645,6 +704,7 @@ Suite *hashtable_suite_create()
 	tc = tcase_create("enumerator");
 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
 	tcase_add_loop_test(tc, test_enumerator, 0, HASHTABLE_MAX);
+	tcase_add_test(tc, test_enumerator_order);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("remove_at");

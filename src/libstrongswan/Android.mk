@@ -6,7 +6,7 @@ libstrongswan_la_SOURCES = \
 library.c \
 asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
-collections/array.c \
+collections/hashlist.c collections/array.c \
 collections/linked_list.c crypto/crypters/crypter.c \
 crypto/drbgs/drbg.c crypto/hashers/hasher.c \
 crypto/hashers/hash_algorithm_set.c crypto/proposal/proposal.c \

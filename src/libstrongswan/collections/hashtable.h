@@ -53,7 +53,7 @@ u_int hashtable_hash_str(const void *key);
 /**
  * Prototype for a function that compares the two keys for equality.
  *
- * @param key			first key (the one we are looking for)
+ * @param key			first key (the one we are looking for/inserting)
  * @param other_key		second key
  * @return				TRUE if the keys are equal
  */
@@ -92,8 +92,7 @@ typedef int (*hashtable_cmp_t)(const void *key, const void *other_key);
  *
  * General purpose hash table. This hash table is not synchronized.
  *
- * @note Any ordering only pertains to keys/items in the same bucket (with or
- * without the same hash value), not to the order when enumerating.
+ * The insertion order is maintained when enumerating entries.
  */
 struct hashtable_t {
 
@@ -169,7 +168,9 @@ struct hashtable_t {
  * method.
  *
  * @note The ordering only pertains to keys/items in the same bucket (with or
- * without the same hash value), not to the order when enumerating.
+ * without the same hash value), not to the order when enumerating. So unlike
+ * hashtable_t this class does not guarantee any specific order when enumerating
+ * all entries.
  *
  * This is intended to be used with hash functions that intentionally return the
  * same hash value for different keys so multiple items can be retrieved for a
@@ -194,7 +195,8 @@ struct hashlist_t {
 	 * than the equals/comparison function provided to the constructor.
 	 *
 	 * This basically allows to enumerate all entries with the same hash value
-	 * in their key's order.
+	 * in their key's order (insertion order, i.e. without comparison function)
+	 * is only guaranteed for items with the same hash value.
 	 *
 	 * @param key		the key to match against
 	 * @param match		match function to be used when comparing keys
