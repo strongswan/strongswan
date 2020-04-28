@@ -178,6 +178,7 @@ static void update_cert_fields (StrongswanPluginUiWidgetPrivate *priv, gboolean 
 			gtk_combo_box_set_active (GTK_COMBO_BOX (widget), 0);
 			/* FALL */
 		case 0:
+			update_pass_field (priv, TRUE);
 			cert = key = TRUE;
 			break;
 		case 1:
@@ -567,6 +568,8 @@ save_cert (NMSettingVpn *settings, GtkBuilder *builder)
 	{
 		default:
 		case 0:
+			save_password_and_flags (settings, builder, "passwd-entry",
+									 "password");
 			cert = key = TRUE;
 			str = "file";
 			break;
