@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Tobias Brunner
+ * Copyright (C) 2006-2020 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -872,10 +872,11 @@ struct ike_sa_t {
 	 *
 	 * @param message_id	ID of the request to retransmit
 	 * @return
-	 *						- SUCCESS
-	 *						- NOT_FOUND if request doesn't have to be retransmitted
+	 *						- SUCCESS if retransmit was sent
+	 *						- INVALID_STATE if no retransmit required
+	 *						- DESTROY_ME if this IKE_SA MUST be deleted
 	 */
-	status_t (*retransmit) (ike_sa_t *this, uint32_t message_id);
+	status_t (*retransmit)(ike_sa_t *this, uint32_t message_id);
 
 	/**
 	 * Sends a DPD request to the peer.

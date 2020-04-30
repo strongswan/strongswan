@@ -404,7 +404,7 @@ static status_t retransmit_packet(private_task_manager_t *this, uint32_t seqnr,
 METHOD(task_manager_t, retransmit, status_t,
 	private_task_manager_t *this, uint32_t seqnr)
 {
-	status_t status = SUCCESS;
+	status_t status = INVALID_STATE;
 
 	if (seqnr == this->initiating.seqnr &&
 		array_count(this->initiating.packets))

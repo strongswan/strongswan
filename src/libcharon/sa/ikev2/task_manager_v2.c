@@ -409,7 +409,7 @@ METHOD(task_manager_t, retransmit, status_t,
 						 "deferred");
 					this->ike_sa->set_condition(this->ike_sa, COND_STALE, TRUE);
 					this->initiating.deferred = TRUE;
-					return SUCCESS;
+					return INVALID_STATE;
 				}
 				else if (mobike->is_probing(mobike))
 				{
@@ -443,7 +443,7 @@ METHOD(task_manager_t, retransmit, status_t,
 					 "deferred");
 				this->ike_sa->set_condition(this->ike_sa, COND_STALE, TRUE);
 				this->initiating.deferred = TRUE;
-				return SUCCESS;
+				return INVALID_STATE;
 			}
 		}
 
@@ -451,8 +451,9 @@ METHOD(task_manager_t, retransmit, status_t,
 		job = (job_t*)retransmit_job_create(this->initiating.mid,
 											this->ike_sa->get_id(this->ike_sa));
 		lib->scheduler->schedule_job_ms(lib->scheduler, job, timeout);
+		return SUCCESS;
 	}
-	return SUCCESS;
+	return INVALID_STATE;
 }
 
 METHOD(task_manager_t, initiate, status_t,
