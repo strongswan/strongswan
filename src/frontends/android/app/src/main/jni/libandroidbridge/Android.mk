@@ -9,6 +9,7 @@ backend/android_creds.c \
 backend/android_fetcher.c \
 backend/android_dns_proxy.c \
 backend/android_private_key.c \
+backend/android_scheduler.c \
 backend/android_service.c \
 charonservice.c \
 kernel/android_ipsec.c \
