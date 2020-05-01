@@ -58,6 +58,7 @@ typedef enum {
 	ANDROID_JELLY_BEAN_MR1 = 17,
 	ANDROID_JELLY_BEAN_MR2 = 18,
 	ANDROID_LOLLIPOP = 21,
+	ANDROID_MARSHMALLOW = 23,
 } android_sdk_version_t;
 
 /**

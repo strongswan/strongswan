@@ -27,6 +27,7 @@
 #include "backend/android_creds.h"
 #include "backend/android_fetcher.h"
 #include "backend/android_private_key.h"
+#include "backend/android_scheduler.h"
 #include "backend/android_service.h"
 #include "kernel/android_ipsec.h"
 #include "kernel/android_net.h"
@@ -93,6 +94,11 @@ struct private_charonservice_t {
 	 * Sockets that were bypassed and we keep track for
 	 */
 	linked_list_t *sockets;
+
+	/**
+	 * Default scheduler if we don't use it
+	 */
+	scheduler_t *default_scheduler;
 };
 
 /**
@@ -574,6 +580,15 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
 	);
 	charonservice = &this->public;
 
+	if (android_sdk_version >= ANDROID_MARSHMALLOW)
+	{
+		/* use a custom scheduler so the app is woken when jobs have to run.
+		 * we can't destroy the default scheduler here due to the scheduler
+		 * job that's operating on it, so we stash it away until later */
+		this->default_scheduler = lib->scheduler;
+		lib->scheduler = android_scheduler_create(service);
+	}
+
 	lib->plugins->add_static_features(lib->plugins, "androidbridge", features,
 									  countof(features), TRUE, NULL, NULL);
 
@@ -600,6 +615,7 @@ static void charonservice_deinit(JNIEnv *env)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
+	DESTROY_IF(this->default_scheduler);
 	this->network_manager->destroy(this->network_manager);
 	this->sockets->destroy(this->sockets);
 	this->builder->destroy(this->builder);
