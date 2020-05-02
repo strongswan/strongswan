@@ -28,9 +28,14 @@
 /**
  * Create an Android-specific scheduler_t implementation.
  *
+ * The given scheduler is used for short-term events. We can't destroy it anyway
+ * because of the scheduler job operating on it, and this way we can use it to
+ * avoid the overhead of broadcasts for some events.
+ *
  * @param context	Context object
+ * @param scheduler	the default scheduler used as fallback
  * @return			scheduler_t instance
  */
-scheduler_t *android_scheduler_create(jobject context);
+scheduler_t *android_scheduler_create(jobject context, scheduler_t *scheduler);
 
 #endif /** ANDROID_SCHEDULER_H_ @}*/

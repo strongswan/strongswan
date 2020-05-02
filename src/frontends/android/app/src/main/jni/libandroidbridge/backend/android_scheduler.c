@@ -21,6 +21,12 @@
 #include <processing/jobs/callback_job.h>
 #include <threading/mutex.h>
 
+/**
+ * Threshold in milliseconds up to which the default scheduler is used.
+ * This includes the roaming events (100 ms) and initial retransmits.
+ */
+#define DEFAULT_SCHEDULER_THRESHOLD 3000
+
 typedef struct private_scheduler_t private_scheduler_t;
 
 /**
@@ -52,6 +58,11 @@ struct private_scheduler_t {
 	 * Mutex to safely access the scheduled jobs.
 	 */
 	mutex_t *mutex;
+
+	/**
+	 * Default scheduler used for short-term events.
+	 */
+	scheduler_t *default_scheduler;
 };
 
 /**
@@ -137,6 +148,14 @@ METHOD(scheduler_t, schedule_job_ms, void,
 	entry_t *entry = NULL;
 	jstring jid;
 
+	/* use the default scheduler for short-term events */
+	if (ms <= DEFAULT_SCHEDULER_THRESHOLD)
+	{
+		this->default_scheduler->schedule_job_ms(this->default_scheduler,
+												 job, ms);
+		return;
+	}
+
 	androidjni_attach_thread(&env);
 	jid = allocate_id(this, env);
 	if (!jid)
@@ -213,6 +232,8 @@ METHOD(scheduler_t, flush, void,
 	JNIEnv *env;
 	jmethodID method_id;
 
+	this->default_scheduler->flush(this->default_scheduler);
+
 	this->mutex->lock(this->mutex);
 	this->jobs->destroy_function(this->jobs, destroy_entry);
 	this->jobs = hashtable_create(hashtable_hash_str, hashtable_equals_str, 16);
@@ -247,6 +268,7 @@ METHOD(scheduler_t, destroy, void,
 		(*env)->DeleteGlobalRef(env, this->cls);
 	}
 	androidjni_detach_thread();
+	this->default_scheduler->destroy(this->default_scheduler);
 	this->mutex->destroy(this->mutex);
 	this->jobs->destroy(this->jobs);
 	free(this);
@@ -255,7 +277,7 @@ METHOD(scheduler_t, destroy, void,
 /*
  * Described in header
  */
-scheduler_t *android_scheduler_create(jobject context)
+scheduler_t *android_scheduler_create(jobject context, scheduler_t *scheduler)
 {
 	private_scheduler_t *this;
 	JNIEnv *env;
@@ -272,6 +294,7 @@ scheduler_t *android_scheduler_create(jobject context)
 			.flush = _flush,
 			.destroy = _destroy,
 		},
+		.default_scheduler = scheduler,
 		.jobs = hashtable_create(hashtable_hash_str, hashtable_equals_str, 16),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 	);

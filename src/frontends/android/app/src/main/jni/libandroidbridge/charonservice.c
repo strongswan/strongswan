@@ -94,11 +94,6 @@ struct private_charonservice_t {
 	 * Sockets that were bypassed and we keep track for
 	 */
 	linked_list_t *sockets;
-
-	/**
-	 * Default scheduler if we don't use it
-	 */
-	scheduler_t *default_scheduler;
 };
 
 /**
@@ -580,15 +575,6 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
 	);
 	charonservice = &this->public;
 
-	if (android_sdk_version >= ANDROID_MARSHMALLOW)
-	{
-		/* use a custom scheduler so the app is woken when jobs have to run.
-		 * we can't destroy the default scheduler here due to the scheduler
-		 * job that's operating on it, so we stash it away until later */
-		this->default_scheduler = lib->scheduler;
-		lib->scheduler = android_scheduler_create(service);
-	}
-
 	lib->plugins->add_static_features(lib->plugins, "androidbridge", features,
 									  countof(features), TRUE, NULL, NULL);
 
@@ -615,7 +601,6 @@ static void charonservice_deinit(JNIEnv *env)
 {
 	private_charonservice_t *this = (private_charonservice_t*)charonservice;
 
-	DESTROY_IF(this->default_scheduler);
 	this->network_manager->destroy(this->network_manager);
 	this->sockets->destroy(this->sockets);
 	this->builder->destroy(this->builder);
@@ -659,6 +644,12 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	{
 		library_deinit();
 		return FALSE;
+	}
+
+	if (android_sdk_version >= ANDROID_MARSHMALLOW)
+	{
+		/* use a custom scheduler so the app is woken when jobs have to run */
+		lib->scheduler = android_scheduler_create(this, lib->scheduler);
 	}
 
 	/* set options before initializing other libraries that might read them */
