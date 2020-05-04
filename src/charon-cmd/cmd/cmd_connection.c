@@ -516,6 +516,7 @@ METHOD(cmd_connection_t, handle, bool,
 		case CMD_OPT_PRIV:
 		case CMD_OPT_AGENT:
 		case CMD_OPT_PKCS12:
+		case CMD_OPT_SMARTCARD:
 			this->key_seen = TRUE;
 			break;
 		case CMD_OPT_LOCAL_TS:

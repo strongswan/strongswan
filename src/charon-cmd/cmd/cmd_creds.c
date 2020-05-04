@@ -20,8 +20,9 @@
 #include <unistd.h>
 
 #include <utils/debug.h>
-#include <credentials/sets/mem_cred.h>
+#include <credentials/certificates/x509.h>
 #include <credentials/containers/pkcs12.h>
+#include <credentials/sets/mem_cred.h>
 #include <credentials/sets/callback_cred.h>
 
 typedef struct private_cmd_creds_t private_cmd_creds_t;
@@ -163,6 +164,60 @@ static void load_key(private_cmd_creds_t *this, key_type_t type, char *path)
 }
 
 /**
+ * Load a private key from a smartcard
+ */
+static void load_smartcard(private_cmd_creds_t *this, char *keyid)
+{
+
+	enumerator_t *enumerator;
+	certificate_t *cert;
+	x509_t *x509;
+	private_key_t *key;
+	chunk_t kid = chunk_empty;
+
+	if (keyid)
+	{
+		kid = chunk_from_hex(chunk_from_str(keyid), NULL);
+	}
+	else
+	{
+		enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+											CERT_X509, KEY_ANY, NULL, FALSE);
+		while (enumerator->enumerate(enumerator, &cert))
+		{
+			x509 = (x509_t*)cert;
+
+			/* there might be a lot of certificates, filter them by usage */
+			if ((x509->get_flags(x509) & X509_CLIENT_AUTH) &&
+				!(x509->get_flags(x509) & X509_CA))
+			{
+				kid = x509->get_subjectKeyIdentifier(x509);
+				if (kid.ptr)
+				{
+					kid = chunk_clone(kid);
+					break;
+				}
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
+	if (kid.ptr)
+	{
+		key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+						KEY_ANY, BUILD_PKCS11_KEYID, kid, BUILD_END);
+		if (!key)
+		{
+			DBG1(DBG_CFG, "loading private key with keyid %#B from smartcard "
+				 "failed", &kid);
+			exit(1);
+		}
+		this->creds->add_key(this->creds, key);
+	}
+	chunk_free(&kid);
+}
+
+/**
  * Load a private and public key via ssh-agent
  */
 static void load_agent(private_cmd_creds_t *this)
@@ -263,6 +318,10 @@ METHOD(cmd_creds_t, handle, bool,
 				DBG1(DBG_CFG, "no ssh-agent socket defined");
 				exit(1);
 			}
+			break;
+		case CMD_OPT_SMARTCARD:
+			// FIXME: do this via identity too like with agent?
+			load_smartcard(this, arg);
 			break;
 		default:
 			return FALSE;

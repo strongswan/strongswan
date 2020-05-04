@@ -50,8 +50,12 @@ cmd_option_t cmd_options[CMD_OPT_COUNT] = {
 		"authentication and trust chain validation"
 	}},
 	{ CMD_OPT_AGENT, "agent", optional_argument, "socket",
-	  "use SSH agent for authentication. If socket is not specified", {
+	  "use SSH agent for authentication. If socket is not specified,", {
 		"it is read from the SSH_AUTH_SOCK environment variable",
+	}},
+	{ CMD_OPT_SMARTCARD, "smartcard", optional_argument, "keyid",
+	  "use a smartcard for authentication. If no keyid is specified,", {
+		"the first usable key on any token will be used",
 	}},
 	{ CMD_OPT_LOCAL_TS, "local-ts", required_argument, "subnet",
 	  "additional traffic selector to propose for our side", {}},
