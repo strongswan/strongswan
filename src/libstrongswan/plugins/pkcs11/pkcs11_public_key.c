@@ -211,8 +211,8 @@ METHOD(public_key_t, verify, bool,
 	chunk_t hash = chunk_empty, parse, r, s;
 	size_t len;
 
-	mechanism = pkcs11_signature_scheme_to_mech(scheme, this->type, this->k,
-												&hash_alg);
+	mechanism = pkcs11_signature_scheme_to_mech(this->lib, this->slot, scheme,
+												this->type, this->k, &hash_alg);
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported",
@@ -277,6 +277,21 @@ METHOD(public_key_t, verify, bool,
 			return FALSE;
 		}
 		hasher->destroy(hasher);
+		switch (scheme)
+		{
+			case SIGN_RSA_EMSA_PKCS1_SHA1:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_256:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_384:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_512:
+				/* encode PKCS#1 digestInfo if the token does not support it */
+				hash = asn1_wrap(ASN1_SEQUENCE, "mm",
+								 asn1_algorithmIdentifier(
+									hasher_algorithm_to_oid(hash_alg)),
+								 asn1_wrap(ASN1_OCTET_STRING, "m", hash));
+				break;
+			default:
+				break;
+		}
 		data = hash;
 	}
 	rv = this->lib->f->C_Verify(session, data.ptr, data.len, sig.ptr, sig.len);

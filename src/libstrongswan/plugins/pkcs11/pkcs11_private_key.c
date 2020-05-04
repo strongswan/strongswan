@@ -118,9 +118,33 @@ METHOD(private_key_t, get_keysize, int,
 }
 
 /**
- * See header.
+ * Check if a token supports the given mechanism.
  */
-CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme,
+static bool is_mechanism_supported(pkcs11_library_t *p11, CK_SLOT_ID slot,
+								   const CK_MECHANISM_PTR mech)
+{
+	enumerator_t *mechs;
+	CK_MECHANISM_TYPE type;
+
+	mechs = p11->create_mechanism_enumerator(p11, slot);
+	while (mechs->enumerate(mechs, &type, NULL))
+	{
+		if (type == mech->mechanism)
+		{
+			mechs->destroy(mechs);
+			return TRUE;
+		}
+	}
+	mechs->destroy(mechs);
+	return FALSE;
+}
+
+/*
+ * Described in header
+ */
+CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(pkcs11_library_t *p11,
+												 CK_SLOT_ID slot,
+												 signature_scheme_t scheme,
 												 key_type_t type, size_t keylen,
 												 hash_algorithm_t *hash)
 {
@@ -135,12 +159,20 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme,
 		 KEY_RSA, 0,									   HASH_UNKNOWN},
 		{SIGN_RSA_EMSA_PKCS1_SHA2_256,	{CKM_SHA256_RSA_PKCS,	NULL, 0},
 		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_256,	{CKM_RSA_PKCS,			NULL, 0},
+		 KEY_RSA, 0,										HASH_SHA256},
 		{SIGN_RSA_EMSA_PKCS1_SHA2_384,	{CKM_SHA384_RSA_PKCS,	NULL, 0},
 		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_384,	{CKM_RSA_PKCS,			NULL, 0},
+		 KEY_RSA, 0,										HASH_SHA384},
 		{SIGN_RSA_EMSA_PKCS1_SHA2_512,	{CKM_SHA512_RSA_PKCS,	NULL, 0},
 		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA2_512,	{CKM_RSA_PKCS,			NULL, 0},
+		 KEY_RSA, 0,										HASH_SHA512},
 		{SIGN_RSA_EMSA_PKCS1_SHA1,		{CKM_SHA1_RSA_PKCS,		NULL, 0},
 		 KEY_RSA, 0,									   HASH_UNKNOWN},
+		{SIGN_RSA_EMSA_PKCS1_SHA1,		{CKM_RSA_PKCS,			NULL, 0},
+		 KEY_RSA, 0,										  HASH_SHA1},
 		{SIGN_RSA_EMSA_PKCS1_MD5,		{CKM_MD5_RSA_PKCS,		NULL, 0},
 		 KEY_RSA, 0,									   HASH_UNKNOWN},
 		{SIGN_ECDSA_WITH_NULL,			{CKM_ECDSA,				NULL, 0},
@@ -167,9 +199,11 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(signature_scheme_t scheme,
 		if (mappings[i].scheme == scheme)
 		{
 			size_t len = mappings[i].keylen;
-			if (mappings[i].type != type || (len && keylen != len))
+
+			if (mappings[i].type != type || (len && keylen != len) ||
+				!is_mechanism_supported(p11, slot, &mappings[i].mechanism))
 			{
-				return NULL;
+				continue;
 			}
 			if (hash)
 			{
@@ -254,8 +288,9 @@ METHOD(private_key_t, sign, bool,
 	hash_algorithm_t hash_alg;
 	chunk_t hash = chunk_empty;
 
-	mechanism = pkcs11_signature_scheme_to_mech(scheme, this->type,
-												get_keysize(this), &hash_alg);
+	mechanism = pkcs11_signature_scheme_to_mech(this->lib, this->slot, scheme,
+												this->type, get_keysize(this),
+												&hash_alg);
 	if (!mechanism)
 	{
 		DBG1(DBG_LIB, "signature scheme %N not supported",
@@ -293,6 +328,21 @@ METHOD(private_key_t, sign, bool,
 			return FALSE;
 		}
 		hasher->destroy(hasher);
+		switch (scheme)
+		{
+			case SIGN_RSA_EMSA_PKCS1_SHA1:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_256:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_384:
+			case SIGN_RSA_EMSA_PKCS1_SHA2_512:
+				/* encode PKCS#1 digestInfo if the token does not support it */
+				hash = asn1_wrap(ASN1_SEQUENCE, "mm",
+								 asn1_algorithmIdentifier(
+									hasher_algorithm_to_oid(hash_alg)),
+								 asn1_wrap(ASN1_OCTET_STRING, "m", hash));
+				break;
+			default:
+				break;
+		}
 		data = hash;
 	}
 	len = (get_keysize(this) + 7) / 8;
