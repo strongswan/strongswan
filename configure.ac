@@ -326,6 +326,7 @@ ARG_ENABL_SET([tss-tss2],       [enable the use of the TSS 2.0 Trusted Software 
 
 # compile options
 ARG_ENABL_SET([coverage],       [enable lcov coverage report generation.])
+ARG_ENABL_SET([git-version],    [use output of 'git describe' as version information in executables.])
 ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
 ARG_ENABL_SET([lock-profiler],  [enable lock/mutex profiling code.])
 ARG_ENABL_SET([log-thread-ids], [use thread ID, if available, instead of an incremented value starting from 1, to identify threads.])
@@ -1382,6 +1383,21 @@ if test "x$ss_cv_static_plugin_constructors" = xyes; then
 	if test "$PYTHON" = ":"; then
 		AC_MSG_FAILURE([Python is required to resolve plugin constructors statically])
 	fi
+fi
+
+AC_MSG_CHECKING([version from Git repository])
+AC_SUBST(GIT_VERSION, [$($srcdir/scripts/git-version "$srcdir")])
+case "$GIT_VERSION" in
+	"$PACKAGE_VERSION"*)
+		AC_MSG_RESULT([$GIT_VERSION])
+		;;
+	*)
+		AC_MSG_ERROR([$PACKAGE_VERSION is not a prefix of $GIT_VERSION, tag missing?])
+		;;
+esac
+
+if test x$git_version = xtrue; then
+	AC_DEFINE_UNQUOTED(VERSION, ["$GIT_VERSION"])
 fi
 
 # ===============================================

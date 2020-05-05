@@ -1,3 +1,5 @@
+EXTRA_DIST = git-version
+
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtls \
