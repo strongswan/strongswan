@@ -212,6 +212,8 @@
         <item quantity="other">Retry in %1$d seconds</item>
     </plurals>
     <string name="cancel_retry">Cancel retry</string>
+    <string name="power_whitelist_title">Disable battery optimizations</string>
+    <string name="power_whitelist_text">Please confirm the next dialog to add the app to the device\'s power whitelist so it can ignore battery optimizations and schedule NAT keep-alives and rekeyings accurately in order to constantly keep reachable while the VPN is established.</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">Toggle VPN</string>
