@@ -6,7 +6,7 @@ nmvpnservice_DATA = nm-strongswan-service.name
 
 @INTLTOOL_DESKTOP_RULE@
 
-appdatadir = $(datadir)/appdata
+appdatadir = $(datadir)/metainfo
 appdata_DATA = $(appdata_in_files:.xml.in=.xml)
 appdata_in_files = NetworkManager-strongswan.appdata.xml.in
 @INTLTOOL_XML_RULE@
