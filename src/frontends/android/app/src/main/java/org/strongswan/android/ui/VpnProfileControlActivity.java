@@ -23,6 +23,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.net.VpnService;
 import android.os.Build;
@@ -41,6 +42,7 @@ import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.State;
+import org.strongswan.android.utils.Constants;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -49,6 +51,7 @@ import androidx.appcompat.app.AppCompatDialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.preference.PreferenceManager;
 
 public class VpnProfileControlActivity extends AppCompatActivity
 {
@@ -198,7 +201,9 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
 		{
 			PowerManager pm = (PowerManager)this.getSystemService(Context.POWER_SERVICE);
-			if (!pm.isIgnoringBatteryOptimizations(this.getPackageName()))
+			SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
+			if (!pm.isIgnoringBatteryOptimizations(this.getPackageName()) &&
+				!pref.getBoolean(Constants.PREF_IGNORE_POWER_WHITELIST, false))
 			{
 				PowerWhitelistRequired whitelist = new PowerWhitelistRequired();
 				mWaitingForResult = true;
