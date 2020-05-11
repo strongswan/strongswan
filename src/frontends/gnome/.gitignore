@@ -9,5 +9,5 @@ nm-strongswan-service.name
 stamp-h1
 config.guess.cdbs-orig
 config.sub.cdbs-orig
-NetworkManager-strongswan.appdata.xml
+NetworkManager-strongswan.metainfo.xml
 NetworkManager-strongswan.pot

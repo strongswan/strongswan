@@ -304,27 +304,27 @@ msgstr ""
 "Die Konfiguration verwendet ssh-agent für die Authentisierung, aber ssh-"
 "agent ist nicht gestartet!"
 
-#: ../NetworkManager-strongswan.appdata.xml.in.h:1
+#: ../NetworkManager-strongswan.metainfo.xml.in.h:1
 msgid "strongSwan VPN client"
 msgstr "strongSwan VPN Client"
 
-#: ../NetworkManager-strongswan.appdata.xml.in.h:2
+#: ../NetworkManager-strongswan.metainfo.xml.in.h:2
 msgid "strongSwan based client for IPsec virtual private networks"
 msgstr "Auf strongSwan basierender Client für IPsec VPNs"
 
-#: ../NetworkManager-strongswan.appdata.xml.in.h:3
+#: ../NetworkManager-strongswan.metainfo.xml.in.h:3
 msgid ""
 "Support for configuring IPsec based virtual private network connections."
 msgstr ""
 "Unterstützung für die Konfiguration von IPsec-basierten VPN Verbindungen."
 
-#: ../NetworkManager-strongswan.appdata.xml.in.h:4
+#: ../NetworkManager-strongswan.metainfo.xml.in.h:4
 msgid ""
 "Compatible with IKEv2 key exchange and multiple authentication mechanisms."
 msgstr ""
 "Kompatibel mit dem IKEv2 Schlüsselaustausch-Protokoll und verschiedenen "
 "Authentisierungsmethoden."
 
-#: ../NetworkManager-strongswan.appdata.xml.in.h:5
+#: ../NetworkManager-strongswan.metainfo.xml.in.h:5
 msgid "strongSwan Developers"
 msgstr "strongSwan Entwickler"
