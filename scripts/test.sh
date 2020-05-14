@@ -205,6 +205,14 @@ win*)
 		;;
 	esac
 	;;
+android)
+	DEPS="$DEPS openjdk-8-jdk"
+	if test "$1" = "deps"; then
+		git clone git://git.strongswan.org/android-ndk-boringssl.git -b ndk-static \
+			src/frontends/android/app/src/main/jni/openssl
+	fi
+	TARGET=distdir
+	;;
 osx)
 	# this causes a false positive in ip-packet.c since Xcode 8.3
 	CFLAGS="$CFLAGS -Wno-address-of-packed-member"
@@ -448,6 +456,12 @@ sonarcloud)
 		-Dsonar.cfamily.cache.path=$HOME/.sonar-cache \
 		-Dsonar.cfamily.build-wrapper-output=bw-output || exit $?
 	rm -r bw-output .scannerwork
+	;;
+android)
+	rm -r strongswan-*
+	cd src/frontends/android
+	echo "$ ./gradlew build"
+	NDK_CCACHE=ccache ./gradlew build
 	;;
 *)
 	;;

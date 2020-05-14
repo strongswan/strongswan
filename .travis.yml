@@ -55,6 +55,34 @@ jobs:
     - env: TEST=osx
       compiler: clang
       os: osx
+    - env: TEST=android
+      install:
+        # see https://developer.android.com/studio#command-tools
+        - export ANDROID_TOOLS=commandlinetools-linux-6200805_latest.zip
+        - export ANDROID_HOME=$HOME/android-sdk
+        - wget -nv https://dl.google.com/android/repository/$ANDROID_TOOLS
+        - unzip -q $ANDROID_TOOLS -d $ANDROID_HOME && rm $ANDROID_TOOLS
+        - export PATH=$PATH:$ANDROID_HOME/tools/bin
+        # sdkmanager only works with Java 8
+        - export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+        - yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses >/dev/null
+        - yes | sdkmanager --sdk_root=$ANDROID_HOME --install 'ndk;20.0.5594570'
+        - mkdir -p $HOME/.gradle
+        - echo "org.gradle.daemon=false" >> $HOME/.gradle/gradle.properties
+        - echo "org.gradle.console=plain" >> $HOME/.gradle/gradle.properties
+        # since the NDK is newly installed everytime, we have to use this to avoid cache misses
+        - export CCACHE_COMPILERCHECK=content
+      after_success:
+        - cat src/frontends/android/app/build/reports/lint-results.xml
+      before_cache:
+        - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+        - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+      cache:
+        ccache: true
+        directories:
+          - $HOME/.gradle/caches/
+          - $HOME/.gradle/wrapper/
+          - $HOME/.android/build-cache
     - env: TEST=all
     - env: TEST=all
       compiler: clang
