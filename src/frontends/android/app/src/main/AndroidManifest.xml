@@ -16,6 +16,7 @@
     for more details.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="org.strongswan.android">
 
     <uses-permission android:name="android.permission.INTERNET" />
@@ -141,7 +142,7 @@
             android:name=".ui.TrustedCertificateImportActivity"
             android:label="@string/import_certificate"
             android:theme="@style/TransparentActivity" >
-            <intent-filter>
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/x-x509-ca-cert" />
