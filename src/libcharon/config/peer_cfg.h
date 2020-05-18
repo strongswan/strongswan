@@ -224,6 +224,14 @@ struct peer_cfg_t {
 	uint32_t (*get_keyingtries) (peer_cfg_t *this);
 
 	/**
+	 * Whether to retry initiation sequence to the redirected peer or with the
+	 * configured remote.
+	 *
+	 * @return			TRUE to retry with the redirected peer
+	 */
+	bool (*keyingtry_redirected) (peer_cfg_t *this);
+
+	/**
 	 * Get a time to start rekeying.
 	 *
 	 * @param jitter	subtract a jitter value to randomize time
@@ -397,6 +405,9 @@ struct peer_cfg_create_t {
 	unique_policy_t unique;
 	/** How many keying tries should be done before giving up */
 	uint32_t keyingtries;
+	/** Reinitiate keying with the originally configured peer instead of the
+	 * redirected peer */
+	bool keyingtry_non_redirected;
 	/** Timeout in seconds before starting rekeying */
 	uint32_t rekey_time;
 	/** Timeout in seconds before starting reauthentication */

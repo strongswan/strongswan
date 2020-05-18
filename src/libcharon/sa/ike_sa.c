@@ -2414,6 +2414,18 @@ METHOD(ike_sa_t, retransmit, status_t,
 					DBG1(DBG_IKE, "peer not responding, trying again (%d/%d)",
 						 this->keyingtry + 1, tries);
 					reset(this, TRUE);
+
+					if (this->redirected_from &&
+						!this->peer_cfg->keyingtry_redirected(this->peer_cfg))
+					{
+						/* In case we were redirected, and keyingtry_redirected
+						 * is false, try again with the configured peer, by
+						 * resetting remote_host. */
+						DESTROY_IF(this->remote_host);
+						this->remote_host = NULL;
+						this->redirected_from->destroy(this->redirected_from);
+						this->redirected_from = NULL;
+					}
 					resolve_hosts(this);
 					return this->task_manager->initiate(this->task_manager);
 				}

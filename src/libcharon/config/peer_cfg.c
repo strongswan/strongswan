@@ -91,6 +91,12 @@ struct private_peer_cfg_t {
 	uint32_t keyingtries;
 
 	/**
+	 * Whether to retry initiation sequence to the redirected peer or restart
+	 * the sequence with the configured remote.
+	 */
+	bool keyingtry_redirected;
+
+	/**
 	 * enable support for MOBIKE
 	 */
 	bool use_mobike;
@@ -486,6 +492,12 @@ METHOD(peer_cfg_t, get_keyingtries, uint32_t,
 	return this->keyingtries;
 }
 
+METHOD(peer_cfg_t, keyingtry_redirected, bool,
+	private_peer_cfg_t *this)
+{
+	return this->keyingtry_redirected;
+}
+
 METHOD(peer_cfg_t, get_rekey_time, uint32_t,
 	private_peer_cfg_t *this, bool jitter)
 {
@@ -722,6 +734,7 @@ METHOD(peer_cfg_t, equals, bool,
 		this->cert_policy == other->cert_policy &&
 		this->unique == other->unique &&
 		this->keyingtries == other->keyingtries &&
+		this->keyingtry_redirected == other->keyingtry_redirected &&
 		this->use_mobike == other->use_mobike &&
 		this->rekey_time == other->rekey_time &&
 		this->reauth_time == other->reauth_time &&
@@ -809,6 +822,7 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 			.get_cert_policy = _get_cert_policy,
 			.get_unique_policy = _get_unique_policy,
 			.get_keyingtries = _get_keyingtries,
+			.keyingtry_redirected = _keyingtry_redirected,
 			.get_rekey_time = _get_rekey_time,
 			.get_reauth_time = _get_reauth_time,
 			.get_over_time = _get_over_time,
@@ -842,6 +856,7 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 		.cert_policy = data->cert_policy,
 		.unique = data->unique,
 		.keyingtries = data->keyingtries,
+		.keyingtry_redirected = !data->keyingtry_non_redirected,
 		.rekey_time = data->rekey_time,
 		.reauth_time = data->reauth_time,
 		.jitter_time = data->jitter_time,
