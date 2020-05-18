@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: NetworkManager-strongswan\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-02-12 12:06+0100\n"
+"POT-Creation-Date: 2020-05-18 11:35+0200\n"
 "PO-Revision-Date: 2019-12-18 17:10+0100\n"
 "Last-Translator: Tobias Brunner\n"
 "Language-Team: de <info@strongswan.org>\n"
@@ -25,31 +25,31 @@ msgstr "IPsec/IKEv2 (strongswan)"
 msgid "IPsec with the IKEv2 key exchange protocol."
 msgstr "IPsec mit dem IKEv2 Protokoll."
 
-#: ../properties/nm-strongswan.c:366
+#: ../properties/nm-strongswan.c:367
 msgid "EAP (Username/Password)"
 msgstr "EAP (Benutzername/Passwort)"
 
-#: ../properties/nm-strongswan.c:367
+#: ../properties/nm-strongswan.c:368
 msgid "Certificate"
 msgstr "Zertifikat"
 
-#: ../properties/nm-strongswan.c:368
+#: ../properties/nm-strongswan.c:369
 msgid "EAP-TLS"
 msgstr "EAP-TLS"
 
-#: ../properties/nm-strongswan.c:369
+#: ../properties/nm-strongswan.c:370
 msgid "Pre-shared key"
 msgstr "Pre-shared Key"
 
-#: ../properties/nm-strongswan.c:395
+#: ../properties/nm-strongswan.c:396
 msgid "Certificate/private key"
 msgstr "Zertifikat/Privater Schlüssel"
 
-#: ../properties/nm-strongswan.c:396
+#: ../properties/nm-strongswan.c:397
 msgid "Certificate/ssh-agent"
 msgstr "Zertifikat/ssh-agent"
 
-#: ../properties/nm-strongswan.c:397
+#: ../properties/nm-strongswan.c:398
 msgid "Smartcard"
 msgstr "Smartcard"
 
@@ -192,14 +192,10 @@ msgid "(Defaults to username, certificate subject or IP address)"
 msgstr "(Standardwert ist der Benutzername, die Zertifikats-ID oder die IP)"
 
 #: ../properties/nm-strongswan-dialog.ui.h:28
-msgid "<b>Options</b>"
-msgstr "<b>Optionen</b>"
-
-#: ../properties/nm-strongswan-dialog.ui.h:29
 msgid "Request an _inner IP address"
 msgstr "_Innere IP-Adresse beziehen"
 
-#: ../properties/nm-strongswan-dialog.ui.h:30
+#: ../properties/nm-strongswan-dialog.ui.h:29
 msgid ""
 "The server may provide addresses from a pool to use for communication in the "
 "VPN. Check to request such an address."
@@ -208,11 +204,11 @@ msgstr ""
 "Kommunikation im dahinterliegenden Netz verwenden kann. Aktivieren, um eine "
 "solche Adresse zu beziehen."
 
-#: ../properties/nm-strongswan-dialog.ui.h:31
+#: ../properties/nm-strongswan-dialog.ui.h:30
 msgid "En_force UDP encapsulation"
 msgstr "Erzwingen einer zusätzlichen Einbettung der Datenpakete in _UDP"
 
-#: ../properties/nm-strongswan-dialog.ui.h:32
+#: ../properties/nm-strongswan-dialog.ui.h:31
 msgid ""
 "Some firewalls block ESP traffic. Enforcing UDP capsulation even if no NAT "
 "situation is detected might help in such cases."
@@ -221,11 +217,11 @@ msgstr ""
 "erzwingen einer zustzlichen Einbettung in UDP, auch wenn kein NAT-Router "
 "detektiert wurde, kann in solchen Situationen hilfreich sein."
 
-#: ../properties/nm-strongswan-dialog.ui.h:33
+#: ../properties/nm-strongswan-dialog.ui.h:32
 msgid "Use IP c_ompression"
 msgstr "IP-Pakete k_omprimieren"
 
-#: ../properties/nm-strongswan-dialog.ui.h:34
+#: ../properties/nm-strongswan-dialog.ui.h:33
 msgid ""
 "IPComp compresses raw IP packets before they get encrypted. This saves some "
 "bandwidth, but uses more processing power."
@@ -233,29 +229,33 @@ msgstr ""
 "IPComp komprimiert IP-Pakete, bevor sie verschlüsselt werden. Diese Option "
 "kann Bandbreite sparen, benötigt jedoch zusätzliche Rechenleistung."
 
-#: ../properties/nm-strongswan-dialog.ui.h:35
-msgid "<b>Cipher proposals</b>"
-msgstr "<b>Algorithmen</b>"
+#: ../properties/nm-strongswan-dialog.ui.h:34
+msgid "Options"
+msgstr "Optionen"
 
-#: ../properties/nm-strongswan-dialog.ui.h:36
+#: ../properties/nm-strongswan-dialog.ui.h:35
 msgid "_Enable custom proposals"
 msgstr "_Eigene Algorithmen verwenden"
 
-#: ../properties/nm-strongswan-dialog.ui.h:37
+#: ../properties/nm-strongswan-dialog.ui.h:36
 msgid "_IKE:"
 msgstr "_IKE:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:38
+#: ../properties/nm-strongswan-dialog.ui.h:37
 msgid "A list of proposals for IKE separated by \";\""
 msgstr "Eine Liste von Proposals für IKE getrennt mit \";\""
 
-#: ../properties/nm-strongswan-dialog.ui.h:39
+#: ../properties/nm-strongswan-dialog.ui.h:38
 msgid "_ESP:"
 msgstr "_ESP:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:40
+#: ../properties/nm-strongswan-dialog.ui.h:39
 msgid "A list of proposals for ESP separated by \";\""
 msgstr "Eine Liste von Proposals für ESP getrennt mit \";\""
+
+#: ../properties/nm-strongswan-dialog.ui.h:40
+msgid "Cipher proposals"
+msgstr "Algorithmen"
 
 #: ../auth-dialog/main.c:137
 #, c-format
