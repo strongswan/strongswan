@@ -201,7 +201,7 @@ static void conn_defaults(starter_conn_t *conn)
 	conn->startup = STARTUP_NO;
 	conn->state   = STATE_IGNORE;
 	conn->mode    = MODE_TUNNEL;
-	conn->options = SA_OPTION_MOBIKE;
+	conn->options = SA_OPTION_MOBIKE | SA_OPTION_KEYINGTRY_REDIRECTED;
 
 	/* esp defaults are set after parsing the conn section */
 	conn->sa_ike_life_seconds   = IKE_LIFETIME_DEFAULT;
@@ -496,6 +496,9 @@ static void handle_keyword(kw_token_t token, starter_conn_t *conn, char *key,
 					cfg->err++;
 				}
 			}
+			break;
+		case KW_KEYINGTRY_REDIRECTED:
+			KW_SA_OPTION_FLAG("yes", "no", SA_OPTION_KEYINGTRY_REDIRECTED)
 			break;
 		case KW_REKEY:
 			KW_SA_OPTION_FLAG("no", "yes", SA_OPTION_DONT_REKEY)

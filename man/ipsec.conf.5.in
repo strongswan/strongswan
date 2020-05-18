@@ -538,6 +538,11 @@ The value \fB%forever\fP
 means 'never give up'.
 Relevant only locally, other end need not agree on it.
 .TP
+.BR keyingtry_redirected " = " yes " | no "
+In case of redirection, specifies whether keying re-initiation is tried
+with the redirected peer (\fByes\fP) or with the originally configured remote
+peer (\fBno\fP).
+.TP
 .BR left " = <ip address> | <fqdn> | " %any " | <range> | <subnet> "
 The IP address of the left participant's public-network interface
 or one of several magic values.

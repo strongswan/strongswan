@@ -81,6 +81,7 @@ typedef enum {
 		SA_OPTION_XAUTH_SERVER  = 1 << 5, /* are we an XAUTH server? */
 		SA_OPTION_MOBIKE		= 1 << 6, /* enable MOBIKE for IKEv2  */
 		SA_OPTION_FORCE_ENCAP   = 1 << 7, /* force UDP encapsulation */
+		SA_OPTION_KEYINGTRY_REDIRECTED = 1 << 8, /* retry key initiate to redirected peer */
 } sa_option_t;
 
 typedef struct starter_end starter_end_t;

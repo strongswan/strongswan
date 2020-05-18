@@ -52,6 +52,7 @@ marginbytes,       KW_MARGINBYTES
 lifepackets,       KW_LIFEPACKETS
 marginpackets,     KW_MARGINPACKETS
 keyingtries,       KW_KEYINGTRIES
+keyingtry_redirected, KW_KEYINGTRY_REDIRECTED
 rekeyfuzz,         KW_REKEYFUZZ
 rekey,             KW_REKEY
 reauth,            KW_REAUTH

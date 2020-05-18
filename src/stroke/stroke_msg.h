@@ -284,6 +284,7 @@ struct stroke_msg_t {
 				uint64_t life_packets;
 				uint64_t margin_packets;
 				unsigned long tries;
+				bool try_redirected;
 				unsigned long fuzz;
 			} rekey;
 			struct {

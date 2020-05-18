@@ -635,6 +635,7 @@ static peer_cfg_t *build_peer_cfg(private_stroke_config_t *this,
 	peer_cfg_create_t peer = {
 		.cert_policy = msg->add_conn.me.sendcert,
 		.keyingtries = msg->add_conn.rekey.tries,
+		.keyingtry_non_redirected = !msg->add_conn.rekey.try_redirected,
 		.no_mobike = !msg->add_conn.mobike,
 		.aggressive = msg->add_conn.aggressive,
 		.push_mode = msg->add_conn.pushmode,
