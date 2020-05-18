@@ -307,22 +307,12 @@ METHOD(listener_t, child_updown, bool,
 	NMStrongswanPluginPrivate *this, ike_sa_t *ike_sa, child_sa_t *child_sa,
 	bool up)
 {
-	if (this->ike_sa == ike_sa)
+	if (this->ike_sa == ike_sa && up)
 	{
-		if (up)
-		{	/* disable initiate-failure-detection hooks */
-			this->listener.ike_state_change = NULL;
-			this->listener.child_state_change = NULL;
-			signal_ip_config(this->plugin, ike_sa, child_sa);
-		}
-		else
-		{
-			if (ike_sa->has_condition(ike_sa, COND_REAUTHENTICATING))
-			{	/* we ignore this during reauthentication */
-				return TRUE;
-			}
-			signal_failure(this->plugin, NM_VPN_PLUGIN_FAILURE_CONNECT_FAILED);
-		}
+		/* disable initiate-failure-detection hooks */
+		this->listener.ike_state_change = NULL;
+		this->listener.child_state_change = NULL;
+		signal_ip_config(this->plugin, ike_sa, child_sa);
 	}
 	return TRUE;
 }
@@ -618,7 +608,6 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	peer_cfg_create_t peer = {
 		.cert_policy = CERT_SEND_IF_ASKED,
 		.unique = UNIQUE_REPLACE,
-		.keyingtries = 1,
 		.rekey_time = 36000, /* 10h */
 		.jitter_time = 600, /* 10min */
 		.over_time = 600, /* 10min */
@@ -632,6 +621,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 			},
 		},
 		.mode = MODE_TUNNEL,
+		.dpd_action = ACTION_RESTART,
+		.close_action = ACTION_RESTART,
 	};
 
 	/**
