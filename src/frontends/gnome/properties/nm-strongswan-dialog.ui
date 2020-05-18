@@ -116,35 +116,6 @@
                 <property name="top_attach">2</property>
               </packing>
             </child>
-            <child>
-              <object class="GtkLabel" id="server-port-label">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="label" translatable="yes">_Port:</property>
-                <property name="use_underline">True</property>
-                <property name="xalign">0</property>
-              </object>
-              <packing>
-                <property name="left_attach">0</property>
-                <property name="top_attach">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkEntry" id="server-port-entry">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="tooltip_text" translatable="yes">Custom server port to connect to. Defaults to UDP port 500, which is followed by a switch to port 4500 after the first exchange.</property>
-                <property name="hexpand">True</property>
-                <property name="invisible_char">•</property>
-                <property name="primary_icon_activatable">False</property>
-                <property name="secondary_icon_activatable">False</property>
-                <property name="placeholder_text" translatable="yes">(Defaults to UDP 500/4500)</property>
-              </object>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="top_attach">3</property>
-              </packing>
-            </child>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -405,6 +376,7 @@
       <object class="GtkNotebook" id="options_notebook">
         <property name="visible">True</property>
         <property name="can_focus">True</property>
+        <property name="tab_pos">left</property>
         <child>
           <object class="GtkBox" id="options-vbox">
             <property name="visible">True</property>
@@ -461,6 +433,49 @@
                 <property name="position">2</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkGrid">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="row_spacing">6</property>
+                <property name="column_spacing">6</property>
+                <property name="row_homogeneous">True</property>
+                <child>
+                  <object class="GtkLabel" id="server-port-label">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">Server _port:</property>
+                    <property name="use_underline">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="server-port-entry">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="tooltip_text" translatable="yes">Custom server port to connect to. Defaults to UDP port 500, which is followed by a switch to port 4500 after the first exchange.</property>
+                    <property name="hexpand">True</property>
+                    <property name="invisible_char">•</property>
+                    <property name="primary_icon_activatable">False</property>
+                    <property name="secondary_icon_activatable">False</property>
+                    <property name="placeholder_text" translatable="yes">(Defaults to UDP 500/4500)</property>
+                  </object>
+                  <packing>
+                    <property name="left_attach">1</property>
+                    <property name="top_attach">0</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">3</property>
+              </packing>
+            </child>
           </object>
         </child>
         <child type="tab">
@@ -483,7 +498,7 @@
             <property name="spacing">6</property>
             <child>
               <object class="GtkCheckButton" id="proposal-check">
-                <property name="label" translatable="yes">_Enable custom proposals</property>
+                <property name="label" translatable="yes">_Enable custom algorithm proposals</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
@@ -575,7 +590,7 @@
           <object class="GtkLabel">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">Cipher proposals</property>
+            <property name="label" translatable="yes">Algorithms</property>
           </object>
           <packing>
             <property name="position">1</property>
