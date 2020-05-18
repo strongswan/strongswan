@@ -313,6 +313,7 @@ typedef struct {
 	childless_t childless;
 	unique_policy_t unique;
 	uint32_t keyingtries;
+	bool keyingtry_redirected;
 	uint32_t local_port;
 	uint32_t remote_port;
 	char *local_addrs;
@@ -430,6 +431,7 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  childless = %u",  data->childless);
 	DBG2(DBG_CFG, "  unique = %N", unique_policy_names, data->unique);
 	DBG2(DBG_CFG, "  keyingtries = %u", data->keyingtries);
+	DBG2(DBG_CFG, "  keyingtry_redirected = %u", data->keyingtry_redirected);
 	DBG2(DBG_CFG, "  reauth_time = %llu", data->reauth_time);
 	DBG2(DBG_CFG, "  rekey_time = %llu", data->rekey_time);
 	DBG2(DBG_CFG, "  over_time = %llu", data->over_time);
@@ -1818,6 +1820,7 @@ CALLBACK(peer_kv, bool,
 		{ "send_certreq",	parse_bool,			&peer->send_certreq			},
 		{ "send_cert",		parse_send_cert,	&peer->send_cert			},
 		{ "keyingtries",	parse_uint32,		&peer->keyingtries			},
+		{ "keyingtry_redirected",	parse_bool,	&peer->keyingtry_redirected	},
 		{ "unique",			parse_unique,		&peer->unique				},
 		{ "local_port",		parse_uint32,		&peer->local_port			},
 		{ "remote_port",	parse_uint32,		&peer->remote_port			},
@@ -2412,6 +2415,7 @@ CALLBACK(config_sn, bool,
 		.fragmentation = FRAGMENTATION_YES,
 		.unique = UNIQUE_NO,
 		.keyingtries = 1,
+		.keyingtry_redirected = TRUE,
 		.rekey_time = LFT_UNDEFINED,
 		.reauth_time = LFT_UNDEFINED,
 		.over_time = LFT_UNDEFINED,
@@ -2566,6 +2570,7 @@ CALLBACK(config_sn, bool,
 		.cert_policy = peer.send_cert,
 		.unique = peer.unique,
 		.keyingtries = peer.keyingtries,
+		.keyingtry_non_redirected = !peer.keyingtry_redirected,
 		.rekey_time = peer.rekey_time,
 		.reauth_time = peer.reauth_time,
 		.jitter_time = peer.rand_time,

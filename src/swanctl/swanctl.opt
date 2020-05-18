@@ -218,6 +218,11 @@ connections.<conn>.keyingtries = 1
 	the configured value. A value of _0_ initiates a new sequence until the
 	connection establishes or fails with a permanent error.
 
+connections.<conn>.keyingtry_redirected = yes
+	In case of redirection, specifies whether keying re-initiation is tried
+	with the redirected peer (_yes_), or with the originally configured remote
+	peer (_no_).
+
 connections.<conn>.unique = no
 	Connection uniqueness policy (_never_, _no_, _keep_ or _replace_).
 
