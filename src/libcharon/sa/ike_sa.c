@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Tobias Brunner
+ * Copyright (C) 2006-2020 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -934,6 +934,17 @@ METHOD(ike_sa_t, reset, void,
 	{
 		charon->ike_sa_manager->new_initiator_spi(charon->ike_sa_manager,
 												  &this->public);
+
+		/* when starting from scratch, connect to the original peer again e.g.
+		 * if we got redirected but weren't able to connect successfully */
+		if (this->redirected_from)
+		{
+			this->redirected_from->destroy(this->redirected_from);
+			this->redirected_from = NULL;
+			/* we can't restore the original value, if there was any */
+			DESTROY_IF(this->remote_host);
+			this->remote_host = NULL;
+		}
 	}
 	/* the responder ID is reset, as peer may choose another one */
 	if (this->ike_sa_id->is_initiator(this->ike_sa_id))
@@ -2287,9 +2298,9 @@ static bool redirect_connecting(private_ike_sa_t *this, identification_t *to)
 	reset(this, TRUE);
 	DESTROY_IF(this->redirected_from);
 	this->redirected_from = this->other_host->clone(this->other_host);
-	DESTROY_IF(this->remote_host);
 	/* this allows us to force the remote address while we still properly
 	 * resolve the local address */
+	DESTROY_IF(this->remote_host);
 	this->remote_host = other;
 	resolve_hosts(this);
 	return TRUE;
