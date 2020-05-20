@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2020 Tobias Brunner
  * Copyright (C) 2007-2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -203,5 +204,19 @@ struct certificate_t {
  * @return				TRUE if this newer than other
  */
 bool certificate_is_newer(certificate_t *cert, certificate_t *other);
+
+/**
+ * Check if the given certificate matches the given type, key type and identity,
+ * all of which are optional.
+ *
+ * Note that the identity may also be a public key fingerprint.
+ *
+ * @param cert			certificate
+ * @param type			certificate type to match, or CERT_ANY
+ * @param key			key type to match, or KEY_ANY
+ * @param id			identity to match, or NULL
+ */
+bool certificate_matches(certificate_t *cert, certificate_type_t type,
+						 key_type_t key, identification_t *id);
 
 #endif /** CERTIFICATE_H_ @}*/
