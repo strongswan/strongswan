@@ -52,6 +52,11 @@ struct private_vici_cred_t {
 	vici_dispatcher_t *dispatcher;
 
 	/**
+	 * CA certificate store
+	 */
+	vici_authority_t *authority;
+
+	/**
 	 * credentials
 	 */
 	mem_cred_t *creds;
@@ -178,19 +183,24 @@ CALLBACK(load_cert, vici_message_t*,
 	}
 	DBG1(DBG_CFG, "loaded certificate '%Y'", cert->get_subject(cert));
 
-	/* check if CA certificate has CA basic constraint set */
-	if (flag & X509_CA)
+	if (type == CERT_X509)
 	{
-		char err_msg[] = "ca certificate lacks CA basic constraint, rejected";
 		x509 = (x509_t*)cert;
-
-		if (!(x509->get_flags(x509) & X509_CA))
+		if (x509->get_flags(x509) & X509_CA)
 		{
+			cert = this->authority->add_ca_cert(this->authority, cert);
 			cert->destroy(cert);
-			DBG1(DBG_CFG, "  %s", err_msg);
-			return create_reply(err_msg);
+			return create_reply(NULL);
+		}
+		else if (flag & X509_CA)
+		{
+			char msg[] = "ca certificate lacks CA basic constraint, rejected";
+			cert->destroy(cert);
+			DBG1(DBG_CFG, "  %s", msg);
+			return create_reply(msg);
 		}
 	}
+
 	if (type == CERT_X509_CRL)
 	{
 		this->creds->add_crl(this->creds, (crl_t*)cert);
@@ -535,6 +545,7 @@ CALLBACK(clear_creds, vici_message_t*,
 	private_vici_cred_t *this, char *name, u_int id, vici_message_t *message)
 {
 	this->creds->clear(this->creds);
+	this->authority->clear_ca_certs(this->authority);
 	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 
 	return create_reply(NULL);
@@ -603,7 +614,8 @@ METHOD(vici_cred_t, destroy, void,
 /**
  * See header
  */
-vici_cred_t *vici_cred_create(vici_dispatcher_t *dispatcher)
+vici_cred_t *vici_cred_create(vici_dispatcher_t *dispatcher,
+							  vici_authority_t *authority)
 {
 	private_vici_cred_t *this;
 
@@ -620,6 +632,7 @@ vici_cred_t *vici_cred_create(vici_dispatcher_t *dispatcher)
 			.destroy = _destroy,
 		},
 		.dispatcher = dispatcher,
+		.authority = authority,
 		.creds = mem_cred_create(),
 		.pins = mem_cred_create(),
 	);

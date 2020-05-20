@@ -44,9 +44,14 @@ struct private_vici_authority_t {
 	vici_dispatcher_t *dispatcher;
 
 	/**
-	 * List of certification authorities
+	 * List of certification authorities (authority_t*)
 	 */
 	linked_list_t *authorities;
+
+	/**
+	 * List of CA certificates (ca_cert_t*)
+	 */
+	linked_list_t *certs;
 
 	/**
 	 * rwlock to lock access to certification authorities
@@ -104,10 +109,8 @@ static authority_t *authority_create(char *name)
 	return authority;
 }
 
-/**
- * destroy a certification authority
- */
-static void authority_destroy(authority_t *this)
+CALLBACK(authority_destroy, void,
+	authority_t *this)
 {
 	this->crl_uris->destroy_function(this->crl_uris, free);
 	this->ocsp_uris->destroy_function(this->ocsp_uris, free);
@@ -117,6 +120,108 @@ static void authority_destroy(authority_t *this)
 	free(this);
 }
 
+typedef struct ca_cert_t ca_cert_t;
+
+/**
+ * Loaded CA certificate.
+ */
+struct ca_cert_t {
+
+	/**
+	 * Reference to certificate.
+	 */
+	certificate_t *cert;
+
+	/**
+	 * The number of authority sections referring to this certificate.
+	 */
+	u_int count;
+
+	/**
+	 * TRUE if this certificate was (also) added externally.
+	 */
+	bool external;
+};
+
+/**
+ * Destroy a CA certificate entry
+ */
+CALLBACK(ca_cert_destroy, void,
+	ca_cert_t *this)
+{
+	this->cert->destroy(this->cert);
+	free(this);
+}
+
+CALLBACK(match_cert, bool,
+	ca_cert_t *item, va_list args)
+{
+	certificate_t *cert;
+
+	VA_ARGS_VGET(args, cert);
+	return cert->equals(cert, item->cert);
+}
+
+/**
+ * Add a CA certificate to the local store
+ */
+static certificate_t *add_cert_internal(private_vici_authority_t *this,
+										certificate_t *cert, bool external)
+{
+	ca_cert_t *found;
+
+	if (this->certs->find_first(this->certs, match_cert, (void**)&found, cert))
+	{
+		cert->destroy(cert);
+		cert = found->cert->get_ref(found->cert);
+	}
+	else
+	{
+		INIT(found,
+			.cert = cert->get_ref(cert)
+		);
+		this->certs->insert_first(this->certs, found);
+	}
+	if (external)
+	{
+		found->external = TRUE;
+	}
+	else
+	{
+		found->count++;
+	}
+	return cert;
+}
+
+CALLBACK(remove_external_certs, bool,
+	ca_cert_t *item, void *unused)
+{
+	if (item->external)
+	{
+		item->external = FALSE;
+
+		if (!item->count)
+		{
+			ca_cert_destroy(item);
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+CALLBACK2(remove_cert, bool,
+	ca_cert_t *item, certificate_t *cert)
+{
+	if (cert == item->cert)
+	{
+		if (--item->count == 0 && !item->external)
+		{
+			ca_cert_destroy(item);
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
 
 /**
  * Create a (error) reply message
@@ -431,6 +536,9 @@ CALLBACK(authority_sn, bool,
 
 	request->this->lock->write_lock(request->this->lock);
 
+	data->authority->cert = add_cert_internal(request->this,
+											  data->authority->cert, FALSE);
+
 	authorities = request->this->authorities;
 	enumerator = authorities->create_enumerator(authorities);
 	while (enumerator->enumerate(enumerator, &authority))
@@ -492,6 +600,7 @@ CALLBACK(unload_authority, vici_message_t*,
 		if (streq(authority->name, authority_name))
 		{
 			this->authorities->remove_at(this->authorities, enumerator);
+			this->certs->remove(this->certs, authority->cert, remove_cert);
 			authority_destroy(authority);
 			found = TRUE;
 			break;
@@ -638,17 +747,16 @@ CALLBACK(cert_data_destroy, void,
 CALLBACK(certs_filter, bool,
 	cert_data_t *data, enumerator_t *orig, va_list args)
 {
-	authority_t *authority;
+	ca_cert_t *ca;
 	certificate_t **out;
 
 	VA_ARGS_VGET(args, out);
 
-	while (orig->enumerate(orig, &authority))
+	while (orig->enumerate(orig, &ca))
 	{
-		if (certificate_matches(authority->cert, data->type, data->key,
-								data->id))
+		if (certificate_matches(ca->cert, data->type, data->key, data->id))
 		{
-			*out = authority->cert;
+			*out = ca->cert;
 			return TRUE;
 		}
 	}
@@ -670,7 +778,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	);
 
 	this->lock->read_lock(this->lock);
-	enumerator = this->authorities->create_enumerator(this->authorities);
+	enumerator = this->certs->create_enumerator(this->certs);
 	return enumerator_create_filter(enumerator, certs_filter, data,
 									cert_data_destroy);
 }
@@ -760,6 +868,23 @@ METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
 			(void*)create_inner_cdp, data, cert_data_destroy);
 }
 
+METHOD(vici_authority_t, add_ca_cert, certificate_t*,
+	private_vici_authority_t *this, certificate_t *cert)
+{
+	this->lock->write_lock(this->lock);
+	cert = add_cert_internal(this, cert, TRUE);
+	this->lock->unlock(this->lock);
+	return cert;
+}
+
+METHOD(vici_authority_t, clear_ca_certs, void,
+	private_vici_authority_t *this)
+{
+	this->lock->write_lock(this->lock);
+	this->certs->remove(this->certs, NULL, remove_external_certs);
+	this->lock->unlock(this->lock);
+}
+
 METHOD(vici_authority_t, destroy, void,
 	private_vici_authority_t *this)
 {
@@ -767,6 +892,7 @@ METHOD(vici_authority_t, destroy, void,
 
 	this->authorities->destroy_function(this->authorities,
 									   (void*)authority_destroy);
+	this->certs->destroy_function(this->certs, ca_cert_destroy);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -787,10 +913,13 @@ vici_authority_t *vici_authority_create(vici_dispatcher_t *dispatcher)
 				.create_cdp_enumerator = _create_cdp_enumerator,
 				.cache_cert = (void*)nop,
 			},
+			.add_ca_cert = _add_ca_cert,
+			.clear_ca_certs = _clear_ca_certs,
 			.destroy = _destroy,
 		},
 		.dispatcher = dispatcher,
 		.authorities = linked_list_create(),
+		.certs = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 

@@ -1444,10 +1444,19 @@ CALLBACK(parse_cert_policy, bool,
  */
 static bool add_cert(auth_data_t *auth, auth_rule_t rule, certificate_t *cert)
 {
+	vici_authority_t *authority;
 	vici_cred_t *cred;
 
-	cred = auth->request->this->cred;
-	cert = cred->add_cert(cred, cert);
+	if (rule == AUTH_RULE_CA_CERT)
+	{
+		authority = auth->request->this->authority;
+		cert = authority->add_ca_cert(authority, cert);
+	}
+	else
+	{
+		cred = auth->request->this->cred;
+		cert = cred->add_cert(cred, cert);
+	}
 	auth->cfg->add(auth->cfg, rule, cert);
 	return TRUE;
 }
@@ -1492,17 +1501,13 @@ CALLBACK(parse_cacerts, bool,
 CALLBACK(parse_pubkeys, bool,
 	auth_data_t *auth, chunk_t v)
 {
-	vici_cred_t *cred;
 	certificate_t *cert;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
 							  BUILD_BLOB_PEM, v, BUILD_END);
 	if (cert)
 	{
-		cred = auth->request->this->cred;
-		cert = cred->add_cert(cred, cert);
-		auth->cfg->add(auth->cfg, AUTH_RULE_SUBJECT_CERT, cert);
-		return TRUE;
+		return add_cert(auth, AUTH_RULE_SUBJECT_CERT, cert);
 	}
 	return FALSE;
 }
