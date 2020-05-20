@@ -220,6 +220,23 @@ METHOD(mem_cred_t, get_cert_ref, certificate_t*,
 	return cert;
 }
 
+METHOD(mem_cred_t, remove_cert, certificate_t*,
+	private_mem_cred_t *this, certificate_t *cert)
+{
+	certificate_t *cached = NULL;
+
+	this->lock->write_lock(this->lock);
+	if (this->untrusted->find_first(this->untrusted, certificate_equals,
+					(void**)&cached, cert))
+	{
+		this->untrusted->remove(this->untrusted, cached, NULL);
+		this->trusted->remove(this->trusted, cached, NULL);
+	}
+	this->lock->unlock(this->lock);
+
+	return cached;
+}
+
 METHOD(mem_cred_t, add_crl, bool,
 	private_mem_cred_t *this, crl_t *crl)
 {
@@ -931,6 +948,7 @@ mem_cred_t *mem_cred_create()
 			.add_cert = _add_cert,
 			.add_cert_ref = _add_cert_ref,
 			.get_cert_ref = _get_cert_ref,
+			.remove_cert = _remove_cert,
 			.add_crl = _add_crl,
 			.add_key = _add_key,
 			.remove_key = _remove_key,

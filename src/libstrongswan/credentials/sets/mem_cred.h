@@ -70,7 +70,13 @@ struct mem_cred_t {
 	 * @return				the same certificate, potentially different instance
 	 */
 	certificate_t* (*get_cert_ref)(mem_cred_t *this, certificate_t *cert);
-
+	/**
+	 * Remove a certificate from the credential set.
+	 *
+	 * @param cert			certificate to remove
+	 * @return the certificate if found else NULL
+	 */
+	certificate_t* (*remove_cert)(mem_cred_t *this, certificate_t *cert);
 	/**
 	 * Add an X.509 CRL to the credential set.
 	 *

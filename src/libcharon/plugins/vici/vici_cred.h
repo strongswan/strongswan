@@ -49,6 +49,13 @@ struct vici_cred_t {
 	certificate_t* (*add_cert)(vici_cred_t *this, certificate_t *cert);
 
 	/**
+	 * Remove a certificate from the certificate store
+	 *
+	 * @param cert	certificate to be removed from the store
+	 * @return		The removed certificate
+	 */
+	certificate_t* (*remove_cert)(vici_cred_t *this, certificate_t *cert);
+	/**
 	 * Destroy a vici_cred_t.
 	 */
 	void (*destroy)(vici_cred_t *this);

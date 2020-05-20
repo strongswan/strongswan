@@ -500,6 +500,17 @@ CALLBACK(unload_authority, vici_message_t*,
 	{
 		if (streq(authority->name, authority_name))
 		{
+			if (authority->cert)
+			{
+				certificate_t *c =
+					this->cred->remove_cert(this->cred,
+								authority->cert);
+				if (c != authority->cert)
+				{
+					DESTROY_IF(c);
+				}
+
+			}
 			this->authorities->remove_at(this->authorities, enumerator);
 			authority_destroy(authority);
 			found = TRUE;

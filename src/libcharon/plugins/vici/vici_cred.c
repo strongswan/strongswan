@@ -589,6 +589,12 @@ METHOD(vici_cred_t, add_cert, certificate_t*,
 	return this->creds->add_cert_ref(this->creds, TRUE, cert);
 }
 
+METHOD(vici_cred_t, remove_cert, certificate_t*,
+	private_vici_cred_t *this, certificate_t *cert)
+{
+	return this->creds->remove_cert(this->creds, cert);
+}
+
 METHOD(vici_cred_t, destroy, void,
 	private_vici_cred_t *this)
 {
@@ -618,6 +624,7 @@ vici_cred_t *vici_cred_create(vici_dispatcher_t *dispatcher)
 				.cache_cert = (void*)_cache_cert,
 			},
 			.add_cert = _add_cert,
+			.remove_cert = _remove_cert,
 			.destroy = _destroy,
 		},
 		.dispatcher = dispatcher,
