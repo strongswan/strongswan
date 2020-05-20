@@ -504,6 +504,7 @@ CALLBACK(unload_authority, vici_message_t*,
 	{
 		return create_reply("unload: authority '%s' not found", authority_name);
 	}
+	lib->credmgr->flush_cache(lib->credmgr, CERT_ANY);
 	return create_reply(NULL);
 }
 
