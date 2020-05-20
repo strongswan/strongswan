@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Tobias Brunner
+ * Copyright (C) 2016-2020 Tobias Brunner
  * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -42,11 +42,6 @@ struct private_vici_authority_t {
 	 * Dispatcher
 	 */
 	vici_dispatcher_t *dispatcher;
-
-	/**
-	 * credential backend managed by VICI used for our ca certificates
-	 */
-	vici_cred_t *cred;
 
 	/**
 	 * List of certification authorities
@@ -379,7 +374,6 @@ CALLBACK(authority_sn, bool,
 	enumerator_t *enumerator;
 	linked_list_t *authorities;
 	authority_t *authority;
-	vici_cred_t *cred;
 	load_data_t *data;
 	chunk_t handle;
 
@@ -452,11 +446,8 @@ CALLBACK(authority_sn, bool,
 	enumerator->destroy(enumerator);
 	authorities->insert_last(authorities, data->authority);
 
-	cred = request->this->cred;
-	data->authority->cert = cred->add_cert(cred, data->authority->cert);
-	data->authority = NULL;
-
 	request->this->lock->unlock(request->this->lock);
+	data->authority = NULL;
 	free_load_data(data);
 
 	return TRUE;
@@ -627,27 +618,64 @@ static void manage_commands(private_vici_authority_t *this, bool reg)
 }
 
 /**
- * data to pass to create_inner_cdp
+ * Data for the certificate and CDP enumerator
  */
 typedef struct {
 	private_vici_authority_t *this;
 	certificate_type_t type;
+	key_type_t key;
 	identification_t *id;
-} cdp_data_t;
+} cert_data_t;
 
-/**
- * destroy cdp enumerator data and unlock list
- */
-static void cdp_data_destroy(cdp_data_t *data)
+CALLBACK(cert_data_destroy, void,
+	cert_data_t *data)
 {
 	data->this->lock->unlock(data->this->lock);
 	free(data);
 }
 
-/**
- * inner enumerator constructor for CDP URIs
- */
-static enumerator_t *create_inner_cdp(authority_t *authority, cdp_data_t *data)
+CALLBACK(certs_filter, bool,
+	cert_data_t *data, enumerator_t *orig, va_list args)
+{
+	authority_t *authority;
+	certificate_t **out;
+
+	VA_ARGS_VGET(args, out);
+
+	while (orig->enumerate(orig, &authority))
+	{
+		if (certificate_matches(authority->cert, data->type, data->key,
+								data->id))
+		{
+			*out = authority->cert;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
+	private_vici_authority_t *this, certificate_type_t cert, key_type_t key,
+	identification_t *id, bool trusted)
+{
+	enumerator_t *enumerator;
+	cert_data_t *data;
+
+	INIT(data,
+		.this = this,
+		.type = cert,
+		.key = key,
+		.id = id,
+	);
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->authorities->create_enumerator(this->authorities);
+	return enumerator_create_filter(enumerator, certs_filter, data,
+									cert_data_destroy);
+}
+
+CALLBACK(create_inner_cdp, enumerator_t*,
+	authority_t *authority, cert_data_t *data)
 {
 	public_key_t *public;
 	enumerator_t *enumerator = NULL;
@@ -671,7 +699,8 @@ static enumerator_t *create_inner_cdp(authority_t *authority, cdp_data_t *data)
 		}
 		else
 		{
-			if (public->has_fingerprint(public, data->id->get_encoding(data->id)))
+			if (public->has_fingerprint(public,
+										data->id->get_encoding(data->id)))
 			{
 				enumerator = list->create_enumerator(list);
 			}
@@ -681,11 +710,8 @@ static enumerator_t *create_inner_cdp(authority_t *authority, cdp_data_t *data)
 	return enumerator;
 }
 
-/**
- * inner enumerator constructor for "Hash and URL"
- */
-static enumerator_t *create_inner_cdp_hashandurl(authority_t *authority,
-												 cdp_data_t *data)
+CALLBACK(create_inner_cdp_hashandurl, enumerator_t*,
+	authority_t *authority, cert_data_t *data)
 {
 	enumerator_t *enumerator = NULL;
 
@@ -694,7 +720,8 @@ static enumerator_t *create_inner_cdp_hashandurl(authority_t *authority,
 		return NULL;
 	}
 
-	if (authority->cert->has_subject(authority->cert, data->id) != ID_MATCH_NONE)
+	if (authority->cert->has_subject(authority->cert,
+									 data->id) != ID_MATCH_NONE)
 	{
 		enumerator = enumerator_create_single(strdup(authority->cert_uri_base),
 											  free);
@@ -706,7 +733,7 @@ METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
 	private_vici_authority_t *this, certificate_type_t type,
 	identification_t *id)
 {
-	cdp_data_t *data;
+	cert_data_t *data;
 
 	switch (type)
 	{	/* we serve CRLs, OCSP responders and URLs for "Hash and URL" */
@@ -718,17 +745,18 @@ METHOD(credential_set_t, create_cdp_enumerator, enumerator_t*,
 		default:
 			return NULL;
 	}
-	data = malloc_thing(cdp_data_t);
-	data->this = this;
-	data->type = type;
-	data->id = id;
+
+	INIT(data,
+		.this = this,
+		.type = type,
+		.id = id,
+	);
 
 	this->lock->read_lock(this->lock);
-
 	return enumerator_create_nested(
 			this->authorities->create_enumerator(this->authorities),
 			(type == CERT_X509) ? (void*)create_inner_cdp_hashandurl :
-			(void*)create_inner_cdp, data, (void*)cdp_data_destroy);
+			(void*)create_inner_cdp, data, cert_data_destroy);
 }
 
 METHOD(vici_authority_t, destroy, void,
@@ -745,8 +773,7 @@ METHOD(vici_authority_t, destroy, void,
 /**
  * See header
  */
-vici_authority_t *vici_authority_create(vici_dispatcher_t *dispatcher,
-										vici_cred_t *cred)
+vici_authority_t *vici_authority_create(vici_dispatcher_t *dispatcher)
 {
 	private_vici_authority_t *this;
 
@@ -754,7 +781,7 @@ vici_authority_t *vici_authority_create(vici_dispatcher_t *dispatcher,
 		.public = {
 			.set = {
 				.create_private_enumerator = (void*)return_null,
-				.create_cert_enumerator = (void*)return_null,
+				.create_cert_enumerator = _create_cert_enumerator,
 				.create_shared_enumerator = (void*)return_null,
 				.create_cdp_enumerator = _create_cdp_enumerator,
 				.cache_cert = (void*)nop,
@@ -762,7 +789,6 @@ vici_authority_t *vici_authority_create(vici_dispatcher_t *dispatcher,
 			.destroy = _destroy,
 		},
 		.dispatcher = dispatcher,
-		.cred = cred,
 		.authorities = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);

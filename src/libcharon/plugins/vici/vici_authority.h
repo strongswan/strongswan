@@ -46,10 +46,8 @@ struct vici_authority_t {
  * Create a vici_authority instance.
  *
  * @param dispatcher		dispatcher to receive requests from
- * @param cred				in-memory credential backend managed by VICI
  * @return					authority backend
  */
-vici_authority_t *vici_authority_create(vici_dispatcher_t *dispatcher,
-										vici_cred_t *cred);
+vici_authority_t *vici_authority_create(vici_dispatcher_t *dispatcher);
 
 #endif /** VICI_AUTHORITY_H_ @}*/
