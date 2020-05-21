@@ -27,7 +27,7 @@ typedef enum tls_hash_algorithm_t tls_hash_algorithm_t;
 typedef enum tls_signature_algorithm_t tls_signature_algorithm_t;
 typedef enum tls_client_certificate_type_t tls_client_certificate_type_t;
 typedef enum tls_ecc_curve_type_t tls_ecc_curve_type_t;
-typedef enum tls_named_curve_t tls_named_curve_t;
+typedef enum tls_named_group_t tls_named_group_t;
 typedef enum tls_ansi_point_format_t tls_ansi_point_format_t;
 typedef enum tls_ec_point_format_t tls_ec_point_format_t;
 
@@ -191,6 +191,12 @@ enum tls_cipher_suite_t {
 
 	TLS_EMPTY_RENEGOTIATION_INFO_SCSV =			0x00FF,
 
+	TLS_AES_128_GCM_SHA256 = 					0x1301,
+	TLS_AES_256_GCM_SHA384 = 					0x1302,
+	TLS_CHACHA20_POLY1305_SHA256 =				0x1303,
+	TLS_AES_128_CCM_SHA256 = 					0x1304,
+	TLS_AES_128_CCM_8_SHA256 = 					0x1305,
+
 	TLS_ECDH_ECDSA_WITH_NULL_SHA =				0xC001,
 	TLS_ECDH_ECDSA_WITH_RC4_128_SHA =			0xC002,
 	TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA =		0xC003,
@@ -327,7 +333,7 @@ extern enum_name_t *tls_ecc_curve_type_names;
 /**
  * TLS Named Curve identifiers
  */
-enum tls_named_curve_t {
+enum tls_named_group_t {
 	TLS_SECT163K1 =		 1,
 	TLS_SECT163R1 =		 2,
 	TLS_SECT163R2 =		 3,
@@ -353,12 +359,21 @@ enum tls_named_curve_t {
 	TLS_SECP256R1 =		23,
 	TLS_SECP384R1 =		24,
 	TLS_SECP521R1 =		25,
+
+	/* TLS 1.3: new ecdhe, dhe groups */
+	TLS_CURVE25519 =    29,
+	TLS_CURVE_448  =    30,
+	TLS_FFDHE2048  =    256,
+	TLS_FFDHE3072  =    257,
+	TLS_FFDHE4096  =    258,
+	TLS_FFDHE6144  =    259,
+	TLS_FFDHE8192  =    260,
 };
 
 /**
- * Enum names for tls_named_curve_t
+ * Enum names for tls_named_group_t
  */
-extern enum_name_t *tls_named_curve_names;
+extern enum_name_t *tls_named_group_names;
 
 /**
  * EC Point format, ANSI X9.62.
@@ -432,7 +447,7 @@ struct tls_crypto_t {
 	/**
 	 * Create an enumerator over supported ECDH groups.
 	 *
-	 * Enumerates over (diffie_hellman_group_t, tls_named_curve_t)
+	 * Enumerates over (diffie_hellman_group_t, tls_named_group_t)
 	 *
 	 * @return				enumerator
 	 */
@@ -499,13 +514,22 @@ struct tls_crypto_t {
 							 bio_reader_t *reader);
 
 	/**
-	 * Calculate the data of a TLS finished message.
+	 * Calculate the data of a legacyTLS finished message.
 	 *
 	 * @param label			ASCII label to use for calculation
 	 * @param out			buffer to write finished data to
 	 * @return				TRUE if calculation successful
 	 */
 	bool (*calculate_finished)(tls_crypto_t *this, char *label, char out[12]);
+
+	/**
+	 * Calculate the data of a TLS finished message.
+	 *
+	 * @param out			buffer to write finished data to
+	 * @return				TRUE if calculation successful
+	 */
+	bool (*calculate_finished_tls13)(tls_crypto_t *this, bool is_server,
+									 chunk_t *out);
 
 	/**
 	 * Derive the master secret, MAC and encryption keys.
@@ -520,6 +544,21 @@ struct tls_crypto_t {
 	bool (*derive_secrets)(tls_crypto_t *this, chunk_t premaster,
 						   chunk_t session, identification_t *id,
 						   chunk_t client_random, chunk_t server_random);
+
+	/**
+	 * Derive the handshake keys.
+	 *
+	 * @param shared_secret 	input key material
+	 * @return 					TRUE if	secret derived successfully
+	 */
+	bool (*derive_handshake_secret)(tls_crypto_t *this, chunk_t shared_secret);
+
+	/**
+	 * Derive the application keys.
+	 *
+	 * @return 					TRUE if	secret derived successfully
+	 */
+	bool (*derive_app_secret)(tls_crypto_t *this);
 
 	/**
 	 * Try to resume a TLS session, derive key material.
