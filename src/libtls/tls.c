@@ -26,12 +26,13 @@
 
 ENUM_BEGIN(tls_version_names, SSL_2_0, SSL_2_0,
 	"SSLv2");
-ENUM_NEXT(tls_version_names, SSL_3_0, TLS_1_2, SSL_2_0,
+ENUM_NEXT(tls_version_names, SSL_3_0, TLS_1_3, SSL_2_0,
 	"SSLv3",
 	"TLS 1.0",
 	"TLS 1.1",
-	"TLS 1.2");
-ENUM_END(tls_version_names, TLS_1_2);
+	"TLS 1.2",
+	"TLS 1.3");
+ENUM_END(tls_version_names, TLS_1_3);
 
 ENUM(tls_content_type_names, TLS_CHANGE_CIPHER_SPEC, TLS_APPLICATION_DATA,
 	"ChangeCipherSpec",
@@ -40,12 +41,22 @@ ENUM(tls_content_type_names, TLS_CHANGE_CIPHER_SPEC, TLS_APPLICATION_DATA,
 	"ApplicationData",
 );
 
-ENUM_BEGIN(tls_handshake_type_names, TLS_HELLO_REQUEST, TLS_SERVER_HELLO,
-	"HelloRequest",
-	"ClientHello",
-	"ServerHello");
+ENUM_BEGIN(tls_handshake_type_names, TLS_HELLO_REQUEST, TLS_HELLO_REQUEST,
+	"HelloRequest");
 ENUM_NEXT(tls_handshake_type_names,
-		TLS_CERTIFICATE, TLS_CLIENT_KEY_EXCHANGE, TLS_SERVER_HELLO,
+		TLS_CLIENT_HELLO, TLS_HELLO_RETRY_REQUEST, TLS_HELLO_REQUEST,
+	"ClientHello",
+	"ServerHello",
+	"HelloVerifyRequest",
+	"NewSessionTicket",
+	"EndOfEarlyData",
+	"HelloRetryRequest");
+ENUM_NEXT(tls_handshake_type_names,
+		TLS_ENCRYPTED_EXTENSIONS, TLS_ENCRYPTED_EXTENSIONS,
+		TLS_HELLO_RETRY_REQUEST,
+	"EncryptedExtensions");
+ENUM_NEXT(tls_handshake_type_names,
+		TLS_CERTIFICATE, TLS_CLIENT_KEY_EXCHANGE, TLS_ENCRYPTED_EXTENSIONS,
 	"Certificate",
 	"ServerKeyExchange",
 	"CertificateRequest",
@@ -53,9 +64,16 @@ ENUM_NEXT(tls_handshake_type_names,
 	"CertificateVerify",
 	"ClientKeyExchange");
 ENUM_NEXT(tls_handshake_type_names,
-		TLS_FINISHED, TLS_FINISHED, TLS_CLIENT_KEY_EXCHANGE,
-	"Finished");
-ENUM_END(tls_handshake_type_names, TLS_FINISHED);
+		  TLS_FINISHED, TLS_KEY_UPDATE, TLS_CLIENT_KEY_EXCHANGE,
+	"Finished",
+	"CertificateUrl",
+	"CertificateStatus",
+	"SupplementalData",
+	"KeyUpdate");
+ENUM_NEXT(tls_handshake_type_names,
+		TLS_MESSAGE_HASH, TLS_MESSAGE_HASH, TLS_KEY_UPDATE,
+	"MessageHash");
+ENUM_END(tls_handshake_type_names, TLS_MESSAGE_HASH);
 
 ENUM_BEGIN(tls_extension_names, TLS_EXT_SERVER_NAME, TLS_EXT_STATUS_REQUEST,
 	"server name",
@@ -65,17 +83,42 @@ ENUM_BEGIN(tls_extension_names, TLS_EXT_SERVER_NAME, TLS_EXT_STATUS_REQUEST,
 	"truncated hmac",
 	"status request");
 ENUM_NEXT(tls_extension_names,
-		TLS_EXT_ELLIPTIC_CURVES, TLS_EXT_EC_POINT_FORMATS,
+		TLS_EXT_SUPPORTED_GROUPS, TLS_EXT_EC_POINT_FORMATS,
 		TLS_EXT_STATUS_REQUEST,
-	"elliptic curves",
+	"supported groups",
 	"ec point formats");
 ENUM_NEXT(tls_extension_names,
-		TLS_EXT_SIGNATURE_ALGORITHMS, TLS_EXT_SIGNATURE_ALGORITHMS,
+		TLS_EXT_SIGNATURE_ALGORITHMS,
+		TLS_EXT_APPLICATION_LAYER_PROTOCOL_NEGOTIATION,
 		TLS_EXT_EC_POINT_FORMATS,
-	"signature algorithms");
+	"signature algorithms",
+	"use rtp",
+	"heartbeat",
+	"application layer protocol negotiation");
+ENUM_NEXT(tls_extension_names,
+		TLS_CLIENT_CERTIFICATE_TYPE, TLS_SERVER_CERTIFICATE_TYPE,
+		TLS_EXT_APPLICATION_LAYER_PROTOCOL_NEGOTIATION,
+	"client certificate type",
+	"server certificate type");
+ENUM_NEXT(tls_extension_names,
+		TLS_EXT_PRE_SHARED_KEY, TLS_EXT_PSK_KEY_EXCHANGE_MODES,
+		TLS_SERVER_CERTIFICATE_TYPE,
+	"pre-shared key",
+	"early data",
+	"supported versions",
+	"cookie",
+	"psk key exchange modes");
+ENUM_NEXT(tls_extension_names,
+		TLS_EXT_CERTIFICATE_AUTHORITIES, TLS_EXT_KEY_SHARE,
+		TLS_EXT_PSK_KEY_EXCHANGE_MODES,
+	"certificate authorities",
+	"oid filters",
+	"post-handshake auth",
+	"signature algorithms cert",
+	"key-share");
 ENUM_NEXT(tls_extension_names,
 		TLS_EXT_RENEGOTIATION_INFO, TLS_EXT_RENEGOTIATION_INFO,
-		TLS_EXT_SIGNATURE_ALGORITHMS,
+		TLS_EXT_KEY_SHARE,
 	"renegotiation info");
 ENUM_END(tls_extension_names, TLS_EXT_RENEGOTIATION_INFO);
 
@@ -107,9 +150,14 @@ struct private_tls_t {
 	bool is_server;
 
 	/**
-	 * Negotiated TLS version
+	 * Negotiated TLS version and maximum supported TLS version
 	 */
-	tls_version_t version;
+	tls_version_t version_max;
+
+	/**
+	 * Minimal supported TLS version
+	 */
+	tls_version_t version_min;
 
 	/**
 	 * TLS stack purpose, as given to constructor
@@ -300,7 +348,14 @@ METHOD(tls_t, build, status_t,
 			{
 				case NEED_MORE:
 					record.type = type;
-					htoun16(&record.version, this->version);
+					if (this->version_max < TLS_1_3)
+					{
+						htoun16(&record.version, this->version_max);
+					}
+					else
+					{
+						htoun16(&record.version, TLS_1_2);
+					}
 					htoun16(&record.length, data.len);
 					this->output = chunk_cat("mcm", this->output,
 											 chunk_from_thing(record), data);
@@ -361,16 +416,22 @@ METHOD(tls_t, get_peer_id, identification_t*,
 	return this->handshake->get_peer_id(this->handshake);
 }
 
-METHOD(tls_t, get_version, tls_version_t,
+METHOD(tls_t, get_version_max, tls_version_t,
 	private_tls_t *this)
 {
-	return this->version;
+	return this->version_max;
+}
+
+METHOD(tls_t, get_version_min, tls_version_t,
+	private_tls_t *this)
+{
+	return this->version_min;
 }
 
 METHOD(tls_t, set_version, bool,
 	private_tls_t *this, tls_version_t version)
 {
-	if (version > this->version)
+	if (version > this->version_max)
 	{
 		return FALSE;
 	}
@@ -379,7 +440,8 @@ METHOD(tls_t, set_version, bool,
 		case TLS_1_0:
 		case TLS_1_1:
 		case TLS_1_2:
-			this->version = version;
+		case TLS_1_3:
+			this->version_max = version;
 			this->protection->set_version(this->protection, version);
 			return TRUE;
 		case SSL_2_0:
@@ -466,7 +528,8 @@ tls_t *tls_create(bool is_server, identification_t *server,
 			.is_server = _is_server,
 			.get_server_id = _get_server_id,
 			.get_peer_id = _get_peer_id,
-			.get_version = _get_version,
+			.get_version_max = _get_version_max,
+			.get_version_min = _get_version_min,
 			.set_version = _set_version,
 			.get_purpose = _get_purpose,
 			.is_complete = _is_complete,
@@ -475,7 +538,8 @@ tls_t *tls_create(bool is_server, identification_t *server,
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
-		.version = TLS_1_2,
+		.version_max = TLS_1_3,
+		.version_min = TLS_1_0,
 		.application = application,
 		.purpose = purpose,
 	);
