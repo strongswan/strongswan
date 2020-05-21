@@ -92,6 +92,7 @@ static int run_client(host_t *host, identification_t *server,
 
 	while (times == -1 || times-- > 0)
 	{
+		/* Open IPv4 socket */
 		fd = socket(AF_INET, SOCK_STREAM, 0);
 		if (fd == -1)
 		{
@@ -101,11 +102,21 @@ static int run_client(host_t *host, identification_t *server,
 		if (connect(fd, host->get_sockaddr(host),
 					*host->get_sockaddr_len(host)) == -1)
 		{
-			DBG1(DBG_TLS, "connecting to %#H failed: %s", host, strerror(errno));
-			close(fd);
-			return 1;
+			/* Check if the socket should use IPv6 instead */
+			fd = socket(AF_INET6, SOCK_STREAM, 0);
+			{
+				if (connect(fd, host->get_sockaddr(host),
+				            *host->get_sockaddr_len(host)) == -1)
+				{
+					DBG1(DBG_TLS, "connecting to %#H failed: %s", host, strerror(errno));
+					close(fd);
+					return 1;
+				}
+			}
+
 		}
-		tls = tls_socket_create(FALSE, server, client, fd, cache, TLS_1_2, TRUE);
+		tls = tls_socket_create(FALSE, server, client, fd, cache,
+							    TLS_1_3, TRUE);
 		if (!tls)
 		{
 			close(fd);
@@ -337,11 +348,17 @@ int main(int argc, char *argv[])
 		usage(stderr, argv[0]);
 		return 1;
 	}
-	host = host_create_from_dns(address, 0, port);
+	/* Try to connect with IPv4 first*/
+	host = host_create_from_dns(address, AF_INET, port);
 	if (!host)
 	{
-		DBG1(DBG_TLS, "resolving hostname %s failed", address);
-		return 1;
+		/* If it fails, try IPv6*/
+		host = host_create_from_dns(address, AF_INET6, port);
+		if (!host)
+		{
+			DBG1(DBG_TLS, "resolving hostname %s failed", address);
+			return 1;
+		}
 	}
 	server = identification_create_from_string(address);
 	cache = tls_cache_create(100, 30);

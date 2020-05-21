@@ -256,7 +256,7 @@ static status_t process_client_hello(private_tls_server_t *this,
 				case TLS_EXT_SIGNATURE_ALGORITHMS:
 					this->hashsig = chunk_clone(ext);
 					break;
-				case TLS_EXT_ELLIPTIC_CURVES:
+				case TLS_EXT_SUPPORTED_GROUPS:
 					this->curves_received = TRUE;
 					this->curves = chunk_clone(ext);
 					break;
@@ -299,7 +299,7 @@ static status_t process_client_hello(private_tls_server_t *this,
 		this->session = chunk_clone(session);
 		this->resume = TRUE;
 		DBG1(DBG_TLS, "resumed %N using suite %N",
-			 tls_version_names, this->tls->get_version(this->tls),
+			 tls_version_names, this->tls->get_version_max(this->tls),
 			 tls_cipher_suite_names, this->suite);
 	}
 	else
@@ -324,7 +324,7 @@ static status_t process_client_hello(private_tls_server_t *this,
 		}
 		DESTROY_IF(rng);
 		DBG1(DBG_TLS, "negotiated %N using suite %N",
-			 tls_version_names, this->tls->get_version(this->tls),
+			 tls_version_names, this->tls->get_version_max(this->tls),
 			 tls_cipher_suite_names, this->suite);
 	}
 	this->state = STATE_HELLO_RECEIVED;
@@ -688,7 +688,7 @@ static status_t send_server_hello(private_tls_server_t *this,
 							tls_handshake_type_t *type, bio_writer_t *writer)
 {
 	/* TLS version */
-	writer->write_uint16(writer, this->tls->get_version(this->tls));
+	writer->write_uint16(writer, this->tls->get_version_max(this->tls));
 	writer->write_data(writer, chunk_from_thing(this->server_random));
 
 	/* session identifier if we have one */
@@ -774,7 +774,7 @@ static status_t send_certificate_request(private_tls_server_t *this,
 	supported->write_uint8(supported, TLS_ECDSA_SIGN);
 	writer->write_data8(writer, supported->get_buf(supported));
 	supported->destroy(supported);
-	if (this->tls->get_version(this->tls) >= TLS_1_2)
+	if (this->tls->get_version_max(this->tls) >= TLS_1_2)
 	{
 		this->crypto->get_signature_algorithms(this->crypto, writer);
 	}
@@ -805,11 +805,11 @@ static status_t send_certificate_request(private_tls_server_t *this,
 /**
  * Get the TLS curve of a given EC DH group
  */
-static tls_named_curve_t ec_group_to_curve(private_tls_server_t *this,
-										   diffie_hellman_group_t group)
+static tls_named_group_t ec_group_to_curve(private_tls_server_t *this,
+                                           diffie_hellman_group_t group)
 {
 	diffie_hellman_group_t current;
-	tls_named_curve_t curve;
+	tls_named_group_t curve;
 	enumerator_t *enumerator;
 
 	enumerator = this->crypto->create_ec_enumerator(this->crypto);
@@ -828,7 +828,7 @@ static tls_named_curve_t ec_group_to_curve(private_tls_server_t *this,
 /**
  * Check if the peer supports a given TLS curve
  */
-bool peer_supports_curve(private_tls_server_t *this, tls_named_curve_t curve)
+bool peer_supports_curve(private_tls_server_t *this, tls_named_group_t curve)
 {
 	bio_reader_t *reader;
 	uint16_t current;
@@ -854,9 +854,9 @@ bool peer_supports_curve(private_tls_server_t *this, tls_named_curve_t curve)
  * Try to find a curve supported by both, client and server
  */
 static bool find_supported_curve(private_tls_server_t *this,
-								 tls_named_curve_t *curve)
+                                 tls_named_group_t *curve)
 {
-	tls_named_curve_t current;
+	tls_named_group_t current;
 	enumerator_t *enumerator;
 
 	enumerator = this->crypto->create_ec_enumerator(this->crypto);
@@ -881,7 +881,7 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 							diffie_hellman_group_t group)
 {
 	diffie_hellman_params_t *params = NULL;
-	tls_named_curve_t curve;
+	tls_named_group_t curve;
 	chunk_t chunk;
 
 	if (diffie_hellman_group_is_ec(group))
@@ -894,7 +894,7 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
 			return NEED_MORE;
 		}
-		DBG2(DBG_TLS, "selected ECDH group %N", tls_named_curve_names, curve);
+		DBG2(DBG_TLS, "selected ECDH group %N", tls_named_group_names, curve);
 		writer->write_uint8(writer, TLS_ECC_NAMED_CURVE);
 		writer->write_uint16(writer, curve);
 	}
