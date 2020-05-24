@@ -839,10 +839,24 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	}
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
-	ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
-	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
-	ts = traffic_selector_create_from_cidr("::/0", 0, 0, 65535);
-	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+	str = nm_setting_vpn_get_data_item(vpn, "remote-ts");
+	if (str && strlen(str))
+	{
+		enumerator = enumerator_create_token(str, ";", "");
+		while (enumerator->enumerate(enumerator, &str))
+		{
+			ts = traffic_selector_create_from_cidr((char*)str, 0, 0, 65535);
+			child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
+		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+		ts = traffic_selector_create_from_cidr("::/0", 0, 0, 65535);
+		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);	
+	}
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 
 	/**
