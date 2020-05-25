@@ -68,7 +68,7 @@ build_wolfssl()
 
 build_tss2()
 {
-	TSS2_REV=2.3.3
+	TSS2_REV=2.4.1
 	TSS2_PKG=tpm2-tss-$TSS2_REV
 	TSS2_DIR=$DEPS_BUILD_DIR/$TSS2_PKG
 	TSS2_SRC=https://github.com/tpm2-software/tpm2-tss/releases/download/$TSS2_REV/$TSS2_PKG.tar.gz
@@ -117,7 +117,7 @@ botan)
 	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem"
 	export TESTS_PLUGINS="test-vectors pem botan!"
 	DEPS=""
-	if test "$1" = "deps"; then
+	if test "$1" = "build-deps"; then
 		build_botan
 	fi
 	;;
@@ -126,7 +126,7 @@ wolfssl)
 	export TESTS_PLUGINS="test-vectors pem wolfssl!"
 	# build with custom options to enable all the features the plugin supports
 	DEPS=""
-	if test "$1" = "deps"; then
+	if test "$1" = "build-deps"; then
 		build_wolfssl
 	fi
 	;;
@@ -161,7 +161,7 @@ all|coverage|sonarcloud)
 		  libpcsclite-dev libpam0g-dev binutils-dev libnm-dev libgcrypt20-dev
 		  libjson-c-dev iptables-dev python-pip libtspi-dev libsystemd-dev"
 	PYDEPS="tox"
-	if test "$1" = "deps"; then
+	if test "$1" = "build-deps"; then
 		if test -z "$UBUNTU_XENIAL"; then
 			build_botan
 		fi
@@ -363,7 +363,8 @@ lgtm)
 	;;
 esac
 
-if test "$1" = "deps"; then
+case "$1" in
+deps)
 	case "$TRAVIS_OS_NAME" in
 	linux)
 		sudo apt-get update -qq && \
@@ -379,12 +380,17 @@ if test "$1" = "deps"; then
 		;;
 	esac
 	exit $?
-fi
-
-if test "$1" = "pydeps"; then
+	;;
+pydeps)
 	test -z "$PYDEPS" || pip -q install --user $PYDEPS
 	exit $?
-fi
+	;;
+build-deps)
+	exit
+	;;
+*)
+	;;
+esac
 
 CONFIG="$CONFIG
 	--disable-dependency-tracking
