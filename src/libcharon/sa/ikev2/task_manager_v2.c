@@ -104,6 +104,12 @@ struct private_task_manager_t {
 		u_int retransmitted;
 
 		/**
+		 * TRUE if any retransmits have been sent for this message (counter is
+		 * reset if deferred)
+		 */
+		bool retransmit_sent;
+
+		/**
 		 * packet(s) for retransmission
 		 */
 		array_t *packets;
@@ -394,6 +400,7 @@ METHOD(task_manager_t, retransmit, status_t,
 					 this->initiating.retransmitted, message_id);
 				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND, packet,
 								   this->initiating.retransmitted);
+				this->initiating.retransmit_sent = TRUE;
 			}
 			if (!mobike)
 			{
@@ -635,6 +642,7 @@ METHOD(task_manager_t, initiate, status_t,
 	message->set_exchange_type(message, exchange);
 	this->initiating.type = exchange;
 	this->initiating.retransmitted = 0;
+	this->initiating.retransmit_sent = FALSE;
 	this->initiating.deferred = FALSE;
 
 	enumerator = array_create_enumerator(this->active_tasks);
@@ -755,7 +763,7 @@ static status_t process_response(private_task_manager_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	if (this->initiating.retransmitted > 1)
+	if (this->initiating.retransmit_sent)
 	{
 		packet_t *packet = NULL;
 		array_get(this->initiating.packets, 0, &packet);
