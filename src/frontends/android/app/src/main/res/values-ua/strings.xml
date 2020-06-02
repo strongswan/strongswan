@@ -34,6 +34,8 @@
     <string name="pref_title">Settings</string>
     <string name="pref_default_vpn_profile">Default VPN profile</string>
     <string name="pref_default_vpn_profile_mru">Connect to most recently used profile</string>
+    <string name="pref_power_whitelist_title">Ignore battery optimizations</string>
+    <string name="pref_power_whitelist_summary">Don\'t show a warning if the app is not on the device\'s power whitelist</string>
 
     <!-- Log view -->
     <string name="log_title">Журнал</string>
@@ -213,6 +215,8 @@
         <item quantity="other">Retry in %1$d seconds</item>
     </plurals>
     <string name="cancel_retry">Cancel retry</string>
+    <string name="power_whitelist_title">Disable battery optimizations</string>
+    <string name="power_whitelist_text">Please confirm the next dialog to add the app to the device\'s power whitelist so it can ignore battery optimizations and schedule NAT keep-alives and rekeyings accurately in order to constantly keep reachable while the VPN is established.</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">Toggle VPN</string>

@@ -754,13 +754,13 @@ static job_requeue_t initiate(private_android_service_t *this)
 		.unique = UNIQUE_REPLACE,
 		.rekey_time = 36000, /* 10h */
 		.jitter_time = 600, /* 10min */
-		.over_time = 600, /* 10min */
+		.over_time = 1800, /* 30min */
 	};
 	child_cfg_create_t child = {
 		.lifetime = {
 			.time = {
-				.life = 3600, /* 1h */
-				.rekey = 3000, /* 50min */
+				.life = 9000, /* 2.5h */
+				.rekey = 7200, /* 2h */
 				.jitter = 300 /* 5min */
 			},
 		},

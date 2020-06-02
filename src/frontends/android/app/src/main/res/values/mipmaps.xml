@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2018 Tobias Brunner
+    Copyright (C) 2020 Tobias Brunner
     HSR Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
@@ -13,5 +13,7 @@
     or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     for more details.
 -->
-<inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/ic_launcher" />
+<resources>
+    <mipmap name="ic_launcher">@mipmap/ic_app</mipmap>
+    <mipmap name="ic_shortcut">@mipmap/ic_app</mipmap>
+</resources>

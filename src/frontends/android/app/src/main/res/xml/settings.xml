@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2018 Tobias Brunner
+    Copyright (C) 2018-2020 Tobias Brunner
     HSR Hochschule fuer Technik Rapperswil
 
     This program is free software; you can redistribute it and/or modify it
@@ -19,5 +19,10 @@
         android:key="pref_default_vpn_profile"
         android:title="@string/pref_default_vpn_profile"
         android:summary="@string/pref_default_vpn_profile_mru" />
+
+    <SwitchPreference
+        android:key="pref_ignore_power_whitelist"
+        android:title="@string/pref_power_whitelist_title"
+        android:summary="@string/pref_power_whitelist_summary" />
 
 </PreferenceScreen>

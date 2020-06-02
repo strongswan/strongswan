@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2019 Tobias Brunner
+    Copyright (C) 2012-2020 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
     HSR Hochschule fuer Technik Rapperswil
@@ -36,6 +36,8 @@
     <string name="pref_title">Einstellungen</string>
     <string name="pref_default_vpn_profile">Voreingestelltes VPN Profil</string>
     <string name="pref_default_vpn_profile_mru">Verbinden mit zuletzt verwendetem Profil</string>
+    <string name="pref_power_whitelist_title">Akku-Optimierung ignorieren</string>
+    <string name="pref_power_whitelist_summary">Keine Warnung anzeigen, falls die App nicht auf der weissen Liste für Akku-Optimierung ist</string>
 
     <!-- Log view -->
     <string name="log_title">Log</string>
@@ -215,6 +217,8 @@
         <item quantity="other">Wiederholen in %1$d Sekunden</item>
     </plurals>
     <string name="cancel_retry">Wiederholen abbrechen</string>
+    <string name="power_whitelist_title">Akku-Optimierung deaktivieren</string>
+    <string name="power_whitelist_text">Bitte den nächsten Dialog bestätigen, um die App auf die weisse Liste für Akku-Optimierung zu setzen, so dass sie NAT keepalives und Rekeyings zeitlich korrekt planen kann, um konstant erreichbar zu bleiben während die VPN-Verbindung besteht.</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">VPN umschalten</string>
