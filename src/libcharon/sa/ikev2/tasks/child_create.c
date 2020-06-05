@@ -1853,7 +1853,7 @@ METHOD(task_t, migrate, void,
 	{
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
 	}
-	if (!this->rekey)
+	if (!this->rekey && !this->retry)
 	{
 		this->dh_group = MODP_NONE;
 	}
