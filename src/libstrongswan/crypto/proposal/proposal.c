@@ -1298,9 +1298,13 @@ proposal_t *proposal_create_default_aead(protocol_id_t protocol)
 			}
 			return &this->public;
 		case PROTO_ESP:
-			/* we currently don't include any AEAD proposal for ESP, as we
-			 * don't know if our kernel backend actually supports it. */
-			return NULL;
+			/* AES-GCM should be supported by pretty much all current kernels,
+			 * RFC 8221 even made it mandatory */
+			this = (private_proposal_t*)proposal_create(protocol, 0);
+			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16, 128);
+			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16, 192);
+			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16, 256);
+			return &this->public;
 		case PROTO_AH:
 		default:
 			return NULL;
