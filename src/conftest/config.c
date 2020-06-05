@@ -192,9 +192,8 @@ static child_cfg_t *load_child_config(private_config_t *this,
 	}
 	else
 	{
+		child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
-		child_cfg->add_proposal(child_cfg,
-								proposal_create_default_aead(PROTO_ESP));
 	}
 
 	token = settings->get_str(settings, "configs.%s.%s.lts", NULL, config, child);

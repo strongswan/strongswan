@@ -834,8 +834,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	}
 	else
 	{
-		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 		child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
+		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	}
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);

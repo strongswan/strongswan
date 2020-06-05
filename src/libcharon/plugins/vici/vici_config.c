@@ -2006,12 +2006,12 @@ CALLBACK(children_sn, bool,
 	}
 	if (child.proposals->get_count(child.proposals) == 0)
 	{
-		proposal = proposal_create_default(PROTO_ESP);
+		proposal = proposal_create_default_aead(PROTO_ESP);
 		if (proposal)
 		{
 			child.proposals->insert_last(child.proposals, proposal);
 		}
-		proposal = proposal_create_default_aead(PROTO_ESP);
+		proposal = proposal_create_default(PROTO_ESP);
 		if (proposal)
 		{
 			child.proposals->insert_last(child.proposals, proposal);
