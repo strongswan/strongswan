@@ -373,7 +373,7 @@ METHOD(task_manager_t, retransmit, status_t,
 								   packet);
 				return DESTROY_ME;
 			}
-			if (this->retransmit_tries_max &&
+			if (!this->retransmit_tries_max ||
 				this->initiating.retransmitted <= this->retransmit_tries_max)
 			{
 				timeout = (uint32_t)(this->retransmit_timeout * 1000.0 *

@@ -372,7 +372,7 @@ static status_t retransmit_packet(private_task_manager_t *this, uint32_t seqnr,
 		charon->bus->alert(charon->bus, ALERT_RETRANSMIT_SEND_TIMEOUT, packet);
 		return DESTROY_ME;
 	}
-	if (this->retransmit_tries_max &&
+	if (!this->retransmit_tries_max ||
 		retransmitted <= this->retransmit_tries_max)
 	{
 		t = (uint32_t)(this->retransmit_timeout * 1000.0 *
