@@ -100,7 +100,7 @@
 #endif
 
 /** Base priority for installed policies */
-#define PRIO_BASE 200000
+#define PRIO_BASE 100000
 
 /**
  * Map the limit for bytes and packets to XFRM_INF by default
@@ -482,6 +482,9 @@ struct policy_sa_t {
 	/** Type of the policy */
 	policy_type_t type;
 
+	/** Whether this is a trap policy */
+	bool trap;
+
 	/** Assigned SA */
 	ipsec_sa_t *sa;
 };
@@ -553,6 +556,53 @@ CALLBACK(policy_sa_destroy_cb, void,
 
 	VA_ARGS_VGET(args, dir, this);
 	policy_sa_destroy(policy, dir, this);
+}
+
+/**
+ * Returns the priority for the given policy type, bypass policies have the
+ * highest priority (lowest value), before IPsec and drop policies.
+ */
+static inline uint32_t policy_type_prio(policy_type_t type)
+{
+	switch (type)
+	{
+		case POLICY_PASS:
+			return 0;
+		case POLICY_IPSEC:
+			return 1;
+		case POLICY_DROP:
+			return 2;
+	}
+	return 0;
+}
+
+/**
+ * Compare two policy_sa_t objects, returns an integer less than, equal to, or
+ * greater than zero if the first argument is considered to be respectively less
+ * than, equal to, or greater than the second.
+ */
+static int policy_sa_cmp(policy_sa_t *a, policy_sa_t *b)
+{
+	if (a->type != b->type)
+	{
+		return policy_type_prio(a->type) - policy_type_prio(b->type);
+	}
+	if (a->priority != b->priority)
+	{
+		return a->priority - b->priority;
+	}
+	/* in case of equal manual prios, order SAs by automatic priority */
+	if (a->auto_priority != b->auto_priority)
+	{
+		return a->auto_priority - b->auto_priority;
+	}
+	/* prefer regular over trap policies with the same priority */
+	if (a->trap != b->trap)
+	{
+		return b->trap ? -1 : 1;
+	}
+	/* prefer SAs with a reqid over those without */
+	return (!b->sa->cfg.reqid || a->sa->cfg.reqid) ? -1 : 0;
 }
 
 typedef struct policy_entry_t policy_entry_t;
@@ -654,42 +704,27 @@ static inline uint32_t port_mask_bits(uint16_t port_mask)
 /**
  * Calculate the priority of a policy
  *
- * bits 0-0:  separate trap and regular policies (0..1) 1 bit
- * bits 1-1:  restriction to network interface (0..1)   1 bit
- * bits 2-7:  src + dst port mask bits (2 * 0..16)      6 bits
- * bits 8-8:  restriction to protocol (0..1)            1 bit
- * bits 9-17: src + dst network mask bits (2 * 0..128)  9 bits
- *                                                     18 bits
+ * bits 0-0:  restriction to network interface (0..1)   1 bit
+ * bits 1-6:  src + dst port mask bits (2 * 0..16)      6 bits
+ * bits 7-7:  restriction to protocol (0..1)            1 bit
+ * bits 8-16: src + dst network mask bits (2 * 0..128)  9 bits
+ *                                                     17 bits
  *
- * smallest value: 000000000 0 000000 0 0:       0, lowest priority = 200'000
- * largest value : 100000000 1 100000 1 1: 131'459, highst priority =  68'541
+ * smallest value: 000000000 0 000000 0:      0, lowest priority = 100'000
+ * largest value : 100000000 1 100000 1: 65'729, highst priority =  34'271
  */
-static uint32_t get_priority(policy_entry_t *policy, policy_priority_t prio,
-							 char *interface)
+static uint32_t get_priority(policy_entry_t *policy, char *interface)
 {
 	uint32_t priority = PRIO_BASE, sport_mask_bits, dport_mask_bits;
 
-	switch (prio)
-	{
-		case POLICY_PRIORITY_FALLBACK:
-			priority += PRIO_BASE;
-			/* fall-through to next case */
-		case POLICY_PRIORITY_ROUTED:
-		case POLICY_PRIORITY_DEFAULT:
-			priority += PRIO_BASE;
-			/* fall-through to next case */
-		case POLICY_PRIORITY_PASS:
-			break;
-	}
 	sport_mask_bits = port_mask_bits(policy->sel.sport_mask);
 	dport_mask_bits = port_mask_bits(policy->sel.dport_mask);
 
 	/* calculate priority */
-	priority -= (policy->sel.prefixlen_s + policy->sel.prefixlen_d) * 512;
-	priority -=  policy->sel.proto ? 256 : 0;
-	priority -= (sport_mask_bits + dport_mask_bits) * 4;
-	priority -= (interface != NULL) * 2;
-	priority -= (prio != POLICY_PRIORITY_ROUTED);
+	priority -= (policy->sel.prefixlen_s + policy->sel.prefixlen_d) * 256;
+	priority -=  policy->sel.proto ? 128 : 0;
+	priority -= (sport_mask_bits + dport_mask_bits) * 2;
+	priority -= (interface != NULL);
 
 	return priority;
 }
@@ -2879,7 +2914,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	assigned_sa = policy_sa_create(this, id->dir, data->type, data->src,
 								   data->dst, id->src_ts, id->dst_ts, id->mark,
 								   id->if_id, data->sa);
-	assigned_sa->auto_priority = get_priority(policy, data->prio, id->interface);
+	assigned_sa->trap = (data->prio == POLICY_PRIORITY_ROUTED);
+	assigned_sa->auto_priority = get_priority(policy, id->interface);
 	assigned_sa->priority = this->get_priority ? this->get_priority(id, data)
 											   : data->manual_prio;
 	assigned_sa->priority = assigned_sa->priority ?: assigned_sa->auto_priority;
@@ -2888,23 +2924,9 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	enumerator = policy->used_by->create_enumerator(policy->used_by);
 	while (enumerator->enumerate(enumerator, (void**)&current_sa))
 	{
-		if (current_sa->priority > assigned_sa->priority)
+		if (policy_sa_cmp(assigned_sa, current_sa) < 0)
 		{
 			break;
-		}
-		if (current_sa->priority == assigned_sa->priority)
-		{
-			/* in case of equal manual prios order SAs by automatic priority */
-			if (current_sa->auto_priority > assigned_sa->auto_priority)
-			{
-				break;
-			}
-			/* prefer SAs with a reqid over those without */
-			if (current_sa->auto_priority == assigned_sa->auto_priority &&
-				(!current_sa->sa->cfg.reqid || assigned_sa->sa->cfg.reqid))
-			{
-				break;
-			}
 		}
 		if (update)
 		{
@@ -3086,7 +3108,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	current->waiting--;
 
 	/* remove mapping to SA by reqid and priority */
-	auto_priority = get_priority(current, data->prio,id->interface);
+	auto_priority = get_priority(current, id->interface);
 	priority = this->get_priority ? this->get_priority(id, data)
 								  : data->manual_prio;
 	priority = priority ?: auto_priority;
@@ -3097,6 +3119,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		if (priority == mapping->priority &&
 			auto_priority == mapping->auto_priority &&
 			data->type == mapping->type &&
+			mapping->trap == (data->prio == POLICY_PRIORITY_ROUTED) &&
 			ipsec_sa_equals(mapping->sa, &assigned_sa))
 		{
 			current->used_by->remove_at(current->used_by, enumerator);
