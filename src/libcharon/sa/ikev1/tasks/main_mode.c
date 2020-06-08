@@ -250,7 +250,6 @@ METHOD(task_t, build_i, status_t,
 		{
 			sa_payload_t *sa_payload;
 			linked_list_t *proposals;
-			identification_t *id;
 			packet_t *packet;
 
 			DBG0(DBG_IKE, "initiating Main Mode IKE_SA %s[%d] to %H",
@@ -262,8 +261,6 @@ METHOD(task_t, build_i, status_t,
 			this->ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
 			this->peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 			this->peer_cfg->get_ref(this->peer_cfg);
-			id = this->ph1->get_id(this->ph1, this->peer_cfg, TRUE);
-			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
 
 			this->method = this->ph1->get_auth_method(this->ph1, this->peer_cfg);
 			if (this->method == AUTH_NONE)
@@ -305,7 +302,13 @@ METHOD(task_t, build_i, status_t,
 		}
 		case MM_SA:
 		{
+			identification_t *id;
 			uint16_t group;
+
+			/* we might need the identity to look up a PSK when processing the
+			 * response */
+			id = this->ph1->get_id(this->ph1, this->peer_cfg, TRUE);
+			this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
 
 			if (!this->ph1->create_hasher(this->ph1))
 			{
