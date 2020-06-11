@@ -66,7 +66,7 @@ struct private_ike_rekey_t {
 	/**
 	 * colliding task detected by the task manager
 	 */
-	task_t *collision;
+	private_ike_rekey_t *collision;
 
 	/**
 	 * TRUE if rekeying can't be handled temporarily
@@ -304,12 +304,11 @@ METHOD(task_t, build_r, status_t,
  */
 static bool conclude_undetected_collision(private_ike_rekey_t *this)
 {
-	if (this->collision &&
-		this->collision->get_type(this->collision) == TASK_IKE_REKEY)
+	if (this->collision)
 	{
 		DBG1(DBG_IKE, "peer did not notice IKE_SA rekey collision, abort "
 			 "active rekeying");
-		establish_new((private_ike_rekey_t*)this->collision);
+		establish_new(this->collision);
 		return TRUE;
 	}
 	return FALSE;
@@ -346,19 +345,17 @@ METHOD(task_t, process_i, status_t,
 			break;
 	}
 
-	/* check for collisions */
-	if (this->collision &&
-		this->collision->get_type(this->collision) == TASK_IKE_REKEY)
+	if (this->collision)
 	{
-		private_ike_rekey_t *other = (private_ike_rekey_t*)this->collision;
+		private_ike_rekey_t *other = this->collision;
 		host_t *host;
 		chunk_t this_nonce, other_nonce;
 
 		this_nonce = this->ike_init->get_lower_nonce(this->ike_init);
 		other_nonce = other->ike_init->get_lower_nonce(other->ike_init);
 
-		/* if we have the lower nonce, delete rekeyed SA. If not, delete
-		 * the redundant. */
+		/* the SA with the lowest nonce should be deleted, check if we or
+		 * the peer created that */
 		if (memcmp(this_nonce.ptr, other_nonce.ptr,
 				   min(this_nonce.len, other_nonce.len)) < 0)
 		{
@@ -387,7 +384,8 @@ METHOD(task_t, process_i, status_t,
 			establish_new(other);
 			return SUCCESS;
 		}
-		/* peer should delete this SA. Add a timeout just in case. */
+
+		/* peer should delete the SA it created, add a timeout just in case */
 		job_t *job = (job_t*)delete_ike_sa_job_create(
 									other->new_sa->get_id(other->new_sa), TRUE);
 		lib->scheduler->schedule_job(lib->scheduler, job,
@@ -403,7 +401,7 @@ METHOD(task_t, process_i, status_t,
 
 	establish_new(this);
 
-	/* rekeying successful, delete the IKE_SA using a subtask */
+	/* rekeying successful, delete this IKE_SA using a subtask */
 	this->ike_delete = ike_delete_create(this->ike_sa, TRUE);
 	this->public.task.build = _build_i_delete;
 	this->public.task.process = _process_i_delete;
@@ -420,8 +418,7 @@ METHOD(task_t, get_type, task_type_t,
 METHOD(ike_rekey_t, did_collide, bool,
 	private_ike_rekey_t *this)
 {
-	return this->collision &&
-		   this->collision->get_type(this->collision) == TASK_IKE_REKEY;
+	return this->collision != NULL;
 }
 
 METHOD(ike_rekey_t, collide, void,
@@ -435,7 +432,7 @@ METHOD(ike_rekey_t, collide, void,
 		case TASK_IKE_DELETE:
 			conclude_undetected_collision(this);
 			other->destroy(other);
-			return;
+			break;
 		case TASK_IKE_REKEY:
 		{
 			private_ike_rekey_t *rekey = (private_ike_rekey_t*)other;
@@ -445,15 +442,16 @@ METHOD(ike_rekey_t, collide, void,
 				DBG1(DBG_IKE, "colliding exchange did not result in an IKE_SA, "
 					 "ignore");
 				other->destroy(other);
-				return;
+				break;
 			}
+			DESTROY_IF(&this->collision->public.task);
+			this->collision = rekey;
 			break;
 		}
 		default:
+			/* shouldn't happen */
 			break;
 	}
-	DESTROY_IF(this->collision);
-	this->collision = other;
 }
 
 /**
@@ -474,7 +472,7 @@ static void cleanup(private_ike_rekey_t *this)
 	cur_sa = charon->bus->get_sa(charon->bus);
 	DESTROY_IF(this->new_sa);
 	charon->bus->set_sa(charon->bus, cur_sa);
-	DESTROY_IF(this->collision);
+	DESTROY_IF(&this->collision->public.task);
 }
 
 METHOD(task_t, migrate, void,
