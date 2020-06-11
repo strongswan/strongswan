@@ -166,6 +166,14 @@ METHOD(task_t, build_i, status_t,
 	/* create new SA only on first try */
 	if (!this->new_sa)
 	{
+		if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING ||
+			this->ike_sa->get_state(this->ike_sa) == IKE_REKEYED)
+		{
+			/* ignore SAs that have or are currently being rekeyed passively */
+			message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
+			return SUCCESS;
+		}
+
 		version = this->ike_sa->get_version(this->ike_sa);
 		this->new_sa = charon->ike_sa_manager->checkout_new(
 										charon->ike_sa_manager, version, TRUE);
