@@ -330,8 +330,8 @@ lgtm)
 			-H 'Accept: application/json' \
 			-H "Authorization: Bearer ${LGTM_TOKEN}" > lgtm.res || exit $?
 		lgtm_check_url=$(jq -r '."task-result-url"' lgtm.res)
-		if [ "$lgtm_check_url" = "null" ]; then
-			cat lgtm.res | jq
+		if [ -z "$lgtm_check_url" -o "$lgtm_check_url" = "null" ]; then
+			cat lgtm.res
 			exit 1
 		fi
 		lgtm_url=$(jq -r '."task-result"."results-url"' lgtm.res)
