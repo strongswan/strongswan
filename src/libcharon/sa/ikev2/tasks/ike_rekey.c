@@ -421,7 +421,7 @@ METHOD(ike_rekey_t, did_collide, bool,
 	return this->collision != NULL;
 }
 
-METHOD(ike_rekey_t, collide, void,
+METHOD(ike_rekey_t, collide, bool,
 	private_ike_rekey_t* this, task_t *other)
 {
 	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names,
@@ -431,7 +431,6 @@ METHOD(ike_rekey_t, collide, void,
 	{
 		case TASK_IKE_DELETE:
 			conclude_undetected_collision(this);
-			other->destroy(other);
 			break;
 		case TASK_IKE_REKEY:
 		{
@@ -441,17 +440,17 @@ METHOD(ike_rekey_t, collide, void,
 			{
 				DBG1(DBG_IKE, "colliding exchange did not result in an IKE_SA, "
 					 "ignore");
-				other->destroy(other);
 				break;
 			}
 			DESTROY_IF(&this->collision->public.task);
 			this->collision = rekey;
-			break;
+			return TRUE;
 		}
 		default:
 			/* shouldn't happen */
 			break;
 	}
+	return FALSE;
 }
 
 /**
