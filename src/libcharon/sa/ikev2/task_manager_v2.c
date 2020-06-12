@@ -882,13 +882,15 @@ static status_t process_response(private_task_manager_t *this,
 }
 
 /**
- * handle exchange collisions
+ * Handle exchange collisions, returns TRUE if the given passive task was
+ * adopted by the active task and the task manager lost control over it.
  */
 static bool handle_collisions(private_task_manager_t *this, task_t *task)
 {
 	enumerator_t *enumerator;
 	task_t *active;
 	task_type_t type;
+	bool adopted = FALSE;
 
 	type = task->get_type(task);
 
@@ -906,7 +908,7 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 					if (type == TASK_IKE_REKEY || type == TASK_IKE_DELETE)
 					{
 						ike_rekey_t *rekey = (ike_rekey_t*)active;
-						rekey->collide(rekey, task);
+						adopted = rekey->collide(rekey, task);
 						break;
 					}
 					continue;
@@ -914,7 +916,7 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 					if (type == TASK_CHILD_REKEY || type == TASK_CHILD_DELETE)
 					{
 						child_rekey_t *rekey = (child_rekey_t*)active;
-						rekey->collide(rekey, task);
+						adopted = rekey->collide(rekey, task);
 						break;
 					}
 					continue;
@@ -922,11 +924,11 @@ static bool handle_collisions(private_task_manager_t *this, task_t *task)
 					continue;
 			}
 			enumerator->destroy(enumerator);
-			return TRUE;
+			return adopted;
 		}
 		enumerator->destroy(enumerator);
 	}
-	return FALSE;
+	return adopted;
 }
 
 /**
