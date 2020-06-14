@@ -1,6 +1,9 @@
 strongswan-5.9.0
 ----------------
 
+- We prefer AEAD algorithms for ESP and therefore put AES-GCM in front of
+  the default proposal.
+
 
 strongswan-5.8.4
 ----------------
