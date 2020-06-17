@@ -1884,6 +1884,7 @@ METHOD(ike_sa_t, delete_, status_t,
 	{
 		case IKE_ESTABLISHED:
 		case IKE_REKEYING:
+		case IKE_REKEYED:
 			if (time_monotonic(NULL) >= this->stats[STAT_DELETE] &&
 				!(this->version == IKEV1 && this->state == IKE_REKEYING))
 			{	/* IKE_SA hard lifetime hit, ignored for reauthenticated
