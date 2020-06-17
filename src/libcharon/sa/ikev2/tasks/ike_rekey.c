@@ -375,9 +375,7 @@ METHOD(task_t, process_i, status_t,
 			this->new_sa->set_my_host(this->new_sa, host->clone(host));
 			host = this->ike_sa->get_other_host(this->ike_sa);
 			this->new_sa->set_other_host(this->new_sa, host->clone(host));
-			/* IKE_SAs in state IKE_REKEYED are silently deleted, so we use
-			 * IKE_REKEYING */
-			this->new_sa->set_state(this->new_sa, IKE_REKEYING);
+			this->new_sa->set_state(this->new_sa, IKE_REKEYED);
 			if (this->new_sa->delete(this->new_sa, FALSE) == DESTROY_ME)
 			{
 				this->new_sa->destroy(this->new_sa);
