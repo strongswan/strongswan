@@ -44,29 +44,54 @@ __declspec(dllexport)
 bool test_runner_available = TRUE;
 
 /**
- * Destroy a single test suite and associated data
+ * Destroy data associated with a test case.
+ */
+static void destroy_case(test_case_t *tcase)
+{
+	array_destroy(tcase->functions);
+	array_destroy(tcase->fixtures);
+}
+
+/**
+ * Destroy a single test suite and associated data.
  */
 static void destroy_suite(test_suite_t *suite)
 {
-	test_case_t *tcase;
-
-	while (array_remove(suite->tcases, 0, &tcase))
-	{
-		array_destroy(tcase->functions);
-		array_destroy(tcase->fixtures);
-	}
+	array_destroy_function(suite->tcases, (void*)destroy_case, NULL);
 	free(suite);
 }
 
 /**
- * Filter loaded test suites, either remove suites listed (exclude=TRUE), or all
- * that are not listed (exclude=FALSE).
+ * Identifies on which component to apply the given filter.
  */
-static void apply_filter(array_t *loaded, char *filter, bool exclude)
+typedef enum {
+	FILTER_SUITES,
+	FILTER_CASES,
+	FILTER_FUNCTIONS,
+} filter_component_t;
+
+/**
+ * Check if the component with the given name should be filtered/removed.
+ */
+static bool filter_name(const char *name, hashtable_t *names, bool exclude)
 {
-	enumerator_t *enumerator, *names;
+	return (exclude && names->get(names, name)) ||
+		   (!exclude && !names->get(names, name));
+}
+
+/**
+ * Filter loaded test suites/cases/functions, either remove components listed
+ * (exclude=TRUE), or all that are not listed (exclude=FALSE).
+ * Empty test cases/suites are removed and destroyed.
+ */
+static void apply_filter(array_t *loaded, filter_component_t comp, char *filter,
+						 bool exclude)
+{
+	enumerator_t *enumerator, *tcases, *functions, *names;
 	hashtable_t *listed;
 	test_suite_t *suite;
+	test_case_t *tcase;
+	test_function_t *func;
 	char *name;
 
 	listed = hashtable_create(hashtable_hash_str, hashtable_equals_str, 8);
@@ -75,11 +100,50 @@ static void apply_filter(array_t *loaded, char *filter, bool exclude)
 	{
 		listed->put(listed, name, name);
 	}
+
 	enumerator = array_create_enumerator(loaded);
 	while (enumerator->enumerate(enumerator, &suite))
 	{
-		if ((exclude && listed->get(listed, suite->name)) ||
-			(!exclude && !listed->get(listed, suite->name)))
+		if (comp == FILTER_SUITES)
+		{
+			if (filter_name(suite->name, listed, exclude))
+			{
+				array_remove_at(loaded, enumerator);
+				destroy_suite(suite);
+			}
+			continue;
+		}
+		tcases = array_create_enumerator(suite->tcases);
+		while (tcases->enumerate(tcases, &tcase))
+		{
+			if (comp == FILTER_CASES)
+			{
+				if (filter_name(tcase->name, listed, exclude))
+				{
+					array_remove_at(suite->tcases, tcases);
+					destroy_case(tcase);
+				}
+				continue;
+			}
+			functions = array_create_enumerator(tcase->functions);
+			while (functions->enumerate(functions, &func))
+			{
+				if (filter_name(func->name, listed, exclude))
+				{
+					array_remove_at(tcase->functions, functions);
+				}
+			}
+			functions->destroy(functions);
+
+			if (!array_count(tcase->functions))
+			{
+				array_remove_at(suite->tcases, tcases);
+				destroy_case(tcase);
+			}
+		}
+		tcases->destroy(tcases);
+
+		if (!array_count(suite->tcases))
 		{
 			array_remove_at(loaded, enumerator);
 			destroy_suite(suite);
@@ -113,22 +177,23 @@ static bool is_in_filter(const char *find, char *filter)
 }
 
 /**
- * Removes and destroys test suites that are not selected or
- * explicitly excluded.
+ * Removes and destroys test suites/cases/functions that are not selected or
+ * explicitly excluded. Takes names of two environment variables.
  */
-static void filter_suites(array_t *loaded)
+static void filter_components(array_t *loaded, filter_component_t comp,
+							  char *sel, char *exc)
 {
 	char *filter;
 
-	filter = getenv("TESTS_SUITES");
+	filter = getenv(sel);
 	if (filter)
 	{
-		apply_filter(loaded, filter, FALSE);
+		apply_filter(loaded, comp, filter, FALSE);
 	}
-	filter = getenv("TESTS_SUITES_EXCLUDE");
+	filter = getenv(exc);
 	if (filter)
 	{
-		apply_filter(loaded, filter, TRUE);
+		apply_filter(loaded, comp, filter, TRUE);
 	}
 }
 
@@ -168,7 +233,12 @@ static array_t *load_suites(test_configuration_t configs[],
 			array_insert(suites, -1, configs[i].suite());
 		}
 	}
-	filter_suites(suites);
+	filter_components(suites, FILTER_SUITES, "TESTS_SUITES",
+					  "TESTS_SUITES_EXCLUDE");
+	filter_components(suites, FILTER_CASES, "TESTS_CASES",
+					  "TESTS_CASES_EXCLUDE");
+	filter_components(suites, FILTER_FUNCTIONS, "TESTS_FUNCTIONS",
+					  "TESTS_FUNCTIONS_EXCLUDE");
 
 	if (lib->leak_detective)
 	{
