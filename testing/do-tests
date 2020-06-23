@@ -313,11 +313,11 @@ do
 	    continue
 	fi
 
-	[ -f $DEFAULTTESTSDIR/${testname}/description.txt ] || die "!! File 'description.txt' is missing"
-	[ -f $DEFAULTTESTSDIR/${testname}/test.conf ]       || die "!! File 'test.conf' is missing"
-	[ -f $DEFAULTTESTSDIR/${testname}/pretest.dat ]     || die "!! File 'pretest.dat' is missing"
-	[ -f $DEFAULTTESTSDIR/${testname}/posttest.dat ]    || die "!! File 'posttest.dat' is missing"
-	[ -f $DEFAULTTESTSDIR/${testname}/evaltest.dat ]    || die "!! File 'evaltest.dat' is missing"
+	[ ! -f $DEFAULTTESTSDIR/${testname}/description.txt ] && echo "!! File 'description.txt' is missing" && continue
+	[ ! -f $DEFAULTTESTSDIR/${testname}/test.conf ]       && echo "!! File 'test.conf' is missing" && continue
+	[ ! -f $DEFAULTTESTSDIR/${testname}/pretest.dat ]     && echo "!! File 'pretest.dat' is missing" && continue
+	[ ! -f $DEFAULTTESTSDIR/${testname}/posttest.dat ]    && echo "!! File 'posttest.dat' is missing" && continue
+	[ ! -f $DEFAULTTESTSDIR/${testname}/evaltest.dat ]    && echo "!! File 'evaltest.dat' is missing" && continue
 
 	TESTRESULTDIR=$TODAYDIR/$testname
 	mkdir -p $TESTRESULTDIR
