@@ -261,7 +261,7 @@ struct private_ike_sa_t {
 	/**
 	 * Timestamps for this IKE_SA
 	 */
-	uint32_t stats[STAT_MAX];
+	time_t stats[STAT_MAX];
 
 	/**
 	 * how many times we have retried so far (keyingtries)
@@ -371,7 +371,7 @@ METHOD(ike_sa_t, get_name, char*,
 	return "(unnamed)";
 }
 
-METHOD(ike_sa_t, get_statistic, uint32_t,
+METHOD(ike_sa_t, get_statistic, time_t,
 	private_ike_sa_t *this, statistic_t kind)
 {
 	if (kind < STAT_MAX)
@@ -382,7 +382,7 @@ METHOD(ike_sa_t, get_statistic, uint32_t,
 }
 
 METHOD(ike_sa_t, set_statistic, void,
-	private_ike_sa_t *this, statistic_t kind, uint32_t value)
+	private_ike_sa_t *this, statistic_t kind, time_t value)
 {
 	if (kind < STAT_MAX)
 	{
@@ -857,7 +857,7 @@ METHOD(ike_sa_t, set_state, void,
 				this->state == IKE_PASSIVE)
 			{
 				job_t *job;
-				uint32_t t;
+				time_t t;
 
 				/* calculate rekey, reauth and lifetime */
 				this->stats[STAT_ESTABLISHED] = time_monotonic(NULL);

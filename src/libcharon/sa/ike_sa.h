@@ -407,7 +407,7 @@ struct ike_sa_t {
 	 * @param kind			kind of requested value
 	 * @return				value as integer
 	 */
-	uint32_t (*get_statistic)(ike_sa_t *this, statistic_t kind);
+	time_t (*get_statistic)(ike_sa_t *this, statistic_t kind);
 
 	/**
 	 * Set statistic value of the IKE_SA.
@@ -415,7 +415,7 @@ struct ike_sa_t {
 	 * @param kind			kind of value to update
 	 * @param value			value as integer
 	 */
-	void (*set_statistic)(ike_sa_t *this, statistic_t kind, uint32_t value);
+	void (*set_statistic)(ike_sa_t *this, statistic_t kind, time_t value);
 
 	/**
 	 * Get the own host address.
