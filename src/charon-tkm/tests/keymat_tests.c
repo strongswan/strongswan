@@ -106,7 +106,7 @@ START_TEST(test_derive_child_keys)
 	fail_if(!info, "encr_i does not contain esa information");
 	fail_if(info->isa_id != keymat->get_isa_id(keymat),
 			"Isa context id mismatch (encr_i)");
-	fail_if(info->spi_r != 42,
+	fail_if(info->spi_l != 42,
 			"SPI mismatch (encr_i)");
 	fail_unless(chunk_equals(info->nonce_i, nonce),
 				"nonce_i mismatch (encr_i)");
@@ -123,7 +123,7 @@ START_TEST(test_derive_child_keys)
 	fail_if(!info, "encr_r does not contain esa information");
 	fail_if(info->isa_id != keymat->get_isa_id(keymat),
 			"Isa context id mismatch (encr_r)");
-	fail_if(info->spi_r != 42,
+	fail_if(info->spi_l != 42,
 			"SPI mismatch (encr_r)");
 	fail_unless(chunk_equals(info->nonce_i, nonce),
 				"nonce_i mismatch (encr_r)");
