@@ -81,13 +81,13 @@ struct child_create_t {
 	void (*use_label)(child_create_t *this, sec_label_t *label);
 
 	/**
-	 * Initially propose a specific DH group to override configuration.
+	 * Initially propose a specific KE method to override configuration.
 	 *
-	 * This is used during rekeying to prefer the previously negotiated group.
+	 * This is used during rekeying to prefer the previously negotiated method.
 	 *
-	 * @param dh_group	DH group to use
+	 * @param ke_method	KE method to use
 	 */
-	void (*use_dh_group)(child_create_t *this, key_exchange_method_t dh_group);
+	void (*use_ke_method)(child_create_t *this, key_exchange_method_t ke_method);
 
 	/**
 	 * Get the lower of the two nonces, used for rekey collisions.

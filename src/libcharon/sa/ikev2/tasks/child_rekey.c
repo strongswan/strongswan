@@ -201,16 +201,16 @@ METHOD(task_t, build_i, status_t,
 	if (!this->child_create)
 	{
 		proposal_t *proposal;
-		uint16_t dh_group;
+		uint16_t ke_method;
 
 		this->child_create = child_create_create(this->ike_sa,
 									config->get_ref(config), TRUE, NULL, NULL);
 
 		proposal = this->child_sa->get_proposal(this->child_sa);
 		if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD,
-									&dh_group, NULL))
-		{	/* reuse the DH group negotiated previously */
-			this->child_create->use_dh_group(this->child_create, dh_group);
+									&ke_method, NULL))
+		{	/* reuse the KE method negotiated previously */
+			this->child_create->use_ke_method(this->child_create, ke_method);
 		}
 	}
 	reqid = this->child_sa->get_reqid_ref(this->child_sa);
