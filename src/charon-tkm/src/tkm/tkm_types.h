@@ -48,9 +48,9 @@ struct esa_info_t {
 	isa_id_type isa_id;
 
 	/**
-	 * Responder SPI of child SA.
+	 * Local SPI of child SA.
 	 */
-	esp_spi_type spi_r;
+	esp_spi_type spi_l;
 
 	/**
 	 * Initiator nonce.
