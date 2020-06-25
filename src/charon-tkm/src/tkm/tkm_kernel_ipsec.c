@@ -106,29 +106,27 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 	esa = *(esa_info_t *)(data->enc_key.ptr);
 
-	/* only handle the case where we have both distinct ESP spi's available */
-	if (esa.spi_r == id->spi)
+	/* only handle the case where we have both distinct ESP SPI's available,
+	 * which is always the outbound SA */
+	if (esa.spi_l == id->spi)
 	{
 		chunk_free(&esa.nonce_i);
 		chunk_free(&esa.nonce_r);
 		return SUCCESS;
 	}
 
+	spi_loc = esa.spi_l;
+	spi_rem = id->spi;
+	local = id->src;
+	peer = id->dst;
+
 	if (data->initiator)
 	{
-		spi_loc = id->spi;
-		spi_rem = esa.spi_r;
-		local = id->dst;
-		peer = id->src;
 		nonce_loc = &esa.nonce_i;
 		nonce_rem = &esa.nonce_r;
 	}
 	else
 	{
-		spi_loc = esa.spi_r;
-		spi_rem = id->spi;
-		local = id->src;
-		peer = id->dst;
 		nonce_loc = &esa.nonce_r;
 		nonce_rem = &esa.nonce_i;
 	}
