@@ -220,7 +220,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 
 	INIT(esa_info_i,
 		 .isa_id = this->isa_ctx_id,
-		 .spi_r = proposal->get_spi(proposal),
+		 .spi_l = proposal->get_spi(proposal),
 		 .nonce_i = chunk_clone(nonce_i),
 		 .nonce_r = chunk_clone(nonce_r),
 		 .is_encr_r = FALSE,
@@ -229,15 +229,15 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 
 	INIT(esa_info_r,
 		 .isa_id = this->isa_ctx_id,
-		 .spi_r = proposal->get_spi(proposal),
+		 .spi_l = proposal->get_spi(proposal),
 		 .nonce_i = chunk_clone(nonce_i),
 		 .nonce_r = chunk_clone(nonce_r),
 		 .is_encr_r = TRUE,
 		 .dh_id = dh_id,
 	);
 
-	DBG1(DBG_CHD, "passing on esa info (isa: %llu, spi_r: %x, dh_id: %llu)",
-		 esa_info_i->isa_id, ntohl(esa_info_i->spi_r), esa_info_i->dh_id);
+	DBG1(DBG_CHD, "passing on esa info (isa: %llu, spi_l: %x, dh_id: %llu)",
+		 esa_info_i->isa_id, ntohl(esa_info_i->spi_l), esa_info_i->dh_id);
 
 	/* store ESA info in encr_i/r, which is passed to add_sa */
 	*encr_i = chunk_create((u_char *)esa_info_i, sizeof(esa_info_t));
@@ -293,6 +293,12 @@ METHOD(keymat_v2_t, get_skd, pseudo_random_function_t,
 	private_tkm_keymat_t *this, chunk_t *skd)
 {
 	isa_info_t *isa_info;
+
+	if (!this->ae_ctx_id)
+	{
+		*skd = chunk_empty;
+		return PRF_UNDEFINED;
+	}
 
 	INIT(isa_info,
 		 .parent_isa_id = this->isa_ctx_id,
