@@ -2017,6 +2017,10 @@ static status_t delete_failed_sa(private_child_create_t *this)
 	{
 		this->public.task.build = _build_i_delete;
 		this->public.task.process = (void*)return_success;
+		/* destroying it here allows the rekey task to differentiate between
+		 * this and the multi-KE case */
+		this->child_sa->destroy(this->child_sa);
+		this->child_sa = NULL;
 		return NEED_MORE;
 	}
 	return SUCCESS;
