@@ -186,11 +186,6 @@ static void install_outbound(private_child_delete_t *this,
 		DBG1(DBG_IKE, "CHILD_SA not found after rekeying");
 		return;
 	}
-	if (this->initiator && is_redundant(this, child_sa))
-	{	/* if we won the rekey collision we don't want to install the
-		 * redundant SA created by the peer */
-		return;
-	}
 
 	status = child_sa->install_outbound(child_sa);
 	if (status != SUCCESS)
