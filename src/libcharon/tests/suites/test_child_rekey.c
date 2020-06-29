@@ -132,6 +132,118 @@ START_TEST(test_regular)
 END_TEST
 
 /**
+ * Config for multiple KE exchange tests
+ */
+static exchange_test_sa_conf_t multi_ke_conf = {
+	.initiator = {
+		.esp = "aes256-sha256-modp3072-ke1_ecp256",
+	},
+	.responder = {
+		.esp = "aes256-sha256-modp3072-ke1_ecp256",
+	},
+};
+
+/**
+ * Regular CHILD_SA rekey either initiated by the original initiator or
+ * responder of the IKE_SA.
+ */
+START_TEST(test_regular_multi_ke)
+{
+	ike_sa_t *a, *b;
+	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	if (_i)
+	{	/* responder rekeys the CHILD_SA (SPI 2) */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &b, &a, &multi_ke_conf);
+	}
+	else
+	{	/* initiator rekeys the CHILD_SA (SPI 1) */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &a, &b, &multi_ke_conf);
+	}
+	initiate_rekey(a, spi_a);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, KEi, TSi, TSr } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, KEr, TSi, TSr, N(ADD_KE) } */
+	assert_hook_not_called(child_rekey);
+	assert_no_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+	assert_hook();
+
+	/* IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } --> */
+	assert_hook_called(child_rekey);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b, 4);
+	assert_hook();
+
+	/* <-- IKE_FOLLOWUP_KE { KEr } */
+	assert_hook_called(child_rekey);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, spi_b, 3, 4);
+	assert_hook();
+
+	/* INFORMATIONAL { D } --> */
+	assert_hook_not_called(child_rekey);
+	assert_jobs_scheduled(1);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_ipsec_sas_installed(b, spi_b, 3, 4);
+	assert_scheduler();
+	assert_hook();
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_not_called(child_rekey);
+	assert_jobs_scheduled(1);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_ipsec_sas_installed(a, spi_a, 3, 4);
+	assert_scheduler();
+	assert_hook();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, spi_a);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, 3, 4);
+	destroy_rekeyed(b, spi_b);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(a, 3, 4);
+
+	/* child_updown */
+	assert_hook();
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
  * CHILD_SA rekey where the responder does not agree with the DH group selected
  * by the initiator, either initiated by the original initiator or responder of
  * the IKE_SA.
@@ -249,6 +361,203 @@ START_TEST(test_regular_ke_invalid)
 	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
 	assert_hook_called(child_rekey);
 	assert_no_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 4, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, 4, 5, 6, 7);
+	assert_hook();
+
+	/* INFORMATIONAL { D } --> */
+	assert_hook_not_called(child_rekey);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 5, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 7, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_ipsec_sas_installed(b, 5, 6, 7);
+	assert_hook();
+
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_not_called(child_rekey);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 4, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 6, CHILD_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_ipsec_sas_installed(a, 4, 6, 7);
+	assert_hook();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, 4);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, 6, 7);
+	destroy_rekeyed(b, 5);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(b, 6, 7);
+
+	/* child_updown */
+	assert_hook();
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * CHILD_SA rekey with multiple key exchanges where the responder does not agree
+ * with the first key exchange method selected by the initiator, either
+ * initiated by the original initiator or responder of the IKE_SA.
+ */
+START_TEST(test_regular_ke_invalid_multi_ke)
+{
+	exchange_test_sa_conf_t conf = {
+		.initiator = {
+			.esp = "aes128-sha256-modp2048-modp3072-ke1_ecp256",
+		},
+		.responder = {
+			.esp = "aes128-sha256-modp3072-modp2048-ke1_ecp256",
+		},
+	};
+	ike_sa_t *a, *b;
+	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	if (_i)
+	{	/* responder rekeys the CHILD_SA (SPI 2) */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &b, &a, &conf);
+	}
+	else
+	{	/* initiator rekeys the CHILD_SA (SPI 1) */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &a, &b, &conf);
+	}
+	initiate_rekey(a, spi_a);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_INSTALLED);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(b, spi_a, spi_b);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(INVAL_KE) } */
+	assert_hook_not_called(child_rekey);
+	assert_single_notify(IN, INVALID_KE_PAYLOAD);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_REKEYING);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+	assert_hook();
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
+	assert_hook_not_called(child_rekey);
+	assert_no_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+	assert_hook();
+
+	/* IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } --> */
+	assert_hook_called(child_rekey);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 5, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b, 5);
+	assert_hook();
+
+	/* <-- IKE_FOLLOWUP_KE { KEr } */
+	assert_hook_called(child_rekey);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(a, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, spi_b, 4, 5);
+	assert_hook();
+
+	/* INFORMATIONAL { D } --> */
+	assert_hook_not_called(child_rekey);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 5, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_ipsec_sas_installed(b, spi_b, 4, 5);
+	assert_hook();
+
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_not_called(child_rekey);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 4, CHILD_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_ipsec_sas_installed(a, spi_a, 4, 5);
+	assert_hook();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, spi_a);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, 4, 5);
+	destroy_rekeyed(b, spi_b);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(b, 4, 5);
+
+	/* child_updown */
+	assert_hook();
+
+	/* because the DH group should get reused another rekeying should complete
+	 * without additional exchange */
+	initiate_rekey(a, 4);
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 5, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, 4, 5);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
+	assert_hook_not_called(child_rekey);
+	assert_no_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 4, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, 4, 5);
+	assert_hook();
+
+	/* IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } --> */
+	assert_hook_called(child_rekey);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 5, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 7, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(b, 4, 5, 7);
+	assert_hook();
+
+	/* <-- IKE_FOLLOWUP_KE { KEr } */
+	assert_hook_called(child_rekey);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_child_sa_state(a, 4, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
@@ -446,7 +755,7 @@ START_TEST(test_regular_responder_handle_hard_expire)
 END_TEST
 
 /**
- * Both peers initiate the CHILD_SA reekying concurrently and should handle
+ * Both peers initiate the CHILD_SA rekeying concurrently and should handle
  * the collision properly depending on the nonces.
  */
 START_TEST(test_collision)
@@ -641,6 +950,443 @@ START_TEST(test_collision)
 	assert_ipsec_sas_installed(a, data[_i].spi_a, data[_i].spi_b);
 	destroy_rekeyed(b, data[_i].spi_del_a);
 	destroy_rekeyed(b, data[_i].spi_del_b);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(b, data[_i].spi_a, data[_i].spi_b);
+
+	/* child_rekey/child_updown */
+	assert_hook();
+	assert_hook();
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * Both peers initiate a multi-KE CHILD_SA rekeying concurrently and should
+ * handle the collision properly depending on the nonces.
+ */
+START_TEST(test_collision_multi_ke)
+{
+	ike_sa_t *a, *b;
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &a, &b, &multi_ke_conf);
+
+	/* When rekeyings collide we get two CHILD_SAs with a total of four nonces.
+	 * The CHILD_SA with the lowest nonce SHOULD be deleted by the peer that
+	 * created that CHILD_SA.  However, with multiple key exchanges, no CHILD_SA
+	 * has yet been established, so the losing peer just doesn't continue with
+	 * IKE_FOLLOWUP_KE exchanges (i.e. that SA is not explicitly deleted later).
+	 * The replaced CHILD_SA is deleted by the peer that initiated the
+	 * surviving SA.  Four nonces and SPIs are needed (SPI 1 and 2 are used for
+	 * the initial CHILD_SA):
+	 *   N1/3 -----\    /----- N2/4
+	 *              \--/-----> N3/5
+	 *   N4/6 <-------/ /----- ...
+	 *   ...  -----\
+	 * We test this four times, each time a different nonce is the lowest.
+	 */
+	struct {
+		/* Nonces used at each point */
+		u_char nonces[4];
+		/* SPIs of the deleted CHILD_SA (either redundant or replaced) */
+		uint32_t spi_del_a, spi_del_b;
+		/* SPIs of the kept CHILD_SA */
+		uint32_t spi_a, spi_b;
+	} data[] = {
+		{ { 0x00, 0xFF, 0xFF, 0xFF }, 3, 2, 6, 4 },
+		{ { 0xFF, 0x00, 0xFF, 0xFF }, 1, 4, 3, 5 },
+		{ { 0xFF, 0xFF, 0x00, 0xFF }, 3, 2, 6, 4 },
+		{ { 0xFF, 0xFF, 0xFF, 0x00 }, 1, 4, 3, 5 },
+	};
+
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[0];
+	initiate_rekey(a, 1);
+	assert_ipsec_sas_installed(a, 1, 2);
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[1];
+	initiate_rekey(b, 2);
+	assert_ipsec_sas_installed(b, 1, 2);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, KEi, TSi, TSr } --> */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, 1, 2);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, KEi, TSi, TSr } */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[3];
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, 1, 2);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, KEr, TSi, TSr, N(ADD_KE) } */
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	/* if a won, it must remove the passive task, otherwise the active task,
+	 * no new SA is yet created */
+	assert_num_tasks(a, data[_i].spi_del_a == 1 ? 0 : 1, TASK_QUEUE_PASSIVE);
+	assert_num_tasks(a, data[_i].spi_del_a == 1 ? 1 : 0, TASK_QUEUE_ACTIVE);
+	assert_child_sa_state(a, 1, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, 1, 2);
+	assert_hook();
+
+	/* CREATE_CHILD_SA { SA, Nr, KEr, TSi, TSr, N(ADD_KE) } --> */
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_num_tasks(b, data[_i].spi_del_b == 2 ? 0 : 1, TASK_QUEUE_PASSIVE);
+	assert_num_tasks(b, data[_i].spi_del_b == 2 ? 1 : 0, TASK_QUEUE_ACTIVE);
+	assert_child_sa_state(b, 2, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, 1, 2);
+	assert_hook();
+
+	if (data[_i].spi_del_a == 1)
+	{
+		/* IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } --> */
+		assert_hook_rekey(child_rekey, 2, 5);
+		assert_payload(IN, PLV2_KEY_EXCHANGE);
+		assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_child_sa_state(b, 2, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(b, 5, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+		assert_ipsec_sas_installed(b, 1, 2, 5);
+		assert_hook();
+
+		/* <-- IKE_FOLLOWUP_KE { KEr } */
+		assert_hook_rekey(child_rekey, 1, data[_i].spi_a);
+		assert_payload(IN, PLV2_KEY_EXCHANGE);
+		assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_ipsec_sas_installed(a, 1, 2, 3, 5);
+		assert_hook();
+	}
+	else
+	{
+		/* <-- IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } */
+		assert_hook_rekey(child_rekey, 1, 6);
+		assert_payload(IN, PLV2_KEY_EXCHANGE);
+		assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+		assert_ipsec_sas_installed(a, 1, 2, 6);
+		assert_hook();
+
+		/* IKE_FOLLOWUP_KE { KEr } --> */
+		assert_hook_rekey(child_rekey, 2, data[_i].spi_b);
+		assert_payload(IN, PLV2_KEY_EXCHANGE);
+		assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_ipsec_sas_installed(b, 1, 2, 4, 6);
+		assert_hook();
+	}
+
+	/* we don't expect this hook to get called anymore */
+	assert_hook_not_called(child_rekey);
+
+	if (data[_i].spi_del_a == 1)
+	{
+		/* INFORMATIONAL { D } --> */
+		assert_jobs_scheduled(1);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_child_sa_state(b, 2, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(b, 5, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_count(b, 2);
+		assert_ipsec_sas_installed(b, 2, 3, 5);
+		assert_scheduler();
+
+		/* <-- INFORMATIONAL { D } */
+		assert_jobs_scheduled(1);
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_child_sa_state(a, 1, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_count(a, 2);
+		assert_ipsec_sas_installed(a, 1, 3, 5);
+		assert_scheduler();
+
+		/* simulate the execution of the scheduled jobs */
+		destroy_rekeyed(a, data[_i].spi_del_a);
+		destroy_rekeyed(b, data[_i].spi_del_a);
+	}
+	else
+	{
+		/* <-- INFORMATIONAL { D } */
+		assert_jobs_scheduled(1);
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_child_sa_state(a, 1, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_count(a, 2);
+		assert_ipsec_sas_installed(a, 1, 4, 6);
+		assert_scheduler();
+
+		/* INFORMATIONAL { D } --> */
+		assert_jobs_scheduled(1);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_child_sa_state(b, 2, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_count(b, 2);
+		assert_ipsec_sas_installed(b, 2, 4, 6);
+		assert_scheduler();
+
+		/* simulate the execution of the scheduled jobs */
+		destroy_rekeyed(a, data[_i].spi_del_b);
+		destroy_rekeyed(b, data[_i].spi_del_b);
+	}
+
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, data[_i].spi_a, data[_i].spi_b);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(b, data[_i].spi_a, data[_i].spi_b);
+
+	/* child_rekey/child_updown */
+	assert_hook();
+	assert_hook();
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * Both peers initiate a CHILD_SA rekeying concurrently, but only one of them
+ * proposes multiple key exchanges, they should still handle the collision
+ * properly.
+ */
+START_TEST(test_collision_mixed)
+{
+	exchange_test_sa_conf_t conf = {
+		.initiator = {
+			.esp = "aes256-sha256-modp3072-ke1_ecp256,aes256-sha256-modp3072",
+		},
+		.responder = {
+			.esp = "aes256-sha256-modp3072,aes256-sha256-modp3072-ke1_ecp256",
+		},
+	};
+	ike_sa_t *a, *b;
+
+	/* let's accept what the peer proposes first */
+	lib->settings->set_bool(lib->settings, "%s.prefer_configured_proposals",
+							FALSE, lib->ns);
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &a, &b, &conf);
+
+	/* When rekeyings collide we get two CHILD_SAs with a total of four nonces.
+	 * The CHILD_SA with the lowest nonce SHOULD be deleted by the peer that
+	 * created that CHILD_SA.  However, with multiple key exchanges, no CHILD_SA
+	 * has yet been established, so the losing peer just doesn't continue with
+	 * IKE_FOLLOWUP_KE exchanges (i.e. that SA is not explicitly deleted later).
+	 * The replaced CHILD_SA is deleted by the peer that initiated the
+	 * surviving SA.  Four nonces and SPIs are needed (SPI 1 and 2 are used for
+	 * the initial CHILD_SA):
+	 *   N1/3 -----\    /----- N2/4
+	 *              \--/-----> N3/5
+	 *   N4/6 <-------/ /----- ...
+	 *   ...  -----\
+	 * We test this four times, each time a different nonce is the lowest.
+	 */
+	struct {
+		/* Nonces used at each point */
+		u_char nonces[4];
+		/* SPIs of the deleted CHILD_SA (either redundant or replaced) */
+		uint32_t spi_del_a, spi_del_b;
+		/* SPIs of the kept CHILD_SA */
+		uint32_t spi_a, spi_b;
+	} data[] = {
+		{ { 0x00, 0xFF, 0xFF, 0xFF }, 3, 2, 6, 4 },
+		{ { 0xFF, 0x00, 0xFF, 0xFF }, 1, 4, 3, 5 },
+		{ { 0xFF, 0xFF, 0x00, 0xFF }, 3, 2, 6, 4 },
+		{ { 0xFF, 0xFF, 0xFF, 0x00 }, 1, 4, 3, 5 },
+	};
+
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[0];
+	initiate_rekey(a, 1);
+	assert_ipsec_sas_installed(a, 1, 2);
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[1];
+	initiate_rekey(b, 2);
+	assert_ipsec_sas_installed(b, 1, 2);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, KEi, TSi, TSr } --> */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, 1, 2);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, KEi, TSi, TSr } */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[3];
+	assert_hook_rekey(child_rekey, 1, 6);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(a, 1, 2, 6);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, KEr, TSi, TSr, N(ADD_KE) } */
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	/* the single-KE passive task was completed and adopted above */
+	assert_num_tasks(a, 0, TASK_QUEUE_PASSIVE);
+	if (data[_i].spi_del_a == 1)
+	{
+		assert_num_tasks(a, 1, TASK_QUEUE_ACTIVE);
+		assert_child_sa_state(a, 1, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, 6, CHILD_REKEYED, CHILD_OUTBOUND_REGISTERED);
+	}
+	else
+	{
+		assert_num_tasks(a, 0, TASK_QUEUE_ACTIVE);
+		assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	}
+	assert_child_sa_count(a, 2);
+	assert_ipsec_sas_installed(a, 1, 2, 6);
+	assert_hook();
+
+	if (data[_i].spi_del_a == 1)
+	{
+		/* CREATE_CHILD_SA { SA, Nr, KEr, TSi, TSr, N(ADD_KE) } --> */
+		assert_hook_not_called(child_rekey);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_num_tasks(b, 1, TASK_QUEUE_PASSIVE);
+		assert_num_tasks(b, 1, TASK_QUEUE_ACTIVE);
+		assert_child_sa_state(b, 2, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(b, 4, CHILD_DELETING, CHILD_OUTBOUND_REGISTERED);
+		assert_child_sa_count(b, 2);
+		assert_ipsec_sas_installed(b, 1, 2, 4);
+		assert_hook();
+
+		/* IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } --> */
+		assert_hook_rekey(child_rekey, 2, 5);
+		assert_payload(IN, PLV2_KEY_EXCHANGE);
+		assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_child_sa_state(b, 2, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(b, 4, CHILD_DELETING, CHILD_OUTBOUND_REGISTERED);
+		assert_child_sa_state(b, 5, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+		assert_child_sa_count(b, 3);
+		assert_ipsec_sas_installed(b, 1, 2, 4, 5);
+		assert_hook();
+
+		/* <-- INFORMATIONAL { D } */
+		assert_jobs_scheduled(1);
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_child_sa_state(a, 1, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, 6, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_count(a, 2);
+		assert_ipsec_sas_installed(a, 1, 2, 6);
+		assert_scheduler();
+
+		/* <-- IKE_FOLLOWUP_KE { KEr } */
+		/* currently we call this again if we keep our own replacement as we
+		 * already called it above */
+		assert_hook_rekey(child_rekey, 1, data[_i].spi_a);
+		assert_payload(IN, PLV2_KEY_EXCHANGE);
+		assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_child_sa_state(a, 1, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, 6, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_ipsec_sas_installed(a, 1, 2, 3, 5, 6);
+		assert_hook();
+	}
+	else
+	{
+		/* CREATE_CHILD_SA { SA, Nr, KEr, TSi, TSr, N(ADD_KE) } --> */
+		assert_hook_rekey(child_rekey, 2, 4);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_num_tasks(b, 0, TASK_QUEUE_PASSIVE);
+		assert_num_tasks(b, 1, TASK_QUEUE_ACTIVE);
+		assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_count(a, 2);
+		assert_ipsec_sas_installed(b, 1, 2, 4, 6);
+		assert_hook();
+	}
+
+	/* we don't expect this hook to get called anymore */
+	assert_hook_not_called(child_rekey);
+
+	if (data[_i].spi_del_a == 1)
+	{
+		/* INFORMATIONAL { D } --> */
+		assert_jobs_scheduled(1);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_child_sa_state(b, 2, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(b, 4, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(b, 5, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+		assert_child_sa_count(b, 3);
+		assert_ipsec_sas_installed(b, 1, 2, 4, 5);
+		assert_scheduler();
+
+		/* INFORMATIONAL { D } --> */
+		assert_jobs_scheduled(1);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_child_sa_state(b, 2, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(b, 4, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(b, 5, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_count(b, 3);
+		assert_ipsec_sas_installed(b, 2, 4, 3, 5);
+		assert_scheduler();
+
+		/* <-- INFORMATIONAL { D } */
+		assert_jobs_scheduled(1);
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_child_sa_state(a, 1, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, 6, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_count(a, 3);
+		assert_ipsec_sas_installed(a, 1, 3, 5, 6);
+		assert_scheduler();
+
+		/* simulate the execution of the scheduled jobs */
+		destroy_rekeyed(a, data[_i].spi_del_a);
+		destroy_rekeyed(a, data[_i].spi_del_b);
+		destroy_rekeyed(b, data[_i].spi_del_a);
+		destroy_rekeyed(b, data[_i].spi_del_b);
+	}
+	else
+	{
+		/* <-- INFORMATIONAL { D } */
+		assert_jobs_scheduled(1);
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_child_sa_state(a, 1, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_count(a, 2);
+		assert_ipsec_sas_installed(a, 1, 4, 6);
+		assert_scheduler();
+
+		/* INFORMATIONAL { D } --> */
+		assert_jobs_scheduled(1);
+		exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+		assert_child_sa_state(b, 2, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_count(b, 2);
+		assert_ipsec_sas_installed(b, 2, 4, 6);
+		assert_scheduler();
+
+		/* simulate the execution of the scheduled jobs */
+		destroy_rekeyed(a, data[_i].spi_del_b);
+		destroy_rekeyed(b, data[_i].spi_del_b);
+	}
+
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, data[_i].spi_a, data[_i].spi_b);
 	assert_child_sa_count(b, 1);
 	assert_ipsec_sas_installed(b, data[_i].spi_a, data[_i].spi_b);
 
@@ -862,6 +1608,177 @@ START_TEST(test_collision_delayed_response)
 	assert_child_sa_count(a, 1);
 	assert_ipsec_sas_installed(a, data[_i].spi_a, data[_i].spi_b);
 	destroy_rekeyed(b, data[_i].spi_del_a);
+	destroy_rekeyed(b, data[_i].spi_del_b);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(b, data[_i].spi_a, data[_i].spi_b);
+
+	/* child_rekey/child_updown */
+	assert_hook();
+	assert_hook();
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * This is like a regular rekey collision, but one CREATE_CHILD_SA response
+ * is delayed:
+ *           Peer A                   Peer B
+ *            rekey ----\       /---- rekey
+ *                       \-----/----> detect collision
+ * detect collision <---------/ /----
+ *                  -----------/---->
+ *        handle KE <---------/------ send additional KE (if won)
+ *                  ---------/------>
+ *     handle rekey <-------/
+ *    additional KE ----------------> handle KE (if lost)
+ *                  <----------------
+ *                         ...        the winner deletes the old SA
+ *
+ * If A wins the collision, this is just a regular collision as B will simply
+ * abort its own rekeying and wait until A receives the response and continues
+ * with its IKE_FOLLOWUP_KE request.  So we only look at the cases in which
+ * B wins.
+ *
+ * Besides the scenario depicted above, i.e. where the response arrives after
+ * handling B's IKE_FOLLOWUP_KE request, we also test when it arrives after
+ * handling the delete.
+ */
+START_TEST(test_collision_delayed_response_multi_ke)
+{
+	ike_sa_t *a, *b;
+	message_t *msg;
+	bool after_delete = _i >= 2;
+
+	_i %= 2;
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &a, &b, &multi_ke_conf);
+
+	/* Four nonces and SPIs are needed (SPI 1 and 2 are used for the initial
+	 * CHILD_SA):
+	 *   N1/3 -----\    /----- N2/4
+	 *              \--/-----> N3/5
+	 *   N4/6 <-------/ /----- ...
+	 *   ...  -----\
+	 * We test this four times, B wins each time (with either of its nonces),
+	 * but the response arrives at different times.
+	 */
+	struct {
+		/* Nonces used at each point */
+		u_char nonces[4];
+		/* SPIs of the deleted CHILD_SA (either redundant or replaced) */
+		uint32_t spi_del_a, spi_del_b;
+		/* SPIs of the kept CHILD_SA */
+		uint32_t spi_a, spi_b;
+	} data[] = {
+		{ { 0x00, 0xFF, 0xFF, 0xFF }, 3, 2, 6, 4 },
+		{ { 0xFF, 0xFF, 0x00, 0xFF }, 3, 2, 6, 4 },
+	};
+
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[0];
+	initiate_rekey(a, 1);
+	assert_ipsec_sas_installed(a, 1, 2);
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[1];
+	initiate_rekey(b, 2);
+	assert_ipsec_sas_installed(b, 1, 2);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, 1, 2);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[3];
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, 1, 2);
+	assert_hook();
+
+	/* delay the CREATE_CHILD_SA response from b to a */
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+
+	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } --> */
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_num_tasks(b, 0, TASK_QUEUE_PASSIVE);
+	assert_num_tasks(b, 1, TASK_QUEUE_ACTIVE);
+	assert_child_sa_state(b, 2, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, 1, 2);
+	assert_hook();
+
+	/* <-- IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } */
+	assert_hook_rekey(child_rekey, 1, 6);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(a, 1, 2, 6);
+	assert_hook();
+
+	/* IKE_FOLLOWUP_KE { KEr } --> */
+	assert_hook_rekey(child_rekey, 2, 4);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, 1, 2, 4, 6);
+	assert_hook();
+
+	/* we don't expect this hook to get called anymore */
+	assert_hook_not_called(child_rekey);
+
+	if (!after_delete)
+	{	/* a receives the response right after the IKE_FOLLOWUP_KE, the passive
+		 * rekeying is completed and the active aborted */
+		/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } (delayed) */
+		exchange_test_helper->process_message(exchange_test_helper, a, msg);
+		assert_num_tasks(a, 0, TASK_QUEUE_PASSIVE);
+		assert_num_tasks(a, 0, TASK_QUEUE_ACTIVE);
+		assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+		assert_ipsec_sas_installed(a, 1, 2, 6);
+	}
+
+	/* <-- INFORMATIONAL { D } */
+	assert_jobs_scheduled(1);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, 1, 4, 6);
+	assert_child_sa_count(a, 2);
+	assert_scheduler();
+
+	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, 2, 4, 6);
+	assert_child_sa_count(b, 2);
+	assert_scheduler();
+
+	if (after_delete)
+	{
+		/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } (delayed) */
+		exchange_test_helper->process_message(exchange_test_helper, a, msg);
+		assert_num_tasks(a, 0, TASK_QUEUE_PASSIVE);
+		assert_num_tasks(a, 0, TASK_QUEUE_ACTIVE);
+		assert_child_sa_state(a, 1, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(a, 6, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_ipsec_sas_installed(a, 1, 4, 6);
+	}
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, data[_i].spi_del_b);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, data[_i].spi_a, data[_i].spi_b);
 	destroy_rekeyed(b, data[_i].spi_del_b);
 	assert_child_sa_count(b, 1);
 	assert_ipsec_sas_installed(b, data[_i].spi_a, data[_i].spi_b);
@@ -1100,6 +2017,178 @@ START_TEST(test_collision_delayed_request_more)
 	assert_child_sa_count(a, 2);
 	assert_ipsec_sas_installed(a, 1, 4, 5);
 	assert_scheduler();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, 1);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, 4, 5);
+	destroy_rekeyed(b, 2);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(b, 4, 5);
+
+	/* child_rekey/child_updown */
+	assert_hook();
+	assert_hook();
+
+	assert_sa_idle(a);
+	assert_sa_idle(b);
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * In this scenario one of the peers does not notice that there is a
+ * rekey collision:
+ *
+ *            rekey ----\       /---- rekey
+ *                       \     /
+ * detect collision <-----\---/
+ *                  -------\-------->
+ *                          \   /---- send additional KE
+ *                           \-/----> detect collision
+ *        handle KE <---------/ /---- TEMP_FAIL
+ *                  -----------/---->
+ *                  <---------/------ delete old SA
+ *           delete ---------/------>
+ *  aborts rekeying <-------/
+ *
+ * In a variation of this scenario, the TEMP_FAIL notify arrives before the
+ * delete does.
+ */
+START_TEST(test_collision_delayed_request_multi_ke)
+{
+	ike_sa_t *a, *b;
+	message_t *msg;
+	bool after_delete = _i >= 3;
+
+	_i %= 3;
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &a, &b, &multi_ke_conf);
+
+	/* Three nonces and SPIs are needed (SPI 1 and 2 are used for the initial
+	 * CHILD_SA):
+	 *   N1/3 -----\    /----- N2/4
+	 *   N3/5 <-----\--/
+	 *   ...  -----\ \-------> ...
+	 * We test this three times, each time a different nonce is the lowest.
+	 */
+	struct {
+		/* Nonces used at each point */
+		u_char nonces[3];
+	} data[] = {
+		{ { 0x00, 0xFF, 0xFF } },
+		{ { 0xFF, 0x00, 0xFF } },
+		{ { 0xFF, 0xFF, 0x00 } },
+	};
+
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[0];
+	initiate_rekey(a, 1);
+	assert_ipsec_sas_installed(a, 1, 2);
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[1];
+	initiate_rekey(b, 2);
+	assert_ipsec_sas_installed(b, 1, 2);
+
+	/* delay the CREATE_CHILD_SA request from a to b */
+	msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* <-- CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } */
+	exchange_test_helper->nonce_first_byte = data[_i].nonces[2];
+	assert_hook_not_called(child_rekey);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, 1, 2);
+	assert_hook();
+
+	/* CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr, N(ADD_KE) } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, 1, 2);
+	assert_hook();
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> (delayed) */
+	assert_single_notify(OUT, TEMPORARY_FAILURE);
+	exchange_test_helper->process_message(exchange_test_helper, b, msg);
+
+	/* <-- IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } */
+	assert_hook_rekey(child_rekey, 1, 5);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_num_tasks(a, 0, TASK_QUEUE_PASSIVE);
+	assert_num_tasks(a, 1, TASK_QUEUE_ACTIVE);
+	assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(a, 5, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(a, 1, 2, 5);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
+	if (!after_delete)
+	{
+		assert_hook_not_called(child_rekey);
+		assert_no_jobs_scheduled();
+		exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+		assert_num_tasks(a, 0, TASK_QUEUE_ACTIVE);
+		assert_child_sa_state(a, 1, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_state(a, 5, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+		assert_ipsec_sas_installed(a, 1, 2, 5);
+		assert_scheduler();
+		assert_hook();
+	}
+	else
+	{	/* delay until we received the delete */
+		msg = exchange_test_helper->sender->dequeue(exchange_test_helper->sender);
+	}
+
+	/* IKE_FOLLOWUP_KE { KEr } --> */
+	assert_hook_rekey(child_rekey, 2, 4);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, 1, 2, 4, 5);
+	assert_hook();
+
+	/* we don't expect this hook to get called anymore */
+	assert_hook_not_called(child_rekey);
+
+	/* <-- INFORMATIONAL { D } */
+	assert_jobs_scheduled(1);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 1, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 5, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_ipsec_sas_installed(a, 1, 4, 5);
+	assert_scheduler();
+
+	/* INFORMATIONAL { D } --> */
+	assert_jobs_scheduled(1);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 2, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_ipsec_sas_installed(b, 2, 4, 5);
+	assert_scheduler();
+
+	if (after_delete)
+	{
+		/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
+		assert_no_jobs_scheduled();
+		exchange_test_helper->process_message(exchange_test_helper, a, msg);
+		assert_num_tasks(a, 0, TASK_QUEUE_ACTIVE);
+		assert_child_sa_state(a, 1, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+		assert_child_sa_state(a, 5, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+		assert_child_sa_count(a, 2);
+		assert_ipsec_sas_installed(a, 1, 4, 5);
+		assert_scheduler();
+	}
 
 	/* simulate the execution of the scheduled jobs */
 	destroy_rekeyed(a, 1);
@@ -1584,6 +2673,94 @@ END_TEST
 
 /**
  * One of the hosts initiates a DELETE of the CHILD_SA the other peer is
+ * concurrently trying to rekey with multiple key exchanges.
+ *
+ *            rekey ---------------->
+ *                  <----------------
+ *    additional ke ----\       /---- delete
+ *                       \-----/----> detect collision
+ * detect collision <---------/ /---- TEMP_FAIL
+ *           delete -----------/---->
+ *  aborts rekeying <---------/
+ */
+START_TEST(test_collision_delete_multi_ke)
+{
+	ike_sa_t *a, *b;
+	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	if (_i)
+	{	/* responder rekeys the CHILD_SA (SPI 2) */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &b, &a, &multi_ke_conf);
+	}
+	else
+	{	/* initiator rekeys the CHILD_SA (SPI 1) */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &a, &b, &multi_ke_conf);
+	}
+	initiate_rekey(a, spi_a);
+
+	/* this should never get called as there is no successful rekeying on
+	 * either side */
+	assert_hook_not_called(child_rekey);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+	assert_notify(IN, REKEY_SA);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr, N(ADD_KE) } */
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+
+	call_ikesa(b, delete_child_sa, PROTO_ESP, spi_b, FALSE);
+	assert_child_sa_state(b, spi_b, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+
+	/* IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } --> */
+	assert_hook_not_called(child_updown);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_single_notify(OUT, TEMPORARY_FAILURE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_DELETING, CHILD_OUTBOUND_INSTALLED);
+	assert_hook();
+
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_updown(child_updown, FALSE);
+	assert_single_payload(IN, PLV2_DELETE);
+	assert_single_payload(OUT, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_count(a, 0);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
+	assert_hook_not_called(child_updown);
+	/* we don't expect a job to retry the rekeying */
+	assert_no_jobs_scheduled();
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_num_tasks(a, 0, TASK_QUEUE_ACTIVE);
+	assert_scheduler();
+	assert_hook();
+
+	/* INFORMATIONAL { D } --> */
+	assert_hook_updown(child_updown, FALSE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_count(b, 0);
+	assert_hook();
+
+	/* child_rekey */
+	assert_hook();
+
+	assert_sa_idle(a);
+	assert_sa_idle(b);
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * One of the hosts initiates a DELETE of the CHILD_SA the other peer is
  * concurrently trying to rekey.  However, the delete request is delayed or
  * dropped, so the peer doing the rekeying is unaware of the collision.
  *
@@ -1949,22 +3126,29 @@ Suite *child_rekey_suite_create()
 
 	tc = tcase_create("regular");
 	tcase_add_loop_test(tc, test_regular, 0, 2);
+	tcase_add_loop_test(tc, test_regular_multi_ke, 0, 2);
 	tcase_add_loop_test(tc, test_regular_ke_invalid, 0, 2);
+	tcase_add_loop_test(tc, test_regular_ke_invalid_multi_ke, 0, 2);
 	tcase_add_test(tc, test_regular_responder_ignore_soft_expire);
 	tcase_add_test(tc, test_regular_responder_handle_hard_expire);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("collisions rekey");
 	tcase_add_loop_test(tc, test_collision, 0, 4);
+	tcase_add_loop_test(tc, test_collision_multi_ke, 0, 4);
+	tcase_add_loop_test(tc, test_collision_mixed, 0, 4);
 	tcase_add_loop_test(tc, test_collision_delayed_response, 0, 4);
+	tcase_add_loop_test(tc, test_collision_delayed_response_multi_ke, 0, 4);
 	tcase_add_loop_test(tc, test_collision_delayed_request, 0, 3);
 	tcase_add_loop_test(tc, test_collision_delayed_request_more, 0, 3);
+	tcase_add_loop_test(tc, test_collision_delayed_request_multi_ke, 0, 6);
 	tcase_add_loop_test(tc, test_collision_ke_invalid, 0, 4);
 	tcase_add_loop_test(tc, test_collision_ke_invalid_delayed_retry, 0, 3);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("collisions delete");
 	tcase_add_loop_test(tc, test_collision_delete, 0, 2);
+	tcase_add_loop_test(tc, test_collision_delete_multi_ke, 0, 2);
 	tcase_add_loop_test(tc, test_collision_delete_drop_delete, 0, 2);
 	tcase_add_loop_test(tc, test_collision_delete_drop_rekey, 0, 2);
 	suite_add_tcase(s, tc);
