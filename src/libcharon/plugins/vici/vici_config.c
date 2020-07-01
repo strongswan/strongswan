@@ -2202,9 +2202,9 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 				}
 				children->destroy(children);
 
-				if (id && !others)
+				if (!ike_sa->get_child_count(ike_sa) || (id && !others))
 				{
-					/* found matching children only, delete full IKE_SA */
+					/* found no children or only matching, delete IKE_SA */
 					id = ike_sa->get_unique_id(ike_sa);
 					array_insert_create_value(&ikeids, sizeof(id),
 											  ARRAY_TAIL, &id);
