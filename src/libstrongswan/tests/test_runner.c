@@ -549,7 +549,8 @@ static double end_timing(struct timespec *start)
 /**
  * Run a single test case with fixtures
  */
-static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
+static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg,
+					 level_t level)
 {
 	enumerator_t *enumerator;
 	test_function_t *tfun;
@@ -585,6 +586,12 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
 				struct timespec start;
 				bool ok = FALSE;
 				int leaks = 0;
+
+				if (level >= 0)
+				{
+					fprintf(stderr, "\nRunning function '%s' [%d]:\n",
+							tfun->name, i);
+				}
 
 				test_setup_timeout(tcase->timeout);
 				start_timing(&start);
@@ -676,7 +683,8 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
 /**
  * Run a single test suite
  */
-static bool run_suite(test_suite_t *suite, test_runner_init_t init, char *cfg)
+static bool run_suite(test_suite_t *suite, test_runner_init_t init, char *cfg,
+					  level_t level)
 {
 	enumerator_t *enumerator;
 	test_case_t *tcase;
@@ -687,7 +695,7 @@ static bool run_suite(test_suite_t *suite, test_runner_init_t init, char *cfg)
 	enumerator = array_create_enumerator(suite->tcases);
 	while (enumerator->enumerate(enumerator, &tcase))
 	{
-		if (run_case(tcase, init, cfg))
+		if (run_case(tcase, init, cfg, level))
 		{
 			passed++;
 		}
@@ -747,7 +755,7 @@ int test_runner_run(const char *name, test_configuration_t configs[],
 	enumerator = array_create_enumerator(suites);
 	while (enumerator->enumerate(enumerator, &suite))
 	{
-		if (run_suite(suite, init, cfg))
+		if (run_suite(suite, init, cfg, level))
 		{
 			passed++;
 		}
