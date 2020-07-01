@@ -2166,7 +2166,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 	enumerator_t *enumerator, *children;
 	child_sa_t *child_sa;
 	ike_sa_t *ike_sa;
-	uint32_t id = 0, others;
+	uint32_t id = 0, others, childs;
 	array_t *ids = NULL, *ikeids = NULL;
 	char *name;
 
@@ -2183,10 +2183,11 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 				{
 					continue;
 				}
-				others = id = 0;
+				childs = others = id = 0;
 				children = ike_sa->create_child_sa_enumerator(ike_sa);
 				while (children->enumerate(children, &child_sa))
 				{
+					childs++;
 					if (child_sa->get_state(child_sa) != CHILD_DELETING &&
 						child_sa->get_state(child_sa) != CHILD_DELETED)
 					{
@@ -2202,7 +2203,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 				}
 				children->destroy(children);
 
-				if (id && !others)
+				if (childs == 0 || (id && !others))
 				{
 					/* found matching children only, delete full IKE_SA */
 					id = ike_sa->get_unique_id(ike_sa);
