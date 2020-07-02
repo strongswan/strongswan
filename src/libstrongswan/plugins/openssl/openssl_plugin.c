@@ -737,12 +737,14 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_521),
 #endif
 #endif /* OPENSSL_NO_ECDSA */
-#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_ECDH)
 		PLUGIN_REGISTER(DH, openssl_x_diffie_hellman_create),
 			/* available since 1.1.0a, but we require 1.1.1 features */
 			PLUGIN_PROVIDE(DH, CURVE_25519),
 			/* available since 1.1.1 */
 			PLUGIN_PROVIDE(DH, CURVE_448),
+#endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_ECDH */
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
 		/* EdDSA private/public key loading */
 		PLUGIN_REGISTER(PUBKEY, openssl_ed_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ED25519),
