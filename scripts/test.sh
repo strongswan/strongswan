@@ -144,7 +144,8 @@ all|coverage|sonarcloud)
 			--disable-osx-attr --disable-tkm --disable-uci
 			--disable-soup --disable-unwind-backtraces
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
-			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
+			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp
+			--disable-kernel-vpp --disable-socket-vpp"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
 	if test "$TEST" != "coverage"; then
