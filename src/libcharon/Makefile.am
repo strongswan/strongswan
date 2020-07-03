@@ -264,6 +264,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_PROXYARP
+  SUBDIRS += plugins/proxyarp
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/proxyarp/libstrongswan-proxyarp.la
+endif
+endif
+
 if USE_COUNTERS
   SUBDIRS += plugins/counters
 if MONOLITHIC

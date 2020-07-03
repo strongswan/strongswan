@@ -278,6 +278,7 @@ ARG_ENABL_SET([forecast],       [enable forecast plugin forwarding broadcast/mul
 ARG_ENABL_SET([duplicheck],     [advanced duplicate checking plugin using liveness checks.])
 ARG_ENABL_SET([error-notify],   [enable error notification plugin.])
 ARG_ENABL_SET([farp],           [enable ARP faking plugin that responds to ARP requests to peers virtual IP])
+ARG_ENABL_SET([proxyarp],       [enable add a proxy ARP entry for the peers virtual IP])
 ARG_ENABL_SET([ha],             [enable high availability cluster plugin.])
 ARG_ENABL_SET([led],            [enable plugin to control LEDs on IKEv2 activity using the Linux kernel LED subsystem.])
 ARG_ENABL_SET([load-tester],    [enable load testing plugin for IKEv2 daemon.])
@@ -1492,6 +1493,7 @@ ADD_PLUGIN([bypass-lan],           [c charon nm cmd])
 ADD_PLUGIN([connmark],             [c charon])
 ADD_PLUGIN([forecast],             [c charon])
 ADD_PLUGIN([farp],                 [c charon])
+ADD_PLUGIN([proxyarp],             [c charon])
 ADD_PLUGIN([stroke],               [c charon])
 ADD_PLUGIN([vici],                 [c charon])
 ADD_PLUGIN([smp],                  [c charon])
@@ -1723,6 +1725,7 @@ AM_CONDITIONAL(USE_BYPASS_LAN, test x$bypass_lan = xtrue)
 AM_CONDITIONAL(USE_CONNMARK, test x$connmark = xtrue)
 AM_CONDITIONAL(USE_FORECAST, test x$forecast = xtrue)
 AM_CONDITIONAL(USE_FARP, test x$farp = xtrue)
+AM_CONDITIONAL(USE_PROXYARP, test x$proxyarp = xtrue)
 AM_CONDITIONAL(USE_ADDRBLOCK, test x$addrblock = xtrue)
 AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
@@ -1991,6 +1994,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/counters/Makefile
 	src/libcharon/plugins/forecast/Makefile
 	src/libcharon/plugins/farp/Makefile
+	src/libcharon/plugins/proxyarp/Makefile
 	src/libcharon/plugins/smp/Makefile
 	src/libcharon/plugins/sql/Makefile
 	src/libcharon/plugins/dnscert/Makefile
