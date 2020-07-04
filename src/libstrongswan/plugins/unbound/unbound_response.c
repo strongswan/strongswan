@@ -147,15 +147,15 @@ unbound_response_t *unbound_response_create_frm_libub_response(
 
 	if (libub_response->secure)
 	{
-		this->security_state = SECURE;
+		this->security_state = DNSS_SECURE;
 	}
 	else if (libub_response->bogus)
 	{
-		this->security_state = BOGUS;
+		this->security_state = DNSS_BOGUS;
 	}
 	else
 	{
-		this->security_state = INDETERMINATE;
+		this->security_state = DNSS_INDETERMINATE;
 	}
 
 	/**

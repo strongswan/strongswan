@@ -169,7 +169,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 		return enumerator_create_empty();
 	}
 
-	if (response->get_security_state(response) != SECURE)
+	if (response->get_security_state(response) != DNSS_SECURE)
 	{
 		DBG1(DBG_CFG, "  DNSSEC state of CERT RRs is not secure");
 		response->destroy(response);
