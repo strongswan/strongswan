@@ -50,10 +50,19 @@
 #include <errno.h>
 #include <net/route.h>
 #include <net/if.h>
+
+#ifdef __APPLE__
+
 #include <net/if_dl.h>
+#include <sys/sockio.h>
+
+#endif
+#ifdef __linux__
+#include <net/if_arp.h>
+#endif
+
 #include <netinet/if_ether.h>
 #include <sys/ioctl.h>
-#include <sys/sockio.h>
 
 #include "proxyarp_listener.h"
 
@@ -61,8 +70,6 @@
 #include <config/child_cfg.h>
 
 #define ALIGNED_CAST(type) (type)(void *)
-#define NEXT_IFR(ifr)      ALIGNED_CAST(struct ifreq *)\
-    ((char *)&ifr->ifr_addr + ifr->ifr_addr.sa_len)
 
 typedef struct private_proxyarp_listener_t private_proxyarp_listener_t;
 
@@ -85,6 +92,31 @@ struct private_proxyarp_listener_t {
 	 */
 	u_int32_t rtm_seq;
 };
+
+static char *format_ip(char *ip_buf, size_t ip_buf_len, u_int32_t ipaddr)
+{
+	const u_int32_t mask = 0xff;
+	snprintf(ip_buf, ip_buf_len, "%d.%d.%d.%d", ipaddr & mask,
+			 (ipaddr >> 8u) & mask, (ipaddr >> 16u) & mask,
+			 (ipaddr >> 24u) & mask);
+	return ip_buf;
+}
+
+static char *format_mac(char *mac_buf, size_t mac_buf_len, const char *macaddr)
+{
+	const u_int32_t mask = 0xff;
+	const unsigned char *umacaddr = (const unsigned char *) macaddr;
+	snprintf(mac_buf, mac_buf_len, "%02x.%02x.%02x.%02x.%02x.%02x",
+			 umacaddr[0] & mask, umacaddr[1] & mask,
+			 umacaddr[2] & mask, umacaddr[3] & mask,
+			 umacaddr[4] & mask, umacaddr[5] & mask);
+	return mac_buf;
+}
+
+#ifdef __APPLE__
+
+#define NEXT_IFR(ifr)      ALIGNED_CAST(struct ifreq *)\
+	((char *)&ifr->ifr_addr + ifr->ifr_addr.sa_len)
 
 typedef struct arp_msg_t arp_msg_t;
 
@@ -141,14 +173,6 @@ static arp_msg_t *uncache_arp_msg(private_proxyarp_listener_t *this,
 	return r;
 }
 
-static char *format_ip(char *ip_buf, size_t ip_buf_len, u_int32_t ipaddr)
-{
-	snprintf(ip_buf, ip_buf_len, "%d.%d.%d.%d", ipaddr & 0xff,
-			 (ipaddr >> 8) & 0xff, (ipaddr >> 16) & 0xff,
-			 (ipaddr >> 24) & 0xff);
-	return ip_buf;
-}
-
 /* --------------------------------------------------------------------------
    get the hardware address of an interface on the same subnet as ipaddr.
    -------------------------------------------------------------------------- */
@@ -156,7 +180,7 @@ static int get_ether_addr(u_int32_t ipaddr, struct sockaddr_dl *hwaddr)
 {
 	short allow_flgs = IFF_UP | IFF_BROADCAST;
 	short check_flgs = allow_flgs | IFF_POINTOPOINT | IFF_LOOPBACK | IFF_NOARP;
-	char ip_buf[3][16];
+	char ip_buf[3][18];
 	struct ifreq *ifr, *ifend, *ifp;
 	struct ifreq ifs[32];
 	struct ifreq ifreq;
@@ -167,14 +191,16 @@ static int get_ether_addr(u_int32_t ipaddr, struct sockaddr_dl *hwaddr)
 
 	ip_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (ip_sockfd < 0) {
-		DBG1(DBG_CHD, "proxyarp: socket(INET, DGRAM, 0): %d", errno);
+		DBG1(DBG_CHD, "proxyarp: %s socket(INET, DGRAM, 0): %d",
+			 format_ip(ip_buf[0], sizeof(ip_buf[0]), ipaddr), errno);
 		return 0;
 	}
 
 	ifc.ifc_len = sizeof(ifs);
 	ifc.ifc_req = ifs;
 	if (ioctl(ip_sockfd, SIOCGIFCONF, &ifc) < 0) {
-		DBG1(DBG_CHD, "proxyarp: ioctl(SIOCGIFCONF): %d", errno);
+		DBG1(DBG_CHD, "proxyarp: %s ioctl(SIOCGIFCONF): %d",
+			 format_ip(ip_buf[0], sizeof(ip_buf[0]), ipaddr), errno);
 		close(ip_sockfd);
 		return 0;
 	}
@@ -183,7 +209,7 @@ static int get_ether_addr(u_int32_t ipaddr, struct sockaddr_dl *hwaddr)
 	 * Scan through looking for an interface with an Internet address on the
 	 * same subnet as `ipaddr'.
 	 */
-	DBG1(DBG_CHD, "proxyarp: find iface matching ip=%s",
+	DBG1(DBG_CHD, "proxyarp: find iface matching %s",
 		 format_ip(ip_buf[0], sizeof(ip_buf[0]), ipaddr));
 
 	ifend = ALIGNED_CAST(struct ifreq *) (ifc.ifc_buf + ifc.ifc_len);
@@ -191,7 +217,8 @@ static int get_ether_addr(u_int32_t ipaddr, struct sockaddr_dl *hwaddr)
 		if (ifr->ifr_addr.sa_family == AF_INET) {
 			ina = (ALIGNED_CAST(struct sockaddr_in *) &ifr->ifr_addr)
 					->sin_addr.s_addr;
-			strlcpy(ifreq.ifr_name, ifr->ifr_name, sizeof(ifreq.ifr_name));
+			snprintf(ifreq.ifr_name, sizeof(ifreq.ifr_name), "%s",
+					 ifr->ifr_name);
 			/*
 			 * Check that the interface is up, and not point-to-point
 			 * or loopback.
@@ -233,7 +260,8 @@ static int get_ether_addr(u_int32_t ipaddr, struct sockaddr_dl *hwaddr)
 	close(ip_sockfd);
 
 	if (ifr >= ifend) {
-		DBG1(DBG_CHD, "proxyarp: no suitable interface found");
+		DBG1(DBG_CHD, "proxyarp: %s no suitable interface found",
+			 format_ip(ip_buf[0], sizeof(ip_buf[0]), ipaddr));
 		return 0;
 	}
 
@@ -244,12 +272,17 @@ static int get_ether_addr(u_int32_t ipaddr, struct sockaddr_dl *hwaddr)
 	ifp = ifr;
 	for (ifr = ifc.ifc_req; ifr < ifend; ifr = NEXT_IFR(ifr)) {
 		const bool is_link = ifr->ifr_addr.sa_family == AF_LINK;
-		if (strcmp(ifp->ifr_name, ifr->ifr_name) == 0 && is_link) {
+		if (is_link && strcmp(ifp->ifr_name, ifr->ifr_name) == 0) {
 			/*
 			 * Found the link-level address - copy it out
 			 */
 			dla = ALIGNED_CAST(struct sockaddr_dl *) &ifr->ifr_addr;
 			memcpy(hwaddr, dla, dla->sdl_len);
+
+			DBG1(DBG_CHD, "proxyarp: if=%s family=%d mac=%s",
+				 ifreq.ifr_name, dla->sdl_family,
+				 format_mac(ip_buf[0], sizeof(ip_buf[0]), dla->sdl_data));
+
 			return 1;
 		}
 	}
@@ -259,11 +292,45 @@ static int get_ether_addr(u_int32_t ipaddr, struct sockaddr_dl *hwaddr)
 }
 
 /* --------------------------------------------------------------------------
+   Delete all the proxy ARP entries in the cache
+   -------------------------------------------------------------------------- */
+static void cifproxyarps(private_proxyarp_listener_t *this)
+{
+	char ip_buf[1][18];
+	int routes;
+	enumerator_t *enumerator;
+	arp_msg_t *i;
+
+	routes = socket(PF_ROUTE, SOCK_RAW, PF_ROUTE);
+	if (routes >= 0) {
+		enumerator = this->cache->create_enumerator(this->cache);
+		while (enumerator->enumerate(enumerator, &i)) {
+			this->cache->remove_at(this->cache, enumerator);
+
+			this->rtm_seq += 1;
+			i->hdr.rtm_type = RTM_DELETE;
+			i->hdr.rtm_seq = this->rtm_seq;
+
+			if (write(routes, i, i->hdr.rtm_msglen) < 0) {
+				DBG1(DBG_CHD, "proxyarp: delete %s failed: write: %d",
+					 format_ip(ip_buf[0], sizeof(ip_buf[0]),
+							   i->dst.sin_addr.s_addr),
+					 errno);
+			}
+
+			free(i);
+		}
+		enumerator->destroy(enumerator);
+		close(routes);
+	}
+}
+
+/* --------------------------------------------------------------------------
    Delete the proxy ARP entry for the peer
    -------------------------------------------------------------------------- */
 static int cifproxyarp(private_proxyarp_listener_t *this, u_int32_t hisaddr)
 {
-	char ip_buf[2][16];
+	char ip_buf[2][18];
 	int routes;
 	arp_msg_t *arp_msg = uncache_arp_msg(this, hisaddr);
 
@@ -275,26 +342,27 @@ static int cifproxyarp(private_proxyarp_listener_t *this, u_int32_t hisaddr)
 	arp_msg->hdr.rtm_type = RTM_DELETE;
 	arp_msg->hdr.rtm_seq = this->rtm_seq;
 
-	if ((routes = socket(PF_ROUTE, SOCK_RAW, PF_ROUTE)) < 0) {
-		DBG1(DBG_CHD, "proxyarp: delete entry %s failed: socket: %d",
+	routes = socket(PF_ROUTE, SOCK_RAW, PF_ROUTE);
+	if (routes < 0) {
+		DBG1(DBG_CHD, "proxyarp: delete %s failed: socket: %d",
 			 format_ip(ip_buf[0], sizeof(ip_buf[0]), hisaddr), errno);
 		free(arp_msg);
 		return 0;
 	}
 
 	if (write(routes, arp_msg, arp_msg->hdr.rtm_msglen) < 0) {
-		DBG1(DBG_CHD, "proxyarp: delete entry %s failed: write: %d",
+		DBG1(DBG_CHD, "proxyarp: delete %s failed: write: %d",
 			 format_ip(ip_buf[0], sizeof(ip_buf[0]), hisaddr), errno);
 		close(routes);
 		free(arp_msg);
 		return 0;
 	}
 
-	DBG1(DBG_CHD, "proxyarp: delete entry %s",
+	DBG1(DBG_CHD, "proxyarp: delete %s",
 		 format_ip(ip_buf[0], sizeof(ip_buf[0]), hisaddr));
-
 	close(routes);
 	free(arp_msg);
+
 	return 1;
 }
 
@@ -303,7 +371,7 @@ static int cifproxyarp(private_proxyarp_listener_t *this, u_int32_t hisaddr)
    -------------------------------------------------------------------------- */
 static int sifproxyarp(private_proxyarp_listener_t *this, u_int32_t hisaddr)
 {
-	char ip_buf[1][16];
+	char ip_buf[1][18];
 	int routes;
 	arp_msg_t *arp_msg = cache_arp_msg(this, hisaddr);
 
@@ -317,8 +385,10 @@ static int sifproxyarp(private_proxyarp_listener_t *this, u_int32_t hisaddr)
 		return 0;
 	}
 
-	if ((routes = socket(PF_ROUTE, SOCK_RAW, PF_ROUTE)) < 0) {
-		DBG1(DBG_CHD, "proxyarp: socket(ROUTE, RAW, ROUTE): %d", errno);
+	routes = socket(PF_ROUTE, SOCK_RAW, PF_ROUTE);
+	if (routes < 0) {
+		DBG1(DBG_CHD, "proxyarp: %s socket(ROUTE, RAW, ROUTE): %d",
+			 format_ip(ip_buf[0], sizeof(ip_buf[0]), hisaddr), errno);
 		uncache_arp_msg(this, hisaddr);
 		free(arp_msg);
 		return 0;
@@ -327,7 +397,8 @@ static int sifproxyarp(private_proxyarp_listener_t *this, u_int32_t hisaddr)
 	u_int32_t hdr_len = ((char *) &arp_msg->hwa) - ((char *) arp_msg);
 	arp_msg->hdr.rtm_msglen = hdr_len + arp_msg->hwa.sdl_len;
 	if (write(routes, arp_msg, arp_msg->hdr.rtm_msglen) < 0) {
-		DBG1(DBG_CHD, "proxyarp: write(hdr=%d sdl=%d rtm=%d): %d", hdr_len,
+		DBG1(DBG_CHD, "proxyarp: %s write(hdr=%d sdl=%d rtm=%d): %d",
+			 format_ip(ip_buf[0], sizeof(ip_buf[0]), hisaddr), hdr_len,
 			 arp_msg->hwa.sdl_len, arp_msg->hdr.rtm_msglen, errno);
 		close(routes);
 		uncache_arp_msg(this, hisaddr);
@@ -335,13 +406,268 @@ static int sifproxyarp(private_proxyarp_listener_t *this, u_int32_t hisaddr)
 		return 0;
 	}
 
+	DBG1(DBG_CHD, "proxyarp: add %s",
+		 format_ip(ip_buf[0], sizeof(ip_buf[0]), hisaddr));
 	close(routes);
 
-	DBG1(DBG_CHD, "proxyarp: add entry %s",
+	return 1;
+}
+
+#endif /* __APPLE__ */
+
+#ifdef __linux__
+#define NEXT_IFR(ifr)      ALIGNED_CAST(struct ifreq *)\
+    ((char *)ifr + sizeof(*ifr))
+
+static struct arpreq *cache_arp_msg(private_proxyarp_listener_t *this,
+									u_int32_t hisaddr)
+{
+	struct arpreq *arp_msg = malloc_thing(struct arpreq);
+	struct sockaddr_in *si;
+
+	memset(arp_msg, 0, sizeof(struct arpreq));
+
+	arp_msg->arp_flags = ATF_COM | ATF_PERM | ATF_PUBL;
+
+	si = (struct sockaddr_in *) &arp_msg->arp_pa;
+	si->sin_family = AF_INET;
+	si->sin_addr.s_addr = hisaddr;
+
+	this->cache->insert_first(this->cache, arp_msg);
+
+	return arp_msg;
+}
+
+static struct arpreq *uncache_arp_msg(private_proxyarp_listener_t *this,
+									  u_int32_t hisaddr)
+{
+	enumerator_t *enumerator;
+	struct arpreq *r = 0;
+	struct arpreq *i;
+	struct sockaddr_in *si;
+
+	enumerator = this->cache->create_enumerator(this->cache);
+	while (enumerator->enumerate(enumerator, &i)) {
+		si = (struct sockaddr_in *) &i->arp_pa;
+		if (si->sin_addr.s_addr == hisaddr) {
+			this->cache->remove_at(this->cache, enumerator);
+			r = i;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return r;
+}
+
+/* --------------------------------------------------------------------------
+   get the hardware address of an interface on the same subnet as ipaddr.
+   -------------------------------------------------------------------------- */
+static int
+get_ether_addr(u_int32_t ipaddr, struct sockaddr_storage *hwaddr, char *devp,
+			   size_t devlen)
+{
+	short allow_flgs = IFF_UP | IFF_BROADCAST;
+	short check_flgs = allow_flgs | IFF_POINTOPOINT | IFF_LOOPBACK | IFF_NOARP;
+	char ip_buf[3][18];
+	struct ifreq *ifr, *ifend;
+	struct ifreq ifs[32];
+	struct ifreq ifreq;
+	struct ifconf ifc;
+	u_int32_t ina, mask;
+	int ip_sockfd;
+
+	ip_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (ip_sockfd < 0) {
+		DBG1(DBG_CHD, "proxyarp: %s socket(INET, DGRAM, 0): %d",
+			 format_ip(ip_buf[0], sizeof(ip_buf[0]), ipaddr), errno);
+		return 0;
+	}
+
+	ifc.ifc_len = sizeof(ifs);
+	ifc.ifc_req = ifs;
+	if (ioctl(ip_sockfd, SIOCGIFCONF, &ifc) < 0) {
+		DBG1(DBG_CHD, "proxyarp: %s ioctl(SIOCGIFCONF): %d",
+			 format_ip(ip_buf[0], sizeof(ip_buf[0]), ipaddr), errno);
+		close(ip_sockfd);
+		return 0;
+	}
+
+	/*
+	 * Scan through looking for an interface with an Internet address on the
+	 * same subnet as `ipaddr'.
+	 */
+	DBG1(DBG_CHD, "proxyarp: find iface matching %s",
+		 format_ip(ip_buf[0], sizeof(ip_buf[0]), ipaddr));
+
+	ifend = ALIGNED_CAST(struct ifreq *) (ifc.ifc_buf + ifc.ifc_len);
+	for (ifr = ifc.ifc_req; ifr < ifend; ifr = NEXT_IFR(ifr)) {
+		if (ifr->ifr_addr.sa_family == AF_INET) {
+			ina = (ALIGNED_CAST(struct sockaddr_in *) &ifr->ifr_addr)
+					->sin_addr.s_addr;
+			snprintf(ifreq.ifr_name, sizeof(ifreq.ifr_name), "%s",
+					 ifr->ifr_name);
+			/*
+			 * Check that the interface is up, and not point-to-point
+			 * or loopback.
+			 */
+			if (ioctl(ip_sockfd, SIOCGIFFLAGS, &ifreq) < 0) {
+				DBG1(DBG_CHD, "- %s: failed to get flags", ifr->ifr_name);
+				continue;
+			}
+			if ((ifreq.ifr_flags & check_flgs) != allow_flgs) {
+				DBG1(DBG_CHD, "- %s: wrong flags %08x != %08x", ifr->ifr_name,
+					 ifreq.ifr_flags & check_flgs, allow_flgs);
+				continue;
+			}
+			/*
+			 * Get its netmask and check that it's on the right subnet.
+			 */
+			if (ioctl(ip_sockfd, SIOCGIFNETMASK, &ifreq) < 0) {
+				DBG1(DBG_CHD, "- %s: failed to get netmask", ifr->ifr_name);
+				continue;
+			}
+			mask = (ALIGNED_CAST(struct sockaddr_in *) &ifreq.ifr_addr)
+					->sin_addr.s_addr;
+			if ((ipaddr & mask) != (ina & mask)) {
+				DBG1(DBG_CHD, "- %s: wrong subnet %s/%s/%s", ifr->ifr_name,
+					 format_ip(ip_buf[0], sizeof(ip_buf[0]), ina),
+					 format_ip(ip_buf[1], sizeof(ip_buf[1]), mask),
+					 format_ip(ip_buf[2], sizeof(ip_buf[2]), ina & mask));
+				continue;
+			}
+
+			DBG1(DBG_CHD, "- %s: match %s/%s/%s", ifr->ifr_name,
+				 format_ip(ip_buf[0], sizeof(ip_buf[0]), ina),
+				 format_ip(ip_buf[1], sizeof(ip_buf[1]), mask),
+				 format_ip(ip_buf[2], sizeof(ip_buf[2]), ina & mask));
+
+			if (ioctl(ip_sockfd, SIOCGIFHWADDR, &ifreq) < 0) {
+				DBG1(DBG_CHD, "proxyarp: ioctl(SIOCGIFHWADDR): %d", errno);
+				close(ip_sockfd);
+				return 0;
+			}
+
+			DBG1(DBG_CHD, "proxyarp: if=%s family=%d mac=%s",
+				 ifreq.ifr_name, ifreq.ifr_hwaddr.sa_family,
+				 format_mac(ip_buf[0], sizeof(ip_buf[0]),
+							ifreq.ifr_hwaddr.sa_data));
+			memcpy(hwaddr, &ifreq.ifr_hwaddr, sizeof(ifreq.ifr_hwaddr));
+			snprintf(devp, devlen, "%s", ifreq.ifr_name);
+			break;
+		}
+	}
+
+	close(ip_sockfd);
+
+	if (ifr >= ifend) {
+		DBG1(DBG_CHD, "proxyarp: no suitable interface found");
+		return 0;
+	}
+
+	return 1;
+}
+
+/* --------------------------------------------------------------------------
+   Delete all the proxy ARP entries in the cache
+   -------------------------------------------------------------------------- */
+static void cifproxyarps(private_proxyarp_listener_t *this)
+{
+	char ip_buf[1][18];
+	int ip_sockfd;
+	enumerator_t *enumerator;
+	struct arpreq *i;
+	struct sockaddr_in *si;
+
+	ip_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (ip_sockfd >= 0) {
+		enumerator = this->cache->create_enumerator(this->cache);
+		while (enumerator->enumerate(enumerator, &i)) {
+			si = (struct sockaddr_in *) &i->arp_pa;
+			this->cache->remove_at(this->cache, enumerator);
+
+			if (ioctl(ip_sockfd, SIOCDARP, i) < 0) {
+				DBG1(DBG_CHD, "proxyarp: delete %s failed: write: %d",
+					 format_ip(ip_buf[0], sizeof(ip_buf[0]),
+							   si->sin_addr.s_addr), errno);
+			}
+
+			DBG1(DBG_CHD, "proxyarp: delete entry %s",
+				 format_ip(ip_buf[0], sizeof(ip_buf[0]), si->sin_addr.s_addr));
+			free(i);
+		}
+		enumerator->destroy(enumerator);
+		close(ip_sockfd);
+	}
+}
+
+/* --------------------------------------------------------------------------
+   Delete the proxy ARP entry for the peer
+   -------------------------------------------------------------------------- */
+static int cifproxyarp(private_proxyarp_listener_t *this, u_int32_t hisaddr)
+{
+	char ip_buf[1][18];
+	int ip_sockfd;
+	struct arpreq *arp_msg = uncache_arp_msg(this, hisaddr);
+
+	if (arp_msg == 0) {
+		return 0;
+	}
+
+	ip_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (ip_sockfd < 0) {
+		DBG1(DBG_CHD, "proxyarp: socket(INET, DGRAM, 0): %d", errno);
+		free(arp_msg);
+		return 0;
+	}
+
+	if (ioctl(ip_sockfd, SIOCDARP, arp_msg) < 0) {
+		DBG1(DBG_CHD, "proxyarp: socket(INET, DGRAM, 0): %d", errno);
+		free(arp_msg);
+		return 0;
+	}
+
+	DBG1(DBG_CHD, "proxyarp: delete entry %s",
 		 format_ip(ip_buf[0], sizeof(ip_buf[0]), hisaddr));
 
 	return 1;
 }
+
+/* --------------------------------------------------------------------------
+   Make a proxy ARP entry for the peer
+   -------------------------------------------------------------------------- */
+static int sifproxyarp(private_proxyarp_listener_t *this, u_int32_t hisaddr)
+{
+	int ip_sockfd;
+	struct arpreq *arp_msg = cache_arp_msg(this, hisaddr);
+	struct sockaddr_storage *ss = (struct sockaddr_storage *) &arp_msg->arp_ha;
+
+	if (!get_ether_addr(hisaddr, ss, arp_msg->arp_dev,
+						sizeof(arp_msg->arp_dev))) {
+		uncache_arp_msg(this, hisaddr);
+		free(arp_msg);
+		return 0;
+	}
+
+	ip_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (ip_sockfd < 0) {
+		DBG1(DBG_CHD, "proxyarp: socket(INET, DGRAM, 0): %d", errno);
+		uncache_arp_msg(this, hisaddr);
+		free(arp_msg);
+		return 0;
+	}
+
+	if (ioctl(ip_sockfd, SIOCSARP, arp_msg) < 0) {
+		DBG1(DBG_CHD, "proxyarp: socket(INET, DGRAM, 0): %d", errno);
+		uncache_arp_msg(this, hisaddr);
+		free(arp_msg);
+		return 0;
+	}
+
+	return 1;
+}
+
+#endif /* __linux__ */
 
 /**
  * Invoke the proxyarp script once for given traffic selectors
@@ -386,32 +712,7 @@ METHOD(listener_t, child_updown, bool, private_proxyarp_listener_t *this,
 
 METHOD(proxyarp_listener_t, destroy, void, private_proxyarp_listener_t *this)
 {
-	char ip_buf[1][16];
-	int routes;
-	enumerator_t *enumerator;
-	arp_msg_t *i;
-
-	if ((routes = socket(PF_ROUTE, SOCK_RAW, PF_ROUTE)) >= 0) {
-		enumerator = this->cache->create_enumerator(this->cache);
-		while (enumerator->enumerate(enumerator, &i)) {
-			this->cache->remove_at(this->cache, enumerator);
-
-			this->rtm_seq += 1;
-			i->hdr.rtm_type = RTM_DELETE;
-			i->hdr.rtm_seq = this->rtm_seq;
-
-			if (write(routes, i, i->hdr.rtm_msglen) < 0) {
-				DBG1(DBG_CHD, "proxyarp: delete entry %s failed: write: %d",
-					 format_ip(ip_buf[0], sizeof(ip_buf[0]),
-							   i->dst.sin_addr.s_addr), errno);
-			}
-
-			free(i);
-		}
-		enumerator->destroy(enumerator);
-		close(routes);
-	}
-
+	cifproxyarps(this);
 	this->cache->destroy(this->cache);
 	free(this);
 }
