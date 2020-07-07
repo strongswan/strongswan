@@ -1547,8 +1547,8 @@ CALLBACK(filter_addresses, bool,
 		{	/* skip deprecated addresses or those with an unusable scope */
 			continue;
 		}
-		if (addr->ip->get_family(addr->ip) == AF_INET6)
-		{	/* handle temporary IPv6 addresses according to config */
+		if (!addr->refcount && addr->ip->get_family(addr->ip) == AF_INET6)
+		{	/* handle non-VIP temporary IPv6 addresses according to config */
 			bool temporary = (addr->flags & IFA_F_TEMPORARY) == IFA_F_TEMPORARY;
 			if (data->this->prefer_temporary_addrs != temporary)
 			{
