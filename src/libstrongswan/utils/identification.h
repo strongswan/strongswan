@@ -183,9 +183,9 @@ enum id_part_t {
 	/** OrganizationUnit RDN of a DN */
 	ID_PART_RDN_OU,
 	/** Surname RDN of a DN */
-	ID_PART_RDN_S,
-	/** SerialNumber RDN of a DN */
 	ID_PART_RDN_SN,
+	/** SerialNumber RDN of a DN */
+	ID_PART_RDN_SERIAL_NUMBER,
 	/** StateOrProvince RDN of a DN */
 	ID_PART_RDN_ST,
 	/** Title RDN of a DN */
