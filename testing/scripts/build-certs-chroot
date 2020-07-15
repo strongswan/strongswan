@@ -460,7 +460,7 @@ mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 cp ${TEST_KEY}  ${TEST}/hosts/carol/${IPSEC_DIR}/private
 cp ${TEST_CERT} ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 
-# Generate another carol certificate with SN=002
+# Generate another carol certificate with serialNumber=002
 TEST="${TEST_DIR}/ikev2/two-certs"
 TEST_KEY="${TEST}/hosts/carol/${IPSEC_DIR}/private/carolKey-002.pem"
 TEST_CERT="${TEST}/hosts/carol/${IPSEC_DIR}/certs/carolCert-002.pem"
@@ -470,7 +470,7 @@ mkdir -p ${TEST}/hosts/carol/${IPSEC_DIR}/certs
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
-    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=Research, SN=002, CN=${CN}" \
+    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=Research, serialNumber=002, CN=${CN}" \
     --outform pem > ${TEST_CERT}
 cp ${TEST_CERT} ${CA_DIR}/certs/${SERIAL}.pem
 
