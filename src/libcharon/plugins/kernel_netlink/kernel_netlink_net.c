@@ -942,8 +942,9 @@ static host_t *get_matching_address(private_kernel_netlink_net_t *this,
 				{	/* optionally match a subnet */
 					continue;
 				}
-				if (candidate && candidate->ip_equals(candidate, addr->ip))
-				{	/* stop if we find the candidate */
+				if (candidate && candidate->ip_equals(candidate, addr->ip) &&
+					!(addr->flags & IFA_F_DEPRECATED))
+				{	/* stop if we find the candidate and it's not deprecated */
 					best = addr;
 					candidate_matched = TRUE;
 					break;
