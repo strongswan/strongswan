@@ -4,7 +4,7 @@ libstrongswan_la_SOURCES = \
 library.c \
 asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
-collections/array.c \
+collections/hashlist.c collections/array.c \
 collections/linked_list.c crypto/crypters/crypter.c \
 crypto/drbgs/drbg.c crypto/hashers/hasher.c \
 crypto/hashers/hash_algorithm_set.c crypto/proposal/proposal.c \
@@ -69,6 +69,7 @@ nobase_strongswan_include_HEADERS = \
 library.h \
 asn1/asn1.h asn1/asn1_parser.h asn1/oid.h bio/bio_reader.h bio/bio_writer.h \
 collections/blocking_queue.h collections/enumerator.h collections/hashtable.h \
+collections/hashtable_profiler.h \
 collections/linked_list.h collections/array.h collections/dictionary.h \
 crypto/crypters/crypter.h crypto/drbgs/drbg.h crypto/hashers/hasher.h \
 crypto/hashers/hash_algorithm_set.h crypto/mac.h crypto/proposal/proposal.h \
