@@ -1391,12 +1391,15 @@ case "$GIT_VERSION" in
 	"$PACKAGE_VERSION"*)
 		AC_MSG_RESULT([$GIT_VERSION])
 		;;
+	UNKNOWN)
+		AC_MSG_RESULT([$GIT_VERSION (could be due to insufficient clone depth)])
+		;;
 	*)
 		AC_MSG_ERROR([$PACKAGE_VERSION is not a prefix of $GIT_VERSION, tag missing?])
 		;;
 esac
 
-if test x$git_version = xtrue; then
+if test x$git_version = xtrue -a "$GIT_VERSION" != "UNKNOWN"; then
 	AC_DEFINE_UNQUOTED(VERSION, ["$GIT_VERSION"])
 fi
 
