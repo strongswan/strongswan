@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2020 Tobias Brunner
  * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -22,7 +23,6 @@
 #define VICI_AUTHORITY_H_
 
 #include "vici_dispatcher.h"
-#include "vici_cred.h"
 
 typedef struct vici_authority_t vici_authority_t;
 
@@ -37,6 +37,20 @@ struct vici_authority_t {
 	credential_set_t set;
 
 	/**
+	 * Add a CA certificate and return a reference if it is already stored,
+	 * otherwise returns the same certificate.
+	 *
+	 * @param cert		certificate to check
+	 * @return			reference to stored CA certificate, or original
+	 */
+	certificate_t *(*add_ca_cert)(vici_authority_t *this, certificate_t *cert);
+
+	/**
+	 * Remove CA certificates added via add_ca_cert().
+	 */
+	void (*clear_ca_certs)(vici_authority_t *this);
+
+	/**
 	 * Destroy a vici_authority_t.
 	 */
 	void (*destroy)(vici_authority_t *this);
@@ -46,10 +60,8 @@ struct vici_authority_t {
  * Create a vici_authority instance.
  *
  * @param dispatcher		dispatcher to receive requests from
- * @param cred				in-memory credential backend managed by VICI
  * @return					authority backend
  */
-vici_authority_t *vici_authority_create(vici_dispatcher_t *dispatcher,
-										vici_cred_t *cred);
+vici_authority_t *vici_authority_create(vici_dispatcher_t *dispatcher);
 
 #endif /** VICI_AUTHORITY_H_ @}*/
