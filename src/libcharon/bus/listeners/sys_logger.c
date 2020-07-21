@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -51,6 +51,11 @@ struct private_sys_logger_t {
 	bool ike_name;
 
 	/**
+	 * Print the log level
+	 */
+	bool log_level;
+
+	/**
 	 * Mutex to ensure multi-line log messages are not torn apart
 	 */
 	mutex_t *mutex;
@@ -65,13 +70,21 @@ METHOD(logger_t, log_, void,
 	private_sys_logger_t *this, debug_t group, level_t level, int thread,
 	ike_sa_t* ike_sa, const char *message)
 {
-	char groupstr[4], namestr[128] = "";
+	char groupstr[5], namestr[128] = "";
 	const char *current = message, *next;
 
 	/* cache group name and optional name string */
-	snprintf(groupstr, sizeof(groupstr), "%N", debug_names, group);
-
 	this->lock->read_lock(this->lock);
+	if (this->log_level)
+	{
+		snprintf(groupstr, sizeof(groupstr), "%N%d", debug_names, group,
+				 level);
+	}
+	else
+	{
+		snprintf(groupstr, sizeof(groupstr), "%N", debug_names, group);
+	}
+
 	if (this->ike_name && ike_sa)
 	{
 		if (ike_sa->get_peer_cfg(ike_sa))
@@ -135,10 +148,11 @@ METHOD(sys_logger_t, set_level, void,
 }
 
 METHOD(sys_logger_t, set_options, void,
-	private_sys_logger_t *this, bool ike_name)
+	private_sys_logger_t *this, bool ike_name, bool log_level)
 {
 	this->lock->write_lock(this->lock);
 	this->ike_name = ike_name;
+	this->log_level = log_level;
 	this->lock->unlock(this->lock);
 }
 

@@ -67,3 +67,6 @@ charon.syslog.<facility>.<subsystem> = <default>
 charon.syslog.<facility>.ike_name = no
 	Prefix each log entry with the connection name and a unique numerical
 	identifier for each IKE_SA.
+
+charon.syslog.<facility>.log_level = no
+	Add the log level of each message after the subsystem (e.g. [IKE2]).

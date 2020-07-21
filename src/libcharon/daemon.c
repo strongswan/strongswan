@@ -450,6 +450,7 @@ static void load_sys_logger(private_daemon_t *this, char *facility,
 	sys_logger_t *sys_logger;
 	debug_t group;
 	level_t def;
+	bool ike_name, log_level;
 
 	if (get_syslog_facility(facility) == -1)
 	{
@@ -462,9 +463,12 @@ static void load_sys_logger(private_daemon_t *this, char *facility,
 		return;
 	}
 
-	sys_logger->set_options(sys_logger,
-				lib->settings->get_bool(lib->settings, "%s.syslog.%s.ike_name",
-										FALSE, lib->ns, facility));
+	ike_name = lib->settings->get_bool(lib->settings, "%s.syslog.%s.ike_name",
+									   FALSE, lib->ns, facility);
+	log_level = lib->settings->get_bool(lib->settings, "%s.syslog.%s.log_level",
+									   FALSE, lib->ns, facility);
+
+	sys_logger->set_options(sys_logger, ike_name, log_level);
 
 	def = lib->settings->get_int(lib->settings, "%s.syslog.%s.default", 1,
 								 lib->ns, facility);
