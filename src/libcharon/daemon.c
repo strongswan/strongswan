@@ -486,7 +486,7 @@ static void load_file_logger(private_daemon_t *this, char *section,
 	file_logger_t *file_logger;
 	debug_t group;
 	level_t def;
-	bool add_ms, ike_name, flush_line, append;
+	bool add_ms, ike_name, log_level, flush_line, append;
 	char *time_format, *filename;
 
 	time_format = lib->settings->get_str(lib->settings,
@@ -495,6 +495,8 @@ static void load_file_logger(private_daemon_t *this, char *section,
 						"%s.filelog.%s.time_add_ms", FALSE, lib->ns, section);
 	ike_name = lib->settings->get_bool(lib->settings,
 						"%s.filelog.%s.ike_name", FALSE, lib->ns, section);
+	log_level = lib->settings->get_bool(lib->settings,
+						"%s.filelog.%s.log_level", FALSE, lib->ns, section);
 	flush_line = lib->settings->get_bool(lib->settings,
 						"%s.filelog.%s.flush_line", FALSE, lib->ns, section);
 	append = lib->settings->get_bool(lib->settings,
@@ -508,7 +510,8 @@ static void load_file_logger(private_daemon_t *this, char *section,
 		return;
 	}
 
-	file_logger->set_options(file_logger, time_format, add_ms, ike_name);
+	file_logger->set_options(file_logger, time_format, add_ms, ike_name,
+							 log_level);
 	file_logger->open(file_logger, flush_line, append);
 
 	def = lib->settings->get_int(lib->settings, "%s.filelog.%s.default", 1,
