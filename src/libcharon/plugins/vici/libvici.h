@@ -91,7 +91,7 @@ extern "C" {
 #endif
 
 /**
- * Opaque vici connection contex.
+ * Opaque vici connection context.
  */
 typedef struct vici_conn_t vici_conn_t;
 
