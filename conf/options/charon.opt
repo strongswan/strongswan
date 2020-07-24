@@ -392,6 +392,15 @@ charon.routing_table_prio
 charon.rsa_pss = no
 	Whether to use RSA with PSS padding instead of PKCS#1 padding by default.
 
+charon.send_cisco_flexvpn_vendor_id = no
+	Send the CISCO FlexVPN vendor ID. It is required in order to make CISCO
+	brand devicesallow negotiating a local_ts (from strongSwan's point of view)
+	that is not the assigned "virtual" IP address, if a "virtual" IP address is
+	requested by strongSwan. Sending the CISCO FlexVPN vendor ID makes the CISCO
+	peer allow this peer to negotiate a TS of 0.0.0.0/0 == 0.0.0.0/0 instead
+	(unknow if it works for IPv6 too). This has been tested with a "tunnel mode
+	ipsec ipv4" CISCO template but should also work for GRE encapsulation.
+
 charon.send_delay = 0
 	Delay in ms for sending packets, to simulate larger RTT.
 
