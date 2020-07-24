@@ -1,8 +1,42 @@
 strongswan-5.9.0
 ----------------
 
-- We prefer AEAD algorithms for ESP and therefore put AES-GCM in front of
-  the default proposal.
+- We prefer AEAD algorithms for ESP and therefore put AES-GCM in a default AEAD
+  proposal in front of the previous default proposal.
+
+- The NM backend now clears cached credentials when disconnecting, has DPD and
+  and close action set to restart, and supports custom remote TS via 'remote-ts'
+  option (no GUI support).
+
+- The pkcs11 plugin falls back to software hashing for PKCS#1v1.5 RSA signatures
+  if mechanisms with hashing (e.g. CKM_SHA256_RSA_PKCS) are not supported.
+
+- The owner/group of log files is now set so the daemon can reopen them if the
+  config is reloaded and it doesn't run as root.
+
+- The wolfssl plugin (with wolfSSL 4.4.0+) supports x448 DH and Ed448 keys.
+
+- The vici plugin stores all CA certificates in one location, which avoids
+  issues with unloading authority sections or clearing all credentials.
+
+- When unloading a vici connection with start_action=start, any related IKE_SAs
+  without children are now terminated (including those in CONNECTING state).
+
+- The hashtable implementation has been changed so it maintains insertion order.
+  This was mainly done so the vici plugin can store its connections in a
+  hashtable, which makes managing high numbers of connections faster.
+
+- The default maximum size for vici messages (512 KiB) can now be changed via
+  VICI_MESSAGE_SIZE_MAX compile option.
+
+- The charon.check_current_path option allows forcing a DPD exchange to check if
+  the current path still works whenever interface/address-changes are detected.
+
+- It's possible to use clocks other than CLOCK_MONOTONIC (e.g. CLOCK_BOOTTIME)
+  via TIME_CLOCK_ID compile option if clock_gettime() is available and
+  pthread_condattr_setclock() supports that clock.
+
+- Test cases and functions can now be filtered when running the unit tests.
 
 
 strongswan-5.8.4
