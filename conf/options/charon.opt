@@ -51,6 +51,18 @@ charon.check_current_path = no
 	connectivity.  It will also trigger a MOBIKE update if NAT mappings were
 	removed during the downtime.
 
+charon.cisco_flexvpn = no
+	Send the Cisco FlexVPN vendor ID payload (IKEv2 only).
+
+	Send the Cisco FlexVPN vendor ID payload, which is required in order to make
+	Cisco brand devices allow negotiating a local traffic selector (from
+	strongSwan's point of view) that is not the assigned virtual IP address if
+	such an address is requested by	strongSwan.  Sending the Cisco FlexVPN
+	vendor ID prevents the peer from narrowing the initiator's local traffic
+	selector and allows it to e.g. negotiate a TS of 0.0.0.0/0 == 0.0.0.0/0
+	instead.  This has been tested with a "tunnel mode ipsec ipv4" Cisco
+	template but should also work for GRE encapsulation.
+
 charon.cisco_unity = no
 	Send Cisco Unity vendor ID payload (IKEv1 only).
 

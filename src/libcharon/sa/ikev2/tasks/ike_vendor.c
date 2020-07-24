@@ -97,7 +97,7 @@ static vid_data_t vids[] = {
 	  "\x88\x2f\xe5\x6d\x6f\xd2\x0d\xbc\x22\x51\x61\x3b\x2e\xbe\x5b\xeb"},
 	{ "Cisco Delete Reason", 0, NULL, 0,
 	  "CISCO-DELETE-REASON" },
-	{ "Cisco FlexVPN Supported", 0, NULL, 0,
+	{ "Cisco FlexVPN Supported", 0, "cisco_flexvpn", 0,
 	  "FLEXVPN-SUPPORTED" },
 	{ "Cisco Copyright (c) 2009", 0, NULL, 0,
 	  "CISCO(COPYRIGHT)&Copyright (c) 2009 Cisco Systems, Inc." },
