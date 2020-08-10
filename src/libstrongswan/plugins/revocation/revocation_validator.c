@@ -112,7 +112,8 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 	}
 	ocsp_request = (ocsp_request_t*)request;
 	ocsp_response = (ocsp_response_t*)response;
-	if (!chunk_equals_const(ocsp_request->get_nonce(ocsp_request),
+	if (ocsp_response->get_nonce(ocsp_response).len &&
+		!chunk_equals_const(ocsp_request->get_nonce(ocsp_request),
 							ocsp_response->get_nonce(ocsp_response)))
 	{
 		DBG1(DBG_CFG, "nonce in ocsp response doesn't match");
