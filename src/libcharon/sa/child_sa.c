@@ -110,6 +110,11 @@ struct private_child_sa_t {
 	chunk_t integ_r;
 
 	/**
+	 * Whether the registered outbound SA was created as initiator
+	 */
+	bool initiator;
+
+	/**
 	 * Whether the outbound SA has only been registered yet during a rekeying
 	 */
 	child_sa_outbound_state_t outbound_state;
@@ -1419,13 +1424,13 @@ static bool install_outbound_immediately(private_child_sa_t *this)
 
 METHOD(child_sa_t, register_outbound, status_t,
 	private_child_sa_t *this, chunk_t encr, chunk_t integ, uint32_t spi,
-	uint16_t cpi, bool tfcv3)
+	uint16_t cpi, bool initiator, bool tfcv3)
 {
 	status_t status;
 
 	if (install_outbound_immediately(this))
 	{
-		status = install_internal(this, encr, integ, spi, cpi, FALSE, FALSE,
+		status = install_internal(this, encr, integ, spi, cpi, initiator, FALSE,
 								  tfcv3);
 	}
 	else
@@ -1439,6 +1444,7 @@ METHOD(child_sa_t, register_outbound, status_t,
 		this->other_cpi = cpi;
 		this->encr_r = chunk_clone(encr);
 		this->integ_r = chunk_clone(integ);
+		this->initiator = initiator;
 		this->tfcv3 = tfcv3;
 		status = SUCCESS;
 	}
@@ -1456,8 +1462,8 @@ METHOD(child_sa_t, install_outbound, status_t,
 	if (!(this->outbound_state & CHILD_OUTBOUND_SA))
 	{
 		status = install_internal(this, this->encr_r, this->integ_r,
-								  this->other_spi, this->other_cpi, FALSE,
-								  FALSE, this->tfcv3);
+								  this->other_spi, this->other_cpi,
+								  this->initiator, FALSE, this->tfcv3);
 		chunk_clear(&this->encr_r);
 		chunk_clear(&this->integ_r);
 	}
