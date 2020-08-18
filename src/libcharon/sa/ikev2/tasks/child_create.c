@@ -720,13 +720,13 @@ static status_t select_and_install(private_child_create_t *this, bool ike_auth)
 			{
 				status_o = this->child_sa->register_outbound(this->child_sa,
 							encr_i, integ_i, this->other_spi, this->other_cpi,
-							this->tfcv3);
+							this->initiator, this->tfcv3);
 			}
 			else
 			{
 				status_o = this->child_sa->register_outbound(this->child_sa,
 							encr_r, integ_r, this->other_spi, this->other_cpi,
-							this->tfcv3);
+							this->initiator, this->tfcv3);
 			}
 		}
 		else if (this->initiator)
