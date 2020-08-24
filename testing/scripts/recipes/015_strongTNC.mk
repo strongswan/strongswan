@@ -15,7 +15,7 @@ $(PKG)-master: $(ZIP)
 
 $(DEPS): $(PKG)-master
 	mkdir -p $(DEPS)
-	pip install --download $(DEPS) -r $(PKG)-master/requirements.txt
+	pip download -d $(DEPS) -r $(PKG)-master/requirements.txt
 
 install: $(DEPS)
 	pip install --no-index --find-links=file://`pwd`/$(DEPS) -r $(PKG)-master/requirements.txt
