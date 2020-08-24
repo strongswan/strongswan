@@ -135,5 +135,14 @@ do
 	execute_chroot "systemctl disable $service"
 done
 
+case "$BASEIMGSUITE" in
+buster)
+	log_action "Switching from iptables-nft to iptables-legacy"
+	execute_chroot "update-alternatives --set iptables /usr/sbin/iptables-legacy" 0
+	execute_chroot "update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy" 0
+	log_status 0
+	;;
+esac
+
 log_action "Disabling root password"
 execute_chroot "passwd -d root"
