@@ -15,8 +15,9 @@ $(PKG)-master: $(ZIP)
 
 $(DEPS): $(PKG)-master
 	mkdir -p $(DEPS)
-	pip download -d $(DEPS) -r $(PKG)-master/requirements.txt
+	pip download -d $(DEPS) -r $(PKG)-master/requirements.txt six
 
 install: $(DEPS)
-	pip install --no-index --find-links=file://`pwd`/$(DEPS) -r $(PKG)-master/requirements.txt
+	# six is required for djangorestframework-camel-case
+	pip install --no-index --find-links=file://`pwd`/$(DEPS) -r $(PKG)-master/requirements.txt six
 	cp -r $(PKG)-master /var/www/tnc && chgrp -R www-data /var/www/tnc && chmod g+sw /var/www/tnc
