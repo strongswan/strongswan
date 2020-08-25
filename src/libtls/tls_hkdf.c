@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2020 Tobias Brunner
  * Copyright (C) 2020 Pascal Knecht
  * Copyright (C) 2020 Méline Sieber
  * HSR Hochschule fuer Technik Rapperswil
@@ -41,11 +42,6 @@ struct private_tls_hkdf_t {
 	hkdf_phase phase;
 
 	/**
-	 * Hash algorithm used.
-	 */
-	hash_algorithm_t hash_algorithm;
-
-	/**
 	 * Pseudorandom function used.
 	 */
 	prf_t *prf;
@@ -61,9 +57,9 @@ struct private_tls_hkdf_t {
 	chunk_t shared_secret;
 
 	/**
-	 * IKM used.
+	 * PSK used.
 	 */
-	chunk_t ikm;
+	chunk_t psk;
 
 	/**
 	 * PRK used.
@@ -105,13 +101,13 @@ static bool extract(private_tls_hkdf_t *this, chunk_t salt, chunk_t ikm,
 {
 	if (!this->prf->set_key(this->prf, salt))
 	{
-		DBG1(DBG_TLS, "unable to set PRF salt");
+		DBG1(DBG_TLS, "unable to set PRF secret to salt");
 		return FALSE;
 	}
 	chunk_clear(prk);
 	if(!this->prf->allocate_bytes(this->prf, ikm, prk))
 	{
-		DBG1(DBG_TLS, "unable to allocate PRF space");
+		DBG1(DBG_TLS, "unable to allocate PRF result");
 		return FALSE;
 	}
 
@@ -127,21 +123,23 @@ static bool extract(private_tls_hkdf_t *this, chunk_t salt, chunk_t ikm,
 static bool expand(private_tls_hkdf_t *this, chunk_t prk, chunk_t info,
 				   size_t length, chunk_t *okm)
 {
+	prf_plus_t *prf_plus;
+
 	if (!this->prf->set_key(this->prf, prk))
 	{
-		DBG1(DBG_TLS, "unable to set PRF PRK");
+		DBG1(DBG_TLS, "unable to set PRF secret to PRK");
 		return FALSE;
 	}
-	prf_plus_t *prf_plus = prf_plus_create(this->prf, TRUE, info);
-	chunk_clear(&this->okm);
+	prf_plus = prf_plus_create(this->prf, TRUE, info);
+	chunk_clear(okm);
 	if (!prf_plus || !prf_plus->allocate_bytes(prf_plus, length, okm))
 	{
-		DBG1(DBG_TLS, "unable to allocate PRF plus space");
+		DBG1(DBG_TLS, "unable to allocate PRF+ result");
 		DESTROY_IF(prf_plus);
 		chunk_clear(okm);
 		return FALSE;
 	}
-	DESTROY_IF(prf_plus);
+	prf_plus->destroy(prf_plus);
 
 	DBG4(DBG_TLS, "OKM: %B", okm);
 
@@ -181,14 +179,11 @@ static bool expand_label(private_tls_hkdf_t *this, chunk_t secret,
 static bool derive_secret(private_tls_hkdf_t *this, chunk_t label,
 						  chunk_t messages)
 {
-	bool success;
 	chunk_t context;
+	bool success;
 
-	if (!this->hasher ||
-		!this->hasher->allocate_hash(this->hasher, messages, &context))
+	if (!this->hasher->allocate_hash(this->hasher, messages, &context))
 	{
-		DBG1(DBG_TLS, "%N not supported", hash_algorithm_names,
-			 this->hash_algorithm);
 		return FALSE;
 	}
 
@@ -199,16 +194,38 @@ static bool derive_secret(private_tls_hkdf_t *this, chunk_t label,
 	return success;
 }
 
+/**
+ * Move to phase 1 (Early Secret)
+ *
+ *            0
+ *            |
+ *            v
+ *  PSK ->  HKDF-Extract = Early Secret
+ *            |
+ *            +-----> Derive-Secret(., "ext binder" | "res binder", "")
+ *            |                     = binder_key
+ *            |
+ *            +-----> Derive-Secret(., "c e traffic", ClientHello)
+ *            |                     = client_early_traffic_secret
+ *            |
+ *            +-----> Derive-Secret(., "e exp master", ClientHello)
+ *            |                     = early_exporter_master_secret
+ *            v
+ */
 static bool move_to_phase_1(private_tls_hkdf_t *this)
 {
-	chunk_t salt_zero;
+	chunk_t salt_zero, psk = this->psk;
 
 	switch (this->phase)
 	{
 		case HKDF_PHASE_0:
 			salt_zero = chunk_alloca(this->hasher->get_hash_size(this->hasher));
 			chunk_copy_pad(salt_zero, chunk_empty, 0);
-			if (!extract(this, salt_zero, this->ikm, &this->prk))
+			if (!psk.ptr)
+			{
+				psk = salt_zero;
+			}
+			if (!extract(this, salt_zero, psk, &this->prk))
 			{
 				DBG1(DBG_TLS, "unable to extract PRK");
 				return FALSE;
@@ -223,6 +240,23 @@ static bool move_to_phase_1(private_tls_hkdf_t *this)
 	}
 }
 
+/**
+ * Move to phase 2 (Handshake Secret)
+ *
+ *      Derive-Secret(., "derived", "")
+ *            |
+ *            v
+ *  (EC)DHE -> HKDF-Extract = Handshake Secret
+ *            |
+ *            +-----> Derive-Secret(., "c hs traffic",
+ *            |                     ClientHello...ServerHello)
+ *            |                     = client_handshake_traffic_secret
+ *            |
+ *            +-----> Derive-Secret(., "s hs traffic",
+ *            |                     ClientHello...ServerHello)
+ *            |                     = server_handshake_traffic_secret
+ *            v
+ */
 static bool move_to_phase_2(private_tls_hkdf_t *this)
 {
 	chunk_t derived;
@@ -249,13 +283,8 @@ static bool move_to_phase_2(private_tls_hkdf_t *this)
 				DBG1(DBG_TLS, "no shared secret set");
 				return FALSE;
 			}
-			else
-			{
-				chunk_clear(&this->ikm);
-				this->ikm = chunk_clone(this->shared_secret);
-			}
 
-			if (!extract(this, this->okm, this->ikm, &this->prk))
+			if (!extract(this, this->okm, this->shared_secret, &this->prk))
 			{
 				DBG1(DBG_TLS, "unable extract PRK");
 				return FALSE;
@@ -270,6 +299,30 @@ static bool move_to_phase_2(private_tls_hkdf_t *this)
 	}
 }
 
+/**
+ * Move to phase 3 (Master Secret)
+ *
+ *      Derive-Secret(., "derived", "")
+ *            |
+ *            v
+ *  0 -> HKDF-Extract = Master Secret
+ *            |
+ *            +-----> Derive-Secret(., "c ap traffic",
+ *            |                     ClientHello...server Finished)
+ *            |                     = client_application_traffic_secret_0
+ *            |
+ *            +-----> Derive-Secret(., "s ap traffic",
+ *            |                     ClientHello...server Finished)
+ *            |                     = server_application_traffic_secret_0
+ *            |
+ *            +-----> Derive-Secret(., "exp master",
+ *            |                     ClientHello...server Finished)
+ *            |                     = exporter_master_secret
+ *            |
+ *            +-----> Derive-Secret(., "res master",
+ *                                  ClientHello...client Finished)
+ *                                  = resumption_master_secret
+ */
 static bool move_to_phase_3(private_tls_hkdf_t *this)
 {
 	chunk_t derived, ikm_zero;
@@ -308,45 +361,6 @@ static bool move_to_phase_3(private_tls_hkdf_t *this)
 			DBG1(DBG_TLS, "invalid HKDF phase");
 			return FALSE;
 	}
-}
-
-static void return_secret(private_tls_hkdf_t *this, chunk_t key,
-						  chunk_t *secret)
-{
-	*secret = chunk_alloc(key.len);
-	chunk_copy_pad(*secret, key, 0);
-}
-
-static bool get_shared_label_keys(private_tls_hkdf_t *this, chunk_t label,
-								  bool is_server, size_t length, chunk_t *key)
-{
-	chunk_t result, secret;
-
-	if (is_server)
-	{
-		secret = chunk_clone(this->server_traffic_secret);
-	}
-	else
-	{
-		secret = chunk_clone(this->client_traffic_secret);
-	}
-
-	if (!expand_label(this, secret, label, chunk_empty, length, &result))
-	{
-		DBG1(DBG_TLS, "unable to derive secret");
-		chunk_clear(&secret);
-		chunk_clear(&result);
-		return FALSE;
-	}
-
-	if (key)
-	{
-		return_secret(this, result, key);
-	}
-
-	chunk_clear(&secret);
-	chunk_clear(&result);
-	return TRUE;
 }
 
 METHOD(tls_hkdf_t, set_shared_secret, void,
@@ -414,9 +428,37 @@ METHOD(tls_hkdf_t, generate_secret, bool,
 
 	if (secret)
 	{
-		return_secret(this, this->okm, secret);
+		*secret = chunk_clone(this->okm);
+	}
+	return TRUE;
+}
+
+/**
+ * Derive keys/IVs from the current traffic secrets.
+ */
+static bool get_shared_label_keys(private_tls_hkdf_t *this, chunk_t label,
+								  bool is_server, size_t length, chunk_t *key)
+{
+	chunk_t result = chunk_empty, secret;
+
+	secret = is_server ? this->server_traffic_secret
+					   : this->client_traffic_secret;
+
+	if (!expand_label(this, secret, label, chunk_empty, length, &result))
+	{
+		DBG1(DBG_TLS, "unable to derive labeled secret");
+		chunk_clear(&result);
+		return FALSE;
 	}
 
+	if (key)
+	{
+		*key = result;
+	}
+	else
+	{
+		chunk_clear(&result);
+	}
 	return TRUE;
 }
 
@@ -446,7 +488,7 @@ METHOD(tls_hkdf_t, derive_finished, bool,
 METHOD(tls_hkdf_t, destroy, void,
 	private_tls_hkdf_t *this)
 {
-	chunk_free(&this->ikm);
+	chunk_clear(&this->psk);
 	chunk_clear(&this->prk);
 	chunk_clear(&this->shared_secret);
 	chunk_clear(&this->okm);
@@ -471,7 +513,8 @@ tls_hkdf_t *tls_hkdf_create(hash_algorithm_t hash_algorithm, chunk_t psk)
 			prf_algorithm = PRF_HMAC_SHA2_384;
 			break;
 		default:
-			DBG1(DBG_TLS, "not supported hash algorithm");
+			DBG1(DBG_TLS, "unsupported hash algorithm %N", hash_algorithm_names,
+				 hash_algorithm);
 			return NULL;
 	}
 
@@ -485,27 +528,26 @@ tls_hkdf_t *tls_hkdf_create(hash_algorithm_t hash_algorithm, chunk_t psk)
 			.destroy = _destroy,
 		},
 		.phase = HKDF_PHASE_0,
-		.hash_algorithm = hash_algorithm,
+		.psk = psk.ptr ? chunk_clone(psk) : chunk_empty,
 		.prf = lib->crypto->create_prf(lib->crypto, prf_algorithm),
 		.hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm),
 	);
 
-	if (!psk.ptr)
-	{
-		this->ikm = chunk_alloc(this->hasher->get_hash_size(this->hasher));
-		chunk_copy_pad(this->ikm, chunk_empty, 0);
-	}
-	else
-	{
-		this->ikm = chunk_clone(psk);
-	}
-
 	if (!this->prf || !this->hasher)
 	{
+		if (!this->prf)
+		{
+			DBG1(DBG_TLS, "%N not supported", pseudo_random_function_names,
+				 prf_algorithm);
+		}
+		if (!this->hasher)
+		{
+			DBG1(DBG_TLS, "%N not supported", hash_algorithm_names,
+				 hash_algorithm);
+		}
 		DBG1(DBG_TLS, "unable to initialise HKDF");
 		destroy(this);
 		return NULL;
 	}
-
 	return &this->public;
 }
