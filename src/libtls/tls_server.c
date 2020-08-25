@@ -601,7 +601,8 @@ static status_t process_finished(private_tls_server_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 		return NEED_MORE;
 	}
-	if (!this->crypto->calculate_finished(this->crypto, "client finished", buf))
+	if (!this->crypto->calculate_finished_legacy(this->crypto,
+												 "client finished", buf))
 	{
 		DBG1(DBG_TLS, "calculating client finished failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
@@ -974,7 +975,8 @@ static status_t send_finished(private_tls_server_t *this,
 {
 	char buf[12];
 
-	if (!this->crypto->calculate_finished(this->crypto, "server finished", buf))
+	if (!this->crypto->calculate_finished_legacy(this->crypto,
+												 "server finished", buf))
 	{
 		DBG1(DBG_TLS, "calculating server finished data failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);

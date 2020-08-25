@@ -1782,7 +1782,7 @@ METHOD(tls_crypto_t, verify_handshake, bool,
 	return verify(this, key, reader, this->handshake);
 }
 
-METHOD(tls_crypto_t, calculate_finished, bool,
+METHOD(tls_crypto_t, calculate_finished_legacy, bool,
 	private_tls_crypto_t *this, char *label, char out[12])
 {
 	chunk_t seed;
@@ -1804,7 +1804,7 @@ METHOD(tls_crypto_t, calculate_finished, bool,
 	return TRUE;
 }
 
-METHOD(tls_crypto_t, calculate_finished_tls13, bool,
+METHOD(tls_crypto_t, calculate_finished, bool,
 	private_tls_crypto_t *this, bool is_server, chunk_t *out)
 {
 	chunk_t finished_key, finished_hash;
@@ -2121,8 +2121,8 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 			.verify = _verify,
 			.sign_handshake = _sign_handshake,
 			.verify_handshake = _verify_handshake,
+			.calculate_finished_legacy = _calculate_finished_legacy,
 			.calculate_finished = _calculate_finished,
-			.calculate_finished_tls13 = _calculate_finished_tls13,
 			.derive_secrets = _derive_secrets,
 			.derive_handshake_keys = _derive_handshake_keys,
 			.derive_app_keys = _derive_app_keys,
