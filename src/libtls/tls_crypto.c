@@ -1,4 +1,9 @@
 /*
+ * Copyright (C) 2020 Tobias Brunner
+ * Copyright (C) 2020 Pascal Knecht
+ * Copyright (C) 2020 Méline Sieber
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010-2014 Martin Willi
  * Copyright (C) 2010-2014 revosec AG
  *
@@ -390,35 +395,6 @@ struct private_tls_crypto_t {
 	 * ECDSA supported?
 	 */
 	bool ecdsa;
-
-	/**
-	 * MD5 supported?
-	 */
-	bool md5;
-
-	/**
-	 * SHA1 supported?
-	 */
-	bool sha1;
-	/**
-	 * SHA224 supported?
-	 */
-	bool sha224;
-
-	/*
-	 * SHA256 supported?
-	 */
-	bool sha256;
-
-	/**
-	 * SHA384 supported?
-	 */
-	bool sha384;
-
-	/**
-	 * SHA512 supported?
-	 */
-	bool sha512;
 
 	/**
 	 * TLS context
@@ -1422,9 +1398,11 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 	private_tls_crypto_t *this, bio_writer_t *writer)
 {
 	bio_writer_t *supported;
+	tls_version_t version;
 	int i;
 
 	supported = bio_writer_create(32);
+	version = this->tls->get_version_max(this->tls);
 
 	for (i = 0; i < countof(schemes); i++)
 	{
@@ -1436,27 +1414,11 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 		{
 			continue;
 		}
-		if (schemes[i].hash == TLS_HASH_MD5 && !this->md5)
+		if (schemes[i].hash == TLS_HASH_MD5 && version >= TLS_1_3)
 		{
 			continue;
 		}
-		if (schemes[i].hash == TLS_HASH_SHA1 && !this->sha1)
-		{
-			continue;
-		}
-		if (schemes[i].hash == TLS_HASH_SHA224 && !this->sha224)
-		{
-			continue;
-		}
-		if (schemes[i].hash == TLS_HASH_SHA256 && !this->sha256)
-		{
-			continue;
-		}
-		if (schemes[i].hash == TLS_HASH_SHA384 && !this->sha384)
-		{
-			continue;
-		}
-		if (schemes[i].hash == TLS_HASH_SHA512 && !this->sha512)
+		if (schemes[i].hash == TLS_HASH_SHA224 && version >= TLS_1_3)
 		{
 			continue;
 		}
@@ -2242,8 +2204,6 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 	enumerator_t *enumerator;
 	credential_type_t type;
 	int subtype;
-	int hash_algorithm;
-	const char *plugin;
 
 	INIT(this,
 		.public = {
@@ -2289,49 +2249,6 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 				default:
 					break;
 			}
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	enumerator = lib->crypto->create_hasher_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &hash_algorithm, &plugin))
-	{
-		switch (hash_algorithm)
-		{
-			case TLS_HASH_MD5:
-				if (tls->get_version_max(tls) < TLS_1_3)
-				{
-					this->md5 = TRUE;
-				}
-				else
-				{
-					this->md5 = FALSE;
-				}
-				break;
-			case TLS_HASH_SHA1:
-				this->sha1 = TRUE;
-				break;
-			case TLS_HASH_SHA224:
-				if (tls->get_version_max(tls) < TLS_1_3)
-				{
-					this->sha224 = TRUE;
-				}
-				else
-				{
-					this->sha224 = FALSE;
-				}
-				break;
-			case TLS_HASH_SHA384:
-				this->sha384 = TRUE;
-				break;
-			case TLS_HASH_SHA256:
-				this->sha256 = TRUE;
-				break;
-			case TLS_HASH_SHA512:
-				this->sha512 = TRUE;
-				break;
-			default:
-				continue;
 		}
 	}
 	enumerator->destroy(enumerator);
