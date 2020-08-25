@@ -1808,35 +1808,31 @@ METHOD(tls_crypto_t, calculate_finished_tls13, bool,
 	private_tls_crypto_t *this, bool is_server, chunk_t *out)
 {
 	chunk_t finished_key, finished_hash;
-	prf_t *prf;
 
-	this->hkdf->derive_finished(this->hkdf, is_server, &finished_key);
+	if (!this->hkdf)
+	{
+		return FALSE;
+	}
 	if (!hash_data(this, this->handshake, &finished_hash))
 	{
 		DBG1(DBG_TLS, "creating hash of handshake failed");
-	}
-
-	if (this->suite == TLS_AES_256_GCM_SHA384)
-	{
-		prf = lib->crypto->create_prf(lib->crypto, PRF_HMAC_SHA2_384);
-	}
-	else
-	{
-		prf = lib->crypto->create_prf(lib->crypto, PRF_HMAC_SHA2_256);
-	}
-	if(!prf->set_key(prf, finished_key) ||
-	   !prf->allocate_bytes(prf, finished_hash, out))
-	{
-		DBG1(DBG_TLS, "setting key or generating hash for HMAC failed");
-		chunk_clear(&finished_key);
-		chunk_clear(&finished_hash);
-		prf->destroy(prf);
 		return FALSE;
 	}
-
+	if (!this->hkdf->derive_finished(this->hkdf, is_server, &finished_key))
+	{
+		DBG1(DBG_TLS, "generating finished key failed");
+		chunk_clear(&finished_hash);
+		return FALSE;
+	}
+	if (!this->hkdf->allocate_bytes(this->hkdf, finished_key, finished_hash, out))
+	{
+		DBG1(DBG_TLS, "generating finished HMAC failed");
+		chunk_clear(&finished_key);
+		chunk_clear(&finished_hash);
+		return FALSE;
+	}
 	chunk_clear(&finished_key);
 	chunk_clear(&finished_hash);
-	prf->destroy(prf);
 	return TRUE;
 }
 
