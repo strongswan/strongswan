@@ -362,7 +362,7 @@ enum tls_named_group_t {
 
 	/* TLS 1.3: new ecdhe, dhe groups */
 	TLS_CURVE25519 =    29,
-	TLS_CURVE_448  =    30,
+	TLS_CURVE448   =    30,
 	TLS_FFDHE2048  =    256,
 	TLS_FFDHE3072  =    257,
 	TLS_FFDHE4096  =    258,
