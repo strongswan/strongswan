@@ -525,7 +525,8 @@ struct tls_crypto_t {
 	 * @param out			buffer to write finished data to
 	 * @return				TRUE if calculation successful
 	 */
-	bool (*calculate_finished)(tls_crypto_t *this, char *label, char out[12]);
+	bool (*calculate_finished_legacy)(tls_crypto_t *this, char *label,
+									  char out[12]);
 
 	/**
 	 * Calculate the data of a TLS finished message.
@@ -533,8 +534,8 @@ struct tls_crypto_t {
 	 * @param out			buffer to write finished data to
 	 * @return				TRUE if calculation successful
 	 */
-	bool (*calculate_finished_tls13)(tls_crypto_t *this, bool is_server,
-									 chunk_t *out);
+	bool (*calculate_finished)(tls_crypto_t *this, bool is_server,
+							   chunk_t *out);
 
 	/**
 	 * Derive the master secret, MAC and encryption keys.
