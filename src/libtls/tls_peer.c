@@ -469,12 +469,10 @@ static status_t process_certificate(private_tls_peer_t *this,
 		{
 			if (!certs->read_data16(certs, &data))
 			{
-				DBG1(DBG_TLS, "reading extension field of certificate failed",
-					 &data);
+				DBG1(DBG_TLS, "failed to read extensions of CertificateEntry");
 				this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 				return NEED_MORE;
 			}
-			break;
 		}
 	}
 	certs->destroy(certs);
