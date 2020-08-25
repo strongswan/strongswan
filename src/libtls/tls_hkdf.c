@@ -485,6 +485,14 @@ METHOD(tls_hkdf_t, derive_finished, bool,
 								 finished);
 }
 
+METHOD(tls_hkdf_t, allocate_bytes, bool,
+	private_tls_hkdf_t *this, chunk_t key, chunk_t seed,
+	chunk_t *out)
+{
+	return this->prf->set_key(this->prf, key) &&
+		   this->prf->allocate_bytes(this->prf, seed, out);
+}
+
 METHOD(tls_hkdf_t, destroy, void,
 	private_tls_hkdf_t *this)
 {
@@ -525,6 +533,7 @@ tls_hkdf_t *tls_hkdf_create(hash_algorithm_t hash_algorithm, chunk_t psk)
 			.derive_key = _derive_key,
 			.derive_iv = _derive_iv,
 			.derive_finished = _derive_finished,
+			.allocate_bytes = _allocate_bytes,
 			.destroy = _destroy,
 		},
 		.phase = HKDF_PHASE_0,
