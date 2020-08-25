@@ -73,7 +73,7 @@ METHOD(tls_protection_t, process, status_t,
 		return NEED_MORE;
 	}
 
-	if (this-> version < TLS_1_3 ||
+	if (this->version < TLS_1_3 ||
 		type == TLS_APPLICATION_DATA)
 	{
 		if (this->aead_in)
@@ -99,7 +99,7 @@ METHOD(tls_protection_t, build, status_t,
 	status = this->compression->build(this->compression, type, data);
 	if (status == NEED_MORE)
 	{
-		if (this-> version < TLS_1_3 && *type == TLS_CHANGE_CIPHER_SPEC)
+		if (*type == TLS_CHANGE_CIPHER_SPEC && this->version < TLS_1_3)
 		{
 			return status;
 		}

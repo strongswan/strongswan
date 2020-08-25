@@ -296,7 +296,7 @@ METHOD(tls_fragmentation_t, process, status_t,
 			{
 				break;
 			}
-			/* fall */
+			/* fall-through */
 		case TLS_APPLICATION_DATA:
 			status = process_application(this, reader);
 			break;
