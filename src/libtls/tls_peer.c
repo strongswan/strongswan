@@ -262,22 +262,21 @@ static status_t process_server_hello(private_tls_peer_t *this,
 
 	if (this->tls->get_version_max(this->tls) == TLS_1_3)
 	{
-		chunk_t shared_secret;
+		chunk_t shared_secret = chunk_empty;
 
-		if (key_type != CURVE_25519 &&
-			!this->dh->set_other_public_value(this->dh, ext_key_share))
+		if (!this->dh->set_other_public_value(this->dh, ext_key_share) ||
+			!this->dh->get_shared_secret(this->dh, &shared_secret) ||
+			!this->crypto->derive_handshake_keys(this->crypto, shared_secret))
 		{
-			DBG2(DBG_TLS, "server key share unable to save");
+			DBG1(DBG_TLS, "DH key derivation failed");
+			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+			chunk_clear(&shared_secret);
+			return NEED_MORE;
 		}
-		if (!this->dh->get_shared_secret(this->dh, &shared_secret))
-		{
-			DBG2(DBG_TLS, "No shared secret key found");
-		}
+		chunk_clear(&shared_secret);
 
-		if (!this->crypto->derive_handshake_secret(this->crypto, shared_secret))
-		{
-			DBG2(DBG_TLS, "derive handshake traffic secret failed");
-		}
+		this->crypto->change_cipher(this->crypto, TRUE);
+		this->crypto->change_cipher(this->crypto, FALSE);
 	}
 
 	this->state = STATE_HELLO_RECEIVED;
@@ -1537,14 +1536,15 @@ METHOD(tls_handshake_t, build, status_t,
 			case STATE_INIT:
 				return send_client_hello(this, type, writer);
 			case STATE_HELLO_DONE:
-				/* otherwise fall through to next state */
 			case STATE_CIPHERSPEC_CHANGED_OUT:
 			case STATE_FINISHED_RECEIVED:
-				/* fall through since legacy TLS and TLS 1.3
-				* expect the same message */
 				return send_finished(this, type, writer);
 			case STATE_FINISHED_SENT:
-				this->crypto->derive_app_secret(this->crypto);
+				if (!this->crypto->derive_app_keys(this->crypto))
+				{
+					this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+					return NEED_MORE;
+				}
 				this->crypto->change_cipher(this->crypto, TRUE);
 				this->crypto->change_cipher(this->crypto, FALSE);
 				this->state = STATE_FINISHED_SENT_KEY_SWITCHED;
