@@ -126,6 +126,16 @@ struct private_tls_peer_t {
 	diffie_hellman_t *dh;
 
 	/**
+	 * Requested DH group
+	 */
+	tls_named_group_t requested_curve;
+
+	/**
+	 * Cookie extension received in HelloRetryRequest
+	 */
+	chunk_t cookie;
+
+	/**
 	 * Resuming a session?
 	 */
 	bool resume;
@@ -147,20 +157,54 @@ struct private_tls_peer_t {
 };
 
 /**
+ * Verify the DH group/key type requested by the server is valid.
+ */
+static bool verify_requested_key_type(private_tls_peer_t *this,
+									  uint16_t key_type)
+{
+	enumerator_t *enumerator;
+	diffie_hellman_group_t group, found = MODP_NONE;
+	tls_named_group_t curve;
+
+	enumerator = this->crypto->create_ec_enumerator(this->crypto);
+	while (enumerator->enumerate(enumerator, &group, &curve))
+	{
+		if (key_type == curve)
+		{
+			found = group;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (found == MODP_NONE)
+	{
+		DBG1(DBG_TLS, "server requested key exchange we didn't propose");
+		return FALSE;
+	}
+	if (this->dh->get_dh_group(this->dh) == found)
+	{
+		DBG1(DBG_TLS, "server requested key exchange we already use");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Process a server hello message
  */
 static status_t process_server_hello(private_tls_peer_t *this,
 									 bio_reader_t *reader)
 {
 	uint8_t compression;
-	uint16_t version, cipher, key_type;
+	uint16_t version, cipher, key_type = 0;
 	bio_reader_t *extensions, *extension;
-	chunk_t random, session, ext = chunk_empty, key_share = chunk_empty;
+	chunk_t msg, random, session, ext = chunk_empty, key_share = chunk_empty;
+	chunk_t cookie = chunk_empty;
 	tls_cipher_suite_t suite = 0;
+	bool is_retry_request;
 
-	this->crypto->append_handshake(this->crypto,
-								   TLS_SERVER_HELLO, reader->peek(reader));
-
+	msg = reader->peek(reader);
 	if (!reader->read_uint16(reader, &version) ||
 		!reader->read_data(reader, sizeof(this->server_random), &random) ||
 		!reader->read_data8(reader, &session) ||
@@ -172,6 +216,8 @@ static status_t process_server_hello(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 		return NEED_MORE;
 	}
+
+	is_retry_request = chunk_equals_const(random, tls_hello_retry_request_magic);
 
 	memcpy(this->server_random, random.ptr, sizeof(this->server_random));
 
@@ -205,7 +251,8 @@ static status_t process_server_hello(private_tls_peer_t *this,
 				break;
 			case TLS_EXT_KEY_SHARE:
 				if (!extension->read_uint16(extension, &key_type) ||
-					!extension->read_data16(extension, &key_share))
+					(!is_retry_request &&
+					 !extension->read_data16(extension, &key_share)))
 				{
 					DBG1(DBG_TLS, "invalid %N extension", tls_extension_names,
 						 extension_type);
@@ -215,6 +262,16 @@ static status_t process_server_hello(private_tls_peer_t *this,
 					return NEED_MORE;
 				}
 				break;
+			case TLS_EXT_COOKIE:
+				if (!extension->read_data16(extension, &cookie))
+				{
+					DBG1(DBG_TLS, "invalid %N extension", tls_extension_names,
+						 extension_type);
+					this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+					extensions->destroy(extensions);
+					extension->destroy(extension);
+					return NEED_MORE;
+				}
 			default:
 				break;
 		}
@@ -264,6 +321,54 @@ static status_t process_server_hello(private_tls_peer_t *this,
 			 tls_version_names, version, tls_cipher_suite_names, suite);
 		free(this->session.ptr);
 		this->session = chunk_clone(session);
+	}
+
+	if (is_retry_request)
+	{
+		if (!this->crypto->hash_handshake(this->crypto, NULL))
+		{
+			DBG1(DBG_TLS, "failed to hash handshake messages");
+			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+			return NEED_MORE;
+		}
+	}
+	this->crypto->append_handshake(this->crypto, TLS_SERVER_HELLO, msg);
+
+	if (is_retry_request)
+	{
+		if (key_type)
+		{
+			DBG1(DBG_TLS, "server requests key exchange with %N",
+				 tls_named_group_names, key_type);
+		}
+		else if (cookie.len)
+		{
+			DBG1(DBG_TLS, "server requests retry with cookie");
+		}
+		else
+		{
+			DBG1(DBG_TLS, "invalid retry request received");
+			this->alert->add(this->alert, TLS_FATAL, TLS_ILLEGAL_PARAMETER);
+			return NEED_MORE;
+		}
+		if (this->requested_curve || this->cookie.len)
+		{
+			DBG1(DBG_TLS, "already replied to previous retry request");
+			this->alert->add(this->alert, TLS_FATAL, TLS_UNEXPECTED_MESSAGE);
+			return NEED_MORE;
+		}
+		if (key_type && !verify_requested_key_type(this, key_type))
+		{
+			this->alert->add(this->alert, TLS_FATAL, TLS_ILLEGAL_PARAMETER);
+			return NEED_MORE;
+		}
+
+		DESTROY_IF(this->dh);
+		this->dh = NULL;
+		this->requested_curve = key_type;
+		this->cookie = chunk_clone(cookie);
+		this->state = STATE_INIT;
+		return NEED_MORE;
 	}
 
 	if (this->tls->get_version_max(this->tls) == TLS_1_3)
@@ -1112,6 +1217,10 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	enumerator = this->crypto->create_ec_enumerator(this->crypto);
 	while (enumerator->enumerate(enumerator, &group, &curve))
 	{
+		if (this->requested_curve && this->requested_curve != curve)
+		{
+			continue;
+		}
 		if (!curves)
 		{
 			extensions->write_uint16(extensions, TLS_EXT_SUPPORTED_GROUPS);
@@ -1155,6 +1264,16 @@ static status_t send_client_hello(private_tls_peer_t *this,
 		versions->wrap8(versions);
 		extensions->write_data16(extensions, versions->get_buf(versions));
 		versions->destroy(versions);
+	}
+
+	if (this->cookie.len)
+	{
+		DBG2(DBG_TLS, "sending extension: %N",
+			 tls_extension_names, TLS_EXT_COOKIE);
+		extensions->write_uint16(extensions, TLS_EXT_COOKIE);
+		extensions->write_uint16(extensions, this->cookie.len + 2);
+		extensions->write_data16(extensions, this->cookie);
+		chunk_free(&this->cookie);
 	}
 
 	DBG2(DBG_TLS, "sending extension: %N",
@@ -1537,7 +1656,14 @@ METHOD(tls_handshake_t, build, status_t,
 				return INVALID_STATE;
 		}
 	}
+}
 
+/**
+ * Check if we are currently retrying to connect to the server.
+ */
+static bool retrying(private_tls_peer_t *this)
+{
+	return this->state == STATE_INIT && (this->requested_curve || this->cookie.len);
 }
 
 METHOD(tls_handshake_t, cipherspec_changed, bool,
@@ -1570,8 +1696,8 @@ METHOD(tls_handshake_t, cipherspec_changed, bool,
 	else
 	{
 		if (inbound)
-		{
-			return this->state == STATE_HELLO_RECEIVED;
+		{	/* accept ChangeCipherSpec after ServerHello or HelloRetryRequest */
+			return this->state == STATE_HELLO_RECEIVED || retrying(this);
 		}
 		else
 		{
@@ -1587,6 +1713,12 @@ METHOD(tls_handshake_t, change_cipherspec, void,
 	if (this->tls->get_version_max(this->tls) < TLS_1_3)
 	{
 		this->crypto->change_cipher(this->crypto, inbound);
+	}
+
+	if (retrying(this))
+	{	/* servers might send a ChangeCipherSpec after a HelloRetryRequest,
+		 * which should not cause any state changes */
+		return;
 	}
 
 	if (inbound)
@@ -1646,6 +1778,7 @@ METHOD(tls_handshake_t, destroy, void,
 	free(this->hashsig.ptr);
 	free(this->cert_types.ptr);
 	free(this->session.ptr);
+	free(this->cookie.ptr);
 	free(this);
 }
 
