@@ -1611,9 +1611,8 @@ METHOD(tls_handshake_t, finished, bool,
 	{
 		if (this->resume)
 		{
-		return this->state == STATE_FINISHED_SENT;
+			return this->state == STATE_FINISHED_SENT;
 		}
-
 		return this->state == STATE_FINISHED_RECEIVED;
 	}
 	else
