@@ -479,52 +479,6 @@ static status_t process_certificate(private_tls_peer_t *this,
 }
 
 /**
- *  Process Certificate verify
- */
-static status_t process_cert_verify(private_tls_peer_t *this,
-									bio_reader_t *reader)
-{
-	enumerator_t *enumerator;
-	public_key_t *public;
-	auth_cfg_t *auth;
-	bio_reader_t *sig;
-	bool verified = FALSE;
-
-	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
-														KEY_ANY, this->server,
-														this->server_auth, TRUE);
-	while (enumerator->enumerate(enumerator, &public, &auth))
-	{
-		sig = bio_reader_create(reader->peek(reader));
-		verified = this->crypto->verify_handshake(this->crypto, public, sig);
-		sig->destroy(sig);
-		if (verified)
-		{
-			this->server_auth->merge(this->server_auth, auth, FALSE);
-			break;
-		}
-		DBG1(DBG_TLS, "signature verification failed, trying another key");
-	}
-	enumerator->destroy(enumerator);
-
-	if (!verified)
-	{
-		DBG1(DBG_TLS, "no trusted certificate found for '%Y' to verify TLS peer",
-			 this->server);
-		this->server->destroy(this->server);
-		this->peer = NULL;
-		this->state = STATE_KEY_EXCHANGE_RECEIVED;
-	}
-	else
-	{
-		this->state = STATE_CERT_VERIFY_RECEIVED;
-	}
-	this->crypto->append_handshake(this->crypto,
-								   TLS_CERTIFICATE_VERIFY, reader->peek(reader));
-	return NEED_MORE;
-}
-
-/**
  * Find a trusted public key to encrypt/verify key exchange data
  */
 static public_key_t *find_public_key(private_tls_peer_t *this)
@@ -553,6 +507,38 @@ static public_key_t *find_public_key(private_tls_peer_t *this)
 		enumerator->destroy(enumerator);
 	}
 	return public;
+}
+
+/**
+ *  Process CertificateVerify message
+ */
+static status_t process_cert_verify(private_tls_peer_t *this,
+									bio_reader_t *reader)
+{
+	public_key_t *public;
+	chunk_t msg;
+
+	public = find_public_key(this);
+	if (!public)
+	{
+		DBG1(DBG_TLS, "no TLS public key found for server '%Y'", this->server);
+		this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
+		return NEED_MORE;
+	}
+
+	msg = reader->peek(reader);
+	if (!this->crypto->verify_handshake(this->crypto, public, reader))
+	{
+		public->destroy(public);
+		DBG1(DBG_TLS, "signature verification failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_BAD_CERTIFICATE);
+		return NEED_MORE;
+	}
+	public->destroy(public);
+
+	this->crypto->append_handshake(this->crypto, TLS_CERTIFICATE_VERIFY, msg);
+	this->state = STATE_CERT_VERIFY_RECEIVED;
+	return NEED_MORE;
 }
 
 /**
