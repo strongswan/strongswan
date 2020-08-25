@@ -1578,6 +1578,26 @@ static bool hash_data(private_tls_crypto_t *this, chunk_t data, chunk_t *hash)
 	return TRUE;
 }
 
+/**
+ * TLS 1.3 static part of the data the server signs (64 spaces followed by the
+ * context string "TLS 1.3, server CertificateVerify" and a 0 byte).
+ */
+static chunk_t tls13_sig_data_server = chunk_from_chars(
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+	0x54, 0x4c, 0x53, 0x20, 0x31, 0x2e, 0x33, 0x2c,
+	0x20, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x20,
+	0x43, 0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63,
+	0x61, 0x74, 0x65, 0x56, 0x65, 0x72, 0x69, 0x66,
+	0x79, 0x00,
+);
+
 METHOD(tls_crypto_t, sign, bool,
 	private_tls_crypto_t *this, private_key_t *key, bio_writer_t *writer,
 	chunk_t data, chunk_t hashsig)
@@ -1665,64 +1685,7 @@ METHOD(tls_crypto_t, verify, bool,
 	private_tls_crypto_t *this, public_key_t *key, bio_reader_t *reader,
 	chunk_t data)
 {
-	if (this->tls->get_version_max(this->tls) == TLS_1_3)
-	{
-		signature_scheme_t scheme = SIGN_UNKNOWN;
-		uint8_t hash, alg;
-		chunk_t sig, transcript_hash, static_sig_data_all;
-
-		chunk_t static_sig_data = chunk_from_chars(
-			0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-			0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-			0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-			0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-			0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-			0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-			0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-			0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-			0x54, 0x4c, 0x53, 0x20, 0x31, 0x2e, 0x33, 0x2c,
-			0x20, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x20,
-			0x43, 0x65, 0x72, 0x74, 0x69, 0x66, 0x69, 0x63,
-			0x61, 0x74, 0x65, 0x56, 0x65, 0x72, 0x69, 0x66,
-			0x79, 0x00,
-		);
-
-		if (!reader->read_uint8(reader, &hash) ||
-			!reader->read_uint8(reader, &alg) ||
-			!reader->read_data16(reader, &sig))
-		{
-			DBG1(DBG_TLS, "received invalid signature");
-			return FALSE;
-		}
-
-		if (!hash_data(this, data, &transcript_hash))
-		{
-			DBG1(DBG_TLS, "Unable to hash");
-			return FALSE;
-		}
-
-		static_sig_data_all = chunk_cat("cc", static_sig_data, transcript_hash);
-		scheme = hashsig_to_scheme(key->get_type(key), hash, alg);
-		if (scheme == SIGN_UNKNOWN)
-		{
-			DBG1(DBG_TLS, "signature algorithms %N/%N not supported",
-				 tls_hash_algorithm_names, hash,
-				 tls_signature_algorithm_names, alg);
-			return FALSE;
-		}
-		if (!key->verify(key, scheme, NULL, static_sig_data_all, sig))
-		{
-			DBG1(DBG_TLS, "verification of signature failed");
-			return FALSE;
-		}
-		DBG2(DBG_TLS,
-			 "verified signature with %N/%N",
-			 tls_hash_algorithm_names,
-			 hash,
-			 tls_signature_algorithm_names,
-			 alg);
-	}
-	else if (this->tls->get_version_max(this->tls) == TLS_1_2)
+	if (this->tls->get_version_max(this->tls) >= TLS_1_2)
 	{
 		signature_scheme_t scheme = SIGN_UNKNOWN;
 		uint8_t hash, alg;
@@ -1743,8 +1706,23 @@ METHOD(tls_crypto_t, verify, bool,
 				 tls_signature_algorithm_names, alg);
 			return FALSE;
 		}
+		if (this->tls->get_version_max(this->tls) == TLS_1_3)
+		{
+			chunk_t transcript_hash;
+
+			if (!hash_data(this, data, &transcript_hash))
+			{
+				DBG1(DBG_TLS, "Unable to create transcript hash");
+				return FALSE;
+			}
+
+			data = chunk_cata("cm", tls13_sig_data_server, transcript_hash);
+		}
 		if (!key->verify(key, scheme, NULL, data, sig))
 		{
+			DBG1(DBG_TLS, "signature verification with %N/%N failed",
+				 tls_hash_algorithm_names, hash, tls_signature_algorithm_names,
+				 alg);
 			return FALSE;
 		}
 		DBG2(DBG_TLS, "verified signature with %N/%N",
