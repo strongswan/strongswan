@@ -475,6 +475,14 @@ struct tls_crypto_t {
 							 tls_handshake_type_t type, chunk_t data);
 
 	/**
+	 * Hash the stored handshake data and store it.  It is optionally returned
+	 * so it could be sent in a cookie extension.
+	 *
+	 * @param hash			optionally returned hash (allocated)
+	 */
+	bool (*hash_handshake)(tls_crypto_t *this, chunk_t *hash);
+
+	/**
 	 * Sign a blob of data, append signature to writer.
 	 *
 	 * @param key			private key to use for signature
