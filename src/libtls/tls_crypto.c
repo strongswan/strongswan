@@ -1579,6 +1579,30 @@ static bool hash_data(private_tls_crypto_t *this, chunk_t data, chunk_t *hash)
 	return TRUE;
 }
 
+METHOD(tls_crypto_t, hash_handshake, bool,
+	private_tls_crypto_t *this, chunk_t *out)
+{
+	chunk_t hash;
+
+	if (!hash_data(this, this->handshake, &hash))
+	{
+		return FALSE;
+	}
+
+	chunk_free(&this->handshake);
+	append_handshake(this, TLS_MESSAGE_HASH, hash);
+
+	if (out)
+	{
+		*out = hash;
+	}
+	else
+	{
+		free(hash.ptr);
+	}
+	return TRUE;
+}
+
 /**
  * TLS 1.3 static part of the data the server signs (64 spaces followed by the
  * context string "TLS 1.3, server CertificateVerify" and a 0 byte).
@@ -2118,6 +2142,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 			.create_ec_enumerator = _create_ec_enumerator,
 			.set_protection = _set_protection,
 			.append_handshake = _append_handshake,
+			.hash_handshake = _hash_handshake,
 			.sign = _sign,
 			.verify = _verify,
 			.sign_handshake = _sign_handshake,
