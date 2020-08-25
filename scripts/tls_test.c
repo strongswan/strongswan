@@ -92,8 +92,8 @@ static int run_client(host_t *host, identification_t *server,
 
 	while (times == -1 || times-- > 0)
 	{
-		/* Open IPv4 socket */
-		fd = socket(AF_INET, SOCK_STREAM, 0);
+		DBG2(DBG_TLS, "connecting to %#H", host);
+		fd = socket(host->get_family(host), SOCK_STREAM, 0);
 		if (fd == -1)
 		{
 			DBG1(DBG_TLS, "opening socket failed: %s", strerror(errno));
@@ -102,18 +102,9 @@ static int run_client(host_t *host, identification_t *server,
 		if (connect(fd, host->get_sockaddr(host),
 					*host->get_sockaddr_len(host)) == -1)
 		{
-			/* Check if the socket should use IPv6 instead */
-			fd = socket(AF_INET6, SOCK_STREAM, 0);
-			{
-				if (connect(fd, host->get_sockaddr(host),
-				            *host->get_sockaddr_len(host)) == -1)
-				{
-					DBG1(DBG_TLS, "connecting to %#H failed: %s", host, strerror(errno));
-					close(fd);
-					return 1;
-				}
-			}
-
+			DBG1(DBG_TLS, "connecting to %#H failed: %s", host, strerror(errno));
+			close(fd);
+			return 1;
 		}
 		tls = tls_socket_create(FALSE, server, client, fd, cache,
 							    TLS_1_3, TRUE);
@@ -278,7 +269,7 @@ int main(int argc, char *argv[])
 {
 	char *address = NULL;
 	bool listen = FALSE;
-	int port = 0, times = -1, res;
+	int port = 0, times = -1, res, family = AF_UNSPEC;
 	identification_t *server, *client;
 	tls_cache_t *cache;
 	host_t *host;
@@ -295,6 +286,8 @@ int main(int argc, char *argv[])
 			{"cert",		required_argument,		NULL,		'x' },
 			{"key",			required_argument,		NULL,		'k' },
 			{"times",		required_argument,		NULL,		't' },
+			{"ipv4",		no_argument,			NULL,		'4' },
+			{"ipv6",		no_argument,			NULL,		'6' },
 			{"debug",		required_argument,		NULL,		'd' },
 			{0,0,0,0 }
 		};
@@ -337,6 +330,12 @@ int main(int argc, char *argv[])
 			case 'd':
 				tls_level = atoi(optarg);
 				continue;
+			case '4':
+				family = AF_INET;
+				continue;
+			case '6':
+				family = AF_INET6;
+				continue;
 			default:
 				usage(stderr, argv[0]);
 				return 1;
@@ -348,17 +347,11 @@ int main(int argc, char *argv[])
 		usage(stderr, argv[0]);
 		return 1;
 	}
-	/* Try to connect with IPv4 first*/
-	host = host_create_from_dns(address, AF_INET, port);
+	host = host_create_from_dns(address, family, port);
 	if (!host)
 	{
-		/* If it fails, try IPv6*/
-		host = host_create_from_dns(address, AF_INET6, port);
-		if (!host)
-		{
-			DBG1(DBG_TLS, "resolving hostname %s failed", address);
-			return 1;
-		}
+		DBG1(DBG_TLS, "resolving hostname %s failed", address);
+		return 1;
 	}
 	server = identification_create_from_string(address);
 	cache = tls_cache_create(100, 30);
