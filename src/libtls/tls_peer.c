@@ -1034,17 +1034,18 @@ METHOD(tls_handshake_t, process, status_t,
  * Send a client hello
  */
 static status_t send_client_hello(private_tls_peer_t *this,
-							tls_handshake_type_t *type, bio_writer_t *writer)
+								  tls_handshake_type_t *type,
+								  bio_writer_t *writer)
 {
 	tls_cipher_suite_t *suites;
-	bio_writer_t *extensions, *curves = NULL;
+	bio_writer_t *extensions, *curves = NULL, *versions, *key_share;
 	tls_version_t version_max, version_min;
-	tls_named_group_t curve;
+	diffie_hellman_group_t group;
+	tls_named_group_t curve, selected_curve = 0;
 	enumerator_t *enumerator;
 	int count, i, v;
 	rng_t *rng;
 	chunk_t pub;
-	uint8_t nof_tls_versions;
 
 	htoun32(&this->client_random, time(NULL));
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
@@ -1058,9 +1059,6 @@ static status_t send_client_hello(private_tls_peer_t *this,
 		return NEED_MORE;
 	}
 	rng->destroy(rng);
-
-	/* client key generation */
-	this->dh = lib->crypto->create_dh(lib->crypto, CURVE_25519);
 
 	/* TLS version_max in handshake protocol */
 	version_max = this->tls->get_version_max(this->tls);
@@ -1112,22 +1110,27 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	DBG2(DBG_TLS, "sending extension: %N",
 		 tls_extension_names, TLS_EXT_SUPPORTED_GROUPS);
 	enumerator = this->crypto->create_ec_enumerator(this->crypto);
-	while (enumerator->enumerate(enumerator, NULL, &curve))
+	while (enumerator->enumerate(enumerator, &group, &curve))
 	{
 		if (!curves)
 		{
 			extensions->write_uint16(extensions, TLS_EXT_SUPPORTED_GROUPS);
 			curves = bio_writer_create(16);
 		}
+		if (!this->dh)
+		{
+			this->dh = lib->crypto->create_dh(lib->crypto, group);
+			if (!this->dh)
+			{
+				continue;
+			}
+			selected_curve = curve;
+		}
 		curves->write_uint16(curves, curve);
 	}
 	enumerator->destroy(enumerator);
 	if (curves)
 	{
-		if (version_max == TLS_1_3)
-		{
-			curves->write_uint16(curves, TLS_CURVE25519);
-		}
 		curves->wrap16(curves);
 		extensions->write_data16(extensions, curves->get_buf(curves));
 		curves->destroy(curves);
@@ -1139,16 +1142,19 @@ static status_t send_client_hello(private_tls_peer_t *this,
 		extensions->write_uint8(extensions, TLS_EC_POINT_UNCOMPRESSED);
 	}
 
-	DBG2(DBG_TLS, "sending extension: %N",
-		 tls_extension_names, TLS_EXT_SUPPORTED_VERSIONS);
-	nof_tls_versions = (version_max - version_min + 1)*2;
-	extensions->write_uint16(extensions, TLS_EXT_SUPPORTED_VERSIONS);
-	extensions->write_uint16(extensions, nof_tls_versions+1);
-	extensions->write_uint8(extensions, nof_tls_versions);
-	for (v = version_max; v >= version_min; v--)
+	if (version_max >= TLS_1_3)
 	{
-		extensions->write_uint16(extensions, v);
-		nof_tls_versions += 2;
+		DBG2(DBG_TLS, "sending extension: %N",
+			 tls_extension_names, TLS_EXT_SUPPORTED_VERSIONS);
+		extensions->write_uint16(extensions, TLS_EXT_SUPPORTED_VERSIONS);
+		versions = bio_writer_create(0);
+		for (v = version_max; v >= version_min; v--)
+		{
+			versions->write_uint16(versions, v);
+		}
+		versions->wrap8(versions);
+		extensions->write_data16(extensions, versions->get_buf(versions));
+		versions->destroy(versions);
 	}
 
 	DBG2(DBG_TLS, "sending extension: %N",
@@ -1156,20 +1162,25 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	extensions->write_uint16(extensions, TLS_EXT_SIGNATURE_ALGORITHMS);
 	this->crypto->get_signature_algorithms(this->crypto, extensions);
 
-	DBG2(DBG_TLS, "sending extension: %N",
-		 tls_extension_names, TLS_EXT_KEY_SHARE);
-	if (!this->dh->get_my_public_value(this->dh, &pub))
+	if (this->dh)
 	{
-		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return NEED_MORE;
+		DBG2(DBG_TLS, "sending extension: %N",
+			 tls_extension_names, TLS_EXT_KEY_SHARE);
+		if (!this->dh->get_my_public_value(this->dh, &pub))
+		{
+			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+			extensions->destroy(extensions);
+			return NEED_MORE;
+		}
+		extensions->write_uint16(extensions, TLS_EXT_KEY_SHARE);
+		key_share = bio_writer_create(pub.len + 6);
+		key_share->write_uint16(key_share, selected_curve);
+		key_share->write_data16(key_share, pub);
+		key_share->wrap16(key_share);
+		extensions->write_data16(extensions, key_share->get_buf(key_share));
+		key_share->destroy(key_share);
+		free(pub.ptr);
 	}
-	extensions->write_uint16(extensions, TLS_EXT_KEY_SHARE);
-	extensions->write_uint16(extensions, pub.len+6);
-	extensions->write_uint16(extensions, pub.len+4);
-	extensions->write_uint16(extensions, TLS_CURVE25519);
-	extensions->write_uint16(extensions, pub.len);
-	extensions->write_data(extensions, pub);
-	free(pub.ptr);
 
 	writer->write_data16(writer, extensions->get_buf(extensions));
 	extensions->destroy(extensions);
