@@ -1270,6 +1270,7 @@ static void destroy_aeads(private_tls_crypto_t *this)
 static bool create_ciphers(private_tls_crypto_t *this, suite_algs_t *algs)
 {
 	destroy_aeads(this);
+	DESTROY_IF(this->hkdf);
 	DESTROY_IF(this->prf);
 	if (this->tls->get_version_max(this->tls) < TLS_1_3)
 	{
