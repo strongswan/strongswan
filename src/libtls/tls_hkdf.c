@@ -356,7 +356,7 @@ METHOD(tls_hkdf_t, set_shared_secret, void,
 }
 
 METHOD(tls_hkdf_t, generate_secret, bool,
-	private_tls_hkdf_t *this, enum tls_hkdf_labels_t label, chunk_t messages,
+	private_tls_hkdf_t *this, tls_hkdf_label_t label, chunk_t messages,
 	chunk_t *secret)
 {
 	switch (label)
