@@ -426,8 +426,7 @@ static void test_tls(tls_version_t version, uint16_t port, bool cauth, u_int i)
 
 	start_echo_server(config);
 
-	count = tls_crypto_get_supported_suites(TRUE, &suites);
-
+	count = tls_crypto_get_supported_suites(TRUE, version, &suites);
 	ck_assert(i < count);
 	snprintf(suite, sizeof(suite), "%N", tls_cipher_suite_names, suites[i]);
 	lib->settings->set_str(lib->settings, "%s.tls.suites", suite, lib->ns);
@@ -482,40 +481,41 @@ Suite *socket_suite_create()
 {
 	Suite *s;
 	TCase *tc;
-	int count;
 
-	count = tls_crypto_get_supported_suites(TRUE, NULL);
+#define add_tls_test(func, version) \
+	tcase_add_loop_test(tc, func, 0, \
+						tls_crypto_get_supported_suites(TRUE, version, NULL));
 
 	s = suite_create("socket");
 
 	tc = tcase_create("TLS 1.2/anon");
 	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
-	tcase_add_loop_test(tc, test_tls12, 0, count);
+	add_tls_test(test_tls12, TLS_1_2);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.2/mutl");
 	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
-	tcase_add_loop_test(tc, test_tls12_mutual, 0, count);
+	add_tls_test(test_tls12_mutual, TLS_1_2);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.1/anon");
 	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
-	tcase_add_loop_test(tc, test_tls11, 0, count);
+	add_tls_test(test_tls11, TLS_1_1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.1/mutl");
 	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
-	tcase_add_loop_test(tc, test_tls11_mutual, 0, count);
+	add_tls_test(test_tls11_mutual, TLS_1_1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.0/anon");
 	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
-	tcase_add_loop_test(tc, test_tls10, 0, count);
+	add_tls_test(test_tls10, TLS_1_0);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.0/mutl");
 	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
-	tcase_add_loop_test(tc, test_tls10_mutual, 0, count);
+	add_tls_test(test_tls10_mutual, TLS_1_0);
 	suite_add_tcase(s, tc);
 
 	return s;
