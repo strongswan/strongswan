@@ -25,12 +25,13 @@
 #include <library.h>
 #include <crypto/hashers/hasher.h>
 
+typedef enum tls_hkdf_label_t tls_hkdf_label_t;
 typedef struct tls_hkdf_t tls_hkdf_t;
 
 /**
  * TLS HKDF labels
  */
-enum tls_hkdf_labels_t {
+enum tls_hkdf_label_t {
 	TLS_HKDF_EXT_BINDER,
 	TLS_HKDF_RES_BINDER,
 	TLS_HKDF_C_E_TRAFFIC,
@@ -65,7 +66,7 @@ struct tls_hkdf_t {
 	 * @param secret			secret will be written into this chunk, if used
 	 * @return					TRUE if secrets derived successfully
 	 */
-	bool (*generate_secret)(tls_hkdf_t *this, enum tls_hkdf_labels_t label,
+	bool (*generate_secret)(tls_hkdf_t *this, tls_hkdf_label_t label,
 							chunk_t messages, chunk_t *secret);
 
 	/**
