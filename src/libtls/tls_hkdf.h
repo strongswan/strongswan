@@ -112,6 +112,19 @@ struct tls_hkdf_t {
 							chunk_t *finished);
 
 	/**
+	 * Use the internal PRF to allocate data (mainly for the finished message
+	 * where the key is from derive_finished() and the seed is the transcript
+	 * hash).
+	 *
+	 * @param key				key to use with the PRF
+	 * @param seed				seed to use with the PRF
+	 * @param out				output from the PRF (allocated)
+	 * @return					TRUE if output was generated
+	 */
+	bool (*allocate_bytes)(tls_hkdf_t *this, chunk_t key, chunk_t seed,
+						   chunk_t *out);
+
+	/**
 	 * Destroy a tls_hkdf_t
 	 */
 	void (*destroy)(tls_hkdf_t *this);
