@@ -823,8 +823,12 @@ static void filter_suite(suite_algs_t suites[], int *count, int offset,
 				}
 			}
 			if (current.prf && current.prf != suites[i].prf)
-			{	/* skip, PRF does not match */
-				continue;
+			{
+				if (suites[i].prf != PRF_UNDEFINED)
+				{
+					/* skip, PRF does not match nor is it undefined */
+					continue;
+				}
 			}
 			if (current.hash && current.hash != suites[i].hash)
 			{	/* skip, hash does not match */
@@ -1108,13 +1112,10 @@ static void filter_specific_config_suites(private_tls_crypto_t *this,
 static void filter_unsupported_suites(suite_algs_t suites[], int *count)
 {
 	/* filter suite list by each algorithm */
-	if (suites->tls_version < TLS_1_3)
-	{
-		filter_suite(suites, count, offsetof(suite_algs_t, encr),
-					 lib->crypto->create_aead_enumerator);
-		filter_suite(suites, count, offsetof(suite_algs_t, prf),
-					 lib->crypto->create_prf_enumerator);
-	}
+	filter_suite(suites, count, offsetof(suite_algs_t, encr),
+				 lib->crypto->create_aead_enumerator);
+	filter_suite(suites, count, offsetof(suite_algs_t, prf),
+				 lib->crypto->create_prf_enumerator);
 	filter_suite(suites, count, offsetof(suite_algs_t, encr),
 				 lib->crypto->create_crypter_enumerator);
 	filter_suite(suites, count, offsetof(suite_algs_t, mac),
