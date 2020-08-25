@@ -1,4 +1,9 @@
 /*
+ * Copyright (C) 2020 Tobias Brunner
+ * Copyright (C) 2020 Pascal Knecht
+ * Copyright (C) 2020 Méline Sieber
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -514,7 +519,7 @@ struct tls_crypto_t {
 							 bio_reader_t *reader);
 
 	/**
-	 * Calculate the data of a legacyTLS finished message.
+	 * Calculate the data of a legacy TLS finished message.
 	 *
 	 * @param label			ASCII label to use for calculation
 	 * @param out			buffer to write finished data to
@@ -551,14 +556,14 @@ struct tls_crypto_t {
 	 * @param shared_secret 	input key material
 	 * @return 					TRUE if	secret derived successfully
 	 */
-	bool (*derive_handshake_secret)(tls_crypto_t *this, chunk_t shared_secret);
+	bool (*derive_handshake_keys)(tls_crypto_t *this, chunk_t shared_secret);
 
 	/**
 	 * Derive the application keys.
 	 *
 	 * @return 					TRUE if	secret derived successfully
 	 */
-	bool (*derive_app_secret)(tls_crypto_t *this);
+	bool (*derive_app_keys)(tls_crypto_t *this);
 
 	/**
 	 * Try to resume a TLS session, derive key material.
