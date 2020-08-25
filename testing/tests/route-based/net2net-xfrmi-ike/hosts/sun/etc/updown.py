@@ -6,6 +6,7 @@ import daemon
 import logging
 from logging.handlers import SysLogHandler
 import subprocess
+import resource
 
 
 logger = logging.getLogger('updownLogger')
@@ -52,6 +53,13 @@ def install_routes(ike_sa):
     for ts in child_sa['remote-ts']:
         logger.info("add route to %s via %s", ts, ifname_out)
         subprocess.call(["ip", "route", "add", ts, "dev", ifname_out])
+
+
+# the hard limit (second number) is the value used by python-daemon when closing
+# potentially open file descriptors while daemonizing.  since the default is
+# 524288 on newer systems, this can take quite a while, and due to how this
+# range of FDs is handled internally (as set) it can even trigger the OOM killer
+resource.setrlimit(resource.RLIMIT_NOFILE, (256, 256))
 
 
 # daemonize and run parallel to the IKE daemon
