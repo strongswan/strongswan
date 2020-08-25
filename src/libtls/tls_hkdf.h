@@ -77,7 +77,7 @@ struct tls_hkdf_t {
 	 *
 	 * @param is_server			TRUE if server, FALSE if client derives secret
 	 * @param length			key length, in bytes
-	 * @param key				secret will be written into this chunk
+	 * @param key				key will be written into this chunk
 	 * @return					TRUE if secrets derived successfully
 	 */
 	bool (*derive_key)(tls_hkdf_t *this, bool is_server, size_t length,
