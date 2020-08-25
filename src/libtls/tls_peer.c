@@ -1,4 +1,9 @@
 /*
+ * Copyright (C) 2020 Tobias Brunner
+ * Copyright (C) 2020 Pascal Knecht
+ * Copyright (C) 2020 Méline Sieber
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -148,12 +153,10 @@ static status_t process_server_hello(private_tls_peer_t *this,
 									 bio_reader_t *reader)
 {
 	uint8_t compression;
-	uint16_t version, cipher;
-	chunk_t random, session, ext = chunk_empty, ext_key_share = chunk_empty;
+	uint16_t version, cipher, key_type;
+	bio_reader_t *extensions, *extension;
+	chunk_t random, session, ext = chunk_empty, key_share = chunk_empty;
 	tls_cipher_suite_t suite = 0;
-	int offset = 0;
-	uint16_t extension_type, extension_length;
-	uint16_t key_type, key_length;
 
 	this->crypto->append_handshake(this->crypto,
 								   TLS_SERVER_HELLO, reader->peek(reader));
@@ -172,50 +175,52 @@ static status_t process_server_hello(private_tls_peer_t *this,
 
 	memcpy(this->server_random, random.ptr, sizeof(this->server_random));
 
-	bio_reader_t *extension_reader = bio_reader_create(ext);
-
-	/* parse extension to decide which tls version of the state machine we
-	 * want to go
-	 */
-	while (offset < ext.len)
+	extensions = bio_reader_create(ext);
+	while (extensions->remaining(extensions))
 	{
-		chunk_t extension_payload = chunk_empty;
+		uint16_t extension_type;
+		chunk_t extension_data;
 
-		extension_reader->read_uint16(extension_reader, &extension_type);
-		extension_reader->read_uint16(extension_reader, &extension_length);
-		offset += extension_length + 4;
-
-		if (!extension_reader->read_data(extension_reader,
-										 extension_length,
-										 &extension_payload))
+		if (!extensions->read_uint16(extensions, &extension_type) ||
+			!extensions->read_data16(extensions, &extension_data))
 		{
-			DBG2(DBG_TLS, "unable to read extension payload data");
+			DBG1(DBG_TLS, "invalid extension in ServerHello");
+			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+			extensions->destroy(extensions);
+			return NEED_MORE;
 		}
-
-		bio_reader_t *ext_payload_reader = bio_reader_create(extension_payload);
-
+		extension = bio_reader_create(extension_data);
 		switch (extension_type)
 		{
 			case TLS_EXT_SUPPORTED_VERSIONS:
-				ext_payload_reader->read_uint16(ext_payload_reader, &version);
-				break;
-
-			case TLS_EXT_KEY_SHARE:
-				ext_payload_reader->read_uint16(ext_payload_reader, &key_type);
-				ext_payload_reader->read_uint16(ext_payload_reader, &key_length);
-				if (!ext_payload_reader->read_data(ext_payload_reader,
-												   key_length,
-												   &ext_key_share))
+				if (!extension->read_uint16(extension, &version))
 				{
-					DBG2(DBG_TLS, "no valid key share found in extension");
+					DBG1(DBG_TLS, "invalid %N extension", tls_extension_names,
+						 extension_type);
+					this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+					extensions->destroy(extensions);
+					extension->destroy(extension);
+					return NEED_MORE;
+				}
+				break;
+			case TLS_EXT_KEY_SHARE:
+				if (!extension->read_uint16(extension, &key_type) ||
+					!extension->read_data16(extension, &key_share))
+				{
+					DBG1(DBG_TLS, "invalid %N extension", tls_extension_names,
+						 extension_type);
+					this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+					extensions->destroy(extensions);
+					extension->destroy(extension);
+					return NEED_MORE;
 				}
 				break;
 			default:
-				continue;
+				break;
 		}
-		ext_payload_reader->destroy(ext_payload_reader);
+		extension->destroy(extension);
 	}
-	extension_reader->destroy(extension_reader);
+	extensions->destroy(extensions);
 
 	if (!this->tls->set_version(this->tls, version))
 	{
@@ -244,6 +249,7 @@ static status_t process_server_hello(private_tls_peer_t *this,
 		DESTROY_IF(this->dh);
 		this->dh = NULL;
 	}
+
 	if (!suite)
 	{
 		suite = cipher;
@@ -264,7 +270,7 @@ static status_t process_server_hello(private_tls_peer_t *this,
 	{
 		chunk_t shared_secret = chunk_empty;
 
-		if (!this->dh->set_other_public_value(this->dh, ext_key_share) ||
+		if (!this->dh->set_other_public_value(this->dh, key_share) ||
 			!this->dh->get_shared_secret(this->dh, &shared_secret) ||
 			!this->crypto->derive_handshake_keys(this->crypto, shared_secret))
 		{
@@ -284,17 +290,16 @@ static status_t process_server_hello(private_tls_peer_t *this,
 }
 
 /**
-* Process a server encrypted extensions message
-*/
+ * Process a server encrypted extensions message
+ */
 static status_t process_encrypted_extensions(private_tls_peer_t *this,
 											 bio_reader_t *reader)
 {
 	chunk_t ext = chunk_empty;
-	int offset = 0;
-	uint16_t extension_type, extension_length;
+	uint16_t extension_type;
 
-	this->crypto->append_handshake(this->crypto,
-								   TLS_ENCRYPTED_EXTENSIONS, reader->peek(reader));
+	this->crypto->append_handshake(this->crypto, TLS_ENCRYPTED_EXTENSIONS,
+								   reader->peek(reader));
 
 	if (!reader->read_data16(reader, &ext))
 	{
@@ -302,31 +307,24 @@ static status_t process_encrypted_extensions(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 		return NEED_MORE;
 	}
-	if (ext.len == 0)
+	if (ext.len)
 	{
-		this->state = STATE_ENCRYPTED_EXTENSIONS_RECEIVED;
-		return NEED_MORE;
-	}
-	else
-	{
-		bio_reader_t *extension_reader = bio_reader_create(ext);
+		bio_reader_t *extensions = bio_reader_create(ext);
 
-		while (offset < ext.len)
+		while (extensions->remaining(extensions))
 		{
-			chunk_t extension_payload = chunk_empty;
-			extension_reader->read_uint16(extension_reader, &extension_type);
-			extension_reader->read_uint16(extension_reader, &extension_length);
-			offset += extension_length + 4;
+			chunk_t extension_data = chunk_empty;
 
-			if (!extension_reader->read_data(extension_reader,
-											 extension_length,
-											 &extension_payload))
+			if (!extensions->read_uint16(extensions, &extension_type) ||
+				!extensions->read_data16(extensions, &extension_data))
 			{
-				DBG2(DBG_TLS, "unable to read extension payload data");
+				DBG1(DBG_TLS, "invalid extension in EncryptedExtensions");
+				this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+				extensions->destroy(extensions);
+				return NEED_MORE;
 			}
 			switch (extension_type)
 			{
-				/* fall through because not supported so far */
 				case TLS_EXT_SERVER_NAME:
 				case TLS_EXT_MAX_FRAGMENT_LENGTH:
 				case TLS_EXT_SUPPORTED_GROUPS:
@@ -334,19 +332,22 @@ static status_t process_encrypted_extensions(private_tls_peer_t *this,
 				case TLS_EXT_HEARTBEAT:
 				case TLS_EXT_APPLICATION_LAYER_PROTOCOL_NEGOTIATION:
 				case TLS_SERVER_CERTIFICATE_TYPE:
-					this->state = STATE_ENCRYPTED_EXTENSIONS_RECEIVED;
-					extension_reader->destroy(extension_reader);
+					/* not supported so far */
+					DBG2(DBG_TLS, "ignoring unsupported %N EncryptedExtension",
+						 tls_extension_names, extension_type);
 					break;
 				default:
-					DBG1(DBG_TLS, "received forbidden EncryptedExtensions");
+					DBG1(DBG_TLS, "received forbidden EncryptedExtension (%d)",
+						 extension_type);
 					this->alert->add(this->alert, TLS_FATAL,
 									 TLS_ILLEGAL_PARAMETER);
-					extension_reader->destroy(extension_reader);
+					extensions->destroy(extensions);
 					return NEED_MORE;
 			}
 		}
-
+		extensions->destroy(extensions);
 	}
+	this->state = STATE_ENCRYPTED_EXTENSIONS_RECEIVED;
 	return NEED_MORE;
 }
 
