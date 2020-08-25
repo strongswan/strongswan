@@ -1130,12 +1130,27 @@ static void filter_unsupported_suites(suite_algs_t suites[], int *count)
 /**
  * Initialize the cipher suite list
  */
-static void build_cipher_suite_list(private_tls_crypto_t *this,
-									bool require_encryption)
+static void build_cipher_suite_list(private_tls_crypto_t *this)
 {
 	suite_algs_t suites[countof(suite_algs)];
 	tls_version_t min_version, max_version;
+	bool require_encryption;
 	int count = 0, i;
+
+	switch (this->tls->get_purpose(this->tls))
+	{
+		case TLS_PURPOSE_EAP_TLS:
+		case TLS_PURPOSE_GENERIC_NULLOK:
+			require_encryption = FALSE;
+			break;
+		case TLS_PURPOSE_EAP_PEAP:
+		case TLS_PURPOSE_EAP_TTLS:
+		case TLS_PURPOSE_GENERIC:
+			require_encryption = TRUE;
+			break;
+		default:
+			return;
+	}
 
 	min_version = this->tls->get_version_min(this->tls);
 	max_version = this->tls->get_version_max(this->tls);
@@ -1186,6 +1201,10 @@ static void build_cipher_suite_list(private_tls_crypto_t *this,
 METHOD(tls_crypto_t, get_cipher_suites, int,
 	private_tls_crypto_t *this, tls_cipher_suite_t **suites)
 {
+	if (!this->suites)
+	{
+		build_cipher_suite_list(this);
+	}
 	*suites = this->suites;
 	return this->suite_count;
 }
@@ -1336,6 +1355,11 @@ METHOD(tls_crypto_t, select_cipher_suite, tls_cipher_suite_t,
 {
 	suite_algs_t *algs;
 	int i, j;
+
+	if (!this->suites)
+	{
+		build_cipher_suite_list(this);
+	}
 
 	for (i = 0; i < this->suite_count; i++)
 	{
@@ -2317,22 +2341,13 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 		case TLS_PURPOSE_EAP_TLS:
 			/* MSK PRF ASCII constant label according to EAP-TLS RFC 5216 */
 			this->msk_label = "client EAP encryption";
-			build_cipher_suite_list(this, FALSE);
 			break;
 		case TLS_PURPOSE_EAP_PEAP:
 			this->msk_label = "client EAP encryption";
-			build_cipher_suite_list(this, TRUE);
 			break;
 		case TLS_PURPOSE_EAP_TTLS:
 			/* MSK PRF ASCII constant label according to EAP-TTLS RFC 5281 */
 			this->msk_label = "ttls keying material";
-			build_cipher_suite_list(this, TRUE);
-			break;
-		case TLS_PURPOSE_GENERIC:
-			build_cipher_suite_list(this, TRUE);
-			break;
-		case TLS_PURPOSE_GENERIC_NULLOK:
-			build_cipher_suite_list(this, FALSE);
 			break;
 		default:
 			break;
