@@ -190,6 +190,12 @@ enum tls_name_type_t {
 extern enum_name_t *tls_extension_names;
 
 /**
+ * Magic value (SHA-256 of "HelloRetryRequest") for Random to differentiate
+ * ServerHello from HelloRetryRequest.
+ */
+extern chunk_t tls_hello_retry_request_magic;
+
+/**
  * A bottom-up driven TLS stack, suitable for EAP implementations.
  */
 struct tls_t {
