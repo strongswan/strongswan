@@ -840,8 +840,7 @@ static status_t process_hello_done(private_tls_peer_t *this,
 static status_t process_finished(private_tls_peer_t *this, bio_reader_t *reader)
 {
 	chunk_t received, verify_data;
-	char buf[12];
-	uint32_t hash_length;
+	u_char buf[12];
 
 	if (this->tls->get_version_max(this->tls) < TLS_1_3)
 	{
@@ -858,44 +857,38 @@ static status_t process_finished(private_tls_peer_t *this, bio_reader_t *reader)
 			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 			return NEED_MORE;
 		}
-		if (!chunk_equals_const(received, chunk_from_thing(buf)))
-		{
-			DBG1(DBG_TLS, "received server finished invalid");
-			this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);
-			return NEED_MORE;
-		}
+		verify_data = chunk_from_thing(buf);
 	}
 	else
 	{
-		hash_length = reader->remaining(reader);
-		if (!reader->read_data(reader, hash_length, &received))
-		{
-			DBG1(DBG_TLS, "received server finished too short");
-			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
-			return NEED_MORE;
-		}
-		if (!this->crypto->calculate_finished(this->crypto, true,
-			&verify_data))
+		received = reader->peek(reader);
+		if (!this->crypto->calculate_finished(this->crypto, TRUE, &verify_data))
 		{
 			DBG1(DBG_TLS, "calculating server finished failed");
 			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 			return NEED_MORE;
 		}
-		if (!chunk_equals(received, verify_data))
-		{
-			DBG1(DBG_TLS, "received server finished invalid");
-			this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);
-			return NEED_MORE;
-		}
 	}
-	this->state = STATE_FINISHED_RECEIVED;
-	this->crypto->append_handshake(this->crypto, TLS_FINISHED, received);
 
+	if (!chunk_equals_const(received, verify_data))
+	{
+		DBG1(DBG_TLS, "received server finished invalid");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);
+		return NEED_MORE;
+	}
+
+	if (verify_data.ptr != buf)
+	{
+		chunk_free(&verify_data);
+	}
+
+	this->crypto->append_handshake(this->crypto, TLS_FINISHED, received);
+	this->state = STATE_FINISHED_RECEIVED;
 	return NEED_MORE;
 }
 
 /**
- * Process New Session Ticket message
+ * Process NewSessionTicket message
  */
 static status_t process_new_session_ticket(private_tls_peer_t *this,
 										   bio_reader_t *reader)
@@ -1440,8 +1433,6 @@ static status_t send_certificate_verify(private_tls_peer_t *this,
 static status_t send_finished(private_tls_peer_t *this,
 							  tls_handshake_type_t *type, bio_writer_t *writer)
 {
-	chunk_t verify_data;
-
 	if (this->tls->get_version_max(this->tls) < TLS_1_3)
 	{
 		char buf[12];
@@ -1458,6 +1449,8 @@ static status_t send_finished(private_tls_peer_t *this,
 	}
 	else
 	{
+		chunk_t verify_data;
+
 		if (!this->crypto->calculate_finished(this->crypto, FALSE, &verify_data))
 		{
 			DBG1(DBG_TLS, "calculating client finished data failed");
@@ -1466,6 +1459,7 @@ static status_t send_finished(private_tls_peer_t *this,
 		}
 
 		writer->write_data(writer, verify_data);
+		chunk_free(&verify_data);
 	}
 
 	*type = TLS_FINISHED;
