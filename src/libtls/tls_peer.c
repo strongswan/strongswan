@@ -409,11 +409,6 @@ static status_t process_certificate(private_tls_peer_t *this,
 			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 			return NEED_MORE;
 		}
-		if (data.len > 0)
-		{
-			DBG1(DBG_TLS, "certificate request context available,"
-				 "but CertificateRequest not received");
-		}
 	}
 	if (!reader->read_data24(reader, &data))
 	{
