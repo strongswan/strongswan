@@ -723,14 +723,20 @@ static status_t process_ec_key_exchange(private_tls_peer_t *this,
 		return NEED_MORE;
 	}
 
-	if (pub.ptr[0] != TLS_ANSI_UNCOMPRESSED)
-	{
-		DBG1(DBG_TLS, "DH point format '%N' not supported",
-			 tls_ansi_point_format_names, pub.ptr[0]);
-		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-		return NEED_MORE;
+	if (group != CURVE_25519 &&
+		group != CURVE_448)
+	{	/* classic ECPoint format (see RFC 8422, section 5.4.1) */
+		if (pub.ptr[0] != TLS_ANSI_UNCOMPRESSED)
+		{
+			DBG1(DBG_TLS, "DH point format '%N' not supported",
+				 tls_ansi_point_format_names, pub.ptr[0]);
+			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+			return NEED_MORE;
+		}
+		pub = chunk_skip(pub, 1);
 	}
-	if (!this->dh->set_other_public_value(this->dh, chunk_skip(pub, 1)))
+
+	if (!this->dh->set_other_public_value(this->dh, pub))
 	{
 		DBG1(DBG_TLS, "applying DH public value failed");
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
@@ -1393,15 +1399,22 @@ static status_t send_key_exchange_dhe(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	if (this->dh->get_dh_group(this->dh) == MODP_CUSTOM)
+	switch (this->dh->get_dh_group(this->dh))
 	{
-		writer->write_data16(writer, pub);
-	}
-	else
-	{	/* ECP uses 8bit length header only, but a point format */
-		writer->write_uint8(writer, pub.len + 1);
-		writer->write_uint8(writer, TLS_ANSI_UNCOMPRESSED);
-		writer->write_data(writer, pub);
+		case MODP_CUSTOM:
+			writer->write_data16(writer, pub);
+			break;
+		case CURVE_25519:
+		case CURVE_448:
+			/* ECPoint uses an 8-bit length header only */
+			writer->write_data8(writer, pub);
+			break;
+		default:
+			/* classic ECPoint format (see RFC 8422, section 5.4.1) */
+			writer->write_uint8(writer, pub.len + 1);
+			writer->write_uint8(writer, TLS_ANSI_UNCOMPRESSED);
+			writer->write_data(writer, pub);
+			break;
 	}
 	free(pub.ptr);
 
