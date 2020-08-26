@@ -85,7 +85,8 @@ static identification_t *find_client_id()
  * Client routine
  */
 static int run_client(host_t *host, identification_t *server,
-					  identification_t *client, int times, tls_cache_t *cache)
+					  identification_t *client, int times, tls_cache_t *cache,
+					  tls_version_t min_version, tls_version_t max_version)
 {
 	tls_socket_t *tls;
 	int fd, res;
@@ -106,8 +107,8 @@ static int run_client(host_t *host, identification_t *server,
 			close(fd);
 			return 1;
 		}
-		tls = tls_socket_create(FALSE, server, client, fd, cache, TLS_1_0,
-							    TLS_1_3, TRUE);
+		tls = tls_socket_create(FALSE, server, client, fd, cache, min_version,
+							    max_version, TRUE);
 		if (!tls)
 		{
 			close(fd);
@@ -128,7 +129,8 @@ static int run_client(host_t *host, identification_t *server,
  * Server routine
  */
 static int serve(host_t *host, identification_t *server,
-				 int times, tls_cache_t *cache)
+				 int times, tls_cache_t *cache, tls_version_t min_version,
+				 tls_version_t max_version)
 {
 	tls_socket_t *tls;
 	int fd, cfd;
@@ -164,8 +166,8 @@ static int serve(host_t *host, identification_t *server,
 		}
 		DBG1(DBG_TLS, "%#H connected", host);
 
-		tls = tls_socket_create(TRUE, server, NULL, cfd, cache, TLS_1_0,
-								TLS_1_2, TRUE);
+		tls = tls_socket_create(TRUE, server, NULL, cfd, cache, min_version,
+								max_version, TRUE);
 		if (!tls)
 		{
 			close(fd);
@@ -266,12 +268,22 @@ static void init()
 	atexit(cleanup);
 }
 
+/**
+ * Used to parse TLS versions
+ */
+ENUM(numeric_version_names, TLS_1_0, TLS_1_3,
+	"1.0",
+	"1.1",
+	"1.2",
+	"1.3");
+
 int main(int argc, char *argv[])
 {
 	char *address = NULL;
 	bool listen = FALSE;
 	int port = 0, times = -1, res, family = AF_UNSPEC;
 	identification_t *server, *client;
+	tls_version_t min_version = TLS_1_0, max_version = TLS_1_3;
 	tls_cache_t *cache;
 	host_t *host;
 
@@ -289,6 +301,9 @@ int main(int argc, char *argv[])
 			{"times",		required_argument,		NULL,		't' },
 			{"ipv4",		no_argument,			NULL,		'4' },
 			{"ipv6",		no_argument,			NULL,		'6' },
+			{"min-version",	required_argument,		NULL,		'm' },
+			{"max-version",	required_argument,		NULL,		'M' },
+			{"version",		required_argument,		NULL,		'v' },
 			{"debug",		required_argument,		NULL,		'd' },
 			{0,0,0,0 }
 		};
@@ -337,6 +352,28 @@ int main(int argc, char *argv[])
 			case '6':
 				family = AF_INET6;
 				continue;
+			case 'm':
+				if (!enum_from_name(numeric_version_names, optarg, &min_version))
+				{
+					fprintf(stderr, "unknown minimum TLS version: %s\n", optarg);
+					return 1;
+				}
+				continue;
+			case 'M':
+				if (!enum_from_name(numeric_version_names, optarg, &max_version))
+				{
+					fprintf(stderr, "unknown maximum TLS version: %s\n", optarg);
+					return 1;
+				}
+				continue;
+			case 'v':
+				if (!enum_from_name(numeric_version_names, optarg, &min_version))
+				{
+					fprintf(stderr, "unknown TLS version: %s\n", optarg);
+					return 1;
+				}
+				max_version = min_version;
+				continue;
 			default:
 				usage(stderr, argv[0]);
 				return 1;
@@ -358,12 +395,13 @@ int main(int argc, char *argv[])
 	cache = tls_cache_create(100, 30);
 	if (listen)
 	{
-		res = serve(host, server, times, cache);
+		res = serve(host, server, times, cache, min_version, max_version);
 	}
 	else
 	{
 		client = find_client_id();
-		res = run_client(host, server, client, times, cache);
+		res = run_client(host, server, client, times, cache, min_version,
+						 max_version);
 		DESTROY_IF(client);
 	}
 	cache->destroy(cache);
