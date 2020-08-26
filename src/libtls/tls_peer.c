@@ -252,7 +252,8 @@ static status_t process_server_hello(private_tls_peer_t *this,
 			case TLS_EXT_KEY_SHARE:
 				if (!extension->read_uint16(extension, &key_type) ||
 					(!is_retry_request &&
-					 !extension->read_data16(extension, &key_share)))
+					 !(extension->read_data16(extension, &key_share) &&
+					   key_share.len)))
 				{
 					DBG1(DBG_TLS, "invalid %N extension", tls_extension_names,
 						 extension_type);
@@ -371,11 +372,25 @@ static status_t process_server_hello(private_tls_peer_t *this,
 		return NEED_MORE;
 	}
 
-	if (this->tls->get_version_max(this->tls) == TLS_1_3)
+	if (this->tls->get_version_max(this->tls) >= TLS_1_3)
 	{
 		chunk_t shared_secret = chunk_empty;
 
-		if (!this->dh->set_other_public_value(this->dh, key_share) ||
+		if (key_share.len &&
+			key_type != TLS_CURVE25519 &&
+			key_type != TLS_CURVE448)
+		{	/* classic format (see RFC 8446, section 4.2.8.2) */
+			if (key_share.ptr[0] != TLS_ANSI_UNCOMPRESSED)
+			{
+				DBG1(DBG_TLS, "DH point format '%N' not supported",
+					 tls_ansi_point_format_names, key_share.ptr[0]);
+				this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+				return NEED_MORE;
+			}
+			key_share = chunk_skip(key_share, 1);
+		}
+		if (!key_share.len ||
+			!this->dh->set_other_public_value(this->dh, key_share) ||
 			!this->dh->get_shared_secret(this->dh, &shared_secret) ||
 			!this->crypto->derive_handshake_keys(this->crypto, shared_secret))
 		{
@@ -1294,7 +1309,17 @@ static status_t send_client_hello(private_tls_peer_t *this,
 		extensions->write_uint16(extensions, TLS_EXT_KEY_SHARE);
 		key_share = bio_writer_create(pub.len + 6);
 		key_share->write_uint16(key_share, selected_curve);
-		key_share->write_data16(key_share, pub);
+		if (selected_curve == TLS_CURVE25519 ||
+			selected_curve == TLS_CURVE448)
+		{
+			key_share->write_data16(key_share, pub);
+		}
+		else
+		{	/* classic format (see RFC 8446, section 4.2.8.2) */
+			key_share->write_uint16(key_share, pub.len + 1);
+			key_share->write_uint8(key_share, TLS_ANSI_UNCOMPRESSED);
+			key_share->write_data(key_share, pub);
+		}
 		key_share->wrap16(key_share);
 		extensions->write_data16(extensions, key_share->get_buf(key_share));
 		key_share->destroy(key_share);
