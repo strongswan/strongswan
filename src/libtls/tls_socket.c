@@ -188,7 +188,11 @@ static bool exchange(private_tls_socket_t *this, bool wr, bool block)
 				case SUCCESS:
 					return TRUE;
 				default:
-					return FALSE;
+					if (wr)
+					{
+						return FALSE;
+					}
+					break;
 			}
 			break;
 		}
