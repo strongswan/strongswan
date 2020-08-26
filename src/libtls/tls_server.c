@@ -282,7 +282,7 @@ static status_t process_client_hello(private_tls_server_t *this,
 	}
 	rng->destroy(rng);
 
-	if (!this->tls->set_version(this->tls, version))
+	if (!this->tls->set_version(this->tls, version, version))
 	{
 		DBG1(DBG_TLS, "negotiated version %N not supported",
 			 tls_version_names, version);
