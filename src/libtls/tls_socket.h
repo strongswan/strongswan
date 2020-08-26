@@ -104,12 +104,14 @@ struct tls_socket_t {
  * @param peer				client identity, NULL for no client authentication
  * @param fd				socket to read/write from
  * @param cache				session cache to use, or NULL
+ * @param min_version		minimum TLS version to negotiate
  * @param max_version		maximum TLS version to negotiate
  * @param nullok			accept NULL encryption ciphers
  * @return					TLS socket wrapper
  */
 tls_socket_t *tls_socket_create(bool is_server, identification_t *server,
-							identification_t *peer, int fd, tls_cache_t *cache,
-							tls_version_t max_version, bool nullok);
+								identification_t *peer, int fd,
+								tls_cache_t *cache, tls_version_t min_version,
+								tls_version_t max_version, bool nullok);
 
 #endif /** TLS_SOCKET_H_ @}*/

@@ -405,8 +405,9 @@ METHOD(tls_socket_t, destroy, void,
  * See header
  */
 tls_socket_t *tls_socket_create(bool is_server, identification_t *server,
-							identification_t *peer, int fd, tls_cache_t *cache,
-							tls_version_t max_version, bool nullok)
+								identification_t *peer, int fd,
+								tls_cache_t *cache, tls_version_t min_version,
+								tls_version_t max_version, bool nullok)
 {
 	private_tls_socket_t *this;
 	tls_purpose_t purpose;
@@ -442,12 +443,11 @@ tls_socket_t *tls_socket_create(bool is_server, identification_t *server,
 
 	this->tls = tls_create(is_server, server, peer, purpose,
 						   &this->app.application, cache);
-	if (!this->tls)
+	if (!this->tls ||
+		!this->tls->set_version(this->tls, min_version, max_version))
 	{
 		free(this);
 		return NULL;
 	}
-	this->tls->set_version(this->tls, TLS_1_0, max_version);
-
 	return &this->public;
 }
