@@ -263,26 +263,29 @@ struct tls_t {
 	identification_t* (*get_peer_id)(tls_t *this);
 
 	/**
-	 * Get the maximum and negotiated TLS/SSL version.
+	 * Get the maximum and negotiated TLS version.
 	 *
 	 * @return			max and negotiated TLS version
 	 */
 	tls_version_t (*get_version_max)(tls_t *this);
 
 	/**
-	* Get the minimum TLS/SSL version.
+	* Get the minimum TLS version.
 	*
 	* @return			min TLS version
 	*/
 	tls_version_t (*get_version_min)(tls_t *this);
 
 	/**
-	 * Set the negotiated TLS/SSL version.
+	 * Set the initial minimum/maximum TLS version, or set both to the same
+	 * value once negotiated.
 	 *
-	 * @param version	negotiated TLS version
-	 * @return			TRUE if version acceptable
+	 * @param min_version	minimum (or negotiated) TLS version
+	 * @param max_version	maximum (or negotiated) TLS version
+	 * @return				TRUE if version(s) acceptable
 	 */
-	bool (*set_version)(tls_t *this, tls_version_t version);
+	bool (*set_version)(tls_t *this, tls_version_t min_version,
+						tls_version_t max_version);
 
 	/**
 	 * Get the purpose of this TLS stack instance.

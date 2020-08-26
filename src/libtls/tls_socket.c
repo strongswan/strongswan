@@ -447,7 +447,7 @@ tls_socket_t *tls_socket_create(bool is_server, identification_t *server,
 		free(this);
 		return NULL;
 	}
-	this->tls->set_version(this->tls, max_version);
+	this->tls->set_version(this->tls, TLS_1_0, max_version);
 
 	return &this->public;
 }

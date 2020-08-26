@@ -436,26 +436,24 @@ METHOD(tls_t, get_version_min, tls_version_t,
 }
 
 METHOD(tls_t, set_version, bool,
-	private_tls_t *this, tls_version_t version)
+	private_tls_t *this, tls_version_t min_version, tls_version_t max_version)
 {
-	if (version > this->version_max)
+	if (min_version < this->version_min ||
+		max_version > this->version_max ||
+		min_version > max_version ||
+		min_version < TLS_1_0)
 	{
 		return FALSE;
 	}
-	switch (version)
+
+	this->version_min = min_version;
+	this->version_max = max_version;
+
+	if (min_version == max_version)
 	{
-		case TLS_1_0:
-		case TLS_1_1:
-		case TLS_1_2:
-		case TLS_1_3:
-			this->version_max = version;
-			this->protection->set_version(this->protection, version);
-			return TRUE;
-		case SSL_2_0:
-		case SSL_3_0:
-		default:
-			return FALSE;
+		this->protection->set_version(this->protection, max_version);
 	}
+	return TRUE;
 }
 
 METHOD(tls_t, get_purpose, tls_purpose_t,
@@ -545,8 +543,8 @@ tls_t *tls_create(bool is_server, identification_t *server,
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
-		.version_max = TLS_1_3,
 		.version_min = TLS_1_0,
+		.version_max = TLS_1_3,
 		.application = application,
 		.purpose = purpose,
 	);
