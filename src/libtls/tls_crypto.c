@@ -1978,51 +1978,26 @@ METHOD(tls_crypto_t, derive_secrets, bool,
 }
 
 /**
- * Derive and configure the keys/IVs using the given labels.
+ * Derive and configure the client/server key/IV on an AEAD using a given label.
  */
-static bool derive_labeled_keys(private_tls_crypto_t *this,
-								tls_hkdf_label_t client_label,
-								tls_hkdf_label_t server_label)
+static bool derive_labeled_key(private_tls_crypto_t *this, bool server,
+							   tls_hkdf_label_t label, tls_aead_t *aead)
 {
-	chunk_t c_key = chunk_empty, c_iv = chunk_empty;
-	chunk_t s_key = chunk_empty, s_iv = chunk_empty;
-	tls_aead_t *aead_c = this->aead_out, *aead_s = this->aead_in;
+	chunk_t key = chunk_empty, iv = chunk_empty;
 	bool success = FALSE;
 
-	if (this->tls->is_server(this->tls))
-	{
-		aead_c = this->aead_in;
-		aead_s = this->aead_out;
-	}
-
-	if (!this->hkdf->generate_secret(this->hkdf, client_label, this->handshake,
+	if (!this->hkdf->generate_secret(this->hkdf, label, this->handshake,
 									 NULL) ||
-		!this->hkdf->derive_key(this->hkdf, FALSE,
-								this->aead_out->get_encr_key_size(this->aead_out),
-								&c_key) ||
-		!this->hkdf->derive_iv(this->hkdf, FALSE,
-							   this->aead_out->get_iv_size(this->aead_out),
-							   &c_iv))
+		!this->hkdf->derive_key(this->hkdf, server,
+								aead->get_encr_key_size(aead), &key) ||
+		!this->hkdf->derive_iv(this->hkdf, server,
+							   aead->get_iv_size(aead), &iv))
 	{
-		DBG1(DBG_TLS, "deriving client key material failed");
+		DBG1(DBG_TLS, "deriving key material failed");
 		goto out;
 	}
 
-	if (!this->hkdf->generate_secret(this->hkdf, server_label, this->handshake,
-									 NULL) ||
-		!this->hkdf->derive_key(this->hkdf, TRUE,
-								this->aead_in->get_encr_key_size(this->aead_in),
-								&s_key) ||
-		!this->hkdf->derive_iv(this->hkdf, TRUE,
-							   this->aead_in->get_iv_size(this->aead_in),
-							   &s_iv))
-	{
-		DBG1(DBG_TLS, "deriving server key material failed");
-		goto out;
-	}
-
-	if (!aead_c->set_keys(aead_c, chunk_empty, c_key, c_iv) ||
-		!aead_s->set_keys(aead_s, chunk_empty, s_key, s_iv))
+	if (!aead->set_keys(aead, chunk_empty, key, iv))
 	{
 		DBG1(DBG_TLS, "setting AEAD key material failed");
 		goto out;
@@ -2030,11 +2005,27 @@ static bool derive_labeled_keys(private_tls_crypto_t *this,
 	success = TRUE;
 
 out:
-	chunk_clear(&c_key);
-	chunk_clear(&c_iv);
-	chunk_clear(&s_key);
-	chunk_clear(&s_iv);
+	chunk_clear(&key);
+	chunk_clear(&iv);
 	return success;
+}
+
+/**
+ * Derive and configure the keys/IVs using the given labels.
+ */
+static bool derive_labeled_keys(private_tls_crypto_t *this,
+								tls_hkdf_label_t client_label,
+								tls_hkdf_label_t server_label)
+{
+	tls_aead_t *aead_c = this->aead_out, *aead_s = this->aead_in;
+
+	if (this->tls->is_server(this->tls))
+	{
+		aead_c = this->aead_in;
+		aead_s = this->aead_out;
+	}
+	return derive_labeled_key(this, FALSE, client_label, aead_c) &&
+		   derive_labeled_key(this, TRUE, server_label, aead_s);
 }
 
 METHOD(tls_crypto_t, derive_handshake_keys, bool,
@@ -2050,6 +2041,19 @@ METHOD(tls_crypto_t, derive_app_keys, bool,
 {
 	return derive_labeled_keys(this, TLS_HKDF_C_AP_TRAFFIC,
 							   TLS_HKDF_S_AP_TRAFFIC);
+}
+
+METHOD(tls_crypto_t, update_app_keys, bool,
+	private_tls_crypto_t *this, bool inbound)
+{
+	tls_hkdf_label_t label = TLS_HKDF_UPD_C_TRAFFIC;
+
+	if (this->tls->is_server(this->tls) != inbound)
+	{
+		label = TLS_HKDF_UPD_S_TRAFFIC;
+	}
+	return derive_labeled_key(this, label == TLS_HKDF_UPD_S_TRAFFIC, label,
+							  inbound ? this->aead_in : this->aead_out);
 }
 
 METHOD(tls_crypto_t, resume_session, tls_cipher_suite_t,
@@ -2152,6 +2156,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 			.derive_secrets = _derive_secrets,
 			.derive_handshake_keys = _derive_handshake_keys,
 			.derive_app_keys = _derive_app_keys,
+			.update_app_keys = _update_app_keys,
 			.resume_session = _resume_session,
 			.get_session = _get_session,
 			.change_cipher = _change_cipher,
