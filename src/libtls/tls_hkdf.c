@@ -403,27 +403,61 @@ METHOD(tls_hkdf_t, generate_secret, bool,
 				return FALSE;
 			}
 			break;
+		case TLS_HKDF_UPD_C_TRAFFIC:
+		case TLS_HKDF_UPD_S_TRAFFIC:
+			if (this->phase != HKDF_PHASE_3)
+			{
+				DBG1(DBG_TLS, "unable to update traffic keys");
+				return FALSE;
+			}
+			break;
 		default:
 			DBG1(DBG_TLS, "invalid HKDF label");
 			return FALSE;
 	}
 
-	if (!derive_secret(this, chunk_from_str(hkdf_labels[label]), messages))
+	if (label == TLS_HKDF_UPD_C_TRAFFIC || label == TLS_HKDF_UPD_S_TRAFFIC)
 	{
-		DBG1(DBG_TLS, "unable to derive secret");
-		return FALSE;
+		chunk_t previous = this->client_traffic_secret;
+
+		if (label == TLS_HKDF_UPD_S_TRAFFIC)
+		{
+			previous = this->server_traffic_secret;
+		}
+
+		if (!expand_label(this, previous, chunk_from_str("tls13 traffic upd"),
+						  chunk_empty, this->hasher->get_hash_size(this->hasher),
+						  &this->okm))
+		{
+			DBG1(DBG_TLS, "unable to update secret");
+			return FALSE;
+		}
+	}
+	else
+	{
+		if (!derive_secret(this, chunk_from_str(hkdf_labels[label]), messages))
+		{
+			DBG1(DBG_TLS, "unable to derive secret");
+			return FALSE;
+		}
 	}
 
-	if (label == TLS_HKDF_C_HS_TRAFFIC || label == TLS_HKDF_C_AP_TRAFFIC)
+	switch (label)
 	{
-		chunk_clear(&this->client_traffic_secret);
-		this->client_traffic_secret = chunk_clone(this->okm);
-	}
-
-	if (label == TLS_HKDF_S_HS_TRAFFIC || label == TLS_HKDF_S_AP_TRAFFIC)
-	{
-		chunk_clear(&this->server_traffic_secret);
-		this->server_traffic_secret = chunk_clone(this->okm);
+		case TLS_HKDF_C_HS_TRAFFIC:
+		case TLS_HKDF_C_AP_TRAFFIC:
+		case TLS_HKDF_UPD_C_TRAFFIC:
+			chunk_clear(&this->client_traffic_secret);
+			this->client_traffic_secret = chunk_clone(this->okm);
+			break;
+		case TLS_HKDF_S_HS_TRAFFIC:
+		case TLS_HKDF_S_AP_TRAFFIC:
+		case TLS_HKDF_UPD_S_TRAFFIC:
+			chunk_clear(&this->server_traffic_secret);
+			this->server_traffic_secret = chunk_clone(this->okm);
+			break;
+		default:
+			break;
 	}
 
 	if (secret)
