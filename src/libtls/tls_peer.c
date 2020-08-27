@@ -1029,6 +1029,36 @@ static status_t process_new_session_ticket(private_tls_peer_t *this,
 	return NEED_MORE;
 }
 
+/**
+ * Process KeyUpdate message
+ */
+static status_t process_key_update(private_tls_peer_t *this,
+								   bio_reader_t *reader)
+{
+	uint8_t update_requested;
+
+	if (!reader->read_uint8(reader, &update_requested) ||
+		update_requested > 1)
+	{
+		DBG1(DBG_TLS, "received invalid KeyUpdate");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
+	}
+
+	if (!this->crypto->update_app_keys(this->crypto, TRUE))
+	{
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
+	this->crypto->change_cipher(this->crypto, TRUE);
+
+	if (update_requested)
+	{
+		DBG1(DBG_TLS, "server requested KeyUpdate, currently not supported");
+	}
+	return NEED_MORE;
+}
+
 METHOD(tls_handshake_t, process, status_t,
 	private_tls_peer_t *this, tls_handshake_type_t type, bio_reader_t *reader)
 {
@@ -1134,6 +1164,10 @@ METHOD(tls_handshake_t, process, status_t,
 				if (type == TLS_NEW_SESSION_TICKET)
 				{
 					return process_new_session_ticket(this, reader);
+				}
+				if (type == TLS_KEY_UPDATE)
+				{
+					return process_key_update(this, reader);
 				}
 				expected = TLS_NEW_SESSION_TICKET;
 				break;
