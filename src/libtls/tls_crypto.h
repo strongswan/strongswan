@@ -575,6 +575,14 @@ struct tls_crypto_t {
 	bool (*derive_app_keys)(tls_crypto_t *this);
 
 	/**
+	 * Update the application keys.
+	 *
+	 * @param inbound			whether to update the in- or outbound keys
+	 * @return 					TRUE if	secret derived successfully
+	 */
+	bool (*update_app_keys)(tls_crypto_t *this, bool inbound);
+
+	/**
 	 * Try to resume a TLS session, derive key material.
 	 *
 	 * @param session		session identifier
