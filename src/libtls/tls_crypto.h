@@ -29,7 +29,7 @@
 typedef struct tls_crypto_t tls_crypto_t;
 typedef enum tls_cipher_suite_t tls_cipher_suite_t;
 typedef enum tls_hash_algorithm_t tls_hash_algorithm_t;
-typedef enum tls_signature_algorithm_t tls_signature_algorithm_t;
+typedef enum tls_signature_scheme_t tls_signature_scheme_t;
 typedef enum tls_client_certificate_type_t tls_client_certificate_type_t;
 typedef enum tls_ecc_curve_type_t tls_ecc_curve_type_t;
 typedef enum tls_named_group_t tls_named_group_t;
@@ -287,18 +287,36 @@ enum tls_hash_algorithm_t {
 extern enum_name_t *tls_hash_algorithm_names;
 
 /**
- * TLS SignatureAlgorithm identifiers
+ * TLS SignatureScheme identifiers
  */
-enum tls_signature_algorithm_t {
-	TLS_SIG_RSA =		1,
-	TLS_SIG_DSA =		2,
-	TLS_SIG_ECDSA =		3,
+enum tls_signature_scheme_t {
+	/* legacy schemes compatible with TLS 1.2 (first byte is the hash algorithm,
+	 * second the key type) */
+	TLS_SIG_RSA_PKCS1_SHA1 =		0x0201,
+	TLS_SIG_ECDSA_SHA1 =			0x0203,
+	TLS_SIG_RSA_PKCS1_SHA256 =		0x0401,
+	TLS_SIG_ECDSA_SHA256 =			0x0403,
+	TLS_SIG_RSA_PKCS1_SHA384 =		0x0501,
+	TLS_SIG_ECDSA_SHA384 =			0x0503,
+	TLS_SIG_RSA_PKCS1_SHA512 =		0x0601,
+	TLS_SIG_ECDSA_SHA512 =			0x0603,
+	/* RSASSA-PSS for public keys with OID rsaEncryption */
+	TLS_SIG_RSA_PSS_RSAE_SHA256 =	0x0804,
+	TLS_SIG_RSA_PSS_RSAE_SHA384 =	0x0805,
+	TLS_SIG_RSA_PSS_RSAE_SHA512 =	0x0806,
+	/* EdDSA */
+	TLS_SIG_ED25519 =				0x0807,
+	TLS_SIG_ED448 =					0x0808,
+	/* RSASSA-PSS for public keys with OID RSASSA-PSS */
+	TLS_SIG_RSA_PSS_PSS_SHA256 =	0x0809,
+	TLS_SIG_RSA_PSS_PSS_SHA384 =	0x080a,
+	TLS_SIG_RSA_PSS_PSS_SHA512 =	0x080b,
 };
 
 /**
- * Enum names for tls_signature_algorithm_t
+ * Enum names for tls_signature_scheme_t
  */
-extern enum_name_t *tls_signature_algorithm_names;
+extern enum_name_t *tls_signature_scheme_names;
 
 /**
  * TLS ClientCertificateType
@@ -443,11 +461,14 @@ struct tls_crypto_t {
 	diffie_hellman_group_t (*get_dh_group)(tls_crypto_t *this);
 
 	/**
-	 * Write the list of supported hash/sig algorithms to writer.
+	 * Write the list of supported signature schemes, either for certificates
+	 * or for CertificateVerify messages, to writer.
 	 *
-	 * @param writer		writer to write supported hash/sig algorithms
+	 * @param writer		writer to write supported signature schemes
+	 * @param cert			TRUE to return signature schemes supported in certs
 	 */
-	void (*get_signature_algorithms)(tls_crypto_t *this, bio_writer_t *writer);
+	void (*get_signature_algorithms)(tls_crypto_t *this, bio_writer_t *writer,
+									 bool cert);
 
 	/**
 	 * Create an enumerator over supported ECDH groups.

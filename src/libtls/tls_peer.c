@@ -1331,7 +1331,11 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	DBG2(DBG_TLS, "sending extension: %N",
 		 tls_extension_names, TLS_EXT_SIGNATURE_ALGORITHMS);
 	extensions->write_uint16(extensions, TLS_EXT_SIGNATURE_ALGORITHMS);
-	this->crypto->get_signature_algorithms(this->crypto, extensions);
+	this->crypto->get_signature_algorithms(this->crypto, extensions, FALSE);
+	DBG2(DBG_TLS, "sending extension: %N",
+		 tls_extension_names, TLS_EXT_SIGNATURE_ALGORITHMS_CERT);
+	extensions->write_uint16(extensions, TLS_EXT_SIGNATURE_ALGORITHMS_CERT);
+	this->crypto->get_signature_algorithms(this->crypto, extensions, TRUE);
 
 	if (this->dh)
 	{

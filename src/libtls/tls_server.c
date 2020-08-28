@@ -777,7 +777,7 @@ static status_t send_certificate_request(private_tls_server_t *this,
 	supported->destroy(supported);
 	if (this->tls->get_version_max(this->tls) >= TLS_1_2)
 	{
-		this->crypto->get_signature_algorithms(this->crypto, writer);
+		this->crypto->get_signature_algorithms(this->crypto, writer, TRUE);
 	}
 
 	authorities = bio_writer_create(64);
