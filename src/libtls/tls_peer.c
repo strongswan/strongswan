@@ -289,7 +289,6 @@ static status_t process_server_hello(private_tls_peer_t *this,
 static status_t process_encrypted_extensions(private_tls_peer_t *this,
 											 bio_reader_t *reader)
 {
-	uint16_t length;
 	chunk_t ext = chunk_empty;
 	int offset = 0;
 	uint16_t extension_type, extension_length;
@@ -297,9 +296,7 @@ static status_t process_encrypted_extensions(private_tls_peer_t *this,
 	this->crypto->append_handshake(this->crypto,
 								   TLS_ENCRYPTED_EXTENSIONS, reader->peek(reader));
 
-
-	if (!reader->read_uint16(reader, &length) ||
-		(reader->remaining(reader) && !reader->read_data16(reader, &ext)))
+	if (!reader->read_data16(reader, &ext))
 	{
 		DBG1(DBG_TLS, "received invalid EncryptedExtensions");
 		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
