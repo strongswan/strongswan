@@ -263,11 +263,42 @@ ENUM(tls_hash_algorithm_names, TLS_HASH_NONE, TLS_HASH_SHA512,
 	"SHA512",
 );
 
-ENUM(tls_signature_algorithm_names, TLS_SIG_RSA, TLS_SIG_ECDSA,
-	"RSA",
-	"DSA",
-	"ECDSA",
+ENUM_BEGIN(tls_signature_scheme_names,
+		   TLS_SIG_RSA_PKCS1_SHA1, TLS_SIG_RSA_PKCS1_SHA1,
+	"RSA_PKCS1_SHA1");
+ENUM_NEXT(tls_signature_scheme_names,
+		  TLS_SIG_ECDSA_SHA1, TLS_SIG_ECDSA_SHA1, TLS_SIG_RSA_PKCS1_SHA1,
+	"ECDSA_SHA1");
+ENUM_NEXT(tls_signature_scheme_names,
+		  TLS_SIG_RSA_PKCS1_SHA256, TLS_SIG_RSA_PKCS1_SHA256, TLS_SIG_ECDSA_SHA1,
+	"RSA_PKCS1_SHA256");
+ENUM_NEXT(tls_signature_scheme_names,
+		  TLS_SIG_ECDSA_SHA256, TLS_SIG_ECDSA_SHA256, TLS_SIG_RSA_PKCS1_SHA256,
+	"ECDSA_SHA256");
+ENUM_NEXT(tls_signature_scheme_names,
+		  TLS_SIG_RSA_PKCS1_SHA384, TLS_SIG_RSA_PKCS1_SHA384, TLS_SIG_ECDSA_SHA256,
+	"RSA_PKCS1_SHA384");
+ENUM_NEXT(tls_signature_scheme_names,
+		  TLS_SIG_ECDSA_SHA384, TLS_SIG_ECDSA_SHA384, TLS_SIG_RSA_PKCS1_SHA384,
+	"ECDSA_SHA384");
+ENUM_NEXT(tls_signature_scheme_names,
+		  TLS_SIG_RSA_PKCS1_SHA512, TLS_SIG_RSA_PKCS1_SHA512, TLS_SIG_ECDSA_SHA384,
+	"RSA_PKCS1_SHA512");
+ENUM_NEXT(tls_signature_scheme_names,
+		  TLS_SIG_ECDSA_SHA512, TLS_SIG_ECDSA_SHA512, TLS_SIG_RSA_PKCS1_SHA512,
+	"ECDSA_SHA512");
+ENUM_NEXT(tls_signature_scheme_names,
+		  TLS_SIG_RSA_PSS_RSAE_SHA256, TLS_SIG_RSA_PSS_PSS_SHA512, TLS_SIG_ECDSA_SHA512,
+	"RSA_PSS_RSAE_SHA256",
+	"RSA_PSS_RSAE_SHA384",
+	"RSA_PSS_RSAE_SHA512",
+	"ED25519",
+	"ED448",
+	"RSA_PSS_PSS_SHA256",
+	"RSA_PSS_PSS_SHA384",
+	"RSA_PSS_PSS_SHA512",
 );
+ENUM_END(tls_signature_scheme_names, TLS_SIG_RSA_PSS_PSS_SHA512);
 
 ENUM_BEGIN(tls_client_certificate_type_names,
 		   TLS_RSA_SIGN, TLS_DSS_EPHEMERAL_DH,
@@ -1372,60 +1403,84 @@ METHOD(tls_crypto_t, get_dh_group, diffie_hellman_group_t,
 }
 
 /**
- * Map signature schemes to TLS key types and hashes, ordered by preference
+ * Parameters for RSA/PSS signature schemes
+ */
+#define PSS_PARAMS(bits) static rsa_pss_params_t pss_params_sha##bits = { \
+	.hash = HASH_SHA##bits, \
+	.mgf1_hash = HASH_SHA##bits, \
+	.salt_len = HASH_SIZE_SHA##bits, \
+}
+
+PSS_PARAMS(256);
+PSS_PARAMS(384);
+PSS_PARAMS(512);
+
+/**
+ * Map TLS signature schemes, ordered by preference
  */
 static struct {
-	tls_signature_algorithm_t sig;
-	tls_hash_algorithm_t hash;
-	signature_scheme_t scheme;
+	tls_signature_scheme_t sig;
+	signature_params_t params;
+	/* min/max versions for use in CertificateVerify */
+	tls_version_t min_version;
+	tls_version_t max_version;
 } schemes[] = {
-	{ TLS_SIG_ECDSA,	TLS_HASH_SHA256,	SIGN_ECDSA_WITH_SHA256_DER   },
-	{ TLS_SIG_ECDSA,	TLS_HASH_SHA384,	SIGN_ECDSA_WITH_SHA384_DER   },
-	{ TLS_SIG_ECDSA,	TLS_HASH_SHA512,	SIGN_ECDSA_WITH_SHA512_DER   },
-	{ TLS_SIG_ECDSA,	TLS_HASH_SHA1,		SIGN_ECDSA_WITH_SHA1_DER     },
-	{ TLS_SIG_RSA,		TLS_HASH_SHA256,	SIGN_RSA_EMSA_PKCS1_SHA2_256 },
-	{ TLS_SIG_RSA,		TLS_HASH_SHA384,	SIGN_RSA_EMSA_PKCS1_SHA2_384 },
-	{ TLS_SIG_RSA,		TLS_HASH_SHA512,	SIGN_RSA_EMSA_PKCS1_SHA2_512 },
-	{ TLS_SIG_RSA,		TLS_HASH_SHA224,	SIGN_RSA_EMSA_PKCS1_SHA2_224 },
-	{ TLS_SIG_RSA,		TLS_HASH_SHA1,		SIGN_RSA_EMSA_PKCS1_SHA1     },
-	{ TLS_SIG_RSA,		TLS_HASH_MD5,		SIGN_RSA_EMSA_PKCS1_MD5      },
+	{ TLS_SIG_ECDSA_SHA256, { .scheme = SIGN_ECDSA_WITH_SHA256_DER },
+		TLS_1_0, TLS_1_3 },
+	{ TLS_SIG_ECDSA_SHA384, { .scheme = SIGN_ECDSA_WITH_SHA384_DER },
+		TLS_1_0, TLS_1_3 },
+	{ TLS_SIG_ECDSA_SHA512, { .scheme = SIGN_ECDSA_WITH_SHA512_DER },
+		TLS_1_0, TLS_1_3 },
+	{ TLS_SIG_ED25519, { .scheme = SIGN_ED25519 },
+		TLS_1_3, TLS_1_3 },
+	{ TLS_SIG_ED448, { .scheme = SIGN_ED448 },
+		TLS_1_3, TLS_1_3 },
+	{ TLS_SIG_RSA_PSS_RSAE_SHA256, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha256, },
+		TLS_1_2, TLS_1_3 },
+	{ TLS_SIG_RSA_PSS_RSAE_SHA384, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha384, },
+		TLS_1_2, TLS_1_3 },
+	{ TLS_SIG_RSA_PSS_RSAE_SHA512, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha512, },
+		TLS_1_2, TLS_1_3 },
+	/* the parameters for the next three should actually be taken from the
+	 * public key, we currently don't have an API for that, so assume defaults */
+	{ TLS_SIG_RSA_PSS_PSS_SHA256, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha256, },
+		TLS_1_2, TLS_1_3 },
+	{ TLS_SIG_RSA_PSS_PSS_SHA384, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha384, },
+		TLS_1_2, TLS_1_3 },
+	{ TLS_SIG_RSA_PSS_PSS_SHA512, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha512, },
+		TLS_1_2, TLS_1_3 },
+	{ TLS_SIG_RSA_PKCS1_SHA256, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256 },
+		TLS_1_0, TLS_1_2 },
+	{ TLS_SIG_RSA_PKCS1_SHA384, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_384 },
+		TLS_1_0, TLS_1_2 },
+	{ TLS_SIG_RSA_PKCS1_SHA512, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512 },
+		TLS_1_0, TLS_1_2 },
 };
 
 METHOD(tls_crypto_t, get_signature_algorithms, void,
-	private_tls_crypto_t *this, bio_writer_t *writer)
+	private_tls_crypto_t *this, bio_writer_t *writer, bool cert)
 {
 	bio_writer_t *supported;
-	tls_version_t version;
+	tls_version_t min_version, max_version;
 	int i;
 
 	supported = bio_writer_create(32);
-	version = this->tls->get_version_max(this->tls);
+
+	if (!cert)
+	{
+		min_version = this->tls->get_version_min(this->tls);
+		max_version = this->tls->get_version_max(this->tls);
+	}
 
 	for (i = 0; i < countof(schemes); i++)
 	{
-		if (schemes[i].sig == TLS_SIG_RSA && !this->rsa)
+		if ((cert || (schemes[i].min_version <= max_version &&
+					  schemes[i].max_version >= min_version)) &&
+			lib->plugins->has_feature(lib->plugins,
+						PLUGIN_PROVIDE(PUBKEY_VERIFY, schemes[i].params.scheme)))
 		{
-			continue;
+			supported->write_uint16(supported, schemes[i].sig);
 		}
-		if (schemes[i].sig == TLS_SIG_ECDSA && !this->ecdsa)
-		{
-			continue;
-		}
-		if (schemes[i].hash == TLS_HASH_MD5 && version >= TLS_1_3)
-		{
-			continue;
-		}
-		if (schemes[i].hash == TLS_HASH_SHA224 && version >= TLS_1_3)
-		{
-			continue;
-		}
-		if (!lib->plugins->has_feature(lib->plugins,
-						PLUGIN_PROVIDE(PUBKEY_VERIFY, schemes[i].scheme)))
-		{
-			continue;
-		}
-		supported->write_uint8(supported, schemes[i].hash);
-		supported->write_uint8(supported, schemes[i].sig);
 	}
 
 	supported->wrap16(supported);
@@ -1434,26 +1489,20 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 }
 
 /**
- * Get the signature scheme from a TLS 1.2 hash/sig algorithm pair
+ * Get the signature parameters from a TLS signature scheme
  */
-static signature_scheme_t hashsig_to_scheme(key_type_t type,
-											tls_hash_algorithm_t hash,
-											tls_signature_algorithm_t sig)
+static signature_params_t *params_for_scheme(tls_signature_scheme_t sig)
 {
 	int i;
 
-	if ((sig == TLS_SIG_RSA && type == KEY_RSA) ||
-		(sig == TLS_SIG_ECDSA && type == KEY_ECDSA))
+	for (i = 0; i < countof(schemes); i++)
 	{
-		for (i = 0; i < countof(schemes); i++)
+		if (schemes[i].sig == sig)
 		{
-			if (schemes[i].sig == sig && schemes[i].hash == hash)
-			{
-				return schemes[i].scheme;
-			}
+			return &schemes[i].params;
 		}
 	}
-	return SIGN_UNKNOWN;
+	return NULL;
 }
 
 /**
@@ -1629,11 +1678,12 @@ METHOD(tls_crypto_t, sign, bool,
 {
 	if (this->tls->get_version_max(this->tls) >= TLS_1_2)
 	{
-		const chunk_t hashsig_def = chunk_from_chars(
-					TLS_HASH_SHA1, TLS_SIG_RSA, TLS_HASH_SHA1, TLS_SIG_ECDSA);
-		signature_scheme_t scheme;
+		/* fallback to SHA1/RSA and SHA1/ECDSA */
+		const chunk_t hashsig_def = chunk_from_chars(0x02, 0x01, 0x02, 0x03);
+		signature_params_t *params;
+		key_type_t type;
+		uint16_t scheme;
 		bio_reader_t *reader;
-		uint8_t hash, alg;
 		chunk_t sig;
 		bool done = FALSE;
 
@@ -1641,15 +1691,16 @@ METHOD(tls_crypto_t, sign, bool,
 		{	/* fallback if none given */
 			hashsig = hashsig_def;
 		}
+		type = key->get_type(key);
 		reader = bio_reader_create(hashsig);
 		while (reader->remaining(reader) >= 2)
 		{
-			if (reader->read_uint8(reader, &hash) &&
-				reader->read_uint8(reader, &alg))
+			if (reader->read_uint16(reader, &scheme))
 			{
-				scheme = hashsig_to_scheme(key->get_type(key), hash, alg);
-				if (scheme != SIGN_UNKNOWN &&
-					key->sign(key, scheme, NULL, data, &sig))
+				params = params_for_scheme(scheme);
+				if (params &&
+					type == key_type_from_signature_scheme(params->scheme) &&
+					key->sign(key, params->scheme, params->params, data, &sig))
 				{
 					done = TRUE;
 					break;
@@ -1662,10 +1713,9 @@ METHOD(tls_crypto_t, sign, bool,
 			DBG1(DBG_TLS, "none of the proposed hash/sig algorithms supported");
 			return FALSE;
 		}
-		DBG2(DBG_TLS, "created signature with %N/%N",
-			 tls_hash_algorithm_names, hash, tls_signature_algorithm_names, alg);
-		writer->write_uint8(writer, hash);
-		writer->write_uint8(writer, alg);
+		DBG2(DBG_TLS, "created signature with %N", tls_signature_scheme_names,
+			 scheme);
+		writer->write_uint16(writer, scheme);
 		writer->write_data16(writer, sig);
 		free(sig.ptr);
 	}
@@ -1712,23 +1762,21 @@ METHOD(tls_crypto_t, verify, bool,
 {
 	if (this->tls->get_version_max(this->tls) >= TLS_1_2)
 	{
-		signature_scheme_t scheme = SIGN_UNKNOWN;
-		uint8_t hash, alg;
+		signature_params_t *params;
+		uint16_t scheme;
 		chunk_t sig;
 
-		if (!reader->read_uint8(reader, &hash) ||
-			!reader->read_uint8(reader, &alg) ||
+		if (!reader->read_uint16(reader, &scheme) ||
 			!reader->read_data16(reader, &sig))
 		{
 			DBG1(DBG_TLS, "received invalid signature");
 			return FALSE;
 		}
-		scheme = hashsig_to_scheme(key->get_type(key), hash, alg);
-		if (scheme == SIGN_UNKNOWN)
+		params = params_for_scheme(scheme);
+		if (!params)
 		{
-			DBG1(DBG_TLS, "signature algorithms %N/%N not supported",
-				 tls_hash_algorithm_names, hash,
-				 tls_signature_algorithm_names, alg);
+			DBG1(DBG_TLS, "signature algorithms %N not supported",
+				 tls_signature_scheme_names, scheme);
 			return FALSE;
 		}
 		if (this->tls->get_version_max(this->tls) == TLS_1_3)
@@ -1743,15 +1791,14 @@ METHOD(tls_crypto_t, verify, bool,
 
 			data = chunk_cata("cm", tls13_sig_data_server, transcript_hash);
 		}
-		if (!key->verify(key, scheme, NULL, data, sig))
+		if (!key->verify(key, params->scheme, params->params, data, sig))
 		{
-			DBG1(DBG_TLS, "signature verification with %N/%N failed",
-				 tls_hash_algorithm_names, hash, tls_signature_algorithm_names,
-				 alg);
+			DBG1(DBG_TLS, "signature verification with %N failed",
+				 tls_signature_scheme_names, scheme);
 			return FALSE;
 		}
-		DBG2(DBG_TLS, "verified signature with %N/%N",
-			 tls_hash_algorithm_names, hash, tls_signature_algorithm_names, alg);
+		DBG2(DBG_TLS, "verified signature with %N",
+			 tls_signature_scheme_names, scheme);
 	}
 	else
 	{
