@@ -47,6 +47,8 @@ typedef enum {
 	STATE_ENCRYPTED_EXTENSIONS_RECEIVED,
 	STATE_CERT_VERIFY_RECEIVED,
 	STATE_FINISHED_SENT_KEY_SWITCHED,
+	STATE_KEY_UPDATE_REQUESTED,
+	STATE_KEY_UPDATE_SENT,
 
 } peer_state_t;
 
@@ -1054,7 +1056,8 @@ static status_t process_key_update(private_tls_peer_t *this,
 
 	if (update_requested)
 	{
-		DBG1(DBG_TLS, "server requested KeyUpdate, currently not supported");
+		DBG1(DBG_TLS, "server requested KeyUpdate");
+		this->state = STATE_KEY_UPDATE_REQUESTED;
 	}
 	return NEED_MORE;
 }
@@ -1657,6 +1660,21 @@ static status_t send_finished(private_tls_peer_t *this,
 	return NEED_MORE;
 }
 
+/**
+ * Send KeyUpdate message
+ */
+static status_t send_key_update(private_tls_peer_t *this,
+								tls_handshake_type_t *type, bio_writer_t *writer)
+{
+	*type = TLS_KEY_UPDATE;
+
+	/* we currently only send this as reply, so we never request an update */
+	writer->write_uint8(writer, 0);
+
+	this->state = STATE_KEY_UPDATE_SENT;
+	return NEED_MORE;
+}
+
 METHOD(tls_handshake_t, build, status_t,
 	private_tls_peer_t *this, tls_handshake_type_t *type, bio_writer_t *writer)
 {
@@ -1706,6 +1724,17 @@ METHOD(tls_handshake_t, build, status_t,
 					return NEED_MORE;
 				}
 				this->crypto->change_cipher(this->crypto, TRUE);
+				this->crypto->change_cipher(this->crypto, FALSE);
+				this->state = STATE_FINISHED_SENT_KEY_SWITCHED;
+				return SUCCESS;
+			case STATE_KEY_UPDATE_REQUESTED:
+				return send_key_update(this, type, writer);
+			case STATE_KEY_UPDATE_SENT:
+				if (!this->crypto->update_app_keys(this->crypto, FALSE))
+				{
+					this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+					return NEED_MORE;
+				}
 				this->crypto->change_cipher(this->crypto, FALSE);
 				this->state = STATE_FINISHED_SENT_KEY_SWITCHED;
 				return SUCCESS;
