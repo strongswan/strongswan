@@ -358,6 +358,7 @@ static status_t build_handshake(private_tls_fragmentation_t *this)
 				DBG2(DBG_TLS, "sending TLS %N handshake (%u bytes)",
 					 tls_handshake_type_names, type, hs->get_buf(hs).len);
 				if (type != TLS_FINISHED &&
+					type != TLS_KEY_UPDATE &&
 					!this->handshake->cipherspec_changed(this->handshake, FALSE))
 				{
 					hs->destroy(hs);
