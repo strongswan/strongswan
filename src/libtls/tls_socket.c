@@ -101,6 +101,11 @@ struct private_tls_socket_t {
 	 * Underlying OS socket
 	 */
 	int fd;
+
+	/**
+	 * Whether the socket returned EOF
+	 */
+	bool eof;
 };
 
 METHOD(tls_application_t, process, status_t,
@@ -236,6 +241,7 @@ static bool exchange(private_tls_socket_t *this, bool wr, bool block)
 		}
 		if (in == 0)
 		{	/* EOF */
+			this->eof = TRUE;
 			return TRUE;
 		}
 		switch (this->tls->process(this->tls, buf, in))
@@ -268,11 +274,20 @@ METHOD(tls_socket_t, read_, ssize_t,
 		}
 		return cache;
 	}
+	if (this->eof)
+	{
+		return 0;
+	}
 	this->app.in.ptr = buf;
 	this->app.in.len = len;
 	this->app.in_done = 0;
 	if (exchange(this, FALSE, block))
 	{
+		if (!this->app.in_done && !this->eof)
+		{
+			errno = EWOULDBLOCK;
+			return -1;
+		}
 		return this->app.in_done;
 	}
 	return -1;
@@ -296,13 +311,13 @@ METHOD(tls_socket_t, splice, bool,
 {
 	char buf[PLAIN_BUF_SIZE], *pos;
 	ssize_t in, out;
-	bool old, plain_eof = FALSE, crypto_eof = FALSE;
+	bool old, crypto_eof = FALSE;
 	struct pollfd pfd[] = {
 		{ .fd = this->fd,	.events = POLLIN, },
 		{ .fd = rfd,		.events = POLLIN, },
 	};
 
-	while (!plain_eof && !crypto_eof)
+	while (!this->eof && !crypto_eof)
 	{
 		old = thread_cancelability(TRUE);
 		in = poll(pfd, countof(pfd), -1);
@@ -312,14 +327,11 @@ METHOD(tls_socket_t, splice, bool,
 			DBG1(DBG_TLS, "TLS select error: %s", strerror(errno));
 			return FALSE;
 		}
-		while (!plain_eof && pfd[0].revents & (POLLIN | POLLHUP | POLLNVAL))
+		while (!this->eof && pfd[0].revents & (POLLIN | POLLHUP | POLLNVAL))
 		{
 			in = read_(this, buf, sizeof(buf), FALSE);
 			switch (in)
 			{
-				case 0:
-					plain_eof = TRUE;
-					break;
 				case -1:
 					if (errno != EWOULDBLOCK)
 					{
