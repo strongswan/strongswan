@@ -75,16 +75,16 @@ struct private_tls_hkdf_t {
 };
 
 static char *hkdf_labels[] = {
-	"tls13 ext binder",
-	"tls13 res binder",
-	"tls13 c e traffic",
-	"tls13 e exp master",
-	"tls13 c hs traffic",
-	"tls13 s hs traffic",
-	"tls13 c ap traffic",
-	"tls13 s ap traffic",
-	"tls13 exp master",
-	"tls13 res master",
+	"ext binder",
+	"res binder",
+	"c e traffic",
+	"e exp master",
+	"c hs traffic",
+	"s hs traffic",
+	"c ap traffic",
+	"s ap traffic",
+	"exp master",
+	"res master",
 };
 
 /**
@@ -149,7 +149,7 @@ static bool expand_label(private_tls_hkdf_t *this, chunk_t secret,
 {
 	bool success;
 
-	if (label.len < 7 || label.len > 255 || context.len > 255)
+	if (!label.len || label.len > 249 || context.len > 255)
 	{
 		return FALSE;
 	}
@@ -157,6 +157,7 @@ static bool expand_label(private_tls_hkdf_t *this, chunk_t secret,
 	/* HKDFLabel as defined in RFC 8446, section 7.1 */
 	bio_writer_t *writer = bio_writer_create(0);
 	writer->write_uint16(writer, length);
+	label = chunk_cata("cc", chunk_from_str("tls13 "), label);
 	writer->write_data8(writer, label);
 	writer->write_data8(writer, context);
 
@@ -251,7 +252,7 @@ static bool move_to_phase_1(private_tls_hkdf_t *this)
  */
 static bool move_to_phase_2(private_tls_hkdf_t *this)
 {
-	chunk_t derived, okm;
+	chunk_t okm;
 
 	switch (this->phase)
 	{
@@ -263,8 +264,8 @@ static bool move_to_phase_2(private_tls_hkdf_t *this)
 			}
 			/* fall-through */
 		case HKDF_PHASE_1:
-			derived = chunk_from_str("tls13 derived");
-			if (!derive_secret(this, this->prk, derived, chunk_empty, &okm))
+			if (!derive_secret(this, this->prk, chunk_from_str("derived"),
+							   chunk_empty, &okm))
 			{
 				DBG1(DBG_TLS, "unable to derive secret");
 				return FALSE;
@@ -320,7 +321,7 @@ static bool move_to_phase_2(private_tls_hkdf_t *this)
  */
 static bool move_to_phase_3(private_tls_hkdf_t *this)
 {
-	chunk_t derived, okm, ikm_zero;
+	chunk_t okm, ikm_zero;
 
 	switch (this->phase)
 	{
@@ -334,8 +335,8 @@ static bool move_to_phase_3(private_tls_hkdf_t *this)
 			/* fall-through */
 		case HKDF_PHASE_2:
 			/* prepare okm for next extract */
-			derived = chunk_from_str("tls13 derived");
-			if (!derive_secret(this, this->prk, derived, chunk_empty, &okm))
+			if (!derive_secret(this, this->prk, chunk_from_str("derived"),
+							   chunk_empty, &okm))
 			{
 				DBG1(DBG_TLS, "unable to derive secret");
 				return FALSE;
@@ -424,7 +425,7 @@ METHOD(tls_hkdf_t, generate_secret, bool,
 			previous = this->server_traffic_secret;
 		}
 
-		if (!expand_label(this, previous, chunk_from_str("tls13 traffic upd"),
+		if (!expand_label(this, previous, chunk_from_str("traffic upd"),
 						  chunk_empty, this->hasher->get_hash_size(this->hasher),
 						  &okm))
 		{
@@ -503,21 +504,21 @@ static bool get_shared_label_keys(private_tls_hkdf_t *this, chunk_t label,
 METHOD(tls_hkdf_t, derive_key, bool,
 	private_tls_hkdf_t *this, bool is_server, size_t length, chunk_t *key)
 {
-	return get_shared_label_keys(this, chunk_from_str("tls13 key"), is_server,
+	return get_shared_label_keys(this, chunk_from_str("key"), is_server,
 								 length, key);
 }
 
 METHOD(tls_hkdf_t, derive_iv, bool,
 	private_tls_hkdf_t *this, bool is_server, size_t length, chunk_t *iv)
 {
-	return get_shared_label_keys(this, chunk_from_str("tls13 iv"), is_server,
+	return get_shared_label_keys(this, chunk_from_str("iv"), is_server,
 								 length, iv);
 }
 
 METHOD(tls_hkdf_t, derive_finished, bool,
 	private_tls_hkdf_t *this, bool is_server, chunk_t *finished)
 {
-	return get_shared_label_keys(this, chunk_from_str("tls13 finished"),
+	return get_shared_label_keys(this, chunk_from_str("finished"),
 								 is_server,
 								 this->hasher->get_hash_size(this->hasher),
 								 finished);
