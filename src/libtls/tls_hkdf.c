@@ -169,8 +169,8 @@ static bool expand_label(private_tls_hkdf_t *this, chunk_t secret,
  * Derive-Secret as defined in RFC 8446, section 7.1:
  * Derive-Secret(Secret, Label, Message) -> OKM
  */
-static bool derive_secret(private_tls_hkdf_t *this, chunk_t label,
-						  chunk_t messages, chunk_t *okm)
+static bool derive_secret(private_tls_hkdf_t *this, chunk_t secret,
+						  chunk_t label, chunk_t messages, chunk_t *okm)
 {
 	chunk_t context;
 	bool success;
@@ -180,7 +180,7 @@ static bool derive_secret(private_tls_hkdf_t *this, chunk_t label,
 		return FALSE;
 	}
 
-	success = expand_label(this, this->prk, label, context,
+	success = expand_label(this, secret, label, context,
 						   this->hasher->get_hash_size(this->hasher), okm);
 	chunk_free(&context);
 	return success;
@@ -264,7 +264,7 @@ static bool move_to_phase_2(private_tls_hkdf_t *this)
 			/* fall-through */
 		case HKDF_PHASE_1:
 			derived = chunk_from_str("tls13 derived");
-			if (!derive_secret(this, derived, chunk_empty, &okm))
+			if (!derive_secret(this, this->prk, derived, chunk_empty, &okm))
 			{
 				DBG1(DBG_TLS, "unable to derive secret");
 				return FALSE;
@@ -335,7 +335,7 @@ static bool move_to_phase_3(private_tls_hkdf_t *this)
 		case HKDF_PHASE_2:
 			/* prepare okm for next extract */
 			derived = chunk_from_str("tls13 derived");
-			if (!derive_secret(this, derived, chunk_empty, &okm))
+			if (!derive_secret(this, this->prk, derived, chunk_empty, &okm))
 			{
 				DBG1(DBG_TLS, "unable to derive secret");
 				return FALSE;
@@ -434,8 +434,8 @@ METHOD(tls_hkdf_t, generate_secret, bool,
 	}
 	else
 	{
-		if (!derive_secret(this, chunk_from_str(hkdf_labels[label]), messages,
-						   &okm))
+		if (!derive_secret(this, this->prk, chunk_from_str(hkdf_labels[label]),
+						   messages, &okm))
 		{
 			DBG1(DBG_TLS, "unable to derive secret");
 			return FALSE;
