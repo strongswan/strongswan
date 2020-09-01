@@ -524,6 +524,54 @@ METHOD(tls_hkdf_t, derive_finished, bool,
 								 finished);
 }
 
+METHOD(tls_hkdf_t, export, bool,
+	private_tls_hkdf_t *this, char *label, chunk_t context,
+	chunk_t messages, size_t length, chunk_t *key)
+{
+	chunk_t exporter_master, exporter, hash = chunk_empty;
+
+	if (this->phase != HKDF_PHASE_3)
+	{
+		DBG1(DBG_TLS, "unable to export key material");
+		return FALSE;
+	}
+
+	/**
+	 * Export key material according to RFC 8446, section 7.5:
+	 *
+	 * TLS-Exporter(label, context_value, key_length) =
+	 *    HKDF-Expand-Label(Derive-Secret(Secret, label, ""),
+	 *                      "exporter", Hash(context_value), key_length)
+	 */
+	if (!generate_secret(this, TLS_HKDF_EXP_MASTER, messages, &exporter_master))
+	{
+		DBG1(DBG_TLS, "unable to derive exporter master secret");
+		return FALSE;
+	}
+
+	if (!derive_secret(this, exporter_master, chunk_from_str(label),
+					   chunk_empty, &exporter))
+	{
+		DBG1(DBG_TLS, "unable to derive exporter secret");
+		chunk_clear(&exporter_master);
+		return FALSE;
+	}
+	chunk_clear(&exporter_master);
+
+	if (!this->hasher->allocate_hash(this->hasher, context, &hash) ||
+		!expand_label(this, exporter, chunk_from_str("exporter"), hash,
+					  length, key))
+	{
+		DBG1(DBG_TLS, "unable to expand key material");
+		chunk_clear(&exporter);
+		chunk_free(&hash);
+		return FALSE;
+	}
+	chunk_clear(&exporter);
+	chunk_free(&hash);
+	return TRUE;
+}
+
 METHOD(tls_hkdf_t, allocate_bytes, bool,
 	private_tls_hkdf_t *this, chunk_t key, chunk_t seed,
 	chunk_t *out)
@@ -571,6 +619,7 @@ tls_hkdf_t *tls_hkdf_create(hash_algorithm_t hash_algorithm, chunk_t psk)
 			.derive_key = _derive_key,
 			.derive_iv = _derive_iv,
 			.derive_finished = _derive_finished,
+			.export = _export,
 			.allocate_bytes = _allocate_bytes,
 			.destroy = _destroy,
 		},

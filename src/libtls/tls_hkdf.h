@@ -114,6 +114,19 @@ struct tls_hkdf_t {
 							chunk_t *finished);
 
 	/**
+	 * Export key material.
+	 *
+	 * @param label				exporter label
+	 * @param context			optional context
+	 * @param messages			handshake messages
+	 * @param length			key length, in bytes
+	 * @param key				exported key material
+	 * @return					TRUE if key material successfully exported
+	 */
+	bool (*export)(tls_hkdf_t *this, char *label, chunk_t context,
+				   chunk_t messages, size_t length, chunk_t *key);
+
+	/**
 	 * Use the internal PRF to allocate data (mainly for the finished message
 	 * where the key is from derive_finished() and the seed is the transcript
 	 * hash).
