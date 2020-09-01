@@ -1730,7 +1730,7 @@ METHOD(tls_handshake_t, build, status_t,
 				this->crypto->change_cipher(this->crypto, TRUE);
 				this->crypto->change_cipher(this->crypto, FALSE);
 				this->state = STATE_FINISHED_SENT_KEY_SWITCHED;
-				return SUCCESS;
+				return INVALID_STATE;
 			case STATE_KEY_UPDATE_REQUESTED:
 				return send_key_update(this, type, writer);
 			case STATE_KEY_UPDATE_SENT:
@@ -1741,9 +1741,7 @@ METHOD(tls_handshake_t, build, status_t,
 				}
 				this->crypto->change_cipher(this->crypto, FALSE);
 				this->state = STATE_FINISHED_SENT_KEY_SWITCHED;
-				return SUCCESS;
-			case STATE_FINISHED_SENT_KEY_SWITCHED:
-				return SUCCESS;
+				return INVALID_STATE;
 			default:
 				return INVALID_STATE;
 		}
