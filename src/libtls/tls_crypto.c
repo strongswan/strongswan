@@ -2086,8 +2086,26 @@ METHOD(tls_crypto_t, derive_handshake_keys, bool,
 METHOD(tls_crypto_t, derive_app_keys, bool,
 	private_tls_crypto_t *this)
 {
-	return derive_labeled_keys(this, TLS_HKDF_C_AP_TRAFFIC,
-							   TLS_HKDF_S_AP_TRAFFIC);
+	if (!derive_labeled_keys(this, TLS_HKDF_C_AP_TRAFFIC,
+							 TLS_HKDF_S_AP_TRAFFIC))
+	{
+		return FALSE;
+	}
+
+	/* EAP-MSK */
+	if (this->msk_label)
+	{
+		/* because the length is encoded when expanding key material, we
+		 * request the same number of bytes as FreeRADIUS (the first 64 for
+		 * the MSK, the next for the EMSK, which we just ignore) */
+		if (!this->hkdf->export(this->hkdf, this->msk_label, chunk_empty,
+								this->handshake, 128, &this->msk))
+		{
+			return FALSE;
+		}
+		this->msk.len = 64;
+	}
+	return TRUE;
 }
 
 METHOD(tls_crypto_t, update_app_keys, bool,
