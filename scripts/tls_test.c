@@ -256,11 +256,14 @@ static void cleanup()
  */
 static void init()
 {
+	char *plugins;
+
 	library_init(NULL, "tls_test");
 
 	dbg = dbg_tls;
 
-	lib->plugins->load(lib->plugins, PLUGINS);
+	plugins = getenv("PLUGINS") ?: PLUGINS;
+	lib->plugins->load(lib->plugins, plugins);
 
 	creds = mem_cred_create();
 	lib->credmgr->add_set(lib->credmgr, &creds->set);
