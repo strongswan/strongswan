@@ -1237,6 +1237,12 @@ static status_t send_client_hello(private_tls_peer_t *this,
 
 	/* add TLS cipher suites */
 	count = this->crypto->get_cipher_suites(this->crypto, &suites);
+	if (count <= 0)
+	{
+		DBG1(DBG_TLS, "no supported TLS cipher suite available");
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
 	writer->write_uint16(writer, count * 2);
 	for (i = 0; i < count; i++)
 	{
