@@ -595,6 +595,8 @@ static char *whitelist[] = {
 	"RAND_DRBG_get0_master",
 	"RAND_DRBG_get0_private",
 	"RAND_DRBG_get0_public",
+	/* We get this via libcurl and OpenSSL 1.1.1 */
+	"CRYPTO_get_ex_new_index",
 	/* OpenSSL libssl */
 	"SSL_COMP_get_compression_methods",
 	/* NSPR */
@@ -622,6 +624,7 @@ static char *whitelist[] = {
 	"system__tasking__initialize",
 	"system__tasking__initialization__abort_defer",
 	"system__tasking__stages__create_task",
+	"system__task_primitives__operations__register_foreign_thread__2",
 	/* in case external threads call into our code */
 	"thread_current_id",
 	/* FHH IMCs and IMVs */

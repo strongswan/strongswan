@@ -15,8 +15,8 @@ check_commands debootstrap mkfs.ext3 partprobe qemu-img qemu-nbd sfdisk
 INC=automake,autoconf,libtool,bison,flex,gperf,pkg-config,gettext,less,locales
 INC=$INC,build-essential,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,ethtool
 INC=$INC,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc
-INC=$INC,openssl,vim,sqlite3,conntrack,gdb,cmake,libltdl-dev,liblog4cxx10-dev
-INC=$INC,libboost-thread-dev,libboost-system-dev,git-core,iperf,htop
+INC=$INC,openssl,vim,sqlite3,conntrack,gdb,cmake,libltdl-dev,wget,gnupg,man-db
+INC=$INC,libboost-thread-dev,libboost-system-dev,git,iperf,htop,valgrind,strace
 INC=$INC,gnat,gprbuild,acpid,acpi-support-base,libldns-dev,libunbound-dev
 INC=$INC,dnsutils,libsoup2.4-dev,ca-certificates,unzip,libsystemd-dev
 INC=$INC,python,python-setuptools,python-dev,python-pip,apt-transport-https
@@ -31,8 +31,13 @@ stretch)
 	INC=$INC,libahven5-dev,libxmlada-schema6-dev,libgmpada6-dev
 	INC=$INC,libalog2-dev
 	;;
+buster)
+	INC=$INC,libahven7-dev,libxmlada-schema8-dev,libgmpada8-dev
+	INC=$INC,libalog4-dev,dbus-user-session
+	;;
 *)
 	echo_warn "Package list for '$BASEIMGSUITE' might has to be updated"
+	;;
 esac
 SERVICES="apache2 dbus isc-dhcp-server slapd bind9 freeradius"
 INC=$INC,${SERVICES// /,}
@@ -129,6 +134,15 @@ do
 	log_action "Disabling service $service"
 	execute_chroot "systemctl disable $service"
 done
+
+case "$BASEIMGSUITE" in
+buster)
+	log_action "Switching from iptables-nft to iptables-legacy"
+	execute_chroot "update-alternatives --set iptables /usr/sbin/iptables-legacy" 0
+	execute_chroot "update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy" 0
+	log_status 0
+	;;
+esac
 
 log_action "Disabling root password"
 execute_chroot "passwd -d root"
