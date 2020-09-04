@@ -583,6 +583,7 @@ static char *whitelist[] = {
 	"RSA_new_method",
 	/* OpenSSL 1.1.0 does not cleanup anymore until the library is unloaded */
 	"OPENSSL_init_crypto",
+	"OPENSSL_init_ssl",
 	"CRYPTO_THREAD_lock_new",
 	"ERR_add_error_data",
 	"ERR_set_mark",
