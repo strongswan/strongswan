@@ -39,15 +39,17 @@ env:
 jobs:
   include:
     - env: TEST=sonarcloud
-      if: type = push AND env(SONAR_TOKEN) IS present
+      if: |
+        type = push AND env(SONAR_TOKEN) IS present AND \
+        env(SONAR_PROJECT) IS present AND \
+        env(SONAR_ORGANIZATION) IS present
       git:
         depth: false
       cache:
         directories:
           - $HOME/.sonar-cache
       addons:
-        sonarcloud:
-          organization: "strongswan"
+        sonarcloud: true
     - env: TEST=lgtm
       if: type = push AND env(LGTM_TOKEN) IS present
       git:
