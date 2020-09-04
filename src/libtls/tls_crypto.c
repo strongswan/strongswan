@@ -1140,7 +1140,7 @@ static void filter_unsupported_suites(suite_algs_t suites[], int *count)
 static void build_cipher_suite_list(private_tls_crypto_t *this)
 {
 	suite_algs_t suites[countof(suite_algs)];
-	tls_version_t min_version, max_version;
+	tls_version_t min_version, max_version, new_min_version, new_max_version;
 	bool require_encryption;
 	int count = 0, i;
 
@@ -1198,10 +1198,26 @@ static void build_cipher_suite_list(private_tls_crypto_t *this)
 	this->suites = malloc(sizeof(tls_cipher_suite_t) * count);
 
 	DBG2(DBG_TLS, "%d supported TLS cipher suites:", count);
+	new_min_version = max_version;
+	new_max_version = min_version;
 	for (i = 0; i < count; i++)
 	{
 		DBG2(DBG_TLS, "  %N", tls_cipher_suite_names, suites[i].suite);
 		this->suites[i] = suites[i].suite;
+
+		/* set TLS min/max versions appropriate to the final cipher suites */
+		new_max_version = max(new_max_version, suites[i].max_version);
+		new_min_version = min(new_min_version, suites[i].min_version);
+	}
+	new_max_version = min(new_max_version, max_version);
+	new_min_version = max(new_min_version, min_version);
+
+	if (min_version != new_min_version || max_version != new_max_version)
+	{
+		this->tls->set_version(this->tls, new_min_version, new_max_version);
+		DBG2(DBG_TLS, "TLS min/max %N/%N according to the cipher suites",
+			 tls_version_names, new_min_version,
+			 tls_version_names, new_max_version);
 	}
 }
 

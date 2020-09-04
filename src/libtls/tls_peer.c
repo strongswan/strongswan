@@ -1217,6 +1217,9 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	}
 	rng->destroy(rng);
 
+	/* determine supported suites before the versions as they might change */
+	count = this->crypto->get_cipher_suites(this->crypto, &suites);
+
 	/* TLS version_max in handshake protocol */
 	version_max = this->tls->get_version_max(this->tls);
 	version_min = this->tls->get_version_min(this->tls);
@@ -1236,7 +1239,6 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	writer->write_data8(writer, this->session);
 
 	/* add TLS cipher suites */
-	count = this->crypto->get_cipher_suites(this->crypto, &suites);
 	if (count <= 0)
 	{
 		DBG1(DBG_TLS, "no supported TLS cipher suite available");
