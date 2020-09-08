@@ -1487,6 +1487,16 @@ static signature_params_t *params_for_scheme(tls_signature_scheme_t sig)
 
 	for (i = 0; i < countof(schemes); i++)
 	{
+		/* strongSwan supports only RSA_PSS_RSAE schemes for signing but can
+		 * verify public keys in rsaEncryption as well as rsassaPss encoding.
+		 * Current implementation does not distinguish between signing and
+		 * verifying. */
+		if (sig == TLS_SIG_RSA_PSS_PSS_SHA256 ||
+			sig == TLS_SIG_RSA_PSS_PSS_SHA384 ||
+			sig == TLS_SIG_RSA_PSS_PSS_SHA512)
+		{
+			continue;
+		}
 		if (schemes[i].sig == sig)
 		{
 			return &schemes[i].params;
@@ -1676,6 +1686,18 @@ METHOD(tls_crypto_t, sign, bool,
 		bio_reader_t *reader;
 		chunk_t sig;
 		bool done = FALSE;
+
+		if (this->tls->get_version_max(this->tls) >= TLS_1_3)
+		{
+			chunk_t transcript_hash;
+
+			if (!hash_data(this, data, &transcript_hash))
+			{
+				DBG1(DBG_TLS, "unable to create transcript hash");
+				return FALSE;
+			}
+			data = chunk_cata("cm", tls13_sig_data_server, transcript_hash);
+		}
 
 		if (!hashsig.len)
 		{	/* fallback if none given */
