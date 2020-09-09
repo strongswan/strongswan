@@ -4,4 +4,11 @@ charon.plugins.revocation.enable_ocsp = yes
 charon.plugins.revocation.enable_crl = yes
 	Whether CRL validation should be enabled.
 
+charon.plugins.revocation.require_ocsp_nonce = no
+	Whether nonces are required in OCSP responses to prevent replay attacks.
 
+	Whether nonces are required in OCSP responses to prevent replay attacks.
+	Many commercial CAs don't support replying with nonces (most likely because
+	they use cached OCSP responses). Nonces are always sent in the requests, but
+	if this option is disabled, strongSwan accepts valid replies without nonce
+	extension.

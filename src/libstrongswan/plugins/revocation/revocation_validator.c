@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Tobias Brunner
+ * Copyright (C) 2015-2020 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2009 Andreas Steffen
@@ -47,6 +47,11 @@ struct private_revocation_validator_t {
 	bool enable_ocsp;
 
 	/**
+	 * Require nonces in OCSP replies
+	 */
+	bool require_nonce;
+
+	/**
 	 * Enable CRL validation
 	 */
 	bool enable_crl;
@@ -61,7 +66,7 @@ struct private_revocation_validator_t {
  * Do an OCSP request
  */
 static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
-								 certificate_t *issuer)
+								 certificate_t *issuer, bool require_nonce)
 {
 	certificate_t *request, *response;
 	ocsp_request_t *ocsp_request;
@@ -112,11 +117,19 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 	}
 	ocsp_request = (ocsp_request_t*)request;
 	ocsp_response = (ocsp_response_t*)response;
-	if (ocsp_response->get_nonce(ocsp_response).len &&
-		!chunk_equals_const(ocsp_request->get_nonce(ocsp_request),
-							ocsp_response->get_nonce(ocsp_response)))
+	if (ocsp_response->get_nonce(ocsp_response).len)
 	{
-		DBG1(DBG_CFG, "nonce in ocsp response doesn't match");
+		if (!chunk_equals_const(ocsp_request->get_nonce(ocsp_request),
+								ocsp_response->get_nonce(ocsp_response)))
+		{
+			DBG1(DBG_CFG, "nonce in ocsp response doesn't match");
+			request->destroy(request);
+			return NULL;
+		}
+	}
+	else if (require_nonce)
+	{
+		DBG1(DBG_CFG, "nonce in ocsp response missing");
 		request->destroy(request);
 		return NULL;
 	}
@@ -295,7 +308,7 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
  * validate a x509 certificate using OCSP
  */
 static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
-									auth_cfg_t *auth)
+									auth_cfg_t *auth, bool require_nonce)
 {
 	enumerator_t *enumerator;
 	cert_validation_t valid = VALIDATION_SKIPPED;
@@ -334,7 +347,8 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 											CERT_X509_OCSP_RESPONSE, keyid);
 		while (enumerator->enumerate(enumerator, &uri))
 		{
-			current = fetch_ocsp(uri, &subject->interface, &issuer->interface);
+			current = fetch_ocsp(uri, &subject->interface, &issuer->interface,
+								 require_nonce);
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
@@ -356,7 +370,8 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 		enumerator = subject->create_ocsp_uri_enumerator(subject);
 		while (enumerator->enumerate(enumerator, &uri))
 		{
-			current = fetch_ocsp(uri, &subject->interface, &issuer->interface);
+			current = fetch_ocsp(uri, &subject->interface, &issuer->interface,
+								 require_nonce);
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
@@ -814,10 +829,11 @@ METHOD(cert_validator_t, validate, bool,
 	certificate_t *issuer, bool online, u_int pathlen, bool anchor,
 	auth_cfg_t *auth)
 {
-	bool enable_ocsp, enable_crl;
+	bool enable_ocsp, require_nonce, enable_crl;
 
 	this->lock->lock(this->lock);
 	enable_ocsp = this->enable_ocsp;
+	require_nonce = this->require_nonce;
 	enable_crl = this->enable_crl;
 	this->lock->unlock(this->lock);
 
@@ -830,7 +846,8 @@ METHOD(cert_validator_t, validate, bool,
 
 		if (enable_ocsp)
 		{
-			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth))
+			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth,
+							   require_nonce))
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
@@ -894,21 +911,30 @@ METHOD(cert_validator_t, validate, bool,
 METHOD(revocation_validator_t, reload, void,
 	private_revocation_validator_t *this)
 {
-	bool enable_ocsp, enable_crl;
+	bool enable_ocsp, require_nonce, enable_crl;
 
 	enable_ocsp = lib->settings->get_bool(lib->settings,
 							"%s.plugins.revocation.enable_ocsp", TRUE, lib->ns);
+	require_nonce = lib->settings->get_bool(lib->settings,
+							"%s.plugins.revocation.require_ocsp_nonce", FALSE,
+							lib->ns);
 	enable_crl  = lib->settings->get_bool(lib->settings,
 							"%s.plugins.revocation.enable_crl",  TRUE, lib->ns);
 
 	this->lock->lock(this->lock);
 	this->enable_ocsp = enable_ocsp;
+	this->require_nonce = require_nonce;
 	this->enable_crl = enable_crl;
 	this->lock->unlock(this->lock);
 
 	if (!enable_ocsp)
 	{
 		DBG1(DBG_LIB, "all OCSP validation disabled");
+	}
+	else
+	{
+		DBG1(DBG_LIB, "nonces are %srequired in OCSP replies",
+			 require_nonce ? "" : "not ");
 	}
 	if (!enable_crl)
 	{
