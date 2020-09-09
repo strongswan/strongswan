@@ -1,6 +1,9 @@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan
 
+AM_CFLAGS = \
+	@COVERAGE_CFLAGS@
+
 AM_LDFLAGS = \
 	-no-undefined
 
