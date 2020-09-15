@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2020 Pascal Knecht
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -101,8 +104,17 @@ ENUM_NEXT(tls_extension_names,
 	"client certificate type",
 	"server certificate type");
 ENUM_NEXT(tls_extension_names,
-		TLS_EXT_PRE_SHARED_KEY, TLS_EXT_PSK_KEY_EXCHANGE_MODES,
+		TLS_EXT_ENCRYPT_THEN_MAC, TLS_EXT_EXTENDED_MASTER_SECRET,
 		TLS_SERVER_CERTIFICATE_TYPE,
+	"encrypt-then-mac",
+	"extended master secret");
+ENUM_NEXT(tls_extension_names,
+		TLS_EXT_SESSION_TICKET, TLS_EXT_SESSION_TICKET,
+		TLS_EXT_EXTENDED_MASTER_SECRET,
+	"session ticket");
+ENUM_NEXT(tls_extension_names,
+		TLS_EXT_PRE_SHARED_KEY, TLS_EXT_PSK_KEY_EXCHANGE_MODES,
+		TLS_EXT_SESSION_TICKET,
 	"pre-shared key",
 	"early data",
 	"supported versions",
