@@ -108,6 +108,12 @@ static TPM2_ALG_ID hash_alg_to_tpm_alg_id(hash_algorithm_t alg)
 			return TPM2_ALG_SHA384;
 		case HASH_SHA512:
 			return TPM2_ALG_SHA512;
+		case HASH_SHA3_256:
+			return TPM2_ALG_SHA3_256;
+		case HASH_SHA3_384:
+			return TPM2_ALG_SHA3_384;
+		case HASH_SHA3_512:
+			return TPM2_ALG_SHA3_512;
 		default:
 			return TPM2_ALG_ERROR;
 	}
@@ -128,6 +134,12 @@ static hash_algorithm_t hash_alg_from_tpm_alg_id(TPM2_ALG_ID alg)
 			return HASH_SHA384;
 		case TPM2_ALG_SHA512:
 			return HASH_SHA512;
+		case TPM2_ALG_SHA3_256:
+			return HASH_SHA3_256;
+		case TPM2_ALG_SHA3_384:
+			return HASH_SHA3_384;
+		case TPM2_ALG_SHA3_512:
+			return HASH_SHA3_512;
 		default:
 			return HASH_UNKNOWN;
 	}
@@ -722,6 +734,7 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 				   HASH_SIZE_SHA1);
 			break;
 		case HASH_SHA256:
+		case HASH_SHA3_256:
 			if (data.len != HASH_SIZE_SHA256)
 			{
 				return FALSE;
@@ -730,6 +743,7 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 				    HASH_SIZE_SHA256);
 			break;
 		case HASH_SHA384:
+		case HASH_SHA3_384:
 			if (data.len != HASH_SIZE_SHA384)
 			{
 				return FALSE;
@@ -738,6 +752,7 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 				    HASH_SIZE_SHA384);
 			break;
 		case HASH_SHA512:
+		case HASH_SHA3_512:
 			if (data.len != HASH_SIZE_SHA512)
 			{
 				return FALSE;
