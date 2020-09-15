@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2020 Pascal Knecht
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -156,6 +159,12 @@ enum tls_extension_t {
 	TLS_CLIENT_CERTIFICATE_TYPE = 19,
 	/** exchange raw public key, server side*/
 	TLS_SERVER_CERTIFICATE_TYPE = 20,
+	/** use encrypt-then-MAC security mechanism RFC 7366 */
+	TLS_EXT_ENCRYPT_THEN_MAC = 22,
+	/** bind master secret to handshake data RFC 7627 */
+	TLS_EXT_EXTENDED_MASTER_SECRET = 23,
+	/** session resumption without server-side state RFC 5077 */
+	TLS_EXT_SESSION_TICKET = 35,
 	/** negotiate identity of the psk **/
 	TLS_EXT_PRE_SHARED_KEY = 41,
 	/** send data in 0-RTT when psk is used and early data is allowed **/
