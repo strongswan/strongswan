@@ -478,15 +478,12 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 {
 	TPM2B_PUBLIC public = { 0, };
 	TPM2_ALG_ID sig_alg, digest_alg;
-	chunk_t aik_blob, aik_pubkey = chunk_empty;
+	chunk_t aik_pubkey = chunk_empty;
 
 	if (!read_public(this, handle, &public))
 	{
 		return chunk_empty;
 	}
-
-	aik_blob = chunk_create((u_char*)&public, sizeof(public));
-	DBG3(DBG_LIB, "%s public key blob: %B", LABEL, &aik_blob);
 
 	/* convert TSS 2.0 public key blot into PKCS#1 format */
 	switch (public.publicArea.type)
