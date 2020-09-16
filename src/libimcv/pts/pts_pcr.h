@@ -25,6 +25,7 @@ typedef struct pts_pcr_t pts_pcr_t;
 
 #include <library.h>
 
+#include <tpm_tss.h>
 #include <tpm_tss_quote_info.h>
 
 /**
@@ -114,7 +115,9 @@ struct pts_pcr_t {
 
 /**
  * Creates an pts_pcr_t object
+ *
+ * @param tpm_version		TPM version
  */
-pts_pcr_t* pts_pcr_create(void);
+pts_pcr_t* pts_pcr_create(tpm_version_t tpm_version);
 
 #endif /** PTS_PCR_H_ @}*/

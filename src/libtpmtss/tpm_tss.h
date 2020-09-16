@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Tobias Brunner
- * Copyright (C) 2016-2018 Andreas Steffen
+ * Copyright (C) 2016-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -165,6 +165,15 @@ struct tpm_tss_t {
 	 */
 	bool (*get_data)(tpm_tss_t *this, uint32_t hierarchy, uint32_t handle,
 					 chunk_t pin, chunk_t *data);
+
+	/**
+	 * Get an event digest from a TPM measurement log
+	 *
+	 * @param fd			file descriptor of the measurement log
+	 * @param digest		allocated chunk_t containing event digest
+	 * @return				TRUE if event digest was successfully extracted
+	 */
+	bool (*get_event_digest)(tpm_tss_t *this, int fd, chunk_t *digest);
 
 	/**
 	 * Destroy a tpm_tss_t.

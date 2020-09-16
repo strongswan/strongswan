@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Andreas Steffen
+ * Copyright (C) 2011-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -350,6 +350,10 @@ METHOD(pts_component_t, measure, status_t,
 	status_t status;
 
 	pcrs = pts->get_pcrs(pts);
+	if (!pcrs)
+	{
+		return FAILED;
+	}
 
 	if (qualifier == (PTS_ITA_QUALIFIER_FLAG_KERNEL |
 					  PTS_ITA_QUALIFIER_TYPE_TRUSTED))
@@ -357,8 +361,8 @@ METHOD(pts_component_t, measure, status_t,
 		switch (this->state)
 		{
 			case IMA_STATE_INIT:
-				this->bios_list = pts_ima_bios_list_create(
-												IMA_BIOS_MEASUREMENTS);
+				this->bios_list = pts_ima_bios_list_create(pts->get_tpm(pts),
+													IMA_BIOS_MEASUREMENTS);
 				if (!this->bios_list)
 				{
 					return FAILED;
@@ -534,6 +538,10 @@ METHOD(pts_component_t, verify, status_t,
 
 	this->aik_id = pts->get_aik_id(pts);
 	pcrs = pts->get_pcrs(pts);
+	if (!pcrs)
+	{
+		return FAILED;
+	}
 	measurement = evidence->get_measurement(evidence, &pcr,	&algo, &transform,
 											&creation_time);
 

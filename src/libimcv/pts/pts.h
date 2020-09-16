@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Sansar Choinyambuu
- * Copyright (C) 2012-2016 Andreas Steffen
+ * Copyright (C) 2012-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ typedef struct pts_t pts_t;
 #include "components/pts_comp_func_name.h"
 
 #include <tpm_tss_quote_info.h>
+#include <tpm_tss.h>
 
 #include <library.h>
 #include <collections/linked_list.h>
@@ -175,17 +176,24 @@ struct pts_t {
 	void (*set_platform_id)(pts_t *this, int pid);
 
 	/**
+	 * Get TPM object handle
+	 *
+	 * @return					TPM object handle
+	 */
+	tpm_tss_t* (*get_tpm)(pts_t *this);
+
+	/**
 	 * Get TPM 1.2 Version Info
 	 *
-	 * @param info				chunk containing a TPM_CAP_VERSION_INFO struct
-	 * @return					TRUE if TPM Version Info available
+	 * @param info				chunk containing a TPM_Version Info struct
+	 * @return					TRUE if TPM Version_Info available
 	 */
 	bool (*get_tpm_version_info)(pts_t *this, chunk_t *info);
 
 	/**
 	 * Set TPM 1.2 Version Info
 	 *
-	 * @param info				chunk containing a TPM_CAP_VERSION_INFO struct
+	 * @param info				chunk containing a TPM Version Info struct
 	 */
 	void (*set_tpm_version_info)(pts_t *this, chunk_t info);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Andreas Steffen
+ * Copyright (C) 2016-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (c) 2008 Hal Finney
@@ -34,6 +34,8 @@
 
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
+
+#include <unistd.h>
 
 #define LABEL	"TPM 1.2 -"
 
@@ -609,6 +611,14 @@ METHOD(tpm_tss_t, get_data, bool,
 	return FALSE;
 }
 
+METHOD(tpm_tss_t, get_event_digest, bool,
+	private_tpm_tss_trousers_t *this, int fd, chunk_t *digest)
+{
+	*digest = chunk_alloc(HASH_SIZE_SHA1);
+
+	return read(fd, digest->ptr, digest->len) == digest->len;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_trousers_t *this)
 {
@@ -655,6 +665,7 @@ tpm_tss_t *tpm_tss_trousers_create()
 				.sign = _sign,
 				.get_random = _get_random,
 				.get_data = _get_data,
+				.get_event_digest = _get_event_digest,
 				.destroy = _destroy,
 			},
 			.load_aik = _load_aik,

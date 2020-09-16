@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Tobias Brunner
- * Copyright (C) 2016-2019 Andreas Steffen
+ * Copyright (C) 2016-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -22,9 +22,12 @@
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
 #include <bio/bio_reader.h>
+#include <bio/bio_writer.h>
 #include <threading/mutex.h>
 
 #include <tpm20.h>
+
+#include <unistd.h>
 
 #ifdef TSS2_TCTI_TABRMD
 #include <tcti/tcti-tabrmd.h>
@@ -65,6 +68,11 @@ struct private_tpm_tss_tss2_t {
 	 * Number of supported algorithms
 	 */
 	size_t supported_algs_count;
+
+	/**
+	 * TPM version info
+	 */
+	chunk_t version_info;
 
 	/**
 	 * List of supported algorithms
@@ -158,16 +166,34 @@ static bool is_supported_alg(private_tpm_tss_tss2_t *this, TPM_ALG_ID alg_id)
 }
 
 /**
- * Get a list of supported algorithms
+ * Get the TPM version_info and a list of supported algorithms
+ *
+ *					   1				   2				   3
+ *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |  TPM 2.0 Version_Info Tag     |           Reserved            |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                            Revision                           |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                              Year                             |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *  |                             Vendor                            |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
+#define TPM2_VERSION_INFO_TAG       0x0200
+#define TPM2_VERSION_INFO_RESERVED  0x0000
+#define TPM2_VERSION_INFO_SIZE      16
+
 static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 {
 	TPMS_CAPABILITY_DATA cap_data;
 	TPMS_TAGGED_PROPERTY tp;
 	TPMI_YES_NO more_data;
 	TPM_ALG_ID alg;
+	bio_writer_t *writer;
 	bool fips_140_2 = FALSE;
-	uint32_t rval, i, offset, revision = 0, year = 0;
+	uint32_t rval, i, offset, revision = 0, year = 0, vendor = 0;
 	size_t len = BUF_LEN;
 	char buf[BUF_LEN], manufacturer[5], vendor_string[17];
 	char *pos = buf;
@@ -200,6 +226,7 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 				year = tp.value;
 				break;
 			case TPM_PT_MANUFACTURER:
+				vendor = tp.value;
 				htoun32(manufacturer, tp.value);
 				break;
 			case TPM_PT_VENDOR_STRING_1:
@@ -228,6 +255,16 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 	DBG2(DBG_PTS, "%s manufacturer: %s (%s) rev: %05.2f %u %s", LABEL,
 		 manufacturer, vendor_string, (float)revision/100, year,
 		 fips_140_2 ? "FIPS 140-2" : (this->fips_186_4 ? "FIPS 186-4" : ""));
+
+	/* construct TPM 2.0 version_info object */
+	writer = bio_writer_create(  TPM2_VERSION_INFO_SIZE);
+	writer->write_uint16(writer, TPM2_VERSION_INFO_TAG);
+	writer->write_uint16(writer, TPM2_VERSION_INFO_RESERVED);
+	writer->write_uint32(writer, revision);
+	writer->write_uint32(writer, year);
+	writer->write_uint32(writer, vendor);
+	this->version_info = writer->extract_buf(writer);
+	writer->destroy(writer);
 
 	/* get supported algorithms */
 	this->mutex->lock(this->mutex);
@@ -429,7 +466,7 @@ METHOD(tpm_tss_t, get_version, tpm_version_t,
 METHOD(tpm_tss_t, get_version_info, chunk_t,
 	private_tpm_tss_tss2_t *this)
 {
-	return chunk_empty;
+	return this->version_info;
 }
 
 /**
@@ -1302,11 +1339,18 @@ METHOD(tpm_tss_t, get_data, bool,
 	return TRUE;
 }
 
+METHOD(tpm_tss_t, get_event_digest, bool,
+	private_tpm_tss_tss2_t *this, int fd, chunk_t *digest)
+{
+	return FALSE;
+}
+
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_tss2_t *this)
 {
 	finalize_context(this);
 	this->mutex->destroy(this->mutex);
+	free(this->version_info.ptr);
 	free(this);
 }
 
@@ -1331,6 +1375,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 			.sign = _sign,
 			.get_random = _get_random,
 			.get_data = _get_data,
+			.get_event_digest = _get_event_digest,
 			.destroy = _destroy,
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),

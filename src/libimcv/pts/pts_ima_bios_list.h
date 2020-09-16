@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
+ * Copyright (C) 2014-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
 #include <time.h>
 
 #include <library.h>
+#include <tpm_tss.h>
 
 typedef struct pts_ima_bios_list_t pts_ima_bios_list_t;
 
@@ -67,8 +68,9 @@ struct pts_ima_bios_list_t {
 /**
  * Create a PTS IMA BIOS measurement object
  *
+ * @param tpm				TPM object
  * @param file				Pathname pointing to the BIOS measurements
  */
-pts_ima_bios_list_t* pts_ima_bios_list_create(char *file);
+pts_ima_bios_list_t* pts_ima_bios_list_create(tpm_tss_t *tpm, char *file);
 
 #endif /** PTS_IMA_BIOS_LIST_H_ @}*/
