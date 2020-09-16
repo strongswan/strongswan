@@ -476,12 +476,12 @@ METHOD(tls_hkdf_t, generate_secret, bool,
  * Derive keys/IVs from the current traffic secrets.
  */
 static bool get_shared_label_keys(private_tls_hkdf_t *this, chunk_t label,
-								  bool is_server, size_t length, chunk_t *key)
+								  bool server, size_t length, chunk_t *key)
 {
 	chunk_t result = chunk_empty, secret;
 
-	secret = is_server ? this->server_traffic_secret
-					   : this->client_traffic_secret;
+	secret = server ? this->server_traffic_secret
+					: this->client_traffic_secret;
 
 	if (!expand_label(this, secret, label, chunk_empty, length, &result))
 	{
@@ -516,10 +516,10 @@ METHOD(tls_hkdf_t, derive_iv, bool,
 }
 
 METHOD(tls_hkdf_t, derive_finished, bool,
-	private_tls_hkdf_t *this, bool is_server, chunk_t *finished)
+	private_tls_hkdf_t *this, bool server, chunk_t *finished)
 {
 	return get_shared_label_keys(this, chunk_from_str("finished"),
-								 is_server,
+								 server,
 								 this->hasher->get_hash_size(this->hasher),
 								 finished);
 }

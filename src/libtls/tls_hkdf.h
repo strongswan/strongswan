@@ -106,11 +106,11 @@ struct tls_hkdf_t {
 	 * section 4.4.4. Space for returned secret is allocated and must be freed
 	 * by the caller.
 	 *
-	 * @param is_server			TRUE if server, FALSE if client derives secret
+	 * @param server			Whether the client or server finish key is derived
 	 * @param finished			key will be written into this chunk
 	 * @return					TRUE if secrets derived successfully
 	 */
-	bool (*derive_finished)(tls_hkdf_t *this, bool is_server,
+	bool (*derive_finished)(tls_hkdf_t *this, bool server,
 							chunk_t *finished);
 
 	/**

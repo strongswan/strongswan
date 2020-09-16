@@ -563,10 +563,11 @@ struct tls_crypto_t {
 	/**
 	 * Calculate the data of a TLS finished message.
 	 *
+	 * @param server		Whether the server or client finish message is calculated
 	 * @param out			buffer to write finished data to
 	 * @return				TRUE if calculation successful
 	 */
-	bool (*calculate_finished)(tls_crypto_t *this, bool is_server,
+	bool (*calculate_finished)(tls_crypto_t *this, bool server,
 							   chunk_t *out);
 
 	/**

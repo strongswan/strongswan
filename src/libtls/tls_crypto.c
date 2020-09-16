@@ -1867,7 +1867,7 @@ METHOD(tls_crypto_t, calculate_finished_legacy, bool,
 }
 
 METHOD(tls_crypto_t, calculate_finished, bool,
-	private_tls_crypto_t *this, bool is_server, chunk_t *out)
+	private_tls_crypto_t *this, bool server, chunk_t *out)
 {
 	chunk_t finished_key, finished_hash;
 
@@ -1880,7 +1880,7 @@ METHOD(tls_crypto_t, calculate_finished, bool,
 		DBG1(DBG_TLS, "creating hash of handshake failed");
 		return FALSE;
 	}
-	if (!this->hkdf->derive_finished(this->hkdf, is_server, &finished_key))
+	if (!this->hkdf->derive_finished(this->hkdf, server, &finished_key))
 	{
 		DBG1(DBG_TLS, "generating finished key failed");
 		chunk_clear(&finished_hash);
