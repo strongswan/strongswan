@@ -1474,7 +1474,6 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 		}
 	}
 
-	supported->wrap16(supported);
 	writer->write_data16(writer, supported->get_buf(supported));
 	supported->destroy(supported);
 }

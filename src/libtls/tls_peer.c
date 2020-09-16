@@ -49,7 +49,6 @@ typedef enum {
 	STATE_FINISHED_SENT_KEY_SWITCHED,
 	STATE_KEY_UPDATE_REQUESTED,
 	STATE_KEY_UPDATE_SENT,
-
 } peer_state_t;
 
 /**
@@ -532,6 +531,7 @@ static status_t process_certificate(private_tls_peer_t *this,
 			return NEED_MORE;
 		}
 	}
+
 	if (!reader->read_data24(reader, &data))
 	{
 		DBG1(DBG_TLS, "certificate message header invalid");
@@ -1195,7 +1195,7 @@ static status_t send_client_hello(private_tls_peer_t *this,
 								  bio_writer_t *writer)
 {
 	tls_cipher_suite_t *suites;
-	bio_writer_t *extensions, *curves = NULL, *versions, *key_share;
+	bio_writer_t *extensions, *curves = NULL, *versions, *key_share, *signatures;
 	tls_version_t version_max, version_min;
 	diffie_hellman_group_t group;
 	tls_named_group_t curve, selected_curve = 0;
@@ -1339,11 +1339,18 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	DBG2(DBG_TLS, "sending extension: %N",
 		 tls_extension_names, TLS_EXT_SIGNATURE_ALGORITHMS);
 	extensions->write_uint16(extensions, TLS_EXT_SIGNATURE_ALGORITHMS);
-	this->crypto->get_signature_algorithms(this->crypto, extensions, FALSE);
+	signatures = bio_writer_create(32);
+	this->crypto->get_signature_algorithms(this->crypto, signatures, FALSE);
+	extensions->write_data16(extensions, signatures->get_buf(signatures));
+	signatures->destroy(signatures);
+
 	DBG2(DBG_TLS, "sending extension: %N",
 		 tls_extension_names, TLS_EXT_SIGNATURE_ALGORITHMS_CERT);
 	extensions->write_uint16(extensions, TLS_EXT_SIGNATURE_ALGORITHMS_CERT);
-	this->crypto->get_signature_algorithms(this->crypto, extensions, TRUE);
+	signatures = bio_writer_create(32);
+	this->crypto->get_signature_algorithms(this->crypto, signatures, TRUE);
+	extensions->write_data16(extensions, signatures->get_buf(signatures));
+	signatures->destroy(signatures);
 
 	if (this->dh)
 	{
@@ -1802,7 +1809,6 @@ METHOD(tls_handshake_t, cipherspec_changed, bool,
 			return FALSE;
 		}
 	}
-
 }
 
 METHOD(tls_handshake_t, change_cipherspec, void,
