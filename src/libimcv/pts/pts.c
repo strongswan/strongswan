@@ -290,16 +290,10 @@ METHOD(pts_t, calculate_secret, bool,
 		return FALSE;
 	}
 	hasher->destroy(hasher);
-
-	/* The DH secret must be destroyed */
 	chunk_clear(&shared_secret);
 
-	/*
-	 * Truncate the hash to 20 bytes to fit the ExternalData
-	 * argument of the TPM Quote command
-	 */
-	this->secret.len = min(this->secret.len, 20);
 	DBG3(DBG_PTS, "secret assessment value: %B", &this->secret);
+
 	return TRUE;
 }
 
@@ -698,15 +692,18 @@ METHOD(pts_t, quote, bool,
 	tpm_tss_quote_info_t **quote_info, chunk_t *quote_sig)
 {
 	chunk_t pcr_value, pcr_computed;
+	hash_algorithm_t hash_alg;
 	uint32_t pcr, pcr_sel = 0;
 	enumerator_t *enumerator;
+
+	hash_alg = pts_meas_algo_to_hash(this->pcrs->get_pcr_algo(this->pcrs));
 
 	/* select PCRs */
 	DBG2(DBG_PTS, "PCR values hashed into PCR Composite:");
 	enumerator = this->pcrs->create_enumerator(this->pcrs);
 	while (enumerator->enumerate(enumerator, &pcr))
 	{
-		if (this->tpm->read_pcr(this->tpm, pcr, &pcr_value, HASH_SHA1))
+		if (this->tpm->read_pcr(this->tpm, pcr, &pcr_value, hash_alg))
 		{
 			pcr_computed = this->pcrs->get(this->pcrs, pcr);
 			DBG2(DBG_PTS, "PCR %2d %#B  %s", pcr, &pcr_value,
@@ -720,7 +717,7 @@ METHOD(pts_t, quote, bool,
 	enumerator->destroy(enumerator);
 
 	/* TPM Quote */
-	return this->tpm->quote(this->tpm, this->aik_handle, pcr_sel, HASH_SHA1,
+	return this->tpm->quote(this->tpm, this->aik_handle, pcr_sel, hash_alg,
 							this->secret, quote_mode, quote_info, quote_sig);
 }
 
@@ -846,7 +843,7 @@ METHOD(pts_t, get_pcrs, pts_pcr_t*,
 {
 	if (!this->pcrs)
 	{
-		this->pcrs = pts_pcr_create(this->tpm_version);
+		this->pcrs = pts_pcr_create(this->tpm_version, this->algorithm);
 	}
 	return this->pcrs;
 }
@@ -904,8 +901,8 @@ pts_t *pts_create(bool is_imc)
 		},
 		.is_imc = is_imc,
 		.proto_caps = PTS_PROTO_CAPS_V,
-		.algorithm = PTS_MEAS_ALGO_SHA256,
-		.dh_hash_algorithm = PTS_MEAS_ALGO_SHA256,
+		.algorithm = PTS_MEAS_ALGO_SHA384,
+		.dh_hash_algorithm = PTS_MEAS_ALGO_SHA384,
 	);
 
 	if (is_imc)

@@ -68,7 +68,7 @@ bool imv_attestation_build(imv_msg_t *out_msg, imv_state_t *state,
 			}
 
 			/* Send DH nonce finish attribute */
-			selected_algorithm = pts->get_meas_algorithm(pts);
+			selected_algorithm = pts->get_dh_hash_algorithm(pts);
 			if (!pts->get_my_public_value(pts, &initiator_value,
 										  &initiator_nonce))
 			{

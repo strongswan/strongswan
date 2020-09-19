@@ -21,6 +21,8 @@
 #ifndef PTS_IMA_BIOS_LIST_H_
 #define PTS_IMA_BIOS_LIST_H_
 
+#include "pts_meas_algo.h"
+
 #include <time.h>
 
 #include <library.h>
@@ -70,7 +72,10 @@ struct pts_ima_bios_list_t {
  *
  * @param tpm				TPM object
  * @param file				Pathname pointing to the BIOS measurements
+ * @param algo				hash measurement algorithm to be used
  */
-pts_ima_bios_list_t* pts_ima_bios_list_create(tpm_tss_t *tpm, char *file);
+pts_ima_bios_list_t* pts_ima_bios_list_create(tpm_tss_t *tpm, char *file,
+											  pts_meas_algorithms_t algo);
+
 
 #endif /** PTS_IMA_BIOS_LIST_H_ @}*/

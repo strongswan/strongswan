@@ -196,12 +196,14 @@ METHOD(pts_ima_bios_list_t, destroy, void,
 /**
  * See header
  */
-pts_ima_bios_list_t* pts_ima_bios_list_create(tpm_tss_t *tpm, char *file)
+pts_ima_bios_list_t* pts_ima_bios_list_create(tpm_tss_t *tpm, char *file,
+											  pts_meas_algorithms_t algo)
 {
 	private_pts_ima_bios_list_t *this;
 	uint32_t pcr, ev_type, event_type, event_len, seek_len, count = 1;
 	uint32_t buf_len = 8192;
 	uint8_t event_buf[buf_len];
+	hash_algorithm_t hash_alg;
 	chunk_t event;
 	bios_entry_t *entry;
 	struct stat st;
@@ -228,6 +230,7 @@ pts_ima_bios_list_t* pts_ima_bios_list_create(tpm_tss_t *tpm, char *file)
 		close(fd);
 		return FALSE;
 	}
+	hash_alg = pts_meas_algo_to_hash(algo);
 
 	INIT(this,
 		.public = {
@@ -264,7 +267,7 @@ pts_ima_bios_list_t* pts_ima_bios_list_create(tpm_tss_t *tpm, char *file)
 		{
 			break;
 		}
-		if (!tpm->get_event_digest(tpm, fd, &entry->measurement))
+		if (!tpm->get_event_digest(tpm, fd, hash_alg, &entry->measurement))
 		{
 			break;
 		}

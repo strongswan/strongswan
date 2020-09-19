@@ -398,6 +398,12 @@ METHOD(tpm_tss_t, supported_signature_schemes, enumerator_t*,
 	return enumerator_create_empty();
 }
 
+METHOD(tpm_tss_t, has_pcr_bank, bool,
+	private_tpm_tss_trousers_t *this, hash_algorithm_t alg)
+{
+	return alg == HASH_SHA1;
+}
+
 METHOD(tpm_tss_t, read_pcr, bool,
 	private_tpm_tss_trousers_t *this, uint32_t pcr_num, chunk_t *pcr_value,
 	hash_algorithm_t alg)
@@ -406,6 +412,10 @@ METHOD(tpm_tss_t, read_pcr, bool,
 	uint8_t *value;
 	uint32_t len;
 
+	if (alg != HASH_SHA1)
+	{
+		return FALSE;
+	}
 	result = Tspi_TPM_PcrRead(this->hTPM, pcr_num, &len, &value);
 	if (result != TSS_SUCCESS)
 	{
@@ -425,6 +435,10 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 	uint32_t pcr_len;
 	uint8_t *pcr_ptr;
 
+	if (alg != HASH_SHA1)
+	{
+		return FALSE;
+	}
 	result = Tspi_TPM_PcrExtend(this->hTPM, pcr_num, data.len, data.ptr,
 								NULL, &pcr_len, &pcr_ptr);
 	if (result != TSS_SUCCESS)
@@ -457,6 +471,11 @@ METHOD(tpm_tss_t, quote, bool,
 	chunk_t quote_chunk, pcr_digest;
 	enumerator_t *enumerator;
 	bool success = FALSE;
+
+	if (alg != HASH_SHA1)
+	{
+		return FALSE;
+	}
 
 	/* Retrieve SRK from TPM and set the authentication to well known secret*/
 	result = Tspi_Context_LoadKeyByUUID(this->hContext, TSS_PS_TYPE_SYSTEM,
@@ -612,8 +631,13 @@ METHOD(tpm_tss_t, get_data, bool,
 }
 
 METHOD(tpm_tss_t, get_event_digest, bool,
-	private_tpm_tss_trousers_t *this, int fd, chunk_t *digest)
+	private_tpm_tss_trousers_t *this, int fd, hash_algorithm_t alg,
+	chunk_t *digest)
 {
+	if (alg != HASH_SHA1)
+	{
+		return FALSE;
+	}
 	*digest = chunk_alloc(HASH_SIZE_SHA1);
 
 	return read(fd, digest->ptr, digest->len) == digest->len;
@@ -659,6 +683,7 @@ tpm_tss_t *tpm_tss_trousers_create()
 				.generate_aik = _generate_aik,
 				.get_public = _get_public,
 				.supported_signature_schemes = _supported_signature_schemes,
+				.has_pcr_bank = _has_pcr_bank,
 				.read_pcr = _read_pcr,
 				.extend_pcr = _extend_pcr,
 				.quote = _quote,

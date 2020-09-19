@@ -90,6 +90,14 @@ struct tpm_tss_t {
 												 uint32_t handle);
 
 	/**
+	 * Check if there is an assigned PCR bank for the given hash algorithm
+	 *
+	 * @param alg			hash algorithm
+	 * @return				TRUE if a PCR bank for this algorithm exists
+	 */
+	bool (*has_pcr_bank)(tpm_tss_t *this, hash_algorithm_t alg);
+
+	/**
 	 * Retrieve the current value of a PCR register in a given PCR bank
 	 *
 	 * @param pcr_num		PCR number
@@ -170,10 +178,12 @@ struct tpm_tss_t {
 	 * Get an event digest from a TPM measurement log
 	 *
 	 * @param fd			file descriptor of the measurement log
+	 * @param hash			hash algorithm of the digest to be extracted
 	 * @param digest		allocated chunk_t containing event digest
 	 * @return				TRUE if event digest was successfully extracted
 	 */
-	bool (*get_event_digest)(tpm_tss_t *this, int fd, chunk_t *digest);
+	bool (*get_event_digest)(tpm_tss_t *this, int fd, hash_algorithm_t alg,
+							 chunk_t *digest);
 
 	/**
 	 * Destroy a tpm_tss_t.

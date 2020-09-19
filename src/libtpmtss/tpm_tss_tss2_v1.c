@@ -42,6 +42,9 @@
 
 #define LABEL	"TPM 2.0 -"
 
+#define PLATFORM_PCR	24
+#define MAX_PCR_BANKS	 4
+
 typedef struct private_tpm_tss_tss2_t private_tpm_tss_tss2_t;
 
 /**
@@ -65,19 +68,29 @@ struct private_tpm_tss_tss2_t {
 	TSS2_SYS_CONTEXT  *sys_context;
 
 	/**
-	 * Number of supported algorithms
-	 */
-	size_t supported_algs_count;
-
-	/**
 	 * TPM version info
 	 */
 	chunk_t version_info;
 
 	/**
+	 * Number of supported algorithms
+	 */
+	size_t supported_algs_count;
+
+	/**
 	 * List of supported algorithms
 	 */
 	TPM_ALG_ID supported_algs[TPM_PT_ALGORITHM_SET];
+
+		/**
+	 * Number of assigned PCR banks
+	 */
+	size_t assigned_pcrs_count;
+
+	/**
+	 * List of assigned PCR banks
+	 */
+	TPM_ALG_ID assigned_pcrs[MAX_PCR_BANKS];
 
 	/**
 	 * Is TPM FIPS 186-4 compliant ?
@@ -304,7 +317,7 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s GetCapability failed for TPM_ECC_CURVES: 0x%06x",
+		DBG1(DBG_PTS, "%s GetCapability failed for TPM_CAP_ECC_CURVES: 0x%06x",
 					   LABEL, rval);
 		return FALSE;
 	}
@@ -326,6 +339,40 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 		len -= written;
 	}
 	DBG2(DBG_PTS, "%s ECC curves:%s", LABEL, buf);
+
+	/* get assigned PCR banks */
+	this->mutex->lock(this->mutex);
+	rval = Tss2_Sys_GetCapability(this->sys_context, 0, TPM_CAP_PCRS,
+						0, MAX_PCR_BANKS, &more_data, &cap_data, 0);
+	this->mutex->unlock(this->mutex);
+	if (rval != TPM_RC_SUCCESS)
+	{
+		DBG1(DBG_PTS, "%s GetCapability failed for TPM_CAP_PCRS: 0x%06x",
+					   LABEL, rval);
+		return FALSE;
+	}
+
+	/* Number of assigned PCR banks */
+	this->assigned_pcrs_count = cap_data.data.assignedPCR.count;
+
+	/* reset print buffer */
+	pos = buf;
+	len = BUF_LEN;
+
+	/* store and print assigned PCR banks */
+	for (i = 0; i < cap_data.data.assignedPCR.count; i++)
+	{
+		alg = cap_data.data.assignedPCR.pcrSelections[i].hash;
+		this->assigned_pcrs[i] = alg;
+		written = snprintf(pos, len, " %N", tpm_alg_id_names, alg);
+		if (written < 0 || written >= len)
+		{
+			break;
+		}
+		pos += written;
+		len -= written;
+	}
+	DBG2(DBG_PTS, "%s PCR banks:%s", LABEL, buf);
 
 	return TRUE;
 }
@@ -685,27 +732,44 @@ METHOD(tpm_tss_t, supported_signature_schemes, enumerator_t*,
 									(void*)signature_params_destroy);
 }
 
+METHOD(tpm_tss_t, has_pcr_bank, bool,
+	private_tpm_tss_tss2_t *this, hash_algorithm_t alg)
+{
+	TPM_ALG_ID alg_id;
+	int i;
+
+	alg_id = hash_alg_to_tpm_alg_id(alg);
+
+	for (i = 0; i < this->assigned_pcrs_count; i++)
+	{
+		if (this->assigned_pcrs[i] == alg_id)
+		{
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
 /**
  * Configure a PCR Selection assuming a maximum of 24 registers
  */
 static bool init_pcr_selection(private_tpm_tss_tss2_t *this, uint32_t pcrs,
 							   hash_algorithm_t alg, TPML_PCR_SELECTION *pcr_sel)
 {
-	TPM_ALG_ID alg_id;
 	uint32_t pcr;
 
-	/* check if hash algorithm is supported by TPM */
-	alg_id = hash_alg_to_tpm_alg_id(alg);
-	if (!is_supported_alg(this, alg_id))
+	/* check if there is an assigned PCR bank for this hash algorithm */
+	if (!has_pcr_bank(this, alg))
 	{
-		DBG1(DBG_PTS, "%s %N hash algorithm not supported by TPM",
+		DBG1(DBG_PTS, "%s %N hash algorithm not supported by any PCR bank",
 			 LABEL, hash_algorithm_short_names, alg);
 		return FALSE;
 	}
 
 	/* initialize the PCR Selection structure,*/
 	pcr_sel->count = 1;
-	pcr_sel->pcrSelections[0].hash = alg_id;
+	pcr_sel->pcrSelections[0].hash = hash_alg_to_tpm_alg_id(alg);
 	pcr_sel->pcrSelections[0].sizeofSelect = 3;
 	pcr_sel->pcrSelections[0].pcrSelect[0] = 0;
 	pcr_sel->pcrSelections[0].pcrSelect[1] = 0;
@@ -772,7 +836,6 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 	chunk_t data, hash_algorithm_t alg)
 {
 	uint32_t rval;
-	TPM_ALG_ID alg_id;
 	TPML_DIGEST_VALUES digest_values;
 	TPMS_AUTH_COMMAND  session_data_cmd;
 	TPMS_AUTH_RESPONSE session_data_rsp;
@@ -796,17 +859,16 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 
 	*( (uint8_t *)((void *)&session_data_cmd.sessionAttributes ) ) = 0;
 
-	/* check if hash algorithm is supported by TPM */
-	alg_id = hash_alg_to_tpm_alg_id(alg);
-	if (!is_supported_alg(this, alg_id))
+	/* check if there is an assigned PCR bank for this hash algorithm */
+	if (!has_pcr_bank(this, alg))
 	{
-		DBG1(DBG_PTS, "%s %N hash algorithm not supported by TPM",
+		DBG1(DBG_PTS, "%s %N hash algorithm not supported by any PCR bank",
 			 LABEL, hash_algorithm_short_names, alg);
 		return FALSE;
 	}
 
 	digest_values.count = 1;
-	digest_values.digests[0].hashAlg = alg_id;
+	digest_values.digests[0].hashAlg = hash_alg_to_tpm_alg_id(alg);
 
 	switch (alg)
 	{
@@ -1337,9 +1399,63 @@ METHOD(tpm_tss_t, get_data, bool,
 }
 
 METHOD(tpm_tss_t, get_event_digest, bool,
-	private_tpm_tss_tss2_t *this, int fd, chunk_t *digest)
+	private_tpm_tss_tss2_t *this, int fd, hash_algorithm_t alg, chunk_t *digest)
 {
-	return FALSE;
+	uint8_t digest_buf[HASH_SIZE_SHA512];
+	uint32_t digest_count;
+	size_t digest_len = 0;
+	hash_algorithm_t hash_alg;
+	TPM_ALG_ID alg_id;
+
+	if (read(fd, &digest_count, 4) != 4)
+	{
+		return FALSE;
+	}
+	while (digest_count--)
+	{
+		if (read(fd, &alg_id, 2) != 2)
+		{
+			return FALSE;
+		}
+		hash_alg = hash_alg_from_tpm_alg_id(alg_id);
+
+		switch (hash_alg)
+		{
+			case HASH_SHA1:
+				digest_len = HASH_SIZE_SHA1;
+				break;
+			case HASH_SHA256:
+				digest_len = HASH_SIZE_SHA256;
+				break;
+			case HASH_SHA384:
+				digest_len = HASH_SIZE_SHA384;
+				break;
+			case HASH_SHA512:
+				digest_len = HASH_SIZE_SHA512;
+				break;
+			default:
+				DBG2(DBG_PTS, "alg_id: 0x%04x", alg_id);
+				return FALSE;
+		}
+		if (hash_alg == alg)
+		{
+			*digest = chunk_alloc(digest_len);
+			if (read(fd, digest->ptr, digest_len) != digest_len)
+			{
+				return FALSE;
+			}
+		}
+		else
+		{
+			/* read without storing */
+			if (read(fd, digest_buf, digest_len) != digest_len)
+			{
+				return FALSE;
+			}
+		}
+	}
+
+	return TRUE;
 }
 
 METHOD(tpm_tss_t, destroy, void,
@@ -1366,6 +1482,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 			.generate_aik = _generate_aik,
 			.get_public = _get_public,
 			.supported_signature_schemes = _supported_signature_schemes,
+			.has_pcr_bank = _has_pcr_bank,
 			.read_pcr = _read_pcr,
 			.extend_pcr = _extend_pcr,
 			.quote = _quote,

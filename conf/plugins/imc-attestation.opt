@@ -10,6 +10,9 @@ libimcv.plugins.imc-attestation.aik_pubkey =
 libimcv.plugins.imc-attestation.aik_handle =
 	AIK object handle.
 
+libimcv.plugins.imc-attestation.hash_algorithm = sha384
+	Preferred measurement hash algorithm.
+
 libimcv.plugins.imc-attestation.mandatory_dh_groups = yes
 	Enforce mandatory Diffie-Hellman groups.
 
