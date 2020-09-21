@@ -157,6 +157,10 @@ struct private_tls_peer_t {
 	chunk_t cert_types;
 };
 
+/* Implemented in tls_server.c */
+bool tls_write_key_share(bio_writer_t **key_share, tls_named_group_t group,
+						 diffie_hellman_t *dh);
+
 /**
  * Verify the DH group/key type requested by the server is valid.
  */
@@ -1202,7 +1206,6 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	enumerator_t *enumerator;
 	int count, i, v;
 	rng_t *rng;
-	chunk_t pub;
 
 	htoun32(&this->client_random, time(NULL));
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
@@ -1352,34 +1355,21 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	extensions->write_data16(extensions, signatures->get_buf(signatures));
 	signatures->destroy(signatures);
 
-	if (this->dh)
+	if (this->tls->get_version_max(this->tls) >= TLS_1_3 &&
+		this->dh)
 	{
 		DBG2(DBG_TLS, "sending extension: %N",
 			 tls_extension_names, TLS_EXT_KEY_SHARE);
-		if (!this->dh->get_my_public_value(this->dh, &pub))
+		extensions->write_uint16(extensions, TLS_EXT_KEY_SHARE);
+		if (!tls_write_key_share(&key_share, selected_curve, this->dh))
 		{
 			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 			extensions->destroy(extensions);
 			return NEED_MORE;
 		}
-		extensions->write_uint16(extensions, TLS_EXT_KEY_SHARE);
-		key_share = bio_writer_create(pub.len + 6);
-		key_share->write_uint16(key_share, selected_curve);
-		if (selected_curve == TLS_CURVE25519 ||
-			selected_curve == TLS_CURVE448)
-		{
-			key_share->write_data16(key_share, pub);
-		}
-		else
-		{	/* classic format (see RFC 8446, section 4.2.8.2) */
-			key_share->write_uint16(key_share, pub.len + 1);
-			key_share->write_uint8(key_share, TLS_ANSI_UNCOMPRESSED);
-			key_share->write_data(key_share, pub);
-		}
 		key_share->wrap16(key_share);
 		extensions->write_data16(extensions, key_share->get_buf(key_share));
 		key_share->destroy(key_share);
-		free(pub.ptr);
 	}
 
 	writer->write_data16(writer, extensions->get_buf(extensions));

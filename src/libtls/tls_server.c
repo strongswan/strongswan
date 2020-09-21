@@ -340,8 +340,7 @@ static status_t process_client_hello(private_tls_server_t *this,
 				{
 					DBG1(DBG_TLS, "invalid %N extension",
 						 tls_extension_names, extension_type);
-					this->alert->add(this->alert, TLS_FATAL,
-									 TLS_DECODE_ERROR);
+					this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 					extensions->destroy(extensions);
 					extension->destroy(extension);
 					return NEED_MORE;
@@ -916,14 +915,45 @@ METHOD(tls_handshake_t, process, status_t,
 }
 
 /**
+ * Write public key into key share extension
+ */
+bool tls_write_key_share(bio_writer_t **key_share, tls_named_group_t group,
+						 diffie_hellman_t *dh)
+{
+	bio_writer_t *writer;
+	chunk_t pub;
+
+	if (!dh || !dh->get_my_public_value(dh, &pub))
+	{
+		return FALSE;
+	}
+	*key_share = writer = bio_writer_create(pub.len + 7);
+	writer->write_uint16(writer, group);
+	if (group == TLS_CURVE25519 ||
+		group == TLS_CURVE448)
+	{
+		writer->write_data16(writer, pub);
+	}
+	else
+	{	/* classic format (see RFC 8446, section 4.2.8.2) */
+		writer->write_uint16(writer, pub.len + 1);
+		writer->write_uint8(writer, TLS_ANSI_UNCOMPRESSED);
+		writer->write_data(writer, pub);
+	}
+	free(pub.ptr);
+	return TRUE;
+}
+
+/**
  * Send ServerHello message
  */
 static status_t send_server_hello(private_tls_server_t *this,
 							tls_handshake_type_t *type, bio_writer_t *writer)
 {
-	bio_writer_t *extensions, *key_share;
-	tls_version_t version = this->tls->get_version_max(this->tls);
-	chunk_t pub;
+	bio_writer_t *key_share, *extensions;
+	tls_version_t version;
+
+	version = this->tls->get_version_max(this->tls);
 
 	/* cap legacy version at TLS 1.2 for middlebox compatibility */
 	writer->write_uint16(writer, min(TLS_1_2, version));
@@ -948,36 +978,18 @@ static status_t send_server_hello(private_tls_server_t *this,
 		extensions->write_uint16(extensions, 2);
 		extensions->write_uint16(extensions, version);
 
-		if (this->dh)
-		{
-			tls_named_group_t selected_curve = this->requested_curve;
+		DBG2(DBG_TLS, "sending extension: %N",
+	   		 tls_extension_names, TLS_EXT_KEY_SHARE);
+		extensions->write_uint16(extensions, TLS_EXT_KEY_SHARE);
 
-			DBG2(DBG_TLS, "sending extension: %N",
-				 tls_extension_names, TLS_EXT_KEY_SHARE);
-			if (!this->dh->get_my_public_value(this->dh, &pub))
-			{
-				this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-				extensions->destroy(extensions);
-				return NEED_MORE;
-			}
-			extensions->write_uint16(extensions, TLS_EXT_KEY_SHARE);
-			key_share = bio_writer_create(pub.len + 6);
-			key_share->write_uint16(key_share, selected_curve);
-			if (selected_curve == TLS_CURVE25519 ||
-				selected_curve == TLS_CURVE448)
-			{
-				key_share->write_data16(key_share, pub);
-			}
-			else
-			{	/* classic format (see RFC 8446, section 4.2.8.2) */
-				key_share->write_uint16(key_share, pub.len + 1);
-				key_share->write_uint8(key_share, TLS_ANSI_UNCOMPRESSED);
-				key_share->write_data(key_share, pub);
-			}
-			extensions->write_data16(extensions, key_share->get_buf(key_share));
-			key_share->destroy(key_share);
-			free(pub.ptr);
+		if (!tls_write_key_share(&key_share, this->requested_curve, this->dh))
+		{
+			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+			extensions->destroy(extensions);
+			return NEED_MORE;
 		}
+		extensions->write_data16(extensions, key_share->get_buf(key_share));
+		key_share->destroy(key_share);
 
 		writer->write_data16(writer, extensions->get_buf(extensions));
 		extensions->destroy(extensions);
