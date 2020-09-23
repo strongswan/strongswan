@@ -15,8 +15,10 @@
  */
 
 #include <stdarg.h>
+#include <inttypes.h>
 
 #include <daemon.h>
+#include <collections/hashtable.h>
 #include <encoding/payloads/auth_payload.h>
 #include <utils/chunk.h>
 #include <tkm/types.h>
@@ -29,6 +31,8 @@
 #include "tkm_utils.h"
 
 typedef struct private_tkm_listener_t private_tkm_listener_t;
+
+static hashtable_t *ca_map = NULL;
 
 /**
  * Private data of a tkm_listener_t object.
@@ -155,9 +159,37 @@ static bool build_cert_chain(const ike_sa_t * const ike_sa, cc_id_type cc_id)
 			cert = auth->get(auth, AUTH_RULE_CA_CERT);
 			if (cert)
 			{
-				const ca_id_type ca_id = 1;
+				ca_id_type ca_id;
+				public_key_t *pubkey;
 				certificate_type ca_cert;
-				chunk_t enc_ca_cert;
+				chunk_t enc_ca_cert, fp;
+				uint64_t *raw_id;
+
+				pubkey = cert->get_public_key(cert);
+				if (!pubkey)
+				{
+					DBG1(DBG_IKE, "unable to get CA certificate pubkey");
+					rounds->destroy(rounds);
+					return FALSE;
+				}
+				if (!pubkey->get_fingerprint(pubkey, KEYID_PUBKEY_SHA1, &fp))
+				{
+					DBG1(DBG_IKE, "unable to extract CA certificate fingerprint");
+					rounds->destroy(rounds);
+					pubkey->destroy(pubkey);
+					return FALSE;
+				}
+				pubkey->destroy(pubkey);
+
+				raw_id = ca_map->get(ca_map, &fp);
+				if (!raw_id || *raw_id == 0)
+				{
+					DBG1(DBG_IKE, "error mapping CA certificate (fp: %#B) to "
+						 "ID", &fp);
+					rounds->destroy(rounds);
+					return FALSE;
+				}
+				ca_id = *raw_id;
 
 				if (!cert->get_encoding(cert, CERT_ASN1_DER, &enc_ca_cert))
 				{
@@ -367,4 +399,113 @@ tkm_listener_t *tkm_listener_create()
 	);
 
 	return &this->public;
+}
+
+static u_int hash(const chunk_t *key)
+{
+	return chunk_hash(*key);
+}
+
+static bool equals(const chunk_t *key, const chunk_t *other_key)
+{
+	return chunk_equals(*key, *other_key);
+}
+
+static u_int id_hash(const uint64_t *key)
+{
+	return chunk_hash(chunk_create((u_char*)key, sizeof(uint64_t)));
+}
+
+static bool id_equals(const uint64_t *key, const uint64_t *other_key)
+{
+	return *key == *other_key;
+}
+
+/*
+ * Described in header.
+ */
+int register_ca_mapping()
+{
+	char *section, *tkm_ca_id_str, *key_fp_str;
+	chunk_t *key_fp;
+	uint64_t *tkm_ca_id;
+	hashtable_t *id_map;
+	enumerator_t *enumerator;
+	bool err = FALSE;
+
+	ca_map = hashtable_create((hashtable_hash_t)hash,
+							  (hashtable_equals_t)equals, 8);
+	id_map = hashtable_create((hashtable_hash_t)id_hash,
+							  (hashtable_equals_t)id_equals, 8);
+
+	enumerator = lib->settings->create_section_enumerator(lib->settings,
+														  "%s.ca_mapping",
+														  lib->ns);
+	while (enumerator->enumerate(enumerator, &section))
+	{
+		tkm_ca_id_str = lib->settings->get_str(lib->settings,
+											   "%s.ca_mapping.%s.id", NULL,
+											   lib->ns, section);
+		tkm_ca_id = malloc_thing(uint64_t);
+		*tkm_ca_id = settings_value_as_uint64(tkm_ca_id_str, 0);
+
+		key_fp_str = lib->settings->get_str(lib->settings,
+											"%s.ca_mapping.%s.fingerprint", NULL,
+											lib->ns, section);
+		if (key_fp_str)
+		{
+			key_fp = malloc_thing(chunk_t);
+			*key_fp = chunk_from_hex(chunk_from_str(key_fp_str), NULL);
+		}
+
+		if (!*tkm_ca_id || !key_fp_str || !key_fp->len ||
+			id_map->get(id_map, tkm_ca_id) != NULL)
+		{
+			DBG1(DBG_CFG, "error adding CA ID mapping '%s': ID %s, FP '%s'",
+				 section, tkm_ca_id_str, key_fp_str);
+			free(tkm_ca_id);
+			if (key_fp_str)
+			{
+				chunk_free(key_fp);
+				free(key_fp);
+			}
+			err = TRUE;
+		}
+		else
+		{
+			DBG2(DBG_CFG, "adding CA ID mapping '%s': ID %" PRIu64 ", FP '%#B'",
+				 section, *tkm_ca_id, key_fp);
+			ca_map->put(ca_map, key_fp, tkm_ca_id);
+			/* track CA IDs for uniqueness, set value to not-NULL */
+			id_map->put(id_map, tkm_ca_id, id_map);
+		}
+	}
+	enumerator->destroy(enumerator);
+	id_map->destroy(id_map);
+
+	return err ? 0 : ca_map->get_count(ca_map);
+}
+
+/*
+ * Described in header.
+ */
+void destroy_ca_mapping()
+{
+	enumerator_t *enumerator;
+	chunk_t *key;
+	uint64_t *value;
+
+	if (ca_map)
+	{
+		enumerator = ca_map->create_enumerator(ca_map);
+		while (enumerator->enumerate(enumerator, &key, &value))
+		{
+			chunk_free(key);
+			free(key);
+			free(value);
+		}
+		enumerator->destroy(enumerator);
+		ca_map->destroy(ca_map);
+	}
+	ca_map = NULL;
 }

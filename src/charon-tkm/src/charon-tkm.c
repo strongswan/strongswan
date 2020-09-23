@@ -323,6 +323,12 @@ int main(int argc, char *argv[])
 		goto deinit;
 	}
 
+	if (!register_ca_mapping())
+	{
+		DBG1(DBG_DMN, "no CA certificate ID mapping defined - aborting %s", dmn_name);
+		goto deinit;
+	}
+
 	/* register TKM keymat variant */
 	keymat_register_constructor(IKEV2, (keymat_constructor_t)tkm_keymat_create);
 
@@ -404,6 +410,7 @@ int main(int argc, char *argv[])
 
 deinit:
 	destroy_dh_mapping();
+	destroy_ca_mapping();
 	libcharon_deinit();
 	tkm_deinit();
 	unlink_pidfile();
