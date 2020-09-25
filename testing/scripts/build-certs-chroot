@@ -1925,3 +1925,30 @@ do
       -e "s|SUN_PUB_DNS|${SUN_PUB_DNS}|g" \
       ${TEST_DATA}.in > ${TEST_DATA}
 done
+
+################################################################################
+# TKM CA ID mapping                                                            #
+################################################################################
+
+for t in host2host-initiator host2host-responder host2host-xfrmproxy \
+         net2net-initiator net2net-xfrmproxy xfrmproxy-expire xfrmproxy-rekey
+do
+  for h in moon
+  do
+    TEST_DATA="${TEST_DIR}/tkm/${t}/hosts/moon/etc/strongswan.conf"
+    sed -e "s/CA_SPK_HEX/${CA_SPK_HEX}/g" \
+        -e "s/CA_SPKI_HEX/${CA_SPKI_HEX}/g" \
+        ${TEST_DATA}.in > ${TEST_DATA}
+  done
+done
+
+for t in multiple-clients
+do
+  for h in sun
+  do
+    TEST_DATA="${TEST_DIR}/tkm/${t}/hosts/${h}/etc/strongswan.conf"
+    sed -e "s/CA_SPK_HEX/${CA_SPK_HEX}/g" \
+        -e "s/CA_SPKI_HEX/${CA_SPKI_HEX}/g" \
+        ${TEST_DATA}.in > ${TEST_DATA}
+  done
+done

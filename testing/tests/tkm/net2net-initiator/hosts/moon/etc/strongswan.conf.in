@@ -5,4 +5,10 @@ charon-tkm {
     15 = 1
     16 = 2
   }
+  ca_mapping {
+    strongswan_ca {
+      id = 1
+      fingerprint = CA_SPK_HEX
+    }
+  }
 }
