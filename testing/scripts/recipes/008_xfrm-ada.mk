@@ -1,7 +1,7 @@
 #!/usr/bin/make
 
 PKG = xfrm-ada
-SRC = http://git.codelabs.ch/git/$(PKG).git
+SRC = https://git.codelabs.ch/git/$(PKG).git
 REV = v0.1
 
 PREFIX = /usr/local/ada

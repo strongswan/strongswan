@@ -1,7 +1,7 @@
 #!/usr/bin/make
 
 PKG = tkm
-SRC = http://git.codelabs.ch/git/$(PKG).git
+SRC = https://git.codelabs.ch/git/$(PKG).git
 REV = 53d224a7312124516aa6220743355c896be6345a
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
