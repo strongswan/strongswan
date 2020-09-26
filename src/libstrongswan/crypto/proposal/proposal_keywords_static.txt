@@ -1,6 +1,9 @@
 %{
 /*
- * Copyright (C) 2009-2013 Andreas Steffen
+ * Copyright (C) 2020 Pascal Knecht
+ * Copyright (C) 2009-2019 Tobias Brunner
+ * Copyright (C) 2009-2018 Martin Willi
+ * Copyright (C) 2009-2017 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -143,35 +146,64 @@ prfaesxcbc,       PSEUDO_RANDOM_FUNCTION, PRF_AES128_XCBC,         0
 prfcamelliaxcbc,  PSEUDO_RANDOM_FUNCTION, PRF_CAMELLIA128_XCBC,    0
 prfaescmac,       PSEUDO_RANDOM_FUNCTION, PRF_AES128_CMAC,         0
 modpnone,         DIFFIE_HELLMAN_GROUP, MODP_NONE,                 0
+modp_none,        DIFFIE_HELLMAN_GROUP, MODP_NONE,                 0
 modpnull,         DIFFIE_HELLMAN_GROUP, MODP_NULL,                 0
+modp_null,        DIFFIE_HELLMAN_GROUP, MODP_NULL,                 0
 modp768,          DIFFIE_HELLMAN_GROUP, MODP_768_BIT,              0
+modp_768,         DIFFIE_HELLMAN_GROUP, MODP_768_BIT,              0
 modp1024,         DIFFIE_HELLMAN_GROUP, MODP_1024_BIT,             0
+modp_1024,        DIFFIE_HELLMAN_GROUP, MODP_1024_BIT,             0
 modp1536,         DIFFIE_HELLMAN_GROUP, MODP_1536_BIT,             0
+modp_1536,        DIFFIE_HELLMAN_GROUP, MODP_1536_BIT,             0
 modp2048,         DIFFIE_HELLMAN_GROUP, MODP_2048_BIT,             0
+modp_2048,        DIFFIE_HELLMAN_GROUP, MODP_2048_BIT,             0
 modp3072,         DIFFIE_HELLMAN_GROUP, MODP_3072_BIT,             0
+modp_3072,        DIFFIE_HELLMAN_GROUP, MODP_3072_BIT,             0
 modp4096,         DIFFIE_HELLMAN_GROUP, MODP_4096_BIT,             0
+modp_4096,        DIFFIE_HELLMAN_GROUP, MODP_4096_BIT,             0
 modp6144,         DIFFIE_HELLMAN_GROUP, MODP_6144_BIT,             0
+modp_6144,        DIFFIE_HELLMAN_GROUP, MODP_6144_BIT,             0
 modp8192,         DIFFIE_HELLMAN_GROUP, MODP_8192_BIT,             0
+modp_8192,        DIFFIE_HELLMAN_GROUP, MODP_8192_BIT,             0
 ecp192,           DIFFIE_HELLMAN_GROUP, ECP_192_BIT,               0
+ecp_192,          DIFFIE_HELLMAN_GROUP, ECP_192_BIT,               0
 ecp224,           DIFFIE_HELLMAN_GROUP, ECP_224_BIT,               0
+ecp_224,          DIFFIE_HELLMAN_GROUP, ECP_224_BIT,               0
 ecp256,           DIFFIE_HELLMAN_GROUP, ECP_256_BIT,               0
+ecp_256,          DIFFIE_HELLMAN_GROUP, ECP_256_BIT,               0
 ecp384,           DIFFIE_HELLMAN_GROUP, ECP_384_BIT,               0
+ecp_384,          DIFFIE_HELLMAN_GROUP, ECP_384_BIT,               0
 ecp521,           DIFFIE_HELLMAN_GROUP, ECP_521_BIT,               0
+ecp_521,          DIFFIE_HELLMAN_GROUP, ECP_521_BIT,               0
 modp1024s160,     DIFFIE_HELLMAN_GROUP, MODP_1024_160,             0
+modp_1024_160,    DIFFIE_HELLMAN_GROUP, MODP_1024_160,             0
 modp2048s224,     DIFFIE_HELLMAN_GROUP, MODP_2048_224,             0
+modp_2048_224,    DIFFIE_HELLMAN_GROUP, MODP_2048_224,             0
 modp2048s256,     DIFFIE_HELLMAN_GROUP, MODP_2048_256,             0
+mod_2048_256,     DIFFIE_HELLMAN_GROUP, MODP_2048_256,             0
 ecp224bp,         DIFFIE_HELLMAN_GROUP, ECP_224_BP,                0
+ecp_224_bp,       DIFFIE_HELLMAN_GROUP, ECP_224_BP,                0
 ecp256bp,         DIFFIE_HELLMAN_GROUP, ECP_256_BP,                0
+ecp_256_bp,       DIFFIE_HELLMAN_GROUP, ECP_256_BP,                0
 ecp384bp,         DIFFIE_HELLMAN_GROUP, ECP_384_BP,                0
+ecp_384_bp,       DIFFIE_HELLMAN_GROUP, ECP_384_BP,                0
 ecp512bp,         DIFFIE_HELLMAN_GROUP, ECP_512_BP,                0
+ecp_512_bp,       DIFFIE_HELLMAN_GROUP, ECP_512_BP,                0
 curve25519,       DIFFIE_HELLMAN_GROUP, CURVE_25519,               0
+curve_25519,      DIFFIE_HELLMAN_GROUP, CURVE_25519,               0
 x25519,           DIFFIE_HELLMAN_GROUP, CURVE_25519,               0
 curve448,         DIFFIE_HELLMAN_GROUP, CURVE_448,                 0
+curve_448,        DIFFIE_HELLMAN_GROUP, CURVE_448,                 0
 x448,             DIFFIE_HELLMAN_GROUP, CURVE_448,                 0
 ntru112,          DIFFIE_HELLMAN_GROUP, NTRU_112_BIT,              0
+ntru_112,         DIFFIE_HELLMAN_GROUP, NTRU_112_BIT,              0
 ntru128,          DIFFIE_HELLMAN_GROUP, NTRU_128_BIT,              0
+ntru_128,         DIFFIE_HELLMAN_GROUP, NTRU_128_BIT,              0
 ntru192,          DIFFIE_HELLMAN_GROUP, NTRU_192_BIT,              0
+ntru_192,         DIFFIE_HELLMAN_GROUP, NTRU_192_BIT,              0
 ntru256,          DIFFIE_HELLMAN_GROUP, NTRU_256_BIT,              0
+ntru_256,         DIFFIE_HELLMAN_GROUP, NTRU_256_BIT,              0
 newhope128,       DIFFIE_HELLMAN_GROUP, NH_128_BIT,                0
+newhope_128,      DIFFIE_HELLMAN_GROUP, NH_128_BIT,                0
 noesn,            EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,   0
 esn,              EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS,      0

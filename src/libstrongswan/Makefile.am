@@ -240,7 +240,7 @@ $(srcdir)/crypto/proposal/proposal_keywords_static.h: $(srcdir)/crypto/proposal/
 $(srcdir)/crypto/proposal/proposal_keywords_static.c:	$(srcdir)/crypto/proposal/proposal_keywords_static.txt \
 														$(srcdir)/crypto/proposal/proposal_keywords_static.h
 		$(AM_V_GEN) \
-		$(GPERF) -N proposal_get_token_static -m 10 -C -G -c -t -D \
+		$(GPERF) -N proposal_get_token_static -m 10 -C -G -c -t -D --ignore-case \
 			--output-file=$@ $(srcdir)/crypto/proposal/proposal_keywords_static.txt
 
 if STATIC_PLUGIN_CONSTRUCTORS
