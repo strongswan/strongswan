@@ -264,6 +264,14 @@ static bool peer_supports_curve(private_tls_server_t *this,
 }
 
 /**
+ * Check if client is currently retrying to connect to the server.
+ */
+static bool retrying(private_tls_server_t *this)
+{
+	return this->state == STATE_INIT && this->requested_curve;
+}
+
+/**
  * Process client hello message
  */
 static status_t process_client_hello(private_tls_server_t *this,
@@ -316,9 +324,11 @@ static status_t process_client_hello(private_tls_server_t *this,
 		switch (extension_type)
 		{
 			case TLS_EXT_SIGNATURE_ALGORITHMS:
+				chunk_free(&this->hashsig);
 				this->hashsig = chunk_clone(extension_data);
 				break;
 			case TLS_EXT_SUPPORTED_GROUPS:
+				chunk_free(&this->curves);
 				this->curves_received = TRUE;
 				this->curves = chunk_clone(extension_data);
 				break;
@@ -457,50 +467,82 @@ static status_t process_client_hello(private_tls_server_t *this,
 	if (this->tls->get_version_max(this->tls) >= TLS_1_3)
 	{
 		diffie_hellman_group_t group;
-		tls_named_group_t curve;
+		tls_named_group_t curve, requesting_curve = 0;
 		enumerator_t *enumerator;
 		chunk_t shared_secret = chunk_empty;
 
 		enumerator = this->crypto->create_ec_enumerator(this->crypto);
 		while (enumerator->enumerate(enumerator, &group, &curve))
 		{
+			if (!requesting_curve &&
+				curve != key_type &&
+				peer_supports_curve(this, curve))
+			{
+				requesting_curve = curve;
+			}
 			if (curve == key_type && peer_supports_curve(this, curve))
 			{
+				DBG1(DBG_TLS, "using key exchange %N",
+					 tls_named_group_names, curve);
 				this->dh = lib->crypto->create_dh(lib->crypto, group);
 				break;
 			}
 		}
 		enumerator->destroy(enumerator);
-		if (!this->dh)
-		{	/* simply fail since HelloRetryRequest is not currently implemented */
-			DBG1(DBG_TLS, "key_type is not within supported group");
-			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
-			return NEED_MORE;
-		}
 
-		if (key_share.len &&
-			key_type != TLS_CURVE25519 &&
-			key_type != TLS_CURVE448)
-		{	/* classic format (see RFC 8446, section 4.2.8.2) */
-			if (key_share.ptr[0] != TLS_ANSI_UNCOMPRESSED)
+		if (!this->dh)
+		{
+			if (retrying(this))
 			{
-				DBG1(DBG_TLS, "DH point format '%N' not supported",
-					 tls_ansi_point_format_names, key_share.ptr[0]);
+				DBG1(DBG_TLS, "already replied with a hello retry request");
+				this->alert->add(this->alert, TLS_FATAL, TLS_UNEXPECTED_MESSAGE);
+				return NEED_MORE;
+			}
+
+			/* TODO: process all client offered key shares, currently only the
+			 * first key share extensions is processed other offered key shares
+			 * are ignored. */
+			if (!requesting_curve)
+			{
+				DBG1(DBG_TLS, "no mutual supported group in client hello");
+				this->alert->add(this->alert, TLS_FATAL, TLS_ILLEGAL_PARAMETER);
+				return NEED_MORE;
+			}
+			this->requested_curve = requesting_curve;
+
+			if (!this->crypto->hash_handshake(this->crypto, NULL))
+			{
+				DBG1(DBG_TLS, "failed to hash handshake messages");
 				this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 				return NEED_MORE;
 			}
-			key_share = chunk_skip(key_share, 1);
 		}
-		if (!key_share.len ||
-			!this->dh->set_other_public_value(this->dh, key_share))
+		else
 		{
-			DBG1(DBG_TLS, "DH key derivation failed");
-			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+			if (key_share.len &&
+				key_type != TLS_CURVE25519 &&
+				key_type != TLS_CURVE448)
+			{	/* classic format (see RFC 8446, section 4.2.8.2) */
+				if (key_share.ptr[0] != TLS_ANSI_UNCOMPRESSED)
+				{
+					DBG1(DBG_TLS, "DH point format '%N' not supported",
+						 tls_ansi_point_format_names, key_share.ptr[0]);
+					this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+					return NEED_MORE;
+				}
+				key_share = chunk_skip(key_share, 1);
+			}
+			if (!key_share.len ||
+				!this->dh->set_other_public_value(this->dh, key_share))
+			{
+				DBG1(DBG_TLS, "DH key derivation failed");
+				this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+				chunk_clear(&shared_secret);
+				return NEED_MORE;
+			}
 			chunk_clear(&shared_secret);
-			return NEED_MORE;
+			this->requested_curve = 0;
 		}
-		chunk_clear(&shared_secret);
-		this->requested_curve = key_type;
 	}
 
 	this->state = STATE_HELLO_RECEIVED;
@@ -999,7 +1041,15 @@ static status_t send_server_hello(private_tls_server_t *this,
 
 	/* cap legacy version at TLS 1.2 for middlebox compatibility */
 	writer->write_uint16(writer, min(TLS_1_2, version));
-	writer->write_data(writer, chunk_from_thing(this->server_random));
+
+	if (this->requested_curve)
+	{
+		writer->write_data(writer, tls_hello_retry_request_magic);
+	}
+	else
+	{
+		writer->write_data(writer, chunk_from_thing(this->server_random));
+	}
 
 	/* session identifier if we have one */
 	writer->write_data8(writer, this->session);
@@ -1023,22 +1073,31 @@ static status_t send_server_hello(private_tls_server_t *this,
 		DBG2(DBG_TLS, "sending extension: %N",
 	   		 tls_extension_names, TLS_EXT_KEY_SHARE);
 		extensions->write_uint16(extensions, TLS_EXT_KEY_SHARE);
-
-		if (!tls_write_key_share(&key_share, this->dh))
+		if (this->requested_curve)
 		{
-			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-			extensions->destroy(extensions);
-			return NEED_MORE;
+			DBG1(DBG_TLS, "requesting key exchange with %N",
+				 tls_named_group_names, this->requested_curve);
+			extensions->write_uint16(extensions, 2);
+			extensions->write_uint16(extensions, this->requested_curve);
 		}
-		extensions->write_data16(extensions, key_share->get_buf(key_share));
-		key_share->destroy(key_share);
+		else
+		{
+			if (!tls_write_key_share(&key_share, this->dh))
+			{
+				this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+				extensions->destroy(extensions);
+				return NEED_MORE;
+			}
+			extensions->write_data16(extensions, key_share->get_buf(key_share));
+			key_share->destroy(key_share);
+		}
 
 		writer->write_data16(writer, extensions->get_buf(extensions));
 		extensions->destroy(extensions);
 	}
 
 	*type = TLS_SERVER_HELLO;
-	this->state = STATE_HELLO_SENT;
+	this->state = this->requested_curve ? STATE_INIT : STATE_HELLO_SENT;
 	this->crypto->append_handshake(this->crypto, *type, writer->get_buf(writer));
 	return NEED_MORE;
 }
@@ -1470,8 +1529,8 @@ METHOD(tls_handshake_t, cipherspec_changed, bool,
 	else
 	{
 		if (inbound)
-		{	/* accept ChangeCipherSpec after ServerFinish */
-			return this->state == STATE_FINISHED_SENT;
+		{	/* accept ChangeCipherSpec after ServerFinish or HelloRetryRequest */
+			return this->state == STATE_FINISHED_SENT || retrying(this);
 		}
 		else
 		{
@@ -1486,6 +1545,12 @@ METHOD(tls_handshake_t, change_cipherspec, void,
 	if (this->tls->get_version_max(this->tls) < TLS_1_3)
 	{
 		this->crypto->change_cipher(this->crypto, inbound);
+	}
+
+	if (retrying(this))
+	{	/* client might send a ChangeCipherSpec after a HelloRetryRequest and
+		 * before a new ClientHello which should not cause any state changes */
+		return;
 	}
 
 	if (inbound)
