@@ -444,6 +444,48 @@ static void test_tls(tls_version_t version, uint16_t port, bool cauth, u_int i)
 	free(config);
 }
 
+/**
+ * TLS curve test wrapper function
+ */
+static void test_tls_curves(tls_version_t version, uint16_t port, bool cauth,
+							u_int i)
+{
+	echo_server_config_t *config;
+	diffie_hellman_group_t *groups;
+	char curve[128];
+	int count;
+
+	INIT(config,
+		.version = version,
+		.addr = "127.0.0.1",
+		.port = port,
+		.cauth = cauth,
+		.data = chunk_from_chars(0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08),
+	);
+
+	start_echo_server(config);
+
+	count = tls_crypto_get_supported_groups(&groups);
+	ck_assert(i < count);
+	snprintf(curve, sizeof(curve), "%N", diffie_hellman_group_names, groups[i]);
+	lib->settings->set_str(lib->settings, "%s.tls.curve", curve, lib->ns);
+
+	run_echo_client(config);
+
+	free(groups);
+
+	shutdown(config->fd, SHUT_RDWR);
+	close(config->fd);
+
+	free(config);
+}
+
+START_TEST(test_tls13_curves)
+{
+	test_tls_curves(TLS_1_3, 5668, FALSE, _i);
+}
+END_TEST
+
 START_TEST(test_tls13)
 {
 	test_tls(TLS_1_3, 5669, FALSE, _i);
@@ -502,6 +544,12 @@ Suite *socket_suite_create()
 						tls_crypto_get_supported_suites(TRUE, version, NULL));
 
 	s = suite_create("socket");
+
+	tc = tcase_create("TLS 1.3/curves");
+	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_loop_test(tc, test_tls13_curves, 0,
+					 	tls_crypto_get_supported_groups(NULL));
+	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.3/anon");
 	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
