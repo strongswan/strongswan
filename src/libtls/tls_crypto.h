@@ -670,6 +670,14 @@ int tls_crypto_get_supported_suites(bool null, tls_version_t version,
 									tls_cipher_suite_t **suites);
 
 /**
+ * Get a list of all supported TLS DH groups.
+ *
+ * @param groups		pointer to allocated DH group array, to free(), or NULL
+ * @return				number of curves supported
+ */
+int tls_crypto_get_supported_groups(diffie_hellman_group_t **groups);
+
+/**
  * Get the TLS curve of a given EC DH group
  *
  * @param group			diffie hellman group indicator
