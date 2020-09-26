@@ -1092,6 +1092,35 @@ static void filter_specific_config_suites(private_tls_crypto_t *this,
 }
 
 /**
+ * Filter key exchange curves by curve user config
+ */
+static bool filter_curve_config(tls_named_group_t curve)
+{
+	enumerator_t *enumerator;
+	char *token, *config;
+
+	config = lib->settings->get_str(lib->settings, "%s.tls.curve", NULL, lib->ns);
+	if (config)
+	{
+		enumerator = enumerator_create_token(config, ",", " ");
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			const proposal_token_t *tok;
+
+			tok = lib->proposal->get_token(lib->proposal, token);
+			if (tok != NULL && tok->type == DIFFIE_HELLMAN_GROUP &&
+				curve == tls_ec_group_to_curve(tok->algorithm))
+			{
+				enumerator->destroy(enumerator);
+				return TRUE;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	return !config;
+}
+
+/**
  * Filter out unsupported suites on given suite array
  */
 static void filter_unsupported_suites(suite_algs_t suites[], int *count)
@@ -1524,29 +1553,52 @@ static struct {
 CALLBACK(group_filter, bool,
 	void *null, enumerator_t *orig, va_list args)
 {
-	diffie_hellman_group_t group, *out;
-	tls_named_group_t *curve;
+	diffie_hellman_group_t group, *group_out;
+	tls_named_group_t curve, *curve_out;
 	char *plugin;
-	int i;
 
-	VA_ARGS_VGET(args, out, curve);
+	VA_ARGS_VGET(args, group_out, curve_out);
 
 	while (orig->enumerate(orig, &group, &plugin))
 	{
-		for (i = 0; i < countof(curves); i++)
+		curve = tls_ec_group_to_curve(group);
+		if (curve)
 		{
-			if (curves[i].group == group)
+			if (group_out)
 			{
-				if (out)
-				{
-					*out = curves[i].group;
-				}
-				if (curve)
-				{
-					*curve = curves[i].curve;
-				}
-				return TRUE;
+				*group_out = group;
 			}
+			if (curve_out)
+			{
+				*curve_out = curve;
+			}
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+CALLBACK(config_filter, bool,
+	void *null, enumerator_t *orig, va_list args)
+{
+	diffie_hellman_group_t group, *group_out;
+	tls_named_group_t curve, *curve_out;
+
+	VA_ARGS_VGET(args, group_out, curve_out);
+
+	while (orig->enumerate(orig, &group, &curve))
+	{
+		if (filter_curve_config(curve))
+		{
+			if (group_out)
+			{
+				*group_out = group;
+			}
+			if (curve_out)
+			{
+				*curve_out = curve;
+			}
+			return TRUE;
 		}
 	}
 	return FALSE;
@@ -1556,8 +1608,10 @@ METHOD(tls_crypto_t, create_ec_enumerator, enumerator_t*,
 	private_tls_crypto_t *this)
 {
 	return enumerator_create_filter(
-							lib->crypto->create_dh_enumerator(lib->crypto),
-							group_filter, NULL, NULL);
+							enumerator_create_filter(
+								lib->crypto->create_dh_enumerator(lib->crypto),
+								group_filter, NULL, NULL),
+							config_filter, NULL, NULL);
 }
 
 METHOD(tls_crypto_t, set_protection, void,
@@ -2315,6 +2369,38 @@ int tls_crypto_get_supported_suites(bool null, tls_version_t version,
 		for (i = 0; i < count; i++)
 		{
 			(*out)[i] = suites[i].suite;
+		}
+	}
+	return count;
+}
+
+/**
+ * See header.
+ */
+int tls_crypto_get_supported_groups(diffie_hellman_group_t **out)
+{
+	enumerator_t *enumerator;
+	diffie_hellman_group_t groups[countof(curves)];
+	diffie_hellman_group_t group;
+	tls_named_group_t curve;
+	int count = 0, i;
+
+	enumerator = enumerator_create_filter(
+							lib->crypto->create_dh_enumerator(lib->crypto),
+							group_filter, NULL, NULL);
+
+	while (enumerator->enumerate(enumerator, &group, &curve))
+	{
+		groups[count++] = group;
+	}
+	enumerator->destroy(enumerator);
+
+	if (out)
+	{
+		*out = calloc(count, sizeof(diffie_hellman_group_t));
+		for (i = 0; i < count; i++)
+		{
+			(*out)[i] = groups[i];
 		}
 	}
 	return count;
