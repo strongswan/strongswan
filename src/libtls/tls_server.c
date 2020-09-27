@@ -48,6 +48,8 @@ typedef enum {
 	/* new states in TLS 1.3 */
 	STATE_ENCRYPTED_EXTENSIONS_SENT,
 	STATE_CERT_VERIFY_SENT,
+	STATE_KEY_UPDATE_REQUESTED,
+	STATE_KEY_UPDATE_SENT,
 } server_state_t;
 
 /**
@@ -822,6 +824,37 @@ static status_t process_finished(private_tls_server_t *this,
 	return NEED_MORE;
 }
 
+/**
+ * Process KeyUpdate message
+ */
+static status_t process_key_update(private_tls_server_t *this,
+								   bio_reader_t *reader)
+{
+	uint8_t update_requested;
+
+	if (!reader->read_uint8(reader, &update_requested) ||
+		update_requested > 1)
+	{
+		DBG1(DBG_TLS, "received invalid KeyUpdate");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
+	}
+
+	if (!this->crypto->update_app_keys(this->crypto, TRUE))
+	{
+		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+		return NEED_MORE;
+	}
+	this->crypto->change_cipher(this->crypto, TRUE);
+
+	if (update_requested)
+	{
+		DBG1(DBG_TLS, "client requested KeyUpdate");
+		this->state = STATE_KEY_UPDATE_REQUESTED;
+	}
+	return NEED_MORE;
+}
+
 METHOD(tls_handshake_t, process, status_t,
 	private_tls_server_t *this, tls_handshake_type_t type, bio_reader_t *reader)
 {
@@ -900,6 +933,10 @@ METHOD(tls_handshake_t, process, status_t,
 				}
 				return NEED_MORE;
 			case STATE_FINISHED_RECEIVED:
+				if (type == TLS_KEY_UPDATE)
+				{
+					return process_key_update(this, reader);
+				}
 				return INVALID_STATE;
 			default:
 				DBG1(DBG_TLS, "TLS %N not expected in current state",
@@ -1341,6 +1378,21 @@ static status_t send_finished(private_tls_server_t *this,
 	return NEED_MORE;
 }
 
+/**
+ * Send KeyUpdate message
+ */
+static status_t send_key_update(private_tls_server_t *this,
+								tls_handshake_type_t *type, bio_writer_t *writer)
+{
+	*type = TLS_KEY_UPDATE;
+
+	/* we currently only send this as reply, so we never request an update */
+	writer->write_uint8(writer, 0);
+
+	this->state = STATE_KEY_UPDATE_SENT;
+	return NEED_MORE;
+}
+
 METHOD(tls_handshake_t, build, status_t,
 	private_tls_server_t *this, tls_handshake_type_t *type, bio_writer_t *writer)
 {
@@ -1390,6 +1442,16 @@ METHOD(tls_handshake_t, build, status_t,
 				return send_finished(this, type, writer);
 			case STATE_FINISHED_SENT:
 				return INVALID_STATE;
+			case STATE_KEY_UPDATE_REQUESTED:
+				return send_key_update(this, type, writer);
+			case STATE_KEY_UPDATE_SENT:
+				if (!this->crypto->update_app_keys(this->crypto, FALSE))
+				{
+					this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+					return NEED_MORE;
+				}
+				this->crypto->change_cipher(this->crypto, FALSE);
+				this->state = STATE_FINISHED_RECEIVED;
 			default:
 				return INVALID_STATE;
 		}
