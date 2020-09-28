@@ -326,6 +326,9 @@ int main(int argc, char *argv[])
 	/* register TKM keymat variant */
 	keymat_register_constructor(IKEV2, (keymat_constructor_t)tkm_keymat_create);
 
+	/* register TKM credential encoder */
+	lib->encoding->add_encoder(lib->encoding, tkm_encoder_encode);
+
 	/* initialize daemon */
 	if (!charon->initialize(charon, PLUGINS))
 	{
@@ -366,9 +369,6 @@ int main(int argc, char *argv[])
 	/* register TKM credential set */
 	creds = tkm_cred_create();
 	lib->credmgr->add_set(lib->credmgr, (credential_set_t*)creds);
-
-	/* register TKM credential encoder */
-	lib->encoding->add_encoder(lib->encoding, tkm_encoder_encode);
 
 	/* add handler for fatal signals,
 	 * INT and TERM are handled by sigwaitinfo() in run() */
