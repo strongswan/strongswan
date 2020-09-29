@@ -410,6 +410,24 @@ static void run_echo_client(echo_server_config_t *config)
 }
 
 /**
+ * Create server/peer configuration
+ */
+static echo_server_config_t *create_config(tls_version_t version, uint16_t port,
+										   bool cauth)
+{
+	echo_server_config_t *config;
+
+	INIT(config,
+		.version = version,
+		.addr = "127.0.0.1",
+		.port = port,
+		.cauth = cauth,
+		.data = chunk_from_chars(0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08),
+	);
+	return config;
+}
+
+/**
  * Common test wrapper function for different test variants
  */
 static void test_tls(tls_version_t version, uint16_t port, bool cauth, u_int i)
@@ -419,13 +437,7 @@ static void test_tls(tls_version_t version, uint16_t port, bool cauth, u_int i)
 	char suite[128];
 	int count;
 
-	INIT(config,
-		.version = version,
-		.addr = "127.0.0.1",
-		.port = port,
-		.cauth = cauth,
-		.data = chunk_from_chars(0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08),
-	);
+	config = create_config(version, port, cauth);
 
 	start_echo_server(config);
 
@@ -455,13 +467,7 @@ static void test_tls_curves(tls_version_t version, uint16_t port, bool cauth,
 	char curve[128];
 	int count;
 
-	INIT(config,
-		.version = version,
-		.addr = "127.0.0.1",
-		.port = port,
-		.cauth = cauth,
-		.data = chunk_from_chars(0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08),
-	);
+	config = create_config(version, port, cauth);
 
 	start_echo_server(config);
 
@@ -479,6 +485,72 @@ static void test_tls_curves(tls_version_t version, uint16_t port, bool cauth,
 
 	free(config);
 }
+
+/**
+ * TLS server version test wrapper function
+ */
+static void test_tls_server(tls_version_t version, uint16_t port, bool cauth,
+							u_int i)
+{
+	echo_server_config_t *client, *server;
+
+	client = create_config(i, port, cauth);
+	server = create_config(version, port, cauth);
+
+	start_echo_server(server);
+
+	run_echo_client(client);
+
+	shutdown(client->fd, SHUT_RDWR);
+	close(client->fd);
+	shutdown(server->fd, SHUT_RDWR);
+	close(server->fd);
+
+	free(client);
+	free(server);
+}
+
+/**
+ * TLS client version test wrapper function
+ */
+static void test_tls_client(tls_version_t version, uint16_t port, bool cauth,
+							u_int i)
+{
+	echo_server_config_t *client, *server;
+
+	client = create_config(version, port, cauth);
+	server = create_config(i, port, cauth);
+
+	start_echo_server(server);
+
+	run_echo_client(client);
+
+	shutdown(client->fd, SHUT_RDWR);
+	close(client->fd);
+	shutdown(server->fd, SHUT_RDWR);
+	close(server->fd);
+
+	free(client);
+	free(server);
+}
+
+START_TEST(test_tls_12_server)
+{
+	test_tls_server(TLS_1_2, 5665, FALSE, _i);
+}
+END_TEST
+
+START_TEST(test_tls_13_server)
+{
+	test_tls_server(TLS_1_3, 5666, FALSE, _i);
+}
+END_TEST
+
+START_TEST(test_tls_13_client)
+{
+	test_tls_client(TLS_1_3, 5667, FALSE, _i);
+}
+END_TEST
 
 START_TEST(test_tls13_curves)
 {
@@ -543,7 +615,25 @@ Suite *socket_suite_create()
 	tcase_add_loop_test(tc, func, 0, \
 						tls_crypto_get_supported_suites(TRUE, version, NULL));
 
+#define add_tls_versions_test(func, from, to) \
+	tcase_add_loop_test(tc, func, from, to+1);
+
 	s = suite_create("socket");
+
+	tc = tcase_create("TLS [1.0..1.3] client to TLS 1.3 server");
+	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	add_tls_versions_test(test_tls_13_server, TLS_1_0, TLS_1_3);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("TLS 1.3 client to TLS [1.0..1.3] server");
+	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	add_tls_versions_test(test_tls_13_client, TLS_1_0, TLS_1_3);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("TLS [1.0..1.3] client to TLS 1.2 server");
+	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	add_tls_versions_test(test_tls_12_server, TLS_1_0, TLS_1_3);
+	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.3/curves");
 	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
