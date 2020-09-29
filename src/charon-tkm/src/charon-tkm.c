@@ -115,20 +115,11 @@ static void run()
 			DBG1(DBG_DMN, "waiting for signal failed: %s", strerror(errno));
 			return;
 		}
-		switch (sig)
-		{
-			case SIGINT:
-			{
-				DBG1(DBG_DMN, "signal of type SIGINT received. Shutting down");
-				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
-				return;
-			}
-			case SIGTERM:
-			{
-				DBG1(DBG_DMN, "signal of type SIGTERM received. Shutting down");
-				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
-				return;
-			}
+		if (sigismember(&set,sig) >= 1)
+		{	/* if condition incase the sigprocmask call fails for some reason */
+			DBG1(DBG_DMN, "signal of type %s received. Shutting down", (sig == SIGINT) ? "SIGINT" : "SIGTERM");
+			charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
+			return;
 		}
 	}
 }
