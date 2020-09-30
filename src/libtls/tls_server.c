@@ -954,20 +954,25 @@ METHOD(tls_handshake_t, process, status_t,
 /**
  * Write public key into key share extension
  */
-bool tls_write_key_share(bio_writer_t **key_share, tls_named_group_t group,
-						 diffie_hellman_t *dh)
+bool tls_write_key_share(bio_writer_t **key_share, diffie_hellman_t *dh)
 {
 	bio_writer_t *writer;
+	tls_named_group_t curve;
 	chunk_t pub;
 
-	if (!dh || !dh->get_my_public_value(dh, &pub))
+	if (!dh)
+	{
+		return FALSE;
+	}
+	curve = tls_ec_group_to_curve(dh->get_dh_group(dh));
+	if (!curve || !dh->get_my_public_value(dh, &pub))
 	{
 		return FALSE;
 	}
 	*key_share = writer = bio_writer_create(pub.len + 7);
-	writer->write_uint16(writer, group);
-	if (group == TLS_CURVE25519 ||
-		group == TLS_CURVE448)
+	writer->write_uint16(writer, curve);
+	if (curve == TLS_CURVE25519 ||
+		curve == TLS_CURVE448)
 	{
 		writer->write_data16(writer, pub);
 	}
@@ -1019,7 +1024,7 @@ static status_t send_server_hello(private_tls_server_t *this,
 	   		 tls_extension_names, TLS_EXT_KEY_SHARE);
 		extensions->write_uint16(extensions, TLS_EXT_KEY_SHARE);
 
-		if (!tls_write_key_share(&key_share, this->requested_curve, this->dh))
+		if (!tls_write_key_share(&key_share, this->dh))
 		{
 			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 			extensions->destroy(extensions);
@@ -1198,29 +1203,6 @@ static status_t send_certificate_request(private_tls_server_t *this,
 }
 
 /**
- * Get the TLS curve of a given EC DH group
- */
-static tls_named_group_t ec_group_to_curve(private_tls_server_t *this,
-                                           diffie_hellman_group_t group)
-{
-	diffie_hellman_group_t current;
-	tls_named_group_t curve;
-	enumerator_t *enumerator;
-
-	enumerator = this->crypto->create_ec_enumerator(this->crypto);
-	while (enumerator->enumerate(enumerator, &current, &curve))
-	{
-		if (current == group)
-		{
-			enumerator->destroy(enumerator);
-			return curve;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return 0;
-}
-
-/**
  * Try to find a curve supported by both, client and server
  */
 static bool find_supported_curve(private_tls_server_t *this,
@@ -1256,7 +1238,7 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 
 	if (diffie_hellman_group_is_ec(group))
 	{
-		curve = ec_group_to_curve(this, group);
+		curve = tls_ec_group_to_curve(group);
 		if (!curve || (!peer_supports_curve(this, curve) &&
 					   !find_supported_curve(this, &curve)))
 		{
