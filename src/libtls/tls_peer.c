@@ -158,8 +158,7 @@ struct private_tls_peer_t {
 };
 
 /* Implemented in tls_server.c */
-bool tls_write_key_share(bio_writer_t **key_share, tls_named_group_t group,
-						 diffie_hellman_t *dh);
+bool tls_write_key_share(bio_writer_t **key_share, diffie_hellman_t *dh);
 
 /**
  * Verify the DH group/key type requested by the server is valid.
@@ -1202,7 +1201,7 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	bio_writer_t *extensions, *curves = NULL, *versions, *key_share, *signatures;
 	tls_version_t version_max, version_min;
 	diffie_hellman_group_t group;
-	tls_named_group_t curve, selected_curve = 0;
+	tls_named_group_t curve;
 	enumerator_t *enumerator;
 	int count, i, v;
 	rng_t *rng;
@@ -1296,7 +1295,6 @@ static status_t send_client_hello(private_tls_peer_t *this,
 			{
 				continue;
 			}
-			selected_curve = curve;
 		}
 		curves->write_uint16(curves, curve);
 	}
@@ -1355,13 +1353,12 @@ static status_t send_client_hello(private_tls_peer_t *this,
 	extensions->write_data16(extensions, signatures->get_buf(signatures));
 	signatures->destroy(signatures);
 
-	if (this->tls->get_version_max(this->tls) >= TLS_1_3 &&
-		this->dh)
+	if (this->tls->get_version_max(this->tls) >= TLS_1_3)
 	{
 		DBG2(DBG_TLS, "sending extension: %N",
 			 tls_extension_names, TLS_EXT_KEY_SHARE);
 		extensions->write_uint16(extensions, TLS_EXT_KEY_SHARE);
-		if (!tls_write_key_share(&key_share, selected_curve, this->dh))
+		if (!tls_write_key_share(&key_share, this->dh))
 		{
 			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 			extensions->destroy(extensions);

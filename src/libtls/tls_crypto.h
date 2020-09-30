@@ -669,4 +669,12 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache);
 int tls_crypto_get_supported_suites(bool null, tls_version_t version,
 									tls_cipher_suite_t **suites);
 
+/**
+ * Get the TLS curve of a given EC DH group
+ *
+ * @param group			diffie hellman group indicator
+ * @return				TLS group indicator
+ */
+tls_named_group_t tls_ec_group_to_curve(diffie_hellman_group_t group);
+
 #endif /** TLS_CRYPTO_H_ @}*/
