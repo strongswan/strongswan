@@ -90,6 +90,11 @@ struct private_tpm_tss_tss2_t {
 	bool fips_186_4;
 
 	/**
+	 * Does the TPM use the old TCG SHA1-only event digest format
+	 */
+	bool old_event_digest_format;
+
+	/**
 	 * Mutex controlling access to the TPM 2.0 context
 	 */
 	mutex_t *mutex;
@@ -192,7 +197,7 @@ static bool is_supported_alg(private_tpm_tss_tss2_t *this, TPM2_ALG_ID alg_id)
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |  TPM 2.0 Version_Info Tag     |           Reserved            |
+ *  |  TPM 2.0 Version_Info Tag     |   Reserved    |   Locality    |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |                            Revision                           |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -202,8 +207,9 @@ static bool is_supported_alg(private_tpm_tss_tss2_t *this, TPM2_ALG_ID alg_id)
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 #define TPM2_VERSION_INFO_TAG       0x0200
-#define TPM2_VERSION_INFO_RESERVED  0x0000
+#define TPM2_VERSION_INFO_RESERVED  0x00
 #define TPM2_VERSION_INFO_SIZE      16
+#define TPM2_DEFAULT_LOCALITY       3
 
 static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 {
@@ -214,6 +220,7 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 	bio_writer_t *writer;
 	bool fips_140_2 = FALSE;
 	uint32_t rval, i, offset, revision = 0, year = 0, vendor = 0;
+	uint8_t locality = TPM2_DEFAULT_LOCALITY;
 	size_t len = BUF_LEN;
 	char buf[BUF_LEN], manufacturer[5], vendor_string[17];
 	char *pos = buf;
@@ -277,10 +284,18 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 		 manufacturer, vendor_string, (float)revision/100, year,
 		 fips_140_2 ? "FIPS 140-2" : (this->fips_186_4 ? "FIPS 186-4" : ""));
 
+	/* determine if TPM uses old event digest format and a different locality */
+	if (streq(manufacturer, "INTC") && revision == 116 && year == 2016)
+	{
+		this->old_event_digest_format = TRUE;
+		locality = 0;
+	}
+
 	/* construct TPM 2.0 version_info object */
 	writer = bio_writer_create(  TPM2_VERSION_INFO_SIZE);
 	writer->write_uint16(writer, TPM2_VERSION_INFO_TAG);
-	writer->write_uint16(writer, TPM2_VERSION_INFO_RESERVED);
+	writer->write_uint8(writer,  TPM2_VERSION_INFO_RESERVED);
+	writer->write_uint8(writer,  locality);
 	writer->write_uint32(writer, revision);
 	writer->write_uint32(writer, year);
 	writer->write_uint32(writer, vendor);
@@ -1306,50 +1321,68 @@ METHOD(tpm_tss_t, get_event_digest, bool,
 	hash_algorithm_t hash_alg;
 	TPM2_ALG_ID alg_id;
 
-	if (read(fd, &digest_count, 4) != 4)
+	if (this->old_event_digest_format)
 	{
-		return FALSE;
-	}
-	while (digest_count--)
-	{
-		if (read(fd, &alg_id, 2) != 2)
+		if (alg != HASH_SHA1)
 		{
 			return FALSE;
 		}
-		hash_alg = hash_alg_from_tpm_alg_id(alg_id);
+		digest_len = HASH_SIZE_SHA1;
 
-		switch (hash_alg)
+		*digest = chunk_alloc(digest_len);
+
+		if (read(fd, digest->ptr, digest_len) != digest_len)
 		{
-			case HASH_SHA1:
-				digest_len = HASH_SIZE_SHA1;
-				break;
-			case HASH_SHA256:
-				digest_len = HASH_SIZE_SHA256;
-				break;
-			case HASH_SHA384:
-				digest_len = HASH_SIZE_SHA384;
-				break;
-			case HASH_SHA512:
-				digest_len = HASH_SIZE_SHA512;
-				break;
-			default:
-				DBG2(DBG_PTS, "alg_id: 0x%04x", alg_id);
-				return FALSE;
+			return FALSE;
 		}
-		if (hash_alg == alg)
+	}
+	else
+	{
+		if (read(fd, &digest_count, 4) != 4)
 		{
-			*digest = chunk_alloc(digest_len);
-			if (read(fd, digest->ptr, digest_len) != digest_len)
+			return FALSE;
+		}
+		while (digest_count--)
+		{
+			if (read(fd, &alg_id, 2) != 2)
 			{
 				return FALSE;
 			}
-		}
-		else
-		{
-			/* read without storing */
-			if (read(fd, digest_buf, digest_len) != digest_len)
+			hash_alg = hash_alg_from_tpm_alg_id(alg_id);
+
+			switch (hash_alg)
 			{
+				case HASH_SHA1:
+					digest_len = HASH_SIZE_SHA1;
+					break;
+				case HASH_SHA256:
+					digest_len = HASH_SIZE_SHA256;
+					break;
+				case HASH_SHA384:
+					digest_len = HASH_SIZE_SHA384;
+					break;
+				case HASH_SHA512:
+					digest_len = HASH_SIZE_SHA512;
+					break;
+				default:
+					DBG2(DBG_PTS, "alg_id: 0x%04x", alg_id);
+					return FALSE;
+			}
+			if (hash_alg == alg)
+			{
+				*digest = chunk_alloc(digest_len);
+				if (read(fd, digest->ptr, digest_len) != digest_len)
+				{
 				return FALSE;
+				}
+			}
+			else
+			{
+				/* read without storing */
+				if (read(fd, digest_buf, digest_len) != digest_len)
+				{
+					return FALSE;
+				}
 			}
 		}
 	}

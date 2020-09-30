@@ -122,7 +122,9 @@ struct pts_pcr_t {
  *
  * @param tpm_version		TPM version
  * @param algo				Hash algorithm used by PCR bank
+ * @param locality			TPM locality in which the PCR bank was initialized
  */
-pts_pcr_t* pts_pcr_create(tpm_version_t tpm_version, pts_meas_algorithms_t algo);
+pts_pcr_t* pts_pcr_create(tpm_version_t tpm_version, pts_meas_algorithms_t algo,
+						  uint8_t locality);
 
 #endif /** PTS_PCR_H_ @}*/

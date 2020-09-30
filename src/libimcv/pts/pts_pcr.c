@@ -259,7 +259,8 @@ METHOD(pts_pcr_t, destroy, void,
 /**
  * See header
  */
-pts_pcr_t *pts_pcr_create(tpm_version_t tpm_version, pts_meas_algorithms_t algo)
+pts_pcr_t *pts_pcr_create(tpm_version_t tpm_version, pts_meas_algorithms_t algo,
+						  uint8_t locality)
 {
 	private_pts_pcr_t *this;
 	hash_algorithm_t hash_alg;
@@ -302,8 +303,6 @@ pts_pcr_t *pts_pcr_create(tpm_version_t tpm_version, pts_meas_algorithms_t algo)
 	/* Set locality indicator in PCR[0] */
 	if (tpm_version == TPM_VERSION_2_0)
 	{
-		const uint8_t locality = 3;
-
 		DBG2(DBG_PTS, "TPM 2.0 - locality indicator set to %u",
 					  (uint32_t)locality);
 		this->pcrs[0].ptr[this->pcr_len - 1] = locality;

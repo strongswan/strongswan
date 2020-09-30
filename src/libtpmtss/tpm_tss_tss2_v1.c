@@ -185,7 +185,7 @@ static bool is_supported_alg(private_tpm_tss_tss2_t *this, TPM_ALG_ID alg_id)
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |  TPM 2.0 Version_Info Tag     |           Reserved            |
+ *  |  TPM 2.0 Version_Info Tag     |   Reserved    |   Locality    |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |                            Revision                           |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -195,8 +195,9 @@ static bool is_supported_alg(private_tpm_tss_tss2_t *this, TPM_ALG_ID alg_id)
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 #define TPM2_VERSION_INFO_TAG       0x0200
-#define TPM2_VERSION_INFO_RESERVED  0x0000
+#define TPM2_VERSION_INFO_RESERVED  0x00
 #define TPM2_VERSION_INFO_SIZE      16
+#define TPM2_DEFAULT_LOCALITY       3
 
 static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 {
@@ -207,6 +208,7 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 	bio_writer_t *writer;
 	bool fips_140_2 = FALSE;
 	uint32_t rval, i, offset, revision = 0, year = 0, vendor = 0;
+	uint8_t locality = TPM2_DEFAULT_LOCALITY;
 	size_t len = BUF_LEN;
 	char buf[BUF_LEN], manufacturer[5], vendor_string[17];
 	char *pos = buf;
@@ -269,10 +271,17 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 		 manufacturer, vendor_string, (float)revision/100, year,
 		 fips_140_2 ? "FIPS 140-2" : (this->fips_186_4 ? "FIPS 186-4" : ""));
 
+	/* determine if TPM uses old event digest format and a different locality */
+	if (streq(manufacturer, "INTC") && revision == 116 && year == 2016)
+	{
+		locality = 0;
+	}
+
 	/* construct TPM 2.0 version_info object */
 	writer = bio_writer_create(  TPM2_VERSION_INFO_SIZE);
 	writer->write_uint16(writer, TPM2_VERSION_INFO_TAG);
-	writer->write_uint16(writer, TPM2_VERSION_INFO_RESERVED);
+	writer->write_uint8(writer,  TPM2_VERSION_INFO_RESERVED);
+	writer->write_uint8(writer,  locality);
 	writer->write_uint32(writer, revision);
 	writer->write_uint32(writer, year);
 	writer->write_uint32(writer, vendor);

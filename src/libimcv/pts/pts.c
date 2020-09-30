@@ -318,8 +318,8 @@ METHOD(pts_t, get_tpm, tpm_tss_t*,
 METHOD(pts_t, get_tpm_version_info, bool,
 	private_pts_t *this, chunk_t *info)
 {
-	*info = this->tpm ? this->tpm->get_version_info(this->tpm) :
-						this->tpm_version_info;
+	*info = this->tpm_version_info;
+
 	return info->len > 0;
 }
 
@@ -369,7 +369,8 @@ METHOD(pts_t, set_tpm_version_info, void,
 
 		this->tpm_version = TPM_VERSION_2_0;
 
-		if (reader->read_uint16(reader, &reserved)  &&
+		if (reader->read_uint8 (reader, &reserved)  &&
+			reader->read_uint8 (reader, &locality)  &&
 			reader->read_uint32(reader, &revision)  &&
 			reader->read_uint32(reader, &year)      &&
 			reader->read_data  (reader, 4, &vendor))
@@ -838,12 +839,29 @@ METHOD(pts_t, verify_quote_signature, bool,
 	return TRUE;
 }
 
+/**
+ * Extracts the locality from a TPM 2.0 Version Info struct
+ */
+static uint8_t get_tpm_locality(chunk_t tpm_version_info)
+{
+	if (tpm_version_info.len < 4 ||
+	    tpm_version_info.ptr[0] != 0x02 || tpm_version_info.ptr[1] != 0x00)
+	{
+		return 0;
+	}
+	else
+	{
+		return tpm_version_info.ptr[3];
+	}
+}
+
 METHOD(pts_t, get_pcrs, pts_pcr_t*,
 	private_pts_t *this)
 {
 	if (!this->pcrs)
 	{
-		this->pcrs = pts_pcr_create(this->tpm_version, this->algorithm);
+		this->pcrs = pts_pcr_create(this->tpm_version, this->algorithm,
+							get_tpm_locality(this->tpm_version_info));
 	}
 	return this->pcrs;
 }
@@ -912,6 +930,7 @@ pts_t *pts_create(bool is_imc)
 		{
 			this->proto_caps |= PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_D;
 			this->tpm_version = this->tpm->get_version(this->tpm);
+			this->tpm_version_info = this->tpm->get_version_info(this->tpm);
 			load_aik(this);
 		}
 	}
