@@ -2319,3 +2319,20 @@ int tls_crypto_get_supported_suites(bool null, tls_version_t version,
 	}
 	return count;
 }
+
+/**
+ * See header.
+ */
+tls_named_group_t tls_ec_group_to_curve(diffie_hellman_group_t group)
+{
+	int i;
+
+	for (i = 0; i < countof(curves); i++)
+	{
+		if (curves[i].group == group)
+		{
+			return curves[i].curve;
+		}
+	}
+	return 0;
+}
