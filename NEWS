@@ -1,3 +1,10 @@
+strongswan-5.9.1
+----------------
+
+- Remote attestation via TNC: Support of SHA-256 based TPM 2.0 BIOS measurements
+  introduced with the Linux 5.4 kernel.
+
+
 strongswan-5.9.0
 ----------------
 

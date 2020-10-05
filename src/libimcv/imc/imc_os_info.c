@@ -487,7 +487,13 @@ static bool extract_platform_info(os_type_t *type, chunk_t *name,
 				os_type = OS_TYPE_DEBIAN;
 
 				os_version.ptr = buf;
-				pos = strchr(buf, '\n');
+
+				/* extract major release number only */
+				pos = strchr(buf, '.');
+				if (!pos)
+				{
+					pos = strchr(buf, '\n');
+				}
 				if (!pos)
 				{
 					DBG1(DBG_PTS, "failed to find end of release string");
