@@ -88,7 +88,7 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 		context.bindService(new Intent(context, VpnStateService.class),
 							mServiceConnection, Service.BIND_AUTO_CREATE);
 		/* hide it initially */
-		getFragmentManager().beginTransaction().hide(this).commit();
+		getParentFragmentManager().beginTransaction().hide(this).commit();
 	}
 
 	@Override
@@ -192,7 +192,7 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 
 	public void updateView()
 	{
-		FragmentManager fm = getFragmentManager();
+		FragmentManager fm = getParentFragmentManager();
 		if (fm == null)
 		{
 			return;
