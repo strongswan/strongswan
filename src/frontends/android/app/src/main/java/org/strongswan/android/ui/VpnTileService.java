@@ -25,7 +25,6 @@ import android.content.SharedPreferences;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 
@@ -35,6 +34,8 @@ import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.utils.Constants;
+
+import androidx.preference.PreferenceManager;
 
 @TargetApi(Build.VERSION_CODES.N)
 public class VpnTileService extends TileService implements VpnStateService.VpnStateListener

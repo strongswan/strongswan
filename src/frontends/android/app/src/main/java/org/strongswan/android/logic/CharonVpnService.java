@@ -35,7 +35,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
-import android.preference.PreferenceManager;
 import android.security.KeyChain;
 import android.security.KeyChainException;
 import android.system.OsConstants;
@@ -77,6 +76,7 @@ import java.util.SortedSet;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
+import androidx.preference.PreferenceManager;
 
 public class CharonVpnService extends VpnService implements Runnable, VpnStateService.VpnStateListener
 {
