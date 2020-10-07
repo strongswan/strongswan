@@ -1265,7 +1265,7 @@ fi
 
 if test x$kernel_vpp = xtrue; then
 save_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -Werror"
+CFLAGS="$CFLAGS -Werror -Wno-error=address-of-packed-member"
 AC_MSG_CHECKING([for VPP API flag IPSEC_API_SAD_FLAG_IS_INBOUND])
 AC_COMPILE_IFELSE(
     [AC_LANG_PROGRAM(
