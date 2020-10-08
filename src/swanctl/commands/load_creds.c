@@ -195,26 +195,21 @@ static bool load_key_anytype(load_ctx_t *ctx, char *path,
 {
 	bool loaded = FALSE;
 	chunk_t encoding;
+	char *type;
 
 	if (!private->get_encoding(private, PRIVKEY_ASN1_DER, &encoding))
 	{
 		fprintf(stderr, "encoding private key from '%s' failed\n", path);
 		return FALSE;
 	}
-	switch (private->get_type(private))
+	type = enum_to_name(key_type_names, private->get_type(private));
+	if (type)
 	{
-		case KEY_RSA:
-			loaded = load_key(ctx, path, "rsa", encoding);
-			break;
-		case KEY_ECDSA:
-			loaded = load_key(ctx, path, "ecdsa", encoding);
-			break;
-		case KEY_BLISS:
-			loaded = load_key(ctx, path, "bliss", encoding);
-			break;
-		default:
-			fprintf(stderr, "unsupported key type in '%s'\n", path);
-			break;
+		loaded = load_key(ctx, path, type, encoding);
+	}
+	if (!loaded)
+	{
+		fprintf(stderr, "unsupported key type in '%s'\n", path);
 	}
 	chunk_clear(&encoding);
 	return loaded;
