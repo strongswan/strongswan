@@ -226,23 +226,7 @@ CALLBACK(load_key, vici_message_t*,
 	{
 		return create_reply("key type missing");
 	}
-	if (strcaseeq(str, "any"))
-	{
-		type = KEY_ANY;
-	}
-	else if (strcaseeq(str, "rsa"))
-	{
-		type = KEY_RSA;
-	}
-	else if (strcaseeq(str, "ecdsa"))
-	{
-		type = KEY_ECDSA;
-	}
-	else if (strcaseeq(str, "bliss"))
-	{
-		type = KEY_BLISS;
-	}
-	else
+	if (!enum_from_name(key_type_names, str, &type))
 	{
 		return create_reply("invalid key type: %s", str);
 	}
