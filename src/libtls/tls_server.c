@@ -357,10 +357,28 @@ static status_t process_client_hello(private_tls_server_t *this,
 		switch (extension_type)
 		{
 			case TLS_EXT_SIGNATURE_ALGORITHMS:
+				if (!extension->read_data16(extension, &extension_data))
+				{
+					DBG1(DBG_TLS, "invalid %N extension",
+						 tls_extension_names, extension_type);
+					this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+					extensions->destroy(extensions);
+					extension->destroy(extension);
+					return NEED_MORE;
+				}
 				chunk_free(&this->hashsig);
 				this->hashsig = chunk_clone(extension_data);
 				break;
 			case TLS_EXT_SUPPORTED_GROUPS:
+				if (!extension->read_data16(extension, &extension_data))
+				{
+					DBG1(DBG_TLS, "invalid %N extension",
+						 tls_extension_names, extension_type);
+					this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+					extensions->destroy(extensions);
+					extension->destroy(extension);
+					return NEED_MORE;
+				}
 				chunk_free(&this->curves);
 				this->curves_received = TRUE;
 				this->curves = chunk_clone(extension_data);
@@ -370,8 +388,7 @@ static status_t process_client_hello(private_tls_server_t *this,
 				{
 					DBG1(DBG_TLS, "invalid %N extension",
 						 tls_extension_names, extension_type);
-					this->alert->add(this->alert, TLS_FATAL,
-									 TLS_DECODE_ERROR);
+					this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 					extensions->destroy(extensions);
 					extension->destroy(extension);
 					return NEED_MORE;
