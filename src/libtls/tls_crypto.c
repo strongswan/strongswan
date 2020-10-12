@@ -23,6 +23,7 @@
 
 #include <utils/debug.h>
 #include <plugins/plugin_feature.h>
+#include <collections/hashtable.h>
 
 ENUM_BEGIN(tls_cipher_suite_names, TLS_NULL_WITH_NULL_NULL,
 								   TLS_DH_anon_WITH_3DES_EDE_CBC_SHA,
@@ -2422,4 +2423,88 @@ tls_named_group_t tls_ec_group_to_curve(diffie_hellman_group_t group)
 		}
 	}
 	return 0;
+}
+
+/**
+ * See header.
+ */
+key_type_t tls_signature_scheme_to_key_type(tls_signature_scheme_t sig)
+{
+	int i;
+
+	for (i = 0; i < countof(schemes); i++)
+	{
+		if (schemes[i].sig == sig)
+		{
+			return key_type_from_signature_scheme(schemes[i].params.scheme);
+		}
+	}
+	return 0;
+}
+
+/**
+ * Hashtable hash function
+ */
+static u_int hash_key_type(key_type_t *type)
+{
+	return chunk_hash(chunk_from_thing(*type));
+}
+
+/**
+ * Hashtable equals function
+ */
+static bool equals_key_type(key_type_t *key1, key_type_t *key2)
+{
+	return *key1 == *key2;
+}
+
+CALLBACK(filter_key_types, bool,
+	void *data, enumerator_t *orig, va_list args)
+{
+	key_type_t *key_type, *out;
+
+	VA_ARGS_VGET(args, out);
+
+	if (orig->enumerate(orig, NULL, &key_type))
+	{
+		*out = *key_type;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+CALLBACK(destroy_key_types, void,
+	hashtable_t *ht)
+{
+	ht->destroy_function(ht, (void*)free);
+}
+
+/*
+ * See header.
+ */
+enumerator_t *tls_get_supported_key_types(tls_version_t min_version,
+										  tls_version_t max_version)
+{
+	hashtable_t *ht;
+	key_type_t *type, lookup;
+	int i;
+
+	ht = hashtable_create((hashtable_hash_t)hash_key_type,
+						  (hashtable_equals_t)equals_key_type, 4);
+	for (i = 0; i < countof(schemes); i++)
+	{
+		if (schemes[i].min_version <= max_version &&
+			schemes[i].max_version >= min_version)
+		{
+			lookup = key_type_from_signature_scheme(schemes[i].params.scheme);
+			if (!ht->get(ht, &lookup))
+			{
+				type = malloc_thing(key_type_t);
+				*type = lookup;
+				ht->put(ht, type, type);
+			}
+		}
+	}
+	return enumerator_create_filter(ht->create_enumerator(ht),
+									filter_key_types, ht, destroy_key_types);
 }
