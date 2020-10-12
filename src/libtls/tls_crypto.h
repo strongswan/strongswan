@@ -691,4 +691,24 @@ int tls_crypto_get_supported_groups(diffie_hellman_group_t **groups);
  */
 tls_named_group_t tls_ec_group_to_curve(diffie_hellman_group_t group);
 
+/**
+ * Get the key type from a TLS signature scheme
+ *
+ * @param sig			TLS signature algorithm scheme
+ * @return				type of a key
+ */
+key_type_t tls_signature_scheme_to_key_type(tls_signature_scheme_t sig);
+
+/**
+ * Create an enumerator over supported key types within a specific TLS version range
+ *
+ * Enumerates over key_type_t
+ *
+ * @param min_version	minimum negotiated TLS version
+ * @param max_version	maximum negotiated TLS version
+ * @return				hashtable of key types
+ */
+enumerator_t *tls_get_supported_key_types(tls_version_t min_version,
+										  tls_version_t max_version);
+
 #endif /** TLS_CRYPTO_H_ @}*/
