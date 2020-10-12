@@ -84,8 +84,7 @@ bool pts_meas_algo_update(char *hash_alg, pts_meas_algorithms_t *algorithms);
  * Remove the PTS measurement algorithms not having an assigned PCR bank
  *
  * @param tpm				handle to TPM object
- * @param algorithm			reduced set of algorithms with assigned PCR banks
- * @
+ * @param algorithms		reduced set of algorithms with assigned PCR banks
  */
 void pts_meas_algo_with_pcr(tpm_tss_t *tpm, pts_meas_algorithms_t *algorithms);
 
@@ -111,8 +110,8 @@ hash_algorithm_t pts_meas_algo_to_hash(pts_meas_algorithms_t algorithm);
 /**
  * Convert hash_algorithm_t to pts_meas_algorithms_t
  *
- * @param algorithm		PTS measurement algorithm type
- * @return				libstrongswan hash algorithm type
+ * @param algorithm		libstrongswan hash algorithm type
+ * @return				PTS measurement algorithm type
  */
 pts_meas_algorithms_t pts_meas_algo_from_hash(hash_algorithm_t algorithm);
 
