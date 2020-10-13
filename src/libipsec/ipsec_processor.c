@@ -60,6 +60,14 @@ struct private_ipsec_processor_t {
 		ipsec_outbound_cb_t cb;
 		void *data;
 	} outbound;
+	
+	/**
+	 * Registered acquire callback
+	 */
+	struct {
+		ipsec_acquire_cb_t cb;
+		void *data;
+	} acquire;
 
 	/**
 	 * Lock used to synchronize access to the callbacks
@@ -211,6 +219,23 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 									   FALSE);
 	if (!sa)
 	{	/* TODO-IPSEC: send an acquire to upper layer */
+		this->lock->read_lock(this->lock);
+		if (this->acquire.cb)
+		{
+			uint32_t reqid = policy->get_reqid(policy);
+			traffic_selector_t *source_ts = policy->get_source_ts(policy),
+				*destination_ts = policy->get_destination_ts(policy);
+
+			source_ts = source_ts->clone(source_ts);
+			destination_ts = destination_ts->clone(destination_ts);
+
+			this->acquire.cb(this->acquire.data, reqid, source_ts, destination_ts);
+		}
+		else
+		{
+			DBG2(DBG_ESP, "No acquire callback registered.");
+		}
+		this->lock->unlock(this->lock);
 		DBG1(DBG_ESP, "could not find an outbound IPsec SA for reqid {%u}, "
 			 "dropping packet", policy->get_reqid(policy));
 		packet->destroy(packet);
@@ -290,6 +315,27 @@ METHOD(ipsec_processor_t, unregister_outbound, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(ipsec_processor_t, register_acquire, void,
+	private_ipsec_processor_t *this, ipsec_acquire_cb_t cb, void *data)
+{
+	this->lock->write_lock(this->lock);
+	this->acquire.cb = cb;
+	this->acquire.data = data;
+	this->lock->unlock(this->lock);
+}
+
+METHOD(ipsec_processor_t, unregister_acquire, void,
+	private_ipsec_processor_t *this, ipsec_acquire_cb_t cb)
+{
+	this->lock->write_lock(this->lock);
+	if (this->acquire.cb == cb)
+	{
+		this->acquire.cb = NULL;
+	}
+	this->lock->unlock(this->lock);
+}
+
+
 METHOD(ipsec_processor_t, destroy, void,
 	private_ipsec_processor_t *this)
 {
@@ -314,6 +360,8 @@ ipsec_processor_t *ipsec_processor_create()
 			.unregister_inbound = _unregister_inbound,
 			.register_outbound = _register_outbound,
 			.unregister_outbound = _unregister_outbound,
+			.register_acquire = _register_acquire,
+			.unregister_acquire = _unregister_acquire,
 			.destroy = _destroy,
 		},
 		.inbound_queue = codel_queue_create(
