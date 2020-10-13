@@ -1512,19 +1512,18 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 /**
  * Get the signature parameters from a TLS signature scheme
  */
-static signature_params_t *params_for_scheme(tls_signature_scheme_t sig)
+static signature_params_t *params_for_scheme(tls_signature_scheme_t sig,
+											 bool sign)
 {
 	int i;
 
 	for (i = 0; i < countof(schemes); i++)
 	{
 		/* strongSwan supports only RSA_PSS_RSAE schemes for signing but can
-		 * verify public keys in rsaEncryption as well as rsassaPss encoding.
-		 * Current implementation does not distinguish between signing and
-		 * verifying. */
-		if (sig == TLS_SIG_RSA_PSS_PSS_SHA256 ||
-			sig == TLS_SIG_RSA_PSS_PSS_SHA384 ||
-			sig == TLS_SIG_RSA_PSS_PSS_SHA512)
+		 * verify public keys in rsaEncryption as well as rsassaPss encoding. */
+		if (sign && (sig == TLS_SIG_RSA_PSS_PSS_SHA256 ||
+					 sig == TLS_SIG_RSA_PSS_PSS_SHA384 ||
+					 sig == TLS_SIG_RSA_PSS_PSS_SHA512))
 		{
 			continue;
 		}
@@ -1765,7 +1764,7 @@ METHOD(tls_crypto_t, sign, bool,
 		{
 			if (reader->read_uint16(reader, &scheme))
 			{
-				params = params_for_scheme(scheme);
+				params = params_for_scheme(scheme, TRUE);
 				if (params &&
 					type == key_type_from_signature_scheme(params->scheme) &&
 					key->sign(key, params->scheme, params->params, data, &sig))
@@ -1840,7 +1839,7 @@ METHOD(tls_crypto_t, verify, bool,
 			DBG1(DBG_TLS, "received invalid signature");
 			return FALSE;
 		}
-		params = params_for_scheme(scheme);
+		params = params_for_scheme(scheme, FALSE);
 		if (!params)
 		{
 			DBG1(DBG_TLS, "signature algorithms %N not supported",
