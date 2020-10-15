@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Tobias Brunner
+ * Copyright (C) 2016-2020 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -528,6 +528,11 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		profile.setDnsServers(getAddressList(obj, "dns-servers"));
 		profile.setMTU(getInteger(obj, "mtu", Constants.MTU_MIN, Constants.MTU_MAX));
 		profile.setNATKeepAlive(getInteger(obj, "nat-keepalive", Constants.NAT_KEEPALIVE_MIN, Constants.NAT_KEEPALIVE_MAX));
+		if (obj.optBoolean("ipv6-transport", false))
+		{
+			flags |= VpnProfile.FLAGS_IPv6_TRANSPORT;
+		}
+
 		JSONObject split = obj.optJSONObject("split-tunneling");
 		if (split != null)
 		{
