@@ -17,6 +17,7 @@ BUILDDIR ?= $(PKG)
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
 CONFIG_OPTS = \
+	--enable-silent-rules \
 	--sysconfdir=/etc \
 	--with-strongswan-conf=/etc/strongswan.conf.testing \
 	--with-random-device=/dev/urandom \
