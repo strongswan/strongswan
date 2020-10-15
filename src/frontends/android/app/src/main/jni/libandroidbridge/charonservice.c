@@ -479,7 +479,7 @@ static bool charonservice_register(plugin_t *plugin, plugin_feature_t *feature,
 /**
  * Set strongswan.conf options
  */
-static void set_options(char *logfile)
+static void set_options(char *logfile, jboolean ipv6)
 {
 	lib->settings->set_int(lib->settings,
 					"charon.plugins.android_log.loglevel", ANDROID_DEBUG_LEVEL);
@@ -516,10 +516,10 @@ static void set_options(char *logfile)
 	 * information */
 	lib->settings->set_bool(lib->settings,
 					"charon.plugins.socket-default.set_source", FALSE);
-	/* the Linux kernel does currently not support UDP encaspulation for IPv6
-	 * so lets disable IPv6 for now to avoid issues with dual-stack gateways */
+	/* the Linux kernel only supports UDP encap for IPv6 since 5.8, so let's use
+	 * IPv6 only if requested, to avoid issues with older dual-stack servers */
 	lib->settings->set_bool(lib->settings,
-					"charon.plugins.socket-default.use_ipv6", FALSE);
+					"charon.plugins.socket-default.use_ipv6", ipv6);
 
 #ifdef USE_BYOD
 	lib->settings->set_str(lib->settings,
@@ -634,7 +634,7 @@ static void __attribute__ ((constructor))register_logger()
  * Initialize charon and the libraries via JNI
  */
 JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
-	jobject builder, jstring jlogfile, jstring jappdir, jboolean byod)
+	jobject builder, jstring jlogfile, jstring jappdir, jboolean byod, jboolean ipv6)
 {
 	struct sigaction action;
 	struct utsname utsname;
@@ -656,7 +656,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	/* set options before initializing other libraries that might read them */
 	logfile = androidjni_convert_jstring(env, jlogfile);
 
-	set_options(logfile);
+	set_options(logfile, ipv6);
 	free(logfile);
 
 	if (!libipsec_init())

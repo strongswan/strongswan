@@ -744,7 +744,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	auth_cfg_t *auth;
 	ike_cfg_create_t ike = {
 		.version = IKEV2,
-		.local = "0.0.0.0",
+		.local = "",
 		.local_port = charon->socket->get_port(charon->socket, FALSE),
 		.force_encap = TRUE,
 		.fragmentation = FRAGMENTATION_YES,
