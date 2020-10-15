@@ -1542,7 +1542,8 @@ METHOD(child_sa_t, update, status_t,
 													OPT_PROXY_MODE);
 
 	if (!this->config->has_option(this->config, OPT_NO_POLICIES) &&
-		require_policy_update())
+		require_policy_update() && array_count(this->my_ts) &&
+		array_count(this->other_ts))
 	{
 		ipsec_sa_cfg_t my_sa, other_sa;
 		enumerator_t *enumerator;
