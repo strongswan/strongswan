@@ -1278,6 +1278,17 @@ static void process_addr(private_kernel_netlink_net_t *this,
 				addr_map_entry_remove(this->addrs, addr, iface);
 				addr_entry_destroy(addr);
 			}
+			else if (entry->addr->flags != msg->ifa_flags)
+			{
+				found = TRUE;
+				entry->addr->flags = msg->ifa_flags;
+				if (event && iface->usable)
+				{
+					changed = TRUE;
+					DBG1(DBG_KNL, "flags changed for %H on %s", host,
+						 iface->ifname);
+				}
+			}
 		}
 		else
 		{
