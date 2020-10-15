@@ -1605,7 +1605,10 @@ METHOD(child_sa_t, update, status_t,
 
 				/* we reinstall the virtual IP to handle interface roaming
 				 * correctly */
-				vips->invoke_function(vips, reinstall_vip, me);
+				if (vips)
+				{
+					vips->invoke_function(vips, reinstall_vip, me);
+				}
 
 				/* reinstall updated policies */
 				install_policies_internal(this, me, other, my_ts, other_ts,
