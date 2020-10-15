@@ -114,6 +114,11 @@ struct private_child_sa_t {
 	child_sa_outbound_state_t outbound_state;
 
 	/**
+	 * Whether the inbound SA has been installed
+	 */
+	bool inbound_installed;
+
+	/**
 	 * Whether the peer supports TFCv3
 	 */
 	bool tfcv3;
@@ -541,7 +546,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 
 	if (inbound)
 	{
-		if (this->my_spi)
+		if (this->my_spi && this->inbound_installed)
 		{
 			kernel_ipsec_sa_id_t id = {
 				.src = this->other_addr,
@@ -807,6 +812,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		this->my_cpi = cpi;
 		dst_ts = my_ts;
 		src_ts = other_ts;
+		this->inbound_installed = TRUE;
 	}
 	else
 	{
@@ -1469,7 +1475,7 @@ static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 						   bool encap)
 {
 	/* update our (initiator) SA */
-	if (this->my_spi)
+	if (this->my_spi && this->inbound_installed)
 	{
 		kernel_ipsec_sa_id_t id = {
 			.src = this->other_addr,
@@ -1701,7 +1707,7 @@ METHOD(child_sa_t, destroy, void,
 	}
 
 	/* delete SAs in the kernel, if they are set up */
-	if (this->my_spi)
+	if (this->my_spi && this->inbound_installed)
 	{
 		kernel_ipsec_sa_id_t id = {
 			.src = this->other_addr,
