@@ -18,7 +18,7 @@ class CommandWrappers(object):
     def reload_settings(self):
         """Reload strongswan.conf settings and any plugins supporting reload.
         """
-        self.request("reload-settings")
+        return self.request("reload-settings")
 
     def initiate(self, sa):
         """Initiate an SA.
@@ -71,7 +71,7 @@ class CommandWrappers(object):
         :param policy: policy to install
         :type policy: dict
         """
-        self.request("install", policy)
+        return self.request("install", policy)
 
     def uninstall(self, policy):
         """Uninstall a trap, drop or bypass policy defined by a CHILD_SA config.
@@ -79,7 +79,7 @@ class CommandWrappers(object):
         :param policy: policy to uninstall
         :type policy: dict
         """
-        self.request("uninstall", policy)
+        return self.request("uninstall", policy)
 
     def list_sas(self, filters=None):
         """Retrieve active IKE_SAs and associated CHILD_SAs.
@@ -158,7 +158,7 @@ class CommandWrappers(object):
         :param connection: connection definition
         :type connection: dict
         """
-        self.request("load-conn", connection)
+        return self.request("load-conn", connection)
 
     def unload_conn(self, name):
         """Unload a connection definition.
@@ -166,7 +166,7 @@ class CommandWrappers(object):
         :param name: connection definition name
         :type name: dict
         """
-        self.request("unload-conn", name)
+        return self.request("unload-conn", name)
 
     def load_cert(self, certificate):
         """Load a certificate into the daemon.
@@ -174,7 +174,7 @@ class CommandWrappers(object):
         :param certificate: PEM or DER encoded certificate
         :type certificate: dict
         """
-        self.request("load-cert", certificate)
+        return self.request("load-cert", certificate)
 
     def load_key(self, private_key):
         """Load a private key into the daemon.
@@ -197,7 +197,7 @@ class CommandWrappers(object):
         :param key_id: key identifier
         :type key_id: dict
         """
-        self.request("unload-key", key_id)
+        return self.request("unload-key", key_id)
 
     def get_keys(self):
         """Retrieve identifiers of private keys loaded exclusively over vici.
@@ -230,7 +230,7 @@ class CommandWrappers(object):
         :param secret: shared IKE PSK, EAP or XAuth secret
         :type secret: dict
         """
-        self.request("load-shared", secret)
+        return self.request("load-shared", secret)
 
     def unload_shared(self, identifier):
         """Unload a previously loaded shared secret by its unique identifier.
@@ -240,7 +240,7 @@ class CommandWrappers(object):
         :param identifier: unique identifier
         :type secret: dict
         """
-        self.request("unload-shared", identifier)
+        return self.request("unload-shared", identifier)
 
     def get_shared(self):
         """Retrieve identifiers of shared keys loaded exclusively over vici.
@@ -261,7 +261,7 @@ class CommandWrappers(object):
         :param filter: flush only certificates of a given type (optional)
         :type filter: dict
         """
-        self.request("flush-certs", filter)
+        return self.request("flush-certs", filter)
 
     def clear_creds(self):
         """Clear credentials loaded over vici.
@@ -270,7 +270,7 @@ class CommandWrappers(object):
         This affects only credentials loaded over vici, but additionally
         flushes the credential cache.
         """
-        self.request("clear-creds")
+        return self.request("clear-creds")
 
     def load_authority(self, ca):
         """Load a certification authority definition into the daemon.
@@ -278,7 +278,7 @@ class CommandWrappers(object):
         :param ca: certification authority definition
         :type ca: dict
         """
-        self.request("load-authority", ca)
+        return self.request("load-authority", ca)
 
     def unload_authority(self, ca):
         """Unload a previously loaded certification authority by name.
@@ -286,7 +286,7 @@ class CommandWrappers(object):
         :param ca: certification authority name
         :type ca: dict
         """
-        self.request("unload-authority", ca)
+        return self.request("unload-authority", ca)
 
     def load_pool(self, pool):
         """Load a virtual IP pool.
@@ -308,7 +308,7 @@ class CommandWrappers(object):
         :param pool_name: pool by name
         :type pool_name: dict
         """
-        self.request("unload-pool", pool_name)
+        return self.request("unload-pool", pool_name)
 
     def get_pools(self, options=None):
         """Retrieve loaded pools.
@@ -350,4 +350,4 @@ class CommandWrappers(object):
         :param options: reset global counters or those of all or one connection
         :type options: dict
         """
-        self.request("reset-counters", options)
+        return self.request("reset-counters", options)
