@@ -2,7 +2,7 @@
  * Copyright (C) 2010-2020 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Copyright (C) 2016-2019 Andreas Steffen
+ * Copyright (C) 2016-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -73,38 +73,34 @@ enum key_exchange_method_t {
 	NTRU_192_BIT       = 1032,
 	NTRU_256_BIT       = 1033,
 	NH_128_BIT         = 1040,
-	/** NIST round 2 KEM candidates, in PRIVATE USE */
-	KE_BIKE1_L1        = 1050,
-	KE_BIKE1_L3        = 1051,
-	KE_BIKE1_L5        = 1052,
-	KE_BIKE2_L1        = 1053,
-	KE_BIKE2_L3        = 1054,
-	KE_BIKE2_L5        = 1055,
-	KE_BIKE3_L1        = 1056,
-	KE_BIKE3_L3        = 1057,
-	KE_BIKE3_L5        = 1058,
-	KE_FRODO_AES_L1    = 1059,
-	KE_FRODO_AES_L3    = 1060,
-	KE_FRODO_AES_L5    = 1061,
-	KE_FRODO_SHAKE_L1  = 1062,
-	KE_FRODO_SHAKE_L3  = 1063,
-	KE_FRODO_SHAKE_L5  = 1064,
-	KE_KYBER_L1        = 1065,
-	KE_KYBER_L3        = 1066,
-	KE_KYBER_L5        = 1067,
-	KE_NEWHOPE_L1      = 1068,
-	KE_NEWHOPE_L5      = 1069,
-	KE_NTRU_HPS_L1     = 1070,
-	KE_NTRU_HPS_L3     = 1071,
-	KE_NTRU_HPS_L5     = 1072,
-	KE_NTRU_HRSS_L3    = 1073,
-	KE_SABER_L1        = 1074,
-	KE_SABER_L3        = 1075,
-	KE_SABER_L5        = 1076,
-	KE_SIKE_L1         = 1077,
-	KE_SIKE_L2         = 1078,
-	KE_SIKE_L3         = 1079,
-	KE_SIKE_L5         = 1080,
+	/** NIST round 3 KEM candidates, in PRIVATE USE */
+	KE_KYBER_L1        = 1050,
+	KE_KYBER_L3        = 1051,
+	KE_KYBER_L5        = 1052,
+	KE_NTRU_HPS_L1     = 1053,
+	KE_NTRU_HPS_L3     = 1054,
+	KE_NTRU_HPS_L5     = 1055,
+	KE_NTRU_HRSS_L3    = 1056,
+	KE_SABER_L1        = 1057,
+	KE_SABER_L3        = 1058,
+	KE_SABER_L5        = 1059,
+	/** NIST alternative KEM candidates, in PRIVATE USE */
+	KE_BIKE_L1         = 1060,
+	KE_BIKE_L3         = 1061,
+	KE_BIKE_L5         = 1062,
+	KE_FRODO_AES_L1    = 1063,
+	KE_FRODO_AES_L3    = 1064,
+	KE_FRODO_AES_L5    = 1065,
+	KE_FRODO_SHAKE_L1  = 1066,
+	KE_FRODO_SHAKE_L3  = 1067,
+	KE_FRODO_SHAKE_L5  = 1068,
+	KE_HQC_L1          = 1069,
+	KE_HQC_L3          = 1070,
+	KE_HQC_L5          = 1071,
+	KE_SIKE_L1         = 1072,
+	KE_SIKE_L2         = 1073,
+	KE_SIKE_L3         = 1074,
+	KE_SIKE_L5         = 1075,
 	/** MODP group with custom generator/prime */
 	/** internally used DH group with additional parameters g and p, outside
 	 * of PRIVATE USE (i.e. IKEv2 DH group range) so it can't be negotiated */
