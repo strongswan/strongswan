@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Andreas Steffen
+ * Copyright (C) 2018-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Based on public domain code by Erdem Alkim, Léo Ducas, Thomas Pöppelmann,
@@ -231,24 +231,6 @@ oqs_kem_t *oqs_kem_create(key_exchange_method_t method)
 
 	switch (method)
 	{
-		case KE_FRODO_AES_L1:
-			kem_alg = OQS_KEM_alg_frodokem_640_aes;
-			break;
-		case KE_FRODO_AES_L3:
-			kem_alg = OQS_KEM_alg_frodokem_976_aes;
-			break;
-		case KE_FRODO_AES_L5:
-			kem_alg = OQS_KEM_alg_frodokem_1344_aes;
-			break;
-		case KE_FRODO_SHAKE_L1:
-			kem_alg = OQS_KEM_alg_frodokem_640_shake;
-			break;
-		case KE_FRODO_SHAKE_L3:
-			kem_alg = OQS_KEM_alg_frodokem_976_shake;
-			break;
-		case KE_FRODO_SHAKE_L5:
-			kem_alg = OQS_KEM_alg_frodokem_1344_shake;
-			break;
 		case KE_KYBER_L1:
 			kem_alg = OQS_KEM_alg_kyber_512;
 			break;
@@ -257,12 +239,6 @@ oqs_kem_t *oqs_kem_create(key_exchange_method_t method)
 			break;
 		case KE_KYBER_L5:
 			kem_alg = OQS_KEM_alg_kyber_1024;
-			break;
-		case KE_NEWHOPE_L1:
-			kem_alg = OQS_KEM_alg_newhope_512cca;
-			break;
-		case KE_NEWHOPE_L5:
-			kem_alg = OQS_KEM_alg_newhope_1024cca;
 			break;
 		case KE_NTRU_HPS_L1:
 			kem_alg = OQS_KEM_alg_ntru_hps2048509;
@@ -284,6 +260,24 @@ oqs_kem_t *oqs_kem_create(key_exchange_method_t method)
 			break;
 		case KE_SABER_L5:
 			kem_alg = OQS_KEM_alg_saber_firesaber;
+			break;
+		case KE_FRODO_AES_L1:
+			kem_alg = OQS_KEM_alg_frodokem_640_aes;
+			break;
+		case KE_FRODO_AES_L3:
+			kem_alg = OQS_KEM_alg_frodokem_976_aes;
+			break;
+		case KE_FRODO_AES_L5:
+			kem_alg = OQS_KEM_alg_frodokem_1344_aes;
+			break;
+		case KE_FRODO_SHAKE_L1:
+			kem_alg = OQS_KEM_alg_frodokem_640_shake;
+			break;
+		case KE_FRODO_SHAKE_L3:
+			kem_alg = OQS_KEM_alg_frodokem_976_shake;
+			break;
+		case KE_FRODO_SHAKE_L5:
+			kem_alg = OQS_KEM_alg_frodokem_1344_shake;
 			break;
 		case KE_SIKE_L1:
 			kem_alg = OQS_KEM_alg_sike_p434;

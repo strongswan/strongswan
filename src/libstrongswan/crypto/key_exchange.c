@@ -2,7 +2,7 @@
  * Copyright (C) 2010-2020 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Copyright (C) 2016-2019 Andreas Steffen
+ * Copyright (C) 2016-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -57,27 +57,10 @@ ENUM_NEXT(key_exchange_method_names, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
 	"NTRU_256");
 ENUM_NEXT(key_exchange_method_names, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
 	"NEWHOPE_128");
-ENUM_NEXT(key_exchange_method_names, KE_BIKE1_L1, KE_SIKE_L5, NH_128_BIT,
-	"BIKE1_L1",
-	"BIKE1_L3",
-	"BIKE1_L5",
-	"BIKE2_L1",
-	"BIKE2_L3",
-	"BIKE2_L5",
-	"BIKE3_L1",
-	"BIKE3_L3",
-	"BIKE3_L5",
-	"FRODO_AES_L1",
-	"FRODO_AES_L3",
-	"FRODO_AES_L5",
-	"FRODO_SHAKE_L1",
-	"FRODO_SHAKE_L3",
-	"FRODO_SHAKE_L5",
+ENUM_NEXT(key_exchange_method_names, KE_KYBER_L1, KE_SIKE_L5, NH_128_BIT,
 	"KYBER_L1",
 	"KYBER_L3",
 	"KYBER_L5",
-	"NEWHOPE_L1",
-	"NEWHOPE_L5",
 	"NTRU_HPS_L1",
 	"NTRU_HPS_L3",
 	"NTRU_HPS_L5",
@@ -85,6 +68,18 @@ ENUM_NEXT(key_exchange_method_names, KE_BIKE1_L1, KE_SIKE_L5, NH_128_BIT,
 	"SABER_L1",
 	"SABER_L3",
 	"SABER_L5",
+	"BIKE_L1",
+	"BIKE_L3",
+	"BIKE_L5",
+	"FRODO_AES_L1",
+	"FRODO_AES_L3",
+	"FRODO_AES_L5",
+	"FRODO_SHAKE_L1",
+	"FRODO_SHAKE_L3",
+	"FRODO_SHAKE_L5",
+	"HQC_L1",
+	"HQC_L3",
+	"HQC_L5",
 	"SIKE_L1",
 	"SIKE_L2",
 	"SIKE_L3",
@@ -129,27 +124,10 @@ ENUM_NEXT(key_exchange_method_names_short, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL
 	"ntru256");
 ENUM_NEXT(key_exchange_method_names_short, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
 	"newhope128");
-ENUM_NEXT(key_exchange_method_names_short, KE_BIKE1_L1, KE_SIKE_L5, NH_128_BIT,
-	"bike11",
-	"bike13",
-	"bike15",
-	"bike21",
-	"bike23",
-	"bike25",
-	"bike31",
-	"bike33",
-	"bike35",
-	"frodoa1",
-	"frodoa3",
-	"frodoa5",
-	"frodos1",
-	"frodos3",
-	"frodos5",
+ENUM_NEXT(key_exchange_method_names_short, KE_KYBER_L1, KE_SIKE_L5, NH_128_BIT,
 	"kyber1",
 	"kyber3",
 	"kyber5",
-	"newhope1",
-	"newhope5",
 	"ntrup1",
 	"ntrup3",
 	"ntrup5",
@@ -157,6 +135,18 @@ ENUM_NEXT(key_exchange_method_names_short, KE_BIKE1_L1, KE_SIKE_L5, NH_128_BIT,
 	"saber1",
 	"saber3",
 	"saber5",
+	"bike1",
+	"bike3",
+	"bike5",
+	"frodoa1",
+	"frodoa3",
+	"frodoa5",
+	"frodos1",
+	"frodos3",
+	"frodos5",
+	"hqc1",
+	"hqc3",
+	"hqc5",
 	"sike1",
 	"sike2",
 	"sike3",
@@ -687,26 +677,9 @@ bool key_exchange_is_kem(key_exchange_method_t ke)
 {
 	switch (ke)
 	{
-		case KE_BIKE1_L1:
-		case KE_BIKE1_L3:
-		case KE_BIKE1_L5:
-		case KE_BIKE2_L1:
-		case KE_BIKE2_L3:
-		case KE_BIKE2_L5:
-		case KE_BIKE3_L1:
-		case KE_BIKE3_L3:
-		case KE_BIKE3_L5:
-		case KE_FRODO_AES_L1:
-		case KE_FRODO_AES_L3:
-		case KE_FRODO_AES_L5:
-		case KE_FRODO_SHAKE_L1:
-		case KE_FRODO_SHAKE_L3:
-		case KE_FRODO_SHAKE_L5:
 		case KE_KYBER_L1:
 		case KE_KYBER_L3:
 		case KE_KYBER_L5:
-		case KE_NEWHOPE_L1:
-		case KE_NEWHOPE_L5:
 		case KE_NTRU_HPS_L1:
 		case KE_NTRU_HPS_L3:
 		case KE_NTRU_HPS_L5:
@@ -714,6 +687,18 @@ bool key_exchange_is_kem(key_exchange_method_t ke)
 		case KE_SABER_L1:
 		case KE_SABER_L3:
 		case KE_SABER_L5:
+		case KE_BIKE_L1:
+		case KE_BIKE_L3:
+		case KE_BIKE_L5:
+		case KE_HQC_L1:
+		case KE_HQC_L3:
+		case KE_HQC_L5:
+		case KE_FRODO_AES_L1:
+		case KE_FRODO_AES_L3:
+		case KE_FRODO_AES_L5:
+		case KE_FRODO_SHAKE_L1:
+		case KE_FRODO_SHAKE_L3:
+		case KE_FRODO_SHAKE_L5:
 		case KE_SIKE_L1:
 		case KE_SIKE_L2:
 		case KE_SIKE_L3:
@@ -783,26 +768,9 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 		case NTRU_192_BIT:
 		case NTRU_256_BIT:
 		case NH_128_BIT:
-		case KE_BIKE1_L1:
-		case KE_BIKE1_L3:
-		case KE_BIKE1_L5:
-		case KE_BIKE2_L1:
-		case KE_BIKE2_L3:
-		case KE_BIKE2_L5:
-		case KE_BIKE3_L1:
-		case KE_BIKE3_L3:
-		case KE_BIKE3_L5:
-		case KE_FRODO_AES_L1:
-		case KE_FRODO_AES_L3:
-		case KE_FRODO_AES_L5:
-		case KE_FRODO_SHAKE_L1:
-		case KE_FRODO_SHAKE_L3:
-		case KE_FRODO_SHAKE_L5:
 		case KE_KYBER_L1:
 		case KE_KYBER_L3:
 		case KE_KYBER_L5:
-		case KE_NEWHOPE_L1:
-		case KE_NEWHOPE_L5:
 		case KE_NTRU_HPS_L1:
 		case KE_NTRU_HPS_L3:
 		case KE_NTRU_HPS_L5:
@@ -810,6 +778,18 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 		case KE_SABER_L1:
 		case KE_SABER_L3:
 		case KE_SABER_L5:
+		case KE_BIKE_L1:
+		case KE_BIKE_L3:
+		case KE_BIKE_L5:
+		case KE_FRODO_AES_L1:
+		case KE_FRODO_AES_L3:
+		case KE_FRODO_AES_L5:
+		case KE_FRODO_SHAKE_L1:
+		case KE_FRODO_SHAKE_L3:
+		case KE_FRODO_SHAKE_L5:
+		case KE_HQC_L1:
+		case KE_HQC_L3:
+		case KE_HQC_L5:
 		case KE_SIKE_L1:
 		case KE_SIKE_L2:
 		case KE_SIKE_L3:
