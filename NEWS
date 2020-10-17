@@ -1,3 +1,14 @@
+strongswan-6.0
+--------------
+
+- Support of multiple post-quantum key exchanges using the IKE_INTERMEDIATE
+  message (draft-ietf-ipsecme-ikev2-intermediate) and the Additional Key
+  Exchange 1..7 transform types (draft-ietf-ipsecme-ikev2-multiple-ke).
+
+- New oqs and frodo plugins support NIST round 3 submission and alternate
+  KEM candidates.
+
+
 strongswan-5.9.4
 ----------------
 
