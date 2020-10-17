@@ -21,7 +21,26 @@
 
 #include <time.h>
 
-const int count = 10;
+const int count = 20;
+
+/**
+  * Skip non-supported KE algorithms
+  */
+static bool unsupported(key_exchange_method_t method)
+{
+	switch(method)
+	{
+		case KE_BIKE_L1:
+		case KE_BIKE_L3:
+		case KE_BIKE_L5:
+		case KE_HQC_L1:
+		case KE_HQC_L3:
+		case KE_HQC_L5:
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
 
 START_TEST(test_oqs_good)
 {
@@ -30,6 +49,11 @@ START_TEST(test_oqs_good)
 	key_exchange_t *i_ke, *r_ke;
 	struct timespec start, stop;
 	int k;
+
+	if (unsupported(method))
+	{
+		return;
+	}
 
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 	for (k = 0; k < count; k++)
@@ -94,8 +118,13 @@ START_TEST(test_oqs_wrong)
 	key_exchange_t *i_ke, *r_ke;
 	key_exchange_method_t method = _i;
 
+	if (unsupported(method))
+	{
+		return;
+	}
+
 	/* test non-kem method */
-	if (method == KE_BIKE1_L1)
+	if (method == KE_KYBER_L1)
 	{
 		ck_assert(!oqs_kem_create(CURVE_25519));
 	}
@@ -148,6 +177,10 @@ START_TEST(test_oqs_fail_i)
 	char buf_ff[16384];
 	chunk_t i_msg, r_msg, fail_msg;
 
+	if (unsupported(method))
+	{
+		return;
+	}
 
 	memset(buf_ff, 0xff, sizeof(buf_ff));
 	fail_msg = chunk_create(buf_ff, sizeof(buf_ff));
@@ -186,6 +219,11 @@ START_TEST(test_oqs_fail_r)
 	char buf_ff[18432];
 	chunk_t i_msg, fail_msg;
 
+	if (unsupported(method))
+	{
+		return;
+	}
+
 	memset(buf_ff, 0xff, sizeof(buf_ff));
 	fail_msg = chunk_create(buf_ff, sizeof(buf_ff));
 
@@ -222,19 +260,19 @@ Suite *oqs_suite_create()
 
 	tc = tcase_create("good");
 	test_case_set_timeout(tc, 30);
-	tcase_add_loop_test(tc, test_oqs_good, KE_BIKE1_L1, KE_SIKE_L5 + 1);
+	tcase_add_loop_test(tc, test_oqs_good, KE_KYBER_L1, KE_SIKE_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("wrong");
-	tcase_add_loop_test(tc, test_oqs_wrong, KE_BIKE1_L1, KE_SIKE_L5 + 1);
+	tcase_add_loop_test(tc, test_oqs_wrong, KE_KYBER_L1, KE_SIKE_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("fail_i");
-	tcase_add_loop_test(tc, test_oqs_fail_i, KE_BIKE1_L1, KE_SIKE_L5 + 1);
+	tcase_add_loop_test(tc, test_oqs_fail_i, KE_KYBER_L1, KE_SIKE_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("fail_r");
-	tcase_add_loop_test(tc, test_oqs_fail_r, KE_BIKE1_L1, KE_SIKE_L5 + 1);
+	tcase_add_loop_test(tc, test_oqs_fail_r, KE_KYBER_L1, KE_SIKE_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	return s;
