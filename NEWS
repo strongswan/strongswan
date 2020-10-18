@@ -1,6 +1,9 @@
 strongswan-6.0
 --------------
 
+- The oqs plugin supports the NIST round 3 submission signature algorithms
+  DILITHIUM and Falcon.
+
 - Support of multiple post-quantum key exchanges using the IKE_INTERMEDIATE
   message (draft-ietf-ipsecme-ikev2-intermediate) and the Additional Key
   Exchange 1..7 transform types (draft-ietf-ipsecme-ikev2-multiple-ke).
