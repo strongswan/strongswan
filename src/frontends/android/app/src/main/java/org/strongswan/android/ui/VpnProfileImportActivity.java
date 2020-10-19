@@ -463,8 +463,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		}
 		catch (IllegalArgumentException e)
 		{
-			e.printStackTrace();
-			return null;
+			throw new JSONException(getString(R.string.profile_import_failed_value, "uuid"));
 		}
 		ParsedVpnProfile profile = new ParsedVpnProfile();
 		Integer flags = 0;
