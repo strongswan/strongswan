@@ -206,7 +206,6 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				!pref.getBoolean(Constants.PREF_IGNORE_POWER_WHITELIST, false))
 			{
 				PowerWhitelistRequired whitelist = new PowerWhitelistRequired();
-				mWaitingForResult = true;
 				whitelist.show(getSupportFragmentManager(), DIALOG_TAG);
 				return false;
 			}
@@ -588,9 +587,11 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				.setTitle(R.string.power_whitelist_title)
 				.setMessage(R.string.power_whitelist_text)
 				.setPositiveButton(android.R.string.ok, (dialog, id) -> {
+					VpnProfileControlActivity activity = (VpnProfileControlActivity)getActivity();
+					activity.mWaitingForResult = true;
 					Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-											   Uri.parse("package:" + getActivity().getPackageName()));
-					getActivity().startActivityForResult(intent, ADD_TO_POWER_WHITELIST);
+											   Uri.parse("package:" + activity.getPackageName()));
+					activity.startActivityForResult(intent, ADD_TO_POWER_WHITELIST);
 				}).create();
 		}
 
