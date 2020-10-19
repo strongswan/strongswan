@@ -205,6 +205,12 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			if (!pm.isIgnoringBatteryOptimizations(this.getPackageName()) &&
 				!pref.getBoolean(Constants.PREF_IGNORE_POWER_WHITELIST, false))
 			{
+				if (getSupportFragmentManager().isStateSaved())
+				{	/* we might get called via service connection and manual onActivityResult()
+					 * call when the activity is not active anymore and fragment transactions
+					 * would cause an illegalStateException */
+					return false;
+				}
 				PowerWhitelistRequired whitelist = new PowerWhitelistRequired();
 				whitelist.show(getSupportFragmentManager(), DIALOG_TAG);
 				return false;
