@@ -42,9 +42,9 @@ struct private_load_tester_config_t {
 	peer_cfg_t *peer_cfg;
 
 	/**
-	 * virtual IP, if any
+	 * request virtual IPs
 	 */
-	host_t *vip;
+	bool vips;
 
 	/**
 	 * Initiator address
@@ -753,9 +753,10 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal, 0));
 	peer_cfg = peer_cfg_create("load-test", ike_cfg, &peer);
 
-	if (this->vip)
+	if (this->vips)
 	{
-		peer_cfg->add_virtual_ip(peer_cfg, this->vip->clone(this->vip));
+		peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET));
+		peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
 	}
 	if (this->pool)
 	{
@@ -789,7 +790,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 
 	if (num)
 	{	/* initiator */
-		if (this->vip)
+		if (this->vips)
 		{
 			add_ts(this, NULL, child_cfg, TRUE, TRUE);
 		}
@@ -914,7 +915,6 @@ METHOD(load_tester_config_t, destroy, void,
 	this->peer_cfg->destroy(this->peer_cfg);
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->esp);
-	DESTROY_IF(this->vip);
 	free(this);
 }
 
@@ -942,11 +942,8 @@ load_tester_config_t *load_tester_config_create()
 		.unique_port = UNIQUE_PORT_START,
 	);
 
-	if (lib->settings->get_bool(lib->settings,
-				"%s.plugins.load-tester.request_virtual_ip", FALSE, lib->ns))
-	{
-		this->vip = host_create_from_string("0.0.0.0", 0);
-	}
+	this->vips = lib->settings->get_bool(lib->settings,
+					"%s.plugins.load-tester.request_virtual_ip", FALSE, lib->ns);
 	this->pool = lib->settings->get_str(lib->settings,
 					"%s.plugins.load-tester.pool", NULL, lib->ns);
 	this->initiator = lib->settings->get_str(lib->settings,
