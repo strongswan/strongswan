@@ -633,13 +633,15 @@ static host_t *allocate_addr(private_load_tester_config_t *this, uint num)
 	char *iface = NULL, buf[32];
 	entry_t *entry;
 
-	requested = host_create_any(AF_INET);
 	snprintf(buf, sizeof(buf), "ext-%d", num);
 	id = identification_create_from_string(buf);
 	enumerator = this->pools->create_enumerator(this->pools);
 	while (enumerator->enumerate(enumerator, &pool))
 	{
+		requested = pool->get_base(pool);
+		requested = host_create_any(requested->get_family(requested));
 		found = pool->acquire_address(pool, id, requested, MEM_POOL_NEW, NULL);
+		requested->destroy(requested);
 		if (found)
 		{
 			iface = (char*)pool->get_name(pool);
@@ -647,7 +649,6 @@ static host_t *allocate_addr(private_load_tester_config_t *this, uint num)
 		}
 	}
 	enumerator->destroy(enumerator);
-	requested->destroy(requested);
 
 	if (!found)
 	{
