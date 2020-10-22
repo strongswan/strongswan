@@ -848,7 +848,7 @@ static int print_alg(private_proposal_t *this, printf_hook_data_t *data,
 	enumerator = array_create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		char *prefix = "/";
+		char *prefix = "/", ake_prefix[5] = "";
 
 		if (type != entry->type)
 		{
@@ -859,14 +859,19 @@ static int print_alg(private_proposal_t *this, printf_hook_data_t *data,
 			prefix = "";
 			*first = FALSE;
 		}
+		if (is_ke_transform(type) && type != KEY_EXCHANGE_METHOD)
+		{
+			sprintf(ake_prefix, "KE%d_", type - ADDITIONAL_KEY_EXCHANGE_1 + 1);
+		}
 		if (names)
 		{
-			written += print_in_hook(data, "%s%N", prefix, names, entry->alg);
+			written += print_in_hook(data, "%s%s%N", prefix, ake_prefix,
+									 names, entry->alg);
 		}
 		else
 		{
-			written += print_in_hook(data, "%sUNKNOWN_%u_%u", prefix,
-									 entry->type, entry->alg);
+			written += print_in_hook(data, "%s%sUNKNOWN_%u_%u", prefix,
+									 ake_prefix, entry->type, entry->alg);
 		}
 		if (entry->key_size)
 		{
