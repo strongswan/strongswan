@@ -7,6 +7,7 @@ sun::tcpdump::IP moon.strongswan.org > sun.strongswan.org: ESP::YES
 sun::tcpdump::IP sun.strongswan.org > moon.strongswan.org: ESP::YES
 moon::cat /tmp/tkm.log::RSA private key '/etc/tkm/moonKey.der' loaded::YES
 moon::cat /tmp/tkm.log::Adding policy \[ 1, 10.1.0.0/16 > 192.168.0.1 <=> 192.168.0.2 < 10.2.0.0/16 \]::YES
-moon::cat /tmp/tkm.log::Checked CA certificate of CC context 1::YES
+moon::cat /tmp/tkm.log::Linked CC context 1 with CA certificate 1::YES
+moon::cat /tmp/tkm.log::Certificate chain of CC context 1 is valid::YES
 moon::cat /tmp/tkm.log::Authentication of ISA context 1 successful::YES
 moon::cat /tmp/tkm.log::Adding ESA \[ 1, 10.1.0.0/16 > 192.168.0.1 <=> 192.168.0.2 < 10.2.0.0/16, SPI_in.*, SPI_out.*, soft 30, hard 60 \]::YES

@@ -15,7 +15,8 @@ moon::cat /var/log/daemon.log::deleting child SA (esa: 1, spi:.*)::YES
 moon::ping -c 1 PH_IP_SUN::64 bytes from PH_IP_SUN: icmp_.eq=1::YES
 moon::cat /tmp/tkm.log::RSA private key '/etc/tkm/moonKey.der' loaded::YES
 moon::cat /tmp/tkm.log::Adding policy \[ 1, 192.168.0.1 <-> 192.168.0.2 \]::YES
-moon::cat /tmp/tkm.log::Checked CA certificate of CC context 1::YES
+moon::cat /tmp/tkm.log::Linked CC context 1 with CA certificate 1::YES
+moon::cat /tmp/tkm.log::Certificate chain of CC context 1 is valid::YES
 moon::cat /tmp/tkm.log::Authentication of ISA context 1 successful::YES
 moon::cat /tmp/tkm.log::Creating first new ESA context with ID 1 (Isa 1, Sp 1, Ea 1, Initiator TRUE, spi_loc.*, spi_rem.*)::YES
 moon::cat /tmp/tkm.log::Creating ESA context with ID 2 (Isa 1, Sp 1, Ea 1, Dh_Id 1, Nc_Loc_Id 1, Initiator TRUE, spi_loc.*, spi_rem.*)::YES
