@@ -1397,7 +1397,9 @@ METHOD(tls_crypto_t, select_cipher_suite, tls_cipher_suite_t,
 				algs = find_suite(this->suites[i]);
 				if (algs)
 				{
-					if (key == KEY_ANY || key == algs->key)
+					if (key == KEY_ANY || key == algs->key ||
+						(algs->key == KEY_ECDSA && key == KEY_ED25519) ||
+						(algs->key == KEY_ECDSA && key == KEY_ED448))
 					{
 						if (create_ciphers(this, algs))
 						{
@@ -1455,9 +1457,9 @@ static struct {
 	{ TLS_SIG_ECDSA_SHA512, { .scheme = SIGN_ECDSA_WITH_SHA512_DER },
 		TLS_1_0, TLS_1_3 },
 	{ TLS_SIG_ED25519, { .scheme = SIGN_ED25519 },
-		TLS_1_3, TLS_1_3 },
+		TLS_1_0, TLS_1_3 },
 	{ TLS_SIG_ED448, { .scheme = SIGN_ED448 },
-		TLS_1_3, TLS_1_3 },
+		TLS_1_0, TLS_1_3 },
 	{ TLS_SIG_RSA_PSS_RSAE_SHA256, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha256, },
 		TLS_1_2, TLS_1_3 },
 	{ TLS_SIG_RSA_PSS_RSAE_SHA384, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha384, },
@@ -1815,6 +1817,20 @@ METHOD(tls_crypto_t, sign, bool,
 				}
 				DBG2(DBG_TLS, "created signature with SHA1/ECDSA");
 				break;
+			case KEY_ED25519:
+				if (!key->sign(key, SIGN_ED25519, NULL, data, &sig))
+				{
+					return FALSE;
+				}
+				DBG2(DBG_TLS, "created signature with Ed25519");
+				break;
+			case KEY_ED448:
+				if (!key->sign(key, SIGN_ED448, NULL, data, &sig))
+				{
+					return FALSE;
+				}
+				DBG2(DBG_TLS, "created signature with Ed448");
+				break;
 			default:
 				return FALSE;
 		}
@@ -1901,6 +1917,20 @@ METHOD(tls_crypto_t, verify, bool,
 					return FALSE;
 				}
 				DBG2(DBG_TLS, "verified signature with SHA1/ECDSA");
+				break;
+			case KEY_ED25519:
+				if (!key->verify(key, SIGN_ED25519, NULL, data, sig))
+				{
+					return FALSE;
+				}
+				DBG2(DBG_TLS, "verified signature with Ed25519");
+				break;
+			case KEY_ED448:
+				if (!key->verify(key, SIGN_ED448, NULL, data, sig))
+				{
+					return FALSE;
+				}
+				DBG2(DBG_TLS, "verified signature with Ed448");
 				break;
 			default:
 				return FALSE;
@@ -2300,6 +2330,8 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 		.cache = cache,
 	);
 
+	/* FIXME: EDDSA keys are currently treated like ECDSA keys. A cleaner
+	 * separation would be welcome. */
 	enumerator = lib->creds->create_builder_enumerator(lib->creds);
 	while (enumerator->enumerate(enumerator, &type, &subtype))
 	{
@@ -2311,6 +2343,8 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 					this->rsa = TRUE;
 					break;
 				case KEY_ECDSA:
+				case KEY_ED25519:
+				case KEY_ED448:
 					this->ecdsa = TRUE;
 					break;
 				default:
