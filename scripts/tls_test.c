@@ -1,4 +1,8 @@
 /*
+ * Copyright (C) 2020 Pascal Knecht
+ * Copyright (C) 2020 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2010 Martin Willi
  * Copyright (C) 2010 revosec AG
  *
@@ -212,8 +216,8 @@ static bool load_key(char *filename)
 {
 	private_key_t *key;
 
-	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-							  BUILD_FROM_FILE, filename, BUILD_END);
+	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+							 BUILD_FROM_FILE, filename, BUILD_END);
 	if (!key)
 	{
 		DBG1(DBG_TLS, "loading key from '%s' failed", filename);
