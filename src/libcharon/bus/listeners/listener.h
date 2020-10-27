@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Tobias Brunner
+ * Copyright (C) 2011-2020 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -160,13 +160,15 @@ struct listener_t {
 	/**
 	 * Hook called for IKE_SA peer endpoint updates.
 	 *
+	 * At least one endpoint has changed when this is invoked.
+	 *
 	 * @param ike_sa	updated IKE_SA, having old endpoints set
-	 * @param local		TRUE if local endpoint gets updated, FALSE for remote
-	 * @param new		new endpoint address and port
+	 * @param local		new/current local endpoint address and port
+	 * @param remote	new/current remote endpoint address and port
 	 * @return			TRUE to stay registered, FALSE to unregister
 	 */
 	bool (*ike_update)(listener_t *this, ike_sa_t *ike_sa,
-					   bool local, host_t *new);
+					   host_t *local, host_t *remote);
 
 	/**
 	 * Hook called when an initiator reestablishes an IKE_SA.
