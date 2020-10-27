@@ -1114,7 +1114,7 @@ METHOD(ike_sa_t, float_ports, void,
 }
 
 METHOD(ike_sa_t, update_hosts, void,
-	private_ike_sa_t *this, host_t *me, host_t *other, bool force)
+	private_ike_sa_t *this, host_t *me, host_t *other, update_hosts_flag_t flags)
 {
 	host_t *new_me = NULL, *new_other = NULL;
 	bool silent = FALSE;
@@ -1138,18 +1138,18 @@ METHOD(ike_sa_t, update_hosts, void,
 	}
 	else
 	{
-		/* update our address in any case */
-		if (force && !me->equals(me, this->my_host))
+		/* update our address only if forced */
+		if ((flags & UPDATE_HOSTS_FORCE_LOCAL) && !me->equals(me, this->my_host))
 		{
 			new_me = me;
 		}
 
 		if (!other->equals(other, this->other_host) &&
-			(force || has_condition(this, COND_NAT_THERE)))
+			((flags & UPDATE_HOSTS_FORCE_REMOTE) || has_condition(this, COND_NAT_THERE)))
 		{
 			/* only update other's address if we are behind a static NAT,
 			 * which we assume is the case if we are not initiator */
-			if (force ||
+			if ((flags & UPDATE_HOSTS_FORCE_REMOTE) ||
 				(!has_condition(this, COND_NAT_HERE) ||
 				 !has_condition(this, COND_ORIGINAL_INITIATOR)))
 			{
@@ -1158,13 +1158,13 @@ METHOD(ike_sa_t, update_hosts, void,
 		}
 	}
 
-	if (new_me || new_other)
+	if (new_me || new_other || (flags & UPDATE_HOSTS_FORCE_CHILDREN))
 	{
 		enumerator_t *enumerator;
 		child_sa_t *child_sa;
 		linked_list_t *vips;
 
-		if (!silent)
+		if ((new_me || new_other) && !silent)
 		{
 			charon->bus->ike_update(charon->bus, &this->public,
 									new_me ?: this->my_host,

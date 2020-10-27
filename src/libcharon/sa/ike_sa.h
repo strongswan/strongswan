@@ -28,6 +28,7 @@ typedef enum ike_extension_t ike_extension_t;
 typedef enum ike_condition_t ike_condition_t;
 typedef enum ike_sa_state_t ike_sa_state_t;
 typedef enum statistic_t statistic_t;
+typedef enum update_hosts_flag_t update_hosts_flag_t;
 typedef struct ike_sa_t ike_sa_t;
 
 #include <library.h>
@@ -265,6 +266,25 @@ enum statistic_t {
 };
 
 /**
+ * Flags used when updating addresses
+ */
+enum update_hosts_flag_t {
+	/** Force updating the local address (otherwise not updated if an address
+	 * is already set). */
+	UPDATE_HOSTS_FORCE_LOCAL = (1<<0),
+	/** Force updating the remote address (otherwise only updated if peer is
+	 * behind a NAT). */
+	UPDATE_HOSTS_FORCE_REMOTE = (1<<1),
+	/** Force updating both addresses. */
+	UPDATE_HOSTS_FORCE_ADDRS = UPDATE_HOSTS_FORCE_LOCAL|UPDATE_HOSTS_FORCE_REMOTE,
+	/** Force updating the CHILD_SAs even if no addresses changed, useful if
+	 * NAT state may have changed. */
+	UPDATE_HOSTS_FORCE_CHILDREN = (1<<2),
+	/** Force updating everything. */
+	UPDATE_HOSTS_FORCE_ALL = UPDATE_HOSTS_FORCE_ADDRS|UPDATE_HOSTS_FORCE_CHILDREN,
+};
+
+/**
  * State of an IKE_SA.
  *
  * An IKE_SA passes various states in its lifetime. A newly created
@@ -454,15 +474,16 @@ struct ike_sa_t {
 	void (*float_ports)(ike_sa_t *this);
 
 	/**
-	 * Update the IKE_SAs host.
+	 * Update the IKE_SAs host and CHILD_SAs.
 	 *
 	 * Hosts may be NULL to use current host.
 	 *
 	 * @param me			new local host address, or NULL
 	 * @param other			new remote host address, or NULL
-	 * @param force			force update
+	 * @param flags			flags to force certain updates
 	 */
-	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other, bool force);
+	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other,
+						 update_hosts_flag_t flags);
 
 	/**
 	 * Get the own identification.

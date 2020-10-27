@@ -1649,8 +1649,10 @@ METHOD(task_manager_t, process_message, status_t,
 				return FAILED;
 			}
 			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
-			{	/* with MOBIKE, we do no implicit updates */
-				this->ike_sa->update_hosts(this->ike_sa, me, other, mid == 1);
+			{	/* only do implicit updates without MOBIKE, and only force
+				 * updates for IKE_AUTH (ports might change due to NAT-T) */
+				this->ike_sa->update_hosts(this->ike_sa, me, other,
+										   mid == 1 ? UPDATE_HOSTS_FORCE_ADDRS : 0);
 			}
 			status = handle_fragment(this, &this->responding.defrag, msg);
 			if (status != SUCCESS)
@@ -1718,11 +1720,11 @@ METHOD(task_manager_t, process_message, status_t,
 				msg->get_exchange_type(msg) != IKE_SA_INIT)
 			{	/* only do updates based on verified messages (or initial ones) */
 				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
-				{	/* with MOBIKE, we do no implicit updates.  we force an
-					 * update of the local address on IKE_SA_INIT, but never
-					 * for the remote address */
-					this->ike_sa->update_hosts(this->ike_sa, me, NULL, mid == 0);
-					this->ike_sa->update_hosts(this->ike_sa, NULL, other, FALSE);
+				{	/* only do implicit updates without MOBIKE, we force an
+					 * update of the local address on IKE_SA_INIT as we might
+					 * not know it yet, but never for the remote address */
+					this->ike_sa->update_hosts(this->ike_sa, me, other,
+											   mid == 0 ? UPDATE_HOSTS_FORCE_LOCAL : 0);
 				}
 			}
 			status = handle_fragment(this, &this->initiating.defrag, msg);
