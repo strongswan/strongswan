@@ -155,6 +155,9 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 			return HASH_SHA3_512;
 		case OID_ED25519:
 		case OID_ED448:
+		case OID_DILITHIUM_2:
+		case OID_DILITHIUM_3:
+		case OID_DILITHIUM_4:
 			return HASH_IDENTITY;
 		default:
 			return HASH_UNKNOWN;
@@ -476,6 +479,31 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 				default:
 					return OID_UNKNOWN;
 			}
+		case KEY_DILITHIUM_2:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+					return OID_DILITHIUM_2;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_DILITHIUM_3:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+					return OID_DILITHIUM_3;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_DILITHIUM_4:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+					return OID_DILITHIUM_4;
+				default:
+					return OID_UNKNOWN;
+			}
+
 		case KEY_BLISS:
 			switch (alg)
 			{
@@ -520,6 +548,9 @@ hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme,
 			break;
 		case SIGN_ED25519:
 		case SIGN_ED448:
+		case SIGN_DILITHIUM_2:
+		case SIGN_DILITHIUM_3:
+		case SIGN_DILITHIUM_4:
 			return HASH_IDENTITY;
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return HASH_MD5;

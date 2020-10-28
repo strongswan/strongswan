@@ -160,8 +160,12 @@ enum builder_part_t {
 	BUILD_EDDSA_PUB,
 	/** DER encoded ASN.1 EdDSA private key */
 	BUILD_EDDSA_PRIV_ASN1_DER,
+	/** DER encoded ASN.1 private key (usually OCTET_STRING) */
+	BUILD_PRIV_ASN1_DER,
 	/** OID of an [unsupported] critical extension */
 	BUILD_CRITICAL_EXTENSION,
+	/** DRBG to be used for crypto tests */
+	BUILD_DRBG,
 	/** end of variable argument builder list */
 	BUILD_END,
 };
