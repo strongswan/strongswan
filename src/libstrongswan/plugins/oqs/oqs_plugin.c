@@ -16,6 +16,8 @@
 #include "oqs_plugin.h"
 #include "oqs_kem.h"
 #include "oqs_drbg.h"
+#include "oqs_public_key.h"
+#include "oqs_private_key.h"
 
 #include <library.h>
 #include <threading/thread_value.h>
@@ -65,6 +67,28 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(KE, KE_SIKE_L2),
 			PLUGIN_PROVIDE(KE, KE_SIKE_L3),
 			PLUGIN_PROVIDE(KE, KE_SIKE_L5),
+		/* private/public keys */
+		PLUGIN_REGISTER(PRIVKEY, oqs_private_key_load, TRUE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_DILITHIUM_2),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_DILITHIUM_3),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_DILITHIUM_4),
+		PLUGIN_REGISTER(PRIVKEY_GEN, oqs_private_key_gen, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_DILITHIUM_2),
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_DILITHIUM_3),
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_DILITHIUM_4),
+		PLUGIN_REGISTER(PUBKEY, oqs_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_DILITHIUM_2),
+			PLUGIN_PROVIDE(PUBKEY, KEY_DILITHIUM_3),
+			PLUGIN_PROVIDE(PUBKEY, KEY_DILITHIUM_4),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
+		/* signature schemes, private */
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_DILITHIUM_2),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_DILITHIUM_3),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_DILITHIUM_4),
+		/* signature verification schemes */
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_DILITHIUM_2),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_DILITHIUM_3),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_DILITHIUM_4),
 	};
 	*features = f;
 	return countof(f);
