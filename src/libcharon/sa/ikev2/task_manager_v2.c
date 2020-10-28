@@ -1281,7 +1281,7 @@ METHOD(task_manager_t, get_mid, uint32_t,
  * Handle the given IKE fragment, if it is one.
  *
  * Returns SUCCESS if the message is not a fragment, and NEED_MORE if it was
- * handled properly.  Error states are  returned if the fragment was invalid or
+ * handled properly.  Error states are returned if the fragment was invalid or
  * the reassembled message could not have been processed properly.
  */
 static status_t handle_fragment(private_task_manager_t *this,
@@ -1290,6 +1290,12 @@ static status_t handle_fragment(private_task_manager_t *this,
 	message_t *reassembled;
 	status_t status;
 
+	if (*defrag && (*defrag)->get_message_id(*defrag) < msg->get_message_id(msg))
+	{
+		/* clear fragments of an incompletely received retransmitted message */
+		(*defrag)->destroy(*defrag);
+		*defrag = NULL;
+	}
 	if (!msg->get_payload(msg, PLV2_FRAGMENT))
 	{
 		return SUCCESS;
