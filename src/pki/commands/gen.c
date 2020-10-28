@@ -52,6 +52,18 @@ static int gen()
 				{
 					type = KEY_ED448;
 				}
+				else if (streq(arg, "dilithium2"))
+				{
+					type = KEY_DILITHIUM_2;
+				}
+				else if (streq(arg, "dilithium3"))
+				{
+					type = KEY_DILITHIUM_3;
+				}
+				else if (streq(arg, "dilithium4"))
+				{
+					type = KEY_DILITHIUM_4;
+				}
 				else if (streq(arg, "bliss"))
 				{
 					type = KEY_BLISS;
@@ -173,8 +185,9 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"[--type rsa|ecdsa|ed25519|ed448|bliss] [--size bits] [--safe-primes]",
-		 "[--shares n] [--threshold l] [--outform der|pem]"},
+		{"[--type rsa|ecdsa|ed25519|ed448|dilithium2|dilithium3|dilithium4|bliss]",
+		 "[--size bits] [--safe-primes] [--shares n] [--threshold l]",
+		 "[--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"type",		't', 1, "type of key, default: rsa"},
