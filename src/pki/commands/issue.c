@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2015-2019 Andreas Steffen
+ * Copyright (C) 2015-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -399,7 +399,7 @@ static int issue()
 		goto end;
 	}
 
-	DBG2(DBG_LIB, "Reading ca private key:");
+	DBG2(DBG_LIB, "Reading CA private key:");
 	if (cakey)
 	{
 		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,

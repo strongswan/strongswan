@@ -20,7 +20,9 @@ plugin_LTLIBRARIES = libstrongswan-oqs.la
 endif
 
 libstrongswan_oqs_la_SOURCES = \
-	oqs_plugin.h oqs_plugin.c
+	oqs_plugin.h oqs_plugin.c \
+	oqs_public_key.h oqs_public_key.c \
+	oqs_private_key.h oqs_private_key.c
 
 libstrongswan_oqs_la_LDFLAGS = -module -avoid-version
 
