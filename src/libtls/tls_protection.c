@@ -123,11 +123,13 @@ METHOD(tls_protection_t, set_cipher, void,
 {
 	if (inbound)
 	{
+		DESTROY_IF(this->aead_in);
 		this->aead_in = aead;
 		this->seq_in = 0;
 	}
 	else
 	{
+		DESTROY_IF(this->aead_out);
 		this->aead_out = aead;
 		this->seq_out = 0;
 	}
@@ -142,6 +144,8 @@ METHOD(tls_protection_t, set_version, void,
 METHOD(tls_protection_t, destroy, void,
 	private_tls_protection_t *this)
 {
+	DESTROY_IF(this->aead_in);
+	DESTROY_IF(this->aead_out);
 	free(this);
 }
 
