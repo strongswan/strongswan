@@ -57,6 +57,9 @@ chunk_t asn1_algorithmIdentifier(int oid)
 		case OID_ECDSA_WITH_SHA512:
 		case OID_ED25519:
 		case OID_ED448:
+		case OID_DILITHIUM_2:
+		case OID_DILITHIUM_3:
+		case OID_DILITHIUM_4:
 			parameters = chunk_empty;
 			break;
 		default:
