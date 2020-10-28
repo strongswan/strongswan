@@ -2162,8 +2162,17 @@ static bool derive_labeled_keys(private_tls_crypto_t *this,
 								tls_hkdf_label_t client_label,
 								tls_hkdf_label_t server_label)
 {
-	tls_aead_t *aead_c = this->aead_out, *aead_s = this->aead_in;
+	tls_aead_t *aead_c, *aead_s;
+	suite_algs_t *algs;
 
+	algs = find_suite(this->suite);
+	destroy_aeads(this);
+	if (!create_aead(this, algs))
+	{
+		return FALSE;
+	}
+	aead_c = this->aead_out;
+	aead_s = this->aead_in;
 	if (this->tls->is_server(this->tls))
 	{
 		aead_c = this->aead_in;
@@ -2209,8 +2218,15 @@ METHOD(tls_crypto_t, derive_app_keys, bool,
 METHOD(tls_crypto_t, update_app_keys, bool,
 	private_tls_crypto_t *this, bool inbound)
 {
+	suite_algs_t *algs;
 	tls_hkdf_label_t label = TLS_HKDF_UPD_C_TRAFFIC;
 
+	algs = find_suite(this->suite);
+	destroy_aeads(this);
+	if (!create_aead(this, algs))
+	{
+		return FALSE;
+	}
 	if (this->tls->is_server(this->tls) != inbound)
 	{
 		label = TLS_HKDF_UPD_S_TRAFFIC;
@@ -2264,10 +2280,12 @@ METHOD(tls_crypto_t, change_cipher, void,
 		if (inbound)
 		{
 			this->protection->set_cipher(this->protection, TRUE, this->aead_in);
+			this->aead_in = NULL;
 		}
 		else
 		{
 			this->protection->set_cipher(this->protection, FALSE, this->aead_out);
+			this->aead_out = NULL;
 		}
 	}
 }
