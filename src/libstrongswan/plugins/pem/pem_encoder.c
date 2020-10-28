@@ -40,6 +40,8 @@ bool pem_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 									&asn1, CRED_PART_END) ||
 				cred_encoding_args(args, CRED_PART_ECDSA_PUB_ASN1_DER,
 									&asn1, CRED_PART_END) ||
+				cred_encoding_args(args, CRED_PART_PUB_ASN1_DER,
+									&asn1, CRED_PART_END) ||
 				cred_encoding_args(args, CRED_PART_EDDSA_PUB_ASN1_DER,
 									&asn1, CRED_PART_END) ||
 				cred_encoding_args(args, CRED_PART_BLISS_PUB_ASN1_DER,
@@ -98,7 +100,9 @@ bool pem_encoder_encode(cred_encoding_type_t type, chunk_t *encoding,
 				label ="BLISS PRIVATE KEY";
 				break;
 			}
-			if (cred_encoding_args(args, CRED_PART_EDDSA_PRIV_ASN1_DER,
+			if (cred_encoding_args(args, CRED_PART_PRIV_ASN1_DER,
+								   &asn1, CRED_PART_END) ||
+				cred_encoding_args(args, CRED_PART_EDDSA_PRIV_ASN1_DER,
 								   &asn1, CRED_PART_END))
 			{
 				label ="PRIVATE KEY";
