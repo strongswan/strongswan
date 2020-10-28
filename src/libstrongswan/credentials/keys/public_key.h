@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2017 Tobias Brunner
- * Copyright (C) 2014-2017 Andreas Steffen
+ * Copyright (C) 2014-2020 Andreas Steffen
  * Copyright (C) 2007 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -47,8 +47,14 @@ enum key_type_t {
 	KEY_ED25519 = 4,
 	/** Ed448   PureEdDSA instance as in RFC 8032 */
 	KEY_ED448   = 5,
+	/** Dilithium2 NIST Round 3 Submission candidate */
+	KEY_DILITHIUM_2 = 6,
+	/** Dilithium3 NIST Round 3 Submission candidate */
+	KEY_DILITHIUM_3 = 7,
+	/** Dilithium4 NIST Round 3 Submission candidate */
+	KEY_DILITHIUM_4 = 8,
 	/** BLISS */
-	KEY_BLISS = 6,
+	KEY_BLISS = 9,
 };
 
 /**
@@ -110,6 +116,12 @@ enum signature_scheme_t {
 	SIGN_ED25519,
 	/** PureEdDSA on Curve448 as in RFC 8410                           */
 	SIGN_ED448,
+	/** Dilithium2 NIST Round 3 Submission signature                   */
+	SIGN_DILITHIUM_2,
+	/** Dilithium3 NIST Round 3 Submission signature                   */
+	SIGN_DILITHIUM_3,
+	/** Dilithium4 NIST Round 3 Submission signature                   */
+	SIGN_DILITHIUM_4,
 	/** BLISS with SHA-2_256                                           */
 	SIGN_BLISS_WITH_SHA2_256,
 	/** BLISS with SHA-2_384                                           */
@@ -262,6 +274,22 @@ bool public_key_equals(public_key_t *public, public_key_t *other);
  * @return				TRUE if key has given fingerprint
  */
 bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint);
+
+/**
+ * Return OID for a given key type
+ *
+ * @param type		type of the key
+ * @return			OID
+ */
+int key_type_to_oid(key_type_t type);
+
+/**
+ * Return key type for a given OID
+ *
+ * @param oid		OID
+ * @return			type of the key
+ */
+key_type_t key_type_from_oid(int oid);
 
 /**
  * Conversion of ASN.1 signature or hash OID to signature scheme.
