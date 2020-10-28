@@ -415,7 +415,7 @@ static int issue()
 		goto end;
 	}
 
-	DBG2(DBG_LIB, "Reading ca private key:");
+	DBG2(DBG_LIB, "Reading CA private key:");
 	if (cakey)
 	{
 		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
