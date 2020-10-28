@@ -144,6 +144,10 @@ enum cred_encoding_part_t {
 	CRED_PART_PKCS10_ASN1_DER,
 	/** a PGP encoded certificate */
 	CRED_PART_PGP_CERT,
+	/** a DER encoded public key */
+	CRED_PART_PUB_ASN1_DER,
+	/** a DER encoded private key */
+	CRED_PART_PRIV_ASN1_DER,
 	/** a DER encoded EdDSA public key */
 	CRED_PART_EDDSA_PUB_ASN1_DER,
 	/** a DER encoded EdDSA private key */

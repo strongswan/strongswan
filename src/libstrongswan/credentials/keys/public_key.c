@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2017 Tobias Brunner
- * Copyright (C) 2014-2016 Andreas Steffen
+ * Copyright (C) 2014-2020 Andreas Steffen
  * Copyright (C) 2007 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -27,6 +27,9 @@ ENUM(key_type_names, KEY_ANY, KEY_BLISS,
 	"DSA",
 	"ED25519",
 	"ED448",
+	"Dilithium2",
+	"Dilithium3",
+	"Dilithium4",
 	"BLISS"
 );
 
@@ -54,6 +57,9 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_BLISS_WITH_SHA3_512,
 	"ECDSA-521",
 	"ED25519",
 	"ED448",
+	"DILITHIUM_2",
+	"DILITHIUM_3",
+	"DILITHIUM_4",
 	"BLISS_WITH_SHA2_256",
 	"BLISS_WITH_SHA2_384",
 	"BLISS_WITH_SHA2_512",
@@ -115,6 +121,50 @@ bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint)
 	return FALSE;
 }
 
+/**
+ * See header.
+ */
+int key_type_to_oid(key_type_t type)
+{
+	switch (type)
+	{
+		case KEY_ED25519:
+			return OID_ED25519;
+		case KEY_ED448:
+			return OID_ED448;
+		case KEY_DILITHIUM_2:
+			return OID_DILITHIUM_2;
+		case KEY_DILITHIUM_3:
+			return OID_DILITHIUM_3;
+		case KEY_DILITHIUM_4:
+			return OID_DILITHIUM_4;
+		default:
+			return OID_UNKNOWN;
+	}
+}
+
+/**
+ * See header.
+ */
+key_type_t key_type_from_oid(int oid)
+{
+	switch (oid)
+	{
+		case OID_ED25519:
+			return KEY_ED25519;
+		case OID_ED448:
+			return KEY_ED448;
+		case OID_DILITHIUM_2:
+			return KEY_DILITHIUM_2;
+		case OID_DILITHIUM_3:
+			return KEY_DILITHIUM_3;
+		case OID_DILITHIUM_4:
+			return KEY_DILITHIUM_4;
+		default:
+			return KEY_ANY;
+	}
+}
+
 /*
  * Defined in header.
  */
@@ -163,6 +213,12 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 			return SIGN_ED25519;
 		case OID_ED448:
 			return SIGN_ED448;
+		case OID_DILITHIUM_2:
+			return SIGN_DILITHIUM_2;
+		case OID_DILITHIUM_3:
+			return SIGN_DILITHIUM_3;
+		case OID_DILITHIUM_4:
+			return SIGN_DILITHIUM_4;
 		case OID_BLISS_PUBLICKEY:
 		case OID_BLISS_WITH_SHA2_512:
 			return SIGN_BLISS_WITH_SHA2_512;
@@ -228,6 +284,12 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 			return OID_ED25519;
 		case SIGN_ED448:
 			return OID_ED448;
+		case SIGN_DILITHIUM_2:
+			return OID_DILITHIUM_2;
+		case SIGN_DILITHIUM_3:
+			return OID_DILITHIUM_3;
+		case SIGN_DILITHIUM_4:
+			return OID_DILITHIUM_4;
 		case SIGN_BLISS_WITH_SHA2_256:
 			return OID_BLISS_WITH_SHA2_256;
 		case SIGN_BLISS_WITH_SHA2_384:
@@ -267,20 +329,26 @@ static struct {
 	int max_keysize;
 	signature_params_t params;
 } scheme_map[] = {
-	{ KEY_RSA,  3072, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha256, }},
-	{ KEY_RSA,  7680, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha384, }},
-	{ KEY_RSA,     0, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha512, }},
-	{ KEY_RSA,  3072, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256 }},
-	{ KEY_RSA,  7680, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_384 }},
-	{ KEY_RSA,     0, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512 }},
-	{ KEY_ECDSA, 256, { .scheme = SIGN_ECDSA_WITH_SHA256_DER }},
-	{ KEY_ECDSA, 384, { .scheme = SIGN_ECDSA_WITH_SHA384_DER }},
-	{ KEY_ECDSA,   0, { .scheme = SIGN_ECDSA_WITH_SHA512_DER }},
-	{ KEY_ED25519, 0, { .scheme = SIGN_ED25519 }},
-	{ KEY_ED448,   0, { .scheme = SIGN_ED448 }},
-	{ KEY_BLISS, 128, { .scheme = SIGN_BLISS_WITH_SHA2_256 }},
-	{ KEY_BLISS, 192, { .scheme = SIGN_BLISS_WITH_SHA2_384 }},
-	{ KEY_BLISS,   0, { .scheme = SIGN_BLISS_WITH_SHA2_512 }},
+	{ KEY_RSA,      3072, { .scheme = SIGN_RSA_EMSA_PSS,
+	                        .params = &pss_params_sha256, }},
+	{ KEY_RSA,      7680, { .scheme = SIGN_RSA_EMSA_PSS,
+	                        .params = &pss_params_sha384, }},
+	{ KEY_RSA,         0, { .scheme = SIGN_RSA_EMSA_PSS,
+	                        .params = &pss_params_sha512, }},
+	{ KEY_RSA,      3072, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256 }},
+	{ KEY_RSA,      7680, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_384 }},
+	{ KEY_RSA,         0, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512 }},
+	{ KEY_ECDSA,     256, { .scheme = SIGN_ECDSA_WITH_SHA256_DER }},
+	{ KEY_ECDSA,     384, { .scheme = SIGN_ECDSA_WITH_SHA384_DER }},
+	{ KEY_ECDSA,       0, { .scheme = SIGN_ECDSA_WITH_SHA512_DER }},
+	{ KEY_ED25519,     0, { .scheme = SIGN_ED25519 }},
+	{ KEY_ED448,       0, { .scheme = SIGN_ED448 }},
+	{ KEY_DILITHIUM_2, 0, { .scheme = SIGN_DILITHIUM_2}},
+	{ KEY_DILITHIUM_3, 0, { .scheme = SIGN_DILITHIUM_3}},
+	{ KEY_DILITHIUM_4, 0, { .scheme = SIGN_DILITHIUM_4}},
+	{ KEY_BLISS,     128, { .scheme = SIGN_BLISS_WITH_SHA2_256 }},
+	{ KEY_BLISS,     192, { .scheme = SIGN_BLISS_WITH_SHA2_384 }},
+	{ KEY_BLISS,       0, { .scheme = SIGN_BLISS_WITH_SHA2_512 }},
 };
 
 /**
@@ -369,6 +437,12 @@ key_type_t key_type_from_signature_scheme(signature_scheme_t scheme)
 			return KEY_ED25519;
 		case SIGN_ED448:
 			return KEY_ED448;
+		case SIGN_DILITHIUM_2:
+			return KEY_DILITHIUM_2;
+		case SIGN_DILITHIUM_3:
+			return KEY_DILITHIUM_3;
+		case SIGN_DILITHIUM_4:
+			return KEY_DILITHIUM_4;
 		case SIGN_BLISS_WITH_SHA2_256:
 		case SIGN_BLISS_WITH_SHA2_384:
 		case SIGN_BLISS_WITH_SHA2_512:
