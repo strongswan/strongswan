@@ -26,6 +26,10 @@ mkdir -p $IMGDIR
 
 case "$2" in
 "")
+	if [ ! -f "$ROOTIMG" ]; then
+		log_action "Creating root image $ROOTIMG"
+		execute "qemu-img create -b $BASEIMG -f $IMGEXT $ROOTIMG"
+	fi
 	log_action "Connecting root image to NBD device $NBDEV"
 	execute "qemu-nbd -c $NBDEV $ROOTIMG"
 	;;
