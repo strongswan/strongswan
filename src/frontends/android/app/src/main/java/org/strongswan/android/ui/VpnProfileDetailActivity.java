@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Tobias Brunner
+ * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -124,6 +124,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private Switch mUseOcsp;
 	private Switch mStrictRevocation;
 	private Switch mRsaPss;
+	private Switch mIPv6Transport;
 	private EditText mNATKeepalive;
 	private TextInputLayoutHelper mNATKeepaliveWrap;
 	private EditText mIncludedSubnets;
@@ -194,6 +195,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mUseOcsp = findViewById(R.id.use_ocsp);
 		mStrictRevocation= findViewById(R.id.strict_revocation);
 		mRsaPss= findViewById(R.id.rsa_pss);
+		mIPv6Transport= findViewById(R.id.ipv6_transport);
 		mIncludedSubnets = (EditText)findViewById(R.id.included_subnets);
 		mIncludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.included_subnets_wrap);
 		mExcludedSubnets = (EditText)findViewById(R.id.excluded_subnets);
@@ -712,6 +714,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		flags |= !mUseOcsp.isChecked() ? VpnProfile.FLAGS_DISABLE_OCSP : 0;
 		flags |= mStrictRevocation.isChecked() ? VpnProfile.FLAGS_STRICT_REVOCATION : 0;
 		flags |= mRsaPss.isChecked() ? VpnProfile.FLAGS_RSA_PSS : 0;
+		flags |= mIPv6Transport.isChecked() ? VpnProfile.FLAGS_IPv6_TRANSPORT : 0;
 		mProfile.setFlags(flags);
 		mProfile.setIncludedSubnets(getString(mIncludedSubnets));
 		mProfile.setExcludedSubnets(getString(mExcludedSubnets));
@@ -782,6 +785,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mUseOcsp.setChecked(flags == null || (flags & VpnProfile.FLAGS_DISABLE_OCSP) == 0);
 		mStrictRevocation.setChecked(flags != null && (flags & VpnProfile.FLAGS_STRICT_REVOCATION) != 0);
 		mRsaPss.setChecked(flags != null && (flags & VpnProfile.FLAGS_RSA_PSS) != 0);
+		mIPv6Transport.setChecked(flags != null && (flags & VpnProfile.FLAGS_IPv6_TRANSPORT) != 0);
 
 		/* check if the user selected a user certificate previously */
 		useralias = savedInstanceState == null ? useralias : savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);

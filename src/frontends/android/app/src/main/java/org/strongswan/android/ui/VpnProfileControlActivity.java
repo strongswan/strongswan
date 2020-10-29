@@ -205,8 +205,13 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			if (!pm.isIgnoringBatteryOptimizations(this.getPackageName()) &&
 				!pref.getBoolean(Constants.PREF_IGNORE_POWER_WHITELIST, false))
 			{
+				if (getSupportFragmentManager().isStateSaved())
+				{	/* we might get called via service connection and manual onActivityResult()
+					 * call when the activity is not active anymore and fragment transactions
+					 * would cause an illegalStateException */
+					return false;
+				}
 				PowerWhitelistRequired whitelist = new PowerWhitelistRequired();
-				mWaitingForResult = true;
 				whitelist.show(getSupportFragmentManager(), DIALOG_TAG);
 				return false;
 			}
@@ -588,9 +593,11 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				.setTitle(R.string.power_whitelist_title)
 				.setMessage(R.string.power_whitelist_text)
 				.setPositiveButton(android.R.string.ok, (dialog, id) -> {
+					VpnProfileControlActivity activity = (VpnProfileControlActivity)getActivity();
+					activity.mWaitingForResult = true;
 					Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-											   Uri.parse("package:" + getActivity().getPackageName()));
-					getActivity().startActivityForResult(intent, ADD_TO_POWER_WHITELIST);
+											   Uri.parse("package:" + activity.getPackageName()));
+					activity.startActivityForResult(intent, ADD_TO_POWER_WHITELIST);
 				}).create();
 		}
 

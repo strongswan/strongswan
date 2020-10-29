@@ -365,6 +365,23 @@
                 android:textSize="12sp"
                 android:text="@string/profile_rsa_pss_hint" />
 
+            <Switch
+                android:id="@+id/ipv6_transport"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:text="@string/profile_ipv6_transport_label" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:textSize="12sp"
+                android:text="@string/profile_ipv6_transport_hint" />
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
