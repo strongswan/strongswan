@@ -1706,8 +1706,9 @@ METHOD(child_sa_t, destroy, void,
 		enumerator->destroy(enumerator);
 	}
 
-	/* delete SAs in the kernel, if they are set up */
-	if (this->my_spi && this->inbound_installed)
+	/* delete SAs in the kernel, if they are set up, inbound is always deleted
+	 * to remove allocated SPIs */
+	if (this->my_spi)
 	{
 		kernel_ipsec_sa_id_t id = {
 			.src = this->other_addr,
