@@ -664,12 +664,6 @@ START_TEST(test_tls13)
 }
 END_TEST
 
-START_TEST(test_tls13_mutual)
-{
-	test_tls(TLS_1_3, 5670, TRUE, _i);
-}
-END_TEST
-
 START_TEST(test_tls12)
 {
 	test_tls(TLS_1_2, 5671, FALSE, _i);
@@ -744,11 +738,6 @@ Suite *socket_suite_create()
 	tc = tcase_create("TLS 1.3/anon");
 	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
 	add_tls_test(test_tls13, TLS_1_3);
-	suite_add_tcase(s, tc);
-
-	tc = tcase_create("TLS 1.3/mutl");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
-	add_tls_test(test_tls13_mutual, TLS_1_3);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.2/anon");
