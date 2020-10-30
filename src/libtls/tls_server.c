@@ -51,6 +51,7 @@ typedef enum {
 	STATE_CERT_VERIFY_SENT,
 	STATE_KEY_UPDATE_REQUESTED,
 	STATE_KEY_UPDATE_SENT,
+	STATE_FINISHED_SENT_KEY_SWITCHED,
 } server_state_t;
 
 /**
@@ -701,6 +702,16 @@ static status_t process_certificate(private_tls_server_t *this,
 	this->crypto->append_handshake(this->crypto,
 								   TLS_CERTIFICATE, reader->peek(reader));
 
+	if (this->tls->get_version_max(this->tls) > TLS_1_2)
+	{
+		if (!reader->read_data8(reader, &data))
+		{
+			DBG1(DBG_TLS, "certificate request context invalid");
+			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+			return NEED_MORE;
+		}
+	}
+
 	if (!reader->read_data24(reader, &data))
 	{
 		DBG1(DBG_TLS, "certificate message header invalid");
@@ -746,6 +757,15 @@ static status_t process_certificate(private_tls_server_t *this,
 		{
 			DBG1(DBG_TLS, "parsing TLS certificate failed, skipped");
 			this->alert->add(this->alert, TLS_WARNING, TLS_BAD_CERTIFICATE);
+		}
+		if (this->tls->get_version_max(this->tls) > TLS_1_2)
+		{
+			if (!certs->read_data16(certs, &data))
+			{
+				DBG1(DBG_TLS, "failed to read extensions of CertificateEntry");
+				this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+				return NEED_MORE;
+			}
 		}
 	}
 	certs->destroy(certs);
@@ -897,43 +917,29 @@ static status_t process_key_exchange(private_tls_server_t *this,
 static status_t process_cert_verify(private_tls_server_t *this,
 									bio_reader_t *reader)
 {
-	bool verified = FALSE;
-	enumerator_t *enumerator;
 	public_key_t *public;
-	auth_cfg_t *auth;
-	bio_reader_t *sig;
+	chunk_t msg;
 
-	enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
-									KEY_ANY, this->peer, this->peer_auth, TRUE);
-	while (enumerator->enumerate(enumerator, &public, &auth))
-	{
-		sig = bio_reader_create(reader->peek(reader));
-		verified = this->crypto->verify_handshake(this->crypto, public, sig);
-		sig->destroy(sig);
-		if (verified)
-		{
-			this->peer_auth->merge(this->peer_auth, auth, FALSE);
-			break;
-		}
-		DBG1(DBG_TLS, "signature verification failed, trying another key");
-	}
-	enumerator->destroy(enumerator);
-
-	if (!verified)
+	public = tls_find_public_key(this->peer_auth);
+	if (!public)
 	{
 		DBG1(DBG_TLS, "no trusted certificate found for '%Y' to verify TLS peer",
 			 this->peer);
-		/* reset peer identity, we couldn't authenticate it */
-		this->peer->destroy(this->peer);
-		this->peer = NULL;
-		this->state = STATE_KEY_EXCHANGE_RECEIVED;
+		this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
+		return NEED_MORE;
 	}
-	else
+
+	msg = reader->peek(reader);
+	if (!this->crypto->verify_handshake(this->crypto, public, reader))
 	{
-		this->state = STATE_CERT_VERIFY_RECEIVED;
+		public->destroy(public);
+		DBG1(DBG_TLS, "signature verification failed");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECRYPT_ERROR);
+		return NEED_MORE;
 	}
-	this->crypto->append_handshake(this->crypto,
-								   TLS_CERTIFICATE_VERIFY, reader->peek(reader));
+	public->destroy(public);
+	this->state = STATE_CERT_VERIFY_RECEIVED;
+	this->crypto->append_handshake(this->crypto, TLS_CERTIFICATE_VERIFY, msg);
 	return NEED_MORE;
 }
 
@@ -972,14 +978,7 @@ static status_t process_finished(private_tls_server_t *this,
 			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 			return NEED_MORE;
 		}
-
-		if (!this->crypto->derive_app_keys(this->crypto))
-		{
-			this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
-			return NEED_MORE;
-		}
 		this->crypto->change_cipher(this->crypto, TRUE);
-		this->crypto->change_cipher(this->crypto, FALSE);
 	}
 
 	if (!chunk_equals_const(received, verify_data))
@@ -1102,6 +1101,29 @@ METHOD(tls_handshake_t, process, status_t,
 				break;
 			case STATE_CIPHERSPEC_CHANGED_IN:
 			case STATE_FINISHED_SENT:
+			case STATE_FINISHED_SENT_KEY_SWITCHED:
+				if (type == TLS_CERTIFICATE)
+				{
+					return process_certificate(this, reader);
+				}
+				if (this->peer)
+				{
+					expected = TLS_CERTIFICATE;
+					break;
+				}
+				/* otherwise fall through to next state */
+			case STATE_CERT_RECEIVED:
+				if (type == TLS_CERTIFICATE_VERIFY)
+				{
+					return process_cert_verify(this, reader);
+				}
+				if (this->peer)
+				{
+					expected = TLS_CERTIFICATE_VERIFY;
+					break;
+				}
+				/* otherwise fall through to next state */
+			case STATE_CERT_VERIFY_RECEIVED:
 				if (type == TLS_FINISHED)
 				{
 					return process_finished(this, reader);
@@ -1348,32 +1370,20 @@ static status_t send_certificate_verify(private_tls_server_t *this,
 	return NEED_MORE;
 }
 
-/**
- * Send Certificate Request
+/*
+ * Write all available certificate authorities to output writer
  */
-static status_t send_certificate_request(private_tls_server_t *this,
-							tls_handshake_type_t *type, bio_writer_t *writer)
+static void write_certificate_authorities(bio_writer_t *writer)
 {
-	bio_writer_t *authorities, *supported;
+	bio_writer_t *authorities;
 	enumerator_t *enumerator;
 	certificate_t *cert;
 	x509_t *x509;
 	identification_t *id;
 
-	supported = bio_writer_create(4);
-	/* we propose both RSA and ECDSA */
-	supported->write_uint8(supported, TLS_RSA_SIGN);
-	supported->write_uint8(supported, TLS_ECDSA_SIGN);
-	writer->write_data8(writer, supported->get_buf(supported));
-	supported->destroy(supported);
-	if (this->tls->get_version_max(this->tls) >= TLS_1_2)
-	{
-		this->crypto->get_signature_algorithms(this->crypto, writer, TRUE);
-	}
-
 	authorities = bio_writer_create(64);
-	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
-												CERT_X509, KEY_RSA, NULL, TRUE);
+	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr, CERT_X509,
+													  KEY_RSA, NULL, TRUE);
 	while (enumerator->enumerate(enumerator, &cert))
 	{
 		x509 = (x509_t*)cert;
@@ -1387,6 +1397,56 @@ static status_t send_certificate_request(private_tls_server_t *this,
 	enumerator->destroy(enumerator);
 	writer->write_data16(writer, authorities->get_buf(authorities));
 	authorities->destroy(authorities);
+}
+
+/**
+ * Send Certificate Request
+ */
+static status_t send_certificate_request(private_tls_server_t *this,
+										 tls_handshake_type_t *type,
+										 bio_writer_t *writer)
+{
+	bio_writer_t *authorities, *supported, *extensions;
+
+	if (this->tls->get_version_max(this->tls) < TLS_1_3)
+	{
+		supported = bio_writer_create(4);
+		/* we propose both RSA and ECDSA */
+		supported->write_uint8(supported, TLS_RSA_SIGN);
+		supported->write_uint8(supported, TLS_ECDSA_SIGN);
+		writer->write_data8(writer, supported->get_buf(supported));
+		supported->destroy(supported);
+		if (this->tls->get_version_max(this->tls) >= TLS_1_2)
+		{
+			this->crypto->get_signature_algorithms(this->crypto, writer, TRUE);
+		}
+
+		write_certificate_authorities(writer);
+	}
+	else
+	{
+		/* certificate request context as described in RFC 8446, section 4.3.2 */
+		writer->write_uint8(writer, 0);
+
+		extensions = bio_writer_create(32);
+		DBG2(DBG_TLS, "sending extension: %N",
+			 tls_extension_names, TLS_EXT_CERTIFICATE_AUTHORITIES);
+		authorities = bio_writer_create(64);
+		write_certificate_authorities(authorities);
+		extensions->write_uint16(extensions, TLS_EXT_CERTIFICATE_AUTHORITIES);
+		extensions->write_data16(extensions, authorities->get_buf(authorities));
+		authorities->destroy(authorities);
+
+		DBG2(DBG_TLS, "sending extension: %N",
+			 tls_extension_names, TLS_EXT_SIGNATURE_ALGORITHMS);
+		extensions->write_uint16(extensions, TLS_EXT_SIGNATURE_ALGORITHMS);
+		supported = bio_writer_create(32);
+		this->crypto->get_signature_algorithms(this->crypto, supported, TRUE);
+		extensions->write_data16(extensions, supported->get_buf(supported));
+		supported->destroy(supported);
+		writer->write_data16(writer, extensions->get_buf(extensions));
+		extensions->destroy(extensions);
+	}
 
 	*type = TLS_CERTIFICATE_REQUEST;
 	this->state = STATE_CERTREQ_SENT;
@@ -1613,12 +1673,26 @@ METHOD(tls_handshake_t, build, status_t,
 			case STATE_CIPHERSPEC_CHANGED_OUT:
 				return send_encrypted_extensions(this, type, writer);
 			case STATE_ENCRYPTED_EXTENSIONS_SENT:
+				if (this->peer)
+				{
+					return send_certificate_request(this, type, writer);
+				}
+				/* otherwise fall through to next state */
+			case STATE_CERTREQ_SENT:
 				return send_certificate(this, type, writer);
 			case STATE_CERT_SENT:
 				return send_certificate_verify(this, type, writer);
 			case STATE_CERT_VERIFY_SENT:
 				return send_finished(this, type, writer);
 			case STATE_FINISHED_SENT:
+				if (!this->crypto->derive_app_keys(this->crypto))
+				{
+					this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
+					return NEED_MORE;
+				}
+				/* inbound key switches after process client finished message */
+				this->crypto->change_cipher(this->crypto, FALSE);
+				this->state = STATE_FINISHED_SENT_KEY_SWITCHED;
 				return INVALID_STATE;
 			case STATE_KEY_UPDATE_REQUESTED:
 				return send_key_update(this, type, writer);
@@ -1667,7 +1741,9 @@ METHOD(tls_handshake_t, cipherspec_changed, bool,
 	{
 		if (inbound)
 		{	/* accept ChangeCipherSpec after ServerFinish or HelloRetryRequest */
-			return this->state == STATE_FINISHED_SENT || retrying(this);
+			return this->state == STATE_FINISHED_SENT ||
+				   this->state == STATE_FINISHED_SENT_KEY_SWITCHED ||
+				   retrying(this);
 		}
 		else
 		{
