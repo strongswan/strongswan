@@ -159,6 +159,7 @@ struct private_tls_peer_t {
 
 /* Implemented in tls_server.c */
 bool tls_write_key_share(bio_writer_t **key_share, diffie_hellman_t *dh);
+public_key_t *tls_find_public_key(auth_cfg_t *peer_auth);
 
 /**
  * Verify the DH group/key type requested by the server is valid.
@@ -599,37 +600,6 @@ static status_t process_certificate(private_tls_peer_t *this,
 }
 
 /**
- * Find a trusted public key to encrypt/verify key exchange data
- */
-static public_key_t *find_public_key(private_tls_peer_t *this)
-{
-	public_key_t *public = NULL, *current;
-	certificate_t *cert, *found;
-	enumerator_t *enumerator;
-	auth_cfg_t *auth;
-
-	cert = this->server_auth->get(this->server_auth, AUTH_HELPER_SUBJECT_CERT);
-	if (cert)
-	{
-		enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
-											KEY_ANY, cert->get_subject(cert),
-											this->server_auth, TRUE);
-		while (enumerator->enumerate(enumerator, &current, &auth))
-		{
-			found = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
-			if (found && cert->equals(cert, found))
-			{
-				public = current->get_ref(current);
-				this->server_auth->merge(this->server_auth, auth, FALSE);
-				break;
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-	return public;
-}
-
-/**
  *  Process CertificateVerify message
  */
 static status_t process_cert_verify(private_tls_peer_t *this,
@@ -638,10 +608,11 @@ static status_t process_cert_verify(private_tls_peer_t *this,
 	public_key_t *public;
 	chunk_t msg;
 
-	public = find_public_key(this);
+	public = tls_find_public_key(this->server_auth);
 	if (!public)
 	{
-		DBG1(DBG_TLS, "no TLS public key found for server '%Y'", this->server);
+		DBG1(DBG_TLS, "no trusted certificate found for '%Y' to verify TLS server",
+			 this->server);
 		this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
 		return NEED_MORE;
 	}
@@ -686,7 +657,7 @@ static status_t process_modp_key_exchange(private_tls_peer_t *this,
 		this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 		return NEED_MORE;
 	}
-	public = find_public_key(this);
+	public = tls_find_public_key(this->server_auth);
 	if (!public)
 	{
 		DBG1(DBG_TLS, "no TLS public key found for server '%Y'", this->server);
@@ -793,7 +764,7 @@ static status_t process_ec_key_exchange(private_tls_peer_t *this,
 		return NEED_MORE;
 	}
 
-	public = find_public_key(this);
+	public = tls_find_public_key(this->server_auth);
 	if (!public)
 	{
 		DBG1(DBG_TLS, "no TLS public key found for server '%Y'", this->server);
@@ -1510,7 +1481,7 @@ static status_t send_key_exchange_encrypt(private_tls_peer_t *this,
 		return NEED_MORE;
 	}
 
-	public = find_public_key(this);
+	public = tls_find_public_key(this->server_auth);
 	if (!public)
 	{
 		DBG1(DBG_TLS, "no TLS public key found for server '%Y'", this->server);
