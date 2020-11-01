@@ -37,8 +37,27 @@
 static void usage(FILE *out, char *cmd)
 {
 	fprintf(out, "usage:\n");
-	fprintf(out, "  %s --connect <address> --port <port> [--key <key] [--cert <file>]+ [--times <n>]\n", cmd);
-	fprintf(out, "  %s --listen <address> --port <port> --key <key> [--cert <file>]+ [--times <n>]\n", cmd);
+	fprintf(out, "  %s --connect <address> --port <port> [--key <key] [--cert <file>] [--cacert <file>]+ [--times <n>]\n", cmd);
+	fprintf(out, "  %s --listen <address> --port <port> --key <key> --cert <file> [--cacert <file>]+ [--times <n>]\n", cmd);
+	fprintf(out, "\n");
+	fprintf(out, "options:\n");
+	fprintf(out, "  --help                   print help and exit\n");
+	fprintf(out, "  --connect <address>      connect to a server on dns name or ip address\n");
+	fprintf(out, "  --listen <address>       listen on dns name or ip address\n");
+	fprintf(out, "  --port <port>            specify the port to use\n");
+	fprintf(out, "  --cert <file>            certificate to authenticate itself\n");
+	fprintf(out, "  --key <file>             private key to authenticate itself\n");
+	fprintf(out, "  --cacert <file>          certificate to verify other peer\n");
+	fprintf(out, "  --times <n>              specify the amount of repeated connection establishments\n");
+	fprintf(out, "  --ipv4                   use IPv4\n");
+	fprintf(out, "  --ipv6                   use IPv6\n");
+	fprintf(out, "  --min-version <version>  specify the minimum TLS version, supported versions:\n");
+	fprintf(out, "                           1.0 (default), 1.1, 1.2 and 1.3\n");
+	fprintf(out, "  --max-version <version>  specify the maximum TLS version, supported versions:\n");
+	fprintf(out, "                           1.0, 1.1, 1.2 and 1.3 (default)\n");
+	fprintf(out, "  --version <version>      set one specific TLS version to use, supported versions:\n");
+	fprintf(out, "                           1.0, 1.1, 1.2 and 1.3\n");
+	fprintf(out, "  --debug <debug level>    set debug level, default is 1\n");
 }
 
 /**
@@ -132,7 +151,7 @@ static int run_client(host_t *host, identification_t *server,
 /**
  * Server routine
  */
-static int serve(host_t *host, identification_t *server,
+static int serve(host_t *host, identification_t *server, identification_t *client,
 				 int times, tls_cache_t *cache, tls_version_t min_version,
 				 tls_version_t max_version)
 {
@@ -170,7 +189,7 @@ static int serve(host_t *host, identification_t *server,
 		}
 		DBG1(DBG_TLS, "%#H connected", host);
 
-		tls = tls_socket_create(TRUE, server, NULL, cfd, cache, min_version,
+		tls = tls_socket_create(TRUE, server, client, cfd, cache, min_version,
 								max_version, TRUE);
 		if (!tls)
 		{
@@ -289,7 +308,7 @@ int main(int argc, char *argv[])
 	char *address = NULL;
 	bool listen = FALSE;
 	int port = 0, times = -1, res, family = AF_UNSPEC;
-	identification_t *server, *client;
+	identification_t *server, *client = NULL;
 	tls_version_t min_version = TLS_1_0, max_version = TLS_1_3;
 	tls_cache_t *cache;
 	host_t *host;
@@ -305,6 +324,7 @@ int main(int argc, char *argv[])
 			{"port",		required_argument,		NULL,		'p' },
 			{"cert",		required_argument,		NULL,		'x' },
 			{"key",			required_argument,		NULL,		'k' },
+			{"cacert",		required_argument,		NULL,		'f' },
 			{"times",		required_argument,		NULL,		't' },
 			{"ipv4",		no_argument,			NULL,		'4' },
 			{"ipv6",		no_argument,			NULL,		'6' },
@@ -332,6 +352,13 @@ int main(int argc, char *argv[])
 				{
 					return 1;
 				}
+				continue;
+			case 'f':
+				if (!load_certificate(optarg))
+				{
+					return 1;
+				}
+				client = identification_create_from_encoding(ID_ANY, chunk_empty);
 				continue;
 			case 'l':
 				listen = TRUE;
@@ -402,10 +429,11 @@ int main(int argc, char *argv[])
 	cache = tls_cache_create(100, 30);
 	if (listen)
 	{
-		res = serve(host, server, times, cache, min_version, max_version);
+		res = serve(host, server, client, times, cache, min_version, max_version);
 	}
 	else
 	{
+		DESTROY_IF(client);
 		client = find_client_id();
 		res = run_client(host, server, client, times, cache, min_version,
 						 max_version);
