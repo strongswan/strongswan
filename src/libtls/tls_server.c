@@ -170,6 +170,37 @@ struct private_tls_server_t {
 };
 
 /**
+ * Find a trusted public key to encrypt/verify key exchange data
+ */
+public_key_t *tls_find_public_key(auth_cfg_t *peer_auth)
+{
+	public_key_t *public = NULL, *current;
+	certificate_t *cert, *found;
+	enumerator_t *enumerator;
+	auth_cfg_t *auth;
+
+	cert = peer_auth->get(peer_auth, AUTH_HELPER_SUBJECT_CERT);
+	if (cert)
+	{
+		enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
+											KEY_ANY, cert->get_subject(cert),
+											peer_auth, TRUE);
+		while (enumerator->enumerate(enumerator, &current, &auth))
+		{
+			found = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+			if (found && cert->equals(cert, found))
+			{
+				public = current->get_ref(current);
+				peer_auth->merge(peer_auth, auth, FALSE);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	return public;
+}
+
+/**
  * Create an array of an intersection of server and peer supported key types
  */
 static array_t *create_common_key_types(chunk_t hashsig,
