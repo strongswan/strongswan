@@ -553,6 +553,7 @@ METHOD(job_t, terminate_ike_execute, job_requeue_t,
 {
 	interface_listener_t *listener = &job->listener;
 	uint32_t unique_id = listener->id;
+	status_t delete_status;
 	ike_sa_t *ike_sa;
 
 	ike_sa = charon->ike_sa_manager->checkout_by_id(charon->ike_sa_manager,
@@ -569,9 +570,18 @@ METHOD(job_t, terminate_ike_execute, job_requeue_t,
 	listener->ike_sa = ike_sa;
 	listener->lock->unlock(listener->lock);
 
-	if (ike_sa->delete(ike_sa, listener->options.force) != DESTROY_ME)
+	delete_status = ike_sa->delete(ike_sa, listener->options.force);
+	if (delete_status != DESTROY_ME)
 	{	/* delete queued */
-		listener->status = FAILED;
+		if (!listener->logger.callback && delete_status == SUCCESS)
+		{
+			/* queued succesfully and no callback set, report as success */
+			listener->status = SUCCESS;
+		}
+		else
+		{
+			listener->status = FAILED;
+		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
 	else
