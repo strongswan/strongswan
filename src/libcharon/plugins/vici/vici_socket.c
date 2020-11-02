@@ -666,7 +666,7 @@ CALLBACK(flush_messages, void,
 	VA_ARGS_VGET(args, this);
 
 	/* no need for any locking as no other threads are running, the connections
-	 * all get disconneted afterwards, so error handling is simple too */
+	 * all get disconnected afterwards, so error handling is simple too */
 	ret = do_write(this, entry, entry->stream, errmsg, sizeof(errmsg), TRUE);
 
 	if (!ret && errmsg[0])

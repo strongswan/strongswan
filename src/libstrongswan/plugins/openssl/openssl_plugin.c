@@ -75,7 +75,7 @@ struct private_openssl_plugin_t {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 
 /**
- * Array of static mutexs, with CRYPTO_num_locks() mutex
+ * Array of static mutexes, with CRYPTO_num_locks() mutex
  */
 static mutex_t **mutex = NULL;
 
