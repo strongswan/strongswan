@@ -210,11 +210,11 @@ METHOD(key_exchange_t, destroy, void,
 	private_oqs_kem_t *this)
 {
 	DESTROY_IF(this->drbg);
-	OQS_KEM_free(this->kem);
 	memwipe(this->secret_key, this->kem->length_secret_key);
 	free(this->secret_key);
 	memwipe(this->shared_secret, this->kem->length_shared_secret);
 	free(this->shared_secret);
+	OQS_KEM_free(this->kem);
 	free(this->public_key);
 	free(this->ciphertext);
 	free(this);
