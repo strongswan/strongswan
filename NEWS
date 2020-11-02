@@ -1,8 +1,43 @@
 strongswan-5.9.1
 ----------------
 
-- Remote attestation via TNC: Support of SHA-256 based TPM 2.0 BIOS measurements
-  introduced with the Linux 5.4 kernel.
+- Remote attestation via TNC supports the SHA-256 based TPM 2.0 BIOS/EFI
+  measurements introduced with the Linux 5.4 kernel.
+
+- Nonces in OCSP responses are not enforced anymore and only validated if a
+  nonce is actually contained.
+
+- Fixed an issue when only some fragments of a retransmitted IKEv2 message were
+  received, which prevented processing a following fragmented message.
+
+- All queued vici messages are now sent to subscribed clients during shutdown,
+  which includes ike/child-updown events triggered when all SAs are deleted.
+
+- CHILD_SA IP addresses are updated before installation to allow MOBIKE updates
+  while retransmitting a CREATE_CHILD_SA request.
+
+- When looking for a route to the peer, the kernel-netlink plugin ignores the
+  current source address if it's deprecated.
+
+- The file and syslog loggers support logging the log level of each message
+  after the subsystem (e.g. [IKE2]).
+
+- charon-nm is now properly terminated during system shutdown.
+
+- Improved support for EdDSA keys in vici/swanctl, in particular, encrypted
+  keys are now supported.
+
+- A new global strongswan.conf option allows sending the Cisco FlexVPN vendor ID
+  to prevent Cisco devices from narrowing a 0.0.0.0/0 traffic selector.
+
+- The openssl plugin accepts CRLs issued by non-CA certificates if they contain
+  the cRLSign keyUsage flag (the x509 plugin already does this since 4.5.1).
+
+- Attributes in PKCS#7 containers, as used in SCEP, are now properly
+  DER-encoded, i.e. sorted.
+
+- The load-tester plugin now supports virtual IPv6 addresses and IPv6 source
+  address pools.
 
 
 strongswan-5.9.0
