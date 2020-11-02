@@ -859,7 +859,7 @@ METHOD(imv_agent_if_t, destroy, void,
 	if (this->pts_creds)
 	{
 		this->pts_credmgr->remove_set(this->pts_credmgr,
-						 			  this->pts_creds->get_set(this->pts_creds));
+									  this->pts_creds->get_set(this->pts_creds));
 		this->pts_creds->destroy(this->pts_creds);
 	}
 	DESTROY_IF(this->pts_db);
@@ -887,7 +887,7 @@ imv_agent_if_t *imv_attestation_agent_create(const char *name, TNC_IMVID id,
 	}
 
 	hash_alg = lib->settings->get_str(lib->settings,
-				"%s.plugins.imv-attestation.hash_algorithm", "sha2384", lib->ns);
+				"%s.plugins.imv-attestation.hash_algorithm", "sha384", lib->ns);
 	dh_group = lib->settings->get_str(lib->settings,
 				"%s.plugins.imv-attestation.dh_group", "ecp256", lib->ns);
 	mandatory_dh_groups = lib->settings->get_bool(lib->settings,
