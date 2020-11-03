@@ -3046,7 +3046,7 @@ METHOD(kernel_net_t, destroy, void,
 	enumerator_t *enumerator;
 	route_entry_t *route;
 
-	if (this->routing_table)
+	if (this->routing_table && this->socket)
 	{
 		manage_rule(this, RTM_DELRULE, AF_INET, this->routing_table,
 					this->routing_table_prio);
