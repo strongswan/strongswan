@@ -167,6 +167,7 @@ METHOD(plugin_t, destroy, void,
 plugin_t *gcrypt_plugin_create()
 {
 	private_gcrypt_plugin_t *this;
+	u_char *dummy[1];
 
 #if GCRYPT_VERSION_NUMBER < 0x010600
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -188,7 +189,7 @@ plugin_t *gcrypt_plugin_create()
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	/* initialize static allocations we want to exclude from leak-detective */
-	gcry_create_nonce(NULL, 0);
+	gcry_create_nonce(dummy, sizeof(dummy));
 
 	INIT(this,
 		.public = {
