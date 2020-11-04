@@ -708,6 +708,12 @@ static status_t process_certificate(private_tls_server_t *this,
 		return NEED_MORE;
 	}
 	certs = bio_reader_create(data);
+	if (!certs->remaining(certs))
+	{
+		DBG1(DBG_TLS, "no certificate sent by peer");
+		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+		return NEED_MORE;
+	}
 	while (certs->remaining(certs))
 	{
 		if (!certs->read_data24(certs, &data))
