@@ -89,11 +89,6 @@ struct private_tls_server_t {
 	identification_t *peer;
 
 	/**
-	 * Is it acceptable if we couldn't verify the peer certificate?
-	 */
-	bool peer_auth_optional;
-
-	/**
 	 * State we are in
 	 */
 	server_state_t state;
@@ -733,12 +728,6 @@ static status_t process_certificate(private_tls_server_t *this,
 				DBG1(DBG_TLS, "received TLS peer certificate '%Y'",
 					 cert->get_subject(cert));
 				first = FALSE;
-				if (this->peer == NULL)
-				{	/* apply identity to authenticate */
-					this->peer = cert->get_subject(cert);
-					this->peer = this->peer->clone(this->peer);
-					this->peer_auth_optional = TRUE;
-				}
 			}
 			else
 			{
@@ -928,11 +917,6 @@ static status_t process_cert_verify(private_tls_server_t *this,
 	{
 		DBG1(DBG_TLS, "no trusted certificate found for '%Y' to verify TLS peer",
 			 this->peer);
-		if (!this->peer_auth_optional)
-		{	/* client authentication is required */
-			this->alert->add(this->alert, TLS_FATAL, TLS_CERTIFICATE_UNKNOWN);
-			return NEED_MORE;
-		}
 		/* reset peer identity, we couldn't authenticate it */
 		this->peer->destroy(this->peer);
 		this->peer = NULL;
@@ -1598,7 +1582,11 @@ METHOD(tls_handshake_t, build, status_t,
 				}
 				/* otherwise fall through to next state */
 			case STATE_KEY_EXCHANGE_SENT:
-				return send_certificate_request(this, type, writer);
+				if (this->peer)
+				{
+					return send_certificate_request(this, type, writer);
+				}
+				/* otherwise fall through to next state */
 			case STATE_CERTREQ_SENT:
 				return send_hello_done(this, type, writer);
 			case STATE_CIPHERSPEC_CHANGED_OUT:
