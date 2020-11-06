@@ -18,3 +18,4 @@ tls_test
 timeattack
 os_info
 nist_kem_kat
+nist_sig_kat
