@@ -20,15 +20,17 @@ mkdir -p $IMGDIR
 
 usage() {
 cat << EOF
-Usage: ${0##*/} [--all] [--guest NAME] [SRCDIR]
+Usage: ${0##*/} [--all] [--clean] [--guest NAME] [SRCDIR]
     --help            (-h)  show usage information
     --all             (-a)  build/install all software, not only strongSwan
+    --clean           (-c)  use a new strongSwan build directory
     --guest NAME      (-g)  only install in a specific guest image
 EOF
 }
 
-GUEST=
 ALL_RECIPES=
+CLEAN=
+GUEST=
 
 while :; do
 	case $1 in
@@ -38,6 +40,9 @@ while :; do
 		;;
 	-a|--all)
 		ALL_RECIPES=1
+		;;
+	-c|--clean)
+		CLEAN=1
 		;;
 	-g|--guest)
 		if [ "$2" ]; then
@@ -133,6 +138,9 @@ else
 	RECIPES=`ls $RECPDIR/*strongswan.mk | xargs -n1 basename`
 fi
 
+if [ "$CLEAN" ]; then
+	rm -rf $SHAREDDIR/build-strongswan
+fi
 mkdir -p $SHAREDDIR/build-strongswan
 mkdir -p $SHAREDDIR/compile
 
