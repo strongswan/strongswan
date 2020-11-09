@@ -21,12 +21,13 @@ mkdir -p $IMGDIR
 usage() {
 cat << EOF
 Usage:
-  ${0##*/} [--all] [--guest NAME] [--replace] [--clean] [SRCDIR]
-  ${0##*/} [--all] [--guest NAME] [--replace] [--tarball VERSION]
+  ${0##*/} [--all] [--guest NAME|--no-guests] [--replace] [--clean] [SRCDIR]
+  ${0##*/} [--all] [--guest NAME|--no-guests] [--replace] [--tarball VERSION]
     --help            (-h)  show usage information
     --all             (-a)  build/install all software, not only strongSwan
     --clean           (-c)  use a new strongSwan build directory
     --guest NAME      (-g)  only install in a specific guest image
+    --no-guests       (-n)  don't build any guest images after the root image
     --replace         (-r)  replace the root image (implies --all)
     --tarball         (-t)  build strongSwan from a release tarball
 EOF
@@ -35,6 +36,7 @@ EOF
 ALL_RECIPES=
 CLEAN=
 GUEST=
+NO_GUESTS=
 REPLACE=
 TARBALL=
 
@@ -57,6 +59,9 @@ while :; do
 		else
 			die "Guest name missing"
 		fi
+		;;
+	-n|--no-guests)
+		NO_GUESTS=1
 		;;
 	-r|--replace)
 		REPLACE=1
@@ -182,7 +187,7 @@ do
 done
 
 # rebuild the guest images after we modified the root image
-if [ -z "$GUEST" ]; then
+if [ -z "$GUEST" -a -z "$NO_GUESTS" ]; then
 	# cleanup before mounting guest images
 	on_exit
 	# building the guest images without certificates fails on winnetou
