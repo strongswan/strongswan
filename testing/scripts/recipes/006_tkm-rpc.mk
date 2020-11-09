@@ -2,7 +2,7 @@
 
 PKG = tkm-rpc
 SRC = https://git.codelabs.ch/git/$(PKG).git
-REV = 1f4e1c9c6ec473cdb391b5416f38d48b09cb6004
+REV = 1235905c5c6fad5df1eecb6ba0447d5722753203
 
 PREFIX = /usr/local/ada
 
