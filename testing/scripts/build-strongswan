@@ -20,17 +20,19 @@ mkdir -p $IMGDIR
 
 usage() {
 cat << EOF
-Usage: ${0##*/} [--all] [--clean] [--guest NAME] [SRCDIR]
+Usage: ${0##*/} [--all] [--clean] [--guest NAME] [--replace] [SRCDIR]
     --help            (-h)  show usage information
     --all             (-a)  build/install all software, not only strongSwan
     --clean           (-c)  use a new strongSwan build directory
     --guest NAME      (-g)  only install in a specific guest image
+    --replace         (-r)  replace the root image (implies --all)
 EOF
 }
 
 ALL_RECIPES=
 CLEAN=
 GUEST=
+REPLACE=
 
 while :; do
 	case $1 in
@@ -52,6 +54,9 @@ while :; do
 			die "Guest name missing"
 		fi
 		;;
+	-r|--replace)
+		REPLACE=1
+		;;
 	*)
 		break
 	esac
@@ -66,7 +71,7 @@ SWANDIR=${1:+$(readlink -f $1)}
 
 case "$GUEST" in
 "")
-	if [ ! -f "$ROOTIMG" ]; then
+	if [ ! -f "$ROOTIMG" -o "$REPLACE" ]; then
 		log_action "Creating root image $ROOTIMG"
 		execute "qemu-img create -b $BASEIMG -f $IMGEXT $ROOTIMG"
 		ALL_RECIPES=1
