@@ -1710,14 +1710,14 @@ METHOD(tls_handshake_t, build, status_t,
 			case STATE_HELLO_DONE:
 			case STATE_CIPHERSPEC_CHANGED_OUT:
 			case STATE_FINISHED_RECEIVED:
-				return send_finished(this, type, writer);
-			case STATE_FINISHED_SENT:
 				if (!this->crypto->derive_app_keys(this->crypto))
 				{
 					this->alert->add(this->alert, TLS_FATAL, TLS_INTERNAL_ERROR);
 					return NEED_MORE;
 				}
 				this->crypto->change_cipher(this->crypto, TRUE);
+				return send_finished(this, type, writer);
+			case STATE_FINISHED_SENT:
 				this->crypto->change_cipher(this->crypto, FALSE);
 				this->state = STATE_FINISHED_SENT_KEY_SWITCHED;
 				return INVALID_STATE;
