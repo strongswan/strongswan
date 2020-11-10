@@ -3,7 +3,7 @@ TESTS = oqs_tests
 check_PROGRAMS = $(TESTS)
 
 oqs_tests_SOURCES = \
-	suites/test_oqs.c \
+	suites/test_oqs.c suites/test_oqs_sig.c \
 	oqs_tests.h oqs_tests.c
 
 oqs_tests_CFLAGS = \
