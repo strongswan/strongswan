@@ -24,6 +24,7 @@
 #include <utils/debug.h>
 #include <plugins/plugin_feature.h>
 #include <collections/hashtable.h>
+#include <collections/array.h>
 
 ENUM_BEGIN(tls_cipher_suite_names, TLS_NULL_WITH_NULL_NULL,
 								   TLS_DH_anon_WITH_3DES_EDE_CBC_SHA,
@@ -2558,10 +2559,10 @@ CALLBACK(destroy_key_types, void,
 	ht->destroy_function(ht, (void*)free);
 }
 
-/*
- * See header.
+/**
+ * Create an enumerator over supported key types within a specific TLS range
  */
-enumerator_t *tls_get_supported_key_types(tls_version_t min_version,
+static enumerator_t *get_supported_key_types(tls_version_t min_version,
 										  tls_version_t max_version)
 {
 	hashtable_t *ht;
@@ -2586,4 +2587,112 @@ enumerator_t *tls_get_supported_key_types(tls_version_t min_version,
 	}
 	return enumerator_create_filter(ht->create_enumerator(ht),
 									filter_key_types, ht, destroy_key_types);
+}
+
+/**
+ * Create an array of an intersection of server and peer supported key types
+ */
+static array_t *create_common_key_types(enumerator_t *enumerator, chunk_t hashsig)
+{
+	array_t *key_types;
+	key_type_t v, lookup;
+	uint16_t sig_scheme;
+
+	key_types = array_create(sizeof(key_type_t), 8);
+	while (enumerator->enumerate(enumerator, &v))
+	{
+		bio_reader_t *reader;
+
+		reader = bio_reader_create(hashsig);
+		while (reader->remaining(reader) &&
+			   reader->read_uint16(reader, &sig_scheme))
+		{
+			lookup = tls_signature_scheme_to_key_type(sig_scheme);
+			if (v == lookup)
+			{
+				array_insert(key_types, ARRAY_TAIL, &lookup);
+				break;
+			}
+		}
+		reader->destroy(reader);
+	}
+	return key_types;
+}
+
+typedef struct {
+	enumerator_t public;
+	array_t *key_types;
+	identification_t *peer;
+	private_key_t *key;
+	auth_cfg_t *auth;
+} private_key_enumerator_t;
+
+METHOD(enumerator_t, private_key_enumerate, bool,
+	private_key_enumerator_t *this, va_list args)
+{
+	key_type_t type;
+	auth_cfg_t **auth_out;
+	private_key_t **key_out;
+
+	VA_ARGS_VGET(args, key_out, auth_out);
+
+	DESTROY_IF(this->key);
+	DESTROY_IF(this->auth);
+	this->auth = auth_cfg_create();
+
+	while (array_remove(this->key_types, ARRAY_HEAD, &type))
+	{
+		this->key = lib->credmgr->get_private(lib->credmgr, type, this->peer,
+											  this->auth);
+		if (this->key)
+		{
+			*key_out = this->key;
+			if (auth_out)
+			{
+				*auth_out = this->auth;
+			}
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+METHOD(enumerator_t, private_key_destroy, void,
+	private_key_enumerator_t *this)
+{
+	DESTROY_IF(this->key);
+	DESTROY_IF(this->auth);
+	array_destroy(this->key_types);
+	free(this);
+}
+
+/**
+ * See header.
+ */
+enumerator_t *tls_create_private_key_enumerator(tls_version_t min_version,
+												tls_version_t max_version,
+												chunk_t hashsig,
+												identification_t *peer)
+{
+	private_key_enumerator_t *enumerator;
+	enumerator_t *key_types;
+
+	key_types = get_supported_key_types(min_version, max_version);
+
+	INIT(enumerator,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _private_key_enumerate,
+			.destroy = _private_key_destroy,
+		},
+		.key_types = create_common_key_types(key_types, hashsig),
+		.peer = peer,
+	);
+	key_types->destroy(key_types);
+
+	if (!array_count(enumerator->key_types))
+	{
+		return NULL;
+	}
+	return &enumerator->public;
 }

@@ -700,15 +700,18 @@ tls_named_group_t tls_ec_group_to_curve(diffie_hellman_group_t group);
 key_type_t tls_signature_scheme_to_key_type(tls_signature_scheme_t sig);
 
 /**
- * Create an enumerator over supported key types within a specific TLS version range
- *
- * Enumerates over key_type_t
+ * Find a private key to encrypt/verify key exchange data
  *
  * @param min_version	minimum negotiated TLS version
  * @param max_version	maximum negotiated TLS version
- * @return				hashtable of key types
+ * @param hashsig		hash and signature algorithms supported by other peer
+ * @param peer			this peer identification
+ * @return				enumerator over private keys,
+ * 						NULL in case no common signature scheme
  */
-enumerator_t *tls_get_supported_key_types(tls_version_t min_version,
-										  tls_version_t max_version);
+enumerator_t *tls_create_private_key_enumerator(tls_version_t min_version,
+												tls_version_t max_version,
+												chunk_t hashsig,
+												identification_t *peer);
 
 #endif /** TLS_CRYPTO_H_ @}*/
