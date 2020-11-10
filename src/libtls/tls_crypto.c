@@ -1775,7 +1775,14 @@ METHOD(tls_crypto_t, sign, bool,
 				DBG1(DBG_TLS, "unable to create transcript hash");
 				return FALSE;
 			}
-			data = chunk_cata("cm", tls13_sig_data_server, transcript_hash);
+			if (this->tls->is_server(this->tls))
+			{
+				data = chunk_cata("cm", tls13_sig_data_server, transcript_hash);
+			}
+			else
+			{
+				data = chunk_cata("cm", tls13_sig_data_client, transcript_hash);
+			}
 		}
 
 		if (!hashsig.len)
@@ -1884,7 +1891,7 @@ METHOD(tls_crypto_t, verify, bool,
 				 tls_signature_scheme_names, scheme);
 			return FALSE;
 		}
-		if (this->tls->get_version_max(this->tls) == TLS_1_3)
+		if (this->tls->get_version_max(this->tls) >= TLS_1_3)
 		{
 			chunk_t transcript_hash;
 

@@ -49,6 +49,7 @@ typedef enum {
 	STATE_FINISHED_SENT_KEY_SWITCHED,
 	STATE_KEY_UPDATE_REQUESTED,
 	STATE_KEY_UPDATE_SENT,
+	STATE_CERT_VERIFY_SENT,
 } peer_state_t;
 
 /**
@@ -846,55 +847,27 @@ static status_t process_key_exchange(private_tls_peer_t *this,
 }
 
 /**
- * Process a Certificate Request message
+ * Read all available certificate authorities from the given reader
  */
-static status_t process_certreq(private_tls_peer_t *this, bio_reader_t *reader)
+static bool read_certificate_authorities(private_tls_peer_t *this,
+										 bio_reader_t *reader)
 {
-	chunk_t types, hashsig, data;
+	chunk_t data;
 	bio_reader_t *authorities;
 	identification_t *id;
 	certificate_t *cert;
 
-	if (!this->peer)
-	{
-		DBG1(DBG_TLS, "server requested a certificate, but client "
-			 "authentication disabled");
-	}
-	this->crypto->append_handshake(this->crypto,
-								TLS_CERTIFICATE_REQUEST, reader->peek(reader));
-
-	if (!reader->read_data8(reader, &types))
-	{
-		DBG1(DBG_TLS, "certreq message header invalid");
-		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
-		return NEED_MORE;
-	}
-	this->cert_types = chunk_clone(types);
-	if (this->tls->get_version_max(this->tls) >= TLS_1_2)
-	{
-		if (!reader->read_data16(reader, &hashsig))
-		{
-			DBG1(DBG_TLS, "certreq message invalid");
-			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
-			return NEED_MORE;
-		}
-		this->hashsig = chunk_clone(hashsig);
-	}
 	if (!reader->read_data16(reader, &data))
 	{
-		DBG1(DBG_TLS, "certreq message invalid");
-		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
-		return NEED_MORE;
+		return FALSE;
 	}
 	authorities = bio_reader_create(data);
 	while (authorities->remaining(authorities))
 	{
 		if (!authorities->read_data16(authorities, &data))
 		{
-			DBG1(DBG_TLS, "certreq message invalid");
-			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 			authorities->destroy(authorities);
-			return NEED_MORE;
+			return FALSE;
 		}
 		if (this->peer)
 		{
@@ -914,6 +887,105 @@ static status_t process_certreq(private_tls_peer_t *this, bio_reader_t *reader)
 		}
 	}
 	authorities->destroy(authorities);
+	return TRUE;
+}
+
+/**
+ * Process a Certificate Request message
+ */
+static status_t process_certreq(private_tls_peer_t *this, bio_reader_t *reader)
+{
+	chunk_t types, hashsig, context, ext;
+	bio_reader_t *extensions, *extension;
+
+	if (!this->peer)
+	{
+		DBG1(DBG_TLS, "server requested a certificate, but client "
+			 "authentication disabled");
+	}
+	this->crypto->append_handshake(this->crypto,
+								TLS_CERTIFICATE_REQUEST, reader->peek(reader));
+
+	if (this->tls->get_version_max(this->tls) < TLS_1_3)
+	{
+		if (!reader->read_data8(reader, &types))
+		{
+			DBG1(DBG_TLS, "certreq message header invalid");
+			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+			return NEED_MORE;
+		}
+		this->cert_types = chunk_clone(types);
+		if (this->tls->get_version_max(this->tls) >= TLS_1_2)
+		{
+			if (!reader->read_data16(reader, &hashsig))
+			{
+				DBG1(DBG_TLS, "certreq message invalid");
+				this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+				return NEED_MORE;
+			}
+			this->hashsig = chunk_clone(hashsig);
+		}
+
+		if (!read_certificate_authorities(this, reader))
+		{
+			DBG1(DBG_TLS, "certreq message invalid");
+			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+			return NEED_MORE;
+		}
+	}
+	else
+	{
+		/* certificate request context as described in RFC 8446, section 4.3.2 */
+		reader->read_data8(reader, &context);
+
+		reader->read_data16(reader, &ext);
+		extensions = bio_reader_create(ext);
+		while (extensions->remaining(extensions))
+		{
+			uint16_t extension_type;
+			chunk_t extension_data;
+
+			if (!extensions->read_uint16(extensions, &extension_type) ||
+				!extensions->read_data16(extensions, &extension_data))
+			{
+				DBG1(DBG_TLS, "invalid extension in CertificateRequest");
+				this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+				extensions->destroy(extensions);
+				return NEED_MORE;
+			}
+			extension = bio_reader_create(extension_data);
+			switch (extension_type)
+			{
+				case TLS_EXT_SIGNATURE_ALGORITHMS:
+					if (!extension->read_data16(extension, &extension_data))
+					{
+						DBG1(DBG_TLS, "invalid %N extension",
+							 tls_extension_names, extension_type);
+						this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+						extension->destroy(extension);
+						extensions->destroy(extensions);
+						return NEED_MORE;
+					}
+					chunk_free(&this->hashsig);
+					this->hashsig = chunk_clone(extension_data);
+					break;
+				case TLS_EXT_CERTIFICATE_AUTHORITIES:
+					if (!read_certificate_authorities(this, extension))
+					{
+						DBG1(DBG_TLS, "certificate request message invalid");
+						this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+						extension->destroy(extension);
+						extensions->destroy(extensions);
+						return NEED_MORE;
+					}
+					break;
+				default:
+					break;
+			}
+			extension->destroy(extension);
+		}
+	extensions->destroy(extensions);
+	}
 	this->state = STATE_CERTREQ_RECEIVED;
 	return NEED_MORE;
 }
@@ -1115,6 +1187,15 @@ METHOD(tls_handshake_t, process, status_t,
 				expected = TLS_ENCRYPTED_EXTENSIONS;
 				break;
 			case STATE_ENCRYPTED_EXTENSIONS_RECEIVED:
+				if (type == TLS_CERTIFICATE_REQUEST)
+				{
+					return process_certreq(this, reader);
+				}
+				/* no cert request, server does not want to authenticate us */
+				DESTROY_IF(this->peer);
+				this->peer = NULL;
+				/* otherwise fall through to next state */
+			case STATE_CERTREQ_RECEIVED:
 				if (type == TLS_CERTIFICATE)
 				{
 					return process_certificate(this, reader);
@@ -1426,37 +1507,45 @@ static status_t send_certificate(private_tls_peer_t *this,
 	}
 	DESTROY_IF(enumerator);
 
+	/* certificate request context as described in RFC 8446, section 4.4.2 */
+	if (this->tls->get_version_max(this->tls) > TLS_1_2)
+	{
+		writer->write_uint8(writer, 0);
+	}
+
 	/* generate certificate payload */
 	certs = bio_writer_create(256);
-	if (this->peer)
+	cert = this->peer_auth->get(this->peer_auth, AUTH_RULE_SUBJECT_CERT);
+	if (cert)
 	{
-		cert = this->peer_auth->get(this->peer_auth, AUTH_RULE_SUBJECT_CERT);
-		if (cert)
+		if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
+		{
+			DBG1(DBG_TLS, "sending TLS client certificate '%Y'",
+				 cert->get_subject(cert));
+			certs->write_data24(certs, data);
+			free(data.ptr);
+		}
+		/* extensions see RFC 8446, section 4.4.2 */
+		if (this->tls->get_version_max(this->tls) > TLS_1_2)
+		{
+			certs->write_uint16(certs, 0);
+		}
+	}
+	enumerator = this->peer_auth->create_enumerator(this->peer_auth);
+	while (enumerator->enumerate(enumerator, &rule, &cert))
+	{
+		if (rule == AUTH_RULE_IM_CERT)
 		{
 			if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
 			{
-				DBG1(DBG_TLS, "sending TLS peer certificate '%Y'",
+				DBG1(DBG_TLS, "sending TLS intermediate certificate '%Y'",
 					 cert->get_subject(cert));
 				certs->write_data24(certs, data);
 				free(data.ptr);
 			}
 		}
-		enumerator = this->peer_auth->create_enumerator(this->peer_auth);
-		while (enumerator->enumerate(enumerator, &rule, &cert))
-		{
-			if (rule == AUTH_RULE_IM_CERT)
-			{
-				if (cert->get_encoding(cert, CERT_ASN1_DER, &data))
-				{
-					DBG1(DBG_TLS, "sending TLS intermediate certificate '%Y'",
-						 cert->get_subject(cert));
-					certs->write_data24(certs, data);
-					free(data.ptr);
-				}
-			}
-		}
-		enumerator->destroy(enumerator);
 	}
+	enumerator->destroy(enumerator);
 
 	writer->write_data24(writer, certs->get_buf(certs));
 	certs->destroy(certs);
@@ -1596,7 +1685,8 @@ static status_t send_key_exchange(private_tls_peer_t *this,
  * Send certificate verify
  */
 static status_t send_certificate_verify(private_tls_peer_t *this,
-							tls_handshake_type_t *type, bio_writer_t *writer)
+										tls_handshake_type_t *type,
+										bio_writer_t *writer)
 {
 	if (!this->private ||
 		!this->crypto->sign_handshake(this->crypto, this->private,
@@ -1716,6 +1806,18 @@ METHOD(tls_handshake_t, build, status_t,
 					return NEED_MORE;
 				}
 				this->crypto->change_cipher(this->crypto, TRUE);
+				if (this->peer)
+				{
+					return send_certificate(this, type, writer);
+				}
+				/* otherwise fall through to next state */
+			case STATE_CERT_SENT:
+				if (this->peer)
+				{
+					return send_certificate_verify(this, type, writer);
+				}
+				/* otherwise fall through to next state */
+			case STATE_VERIFY_SENT:
 				return send_finished(this, type, writer);
 			case STATE_FINISHED_SENT:
 				this->crypto->change_cipher(this->crypto, FALSE);
