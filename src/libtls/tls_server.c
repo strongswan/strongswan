@@ -197,74 +197,30 @@ public_key_t *tls_find_public_key(auth_cfg_t *peer_auth)
 }
 
 /**
- * Create an array of an intersection of server and peer supported key types
- */
-static array_t *create_common_key_types(chunk_t hashsig,
-										tls_version_t version_min,
-										tls_version_t version_max)
-{
-	array_t *key_types;
-	enumerator_t *enumerator;
-	key_type_t v, lookup;
-	uint16_t sig_scheme;
-
-	key_types = array_create(sizeof(key_type_t), 8);
-	enumerator = tls_get_supported_key_types(version_min, version_max);
-	while (enumerator->enumerate(enumerator, &v))
-	{
-		bio_reader_t *reader;
-
-		reader = bio_reader_create(hashsig);
-		while (reader->remaining(reader) &&
-			   reader->read_uint16(reader, &sig_scheme))
-		{
-			lookup = tls_signature_scheme_to_key_type(sig_scheme);
-			if (v == lookup)
-			{
-				array_insert(key_types, ARRAY_TAIL, &lookup);
-				break;
-			}
-		}
-		reader->destroy(reader);
-	}
-	enumerator->destroy(enumerator);
-	return key_types;
-}
-
-/**
  * Find a cipher suite and a server key
  */
 static bool select_suite_and_key(private_tls_server_t *this,
 								 tls_cipher_suite_t *suites, int count)
 {
-	array_t *key_types;
 	tls_version_t version_min, version_max;
 	private_key_t *key;
-	key_type_t type;
+	auth_cfg_t *auth;
+	enumerator_t *enumerator;
 
 	version_min = this->tls->get_version_min(this->tls);
 	version_max = this->tls->get_version_max(this->tls);
-	key_types = create_common_key_types(this->hashsig, version_min, version_max);
-	if (!array_count(key_types))
+	enumerator = tls_create_private_key_enumerator(version_min, version_max,
+												   this->hashsig, this->server);
+	if (!enumerator)
 	{
 		DBG1(DBG_TLS, "no common signature algorithms found");
-		array_destroy(key_types);
 		return FALSE;
 	}
-	while (array_remove(key_types, ARRAY_HEAD, &type))
-	{
-		key = lib->credmgr->get_private(lib->credmgr, type, this->server,
-										this->server_auth);
-		if (key)
-		{
-			break;
-		}
-	}
-	if (!key)
+	if (!enumerator->enumerate(enumerator, &key, &auth))
 	{
 		DBG1(DBG_TLS, "no usable TLS server certificate found for '%Y'",
 			 this->server);
-		array_destroy(key_types);
+		enumerator->destroy(enumerator);
 		return FALSE;
 	}
 
@@ -276,30 +232,25 @@ static bool select_suite_and_key(private_tls_server_t *this,
 	else
 	{
 		this->suite = this->crypto->select_cipher_suite(this->crypto, suites,
-														count, type);
-		while (!this->suite && array_remove(key_types, ARRAY_HEAD, &type))
+														count, key->get_type(key));
+		while (!this->suite &&
+			   enumerator->enumerate(enumerator, &key, &auth))
 		{	/* find a key and cipher suite for one of the remaining key types */
-			DESTROY_IF(key);
-			this->server_auth->destroy(this->server_auth);
-			this->server_auth = auth_cfg_create();
-			key = lib->credmgr->get_private(lib->credmgr, type, this->server,
-											this->server_auth);
-			if (key)
-			{
-				this->suite = this->crypto->select_cipher_suite(this->crypto,
-																suites, count,
-																type);
-			}
+			this->suite = this->crypto->select_cipher_suite(this->crypto,
+															suites, count,
+															key->get_type(key));
 		}
 	}
-	array_destroy(key_types);
-	if (!this->suite || !key)
+	if (!this->suite)
 	{
 		DBG1(DBG_TLS, "received cipher suites or signature schemes unacceptable");
+		enumerator->destroy(enumerator);
 		return FALSE;
 	}
 	DBG1(DBG_TLS, "using key of type %N", key_type_names, key->get_type(key));
-	this->private = key;
+	this->private = key->get_ref(key);
+	this->server_auth->merge(this->server_auth, auth, FALSE);
+	enumerator->destroy(enumerator);
 	return TRUE;
 }
 

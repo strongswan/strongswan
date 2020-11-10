@@ -1398,13 +1398,37 @@ static status_t send_certificate(private_tls_peer_t *this,
 	certificate_t *cert;
 	auth_rule_t rule;
 	bio_writer_t *certs;
+	private_key_t *key;
+	auth_cfg_t *auth;
 	chunk_t data;
+	tls_version_t version_min, version_max;
 
-	this->private = find_private_key(this);
+	version_min = this->tls->get_version_min(this->tls);
+	version_max = this->tls->get_version_max(this->tls);
+	if (version_max > TLS_1_1)
+	{
+		enumerator = tls_create_private_key_enumerator(version_min, version_max,
+													   this->hashsig, this->peer);
+		if (!enumerator)
+		{
+			DBG1(DBG_TLS, "no common signature algorithms found");
+			return FALSE;
+		}
+		if (enumerator->enumerate(enumerator, &key, &auth))
+		{
+			this->private = key->get_ref(key);
+			this->peer_auth->merge(this->peer_auth, auth, FALSE);
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		this->private = find_private_key(this);
+	}
 	if (!this->private)
 	{
-		DBG1(DBG_TLS, "no TLS peer certificate found for '%Y', "
-			 "skipping client authentication", this->peer);
+		DBG1(DBG_TLS, "no usable TLS client certificate found for '%Y'",
+			 this->peer);
 		this->peer->destroy(this->peer);
 		this->peer = NULL;
 	}
