@@ -14,3 +14,4 @@
  */
 
 TEST_SUITE(oqs_suite_create)
+TEST_SUITE(oqs_sig_suite_create)
