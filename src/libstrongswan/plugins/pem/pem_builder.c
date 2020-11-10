@@ -330,7 +330,7 @@ static status_t pem_to_bin(chunk_t *blob, bool *pgp)
 	/* set length to size of binary blob */
 	blob->len = dst.len;
 
-	if (state != PEM_POST)
+	if (state != PEM_POST || !blob->len)
 	{
 		DBG1(DBG_LIB, "  file coded in unknown format, discarded");
 		return PARSE_ERROR;
