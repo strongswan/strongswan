@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2016-2019 Andreas Steffen
+ * Copyright (C) 2016-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ typedef struct xof_test_vector_t xof_test_vector_t;
 typedef struct drbg_test_vector_t drbg_test_vector_t;
 typedef struct rng_test_vector_t rng_test_vector_t;
 typedef struct ke_test_vector_t ke_test_vector_t;
+typedef struct sig_test_vector_t sig_test_vector_t;
 
 struct crypter_test_vector_t {
 	/** encryption algorithm this vector tests */
@@ -172,6 +173,20 @@ struct ke_test_vector_t {
 	chunk_t shared;
 };
 
+struct sig_test_vector_t {
+	/** key type to test */
+	key_type_t type;
+	/** seed from which key material is derived */
+	chunk_t seed;
+	/** msg to be signed */
+	chunk_t msg;
+	/** expected public key */
+	chunk_t pk;
+	/** expected secret key */
+	chunk_t sk;
+	/** expected signed message */
+	chunk_t sm;
+};
 /**
  * Cryptographic primitive testing framework.
  */
