@@ -8,7 +8,9 @@ AM_CFLAGS = \
 # because of the subdirectory, which would cause distclean to fail
 noinst_LTLIBRARIES = libqske-oqs.la
 libqske_oqs_la_SOURCES = \
-	oqs_kem.h oqs_kem.c oqs_drbg.h oqs_drbg.c
+	oqs_kem.h oqs_kem.c oqs_drbg.h oqs_drbg.c \
+	oqs_public_key.h oqs_public_key.c \
+	oqs_private_key.h oqs_private_key.c
 
 libqske_oqs_la_LIBADD = \
 	-loqs -lcrypto -lm
@@ -20,9 +22,7 @@ plugin_LTLIBRARIES = libstrongswan-oqs.la
 endif
 
 libstrongswan_oqs_la_SOURCES = \
-	oqs_plugin.h oqs_plugin.c \
-	oqs_public_key.h oqs_public_key.c \
-	oqs_private_key.h oqs_private_key.c
+	oqs_plugin.h oqs_plugin.c
 
 libstrongswan_oqs_la_LDFLAGS = -module -avoid-version
 
