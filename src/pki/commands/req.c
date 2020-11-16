@@ -65,10 +65,6 @@ static int req()
 				{
 					type = KEY_ECDSA;
 				}
-				else if (streq(arg, "bliss"))
-				{
-					type = KEY_BLISS;
-				}
 				else if (streq(arg, "priv"))
 				{
 					type = KEY_ANY;
@@ -277,7 +273,7 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		req, 'r', "req",
 		"create a PKCS#10 certificate request",
-		{"[--in file|--keyid hex] [--type rsa|ecdsa|bliss|priv]",
+		{"[--in file|--keyid hex] [--type rsa|ecdsa|priv]",
 		 " --oldreq file|--dn distinguished-name [--san subjectAltName]+",
 		 "[--flag serverAuth|clientAuth|ocspSigning|msSmartcardLogon]+",
 		 "[--profile server|client|dual|ocsp] [--password challengePassword]",
