@@ -101,7 +101,6 @@ CONFIG_OPTS = \
 	--enable-tkm \
 	--enable-ntru \
 	--enable-lookip \
-	--enable-bliss \
 	--enable-sha3 \
 	--enable-newhope \
 	--enable-frodo \
