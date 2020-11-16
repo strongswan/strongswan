@@ -46,7 +46,7 @@ Read command line options from \fIfile\fR.
 .TP
 .BI "\-t, \-\-type " type
 Type of key to generate. Either \fIrsa\fR, \fIecdsa\fR, \fIed25519\fR,
-\fIed448\fR, \fIbliss\fR, \fIdilithium2\fR, \fIdilithium3\fR or \fIdilitium4\fR,
+\fIed448\fR, \fIdilithium2\fR, \fIdilithium3\fR or \fIdilitium4\fR,
 defaults to \fIrsa\fR.
 .TP
 .BI "\-s, \-\-size " bits
