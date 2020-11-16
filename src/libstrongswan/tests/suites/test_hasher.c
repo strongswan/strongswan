@@ -61,14 +61,6 @@ static hasher_oid_t oids[] = {
 	{ OID_ECDSA_WITH_SHA384, HASH_SHA384, KEY_ECDSA },             /* 30 */
 	{ OID_ECDSA_WITH_SHA512, HASH_SHA512, KEY_ECDSA },             /* 31 */
 	{ OID_UNKNOWN, HASH_UNKNOWN, KEY_ECDSA },                      /* 32 */
-	{ OID_BLISS_WITH_SHA2_256, HASH_SHA256, KEY_BLISS },           /* 33 */
-	{ OID_BLISS_WITH_SHA2_384, HASH_SHA384, KEY_BLISS },           /* 34 */
-	{ OID_BLISS_WITH_SHA2_512, HASH_SHA512, KEY_BLISS },           /* 35 */
-	{ OID_BLISS_WITH_SHA3_256, HASH_SHA3_256, KEY_BLISS },         /* 36 */
-	{ OID_BLISS_WITH_SHA3_384, HASH_SHA3_384, KEY_BLISS },         /* 37 */
-	{ OID_BLISS_WITH_SHA3_512, HASH_SHA3_512, KEY_BLISS },         /* 38 */
-	{ OID_UNKNOWN, HASH_UNKNOWN, KEY_BLISS },                      /* 39 */
-
 };
 
 START_TEST(test_hasher_from_oid)
@@ -115,12 +107,6 @@ static struct {
 	{ SIGN_ECDSA_256,             HASH_SHA256     },
 	{ SIGN_ECDSA_384,             HASH_SHA384     },
 	{ SIGN_ECDSA_521,             HASH_SHA512     },
-	{ SIGN_BLISS_WITH_SHA2_256,   HASH_SHA256     },
-	{ SIGN_BLISS_WITH_SHA2_384,   HASH_SHA384     },
-	{ SIGN_BLISS_WITH_SHA2_512,   HASH_SHA512     },
-	{ SIGN_BLISS_WITH_SHA3_256,   HASH_SHA3_256   },
-	{ SIGN_BLISS_WITH_SHA3_384,   HASH_SHA3_384   },
-	{ SIGN_BLISS_WITH_SHA3_512,   HASH_SHA3_512   },
 	{ SIGN_ED25519,               HASH_IDENTITY   },
 	{ SIGN_ED448,                 HASH_IDENTITY   },
 	{ 30,						  HASH_UNKNOWN    },

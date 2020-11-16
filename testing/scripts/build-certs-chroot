@@ -86,11 +86,6 @@ MONSTER_CDP="http://crl.strongswan.org/strongswan_monster.crl"
 MONSTER_CA_RSA_SIZE="8192"
 MONSTER_EE_RSA_SIZE="4096"
 #
-BLISS_DIR="${CA_DIR}/bliss"
-BLISS_KEY="${BLISS_DIR}/strongswan_blissKey.der"
-BLISS_CERT="${BLISS_DIR}/strongswan_blissCert.der"
-BLISS_CDP="http://crl.strongswan.org/strongswan_bliss.crl"
-#
 RSA_SIZE="3072"
 IPSEC_DIR="etc/ipsec.d"
 SWANCTL_DIR="etc/swanctl"
@@ -112,7 +107,6 @@ mkdir -p ${RFC3779_DIR}/certs
 mkdir -p ${SHA3_RSA_DIR}/certs
 mkdir -p ${ED25519_DIR}/certs
 mkdir -p ${MONSTER_DIR}/certs
-mkdir -p ${BLISS_DIR}/certs
 
 ################################################################################
 # strongSwan Root CA                                                           #
@@ -1631,93 +1625,6 @@ pki --issue --cakey ${MONSTER_KEY} --cacert ${MONSTER_CERT} --type rsa \
     --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=Monster, CN=${CN}" \
     --crl ${MONSTER_CDP} --outform pem > ${TEST_CERT}
 cp ${TEST_CERT} ${MONSTER_DIR}/certs/${SERIAL}.pem
-
-################################################################################
-# Bliss CA                                                                     #
-################################################################################
-
-# Generate BLISS Root CA with 192 bit security strength
-pki --gen  --type bliss --size 4 > ${BLISS_KEY}
-pki --self --type bliss --in ${BLISS_KEY} --digest sha3_512 \
-    --not-before "${START}" --not-after "${CA_END}" --ca \
-    --dn "C=CH, O=${PROJECT}, CN=strongSwan BLISS Root CA" > ${BLISS_CERT}
-
-# Put a copy in the following scenarios
-for t in rw-newhope-bliss rw-ntru-bliss
-do
-  TEST="${TEST_DIR}/ikev2/${t}"
-  for h in moon carol dave
-  do
-    mkdir -p ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
-    cp ${BLISS_CERT} ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
-  done
-done
-
-# Generate a carol BLISS certificate with 128 bit security strength
-TEST="${TEST_DIR}/ikev2/rw-newhope-bliss"
-TEST_KEY="${TEST}/hosts/carol/${SWANCTL_DIR}/bliss/carolKey.der"
-TEST_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carolCert.der"
-CN="carol@strongswan.org"
-SERIAL="01"
-mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/bliss
-mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
-pki --gen --type bliss --size 1 > ${TEST_KEY}
-pki --issue --cakey ${BLISS_KEY} --cacert ${BLISS_CERT} --type bliss \
-    --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
-    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=BLISS I, CN=${CN}" \
-    --crl ${BLISS_CDP} --digest sha3_512 > ${TEST_CERT}
-cp ${TEST_CERT} ${BLISS_DIR}/certs/${SERIAL}.der
-
-# Put a copy in the ikev2/rw-ntru-bliss scenario
-TEST="${TEST_DIR}/ikev2/rw-ntru-bliss"
-mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/bliss
-mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
-cp ${TEST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/bliss
-cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
-
-# Generate a dave BLISS certificate with 160 bit security strength
-TEST="${TEST_DIR}/ikev2/rw-newhope-bliss"
-TEST_KEY="${TEST}/hosts/dave/${SWANCTL_DIR}/bliss/daveKey.der"
-TEST_CERT="${TEST}/hosts/dave/${SWANCTL_DIR}/x509/daveCert.der"
-CN="dave@strongswan.org"
-SERIAL="02"
-mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/bliss
-mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
-pki --gen --type bliss --size 3 > ${TEST_KEY}
-pki --issue --cakey ${BLISS_KEY} --cacert ${BLISS_CERT} --type bliss \
-    --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
-    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=BLISS III, CN=${CN}" \
-    --crl ${BLISS_CDP} --digest sha3_512 > ${TEST_CERT}
-cp ${TEST_CERT} ${BLISS_DIR}/certs/${SERIAL}.der
-
-# Put a copy in the ikev2/rw-ntru-bliss scenario
-TEST="${TEST_DIR}/ikev2/rw-ntru-bliss"
-mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/bliss
-mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
-cp ${TEST_KEY} ${TEST}/hosts/dave/${SWANCTL_DIR}/bliss
-cp ${TEST_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
-
-# Generate a moon BLISS certificate with 192 bit security strength
-TEST="${TEST_DIR}/ikev2/rw-newhope-bliss"
-TEST_KEY="${TEST}/hosts/moon/${SWANCTL_DIR}/bliss/moonKey.der"
-TEST_CERT="${TEST}/hosts/moon/${SWANCTL_DIR}/x509/moonCert.der"
-CN="moon.strongswan.org"
-SERIAL="03"
-mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/bliss
-mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
-pki --gen --type bliss --size 4 > ${TEST_KEY}
-pki --issue --cakey ${BLISS_KEY} --cacert ${BLISS_CERT} --type bliss \
-    --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
-    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=BLISS IV, CN=${CN}" \
-    --crl ${BLISS_CDP} --digest sha3_512 > ${TEST_CERT}
-cp ${TEST_CERT} ${BLISS_DIR}/certs/${SERIAL}.der
-
-# Put a copy in the ikev2/rw-ntru-bliss scenario
-TEST="${TEST_DIR}/ikev2/rw-ntru-bliss"
-mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/bliss
-mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
-cp ${TEST_KEY} ${TEST}/hosts/moon/${SWANCTL_DIR}/bliss
-cp ${TEST_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
 
 ################################################################################
 # SQL Data                                                                     #
