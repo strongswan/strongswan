@@ -483,7 +483,7 @@ Load a certificate into the daemon.
 Load a private key into the daemon.
 
 	{
-		type = <private key type, rsa|ecdsa|ed25519|ed448|bliss|any>
+		type = <private key type, rsa|ecdsa|ed25519|ed448|any>
 		data = <PEM or DER encoded key data>
 	} => {
 		success = <yes or no>
