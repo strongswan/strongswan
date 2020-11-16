@@ -54,8 +54,6 @@ enum key_type_t {
 	KEY_DILITHIUM_3 = 7,
 	/** Dilithium4 NIST Round 3 Submission candidate */
 	KEY_DILITHIUM_5 = 8,
-	/** BLISS */
-	KEY_BLISS = 9,
 };
 
 /**
@@ -123,18 +121,6 @@ enum signature_scheme_t {
 	SIGN_DILITHIUM_3,
 	/** Dilithium4 NIST Round 3 Submission signature                   */
 	SIGN_DILITHIUM_5,
-	/** BLISS with SHA-2_256                                           */
-	SIGN_BLISS_WITH_SHA2_256,
-	/** BLISS with SHA-2_384                                           */
-	SIGN_BLISS_WITH_SHA2_384,
-	/** BLISS with SHA-2_512                                           */
-	SIGN_BLISS_WITH_SHA2_512,
-	/** BLISS with SHA-3_256                                           */
-	SIGN_BLISS_WITH_SHA3_256,
-	/** BLISS with SHA-3_384                                           */
-	SIGN_BLISS_WITH_SHA3_384,
-	/** BLISS with SHA-3_512                                           */
-	SIGN_BLISS_WITH_SHA3_512,
 };
 
 /**

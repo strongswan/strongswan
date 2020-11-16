@@ -21,7 +21,7 @@
 #include "public_key.h"
 #include "signature_params.h"
 
-ENUM(key_type_names, KEY_ANY, KEY_BLISS,
+ENUM(key_type_names, KEY_ANY, KEY_DILITHIUM_5,
 	"ANY",
 	"RSA",
 	"ECDSA",
@@ -31,10 +31,9 @@ ENUM(key_type_names, KEY_ANY, KEY_BLISS,
 	"Dilithium2",
 	"Dilithium3",
 	"Dilithium5",
-	"BLISS"
 );
 
-ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_BLISS_WITH_SHA3_512,
+ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_DILITHIUM_5,
 	"UNKNOWN",
 	"RSA_EMSA_PKCS1_NULL",
 	"RSA_EMSA_PKCS1_MD5",
@@ -61,12 +60,6 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_BLISS_WITH_SHA3_512,
 	"DILITHIUM_2",
 	"DILITHIUM_3",
 	"DILITHIUM_5",
-	"BLISS_WITH_SHA2_256",
-	"BLISS_WITH_SHA2_384",
-	"BLISS_WITH_SHA2_512",
-	"BLISS_WITH_SHA3_256",
-	"BLISS_WITH_SHA3_384",
-	"BLISS_WITH_SHA3_512",
 );
 
 ENUM(encryption_scheme_names, ENCRYPT_UNKNOWN, ENCRYPT_RSA_OAEP_SHA512,
@@ -220,19 +213,6 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 			return SIGN_DILITHIUM_3;
 		case OID_DILITHIUM_5:
 			return SIGN_DILITHIUM_5;
-		case OID_BLISS_PUBLICKEY:
-		case OID_BLISS_WITH_SHA2_512:
-			return SIGN_BLISS_WITH_SHA2_512;
-		case OID_BLISS_WITH_SHA2_384:
-			return SIGN_BLISS_WITH_SHA2_384;
-		case OID_BLISS_WITH_SHA2_256:
-			return SIGN_BLISS_WITH_SHA2_256;
-		case OID_BLISS_WITH_SHA3_512:
-			return SIGN_BLISS_WITH_SHA3_512;
-		case OID_BLISS_WITH_SHA3_384:
-			return SIGN_BLISS_WITH_SHA3_384;
-		case OID_BLISS_WITH_SHA3_256:
-			return SIGN_BLISS_WITH_SHA3_256;
 	}
 	return SIGN_UNKNOWN;
 }
@@ -291,18 +271,6 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 			return OID_DILITHIUM_3;
 		case SIGN_DILITHIUM_5:
 			return OID_DILITHIUM_5;
-		case SIGN_BLISS_WITH_SHA2_256:
-			return OID_BLISS_WITH_SHA2_256;
-		case SIGN_BLISS_WITH_SHA2_384:
-			return OID_BLISS_WITH_SHA2_384;
-		case SIGN_BLISS_WITH_SHA2_512:
-			return OID_BLISS_WITH_SHA2_512;
-		case SIGN_BLISS_WITH_SHA3_256:
-			return OID_BLISS_WITH_SHA3_256;
-		case SIGN_BLISS_WITH_SHA3_384:
-			return OID_BLISS_WITH_SHA3_384;
-		case SIGN_BLISS_WITH_SHA3_512:
-			return OID_BLISS_WITH_SHA3_512;
 	}
 	return OID_UNKNOWN;
 }
@@ -346,10 +314,7 @@ static struct {
 	{ KEY_ED448,       0, { .scheme = SIGN_ED448 }},
 	{ KEY_DILITHIUM_2, 0, { .scheme = SIGN_DILITHIUM_2}},
 	{ KEY_DILITHIUM_3, 0, { .scheme = SIGN_DILITHIUM_3}},
-	{ KEY_DILITHIUM_5, 0, { .scheme = SIGN_DILITHIUM_5}},
-	{ KEY_BLISS,     128, { .scheme = SIGN_BLISS_WITH_SHA2_256 }},
-	{ KEY_BLISS,     192, { .scheme = SIGN_BLISS_WITH_SHA2_384 }},
-	{ KEY_BLISS,       0, { .scheme = SIGN_BLISS_WITH_SHA2_512 }},
+	{ KEY_DILITHIUM_4, 0, { .scheme = SIGN_DILITHIUM_5}},
 };
 
 /**
@@ -444,13 +409,6 @@ key_type_t key_type_from_signature_scheme(signature_scheme_t scheme)
 			return KEY_DILITHIUM_3;
 		case SIGN_DILITHIUM_5:
 			return KEY_DILITHIUM_5;
-		case SIGN_BLISS_WITH_SHA2_256:
-		case SIGN_BLISS_WITH_SHA2_384:
-		case SIGN_BLISS_WITH_SHA2_512:
-		case SIGN_BLISS_WITH_SHA3_256:
-		case SIGN_BLISS_WITH_SHA3_384:
-		case SIGN_BLISS_WITH_SHA3_512:
-			return KEY_BLISS;
 	}
 	return KEY_ANY;
 }
