@@ -106,8 +106,6 @@ enum auth_rule_t {
 	AUTH_RULE_RSA_STRENGTH,
 	/** required ECDSA public key strength, u_int in bits */
 	AUTH_RULE_ECDSA_STRENGTH,
-	/** required BLISS public key strength, u_int in bits */
-	AUTH_RULE_BLISS_STRENGTH,
 	/** required signature scheme, signature_params_t* */
 	AUTH_RULE_SIGNATURE_SCHEME,
 	/** required signature scheme for IKE authentication, signature_params_t* */

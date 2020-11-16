@@ -32,7 +32,6 @@ plugins = \
 	plugins/android_log.opt \
 	plugins/attr.opt \
 	plugins/attr-sql.opt \
-	plugins/bliss.opt \
 	plugins/botan.opt \
 	plugins/bypass-lan.opt \
 	plugins/certexpire.opt \
