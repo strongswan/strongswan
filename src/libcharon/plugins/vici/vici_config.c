@@ -1305,8 +1305,7 @@ CALLBACK(parse_auth, bool,
 	if (strpfx(buf, "ike:") ||
 		strpfx(buf, "pubkey") ||
 		strpfx(buf, "rsa") ||
-		strpfx(buf, "ecdsa") ||
-		strpfx(buf, "bliss"))
+		strpfx(buf, "ecdsa"))
 	{
 		cfg->add(cfg, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
 		cfg->add_pubkey_constraints(cfg, buf, TRUE);
