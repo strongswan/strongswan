@@ -656,13 +656,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_BLISS
-  SUBDIRS += plugins/bliss
-if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/bliss/libstrongswan-bliss.la
-endif
-endif
-
 if USE_NEWHOPE
   SUBDIRS += plugins/newhope
 if MONOLITHIC
@@ -709,10 +702,6 @@ SUBDIRS += tests
 
 if USE_LIBNTTFFT
   SUBDIRS += math/libnttfft/tests
-endif
-
-if USE_BLISS
-  SUBDIRS += plugins/bliss/tests
 endif
 
 if USE_NEWHOPE
