@@ -1216,7 +1216,6 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case NTRU_128_BIT:
 			case NTRU_192_BIT:
 			case NTRU_256_BIT:
-			case NH_128_BIT:
 				add_algorithm(this, KEY_EXCHANGE_METHOD, group, 0);
 				break;
 			default:
