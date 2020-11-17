@@ -270,13 +270,6 @@ else
 SUBDIRS = .
 endif
 
-# build libnttfft used by some plugins
-######################################
-
-if USE_LIBNTTFFT
-  SUBDIRS += math/libnttfft
-endif
-
 # build plugins with their own Makefile
 #######################################
 
@@ -679,13 +672,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_NEWHOPE
-  SUBDIRS += plugins/newhope
-if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/newhope/libstrongswan-newhope.la
-endif
-endif
-
 if USE_DRBG
   SUBDIRS += plugins/drbg
 if MONOLITHIC
@@ -722,14 +708,6 @@ endif
 ##################
 
 SUBDIRS += tests
-
-if USE_LIBNTTFFT
-  SUBDIRS += math/libnttfft/tests
-endif
-
-if USE_NEWHOPE
-  SUBDIRS += plugins/newhope/tests
-endif
 
 if USE_OQS
   SUBDIRS += plugins/oqs/tests
