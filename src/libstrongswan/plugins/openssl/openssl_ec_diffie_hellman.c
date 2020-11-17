@@ -163,14 +163,6 @@ error:
 
 /**
  * Compute the shared secret.
- *
- * We cannot use the function ECDH_compute_key() because that returns only the
- * x coordinate of the shared secret point (which is defined, for instance, in
- * 'NIST SP 800-56A').
- * However, we need both coordinates as RFC 4753 says: "The Diffie-Hellman
- *   public value is obtained by concatenating the x and y values. The format
- *   of the Diffie-Hellman shared secret value is the same as that of the
- *   Diffie-Hellman public value."
  */
 static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this,
 							   chunk_t *shared_secret)
@@ -178,34 +170,53 @@ static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this,
 	const BIGNUM *priv_key;
 	EC_POINT *secret = NULL;
 	bool x_coordinate_only, ret = FALSE;
-
-	priv_key = EC_KEY_get0_private_key(this->key);
-	if (!priv_key)
-	{
-		goto error;
-	}
-
-	secret = EC_POINT_new(this->ec_group);
-	if (!secret)
-	{
-		goto error;
-	}
-
-	if (!EC_POINT_mul(this->ec_group, secret, NULL, this->pub_key, priv_key, NULL))
-	{
-		goto error;
-	}
+	int len;
 
 	/*
 	 * The default setting ecp_x_coordinate_only = TRUE
 	 * applies the following errata for RFC 4753:
 	 * http://www.rfc-editor.org/errata_search.php?eid=9
+	 * ECDH_compute_key() is used under this setting as
+	 * it also facilitates hardware offload through the use of
+	 * dynamic engines in OpenSSL.
 	 */
 	x_coordinate_only = lib->settings->get_bool(lib->settings,
 									"%s.ecp_x_coordinate_only", TRUE, lib->ns);
-	if (!ecp2chunk(this->ec_group, secret, shared_secret, x_coordinate_only))
+	if (x_coordinate_only)
 	{
-		goto error;
+		*shared_secret = chunk_alloc(EC_FIELD_ELEMENT_LEN(this->ec_group));
+		len = ECDH_compute_key(shared_secret->ptr, shared_secret->len,
+				       this->pub_key, this->key, NULL);
+		if (len <= 0)
+		{
+			chunk_free(shared_secret);
+			goto error;
+		}
+		shared_secret->len = len;
+	}
+	else
+	{
+		priv_key = EC_KEY_get0_private_key(this->key);
+		if (!priv_key)
+		{
+			goto error;
+		}
+
+		secret = EC_POINT_new(this->ec_group);
+		if (!secret)
+		{
+			goto error;
+		}
+
+		if (!EC_POINT_mul(this->ec_group, secret, NULL, this->pub_key, priv_key, NULL))
+		{
+			goto error;
+		}
+
+		if (!ecp2chunk(this->ec_group, secret, shared_secret, x_coordinate_only))
+		{
+			goto error;
+		}
 	}
 
 	ret = TRUE;
