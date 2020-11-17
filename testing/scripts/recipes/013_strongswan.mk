@@ -102,7 +102,6 @@ CONFIG_OPTS = \
 	--enable-ntru \
 	--enable-lookip \
 	--enable-sha3 \
-	--enable-newhope \
 	--enable-systemd \
 	--enable-counters \
 	--enable-save-keys \

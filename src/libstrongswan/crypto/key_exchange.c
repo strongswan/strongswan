@@ -61,9 +61,7 @@ ENUM_NEXT(key_exchange_method_names, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
 	"NTRU_128",
 	"NTRU_192",
 	"NTRU_256");
-ENUM_NEXT(key_exchange_method_names, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
-	"NEWHOPE_128");
-ENUM_NEXT(key_exchange_method_names, MODP_CUSTOM, MODP_CUSTOM, NH_128_BIT,
+ENUM_NEXT(key_exchange_method_names, MODP_CUSTOM, MODP_CUSTOM, NTRU_256_BIT,
 	"MODP_CUSTOM");
 ENUM_END(key_exchange_method_names, MODP_CUSTOM);
 
@@ -106,9 +104,7 @@ ENUM_NEXT(key_exchange_method_names_short, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL
 	"ntru128",
 	"ntru192",
 	"ntru256");
-ENUM_NEXT(key_exchange_method_names_short, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
-	"newhope128");
-ENUM_NEXT(key_exchange_method_names_short, MODP_CUSTOM, MODP_CUSTOM, NH_128_BIT,
+ENUM_NEXT(key_exchange_method_names_short, MODP_CUSTOM, MODP_CUSTOM, NTRU_256_BIT,
 	"modpcustom");
 ENUM_END(key_exchange_method_names_short, MODP_CUSTOM);
 
@@ -709,7 +705,6 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 		case NTRU_128_BIT:
 		case NTRU_192_BIT:
 		case NTRU_256_BIT:
-		case NH_128_BIT:
 		case ML_KEM_512:
 		case ML_KEM_768:
 		case ML_KEM_1024:
