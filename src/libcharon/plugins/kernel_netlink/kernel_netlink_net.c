@@ -3159,6 +3159,12 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 
 	check_kernel_features(this);
 
+	if (!this->socket)
+	{
+		destroy(this);
+		return NULL;
+	}
+
 	if (streq(lib->ns, "starter"))
 	{	/* starter has no threads, so we do not register for kernel events */
 		register_for_events = FALSE;
