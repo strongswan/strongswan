@@ -55,9 +55,7 @@ ENUM_NEXT(key_exchange_method_names, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
 	"NTRU_128",
 	"NTRU_192",
 	"NTRU_256");
-ENUM_NEXT(key_exchange_method_names, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
-	"NEWHOPE_128");
-ENUM_NEXT(key_exchange_method_names, KE_KYBER_L1, KE_SIKE_L5, NH_128_BIT,
+ENUM_NEXT(key_exchange_method_names, KE_KYBER_L1, KE_SIKE_L5, NTRU_256_BIT,
 	"KYBER_L1",
 	"KYBER_L3",
 	"KYBER_L5",
@@ -122,9 +120,7 @@ ENUM_NEXT(key_exchange_method_names_short, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL
 	"ntru128",
 	"ntru192",
 	"ntru256");
-ENUM_NEXT(key_exchange_method_names_short, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
-	"newhope128");
-ENUM_NEXT(key_exchange_method_names_short, KE_KYBER_L1, KE_SIKE_L5, NH_128_BIT,
+ENUM_NEXT(key_exchange_method_names_short, KE_KYBER_L1, KE_SIKE_L5, NTRU_256_BIT,
 	"kyber1",
 	"kyber3",
 	"kyber5",
@@ -767,7 +763,6 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 		case NTRU_128_BIT:
 		case NTRU_192_BIT:
 		case NTRU_256_BIT:
-		case NH_128_BIT:
 		case KE_KYBER_L1:
 		case KE_KYBER_L3:
 		case KE_KYBER_L5:

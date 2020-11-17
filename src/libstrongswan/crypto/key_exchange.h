@@ -72,7 +72,6 @@ enum key_exchange_method_t {
 	NTRU_128_BIT       = 1031,
 	NTRU_192_BIT       = 1032,
 	NTRU_256_BIT       = 1033,
-	NH_128_BIT         = 1040,
 	/** NIST round 3 KEM candidates, in PRIVATE USE */
 	KE_KYBER_L1        = 1050,
 	KE_KYBER_L3        = 1051,
