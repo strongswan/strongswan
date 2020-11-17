@@ -1350,42 +1350,36 @@ static status_t send_client_hello(private_tls_peer_t *this,
 }
 
 /**
- * Find a private key suitable to sign Certificate Verify
+ * Convert certificate types to signature schemes so TLS version <= 1.1 can use
+ * the same private key enumeration as newer TLS versions.
  */
-static private_key_t *find_private_key(private_tls_peer_t *this)
+static void convert_cert_types(private_tls_peer_t *this)
 {
-	private_key_t *key = NULL;
 	bio_reader_t *reader;
-	key_type_t type;
-	uint8_t cert;
+	bio_writer_t *writer;
+	uint8_t type;
 
-	if (!this->peer)
-	{
-		return NULL;
-	}
 	reader = bio_reader_create(this->cert_types);
-	while (reader->remaining(reader) && reader->read_uint8(reader, &cert))
+	writer = bio_writer_create(0);
+	while (reader->remaining(reader) && reader->read_uint8(reader, &type))
 	{
-		switch (cert)
+		/* each certificate type is mapped to one signature scheme, which is not
+		 * ideal but serves our needs in legacy TLS versions */
+		switch (type)
 		{
 			case TLS_RSA_SIGN:
-				type = KEY_RSA;
+				writer->write_uint16(writer, TLS_SIG_RSA_PKCS1_SHA256);
 				break;
 			case TLS_ECDSA_SIGN:
-				type = KEY_ECDSA;
+				writer->write_uint16(writer, TLS_SIG_ECDSA_SHA256);
 				break;
 			default:
 				continue;
 		}
-		key = lib->credmgr->get_private(lib->credmgr, type,
-										this->peer, this->peer_auth);
-		if (key)
-		{
-			break;
-		}
 	}
 	reader->destroy(reader);
-	return key;
+	this->hashsig = writer->extract_buf(writer);
+	writer->destroy(writer);
 }
 
 /**
@@ -1405,33 +1399,32 @@ static status_t send_certificate(private_tls_peer_t *this,
 
 	version_min = this->tls->get_version_min(this->tls);
 	version_max = this->tls->get_version_max(this->tls);
-	if (version_max > TLS_1_1)
+	if (!this->hashsig.len)
 	{
-		enumerator = tls_create_private_key_enumerator(version_min, version_max,
-													   this->hashsig, this->peer);
+		convert_cert_types(this);
+	}
+	enumerator = tls_create_private_key_enumerator(version_min, version_max,
+												   this->hashsig, this->peer);
+	if (!enumerator || !enumerator->enumerate(enumerator, &key, &auth))
+	{
 		if (!enumerator)
 		{
 			DBG1(DBG_TLS, "no common signature algorithms found");
-			return FALSE;
 		}
-		if (enumerator->enumerate(enumerator, &key, &auth))
+		else
 		{
-			this->private = key->get_ref(key);
-			this->peer_auth->merge(this->peer_auth, auth, FALSE);
+			DBG1(DBG_TLS, "no usable TLS client certificate found for '%Y'",
+				 this->peer);
 		}
-		enumerator->destroy(enumerator);
-	}
-	else
-	{
-		this->private = find_private_key(this);
-	}
-	if (!this->private)
-	{
-		DBG1(DBG_TLS, "no usable TLS client certificate found for '%Y'",
-			 this->peer);
 		this->peer->destroy(this->peer);
 		this->peer = NULL;
 	}
+	else
+	{
+		this->private = key->get_ref(key);
+		this->peer_auth->merge(this->peer_auth, auth, FALSE);
+	}
+	DESTROY_IF(enumerator);
 
 	/* generate certificate payload */
 	certs = bio_writer_create(256);
