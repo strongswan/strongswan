@@ -55,9 +55,7 @@ ENUM_NEXT(key_exchange_method_names, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
 	"NTRU_128",
 	"NTRU_192",
 	"NTRU_256");
-ENUM_NEXT(key_exchange_method_names, NH_128_BIT, NH_128_BIT, NTRU_256_BIT,
-	"NEWHOPE_128");
-ENUM_NEXT(key_exchange_method_names, KE_KYBER_L1, KE_SIKE_L5, NH_128_BIT,
+ENUM_NEXT(key_exchange_method_names, KE_KYBER_L1, KE_SIKE_L5, NTRU_256_BIT,
 	"KYBER_L1",
 	"KYBER_L3",
 	"KYBER_L5",
