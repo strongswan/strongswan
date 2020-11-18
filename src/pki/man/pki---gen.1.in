@@ -45,8 +45,9 @@ Set debug level, default: 1.
 Read command line options from \fIfile\fR.
 .TP
 .BI "\-t, \-\-type " type
-Type of key to generate. Either \fIrsa\fR, \fIecdsa\fR, \fIed25519\fR or
-\fIed448\fR, defaults to \fIrsa\fR.
+Type of key to generate. Either \fIrsa\fR, \fIecdsa\fR, \fIed25519\fR,
+\fIed448\fR, \fIdilithium2\fR, \fIdilithium3\fR or \fIdilitium4\fR,
+defaults to \fIrsa\fR.
 .TP
 .BI "\-s, \-\-size " bits
 Key length in bits. Defaults to 2048 for \fIrsa\fR and 384 for \fIecdsa\fR.
