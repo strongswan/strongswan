@@ -639,13 +639,6 @@ if MONOLITHIC
 endif
 endif
 
-if USE_NTRU
-  SUBDIRS += plugins/ntru
-if MONOLITHIC
-  libstrongswan_la_LIBADD += plugins/ntru/libstrongswan-ntru.la
-endif
-endif
-
 if USE_DRBG
   SUBDIRS += plugins/drbg
 if MONOLITHIC
