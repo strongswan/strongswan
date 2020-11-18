@@ -175,10 +175,6 @@ curve25519,       KEY_EXCHANGE_METHOD, CURVE_25519,                0
 x25519,           KEY_EXCHANGE_METHOD, CURVE_25519,                0
 curve448,         KEY_EXCHANGE_METHOD, CURVE_448,                  0
 x448,             KEY_EXCHANGE_METHOD, CURVE_448,                  0
-ntru112,          KEY_EXCHANGE_METHOD, NTRU_112_BIT,               0
-ntru128,          KEY_EXCHANGE_METHOD, NTRU_128_BIT,               0
-ntru192,          KEY_EXCHANGE_METHOD, NTRU_192_BIT,               0
-ntru256,          KEY_EXCHANGE_METHOD, NTRU_256_BIT,               0
 kyber1,           KEY_EXCHANGE_METHOD, KE_KYBER_L1,                0
 kyber3,           KEY_EXCHANGE_METHOD, KE_KYBER_L3,                0
 kyber5,           KEY_EXCHANGE_METHOD, KE_KYBER_L5,                0

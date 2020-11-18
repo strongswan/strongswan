@@ -50,12 +50,7 @@ ENUM_NEXT(key_exchange_method_names, MODP_1024_160, CURVE_448, ECP_521_BIT,
 	"CURVE_448");
 ENUM_NEXT(key_exchange_method_names, MODP_NULL, MODP_NULL, CURVE_448,
 	"MODP_NULL");
-ENUM_NEXT(key_exchange_method_names, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
-	"NTRU_112",
-	"NTRU_128",
-	"NTRU_192",
-	"NTRU_256");
-ENUM_NEXT(key_exchange_method_names, KE_KYBER_L1, KE_SIKE_L5, NTRU_256_BIT,
+ENUM_NEXT(key_exchange_method_names, KE_KYBER_L1, KE_SIKE_L5, MODP_NULL,
 	"KYBER_L1",
 	"KYBER_L3",
 	"KYBER_L5",
@@ -115,12 +110,7 @@ ENUM_NEXT(key_exchange_method_names_short, MODP_1024_160, CURVE_448, ECP_521_BIT
 	"curve448");
 ENUM_NEXT(key_exchange_method_names_short, MODP_NULL, MODP_NULL, CURVE_448,
 	"modpnull");
-ENUM_NEXT(key_exchange_method_names_short, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
-	"ntru112",
-	"ntru128",
-	"ntru192",
-	"ntru256");
-ENUM_NEXT(key_exchange_method_names_short, KE_KYBER_L1, KE_SIKE_L5, NTRU_256_BIT,
+ENUM_NEXT(key_exchange_method_names_short, KE_KYBER_L1, KE_SIKE_L5, MODP_NULL,
 	"kyber1",
 	"kyber3",
 	"kyber5",
@@ -759,10 +749,6 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 		case CURVE_448:
 			valid = value.len == 56;
 			break;
-		case NTRU_112_BIT:
-		case NTRU_128_BIT:
-		case NTRU_192_BIT:
-		case NTRU_256_BIT:
 		case KE_KYBER_L1:
 		case KE_KYBER_L3:
 		case KE_KYBER_L5:
