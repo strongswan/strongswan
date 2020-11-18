@@ -1199,7 +1199,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 	}
 	enumerator->destroy(enumerator);
 
-	/* Round 1 adds ECC and NTRU algorithms with at least 128 bit security strength */
+	/* Round 1 adds ECC with at least 128 bit security strength */
 	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &group, &plugin_name))
 	{
@@ -1213,9 +1213,6 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case ECP_512_BP:
 			case CURVE_25519:
 			case CURVE_448:
-			case NTRU_128_BIT:
-			case NTRU_192_BIT:
-			case NTRU_256_BIT:
 				add_algorithm(this, KEY_EXCHANGE_METHOD, group, 0);
 				break;
 			default:
@@ -1264,7 +1261,6 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case ECP_224_BIT:
 			case ECP_224_BP:
 			case ECP_192_BIT:
-			case NTRU_112_BIT:
 				/* rarely used */
 				break;
 			case MODP_2048_BIT:
