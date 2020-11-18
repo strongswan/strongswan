@@ -77,7 +77,6 @@ plugins = \
 	plugins/kernel-pfroute.opt \
 	plugins/load-tester.opt \
 	plugins/lookip.opt \
-	plugins/ntru.opt \
 	plugins/openssl.opt \
 	plugins/osx-attr.opt \
 	plugins/p-cscf.opt \

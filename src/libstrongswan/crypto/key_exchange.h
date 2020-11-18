@@ -67,11 +67,6 @@ enum key_exchange_method_t {
 	CURVE_448     = 32,
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
 	MODP_NULL          = 1024,
-	/** Parameters defined by IEEE 1363.1, in PRIVATE USE */
-	NTRU_112_BIT       = 1030,
-	NTRU_128_BIT       = 1031,
-	NTRU_192_BIT       = 1032,
-	NTRU_256_BIT       = 1033,
 	/** NIST round 3 KEM candidates, in PRIVATE USE */
 	KE_KYBER_L1        = 1050,
 	KE_KYBER_L3        = 1051,
