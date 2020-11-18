@@ -61,6 +61,9 @@ static hasher_oid_t oids[] = {
 	{ OID_ECDSA_WITH_SHA384, HASH_SHA384, KEY_ECDSA },             /* 30 */
 	{ OID_ECDSA_WITH_SHA512, HASH_SHA512, KEY_ECDSA },             /* 31 */
 	{ OID_UNKNOWN, HASH_UNKNOWN, KEY_ECDSA },                      /* 32 */
+	{ OID_DILITHIUM_2, HASH_IDENTITY, KEY_DILITHIUM_2},            /* 33 */
+	{ OID_DILITHIUM_3, HASH_IDENTITY, KEY_DILITHIUM_3},            /* 34 */
+	{ OID_DILITHIUM_4, HASH_IDENTITY, KEY_DILITHIUM_4},            /* 35 */
 };
 
 START_TEST(test_hasher_from_oid)
@@ -109,7 +112,10 @@ static struct {
 	{ SIGN_ECDSA_521,             HASH_SHA512     },
 	{ SIGN_ED25519,               HASH_IDENTITY   },
 	{ SIGN_ED448,                 HASH_IDENTITY   },
-	{ 30,						  HASH_UNKNOWN    },
+	{ SIGN_DILITHIUM_2,           HASH_IDENTITY   },
+	{ SIGN_DILITHIUM_3,           HASH_IDENTITY   },
+	{ SIGN_DILITHIUM_4,           HASH_IDENTITY   },
+	{ 30,                         HASH_UNKNOWN    },
 };
 
 START_TEST(test_hasher_from_sig_scheme)
