@@ -436,7 +436,7 @@ struct tls_crypto_t {
 	/**
 	 * Get a list of supported TLS cipher suites.
 	 *
-	 * @param suites		list of suites, points to internal data
+	 * @param suites		optional list of suites, points to internal data
 	 * @return				number of suites returned
 	 */
 	int (*get_cipher_suites)(tls_crypto_t *this, tls_cipher_suite_t **suites);

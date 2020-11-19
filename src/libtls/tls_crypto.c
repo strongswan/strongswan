@@ -1228,7 +1228,10 @@ METHOD(tls_crypto_t, get_cipher_suites, int,
 	{
 		build_cipher_suite_list(this);
 	}
-	*suites = this->suites;
+	if (suites)
+	{
+		*suites = this->suites;
+	}
 	return this->suite_count;
 }
 
@@ -1375,11 +1378,6 @@ METHOD(tls_crypto_t, select_cipher_suite, tls_cipher_suite_t,
 {
 	suite_algs_t *algs;
 	int i, j;
-
-	if (!this->suites)
-	{
-		build_cipher_suite_list(this);
-	}
 
 	for (i = 0; i < this->suite_count; i++)
 	{
