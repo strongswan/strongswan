@@ -235,6 +235,10 @@ static status_t process_client_hello(private_tls_server_t *this,
 		return NEED_MORE;
 	}
 
+	/* before we do anything version-related, determine our supported suites
+	 * as that might change the min./max. versions */
+	this->crypto->get_cipher_suites(this->crypto, NULL);
+
 	if (ext.len)
 	{
 		extensions = bio_reader_create(ext);
