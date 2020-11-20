@@ -601,6 +601,8 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 			{ "identity",	SIGN_DILITHIUM_2,				KEY_DILITHIUM_2, },
 			{ "identity",	SIGN_DILITHIUM_3,				KEY_DILITHIUM_3, },
 			{ "identity",	SIGN_DILITHIUM_4,				KEY_DILITHIUM_4, },
+			{ "identity",	SIGN_FALCON_512,				KEY_FALCON_512,  },
+			{ "identity",	SIGN_FALCON_1024,				KEY_FALCON_1024, },
 		};
 
 		if (expected_strength != AUTH_RULE_MAX)
