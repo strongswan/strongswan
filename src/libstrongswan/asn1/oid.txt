@@ -421,6 +421,11 @@
         0x25                 "sect409r1"				OID_SECT409R1
         0x26                 "sect571k1"				OID_SECT571K1
         0x27                 "sect571r1"				OID_SECT571R1
+  0xCE                       ""
+    0x0F                     "Reserved"
+      0x03                   "Falcon"
+        0x01                 "falcon512"        OID_FALCON_512
+        0x04                 "falcon1024"       OID_FALCON_1024
 0x60                         ""
   0x86                       ""
     0x48                     ""
