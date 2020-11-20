@@ -100,6 +100,14 @@ static private_key_t *parse_private_key(chunk_t blob)
 						type = KEY_DILITHIUM_4;
 						part = BUILD_PRIV_ASN1_DER;
 						break;
+					case OID_FALCON_512:
+						type = KEY_FALCON_512;
+						part = BUILD_PRIV_ASN1_DER;
+						break;
+					case OID_FALCON_1024:
+						type = KEY_FALCON_1024;
+						part = BUILD_PRIV_ASN1_DER;
+						break;
 					default:
 						/* key type not supported */
 						goto end;

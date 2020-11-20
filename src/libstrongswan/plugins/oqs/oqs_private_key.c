@@ -114,7 +114,7 @@ METHOD(private_key_t, decrypt, bool,
 METHOD(private_key_t, get_keysize, int,
 	private_oqs_private_key_t *this)
 {
-	return this->public_key.len;
+	return BITS_PER_BYTE * this->public_key.len;
 }
 
 METHOD(private_key_t, get_public_key, public_key_t*,
@@ -221,6 +221,12 @@ static private_oqs_private_key_t *oqs_private_key_create_empty(key_type_t type)
 			break;
 		case KEY_DILITHIUM_4:
 			sig_alg = OQS_SIG_alg_dilithium_4;
+			break;
+		case KEY_FALCON_512:
+			sig_alg = OQS_SIG_alg_falcon_512;
+			break;
+		case KEY_FALCON_1024:
+			sig_alg = OQS_SIG_alg_falcon_1024;
 			break;
 		default:
 			return NULL;
