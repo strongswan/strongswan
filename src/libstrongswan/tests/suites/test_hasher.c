@@ -64,6 +64,8 @@ static hasher_oid_t oids[] = {
 	{ OID_DILITHIUM_2, HASH_IDENTITY, KEY_DILITHIUM_2},            /* 33 */
 	{ OID_DILITHIUM_3, HASH_IDENTITY, KEY_DILITHIUM_3},            /* 34 */
 	{ OID_DILITHIUM_4, HASH_IDENTITY, KEY_DILITHIUM_4},            /* 35 */
+	{ OID_FALCON_512,  HASH_IDENTITY, KEY_FALCON_512},             /* 36 */
+	{ OID_FALCON_1024, HASH_IDENTITY, KEY_FALCON_1024},            /* 37 */
 };
 
 START_TEST(test_hasher_from_oid)
@@ -115,6 +117,8 @@ static struct {
 	{ SIGN_DILITHIUM_2,           HASH_IDENTITY   },
 	{ SIGN_DILITHIUM_3,           HASH_IDENTITY   },
 	{ SIGN_DILITHIUM_4,           HASH_IDENTITY   },
+	{ SIGN_FALCON_512,            HASH_IDENTITY   },
+	{ SIGN_FALCON_1024,           HASH_IDENTITY   },
 	{ 30,                         HASH_UNKNOWN    },
 };
 
