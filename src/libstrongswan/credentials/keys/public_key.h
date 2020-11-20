@@ -54,6 +54,10 @@ enum key_type_t {
 	KEY_DILITHIUM_3 = 7,
 	/** Dilithium4 NIST Round 3 Submission candidate */
 	KEY_DILITHIUM_5 = 8,
+	/** Falcon512 NIST Round 3 Submission candidate */
+	KEY_FALCON_512 = 9,
+	/** Falcon1024 NIST Round 3 Submission candidate */
+	KEY_FALCON_1024 = 10,
 };
 
 /**
@@ -121,6 +125,10 @@ enum signature_scheme_t {
 	SIGN_DILITHIUM_3,
 	/** Dilithium4 NIST Round 3 Submission signature                   */
 	SIGN_DILITHIUM_5,
+	/** Falcon512 NIST Round 3 Submission signature                   */
+	SIGN_FALCON_512,
+	/** Falcon1024 NIST Round 3 Submission signature                   */
+	SIGN_FALCON_1024,
 };
 
 /**

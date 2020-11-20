@@ -277,6 +277,12 @@ end:
 		case KEY_DILITHIUM_5:
 			sig_alg = OQS_SIG_alg_dilithium_5;
 			break;
+		case KEY_FALCON_512:
+			sig_alg = OQS_SIG_alg_falcon_512;
+			break;
+		case KEY_FALCON_1024:
+			sig_alg = OQS_SIG_alg_falcon_1024;
+			break;
 		default:
 			destroy(this);
 			return NULL;
@@ -303,6 +309,8 @@ bool oqs_supported(key_type_t type)
 		case KEY_DILITHIUM_2:
 		case KEY_DILITHIUM_3:
 		case KEY_DILITHIUM_5:
+		case KEY_FALCON_512:
+		case KEY_FALCON_1024:
 			return TRUE;
 		default:
 			return FALSE;
