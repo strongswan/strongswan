@@ -2,7 +2,7 @@
 .
 .SH "NAME"
 .
-pki \-\-gen \- Generate a new RSA or ECDSA private key
+pki \-\-gen \- Generate a new RSA, ECDSA, Edwards Curve, Dilithium or Falcon private key
 .
 .SH "SYNOPSIS"
 .
@@ -30,7 +30,7 @@ pki \-\-gen \- Generate a new RSA or ECDSA private key
 .
 This sub-command of
 .BR pki (1)
-is used to generate a new RSA or ECDSA private key.
+is used to generate a new RSA, ECDSA, Edwards Curve, Dilithium or Falcon private key.
 .
 .SH "OPTIONS"
 .
@@ -46,8 +46,8 @@ Read command line options from \fIfile\fR.
 .TP
 .BI "\-t, \-\-type " type
 Type of key to generate. Either \fIrsa\fR, \fIecdsa\fR, \fIed25519\fR,
-\fIed448\fR, \fIdilithium2\fR, \fIdilithium3\fR or \fIdilitium4\fR,
-defaults to \fIrsa\fR.
+\fIed448\fR, \fIdilithium2\fR, \fIdilithium3\fR, \fIdilitium4\fR,
+\fIfalcon512\fR or \fIfalcon1024\fR, defaults to \fIrsa\fR.
 .TP
 .BI "\-s, \-\-size " bits
 Key length in bits. Defaults to 2048 for \fIrsa\fR and 384 for \fIecdsa\fR.

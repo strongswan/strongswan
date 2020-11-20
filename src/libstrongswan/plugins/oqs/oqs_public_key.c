@@ -90,7 +90,7 @@ METHOD(public_key_t, encrypt_, bool,
 METHOD(public_key_t, get_keysize, int,
 	private_oqs_public_key_t *this)
 {
-	return this->public_key.len;
+	return BITS_PER_BYTE * this->public_key.len;
 }
 
 static chunk_t public_key_info_encode(chunk_t pubkey, int oid)
@@ -276,6 +276,12 @@ end:
 		case KEY_DILITHIUM_4:
 			sig_alg = OQS_SIG_alg_dilithium_4;
 			break;
+		case KEY_FALCON_512:
+			sig_alg = OQS_SIG_alg_falcon_512;
+			break;
+		case KEY_FALCON_1024:
+			sig_alg = OQS_SIG_alg_falcon_1024;
+			break;
 		default:
 			destroy(this);
 			return NULL;
@@ -302,6 +308,8 @@ bool oqs_supported(key_type_t type)
 		case KEY_DILITHIUM_2:
 		case KEY_DILITHIUM_3:
 		case KEY_DILITHIUM_4:
+		case KEY_FALCON_512:
+		case KEY_FALCON_1024:
 			return TRUE;
 		default:
 			return FALSE;

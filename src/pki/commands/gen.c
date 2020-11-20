@@ -64,6 +64,14 @@ static int gen()
 				{
 					type = KEY_DILITHIUM_4;
 				}
+				else if (streq(arg, "falcon512"))
+				{
+					type = KEY_FALCON_512;
+				}
+				else if (streq(arg, "falcon1024"))
+				{
+					type = KEY_FALCON_1024;
+				}
 				else
 				{
 					return command_usage("invalid key type");
@@ -178,7 +186,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"[--type rsa|ecdsa|ed25519|ed448|dilithium2|dilithium3|dilithium4]",
+		{"[--type rsa|ecdsa|ed25519|ed448|dilithium2|dilithium3|dilithium4|falcon512|falcon1024]",
 		 "[--size bits] [--safe-primes] [--shares n] [--threshold l]",
 		 "[--outform der|pem]"},
 		{
