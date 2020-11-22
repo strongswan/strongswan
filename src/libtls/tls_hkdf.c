@@ -586,6 +586,46 @@ METHOD(tls_hkdf_t, export, bool,
 	return TRUE;
 }
 
+METHOD(tls_hkdf_t, resume, bool,
+	private_tls_hkdf_t *this, chunk_t messages, chunk_t nonce, chunk_t *key)
+{
+	chunk_t resumption_master;
+
+	if (this->phase != HKDF_PHASE_3)
+	{
+		DBG1(DBG_TLS, "unable to generate resumption key material");
+		return FALSE;
+	}
+	if (!nonce.len)
+	{
+		DBG1(DBG_TLS, "no nonce provided");
+		return FALSE;
+	}
+
+	/**
+	 * PSK associated with the ticket according to RFC 8446, section 4.6.1
+	 *
+	 *    HKDF-Expand-Label(resumption_master_secret,
+	 *                      "resumption", ticket_nonce, Hash.length)
+	 */
+	if (!generate_secret(this, TLS_HKDF_RES_MASTER, messages,
+						 &resumption_master))
+	{
+		DBG1(DBG_TLS, "unable to derive resumption master secret");
+		return FALSE;
+	}
+
+	if (!expand_label(this, resumption_master, chunk_from_str("resumption"),
+					  nonce, this->hasher->get_hash_size(this->hasher), key))
+	{
+		chunk_clear(&resumption_master);
+		DBG1(DBG_TLS, "unable to expand key material");
+		return FALSE;
+	}
+	chunk_clear(&resumption_master);
+	return TRUE;
+}
+
 METHOD(tls_hkdf_t, allocate_bytes, bool,
 	private_tls_hkdf_t *this, chunk_t key, chunk_t seed,
 	chunk_t *out)
@@ -643,6 +683,7 @@ tls_hkdf_t *tls_hkdf_create(hash_algorithm_t hash_algorithm, chunk_t psk)
 			.derive_iv = _derive_iv,
 			.derive_finished = _derive_finished,
 			.export = _export,
+			.resume = _resume,
 			.allocate_bytes = _allocate_bytes,
 			.destroy = _destroy,
 		},
