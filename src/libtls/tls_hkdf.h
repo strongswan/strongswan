@@ -127,6 +127,17 @@ struct tls_hkdf_t {
 				   chunk_t messages, size_t length, chunk_t *key);
 
 	/**
+	 * Generate resumption PSKs.
+	 *
+	 * @param messages			handshake messages
+	 * @param nonce				nonce to use for this PSK
+	 * @param psk				generated PSK
+	 * @return					TRUE if PSK successfully generated
+	 */
+	bool (*resume)(tls_hkdf_t *this, chunk_t messages, chunk_t nonce,
+				   chunk_t *psk);
+
+	/**
 	 * Use the internal PRF to allocate data (mainly for the finished message
 	 * where the key is from derive_finished() and the seed is the transcript
 	 * hash).
