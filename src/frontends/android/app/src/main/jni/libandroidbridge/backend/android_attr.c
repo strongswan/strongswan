@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 Tobias Brunner
+ * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -16,7 +16,6 @@
  */
 
 #include "android_attr.h"
-#include "../charonservice.h"
 
 #include <utils/debug.h>
 #include <library.h>
@@ -38,8 +37,8 @@ METHOD(attribute_handler_t, handle, bool,
 	private_android_attr_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
-	vpnservice_builder_t *builder;
-	host_t *dns;
+	host_t *dns = NULL;
+	bool handled = FALSE;
 
 	switch (type)
 	{
@@ -50,19 +49,17 @@ METHOD(attribute_handler_t, handle, bool,
 			dns = host_create_from_chunk(AF_INET6, data, 0);
 			break;
 		default:
-			return FALSE;
+			break;
 	}
-
-	if (!dns || dns->is_anyaddr(dns))
+	if (dns && !dns->is_anyaddr(dns))
 	{
-		DESTROY_IF(dns);
-		return FALSE;
+		DBG1(DBG_IKE, "installing DNS server %H", dns);
+		/* we don't actually handle them here, they are added to the TUN device
+		 * explicitly when necessary, we still mark them as handled */
+		handled = TRUE;
 	}
-	DBG1(DBG_IKE, "installing DNS server %H", dns);
-	builder = charonservice->get_vpnservice_builder(charonservice);
-	builder->add_dns(builder, dns);
-	dns->destroy(dns);
-	return TRUE;
+	DESTROY_IF(dns);
+	return handled;
 }
 
 METHOD(attribute_handler_t, release, void,

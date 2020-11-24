@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2018 Tobias Brunner
+ * Copyright (C) 2010-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -258,6 +258,41 @@ static bool add_routes(vpnservice_builder_t *builder, child_sa_t *child_sa)
 }
 
 /**
+ * Add DNS servers to the builder
+ */
+static bool add_dns_servers(vpnservice_builder_t *builder, ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	configuration_attribute_type_t type;
+	chunk_t data;
+	bool handled;
+	host_t *dns;
+
+	enumerator = ike_sa->create_attribute_enumerator(ike_sa);
+	while (enumerator->enumerate(enumerator, &type, &data, &handled))
+	{
+		switch (type)
+		{
+			case INTERNAL_IP4_DNS:
+				dns = host_create_from_chunk(AF_INET, data, 0);
+				break;
+			case INTERNAL_IP6_DNS:
+				dns = host_create_from_chunk(AF_INET6, data, 0);
+				break;
+			default:
+				continue;
+		}
+		if (dns && !dns->is_anyaddr(dns))
+		{
+			builder->add_dns(builder, dns);
+		}
+		DESTROY_IF(dns);
+	}
+	enumerator->destroy(enumerator);
+	return TRUE;
+}
+
+/**
  * Setup a new TUN device for the supplied SAs, also queues a job that
  * reads packets from this device.
  * Additional information such as DNS servers are gathered in appropriate
@@ -297,7 +332,8 @@ static bool setup_tun_device(private_android_service_t *this,
 		DBG1(DBG_DMN, "setting up TUN device failed, no virtual IP found");
 		return FALSE;
 	}
-	if (!add_routes(builder, child_sa) ||
+	if (!add_dns_servers(builder, ike_sa) ||
+		!add_routes(builder, child_sa) ||
 		!builder->set_mtu(builder, this->mtu))
 	{
 		return FALSE;
