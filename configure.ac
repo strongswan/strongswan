@@ -19,7 +19,7 @@
 #  initialize & set some vars
 # ============================
 
-AC_INIT([strongSwan],[5.9.0])
+AC_INIT([strongSwan],[5.9.0bf])
 AM_INIT_AUTOMAKE(m4_esyscmd([
 	echo tar-ustar
 	echo subdir-objects
@@ -31,6 +31,23 @@ AM_INIT_AUTOMAKE(m4_esyscmd([
 		*) echo serial-tests;;
 	esac
 ]))
+
+# backwards compat with older pkg-config
+# - pull in AC_DEFUN from pkg.m4
+m4_ifndef([PKG_CHECK_VAR], [
+# PKG_CHECK_VAR(VARIABLE, MODULE, CONFIG-VARIABLE,
+# [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
+# -------------------------------------------
+# Retrieves the value of the pkg-config variable for the given module.
+AC_DEFUN([PKG_CHECK_VAR],
+[AC_REQUIRE([PKG_PROG_PKG_CONFIG])dnl
+AC_ARG_VAR([$1], [value of $3 for $2, overriding pkg-config])dnl
+_PKG_CONFIG([$1], [variable="][$3]["], [$2])
+AS_VAR_COPY([$1], [pkg_cv_][$1])
+AS_VAR_IF([$1], [""], [$5], [$4])dnl
+])# PKG_CHECK_VAR
+])
+
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_CONFIG_MACRO_DIR([m4/config])
 AC_CONFIG_HEADERS([config.h])
@@ -369,7 +386,7 @@ AC_SUBST(PLUGIN_CFLAGS)
 AC_PROG_CC
 AM_PROG_CC_C_O
 
-AC_LIB_PREFIX
+m4_pattern_allow([AC_LIB_PREFIX])
 AC_C_BIGENDIAN
 
 # =========================

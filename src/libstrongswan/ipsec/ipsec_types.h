@@ -126,6 +126,7 @@ enum hw_offload_t {
 	HW_OFFLOAD_NO = 0,
 	HW_OFFLOAD_YES = 1,
 	HW_OFFLOAD_AUTO = 2,
+	HW_OFFLOAD_FULL = 3,
 };
 
 /**
