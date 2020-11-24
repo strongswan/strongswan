@@ -29,7 +29,7 @@ PLUGINS = \
 	pem \
 	socket-default \
 	openssl \
-	stroke
+	vici
 
 all: build_charon
 

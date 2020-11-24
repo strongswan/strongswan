@@ -13,4 +13,7 @@ charon-tkm {
       fingerprint = CA_SPK_HEX
     }
   }
+  start-scripts {
+    swanctl = /usr/local/sbin/swanctl --load-all --noprompt
+  }
 }
