@@ -1,0 +1,24 @@
+name: lgtm.com
+
+on: [push]
+
+env:
+  OS_NAME: linux
+
+jobs:
+  lgtm:
+    runs-on: ubuntu-latest
+    env:
+      TEST: lgtm
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      # we don't use github/codeql-action because we can't exclude queries there,
+      # so we continue to use the approach we used on Travis
+      - env:
+          LGTM_TOKEN: ${{ secrets.LGTM_TOKEN }}
+          BUILD_NUMBER: ${{ github.run_id }}
+          COMMIT_ID: ${{ github.sha }}
+          COMMIT_BASE: ${{ github.event.before }}
+        uses: ./.github/actions/default
