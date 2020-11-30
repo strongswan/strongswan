@@ -205,26 +205,36 @@ win*)
 			--enable-pki --enable-swanctl --enable-socket-win
 			--enable-kernel-iph --enable-kernel-wfp --enable-winhttp"
 	# no make check for Windows binaries unless we run on a windows host
-	if test "$APPVEYOR" != "True"; then
+	if test "$OS_NAME" != "windows"; then
 		TARGET=
+		DEPS="gcc-mingw-w64-base"
+		case "$TEST" in
+		win64)
+			DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev $DEPS"
+			;;
+		win32)
+			DEPS="gcc-mingw-w64-i686 binutils-mingw-w64-i686 mingw-w64-i686-dev $DEPS"
+			;;
+		esac
 	else
 		CONFIG="$CONFIG --enable-openssl"
-		CFLAGS="$CFLAGS -I$OPENSSL_DIR/include"
-		LDFLAGS="-L$OPENSSL_DIR"
-		export LDFLAGS
+		DEPS="base-devel git"
+		case "$TEST" in
+		win64)
+			DEPS="$DEPS mingw-w64-x86_64-toolchain"
+			;;
+		win32)
+			DEPS="$DEPS mingw-w64-i686-toolchain"
+			;;
+		esac
 	fi
 	CFLAGS="$CFLAGS -mno-ms-bitfields"
-	DEPS="gcc-mingw-w64-base"
 	case "$TEST" in
 	win64)
 		CONFIG="--host=x86_64-w64-mingw32 $CONFIG --enable-dbghelp-backtraces"
-		DEPS="gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev $DEPS"
-		CC="x86_64-w64-mingw32-gcc"
 		;;
 	win32)
 		CONFIG="--host=i686-w64-mingw32 $CONFIG"
-		DEPS="gcc-mingw-w64-i686 binutils-mingw-w64-i686 mingw-w64-i686-dev $DEPS"
-		CC="i686-w64-mingw32-gcc"
 		;;
 	esac
 	;;
@@ -407,6 +417,9 @@ deps)
 	freebsd)
 		pkg install -y automake autoconf libtool pkgconf && \
 		pkg install -y bison flex gperf gettext $DEPS
+		;;
+	windows)
+		pacman --noconfirm -S --needed $DEPS
 		;;
 	esac
 	exit $?

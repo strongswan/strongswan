@@ -4,7 +4,6 @@ on: [push, pull_request]
 
 env:
   TESTS_REDUCED_KEYLENGTHS: yes
-  CCACHE_BASEDIR: ${{ github.workspace }}
   CCACHE_COMPRESS: true
   CCACHE_MAXSIZE: 200M
   # since the compilers are newly installed every time, we have to use this to
@@ -31,6 +30,7 @@ jobs:
       matrix:
         test: [ win64, win32 ]
     env:
+      CCACHE_BASEDIR: ${{ github.workspace }}
       OS_NAME: linux
       TEST: ${{ matrix.test }}
     steps:
@@ -53,3 +53,67 @@ jobs:
           name: Logs ${{ github.job }}
           path: config.log
           retention-days: 5
+
+  native:
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - msystem: MINGW64
+            test: win64
+          - msystem: MINGW32
+            test: win32
+    env:
+      OS_NAME: windows
+      TEST: ${{ matrix.test }}
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+      - run: git config --global core.autocrlf input
+        shell: bash
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: ccache-${{ runner.os }}-${{ matrix.test }}-${{ github.ref }}:${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ matrix.test }}-${{ github.ref }}:
+            ccache-${{ runner.os }}-${{ matrix.test }}-
+      - run: |
+          ./scripts/test.sh deps
+          pacman --noconfirm -S --needed ccache
+          ccache -z
+          ccache -s
+        shell: msys2 {0}
+      - run: |
+          # the ccache package does not add any symlinks and the scripts in the
+          # mingw-w64-...-ccache packages don't work, so do this via CC
+          case "$TEST" in
+          win64)
+            export CC="ccache x86_64-w64-mingw32-gcc"
+            ;;
+          win32)
+            export CC="ccache i686-w64-mingw32-gcc"
+            ;;
+          esac
+          ./scripts/test.sh
+        shell: msys2 {0}
+        # sometimes streaming/threading tests hang completely
+        timeout-minutes: 30
+      - run: ccache -s
+        shell: msys2 {0}
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Logs ${{ github.job }}
+          path: config.log
+          retention-days: 5
+      - if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: ccache ${{ matrix.test }}
+          path: ccache.log
+          retention-days: 1

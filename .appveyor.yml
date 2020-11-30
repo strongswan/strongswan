@@ -10,6 +10,7 @@ environment:
     TESTS_REDUCED_KEYLENGTHS: yes
     LEAK_DETECTIVE: no
     MONOLITHIC: yes
+    OS_NAME: windows
     TZ: Europe/Zurich
   matrix:
     - arch: x86_64
