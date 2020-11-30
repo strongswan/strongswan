@@ -39,7 +39,7 @@ enum dnssec_status_t {
 	 * trust, and is able to verify all the signatures in the response.
 	 * [RFC4033]
 	 */
-	SECURE,
+	DNSS_SECURE,
 	/**
 	 * The validating resolver has a trust anchor, a chain of
 	 * trust, and, at some delegation point, signed proof of the
@@ -48,7 +48,7 @@ enum dnssec_status_t {
 	 * may have a local policy to mark parts of the domain space as
 	 * insecure. [RFC4033]
 	 */
-	INSECURE,
+	DNSS_INSECURE,
 	/**
 	 * The validating resolver has a trust anchor and a secure
 	 * delegation indicating that subsidiary data is signed, but the
@@ -57,13 +57,13 @@ enum dnssec_status_t {
 	 * missing that the relevant NSEC RR says should be present, and so
 	 * forth. [RFC4033]
 	 */
-	BOGUS,
+	DNSS_BOGUS,
 	/**
 	 * There is no trust anchor that would indicate that a
 	 * specific portion of the tree is secure.  This is the default
 	 * operation mode. [RFC4033]
 	 */
-	INDETERMINATE,
+	DNSS_INDETERMINATE,
 };
 
 

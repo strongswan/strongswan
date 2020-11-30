@@ -230,9 +230,11 @@ ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
 ARG_ENABL_SET([kernel-iph],     [enable the Windows IP Helper based networking backend.])
 ARG_ENABL_SET([kernel-libipsec],[enable the libipsec kernel interface.])
 ARG_ENABL_SET([kernel-wfp],     [enable the Windows Filtering Platform IPsec backend.])
+ARG_ENABL_SET([kernel-vpp],     [enable the VPP kernel interface.])
 ARG_DISBL_SET([socket-default], [disable default socket implementation for charon.])
 ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
 ARG_ENABL_SET([socket-win],     [enable Winsock2 based socket implementation for charon])
+ARG_ENABL_SET([socket-vpp],     [enable VPP socket implementation for charon])
 # configuration/control plugins
 ARG_DISBL_SET([stroke],         [disable charons stroke configuration backend.])
 ARG_ENABL_SET([smp],            [enable SMP configuration and control interface. Requires libxml.])
@@ -1278,6 +1280,111 @@ if test x$unwind_backtraces = xtrue; then
 	AC_SUBST(UNWINDLIB)
 fi
 
+if test x$kernel_vpp = xtrue; then
+save_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Werror -Wno-error=address-of-packed-member"
+AC_MSG_CHECKING([for VPP API flag IPSEC_API_SAD_FLAG_IS_INBOUND])
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+		[[#include <vlibapi/api.h>
+		  #include <vlibmemory/api.h>
+		  #include <vpp/api/vpe_msg_enum.h>
+
+		  #define vl_typedefs
+		  #define vl_endianfun
+		  #include <vpp/api/vpe_all_api_h.h>
+		  #undef vl_typedefs
+		  #undef vl_endianfun]],
+		[[int flags = IPSEC_API_SAD_FLAG_IS_INBOUND;
+		  return flags;]])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_IPSEC_API_SAD_FLAG_IS_INBOUND], [], [vpp flag IPSEC_API_SAD_FLAG_IS_INBOUND defined])],
+	[AC_MSG_RESULT([no])]
+)
+
+AC_MSG_CHECKING([for vlibapi_get_main])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#include <stdint.h>
+		  #include <vlibapi/api.h>
+		  #include <vlibmemory/api.h>]],
+		[[api_main_t *am = vlibapi_get_main();
+		return (int)(intptr_t)am;]])],
+	[AC_MSG_RESULT([yes]);
+	AC_DEFINE([HAVE_VLIBAPI_GET_MAIN], [], [vpp has vlibapi_get_main])],
+	[AC_MSG_RESULT([no])]
+)
+
+AC_MSG_CHECKING([if VPP API uses vl_api_if_status_flags_t])
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+        [[#include <vlibapi/api.h>
+          #include <vlibmemory/api.h>
+          #include <vpp/api/vpe_msg_enum.h>
+
+          #define vl_typedefs
+          #include <vpp/api/vpe_all_api_h.h>
+          #undef vl_typedefs]],
+        [[vl_api_if_status_flags_t flags = IF_STATUS_API_FLAG_ADMIN_UP;
+          return (int)flags;]])],
+    [AC_MSG_RESULT([yes]);
+     AC_DEFINE([HAVE_VL_API_IF_STATUS_FLAGS_T], [], [vpp uses vl_api_if_status_flags_t])],
+    [AC_MSG_RESULT([no])]
+)
+
+AC_MSG_CHECKING([if VPP API has useable endian functions])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#include <vlibapi/api.h>
+		  #include <vlibmemory/api.h>
+		  #include <vpp/api/vpe_msg_enum.h>
+
+          #define vl_typedefs
+          #define vl_endianfun
+		  #include <vpp/api/vpe_all_api_h.h>
+          #undef vl_typedefs
+		  #undef vl_endianfun]],
+		  [[vl_api_address_family_t af = ADDRESS_IP6;
+		    vl_api_address_family_t_endian(&af);
+	   	    return (int)af;]])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_VPP_API_ENDIAN_FUNCS], [], [vpp has working api endian funcs (>= 20.01)])],
+	[AC_MSG_RESULT([no])]
+)
+
+AC_MSG_CHECKING([for VPP C string to API function])
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM(
+		[[#include <vlibapi/api.h>]],
+		[[vl_api_string_t str;
+		  int count = vl_api_c_string_to_api_string ("eth0", &str);
+		  return count;]])],
+	[AC_MSG_RESULT([yes]);
+	 AC_DEFINE([HAVE_VL_API_C_STRING_TO_API_STRING], [], [have vl_api_c_string_to_api_string])],
+	[AC_MSG_RESULT([no])]
+)
+
+AC_MSG_CHECKING([for VPP API message VL_API_IP_ROUTE_LOOKUP])
+AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+        [[#include <vlibapi/api.h>
+          #include <vlibmemory/api.h>
+          #include <vpp/api/vpe_msg_enum.h>
+
+          #define vl_typedefs
+          #define vl_endianfun
+          #include <vpp/api/vpe_all_api_h.h>
+          #undef vl_typedefs
+          #undef vl_endianfun]],
+        [[int flags = VL_API_IP_ROUTE_LOOKUP;
+          return flags;]])],
+    [AC_MSG_RESULT([yes]);
+     AC_DEFINE([HAVE_VL_API_IP_ROUTE_LOOKUP], [], [have vpp api VL_API_IP_ROUTE_LOOKUP])],
+    [AC_MSG_RESULT([no])]
+)
+CFLAGS="$save_CFLAGS"
+fi
+
 AM_CONDITIONAL(USE_DEV_HEADERS, [test "x$dev_headers" != xno])
 if test x$dev_headers = xyes; then
 	dev_headers="$includedir/strongswan"
@@ -1502,10 +1609,12 @@ ADD_PLUGIN([kernel-iph],           [c charon])
 ADD_PLUGIN([kernel-pfkey],         [c charon starter nm cmd])
 ADD_PLUGIN([kernel-pfroute],       [c charon starter nm cmd])
 ADD_PLUGIN([kernel-netlink],       [c charon starter nm cmd])
+ADD_PLUGIN([kernel-vpp],           [c charon starter cmd])
 ADD_PLUGIN([resolve],              [c charon cmd])
 ADD_PLUGIN([save-keys],            [c])
 ADD_PLUGIN([socket-default],       [c charon nm cmd])
 ADD_PLUGIN([socket-dynamic],       [c charon cmd])
+ADD_PLUGIN([socket-vpp],           [c charon cmd])
 ADD_PLUGIN([socket-win],           [c charon])
 ADD_PLUGIN([bypass-lan],           [c charon nm cmd])
 ADD_PLUGIN([connmark],             [c charon])
@@ -1681,6 +1790,7 @@ AM_CONDITIONAL(USE_KERNEL_PFROUTE, test x$kernel_pfroute = xtrue)
 AM_CONDITIONAL(USE_KERNEL_LIBIPSEC, test x$kernel_libipsec = xtrue)
 AM_CONDITIONAL(USE_KERNEL_WFP, test x$kernel_wfp = xtrue)
 AM_CONDITIONAL(USE_KERNEL_IPH, test x$kernel_iph = xtrue)
+AM_CONDITIONAL(USE_KERNEL_VPP, test x$kernel_vpp = xtrue)
 AM_CONDITIONAL(USE_WHITELIST, test x$whitelist = xtrue)
 AM_CONDITIONAL(USE_EXT_AUTH, test x$ext_auth = xtrue)
 AM_CONDITIONAL(USE_LOOKIP, test x$lookip = xtrue)
@@ -1738,6 +1848,7 @@ AM_CONDITIONAL(USE_SAVE_KEYS, test x$save_keys = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DEFAULT, test x$socket_default = xtrue)
 AM_CONDITIONAL(USE_SOCKET_DYNAMIC, test x$socket_dynamic = xtrue)
 AM_CONDITIONAL(USE_SOCKET_WIN, test x$socket_win = xtrue)
+AM_CONDITIONAL(USE_SOCKET_VPP, test x$socket_vpp = xtrue)
 AM_CONDITIONAL(USE_BYPASS_LAN, test x$bypass_lan = xtrue)
 AM_CONDITIONAL(USE_CONNMARK, test x$connmark = xtrue)
 AM_CONDITIONAL(USE_FORECAST, test x$forecast = xtrue)
@@ -2005,6 +2116,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/socket_default/Makefile
 	src/libcharon/plugins/socket_dynamic/Makefile
 	src/libcharon/plugins/socket_win/Makefile
+	src/libcharon/plugins/socket_vpp/Makefile
 	src/libcharon/plugins/bypass_lan/Makefile
 	src/libcharon/plugins/connmark/Makefile
 	src/libcharon/plugins/counters/Makefile
@@ -2026,6 +2138,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/kernel_libipsec/Makefile
 	src/libcharon/plugins/kernel_wfp/Makefile
 	src/libcharon/plugins/kernel_iph/Makefile
+	src/libcharon/plugins/kernel_vpp/Makefile
 	src/libcharon/plugins/whitelist/Makefile
 	src/libcharon/plugins/ext_auth/Makefile
 	src/libcharon/plugins/lookip/Makefile
