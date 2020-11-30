@@ -179,33 +179,47 @@ static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this,
 	EC_POINT *secret = NULL;
 	bool x_coordinate_only, ret = FALSE;
 
-	priv_key = EC_KEY_get0_private_key(this->key);
-	if (!priv_key)
-	{
-		goto error;
-	}
-
-	secret = EC_POINT_new(this->ec_group);
-	if (!secret)
-	{
-		goto error;
-	}
-
-	if (!EC_POINT_mul(this->ec_group, secret, NULL, this->pub_key, priv_key, NULL))
-	{
-		goto error;
-	}
-
 	/*
 	 * The default setting ecp_x_coordinate_only = TRUE
 	 * applies the following errata for RFC 4753:
 	 * http://www.rfc-editor.org/errata_search.php?eid=9
+	 * ECDH_compute_key() is used under this setting as
+	 * it also facilitates hardware offload through the use of 
+	 * dynamic engines in OpenSSL.
 	 */
 	x_coordinate_only = lib->settings->get_bool(lib->settings,
 									"%s.ecp_x_coordinate_only", TRUE, lib->ns);
-	if (!ecp2chunk(this->ec_group, secret, shared_secret, x_coordinate_only))
+	if (x_coordinate_only)
 	{
-		goto error;
+		shared_secret->len = EC_FIELD_ELEMENT_LEN(this->ec_group);
+		shared_secret->ptr = malloc(shared_secret->len);
+		memset(shared_secret->ptr, 0, shared_secret->len);
+		shared_secret->len = ECDH_compute_key(shared_secret->ptr, shared_secret->len,
+							this->pub_key, this->key, NULL);
+	}
+	else
+	{
+		priv_key = EC_KEY_get0_private_key(this->key);
+		if (!priv_key)
+		{
+			goto error;
+		}
+
+		secret = EC_POINT_new(this->ec_group);
+		if (!secret)
+		{
+			goto error;
+		}
+
+		if (!EC_POINT_mul(this->ec_group, secret, NULL, this->pub_key, priv_key, NULL))
+		{
+			goto error;
+		}
+
+		if (!ecp2chunk(this->ec_group, secret, shared_secret, x_coordinate_only))
+		{
+			goto error;
+		}
 	}
 
 	ret = TRUE;
