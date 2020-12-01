@@ -37,6 +37,16 @@
 #define EC_FIELD_ELEMENT_LEN(group) ((EC_GROUP_get_degree(group) + 7) / 8)
 
 /**
+ * Derives a shared DH secret from the given keys.
+ *
+ * @param priv		private key
+ * @param pub		public key
+ * @param shared	shared secret
+ * @return			TRUE on success, FALSE otherwise
+ */
+bool openssl_compute_shared_key(EVP_PKEY *priv, EVP_PKEY *pub, chunk_t *shared);
+
+/**
  * Creates a hash of a given type of a chunk of data.
  *
  * Note: this function allocates memory for the hash
