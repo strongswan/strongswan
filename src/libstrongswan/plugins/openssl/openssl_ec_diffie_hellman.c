@@ -120,7 +120,7 @@ error:
  * the point. This function allocates memory for the chunk.
  */
 static bool ecp2chunk(const EC_GROUP *group, const EC_POINT *point,
-					  chunk_t *chunk, bool x_coordinate_only)
+					  chunk_t *chunk)
 {
 	BN_CTX *ctx;
 	BIGNUM *x, *y;
@@ -145,10 +145,6 @@ static bool ecp2chunk(const EC_GROUP *group, const EC_POINT *point,
 		goto error;
 	}
 
-	if (x_coordinate_only)
-	{
-		y = NULL;
-	}
 	if (!openssl_bn_cat(EC_FIELD_ELEMENT_LEN(group), x, y, chunk))
 	{
 		goto error;
@@ -167,66 +163,18 @@ error:
 static bool compute_shared_key(private_openssl_ec_diffie_hellman_t *this,
 							   chunk_t *shared_secret)
 {
-	const BIGNUM *priv_key;
-	EC_POINT *secret = NULL;
-	bool x_coordinate_only, ret = FALSE;
 	int len;
 
-	/*
-	 * The default setting ecp_x_coordinate_only = TRUE
-	 * applies the following errata for RFC 4753:
-	 * http://www.rfc-editor.org/errata_search.php?eid=9
-	 * ECDH_compute_key() is used under this setting as
-	 * it also facilitates hardware offload through the use of
-	 * dynamic engines in OpenSSL.
-	 */
-	x_coordinate_only = lib->settings->get_bool(lib->settings,
-									"%s.ecp_x_coordinate_only", TRUE, lib->ns);
-	if (x_coordinate_only)
+	*shared_secret = chunk_alloc(EC_FIELD_ELEMENT_LEN(this->ec_group));
+	len = ECDH_compute_key(shared_secret->ptr, shared_secret->len,
+						   this->pub_key, this->key, NULL);
+	if (len <= 0)
 	{
-		*shared_secret = chunk_alloc(EC_FIELD_ELEMENT_LEN(this->ec_group));
-		len = ECDH_compute_key(shared_secret->ptr, shared_secret->len,
-							   this->pub_key, this->key, NULL);
-		if (len <= 0)
-		{
-			chunk_free(shared_secret);
-			goto error;
-		}
-		shared_secret->len = len;
+		chunk_free(shared_secret);
+		return FALSE;
 	}
-	else
-	{
-		priv_key = EC_KEY_get0_private_key(this->key);
-		if (!priv_key)
-		{
-			goto error;
-		}
-
-		secret = EC_POINT_new(this->ec_group);
-		if (!secret)
-		{
-			goto error;
-		}
-
-		if (!EC_POINT_mul(this->ec_group, secret, NULL, this->pub_key, priv_key,
-						  NULL))
-		{
-			goto error;
-		}
-
-		if (!ecp2chunk(this->ec_group, secret, shared_secret, x_coordinate_only))
-		{
-			goto error;
-		}
-	}
-
-	ret = TRUE;
-error:
-	if (secret)
-	{
-		EC_POINT_clear_free(secret);
-	}
-	return ret;
+	shared_secret->len = len;
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, set_other_public_value, bool,
@@ -257,7 +205,7 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_openssl_ec_diffie_hellman_t *this,chunk_t *value)
 {
-	ecp2chunk(this->ec_group, EC_KEY_get0_public_key(this->key), value, FALSE);
+	ecp2chunk(this->ec_group, EC_KEY_get0_public_key(this->key), value);
 	return TRUE;
 }
 

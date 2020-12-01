@@ -153,7 +153,6 @@ static bool compute_shared_key(private_wolfssl_ec_diffie_hellman_t *this,
 							   ecc_point *pub_key, chunk_t *shared_secret)
 {
 	ecc_point* secret;
-	bool x_coordinate_only;
 	bool success = FALSE;
 
 	if ((secret = wc_ecc_new_point()) == NULL)
@@ -163,15 +162,7 @@ static bool compute_shared_key(private_wolfssl_ec_diffie_hellman_t *this,
 
 	if (wolfssl_ecc_multiply(this->key.dp, &this->key.k, pub_key, secret))
 	{
-		/*
-		 * The default setting ecp_x_coordinate_only = TRUE
-		 * applies the following errata for RFC 4753:
-		 * http://www.rfc-editor.org/errata_search.php?eid=9
-		 */
-		x_coordinate_only = lib->settings->get_bool(lib->settings,
-									 "%s.ecp_x_coordinate_only", TRUE, lib->ns);
-		success = ecp2chunk(this->keysize, secret, shared_secret,
-							x_coordinate_only);
+		success = ecp2chunk(this->keysize, secret, shared_secret, TRUE);
 	}
 
 	wc_ecc_del_point(secret);
