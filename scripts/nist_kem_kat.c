@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Andreas Steffen
+ * Copyright (C) 2019-2020 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -140,9 +140,9 @@ int main(int argc, char *argv[])
 			{
 				break;
 			}
+			fprintf(out, "/** count = %.*s */\n", value_len, value);
 			fprintf(out, "{\n");
 			fprintf(out, "\t.method = %s,\n", method);
-			fprintf(out, "\t.count = %.*s,\n", value_len, value);
 			count--;
 		}
 		else
