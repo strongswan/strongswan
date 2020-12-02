@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Andreas Steffen
+ * Copyright (C) 2019-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -139,9 +139,9 @@ int main(int argc, char *argv[])
 			{
 				break;
 			}
+			fprintf(out, "/** count = %.*s */\n", value_len, value);
 			fprintf(out, "{\n");
 			fprintf(out, "\t.method = %s,\n", method);
-			fprintf(out, "\t.count = %.*s,\n", value_len, value);
 			count--;
 		}
 		else
