@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 			{"out",		required_argument,	NULL,	'o' },
 			{0,0,0,0 },
 		};
-		switch (getopt_long(argc, argv, "h:m:c:i:o:", long_opts, NULL))
+		switch (getopt_long(argc, argv, "h:t:c:i:o:", long_opts, NULL))
 		{
 			case EOF:
 				break;
