@@ -153,6 +153,11 @@ struct private_tls_server_t {
 	 * Did we receive the curves from the client?
 	 */
 	bool curves_received;
+
+	/**
+	 * Should we send a certificate_authorities in the CertificateRequest
+	 */
+	bool send_certreq_authorities;
 };
 
 /**
@@ -780,8 +785,15 @@ static status_t send_certificate_request(private_tls_server_t *this,
 	}
 
 	authorities = bio_writer_create(64);
-	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
+	if (this->send_certreq_authorities)
+	{
+		enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
 												CERT_X509, KEY_RSA, NULL, TRUE);
+	}
+	else
+	{
+		enumerator = enumerator_create_empty();
+	}
 	while (enumerator->enumerate(enumerator, &cert))
 	{
 		x509 = (x509_t*)cert;
@@ -1135,6 +1147,9 @@ tls_server_t *tls_server_create(tls_t *tls,
 		.state = STATE_INIT,
 		.peer_auth = auth_cfg_create(),
 		.server_auth = auth_cfg_create(),
+		.send_certreq_authorities = lib->settings->get_bool(lib->settings,
+											"%s.tls.send_certreq_authorities",
+											TRUE, lib->ns),
 	);
 
 	return &this->public;

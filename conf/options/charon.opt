@@ -476,6 +476,10 @@ charon.tls.mac
 charon.tls.suites
 	List of TLS cipher suites.
 
+charon.tls.send_certreq_authorities
+	In server's Certificate Request message, controls whether
+	certificate_authorities list should be populated.
+
 charon.user
 	Name of the user the daemon changes to after startup.
 
