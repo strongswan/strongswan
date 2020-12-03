@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+OS=$(grep -w "NAME\=" /etc/os-release | cut -d "=" -f 2)
+
+if [ "$OS" = '"Ubuntu"' ]
+then
+	cp openssl-conf/Ubuntu20_04/openssl.cnf debian/strongswan/etc/ssl/openssl.cnf.mlnx
+elif [ "$OS" = '"Debian GNU/Linux"' ]
+then
+	cp openssl-conf/Debian10/openssl.cnf debian/strongswan/etc/ssl/openssl.cnf.mlnx
+fi

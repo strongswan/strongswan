@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+cp /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf.orig
+cp /etc/ssl/openssl.cnf.mlnx /etc/ssl/openssl.cnf
+
+#DEBHELPER#
+
+exit 0

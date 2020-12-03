@@ -1,0 +1,24 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with autoreconf
+
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
+
+override_dh_autoreconf:
+	dh_autoreconf -- ./autogen.sh
+
+override_dh_auto_configure:
+	./configure --prefix=/usr --sysconfdir=/etc --enable-openssl --disable-random
+
+override_dh_auto_build:
+	make -j$(NJOBS)
+
+override_dh_auto_test:
+
+
+override_dh_auto_install:
+	dh_auto_install
+	mkdir -p debian/strongswan/etc/ssl
+	./install-config
