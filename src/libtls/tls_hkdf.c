@@ -626,6 +626,35 @@ METHOD(tls_hkdf_t, resume, bool,
 	return TRUE;
 }
 
+METHOD(tls_hkdf_t, binder, bool,
+	private_tls_hkdf_t *this, chunk_t seed, chunk_t *out)
+{
+	chunk_t binder_key, finished_key;
+
+	if (!generate_secret(this, TLS_HKDF_RES_BINDER, chunk_empty, &binder_key))
+	{
+		DBG1(DBG_TLS, "unable to derive binder key");
+		return FALSE;
+	}
+
+	if (!expand_label(this, binder_key, chunk_from_str("finished"), chunk_empty,
+					  this->hasher->get_hash_size(this->hasher), &finished_key))
+	{
+		chunk_clear(&binder_key);
+		return FALSE;
+	}
+	chunk_clear(&binder_key);
+
+	if (!this->prf->set_key(this->prf, finished_key) ||
+		!this->prf->allocate_bytes(this->prf, seed, out))
+	{
+		chunk_clear(&finished_key);
+		return FALSE;
+	}
+	chunk_clear(&finished_key);
+	return TRUE;
+}
+
 METHOD(tls_hkdf_t, allocate_bytes, bool,
 	private_tls_hkdf_t *this, chunk_t key, chunk_t seed,
 	chunk_t *out)
@@ -684,6 +713,7 @@ tls_hkdf_t *tls_hkdf_create(hash_algorithm_t hash_algorithm, chunk_t psk)
 			.derive_finished = _derive_finished,
 			.export = _export,
 			.resume = _resume,
+			.binder = _binder,
 			.allocate_bytes = _allocate_bytes,
 			.destroy = _destroy,
 		},

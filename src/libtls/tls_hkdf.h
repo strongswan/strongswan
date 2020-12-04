@@ -138,6 +138,20 @@ struct tls_hkdf_t {
 				   chunk_t *psk);
 
 	/**
+	 * Generate a PSK binder.
+	 *
+	 * @note The transcript hash is built of the partial ClientHello message up
+	 * to and including the PreSharedKey extension's identities field, excluding
+	 * the actual binders (their length is included in that of the extension(s)
+	 * and message, though), as per RFC 8446, section 4.2.11.2.
+	 *
+	 * @param seed				transcript-hash of client_hello to seed the PRF
+	 * @param psk_binder		generated psk binder
+	 * @return					TRUE if output was generated
+	 */
+	bool (*binder)(tls_hkdf_t *this, chunk_t seed, chunk_t *psk_binder);
+
+	/**
 	 * Use the internal PRF to allocate data (mainly for the finished message
 	 * where the key is from derive_finished() and the seed is the transcript
 	 * hash).
