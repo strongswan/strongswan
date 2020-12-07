@@ -279,6 +279,15 @@ oqs_kem_t *oqs_kem_create(key_exchange_method_t method)
 		case KE_FRODO_SHAKE_L5:
 			kem_alg = OQS_KEM_alg_frodokem_1344_shake;
 			break;
+		case KE_HQC_L1:
+			kem_alg = OQS_KEM_alg_hqc_128;
+			break;
+		case KE_HQC_L3:
+			kem_alg = OQS_KEM_alg_hqc_192;
+			break;
+		case KE_HQC_L5:
+			kem_alg = OQS_KEM_alg_hqc_256;
+			break;
 		case KE_SIKE_L1:
 			kem_alg = OQS_KEM_alg_sike_p434;
 			break;

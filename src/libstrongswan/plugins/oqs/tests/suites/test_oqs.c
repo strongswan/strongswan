@@ -33,9 +33,6 @@ static bool unsupported(key_exchange_method_t method)
 		case KE_BIKE_L1:
 		case KE_BIKE_L3:
 		case KE_BIKE_L5:
-		case KE_HQC_L1:
-		case KE_HQC_L3:
-		case KE_HQC_L5:
 			return TRUE;
 		default:
 			return FALSE;
