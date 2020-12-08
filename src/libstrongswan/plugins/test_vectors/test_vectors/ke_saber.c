@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Andreas Steffen
+ * Copyright (C) 2018-2020 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -17,7 +17,7 @@
 #include <crypto/crypto_tester.h>
 
 /**
- * First four test vectors of the official SABER_L1 KAT
+ * First four test vectors of the official NIST Round 3 SABER_L1 KAT
  */
 ke_test_vector_t ke_saber_l1_0 = {
 	.method = KE_SABER_L1,
@@ -708,7 +708,7 @@ ke_test_vector_t ke_saber_l1_3 = {
 };
 
 /**
- * First four test vectors of the official SABER_L3 KAT
+ * First four test vectors of the official NIST Round 3 SABER_L3 KAT
  */
 ke_test_vector_t ke_saber_l3_0 = {
 	.method = KE_SABER_L3,
@@ -1691,7 +1691,7 @@ ke_test_vector_t ke_saber_l3_3 = {
 };
 
 /**
- * First four test vectors of the official SABER_L5 KAT
+ * First four test vectors of the official NIST Round 3 SABER_L5 KAT
  */
 ke_test_vector_t ke_saber_l5_0 = {
 	.method = KE_SABER_L5,
