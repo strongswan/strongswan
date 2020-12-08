@@ -7,7 +7,7 @@ Files:     debian/*
            mlnx-conf/*
            strongswan.spec
            install-config
-Copyright: 2020 Mellanox Technologies.
+Copyright: 2020 Nvidia Corporation
 License:   BSD-3-Clause
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions
@@ -13452,72 +13452,3 @@ Files:     src/frontends/osx/charon-xpc/charon-xpc-Launchd.plist
            COPYING
 Copyright: __NO_COPYRIGHT_NOR_LICENSE__
 License:   __NO_COPYRIGHT_NOR_LICENSE__
-
-Files:     Android.common.mk
-           ChangeLog
-           conf/default.conf
-           conf/options/aikgen.conf
-           conf/options/attest.conf
-           conf/options/charon-logging.conf
-           conf/options/charon-nm.conf
-           conf/options/charon-systemd.conf
-           conf/options/charon.conf
-           conf/options/imcv.conf
-           conf/options/imv_policy_manager.conf
-           conf/options/manager.conf
-           conf/options/medsrv.conf
-           conf/options/pki.conf
-           conf/options/pool.conf
-           conf/options/scepclient.conf
-           conf/options/sec-updater.conf
-           conf/options/starter.conf
-           conf/options/sw-collector.conf
-           conf/options/swanctl.conf
-           conf/options/tnc.conf
-           conf/strongswan.conf.5.main
-           ltmain.sh
-           m4/config/libtool.m4
-           m4/config/ltoptions.m4
-           m4/config/ltsugar.m4
-           m4/config/ltversion.m4
-           m4/config/lt~obsolete.m4
-           src/frontends/gnome/debian/changelog
-           src/frontends/gnome/po/ChangeLog
-           src/libstrongswan/asn1/oid.c
-           src/libstrongswan/asn1/oid.h
-           src/libstrongswan/crypto/proposal/proposal_keywords_static.c
-           src/libstrongswan/crypto/proposal/proposal_keywords_static.h
-           src/libstrongswan/settings/settings_lexer.c
-           src/libstrongswan/settings/settings_parser.c
-           src/libstrongswan/settings/settings_parser.h
-           src/libstrongswan/settings/settings_parser.output
-           src/starter/keywords.c
-           src/starter/keywords.h
-           src/starter/parser/lexer.c
-           src/starter/parser/parser.c
-           src/starter/parser/parser.h
-           src/starter/parser/parser.output
-           src/stroke/stroke_keywords.c
-           src/stroke/stroke_keywords.h
-           src/swanctl/swanctl.conf
-           src/swanctl/swanctl.conf.5.main
-Copyright: 2020 Mellanox Technologies.
-License:   GPL-2.0+
- This program is free software; you can redistribute it and/or modify it
- under the terms of the GNU General Public License as published by the
- Free Software Foundation; either version 2 of the License, or (at your
- option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
- .
- This program is distributed in the hope that it will be useful, but
- WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- for more details.
- .
- CAUTION:  Installing a new version of strongSwan will install a new
- copy of this script, wiping out any custom changes you make.  If
- you need changes, make a copy of this under another name, and customize
- that, and use the (left/right)updown parameters in ipsec.conf to make
- strongSwan use yours instead of this default one.
- .
- On Debian systems, the complete text of the GNU General Public License
- Version 2 can be found in `/usr/share/common-licenses/GPL-2'.
