@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-cp /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf.mlnx
-cp /etc/ssl/openssl.cnf.orig /etc/ssl/openssl.cnf
+cp -f /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf.mlnx
+cp -f /etc/ssl/openssl.cnf.orig /etc/ssl/openssl.cnf
 
 #DEBHELPER#
 

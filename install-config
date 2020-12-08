@@ -5,8 +5,11 @@ OS=$(grep -w "NAME\=" /etc/os-release | cut -d "=" -f 2)
 
 if [ "$OS" = '"Ubuntu"' ]
 then
-	cp openssl-conf/Ubuntu20_04/openssl.cnf debian/strongswan/etc/ssl/openssl.cnf.mlnx
+	cp -f openssl-conf/Ubuntu20_04/openssl.cnf debian/strongswan/etc/ssl/openssl.cnf.mlnx
 elif [ "$OS" = '"Debian GNU/Linux"' ]
 then
-	cp openssl-conf/Debian10/openssl.cnf debian/strongswan/etc/ssl/openssl.cnf.mlnx
+	cp -f openssl-conf/Debian10/openssl.cnf debian/strongswan/etc/ssl/openssl.cnf.mlnx
 fi
+
+cp -f mlnx-conf/BFL.swanctl.conf debian/strongswan/etc/swanctl/conf.d
+cp -f mlnx-conf/BFR.swanctl.conf debian/strongswan/etc/swanctl/conf.d

@@ -4,7 +4,8 @@ Source: https://github.com/Mellanox/strongswan.git
 
 Files:     debian/*
            openssl-conf/*
-           strongswan.spec   
+           mlnx-conf/*
+           strongswan.spec
            install-config
 Copyright: 2020 Mellanox Technologies.
 License:   BSD-3-Clause
