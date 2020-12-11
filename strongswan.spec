@@ -19,6 +19,8 @@ BuildRequires: flex
 BuildRequires: libtool
 BuildRequires: gcc >= 3
 
+Obsoletes: libreswan
+
 %description
 The strongSwan IPsec implementation supports both IKEv1 IKEv2 key
 exchange protocols in conjunction with the native NETKEY IPsec stack of the
@@ -26,13 +28,15 @@ Linux Kernel.
 
 %prep
 %setup
+cp -f systemd-conf/strongswan-starter.service.in.centos init/systemd-starter/strongswan-starter.service.in
 
 %build
 %configure \
 	--enable-openssl \
 	--disable-random \
 	--prefix=%{_prefix} \
-	--sysconfdir=%{_sysconfdir}
+	--sysconfdir=%{_sysconfdir} \
+	--enable-systemd
 %make_build
 
 %install
@@ -50,12 +54,12 @@ cp -f mlnx-conf/BFL.swanctl.conf $RPM_BUILD_ROOT%{_sysconfdir}/swanctl/conf.d
 cp -f mlnx-conf/BFR.swanctl.conf $RPM_BUILD_ROOT%{_sysconfdir}/swanctl/conf.d
 
 %preun
-cp -f /etc/pki/tls/openssl.cnf /etc/pki/tls/openssl.cnf.mlnx
 cp -f /etc/pki/tls/openssl.cnf.orig /etc/pki/tls/openssl.cnf
+systemctl disable strongswan-starter.service
 
 %post
 cp -f /etc/pki/tls/openssl.cnf /etc/pki/tls/openssl.cnf.orig
-cp -f /etc/pki/tls/openssl.cnf.mlnx /etc/pki/tls/openssl.cnf
+systemctl enable strongswan-starter.service
 
 %files
 %defattr(-, root, root)
@@ -69,6 +73,8 @@ cp -f /etc/pki/tls/openssl.cnf.mlnx /etc/pki/tls/openssl.cnf
 %{_sysconfdir}/
 %{_datadir}/
 /usr/lib/systemd/system/strongswan-starter.service
+/usr/lib/systemd/system/strongswan.service
+/usr/sbin/charon-systemd
 
 %doc COPYING TODO NEWS INSTALL HACKING README
 %license LICENSE

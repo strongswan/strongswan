@@ -5,6 +5,7 @@ Source: https://github.com/Mellanox/strongswan.git
 Files:     debian/*
            openssl-conf/*
            mlnx-conf/*
+           systemd-conf/*
            strongswan.spec
            install-config
 Copyright: 2020 Nvidia Corporation

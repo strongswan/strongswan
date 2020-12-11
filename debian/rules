@@ -10,7 +10,7 @@ override_dh_autoreconf:
 	dh_autoreconf -- ./autogen.sh
 
 override_dh_auto_configure:
-	./configure --prefix=/usr --sysconfdir=/etc --enable-openssl --disable-random
+	./configure --prefix=/usr --sysconfdir=/etc --enable-openssl --disable-random --enable-systemd
 
 override_dh_auto_build:
 	make -j$(NJOBS)
