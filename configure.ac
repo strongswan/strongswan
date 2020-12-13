@@ -323,6 +323,7 @@ ARG_ENABL_SET([perl-cpan],      [enable build of provided perl CPAN module.])
 ARG_ENABL_SET([perl-cpan-install],[enable installation of provided CPAN module.])
 ARG_ENABL_SET([tss-trousers],   [enable the use of the TrouSerS Trusted Software Stack])
 ARG_ENABL_SET([tss-tss2],       [enable the use of the TSS 2.0 Trusted Software Stack])
+ARG_ENABL_SET([tss-ibmtss],    [enable the use of the TSS 2.0 IBM Software Stack])
 
 # compile options
 ARG_ENABL_SET([coverage],       [enable lcov coverage report generation.])
@@ -1060,6 +1061,15 @@ if test x$tss_tss2 = xtrue; then
 	fi
 fi
 
+if test x$tss_ibmtss = xtrue; then
+	AC_CHECK_LIB([ibmtss],[TSS_Create],[LIBS="$LIBS"],
+	[AC_MSG_ERROR([no IBM TSS library detected])],[])
+	AC_DEFINE([TPM_POSIX], [], [compile IBMs TSS in POSIX mode])
+	AC_CHECK_HEADER([ibmtss/tss.h],,
+	[AC_MSG_ERROR([IBM TSS header ibmtss/tss.h not found!])])
+	AC_DEFINE([TSS_IBMTSS], [], [use IBM TSS library])
+fi
+
 if test x$imc_swima = xtrue -o $imv_swima = xtrue; then
 	PKG_CHECK_MODULES(json, [json-c], [],
 		[PKG_CHECK_MODULES(json, [json])])
@@ -1776,7 +1786,7 @@ AM_CONDITIONAL(USE_LIBNTTFFT, test x$bliss = xtrue -o x$newhope = xtrue)
 AM_CONDITIONAL(USE_LIBTNCIF, test x$tnc_tnccs = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_LIBTNCCS, test x$tnc_tnccs = xtrue)
 AM_CONDITIONAL(USE_LIBPTTLS, test x$tnc_tnccs = xtrue)
-AM_CONDITIONAL(USE_LIBTPMTSS, test x$tss_trousers = xtrue -o x$tss_tss2 = xtrue -o x$tpm = xtrue -o x$aikgen = xtrue -o x$imcv = xtrue)
+AM_CONDITIONAL(USE_LIBTPMTSS, test x$tss_trousers = xtrue -o x$tss_tss2 = xtrue -o x$tpm = xtrue -o x$tpm_ibmtss = xtrue -o x$aikgen = xtrue -o x$imcv = xtrue)
 AM_CONDITIONAL(USE_FILE_CONFIG, test x$stroke = xtrue)
 AM_CONDITIONAL(USE_IPSEC_SCRIPT, test x$stroke = xtrue -o x$scepclient = xtrue -o x$conftest = xtrue)
 AM_CONDITIONAL(USE_LIBCAP, test x$capabilities = xlibcap)
@@ -1788,6 +1798,7 @@ AM_CONDITIONAL(USE_RADIUS, test x$radius = xtrue)
 AM_CONDITIONAL(USE_IMCV, test x$imcv = xtrue)
 AM_CONDITIONAL(USE_TROUSERS, test x$tss_trousers = xtrue)
 AM_CONDITIONAL(USE_TSS2, test x$tss_tss2 = xtrue)
+AM_CONDITIONAL(USE_IBMTSS, test x$tss_ibmtss = xtrue)
 AM_CONDITIONAL(MONOLITHIC, test x$monolithic = xtrue)
 AM_CONDITIONAL(STATIC_PLUGIN_CONSTRUCTORS, test x$static_plugin_constructors = xtrue)
 AM_CONDITIONAL(USE_SILENT_RULES, test x$enable_silent_rules = xyes)

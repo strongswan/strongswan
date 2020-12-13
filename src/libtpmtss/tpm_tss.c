@@ -15,6 +15,7 @@
 
 #include "tpm_tss.h"
 #include "tpm_tss_tss2.h"
+#include "tpm_tss_ibmtss.h"
 #include "tpm_tss_trousers.h"
 
 /**
@@ -49,6 +50,7 @@ tpm_tss_t *tpm_tss_probe(tpm_version_t version)
 {
 	tpm_tss_create stacks[] = {
 		tpm_tss_tss2_create,
+		tpm_tss_ibmtss_create,
 		tpm_tss_trousers_create,
 	};
 	tpm_tss_t *tpm;
