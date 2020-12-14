@@ -1,2 +1,5 @@
 oid.[ch]
 proposal_keywords_static.[ch]
+settings/settings_lexer.c
+settings/settings_parser.[ch]
+settings_parser.output
