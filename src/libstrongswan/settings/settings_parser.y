@@ -55,20 +55,27 @@ static void add_references(parser_helper_t *ctx, array_t *references);
  * Make sure to call lexer with the proper context
  */
 #undef yylex
-static int yylex(YYSTYPE *lvalp, parser_helper_t *ctx)
+static int yylex(SETTINGS_PARSER_STYPE *yylval, parser_helper_t *ctx)
 {
-	return settings_parser_lex(lvalp, ctx->scanner);
+	return settings_parser_lex(yylval, ctx->scanner);
 }
 
 %}
 %debug
 
 /* generate verbose error messages */
-%error-verbose
+%define parse.error verbose
 /* generate a reentrant parser */
 %define api.pure
 /* prefix function/variable declarations */
-%name-prefix "settings_parser_"
+%define api.prefix {settings_parser_}
+/* make sure flex uses the right definition */
+%code provides
+{
+	#define YY_DECL \
+		int settings_parser_lex(SETTINGS_PARSER_STYPE *yylval, void *yyscanner)
+	YY_DECL;
+}
 
 /* interact properly with the reentrant lexer */
 %lex-param {parser_helper_t *ctx}
