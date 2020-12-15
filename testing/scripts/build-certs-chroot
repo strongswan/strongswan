@@ -44,6 +44,17 @@ SALES_CERT="${SALES_DIR}/salesCert.pem"
 SALES_CERT_DER="${SALES_DIR}/salesCert.der"
 SALES_CDP="http://crl.strongswan.org/sales.crl"
 #
+LEVELS_DIR="${CA_DIR}/levels"
+LEVELS_KEY="${LEVELS_DIR}/levelsKey.pem"
+LEVELS_CERT="${LEVELS_DIR}/levelsCert.pem"
+LEVELS_CDP="http://crl.strongswan.org/levels.crl"
+LEVELS_L2_KEY="${LEVELS_DIR}/levelsKey_l2.pem"
+LEVELS_L2_CERT="${LEVELS_DIR}/levelsCert_l2.pem"
+LEVELS_L2_CDP="http://crl.strongswan.org/levels_l2.crl"
+LEVELS_L3_KEY="${LEVELS_DIR}/levelsKey_l3.pem"
+LEVELS_L3_CERT="${LEVELS_DIR}/levelsCert_l3.pem"
+LEVELS_L3_CDP="http://crl.strongswan.org/levels_l3.crl"
+#
 DUCK_DIR="${CA_DIR}/duck"
 DUCK_KEY="${DUCK_DIR}/duckKey.pem"
 DUCK_CERT="${DUCK_DIR}/duckCert.pem"
@@ -94,6 +105,7 @@ mkdir -p ${RESEARCH_DIR}/certs
 mkdir -p ${RESEARCH_DIR}/keys
 mkdir -p ${SALES_DIR}/certs
 mkdir -p ${SALES_DIR}/keys
+mkdir -p ${LEVELS_DIR}/certs
 mkdir -p ${DUCK_DIR}/certs
 mkdir -p ${ECDSA_DIR}/certs
 mkdir -p ${RFC3779_DIR}/certs
@@ -159,7 +171,8 @@ done
 
 # Put DER-encoded moon private key and Root CA certificate into tkm scenarios
 for t in host2host-initiator host2host-responder host2host-xfrmproxy \
-         net2net-initiator net2net-xfrmproxy xfrmproxy-expire xfrmproxy-rekey
+         multi-level-ca net2net-initiator net2net-xfrmproxy xfrmproxy-expire \
+         xfrmproxy-rekey
 do
   TEST="${TEST_DIR}/tkm/${t}"
   mkdir -p ${TEST}/hosts/moon/${TKM_DIR}
@@ -578,6 +591,52 @@ done
 
 # Convert Sales CA certificate into DER format
 openssl x509 -in ${SALES_CERT} -outform der -out ${SALES_CERT_DER}
+
+################################################################################
+# Multi-level CA Certificate Generation                                        #
+################################################################################
+
+# Generate Levels Root CA (pathlen is higher than the regular root)
+pki --gen  --type rsa --size ${RSA_SIZE} --outform pem > ${LEVELS_KEY}
+pki --self --type rsa --in ${LEVELS_KEY} --not-before "${START}" --not-after "${CA_END}" \
+    --ca --pathlen 2 --dn "C=CH, O=${PROJECT}, CN=strongSwan Levels Root CA" \
+    --outform pem > ${LEVELS_CERT}
+
+# For TKM's CA ID mapping
+LEVELS_SPK_HEX=`pki --keyid --type rsa --format hex --id spk --in ${LEVELS_KEY}`
+
+# Generate Levels L2 CA signed by Levels Root CA
+pki --gen  --type rsa --size ${RSA_SIZE} --outform pem > ${LEVELS_L2_KEY}
+pki --issue --cakey ${LEVELS_KEY} --cacert ${LEVELS_CERT} --crl ${LEVELS_CDP} \
+    --type rsa --in ${LEVELS_L2_KEY} --not-before "${START}" --not-after "${IM_END}" \
+    --ca --dn "C=CH, O=${PROJECT}, OU=L2, CN=Levels L2 CA" \
+    --outform pem > ${LEVELS_L2_CERT}
+
+# Generate Levels L3 CA signed by Levels L2 CA
+pki --gen  --type rsa --size ${RSA_SIZE} --outform pem > ${LEVELS_L3_KEY}
+pki --issue --cakey ${LEVELS_L2_KEY} --cacert ${LEVELS_L2_CERT} --crl ${LEVELS_L2_CDP} \
+    --type rsa --in ${LEVELS_L3_KEY} --not-before "${START}" --not-after "${IM_END}" \
+    --ca --dn "C=CH, O=${PROJECT}, OU=L3, CN=Levels L3 CA" \
+    --outform pem > ${LEVELS_L3_CERT}
+
+for t in swanctl/multi-level-ca-l3 tkm/multi-level-ca
+do
+  TEST="${TEST_DIR}/${t}"
+  for h in moon carol
+  do
+    mkdir -p ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+    cp ${LEVELS_CERT} ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
+  done
+  cp ${LEVELS_L2_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
+  cp ${LEVELS_L3_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
+done
+
+# Put DER-encoded Levels CA certificate into tkm scenario
+TEST="${TEST_DIR}/tkm/multi-level-ca"
+mkdir -p ${TEST}/hosts/moon/${TKM_DIR}
+openssl x509 -in ${LEVELS_CERT} -outform der -out ${TEST}/hosts/moon/${TKM_DIR}/levelsCert.der
+
+################################################################################
 
 # Generate an AES-128 encrypted moon key and a SHA-224 hashed certificate
 TEST="${TEST_DIR}/ikev2/strong-keys-certs"
@@ -1112,6 +1171,34 @@ cp ${TEST_CERT} ${SALES_DIR}/certs/${SERIAL}.pem
 # generate index.txt file for Sales OCSP server
 cp ${SALES_DIR}/index.txt.template ${SALES_DIR}/index.txt
 sed -i -e "s/EE_EXPIRATION/${EE_EXP}/g" ${SALES_DIR}/index.txt
+
+################################################################################
+# Levels L3 CA                                                                 #
+################################################################################
+
+# Generate a carol l3 certificate
+TEST="${TEST_DIR}/swanctl/multi-level-ca-l3"
+TEST_KEY="${TEST}/hosts/carol/${SWANCTL_DIR}/rsa/carolKey.pem"
+TEST_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carolCert.pem"
+CN="carol@strongswan.org"
+SERIAL="01"
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
+pki --issue --cakey ${LEVELS_L3_KEY} --cacert ${LEVELS_L3_CERT} --type rsa \
+    --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
+    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=L3, CN=${CN}" \
+    --crl ${LEVELS_L3_CDP} --outform pem > ${TEST_CERT}
+cp ${TEST_CERT} ${LEVELS_DIR}/certs/${SERIAL}.pem
+
+for t in tkm/multi-level-ca
+do
+  TEST="${TEST_DIR}/${t}"
+  mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
+  mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+  cp ${TEST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
+  cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+done
 
 ################################################################################
 # strongSwan EC Root CA                                                        #
@@ -1931,13 +2018,15 @@ done
 ################################################################################
 
 for t in host2host-initiator host2host-responder host2host-xfrmproxy \
-         net2net-initiator net2net-xfrmproxy xfrmproxy-expire xfrmproxy-rekey
+         multi-level-ca net2net-initiator net2net-xfrmproxy xfrmproxy-expire \
+         xfrmproxy-rekey
 do
   for h in moon
   do
     TEST_DATA="${TEST_DIR}/tkm/${t}/hosts/moon/etc/strongswan.conf"
     sed -e "s/CA_SPK_HEX/${CA_SPK_HEX}/g" \
         -e "s/CA_SPKI_HEX/${CA_SPKI_HEX}/g" \
+        -e "s/LEVELS_SPK_HEX/${LEVELS_SPK_HEX}/g" \
         ${TEST_DATA}.in > ${TEST_DATA}
   done
 done
