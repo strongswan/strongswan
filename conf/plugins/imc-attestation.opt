@@ -47,3 +47,7 @@ libimcv.plugins.imc-attestation.pcr18_meas =
 
 libimcv.plugins.imc-attestation.pcr18_after =
 	PCR18 value after measurement.
+
+libimcv.plugins.imc-attestation.pcr_padding = no
+	Whether to pad IMA SHA1 measurements values when extending into
+	SHA256 PCR bank.
