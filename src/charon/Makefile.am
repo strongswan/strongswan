@@ -17,4 +17,8 @@ charon_LDADD = \
 	$(top_builddir)/src/libcharon/libcharon.la \
 	-lm $(PTHREADLIB) $(ATOMICLIB) $(DLLIB)
 
+if USE_DISABLE_SIGNAL_HANDLER
+  AM_CPPFLAGS += -DDISABLE_SIGNAL_HANDLER
+endif
+
 EXTRA_DIST = Android.mk

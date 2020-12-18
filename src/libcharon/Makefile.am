@@ -47,6 +47,7 @@ encoding/payloads/hash_payload.c encoding/payloads/hash_payload.h \
 encoding/payloads/fragment_payload.c encoding/payloads/fragment_payload.h \
 kernel/kernel_interface.c kernel/kernel_interface.h \
 kernel/kernel_ipsec.c kernel/kernel_ipsec.h \
+kernel/kernel_fc_sp.c kernel/kernel_fc_sp.h \
 kernel/kernel_net.c kernel/kernel_net.h \
 kernel/kernel_listener.h kernel/kernel_handler.c kernel/kernel_handler.h \
 network/receiver.c network/receiver.h network/sender.c network/sender.h \
@@ -324,6 +325,13 @@ if USE_EXT_AUTH
   SUBDIRS += plugins/ext_auth
 if MONOLITHIC
   libcharon_la_LIBADD += plugins/ext_auth/libstrongswan-ext-auth.la
+endif
+endif
+
+if USE_AUTH_ELS
+  SUBDIRS += plugins/auth_els
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/auth_els/libstrongswan-auth-els.la
 endif
 endif
 

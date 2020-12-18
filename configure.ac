@@ -3,6 +3,7 @@
 # Copyright (C) 2006-2019 Andreas Steffen
 # Copyright (C) 2006-2014 Martin Willi
 # HSR Hochschule fuer Technik Rapperswil
+# Copyright (C) 2019-2020 Marvell
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the
@@ -213,6 +214,7 @@ ARG_ENABL_SET([eap-tnc],        [enable EAP TNC trusted network connect module.]
 ARG_ENABL_SET([eap-dynamic],    [enable dynamic EAP proxy module.])
 ARG_ENABL_SET([eap-radius],     [enable RADIUS proxy authentication module.])
 ARG_ENABL_SET([ext-auth],       [enable plugin calling an external authorization script.])
+ARG_ENABL_SET([auth-els],       [enable auth els plugin authorization module.])
 ARG_ENABL_SET([ipseckey],       [enable IPSECKEY authentication plugin.])
 ARG_ENABL_SET([keychain],       [enables OS X Keychain Services credential set.])
 ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
@@ -331,6 +333,7 @@ ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
 ARG_ENABL_SET([lock-profiler],  [enable lock/mutex profiling code.])
 ARG_ENABL_SET([log-thread-ids], [use thread ID, if available, instead of an incremented value starting from 1, to identify threads.])
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
+ARG_ENABL_SET([auth-els-kmip],  [enable auth els kmip in auth els plugin.])
 
 # ===================================
 #  option to disable default options
@@ -606,6 +609,8 @@ AC_CHECK_FUNCS(pthread_rwlock_init)
 AC_CHECK_FUNCS(pthread_spin_init)
 # check if we have POSIX semaphore functions, including timed-wait
 AC_CHECK_FUNCS(sem_timedwait)
+# lookup major()/minor()/makedev()
+AC_HEADER_MAJOR
 LIBS=$saved_LIBS
 
 AC_CHECK_FUNC(
@@ -1501,6 +1506,7 @@ ADD_PLUGIN([kernel-wfp],           [c charon])
 ADD_PLUGIN([kernel-iph],           [c charon])
 ADD_PLUGIN([kernel-pfkey],         [c charon starter nm cmd])
 ADD_PLUGIN([kernel-pfroute],       [c charon starter nm cmd])
+ADD_PLUGIN([auth-els],             [c charon])
 ADD_PLUGIN([kernel-netlink],       [c charon starter nm cmd])
 ADD_PLUGIN([resolve],              [c charon cmd])
 ADD_PLUGIN([save-keys],            [c])
@@ -1683,6 +1689,8 @@ AM_CONDITIONAL(USE_KERNEL_WFP, test x$kernel_wfp = xtrue)
 AM_CONDITIONAL(USE_KERNEL_IPH, test x$kernel_iph = xtrue)
 AM_CONDITIONAL(USE_WHITELIST, test x$whitelist = xtrue)
 AM_CONDITIONAL(USE_EXT_AUTH, test x$ext_auth = xtrue)
+AM_CONDITIONAL(USE_AUTH_ELS, test x$auth_els = xtrue)
+AM_CONDITIONAL(USE_DISABLE_SIGNAL_HANDLER, test x$auth_els = xtrue)
 AM_CONDITIONAL(USE_LOOKIP, test x$lookip = xtrue)
 AM_CONDITIONAL(USE_ERROR_NOTIFY, test x$error_notify = xtrue)
 AM_CONDITIONAL(USE_CERTEXPIRE, test x$certexpire = xtrue)
@@ -1805,6 +1813,7 @@ AM_CONDITIONAL(USE_PYTHON_EGGS, test x$python_eggs = xtrue)
 AM_CONDITIONAL(USE_PERL_CPAN, test x$perl_cpan = xtrue)
 AM_CONDITIONAL(USE_TOX, test "x$TOX" != x)
 AM_CONDITIONAL(USE_PY_TEST, test "x$PY_TEST" != x -a "x$TOX" = x)
+AM_CONDITIONAL(USE_AUTH_ELS_KMIP, test x$auth_els_kmip = xtrue)
 
 # ========================
 #  set global definitions
@@ -2028,6 +2037,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/kernel_iph/Makefile
 	src/libcharon/plugins/whitelist/Makefile
 	src/libcharon/plugins/ext_auth/Makefile
+	src/libcharon/plugins/auth_els/Makefile
 	src/libcharon/plugins/lookip/Makefile
 	src/libcharon/plugins/error_notify/Makefile
 	src/libcharon/plugins/certexpire/Makefile
