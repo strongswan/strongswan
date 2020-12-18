@@ -467,6 +467,7 @@ CALLBACK(pool_li, bool,
 			switch (host->get_family(host))
 			{
 				case AF_INET:
+				case AF_NETLINK:
 					type = keys[index].v4;
 					break;
 				case AF_INET6:
@@ -481,7 +482,7 @@ CALLBACK(pool_li, bool,
 		}
 		else
 		{
-			if (host->get_family(host) == AF_INET)
+			if (host->get_family(host) == AF_INET || host->get_family(host) == AF_NETLINK)
 			{	/* IPv4 attributes contain a subnet mask */
 				uint32_t netmask = 0;
 

@@ -3,6 +3,7 @@
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2019-2020 Marvell
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -27,13 +28,15 @@
 
 #define IPV4_LEN	4
 #define IPV6_LEN	16
-#define TS_IP_LEN(this) ({ ((this)->type == TS_IPV4_ADDR_RANGE) ? IPV4_LEN : IPV6_LEN; })
+#define PORTID_LEN  3
+#define TS_IP_LEN(this) ({ (((this)->type == TS_IPV4_ADDR_RANGE) ? IPV4_LEN : (((this)->type == TS_FC_ADDR_RANGE) ? PORTID_LEN: IPV6_LEN) ); })
 
 #define NON_SUBNET_ADDRESS_RANGE	255
 
-ENUM(ts_type_name, TS_IPV4_ADDR_RANGE, TS_IPV6_ADDR_RANGE,
+ENUM(ts_type_name, TS_IPV4_ADDR_RANGE, TS_FC_ADDR_RANGE,
 	"TS_IPV4_ADDR_RANGE",
 	"TS_IPV6_ADDR_RANGE",
+	"TS_FC_ADDR_RANGE",
 );
 
 typedef struct private_traffic_selector_t private_traffic_selector_t;
@@ -88,6 +91,23 @@ struct private_traffic_selector_t {
 	 * end of port range
 	 */
 	uint16_t to_port;
+
+	/**
+	 * starting R_CTL.
+	 */
+	uint8_t starting_r_ctl;
+
+	/**
+	 * ending R_CTL.
+	 */
+	uint8_t ending_r_ctl;
+
+	/**
+	 * FC port is identified using port index
+	 * as host_t structure is still not FC compliant.
+	 */
+	uint16_t id;
+
 };
 
 /**
@@ -234,7 +254,7 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 	len = TS_IP_LEN(this);
 	memset(from, 0, len);
 	memset(to, 0xFF, len);
-	if (this->dynamic &&
+	if (this->dynamic && (this->type != TS_FC_ADDR_RANGE) &&
 		memeq(this->from, from, len) &&	memeq(this->to, to, len))
 	{
 		written += print_in_hook(data, "dynamic");
@@ -244,6 +264,11 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 		if (this->type == TS_IPV4_ADDR_RANGE)
 		{
 			inet_ntop(AF_INET, &this->from, from_str, sizeof(from_str));
+		}
+		else if (this->type == TS_FC_ADDR_RANGE)
+		{
+			written += print_in_hook(data, "%x%x%x..%x%x%x", this->from[0], this->from[1], this->from[2],
+					this->to[0], this->to[1], this->to[2]);
 		}
 		else
 		{
@@ -312,6 +337,14 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 			{
 				written += print_icmp(data, this->from_port);
 			}
+			else if (this->type == TS_FC_ADDR_RANGE)
+			{
+				written += print_in_hook(data, "%d-%d",
+										 this->from_port, this->to_port);
+				written += print_in_hook(data, "%d-%d",
+										 this->starting_r_ctl, this->ending_r_ctl);
+
+			}
 			else
 			{
 				serv = getservbyport(htons(this->from_port), serv_proto);
@@ -340,6 +373,12 @@ int traffic_selector_printf_hook(printf_hook_data_t *data,
 		{
 			written += print_in_hook(data, "%d-%d",
 									 this->from_port, this->to_port);
+			if (this->type == TS_FC_ADDR_RANGE)
+			{
+				written += print_in_hook(data, "%d-%d",
+										 this->starting_r_ctl, this->ending_r_ctl);
+
+			}
 		}
 	}
 
@@ -421,6 +460,14 @@ METHOD(traffic_selector_t, get_subset, traffic_selector_t*,
 
 	/* we have a match in protocol, port, and address: return it... */
 	subset = traffic_selector_create(protocol, this->type, from_port, to_port);
+	if(this->type == TS_FC_ADDR_RANGE)
+    {
+		subset->starting_r_ctl = this->starting_r_ctl;
+		subset->ending_r_ctl = this->ending_r_ctl;
+		subset->id = this->id;
+		from = this->from;
+		to = this->to;
+    }
 	memcpy(subset->from, from, size);
 	memcpy(subset->to, to, size);
 	calc_netbits(subset);
@@ -470,6 +517,56 @@ METHOD(traffic_selector_t, get_protocol, uint8_t,
 	return this->protocol;
 }
 
+METHOD(traffic_selector_t, get_start_rctl, uint8_t,
+	private_traffic_selector_t *this)
+{
+	return this->starting_r_ctl;
+}
+
+METHOD(traffic_selector_t, set_start_rctl, void,
+	private_traffic_selector_t *this, uint8_t starting_r_ctl)
+{
+	this->starting_r_ctl = starting_r_ctl;
+}
+
+METHOD(traffic_selector_t, get_end_rctl, uint8_t,
+	private_traffic_selector_t *this)
+{
+	return this->ending_r_ctl;
+}
+
+METHOD(traffic_selector_t, set_end_rctl, void,
+	private_traffic_selector_t *this, uint8_t ending_r_ctl)
+{
+	this->ending_r_ctl = ending_r_ctl;
+}
+
+METHOD(traffic_selector_t, set_id, void,
+	private_traffic_selector_t *this, uint16_t port_index)
+{
+	this->id = port_index;
+}
+
+METHOD(traffic_selector_t, get_id, uint16_t,
+	private_traffic_selector_t *this)
+{
+	return this->id;
+}
+
+METHOD(traffic_selector_t, set_port_id, void,
+	private_traffic_selector_t *this, chunk_t from, chunk_t to)
+{
+	if (this->type == TS_FC_ADDR_RANGE)
+	{
+		if ((from.len != 3) || (to.len != 3))
+		{
+			return;
+		}
+		memcpy(this->from, from.ptr, from.len);
+		memcpy(this->to, to.ptr, to.len);
+	}
+}
+
 METHOD(traffic_selector_t, is_host, bool,
 	private_traffic_selector_t *this, host_t *host)
 {
@@ -484,6 +581,14 @@ METHOD(traffic_selector_t, is_host, bool,
 			addr = host->get_address(host);
 			if (memeq(addr.ptr, this->from, addr.len) &&
 				memeq(addr.ptr, this->to, addr.len))
+			{
+				return TRUE;
+			}
+		}
+		else if (this->type == TS_FC_ADDR_RANGE)
+		{
+			uint16_t port_index = host->get_port(host);
+			if (this->id == port_index)
 			{
 				return TRUE;
 			}
@@ -515,21 +620,38 @@ METHOD(traffic_selector_t, is_dynamic, bool,
 METHOD(traffic_selector_t, set_address, void,
 	private_traffic_selector_t *this, host_t *host)
 {
-	this->type = host->get_family(host) == AF_INET ? TS_IPV4_ADDR_RANGE
-												   : TS_IPV6_ADDR_RANGE;
+	if (this->type != TS_FC_ADDR_RANGE)
+	{
+        this->type = host->get_family(host) == AF_INET ? TS_IPV4_ADDR_RANGE
+				: TS_IPV6_ADDR_RANGE;
+    }
 
 	if (host->is_anyaddr(host))
 	{
 		memset(this->from, 0x00, sizeof(this->from));
 		memset(this->to, 0xFF, sizeof(this->to));
 		this->netbits = 0;
+
+		if (this->type == TS_FC_ADDR_RANGE)
+		{
+			uint16_t port_index = host->get_port(host);
+			this->id = port_index;
+		}
 	}
 	else
 	{
-		chunk_t from = host->get_address(host);
-		memcpy(this->from, from.ptr, from.len);
-		memcpy(this->to, from.ptr, from.len);
-		this->netbits = from.len * 8;
+			if (this->type == TS_FC_ADDR_RANGE)
+			{
+				uint16_t port_index = host->get_port(host);
+				this->id = port_index;
+			}
+			else
+			{
+        		chunk_t from = host->get_address(host);
+        		memcpy(this->from, from.ptr, from.len);
+        		memcpy(this->to, from.ptr, from.len);
+        		this->netbits = from.len * 8;
+            }
 	}
 	this->dynamic = FALSE;
 }
@@ -539,6 +661,15 @@ METHOD(traffic_selector_t, is_contained_in, bool,
 {
 	private_traffic_selector_t *subset;
 	bool contained_in = FALSE;
+
+	if (this->type == TS_FC_ADDR_RANGE)
+	{
+		if (equals(this, other))
+		{
+			contained_in = TRUE;
+		}
+		return contained_in;
+	}
 
 	subset = (private_traffic_selector_t*)get_subset(this, other);
 
@@ -558,6 +689,7 @@ METHOD(traffic_selector_t, includes, bool,
 {
 	chunk_t addr;
 	int family = host->get_family(host);
+	uint16_t port_index = 0;
 
 	if ((family == AF_INET && this->type == TS_IPV4_ADDR_RANGE) ||
 		(family == AF_INET6 && this->type == TS_IPV6_ADDR_RANGE))
@@ -566,6 +698,13 @@ METHOD(traffic_selector_t, includes, bool,
 
 		return memcmp(this->from, addr.ptr, addr.len) <= 0 &&
 				memcmp(this->to, addr.ptr, addr.len) >= 0;
+	}
+
+	if (this->type == TS_FC_ADDR_RANGE)
+	{
+		port_index = host->get_port(host);
+
+		return ((this->from_port == port_index) || (this->to_port == port_index));
 	}
 
 	return FALSE;
@@ -633,12 +772,24 @@ METHOD(traffic_selector_t, clone_, traffic_selector_t*,
 
 	memcpy(clone->from, this->from, len);
 	memcpy(clone->to, this->to, len);
+    if (clone->type == TS_FC_ADDR_RANGE)
+    {
+        clone->starting_r_ctl = this->starting_r_ctl;
+        clone->ending_r_ctl = this->ending_r_ctl;
+        clone->id = this->id;
+    }
 	return &clone->public;
 }
 
 METHOD(traffic_selector_t, hash, u_int,
 	private_traffic_selector_t *this, u_int hash)
 {
+	if (this->type == TS_FC_ADDR_RANGE)
+	{
+		hash = chunk_hash_inc(chunk_from_thing(this->starting_r_ctl),
+				  chunk_hash_inc(chunk_from_thing(this->ending_r_ctl),
+						  hash));
+	}
 	return chunk_hash_inc(get_from_address(this),
 			chunk_hash_inc(get_to_address(this),
 			 chunk_hash_inc(chunk_from_thing(this->from_port),
@@ -706,7 +857,23 @@ int traffic_selector_cmp(traffic_selector_t *a_pub, traffic_selector_t *b_pub,
 		return res;
 	}
 	/* larger port ranges first */
-	return compare_int(b->to_port, a->to_port);
+	res = compare_int(b->to_port, a->to_port);
+	if (res)
+	{
+		return res;
+	}
+
+	if (a->type == TS_FC_ADDR_RANGE)
+	{
+		res = compare_int(b->starting_r_ctl, a->starting_r_ctl);
+		if (res)
+		{
+			return res;
+		}
+		res = compare_int(b->ending_r_ctl, a->ending_r_ctl);
+	}
+	return res;
+
 }
 
 /*
@@ -882,7 +1049,7 @@ static private_traffic_selector_t *traffic_selector_create(uint8_t protocol,
 	private_traffic_selector_t *this;
 
 	/* sanity check */
-	if (type != TS_IPV4_ADDR_RANGE && type != TS_IPV6_ADDR_RANGE)
+	if (type != TS_IPV4_ADDR_RANGE && type != TS_IPV6_ADDR_RANGE && type != TS_FC_ADDR_RANGE)
 	{
 		return NULL;
 	}
@@ -906,6 +1073,13 @@ static private_traffic_selector_t *traffic_selector_create(uint8_t protocol,
 			.clone = _clone_,
 			.hash = _hash,
 			.destroy = _destroy,
+			.get_start_rctl = _get_start_rctl,
+			.get_end_rctl = _get_end_rctl,
+			.set_start_rctl = _set_start_rctl,
+			.set_end_rctl = _set_end_rctl,
+			.set_port_id = _set_port_id,
+			.set_id = _set_id,
+			.get_id = _get_id,
 		},
 		.from_port = from_port,
 		.to_port = to_port,
@@ -918,4 +1092,23 @@ static private_traffic_selector_t *traffic_selector_create(uint8_t protocol,
 		this->to_port = to_port < 256 ? to_port << 8 : to_port;
 	}
 	return this;
+}
+
+traffic_selector_t *traffic_selector_create_from_fcsp2_format(chunk_t start_address, uint16_t start_type,
+												chunk_t end_address, uint16_t end_type,
+												uint8_t start_rctl, uint8_t end_rctl)
+{
+	ts_type_t type = TS_FC_ADDR_RANGE;
+	private_traffic_selector_t *this = traffic_selector_create(IPPROTO_RAW, type,
+			start_type, end_type);
+
+	memset(this->from, 0x0, start_address.len);
+	memcpy(this->from, start_address.ptr, start_address.len);
+	this->starting_r_ctl = start_rctl;
+
+	memset(this->to, 0x0, end_address.len);
+	memcpy(this->to, end_address.ptr, end_address.len);
+	this->ending_r_ctl = end_rctl;
+
+	return &this->public;
 }

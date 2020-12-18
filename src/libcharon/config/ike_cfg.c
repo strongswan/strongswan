@@ -450,7 +450,7 @@ static traffic_selector_t* make_range(char *str)
 	{
 		return NULL;
 	}
-	if (to->get_family(to) == AF_INET)
+	if (to->get_family(to) == AF_INET || to->get_family(to) == AF_NETLINK)
 	{
 		type = TS_IPV4_ADDR_RANGE;
 	}

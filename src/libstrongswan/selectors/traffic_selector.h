@@ -3,6 +3,7 @@
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2019-2020 Marvell
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -50,7 +51,16 @@ enum ts_type_t {
 	 * (inclusive). All addresses falling between the two specified
 	 *  addresses are considered to be within the list.
 	 */
-	TS_IPV6_ADDR_RANGE = 8
+	TS_IPV6_ADDR_RANGE = 8,
+
+	/**
+	 * A range of FC addresses, represented by two three (3)
+	 * octet values.  The first value is the beginning FC address
+	 * (inclusive) and the second value is the ending FC address
+	 * (inclusive). All addresses falling between the two specified
+	 *  addresses are considered to be within the list.
+	 */
+	TS_FC_ADDR_RANGE = 9
 };
 
 /**
@@ -151,6 +161,55 @@ struct traffic_selector_t {
 	 * @return			protocol id
 	 */
 	uint8_t (*get_protocol)(traffic_selector_t *this);
+
+	/**
+	 * Get the starting R_CTL type allowed for FC frame
+	 *
+	 * @return			starting R_CTL
+	 */
+	uint8_t (*get_start_rctl) (traffic_selector_t *this);
+
+	/**
+	 * Get the ending R_CTL type allowed for FC frame
+	 *
+	 * @return			ending R_CTL
+	 */
+	uint8_t (*get_end_rctl) (traffic_selector_t *this);
+
+	/**
+	 * set the starting R_CTL type allowed for FC frame
+	 *
+	 * @return			ending R_CTL
+	 */
+	void (*set_start_rctl) (traffic_selector_t *this, uint8_t starting_r_ctl);
+
+	/**
+	 * set the ending R_CTL type allowed for FC frame
+	 *
+	 * @return			ending R_CTL
+	 */
+	void (*set_end_rctl) (traffic_selector_t *this, uint8_t ending_r_ctl);
+
+	/**
+	 * set the 3 bytes port identifiers allowed for FC port
+	 *
+	 * @return			ending R_CTL
+	 */
+	void (*set_port_id) (traffic_selector_t *this, chunk_t from, chunk_t to);
+
+	/**
+	 * set id in ts for FC port as host_t is still not FC compilant
+	 *
+	 * @return			ending R_CTL
+	 */
+	void (*set_id) (traffic_selector_t *this, uint16_t port_index);
+
+	/**
+	 * get id from  ts for FC port to check corresponding host match to identity payload
+	 *
+	 * @return			ending R_CTL
+	 */
+	uint16_t (*get_id) (traffic_selector_t *this);
 
 	/**
 	 * Check if the traffic selector is for a single host.
@@ -415,5 +474,24 @@ traffic_selector_t *traffic_selector_create_dynamic(uint8_t protocol,
  */
 int traffic_selector_printf_hook(printf_hook_data_t *data,
 							printf_hook_spec_t *spec, const void *const *args);
+
+/**
+ * Create a new traffic selector using data read from the net.
+ *
+ * There exists a mix of network and host order in the params.
+ * But the parser gives us this data in fcsp format, so we
+ * don't have to convert twice.
+ *
+ * @param start_address	start of address range, network order
+ * @param start_type	starting type of following addresses
+ * @param end_address	end of address range, network order
+ * @param end_rctl		Ending R_CTL
+ * @param start_rctl	Starting R_CTL
+ * @param end_type		ending type of following address
+ * @return				traffic_selector_t object
+ */
+traffic_selector_t *traffic_selector_create_from_fcsp2_format(chunk_t start_address, uint16_t start_type,
+												chunk_t end_address, uint16_t end_type,
+												uint8_t start_rctl, uint8_t end_rctl);
 
 #endif /** TRAFFIC_SELECTOR_H_ @}*/

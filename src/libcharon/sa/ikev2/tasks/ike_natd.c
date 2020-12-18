@@ -2,6 +2,7 @@
  * Copyright (C) 2006-2007 Martin Willi
  * Copyright (C) 2006 Tobias Brunner, Daniel Roethlisberger
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2019-2020 Marvell
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -85,7 +86,7 @@ static bool force_encap(ike_cfg_t *ike_cfg)
 {
 	if (!ike_cfg->force_encap(ike_cfg))
 	{
-		return charon->kernel->get_features(charon->kernel) &
+		return charon->kernel->get_features(charon->kernel, AF_INET) &
 					KERNEL_REQUIRE_UDP_ENCAPSULATION;
 	}
 	return TRUE;
@@ -101,6 +102,18 @@ static chunk_t generate_natd_hash(private_ike_natd_t *this,
 	chunk_t natd_hash;
 	uint64_t spi_i, spi_r;
 	uint16_t port;
+	
+	// For FC, the port is not a valid comparison point because that port
+	// is not used to make the address tuple.  It is only used as a local host identifier.
+	socket_family_t family = charon->socket->supported_families(charon->socket);
+	if (family != SOCKET_FAMILY_FC)
+	{
+		port = htons(host->get_port(host));
+	}
+	else
+	{
+		port = 0;
+	}
 
 	/* prepare all required chunks */
 	spi_i = ike_sa_id->get_initiator_spi(ike_sa_id);
@@ -109,11 +122,10 @@ static chunk_t generate_natd_hash(private_ike_natd_t *this,
 	spi_i_chunk.len = sizeof(spi_i);
 	spi_r_chunk.ptr = (void*)&spi_r;
 	spi_r_chunk.len = sizeof(spi_r);
-	port = htons(host->get_port(host));
 	port_chunk.ptr = (void*)&port;
 	port_chunk.len = sizeof(port);
 	addr_chunk = host->get_address(host);
-
+	
 	/*  natd_hash = SHA1( spi_i | spi_r | address | port ) */
 	natd_chunk = chunk_cat("cccc", spi_i_chunk, spi_r_chunk, addr_chunk, port_chunk);
 	if (!this->hasher->allocate_hash(this->hasher, natd_chunk, &natd_hash))
@@ -184,6 +196,7 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 	ike_sa_id = message->get_ike_sa_id(message);
 	me = message->get_destination(message);
 	other = message->get_source(message);
+	
 	dst_hash = generate_natd_hash(this, ike_sa_id, me);
 	src_hash = generate_natd_hash(this, ike_sa_id, other);
 

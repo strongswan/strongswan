@@ -1222,4 +1222,7 @@ struct ike_sa_t {
 ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 						ike_version_t version);
 
+ike_sa_t * ike_sa_create_with_family(ike_sa_id_t *ike_sa_id, bool initiator,
+						 ike_version_t version, int family);
+
 #endif /** IKE_SA_H_ @}*/

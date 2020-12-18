@@ -2,6 +2,7 @@
  * Copyright (C) 2010-2018 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2019-2020 Marvell
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -327,9 +328,9 @@ static void apply_port(host_t *host, host_t *old, uint16_t port, bool local)
 	{
 		port = old->get_port(old);
 	}
-	else if (local && port == charon->socket->get_port(charon->socket, FALSE))
+	else if (local && port == charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE))
 	{
-		port = charon->socket->get_port(charon->socket, TRUE);
+		port = charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, TRUE);
 	}
 	else if (!local && port == IKEV2_UDP_PORT)
 	{
@@ -375,6 +376,7 @@ METHOD(ike_mobike_t, transmit, bool,
 	switch (charon->socket->supported_families(charon->socket))
 	{
 		case SOCKET_FAMILY_IPV4:
+		case SOCKET_FAMILY_FC:
 			family = AF_INET;
 			break;
 		case SOCKET_FAMILY_IPV6:

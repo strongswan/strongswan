@@ -3,6 +3,7 @@
  * Copyright (C) 2010 revosec AG
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2019-2020 Marvell
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -66,6 +67,22 @@ struct private_traffic_selector_substructure_t {
 	 * Ending address.
 	 */
 	chunk_t ending_address;
+
+	/**
+	 * starting R_CTL.
+	 */
+	uint8_t starting_r_ctl;
+
+	/**
+	 * ending R_CTL.
+	 */
+	uint8_t ending_r_ctl;
+
+	/**
+	 * FC port is identified using port index
+	 * as host_t structure is still not FC compliant.
+	 */
+	uint16_t id;
 };
 
 /**
@@ -109,9 +126,68 @@ static encoding_rule_t encodings[] = {
       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 */
 
+/**
+ * Encoding rules to parse or generate a TS payload as per FC-SP-2
+ *
+ * The defined offsets are the positions in a object of type
+ * private_traffic_selector_substructure_t.
+ */
+static encoding_rule_t fc_encodings[] = {
+	/* 1 Byte next ts type*/
+	{ TS_TYPE,		offsetof(private_traffic_selector_substructure_t, ts_type) 			},
+	/* 1 Byte reserved*/
+	{ U_INT_8,		offsetof(private_traffic_selector_substructure_t, ip_protocol_id) 	},
+	/* 2 Byte Length of the whole payload*/
+	{ PAYLOAD_LENGTH,offsetof(private_traffic_selector_substructure_t, payload_length)	},
+	/* 1 Byte starting R_CTL*/
+	{ U_INT_8,		offsetof(private_traffic_selector_substructure_t, starting_r_ctl) 	},
+	/* 3 Bytes starting address */
+	{ ADDRESS,		offsetof(private_traffic_selector_substructure_t, starting_address)	},
+	/* 1 Byte ending R_CTL*/
+	{ U_INT_8,		offsetof(private_traffic_selector_substructure_t, ending_r_ctl) 	},
+	/* 3 Bytes ending address */
+	{ ADDRESS,		offsetof(private_traffic_selector_substructure_t, ending_address)	},
+	/* 2 Byte start type*/
+	{ U_INT_16,		offsetof(private_traffic_selector_substructure_t, start_port)		},
+	/* 2 Byte start type*/
+	{ U_INT_16,		offsetof(private_traffic_selector_substructure_t, end_port)		}
+};
+/*
+      0               1               2              3                4
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      !   TS Type     ! Reserved*     |       Selector Length         |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      | Starting R_CTL|           Starting Address*                   |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      | Ending R_CTL  |           Ending Address*                     |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           Start Type*         |           End Type*           |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+
 METHOD(payload_t, verify, status_t,
 	private_traffic_selector_substructure_t *this)
 {
+	if (this->ts_type == TS_FC_ADDR_RANGE)
+	{
+		if (this->start_port > this->end_port)
+		{
+			return FAILED;
+		}
+		if (this->starting_r_ctl > this->ending_r_ctl)
+		{
+			return FAILED;
+		}
+		if ((this->starting_address.len != 3) ||
+			(this->ending_address.len != 3))
+		{
+			/* ipv4 address must be 4 bytes long */
+			return FAILED;
+		}
+		return SUCCESS;
+	}
+
 	if (this->start_port > this->end_port)
 	{
 		/* OPAQUE ports are the only exception */
@@ -142,6 +218,15 @@ METHOD(payload_t, verify, status_t,
 			}
 			break;
 		}
+		case TS_FC_ADDR_RANGE:
+		{
+			if ((this->starting_address.len != 3) ||
+				(this->ending_address.len != 3))
+			{
+				return FAILED;
+			}
+			break;
+		}
 		default:
 		{
 			/* not supported ts type */
@@ -155,8 +240,16 @@ METHOD(payload_t, verify, status_t,
 METHOD(payload_t, get_encoding_rules, int,
 	private_traffic_selector_substructure_t *this, encoding_rule_t **rules)
 {
-	*rules = encodings;
-	return countof(encodings);
+	if (this->ts_type == TS_FC_ADDR_RANGE)
+	{
+		*rules = fc_encodings;
+		return countof(fc_encodings);
+	}
+	else
+	{
+		*rules = encodings;
+		return countof(encodings);
+	}
 }
 
 METHOD(payload_t, get_header_length, int,
@@ -188,13 +281,42 @@ METHOD(payload_t, get_length, size_t,
 	return this->payload_length;
 }
 
+METHOD(traffic_selector_substructure_t, set_ts_type, void,
+	private_traffic_selector_substructure_t *this, ts_type_t ts_type)
+{
+	this->ts_type = ts_type;
+	if (this->ts_type == TS_FC_ADDR_RANGE)
+	{
+		this->payload_length = get_header_length(this) +
+			8; //starting address(3), ending address(3), start R_CTL(1), end R_CTL(1)
+	}
+}
+
+METHOD(traffic_selector_substructure_t, get_ts_type, ts_type_t,
+	private_traffic_selector_substructure_t *this)
+{
+	return this->ts_type;
+}
+
+
 METHOD(traffic_selector_substructure_t, get_traffic_selector, traffic_selector_t*,
 	private_traffic_selector_substructure_t *this)
 {
-	return traffic_selector_create_from_bytes(
+	traffic_selector_t* ts = NULL;
+	if (this->ts_type == TS_FC_ADDR_RANGE)
+	{
+		ts = traffic_selector_create_from_fcsp2_format(this->starting_address, this->start_port,
+				this->ending_address, this->end_port,
+				this->starting_r_ctl, this->ending_r_ctl);
+	}
+	else
+	{
+		ts = traffic_selector_create_from_bytes(
 									this->ip_protocol_id, this->ts_type,
 									this->starting_address, this->start_port,
 									this->ending_address, this->end_port);
+	}
+	return ts;
 }
 
 METHOD2(payload_t, traffic_selector_substructure_t, destroy, void,
@@ -224,6 +346,8 @@ traffic_selector_substructure_t *traffic_selector_substructure_create()
 				.get_type = _get_type,
 				.destroy = _destroy,
 			},
+			.get_ts_type = _get_ts_type,
+			.set_ts_type = _set_ts_type,
 			.get_traffic_selector = _get_traffic_selector,
 			.destroy = _destroy,
 		},
@@ -251,6 +375,15 @@ traffic_selector_substructure_t *traffic_selector_substructure_create_from_traff
 	this->ending_address = chunk_clone(ts->get_to_address(ts));
 	this->payload_length = get_header_length(this) +
 						this->ending_address.len + this->starting_address.len;
+	if (this->ts_type == TS_FC_ADDR_RANGE)
+	{
+		this->payload_length = get_header_length(this) +
+			this->ending_address.len + this->starting_address.len +
+			2; //start/end R_CTL
+		this->starting_r_ctl = ts->get_start_rctl(ts);
+		this->ending_r_ctl = ts->get_end_rctl(ts);
+		this->id = ts->get_id(ts);
+	}
 
 	return &this->public;
 }

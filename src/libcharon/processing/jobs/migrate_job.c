@@ -103,7 +103,7 @@ METHOD(job_t, execute, job_requeue_t,
 		ike_sa->set_kmaddress(ike_sa, this->local, this->remote);
 
 		host = this->local->clone(this->local);
-		host->set_port(host, charon->socket->get_port(charon->socket, FALSE));
+		host->set_port(host, charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE));
 		ike_sa->set_my_host(ike_sa, host);
 
 		host = this->remote->clone(this->remote);

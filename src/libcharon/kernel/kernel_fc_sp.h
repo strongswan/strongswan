@@ -1,39 +1,28 @@
 /*
- * Copyright (C) 2016 Andreas Steffen
- * Copyright (C) 2006-2018 Tobias Brunner
- * Copyright (C) 2006 Daniel Roethlisberger
- * Copyright (C) 2005-2006 Martin Willi
- * Copyright (C) 2005 Jan Hutter
- * HSR Hochschule fuer Technik Rapperswil
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * for more details.
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
  */
 
-/**
- * @defgroup kernel_ipsec kernel_ipsec
- * @{ @ingroup kernel
+/* 
+ * File:   kernel_fc_sp.h
+ * Author: cwinkler
+ *
+ * Created on October 20, 2020, 2:19 PM
  */
 
-#ifndef KERNEL_IPSEC_H_
-#define KERNEL_IPSEC_H_
+#ifndef KERNEL_FC_SP_H
+#define KERNEL_FC_SP_H
 
-typedef struct kernel_ipsec_t kernel_ipsec_t;
-typedef struct kernel_ipsec_sa_id_t kernel_ipsec_sa_id_t;
-typedef struct kernel_ipsec_add_sa_t kernel_ipsec_add_sa_t;
-typedef struct kernel_ipsec_update_sa_t kernel_ipsec_update_sa_t;
-typedef struct kernel_ipsec_query_sa_t kernel_ipsec_query_sa_t;
-typedef struct kernel_ipsec_del_sa_t kernel_ipsec_del_sa_t;
-typedef struct kernel_ipsec_policy_id_t kernel_ipsec_policy_id_t;
-typedef struct kernel_ipsec_manage_policy_t kernel_ipsec_manage_policy_t;
-typedef struct kernel_ipsec_query_policy_t kernel_ipsec_query_policy_t;
+typedef struct kernel_fc_sp_t kernel_fc_sp_t;
+typedef struct kernel_fc_sp_sa_id_t kernel_fc_sp_sa_id_t;
+typedef struct kernel_fc_sp_add_sa_t kernel_fc_sp_add_sa_t;
+typedef struct kernel_fc_sp_update_sa_t kernel_fc_sp_update_sa_t;
+typedef struct kernel_fc_sp_query_sa_t kernel_fc_sp_query_sa_t;
+typedef struct kernel_fc_sp_del_sa_t kernel_fc_sp_del_sa_t;
+typedef struct kernel_fc_sp_policy_id_t kernel_fc_sp_policy_id_t;
+typedef struct kernel_fc_sp_manage_policy_t kernel_fc_sp_manage_policy_t;
+typedef struct kernel_fc_sp_query_policy_t kernel_fc_sp_query_policy_t;
 
 #include <networking/host.h>
 #include <ipsec/ipsec_types.h>
@@ -44,7 +33,7 @@ typedef struct kernel_ipsec_query_policy_t kernel_ipsec_query_policy_t;
 /**
  * Data required to identify an SA in the kernel
  */
-struct kernel_ipsec_sa_id_t {
+struct kernel_fc_sp_sa_id_t {
 	/** Source address */
 	host_t *src;
 	/** Destination address */
@@ -62,7 +51,7 @@ struct kernel_ipsec_sa_id_t {
 /**
  * Data required to add an SA to the kernel
  */
-struct kernel_ipsec_add_sa_t {
+struct kernel_fc_sp_add_sa_t {
 	/** Reqid */
 	uint32_t reqid;
 	/** Mode (tunnel, transport...) */
@@ -116,7 +105,7 @@ struct kernel_ipsec_add_sa_t {
 /**
  * Data required to update the hosts of an SA in the kernel
  */
-struct kernel_ipsec_update_sa_t {
+struct kernel_fc_sp_update_sa_t {
 	/** CPI in case IPComp is used */
 	uint16_t cpi;
 	/** New source address */
@@ -132,14 +121,14 @@ struct kernel_ipsec_update_sa_t {
 /**
  * Data required to query an SA in the kernel
  */
-struct kernel_ipsec_query_sa_t {
+struct kernel_fc_sp_query_sa_t {
 	uint16_t cpi;
 };
 
 /**
  * Data required to delete an SA in the kernel
  */
-struct kernel_ipsec_del_sa_t {
+struct kernel_fc_sp_del_sa_t {
 	/** CPI in case IPComp is used */
 	uint16_t cpi;
 };
@@ -147,7 +136,7 @@ struct kernel_ipsec_del_sa_t {
 /**
  * Data identifying a policy in the kernel
  */
-struct kernel_ipsec_policy_id_t {
+struct kernel_fc_sp_policy_id_t {
 	/** Direction of traffic */
 	policy_dir_t dir;
 	/** Source traffic selector */
@@ -165,7 +154,7 @@ struct kernel_ipsec_policy_id_t {
 /**
  * Data required to add/delete a policy to/from the kernel
  */
-struct kernel_ipsec_manage_policy_t {
+struct kernel_fc_sp_manage_policy_t {
 	/** Type of policy */
 	policy_type_t type;
 	/** Priority class */
@@ -183,29 +172,26 @@ struct kernel_ipsec_manage_policy_t {
 /**
  * Data required to query a policy in the kernel
  */
-struct kernel_ipsec_query_policy_t {
-    int family;
+struct kernel_fc_sp_query_policy_t {
 };
 
+
 /**
- * Interface to the ipsec subsystem of the kernel.
+ * Interface to the fc-sp subsystem.
  *
- * The kernel ipsec interface handles the communication with the kernel
- * for SA and policy management. It allows setup of these, and provides
- * further the handling of kernel events.
- * Policy information are cached in the interface. This is necessary to do
- * reference counting. The Linux kernel does not allow the same policy
- * installed twice, but we need this as CHILD_SA exist multiple times
- * when rekeying. That's why we do reference counting of policies.
+ * The kernel fc-sp interface handles the communication with the FC-SP 
+ * module that will communicate to the lower level that handles the SAs.
+ * FC-SP does not currently use policies so they are not provided in this
+ * implementation of the interface.
  */
-struct kernel_ipsec_t {
+struct kernel_fc_sp_t {
 
 	/**
 	 * Get the feature set supported by this kernel backend.
 	 *
 	 * @return				ORed feature-set of backend
 	 */
-	kernel_feature_t (*get_features)(kernel_ipsec_t *this);
+	kernel_feature_t (*get_features)(kernel_fc_sp_t *this);
 
 	/**
 	 * Get a SPI from the kernel.
@@ -216,10 +202,10 @@ struct kernel_ipsec_t {
 	 * @param spi		allocated spi
 	 * @return			SUCCESS if operation completed
 	 */
-	status_t (*get_spi)(kernel_ipsec_t *this, host_t *src, host_t *dst,
+	status_t (*get_spi)(kernel_fc_sp_t *this, host_t *src, host_t *dst,
 						uint8_t protocol, uint32_t *spi);
-
-	/**
+        
+        /**
 	 * Get a Compression Parameter Index (CPI) from the kernel.
 	 *
 	 * @param src		source address of SA
@@ -227,7 +213,7 @@ struct kernel_ipsec_t {
 	 * @param cpi		allocated cpi
 	 * @return			SUCCESS if operation completed
 	 */
-	status_t (*get_cpi)(kernel_ipsec_t *this, host_t *src, host_t *dst,
+	status_t (*get_cpi)(kernel_fc_sp_t *this, host_t *src, host_t *dst,
 						uint16_t *cpi);
 
 	/**
@@ -240,10 +226,10 @@ struct kernel_ipsec_t {
 	 * @param data			data for this SA
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*add_sa)(kernel_ipsec_t *this, kernel_ipsec_sa_id_t *id,
-					   kernel_ipsec_add_sa_t *data);
-
-	/**
+	status_t (*add_sa)(kernel_fc_sp_t *this, kernel_fc_sp_sa_id_t *id,
+					   kernel_fc_sp_add_sa_t *data);
+        
+        /**
 	 * Update the hosts on an installed SA.
 	 *
 	 * We cannot directly update the destination address as the kernel
@@ -256,8 +242,8 @@ struct kernel_ipsec_t {
 	 * @return				SUCCESS if operation completed, NOT_SUPPORTED if
 	 *						the kernel interface can't update the SA
 	 */
-	status_t (*update_sa)(kernel_ipsec_t *this, kernel_ipsec_sa_id_t *id,
-						  kernel_ipsec_update_sa_t *data);
+	status_t (*update_sa)(kernel_fc_sp_t *this, kernel_fc_sp_sa_id_t *id,
+						  kernel_fc_sp_update_sa_t *data);
 
 	/**
 	 * Query the number of bytes processed by an SA from the SAD.
@@ -269,8 +255,8 @@ struct kernel_ipsec_t {
 	 * @param[out] time		last (monotonic) time of SA use
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*query_sa)(kernel_ipsec_t *this, kernel_ipsec_sa_id_t *id,
-						 kernel_ipsec_query_sa_t *data, uint64_t *bytes,
+	status_t (*query_sa)(kernel_fc_sp_t *this, kernel_fc_sp_sa_id_t *id,
+						 kernel_fc_sp_query_sa_t *data, uint64_t *bytes,
 						 uint64_t *packets, time_t *time);
 
 	/**
@@ -280,26 +266,19 @@ struct kernel_ipsec_t {
 	 * @param data			data to delete the SA
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_sa)(kernel_ipsec_t *this, kernel_ipsec_sa_id_t *id,
-					   kernel_ipsec_del_sa_t *data);
-
-	/**
-	 * Flush all SAs from the SAD.
-	 *
-	 * @return				SUCCESS if operation completed
-	 */
-	status_t (*flush_sas)(kernel_ipsec_t *this);
-
-	/**
+	status_t (*del_sa)(kernel_fc_sp_t *this, kernel_fc_sp_sa_id_t *id,
+					   kernel_fc_sp_del_sa_t *data);
+        
+        /**
 	 * Add a policy to the SPD.
 	 *
 	 * @param id			data identifying this policy
 	 * @param data			data for this policy
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*add_policy)(kernel_ipsec_t *this,
-						   kernel_ipsec_policy_id_t *id,
-						   kernel_ipsec_manage_policy_t *data);
+	status_t (*add_policy)(kernel_fc_sp_t *this,
+						   kernel_fc_sp_policy_id_t *id,
+						   kernel_fc_sp_manage_policy_t *data);
 
 	/**
 	 * Query the use time of a policy.
@@ -313,9 +292,9 @@ struct kernel_ipsec_t {
 	 * @param[out] use_time	the monotonic timestamp of this SA's last use
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*query_policy)(kernel_ipsec_t *this,
-							 kernel_ipsec_policy_id_t *id,
-							 kernel_ipsec_query_policy_t *data,
+	status_t (*query_policy)(kernel_fc_sp_t *this,
+							 kernel_fc_sp_policy_id_t *id,
+							 kernel_fc_sp_query_policy_t *data,
 							 time_t *use_time);
 
 	/**
@@ -325,16 +304,9 @@ struct kernel_ipsec_t {
 	 * @param data			data for this policy
 	 * @return				SUCCESS if operation completed
 	 */
-	status_t (*del_policy)(kernel_ipsec_t *this,
-						   kernel_ipsec_policy_id_t *id,
-						   kernel_ipsec_manage_policy_t *data);
-
-	/**
-	 * Flush all policies from the SPD.
-	 *
-	 * @return				SUCCESS if operation completed
-	 */
-	status_t (*flush_policies)(kernel_ipsec_t *this);
+	status_t (*del_policy)(kernel_fc_sp_t *this,
+						   kernel_fc_sp_policy_id_t *id,
+						   kernel_fc_sp_manage_policy_t *data);
 
 	/**
 	 * Install a bypass policy for the given socket.
@@ -343,7 +315,7 @@ struct kernel_ipsec_t {
 	 * @param family		protocol family of the socket
 	 * @return				TRUE of policy set up successfully
 	 */
-	bool (*bypass_socket)(kernel_ipsec_t *this, int fd, int family);
+	bool (*bypass_socket)(kernel_fc_sp_t *this, int fd, int family);
 
 	/**
 	 * Enable decapsulation of ESP-in-UDP packets for the given port/socket.
@@ -353,27 +325,17 @@ struct kernel_ipsec_t {
 	 * @param port			the UDP port
 	 * @return				TRUE if UDP decapsulation was enabled successfully
 	 */
-	bool (*enable_udp_decap)(kernel_ipsec_t *this, int fd, int family,
+	bool (*enable_udp_decap)(kernel_fc_sp_t *this, int fd, int family,
 							 uint16_t port);
 
 	/**
 	 * Destroy the implementation.
 	 */
-	void (*destroy)(kernel_ipsec_t *this);
+	void (*destroy)(kernel_fc_sp_t *this);
 };
 
-/**
- * Helper function to (un-)register IPsec kernel interfaces from plugin features.
- *
- * This function is a plugin_feature_callback_t and can be used with the
- * PLUGIN_CALLBACK macro to register an IPsec kernel interface constructor.
- *
- * @param plugin		plugin registering the kernel interface
- * @param feature		associated plugin feature
- * @param reg			TRUE to register, FALSE to unregister
- * @param data			data passed to callback, an kernel_ipsec_constructor_t
- */
-bool kernel_ipsec_register(plugin_t *plugin, plugin_feature_t *feature,
+bool kernel_fc_sp_register(plugin_t *plugin, plugin_feature_t *feature,
 						   bool reg, void *data);
 
-#endif /** KERNEL_IPSEC_H_ @}*/
+#endif /* KERNEL_FC_SP_H */
+

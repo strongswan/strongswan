@@ -758,7 +758,7 @@ CALLBACK(parse_ts, bool,
 
 		if (host_create_from_range(buf, &lower, &upper))
 		{
-			type = (lower->get_family(lower) == AF_INET) ?
+			type = (lower->get_family(lower) == AF_INET || lower->get_family(lower) == AF_NETLINK) ?
 								TS_IPV4_ADDR_RANGE : TS_IPV6_ADDR_RANGE;
 			ts = traffic_selector_create_from_bytes(proto, type,
 								lower->get_address(lower), from,
@@ -2477,7 +2477,7 @@ CALLBACK(config_sn, bool,
 	}
 	if (!peer.local_port)
 	{
-		peer.local_port = charon->socket->get_port(charon->socket, FALSE);
+		peer.local_port = charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE);
 	}
 
 	if (peer.rekey_time == LFT_UNDEFINED && peer.reauth_time == LFT_UNDEFINED)

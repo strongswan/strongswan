@@ -747,7 +747,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, uint num)
 	}
 	else
 	{
-		ike.local_port = charon->socket->get_port(charon->socket, FALSE);
+		ike.local_port = charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE);
 	}
 	ike_cfg = ike_cfg_create(&ike);
 	ike_cfg->add_proposal(ike_cfg, this->proposal->clone(this->proposal, 0));

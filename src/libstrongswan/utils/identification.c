@@ -4,6 +4,7 @@
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2019-2020 Marvell
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -36,7 +37,7 @@ ENUM_NEXT(id_match_names, ID_MATCH_PERFECT, ID_MATCH_PERFECT, ID_MATCH_MAX_WILDC
 	"MATCH_PERFECT");
 ENUM_END(id_match_names, ID_MATCH_PERFECT);
 
-ENUM_BEGIN(id_type_names, ID_ANY, ID_KEY_ID,
+ENUM_BEGIN(id_type_names, ID_ANY, ID_KEY_Q_NAME,
 	"ID_ANY",
 	"ID_IPV4_ADDR",
 	"ID_FQDN",
@@ -48,8 +49,9 @@ ENUM_BEGIN(id_type_names, ID_ANY, ID_KEY_ID,
 	"ID_IPV6_ADDR_RANGE",
 	"ID_DER_ASN1_DN",
 	"ID_DER_ASN1_GN",
-	"ID_KEY_ID");
-ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_DER_ASN1_GN_URI, ID_KEY_ID,
+	"ID_KEY_ID",
+	"ID_KEY_Q_NAME");
+ENUM_NEXT(id_type_names, ID_DER_ASN1_GN_URI, ID_DER_ASN1_GN_URI, ID_KEY_Q_NAME,
 	"ID_DER_ASN1_GN_URI");
 ENUM_END(id_type_names, ID_DER_ASN1_GN_URI);
 
@@ -1306,6 +1308,10 @@ int identification_printf_hook(printf_hook_data_t *data,
 		case ID_DER_ASN1_GN:
 			snprintf(buf, BUF_LEN, "(ASN.1 general name)");
 			break;
+		case ID_KEY_Q_NAME:
+			snprintf(buf, sizeof(buf), "%.*s", (int)this->encoded.len,
+					this->encoded.ptr);
+			break;
 		case ID_KEY_ID:
 			if (chunk_printable(this->encoded, NULL, '?') &&
 				this->encoded.len != HASH_SIZE_SHA1)
@@ -1378,6 +1384,7 @@ static private_identification_t *identification_create(id_type_t type)
 			break;
 		case ID_FQDN:
 		case ID_RFC822_ADDR:
+		case ID_KEY_Q_NAME:
 			this->public.hash = _hash_binary;
 			this->public.equals = _equals_strcasecmp;
 			this->public.matches = _matches_string;
@@ -1441,6 +1448,7 @@ static private_identification_t* create_from_string_with_prefix_type(char *str)
 		{ "asn1gn:",		ID_DER_ASN1_GN			},
 		{ "xmppaddr:",		ID_DER_ASN1_GN          },
 		{ "keyid:",			ID_KEY_ID				},
+		{ "0x",				ID_KEY_Q_NAME			},
 	};
 	private_identification_t *this;
 	int i;

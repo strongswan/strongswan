@@ -117,7 +117,7 @@ METHOD(task_t, process_r, status_t,
 						/* Cisco boxes reject the first message from 4500 */
 						me = this->ike_sa->get_my_host(this->ike_sa);
 						me->set_port(me, charon->socket->get_port(
-														charon->socket, FALSE));
+														charon->socket, SOCKET_FAMILY_BOTH, FALSE));
 						this->ike_sa->set_other_host(this->ike_sa, redirect);
 						status = this->ike_sa->reauth(this->ike_sa);
 						enumerator->destroy(enumerator);

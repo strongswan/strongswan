@@ -193,7 +193,7 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 	ike_cfg_create_t ike = {
 		.version = IKEV2,
 		.local = local,
-		.local_port = charon->socket->get_port(charon->socket, FALSE),
+		.local_port = charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE),
 		.remote = remote,
 		.remote_port = IKEV2_UDP_PORT,
 		.no_certreq = TRUE,

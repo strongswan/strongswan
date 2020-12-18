@@ -1202,8 +1202,8 @@ METHOD(ike_sa_manager_t, checkout, ike_sa_t*,
 	return ike_sa;
 }
 
-METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
-	private_ike_sa_manager_t* this, ike_version_t version, bool initiator)
+METHOD(ike_sa_manager_t, checkout_new_with_family, ike_sa_t*,
+	private_ike_sa_manager_t* this, ike_version_t version, bool initiator, int family)
 {
 	ike_sa_id_t *ike_sa_id;
 	ike_sa_t *ike_sa;
@@ -1227,7 +1227,7 @@ METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
 	{
 		ike_sa_id = ike_sa_id_create(ike_version, 0, spi, FALSE);
 	}
-	ike_sa = ike_sa_create(ike_sa_id, initiator, version);
+	ike_sa = ike_sa_create_with_family(ike_sa_id, initiator, version, family);
 	ike_sa_id->destroy(ike_sa_id);
 
 	if (ike_sa)
@@ -1236,6 +1236,12 @@ METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
 			 ike_sa->get_unique_id(ike_sa));
 	}
 	return ike_sa;
+}
+
+METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
+	private_ike_sa_manager_t* this, ike_version_t version, bool initiator)
+{
+	return checkout_new_with_family (this, version, initiator, AF_INET);
 }
 
 /**
@@ -1256,8 +1262,8 @@ static uint32_t get_message_id_or_hash(message_t *message)
 	return message->get_message_id(message);
 }
 
-METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
-	private_ike_sa_manager_t* this, message_t *message)
+METHOD(ike_sa_manager_t, checkout_by_message_with_family, ike_sa_t*,
+	private_ike_sa_manager_t* this, message_t *message, int family)
 {
 	u_int segment;
 	entry_t *entry;
@@ -1328,7 +1334,7 @@ METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
 					this->public.get_count(&this->public) < this->ikesa_limit)
 				{
 					id->set_responder_spi(id, our_spi);
-					ike_sa = ike_sa_create(id, FALSE, ike_version);
+					ike_sa = ike_sa_create_with_family(id, FALSE, ike_version, family);
 					if (ike_sa)
 					{
 						entry = entry_create();
@@ -1420,6 +1426,12 @@ out:
 		DBG2(DBG_MGR, "IKE_SA checkout not successful");
 	}
 	return ike_sa;
+}
+
+METHOD(ike_sa_manager_t, checkout_by_message, ike_sa_t*,
+	private_ike_sa_manager_t* this, message_t *message)
+{
+	return checkout_by_message_with_family (this, message, AF_INET);
 }
 
 METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
@@ -2361,7 +2373,9 @@ ike_sa_manager_t *ike_sa_manager_create()
 		.public = {
 			.checkout = _checkout,
 			.checkout_new = _checkout_new,
+			.checkout_new_with_family = _checkout_new_with_family,
 			.checkout_by_message = _checkout_by_message,
+			.checkout_by_message_with_family = _checkout_by_message_with_family,
 			.checkout_by_config = _checkout_by_config,
 			.checkout_by_id = _checkout_by_id,
 			.checkout_by_name = _checkout_by_name,

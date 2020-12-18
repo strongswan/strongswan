@@ -480,7 +480,7 @@ static traffic_selector_t *parse_peer_ip(char *ip)
 
 	if (host_create_from_range(ip, &from, &to))
 	{
-		if (to->get_family(to) == AF_INET)
+		if (to->get_family(to) == AF_INET || to->get_family(to) == AF_NETLINK)
 		{
 			type = TS_IPV4_ADDR_RANGE;
 		}

@@ -745,7 +745,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	ike_cfg_create_t ike = {
 		.version = IKEV2,
 		.local = "",
-		.local_port = charon->socket->get_port(charon->socket, FALSE),
+		.local_port = charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE),
 		.force_encap = TRUE,
 		.fragmentation = FRAGMENTATION_YES,
 	};

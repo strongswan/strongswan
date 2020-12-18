@@ -2491,7 +2491,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 	}
 
 	/* if remote traffic selector covers the IKE peer, add an exclude route */
-	if (charon->kernel->get_features(charon->kernel) & KERNEL_REQUIRE_EXCLUDE_ROUTE)
+	if (charon->kernel->get_features(charon->kernel, AF_INET) & KERNEL_REQUIRE_EXCLUDE_ROUTE)
 	{
 		if (out->dst_ts->is_host(out->dst_ts, dst))
 		{

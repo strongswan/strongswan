@@ -58,7 +58,7 @@ struct socket_manager_t {
 	 * @param nat_t			TRUE to get the port used to float in case of NAT-T
 	 * @return				the port, or 0, if no socket is registered
 	 */
-	uint16_t (*get_port)(socket_manager_t *this, bool nat_t);
+	uint16_t (*get_port)(socket_manager_t *this, socket_family_t family, bool nat_t);
 
 	/**
 	 * Get the address families the registered socket is listening on.

@@ -55,6 +55,7 @@ typedef enum kernel_feature_t kernel_feature_t;
 #include <kernel/kernel_listener.h>
 #include <kernel/kernel_ipsec.h>
 #include <kernel/kernel_net.h>
+#include <kernel/kernel_fc_sp.h>
 
 /**
  * Default range for SPIs requested from kernels
@@ -87,6 +88,11 @@ enum kernel_feature_t {
 typedef kernel_ipsec_t* (*kernel_ipsec_constructor_t)(void);
 
 /**
+ * Constructor function for fc-sp kernel interface
+ */
+typedef kernel_fc_sp_t* (*kernel_fc_sp_constructor_t)(void);
+
+/**
  * Constructor function for network kernel interface
  */
 typedef kernel_net_t* (*kernel_net_constructor_t)(void);
@@ -104,7 +110,7 @@ struct kernel_interface_t {
 	 *
 	 * @return				ORed feature-set of backends
 	 */
-	kernel_feature_t (*get_features)(kernel_interface_t *this);
+	kernel_feature_t (*get_features)(kernel_interface_t *this, int family);
 
 	/**
 	 * Get a SPI from the kernel.
@@ -461,6 +467,7 @@ struct kernel_interface_t {
 	 */
 	bool (*add_ipsec_interface)(kernel_interface_t *this,
 								kernel_ipsec_constructor_t create);
+        
 
 	/**
 	 * Unregister an ipsec kernel interface constructor.
@@ -471,6 +478,26 @@ struct kernel_interface_t {
 	 */
 	bool (*remove_ipsec_interface)(kernel_interface_t *this,
 								   kernel_ipsec_constructor_t create);
+        
+        /**
+	 * Register an fc-sp interface constructor on the manager.
+	 *
+	 * @param create		constructor to register
+	 * @return				TRUE if the fc-sp kernel interface was registered
+	 *						successfully, FALSE if an interface was already
+	 *						registered or the registration failed
+	 */
+        bool (*add_fc_sp_interface) (kernel_interface_t *this, kernel_fc_sp_constructor_t constructor);
+        
+        /**
+	 * Unregister an fc-sp interface constructor.
+	 *
+	 * @param create		constructor to unregister
+	 * @return				TRUE if the ipsec kernel interface was unregistered
+	 *						successfully, FALSE otherwise
+	 */
+	bool (*remove_fc_sp_interface)(kernel_interface_t *this,
+								   kernel_fc_sp_constructor_t create);
 
 	/**
 	 * Register a network kernel interface constructor on the manager.

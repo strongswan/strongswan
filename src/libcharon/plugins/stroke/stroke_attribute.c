@@ -192,6 +192,7 @@ CALLBACK(attr_filter, bool,
 		switch (host->get_family(host))
 		{
 			case AF_INET:
+			case AF_NETLINK:
 				*type = INTERNAL_IP4_DNS;
 				break;
 			case AF_INET6:

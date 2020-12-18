@@ -58,9 +58,20 @@ struct ike_sa_manager_t {
 	 * 							- NULL, if specified IKE_SA is not found.
 	 */
 	ike_sa_t* (*checkout) (ike_sa_manager_t* this, ike_sa_id_t *sa_id);
+        
+        /**
+	 * Create and check out a new IKE_SA.
+	 *
+	 * @param version			IKE version of this SA
+	 * @param initiator			TRUE for initiator, FALSE otherwise
+         * @param family                        Address family (AF_xx)
+	 * @returns 				created and checked out IKE_SA
+	 */
+        ike_sa_t* (*checkout_new_with_family) (ike_sa_manager_t* this, ike_version_t version, 
+                                                            bool initiator, int family);
 
 	/**
-	 * Create and check out a new IKE_SA.
+	 * Create and check out a new IKE_SA with default address family of AF_INET.
 	 *
 	 * @param version			IKE version of this SA
 	 * @param initiator			TRUE for initiator, FALSE otherwise
@@ -90,6 +101,7 @@ struct ike_sa_manager_t {
 	 * 							- checked out/created IKE_SA
 	 * 							- NULL to not process message further
 	 */
+	ike_sa_t* (*checkout_by_message_with_family) (ike_sa_manager_t* this, message_t *message, int family);
 	ike_sa_t* (*checkout_by_message) (ike_sa_manager_t* this, message_t *message);
 
 	/**

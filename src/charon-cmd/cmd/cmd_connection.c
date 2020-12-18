@@ -181,7 +181,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 			break;
 	}
 
-	ike.local_port = charon->socket->get_port(charon->socket, FALSE);
+	ike.local_port = charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE);
 	if (ike.local_port != IKEV2_UDP_PORT)
 	{
 		ike.remote_port = IKEV2_NATT_PORT;

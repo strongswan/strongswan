@@ -21,6 +21,7 @@
 #include <threading/thread.h>
 #include <threading/rwlock.h>
 #include <collections/linked_list.h>
+#include <collections/hashtable.h>
 
 typedef struct private_socket_manager_t private_socket_manager_t;
 
@@ -33,16 +34,21 @@ struct private_socket_manager_t {
 	 * Public socket_manager_t interface.
 	 */
 	socket_manager_t public;
+	
+	/**
+	 * List of socket constructors used during shutdown.
+	 */
+	hashtable_t *socket_constructors;
 
 	/**
-	 * List of registered socket constructors
+	 * Instantiated socket implementation for IP
 	 */
-	linked_list_t *sockets;
-
+	socket_t *ip_socket;
+	
 	/**
-	 * Instantiated socket implementation
+	 * Instantiated socket implementation for FC
 	 */
-	socket_t *socket;
+	socket_t *fc_socket;
 
 	/**
 	 * The constructor used to create the current socket
@@ -60,7 +66,7 @@ METHOD(socket_manager_t, receiver, status_t,
 {
 	status_t status;
 	this->lock->read_lock(this->lock);
-	if (!this->socket)
+	if (!this->ip_socket)
 	{
 		DBG1(DBG_NET, "no socket implementation registered, receiving failed");
 		this->lock->unlock(this->lock);
@@ -68,7 +74,7 @@ METHOD(socket_manager_t, receiver, status_t,
 	}
 	/* receive is blocking and the thread can be cancelled */
 	thread_cleanup_push((thread_cleanup_t)this->lock->unlock, this->lock);
-	status = this->socket->receive(this->socket, packet);
+	status = this->ip_socket->receive(this->ip_socket, packet);
 	thread_cleanup_pop(TRUE);
 	return status;
 }
@@ -77,26 +83,51 @@ METHOD(socket_manager_t, sender, status_t,
 	private_socket_manager_t *this, packet_t *packet)
 {
 	status_t status;
+	socket_t *socket = NULL;
+	
 	this->lock->read_lock(this->lock);
-	if (!this->socket)
+	host_t *src = packet->get_source (packet);
+	int family = src->get_family (src);
+	
+	if (family == AF_NETLINK)
 	{
-		DBG1(DBG_NET, "no socket implementation registered, sending failed");
+		socket = this->fc_socket;
+	}
+	else
+	{
+		socket = this->ip_socket;
+	}
+	
+	if (!socket)
+	{
+		DBG1(DBG_NET, "no socket implementation registered for family %d, sending failed", family);
 		this->lock->unlock(this->lock);
 		return NOT_SUPPORTED;
 	}
-	status = this->socket->send(this->socket, packet);
+	status = socket->send(socket, packet);
 	this->lock->unlock(this->lock);
 	return status;
 }
 
 METHOD(socket_manager_t, get_port, uint16_t,
-	private_socket_manager_t *this, bool nat_t)
+	private_socket_manager_t *this, socket_family_t family, bool nat_t)
 {
 	uint16_t port = 0;
+	socket_t *socket;
+	
 	this->lock->read_lock(this->lock);
-	if (this->socket)
+	if (family == SOCKET_FAMILY_FC)
 	{
-		port = this->socket->get_port(this->socket, nat_t);
+		socket = this->fc_socket;
+	}
+	else
+	{
+		socket = this->ip_socket;
+	}
+	
+	if (socket)
+	{
+		port = socket->get_port(socket, nat_t);
 	}
 	this->lock->unlock(this->lock);
 	return port;
@@ -106,40 +137,59 @@ METHOD(socket_manager_t, supported_families, socket_family_t,
 	private_socket_manager_t *this)
 {
 	socket_family_t families = SOCKET_FAMILY_NONE;
-	this->lock->read_lock(this->lock);
-	if (this->socket)
-	{
-		families = this->socket->supported_families(this->socket);
+	
+	// Supported families is not needed for fc_socket because there is only one
+	// family for FC, i.e. no IPv4 and IPv6.
+	
+	if (this->ip_socket != NULL)
+	{	
+		this->lock->read_lock(this->lock);
+		families = this->ip_socket->supported_families (this->ip_socket);
+		this->lock->unlock(this->lock);
 	}
-	this->lock->unlock(this->lock);
 	return families;
-}
-
-static void create_socket(private_socket_manager_t *this)
-{
-	socket_constructor_t create;
-	/* remove constructors in order to avoid trying to create broken ones
-	 * multiple times */
-	while (this->sockets->remove_first(this->sockets,
-									   (void**)&create) == SUCCESS)
-	{
-		this->socket = create();
-		if (this->socket)
-		{
-			this->create = create;
-			break;
-		}
-	}
 }
 
 METHOD(socket_manager_t, add_socket, void,
 	private_socket_manager_t *this, socket_constructor_t create)
 {
+	socket_t *new_socket;
+	socket_family_t family;
+	
 	this->lock->write_lock(this->lock);
-	this->sockets->insert_last(this->sockets, create);
-	if (!this->socket)
+	new_socket = create();
+	family = new_socket->supported_families (new_socket);
+	
+	if (family == SOCKET_FAMILY_FC)
 	{
-		create_socket(this);
+		if (this->fc_socket)
+		{
+			DBG0(DBG_NET, "Attempting to create second FC-SP socket!  Ignoring second socket.");
+			DESTROY_IF (new_socket);
+			new_socket = NULL;
+		}
+		else
+		{
+			this->fc_socket = new_socket;
+		}
+	}
+	else
+	{
+		if (this->ip_socket)
+		{
+			DBG0(DBG_NET, "Attempting to create second IPsec-SP socket!  Ignoring second socket.");
+			DESTROY_IF (new_socket);
+			new_socket = NULL;
+		}
+		else
+		{
+			this->ip_socket = new_socket;
+		}
+	}
+	
+	if (new_socket)
+	{
+		this->socket_constructors->put (this->socket_constructors, (void*) create, (void*) family);
 	}
 	this->lock->unlock(this->lock);
 }
@@ -148,22 +198,28 @@ METHOD(socket_manager_t, remove_socket, void,
 	private_socket_manager_t *this, socket_constructor_t create)
 {
 	this->lock->write_lock(this->lock);
-	this->sockets->remove(this->sockets, create, NULL);
-	if (this->create == create)
+	
+	socket_family_t family = (socket_family_t) this->socket_constructors->get (this->socket_constructors, (void*) create);
+	
+	if (family == SOCKET_FAMILY_FC)
 	{
-		this->socket->destroy(this->socket);
-		this->socket = NULL;
-		this->create = NULL;
-		create_socket(this);
+		this->fc_socket->destroy (this->fc_socket);
+		this->fc_socket = NULL;
 	}
+	else
+	{
+		this->ip_socket->destroy (this->ip_socket);
+		this->ip_socket = NULL;
+	}
+	this->socket_constructors->remove (this->socket_constructors, (void*) create);
 	this->lock->unlock(this->lock);
 }
 
 METHOD(socket_manager_t, destroy, void,
 	private_socket_manager_t *this)
 {
-	DESTROY_IF(this->socket);
-	this->sockets->destroy(this->sockets);
+	DESTROY_IF(this->ip_socket);
+	DESTROY_IF(this->fc_socket);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -185,8 +241,10 @@ socket_manager_t *socket_manager_create()
 			.remove_socket = _remove_socket,
 			.destroy = _destroy,
 		},
-		.sockets = linked_list_create(),
+		.socket_constructors = hashtable_create (hashtable_hash_ptr, hashtable_equals_ptr, 8),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
+		.ip_socket = NULL,
+		.fc_socket = NULL,
 	);
 
 	return &this->public;

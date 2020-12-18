@@ -2,6 +2,7 @@
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2019-2020 Marvell
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -596,11 +597,20 @@ METHOD(parser_t, parse_payload, status_t,
 					return PARSE_ERROR;
 				}
 				ts_type = *(uint8_t*)(output + rule->offset);
+
+				if(ts_type == TS_FC_ADDR_RANGE)
+				{
+					traffic_selector_substructure_t *tsstruct = (traffic_selector_substructure_t*)pld;
+					tsstruct->set_ts_type(tsstruct, TS_FC_ADDR_RANGE);
+					rule_count = pld->get_encoding_rules(pld, &this->rules);
+				}
+
 				break;
 			}
 			case ADDRESS:
 			{
 				int address_length = (ts_type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
+				address_length = ((ts_type == TS_FC_ADDR_RANGE) ? 3 : address_length);
 
 				if (!parse_chunk(this, rule_number, output + rule->offset,
 								 address_length))

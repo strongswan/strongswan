@@ -601,7 +601,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	ike_cfg_create_t ike = {
 		.version = IKEV2,
 		.local = "%any",
-		.local_port = charon->socket->get_port(charon->socket, FALSE),
+		.local_port = charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE),
 		.remote_port = IKEV2_UDP_PORT,
 		.fragmentation = FRAGMENTATION_YES,
 	};

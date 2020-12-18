@@ -90,7 +90,7 @@ static peer_cfg_t *build_mediation_config(private_medcli_config_t *this,
 	ike_cfg_create_t ike = {
 		.version = IKEV2,
 		.local = "0.0.0.0",
-		.local_port = charon->socket->get_port(charon->socket, FALSE),
+		.local_port = charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE),
 		.remote_port = IKEV2_UDP_PORT,
 		.no_certreq = TRUE,
 	};
@@ -404,7 +404,7 @@ medcli_config_t *medcli_config_create(database_t *db)
 	ike_cfg_create_t ike = {
 		.version = IKEV2,
 		.local = "0.0.0.0",
-		.local_port = charon->socket->get_port(charon->socket, FALSE),
+		.local_port = charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE),
 		.remote = "0.0.0.0",
 		.remote_port = IKEV2_UDP_PORT,
 		.no_certreq = TRUE,

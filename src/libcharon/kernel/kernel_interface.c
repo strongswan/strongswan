@@ -90,6 +90,11 @@ struct private_kernel_interface_t {
 	 * Registered IPsec constructor
 	 */
 	kernel_ipsec_constructor_t ipsec_constructor;
+	
+	/**
+	 * Registered FC-SP constructor
+	 */
+	kernel_fc_sp_constructor_t fc_sp_constructor;
 
 	/**
 	 * Registered net constructor
@@ -100,6 +105,11 @@ struct private_kernel_interface_t {
 	 * ipsec interface
 	 */
 	kernel_ipsec_t *ipsec;
+	
+	/**
+	 * fc-sp interface
+	 */
+	kernel_fc_sp_t *fc_sp;
 
 	/**
 	 * network interface
@@ -155,17 +165,27 @@ struct private_kernel_interface_t {
 };
 
 METHOD(kernel_interface_t, get_features, kernel_feature_t,
-	private_kernel_interface_t *this)
+	private_kernel_interface_t *this, int family)
 {
 	kernel_feature_t features = 0;
-
-	if (this->ipsec && this->ipsec->get_features)
+	
+	if (family == AF_NETLINK)
 	{
-		features |= this->ipsec->get_features(this->ipsec);
+		if (this->fc_sp && this->fc_sp->get_features)
+		{
+			features |= this->fc_sp->get_features(this->fc_sp);
+		}
 	}
-	if (this->net && this->net->get_features)
+	else
 	{
-		features |= this->net->get_features(this->net);
+		if (this->ipsec && this->ipsec->get_features)
+		{
+			features |= this->ipsec->get_features(this->ipsec);
+		}
+		if (this->net && this->net->get_features)
+		{
+			features |= this->net->get_features(this->net);
+		}
 	}
 	return features;
 }
@@ -174,6 +194,19 @@ METHOD(kernel_interface_t, get_spi, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
 	uint8_t protocol, uint32_t *spi)
 {
+	
+	int family = src->get_family (src);
+	
+	if (family == AF_NETLINK)
+	{
+		if (!this->fc_sp)
+		{
+			return NOT_SUPPORTED;
+		}
+		
+		return this->fc_sp->get_spi (this->fc_sp, src, dst, protocol, spi);
+	}
+	
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
@@ -185,6 +218,17 @@ METHOD(kernel_interface_t, get_cpi, status_t,
 	private_kernel_interface_t *this, host_t *src, host_t *dst,
 	uint16_t *cpi)
 {
+	int family = src->get_family (src);
+	
+	if (family == AF_NETLINK)
+	{
+		if (!this->fc_sp)
+		{
+			return NOT_SUPPORTED;
+		}
+		this->fc_sp->get_cpi (this->fc_sp, src, dst, cpi);
+	}
+	
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
@@ -446,6 +490,18 @@ METHOD(kernel_interface_t, add_sa, status_t,
 	private_kernel_interface_t *this, kernel_ipsec_sa_id_t *id,
 	kernel_ipsec_add_sa_t *data)
 {
+	int family = id->src->get_family (id->src);
+	
+	if (family == AF_NETLINK)
+	{
+		if (!this->fc_sp)
+		{
+			return NOT_SUPPORTED;
+		}
+		
+		return this->fc_sp->add_sa (this->fc_sp, (kernel_fc_sp_sa_id_t*) id, (kernel_fc_sp_add_sa_t*) data);
+	}
+	
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
@@ -469,6 +525,18 @@ METHOD(kernel_interface_t, query_sa, status_t,
 	kernel_ipsec_query_sa_t *data, uint64_t *bytes, uint64_t *packets,
 	time_t *time)
 {
+	int family = id->src->get_family (id->src);
+	
+	if (family == AF_NETLINK)
+	{
+		if (!this->fc_sp)
+		{
+			return NOT_SUPPORTED;
+		}
+		
+		return this->fc_sp->query_sa (this->fc_sp, (kernel_fc_sp_sa_id_t*) id, (kernel_fc_sp_query_sa_t*) data, bytes, packets, time);
+	}
+	
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
@@ -480,6 +548,18 @@ METHOD(kernel_interface_t, del_sa, status_t,
 	private_kernel_interface_t *this, kernel_ipsec_sa_id_t *id,
 	kernel_ipsec_del_sa_t *data)
 {
+	int family = id->src->get_family (id->src);
+	
+	if (family == AF_NETLINK)
+	{
+		if (!this->fc_sp)
+		{
+			return NOT_SUPPORTED;
+		}
+		
+		return this->fc_sp->del_sa (this->fc_sp, (kernel_fc_sp_sa_id_t*) id, (kernel_fc_sp_del_sa_t*) data);
+	}
+	
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
@@ -501,6 +581,17 @@ METHOD(kernel_interface_t, add_policy, status_t,
 	private_kernel_interface_t *this, kernel_ipsec_policy_id_t *id,
 	kernel_ipsec_manage_policy_t *data)
 {
+	int family = data->src->get_family (data->src);
+	
+	if (family == AF_NETLINK)
+	{
+		if (!this->fc_sp)
+		{
+			return NOT_SUPPORTED;
+		}
+		return this->fc_sp->add_policy(this->fc_sp, (kernel_fc_sp_policy_id_t*) id, (kernel_fc_sp_manage_policy_t*) data);
+	}
+	
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
@@ -512,6 +603,14 @@ METHOD(kernel_interface_t, query_policy, status_t,
 	private_kernel_interface_t *this, kernel_ipsec_policy_id_t *id,
 	kernel_ipsec_query_policy_t *data, time_t *use_time)
 {
+	if (data->family == AF_NETLINK)
+	{
+		if (!this->fc_sp)
+		{
+			return NOT_SUPPORTED;
+		}
+		return this->fc_sp->query_policy(this->fc_sp, (kernel_fc_sp_policy_id_t*) id, (kernel_fc_sp_query_policy_t*) data, use_time);
+	}
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
@@ -523,6 +622,17 @@ METHOD(kernel_interface_t, del_policy, status_t,
 	private_kernel_interface_t *this, kernel_ipsec_policy_id_t *id,
 	kernel_ipsec_manage_policy_t *data)
 {
+	int family = data->src->get_family (data->src);
+	
+	if (family == AF_NETLINK)
+	{
+		if (!this->fc_sp)
+		{
+			return NOT_SUPPORTED;
+		}
+		return this->fc_sp->del_policy (this->fc_sp, (kernel_fc_sp_policy_id_t*) id, (kernel_fc_sp_manage_policy_t*) data);
+	}
+	
 	if (!this->ipsec)
 	{
 		return NOT_SUPPORTED;
@@ -641,6 +751,15 @@ METHOD(kernel_interface_t, del_route, status_t,
 METHOD(kernel_interface_t, bypass_socket, bool,
 	private_kernel_interface_t *this, int fd, int family)
 {
+	if (family == AF_NETLINK)
+	{
+		if (!this->fc_sp)
+		{
+			return NOT_SUPPORTED;
+		}
+		return this->fc_sp->bypass_socket(this->fc_sp, fd, family);
+	}
+	
 	if (!this->ipsec)
 	{
 		return FALSE;
@@ -651,6 +770,15 @@ METHOD(kernel_interface_t, bypass_socket, bool,
 METHOD(kernel_interface_t, enable_udp_decap, bool,
 	private_kernel_interface_t *this, int fd, int family, uint16_t port)
 {
+	if (family == AF_NETLINK)
+	{
+		if (!this->fc_sp)
+		{
+			return NOT_SUPPORTED;
+		}
+		return this->fc_sp->enable_udp_decap(this->fc_sp, fd, family, port);
+	}
+	
 	if (!this->ipsec)
 	{
 		return FALSE;
@@ -780,6 +908,31 @@ METHOD(kernel_interface_t, remove_ipsec_interface, bool,
 	{
 		this->ipsec->destroy(this->ipsec);
 		this->ipsec = NULL;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+
+METHOD(kernel_interface_t, add_fc_sp_interface, bool,
+	private_kernel_interface_t *this, kernel_fc_sp_constructor_t constructor)
+{
+	if (!this->fc_sp)
+	{
+		this->fc_sp_constructor = constructor;
+		this->fc_sp = constructor();
+		return this->fc_sp != NULL;
+	}
+	return FALSE;
+}
+
+METHOD(kernel_interface_t, remove_fc_sp_interface, bool,
+	private_kernel_interface_t *this, kernel_fc_sp_constructor_t constructor)
+{
+	if (constructor == this->fc_sp_constructor && this->fc_sp)
+	{
+		this->fc_sp->destroy(this->fc_sp);
+		this->fc_sp = NULL;
 		return TRUE;
 	}
 	return FALSE;
@@ -1004,6 +1157,7 @@ METHOD(kernel_interface_t, destroy, void,
 	this->algorithms->destroy(this->algorithms);
 	this->mutex_algs->destroy(this->mutex_algs);
 	DESTROY_IF(this->ipsec);
+	DESTROY_IF(this->fc_sp);
 	DESTROY_IF(this->net);
 	DESTROY_FUNCTION_IF(this->ifaces_filter, (void*)free);
 	this->reqids->destroy(this->reqids);
@@ -1055,6 +1209,8 @@ kernel_interface_t *kernel_interface_create()
 			.get_address_by_ts = _get_address_by_ts,
 			.add_ipsec_interface = _add_ipsec_interface,
 			.remove_ipsec_interface = _remove_ipsec_interface,
+			.add_fc_sp_interface = _add_fc_sp_interface,
+			.remove_fc_sp_interface = _remove_fc_sp_interface,
 			.add_net_interface = _add_net_interface,
 			.remove_net_interface = _remove_net_interface,
 

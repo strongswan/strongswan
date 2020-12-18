@@ -84,6 +84,7 @@ METHOD(host_t, is_anyaddr, bool,
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
+		case AF_NETLINK:
 		{
 			return memeq(zeroes, &(this->address4.sin_addr.s_addr), IPV4_LEN);
 		}
@@ -121,19 +122,23 @@ int host_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 		void *address;
 		uint16_t port;
 		int len;
+		int family;
 
 		address = &this->address6.sin6_addr;
 		port = this->address6.sin6_port;
+		family = this->address.sa_family;
 
 		switch (this->address.sa_family)
 		{
 			case AF_INET:
+			case AF_NETLINK:
 				address = &this->address4.sin_addr;
 				port = this->address4.sin_port;
+				family = AF_INET;		// inet_ntop does not recognize AF_NETLINK
 				/* fall */
 			case AF_INET6:
 
-				if (inet_ntop(this->address.sa_family, address,
+				if (inet_ntop(family, address,
 							  buffer, sizeof(buffer)) == NULL)
 				{
 					snprintf(buffer, sizeof(buffer),
@@ -166,6 +171,7 @@ METHOD(host_t, get_address, chunk_t,
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
+		case AF_NETLINK:
 		{
 			address.ptr = (char*)&(this->address4.sin_addr.s_addr);
 			address.len = IPV4_LEN;
@@ -197,6 +203,7 @@ METHOD(host_t, get_port, uint16_t,
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
+		case AF_NETLINK:
 		{
 			return ntohs(this->address4.sin_port);
 		}
@@ -217,6 +224,7 @@ METHOD(host_t, set_port, void,
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
+		case AF_NETLINK:
 		{
 			this->address4.sin_port = htons(port);
 			break;
@@ -258,6 +266,7 @@ static bool ip_equals(private_host_t *this, private_host_t *other)
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
+		case AF_NETLINK:
 		{
 			return memeq(&this->address4.sin_addr, &other->address4.sin_addr,
 						 sizeof(this->address4.sin_addr));
@@ -286,6 +295,7 @@ static bool equals(private_host_t *this, private_host_t *other)
 	switch (this->address.sa_family)
 	{
 		case AF_INET:
+		case AF_NETLINK:
 		{
 			return (this->address4.sin_port == other->address4.sin_port);
 		}
@@ -394,6 +404,7 @@ host_t *host_create_from_string_and_family(char *string, int family,
 			addr.v6.sin6_family = AF_INET6;
 			return host_create_from_sockaddr((sockaddr_t*)&addr);
 		case AF_INET:
+		case AF_NETLINK:
 			if (strchr(string, ':'))
 			{	/* do not try to convert v6 addresses for v4 family */
 				return NULL;
@@ -405,7 +416,7 @@ host_t *host_create_from_string_and_family(char *string, int family,
 				return NULL;
 			}
 			addr.v4.sin_port = htons(port);
-			addr.v4.sin_family = AF_INET;
+			addr.v4.sin_family = family == AF_NETLINK ? AF_NETLINK : AF_INET;
 			return host_create_from_sockaddr((sockaddr_t*)&addr);
 		default:
 			return NULL;
@@ -430,6 +441,7 @@ host_t *host_create_from_sockaddr(sockaddr_t *sockaddr)
 	switch (sockaddr->sa_family)
 	{
 		case AF_INET:
+		case AF_NETLINK:
 		{
 			memcpy(&this->address4, (struct sockaddr_in*)sockaddr,
 				   sizeof(struct sockaddr_in));
@@ -481,6 +493,7 @@ host_t *host_create_from_chunk(int family, chunk_t address, uint16_t port)
 	switch (family)
 	{
 		case AF_INET:
+		case AF_NETLINK:
 			if (address.len < IPV4_LEN)
 			{
 				return NULL;
@@ -515,6 +528,7 @@ host_t *host_create_from_chunk(int family, chunk_t address, uint16_t port)
 	switch (family)
 	{
 		case AF_INET:
+		case AF_NETLINK:
 			memcpy(&this->address4.sin_addr.s_addr, address.ptr, address.len);
 			this->address4.sin_port = htons(port);
 			this->socklen = sizeof(struct sockaddr_in);
@@ -664,6 +678,7 @@ host_t *host_create_any(int family)
 	switch (family)
 	{
 		case AF_INET:
+		case AF_NETLINK:
 		{
 			this->socklen = sizeof(struct sockaddr_in);
 			update_sa_len(this);

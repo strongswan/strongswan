@@ -5,6 +5,7 @@
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2019-2020 Marvell
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -638,7 +639,8 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 				.mark = this->mark_in,
 				.if_id = this->if_id_in,
 			};
-			kernel_ipsec_query_policy_t query = {};
+			kernel_ipsec_query_policy_t query;
+			query.family = this->my_addr->get_family (this->my_addr);
 
 			if (charon->kernel->query_policy(charon->kernel, &id, &query,
 											 &in) == SUCCESS)
@@ -665,7 +667,8 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 				.if_id = this->if_id_out,
 				.interface = this->config->get_interface(this->config),
 			};
-			kernel_ipsec_query_policy_t query = {};
+			kernel_ipsec_query_policy_t query;
+			query.family = this->my_addr->get_family (this->my_addr);
 
 			if (charon->kernel->query_policy(charon->kernel, &id, &query,
 											 &out) == SUCCESS)
@@ -959,7 +962,7 @@ static bool require_policy_update()
 {
 	kernel_feature_t f;
 
-	f = charon->kernel->get_features(charon->kernel);
+	f = charon->kernel->get_features(charon->kernel, AF_INET);
 	return !(f & KERNEL_NO_POLICY_UPDATES);
 }
 
@@ -1322,10 +1325,12 @@ METHOD(child_sa_t, register_outbound, status_t,
 	uint16_t cpi, bool tfcv3)
 {
 	status_t status;
+	
+	int family = this->my_addr->get_family (this->my_addr);
 
 	/* if the kernel supports installing SPIs with policies we install the
 	 * SA immediately as it will only be used once we update the policies */
-	if (charon->kernel->get_features(charon->kernel) & KERNEL_POLICY_SPI)
+	if (charon->kernel->get_features(charon->kernel, family) & KERNEL_POLICY_SPI)
 	{
 		status = install_internal(this, encr, integ, spi, cpi, FALSE, FALSE,
 								  tfcv3);

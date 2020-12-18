@@ -291,7 +291,7 @@ static ike_cfg_t *build_ike_cfg(private_stroke_config_t *this, stroke_msg_t *msg
 	}
 	if (ike.local_port == IKEV2_UDP_PORT)
 	{
-		ike.local_port = charon->socket->get_port(charon->socket, FALSE);
+		ike.local_port = charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE);
 	}
 	ike_cfg = ike_cfg_create(&ike);
 

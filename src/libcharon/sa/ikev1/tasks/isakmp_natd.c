@@ -103,7 +103,7 @@ static bool force_encap(ike_cfg_t *ike_cfg)
 {
 	if (!ike_cfg->force_encap(ike_cfg))
 	{
-		return charon->kernel->get_features(charon->kernel) &
+		return charon->kernel->get_features(charon->kernel, AF_INET) &
 					KERNEL_REQUIRE_UDP_ENCAPSULATION;
 	}
 	return TRUE;

@@ -4,6 +4,7 @@
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2019-2020 Marvell
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -1106,10 +1107,10 @@ METHOD(ike_sa_t, float_ports, void,
 		this->other_host->set_port(this->other_host, IKEV2_NATT_PORT);
 	}
 	if (this->my_host->get_port(this->my_host) ==
-			charon->socket->get_port(charon->socket, FALSE))
+			charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE))
 	{
 		this->my_host->set_port(this->my_host,
-								charon->socket->get_port(charon->socket, TRUE));
+								charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, TRUE));
 	}
 }
 
@@ -1414,6 +1415,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 	switch (charon->socket->supported_families(charon->socket))
 	{
 		case SOCKET_FAMILY_IPV4:
+		case SOCKET_FAMILY_FC:
 			family = AF_INET;
 			break;
 		case SOCKET_FAMILY_IPV6:
@@ -1465,7 +1467,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 	if (this->local_host)
 	{
 		host = this->local_host->clone(this->local_host);
-		host->set_port(host, charon->socket->get_port(charon->socket, FALSE));
+		host->set_port(host, charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE));
 	}
 	else
 	{
@@ -2631,6 +2633,7 @@ static bool is_any_path_valid(private_ike_sa_t *this)
 	switch (charon->socket->supported_families(charon->socket))
 	{
 		case SOCKET_FAMILY_IPV4:
+		case SOCKET_FAMILY_FC:
 			family = AF_INET;
 			break;
 		case SOCKET_FAMILY_IPV6:
@@ -3085,8 +3088,8 @@ METHOD(ike_sa_t, destroy, void,
 /*
  * Described in header.
  */
-ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
-						 ike_version_t version)
+ike_sa_t * ike_sa_create_with_family(ike_sa_id_t *ike_sa_id, bool initiator,
+						 ike_version_t version, int family)
 {
 	private_ike_sa_t *this;
 	static refcount_t unique_id = 0;
@@ -3198,8 +3201,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		},
 		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
 		.version = version,
-		.my_host = host_create_any(AF_INET),
-		.other_host = host_create_any(AF_INET),
+		.my_host = host_create_any(family),
+		.other_host = host_create_any(family),
 		.my_id = identification_create_from_encoding(ID_ANY, chunk_empty),
 		.other_id = identification_create_from_encoding(ID_ANY, chunk_empty),
 		.keymat = keymat_create(version, initiator),
@@ -3233,7 +3236,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 
 	this->task_manager = task_manager_create(&this->public);
 	this->my_host->set_port(this->my_host,
-							charon->socket->get_port(charon->socket, FALSE));
+							charon->socket->get_port(charon->socket, SOCKET_FAMILY_BOTH, FALSE));
 
 	if (!this->task_manager || !this->keymat)
 	{
@@ -3242,4 +3245,14 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		return NULL;
 	}
 	return &this->public;
+}
+
+
+/*
+ * Described in header.
+ */
+ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
+						 ike_version_t version)
+{
+	return ike_sa_create_with_family (ike_sa_id, initiator, version, AF_INET);
 }

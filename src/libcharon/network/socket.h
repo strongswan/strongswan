@@ -4,6 +4,7 @@
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2019-2020 Marvell
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -60,6 +61,11 @@ enum socket_family_t {
 	 * Both address families supported
 	 */
 	SOCKET_FAMILY_BOTH = (1 << 2) - 1,
+
+	/**
+	 * FC BSG
+	 */
+	SOCKET_FAMILY_FC = (1 << 2),
 };
 
 /**

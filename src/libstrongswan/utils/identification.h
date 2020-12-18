@@ -3,6 +3,7 @@
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2019-2020 Marvell
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -124,6 +125,12 @@ enum id_type_t {
 	 * types of identification.
 	 */
 	ID_KEY_ID = 11,
+
+	/**
+	 * ID data is a qualifier name string.
+	 * The string MUST NOT contain any terminators.
+	 */
+	ID_KEY_Q_NAME = 12,
 
 	/**
 	 * Private ID type which represents a GeneralName of type URI
