@@ -5,6 +5,8 @@
  * Copyright (C) 2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
+ * Copyright (C) 2019-2020 Marvell
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -653,10 +655,13 @@ METHOD(stroke_list_t, status, void,
 		half_open);
 	enumerator = charon->controller->create_ike_sa_enumerator(
 													charon->controller, wait);
+	int ike_num = 0, child_num = 0;
 	while (enumerator->enumerate(enumerator, &ike_sa) && ferror(out) == 0)
 	{
 		bool ike_printed = FALSE;
 		enumerator_t *children = ike_sa->create_child_sa_enumerator(ike_sa);
+		
+		fprintf(out, "ike_sa %d\n--------\n", ike_num);
 
 		if (name == NULL || streq(name, ike_sa->get_name(ike_sa)))
 		{
@@ -665,8 +670,10 @@ METHOD(stroke_list_t, status, void,
 			ike_printed = TRUE;
 		}
 
+		child_num = 0;
 		while (children->enumerate(children, (void**)&child_sa))
 		{
+			fprintf(out, "\nchild_sa %d-%d\n------------\n", ike_num, child_num++);
 			if (name == NULL || streq(name, child_sa->get_name(child_sa)))
 			{
 				if (!ike_printed)
@@ -676,9 +683,12 @@ METHOD(stroke_list_t, status, void,
 					ike_printed = TRUE;
 				}
 				log_child_sa(out, child_sa, all);
+				fprintf(out, "\n\n");
 			}
 		}
 		children->destroy(children);
+		
+		ike_num++;
 	}
 	enumerator->destroy(enumerator);
 

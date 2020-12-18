@@ -2105,7 +2105,7 @@ METHOD(task_manager_t, queue_child, void,
 {
 	child_create_t *task;
 
-	task = child_create_create(this->ike_sa, cfg, FALSE, tsi, tsr);
+	task = child_create_create(this->ike_sa, cfg->get_ref(cfg), FALSE, tsi, tsr);
 	if (reqid)
 	{
 		task->use_reqid(task, reqid);

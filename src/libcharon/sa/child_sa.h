@@ -334,6 +334,16 @@ struct child_sa_t {
 	 * @return			absolute time
 	 */
 	time_t (*get_lifetime)(child_sa_t *this, bool hard);
+        
+        /**
+        * Set the absolute time when the CHILD_SA  gets rekeyed.
+         * Note: since the rekeying is actually controlled in the kernel,
+         * this api is here to report what is expected, not to actually affect the rekey action.
+        *
+        * @param rekey_time            absolute time when rekey should happen.
+        * @return                      void
+        */
+       void (*set_rekey_time)(child_sa_t *this, time_t rekey_time);
 
 	/**
 	 * Get the absolute time when this SA has been installed.

@@ -741,6 +741,12 @@ METHOD(child_sa_t, get_lifetime, time_t,
 	return hard ? this->expire_time : this->rekey_time;
 }
 
+METHOD(child_sa_t, set_rekey_time, void,
+          private_child_sa_t *this, time_t rekey_time)
+{
+       this->rekey_time = rekey_time;
+}
+
 METHOD(child_sa_t, get_installtime, time_t,
 	private_child_sa_t *this)
 {
@@ -1822,6 +1828,7 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 			.get_proposal = _get_proposal,
 			.set_proposal = _set_proposal,
 			.get_lifetime = _get_lifetime,
+			.set_rekey_time = _set_rekey_time,			
 			.get_installtime = _get_installtime,
 			.get_usestats = _get_usestats,
 			.get_mark = _get_mark,

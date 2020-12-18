@@ -48,6 +48,10 @@ struct private_sender_t {
 	 * mutex to synchronize access to list
 	 */
 	mutex_t *mutex;
+	
+	mutex_t *wakeup_mutex;
+	
+	int	sender_thread_count;
 
 	/**
 	 * condvar to signal for packets added to list
@@ -150,12 +154,24 @@ static job_requeue_t send_packets(private_sender_t *this)
 		oldstate = thread_cancelability(TRUE);
 
 		this->got->wait(this->got, this->mutex);
+		this->wakeup_mutex->lock (this->wakeup_mutex);
 
 		thread_cancelability(oldstate);
 		thread_cleanup_pop(FALSE);
+		
+		// If there is a spurious wakeup and we are the second ones to be awoken,
+		// there may be no send to service.  So double check after we get the wakeup lock
+		// that there is still something to be serviced
+		if (this->list->get_count(this->list) == 0)
+		{
+			this->wakeup_mutex->unlock (this->wakeup_mutex);
+			this->mutex->unlock(this->mutex);
+			continue;
+		}
 	}
 	this->list->remove_first(this->list, (void**)&packet);
 	this->sent->signal(this->sent);
+	this->wakeup_mutex->unlock (this->wakeup_mutex);
 	this->mutex->unlock(this->mutex);
 
 	charon->socket->send(charon->socket, packet);
@@ -191,6 +207,7 @@ METHOD(sender_t, destroy, void,
 sender_t * sender_create()
 {
 	private_sender_t *this;
+	int i;
 
 	INIT(this,
 		.public = {
@@ -201,6 +218,9 @@ sender_t * sender_create()
 		},
 		.list = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.wakeup_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.sender_thread_count = lib->settings->get_int(lib->settings,
+									"%s.sender_thread_count", 1, lib->ns),
 		.got = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.sent = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.send_delay = lib->settings->get_int(lib->settings,
@@ -213,10 +233,13 @@ sender_t * sender_create()
 									"%s.send_delay_response", TRUE, lib->ns),
 	);
 
-	lib->processor->queue_job(lib->processor,
-		(job_t*)callback_job_create_with_prio((callback_job_cb_t)send_packets,
-			this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
-
+	for (i = 0; i < this->sender_thread_count; i++)
+	{
+		lib->processor->queue_job(lib->processor,
+			(job_t*)callback_job_create_with_prio((callback_job_cb_t)send_packets,
+				this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+	}
+	
 	return &this->public;
 }
 
