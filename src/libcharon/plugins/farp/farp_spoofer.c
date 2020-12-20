@@ -308,17 +308,36 @@ handler_send(farp_handler* h, arp_t* arpreq)
 
 	memcpy(frame.e.ether_dhost, arpreq->sender_mac, sizeof(arpreq->sender_mac));
 	memcpy(frame.e.ether_shost, h->mac, sizeof(h->mac));
-	frame.e.ether_type = ETHERTYPE_ARP;
+	frame.e.ether_type = htons(ETHERTYPE_ARP);
 
-	frame.a.hardware_type = arpreq->hardware_type;
-	frame.a.protocol_type = arpreq->protocol_type;
+	frame.a.hardware_type = htons(1);
+	frame.a.protocol_type = htons(ETHERTYPE_IP);
 	frame.a.hardware_size = arpreq->hardware_size;
 	frame.a.protocol_size = arpreq->protocol_size;
-	frame.a.opcode = ARPOP_REPLY;
+	frame.a.opcode = htons(ARPOP_REPLY);
 	memcpy(frame.a.sender_mac, h->mac, sizeof(h->mac));
-	memcpy(frame.a.sender_ip, h->ipv4, sizeof(h->ipv4));
+	memcpy(frame.a.sender_ip, arpreq->target_ip, sizeof(arpreq->target_ip));
 	memcpy(frame.a.target_mac, arpreq->sender_mac, sizeof(arpreq->sender_mac));
 	memcpy(frame.a.target_ip, arpreq->sender_ip, sizeof(arpreq->sender_ip));
+
+	DBG1(DBG_NET, "farp %s", h->name);
+	DBG1(DBG_NET, "  ether destination %02x.%02x.%02x.%02x.%02x.%02x",
+	     frame.e.ether_dhost[0], frame.e.ether_dhost[1], frame.e.ether_dhost[2],
+	     frame.e.ether_dhost[3], frame.e.ether_dhost[4], frame.e.ether_dhost[5]);
+	DBG1(DBG_NET, "  ether source      %02x.%02x.%02x.%02x.%02x.%02x",
+	     frame.e.ether_shost[0], frame.e.ether_shost[1], frame.e.ether_shost[2],
+	     frame.e.ether_shost[3], frame.e.ether_shost[4], frame.e.ether_shost[5]);
+	DBG1(DBG_NET, "  arp ht=%d pt=%d hs=%d ps=%d op=%d",
+	     ntohs(frame.a.hardware_type), ntohs(frame.a.protocol_type),
+	     frame.a.hardware_size, frame.a.protocol_size, ntohs(frame.a.opcode));
+	DBG1(DBG_NET, "  arp sender %02x.%02x.%02x.%02x.%02x.%02x %d.%d.%d.%d",
+	     frame.a.sender_mac[0], frame.a.sender_mac[1], frame.a.sender_mac[2],
+	     frame.a.sender_mac[3], frame.a.sender_mac[4], frame.a.sender_mac[5],
+	     frame.a.sender_ip[0], frame.a.sender_ip[1], frame.a.sender_ip[2], frame.a.sender_ip[3]);
+	DBG1(DBG_NET, "  arp target %02x.%02x.%02x.%02x.%02x.%02x %d.%d.%d.%d",
+	     frame.a.target_mac[0], frame.a.target_mac[1], frame.a.target_mac[2],
+	     frame.a.target_mac[3], frame.a.target_mac[4], frame.a.target_mac[5],
+	     frame.a.target_ip[0], frame.a.target_ip[1], frame.a.target_ip[2], frame.a.target_ip[3]);
 
 	n = write(h->fd, &frame, sizeof(frame));
 	if (n != sizeof(frame)) {
@@ -350,7 +369,16 @@ handler_onarp(farp_handler* h)
 		local = host_create_from_chunk(AF_INET, chunk_create(ah->sender_ip, 4), 0);
 		remote = host_create_from_chunk(AF_INET, chunk_create(ah->target_ip, 4), 0);
 		if (h->this->listener->has_tunnel(h->this->listener, local, remote)) {
+			DBG1(DBG_NET, "Found tunnel %s %d.%d.%d.%d <-> %d.%d.%d.%d",
+			     h->name,
+			     ah->sender_ip[0], ah->sender_ip[1], ah->sender_ip[2], ah->sender_ip[3],
+			     ah->target_ip[0], ah->target_ip[1], ah->target_ip[2], ah->target_ip[3]);
 			handler_send(h, ah);
+		} else {
+			DBG1(DBG_NET, "No tunnel %s %d.%d.%d.%d <-> %d.%d.%d.%d",
+			     h->name,
+			     ah->sender_ip[0], ah->sender_ip[1], ah->sender_ip[2], ah->sender_ip[3],
+			     ah->target_ip[0], ah->target_ip[1], ah->target_ip[2], ah->target_ip[3]);
 		}
 		remote->destroy(remote);
 		local->destroy(local);
@@ -390,37 +418,36 @@ setup_handler(private_farp_spoofer_t* this, farp_handler* h)
 	snprintf(req.ifr_name, sizeof(req.ifr_name), "%s", h->name);
     
 	if ((h->fd = bpf_open()) < 0) {
-		DBG1(DBG_NET, "bpf_open: code=%d msg=%s", h->fd, strerror(errno));
+		DBG1(DBG_NET, "bpf_open(%s): code=%d msg=%s", h->name, h->fd, strerror(errno));
 		return h->fd;
 	}
 
 	if ((status = ioctl(h->fd, BIOCSETIF, &req)) < 0) {
-		DBG1(DBG_NET, "BIOCSETIF: code=%d msg=%s", status, strerror(errno));
+		DBG1(DBG_NET, "BIOCSETIF(%s): code=%d msg=%s", h->name, status, strerror(errno));
 		return status;
 	}
     
 	if ((status = ioctl(h->fd, BIOCSHDRCMPLT, &enable)) < 0) {
-		DBG1(DBG_NET, "BIOCSHDRCMPLT: code=%d msg=%s", status, strerror(errno));
+		DBG1(DBG_NET, "BIOCSHDRCMPLT(%s): code=%d msg=%s", h->name, status, strerror(errno));
 		return status;
 	}
     
 	if ((status = ioctl(h->fd, BIOCSSEESENT, &disable)) < 0) {
-		DBG1(DBG_NET, "BIOCSSEESENT: code=%d msg=%s", status, strerror(errno));
+		DBG1(DBG_NET, "BIOCSSEESENT(%s): code=%d msg=%s", h->name, status, strerror(errno));
 		return status;
 	}
     
 	if ((status = ioctl(h->fd, BIOCIMMEDIATE, &enable)) < 0) {
-		DBG1(DBG_NET, "BIOCIMMEDIATE: code=%d msg=%s", status, strerror(errno));
+		DBG1(DBG_NET, "BIOCIMMEDIATE(%s): code=%d msg=%s", h->name, status, strerror(errno));
 		return status;
 	}
     
 	if ((status = ioctl(h->fd, BIOCGDLT, &dlt)) < 0) {
-		DBG1(DBG_NET, "BIOCGDLT: code=%d msg=%s", status, strerror(errno));
 		return status;
 	}
 	if (dlt != DLT_EN10MB) {
 		errno = EINVAL;
-		DBG1(DBG_NET, "BIOCGDLT: code=%d msg=%s", -1, strerror(errno));
+		DBG1(DBG_NET, "BIOCGDLT(%s): code=%d msg=%s", h->name, -1, strerror(errno));
 		return -1;
 	}
     
@@ -428,17 +455,17 @@ setup_handler(private_farp_spoofer_t* this, farp_handler* h)
 	program.bf_insns = &instructions[0];
 
 	if ((status = ioctl(h->fd, BIOCSETF, &program)) < 0) {
-		DBG1(DBG_NET, "BIOCSETF: code=%d msg=%s", status, strerror(errno));
+		DBG1(DBG_NET, "BIOCSETF(%s): code=%d msg=%s", h->name, status, strerror(errno));
 		return status;
 	}
 
 	if ((status = ioctl(h->fd, BIOCGBLEN, &h->buflen)) < 0) {
-		DBG1(DBG_NET, "BIOCGBLEN: code=%d msg=%s", status, strerror(errno));
+		DBG1(DBG_NET, "BIOCGBLEN(%s): code=%d msg=%s", h->name, status, strerror(errno));
 		return status;
 	}
     
 	if ((h->bufdat = malloc(h->buflen)) == NULL) {
-		DBG1(DBG_NET, "malloc(%lu): failed", h->buflen);
+		DBG1(DBG_NET, "malloc(%s, %lu): failed", h->name, h->buflen);
 		errno = ENOMEM;
 		return -1;
 	}
@@ -477,10 +504,12 @@ setup_handlers(private_farp_spoofer_t* this)
 			break;
 		case AF_INET: {
 			in = (struct sockaddr_in*)ifa->ifa_addr;
-			h = handler_find(this, ifa->ifa_name);
-			if (h) {
-				memcpy(h->ipv4, &in->sin_addr.s_addr, sizeof(in->sin_addr.s_addr));
-				h->fd++;
+			if (in->sin_addr.s_addr != 0) {
+				h = handler_find(this, ifa->ifa_name);
+				if (h) {
+					memcpy(h->ipv4, &in->sin_addr.s_addr, sizeof(in->sin_addr.s_addr));
+					h->fd++;
+				}
 			}
 			break;
 		}
@@ -492,9 +521,17 @@ setup_handlers(private_farp_spoofer_t* this)
 
 	enumerator = this->handlers->create_enumerator(this->handlers);
 	while (enumerator->enumerate(enumerator, &h)) {
-		if (setup_handler(this, h) < 0) {
+		if (h->fd < 2) {
+			h->fd = -1;
 			this->handlers->remove_at(this->handlers, enumerator);
 			handler_free(h);
+		} else if (setup_handler(this, h) < 0) {
+			this->handlers->remove_at(this->handlers, enumerator);
+			handler_free(h);
+		} else {
+			DBG1(DBG_NET, "Listening for ARP requests on %s ipv4=%d.%d.%d.%d ether=%02x.%02x.%02x.%02x.%02x.%02x",
+			     h->name, h->ipv4[0], h->ipv4[1], h->ipv4[2], h->ipv4[3],
+			     h->mac[0], h->mac[1], h->mac[2], h->mac[3], h->mac[4], h->mac[5]);
 		}
 	}
 	enumerator->destroy(enumerator);
