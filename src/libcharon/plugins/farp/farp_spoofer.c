@@ -374,11 +374,11 @@ handler_onarp(farp_handler* h)
 			     ah->sender_ip[0], ah->sender_ip[1], ah->sender_ip[2], ah->sender_ip[3],
 			     ah->target_ip[0], ah->target_ip[1], ah->target_ip[2], ah->target_ip[3]);
 			handler_send(h, ah);
-		} else {
-			DBG1(DBG_NET, "No tunnel %s %d.%d.%d.%d <-> %d.%d.%d.%d",
-			     h->name,
-			     ah->sender_ip[0], ah->sender_ip[1], ah->sender_ip[2], ah->sender_ip[3],
-			     ah->target_ip[0], ah->target_ip[1], ah->target_ip[2], ah->target_ip[3]);
+		//} else {
+		//	DBG1(DBG_NET, "No tunnel %s %d.%d.%d.%d <-> %d.%d.%d.%d",
+		//	     h->name,
+		//	     ah->sender_ip[0], ah->sender_ip[1], ah->sender_ip[2], ah->sender_ip[3],
+		//	     ah->target_ip[0], ah->target_ip[1], ah->target_ip[2], ah->target_ip[3]);
 		}
 		remote->destroy(remote);
 		local->destroy(local);
