@@ -17,10 +17,20 @@
 
 #include <errno.h>
 #include <unistd.h>
+#ifndef __APPLE__
 #include <sys/socket.h>
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>
 #include <linux/filter.h>
+#else
+#include <fcntl.h>
+#include <ifaddrs.h>
+#include <net/bpf.h>
+#include <net/ethernet.h>
+#include <net/if.h>
+#include <net/if_arp.h>
+#include <net/if_dl.h>
+#endif /* __APPLE__ */
 #include <sys/ioctl.h>
 
 #include <daemon.h>
@@ -44,10 +54,17 @@ struct private_farp_spoofer_t {
 	 */
 	farp_listener_t *listener;
 
+#ifndef __APPLE__
 	/**
 	 * RAW socket for ARP requests
 	 */
 	int skt;
+#else
+	/**
+	 * Linked list of interface handlers
+	 */
+	linked_list_t *handlers;
+#endif /* __APPLE__ */
 };
 
 /**
@@ -65,6 +82,7 @@ typedef struct __attribute__((packed)) {
 	uint8_t target_ip[4];
 } arp_t;
 
+#ifndef __APPLE__
 /**
  * Send faked ARP response
  */
@@ -185,3 +203,338 @@ farp_spoofer_t *farp_spoofer_create(farp_listener_t *listener)
 
 	return &this->public;
 }
+
+#else
+
+struct farp_handler {
+	private_farp_spoofer_t *this;
+	char* name;
+	u_int8_t ipv4[4];
+	u_int8_t mac[6];
+	int fd;
+	size_t buflen;
+	u_int8_t* bufdat;
+};
+typedef struct farp_handler farp_handler;
+
+struct frame_t {
+	struct ether_header e;
+	arp_t a;
+};
+typedef struct frame_t frame_t;
+
+static int
+bpf_open()
+{
+	static int no_cloning_bpf = 0;
+	char device[12]; // /dev/bpf000\0
+	int n = no_cloning_bpf ? 0 : -1;
+	int fd;
+
+	do {
+		if (n < 0) {
+			snprintf(device, sizeof(device), "/dev/bpf");
+		} else {
+			snprintf(device, sizeof(device), "/dev/bpf%d", n);
+		}
+
+		fd = open(device, O_RDWR);
+
+		if (n++ < 0 && fd < 0 && errno == ENOENT) {
+			no_cloning_bpf = 1;
+			errno = EBUSY;
+		}
+	} while (fd < 0 && errno == EBUSY && n < 1000);
+
+	return fd;
+}
+
+static void
+handler_free(farp_handler* h)
+{
+	if (h->fd >= 0) {
+		lib->watcher->remove(lib->watcher, h->fd);
+		close(h->fd);
+		h->fd = -1;
+	}
+	if (h->bufdat) {
+		free(h->bufdat);
+		h->bufdat = NULL;
+	}
+	if (h->name) {
+		free(h->name);
+		h->name = NULL;
+	}
+	h->this = NULL;
+	free(h);
+}
+
+static farp_handler*
+handler_find(private_farp_spoofer_t* this, char* interface_name)
+{
+	farp_handler *i;
+	enumerator_t *enumerator = this->handlers->create_enumerator(this->handlers);
+	while (enumerator->enumerate(enumerator, &i)) {
+		if (strcmp(i->name, interface_name) == 0) {
+			break;
+		}
+		i = NULL;
+	}
+	enumerator->destroy(enumerator);
+
+	if (!i) {
+		i = malloc_thing(farp_handler);
+		if (i) {
+			memset(i, 0, sizeof(farp_handler));
+			i->this = this;
+			i->name = strdup(interface_name);
+			if (i->name) {
+				this->handlers->insert_last(this->handlers, i);
+			} else {
+				free(i);
+				i = NULL;
+			}
+		}
+	}
+
+	return i;
+}
+
+static void
+handler_send(farp_handler* h, arp_t* arpreq)
+{
+	frame_t frame;
+	ssize_t n;
+
+	memcpy(frame.e.ether_dhost, arpreq->sender_mac, sizeof(arpreq->sender_mac));
+	memcpy(frame.e.ether_shost, h->mac, sizeof(h->mac));
+	frame.e.ether_type = ETHERTYPE_ARP;
+
+	frame.a.hardware_type = arpreq->hardware_type;
+	frame.a.protocol_type = arpreq->protocol_type;
+	frame.a.hardware_size = arpreq->hardware_size;
+	frame.a.protocol_size = arpreq->protocol_size;
+	frame.a.opcode = ARPOP_REPLY;
+	memcpy(frame.a.sender_mac, h->mac, sizeof(h->mac));
+	memcpy(frame.a.sender_ip, h->ipv4, sizeof(h->ipv4));
+	memcpy(frame.a.target_mac, arpreq->sender_mac, sizeof(arpreq->sender_mac));
+	memcpy(frame.a.target_ip, arpreq->sender_ip, sizeof(arpreq->sender_ip));
+
+	n = write(h->fd, &frame, sizeof(frame));
+	if (n != sizeof(frame)) {
+		DBG1(DBG_NET, "arp reply failed: code=%d msg=%s", n, strerror(errno));
+	}
+}
+
+static bool
+handler_onarp(farp_handler* h)
+{
+	u_int8_t* p = h->bufdat;
+	ssize_t n = read(h->fd, h->bufdat, h->buflen);
+	struct bpf_hdr* bh;
+	struct ether_header* eh;
+	arp_t* ah;
+	host_t* local;
+	host_t* remote;
+
+	if (n <= 0) {
+		DBG1(DBG_NET, "farp %s closed: code=%d msg=%s", h->name, n, strerror(errno));
+		return -1;
+	}
+
+	while (p < h->bufdat + n) {
+		bh = (struct bpf_hdr*)p;
+		eh = (struct ether_header *)(p + bh->bh_hdrlen);
+		ah = (arp_t*)(p + bh->bh_hdrlen + sizeof(struct ether_header));
+	
+		local = host_create_from_chunk(AF_INET, chunk_create(ah->sender_ip, 4), 0);
+		remote = host_create_from_chunk(AF_INET, chunk_create(ah->target_ip, 4), 0);
+		if (h->this->listener->has_tunnel(h->this->listener, local, remote)) {
+			handler_send(h, ah);
+		}
+		remote->destroy(remote);
+		local->destroy(local);
+
+		p += BPF_WORDALIGN(bh->bh_hdrlen + bh->bh_caplen);
+	}
+
+	return TRUE;
+}
+
+static int
+setup_handler(private_farp_spoofer_t* this, farp_handler* h)
+{
+	int status;
+	struct bpf_insn instructions[] = {
+		BPF_STMT(BPF_LD+BPF_W+BPF_LEN, 0),
+		BPF_JUMP(BPF_JMP+BPF_JGE+BPF_K, sizeof(struct ether_header) + sizeof(arp_t), 0, 11),
+		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, offsetof(struct  ether_header, ether_type)),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, ETHERTYPE_ARP, 0, 9),
+		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, sizeof(struct ether_header) + offsetof(arp_t, protocol_type)),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, ETHERTYPE_IP, 0, 7),
+		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, sizeof(struct ether_header) + offsetof(arp_t, hardware_size)),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 6, 0, 5),
+		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, sizeof(struct ether_header) + offsetof(arp_t, protocol_size)),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 4, 0, 3),
+		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, sizeof(struct ether_header) + offsetof(arp_t, opcode)),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, ARPOP_REQUEST, 0, 1),
+		BPF_STMT(BPF_RET+BPF_K, 14 + sizeof(arp_t)),
+		BPF_STMT(BPF_RET+BPF_K, 0)
+	};
+	u_int32_t disable = 1;
+	u_int32_t enable = 1;
+	u_int32_t dlt = 0;
+	struct bpf_program program;
+	struct ifreq req;
+    
+	snprintf(req.ifr_name, sizeof(req.ifr_name), "%s", h->name);
+    
+	if ((h->fd = bpf_open()) < 0) {
+		DBG1(DBG_NET, "bpf_open: code=%d msg=%s", h->fd, strerror(errno));
+		return h->fd;
+	}
+
+	if ((status = ioctl(h->fd, BIOCSETIF, &req)) < 0) {
+		DBG1(DBG_NET, "BIOCSETIF: code=%d msg=%s", status, strerror(errno));
+		return status;
+	}
+    
+	if ((status = ioctl(h->fd, BIOCSHDRCMPLT, &enable)) < 0) {
+		DBG1(DBG_NET, "BIOCSHDRCMPLT: code=%d msg=%s", status, strerror(errno));
+		return status;
+	}
+    
+	if ((status = ioctl(h->fd, BIOCSSEESENT, &disable)) < 0) {
+		DBG1(DBG_NET, "BIOCSSEESENT: code=%d msg=%s", status, strerror(errno));
+		return status;
+	}
+    
+	if ((status = ioctl(h->fd, BIOCIMMEDIATE, &enable)) < 0) {
+		DBG1(DBG_NET, "BIOCIMMEDIATE: code=%d msg=%s", status, strerror(errno));
+		return status;
+	}
+    
+	if ((status = ioctl(h->fd, BIOCGDLT, &dlt)) < 0) {
+		DBG1(DBG_NET, "BIOCGDLT: code=%d msg=%s", status, strerror(errno));
+		return status;
+	}
+	if (dlt != DLT_EN10MB) {
+		errno = EINVAL;
+		DBG1(DBG_NET, "BIOCGDLT: code=%d msg=%s", -1, strerror(errno));
+		return -1;
+	}
+    
+	program.bf_len = sizeof(instructions) / sizeof(struct bpf_insn);
+	program.bf_insns = &instructions[0];
+
+	if ((status = ioctl(h->fd, BIOCSETF, &program)) < 0) {
+		DBG1(DBG_NET, "BIOCSETF: code=%d msg=%s", status, strerror(errno));
+		return status;
+	}
+
+	if ((status = ioctl(h->fd, BIOCGBLEN, &h->buflen)) < 0) {
+		DBG1(DBG_NET, "BIOCGBLEN: code=%d msg=%s", status, strerror(errno));
+		return status;
+	}
+    
+	if ((h->bufdat = malloc(h->buflen)) == NULL) {
+		DBG1(DBG_NET, "malloc(%lu): failed", h->buflen);
+		errno = ENOMEM;
+		return -1;
+	}
+
+	lib->watcher->add(lib->watcher, h->fd, WATCHER_READ, (watcher_cb_t) handler_onarp, h);
+
+	return 0;
+}
+
+static int
+setup_handlers(private_farp_spoofer_t* this)
+{
+	int status;
+	struct ifaddrs* ifas;
+	struct ifaddrs* ifa;
+	struct sockaddr_dl* dl;
+	struct sockaddr_in* in;
+	farp_handler* h;
+	enumerator_t *enumerator;
+
+	if ((status = getifaddrs(&ifas)) < 0) {
+		DBG1(DBG_NET, "farp cannot find interfaces: code=%d msg=%s", status, strerror(errno));
+		return -1;
+	}
+	for (ifa = ifas; ifa != NULL; ifa = ifa->ifa_next) {
+		switch (ifa->ifa_addr->sa_family) {
+		case AF_LINK:
+			dl = (struct sockaddr_dl*)ifa->ifa_addr;
+			if (dl->sdl_alen == 6) {
+				h = handler_find(this, ifa->ifa_name);
+				if (h) {
+					memcpy(h->mac, &dl->sdl_data[dl->sdl_nlen], dl->sdl_alen);
+					h->fd++;
+				}
+			}
+			break;
+		case AF_INET: {
+			in = (struct sockaddr_in*)ifa->ifa_addr;
+			h = handler_find(this, ifa->ifa_name);
+			if (h) {
+				memcpy(h->ipv4, &in->sin_addr.s_addr, sizeof(in->sin_addr.s_addr));
+				h->fd++;
+			}
+			break;
+		}
+		default:
+			break;
+		}
+	}
+	freeifaddrs(ifas);
+
+	enumerator = this->handlers->create_enumerator(this->handlers);
+	while (enumerator->enumerate(enumerator, &h)) {
+		if (setup_handler(this, h) < 0) {
+			this->handlers->remove_at(this->handlers, enumerator);
+			handler_free(h);
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return this->handlers->get_count(this->handlers) > 0 ? 0 : -1;
+}
+
+METHOD(farp_spoofer_t, destroy, void, private_farp_spoofer_t *this)
+{
+	farp_handler* h;
+	enumerator_t *enumerator = this->handlers->create_enumerator(this->handlers);
+	while (enumerator->enumerate(enumerator, &h)) {
+		handler_free(h);
+	}
+	enumerator->destroy(enumerator);
+	this->handlers->destroy(this->handlers);
+	free(this);
+}
+
+/**
+ * See header
+ */
+farp_spoofer_t *farp_spoofer_create(farp_listener_t *listener)
+{
+	private_farp_spoofer_t *this;
+
+	INIT(this,
+		.public = {
+			.destroy = _destroy,
+		},
+		.listener = listener,
+		.handlers = linked_list_create(),
+	);
+
+	if (setup_handlers(this) < 0) {
+		this->public.destroy(&this->public);
+		return NULL;
+	}
+
+	return &this->public;
+}
+
+#endif /* __APPLE__ */
