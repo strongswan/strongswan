@@ -27,7 +27,9 @@
 #include <sys/stat.h>
 #include <libgen.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <errno.h>
+
 
 #ifndef TPM_TAG_QUOTE_INFO2
 #define TPM_TAG_QUOTE_INFO2 0x0036
@@ -88,6 +90,11 @@ struct private_pts_t {
 	 * Primary key of platform entry in database
 	 */
 	int platform_id;
+
+	/**
+	 * List of directory symlinks received from IMC
+	 */
+	pts_symlinks_t *symlinks;
 
 	/**
 	 * TRUE if IMC-PTS, FALSE if IMV-PTS
@@ -309,6 +316,104 @@ METHOD(pts_t, set_platform_id, void,
 	this->platform_id = pid;
 }
 
+METHOD(pts_t, extract_symlinks, pts_symlinks_t*,
+	private_pts_t *this, chunk_t pathname)
+{
+#ifndef WIN32
+	char path[BUF_LEN], real_path[BUF_LEN];
+	size_t path_len, real_path_len;
+	struct dirent *entry;
+	struct stat st;
+	DIR *dir;
+
+	/* open directory and prepare pathnames */
+	snprintf(path, BUF_LEN-1, "%.*s", (int)pathname.len, pathname.ptr);
+	dir = opendir(path);
+	if (!dir)
+	{
+		DBG1(DBG_PTS, "opening directory '%s' failed: %s", path,
+					   strerror(errno));
+		return NULL;
+	}
+	if (pathname.len == 1 && path[0] == '/')
+	{
+		path_len = 1;
+	}
+	else
+	{
+		path[pathname.len] = '/';
+		path_len = pathname.len + 1;
+	}
+	real_path[0] = '/';
+
+	/* symlinks object is owned by pts object */
+	DESTROY_IF(this->symlinks);
+	this->symlinks = pts_symlinks_create();
+
+	while (TRUE)
+	{
+
+		entry = readdir(dir);
+		if (!entry)
+		{
+			/* no more entries -> exit */
+			break;
+		}
+		if (streq(entry->d_name, ".") || streq(entry->d_name, ".."))
+		{
+			continue;
+		}
+
+		/* assemble absolute path */
+		snprintf(path + path_len, BUF_LEN - path_len, "%s", entry->d_name);
+
+		/* only evaluate symlinks pointing to directories */
+		if (lstat(path, &st) == -1 || !S_ISLNK(st.st_mode) ||
+			 stat(path, &st) == -1 || !S_ISDIR(st.st_mode))
+		{
+			continue;
+		}
+
+		real_path_len = readlink(path, real_path + 1, BUF_LEN - 1);
+		if (real_path_len <= 0)
+		{
+			continue;
+		}
+		this->symlinks->add(this->symlinks, chunk_from_str(path),
+							chunk_create(real_path, 1 + real_path_len));
+	}
+	closedir(dir);
+#endif
+
+	return this->symlinks;
+}
+
+
+METHOD(pts_t, get_symlinks, pts_symlinks_t*,
+	private_pts_t *this)
+{
+	return this->symlinks;
+}
+
+METHOD(pts_t, set_symlinks, void,
+	private_pts_t *this, pts_symlinks_t *symlinks)
+{
+	enumerator_t *enumerator;
+	chunk_t symlink, dir;
+
+	DESTROY_IF(this->symlinks);
+	this->symlinks = symlinks->get_ref(symlinks);
+
+	DBG2(DBG_PTS, "adding directory symlinks:");
+	enumerator = symlinks->create_enumerator(symlinks);
+	while (enumerator->enumerate(enumerator, &symlink, &dir))
+	{
+		DBG2(DBG_PTS, "  %.*s -> %.*s", (int)symlink.len, symlink.ptr,
+										(int)dir.len, dir.ptr);
+	}
+	enumerator->destroy(enumerator);
+}
+
 METHOD(pts_t, get_tpm, tpm_tss_t*,
 	private_pts_t *this)
 {
@@ -354,7 +459,7 @@ METHOD(pts_t, set_tpm_version_info, void,
 		{
 			DBG2(DBG_PTS, "%s 1.2 rev. %u.%u.%u.%u %.*s", TPM_VERSION_INFO_LABEL,
 				(uint32_t)major, (uint32_t)minor, (uint32_t)rev_major,
-				(uint32_t)rev_minor, vendor.len, vendor.ptr);
+				(uint32_t)rev_minor, (int)vendor.len, vendor.ptr);
 		}
 		else
 		{
@@ -377,7 +482,7 @@ METHOD(pts_t, set_tpm_version_info, void,
 		{
 			DBG2(DBG_PTS, "%s 2.0 rev. %4.2f %u %.*s - startup locality: %u",
 				 TPM_VERSION_INFO_LABEL, revision/100.0, year,
-				 vendor.len, vendor.ptr, (uint32_t)locality);
+				 (int)vendor.len, vendor.ptr, (uint32_t)locality);
 		}
 		else
 		{
@@ -873,6 +978,7 @@ METHOD(pts_t, destroy, void,
 	DESTROY_IF(this->pcrs);
 	DESTROY_IF(this->aik_cert);
 	DESTROY_IF(this->dh);
+	DESTROY_IF(this->symlinks);
 	free(this->initiator_nonce.ptr);
 	free(this->responder_nonce.ptr);
 	free(this->secret.ptr);
@@ -901,6 +1007,9 @@ pts_t *pts_create(bool is_imc)
 			.calculate_secret = _calculate_secret,
 			.get_platform_id = _get_platform_id,
 			.set_platform_id = _set_platform_id,
+			.extract_symlinks = _extract_symlinks,
+			.get_symlinks = _get_symlinks,
+			.set_symlinks = _set_symlinks,
 			.get_tpm = _get_tpm,
 			.get_tpm_version_info = _get_tpm_version_info,
 			.set_tpm_version_info = _set_tpm_version_info,

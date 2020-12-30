@@ -13,6 +13,9 @@
  * for more details.
  */
 
+#define _GNU_SOURCE
+#include <stdio.h>
+
 #include "ita_comp_ima.h"
 #include "ita_comp_func_name.h"
 
@@ -497,6 +500,123 @@ static pts_meas_algorithms_t parse_validation_uri(pts_comp_evidence_t *evidence,
 	return hash_algo;
 }
 
+/**
+ * Look up all hashes for a given file and OS in the database and check
+ * if one of them matches the IMA measurement
+ */
+static status_t verify_ima_measuremnt(pts_t *pts, pts_database_t *pts_db,
+									  pts_meas_algorithms_t hash_algo,
+									  pts_meas_algorithms_t algo,
+									  bool pcr_padding, chunk_t measurement,
+									  char* ima_algo, char* ima_name,
+									  char *filename)
+{
+	status_t status = NOT_FOUND;
+	pts_meas_algorithms_t meas_algo;
+	uint8_t *hex_digest_buf;
+	uint8_t digest_buf[HASH_SIZE_SHA512];
+	uint8_t hash_buf[HASH_SIZE_SHA512];
+	size_t hash_size;
+	chunk_t hash, digest, hex_digest;
+	enumerator_t *e;
+
+	hash_size = pts_meas_algo_hash_size(algo);
+	hash = chunk_create(hash_buf, hash_size);
+
+	if (pcr_padding)
+	{
+		memset(hash_buf, 0x00, hash_size);
+		meas_algo = PTS_MEAS_ALGO_SHA1;
+	}
+	else
+	{
+		meas_algo = algo;
+	}
+
+	e = pts_db->create_file_meas_enumerator(pts_db, pts->get_platform_id(pts),
+											hash_algo, filename);
+	if (!e)
+	{
+		return FAILED;
+	}
+
+	while (e->enumerate(e, &hex_digest_buf))
+	{
+		hex_digest = chunk_from_str(hex_digest_buf);
+		digest = chunk_from_hex(hex_digest, digest_buf);
+
+		if (!pts_ima_event_hash(digest, ima_algo, ima_name,	meas_algo, hash_buf))
+		{
+			status = FAILED;
+			break;
+		}
+		if (chunk_equals_const(measurement, hash))
+		{
+			status = SUCCESS;
+			break;
+		}
+		else
+		{
+			status = VERIFY_ERROR;
+		}
+	}
+	e->destroy(e);
+
+	return status;
+}
+
+/**
+ * Generate an alternative pathname based on symbolic link info
+ */
+static char* alternative_pathname(pts_t * pts, char *path)
+{
+	pts_symlinks_t *symlinks;
+	enumerator_t *enumerator;
+	chunk_t prefix1, prefix2;
+	char *alt_path = NULL;
+	size_t path_len = strlen(path);
+	int ret;
+
+	symlinks = pts->get_symlinks(pts);
+	if (!symlinks || symlinks->get_count(symlinks) == 0)
+	{
+		return NULL;
+	}
+
+	enumerator = symlinks->create_enumerator(symlinks);
+	while (enumerator->enumerate(enumerator, &prefix1, &prefix2))
+	{
+		/* replace prefix2 by prefix1*/
+		if (path_len > prefix2.len && path[prefix2.len] == '/' &&
+			memeq(path, prefix2.ptr, prefix2.len))
+		{
+			ret = asprintf(&alt_path, "%.*s%s", (int)prefix1.len, prefix1.ptr,
+												path + prefix2.len);
+			if (ret <= 0)
+			{
+				alt_path = NULL;
+			}
+			break;
+		}
+
+		/* replace prefix1 by prefix2 */
+		if (path_len > prefix1.len && path[prefix1.len] == '/' &&
+			memeq(path, prefix1.ptr, prefix1.len))
+		{
+			ret = asprintf(&alt_path, "%.*s%s", (int)prefix2.len, prefix2.ptr,
+												path + prefix1.len);
+			if (ret <= 0)
+			{
+				alt_path = NULL;
+			}
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return alt_path;
+}
+
 METHOD(pts_component_t, verify, status_t,
 	pts_ita_comp_ima_t *this, uint8_t qualifier, pts_t *pts,
 	pts_comp_evidence_t *evidence)
@@ -665,14 +785,8 @@ METHOD(pts_component_t, verify, status_t,
 				break;
 			case IMA_STATE_RUNTIME:
 			{
-				chunk_t hex_digest, digest, hash;
-				uint8_t digest_buf[HASH_SIZE_SHA512], *hex_digest_buf;
-				uint8_t hash_buf[HASH_SIZE_SHA512];
-				size_t hash_size;
-				pts_meas_algorithms_t meas_algo;
-				enumerator_t *e;
-
 				this->count++;
+
 				if (evidence->get_validation(evidence, NULL) !=
 							PTS_COMP_EVID_VALIDATION_PASSED)
 				{
@@ -680,50 +794,30 @@ METHOD(pts_component_t, verify, status_t,
 					this->count_failed++;
 					return FAILED;
 				}
-				hash_size = pts_meas_algo_hash_size(algo);
-				hash = chunk_create(hash_buf, hash_size);
 
-				if (this->pcr_padding)
-				{
-					memset(hash_buf, 0x00, hash_size);
-					meas_algo = PTS_MEAS_ALGO_SHA1;
-				}
-				else
-				{
-					meas_algo = algo;
-				}
+				status = verify_ima_measuremnt(pts, this->pts_db,
+											   hash_algo, algo,
+											   this->pcr_padding, measurement,
+											   ima_algo, ima_name, ima_name);
 
-				e = this->pts_db->create_file_meas_enumerator(this->pts_db,
-												pts->get_platform_id(pts),
-												hash_algo, ima_name);
-				if (e)
+				if (status == NOT_FOUND || status == VERIFY_ERROR)
 				{
-					while (e->enumerate(e, &hex_digest_buf))
+					status_t alt_status;
+					char *alt_path;
+
+					alt_path = alternative_pathname(pts, ima_name);
+					if (alt_path)
 					{
-						hex_digest = chunk_from_str(hex_digest_buf);
-						digest = chunk_from_hex(hex_digest, digest_buf);
-
-						if (!pts_ima_event_hash(digest, ima_algo, ima_name,
-												meas_algo, hash_buf))
+						alt_status = verify_ima_measuremnt(pts, this->pts_db,
+											   hash_algo, algo,
+											   this->pcr_padding, measurement,
+											   ima_algo, ima_name, alt_path);
+						if (alt_status != NOT_FOUND)
 						{
-							status = FAILED;
-							break;
+							status = alt_status;
 						}
-						if (chunk_equals_const(measurement, hash))
-						{
-							status = SUCCESS;
-							break;
-						}
-						else
-						{
-							status = VERIFY_ERROR;
-						}
+						free(alt_path);
 					}
-					e->destroy(e);
-				}
-				else
-				{
-					status = FAILED;
 				}
 
 				switch (status)

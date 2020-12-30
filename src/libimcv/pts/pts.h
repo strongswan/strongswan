@@ -32,6 +32,7 @@ typedef struct pts_t pts_t;
 #include "pts_dh_group.h"
 #include "pts_pcr.h"
 #include "pts_req_func_comp_evid.h"
+#include "pts_symlinks.h"
 #include "components/pts_comp_func_name.h"
 
 #include <tpm_tss_quote_info.h>
@@ -174,6 +175,29 @@ struct pts_t {
 	 * @param pid				Primary key of platform entry in database
 	 */
 	void (*set_platform_id)(pts_t *this, int pid);
+
+	/**
+	 * Extract all directory symlinks contained in a directory
+	 *
+	 * @param pathname			Absolute pathname of directory
+	 * @return					List of directory symlinks
+	 */
+	pts_symlinks_t* (*extract_symlinks)(pts_t *this, chunk_t pathname);
+
+	/**
+	 * Get list of directory symlinks received from IMC
+	 *
+	 * @return					List of symbolic links
+	 */
+	pts_symlinks_t* (*get_symlinks)(pts_t *this);
+
+	/**
+	 * Set list of directory symlinks received from IMC
+	 *
+	 * @param symlinks			List of symbolic links
+	 */
+	void (*set_symlinks)(pts_t *this, pts_symlinks_t *symlinks);
+
 
 	/**
 	 * Get TPM object handle
