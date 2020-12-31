@@ -285,10 +285,14 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 		 fips_140_2 ? "FIPS 140-2" : (this->fips_186_4 ? "FIPS 186-4" : ""));
 
 	/* determine if TPM uses old event digest format and a different locality */
-	if (streq(manufacturer, "INTC") && revision == 116 && year == 2016)
+	if (streq(manufacturer, "INTC"))
 	{
-		this->old_event_digest_format = TRUE;
 		locality = 0;
+
+		if (revision == 116 && year == 2016)
+		{
+			this->old_event_digest_format = TRUE;
+		}
 	}
 
 	/* construct TPM 2.0 version_info object */
