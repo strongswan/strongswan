@@ -209,8 +209,8 @@ METHOD(plugin_t, get_features, int,
 	#if defined(HAVE_ECC192) || defined(HAVE_ALL_CURVES)
 			PLUGIN_PROVIDE(DH, ECP_192_BIT),
 	#endif
-	#ifdef HAVE_BRAINPOOL
-		#if !define(NO_ECC256) || defined(HAVE_ALL_CURVES)
+	#ifdef HAVE_ECC_BRAINPOOL
+		#if !defined(NO_ECC256) || defined(HAVE_ALL_CURVES)
 			PLUGIN_PROVIDE(DH, ECP_256_BP),
 		#endif
 		#if defined(HAVE_ECC384) || defined(HAVE_ALL_CURVES)

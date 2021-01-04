@@ -333,7 +333,7 @@ wolfssl_ec_diffie_hellman_t *wolfssl_ec_diffie_hellman_create(diffie_hellman_gro
 			this->curve_id = ECC_SECP521R1;
 			this->keysize = (521 + 7) / 8;
 			break;
-#ifdef HAVE_BRAINPOOL
+#ifdef HAVE_ECC_BRAINPOOL
 		case ECP_224_BP:
 			this->curve_id = ECC_BRAINPOOLP224R1;
 			this->keysize = 224 / 8;
