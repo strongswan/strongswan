@@ -194,32 +194,41 @@ METHOD(plugin_t, get_features, int,
 #ifdef HAVE_ECC_DHE
 		/* EC DH groups */
 		PLUGIN_REGISTER(DH, wolfssl_ec_diffie_hellman_create),
-	#if !defined(NO_ECC256) || defined(HAVE_ALL_CURVES)
+	#if (!defined(NO_ECC256) || defined(HAVE_ALL_CURVES)) && \
+		(!defined(ECC_MIN_KEY_SZ) || ECC_MIN_KEY_SZ <= 256)
 			PLUGIN_PROVIDE(DH, ECP_256_BIT),
 	#endif
-	#if defined(HAVE_ECC384) || defined(HAVE_ALL_CURVES)
+	#if (defined(HAVE_ECC384) || defined(HAVE_ALL_CURVES)) && \
+		(!defined(ECC_MIN_KEY_SZ) || ECC_MIN_KEY_SZ <= 384)
 			PLUGIN_PROVIDE(DH, ECP_384_BIT),
 	#endif
-	#if defined(HAVE_ECC521) || defined(HAVE_ALL_CURVES)
+	#if (defined(HAVE_ECC521) || defined(HAVE_ALL_CURVES)) && \
+		(!defined(ECC_MIN_KEY_SZ) || ECC_MIN_KEY_SZ <= 521)
 			PLUGIN_PROVIDE(DH, ECP_521_BIT),
 	#endif
-	#if defined(HAVE_ECC224) || defined(HAVE_ALL_CURVES)
+	#if (defined(HAVE_ECC224) || defined(HAVE_ALL_CURVES)) && \
+		 (!defined(ECC_MIN_KEY_SZ) || ECC_MIN_KEY_SZ <= 224)
 			PLUGIN_PROVIDE(DH, ECP_224_BIT),
 	#endif
-	#if defined(HAVE_ECC192) || defined(HAVE_ALL_CURVES)
+	#if (defined(HAVE_ECC192) || defined(HAVE_ALL_CURVES)) && \
+		 (!defined(ECC_MIN_KEY_SZ) || ECC_MIN_KEY_SZ <= 192)
 			PLUGIN_PROVIDE(DH, ECP_192_BIT),
 	#endif
 	#ifdef HAVE_ECC_BRAINPOOL
-		#if !defined(NO_ECC256) || defined(HAVE_ALL_CURVES)
+		#if (!defined(NO_ECC256) || defined(HAVE_ALL_CURVES)) && \
+			(!defined(ECC_MIN_KEY_SZ) || ECC_MIN_KEY_SZ <= 256)
 			PLUGIN_PROVIDE(DH, ECP_256_BP),
 		#endif
-		#if defined(HAVE_ECC384) || defined(HAVE_ALL_CURVES)
+		#if (defined(HAVE_ECC384) || defined(HAVE_ALL_CURVES))  && \
+			(!defined(ECC_MIN_KEY_SZ) || ECC_MIN_KEY_SZ <= 384)
 			PLUGIN_PROVIDE(DH, ECP_384_BP),
 		#endif
-		#if defined(HAVE_ECC512) || defined(HAVE_ALL_CURVES)
+		#if (defined(HAVE_ECC512) || defined(HAVE_ALL_CURVES)) && \
+			(!defined(ECC_MIN_KEY_SZ) || ECC_MIN_KEY_SZ <= 512)
 			PLUGIN_PROVIDE(DH, ECP_512_BP),
 		#endif
-		#if defined(HAVE_ECC224) || defined(HAVE_ALL_CURVES)
+		#if (defined(HAVE_ECC224) || defined(HAVE_ALL_CURVES)) && \
+			(!defined(ECC_MIN_KEY_SZ) || ECC_MIN_KEY_SZ <= 224)
 			PLUGIN_PROVIDE(DH, ECP_224_BP),
 		#endif
 	#endif
