@@ -1039,7 +1039,8 @@ pts_t *pts_create(bool is_imc)
 		{
 			this->proto_caps |= PTS_PROTO_CAPS_T | PTS_PROTO_CAPS_D;
 			this->tpm_version = this->tpm->get_version(this->tpm);
-			this->tpm_version_info = this->tpm->get_version_info(this->tpm);
+			this->tpm_version_info = chunk_clone(
+										this->tpm->get_version_info(this->tpm));
 			load_aik(this);
 		}
 	}
