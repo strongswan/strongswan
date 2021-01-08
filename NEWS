@@ -1,3 +1,13 @@
+strongswan-5.9.2
+----------------
+
+- Together with a Linux 5.8 kernel supporting the IMA measurement of the
+  grub bootloader and the Linux kernel, the strongSwan Attestation IMC
+  allows to do remote attestation of the complete boot phase. A recent
+  TPM 2.0 device with a SHA-256 PCR bank is required, so that both BIOS
+  and IMA file measurements are based on SHA-256 hashes.
+ 
+
 strongswan-5.9.1
 ----------------
 
