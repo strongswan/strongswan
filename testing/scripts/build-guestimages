@@ -41,7 +41,7 @@ do_on_exit umount $LOOPDIR
 for host in $STRONGSWANHOSTS
 do
 	log_action "Creating guest image for $host"
-	execute "qemu-img create -b $ROOTIMG -f $IMGEXT $IMGDIR/$host.$IMGEXT" 0
+	execute "qemu-img create -b $ROOTIMG -f $IMGEXT -F $IMGEXT $IMGDIR/$host.$IMGEXT" 0
 	execute "qemu-nbd -c $NBDEV $IMGDIR/$host.$IMGEXT" 0
 	partprobe $NBDEV
 	execute "mount $NBDPARTITION $LOOPDIR" 0

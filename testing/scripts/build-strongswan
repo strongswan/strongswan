@@ -96,7 +96,7 @@ case "$GUEST" in
 "")
 	if [ ! -f "$ROOTIMG" -o "$REPLACE" ]; then
 		log_action "Creating root image $ROOTIMG"
-		execute "qemu-img create -b $BASEIMG -f $IMGEXT $ROOTIMG"
+		execute "qemu-img create -b $BASEIMG -f $IMGEXT -F $IMGEXT $ROOTIMG"
 		ALL_RECIPES=1
 	fi
 	log_action "Connecting root image to NBD device $NBDEV"
