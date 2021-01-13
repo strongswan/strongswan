@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2021 Tobias Brunner
  * Copyright (C) 2020 Pascal Knecht
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -27,7 +28,9 @@
 #include "tls_server.h"
 #include "tls_peer.h"
 
-ENUM_BEGIN(tls_version_names, SSL_2_0, SSL_2_0,
+ENUM_BEGIN(tls_version_names, TLS_UNSPEC, TLS_UNSPEC,
+	"TLS UNSPEC");
+ENUM_NEXT(tls_version_names, SSL_2_0, SSL_2_0, TLS_UNSPEC,
 	"SSLv2");
 ENUM_NEXT(tls_version_names, SSL_3_0, TLS_1_3, SSL_2_0,
 	"SSLv3",
@@ -36,6 +39,15 @@ ENUM_NEXT(tls_version_names, SSL_3_0, TLS_1_3, SSL_2_0,
 	"TLS 1.2",
 	"TLS 1.3");
 ENUM_END(tls_version_names, TLS_1_3);
+
+/**
+ * Only supported versions are mapped
+ */
+ENUM(tls_numeric_version_names, TLS_SUPPORTED_MIN, TLS_SUPPORTED_MAX,
+	"1.0",
+	"1.1",
+	"1.2",
+	"1.3");
 
 ENUM(tls_content_type_names, TLS_CHANGE_CIPHER_SPEC, TLS_APPLICATION_DATA,
 	"ChangeCipherSpec",
@@ -435,25 +447,74 @@ METHOD(tls_t, get_peer_id, identification_t*,
 	return this->handshake->get_peer_id(this->handshake);
 }
 
+/**
+ * Determine the min/max versions
+ */
+static void determine_versions(private_tls_t *this)
+{
+	tls_version_t version;
+	char *version_str;
+
+	if (this->version_min == TLS_UNSPEC)
+	{
+		this->version_min = TLS_SUPPORTED_MIN;
+
+		version_str = lib->settings->get_str(lib->settings, "%s.tls.version_min",
+											 NULL, lib->ns);
+		if (version_str &&
+			enum_from_name(tls_numeric_version_names, version_str, &version))
+		{
+			this->version_min = version;
+		}
+	}
+	if (this->version_max == TLS_UNSPEC)
+	{
+		this->version_max = TLS_SUPPORTED_MAX;
+
+		version_str = lib->settings->get_str(lib->settings, "%s.tls.version_max",
+											 NULL, lib->ns);
+		if (version_str &&
+			enum_from_name(tls_numeric_version_names, version_str, &version))
+		{
+			this->version_max = version;
+		}
+	}
+	if (this->version_max < this->version_min)
+	{
+		this->version_min = this->version_max;
+	}
+}
+
 METHOD(tls_t, get_version_max, tls_version_t,
 	private_tls_t *this)
 {
+	determine_versions(this);
 	return this->version_max;
 }
 
 METHOD(tls_t, get_version_min, tls_version_t,
 	private_tls_t *this)
 {
+	determine_versions(this);
 	return this->version_min;
 }
 
 METHOD(tls_t, set_version, bool,
 	private_tls_t *this, tls_version_t min_version, tls_version_t max_version)
 {
-	if (min_version < this->version_min ||
-		max_version > this->version_max ||
-		min_version > max_version ||
-		min_version < TLS_1_0)
+	if (min_version == TLS_UNSPEC)
+	{
+		min_version = this->version_min;
+	}
+	if (max_version == TLS_UNSPEC)
+	{
+		max_version = this->version_max;
+	}
+	if ((this->version_min != TLS_UNSPEC && min_version < this->version_min) ||
+		(this->version_max != TLS_UNSPEC && max_version > this->version_max) ||
+		(min_version != TLS_UNSPEC && min_version < TLS_SUPPORTED_MIN) ||
+		(max_version != TLS_UNSPEC && max_version > TLS_SUPPORTED_MAX) ||
+		min_version > max_version)
 	{
 		return FALSE;
 	}
@@ -461,7 +522,7 @@ METHOD(tls_t, set_version, bool,
 	this->version_min = min_version;
 	this->version_max = max_version;
 
-	if (min_version == max_version)
+	if (min_version != TLS_UNSPEC && min_version == max_version)
 	{
 		this->protection->set_version(this->protection, max_version);
 	}
@@ -555,8 +616,6 @@ tls_t *tls_create(bool is_server, identification_t *server,
 			.destroy = _destroy,
 		},
 		.is_server = is_server,
-		.version_min = TLS_1_0,
-		.version_max = TLS_1_3,
 		.application = application,
 		.purpose = purpose,
 	);
