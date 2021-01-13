@@ -476,6 +476,12 @@ charon.tls.mac
 charon.tls.suites
 	List of TLS cipher suites.
 
+charon.tls.version_min = 1.0
+	Minimum TLS version to negotiate.
+
+charon.tls.version_max = 1.3
+	Maximum TLS version to negotiate.
+
 charon.user
 	Name of the user the daemon changes to after startup.
 

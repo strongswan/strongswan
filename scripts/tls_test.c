@@ -294,22 +294,13 @@ static void init()
 	atexit(cleanup);
 }
 
-/**
- * Used to parse TLS versions
- */
-ENUM(numeric_version_names, TLS_1_0, TLS_1_3,
-	"1.0",
-	"1.1",
-	"1.2",
-	"1.3");
-
 int main(int argc, char *argv[])
 {
 	char *address = NULL;
 	bool listen = FALSE;
 	int port = 0, times = -1, res, family = AF_UNSPEC;
 	identification_t *server, *client = NULL;
-	tls_version_t min_version = TLS_1_0, max_version = TLS_1_3;
+	tls_version_t min_version = TLS_SUPPORTED_MIN, max_version = TLS_SUPPORTED_MAX;
 	tls_cache_t *cache;
 	host_t *host;
 
@@ -387,21 +378,24 @@ int main(int argc, char *argv[])
 				family = AF_INET6;
 				continue;
 			case 'm':
-				if (!enum_from_name(numeric_version_names, optarg, &min_version))
+				if (!enum_from_name(tls_numeric_version_names, optarg,
+									&min_version))
 				{
 					fprintf(stderr, "unknown minimum TLS version: %s\n", optarg);
 					return 1;
 				}
 				continue;
 			case 'M':
-				if (!enum_from_name(numeric_version_names, optarg, &max_version))
+				if (!enum_from_name(tls_numeric_version_names, optarg,
+									&max_version))
 				{
 					fprintf(stderr, "unknown maximum TLS version: %s\n", optarg);
 					return 1;
 				}
 				continue;
 			case 'v':
-				if (!enum_from_name(numeric_version_names, optarg, &min_version))
+				if (!enum_from_name(tls_numeric_version_names, optarg,
+									&min_version))
 				{
 					fprintf(stderr, "unknown TLS version: %s\n", optarg);
 					return 1;
