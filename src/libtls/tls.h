@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2021 Tobias Brunner
  * Copyright (C) 2020 Pascal Knecht
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -50,18 +51,26 @@ typedef struct tls_t tls_t;
  * TLS/SSL version numbers
  */
 enum tls_version_t {
+	TLS_UNSPEC = 0,
 	SSL_2_0 = 0x0200,
 	SSL_3_0 = 0x0300,
 	TLS_1_0 = 0x0301,
+	TLS_SUPPORTED_MIN = TLS_1_0,
 	TLS_1_1 = 0x0302,
 	TLS_1_2 = 0x0303,
 	TLS_1_3 = 0x0304,
+	TLS_SUPPORTED_MAX = TLS_1_3,
 };
 
 /**
  * Enum names for tls_version_t
  */
 extern enum_name_t *tls_version_names;
+
+/**
+ * Simple, numeric enum names for tls_version_t (only supported versions)
+ */
+extern enum_name_t *tls_numeric_version_names;
 
 /**
  * TLS higher level content type
