@@ -479,7 +479,7 @@ charon.tls.suites
 charon.tls.version_min = 1.0
 	Minimum TLS version to negotiate.
 
-charon.tls.version_max = 1.3
+charon.tls.version_max = 1.2
 	Maximum TLS version to negotiate.
 
 charon.user

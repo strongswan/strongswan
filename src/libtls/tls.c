@@ -468,8 +468,8 @@ static void determine_versions(private_tls_t *this)
 		}
 	}
 	if (this->version_max == TLS_UNSPEC)
-	{
-		this->version_max = TLS_SUPPORTED_MAX;
+	{	/* default to TLS 1.2 until 1.3 is stable for use in EAP */
+		this->version_max = TLS_1_2;
 
 		version_str = lib->settings->get_str(lib->settings, "%s.tls.version_max",
 											 NULL, lib->ns);
