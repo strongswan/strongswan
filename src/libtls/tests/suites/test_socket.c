@@ -706,17 +706,17 @@ START_TEST(test_tls10_mutual)
 }
 END_TEST
 
-Suite *socket_suite_create()
-{
-	Suite *s;
-	TCase *tc;
-
 #define add_tls_test(func, version) \
 	tcase_add_loop_test(tc, func, 0, \
 						tls_crypto_get_supported_suites(TRUE, version, NULL));
 
 #define add_tls_versions_test(func, from, to) \
 	tcase_add_loop_test(tc, func, from, to+1);
+
+Suite *socket_suite_create()
+{
+	Suite *s;
+	TCase *tc;
 
 	s = suite_create("socket");
 
@@ -781,6 +781,16 @@ Suite *socket_suite_create()
 	add_tls_test(test_tls10_mutual, TLS_1_0);
 	suite_add_tcase(s, tc);
 
+	return s;
+}
+
+Suite *socket_suite_ed25519_create()
+{
+	Suite *s;
+	TCase *tc;
+
+	s = suite_create("socket ed25519");
+
 	tc = tcase_create("TLS 1.3/ed25519");
 	tcase_add_checked_fixture(tc, setup_ed25519_creds, teardown_creds);
 	add_tls_test(test_tls13, TLS_1_3);
@@ -800,6 +810,16 @@ Suite *socket_suite_create()
 	tcase_add_checked_fixture(tc, setup_ed25519_creds, teardown_creds);
 	add_tls_test(test_tls10, TLS_1_0);
 	suite_add_tcase(s, tc);
+
+	return s;
+}
+
+Suite *socket_suite_ed448_create()
+{
+	Suite *s;
+	TCase *tc;
+
+	s = suite_create("socket ed448");
 
 	tc = tcase_create("TLS 1.3/ed448");
 	tcase_add_checked_fixture(tc, setup_ed448_creds, teardown_creds);
