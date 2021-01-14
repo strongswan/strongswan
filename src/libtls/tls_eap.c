@@ -394,6 +394,10 @@ METHOD(tls_eap_t, process, status_t,
 	switch (status)
 	{
 		case INVALID_STATE:
+			if (this->tls->is_complete(this->tls))
+			{
+				return SUCCESS;
+			}
 			*out = create_ack(this);
 			return NEED_MORE;
 		case FAILED:
