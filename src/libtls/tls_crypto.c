@@ -1222,12 +1222,12 @@ static void build_cipher_suite_list(private_tls_crypto_t *this)
 	new_max_version = min(new_max_version, max_version);
 	new_min_version = max(new_min_version, min_version);
 
-	if (min_version != new_min_version || max_version != new_max_version)
+	if ((min_version != new_min_version || max_version != new_max_version) &&
+		this->tls->set_version(this->tls, new_min_version, new_max_version))
 	{
-		this->tls->set_version(this->tls, new_min_version, new_max_version);
 		DBG2(DBG_TLS, "TLS min/max %N/%N according to the cipher suites",
-			 tls_version_names, new_min_version,
-			 tls_version_names, new_max_version);
+			 tls_numeric_version_names, new_min_version,
+			 tls_numeric_version_names, new_max_version);
 	}
 }
 
