@@ -1326,8 +1326,6 @@ static status_t send_client_hello(private_tls_peer_t *this,
 		names->destroy(names);
 	}
 
-	DBG2(DBG_TLS, "sending extension: %N",
-		 tls_extension_names, TLS_EXT_SUPPORTED_GROUPS);
 	enumerator = this->crypto->create_ec_enumerator(this->crypto);
 	while (enumerator->enumerate(enumerator, &group, &curve))
 	{
@@ -1351,8 +1349,12 @@ static status_t send_client_hello(private_tls_peer_t *this,
 		curves->write_uint16(curves, curve);
 	}
 	enumerator->destroy(enumerator);
+
 	if (curves)
 	{
+		DBG2(DBG_TLS, "sending extension: %N",
+			 tls_extension_names, TLS_EXT_SUPPORTED_GROUPS);
+
 		curves->wrap16(curves);
 		extensions->write_data16(extensions, curves->get_buf(curves));
 		curves->destroy(curves);
