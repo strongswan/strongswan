@@ -1277,6 +1277,17 @@ METHOD(ike_sa_manager_t, create_new, ike_sa_t*,
 	return ike_sa;
 }
 
+METHOD(ike_sa_manager_t, checkout_new, void,
+	private_ike_sa_manager_t *this, ike_sa_t *ike_sa)
+{
+	u_int segment;
+	entry_t *entry;
+
+	segment = create_and_put_entry(this, ike_sa, &entry);
+	entry->checked_out = thread_current();
+	unlock_single_segment(this, segment);
+}
+
 /**
  * Get the message ID or message hash to detect early retransmissions
  */
@@ -1491,10 +1502,7 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 	{	/* IKE_SA reuse disabled by config (not possible for IKEv1) */
 		ike_sa = create_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-
-		segment = create_and_put_entry(this, ike_sa, &entry);
-		entry->checked_out = thread_current();
-		unlock_single_segment(this, segment);
+		checkout_new(this, ike_sa);
 		charon->bus->set_sa(charon->bus, ike_sa);
 		goto out;
 	}
@@ -1566,10 +1574,7 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 	{
 		ike_sa = create_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-
-		segment = create_and_put_entry(this, ike_sa, &entry);
-		entry->checked_out = thread_current();
-		unlock_single_segment(this, segment);
+		checkout_new(this, ike_sa);
 	}
 	charon->bus->set_sa(charon->bus, ike_sa);
 
@@ -2468,6 +2473,7 @@ ike_sa_manager_t *ike_sa_manager_create()
 	INIT(this,
 		.public = {
 			.create_new = _create_new,
+			.checkout_new = _checkout_new,
 			.checkout = _checkout,
 			.checkout_by_message = _checkout_by_message,
 			.checkout_by_config = _checkout_by_config,

@@ -60,6 +60,22 @@ struct ike_sa_manager_t {
 							bool initiator);
 
 	/**
+	 * Register/checkout an IKE_SA created with create_new().
+	 *
+	 * This may be used shortly before calling checkin() for unregistered SAs
+	 * created via create_new() to avoid race conditions so e.g. jobs may
+	 * find the SA and block on it until checkin() is called.
+	 *
+	 * @note There is no check that verifies that the IKE_SA is not yet
+	 * registered.
+	 *
+	 * @note The IKE_SA on the bus is not changed by this method.
+	 *
+	 * @param ike_sa			IKE_SA to register
+	 */
+	void (*checkout_new)(ike_sa_manager_t* this, ike_sa_t *ike_sa);
+
+	/**
 	 * Checkout an existing IKE_SA.
 	 *
 	 * @param ike_sa_id			the SA identifier, will be updated
