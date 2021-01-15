@@ -163,6 +163,11 @@ struct private_tls_server_t {
 	 * Did we receive the curves from the client?
 	 */
 	bool curves_received;
+
+	/**
+	 * Whether to include CAs in CertificateRequest messages
+	 */
+	bool send_certreq_authorities;
 };
 
 /**
@@ -1372,7 +1377,14 @@ static status_t send_certificate_request(private_tls_server_t *this,
 			this->crypto->get_signature_algorithms(this->crypto, writer, TRUE);
 		}
 
-		write_certificate_authorities(writer);
+		if (this->send_certreq_authorities)
+		{
+			write_certificate_authorities(writer);
+		}
+		else
+		{
+			writer->write_data16(writer, chunk_empty);
+		}
 	}
 	else
 	{
@@ -1380,13 +1392,17 @@ static status_t send_certificate_request(private_tls_server_t *this,
 		writer->write_uint8(writer, 0);
 
 		extensions = bio_writer_create(32);
-		DBG2(DBG_TLS, "sending extension: %N",
-			 tls_extension_names, TLS_EXT_CERTIFICATE_AUTHORITIES);
-		authorities = bio_writer_create(64);
-		write_certificate_authorities(authorities);
-		extensions->write_uint16(extensions, TLS_EXT_CERTIFICATE_AUTHORITIES);
-		extensions->write_data16(extensions, authorities->get_buf(authorities));
-		authorities->destroy(authorities);
+
+		if (this->send_certreq_authorities)
+		{
+			DBG2(DBG_TLS, "sending extension: %N",
+				 tls_extension_names, TLS_EXT_CERTIFICATE_AUTHORITIES);
+			authorities = bio_writer_create(64);
+			write_certificate_authorities(authorities);
+			extensions->write_uint16(extensions, TLS_EXT_CERTIFICATE_AUTHORITIES);
+			extensions->write_data16(extensions, authorities->get_buf(authorities));
+			authorities->destroy(authorities);
+		}
 
 		DBG2(DBG_TLS, "sending extension: %N",
 			 tls_extension_names, TLS_EXT_SIGNATURE_ALGORITHMS);
@@ -1808,6 +1824,9 @@ tls_server_t *tls_server_create(tls_t *tls,
 		.state = STATE_INIT,
 		.peer_auth = auth_cfg_create(),
 		.server_auth = auth_cfg_create(),
+		.send_certreq_authorities = lib->settings->get_bool(lib->settings,
+											"%s.tls.send_certreq_authorities",
+											TRUE, lib->ns),
 	);
 
 	return &this->public;
