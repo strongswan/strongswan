@@ -2982,7 +2982,7 @@ METHOD(ike_sa_t, inherit_post, void,
 		time_t reauth, delete, now = time_monotonic(NULL);
 
 		this->stats[STAT_REAUTH] = other->stats[STAT_REAUTH];
-		reauth = this->stats[STAT_REAUTH] - now;
+		reauth = max(0, this->stats[STAT_REAUTH] - now);
 		delete = reauth + this->peer_cfg->get_over_time(this->peer_cfg);
 		this->stats[STAT_DELETE] = this->stats[STAT_REAUTH] + delete;
 		DBG1(DBG_IKE, "rescheduling reauthentication in %ds after rekeying, "
