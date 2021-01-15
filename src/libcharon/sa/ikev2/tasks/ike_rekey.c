@@ -126,16 +126,18 @@ static void establish_new(private_ike_rekey_t *this)
 			 this->ike_sa->get_other_host(this->ike_sa),
 			 this->ike_sa->get_other_id(this->ike_sa));
 
+		/* register the new IKE_SA before calling inherit_post() as that may
+		 * schedule jobs, as may listeners for ike_rekey() */
+		charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+											 this->new_sa);
 		this->new_sa->inherit_post(this->new_sa, this->ike_sa);
 		charon->bus->ike_rekey(charon->bus, this->ike_sa, this->new_sa);
 		job = check_queued_tasks(this->new_sa);
-		/* don't queue job before checkin(), as the IKE_SA is not yet
-		 * registered at the manager */
-		charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);
 		if (job)
 		{
 			lib->processor->queue_job(lib->processor, job);
 		}
+		charon->ike_sa_manager->checkin(charon->ike_sa_manager, this->new_sa);
 		this->new_sa = NULL;
 		charon->bus->set_sa(charon->bus, this->ike_sa);
 
