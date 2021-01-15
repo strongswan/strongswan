@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Tobias Brunner
+ * Copyright (C) 2008-2021 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  * HSR Hochschule fuer Technik Rapperswil
@@ -50,6 +50,16 @@ typedef uint64_t (*spi_cb_t)(void *data);
 struct ike_sa_manager_t {
 
 	/**
+	 * Create a new IKE_SA.
+	 *
+	 * @param version			IKE version of this SA
+	 * @param initiator			TRUE for initiator, FALSE otherwise
+	 * @returns 				created IKE_SA (not registered/checked out)
+	 */
+	ike_sa_t *(*create_new)(ike_sa_manager_t* this, ike_version_t version,
+							bool initiator);
+
+	/**
 	 * Checkout an existing IKE_SA.
 	 *
 	 * @param ike_sa_id			the SA identifier, will be updated
@@ -58,16 +68,6 @@ struct ike_sa_manager_t {
 	 * 							- NULL, if specified IKE_SA is not found.
 	 */
 	ike_sa_t* (*checkout) (ike_sa_manager_t* this, ike_sa_id_t *sa_id);
-
-	/**
-	 * Create and check out a new IKE_SA.
-	 *
-	 * @param version			IKE version of this SA
-	 * @param initiator			TRUE for initiator, FALSE otherwise
-	 * @returns 				created and checked out IKE_SA
-	 */
-	ike_sa_t* (*checkout_new) (ike_sa_manager_t* this, ike_version_t version,
-							   bool initiator);
 
 	/**
 	 * Checkout an IKE_SA by a message.

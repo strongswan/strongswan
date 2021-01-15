@@ -509,7 +509,7 @@ METHOD(trap_manager_t, acquire, void,
 
 	if (wildcard)
 	{	/* the peer config would match IKE_SAs with other peers */
-		ike_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+		ike_sa = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
 											peer->get_ike_version(peer), TRUE);
 		if (ike_sa)
 		{

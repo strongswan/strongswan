@@ -1905,7 +1905,7 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 	queued_task_t *queued;
 	bool children = FALSE;
 
-	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+	new = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
 								this->ike_sa->get_version(this->ike_sa), TRUE);
 	if (!new)
 	{	/* shouldn't happen */

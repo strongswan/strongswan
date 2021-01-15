@@ -1636,7 +1636,7 @@ METHOD(task_manager_t, queue_ike_reauth, void,
 	ike_sa_t *new;
 	host_t *host;
 
-	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+	new = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
 								this->ike_sa->get_version(this->ike_sa), TRUE);
 	if (!new)
 	{	/* shouldn't happen */

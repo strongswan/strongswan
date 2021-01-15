@@ -1241,7 +1241,7 @@ METHOD(ike_sa_manager_t, checkout, ike_sa_t*,
 	return ike_sa;
 }
 
-METHOD(ike_sa_manager_t, checkout_new, ike_sa_t*,
+METHOD(ike_sa_manager_t, create_new, ike_sa_t*,
 	private_ike_sa_manager_t* this, ike_version_t version, bool initiator)
 {
 	ike_sa_id_t *ike_sa_id;
@@ -1489,7 +1489,7 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 
 	if (!this->reuse_ikesa && peer_cfg->get_ike_version(peer_cfg) != IKEV1)
 	{	/* IKE_SA reuse disabled by config (not possible for IKEv1) */
-		ike_sa = checkout_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
+		ike_sa = create_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
 
 		segment = create_and_put_entry(this, ike_sa, &entry);
@@ -1564,7 +1564,7 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 
 	if (!ike_sa)
 	{
-		ike_sa = checkout_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
+		ike_sa = create_new(this, peer_cfg->get_ike_version(peer_cfg), TRUE);
 		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
 
 		segment = create_and_put_entry(this, ike_sa, &entry);
@@ -2467,8 +2467,8 @@ ike_sa_manager_t *ike_sa_manager_create()
 
 	INIT(this,
 		.public = {
+			.create_new = _create_new,
 			.checkout = _checkout,
-			.checkout_new = _checkout_new,
 			.checkout_by_message = _checkout_by_message,
 			.checkout_by_config = _checkout_by_config,
 			.checkout_by_id = _checkout_by_id,

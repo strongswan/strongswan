@@ -167,7 +167,7 @@ METHOD(task_t, build_i, status_t,
 	if (this->new_sa == NULL)
 	{
 		version = this->ike_sa->get_version(this->ike_sa);
-		this->new_sa = charon->ike_sa_manager->checkout_new(
+		this->new_sa = charon->ike_sa_manager->create_new(
 										charon->ike_sa_manager, version, TRUE);
 		if (!this->new_sa)
 		{	/* shouldn't happen */
@@ -236,7 +236,7 @@ METHOD(task_t, process_r, status_t,
 		return NEED_MORE;
 	}
 
-	this->new_sa = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+	this->new_sa = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
 							this->ike_sa->get_version(this->ike_sa), FALSE);
 	if (!this->new_sa)
 	{	/* shouldn't happen */

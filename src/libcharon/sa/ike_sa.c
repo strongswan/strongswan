@@ -2186,8 +2186,8 @@ METHOD(ike_sa_t, reestablish, status_t,
 		return FAILED;
 	}
 
-	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-											   this->version, TRUE);
+	new = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
+											 this->version, TRUE);
 	if (!new)
 	{
 		return FAILED;
@@ -2270,8 +2270,8 @@ static bool redirect_established(private_ike_sa_t *this, identification_t *to)
 	host_t *other;
 	time_t redirect;
 
-	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-											   this->version, TRUE);
+	new = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
+											 this->version, TRUE);
 	if (!new)
 	{
 		return FALSE;
