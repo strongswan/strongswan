@@ -884,18 +884,13 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	 */
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
 														peer_cfg);
+	peer_cfg->destroy(peer_cfg);
 	if (!ike_sa)
 	{
-		peer_cfg->destroy(peer_cfg);
 		g_set_error(err, NM_VPN_PLUGIN_ERROR, NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
 					"IKE version not supported.");
 		return FALSE;
 	}
-	if (!ike_sa->get_peer_cfg(ike_sa))
-	{
-		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-	}
-	peer_cfg->destroy(peer_cfg);
 
 	/**
 	 * Register listener, enable  initiate-failure-detection hooks

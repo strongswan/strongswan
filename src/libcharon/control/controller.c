@@ -417,10 +417,10 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
 														peer_cfg);
+	peer_cfg->destroy(peer_cfg);
 	if (!ike_sa)
 	{
 		DESTROY_IF(listener->child_cfg);
-		peer_cfg->destroy(peer_cfg);
 		listener->status = FAILED;
 		listener_done(listener);
 		return JOB_REQUEUE_NONE;
@@ -429,11 +429,6 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 	listener->ike_sa = ike_sa;
 	listener->lock->unlock(listener->lock);
 
-	if (ike_sa->get_peer_cfg(ike_sa) == NULL)
-	{
-		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-	}
-	peer_cfg->destroy(peer_cfg);
 
 	if (listener->options.limits && ike_sa->get_state(ike_sa) == IKE_CREATED)
 	{	/* only check if we are not reusing an IKE_SA */

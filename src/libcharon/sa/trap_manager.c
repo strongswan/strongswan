@@ -538,12 +538,10 @@ METHOD(trap_manager_t, acquire, void,
 		ike_sa = charon->ike_sa_manager->checkout_by_config(
 											charon->ike_sa_manager, peer);
 	}
+	peer->destroy(peer);
+
 	if (ike_sa)
 	{
-		if (ike_sa->get_peer_cfg(ike_sa) == NULL)
-		{
-			ike_sa->set_peer_cfg(ike_sa, peer);
-		}
 		if (this->ignore_acquire_ts || ike_sa->get_version(ike_sa) == IKEV1)
 		{	/* in IKEv1, don't prepend the acquiring packet TS, as we only
 			 * have a single TS that we can establish in a Quick Mode. */
@@ -572,7 +570,6 @@ METHOD(trap_manager_t, acquire, void,
 		destroy_acquire(acquire);
 		child->destroy(child);
 	}
-	peer->destroy(peer);
 }
 
 /**

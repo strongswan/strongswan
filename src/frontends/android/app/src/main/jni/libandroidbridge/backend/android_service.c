@@ -911,18 +911,13 @@ static job_requeue_t initiate(private_android_service_t *this)
 	/* get us an IKE_SA */
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
 														peer_cfg);
+	peer_cfg->destroy(peer_cfg);
 	if (!ike_sa)
 	{
-		peer_cfg->destroy(peer_cfg);
 		charonservice->update_status(charonservice,
 									 CHARONSERVICE_GENERIC_ERROR);
 		return JOB_REQUEUE_NONE;
 	}
-	if (!ike_sa->get_peer_cfg(ike_sa))
-	{
-		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-	}
-	peer_cfg->destroy(peer_cfg);
 
 	/* store the IKE_SA so we can track its progress */
 	this->ike_sa = ike_sa;
