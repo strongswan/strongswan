@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2020 Tobias Brunner
- * Copyright (C) 2020 Pascal Knecht
+ * Copyright (C) 2020-2021 Pascal Knecht
  * Copyright (C) 2020 Méline Sieber
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -206,9 +206,10 @@ static status_t process_server_hello(private_tls_peer_t *this,
 	uint16_t version, cipher, key_type = 0;
 	bio_reader_t *extensions, *extension;
 	chunk_t msg, random, session, ext = chunk_empty, key_share = chunk_empty;
-	chunk_t cookie = chunk_empty;
+	chunk_t cookie = chunk_empty, server_random_end;
 	tls_cipher_suite_t suite = 0;
 	bool is_retry_request;
+	tls_version_t original_max_version;
 
 	msg = reader->peek(reader);
 	if (!reader->read_uint16(reader, &version) ||
@@ -285,6 +286,22 @@ static status_t process_server_hello(private_tls_peer_t *this,
 		extension->destroy(extension);
 	}
 	extensions->destroy(extensions);
+
+	/* downgrade protection (see RFC 8446, section 4.1.3) */
+	original_max_version = this->tls->get_version_max(this->tls);
+	server_random_end = chunk_create(&this->server_random[24], 8);
+	if ((original_max_version == TLS_1_3 && version < TLS_1_3) ||
+		(original_max_version == TLS_1_2 && version < TLS_1_2))
+	{
+		if (chunk_equals(server_random_end, tls_downgrade_protection_tls11) ||
+			chunk_equals(server_random_end, tls_downgrade_protection_tls12))
+		{
+			DBG1(DBG_TLS, "server random indicates downgrade attack to %N",
+				 tls_version_names, version);
+			this->alert->add(this->alert, TLS_FATAL, TLS_ILLEGAL_PARAMETER);
+			return NEED_MORE;
+		}
+	}
 
 	if (!this->tls->set_version(this->tls, version, version))
 	{
