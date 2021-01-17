@@ -342,7 +342,7 @@ handler_free(farp_handler_t* h)
 static farp_handler_t*
 handler_find(private_farp_spoofer_t* this, char* interface_name)
 {
-	farp_handler_t *i;
+	farp_handler_t *i = NULL;
 	enumerator_t *enumerator;
 
 	enumerator = this->handlers->create_enumerator(this->handlers);
