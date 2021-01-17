@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2021 Tobias Brunner
- * Copyright (C) 2020 Pascal Knecht
+ * Copyright (C) 2020-2021 Pascal Knecht
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2010 Martin Willi
@@ -212,6 +212,12 @@ extern enum_name_t *tls_extension_names;
  * ServerHello from HelloRetryRequest.
  */
 extern chunk_t tls_hello_retry_request_magic;
+
+/**
+ * Magic values for downgrade protection (see RFC 8446, section 4.1.3)
+ */
+extern chunk_t tls_downgrade_protection_tls11;
+extern chunk_t tls_downgrade_protection_tls12;
 
 /**
  * A bottom-up driven TLS stack, suitable for EAP implementations.
