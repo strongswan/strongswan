@@ -39,7 +39,7 @@
 
 #include <errno.h>
 #include <unistd.h>
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
 #include <sys/socket.h>
 #include <linux/if_arp.h>
 #include <linux/if_ether.h>
@@ -52,7 +52,7 @@
 #include <net/if.h>
 #include <net/if_arp.h>
 #include <net/if_dl.h>
-#endif /* __APPLE__ */
+#endif /* !defined(__APPLE__) && !defined(__FreeBSD__) */
 #include <sys/ioctl.h>
 
 #include <daemon.h>
@@ -76,7 +76,7 @@ struct private_farp_spoofer_t {
 	 */
 	farp_listener_t *listener;
 
-#ifndef __APPLE__
+#if!defined(__APPLE__) && !defined(__FreeBSD__)
 	/**
 	 * RAW socket for ARP requests
 	 */
@@ -86,7 +86,7 @@ struct private_farp_spoofer_t {
 	 * Linked list of interface handlers
 	 */
 	linked_list_t *handlers;
-#endif /* __APPLE__ */
+#endif /* !defined(__APPLE__) && !defined(__FreeBSD__) */
 };
 
 /**
@@ -104,7 +104,7 @@ typedef struct __attribute__((packed)) {
 	uint8_t target_ip[4];
 } arp_t;
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
 /**
  * Send faked ARP response
  */
@@ -731,4 +731,4 @@ farp_spoofer_t *farp_spoofer_create(farp_listener_t *listener)
 	return &this->public;
 }
 
-#endif /* __APPLE__ */
+#endif /* !defined(__APPLE__) && !defined(__FreeBSD__) */
