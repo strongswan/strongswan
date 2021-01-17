@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Pascal Knecht
+ * Copyright (C) 2020-2021 Pascal Knecht
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2010 Martin Willi
@@ -338,6 +338,7 @@ static status_t process_client_hello(private_tls_server_t *this,
 	chunk_t extension_data = chunk_empty;
 	bio_reader_t *extensions, *extension;
 	tls_cipher_suite_t *suites;
+	tls_version_t original_version_max;
 	int count, i;
 	rng_t *rng;
 
@@ -456,6 +457,8 @@ static status_t process_client_hello(private_tls_server_t *this,
 	}
 	rng->destroy(rng);
 
+	original_version_max = this->tls->get_version_max(this->tls);
+
 	if (versions.len)
 	{
 		bio_reader_t *client_versions;
@@ -482,6 +485,21 @@ static status_t process_client_hello(private_tls_server_t *this,
 			this->client_version = version;
 		}
 	}
+
+	/* downgrade protection (see RFC 8446, section 4.1.3) */
+	if ((original_version_max == TLS_1_3 && version < TLS_1_3) ||
+		(original_version_max == TLS_1_2 && version < TLS_1_2))
+	{
+		chunk_t downgrade_protection = tls_downgrade_protection_tls11;
+
+		if (version == TLS_1_2)
+		{
+			downgrade_protection = tls_downgrade_protection_tls12;
+		}
+		memcpy(&this->server_random[24], downgrade_protection.ptr,
+			   downgrade_protection.len);
+	}
+
 	if (!this->client_version)
 	{
 		DBG1(DBG_TLS, "proposed version %N not supported", tls_version_names,
