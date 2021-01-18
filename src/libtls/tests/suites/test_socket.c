@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Pascal Knecht
+ * Copyright (C) 2020-2021 Pascal Knecht
  * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2014 Martin Willi
@@ -559,8 +559,8 @@ static void test_tls(tls_version_t version, uint16_t port, bool cauth, u_int i)
 /**
  * TLS curve test wrapper function
  */
-static void test_tls_curves(tls_version_t version, uint16_t port, bool cauth,
-							u_int i)
+static void test_tls_ke_groups(tls_version_t version, uint16_t port, bool cauth,
+							   u_int i)
 {
 	echo_server_config_t *config;
 	diffie_hellman_group_t *groups;
@@ -575,7 +575,7 @@ static void test_tls_curves(tls_version_t version, uint16_t port, bool cauth,
 	ck_assert(i < count);
 	snprintf(curve, sizeof(curve), "%N", diffie_hellman_group_names_short,
 			 groups[i]);
-	lib->settings->set_str(lib->settings, "%s.tls.curve", curve, lib->ns);
+	lib->settings->set_str(lib->settings, "%s.tls.ke_group", curve, lib->ns);
 
 	run_echo_client(config);
 
@@ -653,9 +653,9 @@ START_TEST(test_tls_13_client)
 }
 END_TEST
 
-START_TEST(test_tls13_curves)
+START_TEST(test_tls13_ke_groups)
 {
-	test_tls_curves(TLS_1_3, 5668, FALSE, _i);
+	test_tls_ke_groups(TLS_1_3, 5668, FALSE, _i);
 }
 END_TEST
 
@@ -736,9 +736,9 @@ Suite *socket_suite_create()
 	add_tls_versions_test(test_tls_12_server, TLS_1_0, TLS_1_3);
 	suite_add_tcase(s, tc);
 
-	tc = tcase_create("TLS 1.3/curves");
+	tc = tcase_create("TLS 1.3/key exchange groups");
 	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
-	tcase_add_loop_test(tc, test_tls13_curves, 0,
+	tcase_add_loop_test(tc, test_tls13_ke_groups, 0,
 						tls_crypto_get_supported_groups(NULL));
 	suite_add_tcase(s, tc);
 

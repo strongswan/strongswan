@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2020 Tobias Brunner
- * Copyright (C) 2020 Pascal Knecht
+ * Copyright (C) 2020-2021 Pascal Knecht
  * Copyright (C) 2020 Méline Sieber
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -1103,7 +1103,8 @@ static bool filter_curve_config(tls_named_group_t curve)
 	enumerator_t *enumerator;
 	char *token, *config;
 
-	config = lib->settings->get_str(lib->settings, "%s.tls.curve", NULL, lib->ns);
+	config = lib->settings->get_str(lib->settings, "%s.tls.ke_group", NULL,
+									lib->ns);
 	if (config)
 	{
 		enumerator = enumerator_create_token(config, ",", " ");
