@@ -473,6 +473,9 @@ charon.tls.mac
 charon.tls.suites
 	List of TLS cipher suites.
 
+charon.tls.ke_group
+	List of TLS key exchange groups.
+
 charon.tls.send_certreq_authorities = yes
 	Whether to include CAs in a server's CertificateRequest message.
 
