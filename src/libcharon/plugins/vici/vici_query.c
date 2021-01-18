@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Tobias Brunner
+ * Copyright (C) 2015-2020 Tobias Brunner
  * Copyright (C) 2015-2018 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -509,6 +509,7 @@ CALLBACK(list_sas, vici_message_t*,
 	u_int ike_id;
 	bool bl;
 	char buf[BUF_LEN];
+
 
 	bl = request->get_str(request, NULL, "noblock") == NULL;
 	ike = request->get_str(request, NULL, "ike");
@@ -1683,6 +1684,7 @@ static void manage_commands(private_vici_query_t *this, bool reg)
 	this->dispatcher->manage_event(this->dispatcher, "list-cert", reg);
 	this->dispatcher->manage_event(this->dispatcher, "ike-updown", reg);
 	this->dispatcher->manage_event(this->dispatcher, "ike-rekey", reg);
+	this->dispatcher->manage_event(this->dispatcher, "ike-update", reg);
 	this->dispatcher->manage_event(this->dispatcher, "child-updown", reg);
 	this->dispatcher->manage_event(this->dispatcher, "child-rekey", reg);
 	manage_command(this, "list-sas", list_sas, reg);
@@ -1751,6 +1753,36 @@ METHOD(listener_t, ike_rekey, bool,
 
 	this->dispatcher->raise_event(this->dispatcher,
 								  "ike-rekey", 0, b->finalize(b));
+
+	return TRUE;
+}
+
+METHOD(listener_t, ike_update, bool,
+	private_vici_query_t *this, ike_sa_t *ike_sa, host_t *local, host_t *remote)
+{
+	vici_builder_t *b;
+	time_t now;
+
+	if (!this->dispatcher->has_event_listeners(this->dispatcher, "ike-update"))
+	{
+		return TRUE;
+	}
+
+	now = time_monotonic(NULL);
+
+	b = vici_builder_create();
+
+	b->add_kv(b, "local-host", "%H", local);
+	b->add_kv(b, "local-port", "%d", local->get_port(local));
+	b->add_kv(b, "remote-host", "%H", remote);
+	b->add_kv(b, "remote-port", "%d", remote->get_port(remote));
+
+	b->begin_section(b, ike_sa->get_name(ike_sa));
+	list_ike(this, b, ike_sa, now);
+	b->end_section(b);
+
+	this->dispatcher->raise_event(this->dispatcher,
+								  "ike-update", 0, b->finalize(b));
 
 	return TRUE;
 }
@@ -1853,6 +1885,7 @@ vici_query_t *vici_query_create(vici_dispatcher_t *dispatcher)
 			.listener = {
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
+				.ike_update = _ike_update,
 				.child_updown = _child_updown,
 				.child_rekey = _child_rekey,
 			},

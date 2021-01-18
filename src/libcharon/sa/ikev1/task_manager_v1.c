@@ -1408,7 +1408,7 @@ METHOD(task_manager_t, process_message, status_t,
 		}
 		this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
 									time_monotonic(NULL));
-		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
+		this->ike_sa->update_hosts(this->ike_sa, me, other, UPDATE_HOSTS_FORCE_ADDRS);
 		charon->bus->message(charon->bus, msg, TRUE, TRUE);
 		if (process_response(this, msg) != SUCCESS)
 		{
@@ -1528,7 +1528,7 @@ METHOD(task_manager_t, process_message, status_t,
 							"%s.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT,
 							lib->ns));
 		}
-		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
+		this->ike_sa->update_hosts(this->ike_sa, me, other, UPDATE_HOSTS_FORCE_ADDRS);
 		charon->bus->message(charon->bus, msg, TRUE, TRUE);
 		if (process_request(this, msg) != SUCCESS)
 		{

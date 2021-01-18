@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Tobias Brunner
+ * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2006-2009 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -417,10 +417,11 @@ struct bus_t {
 	 * IKE_SA peer endpoint update hook.
 	 *
 	 * @param ike_sa	updated IKE_SA, having old endpoints set
-	 * @param local		TRUE if local endpoint gets updated, FALSE for remote
-	 * @param new		new endpoint address and port
+	 * @param local		new/current local endpoint address and port
+	 * @param remote	new/current remote endpoint address and port
 	 */
-	void (*ike_update)(bus_t *this, ike_sa_t *ike_sa, bool local, host_t *new);
+	void (*ike_update)(bus_t *this, ike_sa_t *ike_sa, host_t *local,
+					   host_t *remote);
 
 	/**
 	 * IKE_SA reestablishing hook (before resolving hosts).

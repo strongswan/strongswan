@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Tobias Brunner
+ * Copyright (C) 2011-2020 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -866,7 +866,7 @@ METHOD(bus_t, ike_rekey, void,
 }
 
 METHOD(bus_t, ike_update, void,
-	private_bus_t *this, ike_sa_t *ike_sa, bool local, host_t *new)
+	private_bus_t *this, ike_sa_t *ike_sa, host_t *local, host_t *remote)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -881,7 +881,8 @@ METHOD(bus_t, ike_update, void,
 			continue;
 		}
 		entry->calling++;
-		keep = entry->listener->ike_update(entry->listener, ike_sa, local, new);
+		keep = entry->listener->ike_update(entry->listener, ike_sa, local,
+										   remote);
 		entry->calling--;
 		if (!keep)
 		{

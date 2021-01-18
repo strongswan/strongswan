@@ -384,7 +384,8 @@ METHOD(task_t, process_r, status_t,
 
 			this->ike_sa->update_hosts(this->ike_sa,
 									   message->get_destination(message),
-									   message->get_source(message), TRUE);
+									   message->get_source(message),
+									   UPDATE_HOSTS_FORCE_ADDRS);
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													PLV1_SECURITY_ASSOCIATION);

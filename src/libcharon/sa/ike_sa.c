@@ -1114,9 +1114,10 @@ METHOD(ike_sa_t, float_ports, void,
 }
 
 METHOD(ike_sa_t, update_hosts, void,
-	private_ike_sa_t *this, host_t *me, host_t *other, bool force)
+	private_ike_sa_t *this, host_t *me, host_t *other, update_hosts_flag_t flags)
 {
-	bool update = FALSE;
+	host_t *new_me = NULL, *new_other = NULL;
+	bool silent = FALSE;
 
 	if (me == NULL)
 	{
@@ -1131,42 +1132,52 @@ METHOD(ike_sa_t, update_hosts, void,
 	if (this->my_host->is_anyaddr(this->my_host) ||
 		this->other_host->is_anyaddr(this->other_host))
 	{
-		set_my_host(this, me->clone(me));
-		set_other_host(this, other->clone(other));
-		update = TRUE;
+		new_me = me;
+		new_other = other;
+		silent = TRUE;
 	}
 	else
 	{
-		/* update our address in any case */
-		if (force && !me->equals(me, this->my_host))
+		/* update our address only if forced */
+		if ((flags & UPDATE_HOSTS_FORCE_LOCAL) && !me->equals(me, this->my_host))
 		{
-			charon->bus->ike_update(charon->bus, &this->public, TRUE, me);
-			set_my_host(this, me->clone(me));
-			update = TRUE;
+			new_me = me;
 		}
 
 		if (!other->equals(other, this->other_host) &&
-			(force || has_condition(this, COND_NAT_THERE)))
+			((flags & UPDATE_HOSTS_FORCE_REMOTE) || has_condition(this, COND_NAT_THERE)))
 		{
 			/* only update other's address if we are behind a static NAT,
 			 * which we assume is the case if we are not initiator */
-			if (force ||
+			if ((flags & UPDATE_HOSTS_FORCE_REMOTE) ||
 				(!has_condition(this, COND_NAT_HERE) ||
 				 !has_condition(this, COND_ORIGINAL_INITIATOR)))
 			{
-				charon->bus->ike_update(charon->bus, &this->public, FALSE, other);
-				set_other_host(this, other->clone(other));
-				update = TRUE;
+				new_other = other;
 			}
 		}
 	}
 
-	/* update all associated CHILD_SAs, if required */
-	if (update)
+	if (new_me || new_other || (flags & UPDATE_HOSTS_FORCE_CHILDREN))
 	{
 		enumerator_t *enumerator;
 		child_sa_t *child_sa;
 		linked_list_t *vips;
+
+		if ((new_me || new_other) && !silent)
+		{
+			charon->bus->ike_update(charon->bus, &this->public,
+									new_me ?: this->my_host,
+									new_other ?: this->other_host);
+		}
+		if (new_me)
+		{
+			set_my_host(this, new_me->clone(new_me));
+		}
+		if (new_other)
+		{
+			set_other_host(this, new_other->clone(new_other));
+		}
 
 		vips = linked_list_create_from_enumerator(
 									array_create_enumerator(this->my_vips));
