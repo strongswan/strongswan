@@ -253,7 +253,8 @@ freebsd)
 			--enable-load-tester --enable-ldap --enable-mediation
 			--enable-mysql --enable-sqlite --enable-tpm --enable-tss-tss2
 			--enable-unbound --enable-unity --enable-xauth-eap --enable-xauth-pam
-			--with-printf-hooks=builtin --enable-attr-sql --enable-sql"
+			--with-printf-hooks=builtin --enable-attr-sql --enable-sql
+			--enable-farp"
 	DEPS="git gmp openldap-client libxml2 mysql80-client sqlite3 unbound ldns tpm2-tss"
 	export GPERF=/usr/local/bin/gperf
 	export LEX=/usr/local/bin/flex
