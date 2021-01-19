@@ -216,8 +216,8 @@ macos)
 	# use the same options as in the Homebrew Formula
 	CONFIG="--disable-defaults --enable-charon --enable-cmd --enable-constraints
 			--enable-curl --enable-eap-gtc --enable-eap-identity
-			--enable-eap-md5 --enable-eap-mschapv2 --enable-ikev1 --enable-ikev2
-			--enable-kernel-libipsec --enable-kernel-pfkey
+			--enable-eap-md5 --enable-eap-mschapv2 --enable-farp --enable-ikev1
+			--enable-ikev2 --enable-kernel-libipsec --enable-kernel-pfkey
 			--enable-kernel-pfroute --enable-nonce --enable-openssl
 			--enable-osx-attr --enable-pem --enable-pgp --enable-pkcs1
 			--enable-pkcs8 --enable-pki --enable-pubkey --enable-revocation
