@@ -547,6 +547,8 @@ CALLBACK(authority_sn, bool,
 		{
 			/* remove the old authority definition */
 			authorities->remove_at(authorities, enumerator);
+			request->this->certs->remove(request->this->certs, authority->cert,
+										 remove_cert);
 			authority_destroy(authority);
 			break;
 		}
