@@ -29,6 +29,49 @@
 #define ASN1_STRING_get0_data(a) ASN1_STRING_data((ASN1_STRING*)a)
 #endif
 
+/*
+ * Described in header
+ */
+bool openssl_compute_shared_key(EVP_PKEY *priv, EVP_PKEY *pub, chunk_t *shared)
+{
+	EVP_PKEY_CTX *ctx;
+	bool success = FALSE;
+
+	ctx = EVP_PKEY_CTX_new(priv, NULL);
+	if (!ctx)
+	{
+		return FALSE;
+	}
+
+	if (EVP_PKEY_derive_init(ctx) <= 0)
+	{
+		goto error;
+	}
+
+	if (EVP_PKEY_derive_set_peer(ctx, pub) <= 0)
+	{
+		goto error;
+	}
+
+	if (EVP_PKEY_derive(ctx, NULL, &shared->len) <= 0)
+	{
+		goto error;
+	}
+
+	*shared = chunk_alloc(shared->len);
+
+	if (EVP_PKEY_derive(ctx, shared->ptr, &shared->len) <= 0)
+	{
+		goto error;
+	}
+
+	success = TRUE;
+
+error:
+	EVP_PKEY_CTX_free(ctx);
+	return success;
+}
+
 /**
  * Described in header.
  */

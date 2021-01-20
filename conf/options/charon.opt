@@ -129,9 +129,6 @@ charon.dns2
 charon.dos_protection = yes
 	Enable Denial of Service protection using cookies and aggressiveness checks.
 
-charon.ecp_x_coordinate_only = yes
-	Compliance with the errata for RFC 4753.
-
 charon.flush_auth_cfg = no
 	Free objects during authentication (might conflict with plugins).
 
