@@ -213,7 +213,8 @@ bool botan_get_signature(botan_privkey_t key, const char *scheme,
 						 chunk_t data, chunk_t *signature)
 {
 	botan_pk_op_sign_t sign_op;
-	botan_rng_t rng;
+	rng_t *rng;
+	botan_rng_t botan_rng;
 
 	if (!scheme || !signature)
 	{
@@ -238,22 +239,34 @@ bool botan_get_signature(botan_privkey_t key, const char *scheme,
 		return FALSE;
 	}
 
-	if (botan_rng_init(&rng, "user"))
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (!rng)
+	{
+		DBG1(DBG_LIB, "444 no RNG found for quality %N", rng_quality_names,
+			RNG_STRONG);
+		botan_pk_op_sign_destroy(sign_op);
+		return FALSE;
+	}
+
+	if (!botan_get_strongswan_rng(&botan_rng, rng))
 	{
 		botan_pk_op_sign_destroy(sign_op);
+		rng->destroy(rng);
 		return FALSE;
 	}
 
 	*signature = chunk_alloc(signature->len);
-	if (botan_pk_op_sign_finish(sign_op, rng, signature->ptr, &signature->len))
+	if (botan_pk_op_sign_finish(sign_op, botan_rng, signature->ptr, &signature->len))
 	{
 		chunk_free(signature);
-		botan_rng_destroy(rng);
+		botan_rng_destroy(botan_rng);
+		rng->destroy(rng);
 		botan_pk_op_sign_destroy(sign_op);
 		return FALSE;
 	}
 
-	botan_rng_destroy(rng);
+	botan_rng_destroy(botan_rng);
+	rng->destroy(rng);
 	botan_pk_op_sign_destroy(sign_op);
 	return TRUE;
 }
@@ -311,5 +324,24 @@ bool botan_dh_key_derivation(botan_privkey_t key, chunk_t pub, chunk_t *secret)
 		return FALSE;
 	}
 	botan_pk_op_key_agreement_destroy(ka);
+	return TRUE;
+}
+
+int strongswan_get_random(uint8_t *out, size_t out_len, rng_t *rng)
+{
+	if (!rng->get_bytes(rng, out_len, out))
+	{
+		return -1;
+	}
+	return 0;
+}
+
+bool botan_get_strongswan_rng(botan_rng_t *botan_rng, rng_t *rng)
+{
+	if(botan_rng_init_custom(botan_rng, "strongswan", rng, strongswan_get_random, NULL))
+	{
+		DBG1(DBG_LIB, "botan RNG creation failed");
+		return FALSE;
+	}
 	return TRUE;
 }

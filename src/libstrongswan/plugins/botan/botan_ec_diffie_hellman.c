@@ -164,7 +164,8 @@ botan_ec_diffie_hellman_t *botan_ec_diffie_hellman_create(
 												diffie_hellman_group_t group)
 {
 	private_botan_ec_diffie_hellman_t *this;
-	botan_rng_t rng;
+	rng_t *rng;
+	botan_rng_t botan_rng;
 
 	INIT(this,
 		.public = {
@@ -205,21 +206,33 @@ botan_ec_diffie_hellman_t *botan_ec_diffie_hellman_create(
 			return NULL;
 	}
 
-	if (botan_rng_init(&rng, "user"))
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (!rng)
 	{
+		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
+			RNG_STRONG);
 		free(this);
 		return NULL;
 	}
 
-	if (botan_privkey_create(&this->key, "ECDH", this->curve_name, rng))
+	if (!botan_get_strongswan_rng(&botan_rng, rng))
+	{
+		rng->destroy(rng);
+		free(this);
+		return NULL;
+	}
+
+	if (botan_privkey_create(&this->key, "ECDH", this->curve_name, botan_rng))
 	{
 		DBG1(DBG_LIB, "ECDH private key generation failed");
-		botan_rng_destroy(rng);
+		botan_rng_destroy(botan_rng);
+		rng->destroy(rng);
 		free(this);
 		return NULL;
 	}
 
-	botan_rng_destroy(rng);
+	botan_rng_destroy(botan_rng);
+	rng->destroy(rng);
 	return &this->public;
 }
 

@@ -142,7 +142,8 @@ METHOD(public_key_t, encrypt, bool,
 	chunk_t plain, chunk_t *crypto)
 {
 	botan_pk_op_encrypt_t encrypt_op;
-	botan_rng_t rng;
+	rng_t *rng;
+	botan_rng_t botan_rng;
 	const char* padding;
 
 	switch (scheme)
@@ -171,35 +172,48 @@ METHOD(public_key_t, encrypt, bool,
 			return FALSE;
 	}
 
-	if (botan_rng_init(&rng, "user"))
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (!rng)
 	{
+		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
+			RNG_STRONG);
+		return FALSE;
+	}
+
+	if (!botan_get_strongswan_rng(&botan_rng, rng))
+	{
+		rng->destroy(rng);
 		return FALSE;
 	}
 
 	if (botan_pk_op_encrypt_create(&encrypt_op, this->key, padding, 0))
 	{
-		botan_rng_destroy(rng);
+		botan_rng_destroy(botan_rng);
+		rng->destroy(rng);
 		return FALSE;
 	}
 
 	crypto->len = 0;
 	if (botan_pk_op_encrypt_output_length(encrypt_op, plain.len, &crypto->len))
 	{
-		botan_rng_destroy(rng);
+		botan_rng_destroy(botan_rng);
+		rng->destroy(rng);
 		botan_pk_op_encrypt_destroy(encrypt_op);
 		return FALSE;
 	}
 
 	*crypto = chunk_alloc(crypto->len);
-	if (botan_pk_op_encrypt(encrypt_op, rng, crypto->ptr, &crypto->len,
+	if (botan_pk_op_encrypt(encrypt_op, botan_rng, crypto->ptr, &crypto->len,
 							plain.ptr, plain.len))
 	{
 		chunk_free(crypto);
-		botan_rng_destroy(rng);
+		botan_rng_destroy(botan_rng);
+		rng->destroy(rng);
 		botan_pk_op_encrypt_destroy(encrypt_op);
 		return FALSE;
 	}
-	botan_rng_destroy(rng);
+	botan_rng_destroy(botan_rng);
+	rng->destroy(rng);
 	botan_pk_op_encrypt_destroy(encrypt_op);
 	return TRUE;
 }

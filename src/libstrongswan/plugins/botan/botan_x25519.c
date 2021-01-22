@@ -142,7 +142,8 @@ METHOD(diffie_hellman_t, destroy, void,
 diffie_hellman_t *botan_x25519_create(diffie_hellman_group_t group)
 {
 	private_diffie_hellman_t *this;
-	botan_rng_t rng;
+	rng_t *rng;
+	botan_rng_t botan_rng;
 
 	INIT(this,
 		.public = {
@@ -155,21 +156,34 @@ diffie_hellman_t *botan_x25519_create(diffie_hellman_group_t group)
 		},
 	);
 
-	if (botan_rng_init(&rng, "user"))
+
+	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (!rng)
 	{
+		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
+			RNG_STRONG);
 		free(this);
 		return NULL;
 	}
 
-	if (botan_privkey_create(&this->key, "Curve25519", "", rng))
+	if (!botan_get_strongswan_rng(&botan_rng, rng))
+	{
+		rng->destroy(rng);
+		free(this);
+		return NULL;
+	}
+
+	if (botan_privkey_create(&this->key, "Curve25519", "", botan_rng))
 	{
 		DBG1(DBG_LIB, "x25519 private key generation failed");
-		botan_rng_destroy(rng);
+		botan_rng_destroy(botan_rng);
+		rng->destroy(rng);
 		free(this);
 		return NULL;
 	}
 
-	botan_rng_destroy(rng);
+	botan_rng_destroy(botan_rng);
+	rng->destroy(rng);
 	return &this->public;
 }
 
