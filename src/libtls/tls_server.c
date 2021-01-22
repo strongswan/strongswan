@@ -563,7 +563,6 @@ static status_t process_client_hello(private_tls_server_t *this,
 		diffie_hellman_group_t group;
 		tls_named_group_t curve, requesting_curve = 0;
 		enumerator_t *enumerator;
-		chunk_t shared_secret = chunk_empty;
 		array_t *peer_key_shares;
 
 		peer_key_shares = array_create(sizeof(key_share_t), 1);
@@ -650,10 +649,8 @@ static status_t process_client_hello(private_tls_server_t *this,
 			{
 				DBG1(DBG_TLS, "DH key derivation failed");
 				this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
-				chunk_clear(&shared_secret);
 				return NEED_MORE;
 			}
-			chunk_clear(&shared_secret);
 			this->requested_curve = 0;
 		}
 	}
