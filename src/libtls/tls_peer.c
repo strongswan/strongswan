@@ -133,6 +133,11 @@ struct private_tls_peer_t {
 	tls_named_group_t requested_curve;
 
 	/**
+	 * Original cipher suite in HelloRetryRequest
+	 */
+	tls_cipher_suite_t original_suite;
+
+	/**
 	 * Cookie extension received in HelloRetryRequest
 	 */
 	chunk_t cookie;
@@ -342,6 +347,14 @@ static status_t process_server_hello(private_tls_peer_t *this,
 			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
 			return NEED_MORE;
 		}
+		if (this->original_suite && this->original_suite != suite)
+		{
+			DBG1(DBG_TLS, "server selected %N instead of %N after retry",
+				 tls_cipher_suite_names, suite, tls_cipher_suite_names,
+				 this->original_suite);
+			this->alert->add(this->alert, TLS_FATAL, TLS_ILLEGAL_PARAMETER);
+			return NEED_MORE;
+		}
 		DBG1(DBG_TLS, "negotiated %N using suite %N",
 			 tls_version_names, version, tls_cipher_suite_names, suite);
 		free(this->session.ptr);
@@ -390,6 +403,7 @@ static status_t process_server_hello(private_tls_peer_t *this,
 
 		DESTROY_IF(this->dh);
 		this->dh = NULL;
+		this->original_suite = suite;
 		this->requested_curve = key_type;
 		this->cookie = chunk_clone(cookie);
 		this->state = STATE_INIT;
