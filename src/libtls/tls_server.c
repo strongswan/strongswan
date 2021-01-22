@@ -253,7 +253,9 @@ static bool select_suite_and_key(private_tls_server_t *this,
 		return FALSE;
 	}
 	DBG1(DBG_TLS, "using key of type %N", key_type_names, key->get_type(key));
+	DESTROY_IF(this->private);
 	this->private = key->get_ref(key);
+	this->server_auth->purge(this->server_auth, FALSE);
 	this->server_auth->merge(this->server_auth, auth, FALSE);
 	enumerator->destroy(enumerator);
 	return TRUE;
@@ -516,7 +518,7 @@ static status_t process_client_hello(private_tls_server_t *this,
 										 chunk_from_thing(this->server_random));
 	}
 
-	if (this->suite)
+	if (this->suite && !retrying(this))
 	{
 		this->session = chunk_clone(session);
 		this->resume = TRUE;
@@ -526,6 +528,8 @@ static status_t process_client_hello(private_tls_server_t *this,
 	}
 	else
 	{
+		tls_cipher_suite_t original_suite = this->suite;
+
 		count = ciphers.len / sizeof(uint16_t);
 		suites = alloca(count * sizeof(tls_cipher_suite_t));
 		DBG2(DBG_TLS, "received %d TLS cipher suites:", count);
@@ -537,6 +541,14 @@ static status_t process_client_hello(private_tls_server_t *this,
 		if (!select_suite_and_key(this, suites, count))
 		{
 			this->alert->add(this->alert, TLS_FATAL, TLS_HANDSHAKE_FAILURE);
+			return NEED_MORE;
+		}
+		if (retrying(this) && original_suite != this->suite)
+		{
+			DBG1(DBG_TLS, "selected %N instead of %N during retry",
+				 tls_cipher_suite_names, this->suite, tls_cipher_suite_names,
+				 original_suite);
+			this->alert->add(this->alert, TLS_FATAL, TLS_ILLEGAL_PARAMETER);
 			return NEED_MORE;
 		}
 		if (this->tls->get_version_max(this->tls) < TLS_1_3)
@@ -551,6 +563,7 @@ static status_t process_client_hello(private_tls_server_t *this,
 		}
 		else
 		{
+			chunk_free(&this->session);
 			this->session = chunk_clone(session);
 		}
 		DBG1(DBG_TLS, "negotiated %N using suite %N",
