@@ -329,7 +329,7 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 			return NULL;
 	}
 
-	if (botan_rng_init(&rng, "system"))
+	if (!botan_get_rng(&rng, RNG_TRUE))
 	{
 		return NULL;
 	}
@@ -429,7 +429,7 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 
 	this = create_empty(oid);
 
-	if (botan_rng_init(&rng, "user"))
+	if (!botan_get_rng(&rng, RNG_STRONG))
 	{
 		chunk_clear(&pkcs8);
 		free(this);

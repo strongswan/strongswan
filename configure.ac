@@ -1177,6 +1177,10 @@ if test x$botan = xtrue; then
 		[PKG_CHECK_MODULES(botan, [botan-2])])
 	AC_SUBST(botan_CFLAGS)
 	AC_SUBST(botan_LIBS)
+	saved_LIBS=$LIBS
+	LIBS="$botan_LIBS"
+	AC_CHECK_FUNCS(botan_rng_init_custom)
+	LIBS=$saved_LIBS
 fi
 
 if test x$uci = xtrue; then

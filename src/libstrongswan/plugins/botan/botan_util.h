@@ -133,4 +133,13 @@ bool botan_dh_key_derivation(botan_privkey_t key, chunk_t pub, chunk_t *secret);
  */
 const char *botan_map_rng_quality(rng_quality_t quality);
 
+/**
+ * Get RNG for Botan API calls.
+ *
+ * @param botan_rng Botan RNG
+ * @param quality   RNG quality requested
+ * @return          TRUE if Botan RNG creation was successful
+ */
+bool botan_get_rng(botan_rng_t *botan_rng, rng_quality_t quality);
+
 #endif /** BOTAN_UTIL_H_ @}*/
