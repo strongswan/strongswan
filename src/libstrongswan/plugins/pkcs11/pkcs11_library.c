@@ -18,7 +18,16 @@
 
 #include "pkcs11_library.h"
 
-#include <dlfcn.h>
+#ifndef WIN32
+#  include <dlfcn.h>
+#else
+#  include <windows.h>
+#  define dlopen(name, _flags) (void *)LoadLibrary(name)
+#  define dclose(hlib) FreeLibrary((HMODULE)hlib)
+#  define dlsym(hlib, sym) (void*)GetProcAddress((HMODULE)hlib, sym)
+/* windows.h defines it as CreateMutexA, which breaks compilation */
+#  undef CreateMutex
+#endif
 
 #include <library.h>
 #include <asn1/asn1.h>
