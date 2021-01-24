@@ -18,7 +18,12 @@
 
 #include "pkcs11_library.h"
 
+#ifndef WIN32
 #include <dlfcn.h>
+#else
+/* macro defined by synchapi.h that maps to CreateMutexA/W */
+#undef CreateMutex
+#endif
 
 #include <library.h>
 #include <asn1/asn1.h>
