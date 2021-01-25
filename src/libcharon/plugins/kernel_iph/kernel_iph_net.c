@@ -16,6 +16,8 @@
 /* Windows 7, for some iphlpapi.h functionality */
 #define _WIN32_WINNT 0x0601
 #include <winsock2.h>
+/* required for iphlpapi.h (which in turn includes mprapi.h)
+ * - needs CERT_NAME_BLOB definition */
 #include <wincrypt.h>
 #include <ws2ipdef.h>
 #include <windows.h>
