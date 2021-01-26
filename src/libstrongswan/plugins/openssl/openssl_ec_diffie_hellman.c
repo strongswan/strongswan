@@ -246,7 +246,7 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 	if (pub.len != 0)
 	{
 		*value = chunk_clone(chunk_skip(pub, 1));
-		chunk_free(&pub);
+		OPENSSL_free(pub.ptr);
 		return value->len != 0;
 	}
 	return FALSE;
