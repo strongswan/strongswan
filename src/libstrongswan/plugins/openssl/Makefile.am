@@ -2,6 +2,10 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-DFIPS_MODE=${fips_mode}
 
+if USE_WINDOWS
+AM_CPPFLAGS += -DNOCRYPT
+endif
+
 AM_CFLAGS = \
 	$(PLUGIN_CFLAGS)
 
