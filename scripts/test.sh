@@ -184,8 +184,8 @@ win*)
 		TARGET=
 	else
 		CONFIG="$CONFIG --enable-openssl"
-		CFLAGS="$CFLAGS -I/c/OpenSSL-$TEST/include"
-		LDFLAGS="-L/c/OpenSSL-$TEST"
+		CFLAGS="$CFLAGS -I$OPENSSL_DIR/include"
+		LDFLAGS="-L$OPENSSL_DIR"
 		export LDFLAGS
 	fi
 	CFLAGS="$CFLAGS -mno-ms-bitfields"

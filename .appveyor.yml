@@ -22,6 +22,12 @@ install:
   - set MSYS_SH=C:\msys%BITS%\usr\bin\sh.exe
   - set MSYSTEM=MINGW%BITS%
   - set TEST=win%BITS%
+  - |
+      set IMG=%APPVEYOR_BUILD_WORKER_IMAGE:~-4%
+      set OPENSSL=OpenSSL
+      IF "%IMG%" == "2017" set OPENSSL=OpenSSL-v11
+      IF "%IMG%" == "2019" set OPENSSL=OpenSSL-v111
+      set OPENSSL_DIR=/c/%OPENSSL%-%TEST%
 
 build_script:
   - '%MSYS_SH% --login -c ". /etc/profile && cd $APPVEYOR_BUILD_FOLDER && ./scripts/test.sh deps"'
