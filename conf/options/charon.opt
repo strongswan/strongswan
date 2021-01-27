@@ -479,7 +479,7 @@ charon.tls.send_certreq_authorities = yes
 	Whether to include CAs in a server's CertificateRequest message. May be
 	disabled if clients can't handle a long list of CAs.
 
-charon.tls.version_min = 1.0
+charon.tls.version_min = 1.2
 	Minimum TLS version to negotiate.
 
 charon.tls.version_max = 1.2
