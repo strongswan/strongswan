@@ -463,8 +463,8 @@ static void determine_versions(private_tls_t *this)
 	char *version_str;
 
 	if (this->version_min == TLS_UNSPEC)
-	{
-		this->version_min = TLS_SUPPORTED_MIN;
+	{	/* default to TLS 1.2 as older versions are considered deprecated */
+		this->version_min = TLS_1_2;
 
 		version_str = lib->settings->get_str(lib->settings, "%s.tls.version_min",
 											 NULL, lib->ns);
