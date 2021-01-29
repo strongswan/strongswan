@@ -171,7 +171,7 @@ METHOD(public_key_t, encrypt, bool,
 			return FALSE;
 	}
 
-	if (!botan_get_rng(&rng))
+	if (!botan_get_rng(&rng, RNG_STRONG))
 	{
 		return FALSE;
 	}

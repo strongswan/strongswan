@@ -238,7 +238,7 @@ bool botan_get_signature(botan_privkey_t key, const char *scheme,
 		return FALSE;
 	}
 
-	if (!botan_get_rng(&rng))
+	if (!botan_get_rng(&rng, RNG_STRONG))
 	{
 		botan_pk_op_sign_destroy(sign_op);
 		return FALSE;
@@ -331,24 +331,57 @@ void botan_destroy_rng(rng_t *rng)
 	}
 }
 
-bool botan_get_rng(botan_rng_t *botan_rng)
+const char* rng_quality_to_botan_rng_name(rng_quality_t quality)
+{
+	const char* rng_name;
+	switch (quality)
+	{
+		case RNG_WEAK:
+		case RNG_STRONG:
+#ifdef BOTAN_TARGET_OS_HAS_THREADS
+			rng_name = "user-threadsafe";
+#else
+			rng_name = "user";
+#endif
+			break;
+		case RNG_TRUE:
+			rng_name = "system";
+			break;
+		default:
+			return NULL;
+	}
+	return rng_name;
+}
+
+bool botan_get_rng(botan_rng_t *botan_rng, rng_quality_t quality)
 {
 #ifdef HAVE_BOTAN_RNG_INIT_CUSTOM
-	rng_t* rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (!rng)
+	if (lib->settings->get_bool(lib->settings,
+			"%s.plugins.botan.use_rng", FALSE, lib->ns))
 	{
-		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
-			RNG_STRONG);
-		return FALSE;
+		if (botan_rng_init(botan_rng, rng_quality_to_botan_rng_name(quality)))
+		{
+			return FALSE;
+		}
 	}
-	
-	if (botan_rng_init_custom(botan_rng, "strongswan", rng, strongswan_get_random, NULL, botan_destroy_rng))
+	else
 	{
-		DBG1(DBG_LIB, "Botan RNG creation failed");
-		return FALSE;
+		rng_t* rng = lib->crypto->create_rng(lib->crypto, quality);
+		if (!rng)
+		{
+			DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
+				quality);
+			return FALSE;
+		}
+
+		if (botan_rng_init_custom(botan_rng, "strongswan", rng, strongswan_get_random, NULL, botan_destroy_rng))
+		{
+			DBG1(DBG_LIB, "Botan RNG creation failed");
+			return FALSE;
+		}
 	}
 #else
-	if (botan_rng_init(botan_rng, "user"))
+	if (botan_rng_init(botan_rng, rng_quality_to_botan_rng_name(quality)))
 	{
 		return FALSE;
 	}

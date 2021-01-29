@@ -82,7 +82,7 @@ public_key_t *botan_public_key_load(key_type_t type, va_list args)
 		break;
 	}
 
-	if (!botan_get_rng(&rng))
+	if (!botan_get_rng(&rng, RNG_STRONG))
 	{
 		return NULL;
 	}
@@ -184,7 +184,7 @@ private_key_t *botan_private_key_load(key_type_t type, va_list args)
 		break;
 	}
 
-	if (!botan_get_rng(&rng))
+	if (!botan_get_rng(&rng, RNG_STRONG))
 	{
 		return NULL;
 	}
