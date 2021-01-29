@@ -333,7 +333,7 @@ void botan_destroy_rng(rng_t *rng)
 
 bool botan_get_rng(botan_rng_t *botan_rng)
 {
-	// TODO add a fallback for Botan versions that don't ship this API function
+#ifdef HAVE_BOTAN_RNG_INIT_CUSTOM
 	rng_t* rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (!rng)
 	{
@@ -342,10 +342,16 @@ bool botan_get_rng(botan_rng_t *botan_rng)
 		return FALSE;
 	}
 	
-	if(botan_rng_init_custom(botan_rng, "strongswan", rng, strongswan_get_random, NULL, botan_destroy_rng))
+	if (botan_rng_init_custom(botan_rng, "strongswan", rng, strongswan_get_random, NULL, botan_destroy_rng))
 	{
 		DBG1(DBG_LIB, "Botan RNG creation failed");
 		return FALSE;
 	}
+#else
+	if (botan_rng_init(botan_rng, "user"))
+	{
+		return FALSE;
+	}
+#endif
 	return TRUE;
 }
