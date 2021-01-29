@@ -128,8 +128,8 @@ bool botan_dh_key_derivation(botan_privkey_t key, chunk_t pub, chunk_t *secret);
 /**
  * Get RNG for Botan API calls.
  *
- * @param botan_rng 	Botan RNG
- * @return 				TRUE if Botan RNG creation was successful
+ * @param botan_rng Botan RNG
+ * @return          TRUE if Botan RNG creation was successful
  */
 bool botan_get_rng(botan_rng_t *botan_rng);
 

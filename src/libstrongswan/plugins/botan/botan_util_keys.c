@@ -84,7 +84,6 @@ public_key_t *botan_public_key_load(key_type_t type, va_list args)
 
 	if (!botan_get_rng(&rng))
 	{
-		free(this);
 		return NULL;
 	}
 	if (botan_pubkey_load(&pubkey, blob.ptr, blob.len))

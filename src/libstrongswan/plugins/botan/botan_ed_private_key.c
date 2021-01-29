@@ -218,7 +218,6 @@ private_key_t *botan_ed_private_key_gen(key_type_t type, va_list args)
 
 	if (!botan_get_rng(&rng))
 	{
-		DBG1(DBG_LIB, "111 EdDSA private key generation failed");
 		return NULL;
 	}
 
