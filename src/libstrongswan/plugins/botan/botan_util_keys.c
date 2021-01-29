@@ -64,8 +64,7 @@ public_key_t *botan_public_key_load(key_type_t type, va_list args)
 	public_key_t *this = NULL;
 	botan_pubkey_t pubkey;
 	chunk_t blob = chunk_empty;
-	rng_t *rng;
-	botan_rng_t botan_rng;
+	botan_rng_t rng;
 	char *name;
 
 	while (TRUE)
@@ -83,37 +82,24 @@ public_key_t *botan_public_key_load(key_type_t type, va_list args)
 		break;
 	}
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (!rng)
+	if (!botan_get_rng(&rng))
 	{
-		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
-			RNG_STRONG);
-		free(this);
-		return NULL;
-	}
-
-	if (!botan_get_strongswan_rng(&botan_rng, rng))
-	{
-		rng->destroy(rng);
 		free(this);
 		return NULL;
 	}
 	if (botan_pubkey_load(&pubkey, blob.ptr, blob.len))
 	{
-		botan_rng_destroy(botan_rng);
-		rng->destroy(rng);
+		botan_rng_destroy(rng);
 		return NULL;
 	}
-	if (botan_pubkey_check_key(pubkey, botan_rng, BOTAN_CHECK_KEY_EXPENSIVE_TESTS))
+	if (botan_pubkey_check_key(pubkey, rng, BOTAN_CHECK_KEY_EXPENSIVE_TESTS))
 	{
 		DBG1(DBG_LIB, "public key failed key checks");
 		botan_pubkey_destroy(pubkey);
-		botan_rng_destroy(botan_rng);
-		rng->destroy(rng);
+		botan_rng_destroy(rng);
 		return NULL;
 	}
-	botan_rng_destroy(botan_rng);
-	rng->destroy(rng);
+	botan_rng_destroy(rng);
 
 	name = get_algo_name(pubkey);
 	if (!name)
@@ -181,8 +167,7 @@ private_key_t *botan_private_key_load(key_type_t type, va_list args)
 	botan_privkey_t key;
 	botan_pubkey_t pubkey;
 	chunk_t blob = chunk_empty;
-	rng_t *rng;
-	botan_rng_t botan_rng;
+	botan_rng_t rng;
 	char *name;
 
 	while (TRUE)
@@ -200,29 +185,16 @@ private_key_t *botan_private_key_load(key_type_t type, va_list args)
 		break;
 	}
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (!rng)
+	if (!botan_get_rng(&rng))
 	{
-		DBG1(DBG_LIB, "222 no RNG found for quality %N", rng_quality_names,
-			RNG_STRONG);
 		return NULL;
 	}
-
-	if (!botan_get_strongswan_rng(&botan_rng, rng))
+	if (botan_privkey_load(&key, rng, blob.ptr, blob.len, NULL))
 	{
-		DBG1(DBG_LIB, "111 no RNG found for quality %N", rng_quality_names,
-			RNG_STRONG);
-		rng->destroy(rng);
+		botan_rng_destroy(rng);
 		return NULL;
 	}
-	if (botan_privkey_load(&key, botan_rng, blob.ptr, blob.len, NULL))
-	{
-		botan_rng_destroy(botan_rng);
-		rng->destroy(rng);
-		return NULL;
-	}
-	botan_rng_destroy(botan_rng);
-	rng->destroy(rng);
+	botan_rng_destroy(rng);
 
 	if (botan_privkey_export_pubkey(&pubkey, key))
 	{

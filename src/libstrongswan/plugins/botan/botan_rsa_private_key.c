@@ -345,8 +345,7 @@ botan_rsa_private_key_t *botan_rsa_private_key_gen(key_type_t type,
 												   va_list args)
 {
 	private_botan_rsa_private_key_t *this;
-	rng_t *rng;
-	botan_rng_t botan_rng;
+	botan_rng_t rng;
 	char buf[BUF_LEN];
 	u_int key_size = 0;
 
@@ -370,17 +369,8 @@ botan_rsa_private_key_t *botan_rsa_private_key_gen(key_type_t type,
 		return NULL;
 	}
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (!rng)
+	if (!botan_get_rng(&rng))
 	{
-		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
-			RNG_STRONG);
-		return NULL;
-	}
-
-	if (!botan_get_strongswan_rng(&botan_rng, rng))
-	{
-		rng->destroy(rng);
 		return NULL;
 	}
 
@@ -388,15 +378,13 @@ botan_rsa_private_key_t *botan_rsa_private_key_gen(key_type_t type,
 
 	snprintf(buf, sizeof(buf), "%u", key_size);
 
-	if (botan_privkey_create(&this->key, "RSA", buf, botan_rng))
+	if (botan_privkey_create(&this->key, "RSA", buf, rng))
 	{
-		botan_rng_destroy(botan_rng);
-		rng->destroy(rng);
+		botan_rng_destroy(rng);
 		free(this);
 		return NULL;
 	}
-	botan_rng_destroy(botan_rng);
-	rng->destroy(rng);
+	botan_rng_destroy(rng);
 	return &this->public;
 }
 
@@ -409,8 +397,7 @@ static bool calculate_pq(botan_mp_t *n, botan_mp_t *e, botan_mp_t *d,
 {
 	botan_mp_t k = NULL, one = NULL, r = NULL, zero = NULL, two = NULL;
 	botan_mp_t n1 = NULL, x = NULL, y = NULL, g = NULL, rem = NULL;
-	rng_t *rng;
-	botan_rng_t botan_rng = NULL;
+	botan_rng_t rng;
 	int i, t, j;
 	bool success = FALSE;
 
@@ -461,15 +448,7 @@ static bool calculate_pq(botan_mp_t *n, botan_mp_t *e, botan_mp_t *d,
 		goto error;
 	}
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (!rng)
-	{
-		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
-			RNG_STRONG);
-		goto error;
-	}
-
-	if (!botan_get_strongswan_rng(&botan_rng, rng))
+	if (!botan_get_rng(&rng))
 	{
 		goto error;
 	}
@@ -493,7 +472,7 @@ static bool calculate_pq(botan_mp_t *n, botan_mp_t *e, botan_mp_t *d,
 	for (i = 0; i < 100; i++)
 	{
 		/* 3a. generate a random integer g in the range [0, n-1] */
-		if (botan_mp_rand_range(g, botan_rng, zero, n1))
+		if (botan_mp_rand_range(g, rng, zero, n1))
 		{
 			goto error;
 		}
@@ -570,8 +549,7 @@ error:
 		botan_mp_destroy(*p);
 		botan_mp_destroy(*q);
 	}
-	botan_rng_destroy(botan_rng);
-	rng->destroy(rng);
+	botan_rng_destroy(rng);
 	botan_mp_destroy(k);
 	botan_mp_destroy(one);
 	botan_mp_destroy(r);

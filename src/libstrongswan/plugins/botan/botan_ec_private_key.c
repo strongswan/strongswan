@@ -284,8 +284,7 @@ botan_ec_private_key_t *botan_ec_private_key_adopt(botan_privkey_t key, int oid)
 botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 {
 	private_botan_ec_private_key_t *this;
-	rng_t *rng;
-	botan_rng_t botan_rng;
+	botan_rng_t rng;
 	u_int key_size = 0;
 	int oid;
 	const char *curve;
@@ -330,33 +329,22 @@ botan_ec_private_key_t *botan_ec_private_key_gen(key_type_t type, va_list args)
 			return NULL;
 	}
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (!rng)
+	if (!botan_get_rng(&rng))
 	{
-		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
-			RNG_STRONG);
-		return NULL;
-	}
-
-	if (!botan_get_strongswan_rng(&botan_rng, rng))
-	{
-		rng->destroy(rng);
 		return NULL;
 	}
 
 	this = create_empty(oid);
 
-	if (botan_privkey_create(&this->key, "ECDSA", curve, botan_rng))
+	if (botan_privkey_create(&this->key, "ECDSA", curve, rng))
 	{
 		DBG1(DBG_LIB, "EC private key generation failed");
-		botan_rng_destroy(botan_rng);
-		rng->destroy(rng);
+		botan_rng_destroy(rng);
 		free(this);
 		return NULL;
 	}
 
-	botan_rng_destroy(botan_rng);
-	rng->destroy(rng);
+	botan_rng_destroy(rng);
 	return &this->public;
 }
 
@@ -368,8 +356,7 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 	private_botan_ec_private_key_t *this;
 	chunk_t params = chunk_empty, key = chunk_empty;
 	chunk_t alg_id = chunk_empty, pkcs8 = chunk_empty;
-	rng_t *rng;
-	botan_rng_t botan_rng;
+	botan_rng_t rng;
 	int oid = OID_UNKNOWN;
 
 	while (TRUE)
@@ -442,36 +429,23 @@ botan_ec_private_key_t *botan_ec_private_key_load(key_type_t type, va_list args)
 
 	this = create_empty(oid);
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (!rng)
+	if (!botan_get_rng(&rng))
 	{
-		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
-			RNG_STRONG);
 		chunk_clear(&pkcs8);
 		free(this);
 		return NULL;
 	}
 
-	if (!botan_get_strongswan_rng(&botan_rng, rng))
+	if (botan_privkey_load(&this->key, rng, pkcs8.ptr, pkcs8.len, NULL))
 	{
 		chunk_clear(&pkcs8);
-		rng->destroy(rng);
-		free(this);
-		return NULL;
-	}
-
-	if (botan_privkey_load(&this->key, botan_rng, pkcs8.ptr, pkcs8.len, NULL))
-	{
-		chunk_clear(&pkcs8);
-		botan_rng_destroy(botan_rng);
-		rng->destroy(rng);
+		botan_rng_destroy(rng);
 		free(this);
 		return NULL;
 	}
 
 	chunk_clear(&pkcs8);
-	botan_rng_destroy(botan_rng);
-	rng->destroy(rng);
+	botan_rng_destroy(rng);
 	return &this->public;
 }
 

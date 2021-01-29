@@ -198,8 +198,7 @@ private_key_t *botan_ed_private_key_adopt(botan_privkey_t key)
 private_key_t *botan_ed_private_key_gen(key_type_t type, va_list args)
 {
 	private_private_key_t *this;
-	rng_t *rng;
-	botan_rng_t botan_rng;
+	botan_rng_t rng;
 
 	while (TRUE)
 	{
@@ -217,33 +216,23 @@ private_key_t *botan_ed_private_key_gen(key_type_t type, va_list args)
 		break;
 	}
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (!rng)
+	if (!botan_get_rng(&rng))
 	{
-		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
-			RNG_STRONG);
-		return NULL;
-	}
-
-	if (!botan_get_strongswan_rng(&botan_rng, rng))
-	{
-		rng->destroy(rng);
+		DBG1(DBG_LIB, "111 EdDSA private key generation failed");
 		return NULL;
 	}
 
 	this = create_empty();
 
-	if (botan_privkey_create(&this->key, "Ed25519", NULL, botan_rng))
+	if (botan_privkey_create(&this->key, "Ed25519", NULL, rng))
 	{
 		DBG1(DBG_LIB, "EdDSA private key generation failed");
-		botan_rng_destroy(botan_rng);
-		rng->destroy(rng);
+		botan_rng_destroy(rng);
 		free(this);
 		return NULL;
 	}
 
-	botan_rng_destroy(botan_rng);
-	rng->destroy(rng);
+	botan_rng_destroy(rng);
 	return &this->public;
 }
 

@@ -70,8 +70,7 @@ METHOD(plugin_t, get_name, char*,
 METHOD(plugin_t, get_features, int,
 	private_botan_plugin_t *this, plugin_feature_t *features[])
 {
-	static plugin_feature_t f[] = {
-
+	static plugin_feature_t f_dh[] = {
 #ifdef BOTAN_HAS_DIFFIE_HELLMAN
 		/* MODP DH groups */
 		PLUGIN_REGISTER(DH, botan_diffie_hellman_create),
@@ -88,6 +87,9 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, MODP_768_BIT),
 			PLUGIN_PROVIDE(DH, MODP_CUSTOM),
 #endif
+	};
+
+	static plugin_feature_t f_ecdh[] = {
 #ifdef BOTAN_HAS_ECDH
 		/* EC DH groups */
 		PLUGIN_REGISTER(DH, botan_ec_diffie_hellman_create),
@@ -102,7 +104,9 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(DH, botan_x25519_create),
 			PLUGIN_PROVIDE(DH, CURVE_25519),
 #endif
+	};
 
+	static plugin_feature_t f_crypt[] = {
 		/* crypters */
 #if defined(BOTAN_HAS_AES) && defined(BOTAN_HAS_MODE_CBC)
 		PLUGIN_REGISTER(CRYPTER, botan_crypter_create),
@@ -148,7 +152,9 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(AEAD, ENCR_CHACHA20_POLY1305, 32),
 #endif
 #endif
+	};
 
+	static plugin_feature_t f_hash[] = {
 		/* hashers */
 		PLUGIN_REGISTER(HASHER, botan_hasher_create),
 #ifdef BOTAN_HAS_MD5
@@ -171,7 +177,9 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(HASHER, HASH_SHA3_384),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA3_512),
 #endif
+	};
 
+	static plugin_feature_t f_prf[] = {
 		/* prfs */
 #ifdef BOTAN_HAS_HMAC
 		PLUGIN_REGISTER(PRF, botan_hmac_prf_create),
@@ -185,6 +193,11 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_384),
 			PLUGIN_PROVIDE(PRF, PRF_HMAC_SHA2_512),
 #endif
+#endif /* BOTAN_HAS_HMAC */
+	};
+
+	static plugin_feature_t f_hmac[] = {
+#ifdef BOTAN_HAS_HMAC
 		/* signer */
 		PLUGIN_REGISTER(SIGNER, botan_hmac_signer_create),
 #ifdef BOTAN_HAS_SHA1
@@ -203,7 +216,9 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_512),
 #endif
 #endif /* BOTAN_HAS_HMAC */
+	};
 
+	static plugin_feature_t f_pubkey[] = {
 		/* generic key loaders */
 #if defined (BOTAN_HAS_RSA) || defined(BOTAN_HAS_ECDSA) || \
 	defined(BOTAN_HAS_ED25519)
@@ -218,6 +233,12 @@ METHOD(plugin_t, get_features, int,
 #ifdef BOTAN_HAS_ED25519
 			PLUGIN_PROVIDE(PUBKEY, KEY_ED25519),
 #endif
+#endif /* BOTAN_HAS_RSA || BOTAN_HAS_ECDSA || BOTAN_HAS_ED25519 */
+	};
+
+	static plugin_feature_t f_privkey[] = {
+#if defined (BOTAN_HAS_RSA) || defined(BOTAN_HAS_ECDSA) || \
+	defined(BOTAN_HAS_ED25519)
 		PLUGIN_REGISTER(PRIVKEY, botan_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
 #ifdef BOTAN_HAS_RSA
@@ -229,7 +250,10 @@ METHOD(plugin_t, get_features, int,
 #ifdef BOTAN_HAS_ED25519
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ED25519),
 #endif
-#endif
+#endif /* BOTAN_HAS_RSA || BOTAN_HAS_ECDSA || BOTAN_HAS_ED25519 */
+	};
+
+	static plugin_feature_t f_rsa[] = {
 		/* RSA */
 #ifdef BOTAN_HAS_RSA
 		/* public/private key loading/generation */
@@ -272,7 +296,7 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA3_384),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA3_512),
 #endif
-#endif
+#endif /* BOTAN_HAS_EMSA_PKCS1 */
 #ifdef BOTAN_HAS_EMSA_PSSR
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PSS),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PSS),
@@ -288,9 +312,11 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_ENCRYPT, ENCRYPT_RSA_OAEP_SHA384),
 		PLUGIN_PROVIDE(PUBKEY_ENCRYPT, ENCRYPT_RSA_OAEP_SHA512),
 #endif
-#endif
+#endif /* BOTAN_HAS_EME_OAEP */
 #endif /* BOTAN_HAS_RSA */
+	};
 
+	static plugin_feature_t f_ecdsa[] = {
 #ifdef BOTAN_HAS_ECDSA
 		/* EC private/public key loading */
 		PLUGIN_REGISTER(PRIVKEY, botan_ec_private_key_load, TRUE),
@@ -325,7 +351,9 @@ METHOD(plugin_t, get_features, int,
 #endif
 #endif /* BOTAN_HAS_EMSA1 */
 #endif /* BOTAN_HAS_ECDSA */
+	};
 
+	static plugin_feature_t f_ed25519[] = {
 #ifdef BOTAN_HAS_ED25519
 		/* EdDSA private/public key loading */
 		PLUGIN_REGISTER(PUBKEY, botan_ed_public_key_load, TRUE),
@@ -340,7 +368,9 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(HASHER, return_null),
 			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
 #endif
+	};
 
+	static plugin_feature_t f_rng[] = {
 		/* random numbers */
 #if BOTAN_HAS_SYSTEM_RNG
 #if BOTAN_HAS_HMAC_DRBG
@@ -351,8 +381,34 @@ METHOD(plugin_t, get_features, int,
 #endif
 #endif
 	};
+	static plugin_feature_t f[countof(f_dh) + countof(f_ecdh) + countof(f_crypt)+
+							  countof(f_hash) + countof(f_prf) +
+							  countof(f_hmac) + countof(f_pubkey)+
+							  countof(f_privkey) + countof(f_rsa)+
+							  countof(f_ecdsa) + countof(f_ed25519)+
+							  countof(f_rng)] = {};
+	static int count = 0;
+
+	if (!count)
+	{	/* initialize only once */
+		plugin_features_add(f, f_dh, countof(f_dh), &count);
+		plugin_features_add(f, f_ecdh, countof(f_ecdh), &count);
+		plugin_features_add(f, f_crypt, countof(f_crypt), &count);
+		plugin_features_add(f, f_hash, countof(f_hash), &count);
+		plugin_features_add(f, f_prf, countof(f_prf), &count);
+		plugin_features_add(f, f_hmac, countof(f_hmac), &count);
+		plugin_features_add(f, f_privkey, countof(f_privkey), &count);
+		plugin_features_add(f, f_rsa, countof(f_rsa), &count);
+		plugin_features_add(f, f_ecdsa, countof(f_ecdsa), &count);
+		plugin_features_add(f, f_ed25519, countof(f_ed25519), &count);
+		if (lib->settings->get_bool(lib->settings,
+								"%s.plugins.botan.use_rng", TRUE, lib->ns))
+		{
+			plugin_features_add(f, f_rng, countof(f_rng), &count);
+		}
+	}
 	*features = f;
-	return countof(f);
+	return count;
 }
 
 METHOD(plugin_t, destroy, void,

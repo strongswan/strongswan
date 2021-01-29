@@ -213,8 +213,7 @@ bool botan_get_signature(botan_privkey_t key, const char *scheme,
 						 chunk_t data, chunk_t *signature)
 {
 	botan_pk_op_sign_t sign_op;
-	rng_t *rng;
-	botan_rng_t botan_rng;
+	botan_rng_t rng;
 
 	if (!scheme || !signature)
 	{
@@ -239,34 +238,22 @@ bool botan_get_signature(botan_privkey_t key, const char *scheme,
 		return FALSE;
 	}
 
-	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
-	if (!rng)
-	{
-		DBG1(DBG_LIB, "444 no RNG found for quality %N", rng_quality_names,
-			RNG_STRONG);
-		botan_pk_op_sign_destroy(sign_op);
-		return FALSE;
-	}
-
-	if (!botan_get_strongswan_rng(&botan_rng, rng))
+	if (!botan_get_rng(&rng))
 	{
 		botan_pk_op_sign_destroy(sign_op);
-		rng->destroy(rng);
 		return FALSE;
 	}
 
 	*signature = chunk_alloc(signature->len);
-	if (botan_pk_op_sign_finish(sign_op, botan_rng, signature->ptr, &signature->len))
+	if (botan_pk_op_sign_finish(sign_op, rng, signature->ptr, &signature->len))
 	{
 		chunk_free(signature);
-		botan_rng_destroy(botan_rng);
-		rng->destroy(rng);
+		botan_rng_destroy(rng);
 		botan_pk_op_sign_destroy(sign_op);
 		return FALSE;
 	}
 
-	botan_rng_destroy(botan_rng);
-	rng->destroy(rng);
+	botan_rng_destroy(rng);
 	botan_pk_op_sign_destroy(sign_op);
 	return TRUE;
 }
@@ -327,7 +314,7 @@ bool botan_dh_key_derivation(botan_privkey_t key, chunk_t pub, chunk_t *secret)
 	return TRUE;
 }
 
-int strongswan_get_random(uint8_t *out, size_t out_len, rng_t *rng)
+int strongswan_get_random(rng_t *rng, uint8_t *out, size_t out_len)
 {
 	if (!rng->get_bytes(rng, out_len, out))
 	{
@@ -336,11 +323,28 @@ int strongswan_get_random(uint8_t *out, size_t out_len, rng_t *rng)
 	return 0;
 }
 
-bool botan_get_strongswan_rng(botan_rng_t *botan_rng, rng_t *rng)
+void botan_destroy_rng(rng_t *rng)
 {
-	if(botan_rng_init_custom(botan_rng, "strongswan", rng, strongswan_get_random, NULL))
+	if(rng)
 	{
-		DBG1(DBG_LIB, "botan RNG creation failed");
+		rng->destroy(rng);
+	}
+}
+
+bool botan_get_rng(botan_rng_t *botan_rng)
+{
+	// TODO add a fallback for Botan versions that don't ship this API function
+	rng_t* rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
+	if (!rng)
+	{
+		DBG1(DBG_LIB, "no RNG found for quality %N", rng_quality_names,
+			RNG_STRONG);
+		return FALSE;
+	}
+	
+	if(botan_rng_init_custom(botan_rng, "strongswan", rng, strongswan_get_random, NULL, botan_destroy_rng))
+	{
+		DBG1(DBG_LIB, "Botan RNG creation failed");
 		return FALSE;
 	}
 	return TRUE;

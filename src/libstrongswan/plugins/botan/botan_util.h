@@ -126,12 +126,11 @@ bool botan_verify_signature(botan_pubkey_t key, const char* scheme,
 bool botan_dh_key_derivation(botan_privkey_t key, chunk_t pub, chunk_t *secret);
 
 /**
- * Get reference to strongswan internal RNG for Botan API calls.
+ * Get RNG for Botan API calls.
  *
  * @param botan_rng 	Botan RNG
- * @param rng 			Strongswan RNG
  * @return 				TRUE if Botan RNG creation was successful
  */
-bool botan_get_strongswan_rng(botan_rng_t *botan_rng, rng_t *rng);
+bool botan_get_rng(botan_rng_t *botan_rng);
 
 #endif /** BOTAN_UTIL_H_ @}*/
