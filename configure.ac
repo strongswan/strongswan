@@ -1173,7 +1173,8 @@ if test x$gcrypt = xtrue; then
 fi
 
 if test x$botan = xtrue; then
-	PKG_CHECK_MODULES(botan, [botan-2])
+	PKG_CHECK_MODULES(botan, [botan-3], [],
+		[PKG_CHECK_MODULES(botan, [botan-2])])
 	AC_SUBST(botan_CFLAGS)
 	AC_SUBST(botan_LIBS)
 fi
