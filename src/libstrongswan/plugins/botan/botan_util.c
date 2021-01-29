@@ -313,3 +313,35 @@ bool botan_dh_key_derivation(botan_privkey_t key, chunk_t pub, chunk_t *secret)
 	botan_pk_op_key_agreement_destroy(ka);
 	return TRUE;
 }
+
+/*
+ * Described in header
+ */
+const char *botan_map_rng_quality(rng_quality_t quality)
+{
+	const char *rng_name;
+
+	switch (quality)
+	{
+		case RNG_WEAK:
+		case RNG_STRONG:
+			/* some rng_t instances of this class (e.g. in the ike-sa-manager)
+			 * may be called concurrently by different threads. the Botan RNGs
+			 * are not reentrant, by default, so use the threadsafe version.
+			 * because we build without threading support when running tests
+			 * with leak-detective (lots of reports of frees of unknown memory)
+			 * there is a fallback to the default */
+#ifdef BOTAN_TARGET_OS_HAS_THREADS
+			rng_name = "user-threadsafe";
+#else
+			rng_name = "user";
+#endif
+			break;
+		case RNG_TRUE:
+			rng_name = "system";
+			break;
+		default:
+			return NULL;
+	}
+	return rng_name;
+}

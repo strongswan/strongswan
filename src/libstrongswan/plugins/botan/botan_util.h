@@ -125,4 +125,12 @@ bool botan_verify_signature(botan_pubkey_t key, const char* scheme,
  */
 bool botan_dh_key_derivation(botan_privkey_t key, chunk_t pub, chunk_t *secret);
 
+/**
+ * Map the given RNG quality to a name as used by Botan.
+ *
+ * @param quality	RNG quality
+ * @return			name of the Botan RNG
+ */
+const char *botan_map_rng_quality(rng_quality_t quality);
+
 #endif /** BOTAN_UTIL_H_ @}*/
