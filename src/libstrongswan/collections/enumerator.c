@@ -434,51 +434,6 @@ METHOD(enumerator_t, enumerate_glob_enum, bool,
 	return FALSE;
 }
 
-/* The three functions below should go to <path.h> */
-static bool path_is_dirsep(int c)
-{
-#ifdef WIN32
-	if (c == '/' )
-	{
-		/* also correct on Win32 */
-		return TRUE;
-	}
-#endif
-	return (c == DIRECTORY_SEPARATOR[0]);
-}
-
-static char *path_first_dirsep(const char *path, int len)
-{
-	if (len < 0)
-		len = (int)strlen(path);
-
-	while (len)
-	{
-		if (path_is_dirsep(*path))
-		{
-			return (char *)path;
-		}
-		path++;
-		len--;
-	}
-	return NULL;
-}
-
-static char *path_last_dirsep(const char *path, int len)
-{
-	if (len < 0)
-		len = (int)strlen(path);
-
-	while (len)
-	{
-		if (path_is_dirsep(path[--len]))
-		{
-			return (char *)path + len;
-		}
-	}
-	return NULL;
-}
-
 enumerator_t* enumerator_create_glob(const char *pattern)
 {
 	glob_enum_t *this;
