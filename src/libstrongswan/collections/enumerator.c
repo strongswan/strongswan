@@ -173,9 +173,9 @@ enumerator_t* enumerator_create_directory(const char *path)
 		return NULL;
 	}
 	/* append a '/' if not already done */
-	if (this->full[len-1] != '/')
+	if (!path_is_separator(this->full[len-1]))
 	{
-		this->full[len++] = '/';
+		this->full[len++] = DIRECTORY_SEPARATOR[0];
 		this->full[len] = '\0';
 	}
 	this->full_end = &this->full[len];
