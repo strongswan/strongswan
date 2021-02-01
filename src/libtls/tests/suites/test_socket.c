@@ -308,7 +308,11 @@ static void setup_credentials(chunk_t key_data, chunk_t cert_data)
 	private_key_t *key;
 	certificate_t *cert;
 
-	creds = mem_cred_create();
+	if (!creds)
+	{
+		creds = mem_cred_create();
+		lib->credmgr->add_set(lib->credmgr, &creds->set);
+	}
 
 	key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 							 BUILD_BLOB, chunk_from_thing(rsa), BUILD_END);
@@ -334,8 +338,6 @@ static void setup_credentials(chunk_t key_data, chunk_t cert_data)
 	{
 		creds->add_cert(creds, TRUE, cert);
 	}
-
-	lib->credmgr->add_set(lib->credmgr, &creds->set);
 }
 
 START_SETUP(setup_creds)
@@ -356,10 +358,19 @@ START_SETUP(setup_ed448_creds)
 }
 END_SETUP
 
+START_SETUP(setup_all_creds)
+{
+	setup_credentials(chunk_from_thing(ecdsa), chunk_from_thing(ecdsa_crt));
+	setup_credentials(chunk_from_thing(ed25519), chunk_from_thing(ed25519_crt));
+	setup_credentials(chunk_from_thing(ed448), chunk_from_thing(ed448_crt));
+}
+END_SETUP
+
 START_TEARDOWN(teardown_creds)
 {
 	lib->credmgr->remove_set(lib->credmgr, &creds->set);
 	creds->destroy(creds);
+	creds = NULL;
 }
 END_TEARDOWN
 
@@ -588,6 +599,37 @@ static void test_tls_ke_groups(tls_version_t version, uint16_t port, bool cauth,
 }
 
 /**
+ * TLS signature test wrapper function
+ */
+static void test_tls_signature_schemes(tls_version_t version, uint16_t port,
+									   bool cauth, u_int i)
+{
+	echo_server_config_t *config;
+	tls_signature_scheme_t *schemes;
+	char signature[128];
+	int count;
+
+	config = create_config(version, port, cauth);
+
+	start_echo_server(config);
+
+	count = tls_crypto_get_supported_signatures(version, &schemes);
+	ck_assert(i < count);
+	snprintf(signature, sizeof(signature), "%N", tls_signature_scheme_names,
+			 schemes[i]);
+	lib->settings->set_str(lib->settings, "%s.tls.signature", signature, lib->ns);
+
+	run_echo_client(config);
+
+	free(schemes);
+
+	shutdown(config->fd, SHUT_RDWR);
+	close(config->fd);
+
+	free(config);
+}
+
+/**
  * TLS server version test wrapper function
  */
 static void test_tls_server(tls_version_t version, uint16_t port, bool cauth,
@@ -637,25 +679,49 @@ static void test_tls_client(tls_version_t version, uint16_t port, bool cauth,
 
 START_TEST(test_tls_12_server)
 {
-	test_tls_server(TLS_1_2, 5665, FALSE, _i);
+	test_tls_server(TLS_1_2, 5661, FALSE, _i);
 }
 END_TEST
 
 START_TEST(test_tls_13_server)
 {
-	test_tls_server(TLS_1_3, 5666, FALSE, _i);
+	test_tls_server(TLS_1_3, 5662, FALSE, _i);
 }
 END_TEST
 
 START_TEST(test_tls_13_client)
 {
-	test_tls_client(TLS_1_3, 5667, FALSE, _i);
+	test_tls_client(TLS_1_3, 5663, FALSE, _i);
 }
 END_TEST
 
 START_TEST(test_tls13_ke_groups)
 {
-	test_tls_ke_groups(TLS_1_3, 5668, FALSE, _i);
+	test_tls_ke_groups(TLS_1_3, 5664, FALSE, _i);
+}
+END_TEST
+
+START_TEST(test_tls13_signature_schemes)
+{
+	test_tls_signature_schemes(TLS_1_3, 5665, FALSE, _i);
+}
+END_TEST
+
+START_TEST(test_tls12_signature_schemes)
+{
+	test_tls_signature_schemes(TLS_1_2, 5666, FALSE, _i);
+}
+END_TEST
+
+START_TEST(test_tls11_signature_schemes)
+{
+	test_tls_signature_schemes(TLS_1_1, 5667, FALSE, _i);
+}
+END_TEST
+
+START_TEST(test_tls10_signature_schemes)
+{
+	test_tls_signature_schemes(TLS_1_0, 5668, FALSE, _i);
 }
 END_TEST
 
@@ -740,6 +806,30 @@ Suite *socket_suite_create()
 	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
 	tcase_add_loop_test(tc, test_tls13_ke_groups, 0,
 						tls_crypto_get_supported_groups(NULL));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("TLS 1.3/signature schemes");
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
+	tcase_add_loop_test(tc, test_tls13_signature_schemes, 0,
+						tls_crypto_get_supported_signatures(TLS_1_3, NULL));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("TLS 1.2/signature schemes");
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
+	tcase_add_loop_test(tc, test_tls12_signature_schemes, 0,
+						tls_crypto_get_supported_signatures(TLS_1_2, NULL));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("TLS 1.1/signature schemes");
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
+	tcase_add_loop_test(tc, test_tls11_signature_schemes, 0,
+						tls_crypto_get_supported_signatures(TLS_1_1, NULL));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("TLS 1.0/signature schemes");
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
+	tcase_add_loop_test(tc, test_tls10_signature_schemes, 0,
+						tls_crypto_get_supported_signatures(TLS_1_0, NULL));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.3/anon");

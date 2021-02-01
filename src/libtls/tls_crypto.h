@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2020 Tobias Brunner
- * Copyright (C) 2020 Pascal Knecht
+ * Copyright (C) 2020-2021 Pascal Knecht
  * Copyright (C) 2020 Méline Sieber
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -682,6 +682,16 @@ int tls_crypto_get_supported_suites(bool null, tls_version_t version,
  * @return				number of curves supported
  */
 int tls_crypto_get_supported_groups(diffie_hellman_group_t **groups);
+
+/**
+ * Get a list of all supported TLS signature schemes.
+ *
+ * @param version		TLS version
+ * @param schemes		pointer to allocated signature array, to free(), or NULL
+ * @return				number of signature schemes supported
+ */
+int tls_crypto_get_supported_signatures(tls_version_t version,
+										tls_signature_scheme_t **schemes);
 
 /**
  * Get the TLS curve of a given EC DH group
