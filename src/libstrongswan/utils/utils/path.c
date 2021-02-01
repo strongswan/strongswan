@@ -24,6 +24,63 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+
+/**
+ * Described in header.
+ */
+bool path_is_dirsep(int c)
+{
+#ifdef WIN32
+	if (c == '/' )
+	{
+		/* also correct on Win32 */
+		return TRUE;
+	}
+#endif
+	return (c == DIRECTORY_SEPARATOR[0]);
+}
+
+
+/**
+ * Described in header.
+ */
+char *path_first_dirsep(const char *path, int len)
+{
+	if (len < 0)
+		len = (int)strlen(path);
+
+	while (len)
+	{
+		if (path_is_dirsep(*path))
+		{
+			return (char *)path;
+		}
+		path++;
+		len--;
+	}
+	return NULL;
+}
+
+
+/**
+ * Described in header.
+ */
+char *path_last_dirsep(const char *path, int len)
+{
+	if (len < 0)
+		len = (int)strlen(path);
+
+	while (len)
+	{
+		if (path_is_dirsep(path[--len]))
+		{
+			return (char *)path + len;
+		}
+	}
+	return NULL;
+}
+
+
 /**
  * Described in header.
  */
@@ -31,15 +88,15 @@ char* path_dirname(const char *path)
 {
 	char *pos;
 
-	pos = path ? strrchr(path, DIRECTORY_SEPARATOR[0]) : NULL;
+	pos = path ? path_last_dirsep(path, -1) : NULL;
 
 	if (pos && !pos[1])
 	{	/* if path ends with slashes we have to look beyond them */
-		while (pos > path && *pos == DIRECTORY_SEPARATOR[0])
+		while (pos > path && path_is_dirsep(*pos))
 		{	/* skip trailing slashes */
 			pos--;
 		}
-		pos = memrchr(path, DIRECTORY_SEPARATOR[0], pos - path + 1);
+		pos = path_last_dirsep(path, pos - path + 1);
 	}
 	if (!pos)
 	{
@@ -54,7 +111,7 @@ char* path_dirname(const char *path)
 #endif
 		return strdup(".");
 	}
-	while (pos > path && *pos == DIRECTORY_SEPARATOR[0])
+	while (pos > path && path_is_dirsep(*pos))
 	{	/* skip superfluous slashes */
 		pos--;
 	}
@@ -72,19 +129,19 @@ char* path_basename(const char *path)
 	{
 		return strdup(".");
 	}
-	pos = strrchr(path, DIRECTORY_SEPARATOR[0]);
+	pos = path_last_dirsep(path, -1);
 	if (pos && !pos[1])
 	{	/* if path ends with slashes we have to look beyond them */
-		while (pos > path && *pos == DIRECTORY_SEPARATOR[0])
+		while (pos > path && path_is_dirsep(*pos))
 		{	/* skip trailing slashes */
 			pos--;
 		}
-		if (pos == path && *pos == DIRECTORY_SEPARATOR[0])
+		if (pos == path && path_is_dirsep(*pos))
 		{	/* contains only slashes */
-			return strdup(DIRECTORY_SEPARATOR);
+			return strndup(pos, 1);
 		}
 		trail = pos + 1;
-		pos = memrchr(path, DIRECTORY_SEPARATOR[0], trail - path);
+		pos = path_last_dirsep(path, trail - path);
 	}
 	pos = pos ? pos + 1 : (char*)path;
 	return trail ? strndup(pos, trail - pos) : strdup(pos);
@@ -108,12 +165,13 @@ bool path_absolute(const char *path)
 	{	/* drive letter */
 		return TRUE;
 	}
-#else /* !WIN32 */
-	if (path[0] == DIRECTORY_SEPARATOR[0])
+#endif /* !WIN32 */
+
+	if (path_is_dirsep(path[0]))
 	{
 		return TRUE;
 	}
-#endif
+
 	return FALSE;
 }
 
@@ -136,18 +194,19 @@ bool mkdir_p(const char *path, mode_t mode)
 		return FALSE;
 	}
 	/* ensure that the path ends with a '/' */
-	if (full[len-1] != '/')
+	if (!path_is_dirsep(full[len-1]))
 	{
 		full[len++] = '/';
 		full[len] = '\0';
 	}
 	/* skip '/' at the beginning */
-	while (*pos == '/')
+	while (path_is_dirsep(*pos))
 	{
 		pos++;
 	}
-	while ((pos = strchr(pos, '/')))
+	while ((pos = path_first_dirsep(pos, -1)))
 	{
+		char old = *pos;
 		*pos = '\0';
 		if (access(full, F_OK) < 0)
 		{
@@ -161,7 +220,7 @@ bool mkdir_p(const char *path, mode_t mode)
 				return FALSE;
 			}
 		}
-		*pos = '/';
+		*pos = old;
 		pos++;
 	}
 	return TRUE;

@@ -32,6 +32,44 @@
 #endif
 
 /**
+ * Checks if given character means directory semarator
+ * basically cluld be just (c == DIRECTORY_SEPARATOR[0]),
+ * but on Windows more also `/` is allowed
+ *
+ * @param c			character to be tested
+ * @return			TRUE if it is directory separator
+ */
+bool path_is_dirsep(int c);
+
+/**
+ * Finds pointer to first directory separarator valid in given path
+ *
+ * Basically strrchr() or memrchr(), but allows more than one valid characters
+ * to be used on platform (mainly Windows) as directory separators.
+ *
+ * @param path		pathname to search in
+ * @param len		length of data in @a path, can be (-1) if
+ * 					path is NULL-terminated
+ * @return			pointer to first occurence of directory separator,
+ * 					NULL if there is no such one.
+ */
+char *path_first_dirsep(const char *path, int len);
+
+/**
+ * Finds pointer to last directory separarator valid in given path
+ *
+ * Basically strrchr() or memrchr(), but allows more than one valid characters
+ * to be used on platform (mainly Windows) as directory separators.
+ *
+ * @param path		pathname to search in
+ * @param len		length of data in @a path, can be (-1) if
+ * 					path is NULL-terminated
+ * @return			pointer to first occurence of directory separator,
+ * 					NULL if there is no such one.
+ */
+char *path_last_dirsep(const char *path, int len);
+
+/**
  * Like dirname(3) returns the directory part of the given null-terminated
  * pathname, up to but not including the final '/' (or '.' if no '/' is found).
  * Trailing '/' are not counted as part of the pathname.

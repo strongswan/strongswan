@@ -275,9 +275,210 @@ enumerator_t* enumerator_create_glob(const char *pattern)
 
 #else /* HAVE_GLOB_H */
 
+/* compare integers contitionally ignoring case */
+static inline bool _chreq(int a, int b, bool nocase)
+{
+	if (!nocase)
+	{
+		return a == b;
+	}
+
+	return tolower(a) == tolower(b);
+}
+
+/* Simple pattern matching
+ * Escapes ('\') and character ranges ('[x-y]') are not supported
+ *
+ * returns match score (as nonegative integer):
+ * - 2*len(name) if matches exactly (if no wildcards are used)
+ * - 0 - if matches only by wildcards
+ * - -1 if name does not mach pattern
+ *
+ * TODO handle escapes and character ranges
+ * Maybe could be useful in <utils/string.h>? */
+static int pattern_match(const char *name, const char *wildcard, bool nocase)
+{
+	const char *n = name;
+	const char *w = wildcard;
+	int result = 0;
+
+	while( *w )
+	{
+		switch( *w )
+		{
+			case '*':
+				/* One or more characters match - comparing recursive
+				 * No support for multi-directory matches (**) */
+				while( *w == '*' )
+				{
+					w++;
+				}
+
+				if( !*w )
+				{
+					return result;
+				}
+
+				while( *n )
+				{
+					int newres = pattern_match(n, w+1, nocase);
+					if( newres >= 0 )
+					{
+						return result + newres;
+					}
+					/* No match - try string starting from next character */
+					n++;
+				}
+
+				/* End of name. We have wildcard here other than '*' */
+				return -1;
+
+			case '?':
+				if( !*n )
+				{
+					return -1;
+				}
+				w++;
+				n++;
+				result++;
+				break;
+
+			default:
+				if (!_chreq(*w, *n, nocase))
+				{
+					return -1;
+				}
+				w++;
+				n++;
+				result += 2;
+				break;
+		}
+	}
+
+	/* OK if end of matched text */
+	if( !*n )
+	{
+		return result;
+	}
+
+	return -1;
+}
+
+/**
+ * Enumerator implementation for glob enumerator
+ */
+typedef struct {
+	/** implements enumerator_t */
+	enumerator_t public;
+	/** pattern to match for files in directory */
+	char *pattern;
+	/** enumerated directory */
+	char *dir;
+	/** enumerated file names in current directory */
+	enumerator_t *dir_enumerator;
+	/** current matched entry */
+	char *match;
+} glob_enum_t;
+
+METHOD(enumerator_t, destroy_glob_enum, void,
+	glob_enum_t *this)
+{
+	free(this->dir);
+	free(this->pattern);
+	DESTROY_IF(this->dir_enumerator);
+	free(this->match);
+	free(this);
+}
+
+METHOD(enumerator_t, enumerate_glob_enum, bool,
+	glob_enum_t *this, va_list args)
+{
+	struct stat *st;
+	char *rel;
+	char **file;
+#ifdef WIN32
+	static const bool nocase = TRUE;
+#else
+	static const bool nocase = FALSE;
+#endif
+
+	VA_ARGS_VGET(args, file, st);
+
+	while (this->dir_enumerator->enumerate(this->dir_enumerator, &rel, NULL, NULL))
+	{
+		if (pattern_match(rel, this->pattern, nocase) >= 0)
+		{
+			free(this->match);
+			asprintf(&this->match, "%s%s%s",
+								this->dir ? this->dir : "",
+								this->dir ? DIRECTORY_SEPARATOR: "",
+								rel);
+
+			if (file)
+			{
+				*file = (char *)this->match;
+			}
+			if (st && stat(this->match, st))
+			{
+				DBG1(DBG_LIB, "stat() on '%s' failed: %s", this->match,
+					 strerror(errno));
+				return FALSE;
+			}
+			return TRUE;
+		}
+	}
+
+	if (!this->match)
+	{
+		DBG1(DBG_LIB, "no files found matching '%s%s%s'",
+		                  this->dir ? this->dir : "",
+		                  this->dir ? DIRECTORY_SEPARATOR : "",
+		                  this->pattern);
+	}
+
+return FALSE;
+}
+
 enumerator_t* enumerator_create_glob(const char *pattern)
 {
-	return NULL;
+	glob_enum_t *this;
+	const char *dir = ".";
+
+	if (!pattern || !*pattern)
+	{
+		return enumerator_create_empty();
+	}
+
+	INIT(this,
+		.public = {
+			.enumerate = enumerator_enumerate_default,
+			.venumerate = _enumerate_glob_enum,
+			.destroy = _destroy_glob_enum,
+		},
+	);
+
+	if (path_first_dirsep(pattern, -1))
+	{
+		this->dir = path_dirname(pattern);
+		if (strchr(this->dir, '*') || strchr(this->dir, '?'))
+		{
+			DBG1(DBG_LIB, "no files found matching '%s' - pattern in directory part is not supported", pattern);
+			_destroy_glob_enum(this);
+			return NULL;
+		}
+		dir = this->dir;
+	}
+	this->pattern = path_basename(pattern);
+
+	this->dir_enumerator = enumerator_create_directory(dir);
+	if (!this->dir_enumerator)
+	{
+		DBG1(DBG_LIB, "no files found matching '%s'", pattern);
+		_destroy_glob_enum(this);
+		return NULL;
+	}
+
+	return &this->public;
 }
 
 #endif /* HAVE_GLOB_H */
