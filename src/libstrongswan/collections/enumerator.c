@@ -275,7 +275,18 @@ enumerator_t* enumerator_create_glob(const char *pattern)
 
 #else /* HAVE_GLOB_H */
 
-/* Simple wildcard matching
+/* compare integers contitionally ignoring case */
+static inline bool _chreq(int a, int b, bool nocase)
+{
+	if (!nocase)
+	{
+		return a == b;
+	}
+
+	return tolower(a) == tolower(b);
+}
+
+/* Simple pattern matching
  * Escapes ('\') and character ranges ('[x-y]') are not supported
  *
  * returns match score (as nonegative integer):
@@ -283,30 +294,13 @@ enumerator_t* enumerator_create_glob(const char *pattern)
  * - 0 - if matches only by wildcards
  * - -1 if name does not mach pattern
  *
- * TODO handle escapes and character ranges */
-static int wildcard_matches(const char *name, const char *wildcard, bool nocase)
+ * TODO handle escapes and character ranges
+ * Maybe could be useful in <utils/string.h>? */
+static int pattern_match(const char *name, const char *wildcard, bool nocase)
 {
 	const char *n = name;
 	const char *w = wildcard;
 	int result = 0;
-
-	if( !strchr( wildcard, '*' ) && !strchr( wildcard, '?' ) )
-	{
-		if( nocase )
-		{
-			if (!strcaseeq(name, wildcard))
-				return -1;
-		}
-		else
-		{
-			if (!streq(name, wildcard))
-				return -1;
-		}
-
-		return 2 * (int)strlen(name);
-	}
-
-	/* we have some wildcard characters */
 
 	while( *w )
 	{
@@ -316,16 +310,22 @@ static int wildcard_matches(const char *name, const char *wildcard, bool nocase)
 				/* One or more characters match - comparing recursive
 				 * No support for multi-directory matches (**) */
 				while( *w == '*' )
+				{
 					w++;
+				}
 
 				if( !*w )
+				{
 					return result;
+				}
 
 				while( *n )
 				{
-					int newres = wildcard_matches( n, w+1, nocase );
+					int newres = pattern_match(n, w+1, nocase);
 					if( newres >= 0 )
+					{
 						return result + newres;
+					}
 					/* No match - try string starting from next character */
 					n++;
 				}
@@ -335,15 +335,19 @@ static int wildcard_matches(const char *name, const char *wildcard, bool nocase)
 
 			case '?':
 				if( !*n )
+				{
 					return -1;
+				}
 				w++;
 				n++;
 				result++;
 				break;
 
 			default:
-				if( *w != *n )
+				if (!_chreq(*w, *n, nocase))
+				{
 					return -1;
+				}
 				w++;
 				n++;
 				result += 2;
@@ -353,7 +357,9 @@ static int wildcard_matches(const char *name, const char *wildcard, bool nocase)
 
 	/* OK if end of matched text */
 	if( !*n )
+	{
 		return result;
+	}
 
 	return -1;
 }
@@ -385,9 +391,8 @@ METHOD(enumerator_t, destroy_glob_enum, void,
 }
 
 METHOD(enumerator_t, enumerate_glob_enum, bool,
-	glob_enum_t *this2, va_list args)
+	glob_enum_t *this, va_list args)
 {
-	glob_enum_t *this = this2;
 	struct stat *st;
 	char *rel;
 	char **file;
@@ -401,21 +406,13 @@ METHOD(enumerator_t, enumerate_glob_enum, bool,
 
 	while (this->dir_enumerator->enumerate(this->dir_enumerator, &rel, NULL, NULL))
 	{
-		if (wildcard_matches(rel, this->pattern, nocase) >= 0)
+		if (pattern_match(rel, this->pattern, nocase) >= 0)
 		{
 			free(this->match);
-			if (this->dir && *this->dir)
-			{
-				size_t len = strlen(this->dir) + strlen(rel) + 2;
-				this->match = malloc(len);
-				strcpy(this->match, this->dir);
-				strcat(this->match, DIRECTORY_SEPARATOR);
-				strcat(this->match, rel);
-			}
-			else
-			{
-				this->match = strdup(rel);
-			}
+			asprintf(&this->match, "%s%s%s",
+								this->dir ? this->dir : "",
+								this->dir ? DIRECTORY_SEPARATOR: "",
+								rel);
 
 			if (file)
 			{
@@ -431,13 +428,21 @@ METHOD(enumerator_t, enumerate_glob_enum, bool,
 		}
 	}
 
-	return FALSE;
+	if (!this->match)
+	{
+		DBG1(DBG_LIB, "no files found matching '%s%s%s'",
+		                  this->dir ? this->dir : "",
+		                  this->dir ? DIRECTORY_SEPARATOR : "",
+		                  this->pattern);
+	}
+
+return FALSE;
 }
 
 enumerator_t* enumerator_create_glob(const char *pattern)
 {
 	glob_enum_t *this;
-	const char *dirsep;
+	const char *dir = ".";
 
 	if (!pattern || !*pattern)
 	{
@@ -452,49 +457,23 @@ enumerator_t* enumerator_create_glob(const char *pattern)
 		},
 	);
 
-	/* Check if wildchar characters are only on last path component */
-	dirsep = path_last_dirsep(pattern, -1);
-	if (dirsep && !dirsep[1])
+	if (path_first_dirsep(pattern, -1))
 	{
-		/* trailing directory separator - get earlier. Skip consequitive ones */
-		while (dirsep > pattern && path_is_dirsep(*(dirsep-1)))
-		{
-			dirsep--;
-		}
-		dirsep = path_last_dirsep(pattern, dirsep - pattern);
-	}
-	if (dirsep)
-	{
-		/* check for wildcards in directory part - not supported yet */
-		const char *asterisk = strchr(pattern, '*');
-		const char *question = strchr(pattern, '?');
-
-		if ((asterisk && asterisk < dirsep) ||
-		    (question && question < dirsep))
+		this->dir = path_dirname(pattern);
+		if (strchr(this->dir, '*') || strchr(this->dir, '?'))
 		{
 			DBG1(DBG_LIB, "no files found matching '%s' - pattern in directory part is not supported", pattern);
 			_destroy_glob_enum(this);
 			return NULL;
 		}
-
-		this->dir = strndup(pattern, dirsep - pattern);
-		this->pattern = strdup(dirsep+1);
+		dir = this->dir;
 	}
-	else
-	{
-		size_t len = strlen(pattern);
-		/* remove trailing slashes */
-		while (len && path_is_dirsep(pattern[len-1]))
-		{
-			len--;
-		}
-		this->pattern = strndup(pattern, len);
-		this->dir = strdup(".");
-	}
+	this->pattern = path_basename(pattern);
 
-	this->dir_enumerator = enumerator_create_directory(this->dir);
+	this->dir_enumerator = enumerator_create_directory(dir);
 	if (!this->dir_enumerator)
 	{
+		DBG1(DBG_LIB, "no files found matching '%s'", pattern);
 		_destroy_glob_enum(this);
 		return NULL;
 	}
