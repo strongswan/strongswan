@@ -1442,16 +1442,18 @@ PSS_PARAMS(256);
 PSS_PARAMS(384);
 PSS_PARAMS(512);
 
-/**
- * Map TLS signature schemes, ordered by preference
- */
-static struct {
+typedef struct {
 	tls_signature_scheme_t sig;
 	signature_params_t params;
 	/* min/max versions for use in CertificateVerify */
 	tls_version_t min_version;
 	tls_version_t max_version;
-} schemes[] = {
+} scheme_algs_t;
+
+/**
+ * Map TLS signature schemes, ordered by preference
+ */
+static scheme_algs_t schemes[] = {
 	{ TLS_SIG_ECDSA_SHA256, { .scheme = SIGN_ECDSA_WITH_SHA256_DER },
 		TLS_1_0, TLS_1_3 },
 	{ TLS_SIG_ECDSA_SHA384, { .scheme = SIGN_ECDSA_WITH_SHA384_DER },
@@ -1484,6 +1486,35 @@ static struct {
 		TLS_1_0, TLS_1_2 },
 };
 
+/**
+ * Filter signature scheme config
+ */
+static bool filter_signature_scheme_config(tls_signature_scheme_t signature)
+{
+	enumerator_t *enumerator;
+	char *token, *config;
+
+	config = lib->settings->get_str(lib->settings, "%s.tls.signature", NULL,
+									lib->ns);
+	if (config)
+	{
+		enumerator = enumerator_create_token(config, ",", " ");
+		while (enumerator->enumerate(enumerator, &token))
+		{
+			tls_signature_scheme_t sig;
+
+			if (enum_from_name(tls_signature_scheme_names, token, &sig) &&
+				sig == signature)
+			{
+				enumerator->destroy(enumerator);
+				return TRUE;
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+	return !config;
+}
+
 METHOD(tls_crypto_t, get_signature_algorithms, void,
 	private_tls_crypto_t *this, bio_writer_t *writer, bool cert)
 {
@@ -1504,7 +1535,8 @@ METHOD(tls_crypto_t, get_signature_algorithms, void,
 		if ((cert || (schemes[i].min_version <= max_version &&
 					  schemes[i].max_version >= min_version)) &&
 			lib->plugins->has_feature(lib->plugins,
-						PLUGIN_PROVIDE(PUBKEY_VERIFY, schemes[i].params.scheme)))
+					PLUGIN_PROVIDE(PUBKEY_VERIFY, schemes[i].params.scheme)) &&
+			filter_signature_scheme_config(schemes[i].sig))
 		{
 			supported->write_uint16(supported, schemes[i].sig);
 		}
@@ -2491,6 +2523,45 @@ int tls_crypto_get_supported_groups(diffie_hellman_group_t **out)
 		for (i = 0; i < count; i++)
 		{
 			(*out)[i] = groups[i];
+		}
+	}
+	return count;
+}
+
+/**
+ * See header.
+ */
+int tls_crypto_get_supported_signatures(tls_version_t version,
+										tls_signature_scheme_t **out)
+{
+	scheme_algs_t sigs[countof(schemes)];
+	int count = 0, i;
+
+	/* initialize copy of signature scheme list */
+	for (i = 0; i < countof(schemes); i++)
+	{
+		/* only RSA_PSS_RSAE schemes supported for signing and verifying */
+		if (schemes[i].sig == TLS_SIG_RSA_PSS_PSS_SHA256 ||
+			schemes[i].sig == TLS_SIG_RSA_PSS_PSS_SHA384 ||
+			schemes[i].sig == TLS_SIG_RSA_PSS_PSS_SHA512)
+		{
+			continue;
+		}
+		if (schemes[i].min_version <= version &&
+			schemes[i].max_version >= version &&
+			lib->plugins->has_feature(lib->plugins,
+					PLUGIN_PROVIDE(PUBKEY_VERIFY, schemes[i].params.scheme)))
+		{
+			sigs[count++] = schemes[i];
+		}
+	}
+
+	if (out)
+	{
+		*out = calloc(count, sizeof(tls_signature_scheme_t));
+		for (i = 0; i < count; i++)
+		{
+			(*out)[i] = sigs[i].sig;
 		}
 	}
 	return count;

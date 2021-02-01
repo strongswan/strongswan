@@ -476,6 +476,9 @@ charon.tls.suites
 charon.tls.ke_group
 	List of TLS key exchange groups.
 
+charon.tls.signature
+	List of TLS signature schemes.
+
 charon.tls.send_certreq_authorities = yes
 	Whether to include CAs in a server's CertificateRequest message.
 
