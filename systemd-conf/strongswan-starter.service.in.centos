@@ -6,7 +6,7 @@ After=syslog.target network-online.target
 ExecStartPre=/bin/cp -f /etc/pki/tls/openssl.cnf.orig /etc/pki/tls/openssl.cnf
 ExecStart=@SBINDIR@/@IPSEC_SCRIPT@ start --nofork
 ExecStartPost=/bin/sleep 2
-ExecStartPost=/bin/cp -f /etc/pki/tls/openssl.cnf.mlnx /etc/pki/tls/openssl.cnf
+ExecStartPost=/bin/bash -c 'if lscpu | grep Flags | grep sha1 | grep sha2 | grep -q aes 2>/dev/null; then /bin/cp -f /etc/pki/tls/openssl.cnf.mlnx /etc/pki/tls/openssl.cnf; fi'
 StandardOutput=syslog
 Restart=on-abnormal
 
