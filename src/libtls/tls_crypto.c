@@ -439,6 +439,11 @@ struct private_tls_crypto_t {
 	bool ecdsa;
 
 	/**
+	 * EdDSA (Ed25519 or *d448) supported?
+	 */
+	bool eddsa;
+
+	/**
 	 * TLS context
 	 */
 	tls_t *tls;
@@ -1194,6 +1199,11 @@ static void build_cipher_suite_list(private_tls_crypto_t *this)
 	if (!this->ecdsa)
 	{
 		filter_key_suites(this, suites, &count, KEY_ECDSA);
+	}
+	if (!this->eddsa)
+	{
+		filter_key_suites(this, suites, &count, KEY_ED25519);
+		filter_key_suites(this, suites, &count, KEY_ED448);
 	}
 
 	filter_unsupported_suites(suites, &count);
@@ -2416,8 +2426,6 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 		.cache = cache,
 	);
 
-	/* FIXME: EDDSA keys are currently treated like ECDSA keys. A cleaner
-	 * separation would be welcome. */
 	enumerator = lib->creds->create_builder_enumerator(lib->creds);
 	while (enumerator->enumerate(enumerator, &type, &subtype))
 	{
@@ -2429,9 +2437,11 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 					this->rsa = TRUE;
 					break;
 				case KEY_ECDSA:
+					this->ecdsa = TRUE;
+					break;
 				case KEY_ED25519:
 				case KEY_ED448:
-					this->ecdsa = TRUE;
+					this->eddsa = TRUE;
 					break;
 				default:
 					break;
