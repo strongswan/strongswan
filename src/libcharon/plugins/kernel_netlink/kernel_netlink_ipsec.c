@@ -242,8 +242,11 @@ static kernel_algorithm_t integrity_algs[] = {
 	{AUTH_HMAC_SHA1_160,		"hmac(sha1)"		},
 	{AUTH_HMAC_SHA2_256_96,		"sha256"			},
 	{AUTH_HMAC_SHA2_256_128,	"hmac(sha256)"		},
+	{AUTH_HMAC_SHA2_256_256,	"hmac(sha256)"		},
 	{AUTH_HMAC_SHA2_384_192,	"hmac(sha384)"		},
+	{AUTH_HMAC_SHA2_384_384,	"hmac(sha384)"		},
 	{AUTH_HMAC_SHA2_512_256,	"hmac(sha512)"		},
+	{AUTH_HMAC_SHA2_512_512,	"hmac(sha512)"		},
 /*	{AUTH_DES_MAC,				"***"				}, */
 /*	{AUTH_KPDK_MD5,				"***"				}, */
 	{AUTH_AES_XCBC_96,			"xcbc(aes)"			},
@@ -1763,6 +1766,15 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			case AUTH_HMAC_SHA1_160:
 				trunc_len = 160;
 				break;
+			case AUTH_HMAC_SHA2_256_256:
+				trunc_len = 256;
+				break;
+			case AUTH_HMAC_SHA2_384_384:
+				trunc_len = 384;
+				break;
+			case AUTH_HMAC_SHA2_512_512:
+				trunc_len = 512;
+				break;
 			default:
 				break;
 		}
@@ -1773,7 +1785,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 			/* the kernel uses SHA256 with 96 bit truncation by default,
 			 * use specified truncation size supported by newer kernels.
-			 * also use this for untruncated MD5 and SHA1. */
+			 * also use this for untruncated MD5, SHA1 and SHA2. */
 			algo = netlink_reserve(hdr, sizeof(request), XFRMA_ALG_AUTH_TRUNC,
 								   sizeof(*algo) + data->int_key.len);
 			if (!algo)
