@@ -28,6 +28,7 @@ install:
       IF "%IMG%" == "2017" set OPENSSL=OpenSSL-v11
       IF "%IMG%" == "2019" set OPENSSL=OpenSSL-v111
       set OPENSSL_DIR=/c/%OPENSSL%-%TEST%
+      C:\%OPENSSL%-%TEST%\bin\openssl.exe version -a
 
 build_script:
   - '%MSYS_SH% --login -c ". /etc/profile && cd $APPVEYOR_BUILD_FOLDER && ./scripts/test.sh deps"'
