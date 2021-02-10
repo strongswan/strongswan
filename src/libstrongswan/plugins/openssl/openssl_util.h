@@ -101,9 +101,14 @@ bool openssl_bn2chunk(const BIGNUM *bn, chunk_t *chunk);
  * @returns			allocated chunk of the object, or chunk_empty
  */
 #define openssl_i2chunk(type, obj) ({ \
-					unsigned char *ptr = NULL; \
-					int len = i2d_##type(obj, &ptr); \
-					len < 0 ? chunk_empty : chunk_create(ptr, len);})
+					chunk_t chunk = chunk_empty; \
+					int len = i2d_##type(obj, NULL); \
+					if (len >= 0) { \
+						chunk = chunk_alloc(len); \
+						u_char *p = chunk.ptr; \
+						i2d_##type(obj, &p); \
+					} \
+					chunk; })
 
 /**
  * Convert an OpenSSL ASN1_OBJECT to a chunk.
