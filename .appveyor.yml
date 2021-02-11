@@ -19,6 +19,7 @@ environment:
     #  bits: 32
 
 install:
+  - tzutil /s "Central European Standard Time"
   - set MSYS_SH=C:\msys%BITS%\usr\bin\sh.exe
   - set MSYSTEM=MINGW%BITS%
   - set TEST=win%BITS%
