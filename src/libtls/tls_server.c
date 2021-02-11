@@ -829,12 +829,14 @@ static status_t process_key_exchange_dhe(private_tls_server_t *this,
 										 bio_reader_t *reader)
 {
 	chunk_t premaster, pub;
+	diffie_hellman_group_t group;
 	bool ec;
 
 	this->crypto->append_handshake(this->crypto,
 								   TLS_CLIENT_KEY_EXCHANGE, reader->peek(reader));
 
-	ec = diffie_hellman_group_is_ec(this->dh->get_dh_group(this->dh));
+	group = this->dh->get_dh_group(this->dh);
+	ec = diffie_hellman_group_is_ec(group);
 	if ((ec && !reader->read_data8(reader, &pub)) ||
 		(!ec && (!reader->read_data16(reader, &pub) || pub.len == 0)))
 	{
@@ -843,7 +845,9 @@ static status_t process_key_exchange_dhe(private_tls_server_t *this,
 		return NEED_MORE;
 	}
 
-	if (ec)
+	if (ec &&
+		group != CURVE_25519 &&
+		group != CURVE_448)
 	{
 		if (pub.ptr[0] != TLS_ANSI_UNCOMPRESSED)
 		{
@@ -1528,11 +1532,16 @@ static status_t send_server_key_exchange(private_tls_server_t *this,
 	{
 		writer->write_data16(writer, chunk);
 	}
-	else
+	else if (group != CURVE_25519 &&
+			 group != CURVE_448)
 	{	/* ECP uses 8bit length header only, but a point format */
 		writer->write_uint8(writer, chunk.len + 1);
 		writer->write_uint8(writer, TLS_ANSI_UNCOMPRESSED);
 		writer->write_data(writer, chunk);
+	}
+	else
+	{	/* ECPoint uses an 8-bit length header only */
+		writer->write_data8(writer, chunk);
 	}
 	free(chunk.ptr);
 
