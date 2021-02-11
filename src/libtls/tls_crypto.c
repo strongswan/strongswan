@@ -966,50 +966,12 @@ static void filter_cipher_config_suites(private_tls_crypto_t *this,
 			enumerator = enumerator_create_token(config, ",", " ");
 			while (enumerator->enumerate(enumerator, &token))
 			{
-				if (strcaseeq(token, "aes128") &&
-					suites[i].encr == ENCR_AES_CBC &&
-					suites[i].encr_size == 16)
-				{
-					suites[remaining++] = suites[i];
-					break;
-				}
-				if (strcaseeq(token, "aes256") &&
-					suites[i].encr == ENCR_AES_CBC &&
-					suites[i].encr_size == 32)
-				{
-					suites[remaining++] = suites[i];
-					break;
-				}
-				if (strcaseeq(token, "aes128gcm") &&
-					suites[i].encr == ENCR_AES_GCM_ICV16 &&
-					suites[i].encr_size == 16)
-				{
-					suites[remaining++] = suites[i];
-					break;
-				}
-				if (strcaseeq(token, "aes256gcm") &&
-					suites[i].encr == ENCR_AES_GCM_ICV16 &&
-					suites[i].encr_size == 32)
-				{
-					suites[remaining++] = suites[i];
-					break;
-				}
-				if (strcaseeq(token, "camellia128") &&
-					suites[i].encr == ENCR_CAMELLIA_CBC &&
-					suites[i].encr_size == 16)
-				{
-					suites[remaining++] = suites[i];
-					break;
-				}
-				if (strcaseeq(token, "camellia256") &&
-					suites[i].encr == ENCR_CAMELLIA_CBC &&
-					suites[i].encr_size == 32)
-				{
-					suites[remaining++] = suites[i];
-					break;
-				}
-				if (strcaseeq(token, "null") &&
-					suites[i].encr == ENCR_NULL)
+				const proposal_token_t *tok;
+
+				tok = lib->proposal->get_token(lib->proposal, token);
+				if (tok != NULL && tok->type == ENCRYPTION_ALGORITHM &&
+					suites[i].encr == tok->algorithm &&
+					(!tok->keysize || suites[i].encr_size == tok->keysize / 8))
 				{
 					suites[remaining++] = suites[i];
 					break;
