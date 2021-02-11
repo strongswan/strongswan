@@ -837,8 +837,10 @@ static void filter_suite(suite_algs_t suites[], int *count, int offset,
 			}
 			if (current.dh && current.dh != suites[i].dh)
 			{
-				if (suites[i].dh != MODP_NONE)
-				{	/* skip DH group, does not match nor NONE */
+				if (suites[i].dh != MODP_NONE &&
+					!(diffie_hellman_group_is_ec(current.dh) &&
+					  diffie_hellman_group_is_ec(suites[i].dh)))
+				{	/* skip DH group, does not match nor NONE nor both ECDH */
 					continue;
 				}
 			}
