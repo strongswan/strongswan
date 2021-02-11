@@ -532,6 +532,8 @@ bool diffie_hellman_group_is_ec(diffie_hellman_group_t group)
 		case ECP_256_BP:
 		case ECP_384_BP:
 		case ECP_512_BP:
+		case CURVE_25519:
+		case CURVE_448:
 			return TRUE;
 		default:
 			return FALSE;
