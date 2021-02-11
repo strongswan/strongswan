@@ -1418,19 +1418,6 @@ METHOD(tls_crypto_t, select_cipher_suite, tls_cipher_suite_t,
 	return 0;
 }
 
-METHOD(tls_crypto_t, get_dh_group, diffie_hellman_group_t,
-	private_tls_crypto_t *this)
-{
-	suite_algs_t *algs;
-
-	algs = find_suite(this->suite);
-	if (algs)
-	{
-		return algs->dh;
-	}
-	return MODP_NONE;
-}
-
 /**
  * Parameters for RSA/PSS signature schemes
  */
@@ -1629,6 +1616,7 @@ CALLBACK(config_filter, bool,
 	while (orig->enumerate(orig, &group, &curve))
 	{
 		if (filter_curve_config(curve))
+
 		{
 			if (group_out)
 			{
@@ -1652,6 +1640,50 @@ METHOD(tls_crypto_t, create_ec_enumerator, enumerator_t*,
 								lib->crypto->create_dh_enumerator(lib->crypto),
 								group_filter, NULL, NULL),
 							config_filter, NULL, NULL);
+}
+
+/**
+ * Check if the given ECDH group is supported or return the first one we
+ * actually do support.
+ */
+static diffie_hellman_group_t supported_ec_group(private_tls_crypto_t *this,
+												 diffie_hellman_group_t orig)
+{
+	diffie_hellman_group_t current, first = MODP_NONE;
+	enumerator_t *enumerator;
+
+	enumerator = create_ec_enumerator(this);
+	while (enumerator->enumerate(enumerator, &current, NULL))
+	{
+		if (current == orig)
+		{
+			enumerator->destroy(enumerator);
+			return orig;
+		}
+		else if (first == MODP_NONE)
+		{
+			first = current;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return first;
+}
+
+METHOD(tls_crypto_t, get_dh_group, diffie_hellman_group_t,
+	private_tls_crypto_t *this)
+{
+	suite_algs_t *algs;
+
+	algs = find_suite(this->suite);
+	if (algs)
+	{
+		if (diffie_hellman_group_is_ec(algs->dh))
+		{
+			return supported_ec_group(this, algs->dh);
+		}
+		return algs->dh;
+	}
+	return MODP_NONE;
 }
 
 METHOD(tls_crypto_t, set_protection, void,
