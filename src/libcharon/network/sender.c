@@ -167,6 +167,7 @@ static job_requeue_t send_packets(private_sender_t *this)
 {
 	packet_t *packet;
 	bool oldstate;
+	bool got_wakeup_mutex = false;
 
 	this->mutex->lock(this->mutex);
 	while (this->list->get_count(this->list) == 0)
@@ -177,6 +178,7 @@ static job_requeue_t send_packets(private_sender_t *this)
 
 		this->got->wait(this->got, this->mutex);
 		this->wakeup_mutex->lock (this->wakeup_mutex);
+		got_wakeup_mutex = true;
 
 		thread_cancelability(oldstate);
 		thread_cleanup_pop(FALSE);
@@ -187,13 +189,17 @@ static job_requeue_t send_packets(private_sender_t *this)
 		if (this->list->get_count(this->list) == 0)
 		{
 			this->wakeup_mutex->unlock (this->wakeup_mutex);
+			got_wakeup_mutex = false;
 			this->mutex->unlock(this->mutex);
 			continue;
 		}
 	}
 	this->list->remove_first(this->list, (void**)&packet);
 	this->sent->signal(this->sent);
-	this->wakeup_mutex->unlock (this->wakeup_mutex);
+	if (got_wakeup_mutex)
+	{
+		this->wakeup_mutex->unlock (this->wakeup_mutex);
+	}
 	this->mutex->unlock(this->mutex);
 
 	charon->socket->send(charon->socket, packet);
