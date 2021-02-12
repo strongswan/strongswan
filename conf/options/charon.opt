@@ -473,6 +473,24 @@ charon.tls.mac
 charon.tls.suites
 	List of TLS cipher suites.
 
+charon.tls.ke_group
+	List of TLS key exchange groups.
+
+charon.tls.signature
+	List of TLS signature schemes.
+
+charon.tls.send_certreq_authorities = yes
+	Whether to include CAs in a server's CertificateRequest message.
+
+	Whether to include CAs in a server's CertificateRequest message. May be
+	disabled if clients can't handle a long list of CAs.
+
+charon.tls.version_min = 1.2
+	Minimum TLS version to negotiate.
+
+charon.tls.version_max = 1.2
+	Maximum TLS version to negotiate.
+
 charon.user
 	Name of the user the daemon changes to after startup.
 

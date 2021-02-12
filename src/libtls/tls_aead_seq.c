@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2020 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2014 Martin Willi
  * Copyright (C) 2014 revosec AG
  *
@@ -15,7 +18,7 @@
 
 #include "tls_aead.h"
 
-#include <crypto/iv/iv_gen_rand.h>
+#include <bio/bio_writer.h>
 
 typedef struct private_tls_aead_t private_tls_aead_t;
 
@@ -30,54 +33,79 @@ struct private_tls_aead_t {
 	tls_aead_t public;
 
 	/**
-	 * AEAD transform
+	 * AEAD transform.
 	 */
 	aead_t *aead;
 
 	/**
-	 * Size of salt, the implicit nonce
+	 * IV derived from key material.
+	 */
+	chunk_t iv;
+
+	/**
+	 * Size of the salt that's internally used by the AEAD implementation.
 	 */
 	size_t salt;
 };
 
 /**
- * Associated header data to create signature over
+ * Additional data for AEAD (record header)
  */
 typedef struct __attribute__((__packed__)) {
-	uint64_t seq;
 	uint8_t type;
 	uint16_t version;
 	uint16_t length;
 } sigheader_t;
 
+/**
+ * Generate the IV from the given sequence number.
+ */
+static bool generate_iv(private_tls_aead_t *this, uint64_t seq, chunk_t iv)
+{
+	if (iv.len < sizeof(uint64_t) ||
+		iv.len < this->iv.len)
+	{
+		return FALSE;
+	}
+	memset(iv.ptr, 0, iv.len);
+	htoun64(iv.ptr + iv.len - sizeof(uint64_t), seq);
+	memxor(iv.ptr + iv.len - this->iv.len, this->iv.ptr, this->iv.len);
+	return TRUE;
+}
+
 METHOD(tls_aead_t, encrypt, bool,
 	private_tls_aead_t *this, tls_version_t version, tls_content_type_t *type,
 	uint64_t seq, chunk_t *data)
 {
-	chunk_t assoc, encrypted, iv, plain;
+	bio_writer_t *writer;
+	chunk_t assoc, encrypted, iv, padding, plain;
 	uint8_t icvlen;
 	sigheader_t hdr;
-	iv_gen_t *gen;
 
-	gen = this->aead->get_iv_gen(this->aead);
-	iv.len = this->aead->get_iv_size(this->aead);
-	icvlen = this->aead->get_icv_size(this->aead);
-
-	encrypted = chunk_alloc(iv.len + data->len + icvlen);
-	iv.ptr = encrypted.ptr;
-	if (!gen->get_iv(gen, seq, iv.len, iv.ptr))
+	iv = chunk_alloca(this->aead->get_iv_size(this->aead));
+	if (!generate_iv(this, seq, iv))
 	{
-		chunk_free(&encrypted);
 		return FALSE;
 	}
-	memcpy(encrypted.ptr + iv.len, data->ptr, data->len);
-	plain = chunk_skip(encrypted, iv.len);
+
+	/* no padding for now */
+	padding = chunk_empty;
+	icvlen = this->aead->get_icv_size(this->aead);
+
+	writer = bio_writer_create(data->len + 1 + padding.len + icvlen);
+	writer->write_data(writer, *data);
+	writer->write_uint8(writer, *type);
+	writer->write_data(writer, padding);
+	writer->skip(writer, icvlen);
+	encrypted = writer->extract_buf(writer);
+	writer->destroy(writer);
+
+	plain = encrypted;
 	plain.len -= icvlen;
 
-	hdr.type = *type;
-	htoun64(&hdr.seq, seq);
-	htoun16(&hdr.version, version);
-	htoun16(&hdr.length, plain.len);
+	hdr.type = TLS_APPLICATION_DATA;
+	htoun16(&hdr.version, TLS_1_2);
+	htoun16(&hdr.length, encrypted.len);
 
 	assoc = chunk_from_thing(hdr);
 	if (!this->aead->encrypt(this->aead, plain, assoc, iv, NULL))
@@ -86,6 +114,7 @@ METHOD(tls_aead_t, encrypt, bool,
 		return FALSE;
 	}
 	chunk_free(data);
+	*type = TLS_APPLICATION_DATA;
 	*data = encrypted;
 	return TRUE;
 }
@@ -98,23 +127,21 @@ METHOD(tls_aead_t, decrypt, bool,
 	uint8_t icvlen;
 	sigheader_t hdr;
 
-	iv.len = this->aead->get_iv_size(this->aead);
-	if (data->len < iv.len)
+	iv = chunk_alloca(this->aead->get_iv_size(this->aead));
+	if (!generate_iv(this, seq, iv))
 	{
 		return FALSE;
 	}
-	iv.ptr = data->ptr;
-	*data = chunk_skip(*data, iv.len);
+
 	icvlen = this->aead->get_icv_size(this->aead);
 	if (data->len < icvlen)
 	{
 		return FALSE;
 	}
 
-	hdr.type = *type;
-	htoun64(&hdr.seq, seq);
-	htoun16(&hdr.version, version);
-	htoun16(&hdr.length, data->len - icvlen);
+	hdr.type = TLS_APPLICATION_DATA;
+	htoun16(&hdr.version, TLS_1_2);
+	htoun16(&hdr.length, data->len);
 
 	assoc = chunk_from_thing(hdr);
 	if (!this->aead->decrypt(this->aead, *data, assoc, iv, NULL))
@@ -122,6 +149,17 @@ METHOD(tls_aead_t, decrypt, bool,
 		return FALSE;
 	}
 	data->len -= icvlen;
+
+	while (data->len && !data->ptr[data->len-1])
+	{	/* ignore any padding */
+		data->len--;
+	}
+	if (data->len < 1)
+	{
+		return FALSE;
+	}
+	*type = data->ptr[data->len-1];
+	data->len--;
 	return TRUE;
 }
 
@@ -134,55 +172,63 @@ METHOD(tls_aead_t, get_mac_key_size, size_t,
 METHOD(tls_aead_t, get_encr_key_size, size_t,
 	private_tls_aead_t *this)
 {
+	/* our AEAD implementations add the salt length here, so subtract it */
 	return this->aead->get_key_size(this->aead) - this->salt;
 }
 
 METHOD(tls_aead_t, get_iv_size, size_t,
 	private_tls_aead_t *this)
 {
-	return this->salt;
+	/* analogous to the change above, we add the salt length here */
+	return this->aead->get_iv_size(this->aead) + this->salt;
 }
 
 METHOD(tls_aead_t, set_keys, bool,
 	private_tls_aead_t *this, chunk_t mac, chunk_t encr, chunk_t iv)
 {
-	chunk_t key;
+	chunk_t key, salt;
+	bool success;
 
-	if (mac.len)
+	if (mac.len || iv.len < this->salt)
 	{
 		return FALSE;
 	}
-	key = chunk_cata("cc", encr, iv);
-	return this->aead->set_key(this->aead, key);
+
+	/* we have to recombine the keys as our AEAD implementations expect the
+	 * salt as part of the key */
+	chunk_clear(&this->iv);
+	chunk_split(iv, "ma", this->salt, &salt, iv.len - this->salt, &this->iv);
+	key = chunk_cata("cc", encr, salt);
+	success = this->aead->set_key(this->aead, key);
+	memwipe(key.ptr, key.len);
+	return success;
 }
 
 METHOD(tls_aead_t, destroy, void,
 	private_tls_aead_t *this)
 {
 	this->aead->destroy(this->aead);
+	chunk_clear(&this->iv);
 	free(this);
 }
 
-/**
- * See header
+/*
+ * Described in header
  */
-tls_aead_t *tls_aead_create_aead(encryption_algorithm_t encr, size_t encr_size)
+tls_aead_t *tls_aead_create_seq(encryption_algorithm_t encr, size_t encr_size)
 {
 	private_tls_aead_t *this;
 	size_t salt;
 
 	switch (encr)
 	{
-		case ENCR_AES_GCM_ICV8:
-		case ENCR_AES_GCM_ICV12:
 		case ENCR_AES_GCM_ICV16:
-		case ENCR_AES_CCM_ICV8:
-		case ENCR_AES_CCM_ICV12:
-		case ENCR_AES_CCM_ICV16:
-		case ENCR_CAMELLIA_CCM_ICV8:
-		case ENCR_CAMELLIA_CCM_ICV12:
-		case ENCR_CAMELLIA_CCM_ICV16:
+		case ENCR_CHACHA20_POLY1305:
 			salt = 4;
+			break;
+		case ENCR_AES_CCM_ICV8:
+		case ENCR_AES_CCM_ICV16:
+			salt = 3;
 			break;
 		default:
 			return NULL;
