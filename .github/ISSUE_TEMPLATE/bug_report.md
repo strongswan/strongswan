@@ -1,5 +1,5 @@
 ---
-name: ":bug: Bug report"
+name: "🐛 Bug report"
 about: Report a reproducible bug or regression
 labels: bug, needs triage
 ---
