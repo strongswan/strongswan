@@ -2767,6 +2767,7 @@ enumerator_t *tls_create_private_key_enumerator(tls_version_t min_version,
 
 	if (!array_count(enumerator->key_types))
 	{
+		private_key_destroy(enumerator);
 		return NULL;
 	}
 	return &enumerator->public;
