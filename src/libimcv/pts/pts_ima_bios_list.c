@@ -297,7 +297,7 @@ pts_ima_bios_list_t* pts_ima_bios_list_create(tpm_tss_t *tpm, char *file,
 			case EV_S_CRTM_CONTENTS:
 			case EV_IPL:
 				if (event_type == EV_NO_ACTION && event_len == 17 &&
-					streq(event_buf, "StartupLocality"))
+					strpfx(event_buf, "StartupLocality"))
 				{
 					DBG2(DBG_PTS, "        'StartupLocality' %x", event_buf[16]);
 				}
