@@ -675,7 +675,7 @@ METHOD(dhcp_socket_t, destroy, void,
  */
 static bool bind_to_device(int fd, char *iface)
 {
-	struct ifreq ifreq;
+	struct ifreq ifreq = {};
 
 	if (strlen(iface) > sizeof(ifreq.ifr_name))
 	{
