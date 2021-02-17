@@ -1,12 +1,59 @@
 strongswan-5.9.2
 ----------------
 
-- Together with a Linux 5.8 kernel supporting the IMA measurement of the
-  grub bootloader and the Linux kernel, the strongSwan Attestation IMC
-  allows to do remote attestation of the complete boot phase. A recent
-  TPM 2.0 device with a SHA-256 PCR bank is required, so that both BIOS
-  and IMA file measurements are based on SHA-256 hashes.
- 
+- Together with a Linux 5.8 kernel supporting the IMA measurement of the GRUB
+  bootloader and the Linux kernel, the strongSwan Attestation IMC allows to do
+  remote attestation of the complete boot phase. A recent TPM 2.0 device with a
+  SHA-256 PCR bank is required, so that both BIOS and IMA file measurements are
+  based on SHA-256 hashes.
+
+- Our own TLS library (libtls) that we use for TLS-based EAP methods and PT-TLS
+  gained experimental support for TLS 1.3.  Thanks to Méline Sieber (client) and
+  Pascal Knecht (client and server) for their work on this.
+  Because the use of TLS 1.3 with these EAP methods is not yet standardized (two
+  Internet-Drafts are being worked on), the default maximum version is currently
+  set to TLS 1.2, which is now also the default minimum version.
+
+- Other improvements for libtls also affect older TLS versions. For instance, we
+  added support for ECDH with Curve25519/448 (DH groups may also be configured
+  now), for EdDSA keys and certificates and for RSA-PSS signatures. Support for
+  old and weak cipher suites has been removed (e.g. with 3DES and MD5) as well
+  as signature schemes with SHA-1.
+
+- The listener_t::ike_update event is now also called for MOBIKE updates. Its
+  signature has changed so we only have to call it once if both addresses/ports
+  have changed (e.g. for an address family switch).  The event is now also
+  exposed via vici.
+
+- The farp plugin has been ported to macOS and FreeBSD. Thanks to Dan James for
+  working on this.
+
+- To fix DNS server installation with systemd-resolved, charon-nm now creates a
+  dummy TUN device again (was removed with 5.5.1).
+
+- The botan plugin can use rng_t implementations provided by other plugins when
+  generating keys etc. if the Botan library supports it.
+
+- charon-tkm now supports multiple CAs and is configured via vici/swanctl.
+
+- Simple glob patterns (e.g. include conf.d/*.conf) now also work on Windows.
+  Handling of forward slashes in paths on Windows has also been improved.
+
+- The abbreviations for the 'surname' and 'serial number' RDNs in ASN.1 DNs have
+  been changed to align with RFC 4519: The abbreviation for 'surname' is now
+  "SN" (was "S" before), which was previously used for 'serial number' that can
+  now be specified as "serialNumber" only.
+
+- An issue with Windows clients requesting previous IPv6 but not IPv4 virtual
+  IP addresses has been fixed.
+
+- ike_sa_manager_t:  Checking out IKE_SAs by config is now atomic (e.g. when
+  acquires for different children of the same connection arrive concurrently).
+  The checkout_new() method has been renamed to create_new(). A new
+  checkout_new() method allows registering a new IKE_SA with the manager before
+  checking it in, so jobs can be queued without losing them as they can block
+  on checking out the new SA.
+
 
 strongswan-5.9.1
 ----------------
