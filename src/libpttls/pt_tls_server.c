@@ -545,7 +545,7 @@ pt_tls_server_t *pt_tls_server_create(identification_t *server, int fd,
 		},
 		.state = PT_TLS_SERVER_VERSION,
 		.tls = tls_socket_create(TRUE, server, client, fd, NULL, TLS_UNSPEC,
-								 TLS_UNSPEC, FALSE),
+								 TLS_UNSPEC, 0),
 		.tnccs = (tls_t*)tnccs,
 		.auth = auth,
 	);
