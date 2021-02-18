@@ -2984,7 +2984,7 @@ METHOD(ike_sa_t, inherit_post, void,
 		this->stats[STAT_REAUTH] = other->stats[STAT_REAUTH];
 		reauth = max(0, this->stats[STAT_REAUTH] - now);
 		delete = reauth + this->peer_cfg->get_over_time(this->peer_cfg);
-		this->stats[STAT_DELETE] = this->stats[STAT_REAUTH] + delete;
+		this->stats[STAT_DELETE] = now + delete;
 		DBG1(DBG_IKE, "rescheduling reauthentication in %ds after rekeying, "
 			 "lifetime reduced to %ds", reauth, delete);
 		lib->scheduler->schedule_job(lib->scheduler,
