@@ -525,11 +525,14 @@ pt_tls_server_t *pt_tls_server_create(identification_t *server, int fd,
 {
 	private_pt_tls_server_t *this;
 	identification_t *client = NULL;
+	tls_flag_t flags = 0;
 
 	switch (auth)
 	{
-		case PT_TLS_AUTH_TLS:
 		case PT_TLS_AUTH_TLS_OR_SASL:
+			flags |= TLS_FLAG_CLIENT_AUTH_OPTIONAL;
+			/* fall-through */
+		case PT_TLS_AUTH_TLS:
 		case PT_TLS_AUTH_TLS_AND_SASL:
 			client = identification_create_from_encoding(ID_ANY, chunk_empty);
 			break;
@@ -545,7 +548,7 @@ pt_tls_server_t *pt_tls_server_create(identification_t *server, int fd,
 		},
 		.state = PT_TLS_SERVER_VERSION,
 		.tls = tls_socket_create(TRUE, server, client, fd, NULL, TLS_UNSPEC,
-								 TLS_UNSPEC, 0),
+								 TLS_UNSPEC, flags),
 		.tnccs = (tls_t*)tnccs,
 		.auth = auth,
 	);
