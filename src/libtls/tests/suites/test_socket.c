@@ -412,7 +412,8 @@ static job_requeue_t serve_echo(echo_server_config_t *config)
 		}
 
 		tls = tls_socket_create(TRUE, server, client, cfd, NULL,
-								TLS_SUPPORTED_MIN, config->version, TRUE);
+								TLS_SUPPORTED_MIN, config->version,
+								TLS_FLAG_ENCRYPTION_OPTIONAL);
 		ck_assert(tls != NULL);
 
 		while (TRUE)
@@ -488,7 +489,8 @@ static void run_echo_client(echo_server_config_t *config)
 	ck_assert(connect(fd, host->get_sockaddr(host),
 					  *host->get_sockaddr_len(host)) != -1);
 	tls = tls_socket_create(FALSE, server, client, fd, NULL,
-							TLS_SUPPORTED_MIN, config->version, TRUE);
+							TLS_SUPPORTED_MIN, config->version,
+							TLS_FLAG_ENCRYPTION_OPTIONAL);
 	ck_assert(tls != NULL);
 
 	wr = rd = 0;

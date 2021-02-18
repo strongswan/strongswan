@@ -1116,22 +1116,22 @@ static void build_cipher_suite_list(private_tls_crypto_t *this)
 {
 	suite_algs_t suites[countof(suite_algs)];
 	tls_version_t min_version, max_version, new_min_version, new_max_version;
-	bool require_encryption;
+	bool require_encryption = TRUE;
 	int count = 0, i;
 
 	switch (this->tls->get_purpose(this->tls))
 	{
 		case TLS_PURPOSE_EAP_TLS:
-		case TLS_PURPOSE_GENERIC_NULLOK:
 			require_encryption = FALSE;
 			break;
-		case TLS_PURPOSE_EAP_PEAP:
-		case TLS_PURPOSE_EAP_TTLS:
 		case TLS_PURPOSE_GENERIC:
-			require_encryption = TRUE;
+			if (this->tls->get_flags(this->tls) & TLS_FLAG_ENCRYPTION_OPTIONAL)
+			{
+				require_encryption = FALSE;
+			}
 			break;
 		default:
-			return;
+			break;
 	}
 
 	min_version = this->tls->get_version_min(this->tls);

@@ -203,6 +203,11 @@ struct private_tls_t {
 	tls_purpose_t purpose;
 
 	/**
+	 * Flags for this TLS stack
+	 */
+	tls_flag_t flags;
+
+	/**
 	 * TLS record protection layer
 	 */
 	tls_protection_t *protection;
@@ -542,6 +547,12 @@ METHOD(tls_t, get_purpose, tls_purpose_t,
 	return this->purpose;
 }
 
+METHOD(tls_t, get_flags, tls_flag_t,
+	private_tls_t *this)
+{
+	return this->flags;
+}
+
 METHOD(tls_t, is_complete, bool,
 	private_tls_t *this)
 {
@@ -590,7 +601,8 @@ METHOD(tls_t, destroy, void,
  */
 tls_t *tls_create(bool is_server, identification_t *server,
 				  identification_t *peer, tls_purpose_t purpose,
-				  tls_application_t *application, tls_cache_t *cache)
+				  tls_application_t *application, tls_cache_t *cache,
+				  tls_flag_t flags)
 {
 	private_tls_t *this;
 
@@ -600,7 +612,6 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		case TLS_PURPOSE_EAP_TTLS:
 		case TLS_PURPOSE_EAP_PEAP:
 		case TLS_PURPOSE_GENERIC:
-		case TLS_PURPOSE_GENERIC_NULLOK:
 			break;
 		default:
 			return NULL;
@@ -617,6 +628,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 			.get_version_min = _get_version_min,
 			.set_version = _set_version,
 			.get_purpose = _get_purpose,
+			.get_flags = _get_flags,
 			.is_complete = _is_complete,
 			.get_eap_msk = _get_eap_msk,
 			.get_auth = _get_auth,
@@ -625,6 +637,7 @@ tls_t *tls_create(bool is_server, identification_t *server,
 		.is_server = is_server,
 		.application = application,
 		.purpose = purpose,
+		.flags = flags,
 	);
 	lib->settings->add_fallback(lib->settings, "%s.tls", "libtls", lib->ns);
 

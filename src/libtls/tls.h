@@ -40,6 +40,7 @@ typedef enum tls_version_t tls_version_t;
 typedef enum tls_content_type_t tls_content_type_t;
 typedef enum tls_handshake_type_t tls_handshake_type_t;
 typedef enum tls_purpose_t tls_purpose_t;
+typedef enum tls_flag_t tls_flag_t;
 typedef struct tls_t tls_t;
 
 #include <library.h>
@@ -130,8 +131,6 @@ enum tls_purpose_t {
 	TLS_PURPOSE_EAP_PEAP,
 	/** non-EAP TLS */
 	TLS_PURPOSE_GENERIC,
-	/** non-EAP TLS accepting NULL encryption */
-	TLS_PURPOSE_GENERIC_NULLOK,
 	/** EAP binding for TNC */
 	TLS_PURPOSE_EAP_TNC
 };
@@ -200,6 +199,16 @@ enum tls_extension_t {
 
 enum tls_name_type_t {
 	TLS_NAME_TYPE_HOST_NAME = 0,
+};
+
+/**
+ * Flags that control the behavior of the stack
+ */
+enum tls_flag_t {
+	/** set if cipher suites with null encryption are acceptable */
+	TLS_FLAG_ENCRYPTION_OPTIONAL = 1,
+	/** set if client authentication is optional even if cert req sent */
+	TLS_FLAG_CLIENT_AUTH_OPTIONAL = 2,
 };
 
 /**
@@ -319,6 +328,13 @@ struct tls_t {
 	tls_purpose_t (*get_purpose)(tls_t *this);
 
 	/**
+	 * Get the flags controlling this TLS stack instance.
+	 *
+	 * @return			flags given during construction
+	 */
+	tls_flag_t (*get_flags)(tls_t *this);
+
+	/**
 	 * Check if TLS negotiation completed successfully.
 	 *
 	 * @return			TRUE if TLS negotiation and authentication complete
@@ -359,10 +375,12 @@ void libtls_init(void);
  * @param purpose			purpose this TLS stack instance is used for
  * @param application		higher layer application or NULL if none
  * @param cache				session cache to use, or NULL
+ * @param flags				flags that control the behavior of the TLS stack
  * @return					TLS stack
  */
 tls_t *tls_create(bool is_server, identification_t *server,
 				  identification_t *peer, tls_purpose_t purpose,
-				  tls_application_t *application, tls_cache_t *cache);
+				  tls_application_t *application, tls_cache_t *cache,
+				  tls_flag_t flags);
 
 #endif /** TLS_H_ @}*/

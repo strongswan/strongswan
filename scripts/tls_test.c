@@ -38,7 +38,7 @@ static void usage(FILE *out, char *cmd)
 {
 	fprintf(out, "usage:\n");
 	fprintf(out, "  %s --connect <address> --port <port> [--key <key] [--cert <file>] [--cacert <file>]+ [--times <n>]\n", cmd);
-	fprintf(out, "  %s --listen <address> --port <port> --key <key> --cert <file> [--cacert <file>]+ [--times <n>]\n", cmd);
+	fprintf(out, "  %s --listen <address> --port <port> --key <key> --cert <file> [--cacert <file>]+ [--auth-optional] [--times <n>]\n", cmd);
 	fprintf(out, "\n");
 	fprintf(out, "options:\n");
 	fprintf(out, "  --help                   print help and exit\n");
@@ -48,6 +48,7 @@ static void usage(FILE *out, char *cmd)
 	fprintf(out, "  --cert <file>            certificate to authenticate itself\n");
 	fprintf(out, "  --key <file>             private key to authenticate itself\n");
 	fprintf(out, "  --cacert <file>          certificate to verify other peer\n");
+	fprintf(out, "  --auth-optional          don't enforce client authentication\n");
 	fprintf(out, "  --times <n>              specify the amount of repeated connection establishments\n");
 	fprintf(out, "  --ipv4                   use IPv4\n");
 	fprintf(out, "  --ipv6                   use IPv6\n");
@@ -109,7 +110,8 @@ static identification_t *find_client_id()
  */
 static int run_client(host_t *host, identification_t *server,
 					  identification_t *client, int times, tls_cache_t *cache,
-					  tls_version_t min_version, tls_version_t max_version)
+					  tls_version_t min_version, tls_version_t max_version,
+					  tls_flag_t flags)
 {
 	tls_socket_t *tls;
 	int fd, res;
@@ -131,7 +133,7 @@ static int run_client(host_t *host, identification_t *server,
 			return 1;
 		}
 		tls = tls_socket_create(FALSE, server, client, fd, cache, min_version,
-							    max_version, TRUE);
+							    max_version, flags);
 		if (!tls)
 		{
 			close(fd);
@@ -153,7 +155,7 @@ static int run_client(host_t *host, identification_t *server,
  */
 static int serve(host_t *host, identification_t *server, identification_t *client,
 				 int times, tls_cache_t *cache, tls_version_t min_version,
-				 tls_version_t max_version)
+				 tls_version_t max_version, tls_flag_t flags)
 {
 	tls_socket_t *tls;
 	int fd, cfd;
@@ -190,7 +192,7 @@ static int serve(host_t *host, identification_t *server, identification_t *clien
 		DBG1(DBG_TLS, "%#H connected", host);
 
 		tls = tls_socket_create(TRUE, server, client, cfd, cache, min_version,
-								max_version, TRUE);
+								max_version, flags);
 		if (!tls)
 		{
 			close(fd);
@@ -301,6 +303,7 @@ int main(int argc, char *argv[])
 	int port = 0, times = -1, res, family = AF_UNSPEC;
 	identification_t *server, *client = NULL;
 	tls_version_t min_version = TLS_SUPPORTED_MIN, max_version = TLS_SUPPORTED_MAX;
+	tls_flag_t flags = TLS_FLAG_ENCRYPTION_OPTIONAL;
 	tls_cache_t *cache;
 	host_t *host;
 
@@ -309,20 +312,21 @@ int main(int argc, char *argv[])
 	while (TRUE)
 	{
 		struct option long_opts[] = {
-			{"help",		no_argument,			NULL,		'h' },
-			{"connect",		required_argument,		NULL,		'c' },
-			{"listen",		required_argument,		NULL,		'l' },
-			{"port",		required_argument,		NULL,		'p' },
-			{"cert",		required_argument,		NULL,		'x' },
-			{"key",			required_argument,		NULL,		'k' },
-			{"cacert",		required_argument,		NULL,		'f' },
-			{"times",		required_argument,		NULL,		't' },
-			{"ipv4",		no_argument,			NULL,		'4' },
-			{"ipv6",		no_argument,			NULL,		'6' },
-			{"min-version",	required_argument,		NULL,		'm' },
-			{"max-version",	required_argument,		NULL,		'M' },
-			{"version",		required_argument,		NULL,		'v' },
-			{"debug",		required_argument,		NULL,		'd' },
+			{"help",			no_argument,			NULL,		'h' },
+			{"connect",			required_argument,		NULL,		'c' },
+			{"listen",			required_argument,		NULL,		'l' },
+			{"port",			required_argument,		NULL,		'p' },
+			{"cert",			required_argument,		NULL,		'x' },
+			{"key",				required_argument,		NULL,		'k' },
+			{"cacert",			required_argument,		NULL,		'f' },
+			{"times",			required_argument,		NULL,		't' },
+			{"ipv4",			no_argument,			NULL,		'4' },
+			{"ipv6",			no_argument,			NULL,		'6' },
+			{"min-version",		required_argument,		NULL,		'm' },
+			{"max-version",		required_argument,		NULL,		'M' },
+			{"version",			required_argument,		NULL,		'v' },
+			{"auth-optional",	no_argument,			NULL,		'n' },
+			{"debug",			required_argument,		NULL,		'd' },
 			{0,0,0,0 }
 		};
 		switch (getopt_long(argc, argv, "", long_opts, NULL))
@@ -402,6 +406,9 @@ int main(int argc, char *argv[])
 				}
 				max_version = min_version;
 				continue;
+			case 'n':
+				flags |= TLS_FLAG_CLIENT_AUTH_OPTIONAL;
+				continue;
 			default:
 				usage(stderr, argv[0]);
 				return 1;
@@ -423,14 +430,15 @@ int main(int argc, char *argv[])
 	cache = tls_cache_create(100, 30);
 	if (listen)
 	{
-		res = serve(host, server, client, times, cache, min_version, max_version);
+		res = serve(host, server, client, times, cache, min_version,
+					max_version, flags);
 	}
 	else
 	{
 		DESTROY_IF(client);
 		client = find_client_id();
 		res = run_client(host, server, client, times, cache, min_version,
-						 max_version);
+						 max_version, flags);
 		DESTROY_IF(client);
 	}
 	cache->destroy(cache);

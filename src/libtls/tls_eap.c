@@ -394,7 +394,7 @@ METHOD(tls_eap_t, process, status_t,
 	switch (status)
 	{
 		case INVALID_STATE:
-			if (this->tls->is_complete(this->tls))
+			if (this->is_server && this->tls->is_complete(this->tls))
 			{
 				return SUCCESS;
 			}

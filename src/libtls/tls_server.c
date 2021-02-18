@@ -705,9 +705,18 @@ static status_t process_certificate(private_tls_server_t *this,
 	certs = bio_reader_create(data);
 	if (!certs->remaining(certs))
 	{
-		DBG1(DBG_TLS, "no certificate sent by peer");
-		this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
-		return NEED_MORE;
+		if (this->tls->get_flags(this->tls) & TLS_FLAG_CLIENT_AUTH_OPTIONAL)
+		{
+			/* client authentication is not required so we clear the identity */
+			DESTROY_IF(this->peer);
+			this->peer = NULL;
+		}
+		else
+		{
+			DBG1(DBG_TLS, "no certificate sent by peer");
+			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+			return NEED_MORE;
+		}
 	}
 	while (certs->remaining(certs))
 	{
@@ -729,6 +738,12 @@ static status_t process_certificate(private_tls_server_t *this,
 				DBG1(DBG_TLS, "received TLS peer certificate '%Y'",
 					 cert->get_subject(cert));
 				first = FALSE;
+				if (this->peer && this->peer->get_type(this->peer) == ID_ANY)
+				{
+					this->peer->destroy(this->peer);
+					this->peer = cert->get_subject(cert);
+					this->peer = this->peer->clone(this->peer);
+				}
 			}
 			else
 			{
