@@ -207,6 +207,8 @@ enum tls_name_type_t {
 enum tls_flag_t {
 	/** set if cipher suites with null encryption are acceptable */
 	TLS_FLAG_ENCRYPTION_OPTIONAL = 1,
+	/** set if client authentication is optional even if cert req sent */
+	TLS_FLAG_CLIENT_AUTH_OPTIONAL = 2,
 };
 
 /**
