@@ -55,6 +55,7 @@ METHOD(xauth_method_t, process_peer, status_t,
 	enumerator_t *enumerator;
 	shared_key_t *shared;
 	cp_payload_t *cp;
+	char *msg_str = NULL;
 	chunk_t msg;
 
 	enumerator = in->create_attribute_enumerator(in);
@@ -64,7 +65,9 @@ METHOD(xauth_method_t, process_peer, status_t,
 		{
 			chunk_printable(attr->get_chunk(attr), &msg, '?');
 			DBG1(DBG_CFG, "XAuth message: %.*s", (int)msg.len, msg.ptr);
+			msg_str = strndup(msg.ptr, msg.len);
 			free(msg.ptr);
+			break;
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -89,7 +92,7 @@ METHOD(xauth_method_t, process_peer, status_t,
 			case XAUTH_USER_PASSWORD:
 				shared = lib->credmgr->get_shared(lib->credmgr, type,
 												  this->peer, this->server,
-												  NULL);
+												  msg_str);
 				if (!shared)
 				{
 					DBG1(DBG_IKE, "no XAuth %s found for '%Y' - '%Y'",
@@ -97,6 +100,7 @@ METHOD(xauth_method_t, process_peer, status_t,
 						 this->peer, this->server);
 					enumerator->destroy(enumerator);
 					cp->destroy(cp);
+					free(msg_str);
 					return FAILED;
 				}
 				cp->add_attribute(cp, configuration_attribute_create_chunk(
@@ -109,6 +113,7 @@ METHOD(xauth_method_t, process_peer, status_t,
 		}
 	}
 	enumerator->destroy(enumerator);
+	free(msg_str);
 
 	*out = cp;
 	return NEED_MORE;
