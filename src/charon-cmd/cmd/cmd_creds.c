@@ -69,31 +69,36 @@ CALLBACK(callback_shared, shared_key_t*,
 	id_match_t *match_other)
 {
 	shared_key_t *shared;
-	char *label, *pwd = NULL;
+	const char *label = msg;
+	char buf[BUF_LEN], *pwd = NULL;
 
 	if (type == this->prompted)
 	{
 		return NULL;
 	}
-	switch (type)
+	if (!label || !*label)
 	{
-		case SHARED_EAP:
-			label = "EAP password: ";
-			break;
-		case SHARED_IKE:
-			label = "Preshared Key: ";
-			break;
-		case SHARED_PRIVATE_KEY_PASS:
-			label = "Password: ";
-			break;
-		case SHARED_PIN:
-			label = "PIN: ";
-			break;
-		default:
-			return NULL;
+		switch (type)
+		{
+			case SHARED_EAP:
+				label = "EAP password";
+				break;
+			case SHARED_IKE:
+				label = "Preshared Key";
+				break;
+			case SHARED_PRIVATE_KEY_PASS:
+				label = "Password";
+				break;
+			case SHARED_PIN:
+				label = "PIN";
+				break;
+			default:
+				return NULL;
+		}
 	}
+	snprintf(buf, sizeof(buf), "%s: ", label);
 #ifdef HAVE_GETPASS
-	pwd = getpass(label);
+	pwd = getpass(buf);
 #endif
 	if (!pwd || strlen(pwd) == 0)
 	{
