@@ -490,7 +490,7 @@ static bool get_ppk(private_ike_auth_t *this, identification_t *ppk_id)
 {
 	shared_key_t *key;
 
-	key = lib->credmgr->get_shared(lib->credmgr, SHARED_PPK, ppk_id, NULL);
+	key = lib->credmgr->get_shared(lib->credmgr, SHARED_PPK, ppk_id, NULL, NULL);
 	if (!key)
 	{
 		if (this->peer_cfg->ppk_required(this->peer_cfg))

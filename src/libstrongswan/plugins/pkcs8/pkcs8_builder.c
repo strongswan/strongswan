@@ -130,7 +130,7 @@ static private_key_t *decrypt_private_key(pkcs5_t *pkcs5, chunk_t blob)
 	private_key_t *private_key = NULL;
 
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-										SHARED_PRIVATE_KEY_PASS, NULL, NULL);
+									SHARED_PRIVATE_KEY_PASS, NULL, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
 		chunk_t decrypted;

@@ -54,7 +54,7 @@ static bool decrypt(pkcs5_t *pkcs5, chunk_t data, chunk_t *decrypted)
 	bool success = FALSE;
 
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-										SHARED_PRIVATE_KEY_PASS, NULL, NULL);
+									SHARED_PRIVATE_KEY_PASS, NULL, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
 		if (pkcs5->decrypt(pkcs5, shared->get_key(shared), data, decrypted))

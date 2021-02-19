@@ -343,7 +343,7 @@ static bool verify_mac(hash_algorithm_t hash, chunk_t salt,
 	calculated = chunk_alloca(signer->get_block_size(signer));
 
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-										SHARED_PRIVATE_KEY_PASS, NULL, NULL);
+									SHARED_PRIVATE_KEY_PASS, NULL, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
 		if (!pkcs12_derive_key(hash, shared->get_key(shared), salt, iterations,

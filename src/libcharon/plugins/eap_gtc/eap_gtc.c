@@ -102,7 +102,7 @@ METHOD(eap_method_t, process_peer, status_t,
 	size_t len;
 
 	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP,
-									  this->peer, this->server);
+									  this->peer, this->server, NULL);
 	if (shared == NULL)
 	{
 		DBG1(DBG_IKE, "no EAP key found for '%Y' - '%Y'",

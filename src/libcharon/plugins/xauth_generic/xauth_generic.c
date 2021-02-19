@@ -88,7 +88,8 @@ METHOD(xauth_method_t, process_peer, status_t,
 				/* FALL */
 			case XAUTH_USER_PASSWORD:
 				shared = lib->credmgr->get_shared(lib->credmgr, type,
-												  this->peer, this->server);
+												  this->peer, this->server,
+												  NULL);
 				if (!shared)
 				{
 					DBG1(DBG_IKE, "no XAuth %s found for '%Y' - '%Y'",
@@ -177,7 +178,8 @@ METHOD(xauth_method_t, process_server, status_t,
 	}
 
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-										SHARED_EAP, this->server, this->peer);
+										SHARED_EAP, this->server, this->peer,
+										NULL);
 	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
 		if (chunk_equals_const(shared->get_key(shared), pass))

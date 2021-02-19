@@ -757,7 +757,8 @@ static bool get_nt_hash(private_eap_mschapv2_t *this, identification_t *me,
 	chunk_t password;
 
 	/* try to find a stored NT_HASH first */
-	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_NT_HASH, me, other);
+	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_NT_HASH, me, other,
+									  NULL);
 	if (shared )
 	{
 		*nt_hash = chunk_clone(shared->get_key(shared));
@@ -766,7 +767,7 @@ static bool get_nt_hash(private_eap_mschapv2_t *this, identification_t *me,
 	}
 
 	/* fallback to plaintext password */
-	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP, me, other);
+	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP, me, other, NULL);
 	if (shared)
 	{
 		password = utf8_to_utf16le(shared->get_key(shared));

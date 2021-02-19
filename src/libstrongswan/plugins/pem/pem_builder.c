@@ -341,7 +341,7 @@ static status_t pem_to_bin(chunk_t *blob, bool *pgp)
 	}
 
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-											SHARED_PRIVATE_KEY_PASS, NULL, NULL);
+									SHARED_PRIVATE_KEY_PASS, NULL, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
 		chunk_t passphrase, chunk;

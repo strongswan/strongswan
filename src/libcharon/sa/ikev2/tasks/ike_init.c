@@ -291,7 +291,7 @@ static bool send_use_ppk(private_ike_init_t *this)
 	{
 		/* check if we have at least one PPK available */
 		keys = lib->credmgr->create_shared_enumerator(lib->credmgr, SHARED_PPK,
-													  NULL, NULL);
+													  NULL, NULL, NULL);
 		if (keys->enumerate(keys, &key, NULL, NULL))
 		{
 			use_ppk = TRUE;

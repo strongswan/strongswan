@@ -428,7 +428,7 @@ CALLBACK(shared_filter, bool,
 
 METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 	private_load_tester_creds_t *this, shared_key_type_t type,
-	identification_t *me, identification_t *other)
+	identification_t *me, identification_t *other, const char *msg)
 {
 	shared_key_t *shared;
 

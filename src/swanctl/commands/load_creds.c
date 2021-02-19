@@ -223,13 +223,10 @@ typedef struct {
 	mem_cred_t *cache;
 } cb_data_t;
 
-/**
- * Callback function to prompt for private key passwords
- */
 CALLBACK(password_cb, shared_key_t*,
-	cb_data_t *data, shared_key_type_t type,
-	identification_t *me, identification_t *other,
-	id_match_t *match_me, id_match_t *match_other)
+	cb_data_t *data, shared_key_type_t type, identification_t *me,
+	identification_t *other, const char *msg, id_match_t *match_me,
+	id_match_t *match_other)
 {
 	shared_key_t *shared;
 	char *pwd = NULL;
