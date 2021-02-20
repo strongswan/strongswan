@@ -612,7 +612,7 @@ CALLBACK(enable_writer, job_requeue_t,
 	return JOB_REQUEUE_NONE;
 }
 
-METHOD(vici_socket_t, send_, void,
+METHOD(vici_socket_t, send_, bool,
 	private_vici_socket_t *this, u_int id, chunk_t msg)
 {
 	if (msg.len <= VICI_MESSAGE_SIZE_MAX)
@@ -646,6 +646,7 @@ METHOD(vici_socket_t, send_, void,
 		{
 			DBG1(DBG_CFG, "vici connection %u unknown", id);
 			chunk_clear(&msg);
+            return FALSE;
 		}
 	}
 	else
@@ -653,7 +654,9 @@ METHOD(vici_socket_t, send_, void,
 		DBG1(DBG_CFG, "vici message size %zu exceeds maximum size of %u, "
 			 "discarded", msg.len, VICI_MESSAGE_SIZE_MAX);
 		chunk_clear(&msg);
+        return FALSE;
 	}
+    return TRUE;
 }
 
 CALLBACK(flush_messages, void,

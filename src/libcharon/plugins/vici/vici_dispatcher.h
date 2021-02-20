@@ -44,9 +44,20 @@
 #define VICI_DISPATCHER_H_
 
 #include "vici_message.h"
+#include "vici_socket.h"
 
 typedef struct vici_dispatcher_t vici_dispatcher_t;
 typedef enum vici_operation_t vici_operation_t;
+
+/**
+ * Callback function invoked when a client registers or unregisters for a given event
+ *
+ * @param user		user data, as passed during registration
+ * @param name		name of the event
+ * @param id		unique client connection identifier
+ * @param reg		whether the client registers or unregisters
+ */
+typedef void (*vici_register_cb_t)(void *user, char *name, u_int id, bool reg);
 
 /**
  * Default socket URI of vici service
@@ -99,12 +110,15 @@ struct vici_dispatcher_t {
 	/**
 	 * Register/Unregister a callback invoked for a specific command request.
 	 *
-	 * @param name			name of the command
-	 * @param cb			callback function to register, NULL to unregister
-	 * @param user			user data to pass to callback
+	 * @param name				name of the command
+	 * @param cb				callback function to register, NULL to unregister
+	 * @param user				user data to pass to callback
+	 * @param register_cb		optional callback for (un)registrations
+	 * @param register_cb_data	optional data for the register_cb callback
 	 */
 	void (*manage_command)(vici_dispatcher_t *this, char *name,
-						   vici_command_cb_t cb, void *user);
+							vici_command_cb_t cb, void *user,
+							vici_register_cb_t register_cb, void *register_cb_data);
 
 	/**
 	 * Register/Unregister an event type to send.
@@ -135,7 +149,7 @@ struct vici_dispatcher_t {
 	 * @param id			client connection ID, 0 for all
 	 * @param message		event message to send, gets destroyed
 	 */
-	void (*raise_event)(vici_dispatcher_t *this, char *name, u_int id,
+	bool (*raise_event)(vici_dispatcher_t *this, char *name, u_int id,
 						vici_message_t *message);
 
 	/**

@@ -2721,7 +2721,7 @@ static void manage_command(private_vici_config_t *this,
 						   char *name, vici_command_cb_t cb, bool reg)
 {
 	this->dispatcher->manage_command(this->dispatcher, name,
-									 reg ? cb : NULL, this);
+									 reg ? cb : NULL, this, NULL, NULL);
 }
 
 /**
