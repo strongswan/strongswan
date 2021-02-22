@@ -239,6 +239,11 @@ static algo_map_t esp_integ[] = {
 	{ AUTH_UNDEFINED,         128, "ANY 128 bit authentication [no checking]" },
 	{ AUTH_UNDEFINED,         192, "ANY 192 bit authentication [no checking]" },
 	{ AUTH_UNDEFINED,         256, "ANY 256 bit authentication [no checking]" },
+	/* Wireshark has no support for sha256_256 variant */
+	{ AUTH_HMAC_SHA2_256_256,  -1, "ANY 256 bit authentication [no checking]" },
+	/* and cannot decode any authentication longer than 256 bits */
+	/* { AUTH_HMAC_SHA2_384_384,  -1, "ANY 384 bit authentication [no checking]" }, */
+	/* { AUTH_HMAC_SHA2_512_512,  -1, "ANY 512 bit authentication [no checking]" }, */
 	{ AUTH_UNDEFINED,          -1, "NULL"                                     },
 };
 
