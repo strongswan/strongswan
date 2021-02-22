@@ -47,6 +47,7 @@
 #include "vici_attribute.h"
 #include "vici_authority.h"
 #include "vici_logger.h"
+#include "vici_prompt.h"
 
 #include <library.h>
 #include <daemon.h>
@@ -102,6 +103,11 @@ struct private_vici_plugin_t {
 	 * Generic debug logger
 	 */
 	vici_logger_t *logger;
+
+	/**
+	 * User prompt
+	 */
+	vici_prompt_t *prompt;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -135,6 +141,8 @@ static bool register_vici(private_vici_plugin_t *this,
 											  this->cred);
 			this->attrs = vici_attribute_create(this->dispatcher);
 			this->logger = vici_logger_create(this->dispatcher);
+
+			this->prompt = vici_prompt_create(this->dispatcher);
 
 			charon->backends->add_backend(charon->backends,
 										  &this->config->backend);
