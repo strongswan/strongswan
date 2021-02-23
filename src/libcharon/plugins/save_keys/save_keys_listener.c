@@ -264,7 +264,7 @@ static inline void esp_names(proposal_t *proposal, const char **enc,
 				len = 64;
 				break;
 			case ENCR_AES_GCM_ICV12:
-				len = 64;
+				len = 96;
 				break;
 			case ENCR_AES_GCM_ICV16:
 				len = 128;
