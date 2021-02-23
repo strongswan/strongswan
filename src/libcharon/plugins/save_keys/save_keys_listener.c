@@ -234,6 +234,7 @@ static algo_map_t esp_integ[] = {
 	{ AUTH_HMAC_SHA2_384_192,  -1, "HMAC-SHA-384-192 [RFC4868]"               },
 	{ AUTH_HMAC_SHA2_512_256,  -1, "HMAC-SHA-512-256 [RFC4868]"               },
 	{ AUTH_HMAC_SHA2_256_96,   -1, "HMAC-SHA-256-96 [draft-ietf-ipsec-ciph-sha-256-00]" },
+	{ AUTH_HMAC_SHA2_256_256,  -1, "ANY 256 bit authentication [no checking]" },
 	{ AUTH_UNDEFINED,          64, "ANY 64 bit authentication [no checking]"  },
 	{ AUTH_UNDEFINED,          96, "ANY 96 bit authentication [no checking]"  },
 	{ AUTH_UNDEFINED,         128, "ANY 128 bit authentication [no checking]" },
@@ -263,7 +264,7 @@ static inline void esp_names(proposal_t *proposal, const char **enc,
 				len = 64;
 				break;
 			case ENCR_AES_GCM_ICV12:
-				len = 64;
+				len = 96;
 				break;
 			case ENCR_AES_GCM_ICV16:
 				len = 128;
