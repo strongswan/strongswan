@@ -368,9 +368,12 @@ CALLBACK(callback_shared, shared_key_t*,
 	shared_key_t *result = NULL;
 	timeval_t now, then, timeout;
 	u_int tmp;
-	chunk_t prompt = chunk_alloc(strlen(msg)+1);
-	prompt.ptr = strndup(msg, strlen(msg));
-	sanitize_string(prompt);
+	chunk_t prompt;
+	if (msg) {
+		prompt = chunk_alloc(strlen(msg)+1);
+		prompt.ptr = strndup(msg, strlen(msg));
+		sanitize_string(prompt);
+	}
 	time_monotonic(&then);
 	timeval_add_ms(&then, this->timeout);
 	/* Only prompt for user secrets, no PSKs or PPKs */
