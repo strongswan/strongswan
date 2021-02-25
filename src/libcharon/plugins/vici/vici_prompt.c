@@ -24,6 +24,7 @@
 #include <library.h>
 #include <daemon.h>
 
+#include <ctype.h>
 #include <errno.h>
 
 #define PROMPT_TIMEOUT_MS 15000
@@ -112,6 +113,23 @@ typedef struct {
 } prompt_request_in_progress_t;
 
 
+void sanitize_string(chunk_t message)
+{
+	chunk_t new = chunk_alloca(message.len);
+	int i = 0, j = 0;
+	for (;i<new.len;i++)
+	{
+		if ((isspace(message.ptr[i]) || isgraph(message.ptr[i])) &&
+			message.ptr[i] != ':')
+		{
+			new.ptr[j++] = message.ptr[i];
+		}
+	}
+	new.ptr[j++] = '\0';
+	new.len = j;
+	memcpy(message.ptr, new.ptr, j);
+	message.len=j;
+}
 
 /* Subtract the `struct timeval' values X and Y,
    storing the result in RESULT.
@@ -350,7 +368,9 @@ CALLBACK(callback_shared, shared_key_t*,
 	shared_key_t *result = NULL;
 	timeval_t now, then, timeout;
 	u_int tmp;
-
+	chunk_t prompt = chunk_alloc(strlen(msg)+1);
+	prompt.ptr = strndup(msg, strlen(msg));
+	sanitize_string(prompt);
 	time_monotonic(&then);
 	timeval_add_ms(&then, this->timeout);
 	/* Only prompt for user secrets, no PSKs or PPKs */
@@ -364,7 +384,7 @@ CALLBACK(callback_shared, shared_key_t*,
 	builder->add_kv(builder, "remote-identity", "%Y", other);
 	builder->add_kv(builder, "local-identity", "%Y", me);
 	builder->add_kv(builder, "secret-type", type == SHARED_EAP ? "password" : "PIN");
-	builder->add_kv(builder, "peer-message", "%s", msg);
+	builder->add_kv(builder, "peer-message", "%s", prompt.ptr);
 	message = builder->finalize(builder);
 
 	INIT(in_progress,
@@ -450,6 +470,7 @@ CALLBACK(callback_shared, shared_key_t*,
 	this->mutex->unlock(this->mutex);
 
 out:;
+	free(prompt.ptr);
 	/* Timeout reached, now destroy all data structures to clean up */
 	this->lock->lock(this->lock);
 	this->requests_in_progress->remove(this->requests_in_progress, in_progress, NULL);
