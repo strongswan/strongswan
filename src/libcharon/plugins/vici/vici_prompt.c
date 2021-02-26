@@ -368,19 +368,26 @@ CALLBACK(callback_shared, shared_key_t*,
 	shared_key_t *result = NULL;
 	timeval_t now, then, timeout;
 	u_int tmp;
-	chunk_t prompt;
-	if (msg) {
-		prompt = chunk_alloc(strlen(msg)+1);
-		prompt.ptr = strndup(msg, strlen(msg));
-		sanitize_string(prompt);
-	}
-	time_monotonic(&then);
-	timeval_add_ms(&then, this->timeout);
+	chunk_t prompt = {
+		.ptr = NULL,
+		.len = 0,
+	};
+
 	/* Only prompt for user secrets, no PSKs or PPKs */
 	if (type != SHARED_EAP && type != SHARED_PIN)
 	{
 		return NULL;
 	}
+	
+	if (msg) {
+		/* prompt = chunk_alloc(strlen(msg)+1); */
+		prompt.ptr = strndup(msg, strlen(msg)+1);
+		prompt.len = strlen(msg)+1;
+		sanitize_string(prompt);
+	}
+
+	time_monotonic(&then);
+	timeval_add_ms(&then, this->timeout);
 	to_delete = linked_list_create();
 
 	builder = vici_builder_create();
@@ -389,6 +396,11 @@ CALLBACK(callback_shared, shared_key_t*,
 	builder->add_kv(builder, "secret-type", type == SHARED_EAP ? "password" : "PIN");
 	builder->add_kv(builder, "peer-message", "%s", prompt.ptr);
 	message = builder->finalize(builder);
+
+	if (prompt.ptr)
+	{
+		free(prompt.ptr);
+	}
 
 	INIT(in_progress,
 		.clients = linked_list_create(),
@@ -442,7 +454,6 @@ CALLBACK(callback_shared, shared_key_t*,
 			if (reply->shared_key && reply->type == type)
 			{
 				DBG2(DBG_LIB, "Found reply from vici client %u", reply->id);
-				reply->shared_key->get_ref(reply->shared_key);
 				result = reply->shared_key->get_ref(reply->shared_key);
 				/* Only cache passwords, not PINs because those can be time dependent (e.g. TOTP).
 				   If the PIN is wrong, then authentication will fail and that will then need to
@@ -455,16 +466,21 @@ CALLBACK(callback_shared, shared_key_t*,
 		}
 		enumerator->destroy(enumerator);
 		enumerator = NULL;
+		this->lock->unlock(this->lock);
+
 		if (result)
 		{
 			break;
 		}
-		DBG2(DBG_LIB, "Was woken up but did not find a valid reply for prompt request");
-		this->lock->unlock(this->lock);
+
+		DBG3(DBG_LIB, "Was woken up but did not find a valid reply for prompt request");
 		time_monotonic(&now);
 		timeval_subtract(&timeout, &then, &now);
-		timeout.tv_sec = then.tv_sec - now.tv_sec;
-		timeout.tv_usec = then.tv_usec - now.tv_usec;
+		DBG3(DBG_LIB, "remaining timeout: %ld.%06ld", timeout.tv_sec, timeout.tv_usec);
+
+		/*	timeout.tv_sec = then.tv_sec - now.tv_sec;
+			timeout.tv_usec = then.tv_usec - now.tv_usec;
+		 */
 	} while (this->cond->timed_wait_abs(this->cond, this->mutex, timeout));
 	
 	if (!result) {
@@ -473,7 +489,6 @@ CALLBACK(callback_shared, shared_key_t*,
 	this->mutex->unlock(this->mutex);
 
 out:;
-	free(prompt.ptr);
 	/* Timeout reached, now destroy all data structures to clean up */
 	this->lock->lock(this->lock);
 	this->requests_in_progress->remove(this->requests_in_progress, in_progress, NULL);
