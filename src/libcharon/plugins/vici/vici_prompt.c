@@ -92,6 +92,12 @@ struct private_vici_prompt_t {
 	 */
 
 	linked_list_t *requests_in_progress;
+	
+	/**
+	 * Stores whether this is enabled. Can be enabled by just connecting a client.
+	 * Can be disabled again by sending the prompt-disable command
+	 */
+	bool enabled;
 };
 
 typedef struct {
@@ -110,6 +116,7 @@ typedef struct {
 	shared_key_type_t type;
 	/* stores objects of type prompt_client_reply_t */
 	linked_list_t *clients;
+	char *msg;
 } prompt_request_in_progress_t;
 
 
@@ -241,9 +248,14 @@ void register_cb (void *user, char *name, u_int id, bool reg)
 {
 	private_vici_prompt_t *this = user;
 	prompt_client_t *client;
+	enumerator_t *enumerator;
+	prompt_request_in_progress_t *prompt_request;
+	vici_builder_t *builder;
+	vici_message_t *msg;
 	INIT (client,
 			.id = id
 	);
+	
 	this->lock->lock(this->lock);
 	if (reg)
 	{
@@ -252,8 +264,33 @@ void register_cb (void *user, char *name, u_int id, bool reg)
 		this->prompt_clients->remove(this->prompt_clients, &id,
 			compare_and_free_prompt_client_t_and_u_int);
 	}
+	
+	/*
+	 * Send existing prompts to new client
+	 */
+	enumerator = this->requests_in_progress->create_enumerator(this->requests_in_progress);
+	while(enumerator->enumerate(enumerator, &prompt_request))
+	{
+		builder = vici_builder_create();
+		builder->add_kv(builder, "msg", "%s", prompt_request->msg);
+		builder->add_kv(builder, "local-identity", "%Y", prompt_request->me);
+		builder->add_kv(builder, "remote-identity", "%Y", prompt_request->other);
+		builder->add_kv(builder, "secret-type", prompt_request->type == SHARED_EAP ? "password" : "PIN");
+		msg = builder->finalize(builder);
+		this->dispatcher->raise_event(this->dispatcher, "prompt-request", id, msg);
+		msg->destroy(msg);
+	}
    
 	this->lock->unlock(this->lock);
+}
+CALLBACK(prompt_disable, vici_message_t*,
+	private_vici_prompt_t *this, char *name, u_int id, vici_message_t *message)
+{
+	this->lock->lock(this->lock);
+	this->enabled = FALSE;
+	this->lock->unlock(this->lock);	
+	DBG2(DBG_LIB, "VICI client %d: prompt disabled", id);
+	return create_reply(TRUE, "prompt disabled");
 }
 
 CALLBACK(prompt_reply, vici_message_t*,
@@ -292,7 +329,7 @@ CALLBACK(prompt_reply, vici_message_t*,
 		type = SHARED_PIN;
 	} else {
 		DBG1(DBG_LIB, "vici client %u: Provided secret type (%s) isn't "
-			 "password or pin.", shared_secret_type);
+			 "password or pin.", id, shared_secret_type);
 		msg = create_reply(FALSE, "Provided secret type (%s) isn't "
 						   "password or pin.", shared_secret_type);
 		goto out;
@@ -310,7 +347,7 @@ CALLBACK(prompt_reply, vici_message_t*,
 											    (void **) &proc, test))
 	{
 		DBG1(DBG_LIB, "vici client %u No matching prompt request found for vici client", id);
-		msg = create_reply(FALSE, "vici client %u No matching prompt request found for vici client", id);
+		msg = create_reply(FALSE, "No matching prompt request found for vici client", id);
 		goto out;
 	}
 
@@ -322,11 +359,14 @@ CALLBACK(prompt_reply, vici_message_t*,
 		(void **) &reply,  reply_test))
 	{
 		DBG1(DBG_LIB, "No matching reply found");
+		msg = create_reply(FALSE, "no matching reply found");
 		goto out;
 	}
 
 	clone = chunk_clone(key);
 	reply->shared_key = shared_key_create(proc->type, clone);
+
+	msg = create_reply(TRUE, "Reply stored");
 
 	this->cond->broadcast(this->cond);
 
@@ -374,7 +414,7 @@ CALLBACK(callback_shared, shared_key_t*,
 	};
 
 	/* Only prompt for user secrets, no PSKs or PPKs */
-	if (type != SHARED_EAP && type != SHARED_PIN)
+	if ((type != SHARED_EAP && type != SHARED_PIN) || !this->enabled)
 	{
 		return NULL;
 	}
@@ -407,6 +447,7 @@ CALLBACK(callback_shared, shared_key_t*,
 		.me = me->clone(me),
 		.other = other->clone(other),
 		.type = type,
+		.msg = strndup(prompt.ptr, prompt.len),
 	);
 
 	this->lock->lock(this->lock);
@@ -496,6 +537,10 @@ out:;
 	in_progress->clients->destroy_function(in_progress->clients, free);
 	in_progress->me->destroy(in_progress->me);
 	in_progress->other->destroy(in_progress->other);
+	if (in_progress->msg)
+	{
+		free(in_progress->msg);
+	}
 	free(in_progress);
 	return result;
 }
@@ -510,8 +555,10 @@ void manage_commands(private_vici_prompt_t *this, bool reg)
 {
 	this->dispatcher->manage_event(this->dispatcher, "prompt-request", reg);
 	this->dispatcher->manage_event(this->dispatcher, "prompt-reply", reg);
+	this->dispatcher->manage_event(this->dispatcher, "prompt-disable", reg);
 	manage_command(this, "prompt-request", prompt_request, reg, register_cb, this);    
 	manage_command(this, "prompt-reply", prompt_reply, reg, register_cb, this);        
+	manage_command(this, "prompt-disable", prompt_disable, reg, NULL, NULL);
 }
 
 METHOD(vici_prompt_t, destroy, void,
@@ -542,7 +589,8 @@ vici_prompt_t *vici_prompt_create(vici_dispatcher_t *dispatcher)
 		.cond = condvar_create(CONDVAR_TYPE_DEFAULT),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.timeout = lib->settings->get_time(lib->settings, "%s.plugins.vici.prompt_timeout", PROMPT_TIMEOUT_MS, lib->ns),      
-		.creds = mem_cred_create(),			
+		.creds = mem_cred_create(),
+		.enabled = FALSE,
 	);
 	this->cb = callback_cred_create_shared(callback_shared, this);
 
