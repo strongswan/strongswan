@@ -638,6 +638,29 @@ METHOD(ike_sa_t, get_message_id, uint32_t,
 	return this->task_manager->get_mid(this->task_manager, initiate);
 }
 
+/**
+ * Set configured DSCP value on packet
+ */
+static void set_dscp(private_ike_sa_t *this, packet_t *packet)
+{
+	ike_cfg_t *ike_cfg;
+
+	/* prefer IKE config on peer_cfg, as its selection is more accurate
+	 * then the initial IKE config */
+	if (this->peer_cfg)
+	{
+		ike_cfg = this->peer_cfg->get_ike_cfg(this->peer_cfg);
+	}
+	else
+	{
+		ike_cfg = this->ike_cfg;
+	}
+	if (ike_cfg)
+	{
+		packet->set_dscp(packet, ike_cfg->get_dscp(ike_cfg));
+	}
+}
+
 METHOD(ike_sa_t, send_keepalive, void,
 	private_ike_sa_t *this, bool scheduled)
 {
@@ -681,6 +704,7 @@ METHOD(ike_sa_t, send_keepalive, void,
 		packet = packet_create();
 		packet->set_source(packet, this->my_host->clone(this->my_host));
 		packet->set_destination(packet, this->other_host->clone(this->other_host));
+		set_dscp(this, packet);
 		data.ptr = malloc(1);
 		data.ptr[0] = 0xFF;
 		data.len = 1;
@@ -1201,29 +1225,6 @@ METHOD(ike_sa_t, update_hosts, void,
 		enumerator->destroy(enumerator);
 
 		vips->destroy(vips);
-	}
-}
-
-/**
- * Set configured DSCP value on packet
- */
-static void set_dscp(private_ike_sa_t *this, packet_t *packet)
-{
-	ike_cfg_t *ike_cfg;
-
-	/* prefer IKE config on peer_cfg, as its selection is more accurate
-	 * then the initial IKE config */
-	if (this->peer_cfg)
-	{
-		ike_cfg = this->peer_cfg->get_ike_cfg(this->peer_cfg);
-	}
-	else
-	{
-		ike_cfg = this->ike_cfg;
-	}
-	if (ike_cfg)
-	{
-		packet->set_dscp(packet, ike_cfg->get_dscp(ike_cfg));
 	}
 }
 
