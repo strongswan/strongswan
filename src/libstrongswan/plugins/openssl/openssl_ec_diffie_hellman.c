@@ -100,7 +100,7 @@ static bool chunk2ecp(const EC_GROUP *group, chunk_t chunk, EVP_PKEY *key)
 	}
 
 	point = EC_POINT_new(group);
-	if (!point || !EC_POINT_set_affine_coordinates_GFp(group, point, x, y, ctx))
+	if (!point || !EC_POINT_set_affine_coordinates(group, point, x, y, ctx))
 	{
 		goto error;
 	}
@@ -164,7 +164,7 @@ static bool ecp2chunk(const EC_GROUP *group, EVP_PKEY *key, chunk_t *chunk)
 
 	ec_key = EVP_PKEY_get1_EC_KEY(key);
 	point = EC_KEY_get0_public_key(ec_key);
-	if (!point || !EC_POINT_get_affine_coordinates_GFp(group, point, x, y, ctx))
+	if (!point || !EC_POINT_get_affine_coordinates(group, point, x, y, ctx))
 	{
 		goto error;
 	}
@@ -506,7 +506,7 @@ EC_GROUP *ec_group_new_brainpool(bp_curve *curve)
 		goto failed;
 	}
 	G = EC_POINT_new(group);
-	if (!G || !EC_POINT_set_affine_coordinates_GFp(group, G, x, y, ctx))
+	if (!G || !EC_POINT_set_affine_coordinates(group, G, x, y, ctx))
 	{
 		goto failed;
 	}
