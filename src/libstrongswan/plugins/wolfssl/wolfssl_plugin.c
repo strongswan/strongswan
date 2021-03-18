@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2019 Sean Parkinson, wolfSSL Inc.
+ * Copyright (C) 2021 Andreas Steffen, strongSec GmbH
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -117,6 +118,18 @@ METHOD(plugin_t, get_features, int,
 #endif
 #ifdef WOLFSSL_SHA512
 			PLUGIN_PROVIDE(HASHER, HASH_SHA512),
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_224)
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_224),
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_256),
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_384)
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_384),
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_512)
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_512),
 #endif
 #ifndef NO_SHA
 		/* keyed sha1 hasher (aka prf) */
