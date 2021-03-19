@@ -29,7 +29,8 @@ libstrongswan_wolfssl_la_SOURCES = \
 	wolfssl_rng.h wolfssl_rng.c \
 	wolfssl_sha1_prf.h wolfssl_sha1_prf.c \
 	wolfssl_x_diffie_hellman.h wolfssl_x_diffie_hellman.c \
-	wolfssl_util.h wolfssl_util.c
+	wolfssl_util.h wolfssl_util.c \
+	wolfssl_xof.h wolfssl_xof.c
 
 
 libstrongswan_wolfssl_la_LDFLAGS = -module -avoid-version

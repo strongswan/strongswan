@@ -41,6 +41,7 @@
 #include "wolfssl_rng.h"
 #include "wolfssl_sha1_prf.h"
 #include "wolfssl_x_diffie_hellman.h"
+#include "wolfssl_xof.h"
 
 #ifndef FIPS_MODE
 #define FIPS_MODE 0
@@ -130,6 +131,10 @@ METHOD(plugin_t, get_features, int,
 #endif
 #if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_512)
 			PLUGIN_PROVIDE(HASHER, HASH_SHA3_512),
+#endif
+#if defined(WOLFSSL_SHAKE256) && LIBWOLFSSL_VERSION_HEX >= 0x04007001
+		PLUGIN_REGISTER(XOF, wolfssl_xof_create),
+			PLUGIN_PROVIDE(XOF, XOF_SHAKE_256),
 #endif
 #ifndef NO_SHA
 		/* keyed sha1 hasher (aka prf) */
