@@ -273,8 +273,8 @@ end:
 		case KEY_DILITHIUM_3:
 			sig_alg = OQS_SIG_alg_dilithium_3;
 			break;
-		case KEY_DILITHIUM_4:
-			sig_alg = OQS_SIG_alg_dilithium_4;
+		case KEY_DILITHIUM_5:
+			sig_alg = OQS_SIG_alg_dilithium_5;
 			break;
 		case KEY_FALCON_512:
 			sig_alg = OQS_SIG_alg_falcon_512;
@@ -307,7 +307,7 @@ bool oqs_supported(key_type_t type)
 	{
 		case KEY_DILITHIUM_2:
 		case KEY_DILITHIUM_3:
-		case KEY_DILITHIUM_4:
+		case KEY_DILITHIUM_5:
 		case KEY_FALCON_512:
 		case KEY_FALCON_1024:
 			return TRUE;
