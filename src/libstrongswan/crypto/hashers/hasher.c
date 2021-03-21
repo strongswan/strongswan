@@ -157,7 +157,7 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 		case OID_ED448:
 		case OID_DILITHIUM_2:
 		case OID_DILITHIUM_3:
-		case OID_DILITHIUM_4:
+		case OID_DILITHIUM_5:
 		case OID_FALCON_512:
 		case OID_FALCON_1024:
 			return HASH_IDENTITY;
@@ -497,11 +497,11 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 				default:
 					return OID_UNKNOWN;
 			}
-		case KEY_DILITHIUM_4:
+		case KEY_DILITHIUM_5:
 			switch (alg)
 			{
 				case HASH_IDENTITY:
-					return OID_DILITHIUM_4;
+					return OID_DILITHIUM_5;
 				default:
 					return OID_UNKNOWN;
 			}
@@ -549,7 +549,7 @@ hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme,
 		case SIGN_ED448:
 		case SIGN_DILITHIUM_2:
 		case SIGN_DILITHIUM_3:
-		case SIGN_DILITHIUM_4:
+		case SIGN_DILITHIUM_5:
 		case SIGN_FALCON_512:
 		case SIGN_FALCON_1024:
 			return HASH_IDENTITY;

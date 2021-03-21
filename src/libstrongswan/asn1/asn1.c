@@ -59,7 +59,7 @@ chunk_t asn1_algorithmIdentifier(int oid)
 		case OID_ED448:
 		case OID_DILITHIUM_2:
 		case OID_DILITHIUM_3:
-		case OID_DILITHIUM_4:
+		case OID_DILITHIUM_5:
 		case OID_FALCON_512:
 		case OID_FALCON_1024:
 			parameters = chunk_empty;
