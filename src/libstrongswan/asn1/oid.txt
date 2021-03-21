@@ -208,13 +208,13 @@
           0x02               "IBM"
             0x82             ""
               0x0B           "QSC"
-                0x06         "dilithium-raw"
+                0x07         "dilithium-r3"
                   0x04       "d2r"
-                    0x03     "dilithium2" OID_DILITHIUM_2
-                  0x05       "d3r"
-                    0x04     "dilithium3" OID_DILITHIUM_3
-                  0x06       "d4r"
-                    0x05     "dilithium4" OID_DILITHIUM_4
+                    0x04     "dilithium2" OID_DILITHIUM_2
+                  0x06       "d3r"
+                    0x05     "dilithium3" OID_DILITHIUM_3
+                  0x08       "d5r"
+                    0x07     "dilithium5" OID_DILITHIUM_5
           0x82               ""
             0x37             "Microsoft"
               0x0A           ""
