@@ -29,7 +29,7 @@ ENUM(key_type_names, KEY_ANY, KEY_FALCON_1024,
 	"ED448",
 	"Dilithium2",
 	"Dilithium3",
-	"Dilithium4",
+	"Dilithium5",
 	"Falcon512",
 	"Falcon1024",
 );
@@ -60,7 +60,7 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_FALCON_1024,
 	"ED448",
 	"DILITHIUM_2",
 	"DILITHIUM_3",
-	"DILITHIUM_4",
+	"DILITHIUM_5",
 	"FALCON_512",
 	"FALCON_1024",
 );
@@ -133,8 +133,8 @@ int key_type_to_oid(key_type_t type)
 			return OID_DILITHIUM_2;
 		case KEY_DILITHIUM_3:
 			return OID_DILITHIUM_3;
-		case KEY_DILITHIUM_4:
-			return OID_DILITHIUM_4;
+		case KEY_DILITHIUM_5:
+			return OID_DILITHIUM_5;
 		case KEY_FALCON_512:
 			return OID_FALCON_512;
 		case KEY_FALCON_1024:
@@ -159,8 +159,8 @@ key_type_t key_type_from_oid(int oid)
 			return KEY_DILITHIUM_2;
 		case OID_DILITHIUM_3:
 			return KEY_DILITHIUM_3;
-		case OID_DILITHIUM_4:
-			return KEY_DILITHIUM_4;
+		case OID_DILITHIUM_5:
+			return KEY_DILITHIUM_5;
 		case OID_FALCON_512:
 			return KEY_FALCON_512;
 		case OID_FALCON_1024:
@@ -222,8 +222,8 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 			return SIGN_DILITHIUM_2;
 		case OID_DILITHIUM_3:
 			return SIGN_DILITHIUM_3;
-		case OID_DILITHIUM_4:
-			return SIGN_DILITHIUM_4;
+		case OID_DILITHIUM_5:
+			return SIGN_DILITHIUM_5;
 		case OID_FALCON_512:
 			return SIGN_FALCON_512;
 		case OID_FALCON_1024:
@@ -284,8 +284,8 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 			return OID_DILITHIUM_2;
 		case SIGN_DILITHIUM_3:
 			return OID_DILITHIUM_3;
-		case SIGN_DILITHIUM_4:
-			return OID_DILITHIUM_4;
+		case SIGN_DILITHIUM_5:
+			return OID_DILITHIUM_5;
 		case SIGN_FALCON_512:
 			return OID_FALCON_512;
 		case SIGN_FALCON_1024:
@@ -333,7 +333,7 @@ static struct {
 	{ KEY_ED448,       0, { .scheme = SIGN_ED448 }},
 	{ KEY_DILITHIUM_2, 0, { .scheme = SIGN_DILITHIUM_2}},
 	{ KEY_DILITHIUM_3, 0, { .scheme = SIGN_DILITHIUM_3}},
-	{ KEY_DILITHIUM_4, 0, { .scheme = SIGN_DILITHIUM_4}},
+	{ KEY_DILITHIUM_5, 0, { .scheme = SIGN_DILITHIUM_5}},
 	{ KEY_FALCON_512,  0, { .scheme = SIGN_FALCON_512}},
 	{ KEY_FALCON_1024, 0, { .scheme = SIGN_FALCON_1024}},
 };
@@ -428,8 +428,8 @@ key_type_t key_type_from_signature_scheme(signature_scheme_t scheme)
 			return KEY_DILITHIUM_2;
 		case SIGN_DILITHIUM_3:
 			return KEY_DILITHIUM_3;
-		case SIGN_DILITHIUM_4:
-			return KEY_DILITHIUM_4;
+		case SIGN_DILITHIUM_5:
+			return KEY_DILITHIUM_5;
 		case SIGN_FALCON_512:
 			return KEY_FALCON_512;
 		case SIGN_FALCON_1024:
