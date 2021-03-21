@@ -60,9 +60,9 @@ static int gen()
 				{
 					type = KEY_DILITHIUM_3;
 				}
-				else if (streq(arg, "dilithium4"))
+				else if (streq(arg, "dilithium5"))
 				{
-					type = KEY_DILITHIUM_4;
+					type = KEY_DILITHIUM_5;
 				}
 				else if (streq(arg, "falcon512"))
 				{
@@ -186,7 +186,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"[--type rsa|ecdsa|ed25519|ed448|dilithium2|dilithium3|dilithium4|falcon512|falcon1024]",
+		{"[--type rsa|ecdsa|ed25519|ed448|dilithium2|dilithium3|dilithium5|falcon512|falcon1024]",
 		 "[--size bits] [--safe-primes] [--shares n] [--threshold l]",
 		 "[--outform der|pem]"},
 		{

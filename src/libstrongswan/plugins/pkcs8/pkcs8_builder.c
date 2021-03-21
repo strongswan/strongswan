@@ -96,8 +96,8 @@ static private_key_t *parse_private_key(chunk_t blob)
 						type = KEY_DILITHIUM_3;
 						part = BUILD_PRIV_ASN1_DER;
 						break;
-					case OID_DILITHIUM_4:
-						type = KEY_DILITHIUM_4;
+					case OID_DILITHIUM_5:
+						type = KEY_DILITHIUM_5;
 						part = BUILD_PRIV_ASN1_DER;
 						break;
 					case OID_FALCON_512:
