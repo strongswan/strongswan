@@ -1731,7 +1731,7 @@ INSERT INTO policies (			/* 10 */
 INSERT INTO policies (			/* 11 */
   type, name, dir, rec_fail, rec_noresult
 ) VALUES (
-  8, 'Get /bin', 1, 0, 0
+  8, 'Get /usr/sbin', 12, 0, 0
 );
 
 INSERT INTO policies (			/*  12 */
@@ -1761,7 +1761,7 @@ INSERT INTO policies (			/* 15 */
 INSERT INTO policies (          /* 16 */
   type, name, dir, rec_fail, rec_noresult
 ) VALUES (
-  9, 'Measure /bin', 1, 2, 2
+  9, 'Measure /usr/sbin', 12, 2, 2
 );
 
 INSERT INTO policies (			/* 17 */
