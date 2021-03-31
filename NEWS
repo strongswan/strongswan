@@ -1,3 +1,9 @@
+strongswan-5.9.3
+----------------
+
+- Added AES_ECB, SHA-3 and SHAKE-256 support to wolfssl plugin.
+
+
 strongswan-5.9.2
 ----------------
 
