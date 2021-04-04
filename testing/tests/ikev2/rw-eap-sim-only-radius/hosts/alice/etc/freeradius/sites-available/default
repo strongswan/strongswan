@@ -1,4 +1,7 @@
 authorize {
+  preprocess
+  chap
+  mschap
   files
   suffix
   update reply {
@@ -15,9 +18,24 @@ authorize {
   eap {
     ok = return
   }
+  unix
+  files
+  expiration
+  logintime
+  pap
 }
 
 authenticate {
+  Auth-Type PAP {
+    pap
+  }
+  Auth-Type CHAP {
+    chap
+  }
+  Auth-Type MS-CHAP {
+    mschap
+  }
+  unix
   eap
 }
 

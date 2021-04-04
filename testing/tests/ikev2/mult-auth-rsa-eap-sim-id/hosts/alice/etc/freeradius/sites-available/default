@@ -2,8 +2,8 @@ authorize {
   preprocess
   chap
   mschap
-  suffix
   files
+  suffix
   update reply {
     EAP-Sim-Rand1 := "%{control:EAP-Sim-Rand1}"
     EAP-Sim-Rand2 := "%{control:EAP-Sim-Rand2}"
@@ -19,6 +19,7 @@ authorize {
     ok = return
   }
   unix
+  files
   expiration
   logintime
   pap
