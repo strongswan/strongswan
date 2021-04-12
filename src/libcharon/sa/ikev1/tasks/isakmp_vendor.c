@@ -116,6 +116,10 @@ static struct {
 	{ "MS NT5 ISAKMPOAKLEY", EXT_MS_WINDOWS, FALSE, 20,
 	  "\x1e\x2b\x51\x69\x05\x99\x1c\x7d\x7c\x96\xfc\xbf\xb5\x87\xe4\x61\x00\x00\x00\x00"},
 
+	/* AVM FRITZ OS boxes send this vendor ID, experimentally discovered */
+	{ "AVM FRITZ OS", 0, FALSE, 16, 
+	  "\xa2\x22\x6f\xc3\x64\x50\x0f\x56\x34\xff\x77\xdb\x3b\x74\xf4\x1b"},
+
 }, vendor_natt_ids[] = {
 
 	/* NAT-Traversal VIDs ordered by preference */
