@@ -117,6 +117,10 @@ static struct {
 	/* Windows peers send this VID and a version number */
 	{ "MS NT5 ISAKMPOAKLEY", EXT_MS_WINDOWS, FALSE, TRUE, 20,
 	  "\x1e\x2b\x51\x69\x05\x99\x1c\x7d\x7c\x96\xfc\xbf\xb5\x87\xe4\x61\x00\x00\x00\x00"},
+	  
+	/* Juniper SRX and Netscreen devices send this VID and a version number */
+	{ "NetScreen Technologies", 0, NULL, TRUE, 20,
+	  "\x69\x93\x69\x22\x87\x41\xc6\xd4\xca\x09\x4c\x93\xe2\x42\xc9\xde\x19\xe7\xb7\xc6"},
 
 	{ "Checkpoint Firewall", 0, FALSE, TRUE, 20,
 	  "\xf4\xed\x19\xe0\xc1\x14\xeb\x51\x6f\xaa\xac\x0e\xe3\x7d\xaf\x28\x07\xb4\x38\x1f"},
