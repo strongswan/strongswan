@@ -379,7 +379,7 @@ static void list_vips(private_vici_query_t *this, vici_builder_t *b,
  * List details of an IKE_SA
  */
 static void list_ike(private_vici_query_t *this, vici_builder_t *b,
-					 ike_sa_t *ike_sa, time_t now)
+					 ike_sa_t *ike_sa, time_t now, bool add_certs)
 {
 	time_t t;
 	ike_sa_id_t *id;
@@ -388,6 +388,9 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	uint32_t if_id;
 	uint16_t alg, ks;
 	host_t *host;
+	auth_cfg_t *auth_cfg;
+	enumerator_t *enumerator;
+
 
 	b->add_kv(b, "uniqueid", "%u", ike_sa->get_unique_id(ike_sa));
 	b->add_kv(b, "version", "%u", ike_sa->get_version(ike_sa));
@@ -397,11 +400,44 @@ static void list_ike(private_vici_query_t *this, vici_builder_t *b,
 	b->add_kv(b, "local-host", "%H", host);
 	b->add_kv(b, "local-port", "%d", host->get_port(host));
 	b->add_kv(b, "local-id", "%Y", ike_sa->get_my_id(ike_sa));
+	if (add_certs)
+	{
+		enumerator = ike_sa->create_auth_cfg_enumerator(ike_sa, TRUE);
+		if (enumerator->enumerate(enumerator, &auth_cfg))
+		{
+			certificate_t *cert = auth_cfg->get(auth_cfg, AUTH_RULE_SUBJECT_CERT);
+			chunk_t encoding;
+
+			if (cert && cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+			{
+				b->add(b, VICI_KEY_VALUE, "local-cert-data", encoding);
+				free(encoding.ptr);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
+
 
 	host = ike_sa->get_other_host(ike_sa);
 	b->add_kv(b, "remote-host", "%H", host);
 	b->add_kv(b, "remote-port", "%d", host->get_port(host));
 	b->add_kv(b, "remote-id", "%Y", ike_sa->get_other_id(ike_sa));
+	if (add_certs)
+	{
+		enumerator = ike_sa->create_auth_cfg_enumerator(ike_sa, FALSE);
+		if (enumerator->enumerate(enumerator, &auth_cfg))
+		{
+			certificate_t *cert = auth_cfg->get(auth_cfg, AUTH_RULE_SUBJECT_CERT);
+			chunk_t encoding;
+
+			if (cert && cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
+			{
+				b->add(b, VICI_KEY_VALUE, "remote-cert-data", encoding);
+				free(encoding.ptr);
+			}
+		}
+		enumerator->destroy(enumerator);
+	}
 
 	eap = ike_sa->get_other_eap_id(ike_sa);
 
@@ -532,7 +568,7 @@ CALLBACK(list_sas, vici_message_t*,
 		b = vici_builder_create();
 		b->begin_section(b, ike_sa->get_name(ike_sa));
 
-		list_ike(this, b, ike_sa, now);
+		list_ike(this, b, ike_sa, now, TRUE);
 
 		b->begin_section(b, "child-sas");
 		csas = ike_sa->create_child_sa_enumerator(ike_sa);
@@ -1684,9 +1720,17 @@ static void manage_commands(private_vici_query_t *this, bool reg)
 	this->dispatcher->manage_event(this->dispatcher, "list-cert", reg);
 	this->dispatcher->manage_event(this->dispatcher, "ike-updown", reg);
 	this->dispatcher->manage_event(this->dispatcher, "ike-rekey", reg);
+	this->dispatcher->manage_event(this->dispatcher, "ike-state-established", reg);
+	this->dispatcher->manage_event(this->dispatcher, "ike-state-destroying", reg);
 	this->dispatcher->manage_event(this->dispatcher, "ike-update", reg);
 	this->dispatcher->manage_event(this->dispatcher, "child-updown", reg);
 	this->dispatcher->manage_event(this->dispatcher, "child-rekey", reg);
+	this->dispatcher->manage_event(this->dispatcher, "child-state-installing", reg);
+	this->dispatcher->manage_event(this->dispatcher, "child-state-installed", reg);
+	this->dispatcher->manage_event(this->dispatcher, "child-state-updating", reg);
+	this->dispatcher->manage_event(this->dispatcher, "child-state-rekeying", reg);
+	this->dispatcher->manage_event(this->dispatcher, "child-state-rekeyed", reg);
+	this->dispatcher->manage_event(this->dispatcher, "child-state-destroying", reg);
 	manage_command(this, "list-sas", list_sas, reg);
 	manage_command(this, "list-policies", list_policies, reg);
 	manage_command(this, "list-conns", list_conns, reg);
@@ -1719,7 +1763,7 @@ METHOD(listener_t, ike_updown, bool,
 	}
 
 	b->begin_section(b, ike_sa->get_name(ike_sa));
-	list_ike(this, b, ike_sa, now);
+	list_ike(this, b, ike_sa, now, up);
 	b->end_section(b);
 
 	this->dispatcher->raise_event(this->dispatcher,
@@ -1744,10 +1788,10 @@ METHOD(listener_t, ike_rekey, bool,
 	b = vici_builder_create();
 	b->begin_section(b, old->get_name(old));
 	b->begin_section(b, "old");
-	list_ike(this, b, old, now);
+	list_ike(this, b, old, now, TRUE);
 	b->end_section(b);
 	b->begin_section(b, "new");
-	list_ike(this, b, new, now);
+	list_ike(this, b, new, now, TRUE);
 	b->end_section(b);
 	b->end_section(b);
 
@@ -1778,7 +1822,7 @@ METHOD(listener_t, ike_update, bool,
 	b->add_kv(b, "remote-port", "%d", remote->get_port(remote));
 
 	b->begin_section(b, ike_sa->get_name(ike_sa));
-	list_ike(this, b, ike_sa, now);
+	list_ike(this, b, ike_sa, now, TRUE);
 	b->end_section(b);
 
 	this->dispatcher->raise_event(this->dispatcher,
@@ -1786,6 +1830,46 @@ METHOD(listener_t, ike_update, bool,
 
 	return TRUE;
 }
+
+METHOD(listener_t, ike_state_change, bool,
+	private_vici_query_t *this, ike_sa_t *ike_sa, ike_sa_state_t state)
+{
+	char *event;
+	vici_builder_t *b;
+	time_t now;
+
+	switch (state)
+	{
+	case IKE_ESTABLISHED:
+		event = "ike-state-established";
+		break;
+	case IKE_DESTROYING:
+		event = "ike-state-destroying";
+		break;
+	default:
+		return TRUE;
+	}
+
+	if (!this->dispatcher->has_event_listeners(this->dispatcher, event))
+	{
+		return TRUE;
+	}
+
+	now = time_monotonic(NULL);
+
+	b = vici_builder_create();
+	b->begin_section(b, ike_sa->get_name(ike_sa));
+	list_ike(this, b, ike_sa, now, state != IKE_DESTROYING);
+	b->begin_section(b, "child-sas");
+	b->end_section(b);
+	b->end_section(b);
+
+	this->dispatcher->raise_event(this->dispatcher,
+								  event, 0, b->finalize(b));
+
+	return TRUE;
+}
+
 
 METHOD(listener_t, child_updown, bool,
 	private_vici_query_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa, bool up)
@@ -1808,7 +1892,7 @@ METHOD(listener_t, child_updown, bool,
 	}
 
 	b->begin_section(b, ike_sa->get_name(ike_sa));
-	list_ike(this, b, ike_sa, now);
+	list_ike(this, b, ike_sa, now, TRUE);
 	b->begin_section(b, "child-sas");
 
 	snprintf(buf, sizeof(buf), "%s-%u", child_sa->get_name(child_sa),
@@ -1827,6 +1911,63 @@ METHOD(listener_t, child_updown, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, child_state_change, bool,
+	private_vici_query_t *this, ike_sa_t *ike_sa, child_sa_t *child_sa, child_sa_state_t state)
+{
+	char *event;
+	vici_builder_t *b;
+	time_t now;
+
+	switch (state)
+	{
+	case CHILD_INSTALLING:
+		event = "child-state-installing";
+		break;
+	case CHILD_INSTALLED:
+		event = "child-state-installed";
+		break;
+	case CHILD_UPDATING:
+		event = "child-state-updating";
+		break;
+	case CHILD_REKEYING:
+		event = "child-state-rekeying";
+		break;
+	case CHILD_REKEYED:
+		event = "child-state-rekeyed";
+		break;
+	case CHILD_DESTROYING:
+		event = "child-state-destroying";
+		break;
+	default:
+		return TRUE;
+	}
+
+	if (!this->dispatcher->has_event_listeners(this->dispatcher, event))
+	{
+		return TRUE;
+	}
+
+	now = time_monotonic(NULL);
+
+	b = vici_builder_create();
+	b->begin_section(b, ike_sa->get_name(ike_sa));
+	list_ike(this, b, ike_sa, now, state != CHILD_DESTROYING);
+	b->begin_section(b, "child-sas");
+
+	b->begin_section(b, child_sa->get_name(child_sa));
+	list_child(this, b, child_sa, now);
+	b->end_section(b);
+
+	b->end_section(b);
+	b->end_section(b);
+
+	this->dispatcher->raise_event(this->dispatcher,
+								  event, 0, b->finalize(b));
+
+	return TRUE;
+}
+
+
 METHOD(listener_t, child_rekey, bool,
 	private_vici_query_t *this, ike_sa_t *ike_sa, child_sa_t *old,
 	child_sa_t *new)
@@ -1843,7 +1984,7 @@ METHOD(listener_t, child_rekey, bool,
 	b = vici_builder_create();
 
 	b->begin_section(b, ike_sa->get_name(ike_sa));
-	list_ike(this, b, ike_sa, now);
+	list_ike(this, b, ike_sa, now, TRUE);
 	b->begin_section(b, "child-sas");
 
 	b->begin_section(b, old->get_name(old));
@@ -1885,9 +2026,11 @@ vici_query_t *vici_query_create(vici_dispatcher_t *dispatcher)
 			.listener = {
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
+				.ike_state_change = _ike_state_change,
 				.ike_update = _ike_update,
 				.child_updown = _child_updown,
 				.child_rekey = _child_rekey,
+				.child_state_change = _child_state_change,
 			},
 			.destroy = _destroy,
 		},

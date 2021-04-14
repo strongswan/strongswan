@@ -432,7 +432,7 @@ METHOD(trap_manager_t, acquire, void,
 	peer_cfg_t *peer;
 	child_cfg_t *child;
 	ike_sa_t *ike_sa;
-	host_t *host;
+	host_t *host, *my_host = NULL, *other_host = NULL;
 	bool wildcard, ignore = FALSE;
 
 	this->lock->read_lock(this->lock);
@@ -522,6 +522,7 @@ METHOD(trap_manager_t, acquire, void,
 
 			port = ike_cfg->get_other_port(ike_cfg);
 			dst->to_subnet(dst, &host, &mask);
+			other_host = host;
 			host->set_port(host, port);
 			ike_sa->set_other_host(ike_sa, host);
 
@@ -529,14 +530,15 @@ METHOD(trap_manager_t, acquire, void,
 			src->to_subnet(src, &host, &mask);
 			host->set_port(host, port);
 			ike_sa->set_my_host(ike_sa, host);
-
+			my_host = host;
 			charon->bus->set_sa(charon->bus, ike_sa);
 		}
 	}
 	else
 	{
 		ike_sa = charon->ike_sa_manager->checkout_by_config(
-											charon->ike_sa_manager, peer);
+											charon->ike_sa_manager, peer,
+											my_host, other_host);
 	}
 	peer->destroy(peer);
 

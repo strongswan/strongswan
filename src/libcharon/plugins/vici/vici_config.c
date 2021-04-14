@@ -2149,7 +2149,7 @@ static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 			DBG1(DBG_CFG, "initiating '%s'", child_cfg->get_name(child_cfg));
 			charon->controller->initiate(charon->controller,
 					peer_cfg->get_ref(peer_cfg), child_cfg->get_ref(child_cfg),
-					NULL, NULL, 0, FALSE);
+					NULL, NULL, NULL, NULL, 0, FALSE);
 			break;
 		case ACTION_ROUTE:
 			DBG1(DBG_CFG, "installing '%s'", child_cfg->get_name(child_cfg));

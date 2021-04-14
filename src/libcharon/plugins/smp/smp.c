@@ -493,8 +493,8 @@ static void request_control_initiate(xmlTextReaderPtr reader,
 			if (child)
 			{
 				status = charon->controller->initiate(charon->controller,
-							peer, child, (controller_cb_t)xml_callback,
-							writer, 0, FALSE);
+							peer, child, NULL, NULL,
+							(controller_cb_t)xml_callback, writer, 0, FALSE);
 			}
 			else
 			{
