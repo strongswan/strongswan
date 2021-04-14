@@ -92,6 +92,13 @@ build_tss2()
 : ${DEPS_BUILD_DIR=$BUILD_DIR/..}
 : ${DEPS_PREFIX=/usr/local}
 
+if [ -e /etc/os-release ]
+then
+	. /etc/os-release
+else
+	echo "Unknown distro and version" >&2
+fi
+
 TARGET=check
 
 DEPS="libgmp-dev"
@@ -111,7 +118,12 @@ openssl*)
 gcrypt)
 	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1"
 	export TESTS_PLUGINS="test-vectors pkcs1 gcrypt!"
-	DEPS="libgcrypt11-dev"
+	if [ "$ID" = ubuntu -a "$VERSION_ID" = "20.04" ]
+	then
+		DEPS="libgcrypt20-dev"
+	else
+		DEPS="libgcrypt11-dev"
+	fi
 	;;
 botan)
 	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem"
@@ -157,8 +169,14 @@ all|coverage|sonarcloud)
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
-		  libgcrypt20-dev libjson-c-dev iptables-dev python-pip libtspi-dev
+		  libgcrypt20-dev libjson-c-dev  libtspi-dev
 		  libsystemd-dev"
+	if [ "$ID" = ubuntu -a "$VERSION_ID" = "20.04" ]
+	then
+		DEPS="$DEPS libxtables-dev libip4tc2 libip4tc-dev libip6tc2 libip6tc-dev python-pip-whl"
+	else
+		DEPS="$DEPS iptables-dev python-pip"
+	fi
 	PYDEPS="tox"
 	if test "$1" = "build-deps"; then
 		if test -z "$UBUNTU_XENIAL"; then
@@ -282,6 +300,11 @@ fuzzing)
 	fi
 	;;
 nm|nm-no-glib)
+	if [ "$ID" = ubuntu -a "$VERSION_ID" = "20.04" ]
+	then
+		echo "Building $TEST not possible because code uses deprecated, removed libraries" 2>/dev/null
+		exit 0
+	fi	
 	DEPS="gnome-common libsecret-1-dev libgtk-3-dev libnm-dev libnma-dev"
 	if test "$TEST" = "nm"; then
 		DEPS="$DEPS libnm-glib-vpn-dev libnm-gtk-dev"
