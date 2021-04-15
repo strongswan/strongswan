@@ -302,7 +302,11 @@ apidoc)
 	;;
 lgtm)
 	DEPS="jq"
-
+	if [ -z "$LGTM_TOKEN" ]
+	then
+		echo "LGTM_TOKEN not set, can't run test."
+		exit 0
+	fi
 	if test -z "$1"; then
 		base=$COMMIT_BASE
 		# after rebases or for new/duplicate branches, the passed base commit
