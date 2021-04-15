@@ -322,8 +322,12 @@ apidoc)
 	TARGET=apidoc
 	;;
 lgtm)
+	if [ -z "$LGTM_PROJECT" -o -z "$LGTM_TOKEN" ]; then
+		echo "The LGTM_PROJECT and LGTM_TOKEN environment variables" \
+			 "are required to run this test"
+		exit 1
+	fi
 	DEPS="jq"
-
 	if test -z "$1"; then
 		base=$COMMIT_BASE
 		# after rebases or for new/duplicate branches, the passed base commit
