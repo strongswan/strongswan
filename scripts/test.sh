@@ -134,6 +134,16 @@ printf-builtin)
 	CONFIG="--with-printf-hooks=builtin"
 	;;
 all|coverage|sonarcloud)
+	if [ "$TEST" = sonarcloud ]
+	then
+		if [ -z "$SONAR_PROJECT" -o -z "$SONAR_ORGANIZATION" -o -z "$SONAR_TOKEN" ]
+		then
+			echo "You need to set the SONAR_PROJECT, SONAR_ORGANIZATION and SONAR_TOKEN environmental variables" \
+			 "first before running the sonarcloud test."
+			exit 1
+		fi
+	fi
+
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
 			--disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-padlock --disable-fuzzing
