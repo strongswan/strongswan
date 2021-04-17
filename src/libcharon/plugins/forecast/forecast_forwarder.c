@@ -361,7 +361,8 @@ static int get_ifindex(private_kernel_listener_t *this, char *ifname)
 {
 	struct ifreq ifr = {};
 
-	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ-1);
+
 	if (ioctl(this->raw, SIOCGIFINDEX, &ifr) == 0)
 	{
 		return ifr.ifr_ifindex;
