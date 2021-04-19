@@ -11,7 +11,7 @@
     <boot dev='hd'/>
   </os>
   <cpu>
-    <model fallback='allow'>core2duo</model>
+    <model fallback='allow'>kvm64</model>
     <feature policy='optional' name='aes'/>
     <feature policy='optional' name='pclmuldq'/>
   </cpu>
