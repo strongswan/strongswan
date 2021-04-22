@@ -21,7 +21,7 @@
   <on_reboot>restart</on_reboot>
   <on_crash>restart</on_crash>
   <devices>
-    <emulator>/usr/bin/kvm</emulator>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2' cache='writethrough'/>
       <source file='/var/lib/libvirt/images/venus.qcow2'/>
