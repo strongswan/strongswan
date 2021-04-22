@@ -34,6 +34,11 @@
 #define SALT_LEN	4
 #define NONCE_LEN	(IV_LEN + SALT_LEN)
 
+/** see RFC 5282 section 7.1
+ * CCM needs only 3 octets salt for an 11 octed nonce
+ */
+#define CCM_SALT_LEN	3
+
 typedef struct private_aead_t private_aead_t;
 
 /**
@@ -57,6 +62,11 @@ struct private_aead_t {
 	char salt[SALT_LEN];
 
 	/**
+	 * Effective salt length depends on the algorithm
+	 */
+	size_t salt_len;
+
+	/**
 	 * Size of the integrity check value
 	 */
 	size_t icv_size;
@@ -70,6 +80,11 @@ struct private_aead_t {
 	 * The cipher to use
 	 */
 	const EVP_CIPHER *cipher;
+
+	/**
+	 * private, algorithm specific crypto function implementation
+	 */
+	bool (*crypt)(private_aead_t *, chunk_t, chunk_t, chunk_t, u_char *, int);
 };
 
 /**
@@ -83,8 +98,8 @@ static bool crypt(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
 	bool success = FALSE;
 	int len;
 
-	memcpy(nonce, this->salt, SALT_LEN);
-	memcpy(nonce + SALT_LEN, iv.ptr, IV_LEN);
+	memcpy(nonce, this->salt, this->salt_len);
+	memcpy(nonce + this->salt_len, iv.ptr, IV_LEN);
 
 	ctx = EVP_CIPHER_CTX_new();
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
@@ -120,6 +135,92 @@ done:
 	return success;
 }
 
+static bool crypt_ccm(private_aead_t *this, chunk_t data, chunk_t assoc, chunk_t iv,
+				  u_char *out, int enc)
+{
+	EVP_CIPHER_CTX *ctx;
+	u_char nonce[NONCE_LEN]; /* 12 octets (one more than needed) */
+	bool success = FALSE;
+	int len;
+
+	/* Construct the RFC5282 short 11-octet nonce */
+	memcpy(nonce, this->salt, this->salt_len);
+	memcpy(nonce + this->salt_len, iv.ptr, IV_LEN);
+
+	/* Initialize cipher context */
+	if (!(ctx = EVP_CIPHER_CTX_new()))
+	{
+		return FALSE;
+	}
+
+	/* Disable padding (plain seems to be already padded) */
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
+
+	/* Initialize the cipher for encryption / decryption */
+	if (!EVP_CipherInit_ex(ctx, this->cipher, NULL, NULL, NULL, enc))
+	{
+		goto done;
+	}
+
+	/* Set the nonce length (11) */
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, this->salt_len + IV_LEN, NULL))
+	{
+		goto done;
+	}
+
+	/* Set the expected tag length (encryption) / the value (decryption) to use */
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, this->icv_size, enc ? NULL :
+									data.ptr + data.len))
+	{
+		goto done;
+	}
+
+	/* Initialise key and nonce of salt + IV for encryption / decryption */
+	if (!EVP_CipherInit_ex(ctx, NULL, NULL, this->key.ptr, nonce, enc))
+	{
+		goto done;
+	}
+
+	/* Provide the total plain or total encrypted length (plain + icv_size). */
+	if (!EVP_CipherUpdate(ctx, NULL, &len, NULL, data.len))
+	{
+		goto done;
+	}
+
+	/* Provide AAD data. This can be called zero or more times as required */
+	if (assoc.len && !EVP_CipherUpdate(ctx, NULL, &len, assoc.ptr, assoc.len))
+	{
+		goto done;
+	}
+
+	/* Provide the message to be encrypted / decrypted and obtain output + length
+	 * Can only be called once */
+	if (!EVP_CipherUpdate(ctx, out, &len, data.ptr, data.len))
+	{
+		goto done;
+	}
+
+	/* Finalise the encryption. Normally encrypted bytes may be written at this
+	 * stage, but this does not occur in CCM mode. */
+	if (enc && !EVP_CipherFinal_ex(ctx, out + len, &len))
+	{
+		goto done;
+	}
+
+	/* Get the tag on encrypption */
+	if (enc && !EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_GET_TAG, this->icv_size,
+									data.ptr + data.len))
+	{
+		goto done;
+	}
+
+	success = TRUE;
+
+done:
+	EVP_CIPHER_CTX_free(ctx);
+	return success;
+}
+
 METHOD(aead_t, encrypt, bool,
 	private_aead_t *this, chunk_t plain, chunk_t assoc, chunk_t iv,
 	chunk_t *encrypted)
@@ -132,7 +233,7 @@ METHOD(aead_t, encrypt, bool,
 		*encrypted = chunk_alloc(plain.len + this->icv_size);
 		out = encrypted->ptr;
 	}
-	return crypt(this, plain, assoc, iv, out, 1);
+	return this->crypt(this, plain, assoc, iv, out, 1);
 }
 
 METHOD(aead_t, decrypt, bool,
@@ -153,7 +254,7 @@ METHOD(aead_t, decrypt, bool,
 		*plain = chunk_alloc(encrypted.len);
 		out = plain->ptr;
 	}
-	return crypt(this, encrypted, assoc, iv, out, 0);
+	return this->crypt(this, encrypted, assoc, iv, out, 0);
 }
 
 METHOD(aead_t, get_block_size, size_t,
@@ -183,7 +284,7 @@ METHOD(aead_t, get_iv_gen, iv_gen_t*,
 METHOD(aead_t, get_key_size, size_t,
 	private_aead_t *this)
 {
-	return this->key.len + SALT_LEN;
+	return this->key.len + this->salt_len;
 }
 
 METHOD(aead_t, set_key, bool,
@@ -193,7 +294,7 @@ METHOD(aead_t, set_key, bool,
 	{
 		return FALSE;
 	}
-	memcpy(this->salt, key.ptr + key.len - SALT_LEN, SALT_LEN);
+	memcpy(this->salt, key.ptr + key.len - this->salt_len, this->salt_len);
 	memcpy(this->key.ptr, key.ptr, this->key.len);
 	return TRUE;
 }
@@ -226,6 +327,8 @@ aead_t *openssl_aead_create(encryption_algorithm_t algo,
 			.set_key = _set_key,
 			.destroy = _destroy,
 		},
+		.salt_len = SALT_LEN,
+		.crypt = crypt,
 	);
 
 	switch (algo)
@@ -242,12 +345,27 @@ aead_t *openssl_aead_create(encryption_algorithm_t algo,
 		case ENCR_CHACHA20_POLY1305:
 			this->icv_size = 16;
 			break;
+		case ENCR_AES_CCM_ICV8:
+			this->icv_size = 8;
+			this->salt_len = CCM_SALT_LEN;
+			this->crypt = crypt_ccm;
+			break;
+		case ENCR_AES_CCM_ICV12:
+			this->icv_size = 12;
+			this->salt_len = CCM_SALT_LEN;
+			this->crypt = crypt_ccm;
+			break;
+		case ENCR_AES_CCM_ICV16:
+			this->icv_size = 16;
+			this->salt_len = CCM_SALT_LEN;
+			this->crypt = crypt_ccm;
+			break;
 		default:
 			free(this);
 			return NULL;
 	}
 
-	if (salt_size && salt_size != SALT_LEN)
+	if (salt_size && salt_size != this->salt_len)
 	{
 		/* currently not supported */
 		free(this);
@@ -294,6 +412,28 @@ aead_t *openssl_aead_create(encryption_algorithm_t algo,
 			}
 			break;
 #endif /* OPENSSL_NO_CHACHA */
+		case ENCR_AES_CCM_ICV8:
+		case ENCR_AES_CCM_ICV12:
+		case ENCR_AES_CCM_ICV16:
+			switch (key_size)
+			{
+				case 0:
+					key_size = 16;
+					/* fall through */
+				case 16:
+					this->cipher = EVP_aes_128_ccm();
+					break;
+				case 24:
+					this->cipher = EVP_aes_192_ccm();
+					break;
+				case 32:
+					this->cipher = EVP_aes_256_ccm();
+					break;
+				default:
+					free(this);
+					return NULL;
+			}
+			break;
 		default:
 			free(this);
 			return NULL;
