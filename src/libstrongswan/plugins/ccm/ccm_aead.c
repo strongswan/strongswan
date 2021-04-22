@@ -415,8 +415,10 @@ ccm_aead_t *ccm_aead_create(encryption_algorithm_t algo,
 		.icv_size = icv_size,
 	);
 
-	if (!this->crypter)
+	if (!this->crypter || !this->iv_gen)
 	{
+		DESTROY_IF(this->crypter);
+		DESTROY_IF(this->iv_gen);
 		free(this);
 		return NULL;
 	}
