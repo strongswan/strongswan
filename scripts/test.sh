@@ -92,6 +92,12 @@ build_tss2()
 : ${DEPS_BUILD_DIR=$BUILD_DIR/..}
 : ${DEPS_PREFIX=/usr/local}
 
+if [ -e /etc/os-release ]; then
+	. /etc/os-release
+elif [ -e /usr/lib/os-release ]; then
+	. /usr/lib/os-release
+fi
+
 TARGET=check
 
 DEPS="libgmp-dev"
@@ -111,7 +117,11 @@ openssl*)
 gcrypt)
 	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1"
 	export TESTS_PLUGINS="test-vectors pkcs1 gcrypt!"
-	DEPS="libgcrypt11-dev"
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
+		DEPS="libgcrypt20-dev"
+	else
+		DEPS="libgcrypt11-dev"
+	fi
 	;;
 botan)
 	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem"
@@ -151,17 +161,21 @@ all|coverage|sonarcloud)
 		DEPS="$DEPS lcov"
 	fi
 	# Botan requires newer compilers, so disable it on Ubuntu 16.04
-	if test -n "$UBUNTU_XENIAL"; then
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "16.04" ]; then
 		CONFIG="$CONFIG --disable-botan"
 	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
-		  libgcrypt20-dev libjson-c-dev iptables-dev python-pip libtspi-dev
-		  libsystemd-dev"
+		  libgcrypt20-dev libjson-c-dev python3-pip libtspi-dev libsystemd-dev"
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
+		DEPS="$DEPS libiptc-dev"
+	else
+		DEPS="$DEPS iptables-dev"
+	fi
 	PYDEPS="tox"
 	if test "$1" = "build-deps"; then
-		if test -z "$UBUNTU_XENIAL"; then
+		if [ "$ID" != "ubuntu" -o "$VERSION_ID" != "16.04" ]; then
 			build_botan
 		fi
 		build_wolfssl
@@ -384,7 +398,7 @@ deps)
 	exit $?
 	;;
 pydeps)
-	test -z "$PYDEPS" || pip -q install --user $PYDEPS
+	test -z "$PYDEPS" || pip3 -q install --user $PYDEPS
 	exit $?
 	;;
 build-deps)
