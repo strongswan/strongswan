@@ -1271,6 +1271,11 @@ if test x$bfd_backtraces = xtrue; then
 	AC_CHECK_LIB([bfd],[bfd_init],[LIBS="$LIBS"],[AC_MSG_ERROR([binutils libbfd not found!])],[])
 	AC_CHECK_HEADER([bfd.h],[AC_DEFINE([HAVE_BFD_H],,[have binutils bfd.h])],
 		[AC_MSG_ERROR([binutils bfd.h header not found!])])
+	AC_CHECK_DECLS(
+		[bfd_section_flags, bfd_get_section_flags,
+		 bfd_section_vma, bfd_get_section_vma,
+		 bfd_section_size, bfd_get_section_size], [], [],
+		[[#include <bfd.h>]])
 	BFDLIB="-lbfd"
 	AC_SUBST(BFDLIB)
 fi
