@@ -325,7 +325,7 @@ lgtm)
 	if [ -z "$LGTM_PROJECT" -o -z "$LGTM_TOKEN" ]; then
 		echo "The LGTM_PROJECT and LGTM_TOKEN environment variables" \
 			 "are required to run this test"
-		exit 1
+		exit 0
 	fi
 	DEPS="jq"
 	if test -z "$1"; then
