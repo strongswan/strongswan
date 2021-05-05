@@ -30,6 +30,7 @@ jobs:
       # so we continue to use the approach we used on Travis
       - env:
           LGTM_TOKEN: ${{ secrets.LGTM_TOKEN }}
+          LGTM_PROJECT: ${{ secrets.LGTM_PROJECT }}
           BUILD_NUMBER: ${{ github.run_id }}
           COMMIT_ID: ${{ github.sha }}
           COMMIT_BASE: ${{ github.event.before }}

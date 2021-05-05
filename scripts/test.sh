@@ -335,12 +335,11 @@ lgtm)
 			base=$(git merge-base origin/master ${COMMIT_ID})
 		fi
 		base=$(git rev-parse $base)
-		project_id=1506185006272
 
 		echo "Starting code review for $COMMIT_ID (base $base) on lgtm.com"
 		git diff --binary $base > lgtm.patch || exit $?
 		curl -s -X POST --data-binary @lgtm.patch \
-			"https://lgtm.com/api/v1.0/codereviews/${project_id}?base=${base}&external-id=${BUILD_NUMBER}" \
+			"https://lgtm.com/api/v1.0/codereviews/${LGTM_PROJECT}?base=${base}&external-id=${BUILD_NUMBER}" \
 			-H 'Content-Type: application/octet-stream' \
 			-H 'Accept: application/json' \
 			-H "Authorization: Bearer ${LGTM_TOKEN}" > lgtm.res || exit $?
