@@ -178,9 +178,12 @@ all|coverage|sonarcloud)
 	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
 		DEPS="$DEPS libiptc-dev"
 	else
-		DEPS="$DEPS iptables-dev"
+		DEPS="$DEPS iptables-dev python3-setuptools"
 	fi
-	PYDEPS="tox"
+	# tox has dependencies that can't be resolved on 16.04 (even with pip)
+	if [ "$ID" != "ubuntu" -o "$VERSION_ID" != "16.04" ]; then
+		PYDEPS="tox"
+	fi
 	if test "$1" = "build-deps"; then
 		if [ "$ID" != "ubuntu" -o "$VERSION_ID" != "16.04" ]; then
 			build_botan
