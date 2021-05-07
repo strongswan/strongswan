@@ -74,6 +74,8 @@ typedef struct {
 	ike_extension_t extension;
 	/* Value from strongswan.conf, whether to send vendor ID */
 	char *setting;
+	/* Prefix matching only */
+	bool prefix;
 	/* length of vendor ID string, 0 for NULL terminated */
 	int len;
 	/* vendor ID string */
@@ -93,27 +95,27 @@ static chunk_t get_vid_data(vid_data_t *data)
  */
 static vid_data_t vids[] = {
 	/* strongSwan MD5("strongSwan") */
-	{ "strongSwan", EXT_STRONGSWAN, "send_vendor_id", 16,
+	{ "strongSwan", EXT_STRONGSWAN, "send_vendor_id", FALSE, 16,
 	  "\x88\x2f\xe5\x6d\x6f\xd2\x0d\xbc\x22\x51\x61\x3b\x2e\xbe\x5b\xeb"},
-	{ "Cisco Delete Reason", 0, NULL, 0,
+	{ "Cisco Delete Reason", 0, NULL, FALSE, 0,
 	  "CISCO-DELETE-REASON" },
-	{ "Cisco FlexVPN Supported", 0, "cisco_flexvpn", 0,
+	{ "Cisco FlexVPN Supported", 0, "cisco_flexvpn", FALSE, 0,
 	  "FLEXVPN-SUPPORTED" },
-	{ "Cisco Copyright (c) 2009", 0, NULL, 0,
+	{ "Cisco Copyright (c) 2009", 0, NULL, FALSE, 0,
 	  "CISCO(COPYRIGHT)&Copyright (c) 2009 Cisco Systems, Inc." },
-	{ "FRAGMENTATION", 0, NULL, 16,
+	{ "FRAGMENTATION", 0, NULL, FALSE, 16,
 	  "\x40\x48\xb7\xd5\x6e\xbc\xe8\x85\x25\xe7\xde\x7f\x00\xd6\xc2\xd3"},
-	{ "MS NT5 ISAKMPOAKLEY v7", 0, NULL, 20,
+	{ "MS NT5 ISAKMPOAKLEY v7", 0, NULL, FALSE, 20,
 	  "\x1e\x2b\x51\x69\x05\x99\x1c\x7d\x7c\x96\xfc\xbf\xb5\x87\xe4\x61\x00\x00\x00\x07"},
-	{ "MS NT5 ISAKMPOAKLEY v8", 0, NULL, 20,
+	{ "MS NT5 ISAKMPOAKLEY v8", 0, NULL, FALSE, 20,
 	  "\x1e\x2b\x51\x69\x05\x99\x1c\x7d\x7c\x96\xfc\xbf\xb5\x87\xe4\x61\x00\x00\x00\x08"},
-	{ "MS NT5 ISAKMPOAKLEY v9", 0, NULL, 20,
+	{ "MS NT5 ISAKMPOAKLEY v9", 0, NULL, FALSE, 20,
 	  "\x1e\x2b\x51\x69\x05\x99\x1c\x7d\x7c\x96\xfc\xbf\xb5\x87\xe4\x61\x00\x00\x00\x09"},
-	{ "MS-Negotiation Discovery Capable", 0, NULL, 16,
+	{ "MS-Negotiation Discovery Capable", 0, NULL, FALSE, 16,
 	  "\xfb\x1d\xe3\xcd\xf3\x41\xb7\xea\x16\xb7\xe5\xbe\x08\x55\xf1\x20"},
-	{ "Vid-Initial-Contact", 0, NULL, 16,
+	{ "Vid-Initial-Contact", 0, NULL, FALSE, 16,
 	  "\x26\x24\x4d\x38\xed\xdb\x61\xb3\x17\x2a\x36\xe3\xd0\xcf\xb8\x19"},
-	{ "Checkpoint Firewall", 0, NULL, 20,
+	{ "Checkpoint Firewall", 0, NULL, TRUE, 20,
 	  "\xf4\xed\x19\xe0\xc1\x14\xeb\x51\x6f\xaa\xac\x0e\xe3\x7d\xaf\x28\x07\xb4\x38\x1f"},
 };
 
@@ -166,7 +168,8 @@ METHOD(task_t, process, status_t,
 
 			for (i = 0; i < countof(vids); i++)
 			{
-				if (chunk_equals(get_vid_data(&vids[i]), data))
+				if ((vids[i].prefix && chunk_equals_prefix(get_vid_data(&vids[i]), data, vids[i].len)) || 
+					chunk_equals(get_vid_data(&vids[i]), data))
 				{
 					DBG1(DBG_IKE, "received %s vendor ID", vids[i].desc);
 					if (vids[i].extension)
