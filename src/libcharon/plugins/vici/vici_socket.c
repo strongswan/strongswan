@@ -191,6 +191,7 @@ static entry_t* find_entry(private_vici_socket_t *this, stream_t *stream,
 			}
 			if (entry->disconnecting)
 			{
+				entry->cond->signal(entry->cond);
 				continue;
 			}
 			candidate = TRUE;
