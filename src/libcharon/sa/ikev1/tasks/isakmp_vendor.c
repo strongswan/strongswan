@@ -120,6 +120,9 @@ static struct {
 
 	{ "Checkpoint Firewall", 0, FALSE, TRUE, 20,
 	  "\xf4\xed\x19\xe0\xc1\x14\xeb\x51\x6f\xaa\xac\x0e\xe3\x7d\xaf\x28\x07\xb4\x38\x1f"},
+	 
+	{ "Cisco VPN Concentrator", 0, FALSE, TRUE, 16,
+	  "\x1f\x07\xf7\x0e\xaa\x65\x14\xd3\xb0\xfa\x96\x54\x2a"},
 }, vendor_natt_ids[] = {
 
 	/* NAT-Traversal VIDs ordered by preference */
