@@ -310,6 +310,15 @@ chunk_t chunk_copy_pad(chunk_t dst, chunk_t src, u_char chr);
 int chunk_compare(chunk_t a, chunk_t b);
 
 /**
+ * Compare at most the first N byte of the two chunks
+ */
+static inline bool chunk_equals_prefix(chunk_t a, chunk_t b, size_t len)
+{
+	size_t prefix = min(min(a.len, b.len), len);
+	return a.ptr != NULL && b.ptr != NULL &&
+			memeq(a.ptr, b.ptr, prefix);
+}
+/**
  * Compare two chunks for equality,
  * NULL chunks are never equal.
  */
