@@ -244,6 +244,7 @@ static entry_t* remove_entry(private_vici_socket_t *this, u_int id)
 					break;
 				}
 				this->connections->remove_at(this->connections, enumerator);
+				entry->cond->broadcast(entry->cond);
 				found = entry;
 				break;
 			}
