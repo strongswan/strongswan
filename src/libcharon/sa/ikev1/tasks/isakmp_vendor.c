@@ -120,6 +120,9 @@ static struct {
 
 	{ "Checkpoint Firewall", 0, FALSE, TRUE, 20,
 	  "\xf4\xed\x19\xe0\xc1\x14\xeb\x51\x6f\xaa\xac\x0e\xe3\x7d\xaf\x28\x07\xb4\x38\x1f"},
+
+	{ "KAME/racoon", 0, FALSE, FALSE, 16,
+	  "\x70\x03\xcb\xc1\x09\x7d\xbe\x9c\x26\x00\xba\x69\x83\xbc\x8b\x35"},
 }, vendor_natt_ids[] = {
 
 	/* NAT-Traversal VIDs ordered by preference */
