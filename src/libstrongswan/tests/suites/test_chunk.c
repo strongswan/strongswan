@@ -34,6 +34,35 @@ static void assert_chunk_empty(chunk_t chunk)
 	ck_assert(chunk.len == 0 && chunk.ptr == NULL);
 }
 
+
+/*******************************************************************************
+ * equals_prefix
+ */
+
+START_TEST(test_chunk_equals_prefix)
+{
+	chunk_t chunk = chunk_from_str("chunk");
+	chunk_t chunk_a, chunk_b;
+
+	chunk_a = chunk_empty;
+	chunk_b = chunk_empty;
+	ck_assert(!chunk_equals_prefix(chunk_a, chunk_b, (min(chunk.len, chunk_a.len), chunk_b.len)));
+
+	chunk_a = chunk_from_str("chunkabc");
+	ck_assert(chunk_equals_prefix(chunk, chunk_a, chunk.len));
+
+	chunk_b = chunk;
+	chunk_a = chunk;
+	ck_assert(chunk_equals_prefix(chunk_a, chunk_b, chunk_a.len));
+
+	chunk_b = chunk_from_str("asdf");
+	ck_assert(!chunk_equals_prefix(chunk_a, chunk_b, chunk_b.len));
+
+	chunk_b = chunk_from_str("chunk");
+	ck_assert(chunk_equals_prefix(chunk_a, chunk_b, chunk_a.len));
+}
+END_TEST
+
 /*******************************************************************************
  * equals
  */
@@ -1077,6 +1106,7 @@ Suite *chunk_suite_create()
 	s = suite_create("chunk");
 
 	tc = tcase_create("equals");
+	tcase_add_test(tc, test_chunk_equals_prefix);
 	tcase_add_test(tc, test_chunk_equals);
 	tcase_add_test(tc, test_chunk_equals_const);
 	suite_add_tcase(s, tc);
