@@ -278,4 +278,9 @@ bool if_id_from_string(const char *value, uint32_t *if_id);
  */
 void allocate_unique_if_ids(uint32_t *in, uint32_t *out);
 
+/**
+ * Maximum CPU ID (used if no CPU ID specified).
+ */
+#define CPU_ID_MAX UINT32_MAX
+
 #endif /** IPSEC_TYPES_H_ @}*/
