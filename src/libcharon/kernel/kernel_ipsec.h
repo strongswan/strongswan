@@ -186,6 +186,8 @@ struct kernel_ipsec_manage_policy_t {
 	uint32_t manual_prio;
 	/** HW offload mode */
 	hw_offload_t hw_offload;
+	/** Enable per-CPU acquires */
+	bool pcpu_acquires;
 	/** Source address of the SA(s) tied to this policy */
 	host_t *src;
 	/** Destination address of the SA(s) tied to this policy */
