@@ -82,6 +82,8 @@ enum notify_type_t {
 
 	/* multiple key exchanges, RFC 9370 */
 	STATE_NOT_FOUND = 47,
+	/* No more per-resource CHILD_SAs, RFC 9611 */
+	TS_MAX_QUEUE = 48,
 
 	/* IKE-ME, private use */
 	ME_CONNECT_FAILED = 8192,
@@ -169,6 +171,9 @@ enum notify_type_t {
 
 	/* multiple key exchanges, RFC 9370 */
 	ADDITIONAL_KEY_EXCHANGE = 16441,
+
+	/* Resource info for CHILD_SAs, RFC 9611 */
+	SA_RESOURCE_INFO = 16444,
 
 	/* IKEv1 initial contact */
 	INITIAL_CONTACT_IKEV1 = 24578,
