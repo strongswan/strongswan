@@ -2833,6 +2833,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			},
 		},
 		.child = {
+			.cpu = CPU_ID_MAX,
 			.seq = seq,
 		},
 		.ike_sa = ike_sa,
