@@ -95,6 +95,8 @@ struct kernel_ipsec_add_sa_t {
 	uint16_t ipcomp;
 	/** CPI for IPComp */
 	uint16_t cpi;
+	/** Optional CPU ID, must be CPU_ID_MAX if not used */
+	uint32_t cpu;
 	/** TRUE to enable UDP encapsulation for NAT traversal */
 	bool encap;
 	/** HW offload mode */
