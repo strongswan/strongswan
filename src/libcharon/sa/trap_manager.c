@@ -349,6 +349,7 @@ METHOD(trap_manager_t, install, bool,
 		 * pass them in a later initiate() call */
 		.if_id_in_def = peer->get_if_id(peer, TRUE),
 		.if_id_out_def = peer->get_if_id(peer, FALSE),
+		.cpu = CPU_ID_MAX,
 	};
 	child_sa = child_sa_create(me, other, child, &child_data);
 

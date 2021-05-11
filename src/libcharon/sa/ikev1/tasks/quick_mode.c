@@ -1567,6 +1567,7 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 			.abort = _abort_,
 		},
 		.child = {
+			.cpu = CPU_ID_MAX,
 			.seq = seq,
 		},
 		.ike_sa = ike_sa,
