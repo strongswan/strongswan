@@ -12,6 +12,12 @@ charon.plugins.dhcp.identity_lease = no
 	Derive user-defined MAC address from hash of IKE identity and send client
 	identity DHCP option.
 
+charon.plugins.dhcp.release_on_delete = yes
+	Send DHCPRELEASE message to DHCP server when IKE_SA is deleted. When
+	set to "no", a DHCPRELEASE message is not sent and clients have a good chance
+	of receiving the same IP address from the DHCP server if they return before the
+	DHCP lease expires.
+
 charon.plugins.dhcp.server = 255.255.255.255
 	DHCP server unicast or broadcast IP address.
 
