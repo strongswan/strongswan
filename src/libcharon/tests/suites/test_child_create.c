@@ -44,7 +44,7 @@ START_TEST(test_collision_ike_rekey)
 								traffic_selector_create_dynamic(0, 0, 65535));
 	child_cfg->add_traffic_selector(child_cfg, FALSE,
 								traffic_selector_create_dynamic(0, 0, 65535));
-	call_ikesa(a, initiate, child_cfg, 0, NULL, NULL);
+	call_ikesa(a, initiate, child_cfg, NULL);
 	assert_child_sa_count(a, 1);
 	assert_hook();
 
@@ -81,7 +81,7 @@ START_TEST(test_collision_ike_rekey)
 	ck_assert(!exchange_test_helper->sender->dequeue(exchange_test_helper->sender));
 	assert_num_tasks(a, 0, TASK_QUEUE_ACTIVE);
 	assert_num_tasks(a, 1, TASK_QUEUE_QUEUED);
-	call_ikesa(a, initiate, NULL, 0, NULL, NULL);
+	call_ikesa(a, initiate, NULL, NULL);
 	assert_num_tasks(a, 0, TASK_QUEUE_ACTIVE);
 
 	assert_sa_idle(b);

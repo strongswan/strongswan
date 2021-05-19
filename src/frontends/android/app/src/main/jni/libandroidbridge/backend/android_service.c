@@ -924,7 +924,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 
 	/* get an additional reference because initiate consumes one */
 	child_cfg->get_ref(child_cfg);
-	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
+	if (ike_sa->initiate(ike_sa, child_cfg, NULL) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "failed to initiate tunnel");
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,

@@ -29,6 +29,7 @@ typedef enum ike_condition_t ike_condition_t;
 typedef enum ike_sa_state_t ike_sa_state_t;
 typedef enum statistic_t statistic_t;
 typedef enum update_hosts_flag_t update_hosts_flag_t;
+typedef struct child_init_args_t child_init_args_t;
 typedef struct ike_sa_t ike_sa_t;
 
 #include <library.h>
@@ -368,6 +369,18 @@ enum ike_sa_state_t {
  * enum names for ike_sa_state_t.
  */
 extern enum_name_t *ike_sa_state_names;
+
+/**
+ * Optional arguments passed when initiating a CHILD_SA.
+ */
+struct child_init_args_t {
+	/** Reqid to use for CHILD_SA, 0 to assign automatically */
+	uint32_t reqid;
+	/** Optional source of triggering packet */
+	traffic_selector_t *src;
+	/** Optional destination of triggering packet */
+	traffic_selector_t *dst;
+};
 
 /**
  * Class ike_sa_t representing an IKE_SA.
@@ -787,16 +800,13 @@ struct ike_sa_t {
 	 * to the CHILD_SA.
 	 *
 	 * @param child_cfg		child config to create CHILD from
-	 * @param reqid			reqid to use for CHILD_SA, 0 assign uniquely
-	 * @param tsi			source of triggering packet
-	 * @param tsr			destination of triggering packet.
+	 * @param args			optional arguments for the CHILD initiation
 	 * @return
 	 *						- SUCCESS if initialization started
 	 *						- DESTROY_ME if initialization failed
 	 */
 	status_t (*initiate) (ike_sa_t *this, child_cfg_t *child_cfg,
-						  uint32_t reqid, traffic_selector_t *tsi,
-						  traffic_selector_t *tsr);
+						  child_init_args_t *args);
 
 	/**
 	 * Retry initiation of this IKE_SA after it got deferred previously.

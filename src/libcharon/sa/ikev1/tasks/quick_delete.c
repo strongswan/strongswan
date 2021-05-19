@@ -149,6 +149,9 @@ static status_t delete_child(private_quick_delete_t *this,
 
 		if (remote_close)
 		{
+			child_init_args_t args = {
+				.reqid = child_sa->get_reqid(child_sa),
+			};
 			child_cfg = child_sa->get_config(child_sa);
 			child_cfg->get_ref(child_cfg);
 
@@ -157,7 +160,7 @@ static status_t delete_child(private_quick_delete_t *this,
 				case ACTION_RESTART:
 					child_cfg->get_ref(child_cfg);
 					status = this->ike_sa->initiate(this->ike_sa, child_cfg,
-									child_sa->get_reqid(child_sa), NULL, NULL);
+													&args);
 					break;
 				case ACTION_ROUTE:
 					charon->traps->install(charon->traps,

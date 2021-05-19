@@ -542,17 +542,23 @@ METHOD(trap_manager_t, acquire, void,
 
 	if (ike_sa)
 	{
+		child_init_args_t args = {
+			.reqid = reqid,
+			.src = src,
+			.dst = dst,
+		};
+
 		if (this->ignore_acquire_ts || ike_sa->get_version(ike_sa) == IKEV1)
 		{	/* in IKEv1, don't prepend the acquiring packet TS, as we only
 			 * have a single TS that we can establish in a Quick Mode. */
-			src = dst = NULL;
+			args.src = args.dst = NULL;
 		}
 
 		this->mutex->lock(this->mutex);
 		acquire->ike_sa = ike_sa;
 		this->mutex->unlock(this->mutex);
 
-		if (ike_sa->initiate(ike_sa, child, reqid, src, dst) != DESTROY_ME)
+		if (ike_sa->initiate(ike_sa, child, &args) != DESTROY_ME)
 		{
 			charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 		}

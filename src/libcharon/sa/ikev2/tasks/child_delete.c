@@ -312,12 +312,13 @@ static void process_payloads(private_child_delete_t *this, message_t *message)
  */
 static status_t destroy_and_reestablish(private_child_delete_t *this)
 {
+	child_init_args_t args = {};
 	enumerator_t *enumerator;
 	entry_t *entry;
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
 	protocol_id_t protocol;
-	uint32_t spi, reqid;
+	uint32_t spi;
 	action_t action;
 	status_t status = SUCCESS;
 	time_t now, expire;
@@ -362,9 +363,9 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 			/* no delay and no lifetime, destroy it immediately */
 		}
 		spi = child_sa->get_spi(child_sa, TRUE);
-		reqid = child_sa->get_reqid(child_sa);
 		child_cfg = child_sa->get_config(child_sa);
 		child_cfg->get_ref(child_cfg);
+		args.reqid = child_sa->get_reqid(child_sa);
 		action = child_sa->get_close_action(child_sa);
 
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
@@ -376,7 +377,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 				case ACTION_RESTART:
 					child_cfg->get_ref(child_cfg);
 					status = this->ike_sa->initiate(this->ike_sa, child_cfg,
-													reqid, NULL, NULL);
+													&args);
 					break;
 				case ACTION_ROUTE:
 					charon->traps->install(charon->traps,
