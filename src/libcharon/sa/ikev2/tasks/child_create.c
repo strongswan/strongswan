@@ -16,12 +16,15 @@
  * for more details.
  */
 
+#include <unistd.h>
+
 #include "child_create.h"
 
 #include <daemon.h>
 #include <sa/ikev2/keymat_v2.h>
 #include <crypto/key_exchange.h>
 #include <credentials/certificates/x509.h>
+#include <collections/hashtable.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
 #include <encoding/payloads/ts_payload.h>
@@ -36,6 +39,9 @@
 #define MAX_KEY_EXCHANGES (MAX_ADDITIONAL_KEY_EXCHANGES + 1)
 
 typedef struct private_child_create_t private_child_create_t;
+
+/** Assumed minimum CPU ID, used when searching for a CPU without SA */
+#define CPU_ID_MIN 0
 
 /**
  * Private members of a child_create_t task.
@@ -126,6 +132,16 @@ struct private_child_create_t {
 	 * Remote traffic selectors as configured or previously negotiated
 	 */
 	traffic_selector_list_t *other_ts;
+
+	/**
+	 * Resource info sent by the peer
+	 */
+	chunk_t resource_info;
+
+	/**
+	 * Whether we received resource info (might be empty)
+	 */
+	bool resource_info_seen;
 
 	/**
 	 * Key exchanges to perform
@@ -265,6 +281,7 @@ static void schedule_delayed_retry(private_child_create_t *this)
 	task->use_marks(task, this->child.mark_in, this->child.mark_out);
 	task->use_if_ids(task, this->child.if_id_in, this->child.if_id_out);
 	task->use_label(task, this->child.label);
+	task->use_per_cpu(task, this->child.per_cpu, this->child.cpu);
 
 	/* clone these directly as we don't have a public method */
 	if (this->my_ts && this->other_ts)
@@ -874,6 +891,83 @@ static bool select_proposal(private_child_create_t *this, bool no_ke)
 }
 
 /**
+ * Returns the number of CPUs that are configured on the system or only those
+ * that are currently online (if we can distinguish this).
+ */
+static uint32_t get_system_cpus(bool online)
+{
+	long cpus;
+
+#ifdef WIN32
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo(&sysinfo);
+	cpus = sysinfo.dwNumberOfProcessors;
+#else /* WIN32 */
+	cpus = sysconf(online ? _SC_NPROCESSORS_ONLN : _SC_NPROCESSORS_CONF);
+
+	if (cpus < 0)
+	{
+		DBG1(DBG_IKE, "failed to determine number of CPUs for this system");
+		/* assume we have at least one CPU */
+		cpus = 1;
+	}
+#endif /* WIN32 */
+	return cpus;
+}
+
+/**
+ * Finds an unused CPU ID to be assigned to a responder's CHILD_SA, or return
+ * CPU_ID_MAX if we don't have a fallback yet.
+ */
+static uint32_t get_cpu(private_child_create_t *this)
+{
+	enumerator_t *enumerator;
+	hashtable_t *used;
+	child_sa_t *child_sa;
+	bool found_fallback = FALSE;
+	uint32_t cpu;
+
+	used = hashtable_create(hashtable_hash_ptr, hashtable_equals_ptr, 32);
+
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
+	{
+		if (child_sa->get_state(child_sa) == CHILD_INSTALLED &&
+			this->config->equals(this->config, child_sa->get_config(child_sa)))
+		{
+			cpu = child_sa->get_cpu(child_sa);
+			if (cpu != CPU_ID_MAX)
+			{
+				used->put(used, (void*)(uintptr_t)cpu, child_sa);
+			}
+			else
+			{
+				found_fallback = TRUE;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (!found_fallback)
+	{
+		cpu = CPU_ID_MAX;
+	}
+	else
+	{
+		cpu = get_system_cpus(TRUE) + CPU_ID_MIN - 1;
+		for (; cpu > CPU_ID_MIN; cpu--)
+		{
+			if (!used->get(used, (void*)(uintptr_t)cpu))
+			{
+				break;
+			}
+		}
+	}
+	used->destroy(used);
+	return cpu;
+}
+
+/**
  * Add a KE payload if a key exchange is used.  As responder we might already
  * have stored the object in the list of completed exchanges.
  */
@@ -989,6 +1083,21 @@ static bool build_payloads(private_child_create_t *this, message_t *message)
 		message->add_notify(message, FALSE, ESP_TFC_PADDING_NOT_SUPPORTED,
 							chunk_empty);
 	}
+
+	if (!this->rekey && this->child.per_cpu)
+	{
+		chunk_t cpu_id = chunk_empty;
+		uint32_t cpu;
+
+		/* always send the notify, but possibly without CPU ID */
+		if (this->child.cpu != CPU_ID_MAX)
+		{
+			cpu = htonl(this->child.cpu);
+			cpu_id = chunk_from_thing(cpu);
+		}
+		message->add_notify(message, FALSE, SA_RESOURCE_INFO,
+							cpu_id);
+	}
 	return TRUE;
 }
 
@@ -1062,6 +1171,11 @@ static void handle_notify(private_child_create_t *this, notify_payload_t *notify
 			DBG1(DBG_IKE, "received %N, not using ESPv3 TFC padding",
 				 notify_type_names, notify->get_notify_type(notify));
 			this->tfcv3 = FALSE;
+			break;
+		case SA_RESOURCE_INFO:
+			chunk_free(&this->resource_info);
+			this->resource_info = chunk_clone(notify->get_notification_data(notify));
+			this->resource_info_seen = TRUE;
 			break;
 		default:
 			break;
@@ -1384,6 +1498,7 @@ static bool child_sa_equals(private_child_create_t *this, child_sa_t *a,
 		a->get_mark(a, FALSE).value == b->get_mark(b, FALSE).value &&
 		a->get_if_id(a, TRUE) == b->get_if_id(b, TRUE) &&
 		a->get_if_id(a, FALSE) == b->get_if_id(b, FALSE) &&
+		a->get_cpu(a) == b->get_cpu(b) &&
 		sec_labels_equal(a->get_label(a), b->get_label(b)) &&
 		reqid_and_ts_equals(this, a, b);
 }
@@ -1592,6 +1707,11 @@ METHOD(task_t, build_i, status_t,
 	{
 		DBG2(DBG_CFG, "proposing security label '%s'",
 			 this->child.label->get_string(this->child.label));
+	}
+	if (!this->rekey)
+	{
+		this->child.per_cpu = this->config->has_option(this->config,
+													   OPT_PER_CPU_SAS);
 	}
 
 	this->proposals = this->config->get_proposals(this->config, no_ke);
@@ -1957,6 +2077,48 @@ static bool select_label(private_child_create_t *this)
 }
 
 /**
+ * Handle per-resource information.
+ */
+static void handle_per_resource(private_child_create_t *this)
+{
+	if (!this->resource_info_seen)
+	{
+		DBG1(DBG_IKE, "peer didn't send %N notify, creating regular SA",
+			 notify_type_names, SA_RESOURCE_INFO);
+		this->child.per_cpu = FALSE;
+		this->child.cpu = CPU_ID_MAX;
+		return;
+	}
+
+	/* as responder, assign a CPU ID (or CPU_ID_MAX if we don't have a
+	 * fallback SA yet) */
+	if (!this->initiator)
+	{
+		this->child.per_cpu = TRUE;
+		this->child.cpu = get_cpu(this);
+	}
+	if (this->child.cpu != CPU_ID_MAX && this->resource_info.len)
+	{
+		DBG1(DBG_IKE, "creating per-resource SA as one of several (our ID %u, "
+			 "peer's ID %+B)", this->child.cpu, &this->resource_info);
+	}
+	else if (this->child.cpu != CPU_ID_MAX)
+	{
+		DBG1(DBG_IKE, "creating per-resource SA as one of several (our ID %u)",
+			 this->child.cpu);
+	}
+	else if (this->resource_info.len)
+	{
+		DBG1(DBG_IKE, "creating SA as one of several per-resource SAs (peer's "
+			 "ID %+B)", &this->resource_info);
+	}
+	else
+	{
+		DBG1(DBG_IKE, "creating SA as one of several per-resource SAs");
+	}
+}
+
+/**
  * Called when a key exchange is done, returns TRUE once all are done.
  */
 static bool key_exchange_done(private_child_create_t *this)
@@ -2201,6 +2363,15 @@ METHOD(task_t, build_r, status_t,
 	this->child.if_id_in_def = this->ike_sa->get_if_id(this->ike_sa, TRUE);
 	this->child.if_id_out_def = this->ike_sa->get_if_id(this->ike_sa, FALSE);
 	this->child.encap = this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY);
+
+	if (!this->rekey && this->config->has_option(this->config, OPT_PER_CPU_SAS))
+	{
+		handle_per_resource(this);
+		/* if it's a per-resource SA, we could check if we already have
+		 * "too many" and reject this one with TS_MAX_QUEUE, but for now we just
+		 * keep it */
+	}
+
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 									 this->ike_sa->get_other_host(this->ike_sa),
 									 this->config, &this->child);
@@ -2550,6 +2721,13 @@ METHOD(task_t, process_i, status_t,
 		return delete_failed_sa(this);
 	}
 
+	if (!this->rekey && this->config->has_option(this->config, OPT_PER_CPU_SAS))
+	{
+		handle_per_resource(this);
+		/* the peer might not have returned the notify, update the flag */
+		this->child_sa->set_per_cpu(this->child_sa, this->child.per_cpu);
+	}
+
 	if (key_exchange_done_and_install_i(this, message, ike_auth) == NEED_MORE)
 	{
 		/* if the installation failed, we delete the failed SA, i.e. build() was
@@ -2600,6 +2778,13 @@ METHOD(child_create_t, use_label, void,
 {
 	DESTROY_IF(this->child.label);
 	this->child.label = label ? label->clone(label) : NULL;
+}
+
+METHOD(child_create_t, use_per_cpu, void,
+	private_child_create_t *this, bool per_cpu, uint32_t cpu)
+{
+	this->child.per_cpu = per_cpu ? per_cpu : cpu != CPU_ID_MAX;
+	this->child.cpu = cpu;
 }
 
 /**
@@ -2736,6 +2921,7 @@ METHOD(task_t, migrate, void,
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
 	chunk_free(&this->link);
+	chunk_free(&this->resource_info);
 	DESTROY_OFFSET_IF(this->tsr, offsetof(traffic_selector_t, destroy));
 	DESTROY_OFFSET_IF(this->tsi, offsetof(traffic_selector_t, destroy));
 	DESTROY_OFFSET_IF(this->labels_i, offsetof(sec_label_t, destroy));
@@ -2767,6 +2953,7 @@ METHOD(task_t, migrate, void,
 	this->ipcomp_received = IPCOMP_NONE;
 	this->other_cpi = 0;
 	this->established = FALSE;
+	this->resource_info_seen = FALSE;
 	this->public.task.build = _build_i;
 	this->public.task.process = _process_i;
 }
@@ -2777,6 +2964,7 @@ METHOD(task_t, destroy, void,
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
 	chunk_free(&this->link);
+	chunk_free(&this->resource_info);
 	DESTROY_OFFSET_IF(this->tsr, offsetof(traffic_selector_t, destroy));
 	DESTROY_OFFSET_IF(this->tsi, offsetof(traffic_selector_t, destroy));
 	DESTROY_OFFSET_IF(this->labels_i, offsetof(sec_label_t, destroy));
@@ -2824,6 +3012,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			.use_marks = _use_marks,
 			.use_if_ids = _use_if_ids,
 			.use_label = _use_label,
+			.use_per_cpu = _use_per_cpu,
 			.recreate_sa = _recreate_sa,
 			.abort = _abort_,
 			.task = {
