@@ -291,6 +291,9 @@ METHOD(task_t, build_i, status_t,
 						this->child_sa->get_if_id(this->child_sa, FALSE));
 		this->child_create->use_label(this->child_create,
 						this->child_sa->get_label(this->child_sa));
+		this->child_create->use_per_cpu(this->child_create,
+						this->child_sa->use_per_cpu(this->child_sa),
+						this->child_sa->get_cpu(this->child_sa));
 	}
 
 	if (this->child_create->task.build(&this->child_create->task,
@@ -445,6 +448,9 @@ METHOD(task_t, build_r, status_t,
 						this->child_sa->get_if_id(this->child_sa, FALSE));
 		this->child_create->use_label(this->child_create,
 						this->child_sa->get_label(this->child_sa));
+		this->child_create->use_per_cpu(this->child_create,
+						this->child_sa->use_per_cpu(this->child_sa),
+						this->child_sa->get_cpu(this->child_sa));
 		config = this->child_sa->get_config(this->child_sa);
 		this->child_create->set_config(this->child_create,
 									   config->get_ref(config));
