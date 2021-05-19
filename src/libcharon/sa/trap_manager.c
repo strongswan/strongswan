@@ -643,6 +643,7 @@ METHOD(trap_manager_t, acquire, void,
 	{
 		child_init_args_t args = {
 			.reqid = allocated_reqid,
+			.cpu = CPU_ID_MAX,
 			.src = data->src,
 			.dst = data->dst,
 			.label = data->label,
