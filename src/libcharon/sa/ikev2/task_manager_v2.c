@@ -2208,6 +2208,8 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 								child_sa->get_mark(child_sa, TRUE).value,
 								child_sa->get_mark(child_sa, FALSE).value);
 		child_create->use_label(child_create, child_sa->get_label(child_sa));
+		child_create->use_per_cpu(child_create, child_sa->use_per_cpu(child_sa),
+								  child_sa->get_cpu(child_sa));
 		/* interface IDs are not migrated as the new CHILD_SAs on old and new
 		 * IKE_SA go though regular updown events */
 		new->queue_task(new, &child_create->task);
@@ -2387,6 +2389,8 @@ METHOD(task_manager_t, queue_child, void,
 			charon->kernel->release_reqid(charon->kernel, reqid);
 		}
 		task->use_label(task, child_sa->get_label(child_sa));
+		task->use_per_cpu(task, child_sa->use_per_cpu(child_sa),
+						  child_sa->get_cpu(child_sa));
 	}
 	else if (args)
 	{
@@ -2394,6 +2398,7 @@ METHOD(task_manager_t, queue_child, void,
 								   args->dst, args->seq);
 		task->use_reqid(task, args->reqid);
 		task->use_label(task, args->label);
+		task->use_per_cpu(task, FALSE, args->cpu);
 	}
 	else
 	{
