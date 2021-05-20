@@ -1778,10 +1778,27 @@ METHOD(ike_sa_t, get_if_id, uint32_t,
 	return inbound ? this->if_id_in : this->if_id_out;
 }
 
+/**
+ * Sort CHILD_SAs by config and CPU ID so SAs without ID are enumerated first.
+ */
+static int child_sa_sort(const void *a_pub, const void *b_pub, void *user)
+{
+	child_sa_t *a = (child_sa_t*)a_pub, *b = (child_sa_t*)b_pub;
+	child_cfg_t *cfg = a->get_config(a);
+
+	if (!cfg->equals(cfg, b->get_config(b)))
+	{	/* use the unique IDs of unrelated SAs to maintain insertion order */
+		return a->get_unique_id(a) - b->get_unique_id(b);
+	}
+	/* otherwise use the CPU ID, making sure an SA without ID comes first */
+	return a->get_cpu(a) == CPU_ID_MAX ? -1 : a->get_cpu(a) - b->get_cpu(b);
+}
+
 METHOD(ike_sa_t, add_child_sa, void,
 	private_ike_sa_t *this, child_sa_t *child_sa)
 {
 	array_insert_create(&this->child_sas, ARRAY_TAIL, child_sa);
+	array_sort(this->child_sas, child_sa_sort, NULL);
 	charon->child_sa_manager->add(charon->child_sa_manager,
 								  child_sa, &this->public);
 }
