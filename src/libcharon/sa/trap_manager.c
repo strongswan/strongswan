@@ -159,11 +159,12 @@ static void destroy_acquire(acquire_t *this)
 CALLBACK(acquire_by_reqid, bool,
 	acquire_t *this, va_list args)
 {
-	uint32_t reqid;
+	uint32_t reqid, cpu;
 	sec_label_t *label;
 
-	VA_ARGS_VGET(args, reqid, label);
-	return this->reqid == reqid && sec_labels_equal(this->data->label, label);
+	VA_ARGS_VGET(args, reqid, cpu, label);
+	return this->reqid == reqid && this->data->cpu == cpu &&
+		   sec_labels_equal(this->data->label, label);
 }
 
 CALLBACK(acquire_by_dst, bool,
@@ -573,7 +574,8 @@ METHOD(trap_manager_t, acquire, void,
 	else
 	{
 		this->acquires->find_first(this->acquires, acquire_by_reqid,
-								   (void**)&acquire, reqid, data->label);
+								   (void**)&acquire, reqid, data->cpu,
+									data->label);
 	}
 	if (!acquire)
 	{
@@ -643,7 +645,7 @@ METHOD(trap_manager_t, acquire, void,
 	{
 		child_init_args_t args = {
 			.reqid = allocated_reqid,
-			.cpu = CPU_ID_MAX,
+			.cpu = data->cpu,
 			.src = data->src,
 			.dst = data->dst,
 			.label = data->label,
