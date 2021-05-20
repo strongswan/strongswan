@@ -1125,6 +1125,9 @@ connections.<conn>.children.<child>.replay_window = 32
 	default of 32 are supported using the Netlink backend only, a value of 0
 	disables IPsec replay protection.
 
+connections.<conn>.children.<child>.per_cpu_sas = no
+	Enable per-CPU CHILD_SAs. Requires _trap_ in **start_action**.
+
 connections.<conn>.children.<child>.hw_offload = no
 	Enable hardware offload for this CHILD_SA, if supported by the IPsec
 	implementation.
