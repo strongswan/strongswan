@@ -1079,6 +1079,67 @@ static status_t defer_child_sa(private_child_create_t *this)
 	return NOT_SUPPORTED;
 }
 
+/**
+ * Compare two CHILD_SA objects for equality
+ */
+static bool child_sa_equals(child_sa_t *a, child_sa_t *b)
+{
+	child_cfg_t *cfg = a->get_config(a);
+	return cfg->equals(cfg, b->get_config(b)) &&
+		/* reqids are allocated based on the final TS, so we can only compare
+		 * them if they are static (i.e. both have them) */
+		(!a->get_reqid(a) || !b->get_reqid(b) ||
+		  a->get_reqid(a) == b->get_reqid(b)) &&
+		a->get_mark(a, TRUE).value == b->get_mark(b, TRUE).value &&
+		a->get_mark(a, FALSE).value == b->get_mark(b, FALSE).value &&
+		a->get_if_id(a, TRUE) == b->get_if_id(b, TRUE) &&
+		a->get_if_id(a, FALSE) == b->get_if_id(b, FALSE);
+}
+
+/**
+ * Check if there is a duplicate CHILD_SA already established and we can abort
+ * initiating this one
+ */
+static bool check_for_duplicate(private_child_create_t *this)
+{
+	enumerator_t *enumerator;
+	child_sa_t *child_sa, *found = NULL;
+
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, (void**)&child_sa))
+	{
+		if (child_sa->get_state(child_sa) == CHILD_INSTALLED &&
+			child_sa_equals(child_sa, this->child_sa))
+		{
+			found = child_sa;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (found)
+	{
+		linked_list_t *my_ts, *other_ts;
+
+		my_ts = linked_list_create_from_enumerator(
+					found->create_ts_enumerator(found, TRUE));
+		other_ts = linked_list_create_from_enumerator(
+					found->create_ts_enumerator(found, FALSE));
+
+		DBG1(DBG_IKE, "not establishing CHILD_SA %s{%d} due to existing "
+			 "duplicate {%d} with SPIs %.8x_i %.8x_o and TS %#R === %#R",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa),
+			 found->get_unique_id(found),
+			 ntohl(found->get_spi(found, TRUE)),
+			 ntohl(found->get_spi(found, FALSE)), my_ts, other_ts);
+
+		my_ts->destroy(my_ts);
+		other_ts->destroy(other_ts);
+	}
+	return found;
+}
+
 METHOD(task_t, build_i, status_t,
 	private_child_create_t *this, message_t *message)
 {
@@ -1179,6 +1240,16 @@ METHOD(task_t, build_i, status_t,
 	this->child_sa = child_sa_create(this->ike_sa->get_my_host(this->ike_sa),
 									 this->ike_sa->get_other_host(this->ike_sa),
 									 this->config, &this->child);
+
+	/* check this after creating the object so that its destruction is detected
+	 * by controller and trap manager */
+	if (!this->rekey &&
+		message->get_exchange_type(message) == CREATE_CHILD_SA &&
+		check_for_duplicate(this))
+	{
+		message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
+		return SUCCESS;
+	}
 
 	if (this->child.reqid)
 	{
