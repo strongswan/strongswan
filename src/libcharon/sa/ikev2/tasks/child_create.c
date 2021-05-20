@@ -1094,8 +1094,7 @@ METHOD(task_t, build_i, status_t,
 		case CREATE_CHILD_SA:
 			if (!generate_nonce(this))
 			{
-				message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN,
-									chunk_empty);
+				message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
 				return SUCCESS;
 			}
 			if (!this->retry && this->dh_group == MODP_NONE)
