@@ -129,9 +129,18 @@ CALLBACK(child_sas, int,
 	ret = vici_parse_cb(res, NULL, sa_values, sa_list, child);
 	if (ret == 0)
 	{
-		printf("  %s: #%s, reqid %s, %s, %s%s, %s:",
+		printf("  %s: #%s, reqid %s",
 			child->get(child, "name"), child->get(child, "uniqueid"),
-			child->get(child, "reqid"), child->get(child, "state"),
+			child->get(child, "reqid"));
+
+		if (child->get(child, "per-cpu-sas"))
+		{
+			printf(", cpu %s",
+				   child->get(child, "cpu") ?: "-");
+		}
+
+		printf(", %s, %s%s, %s:",
+			child->get(child, "state"),
 			child->get(child, "mode"),
 			child->get(child, "encap") ? "-in-UDP" : "",
 			child->get(child, "protocol"));
