@@ -389,4 +389,3 @@ pkcs11_manager_t *pkcs11_manager_create(pkcs11_manager_token_event_t cb,
 
 	return &this->public;
 }
-

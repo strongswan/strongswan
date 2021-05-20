@@ -888,7 +888,8 @@ static private_pkcs11_public_key_t *find_key_by_keyid(pkcs11_library_t *p11,
 
 	enumerator = p11->create_object_enumerator(p11, session, tmpl, count, attr,
 											   countof(attr));
-	if (enumerator->enumerate(enumerator, &object))
+	if (enumerator->enumerate(enumerator, &object) &&
+		attr[0].ulValueLen != CK_UNAVAILABLE_INFORMATION)
 	{
 		switch (type)
 		{
