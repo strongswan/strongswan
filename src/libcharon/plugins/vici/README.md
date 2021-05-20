@@ -819,6 +819,8 @@ command.
 					mark-mask-out = <hex encoded outbound Netfilter mark mask>
 					if-id-in = <hex encoded inbound XFRM interface ID>
 					if-id-out = <hex encoded outbound XFRM interface ID>
+					per-cpu-sas = <yes if per-CPU SAs enabled>
+					cpu = <CPU ID of per-CPU SA>
 					label = <hex encoded security label>
 					encr-alg = <ESP encryption algorithm name, if any>
 					encr-keysize = <ESP encryption key size, if applicable>
