@@ -997,6 +997,10 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 			struct xfrm_user_tmpl* tmpl = RTA_DATA(rta);
 			reqid = tmpl->reqid;
 		}
+		if (rta->rta_type == XFRMA_SA_PCPU)
+		{
+			data.cpu = *(uint32_t*)RTA_DATA(rta);
+		}
 #ifdef USE_SELINUX
 		if (rta->rta_type == XFRMA_SEC_CTX)
 		{
