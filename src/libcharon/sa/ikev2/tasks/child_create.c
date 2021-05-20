@@ -1876,7 +1876,6 @@ METHOD(task_t, migrate, void,
 	this->ipcomp_received = IPCOMP_NONE;
 	this->other_cpi = 0;
 	this->established = FALSE;
-	this->child = (child_sa_create_t){};
 }
 
 METHOD(task_t, destroy, void,

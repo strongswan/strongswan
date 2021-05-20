@@ -1475,7 +1475,6 @@ METHOD(task_t, migrate, void,
 	this->dh = NULL;
 	this->spi_i = 0;
 	this->spi_r = 0;
-	this->child = (child_sa_create_t){};
 
 	if (!this->initiator)
 	{
