@@ -84,6 +84,7 @@ ENUM_NEXT(diffie_hellman_group_names_short, MODP_1024_160, CURVE_448, ECP_521_BI
 	"ecp384bp",
 	"ecp512bp",
 	"curve25519",
+	"sm2",
 	"curve448");
 ENUM_NEXT(diffie_hellman_group_names_short, MODP_NULL, MODP_NULL, CURVE_448,
 	"modpnull");

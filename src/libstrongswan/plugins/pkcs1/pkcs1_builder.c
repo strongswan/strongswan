@@ -62,7 +62,7 @@ static public_key_t *parse_public_key(chunk_t blob)
 				*/
 
 				int oid = asn1_parse_algorithmIdentifier(object,
-										parser->get_level(parser)+1, &param));
+										parser->get_level(parser)+1, &param);
 
 				if (oid == OID_RSA_ENCRYPTION || oid == OID_RSAES_OAEP ||
 					oid == OID_RSASSA_PSS)
