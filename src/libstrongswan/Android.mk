@@ -102,11 +102,16 @@ LOCAL_C_INCLUDES += $(openssl_PATH)
 LOCAL_STATIC_LIBRARIES += libcrypto_static
 endif
 
-LOCAL_SRC_FILES += $(call add_plugin, gmsdf)
-ifneq ($(call plugin_enabled, gmsdf),)
-LOCAL_C_INCLUDES += $(gmsdf_PATH)
-LOCAL_STATIC_LIBRARIES += libgmsdf_static
-endif
+#removed by zhangke
+#---------------------------------
+#LOCAL_SRC_FILES += $(call add_plugin, gmsdf)
+#ifneq ($(call plugin_enabled, gmsdf),)
+#LOCAL_C_INCLUDES += $(gmsdf_PATH)
+#LOCAL_STATIC_LIBRARIES += libgmsdf_static
+#endif
+#---------------------------------
+
+LOCAL_SRC_FILES += $(call add_plugin, gmalg)
 
 LOCAL_SRC_FILES += $(call add_plugin, pem)
 

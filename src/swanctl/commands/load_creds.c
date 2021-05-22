@@ -276,6 +276,7 @@ static bool determine_credtype(char *type, credential_type_t *credtype,
 		{ "ecdsa",			CRED_PRIVATE_KEY,		KEY_ECDSA,			},
 		{ "bliss",			CRED_PRIVATE_KEY,		KEY_BLISS,			},
 		{ "pkcs12",			CRED_CONTAINER,			CONTAINER_PKCS12,	},
+		{ "sm2", 			CRED_PRIVATE_KEY, 		KEY_SM2,			},
 	};
 	int i;
 
