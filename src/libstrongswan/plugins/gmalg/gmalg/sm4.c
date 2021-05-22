@@ -223,7 +223,7 @@ int sm4_set_key(sm4_ctx *ctx, u8 *key, u32 len)
 	return 0;
 }
 
-void sm4_ecb_encrypt(sm4_ctx *ctx, u8 *key, u8 *in, u8 len, u8 *out)
+void sm4_ecb_encrypt(sm4_ctx *ctx, u8 *key, u8 *in, u32 len, u8 *out)
 {
 #if DEBUG
 	printf(" function: %s ,  line= %d \n", __FUNCTION__, __LINE__);
@@ -238,7 +238,7 @@ void sm4_ecb_encrypt(sm4_ctx *ctx, u8 *key, u8 *in, u8 len, u8 *out)
 	}
 }
 
-void sm4_ecb_decrypt(sm4_ctx *ctx, u8 *key, u8 *in, u8 len, u8 *out)
+void sm4_ecb_decrypt(sm4_ctx *ctx, u8 *key, u8 *in, u32 len, u8 *out)
 {
 
 #if DEBUG
@@ -252,7 +252,7 @@ void sm4_ecb_decrypt(sm4_ctx *ctx, u8 *key, u8 *in, u8 len, u8 *out)
 	}
 }
 
-void sm4_cbc_encrypt(sm4_ctx *ctx, u8 *key, u8 *iv, u8 *in, u8 len, u8 *out)
+void sm4_cbc_encrypt(sm4_ctx *ctx, u8 *key, u8 *iv, u8 *in, u32 len, u8 *out)
 {
 #if DEBUG
 	printf(" function: %s ,  line= %d \n", __FUNCTION__, __LINE__);
@@ -274,7 +274,7 @@ void sm4_cbc_encrypt(sm4_ctx *ctx, u8 *key, u8 *iv, u8 *in, u8 len, u8 *out)
 	}
 }
 
-void sm4_cbc_decrypt(sm4_ctx *ctx, u8 *key, u8 *iv, u8 *in, u8 len, u8 *out)
+void sm4_cbc_decrypt(sm4_ctx *ctx, u8 *key, u8 *iv, u8 *in, u32 len, u8 *out)
 {
 #if DEBUG
 	printf(" function: %s ,  line= %d \n", __FUNCTION__, __LINE__);
