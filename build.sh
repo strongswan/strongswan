@@ -33,19 +33,13 @@ PREFIX=$2
 case $system in
     linux )
         ./configure   --prefix=$PREFIX \
-                    CFLAGS="-I$PREFIX/include" \
-                    LDFLAGS="-L$PREFIX/lib" \
                     --enable-kernel-libipsec  \
-                    --disable-gmp  --disable-openssl \
                     --enable-gmalg --with-gmalg_interior=yes
         ;;
 
     arm )
         ./configure --host=arm-linux  --prefix=$PREFIX                \
-                      CFLAGS="-I$PREFIX/include -I/root/openssl-$system/include" \
-                      LDFLAGS="-L$PREFIX/lib -L/root/openssl-$system/lib" \
                       --enable-kernel-libipsec  \
-                      --disable-gmp  --disable-openssl \
                       --enable-rng
                       --enable-gmalg --with-gmalg_interior=yes
         ;;
