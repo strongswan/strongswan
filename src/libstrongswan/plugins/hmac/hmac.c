@@ -155,6 +155,7 @@ static mac_t *hmac_create(hash_algorithm_t hash_algorithm)
 	/* set b, according to hasher */
 	switch (hash_algorithm)
 	{
+		case HASH_SM3:
 		case HASH_SHA1:
 		case HASH_MD5:
 		case HASH_SHA256:

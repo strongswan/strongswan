@@ -1166,6 +1166,14 @@ static bool parse_certificate(private_openssl_x509_t *this)
 		return FALSE;
 	}
 
+	/** This is suggested by zhangke
+	 * 
+	 * this->notBefore = openssl_asn1_to_time(X509_getm_notBefore(this->x509));
+	 * this->notAfter = openssl_asn1_to_time(X509_getm_notAfter(this->x509));
+	 * 
+	 * but seems it has already updated in master branch,so remain the orginal code
+	 */
+
 	this->notBefore = openssl_asn1_to_time(X509_get0_notBefore(this->x509));
 	this->notAfter = openssl_asn1_to_time(X509_get0_notAfter(this->x509));
 

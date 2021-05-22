@@ -254,6 +254,8 @@ static uint16_t auth_to_prf(uint16_t alg)
 {
 	switch (alg)
 	{
+		case AUTH_HMAC_SM3:
+			return PRF_HMAC_SM3;
 		case AUTH_HMAC_SHA1_96:
 			return PRF_HMAC_SHA1;
 		case AUTH_HMAC_SHA2_256_128:
@@ -278,6 +280,8 @@ static uint16_t auth_to_hash(uint16_t alg)
 {
 	switch (alg)
 	{
+		case AUTH_HMAC_SM3:
+			return HASH_SM3;
 		case AUTH_HMAC_SHA1_96:
 			return HASH_SHA1;
 		case AUTH_HMAC_SHA2_256_128:
@@ -384,6 +388,7 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 			break;
 		}
 		case AUTH_RSA:
+		case AUTH_SM2:
 		case AUTH_ECDSA_256:
 		case AUTH_ECDSA_384:
 		case AUTH_ECDSA_521:

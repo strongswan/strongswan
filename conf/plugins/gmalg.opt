@@ -1,0 +1,5 @@
+charon.plugins.gmalg.engine_id = pkcs11
+	ENGINE ID to use in the GmAlg plugin.
+
+charon.plugins.gmalg.fips_mode = 0
+	Set Gmalg FIPS mode: disabled(0), enabled(1), Suite B enabled(2).

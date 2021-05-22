@@ -40,8 +40,15 @@ enum hash_algorithm_t {
 	HASH_SHA256			= 2,
 	HASH_SHA384			= 3,
 	HASH_SHA512			= 4,
+	HASH_SM3			= 5,
+
 	/* RFC 8420 */
-	HASH_IDENTITY		= 5,
+	/** orgin version
+	 * 	HASH_IDENTITY		= 5,
+	 */
+
+	HASH_IDENTITY		= 6,
+
 	/* use private use range for algorithms not defined/permitted by RFC 7427 */
 	HASH_UNKNOWN 		= 1024,
 	HASH_MD2 			= 1025,
@@ -62,6 +69,7 @@ enum hash_algorithm_t {
 #define HASH_SIZE_SHA256	32
 #define HASH_SIZE_SHA384	48
 #define HASH_SIZE_SHA512	64
+#define HASH_SIZE_SM3		32
 
 /**
  * enum names for hash_algorithm_t.

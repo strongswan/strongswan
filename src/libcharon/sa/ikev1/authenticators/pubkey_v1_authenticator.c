@@ -84,6 +84,10 @@ METHOD(authenticator_t, build, status_t,
 	{
 		scheme = SIGN_ECDSA_WITH_NULL;
 	}
+	if (this->type == KEY_SM2)
+	{
+		scheme = SIGN_SM2_WITH_SM3;
+	}
 
 	id = this->ike_sa->get_my_id(this->ike_sa);
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
@@ -170,6 +174,10 @@ METHOD(authenticator_t, process, status_t,
 	if (this->type == KEY_ECDSA)
 	{
 		scheme = SIGN_ECDSA_WITH_NULL;
+	}
+	if (this->type == KEY_SM2)
+	{
+		scheme = SIGN_SM2_WITH_SM3;
 	}
 
 	sig_payload = (hash_payload_t*)message->get_payload(message, PLV1_SIGNATURE);

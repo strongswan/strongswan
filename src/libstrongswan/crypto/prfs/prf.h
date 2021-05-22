@@ -50,8 +50,17 @@ enum pseudo_random_function_t {
 	PRF_HMAC_SHA2_384 = 6,
 	/** RFC4868 */
 	PRF_HMAC_SHA2_512 = 7,
+
+	/** Added by zhangke */
+	PRF_HMAC_SM3 = 8,
+
 	/** RFC4615 */
-	PRF_AES128_CMAC = 8,
+	/** Orgin version
+	 * PRF_AES128_CMAC = 8,
+	 */
+	PRF_AES128_CMAC = 9,
+
+
 	/** FIPS 186-2-change1 */
 	PRF_FIPS_SHA1_160 = 1025,
 	/** FIPS 186-2-change1, uses fixed output size of 160bit */

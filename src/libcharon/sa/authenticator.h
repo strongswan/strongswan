@@ -85,9 +85,15 @@ enum auth_method_t {
 	AUTH_NULL = 13,
 
 	/**
+	 * Digital Signature as specified in sm2
+	 */
+	AUTH_SM2 = 14,
+
+	/**
 	 * Digital Signature as specified in RFC 7427
 	 */
-	AUTH_DS = 14,
+	//Modified by zhangke
+	AUTH_DS = 15,
 
 	/**
 	 * IKEv1 initiator XAUTH with PSK, outside of IANA range

@@ -33,6 +33,7 @@ ENUM_NEXT(pseudo_random_function_names, PRF_HMAC_MD5, PRF_AES128_CMAC, PRF_CAMEL
 	"PRF_HMAC_SHA2_256",
 	"PRF_HMAC_SHA2_384",
 	"PRF_HMAC_SHA2_512",
+	"PRF_HMAC_SM3",
 	"PRF_AES128_CMAC");
 ENUM_END(pseudo_random_function_names, PRF_AES128_CMAC);
 

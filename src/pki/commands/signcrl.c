@@ -478,7 +478,7 @@ static void __attribute__ ((constructor))reg()
 		 "[[--reason key-compromise|ca-compromise|affiliation-changed|",
 		 "           superseded|cessation-of-operation|certificate-hold]",
 		 " [--date timestamp] --cert file|--serial hex]*",
-		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
+		 "[--digest md5|sm3|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
 		 "[--rsa-padding pkcs1|pss] [--critical oid]",
 		 "[--outform der|pem]"},
 		{

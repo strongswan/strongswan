@@ -15,6 +15,7 @@ pki_SOURCES = pki.c pki.h command.c command.h \
 	commands/req.c \
 	commands/self.c \
 	commands/signcrl.c \
+	commands/crypto.c \
 	commands/verify.c
 
 pki_LDADD = \

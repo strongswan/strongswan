@@ -62,7 +62,16 @@ enum diffie_hellman_group_t {
 	ECP_384_BP    = 29,
 	ECP_512_BP    = 30,
 	CURVE_25519   = 31,
-	CURVE_448     = 32,
+
+	/** orgin version 
+	 * CURVE_448     = 32,
+	 */
+
+	/** Added by zhangke */
+	CURVE_SM2     = 32,
+	CURVE_448     = 33,
+
+
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
 	MODP_NULL = 1024,
 	/** MODP group with custom generator/prime */

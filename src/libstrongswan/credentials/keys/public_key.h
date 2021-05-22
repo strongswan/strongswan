@@ -47,8 +47,12 @@ enum key_type_t {
 	KEY_ED25519 = 4,
 	/** Ed448   PureEdDSA instance as in RFC 8032 */
 	KEY_ED448   = 5,
+	/** Added by zhangke */
+	KEY_SM2   = 6,
 	/** BLISS */
-	KEY_BLISS = 6,
+	//Modified by zhangke
+	//KEY_BLISS = 6,
+	KEY_BLISS = 7,
 };
 
 /**
@@ -122,6 +126,8 @@ enum signature_scheme_t {
 	SIGN_BLISS_WITH_SHA3_384,
 	/** BLISS with SHA-3_512                                           */
 	SIGN_BLISS_WITH_SHA3_512,
+	/** Added by zhangke */
+	SIGN_SM2_WITH_SM3,
 };
 
 /**

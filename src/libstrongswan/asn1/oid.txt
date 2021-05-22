@@ -69,6 +69,23 @@
     0x37                     "targetInformation"		OID_TARGET_INFORMATION
     0x38                     "noRevAvail"				OID_NO_REV_AVAIL
 0x2A                         ""
+  0x81                       ""
+    0x1c                     "ISO-CN"
+      0xcf                   ""
+        0x55                 "oscca"
+          0x01               "sm-scheme"
+            0x66             "sm1"
+              0x01           "sm1-ecb"                          OID_SM1_ECB
+              0x02           "sm1-cbc"                          OID_SM1_CBC
+            0x68             "sm4"
+              0x01           "sm4-ecb"                          OID_SM4_ECB
+              0x02           "sm4-cbc"                          OID_SM4_CBC
+            0x82             ""
+              0x2d           "sm2"				OID_SM2
+            0x83             ""
+              0x11           "sm3"
+                0x01         "hash-sm3"				OID_SM3
+              0x75           "sm2signsm3"			OID_SM2_WITH_SM3
   0x83                       ""
     0x08                     "jp"
       0x8C                   ""

@@ -609,6 +609,9 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 
 	switch (group)
 	{
+		case CURVE_SM2:
+			this->key = EC_KEY_new_by_curve_name(NID_sm2p256v1);
+			break;
 		case ECP_192_BIT:
 			key = EC_KEY_new_by_curve_name(NID_X9_62_prime192v1);
 			break;

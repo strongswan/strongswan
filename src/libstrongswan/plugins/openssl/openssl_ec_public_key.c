@@ -48,6 +48,11 @@ struct private_openssl_ec_public_key_t {
 	EC_KEY *ec;
 
 	/**
+	 *  key type
+	 */
+	key_type_t type;
+
+	/**
 	 * reference counter
 	 */
 	refcount_t ref;
@@ -146,7 +151,11 @@ static bool verify_der_signature(private_openssl_ec_public_key_t *this,
 METHOD(public_key_t, get_type, key_type_t,
 	private_openssl_ec_public_key_t *this)
 {
-	return KEY_ECDSA;
+	/** Modified by zhangke
+	 * Orgin version
+	* return KEY_ECDSA;
+	*/
+	return this->type;
 }
 
 METHOD(public_key_t, verify, bool,
@@ -165,6 +174,9 @@ METHOD(public_key_t, verify, bool,
 			return verify_der_signature(this, NID_sha512, data, signature);
 		case SIGN_ECDSA_WITH_NULL:
 			return verify_signature(this, data, signature);
+		case SIGN_SM2_WITH_SM3:
+			return verify_curve_signature(this, scheme, NID_sm3,
+										  NID_sm2p256v1, data, signature);
 		case SIGN_ECDSA_256:
 			return verify_curve_signature(this, scheme, NID_sha256,
 										  NID_X9_62_prime256v1, data, signature);
@@ -325,7 +337,7 @@ openssl_ec_public_key_t *openssl_ec_public_key_load(key_type_t type,
 	private_openssl_ec_public_key_t *this;
 	chunk_t blob = chunk_empty;
 
-	if (type != KEY_ECDSA)
+	if (type != KEY_ECDSA && type != KEY_SM2)
 	{
 		return NULL;
 	}
@@ -351,6 +363,7 @@ openssl_ec_public_key_t *openssl_ec_public_key_load(key_type_t type,
 		destroy(this);
 		return NULL;
 	}
+	this->type =type;
 	return &this->public;
 }
 #endif /* OPENSSL_NO_ECDSA */

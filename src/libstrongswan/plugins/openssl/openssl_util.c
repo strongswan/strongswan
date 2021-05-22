@@ -212,6 +212,12 @@ chunk_t openssl_asn1_str2chunk(const ASN1_STRING *asn1)
 {
 	if (asn1)
 	{
+		/** This is suggested by zhangke
+		 * return chunk_create(ASN1_STRING_get0_data(asn1), ASN1_STRING_length(asn1));
+		 * 
+		 * BUT it seems it has already been updated in orging master branch
+		 * So remain the orginal code
+		 */
 		return chunk_create((u_char*)ASN1_STRING_get0_data(asn1),
 							ASN1_STRING_length(asn1));
 	}

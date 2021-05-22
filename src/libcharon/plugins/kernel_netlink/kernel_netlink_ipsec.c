@@ -223,6 +223,10 @@ static kernel_algorithm_t encryption_algs[] = {
 	{ENCR_AES_GCM_ICV16,		"rfc4106(gcm(aes))"	},
 	{ENCR_NULL_AUTH_AES_GMAC,	"rfc4543(gcm(aes))"	},
 	{ENCR_CAMELLIA_CBC,			"cbc(camellia)"		},
+	{ENCR_SM1_ECB,				"ecb(sm4)"			},
+	{ENCR_SM1_CBC,				"cbc(sm4)"			},
+	{ENCR_SM4_ECB,				"ecb(sm4)"			},
+	{ENCR_SM4_CBC,				"cbc(sm4)"			},
 /*	{ENCR_CAMELLIA_CTR,			"***"				}, */
 /*	{ENCR_CAMELLIA_CCM_ICV8,	"***"				}, */
 /*	{ENCR_CAMELLIA_CCM_ICV12,	"***"				}, */
@@ -247,6 +251,7 @@ static kernel_algorithm_t integrity_algs[] = {
 	{AUTH_HMAC_SHA2_384_384,	"hmac(sha384)"		},
 	{AUTH_HMAC_SHA2_512_256,	"hmac(sha512)"		},
 	{AUTH_HMAC_SHA2_512_512,	"hmac(sha512)"		},
+	{AUTH_HMAC_SM3,				"hmac(sm3)"			},
 /*	{AUTH_DES_MAC,				"***"				}, */
 /*	{AUTH_KPDK_MD5,				"***"				}, */
 	{AUTH_AES_XCBC_96,			"xcbc(aes)"			},

@@ -37,6 +37,7 @@ ENUM_NEXT(auth_method_names, AUTH_ECDSA_256, AUTH_DS, AUTH_DSS,
 	"ECDSA-521 signature",
 	"secure password method",
 	"NULL authentication",
+	"SM2 signature",
 	"digital signature");
 ENUM_NEXT(auth_method_names, AUTH_XAUTH_INIT_PSK, AUTH_HYBRID_RESP_RSA, AUTH_DS,
 	"XAuthInitPSK",
@@ -97,6 +98,7 @@ authenticator_t *authenticator_create_verifier(
 	}
 	switch (auth_payload->get_auth_method(auth_payload))
 	{
+		case AUTH_SM2:
 		case AUTH_RSA:
 		case AUTH_ECDSA_256:
 		case AUTH_ECDSA_384:
@@ -144,6 +146,10 @@ authenticator_t *authenticator_create_v1(ike_sa_t *ike_sa, bool initiator,
 			return (authenticator_t*)pubkey_v1_authenticator_create(ike_sa,
 										initiator, dh, dh_value, sa_payload,
 										id_payload, KEY_ECDSA);
+		case AUTH_SM2:
+			return (authenticator_t*)pubkey_v1_authenticator_create(ike_sa,
+										initiator, dh, dh_value, sa_payload,
+										id_payload, KEY_SM2);
 		case AUTH_HYBRID_INIT_RSA:
 		case AUTH_HYBRID_RESP_RSA:
 			return (authenticator_t*)hybrid_authenticator_create(ike_sa,

@@ -45,6 +45,7 @@ static public_key_t *parse_public_key(chunk_t blob)
 	int objectID;
 	public_key_t *key = NULL;
 	key_type_t type = KEY_ANY;
+	chunk_t  param = chunk_empty;
 
 	parser = asn1_parser_create(pkinfoObjects, blob);
 
@@ -54,8 +55,14 @@ static public_key_t *parse_public_key(chunk_t blob)
 		{
 			case PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM:
 			{
+				/** Orginal version
+				 * 
+				 * int oid = asn1_parse_algorithmIdentifier(object,
+				 * 						parser->get_level(parser)+1, NULL);
+				*/
+
 				int oid = asn1_parse_algorithmIdentifier(object,
-										parser->get_level(parser)+1, NULL);
+										parser->get_level(parser)+1, &param));
 
 				if (oid == OID_RSA_ENCRYPTION || oid == OID_RSAES_OAEP ||
 					oid == OID_RSASSA_PSS)
@@ -68,9 +75,26 @@ static public_key_t *parse_public_key(chunk_t blob)
 				}
 				else if (oid == OID_EC_PUBLICKEY)
 				{
+					key_type_t type = KEY_ECDSA;
+
+					if(param.len > 2)
+					{
+						int oid_sm2 = asn1_known_oid(chunk_create(param.ptr+2,
+												param.len - 2));
+						if (oid_sm2 == OID_SM2)
+						{
+							type = KEY_SM2;
+						}
+					}
+
 					/* Need the whole subjectPublicKeyInfo for EC public keys */
+					/** Orginal version
+					 * 
+					 * key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
+					 *			KEY_ECDSA, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
+					*/
 					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
-								KEY_ECDSA, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
+								type, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
 					goto end;
 				}
 				else if (oid == OID_BLISS_PUBLICKEY)
@@ -293,6 +317,29 @@ static bool is_ec_private_key(chunk_t blob)
 		   (!blob.len || (asn1_unwrap(&blob, &data) == ASN1_CONTEXT_C_1));
 }
 
+static key_type_t get_ec_private_key_type(chunk_t blob)
+{
+	chunk_t data;
+	key_type_t type = KEY_ECDSA;
+
+	if(asn1_unwrap(&blob, &blob) == ASN1_SEQUENCE &&
+			asn1_unwrap(&blob, &data) == ASN1_INTEGER &&
+			asn1_unwrap(&blob, &data) == ASN1_OCTET_STRING &&
+			asn1_unwrap(&blob, &data) == ASN1_CONTEXT_C_0)
+	{
+		if(data.len > 2)
+		{
+			int oid_sm2 = asn1_known_oid(chunk_create(data.ptr+2, data.len - 2));
+
+			if (oid_sm2 == OID_SM2)
+			{
+				type = KEY_SM2;
+			}
+		}
+	}
+	return type;
+}
+
 /**
  * Check if the ASN.1 structure looks like a BLISS private key.
  */
@@ -314,7 +361,14 @@ static private_key_t *parse_private_key(chunk_t blob)
 {
 	if (is_ec_private_key(blob))
 	{
-		return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+		key_type_t type = get_ec_private_key_type(blob);
+		/** Orginal code
+		 * return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ECDSA,
+		 *						  BUILD_BLOB_ASN1_DER, blob, BUILD_END);
+		 */
+		
+		/** Updated by zhangke */
+		return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, type,
 								  BUILD_BLOB_ASN1_DER, blob, BUILD_END);
 	}
 	else if (is_bliss_private_key(blob))

@@ -423,6 +423,9 @@ static auth_method_t get_pubkey_method(private_phase1_t *this, auth_cfg_t *auth)
 					case KEY_RSA:
 						method = AUTH_RSA;
 						break;
+					case KEY_SM2:
+						method = AUTH_SM2;
+						break;
 					case KEY_ECDSA:
 						switch (private->get_keysize(private))
 						{
@@ -531,6 +534,7 @@ static bool check_auth_method(private_phase1_t *this, peer_cfg_t *peer_cfg,
 	method = calc_auth_method(this, peer_cfg);
 	switch (given)
 	{
+		case AUTH_SM2:
 		case AUTH_ECDSA_256:
 		case AUTH_ECDSA_384:
 		case AUTH_ECDSA_521:
