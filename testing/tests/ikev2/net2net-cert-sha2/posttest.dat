@@ -1,0 +1,5 @@
+moon::systemctl stop strongswan
+sun::systemctl stop strongswan
+moon::iptables-restore < /etc/iptables.flush
+sun::iptables-restore < /etc/iptables.flush
+

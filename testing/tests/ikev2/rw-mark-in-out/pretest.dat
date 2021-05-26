@@ -1,0 +1,20 @@
+alice::iptables-restore < /etc/iptables.rules
+venus::iptables-restore < /etc/iptables.rules
+sun::iptables-restore < /etc/iptables.rules
+winnetou::ip route add 10.1.0.0/16 via PH_IP_MOON
+sun::ip route add 10.1.0.0/16 via PH_IP_MOON
+# NAT client traffic to distinct virtual IPs
+sun::iptables -t nat -A POSTROUTING -o eth1 -m mark --mark 10 -j SNAT --to 10.3.0.10
+sun::iptables -t nat -A POSTROUTING -o eth1 -m mark --mark 20 -j SNAT --to 10.3.0.20
+# mark the return traffic accordingly
+sun::iptables -t mangle -A PREROUTING -d 10.3.0.10 -j MARK --set-mark 11
+sun::iptables -t mangle -A PREROUTING -d 10.3.0.20 -j MARK --set-mark 21
+sun::systemctl start strongswan
+alice::systemctl start strongswan
+venus::systemctl start strongswan
+sun::expect-connection alice
+alice::expect-connection home
+alice::swanctl --initiate --child home
+sun::expect-connection venus
+venus::expect-connection home
+venus::swanctl --initiate --child home

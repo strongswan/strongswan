@@ -1,0 +1,13 @@
+The roadwarriors <b>alice</b> and <b>venus</b> sitting behind the router <b>moon</b> set up
+tunnels to gateway <b>sun</b>. Since both roadwarriors possess the same 10.1.0.0/25 subnet,
+gateway <b>sun</b> uses Source NAT after ESP decryption to map these subnets to 10.3.0.10
+and 10.3.0.20, respectively.
+<p/>
+In order to differentiate between the tunnels to <b>alice</b> and <b>venus</b>, respectively,
+<b>XFRM marks</b> are defined for both the inbound and outbound IPsec SAs and policies using
+the <b>mark_in</b> and <b>mark_out</b> options. With the <b>set_mark_in</b> option, the
+corresponding mark is applied to the inbound packets after decryption. Return traffic is
+marked via <b>iptables -t mangle</b> rules in the PREROUTING chain.
+<p/>
+In order to test the tunnel, the hosts <b>alice</b> and <b>venus</b> ping the client
+<b>bob</b> behind the gateway <b>sun</b>.

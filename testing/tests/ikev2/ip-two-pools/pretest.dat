@@ -4,8 +4,9 @@ alice::iptables-restore < /etc/iptables.rules
 moon::systemctl start strongswan
 carol::systemctl start strongswan
 alice::systemctl start strongswan
-moon::expect-connection rw
+moon::expect-connection rw1
 carol::expect-connection home
 carol::swanctl --initiate --child home 2> /dev/null
+moon::expect-connection rw2
 alice::expect-connection home
 alice::swanctl --initiate --child home 2> /dev/null

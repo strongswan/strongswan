@@ -2,5 +2,7 @@ moon::systemctl stop strongswan
 sun::systemctl stop strongswan
 moon::cd /etc/swanctl; rm dnssec.keys pubkey/*
 sun::cd /etc/swanctl; rm dnssec.keys pubkey/*
+moon::rm /etc/resolv.conf
+sun::rm /etc/resolv.conf
 moon::iptables-restore < /etc/iptables.flush
 sun::iptables-restore < /etc/iptables.flush

@@ -1,0 +1,5 @@
+By setting <b>revocation = strict</b> a <b>strict CRL policy</b> is enforced on
+both roadwarrior <b>carol</b> and gateway <b>moon</b>. When <b>carol</b> initiates
+an IPsec connection to <b>moon</b>, both VPN endpoints find a cached CRL in
+their <b>/etc/swanctl/x509crl/</b> directories which allows them to immediately verify
+the certificate received from their peer.
