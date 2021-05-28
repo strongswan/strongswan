@@ -14,7 +14,7 @@
 
 #include <wolfssl/options.h>
 
-#ifdef WOLFSSL_SHAKE256
+#if defined WOLFSSL_SHAKE256 && !defined WOLFSSL_NO_SHAKE256
 
 #include <wolfssl/wolfcrypt/sha3.h>
 
@@ -149,4 +149,4 @@ xof_t *wolfssl_xof_create(ext_out_function_t algorithm)
 	return &this->public;
 }
 
-#endif /* WOLFSSL_SHAKE256 */
+#endif /* WOLFSSL_SHAKE256 && !WOLFSSL_NO_SHAKE256 */
