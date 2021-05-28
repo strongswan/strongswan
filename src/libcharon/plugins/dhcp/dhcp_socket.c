@@ -418,6 +418,9 @@ METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 		DBG1(DBG_CFG, "DHCP DISCOVER timed out");
 		return NULL;
 	}
+	DBG1(DBG_CFG, "received DHCP OFFER %H from %H",
+		 transaction->get_address(transaction),
+		 transaction->get_server(transaction));
 
 	try = 1;
 	while (try <= DHCP_TRIES && request(this, transaction))
@@ -437,6 +440,8 @@ METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 		return NULL;
 	}
 	this->mutex->unlock(this->mutex);
+	DBG1(DBG_CFG, "received DHCP ACK for %H",
+		 transaction->get_address(transaction));
 
 	return transaction;
 }
@@ -550,7 +555,6 @@ static void handle_offer(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 			server = host_create_from_chunk(AF_INET,
 				chunk_from_thing(dhcp->server_address), DHCP_SERVER_PORT);
 		}
-		DBG1(DBG_CFG, "received DHCP OFFER %H from %H", offer, server);
 		transaction->set_address(transaction, offer->clone(offer));
 		transaction->set_server(transaction, server);
 	}
@@ -566,10 +570,6 @@ static void handle_ack(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 {
 	dhcp_transaction_t *transaction;
 	enumerator_t *enumerator;
-	host_t *offer;
-
-	offer = host_create_from_chunk(AF_INET,
-						chunk_from_thing(dhcp->your_address), 0);
 
 	this->mutex->lock(this->mutex);
 	enumerator = this->request->create_enumerator(this->request);
@@ -577,7 +577,6 @@ static void handle_ack(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 	{
 		if (transaction->get_id(transaction) == dhcp->transaction_id)
 		{
-			DBG1(DBG_CFG, "received DHCP ACK for %H", offer);
 			this->request->remove_at(this->request, enumerator);
 			this->completed->insert_last(this->completed, transaction);
 			break;
@@ -586,7 +585,6 @@ static void handle_ack(private_dhcp_socket_t *this, dhcp_t *dhcp, int optlen)
 	enumerator->destroy(enumerator);
 	this->mutex->unlock(this->mutex);
 	this->condvar->broadcast(this->condvar);
-	offer->destroy(offer);
 }
 
 /**
