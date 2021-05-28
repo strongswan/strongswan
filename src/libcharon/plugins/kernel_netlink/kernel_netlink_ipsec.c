@@ -899,9 +899,10 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 	size_t rtasize;
 	traffic_selector_t *src_ts, *dst_ts;
 	uint32_t reqid = 0;
-	int proto = 0;
+	uint8_t proto;
 
 	acquire = NLMSG_DATA(hdr);
+	proto = acquire->id.proto;
 	rta = XFRM_RTA(hdr, struct xfrm_user_acquire);
 	rtasize = XFRM_PAYLOAD(hdr, struct xfrm_user_acquire);
 
@@ -916,7 +917,6 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 			struct xfrm_user_tmpl* tmpl;
 			tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rta);
 			reqid = tmpl->reqid;
-			proto = tmpl->id.proto;
 		}
 		rta = RTA_NEXT(rta, rtasize);
 	}
