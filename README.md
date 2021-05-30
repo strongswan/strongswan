@@ -4,7 +4,12 @@
 
 The most part of the GM algorithm and integrate modification is contributed by [Zhangke](https://github.com/zhangke5959), code base is at [zhangke5959/strongswan](https://github.com/zhangke5959/strongswan).
 
-And also thanks to [Allen Lee](https://github.com/allen0228) and his [contribution](https://github.com/allen0228/strongswan-gmalg), the minor bug fix made the whole system working as [expected](https://github.com/zhangke5959/strongswan/issues/11#issuecomment-764075441).
+And also thanks to:
+
+[Allen Lee](https://github.com/allen0228) and his [contribution](https://github.com/zhangke5959/strongswan/issues/11#issuecomment-764075441)
+
+[Lin Chen](https://github.com/lynchen) and his commit [40eefd8](https://github.com/lynchen/strongswan-gmalg/commit/40eefd800a1347e8c475a637a1cf9ffe4521114f),[214cb34e](https://github.com/lynchen/strongswan-gmalg/commit/214cb34e7033c6e43e7dea25ff5bacee7a014148)
+
 
 In this repo, we merged the integrate modification to the [strongswan master branch](https://github.com/strongswan/strongswan) and fixed some code bug reported by the complier, so the GM algorithm can be integrated with latest [strongswan](https://github.com/strongswan/strongswan) release.
 
