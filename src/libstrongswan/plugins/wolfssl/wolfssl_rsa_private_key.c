@@ -686,6 +686,8 @@ wolfssl_rsa_private_key_t *wolfssl_rsa_private_key_load(key_type_t type,
 	}
 	else if (n.ptr && e.ptr && d.ptr)
 	{
+		this->rsa.type = RSA_PRIVATE;
+
 		if (mp_read_unsigned_bin(&this->rsa.n, n.ptr, n.len) != 0)
 		{
 			goto error;
