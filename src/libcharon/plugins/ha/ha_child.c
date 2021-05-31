@@ -66,6 +66,10 @@ METHOD(listener_t, child_keys, bool,
 	{	/* do not sync SA between nodes */
 		return TRUE;
 	}
+	if (child_sa->use_per_cpu(child_sa))
+	{	/* ignore per-CPU SAs */
+		return TRUE;
+	}
 
 	m = ha_message_create(HA_CHILD_ADD);
 
@@ -167,7 +171,10 @@ METHOD(listener_t, child_state_change, bool,
 	{	/* do not sync SA between nodes */
 		return TRUE;
 	}
-
+	if (child_sa->use_per_cpu(child_sa))
+	{	/* ignore per-CPU SAs */
+		return TRUE;
+	}
 
 	if (state == CHILD_DESTROYING)
 	{
