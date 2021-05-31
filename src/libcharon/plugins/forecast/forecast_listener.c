@@ -500,7 +500,8 @@ static bool commit_handle(struct iptc_handle *ipth)
 static bool handle_sa(child_sa_t *child_sa)
 {
 	return child_sa->get_mark(child_sa, TRUE).value &&
-		   child_sa->get_mark(child_sa, FALSE).value;
+		   child_sa->get_mark(child_sa, FALSE).value &&
+		   !child_sa->use_per_cpu(child_sa);
 }
 
 METHOD(listener_t, child_updown, bool,
