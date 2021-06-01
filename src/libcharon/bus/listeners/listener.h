@@ -100,13 +100,17 @@ struct listener_t {
 	 * Hook called with derived IKE_SA keys.
 	 *
 	 * @param ike_sa	IKE_SA these keys belong to
-	 * @param sk_ei		SK_ei, or Ka for IKEv1
-	 * @param sk_er		SK_er
+	 * @param sk_d		SK_d, or SKEYID_d for IKEv1
 	 * @param sk_ai		SK_ai, or SKEYID_a for IKEv1
 	 * @param sk_ar		SK_ar
+	 * @param sk_ei		SK_ei, or Ka for IKEv1
+	 * @param sk_er		SK_er
+	 * @param sk_pi		SK_pi
+	 * @param sk_pr		SK_pr
 	 */
-	bool (*ike_derived_keys)(listener_t *this, ike_sa_t *ike_sa, chunk_t sk_ei,
-							 chunk_t sk_er, chunk_t sk_ai, chunk_t sk_ar);
+	bool (*ike_derived_keys)(listener_t *this, ike_sa_t *ike_sa, chunk_t sk_d,
+							 chunk_t sk_ai, chunk_t sk_ar, chunk_t sk_ei,
+							 chunk_t sk_er, chunk_t sk_pi, chunk_t sk_pr);
 
 	/**
 	 * Hook called with CHILD_SA key material.

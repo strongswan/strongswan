@@ -604,8 +604,8 @@ METHOD(bus_t, ike_keys, void,
 }
 
 METHOD(bus_t, ike_derived_keys, void,
-	private_bus_t *this, chunk_t sk_ei, chunk_t sk_er, chunk_t sk_ai,
-	chunk_t sk_ar)
+	private_bus_t *this, chunk_t sk_d, chunk_t sk_ai, chunk_t sk_ar,
+	chunk_t sk_ei, chunk_t sk_er, chunk_t sk_pi, chunk_t sk_pr)
 {
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
@@ -623,8 +623,9 @@ METHOD(bus_t, ike_derived_keys, void,
 			continue;
 		}
 		entry->calling++;
-		keep = entry->listener->ike_derived_keys(entry->listener, ike_sa, sk_ei,
-												 sk_er, sk_ai, sk_ar);
+		keep = entry->listener->ike_derived_keys(entry->listener, ike_sa, sk_d,
+												 sk_ai, sk_ar, sk_ei, sk_er,
+												 sk_pi, sk_pr);
 		entry->calling--;
 		if (!keep)
 		{

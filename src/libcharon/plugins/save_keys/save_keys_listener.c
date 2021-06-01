@@ -276,8 +276,9 @@ static inline void esp_names(proposal_t *proposal, const char **enc,
 }
 
 METHOD(listener_t, ike_derived_keys, bool,
-	private_save_keys_listener_t *this, ike_sa_t *ike_sa, chunk_t sk_ei,
-	chunk_t sk_er, chunk_t sk_ai, chunk_t sk_ar)
+	private_save_keys_listener_t *this, ike_sa_t *ike_sa, chunk_t sk_d,
+	chunk_t sk_ai, chunk_t sk_ar, chunk_t sk_ei, chunk_t sk_er, chunk_t sk_pi,
+	chunk_t sk_pr)
 {
 	ike_version_t version;
 	ike_sa_id_t *id;

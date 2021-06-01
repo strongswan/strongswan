@@ -363,13 +363,17 @@ struct bus_t {
 	/**
 	 * IKE_SA derived keys hook.
 	 *
-	 * @param sk_ei		SK_ei, or Ka for IKEv1
-	 * @param sk_er		SK_er
+	 * @param sk_d		SK_d, or SKEYID_d for IKEv1
 	 * @param sk_ai		SK_ai, or SKEYID_a for IKEv1
 	 * @param sk_ar		SK_ar
+	 * @param sk_ei		SK_ei, or Ka for IKEv1
+	 * @param sk_er		SK_er
+	 * @param sk_pi		SK_pi
+	 * @param sk_pr		SK_pr
 	 */
-	void (*ike_derived_keys)(bus_t *this, chunk_t sk_ei, chunk_t sk_er,
-							 chunk_t sk_ai, chunk_t sk_ar);
+	void (*ike_derived_keys)(bus_t *this, chunk_t sk_d, chunk_t sk_ai,
+							 chunk_t sk_ar, chunk_t sk_ei, chunk_t sk_er,
+							 chunk_t sk_pi, chunk_t sk_pr);
 
 	/**
 	 * CHILD_SA keymat hook.
