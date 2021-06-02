@@ -529,15 +529,16 @@ CALLBACK(list_sas, vici_message_t*,
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	time_t now;
-	char *ike;
-	u_int ike_id;
+	char *ike, *child;
+	u_int ike_id, child_id;
 	bool bl;
 	char buf[BUF_LEN];
-
 
 	bl = request->get_str(request, NULL, "noblock") == NULL;
 	ike = request->get_str(request, NULL, "ike");
 	ike_id = request->get_int(request, 0, "ike-id");
+	child = request->get_str(request, NULL, "child");
+	child_id = request->get_int(request, 0, "child-id");
 
 	isas = charon->controller->create_ike_sa_enumerator(charon->controller, bl);
 	while (isas->enumerate(isas, &ike_sa))
@@ -562,6 +563,15 @@ CALLBACK(list_sas, vici_message_t*,
 		csas = ike_sa->create_child_sa_enumerator(ike_sa);
 		while (csas->enumerate(csas, &child_sa))
 		{
+			if (child && !streq(child, child_sa->get_name(child_sa)))
+			{
+				continue;
+			}
+			if (child_id && child_sa->get_unique_id(child_sa) != child_id)
+			{
+				continue;
+			}
+
 			snprintf(buf, sizeof(buf), "%s-%u", child_sa->get_name(child_sa),
 					 child_sa->get_unique_id(child_sa));
 			b->begin_section(b, buf);

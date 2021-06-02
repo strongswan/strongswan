@@ -277,7 +277,7 @@ Terminates an SA while streaming _control-log_ events.
 	{
 		child = <terminate a CHILD_SA by configuration name>
 		ike = <terminate an IKE_SA by configuration name>
-		child-id = <terminate a CHILD_SA by its reqid>
+		child-id = <terminate a CHILD_SA by its unique id>
 		ike-id = <terminate an IKE_SA by its unique id>
 		force = <terminate IKE_SA without waiting for proper DELETE, if timeout
 				 is given, waits for a response until it is reached>
@@ -300,7 +300,7 @@ Initiate the rekeying of an SA.
 	{
 		child = <rekey a CHILD_SA by configuration name>
 		ike = <rekey an IKE_SA by configuration name>
-		child-id = <rekey a CHILD_SA by its reqid>
+		child-id = <rekey a CHILD_SA by its unique id>
 		ike-id = <rekey an IKE_SA by its unique id>
 		reauth = <reauthenticate instead of rekey an IKEv2 SA>
 	} => {
@@ -361,6 +361,8 @@ events.
 		noblock = <use non-blocking mode if key is set>
 		ike = <filter listed IKE_SAs by its name>
 		ike-id = <filter listed IKE_SA by its unique id>
+		child = <filter listed CHILD_SAs by name>
+		child-id = <filter listed CHILD_SAs by unique id>
 	} => {
 		# completes after streaming list-sa events
 	}
