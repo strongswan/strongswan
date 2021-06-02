@@ -406,12 +406,16 @@ do
 	echo -e "\nPRE-TEST\n" >> $CONSOLE_LOG 2>&1
 
 	eval `awk -F "::" '{
-	    if ($1 !~ /^#.*/ && $2 != "")
-	    {
-		printf("echo \"$(print_time)%s# %s\"; ", $1, $2)
-		printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
-		printf("echo;\n")
-	    }
+		if ($0 ~ /^#.*/)
+		{
+			printf("echo \"%s\"; ", $0);
+		}
+		else if ($2 != "")
+		{
+			printf("echo \"$(print_time)%s# %s\"; ", $1, $2)
+			printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
+			printf("echo;\n")
+		}
 	}' $TESTDIR/pretest.dat` >> $CONSOLE_LOG 2>&1
 
 
@@ -443,7 +447,12 @@ do
 		command=$2
 		pattern=$3
 		hit=$4
-		if (host ~ /^#.*/ || command == "")
+		if ($0 ~ /^#.*/)
+		{
+			printf("echo \"%s\"; ", $0);
+			next
+		}
+		else if (command == "")
 		{
 			next
 		}
@@ -766,12 +775,16 @@ do
 	echo -e "\nPOST-TEST\n" >> $CONSOLE_LOG 2>&1
 
 	eval `awk -F "::" '{
-	    if ($1 !~ /^#.*/ && $2 != "")
-	    {
-		printf("echo \"$(print_time)%s# %s\"; ", $1, $2)
-		printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
-		printf("echo;\n")
-	    }
+		if ($0 ~ /^#.*/)
+		{
+			printf("echo \"%s\"; ", $0);
+		}
+		else if ($2 != "")
+		{
+			printf("echo \"$(print_time)%s# %s\"; ", $1, $2)
+			printf("ssh \044SSHCONF root@\044ipv4_%s \"%s\"; ", $1, $2)
+			printf("echo;\n")
+		}
 	}' $TESTDIR/posttest.dat` >> $CONSOLE_LOG 2>&1
 
 	##########################################################################
