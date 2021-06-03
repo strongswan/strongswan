@@ -415,10 +415,13 @@ KEY_PWD="nH5ZQEWtku0RJEZ6"
 openssl rsa -in ${HOST_KEY} -aes128 --passout pass:${KEY_PWD} -out ${HOST_KEY} \
         2> /dev/null
 
-# Put a copy into the ikev2/rw-cert scenario
-TEST="${TEST_DIR}/ikev2/rw-cert"
-mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
-cp ${HOST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
+# Put a copy into the ikev2, botan and wolfssl rw-cert scenarios
+for d in ikev2 botan wolfssl
+do
+  TEST="${TEST_DIR}/${d}/rw-cert"
+  mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
+  cp ${HOST_KEY} ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
+done
 
 # Generate another carol certificate and revoke it
 TEST="${TEST_DIR}/ikev2/crl-revoked"
@@ -1413,18 +1416,21 @@ pki --issue --cakey ${SHA3_RSA_KEY} --cacert ${SHA3_RSA_CERT} --type rsa \
     --crl ${SHA3_RSA_CDP} --digest sha3_256 --outform pem > ${MOON_CERT}
 cp ${MOON_CERT} ${SHA3_RSA_DIR}/certs/${SERIAL}.pem
 
-# Put a copy in the botan/net2net-sha3-rsa-cert scenario
-TEST="${TEST_DIR}/botan/net2net-sha3-rsa-cert"
-cd ${TEST}/hosts/moon/${SWANCTL_DIR}
-mkdir -p rsa x509 x509ca
-cp ${MOON_KEY}      rsa
-cp ${MOON_CERT}     x509
-cp ${SHA3_RSA_CERT} x509ca
-cd ${TEST}/hosts/sun/${SWANCTL_DIR}
-mkdir -p rsa x509 x509ca
-cp ${SUN_KEY}       rsa
-cp ${SUN_CERT}      x509
-cp ${SHA3_RSA_CERT} x509ca
+# Put a copy in the botan and wolfssl net2net-sha3-rsa-cert scenarios
+for d in botan wolfssl
+do
+  TEST="${TEST_DIR}/${d}/net2net-sha3-rsa-cert"
+  cd ${TEST}/hosts/moon/${SWANCTL_DIR}
+  mkdir -p rsa x509 x509ca
+  cp ${MOON_KEY}      rsa
+  cp ${MOON_CERT}     x509
+  cp ${SHA3_RSA_CERT} x509ca
+  cd ${TEST}/hosts/sun/${SWANCTL_DIR}
+  mkdir -p rsa x509 x509ca
+  cp ${SUN_KEY}       rsa
+  cp ${SUN_CERT}      x509
+  cp ${SHA3_RSA_CERT} x509ca
+done
 
 # Put a copy in the ikev2/rw-eap-tls-sha3-rsa scenario
 TEST="${TEST_DIR}/ikev2/rw-eap-tls-sha3-rsa"
@@ -1519,18 +1525,21 @@ pki --issue --cakey ${ED25519_KEY} --cacert ${ED25519_CERT} --type ed25519 \
     --crl ${ED25519_CDP} --outform pem > ${MOON_CERT}
 cp ${MOON_CERT} ${ED25519_DIR}/certs/${SERIAL}.pem
 
-# Put a copy in the botan/net2net-ed25519 scenario
-TEST="${TEST_DIR}/botan/net2net-ed25519"
-cd ${TEST}/hosts/moon/${SWANCTL_DIR}
-mkdir -p pkcs8 x509 x509ca
-cp ${MOON_KEY}     pkcs8
-cp ${MOON_CERT}    x509
-cp ${ED25519_CERT} x509ca
-cd ${TEST}/hosts/sun/${SWANCTL_DIR}
-mkdir -p pkcs8 x509 x509ca
-cp ${SUN_KEY}      pkcs8
-cp ${SUN_CERT}     x509
-cp ${ED25519_CERT} x509ca
+# Put a copy in the botan and wolfssl net2net-ed25519 scenarios
+for d in botan wolfssl
+do
+  TEST="${TEST_DIR}/${d}/net2net-ed25519"
+  cd ${TEST}/hosts/moon/${SWANCTL_DIR}
+  mkdir -p pkcs8 x509 x509ca
+  cp ${MOON_KEY}     pkcs8
+  cp ${MOON_CERT}    x509
+  cp ${ED25519_CERT} x509ca
+  cd ${TEST}/hosts/sun/${SWANCTL_DIR}
+  mkdir -p pkcs8 x509 x509ca
+  cp ${SUN_KEY}      pkcs8
+  cp ${SUN_CERT}     x509
+  cp ${ED25519_CERT} x509ca
+done
 
 # Put a copy in the ikev2/rw-ed25519-certpol scenario
 TEST="${TEST_DIR}/ikev2/rw-ed25519-certpol"
