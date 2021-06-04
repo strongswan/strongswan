@@ -33,8 +33,9 @@
 #define COOKIE_LIFETIME 10
 /** time we wait before disabling cookies */
 #define COOKIE_CALMDOWN_DELAY 10
-/** how many times to reuse the secret */
-#define COOKIE_REUSE 10000
+/** time in seconds we use a secret at most (since we keep two secrets, must
+ * be at least COOKIE_LIFETIME to process all outstanding valid cookies)  */
+#define COOKIE_SECRET_SWITCH 120
 /** default value for private_receiver_t.cookie_threshold */
 #define COOKIE_THRESHOLD_DEFAULT 10
 /** default value for private_receiver_t.block_threshold */
@@ -79,14 +80,9 @@ struct private_receiver_t {
 	char secret_old[SECRET_LENGTH];
 
 	/**
-	 * how many times we have used "secret" so far
+	 * time we used the current secret first
 	 */
-	uint32_t secret_used;
-
-	/**
-	 * time we did the cookie switch
-	 */
-	uint32_t secret_switch;
+	uint32_t secret_first_use;
 
 	/**
 	 * time offset to use, hides our system time
@@ -232,7 +228,7 @@ static bool cookie_verify(private_receiver_t *this, message_t *message,
 	}
 
 	/* check if cookie is derived from old_secret */
-	if (t + this->secret_offset > this->secret_switch)
+	if (t + this->secret_offset >= this->secret_first_use)
 	{
 		secret = chunk_from_thing(this->secret);
 	}
@@ -334,9 +330,33 @@ static bool drop_ike_sa_init(private_receiver_t *this, message_t *message)
 	{
 		chunk_t cookie;
 
-		DBG2(DBG_NET, "received packet from: %#H to %#H",
+		DBG2(DBG_NET, "received packet: from %#H to %#H (%zu bytes)",
 			 message->get_source(message),
-			 message->get_destination(message));
+			 message->get_destination(message),
+			 message->get_packet_data(message).len);
+
+		if (!this->secret_first_use)
+		{
+			this->secret_first_use = now;
+		}
+		else if (now - this->secret_first_use > COOKIE_SECRET_SWITCH)
+		{
+			char secret[SECRET_LENGTH];
+
+			DBG1(DBG_NET, "generating new cookie secret after %ds since first "
+				 "use", now - this->secret_first_use);
+			if (this->rng->get_bytes(this->rng, SECRET_LENGTH, secret))
+			{
+				memcpy(this->secret_old, this->secret, SECRET_LENGTH);
+				memcpy(this->secret, secret, SECRET_LENGTH);
+				memwipe(secret, SECRET_LENGTH);
+				this->secret_first_use = now;
+			}
+			else
+			{
+				DBG1(DBG_NET, "failed to allocated cookie secret, keeping old");
+			}
+		}
 		if (!cookie_build(this, message, now - this->secret_offset,
 						  chunk_from_thing(this->secret), &cookie))
 		{
@@ -346,25 +366,6 @@ static bool drop_ike_sa_init(private_receiver_t *this, message_t *message)
 			 message->get_source(message));
 		send_notify(message, IKEV2_MAJOR_VERSION, IKE_SA_INIT, COOKIE, cookie);
 		chunk_free(&cookie);
-		if (++this->secret_used > COOKIE_REUSE)
-		{
-			char secret[SECRET_LENGTH];
-
-			DBG1(DBG_NET, "generating new cookie secret after %d uses",
-				 this->secret_used);
-			if (this->rng->get_bytes(this->rng, SECRET_LENGTH, secret))
-			{
-				memcpy(this->secret_old, this->secret, SECRET_LENGTH);
-				memcpy(this->secret, secret, SECRET_LENGTH);
-				memwipe(secret, SECRET_LENGTH);
-				this->secret_switch = now;
-				this->secret_used = 0;
-			}
-			else
-			{
-				DBG1(DBG_NET, "failed to allocated cookie secret, keeping old");
-			}
-		}
 		return TRUE;
 	}
 
@@ -628,7 +629,6 @@ receiver_t *receiver_create()
 			.destroy = _destroy,
 		},
 		.esp_cb_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		.secret_switch = now,
 		.secret_offset = now ? random() % now : 0,
 	);
 
