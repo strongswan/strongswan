@@ -174,11 +174,11 @@ static struct {
 	  "\xf4\xed\x19\xe0\xc1\x14\xeb\x51\x6f\xaa\xac\x0e\xe3\x7d\xaf\x28\x07\xb4\x38\x1f"},
 
 	/* Juniper SRX and Netscreen devices send this VID and a version number */
-	{ "NetScreen Technologies", 0, NULL, TRUE, 20,
+	{ "NetScreen Technologies", 0, FALSE, TRUE, 20,
 	  "\x69\x93\x69\x22\x87\x41\xc6\xd4\xca\x09\x4c\x93\xe2\x42\xc9\xde\x19\xe7\xb7\xc6"},
 
 	/* Probably the Juniper SRX VID */
-	{ "Juniper SRX", 0, NULL, FALSE, 20,
+	{ "Juniper SRX", 0, FALSE, FALSE, 20,
 	  "\xfd\x80\x88\x04\xdf\x73\xb1\x51\x50\x70\x9d\x87\x80\x44\xcd\xe0\xac\x1e\xfc\xde"},
 
 }, vendor_natt_ids[] = {
@@ -186,7 +186,7 @@ static struct {
 	/* NAT-Traversal VIDs ordered by preference */
 
 	/* NAT-Traversal, MD5("RFC 3947") */
-	{ "NAT-T (RFC 3947)", EXT_NATT, FALSE, TRUE, 16,
+	{ "NAT-T (RFC 3947)", EXT_NATT, TRUE, FALSE, 16,
 	  "\x4a\x13\x1c\x81\x07\x03\x58\x45\x5c\x57\x28\xf2\x0e\x95\x45\x2f"},
 
 	{ "draft-ietf-ipsec-nat-t-ike-03", EXT_NATT | EXT_NATT_DRAFT_02_03,
@@ -198,7 +198,7 @@ static struct {
 	  "\xcd\x60\x46\x43\x35\xdf\x21\xf8\x7c\xfd\xb2\xfc\x68\xb6\xa4\x48"},
 
 	{ "draft-ietf-ipsec-nat-t-ike-02\\n", EXT_NATT | EXT_NATT_DRAFT_02_03,
-	  FALSE, TRUE, 16,
+	  TRUE, FALSE, 16,
 	  "\x90\xcb\x80\x91\x3e\xbb\x69\x6e\x08\x63\x81\xb5\xec\x42\x7b\x1f"},
 
 	{ "draft-ietf-ipsec-nat-t-ike-08", 0, FALSE, FALSE, 16,
