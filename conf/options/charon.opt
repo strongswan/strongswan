@@ -28,7 +28,8 @@ charon.accept_unencrypted_mainmode_messages = no
 	example, some SonicWall boxes).
 
 charon.block_threshold = 5
-	Maximum number of half-open IKE_SAs for a single peer IP.
+	Maximum number of half-open IKE_SAs (including unprocessed IKE_SA_INITs)
+	for a single peer IP.
 
 charon.cert_cache = yes
 	Whether relations in validated certificate chains should be cached in
@@ -70,11 +71,12 @@ charon.close_ike_on_child_failure = no
 	Close the IKE_SA if setup of the CHILD_SA along with IKE_AUTH failed.
 
 charon.cookie_threshold = 30
-	Number of half-open IKE_SAs that activate the cookie mechanism.
+	Number of half-open IKE_SAs (including unprocessed IKE_SA_INITs) that
+	activate the cookie mechanism.
 
 charon.cookie_threshold_ip = 3
-	Number of half-open IKE_SAs for a single peer IP that activate the cookie
-	mechanism.
+	Number of half-open IKE_SAs (including unprocessed IKE_SA_INITs) for a
+	single peer IP that activate the cookie	mechanism.
 
 charon.crypto_test.bench = no
 	Benchmark crypto algorithms and order them by efficiency.

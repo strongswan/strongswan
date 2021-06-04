@@ -86,6 +86,16 @@ struct ike_sa_manager_t {
 	ike_sa_t* (*checkout) (ike_sa_manager_t* this, ike_sa_id_t *sa_id);
 
 	/**
+	 * Track an initial IKE message as responder by increasing the number of
+	 * half-open IKE_SAs.
+	 *
+	 * @note It's expected that checkout_by_message() is called afterwards.
+	 *
+	 * @param ip				IP of sender
+	 */
+	void (*track_init)(ike_sa_manager_t *this, host_t *ip);
+
+	/**
 	 * Checkout an IKE_SA by a message.
 	 *
 	 * In some situations, it is necessary that the manager knows the
@@ -97,9 +107,12 @@ struct ike_sa_manager_t {
 	 *    retransmission. If so, we have to drop the message, we would
 	 *    create another unneeded IKE_SA for each retransmitted packet.
 	 *
-	 * A call to checkout_by_message() returns a (maybe new created) IKE_SA.
+	 * A call to checkout_by_message() returns a (maybe newly created) IKE_SA.
 	 * If processing the message does not make sense (for the reasons above),
 	 * NULL is returned.
+	 *
+	 * @note For initial IKE messages, track_init() has to be called before
+	 * calling this.
 	 *
 	 * @param ike_sa_id			the SA identifier, will be updated
 	 * @returns
