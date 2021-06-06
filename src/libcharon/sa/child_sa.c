@@ -779,7 +779,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 	chunk_t integ, uint32_t spi, uint16_t cpi, bool initiator, bool inbound,
 	bool tfcv3)
 {
-	uint16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, size;
+	uint16_t enc_alg = ENCR_UNDEFINED, int_alg = AUTH_UNDEFINED, dh_group = MODP_NULL, size;
 	uint16_t esn = NO_EXT_SEQ_NUMBERS;
 	linked_list_t *my_ts, *other_ts, *src_ts, *dst_ts;
 	time_t now;
@@ -840,6 +840,8 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 								  &enc_alg, &size);
 	this->proposal->get_algorithm(this->proposal, INTEGRITY_ALGORITHM,
 								  &int_alg, &size);
+	this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
+								  &dh_group, &size);
 	this->proposal->get_algorithm(this->proposal, EXTENDED_SEQUENCE_NUMBERS,
 								  &esn, NULL);
 
@@ -908,6 +910,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.enc_key = encr,
 		.int_alg = int_alg,
 		.int_key = integ,
+		.dh_group = dh_group,
 		.replay_window = this->config->get_replay_window(this->config),
 		.tfc = tfc,
 		.ipcomp = this->ipcomp,

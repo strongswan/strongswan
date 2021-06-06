@@ -83,6 +83,8 @@ struct kernel_ipsec_add_sa_t {
 	uint16_t int_alg;
 	/** Integrity protection key */
 	chunk_t int_key;
+	/** Diffie Hellman group */
+	uint16_t dh_group;
 	/** Anti-replay window size */
 	uint32_t replay_window;
 	/** Traffic Flow Confidentiality padding */
