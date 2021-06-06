@@ -296,7 +296,7 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file] [--group name]* --issuerkey file|--issuerkeyid hex",
 		 " --issuercert file [--serial hex] [--lifetime hours]",
 		 " [--not-before datetime] [--not-after datetime] [--dateform form]",
-		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
+		 "[--digest md5|sm3|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
 		 "[--rsa-padding pkcs1|pss]",
 		 "[--outform der|pem]"},
 		{
