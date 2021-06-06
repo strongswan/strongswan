@@ -44,7 +44,6 @@ jobs:
           - test: apidoc
           - test: coverage
           - test: dist
-          - test: nm
           - test: nm-no-glib
           - test: fuzzing
             compiler: clang
@@ -121,6 +120,44 @@ jobs:
           path: config.log
           retention-days: 5
 
+  bionic:
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        test: [ all ]
+        compiler: [ gcc, clang ]
+        include:
+          - test: nm
+    env:
+      LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
+      CC: ${{ matrix.compiler || 'gcc' }}
+      TEST: ${{ matrix.test }}
+      UBUNTU_BIONIC: yes
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: ccache-bionic-${{ env.CC }}-${{ matrix.test }}-${{ github.ref }}:${{ github.sha }}
+          restore-keys: |
+            ccache-bionic-${{ env.CC }}-${{ matrix.test }}-${{ github.ref }}:
+            ccache-bionic-${{ env.CC }}-${{ matrix.test }}-
+            ccache-bionic-${{ env.CC }}-
+      - run: |
+          sudo apt-get install -qq ccache
+          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
+          ccache -z
+      - uses: ./.github/actions/default
+      - run: ccache -s
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: Logs ${{ github.job }}
+          path: config.log
+          retention-days: 5
+
   xenial:
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
@@ -137,7 +174,6 @@ jobs:
       LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
-      UBUNTU_XENIAL: yes
       # this is the default with newer versions and fixes builds with clang
       CCACHE_CPP2: true
     steps:

@@ -123,6 +123,7 @@ log_action "Mounting proc filesystem to $LOOPDIR/proc"
 execute "mount -t proc none $LOOPDIR/proc"
 do_on_exit umount $LOOPDIR/proc
 
+mkdir -p $SHAREDDIR
 mkdir -p $LOOPDIR/root/shared
 log_action "Mounting $SHAREDDIR as /root/shared"
 execute "mount -o bind $SHAREDDIR $LOOPDIR/root/shared"

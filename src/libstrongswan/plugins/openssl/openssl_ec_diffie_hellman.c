@@ -506,7 +506,7 @@ EC_GROUP *ec_group_new_brainpool(bp_curve *curve)
 		goto failed;
 	}
 	G = EC_POINT_new(group);
-#ifdef OPENSSL_VERSION_NUMBER >= 0x1010100fL
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL
 	if (!G || !EC_POINT_set_affine_coordinates(group, G, x, y, ctx))
 #else
 	if (!G || !EC_POINT_set_affine_coordinates_GFp(group, G, x, y, ctx))

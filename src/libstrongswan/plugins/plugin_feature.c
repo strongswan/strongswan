@@ -518,24 +518,24 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 		case FEATURE_PRIVKEY_GEN:
 			lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY,
 								feature->arg.privkey, reg->arg.reg.final,
-								reg->arg.reg.f);
+								name, reg->arg.reg.f);
 			break;
 		case FEATURE_PUBKEY:
 			lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY,
 								feature->arg.pubkey, reg->arg.reg.final,
-								reg->arg.reg.f);
+								name, reg->arg.reg.f);
 			break;
 		case FEATURE_CERT_DECODE:
 		case FEATURE_CERT_ENCODE:
 			lib->creds->add_builder(lib->creds, CRED_CERTIFICATE,
 								feature->arg.cert, reg->arg.reg.final,
-								reg->arg.reg.f);
+								name, reg->arg.reg.f);
 			break;
 		case FEATURE_CONTAINER_DECODE:
 		case FEATURE_CONTAINER_ENCODE:
 			lib->creds->add_builder(lib->creds, CRED_CONTAINER,
 								feature->arg.container, reg->arg.reg.final,
-								reg->arg.reg.f);
+								name, reg->arg.reg.f);
 			break;
 		case FEATURE_DATABASE:
 			lib->db->add_database(lib->db, reg->arg.reg.f);

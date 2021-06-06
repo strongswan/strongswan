@@ -4,7 +4,7 @@
 build_botan()
 {
 	# same revision used in the build recipe of the testing environment
-	BOTAN_REV=2.17.1
+	BOTAN_REV=2.18.0
 	BOTAN_DIR=$DEPS_BUILD_DIR/botan
 
 	if test -d "$BOTAN_DIR"; then
@@ -92,6 +92,12 @@ build_tss2()
 : ${DEPS_BUILD_DIR=$BUILD_DIR/..}
 : ${DEPS_PREFIX=/usr/local}
 
+if [ -e /etc/os-release ]; then
+	. /etc/os-release
+elif [ -e /usr/lib/os-release ]; then
+	. /usr/lib/os-release
+fi
+
 TARGET=check
 
 DEPS="libgmp-dev"
@@ -111,7 +117,11 @@ openssl*)
 gcrypt)
 	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1"
 	export TESTS_PLUGINS="test-vectors pkcs1 gcrypt!"
-	DEPS="libgcrypt11-dev"
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
+		DEPS="libgcrypt20-dev"
+	else
+		DEPS="libgcrypt11-dev"
+	fi
 	;;
 botan)
 	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem"
@@ -134,6 +144,13 @@ printf-builtin)
 	CONFIG="--with-printf-hooks=builtin"
 	;;
 all|coverage|sonarcloud)
+	if [ "$TEST" = "sonarcloud" ]; then
+		if [ -z "$SONAR_PROJECT" -o -z "$SONAR_ORGANIZATION" -o -z "$SONAR_TOKEN" ]; then
+			echo "The SONAR_PROJECT, SONAR_ORGANIZATION and SONAR_TOKEN" \
+				 "environment variables are required to run this test"
+			exit 1
+		fi
+	fi
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
 			--disable-kernel-pfroute --disable-keychain
 			--disable-lock-profiler --disable-padlock --disable-fuzzing
@@ -151,17 +168,24 @@ all|coverage|sonarcloud)
 		DEPS="$DEPS lcov"
 	fi
 	# Botan requires newer compilers, so disable it on Ubuntu 16.04
-	if test -n "$UBUNTU_XENIAL"; then
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "16.04" ]; then
 		CONFIG="$CONFIG --disable-botan"
 	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
-		  libgcrypt20-dev libjson-c-dev iptables-dev python-pip libtspi-dev
-		  libsystemd-dev"
-	PYDEPS="tox"
+		  libgcrypt20-dev libjson-c-dev python3-pip libtspi-dev libsystemd-dev"
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
+		DEPS="$DEPS libiptc-dev"
+	else
+		DEPS="$DEPS iptables-dev python3-setuptools"
+	fi
+	# tox has dependencies that can't be resolved on 16.04 (even with pip)
+	if [ "$ID" != "ubuntu" -o "$VERSION_ID" != "16.04" ]; then
+		PYDEPS="tox"
+	fi
 	if test "$1" = "build-deps"; then
-		if test -z "$UBUNTU_XENIAL"; then
+		if [ "$ID" != "ubuntu" -o "$VERSION_ID" != "16.04" ]; then
 			build_botan
 		fi
 		build_wolfssl
@@ -301,8 +325,12 @@ apidoc)
 	TARGET=apidoc
 	;;
 lgtm)
+	if [ -z "$LGTM_PROJECT" -o -z "$LGTM_TOKEN" ]; then
+		echo "The LGTM_PROJECT and LGTM_TOKEN environment variables" \
+			 "are required to run this test"
+		exit 0
+	fi
 	DEPS="jq"
-
 	if test -z "$1"; then
 		base=$COMMIT_BASE
 		# after rebases or for new/duplicate branches, the passed base commit
@@ -314,12 +342,11 @@ lgtm)
 			base=$(git merge-base origin/master ${COMMIT_ID})
 		fi
 		base=$(git rev-parse $base)
-		project_id=1506185006272
 
 		echo "Starting code review for $COMMIT_ID (base $base) on lgtm.com"
 		git diff --binary $base > lgtm.patch || exit $?
 		curl -s -X POST --data-binary @lgtm.patch \
-			"https://lgtm.com/api/v1.0/codereviews/${project_id}?base=${base}&external-id=${BUILD_NUMBER}" \
+			"https://lgtm.com/api/v1.0/codereviews/${LGTM_PROJECT}?base=${base}&external-id=${BUILD_NUMBER}" \
 			-H 'Content-Type: application/octet-stream' \
 			-H 'Accept: application/json' \
 			-H "Authorization: Bearer ${LGTM_TOKEN}" > lgtm.res || exit $?
@@ -384,7 +411,7 @@ deps)
 	exit $?
 	;;
 pydeps)
-	test -z "$PYDEPS" || pip -q install --user $PYDEPS
+	test -z "$PYDEPS" || pip3 -q install --user $PYDEPS
 	exit $?
 	;;
 build-deps)

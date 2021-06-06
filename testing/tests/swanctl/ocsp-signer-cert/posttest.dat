@@ -1,3 +1,0 @@
-carol::swanctl --terminate --ike home
-carol::systemctl stop strongswan
-moon::systemctl stop strongswan

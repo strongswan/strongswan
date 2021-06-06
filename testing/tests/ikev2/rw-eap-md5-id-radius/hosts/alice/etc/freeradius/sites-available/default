@@ -1,4 +1,5 @@
 authorize {
+  suffix
   eap {
     ok = return
   }

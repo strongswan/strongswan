@@ -107,7 +107,8 @@ CONFIG_OPTS = \
 	--enable-systemd \
 	--enable-counters \
 	--enable-save-keys \
-	--enable-python-eggs
+	--enable-python-eggs \
+	--enable-wolfssl
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 

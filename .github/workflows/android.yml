@@ -48,8 +48,7 @@ jobs:
           ccache -z
       - uses: ./.github/actions/default
       - run: ccache -s
-      - if: ${{ success() }}
-        uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v2
         with:
           name: Lint Results
           path: src/frontends/android/app/build/reports/lint-results.xml

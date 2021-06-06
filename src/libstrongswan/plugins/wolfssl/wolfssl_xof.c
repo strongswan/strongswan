@@ -143,6 +143,7 @@ xof_t *wolfssl_xof_create(ext_out_function_t algorithm)
 	if (wc_InitShake256(&this->shake, NULL, 0) != 0)
 	{
 		free(this);
+		return NULL;
 	}
 
 	return &this->public;
