@@ -629,7 +629,7 @@ receiver_t *receiver_create()
 		},
 		.esp_cb_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.secret_switch = now,
-		.secret_offset = random() % now,
+		.secret_offset = now ? random() % now : 0,
 	);
 
 	if (lib->settings->get_bool(lib->settings,
