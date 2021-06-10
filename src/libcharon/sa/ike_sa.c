@@ -1196,10 +1196,30 @@ METHOD(ike_sa_t, update_hosts, void,
 		}
 		if (new_me)
 		{
+			if (this->state == IKE_ESTABLISHED)
+			{
+				DBG1(DBG_IKE, "local endpoint changed from %#H to %#H",
+					 this->my_host, new_me);
+			}
+			else
+			{
+				DBG2(DBG_IKE, "local endpoint changed from %#H to %#H",
+					 this->my_host, new_me);
+			}
 			set_my_host(this, new_me->clone(new_me));
 		}
 		if (new_other)
 		{
+			if (this->state == IKE_ESTABLISHED)
+			{
+				DBG1(DBG_IKE, "remote endpoint changed from %#H to %#H",
+					 this->other_host, new_other);
+			}
+			else
+			{
+				DBG2(DBG_IKE, "remote endpoint changed from %#H to %#H",
+					 this->other_host, new_other);
+			}
 			set_other_host(this, new_other->clone(new_other));
 		}
 

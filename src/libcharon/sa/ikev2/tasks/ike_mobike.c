@@ -443,8 +443,6 @@ METHOD(task_t, process_r, status_t,
 			other_old = this->ike_sa->get_other_host(this->ike_sa);
 			if (!other->equals(other, other_old))
 			{
-				DBG1(DBG_IKE, "remote address changed from %H to %H", other_old,
-					 other);
 				other_new = other;
 				/* our address might have changed too if the responder used
 				 * a different address from our list to reach us */
