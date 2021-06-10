@@ -2548,9 +2548,11 @@ METHOD(kernel_net_t, del_ip, status_t,
 		if (status == SUCCESS && wait)
 		{	/* wait until the address is really gone */
 			this->lock->write_lock(this->lock);
-			while (is_known_vip(this, virtual_ip))
-			{
-				this->condvar->wait(this->condvar, this->lock);
+			while (is_known_vip(this, virtual_ip) &&
+				   lib->watcher->get_state(lib->watcher) != WATCHER_STOPPED)
+			{	/* don't wait during deinit when we can't get notified,
+				 * re-evaluate watcher state if we have to wait longer */
+				this->condvar->timed_wait(this->condvar, this->lock, 1000);
 			}
 			this->lock->unlock(this->lock);
 		}
