@@ -417,6 +417,9 @@ enum child_cfg_option_t {
 
 	/** Enable per-CPU CHILD_SAs */
 	OPT_PER_CPU_SAS = (1<<9),
+
+	/** Enable UDP encapsulation for per-CPU CHILD_SAs */
+	OPT_PER_CPU_SAS_ENCAP = (1<<10),
 };
 
 /**
