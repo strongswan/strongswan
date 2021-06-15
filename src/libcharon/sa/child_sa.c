@@ -988,6 +988,14 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		this->my_cpi = cpi;
 		dst_ts = my_ts;
 		src_ts = other_ts;
+
+		if (this->per_cpu && this->encap)
+		{
+			src = src->clone(src);
+			/* accept inbound traffic from any port as we don't know if the
+			 * peer uses random ports or not */
+			src->set_port(src, 0);
+		}
 	}
 	else
 	{
@@ -1001,6 +1009,14 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		if (tfcv3)
 		{
 			tfc = this->config->get_tfc(this->config);
+		}
+		if (this->per_cpu && this->encap &&
+			this->config->has_option(this->config, OPT_PER_CPU_SAS_ENCAP))
+		{
+			src = src->clone(src);
+			/* use a random source port between 49152 and 65535. doesn't matter
+			 * if it's free or not as we don't receive traffic on it */
+			src->set_port(src, 0xc000 | (random() & 0xffff));
 		}
 	}
 
@@ -1106,6 +1122,10 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 
 	status = charon->kernel->add_sa(charon->kernel, &id, &sa);
 
+	if (src != this->my_addr && src != this->other_addr)
+	{
+		src->destroy(src);
+	}
 	my_ts->destroy(my_ts);
 	other_ts->destroy(other_ts);
 	free(lifetime);
