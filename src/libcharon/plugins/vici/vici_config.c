@@ -583,7 +583,9 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   proposals = %#P", data->proposals);
 	DBG2(DBG_CFG, "   local_ts = %#R", data->local_ts);
 	DBG2(DBG_CFG, "   remote_ts = %#R", data->remote_ts);
-	DBG2(DBG_CFG, "   per_cpu_sas = %u", has_opt(cfg, OPT_PER_CPU_SAS));
+	DBG2(DBG_CFG, "   per_cpu_sas = %s",
+		 has_opt(cfg, OPT_PER_CPU_SAS_ENCAP) ? "encap" :
+		 has_opt(cfg, OPT_PER_CPU_SAS) ? "1" : "0");
 	DBG2(DBG_CFG, "   hw_offload = %N", hw_offload_names, cfg->hw_offload);
 	DBG2(DBG_CFG, "   sha256_96 = %u", has_opt(cfg, OPT_SHA256_96));
 	DBG2(DBG_CFG, "   copy_df = %u", !has_opt(cfg, OPT_NO_COPY_DF));
@@ -1067,6 +1069,16 @@ CALLBACK(parse_opt_copy_ecn, bool,
 CALLBACK(parse_opt_cpus, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
+	enum_map_t map[] = {
+		{ "encap",	OPT_PER_CPU_SAS|OPT_PER_CPU_SAS_ENCAP	},
+	};
+	int d;
+
+	if (parse_map(map, countof(map), &d, v))
+	{
+		*out |= d;
+		return TRUE;
+	}
 	return parse_option(out, OPT_PER_CPU_SAS, v, TRUE);
 }
 
