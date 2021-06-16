@@ -156,7 +156,14 @@ METHOD(task_t, process_r, status_t,
 			/* fall-through */
 		case IKE_ESTABLISHED:
 			this->ike_sa->set_state(this->ike_sa, IKE_DELETING);
-			this->ike_sa->reestablish(this->ike_sa);
+			/* if we are reauthenticating, we don't need to call this: for MBB
+			 * reauths, we are concurrently trying to establish a new SA and
+			 * would create a duplicate, and for BBM reauths, we are already in
+			 * state IKE_DELETING here and call reestablish() in build_r() */
+			if (!this->ike_sa->has_condition(this->ike_sa, COND_REAUTHENTICATING))
+			{
+				this->ike_sa->reestablish(this->ike_sa);
+			}
 			return NEED_MORE;
 		case IKE_REKEYED:
 			this->rekeyed = TRUE;
