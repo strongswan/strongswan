@@ -3,6 +3,22 @@ strongswan-5.9.3
 
 - Added AES_ECB, SHA-3 and SHAKE-256 support to wolfssl plugin.
 
+- Added AES_CCM and SHA-3 signature support to openssl plugin.
+
+- The x509 and openssl plugins now consider the authorityKeyIdentifier, if
+  available, before verifying signatures, which avoids unnecessary signature
+  verifications after a CA key rollover if both certificates are loaded.
+
+- The pkcs11 plugin better handles optional attributes like CKA_TRUSTED, which
+  previously depended on a version check.
+
+- charon-nm now supports using SANs as client identities, not only full DNs.
+
+- charon-tkm now handles IKE encryption.
+
+- A MOBIKE update is sent again if a a change in the NAT mappings is detected
+  but the endpoints stay the same.
+
 - Converted most of the test case scenarios to the vici interface
 
 
