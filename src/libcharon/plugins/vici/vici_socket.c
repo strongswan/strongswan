@@ -191,6 +191,7 @@ static entry_t* find_entry(private_vici_socket_t *this, stream_t *stream,
 			}
 			if (entry->disconnecting)
 			{
+				entry->cond->signal(entry->cond);
 				continue;
 			}
 			candidate = TRUE;
@@ -244,6 +245,7 @@ static entry_t* remove_entry(private_vici_socket_t *this, u_int id)
 					break;
 				}
 				this->connections->remove_at(this->connections, enumerator);
+				entry->cond->broadcast(entry->cond);
 				found = entry;
 				break;
 			}
