@@ -1469,7 +1469,7 @@ static bool parse_cert(auth_data_t *auth, auth_rule_t rule, chunk_t v)
 	certificate_t *cert;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							  BUILD_BLOB_PEM, v, BUILD_END);
+							  BUILD_BLOB, v, BUILD_END);
 	if (cert)
 	{
 		return add_cert(auth, rule, cert);
@@ -1504,7 +1504,7 @@ CALLBACK(parse_pubkeys, bool,
 	certificate_t *cert;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
-							  BUILD_BLOB_PEM, v, BUILD_END);
+							  BUILD_BLOB, v, BUILD_END);
 	if (cert)
 	{
 		return add_cert(auth, AUTH_RULE_SUBJECT_CERT, cert);
