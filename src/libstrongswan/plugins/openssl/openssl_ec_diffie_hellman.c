@@ -21,7 +21,7 @@
 #include <openssl/ec.h>
 #include <openssl/objects.h>
 
-#if OPENSSL_VERSION_NUMBER < 0x1010000fL || defined(OPENSSL_IS_BORINGSSL)
+#if OPENSSL_VERSION_NUMBER < 0x1010000fL
 #include <openssl/bn.h>
 #endif
 
@@ -67,7 +67,7 @@ struct private_openssl_ec_diffie_hellman_t {
 	bool computed;
 };
 
-#if OPENSSL_VERSION_NUMBER < 0x1010000fL || defined(OPENSSL_IS_BORINGSSL)
+#if OPENSSL_VERSION_NUMBER < 0x1010000fL
 /**
  * Convert a chunk to an EC_POINT and set it on the given key. The x and y
  * coordinates of the point have to be concatenated in the chunk.
@@ -202,7 +202,7 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 		goto error;
 	}
 
-#if OPENSSL_VERSION_NUMBER < 0x1010000fL || defined(OPENSSL_IS_BORINGSSL)
+#if OPENSSL_VERSION_NUMBER < 0x1010000fL
 	if (!chunk2ecp(this->ec_group, value, pub))
 	{
 		DBG1(DBG_LIB, "ECDH public value is malformed");
@@ -235,7 +235,7 @@ error:
 METHOD(diffie_hellman_t, get_my_public_value, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t *value)
 {
-#if OPENSSL_VERSION_NUMBER < 0x1010000fL || defined(OPENSSL_IS_BORINGSSL)
+#if OPENSSL_VERSION_NUMBER < 0x1010000fL
 	return ecp2chunk(this->ec_group, this->key, value);
 #else
 	chunk_t pub;

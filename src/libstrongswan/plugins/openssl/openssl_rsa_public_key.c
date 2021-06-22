@@ -280,7 +280,7 @@ METHOD(public_key_t, verify, bool,
 			return verify_emsa_pkcs1_signature(this, NID_sha384, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
 			return verify_emsa_pkcs1_signature(this, NID_sha512, data, signature);
-#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_SHA3) && !defined(OPENSSL_IS_BORINGSSL)
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_SHA3)
 		case SIGN_RSA_EMSA_PKCS1_SHA3_224:
 			return verify_emsa_pkcs1_signature(this, NID_sha3_224, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA3_256:
