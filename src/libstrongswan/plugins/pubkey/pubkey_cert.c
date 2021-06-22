@@ -17,6 +17,7 @@
 
 #include <time.h>
 
+#include <credentials/certificates/x509.h>
 #include <utils/debug.h>
 
 typedef struct private_pubkey_cert_t private_pubkey_cert_t;
@@ -291,6 +292,10 @@ pubkey_cert_t *pubkey_cert_wrap(certificate_type_t type, va_list args)
 			case BUILD_SUBJECT:
 				subject = va_arg(args, identification_t*);
 				continue;
+			case BUILD_X509_FLAG:
+				/* just ignore the flags */
+				va_arg(args, x509_flag_t);
+				continue;
 			case BUILD_END:
 				break;
 			default:
@@ -313,4 +318,3 @@ pubkey_cert_t *pubkey_cert_wrap(certificate_type_t type, va_list args)
 	}
 	return NULL;
 }
-
