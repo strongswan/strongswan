@@ -1,10 +1,8 @@
 #!/usr/bin/make
 
 PKG = wolfssl
-REV = 4.7.1r
-DIR = $(PKG)-$(REV)
-TAR = v$(REV).tar.gz
-SRC = https://github.com/wolfSSL/$(PKG)/archive/refs/tags/$(TAR)
+SRC = https://github.com/wolfSSL/$(PKG).git
+REV = 0caf3ba456f1 # v4.7.1r + SHA-3 fix
 
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
@@ -13,8 +11,7 @@ CFLAGS = \
 	-DWOLFSSL_DES_ECB \
 	-DHAVE_AES_ECB \
 	-DHAVE_ECC_BRAINPOOL \
-	-DWOLFSSL_MIN_AUTH_TAG_SZ=8 \
-	-DHAVE_EX_DATA
+	-DWOLFSSL_MIN_AUTH_TAG_SZ=8
 
 CONFIG_OPTS = \
 	--disable-crypttests \
@@ -22,35 +19,32 @@ CONFIG_OPTS = \
 	--enable-silent-rules \
 	--enable-aesccm \
 	--enable-aesctr \
-	--enable-ecccustcurves \
-	--enable-curve25519 \
-	--enable-ed25519 \
-	--enable-curve448 \
-	--enable-ed448 \
-	--enable-rsapss \
-	--enable-des3 \
-	--enable-sha3 \
-	--enable-shake256 \
-	--enable-md4 \
 	--enable-camellia \
+	--enable-curve25519 \
+	--enable-curve448 \
+	--enable-des3 \
+	--enable-ecccustcurves \
+	--enable-ed25519 \
+	--enable-ed448 \
 	--enable-keygen \
-	--enable-certgen \
-	--enable-certreq \
-	--enable-certext \
-	--enable-sessioncerts
+	--enable-md4 \
+	--enable-rsapss \
+	--enable-sha3 \
+	--enable-shake256
 
 all: install
 
-$(TAR):
-	wget $(SRC)
-
-.$(PKG)-unpacked-$(REV): $(TAR)
-	[ -d $(DIR) ] || tar xf $(TAR)
+.$(PKG)-cloned:
+	[ -d $(PKG) ] || git clone $(SRC) $(PKG)
 	@touch $@
 
-.$(PKG)-built-$(REV): .$(PKG)-unpacked-$(REV)
-	cd $(DIR) && ./autogen.sh && ./configure C_FLAGS="$(CFLAGS)" $(CONFIG_OPTS) && make -j $(NUM_CPUS)
+.$(PKG)-checkout-$(REV): .$(PKG)-cloned
+	cd $(PKG) && git fetch && git checkout $(REV)
+	@rm -f .$(PKG)-checkout-* && touch $@
+
+.$(PKG)-built-$(REV): .$(PKG)-checkout-$(REV)
+	cd $(PKG) && ./autogen.sh && ./configure C_FLAGS="$(CFLAGS)" $(CONFIG_OPTS) && make -j $(NUM_CPUS)
 	@rm -f .$(PKG)-built-* && touch $@
 
 install: .$(PKG)-built-$(REV)
-	cd $(DIR) && make install && ldconfig
+	cd $(PKG) && make install && ldconfig
