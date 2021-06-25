@@ -1372,6 +1372,7 @@ static void process_route(private_kernel_netlink_net_t *this,
 				if (RTA_PAYLOAD(rta) == sizeof(uint32_t) &&
 					this->routing_table == *(uint32_t*)RTA_DATA(rta))
 				{
+					DESTROY_IF(host);
 					return;
 				}
 				break;
