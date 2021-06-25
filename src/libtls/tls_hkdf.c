@@ -735,7 +735,7 @@ tls_hkdf_t *tls_hkdf_create(hash_algorithm_t hash_algorithm, chunk_t psk)
 			DBG1(DBG_TLS, "%N not supported", hash_algorithm_names,
 				 hash_algorithm);
 		}
-		DBG1(DBG_TLS, "unable to initialise HKDF");
+		DBG1(DBG_TLS, "unable to initialize HKDF");
 		destroy(this);
 		return NULL;
 	}

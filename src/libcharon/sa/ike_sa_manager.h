@@ -142,7 +142,7 @@ struct ike_sa_manager_t {
 	 *
 	 * Measures are taken according to the uniqueness policy of the IKE_SA.
 	 * The return value indicates whether duplicates have been found and if
-	 * further measures should be taken (e.g. cancelling an IKE_AUTH exchange).
+	 * further measures should be taken (e.g. canceling an IKE_AUTH exchange).
 	 * check_uniqueness() must be called before the IKE_SA is complete,
 	 * deadlocks occur otherwise.
 	 *

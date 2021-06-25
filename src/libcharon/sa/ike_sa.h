@@ -1170,7 +1170,7 @@ struct ike_sa_t {
 	void (*remove_task)(ike_sa_t *this, enumerator_t *enumerator);
 
 	/**
-	 * Flush a task queue, cancelling all tasks in it.
+	 * Flush a task queue, canceling all tasks in it.
 	 *
 	 * @param queue			queue type to flush
 	 */

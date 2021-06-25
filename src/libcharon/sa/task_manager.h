@@ -293,7 +293,7 @@ struct task_manager_t {
 	void (*flush)(task_manager_t *this);
 
 	/**
-	 * Flush a queue, cancelling all tasks.
+	 * Flush a queue, canceling all tasks.
 	 *
 	 * @param queue			queue to flush
 	 */

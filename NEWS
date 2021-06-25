@@ -2743,7 +2743,7 @@ strongswan-4.1.5
 strongswan-4.1.4
 ----------------
 
-- The pluto IKEv1 daemon now exhibits the same behaviour as its
+- The pluto IKEv1 daemon now exhibits the same behavior as its
   IKEv2 companion charon by inserting an explicit route via the
   _updown script only if a sourceip exists. This is admissible
   since routing through the IPsec tunnel is handled automatically

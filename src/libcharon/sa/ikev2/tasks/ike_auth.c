@@ -887,7 +887,7 @@ METHOD(task_t, process_r, status_t,
 	/* another auth round done, invoke authorize hook */
 	if (!charon->bus->authorize(charon->bus, FALSE))
 	{
-		DBG1(DBG_IKE, "authorization hook forbids IKE_SA, cancelling");
+		DBG1(DBG_IKE, "authorization hook forbids IKE_SA, canceling");
 		this->authentication_failed = TRUE;
 		return NEED_MORE;
 	}
@@ -1104,7 +1104,7 @@ METHOD(task_t, build_r, status_t,
 	if (charon->ike_sa_manager->check_uniqueness(charon->ike_sa_manager,
 										this->ike_sa, this->initial_contact))
 	{
-		DBG1(DBG_IKE, "cancelling IKE_SA setup due to uniqueness policy");
+		DBG1(DBG_IKE, "canceling IKE_SA setup due to uniqueness policy");
 		charon->bus->alert(charon->bus, ALERT_UNIQUE_KEEP);
 		message->add_notify(message, TRUE, AUTHENTICATION_FAILED,
 							chunk_empty);
@@ -1112,7 +1112,7 @@ METHOD(task_t, build_r, status_t,
 	}
 	if (!charon->bus->authorize(charon->bus, TRUE))
 	{
-		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, cancelling");
+		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, canceling");
 		goto peer_auth_failed;
 	}
 	if (this->ike_sa->supports_extension(this->ike_sa, EXT_IKE_REDIRECTION) &&
@@ -1362,7 +1362,7 @@ METHOD(task_t, process_i, status_t,
 		/* another auth round done, invoke authorize hook */
 		if (!charon->bus->authorize(charon->bus, FALSE))
 		{
-			DBG1(DBG_IKE, "authorization forbids IKE_SA, cancelling");
+			DBG1(DBG_IKE, "authorization forbids IKE_SA, canceling");
 			goto peer_auth_failed;
 		}
 
@@ -1453,7 +1453,7 @@ METHOD(task_t, process_i, status_t,
 	if (!charon->bus->authorize(charon->bus, TRUE))
 	{
 		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, "
-				      "cancelling");
+				      "canceling");
 		goto peer_auth_failed;
 	}
 	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",

@@ -142,7 +142,7 @@ static void change_batch_type(private_tnccs_20_server_t *this,
 	{
 		if (this->batch_type != PB_BATCH_NONE)
 		{
-			DBG1(DBG_TNC, "cancelling PB-TNC %N batch",
+			DBG1(DBG_TNC, "canceling PB-TNC %N batch",
 				 pb_tnc_batch_type_names, this->batch_type);
 
 			while (this->messages->remove_last(this->messages,

@@ -487,7 +487,7 @@ METHOD(task_manager_t, initiate, status_t,
 	message_t *message;
 	host_t *me, *other;
 	exchange_type_t exchange = EXCHANGE_TYPE_UNDEFINED;
-	bool new_mid = FALSE, expect_response = FALSE, cancelled = FALSE, keep = FALSE;
+	bool new_mid = FALSE, expect_response = FALSE, canceled = FALSE, keep = FALSE;
 
 	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED &&
 		this->initiating.type != INFORMATIONAL_V1)
@@ -672,7 +672,7 @@ METHOD(task_manager_t, initiate, status_t,
 				/* processed, but task needs another exchange */
 				continue;
 			case ALREADY_DONE:
-				cancelled = TRUE;
+				canceled = TRUE;
 				break;
 			case FAILED:
 			default:
@@ -697,7 +697,7 @@ METHOD(task_manager_t, initiate, status_t,
 	{	/* tasks completed, no exchange active anymore */
 		this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	}
-	if (cancelled)
+	if (canceled)
 	{
 		message->destroy(message);
 		return initiate(this);
@@ -754,7 +754,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	task_t *task;
 	message_t *message;
 	host_t *me, *other;
-	bool delete = FALSE, cancelled = FALSE, expect_request = FALSE;
+	bool delete = FALSE, canceled = FALSE, expect_request = FALSE;
 
 	me = request->get_destination(request);
 	other = request->get_source(request);
@@ -791,7 +791,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				}
 				continue;
 			case ALREADY_DONE:
-				cancelled = TRUE;
+				canceled = TRUE;
 				break;
 			case INVALID_ARG:
 				if (task->get_type(task) == TASK_QUICK_MODE)
@@ -813,7 +813,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	enumerator->destroy(enumerator);
 
 	clear_packets(this->responding.packets);
-	if (cancelled)
+	if (canceled)
 	{
 		message->destroy(message);
 		return initiate(this);

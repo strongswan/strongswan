@@ -299,7 +299,7 @@ struct identification_t {
  * - ID_RFC822_ADDR:	alice@wonderland.org
  * - ID_DER_ASN1_DN:	C=CH, O=Linux strongSwan, CN=bob
  *
- * In favour of pluto, domainnames are prepended with an @, since
+ * In favor of pluto, domainnames are prepended with an @, since
  * pluto resolves domainnames without an @ to IPv4 addresses. Since
  * we use a separate host_t class for addresses, this doesn't
  * make sense for us.
