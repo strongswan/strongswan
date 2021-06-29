@@ -1928,7 +1928,8 @@ METHOD(ike_sa_t, delete_, status_t,
 METHOD(ike_sa_t, rekey, status_t,
 	private_ike_sa_t *this)
 {
-	if (this->state == IKE_PASSIVE)
+	if (this->state == IKE_PASSIVE ||
+		has_condition(this, COND_REAUTHENTICATING))
 	{
 		return INVALID_STATE;
 	}
