@@ -1937,6 +1937,23 @@ METHOD(ike_sa_t, rekey, status_t,
 	return this->task_manager->initiate(this->task_manager);
 }
 
+/*
+ * Described in header
+ */
+bool ike_sa_can_reauthenticate(ike_sa_t *public)
+{
+	private_ike_sa_t *this = (private_ike_sa_t*)public;
+
+	return array_count(this->other_vips) == 0 &&
+		   !has_condition(this, COND_XAUTH_AUTHENTICATED) &&
+		   !has_condition(this, COND_EAP_AUTHENTICATED)
+#ifdef ME
+			/* as mediation server we too cannot reauth the IKE_SA */
+			&& !this->is_mediation_server
+#endif /* ME */
+			;
+}
+
 METHOD(ike_sa_t, reauth, status_t,
 	private_ike_sa_t *this)
 {
@@ -1954,37 +1971,20 @@ METHOD(ike_sa_t, reauth, status_t,
 	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
 	 * If the peer does not support RFC4478, there is no way to keep the
 	 * IKE_SA up. */
-	if (!has_condition(this, COND_ORIGINAL_INITIATOR))
+	if (!has_condition(this, COND_ORIGINAL_INITIATOR) &&
+		!ike_sa_can_reauthenticate(&this->public))
 	{
-		DBG1(DBG_IKE, "initiator did not reauthenticate as requested");
-		if (array_count(this->other_vips) != 0 ||
-			has_condition(this, COND_XAUTH_AUTHENTICATED) ||
-			has_condition(this, COND_EAP_AUTHENTICATED)
-#ifdef ME
-			/* as mediation server we too cannot reauth the IKE_SA */
-			|| this->is_mediation_server
-#endif /* ME */
-			)
-		{
-			time_t del, now;
+		time_t del, now;
 
-			del = this->stats[STAT_DELETE];
-			now = time_monotonic(NULL);
-			DBG1(DBG_IKE, "IKE_SA %s[%d] will timeout in %V",
-				 get_name(this), this->unique_id, &now, &del);
-			return FAILED;
-		}
-		else
-		{
-			DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d] actively",
-				 get_name(this), this->unique_id);
-		}
+		del = this->stats[STAT_DELETE];
+		now = time_monotonic(NULL);
+		DBG1(DBG_IKE, "initiator did not reauthenticate as requested, IKE_SA "
+			 "%s[%d] will timeout in %V", get_name(this), this->unique_id,
+			 &now, &del);
+		return FAILED;
 	}
-	else
-	{
-		DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d]",
-			 get_name(this), this->unique_id);
-	}
+	DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d]",
+		 get_name(this), this->unique_id);
 	set_condition(this, COND_REAUTHENTICATING, TRUE);
 	this->task_manager->queue_ike_reauth(this->task_manager);
 	return this->task_manager->initiate(this->task_manager);
