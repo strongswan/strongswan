@@ -231,6 +231,12 @@ METHOD(task_t, process_r, status_t,
 		this->failed_temporarily = TRUE;
 		return NEED_MORE;
 	}
+	if (this->ike_sa->has_condition(this->ike_sa, COND_REAUTHENTICATING))
+	{
+		DBG1(DBG_IKE, "peer initiated rekeying, but we are reauthenticating");
+		this->failed_temporarily = TRUE;
+		return NEED_MORE;
+	}
 	if (have_half_open_children(this))
 	{
 		DBG1(DBG_IKE, "peer initiated rekeying, but a child is half-open");
