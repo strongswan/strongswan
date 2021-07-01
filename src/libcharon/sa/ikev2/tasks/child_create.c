@@ -313,7 +313,7 @@ static bool update_and_check_proposals(private_child_create_t *this)
 		proposal->set_spi(proposal, this->my_spi);
 
 		/* move the selected DH group to the front, if any */
-		if (this->dh_group != MODP_NONE)
+		if (this->dh_group != KE_NONE)
 		{	/* proposals that don't contain the selected group are
 			 * moved to the back */
 			if (!proposal->promote_ke_method(proposal, this->dh_group))
@@ -336,7 +336,7 @@ static bool update_and_check_proposals(private_child_create_t *this)
 	enumerator->destroy(enumerator);
 	other_dh_groups->destroy(other_dh_groups);
 
-	return this->dh_group == MODP_NONE || found;
+	return this->dh_group == KE_NONE || found;
 }
 
 /**
@@ -615,7 +615,7 @@ static status_t select_and_install(private_child_create_t *this,
 		DBG1(DBG_IKE, "ignoring KE exchange, agreed on a non-PFS proposal");
 		DESTROY_IF(this->dh);
 		this->dh = NULL;
-		this->dh_group = MODP_NONE;
+		this->dh_group = KE_NONE;
 	}
 
 	if (this->initiator)
@@ -1099,7 +1099,7 @@ METHOD(task_t, build_i, status_t,
 									chunk_empty);
 				return SUCCESS;
 			}
-			if (!this->retry && this->dh_group == MODP_NONE)
+			if (!this->retry && this->dh_group == KE_NONE)
 			{	/* during a rekeying the group might already be set */
 				this->dh_group = this->config->get_ke_method(this->config);
 			}
@@ -1172,7 +1172,7 @@ METHOD(task_t, build_i, status_t,
 								this->packet_tsr->clone(this->packet_tsr));
 	}
 	this->proposals = this->config->get_proposals(this->config,
-												  this->dh_group == MODP_NONE);
+												  this->dh_group == KE_NONE);
 	this->mode = this->config->get_mode(this->config);
 
 	this->child.if_id_in_def = this->ike_sa->get_if_id(this->ike_sa, TRUE);
@@ -1209,7 +1209,7 @@ METHOD(task_t, build_i, status_t,
 		return FAILED;
 	}
 
-	if (this->dh_group != MODP_NONE)
+	if (this->dh_group != KE_NONE)
 	{
 		this->dh = this->keymat->keymat.create_ke(&this->keymat->keymat,
 												  this->dh_group);
@@ -1685,7 +1685,7 @@ METHOD(task_t, process_i, status_t,
 				case INVALID_KE_PAYLOAD:
 				{
 					chunk_t data;
-					uint16_t group = MODP_NONE;
+					uint16_t group = KE_NONE;
 
 					data = notify->get_notification_data(notify);
 					if (data.len == sizeof(group))
@@ -1861,7 +1861,7 @@ METHOD(task_t, migrate, void,
 	}
 	if (!this->rekey && !this->retry)
 	{
-		this->dh_group = MODP_NONE;
+		this->dh_group = KE_NONE;
 	}
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
@@ -1938,7 +1938,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 		.config = config,
 		.packet_tsi = tsi ? tsi->clone(tsi) : NULL,
 		.packet_tsr = tsr ? tsr->clone(tsr) : NULL,
-		.dh_group = MODP_NONE,
+		.dh_group = KE_NONE,
 		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
 		.mode = MODE_TUNNEL,
 		.tfcv3 = TRUE,
