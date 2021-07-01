@@ -181,43 +181,43 @@ static struct {
 	} data[4];
 } ke_data[] = {
 	{ NULL, NULL, {
-		{ MODP_NONE, NULL, NULL }
+		{ KE_NONE, NULL, NULL }
 	}},
 	{ "plugin1", NULL, {
 		{ MODP_1024_BIT, ke_create_modp1024, "plugin1" },
-		{ MODP_NONE, NULL, NULL }
+		{ KE_NONE, NULL, NULL }
 	}},
 	{ "plugin1", NULL, {
 		{ MODP_1024_BIT, ke_create_modp1024, "plugin1" },
 		{ MODP_1024_BIT, ke_create_modp1024_second, "plugin2" },
-		{ MODP_NONE, NULL, NULL }
+		{ KE_NONE, NULL, NULL }
 	}},
 	{ "plugin2", NULL, {
 		{ MODP_1024_BIT, ke_create_modp1024_second, "plugin2" },
 		{ MODP_1024_BIT, ke_create_modp1024, "plugin1" },
-		{ MODP_NONE, NULL, NULL }
+		{ KE_NONE, NULL, NULL }
 	}},
 	{ "plugin1", "plugin1", {
 		{ MODP_1024_BIT, ke_create_modp1024, "plugin1" },
 		{ MODP_2048_BIT, ke_create_modp2048, "plugin1" },
-		{ MODP_NONE, NULL }
+		{ KE_NONE, NULL }
 	}},
 	{ "plugin1", "plugin1", {
 		{ MODP_2048_BIT, ke_create_modp2048, "plugin1" },
 		{ MODP_1024_BIT, ke_create_modp1024, "plugin1" },
-		{ MODP_NONE, NULL }
+		{ KE_NONE, NULL }
 	}},
 	{ "plugin1", "plugin1", {
 		{ MODP_2048_BIT, ke_create_modp2048, "plugin1" },
 		{ MODP_2048_BIT, ke_create_modp2048_second, "plugin2" },
 		{ MODP_1024_BIT, ke_create_modp1024, "plugin1" },
-		{ MODP_NONE, NULL }
+		{ KE_NONE, NULL }
 	}},
 	{ "plugin1", "plugin2", {
 		{ MODP_2048_BIT, ke_create_modp2048_second, "plugin2" },
 		{ MODP_2048_BIT, ke_create_modp2048, "plugin1" },
 		{ MODP_1024_BIT, ke_create_modp1024, "plugin1" },
-		{ MODP_NONE, NULL }
+		{ KE_NONE, NULL }
 	}},
 };
 
@@ -248,7 +248,7 @@ START_TEST(test_create_ke)
 
 
 	factory = crypto_factory_create();
-	for (i = 0; ke_data[_i].data[i].ke != MODP_NONE; i++)
+	for (i = 0; ke_data[_i].data[i].ke != KE_NONE; i++)
 	{
 		ck_assert(factory->add_ke(factory, ke_data[_i].data[i].ke,
 								  ke_data[_i].data[i].plugin,
@@ -282,10 +282,10 @@ START_TEST(test_create_ke)
 		}
 	}
 	ck_assert(!enumerator->enumerate(enumerator));
-	ck_assert_int_eq(ke_data[_i].data[i].ke, MODP_NONE);
+	ck_assert_int_eq(ke_data[_i].data[i].ke, KE_NONE);
 	enumerator->destroy(enumerator);
 
-	for (i = 0; ke_data[_i].data[i].ke != MODP_NONE; i++)
+	for (i = 0; ke_data[_i].data[i].ke != KE_NONE; i++)
 	{
 		factory->remove_ke(factory, ke_data[_i].data[i].create);
 	}

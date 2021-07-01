@@ -1145,7 +1145,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 		},
 		.ike_sa = ike_sa,
 		.initiator = initiator,
-		.dh_group = MODP_NONE,
+		.dh_group = KE_NONE,
 		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
 		.old_sa = old_sa,
 		.signature_authentication = lib->settings->get_bool(lib->settings,

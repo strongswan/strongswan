@@ -509,33 +509,33 @@ typedef struct {
  */
 static suite_algs_t suite_algs[] = {
 	/* Cipher suites of TLS 1.3: key exchange and authentication
-	 * delegated to extensions, therefore KEY_ANY, MODP_NONE, PRF_UNDEFINED */
+	 * delegated to extensions, therefore KEY_ANY, KE_NONE, PRF_UNDEFINED */
 	{ TLS_AES_256_GCM_SHA384,
-		KEY_ANY, MODP_NONE,
+		KEY_ANY, KE_NONE,
 		HASH_SHA384, PRF_UNDEFINED,
 		AUTH_HMAC_SHA2_384_384, ENCR_AES_GCM_ICV16, 32,
 		TLS_1_3, TLS_1_3,
 	},
 	{ TLS_AES_128_GCM_SHA256,
-		KEY_ANY, MODP_NONE,
+		KEY_ANY, KE_NONE,
 		HASH_SHA256, PRF_UNDEFINED,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_GCM_ICV16, 16,
 		TLS_1_3, TLS_1_3,
 	},
 	{ TLS_CHACHA20_POLY1305_SHA256,
-		KEY_ANY, MODP_NONE,
+		KEY_ANY, KE_NONE,
 		HASH_SHA256, PRF_UNDEFINED,
 		AUTH_HMAC_SHA2_256_256, ENCR_CHACHA20_POLY1305, 32,
 		TLS_1_3, TLS_1_3,
 	},
 	{ TLS_AES_128_CCM_SHA256,
-		KEY_ANY, MODP_NONE,
+		KEY_ANY, KE_NONE,
 		HASH_SHA256, PRF_UNDEFINED,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CCM_ICV16, 16,
 		TLS_1_3, TLS_1_3,
 	},
 	{ TLS_AES_128_CCM_8_SHA256,
-		KEY_ANY, MODP_NONE,
+		KEY_ANY, KE_NONE,
 		HASH_SHA256, PRF_UNDEFINED,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CCM_ICV8, 16,
 		TLS_1_3, TLS_1_3,
@@ -674,61 +674,61 @@ static suite_algs_t suite_algs[] = {
 		SSL_3_0, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_256_GCM_SHA384,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA384, PRF_HMAC_SHA2_384,
 		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 32,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_256_CBC_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CBC, 32,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_256_CBC_SHA,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA1_160, ENCR_AES_CBC, 32,
 		SSL_3_0, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_128_GCM_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 16,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_128_CBC_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CBC, 16,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_128_CBC_SHA,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA1_160, ENCR_AES_CBC, 16,
 		SSL_3_0, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_CAMELLIA_256_CBC_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_CAMELLIA_CBC, 32,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_CAMELLIA_256_CBC_SHA,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA1_160, ENCR_CAMELLIA_CBC, 32,
 		SSL_3_0, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_CAMELLIA_128_CBC_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_CAMELLIA_CBC, 16,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_CAMELLIA_128_CBC_SHA,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA1_160, ENCR_CAMELLIA_CBC, 16,
 		SSL_3_0, TLS_1_2,
@@ -746,13 +746,13 @@ static suite_algs_t suite_algs[] = {
 		TLS_1_0, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_NULL_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_NULL, 0,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_NULL_SHA,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA1_160, ENCR_NULL, 0,
 		SSL_3_0, TLS_1_2,
@@ -837,7 +837,7 @@ static void filter_suite(suite_algs_t suites[], int *count, int offset,
 			}
 			if (current.dh && current.dh != suites[i].dh)
 			{
-				if (suites[i].dh != MODP_NONE &&
+				if (suites[i].dh != KE_NONE &&
 					!(key_exchange_is_ecdh(current.dh) &&
 					  key_exchange_is_ecdh(suites[i].dh)))
 				{	/* skip DH group, does not match nor NONE nor both ECDH */
@@ -927,14 +927,14 @@ static void filter_key_exchange_config_suites(private_tls_crypto_t *this,
 				}
 				if (strcaseeq(token, "dhe-rsa") &&
 					!key_exchange_is_ecdh(suites[i].dh) &&
-					suites[i].dh != MODP_NONE &&
+					suites[i].dh != KE_NONE &&
 					suites[i].key == KEY_RSA)
 				{
 					suites[remaining++] = suites[i];
 					break;
 				}
 				if (strcaseeq(token, "rsa") &&
-					suites[i].dh == MODP_NONE &&
+					suites[i].dh == KE_NONE &&
 					suites[i].key == KEY_RSA)
 				{
 					suites[remaining++] = suites[i];
@@ -1611,7 +1611,7 @@ METHOD(tls_crypto_t, create_ec_enumerator, enumerator_t*,
 static key_exchange_method_t supported_ec_group(private_tls_crypto_t *this,
 												key_exchange_method_t orig)
 {
-	key_exchange_method_t current, first = MODP_NONE;
+	key_exchange_method_t current, first = KE_NONE;
 	enumerator_t *enumerator;
 
 	enumerator = create_ec_enumerator(this);
@@ -1622,7 +1622,7 @@ static key_exchange_method_t supported_ec_group(private_tls_crypto_t *this,
 			enumerator->destroy(enumerator);
 			return orig;
 		}
-		else if (first == MODP_NONE)
+		else if (first == KE_NONE)
 		{
 			first = current;
 		}
@@ -1645,7 +1645,7 @@ METHOD(tls_crypto_t, get_dh_group, key_exchange_method_t,
 		}
 		return algs->dh;
 	}
-	return MODP_NONE;
+	return KE_NONE;
 }
 
 METHOD(tls_crypto_t, set_protection, void,
