@@ -234,7 +234,7 @@ ke_payload_t *ke_payload_create(payload_type_t type)
 			.destroy = _destroy,
 		},
 		.next_payload = PL_NONE,
-		.ke_method = MODP_NONE,
+		.ke_method = KE_NONE,
 		.type = type,
 	);
 	this->payload_length = get_header_length(this);

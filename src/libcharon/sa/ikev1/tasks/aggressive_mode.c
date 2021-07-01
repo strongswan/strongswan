@@ -253,7 +253,7 @@ METHOD(task_t, build_i, status_t,
 			message->add_payload(message, &sa_payload->payload_interface);
 
 			group = this->ike_cfg->get_ke_method(this->ike_cfg);
-			if (group == MODP_NONE)
+			if (group == KE_NONE)
 			{
 				DBG1(DBG_IKE, "DH group selection failed");
 				return FAILED;
