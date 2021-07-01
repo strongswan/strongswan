@@ -352,7 +352,7 @@ METHOD(ike_cfg_t, get_ke_method, key_exchange_method_t,
 {
 	enumerator_t *enumerator;
 	proposal_t *proposal;
-	uint16_t method = MODP_NONE;
+	uint16_t method = KE_NONE;
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &proposal))

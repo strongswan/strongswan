@@ -179,6 +179,6 @@ key_exchange_method_t pts_dh_group_to_ike(pts_dh_group_t dh_group)
 		case PTS_DH_GROUP_IKE20:
 			return ECP_384_BIT;
 		default:
-			return MODP_NONE;
+			return KE_NONE;
 	}
 }
