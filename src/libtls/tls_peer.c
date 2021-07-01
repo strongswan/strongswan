@@ -174,7 +174,7 @@ static bool verify_requested_key_type(private_tls_peer_t *this,
 									  uint16_t key_type)
 {
 	enumerator_t *enumerator;
-	key_exchange_method_t group, found = MODP_NONE;
+	key_exchange_method_t group, found = KE_NONE;
 	tls_named_group_t curve;
 
 	enumerator = this->crypto->create_ec_enumerator(this->crypto);
@@ -188,7 +188,7 @@ static bool verify_requested_key_type(private_tls_peer_t *this,
 	}
 	enumerator->destroy(enumerator);
 
-	if (found == MODP_NONE)
+	if (found == KE_NONE)
 	{
 		DBG1(DBG_TLS, "server requested key exchange we didn't propose");
 		return FALSE;
@@ -864,7 +864,7 @@ static status_t process_key_exchange(private_tls_peer_t *this,
 								TLS_SERVER_KEY_EXCHANGE, reader->peek(reader));
 
 	group = this->crypto->get_dh_group(this->crypto);
-	if (group == MODP_NONE)
+	if (group == KE_NONE)
 	{
 		DBG1(DBG_TLS, "received Server Key Exchange, but not required "
 			 "for current suite");

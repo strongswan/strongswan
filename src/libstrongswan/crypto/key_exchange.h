@@ -40,7 +40,7 @@ typedef struct diffie_hellman_params_t diffie_hellman_params_t;
  * Curve25519 and Curve448 groups are defined in RFC 8031.
  */
 enum key_exchange_method_t {
-	MODP_NONE     =  0,
+	KE_NONE       =  0,
 	MODP_768_BIT  =  1,
 	MODP_1024_BIT =  2,
 	MODP_1536_BIT =  5,
