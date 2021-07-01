@@ -345,7 +345,7 @@ static bool update_and_check_proposals(private_child_create_t *this)
 		proposal->set_spi(proposal, this->my_spi);
 
 		/* move the selected DH group to the front, if any */
-		if (this->ke_method != MODP_NONE)
+		if (this->ke_method != KE_NONE)
 		{	/* proposals that don't contain the selected group are
 			 * moved to the back */
 			if (!proposal->promote_transform(proposal, KEY_EXCHANGE_METHOD,
@@ -369,7 +369,7 @@ static bool update_and_check_proposals(private_child_create_t *this)
 	enumerator->destroy(enumerator);
 	other_dh_groups->destroy(other_dh_groups);
 
-	return this->ke_method == MODP_NONE || found;
+	return this->ke_method == KE_NONE || found;
 }
 
 /**
@@ -1183,7 +1183,7 @@ static bool check_ke_method(private_child_create_t *this, uint16_t *req)
 		DBG1(DBG_IKE, "ignoring KE payload, agreed on a non-PFS proposal");
 		DESTROY_IF(this->ke);
 		this->ke = NULL;
-		this->ke_method = MODP_NONE;
+		this->ke_method = KE_NONE;
 		/* ignore errors that occurred while handling the KE payload */
 		this->ke_failed = FALSE;
 	}
@@ -1208,7 +1208,7 @@ static bool check_ke_method_r(private_child_create_t *this, message_t *message)
 							chunk_from_thing(alg));
 		return FALSE;
 	}
-	else if (this->ke_method != MODP_NONE && !this->ke)
+	else if (this->ke_method != KE_NONE && !this->ke)
 	{
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FALSE;
@@ -1430,7 +1430,7 @@ METHOD(task_t, build_i, status_t,
 
 	if (!no_ke && !this->retry)
 	{	/* during a rekeying the method might already be set */
-		if (this->ke_method == MODP_NONE)
+		if (this->ke_method == KE_NONE)
 		{
 			this->ke_method = this->config->get_algorithm(this->config,
 														  KEY_EXCHANGE_METHOD);
@@ -1445,7 +1445,7 @@ METHOD(task_t, build_i, status_t,
 		return FAILED;
 	}
 
-	if (this->ke_method != MODP_NONE)
+	if (this->ke_method != KE_NONE)
 	{
 		this->ke = this->keymat->keymat.create_ke(&this->keymat->keymat,
 												  this->ke_method);
@@ -2147,7 +2147,7 @@ METHOD(task_t, process_i, status_t,
 				case INVALID_KE_PAYLOAD:
 				{
 					chunk_t data;
-					uint16_t alg = MODP_NONE;
+					uint16_t alg = KE_NONE;
 
 					data = notify->get_notification_data(notify);
 					if (data.len == sizeof(alg))
@@ -2341,7 +2341,7 @@ METHOD(task_t, migrate, void,
 	}
 	if (!this->rekey && !this->retry)
 	{
-		this->ke_method = MODP_NONE;
+		this->ke_method = KE_NONE;
 	}
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
@@ -2420,7 +2420,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 		.config = config,
 		.packet_tsi = tsi ? tsi->clone(tsi) : NULL,
 		.packet_tsr = tsr ? tsr->clone(tsr) : NULL,
-		.ke_method = MODP_NONE,
+		.ke_method = KE_NONE,
 		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
 		.mode = MODE_TUNNEL,
 		.tfcv3 = TRUE,

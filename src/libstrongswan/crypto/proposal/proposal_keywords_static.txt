@@ -148,7 +148,7 @@ prfmd5,           PSEUDO_RANDOM_FUNCTION, PRF_HMAC_MD5,            0
 prfaesxcbc,       PSEUDO_RANDOM_FUNCTION, PRF_AES128_XCBC,         0
 prfcamelliaxcbc,  PSEUDO_RANDOM_FUNCTION, PRF_CAMELLIA128_XCBC,    0
 prfaescmac,       PSEUDO_RANDOM_FUNCTION, PRF_AES128_CMAC,         0
-modpnone,         KEY_EXCHANGE_METHOD, MODP_NONE,                  0
+modpnone,         KEY_EXCHANGE_METHOD, KE_NONE,                    0
 modpnull,         KEY_EXCHANGE_METHOD, MODP_NULL,                  0
 modp768,          KEY_EXCHANGE_METHOD, MODP_768_BIT,               0
 modp1024,         KEY_EXCHANGE_METHOD, MODP_1024_BIT,              0
@@ -200,5 +200,6 @@ sike1,            KEY_EXCHANGE_METHOD, KE_SIKE_L1,                 0
 sike2,            KEY_EXCHANGE_METHOD, KE_SIKE_L2,                 0
 sike3,            KEY_EXCHANGE_METHOD, KE_SIKE_L3,                 0
 sike5,            KEY_EXCHANGE_METHOD, KE_SIKE_L5,                 0
+none,             KEY_EXCHANGE_METHOD, KE_NONE,                    0
 noesn,            EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,   0
 esn,              EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS,      0

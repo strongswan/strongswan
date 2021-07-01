@@ -21,8 +21,8 @@
 #include <collections/hashtable.h>
 #include <threading/mutex.h>
 
-ENUM_BEGIN(key_exchange_method_names, MODP_NONE, MODP_1024_BIT,
-	"MODP_NONE",
+ENUM_BEGIN(key_exchange_method_names, KE_NONE, MODP_1024_BIT,
+	"KE_NONE",
 	"MODP_768",
 	"MODP_1024");
 ENUM_NEXT(key_exchange_method_names, MODP_1536_BIT, MODP_1536_BIT, MODP_1024_BIT,
@@ -81,8 +81,8 @@ ENUM_NEXT(key_exchange_method_names, MODP_CUSTOM, MODP_CUSTOM, KE_SIKE_L5,
 	"MODP_CUSTOM");
 ENUM_END(key_exchange_method_names, MODP_CUSTOM);
 
-ENUM_BEGIN(key_exchange_method_names_short, MODP_NONE, MODP_1024_BIT,
-	"modpnone",
+ENUM_BEGIN(key_exchange_method_names_short, KE_NONE, MODP_1024_BIT,
+	"none",
 	"modp768",
 	"modp1024");
 ENUM_NEXT(key_exchange_method_names_short, MODP_1536_BIT, MODP_1536_BIT, MODP_1024_BIT,
@@ -782,7 +782,7 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 		case MODP_CUSTOM:
 			valid = TRUE;
 			break;
-		case MODP_NONE:
+		case KE_NONE:
 			/* fail */
 			break;
 		/* compile-warn unhandled methods, fail verification */
