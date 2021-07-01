@@ -781,7 +781,7 @@ static status_t send_notify(private_quick_mode_t *this, notify_type_t type)
 
 /**
  * Prepare a list of proposals from child_config containing only the specified
- * DH group, unless it is set to MODP_NONE.
+ * DH group, unless it is set to KE_NONE.
  */
 static linked_list_t *get_proposals(private_quick_mode_t *this,
 									key_exchange_method_t group)
@@ -794,7 +794,7 @@ static linked_list_t *get_proposals(private_quick_mode_t *this,
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (group != MODP_NONE)
+		if (group != KE_NONE)
 		{
 			if (!proposal->has_ke_method(proposal, group))
 			{
@@ -866,7 +866,7 @@ METHOD(task_t, build_i, status_t,
 			}
 
 			group = this->config->get_ke_method(this->config);
-			if (group != MODP_NONE)
+			if (group != KE_NONE)
 			{
 				proposal_t *proposal;
 				uint16_t preferred_group;
@@ -899,7 +899,7 @@ METHOD(task_t, build_i, status_t,
 			}
 			else
 			{
-				list = get_proposals(this, MODP_NONE);
+				list = get_proposals(this, KE_NONE);
 			}
 
 			get_lifetimes(this);
@@ -914,7 +914,7 @@ METHOD(task_t, build_i, status_t,
 			{
 				return FAILED;
 			}
-			if (group != MODP_NONE)
+			if (group != KE_NONE)
 			{
 				if (!add_ke(this, message))
 				{
