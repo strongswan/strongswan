@@ -465,7 +465,7 @@ struct tls_crypto_t {
 	/**
 	 * Get the Diffie-Hellman group to use, if any.
 	 *
-	 * @return				Diffie-Hellman group, or MODP_NONE
+	 * @return				Diffie-Hellman group, or KE_NONE
 	 */
 	key_exchange_method_t (*get_dh_group)(tls_crypto_t *this);
 
