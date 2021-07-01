@@ -270,7 +270,7 @@ METHOD(proposal_t, has_ke_method, bool,
 	}
 	enumerator->destroy(enumerator);
 
-	if (!any && ke == MODP_NONE)
+	if (!any && ke == KE_NONE)
 	{
 		found = TRUE;
 	}
@@ -691,7 +691,7 @@ static bool check_proposal(private_proposal_t *this)
 			DBG1(DBG_CFG, "a PRF algorithm is mandatory in IKE proposals");
 			return FALSE;
 		}
-		/* remove MODP_NONE from IKE proposal */
+		/* remove KE_NONE from IKE proposal */
 		e = array_create_enumerator(this->transforms);
 		while (e->enumerate(e, &entry))
 		{
