@@ -56,6 +56,11 @@
 #include <stdio.h>
 
 /**
+ *  Maximum proposal length
+ */
+#define MAX_PROPOSAL_LEN   2048
+
+/**
  * Magic value for an undefined lifetime
  */
 #define LFT_UNDEFINED (~(uint64_t)0)
@@ -594,7 +599,7 @@ static void free_child_data(child_data_t *data)
  */
 static bool parse_proposal(linked_list_t *list, protocol_id_t proto, chunk_t v)
 {
-	char buf[BUF_LEN];
+	char buf[MAX_PROPOSAL_LEN];
 	proposal_t *proposal;
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
