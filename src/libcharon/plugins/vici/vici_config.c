@@ -1031,6 +1031,7 @@ CALLBACK(parse_hw_offload, bool,
 		{ "no",		HW_OFFLOAD_NO	},
 		{ "yes",	HW_OFFLOAD_YES	},
 		{ "auto",	HW_OFFLOAD_AUTO	},
+		{ "full",	HW_OFFLOAD_FULL	},
 	};
 	int d;
 

@@ -37,10 +37,11 @@ ENUM(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_LZJH,
 	"IPCOMP_LZJH"
 );
 
-ENUM(hw_offload_names, HW_OFFLOAD_NO, HW_OFFLOAD_AUTO,
+ENUM(hw_offload_names, HW_OFFLOAD_NO, HW_OFFLOAD_FULL,
 	"no",
 	"yes",
 	"auto",
+	"full",
 );
 
 ENUM(dscp_copy_names, DSCP_COPY_OUT_ONLY, DSCP_COPY_NO,
