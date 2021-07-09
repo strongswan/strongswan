@@ -15,7 +15,6 @@
 
 package org.strongswan.android.ui;
 
-import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -74,6 +73,8 @@ import java.util.UUID;
 
 import javax.net.ssl.SSLHandshakeException;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.AsyncTaskLoader;
@@ -84,8 +85,6 @@ public class VpnProfileImportActivity extends AppCompatActivity
 {
 	private static final String PKCS12_INSTALLED = "PKCS12_INSTALLED";
 	private static final String PROFILE_URI = "PROFILE_URI";
-	private static final int INSTALL_PKCS12 = 0;
-	private static final int OPEN_DOCUMENT = 1;
 	private static final int PROFILE_LOADER = 0;
 	private static final int USER_CERT_LOADER = 1;
 
@@ -111,6 +110,29 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	private Button mImportUserCert;
 	private ViewGroup mRemoteCertificate;
 	private RelativeLayout mRemoteCert;
+
+	private final ActivityResultLauncher<Intent> mImportPKCS12 = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			if (result.getResultCode() == RESULT_OK)
+			{	/* no need to import twice */
+				mImportUserCert.setEnabled(false);
+				mSelectUserCert.performClick();
+			}
+		}
+	);
+
+	private final ActivityResultLauncher<Intent> mOpenDocument = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			if (result.getResultCode() == RESULT_OK && result.getData() != null)
+			{
+				loadProfile(result.getData().getData());
+				return;
+			}
+			finish();
+		}
+	);
 
 	private LoaderManager.LoaderCallbacks<ProfileLoadResult> mProfileLoaderCallbacks = new LoaderManager.LoaderCallbacks<ProfileLoadResult>()
 	{
@@ -200,7 +222,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 				Intent intent = KeyChain.createInstallIntent();
 				intent.putExtra(KeyChain.EXTRA_NAME, getString(R.string.profile_cert_alias, mProfile.getName()));
 				intent.putExtra(KeyChain.EXTRA_PKCS12, mProfile.PKCS12);
-				startActivityForResult(intent, INSTALL_PKCS12);
+				mImportPKCS12.launch(intent);
 			}
 		});
 
@@ -216,7 +238,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			openIntent.setType("*/*");
 			try
 			{
-				startActivityForResult(openIntent, OPEN_DOCUMENT);
+				mOpenDocument.launch(openIntent);
 			}
 			catch (ActivityNotFoundException e)
 			{	/* some devices are unable to browse for files */
@@ -280,30 +302,6 @@ public class VpnProfileImportActivity extends AppCompatActivity
 				return true;
 			default:
 				return super.onOptionsItemSelected(item);
-		}
-	}
-
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data)
-	{
-		super.onActivityResult(requestCode, resultCode, data);
-		switch (requestCode)
-		{
-			case INSTALL_PKCS12:
-				if (resultCode == Activity.RESULT_OK)
-				{	/* no need to import twice */
-					mImportUserCert.setEnabled(false);
-					mSelectUserCert.performClick();
-				}
-				break;
-			case OPEN_DOCUMENT:
-				if (resultCode == Activity.RESULT_OK && data != null)
-				{
-					loadProfile(data.getData());
-					return;
-				}
-				finish();
-				break;
 		}
 	}
 

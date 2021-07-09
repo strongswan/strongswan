@@ -74,6 +74,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDialogFragment;
@@ -82,9 +84,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class VpnProfileDetailActivity extends AppCompatActivity
 {
-	private static final int SELECT_TRUSTED_CERTIFICATE = 0;
-	private static final int SELECT_APPLICATIONS = 1;
-
 	private VpnProfileDataSource mDataSource;
 	private Long mId;
 	private TrustedCertificateEntry mCertEntry;
@@ -143,6 +142,31 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private TextView mProfileId;
 	private EditText mDnsServers;
 	private TextInputLayoutHelper mDnsServersWrap;
+
+	private final ActivityResultLauncher<Intent> mSelectTrustedCertificate = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			if (result.getResultCode() == RESULT_OK)
+			{
+				String alias = result.getData().getStringExtra(VpnProfileDataSource.KEY_CERTIFICATE);
+				X509Certificate certificate = TrustedCertificateManager.getInstance().getCACertificateFromAlias(alias);
+				mCertEntry = certificate == null ? null : new TrustedCertificateEntry(alias, certificate);
+				updateCertificateSelector();
+			}
+		}
+	);
+
+	private final ActivityResultLauncher<Intent> mSelectApplications = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			if (result.getResultCode() == RESULT_OK)
+			{
+				ArrayList<String> selection = result.getData().getStringArrayListExtra(VpnProfileDataSource.KEY_SELECTED_APPS_LIST);
+				mSelectedApps = new TreeSet<>(selection);
+				updateAppsSelector();
+			}
+		}
+	);
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -300,7 +324,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			{
 				Intent intent = new Intent(VpnProfileDetailActivity.this, TrustedCertificatesActivity.class);
 				intent.setAction(TrustedCertificatesActivity.SELECT_CERTIFICATE);
-				startActivityForResult(intent, SELECT_TRUSTED_CERTIFICATE);
+				mSelectTrustedCertificate.launch(intent);
 			}
 		});
 
@@ -334,7 +358,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			{
 				Intent intent = new Intent(VpnProfileDetailActivity.this, SelectedApplicationsActivity.class);
 				intent.putExtra(VpnProfileDataSource.KEY_SELECTED_APPS_LIST, new ArrayList<>(mSelectedApps));
-				startActivityForResult(intent, SELECT_APPLICATIONS);
+				mSelectApplications.launch(intent);
 			}
 		});
 
@@ -401,33 +425,6 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				return true;
 			default:
 				return super.onOptionsItemSelected(item);
-		}
-	}
-
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data)
-	{
-		switch (requestCode)
-		{
-			case SELECT_TRUSTED_CERTIFICATE:
-				if (resultCode == RESULT_OK)
-				{
-					String alias = data.getStringExtra(VpnProfileDataSource.KEY_CERTIFICATE);
-					X509Certificate certificate = TrustedCertificateManager.getInstance().getCACertificateFromAlias(alias);
-					mCertEntry = certificate == null ? null : new TrustedCertificateEntry(alias, certificate);
-					updateCertificateSelector();
-				}
-				break;
-			case SELECT_APPLICATIONS:
-				if (resultCode == RESULT_OK)
-				{
-					ArrayList<String> selection = data.getStringArrayListExtra(VpnProfileDataSource.KEY_SELECTED_APPS_LIST);
-					mSelectedApps = new TreeSet<>(selection);
-					updateAppsSelector();
-				}
-				break;
-			default:
-				super.onActivityResult(requestCode, resultCode, data);
 		}
 	}
 

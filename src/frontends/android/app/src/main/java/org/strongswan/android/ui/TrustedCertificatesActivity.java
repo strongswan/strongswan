@@ -15,7 +15,6 @@
 
 package org.strongswan.android.ui;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
@@ -34,6 +33,8 @@ import org.strongswan.android.ui.CertificateDeleteConfirmationDialog.OnCertifica
 
 import java.security.KeyStore;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -45,10 +46,19 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 {
 	public static final String SELECT_CERTIFICATE = "org.strongswan.android.action.SELECT_CERTIFICATE";
 	private static final String DIALOG_TAG = "Dialog";
-	private static final int IMPORT_CERTIFICATE = 0;
 	private TrustedCertificatesPagerAdapter mAdapter;
 	private ViewPager mPager;
 	private boolean mSelect;
+
+	private final ActivityResultLauncher<Intent> mImportCertificate = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			if (result.getResultCode() == RESULT_OK)
+			{
+				reloadCertificates();
+			}
+		}
+	);
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -100,25 +110,10 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 				return true;
 			case R.id.menu_import_certificate:
 				Intent intent = new Intent(this, TrustedCertificateImportActivity.class);
-				startActivityForResult(intent, IMPORT_CERTIFICATE);
+				mImportCertificate.launch(intent);
 				return true;
 		}
 		return super.onOptionsItemSelected(item);
-	}
-
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data)
-	{
-		switch (requestCode)
-		{
-			case IMPORT_CERTIFICATE:
-				if (resultCode == Activity.RESULT_OK)
-				{
-					reloadCertificates();
-				}
-				return;
-		}
-		super.onActivityResult(requestCode, resultCode, data);
 	}
 
 	@Override
@@ -129,7 +124,7 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 			/* the user selected a certificate, return to calling activity */
 			Intent intent = new Intent();
 			intent.putExtra(VpnProfileDataSource.KEY_CERTIFICATE, selected.getAlias());
-			setResult(Activity.RESULT_OK, intent);
+			setResult(RESULT_OK, intent);
 			finish();
 		}
 		else if (mAdapter.getSource(mPager.getCurrentItem()) == TrustedCertificateSource.LOCAL)
