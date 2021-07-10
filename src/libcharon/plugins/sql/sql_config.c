@@ -164,12 +164,19 @@ static void add_esp_proposals(private_sql_config_t *this,
 static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 {
 	int id, lifetime, rekeytime, jitter, hostaccess, mode, ipcomp, reqid;
-	int start, dpd, close;
-	char *name, *updown;
+	int start, dpd, close, if_id_in, if_id_out, inactivity, tfc, hw_offload;
+	int copy_dscp;
+	char *name, *updown, *interface;
+	mark_t mark_in, mark_out, set_mark_in, set_mark_out;
 	child_cfg_t *child_cfg;
 
 	if (e->enumerate(e, &id, &name, &lifetime, &rekeytime, &jitter, &updown,
-						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, &reqid))
+						&hostaccess, &mode, &start, &dpd, &close, &ipcomp, &reqid,
+						&if_id_in, &if_id_out, &mark_in.value, &mark_in.mask,
+						&mark_out.value, &mark_out.mask, &set_mark_in.value,
+						&set_mark_in.mask, &set_mark_out.value,
+						&set_mark_out.mask, &inactivity, &tfc, &interface,
+						&hw_offload, &copy_dscp))
 	{
 		child_cfg_create_t child = {
 			.mode = mode,
@@ -185,6 +192,17 @@ static child_cfg_t *build_child_cfg(private_sql_config_t *this, enumerator_t *e)
 			.dpd_action = dpd,
 			.close_action = close,
 			.updown = updown,
+			.if_id_in = if_id_in,
+			.if_id_out = if_id_out,
+			.mark_in = mark_in,
+			.mark_out = mark_out,
+			.set_mark_in = set_mark_in,
+			.set_mark_out = set_mark_out,
+			.inactivity = inactivity,
+			.tfc = tfc,
+			.interface = interface,
+			.hw_offload = hw_offload,
+			.copy_dscp = copy_dscp,
 		};
 		child_cfg = child_cfg_create(name, &child);
 		add_esp_proposals(this, child_cfg, id);
@@ -205,12 +223,18 @@ static void add_child_cfgs(private_sql_config_t *this, peer_cfg_t *peer, int id)
 	e = this->db->query(this->db,
 			"SELECT c.id, c.name, c.lifetime, c.rekeytime, c.jitter, c.updown, "
 			"c.hostaccess, c.mode, c.start_action, c.dpd_action, "
-			"c.close_action, c.ipcomp, c.reqid "
+			"c.close_action, c.ipcomp, c.reqid, c.if_id_in, c.if_id_out, "
+			"c.mark_in, c.mark_in_mask, c.mark_out, c.mark_out_mask, "
+			"c.set_mark_in, c.set_mark_in_mask, c.set_mark_out, "
+			"c.set_mark_out_mask, c.inactivity, c.tfc, c.interface, "
+			"c.hw_offload, c.copy_dscp "
 			"FROM child_configs AS c JOIN peer_config_child_config AS pc "
 			"ON c.id = pc.child_cfg WHERE pc.peer_cfg = ?",
 			DB_INT, id,
 			DB_INT, DB_TEXT, DB_INT, DB_INT, DB_INT, DB_TEXT, DB_INT,
-			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT);
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
+			DB_INT, DB_INT, DB_TEXT, DB_INT, DB_INT);
 	if (e)
 	{
 		while ((child_cfg = build_child_cfg(this, e)))
