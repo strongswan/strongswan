@@ -349,7 +349,8 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 			"c.cert_policy, c.uniqueid, c.auth_method, c.eap_type, "
 			"c.eap_vendor, c.keyingtries, c.rekeytime, c.reauthtime, c.jitter, "
 			"c.overtime, c.mobike, c.dpd_delay, c.virtual, c.pool, "
-			"c.mediation, c.mediated_by, COALESCE(p.type, 0), p.data "
+			"c.mediation, c.mediated_by, c.if_id_in, c.if_id_out, "
+			"COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
 			"JOIN identities AS l ON c.local_id = l.id "
 			"JOIN identities AS r ON c.remote_id = r.id "
@@ -360,7 +361,7 @@ static peer_cfg_t *get_peer_cfg_by_id(private_sql_config_t *this, int id)
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_TEXT, DB_TEXT,
-			DB_INT, DB_INT, DB_INT, DB_BLOB);
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_BLOB);
 	if (e)
 	{
 		peer_cfg = build_peer_cfg(this, e, NULL, NULL);
@@ -387,7 +388,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 	int id, ike_cfg, l_type, r_type,
 		cert_policy, uniqueid, auth_method, eap_type, eap_vendor, keyingtries,
 		rekeytime, reauthtime, jitter, overtime, mobike, dpd_delay,
-		mediation, mediated_by, p_type;
+		mediation, mediated_by, if_id_in, if_id_out, p_type;
 	chunk_t l_data, r_data, p_data;
 	char *name, *virtual, *pool;
 	enumerator_t *enumerator;
@@ -397,7 +398,7 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 			&cert_policy, &uniqueid, &auth_method, &eap_type, &eap_vendor,
 			&keyingtries, &rekeytime, &reauthtime, &jitter, &overtime, &mobike,
 			&dpd_delay,	&virtual, &pool,
-			&mediation, &mediated_by, &p_type, &p_data))
+			&mediation, &mediated_by, &if_id_in, &if_id_out, &p_type, &p_data))
 	{
 		identification_t *local_id, *remote_id, *peer_id = NULL;
 		peer_cfg_t *peer_cfg, *mediated_cfg = NULL;
@@ -440,6 +441,8 @@ static peer_cfg_t *build_peer_cfg(private_sql_config_t *this, enumerator_t *e,
 				.over_time = overtime,
 				.no_mobike = !mobike,
 				.dpd = dpd_delay,
+				.if_id_in = if_id_in,
+				.if_id_out = if_id_out,
 #ifdef ME
 				.mediation = mediation,
 				.mediated_by = mediated_cfg ?
@@ -504,7 +507,8 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 			"c.cert_policy, c.uniqueid, c.auth_method, c.eap_type, "
 			"c.eap_vendor, c.keyingtries, c.rekeytime, c.reauthtime, c.jitter, "
 			"c.overtime, c.mobike, c.dpd_delay, c.virtual, c.pool, "
-			"c.mediation, c.mediated_by, COALESCE(p.type, 0), p.data "
+			"c.mediation, c.mediated_by, c.if_id_in, c.if_id_out, "
+			"COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
 			"JOIN identities AS l ON c.local_id = l.id "
 			"JOIN identities AS r ON c.remote_id = r.id "
@@ -515,7 +519,7 @@ METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_TEXT, DB_TEXT,
-			DB_INT, DB_INT,	DB_INT, DB_BLOB);
+			DB_INT, DB_INT,	DB_INT, DB_INT, DB_INT, DB_BLOB);
 	if (e)
 	{
 		peer_cfg = build_peer_cfg(this, e, NULL, NULL);
@@ -652,7 +656,8 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 			"c.cert_policy, c.uniqueid, c.auth_method, c.eap_type, "
 			"c.eap_vendor, c.keyingtries, c.rekeytime, c.reauthtime, c.jitter, "
 			"c.overtime, c.mobike, c.dpd_delay, c.virtual, c.pool, "
-			"c.mediation, c.mediated_by, COALESCE(p.type, 0), p.data "
+			"c.mediation, c.mediated_by, c.if_id_in, c.if_id_out, "
+			"COALESCE(p.type, 0), p.data "
 			"FROM peer_configs AS c "
 			"JOIN identities AS l ON c.local_id = l.id "
 			"JOIN identities AS r ON c.remote_id = r.id "
@@ -663,7 +668,7 @@ METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_INT,
 			DB_INT,	DB_TEXT, DB_TEXT,
-			DB_INT, DB_INT, DB_INT, DB_BLOB);
+			DB_INT, DB_INT, DB_INT, DB_INT, DB_INT, DB_BLOB);
 	if (!e->inner)
 	{
 		free(e);

@@ -113,6 +113,8 @@ CREATE TABLE `peer_configs` (
   `mediation` tinyint(1) NOT NULL default '0',
   `mediated_by` int(10) unsigned NOT NULL default '0',
   `peer_id` int(10) unsigned NOT NULL default '0',
+  `if_id_in` mediumint(8) unsigned NOT NULL default '0',
+  `if_id_out` mediumint(8) unsigned NOT NULL default '0',
   PRIMARY KEY (`id`),
   INDEX (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

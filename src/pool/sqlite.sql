@@ -114,7 +114,9 @@ CREATE TABLE peer_configs (
   pool TEXT DEFAULT NULL,
   mediation INTEGER NOT NULL DEFAULT '0',
   mediated_by INTEGER NOT NULL DEFAULT '0',
-  peer_id INTEGER NOT NULL DEFAULT '0'
+  peer_id INTEGER NOT NULL DEFAULT '0',
+  if_id_in INTEGER NOT NULL DEFAULT '0',
+  if_id_out INTEGER NOT NULL DEFAULT '0'
 );
 DROP INDEX IF EXISTS peer_configs_name;
 CREATE INDEX peer_configs_name ON peer_configs (
