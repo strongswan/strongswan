@@ -22,6 +22,7 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.os.SystemClock;
 
@@ -107,7 +108,7 @@ public class VpnStateService extends Service
 	{
 		/* this handler allows us to notify listeners from the UI thread and
 		 * not from the threads that actually report any state changes */
-		mHandler = new RetryHandler(this);
+		mHandler = new RetryHandler(getMainLooper(), this);
 	}
 
 	@Override
@@ -536,8 +537,9 @@ public class VpnStateService extends Service
 	private static class RetryHandler extends Handler {
 		WeakReference<VpnStateService> mService;
 
-		public RetryHandler(VpnStateService service)
+		public RetryHandler(Looper looper, VpnStateService service)
 		{
+			super(looper);
 			mService = new WeakReference<>(service);
 		}
 

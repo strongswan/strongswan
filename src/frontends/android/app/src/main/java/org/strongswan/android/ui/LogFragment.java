@@ -19,6 +19,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.os.FileObserver;
 import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -55,7 +56,7 @@ public class LogFragment extends Fragment
 
 		mLogFilePath = getActivity().getFilesDir() + File.separator + CharonVpnService.LOG_FILE;
 
-		mLogHandler = new Handler();
+		mLogHandler = new Handler(Looper.getMainLooper());
 
 		mDirectoryObserver = new LogDirectoryObserver(getActivity().getFilesDir().getAbsolutePath());
 	}
