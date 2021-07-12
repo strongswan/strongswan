@@ -20,7 +20,6 @@ package org.strongswan.android.ui;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.format.Formatter;
@@ -30,6 +29,7 @@ import android.widget.Toast;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.ui.VpnProfileListFragment.OnVpnProfileSelectedListener;
 
@@ -68,8 +68,10 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 		bar.setDisplayShowTitleEnabled(false);
 		bar.setIcon(R.mipmap.ic_app);
 
-		/* load CA certificates in a background task */
-		new LoadCertificatesTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+		/* load CA certificates in a background thread */
+		((StrongSwanApplication)getApplication()).getExecutor().execute(() -> {
+			TrustedCertificateManager.getInstance().load();
+		});
 	}
 
 	@Override
@@ -155,18 +157,6 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 		CRLCacheDialog dialog = new CRLCacheDialog();
 		dialog.setArguments(args);
 		dialog.show(this.getSupportFragmentManager(), DIALOG_TAG);
-	}
-
-	/**
-	 * Class that loads the cached CA certificates.
-	 */
-	private class LoadCertificatesTask extends AsyncTask<Void, Void, TrustedCertificateManager>
-	{
-		@Override
-		protected TrustedCertificateManager doInBackground(Void... params)
-		{
-			return TrustedCertificateManager.getInstance().load();
-		}
 	}
 
 	/**

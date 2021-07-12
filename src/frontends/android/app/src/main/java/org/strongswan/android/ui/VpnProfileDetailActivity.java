@@ -21,9 +21,9 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
@@ -59,6 +59,7 @@ import org.strongswan.android.data.VpnProfile.SelectedAppsHandling;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
+import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.adapter.CertificateIdentitiesAdapter;
@@ -73,6 +74,7 @@ import java.util.ArrayList;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -788,9 +790,22 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		useralias = savedInstanceState == null ? useralias : savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
 		if (useralias != null)
 		{
-			UserCertificateLoader loader = new UserCertificateLoader(this, useralias);
 			mUserCertLoading = useralias;
-			loader.execute();
+			UserCertificateLoader loader = new UserCertificateLoader(((StrongSwanApplication)getApplication()).getExecutor(),
+																	 ((StrongSwanApplication)getApplication()).getHandler());
+			loader.loadCertifiate(this, useralias, result -> {
+				if (result != null)
+				{
+					mUserCertEntry = new TrustedCertificateEntry(mUserCertLoading, result);
+				}
+				else
+				{	/* previously selected certificate is not here anymore */
+					((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setError("");
+					mUserCertEntry = null;
+				}
+				mUserCertLoading = null;
+				updateCredentialView();
+			});
 		}
 
 		/* check if the user selected a CA certificate previously */
@@ -959,54 +974,52 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	}
 
 	/**
+	 * Callback interface for the user certificate loader.
+	 */
+	private interface UserCertificateLoaderCallback {
+		void onComplete(X509Certificate result);
+	}
+
+	/**
 	 * Load the selected user certificate asynchronously.  This cannot be done
 	 * from the main thread as getCertificateChain() calls back to our main
 	 * thread to bind to the KeyChain service resulting in a deadlock.
 	 */
-	private class UserCertificateLoader extends AsyncTask<Void, Void, X509Certificate>
+	private class UserCertificateLoader
 	{
-		private final Context mContext;
-		private final String mAlias;
+		private final Executor mExecutor;
+		private final Handler mHandler;
 
-		public UserCertificateLoader(Context context, String alias)
+		public UserCertificateLoader(Executor executor, Handler handler)
 		{
-			mContext = context;
-			mAlias = alias;
+			mExecutor = executor;
+			mHandler = handler;
 		}
 
-		@Override
-		protected X509Certificate doInBackground(Void... params)
+		public void loadCertifiate(Context context, String alias, UserCertificateLoaderCallback callback)
 		{
-			X509Certificate[] chain = null;
-			try
-			{
-				chain = KeyChain.getCertificateChain(mContext, mAlias);
-			}
-			catch (KeyChainException | InterruptedException e)
-			{
-				e.printStackTrace();
-			}
-			if (chain != null && chain.length > 0)
-			{
-				return chain[0];
-			}
-			return null;
+			mExecutor.execute(() -> {
+				X509Certificate[] chain = null;
+				try
+				{
+					chain = KeyChain.getCertificateChain(context, alias);
+				}
+				catch (KeyChainException | InterruptedException e)
+				{
+					e.printStackTrace();
+				}
+				if (chain != null && chain.length > 0)
+				{
+					complete(chain[0], callback);
+					return;
+				}
+				complete(null, callback);
+			});
 		}
 
-		@Override
-		protected void onPostExecute(X509Certificate result)
+		protected void complete(X509Certificate result, UserCertificateLoaderCallback callback)
 		{
-			if (result != null)
-			{
-				mUserCertEntry = new TrustedCertificateEntry(mAlias, result);
-			}
-			else
-			{	/* previously selected certificate is not here anymore */
-				((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setError("");
-				mUserCertEntry = null;
-			}
-			mUserCertLoading = null;
-			updateCredentialView();
+			mHandler.post(() -> callback.onComplete(result));
 		}
 	}
 
