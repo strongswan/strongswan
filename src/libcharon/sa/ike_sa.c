@@ -2041,11 +2041,11 @@ static bool is_delete_queued(private_ike_sa_t *this, task_queue_t queue)
 static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 									 bool force)
 {
+	private_ike_sa_t *other = (private_ike_sa_t*)new;
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
 	action_t action;
-	status_t status = FAILED;
 
 	/* handle existing CHILD_SAs */
 	enumerator = create_child_sa_enumerator(this);
@@ -2075,35 +2075,23 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 				action = child_sa->get_dpd_action(child_sa);
 			}
 		}
-		switch (action)
+		if (action == ACTION_RESTART)
 		{
-			case ACTION_RESTART:
-				child_cfg = child_sa->get_config(child_sa);
-				DBG1(DBG_IKE, "restarting CHILD_SA %s",
-					 child_cfg->get_name(child_cfg));
-				child_cfg->get_ref(child_cfg);
-				status = new->initiate(new, child_cfg,
-								child_sa->get_reqid(child_sa), NULL, NULL);
-				break;
-			default:
-				continue;
-		}
-		if (status == DESTROY_ME)
-		{
-			break;
+			child_cfg = child_sa->get_config(child_sa);
+			DBG1(DBG_IKE, "restarting CHILD_SA %s",
+				 child_cfg->get_name(child_cfg));
+			other->task_manager->queue_child(other->task_manager,
+											 child_cfg->get_ref(child_cfg),
+											 child_sa->get_reqid(child_sa),
+											 NULL, NULL);
 		}
 	}
 	enumerator->destroy(enumerator);
+
 	/* adopt any active or queued CHILD-creating tasks */
-	if (status != DESTROY_ME)
-	{
-		new->adopt_child_tasks(new, &this->public);
-		if (new->get_state(new) == IKE_CREATED)
-		{
-			status = new->initiate(new, NULL, 0, NULL, NULL);
-		}
-	}
-	return status;
+	new->adopt_child_tasks(new, &this->public);
+
+	return new->initiate(new, NULL, 0, NULL, NULL);
 }
 
 METHOD(ike_sa_t, reestablish, status_t,
