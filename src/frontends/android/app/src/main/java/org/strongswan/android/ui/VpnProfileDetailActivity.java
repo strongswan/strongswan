@@ -43,6 +43,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
@@ -144,6 +145,16 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private TextView mProfileId;
 	private EditText mDnsServers;
 	private TextInputLayoutHelper mDnsServersWrap;
+
+	private final ActivityResultLauncher<Intent> mInstallPKCS12 = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			if (result.getResultCode() == RESULT_OK)
+			{
+				mSelectUserCert.performClick();
+			}
+		}
+	);
 
 	private final ActivityResultLauncher<Intent> mSelectTrustedCertificate = registerForActivityResult(
 		new ActivityResultContracts.StartActivityForResult(),
@@ -309,6 +320,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		});
 
 		mSelectUserCert.setOnClickListener(new SelectUserCertOnClickListener());
+		((Button)findViewById(R.id.install_user_certificate)).setOnClickListener(v -> {
+			Intent intent = KeyChain.createInstallIntent();
+			mInstallPKCS12.launch(intent);
+		});
 		mSelectUserIdAdapter = new CertificateIdentitiesAdapter(this);
 		mLocalId.setAdapter(mSelectUserIdAdapter);
 

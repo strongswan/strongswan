@@ -72,6 +72,7 @@
     <string name="profile_user_certificate_label">用户证书</string>
     <string name="profile_user_select_certificate_label">选择用户证书</string>
     <string name="profile_user_select_certificate">选择指定的用户证书</string>
+    <string name="profile_user_certificate_install">Install user certificate</string>   
     <string name="profile_ca_label">CA证书</string>
     <string name="profile_ca_auto_label">自动选择</string>
     <string name="profile_ca_select_certificate_label">选择CA证书</string>
