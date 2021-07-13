@@ -15,10 +15,17 @@ Official Android port of the popular strongSwan VPN solution.
  <li>Per-app VPN allows limiting the VPN connection to specific apps, or exclude them from using it</li>
  <li>The IPsec implementation currently supports the AES-CBC, AES-GCM, ChaCha20/Poly1305 and SHA1/SHA2 algorithms</li>
  <li>Passwords are currently stored as cleartext in the database (only if stored with a profile)</li>
- <li>VPN profiles may be imported from files (this is the only reason why the app requests android.permission.READ_EXTERNAL_STORAGE)</li>
+ <li>VPN profiles may be imported from files</li>
 </ul>
 
 Details and a changelog can be found on our wiki: https://wiki.strongswan.org/projects/strongswan/wiki/AndroidVPNClient
+
+# PERMISSIONS #
+
+<ul>
+ <li>READ_EXTERNAL_STORAGE: Allows importing VPN profiles and CA certificates from external storage on some Android versions</li>
+ <li>QUERY_ALL_PACKAGES: Required on Android 11+ to select apps to ex-/include in VPN profiles and the optional EAP-TNC use case</li>
+</ul>
 
 # EXAMPLE SERVER CONFIGURATION #
 
