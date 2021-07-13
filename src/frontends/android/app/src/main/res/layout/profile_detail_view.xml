@@ -280,7 +280,7 @@
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/cert_req"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -297,7 +297,7 @@
                 android:textSize="12sp"
                 android:text="@string/profile_cert_req_hint" />
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/use_ocsp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -314,7 +314,7 @@
                 android:textSize="12sp"
                 android:text="@string/profile_use_ocsp_hint" />
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/use_crl"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -331,7 +331,7 @@
                 android:textSize="12sp"
                 android:text="@string/profile_use_crl_hint" />
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/strict_revocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -348,7 +348,7 @@
                 android:textSize="12sp"
                 android:text="@string/profile_strict_revocation_hint" />
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/rsa_pss"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -365,7 +365,7 @@
                 android:textSize="12sp"
                 android:text="@string/profile_rsa_pss_hint" />
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/ipv6_transport"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

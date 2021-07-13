@@ -50,7 +50,6 @@ import android.widget.EditText;
 import android.widget.MultiAutoCompleteTextView;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
-import android.widget.Switch;
 import android.widget.TextView;
 
 import org.strongswan.android.R;
@@ -81,6 +80,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDialogFragment;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.text.HtmlCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -120,12 +120,12 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private TextInputLayoutHelper mMTUWrap;
 	private EditText mPort;
 	private TextInputLayoutHelper mPortWrap;
-	private Switch mCertReq;
-	private Switch mUseCrl;
-	private Switch mUseOcsp;
-	private Switch mStrictRevocation;
-	private Switch mRsaPss;
-	private Switch mIPv6Transport;
+	private SwitchCompat mCertReq;
+	private SwitchCompat mUseCrl;
+	private SwitchCompat mUseOcsp;
+	private SwitchCompat mStrictRevocation;
+	private SwitchCompat mRsaPss;
+	private SwitchCompat mIPv6Transport;
 	private EditText mNATKeepalive;
 	private TextInputLayoutHelper mNATKeepaliveWrap;
 	private EditText mIncludedSubnets;
@@ -216,7 +216,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mPortWrap = (TextInputLayoutHelper) findViewById(R.id.port_wrap);
 		mNATKeepalive = (EditText)findViewById(R.id.nat_keepalive);
 		mNATKeepaliveWrap = (TextInputLayoutHelper) findViewById(R.id.nat_keepalive_wrap);
-		mCertReq = (Switch)findViewById(R.id.cert_req);
+		mCertReq = findViewById(R.id.cert_req);
 		mUseCrl = findViewById(R.id.use_crl);
 		mUseOcsp = findViewById(R.id.use_ocsp);
 		mStrictRevocation= findViewById(R.id.strict_revocation);
