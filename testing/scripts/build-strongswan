@@ -143,7 +143,7 @@ if [ -z "$TARBALL" ]; then
 	do_on_exit umount $LOOPDIR/root/strongswan
 
 	log_action "Determine strongSwan version"
-	desc=`git -C $SWANDIR describe --dirty`
+	desc=`git -C $SWANDIR describe --exclude 'android-*' --dirty`
 	if [ $? -eq 0 ]; then
 		version="$desc (`git -C $SWANDIR rev-parse --abbrev-ref HEAD`)"
 	else

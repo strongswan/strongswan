@@ -6,7 +6,7 @@ TARBALL=$SRCDIR/.tarball-git-version
 if test -f $TARBALL; then
 	V=$(cat $TARBALL)
 elif test -d $SRCDIR/.git; then
-	V=$(git -C $SRCDIR describe --tags HEAD 2>/dev/null)
+	V=$(git -C $SRCDIR describe --exclude 'android-*' --tags HEAD 2>/dev/null)
 fi
 
 if test -z "$V"; then

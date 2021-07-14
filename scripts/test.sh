@@ -468,7 +468,7 @@ sonarcloud)
 		-Dsonar.projectKey=${SONAR_PROJECT} \
 		-Dsonar.organization=${SONAR_ORGANIZATION} \
 		-Dsonar.login=${SONAR_TOKEN} \
-		-Dsonar.projectVersion=$(git describe)+${BUILD_NUMBER} \
+		-Dsonar.projectVersion=$(git describe --exclude 'android-*')+${BUILD_NUMBER} \
 		-Dsonar.sources=. \
 		-Dsonar.cfamily.threads=2 \
 		-Dsonar.cfamily.cache.enabled=true \
