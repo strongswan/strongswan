@@ -72,6 +72,7 @@
     <string name="profile_user_certificate_label">用戶憑證</string>
     <string name="profile_user_select_certificate_label">選擇用戶憑證</string>
     <string name="profile_user_select_certificate">選擇指定的用戶憑證</string>
+    <string name="profile_user_certificate_install">Install user certificate</string>
     <string name="profile_ca_label">CA憑證</string>
     <string name="profile_ca_auto_label">自動選擇</string>
     <string name="profile_ca_select_certificate_label">選擇CA憑證</string>

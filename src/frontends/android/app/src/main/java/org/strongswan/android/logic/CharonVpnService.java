@@ -192,7 +192,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		mAppDir = getFilesDir().getAbsolutePath();
 
 		/* handler used to do changes in the main UI thread */
-		mHandler = new Handler();
+		mHandler = new Handler(getMainLooper());
 
 		mDataSource = new VpnProfileDataSource(this);
 		mDataSource.open();

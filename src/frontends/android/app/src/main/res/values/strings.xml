@@ -75,6 +75,7 @@
     <string name="profile_user_certificate_label">User certificate</string>
     <string name="profile_user_select_certificate_label">Select user certificate</string>
     <string name="profile_user_select_certificate">Select a specific user certificate</string>
+    <string name="profile_user_certificate_install">Install user certificate</string>
     <string name="profile_ca_label">CA certificate</string>
     <string name="profile_ca_auto_label">Select automatically</string>
     <string name="profile_ca_select_certificate_label">Select CA certificate</string>

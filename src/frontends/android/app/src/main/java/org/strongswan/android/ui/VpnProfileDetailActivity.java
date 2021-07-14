@@ -21,9 +21,9 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
@@ -43,6 +43,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
@@ -50,7 +51,6 @@ import android.widget.EditText;
 import android.widget.MultiAutoCompleteTextView;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
-import android.widget.Switch;
 import android.widget.TextView;
 
 import org.strongswan.android.R;
@@ -59,6 +59,7 @@ import org.strongswan.android.data.VpnProfile.SelectedAppsHandling;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
+import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.adapter.CertificateIdentitiesAdapter;
@@ -73,18 +74,19 @@ import java.util.ArrayList;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDialogFragment;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.text.HtmlCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class VpnProfileDetailActivity extends AppCompatActivity
 {
-	private static final int SELECT_TRUSTED_CERTIFICATE = 0;
-	private static final int SELECT_APPLICATIONS = 1;
-
 	private VpnProfileDataSource mDataSource;
 	private Long mId;
 	private TrustedCertificateEntry mCertEntry;
@@ -119,12 +121,12 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private TextInputLayoutHelper mMTUWrap;
 	private EditText mPort;
 	private TextInputLayoutHelper mPortWrap;
-	private Switch mCertReq;
-	private Switch mUseCrl;
-	private Switch mUseOcsp;
-	private Switch mStrictRevocation;
-	private Switch mRsaPss;
-	private Switch mIPv6Transport;
+	private SwitchCompat mCertReq;
+	private SwitchCompat mUseCrl;
+	private SwitchCompat mUseOcsp;
+	private SwitchCompat mStrictRevocation;
+	private SwitchCompat mRsaPss;
+	private SwitchCompat mIPv6Transport;
 	private EditText mNATKeepalive;
 	private TextInputLayoutHelper mNATKeepaliveWrap;
 	private EditText mIncludedSubnets;
@@ -143,6 +145,41 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private TextView mProfileId;
 	private EditText mDnsServers;
 	private TextInputLayoutHelper mDnsServersWrap;
+
+	private final ActivityResultLauncher<Intent> mInstallPKCS12 = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			if (result.getResultCode() == RESULT_OK)
+			{
+				mSelectUserCert.performClick();
+			}
+		}
+	);
+
+	private final ActivityResultLauncher<Intent> mSelectTrustedCertificate = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			if (result.getResultCode() == RESULT_OK)
+			{
+				String alias = result.getData().getStringExtra(VpnProfileDataSource.KEY_CERTIFICATE);
+				X509Certificate certificate = TrustedCertificateManager.getInstance().getCACertificateFromAlias(alias);
+				mCertEntry = certificate == null ? null : new TrustedCertificateEntry(alias, certificate);
+				updateCertificateSelector();
+			}
+		}
+	);
+
+	private final ActivityResultLauncher<Intent> mSelectApplications = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			if (result.getResultCode() == RESULT_OK)
+			{
+				ArrayList<String> selection = result.getData().getStringArrayListExtra(VpnProfileDataSource.KEY_SELECTED_APPS_LIST);
+				mSelectedApps = new TreeSet<>(selection);
+				updateAppsSelector();
+			}
+		}
+	);
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -190,7 +227,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mPortWrap = (TextInputLayoutHelper) findViewById(R.id.port_wrap);
 		mNATKeepalive = (EditText)findViewById(R.id.nat_keepalive);
 		mNATKeepaliveWrap = (TextInputLayoutHelper) findViewById(R.id.nat_keepalive_wrap);
-		mCertReq = (Switch)findViewById(R.id.cert_req);
+		mCertReq = findViewById(R.id.cert_req);
 		mUseCrl = findViewById(R.id.use_crl);
 		mUseOcsp = findViewById(R.id.use_ocsp);
 		mStrictRevocation= findViewById(R.id.strict_revocation);
@@ -283,6 +320,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		});
 
 		mSelectUserCert.setOnClickListener(new SelectUserCertOnClickListener());
+		((Button)findViewById(R.id.install_user_certificate)).setOnClickListener(v -> {
+			Intent intent = KeyChain.createInstallIntent();
+			mInstallPKCS12.launch(intent);
+		});
 		mSelectUserIdAdapter = new CertificateIdentitiesAdapter(this);
 		mLocalId.setAdapter(mSelectUserIdAdapter);
 
@@ -300,7 +341,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			{
 				Intent intent = new Intent(VpnProfileDetailActivity.this, TrustedCertificatesActivity.class);
 				intent.setAction(TrustedCertificatesActivity.SELECT_CERTIFICATE);
-				startActivityForResult(intent, SELECT_TRUSTED_CERTIFICATE);
+				mSelectTrustedCertificate.launch(intent);
 			}
 		});
 
@@ -334,7 +375,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			{
 				Intent intent = new Intent(VpnProfileDetailActivity.this, SelectedApplicationsActivity.class);
 				intent.putExtra(VpnProfileDataSource.KEY_SELECTED_APPS_LIST, new ArrayList<>(mSelectedApps));
-				startActivityForResult(intent, SELECT_APPLICATIONS);
+				mSelectApplications.launch(intent);
 			}
 		});
 
@@ -401,33 +442,6 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				return true;
 			default:
 				return super.onOptionsItemSelected(item);
-		}
-	}
-
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data)
-	{
-		switch (requestCode)
-		{
-			case SELECT_TRUSTED_CERTIFICATE:
-				if (resultCode == RESULT_OK)
-				{
-					String alias = data.getStringExtra(VpnProfileDataSource.KEY_CERTIFICATE);
-					X509Certificate certificate = TrustedCertificateManager.getInstance().getCACertificateFromAlias(alias);
-					mCertEntry = certificate == null ? null : new TrustedCertificateEntry(alias, certificate);
-					updateCertificateSelector();
-				}
-				break;
-			case SELECT_APPLICATIONS:
-				if (resultCode == RESULT_OK)
-				{
-					ArrayList<String> selection = data.getStringArrayListExtra(VpnProfileDataSource.KEY_SELECTED_APPS_LIST);
-					mSelectedApps = new TreeSet<>(selection);
-					updateAppsSelector();
-				}
-				break;
-			default:
-				super.onActivityResult(requestCode, resultCode, data);
 		}
 	}
 
@@ -791,9 +805,22 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		useralias = savedInstanceState == null ? useralias : savedInstanceState.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
 		if (useralias != null)
 		{
-			UserCertificateLoader loader = new UserCertificateLoader(this, useralias);
 			mUserCertLoading = useralias;
-			loader.execute();
+			UserCertificateLoader loader = new UserCertificateLoader(((StrongSwanApplication)getApplication()).getExecutor(),
+																	 ((StrongSwanApplication)getApplication()).getHandler());
+			loader.loadCertifiate(this, useralias, result -> {
+				if (result != null)
+				{
+					mUserCertEntry = new TrustedCertificateEntry(mUserCertLoading, result);
+				}
+				else
+				{	/* previously selected certificate is not here anymore */
+					((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setError("");
+					mUserCertEntry = null;
+				}
+				mUserCertLoading = null;
+				updateCredentialView();
+			});
 		}
 
 		/* check if the user selected a CA certificate previously */
@@ -962,54 +989,52 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	}
 
 	/**
+	 * Callback interface for the user certificate loader.
+	 */
+	private interface UserCertificateLoaderCallback {
+		void onComplete(X509Certificate result);
+	}
+
+	/**
 	 * Load the selected user certificate asynchronously.  This cannot be done
 	 * from the main thread as getCertificateChain() calls back to our main
 	 * thread to bind to the KeyChain service resulting in a deadlock.
 	 */
-	private class UserCertificateLoader extends AsyncTask<Void, Void, X509Certificate>
+	private class UserCertificateLoader
 	{
-		private final Context mContext;
-		private final String mAlias;
+		private final Executor mExecutor;
+		private final Handler mHandler;
 
-		public UserCertificateLoader(Context context, String alias)
+		public UserCertificateLoader(Executor executor, Handler handler)
 		{
-			mContext = context;
-			mAlias = alias;
+			mExecutor = executor;
+			mHandler = handler;
 		}
 
-		@Override
-		protected X509Certificate doInBackground(Void... params)
+		public void loadCertifiate(Context context, String alias, UserCertificateLoaderCallback callback)
 		{
-			X509Certificate[] chain = null;
-			try
-			{
-				chain = KeyChain.getCertificateChain(mContext, mAlias);
-			}
-			catch (KeyChainException | InterruptedException e)
-			{
-				e.printStackTrace();
-			}
-			if (chain != null && chain.length > 0)
-			{
-				return chain[0];
-			}
-			return null;
+			mExecutor.execute(() -> {
+				X509Certificate[] chain = null;
+				try
+				{
+					chain = KeyChain.getCertificateChain(context, alias);
+				}
+				catch (KeyChainException | InterruptedException e)
+				{
+					e.printStackTrace();
+				}
+				if (chain != null && chain.length > 0)
+				{
+					complete(chain[0], callback);
+					return;
+				}
+				complete(null, callback);
+			});
 		}
 
-		@Override
-		protected void onPostExecute(X509Certificate result)
+		protected void complete(X509Certificate result, UserCertificateLoaderCallback callback)
 		{
-			if (result != null)
-			{
-				mUserCertEntry = new TrustedCertificateEntry(mAlias, result);
-			}
-			else
-			{	/* previously selected certificate is not here anymore */
-				((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setError("");
-				mUserCertEntry = null;
-			}
-			mUserCertLoading = null;
-			updateCredentialView();
+			mHandler.post(() -> callback.onComplete(result));
 		}
 	}
 
