@@ -137,7 +137,8 @@ METHOD(job_t, initiate, job_requeue_t,
 		mediation_cfg->get_ref(mediation_cfg);
 
 		if (charon->controller->initiate(charon->controller, mediation_cfg, NULL,
-				(controller_cb_t)initiate_callback, this, 0, FALSE) != SUCCESS)
+				NULL, NULL, (controller_cb_t)initiate_callback, this, 0,
+				FALSE) != SUCCESS)
 		{
 			mediation_cfg->destroy(mediation_cfg);
 			mediated_cfg->destroy(mediated_cfg);

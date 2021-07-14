@@ -16,6 +16,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2014 Timo Teräs <timo.teras@iki.fi>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "vici_control.h"
 #include "vici_builder.h"
 
@@ -174,9 +196,11 @@ static child_cfg_t* find_child_cfg(char *name, char *pname, peer_cfg_t **out)
 CALLBACK(initiate, vici_message_t*,
 	private_vici_control_t *this, char *name, u_int id, vici_message_t *request)
 {
+	vici_message_t* msg;
 	peer_cfg_t *peer_cfg = NULL;
 	child_cfg_t *child_cfg;
-	char *child, *ike, *type, *sa;
+	host_t *my_host = NULL, *other_host = NULL;
+	char *child, *ike, *type, *sa, *my_host_str, *other_host_str;
 	int timeout;
 	bool limits;
 	controller_cb_t log_cb = NULL;
@@ -190,6 +214,8 @@ CALLBACK(initiate, vici_message_t*,
 	timeout = request->get_int(request, 0, "timeout");
 	limits = request->get_bool(request, FALSE, "init-limits");
 	log.level = request->get_int(request, 1, "loglevel");
+	my_host_str = request->get_str(request, NULL, "my-host");
+	other_host_str = request->get_str(request, NULL, "other-host");
 
 	if (!child && !ike)
 	{
@@ -200,31 +226,51 @@ CALLBACK(initiate, vici_message_t*,
 		log_cb = (controller_cb_t)log_vici;
 	}
 
+	if (my_host_str)
+	{
+		my_host = host_create_from_string(my_host_str, 0);
+	}
+	if (other_host_str)
+	{
+		other_host = host_create_from_string(other_host_str, 0);
+	}
+
+
 	type = child ? "CHILD_SA" : "IKE_SA";
 	sa = child ?: ike;
 
 	child_cfg = find_child_cfg(child, ike, &peer_cfg);
 
-	DBG1(DBG_CFG, "vici initiate %s '%s'", type, sa);
+	DBG1(DBG_CFG, "vici initiate %s '%s', me %H, other %H, limits %d", type, sa, my_host, other_host, limits);
 	if (!peer_cfg)
 	{
-		return send_reply(this, "%s config '%s' not found", type, sa);
+		msg = send_reply(this, "%s config '%s' not found", type, sa);
+		goto ret;
 	}
-	switch (charon->controller->initiate(charon->controller, peer_cfg,
-									child_cfg, log_cb, &log, timeout, limits))
+	switch (charon->controller->initiate(charon->controller,
+				peer_cfg, child_cfg, my_host, other_host,
+				log_cb, &log, timeout, limits))
 	{
 		case SUCCESS:
-			return send_reply(this, NULL);
+			msg = send_reply(this, NULL);
+			break;
 		case OUT_OF_RES:
-			return send_reply(this, "%s '%s' not established after %dms", type,
+			msg = send_reply(this, "%s '%s' not established after %dms", type,
 							  sa, timeout);
+			break;
 		case INVALID_STATE:
-			return send_reply(this, "establishing %s '%s' not possible at the "
+			msg = send_reply(this, "establishing %s '%s' not possible at the "
 							  "moment due to limits", type, sa);
+			break;
 		case FAILED:
 		default:
-			return send_reply(this, "establishing %s '%s' failed", type, sa);
+			msg = send_reply(this, "establishing %s '%s' failed", type, sa);
+			break;
 	}
+ret:
+	if (my_host) my_host->destroy(my_host);
+	if (other_host) other_host->destroy(other_host);
+	return msg;
 }
 
 CALLBACK(terminate, vici_message_t*,
