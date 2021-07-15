@@ -219,6 +219,7 @@ ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
 ARG_ENABL_SET([tpm],            [enables the TPM plugin.])
 ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.])
 ARG_ENABL_SET([whitelist],      [enable peer identity whitelisting plugin.])
+ARG_ENABL_SET([wincapi],        [enables Windows CryptoAPI access to certificate store private keys.])
 ARG_DISBL_SET([xauth-generic],  [disable generic XAuth backend.])
 ARG_ENABL_SET([xauth-eap],      [enable XAuth backend using EAP methods to verify passwords.])
 ARG_ENABL_SET([xauth-pam],      [enable XAuth backend using PAM to verify passwords.])
@@ -1486,6 +1487,7 @@ ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager meds
 ADD_PLUGIN([curve25519],           [s charon pki scripts nm cmd])
 ADD_PLUGIN([agent],                [s charon nm cmd])
 ADD_PLUGIN([keychain],             [s charon cmd])
+ADD_PLUGIN([wincapi],              [s charon cmd])
 ADD_PLUGIN([chapoly],              [s charon scripts nm cmd])
 ADD_PLUGIN([xcbc],                 [s charon nm cmd])
 ADD_PLUGIN([cmac],                 [s charon nm cmd])
@@ -1654,6 +1656,7 @@ AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
 AM_CONDITIONAL(USE_BOTAN, test x$botan = xtrue)
 AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
 AM_CONDITIONAL(USE_KEYCHAIN, test x$keychain = xtrue)
+AM_CONDITIONAL(USE_WINCAPI, test x$wincapi = xtrue)
 AM_CONDITIONAL(USE_PKCS11, test x$pkcs11 = xtrue)
 AM_CONDITIONAL(USE_TPM, test x$tpm = xtrue)
 AM_CONDITIONAL(USE_CHAPOLY, test x$chapoly = xtrue)
@@ -1936,6 +1939,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/botan/Makefile
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/plugins/keychain/Makefile
+	src/libstrongswan/plugins/wincapi/Makefile
 	src/libstrongswan/plugins/pkcs11/Makefile
 	src/libstrongswan/plugins/chapoly/Makefile
 	src/libstrongswan/plugins/ctr/Makefile
