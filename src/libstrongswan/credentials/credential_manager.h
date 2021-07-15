@@ -119,14 +119,19 @@ struct credential_manager_t {
 	 *  shared_key_t*, id_match_t me, id_match_t other
 	 * But must accept values for the id_matches.
 	 *
+	 * @note The optional message should be a simple text that has been
+	 * sanitized and does not end with e.g. ":".
+	 *
 	 * @param type		kind of requested shared key
 	 * @param first		first subject between key is shared
 	 * @param second	second subject between key is shared
+	 * @param msg		optional message that could be displayed to a user
 	 * @return			enumerator over (shared_key_t*,id_match_t,id_match_t)
 	 */
 	enumerator_t *(*create_shared_enumerator)(credential_manager_t *this,
 								shared_key_type_t type,
-								identification_t *first, identification_t *second);
+								identification_t *first, identification_t *second,
+								const char *msg);
 	/**
 	 * Create an enumerator over all Certificate Distribution Points.
 	 *
@@ -151,13 +156,18 @@ struct credential_manager_t {
 	/**
 	 * Get the best matching shared key for two IDs.
 	 *
+	 * @note The optional message should be a simple text that has been
+	 * sanitized and does not end with e.g. ":".
+	 *
 	 * @param type		kind of requested shared key
 	 * @param me		own identity
 	 * @param other		peer identity
+	 * @param msg		optional message that could be displayed to a user
 	 * @return			shared_key_t, NULL if none found
 	 */
 	shared_key_t *(*get_shared)(credential_manager_t *this, shared_key_type_t type,
-								identification_t *me, identification_t *other);
+								identification_t *me, identification_t *other,
+								const char *msg);
 	/**
 	 * Get a private key to create a signature.
 	 *

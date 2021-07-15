@@ -78,11 +78,13 @@ struct credential_set_t {
 	 * @param type		kind of requested shared key
 	 * @param me		own identity
 	 * @param other		other identity who owns that secret
+	 * @param msg		optional message that could be displayed to a user
 	 * @return			enumerator as described above
 	 */
 	enumerator_t *(*create_shared_enumerator)(credential_set_t *this,
 						shared_key_type_t type,
-						identification_t *me, identification_t *other);
+						identification_t *me, identification_t *other,
+						const char *msg);
 
 	/**
 	 * Create an enumerator over certificate distribution points.

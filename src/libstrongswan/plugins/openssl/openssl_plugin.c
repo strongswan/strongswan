@@ -343,8 +343,8 @@ static bool login(ENGINE *engine, chunk_t keyid)
 	bool found = FALSE, success = FALSE;
 
 	id = identification_create_from_encoding(ID_KEY_ID, keyid);
-	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-														SHARED_PIN, id, NULL);
+	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr, SHARED_PIN,
+														id, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
 		found = TRUE;

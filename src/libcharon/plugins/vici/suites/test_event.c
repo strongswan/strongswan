@@ -125,7 +125,7 @@ START_TEST(test_raise_events)
 	ck_assert(dispatcher);
 
 	dispatcher->manage_event(dispatcher, "event", TRUE);
-	dispatcher->manage_command(dispatcher, "raise", raise_cb, dispatcher);
+	dispatcher->manage_command(dispatcher, "raise", raise_cb, dispatcher, NULL, NULL);
 
 	vici_init();
 	conn = vici_connect(URI);
@@ -142,7 +142,7 @@ START_TEST(test_raise_events)
 	vici_disconnect(conn);
 
 	dispatcher->manage_event(dispatcher, "event", FALSE);
-	dispatcher->manage_command(dispatcher, "raise", NULL, NULL);
+	dispatcher->manage_command(dispatcher, "raise", NULL, NULL, NULL, NULL);
 
 	lib->processor->cancel(lib->processor);
 	dispatcher->destroy(dispatcher);

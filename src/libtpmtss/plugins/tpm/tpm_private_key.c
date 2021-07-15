@@ -92,7 +92,7 @@ METHOD(private_key_t, sign, bool,
 
 	/* check for optional PIN */
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-										SHARED_PIN, this->keyid, NULL);
+										SHARED_PIN, this->keyid, NULL, NULL);
 	if (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
 		pin = shared->get_key(shared);

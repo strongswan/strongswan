@@ -53,12 +53,10 @@ struct private_xauth_eap_t {
 	chunk_t pass;
 };
 
-/**
- * Callback credential set function
- */
-static shared_key_t* shared_cb(private_xauth_eap_t *this, shared_key_type_t type,
-							   identification_t *me, identification_t *other,
-							   id_match_t *match_me, id_match_t *match_other)
+CALLBACK(shared_cb, shared_key_t*,
+	private_xauth_eap_t *this, shared_key_type_t type, identification_t *me,
+	identification_t *other, const char *msg, id_match_t *match_me,
+	id_match_t *match_other)
 {
 	shared_key_t *shared;
 
@@ -283,7 +281,7 @@ xauth_eap_t *xauth_eap_create_server(identification_t *server,
 		.peer = peer->clone(peer),
 	);
 
-	this->cred = callback_cred_create_shared((void*)shared_cb, this);
+	this->cred = callback_cred_create_shared(shared_cb, this);
 
 	return &this->public;
 }

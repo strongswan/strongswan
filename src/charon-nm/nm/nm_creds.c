@@ -230,7 +230,7 @@ METHOD(enumerator_t, shared_destroy, void,
 
 METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 	private_nm_creds_t *this, shared_key_type_t type, identification_t *me,
-	identification_t *other)
+	identification_t *other, const char *msg)
 {
 	shared_enumerator_t *enumerator;
 	chunk_t key;

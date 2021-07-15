@@ -123,6 +123,7 @@ typedef struct {
 	shared_key_type_t type;
 	identification_t *me;
 	identification_t *other;
+	char *msg;
 } shared_data_t;
 
 /** enumerator over local and global sets */
@@ -376,6 +377,7 @@ static private_key_t* get_private_by_keyid(private_credential_manager_t *this,
 static void destroy_shared_data(shared_data_t *data)
 {
 	data->this->lock->unlock(data->this->lock);
+	free(data->msg);
 	free(data);
 }
 
@@ -384,12 +386,13 @@ static void destroy_shared_data(shared_data_t *data)
  */
 static enumerator_t *create_shared(credential_set_t *set, shared_data_t *data)
 {
-	return set->create_shared_enumerator(set, data->type, data->me, data->other);
+	return set->create_shared_enumerator(set, data->type, data->me, data->other,
+										 data->msg);
 }
 
 METHOD(credential_manager_t, create_shared_enumerator, enumerator_t*,
 	private_credential_manager_t *this, shared_key_type_t type,
-	identification_t *me, identification_t *other)
+	identification_t *me, identification_t *other, const char *msg)
 {
 	shared_data_t *data;
 
@@ -398,6 +401,7 @@ METHOD(credential_manager_t, create_shared_enumerator, enumerator_t*,
 		.type = type,
 		.me = me,
 		.other = other,
+		.msg = strdupnull(msg),
 	);
 	this->lock->read_lock(this->lock);
 	return enumerator_create_nested(create_sets_enumerator(this),
@@ -407,14 +411,14 @@ METHOD(credential_manager_t, create_shared_enumerator, enumerator_t*,
 
 METHOD(credential_manager_t, get_shared, shared_key_t*,
 	private_credential_manager_t *this, shared_key_type_t type,
-	identification_t *me, identification_t *other)
+	identification_t *me, identification_t *other, const char *msg)
 {
 	shared_key_t *current, *found = NULL;
 	id_match_t best_me = ID_MATCH_NONE, best_other = ID_MATCH_NONE;
 	id_match_t match_me, match_other;
 	enumerator_t *enumerator;
 
-	enumerator = create_shared_enumerator(this, type, me, other);
+	enumerator = create_shared_enumerator(this, type, me, other, msg);
 	while (enumerator->enumerate(enumerator, &current, &match_me, &match_other))
 	{
 		if (match_other > best_other ||

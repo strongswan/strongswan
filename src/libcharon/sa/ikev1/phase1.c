@@ -116,7 +116,7 @@ static shared_key_t *find_shared_key(identification_t *my_id, host_t *me,
 		other_id = any_id;
 	}
 	shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE,
-										  my_id, other_id);
+										  my_id, other_id, NULL);
 	if (!shared_key)
 	{
 		DBG1(DBG_IKE, "no shared key found for '%Y'[%H] - '%Y'[%H]",
@@ -191,7 +191,7 @@ static shared_key_t *lookup_shared_key(private_phase1_t *this,
 		if (my_id && other_id)
 		{
 			shared_key = lib->credmgr->get_shared(lib->credmgr, SHARED_IKE,
-												  my_id, other_id);
+												  my_id, other_id, NULL);
 		}
 		DESTROY_IF(my_id);
 		DESTROY_IF(other_id);

@@ -690,10 +690,10 @@ typedef struct {
 /**
  * Callback function to receive passphrases
  */
-static shared_key_t* passphrase_cb(passphrase_cb_data_t *data,
-								   shared_key_type_t type, identification_t *me,
-								   identification_t *other, id_match_t *match_me,
-								   id_match_t *match_other)
+CALLBACK(passphrase_cb, shared_key_t*,
+	passphrase_cb_data_t *data, shared_key_type_t type, identification_t *me,
+	identification_t *other, const char *msg, id_match_t *match_me,
+	id_match_t *match_other)
 {
 	static const int max_tries = 3;
 	shared_key_t *shared;
@@ -765,9 +765,10 @@ typedef struct {
 /**
  * Callback function to receive PINs
  */
-static shared_key_t* pin_cb(pin_cb_data_t *data, shared_key_type_t type,
-							identification_t *me, identification_t *other,
-							id_match_t *match_me, id_match_t *match_other)
+CALLBACK(pin_cb, shared_key_t*,
+	pin_cb_data_t *data, shared_key_type_t type, identification_t *me,
+	identification_t *other, const char *msg, id_match_t *match_me,
+	id_match_t *match_other)
 {
 	chunk_t secret;
 	char buf[256];
@@ -880,7 +881,7 @@ static bool load_pin(mem_cred_t *secrets, chunk_t line, int line_nr,
 			.card = smartcard,
 			.keyid = chunk,
 		};
-		cb = callback_cred_create_shared((void*)pin_cb, &pin_data);
+		cb = callback_cred_create_shared(pin_cb, &pin_data);
 		lib->credmgr->add_local_set(lib->credmgr, &cb->set, FALSE);
 	}
 	else
@@ -999,7 +1000,7 @@ static bool load_from_file(chunk_t line, int line_nr, FILE *prompt,
 		pp_data.cache = mem_cred_create();
 		lib->credmgr->add_local_set(lib->credmgr, &pp_data.cache->set, FALSE);
 		/* use callback credential set to prompt for the passphrase */
-		cb = callback_cred_create_shared((void*)passphrase_cb, &pp_data);
+		cb = callback_cred_create_shared(passphrase_cb, &pp_data);
 		lib->credmgr->add_local_set(lib->credmgr, &cb->set, FALSE);
 
 		*result = lib->creds->create(lib->creds, type, subtype,

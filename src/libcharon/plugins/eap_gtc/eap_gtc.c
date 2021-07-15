@@ -19,7 +19,7 @@
 #include <daemon.h>
 #include <library.h>
 
-#define GTC_REQUEST_MSG "password"
+#define GTC_REQUEST_MSG "Password"
 
 typedef struct private_eap_gtc_t private_eap_gtc_t;
 
@@ -98,11 +98,20 @@ METHOD(eap_method_t, process_peer, status_t,
 {
 	eap_gtc_header_t *res;
 	shared_key_t *shared;
-	chunk_t key;
+	chunk_t msg, key;
+	char *msg_str = NULL;
 	size_t len;
 
+	msg = chunk_skip(in->get_data(in), 5);
+	if (msg.len)
+	{
+		chunk_printable(msg, &msg, '?');
+		msg_str = strndup(msg.ptr, msg.len);
+		free(msg.ptr);
+	}
 	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP,
-									  this->peer, this->server);
+									  this->peer, this->server, msg_str);
+	free(msg_str);
 	if (shared == NULL)
 	{
 		DBG1(DBG_IKE, "no EAP key found for '%Y' - '%Y'",

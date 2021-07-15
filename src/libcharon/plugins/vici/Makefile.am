@@ -28,7 +28,8 @@ libstrongswan_vici_la_SOURCES = \
 	vici_attribute.h vici_attribute.c \
 	vici_authority.h vici_authority.c \
 	vici_logger.h vici_logger.c \
-	vici_plugin.h vici_plugin.c
+	vici_plugin.h vici_plugin.c \
+	vici_prompt.h vici_prompt.c
 
 libstrongswan_vici_la_LDFLAGS = -module -avoid-version
 
