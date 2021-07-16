@@ -20,6 +20,7 @@
 #include "proposal.h"
 
 #include <collections/array.h>
+#include <collections/hashtable.h>
 #include <utils/identification.h>
 
 #include <crypto/transform.h>
@@ -315,7 +316,7 @@ METHOD(proposal_t, promote_transform, bool,
  */
 static bool select_algo(private_proposal_t *this, proposal_t *other,
 						transform_type_t type, proposal_selection_flag_t flags,
-						bool log, uint16_t *alg, uint16_t *ks)
+						hashtable_t *kes, bool log, uint16_t *alg, uint16_t *ks)
 {
 	enumerator_t *e1, *e2;
 	uint16_t alg1, alg2, ks1, ks2;
@@ -358,9 +359,13 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 
 	e1->destroy(e1);
 	e1 = create_enumerator(this, type);
-	/* compare algs, order of algs in "first" is preferred */
+	/* compare algs, order of algs in "e1" is preferred */
 	while (!found && e1->enumerate(e1, &alg1, &ks1))
 	{
+		if (is_ke_transform(type) && kes->get(kes, (void*)(uintptr_t)alg1))
+		{
+			continue;
+		}
 		e2->destroy(e2);
 		e2 = other->create_enumerator(other, type);
 		while (e2->enumerate(e2, &alg2, &ks2))
@@ -390,6 +395,23 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 }
 
 /**
+ * Hash an algorithm identifier
+ */
+static u_int hash_alg(const void *key)
+{
+	uint16_t alg = (uint16_t)(uintptr_t)key;
+	return chunk_hash(chunk_from_thing(alg));
+}
+
+/**
+ * Compare two algorithm identifiers
+ */
+static bool equals_alg(const void *key, const void *other_key)
+{
+	return (uint16_t)(uintptr_t)key == (uint16_t)(uintptr_t)other_key;
+}
+
+/**
  * Select algorithms from the given proposals, if selected is given, the result
  * is stored there and errors are logged.
  */
@@ -397,9 +419,12 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 						 proposal_t *selected, proposal_selection_flag_t flags)
 {
 	transform_type_t type;
+	hashtable_t *kes;
 	array_t *types;
 	bool skip_integrity = FALSE;
 	int i;
+
+	kes = hashtable_create(hash_alg, equals_alg, 8);
 
 	types = merge_types(this, (private_proposal_t*)other);
 	for (i = 0; i < array_count(types); i++)
@@ -415,7 +440,8 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 		{
 			continue;
 		}
-		if (select_algo(this, other, type, flags, selected != NULL, &alg, &ks))
+		if (select_algo(this, other, type, flags, kes, selected != NULL,
+						&alg, &ks))
 		{
 			if (alg == 0 && type != EXTENDED_SEQUENCE_NUMBERS)
 			{	/* 0 is "valid" for extended sequence numbers, for other
@@ -425,6 +451,10 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 			if (selected)
 			{
 				selected->add_algorithm(selected, type, alg, ks);
+			}
+			if (is_ke_transform(type))
+			{
+				kes->put(kes, (void*)(uintptr_t)alg, (void*)(uintptr_t)alg);
 			}
 			if (type == ENCRYPTION_ALGORITHM &&
 				encryption_algorithm_is_aead(alg))
@@ -441,10 +471,12 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 					 type);
 			}
 			array_destroy(types);
+			kes->destroy(kes);
 			return FALSE;
 		}
 	}
 	array_destroy(types);
+	kes->destroy(kes);
 	return TRUE;
 }
 
