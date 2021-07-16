@@ -474,6 +474,40 @@ METHOD(task_manager_t, retransmit, status_t,
 	return INVALID_STATE;
 }
 
+/**
+ * Derive IKE keys if necessary
+ */
+static bool derive_keys(private_task_manager_t *this, array_t *tasks)
+{
+	enumerator_t *enumerator;
+	task_t *task;
+
+	enumerator = array_create_enumerator(tasks);
+	while (enumerator->enumerate(enumerator, (void*)&task))
+	{
+		if (task->get_type(task) == TASK_IKE_INIT)
+		{
+			ike_init_t *ike_init = (ike_init_t*)task;
+
+			switch (ike_init->derive_keys(ike_init))
+			{
+				case SUCCESS:
+					array_remove_at(tasks, enumerator);
+					task->destroy(task);
+					break;
+				case NEED_MORE:
+					break;
+				default:
+					enumerator->destroy(enumerator);
+					return FALSE;
+			}
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return TRUE;
+}
+
 METHOD(task_manager_t, initiate, status_t,
 	private_task_manager_t *this)
 {
@@ -608,6 +642,11 @@ METHOD(task_manager_t, initiate, status_t,
 	}
 	else
 	{
+		if (!derive_keys(this, this->active_tasks))
+		{
+			return DESTROY_ME;
+		}
+
 		DBG2(DBG_IKE, "reinitiating already active tasks");
 		enumerator = array_create_enumerator(this->active_tasks);
 		while (enumerator->enumerate(enumerator, &task))
@@ -1531,6 +1570,36 @@ static status_t send_invalid_syntax(private_task_manager_t *this,
 }
 
 /**
+ * Check for unsupported critical payloads
+ */
+static status_t has_unsupported_critical_payload(message_t *msg, uint8_t *type)
+{
+	enumerator_t *enumerator;
+	unknown_payload_t *unknown;
+	payload_t *payload;
+	status_t status = SUCCESS;
+
+	enumerator = msg->create_payload_enumerator(msg);
+	while (enumerator->enumerate(enumerator, &payload))
+	{
+		if (payload->get_type(payload) == PL_UNKNOWN)
+		{
+			unknown = (unknown_payload_t*)payload;
+			if (unknown->is_critical(unknown))
+			{
+				*type = unknown->get_type(unknown);
+				DBG1(DBG_ENC, "payload type %N is not supported, "
+					 "but payload is critical!", payload_type_names, *type);
+				status = NOT_SUPPORTED;
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	return status;
+}
+
+/**
  * Parse the given message and verify that it is valid.
  */
 static status_t parse_message(private_task_manager_t *this, message_t *msg)
@@ -1538,34 +1607,22 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 	status_t parse_status, status;
 	uint8_t type = 0;
 
-	parse_status = msg->parse_body(msg, this->ike_sa->get_keymat(this->ike_sa));
+	if (derive_keys(this, this->passive_tasks))
+	{
+		parse_status = msg->parse_body(msg, this->ike_sa->get_keymat(this->ike_sa));
 
-	if (parse_status == SUCCESS)
-	{	/* check for unsupported critical payloads */
-		enumerator_t *enumerator;
-		unknown_payload_t *unknown;
-		payload_t *payload;
-
-		enumerator = msg->create_payload_enumerator(msg);
-		while (enumerator->enumerate(enumerator, &payload))
+		if (parse_status == SUCCESS)
 		{
-			if (payload->get_type(payload) == PL_UNKNOWN)
-			{
-				unknown = (unknown_payload_t*)payload;
-				if (unknown->is_critical(unknown))
-				{
-					type = unknown->get_type(unknown);
-					DBG1(DBG_ENC, "payload type %N is not supported, "
-						 "but payload is critical!", payload_type_names, type);
-					parse_status = NOT_SUPPORTED;
-					break;
-				}
-			}
+			parse_status = has_unsupported_critical_payload(msg, &type);
 		}
-		enumerator->destroy(enumerator);
-	}
 
-	status = parse_status;
+		status = parse_status;
+	}
+	else
+	{	/* there is no point in trying again */
+		parse_status = INVALID_STATE;
+		status = DESTROY_ME;
+	}
 
 	if (parse_status != SUCCESS)
 	{
