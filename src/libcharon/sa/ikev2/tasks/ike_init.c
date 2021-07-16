@@ -56,6 +56,16 @@ struct private_ike_init_t {
 	bool initiator;
 
 	/**
+	 * Whether the key exchange is done
+	 */
+	bool ke_done;
+
+	/**
+	 * Whether keys have already been derived
+	 */
+	bool ke_derived;
+
+	/**
 	 * diffie hellman group to use
 	 */
 	key_exchange_method_t dh_group;
@@ -520,6 +530,7 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
+	ike_sa_id_t *id;
 	ke_payload_t *ke_payload = NULL;
 
 	enumerator = message->create_payload_enumerator(message);
@@ -615,6 +626,21 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 	if (this->proposal)
 	{
 		this->ike_sa->set_proposal(this->ike_sa, this->proposal);
+
+		if (this->old_sa)
+		{	/* retrieve SPI of new IKE_SA when rekeying */
+			id = this->ike_sa->get_id(this->ike_sa);
+			if (this->initiator)
+			{
+				id->set_responder_spi(id,
+									  this->proposal->get_spi(this->proposal));
+			}
+			else
+			{
+				id->set_initiator_spi(id,
+									  this->proposal->get_spi(this->proposal));
+			}
+		}
 	}
 
 	if (ke_payload && this->proposal &&
@@ -769,8 +795,8 @@ METHOD(task_t, process_r,  status_t,
 /**
  * Derive the keymat for the IKE_SA
  */
-static bool derive_keys(private_ike_init_t *this,
-						chunk_t nonce_i, chunk_t nonce_r)
+static bool derive_keys_internal(private_ike_init_t *this, chunk_t nonce_i,
+								 chunk_t nonce_r)
 {
 	keymat_v2_t *old_keymat;
 	pseudo_random_function_t prf_alg = PRF_UNDEFINED;
@@ -783,14 +809,6 @@ static bool derive_keys(private_ike_init_t *this,
 		/* rekeying: Include old SKd, use old PRF, apply SPI */
 		old_keymat = (keymat_v2_t*)this->old_sa->get_keymat(this->old_sa);
 		prf_alg = old_keymat->get_skd(old_keymat, &skd);
-		if (this->initiator)
-		{
-			id->set_responder_spi(id, this->proposal->get_spi(this->proposal));
-		}
-		else
-		{
-			id->set_initiator_spi(id, this->proposal->get_spi(this->proposal));
-		}
 	}
 	if (!this->keymat->derive_ike_keys(this->keymat, this->proposal, this->dh,
 									   nonce_i, nonce_r, id, prf_alg, skd))
@@ -800,6 +818,35 @@ static bool derive_keys(private_ike_init_t *this,
 	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, chunk_empty,
 						  nonce_i, nonce_r, this->old_sa, NULL, AUTH_NONE);
 	return TRUE;
+}
+
+METHOD(ike_init_t, derive_keys, status_t,
+	private_ike_init_t *this)
+{
+	bool success;
+
+	if (!this->ke_done || this->ke_derived)
+	{
+		return NEED_MORE;
+	}
+
+	if (this->initiator)
+	{
+		success = derive_keys_internal(this, this->my_nonce, this->other_nonce);
+	}
+	else
+	{
+		success = derive_keys_internal(this, this->other_nonce, this->my_nonce);
+	}
+
+	this->ke_derived = TRUE;
+
+	if (!success)
+	{
+		DBG1(DBG_IKE, "key derivation failed");
+		return FAILED;
+	}
+	return SUCCESS;
 }
 
 METHOD(task_t, build_r, status_t,
@@ -864,18 +911,25 @@ METHOD(task_t, build_r, status_t,
 		return FAILED;
 	}
 
-	if (!derive_keys(this, this->other_nonce, this->my_nonce))
-	{
-		DBG1(DBG_IKE, "key derivation failed");
-		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
-		return FAILED;
-	}
 	if (!build_payloads(this, message))
 	{
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
 	}
-	return SUCCESS;
+	this->ke_done = TRUE;
+
+	if (this->old_sa)
+	{
+		/* during rekeying, we derive keys here directly */
+		if (derive_keys(this) != SUCCESS)
+		{
+			message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+			return FAILED;
+		}
+		return SUCCESS;
+	}
+	/* key derivation is done before the next request is processed */
+	return NEED_MORE;
 }
 
 /**
@@ -1087,13 +1141,15 @@ METHOD(task_t, process_i, status_t,
 		DBG1(DBG_IKE, "applying DH public value failed");
 		return FAILED;
 	}
+	this->ke_done = TRUE;
 
-	if (!derive_keys(this, this->my_nonce, this->other_nonce))
+	if (this->old_sa)
 	{
-		DBG1(DBG_IKE, "key derivation failed");
-		return FAILED;
+		/* during rekeying, we derive keys here directly */
+		return derive_keys(this);
 	}
-	return SUCCESS;
+	/* key derivation is done before we send the next message */
+	return NEED_MORE;
 }
 
 METHOD(task_t, get_type, task_type_t,
@@ -1107,6 +1163,8 @@ METHOD(task_t, migrate, void,
 {
 	DESTROY_IF(this->proposal);
 	chunk_free(&this->other_nonce);
+	this->ke_done = FALSE;
+	this->ke_derived = FALSE;
 
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
@@ -1154,6 +1212,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
+			.derive_keys = _derive_keys,
 			.get_lower_nonce = _get_lower_nonce,
 		},
 		.ike_sa = ike_sa,
