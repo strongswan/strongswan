@@ -65,6 +65,7 @@ struct private_ike_init_t {
 		transform_type_t type;
 		key_exchange_method_t method;
 		bool done;
+		bool derived;
 	} key_exchanges[MAX_KEY_EXCHANGES];
 
 	/**
@@ -987,9 +988,10 @@ METHOD(task_t, process_r,  status_t,
 /**
  * Derive the keymat for the IKE_SA
  */
-static bool derive_keys(private_ike_init_t *this, ike_sa_t *old_sa,
-						chunk_t nonce_i, chunk_t nonce_r)
+static bool derive_keys_internal(private_ike_init_t *this, chunk_t nonce_i,
+								 chunk_t nonce_r)
 {
+	ike_sa_t *old_sa;
 	keymat_v2_t *old_keymat;
 	pseudo_random_function_t prf_alg = PRF_UNDEFINED;
 	chunk_t skd = chunk_empty;
@@ -997,11 +999,26 @@ static bool derive_keys(private_ike_init_t *this, ike_sa_t *old_sa,
 	array_t *kes = this->kes;
 	bool success;
 
+	if (this->old_sa)
+	{
+		if (additional_key_exchange_required(this))
+		{	/* when rekeying, we only derive keys once all exchanges are done */
+			return FALSE;
+		}
+		old_sa = this->old_sa;
+	}
+	else
+	{	/* key derivation for additional key exchanges is like rekeying, so pass
+		 * our own SA as old SA to get SK_d */
+		old_sa = this->ike_sa;
+	}
+
 	id = this->ike_sa->get_id(this->ike_sa);
 	if (!kes)
 	{
 		array_insert_create(&kes, ARRAY_HEAD, this->ke);
 	}
+
 	if (old_sa)
 	{
 		old_keymat = (keymat_v2_t*)old_sa->get_keymat(old_sa);
@@ -1022,54 +1039,55 @@ static bool derive_keys(private_ike_init_t *this, ike_sa_t *old_sa,
 	return success;
 }
 
-/**
- * Called when a key exchange is done
- */
-static status_t key_exchange_done(private_ike_init_t *this, chunk_t nonce_i,
-								  chunk_t nonce_r)
+METHOD(ike_init_t, derive_keys, status_t,
+	private_ike_init_t *this)
 {
-	ike_sa_t *old_sa = NULL;
-	bool additional_ke;
+	bool success;
 
-	this->key_exchanges[this->ke_index++].done = TRUE;
-	additional_ke = additional_key_exchange_required(this);
-
-	if (this->old_sa)
+	if (!this->ke_index || this->key_exchanges[this->ke_index-1].derived)
 	{
-		/* during rekeying we store all the key exchanges performed... */
-		array_insert_create(&this->kes, ARRAY_TAIL, this->ke);
-		this->ke = NULL;
+		return NEED_MORE;
+	}
 
-		if (!additional_ke)
-		{	/* ...and derive keys only when all are done */
-			old_sa = this->old_sa;
-		}
+	if (this->initiator)
+	{
+		success = derive_keys_internal(this, this->my_nonce, this->other_nonce);
 	}
 	else
 	{
-		/* key derivation for additional key exchanges is like rekeying, so pass
-		 * our own SA as old SA to get SK_d */
-		old_sa = this->ike_sa;
+		success = derive_keys_internal(this, this->other_nonce, this->my_nonce);
 	}
-	if (old_sa && !derive_keys(this, old_sa, nonce_i, nonce_r))
+
+	this->key_exchanges[this->ke_index-1].derived = TRUE;
+
+	if (!success)
 	{
 		DBG1(DBG_IKE, "key derivation failed");
 		return FAILED;
 	}
-	return additional_ke ? NEED_MORE : SUCCESS;
+	return additional_key_exchange_required(this) ? NEED_MORE : SUCCESS;
 }
 
-METHOD(task_t, post_build_r_intermediate, status_t,
-	private_ike_init_t *this, message_t *message)
+/**
+ * Called when a key exchange is done
+ */
+static status_t key_exchange_done(private_ike_init_t *this)
 {
-	return key_exchange_done(this, this->other_nonce, this->my_nonce);
+	if (this->old_sa)
+	{
+		/* during rekeying, we store all the key exchanges performed */
+		array_insert_create(&this->kes, ARRAY_TAIL, this->ke);
+		this->ke = NULL;
+	}
+
+	this->key_exchanges[this->ke_index++].done = TRUE;
+
+	return additional_key_exchange_required(this) ? NEED_MORE : SUCCESS;
 }
 
 METHOD(task_t, build_r_multi_ke, status_t,
 	private_ike_init_t *this, message_t *message)
 {
-	status_t status = NEED_MORE;
-
 	if (!this->ke)
 	{
 		message->add_notify(message, FALSE, INVALID_SYNTAX, chunk_empty);
@@ -1085,21 +1103,19 @@ METHOD(task_t, build_r_multi_ke, status_t,
 		return FAILED;
 	}
 
-	if (this->old_sa)
+	if (key_exchange_done(this) != NEED_MORE && this->old_sa)
 	{
-		status = key_exchange_done(this, this->other_nonce, this->my_nonce);
-		if (status == FAILED)
+		/* during rekeying, we derive keys once all exchanges are done */
+		if (derive_keys(this) != SUCCESS)
 		{
 			message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
 			return FAILED;
 		}
+		return SUCCESS;
 	}
-	else
-	{	/* we do the key derivation for each IKE_INTERMEDIATE in post_build(),
-		 * otherwise the response would be generated using the new keys */
-		this->public.task.post_build = _post_build_r_intermediate;
-	}
-	return status;
+	/* we derive keys after each IKE_INTERMEDIATE once we receive the next
+	 * message, otherwise, IntAuth would be based on the wrong keys */
+	return NEED_MORE;
 }
 
 METHOD(task_t, build_r, status_t,
@@ -1171,20 +1187,24 @@ METHOD(task_t, build_r, status_t,
 		return FAILED;
 	}
 
-	switch (key_exchange_done(this, this->other_nonce, this->my_nonce))
+	if (key_exchange_done(this) == NEED_MORE)
 	{
-		case FAILED:
-			message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
-			return FAILED;
-		case NEED_MORE:
-			/* use other exchange type for additional key exchanges */
-			this->public.task.build = _build_r_multi_ke;
-			this->public.task.process = _process_r_multi_ke;
-			return NEED_MORE;
-		default:
-			break;
+		/* use other exchange type for additional key exchanges */
+		this->public.task.build = _build_r_multi_ke;
+		this->public.task.process = _process_r_multi_ke;
 	}
-	return SUCCESS;
+	else if (this->old_sa)
+	{
+		/* during rekeying, we derive keys here directly */
+		if (derive_keys(this) != SUCCESS)
+		{
+			message->add_notify(message, FALSE, NO_PROPOSAL_CHOSEN, chunk_empty);
+			return FAILED;
+		}
+		return SUCCESS;
+	}
+	/* key derivation is done once the next request is processed */
+	return NEED_MORE;
 }
 
 /**
@@ -1270,17 +1290,9 @@ METHOD(task_t, pre_process_i, status_t,
 	return SUCCESS;
 }
 
-METHOD(task_t, post_process_i_intermediate, status_t,
-	private_ike_init_t *this, message_t *message)
-{
-	return key_exchange_done(this, this->my_nonce, this->other_nonce);
-}
-
 METHOD(task_t, process_i_multi_ke, status_t,
 	private_ike_init_t *this, message_t *message)
 {
-	status_t status = NEED_MORE;
-
 	process_payloads_multi_ke(this, message);
 
 	if (this->ke_failed)
@@ -1288,16 +1300,14 @@ METHOD(task_t, process_i_multi_ke, status_t,
 		return FAILED;
 	}
 
-	if (this->old_sa)
+	if (key_exchange_done(this) != NEED_MORE && this->old_sa)
 	{
-		status = key_exchange_done(this, this->my_nonce, this->other_nonce);
+		/* during rekeying, we derive keys once all exchanges are done */
+		return derive_keys(this);
 	}
-	else
-	{	/* we do the key derivation for each IKE_INTERMEDAITE in post_process(),
-		 * otherwise calculating IntAuth would be done with the wrong keys */
-		this->public.task.post_process = _post_process_i_intermediate;
-	}
-	return status;
+	/* we derive keys after each IKE_INTERMEDIATE once we send the next
+	 * message, otherwise, IntAuth would be based on the wrong keys */
+	return NEED_MORE;
 }
 
 METHOD(task_t, process_i, status_t,
@@ -1305,7 +1315,6 @@ METHOD(task_t, process_i, status_t,
 {
 	enumerator_t *enumerator;
 	payload_t *payload;
-	status_t status;
 
 	/* check for erroneous notifies */
 	enumerator = message->create_payload_enumerator(message);
@@ -1427,14 +1436,19 @@ METHOD(task_t, process_i, status_t,
 		return FAILED;
 	}
 
-	status = key_exchange_done(this, this->my_nonce, this->other_nonce);
-	if (status == NEED_MORE)
+	if (key_exchange_done(this) == NEED_MORE)
 	{
 		/* use other exchange type for additional key exchanges */
 		this->public.task.build = _build_i_multi_ke;
 		this->public.task.process = _process_i_multi_ke;
 	}
-	return status;
+	else if (this->old_sa)
+	{
+		/* during rekeying, we derive keys here directly */
+		return derive_keys(this);
+	}
+	/* key derivation is done once we send the next message */
+	return NEED_MORE;
 }
 
 METHOD(task_t, get_type, task_type_t,
@@ -1497,6 +1511,7 @@ ike_init_t *ike_init_create(ike_sa_t *ike_sa, bool initiator, ike_sa_t *old_sa)
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
+			.derive_keys = _derive_keys,
 			.get_lower_nonce = _get_lower_nonce,
 		},
 		.ike_sa = ike_sa,
