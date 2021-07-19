@@ -128,6 +128,10 @@ struct key_exchange_t {
 	/**
 	 * Sets the public key received from the peer.
 	 *
+	 * @note This operation should be relatively quick. Costly public key
+	 * validation operations or key derivation should be implemented in
+	 * get_shared_secret().
+	 *
 	 * @param value		public key of peer
 	 * @return			TRUE if other public key verified and set
 	 */
