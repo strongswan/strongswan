@@ -163,20 +163,15 @@ static status_t collect_my_init_data(private_ike_auth_t *this,
 {
 	nonce_payload_t *nonce;
 
-	/* get the nonce that was generated in ike_init */
+	/* get the nonce that was generated in ike_init and a copy of the complete
+	 * packet */
 	nonce = (nonce_payload_t*)message->get_payload(message, PLV2_NONCE);
-	if (!nonce)
+	if (!nonce || !message->is_encoded(message))
 	{
 		return FAILED;
 	}
 	this->my_nonce = nonce->get_nonce(nonce);
-
-	/* pre-generate the message, keep a copy */
-	if (this->ike_sa->generate_message(this->ike_sa, message,
-									   &this->my_packet) != SUCCESS)
-	{
-		return FAILED;
-	}
+	this->my_packet = message->get_packet(message);
 	return NEED_MORE;
 }
 
@@ -210,18 +205,6 @@ static status_t collect_int_auth_data(private_ike_auth_t *this, bool verify,
 {
 	keymat_v2_t *keymat;
 	chunk_t int_auth_ap, int_auth;
-	packet_t *packet;
-
-	if (!verify)
-	{
-		/* pre-generate our own message */
-		if (this->ike_sa->generate_message(this->ike_sa, message,
-										   &packet) != SUCCESS)
-		{
-			return FAILED;
-		}
-		packet->destroy(packet);
-	}
 
 	if (!message->get_plain(message, &int_auth_ap))
 	{
@@ -637,10 +620,6 @@ METHOD(task_t, build_i, status_t,
 
 	switch (message->get_exchange_type(message))
 	{
-		case IKE_SA_INIT:
-			return collect_my_init_data(this, message);
-		case IKE_INTERMEDIATE:
-			return collect_int_auth_data(this, FALSE, message);
 		case IKE_AUTH:
 			if (!this->first_auth)
 			{	/* some special handling for the first IKE_AUTH message below */
@@ -795,6 +774,20 @@ METHOD(task_t, build_i, status_t,
 		this->do_another_auth = FALSE;
 	}
 	return NEED_MORE;
+}
+
+METHOD(task_t, post_build_i, status_t,
+	private_ike_auth_t *this, message_t *message)
+{
+	switch (message->get_exchange_type(message))
+	{
+		case IKE_SA_INIT:
+			return collect_my_init_data(this, message);
+		case IKE_INTERMEDIATE:
+			return collect_int_auth_data(this, FALSE, message);
+		default:
+			return NEED_MORE;
+	}
 }
 
 METHOD(task_t, process_r, status_t,
@@ -1030,9 +1023,7 @@ METHOD(task_t, build_r, status_t,
 				message->add_notify(message, FALSE, MULTIPLE_AUTH_SUPPORTED,
 									chunk_empty);
 			}
-			return collect_my_init_data(this, message);
-		case IKE_INTERMEDIATE:
-			return collect_int_auth_data(this, FALSE, message);
+			return NEED_MORE;
 		case IKE_AUTH:
 			break;
 		default:
@@ -1240,6 +1231,20 @@ local_auth_failed:
 	message->add_notify(message, TRUE, AUTHENTICATION_FAILED, chunk_empty);
 	charon->bus->alert(charon->bus, ALERT_LOCAL_AUTH_FAILED);
 	return FAILED;
+}
+
+METHOD(task_t, post_build_r, status_t,
+	private_ike_auth_t *this, message_t *message)
+{
+	switch (message->get_exchange_type(message))
+	{
+		case IKE_SA_INIT:
+			return collect_my_init_data(this, message);
+		case IKE_INTERMEDIATE:
+			return collect_int_auth_data(this, FALSE, message);
+		default:
+			return NEED_MORE;
+	}
 }
 
 /**
@@ -1643,6 +1648,7 @@ ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, bool initiator)
 				.get_type = _get_type,
 				.migrate = _migrate,
 				.build = _build_r,
+				.post_build = _post_build_r,
 				.process = _process_r,
 				.destroy = _destroy,
 			},
@@ -1656,6 +1662,7 @@ ike_auth_t *ike_auth_create(ike_sa_t *ike_sa, bool initiator)
 	if (initiator)
 	{
 		this->public.task.build = _build_i;
+		this->public.task.post_build = _post_build_i;
 		this->public.task.process = _process_i;
 	}
 	return &this->public;
