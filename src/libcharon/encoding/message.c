@@ -2258,7 +2258,7 @@ METHOD(message_t, fragment, status_t,
 		data = generator->get_chunk(generator, NULL);
 		if (!is_encoded(this))
 		{
-			encrypted->destroy(encrypted);
+			this->payloads->insert_last(this->payloads, encrypted);
 		}
 		aead = keymat->get_aead(keymat, FALSE);
 		/* overhead for the encrypted fragment payload */
