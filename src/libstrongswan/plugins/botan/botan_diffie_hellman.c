@@ -54,7 +54,12 @@ struct private_botan_diffie_hellman_t {
 	/**
 	 * Private key
 	 */
-	botan_privkey_t dh_key;
+	botan_privkey_t key;
+
+	/**
+	 * Public key value provided by peer
+	 */
+	chunk_t pubkey;
 
 	/**
 	 * Diffie hellman shared secret
@@ -84,8 +89,8 @@ bool load_private_key(private_botan_diffie_hellman_t *this, chunk_t value)
 		return FALSE;
 	}
 
-	if (botan_privkey_destroy(this->dh_key) ||
-		botan_privkey_load_dh(&this->dh_key, this->p, this->g, xa))
+	if (botan_privkey_destroy(this->key) ||
+		botan_privkey_load_dh(&this->key, this->p, this->g, xa))
 	{
 		botan_mp_destroy(xa);
 		return FALSE;
@@ -102,9 +107,9 @@ METHOD(key_exchange_t, set_public_key, bool,
 		return FALSE;
 	}
 
-	chunk_clear(&this->shared_secret);
-
-	return botan_dh_key_derivation(this->dh_key, value, &this->shared_secret);
+	chunk_clear(&this->pubkey);
+	this->pubkey = chunk_clone(value);
+	return TRUE;
 }
 
 METHOD(key_exchange_t, get_public_key, bool,
@@ -113,14 +118,14 @@ METHOD(key_exchange_t, get_public_key, bool,
 	*value = chunk_empty;
 
 	/* get key size of public key first */
-	if (botan_pk_op_key_agreement_export_public(this->dh_key, NULL, &value->len)
+	if (botan_pk_op_key_agreement_export_public(this->key, NULL, &value->len)
 		!= BOTAN_FFI_ERROR_INSUFFICIENT_BUFFER_SPACE)
 	{
 		return FALSE;
 	}
 
 	*value = chunk_alloc(value->len);
-	if (botan_pk_op_key_agreement_export_public(this->dh_key, value->ptr,
+	if (botan_pk_op_key_agreement_export_public(this->key, value->ptr,
 												&value->len))
 	{
 		chunk_clear(value);
@@ -139,7 +144,8 @@ METHOD(key_exchange_t, set_seed, bool,
 METHOD(key_exchange_t, get_shared_secret, bool,
 	private_botan_diffie_hellman_t *this, chunk_t *secret)
 {
-	if (!this->shared_secret.len)
+	if (!this->shared_secret.len &&
+		!botan_dh_key_derivation(this->key, this->pubkey, &this->shared_secret))
 	{
 		return FALSE;
 	}
@@ -158,8 +164,9 @@ METHOD(key_exchange_t, destroy, void,
 {
 	botan_mp_destroy(this->p);
 	botan_mp_destroy(this->g);
-	botan_privkey_destroy(this->dh_key);
+	botan_privkey_destroy(this->key);
 	chunk_clear(&this->shared_secret);
+	chunk_clear(&this->pubkey);
 	free(this);
 }
 
