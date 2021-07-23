@@ -60,6 +60,11 @@ struct private_pkcs11_dh_t {
 	chunk_t pub_key;
 
 	/**
+	 * Public value provided by peer
+	 */
+	chunk_t other;
+
+	/**
 	 * Shared secret
 	 */
 	chunk_t secret;
@@ -121,6 +126,7 @@ METHOD(key_exchange_t, set_public_key, bool,
 		return FALSE;
 	}
 
+	chunk_clear(&this->other);
 	switch (this->group)
 	{
 		case ECP_192_BIT:
@@ -139,13 +145,14 @@ METHOD(key_exchange_t, set_public_key, bool,
 				pubkey.len,
 				pubkey.ptr,
 			};
-			value = chunk_from_thing(params);
+			this->other = chunk_clone(chunk_from_thing(params));
 			break;
 		}
 		default:
+			this->other = chunk_clone(value);
 			break;
 	}
-	return derive_secret(this, value);
+	return TRUE;
 }
 
 METHOD(key_exchange_t, get_public_key, bool,
@@ -158,7 +165,8 @@ METHOD(key_exchange_t, get_public_key, bool,
 METHOD(key_exchange_t, get_shared_secret, bool,
 	private_pkcs11_dh_t *this, chunk_t *secret)
 {
-	if (!this->secret.ptr)
+	if (!this->secret.ptr &&
+		!derive_secret(this, this->other))
 	{
 		return FALSE;
 	}
@@ -178,6 +186,7 @@ METHOD(key_exchange_t, destroy, void,
 	this->lib->f->C_CloseSession(this->session);
 	chunk_clear(&this->pub_key);
 	chunk_clear(&this->secret);
+	chunk_clear(&this->other);
 	free(this);
 }
 
