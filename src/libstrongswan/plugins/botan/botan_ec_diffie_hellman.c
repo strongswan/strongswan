@@ -61,6 +61,11 @@ struct private_botan_ec_diffie_hellman_t {
 	botan_privkey_t key;
 
 	/**
+	 * Public key value provided by peer
+	 */
+	chunk_t pubkey;
+
+	/**
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
@@ -74,12 +79,10 @@ METHOD(key_exchange_t, set_public_key, bool,
 		return FALSE;
 	}
 
-	chunk_clear(&this->shared_secret);
-
+	chunk_clear(&this->pubkey);
 	/* prepend 0x04 to indicate uncompressed point format */
-	value = chunk_cata("cc", chunk_from_chars(0x04), value);
-
-	return botan_dh_key_derivation(this->key, value, &this->shared_secret);
+	this->pubkey = chunk_cat("cc", chunk_from_chars(0x04), value);
+	return TRUE;
 }
 
 METHOD(key_exchange_t, get_public_key, bool,
@@ -135,7 +138,8 @@ METHOD(key_exchange_t, set_seed, bool,
 METHOD(key_exchange_t, get_shared_secret, bool,
 	private_botan_ec_diffie_hellman_t *this, chunk_t *secret)
 {
-	if (!this->shared_secret.len)
+	if (!this->shared_secret.len &&
+		!botan_dh_key_derivation(this->key, this->pubkey, &this->shared_secret))
 	{
 		return FALSE;
 	}
@@ -154,6 +158,7 @@ METHOD(key_exchange_t, destroy, void,
 {
 	botan_privkey_destroy(this->key);
 	chunk_clear(&this->shared_secret);
+	chunk_clear(&this->pubkey);
 	free(this);
 }
 
