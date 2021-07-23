@@ -42,6 +42,11 @@ struct private_curve25519_dh_t {
 	bool computed;
 
 	/**
+	 * Public key provided by peer
+	 */
+	u_char pubkey[CURVE25519_KEY_SIZE];
+
+	/**
 	 * Curve25519 backend
 	 */
 	curve25519_drv_t *drv;
@@ -77,11 +82,8 @@ METHOD(key_exchange_t, set_public_key, bool,
 {
 	if (value.len == CURVE25519_KEY_SIZE)
 	{
-		if (this->drv->curve25519(this->drv, value.ptr, this->shared))
-		{
-			this->computed = TRUE;
-			return TRUE;
-		}
+		memcpy(this->pubkey, value.ptr, value.len);
+		return TRUE;
 	}
 	return FALSE;
 }
@@ -113,10 +115,12 @@ METHOD(key_exchange_t, set_seed, bool,
 METHOD(key_exchange_t, get_shared_secret, bool,
 	private_curve25519_dh_t *this, chunk_t *secret)
 {
-	if (!this->computed)
+	if (!this->computed &&
+		!this->drv->curve25519(this->drv, this->pubkey, this->shared))
 	{
 		return FALSE;
 	}
+	this->computed = TRUE;
 	*secret = chunk_clone(chunk_from_thing(this->shared));
 	return TRUE;
 }
