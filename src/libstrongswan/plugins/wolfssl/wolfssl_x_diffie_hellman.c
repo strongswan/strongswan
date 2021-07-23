@@ -70,6 +70,18 @@ struct private_diffie_hellman_t {
 	} key;
 
 	/**
+	 * Public key provided by peer
+	 */
+	union {
+#ifdef HAVE_CURVE25519
+		curve25519_key key25519;
+#endif
+#ifdef HAVE_CURVE448
+		curve448_key key448;
+#endif
+	} pub;
+
+	/**
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
@@ -77,47 +89,42 @@ struct private_diffie_hellman_t {
 
 #ifdef HAVE_CURVE25519
 
+METHOD(key_exchange_t, get_shared_secret_25519, bool,
+	private_diffie_hellman_t *this, chunk_t *secret)
+{
+	word32 len = CURVE25519_KEYSIZE;
+
+	if (!this->shared_secret.len)
+	{
+		this->shared_secret = chunk_alloc(len);
+		if (wc_curve25519_shared_secret_ex(&this->key.key25519, &this->pub.key25519,
+					this->shared_secret.ptr, &len, EC25519_LITTLE_ENDIAN) != 0)
+		{
+			DBG1(DBG_LIB, "%N shared secret computation failed",
+				 key_exchange_method_names, this->group);
+			chunk_clear(&this->shared_secret);
+			return FALSE;
+		}
+	}
+	*secret = chunk_clone(this->shared_secret);
+	return TRUE;
+}
+
 METHOD(key_exchange_t, set_public_key_25519, bool,
 	private_diffie_hellman_t *this, chunk_t value)
 {
-	word32 len = CURVE25519_KEYSIZE;
-	curve25519_key pub;
-	int ret;
-
 	if (!key_exchange_verify_pubkey(this->group, value))
 	{
 		return FALSE;
 	}
 
-	ret = wc_curve25519_init(&pub);
-	if (ret != 0)
-	{
-		DBG1(DBG_LIB, "%N public key initialization failed",
-			 key_exchange_method_names, this->group);
-		return FALSE;
-	}
-
-	ret = wc_curve25519_import_public_ex(value.ptr, value.len, &pub,
-										 EC25519_LITTLE_ENDIAN);
-	if (ret != 0)
+	if (wc_curve25519_import_public_ex(value.ptr, value.len, &this->pub.key25519,
+									   EC25519_LITTLE_ENDIAN) != 0)
 	{
 		DBG1(DBG_LIB, "%N public value is malformed",
 			 key_exchange_method_names, this->group);
 		return FALSE;
 	}
-
-	chunk_clear(&this->shared_secret);
-	this->shared_secret = chunk_alloc(len);
-	if (wc_curve25519_shared_secret_ex(&this->key.key25519, &pub,
-					this->shared_secret.ptr, &len, EC25519_LITTLE_ENDIAN) != 0)
-	{
-		DBG1(DBG_LIB, "%N shared secret computation failed",
-			 key_exchange_method_names, this->group);
-		chunk_clear(&this->shared_secret);
-		wc_curve25519_free(&pub);
-		return FALSE;
-	}
-	wc_curve25519_free(&pub);
 	return TRUE;
 }
 
@@ -169,47 +176,42 @@ METHOD(key_exchange_t, set_seed_25519, bool,
 
 #ifdef HAVE_CURVE448
 
+METHOD(key_exchange_t, get_shared_secret_448, bool,
+	private_diffie_hellman_t *this, chunk_t *secret)
+{
+	word32 len = CURVE448_KEY_SIZE;
+
+	if (!this->shared_secret.len)
+	{
+		this->shared_secret = chunk_alloc(len);
+		if (wc_curve448_shared_secret_ex(&this->key.key448, &this->pub.key448,
+					this->shared_secret.ptr, &len, EC448_LITTLE_ENDIAN) != 0)
+		{
+			DBG1(DBG_LIB, "%N shared secret computation failed",
+				 key_exchange_method_names, this->group);
+			chunk_clear(&this->shared_secret);
+			return FALSE;
+		}
+	}
+	*secret = chunk_clone(this->shared_secret);
+	return TRUE;
+}
+
 METHOD(key_exchange_t, set_public_key_448, bool,
 	private_diffie_hellman_t *this, chunk_t value)
 {
-	word32 len = CURVE448_KEY_SIZE;
-	curve448_key pub;
-	int ret;
-
 	if (!key_exchange_verify_pubkey(this->group, value))
 	{
 		return FALSE;
 	}
 
-	ret = wc_curve448_init(&pub);
-	if (ret != 0)
-	{
-		DBG1(DBG_LIB, "%N public key initialization failed",
-			 key_exchange_method_names, this->group);
-		return FALSE;
-	}
-
-	ret = wc_curve448_import_public_ex(value.ptr, value.len, &pub,
-									   EC448_LITTLE_ENDIAN);
-	if (ret != 0)
+	if (wc_curve448_import_public_ex(value.ptr, value.len, &this->pub.key448,
+									 EC448_LITTLE_ENDIAN) != 0)
 	{
 		DBG1(DBG_LIB, "%N public value is malformed",
 			 key_exchange_method_names, this->group);
 		return FALSE;
 	}
-
-	chunk_clear(&this->shared_secret);
-	this->shared_secret = chunk_alloc(len);
-	if (wc_curve448_shared_secret_ex(&this->key.key448, &pub,
-					this->shared_secret.ptr, &len, EC448_LITTLE_ENDIAN) != 0)
-	{
-		DBG1(DBG_LIB, "%N shared secret computation failed",
-			 key_exchange_method_names, this->group);
-		chunk_clear(&this->shared_secret);
-		wc_curve448_free(&pub);
-		return FALSE;
-	}
-	wc_curve448_free(&pub);
 	return TRUE;
 }
 
@@ -259,17 +261,6 @@ METHOD(key_exchange_t, set_seed_448, bool,
 
 #endif /* HAVE_CURVE448 */
 
-METHOD(key_exchange_t, get_shared_secret, bool,
-	private_diffie_hellman_t *this, chunk_t *secret)
-{
-	if (!this->shared_secret.len)
-	{
-		return FALSE;
-	}
-	*secret = chunk_clone(this->shared_secret);
-	return TRUE;
-}
-
 METHOD(key_exchange_t, get_method, key_exchange_method_t,
 	private_diffie_hellman_t *this)
 {
@@ -283,12 +274,14 @@ METHOD(key_exchange_t, destroy, void,
 	{
 #ifdef HAVE_CURVE25519
 		wc_curve25519_free(&this->key.key25519);
+		wc_curve25519_free(&this->pub.key25519);
 #endif
 	}
 	else if (this->group == CURVE_448)
 	{
 #ifdef HAVE_CURVE448
 		wc_curve448_free(&this->key.key448);
+		wc_curve448_free(&this->pub.key448);
 #endif
 	}
 	chunk_clear(&this->shared_secret);
@@ -306,7 +299,6 @@ key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 
 	INIT(this,
 		.public = {
-			.get_shared_secret = _get_shared_secret,
 			.get_method = _get_method,
 			.destroy = _destroy,
 		},
@@ -323,14 +315,16 @@ key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 	if (group == CURVE_25519)
 	{
 #ifdef HAVE_CURVE25519
+		this->public.get_shared_secret = _get_shared_secret_25519;
 		this->public.set_public_key = _set_public_key_25519;
 		this->public.get_public_key = _get_public_key_25519;
 		this->public.set_seed = _set_seed_25519;
 
-		if (wc_curve25519_init(&this->key.key25519) != 0)
+		if (wc_curve25519_init(&this->key.key25519) != 0 ||
+			wc_curve25519_init(&this->pub.key25519) != 0)
 		{
 			DBG1(DBG_LIB, "initializing key failed");
-			free(this);
+			destroy(this);
 			return NULL;
 		}
 		ret = wc_curve25519_make_key(&rng, CURVE25519_KEYSIZE,
@@ -340,14 +334,16 @@ key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 	else if (group == CURVE_448)
 	{
 #ifdef HAVE_CURVE448
+		this->public.get_shared_secret = _get_shared_secret_448;
 		this->public.set_public_key = _set_public_key_448;
 		this->public.get_public_key = _get_public_key_448;
 		this->public.set_seed = _set_seed_448;
 
-		if (wc_curve448_init(&this->key.key448) != 0)
+		if (wc_curve448_init(&this->key.key448) != 0 ||
+			wc_curve448_init(&this->pub.key448) != 0)
 		{
 			DBG1(DBG_LIB, "initializing key failed");
-			free(this);
+			destroy(this);
 			return NULL;
 		}
 		ret = wc_curve448_make_key(&rng, CURVE448_KEY_SIZE, &this->key.key448);
