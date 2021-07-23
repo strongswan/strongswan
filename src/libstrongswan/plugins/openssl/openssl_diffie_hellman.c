@@ -63,11 +63,6 @@ struct private_openssl_diffie_hellman_t {
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
-
-	/**
-	 * True if shared secret is computed
-	 */
-	bool computed;
 };
 
 METHOD(key_exchange_t, get_public_key, bool,
@@ -85,15 +80,24 @@ METHOD(key_exchange_t, get_public_key, bool,
 METHOD(key_exchange_t, get_shared_secret, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t *secret)
 {
-	if (!this->computed)
+	int len;
+
+	if (!this->shared_secret.len)
 	{
-		return FALSE;
+		this->shared_secret = chunk_alloc(DH_size(this->dh));
+		memset(this->shared_secret.ptr, 0xFF, this->shared_secret.len);
+		len = DH_compute_key(this->shared_secret.ptr, this->pub_key, this->dh);
+		if (len < 0)
+		{
+			DBG1(DBG_LIB, "DH shared secret computation failed");
+			chunk_clear(&this->shared_secret);
+			return FALSE;
+		}
+		this->shared_secret.len = len;
 	}
-	/* shared secret should requires a len according the DH group */
-	*secret = chunk_alloc(DH_size(this->dh));
-	memset(secret->ptr, 0, secret->len);
-	memcpy(secret->ptr + secret->len - this->shared_secret.len,
-		   this->shared_secret.ptr, this->shared_secret.len);
+	/* shared secret requires a length according to the DH group */
+	*secret = chunk_copy_pad(chunk_alloc(DH_size(this->dh)),
+							 this->shared_secret, 0);
 	return TRUE;
 }
 
@@ -101,25 +105,12 @@ METHOD(key_exchange_t, get_shared_secret, bool,
 METHOD(key_exchange_t, set_public_key, bool,
 	private_openssl_diffie_hellman_t *this, chunk_t value)
 {
-	int len;
-
 	if (!key_exchange_verify_pubkey(this->group, value))
 	{
 		return FALSE;
 	}
 
 	BN_bin2bn(value.ptr, value.len, this->pub_key);
-	chunk_clear(&this->shared_secret);
-	this->shared_secret.ptr = malloc(DH_size(this->dh));
-	memset(this->shared_secret.ptr, 0xFF, this->shared_secret.len);
-	len = DH_compute_key(this->shared_secret.ptr, this->pub_key, this->dh);
-	if (len < 0)
-	{
-		DBG1(DBG_LIB, "DH shared secret computation failed");
-		return FALSE;
-	}
-	this->shared_secret.len = len;
-	this->computed = TRUE;
 	return TRUE;
 }
 
@@ -136,7 +127,6 @@ METHOD(key_exchange_t, set_seed, bool,
 			return FALSE;
 		}
 		chunk_clear(&this->shared_secret);
-		this->computed = FALSE;
 		return DH_generate_key(this->dh);
 	}
 	return FALSE;
@@ -220,9 +210,7 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(
 	}
 
 	this->group = group;
-	this->computed = FALSE;
 	this->pub_key = BN_new();
-	this->shared_secret = chunk_empty;
 
 	if (group == MODP_CUSTOM)
 	{
