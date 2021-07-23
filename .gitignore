@@ -52,3 +52,4 @@ coverage/
 /*.files
 /*.includes
 test-driver
+nbproject/
