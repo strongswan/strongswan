@@ -62,6 +62,7 @@ bool openssl_compute_shared_key(EVP_PKEY *priv, EVP_PKEY *pub, chunk_t *shared)
 
 	if (EVP_PKEY_derive(ctx, shared->ptr, &shared->len) <= 0)
 	{
+		chunk_clear(shared);
 		goto error;
 	}
 
