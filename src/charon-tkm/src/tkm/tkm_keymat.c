@@ -99,7 +99,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
 	uint64_t nc_id, spi_loc, spi_rem;
-	chunk_t *nonce;
+	chunk_t *nonce, shared;
 	tkm_diffie_hellman_t *tkm_dh;
 	key_exchange_t *ke;
 	dh_id_type dh_id;
@@ -124,8 +124,15 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		return FALSE;
 	}
 
-	/* Get DH context id */
+	/* Calculate the shared secret, nothing is returned */
 	array_get(kes, ARRAY_HEAD, &ke);
+	if (!ke->get_shared_secret(ke, &shared))
+	{
+		DBG1(DBG_IKE, "unable to calculate shared secret");
+		return FALSE;
+	}
+
+	/* Get DH context id */
 	tkm_dh = (tkm_diffie_hellman_t *)ke;
 	dh_id = tkm_dh->get_id(tkm_dh);
 
@@ -212,9 +219,16 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 	esa_info_t *esa_info_i, *esa_info_r;
 	dh_id_type dh_id = 0;
 	key_exchange_t *ke;
+	chunk_t shared;
 
 	if (kes && array_get(kes, ARRAY_HEAD, &ke))
 	{
+		/* no secret is actually returned */
+		if (!ke->get_shared_secret(ke, &shared))
+		{
+			DBG1(DBG_CHD, "unable to calculate shared secret");
+			return FALSE;
+		}
 		dh_id = ((tkm_diffie_hellman_t *)ke)->get_id((tkm_diffie_hellman_t *)ke);
 	}
 
