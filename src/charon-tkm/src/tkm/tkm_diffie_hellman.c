@@ -49,6 +49,11 @@ struct private_tkm_diffie_hellman_t {
 	dh_pubvalue_type pubvalue;
 
 	/**
+	 * Diffie-Hellman public value provided by peer.
+	 */
+	dh_pubvalue_type othervalue;
+
+	/**
 	 * Context id.
 	 */
 	dh_id_type context_id;
@@ -66,18 +71,16 @@ METHOD(key_exchange_t, get_shared_secret, bool,
 	private_tkm_diffie_hellman_t *this, chunk_t *secret)
 {
 	*secret = chunk_empty;
-	return TRUE;
+	return ike_dh_generate_key(this->context_id, this->othervalue) == TKM_OK;
 }
 
 
 METHOD(key_exchange_t, set_public_key, bool,
 	private_tkm_diffie_hellman_t *this, chunk_t value)
 {
-	dh_pubvalue_type othervalue;
-	othervalue.size = value.len;
-	memcpy(&othervalue.data, value.ptr, value.len);
-
-	return ike_dh_generate_key(this->context_id, othervalue) == TKM_OK;
+	this->othervalue.size = value.len;
+	memcpy(&this->othervalue.data, value.ptr, value.len);
+	return TRUE;
 }
 
 METHOD(key_exchange_t, get_method, key_exchange_method_t,
