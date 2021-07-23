@@ -46,14 +46,14 @@ struct private_key_exchange_t {
 	EVP_PKEY *key;
 
 	/**
+	 * Public key provided by peer
+	 */
+	EVP_PKEY *pub;
+
+	/**
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
-
-	/**
-	 * True if shared secret is computed
-	 */
-	bool computed;
 };
 
 /**
@@ -75,33 +75,20 @@ static int map_key_type(key_exchange_method_t ke)
 METHOD(key_exchange_t, set_public_key, bool,
 	private_key_exchange_t *this, chunk_t value)
 {
-	EVP_PKEY *pub;
-
 	if (!key_exchange_verify_pubkey(this->ke, value))
 	{
 		return FALSE;
 	}
 
-	pub =  EVP_PKEY_new_raw_public_key(map_key_type(this->ke), NULL,
-                                       value.ptr, value.len);
-	if (!pub)
+	EVP_PKEY_free(this->pub);
+	this->pub = EVP_PKEY_new_raw_public_key(map_key_type(this->ke), NULL,
+											   value.ptr, value.len);
+	if (!this->pub)
 	{
 		DBG1(DBG_LIB, "%N public value is malformed",
 			 key_exchange_method_names, this->ke);
 		return FALSE;
 	}
-
-	chunk_clear(&this->shared_secret);
-
-	if (!openssl_compute_shared_key(this->key, pub, &this->shared_secret))
-	{
-		DBG1(DBG_LIB, "%N shared secret computation failed",
-			 key_exchange_method_names, this->ke);
-		EVP_PKEY_free(pub);
-		return FALSE;
-	}
-	this->computed = TRUE;
-	EVP_PKEY_free(pub);
 	return TRUE;
 }
 
@@ -141,8 +128,11 @@ METHOD(key_exchange_t, set_seed, bool,
 METHOD(key_exchange_t, get_shared_secret, bool,
 	private_key_exchange_t *this, chunk_t *secret)
 {
-	if (!this->computed)
+	if (!this->shared_secret.len &&
+		!openssl_compute_shared_key(this->key, this->pub, &this->shared_secret))
 	{
+		DBG1(DBG_LIB, "%N shared secret computation failed",
+			 key_exchange_method_names, this->ke);
 		return FALSE;
 	}
 	*secret = chunk_clone(this->shared_secret);
@@ -159,6 +149,7 @@ METHOD(key_exchange_t, destroy, void,
 	private_key_exchange_t *this)
 {
 	EVP_PKEY_free(this->key);
+	EVP_PKEY_free(this->pub);
 	chunk_clear(&this->shared_secret);
 	free(this);
 }

@@ -52,6 +52,11 @@ struct private_openssl_ec_diffie_hellman_t {
 	EVP_PKEY *key;
 
 	/**
+	 * Public key provided by peer
+	 */
+	EVP_PKEY *pub;
+
+	/**
 	 * EC group
 	 */
 	EC_GROUP *ec_group;
@@ -186,50 +191,34 @@ error:
 METHOD(key_exchange_t, set_public_key, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
 {
-	EVP_PKEY *pub = NULL;
-
-	chunk_clear(&this->shared_secret);
-	this->computed = FALSE;
-
 	if (!key_exchange_verify_pubkey(this->group, value))
 	{
 		return FALSE;
 	}
 
-	pub = EVP_PKEY_new();
-	if (!pub)
+	if (!this->pub)
 	{
-		goto error;
+		this->pub = EVP_PKEY_new();
 	}
 
 #if OPENSSL_VERSION_NUMBER < 0x1010000fL
-	if (!chunk2ecp(this->ec_group, value, pub))
+	if (!chunk2ecp(this->ec_group, value, this->pub))
 	{
 		DBG1(DBG_LIB, "ECDH public value is malformed");
-		goto error;
+		return FALSE;
 	}
 #else
 	/* OpenSSL expects the pubkey in the format specified in section 2.3.4 of
 	 * SECG SEC 1, i.e. prefixed with 0x04 to indicate an uncompressed point */
 	value = chunk_cata("cc", chunk_from_chars(0x04), value);
-	if (EVP_PKEY_copy_parameters(pub, this->key) <= 0 ||
-		EVP_PKEY_set1_tls_encodedpoint(pub, value.ptr, value.len) <= 0)
+	if (EVP_PKEY_copy_parameters(this->pub, this->key) <= 0 ||
+		EVP_PKEY_set1_tls_encodedpoint(this->pub, value.ptr, value.len) <= 0)
 	{
 		DBG1(DBG_LIB, "ECDH public value is malformed");
-		goto error;
+		return FALSE;
 	}
 #endif
-
-	if (!openssl_compute_shared_key(this->key, pub, &this->shared_secret))
-	{
-		DBG1(DBG_LIB, "ECDH shared secret computation failed");
-		goto error;
-	}
-	this->computed = TRUE;
-
-error:
-	EVP_PKEY_free(pub);
-	return this->computed;
+	return TRUE;
 }
 
 METHOD(key_exchange_t, get_public_key, bool,
@@ -304,8 +293,10 @@ error:
 METHOD(key_exchange_t, get_shared_secret, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t *secret)
 {
-	if (!this->computed)
+	if (!this->shared_secret.len &&
+		!openssl_compute_shared_key(this->key, this->pub, &this->shared_secret))
 	{
+		DBG1(DBG_LIB, "ECDH shared secret computation failed");
 		return FALSE;
 	}
 	*secret = chunk_clone(this->shared_secret);
@@ -323,6 +314,7 @@ METHOD(key_exchange_t, destroy, void,
 {
 	EC_GROUP_free(this->ec_group);
 	EVP_PKEY_free(this->key);
+	EVP_PKEY_free(this->pub);
 	chunk_clear(&this->shared_secret);
 	free(this);
 }
