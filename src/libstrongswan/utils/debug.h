@@ -145,8 +145,11 @@ extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
 /** default logging function */
 void dbg_default(debug_t group, level_t level, char *fmt, ...);
 
-/** set the level logged by dbg_default() */
+/** set the level logged by dbg_default() for all groups */
 void dbg_default_set_level(level_t level);
+
+/** set the level logged by dbg_default() for a specific group */
+void dbg_default_set_level_group(debug_t group, level_t level);
 
 /** set the stream logged by dbg_default() to */
 void dbg_default_set_stream(FILE *stream);
