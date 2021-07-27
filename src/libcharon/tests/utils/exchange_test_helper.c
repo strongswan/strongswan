@@ -323,17 +323,33 @@ METHOD(exchange_test_helper_t, add_listener, void,
  */
 static void initialize_logging()
 {
-	int level = LEVEL_SILENT;
-	char *verbosity;
+	char buf[BUF_LEN], *verbosity;
+	level_t level;
+	debug_t group;
+
+	lib->settings->set_default_str(lib->settings, "%s.filelog.stderr.default",
+								   "-1", lib->ns);
 
 	verbosity = getenv("TESTS_VERBOSITY");
 	if (verbosity)
 	{
 		level = atoi(verbosity);
+		lib->settings->set_int(lib->settings, "%s.filelog.stderr.default",
+							   level, lib->ns);
 	}
-	lib->settings->set_int(lib->settings, "%s.filelog.stderr.default",
-			lib->settings->get_int(lib->settings, "%s.filelog.stderr.default",
-								   level, lib->ns), lib->ns);
+
+	for (group = 0; group < DBG_MAX; group++)
+	{
+		snprintf(buf, sizeof(buf), "TESTS_VERBOSITY_%s",
+				 enum_to_name(debug_names, group));
+		verbosity = getenv(buf);
+		if (verbosity)
+		{
+			level = atoi(verbosity);
+			lib->settings->set_int(lib->settings, "%s.filelog.stderr.%N",
+								   level, lib->ns, debug_lower_names, group);
+		}
+	}
 	lib->settings->set_bool(lib->settings, "%s.filelog.stderr.ike_name", TRUE,
 							lib->ns);
 	charon->load_loggers(charon);

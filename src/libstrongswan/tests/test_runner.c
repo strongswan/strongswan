@@ -714,6 +714,30 @@ static bool run_suite(test_suite_t *suite, test_runner_init_t init, char *cfg,
 }
 
 /**
+ * Configure log levels for specific groups
+ */
+static void setup_log_levels(level_t *base)
+{
+	char buf[BUF_LEN], *verbosity;
+	debug_t group;
+	level_t level;
+
+	for (group = 0; group < DBG_MAX; group++)
+	{
+		snprintf(buf, sizeof(buf), "TESTS_VERBOSITY_%s",
+				 enum_to_name(debug_names, group));
+
+		verbosity = getenv(buf);
+		if (verbosity)
+		{
+			level = atoi(verbosity);
+			dbg_default_set_level_group(group, level);
+			*base = max(*base, level);
+		}
+	}
+}
+
+/**
  * See header.
  */
 int test_runner_run(const char *name, test_configuration_t configs[],
@@ -749,6 +773,8 @@ int test_runner_run(const char *name, test_configuration_t configs[],
 		level = atoi(verbosity);
 	}
 	dbg_default_set_level(level);
+
+	setup_log_levels(&level);
 
 	fprintf(stderr, "Running %u '%s' test suites:\n", array_count(suites), name);
 
