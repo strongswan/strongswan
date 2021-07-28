@@ -108,6 +108,7 @@ METHOD(plugin_t, get_features, int,
 {
 	static plugin_feature_t f[] = {
 		PLUGIN_REGISTER(RNG, random_rng_create),
+			PLUGIN_PROVIDE(RNG, RNG_WEAK),
 			PLUGIN_PROVIDE(RNG, RNG_STRONG),
 			PLUGIN_PROVIDE(RNG, RNG_TRUE),
 	};
