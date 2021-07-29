@@ -24,7 +24,7 @@
 
 #include "tkm.h"
 #include "tkm_nonceg.h"
-#include "tkm_diffie_hellman.h"
+#include "tkm_key_exchange.h"
 #include "tkm_keymat.h"
 #include "tkm_types.h"
 
@@ -47,16 +47,16 @@ START_TEST(test_derive_ike_keys)
 	fail_unless(ng->nonce_gen.allocate_nonce(&ng->nonce_gen, 32, &nonce),
 			"Unable to allocate nonce");
 
-	tkm_diffie_hellman_t *dh = tkm_diffie_hellman_create(MODP_4096_BIT);
-	fail_if(!dh, "Unable to create DH");
+	tkm_key_exchange_t *ke = tkm_key_exchange_create(MODP_4096_BIT);
+	fail_if(!ke, "Unable to create KE");
 
 	/* Use the same pubvalue for both sides */
 	chunk_t pubvalue;
-	ck_assert(dh->ke.get_public_key(&dh->ke, &pubvalue));
-	ck_assert(dh->ke.set_public_key(&dh->ke, pubvalue));
+	ck_assert(ke->ke.get_public_key(&ke->ke, &pubvalue));
+	ck_assert(ke->ke.set_public_key(&ke->ke, pubvalue));
 
 	array_t *kes = NULL;
-	array_insert_create(&kes, ARRAY_TAIL, dh);
+	array_insert_create(&kes, ARRAY_TAIL, ke);
 	fail_unless(keymat->keymat_v2.derive_ike_keys(&keymat->keymat_v2, proposal,
 				kes, nonce, nonce, ike_sa_id, PRF_UNDEFINED, chunk_empty),
 				"Key derivation failed");
@@ -73,7 +73,7 @@ START_TEST(test_derive_ike_keys)
 
 	ng->nonce_gen.destroy(&ng->nonce_gen);
 	proposal->destroy(proposal);
-	dh->ke.destroy(&dh->ke);
+	ke->ke.destroy(&ke->ke);
 	ike_sa_id->destroy(ike_sa_id);
 	keymat->keymat_v2.keymat.destroy(&keymat->keymat_v2.keymat);
 	chunk_free(&pubvalue);
@@ -82,8 +82,8 @@ END_TEST
 
 START_TEST(test_derive_child_keys)
 {
-	tkm_diffie_hellman_t *dh = tkm_diffie_hellman_create(MODP_4096_BIT);
-	fail_if(!dh, "Unable to create DH object");
+	tkm_key_exchange_t *ke = tkm_key_exchange_create(MODP_4096_BIT);
+	fail_if(!ke, "Unable to create DH object");
 	proposal_t *proposal = proposal_create_from_string(PROTO_ESP,
 			"aes256-sha512-modp4096");
 	fail_if(!proposal, "Unable to create proposal");
@@ -96,7 +96,7 @@ START_TEST(test_derive_child_keys)
 	chunk_t nonce = chunk_from_chars("test chunk");
 
 	array_t *kes = NULL;
-	array_insert_create(&kes, ARRAY_TAIL, dh);
+	array_insert_create(&kes, ARRAY_TAIL, ke);
 	fail_unless(keymat->keymat_v2.derive_child_keys(&keymat->keymat_v2, proposal,
 													kes, nonce, nonce, &encr_i,
 													&integ_i, &encr_r, &integ_r),
@@ -115,8 +115,10 @@ START_TEST(test_derive_child_keys)
 				"nonce_r mismatch (encr_i)");
 	fail_if(info->is_encr_r,
 			"Flag is_encr_r set for encr_i");
-	fail_if(info->dh_id != dh->get_id(dh),
-			"DH context id mismatch (encr_i)");
+	fail_if(info->ke_ids.size != 1,
+			"KE context number mismatch (encr_i)");
+	fail_if(info->ke_ids.data[0] != ke->get_id(ke),
+			"KE context id mismatch (encr_i)");
 	chunk_free(&info->nonce_i);
 	chunk_free(&info->nonce_r);
 
@@ -132,13 +134,15 @@ START_TEST(test_derive_child_keys)
 				"nonce_r mismatch (encr_r)");
 	fail_unless(info->is_encr_r,
 				"Flag is_encr_r set for encr_r");
-	fail_if(info->dh_id != dh->get_id(dh),
-			"DH context id mismatch (encr_i)");
+	fail_if(info->ke_ids.size != 1,
+			"KE context number mismatch (encr_i)");
+	fail_if(info->ke_ids.data[0] != ke->get_id(ke),
+			"KE context id mismatch (encr_i)");
 	chunk_free(&info->nonce_i);
 	chunk_free(&info->nonce_r);
 
 	proposal->destroy(proposal);
-	dh->ke.destroy(&dh->ke);
+	ke->ke.destroy(&ke->ke);
 	keymat->keymat_v2.keymat.destroy(&keymat->keymat_v2.keymat);
 	chunk_free(&encr_i);
 	chunk_free(&encr_r);

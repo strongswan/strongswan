@@ -18,31 +18,31 @@
 #include <daemon.h>
 #include <tests/test_suite.h>
 
-#include "tkm_diffie_hellman.h"
+#include "tkm_key_exchange.h"
 
-START_TEST(test_dh_creation)
+START_TEST(test_ke_creation)
 {
-	tkm_diffie_hellman_t *dh = NULL;
+	tkm_key_exchange_t *ke = NULL;
 
-	dh = tkm_diffie_hellman_create(MODP_768_BIT);
-	fail_if(dh, "MODP_768 created");
+	ke = tkm_key_exchange_create(MODP_768_BIT);
+	fail_if(ke, "MODP_768 created");
 
-	dh = tkm_diffie_hellman_create(MODP_4096_BIT);
-	fail_if(!dh, "MODP_4096 not created");
-	fail_if(!dh->get_id(dh), "Invalid context id (0)");
+	ke = tkm_key_exchange_create(MODP_4096_BIT);
+	fail_if(!ke, "MODP_4096 not created");
+	fail_if(!ke->get_id(ke), "Invalid context id (0)");
 
-	dh->ke.destroy(&dh->ke);
+	ke->ke.destroy(&ke->ke);
 }
 END_TEST
 
-START_TEST(test_dh_get_my_pubvalue)
+START_TEST(test_ke_get_my_pubvalue)
 {
-	tkm_diffie_hellman_t *dh = tkm_diffie_hellman_create(MODP_4096_BIT);
-	fail_if(!dh, "Unable to create DH");
+	tkm_key_exchange_t *ke = tkm_key_exchange_create(MODP_4096_BIT);
+	fail_if(!ke, "Unable to create KE");
 
 	chunk_t value;
-	ck_assert(dh->ke.get_public_key(&dh->ke, &value));
-	dh->ke.destroy(&dh->ke);
+	ck_assert(ke->ke.get_public_key(&ke->ke, &value));
+	ke->ke.destroy(&ke->ke);
 
 	fail_if(value.ptr == NULL, "Pubvalue is NULL");
 	fail_if(value.len != 512, "Pubvalue size mismatch");
@@ -51,19 +51,19 @@ START_TEST(test_dh_get_my_pubvalue)
 }
 END_TEST
 
-Suite *make_diffie_hellman_tests()
+Suite *make_key_exchange_tests()
 {
 	Suite *s;
 	TCase *tc;
 
-	s = suite_create("Diffie-Hellman");
+	s = suite_create("key exchange");
 
 	tc = tcase_create("creation");
-	tcase_add_test(tc, test_dh_creation);
+	tcase_add_test(tc, test_ke_creation);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("get_my_pubvalue");
-	tcase_add_test(tc, test_dh_get_my_pubvalue);
+	tcase_add_test(tc, test_ke_get_my_pubvalue);
 	suite_add_tcase(s, tc);
 
 	return s;
