@@ -880,13 +880,14 @@ connections.<conn>.children.<child>.policies_fwd_out = no
 	traffic for this CHILD_SA.
 
 connections.<conn>.children.<child>.dpd_action = clear
-	Action to perform on DPD timeout (_clear_, _trap_ or _restart_).
+	Action to perform on DPD timeout (_clear_, _trap_ or _restart_, _traprestart_).
 
 	Action to perform for this CHILD_SA on DPD timeout. The default _clear_
 	closes the CHILD_SA and does not take further action. _trap_ installs
 	a trap policy, which will catch matching traffic and tries to re-negotiate
 	the tunnel on-demand. _restart_ immediately tries to re-negotiate the
-	CHILD_SA under a fresh IKE_SA.
+	CHILD_SA under a fresh IKE_SA. _traprestart_ performs the actions of
+	the _trap_ and _restart_ keywords.
 
 connections.<conn>.children.<child>.ipcomp = no
 	Enable IPComp compression before encryption.
@@ -1067,7 +1068,7 @@ connections.<conn>.children.<child>.copy_dscp = out
 	not supported by all kernel interfaces.
 
 connections.<conn>.children.<child>.start_action = none
-	Action to perform after loading the configuration (_none_, _trap_, _start_).
+	Action to perform after loading the configuration (_none_, _trap_, _start_, _trapstart_).
 
 	Action to perform after loading the configuration. The default of _none_
 	loads the connection only, which then can be manually initiated or used as
@@ -1075,19 +1076,23 @@ connections.<conn>.children.<child>.start_action = none
 
 	The value _trap_ installs a trap policy, which triggers the tunnel as soon
 	as matching traffic has been detected. The value _start_ initiates
-	the connection actively.
+	the connection actively. The value _trapstart_ performs the actions of the
+	_trap_ and _start_ keywords.
 
 	When unloading or replacing a CHILD_SA configuration having a
 	**start_action** different from _none_, the inverse action is performed.
 	Configurations with _start_ get closed, while such with _trap_ get
-	uninstalled.
+	uninstalled. Configurations with _trapstart_ get closed and their traps
+	get uninstalled.
 
 connections.<conn>.children.<child>.close_action = none
-	Action to perform after a CHILD_SA gets closed (_none_, _trap_, _start_).
+	Action to perform after a CHILD_SA gets closed (_none_, _trap_, _start_,
+	_trapstart_).
 
 	Action to perform after a CHILD_SA gets closed by the peer. The default of
 	_none_ does not take any action, _trap_ installs a trap policy for the
-	CHILD_SA. _start_ tries to re-create the CHILD_SA.
+	CHILD_SA. _start_ tries to re-create the CHILD_SA. _trapstart_ performs
+	the actions of _trap_ and _start_
 
 	**close_action** does not provide any guarantee that the CHILD_SA is kept
 	alive. It acts on explicit close messages only, but not on negotiation
