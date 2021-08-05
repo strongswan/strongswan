@@ -2076,6 +2076,7 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 		}
 		switch (action)
 		{
+			case ACTION_TRAPRESTART:
 			case ACTION_RESTART:
 				child_cfg = child_sa->get_config(child_sa);
 				DBG1(DBG_IKE, "restarting CHILD_SA %s",
@@ -2166,6 +2167,8 @@ METHOD(ike_sa_t, reestablish, status_t,
 				case ACTION_RESTART:
 					restart = TRUE;
 					break;
+				case ACTION_TRAPRESTART:
+					restart = TRUE;
 				case ACTION_ROUTE:
 					charon->traps->install(charon->traps, this->peer_cfg,
 										   child_sa->get_config(child_sa));
