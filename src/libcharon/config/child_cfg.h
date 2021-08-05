@@ -45,6 +45,8 @@ enum action_t {
 	ACTION_ROUTE,
 	/** Start or restart config immediately */
 	ACTION_RESTART,
+	/** perform ACTION_ROUTE and then ACTION_RESTART */
+	ACTION_TRAPRESTART
 };
 
 /**
