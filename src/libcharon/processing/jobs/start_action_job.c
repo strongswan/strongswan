@@ -56,6 +56,25 @@ METHOD(job_t, execute, job_requeue_t,
 
 			switch (child_cfg->get_start_action(child_cfg))
 			{
+				case ACTION_TRAPRESTART:
+					DBG1(DBG_JOB, "start action: starttrap '%s'", name);
+					mode = child_cfg->get_mode(child_cfg);
+					if (mode == MODE_PASS || mode == MODE_DROP)
+					{
+						charon->shunts->install(charon->shunts,
+												peer_cfg->get_name(peer_cfg),
+												child_cfg);
+					}
+					else
+					{
+						charon->traps->install(charon->traps, peer_cfg,
+											   child_cfg);
+					}
+					charon->controller->initiate(charon->controller,
+												 peer_cfg->get_ref(peer_cfg),
+												 child_cfg->get_ref(child_cfg),
+												 NULL, NULL, 0, FALSE);
+					break;
 				case ACTION_RESTART:
 					DBG1(DBG_JOB, "start action: initiate '%s'", name);
 					charon->controller->initiate(charon->controller,
