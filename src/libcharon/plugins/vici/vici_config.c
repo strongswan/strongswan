@@ -1004,6 +1004,7 @@ CALLBACK(parse_action, bool,
 	action_t *out, chunk_t v)
 {
 	enum_map_t map[] = {
+		{ "starttrap",	ACTION_TRAPRESTART },
 		{ "start",		ACTION_RESTART	},
 		{ "restart",	ACTION_RESTART	},
 		{ "route",		ACTION_ROUTE	},
