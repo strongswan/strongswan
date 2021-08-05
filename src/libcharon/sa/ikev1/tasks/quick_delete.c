@@ -154,6 +154,10 @@ static status_t delete_child(private_quick_delete_t *this,
 
 			switch (child_sa->get_close_action(child_sa))
 			{
+				case ACTION_TRAPRESTART:
+					charon->traps->install(charon->traps,
+									this->ike_sa->get_peer_cfg(this->ike_sa),
+									child_cfg);
 				case ACTION_RESTART:
 					child_cfg->get_ref(child_cfg);
 					status = this->ike_sa->initiate(this->ike_sa, child_cfg,
