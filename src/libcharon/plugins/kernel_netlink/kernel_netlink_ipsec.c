@@ -1323,7 +1323,7 @@ static void netlink_find_offload_feature(const char *ifname)
 {
 	struct ethtool_sset_info *sset_info;
 	struct ethtool_gstrings *cmd = NULL;
-	struct ifreq ifr;
+	struct ifreq ifr = { 0 };
 	uint32_t sset_len, i;
 	char *str;
 	int err, query_socket;
@@ -1392,7 +1392,7 @@ static bool netlink_detect_offload(const char *ifname)
 {
 	struct ethtool_gfeatures *cmd;
 	uint32_t feature_bit;
-	struct ifreq ifr;
+	struct ifreq ifr = { 0 };
 	int query_socket;
 	int block;
 	bool ret = FALSE;
