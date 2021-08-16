@@ -100,8 +100,9 @@ METHOD(mac_t, set_key, bool,
 	private_mac_t *this, chunk_t key)
 {
 	if (!key.ptr)
-	{	/* HMAC_Init_ex() won't reset the key if a NULL pointer is passed */
-		key = chunk_from_str("");
+	{	/* HMAC_Init_ex() won't reset the key if a NULL pointer is passed,
+		 * use a lenghty string in case there is a limit in FIPS-mode */
+		key = chunk_from_str("00000000000000000000000000000000");
 	}
 	return reset(this, key);
 }
@@ -188,7 +189,7 @@ static mac_t *hmac_create(hash_algorithm_t algo)
 #endif
 
 	/* make sure the underlying hash algorithm is supported */
-	if (!set_key(this, chunk_from_str("")))
+	if (!set_key(this, chunk_empty))
 	{
 		destroy(this);
 		return NULL;
