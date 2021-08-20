@@ -38,9 +38,8 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/.ccache
-          key: ccache-${{ runner.os }}-${{ matrix.test }}-${{ github.ref }}:${{ github.sha }}
+          key: ccache-${{ runner.os }}-${{ matrix.test }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ runner.os }}-${{ matrix.test }}-${{ github.ref }}:
             ccache-${{ runner.os }}-${{ matrix.test }}-
       - run: |
           sudo apt-get install -qq ccache

@@ -34,9 +34,8 @@ jobs:
           path: |
             ~/.ccache
             ~/.sonar-cache
-          key: ccache-sonarcloud-${{ github.ref }}:${{ github.sha }}
+          key: ccache-sonarcloud-${{ github.sha }}
           restore-keys: |
-            ccache-sonarcloud-${{ github.ref }}:
             ccache-sonarcloud-
       - run: |
           sudo apt-get install -qq ccache
