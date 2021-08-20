@@ -117,7 +117,6 @@ static void exit_tpm_extendpcr(err_t message, ...)
 		fprintf(stderr, "tpm_extendpcr error: %s\n", m);
 		status = -1;
 	}
-	library_deinit();
 	exit(status);
 }
 
@@ -166,17 +165,23 @@ int main(int argc, char *argv[])
 	uint32_t pcr = 16;
 	bool hash = FALSE;
 
-	atexit(library_deinit);
 	if (!library_init(NULL, "tpm_extendpcr"))
 	{
 		exit(SS_RC_LIBSTRONGSWAN_INTEGRITY);
 	}
+	atexit(library_deinit);
 	if (lib->integrity &&
 		!lib->integrity->check_file(lib->integrity, "tpm_extendpcr", argv[0]))
 	{
 		fprintf(stderr, "integrity check of tpm_extendpcr failed\n");
 		exit(SS_RC_DAEMON_INTEGRITY);
 	}
+	if (!libtpmtss_init())
+	{
+		fprintf(stderr, "libtpmtss initialization failed\n");
+		exit(SS_RC_INITIALIZATION_FAILED);
+	}
+	atexit(libtpmtss_deinit);
 
 	for (;;)
 	{
@@ -250,7 +255,7 @@ int main(int argc, char *argv[])
 
 	if (!lib->plugins->load(lib->plugins,
 			lib->settings->get_str(lib->settings, "tpm_extendpcr.load",
-												  "tpm sha1 sha2")))
+												  "sha1 sha2")))
 	{
 		exit_tpm_extendpcr("plugin loading failed");
 	}
