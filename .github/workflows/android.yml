@@ -38,9 +38,8 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/.ccache
-          key: ccache-android-${{ github.ref }}:${{ github.sha }}
+          key: ccache-android-${{ github.sha }}
           restore-keys: |
-            ccache-android-${{ github.ref }}:
             ccache-android-
       - run: |
           sudo apt-get install -qq ccache

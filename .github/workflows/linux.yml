@@ -62,9 +62,8 @@ jobs:
           # builds and, similarly, builds with leak-detective only differ in two
           # files (LD itself and library.c); but different tests build different
           # dependencies, so different caches are needed
-          key: ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.ref }}:${{ github.sha }}
+          key: ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.ref }}:
             ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-
             ccache-${{ runner.os }}-${{ env.CC }}-
       - run: |
@@ -98,13 +97,11 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/.ccache
-          key: ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.ref }}:${{ github.sha }}
+          key: ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.ref }}:
             ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-
             ccache-${{ runner.os }}-${{ env.CC }}-
-            ccache-${{ runner.os }}-${{ env.CC }}-all-${{ github.ref }}:${{ github.sha }}
-            ccache-${{ runner.os }}-${{ env.CC }}-all-${{ github.ref }}:
+            ccache-${{ runner.os }}-${{ env.CC }}-all-${{ github.sha }}
             ccache-${{ runner.os }}-${{ env.CC }}-all-
             ccache-${{ runner.os }}-${{ env.CC }}-
       - run: |
@@ -140,9 +137,8 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/.ccache
-          key: ccache-bionic-${{ env.CC }}-${{ matrix.test }}-${{ github.ref }}:${{ github.sha }}
+          key: ccache-bionic-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
           restore-keys: |
-            ccache-bionic-${{ env.CC }}-${{ matrix.test }}-${{ github.ref }}:
             ccache-bionic-${{ env.CC }}-${{ matrix.test }}-
             ccache-bionic-${{ env.CC }}-
       - run: |
@@ -181,9 +177,8 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/.ccache
-          key: ccache-xenial-${{ env.CC }}-${{ matrix.test }}-${{ github.ref }}:${{ github.sha }}
+          key: ccache-xenial-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
           restore-keys: |
-            ccache-xenial-${{ env.CC }}-${{ matrix.test }}-${{ github.ref }}:
             ccache-xenial-${{ env.CC }}-${{ matrix.test }}-
             ccache-xenial-${{ env.CC }}-
       - run: |

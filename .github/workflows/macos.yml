@@ -31,9 +31,8 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/Library/Caches/ccache
-          key: ccache-${{ runner.os }}-${{ github.ref }}:${{ github.sha }}
+          key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ runner.os }}-${{ github.ref }}:
             ccache-${{ runner.os }}-
       - run: |
           brew install ccache
