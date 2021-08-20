@@ -78,28 +78,26 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/.ccache
-          key: ccache-${{ runner.os }}-${{ matrix.test }}-${{ github.ref }}:${{ github.sha }}
+          key: ccache-${{ runner.os }}-${{ matrix.test }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ runner.os }}-${{ matrix.test }}-${{ github.ref }}:
             ccache-${{ runner.os }}-${{ matrix.test }}-
       - run: |
           ./scripts/test.sh deps
-          pacman --noconfirm -S --needed ccache
+          pacman --noconfirm -S --needed mingw-w64-ccache || true
+          case "$TEST" in
+          win64)
+            pacman --noconfirm -S --needed mingw-w64-x86_64-ccache
+            echo "PATH=/mingw64/lib/ccache/bin:$PATH" >> $GITHUB_ENV
+            ;;
+          win32)
+            pacman --noconfirm -S --needed mingw-w64-i686-ccache
+            echo "PATH=/mingw32/lib/ccache/bin:$PATH" >> $GITHUB_ENV
+            ;;
+          esac
           ccache -z
           ccache -s
         shell: msys2 {0}
-      - run: |
-          # the ccache package does not add any symlinks and the scripts in the
-          # mingw-w64-...-ccache packages don't work, so do this via CC
-          case "$TEST" in
-          win64)
-            export CC="ccache x86_64-w64-mingw32-gcc"
-            ;;
-          win32)
-            export CC="ccache i686-w64-mingw32-gcc"
-            ;;
-          esac
-          ./scripts/test.sh
+      - run: ./scripts/test.sh
         shell: msys2 {0}
         # sometimes streaming/threading tests hang completely
         timeout-minutes: 30
