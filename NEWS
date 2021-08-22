@@ -1,3 +1,9 @@
+strongswan-5.9.4
+----------------
+
+- Initialize libtpmtss in all programs and library that use it.
+
+
 strongswan-5.9.3
 ----------------
 
