@@ -173,7 +173,7 @@ CALLBACK(load_cert, vici_message_t*,
 	ext_flag = (flag & X509_CA) ? X509_NONE : flag;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
-							  BUILD_BLOB_PEM, data,
+							  BUILD_BLOB, data,
 							  BUILD_X509_FLAG, ext_flag,
 							  BUILD_END);
 	if (!cert)
