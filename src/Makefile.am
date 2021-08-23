@@ -143,6 +143,6 @@ if USE_AIKGEN
   SUBDIRS += aikgen
 endif
 
-if USE_TPM
+if USE_LIBTPMTSS
   SUBDIRS += tpm_extendpcr
 endif
