@@ -86,6 +86,8 @@ enum alert_t {
 	ALERT_RADIUS_NOT_RESPONDING,
 	/** a shutdown signal has been received, argument is the signal (int) */
 	ALERT_SHUTDOWN_SIGNAL,
+	/** failed to determine source address, no arguments */
+	ALERT_LOCAL_ADDR_FAILED,
 	/** local peer authentication failed (by us or by peer), no arguments */
 	ALERT_LOCAL_AUTH_FAILED,
 	/** peer authentication failed, no arguments */

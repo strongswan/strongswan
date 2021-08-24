@@ -1565,6 +1565,21 @@ METHOD(ike_sa_t, initiate, status_t,
 				 addr, this->retry_initiate_interval);
 			defer_initiate = TRUE;
 		}
+		else if (this->my_host->is_anyaddr(this->my_host))
+		{
+			if (!this->retry_initiate_interval)
+			{
+				DBG1(DBG_IKE, "unable to determine source address to reach %H, "
+					 "initiate aborted", this->other_host);
+				DESTROY_IF(child_cfg);
+				charon->bus->alert(charon->bus, ALERT_LOCAL_ADDR_FAILED);
+				return DESTROY_ME;
+			}
+			DBG1(DBG_IKE, "unable to determine source address to reach %H, "
+				 "retrying in %ds", this->other_host,
+				 this->retry_initiate_interval);
+			defer_initiate = TRUE;
+		}
 
 		set_condition(this, COND_ORIGINAL_INITIATOR, TRUE);
 		this->task_manager->queue_ike(this->task_manager);
