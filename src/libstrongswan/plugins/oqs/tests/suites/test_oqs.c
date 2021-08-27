@@ -30,8 +30,6 @@ static bool unsupported(key_exchange_method_t method)
 {
 	switch(method)
 	{
-		case KE_BIKE_L1:
-		case KE_BIKE_L3:
 		case KE_BIKE_L5:
 			return TRUE;
 		default:
