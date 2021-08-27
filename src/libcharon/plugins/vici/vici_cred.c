@@ -375,6 +375,7 @@ CALLBACK(load_token, vici_message_t*,
 	}
 	if (shared && unique)
 	{	/* use the handle as owner, but the key identifier as unique ID */
+		DBG4(DBG_CFG, "loaded shared PIN for '%s': %s", hex, pin);
 		owner = identification_create_from_encoding(ID_KEY_ID, handle);
 		this->pins->add_shared_unique(this->pins, unique, shared,
 									linked_list_create_with_items(owner, NULL));
@@ -482,7 +483,7 @@ CALLBACK(load_shared, vici_message_t*,
 		DBG1(DBG_CFG, "loaded %N shared key for: %s",
 			 shared_key_type_names, type, buf);
 	}
-
+	DBG4(DBG_CFG, "key: %#B", &data);
 	this->creds->add_shared_unique(this->creds, unique,
 						shared_key_create(type, chunk_clone(data)), owners);
 
