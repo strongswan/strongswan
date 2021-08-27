@@ -334,6 +334,7 @@ CALLBACK(load_token, vici_message_t*,
 	if (pin)
 	{	/* provide the pin in a temporary credential set to access the key */
 		shared = shared_key_create(SHARED_PIN, chunk_clone(chunk_from_str(pin)));
+		DBG4(DBG_CFG, "loaded shared PIN for '%s': %s", hex, pin);
 		owner = identification_create_from_encoding(ID_KEY_ID, handle);
 		set = mem_cred_create();
 		set->add_shared(set, shared->get_ref(shared), owner, NULL);
@@ -482,7 +483,7 @@ CALLBACK(load_shared, vici_message_t*,
 		DBG1(DBG_CFG, "loaded %N shared key for: %s",
 			 shared_key_type_names, type, buf);
 	}
-
+	DBG4(DBG_CFG, "key: %#B", &data);
 	this->creds->add_shared_unique(this->creds, unique,
 						shared_key_create(type, chunk_clone(data)), owners);
 
