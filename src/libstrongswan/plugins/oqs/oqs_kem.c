@@ -261,6 +261,12 @@ oqs_kem_t *oqs_kem_create(key_exchange_method_t method)
 		case KE_SABER_L5:
 			kem_alg = OQS_KEM_alg_saber_firesaber;
 			break;
+		case KE_BIKE_L1:
+			kem_alg = OQS_KEM_alg_bike_l1;
+			break;
+		case KE_BIKE_L3:
+			kem_alg = OQS_KEM_alg_bike_l3;
+			break;
 		case KE_FRODO_AES_L1:
 			kem_alg = OQS_KEM_alg_frodokem_640_aes;
 			break;
