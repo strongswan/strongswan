@@ -97,14 +97,22 @@ static vid_data_t vids[] = {
 	/* strongSwan MD5("strongSwan") */
 	{ "strongSwan", EXT_STRONGSWAN, "send_vendor_id", FALSE, 16,
 	  "\x88\x2f\xe5\x6d\x6f\xd2\x0d\xbc\x22\x51\x61\x3b\x2e\xbe\x5b\xeb"},
-	{ "Cisco Delete Reason", 0, NULL, FALSE, 0,
+	{ "Cisco Delete Reason", 0, "cisco_anyconnect", FALSE, 0,
 	  "CISCO-DELETE-REASON" },
 	{ "Cisco FlexVPN Supported", 0, "cisco_flexvpn", FALSE, 0,
 	  "FLEXVPN-SUPPORTED" },
-	{ "Cisco Copyright (c) 2009", 0, NULL, FALSE, 0,
+	{ "Cisco Copyright (c) 2009", 0, "cisco_anyconnect", FALSE, 0,
 	  "CISCO(COPYRIGHT)&Copyright (c) 2009 Cisco Systems, Inc." },
-	{ "FRAGMENTATION", 0, NULL, FALSE, 16,
+	{ "FRAGMENTATION", 0, "cisco_anyconnect", FALSE, 16,
 	  "\x40\x48\xb7\xd5\x6e\xbc\xe8\x85\x25\xe7\xde\x7f\x00\xd6\xc2\xd3"},
+	{ "Cisco GRE Mode", 0, "cisco_anyconnect", TRUE, 0,
+	  "CISCO-GRE-MODE" },
+	{ "Cisco AnyConnect STRAP", 0, "cisco_anyconnect", FALSE, 0,
+	  "CISCO-ANYCONNECT-STRAP" },
+	{ "Cisco AnyConnect EAP", 0, "cisco_anyconnect", FALSE, 0,
+	  "CISCO-ANYCONNECT-EAP" },
+	{ "Cisco NGE LEVEL", 0, "cisco_anyconnect", FALSE, 0,
+	  "CISCO-NGE-LEVEL" },
 	{ "MS NT5 ISAKMPOAKLEY v7", 0, NULL, FALSE, 20,
 	  "\x1e\x2b\x51\x69\x05\x99\x1c\x7d\x7c\x96\xfc\xbf\xb5\x87\xe4\x61\x00\x00\x00\x07"},
 	{ "MS NT5 ISAKMPOAKLEY v8", 0, NULL, FALSE, 20,
@@ -145,12 +153,43 @@ static vid_data_t vids[] = {
 	  "\xfd\x80\x88\x04\xdf\x73\xb1\x51\x50\x70\x9d\x87\x80\x44\xcd\xe0\xac\x1e\xfc\xde"},
 };
 
+#define CISCO_ANYCONNECT_VENDOR_ID_LEN 20
+
 METHOD(task_t, build, status_t,
 	private_ike_vendor_t *this, message_t *message)
 {
 	vendor_id_payload_t *vid;
 	bool send_vid;
 	int i;
+	bool cisco_anyconnect = lib->settings->get_bool(lib->settings, "%s.%s", FALSE,
+										   lib->ns, "cisco_anyconnect");
+	if (cisco_anyconnect && message->get_exchange_type(message) == IKE_AUTH)
+	{
+		if (message->get_message_id(message) != 1)
+		{
+			DBG2(DBG_IKE, "skipping building of vendor IDs due to ANYCONNECT processing");
+			return this->initiator ? NEED_MORE : SUCCESS;
+		}
+		else
+		{
+			DBG2(DBG_IKE, "generating vendor ID for ANYCONNECT emulation");
+			rng_t *rng;
+			char buffer[CISCO_ANYCONNECT_VENDOR_ID_LEN];
+			rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
+			if (!rng || !rng->get_bytes(rng, 20, buffer))
+			{
+				DBG2(DBG_IKE, "unable to generate vendor ID due to problem with random data generator");
+				DESTROY_IF(rng);
+				return DESTROY_ME;
+			}
+
+			DESTROY_IF(rng);
+			chunk_t data = chunk_create(buffer, CISCO_ANYCONNECT_VENDOR_ID_LEN);
+			vid = vendor_id_payload_create_data(PLV2_VENDOR_ID, chunk_clone(data));
+			message->add_payload(message, &vid->payload_interface);
+			return this->initiator ? NEED_MORE : SUCCESS;
+		}
+	}
 
 	for (i = 0; i < countof(vids); i++)
 	{
@@ -170,7 +209,14 @@ METHOD(task_t, build, status_t,
 		}
 	}
 
-	return this->initiator ? NEED_MORE : SUCCESS;
+	if (this->initiator || message->get_exchange_type(message) == IKE_SA_INIT)
+	{
+		return NEED_MORE;
+	}
+	else
+	{
+		return SUCCESS;
+	}
 }
 
 /**
@@ -228,7 +274,14 @@ METHOD(task_t, process, status_t,
 	}
 	enumerator->destroy(enumerator);
 
-	return this->initiator ? SUCCESS : NEED_MORE;
+	if (!this->initiator || message->get_exchange_type(message) == IKE_SA_INIT)
+	{
+		return NEED_MORE;
+	}
+	else
+	{
+		return SUCCESS;
+	}
 }
 
 METHOD(task_t, migrate, void,

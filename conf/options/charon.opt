@@ -66,6 +66,9 @@ charon.cisco_flexvpn = no
 charon.cisco_unity = no
 	Send Cisco Unity vendor ID payload (IKEv1 only).
 
+charon.cisco_anyconnect = no
+	Send Cisco Anyconnect vendor ID payload (IKEv2 only).
+
 charon.close_ike_on_child_failure = no
 	Close the IKE_SA if setup of the CHILD_SA along with IKE_AUTH failed.
 
