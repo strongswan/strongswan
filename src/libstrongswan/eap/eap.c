@@ -97,6 +97,12 @@ ENUM_NEXT(eap_type_short_names, EAP_EXPANDED, EAP_DYNAMIC, EAP_PT_EAP,
 	"DYN");
 ENUM_END(eap_type_short_names, EAP_DYNAMIC);
 
+ENUM(eap_vendor_names, EAP_VENDOR_UNDEFINED, EAP_VENDOR_UNDEFINED,
+	"UNDEFINED");
+
+ENUM(eap_vendor_short_names, EAP_VENDOR_UNDEFINED, EAP_VENDOR_UNDEFINED,
+	"UNDF");
+
 /*
  * See header
  */
@@ -133,6 +139,25 @@ eap_type_t eap_type_from_string(char *name)
 	return 0;
 }
 
+eap_vendor_t eap_vendor_by_eap_type(eap_type_t type)
+{
+	int i;
+	static struct {
+		eap_type_t type;
+		eap_vendor_t vendor;
+	} types[] = {
+	};
+
+	for (i = 0; i < countof(types); i++)
+	{
+		if (type == types[i].type)
+		{
+			return types[i].vendor;
+		}
+	}
+	return EAP_VENDOR_UNDEFINED;
+}
+
 /*
  * See header
  */
@@ -141,7 +166,7 @@ eap_vendor_type_t *eap_vendor_type_from_string(char *str)
 	enumerator_t *enumerator;
 	eap_vendor_type_t *result = NULL;
 	eap_type_t type = 0;
-	uint32_t vendor = 0;
+	eap_vendor_t vendor = 0;
 	char *part, *end;
 
 	/* parse EAP method string of the form: [eap-]type[-vendor] */
@@ -165,6 +190,7 @@ eap_vendor_type_t *eap_vendor_type_from_string(char *str)
 					break;
 				}
 			}
+			vendor = eap_vendor_by_eap_type(type);
 			continue;
 		}
 		errno = 0;

@@ -82,7 +82,7 @@ CALLBACK(entry_matches_cb, bool,
  * Load the given EAP method
  */
 static eap_method_t *load_method(private_eap_dynamic_t *this,
-								 eap_type_t type, uint32_t vendor)
+								 eap_type_t type, eap_vendor_t vendor)
 {
 	eap_method_t *method;
 
@@ -92,8 +92,8 @@ static eap_method_t *load_method(private_eap_dynamic_t *this,
 	{
 		if (vendor)
 		{
-			DBG1(DBG_IKE, "loading vendor specific EAP method %d-%d failed",
-				 type, vendor);
+			DBG1(DBG_IKE, "loading vendor specific EAP method %N-%N failed",
+				 eap_type_names, type, eap_vendor_names, vendor);
 		}
 		else
 		{
@@ -134,9 +134,10 @@ static void select_method(private_eap_dynamic_t *this)
 			{
 				if (entry->vendor)
 				{
-					DBG2(DBG_IKE, "proposed vendor specific EAP method %d-%d "
-						 "not supported by %s, skipped", entry->type,
-						  entry->vendor, who);
+					DBG2(DBG_IKE, "proposed vendor specific EAP method %N-%N "
+						 "not supported by %s, skipped",
+						eap_type_names, entry->type, eap_vendor_names, entry->vendor,
+						who);
 				}
 				else
 				{
@@ -156,8 +157,8 @@ static void select_method(private_eap_dynamic_t *this)
 			}
 			if (entry->vendor)
 			{
-				DBG1(DBG_IKE, "vendor specific EAP method %d-%d selected",
-					 entry->type, entry->vendor);
+				DBG1(DBG_IKE, "vendor specific EAP method %N-%N selected",
+					eap_type_names, entry->type, eap_vendor_names, entry->vendor);
 			}
 			else
 			{
@@ -245,13 +246,13 @@ METHOD(eap_method_t, process, status_t,
 }
 
 METHOD(eap_method_t, get_type, eap_type_t,
-	private_eap_dynamic_t *this, uint32_t *vendor)
+	private_eap_dynamic_t *this, eap_vendor_t *vendor)
 {
 	if (this->method)
 	{
 		return this->method->get_type(this->method, vendor);
 	}
-	*vendor = 0;
+	*vendor = EAP_VENDOR_UNDEFINED;
 	return EAP_DYNAMIC;
 }
 
@@ -355,7 +356,7 @@ static void get_supported_eap_types(private_eap_dynamic_t *this)
 {
 	enumerator_t *enumerator;
 	eap_type_t type;
-	uint32_t vendor;
+	eap_vendor_t vendor;
 
 	enumerator = charon->eap->create_enumerator(charon->eap, EAP_SERVER);
 	while (enumerator->enumerate(enumerator, &type, &vendor))

@@ -25,6 +25,7 @@
 
 typedef enum eap_code_t eap_code_t;
 typedef enum eap_type_t eap_type_t;
+typedef enum eap_vendor_t eap_vendor_t;
 typedef struct eap_vendor_type_t eap_vendor_type_t;
 
 #include <library.h>
@@ -77,6 +78,13 @@ enum eap_type_t {
 };
 
 /**
+ * EAP vendors, defines the EAP method implementation
+ */
+enum eap_vendor_t {
+	EAP_VENDOR_UNDEFINED = 0,
+};
+
+/**
  * enum names for eap_type_t.
  */
 extern enum_name_t *eap_type_names;
@@ -99,8 +107,18 @@ struct eap_vendor_type_t {
 	/**
 	 * Vendor Id
 	 */
-	uint32_t vendor;
+	eap_vendor_t vendor;
 };
+
+/**
+ * string enum names for eap_vendor_t.
+ */
+extern enum_name_t *eap_vendor_names;
+
+/**
+ * short string enum names for eap_vendor_t.
+ */
+extern enum_name_t *eap_vendor_short_names;
 
 /**
  * EAP packet format

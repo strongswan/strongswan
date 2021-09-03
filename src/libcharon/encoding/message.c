@@ -1335,7 +1335,7 @@ static char* get_string(private_message_t *this, char *buf, int len)
 		if (payload->get_type(payload) == PLV2_EAP)
 		{
 			eap_payload_t *eap = (eap_payload_t*)payload;
-			uint32_t vendor;
+			eap_vendor_t vendor;
 			eap_type_t type;
 			char method[64] = "";
 
@@ -1344,7 +1344,8 @@ static char* get_string(private_message_t *this, char *buf, int len)
 			{
 				if (vendor)
 				{
-					snprintf(method, sizeof(method), "/%d-%d", type, vendor);
+					snprintf(method, sizeof(method), "/%N-%N",
+						eap_type_short_names, type, eap_vendor_short_names, vendor);
 				}
 				else
 				{

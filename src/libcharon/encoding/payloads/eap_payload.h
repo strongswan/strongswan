@@ -80,7 +80,7 @@ struct eap_payload_t {
 	 * @param vendor	pointer receiving vendor identifier
 	 * @return			EAP method type, vendor specific if vendor != 0
 	 */
-	eap_type_t (*get_type) (eap_payload_t *this, uint32_t *vendor);
+	eap_type_t (*get_type) (eap_payload_t *this, eap_vendor_t *vendor);
 
 	/**
 	 * Enumerate the EAP method types contained in an EAP-Nak (i.e. get_type()

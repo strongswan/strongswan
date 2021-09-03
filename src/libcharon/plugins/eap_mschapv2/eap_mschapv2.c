@@ -1316,9 +1316,9 @@ METHOD(eap_method_t, process_server, status_t,
 }
 
 METHOD(eap_method_t, get_type, eap_type_t,
-	private_eap_mschapv2_t *this, uint32_t *vendor)
+	private_eap_mschapv2_t *this, eap_vendor_t *vendor)
 {
-	*vendor = 0;
+	*vendor = EAP_VENDOR_UNDEFINED;
 	return EAP_MSCHAPV2;
 }
 

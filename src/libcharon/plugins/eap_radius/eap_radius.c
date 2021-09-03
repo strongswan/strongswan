@@ -56,7 +56,7 @@ struct private_eap_radius_t {
 	/**
 	 * EAP vendor, if any
 	 */
-	uint32_t vendor;
+	eap_vendor_t vendor;
 
 	/**
 	 * EAP message identifier
@@ -716,7 +716,7 @@ METHOD(eap_method_t, process, status_t,
 }
 
 METHOD(eap_method_t, get_type, eap_type_t,
-	private_eap_radius_t *this, uint32_t *vendor)
+	private_eap_radius_t *this, eap_vendor_t *vendor)
 {
 	*vendor = this->vendor;
 	return this->type;
