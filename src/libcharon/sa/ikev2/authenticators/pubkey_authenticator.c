@@ -439,9 +439,31 @@ static status_t sign_classic(private_pubkey_authenticator_t *this,
 	switch (private->get_type(private))
 	{
 		case KEY_RSA:
-			scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+		{
+			chunk_t skd = chunk_empty;
+			keymat_v2_t *keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
+			pseudo_random_function_t prf_alg = keymat->get_skd(keymat, &skd);
+			switch (prf_alg)
+			{
+				case PRF_HMAC_MD5:
+					scheme = SIGN_RSA_EMSA_PKCS1_MD5;
+					break;
+				case PRF_HMAC_SHA2_256:
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256;
+					break;
+				case PRF_HMAC_SHA2_384:
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA2_384;
+					break;
+				case PRF_HMAC_SHA2_512:
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512;
+					break;
+				default:
+					scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+					break;
+			}
 			auth_method = AUTH_RSA;
 			break;
+		}
 		case KEY_ECDSA:
 			/* deduct the signature scheme from the keysize */
 			switch (private->get_keysize(private))
@@ -599,7 +621,27 @@ METHOD(authenticator_t, process, status_t,
 	{
 		case AUTH_RSA:
 			key_type = KEY_RSA;
-			params->scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+			chunk_t skd = chunk_empty;
+			keymat_v2_t *keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
+			pseudo_random_function_t prf_alg = keymat->get_skd(keymat, &skd);
+			switch (prf_alg)
+			{
+				case PRF_HMAC_MD5:
+					params->scheme = SIGN_RSA_EMSA_PKCS1_MD5;
+					break;
+				case PRF_HMAC_SHA2_256:
+					params->scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256;
+					break;
+				case PRF_HMAC_SHA2_384:
+					params->scheme = SIGN_RSA_EMSA_PKCS1_SHA2_384;
+					break;
+				case PRF_HMAC_SHA2_512:
+					params->scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512;
+					break;
+				default:
+					params->scheme = SIGN_RSA_EMSA_PKCS1_SHA1;
+					break;
+			}
 			break;
 		case AUTH_ECDSA_256:
 			params->scheme = SIGN_ECDSA_256;
