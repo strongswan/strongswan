@@ -28,6 +28,7 @@ typedef enum eap_type_t eap_type_t;
 typedef struct eap_vendor_type_t eap_vendor_type_t;
 
 #include <library.h>
+#include <pen/pen.h>
 
 /**
  * EAP code, type of an EAP message
@@ -74,6 +75,8 @@ enum eap_type_t {
 	EAP_RADIUS = 256,
 	/** not a method, select method dynamically based on client selection */
 	EAP_DYNAMIC = 257,
+	/** make sure the enum is large enough to hold vendor-specific types */
+	EAP_UNASSIGNED = 0xffffffff,
 };
 
 /**
@@ -99,8 +102,18 @@ struct eap_vendor_type_t {
 	/**
 	 * Vendor Id
 	 */
-	uint32_t vendor;
+	pen_t vendor;
 };
+
+/**
+ * string enum names for eap_vendor_t.
+ */
+extern enum_name_t *eap_vendor_names;
+
+/**
+ * short string enum names for eap_vendor_t.
+ */
+extern enum_name_t *eap_vendor_short_names;
 
 /**
  * EAP packet format
@@ -128,5 +141,21 @@ eap_type_t eap_type_from_string(char *name);
  * @return			parsed type (gets allocated), NULL if unknown or failed
  */
 eap_vendor_type_t *eap_vendor_type_from_string(char *str);
+
+/**
+ * Lookup the EAP method vendor from a string.
+ *
+ * @param name		EAP method vendor
+ * @return			method vendor, PEN_UNASSIGNED if unknown
+ */
+pen_t eap_vendor_from_string(char *name);
+
+/**
+ * Lookup the EAP method vendor from a string.
+ *
+ * @param type		EAP method type
+ * @return			method vendor, PEN_UNASSIGNED if unknown
+ */
+pen_t eap_vendor_by_eap_type(eap_type_t type);
 
 #endif /** EAP_H_ @}*/

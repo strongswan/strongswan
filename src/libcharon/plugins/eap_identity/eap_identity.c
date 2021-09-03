@@ -125,9 +125,9 @@ METHOD(eap_method_t, initiate_server, status_t,
 }
 
 METHOD(eap_method_t, get_type, eap_type_t,
-	private_eap_identity_t *this, uint32_t *vendor)
+	private_eap_identity_t *this, pen_t *vendor)
 {
-	*vendor = 0;
+	*vendor = PEN_UNASSIGNED;
 	return EAP_IDENTITY;
 }
 

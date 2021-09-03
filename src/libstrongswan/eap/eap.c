@@ -98,6 +98,12 @@ ENUM_NEXT(eap_type_short_names, EAP_EXPANDED, EAP_DYNAMIC, EAP_PT_EAP,
 	"DYN");
 ENUM_END(eap_type_short_names, EAP_DYNAMIC);
 
+ENUM(eap_vendor_names, PEN_UNASSIGNED, PEN_UNASSIGNED,
+	"UNDEFINED");
+
+ENUM(eap_vendor_short_names, PEN_UNASSIGNED, PEN_UNASSIGNED,
+	"UNDF");
+
 /*
  * See header
  */
@@ -134,6 +140,49 @@ eap_type_t eap_type_from_string(char *name)
 	return 0;
 }
 
+pen_t eap_vendor_by_eap_type(eap_type_t type)
+{
+	int i;
+	static struct {
+		eap_type_t type;
+		pen_t vendor;
+	} types[] = {
+		{EAP_EXPANDED, PEN_UNASSIGNED},
+	};
+
+	for (i = 0; i < countof(types); i++)
+	{
+		if (type == types[i].type)
+		{
+			return types[i].vendor;
+		}
+	}
+	return PEN_UNASSIGNED;
+}
+
+/*
+ * See header
+ */
+pen_t eap_vendor_from_string(char *name)
+{
+	int i;
+	static struct {
+		char *name;
+		pen_t vendor;
+	} types[] = {
+		{"undefined", PEN_UNASSIGNED},
+	};
+
+	for (i = 0; i < countof(types); i++)
+	{
+		if (strcaseeq(name, types[i].name))
+		{
+			return types[i].vendor;
+		}
+	}
+	return PEN_UNASSIGNED;
+}
+
 /*
  * See header
  */
@@ -142,7 +191,7 @@ eap_vendor_type_t *eap_vendor_type_from_string(char *str)
 	enumerator_t *enumerator;
 	eap_vendor_type_t *result = NULL;
 	eap_type_t type = 0;
-	uint32_t vendor = 0;
+	pen_t vendor = PEN_IETF;
 	char *part, *end;
 
 	/* parse EAP method string of the form: [eap-]type[-vendor] */
@@ -166,14 +215,19 @@ eap_vendor_type_t *eap_vendor_type_from_string(char *str)
 					break;
 				}
 			}
+			vendor = eap_vendor_by_eap_type(type);
 			continue;
 		}
-		errno = 0;
-		vendor = strtoul(part, &end, 0);
-		if (*end != '\0' || errno)
+		vendor = eap_vendor_from_string(part);
+		if (!vendor)
 		{
-			DBG1(DBG_LIB, "invalid EAP vendor: %s", part);
-			type = 0;
+			errno = 0;
+			vendor = strtoul(part, &end, 0);
+			if (*end != '\0' || errno || vendor >= PEN_IETF)
+			{
+				DBG1(DBG_LIB, "invalid EAP vendor: %s", part);
+				type = 0;
+			}
 		}
 		break;
 	}

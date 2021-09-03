@@ -107,4 +107,9 @@ static inline bool pen_type_is(pen_type_t pen_type,
  */
 extern enum_name_t *pen_names;
 
+/**
+ * short enum names for pen_t.
+ */
+extern enum_name_t *pen_short_names;
+
 #endif /** PEN_H_ @}*/
