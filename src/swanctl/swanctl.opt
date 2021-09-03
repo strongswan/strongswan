@@ -558,6 +558,41 @@ connections.<conn>.remote<suffix>.cert<suffix>.slot =
 connections.<conn>.remote<suffix>.cert<suffix>.module =
 	Optional PKCS#11 module name.
 
+connections.<conn>.remote<suffix>.imcerts =
+	Comma separated list of intermediate CA certificates to accept for authentication.
+
+	Comma separated list of intermediate CA certificates to accept for authentication.
+	The certificates may use a relative path from the **swanctl** _x509ca_
+	directory or an absolute path.
+
+connections.<conn>.remote<suffix>.imcert<suffix> =
+	Section for a intermediate CA certificate to accept for authentication.
+
+	Section for a intermediate CA certificate to accept for authentication. Certificates
+	in _imcerts_ are transmitted as binary blobs, these sections offer more
+	flexibility.
+
+connections.<conn>.remote<suffix>.imcert<suffix>.file =
+	Absolute path to the certificate to load.
+
+	Absolute path to the certificate to load. Passed as-is to the daemon, so it
+	must be readable by it.
+
+	Configure either this or _handle_, but not both, in one section.
+
+connections.<conn>.remote<suffix>.imcert<suffix>.handle =
+	Hex-encoded CKA_ID of the CA certificate on a token.
+
+	Hex-encoded CKA_ID of the CA certificate on a token.
+
+	Configure either this or _file_, but not both, in one section.
+
+connections.<conn>.remote<suffix>.imcert<suffix>.slot =
+	Optional slot number of the token that stores the intermediate CA certificate.
+
+connections.<conn>.remote<suffix>.imcert<suffix>.module =
+	Optional PKCS#11 module name.
+
 connections.<conn>.remote<suffix>.cacerts =
 	Comma separated list of CA certificates to accept for authentication.
 

@@ -211,6 +211,10 @@ CALLBACK(conn_sn, int,
 			{
 				printf("    certs: %s\n", auth->get(auth, "certs"));
 			}
+			if (auth->get(auth, "imcerts"))
+			{
+				printf("    imcerts: %s\n", auth->get(auth, "imcerts"));
+			}
 			if (auth->get(auth, "cacerts"))
 			{
 				printf("    cacerts: %s\n", auth->get(auth, "cacerts"));

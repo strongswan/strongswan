@@ -820,6 +820,18 @@ static void build_auth_cfgs(peer_cfg_t *peer_cfg, bool local, vici_builder_t *b)
 		rules->destroy(rules);
 		b->end_list(b);
 
+		b->begin_list(b, "imcerts");
+		rules = auth->create_enumerator(auth);
+		while (rules->enumerate(rules, &rule, &v))
+		{
+			if (rule == AUTH_RULE_IM_CERT)
+			{
+				b->add_li(b, "%Y", v.cert->get_subject(v.cert));
+			}
+		}
+		rules->destroy(rules);
+		b->end_list(b);
+
 		b->begin_list(b, "cacerts");
 		rules = auth->create_enumerator(auth);
 		while (rules->enumerate(rules, &rule, &v))

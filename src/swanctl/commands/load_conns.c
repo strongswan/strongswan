@@ -59,6 +59,7 @@ static bool is_file_list_key(char *key)
 {
 	char *keys[] = {
 		"certs",
+		"imcerts",
 		"cacerts",
 		"pubkeys"
 	};
@@ -125,7 +126,7 @@ static bool add_file_list_key(vici_req_t *req, char *key, char *value)
 							 DIRECTORY_SEPARATOR, token);
 					token = buf;
 				}
-				else if (streq(key, "cacerts"))
+				else if (streq(key, "cacerts") || streq(key, "imcerts"))
 				{
 					snprintf(buf, sizeof(buf), "%s%s%s%s%s", swanctl_dir,
 							 DIRECTORY_SEPARATOR, SWANCTL_X509CADIR,

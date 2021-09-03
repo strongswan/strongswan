@@ -86,7 +86,7 @@ static bool add_key_values(vici_req_t *req, enumerator_t *enumerator)
 
 	while (enumerator->enumerate(enumerator, &key, &value))
 	{
-		if (streq(key, "cacert"))
+		if (streq(key, "cacert") || streq(key, "imcert"))
 		{
 			ret = add_file_key_value(req, key, value);
 		}
