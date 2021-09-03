@@ -304,6 +304,10 @@ bool payload_is_known(payload_type_t type, uint8_t maj_ver)
 			{
 				return TRUE;
 			}
+			if (type == PLV1_FRAGMENT)
+			{
+				return TRUE;
+			}
 #ifdef ME
 			if (type == PLV2_ID_PEER)
 			{

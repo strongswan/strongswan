@@ -1296,7 +1296,7 @@ static status_t handle_fragment(private_task_manager_t *this,
 		(*defrag)->destroy(*defrag);
 		*defrag = NULL;
 	}
-	if (!msg->get_payload(msg, PLV2_FRAGMENT))
+	if (!msg->get_payload(msg, PLV2_FRAGMENT) && !msg->get_payload(msg, PLV1_FRAGMENT))
 	{
 		return SUCCESS;
 	}

@@ -103,7 +103,7 @@ static vid_data_t vids[] = {
 	  "FLEXVPN-SUPPORTED" },
 	{ "Cisco Copyright (c) 2009", 0, "cisco_anyconnect", FALSE, 0,
 	  "CISCO(COPYRIGHT)&Copyright (c) 2009 Cisco Systems, Inc." },
-	{ "FRAGMENTATION", 0, "cisco_anyconnect", FALSE, 16,
+	{ "FRAGMENTATION", EXT_IKE_FRAGMENTATION_V2_IN_V1, "cisco_anyconnect", FALSE, 16,
 	  "\x40\x48\xb7\xd5\x6e\xbc\xe8\x85\x25\xe7\xde\x7f\x00\xd6\xc2\xd3" },
 	{ "Cisco GRE Mode", 0, "cisco_anyconnect", TRUE, 0,
 	  "CISCO-GRE-MODE" },

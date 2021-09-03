@@ -167,6 +167,11 @@ enum ike_extension_t {
 	 * Responder accepts childless IKE_SAs, RFC 6023
 	 */
 	EXT_IKE_CHILDLESS = (1<<16),
+
+	/**
+	 * Responder expects usage of IKEv1 fragmentation for IKEv2 messages
+	 */
+	EXT_IKE_FRAGMENTATION_V2_IN_V1 = (1<<17),
 };
 
 /**

@@ -181,6 +181,7 @@ static payload_order_t ike_sa_init_r_order[] = {
 static payload_rule_t ike_auth_i_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{PLV2_FRAGMENT,					0,	1,						TRUE,	TRUE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
 	{PLV2_EAP,						0,	1,						TRUE,	TRUE},
 	{PLV2_AUTH,						0,	1,						TRUE,	TRUE},
@@ -229,6 +230,7 @@ static payload_order_t ike_auth_i_order[] = {
 	{PLV2_NOTIFY,					0},
 	{PLV2_VENDOR_ID,				0},
 	{PLV2_FRAGMENT,					0},
+	{PLV1_FRAGMENT,					0},
 };
 
 /**
@@ -237,6 +239,7 @@ static payload_order_t ike_auth_i_order[] = {
 static payload_rule_t ike_auth_r_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{PLV2_FRAGMENT,					0,	1,						TRUE,	TRUE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
 	{PLV2_EAP,						0,	1,						TRUE,	TRUE},
 	{PLV2_AUTH,						0,	1,						TRUE,	TRUE},
@@ -274,6 +277,7 @@ static payload_order_t ike_auth_r_order[] = {
 	{PLV2_NOTIFY,					0},
 	{PLV2_VENDOR_ID,				0},
 	{PLV2_FRAGMENT,					0},
+	{PLV1_FRAGMENT,					0},
 };
 
 /**
@@ -282,6 +286,7 @@ static payload_order_t ike_auth_r_order[] = {
 static payload_rule_t informational_i_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{PLV2_FRAGMENT,					0,	1,						TRUE,	TRUE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
 	{PLV2_CONFIGURATION,			0,	1,						TRUE,	FALSE},
 	{PLV2_DELETE,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
@@ -301,6 +306,7 @@ static payload_order_t informational_i_order[] = {
 	{PLV2_DELETE,					0},
 	{PLV2_CONFIGURATION,			0},
 	{PLV2_FRAGMENT,					0},
+	{PLV1_FRAGMENT,					0},
 };
 
 /**
@@ -309,6 +315,7 @@ static payload_order_t informational_i_order[] = {
 static payload_rule_t informational_r_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{PLV2_FRAGMENT,					0,	1,						TRUE,	TRUE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
 	{PLV2_CONFIGURATION,			0,	1,						TRUE,	FALSE},
 	{PLV2_DELETE,					0,	MAX_DELETE_PAYLOADS,	TRUE,	FALSE},
@@ -328,6 +335,7 @@ static payload_order_t informational_r_order[] = {
 	{PLV2_DELETE,					0},
 	{PLV2_CONFIGURATION,			0},
 	{PLV2_FRAGMENT,					0},
+	{PLV1_FRAGMENT,					0},
 };
 
 /**
@@ -336,6 +344,7 @@ static payload_order_t informational_r_order[] = {
 static payload_rule_t create_child_sa_i_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{PLV2_FRAGMENT,					0,	1,						TRUE,	TRUE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
 	{PLV2_SECURITY_ASSOCIATION,		1,	1,						TRUE,	FALSE},
 	{PLV2_NONCE,					1,	1,						TRUE,	FALSE},
@@ -363,6 +372,7 @@ static payload_order_t create_child_sa_i_order[] = {
 	{PLV2_TS_RESPONDER,				0},
 	{PLV2_NOTIFY,					0},
 	{PLV2_FRAGMENT,					0},
+	{PLV1_FRAGMENT,					0},
 };
 
 /**
@@ -371,6 +381,7 @@ static payload_order_t create_child_sa_i_order[] = {
 static payload_rule_t create_child_sa_r_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{PLV2_FRAGMENT,					0,	1,						TRUE,	TRUE},
+	{PLV1_FRAGMENT,					0,	1,						FALSE,	TRUE},
 	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
 	{PLV2_SECURITY_ASSOCIATION,		1,	1,						TRUE,	FALSE},
 	{PLV2_NONCE,					1,	1,						TRUE,	FALSE},
@@ -398,6 +409,7 @@ static payload_order_t create_child_sa_r_order[] = {
 	{PLV2_NOTIFY,					ADDITIONAL_TS_POSSIBLE},
 	{PLV2_NOTIFY,					0},
 	{PLV2_FRAGMENT,					0},
+	{PLV1_FRAGMENT,					0},
 };
 
 #ifdef ME
@@ -1718,7 +1730,10 @@ static status_t generate_message(private_message_t *this, keymat_t *keymat,
 
 	if (this->major_version == IKEV2_MAJOR_VERSION)
 	{
-		encrypting = this->rule->encrypted;
+		if (get_payload(this, PLV1_FRAGMENT) == NULL)
+		{
+			encrypting = this->rule->encrypted;
+		}
 	}
 	else if (!encrypting)
 	{
@@ -1911,7 +1926,7 @@ static message_t *clone_message(private_message_t *this)
  * Create a single fragment with the given data
  */
 static message_t *create_fragment(private_message_t *this, payload_type_t next,
-								  uint16_t num, uint16_t count, chunk_t data)
+								  uint16_t num, uint16_t count, chunk_t data, bool force_ikev1_fragmentation)
 {
 	enumerator_t *enumerator;
 	payload_t *fragment, *payload;
@@ -1939,10 +1954,16 @@ static message_t *create_fragment(private_message_t *this, payload_type_t next,
 		fragment = (payload_t*)fragment_payload_create_from_data(
 													num, num == count, data);
 	}
+	else if (force_ikev1_fragmentation)
+	{
+		fragment = (payload_t*)fragment_payload_create_from_data(
+													num, num == count, data);
+	}
 	else
 	{
 		fragment = (payload_t*)encrypted_fragment_payload_create_from_data(
 													num, count, data);
+
 		if (num == 1)
 		{
 			/* only in the first fragment is this set to the type of the first
@@ -1983,7 +2004,7 @@ static void clear_fragments(private_message_t *this)
 
 METHOD(message_t, fragment, status_t,
 	private_message_t *this, keymat_t *keymat, size_t frag_len,
-	enumerator_t **fragments)
+	enumerator_t **fragments, bool force_ikev1_fragmentation)
 {
 	encrypted_payload_t *encrypted = NULL;
 	generator_t *generator = NULL;
@@ -2057,7 +2078,7 @@ METHOD(message_t, fragment, status_t,
 	 * account for IKE header */
 	REDUCE_FRAG_LEN(frag_len, 28);
 
-	if (this->major_version == IKEV1_MAJOR_VERSION)
+	if ((this->major_version == IKEV1_MAJOR_VERSION) || force_ikev1_fragmentation)
 	{
 		if (generator)
 		{
@@ -2115,7 +2136,7 @@ METHOD(message_t, fragment, status_t,
 	{
 		len = min(data.len, frag_len);
 		fragment = create_fragment(this, next, num, count,
-								   chunk_create(data.ptr, len));
+								   chunk_create(data.ptr, len), force_ikev1_fragmentation);
 		status = fragment->generate(fragment, keymat, &packet);
 		fragment->destroy(fragment);
 		if (status != SUCCESS)
@@ -2318,7 +2339,7 @@ static status_t parse_payloads(private_message_t *this)
 
 		/* an encrypted (fragment) payload MUST be the last one, so STOP here.
 		 * decryption is done later */
-		if (type == PLV2_ENCRYPTED || type == PLV2_FRAGMENT)
+		if (type == PLV2_ENCRYPTED || type == PLV2_FRAGMENT || type == PLV1_FRAGMENT)
 		{
 			DBG2(DBG_ENC, "%N payload found, stop parsing",
 				 payload_type_names, type);
@@ -3057,7 +3078,8 @@ message_t *message_create_defrag(message_t *fragment)
 	 * reassembling the original message */
 	this->parser->destroy(this->parser);
 	this->parser = NULL;
-	if (fragment->get_major_version(fragment) == IKEV1_MAJOR_VERSION)
+	if ((fragment->get_major_version(fragment) == IKEV1_MAJOR_VERSION) ||
+		fragment->get_payload(fragment, PLV1_FRAGMENT))
 	{
 		/* we store the fragment ID in the message ID field, which should be
 		 * zero for fragments, but make sure */

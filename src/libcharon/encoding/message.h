@@ -273,13 +273,15 @@ struct message_t {
 	 *					for default value depending on address family
 	 * @param fragments	receives an enumerator with generated packet_t*,
 	 *					which are owned by the enumerator
+	 * @param force_ikev1_fragmentation	whether or not to use IKEv1 fragmentation even for IKEv2 messages
 	 * @return
 	 *					- SUCCESS if message could be fragmented
 	 *					- FAILED if fragmentation failed
 	 *					- and the possible return values of generate()
 	 */
 	status_t (*fragment)(message_t *this, keymat_t *keymat, size_t frag_len,
-						 enumerator_t **fragments);
+						 enumerator_t **fragments,
+						 bool force_ikev1_fragmentation);
 
 	/**
 	 * Check if the message has been encoded and fragmented using fragment(),

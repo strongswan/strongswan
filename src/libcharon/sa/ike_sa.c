@@ -1304,7 +1304,7 @@ METHOD(ike_sa_t, generate_message_fragmented, status_t,
 				use_frags = TRUE;
 				break;
 			case FRAGMENTATION_YES:
-				use_frags = supports_extension(this, EXT_IKE_FRAGMENTATION);
+				use_frags = (supports_extension(this, EXT_IKE_FRAGMENTATION) || supports_extension(this, EXT_IKE_FRAGMENTATION_V2_IN_V1));
 				if (use_frags && this->version == IKEV1 &&
 					supports_extension(this, EXT_MS_WINDOWS))
 				{
@@ -1337,7 +1337,7 @@ METHOD(ike_sa_t, generate_message_fragmented, status_t,
 		charon->bus->message(charon->bus, message, FALSE, TRUE);
 	}
 	status = message->fragment(message, this->keymat, this->fragment_size,
-							   &fragments);
+							   &fragments, supports_extension(this, EXT_IKE_FRAGMENTATION_V2_IN_V1));
 	if (status == SUCCESS)
 	{
 		if (!pre_generated)
