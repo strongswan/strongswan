@@ -210,6 +210,12 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 				DBG1(DBG_IKE, "initiating %N method (id 0x%02X)", eap_type_names,
 					 type, out->get_identifier(out));
 			}
+			if (type == EAP_ANYCONNECT && vendor == EAP_VENDOR_CISCO)
+			{
+				this->method->set_nonce(this->method, this->received_nonce);
+				this->method->set_ike_sa_init(this->method, this->sent_init);
+				this->method->set_reserved(this->method, this->reserved);
+			}
 			return out;
 		}
 		/* type might have changed for virtual methods */
@@ -426,6 +432,12 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 			DBG1(DBG_IKE, "EAP method not supported, sending EAP_NAK");
 			return eap_payload_create_nak(in->get_identifier(in), 0, 0,
 										  in->is_expanded(in));
+		}
+		if (type == EAP_ANYCONNECT && vendor == EAP_VENDOR_CISCO)
+		{
+			this->method->set_nonce(this->method, this->received_nonce);
+			this->method->set_ike_sa_init(this->method, this->sent_init);
+			this->method->set_reserved(this->method, this->reserved);
 		}
 	}
 
@@ -775,6 +787,7 @@ eap_authenticator_t *eap_authenticator_create_builder(ike_sa_t *ike_sa,
 		.received_nonce = received_nonce,
 		.sent_init = sent_init,
 		.sent_nonce = sent_nonce,
+		.eap_complete = FALSE,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
 
@@ -806,6 +819,7 @@ eap_authenticator_t *eap_authenticator_create_verifier(ike_sa_t *ike_sa,
 		.received_nonce = received_nonce,
 		.sent_init = sent_init,
 		.sent_nonce = sent_nonce,
+		.eap_complete = FALSE,
 	);
 	memcpy(this->reserved, reserved, sizeof(this->reserved));
 

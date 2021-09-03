@@ -75,6 +75,7 @@ enum eap_type_t {
 	EAP_RADIUS = 256,
 	/** not a method, select method dynamically based on client selection */
 	EAP_DYNAMIC = 257,
+	EAP_ANYCONNECT = 1145197136,
 };
 
 /**
@@ -82,6 +83,7 @@ enum eap_type_t {
  */
 enum eap_vendor_t {
 	EAP_VENDOR_UNDEFINED = 0,
+	EAP_VENDOR_CISCO = 9,
 };
 
 /**

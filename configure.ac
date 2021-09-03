@@ -204,6 +204,7 @@ ARG_ENABL_SET([eap-simaka-pseudonym], [enable EAP-SIM/AKA pseudonym storage plug
 ARG_ENABL_SET([eap-simaka-reauth],    [enable EAP-SIM/AKA reauthentication data storage plugin.])
 ARG_ENABL_SET([eap-identity],   [enable EAP module providing EAP-Identity helper.])
 ARG_ENABL_SET([eap-md5],        [enable EAP MD5 (CHAP) authentication module.])
+ARG_ENABL_SET([eap-anyconnect], [enable EAP ANYCONNECT authentication module. Requires libxml])
 ARG_ENABL_SET([eap-gtc],        [enable EAP GTC authentication module.])
 ARG_ENABL_SET([eap-mschapv2],   [enable EAP MS-CHAPv2 authentication module.])
 ARG_ENABL_SET([eap-tls],        [enable EAP TLS authentication module.])
@@ -467,7 +468,7 @@ if test x$swanctl = xtrue; then
 	vici=true
 fi
 
-if test x$smp = xtrue -o x$tnccs_11 = xtrue -o x$tnc_ifmap = xtrue; then
+if test x$smp = xtrue -o x$tnccs_11 = xtrue -o x$tnc_ifmap = xtrue -o x$eap_anyconnect = xtrue; then
 	xml=true
 fi
 
@@ -1541,6 +1542,7 @@ ADD_PLUGIN([eap-simaka-sql],       [c charon])
 ADD_PLUGIN([eap-simaka-pseudonym], [c charon])
 ADD_PLUGIN([eap-simaka-reauth],    [c charon])
 ADD_PLUGIN([eap-md5],              [c charon nm cmd])
+ADD_PLUGIN([eap-anyconnect],       [c charon])
 ADD_PLUGIN([eap-gtc],              [c charon nm cmd])
 ADD_PLUGIN([eap-mschapv2],         [c charon nm cmd])
 ADD_PLUGIN([eap-dynamic],          [c charon])
@@ -1713,6 +1715,7 @@ AM_CONDITIONAL(USE_EAP_SIMAKA_PSEUDONYM, test x$eap_simaka_pseudonym = xtrue)
 AM_CONDITIONAL(USE_EAP_SIMAKA_REAUTH, test x$eap_simaka_reauth = xtrue)
 AM_CONDITIONAL(USE_EAP_IDENTITY, test x$eap_identity = xtrue)
 AM_CONDITIONAL(USE_EAP_MD5, test x$eap_md5 = xtrue)
+AM_CONDITIONAL(USE_EAP_ANYCONNECT, test x$eap_anyconnect = xtrue)
 AM_CONDITIONAL(USE_EAP_GTC, test x$eap_gtc = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA, test x$eap_aka = xtrue)
 AM_CONDITIONAL(USE_EAP_AKA_3GPP, test x$eap_aka_3gpp = xtrue)
@@ -1996,6 +1999,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/eap_dynamic/Makefile
 	src/libcharon/plugins/eap_identity/Makefile
 	src/libcharon/plugins/eap_md5/Makefile
+	src/libcharon/plugins/eap_anyconnect/Makefile
 	src/libcharon/plugins/eap_gtc/Makefile
 	src/libcharon/plugins/eap_sim/Makefile
 	src/libcharon/plugins/eap_sim_file/Makefile

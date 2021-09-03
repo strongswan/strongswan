@@ -411,6 +411,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_EAP_ANYCONNECT
+  SUBDIRS += plugins/eap_anyconnect
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/eap_anyconnect/libstrongswan-eap-anyconnect.la
+endif
+endif
+
 if USE_EAP_GTC
   SUBDIRS += plugins/eap_gtc
 if MONOLITHIC

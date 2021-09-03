@@ -96,7 +96,7 @@ struct eap_method_t {
 	 * @param vendor	pointer receiving vendor identifier for type, 0 for none
 	 * @return			type of the EAP method
 	 */
-	eap_type_t (*get_type) (eap_method_t *this, uint32_t *vendor);
+	eap_type_t (*get_type) (eap_method_t *this, eap_vendor_t *vendor);
 
 	/**
 	 * Check if this EAP method authenticates the server.
@@ -152,6 +152,27 @@ struct eap_method_t {
 	 * Destroys a eap_method_t object.
 	 */
 	void (*destroy) (eap_method_t *this);
+
+	/**
+	 * Sets nonce used for subsequent calculation of signatures
+	 *
+	 * @param nonce			The nonce
+	 */
+	void (*set_nonce) (eap_method_t *this, chunk_t nonce);
+
+	/**
+	 * Sets IKE_SA_INIT message for subsequent calculation of signatures
+	 *
+	 * @param ike_sa_init		The IKE_SA_INIT message
+	 */
+	void (*set_ike_sa_init) (eap_method_t *this, chunk_t ike_sa_init);
+
+	/**
+	 * Sets reserved used for subsequent calculation of signatures
+	 *
+	 * @param reserved		The reserved values
+	 */
+	void (*set_reserved) (eap_method_t *this, char *reserved);
 };
 
 /**
