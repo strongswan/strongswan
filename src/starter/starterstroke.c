@@ -231,6 +231,8 @@ int starter_stroke_add_conn(starter_config_t *cfg, starter_conn_t *conn)
 	msg->add_conn.mark_in.mask = conn->mark_in.mask;
 	msg->add_conn.mark_out.value = conn->mark_out.value;
 	msg->add_conn.mark_out.mask = conn->mark_out.mask;
+	msg->add_conn.if_id_in = conn->if_id_in;
+	msg->add_conn.if_id_out = conn->if_id_out;
 	msg->add_conn.tfc = conn->tfc;
 
 	add_end(&msg, offsetof(stroke_msg_t, add_conn.me), &conn->left);

@@ -471,6 +471,16 @@ Note that fragmented IKE messages sent by a peer are always accepted
 irrespective of the value of this option (even when set to
 .BR no ).
 .TP
+.BR if_id_in " = <id>"
+XFRM interface ID set on inbound policies/SA. This allows installing
+duplicate policies/SAs and associates them with an interface with the
+same ID.
+.TP
+.BR if_id_out " = <id>"
+XFRM interface ID set on outbound policies/SA. This allows installing
+duplicate policies/SAs and associates them with an interface with the
+same ID.
+.TP
 .BR ike " = <cipher suites>"
 comma-separated list of IKE/ISAKMP SA encryption/authentication algorithms
 to be used, e.g.

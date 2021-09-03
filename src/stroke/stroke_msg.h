@@ -300,6 +300,8 @@ struct stroke_msg_t {
 				uint32_t value;
 				uint32_t mask;
 			} mark_in, mark_out;
+			uint32_t if_id_in;
+			uint32_t if_id_out;
 			stroke_end_t me, other;
 			uint32_t replay_window;
 			bool sha256_96;

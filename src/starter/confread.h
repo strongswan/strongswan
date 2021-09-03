@@ -143,6 +143,8 @@ struct starter_conn {
 		uint32_t       reqid;
 		mark_t          mark_in;
 		mark_t          mark_out;
+		uint32_t        if_id_in;
+		uint32_t        if_id_out;
 		uint32_t       replay_window;
 		uint32_t       tfc;
 		bool            install_policy;

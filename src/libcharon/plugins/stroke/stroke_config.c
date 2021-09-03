@@ -1101,6 +1101,8 @@ static child_cfg_t *build_child_cfg(private_stroke_config_t *this,
 			.value = msg->add_conn.mark_out.value,
 			.mask = msg->add_conn.mark_out.mask
 		},
+		.if_id_in = msg->add_conn.if_id_in,
+		.if_id_out = msg->add_conn.if_id_out,
 		.reqid = msg->add_conn.reqid,
 		.mode = msg->add_conn.mode,
 		.options = (msg->add_conn.proxy_mode ? OPT_PROXY_MODE : 0) |

@@ -75,6 +75,8 @@ replay_window,     KW_REPLAY_WINDOW
 mark,              KW_MARK
 mark_in,           KW_MARK_IN
 mark_out,          KW_MARK_OUT
+if_id_in,          KW_IF_ID_IN
+if_id_out,         KW_IF_ID_OUT
 tfc,               KW_TFC
 cacert,            KW_CACERT
 crluri,            KW_CRLURI
