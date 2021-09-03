@@ -896,6 +896,9 @@ _list-conns_ command.
 				certs = [
 					<certificates allowed for authentication>
 				]
+				imcerts = [
+					<Intermediate CA certificates used for authentication>
+				]
 				cacerts = [
 					<CA certificates allowed for authentication>
 				]

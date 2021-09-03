@@ -400,6 +400,9 @@ static void log_auth(auth_cfg_t *auth)
 			case AUTH_RULE_SUBJECT_CERT:
 				DBG2(DBG_CFG, "   cert = %Y", v.cert->get_subject(v.cert));
 				break;
+			case AUTH_RULE_IM_CERT:
+				DBG2(DBG_CFG, "   imcert = %Y", v.cert->get_subject(v.cert));
+				break;
 			case AUTH_RULE_CA_CERT:
 				DBG2(DBG_CFG, "   cacert = %Y", v.cert->get_subject(v.cert));
 				break;
@@ -1489,6 +1492,15 @@ CALLBACK(parse_certs, bool,
 /**
  * Parse CA certificates
  */
+CALLBACK(parse_imcerts, bool,
+	auth_data_t *auth, chunk_t v)
+{
+	return parse_cert(auth, AUTH_RULE_IM_CERT, v);
+}
+
+/**
+ * Parse CA certificates
+ */
 CALLBACK(parse_cacerts, bool,
 	auth_data_t *auth, chunk_t v)
 {
@@ -1773,6 +1785,7 @@ CALLBACK(auth_li, bool,
 		{ "groups",			parse_group,		auth->cfg					},
 		{ "cert_policy",	parse_cert_policy,	auth->cfg					},
 		{ "certs",			parse_certs,		auth						},
+		{ "imcerts",		parse_imcerts,		auth						},
 		{ "cacerts",		parse_cacerts,		auth						},
 		{ "pubkeys",		parse_pubkeys,		auth						},
 	};
@@ -1858,6 +1871,7 @@ CALLBACK(auth_sn, bool,
 	char *name)
 {
 	if (strcasepfx(name, "cert") ||
+		strcasepfx(name, "imcert") ||
 		strcasepfx(name, "cacert"))
 	{
 		cert_data_t *data;
