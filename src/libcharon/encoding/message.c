@@ -944,6 +944,11 @@ struct private_message_t {
 	 * Data used to reassemble a fragmented message
 	 */
 	fragment_data_t *frag;
+
+	/**
+	 * The fragment ID
+	 */
+	uint16_t frag_id;
 };
 
 /**
@@ -2806,10 +2811,11 @@ METHOD(message_t, add_fragment_v1, status_t,
 	{
 		return INVALID_ARG;
 	}
-	if (!this->fragments || this->message_id != payload->get_id(payload))
+	if (!this->fragments || this->frag_id != payload->get_id(payload))
 	{
 		reset_defrag(this);
-		this->message_id = payload->get_id(payload);
+		this->message_id = message->get_message_id(message);
+		this->frag_id = payload->get_id(payload);
 		/* we don't know the total number of fragments, assume something */
 		this->fragments = array_create(0, 4);
 	}
@@ -3021,6 +3027,8 @@ message_t *message_create_from_packet(packet_t *packet)
 		.packet = packet,
 		.payloads = linked_list_create(),
 		.parser = parser_create(packet->get_data(packet)),
+		.message_id = 0,
+		.frag_id = 0,
 	);
 
 	return &this->public;
@@ -3061,6 +3069,7 @@ message_t *message_create_defrag(message_t *fragment)
 		/* we store the fragment ID in the message ID field, which should be
 		 * zero for fragments, but make sure */
 		this->message_id = 0;
+		this->frag_id = 0;
 		this->public.add_fragment = _add_fragment_v1;
 	}
 	INIT(this->frag,
