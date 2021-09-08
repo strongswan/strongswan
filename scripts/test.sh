@@ -168,10 +168,6 @@ all|coverage|sonarcloud)
 		# not actually required but configure checks for it
 		DEPS="$DEPS lcov"
 	fi
-	# Botan requires newer compilers, so disable it on Ubuntu 16.04
-	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "16.04" ]; then
-		CONFIG="$CONFIG --disable-botan"
-	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
@@ -181,14 +177,9 @@ all|coverage|sonarcloud)
 	else
 		DEPS="$DEPS iptables-dev python3-setuptools"
 	fi
-	# tox has dependencies that can't be resolved on 16.04 (even with pip)
-	if [ "$ID" != "ubuntu" -o "$VERSION_ID" != "16.04" ]; then
-		PYDEPS="tox"
-	fi
+	PYDEPS="tox"
 	if test "$1" = "build-deps"; then
-		if [ "$ID" != "ubuntu" -o "$VERSION_ID" != "16.04" ]; then
-			build_botan
-		fi
+		build_botan
 		build_wolfssl
 		build_tss2
 	fi
