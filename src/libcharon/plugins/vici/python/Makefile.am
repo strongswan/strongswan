@@ -9,7 +9,11 @@ EXTRA_DIST = LICENSE README.rst MANIFEST.in \
 	vici/compat.py \
 	vici/exception.py \
 	vici/protocol.py \
-	vici/session.py
+	vici/session.py \
+	asyncvici/__init__.py \
+	asyncvici/command_wrappers.py \
+	asyncvici/protocol.py \
+	asyncvici/session.py
 
 $(srcdir)/setup.py: $(srcdir)/setup.py.in $(top_builddir)/config.status
 	$(AM_V_GEN) sed \

@@ -22,3 +22,19 @@ Example Usage
     >>> s.get_pools()
     OrderedDict([('p1', OrderedDict([('base', b'10.0.0.0'), ('size', b'254'),
     ('online', b'0'), ('offline', b'0')]))])
+
+
+Starting with Python 3.6, you can use asynchronous calls with the `AsyncSession` class.
+
+.. code-block:: python
+
+    >>> from asyncvici import AsyncSession
+    >>> async with AsyncSession() as s:
+    >>>     await s.version()
+    OrderedDict([('daemon', b'charon'), ('version', b'5.4.0'),
+    ('sysname', b'Linux'), ('release', b'3.13.0-27-generic'), ('machine', b'x86_64')])
+    >>>     await s.load_pool({"p1": {"addrs": "10.0.0.0/24"}})
+    OrderedDict([('success', b'yes')])
+    >>>     await s.get_pools()
+    OrderedDict([('p1', OrderedDict([('base', b'10.0.0.0'), ('size', b'254'),
+    ('online', b'0'), ('offline', b'0')]))])

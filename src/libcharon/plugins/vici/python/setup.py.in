@@ -1,7 +1,17 @@
 from setuptools import setup
+import sys
+
 
 with open('README.rst') as file:
     long_description = file.read()
+
+
+def get_packages():
+    pkgs = ['vici']
+    if sys.version_info >= (3, 6):
+        pkgs.append('asyncvici')
+    return pkgs
+
 
 setup(
     name="vici",
@@ -12,7 +22,7 @@ setup(
     author_email="info@strongswan.org",
     url="https://wiki.strongswan.org/projects/strongswan/wiki/Vici",
     license="MIT",
-    packages=["vici"],
+    packages=get_packages(),
     include_package_data=True,
     classifiers=[
         "Development Status :: 5 - Production/Stable",
