@@ -507,6 +507,14 @@ struct ike_sa_t {
 	identification_t* (*get_other_id) (ike_sa_t *this);
 
 	/**
+	 * Get the other peer's identification for keymat octet
+	 * calculations
+	 *
+	 * @return				identification
+	 */
+	identification_t* (*get_other_octet_id) (ike_sa_t *this);
+
+	/**
 	 * Get the others peer identity, but prefer an EAP-Identity.
 	 *
 	 * @return				EAP or IKEv2 identity
@@ -519,6 +527,20 @@ struct ike_sa_t {
 	 * @param other			identification
 	 */
 	void (*set_other_id) (ike_sa_t *this, identification_t *other);
+
+	/**
+	 * Set the other peer's identification for keymat octet
+	 * calculations
+	 *
+	 * Authenticators by default use the same identification
+	 * for certificate selection and getting octet data for signature etc.
+	 * If other octet id is set, this identification is used fo getting
+	 * octet data for signature/verfication, while keeping the identification
+	 * used for certificate selection untouched
+	 *
+	 * @param other_octet_id		identification
+	 */
+	void (*set_other_octet_id) (ike_sa_t *this, identification_t* other_octet_id);
 
 	/**
 	 * Get the config used to setup this IKE_SA.

@@ -457,6 +457,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	notify_payload_t *notify;
 	chunk_t auth_data, recv_auth_data;
 	identification_t *other_id;
+	identification_t *other_octet_id;
 	auth_cfg_t *auth;
 	keymat_v2_t *keymat;
 	eap_type_t type;
@@ -483,9 +484,10 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	}
 
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
+	other_octet_id = this->ike_sa->get_other_octet_id(this->ike_sa);
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	if (!keymat->get_psk_sig(keymat, TRUE, init, nonce, this->msk, this->ppk,
-							 other_id, this->reserved, &auth_data))
+							 other_octet_id, this->reserved, &auth_data))
 	{
 		return FALSE;
 	}

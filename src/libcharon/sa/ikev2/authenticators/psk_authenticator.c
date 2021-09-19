@@ -122,6 +122,7 @@ METHOD(authenticator_t, process, status_t,
 {
 	chunk_t auth_data, recv_auth_data;
 	identification_t *my_id, *other_id;
+	identification_t *other_octet_id;
 	auth_payload_t *auth_payload;
 	notify_payload_t *notify;
 	auth_cfg_t *auth;
@@ -152,6 +153,7 @@ METHOD(authenticator_t, process, status_t,
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
+	other_octet_id = this->ike_sa->get_other_octet_id(this->ike_sa);
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
 												SHARED_IKE, my_id, other_id);
 	while (!authenticated && enumerator->enumerate(enumerator, &key, NULL, NULL))
@@ -159,7 +161,7 @@ METHOD(authenticator_t, process, status_t,
 		keys_found++;
 
 		if (!keymat->get_psk_sig(keymat, TRUE, this->ike_sa_init, this->nonce,
-								 key->get_key(key), this->ppk, other_id,
+								 key->get_key(key), this->ppk, other_octet_id,
 								 this->reserved, &auth_data))
 		{
 			continue;

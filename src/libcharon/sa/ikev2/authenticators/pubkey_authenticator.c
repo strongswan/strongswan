@@ -408,8 +408,9 @@ static bool get_auth_octets_scheme(private_pubkey_authenticator_t *this,
 	array_insert(schemes, ARRAY_TAIL, *scheme);
 
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
-	if (keymat->get_auth_octets(keymat, verify, this->ike_sa_init, this->nonce,
-								ppk, id, this->reserved, octets,
+	if (keymat->get_auth_octets(keymat, verify, this->ike_sa_init, this->nonce, ppk,
+								verify ? this->ike_sa->get_other_octet_id(this->ike_sa) : id,
+								this->reserved, octets,
 								schemes) &&
 		array_remove(schemes, 0, scheme))
 	{

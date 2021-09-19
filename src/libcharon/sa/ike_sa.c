@@ -187,6 +187,11 @@ struct private_ike_sa_t {
 	identification_t *other_id;
 
 	/**
+	 * Identification used for other keymat octet calculation
+	 */
+	identification_t *other_octet_id;
+
+	/**
 	 * set of extensions the peer supports
 	 */
 	ike_extension_t extensions;
@@ -1725,11 +1730,29 @@ METHOD(ike_sa_t, get_other_eap_id, identification_t*,
 	return this->other_id;
 }
 
+METHOD(ike_sa_t, get_other_octet_id, identification_t*,
+	private_ike_sa_t *this)
+{
+	if (this->other_octet_id)
+	{
+		return this->other_octet_id;
+	}
+
+	return this->other_id;
+}
+
 METHOD(ike_sa_t, set_other_id, void,
 	private_ike_sa_t *this, identification_t *other)
 {
 	DESTROY_IF(this->other_id);
 	this->other_id = other;
+}
+
+METHOD(ike_sa_t, set_other_octet_id, void,
+	private_ike_sa_t *this, identification_t *other_octet_id)
+{
+	DESTROY_IF(this->other_octet_id);
+	this->other_octet_id = other_octet_id;
 }
 
 METHOD(ike_sa_t, get_if_id, uint32_t,
@@ -2914,10 +2937,15 @@ METHOD(ike_sa_t, inherit_post, void,
 	this->other_host->destroy(this->other_host);
 	this->my_id->destroy(this->my_id);
 	this->other_id->destroy(this->other_id);
+	DESTROY_IF(this->other_octet_id);
 	this->my_host = other->my_host->clone(other->my_host);
 	this->other_host = other->other_host->clone(other->other_host);
 	this->my_id = other->my_id->clone(other->my_id);
 	this->other_id = other->other_id->clone(other->other_id);
+	if (other->other_octet_id)
+	{
+		this->other_octet_id = other->other_octet_id->clone(other->other_octet_id);
+	}
 	this->if_id_in = other->if_id_in;
 	this->if_id_out = other->if_id_out;
 
@@ -3086,6 +3114,7 @@ METHOD(ike_sa_t, destroy, void,
 	DESTROY_IF(this->other_host);
 	DESTROY_IF(this->my_id);
 	DESTROY_IF(this->other_id);
+	DESTROY_IF(this->other_octet_id);
 	DESTROY_IF(this->local_host);
 	DESTROY_IF(this->remote_host);
 	DESTROY_IF(this->redirected_from);
@@ -3156,6 +3185,8 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.get_other_id = _get_other_id,
 			.set_other_id = _set_other_id,
 			.get_other_eap_id = _get_other_eap_id,
+			.get_other_octet_id = _get_other_octet_id,
+			.set_other_octet_id = _set_other_octet_id,
 			.enable_extension = _enable_extension,
 			.supports_extension = _supports_extension,
 			.set_condition = _set_condition,
@@ -3223,6 +3254,7 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.other_host = host_create_any(AF_INET),
 		.my_id = identification_create_from_encoding(ID_ANY, chunk_empty),
 		.other_id = identification_create_from_encoding(ID_ANY, chunk_empty),
+		.other_octet_id = NULL,
 		.keymat = keymat_create(version, initiator),
 		.state = IKE_CREATED,
 		.stats[STAT_INBOUND] = time_monotonic(NULL),
