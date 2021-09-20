@@ -248,10 +248,10 @@ private_key_t *openssl_ed_private_key_create(EVP_PKEY *key, bool engine)
 
 	switch (EVP_PKEY_base_id(key))
 	{
-		case EVP_PKEY_X25519:
+		case EVP_PKEY_ED25519:
 			type = KEY_ED25519;
 			break;
-		case EVP_PKEY_X448:
+		case EVP_PKEY_ED448:
 			type = KEY_ED448;
 			break;
 		default:
