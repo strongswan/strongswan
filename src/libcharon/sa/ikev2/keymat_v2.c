@@ -387,7 +387,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			chunk_clear(&prf_plus_seed);
 			return FALSE;
 		}
-		secret = chunk_cat("mc", secret, full_nonce);
+		secret = chunk_cat("sc", secret, full_nonce);
 		if (rekey_prf->set_key(rekey_prf, rekey_skd) &&
 			rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed) &&
 			rekey_prf->set_key(rekey_prf, skeyseed))
