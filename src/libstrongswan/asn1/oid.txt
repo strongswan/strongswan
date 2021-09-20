@@ -294,16 +294,16 @@
                   0x03       "eess1-encodingMethods"
       0x05                   "security"
         0x05                 "mechanisms"
-          0x07               "id-pkix"
-            0x01             "id-pe"
+          0x07               "pkix"
+            0x01             "pe"
               0x01           "authorityInfoAccess"		OID_AUTHORITY_INFO_ACCESS
               0x03           "qcStatements"
               0x07           "ipAddrBlocks"				OID_IP_ADDR_BLOCKS
               0x18           "tlsfeature"
-            0x02             "id-qt"
+            0x02             "qt"
               0x01           "cps"						OID_POLICY_QUALIFIER_CPS
               0x02           "unotice"					OID_POLICY_QUALIFIER_UNOTICE
-            0x03             "id-kp"
+            0x03             "kp"
               0x01           "serverAuth"				OID_SERVER_AUTH
               0x02           "clientAuth"				OID_CLIENT_AUTH
               0x03           "codeSigning"
@@ -313,7 +313,12 @@
               0x07           "ipsecUser"
               0x08           "timeStamping"
               0x09           "ocspSigning"				OID_OCSP_SIGNING
-            0x08             "id-otherNames"
+            0x06             "algorithms"
+              0x1E           "id-rsassa-pss-shake128"	OID_RSASSA_PSS_SHAKE128
+              0x1F           "id-rsassa-pss-shake256"	OID_RSASSA_PSS_SHAKE256
+              0x20           "id-ecdsa-with-shake128"	OID_ECDSA_WITH_SHAKE128
+              0x21           "id-ecdsa-with-shake256"	OID_ECDSA_WITH_SHAKE256
+            0x08             "otherNames"
               0x01           "personalData"
               0x02           "userGroup"
               0x03           "id-on-permanentIdentifier"
@@ -321,13 +326,13 @@
               0x05           "xmppAddr"					OID_XMPP_ADDR
               0x06           "id-on-SIM"
               0x07           "id-on-dnsSRV"
-            0x0A             "id-aca"
+            0x0A             "attributeCertificate"
               0x01           "authenticationInfo"		OID_AUTHENTICATION_INFO
               0x02           "accessIdentity"			OID_ACCESS_IDENTITY
               0x03           "chargingIdentity"			OID_CHARGING_IDENTITY
               0x04           "group"					OID_GROUP
             0x0B             "subjectInfoAccess"
-            0x30             "id-ad"
+            0x30             "ad"
               0x01           "ocsp"						OID_OCSP
                 0x01         "basic"					OID_BASIC
                 0x02         "nonce"					OID_NONCE
