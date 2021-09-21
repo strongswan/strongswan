@@ -3,6 +3,8 @@ strongswan-5.9.4
 
 - Initialize libtpmtss in all programs and library that use it.
 
+- Migrated testing scripts to Python 3.
+
 
 strongswan-5.9.3
 ----------------
