@@ -17,4 +17,4 @@ $(TAR):
 	@touch $@
 
 install: .$(PKG)-unpacked-$(REV)
-	cd $(DIR) && python setup.py install
+	cd $(DIR) && python3 setup.py install

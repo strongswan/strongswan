@@ -1,7 +1,7 @@
 #!/usr/bin/make
 
 PKG = strongTNC
-REV = 0.9.9
+REV = 1.0
 DIR = $(PKG)-$(REV)
 ZIP = $(PKG)-$(REV).zip
 SRC = https://github.com/strongswan/$(PKG)/archive/$(REV).zip
@@ -18,10 +18,9 @@ $(ZIP):
 
 .$(PKG)-deps-$(REV): .$(PKG)-unpacked-$(REV)
 	mkdir -p $(DEPS)
-	pip download -d $(DEPS) -r $(DIR)/requirements.txt six
+	pip3 download -d $(DEPS) -r $(DIR)/requirements.txt
 	@touch $@
 
 install: .$(PKG)-deps-$(REV)
-	# six is required for djangorestframework-camel-case
-	pip install --no-index --find-links=file://`pwd`/$(DEPS) -r $(DIR)/requirements.txt six
+	pip3 install --no-index --find-links=file://`pwd`/$(DEPS) -r $(DIR)/requirements.txt
 	cp -r $(DIR) /var/www/tnc && chgrp -R www-data /var/www/tnc && chmod g+sw /var/www/tnc

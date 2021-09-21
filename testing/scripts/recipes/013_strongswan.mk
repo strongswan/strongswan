@@ -129,6 +129,6 @@ build: configure
 
 install: build
 	cd $(BUILDDIR) && make -j install && \
-		cd $(DIR)/src/libcharon/plugins/vici/python && python setup.py install
+		cd $(DIR)/src/libcharon/plugins/vici/python && python3 setup.py install
 	# for Python-based updown scripts
-	pip install python-daemon
+	pip3 install python-daemon

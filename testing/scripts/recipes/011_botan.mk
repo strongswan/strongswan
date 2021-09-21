@@ -23,7 +23,7 @@ all: install
 	@rm -f .$(PKG)-checkout-* && touch $@
 
 .$(PKG)-built-$(REV): .$(PKG)-checkout-$(REV)
-	cd $(PKG) && python ./configure.py $(CONFIG_OPTS) && make -j $(NUM_CPUS)
+	cd $(PKG) && python3 ./configure.py $(CONFIG_OPTS) && make -j $(NUM_CPUS)
 	@rm -f .$(PKG)-built-* && touch $@
 
 install: .$(PKG)-built-$(REV)
