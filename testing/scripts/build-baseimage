@@ -31,10 +31,6 @@ bullseye)
 	;;
 esac
 case "$BASEIMGSUITE" in
-jessie)
-	INC=$INC,libahven4-dev,libxmlada5-dev,libgmpada5-dev
-	INC=$INC,libalog1-dev
-	;;
 stretch)
 	INC=$INC,libahven5-dev,libxmlada-schema6-dev,libgmpada6-dev
 	INC=$INC,libalog2-dev
