@@ -363,6 +363,20 @@ bool chunk_increment(chunk_t chunk);
 bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace);
 
 /**
+ * Removes any unprintable characters from chunk
+ *
+ * The mode character specifies the how to handle memory of original chunk ch:
+ * The character: 'c' for copy (allocate new chunk), 'm' for move (free given chunk)
+ * or 's' for sensitive-move (clear given chunk, then free). Otherwise chunk is
+ * returned unmodified
+ *
+ * @param mode			Mode of operation
+ * @param chunk			chunk to be checked for unprintable characters
+ * @return			Chunk stripped of unprintable characters based on mode
+ */
+chunk_t chunk_remove_unprintable(const char mode, chunk_t ch);
+
+/**
  * Seed initial key for chunk_hash().
  *
  * This call should get invoked once during startup. This is usually done

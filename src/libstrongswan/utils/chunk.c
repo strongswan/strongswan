@@ -798,6 +798,59 @@ bool chunk_printable(chunk_t chunk, chunk_t *sane, char replace)
 	return printable;
 }
 
+chunk_t chunk_remove_unprintable(char mode, chunk_t ch)
+{
+	size_t i = 0;
+	size_t i2 = 0;
+	chunk_t ret;
+	bool clear_chunk = FALSE;
+
+	switch (mode)
+	{
+		case 'c':
+			ret = chunk_clone(ch);
+			break;
+		case 's':
+			clear_chunk = TRUE;
+			/* FALL */
+		case 'm':
+			ret = ch;
+			break;
+		default:
+			return ch;
+	}
+
+	for (i = 0; i+i2 < ret.len; i++)
+	{
+		while((i+i2 < ret.len) && !isprint(ret.ptr[i+i2]))
+		{
+			i2++;
+		}
+
+		if (i+i2 == ret.len)
+		{
+			break;
+		}
+		else
+		{
+			ret.ptr[i] = ret.ptr[i+i2];
+		}
+	}
+
+	if (i2 > 0)
+	{
+		if (clear_chunk)
+		{
+			memwipe(ret.ptr+i, i2);
+		}
+
+		ret.ptr = realloc(ret.ptr, i);
+		ret.len = i;
+	}
+
+	return ret;
+}
+
 /**
  * Helper functions for chunk_mac()
  */
