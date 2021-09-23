@@ -725,7 +725,9 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 	auth_cfg_t *auth;
 	signature_params_t *scheme;
 	int pathlen;
+	bool orig_trusted = trusted;
 
+	trusted = FALSE;
 	auth = auth_cfg_create();
 	get_key_strength(subject, auth);
 	current = subject->get_ref(subject);
@@ -743,6 +745,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 				DBG1(DBG_CFG, "  using trusted ca certificate \"%Y\"",
 							  issuer->get_subject(issuer));
 				trusted = TRUE;
+				orig_trusted = TRUE;
 			}
 			else
 			{
@@ -781,7 +784,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 			}
 		}
 		if (!check_certificate(this, current, issuer, online,
-							   pathlen, trusted, auth))
+							   pathlen, orig_trusted, auth))
 		{
 			trusted = FALSE;
 			issuer->destroy(issuer);
