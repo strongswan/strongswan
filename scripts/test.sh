@@ -240,7 +240,7 @@ macos)
 			--enable-scepclient --enable-socket-default --enable-sshkey
 			--enable-stroke --enable-swanctl --enable-unity --enable-updown
 			--enable-x509 --enable-xauth-generic"
-	DEPS="automake autoconf libtool bison gettext openssl curl"
+	DEPS="automake autoconf libtool bison gettext openssl@1.1 curl"
 	BREW_PREFIX=$(brew --prefix)
 	export PATH=$BREW_PREFIX/opt/bison/bin:$PATH
 	export ACLOCAL_PATH=$BREW_PREFIX/opt/gettext/share/aclocal:$ACLOCAL_PATH
