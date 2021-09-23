@@ -1700,7 +1700,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	kernel_ipsec_add_sa_t *data)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
-	struct sadb_msg *msg, *out;
+	struct sadb_msg *msg, *out = NULL;
 	struct sadb_sa *sa;
 	struct sadb_x_sa2 *sa2;
 	struct sadb_lifetime *lft;
@@ -1708,6 +1708,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	size_t len;
 	uint16_t ipcomp = data->ipcomp;
 	ipsec_mode_t mode = data->mode;
+	status_t status = FAILED;
 
 	/* if IPComp is used, we install an additional IPComp SA. if the cpi is 0
 	 * we are in the recursive call below */
@@ -1822,7 +1823,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 #else
 			DBG1(DBG_KNL, "extended sequence numbers (ESN) not supported by "
 				 "kernel!");
-			return FAILED;
+			goto failed;
 #endif
 		}
 		sa->sadb_sa_auth = lookup_algorithm(INTEGRITY_ALGORITHM, data->int_alg);
@@ -1878,7 +1879,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
 				 encryption_algorithm_names, data->enc_alg);
-			return FAILED;
+			goto failed;
 		}
 		DBG2(DBG_KNL, "  using encryption algorithm %N with key size %d",
 			 encryption_algorithm_names, data->enc_alg, data->enc_key.len * 8);
@@ -1898,7 +1899,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			DBG1(DBG_KNL, "algorithm %N not supported by kernel!",
 				 integrity_algorithm_names, data->int_alg);
-			return FAILED;
+			goto failed;
 		}
 		DBG2(DBG_KNL, "  using integrity algorithm %N with key size %d",
 			 integrity_algorithm_names, data->int_alg, data->int_key.len * 8);
@@ -1923,19 +1924,23 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	{
 		DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x",
 			 ntohl(id->spi));
-		return FAILED;
+		goto failed;
 	}
 	else if (out->sadb_msg_errno)
 	{
 		DBG1(DBG_KNL, "unable to add SAD entry with SPI %.8x: %s (%d)",
 			 ntohl(id->spi), strerror(out->sadb_msg_errno),
 			 out->sadb_msg_errno);
-		free(out);
-		return FAILED;
+		goto failed;
 	}
 
+	status = SUCCESS;
+
+failed:
+	memwipe(&request, sizeof(request));
+	memwipe(out, len);
 	free(out);
-	return SUCCESS;
+	return status;
 }
 
 METHOD(kernel_ipsec_t, update_sa, status_t,
@@ -1943,10 +1948,11 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	kernel_ipsec_update_sa_t *data)
 {
 	unsigned char request[PFKEY_BUFFER_SIZE];
-	struct sadb_msg *msg, *out;
+	struct sadb_msg *msg, *out = NULL;
 	struct sadb_sa *sa;
 	pfkey_msg_t response;
 	size_t len;
+	status_t status = FAILED;
 
 #ifndef SADB_X_EXT_NEW_ADDRESS_SRC
 	/* we can't update the SA if any of the ip addresses have changed.
@@ -2010,15 +2016,13 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x: %s (%d)",
 			 ntohl(id->spi), strerror(out->sadb_msg_errno),
 			 out->sadb_msg_errno);
-		free(out);
-		return FAILED;
+		goto failed;
 	}
 	else if (parse_pfkey_message(out, &response) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x: parsing "
 			 "response from kernel failed", ntohl(id->spi));
-		free(out);
-		return FAILED;
+		goto failed;
 	}
 
 	DBG2(DBG_KNL, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
@@ -2088,24 +2092,29 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	}
 #endif /*SADB_X_EXT_NEW_ADDRESS_SRC*/
 
+	memwipe(out, len);
 	free(out);
+	out = NULL;
 
 	if (pfkey_send(this, msg, &out, &len) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x",
 			 ntohl(id->spi));
-		return FAILED;
+		goto failed;
 	}
 	else if (out->sadb_msg_errno)
 	{
 		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x: %s (%d)",
 			 ntohl(id->spi), strerror(out->sadb_msg_errno), out->sadb_msg_errno);
-		free(out);
-		return FAILED;
+		goto failed;
 	}
-	free(out);
 
-	return SUCCESS;
+	status = SUCCESS;
+failed:
+	memwipe(&request, sizeof(request));
+	memwipe(out, len);
+	free(out);
+	return status;
 }
 
 METHOD(kernel_ipsec_t, query_sa, status_t,
@@ -2118,6 +2127,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	struct sadb_sa *sa;
 	pfkey_msg_t response;
 	size_t len;
+	status_t status = FAILED;
 
 	memset(&request, 0, sizeof(request));
 
@@ -2152,15 +2162,13 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x: %s (%d)",
 			 ntohl(id->spi), strerror(out->sadb_msg_errno),
 			 out->sadb_msg_errno);
-		free(out);
-		return FAILED;
+		goto failed;
 	}
 	else if (parse_pfkey_message(out, &response) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to query SAD entry with SPI %.8x",
 			 ntohl(id->spi));
-		free(out);
-		return FAILED;
+		goto failed;
 	}
 	if (bytes)
 	{
@@ -2184,8 +2192,11 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 #endif /* !__APPLE__ */
 	}
 
+	status = SUCCESS;
+failed:
+	memwipe(out, len);
 	free(out);
-	return SUCCESS;
+	return status;
 }
 
 METHOD(kernel_ipsec_t, del_sa, status_t,
