@@ -168,7 +168,7 @@ static bool verify_emsa_pss_signature(private_gmp_rsa_public_key_t *this,
 	int i;
 	bool success = FALSE;
 
-	if (!params)
+	if (!params || params->salt_len < 0)
 	{
 		return FALSE;
 	}
