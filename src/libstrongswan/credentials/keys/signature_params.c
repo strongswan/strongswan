@@ -322,7 +322,11 @@ bool rsa_pss_params_parse(chunk_t asn1, int level0, rsa_pss_params_t *params)
 			case RSASSA_PSS_PARAMS_SALT_LEN:
 				if (object.len)
 				{
-					params->salt_len = (size_t)asn1_parse_integer_uint64(object);
+					params->salt_len = (ssize_t)asn1_parse_integer_uint64(object);
+					if (params->salt_len < 0)
+					{
+						goto end;
+					}
 				}
 				break;
 			case RSASSA_PSS_PARAMS_TRAILER:
