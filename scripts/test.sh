@@ -244,7 +244,7 @@ macos)
 	BREW_PREFIX=$(brew --prefix)
 	export PATH=$BREW_PREFIX/opt/bison/bin:$PATH
 	export ACLOCAL_PATH=$BREW_PREFIX/opt/gettext/share/aclocal:$ACLOCAL_PATH
-	for pkg in openssl curl
+	for pkg in openssl@1.1 curl
 	do
 		PKG_CONFIG_PATH=$BREW_PREFIX/opt/$pkg/lib/pkgconfig:$PKG_CONFIG_PATH
 		CPPFLAGS="-I$BREW_PREFIX/opt/$pkg/include $CPPFLAGS"
