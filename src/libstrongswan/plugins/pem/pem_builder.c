@@ -450,7 +450,7 @@ static void *load_from_file(char *file, credential_type_t type, int subtype,
 		return NULL;
 	}
 	cred = load_from_blob(*chunk, type, subtype, subject, flags);
-	chunk_unmap(chunk);
+	chunk_unmap_clear(chunk);
 	return cred;
 }
 
