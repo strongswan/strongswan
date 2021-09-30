@@ -445,7 +445,7 @@ static void load_keys(load_ctx_t *ctx, char *type, char *dir)
 					{
 						load_key(ctx, path, type, *map);
 					}
-					chunk_unmap(map);
+					chunk_unmap_clear(map);
 				}
 				else
 				{
@@ -552,7 +552,7 @@ static void load_containers(load_ctx_t *ctx, char *type, char *dir)
 				if (map)
 				{
 					load_encrypted_container(ctx, rel, path, type, *map);
-					chunk_unmap(map);
+					chunk_unmap_clear(map);
 				}
 				else
 				{
