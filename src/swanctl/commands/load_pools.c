@@ -285,7 +285,7 @@ static int load_pools(vici_conn_t *conn)
 
 	ret = load_pools_cfg(conn, format, cfg);
 
-	cfg->destroy(cfg);
+	cfg->destroy_clear(cfg);
 
 	return ret;
 }

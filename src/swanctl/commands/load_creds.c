@@ -990,7 +990,7 @@ static int load_creds(vici_conn_t *conn)
 
 	ret = load_creds_cfg(conn, format, cfg, clear, noprompt);
 
-	cfg->destroy(cfg);
+	cfg->destroy_clear(cfg);
 
 	return ret;
 }

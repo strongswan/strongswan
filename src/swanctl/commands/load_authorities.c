@@ -345,7 +345,7 @@ static int load_authorities(vici_conn_t *conn)
 
 	ret = load_authorities_cfg(conn, format, cfg);
 
-	cfg->destroy(cfg);
+	cfg->destroy_clear(cfg);
 
 	return ret;
 }
