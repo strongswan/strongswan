@@ -506,7 +506,7 @@ CALLBACK(process_queue, job_requeue_t,
 			break;
 		}
 
-		thread_cleanup_push(free, chunk.ptr);
+		thread_cleanup_push((void*)chunk_clear, &chunk);
 		sel->this->inbound(sel->this->user, id, chunk);
 		thread_cleanup_pop(TRUE);
 	}
