@@ -3,3 +3,8 @@ charon.plugins.openssl.engine_id = pkcs11
 
 charon.plugins.openssl.fips_mode = 0
 	Set OpenSSL FIPS mode: disabled(0), enabled(1), Suite B enabled(2).
+
+charon.plugins.openssl.load_legacy = yes
+	Load the legacy provider in OpenSSL 3+ for algorithms like MD4, DES, or
+	Blowfish (the first two are required for EAP-MSCHAPv2). If disabled, the
+	default provider is loaded, or those configured in the OpenSSL config.
