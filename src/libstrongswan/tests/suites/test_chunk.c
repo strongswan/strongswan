@@ -939,6 +939,44 @@ START_TEST(test_chunk_map)
 }
 END_TEST
 
+START_TEST(test_chunk_map_clear)
+{
+	chunk_t *map, contents = chunk_from_chars(0x01,0x02,0x03,0x04,0x05);
+#ifdef WIN32
+	char *path = "C:\\Windows\\Temp\\strongswan-chunk-map-test";
+#else
+	char *path = "/tmp/strongswan-chunk-map-clear-test";
+#endif
+
+	ck_assert(chunk_write(contents, path, 022, TRUE));
+
+	/* read */
+	map = chunk_map(path, FALSE);
+	ck_assert(map != NULL);
+	ck_assert_msg(chunk_equals(*map, contents), "%B", map);
+	ck_assert(chunk_unmap_clear(map));
+	/* we can't verify that clearing worked as we don't have access to the
+	 * memory anymore and mmap with MAP_ANONYMOUS | MAP_UNINITIALIZED of the
+	 * same area will only work if the kernel allows this */
+
+	/* write */
+	map = chunk_map(path, TRUE);
+	ck_assert(map != NULL);
+	ck_assert_msg(chunk_equals(*map, contents), "%B", map);
+	map->ptr[0] = 0x42;
+	ck_assert(chunk_unmap_clear(map));
+
+	/* verify write */
+	contents.ptr[0] = 0x42;
+	map = chunk_map(path, FALSE);
+	ck_assert(map != NULL);
+	ck_assert_msg(chunk_equals(*map, contents), "%B", map);
+	ck_assert(chunk_unmap_clear(map));
+
+	unlink(path);
+}
+END_TEST
+
 /*******************************************************************************
  * test for chunk_from_fd
  */
@@ -1144,6 +1182,7 @@ Suite *chunk_suite_create()
 
 	tc = tcase_create("chunk_map");
 	tcase_add_test(tc, test_chunk_map);
+	tcase_add_test(tc, test_chunk_map_clear);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("chunk_from_fd");
