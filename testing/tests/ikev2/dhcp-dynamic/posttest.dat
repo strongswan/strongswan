@@ -9,5 +9,5 @@ venus::rm /var/lib/dhcp/dhcpd.leases*; touch /var/lib/dhcp/dhcpd.leases
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush
 dave::iptables-restore < /etc/iptables.flush
-alice::arp -d 10.1.0.50
-alice::arp -d 10.1.0.51
+alice::ip neigh del 10.1.0.50 dev eth0
+alice::ip neigh del 10.1.0.51 dev eth0

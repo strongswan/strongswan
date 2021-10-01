@@ -610,6 +610,12 @@ INSERT INTO products (      /* 102 */
  'Debian 10 x86_64'
 );
 
+INSERT INTO products (      /* 103 */
+  name
+) VALUES (
+ 'Debian 11 x86_64'
+);
+
 /* Directories */
 
 INSERT INTO directories (		/*  1 */
@@ -1334,6 +1340,12 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   5, 102
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 103
 );
 
 INSERT INTO groups_product_defaults (
