@@ -393,6 +393,7 @@ static shared_key_t* cb(void *data, shared_key_type_t type,
 			*match_other = ID_MATCH_NONE;
 		}
 		shared = shared_key_create(type, chunk_clone(chunk_from_str(secret)));
+		memwipe(secret, strlen(secret));
 		/* cache password in case it is required more than once */
 		cb_creds->add_shared(cb_creds, shared, NULL);
 		return shared->get_ref(shared);

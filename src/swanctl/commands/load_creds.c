@@ -254,6 +254,7 @@ CALLBACK(password_cb, shared_key_t*,
 		*match_other = ID_MATCH_PERFECT;
 	}
 	shared = shared_key_create(type, chunk_clone(chunk_from_str(pwd)));
+	memwipe(pwd, strlen(pwd));
 	/* cache secret if it is required more than once (PKCS#12) */
 	data->cache->add_shared(data->cache, shared, NULL);
 	return shared->get_ref(shared);
@@ -635,14 +636,13 @@ static void load_tokens(load_ctx_t *ctx)
 			{
 #ifdef HAVE_GETPASS
 				snprintf(prompt, sizeof(prompt), "PIN for %s: ", section);
-				pin = strdupnull(getpass(prompt));
+				pin = getpass(prompt);
 #endif
 			}
 			load_token(ctx, section, pin);
 			if (pin)
 			{
 				memwipe(pin, strlen(pin));
-				free(pin);
 				pin = NULL;
 			}
 		}
