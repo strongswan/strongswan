@@ -1,6 +1,27 @@
 strongswan-5.9.4
 ----------------
 
+- Fixed a denial-of-service vulnerability in the gmp plugin that was caused by
+  an integer overflow when processing RSASSA-PSS signatures with very large
+  salt lengths.
+  This vulnerability has been registered as CVE-2021-41990.
+
+- Fixed a denial-of-service vulnerabililty in the in-memory certificate cache
+  if certificates are replaced and a very large random value caused an integer
+  overflow.
+  This vulnerability has been registered as CVE-2021-41991.
+
+- Fixed a related flaw that caused the daemon to accept an infinite number of
+  versions of a valid certificate by modifying the parameters in the
+  signatureAlgorithm field of the outer X.509 Certificate structure.
+
+- AUTH_LIFETIME notifies are now only sent by a responder if it can't
+  reauthenticate the IKE_SA itself due to asymmetric authentication (i.e. EAP)
+  or the use of virtual IPs.
+
+- Serial number generation in several pki sub-commands has been fixed so they
+  don't start with an unintended zero byte.
+
 - Initialize libtpmtss in all programs and library that use it.
 
 - Migrated testing scripts to Python 3.
