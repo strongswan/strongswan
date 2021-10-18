@@ -343,8 +343,8 @@ HOST_CERT="${DIR}/hosts/moon/${SWANCTL_DIR}/x509/moonCert.pem"
 MOON_PKCS12="${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs12/moonCert.p12"
 mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs12
 openssl pkcs12 -export -inkey ${HOST_KEY} -in ${HOST_CERT} -name "moon" \
-        -certfile ${CA_CERT} -caname "strongSwan Root CA" \
-        -aes128 -passout "pass:kUqd8O7mzbjXNJKQ" > ${MOON_PKCS12} 2> /dev/null
+        -certfile ${CA_CERT} -caname "strongSwan Root CA" -keypbe aes-128-cbc \
+        -certpbe aes-128-cbc -macalg sha256 -passout "pass:kUqd8O7mzbjXNJKQ" > ${MOON_PKCS12}
 
 # Create PKCS#12 file for sun
 HOST_KEY="${DIR}/hosts/sun/${SWANCTL_DIR}/rsa/sunKey.pem"
@@ -352,8 +352,8 @@ HOST_CERT="${DIR}/hosts/sun/${SWANCTL_DIR}/x509/sunCert.pem"
 SUN_PKCS12="${TEST}/hosts/sun/${SWANCTL_DIR}/pkcs12/sunCert.p12"
 mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/pkcs12
 openssl pkcs12 -export -inkey ${HOST_KEY} -in ${HOST_CERT} -name "sun" \
-        -certfile ${CA_CERT} -caname "strongSwan Root CA" \
-        -aes128 -passout "pass:IxjQVCF3JGI+MoPi" > ${SUN_PKCS12} 2> /dev/null
+        -certfile ${CA_CERT} -caname "strongSwan Root CA" -keypbe aes-128-cbc \
+        -certpbe aes-128-cbc -macalg sha256 -passout "pass:IxjQVCF3JGI+MoPi" > ${SUN_PKCS12}
 
 # Put a PKCS#12 copy into the botan/net2net-pkcs12 scenario
 for t in botan/net2net-pkcs12 openssl-ikev2/net2net-pkcs12
