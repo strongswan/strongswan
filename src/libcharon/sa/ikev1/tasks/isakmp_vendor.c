@@ -105,7 +105,7 @@ static struct {
 	  "\xaf\xca\xd7\x13\x68\xa1\xf1\xc9\x6b\x86\x96\xfc\x77\x57\x01\x00"},
 
 	/* CISCO-UNITY, similar to DPD the last two bytes indicate the version */
-	{ "Cisco Unity", EXT_CISCO_UNITY, FALSE, TRUE, 16,
+	{ "Cisco Unity", EXT_CISCO_UNITY, FALSE, FALSE, 16,
 	  "\x12\xf5\xf2\x8c\x45\x71\x68\xa9\x70\x2d\x9f\xe2\x74\xcc\x01\x00"},
 
 	/* Proprietary IKE fragmentation extension. Capabilities are handled
@@ -240,18 +240,24 @@ static const uint32_t fragmentation_ike = 0x80000000;
 
 static bool is_known_vid(chunk_t data, int i)
 {
-	if (vendor_ids[i].extension == EXT_IKE_FRAGMENTATION)
+	switch (vendor_ids[i].extension)
 	{
-		if (data.len >= 16 && memeq(data.ptr, vendor_ids[i].id, 16))
-		{
-			switch (data.len)
+		case EXT_IKE_FRAGMENTATION:
+			if (data.len >= 16 && memeq(data.ptr, vendor_ids[i].id, 16))
 			{
-				case 16:
-					return TRUE;
-				case 20:
-					return untoh32(&data.ptr[16]) & fragmentation_ike;
+				switch (data.len)
+				{
+					case 16:
+						return TRUE;
+					case 20:
+						return untoh32(&data.ptr[16]) & fragmentation_ike;
+				}
 			}
-		}
+			return FALSE;
+		case EXT_CISCO_UNITY:
+			return data.len == 16 && memeq(data.ptr, vendor_ids[i].id, 14);
+		default:
+			break;
 	}
 	if (vendor_ids[i].prefix)
 	{
