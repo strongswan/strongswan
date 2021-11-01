@@ -115,7 +115,7 @@ static struct {
 	  "\x40\x48\xb7\xd5\x6e\xbc\xe8\x85\x25\xe7\xde\x7f\x00\xd6\xc2\xd3\x80\x00\x00\x00"},
 
 	/* Windows peers send this VID and a version number */
-	{ "MS NT5 ISAKMPOAKLEY", EXT_MS_WINDOWS, FALSE, TRUE, 20,
+	{ "MS NT5 ISAKMPOAKLEY", EXT_MS_WINDOWS, FALSE, TRUE, 16,
 	  "\x1e\x2b\x51\x69\x05\x99\x1c\x7d\x7c\x96\xfc\xbf\xb5\x87\xe4\x61\x00\x00\x00\x00"},
 
 	{ "Cisco VPN Concentrator", 0, FALSE, TRUE, 16,
