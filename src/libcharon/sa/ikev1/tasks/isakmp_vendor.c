@@ -122,7 +122,8 @@ static struct {
 	{ "Cisco VPN Concentrator", 0, FALSE, TRUE, 14,
 	  "\x1f\x07\xf7\x0e\xaa\x65\x14\xd3\xb0\xfa\x96\x54\x2a\x50\x00\x00"},
 
-	{ "Cisco VPN 3000 client", 0, FALSE, FALSE, 20,
+	/* MD5("ALTIGA NETWORKS") */
+	{ "Cisco VPN 3000 client", 0, FALSE, FALSE, 16,
 	  "\xf6\xf7\xef\xc7\xf5\xae\xb8\xcb\x15\x8c\xb9\xd0\x94\xba\x69\xe7"},
 
 	{ "KAME/racoon", 0, FALSE, FALSE, 16,
