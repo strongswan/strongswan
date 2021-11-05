@@ -58,6 +58,9 @@
 /** delay before reinstalling routes (ms) */
 #define ROUTE_DELAY 100
 
+/** default MTU for TUN devices */
+#define TUN_DEFAULT_MTU 1400
+
 typedef struct addr_entry_t addr_entry_t;
 
 /**
@@ -409,6 +412,11 @@ struct private_kernel_pfroute_net_t
 	 * Time in ms to wait for IP addresses to appear/disappear
 	 */
 	int vip_wait;
+
+	/**
+	 * MTU to set on TUN devices
+	 */
+	uint32_t mtu;
 
 	/**
 	 * whether to actually install virtual IPs
@@ -1235,7 +1243,8 @@ METHOD(kernel_net_t, add_ip, status_t,
 	{
 		prefix = vip->get_address(vip).len * 8;
 	}
-	if (!tun->up(tun) || !tun->set_address(tun, vip, prefix))
+	if (!tun->up(tun) || !tun->set_address(tun, vip, prefix) ||
+		!tun->set_mtu(tun, this->mtu))
 	{
 		tun->destroy(tun);
 		return FAILED;
@@ -2088,6 +2097,8 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		.roam_lock = spinlock_create(),
 		.vip_wait = lib->settings->get_int(lib->settings,
 						"%s.plugins.kernel-pfroute.vip_wait", 1000, lib->ns),
+		.mtu = lib->settings->get_int(lib->settings,
+						"%s.plugins.kernel-pfroute.mtu", TUN_DEFAULT_MTU, lib->ns),
 		.install_virtual_ip = lib->settings->get_bool(lib->settings,
 						"%s.install_virtual_ip", TRUE, lib->ns),
 	);
