@@ -3,6 +3,8 @@
  * Copyright (C) 2018-2020 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
+ * Copyright (C) 2021 Andreas Steffen, strongSec GmbH
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -19,20 +21,20 @@
 
 #ifdef TSS_TSS2_V2
 
+#include "tpm_tss_tss2_session.h"
+
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
 #include <bio/bio_reader.h>
 #include <bio/bio_writer.h>
 #include <threading/mutex.h>
 
-#include <tss2/tss2_sys.h>
-
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define LABEL	"TPM 2.0 -"
+#define LABEL	"TPM 2.0 - "
 
 #define PLATFORM_PCR	24
 #define MAX_PCR_BANKS	 4
@@ -95,6 +97,11 @@ struct private_tpm_tss_tss2_t {
 	bool old_event_digest_format;
 
 	/**
+	 * TSS2 session used for protected communication with TPM 2.0
+	 */
+	tpm_tss_tss2_session_t *session;
+
+	/**
 	 * Mutex controlling access to the TPM 2.0 context
 	 */
 	mutex_t *mutex;
@@ -144,7 +151,7 @@ static TPM2_ALG_ID hash_alg_to_tpm_alg_id(hash_algorithm_t alg)
 /**
  * Convert TPM2_ALG_ID to hash algorithm
  */
-static hash_algorithm_t hash_alg_from_tpm_alg_id(TPM2_ALG_ID alg)
+hash_algorithm_t hash_alg_from_tpm_alg_id(TPM2_ALG_ID alg)
 {
 	switch (alg)
 	{
@@ -164,6 +171,31 @@ static hash_algorithm_t hash_alg_from_tpm_alg_id(TPM2_ALG_ID alg)
 			return HASH_SHA3_512;
 		default:
 			return HASH_UNKNOWN;
+	}
+}
+
+/**
+ * Return hash length of TPM2_ALG_ID algorithm
+ */
+size_t hash_len_from_tpm_alg_id(TPM2_ALG_ID alg)
+{
+	switch (alg)
+	{
+		case TPM2_ALG_SHA1:
+			return TPM2_SHA1_DIGEST_SIZE;
+		case TPM2_ALG_SHA256:
+		case TPM2_ALG_SHA3_256:
+			return TPM2_SHA256_DIGEST_SIZE;
+		case TPM2_ALG_SHA384:
+		case TPM2_ALG_SHA3_384:
+			return TPM2_SHA384_DIGEST_SIZE;
+		case TPM2_ALG_SHA512:
+		case TPM2_ALG_SHA3_512:
+			return TPM2_SHA512_DIGEST_SIZE;
+		case TPM2_ALG_SM3_256:
+			return TPM2_SM3_256_DIGEST_SIZE;
+		default:
+			return 0;
 	}
 }
 
@@ -234,8 +266,8 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s GetCapability failed for TPM2_CAP_TPM_PROPERTIES: 0x%06x",
-					   LABEL, rval);
+		DBG1(DBG_PTS, LABEL "GetCapability failed for TPM2_CAP_TPM_PROPERTIES: 0x%06x",
+					  rval);
 		return FALSE;
 	}
 	memset(manufacturer,  '\0', sizeof(manufacturer));
@@ -280,7 +312,7 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 		this->fips_186_4 = lib->settings->get_bool(lib->settings,
 					"%s.plugins.tpm.fips_186_4", FALSE, lib->ns);
 	}
-	DBG2(DBG_PTS, "%s manufacturer: %s (%s) rev: %05.2f %u %s", LABEL,
+	DBG2(DBG_PTS, LABEL "manufacturer: %s (%s) rev: %05.2f %u %s",
 		 manufacturer, vendor_string, (float)revision/100, year,
 		 fips_140_2 ? "FIPS 140-2" : (this->fips_186_4 ? "FIPS 186-4" : ""));
 
@@ -313,8 +345,8 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s GetCapability failed for TPM2_CAP_ALGS: 0x%06x",
-					   LABEL, rval);
+		DBG1(DBG_PTS, LABEL "GetCapability failed for TPM2_CAP_ALGS: 0x%06x",
+					  rval);
 		return FALSE;
 	}
 
@@ -335,7 +367,7 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 		pos += written;
 		len -= written;
 	}
-	DBG2(DBG_PTS, "%s algorithms:%s", LABEL, buf);
+	DBG2(DBG_PTS, LABEL "algorithms:%s", buf);
 
 	/* get supported ECC curves */
 	this->mutex->lock(this->mutex);
@@ -344,8 +376,8 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s GetCapability failed for TPM2_CAP_ECC_CURVES: 0x%06x",
-					   LABEL, rval);
+		DBG1(DBG_PTS, LABEL "GetCapability failed for TPM2_CAP_ECC_CURVES: 0x%06x",
+					  rval);
 		return FALSE;
 	}
 
@@ -365,7 +397,7 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 		pos += written;
 		len -= written;
 	}
-	DBG2(DBG_PTS, "%s ECC curves:%s", LABEL, buf);
+	DBG2(DBG_PTS, LABEL "ECC curves:%s", buf);
 
 	/* get assigned PCR banks */
 	this->mutex->lock(this->mutex);
@@ -374,8 +406,8 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s GetCapability failed for TPM2_CAP_PCRS: 0x%06x",
-					   LABEL, rval);
+		DBG1(DBG_PTS, LABEL "GetCapability failed for TPM2_CAP_PCRS: 0x%06x",
+					  rval);
 		return FALSE;
 	}
 
@@ -399,7 +431,7 @@ static bool get_algs_capability(private_tpm_tss_tss2_t *this)
 		pos += written;
 		len -= written;
 	}
-	DBG2(DBG_PTS, "%s PCR banks:%s", LABEL, buf);
+	DBG2(DBG_PTS, LABEL "PCR banks:%s", buf);
 
 	return TRUE;
 }
@@ -421,7 +453,7 @@ static bool initialize_tcti_context(private_tpm_tss_tss2_t *this)
 	rval = tcti_init(NULL, &tcti_context_size, tcti_opts);
 	if (rval != TSS2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s tcti init setup failed: 0x%06x",  LABEL, rval);
+		DBG1(DBG_PTS, LABEL "tcti init setup failed: 0x%06x", rval);
 		return FALSE;
 	}
 
@@ -433,7 +465,7 @@ static bool initialize_tcti_context(private_tpm_tss_tss2_t *this)
 	rval = tcti_init(this->tcti_context, &tcti_context_size, tcti_opts);
 	if (rval != TSS2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s tcti init allocation failed: 0x%06x", LABEL,rval);
+		DBG1(DBG_PTS, LABEL "tcti init allocation failed: 0x%06x", rval);
 		return FALSE;
 	}
 	return TRUE;
@@ -465,8 +497,7 @@ static bool initialize_sys_context(private_tpm_tss_tss2_t *this)
 							   this->tcti_context, &abi_version);
 	if (rval != TSS2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s could not get sys_context: 0x%06x",
-					   LABEL, rval);
+		DBG1(DBG_PTS, LABEL "could not get sys_context: 0x%06x", rval);
 		return FALSE;
 	}
 
@@ -523,8 +554,8 @@ bool read_public(private_tpm_tss_tss2_t *this, TPMI_DH_OBJECT handle,
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s could not read public key from handle 0x%08x: 0x%06x",
-					   LABEL, handle, rval);
+		DBG1(DBG_PTS, LABEL "could not read public key from handle 0x%08x: 0x%06x",
+					  handle, rval);
 		return FALSE;
 	}
 	return TRUE;
@@ -577,8 +608,8 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 					NULL, &aik_pubkey, CRED_PART_RSA_MODULUS, aik_modulus,
 					CRED_PART_RSA_PUB_EXP, aik_exponent, CRED_PART_END))
 			{
-				DBG1(DBG_PTS, "%s subjectPublicKeyInfo encoding of public key "
-							  "failed", LABEL);
+				DBG1(DBG_PTS, LABEL "subjectPublicKeyInfo encoding of public key "
+									"failed");
 				return chunk_empty;
 			}
 			break;
@@ -618,7 +649,7 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			break;
 		}
 		default:
-			DBG1(DBG_PTS, "%s unsupported key type", LABEL);
+			DBG1(DBG_PTS, LABEL "unsupported key type");
 			return chunk_empty;
 	}
 	DBG1(DBG_PTS, "signature algorithm is %N with %N hash",
@@ -706,7 +737,7 @@ METHOD(tpm_tss_t, supported_signature_schemes, enumerator_t*,
 			break;
 		}
 		default:
-			DBG1(DBG_PTS, "%s unsupported key type", LABEL);
+			DBG1(DBG_PTS, LABEL "unsupported key type");
 			return enumerator_create_empty();
 	}
 	return enumerator_create_single(signature_params_clone(&supported_scheme),
@@ -743,8 +774,8 @@ static bool init_pcr_selection(private_tpm_tss_tss2_t *this, uint32_t pcrs,
 	/* check if there is an assigned PCR bank for this hash algorithm */
 	if (!has_pcr_bank(this, alg))
 	{
-		DBG1(DBG_PTS, "%s %N hash algorithm not supported by any PCR bank",
-			 LABEL, hash_algorithm_short_names, alg);
+		DBG1(DBG_PTS, LABEL "%N hash algorithm not supported by any PCR bank",
+			 		  hash_algorithm_short_names, alg);
 		return FALSE;
 	}
 
@@ -781,8 +812,8 @@ METHOD(tpm_tss_t, read_pcr, bool,
 
 	if (pcr_num >= PLATFORM_PCR)
 	{
-		DBG1(DBG_PTS, "%s maximum number of supported PCR is %d",
-					   LABEL, PLATFORM_PCR);
+		DBG1(DBG_PTS, LABEL "maximum number of supported PCR is %d",
+					  PLATFORM_PCR);
 		return FALSE;
 	}
 
@@ -801,8 +832,7 @@ METHOD(tpm_tss_t, read_pcr, bool,
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s PCR bank could not be read: 0x%60x",
-					   LABEL, rval);
+		DBG1(DBG_PTS, LABEL "PCR bank could not be read: 0x%60x", rval);
 		return FALSE;
 	}
 	pcr_value_ptr = (uint8_t *)pcr_values.digests[0].buffer;
@@ -827,8 +857,8 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 	/* check if there is an assigned PCR bank for this hash algorithm */
 	if (!has_pcr_bank(this, alg))
 	{
-		DBG1(DBG_PTS, "%s %N hash algorithm not supported by any PCR bank",
-			 LABEL, hash_algorithm_short_names, alg);
+		DBG1(DBG_PTS, LABEL "%N hash algorithm not supported by any PCR bank",
+			 		  hash_algorithm_short_names, alg);
 		return FALSE;
 	}
 
@@ -883,8 +913,8 @@ METHOD(tpm_tss_t, extend_pcr, bool,
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS, "%s PCR %02u could not be extended: 0x%06x",
-			 LABEL, pcr_num, rval);
+		DBG1(DBG_PTS, LABEL "PCR %02u could not be extended: 0x%06x",
+					  pcr_num, rval);
 		return FALSE;
 	}
 
@@ -935,7 +965,7 @@ METHOD(tpm_tss_t, quote, bool,
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS,"%s Tss2_Sys_Quote failed: 0x%06x", LABEL, rval);
+		DBG1(DBG_PTS, LABEL "Tss2_Sys_Quote failed: 0x%06x", rval);
 		return FALSE;
 	}
 	quoted_chunk = chunk_create(quoted.attestationData, quoted.size);
@@ -948,7 +978,7 @@ METHOD(tpm_tss_t, quote, bool,
 		!reader->read_data  (reader, 10, &pcr_select) ||
 		!reader->read_data16(reader, &pcr_digest))
 	{
-		DBG1(DBG_PTS, "%s parsing of quoted struct failed", LABEL);
+		DBG1(DBG_PTS, LABEL "parsing of quoted struct failed");
 		reader->destroy(reader);
 		return FALSE;
 	}
@@ -987,8 +1017,8 @@ METHOD(tpm_tss_t, quote, bool,
 			hash_alg = sig.signature.ecdsa.hash;
 			break;
 		default:
-			DBG1(DBG_PTS, "%s unsupported %N signature algorithm",
-						   LABEL, tpm_alg_id_names, sig.sigAlg);
+			DBG1(DBG_PTS, LABEL "unsupported %N signature algorithm",
+						  tpm_alg_id_names, sig.sigAlg);
 			return FALSE;
 	}
 
@@ -1053,8 +1083,8 @@ METHOD(tpm_tss_t, sign, bool,
 	alg_id = hash_alg_to_tpm_alg_id(hash_alg);
 	if (!is_supported_alg(this, alg_id))
 	{
-		DBG1(DBG_PTS, "%s %N hash algorithm not supported by TPM",
-			 LABEL, hash_algorithm_short_names, hash_alg);
+		DBG1(DBG_PTS, LABEL "%N hash algorithm not supported by TPM",
+			 		  hash_algorithm_short_names, hash_alg);
 		return FALSE;
 	}
 
@@ -1085,8 +1115,8 @@ METHOD(tpm_tss_t, sign, bool,
 	}
 	else
 	{
-		DBG1(DBG_PTS, "%s signature scheme %N not supported by TPM key",
-			 LABEL, signature_scheme_names, scheme);
+		DBG1(DBG_PTS, LABEL "signature scheme %N not supported by TPM key",
+			 		  signature_scheme_names, scheme);
 		return FALSE;
 	}
 
@@ -1101,7 +1131,7 @@ METHOD(tpm_tss_t, sign, bool,
 		this->mutex->unlock(this->mutex);
 		if (rval != TPM2_RC_SUCCESS)
 		{
-			DBG1(DBG_PTS,"%s Tss2_Sys_Hash failed: 0x%06x", LABEL, rval);
+			DBG1(DBG_PTS,LABEL "Tss2_Sys_Hash failed: 0x%06x", rval);
 			return FALSE;
 		}
 	}
@@ -1116,8 +1146,8 @@ METHOD(tpm_tss_t, sign, bool,
 										  alg_id, &sequence_handle, 0);
 		if (rval != TPM2_RC_SUCCESS)
 		{
-			DBG1(DBG_PTS,"%s Tss2_Sys_HashSequenceStart failed: 0x%06x",
-				 LABEL, rval);
+			DBG1(DBG_PTS, LABEL "Tss2_Sys_HashSequenceStart failed: 0x%06x",
+				 		  rval);
 			this->mutex->unlock(this->mutex);
 			return FALSE;
 		}
@@ -1133,8 +1163,8 @@ METHOD(tpm_tss_t, sign, bool,
 										   &auth_cmd, &buffer, 0);
 			if (rval != TPM2_RC_SUCCESS)
 			{
-				DBG1(DBG_PTS,"%s Tss2_Sys_SequenceUpdate failed: 0x%06x",
-					 LABEL, rval);
+				DBG1(DBG_PTS, LABEL "Tss2_Sys_SequenceUpdate failed: 0x%06x",
+					 		  rval);
 				this->mutex->unlock(this->mutex);
 				return FALSE;
 			}
@@ -1147,8 +1177,8 @@ METHOD(tpm_tss_t, sign, bool,
 		this->mutex->unlock(this->mutex);
 		if (rval != TPM2_RC_SUCCESS)
 		{
-			DBG1(DBG_PTS,"%s Tss2_Sys_SequenceComplete failed: 0x%06x",
-				 LABEL, rval);
+			DBG1(DBG_PTS, LABEL "Tss2_Sys_SequenceComplete failed: 0x%06x",
+				 		  rval);
 			return FALSE;
 		}
 	}
@@ -1159,7 +1189,7 @@ METHOD(tpm_tss_t, sign, bool,
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS,"%s Tss2_Sys_Sign failed: 0x%06x", LABEL, rval);
+		DBG1(DBG_PTS, LABEL "Tss2_Sys_Sign failed: 0x%06x", rval);
 		return FALSE;
 	}
 
@@ -1206,34 +1236,107 @@ METHOD(tpm_tss_t, sign, bool,
 									sig.signature.ecdsa.signatureS.size)));
 			break;
 		default:
-			DBG1(DBG_PTS, "%s unsupported %N signature scheme",
-						   LABEL, signature_scheme_names, scheme);
+			DBG1(DBG_PTS, LABEL "unsupported %N signature scheme",
+						  signature_scheme_names, scheme);
 			return FALSE;
 	}
 
 	return TRUE;
 }
 
+/**
+ * Check if an authenticated session with the TPM 2.0 can be started
+ * The handle of the RSA Endorsement Key (EK) is required
+ */
+static void try_session_start(private_tpm_tss_tss2_t *this)
+{
+	uint32_t ek_handle = 0;
+	chunk_t handle_chunk;
+	char *handle_str;
+
+	TPM2B_PUBLIC public = { 0, };
+
+	/* get Endorsement Key (EK) handle from settings */
+	handle_str = lib->settings->get_str(lib->settings,
+								"%s.plugins.tpm.ek_handle", NULL, lib->ns);
+	if (handle_str)
+	{
+		handle_chunk = chunk_from_hex(chunk_from_str(handle_str),
+									 (char *)&ek_handle);
+		ek_handle = (handle_chunk.len == 4) ? htonl(ek_handle) : 0;
+
+		/* establish protected auth session if ek_handle is set */
+		if (ek_handle && read_public(this, ek_handle, &public))
+		{
+			this->mutex->lock(this->mutex);
+			this->session = tpm_tss_tss2_session_create(ek_handle, &public,
+														this->sys_context);
+			this->mutex->unlock(this->mutex);
+		}
+	}
+}
+
 METHOD(tpm_tss_t, get_random, bool,
 	private_tpm_tss_tss2_t *this, size_t bytes, uint8_t *buffer)
 {
-	size_t len, random_len= sizeof(TPM2B_DIGEST)-2;
+	size_t len, random_len = sizeof(TPM2B_DIGEST)-2;
 	TPM2B_DIGEST random = { random_len, };
 	uint8_t *pos = buffer;
 	uint32_t rval;
 
+	if (!this->session)
+	{
+		try_session_start(this);
+	}
+
 	while (bytes > 0)
 	{
-		len = min(bytes, random_len);
+		bool success = FALSE;
 
+		len = min(bytes, random_len);
 		this->mutex->lock(this->mutex);
-		rval = Tss2_Sys_GetRandom(this->sys_context, NULL, len, &random, NULL);
-		this->mutex->unlock(this->mutex);
+
+		rval = Tss2_Sys_GetRandom_Prepare(this->sys_context, len);
 		if (rval != TSS2_RC_SUCCESS)
 		{
-			DBG1(DBG_PTS,"%s Tss2_Sys_GetRandom failed: 0x%06x", LABEL, rval);
-			return FALSE;
+			DBG1(DBG_PTS, "%s Tss2_Sys_GetRandom_Prepare failed: 0x%06x",
+				 LABEL, rval);
+			goto error;
 	    }
+
+		if (this->session && !this->session->set_cmd_auths(this->session))
+		{
+			goto error;
+		}
+
+		rval = Tss2_Sys_Execute(this->sys_context);
+		if (rval != TSS2_RC_SUCCESS)
+		{
+			DBG1(DBG_PTS, LABEL "Tss2_Sys_Execute failed: 0x%06x", rval);
+			goto error;
+		}
+
+		if (this->session && !this->session->get_rsp_auths(this->session))
+		{
+			goto error;
+		}
+
+		rval = Tss2_Sys_GetRandom_Complete(this->sys_context, &random);
+		if (rval != TSS2_RC_SUCCESS)
+		{
+			DBG1(DBG_PTS, LABEL "Tss2_Sys_GetRandom_Complete failed: 0x%06x",
+				 		  rval);
+			goto error;
+		}
+		success = TRUE;
+
+error:
+		this->mutex->unlock(this->mutex);
+		if (!success)
+		{
+			return FALSE;
+		}
+
 		memcpy(pos, random.buffer, random.size);
 		pos   += random.size;
 		bytes -= random.size;
@@ -1265,8 +1368,8 @@ METHOD(tpm_tss_t, get_data, bool,
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS,"%s Tss2_Sys_GetCapability failed for "
-					 "TPM2_CAP_TPM_PROPERTIES: 0x%06x", LABEL, rval);
+		DBG1(DBG_PTS, LABEL "Tss2_Sys_GetCapability failed for "
+							"TPM2_CAP_TPM_PROPERTIES: 0x%06x", rval);
 		return FALSE;
 	}
 	max_data_size = min(cap_data.data.tpmProperties.tpmProperty[0].value,
@@ -1279,7 +1382,7 @@ METHOD(tpm_tss_t, get_data, bool,
 	this->mutex->unlock(this->mutex);
 	if (rval != TPM2_RC_SUCCESS)
 	{
-		DBG1(DBG_PTS,"%s Tss2_Sys_NV_ReadPublic failed: 0x%06x", LABEL, rval);
+		DBG1(DBG_PTS, LABEL "Tss2_Sys_NV_ReadPublic failed: 0x%06x", rval);
 		return FALSE;
 	}
 	nv_size = nv_public.nvPublic.dataSize;
@@ -1304,7 +1407,7 @@ METHOD(tpm_tss_t, get_data, bool,
 		this->mutex->unlock(this->mutex);
 		if (rval != TPM2_RC_SUCCESS)
 		{
-			DBG1(DBG_PTS,"%s Tss2_Sys_NV_Read failed: 0x%06x", LABEL, rval);
+			DBG1(DBG_PTS, LABEL "Tss2_Sys_NV_Read failed: 0x%06x", rval);
 			chunk_free(data);
 			return FALSE;
 		}
@@ -1352,26 +1455,9 @@ METHOD(tpm_tss_t, get_event_digest, bool,
 			{
 				return FALSE;
 			}
-			hash_alg = hash_alg_from_tpm_alg_id(alg_id);
+			hash_alg =   hash_alg_from_tpm_alg_id(alg_id);
+			digest_len = hash_len_from_tpm_alg_id(alg_id);
 
-			switch (hash_alg)
-			{
-				case HASH_SHA1:
-					digest_len = HASH_SIZE_SHA1;
-					break;
-				case HASH_SHA256:
-					digest_len = HASH_SIZE_SHA256;
-					break;
-				case HASH_SHA384:
-					digest_len = HASH_SIZE_SHA384;
-					break;
-				case HASH_SHA512:
-					digest_len = HASH_SIZE_SHA512;
-					break;
-				default:
-					DBG2(DBG_PTS, "alg_id: 0x%04x", alg_id);
-					return FALSE;
-			}
 			if (hash_alg == alg)
 			{
 				*digest = chunk_alloc(digest_len);
@@ -1397,6 +1483,7 @@ METHOD(tpm_tss_t, get_event_digest, bool,
 METHOD(tpm_tss_t, destroy, void,
 	private_tpm_tss_tss2_t *this)
 {
+	DESTROY_IF(this->session);
 	finalize_context(this);
 	this->mutex->destroy(this->mutex);
 	free(this->version_info.ptr);
@@ -1443,6 +1530,7 @@ tpm_tss_t *tpm_tss_tss2_create()
 		destroy(this);
 		return NULL;
 	}
+
 	return &this->public;
 }
 
@@ -1467,8 +1555,8 @@ bool tpm_tss_tss2_init(void)
 	{
 		i = 1;
 	}
-	DBG2(DBG_PTS, "%s \"%s\" in-kernel resource manager is %spresent",
-				   LABEL, tcti_options[0], i ? "not " : "");
+	DBG2(DBG_PTS, LABEL "\"%s\" in-kernel resource manager is %spresent",
+				  tcti_options[0], i ? "not " : "");
 
 	/* select a dynamic TCTI library (device, tabrmd or mssim) */
 	tcti_name = lib->settings->get_str(lib->settings,
@@ -1485,8 +1573,7 @@ bool tpm_tss_tss2_init(void)
 	}
 	if (!match)
 	{
-		DBG1(DBG_PTS, "%s \"%s\" is not a valid TCTI library name",
-			 LABEL, tcti_lib);
+		DBG1(DBG_PTS, LABEL "\"%s\" is not a valid TCTI library name", tcti_lib);
 		return FALSE;
 	}
 
@@ -1497,20 +1584,20 @@ bool tpm_tss_tss2_init(void)
 	tcti_handle = dlopen(tcti_lib, RTLD_LAZY);
 	if (!tcti_handle)
 	{
-		DBG1(DBG_PTS, "%s could not load \"%s\"", LABEL, tcti_lib);
+		DBG1(DBG_PTS, LABEL "could not load \"%s\"", tcti_lib);
 		return FALSE;
 	}
 
  	infofn = (TSS2_TCTI_INFO_FUNC)dlsym(tcti_handle, TSS2_TCTI_INFO_SYMBOL);
     if (!infofn)
 	{
-        DBG1(DBG_PTS, "%s symbol \"%s\" not found in \"%s\"", LABEL,
-					   TSS2_TCTI_INFO_SYMBOL, tcti_lib);
+        DBG1(DBG_PTS, LABEL "symbol \"%s\" not found in \"%s\"",
+					  TSS2_TCTI_INFO_SYMBOL, tcti_lib);
 		tpm_tss_tss2_deinit();
 
 		return FALSE;
     }
-	DBG2(DBG_PTS, "%s \"%s\" successfully loaded", LABEL, tcti_lib);
+	DBG2(DBG_PTS, LABEL "\"%s\" successfully loaded", tcti_lib);
 	info = infofn();
 	tcti_init = info->init;
 
