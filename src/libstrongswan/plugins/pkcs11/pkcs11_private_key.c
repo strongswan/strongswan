@@ -388,7 +388,7 @@ METHOD(private_key_t, sign, bool,
 
 METHOD(private_key_t, decrypt, bool,
 	private_pkcs11_private_key_t *this, encryption_scheme_t scheme,
-	chunk_t crypt, chunk_t *plain)
+	void *params, chunk_t crypt, chunk_t *plain)
 {
 	CK_MECHANISM_PTR mechanism;
 	CK_SESSION_HANDLE session;

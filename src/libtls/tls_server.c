@@ -805,8 +805,8 @@ static status_t process_key_exchange_encrypted(private_tls_server_t *this,
 	rng->destroy(rng);
 
 	if (this->private &&
-		this->private->decrypt(this->private,
-							   ENCRYPT_RSA_PKCS1, encrypted, &decrypted))
+		this->private->decrypt(this->private, ENCRYPT_RSA_PKCS1, NULL,
+							   encrypted, &decrypted))
 	{
 		if (decrypted.len == sizeof(premaster) &&
 			untoh16(decrypted.ptr) == this->client_version)

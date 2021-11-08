@@ -278,7 +278,7 @@ METHOD(private_key_t, sign, bool,
 
 METHOD(private_key_t, decrypt, bool,
 	private_gcrypt_rsa_private_key_t *this, encryption_scheme_t scheme,
-	chunk_t encrypted, chunk_t *plain)
+	void *params, chunk_t encrypted, chunk_t *plain)
 {
 	gcry_error_t err;
 	gcry_sexp_t in, out;

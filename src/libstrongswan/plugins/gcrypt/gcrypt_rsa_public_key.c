@@ -237,7 +237,7 @@ METHOD(public_key_t, verify, bool,
 
 METHOD(public_key_t, encrypt_, bool,
 	private_gcrypt_rsa_public_key_t *this, encryption_scheme_t scheme,
-	chunk_t plain, chunk_t *encrypted)
+	void *params, chunk_t plain, chunk_t *encrypted)
 {
 	gcry_sexp_t in, out;
 	gcry_error_t err;
