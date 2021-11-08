@@ -206,6 +206,7 @@ METHOD(private_key_t, decrypt, bool,
 	if (botan_pk_op_decrypt(decrypt_op, plain->ptr, &plain->len, crypto.ptr,
 							crypto.len))
 	{
+		DBG1(DBG_LIB, "RSA decryption failed");
 		chunk_free(plain);
 		botan_pk_op_decrypt_destroy(decrypt_op);
 		return FALSE;
