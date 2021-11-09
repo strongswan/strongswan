@@ -162,6 +162,7 @@ METHOD(private_key_t, decrypt, bool,
 	void *params, chunk_t crypto, chunk_t *plain)
 {
 	botan_pk_op_decrypt_t decrypt_op;
+	chunk_t label = chunk_empty;
 	const char *padding;
 
 	switch (scheme)
@@ -188,6 +189,16 @@ METHOD(private_key_t, decrypt, bool,
 			DBG1(DBG_LIB, "encryption scheme %N not supported via botan",
 				 encryption_scheme_names, scheme);
 			return FALSE;
+	}
+
+	if (scheme != ENCRYPT_RSA_PKCS1 && params != NULL)
+	{
+		label = *(chunk_t *)params;
+		if (label.len > 0)
+		{
+			DBG1(DBG_LIB, "RSA OAEP decryption with a label not supported");
+			return FALSE;
+		}
 	}
 
 	if (botan_pk_op_decrypt_create(&decrypt_op, this->key, padding, 0))
