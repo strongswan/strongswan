@@ -116,8 +116,8 @@ openssl*)
 	DEPS="libssl-dev"
 	;;
 gcrypt)
-	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1"
-	export TESTS_PLUGINS="test-vectors pkcs1 gcrypt!"
+	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1 --enable-pkcs8"
+	export TESTS_PLUGINS="test-vectors pkcs1 pkcs8 gcrypt!"
 	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
 		DEPS="libgcrypt20-dev"
 	else
