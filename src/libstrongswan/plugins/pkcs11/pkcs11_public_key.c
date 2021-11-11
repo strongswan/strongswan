@@ -307,7 +307,7 @@ METHOD(public_key_t, verify, bool,
 
 METHOD(public_key_t, encrypt, bool,
 	private_pkcs11_public_key_t *this, encryption_scheme_t scheme,
-	chunk_t plain, chunk_t *crypt)
+	void *params, chunk_t plain, chunk_t *crypt)
 {
 	CK_MECHANISM_PTR mechanism;
 	CK_SESSION_HANDLE session;

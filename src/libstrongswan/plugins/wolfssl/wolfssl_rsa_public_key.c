@@ -218,10 +218,16 @@ METHOD(public_key_t, verify, bool,
 
 METHOD(public_key_t, encrypt, bool,
 	private_wolfssl_rsa_public_key_t *this, encryption_scheme_t scheme,
-	chunk_t plain, chunk_t *crypto)
+	void *params, chunk_t plain, chunk_t *crypto)
 {
 	int padding, mgf, len;
 	enum wc_HashType hash;
+	chunk_t label = chunk_empty;
+
+	if (params)
+	{
+		label = *(chunk_t *)params;
+	}
 
 	switch (scheme)
 	{
@@ -276,7 +282,7 @@ METHOD(public_key_t, encrypt, bool,
 	*crypto = chunk_alloc(len);
 	len = wc_RsaPublicEncrypt_ex(plain.ptr, plain.len, crypto->ptr, len,
 								 &this->rsa, &this->rng, padding, hash, mgf,
-								 NULL, 0);
+								 label.ptr, label.len);
 	if (len < 0)
 	{
 		DBG1(DBG_LIB, "RSA encryption failed");

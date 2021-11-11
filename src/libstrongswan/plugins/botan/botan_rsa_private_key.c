@@ -159,9 +159,10 @@ METHOD(private_key_t, sign, bool,
 
 METHOD(private_key_t, decrypt, bool,
 	private_botan_rsa_private_key_t *this, encryption_scheme_t scheme,
-	chunk_t crypto, chunk_t *plain)
+	void *params, chunk_t crypto, chunk_t *plain)
 {
 	botan_pk_op_decrypt_t decrypt_op;
+	chunk_t label = chunk_empty;
 	const char *padding;
 
 	switch (scheme)
@@ -190,6 +191,16 @@ METHOD(private_key_t, decrypt, bool,
 			return FALSE;
 	}
 
+	if (scheme != ENCRYPT_RSA_PKCS1 && params != NULL)
+	{
+		label = *(chunk_t *)params;
+		if (label.len > 0)
+		{
+			DBG1(DBG_LIB, "RSA OAEP decryption with a label not supported");
+			return FALSE;
+		}
+	}
+
 	if (botan_pk_op_decrypt_create(&decrypt_op, this->key, padding, 0))
 	{
 		return FALSE;
@@ -206,6 +217,7 @@ METHOD(private_key_t, decrypt, bool,
 	if (botan_pk_op_decrypt(decrypt_op, plain->ptr, &plain->len, crypto.ptr,
 							crypto.len))
 	{
+		DBG1(DBG_LIB, "RSA decryption failed");
 		chunk_free(plain);
 		botan_pk_op_decrypt_destroy(decrypt_op);
 		return FALSE;

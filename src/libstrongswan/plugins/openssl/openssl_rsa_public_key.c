@@ -26,6 +26,7 @@
 #include <credentials/keys/signature_params.h>
 
 #include <openssl/bn.h>
+#include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/x509.h>
@@ -307,10 +308,16 @@ METHOD(public_key_t, verify, bool,
 
 METHOD(public_key_t, encrypt, bool,
 	private_openssl_rsa_public_key_t *this, encryption_scheme_t scheme,
-	chunk_t plain, chunk_t *crypto)
+	void *params, chunk_t plain, chunk_t *crypto)
 {
-	int padding, len;
+	EVP_PKEY_CTX *ctx = NULL;
+	EVP_PKEY *evp_key = NULL;
+	chunk_t label = chunk_empty;
+	hash_algorithm_t hash_alg = HASH_UNKNOWN;
+	size_t len;
+	int padding;
 	char *encrypted;
+	bool success = FALSE;
 
 	switch (scheme)
 	{
@@ -318,24 +325,115 @@ METHOD(public_key_t, encrypt, bool,
 			padding = RSA_PKCS1_PADDING;
 			break;
 		case ENCRYPT_RSA_OAEP_SHA1:
+			hash_alg = HASH_SHA1;
+			padding = RSA_PKCS1_OAEP_PADDING;
+			break;
+		case ENCRYPT_RSA_OAEP_SHA224:
+			hash_alg = HASH_SHA224;
+			padding = RSA_PKCS1_OAEP_PADDING;
+			break;
+		case ENCRYPT_RSA_OAEP_SHA256:
+			hash_alg = HASH_SHA256;
+			padding = RSA_PKCS1_OAEP_PADDING;
+			break;
+		case ENCRYPT_RSA_OAEP_SHA384:
+			hash_alg = HASH_SHA384;
+			padding = RSA_PKCS1_OAEP_PADDING;
+			break;
+		case ENCRYPT_RSA_OAEP_SHA512:
+			hash_alg = HASH_SHA512;
 			padding = RSA_PKCS1_OAEP_PADDING;
 			break;
 		default:
-			DBG1(DBG_LIB, "decryption scheme %N not supported via openssl",
+			DBG1(DBG_LIB, "encryption scheme %N not supported by openssl",
 				 encryption_scheme_names, scheme);
 			return FALSE;
 	}
-	encrypted = malloc(RSA_size(this->rsa));
-	len = RSA_public_encrypt(plain.len, plain.ptr, encrypted,
-							 this->rsa, padding);
-	if (len < 0)
+
+	evp_key = EVP_PKEY_new();
+	if (!evp_key)
 	{
-		DBG1(DBG_LIB, "RSA decryption failed");
+		DBG1(DBG_LIB, "could not create EVP key");
+		goto error;
+	}
+	if (EVP_PKEY_set1_RSA(evp_key, this->rsa) <= 0)
+	{
+		DBG1(DBG_LIB, "could not set EVP key to RSA key");
+		goto error;
+	}
+
+	ctx = EVP_PKEY_CTX_new(evp_key, NULL);
+	if (!ctx)
+	{
+		DBG1(DBG_LIB, "could not create EVP context");
+		goto error;
+	}
+
+	if (EVP_PKEY_encrypt_init(ctx) <= 0)
+	{
+		DBG1(DBG_LIB, "could not initialize RSA encryption");
+		goto error;
+	}
+	if (EVP_PKEY_CTX_set_rsa_padding(ctx, padding) <= 0)
+	{
+		DBG1(DBG_LIB, "could not set RSA padding");
+		goto error;
+	}
+	if (padding == RSA_PKCS1_OAEP_PADDING)
+	{
+ 		const EVP_MD *md = openssl_get_md(hash_alg);
+
+		if (EVP_PKEY_CTX_set_rsa_oaep_md(ctx, md) <= 0)
+		{
+			DBG1(DBG_LIB, "could not set RSA OAEP hash algorithm");
+			goto error;
+		}
+
+		if (params)
+		{
+			label = *(chunk_t *)params;
+		}
+		if (label.len > 0)
+		{
+			 uint8_t *label_cpy;
+
+			 /* Openssl requires a copy of its own */
+			 label_cpy = (uint8_t *)OPENSSL_malloc(label.len);
+			 memcpy(label_cpy, label.ptr, label.len);
+
+			if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx, label_cpy, label.len) <= 0)
+			{
+				OPENSSL_free(label_cpy);
+				DBG1(DBG_LIB, "could not set RSA OAEP label");
+				goto error;
+			}
+		}
+	}
+
+	/* determine maximum ciphertext size */
+	len = RSA_size(this->rsa);
+	encrypted = malloc(len);
+
+	/* decrypt data */
+	if (EVP_PKEY_encrypt(ctx, encrypted, &len, plain.ptr, plain.len) <= 0)
+	{
+		DBG1(DBG_LIB, "RSA encryption failed");
 		free(encrypted);
-		return FALSE;
+		goto error;
 	}
 	*crypto = chunk_create(encrypted, len);
-	return TRUE;
+	success = TRUE;
+
+error:
+	if (ctx)
+	{
+		EVP_PKEY_CTX_free(ctx);
+	}
+	if (evp_key)
+	{
+		EVP_PKEY_free(evp_key);
+	}
+	return success;
 }
 
 METHOD(public_key_t, get_keysize, int,

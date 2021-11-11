@@ -644,7 +644,7 @@ static bool decrypt(private_openssl_pkcs7_t *this,
 				{
 					/* get encryptedKey from internal structure; TODO fixup */
 					chunk = openssl_asn1_str2chunk(ri->ktri->encryptedKey);
-					if (private->decrypt(private, ENCRYPT_RSA_PKCS1,
+					if (private->decrypt(private, ENCRYPT_RSA_PKCS1, NULL,
 										 chunk, &key))
 					{
 						private->destroy(private);
