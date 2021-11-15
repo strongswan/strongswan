@@ -50,9 +50,9 @@ struct private_resolve_handler_t {
 	char *file;
 
 	/**
-	 * Use resolvconf instead of writing directly to resolv.conf
+	 * Path/command for resolvconf(8)
 	 */
-	bool use_resolvconf;
+	char *resolvconf;
 
 	/**
 	 * Prefix to be used for interface names sent to resolvconf
@@ -196,7 +196,7 @@ static bool invoke_resolvconf(private_resolve_handler_t *this, host_t *addr,
 	/* we use the nameserver's IP address as part of the interface name to
 	 * make them unique */
 	process = process_start_shell(NULL, install ? &in : NULL, &out, NULL,
-							"2>&1 %s %s %s%H", RESOLVCONF_EXEC,
+							"2>&1 %s %s %s%H", this->resolvconf,
 							install ? "-a" : "-d", this->iface_prefix, addr);
 
 	if (!process)
@@ -295,7 +295,7 @@ METHOD(attribute_handler_t, handle, bool,
 	this->mutex->lock(this->mutex);
 	if (array_bsearch(this->servers, addr, dns_server_find, &found) == -1)
 	{
-		if (this->use_resolvconf)
+		if (this->resolvconf)
 		{
 			handled = invoke_resolvconf(this, addr, TRUE);
 		}
@@ -362,7 +362,7 @@ METHOD(attribute_handler_t, release, void,
 		}
 		else
 		{
-			if (this->use_resolvconf)
+			if (this->resolvconf)
 			{
 				invoke_resolvconf(this, addr, FALSE);
 			}
@@ -483,17 +483,28 @@ resolve_handler_t *resolve_handler_create()
 			.destroy = _destroy,
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
-		.file = lib->settings->get_str(lib->settings, "%s.plugins.resolve.file",
-									   RESOLV_CONF, lib->ns),
+		.file = lib->settings->get_str(lib->settings,
+								"%s.plugins.resolve.file", RESOLV_CONF, lib->ns),
+		.resolvconf = lib->settings->get_str(lib->settings,
+								"%s.plugins.resolve.resolvconf.path",
+								NULL, lib->ns),
+		.iface_prefix = lib->settings->get_str(lib->settings,
+								"%s.plugins.resolve.resolvconf.iface_prefix",
+								RESOLVCONF_PREFIX, lib->ns),
 	);
 
-	if (stat(RESOLVCONF_EXEC, &st) == 0)
+	if (!this->resolvconf && stat(RESOLVCONF_EXEC, &st) == 0)
 	{
-		this->use_resolvconf = TRUE;
-		this->iface_prefix = lib->settings->get_str(lib->settings,
-								"%s.plugins.resolve.resolvconf.iface_prefix",
-								RESOLVCONF_PREFIX, lib->ns);
+		this->resolvconf = RESOLVCONF_EXEC;
 	}
 
+	if (this->resolvconf)
+	{
+		DBG1(DBG_CFG, "using '%s' to install DNS servers", this->resolvconf);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "install DNS servers in '%s'", this->file);
+	}
 	return &this->public;
 }
