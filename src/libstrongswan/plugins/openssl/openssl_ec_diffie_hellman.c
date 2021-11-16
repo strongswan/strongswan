@@ -328,49 +328,52 @@ METHOD(diffie_hellman_t, destroy, void,
 }
 
 /*
- * Described in header.
+ * Described in header
+ */
+int openssl_ecdh_group_to_nid(diffie_hellman_group_t group)
+{
+	switch (group)
+	{
+		case ECP_192_BIT:
+			return NID_X9_62_prime192v1;
+		case ECP_224_BIT:
+			return NID_secp224r1;
+		case ECP_256_BIT:
+			return NID_X9_62_prime256v1;
+		case ECP_384_BIT:
+			return NID_secp384r1;
+		case ECP_521_BIT:
+			return NID_secp521r1;
+/* added with 1.0.2 */
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+		case ECP_224_BP:
+			return NID_brainpoolP224r1;
+		case ECP_256_BP:
+			return NID_brainpoolP256r1;
+		case ECP_384_BP:
+			return NID_brainpoolP384r1;
+		case ECP_512_BP:
+			return NID_brainpoolP512r1;
+#endif
+		default:
+			return 0;
+	}
+}
+
+/*
+ * Described in header
  */
 openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_group_t group)
 {
 	private_openssl_ec_diffie_hellman_t *this;
 	EC_KEY *key = NULL;
+	int curve;
 
-	switch (group)
+	curve = openssl_ecdh_group_to_nid(group);
+	if (curve)
 	{
-		case ECP_192_BIT:
-			key = EC_KEY_new_by_curve_name(NID_X9_62_prime192v1);
-			break;
-		case ECP_224_BIT:
-			key = EC_KEY_new_by_curve_name(NID_secp224r1);
-			break;
-		case ECP_256_BIT:
-			key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-			break;
-		case ECP_384_BIT:
-			key = EC_KEY_new_by_curve_name(NID_secp384r1);
-			break;
-		case ECP_521_BIT:
-			key = EC_KEY_new_by_curve_name(NID_secp521r1);
-			break;
-/* added with 1.0.2 */
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-		case ECP_224_BP:
-			key = EC_KEY_new_by_curve_name(NID_brainpoolP224r1);
-			break;
-		case ECP_256_BP:
-			key = EC_KEY_new_by_curve_name(NID_brainpoolP256r1);
-			break;
-		case ECP_384_BP:
-			key = EC_KEY_new_by_curve_name(NID_brainpoolP384r1);
-			break;
-		case ECP_512_BP:
-			key = EC_KEY_new_by_curve_name(NID_brainpoolP512r1);
-			break;
-#endif
-		default:
-			break;
+		key = EC_KEY_new_by_curve_name(curve);
 	}
-
 	if (!key)
 	{
 		return NULL;
@@ -408,4 +411,5 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 	}
 	return &this->public;
 }
+
 #endif /* OPENSSL_NO_EC */
