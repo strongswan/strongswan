@@ -139,10 +139,8 @@ static void send_arp(private_farp_spoofer_t *this,
 	}
 }
 
-/**
- * ARP request receiving
- */
-static bool receive_arp(private_farp_spoofer_t *this)
+CALLBACK(receive_arp, bool,
+	private_farp_spoofer_t *this, int fd, watcher_event_t event)
 {
 	struct sockaddr_ll addr;
 	socklen_t addr_len = sizeof(addr);
@@ -227,8 +225,7 @@ farp_spoofer_t *farp_spoofer_create(farp_listener_t *listener)
 		return NULL;
 	}
 
-	lib->watcher->add(lib->watcher, this->skt, WATCHER_READ,
-					  (watcher_cb_t)receive_arp, this);
+	lib->watcher->add(lib->watcher, this->skt, WATCHER_READ, receive_arp, this);
 
 	return &this->public;
 }
