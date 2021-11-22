@@ -931,15 +931,16 @@ plugin_t *openssl_plugin_create()
 	{
 		if (FIPS_mode() != fips_mode && !FIPS_mode_set(fips_mode))
 		{
-			DBG1(DBG_LIB, "unable to set openssl FIPS mode(%d) from (%d)",
+			DBG1(DBG_LIB, "unable to set OpenSSL FIPS mode(%d) from (%d)",
 				 fips_mode, FIPS_mode());
 			return NULL;
 		}
 	}
-#else
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
+	/* OpenSSL 3.0+ is handled below */
 	if (fips_mode)
 	{
-		DBG1(DBG_LIB, "openssl FIPS mode(%d) unavailable", fips_mode);
+		DBG1(DBG_LIB, "OpenSSL FIPS mode(%d) unavailable", fips_mode);
 		return NULL;
 	}
 #endif
@@ -973,8 +974,23 @@ plugin_t *openssl_plugin_create()
 #endif /* OPENSSL_VERSION_NUMBER */
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-	if (lib->settings->get_bool(lib->settings, "%s.plugins.openssl.load_legacy",
-								TRUE, lib->ns))
+	if (fips_mode)
+	{
+		OSSL_PROVIDER *fips;
+
+		fips = OSSL_PROVIDER_load(NULL, "fips");
+		if (!fips)
+		{
+			DBG1(DBG_LIB, "unable to load OpenSSL FIPS provider");
+			return NULL;
+		}
+		array_insert_create(&this->providers, ARRAY_TAIL, fips);
+		/* explicitly load the base provider containing encoding functions */
+		array_insert_create(&this->providers, ARRAY_TAIL,
+							OSSL_PROVIDER_load(NULL, "base"));
+	}
+	else if (lib->settings->get_bool(lib->settings, "%s.plugins.openssl.load_legacy",
+									 TRUE, lib->ns))
 	{
 		/* load the legacy provider for algorithms like MD4, DES, BF etc. */
 		array_insert_create(&this->providers, ARRAY_TAIL,
@@ -989,7 +1005,7 @@ plugin_t *openssl_plugin_create()
 	/* we do this here as it may have been enabled via openssl.conf */
 	fips_mode = FIPS_mode();
 	dbg(DBG_LIB, strpfx(lib->ns, "charon") ? 1 : 2,
-		"openssl FIPS mode(%d) - %sabled ", fips_mode, fips_mode ? "en" : "dis");
+		"OpenSSL FIPS mode(%d) - %sabled ", fips_mode, fips_mode ? "en" : "dis");
 #endif /* OPENSSL_FIPS */
 
 #if OPENSSL_VERSION_NUMBER < 0x1010100fL
