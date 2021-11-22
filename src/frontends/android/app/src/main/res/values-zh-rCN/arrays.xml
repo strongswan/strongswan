@@ -24,8 +24,8 @@
 
     <!-- the order here must match the enum entries in VpnProfile.java -->
     <string-array name="apps_handling">
-        <item>All applications use the VPN</item>
-        <item>Exclude selected applications from the VPN</item>
-        <item>Only selected applications use the VPN</item>
+        <item>所有应用程序都使用VPN</item>
+        <item>从VPN中排除选定的应用程序</item>
+        <item>只有选定的应用程序使用VPN</item>
     </string-array>
 </resources>
