@@ -916,6 +916,31 @@ METHOD(plugin_t, destroy, void,
 	free(this);
 }
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+typedef struct {
+	char names[BUF_LEN];
+	int len;
+} ossl_provider_names_t;
+
+/**
+ * Callback to produce a list of the names of loaded providers
+ */
+static int concat_ossl_providers(OSSL_PROVIDER *provider, void *cbdata)
+{
+	ossl_provider_names_t *data = cbdata;
+	int len;
+
+	len = snprintf(&data->names[data->len], sizeof(data->names) - data->len,
+				   " %s", OSSL_PROVIDER_get0_name(provider));
+	if (len < (sizeof(data->names) - data->len))
+	{
+		data->len += len;
+		return 1;
+	}
+	return 0;
+}
+#endif
+
 /*
  * see header file
  */
@@ -999,6 +1024,10 @@ plugin_t *openssl_plugin_create()
 		array_insert_create(&this->providers, ARRAY_TAIL,
 							OSSL_PROVIDER_load(NULL, "default"));
 	}
+	ossl_provider_names_t data = {};
+	OSSL_PROVIDER_do_all(NULL, concat_ossl_providers, &data);
+	dbg(DBG_LIB, strpfx(lib->ns, "charon") ? 1 : 2,
+		"providers loaded by OpenSSL:%s", data.names);
 #endif /* OPENSSL_VERSION_NUMBER */
 
 #ifdef OPENSSL_FIPS
