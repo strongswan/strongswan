@@ -21,20 +21,20 @@
     <string name="search">搜索</string>
     <string name="vpn_not_supported_title">无法支持VPN</string>
     <string name="vpn_not_supported">您的设备无法支持VPN应用。\n请联系供应商。</string>
-    <string name="vpn_not_supported_during_lockdown">VPN connections are not supported if a built-in VPN has the always-on feature enabled.</string>
-    <string name="vpn_not_supported_no_permission">Unable to get permission to create VPN connections. Either because it was denied by the user, or because a different VPN app has the always-on feature enabled.</string>
+    <string name="vpn_not_supported_during_lockdown">如果内置VPN启用了“始终开启”功能，则不支持VPN连接。</string>
+    <string name="vpn_not_supported_no_permission">无法获得创建VPN连接的权限。可能是因为用户拒绝了，或者是因为其他VPN应用程序启用了“始终打开”功能。</string>
     <string name="loading">载入中&#8230;</string>
     <string name="profile_not_found">未找到配置</string>
     <string name="strongswan_shortcut">strongSwan快捷方式</string>
-    <string name="permanent_notification_name">VPN connection state</string>
-    <string name="permanent_notification_description">Provides information about the VPN connection state and serves as permanent notification to keep the VPN service running in the background.</string>
+    <string name="permanent_notification_name">VPN连接状态</string>
+    <string name="permanent_notification_description">提供有关VPN连接状态的信息，并作为永久通知，使VPN服务在后台运行。</string>
 
     <!-- Settings -->
-    <string name="pref_title">Settings</string>
-    <string name="pref_default_vpn_profile">Default VPN profile</string>
-    <string name="pref_default_vpn_profile_mru">Connect to most recently used profile</string>
-    <string name="pref_power_whitelist_title">Ignore battery optimizations</string>
-    <string name="pref_power_whitelist_summary">Don\'t show a warning if the app is not on the device\'s power whitelist</string>
+    <string name="pref_title">设置</string>
+    <string name="pref_default_vpn_profile">默认VPN配置文件</string>
+    <string name="pref_default_vpn_profile_mru">连接到最近使用的配置文件</string>
+    <string name="pref_power_whitelist_title">忽略电池优化</string>
+    <string name="pref_power_whitelist_summary">如果应用不在设备的电源白名单上，则不显示警告</string>
 
     <!-- Log view -->
     <string name="log_title">日志</string>
@@ -46,8 +46,8 @@
     <string name="no_profiles">无配置.</string>
     <string name="add_profile">添加VPN配置</string>
     <string name="edit_profile">编辑</string>
-    <string name="copy_profile">Copy</string>
-    <string name="copied_name">%1$s (Copy)</string>
+    <string name="copy_profile">拷贝</string>
+    <string name="copied_name">%1$s (拷贝)</string>
     <string name="delete_profile">删除</string>
     <string name="select_profiles">选择配置</string>
     <string name="profiles_deleted">所选配置已删除</string>
@@ -72,7 +72,7 @@
     <string name="profile_user_certificate_label">用户证书</string>
     <string name="profile_user_select_certificate_label">选择用户证书</string>
     <string name="profile_user_select_certificate">选择指定的用户证书</string>
-    <string name="profile_user_certificate_install">Install user certificate</string>   
+    <string name="profile_user_certificate_install">安装用户证书</string>
     <string name="profile_ca_label">CA证书</string>
     <string name="profile_ca_auto_label">自动选择</string>
     <string name="profile_ca_select_certificate_label">选择CA证书</string>
@@ -82,71 +82,71 @@
     <string name="profile_remote_id_label">服务器ID</string>
     <string name="profile_remote_id_hint">默认为已配置的服务器地址。自义定值将在鉴权期间被显式地发送至服务器</string>
     <string name="profile_remote_id_hint_gateway">默认为 \"%1$s\"。自义定值将在鉴权期间被显式地发送至服务器</string>
-    <string name="profile_local_id_label">Client identity</string>
-    <string name="profile_local_id_hint_user">Defaults to the configured username. Custom values may be used if expected/required by the server</string>
-    <string name="profile_local_id_hint_cert">Defaults to the certificate\'s subject identity. Custom values may be used if expected/required by the server. Note that these usually must be confirmed by the certificate (auto-completion is provided for the certificate\'s alternative identities, if any)</string>
-    <string name="profile_dns_servers_label">DNS servers</string>
-    <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\"), defaults to those received from the VPN server</string>
+    <string name="profile_local_id_label">客户身份</string>
+    <string name="profile_local_id_hint_user">默认为配置的用户名。如果服务器期望/需要，可以使用自定义值</string>
+    <string name="profile_local_id_hint_cert">默认为证书的使用者标识。如果服务器期望/需要，可以使用自定义值。请注意，这些通常必须由证书确认（证书的替代身份（如果有）提供自动完成）</string>
+    <string name="profile_dns_servers_label">DNS服务器</string>
+    <string name="profile_dns_servers_hint">连接到VPN时要使用的自定义DNS服务器（用空格分隔，例如“8.8.8.8 2001:4860:4860:：888”），默认为从VPN服务器接收的DNS服务器</string>
     <string name="profile_mtu_label">VPN隧道设备的MTU值</string>
     <string name="profile_mtu_hint">假如在某一网络下默认值不合适</string>
     <string name="profile_port_label">服务器端口</string>
     <string name="profile_port_hint">如不同于默认值，则所需连接的UDP端口</string>
-    <string name="profile_nat_keepalive_label">NAT-T keepalive interval</string>
-    <string name="profile_nat_keepalive_hint">Small packets are sent to keep mappings on NAT routers alive if there is no other traffic. In order to save energy the default interval is 45 seconds. Behind NAT routers that remove mappings early this might be too high, try 20 seconds or less in that case.</string>
-    <string name="profile_cert_req_label">Send certificate requests</string>
-    <string name="profile_cert_req_hint">Certificate requests are sent for all available or selected CA certificates. To reduce the size of the IKE_AUTH message this can be disabled. However, this only works if the server sends its certificate even if it didn\'t receive any certificate requests.</string>
-    <string name="profile_use_ocsp_label">Use OCSP to check certificate</string>
-    <string name="profile_use_ocsp_hint">Use the Online Certificate Status Protocol (OCSP), if available, to check that the server certificate has not been revoked.</string>
-    <string name="profile_use_crl_label">Use CRLs to check certificate</string>
-    <string name="profile_use_crl_hint">Use Certificate Revocation Lists (CRL), if available, to check that the server certificate has not been revoked. CRLs are only used if OCSP doesn\'t yield a result.</string>
-    <string name="profile_strict_revocation_label">Use strict revocation checking</string>
-    <string name="profile_strict_revocation_hint">In strict mode the authentication will fail not only if the server certificate has been revoked but also if its status is unknown (e.g. because OCSP failed and no valid CRL was available).</string>
-    <string name="profile_rsa_pss_label">Use RSA/PSS signatures</string>
-    <string name="profile_rsa_pss_hint">Use the stronger PSS encoding instead of the classic PKCS#1 encoding for RSA signatures. Authentication will fail if the server does not support such signatures.</string>
-    <string name="profile_ipv6_transport_label">Use IPv6 transport addresses</string>
-    <string name="profile_ipv6_transport_hint">Use IPv6 for outer transport addresses if available. Can only be enabled if UDP encapsulation for IPv6 is supported by the server. Note that the Linux kernel only supports this since version 5.8, so many servers will not support it yet.</string>
+    <string name="profile_nat_keepalive_label">NAT-T保持间隔</string>
+    <string name="profile_nat_keepalive_hint">如果没有其他流量，则发送小数据包以保持NAT路由器上的映射处于活动状态。为了节省能源，默认间隔为45秒。在早期删除映射的NAT路由器后面，这可能太高，在这种情况下，尝试20秒或更短时间。</string>
+    <string name="profile_cert_req_label">发送证书请求</string>
+    <string name="profile_cert_req_hint">为所有可用或选定的CA证书发送证书请求。要减小IKE_AUTH消息的大小，可以禁用此选项。但是，这仅在服务器发送其证书时有效，即使它没有收到任何证书请求。</string>
+    <string name="profile_use_ocsp_label">使用OCSP检查证书</string>
+    <string name="profile_use_ocsp_hint">如果可用，请使用联机证书状态协议（OCSP）检查服务器证书是否未被吊销。</string>
+    <string name="profile_use_crl_label">使用CRLs检查证书</string>
+    <string name="profile_use_crl_hint">如果可用，请使用证书吊销列表（CRL）检查服务器证书是否已被吊销。CRL仅在OCSP不产生结果时使用。</string>
+    <string name="profile_strict_revocation_label">使用严格的撤销检查</string>
+    <string name="profile_strict_revocation_hint">在严格模式下，身份验证不仅在服务器证书已被吊销的情况下会失败，而且在其状态未知的情况下也会失败（例如，因为OCSP失败且没有有效的CRL可用）。</string>
+    <string name="profile_rsa_pss_label">使用RSA/PSS签名</string>
+    <string name="profile_rsa_pss_hint">对RSA签名使用更强的PSS编码，而不是经典的PKCS#1编码。如果服务器不支持此类签名，身份验证将失败。</string>
+    <string name="profile_ipv6_transport_label">使用IPv6传输地址</string>
+    <string name="profile_ipv6_transport_hint">使用IPv6作为外部传输地址（如果可用）。仅当服务器支持IPv6的UDP封装时才能启用。请注意，Linux内核仅从5.8版开始支持此功能，因此许多服务器还不支持它。</string>
     <string name="profile_split_tunneling_label">拆分隧道</string>
-    <string name="profile_split_tunneling_intro">By default, the client will route all network traffic through the VPN, unless the server narrows the subnets when the connection is established, in which case only traffic the server allows will be routed via VPN (by default, all other traffic is routed as if there was no VPN).</string>
+    <string name="profile_split_tunneling_intro">默认情况下，客户端将通过VPN路由所有网络流量，除非在建立连接时服务器缩小子网，在这种情况下，只有服务器允许的流量将通过VPN路由（默认情况下，所有其他流量的路由如同没有VPN一样）。</string>
     <string name="profile_split_tunnelingv4_title">屏蔽不通过VPN的IPV4流量</string>
     <string name="profile_split_tunnelingv6_title">屏蔽不通过VPN的IPV6流量</string>
-    <string name="profile_included_subnets_label">Custom subnets</string>
-    <string name="profile_included_subnets_hint">Only route traffic to specific subnets via VPN, everything else is routed as if there was no VPN (separated by spaces, e.g. \"192.168.1.0/24 2001:db8::/64\")</string>
-    <string name="profile_excluded_subnets_label">Excluded subnets</string>
-    <string name="profile_excluded_subnets_hint">Traffic to these subnets will not be routed via VPN, but as if there was no VPN (separated by spaces, e.g. \"192.168.1.0/24 2001:db8::/64\")</string>
-    <string name="profile_select_apps_label">Applications</string>
-    <string name="profile_select_apps">Select applications</string>
-    <string name="profile_select_no_apps">No applications selected</string>
-    <string name="profile_select_one_app">One application selected</string>
-    <string name="profile_select_x_apps">%1$d applications selected</string>
-    <string name="profile_proposals_label">Algorithms</string>
-    <string name="profile_proposals_intro">Optionally configure specific algorithms to use for IKEv2 and/or IPsec/ESP instead of the defaults. Refer to our wiki for a <a href="https://wiki.strongswan.org/projects/strongswan/wiki/IKEv2CipherSuites">list of algorithm identifiers</a> (note that not all are supported by this app). Both fields take a list of algorithms, each separated by a hyphen.</string>
-    <string name="profile_proposals_ike_label">IKEv2 Algorithms</string>
-    <string name="profile_proposals_ike_hint">For non-AEAD/classic encryption algorithms, an integrity algorithm, a pseudo random function (optional, defaults to one based on the integrity algorithm) and a Diffie-Hellman group are required (e.g. aes256-sha256-ecp256). For combined-mode/AEAD algorithms, the integrity algorithm is omitted but a PRF is required (e.g. aes256gcm16-prfsha256-ecp256).</string>
-    <string name="profile_proposals_esp_label">IPsec/ESP Algorithms</string>
-    <string name="profile_proposals_esp_hint">For non-AEAD/classic encryption algorithms, an integrity algorithm is required, a Diffie-Hellman group is optional (e.g. aes256-sha256 or aes256-sha256-ecp256). For combined-mode/AEAD algorithms, the integrity algorithm is omitted (e.g. aes256gcm16 or aes256gcm16-ecp256). If a DH group is specified IPsec SA rekeying will use a DH key exchange. However, DH groups specified here are not used when the connection is established initially because the keys there are derived from the IKE SA key material. Therefore, any configuration mismatch with the server will only cause errors later during rekeying.</string>
+    <string name="profile_included_subnets_label">自定义子网</string>
+    <string name="profile_included_subnets_hint">仅通过VPN将流量路由到特定子网，其他所有内容的路由如同没有VPN一样（用空格分隔，例如“192.168.1.0/24 2001:db8:：/64”）</string>
+    <string name="profile_excluded_subnets_label">排除子网</string>
+    <string name="profile_excluded_subnets_hint">到这些子网的流量将不会通过VPN路由，但就好像没有VPN一样（用空格分隔，例如“192.168.1.0/24 2001:db8:：/64”）</string>
+    <string name="profile_select_apps_label">应用</string>
+    <string name="profile_select_apps">选择应用程序</string>
+    <string name="profile_select_no_apps">未选择任何应用程序</string>
+    <string name="profile_select_one_app">已选择一个应用程序</string>
+    <string name="profile_select_x_apps">%1$d 应用程序被选择</string>
+    <string name="profile_proposals_label">算法</string>
+    <string name="profile_proposals_intro">（可选）配置用于IKEv2和/或IPsec/ESP的特定算法，而不是默认算法。请参阅我们的wiki以了解<a href="https://wiki.strongswan.org/projects/strongswan/wiki/IKEv2CipherSuites">算法标识符列表</a>（请注意，此应用程序并不支持所有标识符）。这两个字段都包含一个算法列表，每个算法用连字符分隔。</string>
+    <string name="profile_proposals_ike_label">IKEv2算法</string>
+    <string name="profile_proposals_ike_hint">对于非AEAD/经典加密算法，需要完整性算法、伪随机函数（可选，默认为基于完整性算法的函数）和Diffie-Hellman组（例如aes256-sha256-ecp256）。对于组合模式/AEAD算法，省略完整性算法，但需要PRF（例如aes256gcm16-prfsha256-ecp256）。</string>
+    <string name="profile_proposals_esp_label">IPsec/ESP 算法</string>
+    <string name="profile_proposals_esp_hint">对于非AEAD/经典加密算法，需要完整性算法，Diffie-Hellman组是可选的（例如aes256-sha256或aes256-sha256-ecp256）。对于组合模式/AEAD算法，省略完整性算法（例如aes256gcm16或aes256gcm16-ecp256）。如果指定了DH组，IPsec SA密钥更新将使用DH密钥交换。但是，在最初建立连接时，不使用此处指定的DH组，因为其中的密钥来自IKE SA密钥材料。因此，与服务器的任何配置不匹配只会在稍后重新设置密钥时导致错误。</string>
     <string name="profile_import">导入VPN配置</string>
     <string name="profile_import_failed">导入VPN配置失败</string>
     <string name="profile_import_failed_detail">导入VPN配置失败: %1$s</string>
     <string name="profile_import_failed_not_found">文件未找到</string>
     <string name="profile_import_failed_host">未知主机</string>
     <string name="profile_import_failed_tls">TLS握手失败</string>
-    <string name="profile_import_failed_value">Invalid value in \"%1$s\"</string>
+    <string name="profile_import_failed_value">无效的值： \"%1$s\"</string>
     <string name="profile_import_exists">此VPN配置已经存在，当前设定将被覆盖。</string>
     <string name="profile_cert_import">从VPN配置导入证书</string>
     <string name="profile_cert_alias">\"%1$s\" 所对应的证书</string>
-    <string name="profile_profile_id">Profile ID</string>
+    <string name="profile_profile_id">配置文件ID</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">必填信息以初始化连接</string>
     <string name="alert_text_no_input_username">请输入您的用户名</string>
     <string name="alert_text_nocertfound_title">未选择CA证书</string>
     <string name="alert_text_nocertfound">请选择一项或激活 <i>自动选择</i></string>
     <string name="alert_text_out_of_range">请输入一个数字范围从%1$d到%2$d</string>
-    <string name="alert_text_no_subnets">Please enter valid subnets and/or IP addresses, separated by spaces</string>
-    <string name="alert_text_no_ips">Please enter valid IP addresses, separated by spaces</string>
-    <string name="alert_text_no_proposal">Please enter a valid list of algorithms, separated by hyphens</string>
+    <string name="alert_text_no_subnets">请输入有效的子网和/或IP地址，用空格分隔</string>
+    <string name="alert_text_no_ips">请输入有效的IP地址，以空格分隔</string>
+    <string name="alert_text_no_proposal">请输入用连字符分隔的有效算法列表</string>
     <string name="tnc_notice_title">EAP-TNC可能会影响您的隐私</string>
     <string name="tnc_notice_subtitle">设备数据已被发送至服务器管理员</string>
-    <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) 允许服务器管理员评定一个用户设备的状况。</p><p>出于此目的，服务器管理员可能要求以下数据如独立ID、已安装软件列表、系统设置、或加密过的文件校验值。</p><b>任何数据都仅将在验证过服务器的身份ID之后被发出。</b>]]></string>
+    <string name="tnc_notice_details"><![CDATA[<p>可信网络连接t (TNC) 允许服务器管理员评定一个用户设备的状况。</p><p>出于此目的，服务器管理员可能要求以下数据如独立ID、已安装软件列表、系统设置、或加密过的文件校验值。</p><b>任何数据都仅将在验证过服务器的身份ID之后被发出。</b>]]></string>
 
     <!-- Trusted certificate selection -->
     <string name="trusted_certs_title">CA证书</string>
@@ -160,14 +160,14 @@
     <string name="import_certificate">导入证书</string>
     <string name="cert_imported_successfully">证书已成功被导入</string>
     <string name="cert_import_failed">证书导入失败</string>
-    <string name="crl_cache">CRL cache</string>
-    <string name="clear_crl_cache_title">Clear CRL cache?</string>
-    <string name="clear_crl_cache_msg_none">The CRL cache is empty</string>
+    <string name="crl_cache">CRL缓存</string>
+    <string name="clear_crl_cache_title">清除CRL缓存？</string>
+    <string name="clear_crl_cache_msg_none">CRL缓存为空</string>
     <plurals name="clear_crl_cache_msg">
-        <item quantity="one">The CRL cache contains %1$d file (%2$s).</item>
-        <item quantity="other">The CRL cache contains %1$d files (%2$s).</item>
+        <item quantity="one">CRL缓存包含 %1$d 个文件 (%2$s).</item>
+        <item quantity="other">CRL缓存包含 %1$d 个文件 (%2$s).</item>
     </plurals>
-    <string name="clear">Clear</string>
+    <string name="clear">清理</string>
 
     <!-- VPN state fragment -->
     <string name="state_label">状态：</string>
@@ -178,7 +178,7 @@
     <string name="state_disconnecting">断开连接中&#8230;</string>
     <string name="state_disabled">无活跃VPN</string>
     <string name="state_error">错误</string>
-    <string name="dismiss">Dismiss</string>
+    <string name="dismiss">不予考虑</string>
 
     <!-- IMC state fragment -->
     <string name="imc_state_label">评估详情：</string>
@@ -201,28 +201,28 @@
     <string name="error_auth_failed">用户鉴权失败</string>
     <string name="error_assessment_failed">可靠性评估失败</string>
     <string name="error_generic">连接中遭遇未知失败</string>
-    <string name="error_password_missing">Password unavailable</string>
-    <string name="error_certificate_unavailable">Client certificate unavailable</string>
+    <string name="error_password_missing">密码不可用</string>
+    <string name="error_certificate_unavailable">客户端证书不可用</string>
     <string name="vpn_connected">VPN已连接</string>
     <string name="vpn_profile_connected">此VPN配置目前已连接。</string>
     <string name="reconnect">重连</string>
     <string name="connect_profile_question">是否连接%1$s？</string>
     <string name="replaces_active_connection">这将覆盖您当前活跃的VPN连接！</string>
-    <string name="disconnect_question">Disconnect VPN?</string>
-    <string name="disconnect_active_connection">This will disconnect the active VPN connection!</string>
+    <string name="disconnect_question">断开VPN连接？</string>
+    <string name="disconnect_active_connection">这将断开活动VPN连接！</string>
     <string name="connect">连接</string>
-    <string name="retry">Retry</string>
+    <string name="retry">重试</string>
     <plurals name="retry_in">
-        <item quantity="one">Retry in %1$d second</item>
-        <item quantity="other">Retry in %1$d seconds</item>
+        <item quantity="one">%1$d s后重试</item>
+        <item quantity="other">%1$d s后重试</item>
     </plurals>
-    <string name="cancel_retry">Cancel retry</string>
-    <string name="power_whitelist_title">Disable battery optimizations</string>
-    <string name="power_whitelist_text">Please confirm the next dialog to add the app to the device\'s power whitelist so it can ignore battery optimizations and schedule NAT keep-alives and rekeyings accurately in order to constantly keep reachable while the VPN is established.</string>
+    <string name="cancel_retry">取消重试</string>
+    <string name="power_whitelist_title">禁用电池优化</string>
+    <string name="power_whitelist_text">请确认下一个对话框，将应用程序添加到设备的电源白名单中，这样它就可以忽略电池优化，并准确地安排NAT保持有效和重新键入，以便在建立VPN时始终保持可访问性。</string>
 
     <!-- Quick Settings tile -->
-    <string name="tile_default">Toggle VPN</string>
-    <string name="tile_connect">Connect VPN</string>
-    <string name="tile_disconnect">Disconnect VPN</string>
+    <string name="tile_default">切换VPN</string>
+    <string name="tile_connect">连接VPN</string>
+    <string name="tile_disconnect">断开VPN</string>
 
 </resources>
