@@ -2110,7 +2110,7 @@ CALLBACK(peer_sn, bool,
 					default_id = TRUE;
 				}
 				else if (cert->get_type(cert) == CERT_TRUSTED_PUBKEY &&
-						 id->get_type != ID_ANY)
+						 id->get_type(id) != ID_ANY)
 				{
 					/* set the subject of all raw public keys to the id */
 					pubkey_cert = (pubkey_cert_t*)cert;
