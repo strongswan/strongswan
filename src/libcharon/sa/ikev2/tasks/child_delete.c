@@ -340,11 +340,13 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 		}
 		else
 		{
+			/* the following two calls are only relevant as responder/loser of
+			 * rekeyings as the initiator/winner already did this right after
+			 * the rekeying was completed, either way, we delay destroying
+			 * the CHILD_SA, by default, so we can process delayed packets */
 			install_outbound(this, protocol, child_sa->get_rekey_spi(child_sa));
-			/* for rekeyed CHILD_SAs we uninstall the outbound SA but don't
-			 * immediately destroy it, by default, so we can process delayed
-			 * packets */
 			child_sa->remove_outbound(child_sa);
+
 			expire = child_sa->get_lifetime(child_sa, TRUE);
 			if (delay && (!expire || ((now + delay) < expire)))
 			{

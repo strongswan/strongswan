@@ -475,19 +475,17 @@ METHOD(task_t, process_i, status_t,
 			other_ts->destroy(other_ts);
 		}
 	}
-	if (to_delete != this->child_create->get_child(this->child_create))
-	{	/* invoke rekey hook if rekeying successful */
+	if (to_delete->get_state(to_delete) != CHILD_REKEYED)
+	{	/* disable updown event for old/redundant CHILD_SA */
+		to_delete->set_state(to_delete, CHILD_REKEYED);
+	}
+	if (to_delete == this->child_sa)
+	{	/* invoke rekey hook if rekeying successful and remove the old
+		 * outbound SA as we installed the new one already above, but might not
+		 * be using it yet depending on how SAs/policies are handled */
+		this->child_sa->remove_outbound(this->child_sa);
 		charon->bus->child_rekey(charon->bus, this->child_sa,
 							this->child_create->get_child(this->child_create));
-	}
-	if (to_delete == NULL)
-	{
-		return SUCCESS;
-	}
-	/* disable updown event for redundant CHILD_SA */
-	if (to_delete->get_state(to_delete) != CHILD_REKEYED)
-	{
-		to_delete->set_state(to_delete, CHILD_REKEYED);
 	}
 	spi = to_delete->get_spi(to_delete, TRUE);
 	protocol = to_delete->get_protocol(to_delete);
