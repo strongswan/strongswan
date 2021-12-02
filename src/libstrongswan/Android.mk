@@ -33,7 +33,7 @@ credentials/sets/cert_cache.c credentials/sets/mem_cred.c \
 credentials/sets/callback_cred.c credentials/auth_cfg.c database/database.c \
 database/database_factory.c fetcher/fetcher.c fetcher/fetcher_manager.c eap/eap.c \
 ipsec/ipsec_types.c \
-metadata/metadata_factory.c metadata/metadata_int.c \
+metadata/metadata_factory.c metadata/metadata_int.c metadata/metadata_set.c \
 networking/host.c networking/host_resolver.c networking/packet.c \
 networking/tun_device.c networking/streams/stream_manager.c \
 networking/streams/stream.c networking/streams/stream_service.c \
