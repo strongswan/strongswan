@@ -144,8 +144,10 @@ METHOD(packet_t, destroy, void,
 	free(this);
 }
 
-METHOD(packet_t, clone_, packet_t*,
-	private_packet_t *this)
+/**
+ * Clone the packet with or without data
+ */
+static packet_t *clone_packet(private_packet_t *this, bool skip_data)
 {
 	private_packet_t *other;
 
@@ -158,13 +160,28 @@ METHOD(packet_t, clone_, packet_t*,
 	{
 		set_source(other, this->source->clone(this->source));
 	}
-	if (this->data.ptr)
+	other->metadata = metadata_set_clone(this->metadata);
+	set_dscp(other, this->dscp);
+
+	if (!skip_data && this->data.ptr)
 	{
 		set_data(other, chunk_clone(this->adjusted_data));
 	}
-	other->metadata = metadata_set_clone(this->metadata);
-	set_dscp(other, this->dscp);
 	return &other->public;
+}
+
+METHOD(packet_t, clone_, packet_t*,
+	private_packet_t *this)
+{
+	return clone_packet(this, FALSE);
+}
+
+/*
+ * Described in header
+ */
+packet_t *packet_clone_no_data(packet_t *packet)
+{
+	return clone_packet((private_packet_t*)packet, TRUE);
 }
 
 /**

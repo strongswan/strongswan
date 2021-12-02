@@ -150,8 +150,16 @@ packet_t *packet_create();
  * @param src			source address (gets owned)
  * @param dst			destination address (gets owned)
  * @param data			packet data (gets owned)
- * @return packet_t object
+ * @return				packet_t object
  */
 packet_t *packet_create_from_data(host_t *src, host_t *dst, chunk_t data);
+
+/**
+ * Create a clone of the given packet but without data
+ *
+ * @param packet		packet to clone
+ * @return				cloned packet
+ */
+packet_t *packet_clone_no_data(packet_t *packet);
 
 #endif /** PACKET_H_ @}*/
