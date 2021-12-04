@@ -65,6 +65,7 @@ enum encryption_algorithm_t {
 	/* see macros below to handle RC2 (effective) key length */
 	ENCR_RC2_CBC =          1028,
 	ENCR_AES_ECB =			1029,
+	ENCR_AES_CFB =			1030,
 };
 
 #define DES_BLOCK_SIZE			 8
