@@ -19,6 +19,7 @@ CONFIG_OPTS = \
 	--enable-silent-rules \
 	--enable-aesccm \
 	--enable-aesctr \
+	--enable-aescfb \
 	--enable-camellia \
 	--enable-curve25519 \
 	--enable-curve448 \

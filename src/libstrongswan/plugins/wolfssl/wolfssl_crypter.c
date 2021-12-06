@@ -48,7 +48,7 @@ struct private_wolfssl_crypter_t {
 	 * wolfSSL cipher
 	 */
 	union {
-#if !defined(NO_AES) && (!defined(NO_AES_CBC) || defined(HAVE_AES_ECB) || defined(WOLFSSL_AES_COUNTER))
+#if !defined(NO_AES) && (!defined(NO_AES_CBC) || defined(HAVE_AES_ECB) || defined(WOLFSSL_AES_CFB) || defined(WOLFSSL_AES_COUNTER))
 		Aes aes;
 #endif
 #ifdef HAVE_CAMELLIA
@@ -136,6 +136,18 @@ METHOD(crypter_t, decrypt, bool,
 			if (ret == 0)
 			{
 				ret = wc_AesEcbDecrypt(&this->cipher.aes, out, data.ptr,
+									   data.len);
+			}
+			success = (ret == 0);
+			break;
+	#endif
+#if !defined(NO_AES) && defined(WOLFSSL_AES_CFB)
+		case ENCR_AES_CFB:
+			ret = wc_AesSetKey(&this->cipher.aes, this->key.ptr, this->key.len,
+							   iv.ptr, AES_ENCRYPTION);
+			if (ret == 0)
+			{
+				ret = wc_AesCfbDecrypt(&this->cipher.aes, out, data.ptr,
 									   data.len);
 			}
 			success = (ret == 0);
@@ -273,6 +285,18 @@ METHOD(crypter_t, encrypt, bool,
 			success = (ret == 0);
 			break;
 #endif
+#if !defined(NO_AES) && defined(WOLFSSL_AES_CFB)
+		case ENCR_AES_CFB:
+			ret = wc_AesSetKey(&this->cipher.aes, this->key.ptr, this->key.len,
+							   iv.ptr, AES_ENCRYPTION);
+			if (ret == 0)
+			{
+				ret = wc_AesCfbEncrypt(&this->cipher.aes, out, data.ptr,
+									   data.len);
+			}
+			success = (ret == 0);
+			break;
+#endif
 #if !defined(NO_AES) && defined(WOLFSSL_AES_COUNTER)
 		case ENCR_AES_CTR:
 			if (out == data.ptr)
@@ -395,6 +419,11 @@ METHOD(crypter_t, destroy, void,
 			wc_AesFree(&this->cipher.aes);
 			break;
 #endif
+#if !defined(NO_AES) && defined(WOLFSSL_AES_CFB)
+		case ENCR_AES_CFB:
+			wc_AesFree(&this->cipher.aes);
+			break;
+#endif
 #if !defined(NO_AES) && defined(WOLFSSL_AES_COUNTER)
 		case ENCR_AES_CTR:
 			wc_AesFree(&this->cipher.aes);
@@ -450,6 +479,24 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 #endif
 #if !defined(NO_AES) && defined(HAVE_AES_ECB)
 		case ENCR_AES_ECB:
+			switch (key_size)
+			{
+				case 0:
+					key_size = 16;
+					/* fall-through */
+				case 16:
+				case 24:
+				case 32:
+					block_size = AES_BLOCK_SIZE;
+					iv_size = AES_IV_SIZE;
+					break;
+				default:
+					return NULL;
+			}
+			break;
+#endif
+#if !defined(NO_AES) && defined(WOLFSSL_AES_CFB)
+		case ENCR_AES_CFB:
 			switch (key_size)
 			{
 				case 0:
@@ -554,6 +601,11 @@ wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 #endif
 #if !defined(NO_AES) && defined(HAVE_AES_ECB)
 		case ENCR_AES_ECB:
+			ret = wc_AesInit(&this->cipher.aes, NULL, INVALID_DEVID);
+			break;
+#endif
+#if !defined(NO_AES) && defined(WOLFSSL_AES_CFB)
+		case ENCR_AES_CFB:
 			ret = wc_AesInit(&this->cipher.aes, NULL, INVALID_DEVID);
 			break;
 #endif
