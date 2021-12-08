@@ -366,14 +366,6 @@ START_SETUP(setup_all_creds)
 }
 END_SETUP
 
-START_TEARDOWN(teardown_creds)
-{
-	lib->credmgr->remove_set(lib->credmgr, &creds->set);
-	creds->destroy(creds);
-	creds = NULL;
-}
-END_TEARDOWN
-
 /**
  * Configuration for an echo server
  */
@@ -385,6 +377,27 @@ typedef struct {
 	int fd;
 	bool cauth;
 } echo_server_config_t;
+
+/**
+ * Global server config for current test
+ */
+static echo_server_config_t *server_config;
+
+START_TEARDOWN(teardown_creds)
+{
+	lib->credmgr->remove_set(lib->credmgr, &creds->set);
+	creds->destroy(creds);
+	creds = NULL;
+
+	if (server_config)
+	{
+		shutdown(server_config->fd, SHUT_RDWR);
+		close(server_config->fd);
+		free(server_config);
+		server_config = NULL;
+	}
+}
+END_TEARDOWN
 
 /**
  * Run an echo server
@@ -545,28 +558,22 @@ static echo_server_config_t *create_config(tls_version_t version, uint16_t port,
  */
 static void test_tls(tls_version_t version, uint16_t port, bool cauth, u_int i)
 {
-	echo_server_config_t *config;
 	tls_cipher_suite_t *suites;
 	char suite[128];
 	int count;
 
-	config = create_config(version, port, cauth);
+	server_config = create_config(version, port, cauth);
 
-	start_echo_server(config);
+	start_echo_server(server_config);
 
 	count = tls_crypto_get_supported_suites(TRUE, version, &suites);
 	ck_assert(i < count);
 	snprintf(suite, sizeof(suite), "%N", tls_cipher_suite_names, suites[i]);
 	lib->settings->set_str(lib->settings, "%s.tls.suites", suite, lib->ns);
 
-	run_echo_client(config);
+	run_echo_client(server_config);
 
 	free(suites);
-
-	shutdown(config->fd, SHUT_RDWR);
-	close(config->fd);
-
-	free(config);
 }
 
 /**
@@ -575,14 +582,13 @@ static void test_tls(tls_version_t version, uint16_t port, bool cauth, u_int i)
 static void test_tls_ke_groups(tls_version_t version, uint16_t port, bool cauth,
 							   u_int i)
 {
-	echo_server_config_t *config;
 	diffie_hellman_group_t *groups;
 	char curve[128];
 	int count;
 
-	config = create_config(version, port, cauth);
+	server_config = create_config(version, port, cauth);
 
-	start_echo_server(config);
+	start_echo_server(server_config);
 
 	count = tls_crypto_get_supported_groups(&groups);
 	ck_assert(i < count);
@@ -590,14 +596,9 @@ static void test_tls_ke_groups(tls_version_t version, uint16_t port, bool cauth,
 			 groups[i]);
 	lib->settings->set_str(lib->settings, "%s.tls.ke_group", curve, lib->ns);
 
-	run_echo_client(config);
+	run_echo_client(server_config);
 
 	free(groups);
-
-	shutdown(config->fd, SHUT_RDWR);
-	close(config->fd);
-
-	free(config);
 }
 
 /**
@@ -606,14 +607,13 @@ static void test_tls_ke_groups(tls_version_t version, uint16_t port, bool cauth,
 static void test_tls_signature_schemes(tls_version_t version, uint16_t port,
 									   bool cauth, u_int i)
 {
-	echo_server_config_t *config;
 	tls_signature_scheme_t *schemes;
 	char signature[128];
 	int count;
 
-	config = create_config(version, port, cauth);
+	server_config = create_config(version, port, cauth);
 
-	start_echo_server(config);
+	start_echo_server(server_config);
 
 	count = tls_crypto_get_supported_signatures(version, &schemes);
 	ck_assert(i < count);
@@ -621,14 +621,9 @@ static void test_tls_signature_schemes(tls_version_t version, uint16_t port,
 			 schemes[i]);
 	lib->settings->set_str(lib->settings, "%s.tls.signature", signature, lib->ns);
 
-	run_echo_client(config);
+	run_echo_client(server_config);
 
 	free(schemes);
-
-	shutdown(config->fd, SHUT_RDWR);
-	close(config->fd);
-
-	free(config);
 }
 
 /**
@@ -637,22 +632,19 @@ static void test_tls_signature_schemes(tls_version_t version, uint16_t port,
 static void test_tls_server(tls_version_t version, uint16_t port, bool cauth,
 							u_int i)
 {
-	echo_server_config_t *client, *server;
+	echo_server_config_t *client;
 
+	server_config = create_config(version, port, cauth);
 	client = create_config(i, port, cauth);
-	server = create_config(version, port, cauth);
 
-	start_echo_server(server);
+	start_echo_server(server_config);
 
 	run_echo_client(client);
 
 	shutdown(client->fd, SHUT_RDWR);
 	close(client->fd);
-	shutdown(server->fd, SHUT_RDWR);
-	close(server->fd);
 
 	free(client);
-	free(server);
 }
 
 /**
@@ -661,22 +653,19 @@ static void test_tls_server(tls_version_t version, uint16_t port, bool cauth,
 static void test_tls_client(tls_version_t version, uint16_t port, bool cauth,
 							u_int i)
 {
-	echo_server_config_t *client, *server;
+	echo_server_config_t *client;
 
+	server_config = create_config(i, port, cauth);
 	client = create_config(version, port, cauth);
-	server = create_config(i, port, cauth);
 
-	start_echo_server(server);
+	start_echo_server(server_config);
 
 	run_echo_client(client);
 
 	shutdown(client->fd, SHUT_RDWR);
 	close(client->fd);
-	shutdown(server->fd, SHUT_RDWR);
-	close(server->fd);
 
 	free(client);
-	free(server);
 }
 
 START_TEST(test_tls_12_server)

@@ -193,11 +193,13 @@ static bool exchange(private_tls_socket_t *this, bool wr, bool block)
 				case SUCCESS:
 					return TRUE;
 				default:
-					if (wr)
-					{
-						return FALSE;
+					if (!wr && this->app.in_done > 0)
+					{	/* return data after proper termination via fatal close
+						 * notify to which we responded with one */
+						this->eof = TRUE;
+						return TRUE;
 					}
-					break;
+					return FALSE;
 			}
 			break;
 		}

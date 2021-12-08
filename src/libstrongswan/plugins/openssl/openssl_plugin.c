@@ -28,6 +28,9 @@
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
+#ifndef OPENSSL_NO_ECDH
+#include <openssl/ec.h>
+#endif
 
 #include "openssl_plugin.h"
 #include "openssl_util.h"
@@ -486,10 +489,55 @@ METHOD(plugin_t, get_name, char*,
 	return "openssl";
 }
 
+#ifndef OPENSSL_NO_ECDH
+/**
+ * Check if the given DH group is in the list of supported curves.
+ */
+static bool ecdh_group_supported(EC_builtin_curve *curves, size_t num_curves,
+								 diffie_hellman_group_t group)
+{
+	int j;
+
+	for (j = 0; j < num_curves; j++)
+	{
+		if (curves[j].nid == openssl_ecdh_group_to_nid(group))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Only add features for ECDH groups that are actually supported.
+ */
+static void add_ecdh_features(plugin_feature_t *features,
+							  plugin_feature_t *to_add, int count, int *pos)
+{
+	size_t num_curves;
+	int i;
+
+	num_curves = EC_get_builtin_curves(NULL, 0);
+
+	EC_builtin_curve curves[num_curves];
+
+	num_curves = EC_get_builtin_curves(curves, num_curves);
+
+	for (i = 0; i < count; i++)
+	{
+		if (to_add[i].kind != FEATURE_PROVIDE ||
+			ecdh_group_supported(curves, num_curves, to_add[i].arg.dh_group))
+		{
+			features[(*pos)++] = to_add[i];
+		}
+	}
+}
+#endif /* OPENSSL_NO_ECDH */
+
 METHOD(plugin_t, get_features, int,
 	private_openssl_plugin_t *this, plugin_feature_t *features[])
 {
-	static plugin_feature_t f[] = {
+	static plugin_feature_t f_base[] = {
 		/* we provide OpenSSL threading callbacks */
 		PLUGIN_PROVIDE(CUSTOM, "openssl-threading"),
 		/* crypters */
@@ -635,21 +683,6 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(AEAD, ENCR_CHACHA20_POLY1305, 32),
 #endif /* OPENSSL_NO_CHACHA */
 #endif /* OPENSSL_VERSION_NUMBER */
-#ifndef OPENSSL_NO_ECDH
-		/* EC DH groups */
-		PLUGIN_REGISTER(DH, openssl_ec_diffie_hellman_create),
-			PLUGIN_PROVIDE(DH, ECP_256_BIT),
-			PLUGIN_PROVIDE(DH, ECP_384_BIT),
-			PLUGIN_PROVIDE(DH, ECP_521_BIT),
-			PLUGIN_PROVIDE(DH, ECP_224_BIT),
-			PLUGIN_PROVIDE(DH, ECP_192_BIT),
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-			PLUGIN_PROVIDE(DH, ECP_256_BP),
-			PLUGIN_PROVIDE(DH, ECP_384_BP),
-			PLUGIN_PROVIDE(DH, ECP_512_BP),
-			PLUGIN_PROVIDE(DH, ECP_224_BP),
-#endif /* OPENSSL_VERSION_NUMBER */
-#endif /* OPENSSL_NO_ECDH */
 #ifndef OPENSSL_NO_DH
 		/* MODP DH groups */
 		PLUGIN_REGISTER(DH, openssl_diffie_hellman_create),
@@ -809,6 +842,33 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(RNG, RNG_STRONG),
 			PLUGIN_PROVIDE(RNG, RNG_WEAK),
 	};
+	static plugin_feature_t f_ecdh[] = {
+#ifndef OPENSSL_NO_ECDH
+		/* EC DH groups */
+		PLUGIN_REGISTER(DH, openssl_ec_diffie_hellman_create),
+			PLUGIN_PROVIDE(DH, ECP_256_BIT),
+			PLUGIN_PROVIDE(DH, ECP_384_BIT),
+			PLUGIN_PROVIDE(DH, ECP_521_BIT),
+			PLUGIN_PROVIDE(DH, ECP_224_BIT),
+			PLUGIN_PROVIDE(DH, ECP_192_BIT),
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+			PLUGIN_PROVIDE(DH, ECP_256_BP),
+			PLUGIN_PROVIDE(DH, ECP_384_BP),
+			PLUGIN_PROVIDE(DH, ECP_512_BP),
+			PLUGIN_PROVIDE(DH, ECP_224_BP),
+#endif /* OPENSSL_VERSION_NUMBER */
+#endif /* OPENSSL_NO_ECDH */
+	};
+	static plugin_feature_t f[countof(f_base) + countof(f_ecdh)] = {};
+	static int count = 0;
+
+	if (!count)
+	{
+		plugin_features_add(f, f_base, countof(f_base), &count);
+#ifndef OPENSSL_NO_ECDH
+		add_ecdh_features(f, f_ecdh, countof(f_ecdh), &count);
+#endif
+	}
 	*features = f;
 	return countof(f);
 }
