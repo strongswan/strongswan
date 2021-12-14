@@ -162,8 +162,8 @@ static int open_connection(char *path)
 
 	if (connect(s, (struct sockaddr*)&addr, SUN_LEN(&addr)) != 0)
 	{
-		DBG1(DBG_LIB, "connecting to ssh-agent socket failed: %s",
-			 strerror(errno));
+		DBG1(DBG_LIB, "connecting to ssh-agent socket '%s' failed: %s",
+			 addr.sun_path, strerror(errno));
 		close(s);
 		return -1;
 	}
