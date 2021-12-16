@@ -897,7 +897,7 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 	struct xfrm_user_acquire *acquire;
 	struct rtattr *rta;
 	size_t rtasize;
-	traffic_selector_t *src_ts, *dst_ts;
+	kernel_acquire_data_t data = {};
 	uint32_t reqid = 0;
 	uint8_t proto;
 
@@ -930,10 +930,13 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 			/* acquire for AH/ESP only, not for IPCOMP */
 			return;
 	}
-	src_ts = selector2ts(&acquire->sel, TRUE);
-	dst_ts = selector2ts(&acquire->sel, FALSE);
+	data.src = selector2ts(&acquire->sel, TRUE);
+	data.dst = selector2ts(&acquire->sel, FALSE);
 
-	charon->kernel->acquire(charon->kernel, reqid, src_ts, dst_ts);
+	charon->kernel->acquire(charon->kernel, reqid, &data);
+
+	DESTROY_IF(data.src);
+	DESTROY_IF(data.dst);
 }
 
 /**

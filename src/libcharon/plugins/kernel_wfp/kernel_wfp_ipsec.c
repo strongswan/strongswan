@@ -1634,6 +1634,7 @@ static u_int hash_trap(trap_t *trap)
 static void acquire(private_kernel_wfp_ipsec_t *this, UINT64 filter_id,
 					traffic_selector_t *src, traffic_selector_t *dst)
 {
+	kernel_acquire_data_t data = {};
 	uint32_t reqid = 0;
 	trap_t *trap, key = {
 		.filter_id = filter_id,
@@ -1649,9 +1650,13 @@ static void acquire(private_kernel_wfp_ipsec_t *this, UINT64 filter_id,
 
 	if (reqid)
 	{
-		src = src ? src->clone(src) : NULL;
-		dst = dst ? dst->clone(dst) : NULL;
-		charon->kernel->acquire(charon->kernel, reqid, src, dst);
+		data.src = src ? src->clone(src) : NULL;
+		data.dst = dst ? dst->clone(dst) : NULL;
+
+		charon->kernel->acquire(charon->kernel, reqid, &data);
+
+		DESTROY_IF(data.src);
+		DESTROY_IF(data.dst);
 	}
 }
 

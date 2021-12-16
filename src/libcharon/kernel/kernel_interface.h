@@ -513,11 +513,10 @@ struct kernel_interface_t {
 	 * Raise an acquire event.
 	 *
 	 * @param reqid			reqid of the policy to acquire
-	 * @param src_ts		source traffic selector
-	 * @param dst_ts		destination traffic selector
+	 * @param data			data from the acquire
 	 */
 	void (*acquire)(kernel_interface_t *this, uint32_t reqid,
-					traffic_selector_t *src_ts, traffic_selector_t *dst_ts);
+					kernel_acquire_data_t *data);
 
 	/**
 	 * Raise an expire event.

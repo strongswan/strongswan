@@ -22,11 +22,22 @@
 #define KERNEL_LISTENER_H_
 
 typedef struct kernel_listener_t kernel_listener_t;
+typedef struct kernel_acquire_data_t kernel_acquire_data_t;
 
 #include <networking/host.h>
 #include <networking/tun_device.h>
 #include <selectors/traffic_selector.h>
 #include <kernel/kernel_ipsec.h>
+
+/**
+ * Data received with a kernel's acquire, has to be cloned/copied by listener.
+ */
+struct kernel_acquire_data_t {
+	/** Optional source of the triggering packet */
+	traffic_selector_t *src;
+	/** Optional destination of the triggering packet */
+	traffic_selector_t *dst;
+};
 
 /**
  * Interface for components interested in kernel events.
@@ -39,12 +50,11 @@ struct kernel_listener_t {
 	 * Hook called if an acquire event for a policy is received.
 	 *
 	 * @param reqid			reqid of the policy to acquire
-	 * @param src_ts		source traffic selector
-	 * @param dst_ts		destination traffic selector
+	 * @param data			data from the acquire
 	 * @return				TRUE to remain registered, FALSE to unregister
 	 */
 	bool (*acquire)(kernel_listener_t *this, uint32_t reqid,
-					traffic_selector_t *src_ts, traffic_selector_t *dst_ts);
+					kernel_acquire_data_t *data);
 
 	/**
 	 * Hook called if an expire event for an IPsec SA is received.

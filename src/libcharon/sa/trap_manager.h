@@ -64,12 +64,11 @@ struct trap_manager_t {
 	/**
 	 * Acquire an SA triggered by an installed trap.
 	 *
-	 * @param reqid		reqid of the triggering CHILD_SA
-	 * @param src		source of the triggering packet
-	 * @param dst		destination of the triggering packet
+	 * @param reqid		reqid of the triggered policy
+	 * @param data		data from the acquire
 	 */
 	void (*acquire)(trap_manager_t *this, uint32_t reqid,
-					traffic_selector_t *src, traffic_selector_t *dst);
+					kernel_acquire_data_t *data);
 
 	/**
 	 * Clear any installed trap.

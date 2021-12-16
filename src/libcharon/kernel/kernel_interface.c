@@ -827,7 +827,7 @@ METHOD(kernel_interface_t, remove_listener, void,
 
 METHOD(kernel_interface_t, acquire, void,
 	private_kernel_interface_t *this, uint32_t reqid,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts)
+	kernel_acquire_data_t *data)
 {
 	kernel_listener_t *listener;
 	enumerator_t *enumerator;
@@ -835,8 +835,7 @@ METHOD(kernel_interface_t, acquire, void,
 	enumerator = this->listeners->create_enumerator(this->listeners);
 	while (enumerator->enumerate(enumerator, &listener))
 	{
-		if (listener->acquire &&
-			!listener->acquire(listener, reqid, src_ts, dst_ts))
+		if (listener->acquire && !listener->acquire(listener, reqid, data))
 		{
 			this->listeners->remove_at(this->listeners, enumerator);
 		}

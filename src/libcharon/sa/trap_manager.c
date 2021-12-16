@@ -423,8 +423,7 @@ METHOD(trap_manager_t, create_enumerator, enumerator_t*,
 }
 
 METHOD(trap_manager_t, acquire, void,
-	private_trap_manager_t *this, uint32_t reqid,
-	traffic_selector_t *src, traffic_selector_t *dst)
+	private_trap_manager_t *this, uint32_t reqid, kernel_acquire_data_t *data)
 {
 	enumerator_t *enumerator;
 	entry_t *entry, *found = NULL;
@@ -454,7 +453,6 @@ METHOD(trap_manager_t, acquire, void,
 		this->lock->unlock(this->lock);
 		return;
 	}
-	reqid = found->child_sa->get_reqid(found->child_sa);
 	wildcard = found->wildcard;
 
 	this->mutex->lock(this->mutex);
@@ -463,7 +461,7 @@ METHOD(trap_manager_t, acquire, void,
 		 * with the same peer */
 		uint8_t mask;
 
-		dst->to_subnet(dst, &host, &mask);
+		data->dst->to_subnet(data->dst, &host, &mask);
 		if (this->acquires->find_first(this->acquires, acquire_by_dst,
 									  (void**)&acquire, host))
 		{
@@ -497,7 +495,8 @@ METHOD(trap_manager_t, acquire, void,
 	this->mutex->unlock(this->mutex);
 	if (ignore)
 	{
-		DBG1(DBG_CFG, "ignoring acquire, connection attempt pending");
+		DBG1(DBG_CFG, "ignoring acquire for reqid %u, connection attempt "
+			 "pending", reqid);
 		this->lock->unlock(this->lock);
 		return;
 	}
@@ -521,12 +520,12 @@ METHOD(trap_manager_t, acquire, void,
 			ike_cfg = ike_sa->get_ike_cfg(ike_sa);
 
 			port = ike_cfg->get_other_port(ike_cfg);
-			dst->to_subnet(dst, &host, &mask);
+			data->dst->to_subnet(data->dst, &host, &mask);
 			host->set_port(host, port);
 			ike_sa->set_other_host(ike_sa, host);
 
 			port = ike_cfg->get_my_port(ike_cfg);
-			src->to_subnet(src, &host, &mask);
+			data->src->to_subnet(data->src, &host, &mask);
 			host->set_port(host, port);
 			ike_sa->set_my_host(ike_sa, host);
 
@@ -544,8 +543,8 @@ METHOD(trap_manager_t, acquire, void,
 	{
 		child_init_args_t args = {
 			.reqid = reqid,
-			.src = src,
-			.dst = dst,
+			.src = data->src,
+			.dst = data->dst,
 		};
 
 		if (this->ignore_acquire_ts || ike_sa->get_version(ike_sa) == IKEV1)
