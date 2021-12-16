@@ -1011,11 +1011,20 @@ CALLBACK(parse_action, bool,
 		{ "none",		ACTION_NONE		},
 		{ "clear",		ACTION_NONE		},
 	};
+	char buf[BUF_LEN];
 	int d;
 
 	if (parse_map(map, countof(map), &d, v))
 	{
 		*out = d;
+		return TRUE;
+	}
+	if (!vici_stringify(v, buf, sizeof(buf)))
+	{
+		return FALSE;
+	}
+	if (enum_flags_from_string(action_names, buf, out))
+	{
 		return TRUE;
 	}
 	return FALSE;
