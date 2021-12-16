@@ -22,10 +22,10 @@
 
 #include <daemon.h>
 
-ENUM(action_names, ACTION_NONE, ACTION_RESTART,
-	"clear",
-	"hold",
-	"restart",
+ENUM_FLAGS(action_names, ACTION_TRAP, ACTION_START,
+	"none",
+	"trap",
+	"start",
 );
 
 /** Default replay window size, if not set using charon.replay_window */

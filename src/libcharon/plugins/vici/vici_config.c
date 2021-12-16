@@ -1004,10 +1004,10 @@ CALLBACK(parse_action, bool,
 	action_t *out, chunk_t v)
 {
 	enum_map_t map[] = {
-		{ "start",		ACTION_RESTART	},
-		{ "restart",	ACTION_RESTART	},
-		{ "route",		ACTION_ROUTE	},
-		{ "trap",		ACTION_ROUTE	},
+		{ "start",		ACTION_START	},
+		{ "restart",	ACTION_START	},
+		{ "route",		ACTION_TRAP		},
+		{ "trap",		ACTION_TRAP		},
 		{ "none",		ACTION_NONE		},
 		{ "clear",		ACTION_NONE		},
 	};
@@ -2143,30 +2143,33 @@ CALLBACK(peer_sn, bool,
 static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 							 child_cfg_t *child_cfg)
 {
-	switch (child_cfg->get_start_action(child_cfg))
+	action_t action;
+
+	action = child_cfg->get_start_action(child_cfg);
+
+	if (action & ACTION_TRAP)
 	{
-		case ACTION_RESTART:
-			DBG1(DBG_CFG, "initiating '%s'", child_cfg->get_name(child_cfg));
-			charon->controller->initiate(charon->controller,
+		DBG1(DBG_CFG, "installing '%s'", child_cfg->get_name(child_cfg));
+		switch (child_cfg->get_mode(child_cfg))
+		{
+			case MODE_PASS:
+			case MODE_DROP:
+				charon->shunts->install(charon->shunts,
+										peer_cfg->get_name(peer_cfg), child_cfg);
+				/* no need to check for ACTION_START */
+				return;
+			default:
+				charon->traps->install(charon->traps, peer_cfg, child_cfg);
+				break;
+		}
+	}
+
+	if (action & ACTION_START)
+	{
+		DBG1(DBG_CFG, "initiating '%s'", child_cfg->get_name(child_cfg));
+		charon->controller->initiate(charon->controller,
 					peer_cfg->get_ref(peer_cfg), child_cfg->get_ref(child_cfg),
 					NULL, NULL, 0, FALSE);
-			break;
-		case ACTION_ROUTE:
-			DBG1(DBG_CFG, "installing '%s'", child_cfg->get_name(child_cfg));
-			switch (child_cfg->get_mode(child_cfg))
-			{
-				case MODE_PASS:
-				case MODE_DROP:
-					charon->shunts->install(charon->shunts,
-									peer_cfg->get_name(peer_cfg), child_cfg);
-					break;
-				default:
-					charon->traps->install(charon->traps, peer_cfg, child_cfg);
-					break;
-			}
-			break;
-		default:
-			break;
 	}
 }
 
@@ -2181,100 +2184,101 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 	ike_sa_t *ike_sa;
 	uint32_t id = 0, others;
 	array_t *ids = NULL, *ikeids = NULL;
+	action_t action;
 	char *name;
 
 	name = child_cfg->get_name(child_cfg);
+	action = child_cfg->get_start_action(child_cfg);
 
-	switch (child_cfg->get_start_action(child_cfg))
+	if (action & ACTION_TRAP)
 	{
-		case ACTION_RESTART:
-			enumerator = charon->controller->create_ike_sa_enumerator(
+		DBG1(DBG_CFG, "uninstalling '%s'", name);
+		switch (child_cfg->get_mode(child_cfg))
+		{
+			case MODE_PASS:
+			case MODE_DROP:
+				charon->shunts->uninstall(charon->shunts, peer_name, name);
+				/* no need to check for ACTION_START */
+				return;
+			default:
+				charon->traps->uninstall(charon->traps, peer_name, name);
+				break;
+		}
+	}
+
+	if (action & ACTION_START)
+	{
+		enumerator = charon->controller->create_ike_sa_enumerator(
 													charon->controller, TRUE);
-			while (enumerator->enumerate(enumerator, &ike_sa))
+		while (enumerator->enumerate(enumerator, &ike_sa))
+		{
+			if (!streq(ike_sa->get_name(ike_sa), peer_name))
 			{
-				if (!streq(ike_sa->get_name(ike_sa), peer_name))
+				continue;
+			}
+			others = id = 0;
+			children = ike_sa->create_child_sa_enumerator(ike_sa);
+			while (children->enumerate(children, &child_sa))
+			{
+				if (child_sa->get_state(child_sa) != CHILD_DELETING &&
+					child_sa->get_state(child_sa) != CHILD_DELETED)
 				{
-					continue;
+					if (streq(name, child_sa->get_name(child_sa)))
+					{
+						id = child_sa->get_unique_id(child_sa);
+					}
+					else
+					{
+						others++;
+					}
 				}
-				others = id = 0;
+			}
+			children->destroy(children);
+
+			if (!ike_sa->get_child_count(ike_sa) || (id && !others))
+			{
+				/* found no children or only matching, delete IKE_SA */
+				id = ike_sa->get_unique_id(ike_sa);
+				array_insert_create_value(&ikeids, sizeof(id),
+										  ARRAY_TAIL, &id);
+			}
+			else
+			{
 				children = ike_sa->create_child_sa_enumerator(ike_sa);
 				while (children->enumerate(children, &child_sa))
 				{
-					if (child_sa->get_state(child_sa) != CHILD_DELETING &&
-						child_sa->get_state(child_sa) != CHILD_DELETED)
+					if (streq(name, child_sa->get_name(child_sa)))
 					{
-						if (streq(name, child_sa->get_name(child_sa)))
-						{
-							id = child_sa->get_unique_id(child_sa);
-						}
-						else
-						{
-							others++;
-						}
+						id = child_sa->get_unique_id(child_sa);
+						array_insert_create_value(&ids, sizeof(id),
+												  ARRAY_TAIL, &id);
 					}
 				}
 				children->destroy(children);
+			}
+		}
+		enumerator->destroy(enumerator);
 
-				if (!ike_sa->get_child_count(ike_sa) || (id && !others))
-				{
-					/* found no children or only matching, delete IKE_SA */
-					id = ike_sa->get_unique_id(ike_sa);
-					array_insert_create_value(&ikeids, sizeof(id),
-											  ARRAY_TAIL, &id);
-				}
-				else
-				{
-					children = ike_sa->create_child_sa_enumerator(ike_sa);
-					while (children->enumerate(children, &child_sa))
-					{
-						if (streq(name, child_sa->get_name(child_sa)))
-						{
-							id = child_sa->get_unique_id(child_sa);
-							array_insert_create_value(&ids, sizeof(id),
-													  ARRAY_TAIL, &id);
-						}
-					}
-					children->destroy(children);
-				}
-			}
-			enumerator->destroy(enumerator);
-
-			if (array_count(ids))
+		if (array_count(ids))
+		{
+			while (array_remove(ids, ARRAY_HEAD, &id))
 			{
-				while (array_remove(ids, ARRAY_HEAD, &id))
-				{
-					DBG1(DBG_CFG, "closing '%s' #%u", name, id);
-					charon->controller->terminate_child(charon->controller,
-														id, NULL, NULL, 0);
-				}
-				array_destroy(ids);
+				DBG1(DBG_CFG, "closing '%s' #%u", name, id);
+				charon->controller->terminate_child(charon->controller,
+													id, NULL, NULL, 0);
 			}
-			if (array_count(ikeids))
+			array_destroy(ids);
+		}
+		if (array_count(ikeids))
+		{
+			while (array_remove(ikeids, ARRAY_HEAD, &id))
 			{
-				while (array_remove(ikeids, ARRAY_HEAD, &id))
-				{
-					DBG1(DBG_CFG, "closing IKE_SA #%u", id);
-					charon->controller->terminate_ike(charon->controller, id,
-													  FALSE, NULL, NULL, 0);
-				}
-				array_destroy(ikeids);
+				DBG1(DBG_CFG, "closing IKE_SA #%u", id);
+				charon->controller->terminate_ike(charon->controller, id,
+												  FALSE, NULL, NULL, 0);
 			}
-			break;
-		case ACTION_ROUTE:
-			DBG1(DBG_CFG, "uninstalling '%s'", name);
-			switch (child_cfg->get_mode(child_cfg))
-			{
-				case MODE_PASS:
-				case MODE_DROP:
-					charon->shunts->uninstall(charon->shunts, peer_name, name);
-					break;
-				default:
-					charon->traps->uninstall(charon->traps, peer_name, name);
-					break;
-			}
-			break;
-		default:
-			break;
+			array_destroy(ikeids);
+		}
 	}
 }
 

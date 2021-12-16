@@ -801,8 +801,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 			},
 		},
 		.mode = MODE_TUNNEL,
-		.dpd_action = ACTION_RESTART,
-		.close_action = ACTION_RESTART,
+		.dpd_action = ACTION_START,
+		.close_action = ACTION_START,
 	};
 	char *type, *remote_id;
 

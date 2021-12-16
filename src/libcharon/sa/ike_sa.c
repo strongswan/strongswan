@@ -2060,7 +2060,7 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 		}
 		if (force)
 		{
-			action = ACTION_RESTART;
+			action = ACTION_START;
 		}
 		else
 		{	/* only restart CHILD_SAs that are configured accordingly */
@@ -2073,7 +2073,7 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 				action = child_sa->get_dpd_action(child_sa);
 			}
 		}
-		if (action == ACTION_RESTART)
+		if (action & ACTION_START)
 		{
 			child_init_args_t args = {
 				.reqid = child_sa->get_reqid(child_sa),
@@ -2150,17 +2150,14 @@ METHOD(ike_sa_t, reestablish, status_t,
 			{
 				action = child_sa->get_dpd_action(child_sa);
 			}
-			switch (action)
+			if (action & ACTION_TRAP)
 			{
-				case ACTION_RESTART:
-					restart = TRUE;
-					break;
-				case ACTION_ROUTE:
-					charon->traps->install(charon->traps, this->peer_cfg,
-										   child_sa->get_config(child_sa));
-					break;
-				default:
-					break;
+				charon->traps->install(charon->traps, this->peer_cfg,
+									   child_sa->get_config(child_sa));
+			}
+			if (action & ACTION_START)
+			{
+				restart = TRUE;
 			}
 		}
 		enumerator->destroy(enumerator);

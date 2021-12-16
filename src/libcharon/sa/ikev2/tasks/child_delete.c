@@ -372,20 +372,16 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 
 		if (entry->check_delete_action)
 		{	/* enforce child_cfg policy if deleted passively */
-			switch (action)
+			if (action & ACTION_TRAP)
 			{
-				case ACTION_RESTART:
-					child_cfg->get_ref(child_cfg);
-					status = this->ike_sa->initiate(this->ike_sa, child_cfg,
-													&args);
-					break;
-				case ACTION_ROUTE:
-					charon->traps->install(charon->traps,
-									this->ike_sa->get_peer_cfg(this->ike_sa),
-									child_cfg);
-					break;
-				default:
-					break;
+				charon->traps->install(charon->traps,
+									   this->ike_sa->get_peer_cfg(this->ike_sa),
+									   child_cfg);
+			}
+			if (action & ACTION_START)
+			{
+				child_cfg->get_ref(child_cfg);
+				status = this->ike_sa->initiate(this->ike_sa, child_cfg, &args);
 			}
 		}
 		child_cfg->destroy(child_cfg);

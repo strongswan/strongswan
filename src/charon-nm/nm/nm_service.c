@@ -635,8 +635,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 			},
 		},
 		.mode = MODE_TUNNEL,
-		.dpd_action = ACTION_RESTART,
-		.close_action = ACTION_RESTART,
+		.dpd_action = ACTION_START,
+		.close_action = ACTION_START,
 	};
 
 	/**

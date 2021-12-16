@@ -40,11 +40,11 @@ typedef struct child_cfg_create_t child_cfg_create_t;
  */
 enum action_t {
 	/** No action */
-	ACTION_NONE,
-	/** Route config to establish or reestablish on demand */
-	ACTION_ROUTE,
-	/** Start or restart config immediately */
-	ACTION_RESTART,
+	ACTION_NONE = 0,
+	/** Install trap policy to (re-)establish on demand */
+	ACTION_TRAP = (1<<0),
+	/** Start or restart immediately */
+	ACTION_START = (1<<1),
 };
 
 /**
