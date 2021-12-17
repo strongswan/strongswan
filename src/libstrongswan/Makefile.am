@@ -132,7 +132,8 @@ library.lo :	$(top_builddir)/config.status
 
 libstrongswan_la_LIBADD = \
 	$(DLLIB) $(ATOMICLIB)  $(BTLIB) $(SOCKLIB) \
-	$(RTLIB) $(BFDLIB) $(UNWINDLIB)
+	$(RTLIB) $(BFDLIB) $(UNWINDLIB) \
+	$(selinux_LIBS)
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
@@ -142,6 +143,7 @@ AM_CPPFLAGS = \
 	-DSTRONGSWAN_CONF=\"${strongswan_conf}\"
 
 AM_CFLAGS = \
+	$(selinux_CFLAGS) \
 	@COVERAGE_CFLAGS@
 
 AM_LDFLAGS = \

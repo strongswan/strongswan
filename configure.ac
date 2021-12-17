@@ -321,6 +321,7 @@ ARG_ENABL_SET([python-eggs],    [enable build of provided python eggs.])
 ARG_ENABL_SET([python-eggs-install],[enable installation of provided python eggs.])
 ARG_ENABL_SET([perl-cpan],      [enable build of provided perl CPAN module.])
 ARG_ENABL_SET([perl-cpan-install],[enable installation of provided CPAN module.])
+ARG_ENABL_SET([selinux],        [enable SELinux support for labeled IPsec.])
 ARG_ENABL_SET([tss-trousers],   [enable the use of the TrouSerS Trusted Software Stack])
 ARG_ENABL_SET([tss-tss2],       [enable the use of the TSS 2.0 Trusted Software Stack])
 
@@ -1246,6 +1247,13 @@ if test x$capabilities = xlibcap; then
 		[AC_DEFINE([HAVE_SYS_CAPABILITY_H], [], [have sys/capability.h])],
 		[AC_MSG_ERROR([libcap header sys/capability.h not found!])])
 	AC_DEFINE([CAPABILITIES_LIBCAP], [], [have libpcap library])
+fi
+
+if test x$selinux = xtrue; then
+	PKG_CHECK_MODULES(selinux, [libselinux])
+	AC_SUBST(selinux_CFLAGS)
+	AC_SUBST(selinux_LIBS)
+	AC_DEFINE([USE_SELINUX], [], [build with support for SELinux])
 fi
 
 if test x$integrity_test = xtrue; then
