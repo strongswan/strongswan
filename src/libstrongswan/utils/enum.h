@@ -158,7 +158,7 @@ char *enum_to_name(enum_name_t *e, int val);
  */
 #define enum_from_name(e, name, valp) ({ \
 	int _val; \
-	int _found = enum_from_name_as_int(e, name, &_val); \
+	bool _found = enum_from_name_as_int(e, name, &_val); \
 	if (_found) \
 	{ \
 		*(valp) = _val; \
@@ -168,13 +168,13 @@ char *enum_to_name(enum_name_t *e, int val);
 /**
  * Convert a enum string back to its enum value, integer pointer variant.
  *
- * This variant takes integer pointer only, use enum_from_name() to pass
+ * This variant takes an integer pointer, use enum_from_name() to pass
  * enum type pointers for the result.
  *
  * @param e		enum names for this enum value
  * @param name	name to get enum value for
  * @param val	integer pointer receiving value
- * @return		TRUE if enum name found, FALSE otherwise
+ * @return		TRUE if all names found, FALSE otherwise
  */
 bool enum_from_name_as_int(enum_name_t *e, const char *name, int *val);
 
@@ -188,6 +188,36 @@ bool enum_from_name_as_int(enum_name_t *e, const char *name, int *val);
  * @return		buf, NULL if buffer too small
  */
 char *enum_flags_to_string(enum_name_t *e, u_int val, char *buf, size_t len);
+
+/**
+ * Convert a string of flags separated by | to their combined value
+ *
+ * @param e		enum names for this enum value
+ * @param str	string to get enum value for
+ * @param valp	variable sized pointer receiving value
+ * @return		TRUE if all names found, FALSE otherwise
+ */
+#define enum_flags_from_string(e, str, valp) ({ \
+	u_int _val; \
+	bool _found = enum_flags_from_string_as_int(e, str, &_val); \
+	if (_found) \
+	{ \
+		*(valp) = _val; \
+	} \
+	_found; })
+
+/**
+ * Convert a string of flags separated by | to their combined value.
+ *
+ * This variant takes an unsigned integer pointer, use enum_flags_from_names()
+ * to pass enum type pointers for the result.
+ *
+ * @param e		enum names for this enum value
+ * @param str	string to get enum value for
+ * @param val	integer pointer receiving value
+ * @return		TRUE if enum name found, FALSE otherwise
+ */
+bool enum_flags_from_string_as_int(enum_name_t *e, const char *str, u_int *val);
 
 /**
  * printf hook function for enum_names_t.
