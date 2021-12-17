@@ -572,7 +572,6 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 	private_tpm_tss_tss2_t *this, uint32_t handle)
 {
 	TPM2B_PUBLIC public = { 0, };
-	TPM2_ALG_ID sig_alg, digest_alg;
 	chunk_t aik_pubkey = chunk_empty;
 
 	if (!read_public(this, handle, &public))
@@ -586,14 +585,9 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 		case TPM2_ALG_RSA:
 		{
 			TPM2B_PUBLIC_KEY_RSA *rsa;
-			TPMT_RSA_SCHEME *scheme;
 			chunk_t aik_exponent = chunk_from_chars(0x01, 0x00, 0x01);
 			chunk_t aik_modulus;
 			uint32_t exponent;
-
-			scheme = &public.publicArea.parameters.rsaDetail.scheme;
-			sig_alg   = scheme->scheme;
-			digest_alg = scheme->details.anySig.hashAlg;
 
 			rsa = &public.publicArea.unique.rsa;
 			aik_modulus = chunk_create(rsa->buffer, rsa->size);
@@ -617,13 +611,32 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 		case TPM2_ALG_ECC:
 		{
 			TPMS_ECC_POINT *ecc;
-			TPMT_ECC_SCHEME *scheme;
 			chunk_t ecc_point;
+			int curve_oid;
 			uint8_t *pos;
 
-			scheme = &public.publicArea.parameters.eccDetail.scheme;
-			sig_alg   = scheme->scheme;
-			digest_alg = scheme->details.anySig.hashAlg;
+			/* determine ECC curveID */
+			switch (public.publicArea.parameters.eccDetail.curveID)
+			{
+				case TPM2_ECC_NIST_P192:
+					curve_oid = OID_PRIME192V1;
+					break;
+				case TPM2_ECC_NIST_P224:
+					curve_oid = OID_SECT224R1;
+					break;
+				case TPM2_ECC_NIST_P256:
+					curve_oid = OID_PRIME256V1;
+					break;
+				case TPM2_ECC_NIST_P384:
+					curve_oid = OID_SECT384R1;
+					break;
+				case TPM2_ECC_NIST_P521:
+					curve_oid = OID_SECT521R1;
+					break;
+				default:
+					DBG1(DBG_PTS, "ECC curve type not supported");
+					return chunk_empty;
+			}
 
 			ecc = &public.publicArea.unique.ecc;
 
@@ -639,12 +652,12 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			pos += ecc->x.size;
 			/* copy y coordinate of ECC point */
 			memcpy(pos, ecc->y.buffer, ecc->y.size);
+
 			/* subjectPublicKeyInfo encoding of ECC public key */
 			aik_pubkey = asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_wrap(ASN1_SEQUENCE, "mm",
 								asn1_build_known_oid(OID_EC_PUBLICKEY),
-								asn1_build_known_oid(ecc->x.size == 32 ?
-										OID_PRIME256V1 : OID_SECT384R1)),
+								asn1_build_known_oid(curve_oid)),
 							ecc_point);
 			break;
 		}
@@ -652,8 +665,25 @@ METHOD(tpm_tss_t, get_public, chunk_t,
 			DBG1(DBG_PTS, LABEL "unsupported key type");
 			return chunk_empty;
 	}
-	DBG1(DBG_PTS, "signature algorithm is %N with %N hash",
-		 tpm_alg_id_names, sig_alg, tpm_alg_id_names, digest_alg);
+	if (public.publicArea.objectAttributes & TPMA_OBJECT_SIGN_ENCRYPT)
+	{
+		TPMT_ASYM_SCHEME *s;
+
+		s = &public.publicArea.parameters.asymDetail.scheme;
+		DBG1(DBG_PTS, "signature algorithm is %N with %N hash",
+					  tpm_alg_id_names, s->scheme,
+					  tpm_alg_id_names, s->details.anySig.hashAlg);
+	}
+	if (public.publicArea.objectAttributes & TPMA_OBJECT_DECRYPT)
+	{
+		TPMT_SYM_DEF_OBJECT *s;
+
+		s = &public.publicArea.parameters.asymDetail.symmetric;
+		DBG1(DBG_PTS, "encryption algorithm is %N-%N with %u bits",
+					  tpm_alg_id_names, s->algorithm,
+					  tpm_alg_id_names, s->mode, s->keyBits.sym);
+	}
+
 	return aik_pubkey;
 }
 

@@ -15,6 +15,7 @@
 #ifdef TSS_TSS2_V2
 
 #include "tpm_tss_tss2_session.h"
+#include "tpm_tss_tss2_names.h"
 
 #define LABEL	"TPM 2.0 - "
 
@@ -56,9 +57,9 @@ struct private_tpm_tss_tss2_session_t {
 	TPM2B_NONCE nonceTPM;
 
 	/**
-	 * AES-CFB encryption of protected communication with TPM 2.0
+	 * AES-CFB key size in bytes
 	 */
-	crypter_t *crypter;
+	size_t aes_key_len;
 
 	/**
 	 * SYS context
@@ -314,6 +315,7 @@ METHOD(tpm_tss_tss2_session_t, get_rsp_auths, bool,
 	hasher_t *hasher;
 	pseudo_random_function_t prf_alg;
 	prf_t *prf;
+	crypter_t *crypter;
 	chunk_t kdf_label = chunk_from_chars('C','F','B', 0x00);
 	chunk_t data, rp_hash, rp_hmac, nonce_caller, nonce_tpm, session_attributes;
 	chunk_t key_mat, aes_key, aes_iv;
@@ -426,8 +428,17 @@ METHOD(tpm_tss_tss2_session_t, get_rsp_auths, bool,
 		return FALSE;
 	}
 
-	key_len = this->crypter->get_key_size(this->crypter);
-	iv_len  = this->crypter->get_iv_size(this->crypter);
+	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_CFB,
+													   this->aes_key_len);
+	if (!crypter)
+	{
+		DBG1(DBG_PTS, "could not create %N crypter", encryption_algorithm_names,
+													 ENCR_AES_CFB);
+		return FALSE;
+	}
+
+	key_len = crypter->get_key_size(crypter);
+	iv_len  = crypter->get_iv_size(crypter);
 
 	/* derive decryption key using KDFa */
 	if (!kdf_a(this->hash_alg, this->session_key, kdf_label, nonce_tpm,
@@ -438,8 +449,9 @@ METHOD(tpm_tss_tss2_session_t, get_rsp_auths, bool,
 	aes_key = chunk_create(key_mat.ptr, key_len);
 	aes_iv  = chunk_create(key_mat.ptr + key_len, iv_len);
 
-	if (!this->crypter->set_key(this->crypter, aes_key))
+	if (!crypter->set_key(crypter, aes_key))
 	{
+		crypter->destroy(crypter);
 		chunk_clear(&key_mat);
 		return FALSE;
 	}
@@ -449,7 +461,8 @@ METHOD(tpm_tss_tss2_session_t, get_rsp_auths, bool,
 	memcpy(data.ptr, param_buffer, param_size);
 
 	/* decrypt ciphertext */
-	success = this->crypter->decrypt(this->crypter, data, aes_iv, NULL);
+	success = crypter->decrypt(crypter, data, aes_iv, NULL);
+	crypter->destroy(crypter);
 	chunk_clear(&key_mat);
 	if (!success)
 	{
@@ -487,7 +500,6 @@ METHOD(tpm_tss_tss2_session_t, destroy, void,
 		}
 		chunk_clear(&this->session_key);
 	}
-	DESTROY_IF(this->crypter);
 	free(this);
 }
 
@@ -745,8 +757,7 @@ tpm_tss_tss2_session_t* tpm_tss_tss2_session_create(uint32_t ek_handle,
 
 	TPM2B_ENCRYPTED_SECRET encryptedSalt;
 	TPM2_SE sessionType = TPM2_SE_HMAC;
-	TPMT_SYM_DEF symmetric = { .algorithm = TPM2_ALG_AES,
-		                       .mode.aes  = TPM2_ALG_CFB, .keyBits.aes = 128 };
+	TPMT_SYM_DEF *sym;
 
 	INIT(this,
 		.public = {
@@ -759,15 +770,6 @@ tpm_tss_tss2_session_t* tpm_tss_tss2_session_create(uint32_t ek_handle,
 	);
 
 	hash_len = hash_len_from_tpm_alg_id(this->hash_alg);
-
-	this->crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_CFB,
-												symmetric.keyBits.aes / 8);
-	if (!this->crypter)
-	{
-		DBG1(DBG_PTS, "could not create %N crypter", encryption_algorithm_names,
-													 ENCR_AES_CFB);
-		goto error;
-	}
 
 	if (!generate_nonce(hash_len, &this->nonceCaller))
 	{
@@ -785,7 +787,8 @@ tpm_tss_tss2_session_t* tpm_tss_tss2_session_create(uint32_t ek_handle,
 			}
 			break;
 		case TPM2_ALG_ECC:
-			DBG1(DBG_PTS, LABEL "ECC EK handle: 0x%08x", ek_handle);
+			DBG1(DBG_PTS, LABEL "ECC %N EK handle: 0x%08x", tpm_ecc_curve_names,
+				 public->publicArea.parameters.eccDetail.curveID, ek_handle);
 			if (!ecc_salt(public, this->hash_alg, &secret, &encryptedSalt))
 			{
 				goto error;
@@ -796,8 +799,12 @@ tpm_tss_tss2_session_t* tpm_tss_tss2_session_create(uint32_t ek_handle,
 			goto error;
 	}
 
+	sym = (TPMT_SYM_DEF*)&public->publicArea.parameters.asymDetail.symmetric;
+	DBG2(DBG_PTS, LABEL "AES-CFB with %u bits", sym->keyBits.aes);
+	this->aes_key_len = sym->keyBits.aes / 8;
+
 	rval = Tss2_Sys_StartAuthSession(this->sys_context, ek_handle, TPM2_RH_NULL,
-				NULL, &this->nonceCaller, &encryptedSalt, sessionType, &symmetric,
+				NULL, &this->nonceCaller, &encryptedSalt, sessionType, sym,
 				this->hash_alg, &this->session_handle, &this->nonceTPM, NULL);
 	if (rval != TSS2_RC_SUCCESS)
 	{
