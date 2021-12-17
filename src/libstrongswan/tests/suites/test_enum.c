@@ -70,15 +70,15 @@ enum {
 } test_enum_flags;
 
 ENUM_FLAGS(test_enum_flags_names, FLAG1, FLAG5,
-	"FLAG1", "FLAG2", "FLAG3", "FLAG4", "FLAG5");
+	"(unset)", "FLAG1", "FLAG2", "FLAG3", "FLAG4", "FLAG5");
 
 ENUM_FLAGS(test_enum_flags_incomplete_names, FLAG3, FLAG4,
-	"FLAG3", "FLAG4");
+	"(unset)", "FLAG3", "FLAG4");
 
 ENUM_FLAGS(test_enum_flags_null_names, FLAG1, FLAG4,
-	"FLAG1", NULL, "FLAG3", NULL);
+	"(unset)", "FLAG1", NULL, "FLAG3", NULL);
 
-ENUM_FLAGS(test_enum_flags_overflow_names, FLAG1, FLAG12,
+ENUM_FLAGS(test_enum_flags_overflow_names, FLAG1, FLAG12, "(unset)",
 	"OVERFLOWFLAGLONGNAME1",  "OVERFLOWFLAGLONGNAME2",  "OVERFLOWFLAGLONGNAME3",
 	"OVERFLOWFLAGLONGNAME4",  "OVERFLOWFLAGLONGNAME5",  "OVERFLOWFLAGLONGNAME6",
 	"OVERFLOWFLAGLONGNAME7",  "OVERFLOWFLAGLONGNAME8",  "OVERFLOWFLAGLONGNAME9",

@@ -130,13 +130,14 @@ struct enum_name_t {
  * @param name	name of the enum_name list
  * @param first	enum value of the first enum string
  * @param last	enum value of the last enum string
+ * @param unset	name used if no flags are set
  * @param ...	a list of strings
  */
-#define ENUM_FLAGS(name, first, last, ...) \
+#define ENUM_FLAGS(name, first, last, unset, ...) \
 	static enum_name_t name##last = {first, last + \
 		BUILD_ASSERT((__builtin_ffs(last)-__builtin_ffs(first)+1) == \
 			countof(((char*[]){__VA_ARGS__}))), \
-		ENUM_FLAG_MAGIC, { __VA_ARGS__ }}; ENUM_END(name, last)
+		ENUM_FLAG_MAGIC, { unset, __VA_ARGS__ }}; ENUM_END(name, last)
 
 /**
  * Convert a enum value to its string representation.

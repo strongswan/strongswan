@@ -66,16 +66,17 @@ bool enum_from_name_as_int(enum_name_t *e, const char *name, int *val)
 /**
  * Get the position of a flag name using offset calculation
  */
-static int find_flag_pos(u_int val, u_int first)
+static int find_flag_pos(u_int first, u_int val)
 {
 	int offset = 0;
 
-	while (val != 0x01)
+	while (first != 0x01)
 	{
-		val = val >> 1;
+		first = first >> 1;
 		offset++;
 	}
-	return first - offset;
+	/* skip the first name as that's used if no flag is set */
+	return 1 + val - offset;
 }
 
 /**
@@ -95,7 +96,7 @@ char *enum_flags_to_string(enum_name_t *e, u_int val, char *buf, size_t len)
 		return buf;
 	}
 
-	if (snprintf(buf, len, "(unset)") >= len)
+	if (snprintf(buf, len, e->names[0]) >= len)
 	{
 		return NULL;
 	}
