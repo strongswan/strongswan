@@ -145,13 +145,15 @@ struct kernel_interface_t {
 	 * @param mark_out	outbound mark on SA
 	 * @param if_id_in	inbound interface ID on SA
 	 * @param if_id_out	outbound interface ID on SA
+	 * @param label		security label (usually the one on the policy, not SA)
 	 * @param reqid		allocated reqid
 	 * @return			SUCCESS if reqid allocated
 	 */
 	status_t (*alloc_reqid)(kernel_interface_t *this,
 							linked_list_t *local_ts, linked_list_t *remote_ts,
 							mark_t mark_in, mark_t mark_out, uint32_t if_id_in,
-							uint32_t if_id_out, uint32_t *reqid);
+							uint32_t if_id_out, sec_label_t *label,
+							uint32_t *reqid);
 
 	/**
 	 * Release a previously allocated reqid.
@@ -161,11 +163,13 @@ struct kernel_interface_t {
 	 * @param mark_out	outbound mark on SA
 	 * @param if_id_in	inbound interface ID on SA
 	 * @param if_id_out	outbound interface ID on SA
+	 * @param label		security label (usually the one on the policy, not SA)
 	 * @return			SUCCESS if reqid released
 	 */
 	status_t (*release_reqid)(kernel_interface_t *this, uint32_t reqid,
 							  mark_t mark_in, mark_t mark_out,
-							  uint32_t if_id_in, uint32_t if_id_out);
+							  uint32_t if_id_in, uint32_t if_id_out,
+							  sec_label_t *label);
 
 	/**
 	 * Add an SA to the SAD.

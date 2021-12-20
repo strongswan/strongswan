@@ -856,7 +856,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 	{
 		status = charon->kernel->alloc_reqid(charon->kernel, my_ts, other_ts,
 								this->mark_in, this->mark_out, this->if_id_in,
-								this->if_id_out, &this->reqid);
+								this->if_id_out, NULL, &this->reqid);
 		if (status != SUCCESS)
 		{
 			my_ts->destroy(my_ts);
@@ -1258,7 +1258,7 @@ METHOD(child_sa_t, install_policies, status_t,
 		status = charon->kernel->alloc_reqid(
 							charon->kernel, my_ts_list, other_ts_list,
 							this->mark_in, this->mark_out, this->if_id_in,
-							this->if_id_out, &this->reqid);
+							this->if_id_out, NULL, &this->reqid);
 		my_ts_list->destroy(my_ts_list);
 		other_ts_list->destroy(other_ts_list);
 		if (status != SUCCESS)
@@ -1744,7 +1744,7 @@ METHOD(child_sa_t, destroy, void,
 	{
 		if (charon->kernel->release_reqid(charon->kernel,
 						this->reqid, this->mark_in, this->mark_out,
-						this->if_id_in, this->if_id_out) != SUCCESS)
+						this->if_id_in, this->if_id_out, NULL) != SUCCESS)
 		{
 			DBG1(DBG_CHD, "releasing reqid %u failed", this->reqid);
 		}

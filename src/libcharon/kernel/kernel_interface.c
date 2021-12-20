@@ -208,6 +208,8 @@ typedef struct {
 	uint32_t if_id_in;
 	/** outbound interface ID used for SA */
 	uint32_t if_id_out;
+	/** security label */
+	sec_label_t *label;
 	/** local traffic selectors */
 	array_t *local;
 	/** remote traffic selectors */
@@ -221,7 +223,40 @@ static void reqid_entry_destroy(reqid_entry_t *entry)
 {
 	array_destroy_offset(entry->local, offsetof(traffic_selector_t, destroy));
 	array_destroy_offset(entry->remote, offsetof(traffic_selector_t, destroy));
+	DESTROY_IF(entry->label);
 	free(entry);
+}
+
+/**
+ * Hash the shared data of reqid entries
+ */
+static u_int entry_hash_shared(reqid_entry_t *entry)
+{
+	u_int hash;
+
+	hash = chunk_hash_inc(chunk_from_thing(entry->mark_in),
+				chunk_hash_inc(chunk_from_thing(entry->mark_out),
+					chunk_hash_inc(chunk_from_thing(entry->if_id_in),
+						chunk_hash(chunk_from_thing(entry->if_id_out)))));
+	if (entry->label)
+	{
+		hash = entry->label->hash(entry->label, hash);
+	}
+	return hash;
+}
+
+/**
+ * Compare the shared properties of reqid entries
+ */
+static bool entry_equals_shared(reqid_entry_t *a, reqid_entry_t *b)
+{
+	return a->mark_in.value == b->mark_in.value &&
+		   a->mark_in.mask == b->mark_in.mask &&
+		   a->mark_out.value == b->mark_out.value &&
+		   a->mark_out.mask == b->mark_out.mask &&
+		   a->if_id_in == b->if_id_in &&
+		   a->if_id_out == b->if_id_out &&
+		   sec_labels_equal(a->label, b->label);
 }
 
 /**
@@ -230,10 +265,7 @@ static void reqid_entry_destroy(reqid_entry_t *entry)
 static u_int hash_reqid(reqid_entry_t *entry)
 {
 	return chunk_hash_inc(chunk_from_thing(entry->reqid),
-				chunk_hash_inc(chunk_from_thing(entry->mark_in),
-					chunk_hash_inc(chunk_from_thing(entry->mark_out),
-						chunk_hash_inc(chunk_from_thing(entry->if_id_in),
-							chunk_hash(chunk_from_thing(entry->if_id_out))))));
+				entry_hash_shared(entry));
 }
 
 /**
@@ -241,13 +273,11 @@ static u_int hash_reqid(reqid_entry_t *entry)
  */
 static bool equals_reqid(reqid_entry_t *a, reqid_entry_t *b)
 {
-	return a->reqid == b->reqid &&
-		   a->mark_in.value == b->mark_in.value &&
-		   a->mark_in.mask == b->mark_in.mask &&
-		   a->mark_out.value == b->mark_out.value &&
-		   a->mark_out.mask == b->mark_out.mask &&
-		   a->if_id_in == b->if_id_in &&
-		   a->if_id_out == b->if_id_out;
+	if (a->reqid == b->reqid)
+	{
+		return entry_equals_shared(a, b);
+	}
+	return FALSE;
 }
 
 /**
@@ -273,11 +303,9 @@ static u_int hash_ts_array(array_t *array, u_int hash)
  */
 static u_int hash_reqid_by_ts(reqid_entry_t *entry)
 {
-	return hash_ts_array(entry->local, hash_ts_array(entry->remote,
-			chunk_hash_inc(chunk_from_thing(entry->mark_in),
-				chunk_hash_inc(chunk_from_thing(entry->mark_out),
-					chunk_hash_inc(chunk_from_thing(entry->if_id_in),
-						chunk_hash(chunk_from_thing(entry->if_id_out)))))));
+	return hash_ts_array(entry->local,
+				hash_ts_array(entry->remote,
+						 entry_hash_shared(entry)));
 }
 
 /**
@@ -311,14 +339,12 @@ static bool ts_array_equals(array_t *a, array_t *b)
  */
 static bool equals_reqid_by_ts(reqid_entry_t *a, reqid_entry_t *b)
 {
-	return ts_array_equals(a->local, b->local) &&
-		   ts_array_equals(a->remote, b->remote) &&
-		   a->mark_in.value == b->mark_in.value &&
-		   a->mark_in.mask == b->mark_in.mask &&
-		   a->mark_out.value == b->mark_out.value &&
-		   a->mark_out.mask == b->mark_out.mask &&
-		   a->if_id_in == b->if_id_in &&
-		   a->if_id_out == b->if_id_out;
+	if (ts_array_equals(a->local, b->local) &&
+		ts_array_equals(a->remote, b->remote))
+	{
+		return entry_equals_shared(a, b);
+	}
+	return FALSE;
 }
 
 /**
@@ -346,7 +372,7 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 	private_kernel_interface_t *this,
 	linked_list_t *local_ts, linked_list_t *remote_ts,
 	mark_t mark_in, mark_t mark_out, uint32_t if_id_in, uint32_t if_id_out,
-	uint32_t *reqid)
+	sec_label_t *label, uint32_t *reqid)
 {
 	static uint32_t counter = 0;
 	reqid_entry_t *entry = NULL, *tmpl;
@@ -359,6 +385,7 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 		.mark_out = mark_out,
 		.if_id_in = if_id_in,
 		.if_id_out = if_id_out,
+		.label = label ? label->clone(label) : NULL,
 		.reqid = *reqid,
 	);
 
@@ -404,7 +431,8 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 
 METHOD(kernel_interface_t, release_reqid, status_t,
 	private_kernel_interface_t *this, uint32_t reqid,
-	mark_t mark_in, mark_t mark_out, uint32_t if_id_in, uint32_t if_id_out)
+	mark_t mark_in, mark_t mark_out, uint32_t if_id_in, uint32_t if_id_out,
+	sec_label_t *label)
 {
 	reqid_entry_t *entry, tmpl = {
 		.reqid = reqid,
@@ -412,6 +440,7 @@ METHOD(kernel_interface_t, release_reqid, status_t,
 		.mark_out = mark_out,
 		.if_id_in = if_id_in,
 		.if_id_out = if_id_out,
+		.label = label,
 	};
 
 	this->mutex->lock(this->mutex);
