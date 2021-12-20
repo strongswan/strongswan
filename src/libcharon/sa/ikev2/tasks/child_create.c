@@ -1093,7 +1093,8 @@ static bool child_sa_equals(child_sa_t *a, child_sa_t *b)
 		a->get_mark(a, TRUE).value == b->get_mark(b, TRUE).value &&
 		a->get_mark(a, FALSE).value == b->get_mark(b, FALSE).value &&
 		a->get_if_id(a, TRUE) == b->get_if_id(b, TRUE) &&
-		a->get_if_id(a, FALSE) == b->get_if_id(b, FALSE);
+		a->get_if_id(a, FALSE) == b->get_if_id(b, FALSE) &&
+		sec_labels_equal(a->get_label(a), b->get_label(b));
 }
 
 /**
