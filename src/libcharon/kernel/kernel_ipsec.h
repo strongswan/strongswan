@@ -38,6 +38,7 @@ typedef struct kernel_ipsec_query_policy_t kernel_ipsec_query_policy_t;
 #include <networking/host.h>
 #include <ipsec/ipsec_types.h>
 #include <selectors/traffic_selector.h>
+#include <selectors/sec_label.h>
 #include <plugins/plugin.h>
 #include <kernel/kernel_interface.h>
 
@@ -97,6 +98,8 @@ struct kernel_ipsec_add_sa_t {
 	hw_offload_t hw_offload;
 	/** Mark the SA should apply to packets after processing */
 	mark_t mark;
+	/** Security label to match or apply */
+	sec_label_t *label;
 	/** TRUE to use Extended Sequence Numbers */
 	bool esn;
 	/** TRUE to copy the DF bit to the outer IPv4 header in tunnel mode */
@@ -160,6 +163,8 @@ struct kernel_ipsec_policy_id_t {
 	uint32_t if_id;
 	/** Network interface restricting policy */
 	char *interface;
+	/** Security label restricting policy */
+	sec_label_t *label;
 };
 
 /**
