@@ -248,6 +248,20 @@ struct child_cfg_t {
 	mark_t (*get_set_mark)(child_cfg_t *this, bool inbound);
 
 	/**
+	 * Optional security label to be configured on policies.
+	 *
+	 * @return				label or NULL
+	 */
+	sec_label_t *(*get_label)(child_cfg_t *this);
+
+	/**
+	 * Get the mode in which the security label is used.
+	 *
+	 * @return				label mode (never SEC_LABEL_MODE_SYSTEM)
+	 */
+	sec_label_mode_t (*get_label_mode)(child_cfg_t *this);
+
+	/**
 	 * Get the TFC padding value to use for CHILD_SA.
 	 *
 	 * @return				TFC padding, 0 to disable, -1 for MTU
@@ -367,6 +381,10 @@ struct child_cfg_create_t {
 	mark_t set_mark_in;
 	/** Optional outbound mark the SA should apply to traffic */
 	mark_t set_mark_out;
+	/** Optional security label configured on policies (cloned) */
+	sec_label_t *label;
+	/** Optional security label mode */
+	sec_label_mode_t label_mode;
 	/** Mode to propose for CHILD_SA */
 	ipsec_mode_t mode;
 	/** TFC padding size, 0 to disable, -1 to pad to PMTU */
