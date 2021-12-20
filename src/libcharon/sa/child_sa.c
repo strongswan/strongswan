@@ -180,6 +180,11 @@ struct private_child_sa_t {
 	mark_t mark_out;
 
 	/**
+	 * Security label
+	 */
+	sec_label_t *label;
+
+	/**
 	 * absolute time when rekeying is scheduled
 	 */
 	time_t rekey_time;
@@ -296,6 +301,46 @@ static inline mark_t mark_in_sa(private_child_sa_t *this)
 		return this->mark_in;
 	}
 	return (mark_t){};
+}
+
+/**
+ * Possible uses for security labels
+ */
+typedef enum {
+	LABEL_USE_REQID,
+	LABEL_USE_POLICY,
+	LABEL_USE_SA,
+} label_use_t;
+
+/**
+ * Returns the security label for either policies, SAs or reqids.
+ */
+static inline sec_label_t *label_for(private_child_sa_t *this, label_use_t use)
+{
+	/* For SELinux we use the configured label for policies and reqid but the
+	 * negotiated one for the SAs. That's because the label on the policies is
+	 * usually a generic one that matches specific labels on flows, which will
+	 * trigger an acquire if no matching SA with that label exists yet.
+	 * When that SA is later installed, we want to avoid having to install
+	 * policies in the kernel that will never get used, so we use the configured
+	 * label again.
+	 * Note that while the labels don't have to be equal, they are both either
+	 * NULL or defined.
+	 */
+	if (this->config->get_label_mode(this->config) == SEC_LABEL_MODE_SELINUX)
+	{
+		switch (use)
+		{
+			case LABEL_USE_REQID:
+			case LABEL_USE_POLICY:
+				return this->config->get_label(this->config);
+			case LABEL_USE_SA:
+				return this->label;
+		}
+	}
+	/* for the simple label mode we don't pass labels to the kernel, so we don't
+	 * use it to acquire unique reqids either */
+	return NULL;
 }
 
 METHOD(child_sa_t, get_name, char*,
@@ -638,6 +683,7 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 				.dst_ts = my_ts,
 				.mark = this->mark_in,
 				.if_id = this->if_id_in,
+				.label = label_for(this, LABEL_USE_POLICY),
 			};
 			kernel_ipsec_query_policy_t query = {};
 
@@ -665,6 +711,7 @@ static bool update_usetime(private_child_sa_t *this, bool inbound)
 				.mark = this->mark_out,
 				.if_id = this->if_id_out,
 				.interface = this->config->get_interface(this->config),
+				.label = label_for(this, LABEL_USE_POLICY),
 			};
 			kernel_ipsec_query_policy_t query = {};
 
@@ -734,6 +781,12 @@ METHOD(child_sa_t, get_if_id, uint32_t,
 	private_child_sa_t *this, bool inbound)
 {
 	return inbound ? this->if_id_in : this->if_id_out;
+}
+
+METHOD(child_sa_t, get_label, sec_label_t*,
+	private_child_sa_t *this)
+{
+	return this->label ?: this->config->get_label(this->config);
 }
 
 METHOD(child_sa_t, get_lifetime, time_t,
@@ -856,7 +909,8 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 	{
 		status = charon->kernel->alloc_reqid(charon->kernel, my_ts, other_ts,
 								this->mark_in, this->mark_out, this->if_id_in,
-								this->if_id_out, NULL, &this->reqid);
+								this->if_id_out, label_for(this, LABEL_USE_REQID),
+								&this->reqid);
 		if (status != SUCCESS)
 		{
 			my_ts->destroy(my_ts);
@@ -920,6 +974,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.copy_df = !this->config->has_option(this->config, OPT_NO_COPY_DF),
 		.copy_ecn = !this->config->has_option(this->config, OPT_NO_COPY_ECN),
 		.copy_dscp = this->config->get_copy_dscp(this->config),
+		.label = label_for(this, LABEL_USE_SA),
 		.initiator = initiator,
 		.inbound = inbound,
 		.update = update,
@@ -1017,6 +1072,7 @@ static status_t install_policies_inbound(private_child_sa_t *this,
 		.dst_ts = my_ts,
 		.mark = this->mark_in,
 		.if_id = this->if_id_in,
+		.label = label_for(this, LABEL_USE_POLICY),
 	};
 	kernel_ipsec_manage_policy_t in_policy = {
 		.type = type,
@@ -1053,6 +1109,7 @@ static status_t install_policies_outbound(private_child_sa_t *this,
 		.mark = this->mark_out,
 		.if_id = this->if_id_out,
 		.interface = this->config->get_interface(this->config),
+		.label = label_for(this, LABEL_USE_POLICY),
 	};
 	kernel_ipsec_manage_policy_t out_policy = {
 		.type = type,
@@ -1126,6 +1183,7 @@ static void del_policies_inbound(private_child_sa_t *this,
 		.dst_ts = my_ts,
 		.mark = this->mark_in,
 		.if_id = this->if_id_in,
+		.label = label_for(this, LABEL_USE_POLICY),
 	};
 	kernel_ipsec_manage_policy_t in_policy = {
 		.type = type,
@@ -1161,6 +1219,7 @@ static void del_policies_outbound(private_child_sa_t *this,
 		.mark = this->mark_out,
 		.if_id = this->if_id_out,
 		.interface = this->config->get_interface(this->config),
+		.label = label_for(this, LABEL_USE_POLICY),
 	};
 	kernel_ipsec_manage_policy_t out_policy = {
 		.type = type,
@@ -1258,7 +1317,8 @@ METHOD(child_sa_t, install_policies, status_t,
 		status = charon->kernel->alloc_reqid(
 							charon->kernel, my_ts_list, other_ts_list,
 							this->mark_in, this->mark_out, this->if_id_in,
-							this->if_id_out, NULL, &this->reqid);
+							this->if_id_out, label_for(this, LABEL_USE_REQID),
+							&this->reqid);
 		my_ts_list->destroy(my_ts_list);
 		other_ts_list->destroy(other_ts_list);
 		if (status != SUCCESS)
@@ -1312,15 +1372,36 @@ METHOD(child_sa_t, install_policies, status_t,
 	return status;
 }
 
+/**
+ * Check if we can install the outbound SA immediately.
+ *
+ * If the kernel supports installing SPIs with policies, we can do so as it
+ * will only be used once we update the policies.
+ *
+ * However, if we use labels with SELinux, we can't as we don't set SPIs
+ * on the policy in order to match SAs with other labels that match the generic
+ * label that's used on the policies.
+ */
+static bool install_outbound_immediately(private_child_sa_t *this)
+{
+	if (charon->kernel->get_features(charon->kernel) & KERNEL_POLICY_SPI)
+	{
+		if (this->config->get_label_mode(this->config) == SEC_LABEL_MODE_SELINUX)
+		{
+			return !this->label;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
 METHOD(child_sa_t, register_outbound, status_t,
 	private_child_sa_t *this, chunk_t encr, chunk_t integ, uint32_t spi,
 	uint16_t cpi, bool tfcv3)
 {
 	status_t status;
 
-	/* if the kernel supports installing SPIs with policies we install the
-	 * SA immediately as it will only be used once we update the policies */
-	if (charon->kernel->get_features(charon->kernel) & KERNEL_POLICY_SPI)
+	if (install_outbound_immediately(this))
 	{
 		status = install_internal(this, encr, integ, spi, cpi, FALSE, FALSE,
 								  tfcv3);
@@ -1744,7 +1825,8 @@ METHOD(child_sa_t, destroy, void,
 	{
 		if (charon->kernel->release_reqid(charon->kernel,
 						this->reqid, this->mark_in, this->mark_out,
-						this->if_id_in, this->if_id_out, NULL) != SUCCESS)
+						this->if_id_in, this->if_id_out,
+						label_for(this, LABEL_USE_REQID)) != SUCCESS)
 		{
 			DBG1(DBG_CHD, "releasing reqid %u failed", this->reqid);
 		}
@@ -1755,6 +1837,7 @@ METHOD(child_sa_t, destroy, void,
 	this->my_addr->destroy(this->my_addr);
 	this->other_addr->destroy(this->other_addr);
 	DESTROY_IF(this->proposal);
+	DESTROY_IF(this->label);
 	this->config->destroy(this->config);
 	chunk_clear(&this->encr_r);
 	chunk_clear(&this->integ_r);
@@ -1827,6 +1910,7 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 			.get_usestats = _get_usestats,
 			.get_mark = _get_mark,
 			.get_if_id = _get_if_id,
+			.get_label = _get_label,
 			.has_encap = _has_encap,
 			.get_ipcomp = _get_ipcomp,
 			.set_ipcomp = _set_ipcomp,
@@ -1864,6 +1948,7 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 		.mark_out = config->get_mark(config, FALSE),
 		.if_id_in = config->get_if_id(config, TRUE) ?: data->if_id_in_def,
 		.if_id_out = config->get_if_id(config, FALSE) ?: data->if_id_out_def,
+		.label = data->label ? data->label->clone(data->label) : NULL,
 		.install_time = time_monotonic(NULL),
 		.policies_fwd_out = config->has_option(config, OPT_FWD_OUT_POLICIES),
 	);
