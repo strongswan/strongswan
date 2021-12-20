@@ -380,6 +380,8 @@ struct child_init_args_t {
 	traffic_selector_t *src;
 	/** Optional destination of triggering packet */
 	traffic_selector_t *dst;
+	/** Optional security label of triggering packet */
+	sec_label_t *label;
 };
 
 /**

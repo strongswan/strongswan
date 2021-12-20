@@ -396,6 +396,7 @@ METHOD(task_t, process_i, status_t,
 	{
 		child_cfg_t *child_cfg;
 		child_init_args_t args = {};
+		status_t status;
 
 		if (this->collision &&
 			this->collision->get_type(this->collision) == TASK_CHILD_DELETE)
@@ -414,10 +415,17 @@ METHOD(task_t, process_i, status_t,
 		child_cfg = this->child_sa->get_config(this->child_sa);
 		child_cfg->get_ref(child_cfg);
 		args.reqid = this->child_sa->get_reqid(this->child_sa);
+		args.label = this->child_sa->get_label(this->child_sa);
+		if (args.label)
+		{
+			args.label = args.label->clone(args.label);
+		}
 		charon->bus->child_updown(charon->bus, this->child_sa, FALSE);
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
-		return this->ike_sa->initiate(this->ike_sa,
-									  child_cfg->get_ref(child_cfg), &args);
+		status = this->ike_sa->initiate(this->ike_sa,
+										child_cfg->get_ref(child_cfg), &args);
+		DESTROY_IF(args.label);
+		return status;
 	}
 
 	if (this->child_create->task.process(&this->child_create->task,

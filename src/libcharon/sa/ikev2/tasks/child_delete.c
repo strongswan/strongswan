@@ -366,6 +366,11 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 		child_cfg = child_sa->get_config(child_sa);
 		child_cfg->get_ref(child_cfg);
 		args.reqid = child_sa->get_reqid(child_sa);
+		args.label = child_sa->get_label(child_sa);
+		if (args.label)
+		{
+			args.label = args.label->clone(args.label);
+		}
 		action = child_sa->get_close_action(child_sa);
 
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
@@ -385,6 +390,7 @@ static status_t destroy_and_reestablish(private_child_delete_t *this)
 			}
 		}
 		child_cfg->destroy(child_cfg);
+		DESTROY_IF(args.label);
 		if (status != SUCCESS)
 		{
 			break;
