@@ -43,6 +43,7 @@
 #include <errno.h>
 
 #include "command.h"
+#include "swanctl.h"
 
 #include <collections/hashtable.h>
 
@@ -80,7 +81,6 @@ CALLBACK(sa_values, int,
 	}
 	return 0;
 }
-
 
 CALLBACK(sa_list, int,
 	hashtable_t *sa, vici_res_t *res, char *name, void *value, int len)
@@ -227,6 +227,7 @@ CALLBACK(child_sas, int,
 		}
 		printf("\n");
 
+		print_label("    label  ", child->get(child, "label"));
 		printf("    local  %s\n", child->get(child, "local-ts"));
 		printf("    remote %s\n", child->get(child, "remote-ts"));
 	}
