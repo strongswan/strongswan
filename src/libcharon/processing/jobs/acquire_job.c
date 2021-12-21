@@ -45,6 +45,7 @@ METHOD(job_t, destroy, void,
 {
 	DESTROY_IF(this->data.src);
 	DESTROY_IF(this->data.dst);
+	DESTROY_IF(this->data.label);
 	free(this);
 }
 
@@ -88,7 +89,10 @@ acquire_job_t *acquire_job_create(uint32_t reqid, kernel_acquire_data_t *data)
 	{
 		this->data.dst = this->data.dst->clone(this->data.dst);
 	}
+	if (this->data.label)
+	{
+		this->data.label = this->data.label->clone(this->data.label);
+	}
 
 	return &this->public;
 }
-

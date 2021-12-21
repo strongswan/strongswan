@@ -37,6 +37,8 @@ struct kernel_acquire_data_t {
 	traffic_selector_t *src;
 	/** Optional destination of the triggering packet */
 	traffic_selector_t *dst;
+	/** Optional security label of the triggering packet */
+	sec_label_t *label;
 };
 
 /**
