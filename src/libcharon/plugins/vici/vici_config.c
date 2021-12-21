@@ -563,6 +563,9 @@ static void log_child_data(child_data_t *data, char *name)
 		 cfg->set_mark_in.value, cfg->set_mark_in.mask);
 	DBG2(DBG_CFG, "   set_mark_out = %u/%u",
 		 cfg->set_mark_out.value, cfg->set_mark_out.mask);
+	DBG2(DBG_CFG, "   label = %s",
+		 cfg->label ? cfg->label->get_string(cfg->label) : NULL);
+	DBG2(DBG_CFG, "   label_mode = %N", sec_label_mode_names, cfg->label_mode);
 	DBG2(DBG_CFG, "   inactivity = %llu", cfg->inactivity);
 	DBG2(DBG_CFG, "   proposals = %#P", data->proposals);
 	DBG2(DBG_CFG, "   local_ts = %#R", data->local_ts);
@@ -585,6 +588,7 @@ static void free_child_data(child_data_t *data)
 									offsetof(traffic_selector_t, destroy));
 	data->remote_ts->destroy_offset(data->remote_ts,
 									offsetof(traffic_selector_t, destroy));
+	DESTROY_IF(data->cfg.label);
 	free(data->cfg.updown);
 	free(data->cfg.interface);
 }
@@ -1271,6 +1275,38 @@ CALLBACK(parse_if_id, bool,
 }
 
 /**
+ * Parse security label
+ */
+CALLBACK(parse_label, bool,
+	sec_label_t **out, chunk_t v)
+{
+	char buf[BUF_LEN];
+
+	if (!vici_stringify(v, buf, sizeof(buf)))
+	{
+		return FALSE;
+	}
+	*out = sec_label_from_string(buf);
+	return *out != NULL;
+}
+
+/**
+ * Parse security label mode
+ */
+CALLBACK(parse_label_mode, bool,
+	sec_label_mode_t *out, chunk_t v)
+{
+	char buf[BUF_LEN];
+
+	if (!vici_stringify(v, buf, sizeof(buf)) ||
+		!sec_label_mode_from_string(buf, out))
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Parse TFC padding option
  */
 CALLBACK(parse_tfc, bool,
@@ -1769,6 +1805,8 @@ CALLBACK(child_kv, bool,
 		{ "copy_dscp",			parse_copy_dscp,	&child->cfg.copy_dscp				},
 		{ "if_id_in",			parse_if_id,		&child->cfg.if_id_in				},
 		{ "if_id_out",			parse_if_id,		&child->cfg.if_id_out				},
+		{ "label",				parse_label,		&child->cfg.label					},
+		{ "label_mode",			parse_label_mode,	&child->cfg.label_mode				},
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
