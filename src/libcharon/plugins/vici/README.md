@@ -817,6 +817,7 @@ command.
 					mark-mask-out = <hex encoded outbound Netfilter mark mask>
 					if-id-in = <hex encoded inbound XFRM interface ID>
 					if-id-out = <hex encoded outbound XFRM interface ID>
+					label = <hex encoded security label>
 					encr-alg = <ESP encryption algorithm name, if any>
 					encr-keysize = <ESP encryption key size, if applicable>
 					integ-alg = <ESP or AH integrity algorithm name, if any>
@@ -854,6 +855,7 @@ _list-policies_ command.
 			child = <CHILD_SA configuration name>
 			ike = <IKE_SA configuration name or namespace, if available>
 			mode = <policy mode, tunnel|transport|pass|drop>
+			label = <hex encoded security label>
 			local-ts = [
 				<list of local traffic selectors>
 			]
@@ -903,6 +905,7 @@ _list-conns_ command.
 			children = {
 				<CHILD_SA config name>* = {
 					mode = <IPsec mode>
+					label = <hex encoded security label>
 					rekey_time = <CHILD_SA rekeying interval in seconds>
 					rekey_bytes = <CHILD_SA rekeying interval in bytes>
 					rekey_packets = <CHILD_SA rekeying interval in packets>
