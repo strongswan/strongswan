@@ -120,6 +120,8 @@ typedef struct {
 	uint32_t reqid;
 	/** destination address (wildcard case) */
 	host_t *dst;
+	/** security label, if any */
+	sec_label_t *label;
 } acquire_t;
 
 /**
@@ -142,6 +144,7 @@ static void destroy_entry(entry_t *this)
 static void destroy_acquire(acquire_t *this)
 {
 	DESTROY_IF(this->dst);
+	DESTROY_IF(this->label);
 	free(this);
 }
 
@@ -149,9 +152,10 @@ CALLBACK(acquire_by_reqid, bool,
 	acquire_t *this, va_list args)
 {
 	uint32_t reqid;
+	sec_label_t *label;
 
-	VA_ARGS_VGET(args, reqid);
-	return this->reqid == reqid;
+	VA_ARGS_VGET(args, reqid, label);
+	return this->reqid == reqid && sec_labels_equal(this->label, label);
 }
 
 CALLBACK(acquire_by_dst, bool,
@@ -567,7 +571,7 @@ METHOD(trap_manager_t, acquire, void,
 	else
 	{
 		if (this->acquires->find_first(this->acquires, acquire_by_reqid,
-									  (void**)&acquire, reqid))
+									  (void**)&acquire, reqid, data->label))
 		{
 			ignore = TRUE;
 		}
@@ -575,6 +579,7 @@ METHOD(trap_manager_t, acquire, void,
 		{
 			INIT(acquire,
 				.reqid = reqid,
+				.label = data->label ? data->label->clone(data->label) : NULL,
 			);
 			this->acquires->insert_last(this->acquires, acquire);
 		}
@@ -632,6 +637,7 @@ METHOD(trap_manager_t, acquire, void,
 			.reqid = reqid,
 			.src = data->src,
 			.dst = data->dst,
+			.label = data->label,
 		};
 
 		if (this->ignore_acquire_ts || ike_sa->get_version(ike_sa) == IKEV1)
@@ -689,6 +695,11 @@ static void complete(private_trap_manager_t *this, ike_sa_t *ike_sa,
 				 * there is no need to compare the destination address */
 			}
 			else if (child_sa->get_reqid(child_sa) != acquire->reqid)
+			{
+				continue;
+			}
+			else if (!sec_labels_equal(acquire->label,
+									   child_sa->get_label(child_sa)))
 			{
 				continue;
 			}
