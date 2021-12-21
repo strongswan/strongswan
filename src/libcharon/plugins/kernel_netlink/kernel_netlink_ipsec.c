@@ -910,6 +910,7 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 	struct rtattr *rta;
 	size_t rtasize;
 	kernel_acquire_data_t data = {};
+	chunk_t label = chunk_empty;
 	uint32_t reqid = 0;
 	uint8_t proto;
 
@@ -926,10 +927,21 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 
 		if (rta->rta_type == XFRMA_TMPL)
 		{
-			struct xfrm_user_tmpl* tmpl;
-			tmpl = (struct xfrm_user_tmpl*)RTA_DATA(rta);
+			struct xfrm_user_tmpl* tmpl = RTA_DATA(rta);
 			reqid = tmpl->reqid;
 		}
+#ifdef USE_SELINUX
+		if (rta->rta_type == XFRMA_SEC_CTX)
+		{
+			struct xfrm_user_sec_ctx *ctx = RTA_DATA(rta);
+
+			if (ctx->ctx_doi == XFRM_SC_DOI_LSM &&
+				ctx->ctx_alg == XFRM_SC_ALG_SELINUX)
+			{
+				label = chunk_create((void*)(ctx + 1), ctx->ctx_len);
+			}
+		}
+#endif
 		rta = RTA_NEXT(rta, rtasize);
 	}
 	switch (proto)
@@ -940,15 +952,18 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 			break;
 		default:
 			/* acquire for AH/ESP only, not for IPCOMP */
+
 			return;
 	}
 	data.src = selector2ts(&acquire->sel, TRUE);
 	data.dst = selector2ts(&acquire->sel, FALSE);
+	data.label = label.len ? sec_label_from_encoding(label) : NULL;
 
 	charon->kernel->acquire(charon->kernel, reqid, &data);
 
 	DESTROY_IF(data.src);
 	DESTROY_IF(data.dst);
+	DESTROY_IF(data.label);
 }
 
 /**
