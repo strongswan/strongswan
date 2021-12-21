@@ -55,14 +55,22 @@ static inline protocol_id_t proto_ip2ike(uint8_t protocol)
 METHOD(kernel_listener_t, acquire, bool,
 	private_kernel_handler_t *this, uint32_t reqid, kernel_acquire_data_t *data)
 {
+	char buf[BUF_LEN] = "";
+
+	if (data->label)
+	{
+		snprintf(buf, sizeof(buf), ", label {%s}",
+				 data->label->get_string(data->label));
+	}
 	if (data->src && data->dst)
 	{
 		DBG1(DBG_KNL, "creating acquire job for policy %R === %R with "
-			 "reqid {%u}", data->src, data->dst, reqid);
+			 "reqid {%u}%s", data->src, data->dst, reqid, buf);
 	}
 	else
 	{
-		DBG1(DBG_KNL, "creating acquire job for policy with reqid {%u}", reqid);
+		DBG1(DBG_KNL, "creating acquire job for policy with reqid {%u}%s",
+			 reqid, buf);
 	}
 	lib->processor->queue_job(lib->processor,
 							  (job_t*)acquire_job_create(reqid, data));
