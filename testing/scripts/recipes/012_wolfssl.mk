@@ -2,7 +2,7 @@
 
 PKG = wolfssl
 SRC = https://github.com/wolfSSL/$(PKG).git
-REV = v5.0.0-stable
+REV = v5.1.1-stable
 
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
@@ -40,7 +40,7 @@ all: install
 	@touch $@
 
 .$(PKG)-checkout-$(REV): .$(PKG)-cloned
-	cd $(PKG) && git fetch && git checkout $(REV)
+	cd $(PKG) && git fetch --tags && git checkout $(REV)
 	@rm -f .$(PKG)-checkout-* && touch $@
 
 .$(PKG)-built-$(REV): .$(PKG)-checkout-$(REV)
