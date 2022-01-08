@@ -330,8 +330,8 @@ int sm2_encrypt(ecc_point *pubKey, u8 *M, u32 Mlen, u8 *C, u32 *Clen)
 	u8 t[ECC_NUMWORD];
 	ecc_point pub[1];
 	ecc_point *C1 = (ecc_point *)C;
-	u8 *C2 = C + ECC_NUMWORD*2;
-	u8 *C3 = C + ECC_NUMWORD*2 + Mlen;
+	u8 *C3 = C + sizeof(ecc_point);				  //指向hash区
+	u8 *C2 = C + sizeof(ecc_point) + ECC_NUMWORD; //指向密文区
 
 	ecc_point kP;
 	u8 *x2 = kP.x;
@@ -394,8 +394,8 @@ int sm2_decrypt(u8 *prikey, u8 *C, u32 Clen, u8 *M, u32 *Mlen)
 	u8 hash[ECC_NUMWORD];
 	u8 pri[ECC_NUMWORD];
 	ecc_point *C1 = (ecc_point *)C;
-	u8 *C2 = C + ECC_NUMWORD*2;
-	u8 *C3 = C + Clen - ECC_NUMWORD;
+	u8 *C3 = C + sizeof(ecc_point);		          //指向hash区
+	u8 *C2 = C + sizeof(ecc_point) + ECC_NUMWORD; //指向密文区
 	ecc_point dB;
 	u8 *x2 = dB.x;
 	u8 *y2 = dB.y;

@@ -161,18 +161,13 @@ int GMALG_ExternalEncrytp_ECC(
 	ECCrefPublicKey *pucPublicKey,
 	unsigned char *pucData,
 	unsigned int uiDataLength,
-	ECCCipher *pucEncData)
+	unsigned char *pucEncData)
 
 {
-	gmalg_ctx *ctx = (gmalg_ctx *)hDeviceHandle;
 	int rc = 0;
+	unsigned int ucEncLen = 0;
 
-	rc = sm2_encrypt(D2I_PUB(pucPublicKey), pucData, uiDataLength,
-			pucEncData->C, &pucEncData->L);
-
-	memset(pucEncData->M, 0, ECC_NUMWORD);
-	memcpy(pucEncData->x, pucPublicKey->x,ECC_NUMWORD);
-	memcpy(pucEncData->y, pucPublicKey->y, ECC_NUMWORD);
+	rc = sm2_encrypt(D2I_PUB(pucPublicKey), pucData, uiDataLength, pucEncData, &ucEncLen);
 
 	return rc;
 }
@@ -180,17 +175,15 @@ int GMALG_ExternalEncrytp_ECC(
 int GMALG_ExternalDecrypt_ECC(
 	void *hDeviceHandle,
 	ECCrefPrivateKey *pucPrivateKey,
-	ECCCipher *pucEncData,
-	unsigned char *pucData,
-	unsigned int *puiDataLength)
+	unsigned char *pucEncData,
+	unsigned int uiDataLen,
+	unsigned char *pucData)
 
 {
-	gmalg_ctx *ctx = (gmalg_ctx *)hDeviceHandle;
 	unsigned int dataLen = 0;
 	int rc = 0;
 
-	rc = sm2_decrypt(pucPrivateKey->K, pucEncData->C, pucEncData->L,
-			pucData, &dataLen);
+	rc = sm2_decrypt(pucPrivateKey->K, pucEncData, uiDataLen, pucData, &dataLen);
 
 	return rc;
 }

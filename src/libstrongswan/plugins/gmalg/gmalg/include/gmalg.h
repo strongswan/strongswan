@@ -204,7 +204,7 @@ extern int GMALG_ExternalEncrytp_ECC (
 	ECCrefPublicKey *pucPublicKey,
 	unsigned char *pucData,
 	unsigned int uiDataLength,
-	ECCCipher *pucEncData);
+	unsigned char *pucEncData);
 
 /*
  * 描述： 使用外部 ECC 私钥进行解密运算
@@ -220,9 +220,9 @@ extern int GMALG_ExternalEncrytp_ECC (
 extern int GMALG_ExternalDecrypt_ECC (
 	void *hDeviceHandle,
 	ECCrefPrivateKey *pucPrivateKey,
-	ECCCipher *pucEncData,
-	unsigned char *pucData,
-	unsigned int *puiDataLength);
+	unsigned char *pucEncData,
+	unsigned int uiDataLen,
+	unsigned char *pucData);
 
 /*
  * 描述： 使用指定的密钥和 IV 对数据进行对称加密运算

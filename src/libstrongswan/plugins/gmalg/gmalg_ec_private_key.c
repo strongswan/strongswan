@@ -133,12 +133,17 @@ METHOD(private_key_t, decrypt, bool,
 	private_gmalg_ec_private_key_t *this, encryption_scheme_t scheme,
 	chunk_t crypto, chunk_t *plain)
 {
-	DBG1(DBG_LIB, "EC private key decryption not implemented");
-	ECCCipher *ipher = (ECCCipher *)crypto.ptr;
-	int len;
+	DBG1(DBG_LIB, "EC private key decryption, cipher len %d", crypto.len);
 
-	*plain  = chunk_alloc(ipher->L);
-	GMALG_ExternalDecrypt_ECC(this->hDeviceHandle, this->prikey, ipher, plain->ptr, &len);
+	if (crypto.len <= 3 * ECCref_MAX_LEN)
+	{
+		return FALSE; //C1C3C2,最少需要96字节
+	}
+
+	*plain  = chunk_alloc(crypto.len - 3 * ECCref_MAX_LEN);
+	memset(plain->ptr, 0, plain->len);
+
+	GMALG_ExternalDecrypt_ECC(this->hDeviceHandle, this->prikey, crypto.ptr, crypto.len, plain->ptr);
 
 	return TRUE;
 }
