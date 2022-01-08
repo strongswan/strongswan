@@ -16,6 +16,7 @@
 
 #include "gmalg_ec_public_key.h"
 #include "gmalg_util.h"
+#include "gmalg_hasher.h"
 
 #include <utils/debug.h>
 
@@ -78,16 +79,16 @@ static bool verify_curve_signature(private_gmalg_ec_public_key_t *this,
 
 	if (HASH_SM3 == nid_hash)
 	{
-		hasher_t *h;
+		gmalg_hasher_t *h;
 
-		h = lib->crypto->create_hasher(lib->crypto, HASH_SM3);
+		h = gmalg_hasher_create_ecc(HASH_SM3, &this->pubkey[0], chunk_from_thing(id_default));
 		if (h == NULL)
 		{
 			valid = FALSE;
 			goto err;
 		}
 
-		valid = h->allocate_hash(h, data, &hash);
+		valid = h->hasher.allocate_hash(&h->hasher, data, &hash);
 		if (valid == FALSE)
 			goto err;
 	}

@@ -24,6 +24,8 @@
 #include <library.h>
 #include <gmalg.h>
 
+extern u_char id_default[16];
+
 /**
  * Described in header.
  */

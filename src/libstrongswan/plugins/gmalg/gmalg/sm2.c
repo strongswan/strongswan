@@ -234,8 +234,11 @@ int sm2_sign(u8 *r, u8 *s, u8 *prikey, u8 *hash)
 	u8 one[ECC_NUMWORD] = {1};
 	u8 random[ECC_NUMWORD];
 	u8 pri[ECC_NUMWORD];
+	u8 e[ECC_NUMWORD];
 	ecc_point p;
 
+	vli_set(e, hash);
+	ecc_bytes2native(e, e);
 	vli_set(pri, prikey);
 	ecc_bytes2native(pri, pri);
 
@@ -255,7 +258,7 @@ int sm2_sign(u8 *r, u8 *s, u8 *prikey, u8 *hash)
 
 	/* r = x1 + e (mod n) */
 	vli_set(r, p.x);
-	vli_mod_add(r, r, hash, ecc_curve.n);
+	vli_mod_add(r, r, e, ecc_curve.n);
 	if (vli_cmp(ecc_curve.n, r) != 1) {
 		vli_sub(r, r, ecc_curve.n);
 	}
@@ -281,8 +284,11 @@ int sm2_verify(ecc_point *pubkey, u8 *hash, u8 *r, u8 *s)
 {
 	ecc_point result;
 	u8 t[ECC_NUMWORD];
+	u8 e[ECC_NUMWORD];
 	ecc_point pub[1];
 
+	vli_set(e, hash);
+	ecc_bytes2native(e, e);
 	vli_set(pub->x, pubkey->x);
 	vli_set(pub->y, pubkey->y);
 
@@ -308,7 +314,7 @@ int sm2_verify(ecc_point *pubkey, u8 *hash, u8 *r, u8 *s)
 	ecc_point_mult2(&result, &ecc_curve.g, pub, s, t);
 
 	/* v = x1 + e (mod n) */
-	vli_mod_add(result.x, result.x, hash, ecc_curve.n);
+	vli_mod_add(result.x, result.x, e, ecc_curve.n);
 
 	if(vli_cmp(ecc_curve.n, result.x) != 1) {
 		vli_sub(result.x, result.x, ecc_curve.n);

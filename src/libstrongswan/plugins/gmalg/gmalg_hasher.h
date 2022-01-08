@@ -54,4 +54,14 @@ const EVP_MD *gmalg_get_md(hash_algorithm_t hash);
  */
 gmalg_hasher_t *gmalg_hasher_create(hash_algorithm_t algo);
 
+/**
+ * Constructor to create gmalg_hasher_t.
+ *
+ * @param algo			algorithm
+ * @param pub_key		public key
+ * @param id			id
+ * @return				gmalg_hasher_t, NULL if not supported
+ */
+gmalg_hasher_t *gmalg_hasher_create_ecc(hash_algorithm_t algo, ECCrefPublicKey *pub_key, chunk_t id);
+
 #endif /** GMALG_HASHER_H_ @}*/
