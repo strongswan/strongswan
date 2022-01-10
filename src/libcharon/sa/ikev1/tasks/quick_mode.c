@@ -1096,7 +1096,7 @@ METHOD(task_t, process_r, status_t,
 			hostsi = get_dynamic_hosts(this->ike_sa, FALSE);
 			hostsr = get_dynamic_hosts(this->ike_sa, TRUE);
 			this->config = peer_cfg->select_child_cfg(peer_cfg, tsr, tsi,
-													  hostsr, hostsi);
+													  hostsr, hostsi, NULL, NULL);
 			hostsi->destroy(hostsi);
 			hostsr->destroy(hostsr);
 			if (this->config)

@@ -1414,7 +1414,7 @@ static child_cfg_t* select_child_cfg(private_child_create_t *this)
 		listi = get_dynamic_hosts(this->ike_sa, FALSE);
 		child_cfg = peer_cfg->select_child_cfg(peer_cfg,
 											tsr ?: this->tsr, tsi ?: this->tsi,
-											listr, listi);
+											listr, listi, NULL, NULL);
 		if ((tsi || tsr) && child_cfg &&
 			child_cfg->get_mode(child_cfg) != MODE_TRANSPORT)
 		{
@@ -1426,7 +1426,8 @@ static child_cfg_t* select_child_cfg(private_child_create_t *this)
 		{
 			/* no match for the substituted NAT selectors, try it without */
 			child_cfg = peer_cfg->select_child_cfg(peer_cfg,
-											this->tsr, this->tsi, listr, listi);
+											this->tsr, this->tsi,
+											listr, listi, NULL, NULL);
 		}
 		listr->destroy(listr);
 		listi->destroy(listi);
