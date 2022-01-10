@@ -820,6 +820,8 @@ static bool install_sps(private_kernel_wfp_ipsec_t *this,
 			case TS_IPV6_ADDR_RANGE:
 				has_v6 = TRUE;
 				break;
+			default:
+				continue;
 		}
 
 		/* inbound policy */
