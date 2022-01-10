@@ -891,9 +891,9 @@ static bool build_payloads(private_child_create_t *this, message_t *message)
 	}
 
 	/* add TSi/TSr payloads */
-	ts_payload = ts_payload_create_from_traffic_selectors(TRUE, this->tsi);
+	ts_payload = ts_payload_create_from_traffic_selectors(TRUE, this->tsi, NULL);
 	message->add_payload(message, (payload_t*)ts_payload);
-	ts_payload = ts_payload_create_from_traffic_selectors(FALSE, this->tsr);
+	ts_payload = ts_payload_create_from_traffic_selectors(FALSE, this->tsr, NULL);
 	message->add_payload(message, (payload_t*)ts_payload);
 
 	/* add a notify if we are not in tunnel mode */
