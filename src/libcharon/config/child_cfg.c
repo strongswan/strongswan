@@ -544,6 +544,85 @@ METHOD(child_cfg_t, get_label_mode, sec_label_mode_t,
 	return this->label_mode;
 }
 
+METHOD(child_cfg_t, select_label, bool,
+	private_child_cfg_t *this, linked_list_t *labels, bool log,
+	sec_label_t **label, bool *exact_out)
+{
+	enumerator_t *enumerator;
+	sec_label_t *current, *match = NULL;
+	bool exact = FALSE;
+
+	if (labels && labels->get_count(labels))
+	{
+		if (!this->label)
+		{
+			DBG2(DBG_CFG, "peer proposed a security label, but none expected");
+			return FALSE;
+		}
+		if (log)
+		{
+			DBG2(DBG_CFG, "selecting security label matching '%s':",
+				 this->label->get_string(this->label));
+		}
+		enumerator = labels->create_enumerator(labels);
+		while (enumerator->enumerate(enumerator, &current))
+		{
+			if (this->label->equals(this->label, current))
+			{
+				if (log)
+				{
+					DBG2(DBG_CFG, " %s => matches exactly",
+						 current->get_string(current));
+				}
+				match = current;
+				exact = TRUE;
+				break;
+			}
+			else if (this->label_mode == SEC_LABEL_MODE_SELINUX &&
+					 this->label->matches(this->label, current))
+			{
+				if (log)
+				{
+					DBG2(DBG_CFG, " %s => matches%s",
+						 current->get_string(current), match ? ", ignored" : "");
+				}
+				/* return the first match if we don't find an exact one */
+				if (!match)
+				{
+					match = current;
+				}
+			}
+			else if (log)
+			{
+				DBG2(DBG_CFG, " %s => no match", current->get_string(current));
+			}
+		}
+		enumerator->destroy(enumerator);
+		if (!match)
+		{
+			DBG2(DBG_CFG, "none of the proposed security labels match the "
+				 "configured label '%s'", this->label->get_string(this->label));
+			return FALSE;
+		}
+	}
+	else if (this->label)
+	{
+		DBG2(DBG_CFG, "peer didn't propose any security labels, we expect one "
+			 "matching '%s'", this->label->get_string(this->label));
+		return FALSE;
+	}
+
+	if (label)
+	{
+		*label = match;
+	}
+	if (exact_out)
+	{
+		*exact_out = exact;
+	}
+	return TRUE;
+}
+
 METHOD(child_cfg_t, get_tfc, uint32_t,
 	private_child_cfg_t *this)
 {
@@ -686,6 +765,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_set_mark = _get_set_mark,
 			.get_label = _get_label,
 			.get_label_mode = _get_label_mode,
+			.select_label = _select_label,
 			.get_tfc = _get_tfc,
 			.get_manual_prio = _get_manual_prio,
 			.get_interface = _get_interface,

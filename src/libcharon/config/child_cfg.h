@@ -262,6 +262,27 @@ struct child_cfg_t {
 	sec_label_mode_t (*get_label_mode)(child_cfg_t *this);
 
 	/**
+	 * Select a security label from the given list that matches the configured
+	 * label.
+	 *
+	 * This fails under the following conditions:
+	 * - a label is configured but no labels are provided
+	 * - no label is configured but at least one label is provided
+	 * - the configured and provided labels don't match
+	 *
+	 * If no label is configured and none are provided, that's considered a
+	 * success and label will be set to NULL.
+	 *
+	 * @param labels		list of labels to match
+	 * @param log			FALSE to avoid logging details about the selection
+	 * @param label[out]	selected label or NULL if no label necessary
+	 * @param exact[out]	TRUE if there was an exact match
+	 * @return				FALSE on failure
+	 */
+	bool (*select_label)(child_cfg_t *this, linked_list_t *labels, bool log,
+						 sec_label_t **label, bool *exact);
+
+	/**
 	 * Get the TFC padding value to use for CHILD_SA.
 	 *
 	 * @return				TFC padding, 0 to disable, -1 for MTU
