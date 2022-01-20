@@ -42,7 +42,7 @@ build_tests: build_tests.gpr
 check: build_tests
 	if test -z "${TESTS_TKM}"; then \
 		echo -e >&2 \
-			"\nSome TKM tests are not enabled, by deafult, because they have" \
+			"\nSome TKM tests are not enabled, by default, because they have" \
 			"\nto be run as root and require a running TKM daemon. They may" \
 			"\nbe enabled by defining the TESTS_TKM environment variable.\n"; \
 	fi

@@ -101,7 +101,7 @@ METHOD(mac_t, set_key, bool,
 {
 	if (!key.ptr)
 	{	/* HMAC_Init_ex() won't reset the key if a NULL pointer is passed,
-		 * use a lenghty string in case there is a limit in FIPS-mode */
+		 * use a lengthy string in case there is a limit in FIPS-mode */
 		key = chunk_from_str("00000000000000000000000000000000");
 	}
 	return reset(this, key);
