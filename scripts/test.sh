@@ -4,7 +4,7 @@
 build_botan()
 {
 	# same revision used in the build recipe of the testing environment
-	BOTAN_REV=c55f5d42650b # 2.18.2 + fix for SHA-3 compilation issue
+	BOTAN_REV=2.19.1
 	BOTAN_DIR=$DEPS_BUILD_DIR/botan
 
 	if test -d "$BOTAN_DIR"; then
