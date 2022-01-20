@@ -451,6 +451,7 @@ static void load_sys_logger(private_daemon_t *this, char *facility,
 	debug_t group;
 	level_t def;
 	bool ike_name, log_level;
+	int map_level;
 
 	if (get_syslog_facility(facility) == -1)
 	{
@@ -467,8 +468,10 @@ static void load_sys_logger(private_daemon_t *this, char *facility,
 									   FALSE, lib->ns, facility);
 	log_level = lib->settings->get_bool(lib->settings, "%s.syslog.%s.log_level",
 									   FALSE, lib->ns, facility);
+	map_level = lib->settings->get_int(lib->settings, "%s.syslog.%s.map_level",
+									   -1, lib->ns, facility);
 
-	sys_logger->set_options(sys_logger, ike_name, log_level);
+	sys_logger->set_options(sys_logger, ike_name, log_level, map_level);
 
 	def = lib->settings->get_int(lib->settings, "%s.syslog.%s.default", 1,
 								 lib->ns, facility);

@@ -70,3 +70,14 @@ charon.syslog.<facility>.ike_name = no
 
 charon.syslog.<facility>.log_level = no
 	Add the log level of each message after the subsystem (e.g. [IKE2]).
+
+charon.syslog.<facility>.map_level = -1
+	Map strongSwan specific loglevels to syslog loglevels.
+
+	The default setting of -1 passes all messages to syslog using a log
+	level of LOG_INFO. A non-negative value maps the strongSwan specific
+	loglevels (0..4) to the syslog level starting at the specified number.
+	For example, a value of 5 (LOG_NOTICE) maps strongSwan loglevel 0 to
+	LOG_NOTICE, level 1 to LOG_INFO, and levels 2, 3 and 4 to LOG_DEBUG.
+	This allows (additional) filtering of log messages on the syslog
+	server.
