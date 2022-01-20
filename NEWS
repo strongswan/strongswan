@@ -1,3 +1,36 @@
+strongswan-5.9.5
+----------------
+
+- Using the trusted RSA or ECC Endorsement Key of the TPM 2.0, libtpmtss may now
+  establish a secure session via RSA encryption or an ephemeral ECDH key
+  exchange, respectively. The session allows HMAC-based authenticated
+  communication with the TPM 2.0 and the exchanged parameters can be encrypted
+  where necessary to guarantee confidentiality (e.g. when using the TPM as RNG).
+
+- Basic support for OpenSSL 3.0 has been added, in particular, the new
+  load_legacy option (enabled by default) allows loading the "legacy" provider
+  for algorithms like MD4 and DES (both required for EAP-MSCHAPv2), and the
+  existing fips_mode option allows explicitly loading the "fips" provider e.g.
+  if it's not activated in OpenSSL's fipsmodule.cnf.
+
+- The MTU of TUN devices created by the kernel-pfroute plugin on macOS and
+  FreeBSD is now configurable and reduced to 1400 bytes, by default.  This also
+  fixes an issue on macOS 12 that prevented the detection of virtual IPs
+  installed on such TUN devices.
+
+- When rekeying CHILD_SAs, the old outbound SA is now uninstalled shortly after
+  the new SA has been installed on the initiator/winner. This is useful for
+  IPsec implementations where the ordering of SAs is unpredictable and we can't
+  set the SPI on the outbound policy to switch to the new SA while both are
+  installed.
+
+- The sw-collector utility may now iterate through APT history logs processed
+  by logrotate.
+
+- The openssl plugin now only announces the ECDH groups actually supported by
+  OpenSSL (determined via EC_get_builtin_curves()).
+
+
 strongswan-5.9.4
 ----------------
 
