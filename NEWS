@@ -1,6 +1,12 @@
 strongswan-5.9.5
 ----------------
 
+- Fixed a vulnerability in the EAP client implementation that was caused by
+  incorrectly handling early EAP-Success messages. It may allow to bypass the
+  client and in some scenarios even the server authentication, or could lead to
+  a denial-of-service attack.
+  This vulnerability has been registered as CVE-2021-45079.
+
 - Using the trusted RSA or ECC Endorsement Key of the TPM 2.0, libtpmtss may now
   establish a secure session via RSA encryption or an ephemeral ECDH key
   exchange, respectively. The session allows HMAC-based authenticated
