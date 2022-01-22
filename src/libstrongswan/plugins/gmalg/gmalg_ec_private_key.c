@@ -17,6 +17,7 @@
 #include "gmalg_ec_private_key.h"
 #include "gmalg_ec_public_key.h"
 #include "gmalg_util.h"
+#include "gmalg_hasher.h"
 
 #include <utils/debug.h>
 
@@ -88,16 +89,17 @@ static bool build_curve_signature(private_gmalg_ec_private_key_t *this,
 
 	if (HASH_SM3 == nid_hash)
 	{
-		hasher_t *h;
+		gmalg_hasher_t *h;
 
-		h = lib->crypto->create_hasher(lib->crypto, HASH_SM3);
+		//GMT0009规定SM2-SM3签名需先用ID、公钥计算Z值.后续如果有需要,ID可由params传入
+		h = gmalg_hasher_create_ecc(HASH_SM3, &this->pubkey[0], chunk_from_thing(id_default));
 		if (h == NULL)
 		{
 			built = FALSE;
 			goto err;
 		}
 
-		built = h->allocate_hash(h, data, &hash);
+		built = h->hasher.allocate_hash(&h->hasher, data, &hash);
 		if (built == FALSE)
 			goto err;
 	}
@@ -131,12 +133,17 @@ METHOD(private_key_t, decrypt, bool,
 	private_gmalg_ec_private_key_t *this, encryption_scheme_t scheme,
 	chunk_t crypto, chunk_t *plain)
 {
-	DBG1(DBG_LIB, "EC private key decryption not implemented");
-	ECCCipher *ipher = (ECCCipher *)crypto.ptr;
-	int len;
+	DBG1(DBG_LIB, "EC private key decryption, cipher len %d", crypto.len);
 
-	*plain  = chunk_alloc(ipher->L);
-	GMALG_ExternalDecrypt_ECC(this->hDeviceHandle, this->prikey, ipher, plain->ptr, &len);
+	if (crypto.len <= 3 * ECCref_MAX_LEN)
+	{
+		return FALSE; //C1C3C2,最少需要96字节
+	}
+
+	*plain  = chunk_alloc(crypto.len - 3 * ECCref_MAX_LEN);
+	memset(plain->ptr, 0, plain->len);
+
+	GMALG_ExternalDecrypt_ECC(this->hDeviceHandle, this->prikey, crypto.ptr, crypto.len, plain->ptr);
 
 	return TRUE;
 }

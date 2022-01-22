@@ -13,9 +13,9 @@
  * for more details.
  */
 
-#include "gmalg_hasher.h"
-
 #include <gmalg.h>
+
+#include "gmalg_hasher.h"
 
 typedef struct private_gmalg_hasher_t private_gmalg_hasher_t;
 
@@ -111,6 +111,29 @@ gmalg_hasher_t *gmalg_hasher_create(hash_algorithm_t algo)
 	this->algo = algo;
 	GMALG_OpenDevice(&this->hDeviceHandle);
 	GMALG_HashInit(this->hDeviceHandle, NULL, NULL, 0);
+
+	return &this->public;
+}
+
+gmalg_hasher_t *gmalg_hasher_create_ecc(hash_algorithm_t algo, ECCrefPublicKey *pub_key, chunk_t id)
+{
+	private_gmalg_hasher_t *this;
+
+	INIT(this,
+		.public = {
+			.hasher = {
+				.get_hash = _get_hash,
+				.allocate_hash = _allocate_hash,
+				.get_hash_size = _get_hash_size,
+				.reset = _reset,
+				.destroy = _destroy,
+			},
+		},
+	);
+
+	this->algo = algo;
+	GMALG_OpenDevice(&this->hDeviceHandle);
+	GMALG_HashInit(this->hDeviceHandle, pub_key, id.ptr, id.len);
 
 	return &this->public;
 }

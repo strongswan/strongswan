@@ -16,6 +16,7 @@
 
 #include "gmalg_ec_public_key.h"
 #include "gmalg_util.h"
+#include "gmalg_hasher.h"
 
 #include <utils/debug.h>
 
@@ -78,16 +79,16 @@ static bool verify_curve_signature(private_gmalg_ec_public_key_t *this,
 
 	if (HASH_SM3 == nid_hash)
 	{
-		hasher_t *h;
+		gmalg_hasher_t *h;
 
-		h = lib->crypto->create_hasher(lib->crypto, HASH_SM3);
+		h = gmalg_hasher_create_ecc(HASH_SM3, &this->pubkey[0], chunk_from_thing(id_default));
 		if (h == NULL)
 		{
 			valid = FALSE;
 			goto err;
 		}
 
-		valid = h->allocate_hash(h, data, &hash);
+		valid = h->hasher.allocate_hash(&h->hasher, data, &hash);
 		if (valid == FALSE)
 			goto err;
 	}
@@ -127,11 +128,11 @@ METHOD(public_key_t, encrypt, bool,
 	private_gmalg_ec_public_key_t *this, encryption_scheme_t scheme,
 	chunk_t crypto, chunk_t *plain)
 {
-	DBG1(DBG_LIB, "EC public key encryption not implemented");
+	DBG1(DBG_LIB, "EC public key encryption");
 
-	*plain  = chunk_alloc(sizeof(ECCCipher));
+	*plain  = chunk_alloc(crypto.len + ECCref_MAX_LEN * 3); //x+y+m+c,C1C3C2
 	GMALG_ExternalEncrytp_ECC(this->hDeviceHandle, this->pubkey,
-			crypto.ptr, crypto.len, (ECCCipher*)plain->ptr);
+			crypto.ptr, crypto.len, plain->ptr);
 
 	return TRUE;
 }
@@ -181,8 +182,6 @@ bool gmalg_ec_fingerprint(ECCrefPublicKey *pubkey, cred_encoding_type_t type, ch
 
 	hasher->destroy(hasher);
 	free(key.ptr);
-
-	memset(fp->ptr, 0x88, fp->len);
 
 	lib->encoding->cache(lib->encoding, type, pubkey, *fp);
 	return TRUE;
