@@ -28,6 +28,12 @@
 
 #include "sec_label.h"
 
+ENUM(sec_label_mode_names, SEC_LABEL_MODE_SYSTEM, SEC_LABEL_MODE_SELINUX,
+	"system",
+	"simple",
+	"selinux",
+);
+
 typedef struct private_sec_label_t private_sec_label_t;
 
 /**
@@ -194,4 +200,29 @@ sec_label_t *sec_label_from_string(const char *value)
 		return NULL;
 	}
 	return sec_label_from_encoding(chunk_create((char*)value, strlen(value)+1));
+}
+
+/*
+ * Described in header
+ */
+bool sec_label_mode_from_string(const char *value, sec_label_mode_t *mode)
+{
+	sec_label_mode_t def = sec_label_mode_default();
+
+	return enum_from_name(sec_label_mode_names, value, mode) &&
+		(def == SEC_LABEL_MODE_SELINUX || *mode != SEC_LABEL_MODE_SELINUX);
+}
+
+/*
+ * Described in header
+ */
+sec_label_mode_t sec_label_mode_default()
+{
+#ifdef USE_SELINUX
+	if (is_selinux_enabled())
+	{
+		return SEC_LABEL_MODE_SELINUX;
+	}
+#endif
+	return SEC_LABEL_MODE_SIMPLE;
 }

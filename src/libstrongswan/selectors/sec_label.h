@@ -28,9 +28,40 @@
 #ifndef SEC_LABEL_H_
 #define SEC_LABEL_H_
 
+typedef enum sec_label_mode_t sec_label_mode_t;
 typedef struct sec_label_t sec_label_t;
 
 #include <library.h>
+
+/**
+ * Mode in which security labels are used.
+ */
+enum sec_label_mode_t {
+
+	/**
+	 * System default.  Simple mode if SELinux is not supported or disabled
+	 * on the system.
+	 */
+	SEC_LABEL_MODE_SYSTEM,
+
+	/**
+	 * Simple mode that does establish regular CHILD_SAs, matches labels exactly
+	 * and does not install them in the kernel.
+	 */
+	SEC_LABEL_MODE_SIMPLE,
+
+	/**
+	 * SELinux mode where configured labels are installed on (trap) policies,
+	 * labels from acquires/peer on SAs, child-less IKE_SAs are initiated
+	 * if there is no acquire, labels are also matched via polmatch.
+	 */
+	SEC_LABEL_MODE_SELINUX,
+};
+
+/**
+ * Names for security label modes.
+ */
+extern enum_name_t *sec_label_mode_names;
 
 /**
  * Representation of a security label used on policies/SAs.
@@ -121,5 +152,21 @@ static inline bool sec_labels_equal(sec_label_t *a, sec_label_t *b)
 {
 	return (!a && !b) || (a && a->equals(a, b));
 }
+
+/**
+ * Try to parse a security label mode from the given string.
+ *
+ * @param value			string to parse
+ * @param mode			parsed mode
+ * @return				TRUE if mode is valid (and usable on system)
+ */
+bool sec_label_mode_from_string(const char *value, sec_label_mode_t *mode);
+
+/**
+ * Get the system default security label mode.
+ *
+ * @return				default mode
+ */
+sec_label_mode_t sec_label_mode_default();
 
 #endif /** SEC_LABEL_H_ @}*/
