@@ -1304,6 +1304,7 @@ proposal_t *proposal_create_default_aead(protocol_id_t protocol)
 			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16, 128);
 			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16, 192);
 			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16, 256);
+			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
 			return &this->public;
 		case PROTO_AH:
 		default:
