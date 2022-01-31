@@ -22,7 +22,7 @@
 #include <config/peer_cfg.h>
 #include <crypto/hashers/hasher.h>
 #include <encoding/payloads/notify_payload.h>
-
+#include <sa/ikev2/tasks/ike_mobike.h>
 
 typedef struct private_ike_natd_t private_ike_natd_t;
 
@@ -255,12 +255,19 @@ static void process_payloads(private_ike_natd_t *this, message_t *message)
 	{
 		this->ike_sa->enable_extension(this->ike_sa, EXT_NATT);
 
-		if (this->fake_no_source_ip && this->dst_matched)
-		{	/* after we faked a NAT, we now see that we are not behind one.
-			 * we still have to register this as NAT to enable UDP-encap but
-			 * we do so as actual local NAT, so DPDs will contain NAT-D
-			 * payloads and we can remove this condition later via MOBIKE */
-			this->dst_matched = FALSE;
+		if (this->fake_no_source_ip)
+		{
+			if (this->dst_matched)
+			{	/* after we faked a NAT, we now see that we are not behind one.
+				 * we still have to register this as NAT to enable UDP-encap but
+				 * we do so as actual local NAT, so DPDs will contain NAT-D
+				 * payloads and we can remove this condition later via MOBIKE */
+				this->dst_matched = FALSE;
+			}
+			else
+			{	/* we are behind a NAT anyway, so nothing special to be done */
+				this->fake_no_source_ip = FALSE;
+			}
 		}
 		else if (this->initiator && this->dst_matched &&
 				 this->ike_sa->has_condition(this->ike_sa, COND_NAT_HERE))
@@ -291,7 +298,10 @@ METHOD(task_t, process_i, status_t,
 
 	if (message->get_exchange_type(message) == IKE_SA_INIT)
 	{
-		peer_cfg_t *peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		peer_cfg_t *peer_cfg;
+		ike_mobike_t *mobike;
+
+		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY) ||
 			(peer_cfg->use_mobike(peer_cfg) &&
 			 this->ike_sa->supports_extension(this->ike_sa, EXT_NATT)))
@@ -300,6 +310,15 @@ METHOD(task_t, process_i, status_t,
 			 * whether the peer supports MOBIKE) because there is no exchange
 			 * to actually do the switch (other than a forced DPD) */
 			this->ike_sa->float_ports(this->ike_sa);
+		}
+
+		if (this->fake_no_source_ip)
+		{	/* the NAT-D payloads revealed that we are not behind a NAT, so
+			 * queue a MOBIKE-enabled DPD to check if UDP-encap can actually be
+			 * disabled once we know if MOBIKE is supported */
+			mobike = ike_mobike_create(this->ike_sa, TRUE);
+			mobike->dpd(mobike);
+			this->ike_sa->queue_task(this->ike_sa, &mobike->task);
 		}
 	}
 	return SUCCESS;
