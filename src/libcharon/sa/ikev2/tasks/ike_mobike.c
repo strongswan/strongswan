@@ -375,6 +375,14 @@ METHOD(task_t, build_i, status_t,
 	{
 		host_t *old, *new;
 
+		/* this task might have been queued before we knew if MOBIKE will be
+		 * supported */
+		if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
+		{
+			message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
+			return SUCCESS;
+		}
+
 		/* we check if the existing address is still valid */
 		old = message->get_source(message);
 		new = charon->kernel->get_source_addr(charon->kernel,
