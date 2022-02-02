@@ -1524,6 +1524,7 @@ ADD_PLUGIN([kernel-iph],           [c charon])
 ADD_PLUGIN([kernel-pfkey],         [c charon starter nm cmd])
 ADD_PLUGIN([kernel-pfroute],       [c charon starter nm cmd])
 ADD_PLUGIN([kernel-netlink],       [c charon starter nm cmd])
+ADD_PLUGIN([selinux],              [c charon starter nm cmd])
 ADD_PLUGIN([resolve],              [c charon cmd])
 ADD_PLUGIN([save-keys],            [c])
 ADD_PLUGIN([socket-default],       [c charon nm cmd])
@@ -1770,6 +1771,7 @@ AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
 AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
 AM_CONDITIONAL(USE_COUNTERS, test x$counters = xtrue)
+AM_CONDITIONAL(USE_SELINUX, test x$selinux = xtrue)
 
 #  other options
 # ---------------
@@ -2073,6 +2075,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/resolve/Makefile
 	src/libcharon/plugins/attr/Makefile
 	src/libcharon/plugins/attr_sql/Makefile
+	src/libcharon/plugins/selinux/Makefile
 	src/libcharon/tests/Makefile
 	src/libtpmtss/Makefile
 	src/libtpmtss/plugins/tpm/Makefile

@@ -726,6 +726,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_SELINUX
+  SUBDIRS += plugins/selinux
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/selinux/libstrongswan-selinux.la
+endif
+endif
+
 if USE_ATTR_SQL
   SUBDIRS += plugins/attr_sql
 if MONOLITHIC
