@@ -48,6 +48,7 @@ static void usage(FILE *out, char *cmd)
 	fprintf(out, "  --cert <file>            certificate to authenticate itself\n");
 	fprintf(out, "  --key <file>             private key to authenticate itself\n");
 	fprintf(out, "  --cacert <file>          certificate to verify other peer\n");
+	fprintf(out, "  --identity <id>          optional remote identity to enforce\n");
 	fprintf(out, "  --auth-optional          don't enforce client authentication\n");
 	fprintf(out, "  --times <n>              specify the amount of repeated connection establishments\n");
 	fprintf(out, "  --ipv4                   use IPv4\n");
@@ -301,7 +302,7 @@ int main(int argc, char *argv[])
 	char *address = NULL;
 	bool listen = FALSE;
 	int port = 0, times = -1, res, family = AF_UNSPEC;
-	identification_t *server, *client = NULL;
+	identification_t *server, *client = NULL, *identity = NULL;
 	tls_version_t min_version = TLS_SUPPORTED_MIN, max_version = TLS_SUPPORTED_MAX;
 	tls_flag_t flags = TLS_FLAG_ENCRYPTION_OPTIONAL;
 	tls_cache_t *cache;
@@ -326,6 +327,7 @@ int main(int argc, char *argv[])
 			{"max-version",		required_argument,		NULL,		'M' },
 			{"version",			required_argument,		NULL,		'v' },
 			{"auth-optional",	no_argument,			NULL,		'n' },
+			{"identity",		required_argument,		NULL,		'i' },
 			{"debug",			required_argument,		NULL,		'd' },
 			{0,0,0,0 }
 		};
@@ -354,6 +356,13 @@ int main(int argc, char *argv[])
 					return 1;
 				}
 				client = identification_create_from_encoding(ID_ANY, chunk_empty);
+				continue;
+			case 'i':
+				identity = identification_create_from_string(optarg);
+				if (!identity)
+				{
+					return 1;
+				}
 				continue;
 			case 'l':
 				listen = TRUE;
@@ -430,19 +439,20 @@ int main(int argc, char *argv[])
 	cache = tls_cache_create(100, 30);
 	if (listen)
 	{
-		res = serve(host, server, client, times, cache, min_version,
+		res = serve(host, server, identity ?: client, times, cache, min_version,
 					max_version, flags);
 	}
 	else
 	{
 		DESTROY_IF(client);
 		client = find_client_id();
-		res = run_client(host, server, client, times, cache, min_version,
+		res = run_client(host, identity ?: server, client, times, cache, min_version,
 						 max_version, flags);
 		DESTROY_IF(client);
 	}
 	cache->destroy(cache);
 	host->destroy(host);
 	server->destroy(server);
+	DESTROY_IF(identity);
 	return res;
 }
