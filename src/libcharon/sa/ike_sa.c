@@ -3261,3 +3261,52 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 	}
 	return &this->public;
 }
+
+/**
+ * Check if we have a an address pool configured.
+ */
+static bool have_pool(private_ike_sa_t *this)
+{
+	enumerator_t *enumerator;
+	bool found = FALSE;
+
+	if (this->peer_cfg)
+	{
+		enumerator = this->peer_cfg->create_pool_enumerator(this->peer_cfg);
+		found = enumerator->enumerate(enumerator, NULL);
+		enumerator->destroy(enumerator);
+	}
+	return found;
+}
+
+/*
+ * Described in header
+ */
+linked_list_t *ike_sa_get_dynamic_hosts(ike_sa_t *ike_sa, bool local)
+{
+	private_ike_sa_t *this = (private_ike_sa_t*)ike_sa;
+	enumerator_t *enumerator;
+	linked_list_t *list;
+	host_t *host;
+
+	list = linked_list_create();
+	enumerator = create_virtual_ip_enumerator(this, local);
+	while (enumerator->enumerate(enumerator, &host))
+	{
+		list->insert_last(list, host);
+	}
+	enumerator->destroy(enumerator);
+
+	if (!list->get_count(list))
+	{	/* no virtual IPs assigned */
+		if (local)
+		{
+			list->insert_last(list, this->my_host);
+		}
+		else if (!have_pool(this))
+		{	/* use remote host only if we don't have a pool configured */
+			list->insert_last(list, this->other_host);
+		}
+	}
+	return list;
+}

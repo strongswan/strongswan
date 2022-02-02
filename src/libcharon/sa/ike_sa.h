@@ -1248,7 +1248,7 @@ struct ike_sa_t {
  * @param ike_sa_id		ike_sa_id_t to associate with new IKE_SA/ISAKMP_SA
  * @param initiator		TRUE to create this IKE_SA as initiator
  * @param version		IKE version of this SA
- * @return				ike_sa_t object
+ * @return			ike_sa_t object
  */
 ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 						ike_version_t version);
@@ -1257,8 +1257,18 @@ ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
  * Check if the given IKE_SA can be reauthenticated actively or if config
  * parameters or the authentication method prevent it.
  *
- * @return				TRUE if active reauthentication is possible
+ * @param this			IKE_SA to check
+ * @return			TRUE if active reauthentication is possible
  */
 bool ike_sa_can_reauthenticate(ike_sa_t *this);
+
+/**
+ * Get hosts, virtual or physical, for deriving dynamic traffic selectors.
+ *
+ * @param this			IKE_SA to retrieve addresses from
+ * @param local			TRUE to get local hosts
+ * @return			list of hosts (internal objects)
+ */
+linked_list_t *ike_sa_get_dynamic_hosts(ike_sa_t *this, bool local);
 
 #endif /** IKE_SA_H_ @}*/

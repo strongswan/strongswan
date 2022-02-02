@@ -370,62 +370,6 @@ static void schedule_inactivity_timeout(private_child_create_t *this)
 }
 
 /**
- * Check if we have a an address pool configured
- */
-static bool have_pool(ike_sa_t *ike_sa)
-{
-	enumerator_t *enumerator;
-	peer_cfg_t *peer_cfg;
-	char *pool;
-	bool found = FALSE;
-
-	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-	if (peer_cfg)
-	{
-		enumerator = peer_cfg->create_pool_enumerator(peer_cfg);
-		if (enumerator->enumerate(enumerator, &pool))
-		{
-			found = TRUE;
-		}
-		enumerator->destroy(enumerator);
-	}
-	return found;
-}
-
-/**
- * Get hosts to use for dynamic traffic selectors
- */
-static linked_list_t *get_dynamic_hosts(ike_sa_t *ike_sa, bool local)
-{
-	enumerator_t *enumerator;
-	linked_list_t *list;
-	host_t *host;
-
-	list = linked_list_create();
-	enumerator = ike_sa->create_virtual_ip_enumerator(ike_sa, local);
-	while (enumerator->enumerate(enumerator, &host))
-	{
-		list->insert_last(list, host);
-	}
-	enumerator->destroy(enumerator);
-
-	if (list->get_count(list) == 0)
-	{	/* no virtual IPs assigned */
-		if (local)
-		{
-			host = ike_sa->get_my_host(ike_sa);
-			list->insert_last(list, host);
-		}
-		else if (!have_pool(ike_sa))
-		{	/* use host only if we don't have a pool configured */
-			host = ike_sa->get_other_host(ike_sa);
-			list->insert_last(list, host);
-		}
-	}
-	return list;
-}
-
-/**
  * Substitute any host address with NATed address in traffic selector
  */
 static linked_list_t* get_transport_nat_ts(private_child_create_t *this,
@@ -479,7 +423,7 @@ static linked_list_t* narrow_ts(private_child_create_t *this, bool local,
 	ike_condition_t cond;
 
 	cond = local ? COND_NAT_HERE : COND_NAT_THERE;
-	hosts = get_dynamic_hosts(this->ike_sa, local);
+	hosts = ike_sa_get_dynamic_hosts(this->ike_sa, local);
 
 	if (this->mode == MODE_TRANSPORT &&
 		this->ike_sa->has_condition(this->ike_sa, cond))
@@ -1262,12 +1206,12 @@ METHOD(task_t, build_i, status_t,
 	else
 	{	/* no virtual IPs configured */
 		list->destroy(list);
-		list = get_dynamic_hosts(this->ike_sa, TRUE);
+		list = ike_sa_get_dynamic_hosts(this->ike_sa, TRUE);
 		this->tsi = this->config->get_traffic_selectors(this->config,
 														TRUE, NULL, list, TRUE);
 		list->destroy(list);
 	}
-	list = get_dynamic_hosts(this->ike_sa, FALSE);
+	list = ike_sa_get_dynamic_hosts(this->ike_sa, FALSE);
 	this->tsr = this->config->get_traffic_selectors(this->config,
 													FALSE, NULL, list, TRUE);
 	list->destroy(list);
@@ -1478,8 +1422,8 @@ static child_cfg_t* select_child_cfg(private_child_create_t *this)
 		tsr = get_ts_if_nat_transport(this, TRUE, this->tsr);
 		tsi = get_ts_if_nat_transport(this, FALSE, this->tsi);
 
-		listr = get_dynamic_hosts(this->ike_sa, TRUE);
-		listi = get_dynamic_hosts(this->ike_sa, FALSE);
+		listr = ike_sa_get_dynamic_hosts(this->ike_sa, TRUE);
+		listi = ike_sa_get_dynamic_hosts(this->ike_sa, FALSE);
 		child_cfg = peer_cfg->select_child_cfg(peer_cfg,
 									tsr ?: this->tsr, tsi ?: this->tsi,
 									listr, listi, this->labels_r, this->labels_i);
