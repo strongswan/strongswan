@@ -173,7 +173,7 @@ struct private_tls_server_t {
 /**
  * Find a trusted public key to encrypt/verify key exchange data
  */
-public_key_t *tls_find_public_key(auth_cfg_t *peer_auth)
+public_key_t *tls_find_public_key(auth_cfg_t *peer_auth, identification_t *id)
 {
 	public_key_t *public = NULL, *current;
 	certificate_t *cert, *found;
@@ -184,8 +184,7 @@ public_key_t *tls_find_public_key(auth_cfg_t *peer_auth)
 	if (cert)
 	{
 		enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
-											KEY_ANY, cert->get_subject(cert),
-											peer_auth, TRUE);
+												KEY_ANY, id, peer_auth, TRUE);
 		while (enumerator->enumerate(enumerator, &current, &auth))
 		{
 			found = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
@@ -923,7 +922,7 @@ static status_t process_cert_verify(private_tls_server_t *this,
 	public_key_t *public;
 	chunk_t msg;
 
-	public = tls_find_public_key(this->peer_auth);
+	public = tls_find_public_key(this->peer_auth, this->peer);
 	if (!public)
 	{
 		DBG1(DBG_TLS, "no trusted certificate found for '%Y' to verify TLS peer",
