@@ -2226,8 +2226,8 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	{
 		/* inbound entry, do update */
 		sa_id = entry->sa_id;
-		ports.localUdpEncapPort = entry->local->get_port(entry->local);
-		ports.remoteUdpEncapPort = entry->remote->get_port(entry->remote);
+		ports.localUdpEncapPort = data->new_dst->get_port(data->new_dst);
+		ports.remoteUdpEncapPort = data->new_src->get_port(data->new_src);
 	}
 	this->mutex->unlock(this->mutex);
 
