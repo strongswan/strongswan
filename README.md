@@ -1,6 +1,6 @@
 # Strongswan with GM algorithm integration #
 
-## Claim ##
+## Acknowledgement ##
 
 The most part of the GM algorithm and integrate modification is contributed by [Zhangke](https://github.com/zhangke5959), code base is at [zhangke5959/strongswan](https://github.com/zhangke5959/strongswan).
 
