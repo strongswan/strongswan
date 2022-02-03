@@ -2280,6 +2280,10 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		key.dst = entry->osa.dst;
 		this->osas->remove(this->osas, &key);
 
+		if (data->new_reqid)
+		{
+			entry->reqid = data->new_reqid;
+		}
 		entry->local->destroy(entry->local);
 		entry->remote->destroy(entry->remote);
 		entry->local = data->new_dst->clone(data->new_dst);

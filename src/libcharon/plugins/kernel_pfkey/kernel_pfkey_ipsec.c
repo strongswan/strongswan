@@ -1960,6 +1960,12 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	size_t len;
 	status_t status = FAILED;
 
+	if (data->new_reqid)
+	{
+		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x: reqid "
+			 "change is not supported", ntohl(id->spi));
+		return NOT_SUPPORTED;
+	}
 #ifndef SADB_X_EXT_NEW_ADDRESS_SRC
 	/* we can't update the SA if any of the ip addresses have changed.
 	 * that's because we can't use SADB_UPDATE and by deleting and readding the

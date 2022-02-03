@@ -2329,6 +2329,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		kernel_ipsec_update_sa_t ipcomp = {
 			.new_src = data->new_src,
 			.new_dst = data->new_dst,
+			.new_reqid = data->new_reqid,
 		};
 		update_sa(this, &ipcomp_id, &ipcomp);
 	}
@@ -2417,6 +2418,10 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	sa = NLMSG_DATA(hdr);
 	memcpy(sa, NLMSG_DATA(out_hdr), sizeof(struct xfrm_usersa_info));
 	sa->family = data->new_dst->get_family(data->new_dst);
+	if (data->new_reqid)
+	{
+		sa->reqid = data->new_reqid;
+	}
 
 	if (!id->src->ip_equals(id->src, data->new_src))
 	{

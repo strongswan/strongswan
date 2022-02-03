@@ -130,6 +130,8 @@ struct kernel_ipsec_update_sa_t {
 	bool encap;
 	/** TRUE to enable UDP encapsulation */
 	bool new_encap;
+	/** New reqid, or 0 if unchanged */
+	uint32_t new_reqid;
 };
 
 /**
