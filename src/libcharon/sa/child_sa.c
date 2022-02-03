@@ -1636,13 +1636,16 @@ METHOD(child_sa_t, update, status_t,
 		ipsec_sa_cfg_t my_sa, other_sa;
 		enumerator_t *enumerator;
 		traffic_selector_t *my_ts, *other_ts;
+		policy_priority_t priority;
 		uint32_t manual_prio;
 		status_t state;
 		bool outbound;
 
 		prepare_sa_cfg(this, &my_sa, &other_sa);
 		manual_prio = this->config->get_manual_prio(this->config);
-		outbound = (this->outbound_state & CHILD_OUTBOUND_POLICIES);
+		priority = this->trap ? POLICY_PRIORITY_ROUTED
+							  : POLICY_PRIORITY_DEFAULT;
+		outbound = (this->outbound_state & CHILD_OUTBOUND_POLICIES) || this->trap;
 
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
@@ -1657,7 +1660,7 @@ METHOD(child_sa_t, update, status_t,
 			/* remove old policies */
 			del_policies_internal(this, this->my_addr, this->other_addr,
 						my_ts, other_ts, &my_sa, &other_sa, POLICY_IPSEC,
-						POLICY_PRIORITY_DEFAULT, manual_prio, outbound);
+						priority, manual_prio, outbound);
 		}
 		enumerator->destroy(enumerator);
 
@@ -1674,7 +1677,7 @@ METHOD(child_sa_t, update, status_t,
 			{
 				install_policies_internal(this, this->my_addr, this->other_addr,
 						my_ts, other_ts, &my_sa, &other_sa, POLICY_IPSEC,
-						POLICY_PRIORITY_DEFAULT, manual_prio, outbound);
+						priority, manual_prio, outbound);
 			}
 			else
 			{
@@ -1702,7 +1705,7 @@ METHOD(child_sa_t, update, status_t,
 				/* reinstall updated policies */
 				install_policies_internal(this, me, other, my_ts, other_ts,
 						&my_sa, &other_sa, POLICY_IPSEC,
-						POLICY_PRIORITY_DEFAULT, manual_prio, outbound);
+						priority, manual_prio, outbound);
 			}
 			/* remove the drop policy */
 			if (outbound)
