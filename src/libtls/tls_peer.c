@@ -21,7 +21,6 @@
 #include "tls_peer.h"
 
 #include <utils/debug.h>
-#include <credentials/certificates/x509.h>
 
 #include <time.h>
 
@@ -510,42 +509,6 @@ static status_t process_encrypted_extensions(private_tls_peer_t *this,
 }
 
 /**
- * Check if a server certificate is acceptable for the given server identity
- */
-static bool check_certificate(private_tls_peer_t *this, certificate_t *cert)
-{
-	identification_t *id;
-
-	if (cert->has_subject(cert, this->server))
-	{
-		return TRUE;
-	}
-	id = cert->get_subject(cert);
-	if (id->matches(id, this->server))
-	{
-		return TRUE;
-	}
-	if (cert->get_type(cert) == CERT_X509)
-	{
-		x509_t *x509 = (x509_t*)cert;
-		enumerator_t *enumerator;
-
-		enumerator = x509->create_subjectAltName_enumerator(x509);
-		while (enumerator->enumerate(enumerator, &id))
-		{
-			if (id->matches(id, this->server))
-			{
-				enumerator->destroy(enumerator);
-				return TRUE;
-			}
-		}
-		enumerator->destroy(enumerator);
-	}
-	DBG1(DBG_TLS, "server certificate does not match to '%Y'", this->server);
-	return FALSE;
-}
-
-/**
  * Process a Certificate message
  */
 static status_t process_certificate(private_tls_peer_t *this,
@@ -591,8 +554,10 @@ static status_t process_certificate(private_tls_peer_t *this,
 		{
 			if (first)
 			{
-				if (!check_certificate(this, cert))
+				if (!cert->has_subject(cert, this->server))
 				{
+					DBG1(DBG_TLS, "server certificate does not match to '%Y'",
+						 this->server);
 					cert->destroy(cert);
 					certs->destroy(certs);
 					this->alert->add(this->alert, TLS_FATAL, TLS_ACCESS_DENIED);
