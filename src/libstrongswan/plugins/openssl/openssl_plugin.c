@@ -881,7 +881,7 @@ METHOD(plugin_t, get_features, int,
 #endif
 	}
 	*features = f;
-	return countof(f);
+	return count;
 }
 
 METHOD(plugin_t, destroy, void,
