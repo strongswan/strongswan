@@ -2916,19 +2916,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	this->mutex->lock(this->mutex);
 	current = this->policies->get(this->policies, policy);
 	if (current)
-	{
-		if (current->reqid && data->sa->reqid &&
-			current->reqid != data->sa->reqid)
-		{
-			DBG1(DBG_CFG, "unable to install policy %R === %R %N%s%s for reqid "
-				 "%u, the same policy for reqid %u exists",
-				 id->src_ts, id->dst_ts, policy_dir_names, id->dir, markstr,
-				 labelstr, data->sa->reqid, current->reqid);
-			policy_entry_destroy(this, policy);
-			this->mutex->unlock(this->mutex);
-			return INVALID_STATE;
-		}
-		/* use existing policy */
+	{	/* use existing policy */
 		DBG2(DBG_KNL, "policy %R === %R %N%s%s already exists, increasing "
 			 "refcount", id->src_ts, id->dst_ts, policy_dir_names, id->dir,
 			 markstr, labelstr);
@@ -3000,7 +2988,13 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 			 id->dir, markstr, labelstr, cur_priority, use_count);
 		return SUCCESS;
 	}
-	policy->reqid = assigned_sa->sa->cfg.reqid;
+	if (policy->reqid != assigned_sa->sa->cfg.reqid)
+	{
+		DBG1(DBG_CFG, "updating reqid for policy %R === %R %N%s%s from %u "
+			 "to %u", id->src_ts, id->dst_ts, policy_dir_names, id->dir,
+			 markstr, labelstr, policy->reqid, assigned_sa->sa->cfg.reqid);
+		policy->reqid = assigned_sa->sa->cfg.reqid;
+	}
 
 	if (this->policy_update)
 	{
@@ -3208,7 +3202,13 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 			return SUCCESS;
 		}
 		current->used_by->get_first(current->used_by, (void**)&mapping);
-		current->reqid = mapping->sa->cfg.reqid;
+		if (current->reqid != mapping->sa->cfg.reqid)
+		{
+			DBG1(DBG_CFG, "updating reqid for policy %R === %R %N%s%s from %u "
+				 "to %u", id->src_ts, id->dst_ts, policy_dir_names, id->dir,
+				 markstr, labelstr, current->reqid, mapping->sa->cfg.reqid);
+			current->reqid = mapping->sa->cfg.reqid;
+		}
 
 		DBG2(DBG_KNL, "updating policy %R === %R %N%s%s [priority %u, "
 			 "refcount %d]", id->src_ts, id->dst_ts, policy_dir_names, id->dir,
