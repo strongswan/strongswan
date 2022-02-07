@@ -591,6 +591,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   copy_df = %u", !has_opt(cfg, OPT_NO_COPY_DF));
 	DBG2(DBG_CFG, "   copy_ecn = %u", !has_opt(cfg, OPT_NO_COPY_ECN));
 	DBG2(DBG_CFG, "   copy_dscp = %N", dscp_copy_names, cfg->copy_dscp);
+	DBG2(DBG_CFG, "   icmp = %u", has_opt(cfg, OPT_FORWARD_ICMP));
 }
 
 /**
@@ -1103,6 +1104,15 @@ CALLBACK(parse_copy_dscp, bool,
 		return TRUE;
 	}
 	return FALSE;
+}
+
+/**
+ * Parse OTP_FORWARD_ICMP option
+ */
+CALLBACK(parse_opt_icmp, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_FORWARD_ICMP, v, TRUE);
 }
 
 /**
@@ -1953,6 +1963,7 @@ CALLBACK(child_kv, bool,
 		{ "copy_df",			parse_opt_copy_df,	&child->cfg.options					},
 		{ "copy_ecn",			parse_opt_copy_ecn,	&child->cfg.options					},
 		{ "copy_dscp",			parse_copy_dscp,	&child->cfg.copy_dscp				},
+		{ "icmp",				parse_opt_icmp,		&child->cfg.options					},
 		{ "if_id_in",			parse_if_id,		&child->cfg.if_id_in				},
 		{ "if_id_out",			parse_if_id,		&child->cfg.if_id_out				},
 		{ "label",				parse_label,		&child->cfg.label					},
