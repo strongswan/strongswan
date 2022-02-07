@@ -470,7 +470,7 @@ static u_int ipsec_sa_hash(ipsec_sa_t *sa)
 						  chunk_hash_inc(chunk_from_thing(sa->mark),
 						  chunk_hash_inc(chunk_from_thing(sa->if_id),
 						  chunk_hash_inc(chunk_from_thing(sa->hw_offload),
-						  chunk_hash(chunk_from_thing(sa->cfg)))))));
+						  ipsec_sa_cfg_hash(&sa->cfg))))));
 }
 
 /**

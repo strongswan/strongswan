@@ -180,6 +180,14 @@ struct ipsec_sa_cfg_t {
 };
 
 /**
+ * Hash an ipsec_sa_cfg_t object.
+ *
+ * @param this		object to hash
+ * @return			hash value
+ */
+u_int ipsec_sa_cfg_hash(ipsec_sa_cfg_t *this);
+
+/**
  * Compare two ipsec_sa_cfg_t objects for equality.
  *
  * @param a			first object
