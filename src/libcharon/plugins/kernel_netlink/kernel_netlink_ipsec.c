@@ -554,6 +554,9 @@ struct policy_sa_t {
 	/** Whether to trigger per-CPU acquires for this policy */
 	bool pcpu_acquires;
 
+	/** Whether to forward certain ICMP error messages for this policy */
+	bool forward_icmp;
+
 	/** Assigned SA */
 	ipsec_sa_t *sa;
 };
@@ -577,19 +580,16 @@ struct policy_sa_out_t {
  * Create a policy_sa(_out)_t object
  */
 static policy_sa_t *policy_sa_create(private_kernel_netlink_ipsec_t *this,
-	policy_dir_t dir, policy_type_t type, host_t *src, host_t *dst,
-	traffic_selector_t *src_ts, traffic_selector_t *dst_ts, mark_t mark,
-	uint32_t if_id, hw_offload_t hw_offload, bool pcpu_acquires,
-	ipsec_sa_cfg_t *cfg)
+	kernel_ipsec_policy_id_t *id, kernel_ipsec_manage_policy_t *data)
 {
 	policy_sa_t *policy;
 
-	if (dir == POLICY_OUT)
+	if (id->dir == POLICY_OUT)
 	{
 		policy_sa_out_t *out;
 		INIT(out,
-			.src_ts = src_ts->clone(src_ts),
-			.dst_ts = dst_ts->clone(dst_ts),
+			.src_ts = id->src_ts->clone(id->src_ts),
+			.dst_ts = id->dst_ts->clone(id->dst_ts),
 		);
 		policy = &out->generic;
 	}
@@ -597,9 +597,11 @@ static policy_sa_t *policy_sa_create(private_kernel_netlink_ipsec_t *this,
 	{
 		INIT(policy, .priority = 0);
 	}
-	policy->type = type;
-	policy->pcpu_acquires = pcpu_acquires;
-	policy->sa = ipsec_sa_create(this, src, dst, mark, if_id, hw_offload, cfg);
+	policy->type = data->type;
+	policy->pcpu_acquires = data->pcpu_acquires;
+	policy->forward_icmp = data->forward_icmp;
+	policy->sa = ipsec_sa_create(this, data->src, data->dst, id->mark,
+								 id->if_id, data->hw_offload, data->sa);
 	return policy;
 }
 
@@ -1805,6 +1807,11 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	if (!data->copy_ecn)
 	{
 		sa->flags |= XFRM_STATE_NOECN;
+	}
+
+	if (data->inbound && data->forward_icmp)
+	{
+		sa->flags |= XFRM_STATE_ICMP;
 	}
 
 	if (data->inbound)
@@ -3065,6 +3072,12 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 													   : XFRM_POLICY_BLOCK;
 	policy_info->share = XFRM_SHARE_ANY;
 
+	if (mapping->type == POLICY_IPSEC && policy->direction != POLICY_IN &&
+		mapping->forward_icmp)
+	{
+		policy_info->flags |= XFRM_POLICY_ICMP;
+	}
+
 	/* policies don't expire */
 	policy_info->lft.soft_byte_limit = XFRM_INF;
 	policy_info->lft.soft_packet_limit = XFRM_INF;
@@ -3262,10 +3275,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	}
 
 	/* cache the assigned IPsec SA */
-	assigned_sa = policy_sa_create(this, id->dir, data->type, data->src,
-								   data->dst, id->src_ts, id->dst_ts, id->mark,
-								   id->if_id, data->hw_offload,
-								   data->pcpu_acquires, data->sa);
+	assigned_sa = policy_sa_create(this, id, data);
 	assigned_sa->auto_priority = get_priority(policy, data->prio, id->interface);
 	assigned_sa->priority = this->get_priority ? this->get_priority(id, data)
 											   : data->manual_prio;
@@ -3499,6 +3509,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 			auto_priority == mapping->auto_priority &&
 			data->type == mapping->type &&
 			data->pcpu_acquires == mapping->pcpu_acquires &&
+			data->forward_icmp == mapping->forward_icmp &&
 			ipsec_sa_equals(mapping->sa, &assigned_sa))
 		{
 			current->used_by->remove_at(current->used_by, enumerator);
