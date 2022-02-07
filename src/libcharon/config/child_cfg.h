@@ -420,6 +420,9 @@ enum child_cfg_option_t {
 
 	/** Enable UDP encapsulation for per-CPU CHILD_SAs */
 	OPT_PER_CPU_SAS_ENCAP = (1<<10),
+
+	/** Enable automatic forwarding of certain ICMP errors */
+	OPT_FORWARD_ICMP = (1<<11),
 };
 
 /**
