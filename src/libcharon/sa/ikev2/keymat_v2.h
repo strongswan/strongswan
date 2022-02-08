@@ -108,11 +108,12 @@ struct keymat_v2_t {
 	 *
 	 * @param verify		TRUE as recipient, FALSE as sender
 	 * @param data			IKE_INTERMEDIATE packet data
+	 * @param prev			previous IntAuth value
 	 * @param[out] auth		IntAuth data to be used later with get_auth_octets()
 	 * @return				TRUE if octets created successfully
 	 */
 	bool (*get_int_auth)(keymat_v2_t *this, bool verify, chunk_t data,
-						 chunk_t *auth);
+						 chunk_t prev, chunk_t *auth);
 
 	/**
 	 * Generate octets to use for authentication procedure (RFC4306 2.15).

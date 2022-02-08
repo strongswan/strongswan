@@ -255,7 +255,8 @@ METHOD(keymat_t, get_aead, aead_t*,
 }
 
 METHOD(keymat_v2_t, get_int_auth, bool,
-	private_tkm_keymat_t *this, bool verify, chunk_t data, chunk_t *auth)
+	private_tkm_keymat_t *this, bool verify, chunk_t data, chunk_t prev,
+	chunk_t *auth)
 {
 	DBG1(DBG_IKE, "TKM doesn't support IntAuth calculation");
 	return FALSE;

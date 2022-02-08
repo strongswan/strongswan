@@ -732,20 +732,23 @@ METHOD(keymat_t, get_aead, aead_t*,
 }
 
 METHOD(keymat_v2_t, get_int_auth, bool,
-	private_keymat_v2_t *this, bool verify, chunk_t data, chunk_t *auth)
+	private_keymat_v2_t *this, bool verify, chunk_t data, chunk_t prev,
+	chunk_t *auth)
 {
 	chunk_t skp;
 
 	skp = verify ? this->skp_verify : this->skp_build;
 
+	DBG3(DBG_IKE, "IntAuth_N-1 %B", &prev);
 	DBG3(DBG_IKE, "IntAuth_A|P %B", &data);
 	DBG4(DBG_IKE, "SK_p %B", &skp);
+	data = chunk_cata("cc", prev, data);
 	if (!this->prf->set_key(this->prf, skp) ||
 		!this->prf->allocate_bytes(this->prf, data, auth))
 	{
 		return FALSE;
 	}
-	DBG3(DBG_IKE, "IntAuth = prf(Sk_px, data) %B", auth);
+	DBG3(DBG_IKE, "IntAuth_N = prf(Sk_px, data) %B", auth);
 	return TRUE;
 }
 
