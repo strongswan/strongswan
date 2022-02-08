@@ -271,6 +271,49 @@ METHOD(task_manager_t, flush, void,
 }
 
 /**
+ * Check if a given task has been queued already
+ */
+static bool has_queued(private_task_manager_t *this, task_queue_t queue,
+					   task_type_t type)
+{
+	enumerator_t *enumerator;
+	array_t *array;
+	task_t *task;
+	bool found = FALSE;
+
+	switch (queue)
+	{
+		case TASK_QUEUE_ACTIVE:
+			array = this->active_tasks;
+			break;
+		case TASK_QUEUE_PASSIVE:
+			array = this->passive_tasks;
+			break;
+		case TASK_QUEUE_QUEUED:
+			array = this->queued_tasks;
+			break;
+		default:
+			return FALSE;
+	}
+
+	enumerator = array_create_enumerator(array);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (queue == TASK_QUEUE_QUEUED)
+		{
+			task = ((queued_task_t*)task)->task;
+		}
+		if (task->get_type(task) == type)
+		{
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return found;
+}
+
+/**
  * Move a task of a specific type from the queue to the active list, if it is
  * not delayed.
  */
@@ -1712,6 +1755,11 @@ static inline bool reject_request(private_task_manager_t *this,
 		case IKE_SA_INIT:
 			reject = state != IKE_CREATED;
 			break;
+		case IKE_INTERMEDIATE:
+			/* only accept this if we have not yet completed the KEs */
+			reject = state != IKE_CONNECTING ||
+					 !has_queued(this, TASK_QUEUE_PASSIVE, TASK_IKE_INIT);
+			break;
 		case IKE_AUTH:
 			reject = state != IKE_CONNECTING;
 			break;
@@ -2065,64 +2113,42 @@ METHOD(task_manager_t, queue_task, void,
 	queue_task_delayed(this, task, 0);
 }
 
-/**
- * Check if a given task has been queued already
- */
-static bool has_queued(private_task_manager_t *this, task_type_t type)
-{
-	enumerator_t *enumerator;
-	bool found = FALSE;
-	queued_task_t *queued;
-
-	enumerator = array_create_enumerator(this->queued_tasks);
-	while (enumerator->enumerate(enumerator, &queued))
-	{
-		if (queued->task->get_type(queued->task) == type)
-		{
-			found = TRUE;
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return found;
-}
-
 METHOD(task_manager_t, queue_ike, void,
 	private_task_manager_t *this)
 {
-	if (!has_queued(this, TASK_IKE_VENDOR))
+	if (!has_queued(this, TASK_QUEUE_QUEUED, TASK_IKE_VENDOR))
 	{
 		queue_task(this, (task_t*)ike_vendor_create(this->ike_sa, TRUE));
 	}
-	if (!has_queued(this, TASK_IKE_INIT))
+	if (!has_queued(this, TASK_QUEUE_QUEUED, TASK_IKE_INIT))
 	{
 		queue_task(this, (task_t*)ike_init_create(this->ike_sa, TRUE, NULL));
 	}
-	if (!has_queued(this, TASK_IKE_NATD))
+	if (!has_queued(this, TASK_QUEUE_QUEUED, TASK_IKE_NATD))
 	{
 		queue_task(this, (task_t*)ike_natd_create(this->ike_sa, TRUE));
 	}
-	if (!has_queued(this, TASK_IKE_CERT_PRE))
+	if (!has_queued(this, TASK_QUEUE_QUEUED, TASK_IKE_CERT_PRE))
 	{
 		queue_task(this, (task_t*)ike_cert_pre_create(this->ike_sa, TRUE));
 	}
-	if (!has_queued(this, TASK_IKE_AUTH))
+	if (!has_queued(this, TASK_QUEUE_QUEUED, TASK_IKE_AUTH))
 	{
 		queue_task(this, (task_t*)ike_auth_create(this->ike_sa, TRUE));
 	}
-	if (!has_queued(this, TASK_IKE_CERT_POST))
+	if (!has_queued(this, TASK_QUEUE_QUEUED, TASK_IKE_CERT_POST))
 	{
 		queue_task(this, (task_t*)ike_cert_post_create(this->ike_sa, TRUE));
 	}
-	if (!has_queued(this, TASK_IKE_CONFIG))
+	if (!has_queued(this, TASK_QUEUE_QUEUED, TASK_IKE_CONFIG))
 	{
 		queue_task(this, (task_t*)ike_config_create(this->ike_sa, TRUE));
 	}
-	if (!has_queued(this, TASK_IKE_AUTH_LIFETIME))
+	if (!has_queued(this, TASK_QUEUE_QUEUED, TASK_IKE_AUTH_LIFETIME))
 	{
 		queue_task(this, (task_t*)ike_auth_lifetime_create(this->ike_sa, TRUE));
 	}
-	if (!has_queued(this, TASK_IKE_MOBIKE))
+	if (!has_queued(this, TASK_QUEUE_QUEUED, TASK_IKE_MOBIKE))
 	{
 		peer_cfg_t *peer_cfg;
 
@@ -2133,7 +2159,7 @@ METHOD(task_manager_t, queue_ike, void,
 		}
 	}
 #ifdef ME
-	if (!has_queued(this, TASK_IKE_ME))
+	if (!has_queued(this, TASK_QUEUE_QUEUED, TASK_IKE_ME))
 	{
 		queue_task(this, (task_t*)ike_me_create(this->ike_sa, TRUE));
 	}
