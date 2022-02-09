@@ -449,6 +449,7 @@ do
 		}
 		printf("cmd_err=\044(tempfile -p test -s err); ")
 		printf("cmd_out=\044(tempfile -p test -s out); ")
+		printf("start_time=\044(print_time); ")
 		if (command == "tcpdump")
 		{
 			printf("if [ \044TDUP_%s == \"true\" ]; then stop_tcpdump %s; fi; \n", host, host)
@@ -475,11 +476,11 @@ do
 		printf("if [ \044cmd_fail -ne 0 ]; then echo \"~~~~~~~ FAIL ~~~~~~~\"; fi; \n")
 		if (command == "tcpdump")
 		{
-			printf("echo \"$(print_time)%s# cat /tmp/tcpdump.log | grep \047%s\047  [%s]\"; ", host, pattern, hit)
+			printf("echo \"\044{start_time}%s# cat /tmp/tcpdump.log | grep \047%s\047  [%s]\"; ", host, pattern, hit)
 		}
 		else
 		{
-			printf("echo \"$(print_time)%s# %s | grep \047%s\047  [%s]\"; ", host, command, pattern, hit)
+			printf("echo \"\044{start_time}%s# %s | grep \047%s\047  [%s]\"; ", host, command, pattern, hit)
 		}
 		printf("if [ -n \"\044cmd_res\" ]; then echo \"\044cmd_res\"; fi; \n")
 		printf("cat \044cmd_err; \n")
