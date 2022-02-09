@@ -53,6 +53,7 @@ struct entry_t {
 		hasher_constructor_t create_hasher;
 		prf_constructor_t create_prf;
 		xof_constructor_t create_xof;
+		kdf_constructor_t create_kdf;
 		drbg_constructor_t create_drbg;
 		rng_constructor_t create_rng;
 		nonce_gen_constructor_t create_nonce_gen;
@@ -102,6 +103,11 @@ struct private_crypto_factory_t {
 	 * registered xofs, as entry_t
 	 */
 	linked_list_t *xofs;
+
+	/**
+	 * registered kdfs, as entry_t
+	 */
+	linked_list_t *kdfs;
 
 	/**
 	 * registered drbgs, as entry_t
@@ -346,6 +352,34 @@ METHOD(crypto_factory_t, create_xof, xof_t*,
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 	return xof;
+}
+
+METHOD(crypto_factory_t, create_kdf, kdf_t*,
+	private_crypto_factory_t *this, key_derivation_function_t algo, ...)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	va_list args;
+	kdf_t *kdf = NULL;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->kdfs->create_enumerator(this->kdfs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->algo == algo)
+		{
+			va_start(args, algo);
+			kdf = entry->create_kdf(algo, args);
+			va_end(args);
+			if (kdf)
+			{
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+	return kdf;
 }
 
 METHOD(crypto_factory_t, create_drbg, drbg_t*,
@@ -749,6 +783,34 @@ METHOD(crypto_factory_t, remove_xof, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(crypto_factory_t, add_kdf, bool,
+	private_crypto_factory_t *this, key_derivation_function_t algo,
+	const char *plugin_name, kdf_constructor_t create)
+{
+	add_entry(this, this->kdfs, algo, plugin_name, 0, create);
+	return TRUE;
+}
+
+METHOD(crypto_factory_t, remove_kdf, void,
+	private_crypto_factory_t *this, kdf_constructor_t create)
+{
+	entry_t *entry;
+	enumerator_t *enumerator;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->kdfs->create_enumerator(this->kdfs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->create_kdf == create)
+		{
+			this->kdfs->remove_at(this->kdfs, enumerator);
+			free(entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+}
+
 METHOD(crypto_factory_t, add_drbg, bool,
 	private_crypto_factory_t *this, drbg_type_t type,
 	const char *plugin_name, drbg_constructor_t create)
@@ -1058,6 +1120,30 @@ METHOD(crypto_factory_t, create_xof_enumerator, enumerator_t*,
 	return create_enumerator(this, this->xofs, xof_filter);
 }
 
+CALLBACK(kdf_filter, bool,
+	void *n, enumerator_t *orig, va_list args)
+{
+	entry_t *entry;
+	key_derivation_function_t *algo;
+	const char **plugin_name;
+
+	VA_ARGS_VGET(args, algo, plugin_name);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*algo = entry->algo;
+		*plugin_name = entry->plugin_name;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+METHOD(crypto_factory_t, create_kdf_enumerator, enumerator_t*,
+	private_crypto_factory_t *this)
+{
+	return create_enumerator(this, this->kdfs, kdf_filter);
+}
+
 CALLBACK(drbg_filter, bool,
 	void *n, enumerator_t *orig, va_list args)
 {
@@ -1323,6 +1409,7 @@ METHOD(crypto_factory_t, destroy, void,
 	this->hashers->destroy(this->hashers);
 	this->prfs->destroy(this->prfs);
 	this->xofs->destroy(this->xofs);
+	this->kdfs->destroy(this->kdfs);
 	this->drbgs->destroy(this->drbgs);
 	this->rngs->destroy(this->rngs);
 	this->nonce_gens->destroy(this->nonce_gens);
@@ -1347,6 +1434,7 @@ crypto_factory_t *crypto_factory_create()
 			.create_hasher = _create_hasher,
 			.create_prf = _create_prf,
 			.create_xof = _create_xof,
+			.create_kdf = _create_kdf,
 			.create_drbg = _create_drbg,
 			.create_rng = _create_rng,
 			.create_nonce_gen = _create_nonce_gen,
@@ -1363,6 +1451,8 @@ crypto_factory_t *crypto_factory_create()
 			.remove_prf = _remove_prf,
 			.add_xof = _add_xof,
 			.remove_xof = _remove_xof,
+			.add_kdf = _add_kdf,
+			.remove_kdf = _remove_kdf,
 			.add_drbg = _add_drbg,
 			.remove_drbg = _remove_drbg,
 			.add_rng = _add_rng,
@@ -1377,6 +1467,7 @@ crypto_factory_t *crypto_factory_create()
 			.create_hasher_enumerator = _create_hasher_enumerator,
 			.create_prf_enumerator = _create_prf_enumerator,
 			.create_xof_enumerator = _create_xof_enumerator,
+			.create_kdf_enumerator = _create_kdf_enumerator,
 			.create_drbg_enumerator = _create_drbg_enumerator,
 			.create_dh_enumerator = _create_dh_enumerator,
 			.create_rng_enumerator = _create_rng_enumerator,
@@ -1391,6 +1482,7 @@ crypto_factory_t *crypto_factory_create()
 		.hashers = linked_list_create(),
 		.prfs = linked_list_create(),
 		.xofs = linked_list_create(),
+		.kdfs = linked_list_create(),
 		.drbgs = linked_list_create(),
 		.rngs = linked_list_create(),
 		.nonce_gens = linked_list_create(),
