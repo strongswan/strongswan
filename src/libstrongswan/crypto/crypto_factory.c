@@ -368,6 +368,20 @@ METHOD(crypto_factory_t, create_kdf, kdf_t*,
 	{
 		if (entry->algo == algo)
 		{
+			if (this->test_on_create)
+			{
+				kdf_test_args_t test_args = {};
+
+				va_start(test_args.args, algo);
+				if (!this->tester->test_kdf(this->tester, algo,
+											entry->create_kdf, &test_args, NULL,
+											default_plugin_name))
+				{
+					va_end(test_args.args);
+					continue;
+				}
+				va_end(test_args.args);
+			}
 			va_start(args, algo);
 			kdf = entry->create_kdf(algo, args);
 			va_end(args);
@@ -787,8 +801,17 @@ METHOD(crypto_factory_t, add_kdf, bool,
 	private_crypto_factory_t *this, key_derivation_function_t algo,
 	const char *plugin_name, kdf_constructor_t create)
 {
-	add_entry(this, this->kdfs, algo, plugin_name, 0, create);
-	return TRUE;
+	u_int speed = 0;
+
+	if (!this->test_on_add ||
+		this->tester->test_kdf(this->tester, algo, create, NULL,
+							   this->bench ? &speed : NULL, plugin_name))
+	{
+		add_entry(this, this->kdfs, algo, plugin_name, 0, create);
+		return TRUE;
+	}
+	this->test_failures++;
+	return FALSE;
 }
 
 METHOD(crypto_factory_t, remove_kdf, void,
@@ -1255,6 +1278,8 @@ METHOD(crypto_factory_t, add_test_vector, void,
 			return this->tester->add_prf_vector(this->tester, vector);
 		case EXTENDED_OUTPUT_FUNCTION:
 			return this->tester->add_xof_vector(this->tester, vector);
+		case KEY_DERIVATION_FUNCTION:
+			return this->tester->add_kdf_vector(this->tester, vector);
 		case DETERMINISTIC_RANDOM_BIT_GENERATOR:
 			return this->tester->add_drbg_vector(this->tester, vector);
 		case RANDOM_NUMBER_GENERATOR:
@@ -1318,6 +1343,10 @@ METHOD(enumerator_t, verify_enumerate, bool,
 			*valid = this->tester->test_xof(this->tester, entry->algo,
 							entry->create_xof, NULL, entry->plugin_name);
 			break;
+		case KEY_DERIVATION_FUNCTION:
+			*valid = this->tester->test_kdf(this->tester, entry->algo,
+							entry->create_kdf, NULL, NULL, entry->plugin_name);
+			break;
 		case DETERMINISTIC_RANDOM_BIT_GENERATOR:
 			*valid = this->tester->test_drbg(this->tester, entry->algo,
 							entry->create_drbg, NULL, entry->plugin_name);
@@ -1372,6 +1401,9 @@ METHOD(crypto_factory_t, create_verify_enumerator, enumerator_t*,
 			break;
 		case EXTENDED_OUTPUT_FUNCTION:
 			inner = this->xofs->create_enumerator(this->xofs);
+			break;
+		case KEY_DERIVATION_FUNCTION:
+			inner = this->kdfs->create_enumerator(this->kdfs);
 			break;
 		case DETERMINISTIC_RANDOM_BIT_GENERATOR:
 			inner = this->drbgs->create_enumerator(this->drbgs);
