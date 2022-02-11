@@ -52,6 +52,7 @@
 #include "openssl_pkcs12.h"
 #include "openssl_rng.h"
 #include "openssl_hmac.h"
+#include "openssl_kdf.h"
 #include "openssl_aead.h"
 #include "openssl_x_diffie_hellman.h"
 #include "openssl_ed_public_key.h"
@@ -653,6 +654,11 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_384_384),
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_256),
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_512),
+#endif
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
+		/* HKDF is available since 1.1.0, expand-only mode only since 1.1.1 */
+		PLUGIN_REGISTER(KDF, openssl_kdf_create),
+			PLUGIN_PROVIDE(KDF, KDF_PRF_PLUS),
 #endif
 #endif /* OPENSSL_NO_HMAC */
 #if (OPENSSL_VERSION_NUMBER >= 0x1000100fL && !defined(OPENSSL_NO_AES)) || \
