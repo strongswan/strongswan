@@ -472,6 +472,17 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 	name = plugin->get_name(plugin);
 	switch (feature->type)
 	{
+		case FEATURE_NONE:
+		case FEATURE_PRIVKEY_SIGN:
+		case FEATURE_PRIVKEY_DECRYPT:
+		case FEATURE_PUBKEY_VERIFY:
+		case FEATURE_PUBKEY_ENCRYPT:
+		case FEATURE_EAP_SERVER:
+		case FEATURE_EAP_PEER:
+		case FEATURE_XAUTH_SERVER:
+		case FEATURE_XAUTH_PEER:
+		case FEATURE_CUSTOM:
+			break;
 		case FEATURE_CRYPTER:
 			lib->crypto->add_crypter(lib->crypto, feature->arg.crypter.alg,
 								feature->arg.crypter.key_size,
@@ -547,8 +558,6 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 		case FEATURE_RESOLVER:
 			lib->resolver->add_resolver(lib->resolver, reg->arg.reg.f);
 			break;
-		default:
-			break;
 	}
 	return TRUE;
 }
@@ -574,6 +583,17 @@ bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 	}
 	switch (feature->type)
 	{
+		case FEATURE_NONE:
+		case FEATURE_PRIVKEY_SIGN:
+		case FEATURE_PRIVKEY_DECRYPT:
+		case FEATURE_PUBKEY_VERIFY:
+		case FEATURE_PUBKEY_ENCRYPT:
+		case FEATURE_EAP_SERVER:
+		case FEATURE_EAP_PEER:
+		case FEATURE_XAUTH_SERVER:
+		case FEATURE_XAUTH_PEER:
+		case FEATURE_CUSTOM:
+			break;
 		case FEATURE_CRYPTER:
 			lib->crypto->remove_crypter(lib->crypto, reg->arg.reg.f);
 			break;
@@ -627,8 +647,6 @@ bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 			break;
 		case FEATURE_RESOLVER:
 			lib->resolver->remove_resolver(lib->resolver, reg->arg.reg.f);
-			break;
-		default:
 			break;
 	}
 	return TRUE;
