@@ -17,7 +17,6 @@
 #include "keymat_v2.h"
 
 #include <daemon.h>
-#include <crypto/prf_plus.h>
 #include <crypto/hashers/hash_algorithm_set.h>
 
 typedef struct private_keymat_v2_t private_keymat_v2_t;
@@ -245,7 +244,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	chunk_t prf_plus_seed, spi_i, spi_r, keymat = chunk_empty;
 	chunk_t sk_ei = chunk_empty, sk_er = chunk_empty;
 	chunk_t sk_ai = chunk_empty, sk_ar = chunk_empty, sk_pi, sk_pr;
-	prf_plus_t *prf_plus = NULL;
+	kdf_t *prf_plus = NULL;
 	uint16_t prf_alg, key_size, enc_alg, enc_size, int_alg;
 	prf_t *rekey_prf = NULL;
 	bool success = FALSE;
@@ -341,10 +340,10 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	{
 		/* SKEYSEED = prf(Ni | Nr, g^ir) */
 		if (this->prf->set_key(this->prf, fixed_nonce) &&
-			this->prf->allocate_bytes(this->prf, secret, &skeyseed) &&
-			this->prf->set_key(this->prf, skeyseed))
+			this->prf->allocate_bytes(this->prf, secret, &skeyseed))
 		{
-			prf_plus = prf_plus_create(this->prf, TRUE, prf_plus_seed);
+			prf_plus = lib->crypto->create_kdf(lib->crypto, KDF_PRF_PLUS,
+											   this->prf_alg);
 		}
 	}
 	else
@@ -364,19 +363,28 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		}
 		secret = chunk_cat("sc", secret, full_nonce);
 		if (rekey_prf->set_key(rekey_prf, rekey_skd) &&
-			rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed) &&
-			rekey_prf->set_key(rekey_prf, skeyseed))
+			rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed))
 		{
-			prf_plus = prf_plus_create(rekey_prf, TRUE, prf_plus_seed);
+			prf_plus = lib->crypto->create_kdf(lib->crypto, KDF_PRF_PLUS,
+											   rekey_function);
 		}
 	}
 	DBG4(DBG_IKE, "SKEYSEED %B", &skeyseed);
+
+	if (prf_plus &&
+		(!prf_plus->set_param(prf_plus, KDF_PARAM_KEY, skeyseed) ||
+		 !prf_plus->set_param(prf_plus, KDF_PARAM_SALT, prf_plus_seed)))
+	{
+		prf_plus->destroy(prf_plus);
+		prf_plus = NULL;
+	}
 
 	chunk_clear(&skeyseed);
 	chunk_clear(&secret);
 	chunk_free(&full_nonce);
 	chunk_free(&fixed_nonce);
 	chunk_clear(&prf_plus_seed);
+	DESTROY_IF(rekey_prf);
 
 	if (!prf_plus)
 	{
@@ -430,20 +438,21 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 failure:
 	chunk_clear(&keymat);
 	DESTROY_IF(prf_plus);
-	DESTROY_IF(rekey_prf);
 	return success;
 }
 
 /**
- * Derives a key from the given key and a PRF that was initialized with a PPK
+ * Derives a new key from the given PPK and old key
  */
-static bool derive_ppk_key(prf_t *prf, char *name, chunk_t key,
-						   chunk_t *new_key)
+static bool derive_ppk_key(private_keymat_v2_t *this, char *name, chunk_t ppk,
+						   chunk_t key, chunk_t *new_key)
 {
-	prf_plus_t *prf_plus;
+	kdf_t *prf_plus;
 
-	prf_plus = prf_plus_create(prf, TRUE, key);
+	prf_plus = lib->crypto->create_kdf(lib->crypto, KDF_PRF_PLUS, this->prf_alg);
 	if (!prf_plus ||
+		!prf_plus->set_param(prf_plus, KDF_PARAM_KEY, ppk) ||
+		!prf_plus->set_param(prf_plus, KDF_PARAM_SALT, key) ||
 		!prf_plus->allocate_bytes(prf_plus, key.len, new_key))
 	{
 		DBG1(DBG_IKE, "unable to derive %s with PPK", name);
@@ -452,20 +461,6 @@ static bool derive_ppk_key(prf_t *prf, char *name, chunk_t key,
 	}
 	prf_plus->destroy(prf_plus);
 	return TRUE;
-}
-
-/**
- * Use the given PPK to derive a new SK_pi/r
- */
-static bool derive_skp_ppk(private_keymat_v2_t *this, chunk_t ppk, chunk_t skp,
-						   chunk_t *new_skp)
-{
-	if (!this->prf->set_key(this->prf, ppk))
-	{
-		DBG1(DBG_IKE, "unable to set PPK in PRF");
-		return FALSE;
-	}
-	return derive_ppk_key(this->prf, "SK_p", skp, new_skp);
 }
 
 METHOD(keymat_v2_t, derive_ike_keys_ppk, bool,
@@ -492,14 +487,9 @@ METHOD(keymat_v2_t, derive_ike_keys_ppk, bool,
 
 	DBG4(DBG_IKE, "derive keys using PPK %B", &ppk);
 
-	if (!this->prf->set_key(this->prf, ppk))
-	{
-		DBG1(DBG_IKE, "unable to set PPK in PRF");
-		return FALSE;
-	}
-	if (!derive_ppk_key(this->prf, "Sk_d", this->skd, &skd) ||
-		!derive_ppk_key(this->prf, "Sk_pi", *skpi, &new_skpi) ||
-		!derive_ppk_key(this->prf, "Sk_pr", *skpr, &new_skpr))
+	if (!derive_ppk_key(this, "Sk_d", ppk, this->skd, &skd) ||
+		!derive_ppk_key(this, "Sk_pi", ppk, *skpi, &new_skpi) ||
+		!derive_ppk_key(this, "Sk_pr", ppk, *skpr, &new_skpr))
 	{
 		chunk_clear(&skd);
 		chunk_clear(&new_skpi);
@@ -528,7 +518,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 {
 	uint16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
 	chunk_t seed, secret = chunk_empty, keymat = chunk_empty;
-	prf_plus_t *prf_plus;
+	kdf_t *prf_plus;
 
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
 								&enc_alg, &enc_size))
@@ -594,11 +584,6 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		int_size /= 8;
 	}
 
-	if (!this->prf->set_key(this->prf, this->skd))
-	{
-		return FALSE;
-	}
-
 	if (dh)
 	{
 		if (!dh->get_shared_secret(dh, &secret))
@@ -610,13 +595,16 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 	seed = chunk_cata("scc", secret, nonce_i, nonce_r);
 	DBG4(DBG_CHD, "seed %B", &seed);
 
-	prf_plus = prf_plus_create(this->prf, TRUE, seed);
-	memwipe(seed.ptr, seed.len);
-
-	if (!prf_plus)
+	prf_plus = lib->crypto->create_kdf(lib->crypto, KDF_PRF_PLUS, this->prf_alg);
+	if (!prf_plus ||
+		!prf_plus->set_param(prf_plus, KDF_PARAM_KEY, this->skd) ||
+		!prf_plus->set_param(prf_plus, KDF_PARAM_SALT, seed))
 	{
+		DESTROY_IF(prf_plus);
+		memwipe(seed.ptr, seed.len);
 		return FALSE;
 	}
+	memwipe(seed.ptr, seed.len);
 
 	*encr_i = *integ_i = *encr_r = *integ_r = chunk_empty;
 	keymat.len = 2 * enc_size + 2 * int_size;
@@ -670,7 +658,7 @@ METHOD(keymat_v2_t, get_auth_octets, bool,
 	if (ppk.ptr)
 	{
 		DBG4(DBG_IKE, "PPK %B", &ppk);
-		if (!derive_skp_ppk(this, ppk, skp, &skp_ppk))
+		if (!derive_ppk_key(this, "SK_p", ppk, skp, &skp_ppk))
 		{
 			return FALSE;
 		}
@@ -716,7 +704,7 @@ METHOD(keymat_v2_t, get_psk_sig, bool,
 		secret = verify ? this->skp_verify : this->skp_build;
 		if (ppk.ptr)
 		{
-			if (!derive_skp_ppk(this, ppk, secret, &skp_ppk))
+			if (!derive_ppk_key(this, "SK_p", ppk, secret, &skp_ppk))
 			{
 				return FALSE;
 			}

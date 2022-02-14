@@ -16,6 +16,7 @@
 #include "keymat_v1.h"
 
 #include <daemon.h>
+#include <crypto/prf_plus.h>
 #include <sa/ikev1/iv_manager.h>
 #include <encoding/generator.h>
 #include <encoding/payloads/nonce_payload.h>
