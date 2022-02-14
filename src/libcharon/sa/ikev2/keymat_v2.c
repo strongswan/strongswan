@@ -97,13 +97,12 @@ METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
 }
 
 /**
- * Derive IKE keys for a combined AEAD algorithm
+ * Create aead_t objects for a combined-mode AEAD algorithm, sets the length of
+ * sk_ei and sk_er
  */
-static bool derive_ike_aead(private_keymat_v2_t *this, uint16_t alg,
-							uint16_t key_size, prf_plus_t *prf_plus,
-							chunk_t *sk_ei, chunk_t *sk_er)
+static bool create_ike_aead(private_keymat_v2_t *this, uint16_t alg,
+							uint16_t key_size, chunk_t *sk_ei, chunk_t *sk_er)
 {
-	aead_t *aead_i, *aead_r;
 	u_int salt_size;
 
 	switch (alg)
@@ -131,162 +130,110 @@ static bool derive_ike_aead(private_keymat_v2_t *this, uint16_t alg,
 			return FALSE;
 	}
 
-	/* SK_ei/SK_er used for encryption */
-	aead_i = lib->crypto->create_aead(lib->crypto, alg, key_size / 8, salt_size);
-	aead_r = lib->crypto->create_aead(lib->crypto, alg, key_size / 8, salt_size);
-	if (aead_i == NULL || aead_r == NULL)
+	this->aead_in = lib->crypto->create_aead(lib->crypto, alg, key_size / 8,
+											 salt_size);
+	this->aead_out = lib->crypto->create_aead(lib->crypto, alg, key_size / 8,
+											  salt_size);
+	if (!this->aead_in || !this->aead_out)
 	{
 		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
 			 transform_type_names, ENCRYPTION_ALGORITHM,
 			 encryption_algorithm_names, alg, key_size);
-		goto failure;
+		return FALSE;
 	}
-	key_size = aead_i->get_key_size(aead_i);
-	if (key_size != aead_r->get_key_size(aead_r))
+	sk_ei->len = this->aead_in->get_key_size(this->aead_in);
+	sk_er->len = this->aead_out->get_key_size(this->aead_out);
+	if (sk_ei->len != sk_er->len)
 	{
-		goto failure;
+		return FALSE;
 	}
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_ei))
-	{
-		goto failure;
-	}
-	DBG4(DBG_IKE, "Sk_ei secret %B", sk_ei);
-	if (!aead_i->set_key(aead_i, *sk_ei))
-	{
-		goto failure;
-	}
-
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_er))
-	{
-		goto failure;
-	}
-	DBG4(DBG_IKE, "Sk_er secret %B", sk_er);
-	if (!aead_r->set_key(aead_r, *sk_er))
-	{
-		goto failure;
-	}
-
-	if (this->initiator)
-	{
-		this->aead_in = aead_r;
-		this->aead_out = aead_i;
-	}
-	else
-	{
-		this->aead_in = aead_i;
-		this->aead_out = aead_r;
-	}
-	aead_i = aead_r = NULL;
-
-failure:
-	DESTROY_IF(aead_i);
-	DESTROY_IF(aead_r);
-	return this->aead_in && this->aead_out;
+	return TRUE;
 }
 
 /**
- * Derive IKE keys for traditional encryption and MAC algorithms
+ * Create aead_t objects for traditional encryption and MAC algorithms, sets the
+ * length of key chunks
  */
-static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
-					uint16_t enc_size, uint16_t int_alg, prf_plus_t *prf_plus,
-					chunk_t *sk_ai, chunk_t *sk_ar, chunk_t *sk_ei,
-					chunk_t *sk_er)
+static bool create_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
+					uint16_t enc_size, uint16_t int_alg, chunk_t *sk_ai,
+					chunk_t *sk_ar, chunk_t *sk_ei, chunk_t *sk_er)
 {
-	crypter_t *crypter_i = NULL, *crypter_r = NULL;
-	signer_t *signer_i, *signer_r;
-	iv_gen_t *ivg_i, *ivg_r;
-	size_t key_size;
+	crypter_t *crypter_i = NULL, *crypter_o = NULL;
+	signer_t *signer_i, *signer_o;
+	iv_gen_t *ivg_i, *ivg_o;
 
 	signer_i = lib->crypto->create_signer(lib->crypto, int_alg);
-	signer_r = lib->crypto->create_signer(lib->crypto, int_alg);
-	crypter_i = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_size / 8);
-	crypter_r = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_size / 8);
-	if (signer_i == NULL || signer_r == NULL)
+	signer_o = lib->crypto->create_signer(lib->crypto, int_alg);
+	if (!signer_i || !signer_o)
 	{
 		DBG1(DBG_IKE, "%N %N not supported!",
 			 transform_type_names, INTEGRITY_ALGORITHM,
 			 integrity_algorithm_names, int_alg);
 		goto failure;
 	}
-	if (crypter_i == NULL || crypter_r == NULL)
+	crypter_i = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_size / 8);
+	crypter_o = lib->crypto->create_crypter(lib->crypto, enc_alg, enc_size / 8);
+	if (!crypter_i || !crypter_o)
 	{
 		DBG1(DBG_IKE, "%N %N (key size %d) not supported!",
 			 transform_type_names, ENCRYPTION_ALGORITHM,
 			 encryption_algorithm_names, enc_alg, enc_size);
 		goto failure;
 	}
-
-	/* SK_ai/SK_ar used for integrity protection */
-	key_size = signer_i->get_key_size(signer_i);
-
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_ai))
+	sk_ai->len = signer_i->get_key_size(signer_i);
+	sk_ar->len = signer_o->get_key_size(signer_o);
+	if (sk_ai->len != sk_ar->len)
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_ai secret %B", sk_ai);
-	if (!signer_i->set_key(signer_i, *sk_ai))
+	sk_ei->len = crypter_i->get_key_size(crypter_i);
+	sk_er->len = crypter_o->get_key_size(crypter_o);
+	if (sk_ei->len != sk_er->len)
 	{
 		goto failure;
 	}
-
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_ar))
-	{
-		goto failure;
-	}
-	DBG4(DBG_IKE, "Sk_ar secret %B", sk_ar);
-	if (!signer_r->set_key(signer_r, *sk_ar))
-	{
-		goto failure;
-	}
-
-	/* SK_ei/SK_er used for encryption */
-	key_size = crypter_i->get_key_size(crypter_i);
-
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_ei))
-	{
-		goto failure;
-	}
-	DBG4(DBG_IKE, "Sk_ei secret %B", sk_ei);
-	if (!crypter_i->set_key(crypter_i, *sk_ei))
-	{
-		goto failure;
-	}
-
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_er))
-	{
-		goto failure;
-	}
-	DBG4(DBG_IKE, "Sk_er secret %B", sk_er);
-	if (!crypter_r->set_key(crypter_r, *sk_er))
-	{
-		goto failure;
-	}
-
 	ivg_i = iv_gen_create_for_alg(enc_alg);
-	ivg_r = iv_gen_create_for_alg(enc_alg);
-	if (!ivg_i || !ivg_r)
+	ivg_o = iv_gen_create_for_alg(enc_alg);
+	if (!ivg_i || !ivg_o)
 	{
 		goto failure;
 	}
-	if (this->initiator)
-	{
-		this->aead_in = aead_create(crypter_r, signer_r, ivg_r);
-		this->aead_out = aead_create(crypter_i, signer_i, ivg_i);
-	}
-	else
-	{
-		this->aead_in = aead_create(crypter_i, signer_i, ivg_i);
-		this->aead_out = aead_create(crypter_r, signer_r, ivg_r);
-	}
-	signer_i = signer_r = NULL;
-	crypter_i = crypter_r = NULL;
+	this->aead_in = aead_create(crypter_i, signer_i, ivg_i);
+	this->aead_out = aead_create(crypter_o, signer_o, ivg_o);
+	signer_i = signer_o = NULL;
+	crypter_i = crypter_o = NULL;
 
 failure:
 	DESTROY_IF(signer_i);
-	DESTROY_IF(signer_r);
+	DESTROY_IF(signer_o);
 	DESTROY_IF(crypter_i);
-	DESTROY_IF(crypter_r);
+	DESTROY_IF(crypter_o);
 	return this->aead_in && this->aead_out;
+}
+
+/**
+ * Set keys on AEAD objects
+ */
+static bool set_aead_keys(private_keymat_v2_t *this, uint16_t enc_alg,
+						  chunk_t sk_ai, chunk_t sk_ar,
+						  chunk_t sk_ei, chunk_t sk_er)
+{
+	aead_t *aead_i, *aead_r;
+	chunk_t sk_i, sk_r;
+	bool success;
+
+	aead_i = this->initiator ? this->aead_out : this->aead_in;
+	aead_r = this->initiator ? this->aead_in : this->aead_out;
+
+	sk_i = chunk_cat("cc", sk_ai, sk_ei);
+	sk_r = chunk_cat("cc", sk_ar, sk_er);
+
+	success = aead_i->set_key(aead_i, sk_i) &&
+			  aead_r->set_key(aead_r, sk_r);
+
+	chunk_clear(&sk_i);
+	chunk_clear(&sk_r);
+	return success;
 }
 
 METHOD(keymat_v2_t, derive_ike_keys, bool,
@@ -295,37 +242,66 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
 	chunk_t skeyseed = chunk_empty, secret, full_nonce, fixed_nonce;
-	chunk_t prf_plus_seed, spi_i, spi_r;
+	chunk_t prf_plus_seed, spi_i, spi_r, keymat = chunk_empty;
 	chunk_t sk_ei = chunk_empty, sk_er = chunk_empty;
 	chunk_t sk_ai = chunk_empty, sk_ar = chunk_empty, sk_pi, sk_pr;
 	prf_plus_t *prf_plus = NULL;
-	uint16_t alg, key_size, int_alg;
+	uint16_t prf_alg, key_size, enc_alg, enc_size, int_alg;
 	prf_t *rekey_prf = NULL;
+	bool success = FALSE;
 
 	spi_i = chunk_alloca(sizeof(uint64_t));
 	spi_r = chunk_alloca(sizeof(uint64_t));
 
-	if (!dh->get_shared_secret(dh, &secret))
+	/* create SA's general purpose PRF first, we may use it here */
+	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &prf_alg,
+								 NULL))
+	{
+		DBG1(DBG_IKE, "no %N selected",
+			 transform_type_names, PSEUDO_RANDOM_FUNCTION);
+		return FALSE;
+	}
+	this->prf_alg = prf_alg;
+	this->prf = lib->crypto->create_prf(lib->crypto, this->prf_alg);
+	if (!this->prf)
+	{
+		DBG1(DBG_IKE, "%N %N not supported!", transform_type_names,
+			 PSEUDO_RANDOM_FUNCTION, pseudo_random_function_names,
+			 this->prf_alg);
+		return FALSE;
+	}
+	key_size = this->prf->get_key_size(this->prf);
+
+	/* create SA's AEAD instances to determine key sizes */
+	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &enc_alg,
+								 &enc_size))
+	{
+		DBG1(DBG_IKE, "no %N selected", transform_type_names,
+			 ENCRYPTION_ALGORITHM);
+		return FALSE;
+	}
+	if (!encryption_algorithm_is_aead(enc_alg))
+	{
+		if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &int_alg,
+									 NULL))
+		{
+			DBG1(DBG_IKE, "no %N selected", transform_type_names,
+				 INTEGRITY_ALGORITHM);
+			return FALSE;
+		}
+		if (!create_ike_traditional(this, enc_alg, enc_size, int_alg,
+									&sk_ai, &sk_ar, &sk_ei, &sk_er))
+		{
+			return FALSE;
+		}
+	}
+	else if (!create_ike_aead(this, enc_alg, enc_size, &sk_ei, &sk_er))
 	{
 		return FALSE;
 	}
 
-	/* Create SAs general purpose PRF first, we may use it here */
-	if (!proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL))
+	if (!dh->get_shared_secret(dh, &secret))
 	{
-		DBG1(DBG_IKE, "no %N selected",
-			 transform_type_names, PSEUDO_RANDOM_FUNCTION);
-		chunk_clear(&secret);
-		return FALSE;
-	}
-	this->prf_alg = alg;
-	this->prf = lib->crypto->create_prf(lib->crypto, alg);
-	if (this->prf == NULL)
-	{
-		DBG1(DBG_IKE, "%N %N not supported!",
-			 transform_type_names, PSEUDO_RANDOM_FUNCTION,
-			 pseudo_random_function_names, alg);
-		chunk_clear(&secret);
 		return FALSE;
 	}
 	DBG4(DBG_IKE, "shared Diffie Hellman secret %B", &secret);
@@ -333,7 +309,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	full_nonce = chunk_cat("cc", nonce_i, nonce_r);
 	/* but the PRF may need a fixed key which only uses the first bytes of
 	 * the nonces. */
-	switch (alg)
+	switch (prf_alg)
 	{
 		case PRF_AES128_CMAC:
 			/* while variable keys may be used according to RFC 4615, RFC 7296
@@ -345,9 +321,8 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		case PRF_CAMELLIA128_XCBC:
 			/* draft-kanno-ipsecme-camellia-xcbc refers to rfc 4434, we
 			 * assume fixed key length. */
-			key_size = this->prf->get_key_size(this->prf)/2;
-			nonce_i.len = min(nonce_i.len, key_size);
-			nonce_r.len = min(nonce_r.len, key_size);
+			nonce_i.len = min(nonce_i.len, key_size / 2);
+			nonce_r.len = min(nonce_r.len, key_size / 2);
 			break;
 		default:
 			/* all other algorithms use variable key length, full nonce */
@@ -408,86 +383,55 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		goto failure;
 	}
 
-	/* KEYMAT = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr */
+	/* KEYMAT = SK_d | SK_ai | SK_ar | SK_ei | SK_er | SK_pi | SK_pr
+	 *
+	 * SK_d, SK_pi and SK_pr have the size of the PRF key
+	 */
+	keymat.len = 3 * key_size + sk_ai.len + sk_ar.len + sk_ei.len + sk_er.len;
+	if (!prf_plus->allocate_bytes(prf_plus, keymat.len, &keymat))
+	{
+		goto failure;
+	}
+	chunk_split(keymat, "ammmmaa", key_size, &this->skd, sk_ai.len, &sk_ai,
+				sk_ar.len, &sk_ar, sk_ei.len, &sk_ei, sk_er.len, &sk_er,
+				key_size, &sk_pi, key_size, &sk_pr);
 
 	/* SK_d is used for generating CHILD_SA key mat => store for later use */
-	key_size = this->prf->get_key_size(this->prf);
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &this->skd))
-	{
-		goto failure;
-	}
 	DBG4(DBG_IKE, "Sk_d secret %B", &this->skd);
-
-	if (!proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &key_size))
+	if (!encryption_algorithm_is_aead(enc_alg))
+	{	/* SK_ai/SK_ar used for integrity protection */
+		DBG4(DBG_IKE, "Sk_ai secret %B", &sk_ai);
+		DBG4(DBG_IKE, "Sk_ar secret %B", &sk_ar);
+	}
+	/* SK_ei/SK_er used for encryption */
+	DBG4(DBG_IKE, "Sk_ei secret %B", &sk_ei);
+	DBG4(DBG_IKE, "Sk_er secret %B", &sk_er);
+	if (!set_aead_keys(this, enc_alg, sk_ai, sk_ar, sk_ei, sk_er))
 	{
-		DBG1(DBG_IKE, "no %N selected",
-			 transform_type_names, ENCRYPTION_ALGORITHM);
 		goto failure;
 	}
-
-	if (encryption_algorithm_is_aead(alg))
-	{
-		if (!derive_ike_aead(this, alg, key_size, prf_plus, &sk_ei, &sk_er))
-		{
-			goto failure;
-		}
-	}
-	else
-	{
-		if (!proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM,
-									 &int_alg, NULL))
-		{
-			DBG1(DBG_IKE, "no %N selected",
-				 transform_type_names, INTEGRITY_ALGORITHM);
-			goto failure;
-		}
-		if (!derive_ike_traditional(this, alg, key_size, int_alg, prf_plus,
-									&sk_ai, &sk_ar, &sk_ei, &sk_er))
-		{
-			goto failure;
-		}
-	}
-
 	/* SK_pi/SK_pr used for authentication => stored for later */
-	key_size = this->prf->get_key_size(this->prf);
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_pi))
-	{
-		goto failure;
-	}
 	DBG4(DBG_IKE, "Sk_pi secret %B", &sk_pi);
-	if (this->initiator)
-	{
-		this->skp_build = sk_pi;
-	}
-	else
-	{
-		this->skp_verify = sk_pi;
-	}
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_pr))
-	{
-		goto failure;
-	}
 	DBG4(DBG_IKE, "Sk_pr secret %B", &sk_pr);
 	if (this->initiator)
 	{
+		this->skp_build = sk_pi;
 		this->skp_verify = sk_pr;
 	}
 	else
 	{
 		this->skp_build = sk_pr;
+		this->skp_verify = sk_pi;
 	}
-	charon->bus->ike_derived_keys(charon->bus,this->skd, sk_ai, sk_ar, sk_ei,
-								  sk_er, sk_pi, sk_pr);
+	charon->bus->ike_derived_keys(charon->bus, this->skd, sk_ai, sk_ar,
+								  sk_ei, sk_er, sk_pi, sk_pr);
+	success = TRUE;
 
 failure:
-	chunk_clear(&sk_ai);
-	chunk_clear(&sk_ar);
-	chunk_clear(&sk_ei);
-	chunk_clear(&sk_er);
+	chunk_clear(&keymat);
 	DESTROY_IF(prf_plus);
 	DESTROY_IF(rekey_prf);
-
-	return this->skp_build.len && this->skp_verify.len;
+	return success;
 }
 
 /**
