@@ -527,7 +527,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
 	uint16_t enc_alg, int_alg, enc_size = 0, int_size = 0;
-	chunk_t seed, secret = chunk_empty;
+	chunk_t seed, secret = chunk_empty, keymat = chunk_empty;
 	prf_plus_t *prf_plus;
 
 	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM,
@@ -619,20 +619,17 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 	}
 
 	*encr_i = *integ_i = *encr_r = *integ_r = chunk_empty;
-	if (!prf_plus->allocate_bytes(prf_plus, enc_size, encr_i) ||
-		!prf_plus->allocate_bytes(prf_plus, int_size, integ_i) ||
-		!prf_plus->allocate_bytes(prf_plus, enc_size, encr_r) ||
-		!prf_plus->allocate_bytes(prf_plus, int_size, integ_r))
+	keymat.len = 2 * enc_size + 2 * int_size;
+	if (!prf_plus->allocate_bytes(prf_plus, keymat.len, &keymat))
 	{
-		chunk_free(encr_i);
-		chunk_free(integ_i);
-		chunk_free(encr_r);
-		chunk_free(integ_r);
 		prf_plus->destroy(prf_plus);
 		return FALSE;
 	}
-
 	prf_plus->destroy(prf_plus);
+
+	chunk_split(keymat, "aaaa", enc_size, encr_i, int_size, integ_i,
+				enc_size, encr_r, int_size, integ_r);
+	chunk_clear(&keymat);
 
 	if (enc_size)
 	{
