@@ -22,8 +22,6 @@
 
 #include "kdf_prf_plus.h"
 
-#include <crypto/prf_plus.h>
-
 typedef struct private_kdf_t private_kdf_t;
 
 /**
@@ -56,16 +54,36 @@ METHOD(kdf_t, get_type, key_derivation_function_t,
 METHOD(kdf_t, get_bytes, bool,
 	private_kdf_t *this, size_t out_len, uint8_t *buffer)
 {
-	prf_plus_t *prf_plus;
-	bool success;
+	chunk_t block, previous = chunk_empty;
+	uint8_t counter = 1, *out = buffer;
+	size_t len;
+	bool success = TRUE;
 
-	prf_plus = prf_plus_create(this->prf, TRUE, this->salt);
-	if (!prf_plus)
+	block = chunk_alloca(this->prf->get_block_size(this->prf));
+	if (out_len > block.len * 255)
 	{
 		return FALSE;
 	}
-	success = prf_plus->get_bytes(prf_plus, out_len, buffer);
-	prf_plus->destroy(prf_plus);
+
+	while (out_len)
+	{
+		if (!this->prf->get_bytes(this->prf, previous, NULL) ||
+			!this->prf->get_bytes(this->prf, this->salt, NULL) ||
+			!this->prf->get_bytes(this->prf, chunk_from_thing(counter),
+								  block.ptr))
+		{
+			success = FALSE;
+			break;
+		}
+		len = min(out_len, block.len);
+		memcpy(out, block.ptr, len);
+		previous = chunk_create(out, block.len);
+
+		out_len -= len;
+		out += len;
+		counter++;
+	}
+	memwipe(block.ptr, block.len);
 	return success;
 }
 
