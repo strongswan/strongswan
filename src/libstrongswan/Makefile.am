@@ -11,7 +11,7 @@ crypto/hashers/hash_algorithm_set.c crypto/proposal/proposal.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
 crypto/prfs/prf.c crypto/prfs/mac_prf.c crypto/pkcs5.c \
 crypto/rngs/rng.c crypto/rngs/rng_tester.c \
-crypto/prf_plus.c crypto/signers/signer.c \
+crypto/signers/signer.c \
 crypto/signers/mac_signer.c crypto/crypto_factory.c crypto/crypto_tester.c \
 crypto/diffie_hellman.c crypto/aead.c crypto/transform.c \
 crypto/iv/iv_gen.c crypto/iv/iv_gen_rand.c crypto/iv/iv_gen_seq.c \
@@ -78,7 +78,7 @@ crypto/hashers/hash_algorithm_set.h crypto/mac.h crypto/proposal/proposal.h \
 crypto/proposal/proposal_keywords.h crypto/proposal/proposal_keywords_static.h \
 crypto/rngs/rng.h crypto/rngs/rng_tester.h \
 crypto/prfs/prf.h crypto/prfs/mac_prf.h crypto/nonce_gen.h \
-crypto/prf_plus.h crypto/signers/signer.h crypto/signers/mac_signer.h \
+crypto/signers/signer.h crypto/signers/mac_signer.h \
 crypto/crypto_factory.h crypto/crypto_tester.h crypto/diffie_hellman.h \
 crypto/aead.h crypto/transform.h crypto/pkcs5.h crypto/iv/iv_gen.h \
 crypto/iv/iv_gen_rand.h crypto/iv/iv_gen_seq.h crypto/iv/iv_gen_null.h \
