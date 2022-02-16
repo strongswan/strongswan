@@ -137,7 +137,13 @@ START_TEST(test_wrap)
 
 	/* the 1-byte counter overflows after 255 blocks of the underlying PRF */
 	out = chunk_alloc(32 * 255 + 1);
-	ck_assert(kdf->get_bytes(kdf, out.len - 1 , out.ptr));
+	ck_assert(kdf->get_bytes(kdf, out.len - 2, out.ptr));
+	if (!kdf->get_bytes(kdf, out.len - 1, out.ptr))
+	{	/* Botan 3.x has a check for (len/bs) >= 255 blocks, so we allow this */
+		warn("unable to generate maximum-sized key for %N (%N) but maximum-1 "
+			 "is fine", key_derivation_function_names, KDF_PRF_PLUS,
+			 pseudo_random_function_names, PRF_HMAC_SHA2_256);
+	}
 	ck_assert(!kdf->get_bytes(kdf, out.len, out.ptr));
 	chunk_free(&out);
 	kdf->destroy(kdf);

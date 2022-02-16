@@ -32,6 +32,7 @@
 #include "botan_crypter.h"
 #include "botan_diffie_hellman.h"
 #include "botan_hmac.h"
+#include "botan_kdf.h"
 #include "botan_rsa_public_key.h"
 #include "botan_rsa_private_key.h"
 #include "botan_ec_diffie_hellman.h"
@@ -208,6 +209,12 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_512),
 #endif
 #endif /* BOTAN_HAS_HMAC */
+
+		/* kdfs */
+#ifdef BOTAN_HAS_HKDF
+		PLUGIN_REGISTER(SIGNER, botan_kdf_create),
+			PLUGIN_PROVIDE(KDF, KDF_PRF_PLUS),
+#endif /* BOTAN_HAS_HKDF */
 
 		/* generic key loaders */
 #if defined (BOTAN_HAS_RSA) || defined(BOTAN_HAS_ECDSA) || \
