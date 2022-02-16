@@ -2339,8 +2339,13 @@ static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
 		{
 			char *if_name = NULL;
 
-			if (charon->kernel->get_interface(charon->kernel, src, &if_name) &&
-				charon->kernel->add_route(charon->kernel,
+			if (gtw->ip_equals(gtw, dst))
+			{
+				DBG1(DBG_KNL, "not installing exclude route for directly "
+					 "connected peer %H", dst);
+			}
+			else if (charon->kernel->get_interface(charon->kernel, src, &if_name) &&
+					 charon->kernel->add_route(charon->kernel,
 									dst->get_address(dst),
 									dst->get_family(dst) == AF_INET ? 32 : 128,
 									gtw, src, if_name, FALSE) == SUCCESS)
