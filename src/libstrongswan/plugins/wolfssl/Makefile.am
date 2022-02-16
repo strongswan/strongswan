@@ -24,6 +24,7 @@ libstrongswan_wolfssl_la_SOURCES = \
 	wolfssl_ed_public_key.h wolfssl_ed_public_key.c \
 	wolfssl_hasher.h wolfssl_hasher.c \
 	wolfssl_hmac.h wolfssl_hmac.c \
+	wolfssl_kdf.h wolfssl_kdf.c \
 	wolfssl_rsa_public_key.h wolfssl_rsa_public_key.c \
 	wolfssl_rsa_private_key.h wolfssl_rsa_private_key.c \
 	wolfssl_rng.h wolfssl_rng.c \

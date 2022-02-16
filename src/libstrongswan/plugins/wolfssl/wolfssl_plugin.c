@@ -36,6 +36,7 @@
 #include "wolfssl_ed_public_key.h"
 #include "wolfssl_hasher.h"
 #include "wolfssl_hmac.h"
+#include "wolfssl_kdf.h"
 #include "wolfssl_rsa_private_key.h"
 #include "wolfssl_rsa_public_key.h"
 #include "wolfssl_rng.h"
@@ -184,6 +185,10 @@ METHOD(plugin_t, get_features, int,
 #ifdef WOLFSSL_SHA512
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_256),
 			PLUGIN_PROVIDE(SIGNER, AUTH_HMAC_SHA2_512_512),
+#endif
+#ifdef HAVE_HKDF
+		PLUGIN_REGISTER(KDF, wolfssl_kdf_create),
+			PLUGIN_PROVIDE(KDF, KDF_PRF_PLUS),
 #endif
 #endif /* NO_HMAC */
 #if (!defined(NO_AES) && (defined(HAVE_AESGCM) || defined(HAVE_AESCCM))) || \
