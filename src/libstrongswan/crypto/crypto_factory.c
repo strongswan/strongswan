@@ -23,8 +23,6 @@
 #include <crypto/crypto_tester.h>
 #include <utils/test.h>
 
-const char *default_plugin_name = "default";
-
 typedef struct entry_t entry_t;
 
 struct entry_t {
@@ -177,7 +175,7 @@ METHOD(crypto_factory_t, create_crypter, crypter_t*,
 			if (this->test_on_create &&
 				!this->tester->test_crypter(this->tester, algo, key_size,
 											entry->create_crypter, NULL,
-											default_plugin_name))
+											entry->plugin_name))
 			{
 				continue;
 			}
@@ -210,7 +208,7 @@ METHOD(crypto_factory_t, create_aead, aead_t*,
 			if (this->test_on_create &&
 				!this->tester->test_aead(this->tester, algo, key_size,
 										 salt_size, entry->create_aead, NULL,
-										 default_plugin_name))
+										 entry->plugin_name))
 			{
 				continue;
 			}
@@ -242,7 +240,7 @@ METHOD(crypto_factory_t, create_signer, signer_t*,
 			if (this->test_on_create &&
 				!this->tester->test_signer(this->tester, algo,
 										   entry->create_signer, NULL,
-										   default_plugin_name))
+										   entry->plugin_name))
 			{
 				continue;
 			}
@@ -274,7 +272,7 @@ METHOD(crypto_factory_t, create_hasher, hasher_t*,
 			if (this->test_on_create &&
 				!this->tester->test_hasher(this->tester, algo,
 										   entry->create_hasher, NULL,
-										   default_plugin_name))
+										   entry->plugin_name))
 			{
 				continue;
 			}
@@ -306,7 +304,7 @@ METHOD(crypto_factory_t, create_prf, prf_t*,
 			if (this->test_on_create &&
 				!this->tester->test_prf(this->tester, algo,
 										entry->create_prf, NULL,
-										default_plugin_name))
+										entry->plugin_name))
 			{
 				continue;
 			}
@@ -338,7 +336,7 @@ METHOD(crypto_factory_t, create_xof, xof_t*,
 			if (this->test_on_create &&
 				!this->tester->test_xof(this->tester, algo,
 										entry->create_xof, NULL,
-										default_plugin_name))
+										entry->plugin_name))
 			{
 				continue;
 			}
@@ -375,7 +373,7 @@ METHOD(crypto_factory_t, create_kdf, kdf_t*,
 				va_start(test_args.args, algo);
 				if (!this->tester->test_kdf(this->tester, algo,
 											entry->create_kdf, &test_args, NULL,
-											default_plugin_name))
+											entry->plugin_name))
 				{
 					va_end(test_args.args);
 					continue;
@@ -413,7 +411,7 @@ METHOD(crypto_factory_t, create_drbg, drbg_t*,
 			if (this->test_on_create &&
 				!this->tester->test_drbg(this->tester, type,
 										 entry->create_drbg, NULL,
-										 default_plugin_name))
+										 entry->plugin_name))
 			{
 				continue;
 			}
@@ -446,7 +444,7 @@ METHOD(crypto_factory_t, create_rng, rng_t*,
 			if (this->test_on_create &&
 				!this->tester->test_rng(this->tester, quality,
 										entry->create_rng, NULL,
-										default_plugin_name))
+										entry->plugin_name))
 			{
 				continue;
 			}
@@ -510,7 +508,7 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
 		{
 			if (this->test_on_create && group != MODP_CUSTOM &&
 				!this->tester->test_dh(this->tester, group,
-								entry->create_dh, NULL, default_plugin_name))
+								entry->create_dh, NULL, entry->plugin_name))
 			{
 				continue;
 			}
