@@ -200,10 +200,17 @@ win*)
 	if test "$APPVEYOR" != "True"; then
 		TARGET=
 	else
+		case "$IMG" in
+		2015|2017)
+			# old OpenSSL versions don't provide HKDF
+			CONFIG="$CONFIG --enable-kdf"
+			;;
+		esac
 		CONFIG="$CONFIG --enable-openssl"
 		CFLAGS="$CFLAGS -I$OPENSSL_DIR/include"
 		LDFLAGS="-L$OPENSSL_DIR"
 		export LDFLAGS
+
 	fi
 	CFLAGS="$CFLAGS -mno-ms-bitfields"
 	DEPS="gcc-mingw-w64-base"
