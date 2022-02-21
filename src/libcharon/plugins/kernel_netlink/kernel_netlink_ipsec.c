@@ -1497,10 +1497,6 @@ static bool config_hw_offload(kernel_ipsec_sa_id_t *id,
 		goto out;
 	}
 	offload->ifindex = if_nametoindex(ifname);
-	if (local->get_family(local) == AF_INET6)
-	{
-		offload->flags |= XFRM_OFFLOAD_IPV6;
-	}
 	offload->flags |= data->inbound ? XFRM_OFFLOAD_INBOUND : 0;
 
 	ret = TRUE;
@@ -2413,14 +2409,6 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 												  &ifname))
 				{
 					offload->ifindex = if_nametoindex(ifname);
-					if (local->get_family(local) == AF_INET6)
-					{
-						offload->flags |= XFRM_OFFLOAD_IPV6;
-					}
-					else
-					{
-						offload->flags &= ~XFRM_OFFLOAD_IPV6;
-					}
 					free(ifname);
 				}
 			}
