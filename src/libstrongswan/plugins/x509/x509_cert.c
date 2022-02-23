@@ -137,7 +137,7 @@ struct private_x509_cert_t {
 	linked_list_t *permitted_names;
 
 	/**
-	 * List of exluced name constraints
+	 * List of excluded name constraints
 	 */
 	linked_list_t *excluded_names;
 
@@ -1710,6 +1710,7 @@ METHOD(certificate_t, issued_by, bool,
 	public_key_t *key;
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
+	chunk_t keyid = chunk_empty;
 
 	if (&this->public.interface.interface == issuer)
 	{
@@ -1733,9 +1734,22 @@ METHOD(certificate_t, issued_by, bool,
 			return FALSE;
 		}
 	}
-	if (!this->issuer->equals(this->issuer, issuer->get_subject(issuer)))
+
+	/* compare keyIdentifiers if available, otherwise use DNs */
+	if (this->authKeyIdentifier.ptr)
 	{
-		return FALSE;
+		keyid = x509->get_subjectKeyIdentifier(x509);
+		if (keyid.len && !chunk_equals(keyid, this->authKeyIdentifier))
+		{
+			return FALSE;
+		}
+	}
+	if (!keyid.len)
+	{
+		if (!this->issuer->equals(this->issuer, issuer->get_subject(issuer)))
+		{
+			return FALSE;
+		}
 	}
 
 	/* get the public key of the issuer */
@@ -2198,6 +2212,8 @@ static chunk_t generate_ts(traffic_selector_t *ts)
 static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 					 private_key_t *sign_key, int digest_alg)
 {
+	const chunk_t keyUsageCrlSign = chunk_from_chars(0x01, 0x02);
+	const chunk_t keyUsageCertSignCrlSign = chunk_from_chars(0x01, 0x06);
 	chunk_t extensions = chunk_empty, extendedKeyUsage = chunk_empty;
 	chunk_t serverAuth = chunk_empty, clientAuth = chunk_empty;
 	chunk_t ocspSigning = chunk_empty, certPolicies = chunk_empty;
@@ -2317,11 +2333,11 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 												chunk_from_chars(0xFF)),
 											pathLenConstraint)));
 		/* set CertificateSign and implicitly CRLsign */
-		keyUsageBits = chunk_from_chars(0x01, 0x06);
+		keyUsageBits = keyUsageCertSignCrlSign;
 	}
 	else if (cert->flags & X509_CRL_SIGN)
 	{
-		keyUsageBits = chunk_from_chars(0x01, 0x02);
+		keyUsageBits = keyUsageCrlSign;
 	}
 	if (keyUsageBits.len)
 	{

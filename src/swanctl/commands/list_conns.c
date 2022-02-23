@@ -183,6 +183,10 @@ CALLBACK(conn_sn, int,
 			{
 				printf("    id: %s\n", auth->get(auth, "id"));
 			}
+			if (auth->get(auth, "ca_id"))
+			{
+				printf("    ca_id: %s\n", auth->get(auth, "ca_id"));
+			}
 			if (auth->get(auth, "eap_id"))
 			{
 				printf("    eap_id: %s\n", auth->get(auth, "eap_id"));

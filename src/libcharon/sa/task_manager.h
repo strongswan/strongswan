@@ -55,12 +55,12 @@ typedef enum task_queue_t task_queue_t;
 /**
  * Interval for mobike routability checks in ms.
  */
-#define ROUTEABILITY_CHECK_INTERVAL 2500
+#define ROUTABILITY_CHECK_INTERVAL 2500
 
 /**
  * Number of routability checks before giving up
  */
-#define ROUTEABILITY_CHECK_TRIES 10
+#define ROUTABILITY_CHECK_TRIES 10
 
 /**
  * Type of task queues the task manager uses to handle tasks
@@ -233,7 +233,7 @@ struct task_manager_t {
 	 * If a message is processed outside of the manager, this call increments
 	 * the message ID counters of the task manager.
 	 *
-	 * @param inititate		TRUE to increment the initiating ID
+	 * @param initiate		TRUE to increment the initiating ID
 	 */
 	void (*incr_mid)(task_manager_t *this, bool initiate);
 
@@ -280,7 +280,7 @@ struct task_manager_t {
 	/**
 	 * Remove the task the given enumerator points to.
 	 *
-	 * @note This should be used with caution, in partciular, for tasks in the
+	 * @note This should be used with caution, in particular, for tasks in the
 	 * active and passive queues.
 	 *
 	 * @param enumerator	enumerator created with the method above
@@ -293,7 +293,7 @@ struct task_manager_t {
 	void (*flush)(task_manager_t *this);
 
 	/**
-	 * Flush a queue, cancelling all tasks.
+	 * Flush a queue, canceling all tasks.
 	 *
 	 * @param queue			queue to flush
 	 */

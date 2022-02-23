@@ -83,6 +83,18 @@ do
 done
 
 ##
+# Levels CA and sub-CAs
+cd /etc/ca/levels
+
+# generate CRLs for Levels CA and sub-CAs
+pki --signcrl --cakey levelsKey.pem --cacert levelsCert.pem \
+    > ${ROOT}/levels.crl
+pki --signcrl --cakey levelsKey_l2.pem --cacert levelsCert_l2.pem \
+    > ${ROOT}/levels_l2.crl
+pki --signcrl --cakey levelsKey_l3.pem --cacert levelsCert_l3.pem \
+    > ${ROOT}/levels_l3.crl
+
+##
 # strongSwan EC Root CA
 cd /etc/ca/ecdsa
 

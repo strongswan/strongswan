@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Tobias Brunner
+ * Copyright (C) 2006-2020 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -28,6 +28,7 @@ typedef enum ike_extension_t ike_extension_t;
 typedef enum ike_condition_t ike_condition_t;
 typedef enum ike_sa_state_t ike_sa_state_t;
 typedef enum statistic_t statistic_t;
+typedef enum update_hosts_flag_t update_hosts_flag_t;
 typedef struct ike_sa_t ike_sa_t;
 
 #include <library.h>
@@ -248,7 +249,7 @@ enum ike_condition_t {
  * Timing information and statistics to query from an SA
  */
 enum statistic_t {
-	/** Timestamp of SA establishement */
+	/** Timestamp of SA establishment */
 	STAT_ESTABLISHED = 0,
 	/** Timestamp of scheduled rekeying */
 	STAT_REKEY,
@@ -262,6 +263,25 @@ enum statistic_t {
 	STAT_OUTBOUND,
 
 	STAT_MAX
+};
+
+/**
+ * Flags used when updating addresses
+ */
+enum update_hosts_flag_t {
+	/** Force updating the local address (otherwise not updated if an address
+	 * is already set). */
+	UPDATE_HOSTS_FORCE_LOCAL = (1<<0),
+	/** Force updating the remote address (otherwise only updated if peer is
+	 * behind a NAT). */
+	UPDATE_HOSTS_FORCE_REMOTE = (1<<1),
+	/** Force updating both addresses. */
+	UPDATE_HOSTS_FORCE_ADDRS = UPDATE_HOSTS_FORCE_LOCAL|UPDATE_HOSTS_FORCE_REMOTE,
+	/** Force updating the CHILD_SAs even if no addresses changed, useful if
+	 * NAT state may have changed. */
+	UPDATE_HOSTS_FORCE_CHILDREN = (1<<2),
+	/** Force updating everything. */
+	UPDATE_HOSTS_FORCE_ALL = UPDATE_HOSTS_FORCE_ADDRS|UPDATE_HOSTS_FORCE_CHILDREN,
 };
 
 /**
@@ -454,15 +474,16 @@ struct ike_sa_t {
 	void (*float_ports)(ike_sa_t *this);
 
 	/**
-	 * Update the IKE_SAs host.
+	 * Update the IKE_SAs host and CHILD_SAs.
 	 *
 	 * Hosts may be NULL to use current host.
 	 *
 	 * @param me			new local host address, or NULL
 	 * @param other			new remote host address, or NULL
-	 * @param force			force update
+	 * @param flags			flags to force certain updates
 	 */
-	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other, bool force);
+	void (*update_hosts)(ike_sa_t *this, host_t *me, host_t *other,
+						 update_hosts_flag_t flags);
 
 	/**
 	 * Get the own identification.
@@ -766,7 +787,7 @@ struct ike_sa_t {
 	 * to the CHILD_SA.
 	 *
 	 * @param child_cfg		child config to create CHILD from
-	 * @param reqid			reqid to use for CHILD_SA, 0 assigne uniquely
+	 * @param reqid			reqid to use for CHILD_SA, 0 assign uniquely
 	 * @param tsi			source of triggering packet
 	 * @param tsr			destination of triggering packet.
 	 * @return
@@ -872,10 +893,11 @@ struct ike_sa_t {
 	 *
 	 * @param message_id	ID of the request to retransmit
 	 * @return
-	 *						- SUCCESS
-	 *						- NOT_FOUND if request doesn't have to be retransmitted
+	 *						- SUCCESS if retransmit was sent
+	 *						- INVALID_STATE if no retransmit required
+	 *						- DESTROY_ME if this IKE_SA MUST be deleted
 	 */
-	status_t (*retransmit) (ike_sa_t *this, uint32_t message_id);
+	status_t (*retransmit)(ike_sa_t *this, uint32_t message_id);
 
 	/**
 	 * Sends a DPD request to the peer.
@@ -1036,7 +1058,7 @@ struct ike_sa_t {
 	status_t (*reauth) (ike_sa_t *this);
 
 	/**
-	 * Restablish the IKE_SA.
+	 * Reestablish the IKE_SA.
 	 *
 	 * Reestablish an IKE_SA after it has been closed.
 	 *
@@ -1140,7 +1162,7 @@ struct ike_sa_t {
 	/**
 	 * Remove the task the given enumerator points to.
 	 *
-	 * @note This should be used with caution, in partciular, for tasks in the
+	 * @note This should be used with caution, in particular, for tasks in the
 	 * active and passive queues.
 	 *
 	 * @param enumerator	enumerator created with the method above
@@ -1148,14 +1170,14 @@ struct ike_sa_t {
 	void (*remove_task)(ike_sa_t *this, enumerator_t *enumerator);
 
 	/**
-	 * Flush a task queue, cancelling all tasks in it.
+	 * Flush a task queue, canceling all tasks in it.
 	 *
 	 * @param queue			queue type to flush
 	 */
 	void (*flush_queue)(ike_sa_t *this, task_queue_t queue);
 
 	/**
-	 * Queue a task for initiaton to the task manager.
+	 * Queue a task for initiation to the task manager.
 	 *
 	 * @param task			task to queue
 	 */
@@ -1220,5 +1242,13 @@ struct ike_sa_t {
  */
 ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 						ike_version_t version);
+
+/**
+ * Check if the given IKE_SA can be reauthenticated actively or if config
+ * parameters or the authentication method prevent it.
+ *
+ * @return				TRUE if active reauthentication is possible
+ */
+bool ike_sa_can_reauthenticate(ike_sa_t *this);
 
 #endif /** IKE_SA_H_ @}*/

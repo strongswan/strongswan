@@ -361,7 +361,7 @@ struct kernel_interface_t {
 	 *
 	 * @param virtual_ip	virtual ip address to remove
 	 * @param prefix		prefix length of the IP to uninstall, -1 for auto
-	 * @param wait			TRUE to wait untily IP is gone
+	 * @param wait			TRUE to wait until IP is gone
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_ip) (kernel_interface_t *this, host_t *virtual_ip,
@@ -375,12 +375,13 @@ struct kernel_interface_t {
 	 * @param gateway		gateway for this route
 	 * @param src_ip		source ip of the route
 	 * @param if_name		name of the interface the route is bound to
+	 * @param pass			TRUE if route is installed for passthrough policy
 	 * @return				SUCCESS if operation completed
 	 *						ALREADY_DONE if the route already exists
 	 */
 	status_t (*add_route) (kernel_interface_t *this, chunk_t dst_net,
 						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
-						   char *if_name);
+						   char *if_name, bool pass);
 
 	/**
 	 * Delete a route.
@@ -390,11 +391,12 @@ struct kernel_interface_t {
 	 * @param gateway		gateway for this route
 	 * @param src_ip		source ip of the route
 	 * @param if_name		name of the interface the route is bound to
+	 * @param pass			TRUE if route was installed for passthrough policy
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_route) (kernel_interface_t *this, chunk_t dst_net,
 						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
-						   char *if_name);
+						   char *if_name, bool pass);
 
 	/**
 	 * Set up a bypass policy for a given socket.
@@ -433,7 +435,7 @@ struct kernel_interface_t {
 	/**
 	 * Check if interfaces are excluded by config.
 	 *
-	 * @return				TRUE if no interfaces are exclued by config
+	 * @return				TRUE if no interfaces are excluded by config
 	 */
 	bool (*all_interfaces_usable)(kernel_interface_t *this);
 

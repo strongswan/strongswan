@@ -106,8 +106,8 @@ static void keyfile_print_stdout (GKeyFile *keyfile)
 	g_free (data);
 }
 
-static gboolean get_secrets(const char *type, const char *uuid, const char *name, gboolean retry,
-							gboolean allow_interaction, gboolean external_ui_mode,
+static gboolean get_secrets(const char *type, const char *cert_source, const char *uuid, const char *name,
+							gboolean retry, gboolean allow_interaction, gboolean external_ui_mode,
 							const char *in_pw, char **out_pw, NMSettingSecretFlags flags)
 {
 	NMAVpnPasswordDialog *dialog;
@@ -137,21 +137,24 @@ static gboolean get_secrets(const char *type, const char *uuid, const char *name
 		prompt = g_strdup_printf (_("EAP password required to establish VPN connection '%s'."),
 								  name);
 	}
-	else if (!strcmp(type, "key"))
-	{
-		prompt = g_strdup_printf (_("Private key decryption password required to establish VPN connection '%s'."),
-								  name);
-	}
 	else if (!strcmp(type, "psk"))
 	{
 		prompt = g_strdup_printf (_("Pre-shared key required to establish VPN connection '%s' (min. 20 characters)."),
 								  name);
 		minlen = 20;
 	}
-	else /* smartcard */
+	else /* certificate auth of some kind */
 	{
-		prompt = g_strdup_printf (_("Smartcard PIN required to establish VPN connection '%s'."),
-								  name);
+		if (!strcmp(cert_source, "smartcard"))
+		{
+			prompt = g_strdup_printf (_("Smartcard PIN required to establish VPN connection '%s'."),
+									  name);
+		}
+		else
+		{
+			prompt = g_strdup_printf (_("Private key decryption password required to establish VPN connection '%s'."),
+									  name);
+		}
 	}
 	if (external_ui_mode)
 	{
@@ -246,11 +249,12 @@ static void wait_for_quit (void)
 int main (int argc, char *argv[])
 {
 	gboolean retry = FALSE, allow_interaction = FALSE, external_ui_mode = FALSE;
+	gboolean need_secret = FALSE;
 	gchar *name = NULL, *uuid = NULL, *service = NULL, *pass = NULL;
 	GHashTable *data = NULL, *secrets = NULL;
 	NMSettingSecretFlags flags = NM_SETTING_SECRET_FLAG_NONE;
 	GOptionContext *context;
-	char *agent, *type;
+	char *agent, *type, *cert_source;
 	int status = 0;
 	GOptionEntry entries[] = {
 		{ "reprompt", 'r', 0, G_OPTION_ARG_NONE, &retry, "Reprompt for passwords", NULL},
@@ -300,13 +304,64 @@ int main (int argc, char *argv[])
 		status = 1;
 		goto out;
 	}
+	cert_source = g_hash_table_lookup (data, "cert-source") ?: type;
 
-	if (!strcmp(type, "eap") || !strcmp(type, "key") ||
-		!strcmp(type, "psk") || !strcmp(type, "smartcard"))
+	if (!strcmp(type, "cert") ||
+		!strcmp(type, "eap-tls") ||
+		!strcmp(type, "key") ||
+		!strcmp(type, "agent") ||
+		!strcmp(type, "smartcard"))
+	{
+		if (!strcmp(cert_source, "agent"))
+		{
+			agent = getenv("SSH_AUTH_SOCK");
+			if (agent)
+			{
+				if (external_ui_mode)
+				{
+					GKeyFile *keyfile;
+
+					keyfile = g_key_file_new ();
+
+					g_key_file_set_integer (keyfile, UI_KEYFILE_GROUP, "Version", 2);
+					g_key_file_set_string (keyfile, UI_KEYFILE_GROUP, "Description", "SSH agent");
+					g_key_file_set_string (keyfile, UI_KEYFILE_GROUP, "Title", _("Authenticate VPN"));
+
+					keyfile_add_entry_info (keyfile, "agent", agent, "SSH agent socket", TRUE, FALSE);
+
+					keyfile_print_stdout (keyfile);
+					g_key_file_unref (keyfile);
+				}
+				else
+				{
+					print_secret("agent", g_strdup (agent));
+					wait_for_quit ();
+				}
+			}
+			else if (allow_interaction)
+			{
+				GtkWidget *dialog;
+				dialog = gtk_message_dialog_new(NULL, 0, GTK_MESSAGE_ERROR,
+							  GTK_BUTTONS_OK,
+							  _("Configuration uses ssh-agent for authentication, "
+							  "but ssh-agent is not running!"));
+				gtk_dialog_run (GTK_DIALOG (dialog));
+				gtk_widget_destroy (dialog);
+			}
+		}
+		else
+		{
+			need_secret = TRUE;
+		}
+	}
+
+	if (need_secret ||
+		!strcmp(type, "eap") ||
+		!strcmp(type, "psk"))
 	{
 		nm_vpn_service_plugin_get_secret_flags (secrets, "password", &flags);
-		if (!get_secrets(type, uuid, name, retry, allow_interaction, external_ui_mode,
-						 g_hash_table_lookup (secrets, "password"), &pass, flags))
+		if (!get_secrets(type, cert_source, uuid, name, retry, allow_interaction,
+						 external_ui_mode, g_hash_table_lookup (secrets, "password"), &pass, flags))
 		{
 			status = 1;
 		}
@@ -314,43 +369,6 @@ int main (int argc, char *argv[])
 		{
 			print_secret("password", pass);
 			wait_for_quit ();
-		}
-	}
-	else if (!strcmp(type, "agent"))
-	{
-		agent = getenv("SSH_AUTH_SOCK");
-		if (agent)
-		{
-			if (external_ui_mode)
-			{
-				GKeyFile *keyfile;
-
-				keyfile = g_key_file_new ();
-
-				g_key_file_set_integer (keyfile, UI_KEYFILE_GROUP, "Version", 2);
-				g_key_file_set_string (keyfile, UI_KEYFILE_GROUP, "Description", "SSH agent");
-				g_key_file_set_string (keyfile, UI_KEYFILE_GROUP, "Title", _("Authenticate VPN"));
-
-				keyfile_add_entry_info (keyfile, "agent", agent, "SSH agent socket", TRUE, FALSE);
-
-				keyfile_print_stdout (keyfile);
-				g_key_file_unref (keyfile);
-			}
-			else
-			{
-				print_secret("agent", g_strdup (agent));
-				wait_for_quit ();
-			}
-		}
-		else if (allow_interaction)
-		{
-			GtkWidget *dialog;
-			dialog = gtk_message_dialog_new(NULL, 0, GTK_MESSAGE_ERROR,
-						  GTK_BUTTONS_OK,
-						  _("Configuration uses ssh-agent for authentication, "
-						  "but ssh-agent is not running!"));
-			gtk_dialog_run (GTK_DIALOG (dialog));
-			gtk_widget_destroy (dialog);
 		}
 	}
 

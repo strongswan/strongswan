@@ -483,7 +483,7 @@ Load a certificate into the daemon.
 Load a private key into the daemon.
 
 	{
-		type = <private key type, rsa|ecdsa|bliss|any>
+		type = <private key type, rsa|ecdsa|ed25519|ed448|bliss|any>
 		data = <PEM or DER encoded key data>
 	} => {
 		success = <yes or no>
@@ -976,6 +976,22 @@ The _ike-rekey_ event is issued when an IKE_SA is rekeyed.
 		}
 	}
 
+### ike-update ###
+
+The _ike-update_ event is issued when the local or remote endpoint address of an
+IKE_SA is about to change (at least one address/port is different).
+
+	{
+		local-host = <new/current local IKE endpoint address>
+		local-port = <new/current local IKE endpoint port>
+		remote-host = <new/current remote IKE endpoint address>
+		remote-port = <new/current remote IKE endpoint port>
+		<IKE_SA config name> = {
+			<same data as in the list-sas event, but without child-sas section
+			 and listing the old addresses/ports>
+		}
+	}
+
 ### child-updown ###
 
 The _child-updown_ event is issued when a CHILD_SA is established or terminated.
@@ -1271,7 +1287,7 @@ subdirectory, and gets built and installed if strongSwan has been
 The _Vici::Session_ module provides a _new()_ constructor for a high level
 interface, the underlying _Vici::Packet_ and _Vici::Transport_ classes are
 usually not required to build Perl applications using VICI. The _Vici::Session_
-class provides methods for the supported VICI commands. The auxiliare
+class provides methods for the supported VICI commands. The auxiliary
  _Vici::Message_ class is used to encode configuration parameters sent to
 the daemon and decode data returned by the daemon.
 

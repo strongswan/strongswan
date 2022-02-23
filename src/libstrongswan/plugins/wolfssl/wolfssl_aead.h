@@ -27,8 +27,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_AEAD_H_
-#define WOLFSSL_AEAD_H_
+#ifndef WOLFSSL_PLUGIN_AEAD_H_
+#define WOLFSSL_PLUGIN_AEAD_H_
 
 #include <crypto/aead.h>
 
@@ -43,4 +43,4 @@
 aead_t *wolfssl_aead_create(encryption_algorithm_t algo, size_t key_size,
 							size_t salt_size);
 
-#endif /** WOLFSSL_AEAD_H_ @}*/
+#endif /** WOLFSSL_PLUGIN_AEAD_H_ @}*/

@@ -1,0 +1,18 @@
+task:
+  matrix:
+    - name: FreeBSD 13.0
+      freebsd_instance:
+        image_family: freebsd-13-0
+    - name: FreeBSD 12.2
+      freebsd_instance:
+        image_family: freebsd-12-2
+
+  env:
+    TESTS_REDUCED_KEYLENGTHS: yes
+    LEAK_DETECTIVE: no
+    MONOLITHIC: no
+    TEST: freebsd
+    OS_NAME: freebsd
+
+  install_script: ./scripts/test.sh deps
+  script: ./scripts/test.sh

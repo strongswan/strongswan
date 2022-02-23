@@ -142,7 +142,7 @@ struct private_socket_default_socket_t {
 	bool set_source;
 
 	/**
-	 * TRUE to force sending source interface on outbound packetrs
+	 * TRUE to force sending source interface on outbound packets
 	 */
 	bool set_sourceif;
 

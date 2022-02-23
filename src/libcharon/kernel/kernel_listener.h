@@ -47,7 +47,7 @@ struct kernel_listener_t {
 					traffic_selector_t *src_ts, traffic_selector_t *dst_ts);
 
 	/**
-	 * Hook called if an exire event for an IPsec SA is received.
+	 * Hook called if an expire event for an IPsec SA is received.
 	 *
 	 * @param protocol		protocol of the expired SA
 	 * @param spi			spi of the expired SA
@@ -63,7 +63,7 @@ struct kernel_listener_t {
 	 *
 	 * @param protocol		IPsec protocol of affected SA
 	 * @param spi			spi of the SA
-	 * @param dst			old destinatino address of SA
+	 * @param dst			old destination address of SA
 	 * @param remote		new remote host
 	 * @return				TRUE to remain registered, FALSE to unregister
 	 */

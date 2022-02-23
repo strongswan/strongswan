@@ -168,7 +168,8 @@ static status_t set_modulus(private_openssl_diffie_hellman_t *this)
 	}
 	if (params->exp_len != params->prime.len)
 	{
-#ifdef OPENSSL_IS_BORINGSSL
+#if defined(OPENSSL_IS_BORINGSSL) && \
+	(!defined(BORINGSSL_API_VERSION) || BORINGSSL_API_VERSION < 11)
 		this->dh->priv_length = params->exp_len * 8;
 #else
 		if (!DH_set_length(this->dh, params->exp_len * 8))

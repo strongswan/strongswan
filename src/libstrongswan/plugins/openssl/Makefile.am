@@ -2,6 +2,10 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-DFIPS_MODE=${fips_mode}
 
+if USE_WINDOWS
+AM_CPPFLAGS += -DNOCRYPT
+endif
+
 AM_CFLAGS = \
 	$(PLUGIN_CFLAGS)
 
@@ -32,7 +36,8 @@ libstrongswan_openssl_la_SOURCES = \
 	openssl_aead.c openssl_aead.h \
 	openssl_x_diffie_hellman.c openssl_x_diffie_hellman.h \
 	openssl_ed_private_key.c openssl_ed_private_key.h \
-	openssl_ed_public_key.c openssl_ed_public_key.h
+	openssl_ed_public_key.c openssl_ed_public_key.h \
+	openssl_xof.c openssl_xof.h
 
 libstrongswan_openssl_la_LDFLAGS = -module -avoid-version
 libstrongswan_openssl_la_LIBADD  = $(OPENSSL_LIB)

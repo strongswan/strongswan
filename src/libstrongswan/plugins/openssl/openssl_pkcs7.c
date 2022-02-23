@@ -441,7 +441,7 @@ METHOD(pkcs7_t, get_attribute, bool,
 		return FALSE;
 	}
 
-	/* "i" gets incremeneted after enumerate(), hence read from previous */
+	/* "i" gets incremented after enumerate(), hence read from previous */
 	si = sk_CMS_SignerInfo_value(e->signers, e->i - 1);
 	for (i = 0; i < CMS_signed_get_attr_count(si); i++)
 	{

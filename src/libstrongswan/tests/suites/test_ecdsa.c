@@ -36,7 +36,7 @@ static struct {
 };
 
 /**
- * Perform a signature verification "good" test having a keypair
+ * Perform a signature verification "good" test having a key pair
  */
 static void test_good_sig(private_key_t *privkey, public_key_t *pubkey)
 {

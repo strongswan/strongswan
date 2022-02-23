@@ -25,8 +25,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_CRYPTER_H_
-#define WOLFSSL_CRYPTER_H_
+#ifndef WOLFSSL_PLUGIN_CRYPTER_H_
+#define WOLFSSL_PLUGIN_CRYPTER_H_
 
 typedef struct wolfssl_crypter_t wolfssl_crypter_t;
 
@@ -53,4 +53,4 @@ struct wolfssl_crypter_t {
 wolfssl_crypter_t *wolfssl_crypter_create(encryption_algorithm_t algo,
 										  size_t key_size);
 
-#endif /** WOLFSSL_CRYPTER_H_ @}*/
+#endif /** WOLFSSL_PLUGIN_CRYPTER_H_ @}*/

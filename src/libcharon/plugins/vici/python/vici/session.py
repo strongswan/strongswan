@@ -1,4 +1,3 @@
-import collections
 import socket
 
 from .exception import SessionException, CommandException, EventUnknownException
@@ -79,7 +78,7 @@ class Session(CommandWrappers, object):
             if command_response["success"] != b"yes":
                 raise CommandException(
                     "Command failed: {errmsg}".format(
-                        errmsg=command_response["errmsg"]
+                        errmsg=command_response["errmsg"].decode("UTF-8")
                     )
                 )
 
@@ -114,7 +113,6 @@ class Session(CommandWrappers, object):
                             yield Message.deserialize(response.payload)
                         except GeneratorExit:
                             exited = True
-                            pass
                 else:
                     break
 
@@ -137,7 +135,7 @@ class Session(CommandWrappers, object):
             if command_response["success"] != b"yes":
                 raise CommandException(
                     "Command failed: {errmsg}".format(
-                        errmsg=command_response["errmsg"]
+                        errmsg=command_response["errmsg"].decode("UTF-8")
                     )
                 )
 

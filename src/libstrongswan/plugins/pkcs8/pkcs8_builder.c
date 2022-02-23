@@ -97,7 +97,8 @@ static private_key_t *parse_private_key(chunk_t blob)
 			case PKINFO_PRIVATE_KEY:
 			{
 				DBG2(DBG_ASN, "-- > --");
-				if (params.ptr)
+				if (params.len &&
+					!chunk_equals(params, chunk_from_chars(0x05, 0x00)))
 				{
 					key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
 											 type, BUILD_BLOB_ALGID_PARAMS,

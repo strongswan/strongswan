@@ -49,7 +49,7 @@ extern enum_name_t *eap_role_names;
  * responses. An EAP method may need multiple exchanges before succeeding, and
  * the eap_authentication may use multiple EAP methods to authenticate a peer.
  * To accomplish these requirements, all EAP methods have their own
- * implementation while the eap_authenticatior uses one or more of these
+ * implementation while the eap_authenticator uses one or more of these
  * EAP methods. Sending of EAP(SUCCESS/FAILURE) message is not the job
  * of the method, the eap_authenticator does this.
  * An EAP method may establish a MSK, this is used the complete the
@@ -162,7 +162,7 @@ struct eap_method_t {
  * Constructors for server and peers are identical, to support both roles
  * of a EAP method, a plugin needs register two constructors in the
  * eap_manager_t.
- * The passed identites are of type ID_EAP and valid only during the
+ * The passed identities are of type ID_EAP and valid only during the
  * constructor invocation.
  *
  * @param server		ID of the server to use for credential lookup

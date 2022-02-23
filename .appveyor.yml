@@ -3,6 +3,7 @@ clone_depth: 50
 image:
   - Visual Studio 2015
   - Visual Studio 2017
+  - Visual Studio 2019
 
 environment:
   global:
@@ -18,12 +19,21 @@ environment:
     #  bits: 32
 
 install:
+  - tzutil /s "Central European Standard Time"
   - set MSYS_SH=C:\msys%BITS%\usr\bin\sh.exe
   - set MSYSTEM=MINGW%BITS%
   - set TEST=win%BITS%
+  - |
+      set IMG=%APPVEYOR_BUILD_WORKER_IMAGE:~-4%
+      set OPENSSL=OpenSSL
+      IF "%IMG%" == "2017" set OPENSSL=OpenSSL-v11
+      IF "%IMG%" == "2019" set OPENSSL=OpenSSL-v111
+      set OPENSSL_DIR=/c/%OPENSSL%-%TEST%
+      C:\%OPENSSL%-%TEST%\bin\openssl.exe version -a
 
 build_script:
   - '%MSYS_SH% --login -c ". /etc/profile && cd $APPVEYOR_BUILD_FOLDER && ./scripts/test.sh deps"'
 
 test_script:
+  - '%MSYS_SH% --login -c ". /etc/profile && touch /$MSYSTEM/etc/strongswan.conf"'
   - '%MSYS_SH% --login -c ". /etc/profile && cd $APPVEYOR_BUILD_FOLDER && ./scripts/test.sh"'

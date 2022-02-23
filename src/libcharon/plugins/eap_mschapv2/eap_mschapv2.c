@@ -1161,7 +1161,7 @@ static status_t process_server_retry(private_eap_mschapv2_t *this,
 	/* delay the response for some time to make brute-force attacks harder */
 	sleep(RETRY_DELAY);
 
-	/* since the error is retryable the state does not change, we still
+	/* since the error is retriable the state does not change, we still
 	 * expect an MSCHAPV2_RESPONSE from the peer */
 	return NEED_MORE;
 }

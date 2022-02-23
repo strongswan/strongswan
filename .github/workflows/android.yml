@@ -1,0 +1,53 @@
+name: Android
+
+on: [push, pull_request]
+
+env:
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_COMPRESS: true
+  CCACHE_MAXSIZE: 400M
+  CC: gcc
+  OS_NAME: linux
+
+jobs:
+  pre-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip-check.outputs.should_skip }}
+    steps:
+      - id: skip-check
+        uses: fkirc/skip-duplicate-actions@master
+        with:
+          concurrent_skipping: 'same_content'
+
+  android:
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      TEST: android
+      # since the NDK is newly installed every time, we have to use this to avoid cache misses
+      CCACHE_COMPILERCHECK: content
+    steps:
+      # even though we don't specify a specific version in our gradle files, the
+      # build fails without this because some arbitrary NDK version, that's
+      # weirdly not installed, is requested
+      - name: Install NDK
+        run: yes | sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install 'ndk;21.0.6113669'
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: ccache-android-${{ github.sha }}
+          restore-keys: |
+            ccache-android-
+      - run: |
+          sudo apt-get install -qq ccache
+          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
+          ccache -z
+      - uses: ./.github/actions/default
+      - run: ccache -s
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Lint Results
+          path: src/frontends/android/app/build/reports/lint-results.xml

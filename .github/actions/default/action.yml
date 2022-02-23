@@ -1,0 +1,16 @@
+name: "Default CI Build Steps"
+runs:
+  using: "composite"
+  steps:
+    - name: "Install Dependencies"
+      run: ./scripts/test.sh deps
+      shell: bash
+    - name: "Install Python Dependencies"
+      run: ./scripts/test.sh pydeps
+      shell: bash
+    - name: "Build Dependencies"
+      run: ./scripts/test.sh build-deps
+      shell: bash
+    - name: "Build/Tests"
+      run: ./scripts/test.sh
+      shell: bash

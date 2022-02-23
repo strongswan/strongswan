@@ -747,6 +747,12 @@ if MONOLITHIC
 endif
 endif
 
+if USE_TPM
+if MONOLITHIC
+  libcharon_la_LIBADD += $(top_builddir)/src/libtpmtss/libtpmtss.la
+endif
+endif
+
 if MONOLITHIC
   SUBDIRS += .
 endif

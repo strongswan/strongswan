@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Tobias Brunner
+ * Copyright (C) 2008-2020 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -50,6 +50,7 @@
 #include "openssl_x_diffie_hellman.h"
 #include "openssl_ed_public_key.h"
 #include "openssl_ed_private_key.h"
+#include "openssl_xof.h"
 
 #ifndef FIPS_MODE
 #define FIPS_MODE 0
@@ -74,7 +75,7 @@ struct private_openssl_plugin_t {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 
 /**
- * Array of static mutexs, with CRYPTO_num_locks() mutex
+ * Array of static mutexes, with CRYPTO_num_locks() mutex
  */
 static mutex_t **mutex = NULL;
 
@@ -243,8 +244,11 @@ static void threading_cleanup()
 
 #endif
 
+#if OPENSSL_VERSION_NUMBER < 0x1010100fL
 /**
  * Seed the OpenSSL RNG, if required
+ * Not necessary anymore with OpenSSL 1.1.1 (maybe wasn't already earlier, but
+ * it's now explicitly mentioned in the documentation).
  */
 static bool seed_rng()
 {
@@ -271,6 +275,7 @@ static bool seed_rng()
 	DESTROY_IF(rng);
 	return TRUE;
 }
+#endif /* OPENSSL_VERSION_NUMBER */
 
 /**
  * Generic key loader
@@ -493,6 +498,9 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 16),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 24),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 32),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_ECB, 16),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_ECB, 24),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_ECB, 32),
 #endif
 #ifndef OPENSSL_NO_CAMELLIA
 			PLUGIN_PROVIDE(CRYPTER, ENCR_CAMELLIA_CBC, 16),
@@ -538,6 +546,19 @@ METHOD(plugin_t, get_features, int,
 #ifndef OPENSSL_NO_SHA512
 			PLUGIN_PROVIDE(HASHER, HASH_SHA384),
 			PLUGIN_PROVIDE(HASHER, HASH_SHA512),
+#endif
+/* SHA3/SHAKE was added with OpenSSL 1.1.1, it doesn't seem to be possible to
+ * disable it, defining the checked var prevents registration, though */
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_SHA3)
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_224),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_256),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_384),
+			PLUGIN_PROVIDE(HASHER, HASH_SHA3_512),
+#endif
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_SHAKE)
+		PLUGIN_REGISTER(XOF, openssl_xof_create),
+			PLUGIN_PROVIDE(XOF, XOF_SHAKE_128),
+			PLUGIN_PROVIDE(XOF, XOF_SHAKE_256),
 #endif
 #ifndef OPENSSL_NO_SHA1
 		/* keyed sha1 hasher (aka prf) */
@@ -594,6 +615,18 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8,  16),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8,  24),
 			PLUGIN_PROVIDE(AEAD, ENCR_AES_GCM_ICV8,  32),
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+			/* CCM is available before 1.1.0 but not via generic controls */
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV16, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV16, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV16, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV12, 16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV12, 24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV12, 32),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV8,  16),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV8,  24),
+			PLUGIN_PROVIDE(AEAD, ENCR_AES_CCM_ICV8,  32),
+#endif /* OPENSSL_VERSION_NUMBER */
 #endif /* OPENSSL_NO_AES */
 #if OPENSSL_VERSION_NUMBER >= 0x1010000fL && !defined(OPENSSL_NO_CHACHA)
 			PLUGIN_PROVIDE(AEAD, ENCR_CHACHA20_POLY1305, 32),
@@ -607,10 +640,12 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(DH, ECP_521_BIT),
 			PLUGIN_PROVIDE(DH, ECP_224_BIT),
 			PLUGIN_PROVIDE(DH, ECP_192_BIT),
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
 			PLUGIN_PROVIDE(DH, ECP_256_BP),
 			PLUGIN_PROVIDE(DH, ECP_384_BP),
 			PLUGIN_PROVIDE(DH, ECP_512_BP),
 			PLUGIN_PROVIDE(DH, ECP_224_BP),
+#endif /* OPENSSL_VERSION_NUMBER */
 #endif /* OPENSSL_NO_ECDH */
 #ifndef OPENSSL_NO_DH
 		/* MODP DH groups */
@@ -660,6 +695,16 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA2_512),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA2_384),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA2_512),
+#endif
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_SHA3)
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA3_224),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA3_256),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA3_384),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA3_512),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA3_224),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA3_256),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA3_384),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA3_512),
 #endif
 #ifndef OPENSSL_NO_MD5
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_MD5),
@@ -716,12 +761,14 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_521),
 #endif
 #endif /* OPENSSL_NO_ECDSA */
-#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_ECDH)
 		PLUGIN_REGISTER(DH, openssl_x_diffie_hellman_create),
 			/* available since 1.1.0a, but we require 1.1.1 features */
 			PLUGIN_PROVIDE(DH, CURVE_25519),
 			/* available since 1.1.1 */
 			PLUGIN_PROVIDE(DH, CURVE_448),
+#endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_ECDH */
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
 		/* EdDSA private/public key loading */
 		PLUGIN_REGISTER(PUBKEY, openssl_ed_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ED25519),
@@ -839,12 +886,14 @@ plugin_t *openssl_plugin_create()
 		"openssl FIPS mode(%d) - %sabled ", fips_mode, fips_mode ? "en" : "dis");
 #endif /* OPENSSL_FIPS */
 
+#if OPENSSL_VERSION_NUMBER < 0x1010100fL
 	if (!seed_rng())
 	{
 		DBG1(DBG_CFG, "no RNG found to seed OpenSSL");
 		destroy(this);
 		return NULL;
 	}
+#endif /* OPENSSL_VERSION_NUMBER */
 
 	return &this->public.plugin;
 }

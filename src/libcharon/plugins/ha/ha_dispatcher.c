@@ -259,7 +259,10 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		if (ok)
 		{
 			if (old_sa)
-			{
+			{	/* register IKE_SA before calling inherit_post() so no scheduled
+				 * jobs are lost */
+				charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+													 ike_sa);
 				ike_sa->inherit_pre(ike_sa, old_sa);
 				ike_sa->inherit_post(ike_sa, old_sa);
 				charon->ike_sa_manager->checkin_and_destroy(

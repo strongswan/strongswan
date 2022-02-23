@@ -573,13 +573,14 @@ METHOD(child_rekey_t, collide, void,
 METHOD(task_t, migrate, void,
 	private_child_rekey_t *this, ike_sa_t *ike_sa)
 {
-	if (this->child_create)
-	{
-		this->child_create->task.migrate(&this->child_create->task, ike_sa);
-	}
+	/* only migrate the currently active task */
 	if (this->child_delete)
 	{
 		this->child_delete->task.migrate(&this->child_delete->task, ike_sa);
+	}
+	else if (this->child_create)
+	{
+		this->child_create->task.migrate(&this->child_create->task, ike_sa);
 	}
 	DESTROY_IF(this->collision);
 

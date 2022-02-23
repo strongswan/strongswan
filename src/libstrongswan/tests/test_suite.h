@@ -51,7 +51,7 @@ typedef void (*test_function_cb_t)(int);
 /**
  * Fixture for a test case.
  */
-typedef void (*test_fixture_cb_t)(void);
+typedef void (*test_fixture_cb_t)(int);
 
 /**
  * A test suite; a collection of test cases with fixtures
@@ -388,9 +388,9 @@ void test_fail_if_worker_failed();
 #define suite_add_tcase test_suite_add_case
 #define START_TEST(name) static void name (int _i) {
 #define END_TEST test_fail_if_worker_failed(); }
-#define START_SETUP(name) static void name() {
+#define START_SETUP(name) static void name(int _i) {
 #define END_SETUP test_fail_if_worker_failed(); }
-#define START_TEARDOWN(name) static void name() {
+#define START_TEARDOWN(name) static void name(int _i) {
 #define END_TEARDOWN test_fail_if_worker_failed(); }
 
 #endif /** TEST_SUITE_H_ @}*/

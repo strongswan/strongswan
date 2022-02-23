@@ -48,6 +48,7 @@
 #include <threading/rwlock.h>
 #include <threading/rwlock_condvar.h>
 #include <collections/array.h>
+#include <collections/hashtable.h>
 #include <collections/linked_list.h>
 #include <plugins/kernel_libipsec/kernel_libipsec_router.h>
 
@@ -103,12 +104,12 @@ struct private_vici_config_t {
 	vici_dispatcher_t *dispatcher;
 
 	/**
-	 * List of loaded connections, as peer_cfg_t
+	 * Hashtable of loaded connections, as peer_cfg_t
 	 */
-	linked_list_t *conns;
+	hashtable_t *conns;
 
 	/**
-	 * Lock for conns list
+	 * Lock for conns table
 	 */
 	rwlock_t *lock;
 
@@ -134,12 +135,27 @@ struct private_vici_config_t {
 
 };
 
+CALLBACK(peer_filter, bool,
+	void *data, enumerator_t *orig, va_list args)
+{
+	peer_cfg_t **out;
+
+	VA_ARGS_VGET(args, out);
+
+	if (orig->enumerate(orig, NULL, out))
+	{
+		return TRUE;
+	}
+	return FALSE;
+}
+
 METHOD(backend_t, create_peer_cfg_enumerator, enumerator_t*,
 	private_vici_config_t *this, identification_t *me, identification_t *other)
 {
 	this->lock->read_lock(this->lock);
-	return enumerator_create_cleaner(this->conns->create_enumerator(this->conns),
-									 (void*)this->lock->unlock, this->lock);
+	return enumerator_create_filter(this->conns->create_enumerator(this->conns),
+									peer_filter, this->lock,
+									(void*)this->lock->unlock);
 }
 
 CALLBACK(ike_filter, bool,
@@ -150,7 +166,7 @@ CALLBACK(ike_filter, bool,
 
 	VA_ARGS_VGET(args, out);
 
-	if (orig->enumerate(orig, &cfg))
+	if (orig->enumerate(orig, NULL, &cfg))
 	{
 		*out = cfg->get_ike_cfg(cfg);
 		return TRUE;
@@ -170,23 +186,15 @@ METHOD(backend_t, create_ike_cfg_enumerator, enumerator_t*,
 METHOD(backend_t, get_peer_cfg_by_name, peer_cfg_t*,
 	private_vici_config_t *this, char *name)
 {
-	peer_cfg_t *current, *found = NULL;
-	enumerator_t *enumerator;
+	peer_cfg_t *found;
 
 	this->lock->read_lock(this->lock);
-	enumerator = this->conns->create_enumerator(this->conns);
-	while (enumerator->enumerate(enumerator, &current))
+	found = this->conns->get(this->conns, name);
+	if (found)
 	{
-		if (streq(current->get_name(current), name))
-		{
-			found = current;
-			found->get_ref(found);
-			break;
-		}
+		found->get_ref(found);
 	}
-	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
-
 	return found;
 }
 
@@ -348,6 +356,7 @@ static void log_auth(auth_cfg_t *auth)
 	union {
 		uintptr_t u;
 		identification_t *id;
+		certificate_t *cert;
 		char *str;
 	} v;
 
@@ -374,6 +383,9 @@ static void log_auth(auth_cfg_t *auth)
 			case AUTH_RULE_IDENTITY:
 				DBG2(DBG_CFG, "   id = %Y", v.id);
 				break;
+			case AUTH_RULE_CA_IDENTITY:
+				DBG2(DBG_CFG, "   ca_id = %Y", v.id);
+				break;
 			case AUTH_RULE_AAA_IDENTITY:
 				DBG2(DBG_CFG, "   aaa_id = %Y", v.id);
 				break;
@@ -385,6 +397,12 @@ static void log_auth(auth_cfg_t *auth)
 				break;
 			case AUTH_RULE_GROUP:
 				DBG2(DBG_CFG, "   group = %Y", v.id);
+				break;
+			case AUTH_RULE_SUBJECT_CERT:
+				DBG2(DBG_CFG, "   cert = %Y", v.cert->get_subject(v.cert));
+				break;
+			case AUTH_RULE_CA_CERT:
+				DBG2(DBG_CFG, "   cacert = %Y", v.cert->get_subject(v.cert));
 				break;
 			default:
 				break;
@@ -1362,6 +1380,15 @@ CALLBACK(parse_ike_id, bool,
 }
 
 /**
+ * Parse CA identity constraint
+ */
+CALLBACK(parse_ca_id, bool,
+	auth_cfg_t *cfg, chunk_t v)
+{
+	return parse_id(cfg, AUTH_RULE_CA_IDENTITY, v);
+}
+
+/**
  * Parse AAA identity
  */
 CALLBACK(parse_aaa_id, bool,
@@ -1421,13 +1448,16 @@ static bool add_cert(auth_data_t *auth, auth_rule_t rule, certificate_t *cert)
 	vici_authority_t *authority;
 	vici_cred_t *cred;
 
-	if (rule == AUTH_RULE_SUBJECT_CERT)
+	if (rule == AUTH_RULE_CA_CERT)
 	{
 		authority = auth->request->this->authority;
-		authority->check_for_hash_and_url(authority, cert);
+		cert = authority->add_ca_cert(authority, cert);
 	}
-	cred = auth->request->this->cred;
-	cert = cred->add_cert(cred, cert);
+	else
+	{
+		cred = auth->request->this->cred;
+		cert = cred->add_cert(cred, cert);
+	}
 	auth->cfg->add(auth->cfg, rule, cert);
 	return TRUE;
 }
@@ -1440,7 +1470,7 @@ static bool parse_cert(auth_data_t *auth, auth_rule_t rule, chunk_t v)
 	certificate_t *cert;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-							  BUILD_BLOB_PEM, v, BUILD_END);
+							  BUILD_BLOB, v, BUILD_END);
 	if (cert)
 	{
 		return add_cert(auth, rule, cert);
@@ -1472,17 +1502,13 @@ CALLBACK(parse_cacerts, bool,
 CALLBACK(parse_pubkeys, bool,
 	auth_data_t *auth, chunk_t v)
 {
-	vici_cred_t *cred;
 	certificate_t *cert;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
-							  BUILD_BLOB_PEM, v, BUILD_END);
+							  BUILD_BLOB, v, BUILD_END);
 	if (cert)
 	{
-		cred = auth->request->this->cred;
-		cert = cred->add_cert(cred, cert);
-		auth->cfg->add(auth->cfg, AUTH_RULE_SUBJECT_CERT, cert);
-		return TRUE;
+		return add_cert(auth, AUTH_RULE_SUBJECT_CERT, cert);
 	}
 	return FALSE;
 }
@@ -1762,6 +1788,7 @@ CALLBACK(auth_kv, bool,
 	parse_rule_t rules[] = {
 		{ "auth",			parse_auth,			auth->cfg					},
 		{ "id",				parse_ike_id,		auth->cfg					},
+		{ "ca_id",			parse_ca_id,		auth->cfg					},
 		{ "aaa_id",			parse_aaa_id,		auth->cfg					},
 		{ "eap_id",			parse_eap_id,		auth->cfg					},
 		{ "xauth_id",		parse_xauth_id,		auth->cfg					},
@@ -1993,12 +2020,12 @@ CALLBACK(children_sn, bool,
 	}
 	if (child.proposals->get_count(child.proposals) == 0)
 	{
-		proposal = proposal_create_default(PROTO_ESP);
+		proposal = proposal_create_default_aead(PROTO_ESP);
 		if (proposal)
 		{
 			child.proposals->insert_last(child.proposals, proposal);
 		}
-		proposal = proposal_create_default_aead(PROTO_ESP);
+		proposal = proposal_create_default(PROTO_ESP);
 		if (proposal)
 		{
 			child.proposals->insert_last(child.proposals, proposal);
@@ -2189,9 +2216,9 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 				}
 				children->destroy(children);
 
-				if (id && !others)
+				if (!ike_sa->get_child_count(ike_sa) || (id && !others))
 				{
-					/* found matching children only, delete full IKE_SA */
+					/* found no children or only matching, delete IKE_SA */
 					id = ike_sa->get_unique_id(ike_sa);
 					array_insert_create_value(&ikeids, sizeof(id),
 											  ARRAY_TAIL, &id);
@@ -2328,54 +2355,46 @@ static void replace_children(private_vici_config_t *this,
  */
 static void merge_config(private_vici_config_t *this, peer_cfg_t *peer_cfg)
 {
-	enumerator_t *enumerator;
-	peer_cfg_t *current;
+	peer_cfg_t *found;
 	ike_cfg_t *ike_cfg;
-	bool merged = FALSE;
-    
+
 	tun_device_t *tun = lib->get(lib,"kernel-libipsec-tun");
 	tun->open_tun(tun);
 	router->resetread(router);
+
 	this->lock->write_lock(this->lock);
 	while (this->handling_actions)
 	{
 		this->condvar->wait(this->condvar, this->lock);
 	}
 
-	enumerator = this->conns->create_enumerator(this->conns);
-	while (enumerator->enumerate(enumerator, &current))
+	found = this->conns->get(this->conns, peer_cfg->get_name(peer_cfg));
+	if (found)
 	{
-		if (streq(peer_cfg->get_name(peer_cfg), current->get_name(current)))
+		ike_cfg = found->get_ike_cfg(found);
+		if (peer_cfg->equals(peer_cfg, found) &&
+			ike_cfg->equals(ike_cfg, peer_cfg->get_ike_cfg(peer_cfg)))
 		{
-			ike_cfg = current->get_ike_cfg(current);
-			if (peer_cfg->equals(peer_cfg, current) &&
-				ike_cfg->equals(ike_cfg, peer_cfg->get_ike_cfg(peer_cfg)))
-			{
-				DBG1(DBG_CFG, "updated vici connection: %s",
-					 peer_cfg->get_name(peer_cfg));
-				replace_children(this, peer_cfg, current);
-				peer_cfg->destroy(peer_cfg);
-			}
-			else
-			{
-				DBG1(DBG_CFG, "replaced vici connection: %s",
-					 peer_cfg->get_name(peer_cfg));
-				this->conns->insert_before(this->conns, enumerator, peer_cfg);
-				this->conns->remove_at(this->conns, enumerator);
-				handle_start_actions(this, current, TRUE);
-				handle_start_actions(this, peer_cfg, FALSE);
-				current->destroy(current);
-			}
-			merged = TRUE;
-			break;
+			DBG1(DBG_CFG, "updated vici connection: %s",
+				 peer_cfg->get_name(peer_cfg));
+			replace_children(this, peer_cfg, found);
+			peer_cfg->destroy(peer_cfg);
+		}
+		else
+		{
+			DBG1(DBG_CFG, "replaced vici connection: %s",
+				 peer_cfg->get_name(peer_cfg));
+			this->conns->put(this->conns, peer_cfg->get_name(peer_cfg),
+							 peer_cfg);
+			handle_start_actions(this, found, TRUE);
+			handle_start_actions(this, peer_cfg, FALSE);
+			found->destroy(found);
 		}
 	}
-	enumerator->destroy(enumerator);
-
-	if (!merged)
+	else
 	{
 		DBG1(DBG_CFG, "added vici connection: %s", peer_cfg->get_name(peer_cfg));
-		this->conns->insert_last(this->conns, peer_cfg);
+		this->conns->put(this->conns, peer_cfg->get_name(peer_cfg), peer_cfg);
 		handle_start_actions(this, peer_cfg, FALSE);
 	}
 	this->condvar->signal(this->condvar);
@@ -2649,10 +2668,8 @@ CALLBACK(load_conn, vici_message_t*,
 CALLBACK(unload_conn, vici_message_t*,
 	private_vici_config_t *this, char *name, u_int id, vici_message_t *message)
 {
-	enumerator_t *enumerator;
 	peer_cfg_t *cfg;
 	char *conn_name;
-	bool found = FALSE;
 
 	conn_name = message->get_str(message, NULL, "name");
 	if (!conn_name)
@@ -2665,23 +2682,16 @@ CALLBACK(unload_conn, vici_message_t*,
 	{
 		this->condvar->wait(this->condvar, this->lock);
 	}
-	enumerator = this->conns->create_enumerator(this->conns);
-	while (enumerator->enumerate(enumerator, &cfg))
+	cfg = this->conns->remove(this->conns, conn_name);
+	if (cfg)
 	{
-		if (streq(cfg->get_name(cfg), conn_name))
-		{
-			this->conns->remove_at(this->conns, enumerator);
-			handle_start_actions(this, cfg, TRUE);
-			cfg->destroy(cfg);
-			found = TRUE;
-			break;
-		}
+		handle_start_actions(this, cfg, TRUE);
+		cfg->destroy(cfg);
 	}
-	enumerator->destroy(enumerator);
 	this->condvar->signal(this->condvar);
 	this->lock->unlock(this->lock);
 
-	if (!found)
+	if (!cfg)
 	{
 		return create_reply("unload: connection '%s' not found", conn_name);
 	}
@@ -2700,7 +2710,7 @@ CALLBACK(get_conns, vici_message_t*,
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->conns->create_enumerator(this->conns);
-	while (enumerator->enumerate(enumerator, &cfg))
+	while (enumerator->enumerate(enumerator, NULL, &cfg))
 	{
 		builder->add_li(builder, "%s", cfg->get_name(cfg));
 	}
@@ -2729,11 +2739,17 @@ static void manage_commands(private_vici_config_t *this, bool reg)
 	manage_command(this, "get-conns", get_conns, reg);
 }
 
+CALLBACK(destroy_conn, void,
+	peer_cfg_t *cfg, const void *key)
+{
+	cfg->destroy(cfg);
+}
+
 METHOD(vici_config_t, destroy, void,
 	private_vici_config_t *this)
 {
 	manage_commands(this, FALSE);
-	this->conns->destroy_offset(this->conns, offsetof(peer_cfg_t, destroy));
+	this->conns->destroy_function(this->conns, destroy_conn);
 	this->condvar->destroy(this->condvar);
 	this->lock->destroy(this->lock);
 	free(this);
@@ -2758,7 +2774,7 @@ vici_config_t *vici_config_create(vici_dispatcher_t *dispatcher,
 			.destroy = _destroy,
 		},
 		.dispatcher = dispatcher,
-		.conns = linked_list_create(),
+		.conns = hashtable_create(hashtable_hash_str, hashtable_equals_str, 32),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.condvar = rwlock_condvar_create(),
 		.authority = authority,

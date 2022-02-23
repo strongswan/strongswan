@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2018 Tobias Brunner
+ * Copyright (C) 2010-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -258,6 +258,41 @@ static bool add_routes(vpnservice_builder_t *builder, child_sa_t *child_sa)
 }
 
 /**
+ * Add DNS servers to the builder
+ */
+static bool add_dns_servers(vpnservice_builder_t *builder, ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	configuration_attribute_type_t type;
+	chunk_t data;
+	bool handled;
+	host_t *dns;
+
+	enumerator = ike_sa->create_attribute_enumerator(ike_sa);
+	while (enumerator->enumerate(enumerator, &type, &data, &handled))
+	{
+		switch (type)
+		{
+			case INTERNAL_IP4_DNS:
+				dns = host_create_from_chunk(AF_INET, data, 0);
+				break;
+			case INTERNAL_IP6_DNS:
+				dns = host_create_from_chunk(AF_INET6, data, 0);
+				break;
+			default:
+				continue;
+		}
+		if (dns && !dns->is_anyaddr(dns))
+		{
+			builder->add_dns(builder, dns);
+		}
+		DESTROY_IF(dns);
+	}
+	enumerator->destroy(enumerator);
+	return TRUE;
+}
+
+/**
  * Setup a new TUN device for the supplied SAs, also queues a job that
  * reads packets from this device.
  * Additional information such as DNS servers are gathered in appropriate
@@ -297,7 +332,8 @@ static bool setup_tun_device(private_android_service_t *this,
 		DBG1(DBG_DMN, "setting up TUN device failed, no virtual IP found");
 		return FALSE;
 	}
-	if (!add_routes(builder, child_sa) ||
+	if (!add_dns_servers(builder, ike_sa) ||
+		!add_routes(builder, child_sa) ||
 		!builder->set_mtu(builder, this->mtu))
 	{
 		return FALSE;
@@ -744,9 +780,9 @@ static job_requeue_t initiate(private_android_service_t *this)
 	auth_cfg_t *auth;
 	ike_cfg_create_t ike = {
 		.version = IKEV2,
-		.local = "0.0.0.0",
+		.local = "",
 		.local_port = charon->socket->get_port(charon->socket, FALSE),
-		.foce_encap = TRUE,
+		.force_encap = TRUE,
 		.fragmentation = FRAGMENTATION_YES,
 	};
 	peer_cfg_create_t peer = {
@@ -754,13 +790,13 @@ static job_requeue_t initiate(private_android_service_t *this)
 		.unique = UNIQUE_REPLACE,
 		.rekey_time = 36000, /* 10h */
 		.jitter_time = 600, /* 10min */
-		.over_time = 600, /* 10min */
+		.over_time = 1800, /* 30min */
 	};
 	child_cfg_create_t child = {
 		.lifetime = {
 			.time = {
-				.life = 3600, /* 1h */
-				.rekey = 3000, /* 50min */
+				.life = 9000, /* 2.5h */
+				.rekey = 7200, /* 2h */
 				.jitter = 300 /* 5min */
 			},
 		},
@@ -829,7 +865,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	if (!gateway || gateway->get_type(gateway) == ID_ANY)
 	{
 		DESTROY_IF(gateway);
-		gateway = identification_create_from_string(server);
+		gateway = identification_create_from_string(ike.remote);
 		/* only use this if remote ID was not configured explicitly */
 		auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
 	}
@@ -875,18 +911,13 @@ static job_requeue_t initiate(private_android_service_t *this)
 	/* get us an IKE_SA */
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
 														peer_cfg);
+	peer_cfg->destroy(peer_cfg);
 	if (!ike_sa)
 	{
-		peer_cfg->destroy(peer_cfg);
 		charonservice->update_status(charonservice,
 									 CHARONSERVICE_GENERIC_ERROR);
 		return JOB_REQUEUE_NONE;
 	}
-	if (!ike_sa->get_peer_cfg(ike_sa))
-	{
-		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-	}
-	peer_cfg->destroy(peer_cfg);
 
 	/* store the IKE_SA so we can track its progress */
 	this->ike_sa = ike_sa;

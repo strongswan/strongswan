@@ -40,7 +40,7 @@
  */
 static int debug_level = 2;
 static bool stderr_quiet = FALSE;
-static int count = 0;
+static int max_count = 0;
 
 typedef enum collector_op_t collector_op_t;
 
@@ -169,7 +169,7 @@ static collector_op_t do_args(int argc, char *argv[], bool *full_tags,
 				op = COLLECTOR_OP_CHECK;
 				continue;
 			case 'c':
-				count = atoi(optarg);
+				max_count = atoi(optarg);
 				continue;
 			case 'd':
 				debug_level = atoi(optarg);
@@ -344,10 +344,10 @@ static int extract_history(sw_collector_db_t *db)
 		}
 		else if (match("End-Date", &cmd))
 		{
-			/* Process 'count' events at a time */
-			if (count > 0 && eid - last_eid == count)
+			/* Process 'max_count' events at a time */
+			if (max_count > 0 && eid - last_eid == max_count)
 			{
-				fprintf(stderr, "added %d events\n", count);
+				fprintf(stderr, "added %d events\n", max_count);
 				goto end;
 			}
 		}
@@ -436,7 +436,7 @@ static bool query_registry(sw_collector_rest_api_t *rest_api, bool installed)
 
 /**
  * List all endpoint software identifiers stored in local collector database
- * that are not registered yet in central collelector database
+ * that are not registered yet in central collector database
  */
 static int unregistered_identifiers(sw_collector_db_t *db,
 									sw_collector_db_query_t type)

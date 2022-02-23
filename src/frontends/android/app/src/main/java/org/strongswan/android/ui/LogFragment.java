@@ -16,11 +16,11 @@
 package org.strongswan.android.ui;
 
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.FileObserver;
 import android.os.Handler;
-import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,6 +36,10 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.StringReader;
 import java.util.ArrayList;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.fragment.app.Fragment;
 
 public class LogFragment extends Fragment
 {
@@ -54,9 +58,17 @@ public class LogFragment extends Fragment
 
 		mLogFilePath = getActivity().getFilesDir() + File.separator + CharonVpnService.LOG_FILE;
 
-		mLogHandler = new Handler();
+		mLogHandler = new Handler(Looper.getMainLooper());
 
-		mDirectoryObserver = new LogDirectoryObserver(getActivity().getFilesDir().getAbsolutePath());
+		File logdir = getActivity().getFilesDir();
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+		{
+			mDirectoryObserver = new LogDirectoryObserver(logdir);
+		}
+		else
+		{
+			mDirectoryObserver = new LogDirectoryObserver(logdir.getAbsolutePath());
+		}
 	}
 
 	@Override
@@ -222,14 +234,20 @@ public class LogFragment extends Fragment
 	 */
 	private class LogDirectoryObserver extends FileObserver
 	{
-		private final File mFile;
-		private long mSize;
+		private static final int mMask = FileObserver.CREATE | FileObserver.MODIFY | FileObserver.DELETE;
+		private final File mFile = new File(mLogFilePath);
+		private long mSize = mFile.length();
 
+		@SuppressWarnings("deprecation")
 		public LogDirectoryObserver(String path)
 		{
-			super(path, FileObserver.CREATE | FileObserver.MODIFY | FileObserver.DELETE);
-			mFile = new File(mLogFilePath);
-			mSize = mFile.length();
+			super(path, mMask);
+		}
+
+		@RequiresApi(api = Build.VERSION_CODES.Q)
+		public LogDirectoryObserver(File path)
+		{
+			super(path, mMask);
 		}
 
 		@Override

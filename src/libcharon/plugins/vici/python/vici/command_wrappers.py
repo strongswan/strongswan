@@ -232,7 +232,6 @@ class CommandWrappers(object):
         """
         self.request("load-shared", secret)
 
-
     def unload_shared(self, identifier):
         """Unload a previously loaded shared secret by its unique identifier.
 
@@ -311,7 +310,7 @@ class CommandWrappers(object):
         """
         self.request("unload-pool", pool_name)
 
-    def get_pools(self, options):
+    def get_pools(self, options=None):
         """Retrieve loaded pools.
 
         :param options: filter by name and/or retrieve leases (optional)

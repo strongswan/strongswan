@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Tobias Brunner
+ * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -27,6 +27,7 @@
 #include "backend/android_creds.h"
 #include "backend/android_fetcher.h"
 #include "backend/android_private_key.h"
+#include "backend/android_scheduler.h"
 #include "backend/android_service.h"
 #include "kernel/android_ipsec.h"
 #include "kernel/android_net.h"
@@ -45,6 +46,7 @@
 #define ANDROID_RETRANSMIT_TIMEOUT 2.0
 #define ANDROID_RETRANSMIT_BASE 1.4
 #define ANDROID_KEEPALIVE_INTERVAL 45
+#define ANDROID_KEEPALIVE_DPD_MARGIN 20
 
 typedef struct private_charonservice_t private_charonservice_t;
 
@@ -434,6 +436,10 @@ static void initiate(settings_t *settings)
 						"charon.keep_alive",
 						settings->get_int(settings, "global.nat_keepalive",
 										  ANDROID_KEEPALIVE_INTERVAL));
+	/* send DPDs if above interval is exceeded, use a static value for now */
+	lib->settings->set_int(lib->settings,
+						"charon.keep_alive_dpd_margin",
+						ANDROID_KEEPALIVE_DPD_MARGIN);
 
 	/* reload plugins after changing settings */
 	lib->plugins->reload(lib->plugins, NULL);
@@ -473,7 +479,7 @@ static bool charonservice_register(plugin_t *plugin, plugin_feature_t *feature,
 /**
  * Set strongswan.conf options
  */
-static void set_options(char *logfile)
+static void set_options(char *logfile, jboolean ipv6)
 {
 	lib->settings->set_int(lib->settings,
 					"charon.plugins.android_log.loglevel", ANDROID_DEBUG_LEVEL);
@@ -499,6 +505,8 @@ static void set_options(char *logfile)
 					"charon.initiator_only", TRUE);
 	lib->settings->set_bool(lib->settings,
 					"charon.close_ike_on_child_failure", TRUE);
+	lib->settings->set_bool(lib->settings,
+					"charon.check_current_path", TRUE);
 	/* setting the source address breaks the VpnService.protect() function which
 	 * uses SO_BINDTODEVICE internally.  the addresses provided to the kernel as
 	 * auxiliary data have precedence over this option causing a routing loop if
@@ -508,10 +516,10 @@ static void set_options(char *logfile)
 	 * information */
 	lib->settings->set_bool(lib->settings,
 					"charon.plugins.socket-default.set_source", FALSE);
-	/* the Linux kernel does currently not support UDP encaspulation for IPv6
-	 * so lets disable IPv6 for now to avoid issues with dual-stack gateways */
+	/* the Linux kernel only supports UDP encap for IPv6 since 5.8, so let's use
+	 * IPv6 only if requested, to avoid issues with older dual-stack servers */
 	lib->settings->set_bool(lib->settings,
-					"charon.plugins.socket-default.use_ipv6", FALSE);
+					"charon.plugins.socket-default.use_ipv6", ipv6);
 
 #ifdef USE_BYOD
 	lib->settings->set_str(lib->settings,
@@ -537,6 +545,7 @@ static void charonservice_init(JNIEnv *env, jobject service, jobject builder,
 			PLUGIN_PROVIDE(CUSTOM, "kernel-ipsec"),
 		PLUGIN_CALLBACK(kernel_net_register, kernel_android_net_create),
 			PLUGIN_PROVIDE(CUSTOM, "kernel-net"),
+				PLUGIN_DEPENDS(CUSTOM, "socket"),
 		PLUGIN_CALLBACK(charonservice_register, NULL),
 			PLUGIN_PROVIDE(CUSTOM, "android-backend"),
 				PLUGIN_DEPENDS(CUSTOM, "libcharon"),
@@ -614,17 +623,22 @@ static void segv_handler(int signal)
 }
 
 /**
+ * Register this logger as default before we have the bus available
+ */
+static void __attribute__ ((constructor))register_logger()
+{
+	dbg = dbg_android;
+}
+
+/**
  * Initialize charon and the libraries via JNI
  */
 JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
-	jobject builder, jstring jlogfile, jstring jappdir, jboolean byod)
+	jobject builder, jstring jlogfile, jstring jappdir, jboolean byod, jboolean ipv6)
 {
 	struct sigaction action;
 	struct utsname utsname;
 	char *logfile, *appdir, *plugins;
-
-	/* logging for library during initialization, as we have no bus yet */
-	dbg = dbg_android;
 
 	/* initialize library */
 	if (!library_init(NULL, "charon"))
@@ -633,10 +647,16 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 		return FALSE;
 	}
 
+	if (android_sdk_version >= ANDROID_MARSHMALLOW)
+	{
+		/* use a custom scheduler so the app is woken when jobs have to run */
+		lib->scheduler = android_scheduler_create(this, lib->scheduler);
+	}
+
 	/* set options before initializing other libraries that might read them */
 	logfile = androidjni_convert_jstring(env, jlogfile);
 
-	set_options(logfile);
+	set_options(logfile, ipv6);
 	free(logfile);
 
 	if (!libipsec_init())
@@ -743,8 +763,6 @@ JNI_METHOD_P(org_strongswan_android_utils, Utils, isProposalValid, jboolean,
 	char *str;
 	bool valid;
 
-	dbg = dbg_android;
-
 	if (!library_init(NULL, "charon"))
 	{
 		library_deinit();
@@ -768,8 +786,6 @@ JNI_METHOD_P(org_strongswan_android_utils, Utils, parseInetAddressBytes, jbyteAr
 	jbyteArray bytes;
 	host_t *host;
 	char *str;
-
-	dbg = dbg_android;
 
 	if (!library_init(NULL, "charon"))
 	{

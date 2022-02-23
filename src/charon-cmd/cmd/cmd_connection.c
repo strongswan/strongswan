@@ -362,9 +362,8 @@ static child_cfg_t* create_child_cfg(private_cmd_connection_t *this,
 	}
 	else
 	{
+		child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
 		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
-		child_cfg->add_proposal(child_cfg,
-								proposal_create_default_aead(PROTO_ESP));
 	}
 	while (this->local_ts->remove_first(this->local_ts, (void**)&ts) == SUCCESS)
 	{

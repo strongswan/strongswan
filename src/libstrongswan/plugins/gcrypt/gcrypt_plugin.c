@@ -70,6 +70,9 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 16),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 24),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 32),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_ECB, 16),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_ECB, 24),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_ECB, 32),
 			/* gcrypt only supports 128 bit blowfish */
 			PLUGIN_PROVIDE(CRYPTER, ENCR_BLOWFISH, 16),
 #ifdef HAVE_GCRY_CIPHER_CAMELLIA
@@ -164,6 +167,7 @@ METHOD(plugin_t, destroy, void,
 plugin_t *gcrypt_plugin_create()
 {
 	private_gcrypt_plugin_t *this;
+	u_char *dummy[1];
 
 #if GCRYPT_VERSION_NUMBER < 0x010600
 	gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
@@ -185,7 +189,7 @@ plugin_t *gcrypt_plugin_create()
 	gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
 
 	/* initialize static allocations we want to exclude from leak-detective */
-	gcry_create_nonce(NULL, 0);
+	gcry_create_nonce(dummy, sizeof(dummy));
 
 	INIT(this,
 		.public = {

@@ -22,10 +22,6 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.content.ContextCompat;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -44,6 +40,11 @@ import org.strongswan.android.logic.imc.ImcState;
 import org.strongswan.android.logic.imc.RemediationInstruction;
 
 import java.util.ArrayList;
+
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
 public class ImcStateFragment extends Fragment implements VpnStateListener
 {
@@ -87,7 +88,7 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 		context.bindService(new Intent(context, VpnStateService.class),
 							mServiceConnection, Service.BIND_AUTO_CREATE);
 		/* hide it initially */
-		getFragmentManager().beginTransaction().hide(this).commit();
+		getParentFragmentManager().beginTransaction().hide(this).commit();
 	}
 
 	@Override
@@ -191,7 +192,7 @@ public class ImcStateFragment extends Fragment implements VpnStateListener
 
 	public void updateView()
 	{
-		FragmentManager fm = getFragmentManager();
+		FragmentManager fm = getParentFragmentManager();
 		if (fm == null)
 		{
 			return;

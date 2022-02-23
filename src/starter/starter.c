@@ -255,14 +255,14 @@ static void fatal_signal_handler(int signal)
 	abort();
 }
 
-static bool check_pid(char *pid_file)
+static bool check_pid(char *file)
 {
 	struct stat stb;
 	FILE *pidfile;
 
-	if (stat(pid_file, &stb) == 0)
+	if (stat(file, &stb) == 0)
 	{
-		pidfile = fopen(pid_file, "r");
+		pidfile = fopen(file, "r");
 		if (pidfile)
 		{
 			char buf[64];
@@ -279,8 +279,8 @@ static bool check_pid(char *pid_file)
 				return TRUE;
 			}
 		}
-		DBG1(DBG_APP, "removing pidfile '%s', process not running", pid_file);
-		unlink(pid_file);
+		DBG1(DBG_APP, "removing pidfile '%s', process not running", file);
+		unlink(file);
 	}
 	return FALSE;
 }

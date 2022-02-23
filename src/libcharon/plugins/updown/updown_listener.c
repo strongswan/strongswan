@@ -54,7 +54,7 @@ typedef struct cache_entry_t cache_entry_t;
  * Cache line in the interface name cache.
  */
 struct cache_entry_t {
-	/** requid of the CHILD_SA */
+	/** reqid of the CHILD_SA */
 	uint32_t reqid;
 	/** cached interface name */
 	char *iface;
@@ -289,7 +289,9 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 			 config->get_name(config));
 	if (up)
 	{
-		if (charon->kernel->get_interface(charon->kernel, me, &iface))
+		host = charon->kernel->get_nexthop(charon->kernel, other, -1, me,
+										   &iface);
+		if (host && iface)
 		{
 			cache_iface(this, child_sa->get_reqid(child_sa), iface);
 		}
@@ -297,6 +299,7 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 		{
 			iface = NULL;
 		}
+		DESTROY_IF(host);
 	}
 	else
 	{

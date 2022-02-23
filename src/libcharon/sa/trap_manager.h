@@ -64,7 +64,7 @@ struct trap_manager_t {
 	/**
 	 * Acquire an SA triggered by an installed trap.
 	 *
-	 * @param reqid		requid of the triggering CHILD_SA
+	 * @param reqid		reqid of the triggering CHILD_SA
 	 * @param src		source of the triggering packet
 	 * @param dst		destination of the triggering packet
 	 */

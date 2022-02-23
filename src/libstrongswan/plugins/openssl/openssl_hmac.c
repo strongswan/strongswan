@@ -76,37 +76,40 @@ struct private_mac_t {
 	 */
 	HMAC_CTX hmac_ctx;
 #endif
-
-	/**
-	 * Key set on HMAC_CTX?
-	 */
-	bool key_set;
 };
 
-METHOD(mac_t, set_key, bool,
-	private_mac_t *this, chunk_t key)
+/**
+ * Resets the state with the given key, or only resets the internal state
+ * if key is chunk_empty.
+ */
+static bool reset(private_mac_t *this, chunk_t key)
 {
 #if OPENSSL_VERSION_NUMBER >= 0x10000000L
 	if (HMAC_Init_ex(this->hmac, key.ptr, key.len, this->hasher, NULL))
 	{
-		this->key_set = TRUE;
 		return TRUE;
 	}
 	return FALSE;
 #else /* OPENSSL_VERSION_NUMBER < 1.0 */
 	HMAC_Init_ex(this->hmac, key.ptr, key.len, this->hasher, NULL);
-	this->key_set = TRUE;
 	return TRUE;
 #endif
+}
+
+METHOD(mac_t, set_key, bool,
+	private_mac_t *this, chunk_t key)
+{
+	if (!key.ptr)
+	{	/* HMAC_Init_ex() won't reset the key if a NULL pointer is passed,
+		 * use a lenghty string in case there is a limit in FIPS-mode */
+		key = chunk_from_str("00000000000000000000000000000000");
+	}
+	return reset(this, key);
 }
 
 METHOD(mac_t, get_mac, bool,
 	private_mac_t *this, chunk_t data, uint8_t *out)
 {
-	if (!this->key_set)
-	{
-		return FALSE;
-	}
 #if OPENSSL_VERSION_NUMBER >= 0x10000000L
 	if (!HMAC_Update(this->hmac, data.ptr, data.len))
 	{
@@ -128,7 +131,7 @@ METHOD(mac_t, get_mac, bool,
 	}
 	HMAC_Final(this->hmac, out, NULL);
 #endif
-	return set_key(this, chunk_empty);
+	return reset(this, chunk_empty);
 }
 
 METHOD(mac_t, get_mac_size, size_t,
@@ -185,6 +188,12 @@ static mac_t *hmac_create(hash_algorithm_t algo)
 	this->hmac = &this->hmac_ctx;
 #endif
 
+	/* make sure the underlying hash algorithm is supported */
+	if (!set_key(this, chunk_empty))
+	{
+		destroy(this);
+		return NULL;
+	}
 	return &this->public;
 }
 

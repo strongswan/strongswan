@@ -353,7 +353,7 @@ START_TEST(test_strpfx)
 END_TEST
 
 /*******************************************************************************
- * mallac_align/free_align
+ * malloc_align/free_align
  */
 
 START_TEST(test_malloc_align)
@@ -548,6 +548,63 @@ START_TEST(test_memstr)
 END_TEST
 
 /*******************************************************************************
+ * memwipe
+ */
+
+START_TEST(test_memwipe_null)
+{
+	memwipe(NULL, 16);
+}
+END_TEST
+
+static inline bool test_wiped_memory(char *buf, size_t len)
+{
+	int i;
+
+	/* comparing two bytes at once reduces the chances of conflicts if memory
+	 * got overwritten already */
+	for (i = 0; i < len; i += 2)
+	{
+		if (buf[i] != 0 && buf[i] == i &&
+			buf[i+1] != 0 && buf[i+1] == i+1)
+		{
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+START_TEST(test_memwipe_stack)
+{
+	char buf[64];
+	int i;
+
+	for (i = 0; i < sizeof(buf); i++)
+	{
+		buf[i] = i;
+	}
+	memwipe(buf, sizeof(buf));
+	ck_assert(test_wiped_memory(buf, sizeof(buf)));
+}
+END_TEST
+
+START_TEST(test_memwipe_heap)
+{
+	size_t len = 64;
+	char *buf = malloc(len);
+	int i;
+
+	for (i = 0; i < len; i++)
+	{
+		buf[i] = i;
+	}
+	memwipe(buf, len);
+	ck_assert(test_wiped_memory(buf, len));
+	free(buf);
+}
+END_TEST
+
+/*******************************************************************************
  * utils_memrchr
  */
 
@@ -710,6 +767,97 @@ START_TEST(test_strreplace)
 END_TEST
 
 /*******************************************************************************
+ * path_first/last_separator
+ */
+
+static struct {
+	char *path;
+	int len;
+	int first;
+	int last;
+} separator_data[] = {
+	{NULL, -1, -1, -1},
+	{"",   -1, -1, -1},
+	{".",  -1, -1, -1},
+	{"..", -1, -1, -1},
+#ifdef WIN32
+	{"C:\\",         -1, 2, 2},
+	{"C:/",          -1, 2, 2},
+	{"X:\\\\",       -1, 2, 3},
+	{"d:\\f",        -1, 2, 2},
+	{"d:\\f",         2, -1, -1},
+	{"C:\\foo\\",    -1, 2, 6},
+	{"foo\\bar",     -1, 3, 3},
+	{"foo\\\\bar",   -1, 3, 4},
+	{"\\foo\\bar",   -1, 0, 4},
+	{"\\\\foo\\bar", -1, 0, 5},
+	{"\\\\foo\\bar",  4, 0, 1},
+	{"foo\\bar/baz", -1, 3, 7},
+#endif /* WIN32 */
+	{"/",         -1, 0, 0},
+	{"//",        -1, 0, 1},
+	{"foo",       -1, -1, -1},
+	{"f/",        -1, 1, 1},
+	{"foo/",      -1, 3, 3},
+	{"foo/",       2, -1, -1},
+	{"foo//",     -1, 3, 4},
+	{"/foo",      -1, 0, 0},
+	{"/foo/",     -1, 0, 4},
+	{"/foo/",      3, 0, 0},
+	{"//foo/",    -1, 0, 5},
+	{"foo/bar",   -1, 3, 3},
+	{"foo/bar",    1, -1, -1},
+	{"foo/bar",    2, -1, -1},
+	{"foo/bar",    3, -1, -1},
+	{"foo/bar",    4, 3, 3},
+	{"foo/bar",    5, 3, 3},
+	{"foo//bar",  -1, 3, 4},
+	{"/foo/bar",  -1, 0, 4},
+	{"/foo/bar/", -1, 0, 8},
+	{"/foo/bar/",  0, -1, -1},
+	{"/foo/bar/",  1, 0, 0},
+	{"/foo/bar/",  2, 0, 0},
+	{"/foo/bar/",  3, 0, 0},
+	{"/foo/bar/",  4, 0, 0},
+	{"/foo/bar/",  5, 0, 4},
+	{"/foo/bar/",  7, 0, 4},
+	{"/foo/bar/",  8, 0, 4},
+	{"/foo/bar/",  9, 0, 8},
+};
+
+START_TEST(test_path_first_separator)
+{
+	char *pos;
+
+	pos = path_first_separator(separator_data[_i].path, separator_data[_i].len);
+	if (separator_data[_i].first >= 0)
+	{
+		ck_assert_int_eq(pos-separator_data[_i].path, separator_data[_i].first);
+	}
+	else
+	{
+		ck_assert(!pos);
+	}
+}
+END_TEST
+
+START_TEST(test_path_last_separator)
+{
+	char *pos;
+
+	pos = path_last_separator(separator_data[_i].path, separator_data[_i].len);
+	if (separator_data[_i].last >= 0)
+	{
+		ck_assert_int_eq(pos-separator_data[_i].path, separator_data[_i].last);
+	}
+	else
+	{
+		ck_assert(!pos);
+	}
+}
+END_TEST
+
+/*******************************************************************************
  * path_dirname/basename/absolute
  */
 
@@ -725,6 +873,7 @@ static struct {
 	{"..", ".", "..", FALSE},
 #ifdef WIN32
 	{"C:\\", "C:", "C:", TRUE},
+	{"C:/", "C:", "C:", TRUE},
 	{"X:\\\\", "X:", "X:", TRUE},
 	{"foo", ".", "foo", FALSE},
 	{"f\\", ".", "f", FALSE},
@@ -732,16 +881,20 @@ static struct {
 	{"foo\\\\", ".", "foo", FALSE},
 	{"d:\\f", "d:", "f", TRUE},
 	{"C:\\f\\", "C:", "f", TRUE},
+	{"C:\\f\\", "C:", "f", TRUE},
 	{"C:\\foo", "C:", "foo", TRUE},
 	{"C:\\foo\\", "C:", "foo", TRUE},
+	{"C:\\foo/", "C:", "foo", TRUE},
 	{"foo\\bar", "foo", "bar", FALSE},
 	{"foo\\\\bar", "foo", "bar", FALSE},
 	{"C:\\foo\\bar", "C:\\foo", "bar", TRUE},
 	{"C:\\foo\\bar\\", "C:\\foo", "bar", TRUE},
 	{"C:\\foo\\bar\\baz", "C:\\foo\\bar", "baz", TRUE},
-	{"\\foo\\bar", "\\foo", "bar", FALSE},
+	{"C:\\foo/bar\\baz", "C:\\foo/bar", "baz", TRUE},
+	{"C:/foo/bar/baz", "C:/foo/bar", "baz", TRUE},
+	{"\\foo\\bar", "\\foo", "bar", TRUE},
 	{"\\\\foo\\bar", "\\\\foo", "bar", TRUE},
-#else /* !WIN32 */
+#endif /* WIN32 */
 	{"/", "/", "/", TRUE},
 	{"//", "/", "/", TRUE},
 	{"foo", ".", "foo", FALSE},
@@ -758,7 +911,6 @@ static struct {
 	{"/foo/bar", "/foo", "bar", TRUE},
 	{"/foo/bar/", "/foo", "bar", TRUE},
 	{"/foo/bar/baz", "/foo/bar", "baz", TRUE},
-#endif
 };
 
 START_TEST(test_path_dirname)
@@ -1132,6 +1284,12 @@ Suite *utils_suite_create()
 	tcase_add_loop_test(tc, test_memstr, 0, countof(memstr_data));
 	suite_add_tcase(s, tc);
 
+	tc = tcase_create("memwipe");
+	tcase_add_test(tc, test_memwipe_null);
+	tcase_add_test(tc, test_memwipe_stack);
+	tcase_add_test(tc, test_memwipe_heap);
+	suite_add_tcase(s, tc);
+
 	tc = tcase_create("utils_memrchr");
 	tcase_add_loop_test(tc, test_utils_memrchr, 0, countof(memrchr_data));
 	suite_add_tcase(s, tc);
@@ -1142,6 +1300,11 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("strreplace");
 	tcase_add_loop_test(tc, test_strreplace, 0, countof(strreplace_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("path_first/last_separator");
+	tcase_add_loop_test(tc, test_path_first_separator, 0, countof(separator_data));
+	tcase_add_loop_test(tc, test_path_last_separator, 0, countof(separator_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("path_dirname");

@@ -1,3 +1,4 @@
+.tox
 *.pyc
 build
 dist

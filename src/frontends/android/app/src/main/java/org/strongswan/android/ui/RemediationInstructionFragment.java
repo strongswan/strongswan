@@ -16,7 +16,6 @@
 package org.strongswan.android.ui;
 
 import android.os.Bundle;
-import android.support.v4.app.ListFragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,6 +25,10 @@ import android.widget.TextView;
 
 import org.strongswan.android.R;
 import org.strongswan.android.logic.imc.RemediationInstruction;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.ListFragment;
 
 public class RemediationInstructionFragment extends ListFragment
 {
@@ -48,9 +51,9 @@ public class RemediationInstructionFragment extends ListFragment
 	}
 
 	@Override
-	public void onActivityCreated(Bundle savedInstanceState)
+	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState)
 	{
-		super.onActivityCreated(savedInstanceState);
+		super.onViewCreated(view, savedInstanceState);
 
 		if (savedInstanceState != null)
 		{

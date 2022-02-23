@@ -63,7 +63,7 @@ struct private_keymat_v2_t {
 	chunk_t skd;
 
 	/**
-	 * Key to build outging authentication data (SKp)
+	 * Key to build outgoing authentication data (SKp)
 	 */
 	chunk_t skp_build;
 
@@ -100,10 +100,10 @@ METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
  * Derive IKE keys for a combined AEAD algorithm
  */
 static bool derive_ike_aead(private_keymat_v2_t *this, uint16_t alg,
-							uint16_t key_size, prf_plus_t *prf_plus)
+							uint16_t key_size, prf_plus_t *prf_plus,
+							chunk_t *sk_ei, chunk_t *sk_er)
 {
 	aead_t *aead_i, *aead_r;
-	chunk_t sk_ei = chunk_empty, sk_er = chunk_empty;
 	u_int salt_size;
 
 	switch (alg)
@@ -146,22 +146,22 @@ static bool derive_ike_aead(private_keymat_v2_t *this, uint16_t alg,
 	{
 		goto failure;
 	}
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_ei))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_ei))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_ei secret %B", &sk_ei);
-	if (!aead_i->set_key(aead_i, sk_ei))
+	DBG4(DBG_IKE, "Sk_ei secret %B", sk_ei);
+	if (!aead_i->set_key(aead_i, *sk_ei))
 	{
 		goto failure;
 	}
 
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_er))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_er))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_er secret %B", &sk_er);
-	if (!aead_r->set_key(aead_r, sk_er))
+	DBG4(DBG_IKE, "Sk_er secret %B", sk_er);
+	if (!aead_r->set_key(aead_r, *sk_er))
 	{
 		goto failure;
 	}
@@ -177,14 +177,10 @@ static bool derive_ike_aead(private_keymat_v2_t *this, uint16_t alg,
 		this->aead_out = aead_r;
 	}
 	aead_i = aead_r = NULL;
-	charon->bus->ike_derived_keys(charon->bus, sk_ei, sk_er, chunk_empty,
-								  chunk_empty);
 
 failure:
 	DESTROY_IF(aead_i);
 	DESTROY_IF(aead_r);
-	chunk_clear(&sk_ei);
-	chunk_clear(&sk_er);
 	return this->aead_in && this->aead_out;
 }
 
@@ -192,14 +188,14 @@ failure:
  * Derive IKE keys for traditional encryption and MAC algorithms
  */
 static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
-					uint16_t enc_size, uint16_t int_alg, prf_plus_t *prf_plus)
+					uint16_t enc_size, uint16_t int_alg, prf_plus_t *prf_plus,
+					chunk_t *sk_ai, chunk_t *sk_ar, chunk_t *sk_ei,
+					chunk_t *sk_er)
 {
 	crypter_t *crypter_i = NULL, *crypter_r = NULL;
 	signer_t *signer_i, *signer_r;
 	iv_gen_t *ivg_i, *ivg_r;
 	size_t key_size;
-	chunk_t sk_ei = chunk_empty, sk_er = chunk_empty,
-			sk_ai = chunk_empty, sk_ar = chunk_empty;
 
 	signer_i = lib->crypto->create_signer(lib->crypto, int_alg);
 	signer_r = lib->crypto->create_signer(lib->crypto, int_alg);
@@ -223,22 +219,22 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
 	/* SK_ai/SK_ar used for integrity protection */
 	key_size = signer_i->get_key_size(signer_i);
 
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_ai))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_ai))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_ai secret %B", &sk_ai);
-	if (!signer_i->set_key(signer_i, sk_ai))
+	DBG4(DBG_IKE, "Sk_ai secret %B", sk_ai);
+	if (!signer_i->set_key(signer_i, *sk_ai))
 	{
 		goto failure;
 	}
 
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_ar))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_ar))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_ar secret %B", &sk_ar);
-	if (!signer_r->set_key(signer_r, sk_ar))
+	DBG4(DBG_IKE, "Sk_ar secret %B", sk_ar);
+	if (!signer_r->set_key(signer_r, *sk_ar))
 	{
 		goto failure;
 	}
@@ -246,22 +242,22 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
 	/* SK_ei/SK_er used for encryption */
 	key_size = crypter_i->get_key_size(crypter_i);
 
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_ei))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_ei))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_ei secret %B", &sk_ei);
-	if (!crypter_i->set_key(crypter_i, sk_ei))
+	DBG4(DBG_IKE, "Sk_ei secret %B", sk_ei);
+	if (!crypter_i->set_key(crypter_i, *sk_ei))
 	{
 		goto failure;
 	}
 
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_er))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, sk_er))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_er secret %B", &sk_er);
-	if (!crypter_r->set_key(crypter_r, sk_er))
+	DBG4(DBG_IKE, "Sk_er secret %B", sk_er);
+	if (!crypter_r->set_key(crypter_r, *sk_er))
 	{
 		goto failure;
 	}
@@ -284,13 +280,8 @@ static bool derive_ike_traditional(private_keymat_v2_t *this, uint16_t enc_alg,
 	}
 	signer_i = signer_r = NULL;
 	crypter_i = crypter_r = NULL;
-	charon->bus->ike_derived_keys(charon->bus, sk_ei, sk_er, sk_ai, sk_ar);
 
 failure:
-	chunk_clear(&sk_ai);
-	chunk_clear(&sk_ar);
-	chunk_clear(&sk_ei);
-	chunk_clear(&sk_er);
 	DESTROY_IF(signer_i);
 	DESTROY_IF(signer_r);
 	DESTROY_IF(crypter_i);
@@ -303,8 +294,10 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
-	chunk_t skeyseed = chunk_empty, key, secret, full_nonce, fixed_nonce;
+	chunk_t skeyseed = chunk_empty, secret, full_nonce, fixed_nonce;
 	chunk_t prf_plus_seed, spi_i, spi_r;
+	chunk_t sk_ei = chunk_empty, sk_er = chunk_empty;
+	chunk_t sk_ai = chunk_empty, sk_ar = chunk_empty, sk_pi, sk_pr;
 	prf_plus_t *prf_plus = NULL;
 	uint16_t alg, key_size, int_alg;
 	prf_t *rekey_prf = NULL;
@@ -394,7 +387,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			chunk_clear(&prf_plus_seed);
 			return FALSE;
 		}
-		secret = chunk_cat("mc", secret, full_nonce);
+		secret = chunk_cat("sc", secret, full_nonce);
 		if (rekey_prf->set_key(rekey_prf, rekey_skd) &&
 			rekey_prf->allocate_bytes(rekey_prf, secret, &skeyseed) &&
 			rekey_prf->set_key(rekey_prf, skeyseed))
@@ -434,7 +427,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 
 	if (encryption_algorithm_is_aead(alg))
 	{
-		if (!derive_ike_aead(this, alg, key_size, prf_plus))
+		if (!derive_ike_aead(this, alg, key_size, prf_plus, &sk_ei, &sk_er))
 		{
 			goto failure;
 		}
@@ -448,7 +441,8 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 				 transform_type_names, INTEGRITY_ALGORITHM);
 			goto failure;
 		}
-		if (!derive_ike_traditional(this, alg, key_size, int_alg, prf_plus))
+		if (!derive_ike_traditional(this, alg, key_size, int_alg, prf_plus,
+									&sk_ai, &sk_ar, &sk_ei, &sk_er))
 		{
 			goto failure;
 		}
@@ -456,35 +450,40 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 
 	/* SK_pi/SK_pr used for authentication => stored for later */
 	key_size = this->prf->get_key_size(this->prf);
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_pi))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_pi secret %B", &key);
+	DBG4(DBG_IKE, "Sk_pi secret %B", &sk_pi);
 	if (this->initiator)
 	{
-		this->skp_build = key;
+		this->skp_build = sk_pi;
 	}
 	else
 	{
-		this->skp_verify = key;
+		this->skp_verify = sk_pi;
 	}
-	if (!prf_plus->allocate_bytes(prf_plus, key_size, &key))
+	if (!prf_plus->allocate_bytes(prf_plus, key_size, &sk_pr))
 	{
 		goto failure;
 	}
-	DBG4(DBG_IKE, "Sk_pr secret %B", &key);
+	DBG4(DBG_IKE, "Sk_pr secret %B", &sk_pr);
 	if (this->initiator)
 	{
-		this->skp_verify = key;
+		this->skp_verify = sk_pr;
 	}
 	else
 	{
-		this->skp_build = key;
+		this->skp_build = sk_pr;
 	}
+	charon->bus->ike_derived_keys(charon->bus,this->skd, sk_ai, sk_ar, sk_ei,
+								  sk_er, sk_pi, sk_pr);
 
-	/* all done, prf_plus not needed anymore */
 failure:
+	chunk_clear(&sk_ai);
+	chunk_clear(&sk_ar);
+	chunk_clear(&sk_ei);
+	chunk_clear(&sk_er);
 	DESTROY_IF(prf_plus);
 	DESTROY_IF(rekey_prf);
 

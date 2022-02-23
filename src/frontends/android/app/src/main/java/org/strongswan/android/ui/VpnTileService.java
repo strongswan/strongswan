@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Tobias Brunner
+ * Copyright (C) 2018-2019 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@ import android.content.SharedPreferences;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 
@@ -35,6 +34,8 @@ import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.utils.Constants;
+
+import androidx.preference.PreferenceManager;
 
 @TargetApi(Build.VERSION_CODES.N)
 public class VpnTileService extends TileService implements VpnStateService.VpnStateListener
@@ -54,7 +55,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		public void onServiceConnected(ComponentName name, IBinder service)
 		{
 			mService = ((VpnStateService.LocalBinder)service).getService();
-			if (mListening)
+			if (mListening && mDataSource != null)
 			{
 				mService.registerListener(VpnTileService.this);
 				updateTile();
@@ -79,11 +80,13 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 	public void onDestroy()
 	{
 		super.onDestroy();
+
 		if (mService != null)
 		{
 			getApplicationContext().unbindService(mServiceConnection);
 		}
 		mDataSource.close();
+		mDataSource = null;
 	}
 
 	@Override
@@ -91,6 +94,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 	{
 		super.onStartListening();
 		mListening = true;
+
 		if (mService != null)
 		{
 			mService.registerListener(this);
@@ -103,6 +107,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 	{
 		super.onStopListening();
 		mListening = false;
+
 		if (mService != null)
 		{
 			mService.unregisterListener(this);
@@ -117,8 +122,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		{
 			uuid = pref.getString(Constants.PREF_MRU_VPN_PROFILE, null);
 		}
-
-		return mDataSource.getVpnProfile(uuid);
+		return mDataSource != null ? mDataSource.getVpnProfile(uuid) : null;
 	}
 
 	@Override
@@ -132,7 +136,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 			{
 				profile = getProfile();
 			}
-			else
+			else if (mDataSource != null)
 			{   /* always get the plain profile without cached password */
 				profile = mDataSource.getVpnProfile(profile.getId());
 			}

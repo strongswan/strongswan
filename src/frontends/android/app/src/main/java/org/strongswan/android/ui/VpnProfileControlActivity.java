@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Tobias Brunner
+ * Copyright (C) 2012-2020 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -19,18 +19,18 @@ import android.app.Dialog;
 import android.app.Service;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
+import android.net.Uri;
 import android.net.VpnService;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.AppCompatDialogFragment;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
@@ -42,6 +42,18 @@ import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.State;
+import org.strongswan.android.utils.Constants;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.preference.PreferenceManager;
 
 public class VpnProfileControlActivity extends AppCompatActivity
 {
@@ -49,7 +61,6 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	public static final String DISCONNECT = "org.strongswan.android.action.DISCONNECT";
 	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
 
-	private static final int PREPARE_VPN_SERVICE = 0;
 	private static final String WAITING_FOR_RESULT = "WAITING_FOR_RESULT";
 	private static final String PROFILE_NAME = "PROFILE_NAME";
 	private static final String PROFILE_REQUIRES_PASSWORD = "REQUIRES_PASSWORD";
@@ -75,6 +86,33 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			handleIntent();
 		}
 	};
+
+	private final ActivityResultLauncher<Intent> mPrepareVpnService = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			mWaitingForResult = false;
+			if (result.getResultCode() == RESULT_OK && mProfileInfo != null)
+			{
+				onVpnServicePrepared();
+			}
+			else
+			{	/* this happens if the always-on VPN feature is activated by a different app or the user declined */
+				VpnNotSupportedError.showWithMessage(this, R.string.vpn_not_supported_no_permission);
+			}
+		}
+	);
+
+	private final ActivityResultLauncher<Intent> mAddToPowerWhitelist = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			mWaitingForResult = false;
+			if (mProfileInfo != null && mService != null)
+			{
+				mService.connect(mProfileInfo, true);
+			}
+			finish();
+		}
+	);
 
 	@Override
 	public void onCreate(Bundle savedInstanceState)
@@ -162,7 +200,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			try
 			{
 				mWaitingForResult = true;
-				startActivityForResult(intent, PREPARE_VPN_SERVICE);
+				mPrepareVpnService.launch(intent);
 			}
 			catch (ActivityNotFoundException ex)
 			{
@@ -176,39 +214,52 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		}
 		else
 		{	/* user already granted permission to use VpnService */
-			onActivityResult(PREPARE_VPN_SERVICE, RESULT_OK, null);
+			onVpnServicePrepared();
 		}
 	}
 
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data)
+	/**
+	 * Called once the VpnService has been prepared and permission has been granted
+	 * by the user.
+	 */
+	protected void onVpnServicePrepared()
 	{
-		switch (requestCode)
+		if (checkPowerWhitelist())
 		{
-			case PREPARE_VPN_SERVICE:
-				mWaitingForResult = false;
-				if (resultCode == RESULT_OK && mProfileInfo != null)
-				{
-					if (mService != null)
-					{
-						mService.connect(mProfileInfo, true);
-					}
-					finish();
-				}
-				else
-				{	/* this happens if the always-on VPN feature is activated by a different app or the user declined */
-					if (getSupportFragmentManager().isStateSaved())
-					{	/* onActivityResult() might be called when we aren't active anymore e.g. if the
-						 * user pressed the home button, if the activity is started again we land here
-						 * before onNewIntent() is called */
-						return;
-					}
-					VpnNotSupportedError.showWithMessage(this, R.string.vpn_not_supported_no_permission);
-				}
-				break;
-			default:
-				super.onActivityResult(requestCode, resultCode, data);
+			if (mService != null)
+			{
+				mService.connect(mProfileInfo, true);
+			}
+			finish();
 		}
+	}
+
+	/**
+	 * Check if we are on the system's power whitelist, if necessary, or ask the user
+	 * to add us.
+	 * @return true if profile can be initiated immediately
+	 */
+	private boolean checkPowerWhitelist()
+	{
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+		{
+			PowerManager pm = (PowerManager)this.getSystemService(Context.POWER_SERVICE);
+			SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
+			if (!pm.isIgnoringBatteryOptimizations(this.getPackageName()) &&
+				!pref.getBoolean(Constants.PREF_IGNORE_POWER_WHITELIST, false))
+			{
+				if (getSupportFragmentManager().isStateSaved())
+				{	/* we might get called via service connection and manual onActivityResult()
+					 * call when the activity is not active anymore and fragment transactions
+					 * would cause an illegalStateException */
+					return false;
+				}
+				PowerWhitelistRequired whitelist = new PowerWhitelistRequired();
+				whitelist.show(getSupportFragmentManager(), DIALOG_TAG);
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -531,6 +582,34 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	}
 
 	/**
+	 * Class that displays a warning before asking the user to add the app to the
+	 * device's power whitelist.
+	 */
+	public static class PowerWhitelistRequired extends AppCompatDialogFragment
+	{
+		@Override
+		public Dialog onCreateDialog(Bundle savedInstanceState)
+		{
+			return new AlertDialog.Builder(getActivity())
+				.setTitle(R.string.power_whitelist_title)
+				.setMessage(R.string.power_whitelist_text)
+				.setPositiveButton(android.R.string.ok, (dialog, id) -> {
+					VpnProfileControlActivity activity = (VpnProfileControlActivity)getActivity();
+					activity.mWaitingForResult = true;
+					Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+											   Uri.parse("package:" + activity.getPackageName()));
+					activity.mAddToPowerWhitelist.launch(intent);
+				}).create();
+		}
+
+		@Override
+		public void onCancel(@NonNull DialogInterface dialog)
+		{
+			getActivity().finish();
+		}
+	}
+
+	/**
 	 * Class representing an error message which is displayed if VpnService is
 	 * not supported on the current device.
 	 */
@@ -555,7 +634,6 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			return new AlertDialog.Builder(getActivity())
 				.setTitle(R.string.vpn_not_supported_title)
 				.setMessage(messageId)
-				.setCancelable(false)
 				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener()
 				{
 					@Override

@@ -1,6 +1,6 @@
 AC_PREREQ(2.52)
 
-AC_INIT(NetworkManager-strongswan, 1.4.5, info@strongswan.org, NetworkManager-strongswan)
+AC_INIT(NetworkManager-strongswan, 1.5.2, info@strongswan.org, NetworkManager-strongswan)
 AM_INIT_AUTOMAKE([subdir-objects])
 AM_MAINTAINER_MODE
 
@@ -68,7 +68,7 @@ AC_ARG_ENABLE(
 )
 AC_ARG_WITH(
 	[libnm-glib],
-	AS_HELP_STRING([--without-libnm-glib], [build NetworkManager-strongswan without libnm-glib comatibility]),
+	AS_HELP_STRING([--without-libnm-glib], [build NetworkManager-strongswan without libnm-glib compatibility]),
 	[with_libnm_glib=no],
 	[with_libnm_glib=yes]
 )

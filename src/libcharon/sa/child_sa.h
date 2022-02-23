@@ -497,7 +497,7 @@ struct child_sa_t {
 	uint32_t (*get_rekey_spi)(child_sa_t *this);
 
 	/**
-	 * Update hosts and ecapulation mode in the kernel SAs and policies.
+	 * Update hosts and ecapsulation mode in the kernel SAs and policies.
 	 *
 	 * @param me		the new local host
 	 * @param other		the new remote host

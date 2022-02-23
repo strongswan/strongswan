@@ -1,0 +1,54 @@
+# http://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+# for alignment reasons the last tab may be replaced with < indent_size spaces,
+# which we currently can't configure here
+indent_style = tab
+indent_size = 4
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+block_comment_start = /*
+block_comment = *
+block_comment_end = */
+
+# don't change these files
+[{doc/**,src/include/{linux,sys}/**,testing/{hosts,tests}/**,AUTHORS,COPYING}]
+charset = unset
+indent_style = unset
+indent_size = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+# never trim whitespace in patches, everything else should not be changed
+[*.patch]
+trim_trailing_whitespace = false
+charset = unset
+indent_style = unset
+indent_size = unset
+end_of_line = unset
+insert_final_newline = unset
+
+[{.*,NEWS,README,INSTALL,*.{gemspec.in,pod,rb,ui}}]
+indent_style = space
+indent_size = 2
+
+[*.{gpr,adb,ads}]
+indent_style = space
+indent_size = 3
+line_comment = --
+
+[{*.{md,gradle,xml},HACKING}]
+indent_style = space
+indent_size = 4
+
+[src/libcharon/plugins/vici/README.md]
+indent_style = tab
+
+[src/libcharon/plugins/vici/**/*.{rst,PL,pm,py}]
+indent_style = space
+indent_size = 4

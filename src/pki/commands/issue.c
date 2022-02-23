@@ -124,6 +124,11 @@ static int issue()
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_ED25519;
 				}
+				else if (streq(arg, "ed448"))
+				{
+					type = CRED_PRIVATE_KEY;
+					subtype = KEY_ED448;
+				}
 				else if (streq(arg, "bliss"))
 				{
 					type = CRED_PRIVATE_KEY;
@@ -427,23 +432,10 @@ static int issue()
 	{
 		serial = chunk_from_hex(chunk_create(hex, strlen(hex)), NULL);
 	}
-	else
+	else if (!allocate_serial(8, &serial))
 	{
-		rng_t *rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-
-		if (!rng)
-		{
-			error = "no random number generator found";
-			goto end;
-		}
-		if (!rng_allocate_bytes_not_zero(rng, 8, &serial, FALSE))
-		{
-			error = "failed to generate serial number";
-			rng->destroy(rng);
-			goto end;
-		}
-		serial.ptr[0] &= 0x7F;
-		rng->destroy(rng);
+		error = "failed to generate serial number";
+		goto end;
 	}
 
 	if (pkcs10)
@@ -631,9 +623,10 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		issue, 'i', "issue",
 		"issue a certificate using a CA certificate and key",
-		{"[--in file] [--type pub|pkcs10|priv|rsa|ecdsa|ed25519|bliss] --cakey file|--cakeyid hex",
-		 " --cacert file [--dn subject-dn] [--san subjectAltName]+",
-		 "[--lifetime days] [--serial hex] [--ca] [--pathlen len]",
+		{"[--in file] [--type pub|pkcs10|priv|rsa|ecdsa|ed25519|ed448|bliss]",
+		 "--cakey file|--cakeyid hex --cacert file [--dn subject-dn]",
+		 "[--san subjectAltName]+ [--lifetime days] [--serial hex]",
+		 "[--ca] [--pathlen len]",
 		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning|msSmartcardLogon]+",
 		 "[--crl uri [--crlissuer i]]+ [--ocsp uri]+ [--nc-permitted name]",
 		 "[--nc-excluded name] [--policy-mapping issuer-oid:subject-oid]",

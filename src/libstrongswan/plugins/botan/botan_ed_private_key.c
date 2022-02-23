@@ -216,7 +216,7 @@ private_key_t *botan_ed_private_key_gen(key_type_t type, va_list args)
 		break;
 	}
 
-	if (botan_rng_init(&rng, "system"))
+	if (!botan_get_rng(&rng, RNG_TRUE))
 	{
 		return NULL;
 	}

@@ -544,7 +544,7 @@ static status_t select_and_install(private_child_create_t *this,
 	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
 	linked_list_t *my_ts, *other_ts;
 	host_t *me, *other;
-	bool private, prefer_configured;
+	proposal_selection_flag_t flags = 0;
 
 	if (this->proposals == NULL)
 	{
@@ -560,11 +560,23 @@ static status_t select_and_install(private_child_create_t *this,
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
 
-	private = this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN);
-	prefer_configured = lib->settings->get_bool(lib->settings,
-							"%s.prefer_configured_proposals", TRUE, lib->ns);
+	if (no_dh)
+	{
+		flags |= PROPOSAL_SKIP_DH;
+	}
+	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN) &&
+		!lib->settings->get_bool(lib->settings, "%s.accept_private_algs",
+								 FALSE, lib->ns))
+	{
+		flags |= PROPOSAL_SKIP_PRIVATE;
+	}
+	if (!lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns))
+	{
+		flags |= PROPOSAL_PREFER_SUPPLIED;
+	}
 	this->proposal = this->config->select_proposal(this->config,
-							this->proposals, no_dh, private, prefer_configured);
+												   this->proposals, flags);
 	if (this->proposal == NULL)
 	{
 		DBG1(DBG_IKE, "no acceptable proposal found");
@@ -695,6 +707,17 @@ static status_t select_and_install(private_child_create_t *this,
 		}
 	}
 
+	this->child_sa->set_ipcomp(this->child_sa, this->ipcomp);
+	this->child_sa->set_mode(this->child_sa, this->mode);
+	this->child_sa->set_protocol(this->child_sa,
+								 this->proposal->get_protocol(this->proposal));
+	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
+
+	/* addresses might have changed since we originally sent the request, update
+	 * them before we configure any policies and install the SAs */
+	this->child_sa->update(this->child_sa, me, other, NULL,
+						   this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY));
+
 	this->child_sa->set_policies(this->child_sa, my_ts, other_ts);
 	if (!this->initiator)
 	{
@@ -703,12 +726,6 @@ static status_t select_and_install(private_child_create_t *this,
 		other_ts->destroy_offset(other_ts,
 							  offsetof(traffic_selector_t, destroy));
 	}
-
-	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
-	this->child_sa->set_ipcomp(this->child_sa, this->ipcomp);
-	this->child_sa->set_mode(this->child_sa, this->mode);
-	this->child_sa->set_protocol(this->child_sa,
-								 this->proposal->get_protocol(this->proposal));
 
 	if (this->my_cpi == 0 || this->other_cpi == 0 || this->ipcomp == IPCOMP_NONE)
 	{
@@ -1841,7 +1858,10 @@ METHOD(task_t, migrate, void,
 	{
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
 	}
-
+	if (!this->rekey && !this->retry)
+	{
+		this->dh_group = MODP_NONE;
+	}
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 	this->proposal = NULL;

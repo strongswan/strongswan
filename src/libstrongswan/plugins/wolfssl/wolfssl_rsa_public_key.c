@@ -187,6 +187,18 @@ METHOD(public_key_t, verify, bool,
 		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
 			return verify_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA512, data,
 											   signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_224:
+			return verify_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_224, data,
+											   signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_256:
+			return verify_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_256, data,
+											   signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_384:
+			return verify_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_384, data,
+											   signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_512:
+			return verify_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_512, data,
+											   signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return verify_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA, data,
 											   signature);

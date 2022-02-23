@@ -23,8 +23,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.TypedArray;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.AttributeSet;
 import android.view.ActionMode;
 import android.view.LayoutInflater;
@@ -51,11 +49,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
+import androidx.fragment.app.Fragment;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 public class VpnProfileListFragment extends Fragment
 {
 	private static final String SELECTED_KEY = "SELECTED";
-	private static final int ADD_REQUEST = 1;
-	private static final int EDIT_REQUEST = 2;
 
 	private List<VpnProfile> mVpnProfiles;
 	private VpnProfileDataSource mDataSource;
@@ -211,7 +210,7 @@ public class VpnProfileListFragment extends Fragment
 			case R.id.add_profile:
 				Intent connectionIntent = new Intent(getActivity(),
 													 VpnProfileDetailActivity.class);
-				startActivityForResult(connectionIntent, ADD_REQUEST);
+				startActivity(connectionIntent);
 				return true;
 			default:
 				return super.onOptionsItemSelected(item);
@@ -269,7 +268,7 @@ public class VpnProfileListFragment extends Fragment
 					VpnProfile profile = (VpnProfile)mListView.getItemAtPosition(position);
 					Intent connectionIntent = new Intent(getActivity(), VpnProfileDetailActivity.class);
 					connectionIntent.putExtra(VpnProfileDataSource.KEY_ID, profile.getId());
-					startActivityForResult(connectionIntent, EDIT_REQUEST);
+					startActivity(connectionIntent);
 					break;
 				}
 				case R.id.copy_profile:
@@ -287,7 +286,7 @@ public class VpnProfileListFragment extends Fragment
 
 					Intent connectionIntent = new Intent(getActivity(), VpnProfileDetailActivity.class);
 					connectionIntent.putExtra(VpnProfileDataSource.KEY_ID, profile.getId());
-					startActivityForResult(connectionIntent, EDIT_REQUEST);
+					startActivity(connectionIntent);
 					break;
 				}
 				case R.id.delete_profile:

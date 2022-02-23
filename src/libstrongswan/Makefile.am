@@ -4,12 +4,14 @@ libstrongswan_la_SOURCES = \
 library.c \
 asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
-collections/array.c \
-collections/linked_list.c crypto/crypters/crypter.c crypto/hashers/hasher.c \
+collections/hashlist.c collections/array.c \
+collections/linked_list.c crypto/crypters/crypter.c \
+crypto/drbgs/drbg.c crypto/hashers/hasher.c \
 crypto/hashers/hash_algorithm_set.c crypto/proposal/proposal.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
 crypto/prfs/prf.c crypto/prfs/mac_prf.c crypto/pkcs5.c \
-crypto/rngs/rng.c crypto/prf_plus.c crypto/signers/signer.c \
+crypto/rngs/rng.c crypto/rngs/rng_tester.c \
+crypto/prf_plus.c crypto/signers/signer.c \
 crypto/signers/mac_signer.c crypto/crypto_factory.c crypto/crypto_tester.c \
 crypto/diffie_hellman.c crypto/aead.c crypto/transform.c \
 crypto/iv/iv_gen.c crypto/iv/iv_gen_rand.c crypto/iv/iv_gen_seq.c \
@@ -67,11 +69,13 @@ nobase_strongswan_include_HEADERS = \
 library.h \
 asn1/asn1.h asn1/asn1_parser.h asn1/oid.h bio/bio_reader.h bio/bio_writer.h \
 collections/blocking_queue.h collections/enumerator.h collections/hashtable.h \
+collections/hashtable_profiler.h \
 collections/linked_list.h collections/array.h collections/dictionary.h \
-crypto/crypters/crypter.h crypto/hashers/hasher.h \
+crypto/crypters/crypter.h crypto/drbgs/drbg.h crypto/hashers/hasher.h \
 crypto/hashers/hash_algorithm_set.h crypto/mac.h crypto/proposal/proposal.h \
 crypto/proposal/proposal_keywords.h crypto/proposal/proposal_keywords_static.h \
-crypto/prfs/prf.h crypto/prfs/mac_prf.h crypto/rngs/rng.h crypto/nonce_gen.h \
+crypto/rngs/rng.h crypto/rngs/rng_tester.h \
+crypto/prfs/prf.h crypto/prfs/mac_prf.h crypto/nonce_gen.h \
 crypto/prf_plus.h crypto/signers/signer.h crypto/signers/mac_signer.h \
 crypto/crypto_factory.h crypto/crypto_tester.h crypto/diffie_hellman.h \
 crypto/aead.h crypto/transform.h crypto/pkcs5.h crypto/iv/iv_gen.h \
@@ -231,13 +235,13 @@ $(srcdir)/crypto/proposal/proposal_keywords_static.h: $(srcdir)/crypto/proposal/
 		$(AM_V_GEN) \
 		sed \
 		-e "s:\@GPERF_LEN_TYPE\@:$(GPERF_LEN_TYPE):" \
-		$< > $@
+		$(srcdir)/crypto/proposal/proposal_keywords_static.h.in > $@
 
 $(srcdir)/crypto/proposal/proposal_keywords_static.c:	$(srcdir)/crypto/proposal/proposal_keywords_static.txt \
 														$(srcdir)/crypto/proposal/proposal_keywords_static.h
 		$(AM_V_GEN) \
-		$(GPERF) -N proposal_get_token_static -m 10 -C -G -c -t -D < \
-												$(srcdir)/crypto/proposal/proposal_keywords_static.txt > $@
+		$(GPERF) -N proposal_get_token_static -m 10 -C -G -c -t -D \
+			--output-file=$@ $(srcdir)/crypto/proposal/proposal_keywords_static.txt
 
 if STATIC_PLUGIN_CONSTRUCTORS
 BUILT_SOURCES += $(srcdir)/plugin_constructors.c
@@ -660,6 +664,13 @@ if USE_NEWHOPE
   SUBDIRS += plugins/newhope
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/newhope/libstrongswan-newhope.la
+endif
+endif
+
+if USE_DRBG
+  SUBDIRS += plugins/drbg
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/drbg/libstrongswan-drbg.la
 endif
 endif
 

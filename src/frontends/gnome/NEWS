@@ -1,3 +1,26 @@
+NetworkManager-strongswan-1.5.2
+-------------------------------
+
+- Reduce height of config dialog by moving options/proposals to tabs
+- Migrated appdata to metainfo (renamed and moved the file)
+
+NetworkManager-strongswan-1.5.1
+-------------------------------
+
+- Fixes password entry for private keys
+
+NetworkManager-strongswan-1.5.0
+-------------------------------
+
+- EAP-TLS authentication
+- Certificate source (file, agent, smartcard) is selectable independently
+- Add support to configure local and remote identities
+- Support configuring a custom server port
+- Show hint regarding password storage policy
+- Replaced the term "gateway" with "server"
+- Fixes build issues due to use of deprecated GLib macros/functions
+- Updated Glade file to GTK 3.2
+
 NetworkManager-strongswan-1.4.5
 -------------------------------
 

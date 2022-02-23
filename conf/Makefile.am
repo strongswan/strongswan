@@ -33,12 +33,14 @@ plugins = \
 	plugins/attr.opt \
 	plugins/attr-sql.opt \
 	plugins/bliss.opt \
+	plugins/botan.opt \
 	plugins/bypass-lan.opt \
 	plugins/certexpire.opt \
 	plugins/coupling.opt \
 	plugins/curl.opt \
 	plugins/dhcp.opt \
 	plugins/dnscert.opt \
+	plugins/drbg.opt \
 	plugins/duplicheck.opt \
 	plugins/eap-aka.opt \
 	plugins/eap-aka-3gpp.opt \

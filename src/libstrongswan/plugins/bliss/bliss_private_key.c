@@ -1071,7 +1071,7 @@ bliss_private_key_t *bliss_private_key_gen(key_type_t type, va_list args)
 	/* We derive the public key from the private key using the FFT */
 	fft = ntt_fft_create(set->fft_params);
 
-	/* Some vectors needed to derive the publi key */
+	/* Some vectors needed to derive the public key */
 	S1 = malloc(n * sizeof(uint32_t));
 	S2 = malloc(n * sizeof(uint32_t));
 	a  = malloc(n * sizeof(uint32_t));

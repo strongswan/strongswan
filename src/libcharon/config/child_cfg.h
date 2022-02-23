@@ -96,17 +96,14 @@ struct child_cfg_t {
 	/**
 	 * Select a proposal from a supplied list.
 	 *
-	 * Returned propsal is newly created and must be destroyed after usage.
+	 * Returned proposal is newly created and must be destroyed after usage.
 	 *
 	 * @param proposals		list from which proposals are selected
-	 * @param strip_dh		TRUE strip out diffie hellman groups
-	 * @param private		accept algorithms from a private range
-	 * @param prefer_self	whether to prefer configured or supplied proposals
+	 * @param flags			flags to consider during proposal selection
 	 * @return				selected proposal, or NULL if nothing matches
 	 */
 	proposal_t* (*select_proposal)(child_cfg_t*this, linked_list_t *proposals,
-								   bool strip_dh, bool private,
-								   bool prefer_self);
+								   proposal_selection_flag_t flags);
 
 	/**
 	 * Add a traffic selector to the config.
@@ -127,7 +124,7 @@ struct child_cfg_t {
 	 * side, one for the remote side.
 	 * If a list with traffic selectors is supplied, these are used to narrow
 	 * down the traffic selector list to the greatest common divisor.
-	 * Some traffic selector may be "dymamic", meaning they are narrowed down
+	 * Some traffic selector may be "dynamic", meaning they are narrowed down
 	 * to a specific address (host-to-host or virtual-IP setups). Use
 	 * the "host" parameter to narrow such traffic selectors to that address.
 	 * Resulted list and its traffic selectors must be destroyed after use.

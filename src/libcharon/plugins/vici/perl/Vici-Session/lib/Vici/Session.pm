@@ -25,7 +25,7 @@ sub stats {
 }
 
 sub reload_settings {
-   return request_res('reload-settings', @_);
+    return request_res('reload-settings', @_);
 }
 
 sub initiate {
@@ -125,7 +125,7 @@ sub flush_certs {
 }
 
 sub clear_creds {
-   return request_res('clear-creds', @_);
+    return request_res('clear-creds', @_);
 }
 
 sub load_authority {
@@ -197,7 +197,7 @@ Vici::Session - Perl binding for the strongSwan VICI configuration interface
 
 =head1 SYNOPSIS
 
-  use Vici::Session;
+use Vici::Session;
 
 =head1 DESCRIPTION
 

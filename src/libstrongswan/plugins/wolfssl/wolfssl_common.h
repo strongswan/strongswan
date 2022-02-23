@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2020 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
+ *
  * Copyright (C) 2019 Sean Parkinson, wolfSSL Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,8 +23,8 @@
  * THE SOFTWARE.
  */
 
-#ifndef WOLFSSL_COMMON_H_
-#define WOLFSSL_COMMON_H_
+#ifndef WOLFSSL_PLUGIN_COMMON_H_
+#define WOLFSSL_PLUGIN_COMMON_H_
 
 #include <library.h>
 
@@ -38,14 +41,58 @@
 #undef DES_BLOCK_SIZE
 #endif
 
+#ifdef RSA_PSS_SALT_LEN_DEFAULT
+#undef RSA_PSS_SALT_LEN_DEFAULT
+#endif
+
 /* PARSE_ERROR is an enum entry in wolfSSL - not used in this plugin */
-#define PARSE_ERROR	WOLFSSL_PARSE_EROR
+#define PARSE_ERROR	WOLFSSL_PARSE_ERROR
+
+/* Remap unused enums from the OpenSSL compatibility layer to avoid conflicts */
+#define ASN1_BOOLEAN         REMAP_ASN1_BOOLEAN
+#define ASN1_OID             REMAP_ASN1_OID
+#define ASN1_INTEGER         REMAP_ASN1_INTEGER
+#define ASN1_BIT_STRING      REMAP_ASN1_BIT_STRING
+#define ASN1_IA5STRING       REMAP_ASN1_IA5STRING
+#define ASN1_OCTET_STRING    REMAP_ASN1_OCTET_STRING
+#define ASN1_UTCTIME         REMAP_ASN1_UTCTIME
+#define ASN1_GENERALIZEDTIME REMAP_ASN1_GENERALIZEDTIME
 
 #ifndef WOLFSSL_USER_SETTINGS
 	#include <wolfssl/options.h>
 #endif
 #include <wolfssl/ssl.h>
 
+/* Special type used to handle EdDSA keys depending on config options */
+#if defined(HAVE_ED25519) || defined(HAVE_ED448)
+#ifdef HAVE_ED25519
+#include <wolfssl/wolfcrypt/ed25519.h>
+#endif
+#ifdef HAVE_ED448
+#include <wolfssl/wolfcrypt/ed448.h>
+#endif
+typedef union {
+#ifdef HAVE_ED25519
+	ed25519_key ed25519;
+#endif
+#ifdef HAVE_ED448
+	ed448_key ed448;
+#endif
+} wolfssl_ed_key;
+#endif /* HAVE_ED25519 || HAVE_ED448 */
+
 #undef PARSE_ERROR
 
-#endif /* WOLFSSL_COMMON_H_ */
+#undef ASN1_BOOLEAN
+#undef ASN1_OID
+#undef ASN1_INTEGER
+#undef ASN1_BIT_STRING
+#undef ASN1_IA5STRING
+#undef ASN1_OCTET_STRING
+#undef ASN1_UTCTIME
+#undef ASN1_GENERALIZEDTIME
+
+/* Eliminate macro conflicts */
+#undef RNG
+
+#endif /* WOLFSSL_PLUGIN_COMMON_H_ */

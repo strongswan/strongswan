@@ -484,7 +484,8 @@ METHOD(keymat_v1_t, derive_ike_keys, bool,
 	{
 		return FALSE;
 	}
-	charon->bus->ike_derived_keys(charon->bus, ka, chunk_empty, this->skeyid_a,
+	charon->bus->ike_derived_keys(charon->bus, this->skeyid_d, this->skeyid_a,
+								  chunk_empty, ka, chunk_empty, chunk_empty,
 								  chunk_empty);
 	chunk_clear(&ka);
 	if (!this->hasher && !this->public.create_hasher(&this->public, proposal))

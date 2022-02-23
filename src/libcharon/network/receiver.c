@@ -176,8 +176,8 @@ static void send_notify(message_t *request, int major, exchange_type_t exchange,
 	if (major == IKEV2_MAJOR_VERSION)
 	{
 		response->set_request(response, FALSE);
+		response->set_message_id(response, request->get_message_id(request));
 	}
-	response->set_message_id(response, 0);
 	ike_sa_id = request->get_ike_sa_id(request);
 	ike_sa_id->switch_initiator(ike_sa_id);
 	response->set_ike_sa_id(response, ike_sa_id);
@@ -302,7 +302,7 @@ static bool cookie_required(private_receiver_t *this,
 		/* We don't disable cookies unless we haven't seen IKE_SA_INITs
 		 * for COOKIE_CALMDOWN_DELAY seconds. This avoids jittering between
 		 * cookie on / cookie off states, which is problematic. Consider the
-		 * following: A legitimiate initiator sends a IKE_SA_INIT while we
+		 * following: A legitimate initiator sends a IKE_SA_INIT while we
 		 * are under a DoS attack. If we toggle our cookie behavior,
 		 * multiple retransmits of this IKE_SA_INIT might get answered with
 		 * and without cookies. The initiator goes on and retries with
@@ -520,7 +520,8 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			break;
 		default:
 #ifdef USE_IKEV2
-			send_notify(message, IKEV2_MAJOR_VERSION, INFORMATIONAL,
+			send_notify(message, IKEV2_MAJOR_VERSION,
+						message->get_exchange_type(message),
 						INVALID_MAJOR_VERSION, chunk_empty);
 #elif defined(USE_IKEV1)
 			send_notify(message, IKEV1_MAJOR_VERSION, INFORMATIONAL_V1,
@@ -628,7 +629,7 @@ receiver_t *receiver_create()
 		},
 		.esp_cb_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.secret_switch = now,
-		.secret_offset = random() % now,
+		.secret_offset = now ? random() % now : 0,
 	);
 
 	if (lib->settings->get_bool(lib->settings,

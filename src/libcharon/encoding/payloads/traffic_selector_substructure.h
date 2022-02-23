@@ -134,7 +134,7 @@ struct traffic_selector_substructure_t {
 traffic_selector_substructure_t *traffic_selector_substructure_create(void);
 
 /**
- * Creates an initialized traffif selector substructure using
+ * Creates an initialized traffic selector substructure using
  * the values from a traffic_selector_t.
  *
  * @param traffic_selector	traffic_selector_t to use for initialization

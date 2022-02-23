@@ -279,6 +279,16 @@ METHOD(private_key_t, sign, bool,
 			return build_emsa_pkcs1_signature(this, NID_sha384, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_SHA2_512:
 			return build_emsa_pkcs1_signature(this, NID_sha512, data, signature);
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_SHA3)
+		case SIGN_RSA_EMSA_PKCS1_SHA3_224:
+			return build_emsa_pkcs1_signature(this, NID_sha3_224, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_256:
+			return build_emsa_pkcs1_signature(this, NID_sha3_256, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_384:
+			return build_emsa_pkcs1_signature(this, NID_sha3_384, data, signature);
+		case SIGN_RSA_EMSA_PKCS1_SHA3_512:
+			return build_emsa_pkcs1_signature(this, NID_sha3_512, data, signature);
+#endif
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return build_emsa_pkcs1_signature(this, NID_sha1, data, signature);
 		case SIGN_RSA_EMSA_PKCS1_MD5:

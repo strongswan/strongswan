@@ -44,7 +44,7 @@ struct private_eap_gtc_t {
 	identification_t *peer;
 
 	/**
-	 * EAP message identififier
+	 * EAP message identifier
 	 */
 	uint8_t identifier;
 };

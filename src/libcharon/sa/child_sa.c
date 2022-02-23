@@ -114,6 +114,11 @@ struct private_child_sa_t {
 	child_sa_outbound_state_t outbound_state;
 
 	/**
+	 * Whether the inbound SA has been installed
+	 */
+	bool inbound_installed;
+
+	/**
 	 * Whether the peer supports TFCv3
 	 */
 	bool tfcv3;
@@ -149,7 +154,7 @@ struct private_child_sa_t {
 	uint32_t unique_id;
 
 	/**
-	 * Whether FWD policieis in the outbound direction should be installed
+	 * Whether FWD policies in the outbound direction should be installed
 	 */
 	bool policies_fwd_out;
 
@@ -429,7 +434,7 @@ METHOD(child_sa_t, get_proposal, proposal_t*,
 METHOD(child_sa_t, set_proposal, void,
 	   private_child_sa_t *this, proposal_t *proposal)
 {
-	this->proposal = proposal->clone(proposal);
+	this->proposal = proposal->clone(proposal, 0);
 }
 
 METHOD(child_sa_t, create_ts_enumerator, enumerator_t*,
@@ -541,7 +546,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 
 	if (inbound)
 	{
-		if (this->my_spi)
+		if (this->my_spi && this->inbound_installed)
 		{
 			kernel_ipsec_sa_id_t id = {
 				.src = this->other_addr,
@@ -807,6 +812,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		this->my_cpi = cpi;
 		dst_ts = my_ts;
 		src_ts = other_ts;
+		this->inbound_installed = TRUE;
 	}
 	else
 	{
@@ -1469,7 +1475,7 @@ static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 						   bool encap)
 {
 	/* update our (initiator) SA */
-	if (this->my_spi)
+	if (this->my_spi && this->inbound_installed)
 	{
 		kernel_ipsec_sa_id_t id = {
 			.src = this->other_addr,
@@ -1542,7 +1548,8 @@ METHOD(child_sa_t, update, status_t,
 													OPT_PROXY_MODE);
 
 	if (!this->config->has_option(this->config, OPT_NO_POLICIES) &&
-		require_policy_update())
+		require_policy_update() && array_count(this->my_ts) &&
+		array_count(this->other_ts))
 	{
 		ipsec_sa_cfg_t my_sa, other_sa;
 		enumerator_t *enumerator;
@@ -1605,7 +1612,10 @@ METHOD(child_sa_t, update, status_t,
 
 				/* we reinstall the virtual IP to handle interface roaming
 				 * correctly */
-				vips->invoke_function(vips, reinstall_vip, me);
+				if (vips)
+				{
+					vips->invoke_function(vips, reinstall_vip, me);
+				}
 
 				/* reinstall updated policies */
 				install_policies_internal(this, me, other, my_ts, other_ts,
@@ -1696,7 +1706,8 @@ METHOD(child_sa_t, destroy, void,
 		enumerator->destroy(enumerator);
 	}
 
-	/* delete SAs in the kernel, if they are set up */
+	/* delete SAs in the kernel, if they are set up, inbound is always deleted
+	 * to remove allocated SPIs */
 	if (this->my_spi)
 	{
 		kernel_ipsec_sa_id_t id = {

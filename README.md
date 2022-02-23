@@ -570,7 +570,7 @@ RSA or ECDSA private key. For details, refer to the TPM 2.0
 In a next step the command
 
     pki --req --type priv --in moonKey.pem \
-              --dn "C=CH, O=strongswan, CN=moon.strongswan.org \
+              --dn "C=CH, O=strongswan, CN=moon.strongswan.org" \
               --san moon.strongswan.org --outform pem > moonReq.pem
 
 creates a PKCS#10 certificate request that has to be signed by the CA.

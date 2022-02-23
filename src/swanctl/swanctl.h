@@ -30,7 +30,7 @@
 /**
  * Base directory for credentials and config
  */
-char *swanctl_dir;
+extern char *swanctl_dir;
 
 /**
  * Configuration file for connections, etc.

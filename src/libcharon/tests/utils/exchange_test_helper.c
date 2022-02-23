@@ -237,11 +237,11 @@ METHOD(exchange_test_helper_t, create_sa, child_cfg_t*,
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 
-	*init = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-												 IKEV2, TRUE);
+	*init = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
+											   IKEV2, TRUE);
 
-	*resp = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-												 IKEV2, FALSE);
+	*resp = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
+											   IKEV2, FALSE);
 
 	peer_cfg = create_peer_cfg(FALSE, conf);
 	child_cfg = create_child_cfg(FALSE, conf);

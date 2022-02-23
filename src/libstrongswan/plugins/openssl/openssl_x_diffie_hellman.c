@@ -20,6 +20,7 @@
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_ECDH)
 
 #include "openssl_x_diffie_hellman.h"
+#include "openssl_util.h"
 
 #include <utils/debug.h>
 
@@ -71,50 +72,6 @@ static int map_key_type(diffie_hellman_group_t group)
 	}
 }
 
-/**
- * Compute the shared secret
- */
-static bool compute_shared_key(private_diffie_hellman_t *this, EVP_PKEY *pub,
-							   chunk_t *shared_secret)
-{
-	EVP_PKEY_CTX *ctx;
-	bool success = FALSE;
-
-	ctx = EVP_PKEY_CTX_new(this->key, NULL);
-	if (!ctx)
-	{
-		return FALSE;
-	}
-
-	if (EVP_PKEY_derive_init(ctx) <= 0)
-	{
-		goto error;
-	}
-
-	if (EVP_PKEY_derive_set_peer(ctx, pub) <= 0)
-	{
-		goto error;
-	}
-
-	if (EVP_PKEY_derive(ctx, NULL, &shared_secret->len) <= 0)
-	{
-		goto error;
-	}
-
-	*shared_secret = chunk_alloc(shared_secret->len);
-
-	if (EVP_PKEY_derive(ctx, shared_secret->ptr, &shared_secret->len) <= 0)
-	{
-		goto error;
-	}
-
-	success = TRUE;
-
-error:
-	EVP_PKEY_CTX_free(ctx);
-	return success;
-}
-
 METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_diffie_hellman_t *this, chunk_t value)
 {
@@ -136,7 +93,7 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 
 	chunk_clear(&this->shared_secret);
 
-	if (!compute_shared_key(this, pub, &this->shared_secret))
+	if (!openssl_compute_shared_key(this->key, pub, &this->shared_secret))
 	{
 		DBG1(DBG_LIB, "%N shared secret computation failed",
 			 diffie_hellman_group_names, this->group);

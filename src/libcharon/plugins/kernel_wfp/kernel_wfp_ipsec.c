@@ -145,7 +145,7 @@ static bool equals_sa(sa_entry_t *a, sa_entry_t *b)
 typedef struct {
 	/** policy source addresses */
 	traffic_selector_t *src;
-	/** policy destinaiton addresses */
+	/** policy destination addresses */
 	traffic_selector_t *dst;
 	/** WFP allocated LUID for inbound filter ID */
 	uint64_t policy_in;
@@ -1402,7 +1402,8 @@ static bool uninstall_route(private_kernel_wfp_ipsec_t *this,
 			if (charon->kernel->get_interface(charon->kernel, src, &name))
 			{
 				res = charon->kernel->del_route(charon->kernel,
-						dst->get_address(dst), mask, gtw, src, name) == SUCCESS;
+										dst->get_address(dst), mask, gtw, src,
+										name, FALSE) == SUCCESS;
 				free(name);
 			}
 			route = this->routes->remove(this->routes, route);
@@ -1446,8 +1447,8 @@ static bool install_route(private_kernel_wfp_ipsec_t *this,
 	{
 		if (charon->kernel->get_interface(charon->kernel, src, &name))
 		{
-			if (charon->kernel->add_route(charon->kernel,
-						dst->get_address(dst), mask, gtw, src, name) == SUCCESS)
+			if (charon->kernel->add_route(charon->kernel, dst->get_address(dst),
+										mask, gtw, src, name, FALSE) == SUCCESS)
 			{
 				INIT(route,
 					.dst = dst->clone(dst),

@@ -557,12 +557,15 @@ static char *whitelist[] = {
 	/* libcurl */
 	"Curl_client_write",
 	/* libsoup */
+	"soup_add_timeout",
+	"soup_headers_parse_response",
 	"soup_message_headers_append",
 	"soup_message_headers_clear",
 	"soup_message_headers_get_list",
 	"soup_message_headers_get_one",
 	"soup_session_abort",
 	"soup_session_get_type",
+	"soup_session_remove_feature",
 	/* libldap */
 	"ldap_int_initialize",
 	/* ClearSilver */
@@ -580,6 +583,7 @@ static char *whitelist[] = {
 	"RSA_new_method",
 	/* OpenSSL 1.1.0 does not cleanup anymore until the library is unloaded */
 	"OPENSSL_init_crypto",
+	"OPENSSL_init_ssl",
 	"CRYPTO_THREAD_lock_new",
 	"ERR_add_error_data",
 	"ERR_set_mark",
@@ -592,6 +596,8 @@ static char *whitelist[] = {
 	"RAND_DRBG_get0_master",
 	"RAND_DRBG_get0_private",
 	"RAND_DRBG_get0_public",
+	/* We get this via libcurl and OpenSSL 1.1.1 */
+	"CRYPTO_get_ex_new_index",
 	/* OpenSSL libssl */
 	"SSL_COMP_get_compression_methods",
 	/* NSPR */
@@ -619,6 +625,7 @@ static char *whitelist[] = {
 	"system__tasking__initialize",
 	"system__tasking__initialization__abort_defer",
 	"system__tasking__stages__create_task",
+	"system__task_primitives__operations__register_foreign_thread__2",
 	/* in case external threads call into our code */
 	"thread_current_id",
 	/* FHH IMCs and IMVs */
@@ -626,8 +633,7 @@ static char *whitelist[] = {
 	"TNC_IMV_NotifyConnectionChange",
 	/* Botan */
 	"botan_public_key_load",
-	"botan_privkey_create_ecdsa",
-	"botan_privkey_create_ecdh",
+	"botan_privkey_create",
 	"botan_privkey_load_ecdh",
 	"botan_privkey_load",
 };

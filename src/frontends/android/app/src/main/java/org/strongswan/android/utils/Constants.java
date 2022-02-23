@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Tobias Brunner
+ * Copyright (C) 2016-2020 Tobias Brunner
  * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -58,4 +58,9 @@ public final class Constants
 	 * Preference key to store the most recently used VPN profile
 	 */
 	public static final String PREF_MRU_VPN_PROFILE = "pref_mru_vpn_profile";
+
+	/**
+	 * Preference key to store whether the user permanently dismissed our warning to add the app to the power whitelist
+	 */
+	public static final String PREF_IGNORE_POWER_WHITELIST = "pref_ignore_power_whitelist";
 }

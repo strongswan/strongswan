@@ -744,8 +744,8 @@ static void apply_lifetimes(private_quick_mode_t *this, sa_payload_t *sa_payload
 	uint32_t lifetime;
 	uint64_t lifebytes;
 
-	lifetime = sa_payload->get_lifetime(sa_payload);
-	lifebytes = sa_payload->get_lifebytes(sa_payload);
+	lifetime = sa_payload->get_lifetime(sa_payload, this->proposal);
+	lifebytes = sa_payload->get_lifebytes(sa_payload, this->proposal);
 	if (this->lifetime != lifetime)
 	{
 		DBG1(DBG_IKE, "received %us lifetime, configured %us",
@@ -773,7 +773,7 @@ static status_t send_notify(private_quick_mode_t *this, notify_type_t type)
 
 	this->ike_sa->queue_task(this->ike_sa,
 						(task_t*)informational_create(this->ike_sa, notify));
-	/* cancel all active/passive tasks in favour of informational */
+	/* cancel all active/passive tasks in favor of informational */
 	this->ike_sa->flush_queue(this->ike_sa,
 					this->initiator ? TASK_QUEUE_ACTIVE : TASK_QUEUE_PASSIVE);
 	return ALREADY_DONE;
@@ -802,7 +802,7 @@ static linked_list_t *get_proposals(private_quick_mode_t *this,
 				proposal->destroy(proposal);
 				continue;
 			}
-			proposal->strip_dh(proposal, group);
+			proposal->promote_dh_group(proposal, group);
 		}
 		proposal->set_spi(proposal, this->spi_i);
 	}
@@ -852,7 +852,7 @@ METHOD(task_t, build_i, status_t,
 				}
 			}
 
-			list = this->config->get_proposals(this->config, MODP_NONE);
+			list = this->config->get_proposals(this->config, FALSE);
 			if (list->get_first(list, (void**)&proposal) == SUCCESS)
 			{
 				this->proto = proposal->get_protocol(proposal);
@@ -1072,7 +1072,7 @@ METHOD(task_t, process_r, status_t,
 			linked_list_t *tsi, *tsr, *hostsi, *hostsr, *list = NULL;
 			peer_cfg_t *peer_cfg;
 			uint16_t group;
-			bool private, prefer_configured;
+			proposal_selection_flag_t flags = 0;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													PLV1_SECURITY_ASSOCIATION);
@@ -1132,16 +1132,20 @@ METHOD(task_t, process_r, status_t,
 				DESTROY_IF(list);
 				list = sa_payload->get_proposals(sa_payload);
 			}
-			private = this->ike_sa->supports_extension(this->ike_sa,
-													   EXT_STRONGSWAN);
-			prefer_configured = lib->settings->get_bool(lib->settings,
-							"%s.prefer_configured_proposals", TRUE, lib->ns);
+			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN)
+				&& !lib->settings->get_bool(lib->settings,
+									"%s.accept_private_algs", FALSE, lib->ns))
+			{
+				flags |= PROPOSAL_SKIP_PRIVATE;
+			}
+			if (!lib->settings->get_bool(lib->settings,
+							"%s.prefer_configured_proposals", TRUE, lib->ns))
+			{
+				flags |= PROPOSAL_PREFER_SUPPLIED;
+			}
 			this->proposal = this->config->select_proposal(this->config, list,
-											FALSE, private, prefer_configured);
+														   flags);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
-
-			get_lifetimes(this);
-			apply_lifetimes(this, sa_payload);
 
 			if (!this->proposal)
 			{
@@ -1150,6 +1154,9 @@ METHOD(task_t, process_r, status_t,
 				return send_notify(this, NO_PROPOSAL_CHOSEN);
 			}
 			this->spi_i = this->proposal->get_spi(this->proposal);
+
+			get_lifetimes(this);
+			apply_lifetimes(this, sa_payload);
 
 			if (!get_nonce(this, &this->nonce_i, message))
 			{
@@ -1217,6 +1224,21 @@ METHOD(task_t, process_r, status_t,
 					return NEED_MORE;
 				}
 				return SUCCESS;
+			}
+			if (!this->rekey)
+			{
+				/* do another check in case SAs were created since we handled
+				 * the QM request, this is consistent with the rekey check
+				 * before installation on the initiator */
+				check_for_rekeyed_child(this, TRUE);
+				if (this->rekey)
+				{
+					this->child_sa->destroy(this->child_sa);
+					this->child_sa = child_sa_create(
+									this->ike_sa->get_my_host(this->ike_sa),
+									this->ike_sa->get_other_host(this->ike_sa),
+									this->config, &this->child);
+				}
 			}
 			if (!install(this))
 			{
@@ -1325,7 +1347,7 @@ METHOD(task_t, process_i, status_t,
 		{
 			sa_payload_t *sa_payload;
 			linked_list_t *list = NULL;
-			bool private;
+			proposal_selection_flag_t flags = 0;
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													PLV1_SECURITY_ASSOCIATION);
@@ -1350,10 +1372,14 @@ METHOD(task_t, process_i, status_t,
 				DESTROY_IF(list);
 				list = sa_payload->get_proposals(sa_payload);
 			}
-			private = this->ike_sa->supports_extension(this->ike_sa,
-													   EXT_STRONGSWAN);
+			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN)
+				&& !lib->settings->get_bool(lib->settings,
+									"%s.accept_private_algs", FALSE, lib->ns))
+			{
+				flags |= PROPOSAL_SKIP_PRIVATE;
+			}
 			this->proposal = this->config->select_proposal(this->config, list,
-														FALSE, private, TRUE);
+														   flags);
 			list->destroy_offset(list, offsetof(proposal_t, destroy));
 			if (!this->proposal)
 			{

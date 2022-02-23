@@ -29,8 +29,8 @@ strongswan_STARTER_PLUGINS := kernel-netlink
 
 # list of all plugins - used to enable them with the function below
 strongswan_PLUGINS := $(sort $(strongswan_CHARON_PLUGINS) \
-			     $(strongswan_STARTER_PLUGINS) \
-			     $(strongswan_SCEPCLIENT_PLUGINS))
+	$(strongswan_STARTER_PLUGINS) \
+	$(strongswan_SCEPCLIENT_PLUGINS))
 
 include $(LOCAL_PATH)/Android.common.mk
 

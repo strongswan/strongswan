@@ -20,16 +20,8 @@ package org.strongswan.android.ui;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.AppCompatDialogFragment;
 import android.text.format.Formatter;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -37,12 +29,21 @@ import android.widget.Toast;
 
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
+import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.ui.VpnProfileListFragment.OnVpnProfileSelectedListener;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDialogFragment;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
 public class MainActivity extends AppCompatActivity implements OnVpnProfileSelectedListener
 {
@@ -65,10 +66,12 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 		ActionBar bar = getSupportActionBar();
 		bar.setDisplayShowHomeEnabled(true);
 		bar.setDisplayShowTitleEnabled(false);
-		bar.setIcon(R.drawable.ic_launcher);
+		bar.setIcon(R.mipmap.ic_app);
 
-		/* load CA certificates in a background task */
-		new LoadCertificatesTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+		/* load CA certificates in a background thread */
+		((StrongSwanApplication)getApplication()).getExecutor().execute(() -> {
+			TrustedCertificateManager.getInstance().load();
+		});
 	}
 
 	@Override
@@ -154,18 +157,6 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 		CRLCacheDialog dialog = new CRLCacheDialog();
 		dialog.setArguments(args);
 		dialog.show(this.getSupportFragmentManager(), DIALOG_TAG);
-	}
-
-	/**
-	 * Class that loads the cached CA certificates.
-	 */
-	private class LoadCertificatesTask extends AsyncTask<Void, Void, TrustedCertificateManager>
-	{
-		@Override
-		protected TrustedCertificateManager doInBackground(Void... params)
-		{
-			return TrustedCertificateManager.getInstance().load();
-		}
 	}
 
 	/**

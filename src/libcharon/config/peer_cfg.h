@@ -134,7 +134,7 @@ struct peer_cfg_t {
 	ike_version_t (*get_ike_version)(peer_cfg_t *this);
 
 	/**
-	 * Get the IKE config to use for initiaton.
+	 * Get the IKE config to use for initiation.
 	 *
 	 * @return				the IKE config to use
 	 */

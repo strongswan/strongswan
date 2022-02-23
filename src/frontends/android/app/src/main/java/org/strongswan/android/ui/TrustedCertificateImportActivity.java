@@ -16,7 +16,6 @@
 package org.strongswan.android.ui;
 
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
@@ -24,10 +23,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.app.AppCompatDialogFragment;
 import android.widget.Toast;
 
 import org.strongswan.android.R;
@@ -41,11 +36,29 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDialogFragment;
+import androidx.fragment.app.FragmentTransaction;
+
 public class TrustedCertificateImportActivity extends AppCompatActivity
 {
-	private static final int OPEN_DOCUMENT = 0;
 	private static final String DIALOG_TAG = "Dialog";
 	private Uri mCertificateUri;
+
+	private final ActivityResultLauncher<Intent> mOpenDocument = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		result -> {
+			if (result.getResultCode() == RESULT_OK && result.getData() != null)
+			{
+				mCertificateUri = result.getData().getData();
+				return;
+			}
+			finish();
+		}
+	);
 
 	@TargetApi(Build.VERSION_CODES.KITKAT)
 	@Override
@@ -70,30 +83,13 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 			openIntent.setType("*/*");
 			try
 			{
-				startActivityForResult(openIntent, OPEN_DOCUMENT);
+				mOpenDocument.launch(openIntent);
 			}
 			catch (ActivityNotFoundException e)
 			{	/* some devices are unable to browse for files */
 				finish();
 				return;
 			}
-		}
-	}
-
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data)
-	{
-		super.onActivityResult(requestCode, resultCode, data);
-		switch (requestCode)
-		{
-			case OPEN_DOCUMENT:
-				if (resultCode == Activity.RESULT_OK && data != null)
-				{
-					mCertificateUri = data.getData();
-					return;
-				}
-				finish();
-				return;
 		}
 	}
 
@@ -201,7 +197,7 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 			certificate = (X509Certificate)getArguments().getSerializable(VpnProfileDataSource.KEY_CERTIFICATE);
 
 			return new AlertDialog.Builder(getActivity())
-				.setIcon(R.drawable.ic_launcher)
+				.setIcon(R.mipmap.ic_app)
 				.setTitle(R.string.import_certificate)
 				.setMessage(certificate.getSubjectDN().toString())
 				.setPositiveButton(R.string.import_certificate, new DialogInterface.OnClickListener()
@@ -213,7 +209,7 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 						if (activity.storeCertificate(certificate))
 						{
 							Toast.makeText(getActivity(), R.string.cert_imported_successfully, Toast.LENGTH_LONG).show();
-							getActivity().setResult(Activity.RESULT_OK);
+							getActivity().setResult(RESULT_OK);
 						}
 						else
 						{

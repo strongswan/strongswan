@@ -114,12 +114,12 @@ struct private_child_cfg_t {
 	uint32_t reqid;
 
 	/**
-	 * Optionl interface ID to use for inbound CHILD_SA
+	 * Optional interface ID to use for inbound CHILD_SA
 	 */
 	uint32_t if_id_in;
 
 	/**
-	 * Optionl interface ID to use for outbound CHILD_SA
+	 * Optional interface ID to use for outbound CHILD_SA
 	 */
 	uint32_t if_id_out;
 
@@ -209,16 +209,18 @@ METHOD(child_cfg_t, get_proposals, linked_list_t*,
 {
 	enumerator_t *enumerator;
 	proposal_t *current;
+	proposal_selection_flag_t flags = 0;
 	linked_list_t *proposals = linked_list_create();
+
+	if (strip_dh)
+	{
+		flags |= PROPOSAL_SKIP_DH;
+	}
 
 	enumerator = this->proposals->create_enumerator(this->proposals);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		current = current->clone(current);
-		if (strip_dh)
-		{
-			current->strip_dh(current, MODP_NONE);
-		}
+		current = current->clone(current, flags);
 		if (proposals->find_first(proposals, match_proposal, NULL, current))
 		{
 			current->destroy(current);
@@ -234,69 +236,10 @@ METHOD(child_cfg_t, get_proposals, linked_list_t*,
 }
 
 METHOD(child_cfg_t, select_proposal, proposal_t*,
-	private_child_cfg_t*this, linked_list_t *proposals, bool strip_dh,
-	bool private, bool prefer_self)
+	private_child_cfg_t*this, linked_list_t *proposals,
+	proposal_selection_flag_t flags)
 {
-	enumerator_t *prefer_enum, *match_enum;
-	proposal_t *proposal, *match, *selected = NULL;
-
-	if (prefer_self)
-	{
-		prefer_enum = this->proposals->create_enumerator(this->proposals);
-		match_enum = proposals->create_enumerator(proposals);
-	}
-	else
-	{
-		prefer_enum = proposals->create_enumerator(proposals);
-		match_enum = this->proposals->create_enumerator(this->proposals);
-	}
-
-	while (prefer_enum->enumerate(prefer_enum, &proposal))
-	{
-		proposal = proposal->clone(proposal);
-		if (strip_dh)
-		{
-			proposal->strip_dh(proposal, MODP_NONE);
-		}
-		if (prefer_self)
-		{
-			proposals->reset_enumerator(proposals, match_enum);
-		}
-		else
-		{
-			this->proposals->reset_enumerator(this->proposals, match_enum);
-		}
-		while (match_enum->enumerate(match_enum, &match))
-		{
-			match = match->clone(match);
-			if (strip_dh)
-			{
-				match->strip_dh(match, MODP_NONE);
-			}
-			selected = proposal->select(proposal, match, prefer_self, private);
-			match->destroy(match);
-			if (selected)
-			{
-				DBG2(DBG_CFG, "received proposals: %#P", proposals);
-				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
-				DBG1(DBG_CFG, "selected proposal: %P", selected);
-				break;
-			}
-		}
-		proposal->destroy(proposal);
-		if (selected)
-		{
-			break;
-		}
-	}
-	prefer_enum->destroy(prefer_enum);
-	match_enum->destroy(match_enum);
-	if (!selected)
-	{
-		DBG1(DBG_CFG, "received proposals: %#P", proposals);
-		DBG1(DBG_CFG, "configured proposals: %#P", this->proposals);
-	}
-	return selected;
+	return proposal_select(this->proposals, proposals, flags);
 }
 
 METHOD(child_cfg_t, add_traffic_selector, void,

@@ -200,6 +200,26 @@ METHOD(private_key_t, sign, bool,
 			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA512, data,
 											  signature);
 #endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_224)
+		case SIGN_RSA_EMSA_PKCS1_SHA3_224:
+			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_224,
+											  data, signature);
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+		case SIGN_RSA_EMSA_PKCS1_SHA3_256:
+			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_256,
+											  data, signature);
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_384)
+		case SIGN_RSA_EMSA_PKCS1_SHA3_384:
+			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_384,
+											  data, signature);
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_512)
+		case SIGN_RSA_EMSA_PKCS1_SHA3_512:
+			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_512,
+											 data, signature);
+#endif
 #ifndef NO_SHA
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA, data,
@@ -419,7 +439,9 @@ static private_wolfssl_rsa_private_key_t *create_empty()
 		free(this);
 		return NULL;
 	}
+#ifdef WC_RSA_BLINDING
 	this->rsa.rng = &this->rng;
+#endif
 
 	return this;
 }
@@ -684,6 +706,8 @@ wolfssl_rsa_private_key_t *wolfssl_rsa_private_key_load(key_type_t type,
 	}
 	else if (n.ptr && e.ptr && d.ptr)
 	{
+		this->rsa.type = RSA_PRIVATE;
+
 		if (mp_read_unsigned_bin(&this->rsa.n, n.ptr, n.len) != 0)
 		{
 			goto error;

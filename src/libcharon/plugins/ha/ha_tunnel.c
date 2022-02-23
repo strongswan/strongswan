@@ -256,8 +256,8 @@ static void setup_tunnel(private_ha_tunnel_t *this,
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	ts = traffic_selector_create_dynamic(IPPROTO_ICMP, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
-	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
+	child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 
 	this->backend.cfg = peer_cfg;

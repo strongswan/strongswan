@@ -38,7 +38,7 @@ struct private_kernel_android_ipsec_t {
 };
 
 /**
- * Callback registrered with libipsec.
+ * Callback registered with libipsec.
  */
 static void expire(uint8_t protocol, uint32_t spi, host_t *dst, bool hard)
 {

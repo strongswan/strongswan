@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2019 Tobias Brunner
+    Copyright (C) 2012-2020 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
     HSR Hochschule fuer Technik Rapperswil
@@ -36,6 +36,8 @@
     <string name="pref_title">Einstellungen</string>
     <string name="pref_default_vpn_profile">Voreingestelltes VPN Profil</string>
     <string name="pref_default_vpn_profile_mru">Verbinden mit zuletzt verwendetem Profil</string>
+    <string name="pref_power_whitelist_title">Akku-Optimierung ignorieren</string>
+    <string name="pref_power_whitelist_summary">Keine Warnung anzeigen, falls die App nicht auf der weissen Liste für Akku-Optimierung ist</string>
 
     <!-- Log view -->
     <string name="log_title">Log</string>
@@ -73,9 +75,7 @@
     <string name="profile_user_certificate_label">Benutzer-Zertifikat</string>
     <string name="profile_user_select_certificate_label">Benutzer-Zertifikat auswählen</string>
     <string name="profile_user_select_certificate">Wählen Sie ein bestimmtes Benutzer-Zertifikat</string>
-    <string name="profile_user_select_id_label">Benutzer-Identität</string>
-    <string name="profile_user_select_id_init">Wählen Sie zuerst ein Benutzer-Zertifikat</string>
-    <string name="profile_user_select_id_default">Standardwert (%1$s)</string>
+    <string name="profile_user_certificate_install">Benutzer-Zertifikat installieren</string>
     <string name="profile_ca_label">CA-Zertifikat</string>
     <string name="profile_ca_auto_label">Automatisch wählen</string>
     <string name="profile_ca_select_certificate_label">CA-Zertifikat auswählen</string>
@@ -85,8 +85,11 @@
     <string name="profile_remote_id_label">Server-Identität</string>
     <string name="profile_remote_id_hint">Standardwert ist der konfigurierte Server. Eigene Werte werden explizit an den Server gesendet und während der Authentifizierung erzwungen</string>
     <string name="profile_remote_id_hint_gateway">Standardwert ist \"%1$s\". Eigene Werte werden explizit an den Server gesendet und während der Authentifizierung erzwungen</string>
+    <string name="profile_local_id_label">Client-Identität</string>
+    <string name="profile_local_id_hint_user">Standardwert ist der konfigurierte Benutzername. Eigene Werte können verwendet werden, falls der Server diese erwartet/benötigt</string>
+    <string name="profile_local_id_hint_cert">Standardwert ist die Inhaber-Identität des Zertifkats. Eigene Werte können verwendet werden, falls der Server diese erwartet/benötigt. Zu beachten ist, dass diese üblicherweise vom Zertifikat bestätigt werden müssen (für die alternativen Identitäten des Zertifikats, falls vorhanden, wird eine Auto-Vervollständigung angeboten)</string>
     <string name="profile_dns_servers_label">DNS Server</string>
-    <string name="profile_dns_servers_hint">Benutzerdefinierte DNS Server bei Verbindung zum VPN (mit Leerzeichen getrennt, z.B.. \"8.8.8.8 2001:4860:4860::8888\", standardmässig werden die vom VPN Server erhaltenen Server verwendet)</string>
+    <string name="profile_dns_servers_hint">Benutzerdefinierte DNS Server bei Verbindung zum VPN (mit Leerzeichen getrennt, z.B.. \"8.8.8.8 2001:4860:4860::8888\"), standardmässig werden die vom VPN Server erhaltenen Server verwendet</string>
     <string name="profile_mtu_label">MTU des VPN Tunnel-Device</string>
     <string name="profile_mtu_hint">Falls der Standardwert in einem bestimmten Netzwerk nicht geeignet ist</string>
     <string name="profile_port_label">Server Port</string>
@@ -103,6 +106,8 @@
     <string name="profile_strict_revocation_hint">Im strikten Modus schlägt die Authentisierung nicht nur dann fehl, wenn das Server-Zertifikat gesperrt wurde, sondern auch wenn der Status des Zertifikats unbekannt ist (z.B. weil OCSP fehl schlug und keine gültige CRL verfügbar war).</string>
     <string name="profile_rsa_pss_label">RSA/PSS Signaturen verwenden</string>
     <string name="profile_rsa_pss_hint">Verwendet das stärkere PSS Encoding anstatt des klassischen PKCS#1 Encoding für RSA Signaturen. Die Authentisierung wird fehlschlagen, wenn der Server solche Signaturen nicht unterstützt.</string>
+    <string name="profile_ipv6_transport_label">IPv6 Transport-Adressen verwenden</string>
+    <string name="profile_ipv6_transport_hint">Verwende IPv6 für die äusseren Transport-Adressen, falls verfügbar. Dies kann nur aktiviert werden, wenn der Server UDP Encapsulation für IPv6 unterstützt. Zu beachten ist, dass dies beim Linux Kernel erst seit Version 5.8 der Fall ist und somit viele Server noch keine Unterstützung bieten.</string>
     <string name="profile_split_tunneling_label">Split-Tunneling</string>
     <string name="profile_split_tunneling_intro">Standardmässig leitet der Client allen Netzwerkverkehr durch den VPN Tunnel, ausser der Server schränkt die Subnetze beim Verbindungsaufbau ein, in welchem Fall nur der Verkehr via VPN geleitet wird, den der Server erlaubt (der Rest wird standardmässig behandelt, als ob kein VPN vorhanden wäre).</string>
     <string name="profile_split_tunnelingv4_title">Blockiere IPv4 Verkehr der nicht für das VPN bestimmt ist</string>
@@ -215,6 +220,8 @@
         <item quantity="other">Wiederholen in %1$d Sekunden</item>
     </plurals>
     <string name="cancel_retry">Wiederholen abbrechen</string>
+    <string name="power_whitelist_title">Akku-Optimierung deaktivieren</string>
+    <string name="power_whitelist_text">Bitte den nächsten Dialog bestätigen, um die App auf die weisse Liste für Akku-Optimierung zu setzen, so dass sie NAT keepalives und Rekeyings zeitlich korrekt planen kann, um konstant erreichbar zu bleiben während die VPN-Verbindung besteht.</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">VPN umschalten</string>

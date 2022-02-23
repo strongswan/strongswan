@@ -12,7 +12,7 @@
     or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     for more details.
 -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Application -->
     <string name="app_name">Клиент strongSwan VPN</string>
@@ -33,6 +33,8 @@
     <string name="pref_title">Settings</string>
     <string name="pref_default_vpn_profile">Default VPN profile</string>
     <string name="pref_default_vpn_profile_mru">Connect to most recently used profile</string>
+    <string name="pref_power_whitelist_title">Ignore battery optimizations</string>
+    <string name="pref_power_whitelist_summary">Don\'t show a warning if the app is not on the device\'s power whitelist</string>
 
     <!-- Log view -->
     <string name="log_title">Журнал</string>
@@ -70,9 +72,7 @@
     <string name="profile_user_certificate_label">Сертификат пользователя</string>
     <string name="profile_user_select_certificate_label">Выбрать сертификат пользователя</string>
     <string name="profile_user_select_certificate">Выбрать сертификат пользователя</string>
-    <string name="profile_user_select_id_label">User identity</string>
-    <string name="profile_user_select_id_init">Select a certificate first</string>
-    <string name="profile_user_select_id_default">Default (%1$s)</string>
+    <string name="profile_user_certificate_install">Install user certificate</string>
     <string name="profile_ca_label">Сертификат CA</string>
     <string name="profile_ca_auto_label">Выбрать автоматически</string>
     <string name="profile_ca_select_certificate_label">Выбрать сертификат CA</string>
@@ -82,8 +82,11 @@
     <string name="profile_remote_id_label">Server identity</string>
     <string name="profile_remote_id_hint">Defaults to the configured server. Custom values are explicitly sent to the server and enforced during authentication</string>
     <string name="profile_remote_id_hint_gateway">Defaults to \"%1$s\". Custom values are explicitly sent to the server and enforced during authentication</string>
+    <string name="profile_local_id_label">Client identity</string>
+    <string name="profile_local_id_hint_user">Defaults to the configured username. Custom values may be used if expected/required by the server</string>
+    <string name="profile_local_id_hint_cert">Defaults to the certificate\'s subject identity. Custom values may be used if expected/required by the server. Note that these usually must be confirmed by the certificate (auto-completion is provided for the certificate\'s alternative identities, if any)</string>
     <string name="profile_dns_servers_label">DNS servers</string>
-    <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\", defaults to those received from the VPN server)</string>
+    <string name="profile_dns_servers_hint">Custom DNS servers to use when connected to the VPN (separated by spaces, e.g. \"8.8.8.8 2001:4860:4860::8888\"), defaults to those received from the VPN server</string>
     <string name="profile_mtu_label">MTU of the VPN tunnel device</string>
     <string name="profile_mtu_hint">In case the default value is unsuitable for a particular network</string>
     <string name="profile_port_label">Server port</string>
@@ -100,6 +103,8 @@
     <string name="profile_strict_revocation_hint">In strict mode the authentication will fail not only if the server certificate has been revoked but also if its status is unknown (e.g. because OCSP failed and no valid CRL was available).</string>
     <string name="profile_rsa_pss_label">Use RSA/PSS signatures</string>
     <string name="profile_rsa_pss_hint">Use the stronger PSS encoding instead of the classic PKCS#1 encoding for RSA signatures. Authentication will fail if the server does not support such signatures.</string>
+    <string name="profile_ipv6_transport_label">Use IPv6 transport addresses</string>
+    <string name="profile_ipv6_transport_hint">Use IPv6 for outer transport addresses if available. Can only be enabled if UDP encapsulation for IPv6 is supported by the server. Note that the Linux kernel only supports this since version 5.8, so many servers will not support it yet.</string>
     <string name="profile_split_tunneling_label">Split tunneling</string>
     <string name="profile_split_tunneling_intro">By default, the client will route all network traffic through the VPN, unless the server narrows the subnets when the connection is established, in which case only traffic the server allows will be routed via VPN (by default, all other traffic is routed as if there was no VPN).</string>
     <string name="profile_split_tunnelingv4_title">Block IPv4 traffic not destined for the VPN</string>
@@ -158,7 +163,7 @@
     <string name="crl_cache">CRL cache</string>
     <string name="clear_crl_cache_title">Clear CRL cache?</string>
     <string name="clear_crl_cache_msg_none">The CRL cache is empty</string>
-    <plurals name="clear_crl_cache_msg">
+    <plurals name="clear_crl_cache_msg" tools:ignore="MissingQuantity">
         <item quantity="one">The CRL cache contains %1$d file (%2$s).</item>
         <item quantity="other">The CRL cache contains %1$d files (%2$s).</item>
     </plurals>
@@ -207,11 +212,13 @@
     <string name="disconnect_active_connection">This will disconnect the active VPN connection!</string>
     <string name="connect">Соединить</string>
     <string name="retry">Retry</string>
-    <plurals name="retry_in">
+    <plurals name="retry_in" tools:ignore="MissingQuantity">
         <item quantity="one">Retry in %1$d second</item>
         <item quantity="other">Retry in %1$d seconds</item>
     </plurals>
     <string name="cancel_retry">Cancel retry</string>
+    <string name="power_whitelist_title">Disable battery optimizations</string>
+    <string name="power_whitelist_text">Please confirm the next dialog to add the app to the device\'s power whitelist so it can ignore battery optimizations and schedule NAT keep-alives and rekeyings accurately in order to constantly keep reachable while the VPN is established.</string>
 
     <!-- Quick Settings tile -->
     <string name="tile_default">Toggle VPN</string>

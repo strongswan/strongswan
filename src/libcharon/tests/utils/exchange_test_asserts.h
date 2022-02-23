@@ -225,7 +225,7 @@ struct listener_message_rule_t {
 	payload_type_t payload;
 
 	/**
-	 * Notify type to expect/not expect (paylod type does not have to be
+	 * Notify type to expect/not expect (payload type does not have to be
 	 * specified)
 	 */
 	notify_type_t notify;

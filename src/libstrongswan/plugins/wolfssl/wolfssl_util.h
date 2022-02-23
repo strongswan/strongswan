@@ -25,8 +25,8 @@
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_UTIL_H_
-#define WOLFSSL_UTIL_H_
+#ifndef WOLFSSL_PLUGIN_UTIL_H_
+#define WOLFSSL_PLUGIN_UTIL_H_
 
 #include <wolfssl/wolfcrypt/integer.h>
 #include <wolfssl/wolfcrypt/hash.h>
@@ -64,7 +64,7 @@ bool wolfssl_mp2chunk(mp_int *mp, chunk_t *chunk);
 bool wolfssl_mp_split(chunk_t chunk, mp_int *a, mp_int *b);
 
 /**
- * Concatenates two integers into a chunk, thereby enfocing the length of
+ * Concatenates two integers into a chunk, thereby enforcing the length of
  * a single integer, if necessary, by pre-pending it with zeros.
  *
  * Note: this function allocates memory for the chunk
@@ -95,4 +95,4 @@ bool wolfssl_hash2type(hash_algorithm_t hash, enum wc_HashType *type);
  */
 bool wolfssl_hash2mgf1(hash_algorithm_t hash, int *mgf1);
 
-#endif /** WOLFSSL_UTIL_H_ @}*/
+#endif /** WOLFSSL_PLUGIN_UTIL_H_ @}*/

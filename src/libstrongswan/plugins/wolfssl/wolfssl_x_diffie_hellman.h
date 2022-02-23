@@ -21,14 +21,14 @@
  */
 
 /**
- * Implementation of the X25519 Diffie-Hellman algorithm using wolfSSL.
+ * Implementation of the X25519/X448 Diffie-Hellman algorithm using wolfSSL.
  *
  * @defgroup wolfssl_x_diffie_hellman wolfssl_x_diffie_hellman
  * @{ @ingroup wolfssl_p
  */
 
-#ifndef WOLFSSL_X_DIFFIE_HELLMAN_H_
-#define WOLFSSL_X_DIFFIE_HELLMAN_H_
+#ifndef WOLFSSL_PLUGIN_X_DIFFIE_HELLMAN_H_
+#define WOLFSSL_PLUGIN_X_DIFFIE_HELLMAN_H_
 
 #include <library.h>
 
@@ -40,4 +40,4 @@
  */
 diffie_hellman_t *wolfssl_x_diffie_hellman_create(diffie_hellman_group_t group);
 
-#endif /** WOLFSSL_X_DIFFIE_HELLMAN_H_ @}*/
+#endif /** WOLFSSL_PLUGIN_X_DIFFIE_HELLMAN_H_ @}*/
