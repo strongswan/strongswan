@@ -615,7 +615,8 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(XOF, XOF_SHAKE_128),
 			PLUGIN_PROVIDE(XOF, XOF_SHAKE_256),
 #endif
-#ifndef OPENSSL_NO_SHA1
+#if !defined(OPENSSL_NO_SHA1) && \
+	(OPENSSL_VERSION_NUMBER < 0x30000000L || !defined(OPENSSL_NO_DEPRECATED))
 		/* keyed sha1 hasher (aka prf) */
 		PLUGIN_REGISTER(PRF, openssl_sha1_prf_create),
 			PLUGIN_PROVIDE(PRF, PRF_KEYED_SHA1),
