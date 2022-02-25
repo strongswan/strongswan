@@ -22,6 +22,11 @@
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+/* for EVP_PKEY_CTX_set_dh_pad */
+#include <openssl/dh.h>
+#endif
+
 /* these were added with 1.1.0 when ASN1_OBJECT was made opaque */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #define OBJ_get0_data(o) ((o)->data)
@@ -47,6 +52,14 @@ bool openssl_compute_shared_key(EVP_PKEY *priv, EVP_PKEY *pub, chunk_t *shared)
 	{
 		goto error;
 	}
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	if (EVP_PKEY_base_id(priv) == EVP_PKEY_DH &&
+		EVP_PKEY_CTX_set_dh_pad(ctx, 1) <= 0)
+	{
+		goto error;
+	}
+#endif
 
 	if (EVP_PKEY_derive_set_peer(ctx, pub) <= 0)
 	{
