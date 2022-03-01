@@ -713,7 +713,9 @@ static status_t process_certificate(private_tls_server_t *this,
 		else
 		{
 			DBG1(DBG_TLS, "no certificate sent by peer");
-			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
+			this->alert->add(this->alert, TLS_FATAL,
+							 this->tls->get_version_max(this->tls) > TLS_1_2 ?
+							 TLS_CERTIFICATE_REQUIRED : TLS_HANDSHAKE_FAILURE);
 			return NEED_MORE;
 		}
 	}
