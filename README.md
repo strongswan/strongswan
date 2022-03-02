@@ -8,8 +8,9 @@ This document is just a short introduction of the strongSwan **swanctl** command
 which uses the modern [**vici**](src/libcharon/plugins/vici/README.md) *Versatile
 IKE Configuration Interface*. The deprecated **ipsec** command using the legacy
 **stroke** configuration interface is described [**here**](README_LEGACY.md).
-For more detailed information consult the man pages and
-[**our wiki**](https://wiki.strongswan.org).
+For more detailed information consult the man pages, our new
+[**documentation site**](https://docs.strongswan.org) and the legacy
+[**wiki**](https://wiki.strongswan.org).
 
 
 ## Quickstart ##
