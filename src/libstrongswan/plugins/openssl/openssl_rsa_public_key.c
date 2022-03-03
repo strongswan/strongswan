@@ -402,53 +402,21 @@ error:
  */
 bool openssl_rsa_fingerprint(EVP_PKEY *key, cred_encoding_type_t type, chunk_t *fp)
 {
-	hasher_t *hasher;
-	chunk_t enc;
-	u_char *p;
+	if (!openssl_fingerprint(key, type, fp))
+	{
+		chunk_t n = chunk_empty, e = chunk_empty;
+		bool success = FALSE;
 
-	if (lib->encoding->get_cache(lib->encoding, type, key, fp))
-	{
-		return TRUE;
-	}
-	switch (type)
-	{
-		case KEYID_PUBKEY_SHA1:
-			enc = chunk_alloc(i2d_PublicKey(key, NULL));
-			p = enc.ptr;
-			i2d_PublicKey(key, &p);
-			break;
-		case KEYID_PUBKEY_INFO_SHA1:
-			enc = chunk_alloc(i2d_PUBKEY(key, NULL));
-			p = enc.ptr;
-			i2d_PUBKEY(key, &p);
-			break;
-		default:
+		if (get_n_and_e(key, &n, &e))
 		{
-			chunk_t n = chunk_empty, e = chunk_empty;
-			bool success = FALSE;
-
-			if (get_n_and_e(key, &n, &e))
-			{
-				success = lib->encoding->encode(lib->encoding, type, key, fp,
+			success = lib->encoding->encode(lib->encoding, type, key, fp,
 									CRED_PART_RSA_MODULUS, n,
 									CRED_PART_RSA_PUB_EXP, e, CRED_PART_END);
-			}
-			chunk_free(&n);
-			chunk_free(&e);
-			return success;
 		}
+		chunk_free(&n);
+		chunk_free(&e);
+		return success;
 	}
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_SHA1);
-	if (!hasher || !hasher->allocate_hash(hasher, enc, fp))
-	{
-		DBG1(DBG_LIB, "SHA1 hash algorithm not supported, fingerprinting failed");
-		DESTROY_IF(hasher);
-		free(enc.ptr);
-		return FALSE;
-	}
-	free(enc.ptr);
-	hasher->destroy(hasher);
-	lib->encoding->cache(lib->encoding, type, key, *fp);
 	return TRUE;
 }
 
