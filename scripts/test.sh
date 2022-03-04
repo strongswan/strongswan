@@ -89,6 +89,46 @@ build_tss2()
 	cd -
 }
 
+build_openssl()
+{
+	SSL_REV=3.0.2
+	SSL_PKG=openssl-$SSL_REV
+	SSL_DIR=$DEPS_BUILD_DIR/$SSL_PKG
+	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
+	SSL_INS=$DEPS_PREFIX/ssl
+	SSL_OPT="shared no-tls no-dtls no-ssl3 no-zlib no-comp no-idea no-psk no-srp
+			 no-stdio no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
+
+	if test -d "$SSL_DIR"; then
+		return
+	fi
+
+	# insist on compiling with gcc and debug information as symbols are otherwise not found
+	if test "$LEAK_DETECTIVE" = "yes"; then
+		SSL_OPT="$SSL_OPT CC=gcc -d"
+	fi
+
+	echo "$ build_openssl()"
+
+	curl -L $SSL_SRC | tar xz -C $DEPS_BUILD_DIR &&
+	cd $SSL_DIR &&
+	./config --prefix=$SSL_INS --openssldir=$SSL_INS --libdir=lib $SSL_OPT &&
+	make -j4 >/dev/null &&
+	sudo make install_sw >/dev/null &&
+	sudo ldconfig || exit $?
+	cd -
+}
+
+use_custom_openssl()
+{
+	CFLAGS="$CFLAGS -I$DEPS_PREFIX/ssl/include"
+	export LDFLAGS="$LDFLAGS -L$DEPS_PREFIX/ssl/lib"
+	export LD_LIBRARY_PATH="$DEPS_PREFIX/ssl/lib:$LD_LIBRARY_PATH"
+	if test "$1" = "build-deps"; then
+		build_openssl
+	fi
+}
+
 : ${BUILD_DIR=$PWD}
 : ${DEPS_BUILD_DIR=$BUILD_DIR/..}
 : ${DEPS_PREFIX=/usr/local}
@@ -114,6 +154,10 @@ openssl*)
 	CONFIG="--disable-defaults --enable-pki --enable-openssl --enable-pem"
 	export TESTS_PLUGINS="test-vectors pem openssl!"
 	DEPS="libssl-dev"
+	if test "$TEST" = "openssl-3"; then
+		DEPS=""
+		use_custom_openssl $1
+	fi
 	;;
 gcrypt)
 	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1 --enable-pkcs8"
@@ -184,6 +228,7 @@ all|coverage|sonarcloud)
 		build_wolfssl
 		build_tss2
 	fi
+	use_custom_openssl $1
 	;;
 win*)
 	CONFIG="--disable-defaults --enable-svc --enable-ikev2
