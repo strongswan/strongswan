@@ -160,41 +160,26 @@ static thread_value_t *cleanup;
  */
 static void cleanup_thread(void *arg)
 {
-#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
 	CRYPTO_THREADID tid;
 
 	CRYPTO_THREADID_set_numeric(&tid, (u_long)(uintptr_t)arg);
 	ERR_remove_thread_state(&tid);
-#else
-	ERR_remove_state((u_long)(uintptr_t)arg);
-#endif
 }
 
 /**
- * Thread-ID callback function
+ * Callback for thread ID
  */
-static u_long id_function(void)
+static void threadid_function(CRYPTO_THREADID *threadid)
 {
 	u_long id;
 
 	/* ensure the thread ID is never zero, otherwise OpenSSL might try to
 	 * acquire locks recursively */
 	id = 1 + (u_long)thread_current_id();
-
 	/* cleanup a thread's state later if OpenSSL interacted with it */
 	cleanup->set(cleanup, (void*)(uintptr_t)id);
-	return id;
+	CRYPTO_THREADID_set_numeric(threadid, id);
 }
-
-#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
-/**
- * Callback for thread ID
- */
-static void threadid_function(CRYPTO_THREADID *threadid)
-{
-	CRYPTO_THREADID_set_numeric(threadid, id_function());
-}
-#endif /* OPENSSL_VERSION_NUMBER */
 
 /**
  * initialize OpenSSL for multi-threaded use
@@ -205,14 +190,9 @@ static void threading_init()
 
 	cleanup = thread_value_create(cleanup_thread);
 
-#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
 	CRYPTO_THREADID_set_callback(threadid_function);
-#else
-	CRYPTO_set_id_callback(id_function);
-#endif
 
 	CRYPTO_set_locking_callback(locking_function);
-
 	CRYPTO_set_dynlock_create_callback(create_function);
 	CRYPTO_set_dynlock_lock_callback(lock_function);
 	CRYPTO_set_dynlock_destroy_callback(destroy_function);
@@ -663,7 +643,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(KDF, KDF_PRF_PLUS),
 #endif
 #endif /* OPENSSL_NO_HMAC */
-#if (OPENSSL_VERSION_NUMBER >= 0x1000100fL && !defined(OPENSSL_NO_AES)) || \
+#if (!defined(OPENSSL_NO_AES)) || \
 	(OPENSSL_VERSION_NUMBER >= 0x1010000fL && !defined(OPENSSL_NO_CHACHA))
 		/* AEAD (AES GCM since 1.0.1, ChaCha20-Poly1305 since 1.1.0) */
 		PLUGIN_REGISTER(AEAD, openssl_aead_create),
