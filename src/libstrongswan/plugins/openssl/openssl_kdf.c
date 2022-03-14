@@ -43,6 +43,11 @@ struct private_kdf_t {
 	kdf_t public;
 
 	/**
+	 * KDF type.
+	 */
+	key_derivation_function_t type;
+
+	/**
 	 * Hasher to use for underlying PRF.
 	 */
 	const EVP_MD *hasher;
@@ -63,26 +68,51 @@ struct private_kdf_t {
 METHOD(kdf_t, get_type, key_derivation_function_t,
 	private_kdf_t *this)
 {
-	return KDF_PRF_PLUS;
+	return this->type;
 }
 
 METHOD(kdf_t, get_length, size_t,
 	private_kdf_t *this)
 {
-	return SIZE_MAX;
+	if (this->type == KDF_PRF_PLUS)
+	{
+		return SIZE_MAX;
+	}
+	return EVP_MD_size(this->hasher);
+}
+
+/**
+ * Set the parameters as a appropriate for the given KDF type.
+ */
+static bool set_params(private_kdf_t *this, EVP_PKEY_CTX *ctx)
+{
+	if (this->type == KDF_PRF)
+	{
+		return EVP_PKEY_CTX_hkdf_mode(ctx, EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY) > 0 &&
+			   EVP_PKEY_CTX_set1_hkdf_key(ctx, this->key.ptr, this->key.len) > 0 &&
+			   EVP_PKEY_CTX_set1_hkdf_salt(ctx, this->salt.ptr, this->salt.len) > 0;
+	}
+	/* for HKDF-Expand() we map the salt to the "info" field */
+	return EVP_PKEY_CTX_hkdf_mode(ctx, EVP_PKEY_HKDEF_MODE_EXPAND_ONLY) > 0 &&
+		   EVP_PKEY_CTX_set1_hkdf_key(ctx, this->key.ptr, this->key.len) > 0 &&
+		   EVP_PKEY_CTX_add1_hkdf_info(ctx, this->salt.ptr, this->salt.len) > 0;
 }
 
 METHOD(kdf_t, get_bytes, bool,
 	private_kdf_t *this, size_t out_len, uint8_t *buffer)
 {
-	EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
+	EVP_PKEY_CTX *ctx;
 
+	if (this->type == KDF_PRF && out_len != get_length(this))
+	{
+		return FALSE;
+	}
+
+	ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
 	if (!ctx ||
 		EVP_PKEY_derive_init(ctx) <= 0 ||
 		EVP_PKEY_CTX_set_hkdf_md(ctx, this->hasher) <= 0 ||
-		EVP_PKEY_CTX_hkdf_mode(ctx, EVP_PKEY_HKDEF_MODE_EXPAND_ONLY) <= 0 ||
-		EVP_PKEY_CTX_set1_hkdf_key(ctx, this->key.ptr, this->key.len) <= 0 ||
-		EVP_PKEY_CTX_add1_hkdf_info(ctx, this->salt.ptr, this->salt.len) <= 0 ||
+		!set_params(this, ctx) ||
 		EVP_PKEY_derive(ctx, buffer, &out_len) <= 0)
 	{
 		EVP_PKEY_CTX_free(ctx);
@@ -95,6 +125,11 @@ METHOD(kdf_t, get_bytes, bool,
 METHOD(kdf_t, allocate_bytes, bool,
 	private_kdf_t *this, size_t out_len, chunk_t *chunk)
 {
+	if (this->type == KDF_PRF)
+	{
+		out_len = out_len ?: get_length(this);
+	}
+
 	*chunk = chunk_alloc(out_len);
 
 	if (!get_bytes(this, out_len, chunk->ptr))
@@ -141,9 +176,9 @@ kdf_t *openssl_kdf_create(key_derivation_function_t algo, va_list args)
 {
 	private_kdf_t *this;
 	pseudo_random_function_t prf_alg;
-	char *name, buf[8];
+	char *name, buf[EVP_MAX_MD_SIZE];
 
-	if (algo != KDF_PRF_PLUS)
+	if (algo != KDF_PRF && algo != KDF_PRF_PLUS)
 	{
 		return NULL;
 	}
@@ -165,13 +200,15 @@ kdf_t *openssl_kdf_create(key_derivation_function_t algo, va_list args)
 			.set_param = _set_param,
 			.destroy = _destroy,
 		},
+		.type = algo,
 		.hasher = EVP_get_digestbyname(name),
 		/* use a lengthy key to test the implementation below to make sure the
 		 * algorithms are usable, see openssl_hmac.c for details */
 		.key = chunk_clone(chunk_from_str("00000000000000000000000000000000")),
 	);
 
-	if (!this->hasher || !get_bytes(this, sizeof(buf), buf))
+	if (!this->hasher ||
+		!get_bytes(this, algo == KDF_PRF ? get_length(this) : sizeof(buf), buf))
 	{
 		destroy(this);
 		return NULL;

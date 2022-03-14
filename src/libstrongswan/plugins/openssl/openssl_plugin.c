@@ -658,6 +658,7 @@ METHOD(plugin_t, get_features, int,
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L
 		/* HKDF is available since 1.1.0, expand-only mode only since 1.1.1 */
 		PLUGIN_REGISTER(KDF, openssl_kdf_create),
+			PLUGIN_PROVIDE(KDF, KDF_PRF),
 			PLUGIN_PROVIDE(KDF, KDF_PRF_PLUS),
 #endif
 #endif /* OPENSSL_NO_HMAC */
