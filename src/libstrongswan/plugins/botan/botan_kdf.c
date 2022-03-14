@@ -71,6 +71,12 @@ METHOD(kdf_t, get_type, key_derivation_function_t,
 	return KDF_PRF_PLUS;
 }
 
+METHOD(kdf_t, get_length, size_t,
+	private_kdf_t *this)
+{
+	return SIZE_MAX;
+}
+
 METHOD(kdf_t, get_bytes, bool,
 	private_kdf_t *this, size_t out_len, uint8_t *buffer)
 {
@@ -162,6 +168,7 @@ kdf_t *botan_kdf_create(key_derivation_function_t algo, va_list args)
 	INIT(this,
 		.public = {
 			.get_type = _get_type,
+			.get_length = _get_length,
 			.get_bytes = _get_bytes,
 			.allocate_bytes = _allocate_bytes,
 			.set_param = _set_param,

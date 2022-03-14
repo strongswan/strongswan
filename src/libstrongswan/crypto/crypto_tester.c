@@ -1309,6 +1309,17 @@ METHOD(crypto_tester_t, test_kdf, bool,
 		{
 			goto failure;
 		}
+		if (kdf_has_fixed_output_length(alg))
+		{
+			if (kdf->get_length(kdf) != vector->out.len)
+			{
+				goto failure;
+			}
+		}
+		else if (kdf->get_length(kdf) != SIZE_MAX)
+		{
+			goto failure;
+		}
 		/* allocated bytes */
 		if (!kdf->allocate_bytes(kdf, vector->out.len, &out))
 		{
@@ -1317,6 +1328,19 @@ METHOD(crypto_tester_t, test_kdf, bool,
 		if (!chunk_equals(out, vector->out))
 		{
 			goto failure;
+		}
+		/* allocate without knowing the length */
+		if (kdf_has_fixed_output_length(alg))
+		{
+			chunk_free(&out);
+			if (!kdf->allocate_bytes(kdf, 0, &out))
+			{
+				goto failure;
+			}
+			if (!chunk_equals(out, vector->out))
+			{
+				goto failure;
+			}
 		}
 		/* bytes to existing buffer */
 		memset(out.ptr, 0, out.len);

@@ -86,7 +86,16 @@ struct kdf_t {
 	key_derivation_function_t (*get_type)(kdf_t *this);
 
 	/**
+	 * Output length for KDFs that produce a fixed amount of output.
+	 *
+	 * @return			fixed output length, SIZE_MAX for variable length
+	 */
+	size_t (*get_length)(kdf_t *this);
+
+	/**
 	 * Derives a key of the given length and writes it to the buffer.
+	 *
+	 * @note Fails if out_len doesn't match for KDFs with fixed output length.
 	 *
 	 * @param out_len	number of key bytes requested
 	 * @param buffer	pointer where the derived key will be written
@@ -98,7 +107,12 @@ struct kdf_t {
 	/**
 	 * Derives a key of the given length and allocates space for it.
 	 *
-	 * @param out_len	number of key bytes requested
+	 * @note Fails if out_len doesn't match for KDFs with fixed output length.
+	 * However, for simplified usage, 0 can be passed for out_len to
+	 * automatically allocate a chunk of the correct size.
+	 *
+	 * @param out_len	number of key bytes requested, or 0 for KDFs with fixed
+	 *					output length
 	 * @param chunk		chunk which will hold the derived key
 	 * @return			TRUE if key derived successfully
 	 */
@@ -120,5 +134,13 @@ struct kdf_t {
 	 */
 	void (*destroy)(kdf_t *this);
 };
+
+/**
+ * Check if the given KDF type has a fixed output length.
+ *
+ * @param type			KDF type
+ * @return				TRUE if the KDF type has a fixed output length
+ */
+bool kdf_has_fixed_output_length(key_derivation_function_t type);
 
 #endif /** KDF_H_ @}*/

@@ -26,3 +26,17 @@ ENUM(key_derivation_function_names, KDF_UNDEFINED, KDF_PRF_PLUS,
 	"KDF_UNDEFINED",
 	"KDF_PRF_PLUS",
 );
+
+/*
+ * Described in header
+ */
+bool kdf_has_fixed_output_length(key_derivation_function_t type)
+{
+	switch (type)
+	{
+		case KDF_PRF_PLUS:
+		case KDF_UNDEFINED:
+			break;
+	}
+	return FALSE;
+}
