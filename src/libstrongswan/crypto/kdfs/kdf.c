@@ -24,6 +24,7 @@
 
 ENUM(key_derivation_function_names, KDF_UNDEFINED, KDF_PRF_PLUS,
 	"KDF_UNDEFINED",
+	"KDF_PRF",
 	"KDF_PRF_PLUS",
 );
 
@@ -34,6 +35,8 @@ bool kdf_has_fixed_output_length(key_derivation_function_t type)
 {
 	switch (type)
 	{
+		case KDF_PRF:
+			return TRUE;
 		case KDF_PRF_PLUS:
 		case KDF_UNDEFINED:
 			break;

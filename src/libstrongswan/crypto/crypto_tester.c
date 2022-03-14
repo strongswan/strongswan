@@ -1217,6 +1217,7 @@ static kdf_t *create_kdf_vector(kdf_constructor_t create,
 {
 	switch (alg)
 	{
+		case KDF_PRF:
 		case KDF_PRF_PLUS:
 			return create_kdf_args(create, alg, vector->arg.prf);
 		case KDF_UNDEFINED:
@@ -1235,6 +1236,7 @@ static bool kdf_vector_applies(key_derivation_function_t alg,
 
 	switch (alg)
 	{
+		case KDF_PRF:
 		case KDF_PRF_PLUS:
 		{
 			pseudo_random_function_t prf;
