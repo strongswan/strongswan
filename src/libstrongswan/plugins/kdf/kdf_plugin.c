@@ -21,7 +21,7 @@
  */
 
 #include "kdf_plugin.h"
-#include "kdf_prf_plus.h"
+#include "kdf_kdf.h"
 
 #include <library.h>
 
@@ -48,7 +48,14 @@ METHOD(plugin_t, get_features, int,
 	private_kdf_plugin_t *this, plugin_feature_t *features[])
 {
 	static plugin_feature_t f[] = {
-		PLUGIN_REGISTER(KDF, kdf_prf_plus_create),
+		PLUGIN_REGISTER(KDF, kdf_kdf_create),
+			PLUGIN_PROVIDE(KDF, KDF_PRF),
+				PLUGIN_SDEPEND(PRF, PRF_HMAC_SHA1),
+				PLUGIN_SDEPEND(PRF, PRF_HMAC_SHA2_256),
+				PLUGIN_SDEPEND(PRF, PRF_HMAC_SHA2_384),
+				PLUGIN_SDEPEND(PRF, PRF_HMAC_SHA2_512),
+				PLUGIN_SDEPEND(PRF, PRF_AES128_XCBC),
+				PLUGIN_SDEPEND(PRF, PRF_AES128_CMAC),
 			PLUGIN_PROVIDE(KDF, KDF_PRF_PLUS),
 				PLUGIN_SDEPEND(PRF, PRF_HMAC_SHA1),
 				PLUGIN_SDEPEND(PRF, PRF_HMAC_SHA2_256),

@@ -21,7 +21,8 @@
  */
 
 /**
- * Implements prf+ as defined in RFC 7296, section 2.13:
+ * Implements a KDF wrapper around PRFs, and prf+ as defined in RFC 7296,
+ * section 2.13:
  *
  * @verbatim
      prf+ (K,S) = T1 | T2 | T3 | T4 | ...
@@ -34,12 +35,12 @@
      ...
  * @endverbatim
  *
- * @defgroup kdf_prf_plus kdf_prf_plus
+ * @defgroup kdf_kdf kdf_kdf
  * @{ @ingroup kdf_p
  */
 
-#ifndef KDF_PRF_PLUS_H_
-#define KDF_PRF_PLUS_H_
+#ifndef KDF_KDF_H_
+#define KDF_KDF_H_
 
 #include <crypto/kdfs/kdf.h>
 
@@ -50,6 +51,6 @@
  * @param args			pseudo_random_function_t of the underlying PRF
  * @return				kdf_t object, NULL if not supported
  */
-kdf_t *kdf_prf_plus_create(key_derivation_function_t algo, va_list args);
+kdf_t *kdf_kdf_create(key_derivation_function_t algo, va_list args);
 
-#endif /** KDF_PRF_PLUS_H_ @}*/
+#endif /** KDF_KDF_H_ @}*/

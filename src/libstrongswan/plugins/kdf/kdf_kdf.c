@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "kdf_prf_plus.h"
+#include "kdf_kdf.h"
 
 typedef struct private_kdf_t private_kdf_t;
 
@@ -33,6 +33,11 @@ struct private_kdf_t {
 	 * Public interface.
 	 */
 	kdf_t public;
+
+	/**
+	 * KDF type.
+	 */
+	key_derivation_function_t type;
 
 	/**
 	 * Underlying PRF.
@@ -48,16 +53,20 @@ struct private_kdf_t {
 METHOD(kdf_t, get_type, key_derivation_function_t,
 	private_kdf_t *this)
 {
-	return KDF_PRF_PLUS;
+	return this->type;
 }
 
 METHOD(kdf_t, get_length, size_t,
 	private_kdf_t *this)
 {
-	return SIZE_MAX;
+	if (this->type == KDF_PRF_PLUS)
+	{
+		return SIZE_MAX;
+	}
+	return this->prf->get_block_size(this->prf);
 }
 
-METHOD(kdf_t, get_bytes, bool,
+METHOD(kdf_t, get_bytes_prf_plus, bool,
 	private_kdf_t *this, size_t out_len, uint8_t *buffer)
 {
 	chunk_t block, previous = chunk_empty;
@@ -93,12 +102,27 @@ METHOD(kdf_t, get_bytes, bool,
 	return success;
 }
 
+METHOD(kdf_t, get_bytes, bool,
+	private_kdf_t *this, size_t out_len, uint8_t *buffer)
+{
+	if (out_len != get_length(this))
+	{
+		return FALSE;
+	}
+	return this->prf->get_bytes(this->prf, this->salt, buffer);
+}
+
 METHOD(kdf_t, allocate_bytes, bool,
 	private_kdf_t *this, size_t out_len, chunk_t *chunk)
 {
+	if (this->type == KDF_PRF)
+	{
+		out_len = out_len ?: get_length(this);
+	}
+
 	*chunk = chunk_alloc(out_len);
 
-	if (!get_bytes(this, out_len, chunk->ptr))
+	if (!this->public.get_bytes(&this->public, out_len, chunk->ptr))
 	{
 		chunk_free(chunk);
 		return FALSE;
@@ -111,6 +135,22 @@ METHOD(kdf_t, set_param, bool,
 {
 	chunk_t chunk;
 	bool success = FALSE;
+
+	if (this->type == KDF_PRF)
+	{	/* IKEv2 uses the nonces etc., which we receive as SALT, as PRF key and
+		 * the DH secret as salt */
+		switch (param)
+		{
+			case KDF_PARAM_KEY:
+				param = KDF_PARAM_SALT;
+				break;
+			case KDF_PARAM_SALT:
+				param = KDF_PARAM_KEY;
+				break;
+			default:
+				break;
+		}
+	}
 
 	switch (param)
 	{
@@ -139,13 +179,13 @@ METHOD(kdf_t, destroy, void,
 /*
  * Described in header
  */
-kdf_t *kdf_prf_plus_create(key_derivation_function_t algo, va_list args)
+kdf_t *kdf_kdf_create(key_derivation_function_t algo, va_list args)
 {
 	private_kdf_t *this;
 	pseudo_random_function_t prf_alg;
 	prf_t *prf;
 
-	if (algo != KDF_PRF_PLUS)
+	if (algo != KDF_PRF && algo != KDF_PRF_PLUS)
 	{
 		return NULL;
 	}
@@ -154,8 +194,9 @@ kdf_t *kdf_prf_plus_create(key_derivation_function_t algo, va_list args)
 	prf = lib->crypto->create_prf(lib->crypto, prf_alg);
 	if (!prf)
 	{
-		DBG1(DBG_LIB, "failed to create %N for prf+",
-			 pseudo_random_function_names, prf_alg);
+		DBG1(DBG_LIB, "failed to create %N for %N",
+			 pseudo_random_function_names, prf_alg,
+			 key_derivation_function_names, algo);
 		return NULL;
 	}
 
@@ -168,8 +209,13 @@ kdf_t *kdf_prf_plus_create(key_derivation_function_t algo, va_list args)
 			.set_param = _set_param,
 			.destroy = _destroy,
 		},
+		.type = algo,
 		.prf = prf,
 	);
 
+	if (algo == KDF_PRF_PLUS)
+	{
+		this->public.get_bytes = _get_bytes_prf_plus;
+	}
 	return &this->public;
 }

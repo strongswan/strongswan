@@ -12,6 +12,6 @@ endif
 
 libstrongswan_kdf_la_SOURCES = \
 	kdf_plugin.h kdf_plugin.c \
-	kdf_prf_plus.h kdf_prf_plus.c
+	kdf_kdf.h kdf_kdf.c
 
 libstrongswan_kdf_la_LDFLAGS = -module -avoid-version
