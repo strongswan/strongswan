@@ -2339,8 +2339,13 @@ static void add_exclude_route(private_kernel_pfkey_ipsec_t *this,
 		{
 			char *if_name = NULL;
 
-			if (charon->kernel->get_interface(charon->kernel, src, &if_name) &&
-				charon->kernel->add_route(charon->kernel,
+			if (gtw->ip_equals(gtw, dst))
+			{
+				DBG1(DBG_KNL, "not installing exclude route for directly "
+					 "connected peer %H", dst);
+			}
+			else if (charon->kernel->get_interface(charon->kernel, src, &if_name) &&
+					 charon->kernel->add_route(charon->kernel,
 									dst->get_address(dst),
 									dst->get_family(dst) == AF_INET ? 32 : 128,
 									gtw, src, if_name, FALSE) == SUCCESS)
@@ -2429,6 +2434,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 {
 	route_entry_t *route, *old;
 	host_t *host, *src, *dst;
+	char *out_interface = NULL;
 	bool is_virtual;
 
 	if (charon->kernel->get_address_by_ts(charon->kernel, out->src_ts, &host,
@@ -2456,7 +2462,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 		 * this is required for example on Linux. */
 		if (is_virtual || this->route_via_internal)
 		{
-			free(route->if_name);
+			out_interface = route->if_name;
 			route->if_name = NULL;
 			src = route->src_ip;
 		}
@@ -2476,6 +2482,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 		!charon->kernel->get_interface(charon->kernel, src, &route->if_name))
 	{
 		route_entry_destroy(route);
+		free(out_interface);
 		return FALSE;
 	}
 
@@ -2486,6 +2493,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 		if (route_entry_equals(old, route))
 		{	/* such a route already exists */
 			route_entry_destroy(route);
+			free(out_interface);
 			return TRUE;
 		}
 		/* uninstall previously installed route */
@@ -2501,8 +2509,10 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 		policy->route = NULL;
 	}
 
-	/* if remote traffic selector covers the IKE peer, add an exclude route */
-	if (charon->kernel->get_features(charon->kernel) & KERNEL_REQUIRE_EXCLUDE_ROUTE)
+	/* if we don't route via outbound interface and the remote traffic selector
+	 * covers the IKE peer, add an exclude route */
+	if (!streq(route->if_name, out_interface) &&
+		charon->kernel->get_features(charon->kernel) & KERNEL_REQUIRE_EXCLUDE_ROUTE)
 	{
 		if (out->dst_ts->is_host(out->dst_ts, dst))
 		{
@@ -2510,6 +2520,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 				 "with IKE traffic", out->src_ts, out->dst_ts, policy_dir_names,
 				 policy->direction);
 			route_entry_destroy(route);
+			free(out_interface);
 			return FALSE;
 		}
 		if (out->dst_ts->includes(out->dst_ts, dst))
@@ -2517,6 +2528,7 @@ static bool install_route(private_kernel_pfkey_ipsec_t *this,
 			add_exclude_route(this, route, out->generic.sa->src, dst);
 		}
 	}
+	free(out_interface);
 
 	DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s",
 		 out->dst_ts, route->gateway, route->src_ip, route->if_name);
