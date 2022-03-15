@@ -188,6 +188,7 @@ METHOD(plugin_t, get_features, int,
 #endif
 #ifdef HAVE_HKDF
 		PLUGIN_REGISTER(KDF, wolfssl_kdf_create),
+			PLUGIN_PROVIDE(KDF, KDF_PRF),
 			PLUGIN_PROVIDE(KDF, KDF_PRF_PLUS),
 #endif
 #endif /* NO_HMAC */

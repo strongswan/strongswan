@@ -43,9 +43,14 @@ struct private_kdf_t {
 	kdf_t public;
 
 	/**
+	 * KDF type.
+	 */
+	key_derivation_function_t type;
+
+	/**
 	 * Hash algorithm type.
 	 */
-	int type;
+	enum wc_HashType hash;
 
 	/**
 	 * Key for KDF.
@@ -61,19 +66,33 @@ struct private_kdf_t {
 METHOD(kdf_t, get_type, key_derivation_function_t,
 	private_kdf_t *this)
 {
-	return KDF_PRF_PLUS;
+	return this->type;
 }
 
 METHOD(kdf_t, get_length, size_t,
 	private_kdf_t *this)
 {
-	return SIZE_MAX;
+	if (this->type == KDF_PRF_PLUS)
+	{
+		return SIZE_MAX;
+	}
+	return wc_HashGetDigestSize(this->hash);
 }
 
 METHOD(kdf_t, get_bytes, bool,
 	private_kdf_t *this, size_t out_len, uint8_t *buffer)
 {
-	if (wc_HKDF_Expand(this->type, this->key.ptr, this->key.len,
+	if (this->type == KDF_PRF)
+	{
+		if (out_len != get_length(this) ||
+			wc_HKDF_Extract(this->hash, this->salt.ptr, this->salt.len,
+							this->key.ptr, this->key.len, buffer))
+		{
+			return FALSE;
+		}
+		return TRUE;
+	}
+	if (wc_HKDF_Expand(this->hash, this->key.ptr, this->key.len,
 					   this->salt.ptr, this->salt.len, buffer, out_len))
 	{
 		return FALSE;
@@ -84,6 +103,11 @@ METHOD(kdf_t, get_bytes, bool,
 METHOD(kdf_t, allocate_bytes, bool,
 	private_kdf_t *this, size_t out_len, chunk_t *chunk)
 {
+	if (this->type == KDF_PRF)
+	{
+		out_len = out_len ?: get_length(this);
+	}
+
 	*chunk = chunk_alloc(out_len);
 
 	if (!get_bytes(this, out_len, chunk->ptr))
@@ -130,16 +154,16 @@ kdf_t *wolfssl_kdf_create(key_derivation_function_t algo, va_list args)
 {
 	private_kdf_t *this;
 	pseudo_random_function_t prf_alg;
-	enum wc_HashType type;
-	char buf[8];
+	enum wc_HashType hash;
+	char buf[HASH_SIZE_SHA512];
 
-	if (algo != KDF_PRF_PLUS)
+	if (algo != KDF_PRF && algo != KDF_PRF_PLUS)
 	{
 		return NULL;
 	}
 
 	VA_ARGS_VGET(args, prf_alg);
-	if (!wolfssl_hash2type(hasher_algorithm_from_prf(prf_alg), &type))
+	if (!wolfssl_hash2type(hasher_algorithm_from_prf(prf_alg), &hash))
 	{
 		return NULL;
 	}
@@ -153,11 +177,12 @@ kdf_t *wolfssl_kdf_create(key_derivation_function_t algo, va_list args)
 			.set_param = _set_param,
 			.destroy = _destroy,
 		},
-		.type = type,
+		.type = algo,
+		.hash = hash,
 	);
 
 	/* test if we can actually use the algorithm */
-	if (!get_bytes(this, sizeof(buf), buf))
+	if (!get_bytes(this, algo == KDF_PRF ? get_length(this) : sizeof(buf), buf))
 	{
 		destroy(this);
 		return NULL;
