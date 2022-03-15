@@ -213,6 +213,7 @@ METHOD(plugin_t, get_features, int,
 		/* kdfs */
 #ifdef BOTAN_HAS_HKDF
 		PLUGIN_REGISTER(SIGNER, botan_kdf_create),
+			PLUGIN_PROVIDE(KDF, KDF_PRF),
 			PLUGIN_PROVIDE(KDF, KDF_PRF_PLUS),
 #endif /* BOTAN_HAS_HKDF */
 

@@ -43,6 +43,11 @@ struct private_kdf_t {
 	kdf_t public;
 
 	/**
+	 * KDF type.
+	 */
+	key_derivation_function_t type;
+
+	/**
 	 * Name of the KDF algorithm in Botan.
 	 */
 	char *name;
@@ -57,29 +62,42 @@ struct private_kdf_t {
 	 */
 	chunk_t salt;
 
-#if BOTAN_VERSION_MAJOR == 2
 	/**
-	 * Used for a manual length check in get_bytes().
+	 * Length of the hash output.
 	 */
 	size_t hash_size;
-#endif
 };
 
 METHOD(kdf_t, get_type, key_derivation_function_t,
 	private_kdf_t *this)
 {
-	return KDF_PRF_PLUS;
+	return this->type;
 }
 
 METHOD(kdf_t, get_length, size_t,
 	private_kdf_t *this)
 {
-	return SIZE_MAX;
+	if (this->type == KDF_PRF_PLUS)
+	{
+		return SIZE_MAX;
+	}
+	return this->hash_size;
 }
 
 METHOD(kdf_t, get_bytes, bool,
 	private_kdf_t *this, size_t out_len, uint8_t *buffer)
 {
+	if (this->type == KDF_PRF)
+	{
+		if (out_len != get_length(this) ||
+			botan_kdf(this->name, buffer, out_len, this->key.ptr, this->key.len,
+					  this->salt.ptr, this->salt.len, NULL, 0))
+		{
+			return FALSE;
+		}
+		return TRUE;
+	}
+
 #if BOTAN_VERSION_MAJOR == 2
 	/* Botan 2 doesn't check the length, just silently prevents wrapping the
 	 * counter and returns truncated output, so do this manually */
@@ -99,6 +117,11 @@ METHOD(kdf_t, get_bytes, bool,
 METHOD(kdf_t, allocate_bytes, bool,
 	private_kdf_t *this, size_t out_len, chunk_t *chunk)
 {
+	if (this->type == KDF_PRF)
+	{
+		out_len = out_len ?: get_length(this);
+	}
+
 	*chunk = chunk_alloc(out_len);
 
 	if (!get_bytes(this, out_len, chunk->ptr))
@@ -147,9 +170,9 @@ kdf_t *botan_kdf_create(key_derivation_function_t algo, va_list args)
 	private_kdf_t *this;
 	pseudo_random_function_t prf_alg;
 	const char *hash_name;
-	char *name, buf[8];
+	char *name, buf[HASH_SIZE_SHA512];
 
-	if (algo != KDF_PRF_PLUS)
+	if (algo != KDF_PRF && algo != KDF_PRF_PLUS)
 	{
 		return NULL;
 	}
@@ -160,7 +183,14 @@ kdf_t *botan_kdf_create(key_derivation_function_t algo, va_list args)
 	{
 		return NULL;
 	}
-	if (asprintf(&name, "HKDF-Expand(%s)", hash_name) <= 0)
+	if (algo == KDF_PRF)
+	{
+		if (asprintf(&name, "HKDF-Extract(%s)", hash_name) <= 0)
+		{
+			return NULL;
+		}
+	}
+	else if (asprintf(&name, "HKDF-Expand(%s)", hash_name) <= 0)
 	{
 		return NULL;
 	}
@@ -174,14 +204,13 @@ kdf_t *botan_kdf_create(key_derivation_function_t algo, va_list args)
 			.set_param = _set_param,
 			.destroy = _destroy,
 		},
+		.type = algo,
 		.name = name,
-#if BOTAN_VERSION_MAJOR == 2
 		.hash_size = hasher_hash_size(hasher_algorithm_from_prf(prf_alg)),
-#endif
 	);
 
 	/* test if we can actually use the algorithm */
-	if (!get_bytes(this, sizeof(buf), buf))
+	if (!get_bytes(this, algo == KDF_PRF ? get_length(this) : sizeof(buf), buf))
 	{
 		destroy(this);
 		return NULL;
