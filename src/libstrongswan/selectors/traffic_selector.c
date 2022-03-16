@@ -109,8 +109,12 @@ static void calc_range(private_traffic_selector_t *this, uint8_t netbits)
 	memcpy(this->to, this->from, bytes);
 	memset(this->from + bytes, 0x00, len - bytes);
 	memset(this->to   + bytes, 0xff, len - bytes);
-	this->from[bytes-1] &= ~mask;
-	this->to[bytes-1]   |=  mask;
+
+	if (bytes)
+	{
+		this->from[bytes-1] &= ~mask;
+		this->to[bytes-1]   |=  mask;
+	}
 }
 
 /**
