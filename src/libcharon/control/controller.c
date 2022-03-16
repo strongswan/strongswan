@@ -15,6 +15,28 @@
  * for more details.
  */
 
+/*
+ * Copyright (C) 2014 Timo Teräs <timo.teras@iki.fi>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 #include "controller.h"
 
 #include <sys/types.h>
@@ -101,6 +123,16 @@ struct interface_listener_t {
 	 * IKE_SA to handle
 	 */
 	ike_sa_t *ike_sa;
+
+	/**
+	 * Our host hint.
+	 */
+	host_t *my_host;
+
+	/**
+	 * Other host hint.
+	 */
+	host_t *other_host;
 
 	/**
 	 * unique ID, used for various methods
@@ -414,9 +446,13 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 	ike_sa_t *ike_sa;
 	interface_listener_t *listener = &job->listener;
 	peer_cfg_t *peer_cfg = listener->peer_cfg;
-
+	host_t *my_host = listener->my_host;
+	host_t *other_host = listener->other_host;
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
-														peer_cfg);
+														peer_cfg, my_host, other_host);
+	DESTROY_IF(my_host);
+	DESTROY_IF(other_host);
+
 	peer_cfg->destroy(peer_cfg);
 	if (!ike_sa)
 	{
@@ -425,6 +461,7 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 		listener_done(listener);
 		return JOB_REQUEUE_NONE;
 	}
+
 	listener->lock->lock(listener->lock);
 	listener->ike_sa = ike_sa;
 	listener->lock->unlock(listener->lock);
@@ -492,6 +529,7 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 
 METHOD(controller_t, initiate, status_t,
 	private_controller_t *this, peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
+	host_t *my_host, host_t *other_host,
 	controller_cb_t callback, void *param, u_int timeout, bool limits)
 {
 	interface_job_t *job;
@@ -514,6 +552,8 @@ METHOD(controller_t, initiate, status_t,
 			.status = FAILED,
 			.child_cfg = child_cfg,
 			.peer_cfg = peer_cfg,
+			.my_host = my_host ? my_host->clone(my_host) : NULL,
+			.other_host = other_host ? other_host->clone(other_host) : NULL,
 			.lock = spinlock_create(),
 			.options.limits = limits,
 		},
