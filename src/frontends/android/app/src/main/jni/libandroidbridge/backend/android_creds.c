@@ -249,10 +249,10 @@ METHOD(android_creds_t, add_username_password, void,
 
 METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 	private_android_creds_t *this, shared_key_type_t type,
-	identification_t *me, identification_t *other)
+	identification_t *me, identification_t *other, const char *msg)
 {
 	return this->creds->set.create_shared_enumerator(&this->creds->set,
-													 type, me, other);
+													 type, me, other, msg);
 }
 
 METHOD(android_creds_t, load_user_certificate, certificate_t*,

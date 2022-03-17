@@ -63,40 +63,42 @@ struct private_cmd_creds_t {
 	char *identity;
 };
 
-/**
- * Callback function to prompt for secret
- */
-static shared_key_t* callback_shared(private_cmd_creds_t *this,
-								shared_key_type_t type,
-								identification_t *me, identification_t *other,
-								id_match_t *match_me, id_match_t *match_other)
+CALLBACK(callback_shared, shared_key_t*,
+	private_cmd_creds_t *this, shared_key_type_t type, identification_t *me,
+	identification_t *other, const char *msg, id_match_t *match_me,
+	id_match_t *match_other)
 {
 	shared_key_t *shared;
-	char *label, *pwd = NULL;
+	const char *label = msg;
+	char buf[BUF_LEN], *pwd = NULL;
 
 	if (type == this->prompted)
 	{
 		return NULL;
 	}
-	switch (type)
+	if (!label || !*label)
 	{
-		case SHARED_EAP:
-			label = "EAP password: ";
-			break;
-		case SHARED_IKE:
-			label = "Preshared Key: ";
-			break;
-		case SHARED_PRIVATE_KEY_PASS:
-			label = "Password: ";
-			break;
-		case SHARED_PIN:
-			label = "PIN: ";
-			break;
-		default:
-			return NULL;
+		switch (type)
+		{
+			case SHARED_EAP:
+				label = "EAP password";
+				break;
+			case SHARED_IKE:
+				label = "Preshared Key";
+				break;
+			case SHARED_PRIVATE_KEY_PASS:
+				label = "Password";
+				break;
+			case SHARED_PIN:
+				label = "PIN";
+				break;
+			default:
+				return NULL;
+		}
 	}
+	snprintf(buf, sizeof(buf), "%s: ", label);
 #ifdef HAVE_GETPASS
-	pwd = getpass(label);
+	pwd = getpass(buf);
 #endif
 	if (!pwd || strlen(pwd) == 0)
 	{
@@ -289,7 +291,7 @@ cmd_creds_t *cmd_creds_create()
 		.creds = mem_cred_create(),
 		.prompted = SHARED_ANY,
 	);
-	this->cb = callback_cred_create_shared((void*)callback_shared, this);
+	this->cb = callback_cred_create_shared(callback_shared, this);
 
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 	lib->credmgr->add_set(lib->credmgr, &this->cb->set);

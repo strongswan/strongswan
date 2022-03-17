@@ -153,7 +153,7 @@ static bool decrypt_and_unpack(private_pkcs12_t *this)
 	bool success = FALSE;
 
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-										SHARED_PRIVATE_KEY_PASS, NULL, NULL);
+									SHARED_PRIVATE_KEY_PASS, NULL, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
 		key = shared->get_key(shared);

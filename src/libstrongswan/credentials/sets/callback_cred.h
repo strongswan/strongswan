@@ -31,13 +31,15 @@ typedef struct callback_cred_t callback_cred_t;
  * @param type			type of requested shared key
  * @param me			own identity
  * @param other			other identity
+ * @param msg			optional message that could be displayed to a user
  * @param match_me		match result of own identity
  * @param match_other	match result of other identity
  */
 typedef shared_key_t* (*callback_cred_shared_cb_t)(
 								void *data, shared_key_type_t type,
 								identification_t *me, identification_t *other,
-								id_match_t *match_me, id_match_t *match_other);
+								const char *msg, id_match_t *match_me,
+								id_match_t *match_other);
 
 /**
  * Generic callback using user specified callback functions.

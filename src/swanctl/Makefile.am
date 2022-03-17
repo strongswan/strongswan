@@ -21,6 +21,7 @@ swanctl_SOURCES = \
 	commands/load_conns.c commands/load_conns.h \
 	commands/load_creds.c commands/load_creds.h \
 	commands/load_pools.c commands/load_pools.h \
+	commands/prompt.c commands/prompt.h \
 	commands/log.c \
 	commands/version.c \
 	commands/stats.c \

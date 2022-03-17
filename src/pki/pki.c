@@ -390,9 +390,10 @@ static shared_key_type_t prompted;
 /**
  * Callback function to receive credentials
  */
-static shared_key_t* cb(void *data, shared_key_type_t type,
-						identification_t *me, identification_t *other,
-						id_match_t *match_me, id_match_t *match_other)
+CALLBACK(cb, shared_key_t*,
+	void *data, shared_key_type_t type, identification_t *me,
+	identification_t *other, const char *msg, id_match_t *match_me,
+	id_match_t *match_other)
 {
 	char buf[64], *label, *secret = NULL;
 	shared_key_t *shared;

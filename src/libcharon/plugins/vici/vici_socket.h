@@ -72,8 +72,9 @@ struct vici_socket_t {
 	 *
 	 * @param id		unique client connection identifier
 	 * @param data		data to send to client, gets owned
+	 * @return			bool indicating success
 	 */
-	void (*send)(vici_socket_t *this, u_int id, chunk_t data);
+	bool (*send)(vici_socket_t *this, u_int id, chunk_t data);
 
 	/**
 	 * Destroy socket.

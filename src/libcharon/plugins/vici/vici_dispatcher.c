@@ -96,6 +96,10 @@ typedef struct {
 	void *user;
 	/** command currently in use? */
 	u_int uses;
+	/** callback for registration/unregister */
+	vici_register_cb_t register_cb;
+	/** user data to pass to connect callback */
+	void *register_cb_data;
 } command_t;
 
 /**
@@ -113,12 +117,12 @@ typedef struct {
 /**
  * Send a operation code, optionally with name and message
  */
-static void send_op(private_vici_dispatcher_t *this, u_int id,
+static bool send_op(private_vici_dispatcher_t *this, u_int id,
 					vici_operation_t op, char *name, vici_message_t *message)
 {
 	bio_writer_t *writer;
 	u_int len;
-
+	bool ret = FALSE;
 	len = sizeof(uint8_t);
 	if (name)
 	{
@@ -138,8 +142,12 @@ static void send_op(private_vici_dispatcher_t *this, u_int id,
 	{
 		writer->write_data(writer, message->get_encoding(message));
 	}
-	this->socket->send(this->socket, id, writer->extract_buf(writer));
+	if (this->socket->send(this->socket, id, writer->extract_buf(writer)))
+	{
+		ret = TRUE;
+	}
 	writer->destroy(writer);
+	return ret;
 }
 
 /**
@@ -149,10 +157,18 @@ static void register_event(private_vici_dispatcher_t *this, char *name,
 						   u_int id)
 {
 	event_t *event;
-
+	command_t *cmd;
 	this->mutex->lock(this->mutex);
 	while (TRUE)
 	{
+		cmd = this->cmds->get(this->cmds, name);
+		if (cmd)
+		{
+			if (cmd->register_cb)
+			{
+				cmd->register_cb(cmd->register_cb_data, name, id, TRUE);
+			}
+		}
 		event = this->events->get(this->events, name);
 		if (!event)
 		{
@@ -189,6 +205,7 @@ static void unregister_event(private_vici_dispatcher_t *this, char *name,
 	event_t *event;
 	u_int *current;
 	bool found = FALSE;
+	command_t *cmd;
 
 	this->mutex->lock(this->mutex);
 	while (TRUE)
@@ -207,7 +224,13 @@ static void unregister_event(private_vici_dispatcher_t *this, char *name,
 				{
 					array_remove_at(event->clients, enumerator);
 					found = TRUE;
-					break;
+					cmd = this->cmds->get(this->cmds, name);
+					if (cmd)
+					{
+						if (cmd->register_cb) {
+							cmd->register_cb(cmd->register_cb_data, name, id, FALSE);
+						}
+					}
 				}
 			}
 			enumerator->destroy(enumerator);
@@ -407,7 +430,7 @@ CALLBACK(disconnect, void,
 
 METHOD(vici_dispatcher_t, manage_command, void,
 	private_vici_dispatcher_t *this, char *name,
-	vici_command_cb_t cb, void *user)
+	vici_command_cb_t cb, void *user, vici_register_cb_t register_cb, void *register_cb_data)
 {
 	command_t *cmd;
 
@@ -418,6 +441,8 @@ METHOD(vici_dispatcher_t, manage_command, void,
 			.name = strdup(name),
 			.cb = cb,
 			.user = user,
+			.register_cb = register_cb,
+			.register_cb_data = register_cb_data,
 		);
 		cmd = this->cmds->put(this->cmds, cmd->name, cmd);
 	}
@@ -488,13 +513,14 @@ METHOD(vici_dispatcher_t, has_event_listeners, bool,
 	return retval;
 }
 
-METHOD(vici_dispatcher_t, raise_event, void,
+METHOD(vici_dispatcher_t, raise_event, bool,
 	private_vici_dispatcher_t *this, char *name, u_int id,
 	vici_message_t *message)
 {
 	enumerator_t *enumerator;
 	event_t *event;
 	u_int *current;
+	bool ret = FALSE;
 
 	this->mutex->lock(this->mutex);
 	event = this->events->get(this->events, name);
@@ -508,7 +534,7 @@ METHOD(vici_dispatcher_t, raise_event, void,
 		{
 			if (id == 0 || id == *current)
 			{
-				send_op(this, *current, VICI_EVENT, name, message);
+				ret = send_op(this, *current, VICI_EVENT, name, message);
 			}
 		}
 		enumerator->destroy(enumerator);
@@ -522,6 +548,7 @@ METHOD(vici_dispatcher_t, raise_event, void,
 	this->mutex->unlock(this->mutex);
 
 	message->destroy(message);
+	return ret;
 }
 
 METHOD(vici_dispatcher_t, destroy, void,

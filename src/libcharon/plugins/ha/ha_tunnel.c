@@ -138,7 +138,7 @@ METHOD(enumerator_t, shared_enumerate, bool,
 
 METHOD(ha_creds_t, create_shared_enumerator, enumerator_t*,
 	ha_creds_t *this, shared_key_type_t type,
-	identification_t *me, identification_t *other)
+	identification_t *me, identification_t *other, const char *msg)
 {
 	shared_enum_t *enumerator;
 

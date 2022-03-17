@@ -252,7 +252,7 @@ static bool reauth(private_pkcs11_private_key_t *this,
 	bool found = FALSE, success = FALSE;
 
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-												SHARED_PIN, this->keyid, NULL);
+											SHARED_PIN, this->keyid, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
 		found = TRUE;
@@ -763,7 +763,7 @@ static bool login(private_pkcs11_private_key_t *this, int slot)
 	}
 
 	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-												SHARED_PIN, this->keyid, NULL);
+											SHARED_PIN, this->keyid, NULL, NULL);
 	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
 	{
 		found = TRUE;

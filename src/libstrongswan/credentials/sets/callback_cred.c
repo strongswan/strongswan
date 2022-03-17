@@ -55,6 +55,8 @@ typedef struct {
 	identification_t *me;
 	/* other identity to match */
 	identification_t *other;
+	/* optional msg */
+	char *msg;
 	/* current shared key */
 	shared_key_t *current;
 } shared_enumerator_t;
@@ -68,7 +70,8 @@ METHOD(enumerator_t, shared_enumerate, bool,
 	VA_ARGS_VGET(args, out, match_me, match_other);
 	DESTROY_IF(this->current);
 	this->current = this->this->cb.shared(this->this->data, this->type,
-								this->me, this->other, match_me, match_other);
+								this->me, this->other, this->msg, match_me,
+								match_other);
 	if (this->current)
 	{
 		*out = this->current;
@@ -81,12 +84,13 @@ METHOD(enumerator_t, shared_destroy, void,
 	shared_enumerator_t *this)
 {
 	DESTROY_IF(this->current);
+	free(this->msg);
 	free(this);
 }
 
 METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 	private_callback_cred_t *this, shared_key_type_t type,
-	identification_t *me, identification_t *other)
+	identification_t *me, identification_t *other, const char *msg)
 {
 	shared_enumerator_t *enumerator;
 
@@ -100,6 +104,7 @@ METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 		.type = type,
 		.me = me,
 		.other = other,
+		.msg = strdupnull(msg),
 	);
 	return &enumerator->public;
 }

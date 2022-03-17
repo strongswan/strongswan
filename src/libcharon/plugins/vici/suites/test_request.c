@@ -105,7 +105,7 @@ START_TEST(test_echo)
 	dispatcher = vici_dispatcher_create(URI);
 	ck_assert(dispatcher);
 
-	dispatcher->manage_command(dispatcher, "echo", echo_cb, (void*)(uintptr_t)1);
+	dispatcher->manage_command(dispatcher, "echo", echo_cb, (void*)(uintptr_t)1, NULL, NULL);
 
 	vici_init();
 	conn = vici_connect(URI);
@@ -120,7 +120,7 @@ START_TEST(test_echo)
 
 	vici_disconnect(conn);
 
-	dispatcher->manage_command(dispatcher, "echo", NULL, NULL);
+	dispatcher->manage_command(dispatcher, "echo", NULL, NULL, NULL, NULL);
 
 	lib->processor->cancel(lib->processor);
 	dispatcher->destroy(dispatcher);
@@ -152,7 +152,7 @@ START_TEST(test_missing)
 
 	vici_disconnect(conn);
 
-	dispatcher->manage_command(dispatcher, "echo", NULL, NULL);
+	dispatcher->manage_command(dispatcher, "echo", NULL, NULL, NULL, NULL);
 
 	lib->processor->cancel(lib->processor);
 	dispatcher->destroy(dispatcher);
@@ -181,7 +181,7 @@ START_TEST(test_stress)
 	dispatcher = vici_dispatcher_create(URI);
 	ck_assert(dispatcher);
 
-	dispatcher->manage_command(dispatcher, "echo", echo_cb, (void*)(uintptr_t)1);
+	dispatcher->manage_command(dispatcher, "echo", echo_cb, (void*)(uintptr_t)1, NULL, NULL);
 	dispatcher->manage_event(dispatcher, "dummy", TRUE);
 
 	vici_init();
@@ -214,7 +214,7 @@ START_TEST(test_stress)
 
 	vici_disconnect(conn);
 
-	dispatcher->manage_command(dispatcher, "echo", NULL, NULL);
+	dispatcher->manage_command(dispatcher, "echo", NULL, NULL, NULL, NULL);
 	dispatcher->manage_event(dispatcher, "dummy", FALSE);
 
 	lib->processor->cancel(lib->processor);

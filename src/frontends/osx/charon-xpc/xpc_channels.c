@@ -458,10 +458,10 @@ static shared_key_t *query_password(xpc_connection_t conn, identification_t *id)
 /**
  * Password query callback
  */
-static shared_key_t* password_cb(private_xpc_channels_t *this,
-								 shared_key_type_t type,
-								 identification_t *me, identification_t *other,
-								 id_match_t *match_me, id_match_t *match_other)
+CALLBACK(password_cb, shared_key_t*,
+	private_xpc_channels_t *this, shared_key_type_t type, identification_t *me,
+	identification_t *other, const char *msg, id_match_t *match_me,
+	id_match_t *match_other)
 {
 	shared_key_t *shared = NULL;
 	ike_sa_t *ike_sa;
@@ -537,8 +537,7 @@ xpc_channels_t *xpc_channels_create()
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
-	this->creds = callback_cred_create_shared(
-								(callback_cred_shared_cb_t)password_cb, this);
+	this->creds = callback_cred_create_shared(password_cb, this);
 	lib->credmgr->add_set(lib->credmgr, &this->creds->set);
 
 	return &this->public;

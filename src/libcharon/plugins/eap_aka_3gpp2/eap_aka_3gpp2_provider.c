@@ -52,7 +52,7 @@ bool eap_aka_3gpp2_get_k(identification_t *id, char k[AKA_K_LEN])
 	shared_key_t *shared;
 	chunk_t key;
 
-	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP, id, NULL);
+	shared = lib->credmgr->get_shared(lib->credmgr, SHARED_EAP, id, NULL, NULL);
 	if (shared == NULL)
 	{
 		return FALSE;
