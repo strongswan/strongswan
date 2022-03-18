@@ -69,8 +69,12 @@ charon.cisco_unity = no
 charon.close_ike_on_child_failure = no
 	Close the IKE_SA if setup of the CHILD_SA along with IKE_AUTH failed.
 
-charon.cookie_threshold = 10
+charon.cookie_threshold = 30
 	Number of half-open IKE_SAs that activate the cookie mechanism.
+
+charon.cookie_threshold_ip = 3
+	Number of half-open IKE_SAs for a single peer IP that activate the cookie
+	mechanism.
 
 charon.crypto_test.bench = no
 	Benchmark crypto algorithms and order them by efficiency.
