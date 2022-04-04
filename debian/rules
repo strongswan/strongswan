@@ -20,6 +20,9 @@ override_dh_auto_test:
 
 override_dh_auto_install:
 	dh_auto_install
+	dh_install -p strongswan --sourcedir=debian/tmp/ etc/
+	dh_install -p strongswan --sourcedir=debian/tmp/ lib/
+	dh_install -p strongswan --sourcedir=debian/tmp/ usr/
 	mkdir -p debian/strongswan/etc/ssl
 	mkdir -p debian/strongswan/etc/swanctl/conf.d
 	./install-config
