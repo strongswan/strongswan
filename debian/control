@@ -26,3 +26,12 @@ Description: IPsec VPN solution package
  kernel. It supports both IKEv1 and IKEv2 protocols.
  This package contains all the libraries and binaries required
  to maintain IKEv1 and IKEv2 connections.
+
+Package: strongswan-swanctl
+Architecture: any
+Description: strongSwan IPsec client, swanctl command
+ The strongSwan VPN suite uses the native IPsec stack in the standard
+ Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
+ .
+ This package contains the swanctl interface, used to configure a running
+ charon daemon

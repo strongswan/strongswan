@@ -21,10 +21,18 @@ BuildRequires: gcc >= 3
 
 Obsoletes: libreswan
 
+%package -n strongswan-swanctl
+Summary: Placeholder package for strongswan-swanctl for dependency resolution
+%description -n strongswan-swanctl
+This package contains the swanctl interface, used to configure a running
+charon daemon
+
 %description
 The strongSwan IPsec implementation supports both IKEv1 IKEv2 key
 exchange protocols in conjunction with the native NETKEY IPsec stack of the
 Linux Kernel.
+
+%files -n strongswan-swanctl
 
 %prep
 %setup
