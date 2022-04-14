@@ -18,7 +18,7 @@ class ChunkFromChars extends Expr {
     this = any(MacroInvocation mi |
       mi.getOutermostMacroAccess().getMacroName() = "chunk_from_chars"
       /* ignore global static uses of the macro */
-      and exists (Block b | mi.getExpr().getEnclosingBlock() = b)
+      and exists (BlockStmt b | mi.getExpr().getEnclosingBlock() = b)
     ).getExpr()
   }
 }
@@ -40,7 +40,7 @@ class ChunkFromCharsUsage extends DataFlow::Configuration {
   }
 }
 
-Block enclosingBlock(Block b) {
+BlockStmt enclosingBlock(BlockStmt b) {
   result = b.getEnclosingBlock()
 }
 
