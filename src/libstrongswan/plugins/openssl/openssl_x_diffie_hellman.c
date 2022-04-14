@@ -46,14 +46,14 @@ struct private_diffie_hellman_t {
 	EVP_PKEY *key;
 
 	/**
+	 * Public key provided by peer
+	 */
+	EVP_PKEY *pub;
+
+	/**
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
-
-	/**
-	 * True if shared secret is computed
-	 */
-	bool computed;
 };
 
 /**
@@ -75,33 +75,21 @@ static int map_key_type(diffie_hellman_group_t group)
 METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_diffie_hellman_t *this, chunk_t value)
 {
-	EVP_PKEY *pub;
-
 	if (!diffie_hellman_verify_value(this->group, value))
 	{
 		return FALSE;
 	}
 
-	pub =  EVP_PKEY_new_raw_public_key(map_key_type(this->group), NULL,
-                                       value.ptr, value.len);
-	if (!pub)
+	EVP_PKEY_free(this->pub);
+	this->pub = EVP_PKEY_new_raw_public_key(map_key_type(this->group), NULL,
+											value.ptr, value.len);
+	if (!this->pub)
 	{
 		DBG1(DBG_LIB, "%N public value is malformed",
 			 diffie_hellman_group_names, this->group);
 		return FALSE;
 	}
-
 	chunk_clear(&this->shared_secret);
-
-	if (!openssl_compute_shared_key(this->key, pub, &this->shared_secret))
-	{
-		DBG1(DBG_LIB, "%N shared secret computation failed",
-			 diffie_hellman_group_names, this->group);
-		EVP_PKEY_free(pub);
-		return FALSE;
-	}
-	this->computed = TRUE;
-	EVP_PKEY_free(pub);
 	return TRUE;
 }
 
@@ -141,8 +129,11 @@ METHOD(diffie_hellman_t, set_private_value, bool,
 METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_diffie_hellman_t *this, chunk_t *secret)
 {
-	if (!this->computed)
+	if (!this->shared_secret.len &&
+		!openssl_compute_shared_key(this->key, this->pub, &this->shared_secret))
 	{
+		DBG1(DBG_LIB, "%N shared secret computation failed",
+			 diffie_hellman_group_names, this->group);
 		return FALSE;
 	}
 	*secret = chunk_clone(this->shared_secret);
@@ -159,6 +150,7 @@ METHOD(diffie_hellman_t, destroy, void,
 	private_diffie_hellman_t *this)
 {
 	EVP_PKEY_free(this->key);
+	EVP_PKEY_free(this->pub);
 	chunk_clear(&this->shared_secret);
 	free(this);
 }

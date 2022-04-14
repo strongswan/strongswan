@@ -19,6 +19,7 @@ libstrongswan_openssl_la_SOURCES = \
 	openssl_plugin.h openssl_plugin.c \
 	openssl_util.c openssl_util.h \
 	openssl_crypter.c openssl_crypter.h \
+	openssl_engine.c openssl_engine.h \
 	openssl_hasher.c openssl_hasher.h \
 	openssl_sha1_prf.c openssl_sha1_prf.h \
 	openssl_diffie_hellman.c openssl_diffie_hellman.h \

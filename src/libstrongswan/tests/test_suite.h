@@ -220,6 +220,18 @@ void test_setup_timeout(int s);
 int test_failure_get(char *msg, int len, const char **file);
 
 /**
+ * Get info about warnings if any were issued during the test. Resets the
+ * warning state.
+ *
+ * @param cb		callback that receives a custom context object, message,
+ *					source file and line of each warning
+ * @param ctx		context object
+ * @return			TRUE if any warnings were issued
+ */
+bool test_warnings_get(void (*cb)(void *ctx, const char *msg, const char *file,
+								  const int line), void *ctx);
+
+/**
  * Get info about a warning if one was issued during the test. Resets the
  * warning state.
  *

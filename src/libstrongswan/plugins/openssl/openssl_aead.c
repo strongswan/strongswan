@@ -15,8 +15,6 @@
 
 #include <openssl/opensslv.h>
 
-#if OPENSSL_VERSION_NUMBER >= 0x1000100fL
-
 #include "openssl_aead.h"
 
 #include <openssl/evp.h>
@@ -363,5 +361,3 @@ aead_t *openssl_aead_create(encryption_algorithm_t algo,
 
 	return &this->public;
 }
-
-#endif /* OPENSSL_VERSION_NUMBER */

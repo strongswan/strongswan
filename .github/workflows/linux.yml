@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test: [ botan, wolfssl, openssl, gcrypt ]
+        test: [ botan, wolfssl, openssl, openssl-3, gcrypt ]
         leak-detective: [ no, yes ]
     env:
       LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}

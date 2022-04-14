@@ -23,6 +23,15 @@
 
 #if OPENSSL_VERSION_NUMBER < 0x1010000fL
 #include <openssl/bn.h>
+#elif OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/bn.h>
+#include <openssl/param_build.h>
+#include <openssl/core_names.h>
+#endif
+
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#define EVP_PKEY_set1_encoded_public_key EVP_PKEY_set1_tls_encodedpoint
+#define EVP_PKEY_get1_encoded_public_key EVP_PKEY_get1_tls_encodedpoint
 #endif
 
 #include "openssl_ec_diffie_hellman.h"
@@ -50,6 +59,11 @@ struct private_openssl_ec_diffie_hellman_t {
 	 * EC private (public) key
 	 */
 	EVP_PKEY *key;
+
+	/**
+	 * Public key provided by peer
+	 */
+	EVP_PKEY *pub;
 
 	/**
 	 * EC group
@@ -186,50 +200,35 @@ error:
 METHOD(diffie_hellman_t, set_other_public_value, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
 {
-	EVP_PKEY *pub = NULL;
-
-	chunk_clear(&this->shared_secret);
-	this->computed = FALSE;
-
 	if (!diffie_hellman_verify_value(this->group, value))
 	{
 		return FALSE;
 	}
 
-	pub = EVP_PKEY_new();
-	if (!pub)
+	if (!this->pub)
 	{
-		goto error;
+		this->pub = EVP_PKEY_new();
 	}
 
 #if OPENSSL_VERSION_NUMBER < 0x1010000fL
-	if (!chunk2ecp(this->ec_group, value, pub))
+	if (!chunk2ecp(this->ec_group, value, this->pub))
 	{
 		DBG1(DBG_LIB, "ECDH public value is malformed");
-		goto error;
+		return FALSE;
 	}
 #else
 	/* OpenSSL expects the pubkey in the format specified in section 2.3.4 of
 	 * SECG SEC 1, i.e. prefixed with 0x04 to indicate an uncompressed point */
 	value = chunk_cata("cc", chunk_from_chars(0x04), value);
-	if (EVP_PKEY_copy_parameters(pub, this->key) <= 0 ||
-		EVP_PKEY_set1_tls_encodedpoint(pub, value.ptr, value.len) <= 0)
+	if (EVP_PKEY_copy_parameters(this->pub, this->key) <= 0 ||
+		EVP_PKEY_set1_encoded_public_key(this->pub, value.ptr, value.len) <= 0)
 	{
 		DBG1(DBG_LIB, "ECDH public value is malformed");
-		goto error;
+		return FALSE;
 	}
 #endif
-
-	if (!openssl_compute_shared_key(this->key, pub, &this->shared_secret))
-	{
-		DBG1(DBG_LIB, "ECDH shared secret computation failed");
-		goto error;
-	}
-	this->computed = TRUE;
-
-error:
-	EVP_PKEY_free(pub);
-	return this->computed;
+	chunk_clear(&this->shared_secret);
+	return TRUE;
 }
 
 METHOD(diffie_hellman_t, get_my_public_value, bool,
@@ -242,7 +241,7 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 
 	/* OpenSSL returns the pubkey in the format specified in section 2.3.4 of
 	 * SECG SEC 1, i.e. prefixed with 0x04 to indicate an uncompressed point */
-	pub.len = EVP_PKEY_get1_tls_encodedpoint(this->key, &pub.ptr);
+	pub.len = EVP_PKEY_get1_encoded_public_key(this->key, &pub.ptr);
 	if (pub.len != 0)
 	{
 		*value = chunk_clone(chunk_skip(pub, 1));
@@ -253,59 +252,13 @@ METHOD(diffie_hellman_t, get_my_public_value, bool,
 #endif
 }
 
-METHOD(diffie_hellman_t, set_private_value, bool,
-	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
-{
-	EC_KEY *key = NULL;
-	EC_POINT *pub = NULL;
-	BIGNUM *priv = NULL;
-	bool ret = FALSE;
-
-	priv = BN_bin2bn(value.ptr, value.len, NULL);
-	if (!priv)
-	{
-		goto error;
-	}
-	pub = EC_POINT_new(this->ec_group);
-	if (!pub)
-	{
-		goto error;
-	}
-	if (EC_POINT_mul(this->ec_group, pub, priv, NULL, NULL, NULL) != 1)
-	{
-		goto error;
-	}
-	key = EC_KEY_new();
-	if (!key || !EC_KEY_set_group(key, this->ec_group))
-	{
-		goto error;
-	}
-	if (EC_KEY_set_private_key(key, priv) != 1)
-	{
-		goto error;
-	}
-	if (EC_KEY_set_public_key(key, pub) != 1)
-	{
-		goto error;
-	}
-	if (EVP_PKEY_set1_EC_KEY(this->key, key) != 1)
-	{
-		goto error;
-	}
-	ret = TRUE;
-
-error:
-	EC_POINT_free(pub);
-	BN_free(priv);
-	EC_KEY_free(key);
-	return ret;
-}
-
 METHOD(diffie_hellman_t, get_shared_secret, bool,
 	private_openssl_ec_diffie_hellman_t *this, chunk_t *secret)
 {
-	if (!this->computed)
+	if (!this->shared_secret.len &&
+		!openssl_compute_shared_key(this->key, this->pub, &this->shared_secret))
 	{
+		DBG1(DBG_LIB, "ECDH shared secret computation failed");
 		return FALSE;
 	}
 	*secret = chunk_clone(this->shared_secret);
@@ -316,15 +269,6 @@ METHOD(diffie_hellman_t, get_dh_group, diffie_hellman_group_t,
 	private_openssl_ec_diffie_hellman_t *this)
 {
 	return this->group;
-}
-
-METHOD(diffie_hellman_t, destroy, void,
-	private_openssl_ec_diffie_hellman_t *this)
-{
-	EC_GROUP_free(this->ec_group);
-	EVP_PKEY_free(this->key);
-	chunk_clear(&this->shared_secret);
-	free(this);
 }
 
 /*
@@ -360,21 +304,151 @@ int openssl_ecdh_group_to_nid(diffie_hellman_group_t group)
 	}
 }
 
+/**
+ * Parse the given private key as BIGNUM and calculate the corresponding public
+ * key as EC_POINT.
+ */
+static bool get_keypair(EC_GROUP *group, chunk_t value, BIGNUM **priv,
+						EC_POINT **pub)
+{
+	*priv = BN_bin2bn(value.ptr, value.len, NULL);
+	*pub = EC_POINT_new(group);
+	return *priv && *pub &&
+			EC_POINT_mul(group, *pub, *priv, NULL, NULL, NULL) == 1;
+}
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+
+/**
+ * Convert the given EC_POINT to a chunk.
+ */
+static bool ecp2chunk(EC_GROUP *group, EC_POINT *point, chunk_t *chunk)
+{
+	BN_CTX *ctx = BN_CTX_new();
+
+	if (ctx)
+	{
+		chunk->len = EC_POINT_point2buf(group, point,
+										POINT_CONVERSION_UNCOMPRESSED,
+										&chunk->ptr, ctx);
+	}
+	BN_CTX_free(ctx);
+	return chunk->len;
+}
+
+METHOD(diffie_hellman_t, set_private_value, bool,
+	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
+{
+	BIGNUM *priv = NULL;
+	EC_POINT *pub = NULL;
+	chunk_t pub_chunk = chunk_empty;
+	const char *name;
+	OSSL_PARAM_BLD *bld;
+	OSSL_PARAM *params = NULL;
+	EVP_PKEY_CTX *ctx;
+	EVP_PKEY *key = NULL;
+	bool ret = FALSE;
+
+	if (!get_keypair(this->ec_group, value, &priv, &pub) ||
+		!ecp2chunk(this->ec_group, pub, &pub_chunk))
+	{
+		EC_POINT_free(pub);
+		BN_free(priv);
+		return FALSE;
+	}
+	EC_POINT_free(pub);
+
+	name = OSSL_EC_curve_nid2name(openssl_ecdh_group_to_nid(this->group));
+	bld = OSSL_PARAM_BLD_new();
+	if (name && bld &&
+		OSSL_PARAM_BLD_push_utf8_string(bld, OSSL_PKEY_PARAM_GROUP_NAME,
+										(char*)name, 0) &&
+		OSSL_PARAM_BLD_push_octet_string(bld, OSSL_PKEY_PARAM_PUB_KEY,
+										 pub_chunk.ptr, pub_chunk.len) &&
+		OSSL_PARAM_BLD_push_BN(bld, OSSL_PKEY_PARAM_PRIV_KEY, priv))
+	{
+		params = OSSL_PARAM_BLD_to_param(bld);
+	}
+	OSSL_PARAM_BLD_free(bld);
+	chunk_free(&pub_chunk);
+	BN_free(priv);
+
+	ctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL);
+	if (params && ctx &&
+		EVP_PKEY_fromdata_init(ctx) > 0 &&
+		EVP_PKEY_fromdata(ctx, &key, EVP_PKEY_KEYPAIR, params) > 0)
+	{
+		EVP_PKEY_free(this->key);
+		this->key = key;
+		ret = TRUE;
+	}
+	EVP_PKEY_CTX_free(ctx);
+	OSSL_PARAM_free(params);
+	return ret;
+}
+
+#else /* OPENSSL_VERSION_NUMBER */
+
+METHOD(diffie_hellman_t, set_private_value, bool,
+	private_openssl_ec_diffie_hellman_t *this, chunk_t value)
+{
+	EC_KEY *key = NULL;
+	EC_POINT *pub = NULL;
+	BIGNUM *priv = NULL;
+	bool ret = FALSE;
+
+	if (!get_keypair(this->ec_group, value, &priv, &pub))
+	{
+		goto error;
+	}
+	key = EC_KEY_new();
+	if (!key || !EC_KEY_set_group(key, this->ec_group))
+	{
+		goto error;
+	}
+	if (EC_KEY_set_private_key(key, priv) != 1)
+	{
+		goto error;
+	}
+	if (EC_KEY_set_public_key(key, pub) != 1)
+	{
+		goto error;
+	}
+	if (EVP_PKEY_set1_EC_KEY(this->key, key) != 1)
+	{
+		goto error;
+	}
+	ret = TRUE;
+
+error:
+	EC_POINT_free(pub);
+	BN_free(priv);
+	EC_KEY_free(key);
+	return ret;
+}
+
+#endif /* OPENSSL_VERSION_NUMBER */
+
+METHOD(diffie_hellman_t, destroy, void,
+	private_openssl_ec_diffie_hellman_t *this)
+{
+	EC_GROUP_free(this->ec_group);
+	EVP_PKEY_free(this->key);
+	EVP_PKEY_free(this->pub);
+	chunk_clear(&this->shared_secret);
+	free(this);
+}
+
 /*
  * Described in header
  */
 openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_group_t group)
 {
 	private_openssl_ec_diffie_hellman_t *this;
-	EC_KEY *key = NULL;
 	int curve;
 
 	curve = openssl_ecdh_group_to_nid(group);
-	if (curve)
-	{
-		key = EC_KEY_new_by_curve_name(curve);
-	}
-	if (!key)
+	if (!curve)
 	{
 		return NULL;
 	}
@@ -391,17 +465,25 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 			},
 		},
 		.group = group,
-		.ec_group = EC_GROUP_dup(EC_KEY_get0_group(key)),
 	);
 
-	/* generate an EC private (public) key */
-	if (!EC_KEY_generate_key(key))
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	this->ec_group = EC_GROUP_new_by_curve_name(curve);
+	this->key = EVP_EC_gen(OSSL_EC_curve_nid2name(curve));
+	if (!this->key)
+	{
+		destroy(this);
+		return NULL;
+	}
+#else
+	EC_KEY *key = EC_KEY_new_by_curve_name(curve);
+	if (!key || !EC_KEY_generate_key(key))
 	{
 		EC_KEY_free(key);
 		destroy(this);
 		return NULL;
 	}
-
+	this->ec_group = EC_GROUP_dup(EC_KEY_get0_group(key));
 	this->key = EVP_PKEY_new();
 	if (!this->key || !EVP_PKEY_assign_EC_KEY(this->key, key))
 	{
@@ -409,6 +491,8 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(diffie_hellman_gro
 		destroy(this);
 		return NULL;
 	}
+#endif
+
 	return &this->public;
 }
 

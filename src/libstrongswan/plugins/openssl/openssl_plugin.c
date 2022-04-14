@@ -25,9 +25,6 @@
 #include <openssl/conf.h>
 #include <openssl/rand.h>
 #include <openssl/crypto.h>
-#ifndef OPENSSL_NO_ENGINE
-#include <openssl/engine.h>
-#endif
 #ifndef OPENSSL_NO_ECDH
 #include <openssl/ec.h>
 #endif
@@ -38,6 +35,7 @@
 #include "openssl_plugin.h"
 #include "openssl_util.h"
 #include "openssl_crypter.h"
+#include "openssl_engine.h"
 #include "openssl_hasher.h"
 #include "openssl_sha1_prf.h"
 #include "openssl_diffie_hellman.h"
@@ -160,41 +158,26 @@ static thread_value_t *cleanup;
  */
 static void cleanup_thread(void *arg)
 {
-#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
 	CRYPTO_THREADID tid;
 
 	CRYPTO_THREADID_set_numeric(&tid, (u_long)(uintptr_t)arg);
 	ERR_remove_thread_state(&tid);
-#else
-	ERR_remove_state((u_long)(uintptr_t)arg);
-#endif
 }
 
 /**
- * Thread-ID callback function
+ * Callback for thread ID
  */
-static u_long id_function(void)
+static void threadid_function(CRYPTO_THREADID *threadid)
 {
 	u_long id;
 
 	/* ensure the thread ID is never zero, otherwise OpenSSL might try to
 	 * acquire locks recursively */
 	id = 1 + (u_long)thread_current_id();
-
 	/* cleanup a thread's state later if OpenSSL interacted with it */
 	cleanup->set(cleanup, (void*)(uintptr_t)id);
-	return id;
+	CRYPTO_THREADID_set_numeric(threadid, id);
 }
-
-#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
-/**
- * Callback for thread ID
- */
-static void threadid_function(CRYPTO_THREADID *threadid)
-{
-	CRYPTO_THREADID_set_numeric(threadid, id_function());
-}
-#endif /* OPENSSL_VERSION_NUMBER */
 
 /**
  * initialize OpenSSL for multi-threaded use
@@ -205,14 +188,9 @@ static void threading_init()
 
 	cleanup = thread_value_create(cleanup_thread);
 
-#if OPENSSL_VERSION_NUMBER >= 0x1000000fL
 	CRYPTO_THREADID_set_callback(threadid_function);
-#else
-	CRYPTO_set_id_callback(id_function);
-#endif
 
 	CRYPTO_set_locking_callback(locking_function);
-
 	CRYPTO_set_dynlock_create_callback(create_function);
 	CRYPTO_set_dynlock_lock_callback(lock_function);
 	CRYPTO_set_dynlock_destroy_callback(destroy_function);
@@ -333,157 +311,6 @@ static private_key_t *openssl_private_key_load(key_type_t type, va_list args)
 			}
 		}
 	}
-	return NULL;
-}
-
-#ifndef OPENSSL_NO_ENGINE
-/**
- * Login to engine with a PIN specified for a keyid
- */
-static bool login(ENGINE *engine, chunk_t keyid)
-{
-	enumerator_t *enumerator;
-	shared_key_t *shared;
-	identification_t *id;
-	chunk_t key;
-	char pin[64];
-	bool found = FALSE, success = FALSE;
-
-	id = identification_create_from_encoding(ID_KEY_ID, keyid);
-	enumerator = lib->credmgr->create_shared_enumerator(lib->credmgr,
-														SHARED_PIN, id, NULL);
-	while (enumerator->enumerate(enumerator, &shared, NULL, NULL))
-	{
-		found = TRUE;
-		key = shared->get_key(shared);
-		if (snprintf(pin, sizeof(pin),
-					 "%.*s", (int)key.len, key.ptr) >= sizeof(pin))
-		{
-			continue;
-		}
-		if (ENGINE_ctrl_cmd_string(engine, "PIN", pin, 0))
-		{
-			success = TRUE;
-			break;
-		}
-		else
-		{
-			DBG1(DBG_CFG, "setting PIN on engine failed");
-		}
-	}
-	enumerator->destroy(enumerator);
-	id->destroy(id);
-	if (!found)
-	{
-		DBG1(DBG_CFG, "no PIN found for %#B", &keyid);
-	}
-	return success;
-}
-#endif /* OPENSSL_NO_ENGINE */
-
-/**
- * Load private key via engine
- */
-static private_key_t *openssl_private_key_connect(key_type_t type,
-												  va_list args)
-{
-#ifndef OPENSSL_NO_ENGINE
-	char *engine_id = NULL;
-	char keyname[BUF_LEN];
-	chunk_t keyid = chunk_empty;
-	EVP_PKEY *key;
-	ENGINE *engine;
-	int slot = -1;
-
-	while (TRUE)
-	{
-		switch (va_arg(args, builder_part_t))
-		{
-			case BUILD_PKCS11_KEYID:
-				keyid = va_arg(args, chunk_t);
-				continue;
-			case BUILD_PKCS11_SLOT:
-				slot = va_arg(args, int);
-				continue;
-			case BUILD_PKCS11_MODULE:
-				engine_id = va_arg(args, char*);
-				continue;
-			case BUILD_END:
-				break;
-			default:
-				return NULL;
-		}
-		break;
-	}
-	if (!keyid.len)
-	{
-		return NULL;
-	}
-
-	memset(keyname, 0, sizeof(keyname));
-	if (slot != -1)
-	{
-		snprintf(keyname, sizeof(keyname), "%d:", slot);
-	}
-	if (sizeof(keyname) - strlen(keyname) <= keyid.len * 2 + 1)
-	{
-		return NULL;
-	}
-	chunk_to_hex(keyid, keyname + strlen(keyname), FALSE);
-
-	if (!engine_id)
-	{
-		engine_id = lib->settings->get_str(lib->settings,
-							"%s.plugins.openssl.engine_id", "pkcs11", lib->ns);
-	}
-	engine = ENGINE_by_id(engine_id);
-	if (!engine)
-	{
-		DBG2(DBG_LIB, "engine '%s' is not available", engine_id);
-		return NULL;
-	}
-	if (!ENGINE_init(engine))
-	{
-		DBG1(DBG_LIB, "failed to initialize engine '%s'", engine_id);
-		ENGINE_free(engine);
-		return NULL;
-	}
-	ENGINE_free(engine);
-	if (!login(engine, keyid))
-	{
-		DBG1(DBG_LIB, "login to engine '%s' failed", engine_id);
-		ENGINE_finish(engine);
-		return NULL;
-	}
-	key = ENGINE_load_private_key(engine, keyname, NULL, NULL);
-	ENGINE_finish(engine);
-	if (!key)
-	{
-		DBG1(DBG_LIB, "failed to load private key with ID '%s' from "
-			 "engine '%s'", keyname, engine_id);
-		return NULL;
-	}
-
-	switch (EVP_PKEY_base_id(key))
-	{
-#ifndef OPENSSL_NO_RSA
-		case EVP_PKEY_RSA:
-			return openssl_rsa_private_key_create(key, TRUE);
-#endif
-#ifndef OPENSSL_NO_ECDSA
-		case EVP_PKEY_EC:
-			return openssl_ec_private_key_create(key, TRUE);
-#endif
-#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
-		case EVP_PKEY_ED25519:
-		case EVP_PKEY_ED448:
-			return openssl_ed_private_key_create(key, TRUE);
-#endif /* OPENSSL_VERSION_NUMBER */
-		default:
-			EVP_PKEY_free(key);
-			break;
-	}
-#endif /* OPENSSL_NO_ENGINE */
 	return NULL;
 }
 
@@ -615,7 +442,8 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(XOF, XOF_SHAKE_128),
 			PLUGIN_PROVIDE(XOF, XOF_SHAKE_256),
 #endif
-#ifndef OPENSSL_NO_SHA1
+#if !defined(OPENSSL_NO_SHA1) && \
+	(OPENSSL_VERSION_NUMBER < 0x30000000L || !defined(OPENSSL_NO_DEPRECATED))
 		/* keyed sha1 hasher (aka prf) */
 		PLUGIN_REGISTER(PRF, openssl_sha1_prf_create),
 			PLUGIN_PROVIDE(PRF, PRF_KEYED_SHA1),
@@ -662,7 +490,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(KDF, KDF_PRF_PLUS),
 #endif
 #endif /* OPENSSL_NO_HMAC */
-#if (OPENSSL_VERSION_NUMBER >= 0x1000100fL && !defined(OPENSSL_NO_AES)) || \
+#if (!defined(OPENSSL_NO_AES)) || \
 	(OPENSSL_VERSION_NUMBER >= 0x1010000fL && !defined(OPENSSL_NO_CHACHA))
 		/* AEAD (AES GCM since 1.0.1, ChaCha20-Poly1305 since 1.1.0) */
 		PLUGIN_REGISTER(AEAD, openssl_aead_create),
@@ -722,10 +550,8 @@ METHOD(plugin_t, get_features, int,
 		/* signature/encryption schemes */
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_NULL),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_NULL),
-#if OPENSSL_VERSION_NUMBER >=  0x10000000L
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PSS),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PSS),
-#endif
 #ifndef OPENSSL_NO_SHA1
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_RSA_EMSA_PKCS1_SHA1),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA1),
@@ -886,6 +712,7 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_openssl_plugin_t *this)
 {
+
 /* OpenSSL 1.1.0 cleans up itself at exit and while OPENSSL_cleanup() exists we
  * can't call it as we couldn't re-initialize the library (as required by the
  * unit tests and the Android app) */
@@ -895,9 +722,7 @@ METHOD(plugin_t, destroy, void,
 	OBJ_cleanup();
 #endif
 	EVP_cleanup();
-#ifndef OPENSSL_NO_ENGINE
-	ENGINE_cleanup();
-#endif /* OPENSSL_NO_ENGINE */
+	openssl_engine_deinit();
 	CRYPTO_cleanup_all_ex_data();
 	threading_cleanup();
 	ERR_free_strings();
@@ -981,11 +806,7 @@ plugin_t *openssl_plugin_create()
 	OPENSSL_config(NULL);
 #endif
 	OpenSSL_add_all_algorithms();
-#ifndef OPENSSL_NO_ENGINE
-	/* activate support for hardware accelerators */
-	ENGINE_load_builtin_engines();
-	ENGINE_register_all_complete();
-#endif /* OPENSSL_NO_ENGINE */
+	openssl_engine_init();
 #endif /* OPENSSL_VERSION_NUMBER */
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
