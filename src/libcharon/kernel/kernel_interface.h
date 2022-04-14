@@ -50,7 +50,6 @@ typedef struct kernel_interface_t kernel_interface_t;
 typedef enum kernel_feature_t kernel_feature_t;
 
 #include <networking/host.h>
-#include <crypto/prf_plus.h>
 
 #include <kernel/kernel_listener.h>
 #include <kernel/kernel_ipsec.h>

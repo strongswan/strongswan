@@ -113,6 +113,8 @@ struct plugin_feature_t {
 		FEATURE_PRF,
 		/** xof_t */
 		FEATURE_XOF,
+		/** kdf_t */
+		FEATURE_KDF,
 		/** drbg_t */
 		FEATURE_DRBG,
 		/** diffie_hellman_t */
@@ -176,8 +178,10 @@ struct plugin_feature_t {
 		integrity_algorithm_t signer;
 		/** FEATURE_PRF */
 		pseudo_random_function_t prf;
-		/** FEATURE_XOFF */
+		/** FEATURE_XOF */
 		ext_out_function_t xof;
+		/** FEATURE_KDF */
+		key_derivation_function_t kdf;
 		/** FEATURE_DRBG */
 		drbg_type_t drbg;
 		/** FEATURE_HASHER */
@@ -288,6 +292,7 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_HASHER(kind, alg)					__PLUGIN_FEATURE(kind, HASHER, .hasher = alg)
 #define _PLUGIN_FEATURE_PRF(kind, alg)						__PLUGIN_FEATURE(kind, PRF, .prf = alg)
 #define _PLUGIN_FEATURE_XOF(kind, alg)						__PLUGIN_FEATURE(kind, XOF, .xof = alg)
+#define _PLUGIN_FEATURE_KDF(kind, alg)						__PLUGIN_FEATURE(kind, KDF, .kdf = alg)
 #define _PLUGIN_FEATURE_DRBG(kind, type)					__PLUGIN_FEATURE(kind, DRBG, .drbg = type)
 #define _PLUGIN_FEATURE_DH(kind, group)						__PLUGIN_FEATURE(kind, DH, .dh_group = group)
 #define _PLUGIN_FEATURE_RNG(kind, quality)					__PLUGIN_FEATURE(kind, RNG, .rng_quality = quality)
@@ -322,6 +327,7 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_REGISTER_HASHER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_PRF(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_XOF(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
+#define _PLUGIN_FEATURE_REGISTER_KDF(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_DRBG(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_DH(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_RNG(type, f)				__PLUGIN_FEATURE_REGISTER(type, f)

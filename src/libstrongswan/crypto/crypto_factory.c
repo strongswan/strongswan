@@ -23,8 +23,6 @@
 #include <crypto/crypto_tester.h>
 #include <utils/test.h>
 
-const char *default_plugin_name = "default";
-
 typedef struct entry_t entry_t;
 
 struct entry_t {
@@ -53,6 +51,7 @@ struct entry_t {
 		hasher_constructor_t create_hasher;
 		prf_constructor_t create_prf;
 		xof_constructor_t create_xof;
+		kdf_constructor_t create_kdf;
 		drbg_constructor_t create_drbg;
 		rng_constructor_t create_rng;
 		nonce_gen_constructor_t create_nonce_gen;
@@ -102,6 +101,11 @@ struct private_crypto_factory_t {
 	 * registered xofs, as entry_t
 	 */
 	linked_list_t *xofs;
+
+	/**
+	 * registered kdfs, as entry_t
+	 */
+	linked_list_t *kdfs;
 
 	/**
 	 * registered drbgs, as entry_t
@@ -171,7 +175,7 @@ METHOD(crypto_factory_t, create_crypter, crypter_t*,
 			if (this->test_on_create &&
 				!this->tester->test_crypter(this->tester, algo, key_size,
 											entry->create_crypter, NULL,
-											default_plugin_name))
+											entry->plugin_name))
 			{
 				continue;
 			}
@@ -204,7 +208,7 @@ METHOD(crypto_factory_t, create_aead, aead_t*,
 			if (this->test_on_create &&
 				!this->tester->test_aead(this->tester, algo, key_size,
 										 salt_size, entry->create_aead, NULL,
-										 default_plugin_name))
+										 entry->plugin_name))
 			{
 				continue;
 			}
@@ -236,7 +240,7 @@ METHOD(crypto_factory_t, create_signer, signer_t*,
 			if (this->test_on_create &&
 				!this->tester->test_signer(this->tester, algo,
 										   entry->create_signer, NULL,
-										   default_plugin_name))
+										   entry->plugin_name))
 			{
 				continue;
 			}
@@ -268,7 +272,7 @@ METHOD(crypto_factory_t, create_hasher, hasher_t*,
 			if (this->test_on_create &&
 				!this->tester->test_hasher(this->tester, algo,
 										   entry->create_hasher, NULL,
-										   default_plugin_name))
+										   entry->plugin_name))
 			{
 				continue;
 			}
@@ -300,7 +304,7 @@ METHOD(crypto_factory_t, create_prf, prf_t*,
 			if (this->test_on_create &&
 				!this->tester->test_prf(this->tester, algo,
 										entry->create_prf, NULL,
-										default_plugin_name))
+										entry->plugin_name))
 			{
 				continue;
 			}
@@ -332,7 +336,7 @@ METHOD(crypto_factory_t, create_xof, xof_t*,
 			if (this->test_on_create &&
 				!this->tester->test_xof(this->tester, algo,
 										entry->create_xof, NULL,
-										default_plugin_name))
+										entry->plugin_name))
 			{
 				continue;
 			}
@@ -346,6 +350,48 @@ METHOD(crypto_factory_t, create_xof, xof_t*,
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
 	return xof;
+}
+
+METHOD(crypto_factory_t, create_kdf, kdf_t*,
+	private_crypto_factory_t *this, key_derivation_function_t algo, ...)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	va_list args;
+	kdf_t *kdf = NULL;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->kdfs->create_enumerator(this->kdfs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->algo == algo)
+		{
+			if (this->test_on_create)
+			{
+				kdf_test_args_t test_args = {};
+
+				va_start(test_args.args, algo);
+				if (!this->tester->test_kdf(this->tester, algo,
+											entry->create_kdf, &test_args, NULL,
+											entry->plugin_name))
+				{
+					va_end(test_args.args);
+					continue;
+				}
+				va_end(test_args.args);
+			}
+			va_start(args, algo);
+			kdf = entry->create_kdf(algo, args);
+			va_end(args);
+			if (kdf)
+			{
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+	return kdf;
 }
 
 METHOD(crypto_factory_t, create_drbg, drbg_t*,
@@ -365,7 +411,7 @@ METHOD(crypto_factory_t, create_drbg, drbg_t*,
 			if (this->test_on_create &&
 				!this->tester->test_drbg(this->tester, type,
 										 entry->create_drbg, NULL,
-										 default_plugin_name))
+										 entry->plugin_name))
 			{
 				continue;
 			}
@@ -398,7 +444,7 @@ METHOD(crypto_factory_t, create_rng, rng_t*,
 			if (this->test_on_create &&
 				!this->tester->test_rng(this->tester, quality,
 										entry->create_rng, NULL,
-										default_plugin_name))
+										entry->plugin_name))
 			{
 				continue;
 			}
@@ -462,7 +508,7 @@ METHOD(crypto_factory_t, create_dh, diffie_hellman_t*,
 		{
 			if (this->test_on_create && group != MODP_CUSTOM &&
 				!this->tester->test_dh(this->tester, group,
-								entry->create_dh, NULL, default_plugin_name))
+								entry->create_dh, NULL, entry->plugin_name))
 			{
 				continue;
 			}
@@ -742,6 +788,43 @@ METHOD(crypto_factory_t, remove_xof, void,
 		if (entry->create_xof == create)
 		{
 			this->xofs->remove_at(this->xofs, enumerator);
+			free(entry);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+}
+
+METHOD(crypto_factory_t, add_kdf, bool,
+	private_crypto_factory_t *this, key_derivation_function_t algo,
+	const char *plugin_name, kdf_constructor_t create)
+{
+	u_int speed = 0;
+
+	if (!this->test_on_add ||
+		this->tester->test_kdf(this->tester, algo, create, NULL,
+							   this->bench ? &speed : NULL, plugin_name))
+	{
+		add_entry(this, this->kdfs, algo, plugin_name, 0, create);
+		return TRUE;
+	}
+	this->test_failures++;
+	return FALSE;
+}
+
+METHOD(crypto_factory_t, remove_kdf, void,
+	private_crypto_factory_t *this, kdf_constructor_t create)
+{
+	entry_t *entry;
+	enumerator_t *enumerator;
+
+	this->lock->write_lock(this->lock);
+	enumerator = this->kdfs->create_enumerator(this->kdfs);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->create_kdf == create)
+		{
+			this->kdfs->remove_at(this->kdfs, enumerator);
 			free(entry);
 		}
 	}
@@ -1058,6 +1141,30 @@ METHOD(crypto_factory_t, create_xof_enumerator, enumerator_t*,
 	return create_enumerator(this, this->xofs, xof_filter);
 }
 
+CALLBACK(kdf_filter, bool,
+	void *n, enumerator_t *orig, va_list args)
+{
+	entry_t *entry;
+	key_derivation_function_t *algo;
+	const char **plugin_name;
+
+	VA_ARGS_VGET(args, algo, plugin_name);
+
+	if (orig->enumerate(orig, &entry))
+	{
+		*algo = entry->algo;
+		*plugin_name = entry->plugin_name;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+METHOD(crypto_factory_t, create_kdf_enumerator, enumerator_t*,
+	private_crypto_factory_t *this)
+{
+	return create_enumerator(this, this->kdfs, kdf_filter);
+}
+
 CALLBACK(drbg_filter, bool,
 	void *n, enumerator_t *orig, va_list args)
 {
@@ -1169,6 +1276,8 @@ METHOD(crypto_factory_t, add_test_vector, void,
 			return this->tester->add_prf_vector(this->tester, vector);
 		case EXTENDED_OUTPUT_FUNCTION:
 			return this->tester->add_xof_vector(this->tester, vector);
+		case KEY_DERIVATION_FUNCTION:
+			return this->tester->add_kdf_vector(this->tester, vector);
 		case DETERMINISTIC_RANDOM_BIT_GENERATOR:
 			return this->tester->add_drbg_vector(this->tester, vector);
 		case RANDOM_NUMBER_GENERATOR:
@@ -1232,6 +1341,10 @@ METHOD(enumerator_t, verify_enumerate, bool,
 			*valid = this->tester->test_xof(this->tester, entry->algo,
 							entry->create_xof, NULL, entry->plugin_name);
 			break;
+		case KEY_DERIVATION_FUNCTION:
+			*valid = this->tester->test_kdf(this->tester, entry->algo,
+							entry->create_kdf, NULL, NULL, entry->plugin_name);
+			break;
 		case DETERMINISTIC_RANDOM_BIT_GENERATOR:
 			*valid = this->tester->test_drbg(this->tester, entry->algo,
 							entry->create_drbg, NULL, entry->plugin_name);
@@ -1287,6 +1400,9 @@ METHOD(crypto_factory_t, create_verify_enumerator, enumerator_t*,
 		case EXTENDED_OUTPUT_FUNCTION:
 			inner = this->xofs->create_enumerator(this->xofs);
 			break;
+		case KEY_DERIVATION_FUNCTION:
+			inner = this->kdfs->create_enumerator(this->kdfs);
+			break;
 		case DETERMINISTIC_RANDOM_BIT_GENERATOR:
 			inner = this->drbgs->create_enumerator(this->drbgs);
 			break;
@@ -1323,6 +1439,7 @@ METHOD(crypto_factory_t, destroy, void,
 	this->hashers->destroy(this->hashers);
 	this->prfs->destroy(this->prfs);
 	this->xofs->destroy(this->xofs);
+	this->kdfs->destroy(this->kdfs);
 	this->drbgs->destroy(this->drbgs);
 	this->rngs->destroy(this->rngs);
 	this->nonce_gens->destroy(this->nonce_gens);
@@ -1347,6 +1464,7 @@ crypto_factory_t *crypto_factory_create()
 			.create_hasher = _create_hasher,
 			.create_prf = _create_prf,
 			.create_xof = _create_xof,
+			.create_kdf = _create_kdf,
 			.create_drbg = _create_drbg,
 			.create_rng = _create_rng,
 			.create_nonce_gen = _create_nonce_gen,
@@ -1363,6 +1481,8 @@ crypto_factory_t *crypto_factory_create()
 			.remove_prf = _remove_prf,
 			.add_xof = _add_xof,
 			.remove_xof = _remove_xof,
+			.add_kdf = _add_kdf,
+			.remove_kdf = _remove_kdf,
 			.add_drbg = _add_drbg,
 			.remove_drbg = _remove_drbg,
 			.add_rng = _add_rng,
@@ -1377,6 +1497,7 @@ crypto_factory_t *crypto_factory_create()
 			.create_hasher_enumerator = _create_hasher_enumerator,
 			.create_prf_enumerator = _create_prf_enumerator,
 			.create_xof_enumerator = _create_xof_enumerator,
+			.create_kdf_enumerator = _create_kdf_enumerator,
 			.create_drbg_enumerator = _create_drbg_enumerator,
 			.create_dh_enumerator = _create_dh_enumerator,
 			.create_rng_enumerator = _create_rng_enumerator,
@@ -1391,6 +1512,7 @@ crypto_factory_t *crypto_factory_create()
 		.hashers = linked_list_create(),
 		.prfs = linked_list_create(),
 		.xofs = linked_list_create(),
+		.kdfs = linked_list_create(),
 		.drbgs = linked_list_create(),
 		.rngs = linked_list_create(),
 		.nonce_gens = linked_list_create(),

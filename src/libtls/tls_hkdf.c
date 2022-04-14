@@ -18,7 +18,6 @@
 #include "tls_hkdf.h"
 
 #include <bio/bio_writer.h>
-#include <crypto/prf_plus.h>
 
 typedef struct private_tls_hkdf_t private_tls_hkdf_t;
 
@@ -50,6 +49,11 @@ struct private_tls_hkdf_t {
 	 * Pseudorandom function used.
 	 */
 	prf_t *prf;
+
+	/**
+	 * prf+ implementation.
+	 */
+	kdf_t *prf_plus;
 
 	/**
 	 * Hasher used.
@@ -115,7 +119,6 @@ static bool extract(private_tls_hkdf_t *this, chunk_t salt, chunk_t ikm,
 	}
 
 	DBG4(DBG_TLS, "PRK: %B", prk);
-
 	return TRUE;
 }
 
@@ -126,24 +129,15 @@ static bool extract(private_tls_hkdf_t *this, chunk_t salt, chunk_t ikm,
 static bool expand(private_tls_hkdf_t *this, chunk_t prk, chunk_t info,
 				   size_t length, chunk_t *okm)
 {
-	prf_plus_t *prf_plus;
-
-	if (!this->prf->set_key(this->prf, prk))
-	{
-		DBG1(DBG_TLS, "unable to set PRF secret to PRK");
-		return FALSE;
-	}
-	prf_plus = prf_plus_create(this->prf, TRUE, info);
-	if (!prf_plus || !prf_plus->allocate_bytes(prf_plus, length, okm))
+	if (!this->prf_plus->set_param(this->prf_plus, KDF_PARAM_KEY, prk) ||
+		!this->prf_plus->set_param(this->prf_plus, KDF_PARAM_SALT, info) ||
+		!this->prf_plus->allocate_bytes(this->prf_plus, length, okm))
 	{
 		DBG1(DBG_TLS, "unable to allocate PRF+ result");
-		DESTROY_IF(prf_plus);
 		return FALSE;
 	}
-	prf_plus->destroy(prf_plus);
 
 	DBG4(DBG_TLS, "OKM: %B", okm);
-
 	return TRUE;
 }
 
@@ -681,6 +675,7 @@ METHOD(tls_hkdf_t, destroy, void,
 	destroy_secrets(&this->handshake_traffic_secrets);
 	destroy_secrets(&this->traffic_secrets);
 	DESTROY_IF(this->prf);
+	DESTROY_IF(this->prf_plus);
 	DESTROY_IF(this->hasher);
 	free(this);
 }
@@ -720,15 +715,22 @@ tls_hkdf_t *tls_hkdf_create(hash_algorithm_t hash_algorithm, chunk_t psk)
 		.phase = HKDF_PHASE_0,
 		.psk = psk.ptr ? chunk_clone(psk) : chunk_empty,
 		.prf = lib->crypto->create_prf(lib->crypto, prf_algorithm),
+		.prf_plus = lib->crypto->create_kdf(lib->crypto, KDF_PRF_PLUS,
+											prf_algorithm),
 		.hasher = lib->crypto->create_hasher(lib->crypto, hash_algorithm),
 	);
 
-	if (!this->prf || !this->hasher)
+	if (!this->prf || !this->prf_plus || !this->hasher)
 	{
 		if (!this->prf)
 		{
 			DBG1(DBG_TLS, "%N not supported", pseudo_random_function_names,
 				 prf_algorithm);
+		}
+		if (!this->prf_plus)
+		{
+			DBG1(DBG_TLS, "%N (%N) not supported", key_derivation_function_names,
+				 KDF_PRF_PLUS, pseudo_random_function_names, prf_algorithm);
 		}
 		if (!this->hasher)
 		{

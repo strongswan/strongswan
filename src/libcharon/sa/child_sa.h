@@ -29,7 +29,6 @@ typedef struct child_sa_t child_sa_t;
 typedef struct child_sa_create_t child_sa_create_t;
 
 #include <library.h>
-#include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <crypto/proposal/proposal.h>
 #include <config/child_cfg.h>

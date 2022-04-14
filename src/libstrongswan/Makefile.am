@@ -11,11 +11,11 @@ crypto/hashers/hash_algorithm_set.c crypto/proposal/proposal.c \
 crypto/proposal/proposal_keywords.c crypto/proposal/proposal_keywords_static.c \
 crypto/prfs/prf.c crypto/prfs/mac_prf.c crypto/pkcs5.c \
 crypto/rngs/rng.c crypto/rngs/rng_tester.c \
-crypto/prf_plus.c crypto/signers/signer.c \
+crypto/signers/signer.c \
 crypto/signers/mac_signer.c crypto/crypto_factory.c crypto/crypto_tester.c \
 crypto/diffie_hellman.c crypto/aead.c crypto/transform.c \
 crypto/iv/iv_gen.c crypto/iv/iv_gen_rand.c crypto/iv/iv_gen_seq.c \
-crypto/iv/iv_gen_null.c \
+crypto/iv/iv_gen_null.c crypto/kdfs/kdf.c \
 crypto/xofs/xof.c crypto/xofs/xof_bitspender.c \
 credentials/credential_factory.c credentials/builder.c \
 credentials/cred_encoding.c credentials/keys/private_key.c \
@@ -78,11 +78,12 @@ crypto/hashers/hash_algorithm_set.h crypto/mac.h crypto/proposal/proposal.h \
 crypto/proposal/proposal_keywords.h crypto/proposal/proposal_keywords_static.h \
 crypto/rngs/rng.h crypto/rngs/rng_tester.h \
 crypto/prfs/prf.h crypto/prfs/mac_prf.h crypto/nonce_gen.h \
-crypto/prf_plus.h crypto/signers/signer.h crypto/signers/mac_signer.h \
+crypto/signers/signer.h crypto/signers/mac_signer.h \
 crypto/crypto_factory.h crypto/crypto_tester.h crypto/diffie_hellman.h \
 crypto/aead.h crypto/transform.h crypto/pkcs5.h crypto/iv/iv_gen.h \
 crypto/iv/iv_gen_rand.h crypto/iv/iv_gen_seq.h crypto/iv/iv_gen_null.h \
 crypto/xofs/xof.h crypto/xofs/xof_bitspender.h crypto/xofs/mgf1.h \
+crypto/kdfs/kdf.h \
 credentials/credential_factory.h credentials/builder.h \
 credentials/cred_encoding.h credentials/keys/private_key.h \
 credentials/keys/public_key.h credentials/keys/shared_key.h \
@@ -391,6 +392,13 @@ if USE_HMAC
   SUBDIRS += plugins/hmac
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/hmac/libstrongswan-hmac.la
+endif
+endif
+
+if USE_KDF
+  SUBDIRS += plugins/kdf
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/kdf/libstrongswan-kdf.la
 endif
 endif
 
