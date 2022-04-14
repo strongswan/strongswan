@@ -388,6 +388,8 @@ static child_cfg_t* create_child_cfg(private_cmd_connection_t *this,
 			case TS_IPV6_ADDR_RANGE:
 				has_v6 = TRUE;
 				break;
+			default:
+				continue;
 		}
 		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
 	}

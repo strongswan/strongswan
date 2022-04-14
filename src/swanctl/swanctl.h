@@ -111,4 +111,13 @@ extern char *swanctl_dir;
  */
 settings_t *load_swanctl_conf(char *file);
 
+/**
+ * Print the given security label (hex-encoded) on a separate line with the
+ * given prefix.
+ *
+ * @param prefix	prefix to print before the string-version of the label
+ * @param value		hex-encoded security label
+ */
+void print_label(const char *prefix, const char *value);
+
 #endif /** SWANCTL_H_ @}*/

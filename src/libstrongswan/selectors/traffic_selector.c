@@ -31,10 +31,12 @@
 
 #define NON_SUBNET_ADDRESS_RANGE	255
 
-ENUM(ts_type_name, TS_IPV4_ADDR_RANGE, TS_IPV6_ADDR_RANGE,
+ENUM_BEGIN(ts_type_name, TS_IPV4_ADDR_RANGE, TS_IPV6_ADDR_RANGE,
 	"TS_IPV4_ADDR_RANGE",
-	"TS_IPV6_ADDR_RANGE",
-);
+	"TS_IPV6_ADDR_RANGE");
+ENUM_NEXT(ts_type_name, TS_SECLABEL, TS_SECLABEL, TS_IPV6_ADDR_RANGE,
+	"TS_SECLABEL");
+ENUM_END(ts_type_name, TS_SECLABEL);
 
 typedef struct private_traffic_selector_t private_traffic_selector_t;
 

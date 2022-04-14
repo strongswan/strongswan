@@ -1318,8 +1318,8 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 							struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
+	kernel_acquire_data_t data = {};
 	uint32_t index, reqid = 0;
-	traffic_selector_t *src_ts, *dst_ts;
 	policy_entry_t *policy;
 	policy_sa_t *sa;
 
@@ -1363,10 +1363,16 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 		this->mutex->unlock(this->mutex);
 	}
 
-	src_ts = sadb_address2ts(response.src);
-	dst_ts = sadb_address2ts(response.dst);
+	if (reqid)
+	{
+		data.src = sadb_address2ts(response.src);
+		data.dst = sadb_address2ts(response.dst);
 
-	charon->kernel->acquire(charon->kernel, reqid, src_ts, dst_ts);
+		charon->kernel->acquire(charon->kernel, reqid, &data);
+
+		data.src->destroy(data.src);
+		data.dst->destroy(data.dst);
+	}
 }
 
 /**
@@ -1954,6 +1960,12 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	size_t len;
 	status_t status = FAILED;
 
+	if (data->new_reqid)
+	{
+		DBG1(DBG_KNL, "unable to update SAD entry with SPI %.8x: reqid "
+			 "change is not supported", ntohl(id->spi));
+		return NOT_SUPPORTED;
+	}
 #ifndef SADB_X_EXT_NEW_ADDRESS_SRC
 	/* we can't update the SA if any of the ip addresses have changed.
 	 * that's because we can't use SADB_UPDATE and by deleting and readding the

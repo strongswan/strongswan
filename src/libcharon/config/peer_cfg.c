@@ -386,13 +386,28 @@ METHOD(peer_cfg_t, create_child_cfg_enumerator, enumerator_t*,
 /**
  * Check how good a list of TS matches a given child config
  */
-static int get_ts_match(child_cfg_t *cfg, bool local,
-						linked_list_t *sup_list, linked_list_t *hosts)
+static u_int get_ts_match(child_cfg_t *cfg, bool local,
+						  linked_list_t *sup_list, linked_list_t *hosts,
+						  linked_list_t *sup_labels)
 {
 	linked_list_t *cfg_list;
 	enumerator_t *sup_enum, *cfg_enum;
 	traffic_selector_t *sup_ts, *cfg_ts, *subset;
-	int match = 0, round;
+	sec_label_t *label;
+	u_int match = 0, round;
+	bool exact = FALSE;
+
+	if (cfg->select_label(cfg, sup_labels, TRUE, &label, &exact))
+	{
+		if (label)
+		{
+			match += exact ? 500 : 100;
+		}
+	}
+	else
+	{	/* label config doesn't match, no need to check TS  */
+		return match;
+	}
 
 	/* fetch configured TS list, narrowing dynamic TS */
 	cfg_list = cfg->get_traffic_selectors(cfg, local, NULL, hosts, TRUE);
@@ -432,24 +447,29 @@ static int get_ts_match(child_cfg_t *cfg, bool local,
 
 METHOD(peer_cfg_t, select_child_cfg, child_cfg_t*,
 	private_peer_cfg_t *this, linked_list_t *my_ts, linked_list_t *other_ts,
-	linked_list_t *my_hosts, linked_list_t *other_hosts)
+	linked_list_t *my_hosts, linked_list_t *other_hosts,
+	linked_list_t *my_labels, linked_list_t *other_labels)
 {
 	child_cfg_t *current, *found = NULL;
 	enumerator_t *enumerator;
-	int best = 0;
+	u_int best = 0;
 
 	DBG2(DBG_CFG, "looking for a child config for %#R === %#R", my_ts, other_ts);
 	enumerator = create_child_cfg_enumerator(this);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		int my_prio, other_prio;
+		u_int my_prio, other_prio;
 
-		my_prio = get_ts_match(current, TRUE, my_ts, my_hosts);
-		other_prio = get_ts_match(current, FALSE, other_ts, other_hosts);
-
-		if (my_prio && other_prio)
+		my_prio = get_ts_match(current, TRUE, my_ts, my_hosts, my_labels);
+		if (!my_prio)
 		{
-			DBG2(DBG_CFG, "  candidate \"%s\" with prio %d+%d",
+			continue;
+		}
+		other_prio = get_ts_match(current, FALSE, other_ts, other_hosts,
+								  other_labels);
+		if (other_prio)
+		{
+			DBG2(DBG_CFG, "  candidate \"%s\" with prio %u+%u",
 				 current->get_name(current), my_prio, other_prio);
 			if (my_prio + other_prio > best)
 			{

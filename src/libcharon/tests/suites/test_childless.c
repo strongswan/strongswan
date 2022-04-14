@@ -44,7 +44,7 @@ START_TEST(test_regular)
 	id_a = a->get_id(a);
 	id_b = b->get_id(b);
 
-	call_ikesa(a, initiate, child_cfg, 0, NULL, NULL);
+	call_ikesa(a, initiate, child_cfg, NULL);
 
 	/* IKE_SA_INIT --> */
 	id_b->set_initiator_spi(id_b, id_a->get_initiator_spi(id_a));
@@ -115,7 +115,7 @@ START_TEST(test_regular_manual)
 	id_a = a->get_id(a);
 	id_b = b->get_id(b);
 
-	call_ikesa(a, initiate, NULL, 0, NULL, NULL);
+	call_ikesa(a, initiate, NULL, NULL);
 
 	/* IKE_SA_INIT --> */
 	id_b->set_initiator_spi(id_b, id_a->get_initiator_spi(id_a));
@@ -144,7 +144,7 @@ START_TEST(test_regular_manual)
 	assert_sa_idle(a);
 	assert_sa_idle(b);
 
-	call_ikesa(a, initiate, child_cfg, 0, NULL, NULL);
+	call_ikesa(a, initiate, child_cfg, NULL);
 
 	/* CREATE_CHILD_SA { SA, Ni, KEi, TSi, TSr } --> */
 	assert_hook_called(child_updown);
@@ -192,7 +192,7 @@ START_TEST(test_failure_init)
 	id_a = a->get_id(a);
 	id_b = b->get_id(b);
 
-	call_ikesa(a, initiate, child_cfg, 0, NULL, NULL);
+	call_ikesa(a, initiate, child_cfg, NULL);
 
 	/* IKE_SA_INIT --> */
 	id_b->set_initiator_spi(id_b, id_a->get_initiator_spi(id_a));
@@ -233,7 +233,7 @@ START_TEST(test_failure_resp)
 	id_a = a->get_id(a);
 	id_b = b->get_id(b);
 
-	call_ikesa(a, initiate, child_cfg, 0, NULL, NULL);
+	call_ikesa(a, initiate, child_cfg, NULL);
 
 	/* IKE_SA_INIT --> */
 	id_b->set_initiator_spi(id_b, id_a->get_initiator_spi(id_a));

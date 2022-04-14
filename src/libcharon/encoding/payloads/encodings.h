@@ -256,32 +256,6 @@ enum encoding_type_t {
 	ATTRIBUTE_VALUE,
 
 	/**
-	 * Representing a Traffic selector type field.
-	 *
-	 * When generating it must be changed from host to network order.
-	 * The value is read from the associated data struct.
-	 * The current write position is moved 16 bit forward afterwards.
-	 *
-	 * When parsing it must be changed from network to host order.
-	 * The value is written to the associated data struct.
-	 * The current read pointer is moved 16 bit forward afterwards.
-	 */
-	TS_TYPE,
-
-	/**
-	 * Representing an address field in a traffic selector.
-	 *
-	 * Depending on the last field of type TS_TYPE
-	 * this field is either 4 or 16 byte long.
-	 *
-	 * When generating the content of the chunk pointing to
-	 * is written.
-	 *
-	 * When parsing 4 or 16 bytes are read and written into the chunk pointing to.
-	 */
-	ADDRESS,
-
-	/**
 	 * Representing a variable length byte field.
 	 */
 	CHUNK_DATA,

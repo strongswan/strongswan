@@ -174,17 +174,20 @@ struct peer_cfg_t {
 	enumerator_t* (*create_child_cfg_enumerator) (peer_cfg_t *this);
 
 	/**
-	 * Select a CHILD config from traffic selectors.
+	 * Select a CHILD config from received traffic selectors.
 	 *
 	 * @param my_ts			TS for local side
 	 * @param other_ts		TS for remote side
 	 * @param my_hosts		hosts to narrow down dynamic TS for local side
 	 * @param other_hosts	hosts to narrow down dynamic TS for remote side
-	 * @return				selected CHILD config, or NULL if no match found
+	 * @param my_labels		optional local security labels
+	 * @param other_labels	optional remove security labels
+	 * @return					selected CHILD config, or NULL if no match found
 	 */
-	child_cfg_t* (*select_child_cfg) (peer_cfg_t *this,
+	child_cfg_t* (*select_child_cfg)(peer_cfg_t *this,
 							linked_list_t *my_ts, linked_list_t *other_ts,
-							linked_list_t *my_hosts, linked_list_t *other_hosts);
+							linked_list_t *my_hosts, linked_list_t *other_hosts,
+							linked_list_t *my_labels, linked_list_t *other_labels);
 
 	/**
 	 * Add an authentication config to the peer configuration.

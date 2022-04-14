@@ -210,6 +210,8 @@ METHOD(task_t, build_i, status_t,
 	this->child_create->use_if_ids(this->child_create,
 						this->child_sa->get_if_id(this->child_sa, TRUE),
 						this->child_sa->get_if_id(this->child_sa, FALSE));
+	this->child_create->use_label(this->child_create,
+						this->child_sa->get_label(this->child_sa));
 
 	if (this->child_create->task.build(&this->child_create->task,
 									   message) != NEED_MORE)
@@ -272,6 +274,8 @@ METHOD(task_t, build_r, status_t,
 	this->child_create->use_if_ids(this->child_create,
 						this->child_sa->get_if_id(this->child_sa, TRUE),
 						this->child_sa->get_if_id(this->child_sa, FALSE));
+	this->child_create->use_label(this->child_create,
+						this->child_sa->get_label(this->child_sa));
 	config = this->child_sa->get_config(this->child_sa);
 	this->child_create->set_config(this->child_create, config->get_ref(config));
 	this->child_create->task.build(&this->child_create->task, message);
@@ -391,7 +395,8 @@ METHOD(task_t, process_i, status_t,
 	if (message->get_notify(message, CHILD_SA_NOT_FOUND))
 	{
 		child_cfg_t *child_cfg;
-		uint32_t reqid;
+		child_init_args_t args = {};
+		status_t status;
 
 		if (this->collision &&
 			this->collision->get_type(this->collision) == TASK_CHILD_DELETE)
@@ -406,15 +411,21 @@ METHOD(task_t, process_i, status_t,
 		 * that (we could go by name, but that might be tricky e.g. due to
 		 * narrowing) */
 		spi = this->child_sa->get_spi(this->child_sa, TRUE);
-		reqid = this->child_sa->get_reqid(this->child_sa);
 		protocol = this->child_sa->get_protocol(this->child_sa);
 		child_cfg = this->child_sa->get_config(this->child_sa);
 		child_cfg->get_ref(child_cfg);
+		args.reqid = this->child_sa->get_reqid(this->child_sa);
+		args.label = this->child_sa->get_label(this->child_sa);
+		if (args.label)
+		{
+			args.label = args.label->clone(args.label);
+		}
 		charon->bus->child_updown(charon->bus, this->child_sa, FALSE);
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
-		return this->ike_sa->initiate(this->ike_sa,
-									  child_cfg->get_ref(child_cfg), reqid,
-									  NULL, NULL);
+		status = this->ike_sa->initiate(this->ike_sa,
+										child_cfg->get_ref(child_cfg), &args);
+		DESTROY_IF(args.label);
+		return status;
 	}
 
 	if (this->child_create->task.process(&this->child_create->task,

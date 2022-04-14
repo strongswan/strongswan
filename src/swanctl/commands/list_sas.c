@@ -43,6 +43,7 @@
 #include <errno.h>
 
 #include "command.h"
+#include "swanctl.h"
 
 #include <collections/hashtable.h>
 
@@ -80,7 +81,6 @@ CALLBACK(sa_values, int,
 	}
 	return 0;
 }
-
 
 CALLBACK(sa_list, int,
 	hashtable_t *sa, vici_res_t *res, char *name, void *value, int len)
@@ -227,6 +227,7 @@ CALLBACK(child_sas, int,
 		}
 		printf("\n");
 
+		print_label("    label  ", child->get(child, "label"));
 		printf("    local  %s\n", child->get(child, "local-ts"));
 		printf("    remote %s\n", child->get(child, "remote-ts"));
 	}
@@ -372,8 +373,8 @@ static int list_sas(vici_conn_t *conn)
 	vici_res_t *res;
 	bool noblock = FALSE;
 	command_format_options_t format = COMMAND_FORMAT_NONE;
-	char *arg, *ike = NULL;
-	int ike_id = 0, ret;
+	char *arg, *ike = NULL, *child = NULL;
+	int ike_id = 0, child_id = 0, ret;
 
 	while (TRUE)
 	{
@@ -386,6 +387,12 @@ static int list_sas(vici_conn_t *conn)
 				continue;
 			case 'I':
 				ike_id = atoi(arg);
+				continue;
+			case 'c':
+				child = arg;
+				continue;
+			case 'C':
+				child_id = atoi(arg);
 				continue;
 			case 'n':
 				noblock = TRUE;
@@ -417,6 +424,14 @@ static int list_sas(vici_conn_t *conn)
 	if (ike_id)
 	{
 		vici_add_key_valuef(req, "ike-id", "%d", ike_id);
+	}
+	if (child)
+	{
+		vici_add_key_valuef(req, "child", "%s", child);
+	}
+	if (child_id)
+	{
+		vici_add_key_valuef(req, "child-id", "%d", child_id);
 	}
 	if (noblock)
 	{
@@ -489,11 +504,14 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		list_sas, 'l', "list-sas", "list currently active IKE_SAs",
-		{"[--raw|--pretty]"},
+		{"[--ike <name>|--ike-id <id>] [--child <name>|--child-id <id>]",
+		 "[--raw|--pretty]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"ike",			'i', 1, "filter IKE_SAs by name"},
 			{"ike-id",		'I', 1, "filter IKE_SAs by unique identifier"},
+			{"child",		'c', 1, "filter CHILD_SAs by name"},
+			{"child-id",	'C', 1, "filter CHILD_SAs by unique identifier"},
 			{"noblock",		'n', 0, "don't wait for IKE_SAs in use"},
 			{"raw",			'r', 0, "dump raw response message"},
 			{"pretty",		'P', 0, "dump raw response message in pretty print"},

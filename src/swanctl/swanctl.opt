@@ -885,7 +885,8 @@ connections.<conn>.children.<child>.dpd_action = clear
 	Action to perform for this CHILD_SA on DPD timeout. The default _clear_
 	closes the CHILD_SA and does not take further action. _trap_ installs
 	a trap policy, which will catch matching traffic and tries to re-negotiate
-	the tunnel on-demand. _restart_ immediately tries to re-negotiate the
+	the tunnel on-demand (note that this is redundant if **start_action**
+	includes _trap_). _restart_ immediately tries to re-negotiate the
 	CHILD_SA under a fresh IKE_SA.
 
 connections.<conn>.children.<child>.ipcomp = no
@@ -1010,6 +1011,34 @@ connections.<conn>.children.<child>.if_id_out = 0
 
 	The daemon will not install routes for CHILD_SAs that have this option set.
 
+connections.<conn>.children.<child>.label
+	Optional security label (e.g. SELinux context), IKEv2 only. Refer to
+	**label_mode** for details on how labels are processed.
+
+connections.<conn>.children.<child>.label_mode = system
+	Security label mode (_system_, _simple_ or _selinux_), IKEv2 only.
+
+	Defines the mode in which the configured security label is used. The default
+	value of _system_ selects _selinux_ if strongSwan was built with SELinux
+	support and SELinux is enabled by the kernel, otherwise, _simple_ will be
+	selected.
+
+	If set to _simple_, the label will be used as is as an additional
+	identifier/selector on the IKEv2 level when negotiating CHILD_SAs and
+	selecting configs, labels are not installed in the kernel and received
+	labels have to match exactly.
+
+	If set to _selinux_, which is only allowed if SELinux is usable on the
+	system, the configured label is expected to be a generic context (e.g.
+	_system_u:object_r:ipsec_spd_t:s0_) for which flows, whose context match it
+	via association:polmatch, will trigger an acquire if no SA exists yet for
+	the flow's specific context.  The configured label is installed on (trap)
+	policies, so this should generally be combined with _trap_ in
+	**start_action**. However, if the connection is initiated directly,
+	without acquire, a childless IKE_SA is established and appropriate trap
+	policies are installed on both ends. Labels received from peers are accepted
+	if they match the configured label via association:polmatch.
+
 connections.<conn>.children.<child>.tfc_padding = 0
 	Traffic Flow Confidentiality padding.
 
@@ -1075,19 +1104,22 @@ connections.<conn>.children.<child>.start_action = none
 
 	The value _trap_ installs a trap policy, which triggers the tunnel as soon
 	as matching traffic has been detected. The value _start_ initiates
-	the connection actively.
+	the connection actively. These two modes can be combined with _trap|start_,
+	to immediately initiate a connection for which trap policies have been
+	installed.
 
 	When unloading or replacing a CHILD_SA configuration having a
 	**start_action** different from _none_, the inverse action is performed.
 	Configurations with _start_ get closed, while such with _trap_ get
-	uninstalled.
+	uninstalled (both happens for connections with _trap|start_).
 
 connections.<conn>.children.<child>.close_action = none
 	Action to perform after a CHILD_SA gets closed (_none_, _trap_, _start_).
 
 	Action to perform after a CHILD_SA gets closed by the peer. The default of
 	_none_ does not take any action, _trap_ installs a trap policy for the
-	CHILD_SA. _start_ tries to re-create the CHILD_SA.
+	CHILD_SA (note that this is redundant if **start_action** includes _trap_).
+	_start_ tries to immediately re-create the CHILD_SA.
 
 	**close_action** does not provide any guarantee that the CHILD_SA is kept
 	alive. It acts on explicit close messages only, but not on negotiation

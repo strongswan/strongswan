@@ -22,10 +22,10 @@
 
 #include <daemon.h>
 
-ENUM(action_names, ACTION_NONE, ACTION_RESTART,
-	"clear",
-	"hold",
-	"restart",
+ENUM_FLAGS(action_names, ACTION_TRAP, ACTION_START,
+	"none",
+	"trap",
+	"start",
 );
 
 /** Default replay window size, if not set using charon.replay_window */
@@ -142,6 +142,16 @@ struct private_child_cfg_t {
 	 * Optional mark to set to packets after outbound processing
 	 */
 	mark_t set_mark_out;
+
+	/**
+	 * Optional security label for policies
+	 */
+	sec_label_t *label;
+
+	/**
+	 * Optional label mode for policies
+	 */
+	sec_label_mode_t label_mode;
 
 	/**
 	 * Traffic Flow Confidentiality padding, if enabled
@@ -522,6 +532,97 @@ METHOD(child_cfg_t, get_set_mark, mark_t,
 	return inbound ? this->set_mark_in : this->set_mark_out;
 }
 
+METHOD(child_cfg_t, get_label, sec_label_t*,
+	private_child_cfg_t *this)
+{
+	return this->label;
+}
+
+METHOD(child_cfg_t, get_label_mode, sec_label_mode_t,
+	private_child_cfg_t *this)
+{
+	return this->label_mode;
+}
+
+METHOD(child_cfg_t, select_label, bool,
+	private_child_cfg_t *this, linked_list_t *labels, bool log,
+	sec_label_t **label, bool *exact_out)
+{
+	enumerator_t *enumerator;
+	sec_label_t *current, *match = NULL;
+	bool exact = FALSE;
+
+	if (labels && labels->get_count(labels))
+	{
+		if (!this->label)
+		{
+			DBG2(DBG_CFG, "peer proposed a security label, but none expected");
+			return FALSE;
+		}
+		if (log)
+		{
+			DBG2(DBG_CFG, "selecting security label matching '%s':",
+				 this->label->get_string(this->label));
+		}
+		enumerator = labels->create_enumerator(labels);
+		while (enumerator->enumerate(enumerator, &current))
+		{
+			if (this->label->equals(this->label, current))
+			{
+				if (log)
+				{
+					DBG2(DBG_CFG, " %s => matches exactly",
+						 current->get_string(current));
+				}
+				match = current;
+				exact = TRUE;
+				break;
+			}
+			else if (this->label_mode == SEC_LABEL_MODE_SELINUX &&
+					 this->label->matches(this->label, current))
+			{
+				if (log)
+				{
+					DBG2(DBG_CFG, " %s => matches%s",
+						 current->get_string(current), match ? ", ignored" : "");
+				}
+				/* return the first match if we don't find an exact one */
+				if (!match)
+				{
+					match = current;
+				}
+			}
+			else if (log)
+			{
+				DBG2(DBG_CFG, " %s => no match", current->get_string(current));
+			}
+		}
+		enumerator->destroy(enumerator);
+		if (!match)
+		{
+			DBG2(DBG_CFG, "none of the proposed security labels match the "
+				 "configured label '%s'", this->label->get_string(this->label));
+			return FALSE;
+		}
+	}
+	else if (this->label)
+	{
+		DBG2(DBG_CFG, "peer didn't propose any security labels, we expect one "
+			 "matching '%s'", this->label->get_string(this->label));
+		return FALSE;
+	}
+
+	if (label)
+	{
+		*label = match;
+	}
+	if (exact_out)
+	{
+		*exact_out = exact;
+	}
+	return TRUE;
+}
+
 METHOD(child_cfg_t, get_tfc, uint32_t,
 	private_child_cfg_t *this)
 {
@@ -607,7 +708,9 @@ METHOD(child_cfg_t, equals, bool,
 		this->hw_offload == other->hw_offload &&
 		this->copy_dscp == other->copy_dscp &&
 		streq(this->updown, other->updown) &&
-		streq(this->interface, other->interface);
+		streq(this->interface, other->interface) &&
+		sec_labels_equal(this->label, other->label) &&
+		this->label_mode == other->label_mode;
 }
 
 METHOD(child_cfg_t, get_ref, child_cfg_t*,
@@ -625,6 +728,7 @@ METHOD(child_cfg_t, destroy, void,
 		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
 		this->my_ts->destroy_offset(this->my_ts, offsetof(traffic_selector_t, destroy));
 		this->other_ts->destroy_offset(this->other_ts, offsetof(traffic_selector_t, destroy));
+		DESTROY_IF(this->label);
 		free(this->updown);
 		free(this->interface);
 		free(this->name);
@@ -659,6 +763,9 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_if_id = _get_if_id,
 			.get_mark = _get_mark,
 			.get_set_mark = _get_set_mark,
+			.get_label = _get_label,
+			.get_label_mode = _get_label_mode,
+			.select_label = _select_label,
 			.get_tfc = _get_tfc,
 			.get_manual_prio = _get_manual_prio,
 			.get_interface = _get_interface,
@@ -685,6 +792,9 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 		.mark_out = data->mark_out,
 		.set_mark_in = data->set_mark_in,
 		.set_mark_out = data->set_mark_out,
+		.label = data->label ? data->label->clone(data->label) : NULL,
+		.label_mode = data->label_mode != SEC_LABEL_MODE_SYSTEM ?
+								data->label_mode : sec_label_mode_default(),
 		.lifetime = data->lifetime,
 		.inactivity = data->inactivity,
 		.tfc = data->tfc,

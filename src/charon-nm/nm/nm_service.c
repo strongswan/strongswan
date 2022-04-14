@@ -635,8 +635,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 			},
 		},
 		.mode = MODE_TUNNEL,
-		.dpd_action = ACTION_RESTART,
-		.close_action = ACTION_RESTART,
+		.dpd_action = ACTION_START,
+		.close_action = ACTION_START,
 	};
 
 	/**
@@ -903,7 +903,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	 * Initiate
 	 */
 	child_cfg->get_ref(child_cfg);
-	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
+	if (ike_sa->initiate(ike_sa, child_cfg, NULL) != SUCCESS)
 	{
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager, ike_sa);
 

@@ -1042,9 +1042,9 @@ static action_t map_action(int starter_action)
 	switch (starter_action)
 	{
 		case 2: /* =hold */
-			return ACTION_ROUTE;
+			return ACTION_TRAP;
 		case 3: /* =restart */
-			return ACTION_RESTART;
+			return ACTION_START;
 		default:
 			return ACTION_NONE;
 	}

@@ -151,6 +151,29 @@ static void list_mode(vici_builder_t *b, child_sa_t *child, child_cfg_t *cfg)
 }
 
 /**
+ * List the security label of a CHILD_SA or config
+ */
+static void list_label(vici_builder_t *b, child_sa_t *child, child_cfg_t *cfg)
+{
+	sec_label_t *label = NULL;
+	chunk_t enc;
+
+	if (child)
+	{
+		label = child->get_label(child);
+	}
+	else if (cfg)
+	{
+		label = cfg->get_label(cfg);
+	}
+	if (label)
+	{
+		enc = label->get_encoding(label);
+		b->add_kv(b, "label", "%+B", &enc);
+	}
+}
+
+/**
  * List IPsec-related details about a CHILD_SA
  */
 static void list_child_ipsec(vici_builder_t *b, child_sa_t *child)
@@ -275,6 +298,7 @@ static void list_child(private_vici_query_t *this, vici_builder_t *b,
 	state = child->get_state(child);
 	b->add_kv(b, "state", "%N", child_sa_state_names, state);
 	list_mode(b, child, NULL);
+	list_label(b, child, NULL);
 
 	switch (state)
 	{
@@ -505,15 +529,16 @@ CALLBACK(list_sas, vici_message_t*,
 	ike_sa_t *ike_sa;
 	child_sa_t *child_sa;
 	time_t now;
-	char *ike;
-	u_int ike_id;
+	char *ike, *child;
+	u_int ike_id, child_id;
 	bool bl;
 	char buf[BUF_LEN];
-
 
 	bl = request->get_str(request, NULL, "noblock") == NULL;
 	ike = request->get_str(request, NULL, "ike");
 	ike_id = request->get_int(request, 0, "ike-id");
+	child = request->get_str(request, NULL, "child");
+	child_id = request->get_int(request, 0, "child-id");
 
 	isas = charon->controller->create_ike_sa_enumerator(charon->controller, bl);
 	while (isas->enumerate(isas, &ike_sa))
@@ -538,6 +563,15 @@ CALLBACK(list_sas, vici_message_t*,
 		csas = ike_sa->create_child_sa_enumerator(ike_sa);
 		while (csas->enumerate(csas, &child_sa))
 		{
+			if (child && !streq(child, child_sa->get_name(child_sa)))
+			{
+				continue;
+			}
+			if (child_id && child_sa->get_unique_id(child_sa) != child_id)
+			{
+				continue;
+			}
+
 			snprintf(buf, sizeof(buf), "%s-%u", child_sa->get_name(child_sa),
 					 child_sa->get_unique_id(child_sa));
 			b->begin_section(b, buf);
@@ -576,6 +610,7 @@ static void raise_policy(private_vici_query_t *this, u_int id, char *ike,
 	b->add_kv(b, "ike", "%s", ike);
 
 	list_mode(b, child, NULL);
+	list_label(b, child, NULL);
 
 	b->begin_list(b, "local-ts");
 	enumerator = child->create_ts_enumerator(child, TRUE);
@@ -624,6 +659,7 @@ static void raise_policy_cfg(private_vici_query_t *this, u_int id, char *ike,
 	}
 
 	list_mode(b, NULL, cfg);
+	list_label(b, NULL, cfg);
 
 	b->begin_list(b, "local-ts");
 	list = cfg->get_traffic_selectors(cfg, TRUE, NULL, NULL, FALSE);
@@ -930,6 +966,7 @@ CALLBACK(list_conns, vici_message_t*,
 			b->begin_section(b, child_cfg->get_name(child_cfg));
 
 			list_mode(b, NULL, child_cfg);
+			list_label(b, NULL, child_cfg);
 
 			lft = child_cfg->get_lifetime(child_cfg, FALSE);
 			b->add_kv(b, "rekey_time",    "%"PRIu64, lft->time.rekey);
