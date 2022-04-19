@@ -31,7 +31,7 @@ jobs:
       - env:
           LGTM_TOKEN: ${{ secrets.LGTM_TOKEN }}
           LGTM_PROJECT: ${{ secrets.LGTM_PROJECT }}
-          BUILD_NUMBER: ${{ github.run_id }}
+          BUILD_NUMBER: ${{ github.run_number }}
           COMMIT_ID: ${{ github.sha }}
           COMMIT_BASE: ${{ github.event.before }}
         uses: ./.github/actions/default
