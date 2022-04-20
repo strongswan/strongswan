@@ -36,6 +36,8 @@
 #define STRONGSWAN_PLUGIN_DESC    _("IPsec with the IKEv2 key exchange protocol.")
 #define STRONGSWAN_PLUGIN_SERVICE "org.freedesktop.NetworkManager.strongswan"
 #define NM_DBUS_SERVICE_STRONGSWAN "org.freedesktop.NetworkManager.strongswan"
+#define NM_DBUS_PATH_STRONGSWAN    "/org/freedesktop/NetworkManager/strongswan"
+#define STRONGSWAN_UI_RESOURCE     NM_DBUS_PATH_STRONGSWAN "/nm-strongswan-dialog.ui"
 
 /************** plugin class **************/
 
@@ -676,7 +678,6 @@ nm_vpn_plugin_ui_widget_interface_new (NMConnection *connection, GError **error)
 {
 	NMVpnEditor *object;
 	StrongswanPluginUiWidgetPrivate *priv;
-	char *ui_file;
 
 	if (error)
 		g_return_val_if_fail (*error == NULL, NULL);
@@ -688,22 +689,16 @@ nm_vpn_plugin_ui_widget_interface_new (NMConnection *connection, GError **error)
 	}
 
 	priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE ((StrongswanPluginUiWidget*)object);
-	ui_file = g_strdup_printf ("%s/%s", UIDIR, "nm-strongswan-dialog.ui");
 	priv->builder = gtk_builder_new ();
 
 	gtk_builder_set_translation_domain (priv->builder, GETTEXT_PACKAGE);
 
-	if (!gtk_builder_add_from_file (priv->builder, ui_file, error)) {
+	if (!gtk_builder_add_from_resource (priv->builder, STRONGSWAN_UI_RESOURCE, error)) {
 		g_warning ("Couldn't load builder file: %s",
 		           error && *error ? (*error)->message : "(unknown)");
-		g_clear_error (error);
-		g_set_error (error, STRONGSWAN_PLUGIN_UI_ERROR, 0,
-		             "could not load required resources at %s", ui_file);
-		g_free (ui_file);
 		g_object_unref (object);
 		return NULL;
 	}
-	g_free (ui_file);
 
 	priv->widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "strongswan-vbox")	);
 	if (!priv->widget) {

@@ -11,3 +11,5 @@ config.guess.cdbs-orig
 config.sub.cdbs-orig
 NetworkManager-strongswan.metainfo.xml
 NetworkManager-strongswan.pot
+properties/nm-strongswan-resources.c
+properties/nm-strongswan-resources.h
