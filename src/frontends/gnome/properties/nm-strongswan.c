@@ -256,6 +256,59 @@ toggle_proposal_cb(GtkCheckButton *button, StrongswanPluginUiWidget *self)
 }
 
 static void
+chooser_button_update_file (GtkLabel *label, GFile *file)
+{
+	char *basename = NULL;
+
+	if (file)
+		basename = g_file_get_basename (file);
+
+	if (basename)
+	{
+		gtk_label_set_label (label, basename);
+		g_free (basename);
+	}
+	else
+	{
+		gtk_label_set_label (label, _("(None)"));
+	}
+}
+
+static void
+chooser_button_update (GtkLabel *label, GtkFileChooser *chooser)
+{
+	GFile *file;
+
+	file = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (chooser));
+	chooser_button_update_file (label, file);
+	g_clear_object (&file);
+}
+
+static void
+chooser_response_cb (GtkDialog *chooser, gint response_id, gpointer user_data)
+{
+	GtkLabel *label = GTK_LABEL (user_data);
+
+	if (response_id == GTK_RESPONSE_ACCEPT)
+	{
+		chooser_button_update (label, GTK_FILE_CHOOSER (chooser));
+	}
+	gtk_widget_hide (GTK_WIDGET (chooser));
+}
+
+static void
+chooser_show_cb (GtkWidget *parent, GtkWidget *widget)
+{
+	GtkWidget *root;
+
+	root = gtk_widget_get_toplevel (parent);
+	g_return_if_fail (GTK_IS_WINDOW (root));
+
+	gtk_window_set_transient_for (GTK_WINDOW (widget), GTK_WINDOW (root));
+	gtk_widget_show (widget);
+}
+
+static void
 password_storage_changed_cb (GObject *entry, GParamSpec *pspec, gpointer user_data)
 {
 	settings_changed_cb (NULL, STRONGSWAN_PLUGIN_UI_WIDGET (user_data));
@@ -296,6 +349,33 @@ init_password_icon (StrongswanPluginUiWidget *self, NMSettingVpn *settings,
 					  G_CALLBACK (password_storage_changed_cb), self);
 }
 
+static void
+init_chooser (GtkBuilder *builder, NMSettingVpn *settings, const char *setting,
+			  const char *chooser, const char *button, const char *label_name)
+{
+	GtkWidget *widget;
+	GtkLabel *label;
+	GFile *file = NULL;
+	const char *value;
+
+	widget = GTK_WIDGET (gtk_builder_get_object (builder, chooser));
+	label = GTK_LABEL (gtk_builder_get_object (builder, label_name));
+	g_signal_connect_swapped (G_OBJECT (widget), "delete-event",
+							  G_CALLBACK (gtk_widget_hide_on_delete), widget);
+	value = nm_setting_vpn_get_data_item (settings, setting);
+	if (value)
+	{
+		file = g_file_new_for_path (value);
+		gtk_file_chooser_set_file (GTK_FILE_CHOOSER (widget), file, NULL);
+	}
+	g_signal_connect (G_OBJECT (widget), "response",
+					  G_CALLBACK (chooser_response_cb), label);
+	g_signal_connect (gtk_builder_get_object (builder, button),
+					  "clicked", G_CALLBACK (chooser_show_cb), widget);
+	chooser_button_update_file (label, file);
+	g_clear_object (&file);
+}
+
 static gboolean
 init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError **error)
 {
@@ -314,11 +394,8 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 		gtk_entry_set_text (GTK_ENTRY (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "certificate-button"));
-	value = nm_setting_vpn_get_data_item (settings, "certificate");
-	if (value)
-		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
-	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
+	init_chooser (priv->builder, settings, "certificate", "certificate-chooser",
+				  "certificate-button", "certificate-button-label");
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "remote-identity-entry"));
 	value = nm_setting_vpn_get_data_item (settings, "remote-identity");
@@ -414,17 +491,11 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 	update_sensitive (priv);
 
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "usercert-button"));
-	value = nm_setting_vpn_get_data_item (settings, "usercert");
-	if (value)
-		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
-	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
+	init_chooser (priv->builder, settings, "usercert", "usercert-chooser",
+				  "usercert-button", "usercert-button-label");
 
-	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "userkey-button"));
-	value = nm_setting_vpn_get_data_item (settings, "userkey");
-	if (value)
-		gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (widget), value);
-	g_signal_connect (G_OBJECT (widget), "selection-changed", G_CALLBACK (settings_changed_cb), self);
+	init_chooser (priv->builder, settings, "userkey", "userkey-chooser",
+				  "userkey-button", "userkey-button-label");
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "virtual-check"));
 	value = nm_setting_vpn_get_data_item (settings, "virtual");
@@ -521,19 +592,24 @@ save_password_and_flags (NMSettingVpn *settings, GtkBuilder *builder,
 	nm_setting_set_secret_flags (NM_SETTING (settings), secret_key, flags, NULL);
 }
 
-
 static void
 save_file_chooser (NMSettingVpn *settings, GtkBuilder *builder,
 				   const char *name, const char *key)
 {
 	GtkWidget *chooser;
-	char *str;
+	GFile *file;
+	char *str = NULL;
 
 	chooser = GTK_WIDGET (gtk_builder_get_object (builder, name));
-	str = (char *) gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (chooser));
-	if (str) {
+	file = gtk_file_chooser_get_file (GTK_FILE_CHOOSER (chooser));
+	if (file) {
+		str = g_file_get_path (file);
+	}
+	if (str && strlen(str)) {
 		nm_setting_vpn_add_data_item (settings, key, str);
 	}
+	g_free (str);
+	g_clear_object (&file);
 }
 
 static void
@@ -580,10 +656,10 @@ save_cert (NMSettingVpn *settings, GtkBuilder *builder)
 	nm_setting_vpn_add_data_item (settings, "cert-source", str);
 
 	if (cert) {
-		save_file_chooser (settings, builder, "usercert-button", "usercert");
+		save_file_chooser (settings, builder, "usercert-chooser", "usercert");
 	}
 	if (key) {
-		save_file_chooser (settings, builder, "userkey-button", "userkey");
+		save_file_chooser (settings, builder, "userkey-chooser", "userkey");
 	}
 }
 
@@ -607,7 +683,7 @@ update_connection (NMVpnEditor *iface,
 				  NM_DBUS_SERVICE_STRONGSWAN, NULL);
 
 	save_entry (settings, priv->builder, "address-entry", "address");
-	save_file_chooser (settings, priv->builder, "certificate-button", "certificate");
+	save_file_chooser (settings, priv->builder, "certificate-chooser", "certificate");
 	save_entry (settings, priv->builder, "remote-identity-entry", "remote-identity");
 	save_entry (settings, priv->builder, "server-port-entry", "server-port");
 	save_entry (settings, priv->builder, "local-identity-entry", "local-identity");

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: NetworkManager-strongswan\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-05-18 18:12+0200\n"
+"POT-Creation-Date: 2022-04-19 17:33+0200\n"
 "PO-Revision-Date: 2019-12-18 17:10+0100\n"
 "Last-Translator: Tobias Brunner\n"
 "Language-Team: de <info@strongswan.org>\n"
@@ -17,59 +17,75 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../properties/nm-strongswan.c:43
+#: ../properties/nm-strongswan.c:35
 msgid "IPsec/IKEv2 (strongswan)"
 msgstr "IPsec/IKEv2 (strongswan)"
 
-#: ../properties/nm-strongswan.c:44
+#: ../properties/nm-strongswan.c:36
 msgid "IPsec with the IKEv2 key exchange protocol."
 msgstr "IPsec mit dem IKEv2 Protokoll."
 
-#: ../properties/nm-strongswan.c:367
+#: ../properties/nm-strongswan.c:273
+msgid "(None)"
+msgstr "(Nicht festgelegt)"
+
+#: ../properties/nm-strongswan.c:438
 msgid "EAP (Username/Password)"
 msgstr "EAP (Benutzername/Passwort)"
 
-#: ../properties/nm-strongswan.c:368
+#: ../properties/nm-strongswan.c:439
 msgid "Certificate"
 msgstr "Zertifikat"
 
-#: ../properties/nm-strongswan.c:369
+#: ../properties/nm-strongswan.c:440
 msgid "EAP-TLS"
 msgstr "EAP-TLS"
 
-#: ../properties/nm-strongswan.c:370
+#: ../properties/nm-strongswan.c:441
 msgid "Pre-shared key"
 msgstr "Pre-shared Key"
 
-#: ../properties/nm-strongswan.c:396
+#: ../properties/nm-strongswan.c:467
 msgid "Certificate/private key"
 msgstr "Zertifikat/Privater Schlüssel"
 
-#: ../properties/nm-strongswan.c:397
+#: ../properties/nm-strongswan.c:468
 msgid "Certificate/ssh-agent"
 msgstr "Zertifikat/ssh-agent"
 
-#: ../properties/nm-strongswan.c:398
+#: ../properties/nm-strongswan.c:469
 msgid "Smartcard"
 msgstr "Smartcard"
 
 #: ../properties/nm-strongswan-dialog.ui.h:1
+msgid "Choose a server or CA certificate…"
+msgstr "Server- oder CA-Zertifikat auswählen…"
+
+#: ../properties/nm-strongswan-dialog.ui.h:2
+msgid "_Cancel"
+msgstr "Abbre_chen"
+
+#: ../properties/nm-strongswan-dialog.ui.h:3
+msgid "_Select"
+msgstr "_Auswählen"
+
+#: ../properties/nm-strongswan-dialog.ui.h:4
 msgid "<b>Server</b>"
 msgstr "<b>Server</b>"
 
-#: ../properties/nm-strongswan-dialog.ui.h:2
+#: ../properties/nm-strongswan-dialog.ui.h:5
 msgid "_Address:"
 msgstr "_Adresse:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:3
+#: ../properties/nm-strongswan-dialog.ui.h:6
 msgid "An IP address or hostname of the VPN server."
 msgstr "Eine IP-Adresse oder ein Hostname des VPN Servers."
 
-#: ../properties/nm-strongswan-dialog.ui.h:4
+#: ../properties/nm-strongswan-dialog.ui.h:7
 msgid "C_ertificate:"
 msgstr "Z_ertifikat:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:5
+#: ../properties/nm-strongswan-dialog.ui.h:8
 msgid ""
 "Server or CA certificate to use for server authentication. If none is "
 "specified, pre-installed CA certificates are used."
@@ -77,11 +93,11 @@ msgstr ""
 "Server- oder CA-Zertifikat für die Authentisierung des Servers. Ohne Angabe "
 "eines Zertifikates werden die CA-Zertifikate des Systems verwendet."
 
-#: ../properties/nm-strongswan-dialog.ui.h:6
+#: ../properties/nm-strongswan-dialog.ui.h:9
 msgid "_Identity:"
 msgstr "_Identität:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:7
+#: ../properties/nm-strongswan-dialog.ui.h:10
 msgid ""
 "Defaults to the server address or the server certificate's subject DN (if "
 "configured). Custom values are explicitly sent to the server and enforced "
@@ -91,35 +107,35 @@ msgstr ""
 "Zertifikats (falls konfiguriert). Eigene Werte werden explizit an den Server "
 "gesendet und während der Authentifizierung erzwungen."
 
-#: ../properties/nm-strongswan-dialog.ui.h:8
+#: ../properties/nm-strongswan-dialog.ui.h:11
 msgid "(Defaults to address or certificate subject)"
 msgstr "(Standardwert ist die Adresse oder die Zertifikats-Identität)"
 
-#: ../properties/nm-strongswan-dialog.ui.h:9
+#: ../properties/nm-strongswan-dialog.ui.h:12
 msgid "<b>Client</b>"
 msgstr "<b>Client</b>"
 
-#: ../properties/nm-strongswan-dialog.ui.h:10
+#: ../properties/nm-strongswan-dialog.ui.h:13
 msgid "Au_thentication:"
 msgstr "Au_thentisierung:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:11
+#: ../properties/nm-strongswan-dialog.ui.h:14
 msgid "Ce_rtificate:"
 msgstr "Ze_rtifikat:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:12
+#: ../properties/nm-strongswan-dialog.ui.h:15
 msgid "Certificate _file:"
 msgstr "Z_ertifikatsdatei:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:13
+#: ../properties/nm-strongswan-dialog.ui.h:16
 msgid "Client certificate to use for client authentication."
 msgstr "Zertifikat des Clients für dessen Authentisierung."
 
-#: ../properties/nm-strongswan-dialog.ui.h:14
+#: ../properties/nm-strongswan-dialog.ui.h:17
 msgid "Private _key:"
 msgstr "Privater _Schlüssel:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:15
+#: ../properties/nm-strongswan-dialog.ui.h:18
 msgid ""
 "Private key to use for client authentication. This key has to match the "
 "certificates public key and may be encrypted."
@@ -127,21 +143,21 @@ msgstr ""
 "Privater Schlüssel für die Authentisierung des Clients. Dieser Schlüssel "
 "muss zum konfigurierten Zertifikat passen und kann verschlüsselt sein."
 
-#: ../properties/nm-strongswan-dialog.ui.h:16
+#: ../properties/nm-strongswan-dialog.ui.h:19
 msgid "_Username:"
 msgstr "_Benutzername:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:17
+#: ../properties/nm-strongswan-dialog.ui.h:20
 msgid ""
 "The username (EAP identity) to use for authentication against the server."
 msgstr ""
 "Benutzername/EAP-Identität für die Authentisierung gegenüber dem Server."
 
-#: ../properties/nm-strongswan-dialog.ui.h:18
+#: ../properties/nm-strongswan-dialog.ui.h:21
 msgid "_Password:"
 msgstr "_Passwort:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:19
+#: ../properties/nm-strongswan-dialog.ui.h:22
 msgid ""
 "The password to use for authentication against the server (min. 20 "
 "characters for PSKs)."
@@ -149,19 +165,19 @@ msgstr ""
 "Das Passwort für die Authentisierung gegenüber dem Server (min. 20 Zeichen "
 "für PSKs)."
 
-#: ../properties/nm-strongswan-dialog.ui.h:20
+#: ../properties/nm-strongswan-dialog.ui.h:23
 msgid "(Use icon to change password storage policy)"
 msgstr "(Icon verwenden, um Passwort-Richtlinie zu ändern)"
 
-#: ../properties/nm-strongswan-dialog.ui.h:21
+#: ../properties/nm-strongswan-dialog.ui.h:24
 msgid "_Show password"
 msgstr "Passwort _anzeigen"
 
-#: ../properties/nm-strongswan-dialog.ui.h:22
+#: ../properties/nm-strongswan-dialog.ui.h:25
 msgid "I_dentity:"
 msgstr "I_dentität:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:23
+#: ../properties/nm-strongswan-dialog.ui.h:26
 msgid ""
 "Defaults to the username (EAP), the client certificate's subject DN "
 "(certificate/EAP-TLS), or the IP address (PSK). Custom values may be used if "
@@ -171,15 +187,15 @@ msgstr ""
 "Zertifikats (Zertifikat/EAP-TLS) oder die IP-Adresse (PSK). Eigene Werte "
 "können verwendet werden, falls der Server diese erwartet/benötigt."
 
-#: ../properties/nm-strongswan-dialog.ui.h:24
+#: ../properties/nm-strongswan-dialog.ui.h:27
 msgid "(Defaults to username, certificate subject or IP address)"
 msgstr "(Standardwert ist der Benutzername, die Zertifikats-ID oder die IP)"
 
-#: ../properties/nm-strongswan-dialog.ui.h:25
+#: ../properties/nm-strongswan-dialog.ui.h:28
 msgid "Request an _inner IP address"
 msgstr "_Innere IP-Adresse beziehen"
 
-#: ../properties/nm-strongswan-dialog.ui.h:26
+#: ../properties/nm-strongswan-dialog.ui.h:29
 msgid ""
 "The server may provide addresses from a pool to use for communication in the "
 "VPN. Check to request such an address."
@@ -188,11 +204,11 @@ msgstr ""
 "Kommunikation im dahinterliegenden Netz verwenden kann. Aktivieren, um eine "
 "solche Adresse zu beziehen."
 
-#: ../properties/nm-strongswan-dialog.ui.h:27
+#: ../properties/nm-strongswan-dialog.ui.h:30
 msgid "En_force UDP encapsulation"
 msgstr "Erzwingen einer zusätzlichen Einbettung der Datenpakete in _UDP"
 
-#: ../properties/nm-strongswan-dialog.ui.h:28
+#: ../properties/nm-strongswan-dialog.ui.h:31
 msgid ""
 "Some firewalls block ESP traffic. Enforcing UDP capsulation even if no NAT "
 "situation is detected might help in such cases."
@@ -201,11 +217,11 @@ msgstr ""
 "erzwingen einer zustzlichen Einbettung in UDP, auch wenn kein NAT-Router "
 "detektiert wurde, kann in solchen Situationen hilfreich sein."
 
-#: ../properties/nm-strongswan-dialog.ui.h:29
+#: ../properties/nm-strongswan-dialog.ui.h:32
 msgid "Use IP c_ompression"
 msgstr "IP-Pakete k_omprimieren"
 
-#: ../properties/nm-strongswan-dialog.ui.h:30
+#: ../properties/nm-strongswan-dialog.ui.h:33
 msgid ""
 "IPComp compresses raw IP packets before they get encrypted. This saves some "
 "bandwidth, but uses more processing power."
@@ -213,11 +229,11 @@ msgstr ""
 "IPComp komprimiert IP-Pakete, bevor sie verschlüsselt werden. Diese Option "
 "kann Bandbreite sparen, benötigt jedoch zusätzliche Rechenleistung."
 
-#: ../properties/nm-strongswan-dialog.ui.h:31
+#: ../properties/nm-strongswan-dialog.ui.h:34
 msgid "Server _port:"
 msgstr "Server-_Port:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:32
+#: ../properties/nm-strongswan-dialog.ui.h:35
 msgid ""
 "Custom server port to connect to. Defaults to UDP port 500, which is "
 "followed by a switch to port 4500 after the first exchange."
@@ -225,37 +241,45 @@ msgstr ""
 "Server-Port zu dem verbunden wird. Ohne Konfiguration wird UDP-Port 500 "
 "verwendet, mit einem Wechsel auf Port 4500 nach der ersten Nachricht."
 
-#: ../properties/nm-strongswan-dialog.ui.h:33
+#: ../properties/nm-strongswan-dialog.ui.h:36
 msgid "(Defaults to UDP 500/4500)"
 msgstr "(Standardwert ist UDP 500/4500)"
 
-#: ../properties/nm-strongswan-dialog.ui.h:34
+#: ../properties/nm-strongswan-dialog.ui.h:37
 msgid "Options"
 msgstr "Optionen"
 
-#: ../properties/nm-strongswan-dialog.ui.h:35
+#: ../properties/nm-strongswan-dialog.ui.h:38
 msgid "_Enable custom algorithm proposals"
 msgstr "_Eigene Algorithmen verwenden"
 
-#: ../properties/nm-strongswan-dialog.ui.h:36
+#: ../properties/nm-strongswan-dialog.ui.h:39
 msgid "_IKE:"
 msgstr "_IKE:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:37
+#: ../properties/nm-strongswan-dialog.ui.h:40
 msgid "A list of proposals for IKE separated by \";\""
 msgstr "Eine Liste von Proposals für IKE getrennt mit \";\""
 
-#: ../properties/nm-strongswan-dialog.ui.h:38
+#: ../properties/nm-strongswan-dialog.ui.h:41
 msgid "_ESP:"
 msgstr "_ESP:"
 
-#: ../properties/nm-strongswan-dialog.ui.h:39
+#: ../properties/nm-strongswan-dialog.ui.h:42
 msgid "A list of proposals for ESP separated by \";\""
 msgstr "Eine Liste von Proposals für ESP getrennt mit \";\""
 
-#: ../properties/nm-strongswan-dialog.ui.h:40
+#: ../properties/nm-strongswan-dialog.ui.h:43
 msgid "Algorithms"
 msgstr "Algorithmen"
+
+#: ../properties/nm-strongswan-dialog.ui.h:44
+msgid "Choose a client certificate…"
+msgstr "Client-Zertifikat auswählen…"
+
+#: ../properties/nm-strongswan-dialog.ui.h:45
+msgid "Choose a private key…"
+msgstr "Privaten Schlüssel auswählen…"
 
 #: ../auth-dialog/main.c:137
 #, c-format
