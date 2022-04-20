@@ -1946,6 +1946,7 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 		child_create->use_marks(child_create,
 								child_sa->get_mark(child_sa, TRUE).value,
 								child_sa->get_mark(child_sa, FALSE).value);
+		child_create->use_label(child_create, child_sa->get_label(child_sa));
 		/* interface IDs are not migrated as the new CHILD_SAs on old and new
 		 * IKE_SA go though regular updown events */
 		new->queue_task(new, &child_create->task);
