@@ -27,16 +27,8 @@
 #include <glib/gi18n-lib.h>
 #include <gtk/gtk.h>
 
-#ifdef NM_STRONGSWAN_OLD
-#define NM_VPN_LIBNM_COMPAT
-#include <nm-vpn-plugin-ui-interface.h>
-#include <nm-setting-vpn.h>
-#include <nm-setting-connection.h>
-#include <nm-ui-utils.h>
-#else
 #include <NetworkManager.h>
 #include <nma-ui-utils.h>
-#endif
 
 #include "nm-strongswan.h"
 

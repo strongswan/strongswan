@@ -66,36 +66,17 @@ AC_ARG_ENABLE(
 	[nm-absolute-paths],
 	AS_HELP_STRING([--enable-nm-absolute-paths],[use absolute paths for NM plugins in the .name file])
 )
-AC_ARG_WITH(
-	[libnm-glib],
-	AS_HELP_STRING([--without-libnm-glib], [build NetworkManager-strongswan without libnm-glib compatibility]),
-	[with_libnm_glib=no],
-	[with_libnm_glib=yes]
-)
-
-AM_CONDITIONAL(WITH_LIBNM_GLIB, test "$with_libnm_glib" != no)
 
 PKG_CHECK_MODULES(LIBNM, libnm >= 1.1.0)
 LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MIN_REQUIRED=NM_VERSION_1_2"
 LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MAX_ALLOWED=NM_VERSION_1_2"
 PKG_CHECK_MODULES(LIBNMA, libnma >= 1.1.0)
 
-if test x"$with_libnm_glib" != xno; then
-	PKG_CHECK_MODULES(LIBNM_GLIB, NetworkManager >= 1.1.0 libnm-util libnm-glib libnm-glib-vpn)
-	PKG_CHECK_MODULES(LIBNM_GTK, libnm-gtk >= 1.1.0)
-	if test -z "$nm_libexecdir"; then
-		nm_libexecdir=$($PKG_CONFIG --variable=libgnome_serverdir NetworkManager)
-	fi
-	if test -z "$nm_plugindir"; then
-		nm_plugindir=$($PKG_CONFIG --variable=plugindir NetworkManager)
-	fi
-else
-	if test -z "$nm_libexecdir"; then
-		nm_libexecdir=$($PKG_CONFIG --variable=exec_prefix libnm)/lib/NetworkManager
-	fi
-	if test -z "$nm_plugindir"; then
-		nm_plugindir=$($PKG_CONFIG --variable=libdir libnm)/NetworkManager
-	fi
+if test -z "$nm_libexecdir"; then
+	nm_libexecdir=$($PKG_CONFIG --variable=exec_prefix libnm)/lib/NetworkManager
+fi
+if test -z "$nm_plugindir"; then
+	nm_plugindir=$($PKG_CONFIG --variable=libdir libnm)/NetworkManager
 fi
 
 AC_SUBST(nm_libexecdir)
