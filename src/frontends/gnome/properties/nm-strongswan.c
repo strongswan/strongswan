@@ -32,27 +32,9 @@
 
 #include "nm-strongswan.h"
 
-#define STRONGSWAN_PLUGIN_NAME    _("IPsec/IKEv2 (strongswan)")
-#define STRONGSWAN_PLUGIN_DESC    _("IPsec with the IKEv2 key exchange protocol.")
-#define STRONGSWAN_PLUGIN_SERVICE "org.freedesktop.NetworkManager.strongswan"
 #define NM_DBUS_SERVICE_STRONGSWAN "org.freedesktop.NetworkManager.strongswan"
 #define NM_DBUS_PATH_STRONGSWAN    "/org/freedesktop/NetworkManager/strongswan"
 #define STRONGSWAN_UI_RESOURCE     NM_DBUS_PATH_STRONGSWAN "/nm-strongswan-dialog.ui"
-
-/************** plugin class **************/
-
-enum {
-	PROP_0,
-	PROP_NAME,
-	PROP_DESC,
-	PROP_SERVICE
-};
-
-static void strongswan_plugin_ui_interface_init (NMVpnEditorPluginInterface *iface_class);
-
-G_DEFINE_TYPE_EXTENDED (StrongswanPluginUi, strongswan_plugin_ui, G_TYPE_OBJECT, 0,
-						G_IMPLEMENT_INTERFACE (NM_TYPE_VPN_EDITOR_PLUGIN,
-											   strongswan_plugin_ui_interface_init))
 
 /************** UI widget class **************/
 
@@ -749,49 +731,6 @@ update_connection (NMVpnEditor *iface,
 	return TRUE;
 }
 
-static NMVpnEditor *
-nm_vpn_plugin_ui_widget_interface_new (NMConnection *connection, GError **error)
-{
-	NMVpnEditor *object;
-	StrongswanPluginUiWidgetPrivate *priv;
-
-	if (error)
-		g_return_val_if_fail (*error == NULL, NULL);
-
-	object = g_object_new (STRONGSWAN_TYPE_PLUGIN_UI_WIDGET, NULL);
-	if (!object) {
-		g_set_error (error, STRONGSWAN_PLUGIN_UI_ERROR, 0, "could not create strongswan object");
-		return NULL;
-	}
-
-	priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE ((StrongswanPluginUiWidget*)object);
-	priv->builder = gtk_builder_new ();
-
-	gtk_builder_set_translation_domain (priv->builder, GETTEXT_PACKAGE);
-
-	if (!gtk_builder_add_from_resource (priv->builder, STRONGSWAN_UI_RESOURCE, error)) {
-		g_warning ("Couldn't load builder file: %s",
-		           error && *error ? (*error)->message : "(unknown)");
-		g_object_unref (object);
-		return NULL;
-	}
-
-	priv->widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "strongswan-vbox")	);
-	if (!priv->widget) {
-		g_set_error (error, STRONGSWAN_PLUGIN_UI_ERROR, 0, "could not load UI widget");
-		g_object_unref (object);
-		return NULL;
-	}
-	g_object_ref_sink (priv->widget);
-
-	if (!init_plugin_ui (STRONGSWAN_PLUGIN_UI_WIDGET (object), connection, error)) {
-		g_object_unref (object);
-		return NULL;
-	}
-
-	return object;
-}
-
 static void
 dispose (GObject *object)
 {
@@ -832,78 +771,45 @@ strongswan_plugin_ui_widget_interface_init (NMVpnEditorInterface *iface_class)
 	iface_class->update_connection = update_connection;
 }
 
-static guint32
-get_capabilities (NMVpnEditorPlugin *iface)
+NMVpnEditor *
+strongswan_editor_new (NMConnection *connection, GError **error)
 {
-	return NM_VPN_EDITOR_PLUGIN_CAPABILITY_IPV6;
-}
+	NMVpnEditor *object;
+	StrongswanPluginUiWidgetPrivate *priv;
 
-static NMVpnEditor *
-get_editor (NMVpnEditorPlugin *iface, NMConnection *connection, GError **error)
-{
-	return nm_vpn_plugin_ui_widget_interface_new (connection, error);
-}
-
-static void
-get_property (GObject *object, guint prop_id,
-			  GValue *value, GParamSpec *pspec)
-{
-	switch (prop_id) {
-	case PROP_NAME:
-		g_value_set_string (value, STRONGSWAN_PLUGIN_NAME);
-		break;
-	case PROP_DESC:
-		g_value_set_string (value, STRONGSWAN_PLUGIN_DESC);
-		break;
-	case PROP_SERVICE:
-		g_value_set_string (value, STRONGSWAN_PLUGIN_SERVICE);
-		break;
-	default:
-		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-		break;
-	}
-}
-
-static void
-strongswan_plugin_ui_class_init (StrongswanPluginUiClass *req_class)
-{
-	GObjectClass *object_class = G_OBJECT_CLASS (req_class);
-
-	object_class->get_property = get_property;
-
-	g_object_class_override_property (object_class,
-									  PROP_NAME,
-									  NM_VPN_EDITOR_PLUGIN_NAME);
-
-	g_object_class_override_property (object_class,
-									  PROP_DESC,
-									  NM_VPN_EDITOR_PLUGIN_DESCRIPTION);
-
-	g_object_class_override_property (object_class,
-									  PROP_SERVICE,
-									  NM_VPN_EDITOR_PLUGIN_SERVICE);
-}
-
-static void
-strongswan_plugin_ui_init (StrongswanPluginUi *plugin)
-{
-}
-
-static void
-strongswan_plugin_ui_interface_init (NMVpnEditorPluginInterface *iface_class)
-{
-	/* interface implementation */
-	iface_class->get_editor = get_editor;
-	iface_class->get_capabilities = get_capabilities;
-	/* TODO: implement delete_connection to purge associated secrets */
-}
-
-
-G_MODULE_EXPORT NMVpnEditorPlugin *
-nm_vpn_editor_plugin_factory (GError **error)
-{
 	if (error)
 		g_return_val_if_fail (*error == NULL, NULL);
 
-	return g_object_new (STRONGSWAN_TYPE_PLUGIN_UI, NULL);
+	object = g_object_new (STRONGSWAN_TYPE_PLUGIN_UI_WIDGET, NULL);
+	if (!object) {
+		g_set_error (error, STRONGSWAN_PLUGIN_UI_ERROR, 0, "could not create strongswan object");
+		return NULL;
+	}
+
+	priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE ((StrongswanPluginUiWidget*)object);
+	priv->builder = gtk_builder_new ();
+
+	gtk_builder_set_translation_domain (priv->builder, GETTEXT_PACKAGE);
+
+	if (!gtk_builder_add_from_resource (priv->builder, STRONGSWAN_UI_RESOURCE, error)) {
+		g_warning ("Couldn't load builder file: %s",
+		           error && *error ? (*error)->message : "(unknown)");
+		g_object_unref (object);
+		return NULL;
+	}
+
+	priv->widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "strongswan-vbox")	);
+	if (!priv->widget) {
+		g_set_error (error, STRONGSWAN_PLUGIN_UI_ERROR, 0, "could not load UI widget");
+		g_object_unref (object);
+		return NULL;
+	}
+	g_object_ref_sink (priv->widget);
+
+	if (!init_plugin_ui (STRONGSWAN_PLUGIN_UI_WIDGET (object), connection, error)) {
+		g_object_unref (object);
+		return NULL;
+	}
+
+	return object;
 }

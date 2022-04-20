@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: NetworkManager-strongswan\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-04-19 17:33+0200\n"
+"POT-Creation-Date: 2022-04-20 17:19+0200\n"
 "PO-Revision-Date: 2019-12-18 17:10+0100\n"
 "Last-Translator: Tobias Brunner\n"
 "Language-Team: de <info@strongswan.org>\n"
@@ -17,43 +17,67 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../properties/nm-strongswan.c:35
+#: ../properties/nm-strongswan-plugin.c:36
 msgid "IPsec/IKEv2 (strongswan)"
 msgstr "IPsec/IKEv2 (strongswan)"
 
-#: ../properties/nm-strongswan.c:36
+#: ../properties/nm-strongswan-plugin.c:37
 msgid "IPsec with the IKEv2 key exchange protocol."
 msgstr "IPsec mit dem IKEv2 Protokoll."
 
-#: ../properties/nm-strongswan.c:273
+#: ../properties/nm-strongswan-plugin.c:80
+#, c-format
+msgid "unable to determine plugin path: %s"
+msgstr "Plugin-Pfad konnte nicht ermittelt werden: %s"
+
+#: ../properties/nm-strongswan-plugin.c:93
+#, c-format
+msgid "missing plugin file '%s'"
+msgstr "Plugin-Datei '%s' fehlt"
+
+#: ../properties/nm-strongswan-plugin.c:98
+#, c-format
+msgid "unable to load editor plugin: %s"
+msgstr "Laden des Editor-Plugins fehlgeschlagen: %s"
+
+#: ../properties/nm-strongswan-plugin.c:108
+#, c-format
+msgid "cannot load factory %s from plugin: %s"
+msgstr "Factory %s konnte nicht aus Plugin geladen werden: %s"
+
+#: ../properties/nm-strongswan-plugin.c:124
+msgid "unknown error creating editor instance"
+msgstr "Unbekannter Fehler beim Erstellen der Editor-Instanz"
+
+#: ../properties/nm-strongswan.c:255
 msgid "(None)"
 msgstr "(Nicht festgelegt)"
 
-#: ../properties/nm-strongswan.c:438
+#: ../properties/nm-strongswan.c:420
 msgid "EAP (Username/Password)"
 msgstr "EAP (Benutzername/Passwort)"
 
-#: ../properties/nm-strongswan.c:439
+#: ../properties/nm-strongswan.c:421
 msgid "Certificate"
 msgstr "Zertifikat"
 
-#: ../properties/nm-strongswan.c:440
+#: ../properties/nm-strongswan.c:422
 msgid "EAP-TLS"
 msgstr "EAP-TLS"
 
-#: ../properties/nm-strongswan.c:441
+#: ../properties/nm-strongswan.c:423
 msgid "Pre-shared key"
 msgstr "Pre-shared Key"
 
-#: ../properties/nm-strongswan.c:467
+#: ../properties/nm-strongswan.c:449
 msgid "Certificate/private key"
 msgstr "Zertifikat/Privater Schlüssel"
 
-#: ../properties/nm-strongswan.c:468
+#: ../properties/nm-strongswan.c:450
 msgid "Certificate/ssh-agent"
 msgstr "Zertifikat/ssh-agent"
 
-#: ../properties/nm-strongswan.c:469
+#: ../properties/nm-strongswan.c:451
 msgid "Smartcard"
 msgstr "Smartcard"
 
