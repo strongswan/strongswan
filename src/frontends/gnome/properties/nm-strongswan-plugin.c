@@ -36,7 +36,8 @@
 #define STRONGSWAN_PLUGIN_NAME    _("IPsec/IKEv2 (strongswan)")
 #define STRONGSWAN_PLUGIN_DESC    _("IPsec with the IKEv2 key exchange protocol.")
 #define STRONGSWAN_PLUGIN_SERVICE "org.freedesktop.NetworkManager.strongswan"
-#define STRONGSWAN_EDITOR_FILE    "libnm-vpn-plugin-strongswan-editor.so"
+#define STRONGSWAN_EDITOR_GTK3    "libnm-vpn-plugin-strongswan-editor.so"
+#define STRONGSWAN_EDITOR_GTK4    "libnm-gtk4-vpn-plugin-strongswan-editor.so"
 #define STRONGSWAN_EDITOR_FACTORY "strongswan_editor_new"
 
 /************** plugin class **************/
@@ -60,13 +61,30 @@ get_editor (NMVpnEditorPlugin *iface, NMConnection *connection, GError **error)
 	static struct {
 		NMVpnEditor *(*factory)(NMConnection*, GError**);
 		void *dl_module;
+		char *file;
 	} cache = {};
 	NMVpnEditor *editor;
+	char *file;
 
 	g_return_val_if_fail (NM_IS_CONNECTION (connection), NULL);
 	g_return_val_if_fail (!error || !*error, NULL);
 
-	if (!cache.factory)
+	/* check for a GTK3-only symbol to decide which editor to load */
+	if (dlsym(RTLD_DEFAULT, "gtk_container_add"))
+	{
+		file = STRONGSWAN_EDITOR_GTK3;
+	}
+	else
+	{
+
+		file = STRONGSWAN_EDITOR_GTK4;
+	}
+
+	if (cache.factory)
+	{	/* we can't switch GTK versions */
+		g_return_val_if_fail (cache.file && !strcmp(cache.file, file), NULL);
+	}
+	else
 	{
 		Dl_info plugin_info;
 		void *dl_module;
@@ -81,7 +99,7 @@ get_editor (NMVpnEditorPlugin *iface, NMConnection *connection, GError **error)
 			return NULL;
 		}
 		dirname = g_path_get_dirname (plugin_info.dli_fname);
-		module_path = g_build_filename (dirname, STRONGSWAN_EDITOR_FILE, NULL);
+		module_path = g_build_filename (dirname, file, NULL);
 		g_free(dirname);
 
 		dl_module = dlopen(module_path, RTLD_LAZY | RTLD_LOCAL);
@@ -112,6 +130,7 @@ get_editor (NMVpnEditorPlugin *iface, NMConnection *connection, GError **error)
 		}
 		cache.factory = factory;
 		cache.dl_module = dl_module;
+		cache.file = strdup(file);
 	}
 
 	editor = cache.factory (connection, error);

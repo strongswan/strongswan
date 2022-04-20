@@ -13,3 +13,5 @@ NetworkManager-strongswan.metainfo.xml
 NetworkManager-strongswan.pot
 properties/nm-strongswan-resources.c
 properties/nm-strongswan-resources.h
+properties/gtk4/nm-strongswan-dialog.ui
+properties/gtk4/nm-strongswan-resources.c

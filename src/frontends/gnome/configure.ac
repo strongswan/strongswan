@@ -70,11 +70,23 @@ AC_ARG_ENABLE(
 	[nm-absolute-paths],
 	AS_HELP_STRING([--enable-nm-absolute-paths],[use absolute paths for NM plugins in the .name file])
 )
+AC_ARG_WITH(
+	[gtk4],
+	AS_HELP_STRING([--with-gtk4], [build NetworkManager-strongswan with libnma-gtk4 support]),
+	[], [with_gtk4=no]
+)
+
+AM_CONDITIONAL(WITH_GTK4, test "$with_gtk4" != no)
 
 PKG_CHECK_MODULES(LIBNM, libnm >= 1.1.0)
 LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MIN_REQUIRED=NM_VERSION_1_2"
 LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MAX_ALLOWED=NM_VERSION_1_2"
 PKG_CHECK_MODULES(LIBNMA, libnma >= 1.1.0)
+
+if test x"$with_gtk4" != xno; then
+	PKG_CHECK_MODULES(GTK4, gtk4 >= 4.0)
+	PKG_CHECK_MODULES(LIBNMA_GTK4, libnma-gtk4 >= 1.8.33)
+fi
 
 if test -z "$nm_libexecdir"; then
 	nm_libexecdir=$($PKG_CONFIG --variable=exec_prefix libnm)/lib/NetworkManager

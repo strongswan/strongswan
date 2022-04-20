@@ -36,6 +36,21 @@
 #define NM_DBUS_PATH_STRONGSWAN    "/org/freedesktop/NetworkManager/strongswan"
 #define STRONGSWAN_UI_RESOURCE     NM_DBUS_PATH_STRONGSWAN "/nm-strongswan-dialog.ui"
 
+#if !GTK_CHECK_VERSION(4,0,0)
+typedef void GtkRoot;
+#define gtk_editable_set_text(editable, text)       gtk_entry_set_text(GTK_ENTRY(editable), (text))
+#define gtk_editable_get_text(editable)             gtk_entry_get_text(GTK_ENTRY(editable))
+#define gtk_check_button_get_active(button)         gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button))
+#define gtk_check_button_set_active(button, active)	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(button), active)
+#define gtk_widget_get_root(widget)                 gtk_widget_get_toplevel(widget)
+#define gtk_window_set_hide_on_close(window, hide) \
+	G_STMT_START { \
+		G_STATIC_ASSERT (hide); \
+		g_signal_connect_swapped (G_OBJECT (window), "delete-event", \
+								  G_CALLBACK (gtk_widget_hide_on_delete), window); \
+	} G_STMT_END
+#endif
+
 /************** UI widget class **************/
 
 static void strongswan_plugin_ui_widget_interface_init (NMVpnEditorInterface *iface_class);
@@ -95,7 +110,7 @@ check_validity (StrongswanPluginUiWidget *self, GError **error)
 	char *str;
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "address-entry"));
-	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+	str = (char *) gtk_editable_get_text (GTK_EDITABLE (widget));
 	if (!str || !strlen (str)) {
 		g_set_error (error,
 					 STRONGSWAN_PLUGIN_UI_ERROR,
@@ -113,7 +128,7 @@ check_validity (StrongswanPluginUiWidget *self, GError **error)
 			{
 				case NM_SETTING_SECRET_FLAG_NONE:
 				case NM_SETTING_SECRET_FLAG_AGENT_OWNED:
-					str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+					str = (char *) gtk_editable_get_text (GTK_EDITABLE (widget));
 					if (str && strlen (str) < 20) {
 						g_set_error (error,
 									 STRONGSWAN_PLUGIN_UI_ERROR,
@@ -222,7 +237,7 @@ show_toggled_cb (GtkCheckButton *button, StrongswanPluginUiWidget *self)
 	GtkWidget *widget;
 	gboolean visible;
 
-	visible = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (button));
+	visible = gtk_check_button_get_active (GTK_CHECK_BUTTON (button));
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
 	gtk_entry_set_visibility (GTK_ENTRY (widget), visible);
@@ -232,7 +247,7 @@ static void
 toggle_proposal_cb(GtkCheckButton *button, StrongswanPluginUiWidget *self)
 {
 	StrongswanPluginUiWidgetPrivate *priv = STRONGSWAN_PLUGIN_UI_WIDGET_GET_PRIVATE (self);
-	gboolean visible = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button));
+	gboolean visible = gtk_check_button_get_active(GTK_CHECK_BUTTON(button));
 	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(priv->builder, "ike-entry")), visible);
 	gtk_widget_set_sensitive(GTK_WIDGET(gtk_builder_get_object(priv->builder, "esp-entry")), visible);
 }
@@ -281,9 +296,9 @@ chooser_response_cb (GtkDialog *chooser, gint response_id, gpointer user_data)
 static void
 chooser_show_cb (GtkWidget *parent, GtkWidget *widget)
 {
-	GtkWidget *root;
+	GtkRoot *root;
 
-	root = gtk_widget_get_toplevel (parent);
+	root = gtk_widget_get_root (parent);
 	g_return_if_fail (GTK_IS_WINDOW (root));
 
 	gtk_window_set_transient_for (GTK_WINDOW (widget), GTK_WINDOW (root));
@@ -320,7 +335,7 @@ init_password_icon (StrongswanPluginUiWidget *self, NMSettingVpn *settings,
 		nm_setting_get_secret_flags (NM_SETTING (settings), secret_key, &pw_flags, NULL);
 	}
 
-	value = gtk_entry_get_text (GTK_ENTRY (entry));
+	value = gtk_editable_get_text (GTK_EDITABLE (entry));
 	if ((!value || !*value) && (pw_flags == NM_SETTING_SECRET_FLAG_NONE))
 	{
 		nma_utils_update_password_storage (entry, NM_SETTING_SECRET_FLAG_NOT_SAVED,
@@ -342,8 +357,7 @@ init_chooser (GtkBuilder *builder, NMSettingVpn *settings, const char *setting,
 
 	widget = GTK_WIDGET (gtk_builder_get_object (builder, chooser));
 	label = GTK_LABEL (gtk_builder_get_object (builder, label_name));
-	g_signal_connect_swapped (G_OBJECT (widget), "delete-event",
-							  G_CALLBACK (gtk_widget_hide_on_delete), widget);
+	gtk_window_set_hide_on_close (GTK_WINDOW(widget), TRUE);
 	value = nm_setting_vpn_get_data_item (settings, setting);
 	if (value)
 	{
@@ -373,7 +387,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "address-entry"));
 	value = nm_setting_vpn_get_data_item (settings, "address");
 	if (value)
-		gtk_entry_set_text (GTK_ENTRY (widget), value);
+		gtk_editable_set_text (GTK_EDITABLE (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 	init_chooser (priv->builder, settings, "certificate", "certificate-chooser",
@@ -382,13 +396,13 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "remote-identity-entry"));
 	value = nm_setting_vpn_get_data_item (settings, "remote-identity");
 	if (value)
-		gtk_entry_set_text (GTK_ENTRY (widget), value);
+		gtk_editable_set_text (GTK_EDITABLE (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "server-port-entry"));
 	value = nm_setting_vpn_get_data_item (settings, "server-port");
 	if (value)
-		gtk_entry_set_text (GTK_ENTRY (widget), value);
+		gtk_editable_set_text (GTK_EDITABLE (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "local-identity-entry"));
@@ -397,14 +411,14 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	if (!value && method && g_strcmp0 (method, "psk") == 0)
 		value = nm_setting_vpn_get_data_item (settings, "user");
 	if (value)
-		gtk_entry_set_text (GTK_ENTRY (widget), value);
+		gtk_editable_set_text (GTK_EDITABLE (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user-entry"));
 	value = nm_setting_vpn_get_data_item (settings, "user");
 	/* PSK auth now uses local identity, see above */
 	if (value && method && g_strcmp0 (method, "psk") != 0)
-		gtk_entry_set_text (GTK_ENTRY (widget), value);
+		gtk_editable_set_text (GTK_EDITABLE (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-show"));
@@ -412,7 +426,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "passwd-entry"));
 	value = nm_setting_vpn_get_secret (settings, "password");
 	if (value)
-		gtk_entry_set_text (GTK_ENTRY (widget), value);
+		gtk_editable_set_text (GTK_EDITABLE (widget), value);
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 	init_password_icon (self, settings, "password", "passwd-entry");
 
@@ -483,7 +497,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	value = nm_setting_vpn_get_data_item (settings, "virtual");
 	if (value && strcmp(value, "yes") == 0)
 	{
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
+		gtk_check_button_set_active(GTK_CHECK_BUTTON(widget), TRUE);
 	}
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
 
@@ -491,7 +505,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	value = nm_setting_vpn_get_data_item (settings, "encap");
 	if (value && strcmp(value, "yes") == 0)
 	{
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
+		gtk_check_button_set_active(GTK_CHECK_BUTTON(widget), TRUE);
 	}
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
 
@@ -499,14 +513,14 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	value = nm_setting_vpn_get_data_item (settings, "ipcomp");
 	if (value && strcmp(value, "yes") == 0)
 	{
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
+		gtk_check_button_set_active(GTK_CHECK_BUTTON(widget), TRUE);
 	}
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (settings_changed_cb), self);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "proposal-check"));
 	value = nm_setting_vpn_get_data_item(settings, "proposal");
 	if (value && strcmp(value, "yes") == 0)
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(widget), TRUE);
+		gtk_check_button_set_active(GTK_CHECK_BUTTON(widget), TRUE);
 	else
 		toggle_proposal_cb(GTK_CHECK_BUTTON(widget), self);
 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (toggle_proposal_cb), self);
@@ -516,7 +530,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	if (value)
 	{
 		value = g_strdelimit (g_strdup (value), ";", ',');
-		gtk_entry_set_text (GTK_ENTRY (widget), value);
+		gtk_editable_set_text (GTK_EDITABLE (widget), value);
 		g_free ((char*)value);
 	}
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
@@ -526,7 +540,7 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	if (value)
 	{
 		value = g_strdelimit (g_strdup (value), ";", ',');
-		gtk_entry_set_text (GTK_ENTRY (widget), value);
+		gtk_editable_set_text (GTK_EDITABLE (widget), value);
 		g_free ((char*)value);
 	}
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
@@ -560,7 +574,7 @@ save_password_and_flags (NMSettingVpn *settings, GtkBuilder *builder,
 		case NM_SETTING_SECRET_FLAG_NONE:
 			/* FALL */
 		case NM_SETTING_SECRET_FLAG_AGENT_OWNED:
-			password = gtk_entry_get_text (GTK_ENTRY (entry));
+			password = gtk_editable_get_text (GTK_EDITABLE (entry));
 			if (password && strlen (password))
 			{
 				nm_setting_vpn_add_secret (settings, secret_key, password);
@@ -602,7 +616,7 @@ save_entry (NMSettingVpn *settings, GtkBuilder *builder,
 	const char *str;
 
 	entry = GTK_WIDGET (gtk_builder_get_object (builder, name));
-	str = (char *) gtk_entry_get_text (GTK_ENTRY (entry));
+	str = (char *) gtk_editable_get_text (GTK_EDITABLE (entry));
 	if (str && strlen (str)) {
 		nm_setting_vpn_add_data_item (settings, key, str);
 	}
@@ -696,23 +710,23 @@ update_connection (NMVpnEditor *iface,
 	nm_setting_vpn_add_data_item (settings, "method", str);
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "virtual-check"));
-	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+	active = gtk_check_button_get_active(GTK_CHECK_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "virtual", active ? "yes" : "no");
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "encap-check"));
-	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+	active = gtk_check_button_get_active(GTK_CHECK_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "encap", active ? "yes" : "no");
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "ipcomp-check"));
-	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+	active = gtk_check_button_get_active(GTK_CHECK_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "ipcomp", active ? "yes" : "no");
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "proposal-check"));
-	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+	active = gtk_check_button_get_active(GTK_CHECK_BUTTON(widget));
 	nm_setting_vpn_add_data_item (settings, "proposal", active ? "yes" : "no");
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "ike-entry"));
-	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+	str = (char *) gtk_editable_get_text (GTK_EDITABLE (widget));
 	if (str && strlen (str)) {
 		str = g_strdelimit (g_strdup (str), ",", ';');
 		nm_setting_vpn_add_data_item (settings, "ike", str);
@@ -720,7 +734,7 @@ update_connection (NMVpnEditor *iface,
 	}
 
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "esp-entry"));
-	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
+	str = (char *) gtk_editable_get_text (GTK_EDITABLE (widget));
 	if (str && strlen (str)) {
 		str = g_strdelimit (g_strdup (str), ",", ';');
 		nm_setting_vpn_add_data_item (settings, "esp", str);
