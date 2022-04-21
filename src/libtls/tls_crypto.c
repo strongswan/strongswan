@@ -1114,7 +1114,7 @@ static void filter_unsupported_suites(suite_algs_t suites[], int *count)
  */
 static void build_cipher_suite_list(private_tls_crypto_t *this)
 {
-	suite_algs_t suites[countof(suite_algs)];
+	suite_algs_t suites[countof(suite_algs)] = {};
 	tls_version_t min_version, max_version, new_min_version, new_max_version;
 	bool require_encryption = TRUE;
 	int count = 0, i;
@@ -2461,7 +2461,7 @@ tls_crypto_t *tls_crypto_create(tls_t *tls, tls_cache_t *cache)
 int tls_crypto_get_supported_suites(bool null, tls_version_t version,
 									tls_cipher_suite_t **out)
 {
-	suite_algs_t suites[countof(suite_algs)];
+	suite_algs_t suites[countof(suite_algs)] = {};
 	int count = 0, i;
 
 	/* initialize copy of suite list */
