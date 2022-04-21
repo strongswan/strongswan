@@ -33,7 +33,7 @@
      T3 = prf (K, T2 | S | 0x03)
      T4 = prf (K, T3 | S | 0x04)
      ...
- * @endverbatim
+   @endverbatim
  *
  * @defgroup kdf_kdf kdf_kdf
  * @{ @ingroup kdf_p
@@ -47,7 +47,7 @@
 /**
  * Create a kdf_t object
  *
- * @param algo			KDF_PRF_PLUS
+ * @param algo			algorithm to instantiate
  * @param args			pseudo_random_function_t of the underlying PRF
  * @return				kdf_t object, NULL if not supported
  */
