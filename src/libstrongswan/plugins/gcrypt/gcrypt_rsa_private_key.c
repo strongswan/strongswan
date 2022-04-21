@@ -281,8 +281,8 @@ METHOD(private_key_t, decrypt, bool,
 	void *params, chunk_t encrypted, chunk_t *plain)
 {
 	gcry_error_t err;
-	gcry_sexp_t in, out;
-	chunk_t label = chunk_empty, decrypted;
+	gcry_sexp_t in, out = NULL;
+	chunk_t label = chunk_empty, decrypted = chunk_empty;
 	u_char *sexp;
 
 	switch (scheme)

@@ -240,7 +240,7 @@ METHOD(public_key_t, encrypt_, bool,
 	void *params, chunk_t plain, chunk_t *encrypted)
 {
 	gcry_error_t err;
-	gcry_sexp_t in, out;
+	gcry_sexp_t in, out = NULL;
 	chunk_t label = chunk_empty;
 	u_char *sexp;
 
