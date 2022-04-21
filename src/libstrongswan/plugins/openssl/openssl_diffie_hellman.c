@@ -183,7 +183,7 @@ METHOD(diffie_hellman_t, set_other_public_value, bool,
 
 /**
  * Calculate the public key for the given private key and DH parameters.
- * Setting only the private key and generating the public key interanlly is
+ * Setting only the private key and generating the public key internally is
  * not supported anymore with OpenSSL 3.0.0.
  */
 static BIGNUM *calculate_public_key(BIGNUM *priv, const BIGNUM *g,
