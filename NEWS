@@ -1,3 +1,48 @@
+strongswan-5.9.6
+----------------
+
+- The IKEv2 key derivation, in particular prf+, has been modularized to simplify
+  certification (e.g. FIPS-140) via an already certified third-party library.
+  The botan, openssl and wolfssl plugins implement the key derivation for
+  HMAC-based PRFs via their respective HKDF implementation.  A generic
+  implementation is provided by the new kdf plugin.
+
+- Labeled IPsec with IKEv2 is supported in an SELinux and a proprietary simple
+  mode.  In SELinux mode, traffic that matches a trap policy with generic
+  context (e.g. system_u:object_r:ipsec_spd_t:s0) triggers the negotiation of
+  CHILD_SAs with a specific label.  With the simple mode, labels are not set on
+  SAs/policies but can be used as identifier to select specific child configs.
+
+- DoS protection has been improved:  COOKIE secrets are now switched based on a
+  time limit (2 min.), a new per-IP threshold (default 3) is used to trigger
+  them, and unprocessed IKE_SA_INITs are already counted as half-open IKE_SAs.
+
+- Initiating duplicate CHILD_SAs within the same IKE_SA is largely prevented.
+
+- Immediately initiating a CHILD_SA with trap policies is now possible via
+  `start_action=trap|start`.
+
+- If the source address is unknown when initiating an IKEv2 SA, a NAT situation
+  is now forced for IPv4 (for IPv6, NAT-T is disabled) to avoid causing
+  asymmetric enabling of UDP-encapsulation.
+
+- Installing unnecessary exclude routes for VPN servers on FreeBSD is avoided.
+
+- The new `map_level` option for syslog loggers allows mapping log levels
+  to syslog levels starting at the specified number.
+
+- The addrblock plugin allows limiting the validation depth of issuer addrblock
+  extensions.
+
+- The default AEAD ESP proposal (sent since 5.9.0) now includes `noesn` to make
+  it standards-compliant.
+
+- Individual CHILD_SAs can be queried via the `list-sas` vici command (or
+  `swanctl --list-sas ), either by unique ID or name.
+
+- Compatibility with OpenSSL 3.0 has been improved.
+
+
 strongswan-5.9.5
 ----------------
 
