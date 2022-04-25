@@ -48,7 +48,7 @@
 #ifndef WIN32
 #include <sys/utsname.h>
 #endif
-#ifdef HAVE_MALLINFO
+#if defined(HAVE_MALLINFO2) || defined (HAVE_MALLINFO)
 #include <malloc.h>
 #endif
 
@@ -1697,8 +1697,17 @@ CALLBACK(stats, vici_message_t*,
 	}
 #endif
 
-#ifdef HAVE_MALLINFO
 	{
+#ifdef HAVE_MALLINFO2
+		struct mallinfo2 mi = mallinfo2();
+
+		b->begin_section(b, "mallinfo");
+		b->add_kv(b, "sbrk", "%zu", mi.arena);
+		b->add_kv(b, "mmap", "%zu", mi.hblkhd);
+		b->add_kv(b, "used", "%zu", mi.uordblks);
+		b->add_kv(b, "free", "%zu", mi.fordblks);
+		b->end_section(b);
+#elif defined(HAVE_MALLINFO)
 		struct mallinfo mi = mallinfo();
 
 		b->begin_section(b, "mallinfo");
@@ -1707,8 +1716,8 @@ CALLBACK(stats, vici_message_t*,
 		b->add_kv(b, "used", "%u", mi.uordblks);
 		b->add_kv(b, "free", "%u", mi.fordblks);
 		b->end_section(b);
+#endif /* HAVE_MALLINFO(2) */
 	}
-#endif /* HAVE_MALLINFO */
 
 	return b->finalize(b);
 }
