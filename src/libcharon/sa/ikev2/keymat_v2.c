@@ -336,7 +336,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		{
 			DBG1(DBG_IKE, "%N with %N not supported",
 				 key_derivation_function_names, KDF_PRF,
-				 pseudo_random_function_names, rekey_function);
+				 pseudo_random_function_names, this->prf_alg);
 			chunk_clear(&secret);
 			chunk_free(&full_nonce);
 			chunk_free(&fixed_nonce);
