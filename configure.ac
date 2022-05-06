@@ -514,6 +514,20 @@ if test x$stroke = xtrue; then
 	counters=true
 fi
 
+if test x$kdf = xfalse; then
+	if test x$aesni = xtrue -o x$cmac = xtrue -o x$xcbc = xtrue; then
+		AC_MSG_WARN(m4_normalize([
+			kdf plugin is required for possible use of PRF_AES128_XCBC/CMAC
+			by one of these plugins: aesni, cmac, xcbc]))
+		kdf=true
+	elif test x$botan = xfalse -a x$openssl = xfalse -a x$wolfssl = xfalse; then
+		AC_MSG_WARN(m4_normalize([
+			kdf plugin is required because none of the following plugins is
+			enabled: botan, openssl, wolfssl]))
+		kdf=true
+	fi
+fi
+
 # ===========================================
 #  check required libraries and header files
 # ===========================================
