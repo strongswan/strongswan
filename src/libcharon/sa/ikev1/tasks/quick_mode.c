@@ -411,6 +411,8 @@ static bool install(private_quick_mode_t *this)
 		/* rekeyed CHILD_SAs stay installed until they expire or are deleted
 		 * by the other peer */
 		old->set_state(old, CHILD_REKEYED);
+		/* remove from outbound since only one outbound policy is valid */
+		old->remove_outbound(old);
 		/* as initiator we delete the CHILD_SA if configured to do so */
 		if (this->initiator && this->delete)
 		{
