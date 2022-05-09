@@ -212,8 +212,8 @@ METHOD(job_t, execute, job_requeue_t,
 													  this->id);
 			if (ike_sa)
 			{
-				while (children->remove_last(children,
-											 (void**)&child_sa) == SUCCESS)
+				while (children->remove_first(children,
+											  (void**)&child_sa) == SUCCESS)
 				{
 					ike_sa->add_child_sa(ike_sa, child_sa);
 				}
