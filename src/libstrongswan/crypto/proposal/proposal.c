@@ -1114,6 +1114,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 					break;
 				case AUTH_HMAC_MD5_96:
 					/* no, thanks */
+					break;
 				default:
 					break;
 			}
