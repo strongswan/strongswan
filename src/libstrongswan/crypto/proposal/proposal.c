@@ -1114,6 +1114,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 					break;
 				case AUTH_HMAC_MD5_96:
 					/* no, thanks */
+					break;
 				default:
 					break;
 			}
@@ -1130,6 +1131,20 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case PRF_HMAC_SHA2_256:
 			case PRF_HMAC_SHA2_384:
 			case PRF_HMAC_SHA2_512:
+				add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* Round 2 adds rarely used algorithms with at least 128 bit strength */
+	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
+	{
+		switch (prf)
+		{
 			case PRF_AES128_XCBC:
 			case PRF_AES128_CMAC:
 				add_algorithm(this, PSEUDO_RANDOM_FUNCTION, prf, 0);
@@ -1140,7 +1155,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 	}
 	enumerator->destroy(enumerator);
 
-	/* Round 2 adds algorithms with less than 128 bit security strength */
+	/* Round 3 adds algorithms with less than 128 bit security strength */
 	enumerator = lib->crypto->create_prf_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &prf, &plugin_name))
 	{
