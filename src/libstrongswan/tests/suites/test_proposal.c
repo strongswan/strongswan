@@ -112,6 +112,48 @@ END_TEST
 
 static struct {
 	protocol_id_t proto;
+	char *proposal;
+	char *expected;
+} create_unchecked_data[] = {
+	{ PROTO_IKE, "", NULL },
+	{ PROTO_IKE, "aesxxx", NULL },
+	{ PROTO_IKE, "aes128-sha256-prfsha384-modp3072", "IKE:AES_CBC_128/HMAC_SHA2_256_128/PRF_HMAC_SHA2_384/MODP_3072" },
+	{ PROTO_IKE, "aes128gcm16-prfsha256-modp3072", "IKE:AES_GCM_16_128/PRF_HMAC_SHA2_256/MODP_3072" },
+	/* these are invalid because required transforms are missing */
+	{ PROTO_IKE, "aes128", "IKE:AES_CBC_128" },
+	{ PROTO_IKE, "sha256", "IKE:HMAC_SHA2_256_128" },
+	{ PROTO_IKE, "aes128-sha256-modp3072", "IKE:AES_CBC_128/HMAC_SHA2_256_128/MODP_3072" },
+	{ PROTO_IKE, "aes128gcm16", "IKE:AES_GCM_16_128" },
+	/* mixing combined and classic algorithms isn't valid either */
+	{ PROTO_IKE, "aes128gcm16-aes128-modp3072", "IKE:AES_GCM_16_128/AES_CBC_128/MODP_3072" },
+	{ PROTO_IKE, "aes128gcm16-aes128-sha256-modp3072", "IKE:AES_GCM_16_128/AES_CBC_128/HMAC_SHA2_256_128/MODP_3072" },
+	{ PROTO_IKE, "aes128gcm16-sha256-modp3072", "IKE:AES_GCM_16_128/HMAC_SHA2_256_128/MODP_3072" },
+	{ PROTO_ESP, "", NULL },
+	{ PROTO_ESP, "aes128-sha256-esn", "ESP:AES_CBC_128/HMAC_SHA2_256_128/EXT_SEQ" },
+	{ PROTO_ESP, "aes128-sha256-noesn", "ESP:AES_CBC_128/HMAC_SHA2_256_128/NO_EXT_SEQ" },
+	{ PROTO_ESP, "aes128-sha256-esn-noesn", "ESP:AES_CBC_128/HMAC_SHA2_256_128/EXT_SEQ/NO_EXT_SEQ" },
+	/* these are invalid because required transforms are missing */
+	{ PROTO_ESP, "sha256", "ESP:HMAC_SHA2_256_128" },
+	{ PROTO_ESP, "aes128-sha256", "ESP:AES_CBC_128/HMAC_SHA2_256_128" },
+	/* mixing combined and classic algorithms isn't valid either */
+	{ PROTO_ESP, "aes128gcm16-aes128-sha256", "ESP:AES_GCM_16_128/AES_CBC_128/HMAC_SHA2_256_128" },
+	/* prfs are not valid in ESP proposals */
+	{ PROTO_ESP, "aes128-prfsha256", "ESP:AES_CBC_128/PRF_HMAC_SHA2_256" },
+};
+
+START_TEST(test_create_from_string_unchecked)
+{
+	proposal_t *proposal;
+
+	proposal = proposal_create_from_string_unchecked(create_unchecked_data[_i].proto,
+													 create_unchecked_data[_i].proposal);
+	assert_proposal_eq(proposal, create_unchecked_data[_i].expected);
+	DESTROY_IF(proposal);
+}
+END_TEST
+
+static struct {
+	protocol_id_t proto;
 	char *self;
 	char *other;
 	char *expected;
@@ -576,6 +618,8 @@ Suite *proposal_suite_create()
 
 	tc = tcase_create("create_from_string");
 	tcase_add_loop_test(tc, test_create_from_string, 0, countof(create_data));
+	tcase_add_loop_test(tc, test_create_from_string_unchecked, 0,
+						countof(create_unchecked_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("select");
