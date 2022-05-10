@@ -37,6 +37,14 @@ ENUM(protocol_id_names, PROTO_NONE, PROTO_IPCOMP,
 	"IPCOMP",
 );
 
+ENUM(protocol_id_lower_names, PROTO_NONE, PROTO_IPCOMP,
+	"none",
+	"ike",
+	"ah",
+	"esp",
+	"ipcomp",
+);
+
 typedef struct private_proposal_t private_proposal_t;
 
 /**
