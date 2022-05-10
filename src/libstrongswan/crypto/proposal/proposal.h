@@ -54,6 +54,11 @@ enum protocol_id_t {
 extern enum_name_t *protocol_id_names;
 
 /**
+ * lower case enum names for protocol_id_t
+ */
+extern enum_name_t *protocol_id_lower_names;
+
+/**
  * Flags for selecting proposals.
  */
 enum proposal_selection_flag_t {
