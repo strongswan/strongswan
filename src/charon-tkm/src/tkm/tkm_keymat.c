@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Tobias Brunner
+ * Copyright (C) 2015-2022 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  *
@@ -19,6 +19,7 @@
 #include <daemon.h>
 #include <tkm/constants.h>
 #include <tkm/client.h>
+#include <collections/array.h>
 #include <crypto/hashers/hash_algorithm_set.h>
 
 #include "tkm.h"
@@ -29,6 +30,9 @@
 #include "tkm_aead.h"
 
 typedef struct private_tkm_keymat_t private_tkm_keymat_t;
+
+static array_t *ike_proposal_map = NULL;
+static array_t *esp_proposal_map = NULL;
 
 /**
  * Private data of a keymat_t object.
@@ -95,6 +99,48 @@ METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
 }
 
 /**
+ * Proposal mapping entry
+ */
+typedef struct {
+	/** Proposal */
+	proposal_t *proposal;
+	/** Id */
+	uint64_t id;
+} entry_t;
+
+/**
+ * Determine the id for the given proposal
+ */
+static uint64_t get_proposal_id(proposal_t *proposal)
+{
+	array_t *map;
+	entry_t entry;
+	int i;
+
+	switch (proposal->get_protocol(proposal))
+	{
+		case PROTO_IKE:
+			map = ike_proposal_map;
+			break;
+		case PROTO_ESP:
+			map = esp_proposal_map;
+			break;
+		default:
+			return 0;
+	}
+	for (i = 0; i < array_count(map); i++)
+	{
+		array_get(map, i, &entry);
+		/* we never match DH groups as they are mapped and passed separately */
+		if (entry.proposal->matches(entry.proposal, proposal, PROPOSAL_SKIP_KE))
+		{
+			return entry.id;
+		}
+	}
+	return 0;
+}
+
+/**
  * Concatenate the TKM KE IDs of the passed key exchanges
  */
 static bool concat_ke_ids(array_t *kes, ke_ids_type *ids)
@@ -123,7 +169,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
-	uint64_t nc_id = 0, spi_loc, spi_rem;
+	uint64_t nc_id = 0, ia_id, spi_loc, spi_rem;
 	chunk_t *nonce;
 	ke_ids_type ke_ids;
 	nonce_type nonce_rem;
@@ -152,6 +198,13 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		spi_rem = id->get_initiator_spi(id);
 	}
 
+	ia_id = get_proposal_id(proposal);
+	if (!ia_id)
+	{
+		DBG1(DBG_IKE, "unable to determine id for proposal %P", proposal);
+		return FALSE;
+	}
+
 	if (rekey_function == PRF_UNDEFINED)
 	{
 		/* Acquire nonce context id */
@@ -168,11 +221,12 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 			DBG1(DBG_IKE, "unable to acquire ae context id");
 			return FALSE;
 		}
-		DBG1(DBG_IKE, "deriving IKE keys (nc: %llu, ke: %llu, spi_loc: %llx, "
-			 "spi_rem: %llx)", nc_id, ke_ids.data[0], spi_loc, spi_rem);
-		res = ike_isa_create(this->isa_ctx_id, this->ae_ctx_id, 1, ke_ids.data[0],
-							 nc_id, nonce_rem, this->initiator, spi_loc, spi_rem,
-							 &block_len, &icv_len, &iv_len);
+		DBG1(DBG_IKE, "deriving IKE keys (nc: %llu, ia: %llu, ke: %llu, "
+			 "spi_loc: %llx, spi_rem: %llx)", nc_id, ia_id, ke_ids.data[0],
+			 spi_loc, spi_rem);
+		res = ike_isa_create(this->isa_ctx_id, this->ae_ctx_id, ia_id,
+							 ke_ids.data[0], nc_id, nonce_rem, this->initiator,
+							 spi_loc, spi_rem, &block_len, &icv_len, &iv_len);
 	}
 	else
 	{
@@ -187,9 +241,10 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 
 		if (this->ae_ctx_id == isa_info.ae_id)
 		{
-			DBG1(DBG_IKE, "deriving IKE keys (parent_isa: %llu, ae: %llu, "
-				 "ke: %llu, spi_loc: %llx, spi_rem: %llx)", isa_info.parent_isa_id,
-				 isa_info.ae_id, ke_ids.data[0], spi_loc, spi_rem);
+			DBG1(DBG_IKE, "deriving IKE keys (parent_isa: %llu, ae: %llu, ia: "
+				 "%llu, ke: %llu, spi_loc: %llx, spi_rem: %llx)",
+				 isa_info.parent_isa_id, isa_info.ae_id, ia_id, ke_ids.data[0],
+				 spi_loc, spi_rem);
 
 			res = ike_isa_update(this->isa_ctx_id, ke_ids.data[0]);
 		}
@@ -206,15 +261,16 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 		}
 		else
 		{
-			DBG1(DBG_IKE, "deriving IKE keys (parent_isa: %llu, ae: %llu, nc: %llu, "
-				 "ke: %llu, spi_loc: %llx, spi_rem: %llx)", isa_info.parent_isa_id,
-				 isa_info.ae_id, nc_id, ke_ids.data[0], spi_loc, spi_rem);
+			DBG1(DBG_IKE, "deriving IKE keys (parent_isa: %llu, ae: %llu, nc: "
+				 "%llu, ia: %llu, ke: %llu, spi_loc: %llx, spi_rem: %llx)",
+				 isa_info.parent_isa_id, isa_info.ae_id, nc_id, ia_id,
+				 ke_ids.data[0], spi_loc, spi_rem);
 
 			this->ae_ctx_id = isa_info.ae_id;
-			res = ike_isa_create_child(this->isa_ctx_id, isa_info.parent_isa_id, 1,
-									   ke_ids, nc_id, nonce_rem, this->initiator,
-									   spi_loc, spi_rem, &block_len, &icv_len,
-									   &iv_len);
+			res = ike_isa_create_child(this->isa_ctx_id, isa_info.parent_isa_id,
+									   ia_id, ke_ids, nc_id, nonce_rem,
+									   this->initiator, spi_loc, spi_rem,
+									   &block_len, &icv_len, &iv_len);
 		}
 
 		chunk_free(&rekey_skd);
@@ -254,9 +310,17 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 {
 	esa_info_t *esa_info_i, *esa_info_r;
 	ke_ids_type ke_ids = {};
+	ea_id_type ea_id;
 
 	if (kes && !concat_ke_ids(kes, &ke_ids))
 	{
+		return FALSE;
+	}
+
+	ea_id = get_proposal_id(proposal);
+	if (!ea_id)
+	{
+		DBG1(DBG_IKE, "unable to determine id for proposal %P", proposal);
 		return FALSE;
 	}
 
@@ -266,6 +330,7 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		 .nonce_i = chunk_clone(nonce_i),
 		 .nonce_r = chunk_clone(nonce_r),
 		 .is_encr_r = FALSE,
+		 .ea_id = ea_id,
 		 .ke_ids = ke_ids,
 	);
 
@@ -275,12 +340,13 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 		 .nonce_i = chunk_clone(nonce_i),
 		 .nonce_r = chunk_clone(nonce_r),
 		 .is_encr_r = TRUE,
+		 .ea_id = ea_id,
 		 .ke_ids = ke_ids,
 	);
 
-	DBG1(DBG_CHD, "passing on esa info (isa: %llu, spi_l: %x, "
+	DBG1(DBG_CHD, "passing on esa info (isa: %llu, spi_l: %x, ea_id: %llu, "
 		 "ke_id[%llu]: %llu)", esa_info_i->isa_id, ntohl(esa_info_i->spi_l),
-		 esa_info_i->ke_ids.size, esa_info_i->ke_ids.data[0]);
+		 esa_info_i->ea_id, esa_info_i->ke_ids.size, esa_info_i->ke_ids.data[0]);
 
 	/* store ESA info in encr_i/r, which is passed to add_sa */
 	*encr_i = chunk_create((u_char *)esa_info_i, sizeof(esa_info_t));
@@ -445,7 +511,82 @@ METHOD(tkm_keymat_t, get_peer_init_msg, chunk_t*,
 }
 
 /**
- * See header.
+ * Init proposal mappings for a specific protocol
+ */
+static int init_proposal_map(array_t *map, protocol_id_t proto)
+{
+	enumerator_t *enumerator;
+	entry_t entry;
+	char *id_str, *proposal_str;
+
+	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
+											"%s.proposal_mapping.%N", lib->ns,
+											protocol_id_lower_names, proto);
+
+	while (enumerator->enumerate(enumerator, &id_str, &proposal_str))
+	{
+		entry.proposal = proposal_create_from_string_unchecked(proto,
+															   proposal_str);
+		if (!entry.proposal)
+		{
+			enumerator->destroy(enumerator);
+			return FALSE;
+		}
+		entry.id = settings_value_as_uint64(id_str, 0);
+		array_insert(map, ARRAY_TAIL, &entry);
+	}
+	enumerator->destroy(enumerator);
+
+	if (!array_count(map))
+	{
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/*
+ * Described in header
+ */
+int register_proposal_mapping()
+{
+	ike_proposal_map = array_create(sizeof(entry_t), 4);
+	esp_proposal_map = array_create(sizeof(entry_t), 4);
+
+	if (!init_proposal_map(ike_proposal_map, PROTO_IKE) ||
+		!init_proposal_map(esp_proposal_map, PROTO_ESP))
+	{
+		return 0;
+	}
+	return array_count(ike_proposal_map) + array_count(esp_proposal_map);
+}
+
+/**
+ * Destroy given proposal mappings
+ */
+static void destroy_proposal_map(array_t *map)
+{
+	entry_t entry;
+
+	while (array_remove(map, ARRAY_HEAD, &entry))
+	{
+		entry.proposal->destroy(entry.proposal);
+	}
+	array_destroy(map);
+}
+
+/*
+ * Described in header
+ */
+void destroy_proposal_mapping()
+{
+	destroy_proposal_map(ike_proposal_map);
+	destroy_proposal_map(esp_proposal_map);
+	ike_proposal_map = NULL;
+	esp_proposal_map = NULL;
+}
+
+/*
+ * Described in header
  */
 tkm_keymat_t *tkm_keymat_create(bool initiator)
 {

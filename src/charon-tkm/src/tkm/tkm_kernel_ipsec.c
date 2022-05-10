@@ -156,8 +156,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	nonce_loc_id = tkm->chunk_map->get_id(tkm->chunk_map, nonce_loc);
 	if (nonce_loc_id == 0 && esa.ke_ids.size == 0)
 	{
-		if (ike_esa_create_first(esa_id, esa.isa_id, data->reqid, 1, flags,
-								 spi_loc, spi_rem) != TKM_OK)
+		if (ike_esa_create_first(esa_id, esa.isa_id, data->reqid, esa.ea_id,
+								 flags, spi_loc, spi_rem) != TKM_OK)
 		{
 			DBG1(DBG_KNL, "child SA (%llu, first) creation failed", esa_id);
 			goto failure;
@@ -167,7 +167,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	else if (nonce_loc_id != 0 && esa.ke_ids.size == 0)
 	{
 		chunk_to_sequence(nonce_rem, &nc_rem, sizeof(nonce_type));
-		if (ike_esa_create_no_pfs(esa_id, esa.isa_id, data->reqid, 1,
+		if (ike_esa_create_no_pfs(esa_id, esa.isa_id, data->reqid, esa.ea_id,
 								  nonce_loc_id, nc_rem, flags,
 								  spi_loc, spi_rem) != TKM_OK)
 		{
@@ -181,7 +181,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	else
 	{
 		chunk_to_sequence(nonce_rem, &nc_rem, sizeof(nonce_type));
-		if (ike_esa_create(esa_id, esa.isa_id, data->reqid, 1, esa.ke_ids,
+		if (ike_esa_create(esa_id, esa.isa_id, data->reqid, esa.ea_id, esa.ke_ids,
 						   nonce_loc_id, nc_rem, flags, spi_loc,
 						   spi_rem) != TKM_OK)
 		{

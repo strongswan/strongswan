@@ -336,6 +336,12 @@ int main(int argc, char *argv[])
 	lib->plugins->add_static_features(lib->plugins, "tkm-backend", features,
 			countof(features), TRUE, NULL, NULL);
 
+	if (!register_proposal_mapping())
+	{
+		DBG1(DBG_DMN, "no proposal mapping defined - aborting %s", dmn_name);
+		goto deinit;
+	}
+
 	if (!register_ke_mapping())
 	{
 		DBG1(DBG_DMN, "no KE group mapping defined - aborting %s", dmn_name);
@@ -428,6 +434,7 @@ int main(int argc, char *argv[])
 	lib->encoding->remove_encoder(lib->encoding, tkm_encoder_encode);
 
 deinit:
+	destroy_proposal_mapping();
 	destroy_ke_mapping();
 	destroy_ca_mapping();
 	libcharon_deinit();
