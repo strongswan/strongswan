@@ -70,6 +70,11 @@ struct esa_info_t {
 	bool is_encr_r;
 
 	/**
+	 * ESP algorithm proposal id.
+	 */
+	ea_id_type ea_id;
+
+	/**
 	 * Key Exchange context ids.
 	 */
 	ke_ids_type ke_ids;

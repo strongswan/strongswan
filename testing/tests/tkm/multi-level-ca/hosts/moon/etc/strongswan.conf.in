@@ -5,6 +5,14 @@ charon-tkm {
     15 = 1
     16 = 2
   }
+  proposal_mapping {
+    ike {
+      1 = aes256-sha512-prfsha512
+    }
+    esp {
+      1 = aes256-sha512-esn-noesn
+    }
+  }
   ca_mapping {
     strongswan_ca {
       id = 1

@@ -68,6 +68,18 @@ struct tkm_keymat_t {
 };
 
 /**
+ * Loads IKE/ESP proposal to TKM id mapping from config.
+ *
+ * @return          number of registered mappings
+ */
+int register_proposal_mapping();
+
+/**
+ * Destroy IKE/ESP proposal to TKM id mapping.
+ */
+void destroy_proposal_mapping();
+
+/**
  * Create TKM keymat instance.
  *
  * @param initiator			TRUE if we are the initiator

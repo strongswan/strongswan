@@ -25,6 +25,7 @@
 #include "tkm_nonceg.h"
 #include "tkm_key_exchange.h"
 #include "tkm_kernel_ipsec.h"
+#include "tkm_keymat.h"
 
 /* declare test suite constructors */
 #define TEST_SUITE(x) test_suite_t* x();
@@ -79,6 +80,11 @@ static bool test_runner_init(bool init)
 							   lib->ns, MODP_3072_BIT);
 		lib->settings->set_int(lib->settings, "%s.ke_mapping.%d", 2,
 							   lib->ns, MODP_4096_BIT);
+		lib->settings->set_str(lib->settings, "%s.proposal_mapping.ike.%d",
+							   "aes256-sha512-prfsha512", lib->ns, 1);
+		lib->settings->set_str(lib->settings, "%s.proposal_mapping.esp.%d",
+							   "aes256-sha512-esn-noesn", lib->ns, 1);
+		register_proposal_mapping();
 		register_ke_mapping();
 
 		plugin_loader_add_plugindirs(BUILDDIR "/src/libstrongswan/plugins",
@@ -100,6 +106,7 @@ static bool test_runner_init(bool init)
 		result = FALSE;
 	}
 
+	destroy_proposal_mapping();
 	destroy_ke_mapping();
 	libcharon_deinit();
 	return result;
