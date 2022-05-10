@@ -282,6 +282,24 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol,
 										const char *algs);
 
 /**
+ * Create a proposal from a string identifying the algorithms without enforcing
+ * any checks or doing automatic fixups.
+ *
+ * The syntax is the same as for proposal_create_from_string(), but the
+ * proposal is constructed verbatim, like manually doing so via
+ * proposal_t::add_algorithm().
+ *
+ * @warning This constructor can lead to invalid proposals (e.g. missing
+ * required or disallowed transforms). Use proposal_create_from_string() instead.
+ *
+ * @param protocol			protocol, such as PROTO_ESP
+ * @param algs				algorithms as string
+ * @return					proposal_t object, NULL if invalid
+ */
+proposal_t *proposal_create_from_string_unchecked(protocol_id_t protocol,
+												  const char *algs);
+
+/**
  * Select a common proposal from the given lists of proposals.
  *
  * @param configured		list of configured/local proposals

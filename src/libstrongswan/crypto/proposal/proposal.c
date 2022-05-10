@@ -1395,7 +1395,8 @@ proposal_t *proposal_create_default_aead(protocol_id_t protocol)
 /*
  * Described in header
  */
-proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs)
+proposal_t *proposal_create_from_string_unchecked(protocol_id_t protocol,
+												  const char *algs)
 {
 	private_proposal_t *this;
 	enumerator_t *enumerator;
@@ -1417,13 +1418,28 @@ proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs
 	}
 	enumerator->destroy(enumerator);
 
-	if (failed || !check_proposal(this))
+	if (failed)
 	{
 		destroy(this);
 		return NULL;
 	}
-
 	return &this->public;
+}
+
+/*
+ * Described in header
+ */
+proposal_t *proposal_create_from_string(protocol_id_t protocol, const char *algs)
+{
+	proposal_t *this;
+
+	this = proposal_create_from_string_unchecked(protocol, algs);
+	if (!this || !check_proposal((private_proposal_t*)this))
+	{
+		DESTROY_IF(this);
+		return NULL;
+	}
+	return this;
 }
 
 /*
