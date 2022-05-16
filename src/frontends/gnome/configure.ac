@@ -1,6 +1,6 @@
 AC_PREREQ(2.52)
 
-AC_INIT(NetworkManager-strongswan, 1.5.2, info@strongswan.org, NetworkManager-strongswan)
+AC_INIT(NetworkManager-strongswan, 1.6.0, info@strongswan.org, NetworkManager-strongswan)
 AM_INIT_AUTOMAKE([subdir-objects])
 AM_MAINTAINER_MODE
 
@@ -15,6 +15,7 @@ AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AC_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG
+AC_PATH_PROG(GLIB_COMPILE_RESOURCES, glib-compile-resources)
 
 dnl
 dnl Required headers
@@ -35,6 +36,9 @@ dnl
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MEMCMP
 AC_CHECK_FUNCS(select socket uname)
+
+AC_SEARCH_LIBS([dlopen], [dl dld], [], [ac_cv_search_dlopen=])
+AC_SUBST([DL_LIBS], "$ac_cv_search_dlopen")
 
 GETTEXT_PACKAGE=NetworkManager-strongswan
 AC_SUBST(GETTEXT_PACKAGE)
@@ -67,35 +71,28 @@ AC_ARG_ENABLE(
 	AS_HELP_STRING([--enable-nm-absolute-paths],[use absolute paths for NM plugins in the .name file])
 )
 AC_ARG_WITH(
-	[libnm-glib],
-	AS_HELP_STRING([--without-libnm-glib], [build NetworkManager-strongswan without libnm-glib compatibility]),
-	[with_libnm_glib=no],
-	[with_libnm_glib=yes]
+	[gtk4],
+	AS_HELP_STRING([--with-gtk4], [build NetworkManager-strongswan with libnma-gtk4 support]),
+	[], [with_gtk4=no]
 )
 
-AM_CONDITIONAL(WITH_LIBNM_GLIB, test "$with_libnm_glib" != no)
+AM_CONDITIONAL(WITH_GTK4, test "$with_gtk4" != no)
 
 PKG_CHECK_MODULES(LIBNM, libnm >= 1.1.0)
 LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MIN_REQUIRED=NM_VERSION_1_2"
 LIBNM_CFLAGS="$LIBNM_CFLAGS -DNM_VERSION_MAX_ALLOWED=NM_VERSION_1_2"
 PKG_CHECK_MODULES(LIBNMA, libnma >= 1.1.0)
 
-if test x"$with_libnm_glib" != xno; then
-	PKG_CHECK_MODULES(LIBNM_GLIB, NetworkManager >= 1.1.0 libnm-util libnm-glib libnm-glib-vpn)
-	PKG_CHECK_MODULES(LIBNM_GTK, libnm-gtk >= 1.1.0)
-	if test -z "$nm_libexecdir"; then
-		nm_libexecdir=$($PKG_CONFIG --variable=libgnome_serverdir NetworkManager)
-	fi
-	if test -z "$nm_plugindir"; then
-		nm_plugindir=$($PKG_CONFIG --variable=plugindir NetworkManager)
-	fi
-else
-	if test -z "$nm_libexecdir"; then
-		nm_libexecdir=$($PKG_CONFIG --variable=exec_prefix libnm)/lib/NetworkManager
-	fi
-	if test -z "$nm_plugindir"; then
-		nm_plugindir=$($PKG_CONFIG --variable=libdir libnm)/NetworkManager
-	fi
+if test x"$with_gtk4" != xno; then
+	PKG_CHECK_MODULES(GTK4, gtk4 >= 4.0)
+	PKG_CHECK_MODULES(LIBNMA_GTK4, libnma-gtk4 >= 1.8.33)
+fi
+
+if test -z "$nm_libexecdir"; then
+	nm_libexecdir=$($PKG_CONFIG --variable=exec_prefix libnm)/lib/NetworkManager
+fi
+if test -z "$nm_plugindir"; then
+	nm_plugindir=$($PKG_CONFIG --variable=libdir libnm)/NetworkManager
 fi
 
 AC_SUBST(nm_libexecdir)

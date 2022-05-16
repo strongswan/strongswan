@@ -31,27 +31,6 @@ typedef enum
 #define STRONGSWAN_TYPE_PLUGIN_UI_ERROR (strongswan_plugin_ui_error_get_type ())
 GType strongswan_plugin_ui_error_get_type (void);
 
-#define STRONGSWAN_TYPE_PLUGIN_UI            (strongswan_plugin_ui_get_type ())
-#define STRONGSWAN_PLUGIN_UI(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), STRONGSWAN_TYPE_PLUGIN_UI, StrongswanPluginUi))
-#define STRONGSWAN_PLUGIN_UI_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), STRONGSWAN_TYPE_PLUGIN_UI, StrongswanPluginUiClass))
-#define STRONGSWAN_IS_PLUGIN_UI(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), STRONGSWAN_TYPE_PLUGIN_UI))
-#define STRONGSWAN_IS_PLUGIN_UI_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((obj), STRONGSWAN_TYPE_PLUGIN_UI))
-#define STRONGSWAN_PLUGIN_UI_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), STRONGSWAN_TYPE_PLUGIN_UI, StrongswanPluginUiClass))
-
-typedef struct _StrongswanPluginUi StrongswanPluginUi;
-typedef struct _StrongswanPluginUiClass StrongswanPluginUiClass;
-
-struct _StrongswanPluginUi {
-	GObject parent;
-};
-
-struct _StrongswanPluginUiClass {
-	GObjectClass parent;
-};
-
-GType strongswan_plugin_ui_get_type (void);
-
-
 #define STRONGSWAN_TYPE_PLUGIN_UI_WIDGET            (strongswan_plugin_ui_widget_get_type ())
 #define STRONGSWAN_PLUGIN_UI_WIDGET(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), STRONGSWAN_TYPE_PLUGIN_UI_WIDGET, StrongswanPluginUiWidget))
 #define STRONGSWAN_PLUGIN_UI_WIDGET_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), STRONGSWAN_TYPE_PLUGIN_UI_WIDGET, StrongswanPluginUiWidgetClass))
@@ -72,5 +51,6 @@ struct _StrongswanPluginUiWidgetClass {
 
 GType strongswan_plugin_ui_widget_get_type (void);
 
-#endif	/* _NM_STRONGSWAN_H_ */
+NMVpnEditor *strongswan_editor_new (NMConnection *connection, GError **error);
 
+#endif	/* _NM_STRONGSWAN_H_ */
