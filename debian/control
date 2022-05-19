@@ -13,7 +13,7 @@ Build-Depends: debhelper (>=11~),
                gettext,
                libgmp-dev,
                perl,
-               python,
+               python2,
                libssl-dev
 Standards-Version: 4.1.4
 Homepage: http://www.strongswan.org
