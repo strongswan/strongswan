@@ -120,7 +120,7 @@
 #define CALLBACK(name, ret, param1, ...) \
 	static ret _cb_##name(union {void *_generic; param1;} \
 	__attribute__((transparent_union)), ##__VA_ARGS__); \
-	static typeof(_cb_##name) *name = (typeof(_cb_##name)*)_cb_##name; \
+	static ret (*name)(void*, ##__VA_ARGS__) = _cb_##name; \
 	static ret _cb_##name(param1, ##__VA_ARGS__)
 
 /**
@@ -131,7 +131,7 @@
 	__attribute__((transparent_union)), \
 	union {void *_generic; param2;} \
 	__attribute__((transparent_union)), ##__VA_ARGS__); \
-	static typeof(_cb_##name) *name = (typeof(_cb_##name)*)_cb_##name; \
+	static ret (*name)(void*, void*, ##__VA_ARGS__) = _cb_##name; \
 	static ret _cb_##name(param1, param2, ##__VA_ARGS__)
 
 #endif /** OBJECT_H_ @} */
