@@ -2,6 +2,8 @@
  * Copyright (C) 2011-2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
+ * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -48,12 +50,14 @@ enum tcg_attr_t {
 	TCG_SWID_SUBSCRIPTION_STATUS_REQ =    0x00000016,
 	TCG_SWID_SUBSCRIPTION_STATUS_RESP =   0x00000017,
 
-	/* IF-M Attribute Segmentation */
-	TCG_SEG_MAX_ATTR_SIZE_REQ =           0x00000021,
-	TCG_SEG_MAX_ATTR_SIZE_RESP =          0x00000022,
-	TCG_SEG_ATTR_SEG_ENV =                0x00000023,
-	TCG_SEG_NEXT_SEG_REQ =                0x00000024,
-	TCG_SEG_CANCEL_SEG_EXCH =             0x00000025,
+	/* IF-M Segmentation */
+	TCG_SEG_CONTRACT_REQ =                0x00000021,
+	TCG_SEG_CONTRACT_RESP =               0x00000022,
+	TCG_SEG_ENVELOPE =                    0x00000023,
+	TCG_SEG_NEXT_SEGMENT =                0x00000024,
+	TCG_SEG_CANCEL =                      0x00000025,
+	TCG_SEG_OVERSIZED_MSG =               0x00000026,
+	TCG_SEG_CONTRACT_EXEMPTION =          0x00000027,
 
 	/* PTS Protocol Negotiations */
 	TCG_PTS_REQ_PROTO_CAPS =              0x01000000,

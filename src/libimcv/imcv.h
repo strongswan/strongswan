@@ -2,6 +2,8 @@
  * Copyright (C) 2011 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
+ * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -63,6 +65,15 @@ bool libimcv_init(bool is_imv);
  * Deinitialize libimcv.
  */
 void libimcv_deinit(void);
+
+/**
+ * List PA-TNC attribute type and namespace (vendor ID)
+ *
+ * @param label         label to be used (creating/processing)
+ * @param vendor_id     namespace defined by Private Enterprise Number (PEN)
+ * @param type          PA-TNC attribute type
+ */
+void imcv_list_pa_tnc_attribute_type(char *label, pen_t vendor_id, uint32_t type);
 
 /**
  * PA-TNC attribute manager

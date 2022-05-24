@@ -2,6 +2,8 @@
  * Copyright (C) 2011-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
+ * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -77,6 +79,27 @@ static refcount_t libstrongswan_ref = 0;
  */
 static int  imcv_debug_level;
 static bool imcv_stderr_quiet;
+
+/**
+ * Described in header.
+ */
+void imcv_list_pa_tnc_attribute_type(char *label, pen_t vendor_id, uint32_t type)
+{
+	enum_name_t *pa_attr_names;
+
+	pa_attr_names = imcv_pa_tnc_attributes->get_names(imcv_pa_tnc_attributes,
+													  vendor_id);
+	if (pa_attr_names)
+	{
+		DBG2(DBG_TNC, "%s PA-TNC attribute type '%N/%N' 0x%06x/0x%08x",
+			 label, pen_names, vendor_id, pa_attr_names, type, vendor_id, type);
+	}
+	else
+	{
+		DBG2(DBG_TNC, "%s PA-TNC attribute type '%N' 0x%06x/0x%08x",
+			 label, pen_names, vendor_id, vendor_id, type);
+	}
+}
 
 /**
  * imvc dbg function

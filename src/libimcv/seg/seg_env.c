@@ -2,6 +2,8 @@
  * Copyright (C) 2014-2015 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
+ * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -39,9 +41,9 @@ struct private_seg_env_t {
 	seg_env_t public;
 
 	/**
-	 * Base Attribute ID
+	 * Base Message ID
 	 */
-	uint32_t base_attr_id;
+	uint32_t base_msg_id;
 
 	/**
 	 * Base Attribute
@@ -70,10 +72,10 @@ struct private_seg_env_t {
 
 };
 
-METHOD(seg_env_t, get_base_attr_id, uint32_t,
+METHOD(seg_env_t, get_base_msg_id, uint32_t,
 	private_seg_env_t *this)
 {
-	return this->base_attr_id;
+	return this->base_msg_id;
 }
 
 METHOD(seg_env_t, get_base_attr, pa_tnc_attr_t*,
@@ -124,12 +126,12 @@ METHOD(seg_env_t, first_segment, pa_tnc_attr_t*,
 	writer->destroy(writer);
 	this->data = chunk_skip(this->data, segment_data.len);
 
-	DBG2(DBG_TNC, "creating first segment for base attribute ID %d (%d bytes)",
-		 this->base_attr_id, seg_size);
+	DBG2(DBG_TNC, "creating first segment for base message ID %d (%d bytes)",
+		 this->base_msg_id, seg_size);
 
 	seg_env_flags = SEG_ENV_FLAG_START | SEG_ENV_FLAG_MORE;
 	seg_env_attr = tcg_seg_attr_seg_env_create(value, seg_env_flags,
-											   this->base_attr_id);
+											   this->base_msg_id);
 	chunk_free(&value);
 
 	return seg_env_attr;
@@ -159,13 +161,13 @@ METHOD(seg_env_t, next_segment, pa_tnc_attr_t*,
 	{
 		*last = is_last_segment;
 	}
-	DBG2(DBG_TNC, "creating %s segment for base attribute ID %d (%d bytes)",
-				   is_last_segment ? "last" : "next", this->base_attr_id,
+	DBG2(DBG_TNC, "creating %s segment for base message ID %d (%d bytes)",
+				   is_last_segment ? "last" : "next", this->base_msg_id,
 				   segment_data.len);
 
 	seg_env_flags = is_last_segment ? SEG_ENV_FLAG_NONE : SEG_ENV_FLAG_MORE;
 	seg_env_attr = tcg_seg_attr_seg_env_create(segment_data, seg_env_flags,
-											   this->base_attr_id);
+											   this->base_msg_id);
 
 	return seg_env_attr;
 }
@@ -210,7 +212,7 @@ METHOD(seg_env_t, destroy, void,
 /**
  * See header
  */
-seg_env_t *seg_env_create(uint32_t base_attr_id, pa_tnc_attr_t *base_attr,
+seg_env_t *seg_env_create(uint32_t base_msg_id, pa_tnc_attr_t *base_attr,
 						  uint32_t max_seg_size)
 {
 	private_seg_env_t *this;
@@ -232,7 +234,7 @@ seg_env_t *seg_env_create(uint32_t base_attr_id, pa_tnc_attr_t *base_attr,
 
 	INIT(this,
 		.public = {
-			.get_base_attr_id = _get_base_attr_id,
+			.get_base_msg_id = _get_base_msg_id,
 			.get_base_attr = _get_base_attr,
 			.get_base_attr_info = _get_base_attr_info,
 			.first_segment = _first_segment,
@@ -240,7 +242,7 @@ seg_env_t *seg_env_create(uint32_t base_attr_id, pa_tnc_attr_t *base_attr,
 			.add_segment = _add_segment,
 			.destroy = _destroy,
 		},
-		.base_attr_id = base_attr_id,
+		.base_msg_id = base_msg_id,
 		.base_attr = base_attr,
 		.max_seg_size = max_seg_size,
 		.data = base_attr->get_value(base_attr),
@@ -252,7 +254,7 @@ seg_env_t *seg_env_create(uint32_t base_attr_id, pa_tnc_attr_t *base_attr,
 /**
  * See header
  */
-seg_env_t *seg_env_create_from_data(uint32_t base_attr_id, chunk_t data,
+seg_env_t *seg_env_create_from_data(uint32_t base_msg_id, chunk_t data,
 									uint32_t max_seg_size, pa_tnc_attr_t** error)
 {
 	private_seg_env_t *this;
@@ -264,7 +266,7 @@ seg_env_t *seg_env_create_from_data(uint32_t base_attr_id, chunk_t data,
 
 	INIT(this,
 		.public = {
-			.get_base_attr_id = _get_base_attr_id,
+			.get_base_msg_id = _get_base_msg_id,
 			.get_base_attr = _get_base_attr,
 			.get_base_attr_info = _get_base_attr_info,
 			.first_segment = _first_segment,
@@ -272,13 +274,13 @@ seg_env_t *seg_env_create_from_data(uint32_t base_attr_id, chunk_t data,
 			.add_segment = _add_segment,
 			.destroy = _destroy,
 		},
-		.base_attr_id = base_attr_id,
+		.base_msg_id = base_msg_id,
 		.max_seg_size = max_seg_size,
 	);
 
 	/* create info field to be used by PA-TNC error messages */
 	memset(this->base_attr_info, 0xff, 4);
-	htoun32(this->base_attr_info + 4, base_attr_id);
+	htoun32(this->base_attr_info + 4, base_msg_id);
 	msg_info = get_base_attr_info(this);
 
 	/* extract from base attribute segment from data */

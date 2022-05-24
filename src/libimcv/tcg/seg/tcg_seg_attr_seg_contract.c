@@ -2,6 +2,8 @@
  * Copyright (C) 2014 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
+ * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
@@ -13,37 +15,37 @@
  * for more details.
  */
 
-#include "tcg_seg_attr_max_size.h"
+#include "tcg_seg_attr_seg_contract.h"
 
 #include <pa_tnc/pa_tnc_msg.h>
 #include <bio/bio_writer.h>
 #include <bio/bio_reader.h>
 #include <utils/debug.h>
 
-typedef struct private_tcg_seg_attr_max_size_t private_tcg_seg_attr_max_size_t;
+typedef struct private_tcg_seg_attr_seg_contract_t private_tcg_seg_attr_seg_contract_t;
 
 /**
- * Maximum Attribute Size Request/Response
- * see TCG IF-M Segmentation Specification
+ * Segmentation Contract Request/Response
+ * see TCG IF-M Segmentation Specification Version 1.0 Rev. 5, 4 April 2016
  *
  *	                     1                   2				     3
  *   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *  |                       Max Attribute Size                      |
+ *  |                        Max Message Size                       |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  *  |                        Max Segment Size                       |
  *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  */
 
 /**
- * Private data of an tcg_seg_attr_max_size_t object.
+ * Private data of an tcg_seg_attr_seg_contract_t object.
  */
-struct private_tcg_seg_attr_max_size_t {
+struct private_tcg_seg_attr_seg_contract_t {
 
 	/**
-	 * Public members of tcg_seg_attr_max_size_t
+	 * Public members of tcg_seg_attr_seg_contract_t
 	 */
-	tcg_seg_attr_max_size_t public;
+	tcg_seg_attr_seg_contract_t public;
 
 	/**
 	 * Vendor-specific attribute type
@@ -66,9 +68,9 @@ struct private_tcg_seg_attr_max_size_t {
 	bool noskip_flag;
 
 	/**
-	 * Maximum IF-M attribute size in octets
+	 * Maximum IF-M message size in octets
 	 */
-	uint32_t max_attr_size;
+	uint32_t max_msg_size;
 
 	/**
 	 * Maximum IF-M attribute segment size in octets
@@ -82,31 +84,31 @@ struct private_tcg_seg_attr_max_size_t {
 };
 
 METHOD(pa_tnc_attr_t, get_type, pen_type_t,
-	private_tcg_seg_attr_max_size_t *this)
+	private_tcg_seg_attr_seg_contract_t *this)
 {
 	return this->type;
 }
 
 METHOD(pa_tnc_attr_t, get_value, chunk_t,
-	private_tcg_seg_attr_max_size_t *this)
+	private_tcg_seg_attr_seg_contract_t *this)
 {
 	return this->value;
 }
 
 METHOD(pa_tnc_attr_t, get_noskip_flag, bool,
-	private_tcg_seg_attr_max_size_t *this)
+	private_tcg_seg_attr_seg_contract_t *this)
 {
 	return this->noskip_flag;
 }
 
 METHOD(pa_tnc_attr_t, set_noskip_flag,void,
-	private_tcg_seg_attr_max_size_t *this, bool noskip)
+	private_tcg_seg_attr_seg_contract_t *this, bool noskip)
 {
 	this->noskip_flag = noskip;
 }
 
 METHOD(pa_tnc_attr_t, build, void,
-	private_tcg_seg_attr_max_size_t *this)
+	private_tcg_seg_attr_seg_contract_t *this)
 {
 	bio_writer_t *writer;
 
@@ -114,8 +116,8 @@ METHOD(pa_tnc_attr_t, build, void,
 	{
 		return;
 	}
-	writer = bio_writer_create(TCG_SEG_ATTR_MAX_SIZE_SIZE);
-	writer->write_uint32(writer, this->max_attr_size);
+	writer = bio_writer_create(TCG_SEG_ATTR_SEG_CONTRACT_SIZE);
+	writer->write_uint32(writer, this->max_msg_size);
 	writer->write_uint32(writer, this->max_seg_size);
 
 	this->value = writer->extract_buf(writer);
@@ -124,7 +126,7 @@ METHOD(pa_tnc_attr_t, build, void,
 }
 
 METHOD(pa_tnc_attr_t, process, status_t,
-	private_tcg_seg_attr_max_size_t *this, uint32_t *offset)
+	private_tcg_seg_attr_seg_contract_t *this, uint32_t *offset)
 {
 	bio_reader_t *reader;
 
@@ -134,14 +136,14 @@ METHOD(pa_tnc_attr_t, process, status_t,
 	{
 		return NEED_MORE;
 	}
-	if (this->value.len < TCG_SEG_ATTR_MAX_SIZE_SIZE)
+	if (this->value.len < TCG_SEG_ATTR_SEG_CONTRACT_SIZE)
 	{
 		DBG1(DBG_TNC, "insufficient data for %N", tcg_attr_names,
 												  this->type.type);
 		return FAILED;
 	}
 	reader = bio_reader_create(this->value);
-	reader->read_uint32(reader, &this->max_attr_size);
+	reader->read_uint32(reader, &this->max_msg_size);
 	reader->read_uint32(reader, &this->max_seg_size);
 	reader->destroy(reader);
 
@@ -149,20 +151,20 @@ METHOD(pa_tnc_attr_t, process, status_t,
 }
 
 METHOD(pa_tnc_attr_t, add_segment, void,
-	private_tcg_seg_attr_max_size_t *this, chunk_t segment)
+	private_tcg_seg_attr_seg_contract_t *this, chunk_t segment)
 {
 	this->value = chunk_cat("mc", this->value, segment);
 }
 
 METHOD(pa_tnc_attr_t, get_ref, pa_tnc_attr_t*,
-	private_tcg_seg_attr_max_size_t *this)
+	private_tcg_seg_attr_seg_contract_t *this)
 {
 	ref_get(&this->ref);
 	return &this->public.pa_tnc_attribute;
 }
 
 METHOD(pa_tnc_attr_t, destroy, void,
-	private_tcg_seg_attr_max_size_t *this)
+	private_tcg_seg_attr_seg_contract_t *this)
 {
 	if (ref_put(&this->ref))
 	{
@@ -171,13 +173,13 @@ METHOD(pa_tnc_attr_t, destroy, void,
 	}
 }
 
-METHOD(tcg_seg_attr_max_size_t, get_attr_size, void,
-	private_tcg_seg_attr_max_size_t *this, uint32_t *max_attr_size,
-										   uint32_t *max_seg_size)
+METHOD(tcg_seg_attr_seg_contract_t, get_max_size, void,
+	private_tcg_seg_attr_seg_contract_t *this, uint32_t *max_msg_size,
+											   uint32_t *max_seg_size)
 {
-	if (max_attr_size)
+	if (max_msg_size)
 	{
-		*max_attr_size = this->max_attr_size;
+		*max_msg_size = this->max_msg_size;
 	}
 	if (max_seg_size)
 	{
@@ -188,11 +190,11 @@ METHOD(tcg_seg_attr_max_size_t, get_attr_size, void,
 /**
  * Described in header.
  */
-pa_tnc_attr_t* tcg_seg_attr_max_size_create(uint32_t max_attr_size,
-											uint32_t max_seg_size,
-											bool request)
+pa_tnc_attr_t* tcg_seg_attr_seg_contract_create(uint32_t max_msg_size,
+												uint32_t max_seg_size,
+												bool request)
 {
-	private_tcg_seg_attr_max_size_t *this;
+	private_tcg_seg_attr_seg_contract_t *this;
 
 	INIT(this,
 		.public = {
@@ -207,11 +209,11 @@ pa_tnc_attr_t* tcg_seg_attr_max_size_create(uint32_t max_attr_size,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
-			.get_attr_size = _get_attr_size,
+			.get_max_size = _get_max_size,
 		},
-		.type = { PEN_TCG, request ? TCG_SEG_MAX_ATTR_SIZE_REQ :
-									 TCG_SEG_MAX_ATTR_SIZE_RESP },
-		.max_attr_size = max_attr_size,
+		.type = { PEN_TCG, request ? TCG_SEG_CONTRACT_REQ :
+									 TCG_SEG_CONTRACT_RESP },
+		.max_msg_size = max_msg_size,
 		.max_seg_size = max_seg_size,
 		.ref = 1,
 	);
@@ -222,11 +224,11 @@ pa_tnc_attr_t* tcg_seg_attr_max_size_create(uint32_t max_attr_size,
 /**
  * Described in header.
  */
-pa_tnc_attr_t *tcg_seg_attr_max_size_create_from_data(size_t length,
-													  chunk_t data,
-													  bool request)
+pa_tnc_attr_t *tcg_seg_attr_seg_contract_create_from_data(size_t length,
+														  chunk_t data,
+														  bool request)
 {
-	private_tcg_seg_attr_max_size_t *this;
+	private_tcg_seg_attr_seg_contract_t *this;
 
 	INIT(this,
 		.public = {
@@ -241,10 +243,10 @@ pa_tnc_attr_t *tcg_seg_attr_max_size_create_from_data(size_t length,
 				.get_ref = _get_ref,
 				.destroy = _destroy,
 			},
-			.get_attr_size = _get_attr_size,
+			.get_max_size = _get_max_size,
 		},
-		.type = { PEN_TCG, request ? TCG_SEG_MAX_ATTR_SIZE_REQ :
-									 TCG_SEG_MAX_ATTR_SIZE_RESP },
+		.type = { PEN_TCG, request ? TCG_SEG_CONTRACT_REQ :
+									 TCG_SEG_CONTRACT_RESP },
 		.length = length,
 		.value = chunk_clone(data),
 		.ref = 1,
