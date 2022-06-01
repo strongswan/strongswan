@@ -95,13 +95,32 @@ static void list(private_whitelist_control_t *this,
 /**
  * Dispatch a received message
  */
-static bool on_accept(private_whitelist_control_t *this, stream_t *stream)
+CALLBACK(on_read, bool,
+	private_whitelist_control_t *this, stream_t *stream)
 {
 	identification_t *id;
 	whitelist_msg_t msg;
+	ssize_t n;
 
-	while (stream->read_all(stream, &msg, sizeof(msg)))
+	while (TRUE)
 	{
+		n = stream->read(stream, &msg, sizeof(msg), FALSE);
+		if (n <= 0)
+		{
+			if (errno == EWOULDBLOCK)
+			{
+				break;
+			}
+			return FALSE;
+		}
+		if (n < sizeof(msg))
+		{
+			if (!stream->read_all(stream, ((char *)&msg) + n, sizeof(msg) - n))
+			{
+				return FALSE;
+			}
+		}
+
 		msg.id[sizeof(msg.id) - 1] = 0;
 		id = identification_create_from_string(msg.id);
 		switch (ntohl(msg.type))
@@ -131,7 +150,14 @@ static bool on_accept(private_whitelist_control_t *this, stream_t *stream)
 		id->destroy(id);
 	}
 
-	return FALSE;
+	return TRUE;
+}
+
+CALLBACK(on_accept, bool,
+	private_whitelist_control_t *this, stream_t *stream)
+{
+	stream->on_read(stream, on_read, this);
+	return TRUE;
 }
 
 METHOD(whitelist_control_t, destroy, void,
