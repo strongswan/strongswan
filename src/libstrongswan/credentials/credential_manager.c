@@ -867,6 +867,8 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 		this->pretrusted = get_pretrusted_cert(this->this, this->type, this->id);
 		if (this->pretrusted)
 		{
+			DBG1(DBG_CFG, "  using trusted certificate \"%Y\"",
+				 this->pretrusted->get_subject(this->pretrusted));
 			/* if we find a trusted self signed certificate, we just accept it.
 			 * However, in order to fulfill authorization rules, we try to build
 			 * the trust chain if it is not self signed */
@@ -874,8 +876,6 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 				verify_trust_chain(this->this, this->pretrusted, this->auth,
 								   TRUE, this->online))
 			{
-				DBG1(DBG_CFG, "  using trusted certificate \"%Y\"",
-					 this->pretrusted->get_subject(this->pretrusted));
 				*cert = this->pretrusted;
 				if (!this->auth->get(this->auth, AUTH_RULE_SUBJECT_CERT))
 				{	/* add cert to auth info, if not returned by trustchain */
