@@ -52,7 +52,7 @@ if USE_FILE_CONFIG
 endif
 
 if USE_IPSEC_SCRIPT
-  SUBDIRS += ipsec _copyright
+  SUBDIRS += ipsec
 endif
 
 if USE_CHARON

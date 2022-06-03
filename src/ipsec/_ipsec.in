@@ -315,14 +315,9 @@ duplicheck|error-notify|imv_policy_manager|load-tester|lookip|whitelist|\
 _updown|_imv_policy)
 	# fall through
 	;;
-copyright|--copyright)
-	set _copyright
-	# fall through
-	;;
 version|--version)
 	printf "$OS_NAME $IPSEC_NAME $IPSEC_VERSION\n"
 	printf "$IPSEC_DISTRO\n"
-	printf "See '$IPSEC_SCRIPT --copyright' for copyright information.\n"
 	exit 0
 	;;
 --*)
