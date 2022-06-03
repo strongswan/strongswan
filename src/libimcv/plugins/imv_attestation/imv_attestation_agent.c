@@ -1,9 +1,8 @@
 /*
+ * Copyright (C) 2011-2022 Andreas Steffen
  * Copyright (C) 2011-2012 Sansar Choinyambuu
- * Copyright (C) 2011-2020 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
  *
- * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

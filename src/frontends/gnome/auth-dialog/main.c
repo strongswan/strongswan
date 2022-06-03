@@ -3,7 +3,6 @@
  *
  * Copyright (C) 2013-2016 Tobias Brunner
  * Copyright (C) 2008-2011 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2004 Dan Williams
  * Red Hat, Inc.

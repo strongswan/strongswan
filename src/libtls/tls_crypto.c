@@ -2,10 +2,9 @@
  * Copyright (C) 2020 Tobias Brunner
  * Copyright (C) 2020-2021 Pascal Knecht
  * Copyright (C) 2020 Méline Sieber
- * HSR Hochschule fuer Technik Rapperswil
- *
  * Copyright (C) 2010-2014 Martin Willi
- * Copyright (C) 2010-2014 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

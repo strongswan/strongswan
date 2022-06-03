@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2014-2022 Andreas Steffen
  *
- * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ * Copyright (C) secunet Security Networks AG
  *
- This program is free software; you can redistribute it and/or modify it
+ * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; either version 2 of the License, or (at your
  * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.

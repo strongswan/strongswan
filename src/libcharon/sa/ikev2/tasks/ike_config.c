@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2007 Martin Willi
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

@@ -1,7 +1,6 @@
 /*
  * Copyright (C) 2013-2020 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
  * Copyright (C) 2015 Lubomir Rintel
  * Copyright (C) 2005 David Zeuthen
  * Copyright (C) 2005-2008 Dan Williams
