@@ -345,23 +345,29 @@ static bool ecdh_group_supported(EC_builtin_curve *curves, size_t num_curves,
 static void add_ecdh_features(plugin_feature_t *features,
 							  plugin_feature_t *to_add, int count, int *pos)
 {
-	size_t num_curves;
-	int i;
+    size_t num_curves;
+    int i;
+    EC_builtin_curve* curves = NULL;
 
-	num_curves = EC_get_builtin_curves(NULL, 0);
+    num_curves = EC_get_builtin_curves(NULL, 0);
 
-	EC_builtin_curve curves[num_curves];
+    if (num_curves > 0)
+    {
+        curves = (EC_builtin_curve*)malloc(sizeof(EC_builtin_curve) * num_curves);
 
-	num_curves = EC_get_builtin_curves(curves, num_curves);
+        num_curves = EC_get_builtin_curves(curves, num_curves);
 
-	for (i = 0; i < count; i++)
-	{
-		if (to_add[i].kind != FEATURE_PROVIDE ||
-			ecdh_group_supported(curves, num_curves, to_add[i].arg.dh_group))
-		{
-			features[(*pos)++] = to_add[i];
-		}
-	}
+        for (i = 0; i < count; i++)
+        {
+            if (to_add[i].kind != FEATURE_PROVIDE ||
+                    ecdh_group_supported(curves, num_curves, to_add[i].arg.dh_group))
+            {
+                    features[(*pos)++] = to_add[i];
+            }
+        }
+
+        free(curves);
+    }
 }
 #endif /* OPENSSL_NO_ECDH */
 
