@@ -604,13 +604,14 @@ METHOD(task_t, build_r, status_t,
 		{
 			return send_notify(this, NO_PROPOSAL_CHOSEN);
 		}
+
+		id = this->ph1->get_id(this->ph1, this->peer_cfg, TRUE);
+		this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
+
 		if (!this->ph1->derive_keys(this->ph1, this->peer_cfg, this->method))
 		{
 			return send_notify(this, INVALID_KEY_INFORMATION);
 		}
-
-		id = this->ph1->get_id(this->ph1, this->peer_cfg, TRUE);
-		this->ike_sa->set_my_id(this->ike_sa, id->clone(id));
 
 		id_payload = id_payload_create_from_identification(PLV1_ID, id);
 		message->add_payload(message, &id_payload->payload_interface);
