@@ -114,9 +114,9 @@ METHOD(prf_t, get_bytes, bool,
 	uint8_t *xkey = this->key;
 	uint8_t one[this->b];
 
-	if (!w)
+	if (!w || !this->b)
 	{
-		/* append mode is not supported */
+		/* append mode is not supported, the other check is to make GCC happy */
 		return FALSE;
 	}
 
