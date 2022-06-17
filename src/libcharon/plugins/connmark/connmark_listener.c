@@ -119,7 +119,7 @@ static bool manage_rule(struct iptc_handle *ipth, const char *chain,
  */
 static bool manage_pre_esp_in_udp(private_connmark_listener_t *this,
 								  struct iptc_handle *ipth, bool add,
-								  u_int mark, uint32_t spi,
+								  uint32_t mark, uint32_t mask, uint32_t spi,
 								  host_t *dst, host_t *src)
 {
 	uint16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
@@ -167,7 +167,7 @@ static bool manage_pre_esp_in_udp(private_connmark_listener_t *this,
 	);
 	ADD_STRUCT(pos, struct xt_mark_tginfo2,
 		.mark = mark,
-		.mask = ~0,
+		.mask = mask,
 	);
 	return manage_rule(ipth, "PREROUTING", add, e);
 }
@@ -177,7 +177,7 @@ static bool manage_pre_esp_in_udp(private_connmark_listener_t *this,
  */
 static bool manage_pre_esp(private_connmark_listener_t *this,
 						   struct iptc_handle *ipth, bool add,
-						   u_int mark, uint32_t spi,
+						   uint32_t mark, uint32_t mask, uint32_t spi,
 						   host_t *dst, host_t *src)
 {
 	uint16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
@@ -224,7 +224,7 @@ static bool manage_pre_esp(private_connmark_listener_t *this,
 	);
 	ADD_STRUCT(pos, struct xt_mark_tginfo2,
 		.mark = mark,
-		.mask = ~0,
+		.mask = mask,
 	);
 	return manage_rule(ipth, "PREROUTING", add, e);
 }
@@ -234,14 +234,14 @@ static bool manage_pre_esp(private_connmark_listener_t *this,
  */
 static bool manage_pre(private_connmark_listener_t *this,
 					   struct iptc_handle *ipth, bool add,
-					   u_int mark, uint32_t spi, bool encap,
+					   uint32_t mark, uint32_t mask, uint32_t spi, bool encap,
 					   host_t *dst, host_t *src)
 {
 	if (encap)
 	{
-		return manage_pre_esp_in_udp(this, ipth, add, mark, spi, dst, src);
+		return manage_pre_esp_in_udp(this, ipth, add, mark, mask, spi, dst, src);
 	}
-	return manage_pre_esp(this, ipth, add, mark, spi, dst, src);
+	return manage_pre_esp(this, ipth, add, mark, mask, spi, dst, src);
 }
 
 /**
@@ -249,7 +249,7 @@ static bool manage_pre(private_connmark_listener_t *this,
  */
 static bool manage_in(private_connmark_listener_t *this,
 					  struct iptc_handle *ipth, bool add,
-					  u_int mark, uint32_t spi,
+					  uint32_t mark, uint32_t mask, uint32_t spi,
 					  traffic_selector_t *dst, traffic_selector_t *src)
 {
 	uint16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
@@ -300,8 +300,8 @@ static bool manage_in(private_connmark_listener_t *this,
 	);
 	ADD_STRUCT(pos, struct xt_connmark_tginfo1,
 		.ctmark = mark,
-		.ctmask = ~0,
-		.nfmask = ~0,
+		.ctmask = mask,
+		.nfmask = mask,
 		.mode = XT_CONNMARK_SET,
 	);
 	return manage_rule(ipth, "INPUT", add, e);
@@ -312,7 +312,7 @@ static bool manage_in(private_connmark_listener_t *this,
  * already has a mark set
  */
 static bool manage_out(private_connmark_listener_t *this,
-					   struct iptc_handle *ipth, bool add,
+					   struct iptc_handle *ipth, bool add, uint32_t mask,
 					   traffic_selector_t *dst, traffic_selector_t *src)
 {
 	uint16_t match_size	= XT_ALIGN(sizeof(struct ipt_entry_match)) +
@@ -344,7 +344,7 @@ static bool manage_out(private_connmark_listener_t *this,
 		},
 	);
 	ADD_STRUCT(pos, struct xt_mark_mtinfo1,
-		.mask = ~0,
+		.mask = mask,
 	);
 	ADD_STRUCT(pos, struct ipt_entry_target,
 		.u = {
@@ -356,8 +356,8 @@ static bool manage_out(private_connmark_listener_t *this,
 		},
 	);
 	ADD_STRUCT(pos, struct xt_connmark_tginfo1,
-		.ctmask = ~0,
-		.nfmask = ~0,
+		.ctmask = mask,
+		.nfmask = mask,
 		.mode = XT_CONNMARK_RESTORE,
 	);
 	return manage_rule(ipth, "OUTPUT", add, e);
@@ -401,19 +401,19 @@ static bool manage_policies(private_connmark_listener_t *this,
 {
 	traffic_selector_t *local, *remote;
 	enumerator_t *enumerator;
-	uint32_t spi;
-	u_int mark;
+	uint32_t spi, mark, mask;
 	bool done = TRUE;
 
 	spi = child_sa->get_spi(child_sa, TRUE);
 	mark = child_sa->get_mark(child_sa, TRUE).value;
+	mask = child_sa->get_mark(child_sa, TRUE).mask;
 
 	enumerator = child_sa->create_policy_enumerator(child_sa);
 	while (enumerator->enumerate(enumerator, &local, &remote))
 	{
-		if (!manage_pre(this, ipth, add, mark, spi, encap, dst, src) ||
-			!manage_in(this, ipth, add, mark, spi, local, remote) ||
-			!manage_out(this, ipth, add, remote, local))
+		if (!manage_pre(this, ipth, add, mark, mask, spi, encap, dst, src) ||
+			!manage_in(this, ipth, add, mark, mask, spi, local, remote) ||
+			!manage_out(this, ipth, add, mask, remote, local))
 		{
 			done = FALSE;
 			break;
