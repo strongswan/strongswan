@@ -255,11 +255,12 @@ charon.leak_detective.detailed = yes
 	Includes source file names and line numbers in leak detective output.
 
 charon.leak_detective.usage_threshold = 10240
-	Threshold in bytes for leaks to be reported (0 to report all).
+	Threshold in bytes for allocations to be included in usage reports (0 to
+	include all).
 
 charon.leak_detective.usage_threshold_count = 0
-	Threshold in number of allocations for leaks to be reported (0 to report
-	all).
+	Threshold in number of allocations for allocations to be included in usage
+	reports (0 to include all).
 
 charon.load
 	Plugins to load in the IKE daemon charon.
