@@ -44,6 +44,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/utsname.h>
 #include <stdint.h>
 #include <linux/ipsec.h>
 #include <linux/netlink.h>
@@ -340,6 +341,11 @@ struct private_kernel_netlink_ipsec_t {
 	 * Netlink xfrm socket to receive acquire and expire events
 	 */
 	netlink_event_socket_t *socket_xfrm_events;
+
+	/**
+	 * Whether the kernel reports the last use time on SAs
+	 */
+	bool sa_lastused;
 
 	/**
 	 * Whether to install routes along policies
@@ -1157,7 +1163,8 @@ CALLBACK(receive_events, void,
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	private_kernel_netlink_ipsec_t *this)
 {
-	return KERNEL_ESP_V3_TFC | KERNEL_POLICY_SPI;
+	return KERNEL_ESP_V3_TFC | KERNEL_POLICY_SPI |
+			(this->sa_lastused ? KERNEL_SA_USE_TIME : 0);
 }
 
 /**
@@ -2210,10 +2217,33 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 	free(out);
 }
 
+/**
+ * Get the last used time of an SA if provided by the kernel
+ */
+static bool get_lastused(struct nlmsghdr *hdr, uint64_t *lastused)
+{
+	struct rtattr *rta;
+	size_t rtasize;
+
+	rta = XFRM_RTA(hdr, struct xfrm_usersa_info);
+	rtasize = XFRM_PAYLOAD(hdr, struct xfrm_usersa_info);
+	while (RTA_OK(rta, rtasize))
+	{
+		if (rta->rta_type == XFRMA_LASTUSED &&
+			RTA_PAYLOAD(rta) == sizeof(*lastused))
+		{
+			*lastused = *(uint64_t*)RTA_DATA(rta);
+			return TRUE;
+		}
+		rta = RTA_NEXT(rta, rtasize);
+	}
+	return FALSE;
+}
+
 METHOD(kernel_ipsec_t, query_sa, status_t,
 	private_kernel_netlink_ipsec_t *this, kernel_ipsec_sa_id_t *id,
 	kernel_ipsec_query_sa_t *data, uint64_t *bytes, uint64_t *packets,
-	time_t *time)
+	time_t *use_time)
 {
 	netlink_buf_t request;
 	struct nlmsghdr *out = NULL, *hdr;
@@ -2291,11 +2321,20 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 		{
 			*packets = sa->curlft.packets;
 		}
-		if (time)
-		{	/* curlft contains an "use" time, but that contains a timestamp
-			 * of the first use, not the last. Last use time must be queried
-			 * on the policy on Linux */
-			*time = 0;
+		if (use_time)
+		{
+			uint64_t lastused = 0;
+
+			/* curlft.use_time contains the timestamp of the SA's first use, not
+			 * the last, but we might get the last use time in an attribute */
+			if (this->sa_lastused && get_lastused(hdr, &lastused))
+			{
+				*use_time = time_monotonic(NULL) - (time(NULL) - lastused);
+			}
+			else
+			{
+				*use_time = 0;
+			}
 		}
 		status = SUCCESS;
 	}
@@ -4037,6 +4076,30 @@ static void setup_spd_hash_thresh(private_kernel_netlink_ipsec_t *this,
 	}
 }
 
+/**
+ * Check for kernel features (currently only via version number)
+ */
+static void check_kernel_features(private_kernel_netlink_ipsec_t *this)
+{
+	struct utsname utsname;
+	int a, b, c;
+
+	if (uname(&utsname) == 0)
+	{
+		switch(sscanf(utsname.release, "%d.%d.%d", &a, &b, &c))
+		{
+			case 2:
+			case 3:
+				/* before 6.2 the kernel only provided the last used time for
+				 * specific outbound IPv6 SAs */
+				this->sa_lastused = a > 6 || (a == 6 && b >= 2);
+				break;
+			default:
+				break;
+		}
+	}
+}
+
 /*
  * Described in header.
  */
@@ -4083,6 +4146,8 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		.port_bypass = lib->settings->get_bool(lib->settings,
 						"%s.plugins.kernel-netlink.port_bypass", FALSE, lib->ns),
 	);
+
+	check_kernel_features(this);
 
 	this->socket_xfrm = netlink_socket_create(NETLINK_XFRM, xfrm_msg_names,
 				lib->settings->get_bool(lib->settings,
