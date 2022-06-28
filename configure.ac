@@ -1191,7 +1191,7 @@ fi
 if test x$oqs = xtrue; then
 	saved_LIBS=$LIBS
 	LIBS="-lm"
-	AC_CHECK_LIB([oqs],[_init],,[AC_MSG_ERROR([Open Quantum-Safe library oqs not found])],[])
+	AC_CHECK_LIB([oqs],[OQS_init],,[AC_MSG_ERROR([Open Quantum-Safe library oqs not found])],[])
 	LIBS=$saved_LIBS
 	AC_CHECK_HEADER([oqs/oqs.h],,[AC_MSG_ERROR([Open Quantum-Safe header oqs/oqs.h not found!])])
 fi
