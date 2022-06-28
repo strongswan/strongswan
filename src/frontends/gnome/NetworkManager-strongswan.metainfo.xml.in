@@ -31,8 +31,8 @@
     </screenshot>
   </screenshots>
 
-  <url type="homepage">https://wiki.strongswan.org/projects/strongswan/wiki/NetworkManager</url>
-  <url type="bugtracker">https://wiki.strongswan.org/projects/strongswan/wiki/FlawReporting</url>
+  <url type="homepage">https://docs.strongswan.org/docs/5.9/features/networkManager.html</url>
+  <url type="bugtracker">https://github.com/strongswan/strongswan/issues</url>
   <url type="help">https://www.strongswan.org/support.html</url>
   <update_contact>info_AT_strongswan.org</update_contact>
   <translation type="gettext">NetworkManager-strongswan</translation>

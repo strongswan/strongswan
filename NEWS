@@ -1658,8 +1658,7 @@ strongswan-5.0.0
   keying protocols. The feature-set of IKEv1 in charon is almost on par with
   pluto, but currently does not support AH or bundled AH+ESP SAs. Beside
   RSA/ECDSA, PSK and XAuth, charon also supports the Hybrid authentication
-  mode. Information for interoperability and migration is available at
-  https://wiki.strongswan.org/projects/strongswan/wiki/CharonPlutoIKEv1.
+  mode.
 
 - Charon's bus_t has been refactored so that loggers and other listeners are
   now handled separately.  The single lock was previously cause for deadlocks
@@ -2089,8 +2088,7 @@ strongswan-4.4.0
 
 - The IKEv2 High Availability plugin has been integrated. It provides
   load sharing and failover capabilities in a cluster of currently two nodes,
-  based on an extend ClusterIP kernel module. More information is available at
-  https://wiki.strongswan.org/projects/strongswan/wiki/HighAvailability.
+  based on an extend ClusterIP kernel module.
   The development of the High Availability functionality was sponsored by
   secunet Security Networks AG.
 
@@ -2250,7 +2248,7 @@ strongswan-4.3.4
 ----------------
 
 - IKEv2 charon daemon ported to FreeBSD and Mac OS X. Installation details can
-  be found on wiki.strongswan.org.
+  be found in the documentation.
 
 - ipsec statusall shows the number of bytes transmitted and received over
   ESP connections configured by the IKEv2 charon daemon.
@@ -2797,8 +2795,7 @@ strongswan-4.1.7
   simulate a NAT situation and trick the other peer into NAT mode (IKEv2 only).
 
 - Preview of strongSwan Manager, a web based configuration and monitoring
-  application. It uses a new XML control interface to query the IKEv2 daemon
-  (see https://wiki.strongswan.org/wiki/Manager).
+  application. It uses a new XML control interface to query the IKEv2 daemon.
 
 - Experimental SQLite configuration backend which will provide the configuration
   interface for strongSwan Manager in future releases.

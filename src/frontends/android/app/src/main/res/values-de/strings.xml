@@ -123,7 +123,7 @@
     <string name="profile_select_one_app">Eine App ausgewählt</string>
     <string name="profile_select_x_apps">%1$d Apps ausgewählt</string>
     <string name="profile_proposals_label">Algorithmen</string>
-    <string name="profile_proposals_intro">Optionale spezifische Algorithmen für IKEv2 und/oder IPsec/ESP die statt der Standardwerte verwendet werden sollen. Eine <a href="https://wiki.strongswan.org/projects/strongswan/wiki/IKEv2CipherSuites">Liste gültiger Algorithmen</a> kann unserem Wiki entnommen werden (nicht alle werden von dieser App unterstützt). Beide Felder erwarten eine Liste von Algorithmen, jeweils mit einem Bindestrich getrennt.</string>
+    <string name="profile_proposals_intro">Optionale spezifische Algorithmen für IKEv2 und/oder IPsec/ESP die statt der Standardwerte verwendet werden sollen. Eine <a href="https://docs.strongswan.org/docs/5.9/config/IKEv2CipherSuites.html">Liste gültiger Algorithmen</a> kann unserem Wiki entnommen werden (nicht alle werden von dieser App unterstützt). Beide Felder erwarten eine Liste von Algorithmen, jeweils mit einem Bindestrich getrennt.</string>
     <string name="profile_proposals_ike_label">IKEv2 Algorithmen</string>
     <string name="profile_proposals_ike_hint">Für non-AEAD/klassische Verschlüsselungsalgorithmen wird ein Integritätsalgorithmus, eine pseudozufällige Funktion (PRF, optional, ansonsten wird eine auf dem Integritätsalgorithmus basierende verwendet) und eine Diffie-Hellman Gruppe benötigt (z.B. aes256-sha256-ecp256). Für kombinierte/AEAD Algorithmen wird der Integritätsalgorithmus weggelassen aber eine PRF wird benötigt (z.B. aes256gcm16-prfsha256-ecp256).</string>
     <string name="profile_proposals_esp_label">IPsec/ESP Algorithmen</string>

@@ -18,7 +18,7 @@ Dies ist die offizielle Android-Portierung der populären strongSwan VPN-Lösung
  <li>VPN Profile können von Dateien importiert werden</li>
 </ul>
 
-Details und ein Changelog sind auf unserem Wiki zu finden: https://wiki.strongswan.org/projects/strongswan/wiki/AndroidVPNClient
+Details und ein Changelog sind in unserer Dokumentation zu finden: https://docs.strongswan.org/docs/5.9/os/androidVpnClient.html
 
 # PERMISSIONS #
 
@@ -29,7 +29,7 @@ Details und ein Changelog sind auf unserem Wiki zu finden: https://wiki.strongsw
 
 # BEISPIEL-SERVERKONFIGURATION #
 
-Sie finden in unserem Wiki Beispiel-Serverkonfigurationen: https://wiki.strongswan.org/projects/strongswan/wiki/AndroidVPNClient#Server-Configuration
+Sie finden in unserer Dokumentation Beispiel-Serverkonfigurationen: https://docs.strongswan.org/docs/5.9/os/androidVpnClient.html#_server_configuration
 
 Beachten Sie bitte, dass der im VPN Profil konfigurierte Hostname (bzw. die IP-Adresse) *zwingend* als subjectAltName-Extension im Server-Zertifikat vorhanden sein muss.
 
