@@ -252,34 +252,37 @@ METHOD(proposal_t, get_algorithm, bool,
 	return found;
 }
 
-METHOD(proposal_t, has_dh_group, bool,
-	private_proposal_t *this, diffie_hellman_group_t group)
+METHOD(proposal_t, has_transform, bool,
+	private_proposal_t *this, transform_type_t type, uint16_t alg)
 {
 	bool found = FALSE, any = FALSE;
 	enumerator_t *enumerator;
 	uint16_t current;
 
-	enumerator = create_enumerator(this, DIFFIE_HELLMAN_GROUP);
+	enumerator = create_enumerator(this, type);
 	while (enumerator->enumerate(enumerator, &current, NULL))
 	{
-		any = TRUE;
-		if (current == group)
+		if (current)
 		{
-			found = TRUE;
-			break;
+			any = TRUE;
+			if (alg && current == alg)
+			{
+				found = TRUE;
+				break;
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	if (!any && group == MODP_NONE)
+	if (!any && !alg)
 	{
 		found = TRUE;
 	}
 	return found;
 }
 
-METHOD(proposal_t, promote_dh_group, bool,
-	private_proposal_t *this, diffie_hellman_group_t group)
+METHOD(proposal_t, promote_transform, bool,
+	private_proposal_t *this, transform_type_t type, uint16_t alg)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -288,8 +291,8 @@ METHOD(proposal_t, promote_dh_group, bool,
 	enumerator = array_create_enumerator(this->transforms);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (entry->type == DIFFIE_HELLMAN_GROUP &&
-			entry->alg == group)
+		if (entry->type == type &&
+			entry->alg == alg)
 		{
 			array_remove_at(this->transforms, enumerator);
 			found = TRUE;
@@ -300,8 +303,8 @@ METHOD(proposal_t, promote_dh_group, bool,
 	if (found)
 	{
 		entry_t entry = {
-			.type = DIFFIE_HELLMAN_GROUP,
-			.alg = group,
+			.type = type,
+			.alg = alg,
 		};
 		array_insert(this->transforms, ARRAY_HEAD, &entry);
 	}
@@ -319,7 +322,7 @@ static bool select_algo(private_proposal_t *this, proposal_t *other,
 	uint16_t alg1, alg2, ks1, ks2;
 	bool found = FALSE, optional = FALSE;
 
-	if (type == DIFFIE_HELLMAN_GROUP)
+	if (type == KEY_EXCHANGE_METHOD)
 	{
 		optional = this->protocol == PROTO_ESP || this->protocol == PROTO_AH;
 	}
@@ -408,7 +411,7 @@ static bool select_algos(private_proposal_t *this, proposal_t *other,
 		{
 			continue;
 		}
-		if (type == DIFFIE_HELLMAN_GROUP && (flags & PROPOSAL_SKIP_DH))
+		if (type == KEY_EXCHANGE_METHOD && (flags & PROPOSAL_SKIP_KE))
 		{
 			continue;
 		}
@@ -601,7 +604,7 @@ METHOD(proposal_t, clone_, proposal_t*,
 		{
 			continue;
 		}
-		if (entry->type == DIFFIE_HELLMAN_GROUP && (flags & PROPOSAL_SKIP_DH))
+		if (entry->type == KEY_EXCHANGE_METHOD && (flags & PROPOSAL_SKIP_KE))
 		{
 			continue;
 		}
@@ -692,17 +695,17 @@ static bool check_proposal(private_proposal_t *this)
 			DBG1(DBG_CFG, "a PRF algorithm is mandatory in IKE proposals");
 			return FALSE;
 		}
-		/* remove MODP_NONE from IKE proposal */
+		/* remove KE_NONE from IKE proposal */
 		e = array_create_enumerator(this->transforms);
 		while (e->enumerate(e, &entry))
 		{
-			if (entry->type == DIFFIE_HELLMAN_GROUP && !entry->alg)
+			if (entry->type == KEY_EXCHANGE_METHOD && !entry->alg)
 			{
 				array_remove_at(this->transforms, e);
 			}
 		}
 		e->destroy(e);
-		if (!get_algorithm(this, DIFFIE_HELLMAN_GROUP, NULL, NULL))
+		if (!get_algorithm(this, KEY_EXCHANGE_METHOD, NULL, NULL))
 		{
 			DBG1(DBG_CFG, "a DH group is mandatory in IKE proposals");
 			return FALSE;
@@ -943,8 +946,8 @@ proposal_t *proposal_create_v1(protocol_id_t protocol, uint8_t number,
 			.add_algorithm = _add_algorithm,
 			.create_enumerator = _create_enumerator,
 			.get_algorithm = _get_algorithm,
-			.has_dh_group = _has_dh_group,
-			.promote_dh_group = _promote_dh_group,
+			.has_transform = _has_transform,
+			.promote_transform = _promote_transform,
 			.select = _select_proposal,
 			.matches = _matches,
 			.get_protocol = _get_protocol,
@@ -983,7 +986,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 	encryption_algorithm_t encryption;
 	integrity_algorithm_t integrity;
 	pseudo_random_function_t prf;
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 	const char *plugin_name;
 
 	if (aead)
@@ -1175,7 +1178,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 	enumerator->destroy(enumerator);
 
 	/* Round 1 adds ECC and NTRU algorithms with at least 128 bit security strength */
-	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
+	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &group, &plugin_name))
 	{
 		switch (group)
@@ -1192,7 +1195,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case NTRU_192_BIT:
 			case NTRU_256_BIT:
 			case NH_128_BIT:
-				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
+				add_algorithm(this, KEY_EXCHANGE_METHOD, group, 0);
 				break;
 			default:
 				break;
@@ -1201,7 +1204,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 	enumerator->destroy(enumerator);
 
 	/* Round 2 adds other algorithms with at least 128 bit security strength */
-	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
+	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &group, &plugin_name))
 	{
 		switch (group)
@@ -1210,7 +1213,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 			case MODP_4096_BIT:
 			case MODP_6144_BIT:
 			case MODP_8192_BIT:
-				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
+				add_algorithm(this, KEY_EXCHANGE_METHOD, group, 0);
 				break;
 			default:
 				break;
@@ -1219,7 +1222,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 	enumerator->destroy(enumerator);
 
 	/* Round 3 adds algorithms with less than 128 bit security strength */
-	enumerator = lib->crypto->create_dh_enumerator(lib->crypto);
+	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
 	while (enumerator->enumerate(enumerator, &group, &plugin_name))
 	{
 		switch (group)
@@ -1244,7 +1247,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 				/* rarely used */
 				break;
 			case MODP_2048_BIT:
-				add_algorithm(this, DIFFIE_HELLMAN_GROUP, group, 0);
+				add_algorithm(this, KEY_EXCHANGE_METHOD, group, 0);
 				break;
 			default:
 				break;

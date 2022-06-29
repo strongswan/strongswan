@@ -481,7 +481,7 @@ struct private_tls_crypto_t {
 typedef struct {
 	tls_cipher_suite_t suite;
 	key_type_t key;
-	diffie_hellman_group_t dh;
+	key_exchange_method_t dh;
 	hash_algorithm_t hash;
 	pseudo_random_function_t prf;
 	integrity_algorithm_t mac;
@@ -508,33 +508,33 @@ typedef struct {
  */
 static suite_algs_t suite_algs[] = {
 	/* Cipher suites of TLS 1.3: key exchange and authentication
-	 * delegated to extensions, therefore KEY_ANY, MODP_NONE, PRF_UNDEFINED */
+	 * delegated to extensions, therefore KEY_ANY, KE_NONE, PRF_UNDEFINED */
 	{ TLS_AES_256_GCM_SHA384,
-		KEY_ANY, MODP_NONE,
+		KEY_ANY, KE_NONE,
 		HASH_SHA384, PRF_UNDEFINED,
 		AUTH_HMAC_SHA2_384_384, ENCR_AES_GCM_ICV16, 32,
 		TLS_1_3, TLS_1_3,
 	},
 	{ TLS_AES_128_GCM_SHA256,
-		KEY_ANY, MODP_NONE,
+		KEY_ANY, KE_NONE,
 		HASH_SHA256, PRF_UNDEFINED,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_GCM_ICV16, 16,
 		TLS_1_3, TLS_1_3,
 	},
 	{ TLS_CHACHA20_POLY1305_SHA256,
-		KEY_ANY, MODP_NONE,
+		KEY_ANY, KE_NONE,
 		HASH_SHA256, PRF_UNDEFINED,
 		AUTH_HMAC_SHA2_256_256, ENCR_CHACHA20_POLY1305, 32,
 		TLS_1_3, TLS_1_3,
 	},
 	{ TLS_AES_128_CCM_SHA256,
-		KEY_ANY, MODP_NONE,
+		KEY_ANY, KE_NONE,
 		HASH_SHA256, PRF_UNDEFINED,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CCM_ICV16, 16,
 		TLS_1_3, TLS_1_3,
 	},
 	{ TLS_AES_128_CCM_8_SHA256,
-		KEY_ANY, MODP_NONE,
+		KEY_ANY, KE_NONE,
 		HASH_SHA256, PRF_UNDEFINED,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CCM_ICV8, 16,
 		TLS_1_3, TLS_1_3,
@@ -673,61 +673,61 @@ static suite_algs_t suite_algs[] = {
 		SSL_3_0, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_256_GCM_SHA384,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA384, PRF_HMAC_SHA2_384,
 		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 32,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_256_CBC_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CBC, 32,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_256_CBC_SHA,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA1_160, ENCR_AES_CBC, 32,
 		SSL_3_0, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_128_GCM_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_UNDEFINED, ENCR_AES_GCM_ICV16, 16,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_128_CBC_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_AES_CBC, 16,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_AES_128_CBC_SHA,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA1_160, ENCR_AES_CBC, 16,
 		SSL_3_0, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_CAMELLIA_256_CBC_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_CAMELLIA_CBC, 32,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_CAMELLIA_256_CBC_SHA,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA1_160, ENCR_CAMELLIA_CBC, 32,
 		SSL_3_0, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_CAMELLIA_128_CBC_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_CAMELLIA_CBC, 16,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_CAMELLIA_128_CBC_SHA,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA1_160, ENCR_CAMELLIA_CBC, 16,
 		SSL_3_0, TLS_1_2,
@@ -745,13 +745,13 @@ static suite_algs_t suite_algs[] = {
 		TLS_1_0, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_NULL_SHA256,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA2_256_256, ENCR_NULL, 0,
 		TLS_1_2, TLS_1_2,
 	},
 	{ TLS_RSA_WITH_NULL_SHA,
-		KEY_RSA, MODP_NONE,
+		KEY_RSA, KE_NONE,
 		HASH_SHA256, PRF_HMAC_SHA2_256,
 		AUTH_HMAC_SHA1_160, ENCR_NULL, 0,
 		SSL_3_0, TLS_1_2,
@@ -836,9 +836,9 @@ static void filter_suite(suite_algs_t suites[], int *count, int offset,
 			}
 			if (current.dh && current.dh != suites[i].dh)
 			{
-				if (suites[i].dh != MODP_NONE &&
-					!(diffie_hellman_group_is_ec(current.dh) &&
-					  diffie_hellman_group_is_ec(suites[i].dh)))
+				if (suites[i].dh != KE_NONE &&
+					!(key_exchange_is_ecdh(current.dh) &&
+					  key_exchange_is_ecdh(suites[i].dh)))
 				{	/* skip DH group, does not match nor NONE nor both ECDH */
 					continue;
 				}
@@ -911,29 +911,29 @@ static void filter_key_exchange_config_suites(private_tls_crypto_t *this,
 			while (enumerator->enumerate(enumerator, &token))
 			{
 				if (strcaseeq(token, "ecdhe-ecdsa") &&
-					diffie_hellman_group_is_ec(suites[i].dh) &&
+					key_exchange_is_ecdh(suites[i].dh) &&
 					suites[i].key == KEY_ECDSA)
 				{
 					suites[remaining++] = suites[i];
 					break;
 				}
 				if (strcaseeq(token, "ecdhe-rsa") &&
-					diffie_hellman_group_is_ec(suites[i].dh) &&
+					key_exchange_is_ecdh(suites[i].dh) &&
 					suites[i].key == KEY_RSA)
 				{
 					suites[remaining++] = suites[i];
 					break;
 				}
 				if (strcaseeq(token, "dhe-rsa") &&
-					!diffie_hellman_group_is_ec(suites[i].dh) &&
-					suites[i].dh != MODP_NONE &&
+					!key_exchange_is_ecdh(suites[i].dh) &&
+					suites[i].dh != KE_NONE &&
 					suites[i].key == KEY_RSA)
 				{
 					suites[remaining++] = suites[i];
 					break;
 				}
 				if (strcaseeq(token, "rsa") &&
-					suites[i].dh == MODP_NONE &&
+					suites[i].dh == KE_NONE &&
 					suites[i].key == KEY_RSA)
 				{
 					suites[remaining++] = suites[i];
@@ -1076,7 +1076,7 @@ static bool filter_curve_config(tls_named_group_t curve)
 			const proposal_token_t *tok;
 
 			tok = lib->proposal->get_token(lib->proposal, token);
-			if (tok != NULL && tok->type == DIFFIE_HELLMAN_GROUP &&
+			if (tok != NULL && tok->type == KEY_EXCHANGE_METHOD &&
 				curve == tls_ec_group_to_curve(tok->algorithm))
 			{
 				enumerator->destroy(enumerator);
@@ -1105,7 +1105,7 @@ static void filter_unsupported_suites(suite_algs_t suites[], int *count)
 	filter_suite(suites, count, offsetof(suite_algs_t, hash),
 				 lib->crypto->create_hasher_enumerator);
 	filter_suite(suites, count, offsetof(suite_algs_t, dh),
-				 lib->crypto->create_dh_enumerator);
+				 lib->crypto->create_ke_enumerator);
 }
 
 /**
@@ -1526,7 +1526,7 @@ static signature_params_t *params_for_scheme(tls_signature_scheme_t sig,
  * Mapping groups to TLS named curves
  */
 static struct {
-	diffie_hellman_group_t group;
+	key_exchange_method_t group;
 	tls_named_group_t curve;
 } curves[] = {
 	{ ECP_256_BIT, TLS_SECP256R1},
@@ -1541,7 +1541,7 @@ static struct {
 CALLBACK(group_filter, bool,
 	void *null, enumerator_t *orig, va_list args)
 {
-	diffie_hellman_group_t group, *group_out;
+	key_exchange_method_t group, *group_out;
 	tls_named_group_t curve, *curve_out;
 	char *plugin;
 
@@ -1569,7 +1569,7 @@ CALLBACK(group_filter, bool,
 CALLBACK(config_filter, bool,
 	void *null, enumerator_t *orig, va_list args)
 {
-	diffie_hellman_group_t group, *group_out;
+	key_exchange_method_t group, *group_out;
 	tls_named_group_t curve, *curve_out;
 
 	VA_ARGS_VGET(args, group_out, curve_out);
@@ -1598,7 +1598,7 @@ METHOD(tls_crypto_t, create_ec_enumerator, enumerator_t*,
 {
 	return enumerator_create_filter(
 							enumerator_create_filter(
-								lib->crypto->create_dh_enumerator(lib->crypto),
+								lib->crypto->create_ke_enumerator(lib->crypto),
 								group_filter, NULL, NULL),
 							config_filter, NULL, NULL);
 }
@@ -1607,10 +1607,10 @@ METHOD(tls_crypto_t, create_ec_enumerator, enumerator_t*,
  * Check if the given ECDH group is supported or return the first one we
  * actually do support.
  */
-static diffie_hellman_group_t supported_ec_group(private_tls_crypto_t *this,
-												 diffie_hellman_group_t orig)
+static key_exchange_method_t supported_ec_group(private_tls_crypto_t *this,
+												key_exchange_method_t orig)
 {
-	diffie_hellman_group_t current, first = MODP_NONE;
+	key_exchange_method_t current, first = KE_NONE;
 	enumerator_t *enumerator;
 
 	enumerator = create_ec_enumerator(this);
@@ -1621,7 +1621,7 @@ static diffie_hellman_group_t supported_ec_group(private_tls_crypto_t *this,
 			enumerator->destroy(enumerator);
 			return orig;
 		}
-		else if (first == MODP_NONE)
+		else if (first == KE_NONE)
 		{
 			first = current;
 		}
@@ -1630,7 +1630,7 @@ static diffie_hellman_group_t supported_ec_group(private_tls_crypto_t *this,
 	return first;
 }
 
-METHOD(tls_crypto_t, get_dh_group, diffie_hellman_group_t,
+METHOD(tls_crypto_t, get_dh_group, key_exchange_method_t,
 	private_tls_crypto_t *this)
 {
 	suite_algs_t *algs;
@@ -1638,13 +1638,13 @@ METHOD(tls_crypto_t, get_dh_group, diffie_hellman_group_t,
 	algs = find_suite(this->suite);
 	if (algs)
 	{
-		if (diffie_hellman_group_is_ec(algs->dh))
+		if (key_exchange_is_ecdh(algs->dh))
 		{
 			return supported_ec_group(this, algs->dh);
 		}
 		return algs->dh;
 	}
-	return MODP_NONE;
+	return KE_NONE;
 }
 
 METHOD(tls_crypto_t, set_protection, void,
@@ -2494,16 +2494,16 @@ int tls_crypto_get_supported_suites(bool null, tls_version_t version,
 /**
  * See header.
  */
-int tls_crypto_get_supported_groups(diffie_hellman_group_t **out)
+int tls_crypto_get_supported_groups(key_exchange_method_t **out)
 {
 	enumerator_t *enumerator;
-	diffie_hellman_group_t groups[countof(curves)];
-	diffie_hellman_group_t group;
+	key_exchange_method_t groups[countof(curves)];
+	key_exchange_method_t group;
 	tls_named_group_t curve;
 	int count = 0, i;
 
 	enumerator = enumerator_create_filter(
-							lib->crypto->create_dh_enumerator(lib->crypto),
+							lib->crypto->create_ke_enumerator(lib->crypto),
 							group_filter, NULL, NULL);
 
 	while (enumerator->enumerate(enumerator, &group, &curve))
@@ -2514,7 +2514,7 @@ int tls_crypto_get_supported_groups(diffie_hellman_group_t **out)
 
 	if (out)
 	{
-		*out = calloc(count, sizeof(diffie_hellman_group_t));
+		*out = calloc(count, sizeof(key_exchange_method_t));
 		for (i = 0; i < count; i++)
 		{
 			(*out)[i] = groups[i];
@@ -2565,7 +2565,7 @@ int tls_crypto_get_supported_signatures(tls_version_t version,
 /**
  * See header.
  */
-tls_named_group_t tls_ec_group_to_curve(diffie_hellman_group_t group)
+tls_named_group_t tls_ec_group_to_curve(key_exchange_method_t group)
 {
 	int i;
 

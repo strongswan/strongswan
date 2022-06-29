@@ -137,7 +137,7 @@ struct private_quick_mode_t {
 	/**
 	 * DH exchange, when PFS is in use
 	 */
-	diffie_hellman_t *dh;
+	key_exchange_t *dh;
 
 	/**
 	 * Negotiated lifetime of new SA
@@ -486,8 +486,8 @@ static bool add_ke(private_quick_mode_t *this, message_t *message)
 {
 	ke_payload_t *ke_payload;
 
-	ke_payload = ke_payload_create_from_diffie_hellman(PLV1_KEY_EXCHANGE,
-													   this->dh);
+	ke_payload = ke_payload_create_from_key_exchange(PLV1_KEY_EXCHANGE,
+													 this->dh);
 	if (!ke_payload)
 	{
 		DBG1(DBG_IKE, "creating KE payload failed");
@@ -510,7 +510,7 @@ static bool get_ke(private_quick_mode_t *this, message_t *message)
 		DBG1(DBG_IKE, "KE payload missing");
 		return FALSE;
 	}
-	if (!this->dh->set_other_public_value(this->dh,
+	if (!this->dh->set_public_key(this->dh,
 								ke_payload->get_key_exchange_data(ke_payload)))
 	{
 		DBG1(DBG_IKE, "unable to apply received KE value");
@@ -782,10 +782,10 @@ static status_t send_notify(private_quick_mode_t *this, notify_type_t type)
 
 /**
  * Prepare a list of proposals from child_config containing only the specified
- * DH group, unless it is set to MODP_NONE.
+ * DH group, unless it is set to KE_NONE.
  */
 static linked_list_t *get_proposals(private_quick_mode_t *this,
-									diffie_hellman_group_t group)
+									key_exchange_method_t group)
 {
 	linked_list_t *list;
 	proposal_t *proposal;
@@ -795,15 +795,15 @@ static linked_list_t *get_proposals(private_quick_mode_t *this,
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &proposal))
 	{
-		if (group != MODP_NONE)
+		if (group != KE_NONE)
 		{
-			if (!proposal->has_dh_group(proposal, group))
+			if (!proposal->has_transform(proposal, KEY_EXCHANGE_METHOD, group))
 			{
 				list->remove_at(list, enumerator);
 				proposal->destroy(proposal);
 				continue;
 			}
-			proposal->promote_dh_group(proposal, group);
+			proposal->promote_transform(proposal, KEY_EXCHANGE_METHOD, group);
 		}
 		proposal->set_spi(proposal, this->spi_i);
 	}
@@ -822,7 +822,7 @@ METHOD(task_t, build_i, status_t,
 			sa_payload_t *sa_payload;
 			linked_list_t *list, *tsi, *tsr;
 			proposal_t *proposal;
-			diffie_hellman_group_t group;
+			key_exchange_method_t group;
 			encap_t encap;
 
 			this->mode = this->config->get_mode(this->config);
@@ -866,14 +866,15 @@ METHOD(task_t, build_i, status_t,
 				return FAILED;
 			}
 
-			group = this->config->get_dh_group(this->config);
-			if (group != MODP_NONE)
+			group = this->config->get_algorithm(this->config,
+												KEY_EXCHANGE_METHOD);
+			if (group != KE_NONE)
 			{
 				proposal_t *proposal;
 				uint16_t preferred_group;
 
 				proposal = this->ike_sa->get_proposal(this->ike_sa);
-				proposal->get_algorithm(proposal, DIFFIE_HELLMAN_GROUP,
+				proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD,
 										&preferred_group, NULL);
 				/* try the negotiated DH group from IKE_SA */
 				list = get_proposals(this, preferred_group);
@@ -888,19 +889,19 @@ METHOD(task_t, build_i, status_t,
 					list = get_proposals(this, group);
 				}
 
-				this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+				this->dh = this->keymat->keymat.create_ke(&this->keymat->keymat,
 														  group);
 				if (!this->dh)
 				{
 					DBG1(DBG_IKE, "configured DH group %N not supported",
-						 diffie_hellman_group_names, group);
+						 key_exchange_method_names, group);
 					list->destroy_offset(list, offsetof(proposal_t, destroy));
 					return FAILED;
 				}
 			}
 			else
 			{
-				list = get_proposals(this, MODP_NONE);
+				list = get_proposals(this, KE_NONE);
 			}
 
 			get_lifetimes(this);
@@ -915,7 +916,7 @@ METHOD(task_t, build_i, status_t,
 			{
 				return FAILED;
 			}
-			if (group != MODP_NONE)
+			if (group != KE_NONE)
 			{
 				if (!add_ke(this, message))
 				{
@@ -1165,14 +1166,14 @@ METHOD(task_t, process_r, status_t,
 			}
 
 			if (this->proposal->get_algorithm(this->proposal,
-										DIFFIE_HELLMAN_GROUP, &group, NULL))
+										KEY_EXCHANGE_METHOD, &group, NULL))
 			{
-				this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+				this->dh = this->keymat->keymat.create_ke(&this->keymat->keymat,
 														  group);
 				if (!this->dh)
 				{
 					DBG1(DBG_IKE, "negotiated DH group %N not supported",
-						 diffie_hellman_group_names, group);
+						 key_exchange_method_names, group);
 					return send_notify(this, INVALID_KEY_INFORMATION);
 				}
 				if (!get_ke(this, message))
