@@ -87,7 +87,7 @@ static int verify(chunk_t chunk)
 	bool verified = FALSE;
 
 	container = lib->creds->create(lib->creds, CRED_CONTAINER, CONTAINER_PKCS7,
-								   BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+								   BUILD_BLOB, chunk, BUILD_END);
 	if (!container)
 	{
 		return 1;
@@ -209,7 +209,7 @@ static int decrypt(chunk_t chunk)
 	chunk_t data;
 
 	container = lib->creds->create(lib->creds, CRED_CONTAINER, CONTAINER_PKCS7,
-								   BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+								   BUILD_BLOB, chunk, BUILD_END);
 	if (!container)
 	{
 		return 1;
@@ -247,7 +247,7 @@ static int show(chunk_t chunk)
 	chunk_t data;
 
 	container = lib->creds->create(lib->creds, CRED_CONTAINER, CONTAINER_PKCS7,
-								   BUILD_BLOB_ASN1_DER, chunk, BUILD_END);
+								   BUILD_BLOB, chunk, BUILD_END);
 	if (!container)
 	{
 		return 1;
