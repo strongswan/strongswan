@@ -29,7 +29,6 @@ typedef struct child_sa_t child_sa_t;
 typedef struct child_sa_create_t child_sa_create_t;
 
 #include <library.h>
-#include <crypto/prf_plus.h>
 #include <encoding/payloads/proposal_substructure.h>
 #include <crypto/proposal/proposal.h>
 #include <config/child_cfg.h>
@@ -370,6 +369,15 @@ struct child_sa_t {
 	uint32_t (*get_if_id)(child_sa_t *this, bool inbound);
 
 	/**
+	 * Get the security label used with this CHILD_SA.
+	 *
+	 * This might be different than the configured label.
+	 *
+	 * @return				security label used with this CHILD_SA
+	 */
+	sec_label_t *(*get_label)(child_sa_t *this);
+
+	/**
 	 * Create an enumerator over traffic selectors of one side.
 	 *
 	 * @param local		TRUE for own traffic selectors, FALSE for remote.
@@ -533,6 +541,8 @@ struct child_sa_create_t {
 	/** Optional default outbound interface ID, if neither if_id_out, nor config
 	 * sets one */
 	uint32_t if_id_out_def;
+	/** Optional security label to apply on SAs (cloned) */
+	sec_label_t *label;
 	/** TRUE to enable UDP encapsulation (NAT traversal) */
 	bool encap;
 };
@@ -546,7 +556,7 @@ struct child_sa_create_t {
  * @param data				data for this CHILD_SA
  * @return					child_sa_t object
  */
-child_sa_t *child_sa_create(host_t *me, host_t *other,	child_cfg_t *config,
+child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 							child_sa_create_t *data);
 
 #endif /** CHILD_SA_H_ @}*/

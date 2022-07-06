@@ -59,6 +59,7 @@ ENUM_NEXT(tpm_alg_id_names, TPM_ALG_SM3_256, TPM_ALG_ECMQV, TPM_ALG_NULL,
 	"OAEP",
 	"ECDSA",
 	"ECDH",
+	"ECDAA",
 	"SM2",
 	"ECSCHNORR",
 	"ECMQV"

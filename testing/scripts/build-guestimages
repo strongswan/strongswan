@@ -41,7 +41,7 @@ do_on_exit umount $LOOPDIR
 for host in $STRONGSWANHOSTS
 do
 	log_action "Creating guest image for $host"
-	execute "qemu-img create -b $ROOTIMG -f $IMGEXT $IMGDIR/$host.$IMGEXT" 0
+	execute "qemu-img create -b $ROOTIMG -f $IMGEXT -F $IMGEXT $IMGDIR/$host.$IMGEXT" 0
 	execute "qemu-nbd -c $NBDEV $IMGDIR/$host.$IMGEXT" 0
 	partprobe $NBDEV
 	execute "mount $NBDPARTITION $LOOPDIR" 0
@@ -75,7 +75,10 @@ do
 		execute_chroot "dnssec-signzone -K /etc/bind -o org. /etc/bind/db.org" 0
 		execute_chroot "dnssec-signzone -K /etc/bind -o . /etc/bind/db.root" 0
 
-		for service in "apache2 slapd bind9"
+		# on bullseye, enabling via bind9 doesn't work, while disabling does, so
+		# use named there. on the other hand, older releases don't have named
+		# service files (systemctl returns 0 even if files are not found)
+		for service in apache2 slapd bind9 named
 		do
 			execute_chroot "systemctl enable $service" 0
 		done

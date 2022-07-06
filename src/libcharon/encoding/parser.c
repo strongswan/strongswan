@@ -368,7 +368,6 @@ METHOD(parser_t, parse_payload, status_t,
 	payload_t *pld;
 	void *output;
 	int payload_length = 0, spi_size = 0, attribute_length = 0, header_length;
-	uint16_t ts_type = 0;
 	bool attribute_format = FALSE;
 	int rule_number, rule_count;
 	encoding_rule_t *rule;
@@ -582,28 +581,6 @@ METHOD(parser_t, parse_payload, status_t,
 				if (attribute_format == FALSE &&
 					!parse_chunk(this, rule_number, output + rule->offset,
 								 attribute_length))
-				{
-					pld->destroy(pld);
-					return PARSE_ERROR;
-				}
-				break;
-			}
-			case TS_TYPE:
-			{
-				if (!parse_uint8(this, rule_number, output + rule->offset))
-				{
-					pld->destroy(pld);
-					return PARSE_ERROR;
-				}
-				ts_type = *(uint8_t*)(output + rule->offset);
-				break;
-			}
-			case ADDRESS:
-			{
-				int address_length = (ts_type == TS_IPV4_ADDR_RANGE) ? 4 : 16;
-
-				if (!parse_chunk(this, rule_number, output + rule->offset,
-								 address_length))
 				{
 					pld->destroy(pld);
 					return PARSE_ERROR;

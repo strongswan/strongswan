@@ -43,7 +43,7 @@
 #              is the name of the ipsec interface to be used.
 #
 #       PLUTO_REQID
-#              is the requid of the AH|ESP policy
+#              is the reqid of the AH|ESP policy
 #
 #       PLUTO_PROTO
 #              is the negotiated IPsec protocol, ah|esp

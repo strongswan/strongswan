@@ -16,6 +16,9 @@
 package org.strongswan.android.logic;
 
 import java.security.Security;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.strongswan.android.security.LocalCertificateKeyStoreProvider;
 import org.strongswan.android.ui.MainActivity;
@@ -23,10 +26,16 @@ import org.strongswan.android.ui.MainActivity;
 import android.app.Application;
 import android.content.Context;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+
+import androidx.core.os.HandlerCompat;
 
 public class StrongSwanApplication extends Application
 {
 	private static Context mContext;
+	private final ExecutorService mExecutorService = Executors.newFixedThreadPool(4);
+	private final Handler mMainHandler = HandlerCompat.createAsync(Looper.getMainLooper());
 
 	static {
 		Security.addProvider(new LocalCertificateKeyStoreProvider());
@@ -46,6 +55,24 @@ public class StrongSwanApplication extends Application
 	public static Context getContext()
 	{
 		return StrongSwanApplication.mContext;
+	}
+
+	/**
+	 * Returns a thread pool to run tasks in separate threads
+	 * @return thread pool
+	 */
+	public Executor getExecutor()
+	{
+		return mExecutorService;
+	}
+
+	/**
+	 * Returns a handler to execute stuff by the main thread.
+	 * @return handler
+	 */
+	public Handler getHandler()
+	{
+		return mMainHandler;
 	}
 
 	/*

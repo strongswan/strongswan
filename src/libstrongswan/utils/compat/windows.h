@@ -135,16 +135,6 @@ int WINAPI inet_pton(int af, const char *src, void *dst);
 #endif
 
 /**
- * Provided by printf hook backend
- */
-int asprintf(char **strp, const char *fmt, ...);
-
-/**
- * Provided by printf hook backend
- */
-int vasprintf(char **strp, const char *fmt, va_list ap);
-
-/**
  * timeradd(3) from <sys/time.h>
  */
 static inline void timeradd(struct timeval *a, struct timeval *b,

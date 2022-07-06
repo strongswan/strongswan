@@ -487,7 +487,7 @@ METHOD(task_manager_t, initiate, status_t,
 	message_t *message;
 	host_t *me, *other;
 	exchange_type_t exchange = EXCHANGE_TYPE_UNDEFINED;
-	bool new_mid = FALSE, expect_response = FALSE, cancelled = FALSE, keep = FALSE;
+	bool new_mid = FALSE, expect_response = FALSE, canceled = FALSE, keep = FALSE;
 
 	if (this->initiating.type != EXCHANGE_TYPE_UNDEFINED &&
 		this->initiating.type != INFORMATIONAL_V1)
@@ -672,7 +672,7 @@ METHOD(task_manager_t, initiate, status_t,
 				/* processed, but task needs another exchange */
 				continue;
 			case ALREADY_DONE:
-				cancelled = TRUE;
+				canceled = TRUE;
 				break;
 			case FAILED:
 			default:
@@ -697,7 +697,7 @@ METHOD(task_manager_t, initiate, status_t,
 	{	/* tasks completed, no exchange active anymore */
 		this->initiating.type = EXCHANGE_TYPE_UNDEFINED;
 	}
-	if (cancelled)
+	if (canceled)
 	{
 		message->destroy(message);
 		return initiate(this);
@@ -754,7 +754,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	task_t *task;
 	message_t *message;
 	host_t *me, *other;
-	bool delete = FALSE, cancelled = FALSE, expect_request = FALSE;
+	bool delete = FALSE, canceled = FALSE, expect_request = FALSE;
 
 	me = request->get_destination(request);
 	other = request->get_source(request);
@@ -791,7 +791,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 				}
 				continue;
 			case ALREADY_DONE:
-				cancelled = TRUE;
+				canceled = TRUE;
 				break;
 			case INVALID_ARG:
 				if (task->get_type(task) == TASK_QUICK_MODE)
@@ -813,7 +813,7 @@ static status_t build_response(private_task_manager_t *this, message_t *request)
 	enumerator->destroy(enumerator);
 
 	clear_packets(this->responding.packets);
-	if (cancelled)
+	if (canceled)
 	{
 		message->destroy(message);
 		return initiate(this);
@@ -1408,7 +1408,7 @@ METHOD(task_manager_t, process_message, status_t,
 		}
 		this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
 									time_monotonic(NULL));
-		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
+		this->ike_sa->update_hosts(this->ike_sa, me, other, UPDATE_HOSTS_FORCE_ADDRS);
 		charon->bus->message(charon->bus, msg, TRUE, TRUE);
 		if (process_response(this, msg) != SUCCESS)
 		{
@@ -1528,7 +1528,7 @@ METHOD(task_manager_t, process_message, status_t,
 							"%s.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT,
 							lib->ns));
 		}
-		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
+		this->ike_sa->update_hosts(this->ike_sa, me, other, UPDATE_HOSTS_FORCE_ADDRS);
 		charon->bus->message(charon->bus, msg, TRUE, TRUE);
 		if (process_request(this, msg) != SUCCESS)
 		{
@@ -1636,7 +1636,7 @@ METHOD(task_manager_t, queue_ike_reauth, void,
 	ike_sa_t *new;
 	host_t *host;
 
-	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+	new = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
 								this->ike_sa->get_version(this->ike_sa), TRUE);
 	if (!new)
 	{	/* shouldn't happen */
@@ -1685,7 +1685,7 @@ METHOD(task_manager_t, queue_ike_reauth, void,
 		enumerator->destroy(enumerator);
 	}
 
-	if (new->initiate(new, NULL, 0, NULL, NULL) != DESTROY_ME)
+	if (new->initiate(new, NULL, NULL) != DESTROY_ME)
 	{
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, new);
 		this->ike_sa->set_state(this->ike_sa, IKE_REKEYING);
@@ -1732,14 +1732,19 @@ METHOD(task_manager_t, queue_mobike, void,
 }
 
 METHOD(task_manager_t, queue_child, void,
-	private_task_manager_t *this, child_cfg_t *cfg, uint32_t reqid,
-	traffic_selector_t *tsi, traffic_selector_t *tsr)
+	private_task_manager_t *this, child_cfg_t *cfg, child_init_args_t *args)
 {
 	quick_mode_t *task;
 
-	task = quick_mode_create(this->ike_sa, cfg, tsi, tsr);
-	task->use_reqid(task, reqid);
-
+	if (args)
+	{
+		task = quick_mode_create(this->ike_sa, cfg, args->src, args->dst);
+		task->use_reqid(task, args->reqid);
+	}
+	else
+	{
+		task = quick_mode_create(this->ike_sa, cfg, NULL, NULL);
+	}
 	queue_task(this, &task->task);
 }
 

@@ -21,6 +21,8 @@
 #ifndef PTS_IMA_EVENT_LIST_H_
 #define PTS_IMA_EVENT_LIST_H_
 
+#include "pts_meas_algo.h"
+
 #include <time.h>
 
 #include <library.h>
@@ -56,7 +58,7 @@ struct pts_ima_event_list_t {
 	 * Get the next file measurement and remove it from the list
 	 *
 	 * @param measurement	Measurement hash
-	 * @param algo			Algorithm used to hash files
+	 * @param algo			Algorithm used to compute file digests
 	 " @param name			Event name (absolute filename or boot_aggregate)
 	 * @return				Return code
 	 */
@@ -74,7 +76,23 @@ struct pts_ima_event_list_t {
  * Create a PTS IMA runtime file measurement object
  *
  * @param file				Pathname pointing to the IMA runtime measurements
+ * @param pcr_algo			PCR hash measurement algorithm to be used
+ * @param pcr_padding		Apply PCR hash padding if hash algorithm is lacking
  */
-pts_ima_event_list_t* pts_ima_event_list_create(char *file);
+pts_ima_event_list_t* pts_ima_event_list_create(char *file,
+							pts_meas_algorithms_t pcr_algo, bool pcr_padding);
+
+/**
+ * Generate an IMA or IMA-NG hash from an event digest and event name
+ *
+ * @param digest		event digest
+ * @param ima_algo		event digest algorithm string ("sha1:", "sha256:", etc.)
+ * @param ima_name		event name
+ * @param pcr_algo		hash algorithm used by TPM PCR extension
+ * @param hash_buf		hash value to be compared with TPM measurement
+ * @return				TRUE if computation successful
+ */
+bool pts_ima_event_hash(chunk_t digest, char *ima_algo, char *ima_name,
+						pts_meas_algorithms_t pcr_algo, char *hash_buf);
 
 #endif /** PTS_IMA_EVENT_LIST_H_ @}*/

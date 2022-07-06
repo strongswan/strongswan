@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2019 Sean Parkinson, wolfSSL Inc.
+ * Copyright (C) 2021 Andreas Steffen, strongSec GmbH
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -146,6 +147,26 @@ bool wolfssl_hash2type(hash_algorithm_t hash, enum wc_HashType *type)
 #ifdef WOLFSSL_SHA512
 		case HASH_SHA512:
 			*type = WC_HASH_TYPE_SHA512;
+			break;
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_224)
+		case HASH_SHA3_224:
+			*type = WC_HASH_TYPE_SHA3_224;
+			break;
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+		case HASH_SHA3_256:
+			*type = WC_HASH_TYPE_SHA3_256;
+			break;
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_384)
+		case HASH_SHA3_384:
+			*type = WC_HASH_TYPE_SHA3_384;
+			break;
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_512)
+		case HASH_SHA3_512:
+			*type = WC_HASH_TYPE_SHA3_512;
 			break;
 #endif
 		default:

@@ -640,7 +640,7 @@ print $res ? "ok\n" : "failed: $errmsg\n";
 # close vici socket
 close($socket);
 
-=head1 COPYRIGHT AND LICENCE
+=head1 COPYRIGHT AND LICENSE
 
 Copyright (c) 2015 Andreas Steffen
 

@@ -53,7 +53,7 @@ static const char imc_name[] = "Android";
 
 static pen_type_t msg_types[] = {
 	{ PEN_IETF, PA_SUBTYPE_IETF_OPERATING_SYSTEM },
-	{ PEN_IETF, PA_SUBTYPE_IETF_VPN },
+	{ PEN_IETF, PA_SUBTYPE_IETF_FIREWALL },
 	{ PEN_TCG, PA_SUBTYPE_TCG_PTS },
 };
 

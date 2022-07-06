@@ -1281,7 +1281,7 @@ METHOD(task_manager_t, get_mid, uint32_t,
  * Handle the given IKE fragment, if it is one.
  *
  * Returns SUCCESS if the message is not a fragment, and NEED_MORE if it was
- * handled properly.  Error states are  returned if the fragment was invalid or
+ * handled properly.  Error states are returned if the fragment was invalid or
  * the reassembled message could not have been processed properly.
  */
 static status_t handle_fragment(private_task_manager_t *this,
@@ -1290,6 +1290,12 @@ static status_t handle_fragment(private_task_manager_t *this,
 	message_t *reassembled;
 	status_t status;
 
+	if (*defrag && (*defrag)->get_message_id(*defrag) < msg->get_message_id(msg))
+	{
+		/* clear fragments of an incompletely received retransmitted message */
+		(*defrag)->destroy(*defrag);
+		*defrag = NULL;
+	}
 	if (!msg->get_payload(msg, PLV2_FRAGMENT))
 	{
 		return SUCCESS;
@@ -1643,8 +1649,10 @@ METHOD(task_manager_t, process_message, status_t,
 				return FAILED;
 			}
 			if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
-			{	/* with MOBIKE, we do no implicit updates */
-				this->ike_sa->update_hosts(this->ike_sa, me, other, mid == 1);
+			{	/* only do implicit updates without MOBIKE, and only force
+				 * updates for IKE_AUTH (ports might change due to NAT-T) */
+				this->ike_sa->update_hosts(this->ike_sa, me, other,
+										   mid == 1 ? UPDATE_HOSTS_FORCE_ADDRS : 0);
 			}
 			status = handle_fragment(this, &this->responding.defrag, msg);
 			if (status != SUCCESS)
@@ -1712,11 +1720,11 @@ METHOD(task_manager_t, process_message, status_t,
 				msg->get_exchange_type(msg) != IKE_SA_INIT)
 			{	/* only do updates based on verified messages (or initial ones) */
 				if (!this->ike_sa->supports_extension(this->ike_sa, EXT_MOBIKE))
-				{	/* with MOBIKE, we do no implicit updates.  we force an
-					 * update of the local address on IKE_SA_INIT, but never
-					 * for the remote address */
-					this->ike_sa->update_hosts(this->ike_sa, me, NULL, mid == 0);
-					this->ike_sa->update_hosts(this->ike_sa, NULL, other, FALSE);
+				{	/* only do implicit updates without MOBIKE, we force an
+					 * update of the local address on IKE_SA_INIT as we might
+					 * not know it yet, but never for the remote address */
+					this->ike_sa->update_hosts(this->ike_sa, me, other,
+											   mid == 0 ? UPDATE_HOSTS_FORCE_LOCAL : 0);
 				}
 			}
 			status = handle_fragment(this, &this->initiating.defrag, msg);
@@ -1897,7 +1905,7 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 	queued_task_t *queued;
 	bool children = FALSE;
 
-	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
+	new = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
 								this->ike_sa->get_version(this->ike_sa), TRUE);
 	if (!new)
 	{	/* shouldn't happen */
@@ -1938,6 +1946,7 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 		child_create->use_marks(child_create,
 								child_sa->get_mark(child_sa, TRUE).value,
 								child_sa->get_mark(child_sa, FALSE).value);
+		child_create->use_label(child_create, child_sa->get_label(child_sa));
 		/* interface IDs are not migrated as the new CHILD_SAs on old and new
 		 * IKE_SA go though regular updown events */
 		new->queue_task(new, &child_create->task);
@@ -1975,7 +1984,7 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 	/* suspend online revocation checking until the SA is established */
 	new->set_condition(new, COND_ONLINE_VALIDATION_SUSPENDED, TRUE);
 
-	if (new->initiate(new, NULL, 0, NULL, NULL) != DESTROY_ME)
+	if (new->initiate(new, NULL, NULL) != DESTROY_ME)
 	{
 		new->queue_task(new, (task_t*)ike_verify_peer_cert_create(new));
 		new->queue_task(new, (task_t*)ike_reauth_complete_create(new,
@@ -2094,15 +2103,19 @@ METHOD(task_manager_t, queue_dpd, void,
 }
 
 METHOD(task_manager_t, queue_child, void,
-	private_task_manager_t *this, child_cfg_t *cfg, uint32_t reqid,
-	traffic_selector_t *tsi, traffic_selector_t *tsr)
+	private_task_manager_t *this, child_cfg_t *cfg, child_init_args_t *args)
 {
 	child_create_t *task;
 
-	task = child_create_create(this->ike_sa, cfg, FALSE, tsi, tsr);
-	if (reqid)
+	if (args)
 	{
-		task->use_reqid(task, reqid);
+		task = child_create_create(this->ike_sa, cfg, FALSE, args->src, args->dst);
+		task->use_reqid(task, args->reqid);
+		task->use_label(task, args->label);
+	}
+	else
+	{
+		task = child_create_create(this->ike_sa, cfg, FALSE, NULL, NULL);
 	}
 	queue_task(this, &task->task);
 }

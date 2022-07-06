@@ -173,7 +173,7 @@ CALLBACK(load_cert, vici_message_t*,
 	ext_flag = (flag & X509_CA) ? X509_NONE : flag;
 
 	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, type,
-							  BUILD_BLOB_PEM, data,
+							  BUILD_BLOB, data,
 							  BUILD_X509_FLAG, ext_flag,
 							  BUILD_END);
 	if (!cert)
@@ -226,23 +226,7 @@ CALLBACK(load_key, vici_message_t*,
 	{
 		return create_reply("key type missing");
 	}
-	if (strcaseeq(str, "any"))
-	{
-		type = KEY_ANY;
-	}
-	else if (strcaseeq(str, "rsa"))
-	{
-		type = KEY_RSA;
-	}
-	else if (strcaseeq(str, "ecdsa"))
-	{
-		type = KEY_ECDSA;
-	}
-	else if (strcaseeq(str, "bliss"))
-	{
-		type = KEY_BLISS;
-	}
-	else
+	if (!enum_from_name(key_type_names, str, &type))
 	{
 		return create_reply("invalid key type: %s", str);
 	}
@@ -391,6 +375,7 @@ CALLBACK(load_token, vici_message_t*,
 	}
 	if (shared && unique)
 	{	/* use the handle as owner, but the key identifier as unique ID */
+		DBG4(DBG_CFG, "loaded shared PIN for '%s': %s", hex, pin);
 		owner = identification_create_from_encoding(ID_KEY_ID, handle);
 		this->pins->add_shared_unique(this->pins, unique, shared,
 									linked_list_create_with_items(owner, NULL));
@@ -498,7 +483,7 @@ CALLBACK(load_shared, vici_message_t*,
 		DBG1(DBG_CFG, "loaded %N shared key for: %s",
 			 shared_key_type_names, type, buf);
 	}
-
+	DBG4(DBG_CFG, "key: %#B", &data);
 	this->creds->add_shared_unique(this->creds, unique,
 						shared_key_create(type, chunk_clone(data)), owners);
 

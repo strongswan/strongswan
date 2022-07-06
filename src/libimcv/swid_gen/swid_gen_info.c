@@ -135,7 +135,7 @@ swid_gen_info_t *swid_gen_info_create(void)
 			.create_sw_id = _create_sw_id,
 			.destroy = _destroy,
 		},
-		.os_info = imc_os_info_create(),
+		.os_info = imc_os_info_create(FALSE),
 		.tag_creator = strdup(tag_creator),
 	);
 

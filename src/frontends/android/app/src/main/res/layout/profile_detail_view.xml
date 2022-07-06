@@ -123,6 +123,14 @@
                 android:id="@+id/select_user_certificate"
                 layout="@layout/two_line_button" />
 
+            <Button
+                android:id="@+id/install_user_certificate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginRight="4dp"
+                android:text="@string/profile_user_certificate_install" />
+
         </LinearLayout>
 
         <TextView
@@ -280,7 +288,7 @@
 
             </org.strongswan.android.ui.widget.TextInputLayoutHelper>
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/cert_req"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -297,7 +305,7 @@
                 android:textSize="12sp"
                 android:text="@string/profile_cert_req_hint" />
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/use_ocsp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -314,7 +322,7 @@
                 android:textSize="12sp"
                 android:text="@string/profile_use_ocsp_hint" />
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/use_crl"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -331,7 +339,7 @@
                 android:textSize="12sp"
                 android:text="@string/profile_use_crl_hint" />
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/strict_revocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -348,7 +356,7 @@
                 android:textSize="12sp"
                 android:text="@string/profile_strict_revocation_hint" />
 
-            <Switch
+            <androidx.appcompat.widget.SwitchCompat
                 android:id="@+id/rsa_pss"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -364,6 +372,23 @@
                 android:layout_marginStart="4dp"
                 android:textSize="12sp"
                 android:text="@string/profile_rsa_pss_hint" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/ipv6_transport"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:text="@string/profile_ipv6_transport_label" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
+                android:textSize="12sp"
+                android:text="@string/profile_ipv6_transport_hint" />
 
             <TextView
                 android:layout_width="match_parent"

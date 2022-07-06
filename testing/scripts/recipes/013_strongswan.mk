@@ -17,6 +17,7 @@ BUILDDIR ?= $(PKG)
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
 CONFIG_OPTS = \
+	--enable-silent-rules \
 	--sysconfdir=/etc \
 	--with-strongswan-conf=/etc/strongswan.conf.testing \
 	--with-random-device=/dev/urandom \
@@ -106,7 +107,8 @@ CONFIG_OPTS = \
 	--enable-systemd \
 	--enable-counters \
 	--enable-save-keys \
-	--enable-python-eggs-install
+	--enable-python-eggs \
+	--enable-wolfssl
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 
@@ -126,6 +128,7 @@ build: configure
 	cd $(BUILDDIR) && make -j $(NUM_CPUS)
 
 install: build
-	cd $(BUILDDIR) && make -j install
+	cd $(BUILDDIR) && make -j install && \
+		cd $(DIR)/src/libcharon/plugins/vici/python && python3 setup.py install
 	# for Python-based updown scripts
-	pip install python-daemon
+	pip3 install python-daemon

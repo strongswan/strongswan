@@ -5,7 +5,7 @@ dave::systemctl stop strongswan
 moon::systemctl stop strongswan
 carol::rm /etc/swanctl/pkcs8/carolKey.pem
 dave::rm /etc/swanctl/pkcs8/daveKey.pem
-moon::rm /etc/swanctl/ecdsa/moonKey.pem
+moon::rm /etc/swanctl/pkcs8/moonKey.pem
 moon::iptables-restore < /etc/iptables.flush
 carol::iptables-restore < /etc/iptables.flush
 dave::iptables-restore < /etc/iptables.flush

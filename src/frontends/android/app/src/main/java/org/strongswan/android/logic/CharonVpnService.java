@@ -35,7 +35,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
-import android.preference.PreferenceManager;
 import android.security.KeyChain;
 import android.security.KeyChainException;
 import android.system.OsConstants;
@@ -77,6 +76,7 @@ import java.util.SortedSet;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
+import androidx.preference.PreferenceManager;
 
 public class CharonVpnService extends VpnService implements Runnable, VpnStateService.VpnStateListener
 {
@@ -192,7 +192,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		mAppDir = getFilesDir().getAbsolutePath();
 
 		/* handler used to do changes in the main UI thread */
-		mHandler = new Handler();
+		mHandler = new Handler(getMainLooper());
 
 		mDataSource = new VpnProfileDataSource(this);
 		mDataSource.open();
@@ -288,7 +288,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 						SimpleFetcher.enable();
 						addNotification();
 						mBuilderAdapter.setProfile(mCurrentProfile);
-						if (initializeCharon(mBuilderAdapter, mLogFile, mAppDir, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD)))
+						if (initializeCharon(mBuilderAdapter, mLogFile, mAppDir, mCurrentProfile.getVpnType().has(VpnTypeFeature.BYOD),
+											(mCurrentProfile.getFlags() & VpnProfile.FLAGS_IPv6_TRANSPORT) != 0))
 						{
 							Log.i(TAG, "charon started");
 
@@ -775,9 +776,10 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 * @param logfile absolute path to the logfile
 	 * @param appdir absolute path to the data directory of the app
 	 * @param byod enable BYOD features
+	 * @param ipv6 enable IPv6 transport
 	 * @return TRUE if initialization was successful
 	 */
-	public native boolean initializeCharon(BuilderAdapter builder, String logfile, String appdir, boolean byod);
+	public native boolean initializeCharon(BuilderAdapter builder, String logfile, String appdir, boolean byod, boolean ipv6);
 
 	/**
 	 * Deinitialize charon, provided by libandroidbridge.so
@@ -820,6 +822,12 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			PendingIntent pending = PendingIntent.getActivity(context, 0, intent,
 															  PendingIntent.FLAG_UPDATE_CURRENT);
 			builder.setConfigureIntent(pending);
+
+			/* mark all VPN connections as unmetered (default changed for Android 10) */
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+			{
+				builder.setMetered(false);
+			}
 			return builder;
 		}
 

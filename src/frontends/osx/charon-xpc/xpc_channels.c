@@ -64,7 +64,7 @@ typedef struct {
 } entry_t;
 
 /**
- * Clean up an entry, cancelling connection
+ * Clean up an entry, canceling connection
  */
 static void destroy_entry(entry_t *entry)
 {

@@ -1,0 +1,41 @@
+Official Android port of the popular strongSwan VPN solution.
+
+# FEATURES AND LIMITATIONS #
+
+<ul>
+ <li>Uses the VpnService API featured by Android 4+. Devices by some manufacturers seem to lack support for this - strongSwan VPN Client won't work on these devices!</li>
+ <li>Uses the IKEv2 key exchange protocol (IKEv1 is not supported)</li>
+ <li>Uses IPsec for data traffic (L2TP is not supported)</li>
+ <li>Full support for changed connectivity and mobility through MOBIKE (or reauthentication)</li>
+ <li>Supports username/password EAP authentication (namely EAP-MSCHAPv2, EAP-MD5 and EAP-GTC) as well as RSA/ECDSA private key/certificate authentication to authenticate users, EAP-TLS with client certificates is also supported</li>
+ <li>Combined RSA/ECDSA and EAP authentication is supported by using two authentication rounds as defined in RFC 4739</li>
+ <li>VPN server certificates are verified against the CA certificates pre-installed or installed by the user on the system. The CA or server certificates used to authenticate the server can also be imported directly into the app.</li>
+ <li>IKEv2 fragmentation is supported if the VPN server supports it (strongSwan does so since 5.2.1)</li>
+ <li>Split-tunneling allows sending only certain traffic through the VPN and/or excluding specific traffic from it</li>
+ <li>Per-app VPN allows limiting the VPN connection to specific apps, or exclude them from using it</li>
+ <li>The IPsec implementation currently supports the AES-CBC, AES-GCM, ChaCha20/Poly1305 and SHA1/SHA2 algorithms</li>
+ <li>Passwords are currently stored as cleartext in the database (only if stored with a profile)</li>
+ <li>VPN profiles may be imported from files</li>
+</ul>
+
+Details and a changelog can be found on our wiki: https://wiki.strongswan.org/projects/strongswan/wiki/AndroidVPNClient
+
+# PERMISSIONS #
+
+<ul>
+ <li>READ_EXTERNAL_STORAGE: Allows importing VPN profiles and CA certificates from external storage on some Android versions</li>
+ <li>QUERY_ALL_PACKAGES: Required on Android 11+ to select apps to ex-/include in VPN profiles and the optional EAP-TNC use case</li>
+</ul>
+
+# EXAMPLE SERVER CONFIGURATION #
+
+Example server configurations may be found on our wiki: https://wiki.strongswan.org/projects/strongswan/wiki/AndroidVPNClient#Server-Configuration
+
+Please note that the host name (or IP address) configured with a VPN profile in the app *must be* contained in the server certificate as subjectAltName extension.
+
+# FEEDBACK #
+
+Please post bug reports and feature requests via GitHub: https://github.com/strongswan/strongswan/issues/new/choose
+If you do so, please include information about your device (manufacturer, model, OS version etc.).
+
+The log file written by the key exchange service can be sent directly from within the application.

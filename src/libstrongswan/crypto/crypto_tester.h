@@ -32,6 +32,8 @@ typedef struct signer_test_vector_t signer_test_vector_t;
 typedef struct hasher_test_vector_t hasher_test_vector_t;
 typedef struct prf_test_vector_t prf_test_vector_t;
 typedef struct xof_test_vector_t xof_test_vector_t;
+typedef struct kdf_test_vector_t kdf_test_vector_t;
+typedef struct kdf_test_args_t kdf_test_args_t;
 typedef struct drbg_test_vector_t drbg_test_vector_t;
 typedef struct rng_test_vector_t rng_test_vector_t;
 typedef struct dh_test_vector_t dh_test_vector_t;
@@ -128,6 +130,26 @@ struct xof_test_vector_t {
 	size_t out_len;
 	/** expected output of size*/
 	u_char *out;
+};
+
+struct kdf_test_vector_t {
+	/** kdf algorithm this test vector tests */
+	key_derivation_function_t alg;
+	/** argument passed to constructor, type depends on alg */
+	union {
+		pseudo_random_function_t prf;
+	} arg;
+	/** optional key */
+	chunk_t key;
+	/** optional salt */
+	chunk_t salt;
+	/** expected output */
+	chunk_t out;
+};
+
+struct kdf_test_args_t {
+	/** the arguments used to construct the KDF */
+	va_list args;
 };
 
 struct drbg_test_vector_t {
@@ -257,6 +279,22 @@ struct crypto_tester_t {
 					 xof_constructor_t create,
 					 u_int *speed, const char *plugin_name);
 	/**
+	 * Test a KDF algorithm.
+	 *
+	 * If constructor arguments are passed, only matching test vectors are
+	 * tried. Otherwise, all are tried and implementations are allowed to fail
+	 * construction with unsupported arguments.
+	 *
+	 * @param alg			algorithm to test
+	 * @param create		constructor function for the XOF
+	 * @param args			optional arguments to pass to constructor
+	 * @param speed			speed test result, NULL to omit
+	 * @return				TRUE if test passed
+	 */
+	bool (*test_kdf)(crypto_tester_t *this, key_derivation_function_t alg,
+					 kdf_constructor_t create, kdf_test_args_t *args,
+					 u_int *speed, const char *plugin_name);
+	/**
 	 * Test a DRBG type.
 	 *
 	 * @param type			DRBG type to test
@@ -331,6 +369,13 @@ struct crypto_tester_t {
 	 * @param vector		pointer to test vector
 	 */
 	void (*add_xof_vector)(crypto_tester_t *this, xof_test_vector_t *vector);
+
+	/**
+	 * Add a test vector to test a KDF.
+	 *
+	 * @param vector		pointer to test vector
+	 */
+	void (*add_kdf_vector)(crypto_tester_t *this, kdf_test_vector_t *vector);
 
 	/**
 	 * Add a test vector to test a DRBG.

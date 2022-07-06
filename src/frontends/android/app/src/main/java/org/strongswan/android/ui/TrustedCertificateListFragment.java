@@ -41,6 +41,8 @@ import java.util.Map.Entry;
 import java.util.Observable;
 import java.util.Observer;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.ListFragment;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.app.LoaderManager.LoaderCallbacks;
@@ -63,9 +65,9 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	}
 
 	@Override
-	public void onActivityCreated(Bundle savedInstanceState)
+	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState)
 	{
-		super.onActivityCreated(savedInstanceState);
+		super.onViewCreated(view, savedInstanceState);
 		setHasOptionsMenu(true);
 
 		setEmptyText(getString(R.string.no_certificates));

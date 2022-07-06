@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 
 #include <daemon.h>
+#include <asn1/asn1.h>
 #include <credentials/keys/shared_key.h>
 #include <credentials/certificates/x509.h>
 #include <utils/identification.h>
@@ -311,8 +312,8 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	public_key_t *peer_key, *ca_key;
 	identification_t *dn = NULL;
 	linked_list_t *sans;
+	chunk_t serial;
 	char buf[128];
-	uint32_t serial;
 	time_t now;
 
 	if (this->ca == NULL)
@@ -355,7 +356,6 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 	if (!trusted && this->private)
 	{
 		/* peer certificate, generate on demand */
-		serial = htonl(++this->serial);
 		now = time(NULL);
 		sans = linked_list_create();
 
@@ -376,6 +376,7 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 				sans->destroy(sans);
 				return NULL;
 		}
+		serial = asn1_integer_from_uint64(++this->serial);
 		peer_key = this->private->get_public_key(this->private);
 		peer_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 									BUILD_SIGNING_KEY, this->private,
@@ -386,11 +387,12 @@ METHOD(credential_set_t, create_cert_enumerator, enumerator_t*,
 									BUILD_SUBJECT_ALTNAMES, sans,
 									BUILD_NOT_BEFORE_TIME, now - 60 * 60 * 24,
 									BUILD_NOT_AFTER_TIME, now + 60 * 60 * 24,
-									BUILD_SERIAL, chunk_from_thing(serial),
+									BUILD_SERIAL, serial,
 									BUILD_CRL_DISTRIBUTION_POINTS, this->cdps,
 									BUILD_END);
 		peer_key->destroy(peer_key);
 		sans->destroy(sans);
+		chunk_free(&serial);
 		DESTROY_IF(dn);
 		if (peer_cert)
 		{

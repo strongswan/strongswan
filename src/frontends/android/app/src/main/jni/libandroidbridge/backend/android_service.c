@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2018 Tobias Brunner
+ * Copyright (C) 2010-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -258,6 +258,41 @@ static bool add_routes(vpnservice_builder_t *builder, child_sa_t *child_sa)
 }
 
 /**
+ * Add DNS servers to the builder
+ */
+static bool add_dns_servers(vpnservice_builder_t *builder, ike_sa_t *ike_sa)
+{
+	enumerator_t *enumerator;
+	configuration_attribute_type_t type;
+	chunk_t data;
+	bool handled;
+	host_t *dns;
+
+	enumerator = ike_sa->create_attribute_enumerator(ike_sa);
+	while (enumerator->enumerate(enumerator, &type, &data, &handled))
+	{
+		switch (type)
+		{
+			case INTERNAL_IP4_DNS:
+				dns = host_create_from_chunk(AF_INET, data, 0);
+				break;
+			case INTERNAL_IP6_DNS:
+				dns = host_create_from_chunk(AF_INET6, data, 0);
+				break;
+			default:
+				continue;
+		}
+		if (dns && !dns->is_anyaddr(dns))
+		{
+			builder->add_dns(builder, dns);
+		}
+		DESTROY_IF(dns);
+	}
+	enumerator->destroy(enumerator);
+	return TRUE;
+}
+
+/**
  * Setup a new TUN device for the supplied SAs, also queues a job that
  * reads packets from this device.
  * Additional information such as DNS servers are gathered in appropriate
@@ -297,7 +332,8 @@ static bool setup_tun_device(private_android_service_t *this,
 		DBG1(DBG_DMN, "setting up TUN device failed, no virtual IP found");
 		return FALSE;
 	}
-	if (!add_routes(builder, child_sa) ||
+	if (!add_dns_servers(builder, ike_sa) ||
+		!add_routes(builder, child_sa) ||
 		!builder->set_mtu(builder, this->mtu))
 	{
 		return FALSE;
@@ -744,7 +780,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	auth_cfg_t *auth;
 	ike_cfg_create_t ike = {
 		.version = IKEV2,
-		.local = "0.0.0.0",
+		.local = "",
 		.local_port = charon->socket->get_port(charon->socket, FALSE),
 		.force_encap = TRUE,
 		.fragmentation = FRAGMENTATION_YES,
@@ -765,8 +801,8 @@ static job_requeue_t initiate(private_android_service_t *this)
 			},
 		},
 		.mode = MODE_TUNNEL,
-		.dpd_action = ACTION_RESTART,
-		.close_action = ACTION_RESTART,
+		.dpd_action = ACTION_START,
+		.close_action = ACTION_START,
 	};
 	char *type, *remote_id;
 
@@ -875,25 +911,20 @@ static job_requeue_t initiate(private_android_service_t *this)
 	/* get us an IKE_SA */
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
 														peer_cfg);
+	peer_cfg->destroy(peer_cfg);
 	if (!ike_sa)
 	{
-		peer_cfg->destroy(peer_cfg);
 		charonservice->update_status(charonservice,
 									 CHARONSERVICE_GENERIC_ERROR);
 		return JOB_REQUEUE_NONE;
 	}
-	if (!ike_sa->get_peer_cfg(ike_sa))
-	{
-		ike_sa->set_peer_cfg(ike_sa, peer_cfg);
-	}
-	peer_cfg->destroy(peer_cfg);
 
 	/* store the IKE_SA so we can track its progress */
 	this->ike_sa = ike_sa;
 
 	/* get an additional reference because initiate consumes one */
 	child_cfg->get_ref(child_cfg);
-	if (ike_sa->initiate(ike_sa, child_cfg, 0, NULL, NULL) != SUCCESS)
+	if (ike_sa->initiate(ike_sa, child_cfg, NULL) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "failed to initiate tunnel");
 		charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,

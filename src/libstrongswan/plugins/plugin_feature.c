@@ -32,6 +32,7 @@ ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 	"HASHER",
 	"PRF",
 	"XOF",
+	"KDF",
 	"DRBG",
 	"DH",
 	"RNG",
@@ -92,6 +93,9 @@ uint32_t plugin_feature_hash(plugin_feature_t *feature)
 			break;
 		case FEATURE_XOF:
 			data = chunk_from_thing(feature->arg.xof);
+			break;
+		case FEATURE_KDF:
+			data = chunk_from_thing(feature->arg.kdf);
 			break;
 		case FEATURE_DRBG:
 			data = chunk_from_thing(feature->arg.drbg);
@@ -171,6 +175,8 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 				return a->arg.prf == b->arg.prf;
 			case FEATURE_XOF:
 				return a->arg.xof == b->arg.xof;
+			case FEATURE_KDF:
+				return a->arg.kdf == b->arg.kdf;
 			case FEATURE_DRBG:
 				return a->arg.drbg == b->arg.drbg;
 			case FEATURE_DH:
@@ -232,6 +238,7 @@ bool plugin_feature_equals(plugin_feature_t *a, plugin_feature_t *b)
 			case FEATURE_HASHER:
 			case FEATURE_PRF:
 			case FEATURE_XOF:
+			case FEATURE_KDF:
 			case FEATURE_DRBG:
 			case FEATURE_DH:
 			case FEATURE_NONCE_GEN:
@@ -323,6 +330,13 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 		case FEATURE_XOF:
 			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
 					ext_out_function_names, feature->arg.xof) > 0)
+			{
+				return str;
+			}
+			break;
+		case FEATURE_KDF:
+			if (asprintf(&str, "%N:%N", plugin_feature_names, feature->type,
+					key_derivation_function_names, feature->arg.kdf) > 0)
 			{
 				return str;
 			}
@@ -472,6 +486,17 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 	name = plugin->get_name(plugin);
 	switch (feature->type)
 	{
+		case FEATURE_NONE:
+		case FEATURE_PRIVKEY_SIGN:
+		case FEATURE_PRIVKEY_DECRYPT:
+		case FEATURE_PUBKEY_VERIFY:
+		case FEATURE_PUBKEY_ENCRYPT:
+		case FEATURE_EAP_SERVER:
+		case FEATURE_EAP_PEER:
+		case FEATURE_XAUTH_SERVER:
+		case FEATURE_XAUTH_PEER:
+		case FEATURE_CUSTOM:
+			break;
 		case FEATURE_CRYPTER:
 			lib->crypto->add_crypter(lib->crypto, feature->arg.crypter.alg,
 								feature->arg.crypter.key_size,
@@ -498,6 +523,10 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 			lib->crypto->add_xof(lib->crypto, feature->arg.xof,
 								name, reg->arg.reg.f);
 			break;
+		case FEATURE_KDF:
+			lib->crypto->add_kdf(lib->crypto, feature->arg.kdf,
+								name, reg->arg.reg.f);
+			break;
 		case FEATURE_DRBG:
 			lib->crypto->add_drbg(lib->crypto, feature->arg.drbg,
 								name, reg->arg.reg.f);
@@ -518,24 +547,24 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 		case FEATURE_PRIVKEY_GEN:
 			lib->creds->add_builder(lib->creds, CRED_PRIVATE_KEY,
 								feature->arg.privkey, reg->arg.reg.final,
-								reg->arg.reg.f);
+								name, reg->arg.reg.f);
 			break;
 		case FEATURE_PUBKEY:
 			lib->creds->add_builder(lib->creds, CRED_PUBLIC_KEY,
 								feature->arg.pubkey, reg->arg.reg.final,
-								reg->arg.reg.f);
+								name, reg->arg.reg.f);
 			break;
 		case FEATURE_CERT_DECODE:
 		case FEATURE_CERT_ENCODE:
 			lib->creds->add_builder(lib->creds, CRED_CERTIFICATE,
 								feature->arg.cert, reg->arg.reg.final,
-								reg->arg.reg.f);
+								name, reg->arg.reg.f);
 			break;
 		case FEATURE_CONTAINER_DECODE:
 		case FEATURE_CONTAINER_ENCODE:
 			lib->creds->add_builder(lib->creds, CRED_CONTAINER,
 								feature->arg.container, reg->arg.reg.final,
-								reg->arg.reg.f);
+								name, reg->arg.reg.f);
 			break;
 		case FEATURE_DATABASE:
 			lib->db->add_database(lib->db, reg->arg.reg.f);
@@ -546,8 +575,6 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 			break;
 		case FEATURE_RESOLVER:
 			lib->resolver->add_resolver(lib->resolver, reg->arg.reg.f);
-			break;
-		default:
 			break;
 	}
 	return TRUE;
@@ -574,6 +601,17 @@ bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 	}
 	switch (feature->type)
 	{
+		case FEATURE_NONE:
+		case FEATURE_PRIVKEY_SIGN:
+		case FEATURE_PRIVKEY_DECRYPT:
+		case FEATURE_PUBKEY_VERIFY:
+		case FEATURE_PUBKEY_ENCRYPT:
+		case FEATURE_EAP_SERVER:
+		case FEATURE_EAP_PEER:
+		case FEATURE_XAUTH_SERVER:
+		case FEATURE_XAUTH_PEER:
+		case FEATURE_CUSTOM:
+			break;
 		case FEATURE_CRYPTER:
 			lib->crypto->remove_crypter(lib->crypto, reg->arg.reg.f);
 			break;
@@ -591,6 +629,9 @@ bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 			break;
 		case FEATURE_XOF:
 			lib->crypto->remove_xof(lib->crypto, reg->arg.reg.f);
+			break;
+		case FEATURE_KDF:
+			lib->crypto->remove_kdf(lib->crypto, reg->arg.reg.f);
 			break;
 		case FEATURE_DRBG:
 			lib->crypto->remove_drbg(lib->crypto, reg->arg.reg.f);
@@ -627,8 +668,6 @@ bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 			break;
 		case FEATURE_RESOLVER:
 			lib->resolver->remove_resolver(lib->resolver, reg->arg.reg.f);
-			break;
-		default:
 			break;
 	}
 	return TRUE;

@@ -26,6 +26,8 @@ import org.strongswan.android.ui.adapter.RemediationInstructionAdapter;
 
 import java.util.ArrayList;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.ListFragment;
 
 public class RemediationInstructionsFragment extends ListFragment
@@ -46,9 +48,9 @@ public class RemediationInstructionsFragment extends ListFragment
 	}
 
 	@Override
-	public void onActivityCreated(Bundle savedInstanceState)
+	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState)
 	{
-		super.onActivityCreated(savedInstanceState);
+		super.onViewCreated(view, savedInstanceState);
 
 		if (savedInstanceState != null)
 		{
@@ -81,7 +83,7 @@ public class RemediationInstructionsFragment extends ListFragment
 	{
 		super.onStart();
 
-		boolean two_pane = getFragmentManager().findFragmentById(R.id.remediation_instruction_fragment) != null;
+		boolean two_pane = getParentFragmentManager().findFragmentById(R.id.remediation_instruction_fragment) != null;
 		if (two_pane)
 		{	/* two-pane layout, make list items selectable */
 			getListView().setChoiceMode(ListView.CHOICE_MODE_SINGLE);

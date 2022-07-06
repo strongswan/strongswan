@@ -219,6 +219,24 @@ gcrypt_crypter_t *gcrypt_crypter_create(encryption_algorithm_t algo,
 					return NULL;
 			}
 			break;
+		case ENCR_AES_CFB:
+			mode = GCRY_CIPHER_MODE_CFB;
+			switch (key_size)
+			{
+				case 0:
+				case 16:
+					gcrypt_alg = GCRY_CIPHER_AES128;
+					break;
+				case 24:
+					gcrypt_alg = GCRY_CIPHER_AES192;
+					break;
+				case 32:
+					gcrypt_alg = GCRY_CIPHER_AES256;
+					break;
+				default:
+					return NULL;
+			}
+			break;
 		case ENCR_CAMELLIA_CTR:
 			mode = GCRY_CIPHER_MODE_CTR;
 			/* fall */

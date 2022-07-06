@@ -942,8 +942,9 @@ static host_t *get_matching_address(private_kernel_netlink_net_t *this,
 				{	/* optionally match a subnet */
 					continue;
 				}
-				if (candidate && candidate->ip_equals(candidate, addr->ip))
-				{	/* stop if we find the candidate */
+				if (candidate && candidate->ip_equals(candidate, addr->ip) &&
+					!(addr->flags & IFA_F_DEPRECATED))
+				{	/* stop if we find the candidate and it's not deprecated */
 					best = addr;
 					candidate_matched = TRUE;
 					break;
@@ -1278,6 +1279,17 @@ static void process_addr(private_kernel_netlink_net_t *this,
 				addr_map_entry_remove(this->addrs, addr, iface);
 				addr_entry_destroy(addr);
 			}
+			else if (entry->addr->flags != msg->ifa_flags)
+			{
+				found = TRUE;
+				entry->addr->flags = msg->ifa_flags;
+				if (event && iface->usable)
+				{
+					changed = TRUE;
+					DBG1(DBG_KNL, "flags changed for %H on %s", host,
+						 iface->ifname);
+				}
+			}
 		}
 		else
 		{
@@ -1360,6 +1372,7 @@ static void process_route(private_kernel_netlink_net_t *this,
 				if (RTA_PAYLOAD(rta) == sizeof(uint32_t) &&
 					this->routing_table == *(uint32_t*)RTA_DATA(rta))
 				{
+					DESTROY_IF(host);
 					return;
 				}
 				break;
@@ -2536,9 +2549,11 @@ METHOD(kernel_net_t, del_ip, status_t,
 		if (status == SUCCESS && wait)
 		{	/* wait until the address is really gone */
 			this->lock->write_lock(this->lock);
-			while (is_known_vip(this, virtual_ip))
-			{
-				this->condvar->wait(this->condvar, this->lock);
+			while (is_known_vip(this, virtual_ip) &&
+				   lib->watcher->get_state(lib->watcher) != WATCHER_STOPPED)
+			{	/* don't wait during deinit when we can't get notified,
+				 * re-evaluate watcher state if we have to wait longer */
+				this->condvar->timed_wait(this->condvar, this->lock, 1000);
 			}
 			this->lock->unlock(this->lock);
 		}
@@ -3034,7 +3049,7 @@ METHOD(kernel_net_t, destroy, void,
 	enumerator_t *enumerator;
 	route_entry_t *route;
 
-	if (this->routing_table)
+	if (this->routing_table && this->socket)
 	{
 		manage_rule(this, RTM_DELRULE, AF_INET, this->routing_table,
 					this->routing_table_prio);
@@ -3146,6 +3161,12 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 	timerclear(&this->next_roam);
 
 	check_kernel_features(this);
+
+	if (!this->socket)
+	{
+		destroy(this);
+		return NULL;
+	}
 
 	if (streq(lib->ns, "starter"))
 	{	/* starter has no threads, so we do not register for kernel events */

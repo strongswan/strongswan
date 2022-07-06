@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
 import androidx.fragment.app.ListFragment;
@@ -53,9 +54,9 @@ public class SelectedApplicationsListFragment extends ListFragment implements Lo
 	private SortedSet<String> mSelection;
 
 	@Override
-	public void onActivityCreated(@Nullable Bundle savedInstanceState)
+	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState)
 	{
-		super.onActivityCreated(savedInstanceState);
+		super.onViewCreated(view, savedInstanceState);
 		setHasOptionsMenu(true);
 
 		getListView().setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);

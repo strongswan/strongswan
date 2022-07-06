@@ -69,6 +69,13 @@ struct child_create_t {
 	void (*use_if_ids)(child_create_t *this, uint32_t in, uint32_t out);
 
 	/**
+	 * Use specific security label, overriding configuration.
+	 *
+	 * @param label			security label
+	 */
+	void (*use_label)(child_create_t *this, sec_label_t *label);
+
+	/**
 	 * Initially propose a specific DH group to override configuration.
 	 *
 	 * This is used during rekeying to prefer the previously negotiated group.

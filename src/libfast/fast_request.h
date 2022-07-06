@@ -209,7 +209,7 @@ struct fast_request_t {
 /**
  * Create a request from the fastcgi struct.
  *
- * @param fd			file descripter opened with FCGX_OpenSocket
+ * @param fd			file descriptor opened with FCGX_OpenSocket
  * @param debug			no stripping, no compression, timing information
  */
 fast_request_t *fast_request_create(int fd, bool debug);

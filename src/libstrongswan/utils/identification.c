@@ -67,8 +67,7 @@ static const x501rdn_t x501rdns[] = {
 	{"UID", 				OID_PILOT_USERID,			ASN1_PRINTABLESTRING},
 	{"DC", 					OID_PILOT_DOMAIN_COMPONENT, ASN1_PRINTABLESTRING},
 	{"CN",					OID_COMMON_NAME,			ASN1_PRINTABLESTRING},
-	{"S", 					OID_SURNAME,				ASN1_PRINTABLESTRING},
-	{"SN", 					OID_SERIAL_NUMBER,			ASN1_PRINTABLESTRING},
+	{"SN", 					OID_SURNAME,				ASN1_PRINTABLESTRING},
 	{"serialNumber", 		OID_SERIAL_NUMBER,			ASN1_PRINTABLESTRING},
 	{"C", 					OID_COUNTRY,				ASN1_PRINTABLESTRING},
 	{"L", 					OID_LOCALITY,				ASN1_PRINTABLESTRING},
@@ -217,8 +216,8 @@ METHOD(enumerator_t, rdn_part_enumerate, bool,
 		id_part_t type;
 	} oid2part[] = {
 		{OID_COMMON_NAME,		ID_PART_RDN_CN},
-		{OID_SURNAME,			ID_PART_RDN_S},
-		{OID_SERIAL_NUMBER,		ID_PART_RDN_SN},
+		{OID_SURNAME,			ID_PART_RDN_SN},
+		{OID_SERIAL_NUMBER,		ID_PART_RDN_SERIAL_NUMBER},
 		{OID_COUNTRY,			ID_PART_RDN_C},
 		{OID_LOCALITY,			ID_PART_RDN_L},
 		{OID_STATE_OR_PROVINCE,	ID_PART_RDN_ST},
@@ -864,6 +863,31 @@ static bool compare_dn(chunk_t t_dn, chunk_t o_dn, int *wc)
 	}
 	t->destroy(t);
 	o->destroy(o);
+	return finished;
+}
+
+/**
+ * Check if the data in the given chunk represents a valid DN.
+ */
+static bool is_valid_dn(chunk_t dn)
+{
+	enumerator_t *enumerator;
+	chunk_t oid, data;
+	u_char type;
+	bool finished = FALSE;
+
+	enumerator = create_rdn_enumerator(dn);
+	while (enumerator->enumerate(enumerator, &oid, &type, &data))
+	{
+		/* the enumerator returns FALSE on parse error, we are finished
+		 * if we have reached the end of the DN only */
+		if ((data.ptr + data.len == dn.ptr + dn.len))
+		{
+			finished = TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+
 	return finished;
 }
 
@@ -1713,7 +1737,7 @@ identification_t * identification_create_from_data(chunk_t data)
 {
 	char buf[data.len + 1];
 
-	if (is_asn1(data))
+	if (is_asn1(data) && is_valid_dn(data))
 	{
 		return identification_create_from_encoding(ID_DER_ASN1_DN, data);
 	}

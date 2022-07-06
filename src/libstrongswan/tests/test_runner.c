@@ -457,22 +457,44 @@ static void collect_failure_info(array_t *failures, char *name, int i)
 }
 
 /**
+ * Context data to collect warnings
+ */
+typedef struct {
+	char *name;
+	int i;
+	array_t *warnings;
+} warning_ctx_t;
+
+/**
+ * Callback to collect warnings
+ */
+CALLBACK(warning_cb, void,
+	warning_ctx_t *ctx, const char *msg, const char *file, const int line)
+{
+	failure_t warning = {
+		.name = ctx->name,
+		.i = ctx->i,
+		.file = file,
+		.line = line,
+	};
+
+	strncpy(warning.msg, msg, sizeof(warning.msg) - 1);
+	warning.msg[sizeof(warning.msg)-1] = 0;
+	array_insert(ctx->warnings, -1, &warning);
+}
+
+/**
  * Collect warning information, add failure_t to array
  */
 static bool collect_warning_info(array_t *warnings, char *name, int i)
 {
-	failure_t warning = {
+	warning_ctx_t ctx = {
 		.name = name,
 		.i = i,
+		.warnings = warnings,
 	};
 
-	warning.line = test_warning_get(warning.msg, sizeof(warning.msg),
-									&warning.file);
-	if (warning.line)
-	{
-		array_insert(warnings, -1, &warning);
-	}
-	return warning.line;
+	return test_warnings_get(warning_cb, &ctx);
 }
 
 /**

@@ -6,7 +6,7 @@ include $(CLEAR_VARS)
 strongswan_USE_BYOD := true
 
 strongswan_CHARON_PLUGINS := android-log openssl fips-prf random nonce pubkey \
-	chapoly curve25519 pkcs1 pkcs8 pem xcbc hmac socket-default revocation \
+	chapoly curve25519 pkcs1 pkcs8 pem xcbc hmac kdf socket-default revocation \
 	eap-identity eap-mschapv2 eap-md5 eap-gtc eap-tls x509
 
 ifneq ($(strongswan_USE_BYOD),)
@@ -48,6 +48,7 @@ strongswan_CFLAGS := \
 	-DHAVE_IPSEC_MODE_BEET \
 	-DHAVE_IPSEC_DIR_FWD \
 	-DHAVE_IN6ADDR_ANY \
+	-DHAVE_IN6_PKTINFO \
 	-DHAVE_NETINET_IP6_H \
 	-DCONFIG_H_INCLUDED \
 	-DMONOLITHIC \

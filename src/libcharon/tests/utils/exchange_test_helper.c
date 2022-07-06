@@ -237,11 +237,11 @@ METHOD(exchange_test_helper_t, create_sa, child_cfg_t*,
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 
-	*init = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-												 IKEV2, TRUE);
+	*init = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
+											   IKEV2, TRUE);
 
-	*resp = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-												 IKEV2, FALSE);
+	*resp = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
+											   IKEV2, FALSE);
 
 	peer_cfg = create_peer_cfg(FALSE, conf);
 	child_cfg = create_child_cfg(FALSE, conf);
@@ -273,7 +273,7 @@ METHOD(exchange_test_helper_t, establish_sa, void,
 	id_i = sa_i->get_id(sa_i);
 	id_r = sa_r->get_id(sa_r);
 
-	call_ikesa(sa_i, initiate, child_i, 0, NULL, NULL);
+	call_ikesa(sa_i, initiate, child_i, NULL);
 
 	/* IKE_SA_INIT --> */
 	id_r->set_initiator_spi(id_r, id_i->get_initiator_spi(id_i));

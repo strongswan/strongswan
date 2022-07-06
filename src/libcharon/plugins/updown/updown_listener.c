@@ -54,7 +54,7 @@ typedef struct cache_entry_t cache_entry_t;
  * Cache line in the interface name cache.
  */
 struct cache_entry_t {
-	/** requid of the CHILD_SA */
+	/** reqid of the CHILD_SA */
 	uint32_t reqid;
 	/** cached interface name */
 	char *iface;

@@ -1,1 +1,3 @@
 *.der
+*.pem
+strongswan.conf

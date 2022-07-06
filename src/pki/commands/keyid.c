@@ -76,7 +76,7 @@ static int keyid()
 		ID_TYPE_ALL,
 		ID_TYPE_SPK,
 		ID_TYPE_SPKI,
-	} id_type = FORMAT_PRETTY;
+	} id_type = ID_TYPE_ALL;
 	char *file = NULL, *keyid = NULL;
 	void *cred;
 	chunk_t id, spk = chunk_empty, spki = chunk_empty;

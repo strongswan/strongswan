@@ -1889,17 +1889,13 @@ METHOD(message_t, generate, status_t,
 static message_t *clone_message(private_message_t *this)
 {
 	message_t *message;
-	host_t *src, *dst;
 
-	src = this->packet->get_source(this->packet);
-	dst = this->packet->get_destination(this->packet);
-
-	message = message_create(this->major_version, this->minor_version);
+	message = message_create_from_packet(packet_clone_no_data(this->packet));
+	message->set_major_version(message, this->major_version);
+	message->set_minor_version(message, this->minor_version);
 	message->set_ike_sa_id(message, this->ike_sa_id);
 	message->set_message_id(message, this->message_id);
 	message->set_request(message, this->is_request);
-	message->set_source(message, src->clone(src));
-	message->set_destination(message, dst->clone(dst));
 	message->set_exchange_type(message, this->exchange_type);
 	memcpy(((private_message_t*)message)->reserved, this->reserved,
 		   sizeof(this->reserved));
@@ -2946,6 +2942,18 @@ METHOD(message_t, add_fragment_v2, status_t,
 	return SUCCESS;
 }
 
+METHOD(message_t, get_metadata, metadata_t*,
+	private_message_t *this, const char *key)
+{
+	return this->packet->get_metadata(this->packet, key);
+}
+
+METHOD(message_t, set_metadata, void,
+	private_message_t *this, const char *key, metadata_t *data)
+{
+	this->packet->set_metadata(this->packet, key, data);
+}
+
 METHOD(message_t, destroy, void,
 	private_message_t *this)
 {
@@ -3013,6 +3021,8 @@ message_t *message_create_from_packet(packet_t *packet)
 			.get_packet = _get_packet,
 			.get_packet_data = _get_packet_data,
 			.get_fragments = _get_fragments,
+			.get_metadata = _get_metadata,
+			.set_metadata = _set_metadata,
 			.destroy = _destroy,
 		},
 		.exchange_type = EXCHANGE_TYPE_UNDEFINED,

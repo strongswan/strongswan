@@ -58,7 +58,7 @@
  * - vici_end_list(): Close a previously opened list
  * - vici_add_list_item() / vici_add_list_itemf(): Add list item
  *
- * Once the request message is complete, it can be sent or cancelled with:
+ * Once the request message is complete, it can be sent or canceled with:
  *
  * - vici_submit()
  * - vici_free_req()

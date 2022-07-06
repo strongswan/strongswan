@@ -21,7 +21,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.Network;
-import android.net.NetworkInfo;
 import android.net.NetworkRequest;
 import android.os.Build;
 
@@ -126,10 +125,12 @@ public class NetworkManager extends BroadcastReceiver implements Runnable
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	public boolean isConnected()
 	{
+		/* deprecated since API level 29 */
 		ConnectivityManager cm = (ConnectivityManager)mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-		NetworkInfo info = null;
+		android.net.NetworkInfo info = null;
 		if (cm != null)
 		{
 			info = cm.getActiveNetworkInfo();

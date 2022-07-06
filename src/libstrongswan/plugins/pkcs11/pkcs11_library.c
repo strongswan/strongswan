@@ -18,7 +18,12 @@
 
 #include "pkcs11_library.h"
 
+#ifndef WIN32
 #include <dlfcn.h>
+#else
+/* macro defined by synchapi.h that maps to CreateMutexA/W */
+#undef CreateMutex
+#endif
 
 #include <library.h>
 #include <asn1/asn1.h>
@@ -619,6 +624,8 @@ typedef struct {
 	pkcs11_library_t *lib;
 	/* attributes to retrieve */
 	CK_ATTRIBUTE_PTR attr;
+	/* copy of the original attributes provided by the caller */
+	CK_ATTRIBUTE_PTR orig_attr;
 	/* number of attributes */
 	CK_ULONG count;
 	/* object handle in case of a single object */
@@ -628,17 +635,36 @@ typedef struct {
 } object_enumerator_t;
 
 /**
- * Free contents of attributes in a list
+ * Keep a copy of the original attribute values so we can restore them while
+ * enumerating e.g. if an attribute was unavailable for a particular object.
+ */
+static void init_attrs(object_enumerator_t *this)
+{
+	int i;
+
+	this->orig_attr = calloc(this->count, sizeof(CK_ATTRIBUTE));
+	for (i = 0; i < this->count; i++)
+	{
+		this->orig_attr[i] = this->attr[i];
+	}
+}
+
+/**
+ * Free contents of allocated attributes and reset them to their original
+ * values.
  */
 static void free_attrs(object_enumerator_t *this)
 {
 	CK_ATTRIBUTE_PTR attr;
+	int i;
 
 	while (this->freelist->remove_last(this->freelist, (void**)&attr) == SUCCESS)
 	{
 		free(attr->pValue);
-		attr->pValue = NULL;
-		attr->ulValueLen = 0;
+	}
+	for (i = 0; i < this->count; i++)
+	{
+		this->attr[i] = this->orig_attr[i];
 	}
 }
 
@@ -682,7 +708,9 @@ static bool get_attributes(object_enumerator_t *this, CK_OBJECT_HANDLE object)
 	/* get length of objects first */
 	rv = this->lib->f->C_GetAttributeValue(this->session, object,
 										   this->attr, this->count);
-	if (rv != CKR_OK)
+	if (rv != CKR_OK &&
+		rv != CKR_ATTRIBUTE_SENSITIVE &&
+		rv != CKR_ATTRIBUTE_TYPE_INVALID)
 	{
 		DBG1(DBG_CFG, "C_GetAttributeValue(NULL) error: %N", ck_rv_names, rv);
 		return FALSE;
@@ -690,8 +718,12 @@ static bool get_attributes(object_enumerator_t *this, CK_OBJECT_HANDLE object)
 	/* allocate required chunks */
 	for (i = 0; i < this->count; i++)
 	{
-		if (this->attr[i].pValue == NULL &&
-			this->attr[i].ulValueLen != 0 && this->attr[i].ulValueLen != -1)
+		if (this->attr[i].ulValueLen == CK_UNAVAILABLE_INFORMATION)
+		{	/* reset this unavailable attribute before the next call */
+			this->attr[i] = this->orig_attr[i];
+		}
+		else if (this->attr[i].pValue == NULL &&
+				 this->attr[i].ulValueLen != 0)
 		{
 			this->attr[i].pValue = malloc(this->attr[i].ulValueLen);
 			this->freelist->insert_last(this->freelist, &this->attr[i]);
@@ -700,9 +732,10 @@ static bool get_attributes(object_enumerator_t *this, CK_OBJECT_HANDLE object)
 	/* get the data */
 	rv = this->lib->f->C_GetAttributeValue(this->session, object,
 										   this->attr, this->count);
-	if (rv != CKR_OK)
+	if (rv != CKR_OK &&
+		rv != CKR_ATTRIBUTE_SENSITIVE &&
+		rv != CKR_ATTRIBUTE_TYPE_INVALID)
 	{
-		free_attrs(this);
 		DBG1(DBG_CFG, "C_GetAttributeValue() error: %N", ck_rv_names, rv);
 		return FALSE;
 	}
@@ -769,6 +802,7 @@ METHOD(enumerator_t, object_destroy, void,
 	}
 	free_attrs(this);
 	this->freelist->destroy(this->freelist);
+	free(this->orig_attr);
 	free(this);
 }
 
@@ -799,6 +833,7 @@ METHOD(pkcs11_library_t, create_object_enumerator, enumerator_t*,
 		.count = acount,
 		.freelist = linked_list_create(),
 	);
+	init_attrs(enumerator);
 	return &enumerator->public;
 }
 
@@ -821,6 +856,7 @@ METHOD(pkcs11_library_t, create_object_attr_enumerator, enumerator_t*,
 		.object = object,
 		.freelist = linked_list_create(),
 	);
+	init_attrs(enumerator);
 	return &enumerator->public;
 }
 
@@ -1028,7 +1064,6 @@ static void check_features(private_pkcs11_library_t *this, CK_INFO *info)
 {
 	if (has_version(info, 2, 20))
 	{
-		this->features |= PKCS11_TRUSTED_CERTS;
 		this->features |= PKCS11_ALWAYS_AUTH_KEYS;
 	}
 }

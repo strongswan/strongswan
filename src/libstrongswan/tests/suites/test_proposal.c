@@ -17,6 +17,32 @@
 
 #include <crypto/proposal/proposal.h>
 
+START_TEST(test_dh_group_mapping)
+{
+	enum_name_t *e = diffie_hellman_group_names_short;
+	diffie_hellman_group_t group;
+	const proposal_token_t *token;
+	char *name;
+
+	do
+	{
+		for (group = e->first; group <= e->last; group++)
+		{
+			if (group == MODP_CUSTOM)
+			{	/* can't be configured */
+				continue;
+			}
+			name = e->names[group - e->first];
+			token = lib->proposal->get_token(lib->proposal, name);
+			ck_assert_msg(token, "%s can't be mapped", name);
+			ck_assert_int_eq(token->type, DIFFIE_HELLMAN_GROUP);
+			ck_assert_int_eq(token->algorithm, group);
+		}
+	}
+	while ((e = e->next));
+}
+END_TEST
+
 static struct {
 	protocol_id_t proto;
 	char *proposal;
@@ -455,6 +481,10 @@ Suite *proposal_suite_create()
 	TCase *tc;
 
 	s = suite_create("proposal");
+
+	tc = tcase_create("proposal keywords");
+	tcase_add_test(tc, test_dh_group_mapping);
+	suite_add_tcase(s, tc);
 
 	tc = tcase_create("create_from_string");
 	tcase_add_loop_test(tc, test_create_from_string, 0, countof(create_data));

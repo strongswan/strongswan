@@ -1,0 +1,11 @@
+# 2.3.3 #
+
+- Adds a button to install user certificates
+
+# 2.3.2 #
+
+- Don't mark VPN connections as metered (the default changed when targeting Android 10 with the last release)
+
+# 2.3.1 #
+
+- Optionally use IPv6 transport addresses for IKE and ESP. Can only be enabled if the server supports UDP encapsulation for IPv6 (the Linux kernel only supports this since 5.8, so many servers will not support it yet)

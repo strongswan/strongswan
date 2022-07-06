@@ -266,7 +266,7 @@ drbg_hmac_t *drbg_hmac_create(drbg_type_t type, uint32_t strength,
 
 	if (strength >  out_len * BITS_PER_BYTE)
 	{
-		DBG1(DBG_LIB, "%N not sufficient for security strength of % bits",
+		DBG1(DBG_LIB, "%N not sufficient for security strength of %u bits",
 			 pseudo_random_function_names, prf_type, strength);
 		prf->destroy(prf);
 		return NULL;

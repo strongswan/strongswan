@@ -40,11 +40,11 @@ typedef struct child_cfg_create_t child_cfg_create_t;
  */
 enum action_t {
 	/** No action */
-	ACTION_NONE,
-	/** Route config to establish or reestablish on demand */
-	ACTION_ROUTE,
-	/** Start or restart config immediately */
-	ACTION_RESTART,
+	ACTION_NONE = 0,
+	/** Install trap policy to (re-)establish on demand */
+	ACTION_TRAP = (1<<0),
+	/** Start or restart immediately */
+	ACTION_START = (1<<1),
 };
 
 /**
@@ -248,6 +248,41 @@ struct child_cfg_t {
 	mark_t (*get_set_mark)(child_cfg_t *this, bool inbound);
 
 	/**
+	 * Optional security label to be configured on policies.
+	 *
+	 * @return				label or NULL
+	 */
+	sec_label_t *(*get_label)(child_cfg_t *this);
+
+	/**
+	 * Get the mode in which the security label is used.
+	 *
+	 * @return				label mode (never SEC_LABEL_MODE_SYSTEM)
+	 */
+	sec_label_mode_t (*get_label_mode)(child_cfg_t *this);
+
+	/**
+	 * Select a security label from the given list that matches the configured
+	 * label.
+	 *
+	 * This fails under the following conditions:
+	 * - a label is configured but no labels are provided
+	 * - no label is configured but at least one label is provided
+	 * - the configured and provided labels don't match
+	 *
+	 * If no label is configured and none are provided, that's considered a
+	 * success and label will be set to NULL.
+	 *
+	 * @param labels		list of labels to match
+	 * @param log			FALSE to avoid logging details about the selection
+	 * @param label[out]	selected label or NULL if no label necessary
+	 * @param exact[out]	TRUE if there was an exact match
+	 * @return				FALSE on failure
+	 */
+	bool (*select_label)(child_cfg_t *this, linked_list_t *labels, bool log,
+						 sec_label_t **label, bool *exact);
+
+	/**
 	 * Get the TFC padding value to use for CHILD_SA.
 	 *
 	 * @return				TFC padding, 0 to disable, -1 for MTU
@@ -367,6 +402,10 @@ struct child_cfg_create_t {
 	mark_t set_mark_in;
 	/** Optional outbound mark the SA should apply to traffic */
 	mark_t set_mark_out;
+	/** Optional security label configured on policies (cloned) */
+	sec_label_t *label;
+	/** Optional security label mode */
+	sec_label_mode_t label_mode;
 	/** Mode to propose for CHILD_SA */
 	ipsec_mode_t mode;
 	/** TFC padding size, 0 to disable, -1 to pad to PMTU */

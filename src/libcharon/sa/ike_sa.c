@@ -638,6 +638,29 @@ METHOD(ike_sa_t, get_message_id, uint32_t,
 	return this->task_manager->get_mid(this->task_manager, initiate);
 }
 
+/**
+ * Set configured DSCP value on packet
+ */
+static void set_dscp(private_ike_sa_t *this, packet_t *packet)
+{
+	ike_cfg_t *ike_cfg;
+
+	/* prefer IKE config on peer_cfg, as its selection is more accurate
+	 * then the initial IKE config */
+	if (this->peer_cfg)
+	{
+		ike_cfg = this->peer_cfg->get_ike_cfg(this->peer_cfg);
+	}
+	else
+	{
+		ike_cfg = this->ike_cfg;
+	}
+	if (ike_cfg)
+	{
+		packet->set_dscp(packet, ike_cfg->get_dscp(ike_cfg));
+	}
+}
+
 METHOD(ike_sa_t, send_keepalive, void,
 	private_ike_sa_t *this, bool scheduled)
 {
@@ -681,6 +704,7 @@ METHOD(ike_sa_t, send_keepalive, void,
 		packet = packet_create();
 		packet->set_source(packet, this->my_host->clone(this->my_host));
 		packet->set_destination(packet, this->other_host->clone(this->other_host));
+		set_dscp(this, packet);
 		data.ptr = malloc(1);
 		data.ptr[0] = 0xFF;
 		data.len = 1;
@@ -1114,9 +1138,10 @@ METHOD(ike_sa_t, float_ports, void,
 }
 
 METHOD(ike_sa_t, update_hosts, void,
-	private_ike_sa_t *this, host_t *me, host_t *other, bool force)
+	private_ike_sa_t *this, host_t *me, host_t *other, update_hosts_flag_t flags)
 {
-	bool update = FALSE;
+	host_t *new_me = NULL, *new_other = NULL;
+	bool silent = FALSE;
 
 	if (me == NULL)
 	{
@@ -1131,42 +1156,72 @@ METHOD(ike_sa_t, update_hosts, void,
 	if (this->my_host->is_anyaddr(this->my_host) ||
 		this->other_host->is_anyaddr(this->other_host))
 	{
-		set_my_host(this, me->clone(me));
-		set_other_host(this, other->clone(other));
-		update = TRUE;
+		new_me = me;
+		new_other = other;
+		silent = TRUE;
 	}
 	else
 	{
-		/* update our address in any case */
-		if (force && !me->equals(me, this->my_host))
+		/* update our address only if forced */
+		if ((flags & UPDATE_HOSTS_FORCE_LOCAL) && !me->equals(me, this->my_host))
 		{
-			charon->bus->ike_update(charon->bus, &this->public, TRUE, me);
-			set_my_host(this, me->clone(me));
-			update = TRUE;
+			new_me = me;
 		}
 
 		if (!other->equals(other, this->other_host) &&
-			(force || has_condition(this, COND_NAT_THERE)))
+			((flags & UPDATE_HOSTS_FORCE_REMOTE) || has_condition(this, COND_NAT_THERE)))
 		{
 			/* only update other's address if we are behind a static NAT,
 			 * which we assume is the case if we are not initiator */
-			if (force ||
+			if ((flags & UPDATE_HOSTS_FORCE_REMOTE) ||
 				(!has_condition(this, COND_NAT_HERE) ||
 				 !has_condition(this, COND_ORIGINAL_INITIATOR)))
 			{
-				charon->bus->ike_update(charon->bus, &this->public, FALSE, other);
-				set_other_host(this, other->clone(other));
-				update = TRUE;
+				new_other = other;
 			}
 		}
 	}
 
-	/* update all associated CHILD_SAs, if required */
-	if (update)
+	if (new_me || new_other || (flags & UPDATE_HOSTS_FORCE_CHILDREN))
 	{
 		enumerator_t *enumerator;
 		child_sa_t *child_sa;
 		linked_list_t *vips;
+
+		if ((new_me || new_other) && !silent)
+		{
+			charon->bus->ike_update(charon->bus, &this->public,
+									new_me ?: this->my_host,
+									new_other ?: this->other_host);
+		}
+		if (new_me)
+		{
+			if (this->state == IKE_ESTABLISHED)
+			{
+				DBG1(DBG_IKE, "local endpoint changed from %#H to %#H",
+					 this->my_host, new_me);
+			}
+			else
+			{
+				DBG2(DBG_IKE, "local endpoint changed from %#H to %#H",
+					 this->my_host, new_me);
+			}
+			set_my_host(this, new_me->clone(new_me));
+		}
+		if (new_other)
+		{
+			if (this->state == IKE_ESTABLISHED)
+			{
+				DBG1(DBG_IKE, "remote endpoint changed from %#H to %#H",
+					 this->other_host, new_other);
+			}
+			else
+			{
+				DBG2(DBG_IKE, "remote endpoint changed from %#H to %#H",
+					 this->other_host, new_other);
+			}
+			set_other_host(this, new_other->clone(new_other));
+		}
 
 		vips = linked_list_create_from_enumerator(
 									array_create_enumerator(this->my_vips));
@@ -1190,29 +1245,6 @@ METHOD(ike_sa_t, update_hosts, void,
 		enumerator->destroy(enumerator);
 
 		vips->destroy(vips);
-	}
-}
-
-/**
- * Set configured DSCP value on packet
- */
-static void set_dscp(private_ike_sa_t *this, packet_t *packet)
-{
-	ike_cfg_t *ike_cfg;
-
-	/* prefer IKE config on peer_cfg, as its selection is more accurate
-	 * then the initial IKE config */
-	if (this->peer_cfg)
-	{
-		ike_cfg = this->peer_cfg->get_ike_cfg(this->peer_cfg);
-	}
-	else
-	{
-		ike_cfg = this->ike_cfg;
-	}
-	if (ike_cfg)
-	{
-		packet->set_dscp(packet, ike_cfg->get_dscp(ike_cfg));
 	}
 }
 
@@ -1499,8 +1531,7 @@ static void resolve_hosts(private_ike_sa_t *this)
 }
 
 METHOD(ike_sa_t, initiate, status_t,
-	private_ike_sa_t *this, child_cfg_t *child_cfg, uint32_t reqid,
-	traffic_selector_t *tsi, traffic_selector_t *tsr)
+	private_ike_sa_t *this, child_cfg_t *child_cfg, child_init_args_t *args)
 {
 	bool defer_initiate = FALSE;
 
@@ -1555,8 +1586,7 @@ METHOD(ike_sa_t, initiate, status_t,
 	if (child_cfg)
 	{
 		/* normal IKE_SA with CHILD_SA */
-		this->task_manager->queue_child(this->task_manager, child_cfg, reqid,
-										tsi, tsr);
+		this->task_manager->queue_child(this->task_manager, child_cfg, args);
 #ifdef ME
 		if (this->peer_cfg->get_mediated_by(this->peer_cfg))
 		{
@@ -1589,7 +1619,7 @@ METHOD(ike_sa_t, retry_initiate, status_t,
 	if (this->retry_initiate_queued)
 	{
 		this->retry_initiate_queued = FALSE;
-		return initiate(this, NULL, 0, NULL, NULL);
+		return initiate(this, NULL, NULL);
 	}
 	return SUCCESS;
 }
@@ -1896,12 +1926,30 @@ METHOD(ike_sa_t, delete_, status_t,
 METHOD(ike_sa_t, rekey, status_t,
 	private_ike_sa_t *this)
 {
-	if (this->state == IKE_PASSIVE)
+	if (this->state == IKE_PASSIVE ||
+		has_condition(this, COND_REAUTHENTICATING))
 	{
 		return INVALID_STATE;
 	}
 	this->task_manager->queue_ike_rekey(this->task_manager);
 	return this->task_manager->initiate(this->task_manager);
+}
+
+/*
+ * Described in header
+ */
+bool ike_sa_can_reauthenticate(ike_sa_t *public)
+{
+	private_ike_sa_t *this = (private_ike_sa_t*)public;
+
+	return array_count(this->other_vips) == 0 &&
+		   !has_condition(this, COND_XAUTH_AUTHENTICATED) &&
+		   !has_condition(this, COND_EAP_AUTHENTICATED)
+#ifdef ME
+			/* as mediation server we too cannot reauth the IKE_SA */
+			&& !this->is_mediation_server
+#endif /* ME */
+			;
 }
 
 METHOD(ike_sa_t, reauth, status_t,
@@ -1921,37 +1969,20 @@ METHOD(ike_sa_t, reauth, status_t,
 	/* we can't reauthenticate as responder when we use EAP or virtual IPs.
 	 * If the peer does not support RFC4478, there is no way to keep the
 	 * IKE_SA up. */
-	if (!has_condition(this, COND_ORIGINAL_INITIATOR))
+	if (!has_condition(this, COND_ORIGINAL_INITIATOR) &&
+		!ike_sa_can_reauthenticate(&this->public))
 	{
-		DBG1(DBG_IKE, "initiator did not reauthenticate as requested");
-		if (array_count(this->other_vips) != 0 ||
-			has_condition(this, COND_XAUTH_AUTHENTICATED) ||
-			has_condition(this, COND_EAP_AUTHENTICATED)
-#ifdef ME
-			/* as mediation server we too cannot reauth the IKE_SA */
-			|| this->is_mediation_server
-#endif /* ME */
-			)
-		{
-			time_t del, now;
+		time_t del, now;
 
-			del = this->stats[STAT_DELETE];
-			now = time_monotonic(NULL);
-			DBG1(DBG_IKE, "IKE_SA %s[%d] will timeout in %V",
-				 get_name(this), this->unique_id, &now, &del);
-			return FAILED;
-		}
-		else
-		{
-			DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d] actively",
-				 get_name(this), this->unique_id);
-		}
+		del = this->stats[STAT_DELETE];
+		now = time_monotonic(NULL);
+		DBG1(DBG_IKE, "initiator did not reauthenticate as requested, IKE_SA "
+			 "%s[%d] will timeout in %V", get_name(this), this->unique_id,
+			 &now, &del);
+		return FAILED;
 	}
-	else
-	{
-		DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d]",
-			 get_name(this), this->unique_id);
-	}
+	DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d]",
+		 get_name(this), this->unique_id);
 	set_condition(this, COND_REAUTHENTICATING, TRUE);
 	this->task_manager->queue_ike_reauth(this->task_manager);
 	return this->task_manager->initiate(this->task_manager);
@@ -2008,11 +2039,11 @@ static bool is_delete_queued(private_ike_sa_t *this, task_queue_t queue)
 static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 									 bool force)
 {
+	private_ike_sa_t *other = (private_ike_sa_t*)new;
 	enumerator_t *enumerator;
 	child_sa_t *child_sa;
 	child_cfg_t *child_cfg;
 	action_t action;
-	status_t status = FAILED;
 
 	/* handle existing CHILD_SAs */
 	enumerator = create_child_sa_enumerator(this);
@@ -2029,7 +2060,7 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 		}
 		if (force)
 		{
-			action = ACTION_RESTART;
+			action = ACTION_START;
 		}
 		else
 		{	/* only restart CHILD_SAs that are configured accordingly */
@@ -2042,35 +2073,26 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 				action = child_sa->get_dpd_action(child_sa);
 			}
 		}
-		switch (action)
+		if (action & ACTION_START)
 		{
-			case ACTION_RESTART:
-				child_cfg = child_sa->get_config(child_sa);
-				DBG1(DBG_IKE, "restarting CHILD_SA %s",
-					 child_cfg->get_name(child_cfg));
-				child_cfg->get_ref(child_cfg);
-				status = new->initiate(new, child_cfg,
-								child_sa->get_reqid(child_sa), NULL, NULL);
-				break;
-			default:
-				continue;
-		}
-		if (status == DESTROY_ME)
-		{
-			break;
+			child_init_args_t args = {
+				.reqid = child_sa->get_reqid(child_sa),
+				.label = child_sa->get_label(child_sa),
+			};
+			child_cfg = child_sa->get_config(child_sa);
+			DBG1(DBG_IKE, "restarting CHILD_SA %s",
+				 child_cfg->get_name(child_cfg));
+			other->task_manager->queue_child(other->task_manager,
+											 child_cfg->get_ref(child_cfg),
+											 &args);
 		}
 	}
 	enumerator->destroy(enumerator);
+
 	/* adopt any active or queued CHILD-creating tasks */
-	if (status != DESTROY_ME)
-	{
-		new->adopt_child_tasks(new, &this->public);
-		if (new->get_state(new) == IKE_CREATED)
-		{
-			status = new->initiate(new, NULL, 0, NULL, NULL);
-		}
-	}
-	return status;
+	new->adopt_child_tasks(new, &this->public);
+
+	return new->initiate(new, NULL, NULL);
 }
 
 METHOD(ike_sa_t, reestablish, status_t,
@@ -2129,17 +2151,14 @@ METHOD(ike_sa_t, reestablish, status_t,
 			{
 				action = child_sa->get_dpd_action(child_sa);
 			}
-			switch (action)
+			if (action & ACTION_TRAP)
 			{
-				case ACTION_RESTART:
-					restart = TRUE;
-					break;
-				case ACTION_ROUTE:
-					charon->traps->install(charon->traps, this->peer_cfg,
-										   child_sa->get_config(child_sa));
-					break;
-				default:
-					break;
+				charon->traps->install(charon->traps, this->peer_cfg,
+									   child_sa->get_config(child_sa));
+			}
+			if (action & ACTION_START)
+			{
+				restart = TRUE;
 			}
 		}
 		enumerator->destroy(enumerator);
@@ -2175,8 +2194,8 @@ METHOD(ike_sa_t, reestablish, status_t,
 		return FAILED;
 	}
 
-	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-											   this->version, TRUE);
+	new = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
+											 this->version, TRUE);
 	if (!new)
 	{
 		return FAILED;
@@ -2203,7 +2222,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 #ifdef ME
 	if (this->peer_cfg->is_mediation(this->peer_cfg))
 	{
-		status = new->initiate(new, NULL, 0, NULL, NULL);
+		status = new->initiate(new, NULL, NULL);
 	}
 	else
 #endif /* ME */
@@ -2259,8 +2278,8 @@ static bool redirect_established(private_ike_sa_t *this, identification_t *to)
 	host_t *other;
 	time_t redirect;
 
-	new = charon->ike_sa_manager->checkout_new(charon->ike_sa_manager,
-											   this->version, TRUE);
+	new = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
+											 this->version, TRUE);
 	if (!new)
 	{
 		return FALSE;
@@ -2971,9 +2990,9 @@ METHOD(ike_sa_t, inherit_post, void,
 		time_t reauth, delete, now = time_monotonic(NULL);
 
 		this->stats[STAT_REAUTH] = other->stats[STAT_REAUTH];
-		reauth = this->stats[STAT_REAUTH] - now;
+		reauth = max(0, this->stats[STAT_REAUTH] - now);
 		delete = reauth + this->peer_cfg->get_over_time(this->peer_cfg);
-		this->stats[STAT_DELETE] = this->stats[STAT_REAUTH] + delete;
+		this->stats[STAT_DELETE] = now + delete;
 		DBG1(DBG_IKE, "rescheduling reauthentication in %ds after rekeying, "
 			 "lifetime reduced to %ds", reauth, delete);
 		lib->scheduler->schedule_job(lib->scheduler,
@@ -3242,4 +3261,53 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		return NULL;
 	}
 	return &this->public;
+}
+
+/**
+ * Check if we have a an address pool configured.
+ */
+static bool have_pool(private_ike_sa_t *this)
+{
+	enumerator_t *enumerator;
+	bool found = FALSE;
+
+	if (this->peer_cfg)
+	{
+		enumerator = this->peer_cfg->create_pool_enumerator(this->peer_cfg);
+		found = enumerator->enumerate(enumerator, NULL);
+		enumerator->destroy(enumerator);
+	}
+	return found;
+}
+
+/*
+ * Described in header
+ */
+linked_list_t *ike_sa_get_dynamic_hosts(ike_sa_t *ike_sa, bool local)
+{
+	private_ike_sa_t *this = (private_ike_sa_t*)ike_sa;
+	enumerator_t *enumerator;
+	linked_list_t *list;
+	host_t *host;
+
+	list = linked_list_create();
+	enumerator = create_virtual_ip_enumerator(this, local);
+	while (enumerator->enumerate(enumerator, &host))
+	{
+		list->insert_last(list, host);
+	}
+	enumerator->destroy(enumerator);
+
+	if (!list->get_count(list))
+	{	/* no virtual IPs assigned */
+		if (local)
+		{
+			list->insert_last(list, this->my_host);
+		}
+		else if (!have_pool(this))
+		{	/* use remote host only if we don't have a pool configured */
+			list->insert_last(list, this->other_host);
+		}
+	}
+	return list;
 }

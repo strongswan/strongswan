@@ -277,7 +277,7 @@ Terminates an SA while streaming _control-log_ events.
 	{
 		child = <terminate a CHILD_SA by configuration name>
 		ike = <terminate an IKE_SA by configuration name>
-		child-id = <terminate a CHILD_SA by its reqid>
+		child-id = <terminate a CHILD_SA by its unique id>
 		ike-id = <terminate an IKE_SA by its unique id>
 		force = <terminate IKE_SA without waiting for proper DELETE, if timeout
 				 is given, waits for a response until it is reached>
@@ -300,7 +300,7 @@ Initiate the rekeying of an SA.
 	{
 		child = <rekey a CHILD_SA by configuration name>
 		ike = <rekey an IKE_SA by configuration name>
-		child-id = <rekey a CHILD_SA by its reqid>
+		child-id = <rekey a CHILD_SA by its unique id>
 		ike-id = <rekey an IKE_SA by its unique id>
 		reauth = <reauthenticate instead of rekey an IKEv2 SA>
 	} => {
@@ -361,6 +361,8 @@ events.
 		noblock = <use non-blocking mode if key is set>
 		ike = <filter listed IKE_SAs by its name>
 		ike-id = <filter listed IKE_SA by its unique id>
+		child = <filter listed CHILD_SAs by name>
+		child-id = <filter listed CHILD_SAs by unique id>
 	} => {
 		# completes after streaming list-sa events
 	}
@@ -483,7 +485,7 @@ Load a certificate into the daemon.
 Load a private key into the daemon.
 
 	{
-		type = <private key type, rsa|ecdsa|bliss|any>
+		type = <private key type, rsa|ecdsa|ed25519|ed448|bliss|any>
 		data = <PEM or DER encoded key data>
 	} => {
 		success = <yes or no>
@@ -817,6 +819,7 @@ command.
 					mark-mask-out = <hex encoded outbound Netfilter mark mask>
 					if-id-in = <hex encoded inbound XFRM interface ID>
 					if-id-out = <hex encoded outbound XFRM interface ID>
+					label = <hex encoded security label>
 					encr-alg = <ESP encryption algorithm name, if any>
 					encr-keysize = <ESP encryption key size, if applicable>
 					integ-alg = <ESP or AH integrity algorithm name, if any>
@@ -854,6 +857,7 @@ _list-policies_ command.
 			child = <CHILD_SA configuration name>
 			ike = <IKE_SA configuration name or namespace, if available>
 			mode = <policy mode, tunnel|transport|pass|drop>
+			label = <hex encoded security label>
 			local-ts = [
 				<list of local traffic selectors>
 			]
@@ -903,6 +907,7 @@ _list-conns_ command.
 			children = {
 				<CHILD_SA config name>* = {
 					mode = <IPsec mode>
+					label = <hex encoded security label>
 					rekey_time = <CHILD_SA rekeying interval in seconds>
 					rekey_bytes = <CHILD_SA rekeying interval in bytes>
 					rekey_packets = <CHILD_SA rekeying interval in packets>
@@ -973,6 +978,22 @@ The _ike-rekey_ event is issued when an IKE_SA is rekeyed.
 			new = {
 				<same data as in the list-sas event, but without child-sas section>
 			}
+		}
+	}
+
+### ike-update ###
+
+The _ike-update_ event is issued when the local or remote endpoint address of an
+IKE_SA is about to change (at least one address/port is different).
+
+	{
+		local-host = <new/current local IKE endpoint address>
+		local-port = <new/current local IKE endpoint port>
+		remote-host = <new/current remote IKE endpoint address>
+		remote-port = <new/current remote IKE endpoint port>
+		<IKE_SA config name> = {
+			<same data as in the list-sas event, but without child-sas section
+			 and listing the old addresses/ports>
 		}
 	}
 

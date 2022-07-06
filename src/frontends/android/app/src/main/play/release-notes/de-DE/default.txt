@@ -1,0 +1,11 @@
+# 2.3.3 #
+
+- Fügt einen Button zur Installation von Benutzer-Zertifikaten hinzu
+
+# 2.3.2 #
+
+- VPN Verbindungen nicht als getaktet markieren (der Default hat mit Android 10 als Ziel-SDK geändert)
+
+# 2.3.1 #
+
+- Optionale Verwendung von IPv6 Transport-Adressen für IKE und ESP. Benötigt Unterstützung für UDP Encapsulation für IPv6 auf dem Server (bei Linux erst seit 5.8 der Fall, viele Server bieten also noch keine Unterstützung)

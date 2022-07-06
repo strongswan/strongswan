@@ -200,6 +200,26 @@ METHOD(private_key_t, sign, bool,
 			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA512, data,
 											  signature);
 #endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_224)
+		case SIGN_RSA_EMSA_PKCS1_SHA3_224:
+			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_224,
+											  data, signature);
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_256)
+		case SIGN_RSA_EMSA_PKCS1_SHA3_256:
+			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_256,
+											  data, signature);
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_384)
+		case SIGN_RSA_EMSA_PKCS1_SHA3_384:
+			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_384,
+											  data, signature);
+#endif
+#if defined(WOLFSSL_SHA3) && !defined(WOLFSSL_NOSHA3_512)
+		case SIGN_RSA_EMSA_PKCS1_SHA3_512:
+			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA3_512,
+											 data, signature);
+#endif
 #ifndef NO_SHA
 		case SIGN_RSA_EMSA_PKCS1_SHA1:
 			return build_emsa_pkcs1_signature(this, WC_HASH_TYPE_SHA, data,
@@ -223,10 +243,16 @@ METHOD(private_key_t, sign, bool,
 
 METHOD(private_key_t, decrypt, bool,
 	private_wolfssl_rsa_private_key_t *this, encryption_scheme_t scheme,
-	chunk_t crypto, chunk_t *plain)
+	void *params, chunk_t crypto, chunk_t *plain)
 {
 	int padding, mgf, len;
 	enum wc_HashType hash;
+	chunk_t label = chunk_empty;
+
+	if (params)
+	{
+		label = *(chunk_t *)params;
+	}
 
 	switch (scheme)
 	{
@@ -280,7 +306,8 @@ METHOD(private_key_t, decrypt, bool,
 	len = wc_RsaEncryptSize(&this->rsa);
 	*plain = chunk_alloc(len);
 	len = wc_RsaPrivateDecrypt_ex(crypto.ptr, crypto.len, plain->ptr, len,
-								  &this->rsa, padding, hash, mgf, NULL, 0);
+								  &this->rsa, padding, hash, mgf,
+								  label.ptr, label.len);
 	if (len < 0)
 	{
 		DBG1(DBG_LIB, "RSA decryption failed");
@@ -686,6 +713,8 @@ wolfssl_rsa_private_key_t *wolfssl_rsa_private_key_load(key_type_t type,
 	}
 	else if (n.ptr && e.ptr && d.ptr)
 	{
+		this->rsa.type = RSA_PRIVATE;
+
 		if (mp_read_unsigned_bin(&this->rsa.n, n.ptr, n.len) != 0)
 		{
 			goto error;

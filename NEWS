@@ -1,3 +1,240 @@
+strongswan-5.9.6
+----------------
+
+- The IKEv2 key derivation, in particular prf+, has been modularized to simplify
+  certification (e.g. FIPS-140) via an already certified third-party library.
+  The botan, openssl and wolfssl plugins implement the key derivation for
+  HMAC-based PRFs via their respective HKDF implementation.  A generic
+  implementation is provided by the new kdf plugin.
+
+- Labeled IPsec with IKEv2 is supported in an SELinux and a proprietary simple
+  mode.  In SELinux mode, traffic that matches a trap policy with generic
+  context (e.g. system_u:object_r:ipsec_spd_t:s0) triggers the negotiation of
+  CHILD_SAs with a specific label.  With the simple mode, labels are not set on
+  SAs/policies but can be used as identifier to select specific child configs.
+
+- DoS protection has been improved:  COOKIE secrets are now switched based on a
+  time limit (2 min.), a new per-IP threshold (default 3) is used to trigger
+  them, and unprocessed IKE_SA_INITs are already counted as half-open IKE_SAs.
+
+- Initiating duplicate CHILD_SAs within the same IKE_SA is largely prevented.
+
+- Immediately initiating a CHILD_SA with trap policies is now possible via
+  `start_action=trap|start`.
+
+- If the source address is unknown when initiating an IKEv2 SA, a NAT situation
+  is now forced for IPv4 (for IPv6, NAT-T is disabled) to avoid causing
+  asymmetric enabling of UDP-encapsulation.
+
+- Installing unnecessary exclude routes for VPN servers on FreeBSD is avoided.
+
+- The new `map_level` option for syslog loggers allows mapping log levels
+  to syslog levels starting at the specified number.
+
+- The addrblock plugin allows limiting the validation depth of issuer addrblock
+  extensions.
+
+- The default AEAD ESP proposal (sent since 5.9.0) now includes `noesn` to make
+  it standards-compliant.
+
+- Individual CHILD_SAs can be queried via the `list-sas` vici command (or
+  `swanctl --list-sas ), either by unique ID or name.
+
+- Compatibility with OpenSSL 3.0 has been improved.
+
+
+strongswan-5.9.5
+----------------
+
+- Fixed a vulnerability in the EAP client implementation that was caused by
+  incorrectly handling early EAP-Success messages. It may allow to bypass the
+  client and in some scenarios even the server authentication, or could lead to
+  a denial-of-service attack.
+  This vulnerability has been registered as CVE-2021-45079.
+
+- Using the trusted RSA or ECC Endorsement Key of the TPM 2.0, libtpmtss may now
+  establish a secure session via RSA encryption or an ephemeral ECDH key
+  exchange, respectively. The session allows HMAC-based authenticated
+  communication with the TPM 2.0 and the exchanged parameters can be encrypted
+  where necessary to guarantee confidentiality (e.g. when using the TPM as RNG).
+
+- Basic support for OpenSSL 3.0 has been added, in particular, the new
+  load_legacy option (enabled by default) allows loading the "legacy" provider
+  for algorithms like MD4 and DES (both required for EAP-MSCHAPv2), and the
+  existing fips_mode option allows explicitly loading the "fips" provider e.g.
+  if it's not activated in OpenSSL's fipsmodule.cnf.
+
+- The MTU of TUN devices created by the kernel-pfroute plugin on macOS and
+  FreeBSD is now configurable and reduced to 1400 bytes, by default.  This also
+  fixes an issue on macOS 12 that prevented the detection of virtual IPs
+  installed on such TUN devices.
+
+- When rekeying CHILD_SAs, the old outbound SA is now uninstalled shortly after
+  the new SA has been installed on the initiator/winner. This is useful for
+  IPsec implementations where the ordering of SAs is unpredictable and we can't
+  set the SPI on the outbound policy to switch to the new SA while both are
+  installed.
+
+- The sw-collector utility may now iterate through APT history logs processed
+  by logrotate.
+
+- The openssl plugin now only announces the ECDH groups actually supported by
+  OpenSSL (determined via EC_get_builtin_curves()).
+
+
+strongswan-5.9.4
+----------------
+
+- Fixed a denial-of-service vulnerability in the gmp plugin that was caused by
+  an integer overflow when processing RSASSA-PSS signatures with very large
+  salt lengths.
+  This vulnerability has been registered as CVE-2021-41990.
+
+- Fixed a denial-of-service vulnerabililty in the in-memory certificate cache
+  if certificates are replaced and a very large random value caused an integer
+  overflow.
+  This vulnerability has been registered as CVE-2021-41991.
+
+- Fixed a related flaw that caused the daemon to accept an infinite number of
+  versions of a valid certificate by modifying the parameters in the
+  signatureAlgorithm field of the outer X.509 Certificate structure.
+
+- AUTH_LIFETIME notifies are now only sent by a responder if it can't
+  reauthenticate the IKE_SA itself due to asymmetric authentication (i.e. EAP)
+  or the use of virtual IPs.
+
+- Serial number generation in several pki sub-commands has been fixed so they
+  don't start with an unintended zero byte.
+
+- Initialize libtpmtss in all programs and library that use it.
+
+- Migrated testing scripts to Python 3.
+
+
+strongswan-5.9.3
+----------------
+
+- Added AES_ECB, SHA-3 and SHAKE-256 support to wolfssl plugin.
+
+- Added AES_CCM and SHA-3 signature support to openssl plugin.
+
+- The x509 and openssl plugins now consider the authorityKeyIdentifier, if
+  available, before verifying signatures, which avoids unnecessary signature
+  verifications after a CA key rollover if both certificates are loaded.
+
+- The pkcs11 plugin better handles optional attributes like CKA_TRUSTED, which
+  previously depended on a version check.
+
+- charon-nm now supports using SANs as client identities, not only full DNs.
+
+- charon-tkm now handles IKE encryption.
+
+- A MOBIKE update is sent again if a a change in the NAT mappings is detected
+  but the endpoints stay the same.
+
+- Converted most of the test case scenarios to the vici interface
+
+
+strongswan-5.9.2
+----------------
+
+- Together with a Linux 5.8 kernel supporting the IMA measurement of the GRUB
+  bootloader and the Linux kernel, the strongSwan Attestation IMC allows to do
+  remote attestation of the complete boot phase. A recent TPM 2.0 device with a
+  SHA-256 PCR bank is required, so that both BIOS and IMA file measurements are
+  based on SHA-256 hashes.
+
+- Our own TLS library (libtls) that we use for TLS-based EAP methods and PT-TLS
+  gained experimental support for TLS 1.3.  Thanks to Méline Sieber (client) and
+  Pascal Knecht (client and server) for their work on this.
+  Because the use of TLS 1.3 with these EAP methods is not yet standardized (two
+  Internet-Drafts are being worked on), the default maximum version is currently
+  set to TLS 1.2, which is now also the default minimum version. However the TNC
+  test scenarios using PT-TLS transport already use TLS 1.3.
+
+- Other improvements for libtls also affect older TLS versions. For instance, we
+  added support for ECDH with Curve25519/448 (DH groups may also be configured
+  now), for EdDSA keys and certificates and for RSA-PSS signatures. Support for
+  old and weak cipher suites has been removed (e.g. with 3DES and MD5) as well
+  as signature schemes with SHA-1.
+
+- The listener_t::ike_update event is now also called for MOBIKE updates. Its
+  signature has changed so we only have to call it once if both addresses/ports
+  have changed (e.g. for an address family switch).  The event is now also
+  exposed via vici.
+
+- The farp plugin has been ported to macOS and FreeBSD. Thanks to Dan James for
+  working on this.
+
+- To fix DNS server installation with systemd-resolved, charon-nm now creates a
+  dummy TUN device again (was removed with 5.5.1).
+
+- The botan plugin can use rng_t implementations provided by other plugins when
+  generating keys etc. if the Botan library supports it.
+
+- charon-tkm now supports multiple CAs and is configured via vici/swanctl.
+
+- Simple glob patterns (e.g. include conf.d/*.conf) now also work on Windows.
+  Handling of forward slashes in paths on Windows has also been improved.
+
+- The abbreviations for the 'surname' and 'serial number' RDNs in ASN.1 DNs have
+  been changed to align with RFC 4519: The abbreviation for 'surname' is now
+  "SN" (was "S" before), which was previously used for 'serial number' that can
+  now be specified as "serialNumber" only.
+
+- An issue with Windows clients requesting previous IPv6 but not IPv4 virtual
+  IP addresses has been fixed.
+
+- ike_sa_manager_t:  Checking out IKE_SAs by config is now atomic (e.g. when
+  acquires for different children of the same connection arrive concurrently).
+  The checkout_new() method has been renamed to create_new(). A new
+  checkout_new() method allows registering a new IKE_SA with the manager before
+  checking it in, so jobs can be queued without losing them as they can block
+  on checking out the new SA.
+
+
+strongswan-5.9.1
+----------------
+
+- Remote attestation via TNC supports the SHA-256 based TPM 2.0 BIOS/EFI
+  measurements introduced with the Linux 5.4 kernel.
+
+- Nonces in OCSP responses are not enforced anymore and only validated if a
+  nonce is actually contained.
+
+- Fixed an issue when only some fragments of a retransmitted IKEv2 message were
+  received, which prevented processing a following fragmented message.
+
+- All queued vici messages are now sent to subscribed clients during shutdown,
+  which includes ike/child-updown events triggered when all SAs are deleted.
+
+- CHILD_SA IP addresses are updated before installation to allow MOBIKE updates
+  while retransmitting a CREATE_CHILD_SA request.
+
+- When looking for a route to the peer, the kernel-netlink plugin ignores the
+  current source address if it's deprecated.
+
+- The file and syslog loggers support logging the log level of each message
+  after the subsystem (e.g. [IKE2]).
+
+- charon-nm is now properly terminated during system shutdown.
+
+- Improved support for EdDSA keys in vici/swanctl, in particular, encrypted
+  keys are now supported.
+
+- A new global strongswan.conf option allows sending the Cisco FlexVPN vendor ID
+  to prevent Cisco devices from narrowing a 0.0.0.0/0 traffic selector.
+
+- The openssl plugin accepts CRLs issued by non-CA certificates if they contain
+  the cRLSign keyUsage flag (the x509 plugin already does this since 4.5.1).
+
+- Attributes in PKCS#7 containers, as used in SCEP, are now properly
+  DER-encoded, i.e. sorted.
+
+- The load-tester plugin now supports virtual IPv6 addresses and IPv6 source
+  address pools.
+
+
 strongswan-5.9.0
 ----------------
 
@@ -2619,7 +2856,7 @@ strongswan-4.1.5
 strongswan-4.1.4
 ----------------
 
-- The pluto IKEv1 daemon now exhibits the same behaviour as its
+- The pluto IKEv1 daemon now exhibits the same behavior as its
   IKEv2 companion charon by inserting an explicit route via the
   _updown script only if a sourceip exists. This is admissible
   since routing through the IPsec tunnel is handled automatically

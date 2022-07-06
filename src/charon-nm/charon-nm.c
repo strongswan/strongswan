@@ -94,14 +94,10 @@ static void run()
 		switch (sig)
 		{
 			case SIGINT:
-			{
-				DBG1(DBG_DMN, "signal of type SIGINT received. Shutting down");
-				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
-				return;
-			}
 			case SIGTERM:
 			{
-				DBG1(DBG_DMN, "signal of type SIGTERM received. Shutting down");
+				DBG1(DBG_DMN, "%s received, shutting down",
+					 sig == SIGINT ? "SIGINT" : "SIGTERM");
 				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
 				return;
 			}

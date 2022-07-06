@@ -10,6 +10,9 @@ libimcv.plugins.imc-attestation.aik_pubkey =
 libimcv.plugins.imc-attestation.aik_handle =
 	AIK object handle.
 
+libimcv.plugins.imc-attestation.hash_algorithm = sha384
+	Preferred measurement hash algorithm.
+
 libimcv.plugins.imc-attestation.mandatory_dh_groups = yes
 	Enforce mandatory Diffie-Hellman groups.
 
@@ -44,3 +47,7 @@ libimcv.plugins.imc-attestation.pcr18_meas =
 
 libimcv.plugins.imc-attestation.pcr18_after =
 	PCR18 value after measurement.
+
+libimcv.plugins.imc-attestation.pcr_padding = no
+	Whether to pad IMA SHA1 measurements values when extending into
+	SHA256 PCR bank.

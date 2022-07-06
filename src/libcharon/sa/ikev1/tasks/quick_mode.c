@@ -773,7 +773,7 @@ static status_t send_notify(private_quick_mode_t *this, notify_type_t type)
 
 	this->ike_sa->queue_task(this->ike_sa,
 						(task_t*)informational_create(this->ike_sa, notify));
-	/* cancel all active/passive tasks in favour of informational */
+	/* cancel all active/passive tasks in favor of informational */
 	this->ike_sa->flush_queue(this->ike_sa,
 					this->initiator ? TASK_QUEUE_ACTIVE : TASK_QUEUE_PASSIVE);
 	return ALREADY_DONE;
@@ -1096,7 +1096,7 @@ METHOD(task_t, process_r, status_t,
 			hostsi = get_dynamic_hosts(this->ike_sa, FALSE);
 			hostsr = get_dynamic_hosts(this->ike_sa, TRUE);
 			this->config = peer_cfg->select_child_cfg(peer_cfg, tsr, tsi,
-													  hostsr, hostsi);
+													  hostsr, hostsi, NULL, NULL);
 			hostsi->destroy(hostsi);
 			hostsr->destroy(hostsr);
 			if (this->config)
@@ -1475,7 +1475,6 @@ METHOD(task_t, migrate, void,
 	this->dh = NULL;
 	this->spi_i = 0;
 	this->spi_r = 0;
-	this->child = (child_sa_create_t){};
 
 	if (!this->initiator)
 	{

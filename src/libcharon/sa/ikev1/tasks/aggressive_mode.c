@@ -103,7 +103,7 @@ static bool establish(private_aggressive_mode_t *this)
 {
 	if (!charon->bus->authorize(charon->bus, TRUE))
 	{
-		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, cancelling");
+		DBG1(DBG_IKE, "final authorization hook forbids IKE_SA, canceling");
 		return FALSE;
 	}
 
@@ -177,7 +177,7 @@ static status_t send_notify(private_aggressive_mode_t *this, notify_type_t type)
 
 	this->ike_sa->queue_task(this->ike_sa,
 						(task_t*)informational_create(this->ike_sa, notify));
-	/* cancel all active/passive tasks in favour of informational */
+	/* cancel all active/passive tasks in favor of informational */
 	this->ike_sa->flush_queue(this->ike_sa,
 					this->initiator ? TASK_QUEUE_ACTIVE : TASK_QUEUE_PASSIVE);
 	return ALREADY_DONE;
@@ -190,7 +190,7 @@ static status_t send_delete(private_aggressive_mode_t *this)
 {
 	this->ike_sa->queue_task(this->ike_sa,
 						(task_t*)isakmp_delete_create(this->ike_sa, TRUE));
-	/* cancel all active tasks in favour of informational */
+	/* cancel all active tasks in favor of informational */
 	this->ike_sa->flush_queue(this->ike_sa,
 					this->initiator ? TASK_QUEUE_ACTIVE : TASK_QUEUE_PASSIVE);
 	return ALREADY_DONE;
@@ -320,7 +320,7 @@ METHOD(task_t, build_i, status_t,
 					if (charon->ike_sa_manager->check_uniqueness(
 								charon->ike_sa_manager, this->ike_sa, FALSE))
 					{
-						DBG1(DBG_IKE, "cancelling Aggressive Mode due to "
+						DBG1(DBG_IKE, "canceling Aggressive Mode due to "
 							 "uniqueness policy");
 						return send_notify(this, AUTHENTICATION_FAILED);
 					}
@@ -384,7 +384,8 @@ METHOD(task_t, process_r, status_t,
 
 			this->ike_sa->update_hosts(this->ike_sa,
 									   message->get_destination(message),
-									   message->get_source(message), TRUE);
+									   message->get_source(message),
+									   UPDATE_HOSTS_FORCE_ADDRS);
 
 			sa_payload = (sa_payload_t*)message->get_payload(message,
 													PLV1_SECURITY_ASSOCIATION);
@@ -506,7 +507,7 @@ METHOD(task_t, process_r, status_t,
 			if (!charon->bus->authorize(charon->bus, FALSE))
 			{
 				DBG1(DBG_IKE, "Aggressive Mode authorization hook forbids "
-					 "IKE_SA, cancelling");
+					 "IKE_SA, canceling");
 				charon->bus->alert(charon->bus, ALERT_PEER_AUTH_FAILED);
 				return send_delete(this);
 			}
@@ -528,7 +529,7 @@ METHOD(task_t, process_r, status_t,
 					if (charon->ike_sa_manager->check_uniqueness(
 								charon->ike_sa_manager, this->ike_sa, FALSE))
 					{
-						DBG1(DBG_IKE, "cancelling Aggressive Mode due to "
+						DBG1(DBG_IKE, "canceling Aggressive Mode due to "
 							 "uniqueness policy");
 						return send_delete(this);
 					}
@@ -708,7 +709,7 @@ METHOD(task_t, process_i, status_t,
 		if (!charon->bus->authorize(charon->bus, FALSE))
 		{
 			DBG1(DBG_IKE, "Aggressive Mode authorization hook forbids IKE_SA, "
-				 "cancelling");
+				 "canceling");
 			return send_notify(this, AUTHENTICATION_FAILED);
 		}
 

@@ -283,7 +283,7 @@ drbg_ctr_t *drbg_ctr_create(drbg_type_t type, uint32_t strength,
 	if (strength >  key_len * BITS_PER_BYTE)
 	{
 		DBG1(DBG_LIB, "%d bit block encryption key not sufficient for security "
-			 "strength of % bits", key_len * BITS_PER_BYTE, strength);
+			 "strength of %u bits", key_len * BITS_PER_BYTE, strength);
 		return NULL;
 	}
 
@@ -300,7 +300,7 @@ drbg_ctr_t *drbg_ctr_create(drbg_type_t type, uint32_t strength,
 	if (personalization_str.len > seed_len)
 	{
 		DBG1(DBG_LIB, "personalization string length of %d bytes is larger "
-			 "than seed length of % bytes", personalization_str.len, seed_len);
+			 "than seed length of %u bytes", personalization_str.len, seed_len);
 		crypter->destroy(crypter);
 		return NULL;
 	}

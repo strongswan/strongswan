@@ -15,6 +15,7 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/3des_cbc.c \
 	test_vectors/aes_cbc.c \
 	test_vectors/aes_ecb.c \
+	test_vectors/aes_cfb.c \
 	test_vectors/aes_ctr.c \
 	test_vectors/aes_xcbc.c \
 	test_vectors/aes_cmac.c \
@@ -29,6 +30,8 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/cast.c \
 	test_vectors/des.c \
 	test_vectors/idea.c \
+	test_vectors/kdf_prf.c \
+	test_vectors/kdf_prf_plus.c \
 	test_vectors/null.c \
 	test_vectors/rc2.c \
 	test_vectors/rc5.c \

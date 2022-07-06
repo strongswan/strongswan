@@ -1130,7 +1130,7 @@ static void *cancel_onoff_run(void *data_in)
 	thread_cancelability(FALSE);
 	data->cancellable = FALSE;
 
-	/* we should not get cancelled here */
+	/* we should not get canceled here */
 	data->sem->wait(data->sem);
 
 	data->cancellable = TRUE;

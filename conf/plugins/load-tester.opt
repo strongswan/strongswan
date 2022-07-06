@@ -119,7 +119,7 @@ charon.plugins.load-tester.responder_tsr = initiator_tsr
 	Traffic selector on responder side, as narrowed by responder.
 
 charon.plugins.load-tester.request_virtual_ip = no
-	Request an INTERNAL_IPV4_ADDR from the server.
+	Request an INTERNAL_IPV4_ADDR and INTERNAL_IPV6_ADDR from the server.
 
 charon.plugins.load-tester.shutdown_when_complete = no
 	Shutdown the daemon after all IKE_SAs have been established.

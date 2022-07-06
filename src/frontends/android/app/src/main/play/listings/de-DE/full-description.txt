@@ -1,0 +1,41 @@
+Dies ist die offizielle Android-Portierung der populären strongSwan VPN-Lösung.
+
+# MERKMALE UND EINSCHRÄNKUNGEN #
+
+<ul>
+ <li>Verwendet die VpnService API von Android 4+. Geräte von einigen Herstellern scheinen diese nicht zu unterstützen - strongSwan wird auf diesen Geräten nicht funktionieren!</li>
+ <li>Verwendet das IKEv2 Schlüsselaustausch-Protokoll (IKEv1 wird nicht unterstützt)</li>
+ <li>Verwendet IPsec für den Datenkanal (L2TP wird nicht unterstützt)</li>
+ <li>Volle Unterstützung für Konnektivitätsänderungen und Mobilität via MOBIKE (oder Re-Authentisierung)</li>
+ <li>Zur Authentisierung der Nutzer wird sowohl einfache auf Benutzername und Passwort basierende EAP-Authentisierung (namentlich EAP-MSCHAPv2, EAP-MD5 und EAP-GTC), sowie zertifikatsbasierte RSA/ECSA-Authentisierung unterstützt, EAP-TLS mit Benutzer-Zertifikaten wird ebenfalls unterstützt</li>
+ <li>Kombinierte Authentisierung mit RSA/ECDSA und EAP wird über zwei Authentisierungsrunden nach RFC 4739 unterstützt</li>
+ <li>Auf dem System vorinstallierte oder durch den Benutzer hinzugefügte CA-Zertifikate werden zur Verifizierung der Server-Zertifikate verwendet. Die CA- oder Server-Zertifikate zur Authentisierung des Server können auch direkt in der App importiert werden.</li>
+ <li>IKEv2-Fragmentierung wird unterstützt, sofern der VPN Server dies ebenfalls tut (strongSwan seit 5.2.1)</li>
+ <li>Split-Tunneling erlaubt das Senden von ausschliesslich ausgewähltem Netzwerkverkehr via VPN und/oder bestimmten Verkehr davon auszuschliessen</li>
+ <li>Per-App VPN erlaubt die VPN-Verbindung nur bestimmten Apps zur Verfügung zu stellen bzw. ausgewählte Apps von der Nutzung des VPN auszuschliessen</li>
+ <li>Die IPsec-Implementierung unterstützt derzeit die AES-CBC, AES-GCM, ChaCha20/Poly1305 und SHA1/SHA2-Algorithmen</li>
+ <li>Passwörter werden zurzeit als Klartext in der Datenbank gespeichert (nur wenn diese mit einem Profil gespeichert werden)</li>
+ <li>VPN Profile können von Dateien importiert werden</li>
+</ul>
+
+Details und ein Changelog sind auf unserem Wiki zu finden: https://wiki.strongswan.org/projects/strongswan/wiki/AndroidVPNClient
+
+# PERMISSIONS #
+
+<ul>
+ <li>READ_EXTERNAL_STORAGE: Erlaubt den Import von VPN Profilen und CA Zertifikaten von externen Speichern unter bestimmten Android-Versionen</li>
+ <li>QUERY_ALL_PACKAGES: Benötigt unter Android 11+ für die Auswahl von Apps in VPN Profilen und den optionalen EAP-TNC Anwendungsfall</li>
+</ul>
+
+# BEISPIEL-SERVERKONFIGURATION #
+
+Sie finden in unserem Wiki Beispiel-Serverkonfigurationen: https://wiki.strongswan.org/projects/strongswan/wiki/AndroidVPNClient#Server-Configuration
+
+Beachten Sie bitte, dass der im VPN Profil konfigurierte Hostname (bzw. die IP-Adresse) *zwingend* als subjectAltName-Extension im Server-Zertifikat vorhanden sein muss.
+
+# FEEDBACK #
+
+Bitte senden Sie uns Ihre Bug-Reports und Feature-Requests über GitHub: https://github.com/strongswan/strongswan/issues/new/choose
+Falls Sie dies tun, so fügen Sie bitte Informationen über Ihr Gerät bei (Hersteller, Modell, OS Version usw.).
+
+Die Log-Datei des Schlüsselaustausch-Dienstes kann direkt aus der Anwendung heraus via E-Mail versendet werden.
