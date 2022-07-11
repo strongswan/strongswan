@@ -63,6 +63,7 @@
 
 #include "kernel_netlink_ipsec.h"
 #include "kernel_netlink_shared.h"
+#include "kernel_netlink_xfrmi.h"
 
 #include <daemon.h>
 #include <utils/debug.h>
@@ -336,6 +337,11 @@ struct private_kernel_netlink_ipsec_t {
 	 * Netlink xfrm socket (IPsec)
 	 */
 	netlink_socket_t *socket_xfrm;
+
+	/**
+	 * XFRM interface manager
+	 */
+	kernel_netlink_xfrmi_t *xfrmi;
 
 	/**
 	 * Netlink xfrm socket to receive acquire and expire events
@@ -3949,6 +3955,11 @@ METHOD(kernel_ipsec_t, destroy, void,
 	DESTROY_IF(this->socket_link_events);
 	DESTROY_IF(this->socket_xfrm_events);
 	array_destroy_function(this->bypass, remove_port_bypass, this);
+	if (this->xfrmi)
+	{
+		lib->set(lib, KERNEL_NETLINK_XFRMI_MANAGER, NULL);
+		kernel_netlink_xfrmi_destroy(this->xfrmi);
+	}
 	DESTROY_IF(this->socket_xfrm);
 	enumerator = this->policies->create_enumerator(this->policies);
 	while (enumerator->enumerate(enumerator, NULL, &policy))
@@ -4187,6 +4198,12 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 			destroy(this);
 			return NULL;
 		}
+	}
+
+	this->xfrmi = kernel_netlink_xfrmi_create(TRUE);
+	if (this->xfrmi)
+	{
+		lib->set(lib, KERNEL_NETLINK_XFRMI_MANAGER, this->xfrmi);
 	}
 	return &this->public;
 }
