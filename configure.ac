@@ -383,7 +383,7 @@ LT_INIT
 AC_PROG_INSTALL
 AC_PROG_EGREP
 AC_PROG_AWK
-AC_PROG_LEX
+AC_PROG_LEX(noyywrap)
 AC_PROG_YACC
 AM_PATH_PYTHON(,,[:])
 AC_PATH_PROG([PERL], [perl], [], [$PATH:/bin:/usr/bin:/usr/local/bin])

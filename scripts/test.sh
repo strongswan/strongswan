@@ -325,8 +325,6 @@ freebsd)
 			--with-printf-hooks=builtin --enable-attr-sql --enable-sql
 			--enable-farp"
 	DEPS="git gmp openldap24-client libxml2 mysql80-client sqlite3 unbound ldns tpm2-tss"
-	export GPERF=/usr/local/bin/gperf
-	export LEX=/usr/local/bin/flex
 	;;
 fuzzing)
 	CFLAGS="$CFLAGS -DNO_CHECK_MEMWIPE"
