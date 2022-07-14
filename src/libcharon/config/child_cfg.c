@@ -298,6 +298,12 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 				e2 = hosts->create_enumerator(hosts);
 				while (e2->enumerate(e2, &host))
 				{
+					if (!dynamic && !host->is_anyaddr(host) &&
+						!ts1->includes(ts1, host))
+					{	/* for transport mode, we skip TS that don't match
+						 * specific IPs */
+						continue;
+					}
 					ts2 = ts1->clone(ts1);
 					if (dynamic || !host->is_anyaddr(host))
 					{	/* don't make regular TS larger than they were */
