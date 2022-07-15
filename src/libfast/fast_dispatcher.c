@@ -295,7 +295,8 @@ static void cleanup_sessions(private_fast_dispatcher_t *this, time_t now)
 /**
  * Actual dispatching code
  */
-static void dispatch(private_fast_dispatcher_t *this)
+CALLBACK(dispatch, void*,
+	private_fast_dispatcher_t *this)
 {
 	thread_cancelability(FALSE);
 
@@ -363,6 +364,7 @@ static void dispatch(private_fast_dispatcher_t *this)
 
 		request->destroy(request);
 	}
+	return NULL;
 }
 
 METHOD(fast_dispatcher_t, run, void,
@@ -372,8 +374,7 @@ METHOD(fast_dispatcher_t, run, void,
 	this->threads = malloc(sizeof(thread_t*) * threads);
 	while (threads)
 	{
-		this->threads[threads - 1] = thread_create((thread_main_t)dispatch,
-												   this);
+		this->threads[threads - 1] = thread_create(dispatch, this);
 		if (this->threads[threads - 1])
 		{
 			threads--;
