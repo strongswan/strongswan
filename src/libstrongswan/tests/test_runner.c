@@ -289,7 +289,7 @@ static bool call_fixture(test_case_t *tcase, bool up, int i)
 {
 	enumerator_t *enumerator;
 	test_fixture_t *fixture;
-	bool failure = FALSE;
+	volatile bool failure = FALSE;
 
 	enumerator = array_create_enumerator(tcase->fixtures);
 	while (enumerator->enumerate(enumerator, &fixture))
