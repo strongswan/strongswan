@@ -334,6 +334,7 @@ ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
 ARG_ENABL_SET([lock-profiler],  [enable lock/mutex profiling code.])
 ARG_ENABL_SET([log-thread-ids], [use thread ID, if available, instead of an incremented value starting from 1, to identify threads.])
 ARG_ENABL_SET([monolithic],     [build monolithic version of libstrongswan that includes all enabled plugins. Similarly, the plugins of charon are assembled in libcharon.])
+ARG_ENABL_SET([warnings],       [enable extended compiler warnings and -Werror (auto-enabled when building from the repository).])
 
 # ===================================
 #  option to disable default options
@@ -366,7 +367,7 @@ fi
 # ===========================
 
 if test -z "$CFLAGS"; then
-	CFLAGS="-g -O2 -Wall -Wno-format -Wno-format-security -Wno-pointer-sign"
+	CFLAGS="-g -O2"
 fi
 AC_SUBST(PLUGIN_CFLAGS)
 AC_PROG_CC
@@ -527,6 +528,12 @@ if test x$kdf = xfalse; then
 			enabled: botan, openssl, wolfssl]))
 		kdf=true
 	fi
+fi
+
+# enable warnings and -Werror by default when building from the repo (check with
+# -e as .git is a file in worktrees)
+if test x$warnings_given = xfalse -a -e "$srcdir"/.git; then
+	warnings=true
 fi
 
 # ===========================================
@@ -1322,8 +1329,6 @@ if test x$dev_headers = xyes; then
 fi
 AC_SUBST(dev_headers)
 
-CFLAGS="$CFLAGS -include `pwd`/config.h"
-
 if test x$tkm = xtrue; then
 	AC_PATH_PROG([GPRBUILD], [gprbuild], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 	if test x$GPRBUILD = x; then
@@ -1440,6 +1445,32 @@ esac
 if test x$git_version = xtrue -a "$GIT_VERSION" != "UNKNOWN"; then
 	AC_DEFINE_UNQUOTED(VERSION, ["$GIT_VERSION"])
 fi
+
+# modify CFLAGS as needed, do this late so we don't affect configure checks
+CFLAGS="$CFLAGS -include $(pwd)/config.h"
+
+WARN_CFLAGS=
+if test x$warnings = xtrue; then
+	WARN_CFLAGS="-Werror -Wall -Wextra"
+fi
+# disable some warnings, whether explicitly enabled above or by default
+# these are not compatible with our custom printf specifiers
+WARN_CFLAGS="$WARN_CFLAGS -Wno-format"
+WARN_CFLAGS="$WARN_CFLAGS -Wno-format-security"
+# we generally use comments, but GCC doesn't seem to recognize many of them
+WARN_CFLAGS="$WARN_CFLAGS -Wno-implicit-fallthrough"
+# we often omit fields when initializing structs (e.g. when using INIT)
+WARN_CFLAGS="$WARN_CFLAGS -Wno-missing-field-initializers"
+# allow assigning char* to u_char* (e.g. in chunk_create())
+WARN_CFLAGS="$WARN_CFLAGS -Wno-pointer-sign"
+# allow comparing e.g. int with chunk_t::len or countof(...)
+WARN_CFLAGS="$WARN_CFLAGS -Wno-sign-compare"
+# allow defensive checks like e.g. unsigned_var < CONST(= currently 0)
+WARN_CFLAGS="$WARN_CFLAGS -Wno-type-limits"
+# we often don't use function parameters when implementing interfaces
+WARN_CFLAGS="$WARN_CFLAGS -Wno-unused-parameter"
+# add the flags before existing CFLAGS so warning flags can be overridden
+CFLAGS="$WARN_CFLAGS $CFLAGS"
 
 # ===============================================
 #  collect plugin list for strongSwan components

@@ -143,7 +143,7 @@ TARGET=check
 
 DEPS="libgmp-dev"
 
-CFLAGS="-g -O2 -Wall -Wno-format -Wno-format-security -Wno-pointer-sign -Werror"
+CFLAGS="-g -O2"
 
 case "$TEST" in
 default)
