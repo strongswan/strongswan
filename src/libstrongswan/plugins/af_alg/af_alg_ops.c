@@ -218,8 +218,8 @@ af_alg_ops_t *af_alg_ops_create(char *type, char *alg)
 		.salg_family = AF_ALG,
 	};
 
-	strncpy(sa.salg_type, type, sizeof(sa.salg_type));
-	strncpy(sa.salg_name, alg, sizeof(sa.salg_name));
+	strncpy(sa.salg_type, type, sizeof(sa.salg_type) - 1);
+	strncpy(sa.salg_name, alg, sizeof(sa.salg_name) - 1);
 
 	INIT(this,
 		.public = {
