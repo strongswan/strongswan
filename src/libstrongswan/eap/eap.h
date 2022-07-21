@@ -75,6 +75,8 @@ enum eap_type_t {
 	EAP_RADIUS = 256,
 	/** not a method, select method dynamically based on client selection */
 	EAP_DYNAMIC = 257,
+	/** make sure the enum is large enough to hold vendor-specific types */
+	EAP_UNASSIGNED = 0xffffffff,
 };
 
 /**
