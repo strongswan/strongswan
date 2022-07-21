@@ -115,7 +115,7 @@ struct private_eap_authenticator_t {
  * load an EAP method
  */
 static eap_method_t *load_method(private_eap_authenticator_t *this,
-							eap_type_t type, uint32_t vendor, eap_role_t role)
+							eap_type_t type, pen_t vendor, eap_role_t role)
 {
 	identification_t *server, *peer, *aaa;
 	auth_cfg_t *auth;
@@ -154,7 +154,7 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 	auth_cfg_t *auth;
 	eap_type_t type;
 	identification_t *id;
-	uint32_t vendor;
+	pen_t vendor;
 	eap_payload_t *out;
 	char *action;
 
@@ -248,7 +248,7 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 										 eap_payload_t *in)
 {
 	eap_type_t type, received_type, conf_type;
-	uint32_t vendor, received_vendor, conf_vendor;
+	pen_t vendor, received_vendor, conf_vendor;
 	eap_payload_t *out;
 	auth_cfg_t *auth;
 
@@ -361,7 +361,7 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 										 eap_payload_t *in)
 {
 	eap_type_t type, conf_type;
-	uint32_t vendor, conf_vendor;
+	pen_t vendor, conf_vendor;
 	auth_cfg_t *auth;
 	eap_payload_t *out;
 	identification_t *id;
@@ -470,7 +470,7 @@ static bool verify_auth(private_eap_authenticator_t *this, message_t *message,
 	auth_cfg_t *auth;
 	keymat_v2_t *keymat;
 	eap_type_t type;
-	uint32_t vendor;
+	pen_t vendor;
 
 	auth_payload = (auth_payload_t*)message->get_payload(message,
 														 PLV2_AUTH);
@@ -640,7 +640,7 @@ METHOD(authenticator_t, process_client, status_t,
 		}
 		if (this->require_mutual && !this->method->is_mutual(this->method))
 		{	/* we require mutual authentication due to EAP-only */
-			uint32_t vendor;
+			pen_t vendor;
 
 			DBG1(DBG_IKE, "EAP-only authentication requires a mutual and "
 				 "MSK deriving EAP method, but %N is not",
@@ -668,7 +668,7 @@ METHOD(authenticator_t, process_client, status_t,
 			case EAP_SUCCESS:
 			{
 				eap_type_t type;
-				uint32_t vendor;
+				pen_t vendor;
 				auth_cfg_t *cfg;
 
 				if (!this->method)
@@ -745,7 +745,7 @@ METHOD(authenticator_t, is_mutual, bool,
 {
 	if (this->method)
 	{
-		uint32_t vendor;
+		pen_t vendor;
 
 		if (this->method->get_type(this->method, &vendor) != EAP_IDENTITY ||
 			vendor != 0)

@@ -78,7 +78,7 @@ METHOD(eap_method_t, process, status_t,
 }
 
 METHOD(eap_method_t, get_type, eap_type_t,
-	private_eap_peap_t *this, uint32_t *vendor)
+	private_eap_peap_t *this, pen_t *vendor)
 {
 	*vendor = 0;
 	return EAP_PEAP;

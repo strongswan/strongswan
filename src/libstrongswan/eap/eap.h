@@ -28,6 +28,7 @@ typedef enum eap_type_t eap_type_t;
 typedef struct eap_vendor_type_t eap_vendor_type_t;
 
 #include <library.h>
+#include <pen/pen.h>
 
 /**
  * EAP code, type of an EAP message
@@ -99,7 +100,7 @@ struct eap_vendor_type_t {
 	/**
 	 * Vendor Id
 	 */
-	uint32_t vendor;
+	pen_t vendor;
 };
 
 /**

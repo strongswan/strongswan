@@ -1335,8 +1335,8 @@ static char* get_string(private_message_t *this, char *buf, int len)
 		if (payload->get_type(payload) == PLV2_EAP)
 		{
 			eap_payload_t *eap = (eap_payload_t*)payload;
-			uint32_t vendor;
 			eap_type_t type;
+			pen_t vendor;
 			char method[64] = "";
 
 			type = eap->get_type(eap, &vendor);
