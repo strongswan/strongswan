@@ -203,8 +203,8 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 			type = this->method->get_type(this->method, &vendor);
 			if (vendor)
 			{
-				DBG1(DBG_IKE, "initiating EAP vendor type %d-%d method (id 0x%02X)",
-					 type, vendor, out->get_identifier(out));
+				DBG1(DBG_IKE, "initiating EAP vendor type %d-%N method (id 0x%02X)",
+					 type, pen_names, vendor, out->get_identifier(out));
 			}
 			else
 			{
@@ -218,8 +218,8 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 	}
 	if (vendor)
 	{
-		DBG1(DBG_IKE, "%s EAP vendor type %d-%d method failed",
-					  action, type,	vendor);
+		DBG1(DBG_IKE, "%s EAP vendor type %d-%N method failed",
+					  action, type,	pen_names, vendor);
 	}
 	else
 	{
@@ -320,8 +320,8 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 			}
 			if (vendor)
 			{
-				DBG1(DBG_IKE, "EAP vendor specific method %d-%d succeeded, "
-					 "%sMSK established", type, vendor,
+				DBG1(DBG_IKE, "EAP vendor specific method %d-%N succeeded, "
+					 "%sMSK established", type, pen_names, vendor,
 					 this->msk.ptr ? "" : "no ");
 			}
 			else
@@ -340,8 +340,8 @@ failure:
 			type = this->method->get_type(this->method, &vendor);
 			if (vendor)
 			{
-				DBG1(DBG_IKE, "EAP vendor specific method %d-%d failed for "
-					 "peer %Y", type, vendor,
+				DBG1(DBG_IKE, "EAP vendor specific method %d-%N failed for "
+					 "peer %Y", type, pen_names, vendor,
 					 this->ike_sa->get_other_id(this->ike_sa));
 			}
 			else
@@ -403,8 +403,8 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 	{
 		if (vendor)
 		{
-			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d ",
-						  "(id 0x%02X)", type, vendor, in->get_identifier(in));
+			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%N ",
+				 "(id 0x%02X)", type, pen_names, vendor, in->get_identifier(in));
 		}
 		else
 		{
@@ -419,8 +419,8 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 		{
 			if (conf_vendor)
 			{
-				DBG1(DBG_IKE, "requesting EAP method %d-%d, sending EAP_NAK",
-					 conf_type, conf_vendor);
+				DBG1(DBG_IKE, "requesting EAP method %d-%N, sending EAP_NAK",
+					 conf_type, pen_names, conf_vendor);
 			}
 			else
 			{
@@ -448,7 +448,8 @@ static eap_payload_t* client_process_eap(private_eap_authenticator_t *this,
 
 	if (vendor)
 	{
-		DBG1(DBG_IKE, "vendor specific EAP method %d-%d failed", type, vendor);
+		DBG1(DBG_IKE, "vendor specific EAP method %d-%N failed", type,
+			 pen_names, vendor);
 	}
 	else
 	{
@@ -693,8 +694,8 @@ METHOD(authenticator_t, process_client, status_t,
 				type = this->method->get_type(this->method, &vendor);
 				if (vendor)
 				{
-					DBG1(DBG_IKE, "EAP vendor specific method %d-%d succeeded, "
-						 "%sMSK established", type, vendor,
+					DBG1(DBG_IKE, "EAP vendor specific method %d-%N succeeded, "
+						 "%sMSK established", type, pen_names, vendor,
 						 this->msk.ptr ? "" : "no ");
 				}
 				else

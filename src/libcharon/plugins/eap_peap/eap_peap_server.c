@@ -317,8 +317,8 @@ METHOD(tls_application_t, process, status_t,
 		default:
 			if (vendor)
 			{
-				DBG1(DBG_IKE, "vendor specific EAP method %d-%d failed",
-							   type, vendor);
+				DBG1(DBG_IKE, "vendor specific EAP method %d-%N failed",
+							   type, pen_names, vendor);
 			}
 			else
 			{

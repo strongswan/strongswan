@@ -1344,7 +1344,8 @@ static char* get_string(private_message_t *this, char *buf, int len)
 			{
 				if (vendor)
 				{
-					snprintf(method, sizeof(method), "/%d-%d", type, vendor);
+					snprintf(method, sizeof(method), "/%d-%N", type,
+							 pen_short_names, vendor);
 				}
 				else
 				{

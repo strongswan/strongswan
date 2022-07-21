@@ -93,8 +93,8 @@ static eap_method_t *load_method(private_eap_dynamic_t *this,
 	{
 		if (vendor)
 		{
-			DBG1(DBG_IKE, "loading vendor specific EAP method %d-%d failed",
-				 type, vendor);
+			DBG1(DBG_IKE, "loading vendor specific EAP method %d-%N failed",
+				 type, pen_names, vendor);
 		}
 		else
 		{
@@ -135,9 +135,9 @@ static void select_method(private_eap_dynamic_t *this)
 			{
 				if (entry->vendor)
 				{
-					DBG2(DBG_IKE, "proposed vendor specific EAP method %d-%d "
+					DBG2(DBG_IKE, "proposed vendor specific EAP method %d-%N "
 						 "not supported by %s, skipped", entry->type,
-						  entry->vendor, who);
+						  pen_names, entry->vendor, who);
 				}
 				else
 				{
@@ -157,8 +157,8 @@ static void select_method(private_eap_dynamic_t *this)
 			}
 			if (entry->vendor)
 			{
-				DBG1(DBG_IKE, "vendor specific EAP method %d-%d selected",
-					 entry->type, entry->vendor);
+				DBG1(DBG_IKE, "vendor specific EAP method %d-%N selected",
+					 entry->type, pen_names, entry->vendor);
 			}
 			else
 			{

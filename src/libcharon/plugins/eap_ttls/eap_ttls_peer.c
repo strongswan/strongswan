@@ -185,8 +185,8 @@ METHOD(tls_application_t, process, status_t,
 	{
 		if (received_vendor)
 		{
-			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d "
-						  "(id 0x%02X)", received_type, received_vendor,
+			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%N "
+						  "(id 0x%02X)", received_type, pen_names, received_vendor,
 						   in->get_identifier(in));
 		}
 		else
@@ -224,8 +224,8 @@ METHOD(tls_application_t, process, status_t,
 		default:
 			if (vendor)
 			{
-				DBG1(DBG_IKE, "vendor specific EAP method %d-%d failed",
-							   type, vendor);
+				DBG1(DBG_IKE, "vendor specific EAP method %d-%N failed",
+							   type, pen_names, vendor);
 			}
 			else
 			{

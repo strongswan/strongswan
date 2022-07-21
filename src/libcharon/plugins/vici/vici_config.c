@@ -370,7 +370,7 @@ static void log_auth(auth_cfg_t *auth)
 				DBG2(DBG_CFG, "   eap-type = %N", eap_type_names, v.u);
 				break;
 			case AUTH_RULE_EAP_VENDOR:
-				DBG2(DBG_CFG, "   eap-vendor = %u", v.u);
+				DBG2(DBG_CFG, "   eap-vendor = %N", pen_names, v.u);
 				break;
 			case AUTH_RULE_XAUTH_BACKEND:
 				DBG2(DBG_CFG, "   xauth = %s", v.str);
