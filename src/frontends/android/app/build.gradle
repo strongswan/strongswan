@@ -3,6 +3,8 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 30
 
+    namespace 'org.strongswan.android'
+
     defaultConfig {
         applicationId "org.strongswan.android"
         minSdkVersion 15
