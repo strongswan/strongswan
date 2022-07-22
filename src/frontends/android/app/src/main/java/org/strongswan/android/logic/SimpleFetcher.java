@@ -58,6 +58,7 @@ public class SimpleFetcher
 				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 				conn.setConnectTimeout(10000);
 				conn.setReadTimeout(10000);
+				conn.setRequestProperty("Connection", "close");
 				try
 				{
 					if (contentType != null)
