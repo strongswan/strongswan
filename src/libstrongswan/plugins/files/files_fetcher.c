@@ -82,6 +82,9 @@ METHOD(fetcher_t, set_option, bool,
 			this->cb = va_arg(args, fetcher_callback_t);
 			break;
 		}
+		case FETCH_TIMEOUT:
+			/* irrelevant, but fine if requested */
+			break;
 		default:
 			supported = FALSE;
 			break;

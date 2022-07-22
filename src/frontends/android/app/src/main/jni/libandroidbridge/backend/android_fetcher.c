@@ -134,6 +134,11 @@ METHOD(fetcher_t, set_option, bool,
 			this->request_type = strdup(va_arg(args, char*));
 			break;
 		}
+		case FETCH_TIMEOUT:
+		{
+			/* we already enforce a 10s timeout */
+			break;
+		}
 		default:
 			supported = FALSE;
 			break;
