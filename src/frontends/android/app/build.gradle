@@ -12,7 +12,6 @@ android {
     }
 
     sourceSets.main {
-        jni.srcDirs = [] // disables the default ndk-build call (with on-the-fly Android.mk files)
         jniLibs.srcDir 'src/main/libs'
     }
 
