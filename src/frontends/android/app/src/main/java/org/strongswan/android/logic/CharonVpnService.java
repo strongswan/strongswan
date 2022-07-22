@@ -461,8 +461,13 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 				intent.setAction(VpnProfileControlActivity.START_PROFILE);
 				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_ID, profile.getUUID().toString());
+				int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+				{
+					flags |= PendingIntent.FLAG_IMMUTABLE;
+				}
 				PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
-																  PendingIntent.FLAG_UPDATE_CURRENT);
+																  flags);
 				builder.addAction(R.drawable.ic_notification_connecting, getString(R.string.retry), pending);
 				add_action = true;
 			}
@@ -491,6 +496,12 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			}
 		}
 		builder.setContentTitle(getString(s));
+
+		int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+		{
+			flags |= PendingIntent.FLAG_IMMUTABLE;
+		}
 		if (!publicVersion)
 		{
 			if (add_action)
@@ -498,7 +509,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				Intent intent = new Intent(getApplicationContext(), VpnProfileControlActivity.class);
 				intent.setAction(VpnProfileControlActivity.DISCONNECT);
 				PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
-																  PendingIntent.FLAG_UPDATE_CURRENT);
+																  flags);
 				builder.addAction(R.drawable.ic_notification_disconnect, getString(R.string.disconnect), pending);
 			}
 			if (error == ErrorState.NO_ERROR)
@@ -510,7 +521,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 
 		Intent intent = new Intent(getApplicationContext(), MainActivity.class);
 		PendingIntent pending = PendingIntent.getActivity(getApplicationContext(), 0, intent,
-														  PendingIntent.FLAG_UPDATE_CURRENT);
+														  flags);
 		builder.setContentIntent(pending);
 		return builder.build();
 	}
@@ -820,8 +831,12 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			 * we just use our main Activity */
 			Context context = getApplicationContext();
 			Intent intent = new Intent(context, MainActivity.class);
-			PendingIntent pending = PendingIntent.getActivity(context, 0, intent,
-															  PendingIntent.FLAG_UPDATE_CURRENT);
+			int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+			{
+				flags |= PendingIntent.FLAG_IMMUTABLE;
+			}
+			PendingIntent pending = PendingIntent.getActivity(context, 0, intent, flags);
 			builder.setConfigureIntent(pending);
 
 			/* mark all VPN connections as unmetered (default changed for Android 10) */
