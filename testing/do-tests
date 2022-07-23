@@ -459,8 +459,8 @@ do
 		{
 			next
 		}
-		printf("cmd_err=\044(tempfile -p test -s err); ")
-		printf("cmd_out=\044(tempfile -p test -s out); ")
+		printf("cmd_err=\044(mktemp --suff .err test.XXXXXX); ")
+		printf("cmd_out=\044(mktemp --suff .out test.XXXXXX); ")
 		printf("start_time=\044(print_time); ")
 		if (command == "tcpdump")
 		{
