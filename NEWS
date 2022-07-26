@@ -1,3 +1,36 @@
+strongswan-5.9.7
+----------------
+
+- The IKEv2 key derivation is now delayed until the keys are actually needed for
+  the next message. Instead of deriving the keys while processing an IKE_SA_INIT
+  request, it's delayed until the corresponding IKE_AUTH request is received.
+  DH implementations now must do costly public key validation and the key
+  derivation in get_shared_secret().
+
+- Inbound IKEv2 messages are not parsed immediately anymore, instead we first
+  check a request's MID and compare its hash to that of the previous request to
+  decide if it's a valid retransmit (for fragmented message we only keep track
+  of the first fragment, so we don't have to wait for all fragments and
+  reconstruct the message, which we did before).
+
+- The retransmission logic in the dhcp plugin has been fixed so that four
+  retransmits are sent per DHCP request over a total of 15 seconds (previously,
+  it could happen that all were sent within the same second without any time
+  to actually wait for a response).
+
+- The connmark plugin now considers configured masks in installed firewall
+  rules, which allows using the upper parts of the mark value for other
+  purposes.  Just consider that the daemon might have to be restarted regularly
+  to reset the global unique mark counter as that's unaware of any masks.
+
+- Child config selection has been improved as responder in cases where multiple
+  children use transport mode traffic selectors.
+
+- The outbound SA/policy is now also removed after IKEv1 CHILD_SA rekeyings.
+
+- The openssl plugin supports AES and Camellia in CTR mode.
+
+
 strongswan-5.9.6
 ----------------
 
