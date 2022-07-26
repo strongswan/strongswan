@@ -37,7 +37,7 @@ struct private_diffie_hellman_t {
 	key_exchange_t public;
 
 	/**
-	 * Instantiated key exchagne method
+	 * Instantiated key exchange method
 	 */
 	key_exchange_method_t method;
 };
