@@ -233,7 +233,7 @@ struct ike_cfg_t {
 	 * Get the first algorithm of a certain transform type that's contained in
 	 * any of the configured proposals.
 	 *
-	 * For instance, use with KEY_EXCHANGE_METHOD to get the KE metho to use
+	 * For instance, use with KEY_EXCHANGE_METHOD to get the KE method to use
 	 * for the IKE_SA initiation.
 	 *
 	 * @param type			transform type to look for
