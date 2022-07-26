@@ -405,6 +405,9 @@ charon.routing_table
 charon.routing_table_prio
 	Priority of the routing table.
 
+charon.reqid_base = 1
+	Value of the first reqid to be automatically assigned to a CHILD_SA.
+
 charon.rsa_pss = no
 	Whether to use RSA with PSS padding instead of PKCS#1 padding by default.
 

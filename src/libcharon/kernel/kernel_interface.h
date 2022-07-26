@@ -147,7 +147,8 @@ struct kernel_interface_t {
 	 * @param if_id_out	outbound interface ID on SA
 	 * @param label		security label (usually the one on the policy, not SA)
 	 * @param reqid		allocated reqid
-	 * @return			SUCCESS if reqid allocated
+	 * @return			SUCCESS if reqid allocated, OUT_OF_RES if no reqid is
+	 *					available due to an overflow
 	 */
 	status_t (*alloc_reqid)(kernel_interface_t *this,
 							linked_list_t *local_ts, linked_list_t *remote_ts,
