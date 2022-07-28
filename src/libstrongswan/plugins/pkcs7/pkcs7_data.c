@@ -60,6 +60,13 @@ METHOD(container_t, get_data, bool,
 	chunk_t chunk;
 
 	chunk = this->content;
+
+	/* The content field is optional */
+	if (chunk.len == 0)
+	{
+		*data = chunk_empty;
+		return TRUE;
+	}
 	if (asn1_unwrap(&chunk, &chunk) == ASN1_OCTET_STRING)
 	{
 		*data = chunk_clone(chunk);
