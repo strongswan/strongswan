@@ -9,6 +9,7 @@ man1_MANS = \
 	pki---print.1 \
 	pki---pub.1 \
 	pki---req.1 \
+	pki---scepca.1 \
 	pki---self.1 \
 	pki---signcrl.1 \
 	pki---verify.1

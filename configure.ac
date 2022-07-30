@@ -2175,6 +2175,7 @@ AC_CONFIG_FILES([
 	src/pki/man/pki---print.1
 	src/pki/man/pki---pub.1
 	src/pki/man/pki---req.1
+	src/pki/man/pki---scepca.1
 	src/pki/man/pki---self.1
 	src/pki/man/pki---signcrl.1
 	src/pki/man/pki---verify.1
