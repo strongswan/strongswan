@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
  *
  * Copyright (C) secunet Security Networks AG
@@ -25,36 +25,37 @@
 /* supported SCEP operation types */
 typedef enum {
 	SCEP_PKI_OPERATION,
-	SCEP_GET_CA_CERT
+	SCEP_GET_CA_CERT,
+	SCEP_GET_CA_CAPS
 } scep_op_t;
 
 /* SCEP pkiStatus values */
 typedef enum {
-   SCEP_SUCCESS,
-   SCEP_FAILURE,
-   SCEP_PENDING,
-   SCEP_UNKNOWN
+	SCEP_SUCCESS,
+	SCEP_FAILURE,
+	SCEP_PENDING,
+	SCEP_UNKNOWN
 } pkiStatus_t;
 
 /* SCEP messageType values */
 typedef enum {
-   SCEP_CertRep_MSG,
-   SCEP_RenewalReq_MSG,
-   SCEP_PKCSReq_MSG,
-   SCEP_CertPoll_MSG,
-   SCEP_GetCert_MSG,
-   SCEP_GetCRL_MSG,
-   SCEP_Unknown_MSG
+	SCEP_CertRep_MSG,
+	SCEP_RenewalReq_MSG,
+	SCEP_PKCSReq_MSG,
+	SCEP_CertPoll_MSG,
+	SCEP_GetCert_MSG,
+	SCEP_GetCRL_MSG,
+	SCEP_Unknown_MSG
 } scep_msg_t;
 
 /* SCEP failure reasons */
 typedef enum {
-   SCEP_badAlg_REASON =          0,
-   SCEP_badMessageCheck_REASON = 1,
-   SCEP_badRequest_REASON =      2,
-   SCEP_badTime_REASON =         3,
-   SCEP_badCertId_REASON =       4,
-   SCEP_unknown_REASON =         5
+	SCEP_badAlg_REASON =          0,
+	SCEP_badMessageCheck_REASON = 1,
+	SCEP_badRequest_REASON =      2,
+	SCEP_badTime_REASON =         3,
+	SCEP_badCertId_REASON =       4,
+	SCEP_unknown_REASON =         5
 } failInfo_t;
 
 /* SCEP attributes */
@@ -69,20 +70,32 @@ typedef struct {
 
 /* SCEP http parameters */
 typedef struct {
-   bool  get_request;
-   u_int timeout;
-   char  *bind;
+	bool  get_request;
+	u_int timeout;
+	char  *bind;
 } scep_http_params_t;
+
+/* SCEP CA Capabilities */
+typedef enum {
+	SCEP_CAPS_AES =              0,
+	SCEP_CAPS_DES3 =             1,
+	SCEP_CAPS_SHA256 =           2,
+	SCEP_CAPS_SHA384 =           3,
+	SCEP_CAPS_SHA512 =           4,
+	SCEP_CAPS_SHA224 =           5,
+	SCEP_CAPS_SHA1 =             6,
+	SCEP_CAPS_POSTPKIOPERATION = 7,
+	SCEP_CAPS_SCEPSTANDARD =     8,
+	SCEP_CAPS_GETNEXTCACERT =    9,
+	SCEP_CAPS_RENEWAL =         10
+} scep_caps_t;
 
 extern const scep_attributes_t empty_scep_attributes;
 
 bool parse_attributes(chunk_t blob, scep_attributes_t *attrs);
 
-void scep_generate_transaction_id(public_key_t *key,
-								  chunk_t *transID,
-								  chunk_t *serialNumber);
-
-chunk_t scep_generate_pkcs10_fingerprint(chunk_t pkcs10);
+bool scep_generate_transaction_id(public_key_t *key,
+								  chunk_t *transId, chunk_t *serialNumber);
 
 chunk_t scep_transId_attribute(chunk_t transaction_id);
 
@@ -98,7 +111,9 @@ chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 					   scep_http_params_t *http_params, chunk_t *response);
 
-err_t scep_parse_response(chunk_t response, chunk_t transID,
-						  container_t **out, scep_attributes_t *attrs);
+bool scep_parse_response(chunk_t response, chunk_t transID, container_t **out,
+						 scep_attributes_t *attrs);
+
+uint32_t scep_parse_caps(chunk_t response);
 
 #endif /* _SCEP_H */

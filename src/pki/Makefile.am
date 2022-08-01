@@ -13,6 +13,7 @@ pki_SOURCES = pki.c pki.h command.c command.h \
 	commands/print.c \
 	commands/pub.c \
 	commands/req.c \
+	commands/scep.c \
 	commands/scepca.c \
 	commands/self.c \
 	commands/signcrl.c \

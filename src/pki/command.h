@@ -25,7 +25,7 @@
 /**
  * Maximum number of commands (+1).
  */
-#define MAX_COMMANDS 15
+#define MAX_COMMANDS 16
 
 /**
  * Maximum number of options in a command (+3)

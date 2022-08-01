@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2005 Jan Hutter, Martin Willi
+ * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
  *
  * Copyright (C) secunet Security Networks AG
@@ -21,6 +21,7 @@
 
 #include <library.h>
 #include <utils/debug.h>
+#include <utils/lexparser.h>
 #include <asn1/asn1.h>
 #include <asn1/asn1_parser.h>
 #include <asn1/oid.h>
@@ -28,6 +29,12 @@
 #include <crypto/hashers/hasher.h>
 
 #include "scep.h"
+
+static const char *operations[] = {
+	"PKIOperation",
+	"GetCACert",
+	"GetCACaps"
+};
 
 static const char *pkiStatus_values[] = { "0", "2", "3" };
 
@@ -56,6 +63,20 @@ static const char *failInfo_reasons[] = {
 	"badRequest - transaction not permitted or supported",
 	"badTime - Message time field was not sufficiently close to the system time",
 	"badCertId - No certificate could be identified matching the provided criteria"
+};
+
+static const char *caps_names[] = {
+	"AES",
+	"DES3",
+	"SHA-256",
+	"SHA-384",
+	"SHA-512",
+	"SHA-224",
+	"SHA-1",
+	"POSTPKIOperation",
+	"SCEPStandard",
+	"GetNextCACert",
+	"Renewal"
 };
 
 const scep_attributes_t empty_scep_attributes = {
@@ -125,75 +146,46 @@ void extract_attributes(pkcs7_t *pkcs7, enumerator_t *enumerator,
 }
 
 /**
- * Generates a unique fingerprint of the pkcs10 request
- * by computing an MD5 hash over it
+ * Generate a transaction ID as the SHA-1 hash of the publicKeyInfo
+ * the transaction ID is also used as a unique serial number
  */
-chunk_t scep_generate_pkcs10_fingerprint(chunk_t pkcs10)
+bool scep_generate_transaction_id(public_key_t *public,
+								  chunk_t *transId, chunk_t *serialNumber)
 {
-	chunk_t digest = chunk_alloca(HASH_SIZE_MD5);
-	hasher_t *hasher;
-
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-	if (!hasher || !hasher->get_hash(hasher, pkcs10, digest.ptr))
-	{
-		DESTROY_IF(hasher);
-		return chunk_empty;
-	}
-	hasher->destroy(hasher);
-
-	return chunk_to_hex(digest, NULL, FALSE);
-}
-
-/**
- * Generate a transaction id as the MD5 hash of an public key
- * the transaction id is also used as a unique serial number
- */
-void scep_generate_transaction_id(public_key_t *key, chunk_t *transID,
-								  chunk_t *serialNumber)
-{
-	chunk_t digest = chunk_alloca(HASH_SIZE_MD5);
-	chunk_t keyEncoding = chunk_empty, keyInfo;
-	hasher_t *hasher;
+	chunk_t digest;
 	int zeros = 0, msb_set = 0;
 
-	key->get_encoding(key, PUBKEY_ASN1_DER, &keyEncoding);
-
-	keyInfo = asn1_wrap(ASN1_SEQUENCE, "mm",
-						asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
-						asn1_bitstring("m", keyEncoding));
-
-	hasher = lib->crypto->create_hasher(lib->crypto, HASH_MD5);
-	if (!hasher || !hasher->get_hash(hasher, keyInfo, digest.ptr))
+	if (public->get_fingerprint(public, KEYID_PUBKEY_INFO_SHA1, &digest))
 	{
-		memset(digest.ptr, 0, digest.len);
-	}
-	DESTROY_IF(hasher);
-	free(keyInfo.ptr);
+		/* the transaction ID is the fingerprint in hex format */
+		*transId = chunk_to_hex(digest, NULL, TRUE);
 
-	/* the serialNumber should be valid ASN1 integer content:
-	 * remove leading zeros, add one if MSB is set (two's complement) */
-	while (zeros < digest.len)
-	{
-		if (digest.ptr[zeros])
+		/**
+		 * the serial number must be a valid positive ASN.1 integer
+	     * remove leading zeros, add one if MSB is set (two's complement)
+	     */
+		while (zeros < digest.len)
 		{
-			if (digest.ptr[zeros] & 0x80)
+			if (digest.ptr[zeros])
 			{
-				msb_set = 1;
+				if (digest.ptr[zeros] & 0x80)
+				{
+					msb_set = 1;
+				}
+				break;
 			}
-			break;
+			zeros++;
 		}
-		zeros++;
+		*serialNumber = chunk_alloc(digest.len - zeros + msb_set);
+		if (msb_set)
+		{
+			serialNumber->ptr[0] = 0x00;
+		}
+		memcpy(serialNumber->ptr + msb_set, digest.ptr + zeros,
+			   digest.len - zeros);
+		return TRUE;
 	}
-	*serialNumber = chunk_alloc(digest.len - zeros + msb_set);
-	if (msb_set)
-	{
-		serialNumber->ptr[0] = 0x00;
-	}
-	memcpy(serialNumber->ptr + msb_set, digest.ptr + zeros,
-		   digest.len - zeros);
-
-	/* the transaction id is the serial number in hex format */
-	*transID = chunk_to_hex(digest, NULL, TRUE);
+	return FALSE;
 }
 
 /**
@@ -347,6 +339,7 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 	int len;
 	status_t status;
 	char *complete_url = NULL;
+	const char *operation;
 	host_t *srcip = NULL;
 
 	/* initialize response */
@@ -356,69 +349,70 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 	{
 		srcip = host_create_from_string(http_params->bind, 0);
 	}
-
 	DBG2(DBG_APP, "sending scep request to '%s'", url);
 
-	if (op == SCEP_PKI_OPERATION)
+	operation = operations[op];
+	switch (op)
 	{
-		const char operation[] = "PKIOperation";
+		case SCEP_PKI_OPERATION:
+		default:
+			if (http_params->get_request)
+			{
+				char *escaped_req = escape_http_request(msg);
 
-		if (http_params->get_request)
-		{
-			char *escaped_req = escape_http_request(msg);
+				/* form complete url */
+				len = strlen(url) + 20 + strlen(operation) +
+					  strlen(escaped_req) + 1;
+				complete_url = malloc(len);
+				snprintf(complete_url, len, "%s?operation=%s&message=%s"
+						, url, operation, escaped_req);
+				free(escaped_req);
 
-			/* form complete url */
-			len = strlen(url) + 20 + strlen(operation) + strlen(escaped_req) + 1;
-			complete_url = malloc(len);
-			snprintf(complete_url, len, "%s?operation=%s&message=%s"
-					, url, operation, escaped_req);
-			free(escaped_req);
-
-			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
+				status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 										 FETCH_TIMEOUT, http_params->timeout,
 										 FETCH_REQUEST_HEADER, "Pragma:",
 										 FETCH_REQUEST_HEADER, "Host:",
 										 FETCH_REQUEST_HEADER, "Accept:",
 										 FETCH_SOURCEIP, srcip,
 										 FETCH_END);
-		}
-		else /* HTTP_POST */
-		{
-			/* form complete url */
-			len = strlen(url) + 11 + strlen(operation) + 1;
-			complete_url = malloc(len);
-			snprintf(complete_url, len, "%s?operation=%s", url, operation);
+			}
+			else /* HTTP_POST */
+			{
+				/* form complete url */
+				len = strlen(url) + 11 + strlen(operation) + 1;
+				complete_url = malloc(len);
+				snprintf(complete_url, len, "%s?operation=%s", url, operation);
 
-			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
+				status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 										 FETCH_TIMEOUT, http_params->timeout,
 										 FETCH_REQUEST_DATA, msg,
 										 FETCH_REQUEST_TYPE, "",
 										 FETCH_REQUEST_HEADER, "Expect:",
 										 FETCH_SOURCEIP, srcip,
 										 FETCH_END);
-		}
-	}
-	else  /* SCEP_GET_CA_CERT */
-	{
-		const char operation[] = "GetCACert";
+			}
+			break;
+		case SCEP_GET_CA_CERT:
+		case SCEP_GET_CA_CAPS:
+		{
+			/* form complete url */
+			len = strlen(url) + 11 + strlen(operation)  + 1;
+			complete_url = malloc(len);
+			snprintf(complete_url, len, "%s?operation=%s", url, operation);
 
-		/* form complete url */
-		len = strlen(url) + 11 + strlen(operation)  + 1;
-		complete_url = malloc(len);
-		snprintf(complete_url, len, "%s?operation=%s", url, operation);
-
-		status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
+			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 									 FETCH_TIMEOUT, http_params->timeout,
 									 FETCH_SOURCEIP, srcip,
 									 FETCH_END);
+		}
 	}
-
 	DESTROY_IF(srcip);
 	free(complete_url);
+
 	return (status == SUCCESS);
 }
 
-err_t scep_parse_response(chunk_t response, chunk_t transID,
+bool scep_parse_response(chunk_t response, chunk_t transID,
 						  container_t **out, scep_attributes_t *attrs)
 {
 	enumerator_t *enumerator;
@@ -426,16 +420,19 @@ err_t scep_parse_response(chunk_t response, chunk_t transID,
 	container_t *container;
 	auth_cfg_t *auth;
 
+	*out = NULL;
+
 	container = lib->creds->create(lib->creds, CRED_CONTAINER, CONTAINER_PKCS7,
 								   BUILD_BLOB_ASN1_DER, response, BUILD_END);
 	if (!container)
 	{
-		return "error parsing the scep response";
+		DBG1(DBG_APP, "error parsing the scep response");
+		return FALSE;
 	}
 	if (container->get_type(container) != CONTAINER_PKCS7_SIGNED_DATA)
 	{
-		container->destroy(container);
-		return "scep response is not PKCS#7 signed-data";
+		DBG1(DBG_APP, "scep response is not PKCS#7 signed-data");
+		goto error;
 	}
 
 	enumerator = container->create_signature_enumerator(container);
@@ -446,16 +443,45 @@ err_t scep_parse_response(chunk_t response, chunk_t transID,
 		if (!chunk_equals(transID, attrs->transID))
 		{
 			enumerator->destroy(enumerator);
-			container->destroy(container);
-			return "transaction ID of scep response does not match";
+			DBG1(DBG_APP, "transaction ID of scep response does not match");
+			goto error;
 		}
 	}
 	enumerator->destroy(enumerator);
+
 	if (!verified)
 	{
-		container->destroy(container);
-		return "unable to verify PKCS#7 container";
+		DBG1(DBG_APP, "unable to verify PKCS#7 container");
+		goto error;
 	}
 	*out = container;
-	return NULL;
+
+	return TRUE;
+
+error:
+	container->destroy(container);
+	return FALSE;
+}
+
+uint32_t scep_parse_caps(chunk_t response)
+{
+	uint32_t caps_flags = 0;
+	chunk_t line;
+
+	DBG2(DBG_APP, "CA Capabilities:");
+
+	while (fetchline(&response, &line))
+	{
+		int i;
+
+		for (i = 0; i < countof(caps_names); i++)
+		{
+			if (strncaseeq(caps_names[i], line.ptr, line.len))
+			{
+				DBG2(DBG_APP, "  %s", caps_names[i]);
+				caps_flags |= (1 << i);
+			}
+		}
+	}
+	return caps_flags;
 }
