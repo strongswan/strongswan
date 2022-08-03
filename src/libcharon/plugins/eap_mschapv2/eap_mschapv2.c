@@ -171,6 +171,7 @@ ENUM_END(mschapv2_error_names, ERROR_CHANGING_PASSWORD);
 #define MAX_RETRIES 2
 
 typedef struct eap_mschapv2_header_t eap_mschapv2_header_t;
+typedef struct eap_mschapv2_short_header_t eap_mschapv2_short_header_t;
 typedef struct eap_mschapv2_challenge_t eap_mschapv2_challenge_t;
 typedef struct eap_mschapv2_response_t eap_mschapv2_response_t;
 
@@ -196,6 +197,21 @@ struct eap_mschapv2_header_t
 	/** packet data (determined by OpCode) */
 	uint8_t data[];
 }__attribute__((__packed__));
+
+struct eap_mschapv2_short_header_t
+{
+	/** EAP code (REQUEST/RESPONSE) */
+	uint8_t code;
+	/** unique message identifier */
+	uint8_t identifier;
+	/** length of whole message */
+	uint16_t length;
+	/** EAP type */
+	uint8_t type;
+	/** MS-CHAPv2 OpCode */
+	uint8_t opcode;	
+}__attribute__((__packed__));
+
 
 /**
  * packed data for a MS-CHAPv2 Challenge packet
@@ -880,6 +896,7 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 	status_t status = FAILED;
 	enumerator_t *enumerator;
 	eap_mschapv2_header_t *eap;
+	eap_mschapv2_short_header_t *eap_short_header;
 	chunk_t data, auth_string = chunk_empty;
 	char *message, *token, *msg = NULL;
 	int message_len;
@@ -941,14 +958,14 @@ static status_t process_peer_success(private_eap_mschapv2_t *this,
 
 	DBG1(DBG_IKE, "EAP-MS-CHAPv2 succeeded: '%s'", sanitize(msg));
 
-	eap = alloca(len);
-	eap->code = EAP_RESPONSE;
-	eap->identifier = this->identifier;
-	eap->length = htons(len);
-	eap->type = EAP_MSCHAPV2;
-	eap->opcode = MSCHAPV2_SUCCESS;
+	eap_short_header = alloca(sizeof(eap_mschapv2_short_header_t));
+	eap_short_header->code = EAP_RESPONSE;
+	eap_short_header->identifier = this->identifier;
+	eap_short_header->length = htons(len);
+	eap_short_header->type = EAP_MSCHAPV2;
+	eap_short_header->opcode = MSCHAPV2_SUCCESS;
 
-	*out = eap_payload_create_data(chunk_create((void*) eap, len));
+	*out = eap_payload_create_data(chunk_create((void*) eap_short_header, sizeof(eap_mschapv2_short_header_t)));
 	status = NEED_MORE;
 	this->state = S_DONE;
 
