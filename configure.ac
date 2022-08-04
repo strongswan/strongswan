@@ -1041,10 +1041,10 @@ if test x$systemd = xtrue; then
 	PKG_CHECK_MODULES(systemd, [libsystemd >= 209],
 		[AC_SUBST(systemd_CFLAGS)
 		 AC_SUBST(systemd_LIBS)],
-		[PKG_CHECK_MODULES(systemd_daemon, [libsystemd-daemon])
+		[PKG_CHECK_MODULES(systemd_daemon, [libsystemd])
 		 AC_SUBST(systemd_daemon_CFLAGS)
 		 AC_SUBST(systemd_daemon_LIBS)
-		 PKG_CHECK_MODULES(systemd_journal, [libsystemd-journal])
+		 PKG_CHECK_MODULES(systemd_journal, [libsystemd])
 		 AC_SUBST(systemd_journal_CFLAGS)
 		 AC_SUBST(systemd_journal_LIBS)]
 	)
