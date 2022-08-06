@@ -56,6 +56,12 @@ intermediate or sub CA certificates.
 If a file suffix is missing, then depending on the value of
 .B \-\-outform
 either .\fIder\fR (the default) or .\fIpem\fR is automatically appended.
+If the
+.B \-\-caout
+option is missing and
+.B \-\-outform
+is set to \fIpem\fR then a PEM-encoded CA certificate bundle is written to
+\fIstdout\fR.
 .TP
 .BI "\-r, \-\-raout " file
 If present, path where the fetched RA certificate file is stored to.
@@ -141,6 +147,12 @@ Sub CA cert is trusted, valid until Aug 12 15:51:34 2027, 'mycacert-1.crt'
 RA cert "C=CH, O=strongSwan Project, CN=SCEP RA"
   ...
 RA cert is trusted, valid until Aug 10 15:51:34 2023, 'myca-ra.crt'
+.EE
+.PP
+A CA certificate bundle in PEM format is written to \fIstdout\fR:
+.PP
+.EX
+pki \-\-scepca \-\-url http://pki.strongswan.org:8080/scep --raout myra.crt \-\-outform pem > cacerts.pem
 .EE
 .PP
 .
