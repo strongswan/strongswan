@@ -216,7 +216,7 @@ METHOD(public_key_t, verify, bool,
 	}
 }
 
-METHOD(public_key_t, encrypt, bool,
+METHOD(public_key_t, encrypt_, bool,
 	private_wolfssl_rsa_public_key_t *this, encryption_scheme_t scheme,
 	void *params, chunk_t plain, chunk_t *crypto)
 {
@@ -440,7 +440,7 @@ static private_wolfssl_rsa_public_key_t *create_empty()
 			.key = {
 				.get_type = _get_type,
 				.verify = _verify,
-				.encrypt = _encrypt,
+				.encrypt = _encrypt_,
 				.equals = public_key_equals,
 				.get_keysize = _get_keysize,
 				.get_fingerprint = _get_fingerprint,
