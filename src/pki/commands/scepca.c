@@ -248,10 +248,6 @@ static int scepca()
 
 	int cert_type_count[] = { 0, 0, 0 };
 
-	scep_http_params_t http_params = {
-		.get_request = TRUE, .timeout = 30, .bind = NULL
-	};
-
 	while (TRUE)
 	{
 		switch (command_getopt(&arg))
@@ -289,7 +285,7 @@ static int scepca()
 		return command_usage("--url is required");
 	}
 
-	if (!scep_http_request(url, chunk_empty, SCEP_GET_CA_CERT, &http_params,
+	if (!scep_http_request(url, chunk_empty, SCEP_GET_CA_CERT, FALSE,
 						   &scep_response))
 	{
 		DBG1(DBG_APP, "did not receive a valid scep response");

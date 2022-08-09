@@ -76,11 +76,7 @@ static int scep()
 	linked_list_t *san;
 	enumerator_t *enumerator;
 	int status = 1;
-	bool ok, stored = FALSE;
-
-	scep_http_params_t http_params = {
-		.get_request = FALSE, .timeout = 30, .bind = NULL
-	};
+	bool ok, http_post = FALSE, stored = FALSE;
 
 	bool pss = lib->settings->get_bool(lib->settings,
 								"%s.rsa_pss", FALSE, lib->ns);
@@ -273,7 +269,7 @@ static int scep()
 	public = private->get_public_key(private);
 
 	/* Request capabilities from SCEP server */
-	if (!scep_http_request(url, chunk_empty, SCEP_GET_CA_CAPS, &http_params,
+	if (!scep_http_request(url, chunk_empty, SCEP_GET_CA_CAPS, FALSE,
 						   &scep_response))
 	{
 		DBG1(DBG_APP, "did not receive a valid scep response");
@@ -338,10 +334,9 @@ static int scep()
 	if ((caps_flags & SCEP_CAPS_POSTPKIOPERATION) ||
 	    (caps_flags & SCEP_CAPS_SCEPSTANDARD))
 	{
-		http_params.get_request = FALSE;
+		http_post = TRUE;
 	}
-	DBG2(DBG_APP, "HTTP POST %ssupported",
-				   http_params.get_request ? "not " : "");
+	DBG2(DBG_APP, "HTTP POST %ssupported", http_post ? "" : "not ");
 
 	scheme = get_signature_scheme(private, digest_alg, pss);
 	if (!scheme)
@@ -467,7 +462,7 @@ static int scep()
 		goto end;
 	}
 
-	if (!scep_http_request(url, pkcs7_req, SCEP_PKI_OPERATION, &http_params,
+	if (!scep_http_request(url, pkcs7_req, SCEP_PKI_OPERATION, http_post,
 						   &scep_response))
 	{
 		DBG1(DBG_APP, "did not receive a valid SCEP response");
@@ -526,8 +521,8 @@ static int scep()
 			DBG1(DBG_APP, "failed to build SCEP certPoll request");
 			goto end;
 		}
-		if (!scep_http_request(url, certPoll, SCEP_PKI_OPERATION,
-							   &http_params, &scep_response))
+		if (!scep_http_request(url, certPoll, SCEP_PKI_OPERATION, http_post,
+							   &scep_response))
 		{
 			DBG1(DBG_APP, "did not receive a valid SCEP response");
 			goto end;

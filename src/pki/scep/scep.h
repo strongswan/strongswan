@@ -68,13 +68,6 @@ typedef struct {
 	chunk_t     recipientNonce;
 } scep_attributes_t;
 
-/* SCEP http parameters */
-typedef struct {
-	bool  get_request;
-	u_int timeout;
-	char  *bind;
-} scep_http_params_t;
-
 /* SCEP CA Capabilities */
 typedef enum {
 	SCEP_CAPS_AES =              0,
@@ -108,8 +101,8 @@ chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 						size_t key_size, certificate_t *signer_cert,
 						hash_algorithm_t digest_alg, private_key_t *private_key);
 
-bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
-					   scep_http_params_t *http_params, chunk_t *response);
+bool scep_http_request(const char *url, chunk_t msg, scep_op_t op, bool use_post,
+					   chunk_t *response);
 
 bool scep_parse_response(chunk_t response, chunk_t transID, container_t **out,
 						 scep_attributes_t *attrs);

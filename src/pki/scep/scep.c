@@ -334,7 +334,7 @@ static char* escape_http_request(chunk_t req)
  * Send a SCEP request via HTTP and wait for a response
  */
 bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
-					   scep_http_params_t *http_params, chunk_t *response)
+					   bool http_post, chunk_t *response)
 {
 	int len;
 	status_t status;
@@ -342,21 +342,42 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 	const char *operation;
 	host_t *srcip = NULL;
 
-	/* initialize response */
-	*response = chunk_empty;
+	uint32_t http_timeout = lib->settings->get_time(lib->settings,
+										"%s.scep.http_timeout", 30, lib->ns);
 
-	if (http_params->bind)
+	char *http_bind = lib->settings->get_str(lib->settings,
+										"%s.scep.http_bind", NULL, lib->ns);
+
+	if (http_bind)
 	{
-		srcip = host_create_from_string(http_params->bind, 0);
+		srcip = host_create_from_string(http_bind, 0);
 	}
 	DBG2(DBG_APP, "sending scep request to '%s'", url);
+
+	/* initialize response */
+	*response = chunk_empty;
 
 	operation = operations[op];
 	switch (op)
 	{
 		case SCEP_PKI_OPERATION:
 		default:
-			if (http_params->get_request)
+			if (http_post)
+			{
+				/* form complete url */
+				len = strlen(url) + 11 + strlen(operation) + 1;
+				complete_url = malloc(len);
+				snprintf(complete_url, len, "%s?operation=%s", url, operation);
+
+				status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
+										 FETCH_TIMEOUT, http_timeout,
+										 FETCH_REQUEST_DATA, msg,
+										 FETCH_REQUEST_TYPE, "",
+										 FETCH_REQUEST_HEADER, "Expect:",
+										 FETCH_SOURCEIP, srcip,
+										 FETCH_END);
+			}
+			else /* HTTP_GET */
 			{
 				char *escaped_req = escape_http_request(msg);
 
@@ -369,25 +390,10 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 				free(escaped_req);
 
 				status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
-										 FETCH_TIMEOUT, http_params->timeout,
+										 FETCH_TIMEOUT, http_timeout,
 										 FETCH_REQUEST_HEADER, "Pragma:",
 										 FETCH_REQUEST_HEADER, "Host:",
 										 FETCH_REQUEST_HEADER, "Accept:",
-										 FETCH_SOURCEIP, srcip,
-										 FETCH_END);
-			}
-			else /* HTTP_POST */
-			{
-				/* form complete url */
-				len = strlen(url) + 11 + strlen(operation) + 1;
-				complete_url = malloc(len);
-				snprintf(complete_url, len, "%s?operation=%s", url, operation);
-
-				status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
-										 FETCH_TIMEOUT, http_params->timeout,
-										 FETCH_REQUEST_DATA, msg,
-										 FETCH_REQUEST_TYPE, "",
-										 FETCH_REQUEST_HEADER, "Expect:",
 										 FETCH_SOURCEIP, srcip,
 										 FETCH_END);
 			}
@@ -401,7 +407,7 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 			snprintf(complete_url, len, "%s?operation=%s", url, operation);
 
 			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
-									 FETCH_TIMEOUT, http_params->timeout,
+									 FETCH_TIMEOUT, http_timeout,
 									 FETCH_SOURCEIP, srcip,
 									 FETCH_END);
 		}
