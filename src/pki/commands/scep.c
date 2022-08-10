@@ -46,6 +46,7 @@ static int scep()
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	chunk_t scep_response = chunk_empty;
 	chunk_t challenge_password = chunk_empty;
+	chunk_t cert_type = chunk_empty;
 	chunk_t serialNumber = chunk_empty;
 	chunk_t transID = chunk_empty;
 	chunk_t pkcs10_encoding = chunk_empty;
@@ -113,6 +114,9 @@ static int scep()
 				continue;
 			case 'a':
 				san->insert_last(san, identification_create_from_string(arg));
+				continue;
+			case 'P':
+				cert_type = chunk_create(arg, strlen(arg));
 				continue;
 			case 'p':
 				challenge_password = chunk_create(arg, strlen(arg));
@@ -351,6 +355,7 @@ static int scep()
 							BUILD_SUBJECT, subject,
 							BUILD_SUBJECT_ALTNAMES, san,
 							BUILD_CHALLENGE_PWD, challenge_password,
+							BUILD_CERT_TYPE_EXT, cert_type,
 							BUILD_SIGNATURE_SCHEME, scheme,
 							BUILD_END);
 	if (!pkcs10)
@@ -682,8 +687,9 @@ static void __attribute__ ((constructor))reg()
 		scep, 'S', "scep",
 		"Enroll an X.509 certificate with a SCEP server",
 		{"--url url [--in file] --dn distinguished-name [--san subjectAltName]+",
-		 "[--password password] --cacert-enc file --cacert-sig file [--cacert file]+",
-		 "[--oldcert file --oldkey file] [--cipher aes|des3]",
+		 "[--profile profile] [--password password]",
+		 " --cacert-enc file --cacert-sig file [--cacert file]+",
+		 " --oldcert file --oldkey file] [--cipher aes|des3]",
 		 "[--digest sha256|sha384|sha512|sha224|sha1] [--rsa-padding pkcs1|pss]",
 		 "[--interval time] [--maxpolltime time] [--outform der|pem]"},
 		{
@@ -692,6 +698,7 @@ static void __attribute__ ((constructor))reg()
 			{"in",          'i', 1, "RSA private key input file, default: stdin"},
 			{"dn",          'd', 1, "subject distinguished name"},
 			{"san",         'a', 1, "subjectAltName to include in cert request"},
+			{"profile",     'P', 1, "certificate profile name to include in cert request"},
 			{"password",    'p', 1, "challengePassword to include in cert request"},
 			{"cacert-enc",  'e', 1, "CA certificate for encryption"},
 			{"cacert-sig",  's', 1, "CA certificate for signature verification"},

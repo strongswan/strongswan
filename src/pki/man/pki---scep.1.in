@@ -11,6 +11,7 @@ pki \-\-scep \- Enroll an X.509 certificate with a SCEP server
 .OP \-\-in file
 .BI \-\-dn\~ distinguished-name
 .OP \-\-san subjectAltName
+.OP \-\-profile profile
 .OP \-\-password password
 .BI \-\-ca-cert-enc\~ file
 .BI \-\-ca-cert-sig\~ file
@@ -73,6 +74,14 @@ Subject distinguished name (DN). Required.
 .TP
 .BI "\-a, \-\-san " subjectAltName
 subjectAltName extension to include in request. Can be used multiple times.
+.TP
+.BI "\-P, \-\-profile " profile
+Certificate profile name to be included in the certificate request. Can be any
+UTF8 string. Supported e.g. by the
+.B openxpki
+SCEP server with profiles (\fIpc-client\fR, \fItls-server\fR, etc.) that are
+translated into corresponding Extended Key Usage (EKU) flags in the generated
+X.509 certificate.
 .TP
 .BI "\-p, \-\-password " password
 The challengePassword to include in the certificate request.

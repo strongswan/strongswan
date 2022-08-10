@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Andreas Steffen
+ * Copyright (C) 2009-2022 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -21,6 +21,8 @@
 
 #ifndef PKCS10_H_
 #define PKCS10_H_
+
+#include "x509.h"
 
 #include <collections/enumerator.h>
 #include <credentials/certificates/certificate.h>
@@ -47,8 +49,15 @@ struct pkcs10_t {
 	 */
 	chunk_t (*get_challengePassword)(pkcs10_t *this);
 
+    /**
+     * Get Extended Key Usage (EKU) flags
+     *
+     * @return          EKU flags
+     */
+    x509_flag_t (*get_flags)(pkcs10_t *this);
+
 	/**
-	 * Get.
+	 * Get subjectAltNames
 	 *
 	 * @return			enumerator over subjectAltNames as identification_t*
 	 */

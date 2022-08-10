@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2009-2017 Andreas Steffen
+ * Copyright (C) 2009-2022 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -39,6 +39,7 @@ static int req()
 	linked_list_t *san;
 	chunk_t encoding = chunk_empty;
 	chunk_t challenge_password = chunk_empty;
+	chunk_t cert_type_ext = chunk_empty;
 	char *arg;
 	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
 									   lib->ns);
@@ -100,6 +101,9 @@ static int req()
 				continue;
 			case 'a':
 				san->insert_last(san, identification_create_from_string(arg));
+				continue;
+			case 'P':
+				cert_type_ext = chunk_create(arg, strlen(arg));
 				continue;
 			case 'p':
 				challenge_password = chunk_create(arg, strlen(arg));
@@ -180,6 +184,7 @@ static int req()
 							  BUILD_SUBJECT, id,
 							  BUILD_SUBJECT_ALTNAMES, san,
 							  BUILD_CHALLENGE_PWD, challenge_password,
+							  BUILD_CERT_TYPE_EXT, cert_type_ext,
 							  BUILD_SIGNATURE_SCHEME, scheme,
 							  BUILD_END);
 	if (!cert)
@@ -228,9 +233,9 @@ static void __attribute__ ((constructor))reg()
 		req, 'r', "req",
 		"create a PKCS#10 certificate request",
 		{"[--in file|--keyid hex] [--type rsa|ecdsa|bliss|priv] --dn distinguished-name",
-		 "[--san subjectAltName]+ [--password challengePassword]",
+		 "[--san subjectAltName]+ [--profile server|client|dual|ocsp]",
+		 "[--password challengePassword] [--rsa-padding pkcs1|pss]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
-		 "[--rsa-padding pkcs1|pss]",
 		 "[--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
@@ -239,6 +244,7 @@ static void __attribute__ ((constructor))reg()
 			{"type",		't', 1, "type of input key, default: priv"},
 			{"dn",			'd', 1, "subject distinguished name"},
 			{"san",			'a', 1, "subjectAltName to include in cert request"},
+			{"profile",     'P', 1, "certificate profile name to include in cert request"},
 			{"password",	'p', 1, "challengePassword to include in cert request"},
 			{"digest",		'g', 1, "digest for signature creation, default: key-specific"},
 			{"rsa-padding",	'R', 1, "padding for RSA signatures, default: pkcs1"},

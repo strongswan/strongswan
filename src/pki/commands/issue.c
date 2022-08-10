@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2015-2019 Andreas Steffen
+ * Copyright (C) 2015-2022 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -480,9 +480,12 @@ static int issue()
 			id = cert_req->get_subject(cert_req);
 			id = id->clone(id);
 		}
+		req = (pkcs10_t*)cert_req;
+
+		/* Add Extended Key Usage (EKU) flags */
+		flags |= req->get_flags(req);
 
 		/* Add subjectAltNames from PKCS#10 certificate request */
-		req = (pkcs10_t*)cert_req;
 		enumerator = req->create_subjectAltName_enumerator(req);
 		while (enumerator->enumerate(enumerator, &subjectAltName))
 		{
