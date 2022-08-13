@@ -333,8 +333,8 @@ static char* escape_http_request(chunk_t req)
 /**
  * Send a SCEP request via HTTP and wait for a response
  */
-bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
-					   bool http_post, chunk_t *response)
+bool scep_http_request(const char *url, scep_op_t op, bool http_post,
+					   chunk_t data, chunk_t *response, u_int *http_code)
 {
 	int len;
 	status_t status;
@@ -356,6 +356,7 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 
 	/* initialize response */
 	*response = chunk_empty;
+	*http_code = 0;
 
 	operation = operations[op];
 	switch (op)
@@ -371,23 +372,23 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 
 				status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 										 FETCH_TIMEOUT, http_timeout,
-										 FETCH_REQUEST_DATA, msg,
+										 FETCH_REQUEST_DATA, data,
 										 FETCH_REQUEST_TYPE, "",
 										 FETCH_REQUEST_HEADER, "Expect:",
 										 FETCH_SOURCEIP, srcip,
+										 FETCH_RESPONSE_CODE, http_code,
 										 FETCH_END);
 			}
 			else /* HTTP_GET */
 			{
-				char *escaped_req = escape_http_request(msg);
+				char *msg = escape_http_request(data);
 
 				/* form complete url */
-				len = strlen(url) + 20 + strlen(operation) +
-					  strlen(escaped_req) + 1;
+				len = strlen(url) + 20 + strlen(operation) + strlen(msg) + 1;
 				complete_url = malloc(len);
 				snprintf(complete_url, len, "%s?operation=%s&message=%s"
-						, url, operation, escaped_req);
-				free(escaped_req);
+						, url, operation, msg);
+				free(msg);
 
 				status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 										 FETCH_TIMEOUT, http_timeout,
@@ -395,6 +396,7 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 										 FETCH_REQUEST_HEADER, "Host:",
 										 FETCH_REQUEST_HEADER, "Accept:",
 										 FETCH_SOURCEIP, srcip,
+										 FETCH_RESPONSE_CODE, http_code,
 										 FETCH_END);
 			}
 			break;
@@ -409,6 +411,7 @@ bool scep_http_request(const char *url, chunk_t msg, scep_op_t op,
 			status = lib->fetcher->fetch(lib->fetcher, complete_url, response,
 									 FETCH_TIMEOUT, http_timeout,
 									 FETCH_SOURCEIP, srcip,
+									 FETCH_RESPONSE_CODE, http_code,
 									 FETCH_END);
 		}
 	}

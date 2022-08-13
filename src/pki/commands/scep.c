@@ -16,15 +16,12 @@
  * for more details.
  */
 
-#define _GNU_SOURCE
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <unistd.h>
-#include <stdio.h>
 #include <errno.h>
 #include <time.h>
 
 #include "pki.h"
+#include "pki_cert.h"
 #include "scep/scep.h"
 
 #include <credentials/certificates/certificate.h>
@@ -50,7 +47,6 @@ static int scep()
 	chunk_t serialNumber = chunk_empty;
 	chunk_t transID = chunk_empty;
 	chunk_t pkcs10_encoding = chunk_empty;
-	chunk_t cert_encoding = chunk_empty;
 	chunk_t pkcs7_req = chunk_empty;
 	chunk_t certPoll = chunk_empty;
 	chunk_t issuerAndSubject = chunk_empty;
@@ -65,19 +61,17 @@ static int scep()
 	certificate_t *x509_ca_sig = NULL, *x509_ca_enc = NULL;
 	identification_t *subject = NULL, *issuer = NULL;
 	container_t *container = NULL;
-	pkcs7_t *pkcs7;
 	mem_cred_t *creds = NULL;
 	scep_msg_t scep_msg_type;
 	scep_attributes_t attrs = empty_scep_attributes;
 	uint32_t caps_flags;
 	u_int poll_interval = DEFAULT_POLL_INTERVAL;
-	u_int max_poll_time = 0;
-	u_int poll_start = 0;
+	u_int max_poll_time = 0, poll_start = 0;
+	u_int http_code = 0;
 	time_t notBefore, notAfter;
 	linked_list_t *san;
-	enumerator_t *enumerator;
 	int status = 1;
-	bool ok, http_post = FALSE, stored = FALSE;
+	bool ok, http_post = FALSE;
 
 	bool pss = lib->settings->get_bool(lib->settings,
 								"%s.rsa_pss", FALSE, lib->ns);
@@ -258,7 +252,7 @@ static int scep()
 		set_file_mode(stdin, CERT_ASN1_DER);
 		if (!chunk_from_fd(0, &chunk))
 		{
-			DBG1(DBG_APP, "reading private key failed: %s\n", strerror(errno));
+			DBG1(DBG_APP, "reading private key failed: %s", strerror(errno));
 			goto end;
 		}
 		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
@@ -273,10 +267,10 @@ static int scep()
 	public = private->get_public_key(private);
 
 	/* Request capabilities from SCEP server */
-	if (!scep_http_request(url, chunk_empty, SCEP_GET_CA_CAPS, FALSE,
-						   &scep_response))
+	if (!scep_http_request(url, SCEP_GET_CA_CAPS, FALSE, chunk_empty,
+						   &scep_response, &http_code))
 	{
-		DBG1(DBG_APP, "did not receive a valid scep response");
+		DBG1(DBG_APP, "did not receive a valid scep response: HTTP %u", http_code);
 		goto end;
 	}
 	caps_flags = scep_parse_caps(scep_response);
@@ -467,10 +461,10 @@ static int scep()
 		goto end;
 	}
 
-	if (!scep_http_request(url, pkcs7_req, SCEP_PKI_OPERATION, http_post,
-						   &scep_response))
+	if (!scep_http_request(url, SCEP_PKI_OPERATION, http_post, pkcs7_req,
+						   &scep_response, &http_code))
 	{
-		DBG1(DBG_APP, "did not receive a valid SCEP response");
+		DBG1(DBG_APP, "did not receive a valid SCEP response: HTTP %u", http_code);
 		goto end;
 	}
 
@@ -526,10 +520,11 @@ static int scep()
 			DBG1(DBG_APP, "failed to build SCEP certPoll request");
 			goto end;
 		}
-		if (!scep_http_request(url, certPoll, SCEP_PKI_OPERATION, http_post,
-							   &scep_response))
+		if (!scep_http_request(url, SCEP_PKI_OPERATION, http_post, certPoll,
+							   &scep_response, &http_code))
 		{
-			DBG1(DBG_APP, "did not receive a valid SCEP response");
+			DBG1(DBG_APP, "did not receive a valid SCEP response: HTTP %u",
+						   http_code);
 			goto end;
 		}
 		if (!scep_parse_response(scep_response, transID, &container, &attrs))
@@ -570,78 +565,10 @@ static int scep()
 		goto end;
 	}
 	container->destroy(container);
+	container = NULL;
 
-	/* parse signed-data container */
-	container = lib->creds->create(lib->creds,
-								   CRED_CONTAINER, CONTAINER_PKCS7,
-								   BUILD_BLOB_ASN1_DER, data,
-								   BUILD_END);
+	status = pki_cert_extract_cert(data, form, creds) ? 0 : 1;
 	chunk_free(&data);
-
-	if (!container)
-	{
-		DBG1(DBG_APP, "could not parse signed-data");
-		goto end;
-	}
-	/* no need to verify the signed-data container, the signature does NOT
-	 * cover the contained certificates */
-
-	/* store the end entity certificate */
-	pkcs7 = (pkcs7_t*)container;
-	enumerator = pkcs7->create_cert_enumerator(pkcs7);
-
-	while (enumerator->enumerate(enumerator, &cert))
-	{
-		x509_t *x509 = (x509_t*)cert;
-		enumerator_t *certs;
-		time_t from, until;
-		bool trusted, valid;
-
-		if (!(x509->get_flags(x509) & X509_CA))
-		{
-			DBG1(DBG_APP, "certificate \"%Y\"", cert->get_subject(cert));
-
-			if (stored)
-			{
-				DBG1(DBG_APP, "multiple certs received, only first stored");
-				continue;
-			}
-
-			/* establish trust relativ to root CA */
-			creds->add_cert(creds, FALSE, cert->get_ref(cert));
-			certs = lib->credmgr->create_trusted_enumerator(lib->credmgr,
-								KEY_RSA, cert->get_subject(cert), FALSE);
-			trusted = certs->enumerate(certs, &cert, NULL);
-			valid = cert->get_validity(cert, NULL, &from, &until);
-
-			DBG1(DBG_APP, "certificate is %strusted, valid from %T until %T "
-						  "(currently %svalid)",
-						  trusted ? "" : "not ", &from, FALSE, &until, FALSE,
-						  valid ? "" : "not ");
-
-			certs->destroy(certs);
-
-			if (!cert->get_encoding(cert, form, &cert_encoding))
-			{
-				DBG1(DBG_APP, "encoding certificate failed");
-				break;
-			}
-
-			set_file_mode(stdout, form);
-			if (fwrite(cert_encoding.ptr, cert_encoding.len, 1, stdout) != 1)
-			{
-				DBG1(DBG_APP, "writing certificate failed");
-				break;
-			}
-			else
-			{
-				stored = TRUE;
-				status = 0;
-			}
-		}
-	}
-	enumerator->destroy(enumerator);
-
 
 end:
 	lib->credmgr->remove_set(lib->credmgr, &creds->set);
@@ -661,7 +588,6 @@ end:
 	chunk_free(&serialNumber);
 	chunk_free(&transID);
 	chunk_free(&pkcs10_encoding);
-	chunk_free(&cert_encoding);
 	chunk_free(&pkcs7_req);
 	chunk_free(&certPoll);
 	chunk_free(&issuerAndSubject);

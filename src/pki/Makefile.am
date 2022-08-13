@@ -2,9 +2,10 @@ SUBDIRS = man
 
 bin_PROGRAMS = pki
 
-pki_SOURCES = pki.c pki.h command.c command.h \
+pki_SOURCES = pki.c pki.h pki_cert.c pki_cert.h command.c command.h \
 	commands/acert.c \
 	commands/dn.c \
+	commands/estca.c \
 	commands/gen.c \
 	commands/issue.c \
 	commands/keyid.c \
@@ -18,6 +19,7 @@ pki_SOURCES = pki.c pki.h command.c command.h \
 	commands/self.c \
 	commands/signcrl.c \
 	commands/verify.c \
+	est/est.h est/est.c \
 	scep/scep.h scep/scep.c
 
 pki_LDADD = \

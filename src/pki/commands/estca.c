@@ -1,6 +1,4 @@
 /*
- * Copyright (C) 2005 Jan Hutter, Martin Willi
- * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
  *
  * Copyright (C) secunet Security Networks AG
@@ -18,18 +16,20 @@
 
 #include "pki.h"
 #include "pki_cert.h"
-#include "scep/scep.h"
+#include "est/est.h"
 
+#include <credentials/containers/pkcs7.h>
 #include <credentials/certificates/certificate.h>
+#include <credentials/sets/mem_cred.h>
 
 /**
- * Get CA certificate[s] from a SCEP server (RFC 8894)
+ * Get CA certificate[s] from an EST server (RFC 7030)
  */
-static int scepca()
+static int estca()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
-	chunk_t scep_response = chunk_empty;
-	char *arg, *url = NULL, *caout = NULL, *raout = NULL;
+	chunk_t est_response = chunk_empty;
+	char *arg, *url = NULL, *caout = NULL;
 	bool force = FALSE, success;
 	u_int http_code = 0;
 
@@ -45,9 +45,6 @@ static int scepca()
 			case 'c':
 				caout = arg;
 				continue;
-			case 'r':
-				raout = arg;
-				continue;
 			case 'f':
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
 				{
@@ -60,7 +57,7 @@ static int scepca()
 			case EOF:
 				break;
 			default:
-				return command_usage("invalid --scepca option");
+				return command_usage("invalid --estca option");
 		}
 		break;
 	}
@@ -70,16 +67,15 @@ static int scepca()
 		return command_usage("--url is required");
 	}
 
-	if (!scep_http_request(url, SCEP_GET_CA_CERT, FALSE, chunk_empty,
-						   &scep_response, &http_code))
+	if (!est_https_request(url, EST_CACERTS, FALSE, chunk_empty, &est_response,
+						   &http_code))
 	{
-		DBG1(DBG_APP, "did not receive a valid SCEP response: HTTP %u", http_code);
+		DBG1(DBG_APP, "did not receive a valid EST response: HTTP %u", http_code);
 		return 1;
 	}
-
-	success = pki_cert_extract_cacerts(scep_response, caout, raout, TRUE, form,
+	success = pki_cert_extract_cacerts(est_response, caout, NULL, TRUE, form,
 									   force);
-	chunk_free(&scep_response);
+	chunk_free(&est_response);
 
 	return success ? 0 : 1;
 }
@@ -90,14 +86,13 @@ static int scepca()
 static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
-		scepca, 'C', "scepca",
-		"get CA [and RA] certificate[s] from a SCEP server",
-		{"--url url [--caout file] [--raout file] [--outform der|pem] [--force]"},
+		estca, 'e', "estca",
+		"get CA certificate[s] from a EST server",
+		{"--url url [--caout file] [--outform der|pem] [--force]"},
 		{
 			{"help",    'h', 0, "show usage information"},
 			{"url",     'u', 1, "URL of the SCEP server"},
 			{"caout",   'c', 1, "CA certificate [template]"},
-			{"raout",   'r', 1, "RA certificate [template]"},
 			{"outform", 'f', 1, "encoding of stored certificates, default: der"},
 			{"force",   'F', 0, "force overwrite of existing files"},
 		}

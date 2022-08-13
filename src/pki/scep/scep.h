@@ -101,8 +101,11 @@ chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 						size_t key_size, certificate_t *signer_cert,
 						hash_algorithm_t digest_alg, private_key_t *private_key);
 
-bool scep_http_request(const char *url, chunk_t msg, scep_op_t op, bool use_post,
-					   chunk_t *response);
+/**
+ * Send a SCEP request via HTTP and wait for a response
+ */
+bool scep_http_request(const char *url, scep_op_t op, bool http_post,
+					   chunk_t data, chunk_t *response, u_int *http_code);
 
 bool scep_parse_response(chunk_t response, chunk_t transID, container_t **out,
 						 scep_attributes_t *attrs);
