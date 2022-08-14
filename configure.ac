@@ -2162,6 +2162,7 @@ AC_CONFIG_FILES([
 	src/pki/man/pki.1
 	src/pki/man/pki---acert.1
 	src/pki/man/pki---dn.1
+	src/pki/man/pki---estca.1
 	src/pki/man/pki---gen.1
 	src/pki/man/pki---issue.1
 	src/pki/man/pki---keyid.1
