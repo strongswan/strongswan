@@ -89,65 +89,34 @@ const scep_attributes_t empty_scep_attributes = {
 };
 
 /**
- * Extract X.501 attributes
+ * Parse CA Capabilities of SCEP server
  */
-void extract_attributes(pkcs7_t *pkcs7, enumerator_t *enumerator,
-						scep_attributes_t *attrs)
+uint32_t scep_parse_caps(chunk_t response)
 {
-	chunk_t attr;
+	uint32_t caps_flags = 0;
+	chunk_t line;
 
-	if (pkcs7->get_attribute(pkcs7, OID_PKI_MESSAGE_TYPE, enumerator, &attr))
+	DBG2(DBG_APP, "CA Capabilities:");
+
+	while (fetchline(&response, &line))
 	{
-		scep_msg_t m;
+		int i;
 
-		for (m = SCEP_CertRep_MSG; m < SCEP_Unknown_MSG; m++)
+		for (i = 0; i < countof(caps_names); i++)
 		{
-			if (strncmp(msgType_values[m], attr.ptr, attr.len) == 0)
+			if (strncaseeq(caps_names[i], line.ptr, line.len))
 			{
-				attrs->msgType = m;
+				DBG2(DBG_APP, "  %s", caps_names[i]);
+				caps_flags |= (1 << i);
 			}
 		}
-		DBG2(DBG_APP, "messageType:  %s", msgType_names[attrs->msgType]);
-		free(attr.ptr);
 	}
-	if (pkcs7->get_attribute(pkcs7, OID_PKI_STATUS, enumerator, &attr))
-	{
-		pkiStatus_t s;
-
-		for (s = SCEP_SUCCESS; s < SCEP_UNKNOWN; s++)
-		{
-			if (strncmp(pkiStatus_values[s], attr.ptr, attr.len) == 0)
-			{
-				attrs->pkiStatus = s;
-			}
-		}
-		DBG2(DBG_APP, "pkiStatus:    %s", pkiStatus_names[attrs->pkiStatus]);
-		free(attr.ptr);
-	}
-	if (pkcs7->get_attribute(pkcs7, OID_PKI_FAIL_INFO, enumerator, &attr))
-	{
-		if (attr.len == 1 && *attr.ptr >= '0' && *attr.ptr <= '4')
-		{
-			attrs->failInfo = (failInfo_t)(*attr.ptr - '0');
-		}
-		if (attrs->failInfo != SCEP_unknown_REASON)
-		{
-			DBG1(DBG_APP, "failInfo:     %s", failInfo_reasons[attrs->failInfo]);
-		}
-		free(attr.ptr);
-	}
-
-	pkcs7->get_attribute(pkcs7, OID_PKI_SENDER_NONCE, enumerator,
-						 &attrs->senderNonce);
-	pkcs7->get_attribute(pkcs7, OID_PKI_RECIPIENT_NONCE, enumerator,
-						 &attrs->recipientNonce);
-	pkcs7->get_attribute(pkcs7, OID_PKI_TRANS_ID, enumerator,
-						 &attrs->transID);
+	return caps_flags;
 }
 
 /**
  * Generate a transaction ID as the SHA-1 hash of the publicKeyInfo
- * the transaction ID is also used as a unique serial number
+ * The transaction ID is also used as a unique serial number
  */
 bool scep_generate_transaction_id(public_key_t *public,
 								  chunk_t *transId, chunk_t *serialNumber)
@@ -189,7 +158,7 @@ bool scep_generate_transaction_id(public_key_t *public,
 }
 
 /**
- * Builds a pkcs7 enveloped and signed scep request
+ * Builds a PKCS#7 enveloped and signed SCEP request
  */
 chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 					certificate_t *enc_cert, encryption_algorithm_t enc_alg,
@@ -421,6 +390,66 @@ bool scep_http_request(const char *url, scep_op_t op, bool http_post,
 	return (status == SUCCESS);
 }
 
+/**
+ * Extract X.501 attributes
+ */
+void extract_attributes(pkcs7_t *pkcs7, enumerator_t *enumerator,
+						scep_attributes_t *attrs)
+{
+	chunk_t attr;
+
+	if (pkcs7->get_attribute(pkcs7, OID_PKI_MESSAGE_TYPE, enumerator, &attr))
+	{
+		scep_msg_t m;
+
+		for (m = SCEP_CertRep_MSG; m < SCEP_Unknown_MSG; m++)
+		{
+			if (strncmp(msgType_values[m], attr.ptr, attr.len) == 0)
+			{
+				attrs->msgType = m;
+			}
+		}
+		DBG2(DBG_APP, "messageType:  %s", msgType_names[attrs->msgType]);
+		free(attr.ptr);
+	}
+	if (pkcs7->get_attribute(pkcs7, OID_PKI_STATUS, enumerator, &attr))
+	{
+		pkiStatus_t s;
+
+		for (s = SCEP_SUCCESS; s < SCEP_UNKNOWN; s++)
+		{
+			if (strncmp(pkiStatus_values[s], attr.ptr, attr.len) == 0)
+			{
+				attrs->pkiStatus = s;
+			}
+		}
+		DBG2(DBG_APP, "pkiStatus:    %s", pkiStatus_names[attrs->pkiStatus]);
+		free(attr.ptr);
+	}
+	if (pkcs7->get_attribute(pkcs7, OID_PKI_FAIL_INFO, enumerator, &attr))
+	{
+		if (attr.len == 1 && *attr.ptr >= '0' && *attr.ptr <= '4')
+		{
+			attrs->failInfo = (failInfo_t)(*attr.ptr - '0');
+		}
+		if (attrs->failInfo != SCEP_unknown_REASON)
+		{
+			DBG1(DBG_APP, "failInfo:     %s", failInfo_reasons[attrs->failInfo]);
+		}
+		free(attr.ptr);
+	}
+
+	pkcs7->get_attribute(pkcs7, OID_PKI_SENDER_NONCE, enumerator,
+						 &attrs->senderNonce);
+	pkcs7->get_attribute(pkcs7, OID_PKI_RECIPIENT_NONCE, enumerator,
+						 &attrs->recipientNonce);
+	pkcs7->get_attribute(pkcs7, OID_PKI_TRANS_ID, enumerator,
+						 &attrs->transID);
+}
+
+/**
+ * Parse PKCS#7 encoded SCEP response
+ */
 bool scep_parse_response(chunk_t response, chunk_t transID,
 						  container_t **out, scep_attributes_t *attrs)
 {
@@ -470,27 +499,4 @@ bool scep_parse_response(chunk_t response, chunk_t transID,
 error:
 	container->destroy(container);
 	return FALSE;
-}
-
-uint32_t scep_parse_caps(chunk_t response)
-{
-	uint32_t caps_flags = 0;
-	chunk_t line;
-
-	DBG2(DBG_APP, "CA Capabilities:");
-
-	while (fetchline(&response, &line))
-	{
-		int i;
-
-		for (i = 0; i < countof(caps_names); i++)
-		{
-			if (strncaseeq(caps_names[i], line.ptr, line.len))
-			{
-				DBG2(DBG_APP, "  %s", caps_names[i]);
-				caps_flags |= (1 << i);
-			}
-		}
-	}
-	return caps_flags;
 }

@@ -85,17 +85,21 @@ typedef enum {
 
 extern const scep_attributes_t empty_scep_attributes;
 
-bool parse_attributes(chunk_t blob, scep_attributes_t *attrs);
+/**
+ * Parse SCEP CA Capabilities
+ */
+uint32_t scep_parse_caps(chunk_t response);
 
+/**
+ * Generate a transaction ID as the SHA-1 hash of the publicKeyInfo
+ * The transaction ID is also used as a unique serial number
+ */
 bool scep_generate_transaction_id(public_key_t *key,
 								  chunk_t *transId, chunk_t *serialNumber);
 
-chunk_t scep_transId_attribute(chunk_t transaction_id);
-
-chunk_t scep_messageType_attribute(scep_msg_t m);
-
-chunk_t scep_senderNonce_attribute(void);
-
+/**
+ * Builds a PKCS#7 enveloped and signed SCEP request
+ */
 chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 						certificate_t *enc_cert, encryption_algorithm_t enc_alg,
 						size_t key_size, certificate_t *signer_cert,
@@ -107,9 +111,10 @@ chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 bool scep_http_request(const char *url, scep_op_t op, bool http_post,
 					   chunk_t data, chunk_t *response, u_int *http_code);
 
+/**
+ * Parse PKCS#7 encoded SCEP response
+ */
 bool scep_parse_response(chunk_t response, chunk_t transID, container_t **out,
 						 scep_attributes_t *attrs);
-
-uint32_t scep_parse_caps(chunk_t response);
 
 #endif /* _SCEP_H */
