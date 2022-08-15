@@ -522,7 +522,7 @@ android)
 	rm -r strongswan-*
 	cd src/frontends/android
 	echo "$ ./gradlew build"
-	NDK_CCACHE=ccache ./gradlew build || exit $?
+	NDK_CCACHE=ccache ./gradlew build --info || exit $?
 	;;
 *)
 	;;

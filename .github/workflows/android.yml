@@ -29,11 +29,11 @@ jobs:
       # since the NDK is newly installed every time, we have to use this to avoid cache misses
       CCACHE_COMPILERCHECK: content
     steps:
-      # even though we don't specify a specific version in our gradle files, the
-      # build fails without this because some arbitrary NDK version, that's
-      # weirdly not installed, is requested
+      # we currently don't specify a specific NDK version in our gradle files,
+      # so we load the version the Gradle Plugin uses as default but which is
+      # not installed anymore in the image
       - name: Install NDK
-        run: yes | sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install 'ndk;21.0.6113669'
+        run: yes | sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install 'ndk;21.4.7075529'
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
         with:
