@@ -5,6 +5,7 @@ bin_PROGRAMS = pki
 pki_SOURCES = pki.c pki.h pki_cert.c pki_cert.h command.c command.h \
 	commands/acert.c \
 	commands/dn.c \
+	commands/est.c \
 	commands/estca.c \
 	commands/gen.c \
 	commands/issue.c \
