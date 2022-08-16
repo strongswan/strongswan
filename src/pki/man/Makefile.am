@@ -2,6 +2,7 @@ man1_MANS = \
 	pki.1 \
 	pki---acert.1 \
 	pki---dn.1 \
+	pki---est.1 \
 	pki---estca.1 \
 	pki---gen.1 \
 	pki---issue.1 \

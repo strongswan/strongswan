@@ -37,6 +37,14 @@ bool match(const char *pattern, const chunk_t *ch)
 }
 
 /**
+ * compare string with chunk ignoring the case of the characters
+ */
+bool matchcase(const char *pattern, const chunk_t *ch)
+{
+	return ch->len == strlen(pattern) && strncasecmp(pattern, ch->ptr, ch->len) == 0;
+}
+
+/**
  * extracts a token ending with the first occurrence of a given termination symbol
  */
 bool extract_token(chunk_t *token, const char termination, chunk_t *src)

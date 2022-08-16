@@ -1,6 +1,6 @@
 #
 # Copyright (C) 2007-2017 Tobias Brunner
-# Copyright (C) 2006-2019 Andreas Steffen
+# Copyright (C) 2006-2022 Andreas Steffen
 # Copyright (C) 2006-2014 Martin Willi
 #
 # Copyright (C) secunet Security Networks AG
@@ -2162,6 +2162,7 @@ AC_CONFIG_FILES([
 	src/pki/man/pki.1
 	src/pki/man/pki---acert.1
 	src/pki/man/pki---dn.1
+	src/pki/man/pki---est.1
 	src/pki/man/pki---estca.1
 	src/pki/man/pki---gen.1
 	src/pki/man/pki---issue.1
