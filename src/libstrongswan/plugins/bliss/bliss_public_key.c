@@ -267,7 +267,7 @@ METHOD(public_key_t, get_fingerprint, bool,
 										   this->set, type, fp);
 	if (success)
 	{
-		lib->encoding->cache(lib->encoding, type, this, *fp);
+		lib->encoding->cache(lib->encoding, type, this, fp);
 	}
 	return success;
 }

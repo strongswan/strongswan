@@ -254,7 +254,7 @@ bool wolfssl_ed_fingerprint(wolfssl_ed_key *key, key_type_t key_type,
 	}
 	else
 	{
-		lib->encoding->cache(lib->encoding, type, key, *fp);
+		lib->encoding->cache(lib->encoding, type, key, fp);
 		success = TRUE;
 	}
 	DESTROY_IF(hasher);

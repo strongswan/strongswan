@@ -253,7 +253,7 @@ bool wolfssl_ec_fingerprint(ecc_key *ec, cred_encoding_type_t type, chunk_t *fp)
 		return FALSE;
 	}
 	hasher->destroy(hasher);
-	lib->encoding->cache(lib->encoding, type, ec, *fp);
+	lib->encoding->cache(lib->encoding, type, ec, fp);
 	return TRUE;
 }
 

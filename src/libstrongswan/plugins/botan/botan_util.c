@@ -200,7 +200,7 @@ bool botan_get_fingerprint(botan_pubkey_t pubkey, void *cache,
 
 	if (cache)
 	{
-		lib->encoding->cache(lib->encoding, type, cache, *fp);
+		lib->encoding->cache(lib->encoding, type, cache, fp);
 	}
 	return TRUE;
 }

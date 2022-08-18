@@ -186,7 +186,7 @@ METHOD(public_key_t, get_fingerprint, bool,
 	success = curve25519_public_key_fingerprint(this->pubkey, type, fp);
 	if (success)
 	{
-		lib->encoding->cache(lib->encoding, type, this, *fp);
+		lib->encoding->cache(lib->encoding, type, this, fp);
 	}
 	return success;
 }

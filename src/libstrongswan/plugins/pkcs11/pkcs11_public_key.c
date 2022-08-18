@@ -430,7 +430,7 @@ static bool fingerprint_ecdsa(private_pkcs11_public_key_t *this,
 	}
 	hasher->destroy(hasher);
 	chunk_clear(&asn1);
-	lib->encoding->cache(lib->encoding, type, this, *fp);
+	lib->encoding->cache(lib->encoding, type, this, fp);
 	return TRUE;
 }
 

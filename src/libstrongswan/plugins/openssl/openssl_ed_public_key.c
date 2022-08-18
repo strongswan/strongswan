@@ -175,7 +175,7 @@ bool openssl_ed_fingerprint(EVP_PKEY *key, cred_encoding_type_t type,
 		return FALSE;
 	}
 	hasher->destroy(hasher);
-	lib->encoding->cache(lib->encoding, type, key, *fp);
+	lib->encoding->cache(lib->encoding, type, key, fp);
 	return TRUE;
 }
 

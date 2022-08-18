@@ -370,7 +370,7 @@ bool wolfssl_rsa_fingerprint(RsaKey *rsa, cred_encoding_type_t type,
 	}
 	else
 	{
-		lib->encoding->cache(lib->encoding, type, rsa, *fp);
+		lib->encoding->cache(lib->encoding, type, rsa, fp);
 		success = TRUE;
 	}
 	DESTROY_IF(hasher);

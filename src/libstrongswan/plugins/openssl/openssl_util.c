@@ -125,7 +125,7 @@ bool openssl_fingerprint(EVP_PKEY *key, cred_encoding_type_t type, chunk_t *fp)
 	}
 	free(enc.ptr);
 	hasher->destroy(hasher);
-	lib->encoding->cache(lib->encoding, type, key, *fp);
+	lib->encoding->cache(lib->encoding, type, key, fp);
 	return TRUE;
 }
 
