@@ -20,12 +20,10 @@
 #include "pki.h"
 #include "pki_cert.h"
 #include "est/est.h"
+#include "est/est_tls.h"
 
 #include <credentials/certificates/certificate.h>
 #include <credentials/sets/mem_cred.h>
-
-#define HTTP_CODE_OK         200
-#define HTTP_CODE_ACCEPTED   202
 
 /* default polling time interval in EST manual mode */
 #define DEFAULT_POLL_INTERVAL    60      /* seconds */
@@ -43,9 +41,10 @@ static int est()
 	mem_cred_t *creds = NULL;
 	private_key_t *client_key = NULL;
 	est_op_t est_op = EST_SIMPLE_ENROLL;
+	est_tls_t *est_tls;
 	u_int poll_interval = DEFAULT_POLL_INTERVAL;
 	u_int max_poll_time = 0, poll_start = 0;
-	u_int http_code = 0;
+	u_int http_code = 0, retry_after = 0;
 	int status = 1;
 
 	/* initialize CA certificate storage */
@@ -165,6 +164,7 @@ static int est()
 			DBG1(DBG_APP, "could not load client cert file '%s'", client_cert_file);
 			goto end;
 		}
+		creds->add_cert(creds, FALSE, client_cert->get_ref(client_cert));
 
 		/* load old client private key */
 		client_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
@@ -174,19 +174,30 @@ static int est()
 			DBG1(DBG_APP, "parsing client private key failed");
 			goto end;
 		}
+		creds->add_key(creds, client_key->get_ref(client_key));
 		est_op = EST_SIMPLE_REENROLL;
 	}
 
-	if (!est_https_request(url, est_op, TRUE, pkcs10_encoding, &est_response,
-						   &http_code))
+	est_tls = est_tls_create(url, client_cert, NULL);
+	if (!est_tls)
 	{
-		DBG1(DBG_APP, "did not receive a valid EST response: HTTP %u", http_code);
+		DBG1(DBG_APP, "TLS connection to EST server was not established");
+		goto end;
+	}
+	if (!est_tls->request(est_tls, est_op, pkcs10_encoding, &est_response,
+						  &http_code, &retry_after))
+	{
+		DBG1(DBG_APP, "EST request failed: HTTP %u", http_code);
 		goto end;
 	}
 
 	/* in case of manual mode, we are going into a polling loop */
-	if (http_code == HTTP_CODE_ACCEPTED)
+	if (http_code == EST_HTTP_CODE_ACCEPTED)
 	{
+		if (retry_after > 0 && poll_interval < retry_after)
+		{
+			poll_interval = retry_after;
+		}
 		if (max_poll_time > 0)
 		{
 			DBG1(DBG_APP, "  EST request pending, polling every %d seconds"
@@ -200,7 +211,7 @@ static int est()
 		poll_start = time_monotonic(NULL);
 	}
 
-	while (http_code == HTTP_CODE_ACCEPTED)
+	while (http_code == EST_HTTP_CODE_ACCEPTED)
 	{
 		if (max_poll_time > 0 &&
 		   (time_monotonic(NULL) - poll_start) >= max_poll_time)
@@ -211,16 +222,23 @@ static int est()
 		DBG1(DBG_APP, "  going to sleep for %d seconds", poll_interval);
 		sleep(poll_interval);
 		chunk_free(&est_response);
-		if (!est_https_request(url, est_op, TRUE, pkcs10_encoding, &est_response,
-							   &http_code))
+
+		est_tls->destroy(est_tls);
+		est_tls = est_tls_create(url, client_cert, NULL);
+		if (!est_tls)
 		{
-			DBG1(DBG_APP, "did not receive a valid EST response: HTTP %u",
-						   http_code);
+			DBG1(DBG_APP, "TLS connection to EST server was not established");
+			goto end;
+		}
+		if (!est_tls->request(est_tls, est_op, pkcs10_encoding, &est_response,
+							  &http_code, &retry_after))
+		{
+			DBG1(DBG_APP, "EST request failed: HTTP %u", http_code);
 			goto end;
 		}
 	}
 
-	if (http_code == HTTP_CODE_OK)
+	if (http_code == EST_HTTP_CODE_OK)
 	{
 		status = pki_cert_extract_cert(est_response, form, creds) ? 0 : 1;
 	}
@@ -228,6 +246,7 @@ static int est()
 end:
 	lib->credmgr->remove_set(lib->credmgr, &creds->set);
 	creds->destroy(creds);
+	DESTROY_IF(est_tls);
 	DESTROY_IF(client_cert);
 	DESTROY_IF(client_key);
 	DESTROY_IF(pkcs10);
