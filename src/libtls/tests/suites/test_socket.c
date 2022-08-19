@@ -339,12 +339,6 @@ static void setup_credentials(chunk_t key_data, chunk_t cert_data)
 	}
 }
 
-START_SETUP(setup_creds)
-{
-	setup_credentials(chunk_from_thing(ecdsa), chunk_from_thing(ecdsa_crt));
-}
-END_SETUP
-
 START_SETUP(setup_ed25519_creds)
 {
 	setup_credentials(chunk_from_thing(ed25519), chunk_from_thing(ed25519_crt));
@@ -778,22 +772,22 @@ Suite *socket_suite_create()
 	s = suite_create("socket");
 
 	tc = tcase_create("TLS [1.0..1.3] client to TLS 1.3 server");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	add_tls_versions_test(test_tls_13_server, TLS_1_0, TLS_1_3);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.3 client to TLS [1.0..1.3] server");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	add_tls_versions_test(test_tls_13_client, TLS_1_0, TLS_1_3);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS [1.0..1.3] client to TLS 1.2 server");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	add_tls_versions_test(test_tls_12_server, TLS_1_0, TLS_1_3);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.3/key exchange groups");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	tcase_add_loop_test(tc, test_tls13_ke_groups, 0,
 						tls_crypto_get_supported_groups(NULL));
 	suite_add_tcase(s, tc);
@@ -823,42 +817,42 @@ Suite *socket_suite_create()
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.3/anon");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	add_tls_test(test_tls13, TLS_1_3);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.3/mutl");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	add_tls_test(test_tls13_mutual, TLS_1_3);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.2/anon");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	add_tls_test(test_tls12, TLS_1_2);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.2/mutl");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	add_tls_test(test_tls12_mutual, TLS_1_2);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.1/anon");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	add_tls_test(test_tls11, TLS_1_1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.1/mutl");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	add_tls_test(test_tls11_mutual, TLS_1_1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.0/anon");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	add_tls_test(test_tls10, TLS_1_0);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("TLS 1.0/mutl");
-	tcase_add_checked_fixture(tc, setup_creds, teardown_creds);
+	tcase_add_checked_fixture(tc, setup_all_creds, teardown_creds);
 	add_tls_test(test_tls10_mutual, TLS_1_0);
 	suite_add_tcase(s, tc);
 
