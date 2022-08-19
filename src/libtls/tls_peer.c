@@ -91,6 +91,11 @@ struct private_tls_peer_t {
 	peer_state_t state;
 
 	/**
+	 *  Received a certificate request from server
+	 */
+	 bool certreq_received;
+
+	/**
 	 * TLS version we offered in hello
 	 */
 	tls_version_t hello_version;
@@ -982,6 +987,7 @@ static status_t process_certreq(private_tls_peer_t *this, bio_reader_t *reader)
 		}
 	extensions->destroy(extensions);
 	}
+	this->certreq_received = TRUE;
 	this->state = STATE_CERTREQ_RECEIVED;
 	return NEED_MORE;
 }
@@ -1478,35 +1484,39 @@ static status_t send_certificate(private_tls_peer_t *this,
 
 	version_min = this->tls->get_version_min(this->tls);
 	version_max = this->tls->get_version_max(this->tls);
-	if (!this->hashsig.len)
+
+	if (this->peer)
 	{
-		convert_cert_types(this);
-	}
-	enumerator = tls_create_private_key_enumerator(version_min, version_max,
-												   this->hashsig, this->peer);
-	if (!enumerator || !enumerator->enumerate(enumerator, &key, &auth))
-	{
-		if (!enumerator)
+		if (!this->hashsig.len)
 		{
-			DBG1(DBG_TLS, "no common signature algorithms found");
+			convert_cert_types(this);
+		}
+		enumerator = tls_create_private_key_enumerator(version_min, version_max,
+													   this->hashsig, this->peer);
+		if (!enumerator || !enumerator->enumerate(enumerator, &key, &auth))
+		{
+			if (!enumerator)
+			{
+				DBG1(DBG_TLS, "no common signature algorithms found");
+			}
+			else
+			{
+				DBG1(DBG_TLS, "no usable TLS client certificate found for '%Y'",
+					 this->peer);
+			}
+			this->peer->destroy(this->peer);
+			this->peer = NULL;
 		}
 		else
 		{
-			DBG1(DBG_TLS, "no usable TLS client certificate found for '%Y'",
-				 this->peer);
+			this->private = key->get_ref(key);
+			this->peer_auth->merge(this->peer_auth, auth, FALSE);
 		}
-		this->peer->destroy(this->peer);
-		this->peer = NULL;
+		DESTROY_IF(enumerator);
 	}
-	else
-	{
-		this->private = key->get_ref(key);
-		this->peer_auth->merge(this->peer_auth, auth, FALSE);
-	}
-	DESTROY_IF(enumerator);
 
 	/* certificate request context as described in RFC 8446, section 4.4.2 */
-	if (this->tls->get_version_max(this->tls) > TLS_1_2)
+	if (version_max > TLS_1_2)
 	{
 		writer->write_uint8(writer, 0);
 	}
@@ -1524,7 +1534,7 @@ static status_t send_certificate(private_tls_peer_t *this,
 			free(data.ptr);
 		}
 		/* extensions see RFC 8446, section 4.4.2 */
-		if (this->tls->get_version_max(this->tls) > TLS_1_2)
+		if (version_max > TLS_1_2)
 		{
 			certs->write_uint16(certs, 0);
 		}
@@ -1767,7 +1777,7 @@ METHOD(tls_handshake_t, build, status_t,
 			case STATE_INIT:
 				return send_client_hello(this, type, writer);
 			case STATE_HELLO_DONE:
-				if (this->peer)
+				if (this->peer || this->certreq_received)
 				{
 					return send_certificate(this, type, writer);
 				}
@@ -1804,7 +1814,7 @@ METHOD(tls_handshake_t, build, status_t,
 					return NEED_MORE;
 				}
 				this->crypto->change_cipher(this->crypto, TRUE);
-				if (this->peer)
+				if (this->peer || this->certreq_received)
 				{
 					return send_certificate(this, type, writer);
 				}
