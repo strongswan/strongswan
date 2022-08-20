@@ -388,7 +388,7 @@ static bool commit_handle(struct iptc_handle *ipth)
 	{
 		return TRUE;
 	}
-	DBG1(DBG_CFG, "forecast iptables commit failed: %s", iptc_strerror(errno));
+	DBG1(DBG_CFG, "connmark iptables commit failed: %s", iptc_strerror(errno));
 	return FALSE;
 }
 
