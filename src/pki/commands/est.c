@@ -35,10 +35,11 @@ static int est()
 {
 	char *arg, *url = NULL, *file = NULL, *error = NULL;
 	char *client_cert_file = NULL, *client_key_file = NULL;
+	char *user_pass = NULL;
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	chunk_t pkcs10_encoding = chunk_empty, est_response = chunk_empty;
 	certificate_t *pkcs10 = NULL, *client_cert = NULL, *cacert = NULL;
-	mem_cred_t *creds = NULL;
+	mem_cred_t *creds = NULL, *client_creds = NULL;
 	private_key_t *client_key = NULL;
 	est_op_t est_op = EST_SIMPLE_ENROLL;
 	est_tls_t *est_tls;
@@ -55,29 +56,32 @@ static int est()
 	{
 		switch (command_getopt(&arg))
 		{
-			case 'h':
+			case 'h':       /* --help */
 				goto usage;
-			case 'u':
+			case 'u':       /* --url */
 				url = arg;
 				continue;
-			case 'i':
+			case 'i':       /* --in */
 				file = arg;
 				continue;
-			case 'c':
+			case 'c':       /* --cacert */
 				cacert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 							 CERT_X509,	BUILD_FROM_FILE, arg, BUILD_END);
 				if (!cacert)
 				{
 					DBG1(DBG_APP, "could not load cacert file '%s'", arg);
-					goto end;
+					goto err;
 				}
 				creds->add_cert(creds, TRUE, cacert);
 				continue;
-			case 'o':
+			case 'o':       /* --cert */
 				client_cert_file = arg;
 				continue;
-			case 'k':
+			case 'k':       /* --key */
 				client_key_file = arg;
+				continue;
+			case 'p':       /* --userpass */
+				user_pass = arg;
 				continue;
 			case 't':       /* --pollinterval */
 				poll_interval = atoi(arg);
@@ -90,7 +94,7 @@ static int est()
 			case 'm':       /* --maxpolltime */
 				max_poll_time = atoi(arg);
 				continue;
-			case 'f':
+			case 'f':       /* --force */
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
 				{
 					error = "invalid certificate output format";
@@ -134,7 +138,7 @@ static int est()
 		{
 			DBG1(DBG_APP, "reading PKCS#10 certificate request failed: %s\n",
 						   strerror(errno));
-			goto end;
+			goto err;
 		}
 		pkcs10 = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 									  CERT_PKCS10_REQUEST,
@@ -144,15 +148,21 @@ static int est()
 	if (!pkcs10)
 	{
 		DBG1(DBG_APP, "parsing certificate request failed");
-		goto end;
+		goto err;
 	}
 
 	/* generate PKCS#10 encoding */
 	if (!pkcs10->get_encoding(pkcs10, CERT_ASN1_DER, &pkcs10_encoding))
 	{
 		DBG1(DBG_APP, "encoding certificate request failed");
-		goto end;
+		pkcs10->destroy(pkcs10);
+		goto err;
 	}
+	pkcs10->destroy(pkcs10);
+
+	/* create a separate set for the old client credentials */
+	client_creds = mem_cred_create();
+	lib->credmgr->add_set(lib->credmgr, &client_creds->set);
 
 	if (client_cert_file)
 	{
@@ -164,7 +174,7 @@ static int est()
 			DBG1(DBG_APP, "could not load client cert file '%s'", client_cert_file);
 			goto end;
 		}
-		creds->add_cert(creds, FALSE, client_cert->get_ref(client_cert));
+		client_creds->add_cert(client_creds, FALSE, client_cert);
 
 		/* load old client private key */
 		client_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
@@ -174,11 +184,11 @@ static int est()
 			DBG1(DBG_APP, "parsing client private key failed");
 			goto end;
 		}
-		creds->add_key(creds, client_key->get_ref(client_key));
+		client_creds->add_key(client_creds, client_key);
 		est_op = EST_SIMPLE_REENROLL;
 	}
 
-	est_tls = est_tls_create(url, client_cert, NULL);
+	est_tls = est_tls_create(url, client_cert, user_pass);
 	if (!est_tls)
 	{
 		DBG1(DBG_APP, "TLS connection to EST server was not established");
@@ -187,6 +197,7 @@ static int est()
 	if (!est_tls->request(est_tls, est_op, pkcs10_encoding, &est_response,
 						  &http_code, &retry_after))
 	{
+		est_tls->destroy(est_tls);
 		DBG1(DBG_APP, "EST request failed: HTTP %u", http_code);
 		goto end;
 	}
@@ -213,6 +224,9 @@ static int est()
 
 	while (http_code == EST_HTTP_CODE_ACCEPTED)
 	{
+		chunk_free(&est_response);
+		est_tls->destroy(est_tls);
+
 		if (max_poll_time > 0 &&
 		   (time_monotonic(NULL) - poll_start) >= max_poll_time)
 		{
@@ -221,10 +235,8 @@ static int est()
 		}
 		DBG1(DBG_APP, "  going to sleep for %d seconds", poll_interval);
 		sleep(poll_interval);
-		chunk_free(&est_response);
 
-		est_tls->destroy(est_tls);
-		est_tls = est_tls_create(url, client_cert, NULL);
+		est_tls = est_tls_create(url, client_cert, user_pass);
 		if (!est_tls)
 		{
 			DBG1(DBG_APP, "TLS connection to EST server was not established");
@@ -234,22 +246,26 @@ static int est()
 							  &http_code, &retry_after))
 		{
 			DBG1(DBG_APP, "EST request failed: HTTP %u", http_code);
+			est_tls->destroy(est_tls);
 			goto end;
 		}
 	}
+	est_tls->destroy(est_tls);
+
+end:
+	/* remove the old client certificate before extracting the new one */
+	lib->credmgr->remove_set(lib->credmgr, &client_creds->set);
+	client_creds->destroy(client_creds);
 
 	if (http_code == EST_HTTP_CODE_OK)
 	{
-		status = pki_cert_extract_cert(est_response, form, creds) ? 0 : 1;
+		status = pki_cert_extract_cert(est_response, form) ? 0 : 1;
 	}
 
-end:
+err:
+	/* cleanup */
 	lib->credmgr->remove_set(lib->credmgr, &creds->set);
 	creds->destroy(creds);
-	DESTROY_IF(est_tls);
-	DESTROY_IF(client_cert);
-	DESTROY_IF(client_key);
-	DESTROY_IF(pkcs10);
 	chunk_free(&pkcs10_encoding);
 	chunk_free(&est_response);
 
@@ -271,14 +287,16 @@ static void __attribute__ ((constructor))reg()
 		est, 'E', "est",
 		"Enroll an X.509 certificate with an EST server",
 		{"--url url [--in file] [--cacert file]+ [--cert file --key file]",
-		 "[--interval time] [--maxpolltime time] [--outform der|pem]"},
+		 "[-userpass username:password] [--interval time] [--maxpolltime time]",
+		 "[--outform der|pem]"},
 		{
 			{"help",        'h', 0, "show usage information"},
 			{"url",         'u', 1, "URL of the EST server"},
 			{"in",          'i', 1, "PKCS#10 input file, default: stdin"},
 			{"cacert",      'c', 1, "CA certificate"},
 			{"cert",        'o', 1, "Old certificate about to be renewed"},
-			{"key",         'k', 1, "Old RSA private key about to be replaced"},
+			{"key",         'k', 1, "Old private key about to be replaced"},
+			{"userpass",    'p', 1, "username:password for http basic auth"},
 			{"interval",    't', 1, "poll interval, default: 60s"},
 			{"maxpolltime", 'm', 1, "maximum poll time, default: 0 (no limit)"},
 			{"outform",     'f', 1, "encoding of stored certificates, default: der"},

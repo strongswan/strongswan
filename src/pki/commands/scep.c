@@ -61,7 +61,7 @@ static int scep()
 	certificate_t *x509_ca_sig = NULL, *x509_ca_enc = NULL;
 	identification_t *subject = NULL, *issuer = NULL;
 	container_t *container = NULL;
-	mem_cred_t *creds = NULL;
+	mem_cred_t *creds = NULL, *client_creds = NULL;
 	scep_msg_t scep_msg_type;
 	scep_attributes_t attrs = empty_scep_attributes;
 	uint32_t caps_flags;
@@ -127,7 +127,7 @@ static int scep()
 				if (!cert)
 				{
 					DBG1(DBG_APP, "could not load cacert file '%s'", arg);
-					goto end;
+					goto err;
 				}
 				creds->add_cert(creds, TRUE, cert);
 				continue;
@@ -236,7 +236,7 @@ static int scep()
 	if (subject->get_type(subject) != ID_DER_ASN1_DN)
 	{
 		DBG1(DBG_APP, "supplied --dn is not a distinguished name");
-		goto end;
+		goto err;
 	}
 
 	/* load RSA private key from file or stdin */
@@ -253,7 +253,7 @@ static int scep()
 		if (!chunk_from_fd(0, &chunk))
 		{
 			DBG1(DBG_APP, "reading private key failed: %s", strerror(errno));
-			goto end;
+			goto err;
 		}
 		private = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
 									 BUILD_BLOB, chunk, BUILD_END);
@@ -262,7 +262,7 @@ static int scep()
 	if (!private)
 	{
 		DBG1(DBG_APP, "parsing private key failed");
-		goto end;
+		goto err;
 	}
 	public = private->get_public_key(private);
 
@@ -271,7 +271,7 @@ static int scep()
 						   &scep_response, &http_code))
 	{
 		DBG1(DBG_APP, "did not receive a valid scep response: HTTP %u", http_code);
-		goto end;
+		goto err;
 	}
 	caps_flags = scep_parse_caps(scep_response);
 	chunk_free(&scep_response);
@@ -302,7 +302,7 @@ static int scep()
 	{
 		DBG1(DBG_APP, "%N digest algorithm not supported by CA",
 					  hash_algorithm_short_names, digest_alg);
-		goto end;
+		goto err;
 	}
 
 	/* check support of selected encryption algorithm */
@@ -322,7 +322,7 @@ static int scep()
 	{
 		DBG1(DBG_APP, "%N encryption algorithm not supported by CA",
 					  encryption_algorithm_names, cipher);
-		goto end;
+		goto err;
 	}
 	DBG2(DBG_APP, "%N digest and %N encryption algorithm supported by CA",
 				  hash_algorithm_short_names, digest_alg,
@@ -340,7 +340,7 @@ static int scep()
 	if (!scheme)
 	{
 		DBG1(DBG_APP, "no signature scheme found");
-		goto end;
+		goto err;
 	}
 
 	/* generate PKCS#10 certificate request */
@@ -355,32 +355,46 @@ static int scep()
 	if (!pkcs10)
 	{
 		DBG1(DBG_APP, "generating certificate request failed");
-		goto end;
+		goto err;
 	}
 
 	/* generate PKCS#10 encoding */
 	if (!pkcs10->get_encoding(pkcs10, CERT_ASN1_DER, &pkcs10_encoding))
 	{
 		DBG1(DBG_APP, "encoding certificate request failed");
-		goto end;
+		pkcs10->destroy(pkcs10);
+		goto err;
 	}
+	pkcs10->destroy(pkcs10);
 
 	if (!scep_generate_transaction_id(public, &transID, &serialNumber))
 	{
 		DBG1(DBG_APP, "generating transaction ID failed");
-		goto end;
+		goto err;
 	}
 	DBG1(DBG_APP, "transaction ID: %.*s", (int)transID.len, transID.ptr);
 
 	if (old_cert_file)
 	{
+		/* check support of Renewal Operation */
+		if (!(caps_flags & SCEP_CAPS_RENEWAL))
+		{
+			DBG1(DBG_APP, "Renewal operation not supported by SCEP server");
+			goto err;
+		}
+		DBG2(DBG_APP, "SCEP Renewal operation supported");
+
+		/* set message type for SCEP renewal request */
+		scep_msg_type = renewal_via_pkcs_req ? SCEP_PKCSReq_MSG :
+											   SCEP_RenewalReq_MSG;
+
 		/* load old client certificate */
 		x509_signer  = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 									BUILD_FROM_FILE, old_cert_file, BUILD_END);
 		if (!x509_signer)
 		{
 			DBG1(DBG_APP, "could not load old cert file '%s'", old_cert_file);
-			goto end;
+			goto err;
 		}
 
 		/* load old RSA private key */
@@ -389,20 +403,8 @@ static int scep()
 		if (!priv_signer)
 		{
 			DBG1(DBG_APP, "parsing old private key failed");
-			goto end;
+			goto err;
 		}
-
-		/* check support of Renewal Operation */
-		if (!(caps_flags & SCEP_CAPS_RENEWAL))
-		{
-			DBG1(DBG_APP, "Renewal operation not supported by SCEP server");
-			goto end;
-		}
-		DBG2(DBG_APP, "SCEP Renewal operation supported");
-
-		/* set message type for SCEP renewal request */
-		scep_msg_type = renewal_via_pkcs_req ? SCEP_PKCSReq_MSG :
-											   SCEP_RenewalReq_MSG;
 	}
 	else
 	{
@@ -419,8 +421,8 @@ static int scep()
 									BUILD_END);
 		if (!x509_signer)
 		{
-			DBG1(DBG_APP, "generating self-sigend certificate failed");
-			goto end;
+			DBG1(DBG_APP, "generating self-signed certificate failed");
+			goto err;
 		}
 
 		/* the signing key is identical to the client key */
@@ -429,8 +431,13 @@ static int scep()
 		/* set message type for SCEP request */
 		scep_msg_type = SCEP_PKCSReq_MSG;
 	}
-	creds->add_cert(creds, FALSE, x509_signer->get_ref(x509_signer));
-	creds->add_key(creds, priv_signer->get_ref(priv_signer));
+
+	/* create a separate set for the self-signed or old client credentials */
+	client_creds = mem_cred_create();
+	lib->credmgr->add_set(lib->credmgr, &client_creds->set);
+
+	client_creds->add_cert(client_creds, FALSE, x509_signer);
+	client_creds->add_key(client_creds, priv_signer);
 
 	/* load CA or RA certificate used for encryption */
 	x509_ca_enc = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
@@ -566,11 +573,21 @@ static int scep()
 	}
 	container->destroy(container);
 	container = NULL;
-
-	status = pki_cert_extract_cert(data, form, creds) ? 0 : 1;
-	chunk_free(&data);
+	status = 0;
 
 end:
+	/* remove the old client certificate before extracting the new one */
+	lib->credmgr->remove_set(lib->credmgr, &client_creds->set);
+	client_creds->destroy(client_creds);
+
+	if (status == 0)
+	{
+		status = pki_cert_extract_cert(data, form) ? 0 : 1;
+		chunk_free(&data);
+	}
+
+err:
+	/* cleanup */
 	lib->credmgr->remove_set(lib->credmgr, &creds->set);
 	creds->destroy(creds);
 	san->destroy_offset(san, offsetof(identification_t, destroy));
@@ -578,9 +595,6 @@ end:
 	DESTROY_IF(subject);
 	DESTROY_IF(private);
 	DESTROY_IF(public);
-	DESTROY_IF(priv_signer);
-	DESTROY_IF(x509_signer);
-	DESTROY_IF(pkcs10);
 	DESTROY_IF(x509_ca_enc);
 	DESTROY_IF(x509_ca_sig);
 	DESTROY_IF(container);

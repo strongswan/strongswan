@@ -218,7 +218,7 @@ METHOD(est_tls_t, request, bool,
 	{
 		return FALSE;
 	}
-	DBG1(DBG_APP, "http: %B", &http);
+	DBG2(DBG_APP, "http request: %B", &http);
 
 	/* send https request */
 	if (this->tls->write(this->tls, http.ptr, http.len) != http.len)
@@ -237,7 +237,7 @@ METHOD(est_tls_t, request, bool,
 		return FALSE;
 	}
 	response = chunk_create(buf, len);
-	DBG1(DBG_APP, "response: %B", &response);
+	DBG2(DBG_APP, "http response: %B", &response);
 
 	if (!parse_http_header(&response, http_code, &content_len, &base64,
 						   retry_after))

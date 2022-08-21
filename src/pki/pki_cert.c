@@ -348,6 +348,7 @@ bool pki_cert_extract_cacerts(chunk_t data, char *caout, char *raout,
 			cert_type = get_pki_cert_type(cert);
 			if (cert_type != CERT_TYPE_ROOT_CA)
 			{
+				certificate_t *cert_found = NULL;
 				enumerator_t *certs;
 				bool trusted;
 
@@ -359,7 +360,8 @@ bool pki_cert_extract_cacerts(chunk_t data, char *caout, char *raout,
 				/* establish trust relativ to root CA */
 				certs = lib->credmgr->create_trusted_enumerator(lib->credmgr,
 									KEY_ANY, cert->get_subject(cert), FALSE);
-				trusted = certs->enumerate(certs, &cert, NULL);
+				trusted = certs->enumerate(certs, &cert_found, NULL) &&
+						  (cert_found == cert);
 				certs->destroy(certs);
 
 				cert_type_count[cert_type]++;
@@ -394,12 +396,12 @@ end:
  * Extract an X.509 client certificates from PKCS#7 container
  * check trust as well as validity and write to stdout
  */
-bool pki_cert_extract_cert(chunk_t data, cred_encoding_type_t form,
-                           mem_cred_t *creds)
+bool pki_cert_extract_cert(chunk_t data, cred_encoding_type_t form)
 {
 	pkcs7_t *pkcs7;
 	container_t *container;
 	certificate_t *cert;
+	mem_cred_t *client_creds;
 	chunk_t cert_encoding = chunk_empty;
 	enumerator_t *enumerator;
 	bool stored = FALSE;
@@ -413,6 +415,10 @@ bool pki_cert_extract_cert(chunk_t data, cred_encoding_type_t form,
 		return FALSE;
 	}
 
+	lib->credmgr->flush_cache(lib->credmgr, CERT_X509);
+	client_creds = mem_cred_create();
+	lib->credmgr->add_set(lib->credmgr, &client_creds->set);
+
 	/* store the end entity certificate */
 	pkcs7 = (pkcs7_t*)container;
 	enumerator = pkcs7->create_cert_enumerator(pkcs7);
@@ -420,13 +426,17 @@ bool pki_cert_extract_cert(chunk_t data, cred_encoding_type_t form,
 	while (enumerator->enumerate(enumerator, &cert))
 	{
 		x509_t *x509 = (x509_t*)cert;
+		certificate_t *cert_found = NULL;
 		enumerator_t *certs;
+		chunk_t serial;
 		time_t from, until;
 		bool trusted, valid;
 
 		if (!(x509->get_flags(x509) & X509_CA))
 		{
-			DBG1(DBG_APP, "certificate \"%Y\"", cert->get_subject(cert));
+			DBG1(DBG_APP, "issued certificate \"%Y\"", cert->get_subject(cert));
+			serial = x509->get_serial(x509);
+			DBG1(DBG_APP, "  serial: %#B", &serial);
 
 			if (stored)
 			{
@@ -434,19 +444,19 @@ bool pki_cert_extract_cert(chunk_t data, cred_encoding_type_t form,
 				continue;
 			}
 
-			/* establish trust relativ to root CA */
-			creds->add_cert(creds, FALSE, cert->get_ref(cert));
+			/* establish trust relative to root CA */
+			client_creds->add_cert(client_creds, FALSE, cert->get_ref(cert));
 			certs = lib->credmgr->create_trusted_enumerator(lib->credmgr,
 								KEY_ANY, cert->get_subject(cert), FALSE);
-			trusted = certs->enumerate(certs, &cert, NULL);
-			valid = cert->get_validity(cert, NULL, &from, &until);
+			trusted = certs->enumerate(certs, &cert_found, NULL) &&
+					  (cert_found == cert);
+			certs->destroy(certs);
 
-			DBG1(DBG_APP, "certificate is %strusted, valid from %T until %T "
-						  "(currently %svalid)",
+			valid = cert->get_validity(cert, NULL, &from, &until);
+			DBG1(DBG_APP, "issued certificate is %strusted, "
+						  "valid from %T until %T (currently %svalid)",
 						  trusted ? "" : "not ", &from, FALSE, &until, FALSE,
 						  valid ? "" : "not ");
-
-			certs->destroy(certs);
 
 			if (!cert->get_encoding(cert, form, &cert_encoding))
 			{
@@ -467,6 +477,8 @@ bool pki_cert_extract_cert(chunk_t data, cred_encoding_type_t form,
 	}
 	enumerator->destroy(enumerator);
 	container->destroy(container);
+	lib->credmgr->remove_set(lib->credmgr, &client_creds->set);
+	client_creds->destroy(client_creds);
 
 	return stored;
 }

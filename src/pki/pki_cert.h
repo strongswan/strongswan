@@ -37,7 +37,6 @@ bool pki_cert_extract_cacerts(chunk_t data, char *caout, char *raout,
  * Extract an X.509 client certificates from PKCS#7 container
  * check trust as well as validity and write to stdout
  */
-bool pki_cert_extract_cert(chunk_t data, cred_encoding_type_t form,
-                           mem_cred_t *creds);
+bool pki_cert_extract_cert(chunk_t data, cred_encoding_type_t form);
 
 #endif /** PKI_CERT_H_ @}*/
