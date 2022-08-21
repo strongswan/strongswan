@@ -35,7 +35,7 @@ static int est()
 {
 	char *arg, *url = NULL, *file = NULL, *error = NULL;
 	char *client_cert_file = NULL, *client_key_file = NULL;
-	char *user_pass = NULL;
+	char *keyid = NULL, *certid = NULL, *user_pass = NULL;
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	chunk_t pkcs10_encoding = chunk_empty, est_response = chunk_empty;
 	certificate_t *pkcs10 = NULL, *client_cert = NULL, *cacert = NULL;
@@ -77,8 +77,14 @@ static int est()
 			case 'o':       /* --cert */
 				client_cert_file = arg;
 				continue;
+			case 'X':       /* --certid */
+				certid = arg;
+				continue;
 			case 'k':       /* --key */
 				client_key_file = arg;
+				continue;
+			case 'x':       /* --keyid */
+				keyid = arg;
 				continue;
 			case 'p':       /* --userpass */
 				user_pass = arg;
@@ -116,9 +122,27 @@ static int est()
 		goto usage;
 	}
 
-	if (client_cert_file && !client_key_file)
+	if ((client_cert_file || certid) && !(client_key_file || keyid))
 	{
-		error = "--key is required if --cert is set";
+		error = "--key or --keyid is required if --cert or --certid is set";
+		goto usage;
+	}
+
+	if (!(client_cert_file || certid) && (client_key_file || keyid))
+	{
+		error = "--cert or --certid is required if --key or --keyid is set";
+		goto usage;
+	}
+
+	if (client_key_file && keyid)
+	{
+		error = "only one of --key or --keyid can be set";
+		goto usage;
+	}
+
+	if (client_cert_file && certid)
+	{
+		error = "only one of --cert or --certid can be set";
 		goto usage;
 	}
 
@@ -164,27 +188,72 @@ static int est()
 	client_creds = mem_cred_create();
 	lib->credmgr->add_set(lib->credmgr, &client_creds->set);
 
-	if (client_cert_file)
+	/* re-enrollment with existing client certificate */
+	if (client_cert_file || certid)
 	{
-		/* load old client certificate */
-		client_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-									BUILD_FROM_FILE, client_cert_file, BUILD_END);
-		if (!client_cert)
+		chunk_t handle;
+
+		if (client_cert_file)	/* loadold certificate file */
 		{
-			DBG1(DBG_APP, "could not load client cert file '%s'", client_cert_file);
-			goto end;
+			client_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										CERT_X509,
+										BUILD_FROM_FILE, client_cert_file,
+										BUILD_END);
+			if (!client_cert)
+			{
+				DBG1(DBG_APP, "loading client cert '%s' failed",
+							   client_cert_file);
+				goto end;
+			}
+		}
+		else					/* attach old certificate object */
+		{
+			handle = chunk_from_hex(chunk_create(certid, strlen(certid)), NULL);
+			client_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+										CERT_X509,
+										BUILD_PKCS11_KEYID, handle,
+										BUILD_END);
+			chunk_free(&handle);
+			if (!client_cert)
+			{
+				DBG1(DBG_APP, "attaching to certificate handle %s failed",
+							   certid);
+				goto end;
+			}
 		}
 		client_creds->add_cert(client_creds, FALSE, client_cert);
 
-		/* load old client private key */
-		client_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
-									 BUILD_FROM_FILE, client_key_file, BUILD_END);
-		if (!client_key)
+		if (client_key_file)	/* load old client private key file */
 		{
-			DBG1(DBG_APP, "parsing client private key failed");
-			goto end;
+			client_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+										KEY_ANY,
+										BUILD_FROM_FILE, client_key_file,
+										BUILD_END);
+			if (!client_key)
+			{
+				DBG1(DBG_APP, "loading client private key '%s' failed",
+							   client_key_file);
+				goto end;
+			}
+		}
+		else					/* attach old client private key object */
+		{
+
+			handle = chunk_from_hex(chunk_create(keyid, strlen(keyid)), NULL);
+			client_key = lib->creds->create(lib->creds, CRED_PRIVATE_KEY,
+										KEY_ANY,
+										BUILD_PKCS11_KEYID, handle,
+										BUILD_END);
+			chunk_free(&handle);
+			if (!client_key)
+			{
+				DBG1(DBG_APP, "attaching to private key handle %s failed",
+							   keyid);
+				goto end;
+			}
 		}
 		client_creds->add_key(client_creds, client_key);
+
 		est_op = EST_SIMPLE_REENROLL;
 	}
 
@@ -286,16 +355,18 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		est, 'E', "est",
 		"Enroll an X.509 certificate with an EST server",
-		{"--url url [--in file] [--cacert file]+ [--cert file --key file]",
-		 "[-userpass username:password] [--interval time] [--maxpolltime time]",
-		 "[--outform der|pem]"},
+		{"--url url [--in file] [--cacert file]+ [-userpass username:password]",
+		 "[--cert file|--certid hex --key file|--keyid hex] [--interval time]",
+		 "[--maxpolltime time] [--outform der|pem]"},
 		{
 			{"help",        'h', 0, "show usage information"},
 			{"url",         'u', 1, "URL of the EST server"},
 			{"in",          'i', 1, "PKCS#10 input file, default: stdin"},
 			{"cacert",      'c', 1, "CA certificate"},
-			{"cert",        'o', 1, "Old certificate about to be renewed"},
-			{"key",         'k', 1, "Old private key about to be replaced"},
+			{"cert",        'o', 1, "old certificate about to be renewed"},
+			{"certid",		'X', 1, "smartcard or TPM certificate object handle" },
+			{"key",         'k', 1, "old private key about to be replaced"},
+			{"keyid",       'x', 1, "smartcard or TPM private key object handle"},
 			{"userpass",    'p', 1, "username:password for http basic auth"},
 			{"interval",    't', 1, "poll interval, default: 60s"},
 			{"maxpolltime", 'm', 1, "maximum poll time, default: 0 (no limit)"},
