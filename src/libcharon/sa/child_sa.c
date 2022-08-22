@@ -131,9 +131,10 @@ struct private_child_sa_t {
 	bool tfcv3;
 
 	/**
-	 * The outbound SPI of the CHILD_SA that replaced this one during a rekeying
+	 * The "other" CHILD_SA involved in a passive rekeying (either replacing
+	 * this one, or being replaced by it)
 	 */
-	uint32_t rekey_spi;
+	child_sa_t *rekey_sa;
 
 	/**
 	 * Protocol used to protect this SA, ESP|AH
@@ -1588,16 +1589,16 @@ METHOD(child_sa_t, remove_outbound, void,
 	this->outbound_state = CHILD_OUTBOUND_NONE;
 }
 
-METHOD(child_sa_t, set_rekey_spi, void,
-	private_child_sa_t *this, uint32_t spi)
+METHOD(child_sa_t, set_rekey_sa, void,
+	private_child_sa_t *this, child_sa_t *sa)
 {
-	this->rekey_spi = spi;
+	this->rekey_sa = sa;
 }
 
-METHOD(child_sa_t, get_rekey_spi, uint32_t,
+METHOD(child_sa_t, get_rekey_sa, child_sa_t*,
 	private_child_sa_t *this)
 {
-	return this->rekey_spi;
+	return this->rekey_sa;
 }
 
 CALLBACK(reinstall_vip, void,
@@ -2077,8 +2078,8 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 			.register_outbound = _register_outbound,
 			.install_outbound = _install_outbound,
 			.remove_outbound = _remove_outbound,
-			.set_rekey_spi = _set_rekey_spi,
-			.get_rekey_spi = _get_rekey_spi,
+			.set_rekey_sa = _set_rekey_sa,
+			.get_rekey_sa = _get_rekey_sa,
 			.update = _update,
 			.set_policies = _set_policies,
 			.install_policies = _install_policies,
