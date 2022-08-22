@@ -37,24 +37,24 @@ static int scepca()
 	{
 		switch (command_getopt(&arg))
 		{
-			case 'h':
+			case 'h':       /* --help */
 				return command_usage(NULL);
-			case 'u':
+			case 'u':       /* --url */
 				url = arg;
 				continue;
-			case 'c':
+			case 'c':       /* --caout */
 				caout = arg;
 				continue;
-			case 'r':
+			case 'r':       /* --raout */
 				raout = arg;
 				continue;
-			case 'f':
+			case 'f':       /* --form */
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
 				{
 					return command_usage("invalid certificate output format");
 				}
 				continue;
-			case 'F':
+			case 'F':       /* --force */
 				force = TRUE;
 				continue;
 			case EOF:

@@ -73,11 +73,15 @@ static bool print_cert_info(certificate_t *cert, pki_cert_type_t cert_type)
 	char digest_buf[HASH_SIZE_SHA256];
 	char base64_buf[HASH_SIZE_SHA256];
 	chunk_t cert_digest = {digest_buf, HASH_SIZE_SHA256};
-	chunk_t cert_id, encoding = chunk_empty;
+	chunk_t cert_id, serial, encoding = chunk_empty;
+	x509_t *x509;
 	bool success = FALSE;
 
 	DBG1(DBG_APP, "%s cert \"%Y\"", cert_type_label[cert_type],
 									cert->get_subject(cert));
+	x509 = (x509_t*)cert;
+	serial = x509->get_serial(x509);
+	DBG1(DBG_APP, "  serial: %#B", &serial);
 
 	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
 	{
@@ -299,26 +303,53 @@ bool pki_cert_extract_cacerts(chunk_t data, char *caout, char *raout,
 	{
 		enumerator_t *enumerator;
 		pkcs7_t *pkcs7 = (pkcs7_t*)container;
+		certificate_t *cert_found;
+		enumerator_t *certs;
+		bool trusted;
 
 		enumerator = pkcs7->create_cert_enumerator(pkcs7);
 		while (enumerator->enumerate(enumerator, &cert))
 		{
+			trusted = FALSE;
+
 			cert_type = get_pki_cert_type(cert);
 			if (cert_type == CERT_TYPE_ROOT_CA)
 			{
-				/* trust in root CA has to be established manuallly */
-				creds->add_cert(creds, TRUE, cert->get_ref(cert));
-
-				cert_type_count[cert_type]++;
-
 				if (!print_cert_info(cert, cert_type))
 				{
 					goto end;
 				}
+
+				/* same root CA as trusted TLS root CA already in cred set? */
+				certs = lib->credmgr->create_trusted_enumerator(lib->credmgr,
+									KEY_ANY, cert->get_subject(cert), FALSE);
+				while (certs->enumerate(certs, &cert_found, NULL))
+				{
+					if (cert->equals(cert, cert_found))
+					{
+						DBG1(DBG_APP, "Root CA equals trusted TLS Root CA");
+						trusted = TRUE;
+						break;
+					}
+					else
+					{
+						DBG1(DBG_APP, "non-matching TLS Root CA of same name");
+					}
+				}
+				certs->destroy(certs);
+
+				/* otherwise trust in root CA has to be established manuallly */
+				if (!trusted)
+				{
+					creds->add_cert(creds, TRUE, cert->get_ref(cert));
+					trusted = FALSE;
+				}
+				cert_type_count[cert_type]++;
+
 				if (build_pathname(&path, cert_type, cert_type_count, caout,
 								   raout, form))
 				{
-					written = write_cert(cert, cert_type, FALSE, path, form,
+					written = write_cert(cert, cert_type, trusted, path, form,
 										 force);
 					free(path);
 				}
@@ -344,24 +375,31 @@ bool pki_cert_extract_cacerts(chunk_t data, char *caout, char *raout,
 		while (enumerator->enumerate(enumerator, &cert))
 		{
 			written = FALSE;
+			trusted = FALSE;
 
 			cert_type = get_pki_cert_type(cert);
 			if (cert_type != CERT_TYPE_ROOT_CA)
 			{
-				certificate_t *cert_found = NULL;
-				enumerator_t *certs;
-				bool trusted;
-
 				if (!print_cert_info(cert, cert_type))
 				{
 					break;
 				}
 
-				/* establish trust relativ to root CA */
+				/* establish trust relative to root CA */
 				certs = lib->credmgr->create_trusted_enumerator(lib->credmgr,
 									KEY_ANY, cert->get_subject(cert), FALSE);
-				trusted = certs->enumerate(certs, &cert_found, NULL) &&
-						  (cert_found == cert);
+				while (certs->enumerate(certs, &cert_found, NULL))
+				{
+					if (cert->equals(cert, cert_found))
+					{
+						trusted = TRUE;
+						break;
+					}
+					else
+					{
+						DBG1(DBG_APP, "non-matching TLS Sub CA of same name");
+					}
+				}
 				certs->destroy(certs);
 
 				cert_type_count[cert_type]++;
@@ -434,7 +472,7 @@ bool pki_cert_extract_cert(chunk_t data, cred_encoding_type_t form)
 
 		if (!(x509->get_flags(x509) & X509_CA))
 		{
-			DBG1(DBG_APP, "issued certificate \"%Y\"", cert->get_subject(cert));
+			DBG1(DBG_APP, "Issued certificate \"%Y\"", cert->get_subject(cert));
 			serial = x509->get_serial(x509);
 			DBG1(DBG_APP, "  serial: %#B", &serial);
 
@@ -453,7 +491,7 @@ bool pki_cert_extract_cert(chunk_t data, cred_encoding_type_t form)
 			certs->destroy(certs);
 
 			valid = cert->get_validity(cert, NULL, &from, &until);
-			DBG1(DBG_APP, "issued certificate is %strusted, "
+			DBG1(DBG_APP, "Issued certificate is %strusted, "
 						  "valid from %T until %T (currently %svalid)",
 						  trusted ? "" : "not ", &from, FALSE, &until, FALSE,
 						  valid ? "" : "not ");

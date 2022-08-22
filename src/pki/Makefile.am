@@ -20,7 +20,7 @@ pki_SOURCES = pki.c pki.h pki_cert.c pki_cert.h command.c command.h \
 	commands/self.c \
 	commands/signcrl.c \
 	commands/verify.c \
-	est/est.h est/est.c est/est_tls.h est/est_tls.c \
+	est/est_tls.h est/est_tls.c	\
 	scep/scep.h scep/scep.c
 
 pki_LDADD = \

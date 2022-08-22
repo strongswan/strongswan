@@ -39,7 +39,7 @@ static int scep()
 {
 	char *arg, *url = NULL, *file = NULL, *dn = NULL, *error = NULL;
 	char *ca_enc_file = NULL, *ca_sig_file = NULL;
-	char *old_cert_file = NULL, *old_key_file = NULL;
+	char *client_cert_file = NULL, *client_key_file = NULL;
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	chunk_t scep_response = chunk_empty;
 	chunk_t challenge_password = chunk_empty;
@@ -95,33 +95,33 @@ static int scep()
 	{
 		switch (command_getopt(&arg))
 		{
-			case 'h':
+			case 'h':       /* --help */
 				goto usage;
-			case 'u':
+			case 'u':       /* --url */
 				url = arg;
 				continue;
-			case 'i':
+			case 'i':       /* --in */
 				file = arg;
 				continue;
-			case 'd':
+			case 'd':       /* --dn */
 				dn = arg;
 				continue;
-			case 'a':
+			case 'a':       /* --san */
 				san->insert_last(san, identification_create_from_string(arg));
 				continue;
-			case 'P':
+			case 'P':       /* --profile */
 				cert_type = chunk_create(arg, strlen(arg));
 				continue;
-			case 'p':
+			case 'p':       /* --password */
 				challenge_password = chunk_create(arg, strlen(arg));
 				continue;
-			case 'e':
+			case 'e':       /* --cacert-enc */
 				ca_enc_file = arg;
 				continue;
-			case 's':
+			case 's':       /* --cacert-sig */
 				ca_sig_file = arg;
 				continue;
-			case 'c':
+			case 'C':       /* --cacert */
 				cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
 									BUILD_FROM_FILE, arg, BUILD_END);
 				if (!cert)
@@ -131,13 +131,13 @@ static int scep()
 				}
 				creds->add_cert(creds, TRUE, cert);
 				continue;
-			case 'o':
-				old_cert_file = arg;
+			case 'c':       /* --cert */
+				client_cert_file = arg;
 				continue;
-			case 'k':
-				old_key_file = arg;
+			case 'k':       /* --key */
+				client_key_file = arg;
 				continue;
-			case 'C':
+			case 'E':       /* --cipher */
 				if (strcaseeq(arg, "des3"))
 				{
 					cipher = ENCR_3DES;
@@ -154,14 +154,14 @@ static int scep()
 					goto usage;
 				}
 				continue;
-			case 'g':
+			case 'g':       /* --digest */
 				if (!enum_from_name(hash_algorithm_short_names, arg, &digest_alg))
 				{
 					error = "invalid --digest type";
 					goto usage;
 				}
 				continue;
-			case 'R':
+			case 'R':       /* --rsa-padding */
 				if (streq(arg, "pss"))
 				{
 					pss = TRUE;
@@ -186,7 +186,7 @@ static int scep()
 			case 'm':       /* --maxpolltime */
 				max_poll_time = atoi(optarg);
 				continue;
-			case 'f':
+			case 'f':       /* --form */
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
 				{
 					error = "invalid certificate output format";
@@ -220,7 +220,7 @@ static int scep()
 		goto usage;
 	}
 
-	if (old_cert_file && !old_key_file)
+	if (client_cert_file && !client_key_file)
 	{
 		error = "--oldkey is required if --oldcert is set";
 		goto usage;
@@ -374,7 +374,7 @@ static int scep()
 	}
 	DBG1(DBG_APP, "transaction ID: %.*s", (int)transID.len, transID.ptr);
 
-	if (old_cert_file)
+	if (client_cert_file)
 	{
 		/* check support of Renewal Operation */
 		if (!(caps_flags & SCEP_CAPS_RENEWAL))
@@ -390,19 +390,21 @@ static int scep()
 
 		/* load old client certificate */
 		x509_signer  = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509,
-									BUILD_FROM_FILE, old_cert_file, BUILD_END);
+									BUILD_FROM_FILE, client_cert_file, BUILD_END);
 		if (!x509_signer)
 		{
-			DBG1(DBG_APP, "could not load old cert file '%s'", old_cert_file);
+			DBG1(DBG_APP, "loading client cert file '%s' failed",
+						   client_cert_file);
 			goto err;
 		}
 
 		/* load old RSA private key */
 		priv_signer = lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
-									 BUILD_FROM_FILE, old_key_file, BUILD_END);
+									 BUILD_FROM_FILE, client_key_file, BUILD_END);
 		if (!priv_signer)
 		{
-			DBG1(DBG_APP, "parsing old private key failed");
+			DBG1(DBG_APP, "loading client private key file '%s' failed",
+						   client_key_file);
 			goto err;
 		}
 	}
@@ -456,7 +458,7 @@ static int scep()
 		DBG1(DBG_APP, "could not load signature cacert file '%s'", ca_sig_file);
 		goto end;
 	}
-	creds->add_cert(creds, TRUE, x509_ca_sig->get_ref(x509_ca_sig));
+	x509_ca_sig = creds->add_cert_ref(creds, TRUE, x509_ca_sig);
 
 	/* build pkcs7 request */
 	pkcs7_req = scep_build_request(pkcs10_encoding, transID, scep_msg_type,
@@ -642,10 +644,10 @@ static void __attribute__ ((constructor))reg()
 			{"password",    'p', 1, "challengePassword to include in cert request"},
 			{"cacert-enc",  'e', 1, "CA certificate for encryption"},
 			{"cacert-sig",  's', 1, "CA certificate for signature verification"},
-			{"cacert",      'c', 1, "Additional CA certificates"},
-			{"oldcert",     'o', 1, "Old certificate about to be renewed"},
-			{"oldkey",      'k', 1, "Old RSA private key about to be replaced"},
-			{"cipher",      'C', 1, "encryption cipher, default: aes"},
+			{"cacert",      'C', 1, "Additional CA certificates"},
+			{"cert",        'c', 1, "Old certificate about to be renewed"},
+			{"key",         'k', 1, "Old RSA private key about to be replaced"},
+			{"cipher",      'E', 1, "encryption cipher, default: aes"},
 			{"digest",      'g', 1, "digest for signature creation, default: sha256"},
 			{"rsa-padding", 'R', 1, "padding for RSA signatures, default: pkcs1"},
 			{"interval",    't', 1, "poll interval, default: 60s"},

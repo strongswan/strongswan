@@ -19,7 +19,6 @@
 
 #include "pki.h"
 #include "pki_cert.h"
-#include "est/est.h"
 #include "est/est_tls.h"
 
 #include <credentials/certificates/certificate.h>
@@ -64,7 +63,7 @@ static int est()
 			case 'i':       /* --in */
 				file = arg;
 				continue;
-			case 'c':       /* --cacert */
+			case 'C':       /* --cacert */
 				cacert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 							 CERT_X509,	BUILD_FROM_FILE, arg, BUILD_END);
 				if (!cacert)
@@ -74,7 +73,7 @@ static int est()
 				}
 				creds->add_cert(creds, TRUE, cacert);
 				continue;
-			case 'o':       /* --cert */
+			case 'c':       /* --cert */
 				client_cert_file = arg;
 				continue;
 			case 'X':       /* --certid */
@@ -193,7 +192,7 @@ static int est()
 	{
 		chunk_t handle;
 
-		if (client_cert_file)	/* loadold certificate file */
+		if (client_cert_file)	/* load old certificate file */
 		{
 			client_cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 										CERT_X509,
@@ -362,9 +361,9 @@ static void __attribute__ ((constructor))reg()
 			{"help",        'h', 0, "show usage information"},
 			{"url",         'u', 1, "URL of the EST server"},
 			{"in",          'i', 1, "PKCS#10 input file, default: stdin"},
-			{"cacert",      'c', 1, "CA certificate"},
-			{"cert",        'o', 1, "old certificate about to be renewed"},
-			{"certid",		'X', 1, "smartcard or TPM certificate object handle" },
+			{"cacert",      'C', 1, "CA certificate"},
+			{"cert",        'c', 1, "old certificate about to be renewed"},
+			{"certid",      'X', 1, "smartcard or TPM certificate object handle" },
 			{"key",         'k', 1, "old private key about to be replaced"},
 			{"keyid",       'x', 1, "smartcard or TPM private key object handle"},
 			{"userpass",    'p', 1, "username:password for http basic auth"},

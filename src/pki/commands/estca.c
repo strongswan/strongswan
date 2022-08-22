@@ -16,7 +16,7 @@
 
 #include "pki.h"
 #include "pki_cert.h"
-#include "est/est.h"
+#include "est/est_tls.h"
 
 #include <credentials/containers/pkcs7.h>
 #include <credentials/certificates/certificate.h>
@@ -29,35 +29,55 @@ static int estca()
 {
 	cred_encoding_type_t form = CERT_ASN1_DER;
 	chunk_t est_response = chunk_empty;
-	char *arg, *url = NULL, *caout = NULL;
+	certificate_t *cacert;
+	mem_cred_t *creds = NULL;
+	est_tls_t *est_tls;
+	char *arg, *error = NULL, *url = NULL, *caout = NULL;
 	bool force = FALSE, success;
 	u_int http_code = 0;
+	status_t status = 1;
+
+	/* initialize CA certificate storage */
+	creds = mem_cred_create();
+	lib->credmgr->add_set(lib->credmgr, &creds->set);
 
 	while (TRUE)
 	{
 		switch (command_getopt(&arg))
 		{
-			case 'h':
-				return command_usage(NULL);
-			case 'u':
+			case 'h':       /* --help */
+				goto usage;
+			case 'u':       /* --url */
 				url = arg;
 				continue;
-			case 'c':
+			case 'C':       /* --cacert */
+				cacert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+							 CERT_X509,	BUILD_FROM_FILE, arg, BUILD_END);
+				if (!cacert)
+				{
+					DBG1(DBG_APP, "could not load cacert file '%s'", arg);
+					goto err;
+				}
+				creds->add_cert(creds, TRUE, cacert);
+				continue;
+			case 'c':       /* --caout */
 				caout = arg;
 				continue;
-			case 'f':
+			case 'f':       /* --outform */
 				if (!get_form(arg, &form, CRED_CERTIFICATE))
 				{
-					return command_usage("invalid certificate output format");
+					error ="invalid certificate output format";
+					goto usage;
 				}
 				continue;
-			case 'F':
+			case 'F':       /* --force */
 				force = TRUE;
 				continue;
 			case EOF:
 				break;
 			default:
-				return command_usage("invalid --estca option");
+				error ="invalid --estca option";
+				goto usage;
 		}
 		break;
 	}
@@ -67,17 +87,38 @@ static int estca()
 		return command_usage("--url is required");
 	}
 
-	if (!est_https_request(url, EST_CACERTS, FALSE, chunk_empty, &est_response,
-						   &http_code))
+	est_tls = est_tls_create(url, NULL, NULL);
+	if (!est_tls)
 	{
-		DBG1(DBG_APP, "did not receive a valid EST response: HTTP %u", http_code);
-		return 1;
+		DBG1(DBG_APP, "TLS connection to EST server was not established");
+		goto err;
 	}
-	success = pki_cert_extract_cacerts(est_response, caout, NULL, TRUE, form,
-									   force);
+	success = est_tls->request(est_tls, EST_CACERTS, chunk_empty, &est_response,
+							   &http_code, NULL);
+	est_tls->destroy(est_tls);
+
+	if (!success)
+	{
+		DBG1(DBG_APP, "EST request failed: HTTP %u", http_code);
+		goto err;
+	}
+	if (pki_cert_extract_cacerts(est_response, caout, NULL, TRUE, form, force))
+	{
+		status = 0;
+	}
+
+err:
+	lib->credmgr->remove_set(lib->credmgr, &creds->set);
+	creds->destroy(creds);
 	chunk_free(&est_response);
 
-	return success ? 0 : 1;
+	return status;
+
+usage:
+	lib->credmgr->remove_set(lib->credmgr, &creds->set);
+	creds->destroy(creds);
+
+	return command_usage(error);
 }
 
 /**
@@ -88,10 +129,11 @@ static void __attribute__ ((constructor))reg()
 	command_register((command_t) {
 		estca, 'e', "estca",
 		"get CA certificate[s] from a EST server",
-		{"--url url [--caout file] [--outform der|pem] [--force]"},
+		{"--url url [--cacert file]+ [--caout file] [--outform der|pem] [--force]"},
 		{
 			{"help",    'h', 0, "show usage information"},
 			{"url",     'u', 1, "URL of the SCEP server"},
+			{"cacert",  'C', 1, "TLS CA certificate"},
 			{"caout",   'c', 1, "CA certificate [template]"},
 			{"outform", 'f', 1, "encoding of stored certificates, default: der"},
 			{"force",   'F', 0, "force overwrite of existing files"},

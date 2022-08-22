@@ -16,8 +16,6 @@
 
 #define _GNU_SOURCE /* for asprintf() */
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
 
@@ -133,7 +131,8 @@ static chunk_t build_http_request(private_est_tls_t *this, est_op_t op, chunk_t 
 		len = asprintf(&http_header,
 				"GET %s/.well-known/est/%s HTTP/1.1\r\n"
 				"Host: %s\r\n"
-				"%s",
+				"%s"
+				"\r\n",
 				this->http_path, operations[op], this->http_host, http_auth);
 		if (len > 0)
 		{
@@ -153,6 +152,11 @@ static bool parse_http_header(chunk_t *in,  u_int *http_code, u_int *content_len
 	*http_code = 0;
 	*content_len = 0;
 	*base64 = FALSE;
+
+	if (retry_after)
+	{
+		*retry_after = 0;
+	}
 
 	/* Process HTTP protocol version and HTTP status code */
 	if (!fetchline(in, &line) || !extract_token(&version, ' ', &line) ||
@@ -210,7 +214,11 @@ METHOD(est_tls_t, request, bool,
 	/* initialize output variables */
 	*out = chunk_empty;
 	*http_code = 0;
-	*retry_after = 0;
+
+	if (retry_after)
+	{
+		*retry_after = 0;
+	}
 
 	http = build_http_request(this, op, in);
 

@@ -22,8 +22,6 @@
 #ifndef EST_TLS_H_
 #define EST_TLS_H_
 
-#include "est.h"
-
 #include <library.h>
 #include <credentials/certificates/certificate.h>
 
@@ -31,6 +29,18 @@
 #define EST_HTTP_CODE_ACCEPTED   202
 
 typedef struct est_tls_t est_tls_t;
+
+/**
+ * EST (RFC 7030) Operations
+ */
+typedef enum {
+    EST_CACERTS,
+    EST_SIMPLE_ENROLL,
+    EST_SIMPLE_REENROLL,
+    EST_FULL_CMC,
+    EST_SERVER_KEYGEN,
+    EST_CSR_ATTRS
+} est_op_t;
 
 /**
  * TLS Interface for sending and receiving HTTPS messages
