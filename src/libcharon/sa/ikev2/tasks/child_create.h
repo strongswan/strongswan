@@ -100,6 +100,13 @@ struct child_create_t {
 	child_sa_t* (*get_child) (child_create_t *this);
 
 	/**
+	 * Get the SPI of the other peer's selected proposal, if available.
+	 *
+	 * @return			other's SPI, 0 if unknown
+	 */
+	uint32_t (*get_other_spi)(child_create_t *this);
+
+	/**
 	 * Enforce a specific CHILD_SA config as responder.
 	 *
 	 * @param cfg		configuration to enforce, reference gets owned
