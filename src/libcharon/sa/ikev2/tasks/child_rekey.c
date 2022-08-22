@@ -19,6 +19,7 @@
 #include "child_rekey.h"
 
 #include <daemon.h>
+#include <encoding/payloads/delete_payload.h>
 #include <encoding/payloads/notify_payload.h>
 #include <sa/ikev2/tasks/child_create.h>
 #include <sa/ikev2/tasks/child_delete.h>
@@ -84,6 +85,11 @@ struct private_child_rekey_t {
 	task_t *collision;
 
 	/**
+	 * SPIs of SAs the peer deleted during the rekeying which we haven't found
+	 */
+	array_t *deleted_spis;
+
+	/**
 	 * State flags
 	 */
 	enum {
@@ -95,19 +101,33 @@ struct private_child_rekey_t {
 		CHILD_REKEY_FOLLOWUP_KE = (1<<0),
 
 		/**
-		 * Set if we adopted a completed passive task, otherwise (i.e. for
-		 * multi-KE rekeyings) we just reference it.
+		 * Set if the passive rekey task is completed and we adopted it,
+		 * otherwise (i.e. for  multi-KE rekeyings) we just reference it.
 		 */
-		CHILD_REKEY_ADOPTED_PASSIVE = (1<<1),
+		CHILD_REKEY_PASSIVE_INSTALLED = (1<<1),
 
 		/**
-		 * Indicate that the peer destroyed the redundant child from a
-		 * collision. This happens if a peer's delete notification for the
-		 * redundant child gets processed before the active rekey job is
-		 * complete. If so, we must not touch the child created in the collision
-		 * since it points to memory already freed.
+		 * Indicate that the peer sent a DELETE for its own CHILD_SA of a
+		 * collision. In regular rekeyings this happens if a peer lost and
+		 * the delete for the redundant SA gets processed before the active
+		 * rekey job is complete.  It could also mean the peer deleted its
+		 * winning SA.
 		 */
-		CHILD_REKEY_OTHER_DESTROYED = (1<<2),
+		CHILD_REKEY_OTHER_DELETED = (1<<2),
+
+		/**
+		 * Indicate that the peer sent a DELETE for the rekeyed/old CHILD_SA.
+		 * This happens if the peer has won the rekey collision, but it might
+		 * also happen if it incorrectly sent one after it replied to our
+		 * rekeying request, but the DELETE arrived before that response.
+		 */
+		CHILD_REKEY_OLD_SA_DELETED = (1<<3),
+
+		/**
+		 * After handling the collision, this indicates whether the peer deleted
+		 * the winning replacement SA (either ours or its own).
+		 */
+		CHILD_REKEY_REPLACEMENT_DELETED = (1<<4),
 
 	} flags;
 };
@@ -131,57 +151,118 @@ static void schedule_delayed_rekey(private_child_rekey_t *this)
 }
 
 /**
- * Implementation of task_t.build for initiator, after rekeying
+ * Destroy the old CHILD_SA and recreate it.
  */
-static status_t build_i_delete(private_child_rekey_t *this, message_t *message)
+static status_t destroy_and_recreate_child_sa(private_child_rekey_t *this)
+{
+	child_init_args_t args = {};
+	child_cfg_t *child_cfg;
+	protocol_id_t protocol;
+	uint32_t spi;
+	status_t status;
+
+	spi = this->child_sa->get_spi(this->child_sa, TRUE);
+	protocol = this->child_sa->get_protocol(this->child_sa);
+	child_cfg = this->child_sa->get_config(this->child_sa);
+	child_cfg->get_ref(child_cfg);
+	args.reqid = this->child_sa->get_reqid(this->child_sa);
+	args.label = this->child_sa->get_label(this->child_sa);
+	if (args.label)
+	{
+		args.label = args.label->clone(args.label);
+	}
+
+	charon->bus->child_updown(charon->bus, this->child_sa, FALSE);
+	this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
+
+	status = this->ike_sa->initiate(this->ike_sa, child_cfg, &args);
+	DESTROY_IF(args.label);
+	return status;
+}
+
+METHOD(task_t, build_i_delete, status_t,
+	private_child_rekey_t *this, message_t *message)
 {
 	/* update exchange type to INFORMATIONAL for the delete */
 	message->set_exchange_type(message, INFORMATIONAL);
-
 	return this->child_delete->task.build(&this->child_delete->task, message);
 }
 
-/**
- * Implementation of task_t.process for initiator, after rekeying
- */
-static status_t process_i_delete(private_child_rekey_t *this, message_t *message)
+METHOD(task_t, process_i_delete, status_t,
+	private_child_rekey_t *this, message_t *message)
 {
 	return this->child_delete->task.process(&this->child_delete->task, message);
 }
 
 /**
- * find a child using the REKEY_SA notify
+ * In failure cases we don't use a child_delete task, but handle the deletes
+ * ourselves for more flexibility.
  */
-static void find_child(private_child_rekey_t *this, message_t *message)
+static void build_delete_old_sa(private_child_rekey_t *this, message_t *message)
 {
-	notify_payload_t *notify;
+	delete_payload_t *del;
 	protocol_id_t protocol;
 	uint32_t spi;
-	child_sa_t *child_sa;
 
-	notify = message->get_notify(message, REKEY_SA);
-	if (notify)
+	message->set_exchange_type(message, INFORMATIONAL);
+
+	protocol = this->child_sa->get_protocol(this->child_sa);
+	spi = this->child_sa->get_spi(this->child_sa, TRUE);
+
+	del = delete_payload_create(PLV2_DELETE, protocol);
+	del->add_spi(del, spi);
+	message->add_payload(message, (payload_t*)del);
+
+	DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x",
+		 protocol_id_names, protocol, ntohl(spi));
+}
+
+METHOD(task_t, build_i_delete_replacement, status_t,
+	private_child_rekey_t *this, message_t *message)
+{
+	/* add the delete for the replacement we failed to create locally but the
+	 * peer probably already has installed */
+	this->child_create->task.build(&this->child_create->task, message);
+	return SUCCESS;
+}
+
+METHOD(task_t, build_i_delete_old_destroy, status_t,
+	private_child_rekey_t *this, message_t *message)
+{
+	/* send the delete but then immediately destroy and possibly recreate the
+	 * CHILD_SA as the peer deleted its replacement, treat this like the peer
+	 * sent a delete for the original SA */
+	build_delete_old_sa(this, message);
+	child_delete_destroy_and_reestablish(this->ike_sa, this->child_sa);
+	return SUCCESS;
+}
+
+/**
+ * Delete either both or only the replacement SA and then destroy and recreate
+ * the old SA.
+ */
+static status_t build_delete_recreate(private_child_rekey_t *this,
+									  message_t *message, bool delete_old)
+{
+	if (delete_old)
 	{
-		protocol = notify->get_protocol_id(notify);
-		spi = notify->get_spi(notify);
-
-		if (protocol == PROTO_ESP || protocol == PROTO_AH)
-		{
-			child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
-												  spi, FALSE);
-			/* ignore rekeyed/deleted CHILD_SAs we keep around */
-			if (child_sa &&
-				child_sa->get_state(child_sa) != CHILD_DELETED)
-			{
-				this->child_sa = child_sa;
-			}
-		}
-		if (!this->child_sa)
-		{
-			this->protocol = protocol;
-			this->spi_data = chunk_clone(notify->get_spi_data(notify));
-		}
+		build_delete_old_sa(this, message);
 	}
+	this->child_create->task.build(&this->child_create->task, message);
+	destroy_and_recreate_child_sa(this);
+	return SUCCESS;
+}
+
+METHOD(task_t, build_i_delete_replacement_recreate, status_t,
+	private_child_rekey_t *this, message_t *message)
+{
+	return build_delete_recreate(this, message, FALSE);
+}
+
+METHOD(task_t, build_i_delete_both_recreate, status_t,
+	private_child_rekey_t *this, message_t *message)
+{
+	return build_delete_recreate(this, message, TRUE);
 }
 
 METHOD(task_t, build_i, status_t,
@@ -262,6 +343,41 @@ METHOD(task_t, build_i, status_t,
 	return NEED_MORE;
 }
 
+/**
+ * find a child using the REKEY_SA notify
+ */
+static void find_child(private_child_rekey_t *this, message_t *message)
+{
+	notify_payload_t *notify;
+	protocol_id_t protocol;
+	uint32_t spi;
+	child_sa_t *child_sa;
+
+	notify = message->get_notify(message, REKEY_SA);
+	if (notify)
+	{
+		protocol = notify->get_protocol_id(notify);
+		spi = notify->get_spi(notify);
+
+		if (protocol == PROTO_ESP || protocol == PROTO_AH)
+		{
+			child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
+												  spi, FALSE);
+			/* ignore rekeyed/deleted CHILD_SAs we keep around */
+			if (child_sa &&
+				child_sa->get_state(child_sa) != CHILD_DELETED)
+			{
+				this->child_sa = child_sa;
+			}
+		}
+		if (!this->child_sa)
+		{
+			this->protocol = protocol;
+			this->spi_data = chunk_clone(notify->get_spi_data(notify));
+		}
+	}
+}
+
 METHOD(task_t, process_r, status_t,
 	private_child_rekey_t *this, message_t *message)
 {
@@ -314,7 +430,7 @@ METHOD(task_t, build_r, status_t,
 	child_sa_t *child_sa;
 	child_sa_state_t state = CHILD_INSTALLED;
 	uint32_t reqid;
-	bool followup_sent;
+	bool is_collision, followup_sent = FALSE;
 
 	if (!this->child_sa)
 	{
@@ -328,11 +444,14 @@ METHOD(task_t, build_r, status_t,
 	}
 	if (this->child_sa->get_state(this->child_sa) == CHILD_DELETING)
 	{
-		DBG1(DBG_IKE, "unable to rekey, we are deleting the CHILD_SA");
+		DBG1(DBG_IKE, "unable to rekey CHILD_SA %s{%u}, we are deleting it",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
 		message->add_notify(message, TRUE, TEMPORARY_FAILURE, chunk_empty);
 		return SUCCESS;
 	}
-	if (actively_rekeying(this, &followup_sent) && followup_sent)
+	is_collision = actively_rekeying(this, &followup_sent);
+	if (is_collision && followup_sent)
 	{
 		DBG1(DBG_IKE, "peer initiated rekeying, but we did too and already "
 			 "sent IKE_FOLLOWUP_KE");
@@ -371,17 +490,47 @@ METHOD(task_t, build_r, status_t,
 	if (child_sa && child_sa->get_state(child_sa) == CHILD_INSTALLED)
 	{
 		this->child_sa->set_state(this->child_sa, CHILD_REKEYED);
-		this->child_sa->set_rekey_spi(this->child_sa,
-									  child_sa->get_spi(child_sa, FALSE));
-
-		/* FIXME: this might trigger twice if there was a collision */
-		charon->bus->child_rekey(charon->bus, this->child_sa, child_sa);
+		/* link the SAs */
+		this->child_sa->set_rekey_sa(this->child_sa, child_sa);
+		child_sa->set_rekey_sa(child_sa, this->child_sa);
+		/* like installing the outbound SA, we only trigger the child-rekey
+		 * event once the old SA is deleted */
 	}
 	else if (this->child_sa->get_state(this->child_sa) == CHILD_REKEYING)
 	{	/* rekeying failed, reuse old child */
 		this->child_sa->set_state(this->child_sa, state);
 	}
 	return SUCCESS;
+}
+
+/**
+ * Check if the peer deleted the replacement SA we created.
+ */
+static bool is_our_replacement_deleted(private_child_rekey_t *this)
+{
+	uint32_t spi, peer_spi;
+	int i;
+
+	if (!this->deleted_spis)
+	{
+		return FALSE;
+	}
+
+	peer_spi = this->child_create->get_other_spi(this->child_create);
+	if (!peer_spi)
+	{
+		return FALSE;
+	}
+
+	for (i = 0; i < array_count(this->deleted_spis); i++)
+	{
+		array_get(this->deleted_spis, i, &spi);
+		if (spi == peer_spi)
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
 }
 
 /**
@@ -408,42 +557,42 @@ static void remove_passive_rekey_task(private_child_rekey_t *this)
 }
 
 /**
- * Handle a rekey collision
+ * Compare the nonces to determine if we lost the rekey collision.
+ * The SA with the lowest nonce should be deleted (if already complete), this
+ * checks if we or the peer created it
  */
-static child_sa_t *handle_collision(private_child_rekey_t *this,
-									child_sa_t **to_install, bool multi_ke)
+static bool lost_collision(private_child_rekey_t *this)
 {
 	private_child_rekey_t *other = (private_child_rekey_t*)this->collision;
 	chunk_t this_nonce, other_nonce;
-	child_sa_t *to_delete, *child_sa;
 
-	if (this->collision->get_type(this->collision) == TASK_CHILD_DELETE)
-	{	/* CHILD_DELETE, which we only adopt if it is for the CHILD_SA we are
-		 * ourselves rekeying */
-		to_delete = this->child_create->get_child(this->child_create);
-		if (multi_ke)
-		{
-			DBG1(DBG_IKE, "CHILD_SA rekey/delete collision, abort incomplete "
-				 "multi-KE rekeying");
-		}
-		else
-		{
-			DBG1(DBG_IKE, "CHILD_SA rekey/delete collision, deleting redundant "
-				 "child %s{%d}", to_delete->get_name(to_delete),
-				 to_delete->get_unique_id(to_delete));
-		}
-		return to_delete;
+	if (!other)
+	{
+		return FALSE;
 	}
 
 	this_nonce = this->child_create->get_lower_nonce(this->child_create);
 	other_nonce = other->child_create->get_lower_nonce(other->child_create);
 
-	/* the SA with the lowest nonce should be deleted (if already complete),
-	 * check if we or the peer created it */
-	if (memcmp(this_nonce.ptr, other_nonce.ptr,
-			   min(this_nonce.len, other_nonce.len)) < 0)
+	return memcmp(this_nonce.ptr, other_nonce.ptr,
+				  min(this_nonce.len, other_nonce.len)) < 0;
+}
+
+/**
+ * Handle a rekey collision. Returns TRUE if we won the collision or there
+ * wasn't one.  Also returns the SA that should be deleted and the winning SA
+ * of the collision, if any.
+ */
+static bool handle_collision(private_child_rekey_t *this,
+							 child_sa_t **to_delete, child_sa_t **winning_sa,
+							 bool multi_ke)
+{
+	private_child_rekey_t *other = (private_child_rekey_t*)this->collision;
+	child_sa_t *other_sa;
+
+	if (lost_collision(this))
 	{
-		to_delete = this->child_create->get_child(this->child_create);
+		*to_delete = this->child_create->get_child(this->child_create);
 		if (multi_ke)
 		{
 			DBG1(DBG_IKE, "CHILD_SA rekey collision lost, abort incomplete "
@@ -452,38 +601,65 @@ static child_sa_t *handle_collision(private_child_rekey_t *this,
 		else
 		{
 			DBG1(DBG_IKE, "CHILD_SA rekey collision lost, deleting "
-				 "redundant child %s{%d}", to_delete->get_name(to_delete),
-				 to_delete->get_unique_id(to_delete));
+				 "redundant child %s{%u}", (*to_delete)->get_name(*to_delete),
+				 (*to_delete)->get_unique_id(*to_delete));
 		}
-		return to_delete;
+		if (this->flags & CHILD_REKEY_PASSIVE_INSTALLED)
+		{
+			*winning_sa = other->child_create->get_child(other->child_create);
+
+			if (this->flags & CHILD_REKEY_OTHER_DELETED)
+			{
+				/* the peer deleted its own replacement SA while we waited
+				 * for a response, set a flag to destroy the SA accordingly */
+				this->flags |= CHILD_REKEY_REPLACEMENT_DELETED;
+				/* if the peer has not triggered a rekey event yet by deleting
+				 * its own SA before deleting the old SA (if it did so at all),
+				 * we trigger that now so listeners can track this properly */
+				if (!(this->flags & CHILD_REKEY_OLD_SA_DELETED) ||
+					(*winning_sa)->get_outbound_state(*winning_sa) != CHILD_OUTBOUND_INSTALLED)
+				{
+					charon->bus->child_rekey(charon->bus, this->child_sa,
+											 *winning_sa);
+				}
+			}
+			/* check if the peer already sent a delete for the old SA */
+			if (this->flags & CHILD_REKEY_OLD_SA_DELETED)
+			{
+				child_delete_destroy_rekeyed(this->ike_sa, this->child_sa);
+			}
+			else if (this->flags & CHILD_REKEY_OTHER_DELETED)
+			{
+				/* make sure the old SA is in the correct state if the peer
+				 * deleted its own SA but not yet the old one (weird, but who
+				 * knows...) */
+				this->child_sa->set_state(this->child_sa, CHILD_REKEYED);
+			}
+		}
+		return FALSE;
 	}
 
-	*to_install = this->child_create->get_child(this->child_create);
-	to_delete = this->child_sa;
+	*winning_sa = this->child_create->get_child(this->child_create);
+	*to_delete = this->child_sa;
+
+	if (!this->collision)
+	{
+		if (is_our_replacement_deleted(this))
+		{
+			this->flags |= CHILD_REKEY_REPLACEMENT_DELETED;
+			/* since we will destroy the winning SA, we have to trigger a rekey
+			 * event before so listeners can track this properly */
+			charon->bus->child_rekey(charon->bus, this->child_sa, *winning_sa);
+		}
+		return TRUE;
+	}
 
 	/* the passive rekeying is complete only if it was single-KE.  otherwise,
 	 * the peer would either have stopped before sending IKE_FOLLOWUP_KE when
 	 * it noticed it lost, or it responded with TEMPORARY_FAILURE to our
 	 * CREATE_CHILD_SA request if it already started sending them. */
-	if (this->flags & CHILD_REKEY_ADOPTED_PASSIVE)
+	if (this->flags & CHILD_REKEY_PASSIVE_INSTALLED)
 	{
-		/* we don't want to install the peer's redundant outbound SA */
-		this->child_sa->set_rekey_spi(this->child_sa, 0);
-		/* don't touch child other created if it has already been deleted */
-		if (!(this->flags & CHILD_REKEY_OTHER_DESTROYED))
-		{
-			/* disable close action and updown event for redundant child the
-			 * other is expected to delete */
-			child_sa = other->child_create->get_child(other->child_create);
-			if (child_sa)
-			{
-				child_sa->set_close_action(child_sa, ACTION_NONE);
-				if (child_sa->get_state(child_sa) != CHILD_REKEYED)
-				{
-					child_sa->set_state(child_sa, CHILD_REKEYED);
-				}
-			}
-		}
 		if (multi_ke)
 		{
 			DBG1(DBG_IKE, "CHILD_SA rekey collision won, continue with "
@@ -494,8 +670,51 @@ static child_sa_t *handle_collision(private_child_rekey_t *this,
 		else
 		{
 			DBG1(DBG_IKE, "CHILD_SA rekey collision won, deleting old child "
-				 "%s{%d}", to_delete->get_name(to_delete),
-				 to_delete->get_unique_id(to_delete));
+				 "%s{%u}", (*to_delete)->get_name(*to_delete),
+				 (*to_delete)->get_unique_id(*to_delete));
+		}
+
+		other_sa = other->child_create->get_child(other->child_create);
+
+		/* check if the peer already sent a delete for our winning SA */
+		if (is_our_replacement_deleted(this))
+		{
+			this->flags |= CHILD_REKEY_REPLACEMENT_DELETED;
+			/* similar to the case above, but here the peer might already have
+			 * deleted its redundant SA, and it might have sent an incorrect
+			 * delete for the old SA. if it did the latter first, then we will
+			 * have concluded the rekeying and there was a rekey event from the
+			 * old SA to the redundant one that we have to consider here */
+			if (this->flags & CHILD_REKEY_OLD_SA_DELETED && other_sa &&
+				other_sa->get_outbound_state(other_sa) == CHILD_OUTBOUND_INSTALLED)
+			{
+				charon->bus->child_rekey(charon->bus, other_sa, *winning_sa);
+			}
+			else
+			{
+				charon->bus->child_rekey(charon->bus, this->child_sa,
+										 *winning_sa);
+			}
+		}
+
+		/* check if the peer already sent a delete for its redundant SA */
+		if (!(this->flags & CHILD_REKEY_OTHER_DELETED))
+		{
+			/* unlink the redundant SA the peer is expected to delete, disable
+			 * events and make sure the outbound SA isn't installed/registered */
+			this->child_sa->set_rekey_sa(this->child_sa, NULL);
+			if (other_sa)
+			{
+				other_sa->set_rekey_sa(other_sa, NULL);
+				other_sa->set_state(other_sa, CHILD_REKEYED);
+				other_sa->remove_outbound(other_sa);
+			}
+		}
+		else if (other_sa)
+		{
+			/* the peer already deleted its redundant SA, but we have not yet
+			 * destroyed it */
+			child_delete_destroy_rekeyed(this->ike_sa, other_sa);
 		}
 		this->collision->destroy(this->collision);
 	}
@@ -517,7 +736,181 @@ static child_sa_t *handle_collision(private_child_rekey_t *this,
 		remove_passive_rekey_task(this);
 	}
 	this->collision = NULL;
-	return to_delete;
+	return TRUE;
+}
+
+/**
+ * Check if we can ignore a CHILD_SA_NOT_FOUND notify and log appropriate
+ * messages.
+ */
+static bool ignore_child_sa_not_found(private_child_rekey_t *this)
+{
+	private_child_rekey_t *other;
+	child_sa_t *other_sa;
+
+	/* if the peer hasn't explicitly sent a delete for the CHILD_SA it wasn't
+	 * able to find now, it might have lost the state, we can't ignore that and
+	 * create a replacement */
+	if (!(this->flags & CHILD_REKEY_OLD_SA_DELETED))
+	{
+		DBG1(DBG_IKE, "peer didn't find CHILD_SA %s{%u} we tried to rekey, "
+			 "create a replacement",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
+		return FALSE;
+	}
+
+	/* if the peer explicitly deleted the original CHILD_SA before our request
+	 * arrived, we adhere to that wish and close the SA.
+	 * this is the case where the peer received the DELETE response before
+	 * our rekey request, see below for the case where it hasn't received the
+	 * response yet and responded with TEMPORARY_FAILURE */
+	if (!this->collision)
+	{
+		DBG1(DBG_IKE, "closing CHILD_SA %s{%u} we tried to rekey because "
+			 "the peer deleted it before it received our request",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
+		child_delete_destroy_and_reestablish(this->ike_sa, this->child_sa);
+		return TRUE;
+	}
+
+	/* if there was a rekey collision and the peer deleted the original CHILD_SA
+	 * before our request arrived and it has not deleted the new SA, we just
+	 * abort our own rekeying and use the peer's replacement */
+	if (!(this->flags & CHILD_REKEY_OTHER_DELETED))
+	{
+		DBG1(DBG_IKE, "abort active rekeying for CHILD_SA %s{%u} because "
+			 "it was successfully rekeyed by the peer before it received "
+			 "our request", this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
+		child_delete_destroy_rekeyed(this->ike_sa, this->child_sa);
+		return TRUE;
+	}
+
+	/* the peer successfully rekeyed the same SA, deleted it, but then also
+	 * deleted the CHILD_SA it created as replacement. adhere to that wish and
+	 * close the replacement */
+	other = (private_child_rekey_t*)this->collision;
+	other_sa = other->child_create->get_child(other->child_create);
+
+	DBG1(DBG_IKE, "abort active rekeying for CHILD_SA %s{%u} because the other "
+		 "peer already deleted its replacement CHILD_SA %s{%u} before "
+		 "it received our request", this->child_sa->get_name(this->child_sa),
+		 this->child_sa->get_unique_id(this->child_sa),
+		 other_sa->get_name(other_sa), other_sa->get_unique_id(other_sa));
+	child_delete_destroy_rekeyed(this->ike_sa, this->child_sa);
+	child_delete_destroy_and_reestablish(this->ike_sa, other_sa);
+	return TRUE;
+}
+
+/**
+ * Check if we can ignore failures to create the new CHILD_SA e.g. due to an
+ * error notify like TEMPORARY_FAILURE and log appropriate messages.
+ */
+static bool ignore_child_sa_failure(private_child_rekey_t *this)
+{
+	/* we are fine if there was a successful passive rekeying. the peer might
+	 * not have detected the collision and responded with a TEMPORARY_FAILURE
+	 * notify while deleting the old SA, which conflicted with our request */
+	if (this->collision && (this->flags & CHILD_REKEY_PASSIVE_INSTALLED) &&
+		!(this->flags & CHILD_REKEY_OTHER_DELETED))
+	{
+		DBG1(DBG_IKE, "abort active rekeying for CHILD_SA %s{%u} because "
+			 "the peer successfully rekeyed it before receiving our request%s",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa),
+			 this->flags & CHILD_REKEY_OLD_SA_DELETED ? ""
+			 										  : " (waiting for delete)");
+
+		/* if the peer already deleted the rekeyed SA, destroy it, otherwise
+		 * just wait for the delete */
+		if (this->flags & CHILD_REKEY_OLD_SA_DELETED)
+		{
+			child_delete_destroy_rekeyed(this->ike_sa, this->child_sa);
+		}
+		return TRUE;
+	}
+
+	/* if the peer initiated a delete for the old SA before our rekey request
+	 * reached it, the expected response is TEMPORARY_FAILURE.  adhere to that
+	 * wish and abort the rekeying.
+	 * this is the case where the peer has not yet received the DELETE response
+	 * when our rekey request arrived, see above for the case where it has
+	 * already received the response and responded with CHILD_SA_NOT_FOUND */
+	if (this->flags & CHILD_REKEY_OLD_SA_DELETED)
+	{
+		DBG1(DBG_IKE, "closing CHILD_SA %s{%u} we tried to rekey because "
+			 "the peer started to delete it before receiving our request",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
+		child_delete_destroy_and_reestablish(this->ike_sa, this->child_sa);
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/**
+ * Check if we can ignore local failures to create the new CHILD_SA e.g. due to
+ * a KE or kernel problem and log an appropriate message.
+ */
+static status_t handle_local_failure(private_child_rekey_t *this)
+{
+	/* if we lost the collision, we are expected to delete the failed SA
+	 * anyway, so just do that and rely on the passive rekeying, which
+	 * deletes the old SA (or has already done so, in which case we destroy the
+	 * SA now) */
+	if (this->collision && lost_collision(this))
+	{
+		if (this->flags & CHILD_REKEY_OLD_SA_DELETED)
+		{
+			child_delete_destroy_rekeyed(this->ike_sa, this->child_sa);
+		}
+		this->public.task.build = _build_i_delete_replacement;
+		return NEED_MORE;
+	}
+
+	/* the peer sent a delete for our winning replacement SA, no need to send a
+	 * delete for it again and adhere to this wish to delete the SA.
+	 * however, we are expected to send a delete for the original SA, unless,
+	 * it was already deleted by the peer as well (which would be incorrect) */
+	if (is_our_replacement_deleted(this))
+	{
+		DBG1(DBG_IKE, "closing CHILD_SA %s{%u} we tried to rekey because "
+			 "the peer meanwhile sent a delete for its replacement",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
+		if (this->flags & CHILD_REKEY_OLD_SA_DELETED)
+		{
+			child_delete_destroy_and_reestablish(this->ike_sa, this->child_sa);
+			return SUCCESS;
+		}
+		this->public.task.build = _build_i_delete_old_destroy;
+		return NEED_MORE;
+	}
+
+	/* as the winner of the collision or if there wasn't one, we're expected to
+	 * delete the original SA, but we also want to recreate it because we
+	 * failed to install the replacement.  because the peer already has the
+	 * replacement partially installed, we also need to send a delete for the
+	 * failed one */
+	this->public.task.build = _build_i_delete_both_recreate;
+
+	if (this->flags & CHILD_REKEY_OLD_SA_DELETED)
+	{
+		/* the peer already sent an incorrect delete for the original SA that
+		 * arrived before the response to the rekeying, delete only the failed
+		 * replacement and recreate the SA */
+		DBG1(DBG_IKE, "peer sent an incorrect delete for CHILD_SA %s{%u} after "
+			 "responding to our rekeying",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
+		this->public.task.build = _build_i_delete_replacement_recreate;
+	}
+	DBG1(DBG_IKE, "closing and recreating CHILD_SA %s{%u} after failing to "
+		 "install replacement", this->child_sa->get_name(this->child_sa),
+		 this->child_sa->get_unique_id(this->child_sa));
+	return NEED_MORE;
 }
 
 METHOD(task_t, process_i, status_t,
@@ -525,7 +918,8 @@ METHOD(task_t, process_i, status_t,
 {
 	protocol_id_t protocol;
 	uint32_t spi;
-	child_sa_t *child_sa, *to_delete = NULL, *to_install = NULL;
+	child_sa_t *child_sa, *to_delete = NULL, *winning_sa = NULL;
+	bool collision_won;
 
 	if (message->get_notify(message, NO_ADDITIONAL_SAS))
 	{
@@ -539,70 +933,51 @@ METHOD(task_t, process_i, status_t,
 	}
 	if (message->get_notify(message, CHILD_SA_NOT_FOUND))
 	{
-		child_cfg_t *child_cfg;
-		child_init_args_t args = {};
-		status_t status;
-
-		if (this->collision &&
-			this->collision->get_type(this->collision) == TASK_CHILD_DELETE)
-		{	/* ignore this error if we already deleted the CHILD_SA on the
-			 * peer's behalf (could happen if the other peer does not detect
-			 * the collision and did not respond with TEMPORARY_FAILURE) */
+		/* ignore CHILD_SA_NOT_FOUND error notify in some cases, otherwise
+		 * create a replacement SA */
+		if (ignore_child_sa_not_found(this))
+		{
 			return SUCCESS;
 		}
-		DBG1(DBG_IKE, "peer didn't find the CHILD_SA we tried to rekey");
-		/* FIXME: according to RFC 7296 we should only create a new CHILD_SA if
-		 * it does not exist yet, we currently have no good way of checking for
-		 * that (we could go by name, but that might be tricky e.g. due to
-		 * narrowing) */
-		spi = this->child_sa->get_spi(this->child_sa, TRUE);
-		protocol = this->child_sa->get_protocol(this->child_sa);
-		child_cfg = this->child_sa->get_config(this->child_sa);
-		child_cfg->get_ref(child_cfg);
-		args.reqid = this->child_sa->get_reqid(this->child_sa);
-		args.label = this->child_sa->get_label(this->child_sa);
-		if (args.label)
-		{
-			args.label = args.label->clone(args.label);
-		}
-		charon->bus->child_updown(charon->bus, this->child_sa, FALSE);
-		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
-		status = this->ike_sa->initiate(this->ike_sa,
-										child_cfg->get_ref(child_cfg), &args);
-		DESTROY_IF(args.label);
-		return status;
+		return destroy_and_recreate_child_sa(this);
 	}
 
 	if (this->child_create->task.process(&this->child_create->task,
 										 message) == NEED_MORE)
 	{
-		if (message->get_notify(message, INVALID_KE_PAYLOAD) ||
-			!this->child_create->get_child(this->child_create))
-		{	/* bad key exchange mechanism, retry, or failure requiring delete */
-			return NEED_MORE;
+		if (message->get_notify(message, INVALID_KE_PAYLOAD))
+		{
+			/* invalid KE method => retry, unless we can ignore it */
+			return ignore_child_sa_failure(this) ? SUCCESS : NEED_MORE;
 		}
+		else if (!this->child_create->get_child(this->child_create))
+		{
+			/* local failure requiring a delete, check what we have to do */
+			return handle_local_failure(this);
+		}
+
 		/* multiple key exchanges */
 		this->flags |= CHILD_REKEY_FOLLOWUP_KE;
 		/* there will only be a collision while we process a CREATE_CHILD_SA
-		 * response, later we just respond with TEMPORARY_FAILURE and ignore
-		 * the passive task - if we lost, the returned SA is the one we created
-		 * in this task, since it's not complete yet, we abort the task */
-		if (this->collision)
+		 * response, later we just respond with TEMPORARY_FAILURE, so handle
+		 * it now */
+		if (!handle_collision(this, &to_delete, &winning_sa, TRUE))
 		{
-			to_delete = handle_collision(this, &to_install, TRUE);
+			/* we lost the collision. since the SA is not complete yet, we just
+			 * abort the task */
+			return SUCCESS;
 		}
-		return (to_delete && to_delete != this->child_sa) ? SUCCESS : NEED_MORE;
+		return NEED_MORE;
 	}
 
 	child_sa = this->child_create->get_child(this->child_create);
 	if (!child_sa || child_sa->get_state(child_sa) != CHILD_INSTALLED)
 	{
-		/* establishing new child failed, reuse old and try again. but not when
-		 * we received a delete in the meantime or passively rekeyed the SA */
-		if (!this->collision ||
-			(this->collision->get_type(this->collision) != TASK_CHILD_DELETE &&
-			 !(this->flags & CHILD_REKEY_ADOPTED_PASSIVE)))
+		/* check if we can ignore remote errors like TEMPORARY_FAILURE */
+		if (!ignore_child_sa_failure(this))
 		{
+			/* otherwise (e.g. for an IKE/CHILD rekey collision), reuse the old
+			 * CHILD_SA and try again */
 			schedule_delayed_rekey(this);
 		}
 		return SUCCESS;
@@ -610,66 +985,105 @@ METHOD(task_t, process_i, status_t,
 
 	/* there won't be a collision if this task is for a multi-KE rekeying, as a
 	 * collision during CREATE_CHILD_SA was cleaned up above */
-	if (this->collision)
-	{
-		to_delete = handle_collision(this, &to_install, FALSE);
-	}
-	else
-	{
-		to_install = this->child_create->get_child(this->child_create);
-		to_delete = this->child_sa;
-	}
-	if (to_install)
-	{
-		if (to_install->install_outbound(to_install) != SUCCESS)
-		{
-			DBG1(DBG_IKE, "unable to install outbound IPsec SA (SAD) in kernel");
-			charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_SA_FAILED,
-							   to_install);
-			/* FIXME: delete the child_sa? fail the task? */
-		}
-		else
-		{
-			linked_list_t *my_ts, *other_ts;
+	collision_won = handle_collision(this, &to_delete, &winning_sa, FALSE);
 
-			my_ts = linked_list_create_from_enumerator(
-						to_install->create_ts_enumerator(to_install, TRUE));
-			other_ts = linked_list_create_from_enumerator(
-						to_install->create_ts_enumerator(to_install, FALSE));
+	if (this->flags & CHILD_REKEY_REPLACEMENT_DELETED)
+	{
+		DBG1(DBG_IKE, "peer meanwhile sent a delete for CHILD_SA %s{%u} with "
+			 "SPIs %.8x_i %.8x_o, abort rekeying",
+			 winning_sa->get_name(winning_sa),
+			 winning_sa->get_unique_id(winning_sa),
+			 ntohl(winning_sa->get_spi(winning_sa, TRUE)),
+			 ntohl(winning_sa->get_spi(winning_sa, FALSE)));
+		child_delete_destroy_and_reestablish(this->ike_sa, winning_sa);
+	}
+	else if (collision_won)
+	{
+		/* only conclude the rekeying here if we won,  otherwise, we either
+		 * already concluded the rekeying or we will do so when the peer deletes
+		 * the old SA */
+		child_rekey_conclude_rekeying(this->child_sa, winning_sa);
+	}
 
-			DBG0(DBG_IKE, "outbound CHILD_SA %s{%d} established "
-				 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
-				 to_install->get_name(to_install),
-				 to_install->get_unique_id(to_install),
-				 ntohl(to_install->get_spi(to_install, TRUE)),
-				 ntohl(to_install->get_spi(to_install, FALSE)),
-				 my_ts, other_ts);
+	if (collision_won &&
+		this->flags & CHILD_REKEY_OLD_SA_DELETED)
+	{
+		/* the peer already deleted the rekeyed SA we were expected to delete
+		 * with an incorrect delete to which we responded as usual but didn't
+		 * destroy the SA yet */
+		DBG1(DBG_IKE, "peer sent an incorrect delete for CHILD_SA %s{%u} after "
+			 "responding to our rekeying",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
+		child_delete_destroy_rekeyed(this->ike_sa, this->child_sa);
+		return SUCCESS;
+	}
 
-			my_ts->destroy(my_ts);
-			other_ts->destroy(other_ts);
-		}
+	/* disable updown event for old/redundant CHILD_SA */
+	to_delete->set_state(to_delete, CHILD_REKEYED);
+	/* and make sure the outbound SA is not registered, unless it is still fully
+	 * installed, which happens if the rekeying is aborted. we keep it installed
+	 * as we can't establish a replacement until the delete is done */
+	if (to_delete->get_outbound_state(to_delete) != CHILD_OUTBOUND_INSTALLED)
+	{
+		to_delete->remove_outbound(to_delete);
 	}
-	if (to_delete->get_state(to_delete) != CHILD_REKEYED)
-	{	/* disable updown event for old/redundant CHILD_SA */
-		to_delete->set_state(to_delete, CHILD_REKEYED);
-	}
-	if (to_delete == this->child_sa)
-	{	/* invoke rekey hook if rekeying successful and remove the old
-		 * outbound SA as we installed the new one already above, but might not
-		 * be using it yet depending on how SAs/policies are handled */
-		this->child_sa->remove_outbound(this->child_sa);
-		charon->bus->child_rekey(charon->bus, this->child_sa,
-							this->child_create->get_child(this->child_create));
-	}
+
 	spi = to_delete->get_spi(to_delete, TRUE);
 	protocol = to_delete->get_protocol(to_delete);
 
 	/* rekeying done, delete the obsolete CHILD_SA using a subtask */
 	this->child_delete = child_delete_create(this->ike_sa, protocol, spi, FALSE);
-	this->public.task.build = (status_t(*)(task_t*,message_t*))build_i_delete;
-	this->public.task.process = (status_t(*)(task_t*,message_t*))process_i_delete;
+	this->public.task.build = _build_i_delete;
+	this->public.task.process = _process_i_delete;
 
 	return NEED_MORE;
+}
+
+/*
+ * Described in header
+ */
+bool child_rekey_conclude_rekeying(child_sa_t *old, child_sa_t *new)
+{
+	linked_list_t *my_ts, *other_ts;
+
+	if (new->install_outbound(new) != SUCCESS)
+	{	/* shouldn't happen after we were able to install the inbound SA */
+		DBG1(DBG_IKE, "unable to install outbound IPsec SA (SAD) in kernel");
+		charon->bus->alert(charon->bus, ALERT_INSTALL_CHILD_SA_FAILED,
+						   new);
+		return FALSE;
+	}
+
+	my_ts = linked_list_create_from_enumerator(
+							new->create_ts_enumerator(new, TRUE));
+	other_ts = linked_list_create_from_enumerator(
+							new->create_ts_enumerator(new, FALSE));
+
+	DBG0(DBG_IKE, "outbound CHILD_SA %s{%d} established "
+		 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
+		 new->get_name(new),
+		 new->get_unique_id(new),
+		 ntohl(new->get_spi(new, TRUE)),
+		 ntohl(new->get_spi(new, FALSE)),
+		 my_ts, other_ts);
+
+	my_ts->destroy(my_ts);
+	other_ts->destroy(other_ts);
+
+	/* remove the old outbound SA after we installed the new one. otherwise, it
+	 * might not get used yet depending on how SAs/policies are handled in the
+	 * kernel */
+	old->remove_outbound(old);
+
+	DBG0(DBG_IKE, "rekeyed CHILD_SA %s{%u} with SPIs %.8x_i %.8x_o with "
+		 "%s{%u} with SPIs %.8x_i %.8x_o",
+		 old->get_name(old), old->get_unique_id(old),
+		 ntohl(old->get_spi(old, TRUE)), ntohl(old->get_spi(old, FALSE)),
+		 new->get_name(new), new->get_unique_id(new),
+		 ntohl(new->get_spi(new, TRUE)), ntohl(new->get_spi(new, FALSE)));
+	charon->bus->child_rekey(charon->bus, old, new);
+	return TRUE;
 }
 
 METHOD(task_t, get_type, task_type_t,
@@ -678,75 +1092,87 @@ METHOD(task_t, get_type, task_type_t,
 	return TASK_CHILD_REKEY;
 }
 
-METHOD(child_rekey_t, is_redundant, bool,
-	private_child_rekey_t *this, child_sa_t *child)
+METHOD(child_rekey_t, handle_delete, child_rekey_collision_t,
+	private_child_rekey_t *this, child_sa_t *child, uint32_t spi)
 {
-	if (this->collision &&
-		this->collision->get_type(this->collision) == TASK_CHILD_REKEY)
+	/* if we already completed our active rekeying and are deleting the
+	 * old/redundant SA, there is no need to do anything special */
+	if (this->child_delete)
 	{
-		private_child_rekey_t *rekey = (private_child_rekey_t*)this->collision;
-		return child == rekey->child_create->get_child(rekey->child_create);
+		return CHILD_REKEY_COLLISION_NONE;
 	}
-	return FALSE;
+
+	if (!child)
+	{
+		/* check later if the SPI is the peer's of the SA we created (i.e.
+		 * whether it deleted the new SA immediately after creation and we
+		 * received that request before our active rekeying was complete) */
+		array_insert_create_value(&this->deleted_spis, sizeof(uint32_t),
+								  ARRAY_TAIL, &spi);
+	}
+	else if (child == this->child_sa)
+	{
+		/* the peer sent a delete for the old SA, might be because it won a
+		 * collision, but could also be either because it initiated that before
+		 * it received our CREATE_CHILD_SA request, or it incorrectly sent one
+		 * as response to our request, we will check once we have the response
+		 * to our rekeying */
+		this->flags |= CHILD_REKEY_OLD_SA_DELETED;
+		return CHILD_REKEY_COLLISION_OLD;
+	}
+	else if (this->collision)
+	{
+		private_child_rekey_t *other = (private_child_rekey_t*)this->collision;
+
+		if (child == other->child_create->get_child(other->child_create))
+		{
+			/* the peer deleted the redundant (or in rare cases the winning) SA
+			 * it created before our active rekeying was complete, how we handle
+			 * this depends on the response to our rekeying */
+			this->flags |= CHILD_REKEY_OTHER_DELETED;
+			return CHILD_REKEY_COLLISION_PEER;
+		}
+	}
+	return CHILD_REKEY_COLLISION_NONE;
 }
 
 METHOD(child_rekey_t, collide, bool,
 	private_child_rekey_t *this, task_t *other)
 {
-	/* the task manager only detects exchange collision, but not if
-	 * the collision is for the same child. we check it here. */
-	if (other->get_type(other) == TASK_CHILD_REKEY)
-	{
-		private_child_rekey_t *rekey = (private_child_rekey_t*)other;
-		child_sa_t *other_child;
+	private_child_rekey_t *rekey = (private_child_rekey_t*)other;
+	child_sa_t *other_child;
 
-		if (rekey->child_sa != this->child_sa)
-		{	/* not the same child => no collision */
-			return FALSE;
-		}
-		/* ignore passive tasks that did not successfully create a CHILD_SA */
-		other_child = rekey->child_create->get_child(rekey->child_create);
-		if (!other_child)
-		{
-			return FALSE;
-		}
-		if (other_child->get_state(other_child) != CHILD_INSTALLED)
-		{
-			DBG1(DBG_IKE, "colliding passive rekeying is not yet complete",
-				 task_type_names, TASK_CHILD_REKEY);
-			/* we do reference the task to check its state later */
-			this->collision = other;
-			return FALSE;
-		}
-	}
-	else if (other->get_type(other) == TASK_CHILD_DELETE)
-	{
-		child_delete_t *del = (child_delete_t*)other;
-		if (is_redundant(this, del->get_child(del)))
-		{
-			this->flags |= CHILD_REKEY_OTHER_DESTROYED;
-			return FALSE;
-		}
-		if (del->get_child(del) != this->child_sa)
-		{
-			/* not the same child => no collision */
-			return FALSE;
-		}
-	}
-	else
-	{
-		/* shouldn't happen */
+	if (rekey->child_sa != this->child_sa)
+	{	/* not the same child => no collision */
 		return FALSE;
 	}
 
-	DBG1(DBG_IKE, "detected %N collision with %N", task_type_names,
-		 TASK_CHILD_REKEY, task_type_names, other->get_type(other));
-
-	if (this->flags & CHILD_REKEY_ADOPTED_PASSIVE)
-	{
-		DESTROY_IF(this->collision);
+	other_child = rekey->child_create->get_child(rekey->child_create);
+	if (!other_child)
+	{	/* ignore passive tasks that did not successfully create a CHILD_SA */
+		return FALSE;
 	}
-	this->flags |= CHILD_REKEY_ADOPTED_PASSIVE;
+	if (other_child->get_state(other_child) != CHILD_INSTALLED)
+	{
+		DBG1(DBG_IKE, "colliding passive rekeying for CHILD_SA %s{%u} is not "
+			 "yet complete", this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
+		/* we do reference the task to check its state later */
+		this->collision = other;
+		return FALSE;
+	}
+	if (this->collision && this->collision != other)
+	{
+		DBG1(DBG_IKE, "duplicate rekey collision for CHILD_SA %s{%u}???",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
+		return FALSE;
+	}
+	/* once the passive rekeying is complete, we adopt the task */
+	DBG1(DBG_IKE, "detected rekey collision for CHILD_SA %s{%u}",
+		 this->child_sa->get_name(this->child_sa),
+		 this->child_sa->get_unique_id(this->child_sa));
+	this->flags |= CHILD_REKEY_PASSIVE_INSTALLED;
 	this->collision = other;
 	return TRUE;
 }
@@ -763,13 +1189,15 @@ METHOD(task_t, migrate, void,
 	{
 		this->child_create->task.migrate(&this->child_create->task, ike_sa);
 	}
-	if (this->flags & CHILD_REKEY_ADOPTED_PASSIVE)
+	if (this->flags & CHILD_REKEY_PASSIVE_INSTALLED)
 	{
 		DESTROY_IF(this->collision);
 	}
+	array_destroy(this->deleted_spis);
 
 	this->ike_sa = ike_sa;
 	this->collision = NULL;
+	this->flags = 0;
 }
 
 METHOD(task_t, destroy, void,
@@ -783,10 +1211,11 @@ METHOD(task_t, destroy, void,
 	{
 		this->child_delete->task.destroy(&this->child_delete->task);
 	}
-	if (this->flags & CHILD_REKEY_ADOPTED_PASSIVE)
+	if (this->flags & CHILD_REKEY_PASSIVE_INSTALLED)
 	{
 		DESTROY_IF(this->collision);
 	}
+	array_destroy(this->deleted_spis);
 	chunk_free(&this->spi_data);
 	free(this);
 }
@@ -806,7 +1235,7 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
-			.is_redundant = _is_redundant,
+			.handle_delete = _handle_delete,
 			.collide = _collide,
 		},
 		.ike_sa = ike_sa,

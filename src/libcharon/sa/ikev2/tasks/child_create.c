@@ -2181,7 +2181,7 @@ METHOD(task_t, build_i_delete, status_t,
 		DBG1(DBG_IKE, "sending DELETE for %N CHILD_SA with SPI %.8x",
 			 protocol_id_names, this->proto, ntohl(this->my_spi));
 	}
-	return NEED_MORE;
+	return SUCCESS;
 }
 
 /**
@@ -2192,7 +2192,6 @@ static status_t delete_failed_sa(private_child_create_t *this)
 	if (this->my_spi && this->proto)
 	{
 		this->public.task.build = _build_i_delete;
-		this->public.task.process = (void*)return_success;
 		/* destroying it here allows the rekey task to differentiate between
 		 * this and the multi-KE case */
 		this->child_sa->destroy(this->child_sa);
@@ -2229,6 +2228,17 @@ static status_t key_exchange_done_and_install_i(private_child_create_t *this,
 METHOD(task_t, process_i_multi_ke, status_t,
 	private_child_create_t *this, message_t *message)
 {
+	if (message->get_notify(message, TEMPORARY_FAILURE))
+	{
+		DBG1(DBG_IKE, "received %N notify", notify_type_names,
+			 TEMPORARY_FAILURE);
+		if (!this->rekey)
+		{	/* the rekey task will retry itself if necessary */
+			schedule_delayed_retry(this);
+		}
+		return SUCCESS;
+	}
+
 	process_payloads_multi_ke(this, message);
 
 	if (this->ke_failed)
@@ -2301,8 +2311,7 @@ METHOD(task_t, process_i, status_t,
 				}
 				case TEMPORARY_FAILURE:
 				{
-					DBG1(DBG_IKE, "received %N notify, will retry later",
-						 notify_type_names, type);
+					DBG1(DBG_IKE, "received %N notify", notify_type_names, type);
 					enumerator->destroy(enumerator);
 					if (!this->rekey)
 					{	/* the rekey task will retry itself if necessary */
@@ -2362,6 +2371,15 @@ METHOD(task_t, process_i, status_t,
 
 	process_payloads(this, message);
 
+	if (!select_proposal(this, no_ke))
+	{
+		handle_child_sa_failure(this, message);
+		return delete_failed_sa(this);
+	}
+
+	this->other_spi = this->proposal->get_spi(this->proposal);
+	this->proposal->set_spi(this->proposal, this->my_spi);
+
 	if (this->ipcomp == IPCOMP_NONE && this->ipcomp_received != IPCOMP_NONE)
 	{
 		DBG1(DBG_IKE, "received an IPCOMP_SUPPORTED notify without requesting"
@@ -2382,15 +2400,6 @@ METHOD(task_t, process_i, status_t,
 		handle_child_sa_failure(this, message);
 		return delete_failed_sa(this);
 	}
-
-	if (!select_proposal(this, no_ke))
-	{
-		handle_child_sa_failure(this, message);
-		return delete_failed_sa(this);
-	}
-
-	this->other_spi = this->proposal->get_spi(this->proposal);
-	this->proposal->set_spi(this->proposal, this->my_spi);
 
 	if (!check_ke_method(this, NULL))
 	{
@@ -2471,6 +2480,12 @@ METHOD(child_create_t, get_child, child_sa_t*,
 	private_child_create_t *this)
 {
 	return this->child_sa;
+}
+
+METHOD(child_create_t, get_other_spi, uint32_t,
+	private_child_create_t *this)
+{
+	return this->other_spi;
 }
 
 METHOD(child_create_t, set_config, void,
@@ -2607,6 +2622,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 	INIT(this,
 		.public = {
 			.get_child = _get_child,
+			.get_other_spi = _get_other_spi,
 			.set_config = _set_config,
 			.get_lower_nonce = _get_lower_nonce,
 			.use_reqid = _use_reqid,
