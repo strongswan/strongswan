@@ -938,7 +938,6 @@ static status_t process_certreq(private_tls_peer_t *this, bio_reader_t *reader)
 	{
 		/* certificate request context as described in RFC 8446, section 4.3.2 */
 		reader->read_data8(reader, &context);
-
 		reader->read_data16(reader, &ext);
 		extensions = bio_reader_create(ext);
 		while (extensions->remaining(extensions))
@@ -1532,11 +1531,12 @@ static status_t send_certificate(private_tls_peer_t *this,
 				 cert->get_subject(cert));
 			certs->write_data24(certs, data);
 			free(data.ptr);
-		}
-		/* extensions see RFC 8446, section 4.4.2 */
-		if (version_max > TLS_1_2)
-		{
-			certs->write_uint16(certs, 0);
+
+			/* extensions see RFC 8446, section 4.4.2 */
+			if (version_max > TLS_1_2)
+			{
+				certs->write_uint16(certs, 0);
+			}
 		}
 	}
 	enumerator = this->peer_auth->create_enumerator(this->peer_auth);
@@ -1550,6 +1550,12 @@ static status_t send_certificate(private_tls_peer_t *this,
 					 cert->get_subject(cert));
 				certs->write_data24(certs, data);
 				free(data.ptr);
+
+				/* extensions see RFC 8446, section 4.4.2 */
+				if (version_max > TLS_1_2)
+				{
+					certs->write_uint16(certs, 0);
+				}
 			}
 		}
 	}
