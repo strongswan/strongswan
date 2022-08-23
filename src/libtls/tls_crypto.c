@@ -1789,10 +1789,11 @@ METHOD(tls_crypto_t, sign, bool,
 		const chunk_t hashsig_def = chunk_from_chars(0x02, 0x01, 0x02, 0x03);
 		signature_params_t *params;
 		key_type_t type;
-		uint16_t scheme;
+		uint16_t scheme = 0, hashsig_scheme;
 		bio_reader_t *reader;
 		chunk_t sig;
 		bool done = FALSE;
+
 
 		if (this->tls->get_version_max(this->tls) >= TLS_1_3)
 		{
@@ -1817,19 +1818,65 @@ METHOD(tls_crypto_t, sign, bool,
 		{	/* fallback if none given */
 			hashsig = hashsig_def;
 		}
+
+		/* Determine TLS signature scheme if unique */
 		type = key->get_type(key);
+		switch (type)
+		{
+			case KEY_ED448:
+				scheme = TLS_SIG_ED448;
+				break;
+			case KEY_ED25519:
+				scheme = TLS_SIG_ED25519;
+				break;
+			case KEY_ECDSA:
+				switch (key->get_keysize(key))
+				{
+					case 256:
+						scheme = TLS_SIG_ECDSA_SHA256;
+						break;
+					case 384:
+						scheme = TLS_SIG_ECDSA_SHA384;
+						break;
+					case 521:
+						scheme = TLS_SIG_ECDSA_SHA512;
+						break;
+					default:
+						DBG1(DBG_TLS, "%d bit ECDSA private key size not supported",
+							key->get_keysize(key));
+						return FALSE;
+				}
+				break;
+			case KEY_RSA:
+				/* Several TLS signature schemes possible, select later on */
+				break;
+			default:
+				DBG1(DBG_TLS, "%N private key type not supported",
+							   key_type_names, type);
+				return FALSE;
+		}
+
 		reader = bio_reader_create(hashsig);
 		while (reader->remaining(reader) >= 2)
 		{
-			if (reader->read_uint16(reader, &scheme))
+			if (reader->read_uint16(reader, &hashsig_scheme))
 			{
-				params = params_for_scheme(scheme, TRUE);
-				if (params &&
-					type == key_type_from_signature_scheme(params->scheme) &&
-					key->sign(key, params->scheme, params->params, data, &sig))
+				params = params_for_scheme(hashsig_scheme, TRUE);
+
+				/**
+				 * All key types except RSA have a single fixed signature scheme
+				 * RSA signature schemes are tried until sign() is successful
+				 */
+				if (params && (scheme == hashsig_scheme ||
+				   (!scheme &&
+				    type == key_type_from_signature_scheme(params->scheme))))
 				{
-					done = TRUE;
-					break;
+				    if (key->sign(key, params->scheme, params->params, data, &sig))
+					{
+						done = TRUE;
+						scheme = hashsig_scheme;
+						break;
+					}
 				}
 			}
 		}
@@ -1839,7 +1886,7 @@ METHOD(tls_crypto_t, sign, bool,
 			DBG1(DBG_TLS, "none of the proposed hash/sig algorithms supported");
 			return FALSE;
 		}
-		DBG2(DBG_TLS, "created signature with %N", tls_signature_scheme_names,
+		DBG1(DBG_TLS, "created signature with %N", tls_signature_scheme_names,
 			 scheme);
 		writer->write_uint16(writer, scheme);
 		writer->write_data16(writer, sig);
