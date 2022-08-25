@@ -320,6 +320,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_UPDOWNV2
+  SUBDIRS += plugins/updownv2
+if MONOLITHIC
+  libcharon_la_LIBADD += plugins/updownv2/libstrongswan-updownv2.la
+endif
+endif
+
 if USE_EXT_AUTH
   SUBDIRS += plugins/ext_auth
 if MONOLITHIC

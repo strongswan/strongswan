@@ -289,6 +289,7 @@ ARG_ENABL_SET([save-keys],      [enable development/debugging plugin that saves 
 ARG_ENABL_SET([systime-fix],    [enable plugin to handle cert lifetimes with invalid system time gracefully.])
 ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
 ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
+ARG_ENABL_SET([updownv2],       [enable improved updown firewall script plugin.])
 # programs/components
 ARG_ENABL_SET([aikgen],         [enable AIK generator for TPM 1.2.])
 ARG_DISBL_SET([charon],         [disable the IKEv1/IKEv2 keying daemon charon.])
@@ -1587,6 +1588,7 @@ ADD_PLUGIN([vici],                 [c charon])
 ADD_PLUGIN([smp],                  [c charon])
 ADD_PLUGIN([sql],                  [c charon])
 ADD_PLUGIN([updown],               [c charon])
+ADD_PLUGIN([updownv2],             [c charon])
 ADD_PLUGIN([eap-identity],         [c charon nm cmd])
 ADD_PLUGIN([eap-sim],              [c charon])
 ADD_PLUGIN([eap-sim-file],         [c charon])
@@ -1744,6 +1746,7 @@ AM_CONDITIONAL(USE_SQL, test x$sql = xtrue)
 AM_CONDITIONAL(USE_DNSCERT, test x$dnscert = xtrue)
 AM_CONDITIONAL(USE_IPSECKEY, test x$ipseckey = xtrue)
 AM_CONDITIONAL(USE_UPDOWN, test x$updown = xtrue)
+AM_CONDITIONAL(USE_UPDOWNV2, test x$updownv2 = xtrue)
 AM_CONDITIONAL(USE_DHCP, test x$dhcp = xtrue)
 AM_CONDITIONAL(USE_LOAD_TESTER, test x$load_tester = xtrue)
 AM_CONDITIONAL(USE_HA, test x$ha = xtrue)
@@ -2120,6 +2123,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/vici/perl/Makefile
 	src/libcharon/plugins/vici/python/Makefile
 	src/libcharon/plugins/updown/Makefile
+	src/libcharon/plugins/updownv2/Makefile
 	src/libcharon/plugins/dhcp/Makefile
 	src/libcharon/plugins/load_tester/Makefile
 	src/libcharon/plugins/resolve/Makefile
@@ -2134,6 +2138,7 @@ AC_CONFIG_FILES([
 	src/starter/Makefile
 	src/starter/tests/Makefile
 	src/_updown/Makefile
+	src/_updownv2/Makefile
 	src/scepclient/Makefile
 	src/aikgen/Makefile
 	src/tpm_extendpcr/Makefile

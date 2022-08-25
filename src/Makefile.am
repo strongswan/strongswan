@@ -75,6 +75,10 @@ if USE_UPDOWN
   SUBDIRS += _updown
 endif
 
+if USE_UPDOWNV2
+  SUBDIRS += _updownv2
+endif
+
 if USE_SCEPCLIENT
   SUBDIRS += scepclient
 endif

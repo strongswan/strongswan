@@ -1,0 +1,40 @@
+#!/bin/sh
+# improved firewall script
+#
+# Copyright (C) 2003-2004 Nigel Meteringham
+# Copyright (C) 2003-2004 Tuomo Soini
+# Copyright (C) 2002-2004 Michael Richardson
+# Copyright (C) 2005-2007 Andreas Steffen <andreas.steffen@strongswan.org>
+# Copyright (C) 2022      Noel Kuntze <noel.kuntze@thermi.consulting>
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+
+# CAUTION:  Installing a new version of strongSwan will install a new
+# copy of this script, wiping out any custom changes you make.  If
+# you need changes, make a copy of this under another name, and customize
+# that, and use the (left/right)updown parameters in ipsec.conf to make
+# strongSwan use yours instead of this default one.
+
+#
+#       PLUTO_DNS4_$i
+#       PLUTO_DNS6_$i
+#              contains IPv4/IPv6 DNS server attribute received from a
+#              responder, $i enumerates from 1 to the number of servers per
+#              address family.
+#
+
+# define a minimum PATH environment in case it is not set
+PATH="/sbin:/bin:/usr/sbin:/usr/bin:@sbindir@"
+export PATH
+
+env > /var/log/strongswan-updown.log
+
+exit 0
