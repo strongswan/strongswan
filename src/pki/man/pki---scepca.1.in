@@ -103,7 +103,7 @@ Sub CA cert "C=CH, O=strongSwan Project, CN=strongSwan Issuing CA"
   using certificate "C=CH, O=strongSwan Project, CN=strongSwan Issuing CA"
   using trusted ca certificate "C=CH, O=strongSwan Project, CN=strongSwan Root CA"
   reached self-signed root ca with a path length of 0
-Sub CA cert is trusted, valid until Aug 12 15:51:34 2027, 'mycacert-1.crt'
+Sub CA cert is trusted, valid until Aug 12 15:51:34 2027, 'myca-1.crt'
 RA cert "C=CH, O=strongSwan Project, CN=SCEP RA"
   serial: 74:f9:7e:72:7d:b8:fd:f2:c6:e5:1b:fa:37:f9:cb:87:bf:9c:ea:e3
   SHA256: 57:22:f3:13:69:2f:24:82:12:59:8e:05:63:0b:f5:a8:fb:4e:78:87:8d:68:d1:4c:c1:c4:b5:85:db:bb:64:df
@@ -143,10 +143,10 @@ Root CA cert "C=CH, O=strongSwan Project, CN=strongSwan Root CA"
 Root CA cert is untrusted, valid until Aug 12 15:51:34 2032, written to 'scep/myca.pem'
 Sub CA cert "C=CH, O=strongSwan Project, CN=strongSwan Issuing CA"
   ...
-Sub CA cert is trusted, valid until Aug 12 15:51:34 2027, 'mycacert-1.crt'
+Sub CA cert is trusted, valid until Aug 12 15:51:34 2027, 'scep/myca-1.pem'
 RA cert "C=CH, O=strongSwan Project, CN=SCEP RA"
   ...
-RA cert is trusted, valid until Aug 10 15:51:34 2023, 'myca-ra.crt'
+RA cert is trusted, valid until Aug 10 15:51:34 2023, 'scep/myca-ra.pem'
 .EE
 .PP
 A CA certificate bundle in PEM format is written to \fIstdout\fR:
