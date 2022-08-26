@@ -2391,6 +2391,14 @@ METHOD(ike_sa_manager_t, flush, void,
 	entry_t *entry;
 	u_int segment;
 
+	/* prevent threads from creating new SAs */
+	this->spi_lock->write_lock(this->spi_lock);
+	DESTROY_IF(this->rng);
+	this->rng = NULL;
+	this->spi_cb.cb = NULL;
+	this->spi_cb.data = NULL;
+	this->spi_lock->unlock(this->spi_lock);
+
 	lock_all_segments(this);
 	DBG2(DBG_MGR, "going to destroy IKE_SA manager and all managed IKE_SA's");
 	/* Step 1: drive out all waiting threads  */
@@ -2431,13 +2439,6 @@ METHOD(ike_sa_manager_t, flush, void,
 	/* Step 4: destroy all entries */
 	destroy_all_entries(this);
 	unlock_all_segments(this);
-
-	this->spi_lock->write_lock(this->spi_lock);
-	DESTROY_IF(this->rng);
-	this->rng = NULL;
-	this->spi_cb.cb = NULL;
-	this->spi_cb.data = NULL;
-	this->spi_lock->unlock(this->spi_lock);
 }
 
 METHOD(ike_sa_manager_t, destroy, void,
