@@ -436,11 +436,9 @@ METHOD(ike_sa_t, set_peer_cfg, void,
 	DESTROY_IF(this->peer_cfg);
 	this->peer_cfg = peer_cfg;
 
-	if (!this->ike_cfg)
-	{
-		this->ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
-		this->ike_cfg->get_ref(this->ike_cfg);
-	}
+	DESTROY_IF(this->ike_cfg);
+	this->ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+	this->ike_cfg->get_ref(this->ike_cfg);
 
 	this->if_id_in = peer_cfg->get_if_id(peer_cfg, TRUE);
 	this->if_id_out = peer_cfg->get_if_id(peer_cfg, FALSE);
@@ -644,21 +642,9 @@ METHOD(ike_sa_t, get_message_id, uint32_t,
  */
 static void set_dscp(private_ike_sa_t *this, packet_t *packet)
 {
-	ike_cfg_t *ike_cfg;
-
-	/* prefer IKE config on peer_cfg, as its selection is more accurate
-	 * then the initial IKE config */
-	if (this->peer_cfg)
+	if (this->ike_cfg)
 	{
-		ike_cfg = this->peer_cfg->get_ike_cfg(this->peer_cfg);
-	}
-	else
-	{
-		ike_cfg = this->ike_cfg;
-	}
-	if (ike_cfg)
-	{
-		packet->set_dscp(packet, ike_cfg->get_dscp(ike_cfg));
+		packet->set_dscp(packet, this->ike_cfg->get_dscp(this->ike_cfg));
 	}
 }
 
