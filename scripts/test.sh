@@ -160,8 +160,8 @@ openssl*)
 	fi
 	;;
 gcrypt)
-	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1 --enable-pkcs8"
-	export TESTS_PLUGINS="test-vectors pkcs1 pkcs8 gcrypt!"
+	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-random --enable-pem --enable-pkcs1 --enable-pkcs8 --enable-gcm --enable-hmac --enable-kdf -enable-curve25519 --enable-x509 --enable-constraints"
+	export TESTS_PLUGINS="test-vectors random pem pkcs1 pkcs8 gcm hmac kdf curve25519 x509 constraints gcrypt!"
 	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
 		DEPS="libgcrypt20-dev"
 	else
@@ -169,16 +169,16 @@ gcrypt)
 	fi
 	;;
 botan)
-	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem"
-	export TESTS_PLUGINS="test-vectors pem botan!"
+	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem --enable-hmac --enable-x509 --enable-constraints"
+	export TESTS_PLUGINS="test-vectors pem hmac x509 constraints botan!"
 	DEPS=""
 	if test "$1" = "build-deps"; then
 		build_botan
 	fi
 	;;
 wolfssl)
-	CONFIG="--disable-defaults --enable-pki --enable-wolfssl --enable-pem"
-	export TESTS_PLUGINS="test-vectors pem wolfssl!"
+	CONFIG="--disable-defaults --enable-pki --enable-wolfssl --enable-pem --enable-pkcs1 --enable-pkcs8 --enable-x509 --enable-constraints"
+	export TESTS_PLUGINS="test-vectors pem pkcs1 pkcs8 x509 constraints wolfssl!"
 	# build with custom options to enable all the features the plugin supports
 	DEPS=""
 	if test "$1" = "build-deps"; then

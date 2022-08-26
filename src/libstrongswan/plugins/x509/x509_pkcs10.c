@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
- * Copyright (C) 2009-2017 Andreas Steffen
+ * Copyright (C) 2009-2022 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -71,6 +71,11 @@ struct private_x509_pkcs10_t {
 	 * challenge password
 	 */
 	chunk_t challengePassword;
+
+	/**
+	 * certificate type extension
+	 */
+	chunk_t certTypeExt;
 
 	/**
 	 * Signature scheme
@@ -230,6 +235,35 @@ METHOD(pkcs10_t, get_challengePassword, chunk_t,
 	return this->challengePassword;
 }
 
+METHOD(pkcs10_t, get_flags, x509_flag_t,
+	private_x509_pkcs10_t *this)
+{
+	x509_flag_t flags = X509_NONE;
+	char *profile;
+
+	profile = strndup(this->certTypeExt.ptr, this->certTypeExt.len);
+
+	if (strcaseeq(profile, "server"))
+	{
+		flags |= X509_SERVER_AUTH;
+	}
+	else if (strcaseeq(profile, "client"))
+	{
+		flags |= X509_CLIENT_AUTH;
+	}
+	else if (strcaseeq(profile, "dual"))
+	{
+		flags |= (X509_SERVER_AUTH | X509_CLIENT_AUTH);
+	}
+	else if (strcaseeq(profile, "ocsp"))
+	{
+		flags |= X509_OCSP_SIGNER;
+	}
+	free(profile);
+
+	return flags;
+}
+
 METHOD(pkcs10_t, create_subjectAltName_enumerator, enumerator_t*,
 	private_x509_pkcs10_t *this)
 {
@@ -240,12 +274,12 @@ METHOD(pkcs10_t, create_subjectAltName_enumerator, enumerator_t*,
  * ASN.1 definition of a PKCS#10 extension request
  */
 static const asn1Object_t extensionRequestObjects[] = {
-	{ 0, "extensions",   ASN1_SEQUENCE,     ASN1_LOOP           }, /* 0 */
+	{ 0, "extensions",    ASN1_SEQUENCE,     ASN1_LOOP          }, /* 0 */
 	{ 1,   "extension",   ASN1_SEQUENCE,     ASN1_NONE          }, /* 1 */
-	{ 2,     "extnID",	  ASN1_OID,          ASN1_BODY          }, /* 2 */
+	{ 2,     "extnID",    ASN1_OID,          ASN1_BODY          }, /* 2 */
 	{ 2,     "critical",  ASN1_BOOLEAN,      ASN1_DEF|ASN1_BODY }, /* 3 */
 	{ 2,     "extnValue", ASN1_OCTET_STRING, ASN1_BODY          }, /* 4 */
-	{ 1, "end loop",      ASN1_EOC,          ASN1_END			}, /* 5 */
+	{ 0, "end loop",      ASN1_EOC,          ASN1_END           }, /* 5 */
 	{ 0, "exit",          ASN1_EOC,          ASN1_EXIT          }
 };
 #define PKCS10_EXTN_ID			2
@@ -290,6 +324,14 @@ static bool parse_extension_request(private_x509_pkcs10_t *this, chunk_t blob, i
 						{
 							goto end;
 						}
+						break;
+					case OID_MS_CERT_TYPE_EXT:
+						if (!asn1_parse_simple_object(&object, ASN1_UTF8STRING,
+													  level, "certTypeExt"))
+						{
+							goto end;
+						}
+						this->certTypeExt = object;
 						break;
 					default:
 						break;
@@ -482,6 +524,7 @@ METHOD(certificate_t, destroy, void,
 		{	/* only parsed certificate requests point these fields to "encoded" */
 			chunk_free(&this->certificationRequestInfo);
 			chunk_free(&this->challengePassword);
+			chunk_free(&this->certTypeExt);
 			chunk_free(&this->signature);
 		}
 		free(this);
@@ -513,6 +556,7 @@ static private_x509_pkcs10_t* create_empty(void)
 					.destroy = _destroy,
 				},
 				.get_challengePassword = _get_challengePassword,
+				.get_flags = _get_flags,
 				.create_subjectAltName_enumerator = _create_subjectAltName_enumerator,
 			},
 		},
@@ -530,7 +574,7 @@ static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 					 int digest_alg)
 {
 	chunk_t key_info, subjectAltNames, attributes;
-	chunk_t extensionRequest  = chunk_empty;
+	chunk_t extensionRequest  = chunk_empty, certTypeExt = chunk_empty;
 	chunk_t challengePassword = chunk_empty, sig_scheme = chunk_empty;
 	identification_t *subject;
 
@@ -565,35 +609,44 @@ static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 	/* encode subjectAltNames */
 	subjectAltNames = x509_build_subjectAltNames(cert->subjectAltNames);
 
-	if (subjectAltNames.ptr)
+	/* encode certTypeExt */
+	if (cert->certTypeExt.len > 0)
+	{
+		certTypeExt = asn1_wrap(ASN1_SEQUENCE, "mm",
+				asn1_build_known_oid(OID_MS_CERT_TYPE_EXT),
+				asn1_wrap(ASN1_OCTET_STRING, "m",
+					asn1_simple_object(ASN1_UTF8STRING, cert->certTypeExt)
+				));
+	}
+
+	/* encode extensionRequest attribute */
+	if (subjectAltNames.ptr || certTypeExt.ptr)
 	{
 		extensionRequest = asn1_wrap(ASN1_SEQUENCE, "mm",
-					asn1_build_known_oid(OID_EXTENSION_REQUEST),
-					asn1_wrap(ASN1_SET, "m",
-						asn1_wrap(ASN1_SEQUENCE, "m", subjectAltNames)
-					));
+				asn1_build_known_oid(OID_EXTENSION_REQUEST),
+				asn1_wrap(ASN1_SET, "m",
+					asn1_wrap(ASN1_SEQUENCE, "mm", subjectAltNames, certTypeExt)
+				));
 	}
+
+	/* encode challengePassword attribute */
 	if (cert->challengePassword.len > 0)
 	{
-		asn1_t type = asn1_is_printablestring(cert->challengePassword) ?
-								ASN1_PRINTABLESTRING : ASN1_T61STRING;
-
 		challengePassword = asn1_wrap(ASN1_SEQUENCE, "mm",
-					asn1_build_known_oid(OID_CHALLENGE_PASSWORD),
-					asn1_wrap(ASN1_SET, "m",
-						asn1_simple_object(type, cert->challengePassword)
-					)
-			);
+				asn1_build_known_oid(OID_CHALLENGE_PASSWORD),
+				asn1_wrap(ASN1_SET, "m",
+					asn1_simple_object(ASN1_UTF8STRING, cert->challengePassword)
+				));
 	}
+
 	attributes = asn1_wrap(ASN1_CONTEXT_C_0, "mm", extensionRequest,
 												   challengePassword);
 
 	cert->certificationRequestInfo = asn1_wrap(ASN1_SEQUENCE, "ccmm",
-							ASN1_INTEGER_0,
-							subject->get_encoding(subject),
-							key_info,
-							attributes);
-
+										ASN1_INTEGER_0,
+										subject->get_encoding(subject),
+										key_info,
+										attributes);
 	if (!sign_key->sign(sign_key, cert->scheme->scheme, cert->scheme->params,
 						cert->certificationRequestInfo, &cert->signature))
 	{
@@ -684,6 +737,9 @@ x509_pkcs10_t *x509_pkcs10_gen(certificate_type_t type, va_list args)
 			}
 			case BUILD_CHALLENGE_PWD:
 				cert->challengePassword = chunk_clone(va_arg(args, chunk_t));
+				continue;
+			case BUILD_CERT_TYPE_EXT:
+				cert->certTypeExt = chunk_clone(va_arg(args, chunk_t));
 				continue;
 			case BUILD_SIGNATURE_SCHEME:
 				cert->scheme = va_arg(args, signature_params_t*);

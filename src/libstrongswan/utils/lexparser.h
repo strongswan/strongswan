@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2001-2008 Andreas Steffen
- *
+ * Copyright (C) 2001-2022 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -34,6 +33,11 @@ bool eat_whitespace(chunk_t *src);
  * Compare null-terminated pattern with chunk
  */
 bool match(const char *pattern, const chunk_t *ch);
+
+/**
+ * Compare null-terminated pattern with chunk ignoring the case of the characters
+ */
+bool matchcase(const char *pattern, const chunk_t *ch);
 
 /**
  * Extracts a token ending with the first occurrence of a given termination symbol

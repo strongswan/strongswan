@@ -75,10 +75,6 @@ if USE_UPDOWN
   SUBDIRS += _updown
 endif
 
-if USE_SCEPCLIENT
-  SUBDIRS += scepclient
-endif
-
 if USE_PKI
   SUBDIRS += pki
 endif
