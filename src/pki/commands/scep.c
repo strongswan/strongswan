@@ -405,6 +405,7 @@ static int scep()
 		{
 			DBG1(DBG_APP, "loading client private key file '%s' failed",
 						   client_key_file);
+			x509_signer->destroy(x509_signer);
 			goto err;
 		}
 	}
