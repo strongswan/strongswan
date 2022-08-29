@@ -271,6 +271,125 @@ METHOD(pkcs10_t, create_subjectAltName_enumerator, enumerator_t*,
 }
 
 /**
+ * Generate and sign a new certificate request
+ */
+static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
+					 int digest_alg)
+{
+	chunk_t key_info, subjectAltNames, attributes;
+	chunk_t extensionRequest  = chunk_empty, certTypeExt = chunk_empty;
+	chunk_t challengePassword = chunk_empty, sig_scheme = chunk_empty;
+	identification_t *subject;
+
+	subject = cert->subject;
+	cert->public_key = sign_key->get_public_key(sign_key);
+
+	/* select signature scheme, if not already specified */
+	if (!cert->scheme)
+	{
+		INIT(cert->scheme,
+			.scheme = signature_scheme_from_oid(
+								hasher_signature_algorithm_to_oid(digest_alg,
+												sign_key->get_type(sign_key))),
+		);
+	}
+	if (cert->scheme->scheme == SIGN_UNKNOWN)
+	{
+		return FALSE;
+	}
+	if (!signature_params_build(cert->scheme, &sig_scheme))
+	{
+		return FALSE;
+	}
+
+	if (!cert->public_key->get_encoding(cert->public_key,
+										PUBKEY_SPKI_ASN1_DER, &key_info))
+	{
+		chunk_free(&sig_scheme);
+		return FALSE;
+	}
+
+	/* encode subjectAltNames */
+	subjectAltNames = x509_build_subjectAltNames(cert->subjectAltNames);
+
+	/* encode certTypeExt */
+	if (cert->certTypeExt.len > 0)
+	{
+		certTypeExt = asn1_wrap(ASN1_SEQUENCE, "mm",
+				asn1_build_known_oid(OID_MS_CERT_TYPE_EXT),
+				asn1_wrap(ASN1_OCTET_STRING, "m",
+					asn1_simple_object(ASN1_UTF8STRING, cert->certTypeExt)
+				));
+	}
+
+	/* encode extensionRequest attribute */
+	if (subjectAltNames.ptr || certTypeExt.ptr)
+	{
+		extensionRequest = asn1_wrap(ASN1_SEQUENCE, "mm",
+				asn1_build_known_oid(OID_EXTENSION_REQUEST),
+				asn1_wrap(ASN1_SET, "m",
+					asn1_wrap(ASN1_SEQUENCE, "mm", subjectAltNames, certTypeExt)
+				));
+	}
+
+	/* encode challengePassword attribute */
+	if (cert->challengePassword.len > 0)
+	{
+		challengePassword = asn1_wrap(ASN1_SEQUENCE, "mm",
+				asn1_build_known_oid(OID_CHALLENGE_PASSWORD),
+				asn1_wrap(ASN1_SET, "m",
+					asn1_simple_object(ASN1_UTF8STRING, cert->challengePassword)
+				));
+	}
+
+	attributes = asn1_wrap(ASN1_CONTEXT_C_0, "mm", extensionRequest,
+												   challengePassword);
+
+	cert->certificationRequestInfo = asn1_wrap(ASN1_SEQUENCE, "ccmm",
+										ASN1_INTEGER_0,
+										subject->get_encoding(subject),
+										key_info,
+										attributes);
+	if (!sign_key->sign(sign_key, cert->scheme->scheme, cert->scheme->params,
+						cert->certificationRequestInfo, &cert->signature))
+	{
+		chunk_free(&sig_scheme);
+		return FALSE;
+	}
+
+	cert->encoding = asn1_wrap(ASN1_SEQUENCE, "cmm",
+							   cert->certificationRequestInfo,
+							   sig_scheme,
+							   asn1_bitstring("c", cert->signature));
+	return TRUE;
+}
+
+METHOD(pkcs10_t, replace_key, certificate_t*,
+	private_x509_pkcs10_t *this, private_key_t *private,
+	signature_params_t *scheme, chunk_t password)
+{
+	/* remove old public key and signature */
+	this->public_key->destroy(this->public_key);
+	this->signature = chunk_empty;
+
+	/* copy existing attributes from old certreq encoding */
+	this->certificationRequestInfo = chunk_empty;
+	this->certTypeExt =	chunk_clone(this->certTypeExt);
+	this->challengePassword = chunk_clone((password.len > 0) ?
+										   password : this->challengePassword);
+	chunk_free(&this->encoding);
+	signature_params_destroy(this->scheme);
+	this->scheme = signature_params_clone(scheme);
+	this->parsed = FALSE;
+
+	if (generate(this, private, HASH_SHA256))
+	{
+		return &this->public.interface.interface;
+	}
+	return NULL;
+}
+
+/**
  * ASN.1 definition of a PKCS#10 extension request
  */
 static const asn1Object_t extensionRequestObjects[] = {
@@ -378,6 +497,8 @@ static bool parse_challengePassword(private_x509_pkcs10_t *this, chunk_t blob, i
 	}
 	DBG2(DBG_ASN, "L%d - challengePassword:", level);
 	DBG4(DBG_ASN, "  '%.*s'", (int)blob.len, blob.ptr);
+	this->challengePassword = blob;
+
 	return TRUE;
 }
 
@@ -558,6 +679,7 @@ static private_x509_pkcs10_t* create_empty(void)
 				.get_challengePassword = _get_challengePassword,
 				.get_flags = _get_flags,
 				.create_subjectAltName_enumerator = _create_subjectAltName_enumerator,
+				.replace_key = _replace_key,
 			},
 		},
 		.subjectAltNames = linked_list_create(),
@@ -565,100 +687,6 @@ static private_x509_pkcs10_t* create_empty(void)
 	);
 
 	return this;
-}
-
-/**
- * Generate and sign a new certificate request
- */
-static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
-					 int digest_alg)
-{
-	chunk_t key_info, subjectAltNames, attributes;
-	chunk_t extensionRequest  = chunk_empty, certTypeExt = chunk_empty;
-	chunk_t challengePassword = chunk_empty, sig_scheme = chunk_empty;
-	identification_t *subject;
-
-	subject = cert->subject;
-	cert->public_key = sign_key->get_public_key(sign_key);
-
-	/* select signature scheme, if not already specified */
-	if (!cert->scheme)
-	{
-		INIT(cert->scheme,
-			.scheme = signature_scheme_from_oid(
-								hasher_signature_algorithm_to_oid(digest_alg,
-												sign_key->get_type(sign_key))),
-		);
-	}
-	if (cert->scheme->scheme == SIGN_UNKNOWN)
-	{
-		return FALSE;
-	}
-	if (!signature_params_build(cert->scheme, &sig_scheme))
-	{
-		return FALSE;
-	}
-
-	if (!cert->public_key->get_encoding(cert->public_key,
-										PUBKEY_SPKI_ASN1_DER, &key_info))
-	{
-		chunk_free(&sig_scheme);
-		return FALSE;
-	}
-
-	/* encode subjectAltNames */
-	subjectAltNames = x509_build_subjectAltNames(cert->subjectAltNames);
-
-	/* encode certTypeExt */
-	if (cert->certTypeExt.len > 0)
-	{
-		certTypeExt = asn1_wrap(ASN1_SEQUENCE, "mm",
-				asn1_build_known_oid(OID_MS_CERT_TYPE_EXT),
-				asn1_wrap(ASN1_OCTET_STRING, "m",
-					asn1_simple_object(ASN1_UTF8STRING, cert->certTypeExt)
-				));
-	}
-
-	/* encode extensionRequest attribute */
-	if (subjectAltNames.ptr || certTypeExt.ptr)
-	{
-		extensionRequest = asn1_wrap(ASN1_SEQUENCE, "mm",
-				asn1_build_known_oid(OID_EXTENSION_REQUEST),
-				asn1_wrap(ASN1_SET, "m",
-					asn1_wrap(ASN1_SEQUENCE, "mm", subjectAltNames, certTypeExt)
-				));
-	}
-
-	/* encode challengePassword attribute */
-	if (cert->challengePassword.len > 0)
-	{
-		challengePassword = asn1_wrap(ASN1_SEQUENCE, "mm",
-				asn1_build_known_oid(OID_CHALLENGE_PASSWORD),
-				asn1_wrap(ASN1_SET, "m",
-					asn1_simple_object(ASN1_UTF8STRING, cert->challengePassword)
-				));
-	}
-
-	attributes = asn1_wrap(ASN1_CONTEXT_C_0, "mm", extensionRequest,
-												   challengePassword);
-
-	cert->certificationRequestInfo = asn1_wrap(ASN1_SEQUENCE, "ccmm",
-										ASN1_INTEGER_0,
-										subject->get_encoding(subject),
-										key_info,
-										attributes);
-	if (!sign_key->sign(sign_key, cert->scheme->scheme, cert->scheme->params,
-						cert->certificationRequestInfo, &cert->signature))
-	{
-		chunk_free(&sig_scheme);
-		return FALSE;
-	}
-
-	cert->encoding = asn1_wrap(ASN1_SEQUENCE, "cmm",
-							   cert->certificationRequestInfo,
-							   sig_scheme,
-							   asn1_bitstring("c", cert->signature));
-	return TRUE;
 }
 
 /**
@@ -705,7 +733,7 @@ x509_pkcs10_t *x509_pkcs10_gen(certificate_type_t type, va_list args)
 {
 	private_x509_pkcs10_t *cert;
 	private_key_t *sign_key = NULL;
-	hash_algorithm_t digest_alg = HASH_SHA1;
+	hash_algorithm_t digest_alg = HASH_SHA256;
 
 	cert = create_empty();
 	while (TRUE)

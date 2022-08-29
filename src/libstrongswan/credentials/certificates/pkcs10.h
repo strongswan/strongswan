@@ -62,6 +62,16 @@ struct pkcs10_t {
 	 * @return			enumerator over subjectAltNames as identification_t*
 	 */
 	enumerator_t* (*create_subjectAltName_enumerator)(pkcs10_t *this);
+
+    /**
+     * Replace the public key and private key signature
+     *
+     * @param private   new private key to be used
+     * @param scheme    signature scheme
+     * @param password  optionally set new password
+     */
+    certificate_t* (*replace_key)(pkcs10_t *this, private_key_t *private,
+                    signature_params_t *scheme, chunk_t password);
 };
 
 #endif /** PKCS10_H_ @}*/
