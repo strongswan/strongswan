@@ -178,6 +178,8 @@ bool exchange_test_asserts_message(listener_t *listener, ike_sa_t *ike_sa,
 				assert_message_rule(this, message, &this->rules[i]);
 			}
 		}
+		free(this->rules);
+		free(this);
 		return FALSE;
 	}
 	return TRUE;
