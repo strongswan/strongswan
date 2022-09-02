@@ -1,12 +1,16 @@
-strongswan-5.9.
+strongswan-5.9.8
 ----------------
 
-- The pki --scep|--scepca command supports the HTTP-based "Simple Certificate
+- The pki --scep|--scepca commands support the HTTP-based "Simple Certificate
   Enrollment Protocol" (RFC 8894 SCEP) replacing the obsoleted scepclient that
   has been removed.
 
-- The pki --est|estca command supports the HTTPS-based "Enrollment over Secure
-  Transport" (RFC 7070 EST) protocol
+- The pki --est|estca commands support the HTTPS-based "Enrollment over Secure
+  Transport" (RFC 7070 EST) protocol.
+
+- The pki --req command can create a certificate request based on an existing
+  PKCS#10 template by replacing the public key and re-generating the signature
+  with the new private key.
 
 
 strongswan-5.9.7
