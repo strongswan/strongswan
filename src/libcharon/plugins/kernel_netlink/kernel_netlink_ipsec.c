@@ -2060,7 +2060,7 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 
 	memset(&request, 0, sizeof(request));
 
-	DBG2(DBG_KNL, "querying replay state from SAD entry with SPI %.8x",
+	DBG3(DBG_KNL, "querying replay state from SAD entry with SPI %.8x",
 		 ntohl(sa->spi));
 
 	hdr = &request.hdr;
@@ -2164,7 +2164,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 	memset(&request, 0, sizeof(request));
 	format_mark(markstr, sizeof(markstr), id->mark);
 
-	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x%s", ntohl(id->spi),
+	DBG3(DBG_KNL, "querying SAD entry with SPI %.8x%s", ntohl(id->spi),
 		 markstr);
 
 	hdr = &request.hdr;
@@ -2353,7 +2353,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	memset(&request, 0, sizeof(request));
 	format_mark(markstr, sizeof(markstr), id->mark);
 
-	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x%s for update",
+	DBG3(DBG_KNL, "querying SAD entry with SPI %.8x%s for update",
 		 ntohl(id->spi), markstr);
 
 	/* query the existing SA first */
@@ -3047,7 +3047,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 	format_mark(markstr, sizeof(markstr), id->mark);
 	format_label(labelstr, sizeof(labelstr), id->label);
 
-	DBG2(DBG_KNL, "querying policy %R === %R %N%s%s", id->src_ts, id->dst_ts,
+	DBG3(DBG_KNL, "querying policy %R === %R %N%s%s", id->src_ts, id->dst_ts,
 		 policy_dir_names, id->dir, markstr, labelstr);
 
 	hdr = &request.hdr;
