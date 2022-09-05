@@ -66,7 +66,7 @@ static bool log_to_syslog = TRUE;
 static level_t current_loglevel = 1;
 
 /**
- * logging function for scepclient
+ * logging function for starter
  */
 static void starter_dbg(debug_t group, level_t level, char *fmt, ...)
 {
