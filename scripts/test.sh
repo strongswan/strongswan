@@ -290,8 +290,8 @@ macos)
 			--enable-kernel-pfroute --enable-nonce --enable-openssl
 			--enable-osx-attr --enable-pem --enable-pgp --enable-pkcs1
 			--enable-pkcs8 --enable-pki --enable-pubkey --enable-revocation
-			--enable-scepclient --enable-socket-default --enable-sshkey
-			--enable-stroke --enable-swanctl --enable-unity --enable-updown
+			--enable-socket-default --enable-sshkey --enable-stroke
+			--enable-swanctl --enable-unity --enable-updown
 			--enable-x509 --enable-xauth-generic"
 	DEPS="automake autoconf libtool bison gettext openssl@1.1 curl"
 	BREW_PREFIX=$(brew --prefix)
