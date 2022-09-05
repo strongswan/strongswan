@@ -1327,11 +1327,12 @@ static status_t send_certificate(private_tls_server_t *this,
 				 cert->get_subject(cert));
 			certs->write_data24(certs, data);
 			free(data.ptr);
-		}
-		/* extensions see RFC 8446, section 4.4.2 */
-		if (this->tls->get_version_max(this->tls) > TLS_1_2)
-		{
-			certs->write_uint16(certs, 0);
+
+			/* extensions see RFC 8446, section 4.4.2 */
+			if (this->tls->get_version_max(this->tls) > TLS_1_2)
+			{
+				certs->write_uint16(certs, 0);
+			}
 		}
 	}
 	enumerator = this->server_auth->create_enumerator(this->server_auth);
@@ -1345,6 +1346,12 @@ static status_t send_certificate(private_tls_server_t *this,
 					 cert->get_subject(cert));
 				certs->write_data24(certs, data);
 				free(data.ptr);
+
+				/* extensions see RFC 8446, section 4.4.2 */
+				if (this->tls->get_version_max(this->tls) > TLS_1_2)
+				{
+					certs->write_uint16(certs, 0);
+				}
 			}
 		}
 	}
