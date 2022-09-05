@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <errno.h>
 
+#include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
 #include <credentials/sets/mem_cred.h>
 
@@ -509,6 +510,7 @@ static job_requeue_t serve_echo(echo_server_config_t *config)
 	identification_t *server, *client = NULL;
 	ssize_t len, total, done;
 	char buf[128];
+	bool oldstate;
 
 	server = identification_create_from_string(config->addr);
 	if (config->cauth)
@@ -516,9 +518,12 @@ static job_requeue_t serve_echo(echo_server_config_t *config)
 		client = server;
 	}
 	sfd = config->fd;
+	thread_cleanup_push((thread_cleanup_t)server->destroy, server);
 	while (TRUE)
 	{
+		oldstate = thread_cancelability(TRUE);
 		cfd = accept(sfd, NULL, NULL);
+		thread_cancelability(oldstate);
 		if (cfd < 0)
 		{
 			break;
@@ -548,7 +553,7 @@ static job_requeue_t serve_echo(echo_server_config_t *config)
 		tls->destroy(tls);
 		close(cfd);
 	}
-	server->destroy(server);
+	thread_cleanup_pop(TRUE);
 
 	return JOB_REQUEUE_NONE;
 }
@@ -575,7 +580,8 @@ static void start_echo_server(echo_server_config_t *config)
 	lib->processor->set_threads(lib->processor, 8);
 
 	lib->processor->queue_job(lib->processor, (job_t*)
-				callback_job_create((void*)serve_echo, config, NULL, NULL));
+				callback_job_create((void*)serve_echo, config, NULL,
+									(callback_job_cancel_t)return_false));
 }
 
 /**
