@@ -698,12 +698,6 @@ static int open_socket(private_socket_default_socket_t *this,
 		DBG1(DBG_NET, "could not open socket: %s", strerror(errno));
 		return -1;
 	}
-	if (setsockopt(skt, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
-	{
-		DBG1(DBG_NET, "unable to set SO_REUSEADDR on socket: %s", strerror(errno));
-		close(skt);
-		return -1;
-	}
 
 	/* bind the socket */
 	if (bind(skt, &addr.sockaddr, addrlen) < 0)
