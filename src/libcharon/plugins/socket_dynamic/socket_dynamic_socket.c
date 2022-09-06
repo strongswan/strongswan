@@ -410,12 +410,6 @@ static int open_socket(private_socket_dynamic_socket_t *this,
 		DBG1(DBG_NET, "could not open socket: %s", strerror(errno));
 		return 0;
 	}
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on)) < 0)
-	{
-		DBG1(DBG_NET, "unable to set SO_REUSEADDR on socket: %s", strerror(errno));
-		close(fd);
-		return 0;
-	}
 
 	if (bind(fd, &addr.s, addrlen) < 0)
 	{
