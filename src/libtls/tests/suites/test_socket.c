@@ -493,12 +493,16 @@ START_TEARDOWN(teardown_creds)
 	if (server_config)
 	{
 		shutdown(server_config->fd, SHUT_RDWR);
-		close(server_config->fd);
 		free(server_config);
 		server_config = NULL;
 	}
 }
 END_TEARDOWN
+
+static void close_fd_ptr(void *fd)
+{
+	close(*(int*)fd);
+}
 
 /**
  * Run an echo server
@@ -519,6 +523,7 @@ static job_requeue_t serve_echo(echo_server_config_t *config)
 	}
 	sfd = config->fd;
 	thread_cleanup_push((thread_cleanup_t)server->destroy, server);
+	thread_cleanup_push(close_fd_ptr, &sfd);
 	while (TRUE)
 	{
 		oldstate = thread_cancelability(TRUE);
@@ -553,6 +558,7 @@ static job_requeue_t serve_echo(echo_server_config_t *config)
 		tls->destroy(tls);
 		close(cfd);
 	}
+	thread_cleanup_pop(TRUE);
 	thread_cleanup_pop(TRUE);
 
 	return JOB_REQUEUE_NONE;
