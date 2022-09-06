@@ -60,6 +60,9 @@ START_TEST(test_event)
 	ck_assert(vici_register(conn, "test", event_cb, &count) == 0);
 	ck_assert(vici_register(conn, "nonexistent", event_cb, &count) != 0);
 
+	/* should just get ignored */
+	dispatcher->raise_event(dispatcher, "test", 0, NULL);
+
 	dispatcher->raise_event(dispatcher, "test", 0, vici_message_create_from_args(
 		 VICI_KEY_VALUE, "key1", chunk_from_str("value1"),
 		VICI_END));

@@ -497,6 +497,11 @@ METHOD(vici_dispatcher_t, raise_event, void,
 	event_t *event;
 	u_int *current;
 
+	if (!message)
+	{
+		return;
+	}
+
 	this->mutex->lock(this->mutex);
 	event = this->events->get(this->events, name);
 	if (event)
