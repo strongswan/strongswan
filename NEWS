@@ -12,6 +12,9 @@ strongswan-5.9.8
   PKCS#10 template by replacing the public key and re-generating the signature
   with the new private key.
 
+- The charon.rsa_pss_trailerfield setting generates an algorithmIdentifier with
+  explicit trailerField.
+
 
 strongswan-5.9.7
 ----------------
