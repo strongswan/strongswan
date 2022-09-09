@@ -16,6 +16,8 @@ ipsec_processor.c ipsec_processor.h \
 ipsec_sa.c ipsec_sa.h \
 ipsec_sa_mgr.c ipsec_sa_mgr.h
 
+libipsec_la_LIBADD += -lm
+
 LOCAL_SRC_FILES := $(filter %.c,$(libipsec_la_SOURCES))
 
 # build libipsec ---------------------------------------------------------------
@@ -33,7 +35,7 @@ LOCAL_ARM_MODE := arm
 
 LOCAL_PRELINK_MODULE := false
 
-LOCAL_SHARED_LIBRARIES += libstrongswan -lm
+LOCAL_SHARED_LIBRARIES += libstrongswan
 
 include $(BUILD_SHARED_LIBRARY)
 
