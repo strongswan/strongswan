@@ -60,6 +60,8 @@ START_TEST(test_regular)
 	ike_sa_t *a, *b;
 	uint32_t spi_a = _i+1, spi_b = 2-_i;
 
+	assert_track_sas_start();
+
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
 		exchange_test_helper->establish_sa(exchange_test_helper,
@@ -127,6 +129,7 @@ START_TEST(test_regular)
 
 	/* child_updown */
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -153,6 +156,8 @@ START_TEST(test_regular_multi_ke)
 {
 	ike_sa_t *a, *b;
 	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
@@ -239,6 +244,7 @@ START_TEST(test_regular_multi_ke)
 
 	/* child_updown */
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -262,6 +268,8 @@ START_TEST(test_regular_ke_invalid)
 	};
 	ike_sa_t *a, *b;
 	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
@@ -399,6 +407,7 @@ START_TEST(test_regular_ke_invalid)
 
 	/* child_updown */
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -422,6 +431,8 @@ START_TEST(test_regular_ke_invalid_multi_ke)
 	};
 	ike_sa_t *a, *b;
 	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
@@ -596,6 +607,7 @@ START_TEST(test_regular_ke_invalid_multi_ke)
 
 	/* child_updown */
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -609,6 +621,8 @@ END_TEST
 START_TEST(test_regular_responder_ignore_soft_expire)
 {
 	ike_sa_t *a, *b;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -676,6 +690,7 @@ START_TEST(test_regular_responder_ignore_soft_expire)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -690,6 +705,8 @@ END_TEST
 START_TEST(test_regular_responder_handle_hard_expire)
 {
 	ike_sa_t *a, *b;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -755,6 +772,7 @@ START_TEST(test_regular_responder_handle_hard_expire)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -769,6 +787,8 @@ END_TEST
 START_TEST(test_regular_responder_delete)
 {
 	ike_sa_t *a, *b;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -869,6 +889,7 @@ START_TEST(test_regular_responder_delete)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 0);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -882,6 +903,8 @@ END_TEST
 START_TEST(test_regular_responder_lost_sa)
 {
 	ike_sa_t *a, *b;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -925,6 +948,9 @@ START_TEST(test_regular_responder_lost_sa)
 
 	/* child_rekey */
 	assert_hook();
+	/* the additional CHILD_SA here is the one we destroyed on b without
+	 * triggering an event */
+	assert_track_sas(2, 3);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -984,6 +1010,8 @@ START_TEST(test_regular_responder_incorrect_delete)
 {
 	ike_sa_t *a, *b;
 	message_t *msg;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -1054,6 +1082,7 @@ START_TEST(test_regular_responder_incorrect_delete)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -1067,6 +1096,8 @@ END_TEST
 START_TEST(test_collision)
 {
 	ike_sa_t *a, *b;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -1279,6 +1310,7 @@ START_TEST(test_collision)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -1292,6 +1324,8 @@ END_TEST
 START_TEST(test_collision_multi_ke)
 {
 	ike_sa_t *a, *b;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, &multi_ke_conf);
@@ -1481,6 +1515,7 @@ START_TEST(test_collision_multi_ke)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -1503,6 +1538,8 @@ START_TEST(test_collision_mixed)
 		},
 	};
 	ike_sa_t *a, *b;
+
+	assert_track_sas_start();
 
 	/* let's accept what the peer proposes first */
 	lib->settings->set_bool(lib->settings, "%s.prefer_configured_proposals",
@@ -1742,6 +1779,7 @@ START_TEST(test_collision_mixed)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -1768,6 +1806,8 @@ START_TEST(test_collision_delayed_response)
 {
 	ike_sa_t *a, *b;
 	message_t *msg;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -1980,6 +2020,7 @@ START_TEST(test_collision_delayed_response)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -2006,6 +2047,8 @@ START_TEST(test_collision_delayed_response_delete)
 {
 	ike_sa_t *a, *b;
 	message_t *msg;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -2258,6 +2301,7 @@ START_TEST(test_collision_delayed_response_delete)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 0);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -2295,6 +2339,8 @@ START_TEST(test_collision_delayed_response_multi_ke)
 	bool after_delete = _i >= 2;
 
 	_i %= 2;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, &multi_ke_conf);
@@ -2435,6 +2481,7 @@ START_TEST(test_collision_delayed_response_multi_ke)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -2472,6 +2519,8 @@ START_TEST(test_collision_delayed_request)
 	bool before_delete = _i >= 3;
 
 	_i %= 3;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -2610,6 +2659,7 @@ START_TEST(test_collision_delayed_request)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -2637,6 +2687,8 @@ START_TEST(test_collision_delayed_request_more)
 {
 	ike_sa_t *a, *b;
 	message_t *msg;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -2737,6 +2789,7 @@ START_TEST(test_collision_delayed_request_more)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -2766,6 +2819,8 @@ START_TEST(test_collision_delayed_request_more_delete)
 {
 	ike_sa_t *a, *b;
 	message_t *msg;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -2902,6 +2957,7 @@ START_TEST(test_collision_delayed_request_more_delete)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 0);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -2937,6 +2993,8 @@ START_TEST(test_collision_delayed_request_multi_ke)
 	bool after_delete = _i >= 3;
 
 	_i %= 3;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, &multi_ke_conf);
@@ -3075,6 +3133,7 @@ START_TEST(test_collision_delayed_request_multi_ke)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -3100,6 +3159,8 @@ START_TEST(test_collision_ke_invalid)
 		},
 	};
 	ike_sa_t *a, *b;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, &conf);
@@ -3312,6 +3373,7 @@ START_TEST(test_collision_ke_invalid)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -3337,6 +3399,8 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 	};
 	ike_sa_t *a, *b;
 	message_t *msg;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, &conf);
@@ -3468,6 +3532,7 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -3488,6 +3553,8 @@ START_TEST(test_collision_responder_incorrect_delete)
 {
 	ike_sa_t *a, *b;
 	message_t *msg;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -3612,6 +3679,7 @@ START_TEST(test_collision_responder_incorrect_delete)
 	/* child_rekey/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -3633,6 +3701,8 @@ START_TEST(test_collision_delete)
 {
 	ike_sa_t *a, *b;
 	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
@@ -3696,6 +3766,7 @@ START_TEST(test_collision_delete)
 
 	/* child_rekey */
 	assert_hook();
+	assert_track_sas(2, 0);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -3721,6 +3792,8 @@ START_TEST(test_collision_delete_multi_ke)
 {
 	ike_sa_t *a, *b;
 	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
@@ -3786,6 +3859,7 @@ START_TEST(test_collision_delete_multi_ke)
 
 	/* child_rekey */
 	assert_hook();
+	assert_track_sas(2, 0);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -3813,6 +3887,8 @@ START_TEST(test_collision_delete_drop_delete)
 	ike_sa_t *a, *b;
 	message_t *msg;
 	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
@@ -3872,6 +3948,7 @@ START_TEST(test_collision_delete_drop_delete)
 
 	/* child_rekey */
 	assert_hook();
+	assert_track_sas(2, 0);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -3898,6 +3975,8 @@ START_TEST(test_collision_delete_drop_rekey)
 	ike_sa_t *a, *b;
 	message_t *msg;
 	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
@@ -3962,6 +4041,7 @@ START_TEST(test_collision_delete_drop_rekey)
 
 	/* child_rekey */
 	assert_hook();
+	assert_track_sas(2, 0);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -3988,6 +4068,8 @@ START_TEST(test_collision_delete_delayed_response)
 	ike_sa_t *a, *b;
 	message_t *msg;
 	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
@@ -4091,6 +4173,7 @@ START_TEST(test_collision_delete_delayed_response)
 
 	/* child_rekey */
 	assert_hook();
+	assert_track_sas(2, 0);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -4115,6 +4198,8 @@ START_TEST(test_collision_ike_rekey)
 {
 	ike_sa_t *a, *b;
 	uint32_t spi_a = _i+1;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
@@ -4172,6 +4257,7 @@ START_TEST(test_collision_ike_rekey)
 	/* ike_rekey/child_rekey */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	assert_sa_idle(a);
 	assert_sa_idle(b);
@@ -4198,6 +4284,8 @@ START_TEST(test_collision_ike_delete)
 	uint32_t spi_a = _i+1;
 	message_t *msg;
 	status_t s;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the CHILD_SA (SPI 2) */
@@ -4259,6 +4347,7 @@ START_TEST(test_collision_ike_delete)
 
 	/* child_rekey */
 	assert_hook();
+	assert_track_sas(0, 0);
 }
 END_TEST
 
