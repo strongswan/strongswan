@@ -40,6 +40,8 @@ START_TEST(test_regular)
 	ike_sa_t *a, *b, *new_sa;
 	status_t s;
 
+	assert_track_sas_start();
+
 	if (_i)
 	{	/* responder rekeys the IKE_SA */
 		exchange_test_helper->establish_sa(exchange_test_helper,
@@ -98,6 +100,7 @@ START_TEST(test_regular)
 	assert_hook();
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -123,6 +126,8 @@ START_TEST(test_regular_multi_ke)
 {
 	ike_sa_t *a, *b, *new_sa;
 	status_t s;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the IKE_SA */
@@ -202,6 +207,7 @@ START_TEST(test_regular_multi_ke)
 	assert_hook();
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -224,6 +230,8 @@ START_TEST(test_regular_ke_invalid)
 	};
 	ike_sa_t *a, *b, *sa;
 	status_t s;
+
+	assert_track_sas_start();
 
 	lib->settings->set_bool(lib->settings, "%s.prefer_configured_proposals",
 							FALSE, lib->ns);
@@ -303,6 +311,7 @@ START_TEST(test_regular_ke_invalid)
 	assert_hook();
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -325,6 +334,8 @@ START_TEST(test_regular_ke_invalid_multi_ke)
 	};
 	ike_sa_t *a, *b, *sa;
 	status_t s;
+
+	assert_track_sas_start();
 
 	lib->settings->set_bool(lib->settings, "%s.prefer_configured_proposals",
 							FALSE, lib->ns);
@@ -423,6 +434,7 @@ START_TEST(test_regular_ke_invalid_multi_ke)
 	assert_hook();
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -436,6 +448,8 @@ START_TEST(test_collision)
 {
 	ike_sa_t *a, *b, *sa;
 	status_t status;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -578,6 +592,7 @@ START_TEST(test_collision)
 	assert_hook();
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -592,6 +607,8 @@ START_TEST(test_collision_multi_ke)
 {
 	ike_sa_t *a, *b, *sa;
 	status_t status;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, &multi_ke_conf);
@@ -729,6 +746,7 @@ START_TEST(test_collision_multi_ke)
 	assert_hook();
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -751,6 +769,8 @@ START_TEST(test_collision_mixed)
 	};
 	ike_sa_t *a, *b, *sa;
 	status_t status;
+
+	assert_track_sas_start();
 
 	/* let's accept what the peer proposes first */
 	lib->settings->set_bool(lib->settings, "%s.prefer_configured_proposals",
@@ -953,6 +973,7 @@ START_TEST(test_collision_mixed)
 	assert_hook();
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -975,6 +996,8 @@ START_TEST(test_collision_ke_invalid)
 	};
 	ike_sa_t *a, *b, *sa;
 	status_t status;
+
+	assert_track_sas_start();
 
 	lib->settings->set_bool(lib->settings, "%s.prefer_configured_proposals",
 							FALSE, lib->ns);
@@ -1165,6 +1188,7 @@ START_TEST(test_collision_ke_invalid)
 	assert_hook();
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -1186,6 +1210,8 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 	ike_sa_t *a, *b, *sa;
 	message_t *msg;
 	status_t s;
+
+	assert_track_sas_start();
 
 	lib->settings->set_bool(lib->settings, "%s.prefer_configured_proposals",
 							FALSE, lib->ns);
@@ -1325,6 +1351,7 @@ START_TEST(test_collision_ke_invalid_delayed_retry)
 	/* ike_updown/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -1365,6 +1392,8 @@ START_TEST(test_collision_delayed_response)
 	ike_sa_t *a, *b, *sa;
 	message_t *msg, *d;
 	status_t s;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -1545,6 +1574,7 @@ START_TEST(test_collision_delayed_response)
 	/* ike_updown/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -1583,6 +1613,8 @@ START_TEST(test_collision_delayed_response_multi_ke)
 	bool after_delete = _i >= 2;
 
 	_i %= 2;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, &multi_ke_conf);
@@ -1746,6 +1778,7 @@ START_TEST(test_collision_delayed_response_multi_ke)
 	/* ike_updown/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -1768,6 +1801,8 @@ START_TEST(test_collision_dropped_request)
 	ike_sa_t *a, *b, *sa;
 	message_t *msg;
 	status_t s;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -1848,6 +1883,7 @@ START_TEST(test_collision_dropped_request)
 	/* ike_updown/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -1873,6 +1909,8 @@ START_TEST(test_collision_delayed_request)
 	ike_sa_t *a, *b, *sa;
 	message_t *msg;
 	status_t s;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -1963,6 +2001,7 @@ START_TEST(test_collision_delayed_request)
 	/* ike_updown/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -1988,6 +2027,8 @@ START_TEST(test_collision_delayed_request_and_delete)
 	ike_sa_t *a, *b, *sa;
 	message_t *msg;
 	status_t s;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, NULL);
@@ -2083,6 +2124,7 @@ START_TEST(test_collision_delayed_request_and_delete)
 	/* ike_updown/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -2116,6 +2158,8 @@ START_TEST(test_collision_delayed_request_multi_ke)
 	bool after_delete = _i >= 3;
 
 	_i %= 3;
+
+	assert_track_sas_start();
 
 	exchange_test_helper->establish_sa(exchange_test_helper,
 									   &a, &b, &multi_ke_conf);
@@ -2256,6 +2300,7 @@ START_TEST(test_collision_delayed_request_multi_ke)
 	/* ike_updown/child_updown */
 	assert_hook();
 	assert_hook();
+	assert_track_sas(2, 2);
 
 	charon->ike_sa_manager->flush(charon->ike_sa_manager);
 }
@@ -2277,6 +2322,8 @@ START_TEST(test_collision_delete)
 	ike_sa_t *a, *b;
 	message_t *msg;
 	status_t s;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the IKE_SA */
@@ -2340,6 +2387,7 @@ START_TEST(test_collision_delete)
 
 	/* ike_rekey */
 	assert_hook();
+	assert_track_sas(0, 0);
 }
 END_TEST
 
@@ -2360,6 +2408,8 @@ START_TEST(test_collision_delete_multi_ke)
 	ike_sa_t *a, *b;
 	message_t *msg;
 	status_t s;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the IKE_SA */
@@ -2425,6 +2475,7 @@ START_TEST(test_collision_delete_multi_ke)
 
 	/* ike_rekey */
 	assert_hook();
+	assert_track_sas(0, 0);
 }
 END_TEST
 
@@ -2444,6 +2495,8 @@ START_TEST(test_collision_delete_drop_delete)
 	ike_sa_t *a, *b;
 	message_t *msg;
 	status_t s;
+
+	assert_track_sas_start();
 
 	if (_i)
 	{	/* responder rekeys the IKE_SA */
@@ -2511,6 +2564,7 @@ START_TEST(test_collision_delete_drop_delete)
 
 	/* ike_rekey */
 	assert_hook();
+	assert_track_sas(0, 0);
 }
 END_TEST
 
