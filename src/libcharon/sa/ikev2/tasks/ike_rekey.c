@@ -449,7 +449,10 @@ METHOD(ike_rekey_t, collide, bool,
 					 "ignore");
 				break;
 			}
-			DESTROY_IF(&this->collision->public.task);
+			if (this->collision)
+			{
+				this->collision->public.task.destroy(&this->collision->public.task);
+			}
 			this->collision = rekey;
 			return TRUE;
 		}
@@ -478,7 +481,10 @@ static void cleanup(private_ike_rekey_t *this)
 	cur_sa = charon->bus->get_sa(charon->bus);
 	DESTROY_IF(this->new_sa);
 	charon->bus->set_sa(charon->bus, cur_sa);
-	DESTROY_IF(&this->collision->public.task);
+	if (this->collision)
+	{
+		this->collision->public.task.destroy(&this->collision->public.task);
+	}
 }
 
 METHOD(task_t, migrate, void,
