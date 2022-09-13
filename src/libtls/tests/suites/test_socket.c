@@ -648,6 +648,11 @@ static void run_echo_client(echo_server_config_t *config)
 }
 
 /**
+ * Data for echo test
+ */
+static chunk_t echo_data = chunk_from_chars(0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08);
+
+/**
  * Create server/peer configuration
  */
 static echo_server_config_t *create_config(tls_version_t version, uint16_t port,
@@ -660,7 +665,7 @@ static echo_server_config_t *create_config(tls_version_t version, uint16_t port,
 		.addr = "127.0.0.1",
 		.port = port,
 		.cauth = cauth,
-		.data = chunk_from_chars(0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08),
+		.data = echo_data,
 	);
 	return config;
 }
