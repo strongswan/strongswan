@@ -1448,9 +1448,13 @@ fi
 # modify CFLAGS as needed, do this late so we don't affect configure checks
 CFLAGS="$CFLAGS -include $(pwd)/config.h"
 
+AC_MSG_CHECKING([for use of -Werror and additional warnings])
 WARN_CFLAGS=
 if test x$warnings = xtrue; then
 	WARN_CFLAGS="-Werror -Wall -Wextra"
+	AC_MSG_RESULT([yes])
+else
+	AC_MSG_RESULT([no])
 fi
 # disable some warnings, whether explicitly enabled above or by default
 # these are not compatible with our custom printf specifiers
