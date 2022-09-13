@@ -96,7 +96,7 @@ build_openssl()
 	SSL_DIR=$DEPS_BUILD_DIR/$SSL_PKG
 	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
 	SSL_INS=$DEPS_PREFIX/ssl
-	SSL_OPT="shared no-tls no-dtls no-ssl3 no-zlib no-comp no-idea no-psk no-srp
+	SSL_OPT="-d shared no-tls no-dtls no-ssl3 no-zlib no-comp no-idea no-psk no-srp
 			 no-stdio no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
 
 	if test -d "$SSL_DIR"; then
@@ -470,6 +470,21 @@ CONFIG="$CONFIG
 	--enable-test-vectors
 	--enable-monolithic=${MONOLITHIC-no}
 	--enable-leak-detective=${LEAK_DETECTIVE-no}"
+
+case "$TEST" in
+	coverage|freebsd|fuzzing|sonarcloud|win*)
+		# don't use AddressSanitizer if it's not available or causes conflicts
+		CONFIG="$CONFIG --disable-asan"
+		;;
+	*)
+		if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "18.04" ]; then
+			# the libstdc++ workaround for libbotan doesn't work on Ubuntu 18.04
+			CONFIG="$CONFIG --disable-asan"
+		elif [ "$LEAK_DETECTIVE" != "yes" ]; then
+			CONFIG="$CONFIG --enable-asan"
+		fi
+		;;
+esac
 
 echo "$ ./autogen.sh"
 ./autogen.sh || exit $?
