@@ -16,6 +16,11 @@
  * for more details.
  */
 
+/**
+ * @defgroup scep scep
+ * @{ @ingroup pki
+ */
+
 #ifndef _SCEP_H
 #define _SCEP_H
 
@@ -117,4 +122,4 @@ bool scep_http_request(const char *url, scep_op_t op, bool http_post,
 bool scep_parse_response(chunk_t response, chunk_t transID, container_t **out,
 						 scep_attributes_t *attrs);
 
-#endif /* _SCEP_H */
+#endif /** _SCEP_H @} */
