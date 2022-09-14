@@ -235,7 +235,7 @@ static bool write_cert(certificate_t *cert, pki_cert_type_t cert_type,
 			DBG1(DBG_APP, "could not get certificate encoding");
 			return FALSE;
 		}
-		printf("%.*s", encoding.len, encoding.ptr);
+		printf("%.*s", (int)encoding.len, encoding.ptr);
 		chunk_free(&encoding);
 		path = "stdout";
 	}
