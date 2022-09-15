@@ -1126,7 +1126,7 @@ static void process_link(private_kernel_netlink_net_t *this,
 				);
 				this->ifaces->insert_last(this->ifaces, entry);
 			}
-			strncpy(entry->ifname, name, IFNAMSIZ);
+			strncpy(entry->ifname, name, IFNAMSIZ-1);
 			entry->ifname[IFNAMSIZ-1] = '\0';
 			entry->usable = charon->kernel->is_interface_usable(charon->kernel,
 																name);
