@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2007-2017 Tobias Brunner
+# Copyright (C) 2007-2022 Tobias Brunner
 # Copyright (C) 2006-2022 Andreas Steffen
 # Copyright (C) 2006-2014 Martin Willi
 #
@@ -327,6 +327,7 @@ ARG_ENABL_SET([tss-trousers],   [enable the use of the TrouSerS Trusted Software
 ARG_ENABL_SET([tss-tss2],       [enable the use of the TSS 2.0 Trusted Software Stack])
 
 # compile options
+ARG_ENABL_SET([asan],           [enable build with AddressSanitizer (ASan).])
 ARG_ENABL_SET([coverage],       [enable lcov coverage report generation.])
 ARG_ENABL_SET([git-version],    [use output of 'git describe' as version information in executables.])
 ARG_ENABL_SET([leak-detective], [enable malloc hooks to find memory leaks.])
@@ -1376,6 +1377,27 @@ if test x$fuzzing = xtrue; then
 		AC_SUBST(FUZZING_LDFLAGS)
 		;;
 	esac
+fi
+
+if test x$asan = xtrue; then
+	# adding this here and not earlier or passed to the script avoids issues
+	# e.g. with libpthread (libasan provides stubs for its functions but no full
+	# implementation so configure does not detect that -lpthread is required
+	# when GCC is used, clang always adds -lpthread)
+	CFLAGS="$CFLAGS -fsanitize=address -fno-omit-frame-pointer"
+	# this is necessary so AddressSanitizer can resolve symbols e.g. for
+	# C++ exceptions that are used in libbotan
+	if test x$botan = xtrue; then
+		LDFLAGS="$LDFLAGS -lstdc++"
+	fi
+	if test x$openssl = xtrue; then
+		# we need to suppress some leaks with OpenSSL 3 as we don't deinitialze
+		# it properly
+		AC_SUBST(LSAN_OPTIONS, [suppressions=\${abs_top_srcdir}/.lsan.suppressions])
+		# use this instead of AM_TESTS_ENVIRONMENT as we don't use the parallel
+		# test harness
+		AC_SUBST(TESTS_ENVIRONMENT, ['export LSAN_OPTIONS="$(LSAN_OPTIONS)";'])
+	fi
 fi
 
 if test x$ruby_gems = xtrue; then
