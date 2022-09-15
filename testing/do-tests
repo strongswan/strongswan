@@ -20,7 +20,6 @@ DIR=$(dirname `readlink -f $0`)
 SSHCONF="-F $DIR/ssh_config"
 
 [ -d $DIR/hosts ] || die "Directory 'hosts' not found"
-[ -d $DIR/tests ] || die "Directory 'tests' not found"
 [ -d $BUILDDIR ] ||
 	die "Directory '$BUILDDIR' does not exist, please run make-testing first"
 running_any $STRONGSWANHOSTS || die "Please start test environment before running $0"
@@ -39,7 +38,8 @@ TODAYDIR=$TESTRESULTSDIR/$TESTDATE
 mkdir $TODAYDIR
 TESTRESULTSHTML=$TODAYDIR/all.html
 INDEX=$TODAYDIR/index.html
-DEFAULTTESTSDIR=$TESTDIR/testing/tests
+
+[ -d $TESTSETDIR ] || die "Directory $TESTSETDIR not found"
 
 SOURCEIP_ROUTING_TABLE=220
 
@@ -225,7 +225,7 @@ if [ $# -gt 0 ]
 then
     TESTS=$(printf "%s\n" $* | sort -u)
 else
-    TESTS=$(ls $DEFAULTTESTSDIR)
+    TESTS=$(ls $TESTSETDIR)
 fi
 
 for SUBDIR in $TESTS
@@ -234,11 +234,11 @@ do
 
 	if [ $SUBTESTS = $SUBDIR ]
 	then
-		SUBTESTS="`ls $DEFAULTTESTSDIR/$SUBDIR`"
+		SUBTESTS="`ls $TESTSETDIR/$SUBDIR`"
 	else
 		if [[ $SUBTESTS == *'*'* ]]
 		then
-			SUBTESTS="`basename -a $DEFAULTTESTSDIR/$SUBDIR`"
+			SUBTESTS="`basename -a $TESTSETDIR/$SUBDIR`"
 		fi
 		SUBDIR="`dirname $SUBDIR`"
 	fi
@@ -310,17 +310,17 @@ do
 
 	teststart=$(date +%s)
 
-	if [ ! -d $DEFAULTTESTSDIR/${testname} ]
+	if [ ! -d $TESTSETDIR/${testname} ]
 	then
 	    echo "is missing..skipped"
 	    continue
 	fi
 
-	[ ! -f $DEFAULTTESTSDIR/${testname}/description.txt ] && echo "!! File 'description.txt' is missing" && continue
-	[ ! -f $DEFAULTTESTSDIR/${testname}/test.conf ]       && echo "!! File 'test.conf' is missing" && continue
-	[ ! -f $DEFAULTTESTSDIR/${testname}/pretest.dat ]     && echo "!! File 'pretest.dat' is missing" && continue
-	[ ! -f $DEFAULTTESTSDIR/${testname}/posttest.dat ]    && echo "!! File 'posttest.dat' is missing" && continue
-	[ ! -f $DEFAULTTESTSDIR/${testname}/evaltest.dat ]    && echo "!! File 'evaltest.dat' is missing" && continue
+	[ ! -f $TESTSETDIR/${testname}/description.txt ] && echo "!! File 'description.txt' is missing" && continue
+	[ ! -f $TESTSETDIR/${testname}/test.conf ]       && echo "!! File 'test.conf' is missing" && continue
+	[ ! -f $TESTSETDIR/${testname}/pretest.dat ]     && echo "!! File 'pretest.dat' is missing" && continue
+	[ ! -f $TESTSETDIR/${testname}/posttest.dat ]    && echo "!! File 'posttest.dat' is missing" && continue
+	[ ! -f $TESTSETDIR/${testname}/evaltest.dat ]    && echo "!! File 'evaltest.dat' is missing" && continue
 
 	TESTRESULTDIR=$TODAYDIR/$testname
 	mkdir -p $TESTRESULTDIR
