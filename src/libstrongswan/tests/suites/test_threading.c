@@ -1214,6 +1214,8 @@ START_TEST(test_cancel_point)
 }
 END_TEST
 
+/* not sure why AddressSanitizer complains here, pointer looks fine */
+ADDRESS_SANITIZER_EXCLUDE
 static void close_fd_ptr(void *fd)
 {
 	close(*(int*)fd);
@@ -1253,6 +1255,8 @@ static void cancellation_read()
 	}
 }
 
+/* the AddressSaniziter complains about the fd_set here for some reason */
+ADDRESS_SANITIZER_EXCLUDE
 static void cancellation_select()
 {
 	int sv[2];

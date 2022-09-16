@@ -1411,7 +1411,7 @@ static void netlink_find_offload_feature(const char *ifname)
 		.cmd = ETHTOOL_GSSET_INFO,
 		.sset_mask = 1ULL << ETH_SS_FEATURES,
 	);
-	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ-1);
 	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 	ifr.ifr_data = (void*)sset_info;
 
@@ -1427,7 +1427,7 @@ static void netlink_find_offload_feature(const char *ifname)
 		.cmd = ETHTOOL_GSTRINGS,
 		.string_set = ETH_SS_FEATURES,
 	);
-	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ-1);
 	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 	ifr.ifr_data = (void*)cmd;
 
@@ -1486,7 +1486,7 @@ static bool netlink_detect_offload(const char *ifname)
 		.cmd = ETHTOOL_GFEATURES,
 		.size = netlink_hw_offload.total_blocks,
 	);
-	strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	strncpy(ifr.ifr_name, ifname, IFNAMSIZ-1);
 	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 	ifr.ifr_data = (void*)cmd;
 
@@ -1778,8 +1778,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			}
 			algo->alg_key_len = data->enc_key.len * 8;
 			algo->alg_icv_len = icv_size;
-			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
-			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
+			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name)-1);
+			algo->alg_name[sizeof(algo->alg_name)-1] = '\0';
 			memcpy(algo->alg_key, data->enc_key.ptr, data->enc_key.len);
 			break;
 		}
@@ -1805,8 +1805,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				goto failed;
 			}
 			algo->alg_key_len = data->enc_key.len * 8;
-			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
-			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
+			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name)-1);
+			algo->alg_name[sizeof(algo->alg_name)-1] = '\0';
 			memcpy(algo->alg_key, data->enc_key.ptr, data->enc_key.len);
 		}
 	}
@@ -1862,8 +1862,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			}
 			algo->alg_key_len = data->int_key.len * 8;
 			algo->alg_trunc_len = trunc_len;
-			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
-			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
+			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name)-1);
+			algo->alg_name[sizeof(algo->alg_name)-1] = '\0';
 			memcpy(algo->alg_key, data->int_key.ptr, data->int_key.len);
 		}
 		else
@@ -1877,8 +1877,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 				goto failed;
 			}
 			algo->alg_key_len = data->int_key.len * 8;
-			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
-			algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
+			strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name)-1);
+			algo->alg_name[sizeof(algo->alg_name)-1] = '\0';
 			memcpy(algo->alg_key, data->int_key.ptr, data->int_key.len);
 		}
 	}
@@ -1904,8 +1904,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			goto failed;
 		}
 		algo->alg_key_len = 0;
-		strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name));
-		algo->alg_name[sizeof(algo->alg_name) - 1] = '\0';
+		strncpy(algo->alg_name, alg_name, sizeof(algo->alg_name)-1);
+		algo->alg_name[sizeof(algo->alg_name)-1] = '\0';
 	}
 
 	if (data->encap)

@@ -50,6 +50,7 @@ static void destroy_case(test_case_t *tcase)
 {
 	array_destroy(tcase->functions);
 	array_destroy(tcase->fixtures);
+	free(tcase);
 }
 
 /**
@@ -738,6 +739,7 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg,
 	array_destroy(failures);
 	array_destroy(warnings);
 	DESTROY_IF(iterations);
+	free(times);
 
 	return passed == array_count(tcase->functions);
 }

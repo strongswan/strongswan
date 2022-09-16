@@ -350,16 +350,18 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
 
 #define _assert_payload(dir, c, ...) ({ \
 	listener_message_rule_t _rules[] = { __VA_ARGS__ }; \
-	listener_message_assert_t _listener = { \
+	listener_message_assert_t *_listener; \
+	INIT(_listener, \
 		.listener = { .message = exchange_test_asserts_message, }, \
 		.file = __FILE__, \
 		.line = __LINE__, \
 		.incoming = streq(dir, "IN") ? TRUE : FALSE, \
 		.count = c, \
-		.rules = _rules, \
+		.rules = malloc(sizeof(_rules)), \
 		.num_rules = countof(_rules), \
-	}; \
-	exchange_test_helper->add_listener(exchange_test_helper, &_listener.listener); \
+	); \
+	memcpy(_listener->rules, _rules, sizeof(_rules)); \
+	exchange_test_helper->add_listener(exchange_test_helper, &_listener->listener); \
 })
 
 /**
