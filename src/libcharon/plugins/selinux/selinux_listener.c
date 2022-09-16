@@ -110,59 +110,88 @@ static bool install_generic_trap(ike_sa_t *ike_sa, child_sa_t *child_sa)
 	return success;
 }
 
-METHOD(listener_t, ike_updown, bool,
-	private_selinux_listener_t *this, ike_sa_t *ike_sa, bool up)
+/**
+ * Add an IKE_SA after it has been established and depending on its config.
+ */
+static void add_ike_sa(private_selinux_listener_t *this, ike_sa_t *ike_sa)
 {
 	enumerator_t *enumerator;
 	peer_cfg_t *peer_cfg;
 	child_cfg_t *child_cfg;
 	child_sa_t *child_sa;
 	entry_t *entry;
+	child_sa_create_t child = {
+		.if_id_in_def = ike_sa->get_if_id(ike_sa, TRUE),
+		.if_id_out_def = ike_sa->get_if_id(ike_sa, FALSE),
+	};
 
-	if (up)
+	INIT(entry,
+		.id = ike_sa->get_id(ike_sa),
+	);
+	entry->id = entry->id->clone(entry->id);
+
+	peer_cfg = ike_sa->get_peer_cfg(ike_sa);
+	enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
+	while (enumerator->enumerate(enumerator, &child_cfg))
 	{
-		child_sa_create_t child = {
-			.if_id_in_def = ike_sa->get_if_id(ike_sa, TRUE),
-			.if_id_out_def = ike_sa->get_if_id(ike_sa, FALSE),
-		};
-
-		INIT(entry,
-			.id = ike_sa->get_id(ike_sa),
-		);
-		entry->id = entry->id->clone(entry->id);
-
-		peer_cfg = ike_sa->get_peer_cfg(ike_sa);
-		enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
-		while (enumerator->enumerate(enumerator, &child_cfg))
+		if (child_cfg->get_label(child_cfg) &&
+			child_cfg->get_label_mode(child_cfg) == SEC_LABEL_MODE_SELINUX)
 		{
-			if (child_cfg->get_label(child_cfg) &&
-				child_cfg->get_label_mode(child_cfg) == SEC_LABEL_MODE_SELINUX)
+			child_sa = child_sa_create(ike_sa->get_my_host(ike_sa),
+									   ike_sa->get_other_host(ike_sa),
+									   child_cfg, &child);
+			if (install_generic_trap(ike_sa, child_sa))
 			{
-				child_sa = child_sa_create(ike_sa->get_my_host(ike_sa),
-										   ike_sa->get_other_host(ike_sa),
-										   child_cfg, &child);
-				if (install_generic_trap(ike_sa, child_sa))
-				{
-					array_insert_create(&entry->traps, ARRAY_TAIL, child_sa);
-				}
-				else
-				{
-					child_sa->destroy(child_sa);
-				}
+				array_insert_create(&entry->traps, ARRAY_TAIL, child_sa);
+			}
+			else
+			{
+				child_sa->destroy(child_sa);
 			}
 		}
-		enumerator->destroy(enumerator);
+	}
+	enumerator->destroy(enumerator);
 
-		if (array_count(entry->traps))
-		{
-			this->sas->put(this->sas, entry->id, entry);
-		}
-		else
-		{
-			destroy_entry(entry);
-		}
+	if (array_count(entry->traps))
+	{
+		this->sas->put(this->sas, entry->id, entry);
 	}
 	else
+	{
+		destroy_entry(entry);
+	}
+}
+
+METHOD(listener_t, assign_vips, bool,
+	private_selinux_listener_t *this, ike_sa_t *ike_sa, bool assign)
+{
+	if (assign)
+	{	/* track SAs as responder */
+		add_ike_sa(this, ike_sa);
+	}
+	return TRUE;
+}
+
+
+METHOD(listener_t, handle_vips, bool,
+	private_selinux_listener_t *this, ike_sa_t *ike_sa, bool handle)
+{
+	if (handle)
+	{	/* track SAs as initiator */
+		add_ike_sa(this, ike_sa);
+	}
+	return TRUE;
+}
+
+METHOD(listener_t, ike_updown, bool,
+	private_selinux_listener_t *this, ike_sa_t *ike_sa, bool up)
+{
+	child_sa_t *child_sa;
+	entry_t *entry;
+
+	/* we don't use the "up" event here as the virtual IP addresses, if any,
+	 * are not assigned yet. we use the events above instead. */
+	if (!up)
 	{
 		entry = this->sas->remove(this->sas, ike_sa->get_id(ike_sa));
 		if (entry)
@@ -242,6 +271,8 @@ selinux_listener_t *selinux_listener_create()
 	INIT(this,
 		.public = {
 			.listener = {
+				.assign_vips = _assign_vips,
+				.handle_vips = _handle_vips,
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
 				.ike_update = _ike_update,
