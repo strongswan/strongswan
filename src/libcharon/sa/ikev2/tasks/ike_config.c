@@ -49,6 +49,11 @@ struct private_ike_config_t {
 	bool vip_requested;
 
 	/**
+	 * Whether we requested any configuration attributes at all.
+	 */
+	bool any_attributes_requested;
+
+	/**
 	 * Received list of virtual IPs, host_t*
 	 */
 	linked_list_t *vips;
@@ -322,10 +327,7 @@ METHOD(task_t, build_i, status_t,
 		if (cp)
 		{
 			message->add_payload(message, (payload_t*)cp);
-		}
-		else
-		{	/* we don't expect a CFG_REPLY */
-			return SUCCESS;
+			this->any_attributes_requested = TRUE;
 		}
 	}
 	return NEED_MORE;
@@ -459,6 +461,12 @@ METHOD(task_t, process_i, status_t,
 		enumerator_t *enumerator;
 		host_t *host;
 
+		if (!this->any_attributes_requested)
+		{	/* just trigger the event even if no IPs were requested/assigned */
+			charon->bus->handle_vips(charon->bus, this->ike_sa, TRUE);
+			return SUCCESS;
+		}
+
 		process_payloads(this, message);
 
 		this->ike_sa->clear_virtual_ips(this->ike_sa, TRUE);
@@ -494,6 +502,8 @@ METHOD(task_t, migrate, void,
 	this->requested->destroy_function(this->requested, free);
 	this->requested = linked_list_create();
 	this->public.task.build = _build_i;
+	this->vip_requested = FALSE;
+	this->any_attributes_requested = FALSE;
 }
 
 METHOD(task_t, destroy, void,
