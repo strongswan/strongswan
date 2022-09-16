@@ -1999,7 +1999,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 
 	memset(&request, 0, sizeof(request));
 
-	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x for update",
+	DBG3(DBG_KNL, "querying SAD entry with SPI %.8x for update",
 		 ntohl(id->spi));
 
 	msg = (struct sadb_msg*)request;
@@ -2144,7 +2144,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 
 	memset(&request, 0, sizeof(request));
 
-	DBG2(DBG_KNL, "querying SAD entry with SPI %.8x", ntohl(id->spi));
+	DBG3(DBG_KNL, "querying SAD entry with SPI %.8x", ntohl(id->spi));
 
 	msg = (struct sadb_msg*)request;
 	msg->sadb_msg_version = PF_KEY_V2;
@@ -2888,7 +2888,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 		return NOT_FOUND;
 	}
 
-	DBG2(DBG_KNL, "querying policy %R === %R %N", id->src_ts, id->dst_ts,
+	DBG3(DBG_KNL, "querying policy %R === %R %N", id->src_ts, id->dst_ts,
 		 policy_dir_names, id->dir);
 
 	/* create a policy */
