@@ -81,9 +81,9 @@ struct private_est_tls_t {
 	char *http_path;
 
 	/**
-	 * Optional <username:password> for http basic authentication
+	 * Optional base64-encoded <username:password> for http basic authentication
 	 */
-	char *user_pass;
+	chunk_t user_pass;
 };
 
 static chunk_t build_http_request(private_est_tls_t *this, est_op_t op, chunk_t in)
@@ -93,10 +93,10 @@ static chunk_t build_http_request(private_est_tls_t *this, est_op_t op, chunk_t 
 	int len;
 
 	/* Use Basic Authentication? */
-	if (this->user_pass)
+	if (this->user_pass.len > 0)
 	{
-		snprintf(http_auth, sizeof(http_auth), "Authorization: Basic %s\r\n",
-				 this->user_pass);
+		snprintf(http_auth, sizeof(http_auth), "Authorization: Basic %.*s\r\n",
+				 (int)this->user_pass.len, this->user_pass.ptr);
 	}
 	else
 	{
@@ -287,9 +287,9 @@ METHOD(est_tls_t, destroy, void,
 	{
 		close(this->fd);
 	}
+	chunk_clear(&this->user_pass);
 	free(this->http_host);
 	free(this->http_path);
-	free(this->user_pass);
 	free(this);
 }
 
@@ -405,7 +405,7 @@ est_tls_t *est_tls_create(char *uri, certificate_t *client_cert, char *user_pass
 
 	if (user_pass)
 	{
-		this->user_pass = strdup(user_pass);
+		this->user_pass = chunk_to_base64(chunk_from_str(user_pass), NULL);;
 	}
 
 	if (!est_tls_init(this, uri, client_cert))
