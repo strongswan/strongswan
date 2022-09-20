@@ -112,7 +112,6 @@ static chunk_t build_http_request(private_est_tls_t *this, est_op_t op, chunk_t 
 				"Host: %s\r\n"
 				"%s"
 				"Content-Type: %s\r\n"
-				"Content-Transfer-Encoding: base64\r\n"
 				"Content-Length: %d\r\n"
 				"\r\n",
 				this->http_path, operations[op], this->http_host, http_auth,
@@ -143,7 +142,7 @@ static chunk_t build_http_request(private_est_tls_t *this, est_op_t op, chunk_t 
 }
 
 static bool parse_http_header(chunk_t *in,  u_int *http_code, u_int *content_len,
-							  bool *base64, u_int *retry_after)
+							  u_int *retry_after)
 {
 	chunk_t line, version, parameter;
 	u_int len;
@@ -151,7 +150,6 @@ static bool parse_http_header(chunk_t *in,  u_int *http_code, u_int *content_len
 	/*initialize output parameters */
 	*http_code = 0;
 	*content_len = 0;
-	*base64 = FALSE;
 
 	if (retry_after)
 	{
@@ -182,11 +180,6 @@ static bool parse_http_header(chunk_t *in,  u_int *http_code, u_int *content_len
 					*content_len = len;
 				}
 			}
-			else if (matchcase("Content-Transfer-Encoding", &parameter) &&
-					 matchcase("Base64", &line))
-			{
-				*base64 = TRUE;
-			}
 			else if (matchcase("Retry-After", &parameter))
 			{
 				if (sscanf(line.ptr, "%u", &len) == 1 && retry_after)
@@ -208,7 +201,6 @@ METHOD(est_tls_t, request, bool,
 	chunk_t http = chunk_empty, data = chunk_empty, response;
 	u_int content_len;
 	char buf[1024];
-	bool base64;
 	int len;
 
 	/* initialize output variables */
@@ -247,8 +239,7 @@ METHOD(est_tls_t, request, bool,
 	response = chunk_create(buf, len);
 	DBG2(DBG_APP, "http response: %B", &response);
 
-	if (!parse_http_header(&response, http_code, &content_len, &base64,
-						   retry_after))
+	if (!parse_http_header(&response, http_code, &content_len, retry_after))
 	{
 		return FALSE;
 	}
@@ -281,15 +272,8 @@ METHOD(est_tls_t, request, bool,
 			}
 		}
 
-		if (base64)
-		{
-			*out = chunk_from_base64(data, NULL);
-			chunk_free(&data);
-		}
-		else
-		{
-			*out = data;
-		}
+		*out = chunk_from_base64(data, NULL);
+		chunk_free(&data);
 	}
 	return TRUE;
 }
