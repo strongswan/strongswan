@@ -412,8 +412,8 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 		case FEATURE_EAP_SERVER:
 		case FEATURE_EAP_PEER:
 			if (feature->arg.eap.vendor &&
-				asprintf(&str, "%N:%d-%d", plugin_feature_names, feature->type,
-					feature->arg.eap.type, feature->arg.eap.vendor) > 0)
+				asprintf(&str, "%N:%d-%N", plugin_feature_names, feature->type,
+					feature->arg.eap.type, pen_names, feature->arg.eap.vendor) > 0)
 			{
 				return str;
 			}

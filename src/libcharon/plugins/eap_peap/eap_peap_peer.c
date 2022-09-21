@@ -72,7 +72,7 @@ METHOD(tls_application_t, process, status_t,
 	eap_payload_t *in;
 	eap_code_t code;
 	eap_type_t type, received_type;
-	uint32_t vendor, received_vendor;
+	pen_t vendor, received_vendor;
 
 	status = this->avp->process(this->avp, reader, &data,
 							this->ph1_method->get_identifier(this->ph1_method));
@@ -137,8 +137,8 @@ METHOD(tls_application_t, process, status_t,
 	{
 		if (received_vendor)
 		{
-			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d "
-						  "(id 0x%02X", received_type, received_vendor,
+			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%N "
+						  "(id 0x%02X)", received_type, pen_names, received_vendor,
 						   in->get_identifier(in));
 		}
 		else
@@ -175,8 +175,8 @@ METHOD(tls_application_t, process, status_t,
 		default:
 			if (vendor)
 			{
-				DBG1(DBG_IKE, "vendor specific EAP method %d-%d failed",
-							   type, vendor);
+				DBG1(DBG_IKE, "vendor specific EAP method %d-%N failed",
+							   type, pen_names, vendor);
 			}
 			else
 			{
@@ -192,7 +192,7 @@ METHOD(tls_application_t, build, status_t,
 	chunk_t data;
 	eap_code_t code;
 	eap_type_t type;
-	uint32_t vendor;
+	pen_t vendor;
 
 	if (this->out)
 	{
