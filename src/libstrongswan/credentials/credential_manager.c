@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
+ * Copyright (C) 2015-2022 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -600,11 +600,11 @@ static bool check_lifetime(private_credential_manager_t *this,
 }
 
 /**
- * check a certificate for its lifetime
+ * Check a certificate's lifetime and consult plugins
  */
 static bool check_certificate(private_credential_manager_t *this,
-				certificate_t *subject, certificate_t *issuer, bool online,
-				int pathlen, bool anchor, auth_cfg_t *auth)
+							  certificate_t *subject, certificate_t *issuer,
+							  int pathlen, bool anchor, auth_cfg_t *auth)
 {
 	cert_validator_t *validator;
 	enumerator_t *enumerator;
@@ -618,12 +618,34 @@ static bool check_certificate(private_credential_manager_t *this,
 	enumerator = this->validators->create_enumerator(this->validators);
 	while (enumerator->enumerate(enumerator, &validator))
 	{
-		if (!validator->validate)
+		if (validator->validate &&
+			!validator->validate(validator, subject, issuer,
+								 pathlen, anchor, auth))
 		{
-			continue;
+			enumerator->destroy(enumerator);
+			return FALSE;
 		}
-		if (!validator->validate(validator, subject, issuer,
-								 online, pathlen, anchor, auth))
+	}
+	enumerator->destroy(enumerator);
+	return TRUE;
+}
+
+/**
+ * Do online revocation checking
+ */
+static bool check_certificate_online(private_credential_manager_t *this,
+							  certificate_t *subject, certificate_t *issuer,
+							  int pathlen, bool anchor, auth_cfg_t *auth)
+{
+	cert_validator_t *validator;
+	enumerator_t *enumerator;
+
+	enumerator = this->validators->create_enumerator(this->validators);
+	while (enumerator->enumerate(enumerator, &validator))
+	{
+		if (validator->validate_online &&
+			!validator->validate_online(validator, subject, issuer,
+										pathlen, anchor, auth))
 		{
 			enumerator->destroy(enumerator);
 			return FALSE;
@@ -788,9 +810,7 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 				break;
 			}
 		}
-		/* don't do online verification here */
-		if (!check_certificate(this, current, issuer, FALSE,
-							   pathlen, is_anchor, auth))
+		if (!check_certificate(this, current, issuer, pathlen, is_anchor, auth))
 		{
 			trusted = FALSE;
 			issuer->destroy(issuer);
@@ -828,8 +848,8 @@ static bool verify_trust_chain(private_credential_manager_t *this,
 		{
 			if (rule == AUTH_RULE_CA_CERT || rule == AUTH_RULE_IM_CERT)
 			{
-				if (!check_certificate(this, current, issuer, TRUE, pathlen++,
-									   rule == AUTH_RULE_CA_CERT, auth))
+				if (!check_certificate_online(this, current, issuer, pathlen++,
+											  rule == AUTH_RULE_CA_CERT, auth))
 				{
 					trusted = FALSE;
 					break;

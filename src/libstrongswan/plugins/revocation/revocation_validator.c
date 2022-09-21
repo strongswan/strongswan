@@ -826,10 +826,9 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	return valid;
 }
 
-METHOD(cert_validator_t, validate, bool,
+METHOD(cert_validator_t, validate_online, bool,
 	private_revocation_validator_t *this, certificate_t *subject,
-	certificate_t *issuer, bool online, u_int pathlen, bool anchor,
-	auth_cfg_t *auth)
+	certificate_t *issuer, u_int pathlen, bool anchor, auth_cfg_t *auth)
 {
 	bool enable_ocsp, enable_crl;
 	u_int timeout;
@@ -840,7 +839,7 @@ METHOD(cert_validator_t, validate, bool,
 	timeout = this->timeout;
 	this->lock->unlock(this->lock);
 
-	if (online && (enable_ocsp || enable_crl) &&
+	if ((enable_ocsp || enable_crl) &&
 		subject->get_type(subject) == CERT_X509 &&
 		issuer->get_type(issuer) == CERT_X509)
 	{
@@ -956,7 +955,7 @@ revocation_validator_t *revocation_validator_create()
 
 	INIT(this,
 		.public = {
-			.validator.validate = _validate,
+			.validator.validate_online = _validate_online,
 			.reload = _reload,
 			.destroy = _destroy,
 		},

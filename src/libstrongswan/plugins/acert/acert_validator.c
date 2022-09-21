@@ -91,8 +91,7 @@ static void apply(private_acert_validator_t *this, ac_t *ac, auth_cfg_t *auth)
 
 METHOD(cert_validator_t, validate, bool,
 	private_acert_validator_t *this, certificate_t *subject,
-	certificate_t *issuer, bool online, u_int pathlen, bool anchor,
-	auth_cfg_t *auth)
+	certificate_t *issuer, u_int pathlen, bool anchor, auth_cfg_t *auth)
 {
 	/* for X.509 end entity certs only */
 	if (pathlen == 0 && subject->get_type(subject) == CERT_X509)
