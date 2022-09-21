@@ -1,6 +1,10 @@
 strongswan-5.9.8
 ----------------
 
+- Fixed a vulnerability related to accessing untrusted OCSP URIs and CDPs in
+  certificates that could lead to a denial-of-service attack.
+  This vulnerability has been registered as CVE-2022-40617.
+
 - The pki --scep|--scepca commands support the HTTP-based "Simple Certificate
   Enrollment Protocol" (RFC 8894 SCEP) replacing the old and long deprecated
   scepclient that has been removed.
