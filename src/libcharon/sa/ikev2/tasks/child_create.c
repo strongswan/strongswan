@@ -1552,7 +1552,7 @@ METHOD(task_t, build_r, status_t,
 			no_dh = FALSE;
 			break;
 		case IKE_AUTH:
-			if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+			if (!this->ike_sa->has_condition(this->ike_sa, COND_AUTHENTICATED))
 			{	/* wait until all authentication round completed */
 				return NEED_MORE;
 			}
@@ -1762,7 +1762,7 @@ METHOD(task_t, process_i, status_t,
 			no_dh = FALSE;
 			break;
 		case IKE_AUTH:
-			if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+			if (!this->ike_sa->has_condition(this->ike_sa, COND_AUTHENTICATED))
 			{	/* wait until all authentication round completed */
 				return NEED_MORE;
 			}

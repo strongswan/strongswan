@@ -1167,15 +1167,8 @@ METHOD(task_t, build_r, status_t,
 							"%s.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT,
 							lib->ns));
 	}
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
-		 this->ike_sa->get_name(this->ike_sa),
-		 this->ike_sa->get_unique_id(this->ike_sa),
-		 this->ike_sa->get_my_host(this->ike_sa),
-		 this->ike_sa->get_my_id(this->ike_sa),
-		 this->ike_sa->get_other_host(this->ike_sa),
-		 this->ike_sa->get_other_id(this->ike_sa));
-	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-	charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+
+	this->ike_sa->set_condition(this->ike_sa, COND_AUTHENTICATED, TRUE);
 	return SUCCESS;
 
 peer_auth_failed:
@@ -1504,15 +1497,8 @@ METHOD(task_t, process_i, status_t,
 				      "canceling");
 		goto peer_auth_failed;
 	}
-	DBG0(DBG_IKE, "IKE_SA %s[%d] established between %H[%Y]...%H[%Y]",
-		 this->ike_sa->get_name(this->ike_sa),
-		 this->ike_sa->get_unique_id(this->ike_sa),
-		 this->ike_sa->get_my_host(this->ike_sa),
-		 this->ike_sa->get_my_id(this->ike_sa),
-		 this->ike_sa->get_other_host(this->ike_sa),
-		 this->ike_sa->get_other_id(this->ike_sa));
-	this->ike_sa->set_state(this->ike_sa, IKE_ESTABLISHED);
-	charon->bus->ike_updown(charon->bus, this->ike_sa, TRUE);
+
+	this->ike_sa->set_condition(this->ike_sa, COND_AUTHENTICATED, TRUE);
 
 	if (this->redirect_to)
 	{

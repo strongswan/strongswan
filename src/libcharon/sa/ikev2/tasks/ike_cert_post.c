@@ -275,7 +275,7 @@ METHOD(task_t, build_r, status_t,
 	{
 		build_certs(this, message);
 	}
-	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+	if (!this->ike_sa->has_condition(this->ike_sa, COND_AUTHENTICATED))
 	{	/* stay alive, we might have additional rounds with certs */
 		return NEED_MORE;
 	}
@@ -285,7 +285,7 @@ METHOD(task_t, build_r, status_t,
 METHOD(task_t, process_i, status_t,
 	private_ike_cert_post_t *this, message_t *message)
 {
-	if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+	if (!this->ike_sa->has_condition(this->ike_sa, COND_AUTHENTICATED))
 	{	/* stay alive, we might have additional rounds with CERTS */
 		return NEED_MORE;
 	}

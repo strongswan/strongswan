@@ -346,7 +346,7 @@ METHOD(task_t, process_r, status_t,
 METHOD(task_t, build_r, status_t,
 	private_ike_config_t *this, message_t *message)
 {
-	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
+	if (this->ike_sa->has_condition(this->ike_sa, COND_AUTHENTICATED))
 	{	/* in last IKE_AUTH exchange */
 		enumerator_t *enumerator;
 		configuration_attribute_type_t type;
@@ -454,7 +454,7 @@ METHOD(task_t, build_r, status_t,
 METHOD(task_t, process_i, status_t,
 	private_ike_config_t *this, message_t *message)
 {
-	if (this->ike_sa->get_state(this->ike_sa) == IKE_ESTABLISHED)
+	if (this->ike_sa->has_condition(this->ike_sa, COND_AUTHENTICATED))
 	{	/* in last IKE_AUTH exchange */
 		enumerator_t *enumerator;
 		host_t *host;

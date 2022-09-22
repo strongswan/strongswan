@@ -893,6 +893,11 @@ METHOD(ike_sa_t, set_state, void,
 					lib->scheduler->schedule_job(lib->scheduler, job, t);
 					DBG1(DBG_IKE, "scheduling reauthentication in %ds", t);
 				}
+				else if (this->stats[STAT_REAUTH])
+				{
+					t = this->stats[STAT_REAUTH] - this->stats[STAT_ESTABLISHED];
+					DBG1(DBG_IKE, "reauthentication already scheduled in %ds", t);
+				}
 				t = this->peer_cfg->get_over_time(this->peer_cfg);
 				if (this->stats[STAT_REKEY] || this->stats[STAT_REAUTH])
 				{

@@ -38,6 +38,7 @@
 #include <sa/ikev2/tasks/ike_mid_sync.h>
 #include <sa/ikev2/tasks/ike_vendor.h>
 #include <sa/ikev2/tasks/ike_verify_peer_cert.h>
+#include <sa/ikev2/tasks/ike_establish.h>
 #include <sa/ikev2/tasks/child_create.h>
 #include <sa/ikev2/tasks/child_rekey.h>
 #include <sa/ikev2/tasks/child_delete.h>
@@ -554,6 +555,8 @@ METHOD(task_manager_t, initiate, status_t,
 					activate_task(this, TASK_IKE_CONFIG);
 					activate_task(this, TASK_IKE_AUTH_LIFETIME);
 					activate_task(this, TASK_IKE_MOBIKE);
+					/* make sure this is the last IKE-related task */
+					activate_task(this, TASK_IKE_ESTABLISH);
 					activate_task(this, TASK_CHILD_CREATE);
 				}
 				break;
@@ -1151,9 +1154,14 @@ static status_t process_request(private_task_manager_t *this,
 #endif /* ME */
 				task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
-				task = (task_t*)ike_auth_lifetime_create(this->ike_sa, FALSE);
-				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_mobike_create(this->ike_sa, FALSE);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
+				/* this should generally be the last IKE-related task */
+				task = (task_t*)ike_establish_create(this->ike_sa, FALSE);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
+				/* make sure this comes after the above task to send the correct
+				 * reauth time, as responder the task doesn't modify it anymore */
+				task = (task_t*)ike_auth_lifetime_create(this->ike_sa, FALSE);
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)child_create_create(this->ike_sa, NULL, FALSE,
 													NULL, NULL);
@@ -2128,6 +2136,10 @@ METHOD(task_manager_t, queue_ike, void,
 		{
 			queue_task(this, (task_t*)ike_mobike_create(this->ike_sa, TRUE));
 		}
+	}
+	if (!has_queued(this, TASK_IKE_ESTABLISH))
+	{
+		queue_task(this, (task_t*)ike_establish_create(this->ike_sa, TRUE));
 	}
 #ifdef ME
 	if (!has_queued(this, TASK_IKE_ME))
