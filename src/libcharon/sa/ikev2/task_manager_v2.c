@@ -546,15 +546,11 @@ METHOD(task_manager_t, initiate, status_t,
 					exchange = IKE_SA_INIT;
 					activate_task(this, TASK_IKE_NATD);
 					activate_task(this, TASK_IKE_CERT_PRE);
-#ifdef ME
-					/* this task has to be activated before the TASK_IKE_AUTH
-					 * task, because that task pregenerates the packet after
-					 * which no payloads can be added to the message anymore.
-					 */
-					activate_task(this, TASK_IKE_ME);
-#endif /* ME */
 					activate_task(this, TASK_IKE_AUTH);
 					activate_task(this, TASK_IKE_CERT_POST);
+#ifdef ME
+					activate_task(this, TASK_IKE_ME);
+#endif /* ME */
 					activate_task(this, TASK_IKE_CONFIG);
 					activate_task(this, TASK_CHILD_CREATE);
 					activate_task(this, TASK_IKE_AUTH_LIFETIME);
@@ -1145,14 +1141,14 @@ static status_t process_request(private_task_manager_t *this,
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_cert_pre_create(this->ike_sa, FALSE);
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
-#ifdef ME
-				task = (task_t*)ike_me_create(this->ike_sa, FALSE);
-				array_insert(this->passive_tasks, ARRAY_TAIL, task);
-#endif /* ME */
 				task = (task_t*)ike_auth_create(this->ike_sa, FALSE);
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_cert_post_create(this->ike_sa, FALSE);
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
+#ifdef ME
+				task = (task_t*)ike_me_create(this->ike_sa, FALSE);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
+#endif /* ME */
 				task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)child_create_create(this->ike_sa, NULL, FALSE,
