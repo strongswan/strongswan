@@ -552,9 +552,9 @@ METHOD(task_manager_t, initiate, status_t,
 					activate_task(this, TASK_IKE_ME);
 #endif /* ME */
 					activate_task(this, TASK_IKE_CONFIG);
-					activate_task(this, TASK_CHILD_CREATE);
 					activate_task(this, TASK_IKE_AUTH_LIFETIME);
 					activate_task(this, TASK_IKE_MOBIKE);
+					activate_task(this, TASK_CHILD_CREATE);
 				}
 				break;
 			case IKE_ESTABLISHED:
@@ -1151,12 +1151,12 @@ static status_t process_request(private_task_manager_t *this,
 #endif /* ME */
 				task = (task_t*)ike_config_create(this->ike_sa, FALSE);
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
-				task = (task_t*)child_create_create(this->ike_sa, NULL, FALSE,
-													NULL, NULL);
-				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_auth_lifetime_create(this->ike_sa, FALSE);
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)ike_mobike_create(this->ike_sa, FALSE);
+				array_insert(this->passive_tasks, ARRAY_TAIL, task);
+				task = (task_t*)child_create_create(this->ike_sa, NULL, FALSE,
+													NULL, NULL);
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				break;
 			}
