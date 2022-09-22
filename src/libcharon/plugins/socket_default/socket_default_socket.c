@@ -699,6 +699,14 @@ static int open_socket(private_socket_default_socket_t *this,
 		return -1;
 	}
 
+	if (family == AF_INET6 &&
+		setsockopt(skt, SOL_IPV6, IPV6_V6ONLY, &on, sizeof(on)) < 0)
+	{
+		DBG1(DBG_NET, "unable to set IPV6_V6ONLY on socket: %s", strerror(errno));
+		close(skt);
+		return -1;
+	}
+
 	/* bind the socket */
 	if (bind(skt, &addr.sockaddr, addrlen) < 0)
 	{
