@@ -1324,7 +1324,9 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 							struct sadb_msg* msg)
 {
 	pfkey_msg_t response;
-	kernel_acquire_data_t data = {};
+	kernel_acquire_data_t data = {
+		.cpu = CPU_ID_MAX,
+	};
 	uint32_t index, reqid = 0;
 	uint8_t mode = 0;
 	policy_entry_t *policy;
