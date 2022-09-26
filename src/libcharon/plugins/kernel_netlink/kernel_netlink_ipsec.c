@@ -974,7 +974,9 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 	struct xfrm_user_acquire *acquire;
 	struct rtattr *rta;
 	size_t rtasize;
-	kernel_acquire_data_t data = {};
+	kernel_acquire_data_t data = {
+		.cpu = CPU_ID_MAX,
+	};
 	chunk_t label = chunk_empty;
 	uint32_t reqid = 0;
 	uint8_t proto;

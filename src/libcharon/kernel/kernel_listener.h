@@ -40,6 +40,8 @@ struct kernel_acquire_data_t {
 	traffic_selector_t *dst;
 	/** Optional security label of the triggering packet */
 	sec_label_t *label;
+	/** Optional CPU ID of the triggering packet, CPU_ID_MAX if none */
+	uint32_t cpu;
 	/** Optional sequence number associated with the acquire */
 	uint32_t seq;
 };
