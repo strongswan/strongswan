@@ -210,7 +210,7 @@ bool chunk_equals_nosan(chunk_t a, chunk_t b)
 {
 	int i;
 
-	/* cant use memcmp() or any function using it, as that is again
+	/* can't use memcmp() or any function using it, as that is again
 	 * sanitize-checked */
 	if (a.len != b.len)
 	{

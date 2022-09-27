@@ -74,7 +74,7 @@ Can be used multiple times.
 Client certificate to be renewed.
 .TP
 .BI "\-X, \-\-certid " hex
-Smartcard or TPM 2.0 client certficate object handle.
+Smartcard or TPM 2.0 client certificate object handle.
 .TP
 .BI "\-k, \-\-key " file
 Client private key to be replaced.
@@ -173,7 +173,7 @@ Issued certificate is trusted, valid from Jul 20 12:21:00 2023 until Jul 20 12:2
 .EE
 .PP
 If the private key and the certificate of the client is stored in a TPM 2.0, the
-renewal can be done wtih the following options:
+renewal can be done with the following options:
 .PP
 .EX
 pki \-\-options est.opt --in moonReqNew.der --certid 0x01800004 --keyid 0x81010004 > moonCertNew.der
