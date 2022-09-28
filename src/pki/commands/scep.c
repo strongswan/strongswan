@@ -166,11 +166,12 @@ static int scep()
 				{
 					pss = TRUE;
 				}
-				if (streq(arg, "pkcs1"))
+				else if (streq(arg, "pkcs1"))
 				{
 					pss = FALSE;
 				}
-				else {
+				else
+				{
 					error = "invalid RSA padding";
 					goto usage;
 				}
