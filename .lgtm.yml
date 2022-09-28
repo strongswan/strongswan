@@ -34,13 +34,28 @@ extraction:
       command:
         # follows the "all" build in test.sh (without custom-compiled stuff)
         - ./autogen.sh
-        - ./configure --enable-all --disable-android-dns --disable-android-log
-            --disable-kernel-pfroute --disable-keychain
-            --disable-lock-profiler --disable-padlock --disable-fuzzing
-            --disable-osx-attr --disable-tkm --disable-uci
-            --disable-unwind-backtraces
-            --disable-svc --disable-dbghelp-backtraces --disable-socket-win
-            --disable-kernel-wfp --disable-kernel-iph --disable-winhttp
-            --disable-af-alg --disable-coverage
+        - ./configure --enable-all
+            --disable-af-alg
+            --disable-android-dns
+            --disable-android-log
+            --disable-asan
+            --disable-coverage
+            --disable-dbghelp-backtraces
+            --disable-fuzzing
+            --disable-kernel-iph
+            --disable-kernel-pfroute
+            --disable-kernel-wfp
+            --disable-keychain
+            --disable-leak-detective
+            --disable-lock-profiler
+            --disable-monolithic
+            --disable-osx-attr
+            --disable-padlock
             --disable-python-eggs-install
-            --disable-monolithic --disable-leak-detective
+            --disable-socket-win
+            --disable-svc
+            --disable-tkm
+            --disable-uci
+            --disable-unwind-backtraces
+            --disable-warnings
+            --disable-winhttp
