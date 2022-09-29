@@ -266,7 +266,7 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 				{
 					INIT(config,
 						.scheme = scheme,
-					)
+					);
 					array_insert(selected, ARRAY_TAIL, config);
 				}
 			}

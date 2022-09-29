@@ -78,7 +78,7 @@ static package_t* create_package(swid_gen_info_t *info, chunk_t package,
 		.package = strndup(package.ptr, package.len),
 		.version = strndup(version.ptr, version.len),
 		.old_version = strndup(old_version.ptr, old_version.len),
-	)
+	);
 
 	this->sw_id = info->create_sw_id(info, this->package, this->version);
 	if (old_version.len)
