@@ -405,7 +405,7 @@ est_tls_t *est_tls_create(char *uri, certificate_t *client_cert, char *user_pass
 
 	if (user_pass)
 	{
-		this->user_pass = chunk_to_base64(chunk_from_str(user_pass), NULL);;
+		this->user_pass = chunk_to_base64(chunk_from_str(user_pass), NULL);
 	}
 
 	if (!est_tls_init(this, uri, client_cert))
