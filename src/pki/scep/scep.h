@@ -108,7 +108,8 @@ bool scep_generate_transaction_id(public_key_t *key,
 chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 						certificate_t *enc_cert, encryption_algorithm_t enc_alg,
 						size_t key_size, certificate_t *signer_cert,
-						hash_algorithm_t digest_alg, private_key_t *private_key);
+						hash_algorithm_t digest_alg, signature_params_t *scheme,
+						private_key_t *private_key);
 
 /**
  * Send a SCEP request via HTTP and wait for a response

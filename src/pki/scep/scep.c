@@ -163,7 +163,8 @@ bool scep_generate_transaction_id(public_key_t *public,
 chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 					certificate_t *enc_cert, encryption_algorithm_t enc_alg,
 					size_t key_size, certificate_t *signer_cert,
-					hash_algorithm_t digest_alg, private_key_t *private_key)
+					hash_algorithm_t digest_alg, signature_params_t *scheme,
+					private_key_t *private_key)
 {
 	chunk_t request;
 	container_t *container;
@@ -212,6 +213,7 @@ chunk_t scep_build_request(chunk_t data, chunk_t transID, scep_msg_t msg,
 					BUILD_SIGNING_CERT, signer_cert,
 					BUILD_SIGNING_KEY, private_key,
 					BUILD_DIGEST_ALG, digest_alg,
+					BUILD_SIGNATURE_SCHEME, scheme,
 					BUILD_PKCS7_ATTRIBUTE, OID_PKI_SENDER_NONCE, senderNonce,
 					BUILD_PKCS7_ATTRIBUTE, OID_PKI_TRANS_ID, transID,
 					BUILD_PKCS7_ATTRIBUTE, OID_PKI_MESSAGE_TYPE, msgType,

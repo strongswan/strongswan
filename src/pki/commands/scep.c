@@ -465,7 +465,7 @@ static int scep()
 	/* build pkcs7 request */
 	pkcs7_req = scep_build_request(pkcs10_encoding, transID, scep_msg_type,
 								   x509_ca_enc, cipher, key_size, x509_signer,
-								   digest_alg, priv_signer);
+								   digest_alg, scheme, priv_signer);
 	if (!pkcs7_req.ptr)
 	{
 		DBG1(DBG_APP, "failed to build SCEP request");
@@ -525,7 +525,7 @@ static int scep()
 
 		certPoll = scep_build_request(issuerAndSubject, transID, SCEP_CertPoll_MSG,
 									  x509_ca_enc, cipher, key_size, x509_signer,
-									  digest_alg, priv_signer);
+									  digest_alg, scheme, priv_signer);
 		if (!certPoll.ptr)
 		{
 			DBG1(DBG_APP, "failed to build SCEP certPoll request");
