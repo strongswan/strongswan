@@ -97,6 +97,9 @@ static void println(FILE *file, char *format, ...)
 	va_end(args);
 }
 
+#if ((defined(HAVE_BACKTRACE) || defined(HAVE_LIBUNWIND_H)) && \
+	  defined(HAVE_DLADDR)) || defined(WIN32)
+
 /**
  * Same as tty_escape_get(), but for a potentially NULL FILE*
  */
@@ -108,6 +111,8 @@ static inline char* esc(FILE *file, tty_escape_t escape)
 	}
 	return "";
 }
+
+#endif /* HAVE_BACKTRACE/HAVE_LIBUNWIND_H/WIN32 */
 
 #ifdef HAVE_DBGHELP
 
@@ -408,6 +413,8 @@ static void print_sourceline(FILE *file, char *filename, void *ptr, void *base)
 void backtrace_init() {}
 void backtrace_deinit() {}
 
+#if defined(HAVE_BACKTRACE) || defined(HAVE_LIBUNWIND_H) || defined(WIN32)
+
 /**
  * Print the source file with line number to file, slow addr2line variant
  */
@@ -443,6 +450,8 @@ static void print_sourceline(FILE *file, char *filename, void *ptr, void* base)
 				esc(file, TTY_FG_DEF));
 	}
 }
+
+#endif /* HAVE_BACKTRACE/HAVE_LIBUNWIND_H/WIN32 */
 
 #endif /* HAVE_BFD_H */
 
@@ -572,7 +581,7 @@ METHOD(backtrace_t, log_, void,
 #endif /* HAVE_BFD_H */
 		}
 		else
-#endif /* HAVE_DLADDR/HAVE_DBGHELP */
+#endif /* HAVE_DLADDR/HAVE_DBGHELP/WIN32 */
 		{
 #ifdef HAVE_BACKTRACE
 			if (!strings)
