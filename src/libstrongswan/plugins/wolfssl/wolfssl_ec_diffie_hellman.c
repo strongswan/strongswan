@@ -31,6 +31,12 @@
 
 #include <utils/debug.h>
 
+#if defined(ECC_TIMING_RESISTANT) && \
+    (!defined(HAVE_FIPS) || \
+     (defined(HAVE_FIPS_VERSION) && (HAVE_FIPS_VERSION >= 5)))
+    #define USE_RNG_FOR_TIMING_RESISTANCE
+#endif
+
 typedef struct private_wolfssl_ec_diffie_hellman_t private_wolfssl_ec_diffie_hellman_t;
 
 /**
@@ -203,13 +209,14 @@ METHOD(key_exchange_t, set_private_key, bool,
 static bool compute_shared_key(private_wolfssl_ec_diffie_hellman_t *this)
 {
 	word32 len;
-#ifdef ECC_TIMING_RESISTANT
+#ifdef USE_RNG_FOR_TIMING_RESISTANCE
 	WC_RNG rng;
 
 	if (wc_InitRng(&rng) != 0)
 	{
 		return FALSE;
 	}
+
 	if (wc_ecc_set_rng(&this->key, &rng) != 0)
 	{
 		wc_FreeRng(&rng);
@@ -225,13 +232,13 @@ static bool compute_shared_key(private_wolfssl_ec_diffie_hellman_t *this)
 	{
 		DBG1(DBG_LIB, "ECDH shared secret computation failed");
 		chunk_clear(&this->shared_secret);
-#ifdef ECC_TIMING_RESISTANT
+#ifdef USE_RNG_FOR_TIMING_RESISTANCE
 		wc_FreeRng(&rng);
 #endif
 		return FALSE;
 	}
 	this->shared_secret.len = len;
-#ifdef ECC_TIMING_RESISTANT
+#ifdef USE_RNG_FOR_TIMING_RESISTANCE
 	wc_FreeRng(&rng);
 #endif
 	return TRUE;
