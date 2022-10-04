@@ -24,6 +24,7 @@
 #include <library.h>
 #include <utils/debug.h>
 
+#define WOLFSSL_COMMON_INC_SSL_H
 #include "wolfssl_common.h"
 #include "wolfssl_plugin.h"
 #include "wolfssl_aead.h"
