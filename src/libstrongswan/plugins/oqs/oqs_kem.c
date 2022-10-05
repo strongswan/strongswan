@@ -295,18 +295,6 @@ oqs_kem_t *oqs_kem_create(key_exchange_method_t method)
 		case KE_HQC_L5:
 			kem_alg = OQS_KEM_alg_hqc_256;
 			break;
-		case KE_SIKE_L1:
-			kem_alg = OQS_KEM_alg_sike_p434;
-			break;
-		case KE_SIKE_L2:
-			kem_alg = OQS_KEM_alg_sike_p503;
-			break;
-		case KE_SIKE_L3:
-			kem_alg = OQS_KEM_alg_sike_p610;
-			break;
-		case KE_SIKE_L5:
-			kem_alg = OQS_KEM_alg_sike_p751;
-			break;
 		default:
 			return NULL;
 	}

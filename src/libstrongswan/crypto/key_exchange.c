@@ -51,7 +51,7 @@ ENUM_NEXT(key_exchange_method_names, MODP_1024_160, CURVE_448, ECP_521_BIT,
 	"CURVE_448");
 ENUM_NEXT(key_exchange_method_names, MODP_NULL, MODP_NULL, CURVE_448,
 	"MODP_NULL");
-ENUM_NEXT(key_exchange_method_names, KE_KYBER_L1, KE_SIKE_L5, MODP_NULL,
+ENUM_NEXT(key_exchange_method_names, KE_KYBER_L1, KE_HQC_L5, MODP_NULL,
 	"KYBER_L1",
 	"KYBER_L3",
 	"KYBER_L5",
@@ -73,12 +73,8 @@ ENUM_NEXT(key_exchange_method_names, KE_KYBER_L1, KE_SIKE_L5, MODP_NULL,
 	"FRODO_SHAKE_L5",
 	"HQC_L1",
 	"HQC_L3",
-	"HQC_L5",
-	"SIKE_L1",
-	"SIKE_L2",
-	"SIKE_L3",
-	"SIKE_L5");
-ENUM_NEXT(key_exchange_method_names, MODP_CUSTOM, MODP_CUSTOM, KE_SIKE_L5,
+	"HQC_L5");
+ENUM_NEXT(key_exchange_method_names, MODP_CUSTOM, MODP_CUSTOM, KE_HQC_L5,
 	"MODP_CUSTOM");
 ENUM_END(key_exchange_method_names, MODP_CUSTOM);
 
@@ -111,7 +107,7 @@ ENUM_NEXT(key_exchange_method_names_short, MODP_1024_160, CURVE_448, ECP_521_BIT
 	"curve448");
 ENUM_NEXT(key_exchange_method_names_short, MODP_NULL, MODP_NULL, CURVE_448,
 	"modpnull");
-ENUM_NEXT(key_exchange_method_names_short, KE_KYBER_L1, KE_SIKE_L5, MODP_NULL,
+ENUM_NEXT(key_exchange_method_names_short, KE_KYBER_L1, KE_HQC_L5, MODP_NULL,
 	"kyber1",
 	"kyber3",
 	"kyber5",
@@ -133,12 +129,8 @@ ENUM_NEXT(key_exchange_method_names_short, KE_KYBER_L1, KE_SIKE_L5, MODP_NULL,
 	"frodos5",
 	"hqc1",
 	"hqc3",
-	"hqc5",
-	"sike1",
-	"sike2",
-	"sike3",
-	"sike5");
-ENUM_NEXT(key_exchange_method_names_short, MODP_CUSTOM, MODP_CUSTOM, KE_SIKE_L5,
+	"hqc5");
+ENUM_NEXT(key_exchange_method_names_short, MODP_CUSTOM, MODP_CUSTOM, KE_HQC_L5,
 	"modpcustom");
 ENUM_END(key_exchange_method_names_short, MODP_CUSTOM);
 
@@ -686,10 +678,6 @@ bool key_exchange_is_kem(key_exchange_method_t ke)
 		case KE_FRODO_SHAKE_L1:
 		case KE_FRODO_SHAKE_L3:
 		case KE_FRODO_SHAKE_L5:
-		case KE_SIKE_L1:
-		case KE_SIKE_L2:
-		case KE_SIKE_L3:
-		case KE_SIKE_L5:
 			return TRUE;
 		default:
 			return FALSE;
@@ -772,10 +760,6 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 		case KE_HQC_L1:
 		case KE_HQC_L3:
 		case KE_HQC_L5:
-		case KE_SIKE_L1:
-		case KE_SIKE_L2:
-		case KE_SIKE_L3:
-		case KE_SIKE_L5:
 			/* verification currently not supported, do in plugin */
 			valid = FALSE;
 			break;
