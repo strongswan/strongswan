@@ -536,8 +536,8 @@ METHOD(tpm_tss_t, get_version_info, chunk_t,
 /**
  * read the public key portion of a TSS 2.0 key from NVRAM
  */
-bool read_public(private_tpm_tss_tss2_t *this, TPMI_DH_OBJECT handle,
-	TPM2B_PUBLIC *public)
+static bool read_public(private_tpm_tss_tss2_t *this, TPMI_DH_OBJECT handle,
+						TPM2B_PUBLIC *public)
 {
 	uint32_t rval;
 

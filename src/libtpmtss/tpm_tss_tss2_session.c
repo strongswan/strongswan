@@ -82,7 +82,7 @@ size_t hash_len_from_tpm_alg_id(TPM2_ALG_ID alg);
 /**
  * Convert TPM2_ALG_ID to PRF algorithm
  */
-pseudo_random_function_t prf_alg_from_tpm_alg_id(TPM2_ALG_ID alg)
+static pseudo_random_function_t prf_alg_from_tpm_alg_id(TPM2_ALG_ID alg)
 {
 	switch (alg)
 	{

@@ -105,7 +105,7 @@ typedef struct {
 /**
  * Destroy a signerinfo_t entry
  */
-void signerinfo_destroy(signerinfo_t *this)
+static void signerinfo_destroy(signerinfo_t *this)
 {
 	DESTROY_IF(this->attributes);
 	DESTROY_IF(this->serial);

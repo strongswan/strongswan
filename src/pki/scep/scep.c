@@ -395,8 +395,8 @@ bool scep_http_request(const char *url, scep_op_t op, bool http_post,
 /**
  * Extract X.501 attributes
  */
-void extract_attributes(pkcs7_t *pkcs7, enumerator_t *enumerator,
-						scep_attributes_t *attrs)
+static void extract_attributes(pkcs7_t *pkcs7, enumerator_t *enumerator,
+							   scep_attributes_t *attrs)
 {
 	chunk_t attr;
 

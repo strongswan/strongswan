@@ -2041,7 +2041,7 @@ static private_x509_cert_t* create_empty(void)
 /**
  * Build a generalName from an id
  */
-chunk_t build_generalName(identification_t *id)
+static chunk_t build_generalName(identification_t *id)
 {
 	int context;
 
