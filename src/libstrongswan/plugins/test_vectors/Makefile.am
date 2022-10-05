@@ -60,7 +60,6 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/ke_saber.c \
 	test_vectors/ke_bike.c \
 	test_vectors/ke_hqc.c \
-	test_vectors/ke_sike.c \
 	test_vectors/drbg_ctr.c \
 	test_vectors/drbg_hmac.c \
 	test_vectors/rng.c
