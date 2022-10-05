@@ -80,7 +80,7 @@ METHOD(public_key_t, verify, bool,
 }
 
 METHOD(public_key_t, encrypt_, bool,
-	private_oqs_public_key_t *this, encryption_scheme_t scheme,
+	private_oqs_public_key_t *this, encryption_scheme_t scheme, void *params,
 	chunk_t plain, chunk_t *crypto)
 {
 	DBG1(DBG_LIB, "encryption scheme %N not supported",
@@ -135,7 +135,7 @@ METHOD(public_key_t, get_fingerprint, bool,
 	success = oqs_public_key_fingerprint(this->public_key, this->oid, type, fp);
 	if (success)
 	{
-		lib->encoding->cache(lib->encoding, type, this, *fp);
+		lib->encoding->cache(lib->encoding, type, this, fp);
 	}
 
 	return success;

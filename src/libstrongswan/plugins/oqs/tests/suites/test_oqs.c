@@ -256,19 +256,19 @@ Suite *oqs_suite_create()
 
 	tc = tcase_create("good");
 	test_case_set_timeout(tc, 30);
-	tcase_add_loop_test(tc, test_oqs_good, KE_KYBER_L1, KE_SIKE_L5 + 1);
+	tcase_add_loop_test(tc, test_oqs_good, KE_KYBER_L1, KE_HQC_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("wrong");
-	tcase_add_loop_test(tc, test_oqs_wrong, KE_KYBER_L1, KE_SIKE_L5 + 1);
+	tcase_add_loop_test(tc, test_oqs_wrong, KE_KYBER_L1, KE_HQC_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("fail_i");
-	tcase_add_loop_test(tc, test_oqs_fail_i, KE_KYBER_L1, KE_SIKE_L5 + 1);
+	tcase_add_loop_test(tc, test_oqs_fail_i, KE_KYBER_L1, KE_HQC_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("fail_r");
-	tcase_add_loop_test(tc, test_oqs_fail_r, KE_KYBER_L1, KE_SIKE_L5 + 1);
+	tcase_add_loop_test(tc, test_oqs_fail_r, KE_KYBER_L1, KE_HQC_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	return s;

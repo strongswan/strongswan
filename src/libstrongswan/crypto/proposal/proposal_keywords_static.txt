@@ -198,9 +198,5 @@ frodos5,          KEY_EXCHANGE_METHOD, KE_FRODO_SHAKE_L5,          0
 hqc1,             KEY_EXCHANGE_METHOD, KE_HQC_L1,                  0
 hqc3,             KEY_EXCHANGE_METHOD, KE_HQC_L3,                  0
 hqc5,             KEY_EXCHANGE_METHOD, KE_HQC_L5,                  0
-sike1,            KEY_EXCHANGE_METHOD, KE_SIKE_L1,                 0
-sike2,            KEY_EXCHANGE_METHOD, KE_SIKE_L2,                 0
-sike3,            KEY_EXCHANGE_METHOD, KE_SIKE_L3,                 0
-sike5,            KEY_EXCHANGE_METHOD, KE_SIKE_L5,                 0
 noesn,            EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,   0
 esn,              EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS,      0
