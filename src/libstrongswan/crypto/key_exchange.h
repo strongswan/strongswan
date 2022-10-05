@@ -92,10 +92,6 @@ enum key_exchange_method_t {
 	KE_HQC_L1          = 1069,
 	KE_HQC_L3          = 1070,
 	KE_HQC_L5          = 1071,
-	KE_SIKE_L1         = 1072,
-	KE_SIKE_L2         = 1073,
-	KE_SIKE_L3         = 1074,
-	KE_SIKE_L5         = 1075,
 	/** MODP group with custom generator/prime */
 	/** internally used DH group with additional parameters g and p, outside
 	 * of PRIVATE USE (i.e. IKEv2 DH group range) so it can't be negotiated */
