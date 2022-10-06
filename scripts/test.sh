@@ -324,7 +324,7 @@ freebsd)
 			--enable-unbound --enable-unity --enable-xauth-eap --enable-xauth-pam
 			--with-printf-hooks=builtin --enable-attr-sql --enable-sql
 			--enable-farp"
-	DEPS="git gmp openldap24-client libxml2 mysql80-client sqlite3 unbound ldns tpm2-tss"
+	DEPS="git gmp libxml2 mysql80-client sqlite3 unbound ldns tpm2-tss"
 	;;
 fuzzing)
 	CFLAGS="$CFLAGS -DNO_CHECK_MEMWIPE"
