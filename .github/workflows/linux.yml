@@ -53,6 +53,8 @@ jobs:
       MONOLITHIC: ${{ matrix.monolithic || 'no' }}
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
+      # LSan causes spurious SIGSEGV after tests due to DTLS handling by glibc
+      ASAN_OPTIONS: intercept_tls_get_addr=0
     steps:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
