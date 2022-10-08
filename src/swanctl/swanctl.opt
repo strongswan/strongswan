@@ -296,16 +296,18 @@ connections.<conn>.pools =
 	from either the **pools** section or an external pool.
 
 connections.<conn>.if_id_in = 0
-	Default inbound XFRM interface ID for children.
-
-	XFRM interface ID set on inbound policies/SA, can be overridden by child
-	config, see there for details.
+	XFRM interface ID set on inbound policies/SA, can be overridden by child config,
+	see connections.<conn>.children.<child>.if_id_in for valid values,
+	behaviour, and other details.
+	When the ID is set to **%unique** or **%unique-dir** the same if_id is
+	set for the inbound policies for all CHILD_SAs managed by the particular IKE_SA.
 
 connections.<conn>.if_id_out = 0
-	Default outbound XFRM interface ID for children.
-
-	XFRM interface ID set on outbound policies/SA, can be overridden by child
-	config, see there for details.
+	XFRM interface ID set on inbound policies/SA, can be overridden by child config,
+	see connections.<conn>.children.<child>.if_id_out for valid values,
+	behaviour, and other details.
+	When the ID is set to **%unique** or **%unique-dir** the same if_id is
+	set for the outbound policies for all CHILD_SAs managed by the particular IKE_SA.
 
 connections.<conn>.mediation = no
 	Whether this connection is a mediation connection.
@@ -999,6 +1001,9 @@ connections.<conn>.children.<child>.if_id_in = 0
 	ID. The special value _%unique_ sets a unique interface ID on each CHILD_SA
 	instance, beyond that the value _%unique-dir_ assigns a different unique
 	interface ID for each CHILD_SA direction (in/out).
+	This value can be hexadecimal (start with 0x), decimal (no special prefix), or octal (start with 0).
+	The conversion of the numerical values is done using the **strtoul** function thus all quirks and
+	implementation details of it apply here. The if_id is a 64 bit value.
 
 connections.<conn>.children.<child>.if_id_out = 0
 	Outbound XFRM interface ID.
@@ -1008,6 +1013,10 @@ connections.<conn>.children.<child>.if_id_out = 0
 	ID. The special value _%unique_ sets a unique interface ID on each CHILD_SA
 	instance, beyond that the value _%unique-dir_ assigns a different unique
 	interface ID for each CHILD_SA direction (in/out).
+	This value can be hexadecimal (start with 0x), decimal (no special prefix), or octal (start with 0).
+	The conversion of the numerical values is done using the **strtoul** function thus all quirks and
+	implementation details of it apply here. The if_id is a 64 bit value.
+
 
 	The daemon will not install routes for CHILD_SAs that have this option set.
 
