@@ -79,9 +79,9 @@ enum notify_type_t {
 	/* IKEv2 RFC 5996 */
 	TEMPORARY_FAILURE = 43,
 	CHILD_SA_NOT_FOUND = 44,
-
 	/* draft-ietf-ipsecme-ikev2-multiple-ke */
-	STATE_NOT_FOUND = 8192,
+	STATE_NOT_FOUND = 47,
+
 	/* IKE-ME, private use */
 	ME_CONNECT_FAILED = 8193,
 
@@ -164,6 +164,8 @@ enum notify_type_t {
 	NO_PPK_AUTH = 16437,
 	/* IKEv2 Intermediate Exchanges, RFC 9242 */
 	INTERMEDIATE_EXCHANGE_SUPPORTED = 16438,
+	/* draft-ietf-ipsecme-ikev2-multiple-ke */
+	ADDITIONAL_KEY_EXCHANGE = 16441,
 	/* IKEv1 initial contact */
 	INITIAL_CONTACT_IKEV1 = 24578,
 	/* IKEv1 DPD */
@@ -183,8 +185,6 @@ enum notify_type_t {
 	ME_RESPONSE = 40968,
 	/* RADIUS attribute received/to send to a AAA backend */
 	RADIUS_ATTRIBUTE = 40969,
-	/* draft-ietf-ipsecme-ikev2-multiple-ke */
-	ADDITIONAL_KEY_EXCHANGE = 50205,
 };
 
 /**
