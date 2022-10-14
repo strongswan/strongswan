@@ -1002,7 +1002,7 @@ connections.<conn>.children.<child>.set_mark_out = 0/0x00000000
 	requires at least Linux 4.19.
 
 connections.<conn>.children.<child>.if_id_in = 0
-	Inbound XFRM interface ID.
+	Inbound XFRM interface ID (32-bit unsigned integer).
 
 	XFRM interface ID set on inbound policies/SA. This allows installing
 	duplicate policies/SAs and associates them with an interface with the same
@@ -1011,7 +1011,7 @@ connections.<conn>.children.<child>.if_id_in = 0
 	interface ID for each CHILD_SA direction (in/out).
 
 connections.<conn>.children.<child>.if_id_out = 0
-	Outbound XFRM interface ID.
+	Outbound XFRM interface ID (32-bit unsigned integer).
 
 	XFRM interface ID set on outbound policies/SA. This allows installing
 	duplicate policies/SAs and associates them with an interface with the same
