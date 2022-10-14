@@ -392,7 +392,7 @@ charon.retransmit_jitter = 0
 charon.retransmit_limit = 0
 	Upper limit in seconds for calculated retransmission timeout (0 to disable).
 
-charon.retry_initiate_interval = 0
+charon.retry_initiate_interval = 0s
 	Interval in seconds to use when retrying to initiate an IKE_SA (e.g. if DNS
 	resolution failed), 0 to disable retries.
 
