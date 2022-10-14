@@ -301,11 +301,21 @@ connections.<conn>.if_id_in = 0
 	XFRM interface ID set on inbound policies/SA, can be overridden by child
 	config, see there for details.
 
+	The special value _%unique_ allocates a unique interface ID per IKE_SA,
+	which is inherited by all its CHILD_SAs (unless overriden there), beyond
+	that the value _%unique-dir_ assigns a different unique interface ID for
+	each direction (in/out).
+
 connections.<conn>.if_id_out = 0
 	Default outbound XFRM interface ID for children.
 
 	XFRM interface ID set on outbound policies/SA, can be overridden by child
 	config, see there for details.
+
+	The special value _%unique_ allocates a unique interface ID per IKE_SA,
+	which is inherited by all its CHILD_SAs (unless overriden there), beyond
+	that the value _%unique-dir_ assigns a different unique interface ID for
+	each direction (in/out).
 
 connections.<conn>.mediation = no
 	Whether this connection is a mediation connection.
