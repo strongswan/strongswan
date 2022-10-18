@@ -350,7 +350,7 @@ openssl pkcs12 -export -inkey ${HOST_KEY} -in ${HOST_CERT} -name "sun" \
         -certpbe aes-128-cbc -macalg sha256 -passout "pass:IxjQVCF3JGI+MoPi" > ${SUN_PKCS12}
 
 # Put a PKCS#12 copy into the botan/net2net-pkcs12 scenario
-for t in botan/net2net-pkcs12 openssl-ikev2/net2net-pkcs12
+for t in botan/net2net-pkcs12
 do
   TEST="${TEST_DIR}/${t}"
   mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs12
@@ -753,13 +753,6 @@ pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --outform pem > ${TEST_CERT}
 cp ${TEST_CERT} ${CA_DIR}/certs/${SERIAL}.pem
 
-# Put a copy in the openssl-ikev2/critical extension scenario
-TEST="${TEST_DIR}/openssl-ikev2/critical-extension"
-mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/rsa
-mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
-cp ${TEST_KEY} ${TEST}/hosts/moon/${SWANCTL_DIR}/rsa
-cp ${TEST_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
-
 # Generate sun certificate with an unsupported critical X.509 extension
 TEST="${TEST_DIR}/ikev2/critical-extension"
 TEST_KEY="${TEST}/hosts/sun/${SWANCTL_DIR}/rsa/sunKey.pem"
@@ -775,13 +768,6 @@ pki --issue --cakey ${CA_KEY} --cacert ${CA_CERT} --crl ${CA_CDP} --type rsa \
     --critical 1.3.6.1.4.1.36906.1 --flag serverAuth \
     --outform pem > ${TEST_CERT}
 cp ${TEST_CERT} ${CA_DIR}/certs/${SERIAL}.pem
-
-# Put a copy in the openssl-ikev2/critical extension scenario
-TEST="${TEST_DIR}/openssl-ikev2/critical-extension"
-mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/rsa
-mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509
-cp ${TEST_KEY} ${TEST}/hosts/sun/${SWANCTL_DIR}/rsa
-cp ${TEST_CERT} ${TEST}/hosts/sun/${SWANCTL_DIR}/x509
 
 # Generate winnetou server certificate
 HOST_KEY="${CA_DIR}/winnetouKey.pem"
