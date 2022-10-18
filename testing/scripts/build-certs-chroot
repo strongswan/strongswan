@@ -1216,8 +1216,8 @@ mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/pkcs8
 openssl pkcs8 -in ${DAVE_KEY} -nocrypt -topk8  -v2 aes128 \
               -passout "pass:OJlNZBx+80dLh4wC6fw5LmBd" -out ${TEST_KEY}
 
-# Put CA and EE certificate copies in the openssl-ikev1/ecdsa-certs scenario
-TEST="${TEST_DIR}/openssl-ikev1/ecdsa-certs"
+# Put CA and EE certificate copies in the ikev1/ecdsa-certs scenario
+TEST="${TEST_DIR}/ikev1/ecdsa-certs"
 cd ${TEST}/hosts/moon/${SWANCTL_DIR}
 mkdir -p ecdsa x509 x509ca
 cp ${MOON_KEY}   ecdsa
