@@ -30,7 +30,7 @@
 #define RESOLVCONF_EXEC "/sbin/resolvconf"
 
 /* default prefix used for resolvconf interfaces (should have high prio) */
-#define RESOLVCONF_PREFIX "lo.inet.ipsec."
+#define RESOLVCONF_PREFIX "lo.ipsec"
 
 typedef struct private_resolve_handler_t private_resolve_handler_t;
 
@@ -191,13 +191,20 @@ static bool invoke_resolvconf(private_resolve_handler_t *this, host_t *addr,
 {
 	process_t *process;
 	FILE *shell;
+	char buf[BUF_LEN];
 	int in, out, retval;
+
+	if (snprintf(buf, sizeof(buf), "%H", addr) >= sizeof(buf))
+	{
+		return FALSE;
+	}
+	translate(buf, ".:", "__");
 
 	/* we use the nameserver's IP address as part of the interface name to
 	 * make them unique */
 	process = process_start_shell(NULL, install ? &in : NULL, &out, NULL,
-							"2>&1 %s %s %s%H", this->resolvconf,
-							install ? "-a" : "-d", this->iface_prefix, addr);
+							"2>&1 %s %s %s%s", this->resolvconf,
+							install ? "-a" : "-d", this->iface_prefix, buf);
 
 	if (!process)
 	{
