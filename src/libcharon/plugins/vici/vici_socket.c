@@ -401,7 +401,7 @@ CALLBACK(on_write, bool,
 
 		if (!ret && errmsg[0])
 		{
-			DBG1(DBG_CFG, errmsg);
+			DBG1(DBG_CFG, "%s", errmsg);
 		}
 	}
 
@@ -557,7 +557,7 @@ CALLBACK(on_read, bool,
 
 		if (!ret && errmsg[0])
 		{
-			DBG1(DBG_CFG, errmsg);
+			DBG1(DBG_CFG, "%s", errmsg);
 		}
 	}
 
@@ -674,7 +674,7 @@ CALLBACK(flush_messages, void,
 
 	if (!ret && errmsg[0])
 	{
-		DBG1(DBG_CFG, errmsg);
+		DBG1(DBG_CFG, "%s", errmsg);
 	}
 }
 
