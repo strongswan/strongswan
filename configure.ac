@@ -132,7 +132,7 @@ AC_SUBST(ipsec_script_upper, [`echo -n "$ipsec_script" | tr a-z A-Z`])
 m4_include(m4/macros/enable-disable.m4)
 
 # crypto plugins
-ARG_DISBL_SET([aes],            [disable AES software implementation plugin.])
+ARG_ENABL_SET([aes],            [enable AES software implementation plugin.])
 ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto API.])
 ARG_ENABL_SET([blowfish],       [enable Blowfish software implementation plugin.])
 ARG_ENABL_SET([botan],          [enables the Botan crypto plugin.])
@@ -140,30 +140,30 @@ ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([chapoly],        [enables the ChaCha20/Poly1305 AEAD plugin.])
 ARG_DISBL_SET([cmac],           [disable CMAC crypto implementation plugin.])
 ARG_ENABL_SET([ctr],            [enables the Counter Mode wrapper crypto plugin.])
-ARG_DISBL_SET([des],            [disable DES/3DES software implementation plugin.])
+ARG_ENABL_SET([des],            [enable DES/3DES software implementation plugin.])
 ARG_DISBL_SET([drbg],           [disable the NIST Deterministic Random Bit Generator plugin.])
-ARG_DISBL_SET([fips-prf],       [disable FIPS PRF software implementation plugin.])
-ARG_DISBL_SET([gcm],            [disable the GCM AEAD wrapper crypto plugin.])
+ARG_ENABL_SET([fips-prf],       [enable FIPS PRF software implementation plugin.])
+ARG_ENABL_SET([gcm],            [enable the GCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([gcrypt],         [enables the libgcrypt plugin.])
-ARG_DISBL_SET([gmp],            [disable GNU MP (libgmp) based crypto implementation plugin.])
-ARG_DISBL_SET([curve25519],     [disable Curve25519 Diffie-Hellman plugin.])
-ARG_DISBL_SET([hmac],           [disable HMAC crypto implementation plugin.])
+ARG_ENABL_SET([gmp],            [enable GNU MP (libgmp) based crypto implementation plugin.])
+ARG_ENABL_SET([curve25519],     [enable Curve25519 Diffie-Hellman plugin.])
+ARG_ENABL_SET([hmac],           [enable HMAC crypto implementation plugin.])
 ARG_DISBL_SET([kdf],            [disable KDF (prf+) implementation plugin.])
 ARG_ENABL_SET([md4],            [enable MD4 software implementation plugin.])
-ARG_DISBL_SET([md5],            [disable MD5 software implementation plugin.])
+ARG_ENABL_SET([md5],            [enable MD5 software implementation plugin.])
 ARG_ENABL_SET([mgf1],           [enable the MGF1 software implementation plugin.])
 ARG_DISBL_SET([nonce],          [disable nonce generation plugin.])
 ARG_ENABL_SET([frodo],          [enable FrodoKEM Post Quantum Safe plugin.])
 ARG_ENABL_SET([oqs],            [enable Open Quantum Safe (liboqs) plugin.])
-ARG_ENABL_SET([openssl],        [enables the OpenSSL crypto plugin.])
+ARG_DISBL_SET([openssl],        [disable the OpenSSL crypto plugin.])
 ARG_ENABL_SET([wolfssl],        [enables the wolfSSL crypto plugin.])
 ARG_ENABL_SET([padlock],        [enables VIA Padlock crypto plugin.])
 ARG_DISBL_SET([random],         [disable RNG implementation on top of /dev/(u)random.])
-ARG_DISBL_SET([rc2],            [disable RC2 software implementation plugin.])
+ARG_ENABL_SET([rc2],            [enable RC2 software implementation plugin.])
 ARG_ENABL_SET([rdrand],         [enable Intel RDRAND random generator plugin.])
 ARG_ENABL_SET([aesni],          [enable Intel AES-NI crypto plugin.])
-ARG_DISBL_SET([sha1],           [disable SHA1 software implementation plugin.])
-ARG_DISBL_SET([sha2],           [disable SHA256/SHA384/SHA512 software implementation plugin.])
+ARG_ENABL_SET([sha1],           [enable SHA1 software implementation plugin.])
+ARG_ENABL_SET([sha2],           [enable SHA256/SHA384/SHA512 software implementation plugin.])
 ARG_ENABL_SET([sha3],           [enable SHA3_224/SHA3_256/SHA3_384/SHA3_512 software implementation plugin.])
 ARG_DISBL_SET([xcbc],           [disable xcbc crypto implementation plugin.])
 # encoding/decoding plugins
@@ -173,7 +173,7 @@ ARG_DISBL_SET([pgp],            [disable PGP key decoding plugin.])
 ARG_DISBL_SET([pkcs1],          [disable PKCS1 key decoding plugin.])
 ARG_DISBL_SET([pkcs7],          [disable PKCS7 container support plugin.])
 ARG_DISBL_SET([pkcs8],          [disable PKCS8 private key decoding plugin.])
-ARG_DISBL_SET([pkcs12],         [disable PKCS12 container support plugin.])
+ARG_ENABL_SET([pkcs12],         [enable PKCS12 container support plugin.])
 ARG_DISBL_SET([pubkey],         [disable RAW public key support plugin.])
 ARG_DISBL_SET([sshkey],         [disable SSH key decoding plugin.])
 ARG_DISBL_SET([x509],           [disable X509 certificate implementation plugin.])
@@ -235,7 +235,7 @@ ARG_DISBL_SET([socket-default], [disable default socket implementation for charo
 ARG_ENABL_SET([socket-dynamic], [enable dynamic socket implementation for charon])
 ARG_ENABL_SET([socket-win],     [enable Winsock2 based socket implementation for charon])
 # configuration/control plugins
-ARG_DISBL_SET([stroke],         [disable charons stroke configuration backend.])
+ARG_ENABL_SET([stroke],         [enable the stroke configuration backend.])
 ARG_ENABL_SET([smp],            [enable SMP configuration and control interface. Requires libxml.])
 ARG_ENABL_SET([sql],            [enable SQL database configuration backend.])
 ARG_ENABL_SET([uci],            [enable OpenWRT UCI configuration plugin.])
@@ -464,6 +464,10 @@ if test x$fips_prf = xtrue; then
 	if test x$openssl = xfalse -a x$wolfssl = xfalse; then
 		sha1=true;
 	fi
+fi
+
+if test x$pkcs12 = xtrue; then
+	rc2=true;
 fi
 
 if test x$swanctl = xtrue; then
