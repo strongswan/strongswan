@@ -64,7 +64,6 @@ CONFIG_OPTS = \
 	--enable-attr-sql \
 	--enable-mediation \
 	--enable-botan \
-	--enable-openssl \
 	--enable-blowfish \
 	--enable-kernel-pfkey \
 	--enable-integrity-test \
@@ -82,14 +81,14 @@ CONFIG_OPTS = \
 	--enable-ctr \
 	--enable-ccm \
 	--enable-gcm \
-	--enable-cmac \
+	--enable-hmac \
 	--enable-chapoly \
 	--enable-ha \
 	--enable-af-alg \
 	--enable-whitelist \
 	--enable-xauth-generic \
 	--enable-xauth-eap \
-	--enable-pkcs8 \
+	--enable-pkcs12 \
 	--enable-unity \
 	--enable-unbound \
 	--enable-ipseckey \
@@ -98,9 +97,17 @@ CONFIG_OPTS = \
 	--enable-cmd \
 	--enable-libipsec \
 	--enable-kernel-libipsec \
+	--enable-stroke \
 	--enable-tkm \
 	--enable-lookip \
+	--enable-des \
+	--enable-aes \
+	--enable-md5 \
+	--enable-sha1 \
+	--enable-sha2 \
 	--enable-sha3 \
+	--enable-gmp \
+	--enable-curve25519 \
 	--enable-frodo \
 	--enable-systemd \
 	--enable-counters \
