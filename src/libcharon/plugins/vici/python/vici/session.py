@@ -139,11 +139,19 @@ class Session(CommandWrappers, object):
                     )
                 )
 
-    def listen(self, event_types):
+    def listen(self, event_types, timeout=None):
         """Register and listen for the given events.
+
+        If a timeout is given, the generator produces a (None, None) tuple
+        if no event has been received for that time. This allows the caller
+        to either abort by breaking from the generator, or perform periodic
+        tasks while staying registered within listen(), and then continue
+        waiting for more events.
 
         :param event_types: event types to register
         :type event_types: list
+        :param timeout: timeout to wait for events, in fractions of a second
+        :type timeout: float
         :return: generator for streamed event responses as (event_type, dict)
         :rtype: generator
         """
@@ -152,7 +160,11 @@ class Session(CommandWrappers, object):
 
         try:
             while True:
-                response = Packet.parse(self.transport.receive())
+                try:
+                    response = Packet.parse(self.transport.receive(timeout))
+                except socket.timeout:
+                    yield None, None
+                    continue
                 if response.response_type == Packet.EVENT:
                     try:
                         msg = Message.deserialize(response.payload)
