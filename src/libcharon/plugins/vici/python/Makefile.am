@@ -4,6 +4,7 @@ EXTRA_DIST = LICENSE README.rst MANIFEST.in \
 	tox.sh \
 	test/__init__.py \
 	test/test_protocol.py \
+	test/test_session.py \
 	vici/__init__.py \
 	vici/command_wrappers.py \
 	vici/exception.py \
