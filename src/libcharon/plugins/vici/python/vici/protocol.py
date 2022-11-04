@@ -5,7 +5,6 @@ import struct
 from collections import namedtuple
 from collections import OrderedDict
 
-from .compat import iteritems
 from .exception import DeserializationException
 
 
@@ -121,7 +120,7 @@ class Message(object):
 
         def serialize_dict(d):
             segment = bytes()
-            for key, value in iteritems(d):
+            for key, value in d.items():
                 if isinstance(value, dict):
                     segment += (
                         encode_named_type(cls.SECTION_START, key)
