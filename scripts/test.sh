@@ -274,7 +274,7 @@ win*)
 	;;
 android)
 	if test "$1" = "deps"; then
-		git clone git://git.strongswan.org/android-ndk-boringssl.git -b ndk-static \
+		git clone https://github.com/strongswan/boringssl.git -b ndk-static \
 			src/frontends/android/app/src/main/jni/openssl
 	fi
 	TARGET=distdir
