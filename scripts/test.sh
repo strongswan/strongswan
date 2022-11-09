@@ -91,7 +91,7 @@ build_tss2()
 
 build_openssl()
 {
-	SSL_REV=3.0.5
+	SSL_REV=3.0.7
 	SSL_PKG=openssl-$SSL_REV
 	SSL_DIR=$DEPS_BUILD_DIR/$SSL_PKG
 	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
