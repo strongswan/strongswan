@@ -15,23 +15,20 @@
  */
 
 #define _GNU_SOURCE
-
-#ifdef HAVE_BACKTRACE
-# include <execinfo.h>
-#endif /* HAVE_BACKTRACE */
-#ifdef HAVE_DBGHELP
-# include <winsock2.h>
-# include <windows.h>
-# include <dbghelp.h>
-#endif /* HAVE_DBGHELP */
 #include <string.h>
 
-#include "backtrace.h"
-
-#include <utils/debug.h>
+#ifdef HAVE_BACKTRACE
+#include <execinfo.h>
+#endif /* HAVE_BACKTRACE */
 
 #ifdef WIN32
-# include <psapi.h>
+#include <winsock2.h>
+#include <windows.h>
+#ifdef HAVE_DBGHELP
+#include <dbghelp.h>
+#endif /* HAVE_DBGHELP */
+
+#include <psapi.h>
 /* missing in MinGW */
 #ifdef WIN64
 #ifndef GetModuleInformation
@@ -46,6 +43,10 @@ DWORD K32GetModuleFileNameExA(HANDLE hProcess, HMODULE hModule,
 #endif /* !GetModuleFileNameEx */
 #endif /* WIN64 */
 #endif
+
+#include "backtrace.h"
+
+#include <utils/debug.h>
 
 typedef struct private_backtrace_t private_backtrace_t;
 
