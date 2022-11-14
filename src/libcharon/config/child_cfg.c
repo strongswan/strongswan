@@ -435,6 +435,10 @@ static uint64_t apply_jitter(uint64_t rekey, uint64_t jitter)
 		return rekey;
 	}
 	jitter = (jitter == UINT64_MAX) ? jitter : jitter + 1;
+	if (jitter > rekey)
+	{
+		jitter = rekey;
+	}
 	return rekey - jitter * (random() / (RAND_MAX + 1.0));
 }
 #define APPLY_JITTER(l) l.rekey = apply_jitter(l.rekey, l.jitter)
