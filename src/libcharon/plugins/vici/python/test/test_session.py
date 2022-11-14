@@ -84,6 +84,7 @@ class TestSession(object):
             if name is None:
                 i += 1
                 if i > 2:
+                    s.send(Packet.EVENT, name="event", message={"late": b'1'})
                     s.send(Packet.EVENT_CONFIRM)
                     s.send(Packet.EVENT_CONFIRM)
                     break

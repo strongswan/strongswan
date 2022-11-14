@@ -40,7 +40,9 @@ class Session(CommandWrappers, object):
             raise EventUnknownException(
                 "Unknown event type '{event}'".format(event=event_type)
             )
-        elif response.response_type != Packet.EVENT_CONFIRM:
+        while response.response_type == Packet.EVENT:
+            response = Packet.parse(self.transport.receive())
+        if response.response_type != Packet.EVENT_CONFIRM:
             raise SessionException(
                 "Unexpected response type {type}, "
                 "expected '{confirm}' (EVENT_CONFIRM)".format(
