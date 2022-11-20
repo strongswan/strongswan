@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Andreas Steffen
+ * Copyright (C) 2015-2022 Andreas Steffen
  * Copyright (C) 2010 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -85,7 +85,7 @@ static void print_x509(private_certificate_printer_t *this, x509_t *x509)
 	x509_policy_mapping_t *mapping;
 	FILE *f = this->f;
 
-	chunk = chunk_skip_zero(x509->get_serial(x509));
+	chunk = x509->get_serial(x509);
 	fprintf(f, "  serial:    %#B\n", &chunk);
 
 	first = TRUE;
@@ -341,12 +341,11 @@ static void print_crl(private_certificate_printer_t *this, crl_t *crl)
 	x509_cdp_t *cdp;
 	FILE *f = this->f;
 
-	chunk = chunk_skip_zero(crl->get_serial(crl));
+	chunk = crl->get_serial(crl);
 	fprintf(f, "  serial:    %#B\n", &chunk);
 
 	if (crl->is_delta_crl(crl, &chunk))
 	{
-		chunk = chunk_skip_zero(chunk);
 		fprintf(f, "  delta CRL: for serial %#B\n", &chunk);
 	}
 	chunk = crl->get_authKeyIdentifier(crl);
@@ -388,7 +387,6 @@ static void print_crl(private_certificate_printer_t *this, crl_t *crl)
 		enumerator = crl->create_enumerator(crl);
 		while (enumerator->enumerate(enumerator, &chunk, &ts, &reason))
 		{
-			chunk = chunk_skip_zero(chunk);
 			fprintf(f, "    %#B: %T, %N\n", &chunk, &ts, this->utc,
 											crl_reason_names, reason);
 		}
@@ -408,7 +406,7 @@ static void print_ac(private_certificate_printer_t *this, ac_t *ac)
 	bool first = TRUE;
 	FILE *f = this->f;
 
-	chunk = chunk_skip_zero(ac->get_serial(ac));
+	chunk = ac->get_serial(ac);
 	fprintf(f, "  serial:    %#B\n", &chunk);
 
 	id = ac->get_holderIssuer(ac);
@@ -416,7 +414,7 @@ static void print_ac(private_certificate_printer_t *this, ac_t *ac)
 	{
 		fprintf(f, "  hissuer:  \"%Y\"\n", id);
 	}
-	chunk = chunk_skip_zero(ac->get_holderSerial(ac));
+	chunk = ac->get_holderSerial(ac);
 	if (chunk.ptr)
 	{
 		fprintf(f, "  hserial:   %#B\n", &chunk);
@@ -507,7 +505,6 @@ static void print_ocsp_response(private_certificate_printer_t *this,
 			{
 				fprintf(f, "             ");
 			}
-			serialNumber = chunk_skip_zero(serialNumber);
 
 			switch (status)
 			{

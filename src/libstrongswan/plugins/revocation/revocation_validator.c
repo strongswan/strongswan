@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015-2018 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2009 Andreas Steffen
+ * Copyright (C) 2009-2022 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -534,11 +534,11 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 		return best;
 	}
 
-	subject_serial = chunk_skip_zero(subject->get_serial(subject));
+	subject_serial = subject->get_serial(subject);
 	enumerator = crl->create_enumerator(crl);
 	while (enumerator->enumerate(enumerator, &serial, &revocation, &reason))
 	{
-		if (chunk_equals(subject_serial, chunk_skip_zero(serial)))
+		if (chunk_equals(subject_serial, serial))
 		{
 			if (reason != CRL_REASON_CERTIFICATE_HOLD)
 			{

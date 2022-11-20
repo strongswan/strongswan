@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2017-2019 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
- * Copyright (C) 2007-2015 Andreas Steffen
+ * Copyright (C) 2007-2022 Andreas Steffen
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
  *
  * Copyright (C) secunet Security Networks AG
@@ -370,7 +370,7 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 				response->issuerKeyHash = object;
 				break;
 			case SINGLE_RESPONSE_SERIAL_NUMBER:
-				response->serialNumber = object;
+				response->serialNumber = chunk_skip_zero(object);
 				break;
 			case SINGLE_RESPONSE_CERT_STATUS_GOOD:
 				response->status = VALIDATION_GOOD;

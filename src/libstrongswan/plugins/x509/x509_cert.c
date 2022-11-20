@@ -2,7 +2,7 @@
  * Copyright (C) 2000 Andreas Hess, Patric Lichtsteiner, Roger Wegmann
  * Copyright (C) 2001 Marco Bertossa, Andreas Schleiss
  * Copyright (C) 2002 Mario Strasser
- * Copyright (C) 2000-2017 Andreas Steffen
+ * Copyright (C) 2000-2022 Andreas Steffen
  * Copyright (C) 2006-2009 Martin Willi
  * Copyright (C) 2008-2017 Tobias Brunner
  *
@@ -1848,7 +1848,7 @@ METHOD(x509_t, get_flags, x509_flag_t,
 METHOD(x509_t, get_serial, chunk_t,
 	private_x509_cert_t *this)
 {
-	return this->serialNumber;
+	return chunk_skip_zero(this->serialNumber);
 }
 
 METHOD(x509_t, get_subjectKeyIdentifier, chunk_t,
