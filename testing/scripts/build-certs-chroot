@@ -428,7 +428,7 @@ TEST="${TEST_DIR}/ikev2/crl-revoked"
 TEST_KEY="${TEST}/hosts/carol/${SWANCTL_DIR}/rsa/carolKey.pem"
 TEST_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carolCert.pem"
 CN="carol@strongswan.org"
-SERIAL="08"
+SERIAL="88"
 mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
 mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
 pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
