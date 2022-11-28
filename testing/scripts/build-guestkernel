@@ -21,7 +21,7 @@ fi
 
 if [[ $KERNELPATCH && ! -f "$KERNELPATCH" ]]
 then
-	url=http://download.strongswan.org/uml/$KERNELPATCH
+	url=https://download.strongswan.org/testing/$KERNELPATCH
 	log_action "Downloading $url"
 	execute "wget -q $url"
 fi
