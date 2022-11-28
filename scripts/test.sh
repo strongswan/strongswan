@@ -97,7 +97,7 @@ build_openssl()
 	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
 	SSL_INS=$DEPS_PREFIX/ssl
 	SSL_OPT="-d shared no-tls no-dtls no-ssl3 no-zlib no-comp no-idea no-psk no-srp
-			 no-stdio no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
+			 no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
 
 	if test -d "$SSL_DIR"; then
 		return
@@ -129,6 +129,35 @@ use_custom_openssl()
 	fi
 }
 
+system_uses_openssl3()
+{
+	pkg-config --atleast-version=3.0.0 libcrypto
+	return $?
+}
+
+prepare_system_openssl()
+{
+	# On systems that ship OpenSSL 3 (e.g. Ubuntu 22.04), we require debug
+	# symbols to whitelist leaks
+	if test "$1" = "deps"; then
+		echo "deb http://ddebs.ubuntu.com $(lsb_release -cs) main restricted
+			deb http://ddebs.ubuntu.com $(lsb_release -cs)-updates main restricted
+			deb http://ddebs.ubuntu.com $(lsb_release -cs)-proposed main restricted" | \
+			sudo tee -a /etc/apt/sources.list.d/ddebs.list
+		sudo apt-get install -qq ubuntu-dbgsym-keyring
+		DEPS="$DEPS libssl3-dbgsym"
+	fi
+	if test "$LEAK_DETECTIVE" = "yes"; then
+		# make sure we can properly whitelist functions with leak detective
+		DEPS="$DEPS binutils-dev"
+		CONFIG="$CONFIG --enable-bfd-backtraces"
+	else
+		# with ASan we have to use the (extremely) slow stack unwind as the
+		# shipped version of the library is built with -fomit-frame-pointer
+		export ASAN_OPTIONS=fast_unwind_on_malloc=0
+	fi
+}
+
 : ${BUILD_DIR=$PWD}
 : ${DEPS_BUILD_DIR=$BUILD_DIR/..}
 : ${DEPS_PREFIX=/usr/local}
@@ -157,15 +186,17 @@ openssl*)
 	if test "$TEST" = "openssl-3"; then
 		DEPS=""
 		use_custom_openssl $1
+	elif system_uses_openssl3; then
+		prepare_system_openssl $1
 	fi
 	;;
 gcrypt)
 	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-random --enable-pem --enable-pkcs1 --enable-pkcs8 --enable-gcm --enable-hmac --enable-kdf -enable-curve25519 --enable-x509 --enable-constraints"
 	export TESTS_PLUGINS="test-vectors gcrypt! random pem pkcs1 pkcs8 gcm hmac kdf curve25519 x509 constraints"
-	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
-		DEPS="libgcrypt20-dev"
-	else
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "18.04" ]; then
 		DEPS="libgcrypt11-dev"
+	else
+		DEPS="libgcrypt20-dev"
 	fi
 	;;
 botan)
@@ -217,10 +248,10 @@ all|coverage|sonarcloud)
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libgcrypt20-dev libjson-c-dev python3-pip libtspi-dev libsystemd-dev
 		  libselinux1-dev"
-	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
-		DEPS="$DEPS libiptc-dev"
-	else
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "18.04" ]; then
 		DEPS="$DEPS iptables-dev python3-setuptools"
+	else
+		DEPS="$DEPS libiptc-dev"
 	fi
 	PYDEPS="tox"
 	if test "$1" = "build-deps"; then
@@ -348,13 +379,8 @@ fuzzing)
 			symbolize=1:handle_segv=1:fast_unwind_on_fatal=0:external_symbolizer_path=/usr/bin/llvm-symbolizer-3.5
 	fi
 	;;
-nm|nm-no-glib)
+nm)
 	DEPS="gnome-common libsecret-1-dev libgtk-3-dev libnm-dev libnma-dev"
-	if test "$TEST" = "nm"; then
-		DEPS="$DEPS libnm-glib-vpn-dev libnm-gtk-dev"
-	else
-		CONFIG="$CONFIG --without-libnm-glib"
-	fi
 	cd src/frontends/gnome
 	# don't run ./configure with ./autogen.sh
 	export NOCONFIGURE=1
