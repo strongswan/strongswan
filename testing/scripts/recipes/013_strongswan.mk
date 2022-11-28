@@ -3,7 +3,7 @@
 PV  = $(SWANVERSION)
 PKG = strongswan-$(PV)
 TAR = $(PKG).tar.bz2
-SRC = http://download.strongswan.org/$(TAR)
+SRC = https://download.strongswan.org/$(TAR)
 
 # can be passed to load sources from a directory instead of a tarball
 ifneq ($(origin SRCDIR), undefined)
