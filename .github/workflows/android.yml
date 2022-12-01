@@ -50,4 +50,4 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: Lint Results
-          path: src/frontends/android/app/build/reports/lint-results.xml
+          path: src/frontends/android/app/build/reports/lint-results*.xml
