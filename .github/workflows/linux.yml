@@ -54,8 +54,8 @@ jobs:
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: ~/.cache/ccache
           # with regards to ccache, monolithic builds don't differ from regular
@@ -75,7 +75,7 @@ jobs:
       - if: ${{ success() && matrix.test == 'coverage' }}
         run: bash <(curl -s https://codecov.io/bash)
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Logs ${{ github.job }}
           path: config.log
@@ -103,8 +103,8 @@ jobs:
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           # path is different on newer systems
           path: |
@@ -123,7 +123,7 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Logs ${{ github.job }}
           path: config.log
@@ -146,8 +146,8 @@ jobs:
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: ~/.ccache
           key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
@@ -161,7 +161,7 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Logs ${{ github.job }}
           path: config.log

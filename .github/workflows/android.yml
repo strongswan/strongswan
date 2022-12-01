@@ -34,8 +34,8 @@ jobs:
       # not installed anymore in the image
       - name: Install NDK
         run: yes | sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install 'ndk;21.4.7075529'
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: ~/.cache/ccache
           key: ccache-android-${{ github.sha }}
@@ -47,7 +47,7 @@ jobs:
           ccache -z
       - uses: ./.github/actions/default
       - run: ccache -s
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: Lint Results
           path: src/frontends/android/app/build/reports/lint-results.xml

@@ -28,8 +28,8 @@ jobs:
     env:
       TEST: macos
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: ~/Library/Caches/ccache
           key: ccache-${{ runner.os }}-${{ github.sha }}
@@ -42,7 +42,7 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Logs ${{ github.job }}
           path: config.log
