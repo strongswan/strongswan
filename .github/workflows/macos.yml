@@ -24,6 +24,7 @@ jobs:
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
     runs-on: macos-latest
+    timeout-minutes: 20
     env:
       TEST: macos
     steps:
