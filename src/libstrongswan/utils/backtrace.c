@@ -243,6 +243,15 @@ static bool bfd_equals(char *a, char *b)
 }
 
 /**
+ * Do not print internal errors by libbfd as we get quite a lot of
+ * "DWARF error: could not find variable specification" messages when running
+ * against Ubuntu 20.04's libcrypto (same with addr2line and still in 22.10).
+ */
+void suppress_bfd_errors (const char *fmt, va_list args)
+{
+}
+
+/**
  * See header.
  */
 void backtrace_init()
@@ -251,6 +260,7 @@ void backtrace_init()
 	bfds = hashtable_create((hashtable_hash_t)bfd_hash,
 							(hashtable_equals_t)bfd_equals, 8);
 	bfd_mutex = mutex_create(MUTEX_TYPE_DEFAULT);
+	bfd_set_error_handler(suppress_bfd_errors);
 }
 
 /**
