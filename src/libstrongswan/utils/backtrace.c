@@ -207,10 +207,16 @@ typedef struct {
 	bfd_entry_t *entry;
 	/** backtrace address */
 	bfd_vma vma;
-	/** stream to log to */
-	FILE *file;
-	/** TRUE if complete */
+	/** TRUE if address found */
 	bool found;
+	/** optional stream to log to */
+	FILE *file;
+	/** optional list of function names to match */
+	char **list;
+	/** optional number of names in list */
+	int count;
+	/** TRUE if found function name is in list */
+	bool in_list;
 } bfd_find_data_t;
 
 /**
@@ -279,38 +285,55 @@ static void find_addr(bfd *abfd, asection *section, bfd_find_data_t *data)
 	const char *function;
 	char fbuf[512] = "", sbuf[512] = "";
 	u_int line;
+	int i;
 
-	if (!data->found || (get_section_flags(abfd, section) & SEC_ALLOC) != 0)
+	if (data->found || (get_section_flags(abfd, section) & SEC_ALLOC) == 0)
 	{
-		vma = get_section_vma(abfd, section);
-		if (data->vma >= vma)
+		return;
+	}
+	vma = get_section_vma(abfd, section);
+	if (data->vma < vma)
+	{
+		return;
+	}
+	size = get_section_size(section);
+	if (data->vma >= vma + size)
+	{
+		return;
+	}
+
+	data->found = bfd_find_nearest_line(abfd, section, data->entry->syms,
+										data->vma - vma, &source, &function,
+										&line);
+	if (!data->found)
+	{
+		return;
+	}
+	if (data->count && function)
+	{
+		for (i = 0; i < data->count; i++)
 		{
-			size = get_section_size(section);
-			if (data->vma < vma + size)
+			if (streq(function, data->list[i]))
 			{
-				data->found = bfd_find_nearest_line(abfd, section,
-											data->entry->syms, data->vma - vma,
-											&source, &function, &line);
-				if (data->found)
-				{
-					if (source || function)
-					{
-						if (function)
-						{
-							snprintf(fbuf, sizeof(fbuf), "%s%s() ",
-								esc(data->file, TTY_FG_BLUE), function);
-						}
-						if (source)
-						{
-							snprintf(sbuf, sizeof(sbuf), "%s@ %s:%d",
-								esc(data->file, TTY_FG_GREEN), source, line);
-						}
-						println(data->file, "    -> %s%s%s", fbuf, sbuf,
-								esc(data->file, TTY_FG_DEF));
-					}
-				}
+				data->in_list = TRUE;
+				break;
 			}
 		}
+	}
+	else if (data->file && (source || function))
+	{
+		if (function)
+		{
+			snprintf(fbuf, sizeof(fbuf), "%s%s() ",
+				esc(data->file, TTY_FG_BLUE), function);
+		}
+		if (source)
+		{
+			snprintf(sbuf, sizeof(sbuf), "%s@ %s:%d",
+				esc(data->file, TTY_FG_GREEN), source, line);
+		}
+		println(data->file, "    -> %s%s%s", fbuf, sbuf,
+				esc(data->file, TTY_FG_DEF));
 	}
 }
 
@@ -380,15 +403,11 @@ static bfd_entry_t *get_bfd_entry(char *filename)
 }
 
 /**
- * Print the source file with line number to file, libbfd variant
+ * Lookup the given address
  */
-static void print_sourceline(FILE *file, char *filename, void *ptr, void *base)
+static void lookup_addr(char *filename, bfd_find_data_t *data)
 {
 	bfd_entry_t *entry;
-	bfd_find_data_t data = {
-		.file = file,
-		.vma = (uintptr_t)ptr,
-	};
 	bool old = FALSE;
 
 	bfd_mutex->lock(bfd_mutex);
@@ -399,14 +418,43 @@ static void print_sourceline(FILE *file, char *filename, void *ptr, void *base)
 	entry = get_bfd_entry(filename);
 	if (entry)
 	{
-		data.entry = entry;
-		bfd_map_over_sections(entry->abfd, (void*)find_addr, &data);
+		data->entry = entry;
+		bfd_map_over_sections(entry->abfd, (void*)find_addr, data);
 	}
 	if (lib && lib->leak_detective)
 	{
 		lib->leak_detective->set_state(lib->leak_detective, old);
 	}
 	bfd_mutex->unlock(bfd_mutex);
+}
+
+/**
+ * Print the source file with line number to file, libbfd variant
+ */
+static void print_sourceline(FILE *file, char *filename, void *ptr, void *base)
+{
+	bfd_find_data_t data = {
+		.file = file,
+		.vma = (uintptr_t)ptr,
+	};
+
+	lookup_addr(filename, &data);
+}
+
+/**
+ * Check if the function name of the source line is in the given list
+ */
+static bool contains_function_bfd(char *filename, void *ptr, char *list[],
+								  int count)
+{
+	bfd_find_data_t data = {
+		.vma = (uintptr_t)ptr,
+		.list = list,
+		.count = count,
+	};
+
+	lookup_addr(filename, &data);
+	return data.in_list;
 }
 
 #else /* !HAVE_BFD_H */
@@ -619,15 +667,34 @@ METHOD(backtrace_t, contains_function, bool,
 	{
 		Dl_info info;
 
-		if (dladdr(this->frames[i], &info) && info.dli_sname)
+		if (dladdr(this->frames[i], &info))
 		{
-			for (j = 0; j < count; j++)
+			if (info.dli_sname)
 			{
-				if (streq(info.dli_sname, function[j]))
+				for (j = 0; j < count; j++)
+				{
+					if (streq(info.dli_sname, function[j]))
+					{
+						return TRUE;
+					}
+				}
+			}
+#ifdef HAVE_BFD_H
+			else if (info.dli_fname[0])
+			{
+				void *ptr = this->frames[i];
+
+				if (strstr(info.dli_fname, ".so"))
+				{
+					ptr = (void*)(this->frames[i] - info.dli_fbase);
+				}
+				if (contains_function_bfd((char*)info.dli_fname, ptr,
+										  function, count))
 				{
 					return TRUE;
 				}
 			}
+#endif /* HAVE_BFD_H */
 		}
 	}
 #elif defined(HAVE_DBGHELP)
