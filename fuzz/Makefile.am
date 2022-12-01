@@ -53,7 +53,7 @@ libFuzzerLocal_a_LIBADD = $(top_builddir)/src/libstrongswan/libstrongswan.la
 check: all
 	for f in $(FUZZ_TARGETS); do \
 		corpus=$${f#fuzz_}; \
-		./$$f $(FUZZING_CORPORA)/$${corpus}/*; \
+		./$$f $(FUZZING_CORPORA)/$${corpus}/* || exit 1; \
 		crashes=$(FUZZING_CORPORA)/$${corpus}-crash; \
-		test ! -d $${crashes} || ./$$f $${crashes}/*; \
+		test ! -d $${crashes} || ./$$f $${crashes}/* || exit 1; \
 	done
