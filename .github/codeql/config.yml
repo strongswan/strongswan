@@ -1,0 +1,11 @@
+queries:
+  - uses: ./.github/codeql/cpp-queries
+
+query-filters:
+  # don't explicitly point out FIXME comments
+  - exclude:
+      id: cpp/fixme-comment
+  # this rule produces too many false positives due to our custom specifiers and
+  # the use of void pointers in swanctl
+  - exclude:
+      id: cpp/wrong-type-format-argument

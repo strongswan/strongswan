@@ -1,0 +1,72 @@
+name: "CodeQL"
+
+on: [push, pull_request]
+
+env:
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_COMPRESS: true
+  CCACHE_MAXSIZE: 200M
+  OS_NAME: linux
+
+jobs:
+  pre-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip-check.outputs.should_skip }}
+    steps:
+      - id: skip-check
+        uses: fkirc/skip-duplicate-actions@master
+        with:
+          concurrent_skipping: 'same_content'
+
+  analyze:
+    needs: pre-check
+    if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'cpp', 'python', 'ruby' ]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+        config-file: ./.github/codeql/config.yml
+
+    - if: matrix.language == 'python' || matrix.language == 'ruby'
+      name: Autobuild
+      uses: github/codeql-action/autobuild@v2
+
+    # this follows the steps of the Linux workflow
+    - if: matrix.language == 'cpp'
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/ccache
+        key: ccache-ubuntu-latest-gcc-codeql-${{ github.sha }}
+        restore-keys: |
+          ccache-ubuntu-latest-gcc-codeql
+          ccache-ubuntu-latest-gcc-all-${{ github.sha }}
+          ccache-ubuntu-latest-gcc-all-
+          ccache-ubuntu-latest-gcc-
+    - if: matrix.language == 'cpp'
+      run: |
+          sudo apt-get install -qq ccache
+          echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
+          ccache -z
+    - if: matrix.language == 'cpp'
+      env:
+        TEST: codeql
+      uses: ./.github/actions/default
+    - if: matrix.language == 'cpp'
+      run: ccache -s
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
