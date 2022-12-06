@@ -1981,18 +1981,52 @@ CALLBACK(auth_sn, bool,
  */
 static void check_lifetimes(lifetime_cfg_t *lft)
 {
+	/* if no soft lifetime specified, set a default or base it on the hard lifetime */
+	if (lft->time.rekey == LFT_UNDEFINED)
+	{
+		if (lft->time.life != LFT_UNDEFINED)
+		{
+			lft->time.rekey = lft->time.life / 1.1;
+		}
+		else
+		{
+			lft->time.rekey = LFT_DEFAULT_CHILD_REKEY_TIME;
+		}
+	}
+	if (lft->bytes.rekey == LFT_UNDEFINED)
+	{
+		if (lft->bytes.life != LFT_UNDEFINED)
+		{
+			lft->bytes.rekey = lft->bytes.life / 1.1;
+		}
+		else
+		{
+			lft->bytes.rekey = LFT_DEFAULT_CHILD_REKEY_BYTES;
+		}
+	}
+	if (lft->packets.rekey == LFT_UNDEFINED)
+	{
+		if (lft->packets.life != LFT_UNDEFINED)
+		{
+			lft->packets.rekey = lft->packets.life / 1.1;
+		}
+		else
+		{
+			lft->packets.rekey = LFT_DEFAULT_CHILD_REKEY_PACKETS;
+		}
+	}
 	/* if no hard lifetime specified, add one at soft lifetime + 10% */
 	if (lft->time.life == LFT_UNDEFINED)
 	{
-		lft->time.life = lft->time.rekey * 110 / 100;
+		lft->time.life = lft->time.rekey * 1.1;
 	}
 	if (lft->bytes.life == LFT_UNDEFINED)
 	{
-		lft->bytes.life = lft->bytes.rekey * 110 / 100;
+		lft->bytes.life = lft->bytes.rekey * 1.1;
 	}
 	if (lft->packets.life == LFT_UNDEFINED)
 	{
-		lft->packets.life = lft->packets.rekey * 110 / 100;
+		lft->packets.life = lft->packets.rekey * 1.1;
 	}
 	/* if no rand time defined, use difference of hard and soft */
 	if (lft->time.jitter == LFT_UNDEFINED)
@@ -2026,17 +2060,17 @@ CALLBACK(children_sn, bool,
 			.mode = MODE_TUNNEL,
 			.lifetime = {
 				.time = {
-					.rekey = LFT_DEFAULT_CHILD_REKEY_TIME,
+					.rekey = LFT_UNDEFINED,
 					.life = LFT_UNDEFINED,
 					.jitter = LFT_UNDEFINED,
 				},
 				.bytes = {
-					.rekey = LFT_DEFAULT_CHILD_REKEY_BYTES,
+					.rekey = LFT_UNDEFINED,
 					.life = LFT_UNDEFINED,
 					.jitter = LFT_UNDEFINED,
 				},
 				.packets = {
-					.rekey = LFT_DEFAULT_CHILD_REKEY_PACKETS,
+					.rekey = LFT_UNDEFINED,
 					.life = LFT_UNDEFINED,
 					.jitter = LFT_UNDEFINED,
 				},
