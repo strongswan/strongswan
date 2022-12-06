@@ -6,6 +6,8 @@ env:
   CCACHE_BASEDIR: ${{ github.workspace }}
   CCACHE_COMPRESS: true
   CCACHE_MAXSIZE: 200M
+  # CodeQL currently doesn't support ccache
+  CCACHE_DISABLE: true
   OS_NAME: linux
 
 jobs:
