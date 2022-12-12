@@ -96,7 +96,7 @@ build_openssl()
 	SSL_DIR=$DEPS_BUILD_DIR/$SSL_PKG
 	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
 	SSL_INS=$DEPS_PREFIX/ssl
-	SSL_OPT="-d shared no-tls no-dtls no-ssl3 no-zlib no-comp no-idea no-psk no-srp
+	SSL_OPT="-d shared no-dtls no-ssl3 no-zlib no-idea no-psk no-srp
 			 no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
 
 	if test -d "$SSL_DIR"; then
