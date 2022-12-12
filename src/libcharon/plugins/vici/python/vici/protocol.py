@@ -5,7 +5,6 @@ import struct
 from collections import namedtuple
 from collections import OrderedDict
 
-from .compat import iteritems
 from .exception import DeserializationException
 
 
@@ -19,8 +18,8 @@ class Transport(object):
     def send(self, packet):
         self.socket.sendall(struct.pack("!I", len(packet)) + packet)
 
-    def receive(self):
-        raw_length = self._recvall(self.HEADER_LENGTH)
+    def receive(self, timeout=None):
+        raw_length = self._recvall(self.HEADER_LENGTH, timeout)
         length, = struct.unpack("!I", raw_length)
         payload = self._recvall(length)
         return payload
@@ -29,11 +28,14 @@ class Transport(object):
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
-    def _recvall(self, count):
+    def _recvall(self, count, timeout=None):
         """Ensure to read count bytes from the socket"""
         data = b""
+        if count > 0:
+            self.socket.settimeout(timeout)
         while len(data) < count:
             buf = self.socket.recv(count - len(data))
+            self.socket.settimeout(None)
             if not buf:
                 raise socket.error('Connection closed')
             data += buf
@@ -121,7 +123,7 @@ class Message(object):
 
         def serialize_dict(d):
             segment = bytes()
-            for key, value in iteritems(d):
+            for key, value in d.items():
                 if isinstance(value, dict):
                     segment += (
                         encode_named_type(cls.SECTION_START, key)
