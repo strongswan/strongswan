@@ -1523,17 +1523,19 @@ static bool netlink_detect_offload(const char *ifname)
 #endif
 
 /**
- * There are 3 HW offload configuration values:
- * 1. HW_OFFLOAD_NO   : Do not configure HW offload.
- * 2. HW_OFFLOAD_YES  : Configure HW offload.
- *                      Fail SA addition if offload is not supported.
- * 3. HW_OFFLOAD_AUTO : Configure HW offload if supported by the kernel
- *                      and device.
- *                      Do not fail SA addition otherwise.
+ * There are 4 HW offload configuration values:
+ * 1. HW_OFFLOAD_NO   	: Do not configure any HW offload.
+ * 2. HW_OFFLOAD_CRYPTO	: Configure crypto HW offload.
+ *                        Fail SA addition if crypto HW offload is not supported.
+ * 3. HW_OFFLOAD_FULL	: Configure full HW offload.
+ * 			  Fail SA addition if full HW offload is not supported.
+ * 4. HW_OFFLOAD_AUTO 	: Configure full HW offload if supported by the kernel and device.
+ * 			  If not, configure crypto HW offload if supported by the kernel and device.
+ *                        Do not fail SA addition if offload is not supported.
  */
 static bool config_hw_offload(kernel_ipsec_sa_id_t *id,
 							  kernel_ipsec_add_sa_t *data, struct nlmsghdr *hdr,
-							  int buflen)
+							  int buflen, bool hw_offload_full)
 {
 	host_t *local = data->inbound ? id->dst : id->src;
 	struct xfrm_user_offload *offload;
@@ -1546,7 +1548,7 @@ static bool config_hw_offload(kernel_ipsec_sa_id_t *id,
 		return TRUE;
 	}
 
-	hw_offload_yes = (data->hw_offload == HW_OFFLOAD_YES);
+	hw_offload_yes = (data->hw_offload == HW_OFFLOAD_CRYPTO) || (data->hw_offload == HW_OFFLOAD_FULL);
 
 	if (!charon->kernel->get_interface(charon->kernel, local, &ifname))
 	{
@@ -1571,6 +1573,12 @@ static bool config_hw_offload(kernel_ipsec_sa_id_t *id,
 	offload->ifindex = if_nametoindex(ifname);
 	offload->flags |= data->inbound ? XFRM_OFFLOAD_INBOUND : 0;
 
+	/* check if full HW offload is requested and activate it */
+	if (hw_offload_full)
+	{
+		offload->flags |= XFRM_OFFLOAD_FULL;
+	}
+
 	ret = TRUE;
 
 out:
@@ -1590,6 +1598,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	uint16_t icv_size = 64, ipcomp = data->ipcomp;
 	ipsec_mode_t mode = data->mode, original_mode = data->mode;
 	traffic_selector_t *first_src_ts, *first_dst_ts;
+	bool full_hw_offload = FALSE;
 	status_t status = FAILED;
 
 	/* if IPComp is used, we install an additional IPComp SA. if the cpi is 0
@@ -2008,8 +2017,11 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			sa->replay_window = data->replay_window;
 		}
 
+		/* try full HW offload if requested */
+		full_hw_offload = (data->hw_offload == HW_OFFLOAD_FULL) || (data->hw_offload == HW_OFFLOAD_AUTO);
+
 		DBG2(DBG_KNL, "  HW offload: %N", hw_offload_names, data->hw_offload);
-		if (!config_hw_offload(id, data, hdr, sizeof(request)))
+		if (!config_hw_offload(id, data, hdr, sizeof(request), full_hw_offload))
 		{
 			DBG1(DBG_KNL, "failed to configure HW offload");
 			goto failed;
@@ -2017,6 +2029,21 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 
 	status = this->socket_xfrm->send_ack(this->socket_xfrm, hdr);
+
+	/* if fails when full HW offload is configured and we are in auto mode
+	 * then fallback to crypto offload (disable full HW offload) and retry */
+	if (status != SUCCESS && id->proto != IPPROTO_COMP && full_hw_offload && data->hw_offload == HW_OFFLOAD_AUTO)
+	{
+		DBG1(DBG_KNL, "failed to configure full HW offload, trying to fallback to crypto");
+		full_hw_offload = FALSE;
+		if (!config_hw_offload(id, data, hdr, sizeof(request), full_hw_offload))
+		{
+			DBG1(DBG_KNL, "failed to configure HW offload");
+			goto failed;
+		}
+		status = this->socket_xfrm->send_ack(this->socket_xfrm, hdr);
+	}
+
 	if (status == NOT_FOUND && data->update)
 	{
 		DBG1(DBG_KNL, "allocated SPI not found anymore, try to add SAD entry");
