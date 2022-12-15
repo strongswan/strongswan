@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Tobias Brunner
+ * Copyright (C) 2006-2022 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2008-2016 Andreas Steffen
  * Copyright (C) 2006-2007 Fabian Hartmann, Noah Heusser
@@ -392,6 +392,9 @@ struct ipsec_sa_t {
 	/** Optional mark */
 	uint32_t if_id;
 
+	/** Optional HW offload */
+	hw_offload_t hw_offload;
+
 	/** Description of this SA */
 	ipsec_sa_cfg_t cfg;
 
@@ -408,7 +411,8 @@ static u_int ipsec_sa_hash(ipsec_sa_t *sa)
 						  chunk_hash_inc(sa->dst->get_address(sa->dst),
 						  chunk_hash_inc(chunk_from_thing(sa->mark),
 						  chunk_hash_inc(chunk_from_thing(sa->if_id),
-						  chunk_hash(chunk_from_thing(sa->cfg))))));
+						  chunk_hash_inc(chunk_from_thing(sa->hw_offload),
+						  chunk_hash(chunk_from_thing(sa->cfg)))))));
 }
 
 /**
@@ -421,6 +425,7 @@ static bool ipsec_sa_equals(ipsec_sa_t *sa, ipsec_sa_t *other_sa)
 		   sa->mark.value == other_sa->mark.value &&
 		   sa->mark.mask == other_sa->mark.mask &&
 		   sa->if_id == other_sa->if_id &&
+		   sa->hw_offload == other_sa->hw_offload &&
 		   ipsec_sa_cfg_equals(&sa->cfg, &other_sa->cfg);
 }
 
@@ -429,7 +434,8 @@ static bool ipsec_sa_equals(ipsec_sa_t *sa, ipsec_sa_t *other_sa)
  */
 static ipsec_sa_t *ipsec_sa_create(private_kernel_netlink_ipsec_t *this,
 								   host_t *src, host_t *dst, mark_t mark,
-								   uint32_t if_id, ipsec_sa_cfg_t *cfg)
+								   uint32_t if_id, hw_offload_t hw_offload,
+								   ipsec_sa_cfg_t *cfg)
 {
 	ipsec_sa_t *sa, *found;
 	INIT(sa,
@@ -437,6 +443,7 @@ static ipsec_sa_t *ipsec_sa_create(private_kernel_netlink_ipsec_t *this,
 		.dst = dst,
 		.mark = mark,
 		.if_id = if_id,
+		.hw_offload = hw_offload,
 		.cfg = *cfg,
 	);
 	found = this->sas->get(this->sas, sa);
@@ -511,7 +518,7 @@ struct policy_sa_out_t {
 static policy_sa_t *policy_sa_create(private_kernel_netlink_ipsec_t *this,
 	policy_dir_t dir, policy_type_t type, host_t *src, host_t *dst,
 	traffic_selector_t *src_ts, traffic_selector_t *dst_ts, mark_t mark,
-	uint32_t if_id, ipsec_sa_cfg_t *cfg)
+	uint32_t if_id, hw_offload_t hw_offload, ipsec_sa_cfg_t *cfg)
 {
 	policy_sa_t *policy;
 
@@ -529,7 +536,7 @@ static policy_sa_t *policy_sa_create(private_kernel_netlink_ipsec_t *this,
 		INIT(policy, .priority = 0);
 	}
 	policy->type = type;
-	policy->sa = ipsec_sa_create(this, src, dst, mark, if_id, cfg);
+	policy->sa = ipsec_sa_create(this, src, dst, mark, if_id, hw_offload, cfg);
 	return policy;
 }
 
@@ -1521,59 +1528,118 @@ static bool netlink_detect_offload(const char *ifname)
 #endif
 
 /**
- * There are 3 HW offload configuration values:
- * 1. HW_OFFLOAD_NO   : Do not configure HW offload.
- * 2. HW_OFFLOAD_YES  : Configure HW offload.
- *                      Fail SA addition if offload is not supported.
- * 3. HW_OFFLOAD_AUTO : Configure HW offload if supported by the kernel
- *                      and device.
- *                      Do not fail SA addition otherwise.
+ * Add a HW offload attribute to the given message, return it if it was added.
+ *
+ * There are 4 HW offload configuration values:
+ * 1. HW_OFFLOAD_NO     : Do not configure HW offload.
+ * 2. HW_OFFLOAD_CRYPTO : Configure crypto HW offload.
+ *                        Fail SA addition if crypto offload is not supported.
+ * 3. HW_OFFLOAD_PACKET : Configure packet HW offload.
+ *                        Fail SA addition if packet offload is not supported.
+ * 4. HW_OFFLOAD_AUTO   : Configure packet HW offload if supported by the kernel
+ *                        and device.  If not, configure crypto HW offload if
+ *                        supported by the kernel and device.
+ *                        Do not fail SA addition if offload is not supported.
  */
-static bool config_hw_offload(kernel_ipsec_sa_id_t *id,
-							  kernel_ipsec_add_sa_t *data, struct nlmsghdr *hdr,
-							  int buflen)
+static bool add_hw_offload(struct nlmsghdr *hdr, int buflen, host_t *local,
+						   hw_offload_t hw_offload,
+						   struct xfrm_user_offload **offload)
 {
-	host_t *local = data->inbound ? id->dst : id->src;
-	struct xfrm_user_offload *offload;
-	bool hw_offload_yes, ret = FALSE;
 	char *ifname;
+	bool ret;
 
-	/* do Ipsec configuration without offload */
-	if (data->hw_offload == HW_OFFLOAD_NO)
+	/* do IPsec configuration without offload */
+	if (hw_offload == HW_OFFLOAD_NO)
 	{
 		return TRUE;
 	}
 
-	hw_offload_yes = (data->hw_offload == HW_OFFLOAD_YES);
+	/* unless offloading is forced, we return TRUE even if we fail */
+	ret = (hw_offload == HW_OFFLOAD_AUTO);
 
 	if (!charon->kernel->get_interface(charon->kernel, local, &ifname))
 	{
-		return !hw_offload_yes;
+		return ret;
 	}
 
 	/* check if interface supports hw_offload */
 	if (!netlink_detect_offload(ifname))
 	{
-		ret = !hw_offload_yes;
 		goto out;
 	}
 
 	/* activate HW offload */
-	offload = netlink_reserve(hdr, buflen,
-							  XFRMA_OFFLOAD_DEV, sizeof(*offload));
-	if (!offload)
+	*offload = netlink_reserve(hdr, buflen,
+							   XFRMA_OFFLOAD_DEV, sizeof(**offload));
+	if (!(*offload))
 	{
-		ret = !hw_offload_yes;
 		goto out;
 	}
-	offload->ifindex = if_nametoindex(ifname);
-	offload->flags |= data->inbound ? XFRM_OFFLOAD_INBOUND : 0;
+	(*offload)->ifindex = if_nametoindex(ifname);
+
+	if (hw_offload == HW_OFFLOAD_PACKET ||
+		hw_offload == HW_OFFLOAD_AUTO)
+	{
+		(*offload)->flags |= XFRM_OFFLOAD_PACKET;
+	}
 
 	ret = TRUE;
 
 out:
 	free(ifname);
 	return ret;
+}
+
+/**
+ * Add a HW offload attribute to the given SA-related message.
+ */
+static bool add_hw_offload_sa(struct nlmsghdr *hdr, int buflen,
+							  kernel_ipsec_sa_id_t *id,
+							  kernel_ipsec_add_sa_t *data,
+							  struct xfrm_user_offload **offload)
+{
+	host_t *local = data->inbound ? id->dst : id->src;
+
+	if (!add_hw_offload(hdr, buflen, local, data->hw_offload, offload))
+	{
+		return FALSE;
+	}
+	else if (*offload)
+	{
+		(*offload)->flags |= data->inbound ? XFRM_OFFLOAD_INBOUND : 0;
+	}
+	return TRUE;
+}
+
+/**
+ * Add a HW offload attribuet to the given policy-related message.
+ */
+static bool add_hw_offload_policy(struct nlmsghdr *hdr, int buflen,
+								  policy_entry_t *policy,
+								  policy_sa_t *mapping,
+								  struct xfrm_user_offload **offload)
+{
+	ipsec_sa_t *ipsec = mapping->sa;
+	host_t *local = ipsec->src;
+
+	/* only packet offloading is supported for policies, which we try to use
+	 * in automatic mode */
+	if (ipsec->hw_offload != HW_OFFLOAD_PACKET &&
+		ipsec->hw_offload != HW_OFFLOAD_AUTO)
+	{
+		return TRUE;
+	}
+
+	switch (policy->direction)
+	{
+		case POLICY_FWD:
+			/* FWD policies are not offloaded, they are enforced by the kernel */
+			return TRUE;
+		case POLICY_IN:
+			local = ipsec->dst;
+			break;
+	}
+	return add_hw_offload(hdr, buflen, local, ipsec->hw_offload, offload);
 }
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
@@ -1585,6 +1651,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	char markstr[32] = "";
 	struct nlmsghdr *hdr;
 	struct xfrm_usersa_info *sa;
+	struct xfrm_user_offload *offload = NULL;
 	uint16_t icv_size = 64, ipcomp = data->ipcomp;
 	ipsec_mode_t mode = data->mode, original_mode = data->mode;
 	traffic_selector_t *first_src_ts, *first_dst_ts;
@@ -2007,7 +2074,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		}
 
 		DBG2(DBG_KNL, "  HW offload: %N", hw_offload_names, data->hw_offload);
-		if (!config_hw_offload(id, data, hdr, sizeof(request)))
+		if (!add_hw_offload_sa(hdr, sizeof(request), id, data, &offload))
 		{
 			DBG1(DBG_KNL, "failed to configure HW offload");
 			goto failed;
@@ -2015,6 +2082,16 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	}
 
 	status = this->socket_xfrm->send_ack(this->socket_xfrm, hdr);
+
+	if (status != SUCCESS && offload && data->hw_offload == HW_OFFLOAD_AUTO)
+	{
+		DBG1(DBG_KNL, "failed to install SA with %N HW offload, trying with "
+			 "%N HW offload", hw_offload_names, HW_OFFLOAD_PACKET,
+			 hw_offload_names, HW_OFFLOAD_CRYPTO);
+		offload->flags &= ~XFRM_OFFLOAD_PACKET;
+		status = this->socket_xfrm->send_ack(this->socket_xfrm, hdr);
+	}
+
 	if (status == NOT_FOUND && data->update)
 	{
 		DBG1(DBG_KNL, "allocated SPI not found anymore, try to add SAD entry");
@@ -2745,6 +2822,7 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	policy_entry_t clone;
 	ipsec_sa_t *ipsec = mapping->sa;
 	struct xfrm_userpolicy_info *policy_info;
+	struct xfrm_user_offload *offload = NULL;
 	struct nlmsghdr *hdr;
 	status_t status;
 	int i;
@@ -2858,9 +2936,26 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 		policy_change_done(this, policy);
 		return FAILED;
 	}
+	/* make sure this is the last attribute added to the message */
+	if (!add_hw_offload_policy(hdr, sizeof(request), policy, mapping, &offload))
+	{
+		policy_change_done(this, policy);
+		return FAILED;
+	}
 	this->mutex->unlock(this->mutex);
 
 	status = this->socket_xfrm->send_ack(this->socket_xfrm, hdr);
+
+	if (status != SUCCESS && offload && mapping->sa->hw_offload == HW_OFFLOAD_AUTO)
+	{
+		DBG1(DBG_KNL, "failed to install SA with %N HW offload, trying without "
+			 "offload", hw_offload_names, HW_OFFLOAD_PACKET);
+		/* the kernel only allows offloading with packet offload and rejects
+		 * the attribute if that flag is not set, so remove it again */
+		hdr->nlmsg_len -= RTA_ALIGN(RTA_LENGTH(sizeof(*offload)));
+		status = this->socket_xfrm->send_ack(this->socket_xfrm, hdr);
+	}
+
 	if (status == ALREADY_DONE && !update)
 	{
 		DBG1(DBG_KNL, "policy already exists, try to update it");
@@ -2948,7 +3043,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	/* cache the assigned IPsec SA */
 	assigned_sa = policy_sa_create(this, id->dir, data->type, data->src,
 								   data->dst, id->src_ts, id->dst_ts, id->mark,
-								   id->if_id, data->sa);
+								   id->if_id, data->hw_offload, data->sa);
 	assigned_sa->auto_priority = get_priority(policy, data->prio, id->interface);
 	assigned_sa->priority = this->get_priority ? this->get_priority(id, data)
 											   : data->manual_prio;
@@ -3129,6 +3224,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		.dst = data->dst,
 		.mark = id->mark,
 		.if_id = id->if_id,
+		.hw_offload = data->hw_offload,
 		.cfg = *data->sa,
 	};
 	char markstr[32] = "", labelstr[128] = "";

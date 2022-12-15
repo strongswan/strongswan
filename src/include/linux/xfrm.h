@@ -503,6 +503,7 @@ struct xfrm_user_offload {
 };
 #define XFRM_OFFLOAD_IPV6	1
 #define XFRM_OFFLOAD_INBOUND	2
+#define XFRM_OFFLOAD_PACKET	4
 
 #ifndef __KERNEL__
 /* backwards compatibility for userspace */
