@@ -95,7 +95,7 @@ struct kernel_ipsec_add_sa_t {
 	uint16_t cpi;
 	/** TRUE to enable UDP encapsulation for NAT traversal */
 	bool encap;
-	/** no (disabled), yes (enabled), auto (enabled if supported) */
+	/** HW offload mode */
 	hw_offload_t hw_offload;
 	/** Mark the SA should apply to packets after processing */
 	mark_t mark;
@@ -180,6 +180,8 @@ struct kernel_ipsec_manage_policy_t {
 	policy_priority_t prio;
 	/** Manually-set priority (automatic if set to 0) */
 	uint32_t manual_prio;
+	/** HW offload mode */
+	hw_offload_t hw_offload;
 	/** Source address of the SA(s) tied to this policy */
 	host_t *src;
 	/** Destination address of the SA(s) tied to this policy */
