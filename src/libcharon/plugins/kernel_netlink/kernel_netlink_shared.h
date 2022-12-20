@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Tobias Brunner
+ * Copyright (C) 2008-2022 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -122,7 +122,17 @@ void netlink_nested_end(struct nlmsghdr *hdr, void *attr);
  * @param len			length of RTA data
  * @return				buffer to len bytes of attribute data, NULL on error
  */
-void* netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len);
+void *netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len);
+
+/**
+ * Log extended ACK error/warning message in a NLMSG_ERROR message.  In error
+ * messages (i.e. error != 0), the generic error message is logged if no
+ * extended ACK message is available.
+ *
+ * @param hdr			netlink message
+ * @param prefix		optional prefix to add before error message
+ */
+void netlink_log_error(struct nlmsghdr *hdr, const char *prefix);
 
 /**
  * Determine buffer size for received messages (e.g. events).

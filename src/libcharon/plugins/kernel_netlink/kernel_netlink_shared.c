@@ -1,6 +1,6 @@
 /*
+ * Copyright (C) 2008-2022 Tobias Brunner
  * Copyright (C) 2014 Martin Willi
- * Copyright (C) 2008-2020 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -535,7 +535,7 @@ METHOD(netlink_socket_t, netlink_send_ack, status_t,
 		{
 			case NLMSG_ERROR:
 			{
-				struct nlmsgerr* err = NLMSG_DATA(hdr);
+				struct nlmsgerr *err = NLMSG_DATA(hdr);
 
 				if (err->error)
 				{
@@ -549,11 +549,11 @@ METHOD(netlink_socket_t, netlink_send_ack, status_t,
 						free(out);
 						return NOT_FOUND;
 					}
-					DBG1(DBG_KNL, "received netlink error: %s (%d)",
-						 strerror(-err->error), -err->error);
+					netlink_log_error(hdr, NULL);
 					free(out);
 					return FAILED;
 				}
+				netlink_log_error(hdr, NULL);
 				free(out);
 				return SUCCESS;
 			}
@@ -620,7 +620,7 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		.nl_family = AF_NETLINK,
 	};
 	bool force_buf = FALSE;
-	int rcvbuf_size = 0;
+	int on = 1, rcvbuf_size = 0;
 
 	INIT(this,
 		.public = {
@@ -659,6 +659,13 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		destroy(this);
 		return NULL;
 	}
+
+	/* don't echo back the request payload in error messages, might not be
+	 * supported by older kernels, so don't check the result */
+	setsockopt(this->socket, SOL_NETLINK, NETLINK_CAP_ACK, &on, sizeof(on));
+	/* enable extended ACK attributes, might not be supported by older kernels */
+	setsockopt(this->socket, SOL_NETLINK, NETLINK_EXT_ACK, &on, sizeof(on));
+
 	rcvbuf_size = lib->settings->get_int(lib->settings,
 						"%s.plugins.kernel-netlink.receive_buffer_size",
 						rcvbuf_size, lib->ns);
@@ -764,6 +771,69 @@ void *netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len)
 		return NULL;
 	}
 	return RTA_DATA(rta);
+}
+
+/*
+ * Described in header
+ */
+void netlink_log_error(struct nlmsghdr *hdr, const char *prefix)
+{
+	struct nlmsgerr *err = NLMSG_DATA(hdr);
+	struct rtattr *rta;
+	size_t offset, rtasize;
+	const char *msg = NULL;
+	bool is_error = err->error != 0;
+
+	if (!prefix)
+	{
+		prefix = is_error ? "received netlink error"
+						  : "received netlink warning";
+	}
+
+	if (hdr->nlmsg_flags & NLM_F_ACK_TLVS)
+	{
+		/* skip the headers, and the request payload for older kernels that
+		 * don't support omitting it */
+		offset = sizeof(*err);
+		if (!(hdr->nlmsg_flags & NLM_F_CAPPED))
+		{
+			offset += err->msg.nlmsg_len - NLMSG_HDRLEN;
+		}
+
+		rta = (struct rtattr*)(NLMSG_DATA(hdr) + NLMSG_ALIGN(offset));
+		rtasize = NLMSG_PAYLOAD(hdr, offset);
+		while (RTA_OK(rta, rtasize))
+		{
+			if (rta->rta_type == NLMSGERR_ATTR_MSG)
+			{
+				msg = RTA_DATA(rta);
+				/* sanity check, strings from the kernel should be terminated */
+				if (!RTA_PAYLOAD(rta) || msg[RTA_PAYLOAD(rta)-1] != '\0')
+				{
+					msg = NULL;
+				}
+				break;
+			}
+			rta = RTA_NEXT(rta, rtasize);
+		}
+	}
+
+	if (msg && *msg)
+	{
+		if (is_error)
+		{
+			DBG1(DBG_KNL, "%s: %s (%d)", prefix, msg, -err->error);
+		}
+		else
+		{
+			DBG2(DBG_KNL, "%s: %s", prefix, msg);
+		}
+	}
+	else if (is_error)
+	{
+		DBG1(DBG_KNL, "%s: %s (%d)", prefix, strerror(-err->error),
+			 -err->error);
+	}
 }
 
 /*

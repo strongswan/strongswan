@@ -1217,9 +1217,7 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 				}
 				case NLMSG_ERROR:
 				{
-					struct nlmsgerr *err = NLMSG_DATA(hdr);
-					DBG1(DBG_KNL, "allocating SPI failed: %s (%d)",
-						 strerror(-err->error), -err->error);
+					netlink_log_error(hdr, "allocating SPI failed");
 					break;
 				}
 				default:
@@ -2099,9 +2097,8 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 				}
 				case NLMSG_ERROR:
 				{
-					struct nlmsgerr *err = NLMSG_DATA(hdr);
-					DBG1(DBG_KNL, "querying replay state from SAD entry "
-						 "failed: %s (%d)", strerror(-err->error), -err->error);
+					netlink_log_error(hdr, "querying replay state from SAD "
+									  "entry failed");
 					break;
 				}
 				default:
@@ -2201,11 +2198,7 @@ METHOD(kernel_ipsec_t, query_sa, status_t,
 				}
 				case NLMSG_ERROR:
 				{
-					struct nlmsgerr *err = NLMSG_DATA(hdr);
-
-					DBG1(DBG_KNL, "querying SAD entry with SPI %.8x%s failed: "
-						 "%s (%d)", ntohl(id->spi), markstr,
-						 strerror(-err->error), -err->error);
+					netlink_log_error(hdr, "querying SAD entry failed");
 					break;
 				}
 				default:
@@ -2391,9 +2384,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 				}
 				case NLMSG_ERROR:
 				{
-					struct nlmsgerr *err = NLMSG_DATA(hdr);
-					DBG1(DBG_KNL, "querying SAD entry failed: %s (%d)",
-						 strerror(-err->error), -err->error);
+					netlink_log_error(hdr, "querying SAD entry failed");
 					break;
 				}
 				default:
@@ -3086,9 +3077,7 @@ METHOD(kernel_ipsec_t, query_policy, status_t,
 				}
 				case NLMSG_ERROR:
 				{
-					struct nlmsgerr *err = NLMSG_DATA(hdr);
-					DBG1(DBG_KNL, "querying policy failed: %s (%d)",
-						 strerror(-err->error), -err->error);
+					netlink_log_error(hdr, "querying policy failed");
 					break;
 				}
 				default:
@@ -3609,9 +3598,7 @@ static bool get_spd_hash_thresh(private_kernel_netlink_ipsec_t *this,
 				}
 				case NLMSG_ERROR:
 				{
-					struct nlmsgerr *err = NLMSG_DATA(hdr);
-					DBG1(DBG_KNL, "getting SPD hash threshold failed: %s (%d)",
-						 strerror(-err->error), -err->error);
+					netlink_log_error(hdr, "getting SPD hash threshold failed");
 					break;
 				}
 				default:
