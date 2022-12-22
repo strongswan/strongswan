@@ -662,9 +662,11 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 
 	/* don't echo back the request payload in error messages, might not be
 	 * supported by older kernels, so don't check the result */
-	setsockopt(this->socket, SOL_NETLINK, NETLINK_CAP_ACK, &on, sizeof(on));
+	ignore_result(setsockopt(this->socket, SOL_NETLINK, NETLINK_CAP_ACK, &on,
+							 sizeof(on)));
 	/* enable extended ACK attributes, might not be supported by older kernels */
-	setsockopt(this->socket, SOL_NETLINK, NETLINK_EXT_ACK, &on, sizeof(on));
+	ignore_result(setsockopt(this->socket, SOL_NETLINK, NETLINK_EXT_ACK, &on,
+							 sizeof(on)));
 
 	rcvbuf_size = lib->settings->get_int(lib->settings,
 						"%s.plugins.kernel-netlink.receive_buffer_size",
