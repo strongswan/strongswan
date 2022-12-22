@@ -1,3 +1,22 @@
+strongswan-5.9.9
+----------------
+
+- The charon.reqid_base setting allows specifying the first reqid that's
+  automatically assigned to a CHILD_SA.
+
+- The path/command for resolvconf(8) used by the resolve plugin is now
+  configurable.
+
+- The resolve plugin doesn't generate unique interface names for name servers
+  anymore. Instead, all available name servers are associated with a single,
+  configurable interface name.
+
+- Serial numbers of certificates and CRLs are now always returned in canonical
+  form (i.e. without leading zeros).
+
+- The kernel-netlink plugin now logs extended ACK error/warning messages.
+
+
 strongswan-5.9.8
 ----------------
 
