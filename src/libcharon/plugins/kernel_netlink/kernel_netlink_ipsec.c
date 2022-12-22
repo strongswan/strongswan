@@ -363,6 +363,11 @@ struct private_kernel_netlink_ipsec_t {
 	bool policy_update;
 
 	/**
+	 * Whether the policy level is 'use' instead of 'required'
+	 */
+	bool policy_optional;
+
+	/**
 	 * Installed port based IKE bypass policies, as bypass_t
 	 */
 	array_t *bypass;
@@ -2825,8 +2830,9 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 			}
 			tmpl->aalgos = tmpl->ealgos = tmpl->calgos = ~0;
 			tmpl->mode = mode2kernel(proto_mode);
-			tmpl->optional = protos[i].proto == IPPROTO_COMP &&
-							 policy->direction != POLICY_OUT;
+			tmpl->optional = this->policy_optional ||
+							 (protos[i].proto == IPPROTO_COMP &&
+							 policy->direction != POLICY_OUT);
 			tmpl->family = ipsec->src->get_family(ipsec->src);
 
 			if (proto_mode == MODE_TUNNEL || proto_mode == MODE_BEET)
@@ -3691,6 +3697,8 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 							  "kernel_netlink_get_priority_custom"),
 		.policy_update = lib->settings->get_bool(lib->settings,
 					"%s.plugins.kernel-netlink.policy_update", FALSE, lib->ns),
+		.policy_optional = lib->settings->get_bool(lib->settings,
+					"%s.plugins.kernel-netlink.policy_optional", FALSE, lib->ns),
 		.install_routes = lib->settings->get_bool(lib->settings,
 							"%s.install_routes", TRUE, lib->ns),
 		.proto_port_transport = lib->settings->get_bool(lib->settings,

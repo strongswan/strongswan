@@ -48,6 +48,9 @@ charon.plugins.kernel-netlink.parallel_xfrm = no
 charon.plugins.kernel-netlink.policy_update = no
 	Whether to always use XFRM_MSG_UPDPOLICY to install policies.
 
+charon.plugins.kernel-netlink.policy_optional = no
+	Whether the policy level is 'use' instead of 'required'
+
 charon.plugins.kernel-netlink.port_bypass = no
 	Whether to use port or socket based IKE XFRM bypass policies.
 
