@@ -6,7 +6,7 @@ swanctl.conf is the configuration file used by the
 .BR swanctl (8)
 tool to load configurations and credentials into the strongSwan IKE daemon.
 
-For a description of the basic file syntax, including numer/time formats, or how
+For a description of the basic file syntax, including number/time formats, or how
 to reference sections or split the configuration in multiple files by including
 other files, refer to
 .BR strongswan.conf (5).

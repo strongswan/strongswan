@@ -17,4 +17,4 @@ charon.plugins.resolve.resolvconf.path = /sbin/resolvconf
 
 	If not configured, **resolvconf**(8) will be used if found at the default
 	location.  Otherwise, the file in _charon.plugins.resolve.file_ will be
-	modfied directly.
+	modified directly.

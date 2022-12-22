@@ -375,6 +375,9 @@ charon.receive_delay_type = 0
 charon.replay_window = 32
 	Size of the AH/ESP replay window, in packets.
 
+charon.reqid_base = 1
+	Value of the first reqid to be automatically assigned to a CHILD_SA.
+
 charon.retransmit_base = 1.8
 	Base to use for calculating exponential back off, see IKEv2 RETRANSMISSION
 	in **strongswan.conf**(5).
@@ -404,9 +407,6 @@ charon.routing_table
 
 charon.routing_table_prio
 	Priority of the routing table.
-
-charon.reqid_base = 1
-	Value of the first reqid to be automatically assigned to a CHILD_SA.
 
 charon.rsa_pss = no
 	Whether to use RSA with PSS padding instead of PKCS#1 padding by default.

@@ -302,7 +302,7 @@ connections.<conn>.if_id_in = 0
 	config, see there for details.
 
 	The special value _%unique_ allocates a unique interface ID per IKE_SA,
-	which is inherited by all its CHILD_SAs (unless overriden there), beyond
+	which is inherited by all its CHILD_SAs (unless overridden there), beyond
 	that the value _%unique-dir_ assigns a different unique interface ID for
 	each direction (in/out).
 
@@ -313,7 +313,7 @@ connections.<conn>.if_id_out = 0
 	config, see there for details.
 
 	The special value _%unique_ allocates a unique interface ID per IKE_SA,
-	which is inherited by all its CHILD_SAs (unless overriden there), beyond
+	which is inherited by all its CHILD_SAs (unless overridden there), beyond
 	that the value _%unique-dir_ assigns a different unique interface ID for
 	each direction (in/out).
 
