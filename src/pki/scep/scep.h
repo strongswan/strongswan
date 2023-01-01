@@ -31,7 +31,8 @@
 typedef enum {
 	SCEP_PKI_OPERATION,
 	SCEP_GET_CA_CERT,
-	SCEP_GET_CA_CAPS
+	SCEP_GET_CA_CAPS,
+	SCEP_GET_NEXT_CA_CERT
 } scep_op_t;
 
 /* SCEP pkiStatus values */

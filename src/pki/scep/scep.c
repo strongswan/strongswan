@@ -33,7 +33,8 @@
 static const char *operations[] = {
 	"PKIOperation",
 	"GetCACert",
-	"GetCACaps"
+	"GetCACaps",
+	"GetNextCACert"
 };
 
 static const char *pkiStatus_values[] = { "0", "2", "3" };
@@ -373,6 +374,7 @@ bool scep_http_request(const char *url, scep_op_t op, bool http_post,
 			break;
 		case SCEP_GET_CA_CERT:
 		case SCEP_GET_CA_CAPS:
+		case SCEP_GET_NEXT_CA_CERT:
 		{
 			/* form complete url */
 			len = strlen(url) + 11 + strlen(operation)  + 1;
