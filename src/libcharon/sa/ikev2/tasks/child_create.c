@@ -2193,7 +2193,7 @@ static status_t delete_failed_sa(private_child_create_t *this)
 		this->public.task.build = _build_i_delete;
 		/* destroying it here allows the rekey task to differentiate between
 		 * this and the multi-KE case */
-		this->child_sa->destroy(this->child_sa);
+		DESTROY_IF(this->child_sa);
 		this->child_sa = NULL;
 		return NEED_MORE;
 	}
