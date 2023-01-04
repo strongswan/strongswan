@@ -124,6 +124,14 @@ pki --signcrl --cakey strongswanKey.pem --cacert strongswanCert.pem \
     --digest sha3_256 > ${ROOT}/strongswan_sha3_rsa.crl
 
 ##
+# strongSwan TKM-RSA Root CA
+cd /etc/ca/tkm-rsa
+
+# generate CRL for strongSwan TKM-RSA Root CA
+pki --signcrl --cakey strongswanKey.pem --cacert strongswanCert.pem \
+    --rsa-padding pkcs1  > ${ROOT}/strongswan_tkm_rsa.crl
+
+##
 # strongSwan Ed25519 Root CA
 cd /etc/ca/ed25519
 

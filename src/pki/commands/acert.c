@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2015-2017 Andreas Steffen
+ * Copyright (C) 2015-2023 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -45,7 +45,7 @@ static int acert()
 	time_t not_before, not_after, lifetime = 24 * 60 * 60;
 	char *datenb = NULL, *datena = NULL, *dateform = NULL;
 	char *arg;
-	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", TRUE,
 									   lib->ns);
 
 	groups = linked_list_create();
@@ -281,7 +281,7 @@ static void __attribute__ ((constructor))reg()
 		 " --issuercert file [--serial hex] [--lifetime hours]",
 		 " [--not-before datetime] [--not-after datetime] [--dateform form]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
-		 "[--rsa-padding pkcs1|pss]",
+		 "[--rsa-padding pss|pkcs1]",
 		 "[--outform der|pem]"},
 		{
 			{"help",			'h', 0, "show usage information"},
@@ -296,7 +296,7 @@ static void __attribute__ ((constructor))reg()
 			{"not-after",		'T', 1, "date/time the validity of the AC ends"},
 			{"dateform",		'D', 1, "strptime(3) input format, default: %d.%m.%y %T"},
 			{"digest",			'g', 1, "digest for signature creation, default: key-specific"},
-			{"rsa-padding",		'R', 1, "padding for RSA signatures, default: pkcs1"},
+			{"rsa-padding",		'R', 1, "padding for RSA signatures, default: pss"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
 	});

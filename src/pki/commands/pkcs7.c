@@ -298,7 +298,7 @@ static int pkcs7()
 		OP_DECRYPT,
 		OP_SHOW,
 	} op = OP_NONE;
-	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", TRUE,
 									   lib->ns);
 
 	creds = mem_cred_create();
@@ -490,7 +490,7 @@ static void __attribute__ ((constructor))reg()
 		{"--sign|--verify|--encrypt|--decrypt|--show",
 		 "[--in file] [--cert file]+ [--key file]",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
-		 "[--rsa-padding pkcs1|pss]"},
+		 "[--rsa-padding pss|pkcs1]"},
 		{
 			{"help",		'h', 0, "show usage information"},
 			{"sign",		's', 0, "create PKCS#7 signed-data"},
@@ -502,7 +502,7 @@ static void __attribute__ ((constructor))reg()
 			{"key",			'k', 1, "path to private key for sign/decrypt"},
 			{"cert",		'c', 1, "path to certificate for sign/verify/encrypt"},
 			{"digest",		'g', 1, "digest for signature creation, default: key-specific"},
-			{"rsa-padding",	'R', 1, "padding for RSA signatures, default: pkcs1"},
+			{"rsa-padding",	'R', 1, "padding for RSA signatures, default: pss"},
 		}
 	});
 }

@@ -248,7 +248,7 @@ static int ocsp()
 		OP_RESPOND,
 	} op = OP_SHOW;
 
-	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", TRUE,
 									   lib->ns);
 
 	creds = mem_cred_create();
@@ -627,7 +627,7 @@ static void __attribute__ ((constructor))reg()
 		{"[--in file] [--respond] [--cert file|--certid hex]+ [--key file|--keyid hex]+ ",
 		 "[--cacert file [--index file]]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
-		 "[--rsa-padding pkcs1|pss] [--lifetime minutes]"},
+		 "[--rsa-padding pss|pkcs1] [--lifetime minutes]"},
 		{
 			{"help",          'h', 0, "show usage information"},
 			{"respond",       'r', 0, "respond to OCSP request with OCSP response"},
@@ -639,7 +639,7 @@ static void __attribute__ ((constructor))reg()
 			{"cacert",        'C', 1, "CA certificate (can be used multiple times"},
 			{"index",         'x', 1, "OpenSSL-style index.txt to check status of certificates"},
 			{"digest",        'g', 1, "digest for signature creation, default: key-specific"},
-			{"rsa-padding",   'R', 1, "padding for RSA signatures, default: pkcs1"},
+			{"rsa-padding",   'R', 1, "padding for RSA signatures, default: pss"},
 			{"lifetime",      'l', 1, "validity in minutes of the OCSP response (if missing, nextUpdate is omitted)"},
 		}
 	});
