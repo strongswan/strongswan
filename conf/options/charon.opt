@@ -408,8 +408,9 @@ charon.routing_table
 charon.routing_table_prio
 	Priority of the routing table.
 
-charon.rsa_pss = no
-	Whether to use RSA with PSS padding instead of PKCS#1 padding by default.
+charon.rsa_pss = yes
+	Use RSA with PSS padding by default. Revert to legacy PKCS#1 padding by
+	setting the option to no.
 
 charon.rsa_pss_trailerfield = no
 	Whether to encode an explicit trailerField value of 0x01 in the RSA-PSS

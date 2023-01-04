@@ -2,6 +2,7 @@
  * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
+ * Copyright (C) 2023 Andreas Steffen, strongSec GmbH
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -423,7 +424,7 @@ static void initiate(settings_t *settings)
 						settings->get_bool(settings, "global.ocsp", TRUE));
 	lib->settings->set_bool(lib->settings,
 						"charon.rsa_pss",
-						settings->get_bool(settings, "global.rsa_pss", FALSE));
+						settings->get_bool(settings, "global.rsa_pss", TRUE));
 	/* this is actually the size of the complete IKE/IP packet, so if the MTU
 	 * for the TUN devices has to be reduced to pass traffic the IKE packets
 	 * will be a bit smaller than necessary as there is no IPsec overhead like
