@@ -110,7 +110,7 @@ Digest to use for signature creation. One of \fIsha256\fR (the default),
 \fIsha384\fR, \fIsha512\fR, or \fIsha1\fR.
 .TP
 .BI "\-R, \-\-rsa\-padding " padding
-Padding to use for RSA signatures. Either \fIpkcs1\fR (the default) or \fIpss\fR.
+Padding to use for RSA signatures. Either \fIpss\fR (the default) or \fIpkcs1\fR.
 .TP
 .BI "\-t, \-\-interval " time
 Poll interval in seconds, defaults to \fI60s\fR.

@@ -2,6 +2,7 @@
  * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
+ * Copyright (C) 2023 Andreas Steffen, strongSec GmbH
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -227,7 +228,7 @@ static array_t *select_signature_schemes(keymat_v2_t *keymat,
 		while (enumerator->enumerate(enumerator, &config))
 		{
 			if (config->scheme == SIGN_RSA_EMSA_PSS &&
-				!lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+				!lib->settings->get_bool(lib->settings, "%s.rsa_pss", TRUE,
 										 lib->ns))
 			{
 				continue;

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2009-2022 Andreas Steffen
+ * Copyright (C) 2009-2023 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -44,7 +44,7 @@ static int req()
 	chunk_t challenge_password = chunk_empty;
 	chunk_t cert_type_ext = chunk_empty;
 	char *arg;
-	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", TRUE,
 									   lib->ns);
 
 	san = linked_list_create();
@@ -86,7 +86,11 @@ static int req()
 				{
 					pss = TRUE;
 				}
-				else if (!streq(arg, "pkcs1"))
+				else if (streq(arg, "pkcs1"))
+				{
+					pss = FALSE;
+				}
+				else
 				{
 					error = "invalid RSA padding";
 					goto usage;
@@ -261,7 +265,7 @@ static void __attribute__ ((constructor))reg()
 		 " --oldreq file|--dn distinguished-name [--san subjectAltName]+",
 		 "[--profile server|client|dual|ocsp] [--password challengePassword]",
 		 "[--digest sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
-		 "[--rsa-padding pkcs1|pss] [--outform der|pem]"},
+		 "[--rsa-padding pss|pkcs1] [--outform der|pem]"},
 		{
 			{"help",        'h', 0, "show usage information"},
 			{"in",          'i', 1, "private key input file, default: stdin"},
@@ -273,7 +277,7 @@ static void __attribute__ ((constructor))reg()
 			{"profile",     'P', 1, "certificate profile name to include in cert request"},
 			{"password",    'p', 1, "challengePassword to include in cert request"},
 			{"digest",      'g', 1, "digest for signature creation, default: key-specific"},
-			{"rsa-padding", 'R', 1, "padding for RSA signatures, default: pkcs1"},
+			{"rsa-padding", 'R', 1, "padding for RSA signatures, default: pss"},
 			{"outform",     'f', 1, "encoding of generated request, default: der"},
 		}
 	});
