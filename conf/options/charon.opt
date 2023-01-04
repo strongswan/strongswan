@@ -283,7 +283,7 @@ charon.max_ikev1_exchanges = 3
 charon.max_packet = 10000
 	Maximum packet size accepted by charon.
 
-charon.make_before_break = no
+charon.make_before_break = yes
 	Initiate IKEv2 reauthentication with a make-before-break scheme.
 
 	Initiate IKEv2 reauthentication with a make-before-break instead of a
