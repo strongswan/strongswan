@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Andreas Steffen
+ * Copyright (C) 2017-2023 Andreas Steffen
  * Copyright (C) 2010 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -126,7 +126,7 @@ static int sign_crl()
 	chunk_t crl_serial = chunk_empty, baseCrlNumber = chunk_empty;
 	chunk_t critical_extension_oid = chunk_empty;
 	chunk_t encoding = chunk_empty;
-	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", TRUE,
 									   lib->ns);
 
 	list = linked_list_create();
@@ -465,7 +465,7 @@ static void __attribute__ ((constructor))reg()
 		 "           superseded|cessation-of-operation|certificate-hold]",
 		 " [--date timestamp] --cert file|--serial hex]*",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
-		 "[--rsa-padding pkcs1|pss] [--critical oid]",
+		 "[--rsa-padding pss|pkcs1] [--critical oid]",
 		 "[--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},
@@ -484,7 +484,7 @@ static void __attribute__ ((constructor))reg()
 			{"reason",		'r', 1, "reason for certificate revocation"},
 			{"date",		'd', 1, "revocation date as unix timestamp, default: now"},
 			{"digest",		'g', 1, "digest for signature creation, default: key-specific"},
-			{"rsa-padding",	'R', 1, "padding for RSA signatures, default: pkcs1"},
+			{"rsa-padding",	'R', 1, "padding for RSA signatures, default: pss"},
 			{"critical",	'X', 1, "critical extension OID to include for test purposes"},
 			{"outform",		'f', 1, "encoding of generated crl, default: der"},
 		}

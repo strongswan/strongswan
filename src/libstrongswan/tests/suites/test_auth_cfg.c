@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2023 Andreas Steffen, strongSec GmbH
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -68,6 +69,8 @@ START_TEST(test_sig_constraints)
 	auth_cfg_t *cfg;
 	signature_scheme_t none[] = {0};
 
+	lib->settings->set_bool(lib->settings, "%s.rsa_pss", FALSE, lib->ns);
+
 	cfg = auth_cfg_create();
 	cfg->add_pubkey_constraints(cfg, sig_constraints_tests[_i].constraints, FALSE);
 	check_sig_constraints(cfg, AUTH_RULE_SIGNATURE_SCHEME, sig_constraints_tests[_i].sig);
@@ -89,6 +92,7 @@ START_TEST(test_ike_constraints_fallback)
 {
 	auth_cfg_t *cfg;
 
+	lib->settings->set_bool(lib->settings, "%s.rsa_pss", FALSE, lib->ns);
 	lib->settings->set_bool(lib->settings, "%s.signature_authentication_constraints",
 							TRUE, lib->ns);
 
@@ -167,6 +171,8 @@ static void check_sig_constraints_params(auth_cfg_t *cfg, auth_rule_t type,
 START_TEST(test_sig_constraints_params)
 {
 	auth_cfg_t *cfg;
+
+	lib->settings->set_bool(lib->settings, "%s.rsa_pss", FALSE, lib->ns);
 
 	cfg = auth_cfg_create();
 	cfg->add_pubkey_constraints(cfg, sig_constraints_params_tests[_i].constraints, TRUE);

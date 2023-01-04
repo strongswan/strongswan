@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2005 Jan Hutter, Martin Willi
  * Copyright (C) 2012 Tobias Brunner
- * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ * Copyright (C) 2022-2023 Andreas Steffen, strongSec GmbH
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -74,7 +74,7 @@ static int scep()
 	bool ok, http_post = FALSE;
 
 	bool pss = lib->settings->get_bool(lib->settings,
-								"%s.rsa_pss", FALSE, lib->ns);
+								"%s.rsa_pss", TRUE, lib->ns);
 
 	bool renewal_via_pkcs_req = lib->settings->get_bool(lib->settings,
 								"%s.scep.renewal_via_pkcs_req", FALSE, lib->ns);
@@ -634,13 +634,13 @@ static void __attribute__ ((constructor))reg()
 		 "[--profile profile] [--password password]",
 		 " --cacert-enc file --cacert-sig file [--cacert file]+",
 		 " --cert file --key file] [--cipher aes|des3]",
-		 "[--digest sha256|sha384|sha512|sha224|sha1] [--rsa-padding pkcs1|pss]",
+		 "[--digest sha256|sha384|sha512|sha224|sha1] [--rsa-padding pss|pkcs1]",
 		 "[--interval time] [--maxpolltime time] [--outform der|pem]"},
 		{
 			{"help",        'h', 0, "show usage information"},
 			{"url",         'u', 1, "URL of the SCEP server"},
 			{"in",          'i', 1, "RSA private key input file, default: stdin"},
-			{"dn",          'd', 1, "subject distinguished name (optional if --cert is given)"},
+			{"dn",          'd', 1, "subject distinguished name"},
 			{"san",         'a', 1, "subjectAltName to include in cert request"},
 			{"profile",     'P', 1, "certificate profile name to include in cert request"},
 			{"password",    'p', 1, "challengePassword to include in cert request"},
@@ -651,7 +651,7 @@ static void __attribute__ ((constructor))reg()
 			{"key",         'k', 1, "Old RSA private key about to be replaced"},
 			{"cipher",      'E', 1, "encryption cipher, default: aes"},
 			{"digest",      'g', 1, "digest for signature creation, default: sha256"},
-			{"rsa-padding", 'R', 1, "padding for RSA signatures, default: pkcs1"},
+			{"rsa-padding", 'R', 1, "padding for RSA signatures, default: pss"},
 			{"interval",    't', 1, "poll interval, default: 60s"},
 			{"maxpolltime", 'm', 1, "maximum poll time, default: 0 (no limit)"},
 			{"outform",     'f', 1, "encoding of stored certificates, default: der"},

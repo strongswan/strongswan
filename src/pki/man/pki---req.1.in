@@ -116,8 +116,7 @@ Digest to use for signature creation. One of \fIsha1\fR, \fIsha224\fR,
 the type and size of the signature key.
 .TP
 .BI "\-R, \-\-rsa\-padding " padding
-Padding to use for RSA signatures. Either \fIpkcs1\fR or \fIpss\fR, defaults
-to \fIpkcs1\fR.
+Padding to use for RSA signatures. Either \fIpss\fR (the default) or \fIpkcs1\fR.
 .TP
 .BI "\-f, \-\-outform " encoding
 Encoding of the created certificate file. Either \fIder\fR (ASN.1 DER) or

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
- * Copyright (C) 2016 Andreas Steffen
+ * Copyright (C) 2016-2023 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -571,7 +571,7 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 	auth_rule_t type;
 	void *value;
 
-	rsa_pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+	rsa_pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", TRUE,
 									  lib->ns);
 
 	enumerator = enumerator_create_token(constraints, "-", "");

@@ -80,6 +80,12 @@ SHA3_RSA_KEY="${SHA3_RSA_DIR}/strongswanKey.pem"
 SHA3_RSA_CERT="${SHA3_RSA_DIR}/strongswanCert.pem"
 SHA3_RSA_CDP="http://crl.strongswan.org/strongswan_sha3_rsa.crl"
 #
+TKM_RSA_DIR="${CA_DIR}/tkm-rsa"
+TKM_RSA_KEY="${TKM_RSA_DIR}/strongswanKey.pem"
+TKM_RSA_CERT="${TKM_RSA_DIR}/strongswanCert.pem"
+TKM_RSA_CERT_DER="${TKM_RSA_DIR}/strongswanCert.der"
+TKM_RSA_CDP="http://crl.strongswan.org/strongswan_tkm_rsa.crl"
+#
 ED25519_DIR="${CA_DIR}/ed25519"
 ED25519_KEY="${ED25519_DIR}/strongswanKey.pem"
 ED25519_CERT="${ED25519_DIR}/strongswanCert.pem"
@@ -111,6 +117,7 @@ mkdir -p ${DUCK_DIR}/certs
 mkdir -p ${ECDSA_DIR}/certs
 mkdir -p ${RFC3779_DIR}/certs
 mkdir -p ${SHA3_RSA_DIR}/certs
+mkdir -p ${TKM_RSA_DIR}/certs
 mkdir -p ${ED25519_DIR}/certs
 mkdir -p ${MONSTER_DIR}/certs
 
@@ -168,21 +175,6 @@ do
   openssl rsa -in ${HOST_KEY} -outform der -out ${CA_DIR}/keys/${h}Key.der \
           ${TRAD} 2> /dev/null
 done
-
-# Put DER-encoded moon private key and Root CA certificate into tkm scenarios
-for t in host2host-initiator host2host-responder host2host-xfrmproxy \
-         multi-level-ca net2net-initiator net2net-xfrmproxy xfrmproxy-expire \
-         xfrmproxy-rekey
-do
-  TEST="${TEST_DIR}/tkm/${t}"
-  mkdir -p ${TEST}/hosts/moon/${TKM_DIR}
-  cp ${CA_DIR}/keys/moonKey.der ${CA_CERT_DER} ${TEST}/hosts/moon/${TKM_DIR}
-done
-
-# Put DER_encoded sun private key and Root CA certificate into tkm scenarios
-TEST="${TEST_DIR}/tkm/multiple-clients"
-mkdir -p ${TEST}/hosts/sun/${TKM_DIR}
-cp ${CA_DIR}/keys/sunKey.der ${CA_CERT_DER} ${TEST}/hosts/sun/${TKM_DIR}
 
 # Convert moon private key into unencrypted PKCS#8 format
 TEST="${TEST_DIR}/ikev2/rw-pkcs8"
@@ -555,14 +547,14 @@ done
 openssl x509 -in ${SALES_CERT} -outform der -out ${SALES_CERT_DER}
 
 ################################################################################
-# Multi-level CA Certificate Generation                                        #
+# Multi-level CA Certificate Generation with legacy RSA PKCS#1.5 padding       #
 ################################################################################
 
 # Generate Levels Root CA (pathlen is higher than the regular root)
 pki --gen  --type rsa --size ${RSA_SIZE} --outform pem > ${LEVELS_KEY}
 pki --self --type rsa --in ${LEVELS_KEY} --not-before "${START}" --not-after "${CA_END}" \
     --ca --pathlen 2 --dn "C=CH, O=${PROJECT}, CN=strongSwan Levels Root CA" \
-    --outform pem > ${LEVELS_CERT}
+    --rsa-padding pkcs1 --outform pem > ${LEVELS_CERT}
 
 # For TKM's CA ID mapping
 LEVELS_SPK_HEX=`pki --keyid --type rsa --format hex --id spk --in ${LEVELS_KEY}`
@@ -572,14 +564,14 @@ pki --gen  --type rsa --size ${RSA_SIZE} --outform pem > ${LEVELS_L2_KEY}
 pki --issue --cakey ${LEVELS_KEY} --cacert ${LEVELS_CERT} --crl ${LEVELS_CDP} \
     --type rsa --in ${LEVELS_L2_KEY} --not-before "${START}" --not-after "${IM_END}" \
     --ca --dn "C=CH, O=${PROJECT}, OU=L2, CN=Levels L2 CA" \
-    --outform pem > ${LEVELS_L2_CERT}
+    --rsa-padding pkcs1 --outform pem > ${LEVELS_L2_CERT}
 
 # Generate Levels L3 CA signed by Levels L2 CA
 pki --gen  --type rsa --size ${RSA_SIZE} --outform pem > ${LEVELS_L3_KEY}
 pki --issue --cakey ${LEVELS_L2_KEY} --cacert ${LEVELS_L2_CERT} --crl ${LEVELS_L2_CDP} \
     --type rsa --in ${LEVELS_L3_KEY} --not-before "${START}" --not-after "${IM_END}" \
     --ca --dn "C=CH, O=${PROJECT}, OU=L3, CN=Levels L3 CA" \
-    --outform pem > ${LEVELS_L3_CERT}
+    --rsa-padding pkcs1 --outform pem > ${LEVELS_L3_CERT}
 
 for t in ikev2-multi-ca/crls-l3 tkm/multi-level-ca
 do
@@ -1113,7 +1105,7 @@ pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
 pki --issue --cakey ${LEVELS_L3_KEY} --cacert ${LEVELS_L3_CERT} --type rsa \
     --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
     --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=L3, CN=${CN}" \
-    --crl ${LEVELS_L3_CDP} --outform pem > ${TEST_CERT}
+    --rsa-padding pkcs1 --crl ${LEVELS_L3_CDP} --outform pem > ${TEST_CERT}
 cp ${TEST_CERT} ${LEVELS_DIR}/certs/${SERIAL}.pem
 
 for t in tkm/multi-level-ca
@@ -1355,7 +1347,7 @@ cp ${TEST_CERT} ${RFC3779_DIR}/certs/${SERIAL}.pem
 # Use specific plugin configuration to issue certificates with SHA-3 signatures
 # as not all crypto plugins support them.  To avoid entropy issues use the
 # default plugins to generate the keys.
-SHA3_PKI_PLUGINS="gmp pem pkcs1 random sha1 sha3 x509"
+SHA3_PKI_PLUGINS="gmp pem pkcs1 random mgf1 sha1 sha3 x509"
 
 # Generate strongSwan SHA3-RSA Root CA
 pki --gen  --type rsa --size ${RSA_SIZE} --outform pem > ${SHA3_RSA_KEY}
@@ -1460,6 +1452,143 @@ do
   mkdir -p ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
   cp ${SHA3_RSA_CERT} ${TEST}/hosts/${h}/${SWANCTL_DIR}/x509ca
 done
+
+################################################################################
+# strongSwan TKM Root CA using legacy RSA PKCS#1.5 padding                     #
+################################################################################
+
+# Generate strongSwan TKM-RSA Root CA
+pki --gen  --type rsa --size ${RSA_SIZE} --outform pem > ${TKM_RSA_KEY}
+pki --self --type rsa --in ${TKM_RSA_KEY} --rsa-padding pkcs1 \
+    --not-before "${START}" --not-after "${CA_END}" --ca \
+    --dn "C=CH, O=${PROJECT}, OU=TKM, CN=strongSwan Root CA" \
+    --outform pem > ${TKM_RSA_CERT}
+
+# Put a copy in the following tkm scenarios
+for t in multi-level-ca multiple-clients
+do
+  TEST="${TEST_DIR}/tkm/${t}"
+  mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
+  mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509ca
+  cp ${TKM_RSA_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
+  cp ${TKM_RSA_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509ca
+done
+
+# Convert strongSwan Root CA certificate into DER format
+openssl x509 -in ${TKM_RSA_CERT} -outform der -out ${TKM_RSA_CERT_DER}
+
+TKM_RSA_SPK_HEX=`pki --keyid --type rsa --format hex --id spk --in ${TKM_RSA_KEY}`
+TKM_RSA_SPKI_HEX=`pki --keyid --type rsa --format hex --id spki --in ${TKM_RSA_KEY}`
+
+# Generate a moon TKM-RSA certificate
+TEST="${TEST_DIR}/tkm/host2host-initiator"
+MOON_KEY="${TEST}/hosts/moon/${TKM_DIR}/moonKey.der"
+MOON_CERT="${TEST}/hosts/moon/${SWANCTL_DIR}/x509/moonCert.pem"
+CN="moon.strongswan.org"
+SERIAL="01"
+mkdir -p ${TEST}/hosts/moon/${TKM_DIR}
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+pki --gen --type rsa --size ${RSA_SIZE} > ${MOON_KEY}
+pki --issue --cakey ${TKM_RSA_KEY} --cacert ${TKM_RSA_CERT} --type rsa \
+    --in ${MOON_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
+    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU= TKM, CN=${CN}" \
+    --rsa-padding pkcs1 --crl ${TKM_RSA_CDP} --outform pem > ${MOON_CERT}
+cp ${TKM_RSA_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+cp ${TKM_RSA_CERT_DER} ${TEST}/hosts/moon/${TKM_DIR}
+cp ${MOON_CERT} ${TKM_RSA_DIR}/certs/${SERIAL}.pem
+
+# Generate a sun TKM-RSA certificate
+SUN_KEY="${TEST}/hosts/sun/${SWANCTL_DIR}/rsa/sunKey.pem"
+SUN_CERT="${TEST}/hosts/sun/${SWANCTL_DIR}/x509/sunCert.pem"
+CN="sun.strongswan.org"
+SERIAL="02"
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509ca
+pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${SUN_KEY}
+pki --issue --cakey ${TKM_RSA_KEY} --cacert ${TKM_RSA_CERT} --type rsa \
+    --in ${SUN_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
+    --serial ${SERIAL} --dn "C=CH, O=TKM, CN=${CN}" \
+    --rsa-padding pkcs1 --crl ${TKM_RSA_CDP} --outform pem > ${SUN_CERT}
+cp ${SUN_CERT} ${TKM_RSA_DIR}/certs/${SERIAL}.pem
+cp ${TKM_RSA_CERT} ${TEST}/hosts/sun/${SWANCTL_DIR}/x509ca
+
+
+# Put DER-encoded moon private key and Root CA certificate as well as PEM-encoded
+#  moon cert into the tkm/multi-level-ca
+TEST="${TEST_DIR}/tkm/multi-level-ca"
+mkdir -p ${TEST}/hosts/moon/${TKM_DIR}
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+cp ${MOON_KEY} ${TKM_RSA_CERT_DER} ${TEST}/hosts/moon/${TKM_DIR}
+cp ${MOON_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+cp ${TKM_RSA_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+
+# Put key and certificate copies into the following tkm scenarios:
+for t in host2host-responder host2host-xfrmproxy net2net-initiator \
+         net2net-xfrmproxy xfrmproxy-expire xfrmproxy-rekey
+do
+  TEST="${TEST_DIR}/tkm/${t}"
+  mkdir -p ${TEST}/hosts/moon/${TKM_DIR}
+  mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+  mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+  mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509ca
+  mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/rsa
+  mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509
+  cp ${MOON_KEY} ${TKM_RSA_CERT_DER} ${TEST}/hosts/moon/${TKM_DIR}
+  cp ${MOON_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+  cp ${TKM_RSA_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+  cp ${TKM_RSA_CERT} ${TEST}/hosts/sun/${SWANCTL_DIR}/x509ca
+  cp ${SUN_KEY} ${TEST}/hosts/sun/${SWANCTL_DIR}/rsa
+  cp ${SUN_CERT} ${TEST}/hosts/sun/${SWANCTL_DIR}/x509
+done
+
+# Generate a carol TKM-RSA certificate
+TEST="${TEST_DIR}/tkm/multiple-clients"
+TEST_KEY="${TEST}/hosts/carol/${SWANCTL_DIR}/rsa/carolKey.pem"
+TEST_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carolCert.pem"
+CN="carol@strongswan.org"
+SERIAL="03"
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
+pki --issue --cakey ${TKM_RSA_KEY} --cacert ${TKM_RSA_CERT} --type rsa \
+    --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
+    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=TKM, CN=${CN}" \
+    --rsa-padding pkcs1 --crl ${TKM_RSA_CDP} --outform pem > ${TEST_CERT}
+cp ${TEST_CERT} ${TKM_RSA_DIR}/certs/${SERIAL}.pem
+
+# Generate a dave TKM-RSA certificate
+TEST_KEY="${TEST}/hosts/dave/${SWANCTL_DIR}/rsa/daveKey.pem"
+TEST_CERT="${TEST}/hosts/dave/${SWANCTL_DIR}/x509/daveCert.pem"
+CN="dave@strongswan.org"
+SERIAL="04"
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
+pki --gen --type rsa --size ${RSA_SIZE} --outform pem > ${TEST_KEY}
+pki --issue --cakey ${TKM_RSA_KEY} --cacert ${TKM_RSA_CERT} --type rsa \
+    --in ${TEST_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
+    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=TKM, CN=${CN}" \
+    --rsa-padding pkcs1 --crl ${TKM_RSA_CDP} --outform pem > ${TEST_CERT}
+cp ${TEST_CERT} ${TKM_RSA_DIR}/certs/${SERIAL}.pem
+
+# Put DER-encoded sun private key in tkm/multiple-client scenario
+mkdir -p ${TEST}/hosts/sun/${TKM_DIR}
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509
+mkdir -p ${TEST}/hosts/sun/${SWANCTL_DIR}/x509ca
+openssl rsa -in ${SUN_KEY} -outform der -out ${TEST}/hosts/sun/${TKM_DIR}/sunKey.der \
+        ${TRAD} 2> /dev/null
+cp ${TKM_RSA_CERT_DER} ${TEST}/hosts/sun/${TKM_DIR}
+cp ${SUN_CERT} ${TEST}/hosts/sun/${SWANCTL_DIR}/x509
+cp ${TKM_RSA_CERT} ${TEST}/hosts/sun/${SWANCTL_DIR}/x509ca
+
+# Put dave private key and certificate in tkm/multi-level-ca scenario:
+TEST="${TEST_DIR}/tkm/multi-level-ca"
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/rsa
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
+cp ${TEST_KEY} ${TEST}/hosts/dave/${SWANCTL_DIR}/rsa
+cp ${TEST_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
 
 ################################################################################
 # strongSwan Ed25519 Root CA                                                   #
@@ -1816,8 +1945,8 @@ do
   for h in moon
   do
     TEST_DATA="${TEST_DIR}/tkm/${t}/hosts/moon/etc/strongswan.conf"
-    sed -e "s/CA_SPK_HEX/${CA_SPK_HEX}/g" \
-        -e "s/CA_SPKI_HEX/${CA_SPKI_HEX}/g" \
+    sed -e "s/CA_SPK_HEX/${TKM_RSA_SPK_HEX}/g" \
+        -e "s/CA_SPKI_HEX/${TKM_RSA_SPKI_HEX}/g" \
         -e "s/LEVELS_SPK_HEX/${LEVELS_SPK_HEX}/g" \
         ${TEST_DATA}.in > ${TEST_DATA}
   done
@@ -1828,8 +1957,8 @@ do
   for h in sun
   do
     TEST_DATA="${TEST_DIR}/tkm/${t}/hosts/${h}/etc/strongswan.conf"
-    sed -e "s/CA_SPK_HEX/${CA_SPK_HEX}/g" \
-        -e "s/CA_SPKI_HEX/${CA_SPKI_HEX}/g" \
+    sed -e "s/CA_SPK_HEX/${TKM_RSA_SPK_HEX}/g" \
+        -e "s/CA_SPKI_HEX/${TKM_RSA_SPKI_HEX}/g" \
         ${TEST_DATA}.in > ${TEST_DATA}
   done
 done
