@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2007-2019 Tobias Brunner
  * Copyright (C) 2007-2010 Martin Willi
- *
+ * Copyright (C) 2023 Andreas Steffen, strongSec GmbH
+
  * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -2662,7 +2663,7 @@ task_manager_v2_t *task_manager_v2_create(ike_sa_t *ike_sa)
 		.retransmit_limit = lib->settings->get_int(lib->settings,
 					"%s.retransmit_limit", 0, lib->ns) * 1000,
 		.make_before_break = lib->settings->get_bool(lib->settings,
-					"%s.make_before_break", FALSE, lib->ns),
+					"%s.make_before_break", TRUE, lib->ns),
 	);
 
 	if (this->retransmit_base > 1)
