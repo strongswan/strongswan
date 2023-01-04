@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2015-2019 Andreas Steffen
+ * Copyright (C) 2015-2023 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -73,7 +73,7 @@ static int self()
 	x509_cert_policy_t *policy = NULL;
 	traffic_selector_t *ts;
 	char *arg;
-	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", FALSE,
+	bool pss = lib->settings->get_bool(lib->settings, "%s.rsa_pss", TRUE,
 									   lib->ns);
 
 	san = linked_list_create();
@@ -460,7 +460,7 @@ static void __attribute__ ((constructor))reg()
 		 "[--policy-explicit len] [--policy-inhibit len] [--policy-any len]",
 		 "[--cert-policy oid [--cps-uri uri] [--user-notice text]]+",
 		 "[--digest md5|sha1|sha224|sha256|sha384|sha512|sha3_224|sha3_256|sha3_384|sha3_512]",
-		 "[--rsa-padding pkcs1|pss] [--critical oid]",
+		 "[--rsa-padding pss|pkcs1] [--critical oid]",
 		 "[--outform der|pem]"},
 		{
 			{"help",			'h', 0, "show usage information"},
@@ -489,7 +489,7 @@ static void __attribute__ ((constructor))reg()
 			{"flag",			'e', 1, "include extendedKeyUsage flag"},
 			{"ocsp",			'o', 1, "OCSP AuthorityInfoAccess URI to include"},
 			{"digest",			'g', 1, "digest for signature creation, default: key-specific"},
-			{"rsa-padding",		'R', 1, "padding for RSA signatures, default: pkcs1"},
+			{"rsa-padding",		'R', 1, "padding for RSA signatures, default: pss"},
 			{"critical",		'X', 1, "critical extension OID to include for test purposes"},
 			{"outform",			'f', 1, "encoding of generated cert, default: der"},
 		}
