@@ -383,8 +383,12 @@ fuzzing)
 			symbolize=1:handle_segv=1:fast_unwind_on_fatal=0:external_symbolizer_path=/usr/bin/llvm-symbolizer-3.5
 	fi
 	;;
-nm)
+nm|nm-*)
 	DEPS="gnome-common libsecret-1-dev libgtk-3-dev libnm-dev libnma-dev"
+	if test "$TEST" = "nm-gtk4"; then
+		DEPS="$DEPS libgtk-4-dev libnma-gtk4-dev"
+		CONFIG="--with-gtk4"
+	fi
 	cd src/frontends/gnome
 	# don't run ./configure with ./autogen.sh
 	export NOCONFIGURE=1
