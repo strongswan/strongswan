@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008-2009 Martin Willi
+ * Copyright (C) 2023 Andreas Steffen, strongSec GmbH
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -115,6 +116,8 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_SDEPEND(XOF, XOF_MGF1_SHA1),
 			PLUGIN_SDEPEND(XOF, XOF_MGF1_SHA256),
 			PLUGIN_SDEPEND(XOF, XOF_MGF1_SHA512),
+			PLUGIN_SDEPEND(XOF, XOF_MGF1_SHA3_256),
+			PLUGIN_SDEPEND(XOF, XOF_MGF1_SHA3_512),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_NULL),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_RSA_EMSA_PKCS1_SHA2_224),
 			PLUGIN_DEPENDS(HASHER, HASH_SHA224),
