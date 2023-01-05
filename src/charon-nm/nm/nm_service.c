@@ -137,10 +137,17 @@ static void signal_ip_config(NMVpnServicePlugin *plugin,
 	 * as NM fiddles around with it and systemd-resolved likes a separate
 	 * device. So we pass a dummy TUN device along for NM etc. to play with...
 	 */
+	DESTROY_IF(priv->tun);
+	priv->tun = tun_device_create(NULL);
 	if (priv->tun)
 	{
 		g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_CONFIG_TUNDEV,
 							   g_variant_new_string (priv->tun->get_name(priv->tun)));
+	}
+	else
+	{
+		DBG1(DBG_CFG, "failed to create dummy TUN device, might affect DNS "
+			 "server installation negatively");
 	}
 
 	/* pass the first virtual IPs we got or use the physical IP */
@@ -655,11 +662,6 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 		 priv->name);
 	DBG4(DBG_CFG, "%s",
 		 nm_setting_to_string(NM_SETTING(vpn)));
-	if (!priv->tun)
-	{
-		DBG1(DBG_CFG, "failed to create dummy TUN device, might affect DNS "
-			 "server installation negatively");
-	}
 	ike.remote = (char*)nm_setting_vpn_get_data_item(vpn, "address");
 	if (!ike.remote || !*ike.remote)
 	{
@@ -989,7 +991,7 @@ static gboolean do_disconnect(gpointer plugin)
 	NMStrongswanPluginPrivate *priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
 	enumerator_t *enumerator;
 	ike_sa_t *ike_sa;
-	u_int id;
+	u_int id = 0;
 
 	/* our ike_sa pointer might be invalid, lookup sa */
 	enumerator = charon->controller->create_ike_sa_enumerator(
@@ -999,20 +1001,31 @@ static gboolean do_disconnect(gpointer plugin)
 		if (priv->ike_sa == ike_sa)
 		{
 			id = ike_sa->get_unique_id(ike_sa);
-			enumerator->destroy(enumerator);
-			charon->controller->terminate_ike(charon->controller, id, FALSE,
-											  controller_cb_empty, NULL, 0);
-
-			/* clear secrets as we are asked for new secrets (where we'd find
-			 * the cached secrets from earlier connections) before we clear
-			 * them in connect() */
-			priv->creds->clear(priv->creds);
-			return FALSE;
+			break;
 		}
 	}
 	enumerator->destroy(enumerator);
 
-	g_debug("Connection not found.");
+	if (id)
+	{
+		charon->controller->terminate_ike(charon->controller, id, FALSE,
+										  controller_cb_empty, NULL, 0);
+	}
+	else
+	{
+		g_debug("Connection not found.");
+	}
+
+	/* clear secrets as we are asked for new secrets (where we'd find the cached
+	 * secrets from earlier connections) before we clear them in connect() */
+	priv->creds->clear(priv->creds);
+
+	/* delete the dummy TUN device */
+	if (priv->tun)
+	{
+		priv->tun->destroy(priv->tun);
+		priv->tun = NULL;
+	}
 	return FALSE;
 }
 
@@ -1044,7 +1057,7 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 	priv->listener.ike_reestablish_pre = _ike_reestablish_pre;
 	priv->listener.ike_reestablish_post = _ike_reestablish_post;
 	charon->bus->add_listener(charon->bus, &priv->listener);
-	priv->tun = tun_device_create(NULL);
+	priv->tun = NULL;
 	priv->name = NULL;
 }
 
