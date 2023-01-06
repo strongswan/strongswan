@@ -24,8 +24,17 @@ modptest "gcrypt"
 echo "testing openssl"
 modptest "openssl"
 $DIR/dh_speed "openssl" 300 ecp192 ecp192 ecp224 ecp256 ecp384 ecp521 | tail -n 5
+$DIR/dh_speed "openssl" 300 ecp224bp ecp224bp ecp256bp ecp384bp ecp512bp | tail -n 4
+$DIR/dh_speed "openssl" 300 curve25519 curve25519 curve448 | tail -n 2
+
+echo "testing wolfssl"
+modptest "wolfssl"
+$DIR/dh_speed "wolfssl" 300 ecp224 ecp224 ecp256 ecp384 ecp521 | tail -n 4
+$DIR/dh_speed "wolfssl" 300 ecp224bp ecp224bp ecp256bp ecp384bp ecp512bp | tail -n 4
+$DIR/dh_speed "wolfssl" 300 curve25519 curve25519 curve448 | tail -n 2
 
 echo "testing botan"
 modptest "botan"
 $DIR/dh_speed "botan" 300 ecp256 ecp256 ecp384 ecp521 | tail -n 3
+$DIR/dh_speed "botan" 300 ecp256bp ecp256bp ecp384bp ecp512bp | tail -n 3
 $DIR/dh_speed "botan" 300 curve25519 curve25519 | tail -n 1
