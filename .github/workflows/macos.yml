@@ -35,6 +35,8 @@ jobs:
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             ccache-${{ runner.os }}-
+      # workaround for conflict between Python installed in the image and via brew
+      - run: find /usr/local/bin -lname '*/Library/Frameworks/Python.framework/*' -delete -print
       - run: |
           brew install ccache
           echo "PATH=$(brew --prefix)/opt/ccache/libexec:$PATH" >> $GITHUB_ENV
