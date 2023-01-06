@@ -67,17 +67,23 @@ static double end_timing(struct timespec *start)
 
 static void run_test(key_exchange_method_t group, int rounds)
 {
-	key_exchange_t *l[rounds], *r;
-	chunk_t chunk, chunks[rounds], lsecrets[rounds], rsecrets[rounds];
+	key_exchange_t *l[rounds], *r[rounds];
+	chunk_t lpublic[rounds], rpublic[rounds], lsecret[rounds], rsecret[rounds];
 	struct timespec timing;
 	int round;
 
-	r = lib->crypto->create_ke(lib->crypto, group);
-	if (!r)
+	r[0] = lib->crypto->create_ke(lib->crypto, group);
+	if (!r[0])
 	{
 		printf("skipping %N, not supported\n", key_exchange_method_names,
 			   group);
 		return;
+	}
+	assert(r[0]->get_public_key(r[0], &rpublic[0]));
+	for (round = 1; round < rounds; round++)
+	{
+		r[round] = lib->crypto->create_ke(lib->crypto, group);
+		assert(r[round]->get_public_key(r[round], &rpublic[round]));
 	}
 
 	printf("%N:\t", key_exchange_method_names, group);
@@ -86,35 +92,34 @@ static void run_test(key_exchange_method_t group, int rounds)
 	for (round = 0; round < rounds; round++)
 	{
 		l[round] = lib->crypto->create_ke(lib->crypto, group);
-		assert(l[round]->get_public_key(l[round], &chunks[round]));
+		assert(l[round]->get_public_key(l[round], &lpublic[round]));
 	}
 	printf("A = g^a/s: %8.1f", rounds / end_timing(&timing));
 
 	for (round = 0; round < rounds; round++)
 	{
-		assert(r->set_public_key(r, chunks[round]));
-		assert(r->get_shared_secret(r, &rsecrets[round]));
-		chunk_free(&chunks[round]);
+		assert(r[round]->set_public_key(r[round], lpublic[round]));
+		assert(r[round]->get_shared_secret(r[round], &rsecret[round]));
+		chunk_free(&lpublic[round]);
 	}
 
-	assert(r->get_public_key(r, &chunk));
 	start_timing(&timing);
 	for (round = 0; round < rounds; round++)
 	{
-		assert(l[round]->set_public_key(l[round], chunk));
-		assert(l[round]->get_shared_secret(l[round], &lsecrets[round]));
+		assert(l[round]->set_public_key(l[round], rpublic[round]));
+		assert(l[round]->get_shared_secret(l[round], &lsecret[round]));
 	}
 	printf(" | S = B^a/s: %8.1f\n", rounds / end_timing(&timing));
-	chunk_free(&chunk);
 
 	for (round = 0; round < rounds; round++)
 	{
-		assert(chunk_equals(rsecrets[round], lsecrets[round]));
-		free(lsecrets[round].ptr);
-		free(rsecrets[round].ptr);
+		assert(chunk_equals(rsecret[round], lsecret[round]));
+		chunk_free(&lsecret[round]);
+		chunk_free(&rsecret[round]);
+		chunk_free(&rpublic[round]);
 		l[round]->destroy(l[round]);
+		r[round]->destroy(r[round]);
 	}
-	r->destroy(r);
 }
 
 int main(int argc, char *argv[])
