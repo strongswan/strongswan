@@ -178,6 +178,9 @@ case "$TEST" in
 default)
 	# should be the default, but lets make sure
 	CONFIG="--with-printf-hooks=glibc"
+	if system_uses_openssl3; then
+		prepare_system_openssl $1
+	fi
 	;;
 openssl*)
 	CONFIG="--disable-defaults --enable-pki --enable-openssl --enable-pem"
