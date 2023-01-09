@@ -47,6 +47,38 @@ struct private_kernel_netlink_xfrmi_t {
 	netlink_socket_t *socket;
 };
 
+/**
+ * "up" the interface with the given name
+ */
+static bool interface_up(private_kernel_netlink_xfrmi_t *this, char *name)
+{
+	netlink_buf_t request;
+	struct nlmsghdr *hdr;
+	struct ifinfomsg *msg;
+
+	memset(&request, 0, sizeof(request));
+
+	hdr = &request.hdr;
+	hdr->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
+	hdr->nlmsg_type = RTM_SETLINK;
+	hdr->nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+
+	msg = NLMSG_DATA(hdr);
+	msg->ifi_family = AF_UNSPEC;
+	msg->ifi_change |= IFF_UP;
+	msg->ifi_flags |= IFF_UP;
+
+	netlink_add_attribute(hdr, IFLA_IFNAME, chunk_from_str(name),
+						  sizeof(request));
+
+	if (this->socket->send_ack(this->socket, hdr) != SUCCESS)
+	{
+		DBG1(DBG_KNL, "failed to bring up XFRM interface '%s'", name);
+		return FALSE;
+	}
+	return TRUE;
+}
+
 METHOD(kernel_netlink_xfrmi_t, create, bool,
 	private_kernel_netlink_xfrmi_t *this, char *name, uint32_t if_id,
 	char *phys, uint32_t mtu)
@@ -106,7 +138,7 @@ METHOD(kernel_netlink_xfrmi_t, create, bool,
 	switch (this->socket->send_ack(this->socket, hdr))
 	{
 		case SUCCESS:
-			return TRUE;
+			return interface_up(this, name);
 		case ALREADY_DONE:
 			DBG1(DBG_KNL, "XFRM interface '%s' already exists", name);
 			break;
