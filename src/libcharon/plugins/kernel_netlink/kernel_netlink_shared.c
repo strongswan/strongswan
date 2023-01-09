@@ -52,6 +52,11 @@
 #include <collections/array.h>
 #include <collections/hashtable.h>
 
+/* some older versions of socket.h don't define this yet */
+#ifndef SOL_NETLINK
+#define SOL_NETLINK 270
+#endif
+
 typedef struct private_netlink_socket_t private_netlink_socket_t;
 
 /**
