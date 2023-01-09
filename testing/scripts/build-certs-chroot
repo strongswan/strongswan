@@ -1402,8 +1402,8 @@ pki --issue --cakey ${SHA3_RSA_KEY} --cacert ${SHA3_RSA_CERT} --type rsa \
     --crl ${SHA3_RSA_CDP} --digest sha3_256 --outform pem > ${MOON_CERT}
 cp ${MOON_CERT} ${SHA3_RSA_DIR}/certs/${SERIAL}.pem
 
-# Put a copy in the botan and wolfssl net2net-sha3-rsa-cert scenarios
-for d in botan wolfssl
+# Put a copy in the botan net2net-sha3-rsa-cert scenarios
+for d in botan
 do
   TEST="${TEST_DIR}/${d}/net2net-sha3-rsa-cert"
   cd ${TEST}/hosts/moon/${SWANCTL_DIR}
