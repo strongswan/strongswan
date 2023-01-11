@@ -125,7 +125,8 @@ Serial number in hex. It is randomly allocated by default.
 .TP
 .BI "\-e, \-\-flag " flag
 Add extendedKeyUsage flag. One of \fIserverAuth\fR, \fIclientAuth\fR,
-\fIcrlSign\fR, or \fIocspSigning\fR. Can be used multiple times.
+\fIcrlSign\fR, \fIocspSigning\fR or \fImsSmartcardLogon\fR. Can be used multiple
+times.
 .TP
 .BI "\-g, \-\-digest " digest
 Digest to use for signature creation. One of \fImd5\fR, \fIsha1\fR,
