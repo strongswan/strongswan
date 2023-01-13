@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2023 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -152,6 +153,60 @@ METHOD(plugin_t, destroy, void,
 	free(this);
 }
 
+#if LIBCURL_VERSION_NUM >= 0x073800
+/**
+ * Configure a specific SSL backend if multiple are available
+ */
+static void set_ssl_backend()
+{
+	const curl_ssl_backend **avail;
+	char *backend, buf[BUF_LEN] = "";
+	int i, len = 0, added;
+
+	backend = lib->settings->get_str(lib->settings, "%s.plugins.curl.tls_backend",
+									 NULL, lib->ns);
+	switch (curl_global_sslset(-1, backend, &avail))
+	{
+		case CURLSSLSET_UNKNOWN_BACKEND:
+			for (i = 0; avail[i]; i++)
+			{
+				added = snprintf(buf + len, sizeof(buf) - len, " %s",
+								 avail[i]->name);
+				if (added < sizeof(buf) - len)
+				{
+					len += added;
+				}
+			}
+			if (backend)
+			{
+				DBG1(DBG_LIB, "unsupported TLS backend '%s' in libcurl, "
+					 "available:%s", backend, buf);
+			}
+			else
+			{
+				DBG2(DBG_LIB, "available TLS backends in libcurl:%s", buf);
+			}
+			break;
+		case CURLSSLSET_NO_BACKENDS:
+			if (backend)
+			{
+				DBG1(DBG_LIB, "unable to set TLS backend '%s', libcurl was "
+					 "built without TLS support", backend);
+			}
+			break;
+		case CURLSSLSET_TOO_LATE:
+			if (backend)
+			{
+				DBG1(DBG_LIB, "unable to set TLS backend '%s' in libcurl, "
+					 "already set", backend);
+			}
+			break;
+		case CURLSSLSET_OK:
+			break;
+	}
+}
+#endif
+
 /*
  * see header file
  */
@@ -169,6 +224,10 @@ plugin_t *curl_plugin_create()
 			},
 		},
 	);
+
+#if LIBCURL_VERSION_NUM >= 0x073800
+	set_ssl_backend();
+#endif
 
 	res = curl_global_init(CURL_GLOBAL_SSL);
 	if (res != CURLE_OK)
