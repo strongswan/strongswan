@@ -60,7 +60,9 @@ static void add_feature(private_curl_plugin_t *this, plugin_feature_t f)
 static void add_feature_with_ssl(private_curl_plugin_t *this, const char *ssl,
 								 char *proto, plugin_feature_t f)
 {
-	/* http://curl.haxx.se/libcurl/c/libcurl-tutorial.html#Multi-threading */
+	/* according to https://curl.se/libcurl/c/threadsafe.html there is only an
+	 * issue with thread-safety with older versions of OpenSSL (<= 1.0.2) and
+	 * GnuTLS (< 1.6.0), so we just accept all other SSL backends */
 	if (strpfx(ssl, "OpenSSL") || strpfx(ssl, "LibreSSL"))
 	{
 		add_feature(this, f);
@@ -71,15 +73,9 @@ static void add_feature_with_ssl(private_curl_plugin_t *this, const char *ssl,
 		add_feature(this, f);
 		add_feature(this, PLUGIN_DEPENDS(CUSTOM, "gcrypt-threading"));
 	}
-	else if (strpfx(ssl, "NSS") ||
-			 strpfx(ssl, "BoringSSL"))
-	{
-		add_feature(this, f);
-	}
 	else
 	{
-		DBG1(DBG_LIB, "curl SSL backend '%s' not supported, %s disabled",
-			 ssl, proto);
+		add_feature(this, f);
 	}
 }
 
