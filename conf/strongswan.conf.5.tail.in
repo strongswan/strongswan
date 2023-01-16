@@ -475,11 +475,12 @@ ${urandom_device}       @urandom_device@
 .fi
 .
 .SH SEE ALSO
+\fBswanctl.conf\fR(5), \fBswanctl\fR(8),
 \fBipsec.conf\fR(5), \fBipsec.secrets\fR(5), \fBipsec\fR(8), \fBcharon-cmd\fR(8)
 
 .SH HISTORY
 Written for the
-.UR http://www.strongswan.org
+.UR https://www.strongswan.org
 strongSwan project
 .UE
 by Tobias Brunner, Andreas Steffen and Martin Willi.
