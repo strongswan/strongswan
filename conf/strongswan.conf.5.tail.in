@@ -458,6 +458,7 @@ The variables used above are configured as follows:
 .na
 ${piddir}               @piddir@
 ${prefix}               @prefix@
+${sysconfdir}           @sysconfdir@
 ${random_device}        @random_device@
 ${urandom_device}       @urandom_device@
 .ad
@@ -467,9 +468,9 @@ ${urandom_device}       @urandom_device@
 .
 .nf
 .na
-/etc/strongswan.conf       configuration file
-/etc/strongswan.d/         directory containing included config snippets
-/etc/strongswan.d/charon/  plugin specific config snippets
+@sysconfdir@/strongswan.conf       configuration file
+@sysconfdir@/strongswan.d/         directory containing included config snippets
+@sysconfdir@/strongswan.d/charon/  plugin specific config snippets
 .ad
 .fi
 .
