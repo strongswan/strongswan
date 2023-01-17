@@ -369,6 +369,9 @@ METHOD(tls_eap_t, process, status_t,
 	}
 	else
 	{
+		/* note that with TLS 1.3 the client sends an empty EAP packet after the
+		 * server sent the "protected success indication" over the TLS
+		 * connection, which is interpreted here as an ACK packet */
 		if (in.len == sizeof(eap_tls_packet_t))
 		{
 			DBG2(DBG_TLS, "received %N acknowledgment packet",
