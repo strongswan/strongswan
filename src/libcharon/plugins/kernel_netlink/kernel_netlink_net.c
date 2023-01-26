@@ -79,9 +79,6 @@
 #define ROUTING_TABLE_PRIO 0
 #endif
 
-/** multicast groups (for groups > 31 setsockopt has to be used) */
-#define nl_group(group) (1 << (group - 1))
-
 ENUM(rt_msg_names, RTM_NEWLINK, RTM_GETRULE,
 	"RTM_NEWLINK",
 	"RTM_DELLINK",
