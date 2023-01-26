@@ -1542,7 +1542,7 @@ static bool netlink_detect_offload(const char *ifname)
  *                        Do not fail SA addition if offload is not supported.
  */
 static bool add_hw_offload(struct nlmsghdr *hdr, int buflen, host_t *local,
-						   hw_offload_t hw_offload,
+						   char *interface, hw_offload_t hw_offload,
 						   struct xfrm_user_offload **offload)
 {
 	char *ifname;
@@ -1557,9 +1557,14 @@ static bool add_hw_offload(struct nlmsghdr *hdr, int buflen, host_t *local,
 	/* unless offloading is forced, we return TRUE even if we fail */
 	ret = (hw_offload == HW_OFFLOAD_AUTO);
 
-	if (!charon->kernel->get_interface(charon->kernel, local, &ifname))
+	if (!local || local->is_anyaddr(local) ||
+		!charon->kernel->get_interface(charon->kernel, local, &ifname))
 	{
-		return ret;
+		if (!interface || !interface[0])
+		{
+			return ret;
+		}
+		ifname = strdup(interface);
 	}
 
 	/* check if interface supports hw_offload */
@@ -1600,7 +1605,7 @@ static bool add_hw_offload_sa(struct nlmsghdr *hdr, int buflen,
 {
 	host_t *local = data->inbound ? id->dst : id->src;
 
-	if (!add_hw_offload(hdr, buflen, local, data->hw_offload, offload))
+	if (!add_hw_offload(hdr, buflen, local, NULL, data->hw_offload, offload))
 	{
 		return FALSE;
 	}
@@ -1621,6 +1626,7 @@ static bool add_hw_offload_policy(struct nlmsghdr *hdr, int buflen,
 {
 	ipsec_sa_t *ipsec = mapping->sa;
 	host_t *local = ipsec->src;
+	char ifname[IFNAMSIZ] = "";
 
 	/* only packet offloading is supported for policies, which we try to use
 	 * in automatic mode */
@@ -1639,7 +1645,11 @@ static bool add_hw_offload_policy(struct nlmsghdr *hdr, int buflen,
 			local = ipsec->dst;
 			break;
 	}
-	return add_hw_offload(hdr, buflen, local, ipsec->hw_offload, offload);
+	if (policy->sel.ifindex)
+	{
+		if_indextoname(policy->sel.ifindex, ifname);
+	}
+	return add_hw_offload(hdr, buflen, local, ifname, ipsec->hw_offload, offload);
 }
 
 METHOD(kernel_ipsec_t, add_sa, status_t,
