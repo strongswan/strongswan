@@ -1505,7 +1505,6 @@ m4_include(m4/macros/add-plugin.m4)
 
 # plugin lists for all components
 charon_plugins=
-starter_plugins=
 pool_plugins=
 attest_plugins=
 pki_plugins=
@@ -1593,10 +1592,10 @@ ADD_PLUGIN([load-tester],          [c charon])
 ADD_PLUGIN([kernel-libipsec],      [c charon cmd])
 ADD_PLUGIN([kernel-wfp],           [c charon])
 ADD_PLUGIN([kernel-iph],           [c charon])
-ADD_PLUGIN([kernel-pfkey],         [c charon starter nm cmd])
-ADD_PLUGIN([kernel-pfroute],       [c charon starter nm cmd])
-ADD_PLUGIN([kernel-netlink],       [c charon starter nm cmd])
-ADD_PLUGIN([selinux],              [c charon starter nm cmd])
+ADD_PLUGIN([kernel-pfkey],         [c charon nm cmd])
+ADD_PLUGIN([kernel-pfroute],       [c charon nm cmd])
+ADD_PLUGIN([kernel-netlink],       [c charon nm cmd])
+ADD_PLUGIN([selinux],              [c charon nm cmd])
 ADD_PLUGIN([resolve],              [c charon cmd])
 ADD_PLUGIN([save-keys],            [c])
 ADD_PLUGIN([socket-default],       [c charon nm cmd])
@@ -1666,7 +1665,6 @@ ADD_PLUGIN([unity],                [c charon])
 ADD_PLUGIN([counters],             [c charon])
 
 AC_SUBST(charon_plugins)
-AC_SUBST(starter_plugins)
 AC_SUBST(pool_plugins)
 AC_SUBST(attest_plugins)
 AC_SUBST(pki_plugins)
