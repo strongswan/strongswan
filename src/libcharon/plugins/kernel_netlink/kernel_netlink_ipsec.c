@@ -3764,7 +3764,7 @@ static void setup_spd_hash_thresh(private_kernel_netlink_ipsec_t *this,
 kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 {
 	private_kernel_netlink_ipsec_t *this;
-	bool register_for_events = TRUE;
+	struct sockaddr_nl addr;
 
 	INIT(this,
 		.public = {
@@ -3804,11 +3804,6 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 						FALSE, lib->ns),
 	);
 
-	if (streq(lib->ns, "starter"))
-	{	/* starter has no threads, so we do not register for kernel events */
-		register_for_events = FALSE;
-	}
-
 	this->socket_xfrm = netlink_socket_create(NETLINK_XFRM, xfrm_msg_names,
 				lib->settings->get_bool(lib->settings,
 					"%s.plugins.kernel-netlink.parallel_xfrm", FALSE, lib->ns));
@@ -3821,34 +3816,29 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 	setup_spd_hash_thresh(this, "ipv4", XFRMA_SPD_IPV4_HTHRESH, 32);
 	setup_spd_hash_thresh(this, "ipv6", XFRMA_SPD_IPV6_HTHRESH, 128);
 
-	if (register_for_events)
+	memset(&addr, 0, sizeof(addr));
+	addr.nl_family = AF_NETLINK;
+
+	/* create and bind XFRM socket for ACQUIRE, EXPIRE, MIGRATE & MAPPING */
+	this->socket_xfrm_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
+	if (this->socket_xfrm_events <= 0)
 	{
-		struct sockaddr_nl addr;
-
-		memset(&addr, 0, sizeof(addr));
-		addr.nl_family = AF_NETLINK;
-
-		/* create and bind XFRM socket for ACQUIRE, EXPIRE, MIGRATE & MAPPING */
-		this->socket_xfrm_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_XFRM);
-		if (this->socket_xfrm_events <= 0)
-		{
-			DBG1(DBG_KNL, "unable to create XFRM event socket: %s (%d)",
-				 strerror(errno), errno);
-			destroy(this);
-			return NULL;
-		}
-		addr.nl_groups = XFRMNLGRP(ACQUIRE) | XFRMNLGRP(EXPIRE) |
-						 XFRMNLGRP(MIGRATE) | XFRMNLGRP(MAPPING);
-		if (bind(this->socket_xfrm_events, (struct sockaddr*)&addr, sizeof(addr)))
-		{
-			DBG1(DBG_KNL, "unable to bind XFRM event socket: %s (%d)",
-				 strerror(errno), errno);
-			destroy(this);
-			return NULL;
-		}
-		lib->watcher->add(lib->watcher, this->socket_xfrm_events, WATCHER_READ,
-						  (watcher_cb_t)receive_events, this);
+		DBG1(DBG_KNL, "unable to create XFRM event socket: %s (%d)",
+			 strerror(errno), errno);
+		destroy(this);
+		return NULL;
 	}
+	addr.nl_groups = XFRMNLGRP(ACQUIRE) | XFRMNLGRP(EXPIRE) |
+					 XFRMNLGRP(MIGRATE) | XFRMNLGRP(MAPPING);
+	if (bind(this->socket_xfrm_events, (struct sockaddr*)&addr, sizeof(addr)))
+	{
+		DBG1(DBG_KNL, "unable to bind XFRM event socket: %s (%d)",
+			 strerror(errno), errno);
+		destroy(this);
+		return NULL;
+	}
+	lib->watcher->add(lib->watcher, this->socket_xfrm_events, WATCHER_READ,
+					  (watcher_cb_t)receive_events, this);
 
 	netlink_find_offload_feature(lib->settings->get_str(lib->settings,
 					"%s.plugins.kernel-netlink.hw_offload_feature_interface",

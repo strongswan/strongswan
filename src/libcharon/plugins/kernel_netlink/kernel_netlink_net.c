@@ -3096,7 +3096,7 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 {
 	private_kernel_netlink_net_t *this;
 	enumerator_t *enumerator;
-	bool register_for_events = TRUE;
+	struct sockaddr_nl addr;
 	char *exclude;
 
 	INIT(this,
@@ -3168,11 +3168,6 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		return NULL;
 	}
 
-	if (streq(lib->ns, "starter"))
-	{	/* starter has no threads, so we do not register for kernel events */
-		register_for_events = FALSE;
-	}
-
 	exclude = lib->settings->get_str(lib->settings,
 									 "%s.ignore_routing_tables", NULL, lib->ns);
 	if (exclude)
@@ -3194,46 +3189,40 @@ kernel_netlink_net_t *kernel_netlink_net_create()
 		enumerator->destroy(enumerator);
 	}
 
-	if (register_for_events)
+	memset(&addr, 0, sizeof(addr));
+	addr.nl_family = AF_NETLINK;
+
+	/* create and bind RT socket for events (address/interface/route changes) */
+	this->socket_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (this->socket_events < 0)
 	{
-		struct sockaddr_nl addr;
-
-		memset(&addr, 0, sizeof(addr));
-		addr.nl_family = AF_NETLINK;
-
-		/* create and bind RT socket for events (address/interface/route changes) */
-		this->socket_events = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-		if (this->socket_events < 0)
-		{
-			DBG1(DBG_KNL, "unable to create RT event socket: %s (%d)",
-				 strerror(errno), errno);
-			destroy(this);
-			return NULL;
-		}
-		addr.nl_groups = nl_group(RTNLGRP_IPV4_IFADDR) |
-						 nl_group(RTNLGRP_IPV6_IFADDR) |
-						 nl_group(RTNLGRP_LINK);
-		if (this->process_route)
-		{
-			addr.nl_groups |= nl_group(RTNLGRP_IPV4_ROUTE) |
-							  nl_group(RTNLGRP_IPV6_ROUTE);
-		}
-		if (this->process_rules)
-		{
-			addr.nl_groups |= nl_group(RTNLGRP_IPV4_RULE) |
-							  nl_group(RTNLGRP_IPV6_RULE);
-		}
-		if (bind(this->socket_events, (struct sockaddr*)&addr, sizeof(addr)))
-		{
-			DBG1(DBG_KNL, "unable to bind RT event socket: %s (%d)",
-				 strerror(errno), errno);
-			destroy(this);
-			return NULL;
-		}
-
-		lib->watcher->add(lib->watcher, this->socket_events, WATCHER_READ,
-						  (watcher_cb_t)receive_events, this);
+		DBG1(DBG_KNL, "unable to create RT event socket: %s (%d)",
+			 strerror(errno), errno);
+		destroy(this);
+		return NULL;
 	}
+	addr.nl_groups = nl_group(RTNLGRP_IPV4_IFADDR) |
+					 nl_group(RTNLGRP_IPV6_IFADDR) |
+					 nl_group(RTNLGRP_LINK);
+	if (this->process_route)
+	{
+		addr.nl_groups |= nl_group(RTNLGRP_IPV4_ROUTE) |
+						  nl_group(RTNLGRP_IPV6_ROUTE);
+	}
+	if (this->process_rules)
+	{
+		addr.nl_groups |= nl_group(RTNLGRP_IPV4_RULE) |
+						  nl_group(RTNLGRP_IPV6_RULE);
+	}
+	if (bind(this->socket_events, (struct sockaddr*)&addr, sizeof(addr)))
+	{
+		DBG1(DBG_KNL, "unable to bind RT event socket: %s (%d)",
+			 strerror(errno), errno);
+		destroy(this);
+		return NULL;
+	}
+	lib->watcher->add(lib->watcher, this->socket_events, WATCHER_READ,
+					  (watcher_cb_t)receive_events, this);
 
 	if (init_address_list(this) != SUCCESS)
 	{
