@@ -276,7 +276,7 @@ struct private_child_sa_t {
 	uint64_t my_usepackets;
 
 	/**
-	 * last number of outbound bytes
+	 * last number of outbound packets
 	 */
 	uint64_t other_usepackets;
 };
