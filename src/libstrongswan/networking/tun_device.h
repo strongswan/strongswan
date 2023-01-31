@@ -2,6 +2,7 @@
  * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
+ * Copyright (C) 2020 Noel Kuntze
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -100,12 +101,21 @@ struct tun_device_t {
 	 */
 	char *(*get_name)(tun_device_t *this);
 
+#ifdef WIN32
+	/**
+	 * Get the underlying HANDLE.
+	 *
+	 * @return				file HANDLE of this tun device
+	 */
+	HANDLE (*get_handle)(tun_device_t *this);
+#else /* !WIN32 */
 	/**
 	 * Get the underlying tun file descriptor.
 	 *
 	 * @return				file descriptor of this tun device
 	 */
 	int (*get_fd)(tun_device_t *this);
+#endif
 
 	/**
 	 * Destroy a tun_device_t

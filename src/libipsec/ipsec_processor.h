@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2020 Noel Kuntze
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -45,6 +46,15 @@ typedef void (*ipsec_inbound_cb_t)(void *data, ip_packet_t *packet);
  * @param packet		ESP packet to send
  */
 typedef void (*ipsec_outbound_cb_t)(void *data, esp_packet_t *packet);
+
+
+/**
+ * Callback called to raise acquire events.
+ *
+ * @param reqid			reqid of the matched IPsec policy
+ * @param data			data supplied during registration of the callback
+ */
+typedef void (*ipsec_acquire_cb_t)(uint32_t reqid, kernel_acquire_data_t *data);
 
 /**
  *  IPsec processor
@@ -98,6 +108,22 @@ struct ipsec_processor_t {
 	 */
 	void (*unregister_outbound)(ipsec_processor_t *this,
 								ipsec_outbound_cb_t cb);
+
+	/**
+	 * Register the callback used to raise an acquire event.
+	 *
+	 * @param cb			the callback function
+	 * @param data			optional data provided to the callback
+	 */
+	void (*register_acquire)(ipsec_processor_t *this, ipsec_acquire_cb_t cb,
+							 void *data);
+
+	/**
+	 * Unregister a previously registered acquire callback.
+	 *
+	 * @param cb			previously registered acquire callback
+	 */
+	void (*unregister_acquire)(ipsec_processor_t *this, ipsec_acquire_cb_t cb);
 
 	/**
 	 * Destroy an ipsec_processor_t.
