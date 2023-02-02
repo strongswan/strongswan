@@ -114,6 +114,8 @@ struct tun_device_t {
 
 };
 
+typedef tun_device_t *(*tun_device_constructor_t)(const char *name_tmpl);
+
 /**
  * Create a TUN device using the given name template.
  *

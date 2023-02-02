@@ -33,9 +33,10 @@ database/database_factory.c fetcher/fetcher.c fetcher/fetcher_manager.c eap/eap.
 ipsec/ipsec_types.c \
 metadata/metadata_factory.c metadata/metadata_int.c metadata/metadata_set.c \
 networking/host.c networking/host_resolver.c networking/packet.c \
-networking/tun_device.c networking/streams/stream_manager.c \
-networking/streams/stream.c networking/streams/stream_service.c \
-networking/streams/stream_tcp.c networking/streams/stream_service_tcp.c \
+networking/tun_device.c networking/tun_device_manager.c \
+networking/streams/stream_manager.c networking/streams/stream.c \
+networking/streams/stream_service.c networking/streams/stream_tcp.c \
+networking/streams/stream_service_tcp.c \
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 processing/watcher.c resolver/resolver_manager.c resolver/rr_set.c \
@@ -105,7 +106,7 @@ fetcher/fetcher_manager.h eap/eap.h pen/pen.h ipsec/ipsec_types.h \
 metadata/metadata.h metadata/metadata_factory.h metadata/metadata_int.h \
 metadata/metadata_set.h \
 networking/host.h networking/host_resolver.h networking/packet.h \
-networking/tun_device.h networking/streams/stream.h \
+networking/tun_device.h networking/tun_device_manager.h networking/streams/stream.h \
 networking/streams/stream_unix.h networking/streams/stream_service_unix.h \
 networking/streams/stream_service_systemd.h \
 networking/streams/stream_tcp.h networking/streams/stream_service_tcp.h \

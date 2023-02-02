@@ -128,7 +128,7 @@ static void fixup_pf_route()
 	tun_device_t *tun;
 	host_t *host;
 
-	tun = tun_device_create(NULL);
+	tun = lib->tun->create(lib->tun, NULL);
 	if (tun)
 	{
 		if (tun->up(tun))

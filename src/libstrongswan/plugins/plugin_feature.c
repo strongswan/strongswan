@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Andreas Steffen
+ * Copyright (C) 2016-2023 Andreas Steffen
  * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2011 Martin Willi
  *
@@ -54,6 +54,7 @@ ENUM(plugin_feature_names, FEATURE_NONE, FEATURE_CUSTOM,
 	"DATABASE",
 	"FETCHER",
 	"RESOLVER",
+	"TUN_DEVICE",
 	"CUSTOM",
 );
 
@@ -72,6 +73,7 @@ uint32_t plugin_feature_hash(plugin_feature_t *feature)
 		case FEATURE_DATABASE:
 		case FEATURE_FETCHER:
 		case FEATURE_RESOLVER:
+		case FEATURE_TUN_DEVICE:
 			/* put these special cases in their (type-specific) buckets */
 			data = chunk_empty;
 			break;
@@ -184,6 +186,7 @@ bool plugin_feature_matches(plugin_feature_t *a, plugin_feature_t *b)
 				return a->arg.rng_quality <= b->arg.rng_quality;
 			case FEATURE_NONCE_GEN:
 			case FEATURE_RESOLVER:
+			case FEATURE_TUN_DEVICE:
 				return TRUE;
 			case FEATURE_PRIVKEY:
 			case FEATURE_PRIVKEY_GEN:
@@ -242,6 +245,7 @@ bool plugin_feature_equals(plugin_feature_t *a, plugin_feature_t *b)
 			case FEATURE_KE:
 			case FEATURE_NONCE_GEN:
 			case FEATURE_RESOLVER:
+			case FEATURE_TUN_DEVICE:
 			case FEATURE_PRIVKEY:
 			case FEATURE_PRIVKEY_GEN:
 			case FEATURE_PUBKEY:
@@ -363,6 +367,7 @@ char* plugin_feature_get_string(plugin_feature_t *feature)
 			break;
 		case FEATURE_NONCE_GEN:
 		case FEATURE_RESOLVER:
+		case FEATURE_TUN_DEVICE:
 			if (asprintf(&str, "%N", plugin_feature_names, feature->type) > 0)
 			{
 				return str;
@@ -574,6 +579,8 @@ bool plugin_feature_load(plugin_t *plugin, plugin_feature_t *feature,
 			break;
 		case FEATURE_RESOLVER:
 			lib->resolver->add_resolver(lib->resolver, reg->arg.reg.f);
+		case FEATURE_TUN_DEVICE:
+			lib->tun->add_tun_device(lib->tun, reg->arg.reg.f);
 			break;
 	}
 	return TRUE;
@@ -667,6 +674,9 @@ bool plugin_feature_unload(plugin_t *plugin, plugin_feature_t *feature,
 			break;
 		case FEATURE_RESOLVER:
 			lib->resolver->remove_resolver(lib->resolver, reg->arg.reg.f);
+			break;
+		case FEATURE_TUN_DEVICE:
+			lib->tun->remove_tun_device(lib->tun, reg->arg.reg.f);
 			break;
 	}
 	return TRUE;

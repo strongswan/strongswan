@@ -1044,7 +1044,7 @@ static void nm_strongswan_plugin_init(NMStrongswanPlugin *plugin)
 	priv->listener.ike_reestablish_pre = _ike_reestablish_pre;
 	priv->listener.ike_reestablish_post = _ike_reestablish_post;
 	charon->bus->add_listener(charon->bus, &priv->listener);
-	priv->tun = tun_device_create(NULL);
+	priv->tun = lib->tun->create(lib->tun, NULL);
 	priv->name = NULL;
 }
 

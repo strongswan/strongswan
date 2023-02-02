@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Andreas Steffen
+ * Copyright (C) 2016-2023 Andreas Steffen
  * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2011 Martin Willi
  *
@@ -158,6 +158,8 @@ struct plugin_feature_t {
 		FEATURE_FETCHER,
 		/** resolver_t */
 		FEATURE_RESOLVER,
+		/** tun_device_t */
+		FEATURE_TUN_DEVICE,
 		/** custom feature, described with a string */
 		FEATURE_CUSTOM,
 	} type;
@@ -314,6 +316,7 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_DATABASE(kind, type)				__PLUGIN_FEATURE(kind, DATABASE, .database = type)
 #define _PLUGIN_FEATURE_FETCHER(kind, type)					__PLUGIN_FEATURE(kind, FETCHER, .fetcher = type)
 #define _PLUGIN_FEATURE_RESOLVER(kind, ...)					__PLUGIN_FEATURE(kind, RESOLVER, .custom = NULL)
+#define _PLUGIN_FEATURE_TUN_DEVICE(kind, ...)				__PLUGIN_FEATURE(kind, TUN_DEVICE, .custom = NULL)
 #define _PLUGIN_FEATURE_CUSTOM(kind, name)					__PLUGIN_FEATURE(kind, CUSTOM, .custom = name)
 #define _PLUGIN_FEATURE_XAUTH_SERVER(kind, name)			__PLUGIN_FEATURE(kind, XAUTH_SERVER, .xauth = name)
 #define _PLUGIN_FEATURE_XAUTH_PEER(kind, name)				__PLUGIN_FEATURE(kind, XAUTH_PEER, .xauth = name)
@@ -341,6 +344,7 @@ struct plugin_feature_t {
 #define _PLUGIN_FEATURE_REGISTER_DATABASE(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_FETCHER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
 #define _PLUGIN_FEATURE_REGISTER_RESOLVER(type, f)			__PLUGIN_FEATURE_REGISTER(type, f)
+#define _PLUGIN_FEATURE_REGISTER_TUN_DEVICE(type, f)		__PLUGIN_FEATURE_REGISTER(type, f)
 
 #define _PLUGIN_FEATURE_CALLBACK(_cb, _data) (plugin_feature_t){ FEATURE_CALLBACK, FEATURE_NONE, .arg.cb = { .f = _cb, .data = _data } }
 

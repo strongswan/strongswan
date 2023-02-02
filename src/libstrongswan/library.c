@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009-2018 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2023 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -177,6 +178,7 @@ void library_deinit()
 	this->public.proposal->destroy(this->public.proposal);
 	this->public.fetcher->destroy(this->public.fetcher);
 	this->public.resolver->destroy(this->public.resolver);
+	this->public.tun->destroy(this->public.tun);
 	this->public.db->destroy(this->public.db);
 	this->public.printf_hook->destroy(this->public.printf_hook);
 	this->objects->destroy(this->objects);
@@ -404,6 +406,7 @@ bool library_init(char *settings, const char *namespace)
 	this->public.metadata = metadata_factory_create();
 	this->public.fetcher = fetcher_manager_create();
 	this->public.resolver = resolver_manager_create();
+	this->public.tun = tun_device_manager_create();
 	this->public.db = database_factory_create();
 	this->public.processor = processor_create();
 	this->public.scheduler = scheduler_create();

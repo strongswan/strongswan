@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010-2018 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2023 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -109,6 +110,7 @@
 #include "crypto/proposal/proposal_keywords.h"
 #include "fetcher/fetcher_manager.h"
 #include "resolver/resolver_manager.h"
+#include "networking/tun_device_manager.h"
 #include "database/database_factory.h"
 #include "credentials/credential_factory.h"
 #include "credentials/credential_manager.h"
@@ -204,7 +206,12 @@ struct library_t {
 	/**
 	 * Manager for DNS resolvers
 	 */
-	 resolver_manager_t *resolver;
+	resolver_manager_t *resolver;
+
+	/**
+	 * Manager for TUN devices
+	 */
+	tun_device_manager_t *tun;
 
 	/**
 	 * database construction factory

@@ -1235,7 +1235,7 @@ METHOD(kernel_net_t, add_ip, status_t,
 		return SUCCESS;
 	}
 
-	tun = tun_device_create(NULL);
+	tun = lib->tun->create(lib->tun, NULL);
 	if (!tun)
 	{
 		return FAILED;

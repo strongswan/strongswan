@@ -35,9 +35,10 @@ database/database_factory.c fetcher/fetcher.c fetcher/fetcher_manager.c eap/eap.
 ipsec/ipsec_types.c \
 metadata/metadata_factory.c metadata/metadata_int.c metadata/metadata_set.c \
 networking/host.c networking/host_resolver.c networking/packet.c \
-networking/tun_device.c networking/streams/stream_manager.c \
-networking/streams/stream.c networking/streams/stream_service.c \
-networking/streams/stream_tcp.c networking/streams/stream_service_tcp.c \
+networking/tun_device.c networking/tun_device_manager.c \
+networking/streams/stream_manager.c networking/streams/stream.c \
+networking/streams/stream_service.c networking/streams/stream_tcp.c \
+networking/streams/stream_service_tcp.c \
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 processing/watcher.c resolver/resolver_manager.c resolver/rr_set.c \
