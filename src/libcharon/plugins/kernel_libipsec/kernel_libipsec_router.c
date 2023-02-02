@@ -307,6 +307,7 @@ METHOD(kernel_libipsec_router_t, destroy, void,
 	free(this);
 }
 
+#ifndef WIN32
 /**
  * Set O_NONBLOCK on the given socket.
  */
@@ -315,6 +316,7 @@ static bool set_nonblock(int socket)
 	int flags = fcntl(socket, F_GETFL);
 	return flags != -1 && fcntl(socket, F_SETFL, flags | O_NONBLOCK) != -1;
 }
+#endif
 
 /*
  * See header file
@@ -322,6 +324,9 @@ static bool set_nonblock(int socket)
 kernel_libipsec_router_t *kernel_libipsec_router_create()
 {
 	private_kernel_libipsec_router_t *this;
+#ifdef WIN32
+	u_long on = 1;
+#endif
 
 	INIT(this,
 		.public = {
@@ -336,8 +341,13 @@ kernel_libipsec_router_t *kernel_libipsec_router_create()
 		}
 	);
 
+#ifdef WIN32
+	if (socketpair(AF_INET, SOCK_STREAM, 0, this->notify) != 0 ||
+		ioctlsocket(this->notify[0], FIONBIO, &on) != 0)
+#else /* !WIN32 */
 	if (pipe(this->notify) != 0 ||
 		!set_nonblock(this->notify[0]) || !set_nonblock(this->notify[1]))
+#endif /* !WIN332 */
 	{
 		DBG1(DBG_KNL, "creating notify pipe for kernel-libipsec router failed");
 		free(this);

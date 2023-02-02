@@ -697,6 +697,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_WINTUN
+  SUBDIRS += plugins/wintun
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/wintun/libstrongswan-wintun.la
+endif
+endif
+
 if MONOLITHIC
   SUBDIRS += .
 endif

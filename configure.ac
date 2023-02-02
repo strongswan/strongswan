@@ -226,6 +226,7 @@ ARG_ENABL_SET([xauth-eap],      [enable XAuth backend using EAP methods to verif
 ARG_ENABL_SET([xauth-pam],      [enable XAuth backend using PAM to verify passwords.])
 ARG_ENABL_SET([xauth-noauth],   [enable XAuth pseudo-backend that does not actually verify or even request any credentials.])
 # kernel interfaces / sockets
+ARG_ENABL_SET([wintun],         [enables the Windows TUN device plugin.])
 ARG_DISBL_SET([kernel-netlink], [disable the netlink kernel interface.])
 ARG_ENABL_SET([kernel-pfkey],   [enable the PF_KEY kernel interface.])
 ARG_ENABL_SET([kernel-pfroute], [enable the PF_ROUTE kernel interface.])
@@ -1587,6 +1588,7 @@ ADD_PLUGIN([winhttp],              [s charon pki scripts])
 ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
 ADD_PLUGIN([sqlite],               [s charon pool manager medsrv attest])
+ADD_PLUGIN([wintun],               [s charon])
 ADD_PLUGIN([attr],                 [c charon])
 ADD_PLUGIN([attr-sql],             [c charon])
 ADD_PLUGIN([load-tester],          [c charon])
@@ -1750,6 +1752,7 @@ AM_CONDITIONAL(USE_NTRU, test x$ntru = xtrue)
 AM_CONDITIONAL(USE_NEWHOPE, test x$newhope = xtrue)
 AM_CONDITIONAL(USE_BLISS, test x$bliss = xtrue)
 AM_CONDITIONAL(USE_DRBG, test x$drbg = xtrue)
+AM_CONDITIONAL(USE_WINTUN, test x$wintun = xtrue)
 
 #  charon plugins
 # ----------------
@@ -2034,6 +2037,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/newhope/Makefile
 	src/libstrongswan/plugins/newhope/tests/Makefile
 	src/libstrongswan/plugins/test_vectors/Makefile
+	src/libstrongswan/plugins/wintun/Makefile
 	src/libstrongswan/tests/Makefile
 	src/libipsec/Makefile
 	src/libipsec/tests/Makefile
