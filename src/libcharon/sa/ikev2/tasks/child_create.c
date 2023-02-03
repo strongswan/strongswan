@@ -1044,7 +1044,8 @@ static status_t defer_child_sa(private_child_create_t *this)
 		/* with SELinux, we prefer not to create a CHILD_SA when we only have
 		 * the generic label available.  if the peer does not support it,
 		 * creating the SA will most likely fail */
-		if (policy == CHILDLESS_FORCE ||
+		if (policy == CHILDLESS_PREFER ||
+			policy == CHILDLESS_FORCE ||
 			generic_label_only(this))
 		{
 			return NEED_MORE;

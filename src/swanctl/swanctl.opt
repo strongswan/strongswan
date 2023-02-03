@@ -169,19 +169,21 @@ connections.<conn>.fragmentation = yes
 	irrespective of the value of this option (even when set to _no_).
 
 connections.<conn>.childless = allow
-	Use childless IKE_SA initiation (_allow_, _force_ or _never_).
+	Use childless IKE_SA initiation (_allow_, _prefer_, _force_ or _never_).
 
-	Use childless IKE_SA initiation (RFC 6023) for IKEv2.  Acceptable values
-	are _allow_ (the default), _force_ and _never_. If set to _allow_,
-	responders will accept childless IKE_SAs (as indicated via notify in the
-	IKE_SA_INIT response) while initiators continue to create regular IKE_SAs
-	with the first CHILD_SA created during IKE_AUTH, unless the IKE_SA is
-	initiated explicitly without any children (which will fail if the responder
-	does not support or has disabled this extension).  If set to _force_, only
-	childless initiation is accepted and the first CHILD_SA is created with a
-	separate CREATE_CHILD_SA exchange (e.g. to use an independent DH exchange
-	for all CHILD_SAs).  Finally, setting the option to _never_ disables support
-	for childless IKE_SAs as responder.
+	Use childless IKE_SA initiation (RFC 6023) for IKEv2, with the first
+	CHILD_SA created with a separate CREATE_CHILD_SA exchange (e.g. to use an
+	independent DH exchange for all CHILD_SAs).  Acceptable values are _allow_
+	(the default), _prefer_, _force_ and _never_. If set to _allow_, responders
+	will accept childless IKE_SAs (as indicated via notify in the IKE_SA_INIT
+	response) while initiators continue to create regular IKE_SAs with the first
+	CHILD_SA created during IKE_AUTH, unless the IKE_SA is initiated explicitly
+	without any children (which will fail if the responder does not support or
+	has disabled this extension). The effect of _prefer_ is the same as _allow_
+	on responders, but as initiator a childless IKE_SA is initiated if the
+	responder supports it. If set to _force_, only childless initiation is
+	accepted in either role.  Finally, setting the option to _never_ disables
+	support for childless IKE_SAs as responder.
 
 connections.<conn>.send_certreq = yes
 	Send certificate requests payloads (_yes_ or _no_).

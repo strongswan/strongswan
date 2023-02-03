@@ -1643,6 +1643,7 @@ CALLBACK(parse_childless, bool,
 {
 	enum_map_t map[] = {
 		{ "allow",		CHILDLESS_ALLOW		},
+		{ "prefer",		CHILDLESS_PREFER	},
 		{ "never",		CHILDLESS_NEVER		},
 		{ "force",		CHILDLESS_FORCE		},
 	};
