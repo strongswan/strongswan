@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2022-2023 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -28,18 +29,19 @@
  */
 char *enum_to_name(enum_name_t *e, int val)
 {
+	enum_name_elem_t *cur;
+
 	if (!e)
 	{
 		return NULL;
 	}
-	do
+	for (cur = e->elem; cur; cur = cur->next)
 	{
-		if (val >= e->first && val <= e->last)
+		if (val >= cur->first && val <= cur->last)
 		{
-			return e->names[val - e->first];
+			return cur->names[val - cur->first];
 		}
 	}
-	while ((e = e->next));
 	return NULL;
 }
 
@@ -48,20 +50,25 @@ char *enum_to_name(enum_name_t *e, int val)
  */
 bool enum_from_name_as_int(enum_name_t *e, const char *name, int *val)
 {
-	do
+	enum_name_elem_t *cur;
+
+	if (!e)
 	{
-		int i, count = e->last - e->first + 1;
+		return FALSE;
+	}
+	for (cur = e->elem; cur; cur = cur->next)
+	{
+		int i, count = cur->last - cur->first + 1;
 
 		for (i = 0; i < count; i++)
 		{
-			if (name && strcaseeq(name, e->names[i]))
+			if (name && strcaseeq(name, cur->names[i]))
 			{
-				*val = e->first + i;
+				*val = cur->first + i;
 				return TRUE;
 			}
 		}
 	}
-	while ((e = e->next));
 	return FALSE;
 }
 
@@ -86,10 +93,16 @@ static int find_flag_pos(u_int first, u_int val)
  */
 char *enum_flags_to_string(enum_name_t *e, u_int val, char *buf, size_t len)
 {
+	enum_name_elem_t *cur;
 	char *pos = buf, *delim = "";
 	int i, wr;
 
-	if (e->next != ENUM_FLAG_MAGIC)
+	if (!e)
+	{
+		return NULL;
+	}
+	cur = e->elem;
+	if (cur->next != ENUM_FLAG_MAGIC)
 	{
 		if (snprintf(buf, len, "(%d)", (int)val) >= len)
 		{
@@ -98,7 +111,7 @@ char *enum_flags_to_string(enum_name_t *e, u_int val, char *buf, size_t len)
 		return buf;
 	}
 
-	if (snprintf(buf, len, "%s", e->names[0]) >= len)
+	if (snprintf(buf, len, "%s", cur->names[0]) >= len)
 	{
 		return NULL;
 	}
@@ -111,9 +124,9 @@ char *enum_flags_to_string(enum_name_t *e, u_int val, char *buf, size_t len)
 		{
 			char *name = NULL, hex[32];
 
-			if (flag >= (u_int)e->first && flag <= (u_int)e->last)
+			if (flag >= (u_int)cur->first && flag <= (u_int)cur->last)
 			{
-				name = e->names[find_flag_pos(e->first, i)];
+				name = cur->names[find_flag_pos(cur->first, i)];
 			}
 			else
 			{
@@ -142,16 +155,18 @@ char *enum_flags_to_string(enum_name_t *e, u_int val, char *buf, size_t len)
  */
 bool enum_flags_from_string_as_int(enum_name_t *e, const char *str, u_int *val)
 {
+	enum_name_elem_t *cur;
 	enumerator_t *enumerator;
 	char *name;
 
 	*val = 0;
 
-	if (!str || !*str)
+	if (!e || !str || !*str)
 	{
 		return TRUE;
 	}
-	else if (e->next != ENUM_FLAG_MAGIC)
+	cur = e->elem;
+	if (cur->next != ENUM_FLAG_MAGIC)
 	{
 		return enum_from_name_as_int(e, str, val);
 	}
@@ -162,13 +177,13 @@ bool enum_flags_from_string_as_int(enum_name_t *e, const char *str, u_int *val)
 		u_int flag, i;
 		bool found = FALSE;
 
-		if (strcaseeq(name, e->names[0]))
+		if (strcaseeq(name, cur->names[0]))
 		{	/* accept name used if no flags are set */
 			continue;
 		}
-		for (i = 1, flag = e->first; flag <= e->last; i++, flag <<= 1)
+		for (i = 1, flag = cur->first; flag <= cur->last; i++, flag <<= 1)
 		{
-			if (e->names[i] && strcaseeq(name, e->names[i]))
+			if (cur->names[i] && strcaseeq(name, cur->names[i]))
 			{
 				*val |= flag;
 				found = TRUE;
@@ -195,7 +210,7 @@ int enum_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 	int val = *((int*)(args[1]));
 	char *name, buf[512];
 
-	if (ed && ed->next == ENUM_FLAG_MAGIC)
+	if (ed && ed->elem->next == ENUM_FLAG_MAGIC)
 	{
 		name = enum_flags_to_string(ed, val, buf, sizeof(buf));
 		if (name == NULL)

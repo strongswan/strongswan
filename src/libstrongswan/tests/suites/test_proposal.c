@@ -20,7 +20,7 @@
 
 START_TEST(test_dh_group_mapping)
 {
-	enum_name_t *e = key_exchange_method_names_short;
+	enum_name_elem_t *e = key_exchange_method_names_short->elem;
 	key_exchange_method_t ke;
 	const proposal_token_t *token;
 	char *name;
