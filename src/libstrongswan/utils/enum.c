@@ -73,6 +73,26 @@ bool enum_from_name_as_int(enum_name_t *e, const char *name, int *val)
 }
 
 /**
+ * Check if there any callbacks and if one of them can convert the enum value.
+ */
+static bool enum_name_cb(enum_name_t *e, u_int val, char *buf, size_t len)
+{
+	size_t written;
+	int i;
+
+	for  (i = 0; e->cb[i].cb && i < ENUM_NAME_CB_MAX; i++)
+	{
+		written = e->cb[i].cb(e->cb[i].user, e, val, buf, len);
+		if (written > 0 && written < len)
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+
+/**
  * Get the position of a flag name using offset calculation
  */
 static int find_flag_pos(u_int first, u_int val)
@@ -122,11 +142,19 @@ char *enum_flags_to_string(enum_name_t *e, u_int val, char *buf, size_t len)
 
 		if (val & flag)
 		{
-			char *name = NULL, hex[32];
+			char *name = NULL, cb[64], hex[32];
 
 			if (flag >= (u_int)cur->first && flag <= (u_int)cur->last)
 			{
 				name = cur->names[find_flag_pos(cur->first, i)];
+				if (!name && enum_name_cb(e, flag, cb, sizeof(cb)))
+				{
+					name = cb;
+				}
+			}
+			else if (enum_name_cb(e, flag, cb, sizeof(cb)))
+			{
+				name = cb;
 			}
 			else
 			{
@@ -224,7 +252,10 @@ int enum_printf_hook(printf_hook_data_t *data, printf_hook_spec_t *spec,
 		name = enum_to_name(ed, val);
 		if (name == NULL)
 		{
-			snprintf(buf, sizeof(buf), "(%d)", val);
+			if (!ed || !enum_name_cb(ed, val, buf, sizeof(buf)))
+			{
+				snprintf(buf, sizeof(buf), "(%d)", val);
+			}
 			name = buf;
 		}
 	}

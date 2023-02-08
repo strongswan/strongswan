@@ -34,6 +34,38 @@ typedef struct enum_name_elem_t enum_name_elem_t;
 #define ENUM_FLAG_MAGIC ((enum_name_elem_t*)~(uintptr_t)0)
 
 /**
+ * Maximum number of callbacks per enum name that can be registered
+ */
+#ifndef ENUM_NAME_CB_MAX
+#define ENUM_NAME_CB_MAX 2
+#endif
+
+/**
+ * Callback used if an enum value can't be mapped to a string statically.
+ *
+ * @note This does is primarily used in the printf hook, so it does not map
+ * values via enum_from_name(). However, it is called in enum_flags_to_string()
+ * to resolve individual flag values.
+ *
+ * @param user	user supplied data
+ * @param e		enum name for which callback is invoked
+ * @param val	enum value (or individual flag) to map
+ * @param buf	buffer to write to
+ * @param len	buffer length
+ * @return		number of characters written to buffer (without terminating \0)
+ */
+typedef int (*enum_name_cb_t)(void *user, enum_name_t *e, int val,
+							  char *buf, size_t len);
+
+/**
+ * Struct to store enum name callbacks and context data.
+ */
+typedef struct {
+	enum_name_cb_t cb;
+	void *user;
+} enum_name_cb_elem_t;
+
+/**
  * Struct to store names for enums.
  *
  * To print the string representation of enumeration values, the strings
@@ -63,6 +95,8 @@ typedef struct enum_name_elem_t enum_name_elem_t;
 struct enum_name_t {
 	/** first enum_name_elem_t in chain */
 	enum_name_elem_t *elem;
+	/** optional callbacks that serve as fallbacks */
+	enum_name_cb_elem_t cb[ENUM_NAME_CB_MAX];
 };
 
 /**
@@ -150,6 +184,58 @@ struct enum_name_elem_t {
 		BUILD_ASSERT((__builtin_ffs(last)-__builtin_ffs(first)+1) == \
 			countof(((char*[]){__VA_ARGS__}))), \
 		ENUM_FLAG_MAGIC, { unset, __VA_ARGS__ }}; ENUM_END(name, last)
+
+/**
+ * Add a callback that serves as fallback if a value can't be found in the given
+ * enum name list.
+ *
+ * @note This should only be called in single-threaded mode, i.e. when plugins
+ * and plugin features are loaded.
+ *
+ * @param e		enum names
+ * @param cb	callback to add
+ * @param user	user data to pass to callback
+ * @return		TRUE if cb added successfully
+ */
+static inline bool enum_name_cb_add(enum_name_t *e, enum_name_cb_t cb,
+									void *user)
+{
+	for (int i = 0; i < ENUM_NAME_CB_MAX; i++)
+	{
+		if (!e->cb[i].cb)
+		{
+			e->cb[i].cb = cb;
+			e->cb[i].user = user;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Remove a callback that served as fallback if a value couldn't be found in
+ * the given enum name list.
+ *
+ * @note This should only be called in single-threaded mode, i.e. when plugins
+ * and plugin features are unloaded.
+ *
+ * @param e		enum names
+ * @param cb	callback to remove
+ */
+static inline void enum_name_cb_remove(enum_name_t *e, enum_name_cb_t cb)
+{
+	for (int i = 0; i < ENUM_NAME_CB_MAX; i++)
+	{
+		if (e->cb[i].cb == cb)
+		{
+			memmove(&e->cb[i], &e->cb[i + 1],
+					sizeof(e->cb[0]) * (ENUM_NAME_CB_MAX - 1 - i));
+			e->cb[ENUM_NAME_CB_MAX - 1].cb = NULL;
+			e->cb[ENUM_NAME_CB_MAX - 1].user = NULL;
+			--i;
+		}
+	}
+}
 
 /**
  * Convert a enum value to its string representation.

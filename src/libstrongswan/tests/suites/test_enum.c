@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Tobias Brunner
+ * Copyright (C) 2013-2023 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -441,6 +441,104 @@ START_TEST(test_enum_printf_hook_width)
 }
 END_TEST
 
+typedef struct {
+	int val;
+	char *name;
+} test_enum_cb_data_t;
+
+static test_enum_cb_data_t test_enum_cb_data[] = {
+	{ 10, "TEN" },
+	{ 11, "11"  }
+};
+
+CALLBACK(enum_cont_cb, int,
+	test_enum_cb_data_t *d, enum_name_t *e, int val, char *buf, size_t len)
+{
+	if (val == d->val)
+	{
+		return snprintf(buf, len, "%s", d->name);
+	}
+	return 0;
+}
+
+START_TEST(test_enum_name_cb_cont)
+{
+	char buf[128];
+
+	snprintf(buf, sizeof(buf), "%N", test_enum_cont_names, 10);
+	ck_assert_str_eq("(10)", buf);
+	ck_assert(enum_name_cb_add(test_enum_cont_names, enum_cont_cb,
+							   &test_enum_cb_data[0]));
+	ck_assert(enum_name_cb_add(test_enum_cont_names, enum_cont_cb,
+							   &test_enum_cb_data[1]));
+	/* exceeds the current limit */
+	ck_assert(!enum_name_cb_add(test_enum_cont_names, enum_cont_cb,
+								&test_enum_cb_data[0]));
+	snprintf(buf, sizeof(buf), "%N", test_enum_cont_names, 10);
+	ck_assert_str_eq("TEN", buf);
+	snprintf(buf, sizeof(buf), "%N", test_enum_cont_names, 11);
+	ck_assert_str_eq("11", buf);
+	snprintf(buf, sizeof(buf), "%N", test_enum_cont_names, CONT2);
+	ck_assert_str_eq("CONT2", buf);
+	enum_name_cb_remove(test_enum_cont_names, enum_cont_cb);
+	snprintf(buf, sizeof(buf), "%N", test_enum_cont_names, 11);
+	ck_assert_str_eq("(11)", buf);
+}
+END_TEST
+
+static int EXTRA_FLAG = (1 << 15);
+
+CALLBACK(enum_flag_cb_extra, int,
+	void *user, enum_name_t *e, int val, char *buf, size_t len)
+{
+	if (val == EXTRA_FLAG)
+	{
+		return snprintf(buf, len, "EXTRA");
+	}
+	return 0;
+}
+
+CALLBACK(enum_flag_cb_f2, int,
+	void *user, enum_name_t *e, int val, char *buf, size_t len)
+{
+	if (val == FLAG2)
+	{
+		return snprintf(buf, len, "F2");
+	}
+	return 0;
+}
+
+START_TEST(test_enum_name_cb_flags)
+{
+	char buf[128];
+
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_names, EXTRA_FLAG);
+	ck_assert_str_eq("(0x8000)", buf);
+	ck_assert(enum_name_cb_add(test_enum_flags_names, enum_flag_cb_extra, NULL));
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_names, EXTRA_FLAG);
+	ck_assert_str_eq("EXTRA", buf);
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_names, FLAG2 | EXTRA_FLAG);
+	ck_assert_str_eq("FLAG2 | EXTRA", buf);
+	enum_name_cb_remove(test_enum_flags_names, enum_flag_cb_extra);
+
+	/* the callback allows printing a name for previously suppressed flags */
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_null_names, FLAG2 | FLAG3);
+	ck_assert_str_eq("FLAG3", buf);
+	ck_assert(enum_name_cb_add(test_enum_flags_null_names, enum_flag_cb_f2, NULL));
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_null_names, FLAG2 | FLAG3);
+	ck_assert_str_eq("F2 | FLAG3", buf);
+	ck_assert(enum_name_cb_add(test_enum_flags_null_names, enum_flag_cb_extra, NULL));
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_null_names, FLAG2 | EXTRA_FLAG);
+	ck_assert_str_eq("F2 | EXTRA", buf);
+	enum_name_cb_remove(test_enum_flags_null_names, enum_flag_cb_f2);
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_null_names, FLAG2 | EXTRA_FLAG);
+	ck_assert_str_eq("EXTRA", buf);
+	enum_name_cb_remove(test_enum_flags_null_names, enum_flag_cb_extra);
+	snprintf(buf, sizeof(buf), "%N", test_enum_flags_null_names, FLAG2 | EXTRA_FLAG);
+	ck_assert_str_eq("(0x8000)", buf);
+}
+END_TEST
+
 Suite *enum_suite_create()
 {
 	Suite *s;
@@ -478,6 +576,11 @@ Suite *enum_suite_create()
 	tcase_add_loop_test(tc, test_enum_printf_hook_flags_overflow, 0, countof(printf_tests_flags_overflow));
 	tcase_add_loop_test(tc, test_enum_printf_hook_flags_noflagenum, 0, countof(printf_tests_flags_noflagenum));
 	tcase_add_test(tc, test_enum_printf_hook_width);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("enum_name_cb");
+	tcase_add_test(tc, test_enum_name_cb_cont);
+	tcase_add_test(tc, test_enum_name_cb_flags);
 	suite_add_tcase(s, tc);
 
 	return s;
