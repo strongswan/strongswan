@@ -110,13 +110,19 @@ build_openssl()
 
 	echo "$ build_openssl()"
 
-	curl -L $SSL_SRC | tar xz -C $DEPS_BUILD_DIR &&
-	cd $SSL_DIR &&
-	./config --prefix=$SSL_INS --openssldir=$SSL_INS --libdir=lib $SSL_OPT &&
-	make -j4 >/dev/null &&
-	sudo make install_sw >/dev/null &&
-	sudo ldconfig || exit $?
-	cd -
+	curl -L $SSL_SRC | tar xz -C $DEPS_BUILD_DIR || exit $?
+
+	if [ "$TEST" = "android" ]; then
+		OPENSSL_SRC=${SSL_DIR} \
+		NO_DOCKER=1 src/frontends/android/openssl/build.sh || exit $?
+	else
+		cd $SSL_DIR &&
+		./config --prefix=$SSL_INS --openssldir=$SSL_INS --libdir=lib $SSL_OPT &&
+		make -j4 >/dev/null &&
+		sudo make install_sw >/dev/null &&
+		sudo ldconfig || exit $?
+		cd -
+	fi
 }
 
 use_custom_openssl()
@@ -308,9 +314,8 @@ win*)
 	esac
 	;;
 android)
-	if test "$1" = "deps"; then
-		git clone https://github.com/strongswan/boringssl.git -b ndk-static \
-			src/frontends/android/app/src/main/jni/openssl
+	if test "$1" = "build-deps"; then
+		build_openssl
 	fi
 	TARGET=distdir
 	;;
