@@ -632,6 +632,27 @@ static void __attribute__ ((constructor))register_logger()
 }
 
 /**
+ * Determine the application ID of the app
+ */
+static char *get_app_id(JNIEnv *env, jobject service)
+{
+	jclass cls;
+	jmethodID method_id;
+	jstring jstr;
+	char *name = NULL;
+
+	cls = (*env)->FindClass(env, "android/content/Context");
+	method_id = (*env)->GetMethodID(env, cls, "getPackageName",
+									"()Ljava/lang/String;");
+	jstr = (*env)->CallObjectMethod(env, service, method_id);
+	if (jstr)
+	{
+		name = androidjni_convert_jstring(env, jstr);
+	}
+	return name;
+}
+
+/**
  * Initialize charon and the libraries via JNI
  */
 JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
@@ -639,7 +660,7 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 {
 	struct sigaction action;
 	struct utsname utsname;
-	char *logfile, *appdir, *plugins;
+	char *logfile, *appdir, *plugins, *app_id;
 
 	/* initialize library */
 	if (!library_init(NULL, "charon"))
@@ -685,10 +706,12 @@ JNI_METHOD(CharonVpnService, initializeCharon, jboolean,
 	{
 		memset(&utsname, 0, sizeof(utsname));
 	}
+	app_id = get_app_id(env, this);
 	DBG1(DBG_DMN, "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+");
 	DBG1(DBG_DMN, "Starting IKE service (strongSwan "VERSION", %s, %s, "
-		 "%s %s, %s)", android_version_string, android_device_string,
-		  utsname.sysname, utsname.release, utsname.machine);
+		 "%s %s, %s, %s)", android_version_string, android_device_string,
+		  utsname.sysname, utsname.release, utsname.machine, app_id ?: "(unknown)");
+	free(app_id);
 
 #ifdef PLUGINS_BYOD
 	if (byod)

@@ -5,9 +5,9 @@ include $(CLEAR_VARS)
 # MainActivity.java)
 strongswan_USE_BYOD := true
 
-strongswan_CHARON_PLUGINS := android-log openssl fips-prf random nonce pubkey \
-	chapoly curve25519 pkcs1 pkcs8 pem xcbc hmac kdf socket-default revocation \
-	eap-identity eap-mschapv2 eap-md5 eap-gtc eap-tls x509
+strongswan_CHARON_PLUGINS := android-log socket-default openssl nonce \
+	pkcs1 pem x509 xcbc kdf revocation \
+	eap-identity eap-mschapv2 eap-md5 eap-gtc eap-tls
 
 ifneq ($(strongswan_USE_BYOD),)
 strongswan_BYOD_PLUGINS := eap-ttls eap-tnc tnc-imc tnc-tnccs tnccs-20

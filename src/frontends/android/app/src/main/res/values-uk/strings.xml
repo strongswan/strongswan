@@ -13,7 +13,7 @@
     or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
     for more details.
 -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Application -->
     <string name="app_name">strongSwan VPN клієнт</string>
@@ -164,7 +164,7 @@
     <string name="crl_cache">CRL cache</string>
     <string name="clear_crl_cache_title">Clear CRL cache?</string>
     <string name="clear_crl_cache_msg_none">The CRL cache is empty</string>
-    <plurals name="clear_crl_cache_msg">
+    <plurals name="clear_crl_cache_msg" tools:ignore="MissingQuantity">
         <item quantity="one">The CRL cache contains %1$d file (%2$s).</item>
         <item quantity="other">The CRL cache contains %1$d files (%2$s).</item>
     </plurals>
@@ -213,7 +213,7 @@
     <string name="disconnect_active_connection">This will disconnect the active VPN connection!</string>
     <string name="connect">Підключити</string>
     <string name="retry">Retry</string>
-    <plurals name="retry_in">
+    <plurals name="retry_in" tools:ignore="MissingQuantity">
         <item quantity="one">Retry in %1$d second</item>
         <item quantity="other">Retry in %1$d seconds</item>
     </plurals>
