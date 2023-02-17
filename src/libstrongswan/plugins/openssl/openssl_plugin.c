@@ -709,7 +709,7 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(KE, CURVE_448),
 #endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_ECDH */
 	};
-	static plugin_feature_t f[countof(f_base) + countof(f_ecdh)] = {};
+	static plugin_feature_t f[countof(f_base) + countof(f_ecdh) + countof(f_xdh)] = {};
 	static int count = 0;
 
 	if (!count)
