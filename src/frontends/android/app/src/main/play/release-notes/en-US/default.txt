@@ -1,3 +1,7 @@
+# 2.4.1 #
+
+- Changed order of DH groups to avoid issue with Zyxel Firewalls
+
 # 2.4.0 #
 
 - Switched from BoringSSL to OpenSSL
