@@ -183,11 +183,11 @@ public_key_t *tls_find_public_key(auth_cfg_t *peer_auth, identification_t *id)
 	cert = peer_auth->get(peer_auth, AUTH_HELPER_SUBJECT_CERT);
 	if (cert)
 	{
-		public = cert->get_public_key(cert);
-		if (public)
+		current = cert->get_public_key(cert);
+		if (current)
 		{
-			key_type = public->get_type(public);
-			public->destroy(public);
+			key_type = current->get_type(current);
+			current->destroy(current);
 		}
 		enumerator = lib->credmgr->create_public_enumerator(lib->credmgr,
 											key_type, id, peer_auth, TRUE);
