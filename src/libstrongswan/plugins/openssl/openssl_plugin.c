@@ -654,13 +654,6 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_521),
 #endif
 #endif /* OPENSSL_NO_ECDSA */
-#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_ECDH)
-		PLUGIN_REGISTER(KE, openssl_x_diffie_hellman_create),
-			/* available since 1.1.0a, but we require 1.1.1 features */
-			PLUGIN_PROVIDE(KE, CURVE_25519),
-			/* available since 1.1.1 */
-			PLUGIN_PROVIDE(KE, CURVE_448),
-#endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_ECDH */
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
 		/* EdDSA private/public key loading */
 		PLUGIN_REGISTER(PUBKEY, openssl_ed_public_key_load, TRUE),
@@ -706,6 +699,16 @@ METHOD(plugin_t, get_features, int,
 #endif /* OPENSSL_VERSION_NUMBER */
 #endif /* OPENSSL_NO_ECDH */
 	};
+	static plugin_feature_t f_xdh[] = {
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_ECDH)
+		/* define them here, so we can add them after the EC DH groups */
+		PLUGIN_REGISTER(KE, openssl_x_diffie_hellman_create),
+			/* available since 1.1.0a, but we require 1.1.1 features */
+			PLUGIN_PROVIDE(KE, CURVE_25519),
+			/* available since 1.1.1 */
+			PLUGIN_PROVIDE(KE, CURVE_448),
+#endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_ECDH */
+	};
 	static plugin_feature_t f[countof(f_base) + countof(f_ecdh)] = {};
 	static int count = 0;
 
@@ -715,6 +718,7 @@ METHOD(plugin_t, get_features, int,
 #ifndef OPENSSL_NO_ECDH
 		add_ecdh_features(f, f_ecdh, countof(f_ecdh), &count);
 #endif
+		plugin_features_add(f, f_xdh, countof(f_xdh), &count);
 	}
 	*features = f;
 	return count;
