@@ -1040,9 +1040,11 @@ CALLBACK(parse_hw_offload, bool,
 	action_t *out, chunk_t v)
 {
 	enum_map_t map[] = {
-		{ "no",		HW_OFFLOAD_NO	},
-		{ "yes",	HW_OFFLOAD_YES	},
-		{ "auto",	HW_OFFLOAD_AUTO	},
+		{ "no",		HW_OFFLOAD_NO		},
+		{ "yes",	HW_OFFLOAD_CRYPTO	},
+		{ "crypto",	HW_OFFLOAD_CRYPTO	},
+		{ "packet",	HW_OFFLOAD_PACKET	},
+		{ "auto",	HW_OFFLOAD_AUTO		},
 	};
 	int d;
 

@@ -2114,21 +2114,9 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
 		destroy(this);
 		return NULL;
 	}
+	lib->watcher->add(lib->watcher, this->socket, WATCHER_READ,
+					  (watcher_cb_t)receive_events, this);
 
-	if (streq(lib->ns, "starter"))
-	{
-		/* starter has no threads, so we do not register for kernel events */
-		if (shutdown(this->socket, SHUT_RD) != 0)
-		{
-			DBG1(DBG_KNL, "closing read end of PF_ROUTE socket failed: %s",
-				 strerror(errno));
-		}
-	}
-	else
-	{
-		lib->watcher->add(lib->watcher, this->socket, WATCHER_READ,
-						  (watcher_cb_t)receive_events, this);
-	}
 	if (init_address_list(this) != SUCCESS)
 	{
 		DBG1(DBG_KNL, "unable to get interface list");
