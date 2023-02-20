@@ -1,14 +1,29 @@
 To build this within the NDK the following things have to be done:
 
- - By default the strongSwan sources of the current Git tree are used. They have
-   to be prepared first (see HACKING for a list of required tools):
+ - By default, the strongSwan sources of the current Git tree are used. They
+   have to be prepared first (see HACKING for a list of required tools):
 
      ./autogen.sh && ./configure && make && make distclean
 
-   It is also possible to use the sources from a different directory (e.g. an
+   It's also possible to use the sources from a different directory (e.g. an
    extracted tarball) by setting strongswan_DIR in app/src/main/jni/Android.mk.
 
- - The OpenSSL or BoringSSL sources are expected in app/src/main/jni/openssl.
-   Since the sources need to be changed to be built on Android (and especially
-   in the NDK) we provide a modified mirror of the official Android repositories
-   on git.strongswan.org.
+ - The libstrongswan library depends on an Android module called libcrypto_static
+   that provides OpenSSL's libcrypto and header files.  To simplify this, the
+   build.sh script in the openssl directory can be used to statically build
+   libcrypto for all ABIs. The results are placed in app/src/main/jni/openssl.
+
+   The script expects the path to the Android NDK in ANDROID_NDK_ROOT, which is
+   something like /path/to/android-ndk-<ver> for standalone NDKs, and something
+   like /path/to/android-sdk/ndk/<ver> for side-by-side NDKs.  The path to the
+   OpenSSL sources is expected in OPENSSL_SRC (work with OpenSSL 1.1.1 or 3).
+   For instance, it may be invoked like this:
+
+     ANDROID_NDK_ROOT=~/android-ndk-<ver> \
+     OPENSSL_SRC=~/openssl-<ver> \
+     src/frontends/android/openssl/build.sh
+
+   By default, the script uses Docker to compile the library.  However, if the
+   necessary build dependencies (jq, make, perl) are installed on the host, this
+   can be disabled by defining the NO_DOCKER.  The dependency on jq may be
+   avoided by passing a space-separated list of target ABIs via ABIS variable.
