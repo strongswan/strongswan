@@ -27,10 +27,10 @@ def handle_interfaces(ike_sa, up):
 
     if up:
         logger.info("add XFRM interfaces %s and %s", ifname_in, ifname_out)
-        subprocess.call(["/usr/local/libexec/ipsec/xfrmi", "-n", ifname_out,
-                         "-i", str(if_id_out), "-d", "eth0"])
-        subprocess.call(["/usr/local/libexec/ipsec/xfrmi", "-n", ifname_in,
-                         "-i", str(if_id_in), "-d", "eth0"])
+        subprocess.call(["ip", "link", "add", ifname_out, "type", "xfrm",
+                         "if_id", str(if_id_out), "dev", "eth0"])
+        subprocess.call(["ip", "link", "add", ifname_in, "type", "xfrm",
+                         "if_id", str(if_id_in), "dev", "eth0"])
         subprocess.call(["ip", "link", "set", ifname_out, "up"])
         subprocess.call(["ip", "link", "set", ifname_in, "up"])
         subprocess.call(["iptables", "-A", "FORWARD", "-o", ifname_out,

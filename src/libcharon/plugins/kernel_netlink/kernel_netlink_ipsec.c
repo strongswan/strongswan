@@ -63,6 +63,7 @@
 
 #include "kernel_netlink_ipsec.h"
 #include "kernel_netlink_shared.h"
+#include "kernel_netlink_xfrmi.h"
 
 #include <daemon.h>
 #include <utils/debug.h>
@@ -338,6 +339,11 @@ struct private_kernel_netlink_ipsec_t {
 	netlink_socket_t *socket_xfrm;
 
 	/**
+	 * XFRM interface manager
+	 */
+	kernel_netlink_xfrmi_t *xfrmi;
+
+	/**
 	 * Netlink xfrm socket to receive acquire and expire events
 	 */
 	netlink_event_socket_t *socket_xfrm_events;
@@ -351,6 +357,11 @@ struct private_kernel_netlink_ipsec_t {
 	 * Whether to install routes along policies
 	 */
 	bool install_routes;
+
+	/**
+	 * Whether to install routes via XFRM interfaces
+	 */
+	bool install_routes_xfrmi;
 
 	/**
 	 * Whether to set protocol and ports on selector installed with transport
@@ -2731,6 +2742,30 @@ static void policy_change_done(private_kernel_netlink_ipsec_t *this,
 }
 
 /**
+ * Find an XFRM interface with the given ID
+ */
+static bool find_xfrmi(private_kernel_netlink_ipsec_t *this, uint32_t target,
+					   char **if_name)
+{
+	enumerator_t *enumerator;
+	char *name;
+	uint32_t if_id;
+
+	enumerator = this->xfrmi->create_enumerator(this->xfrmi);
+	while (enumerator->enumerate(enumerator, &name, &if_id, NULL, NULL))
+	{
+		if (if_id == target)
+		{
+			*if_name = strdup(name);
+			enumerator->destroy(enumerator);
+			return TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return FALSE;
+}
+
+/**
  * Install a route for the given policy if enabled and required
  */
 static void install_route(private_kernel_netlink_ipsec_t *this,
@@ -2759,9 +2794,15 @@ static void install_route(private_kernel_netlink_ipsec_t *this,
 
 	if (!ipsec->dst->is_anyaddr(ipsec->dst))
 	{
-		route->gateway = charon->kernel->get_nexthop(charon->kernel,
-											ipsec->dst, -1, ipsec->src,
-											&route->if_name);
+		/* if if_ids are used, install a route via XFRM interface if any,
+		 * otherwise install the route via the interface we reach the peer */
+		if (!policy->if_id || !this->xfrmi ||
+			!find_xfrmi(this, policy->if_id, &route->if_name))
+		{
+			route->gateway = charon->kernel->get_nexthop(charon->kernel,
+												ipsec->dst, -1, ipsec->src,
+												&route->if_name);
+		}
 	}
 	else
 	{	/* for shunt policies */
@@ -3000,12 +3041,12 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 	 * - this is an outbound policy (to just get one for each child)
 	 * - routing is not disabled via strongswan.conf
 	 * - the selector is not for a specific protocol/port
-	 * - no XFRM interface ID is configured
+	 * - routes via XFRM interfaces are enabled or no interface ID is configured
 	 * - we are in tunnel/BEET mode or install a bypass policy
 	 */
 	if (policy->direction == POLICY_OUT && this->install_routes &&
 		!policy->sel.proto && !policy->sel.dport && !policy->sel.sport &&
-		!policy->if_id)
+		(this->install_routes_xfrmi || !policy->if_id))
 	{
 		if (mapping->type == POLICY_PASS ||
 		   (mapping->type == POLICY_IPSEC && ipsec->cfg.mode != MODE_TRANSPORT))
@@ -3949,6 +3990,11 @@ METHOD(kernel_ipsec_t, destroy, void,
 	DESTROY_IF(this->socket_link_events);
 	DESTROY_IF(this->socket_xfrm_events);
 	array_destroy_function(this->bypass, remove_port_bypass, this);
+	if (this->xfrmi)
+	{
+		lib->set(lib, KERNEL_NETLINK_XFRMI_MANAGER, NULL);
+		kernel_netlink_xfrmi_destroy(this->xfrmi);
+	}
 	DESTROY_IF(this->socket_xfrm);
 	enumerator = this->policies->create_enumerator(this->policies);
 	while (enumerator->enumerate(enumerator, NULL, &policy))
@@ -4137,9 +4183,13 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 		.get_priority = dlsym(RTLD_DEFAULT,
 							  "kernel_netlink_get_priority_custom"),
 		.policy_update = lib->settings->get_bool(lib->settings,
-					"%s.plugins.kernel-netlink.policy_update", FALSE, lib->ns),
+						"%s.plugins.kernel-netlink.policy_update",
+						FALSE, lib->ns),
 		.install_routes = lib->settings->get_bool(lib->settings,
-							"%s.install_routes", TRUE, lib->ns),
+						"%s.install_routes", TRUE, lib->ns),
+		.install_routes_xfrmi = lib->settings->get_bool(lib->settings,
+						"%s.plugins.kernel-netlink.install_routes_xfrmi",
+						FALSE, lib->ns),
 		.proto_port_transport = lib->settings->get_bool(lib->settings,
 						"%s.plugins.kernel-netlink.set_proto_port_transport_sa",
 						FALSE, lib->ns),
@@ -4187,6 +4237,12 @@ kernel_netlink_ipsec_t *kernel_netlink_ipsec_create()
 			destroy(this);
 			return NULL;
 		}
+	}
+
+	this->xfrmi = kernel_netlink_xfrmi_create(TRUE);
+	if (this->xfrmi)
+	{
+		lib->set(lib, KERNEL_NETLINK_XFRMI_MANAGER, this->xfrmi);
 	}
 	return &this->public;
 }
