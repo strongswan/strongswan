@@ -475,6 +475,7 @@ int vici_register(vici_conn_t *conn, char *name, vici_event_cb_t cb, void *user)
  * Primarily useful when listening for events via vici_register(). The callback
  * gets invoked by a different thread from the libstrongswan thread pool.
  *
+ * @param conn		connection context
  * @param cb		callback function to register, NULL to unregister
  * @param user		user data passed to callback invocation
  */
