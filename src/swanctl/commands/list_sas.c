@@ -457,7 +457,7 @@ CALLBACK(close_cb, void,
 {
 	fprintf(stderr, "connection closed\n");
 	*ret = ECONNRESET;
-	kill(0, SIGTERM);
+	send_sigint();
 }
 
 static int monitor_sas(vici_conn_t *conn)
