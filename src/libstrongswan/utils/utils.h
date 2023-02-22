@@ -237,6 +237,12 @@ int sigwaitinfo(const sigset_t *set, void *info);
  */
 void wait_sigint();
 
+/**
+ * Portable function to send a SIGINT/SIGTERM (or equivalent) to the current
+ * process to exit the above function.
+ */
+void send_sigint();
+
 #ifndef HAVE_CLOSEFROM
 /**
  * Close open file descriptors greater than or equal to lowfd.
