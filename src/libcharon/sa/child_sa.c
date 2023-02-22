@@ -759,19 +759,19 @@ METHOD(child_sa_t, get_usestats, void,
 	private_child_sa_t *this, bool inbound,
 	time_t *time, uint64_t *bytes, uint64_t *packets)
 {
-	if ((!bytes && !packets) || update_usebytes(this, inbound) != FAILED)
+	status_t status = NOT_SUPPORTED;
+	bool sa_use_time;
+
+	sa_use_time = charon->kernel->get_features(charon->kernel) & KERNEL_SA_USE_TIME;
+
+	if (bytes || packets || sa_use_time)
 	{
-		/* there was traffic since last update or the kernel interface
-		 * does not support querying the number of usebytes.
-		 */
-		if (time)
-		{
-			if (!update_usetime(this, inbound) && !bytes && !packets)
-			{
-				/* if policy query did not yield a usetime, query SAs instead */
-				update_usebytes(this, inbound);
-			}
-		}
+		status = update_usebytes(this, inbound);
+	}
+	if (time && !sa_use_time && status != FAILED)
+	{	/* query policies only if last use time is not available from SAs and
+		 * there was either traffic or querying the SA wasn't supported */
+		update_usetime(this, inbound);
 	}
 	if (time)
 	{

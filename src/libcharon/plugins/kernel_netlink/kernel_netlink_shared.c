@@ -359,7 +359,7 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 
 	if (this->names)
 	{
-		DBG3(DBG_KNL, "sending %N %u: %b", this->names, in->nlmsg_type,
+		DBG4(DBG_KNL, "sending %N %u: %b", this->names, in->nlmsg_type,
 			 (u_int)seq, in, in->nlmsg_len);
 	}
 
@@ -426,7 +426,7 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 	{
 		if (this->names)
 		{
-			DBG3(DBG_KNL, "received %N %u: %b", this->names, hdr->nlmsg_type,
+			DBG4(DBG_KNL, "received %N %u: %b", this->names, hdr->nlmsg_type,
 				 hdr->nlmsg_seq, hdr, hdr->nlmsg_len);
 		}
 		memcpy(ptr, hdr, hdr->nlmsg_len);

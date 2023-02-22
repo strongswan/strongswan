@@ -269,7 +269,11 @@ struct kernel_ipsec_t {
 						  kernel_ipsec_update_sa_t *data);
 
 	/**
-	 * Query the number of bytes processed by an SA from the SAD.
+	 * Query the number of bytes and packets processed by an SA from the SAD.
+	 *
+	 * Some implementations may also return the last use time (as indicated by
+	 * get_features()). This is a monotonic timestamp as returned by
+	 * time_monotonic().
 	 *
 	 * @param id			data identifying this SA
 	 * @param data			data to query the SA
@@ -314,12 +318,11 @@ struct kernel_ipsec_t {
 	 * Query the use time of a policy.
 	 *
 	 * The use time of a policy is the time the policy was used for the last
-	 * time. It is not the system time, but a monotonic timestamp as returned
-	 * by time_monotonic.
+	 * time. This is a monotonic timestamp as returned by time_monotonic().
 	 *
 	 * @param id			data identifying this policy
 	 * @param data			data to query the policy
-	 * @param[out] use_time	the monotonic timestamp of this SA's last use
+	 * @param[out] use_time	the monotonic timestamp of this policy's last use
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_policy)(kernel_ipsec_t *this,

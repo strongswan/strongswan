@@ -231,7 +231,8 @@ static void expire(uint8_t protocol, uint32_t spi, host_t *dst, bool hard)
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	private_kernel_libipsec_ipsec_t *this)
 {
-	return KERNEL_REQUIRE_UDP_ENCAPSULATION | KERNEL_ESP_V3_TFC;
+	return KERNEL_REQUIRE_UDP_ENCAPSULATION | KERNEL_ESP_V3_TFC |
+		   KERNEL_SA_USE_TIME;
 }
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
