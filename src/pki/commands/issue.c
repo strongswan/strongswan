@@ -482,8 +482,11 @@ static int issue()
 		}
 		req = (pkcs10_t*)cert_req;
 
-		/* Add Extended Key Usage (EKU) flags */
-		flags |= req->get_flags(req);
+		/* Add Extended Key Usage (EKU) flags if not overridden */
+		if (!flags)
+		{
+			flags = req->get_flags(req);
+		}
 
 		/* Add subjectAltNames from PKCS#10 certificate request */
 		enumerator = req->create_subjectAltName_enumerator(req);
