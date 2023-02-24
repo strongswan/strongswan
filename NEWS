@@ -1,6 +1,12 @@
 strongswan-5.9.10
 -----------------
 
+- Fixed a vulnerability related to certificate verification in TLS-based EAP
+  methods that leads to an authentication bypass followed by an expired pointer
+  dereference that results in a denial of service and possibly even remote code
+  execution.
+  This vulnerability has been registered as CVE-2023-26463.
+
 - Added support for full packet hardware offload for IPsec SAs and policies with
   Linux 6.2 kernels to the kernel-netlink plugin.
 
