@@ -1,3 +1,37 @@
+strongswan-5.9.10
+-----------------
+
+- Added support for full packet hardware offload for IPsec SAs and policies with
+  Linux 6.2 kernels to the kernel-netlink plugin.
+
+- TLS-based EAP methods now use the standardized key derivation when used
+  with TLS 1.3.
+
+- The eap-tls plugin properly supports TLS 1.3 according to RFC 9190, by
+  implementing the "protected success indication".
+
+- With the `prefer` value for the `childless` setting, initiators will create
+  a childless IKE_SA if the responder supports the extension.
+
+- Routes via XFRM interfaces can optionally be installed automatically by
+  enabling the `install_routes_xfrmi` option of the kernel-netlink plugin.
+
+- charon-nm now uses XFRM interfaces instead of dummy TUN devices to avoid
+  issues with name resolution if they are supported by the kernel.
+
+- The `pki --req` command can encode extendedKeyUsage (EKU) flags in the
+  PKCS#10 certificate signing request.
+
+- The `pki --issue` command adopts EKU flags from CSRs but allows modifying them
+  (replace them completely, or adding/removing specific flags).
+
+- On Linux 6.2 kernels, the last use times of CHILD_SAs are determined via the
+  IPsec SAs instead of the policies.
+
+- For libcurl with MultiSSL support, the curl plugin provides an option to
+  select the SSL/TLS backend.
+
+
 strongswan-5.9.9
 ----------------
 
