@@ -475,9 +475,13 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 
 	if (ike_sa->initiate(ike_sa, listener->child_cfg, NULL) == SUCCESS)
 	{
-		if (!listener->logger.callback)
-		{
+		if (!listener->logger.callback ||
+			(!listener->child_cfg &&
+			 ike_sa->get_state(ike_sa) != IKE_CONNECTING))
+		{	/* immediately return if we don't block or after re-initiating an
+			 * existing IKE_SA childless */
 			listener->status = SUCCESS;
+			listener_done(listener);
 		}
 		charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
 	}
