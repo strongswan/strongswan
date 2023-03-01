@@ -1,6 +1,6 @@
 carol::cat /var/log/daemon.log::server requested EAP_TLS authentication::YES
 carol::cat /var/log/daemon.log::allow mutual EAP-only authentication::YES
-carol::cat /var/log/daemon.log::negotiated TLS 1.2 using suite TLS_DHE_RSA_WITH_AES_256_GCM_SHA384::YES
+carol::cat /var/log/daemon.log::negotiated TLS 1.3 using suite TLS_AES_256_GCM_SHA384::YES
 carol::cat /var/log/daemon.log::authentication of 'C=CH, O=strongSwan Project, CN=moon.strongswan.org' with EAP successful::YES
 dave::cat /var/log/daemon.log::no issuer certificate found for \"C=CH, O=strongSwan Project, CN=moon.strongswan.org\"::YES
 dave::cat /var/log/daemon.log::no TLS public key found for server 'C=CH, O=strongSwan Project, CN=moon.strongswan.org'::YES
