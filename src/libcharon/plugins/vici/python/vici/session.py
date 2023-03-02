@@ -1,12 +1,29 @@
 import socket
 
 from .exception import SessionException, CommandException, EventUnknownException
-from .protocol import Transport, Packet, Message
+from .protocol import Transport, Packet, Message, RECV_TIMEOUT_DEFAULT
 from .command_wrappers import CommandWrappers
 
 
 class Session(CommandWrappers, object):
     def __init__(self, sock=None):
+        """Establish a session with an IKE daemon.
+        By default, the session will connect to the `/var/run/charon.vici` Unix
+        domain socket.
+
+        If there is a need to connect a socket in another location or set
+        specific settings on the socket (like a timeout), create and connect
+        a socket and pass it to the `sock` parameter.
+
+        .. note::
+
+            In case a timeout is set on the socket, the internal read code
+            will temporarily disable it after receiving the first byte to avoid
+            partial read corruptions.
+
+        :param sock: socket connected to the IKE daemon (optional)
+        :type sock: socket.socket
+        """
         if sock is None:
             sock = socket.socket(socket.AF_UNIX)
             sock.connect("/var/run/charon.vici")
@@ -141,7 +158,7 @@ class Session(CommandWrappers, object):
                     )
                 )
 
-    def listen(self, event_types, timeout=None):
+    def listen(self, event_types, timeout=RECV_TIMEOUT_DEFAULT):
         """Register and listen for the given events.
 
         If a timeout is given, the generator produces a (None, None) tuple
