@@ -2604,8 +2604,8 @@ CALLBACK(config_sn, bool,
 #ifdef ME
 	if (peer.mediation && peer.mediated_by)
 	{
-		DBG1(DBG_CFG, "a mediation connection cannot be a mediated connection "
-			 "at the same time, config discarded");
+		request->reply = create_reply("a mediation connection cannot be a "
+									  "mediated connection at the same time");
 		free_peer_data(&peer);
 		return FALSE;
 	}
@@ -2616,23 +2616,23 @@ CALLBACK(config_sn, bool,
 	else if (peer.mediated_by)
 	{	/* fallback to remote identity of first auth round if peer_id is not
 		 * given explicitly */
-		auth_cfg_t *cfg;
+		auth_data_t *auth;
 
 		if (!peer.peer_id &&
-			peer.remote->get_first(peer.remote, (void**)&cfg) == SUCCESS)
+			peer.remote->get_first(peer.remote, (void**)&auth) == SUCCESS)
 		{
-			peer.peer_id = cfg->get(cfg, AUTH_RULE_IDENTITY);
+			peer.peer_id = auth->cfg->get(auth->cfg, AUTH_RULE_IDENTITY);
 			if (peer.peer_id)
 			{
 				peer.peer_id = peer.peer_id->clone(peer.peer_id);
 			}
-			else
-			{
-				DBG1(DBG_CFG, "mediation peer missing for mediated connection, "
-					 "config discarded");
-				free_peer_data(&peer);
-				return FALSE;
-			}
+		}
+		if (!peer.peer_id)
+		{
+			request->reply = create_reply("mediation peer or remote identity "
+										  "missing for mediated connection");
+			free_peer_data(&peer);
+			return FALSE;
 		}
 	}
 #endif /* ME */
