@@ -286,17 +286,23 @@ win*)
 	if test "$APPVEYOR" != "True"; then
 		TARGET=
 	else
+		CONFIG="$CONFIG --enable-openssl"
 		case "$IMG" in
 		2015|2017)
 			# old OpenSSL versions don't provide HKDF
 			CONFIG="$CONFIG --enable-kdf"
 			;;
 		esac
-		CONFIG="$CONFIG --enable-openssl"
-		CFLAGS="$CFLAGS -I$OPENSSL_DIR/include"
-		LDFLAGS="-L$OPENSSL_DIR"
-		export LDFLAGS
 
+		CFLAGS="$CFLAGS -I$OPENSSL_DIR/include"
+		LDFLAGS="-L$OPENSSL_DIR/lib"
+		case "$IMG" in
+		2015)
+			# gcc/ld might be too old to find libeay32 via .lib instead of .dll
+			LDFLAGS="-L$OPENSSL_DIR"
+			;;
+		esac
+		export LDFLAGS
 	fi
 	CFLAGS="$CFLAGS -mno-ms-bitfields"
 	DEPS="gcc-mingw-w64-base"

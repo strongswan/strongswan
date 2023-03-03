@@ -1169,7 +1169,7 @@ if test x$openssl = xtrue; then
 	if test "x$windows" = xtrue; then
 		openssl_lib=eay32
 		AC_CHECK_LIB([$openssl_lib],[EVP_CIPHER_CTX_new],[LIBS="$LIBS"],
-			[AC_MSG_RESULT([no]);openssl_lib=""],[$DLLIB])
+			[openssl_lib=""],[$DLLIB])
 	fi
 	if test -z "$openssl_lib"; then
 		openssl_lib=crypto
