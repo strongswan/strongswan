@@ -199,11 +199,7 @@ openssl*)
 gcrypt)
 	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-random --enable-pem --enable-pkcs1 --enable-pkcs8 --enable-gcm --enable-hmac --enable-kdf -enable-curve25519 --enable-x509 --enable-constraints"
 	export TESTS_PLUGINS="test-vectors gcrypt! random pem pkcs1 pkcs8 gcm hmac kdf curve25519 x509 constraints"
-	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "18.04" ]; then
-		DEPS="libgcrypt11-dev"
-	else
-		DEPS="libgcrypt20-dev"
-	fi
+	DEPS="libgcrypt20-dev"
 	;;
 botan)
 	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem --enable-hmac --enable-x509 --enable-constraints"
@@ -257,12 +253,7 @@ all|codeql|coverage|sonarcloud)
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libgcrypt20-dev libjson-c-dev python3-pip libtspi-dev libsystemd-dev
-		  libselinux1-dev"
-	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "18.04" ]; then
-		DEPS="$DEPS iptables-dev python3-setuptools"
-	else
-		DEPS="$DEPS libiptc-dev"
-	fi
+		  libselinux1-dev libiptc-dev"
 	PYDEPS="tox"
 	if test "$1" = "build-deps"; then
 		build_botan
@@ -456,10 +447,7 @@ case "$TEST" in
 		CONFIG="$CONFIG --disable-asan"
 		;;
 	*)
-		if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "18.04" ]; then
-			# the libstdc++ workaround for libbotan doesn't work on Ubuntu 18.04
-			CONFIG="$CONFIG --disable-asan"
-		elif [ "$LEAK_DETECTIVE" != "yes" ]; then
+		if [ "$LEAK_DETECTIVE" != "yes" ]; then
 			CONFIG="$CONFIG --enable-asan"
 		fi
 		;;
