@@ -111,6 +111,11 @@ struct private_dhcp_socket_t {
 	 * Force configured destination address
 	 */
 	bool force_dst;
+
+	/**
+	 * Send DHCPRELEASE on IKE_SA DELETE, or just let lease expire?
+	 */
+	bool release_on_delete;
 };
 
 /**
@@ -486,6 +491,15 @@ METHOD(dhcp_socket_t, release, void,
 	chunk_t chunk;
 	int optlen;
 
+	/*
+	 * Some DHCP servers will always grant us a different address after a
+	 * DHCPRELEASE, and we may prefer to allow the server to expire leases
+	 * (giving the client a good chance to receive the same address on next
+	 * connection) rather than generating a DHCPRELEASE each time the
+	 * IKE_SA goes down.
+	 */
+	if (this->release_on_delete == FALSE) return;
+
 	optlen = prepare_dhcp(this, transaction, DHCP_RELEASE, &dhcp);
 
 	release = transaction->get_address(transaction);
@@ -796,6 +810,9 @@ dhcp_socket_t *dhcp_socket_create()
 								lib->ns);
 	this->force_dst = lib->settings->get_str(lib->settings,
 								"%s.plugins.dhcp.force_server_address", FALSE,
+								lib->ns);
+	this->release_on_delete = lib->settings->get_bool(lib->settings,
+								"%s.plugins.dhcp.release_on_delete", TRUE,
 								lib->ns);
 	this->dst = host_create_from_string(lib->settings->get_str(lib->settings,
 								"%s.plugins.dhcp.server", "255.255.255.255",
