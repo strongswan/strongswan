@@ -179,22 +179,31 @@ METHOD(tls_application_t, server_process, status_t,
 METHOD(tls_application_t, server_build, status_t,
 	eap_tls_app_t *app, bio_writer_t *writer)
 {
-	if (app->this->tls->get_version_max(app->this->tls) < TLS_1_3 ||
-		app->this->indication_sent_received)
+	if (app->this->indication_sent_received)
 	{
 		return SUCCESS;
 	}
-	/* build() is called twice when sending the indication, return the same
-	 * status but data only once */
-	if (app->indication_sent)
+	if (app->this->tls->get_version_max(app->this->tls) >= TLS_1_3)
 	{
-		app->this->indication_sent_received = TRUE;
+		/* build() is called twice when sending the indication, return the same
+		 * status but data only once */
+		if (app->indication_sent)
+		{
+			app->this->indication_sent_received = TRUE;
+		}
+		else
+		{	/* send a single 0x00 */
+			DBG2(DBG_TLS, "sending protected success indication via TLS");
+			writer->write_uint8(writer, 0);
+			app->indication_sent = TRUE;
+		}
 	}
 	else
-	{	/* send a single 0x00 */
-		DBG2(DBG_TLS, "sending protected success indication via TLS");
-		writer->write_uint8(writer, 0);
-		app->indication_sent = TRUE;
+	{
+		/* with earlier TLS versions, return INVALID_STATE without data to send
+		 * the final handshake messages (returning SUCCESS immediately would
+		 * prevent that) */
+		app->this->indication_sent_received = TRUE;
 	}
 	return INVALID_STATE;
 }
