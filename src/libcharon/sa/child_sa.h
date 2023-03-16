@@ -291,6 +291,30 @@ struct child_sa_t {
 	void (*set_ipcomp)(child_sa_t *this, ipcomp_transform_t ipcomp);
 
 	/**
+	 * Whether this CHILD_SA can be rekeyed with an optimized exchange (omitting
+	 * SA and TS payloads).
+	 *
+	 * The primary SA for which this is not possible is the initial SA that's
+	 * created during IKE_AUTH as we don't know what key exchange method (if
+	 * any) would get negotiated during rekeying.
+	 *
+	 * @return			TRUE if optimized rekeying is possible
+	 */
+	bool (*get_optimized_rekey)(child_sa_t *this);
+
+	/**
+	 * Set whether this CHILD_SA can be rekeyed with an optimized
+	 * CREATE_CHILD_SA exchange that omits SA and TS payloads.
+	 *
+	 * @note This must not be enabled for the initial SA that's negotiated
+	 * during IKE_AUTH as we don't know what key exchange method (if any) should
+	 * be used (they are stripped in the proposals exchanged during IKE_AUTH).
+	 *
+	 * @param enabled	TRUE to enable optimized rekeying
+	 */
+	void (*set_optimized_rekey)(child_sa_t *this, bool enabled);
+
+	/**
 	 * Disable fragmenting messages across multiple IP-TFS packets. Only
 	 * relevant with MODE_IPTFS.
 	 */
