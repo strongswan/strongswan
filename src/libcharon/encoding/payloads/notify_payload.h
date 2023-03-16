@@ -177,6 +177,11 @@ enum notify_type_t {
 	/* Resource info for CHILD_SAs, RFC 9611 */
 	SA_RESOURCE_INFO = 16444,
 
+	/* Optimized rekeying supported (draft-ietf-ipsecme-ikev2-sa-ts-payloads-opt) */
+	OPTIMIZED_REKEY_SUPPORTED = 16445,
+	/* Optimized rekeying (draft-ietf-ipsecme-ikev2-sa-ts-payloads-opt) */
+	OPTIMIZED_REKEY = 16446,
+
 	/* IKEv1 initial contact */
 	INITIAL_CONTACT_IKEV1 = 24578,
 
