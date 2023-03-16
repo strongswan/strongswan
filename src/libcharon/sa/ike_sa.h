@@ -183,6 +183,11 @@ enum ike_extension_t {
 	EXT_CHILD_SA_PFS_INFO = (1<<18),
 
 	/**
+	 * Peer supports optimized rekeying, draft-ietf-ipsecme-ikev2-sa-ts-payloads-opt
+	 */
+	EXT_OPTIMIZED_REKEY = (1<<19),
+
+	/**
 	 * MSB marker to separate private extensions
 	 */
 	EXT_PRIVATE_MARKER = (1<<31),
