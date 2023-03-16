@@ -200,6 +200,11 @@ enum notify_type_t {
 	/* RADIUS attribute received/to send to a AAA backend */
 	RADIUS_ATTRIBUTE = 40969,
 
+	/* Optimized rekeying supported (draft-ietf-ipsecme-ikev2-sa-ts-payloads-opt) */
+	OPTIMIZED_REKEY_SUPPORTED = 50400,
+	/* Optimized rekeying (draft-ietf-ipsecme-ikev2-sa-ts-payloads-opt) */
+	OPTIMIZED_REKEY = 50401,
+
 	/* KE negotiation during IKE_AUTH, draft-ietf-ipsecme-child-pfs-info */
 	CHILD_SA_PFS_INFO_SUPPORTED = 50600,
 };
