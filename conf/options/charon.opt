@@ -326,6 +326,9 @@ charon.ocsp_nonce_len = 32
 	between 1 and 32, with new clients required to use 32. Some servers might
 	not support that so lowering the value to e.g. 16 might be necessary.
 
+charon.optimized_rekeying = yes
+	Enable optimized rekeying that omits SA and TS payloads (RFC ...).
+
 charon.port = 500
 	UDP port used locally. If set to 0 a random port will be allocated.
 
