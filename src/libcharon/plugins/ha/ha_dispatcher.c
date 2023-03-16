@@ -838,6 +838,12 @@ static void process_child_add(private_ha_dispatcher_t *this,
 		proposal->add_algorithm(proposal, ENCRYPTION_ALGORITHM, encr, len);
 	}
 	add_ke_methods_to_proposal(proposal, ke_alg, add_kes);
+	if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD, NULL, NULL))
+	{
+		/* enable this only for SAs that we definitely know were rekeyed or
+		 * created with a CREATE_CHILD_SA exchange */
+		child_sa->set_optimized_rekey(child_sa, TRUE);
+	}
 	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, esn, 0);
 
 	if (secret.len)
