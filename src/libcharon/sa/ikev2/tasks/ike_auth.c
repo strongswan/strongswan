@@ -158,12 +158,21 @@ struct private_ike_auth_t {
 };
 
 /**
- * check if multiple authentication extension is enabled, configuration-wise
+ * check if multiple authentication extension is disabled in the config
  */
 static bool multiple_auth_enabled()
 {
 	return lib->settings->get_bool(lib->settings,
 								   "%s.multiple_authentication", TRUE, lib->ns);
+}
+
+/**
+ * check if optimized rekeying is disabled in the config
+ */
+static bool optimized_rekey_enabled()
+{
+	return lib->settings->get_bool(lib->settings,
+								   "%s.optimized_rekeying", TRUE, lib->ns);
 }
 
 /**
@@ -835,6 +844,11 @@ METHOD(task_t, build_i, status_t,
 			message->add_notify(message, FALSE, MULTIPLE_AUTH_SUPPORTED,
 								chunk_empty);
 		}
+		if (optimized_rekey_enabled())
+		{	/* indicate support for optmized rekeying */
+			message->add_notify(message, FALSE, OPTIMIZED_REKEY_SUPPORTED,
+								chunk_empty);
+		}
 		/* indicate support for EAP-only authentication */
 		message->add_notify(message, FALSE, EAP_ONLY_AUTHENTICATION,
 							chunk_empty);
@@ -1026,6 +1040,11 @@ METHOD(task_t, process_r, status_t,
 		if (message->get_notify(message, MULTIPLE_AUTH_SUPPORTED))
 		{
 			this->ike_sa->enable_extension(this->ike_sa, EXT_MULTIPLE_AUTH);
+		}
+		if (message->get_notify(message, OPTIMIZED_REKEY_SUPPORTED) &&
+			optimized_rekey_enabled())
+		{
+			this->ike_sa->enable_extension(this->ike_sa, EXT_OPTIMIZED_REKEY);
 		}
 		if (message->get_notify(message, EAP_ONLY_AUTHENTICATION))
 		{
@@ -1389,6 +1408,12 @@ METHOD(task_t, build_r, status_t,
 							"%s.half_open_timeout", HALF_OPEN_IKE_SA_TIMEOUT,
 							lib->ns));
 	}
+	else if (this->ike_sa->supports_extension(this->ike_sa, EXT_OPTIMIZED_REKEY))
+	{
+		/* indicate support for optimized rekeying in last IKE_AUTH message */
+		message->add_notify(message, FALSE, OPTIMIZED_REKEY_SUPPORTED,
+							chunk_empty);
+	}
 
 	this->ike_sa->set_condition(this->ike_sa, COND_AUTHENTICATED, TRUE);
 	return SUCCESS;
@@ -1544,6 +1569,13 @@ METHOD(task_t, process_i, status_t,
 				case IKEV2_MESSAGE_ID_SYNC_SUPPORTED:
 					this->ike_sa->enable_extension(this->ike_sa,
 												   EXT_IKE_MESSAGE_ID_SYNC);
+					break;
+				case OPTIMIZED_REKEY_SUPPORTED:
+					if (optimized_rekey_enabled())
+					{
+						this->ike_sa->enable_extension(this->ike_sa,
+													   EXT_OPTIMIZED_REKEY);
+					}
 					break;
 				case PPK_IDENTITY:
 					ppk_id_received = TRUE;
