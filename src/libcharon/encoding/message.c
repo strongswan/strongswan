@@ -337,7 +337,7 @@ static payload_rule_t create_child_sa_i_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{PLV2_FRAGMENT,					0,	1,						TRUE,	TRUE},
 	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	FALSE},
-	{PLV2_SECURITY_ASSOCIATION,		1,	1,						TRUE,	FALSE},
+	{PLV2_SECURITY_ASSOCIATION,		0,	1,						TRUE,	FALSE},
 	{PLV2_NONCE,					1,	1,						TRUE,	FALSE},
 	{PLV2_KEY_EXCHANGE,				0,	1,						TRUE,	FALSE},
 	{PLV2_TS_INITIATOR,				0,	1,						TRUE,	FALSE},
@@ -352,6 +352,7 @@ static payload_rule_t create_child_sa_i_rules[] = {
 static payload_order_t create_child_sa_i_order[] = {
 /*	payload type					notify type */
 	{PLV2_NOTIFY,					REKEY_SA},
+	{PLV2_NOTIFY,					OPTIMIZED_REKEY},
 	{PLV2_NOTIFY,					IPCOMP_SUPPORTED},
 	{PLV2_NOTIFY,					USE_TRANSPORT_MODE},
 	{PLV2_NOTIFY,					ESP_TFC_PADDING_NOT_SUPPORTED},
@@ -372,7 +373,7 @@ static payload_rule_t create_child_sa_r_rules[] = {
 /*	payload type					min	max						encr	suff */
 	{PLV2_FRAGMENT,					0,	1,						TRUE,	TRUE},
 	{PLV2_NOTIFY,					0,	MAX_NOTIFY_PAYLOADS,	TRUE,	TRUE},
-	{PLV2_SECURITY_ASSOCIATION,		1,	1,						TRUE,	FALSE},
+	{PLV2_SECURITY_ASSOCIATION,		0,	1,						TRUE,	FALSE},
 	{PLV2_NONCE,					1,	1,						TRUE,	FALSE},
 	{PLV2_KEY_EXCHANGE,				0,	1,						TRUE,	FALSE},
 	{PLV2_TS_INITIATOR,				0,	1,						TRUE,	FALSE},
@@ -386,6 +387,7 @@ static payload_rule_t create_child_sa_r_rules[] = {
  */
 static payload_order_t create_child_sa_r_order[] = {
 /*	payload type					notify type */
+	{PLV2_NOTIFY,					OPTIMIZED_REKEY},
 	{PLV2_NOTIFY,					IPCOMP_SUPPORTED},
 	{PLV2_NOTIFY,					USE_TRANSPORT_MODE},
 	{PLV2_NOTIFY,					ESP_TFC_PADDING_NOT_SUPPORTED},
