@@ -61,6 +61,9 @@ START_TEST(test_regular)
 	/* CREATE_CHILD_SA { SA, Ni, KEi } --> */
 	assert_hook_rekey(ike_rekey, 1, 3);
 	assert_no_notify(IN, REKEY_SA);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_ike_sa_state(b, IKE_REKEYED);
 	assert_child_sa_count(b, 0);
@@ -73,6 +76,9 @@ START_TEST(test_regular)
 	/* <-- CREATE_CHILD_SA { SA, Nr, KEr } */
 	assert_hook_rekey(ike_rekey, 1, 3);
 	assert_no_notify(IN, REKEY_SA);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_ike_sa_state(a, IKE_DELETING);
 	assert_child_sa_count(a, 0);
@@ -148,6 +154,9 @@ START_TEST(test_regular_multi_ke)
 	/* CREATE_CHILD_SA { SA, Ni, KEi } --> */
 	assert_hook_not_called(ike_rekey);
 	assert_no_notify(IN, REKEY_SA);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_ike_sa_state(b, IKE_REKEYING);
 	assert_child_sa_count(b, 1);
@@ -157,6 +166,9 @@ START_TEST(test_regular_multi_ke)
 	/* <-- CREATE_CHILD_SA { SA, Nr, KEr, N(ADD_KE) } */
 	assert_hook_not_called(ike_rekey);
 	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_ike_sa_state(a, IKE_REKEYING);
 	assert_child_sa_count(a, 1);
@@ -166,6 +178,8 @@ START_TEST(test_regular_multi_ke)
 	/* IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } --> */
 	assert_hook_rekey(ike_rekey, 1, 3);
 	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_no_payload(IN, PLV2_NONCE);
 	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_ike_sa_state(b, IKE_REKEYED);
@@ -179,6 +193,8 @@ START_TEST(test_regular_multi_ke)
 	/* <-- IKE_FOLLOWUP_KE { KEr } */
 	assert_hook_rekey(ike_rekey, 1, 3);
 	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_no_payload(IN, PLV2_NONCE);
 	assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_ike_sa_state(a, IKE_DELETING);
@@ -413,6 +429,198 @@ START_TEST(test_regular_ke_invalid_multi_ke)
 	sa = assert_ike_sa_checkout(3, 5, TRUE);
 	assert_ike_sa_state(sa, IKE_ESTABLISHED);
 	assert_child_sa_count(sa, 1);
+	assert_ike_sa_count(2);
+	assert_hook();
+
+	/* we don't expect this hook to get called anymore */
+	assert_hook_not_called(ike_rekey);
+
+	/* INFORMATIONAL { D } --> */
+	assert_single_payload(IN, PLV2_DELETE);
+	s = exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(b, destroy);
+	/* <-- INFORMATIONAL { } */
+	assert_message_empty(IN);
+	s = exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(a, destroy);
+
+	/* ike_rekey/ike_updown/child_updown */
+	assert_hook();
+	assert_hook();
+	assert_hook();
+	assert_track_sas(2, 2);
+
+	charon->ike_sa_manager->flush(charon->ike_sa_manager);
+}
+END_TEST
+
+/**
+ * Optimized IKE_SA rekeying either initiated by the original initiator or
+ * responder of the IKE_SA.
+ */
+START_TEST(test_optimized)
+{
+	ike_sa_t *a, *b, *new_sa;
+	status_t s;
+
+	assert_track_sas_start();
+
+	if (_i)
+	{	/* responder rekeys the IKE_SA */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &b, &a, NULL);
+	}
+	else
+	{	/* initiator rekeys the IKE_SA */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &a, &b, NULL);
+	}
+	/* these should never get called as this results in a successful rekeying */
+	assert_hook_not_called(ike_updown);
+	assert_hook_not_called(child_updown);
+
+	initiate_rekey(a);
+
+	/* CREATE_CHILD_SA { N(OPT_REKEY), Ni, KEi } --> */
+	assert_hook_rekey(ike_rekey, 1, 3);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_no_notify(IN, REKEY_SA);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_ike_sa_state(b, IKE_REKEYED);
+	assert_child_sa_count(b, 0);
+	new_sa = assert_ike_sa_checkout(3, 4, FALSE);
+	assert_ike_sa_state(new_sa, IKE_ESTABLISHED);
+	assert_child_sa_count(new_sa, 1);
+	assert_ike_sa_count(1);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(OPT_REKEY), Nr, KEr } */
+	assert_hook_rekey(ike_rekey, 1, 3);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_no_notify(IN, REKEY_SA);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_ike_sa_state(a, IKE_DELETING);
+	assert_child_sa_count(a, 0);
+	new_sa = assert_ike_sa_checkout(3, 4, TRUE);
+	assert_ike_sa_state(new_sa, IKE_ESTABLISHED);
+	assert_child_sa_count(new_sa, 1);
+	assert_ike_sa_count(2);
+	assert_hook();
+
+	/* we don't expect this hook to get called anymore */
+	assert_hook_not_called(ike_rekey);
+
+	/* INFORMATIONAL { D } --> */
+	assert_single_payload(IN, PLV2_DELETE);
+	s = exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(b, destroy);
+	/* <-- INFORMATIONAL { } */
+	assert_message_empty(IN);
+	s = exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	ck_assert_int_eq(DESTROY_ME, s);
+	call_ikesa(a, destroy);
+
+	/* ike_rekey/ike_updown/child_updown */
+	assert_hook();
+	assert_hook();
+	assert_hook();
+	assert_track_sas(2, 2);
+
+	charon->ike_sa_manager->flush(charon->ike_sa_manager);
+}
+END_TEST
+
+/**
+ * Optimized IKE_SA rekeying with multiple key exchanges either initiated by the
+ * original initiator or responder of the IKE_SA.
+ */
+START_TEST(test_optimized_multi_ke)
+{
+	ike_sa_t *a, *b, *new_sa;
+	status_t s;
+
+	assert_track_sas_start();
+
+	if (_i)
+	{	/* responder rekeys the IKE_SA */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &b, &a, &multi_ke_conf);
+	}
+	else
+	{	/* initiator rekeys the IKE_SA */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &a, &b, &multi_ke_conf);
+	}
+	/* these should never get called as this results in a successful rekeying */
+	assert_hook_not_called(ike_updown);
+	assert_hook_not_called(child_updown);
+
+	initiate_rekey(a);
+
+	/* CREATE_CHILD_SA { N(OPT_REKEY), Ni, KEi } --> */
+	assert_hook_not_called(ike_rekey);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_no_notify(IN, REKEY_SA);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_ike_sa_state(b, IKE_REKEYING);
+	assert_child_sa_count(b, 1);
+	assert_ike_sa_count(0);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(OPT_REKEY), Nr, KEr, N(ADD_KE) } */
+	assert_hook_not_called(ike_rekey);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_ike_sa_state(a, IKE_REKEYING);
+	assert_child_sa_count(a, 1);
+	assert_ike_sa_count(0);
+	assert_hook();
+
+	/* IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } --> */
+	assert_hook_rekey(ike_rekey, 1, 3);
+	assert_no_notify(IN, OPTIMIZED_REKEY);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_no_payload(IN, PLV2_NONCE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_ike_sa_state(b, IKE_REKEYED);
+	assert_child_sa_count(b, 0);
+	new_sa = assert_ike_sa_checkout(3, 4, FALSE);
+	assert_ike_sa_state(new_sa, IKE_ESTABLISHED);
+	assert_child_sa_count(new_sa, 1);
+	assert_ike_sa_count(1);
+	assert_hook();
+
+	/* <-- IKE_FOLLOWUP_KE { KEr } */
+	assert_hook_rekey(ike_rekey, 1, 3);
+	assert_no_notify(IN, OPTIMIZED_REKEY);
+	assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_no_payload(IN, PLV2_NONCE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_ike_sa_state(a, IKE_DELETING);
+	assert_child_sa_count(a, 0);
+	new_sa = assert_ike_sa_checkout(3, 4, TRUE);
+	assert_ike_sa_state(new_sa, IKE_ESTABLISHED);
+	assert_child_sa_count(new_sa, 1);
 	assert_ike_sa_count(2);
 	assert_hook();
 
@@ -2568,6 +2776,20 @@ START_TEST(test_collision_delete_drop_delete)
 }
 END_TEST
 
+START_SETUP(disable_optimized_rekey)
+{
+	lib->settings->set_bool(lib->settings, "%s.optimized_rekeying",
+							FALSE, lib->ns);
+}
+END_SETUP
+
+START_TEARDOWN(enable_optimized_rekey)
+{
+	lib->settings->set_bool(lib->settings, "%s.optimized_rekeying",
+							TRUE, lib->ns);
+}
+END_TEARDOWN
+
 Suite *ike_rekey_suite_create()
 {
 	Suite *s;
@@ -2576,13 +2798,20 @@ Suite *ike_rekey_suite_create()
 	s = suite_create("ike rekey");
 
 	tc = tcase_create("regular");
+	tcase_add_checked_fixture(tc, disable_optimized_rekey, enable_optimized_rekey);
 	tcase_add_loop_test(tc, test_regular, 0, 2);
 	tcase_add_loop_test(tc, test_regular_multi_ke, 0, 2);
 	tcase_add_loop_test(tc, test_regular_ke_invalid, 0, 2);
 	tcase_add_loop_test(tc, test_regular_ke_invalid_multi_ke, 0, 2);
 	suite_add_tcase(s, tc);
 
+	tc = tcase_create("optimized");
+	tcase_add_loop_test(tc, test_optimized, 0, 2);
+	tcase_add_loop_test(tc, test_optimized_multi_ke, 0, 2);
+	suite_add_tcase(s, tc);
+
 	tc = tcase_create("collisions rekey");
+	tcase_add_checked_fixture(tc, disable_optimized_rekey, enable_optimized_rekey);
 	tcase_add_loop_test(tc, test_collision, 0, 4);
 	tcase_add_loop_test(tc, test_collision_multi_ke, 0, 4);
 	tcase_add_loop_test(tc, test_collision_mixed, 0, 4);
@@ -2597,6 +2826,7 @@ Suite *ike_rekey_suite_create()
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("collisions delete");
+	tcase_add_checked_fixture(tc, disable_optimized_rekey, enable_optimized_rekey);
 	tcase_add_loop_test(tc, test_collision_delete, 0, 2);
 	tcase_add_loop_test(tc, test_collision_delete_multi_ke, 0, 2);
 	tcase_add_loop_test(tc, test_collision_delete_drop_delete, 0, 2);
