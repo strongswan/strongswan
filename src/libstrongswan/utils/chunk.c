@@ -636,10 +636,8 @@ static int b642bin(char b64)
 		case '0' ... '9':
 			return ('Z' - 'A' + 1) + ('z' - 'a' + 1) + b64 - '0';
 		case '+':
-		case '-':
 			return 62;
 		case '/':
-		case '_':
 			return 63;
 		case '=':
 			return 0;
@@ -672,7 +670,12 @@ chunk_t chunk_from_base64(chunk_t base64, char *buf)
 			{
 				outlen--;
 			}
-			byte[j] = b642bin(*pos++);
+            int res = b642bin(*pos++);
+            if (res >= 0) {
+                byte[j] = res;
+            } else {
+                j--;
+            }
 		}
 		buf[i] = (byte[0] << 2) | (byte[1] >> 4);
 		buf[i+1] = (byte[1] << 4) | (byte[2] >> 2);
