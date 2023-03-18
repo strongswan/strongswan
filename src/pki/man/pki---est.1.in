@@ -8,6 +8,7 @@ pki \-\-est \- Enroll an X.509 certificate with an EST server
 .
 .SY pki\ \-\-est
 .BI\-\-\-url\~ url
+.OP \-\-label label
 .OP \-\-in file
 .BI \-\-cacert\~ file
 .RB [ \-\-cert
@@ -60,6 +61,9 @@ Read command line options from \fIfile\fR.
 .TP
 .BI "\-u, \-\-url " url
 URL of the EST server.
+.TP
+.BI "\-l, \-\-label " label
+Label in the EST server path.
 .TP
 .BI "\-i, \-\-in " file
 PKCS#10 certificate request. If not given, the certificate request is read from
