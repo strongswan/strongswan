@@ -80,6 +80,11 @@ struct private_est_tls_t {
 	 */
 	char *http_path;
 
+    /**
+     * Label string used for http requests
+     */
+    char *http_label;
+
 	/**
 	 * Optional base64-encoded <username:password> for http basic authentication
 	 */
@@ -108,13 +113,13 @@ static chunk_t build_http_request(private_est_tls_t *this, est_op_t op, chunk_t 
 		data = chunk_to_base64(in, NULL);
 
 		len = asprintf(&http_header,
-				"POST %s/.well-known/est/%s HTTP/1.1\r\n"
+				"POST %s/.well-known/est/%s%s HTTP/1.1\r\n"
 				"Host: %s\r\n"
 				"%s"
 				"Content-Type: %s\r\n"
 				"Content-Length: %d\r\n"
 				"\r\n",
-				this->http_path, operations[op], this->http_host, http_auth,
+				this->http_path, this->http_label, operations[op], this->http_host, http_auth,
 				request_types[op], (int)data.len);
 		if (len > 0)
 		{
@@ -128,11 +133,11 @@ static chunk_t build_http_request(private_est_tls_t *this, est_op_t op, chunk_t 
 	else                                /* create HTTP GET request */
 	{
 		len = asprintf(&http_header,
-				"GET %s/.well-known/est/%s HTTP/1.1\r\n"
+				"GET %s/.well-known/est/%s%s HTTP/1.1\r\n"
 				"Host: %s\r\n"
 				"%s"
 				"\r\n",
-				this->http_path, operations[op], this->http_host, http_auth);
+				this->http_path, this->http_label, operations[op], this->http_host, http_auth);
 		if (len > 0)
 		{
 			request = chunk_create(http_header, len);
@@ -289,15 +294,16 @@ METHOD(est_tls_t, destroy, void,
 	}
 	chunk_clear(&this->user_pass);
 	free(this->http_host);
+    free(this->http_label);
 	free(this->http_path);
 	free(this);
 }
 
-static bool est_tls_init(private_est_tls_t *this, char *uri,
+static bool est_tls_init(private_est_tls_t *this, char *uri, char *label,
 						 certificate_t *client_cert)
 {
 	identification_t *client_id = NULL, *server_id = NULL;
-	char *host_str, *port_str, *path_str;
+	char *host_str, *port_str, *path_str, *label_str;
 	int port = 443;
 	bool success = FALSE;
 
@@ -321,7 +327,19 @@ static bool est_tls_init(private_est_tls_t *this, char *uri,
 		*path_str = '\0';
 	}
 
-	/* duplicate <hostname:port> string since we are going to manipulate it */
+    label_str = strdup(label);
+    bool no_slash = label_str[strlen(label_str)] != '/';
+    if (no_slash) {
+        char suffix[] = {"/"};
+        char *res = malloc(strlen(label_str) + 2);
+        strcpy(res, label_str);
+        strcat(res, suffix);
+        this->http_label = res;
+    } else {
+        this->http_label = label_str;
+    }
+
+    /* duplicate <hostname:port> string since we are going to manipulate it */
 	host_str = strdup(uri);
 
 	/* another duplicate for http requests */
@@ -392,7 +410,7 @@ end:
 /**
  * See header
  */
-est_tls_t *est_tls_create(char *uri, certificate_t *client_cert, char *user_pass)
+est_tls_t *est_tls_create(char *uri, char *label, certificate_t *client_cert, char *user_pass)
 {
 	private_est_tls_t *this;
 
@@ -408,7 +426,7 @@ est_tls_t *est_tls_create(char *uri, certificate_t *client_cert, char *user_pass
 		this->user_pass = chunk_to_base64(chunk_from_str(user_pass), NULL);
 	}
 
-	if (!est_tls_init(this, uri, client_cert))
+	if (!est_tls_init(this, uri, label, client_cert))
 	{
 		destroy(this);
 		return NULL;

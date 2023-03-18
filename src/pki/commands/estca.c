@@ -32,7 +32,7 @@ static int estca()
 	certificate_t *cacert;
 	mem_cred_t *creds = NULL;
 	est_tls_t *est_tls;
-	char *arg, *error = NULL, *url = NULL, *caout = NULL;
+	char *arg, *error = NULL, *url = NULL, *label = NULL, *caout = NULL;
 	bool force = FALSE, success;
 	u_int http_code = 0;
 	status_t status = 1;
@@ -50,6 +50,9 @@ static int estca()
 			case 'u':       /* --url */
 				url = arg;
 				continue;
+            case 'l':       /* --label */
+                label = arg;
+                continue;
 			case 'C':       /* --cacert */
 				cacert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
 							 CERT_X509,	BUILD_FROM_FILE, arg, BUILD_END);
@@ -87,7 +90,7 @@ static int estca()
 		return command_usage("--url is required");
 	}
 
-	est_tls = est_tls_create(url, NULL, NULL);
+	est_tls = est_tls_create(url, label, NULL, NULL);
 	if (!est_tls)
 	{
 		DBG1(DBG_APP, "TLS connection to EST server was not established");
@@ -132,7 +135,8 @@ static void __attribute__ ((constructor))reg()
 		{"--url url [--cacert file]+ [--caout file] [--outform der|pem] [--force]"},
 		{
 			{"help",    'h', 0, "show usage information"},
-			{"url",     'u', 1, "URL of the SCEP server"},
+			{"url",     'u', 1, "URL of the EST server"},
+            {"label",   'l', 1, "label of the EST server"},
 			{"cacert",  'C', 1, "TLS CA certificate"},
 			{"caout",   'c', 1, "CA certificate [template]"},
 			{"outform", 'f', 1, "encoding of stored certificates, default: der"},
