@@ -36,6 +36,13 @@
 
 typedef struct private_openssl_pkcs7_t private_openssl_pkcs7_t;
 
+static int allowed_signature_algorithms[] = {
+		OID_RSA_ENCRYPTION,
+		OID_SHA1_WITH_RSA,
+		OID_SHA256_WITH_RSA,
+		OID_SHA512_WITH_RSA,
+};
+
 /**
  * Private data of an openssl_pkcs7_t object.
  */
@@ -325,6 +332,18 @@ static bool verify_digest(CMS_ContentInfo *cms, CMS_SignerInfo *si, int hash_oid
 	return TRUE;
 }
 
+static bool is_algo_supported(int sigAlgo) {
+	bool sigAlgoSupported = false;
+	for (int i = 0; i < sizeof(allowed_signature_algorithms); i++) {
+		if (allowed_signature_algorithms[i] == sigAlgo) {
+			sigAlgoSupported = true;
+			DBG1(DBG_LIB, "digest encryption used: %i", sigAlgo);
+			break;
+		};
+	}
+	return sigAlgoSupported;
+}
+
 METHOD(enumerator_t, signature_enumerate, bool,
 	signature_enumerator_t *this, va_list args)
 {
@@ -350,9 +369,9 @@ METHOD(enumerator_t, signature_enumerate, bool,
 
 		CMS_SignerInfo_get0_algs(si, NULL, NULL, &digest, &sig);
 		hash_oid = openssl_asn1_known_oid(digest->algorithm);
-		if (openssl_asn1_known_oid(sig->algorithm) != OID_RSA_ENCRYPTION)
+		if (is_algo_supported(openssl_asn1_known_oid(sig->algorithm)))
 		{
-			DBG1(DBG_LIB, "only RSA digest encryption supported");
+			DBG1(DBG_LIB, "algorithm for digest encryption not supported");
 			continue;
 		}
 		this->auth = verify_signature(si, hash_oid);
