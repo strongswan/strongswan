@@ -393,6 +393,17 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
 				_assert_payload(#dir, 1, { TRUE, expected, 0 })
 
 /**
+ * Assert whether the next in- or outbound plaintext message contains a payload
+ * of the given type.
+ *
+ * @param dir			IN or OUT to check the next in- or outbound message
+ * @param type			payload type
+ * @param cond			whether to expect the payload or not
+ */
+#define assert_payload_cond(dir, type, cond) \
+				_assert_payload(#dir, -1, { (cond), type, 0 })
+
+/**
  * Assert that the next in- or outbound plaintext message contains a payload
  * of the given type.
  *
@@ -400,7 +411,7 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
  * @param expected		expected payload type
  */
 #define assert_payload(dir, expected) \
-				_assert_payload(#dir, -1, { TRUE, expected, 0 })
+				assert_payload_cond(dir, expected, TRUE)
 
 /**
  * Assert that the next in- or outbound plaintext message contains no payload
@@ -410,7 +421,7 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
  * @param unexpected	not expected payload type
  */
 #define assert_no_payload(dir, unexpected) \
-				_assert_payload(#dir, -1, { FALSE, unexpected, 0 })
+				assert_payload_cond(dir, unexpected, FALSE)
 
 /**
  * Assert that the next in- or outbound plaintext message contains exactly

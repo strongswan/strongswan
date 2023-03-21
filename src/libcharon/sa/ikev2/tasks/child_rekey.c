@@ -354,11 +354,42 @@ static void find_child(private_child_rekey_t *this, message_t *message)
 METHOD(task_t, process_r, status_t,
 	private_child_rekey_t *this, message_t *message)
 {
-	/* let the CHILD_CREATE task process the message */
-	this->child_create->task.process(&this->child_create->task, message);
+	child_cfg_t *config;
+	uint32_t reqid;
 
 	find_child(this, message);
 
+	if (this->child_sa)
+	{
+		/* configure everything during the first request of a rekeying */
+		if (message->get_exchange_type(message) == CREATE_CHILD_SA)
+		{
+			this->child_create->recreate_sa(this->child_create, this->child_sa);
+			reqid = this->child_sa->get_reqid_ref(this->child_sa);
+			if (reqid)
+			{
+				this->child_create->use_reqid(this->child_create, reqid);
+				charon->kernel->release_reqid(charon->kernel, reqid);
+			}
+			this->child_create->use_marks(this->child_create,
+							this->child_sa->get_mark(this->child_sa, TRUE).value,
+							this->child_sa->get_mark(this->child_sa, FALSE).value);
+			this->child_create->use_if_ids(this->child_create,
+							this->child_sa->get_if_id(this->child_sa, TRUE),
+							this->child_sa->get_if_id(this->child_sa, FALSE));
+			this->child_create->use_label(this->child_create,
+							this->child_sa->get_label(this->child_sa));
+			this->child_create->use_per_cpu(this->child_create,
+							this->child_sa->use_per_cpu(this->child_sa),
+							this->child_sa->get_cpu(this->child_sa));
+			config = this->child_sa->get_config(this->child_sa);
+			this->child_create->set_config(this->child_create,
+										   config->get_ref(config));
+		}
+
+		/* let the CHILD_CREATE task process the message */
+		this->child_create->task.process(&this->child_create->task, message);
+	}
 	return NEED_MORE;
 }
 
@@ -399,10 +430,8 @@ METHOD(task_t, build_r, status_t,
 	private_child_rekey_t *this, message_t *message)
 {
 	notify_payload_t *notify;
-	child_cfg_t *config;
 	child_sa_t *child_sa, *old_replacement;
 	child_sa_state_t state = CHILD_INSTALLED;
-	uint32_t reqid;
 	bool followup_sent = FALSE;
 
 	if (!this->child_sa)
@@ -433,27 +462,6 @@ METHOD(task_t, build_r, status_t,
 
 	if (message->get_exchange_type(message) == CREATE_CHILD_SA)
 	{
-		this->child_create->recreate_sa(this->child_create, this->child_sa);
-		reqid = this->child_sa->get_reqid_ref(this->child_sa);
-		if (reqid)
-		{
-			this->child_create->use_reqid(this->child_create, reqid);
-			charon->kernel->release_reqid(charon->kernel, reqid);
-		}
-		this->child_create->use_marks(this->child_create,
-						this->child_sa->get_mark(this->child_sa, TRUE).value,
-						this->child_sa->get_mark(this->child_sa, FALSE).value);
-		this->child_create->use_if_ids(this->child_create,
-						this->child_sa->get_if_id(this->child_sa, TRUE),
-						this->child_sa->get_if_id(this->child_sa, FALSE));
-		this->child_create->use_label(this->child_create,
-						this->child_sa->get_label(this->child_sa));
-		this->child_create->use_per_cpu(this->child_create,
-						this->child_sa->use_per_cpu(this->child_sa),
-						this->child_sa->get_cpu(this->child_sa));
-		config = this->child_sa->get_config(this->child_sa);
-		this->child_create->set_config(this->child_create,
-									   config->get_ref(config));
 		state = this->child_sa->get_state(this->child_sa);
 		this->child_sa->set_state(this->child_sa, CHILD_REKEYING);
 	}

@@ -81,6 +81,10 @@ START_TEST(test_regular)
 	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
 	assert_hook_not_called(child_rekey);
 	assert_notify(IN, REKEY_SA);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_TS_INITIATOR);
+	assert_payload(IN, PLV2_TS_RESPONDER);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, spi_b, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
@@ -90,6 +94,10 @@ START_TEST(test_regular)
 	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
 	assert_hook_rekey(child_rekey, spi_a, 3);
 	assert_no_notify(IN, REKEY_SA);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_TS_INITIATOR);
+	assert_payload(IN, PLV2_TS_RESPONDER);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_NONE);
 	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
@@ -178,6 +186,11 @@ START_TEST(test_regular_multi_ke)
 	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, KEi, TSi, TSr } --> */
 	assert_hook_not_called(child_rekey);
 	assert_notify(IN, REKEY_SA);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_payload(IN, PLV2_TS_INITIATOR);
+	assert_payload(IN, PLV2_TS_RESPONDER);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, spi_b, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
 	assert_ipsec_sas_installed(b, spi_a, spi_b);
@@ -186,6 +199,12 @@ START_TEST(test_regular_multi_ke)
 	/* <-- CREATE_CHILD_SA { SA, Nr, KEr, TSi, TSr, N(ADD_KE) } */
 	assert_hook_not_called(child_rekey);
 	assert_no_notify(IN, REKEY_SA);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_payload(IN, PLV2_TS_INITIATOR);
+	assert_payload(IN, PLV2_TS_RESPONDER);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_child_sa_state(a, spi_a, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
 	assert_ipsec_sas_installed(a, spi_a, spi_b);
@@ -193,8 +212,12 @@ START_TEST(test_regular_multi_ke)
 
 	/* IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } --> */
 	assert_hook_not_called(child_rekey);
-	assert_payload(IN, PLV2_KEY_EXCHANGE);
 	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_no_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
 	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
 	assert_child_sa_state(b, spi_b, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
 	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
@@ -203,8 +226,12 @@ START_TEST(test_regular_multi_ke)
 
 	/* <-- IKE_FOLLOWUP_KE { KEr } */
 	assert_hook_rekey(child_rekey, spi_a, 3);
-	assert_payload(IN, PLV2_KEY_EXCHANGE);
 	assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_no_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
 	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_NONE);
 	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
@@ -1269,6 +1296,622 @@ START_TEST(test_regular_delete_timeout)
 												exchange_test_helper->sender);
 	}
 	assert_hook();
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * Optimized CHILD_SA rekey either initiated by the original initiator or
+ * responder of the IKE_SA.
+ */
+START_TEST(test_optimized)
+{
+	exchange_test_sa_conf_t conf[] = {
+		/* default proposal includes KE methods now */
+		{
+		},
+		/* also test with a config without KE methods */
+		{
+			.initiator = {
+				.esp = "aes128-sha256",
+			},
+			.responder = {
+				.esp = "aes128-sha256",
+			},
+		},
+	};
+	ike_sa_t *a, *b;
+	uint32_t spi_a = (_i%2)+1, spi_b = 2-(_i%2);
+
+	assert_track_sas_start();
+
+	if (_i%2)
+	{	/* responder rekeys the CHILD_SA (SPI 2) */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &b, &a, &conf[_i/2]);
+	}
+	else
+	{	/* initiator rekeys the CHILD_SA (SPI 1) */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &a, &b, &conf[_i/2]);
+	}
+	initiate_rekey(a, spi_a);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* since we negotiated KE methods during IKE_AUTH, we can directly rekey
+	 * this SA optimized */
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), N(OPT_REKEY), Ni, [KEi] } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	assert_payload_cond(IN, PLV2_KEY_EXCHANGE, !(_i/2));
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b, 4);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(OPT_REKEY), Nr, [KEr] } */
+	assert_hook_rekey(child_rekey, spi_a, 3);
+	assert_no_notify(IN, REKEY_SA);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	assert_payload_cond(IN, PLV2_KEY_EXCHANGE, !(_i/2));
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, 3, 4);
+	assert_hook();
+
+	/* INFORMATIONAL { D } --> */
+	assert_hook_rekey(child_rekey, spi_b, 4);
+	assert_jobs_scheduled(1);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_ipsec_sas_installed(b, spi_b, 3, 4);
+	assert_scheduler();
+	assert_hook();
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_not_called(child_rekey);
+	assert_jobs_scheduled(1);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_ipsec_sas_installed(a, spi_a, 3, 4);
+	assert_scheduler();
+	assert_hook();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, spi_a);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, 3, 4);
+	destroy_rekeyed(b, spi_b);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(a, 3, 4);
+
+	/* child_updown */
+	assert_hook();
+	assert_track_sas(2, 2);
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * Optimized rekey of a CHILD_SA created with a CREATE_CHILD_SA exchange, either
+ * initiated by the original initiator or responder of the IKE_SA.
+ */
+START_TEST(test_optimized_childless)
+{
+	exchange_test_sa_conf_t conf = {
+		.initiator = {
+			.childless = CHILDLESS_FORCE,
+		},
+	};
+	ike_sa_t *init, *resp, *a, *b;
+	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	assert_track_sas_start();
+
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &init, &resp, &conf);
+	if (_i)
+	{	/* responder rekeys the CHILD_SA (SPI 2) */
+		a = resp;
+		b = init;
+	}
+	else
+	{	/* initiator rekeys the CHILD_SA (SPI 1) */
+		a = init;
+		b = resp;
+	}
+	assert_child_sa_count(init, 0);
+
+	/* CREATE_CHILD_SA { SA, Ni, [KEi,] TSi, TSr } --> */
+	assert_hook_called(child_updown);
+	assert_no_notify(IN, REKEY_SA);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_TS_INITIATOR);
+	assert_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, resp, NULL);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
+	assert_hook_called(child_updown);
+	assert_no_notify(IN, REKEY_SA);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_TS_INITIATOR);
+	assert_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, init, NULL);
+	assert_hook();
+
+	assert_child_sa_state(a, spi_a, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+	assert_child_sa_state(b, spi_b, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b);
+
+	initiate_rekey(a, spi_a);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* since the CHILD_SA was created with a CREATE_CHILD_SA exchange, we can
+	 * use optimized rekeying*/
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), N(OPT_REKEY), Ni, [KEi] } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b, 4);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(OPT_REKEY), Nr, [KEr] } */
+	assert_hook_called(child_rekey);
+	assert_no_notify(IN, REKEY_SA);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, 3, 4);
+	assert_hook();
+
+	/* INFORMATIONAL { D } --> */
+	assert_hook_rekey(child_rekey, spi_b, 4);
+	assert_jobs_scheduled(1);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_ipsec_sas_installed(b, spi_b, 3, 4);
+	assert_scheduler();
+	assert_hook();
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_not_called(child_rekey);
+	assert_jobs_scheduled(1);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_ipsec_sas_installed(a, spi_a, 3, 4);
+	assert_scheduler();
+	assert_hook();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, spi_a);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, 3, 4);
+	destroy_rekeyed(b, spi_b);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(a, 3, 4);
+
+	/* child_updown */
+	assert_hook();
+	assert_track_sas(2, 2);
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * Optimized CHILD_SA rekey either initiated by the original initiator or
+ * responder of the IKE_SA.
+ */
+START_TEST(test_optimized_multi_ke)
+{
+	exchange_test_sa_conf_t conf = multi_ke_conf;
+	ike_sa_t *init, *resp, *a, *b;
+	uint32_t spi_a = _i+1, spi_b = 2-_i;
+
+	assert_track_sas_start();
+
+	/* use childless initiation so we can use optimized rekeying */
+	conf.initiator.childless = CHILDLESS_FORCE;
+	exchange_test_helper->establish_sa(exchange_test_helper,
+									   &init, &resp, &conf);
+	if (_i)
+	{	/* responder rekeys the CHILD_SA (SPI 2) */
+		a = resp;
+		b = init;
+	}
+	else
+	{	/* initiator rekeys the CHILD_SA (SPI 1) */
+		a = init;
+		b = resp;
+	}
+	assert_child_sa_count(init, 0);
+
+	/* CREATE_CHILD_SA { SA, Ni, KEi, TSi, TSr } --> */
+	assert_hook_not_called(child_updown);
+	assert_no_notify(IN, REKEY_SA);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_payload(IN, PLV2_TS_INITIATOR);
+	assert_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, resp, NULL);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, KEr, TSi, TSr, N(ADD_KE) } */
+	assert_hook_not_called(child_updown);
+	assert_no_notify(IN, REKEY_SA);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_payload(IN, PLV2_TS_INITIATOR);
+	assert_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, init, NULL);
+	assert_hook();
+
+	/* IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } --> */
+	assert_hook_called(child_updown);
+	assert_no_notify(IN, REKEY_SA);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_no_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, resp, NULL);
+	assert_hook();
+
+	/* <-- IKE_FOLLOWUP_KE { KEr } */
+	assert_hook_called(child_updown);
+	assert_no_notify(IN, REKEY_SA);
+	assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_no_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, init, NULL);
+	assert_hook();
+
+	assert_child_sa_state(a, spi_a, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+	assert_child_sa_state(b, spi_b, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b);
+
+	initiate_rekey(a, spi_a);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), N(OPT_REKEY), Ni, KEi } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(OPT_REKEY), Nr, KEr, N(ADD_KE) } */
+	assert_hook_not_called(child_rekey);
+	assert_no_notify(IN, REKEY_SA);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_REKEYING, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+	assert_hook();
+
+	/* IKE_FOLLOWUP_KE { KEi, N(ADD_KE) } --> */
+	assert_hook_not_called(child_rekey);
+	assert_no_notify(IN, REKEY_SA);
+	assert_no_notify(IN, OPTIMIZED_REKEY);
+	assert_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_no_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b, 4);
+	assert_hook();
+
+	/* <-- IKE_FOLLOWUP_KE { KEr } */
+	assert_hook_rekey(child_rekey, spi_a, 3);
+	assert_no_notify(IN, REKEY_SA);
+	assert_no_notify(IN, OPTIMIZED_REKEY);
+	assert_no_notify(IN, ADDITIONAL_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_no_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_KEY_EXCHANGE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, 3, 4);
+	assert_hook();
+
+	/* INFORMATIONAL { D } --> */
+	assert_hook_rekey(child_rekey, spi_b, 4);
+	assert_jobs_scheduled(1);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_ipsec_sas_installed(b, spi_b, 3, 4);
+	assert_scheduler();
+	assert_hook();
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_not_called(child_rekey);
+	assert_jobs_scheduled(1);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_ipsec_sas_installed(a, spi_a, 3, 4);
+	assert_scheduler();
+	assert_hook();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, spi_a);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, 3, 4);
+	destroy_rekeyed(b, spi_b);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(a, 3, 4);
+
+	/* child_updown */
+	assert_hook();
+	assert_track_sas(2, 2);
+
+	call_ikesa(a, destroy);
+	call_ikesa(b, destroy);
+}
+END_TEST
+
+/**
+ * Regular and then optimized CHILD_SA rekey because KE methods are not
+ * negotiated during IKE_AUTH, either initiated by the original initiator or
+ * responder of the IKE_SA.
+ */
+START_TEST(test_optimized_fallback)
+{
+	exchange_test_sa_conf_t conf[] = {
+		/* default proposal includes KE methods now */
+		{
+		},
+		/* also test with a config without KE methods */
+		{
+			.initiator = {
+				.esp = "aes128-sha256",
+			},
+			.responder = {
+				.esp = "aes128-sha256",
+			},
+		},
+	};
+	ike_sa_t *a, *b;
+	uint32_t spi_a = (_i%2)+1, spi_b = 2-(_i%2);
+
+	/* disable KE negotiation during IKE_AUTH, to force a regular rekeying */
+	lib->settings->set_bool(lib->settings, "%s.child_sa_pfs_info",
+							FALSE, lib->ns);
+
+	assert_track_sas_start();
+
+	if (_i%2)
+	{	/* responder rekeys the CHILD_SA (SPI 2) */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &b, &a, &conf[_i/2]);
+	}
+	else
+	{	/* initiator rekeys the CHILD_SA (SPI 1) */
+		exchange_test_helper->establish_sa(exchange_test_helper,
+										   &a, &b, &conf[_i/2]);
+	}
+	initiate_rekey(a, spi_a);
+	assert_ipsec_sas_installed(a, spi_a, spi_b);
+
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* the CHILD_SA created with IKE_AUTH has to be rekeyed regularly as we
+	 * don't know if we use PFS or not */
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), SA, Ni, [KEi,] TSi, TSr } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_TS_INITIATOR);
+	assert_payload(IN, PLV2_TS_RESPONDER);
+	assert_payload_cond(IN, PLV2_KEY_EXCHANGE, !(_i/2));
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(b, spi_a, spi_b, 4);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { SA, Nr, [KEr,] TSi, TSr } */
+	assert_hook_rekey(child_rekey, spi_a, 3);
+	assert_no_notify(IN, REKEY_SA);
+	assert_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_payload(IN, PLV2_TS_INITIATOR);
+	assert_payload(IN, PLV2_TS_RESPONDER);
+	assert_payload_cond(IN, PLV2_KEY_EXCHANGE, !(_i/2));
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, spi_a, 3, 4);
+	assert_hook();
+
+	/* INFORMATIONAL { D } --> */
+	assert_hook_rekey(child_rekey, spi_b, 4);
+	assert_jobs_scheduled(1);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, spi_b, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 4, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_ipsec_sas_installed(b, spi_b, 3, 4);
+	assert_scheduler();
+	assert_hook();
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_not_called(child_rekey);
+	assert_jobs_scheduled(1);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, spi_a, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 3, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_ipsec_sas_installed(a, spi_a, 3, 4);
+	assert_scheduler();
+	assert_hook();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, spi_a);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, 3, 4);
+	destroy_rekeyed(b, spi_b);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(a, 3, 4);
+
+	/* child_updown */
+	assert_hook();
+
+	/* after the first rekeying the CHILD_SA can be rekeyed optimized */
+	initiate_rekey(a, 3);
+	/* this should never get called as this results in a successful rekeying */
+	assert_hook_not_called(child_updown);
+
+	/* CREATE_CHILD_SA { N(REKEY_SA), N(OPT_REKEY), Ni, [KEi] } --> */
+	assert_hook_not_called(child_rekey);
+	assert_notify(IN, REKEY_SA);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	assert_payload_cond(IN, PLV2_KEY_EXCHANGE, !(_i/2));
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 4, CHILD_REKEYED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_state(b, 6, CHILD_INSTALLED, CHILD_OUTBOUND_REGISTERED);
+	assert_ipsec_sas_installed(b, 3, 4, 6);
+	assert_hook();
+
+	/* <-- CREATE_CHILD_SA { N(OPT_REKEY), Nr, [KEr] } */
+	assert_hook_called(child_rekey);
+	assert_no_notify(IN, REKEY_SA);
+	assert_notify(IN, OPTIMIZED_REKEY);
+	assert_no_payload(IN, PLV2_SECURITY_ASSOCIATION);
+	assert_payload(IN, PLV2_NONCE);
+	assert_no_payload(IN, PLV2_TS_INITIATOR);
+	assert_no_payload(IN, PLV2_TS_RESPONDER);
+	assert_payload_cond(IN, PLV2_KEY_EXCHANGE, !(_i/2));
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 3, CHILD_DELETING, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 5, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_ipsec_sas_installed(a, 3, 5, 6);
+	assert_hook();
+
+	/* INFORMATIONAL { D } --> */
+	assert_hook_called(child_rekey);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, b, NULL);
+	assert_child_sa_state(b, 4, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(b, 6, CHILD_INSTALLED, CHILD_OUTBOUND_INSTALLED);
+	assert_child_sa_count(b, 2);
+	assert_ipsec_sas_installed(b, 4, 5, 6);
+	assert_hook();
+
+	/* <-- INFORMATIONAL { D } */
+	assert_hook_not_called(child_rekey);
+	assert_single_payload(IN, PLV2_DELETE);
+	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+	assert_child_sa_state(a, 3, CHILD_DELETED, CHILD_OUTBOUND_NONE);
+	assert_child_sa_state(a, 5, CHILD_INSTALLED);
+	assert_child_sa_count(a, 2);
+	assert_ipsec_sas_installed(a, 3, 5, 6);
+	assert_hook();
+
+	/* simulate the execution of the scheduled jobs */
+	destroy_rekeyed(a, 3);
+	assert_child_sa_count(a, 1);
+	assert_ipsec_sas_installed(a, 5, 6);
+	destroy_rekeyed(b, 4);
+	assert_child_sa_count(b, 1);
+	assert_ipsec_sas_installed(b, 5, 6);
+
+	/* child_updown */
+	assert_hook();
+	assert_track_sas(2, 2);
 
 	call_ikesa(a, destroy);
 	call_ikesa(b, destroy);
@@ -4545,6 +5188,20 @@ START_TEST(test_collision_ike_delete)
 }
 END_TEST
 
+START_SETUP(disable_optimized_rekey)
+{
+	lib->settings->set_bool(lib->settings, "%s.optimized_rekeying",
+							FALSE, lib->ns);
+}
+END_SETUP
+
+START_TEARDOWN(enable_optimized_rekey)
+{
+	lib->settings->set_bool(lib->settings, "%s.optimized_rekeying",
+							TRUE, lib->ns);
+}
+END_TEARDOWN
+
 Suite *child_rekey_suite_create()
 {
 	Suite *s;
@@ -4553,6 +5210,7 @@ Suite *child_rekey_suite_create()
 	s = suite_create("child rekey");
 
 	tc = tcase_create("regular");
+	tcase_add_checked_fixture(tc, disable_optimized_rekey, enable_optimized_rekey);
 	tcase_add_loop_test(tc, test_regular, 0, 2);
 	tcase_add_loop_test(tc, test_regular_multi_ke, 0, 2);
 	tcase_add_loop_test(tc, test_regular_ke_mismatch, 0, 2);
@@ -4566,7 +5224,15 @@ Suite *child_rekey_suite_create()
 	tcase_add_test(tc, test_regular_delete_timeout);
 	suite_add_tcase(s, tc);
 
+	tc = tcase_create("optimized");
+	tcase_add_loop_test(tc, test_optimized, 0, 4);
+	tcase_add_loop_test(tc, test_optimized_childless, 0, 2);
+	tcase_add_loop_test(tc, test_optimized_multi_ke, 0, 2);
+	tcase_add_loop_test(tc, test_optimized_fallback, 0, 4);
+	suite_add_tcase(s, tc);
+
 	tc = tcase_create("collisions rekey");
+	tcase_add_checked_fixture(tc, disable_optimized_rekey, enable_optimized_rekey);
 	tcase_add_loop_test(tc, test_collision, 0, 4);
 	tcase_add_loop_test(tc, test_collision_multi_ke, 0, 4);
 	tcase_add_loop_test(tc, test_collision_mixed, 0, 4);
