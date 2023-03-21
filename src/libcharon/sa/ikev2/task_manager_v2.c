@@ -1190,7 +1190,7 @@ static status_t process_request(private_task_manager_t *this,
 					switch (payload->get_type(payload))
 					{
 						case PLV2_NOTIFY:
-						{	/* if we find a rekey notify, its CHILD_SA rekeying */
+						{
 							notify = (notify_payload_t*)payload;
 							if (notify->get_notify_type(notify) == REKEY_SA &&
 								(notify->get_protocol_id(notify) == PROTO_AH ||
@@ -1202,7 +1202,7 @@ static status_t process_request(private_task_manager_t *this,
 						}
 						case PLV2_TS_INITIATOR:
 						case PLV2_TS_RESPONDER:
-						{	/* if we don't find a TS, its IKE rekeying */
+						{
 							ts_found = TRUE;
 							break;
 						}
@@ -1212,18 +1212,16 @@ static status_t process_request(private_task_manager_t *this,
 				}
 				enumerator->destroy(enumerator);
 
-				if (ts_found)
+				if (notify_found)
 				{
-					if (notify_found)
-					{
-						task = (task_t*)child_rekey_create(this->ike_sa,
-														   PROTO_NONE, 0);
-					}
-					else
-					{
-						task = (task_t*)child_create_create(this->ike_sa, NULL,
-															FALSE, NULL, NULL, 0);
-					}
+					task = (task_t*)child_rekey_create(this->ike_sa,
+													   PROTO_NONE, 0);
+				}
+				else if (ts_found)
+				{
+
+					task = (task_t*)child_create_create(this->ike_sa, NULL,
+														FALSE, NULL, NULL, 0);
 				}
 				else
 				{
