@@ -303,7 +303,7 @@ METHOD(certificate_t, issued_by, bool,
 		return FALSE;
 	}
 	x509 = (x509_t*)issuer;
-	if (!(x509->get_flags(x509) & (X509_CA | X509_CRL_SIGN)))
+	if (!(x509->get_flags(x509) & X509_CRL_SIGN))
 	{
 		return FALSE;
 	}

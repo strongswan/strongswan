@@ -462,12 +462,12 @@ METHOD(certificate_t, issued_by, bool,
 	x509_t *x509 = (x509_t*)issuer;
 	chunk_t keyid = chunk_empty;
 
-	/* check if issuer is an X.509 CA certificate */
+	/* check if issuer is an X.509 certificate with cRLSign keyUsage bit set */
 	if (issuer->get_type(issuer) != CERT_X509)
 	{
 		return FALSE;
 	}
-	if (!(x509->get_flags(x509) & (X509_CA | X509_CRL_SIGN)))
+	if (!(x509->get_flags(x509) & X509_CRL_SIGN))
 	{
 		return FALSE;
 	}

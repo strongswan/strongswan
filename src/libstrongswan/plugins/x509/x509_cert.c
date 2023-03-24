@@ -715,9 +715,6 @@ static void parse_keyUsage(chunk_t blob, private_x509_cert_t *this)
 		KU_DECIPHER_ONLY =		8,
 	};
 
-	/* to be compliant with RFC 4945 specific KUs have to be included */
-	this->flags &= ~X509_IKE_COMPLIANT;
-
 	if (asn1_unwrap(&blob, &blob) == ASN1_BIT_STRING && blob.len)
 	{
 		int bit, byte, unused = blob.ptr[0];
@@ -1391,13 +1388,10 @@ static bool parse_certificate(private_x509_cert_t *this)
 	int objectID;
 	int extn_oid = OID_UNKNOWN;
 	signature_params_t sig_alg = {};
+	bool critical = FALSE, key_usage_parsed = FALSE;
 	bool success = FALSE;
-	bool critical = FALSE;
 
 	parser = asn1_parser_create(certObjects, this->encoding);
-
-	/* unless we see a keyUsage extension we are compliant with RFC 4945 */
-	this->flags |= X509_IKE_COMPLIANT;
 
 	while (parser->iterate(parser, &objectID, &object))
 	{
@@ -1513,6 +1507,7 @@ static bool parse_certificate(private_x509_cert_t *this)
 						break;
 					case OID_KEY_USAGE:
 						parse_keyUsage(object, this);
+						key_usage_parsed = TRUE;
 						break;
 					case OID_EXTENDED_KEY_USAGE:
 						if (!x509_parse_eku_extension(object, level, &this->flags))
@@ -1609,6 +1604,17 @@ end:
 	if (success)
 	{
 		hasher_t *hasher;
+
+		if (!key_usage_parsed)
+		{
+			/* we are compliant with RFC 4945 without keyUsage extension */
+			this->flags |= X509_IKE_COMPLIANT;
+			/* allow CA certificates without keyUsage extension to sign CRLs */
+			if (this->flags & X509_CA)
+			{
+				this->flags |= X509_CRL_SIGN;
+			}
+		}
 
 		/* check if the certificate is self-signed */
 		if (this->public.interface.interface.issued_by(

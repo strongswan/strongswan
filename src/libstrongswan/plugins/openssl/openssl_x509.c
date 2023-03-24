@@ -687,9 +687,6 @@ static bool parse_keyUsage_ext(private_openssl_x509_t *this,
 {
 	ASN1_BIT_STRING *usage;
 
-	/* to be compliant with RFC 4945 specific KUs have to be included */
-	this->flags &= ~X509_IKE_COMPLIANT;
-
 	usage = X509V3_EXT_d2i(ext);
 	if (usage)
 	{
@@ -1013,10 +1010,8 @@ static bool parse_subjectKeyIdentifier_ext(private_openssl_x509_t *this,
 static bool parse_extensions(private_openssl_x509_t *this)
 {
 	const STACK_OF(X509_EXTENSION) *extensions;
+	bool key_usage_parsed = FALSE;
 	int i, num;
-
-	/* unless we see a keyUsage extension we are compliant with RFC 4945 */
-	this->flags |= X509_IKE_COMPLIANT;
 
 	extensions = X509_get0_extensions(this->x509);
 	if (extensions)
@@ -1051,6 +1046,7 @@ static bool parse_extensions(private_openssl_x509_t *this)
 					break;
 				case NID_key_usage:
 					ok = parse_keyUsage_ext(this, ext);
+					key_usage_parsed = TRUE;
 					break;
 				case NID_ext_key_usage:
 					ok = parse_extKeyUsage_ext(this, ext);
@@ -1082,6 +1078,16 @@ static bool parse_extensions(private_openssl_x509_t *this)
 			{
 				return FALSE;
 			}
+		}
+	}
+	if (!key_usage_parsed)
+	{
+		/* we are compliant with RFC 4945 without keyUsage extension */
+		this->flags |= X509_IKE_COMPLIANT;
+		/* allow CA certificates without keyUsage extension to sign CRLs */
+		if (this->flags & X509_CA)
+		{
+			this->flags |= X509_CRL_SIGN;
 		}
 	}
 	return TRUE;
