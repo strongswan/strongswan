@@ -138,7 +138,8 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 /**
  * check the signature of an OCSP response
  */
-static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
+static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca,
+						bool cached)
 {
 	certificate_t *issuer, *subject;
 	identification_t *responder;
@@ -177,8 +178,11 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
 		found = TRUE;
 		if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
 		{
-			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
-				 issuer->get_subject(issuer));
+			if (!cached)
+			{
+				DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
+					 issuer->get_subject(issuer));
+			}
 			verified = TRUE;
 			break;
 		}
@@ -204,8 +208,11 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
 				found = TRUE;
 				if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
 				{
-					DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
-						 issuer->get_subject(issuer));
+					if (!cached)
+					{
+						DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
+							 issuer->get_subject(issuer));
+					}
 					verified = TRUE;
 					break;
 				}
@@ -219,7 +226,7 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
 	lib->credmgr->remove_local_set(lib->credmgr, &wrapper->set);
 	wrapper->destroy(wrapper);
 
-	if (!found)
+	if (!found && !cached)
 	{
 		DBG1(DBG_CFG, "ocsp response verification failed, "
 			 "no signer certificate '%Y' found", responder);
@@ -232,7 +239,7 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
  */
 static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 									  x509_t *subject, x509_t *issuer,
-									  cert_validation_t *valid, bool cache)
+									  cert_validation_t *valid, bool cached)
 {
 	ocsp_response_t *response;
 	time_t revocation, this_update, next_update, valid_until;
@@ -242,7 +249,7 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 	response = (ocsp_response_t*)cand;
 
 	/* check ocsp signature */
-	if (!verify_ocsp(response, &issuer->interface))
+	if (!verify_ocsp(response, &issuer->interface, cached))
 	{
 		cand->destroy(cand);
 		return best;
@@ -263,7 +270,11 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 		default:
 		case VALIDATION_FAILED:
 			/* candidate unusable, does not contain our cert */
-			DBG1(DBG_CFG, "  ocsp response contains no status on our certificate");
+			if (!cached)
+			{
+				DBG1(DBG_CFG, "  ocsp response contains no status on our "
+					 "certificate");
+			}
 			cand->destroy(cand);
 			return best;
 	}
@@ -278,7 +289,7 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 			DBG1(DBG_CFG, "  ocsp response is valid: until %T",
 							 &valid_until, FALSE);
 			*valid = VALIDATION_GOOD;
-			if (cache)
+			if (!cached)
 			{	/* cache non-stale only, stale certs get refetched */
 				lib->credmgr->cache_cert(lib->credmgr, best);
 			}
@@ -322,7 +333,7 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		current->get_ref(current);
-		best = get_better_ocsp(current, best, subject, issuer, &valid, FALSE);
+		best = get_better_ocsp(current, best, subject, issuer, &valid, TRUE);
 		if (best && valid != VALIDATION_STALE)
 		{
 			DBG1(DBG_CFG, "  using cached ocsp response");
@@ -350,7 +361,7 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
-									   &valid, TRUE);
+									   &valid, FALSE);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -373,7 +384,7 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
-									   &valid, TRUE);
+									   &valid, FALSE);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
