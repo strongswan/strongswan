@@ -2785,16 +2785,16 @@ CALLBACK(get_conns, vici_message_t*,
 {
 	vici_builder_t *builder;
 	enumerator_t *enumerator;
-	peer_cfg_t *cfg;
+	char *conn_name;
 
 	builder = vici_builder_create();
 	builder->begin_list(builder, "conns");
 
 	this->lock->read_lock(this->lock);
 	enumerator = this->conns->create_enumerator(this->conns);
-	while (enumerator->enumerate(enumerator, NULL, &cfg))
+	while (enumerator->enumerate(enumerator, &conn_name, NULL))
 	{
-		builder->add_li(builder, "%s", cfg->get_name(cfg));
+		builder->add_li(builder, "%s", conn_name);
 	}
 	enumerator->destroy(enumerator);
 	this->lock->unlock(this->lock);
