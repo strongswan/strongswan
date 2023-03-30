@@ -337,22 +337,30 @@ static void remove_from_list(linked_list_t *list, char *str)
 }
 
 /**
- * Unload a connection by name
+ * Unload a list of connections by name
  */
-static bool unload_conn(vici_conn_t *conn, char *name,
-					    command_format_options_t format)
+static u_int unload_conns(vici_conn_t *conn, linked_list_t *conns,
+						  command_format_options_t format)
 {
 	vici_req_t *req;
 	vici_res_t *res;
-	bool ret = TRUE;
+	char *section;
+	u_int unloaded = 0;
 
 	req = vici_begin("unload-conn");
-	vici_add_key_valuef(req, "name", "%s", name);
+	vici_begin_list(req, "names");
+	while (conns->remove_first(conns, (void**)&section) == SUCCESS)
+	{
+		vici_add_list_itemf(req, "%s", section);
+		free(section);
+	}
+	vici_end_list(req);
+
 	res = vici_submit(req, conn);
 	if (!res)
 	{
 		fprintf(stderr, "unload-conn request failed: %s\n", strerror(errno));
-		return FALSE;
+		return 0;
 	}
 	if (format & COMMAND_FORMAT_RAW)
 	{
@@ -361,12 +369,12 @@ static bool unload_conn(vici_conn_t *conn, char *name,
 	}
 	else if (!streq(vici_find_str(res, "no", "success"), "yes"))
 	{
-		fprintf(stderr, "unloading connection '%s' failed: %s\n",
-				name, vici_find_str(res, "", "errmsg"));
-		ret = FALSE;
+		fprintf(stderr, "unloading connections failed: %s\n",
+				vici_find_str(res, "", "errmsg"));
 	}
+	unloaded = vici_find_int(res, 0, "unloaded");
 	vici_free_res(res);
-	return ret;
+	return unloaded;
 }
 
 /**
@@ -394,14 +402,10 @@ int load_conns_cfg(vici_conn_t *conn, command_format_options_t format,
 	}
 	enumerator->destroy(enumerator);
 
-	/* unload all connection in daemon, but not in file */
-	while (conns->remove_first(conns, (void**)&section) == SUCCESS)
+	/* unload all connections in daemon, but not in file */
+	if (conns->get_count(conns))
 	{
-		if (unload_conn(conn, section, format))
-		{
-			unloaded++;
-		}
-		free(section);
+		unloaded = unload_conns(conn, conns, format);
 	}
 	conns->destroy(conns);
 
