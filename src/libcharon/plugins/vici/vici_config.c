@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Tobias Brunner
+ * Copyright (C) 2015-2023 Tobias Brunner
  * Copyright (C) 2015-2018 Andreas Steffen
  * Copyright (C) 2014 Martin Willi
  *
@@ -2747,16 +2747,45 @@ CALLBACK(load_conn, vici_message_t*,
 	return create_reply(NULL);
 }
 
+CALLBACK(unload_conn_li, bool,
+	array_t *names, vici_message_t *message, char *name, chunk_t value)
+{
+	char buf[BUF_LEN];
+
+	if (!streq(name, "names") ||
+		!vici_stringify(value, buf, sizeof(buf)))
+	{
+		return FALSE;
+	}
+	array_insert(names, ARRAY_TAIL, strdup(buf));
+	return TRUE;
+}
+
 CALLBACK(unload_conn, vici_message_t*,
 	private_vici_config_t *this, char *name, u_int id, vici_message_t *message)
 {
+	vici_builder_t *builder;
 	peer_cfg_t *cfg;
+	array_t *names;
 	char *conn_name;
+	int count, found = 0;
 
+	names = array_create(0, 32);
 	conn_name = message->get_str(message, NULL, "name");
-	if (!conn_name)
+	if (conn_name)
 	{
-		return create_reply("unload: missing connection name");
+		array_insert(names, ARRAY_TAIL, strdup(conn_name));
+	}
+	if (!message->parse(message, NULL, NULL, NULL, unload_conn_li, names))
+	{
+		array_destroy_function(names, (void*)free, NULL);
+		return create_reply("parsing request failed");
+	}
+	count = array_count(names);
+	if (!count)
+	{
+		array_destroy(names);
+		return create_reply("missing connection name(s)");
 	}
 
 	this->lock->write_lock(this->lock);
@@ -2764,20 +2793,30 @@ CALLBACK(unload_conn, vici_message_t*,
 	{
 		this->condvar->wait(this->condvar, this->lock);
 	}
-	cfg = this->conns->remove(this->conns, conn_name);
-	if (cfg)
+	while (array_remove(names, ARRAY_HEAD, &conn_name))
 	{
-		handle_start_actions(this, cfg, TRUE);
-		cfg->destroy(cfg);
+		cfg = this->conns->remove(this->conns, conn_name);
+		free(conn_name);
+		if (cfg)
+		{
+			handle_start_actions(this, cfg, TRUE);
+			cfg->destroy(cfg);
+			found++;
+		}
 	}
 	this->condvar->signal(this->condvar);
 	this->lock->unlock(this->lock);
+	array_destroy(names);
 
-	if (!cfg)
+	builder = vici_builder_create();
+	builder->add_kv(builder, "success", found < count ? "no" : "yes");
+	builder->add_kv(builder, "unloaded", "%u", found);
+	if (found < count)
 	{
-		return create_reply("unload: connection '%s' not found", conn_name);
+		builder->add_kv(builder, "errmsg", "only %d of %d connections "
+						"unloaded", found, count);
 	}
-	return create_reply(NULL);
+	return builder->finalize(builder);
 }
 
 CALLBACK(get_conns, vici_message_t*,

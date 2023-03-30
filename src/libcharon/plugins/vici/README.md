@@ -458,12 +458,16 @@ with the same name gets updated or replaced.
 
 ### unload-conn() ###
 
-Unload a previously loaded connection definition by name.
+Unload one or more previously loaded connection definitions by name.
 
 	{
 		name = <IKE_SA config name>
+		names = [
+			<list of IKE_SA config names>
+		]
 	} => {
 		success = <yes or no>
+		unloaded = <number of unloaded configs>
 		errmsg = <error string on failure>
 	}
 
