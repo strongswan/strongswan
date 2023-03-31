@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include "est_tls.h"
 
@@ -198,7 +199,6 @@ static bool parse_http_header(chunk_t *in,  u_int *http_code, u_int *content_len
 	return (*http_code < 300);
 }
 
-
 METHOD(est_tls_t, request, bool,
 	private_est_tls_t *this, est_op_t op, chunk_t in, chunk_t *out,
 	u_int *http_code, u_int *retry_after)
@@ -206,7 +206,7 @@ METHOD(est_tls_t, request, bool,
 	chunk_t http = chunk_empty, data = chunk_empty, response;
 	u_int content_len;
 	char buf[1024];
-	int len;
+	int i, len;
 
 	/* initialize output variables */
 	*out = chunk_empty;
@@ -276,6 +276,15 @@ METHOD(est_tls_t, request, bool,
 				return FALSE;
 			}
 		}
+
+		for (i = 0, len = 0; i < data.len; i++)
+		{
+			if (!isspace(data.ptr[i]))
+			{
+				data.ptr[len++] = data.ptr[i];
+			}
+		}
+		data.len = len;
 
 		*out = chunk_from_base64(data, NULL);
 		chunk_free(&data);
