@@ -162,15 +162,7 @@ static int scep()
 				}
 				continue;
 			case 'R':       /* --rsa-padding */
-				if (streq(arg, "pss"))
-				{
-					pss = TRUE;
-				}
-				else if (streq(arg, "pkcs1"))
-				{
-					pss = FALSE;
-				}
-				else
+				if (!parse_rsa_padding(arg, &pss))
 				{
 					error = "invalid RSA padding";
 					goto usage;
