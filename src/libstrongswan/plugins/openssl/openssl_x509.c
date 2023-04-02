@@ -365,7 +365,7 @@ METHOD(certificate_t, has_subject, id_match_t,
 	enumerator = create_subjectAltName_enumerator(this);
 	while (enumerator->enumerate(enumerator, &current))
 	{
-		match = current->matches(current, subject);
+		match = current->matches(subject, current);
 		if (match > best)
 		{
 			best = match;
