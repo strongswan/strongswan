@@ -4,7 +4,7 @@
 build_botan()
 {
 	# same revision used in the build recipe of the testing environment
-	BOTAN_REV=2.19.3
+	BOTAN_REV=3.1.1
 	BOTAN_DIR=$DEPS_BUILD_DIR/botan
 
 	if test -d "$BOTAN_DIR"; then
@@ -246,6 +246,10 @@ all|codeql|coverage|sonarcloud|no-dbg)
 			--disable-python-eggs-install"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
+	# unable to build Botan on Ubuntu 20.04
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
+		CONFIG="$CONFIG --disable-botan"
+	fi
 	if test "$TEST" != "coverage"; then
 		CONFIG="$CONFIG --disable-coverage"
 	else
@@ -259,7 +263,9 @@ all|codeql|coverage|sonarcloud|no-dbg)
 		  libselinux1-dev libiptc-dev"
 	PYDEPS="tox"
 	if test "$1" = "build-deps"; then
-		build_botan
+		if [ "$ID" = "ubuntu" -a "$VERSION_ID" != "20.04" ]; then
+			build_botan
+		fi
 		build_wolfssl
 		build_tss2
 	fi
