@@ -153,6 +153,8 @@ static entry_t *remove_entry(private_watcher_t *this, entry_t *entry,
  * Data we pass on for an async notification
  */
 typedef struct {
+	/** triggering entry */
+	entry_t *entry;
 	/** file descriptor */
 	int fd;
 	/** event type */
@@ -227,7 +229,7 @@ static void notify_end(notify_data_t *data)
 	this->mutex->lock(this->mutex);
 	for (entry = this->fds; entry; prev = entry, entry = entry->next)
 	{
-		if (entry->fd == data->fd)
+		if (entry == data->entry)
 		{
 			if (!data->keep)
 			{
@@ -277,6 +279,7 @@ static void notify(private_watcher_t *this, entry_t *entry,
 
 	/* get a copy of entry for async job, but with specific event */
 	INIT(data,
+		.entry = entry,
 		.fd = entry->fd,
 		.event = event,
 		.cb = entry->cb,
