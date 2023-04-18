@@ -541,6 +541,7 @@ static char *whitelist[] = {
 	"tzset",
 	"_IO_file_doallocate",
 	"selinux_check_access",
+	"on_exit",
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
 	"dlerror",
