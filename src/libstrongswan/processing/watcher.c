@@ -388,7 +388,6 @@ static job_requeue_t watch(private_watcher_t *this)
 	entry_t *entry;
 	struct pollfd *pfd;
 	int count = 0, res;
-	bool rebuild = FALSE;
 #if DEBUG_LEVEL >= 2
 	char logbuf[BUF_LEN], *logpos, eventbuf[4], *eventpos;
 	int loglen;
@@ -451,7 +450,7 @@ static job_requeue_t watch(private_watcher_t *this)
 	}
 #endif
 
-	while (!rebuild)
+	while (TRUE)
 	{
 		int revents;
 		char buf[1];
@@ -493,7 +492,7 @@ static job_requeue_t watch(private_watcher_t *this)
 				}
 				this->pending = FALSE;
 				DBG2(DBG_JOB, "watcher got notification, rebuilding");
-				return JOB_REQUEUE_DIRECT;
+				break;
 			}
 
 			reset_log(logbuf, logpos, loglen);
@@ -502,8 +501,7 @@ static job_requeue_t watch(private_watcher_t *this)
 			{
 				if (entry->in_callback)
 				{
-					rebuild = TRUE;
-					break;
+					continue;
 				}
 				reset_event_log(eventbuf, eventpos);
 				revents = find_revents(pfd, count, entry->fd);
@@ -545,7 +543,7 @@ static job_requeue_t watch(private_watcher_t *this)
 					lib->processor->execute_job(lib->processor, job);
 				}
 				/* we temporarily disable a notified FD, rebuild FDSET */
-				return JOB_REQUEUE_DIRECT;
+				break;
 			}
 		}
 		else
@@ -554,7 +552,7 @@ static job_requeue_t watch(private_watcher_t *this)
 			{	/* complain only if no pending updates */
 				DBG1(DBG_JOB, "watcher poll() error: %s", strerror(errno));
 			}
-			return JOB_REQUEUE_DIRECT;
+			break;
 		}
 	}
 	return JOB_REQUEUE_DIRECT;
