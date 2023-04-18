@@ -220,6 +220,8 @@ static void notify_end(notify_data_t *data)
 {
 	private_watcher_t *this = data->this;
 	entry_t *entry, *prev = NULL;
+	watcher_event_t updated = 0;
+	bool removed = FALSE;
 
 	/* reactivate the disabled entry */
 	this->mutex->lock(this->mutex);
@@ -230,9 +232,11 @@ static void notify_end(notify_data_t *data)
 			if (!data->keep)
 			{
 				entry->events &= ~data->event;
+				updated = entry->events;
 				if (!entry->events)
 				{
 					remove_entry(this, entry, prev);
+					removed = TRUE;
 					break;
 				}
 			}
@@ -243,6 +247,23 @@ static void notify_end(notify_data_t *data)
 	this->condvar->broadcast(this->condvar);
 	update_and_unlock(this);
 
+	if (removed)
+	{
+		DBG3(DBG_JOB, "removed fd %d[%s%s%s] from watcher after callback", data->fd,
+			 data->event & WATCHER_READ ? "r" : "",
+			 data->event & WATCHER_WRITE ? "w" : "",
+			 data->event & WATCHER_EXCEPT ? "e" : "");
+	}
+	else if (updated)
+	{
+		DBG3(DBG_JOB, "updated fd %d[%s%s%s] to %d[%s%s%s] after callback", data->fd,
+			 (updated | data->event) & WATCHER_READ ? "r" : "",
+			 (updated | data->event) & WATCHER_WRITE ? "w" : "",
+			 (updated | data->event) & WATCHER_EXCEPT ? "e" : "", data->fd,
+			 updated & WATCHER_READ ? "r" : "",
+			 updated & WATCHER_WRITE ? "w" : "",
+			 updated & WATCHER_EXCEPT ? "e" : "");
+	}
 	free(data);
 }
 
@@ -498,6 +519,11 @@ METHOD(watcher_t, add, void,
 		.data = data,
 	);
 
+	DBG3(DBG_JOB, "adding fd %d[%s%s%s] to watcher", fd,
+		 events & WATCHER_READ ? "r" : "",
+		 events & WATCHER_WRITE ? "w" : "",
+		 events & WATCHER_EXCEPT ? "e" : "");
+
 	this->mutex->lock(this->mutex);
 	add_entry(this, entry);
 	if (this->state == WATCHER_STOPPED)
@@ -519,7 +545,7 @@ METHOD(watcher_t, remove_, void,
 	private_watcher_t *this, int fd)
 {
 	entry_t *entry, *prev = NULL;
-	bool found = FALSE;
+	watcher_event_t found = 0;
 
 	this->mutex->lock(this->mutex);
 	while (TRUE)
@@ -536,8 +562,8 @@ METHOD(watcher_t, remove_, void,
 					is_in_callback = TRUE;
 					break;
 				}
+				found |= entry->events;
 				entry = remove_entry(this, entry, prev);
-				found = TRUE;
 				continue;
 			}
 			prev = entry;
@@ -552,6 +578,11 @@ METHOD(watcher_t, remove_, void,
 	if (found)
 	{
 		update_and_unlock(this);
+
+		DBG3(DBG_JOB, "removed fd %d[%s%s%s] from watcher", fd,
+			 found & WATCHER_READ ? "r" : "",
+			 found & WATCHER_WRITE ? "w" : "",
+			 found & WATCHER_EXCEPT ? "e" : "");
 	}
 	else
 	{
