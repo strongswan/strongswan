@@ -1042,7 +1042,7 @@ static status_t process_key_update(private_tls_server_t *this,
 METHOD(tls_handshake_t, process, status_t,
 	private_tls_server_t *this, tls_handshake_type_t type, bio_reader_t *reader)
 {
-	tls_handshake_type_t expected;
+	tls_handshake_type_t expected DBG_UNUSED;
 
 	if (this->tls->get_version_max(this->tls) < TLS_1_3)
 	{

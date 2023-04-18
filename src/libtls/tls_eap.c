@@ -210,7 +210,7 @@ static status_t build_pkt(private_tls_eap_t *this, chunk_t *out)
 	eap_tls_packet_t *pkt;
 	size_t len, reclen, msg_len_offset;
 	status_t status;
-	char *kind;
+	char *kind DBG_UNUSED;
 
 	if (this->is_server)
 	{
