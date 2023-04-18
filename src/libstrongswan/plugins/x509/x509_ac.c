@@ -429,7 +429,6 @@ static bool parse_certificate(private_x509_ac_t *this)
 	int extn_oid = OID_UNKNOWN;
 	signature_params_t sig_alg = {};
 	bool success = FALSE;
-	bool critical;
 
 	parser = asn1_parser_create(acObjects, this->encoding);
 
@@ -529,8 +528,8 @@ static bool parse_certificate(private_x509_ac_t *this)
 				extn_oid = asn1_known_oid(object);
 				break;
 			case AC_OBJ_CRITICAL:
-				critical = object.len && *object.ptr;
-				DBG2(DBG_ASN, "  %s",(critical)?"TRUE":"FALSE");
+				DBG2(DBG_ASN, "  %s",
+					 object.len && *object.ptr ? "TRUE" : "FALSE");
 				break;
 			case AC_OBJ_EXTN_VALUE:
 			{

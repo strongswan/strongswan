@@ -430,7 +430,6 @@ static bool parse_extension_request(private_x509_pkcs10_t *this, chunk_t blob, i
 	int objectID;
 	int extn_oid = OID_UNKNOWN;
 	bool success = FALSE;
-	bool critical;
 
 	parser = asn1_parser_create(extensionRequestObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -445,8 +444,8 @@ static bool parse_extension_request(private_x509_pkcs10_t *this, chunk_t blob, i
 				extn_oid = asn1_known_oid(object);
 				break;
 			case PKCS10_EXTN_CRITICAL:
-				critical = object.len && *object.ptr;
-				DBG2(DBG_ASN, "  %s", critical ? "TRUE" : "FALSE");
+				DBG2(DBG_ASN, "  %s",
+					 object.len && *object.ptr ? "TRUE" : "FALSE");
 				break;
 			case PKCS10_EXTN_VALUE:
 			{
