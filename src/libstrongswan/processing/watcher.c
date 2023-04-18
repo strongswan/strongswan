@@ -356,6 +356,30 @@ static inline bool entry_ready(entry_t *entry, watcher_event_t event,
 	return FALSE;
 }
 
+#if DEBUG_LEVEL >= 2
+#define reset_log(buf, pos, len) ({ buf[0] = '\0'; pos = buf; len = sizeof(buf); })
+#define reset_event_log(buf, pos) ({ pos = buf; })
+#define end_event_log(pos) ({ *pos = '\0'; })
+#define log_event(pos, ev) ({ *pos++ = ev; })
+#define log_fd(pos, len, fd, ev) ({ \
+	if (ev[0]) \
+	{ \
+		int _add = snprintf(pos, len, " %d[%s]", fd, ev); \
+		if (_add >= 0 && _add < len) \
+		{ \
+			pos += _add; \
+			len -= _add; \
+		} \
+	} \
+})
+#else
+#define reset_event_log(...) ({})
+#define end_event_log(...) ({})
+#define log_event(...) ({})
+#define reset_log(...) ({})
+#define log_fd(...) ({})
+#endif
+
 /**
  * Dispatching function
  */
@@ -365,6 +389,12 @@ static job_requeue_t watch(private_watcher_t *this)
 	struct pollfd *pfd;
 	int count = 0, res;
 	bool rebuild = FALSE;
+#if DEBUG_LEVEL >= 2
+	char logbuf[BUF_LEN], *logpos, eventbuf[4], *eventpos;
+	int loglen;
+#endif
+
+	reset_log(logbuf, logpos, loglen);
 
 	this->mutex->lock(this->mutex);
 
@@ -391,25 +421,35 @@ static job_requeue_t watch(private_watcher_t *this)
 		{
 			pfd[count].fd = entry->fd;
 			pfd[count].events = 0;
+			reset_event_log(eventbuf, eventpos);
 			if (entry->events & WATCHER_READ)
 			{
-				DBG3(DBG_JOB, "  watching %d for reading", entry->fd);
+				log_event(eventpos, 'r');
 				pfd[count].events |= POLLIN;
 			}
 			if (entry->events & WATCHER_WRITE)
 			{
-				DBG3(DBG_JOB, "  watching %d for writing", entry->fd);
+				log_event(eventpos, 'w');
 				pfd[count].events |= POLLOUT;
 			}
 			if (entry->events & WATCHER_EXCEPT)
 			{
-				DBG3(DBG_JOB, "  watching %d for exceptions", entry->fd);
+				log_event(eventpos, 'e');
 				pfd[count].events |= POLLERR;
 			}
+			end_event_log(eventpos);
+			log_fd(logpos, loglen, entry->fd, eventbuf);
 			count++;
 		}
 	}
 	this->mutex->unlock(this->mutex);
+
+#if DEBUG_LEVEL >= 3
+	if (logbuf[0])
+	{
+		DBG3(DBG_JOB, "observing fds:%s", logbuf);
+	}
+#endif
 
 	while (!rebuild)
 	{
@@ -456,6 +496,7 @@ static job_requeue_t watch(private_watcher_t *this)
 				return JOB_REQUEUE_DIRECT;
 			}
 
+			reset_log(logbuf, logpos, loglen);
 			this->mutex->lock(this->mutex);
 			for (entry = this->fds; entry; entry = entry->next)
 			{
@@ -464,27 +505,37 @@ static job_requeue_t watch(private_watcher_t *this)
 					rebuild = TRUE;
 					break;
 				}
+				reset_event_log(eventbuf, eventpos);
 				revents = find_revents(pfd, count, entry->fd);
 				if (entry_ready(entry, WATCHER_EXCEPT, revents))
 				{
-					DBG2(DBG_JOB, "watched FD %d has exception", entry->fd);
+					log_event(eventpos, 'e');
 					notify(this, entry, WATCHER_EXCEPT);
 				}
 				else
 				{
 					if (entry_ready(entry, WATCHER_READ, revents))
 					{
-						DBG2(DBG_JOB, "watched FD %d ready to read", entry->fd);
+						log_event(eventpos, 'r');
 						notify(this, entry, WATCHER_READ);
 					}
 					if (entry_ready(entry, WATCHER_WRITE, revents))
 					{
-						DBG2(DBG_JOB, "watched FD %d ready to write", entry->fd);
+						log_event(eventpos, 'w');
 						notify(this, entry, WATCHER_WRITE);
 					}
 				}
+				end_event_log(eventpos);
+				log_fd(logpos, loglen, entry->fd, eventbuf);
 			}
 			this->mutex->unlock(this->mutex);
+
+#if DEBUG_LEVEL >= 2
+			if (logbuf[0])
+			{
+				DBG2(DBG_JOB, "events on fds:%s", logbuf);
+			}
+#endif
 
 			if (this->jobs->get_count(this->jobs))
 			{
