@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
+ * Copyright (C) 2016-2023 Tobias Brunner
  * Copyright (C) 2013 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -168,19 +168,26 @@ typedef struct {
 } notify_data_t;
 
 /**
- * Notify watcher thread about changes
+ * Notify watcher thread about changes and unlock mutex
  */
-static void update(private_watcher_t *this)
+static void update_and_unlock(private_watcher_t *this)
 {
 	char buf[1] = { 'u' };
+	int error = 0;
 
 	this->pending = TRUE;
 	if (this->notify[1] != -1)
 	{
 		if (write(this->notify[1], buf, sizeof(buf)) == -1)
 		{
-			DBG1(DBG_JOB, "notifying watcher failed: %s", strerror(errno));
+			error = errno;
 		}
+	}
+	this->mutex->unlock(this->mutex);
+
+	if (error)
+	{
+		DBG1(DBG_JOB, "notifying watcher failed: %s", strerror(error));
 	}
 }
 
@@ -233,9 +240,8 @@ static void notify_end(notify_data_t *data)
 			break;
 		}
 	}
-	update(this);
 	this->condvar->broadcast(this->condvar);
-	this->mutex->unlock(this->mutex);
+	update_and_unlock(this);
 
 	free(data);
 }
@@ -258,7 +264,7 @@ static void notify(private_watcher_t *this, entry_t *entry,
 		.this = this,
 	);
 
-	/* deactivate entry, so we can select() other FDs even if the async
+	/* deactivate entry, so we can poll() other FDs even if the async
 	 * processing did not handle the event yet */
 	entry->in_callback++;
 
@@ -497,15 +503,16 @@ METHOD(watcher_t, add, void,
 	if (this->state == WATCHER_STOPPED)
 	{
 		this->state = WATCHER_QUEUED;
+		this->mutex->unlock(this->mutex);
+
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create_with_prio((void*)watch, this,
 				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 	}
 	else
 	{
-		update(this);
+		update_and_unlock(this);
 	}
-	this->mutex->unlock(this->mutex);
 }
 
 METHOD(watcher_t, remove_, void,
@@ -544,9 +551,12 @@ METHOD(watcher_t, remove_, void,
 	}
 	if (found)
 	{
-		update(this);
+		update_and_unlock(this);
 	}
-	this->mutex->unlock(this->mutex);
+	else
+	{
+		this->mutex->unlock(this->mutex);
+	}
 }
 
 METHOD(watcher_t, get_state, watcher_state_t,
