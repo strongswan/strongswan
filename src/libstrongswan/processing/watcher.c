@@ -395,7 +395,7 @@ static job_requeue_t watch(private_watcher_t *this)
 		ssize_t len;
 		job_t *job;
 
-		DBG2(DBG_JOB, "watcher going to poll() %d fds", count);
+		DBG2(DBG_JOB, "watcher is observing %d fds", count-1);
 		thread_cleanup_push((void*)activate_all, this);
 		old = thread_cancelability(TRUE);
 
