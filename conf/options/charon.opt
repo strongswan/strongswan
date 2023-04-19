@@ -430,6 +430,9 @@ charon.send_delay_type = 0
 charon.send_vendor_id = no
 	Send strongSwan vendor ID payload
 
+charon.accept_incomplete_chains = no
+	Accept incomplete cert chains
+
 charon.signature_authentication = yes
 	Whether to enable Signature Authentication as per RFC 7427.
 

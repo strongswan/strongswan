@@ -93,6 +93,11 @@ struct private_credential_manager_t {
 	 * Registered data to pass to hook
 	 */
 	void *hook_data;
+
+	/**
+	 * Accept incomplete cert chains
+	 */
+	bool accept_incomplete_chains;
 };
 
 /** data to pass to create_private_enumerator */
@@ -1154,8 +1159,8 @@ static auth_cfg_t *build_trustchain(private_credential_manager_t *this,
 		issuer = get_issuer_cert(this, current, FALSE, NULL);
 		if (!issuer)
 		{
-			if (!has_anchor)
-			{	/* If no trust anchor specified, accept incomplete chains */
+			if (!has_anchor || this->accept_incomplete_chains)
+			{
 				return trustchain;
 			}
 			break;
@@ -1427,6 +1432,7 @@ credential_manager_t *credential_manager_create()
 
 	this->local_sets = thread_value_create((thread_cleanup_t)this->sets->destroy);
 	this->exclusive_local_sets = thread_value_create((thread_cleanup_t)this->sets->destroy);
+	this->accept_incomplete_chains = lib->settings->get_bool(lib->settings, "%s.accept_incomplete_chains", FALSE, lib->ns);
 	if (lib->settings->get_bool(lib->settings, "%s.cert_cache", TRUE, lib->ns))
 	{
 		this->cache = cert_cache_create();
