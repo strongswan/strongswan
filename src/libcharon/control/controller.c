@@ -228,7 +228,7 @@ METHOD(logger_t, listener_log, void,
 	target = this->listener->ike_sa;
 	this->listener->lock->unlock(this->listener->lock);
 
-	if (target == ike_sa)
+	if (target && target == ike_sa)
 	{
 		if (!this->callback(this->param, group, level, ike_sa, message))
 		{
