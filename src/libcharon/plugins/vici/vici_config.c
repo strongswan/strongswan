@@ -2252,7 +2252,7 @@ static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 		DBG1(DBG_CFG, "initiating '%s'", child_cfg->get_name(child_cfg));
 		charon->controller->initiate(charon->controller,
 					peer_cfg->get_ref(peer_cfg), child_cfg->get_ref(child_cfg),
-					NULL, NULL, 0, FALSE);
+					NULL, NULL, 0, 0, FALSE);
 	}
 }
 
@@ -2348,7 +2348,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 			{
 				DBG1(DBG_CFG, "closing '%s' #%u", name, id);
 				charon->controller->terminate_child(charon->controller,
-													id, NULL, NULL, 0);
+													id, NULL, NULL, 0, 0);
 			}
 			array_destroy(ids);
 		}
@@ -2358,7 +2358,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 			{
 				DBG1(DBG_CFG, "closing IKE_SA #%u", id);
 				charon->controller->terminate_ike(charon->controller, id,
-												  FALSE, NULL, NULL, 0);
+												  FALSE, NULL, NULL, 0, 0);
 			}
 			array_destroy(ikeids);
 		}

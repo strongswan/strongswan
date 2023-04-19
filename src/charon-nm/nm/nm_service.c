@@ -1067,7 +1067,7 @@ static gboolean do_disconnect(gpointer plugin)
 	if (id)
 	{
 		charon->controller->terminate_ike(charon->controller, id, FALSE,
-										  controller_cb_empty, NULL, 0);
+									controller_cb_empty, NULL, LEVEL_SILENT, 0);
 	}
 	else
 	{

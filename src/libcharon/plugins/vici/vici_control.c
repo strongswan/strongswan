@@ -209,8 +209,8 @@ CALLBACK(initiate, vici_message_t*,
 	{
 		return send_reply(this, "%s config '%s' not found", type, sa);
 	}
-	switch (charon->controller->initiate(charon->controller, peer_cfg,
-									child_cfg, log_cb, &log, timeout, limits))
+	switch (charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
+										 log_cb, &log, log.level, timeout, limits))
 	{
 		case SUCCESS:
 			return send_reply(this, NULL);
@@ -328,7 +328,7 @@ CALLBACK(terminate, vici_message_t*,
 		if (child || child_id)
 		{
 			if (charon->controller->terminate_child(charon->controller, *del,
-											log_cb, &log, timeout) == SUCCESS)
+									log_cb, &log, log.level, timeout) == SUCCESS)
 			{
 				done++;
 			}
@@ -336,7 +336,7 @@ CALLBACK(terminate, vici_message_t*,
 		else
 		{
 			if (charon->controller->terminate_ike(charon->controller, *del, force,
-											log_cb, &log, timeout) == SUCCESS)
+									log_cb, &log, log.level, timeout) == SUCCESS)
 			{
 				done++;
 			}

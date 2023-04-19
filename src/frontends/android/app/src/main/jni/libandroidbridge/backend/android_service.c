@@ -440,7 +440,7 @@ CALLBACK(terminate, job_requeue_t,
 	uint32_t *id)
 {
 	charon->controller->terminate_ike(charon->controller, *id, FALSE,
-									  controller_cb_empty, NULL, 0);
+									  controller_cb_empty, NULL, LEVEL_SILENT, 0);
 	return JOB_REQUEUE_NONE;
 }
 
