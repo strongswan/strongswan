@@ -1732,6 +1732,8 @@ METHOD(ike_sa_manager_t, new_initiator_spi, bool,
 	entry_t *entry;
 	u_int segment;
 	uint64_t new_spi, spi;
+    enumerator_t *enumerator;
+    child_sa_t *child_sa;
 
 	state = ike_sa->get_state(ike_sa);
 	if (state != IKE_CONNECTING)
@@ -1798,6 +1800,18 @@ METHOD(ike_sa_manager_t, new_initiator_spi, bool,
 
 	ike_sa_id->set_initiator_spi(ike_sa_id, new_spi);
 	entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa_id);
+
+    /* child should be updated after update of initiator spi */
+    charon->bus->children_migrate(charon->bus, ike_sa->get_id(ike_sa),
+                                  ike_sa->get_unique_id(ike_sa));
+    enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+    while (enumerator->enumerate(enumerator, &child_sa))
+    {
+        ike_sa->remove_child_sa(ike_sa, enumerator);
+        ike_sa->add_child_sa(ike_sa, child_sa);
+    }
+    enumerator->destroy(enumerator);
+    charon->bus->children_migrate(charon->bus, NULL, 0);
 
 	entry->condvar->signal(entry->condvar);
 	unlock_single_segment(this, segment);
