@@ -1,4 +1,5 @@
 import socket
+import platform
 
 from .exception import SessionException, CommandException, EventUnknownException
 from .protocol import Transport, Packet, Message, RECV_TIMEOUT_DEFAULT
@@ -26,8 +27,12 @@ class Session(CommandWrappers, object):
         :type sock: socket.socket
         """
         if sock is None:
-            sock = socket.socket(socket.AF_UNIX)
-            sock.connect("/var/run/charon.vici")
+            if platform.system() == "Windows":
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.connect('127.0.0.1', 4502)
+            else:
+                sock = socket.socket(socket.AF_UNIX)
+                sock.connect("/var/run/charon.vici")
         self.transport = Transport(sock)
 
     def _communicate(self, packet):
