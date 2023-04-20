@@ -1778,8 +1778,8 @@ METHOD(ike_sa_manager_t, new_initiator_spi, bool,
 		return FALSE;
 	}
 
-	/* the hashtable row and segment are determined by the local SPI as
-	 * initiator, so if we change it the row and segment derived from it might
+	/* The hashtable row and segment are determined by the local SPI as
+	 * initiator, so if we change it, the row and segment derived from it might
 	 * change as well.  This could be a problem for threads waiting for the
 	 * entry (in particular those enumerating entries to check them out by
 	 * unique ID or name).  In order to avoid having to drive them out and thus
@@ -1796,7 +1796,49 @@ METHOD(ike_sa_manager_t, new_initiator_spi, bool,
 		 "%.16"PRIx64, ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa),
 		 be64toh(spi), be64toh(new_spi));
 
-	ike_sa_id->set_initiator_spi(ike_sa_id, new_spi);
+	/* when reauthenticating an IKEv1 SA, we have to migrate children again that
+	 * were adopted previously */
+	if (ike_sa->get_version(ike_sa) == IKEV1 &&
+		ike_sa->get_child_count(ike_sa))
+	{
+		enumerator_t *enumerator;
+		child_sa_t *child_sa;
+		ike_sa_id_t *new_id;
+
+		/* release the segment lock while triggering events and migrating
+		 * children, the IKE_SA is already checked out by our thread */
+		unlock_single_segment(this, segment);
+
+		/* do this before updating the ID on the current IKE_SA so listeners can
+		 * migrate children too */
+		new_id = ike_sa_id->clone(ike_sa_id);
+		new_id->set_initiator_spi(new_id, new_spi);
+		charon->bus->children_migrate(charon->bus, new_id,
+									  ike_sa->get_unique_id(ike_sa));
+		new_id->destroy(new_id);
+
+		/* update the ID so the CHILD_SA manager can migrate entries */
+		ike_sa_id->set_initiator_spi(ike_sa_id, new_spi);
+
+		enumerator = ike_sa->create_child_sa_enumerator(ike_sa);
+		while (enumerator->enumerate(enumerator, &child_sa))
+		{
+			charon->child_sa_manager->remove(charon->child_sa_manager,
+											 child_sa);
+			charon->child_sa_manager->add(charon->child_sa_manager,
+										  child_sa, ike_sa);
+		}
+		enumerator->destroy(enumerator);
+
+		charon->bus->children_migrate(charon->bus, NULL, 0);
+
+		/* no need for another lookup, our entry is already checked out */
+		lock_single_segment(this, segment);
+	}
+	else
+	{
+		ike_sa_id->set_initiator_spi(ike_sa_id, new_spi);
+	}
 	entry->ike_sa_id->replace_values(entry->ike_sa_id, ike_sa_id);
 
 	entry->condvar->signal(entry->condvar);
