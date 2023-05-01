@@ -45,6 +45,9 @@ jobs:
           - test: coverage
           - test: dist
           - test: nm
+          - test: no-dbg
+          - test: no-dbg
+            compiler: clang
           - test: fuzzing
             compiler: clang
             monolithic: yes

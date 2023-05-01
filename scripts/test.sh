@@ -221,7 +221,7 @@ wolfssl)
 printf-builtin)
 	CONFIG="--with-printf-hooks=builtin"
 	;;
-all|codeql|coverage|sonarcloud)
+all|codeql|coverage|sonarcloud|no-dbg)
 	if [ "$TEST" = "sonarcloud" ]; then
 		if [ -z "$SONAR_PROJECT" -o -z "$SONAR_ORGANIZATION" -o -z "$SONAR_TOKEN" ]; then
 			echo "The SONAR_PROJECT, SONAR_ORGANIZATION and SONAR_TOKEN" \
@@ -232,6 +232,9 @@ all|codeql|coverage|sonarcloud)
 	if [ "$TEST" = "codeql" ]; then
 		# don't run tests, only analyze built code
 		TARGET=
+	fi
+	if [ "$TEST" = "no-dbg" ]; then
+		CFLAGS="$CFLAGS -DDEBUG_LEVEL=-1"
 	fi
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
 			--disable-kernel-pfroute --disable-keychain
