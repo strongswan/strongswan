@@ -352,7 +352,7 @@ static bool has_policy(x509_t *issuer, chunk_t oid)
  */
 static bool check_policy(x509_t *subject, x509_t *issuer)
 {
-	certificate_t *cert = (certificate_t*)subject;
+	certificate_t *cert DBG_UNUSED = (certificate_t*)subject;
 	x509_policy_mapping_t *mapping;
 	x509_cert_policy_t *policy;
 	enumerator_t *enumerator;
@@ -485,7 +485,7 @@ static bool has_no_policy_mapping(linked_list_t *chain, int len)
 {
 	enumerator_t *enumerator, *mappings;
 	x509_policy_mapping_t *mapping;
-	certificate_t *cert;
+	certificate_t *cert DBG_UNUSED;
 	x509_t *x509;
 	bool valid = TRUE;
 
@@ -514,7 +514,7 @@ static bool has_no_any_policy(linked_list_t *chain, int len)
 {
 	enumerator_t *enumerator, *policies;
 	x509_cert_policy_t *policy;
-	certificate_t *cert;
+	certificate_t *cert DBG_UNUSED;
 	x509_t *x509;
 	bool valid = TRUE;
 
