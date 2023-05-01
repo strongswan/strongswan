@@ -520,7 +520,7 @@ typedef struct {
  */
 static void log_child_data(child_data_t *data, char *name)
 {
-	child_cfg_create_t *cfg = &data->cfg;
+	child_cfg_create_t *cfg DBG_UNUSED = &data->cfg;
 
 #define has_opt(opt) ({ (cfg->options & (opt)) == (opt); })
 	DBG2(DBG_CFG, "  child %s:", name);
