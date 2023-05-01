@@ -1541,19 +1541,17 @@ METHOD(ike_sa_t, initiate, status_t,
 #endif /* ME */
 			)
 		{
-			char *addr;
-
-			addr = this->ike_cfg->get_other_addr(this->ike_cfg);
 			if (!this->retry_initiate_interval)
 			{
 				DBG1(DBG_IKE, "unable to resolve %s, initiate aborted",
-					 addr);
+					 this->ike_cfg->get_other_addr(this->ike_cfg));
 				DESTROY_IF(child_cfg);
 				charon->bus->alert(charon->bus, ALERT_PEER_ADDR_FAILED);
 				return DESTROY_ME;
 			}
 			DBG1(DBG_IKE, "unable to resolve %s, retrying in %ds",
-				 addr, this->retry_initiate_interval);
+				 this->ike_cfg->get_other_addr(this->ike_cfg),
+				 this->retry_initiate_interval);
 			defer_initiate = TRUE;
 		}
 
@@ -1965,13 +1963,13 @@ METHOD(ike_sa_t, reauth, status_t,
 	if (!has_condition(this, COND_ORIGINAL_INITIATOR) &&
 		!ike_sa_can_reauthenticate(&this->public))
 	{
-		time_t del, now;
-
-		del = this->stats[STAT_DELETE];
-		now = time_monotonic(NULL);
+#if DEBUG_LEVEL >= 1
+		time_t del = this->stats[STAT_DELETE];
+		time_t now = time_monotonic(NULL);
 		DBG1(DBG_IKE, "initiator did not reauthenticate as requested, IKE_SA "
 			 "%s[%d] will timeout in %V", get_name(this), this->unique_id,
 			 &now, &del);
+#endif
 		return FAILED;
 	}
 	DBG0(DBG_IKE, "reauthenticating IKE_SA %s[%d]",
