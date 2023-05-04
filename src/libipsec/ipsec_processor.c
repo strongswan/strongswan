@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2012-2023 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -194,6 +194,7 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 	ip_packet_t *packet;
 	ipsec_sa_t *sa;
 	host_t *src, *dst;
+	bool acquire = FALSE;
 
 	packet = (ip_packet_t*)this->outbound_queue->dequeue(this->outbound_queue);
 
@@ -208,11 +209,22 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 	}
 
 	sa = ipsec->sas->checkout_by_reqid(ipsec->sas, policy->get_reqid(policy),
-									   FALSE, NULL);
+									   FALSE, &acquire);
 	if (!sa)
-	{	/* TODO-IPSEC: send an acquire to upper layer */
-		DBG1(DBG_ESP, "could not find an outbound IPsec SA for reqid {%u}, "
-			 "dropping packet", policy->get_reqid(policy));
+	{
+		if (acquire)
+		{
+			DBG1(DBG_ESP, "could not find an outbound IPsec SA for reqid {%u}, "
+				 "dropping packet and triggering acquire",
+				 policy->get_reqid(policy));
+			ipsec->events->acquire(ipsec->events, policy->get_reqid(policy));
+		}
+		else
+		{
+			DBG2(DBG_ESP, "could not find an outbound IPsec SA for reqid {%u}, "
+				 "dropping packet while acquire is pending",
+				 policy->get_reqid(policy));
+		}
 		packet->destroy(packet);
 		policy->destroy(policy);
 		return JOB_REQUEUE_DIRECT;
