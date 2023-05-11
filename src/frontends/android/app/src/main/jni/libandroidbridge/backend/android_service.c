@@ -85,19 +85,14 @@ struct private_android_service_t {
 	bool use_dns_proxy;
 };
 
-/**
- * Outbound callback
- */
-static void send_esp(void *data, esp_packet_t *packet)
+CALLBACK(send_esp, void,
+	void *data, esp_packet_t *packet)
 {
 	charon->sender->send_no_marker(charon->sender, (packet_t*)packet);
 }
 
-/**
- * Inbound callback
- */
-static void deliver_plain(private_android_service_t *this,
-						  ip_packet_t *packet)
+CALLBACK(deliver_plain, void,
+	private_android_service_t *this, ip_packet_t *packet)
 {
 	chunk_t encoding;
 	ssize_t len;
@@ -122,10 +117,8 @@ static void deliver_plain(private_android_service_t *this,
 	packet->destroy(packet);
 }
 
-/**
- * Receiver callback
- */
-static void receiver_esp_cb(void *data, packet_t *packet)
+CALLBACK(receiver_esp_cb, void,
+	void *data, packet_t *packet)
 {
 	esp_packet_t *esp_packet;
 
@@ -359,14 +352,10 @@ static bool setup_tun_device(private_android_service_t *this,
 
 	if (!already_registered)
 	{
-		charon->receiver->add_esp_cb(charon->receiver,
-								(receiver_esp_cb_t)receiver_esp_cb, NULL);
-		ipsec->processor->register_inbound(ipsec->processor,
-									  (ipsec_inbound_cb_t)deliver_plain, this);
-		ipsec->processor->register_outbound(ipsec->processor,
-									   (ipsec_outbound_cb_t)send_esp, NULL);
-		this->dns_proxy->register_cb(this->dns_proxy,
-								(dns_proxy_response_cb_t)deliver_plain, this);
+		charon->receiver->add_esp_cb(charon->receiver, receiver_esp_cb, NULL);
+		ipsec->processor->register_inbound(ipsec->processor, deliver_plain, this);
+		ipsec->processor->register_outbound(ipsec->processor, send_esp, NULL);
+		this->dns_proxy->register_cb(this->dns_proxy, deliver_plain, this);
 
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create((callback_job_cb_t)handle_plain, this,
@@ -422,14 +411,10 @@ static void close_tun_device(private_android_service_t *this)
 	this->tunfd = -1;
 	this->lock->unlock(this->lock);
 
-	this->dns_proxy->unregister_cb(this->dns_proxy,
-								(dns_proxy_response_cb_t)deliver_plain);
-	ipsec->processor->unregister_outbound(ipsec->processor,
-										 (ipsec_outbound_cb_t)send_esp);
-	ipsec->processor->unregister_inbound(ipsec->processor,
-										(ipsec_inbound_cb_t)deliver_plain);
-	charon->receiver->del_esp_cb(charon->receiver,
-								(receiver_esp_cb_t)receiver_esp_cb);
+	this->dns_proxy->unregister_cb(this->dns_proxy, deliver_plain);
+	ipsec->processor->unregister_outbound(ipsec->processor, send_esp);
+	ipsec->processor->unregister_inbound(ipsec->processor, deliver_plain);
+	charon->receiver->del_esp_cb(charon->receiver, receiver_esp_cb);
 	close(tunfd);
 }
 
