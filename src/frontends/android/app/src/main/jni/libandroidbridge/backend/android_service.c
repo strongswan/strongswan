@@ -86,7 +86,7 @@ struct private_android_service_t {
 };
 
 CALLBACK(send_esp, void,
-	void *data, esp_packet_t *packet)
+	void *data, esp_packet_t *packet, bool encap)
 {
 	charon->sender->send_no_marker(charon->sender, (packet_t*)packet);
 }

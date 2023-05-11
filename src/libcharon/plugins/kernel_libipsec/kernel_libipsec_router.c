@@ -95,7 +95,7 @@ static bool tun_entry_equals(tun_entry_t *a, tun_entry_t *b)
 }
 
 CALLBACK(send_esp, void,
-	void *data, esp_packet_t *packet)
+	void *data, esp_packet_t *packet, bool encap)
 {
 	charon->sender->send_no_marker(charon->sender, (packet_t*)packet);
 }
