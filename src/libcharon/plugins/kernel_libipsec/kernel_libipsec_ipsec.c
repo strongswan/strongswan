@@ -263,6 +263,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_libipsec_ipsec_t *this, kernel_ipsec_sa_id_t *id,
 	kernel_ipsec_add_sa_t *data)
 {
+	if (!data->encap)
+	{
+		DBG1(DBG_ESP, "failed to add SAD entry: only UDP encapsulation is "
+			 "supported");
+		return FAILED;
+	}
 	return ipsec->sas->add_sa(ipsec->sas, id->src, id->dst, id->spi, id->proto,
 					data->reqid, id->mark, data->tfc, data->lifetime,
 					data->enc_alg, data->enc_key, data->int_alg, data->int_key,

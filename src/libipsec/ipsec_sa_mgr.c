@@ -518,12 +518,6 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 	DBG2(DBG_ESP, "  using integrity algorithm %N with key size %d",
 		 integrity_algorithm_names, int_alg, int_key.len * 8);
 
-	if (!encap)
-	{
-		DBG1(DBG_ESP, "  IPsec SA: only UDP encapsulation is supported");
-		return FAILED;
-	}
-
 	sa_new = ipsec_sa_create(spi, src, dst, protocol, reqid, mark, tfc,
 							 lifetime, enc_alg, enc_key, int_alg, int_key, mode,
 							 ipcomp, cpi, encap, esn, inbound);
@@ -573,13 +567,6 @@ METHOD(ipsec_sa_mgr_t, update_sa, status_t,
 
 	DBG2(DBG_ESP, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
 		 ntohl(spi), src, dst, new_src, new_dst);
-
-	if (!new_encap)
-	{
-		DBG1(DBG_ESP, "failed to update SAD entry: can't deactivate UDP "
-			 "encapsulation");
-		return NOT_SUPPORTED;
-	}
 
 	this->mutex->lock(this->mutex);
 	if (this->sas->find_first(this->sas, match_entry_by_spi_src_dst_cb,
