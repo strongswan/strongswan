@@ -502,7 +502,7 @@ METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 
 METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, uint32_t spi,
-	uint8_t protocol, uint32_t reqid,	mark_t mark, uint32_t tfc,
+	uint8_t protocol, uint32_t reqid, mark_t mark, uint32_t tfc,
 	lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
 	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode, uint16_t ipcomp,
 	uint16_t cpi, bool initiator, bool encap, bool esn, bool inbound,
@@ -517,6 +517,12 @@ METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 		 encryption_algorithm_names, enc_alg, enc_key.len * 8);
 	DBG2(DBG_ESP, "  using integrity algorithm %N with key size %d",
 		 integrity_algorithm_names, int_alg, int_key.len * 8);
+
+	if (!encap)
+	{
+		DBG1(DBG_ESP, "  IPsec SA: only UDP encapsulation is supported");
+		return FAILED;
+	}
 
 	sa_new = ipsec_sa_create(spi, src, dst, protocol, reqid, mark, tfc,
 							 lifetime, enc_alg, enc_key, int_alg, int_key, mode,
@@ -582,6 +588,7 @@ METHOD(ipsec_sa_mgr_t, update_sa, status_t,
 	{
 		entry->sa->set_source(entry->sa, new_src);
 		entry->sa->set_destination(entry->sa, new_dst);
+		entry->sa->set_encap(entry->sa, new_encap);
 		/* checkin the entry */
 		entry->locked = FALSE;
 		entry->condvar->signal(entry->condvar);
