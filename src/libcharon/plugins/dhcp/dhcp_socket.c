@@ -304,13 +304,14 @@ static bool discover(private_dhcp_socket_t *this,
 {
 	dhcp_option_t *option;
 	dhcp_t dhcp;
-	chunk_t mac;
 	int optlen;
 
 	optlen = prepare_dhcp(this, transaction, DHCP_DISCOVER, &dhcp);
 
-	mac = chunk_from_thing(dhcp.client_hw_addr);
+#if DEBUG_LEVEL >= 1
+	chunk_t mac = chunk_from_thing(dhcp.client_hw_addr);
 	DBG1(DBG_CFG, "sending DHCP DISCOVER for %#B to %H", &mac, this->dst);
+#endif
 
 	option = (dhcp_option_t*)&dhcp.options[optlen];
 	option->type = DHCP_PARAM_REQ_LIST;

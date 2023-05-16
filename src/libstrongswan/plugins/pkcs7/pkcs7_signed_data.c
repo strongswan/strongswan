@@ -405,7 +405,7 @@ static bool parse(private_pkcs7_signed_data_t *this, chunk_t content)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
-	int objectID, version;
+	int objectID;
 	signerinfo_t *info = NULL;
 	bool success = FALSE;
 
@@ -418,8 +418,7 @@ static bool parse(private_pkcs7_signed_data_t *this, chunk_t content)
 		switch (objectID)
 		{
 			case PKCS7_VERSION:
-				version = object.len ? (int)*object.ptr : 0;
-				DBG2(DBG_LIB, "  v%d", version);
+				DBG2(DBG_LIB, "  v%d", object.len ? (int)*object.ptr : 0);
 				break;
 			case PKCS7_CONTENT_INFO:
 				this->content = lib->creds->create(lib->creds,
@@ -448,8 +447,7 @@ static bool parse(private_pkcs7_signed_data_t *this, chunk_t content)
 				this->signerinfos->insert_last(this->signerinfos, info);
 				break;
 			case PKCS7_SIGNER_INFO_VERSION:
-				version = object.len ? (int)*object.ptr : 0;
-				DBG2(DBG_LIB, "  v%d", version);
+				DBG2(DBG_LIB, "  v%d", object.len ? (int)*object.ptr : 0);
 				break;
 			case PKCS7_ISSUER:
 				info->issuer = identification_create_from_encoding(

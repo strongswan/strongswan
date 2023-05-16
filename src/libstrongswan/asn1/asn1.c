@@ -548,9 +548,10 @@ void asn1_debug_simple_object(chunk_t object, asn1_t type, bool private)
 		case ASN1_UTCTIME:
 		case ASN1_GENERALIZEDTIME:
 			{
+#if DEBUG_LEVEL >= 2
 				time_t time = asn1_to_time(&object, type);
-
 				DBG2(DBG_ASN, "  '%T'", &time, TRUE);
+#endif
 			}
 			return;
 		default:

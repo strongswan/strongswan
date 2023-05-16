@@ -3067,8 +3067,8 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	enumerator_t *enumerator;
 	bool found = FALSE, update = TRUE;
 	char markstr[32] = "", labelstr[128] = "";
-	uint32_t cur_priority = 0;
-	int use_count;
+	uint32_t cur_priority DBG_UNUSED = 0;
+	int use_count DBG_UNUSED;
 
 	/* create a policy */
 	INIT(policy,
@@ -3286,7 +3286,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 	struct nlmsghdr *hdr;
 	struct xfrm_userpolicy_id *policy_id;
 	bool is_installed = TRUE;
-	uint32_t priority, auto_priority, cur_priority;
+	uint32_t priority, auto_priority, cur_priority DBG_UNUSED;
 	ipsec_sa_t assigned_sa = {
 		.src = data->src,
 		.dst = data->dst,

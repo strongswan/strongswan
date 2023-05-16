@@ -683,7 +683,8 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 									u_int timeout)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
-	certificate_t *best = NULL, *current, *cissuer = (certificate_t*)issuer;
+	certificate_t *best = NULL, *current;
+	certificate_t *cissuer DBG_UNUSED = (certificate_t*)issuer;
 	enumerator_t *enumerator;
 	identification_t *id;
 	x509_cdp_t *cdp;
@@ -752,7 +753,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 								   auth_cfg_t *auth, u_int timeout)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
-	certificate_t *best = NULL, *cissuer = (certificate_t*)issuer;
+	certificate_t *best = NULL, *cissuer DBG_UNUSED = (certificate_t*)issuer;
 	identification_t *id;
 	x509_cdp_t *cdp;
 	bool uri_found = FALSE;

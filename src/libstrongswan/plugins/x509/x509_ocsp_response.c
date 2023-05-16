@@ -528,7 +528,6 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 	u_int responses_level = level0;
 	certificate_t *cert;
 	bool success = FALSE;
-	bool critical;
 
 	parser = asn1_parser_create(basicResponseObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -573,8 +572,8 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				extn_oid = asn1_known_oid(object);
 				break;
 			case BASIC_RESPONSE_CRITICAL:
-				critical = object.len && *object.ptr;
-				DBG2(DBG_ASN, "  %s", critical ? "TRUE" : "FALSE");
+				DBG2(DBG_ASN, "  %s",
+					 object.len && *object.ptr ? "TRUE" : "FALSE");
 				break;
 			case BASIC_RESPONSE_EXT_VALUE:
 				if (extn_oid == OID_NONCE &&
