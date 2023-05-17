@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Tobias Brunner
+ * Copyright (C) 2012-2023 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -59,16 +59,6 @@ struct private_android_net_t {
 	linked_list_t *vips;
 
 	/**
-	 * Socket used to determine source address (IPv4)
-	 */
-	int socket_v4;
-
-	/**
-	 * Socket used to determine source address (IPv6)
-	 */
-	int socket_v6;
-
-	/**
 	 * Whether the device is currently connected
 	 */
 	bool connected;
@@ -112,44 +102,34 @@ static void connectivity_cb(private_android_net_t *this,
 }
 
 METHOD(kernel_net_t, get_source_addr, host_t*,
-	private_android_net_t *this, host_t *dest, host_t *src)
+	private_android_net_t *this, host_t *dst, host_t *src)
 {
 	union {
 		struct sockaddr sockaddr;
 		struct sockaddr_in sin;
 		struct sockaddr_in6 sin6;
-	} addr;
-	socklen_t addrlen;
+	} addr = {};
+	socklen_t addrlen = *dst->get_sockaddr_len(dst);
 	timeval_t now;
 	job_t *job;
-	int socket;
+	host_t *host = NULL;
+	int skt;
 
-	if (dest->get_family(dest) == AF_INET)
+	skt = socket(dst->get_family(dst), SOCK_DGRAM, IPPROTO_UDP);
+	if (skt < 0)
 	{
-		socket = this->socket_v4;
-	}
-	else
-	{
-		socket = this->socket_v6;
-	}
-	if (socket < 0)
-	{
-		DBG1(DBG_KNL, "unable to determine src address for address family");
+		DBG1(DBG_KNL, "failed to create socket to lookup src addresses: %s",
+			 strerror(errno));
 		return NULL;
 	}
-	addrlen = *dest->get_sockaddr_len(dest);
-	addr.sockaddr.sa_family = AF_UNSPEC;
-	if (connect(socket, &addr.sockaddr, addrlen) < 0)
-	{
-		DBG1(DBG_KNL, "failed to disconnect socket: %s", strerror(errno));
-		return NULL;
-	}
+	charonservice->bypass_socket(charonservice, skt, dst->get_family(dst));
+
 	if (android_sdk_version <= ANDROID_JELLY_BEAN_MR2)
 	{	/* this seems to help avoiding the VIP, unless there is no connectivity
 		 * at all */
 		charonservice->bypass_socket(charonservice, -1, 0);
 	}
-	if (connect(socket, dest->get_sockaddr(dest), addrlen) < 0)
+	if (connect(skt, dst->get_sockaddr(dst), addrlen) < 0)
 	{
 		/* don't report an error if we are not connected (ENETUNREACH) */
 		if (errno != ENETUNREACH)
@@ -177,14 +157,17 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 				this->mutex->unlock(this->mutex);
 			}
 		}
-		return NULL;
 	}
-	if (getsockname(socket, &addr.sockaddr, &addrlen) < 0)
+	else if (getsockname(skt, &addr.sockaddr, &addrlen) < 0)
 	{
 		DBG1(DBG_KNL, "failed to determine src address: %s", strerror(errno));
-		return NULL;
 	}
-	return host_create_from_sockaddr((sockaddr_t*)&addr);
+	else
+	{
+		host = host_create_from_sockaddr((sockaddr_t*)&addr);
+	}
+	close(skt);
+	return host;
 }
 
 CALLBACK(vip_equals, bool,
@@ -295,8 +278,6 @@ METHOD(kernel_net_t, destroy, void,
 												 (void*)connectivity_cb);
 	this->mutex->destroy(this->mutex);
 	this->vips->destroy(this->vips);
-	close(this->socket_v4);
-	close(this->socket_v6);
 	free(this);
 }
 
@@ -325,32 +306,6 @@ kernel_net_t *kernel_android_net_create()
 	if (android_sdk_version <= ANDROID_JELLY_BEAN_MR2)
 	{
 		this->public.get_source_addr = _get_source_addr_old;
-	}
-
-	this->socket_v4 = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (this->socket_v4 < 0)
-	{
-		DBG1(DBG_KNL, "failed to create socket to lookup src addresses: %s",
-			 strerror(errno));
-	}
-	charonservice->bypass_socket(charonservice, this->socket_v4, AF_INET);
-
-	switch (charon->socket->supported_families(charon->socket))
-	{
-		case SOCKET_FAMILY_IPV6:
-		case SOCKET_FAMILY_BOTH:
-			this->socket_v6 = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-			if (this->socket_v6 < 0)
-			{
-				DBG1(DBG_KNL, "failed to create socket to lookup IPv6 src "
-					 "addresses: %s", strerror(errno));
-			}
-			charonservice->bypass_socket(charonservice, this->socket_v6,
-										 AF_INET6);
-			break;
-		default:
-			this->socket_v6 = -1;
-			break;
 	}
 
 	this->mutex->lock(this->mutex);
