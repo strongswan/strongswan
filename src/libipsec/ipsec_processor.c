@@ -16,11 +16,11 @@
 
 #include "ipsec.h"
 #include "ipsec_processor.h"
+#include "codel_queue.h"
 
 #include <utils/debug.h>
 #include <library.h>
 #include <threading/rwlock.h>
-#include <collections/blocking_queue.h>
 #include <processing/jobs/callback_job.h>
 
 typedef struct private_ipsec_processor_t private_ipsec_processor_t;
@@ -38,12 +38,12 @@ struct private_ipsec_processor_t {
 	/**
 	 * Queue for inbound packets (esp_packet_t*)
 	 */
-	blocking_queue_t *inbound_queue;
+	codel_queue_t *inbound_queue;
 
 	/**
 	 * Queue for outbound packets (ip_packet_t*)
 	 */
-	blocking_queue_t *outbound_queue;
+	codel_queue_t *outbound_queue;
 
 	/**
 	 * Registered inbound callback
@@ -60,6 +60,14 @@ struct private_ipsec_processor_t {
 		ipsec_outbound_cb_t cb;
 		void *data;
 	} outbound;
+	
+	/**
+	 * Registered acquire callback
+	 */
+	struct {
+		ipsec_acquire_cb_t cb;
+		void *data;
+	} acquire;
 
 	/**
 	 * Lock used to synchronize access to the callbacks
@@ -211,6 +219,23 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 									   FALSE);
 	if (!sa)
 	{	/* TODO-IPSEC: send an acquire to upper layer */
+		this->lock->read_lock(this->lock);
+		if (this->acquire.cb)
+		{
+			uint32_t reqid = policy->get_reqid(policy);
+			traffic_selector_t *source_ts = policy->get_source_ts(policy),
+				*destination_ts = policy->get_destination_ts(policy);
+
+			source_ts = source_ts->clone(source_ts);
+			destination_ts = destination_ts->clone(destination_ts);
+
+			this->acquire.cb(this->acquire.data, reqid, source_ts, destination_ts);
+		}
+		else
+		{
+			DBG2(DBG_ESP, "No acquire callback registered.");
+		}
+		this->lock->unlock(this->lock);
 		DBG1(DBG_ESP, "could not find an outbound IPsec SA for reqid {%u}, "
 			 "dropping packet", policy->get_reqid(policy));
 		packet->destroy(packet);
@@ -239,13 +264,15 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 METHOD(ipsec_processor_t, queue_inbound, void,
 	private_ipsec_processor_t *this, esp_packet_t *packet)
 {
-	this->inbound_queue->enqueue(this->inbound_queue, packet);
+	this->inbound_queue->enqueue(this->inbound_queue, packet,
+								packet->packet.get_data(&packet->packet).len);
 }
 
 METHOD(ipsec_processor_t, queue_outbound, void,
 	private_ipsec_processor_t *this, ip_packet_t *packet)
 {
-	this->outbound_queue->enqueue(this->outbound_queue, packet);
+	this->outbound_queue->enqueue(this->outbound_queue, packet,
+								packet->get_encoding(packet).len);
 }
 
 METHOD(ipsec_processor_t, register_inbound, void,
@@ -288,13 +315,32 @@ METHOD(ipsec_processor_t, unregister_outbound, void,
 	this->lock->unlock(this->lock);
 }
 
+METHOD(ipsec_processor_t, register_acquire, void,
+	private_ipsec_processor_t *this, ipsec_acquire_cb_t cb, void *data)
+{
+	this->lock->write_lock(this->lock);
+	this->acquire.cb = cb;
+	this->acquire.data = data;
+	this->lock->unlock(this->lock);
+}
+
+METHOD(ipsec_processor_t, unregister_acquire, void,
+	private_ipsec_processor_t *this, ipsec_acquire_cb_t cb)
+{
+	this->lock->write_lock(this->lock);
+	if (this->acquire.cb == cb)
+	{
+		this->acquire.cb = NULL;
+	}
+	this->lock->unlock(this->lock);
+}
+
+
 METHOD(ipsec_processor_t, destroy, void,
 	private_ipsec_processor_t *this)
 {
-	this->inbound_queue->destroy_offset(this->inbound_queue,
-										offsetof(esp_packet_t, destroy));
-	this->outbound_queue->destroy_offset(this->outbound_queue,
-										 offsetof(ip_packet_t, destroy));
+	this->inbound_queue->destroy(this->inbound_queue);
+	this->outbound_queue->destroy(this->outbound_queue);
 	this->lock->destroy(this->lock);
 	free(this);
 }
@@ -314,10 +360,14 @@ ipsec_processor_t *ipsec_processor_create()
 			.unregister_inbound = _unregister_inbound,
 			.register_outbound = _register_outbound,
 			.unregister_outbound = _unregister_outbound,
+			.register_acquire = _register_acquire,
+			.unregister_acquire = _unregister_acquire,
 			.destroy = _destroy,
 		},
-		.inbound_queue = blocking_queue_create(),
-		.outbound_queue = blocking_queue_create(),
+		.inbound_queue = codel_queue_create(
+										offsetof(esp_packet_t, destroy), 1500),
+		.outbound_queue = codel_queue_create(
+										offsetof(ip_packet_t, destroy), 1500),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 	);
 
