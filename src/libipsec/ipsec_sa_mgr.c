@@ -502,7 +502,7 @@ METHOD(ipsec_sa_mgr_t, get_spi, status_t,
 
 METHOD(ipsec_sa_mgr_t, add_sa, status_t,
 	private_ipsec_sa_mgr_t *this, host_t *src, host_t *dst, uint32_t spi,
-	uint8_t protocol, uint32_t reqid,	mark_t mark, uint32_t tfc,
+	uint8_t protocol, uint32_t reqid, mark_t mark, uint32_t tfc,
 	lifetime_cfg_t *lifetime, uint16_t enc_alg, chunk_t enc_key,
 	uint16_t int_alg, chunk_t int_key, ipsec_mode_t mode, uint16_t ipcomp,
 	uint16_t cpi, bool initiator, bool encap, bool esn, bool inbound,
@@ -568,13 +568,6 @@ METHOD(ipsec_sa_mgr_t, update_sa, status_t,
 	DBG2(DBG_ESP, "updating SAD entry with SPI %.8x from %#H..%#H to %#H..%#H",
 		 ntohl(spi), src, dst, new_src, new_dst);
 
-	if (!new_encap)
-	{
-		DBG1(DBG_ESP, "failed to update SAD entry: can't deactivate UDP "
-			 "encapsulation");
-		return NOT_SUPPORTED;
-	}
-
 	this->mutex->lock(this->mutex);
 	if (this->sas->find_first(this->sas, match_entry_by_spi_src_dst_cb,
 							 (void**)&entry, spi, src, dst) &&
@@ -582,6 +575,7 @@ METHOD(ipsec_sa_mgr_t, update_sa, status_t,
 	{
 		entry->sa->set_source(entry->sa, new_src);
 		entry->sa->set_destination(entry->sa, new_dst);
+		entry->sa->set_encap(entry->sa, new_encap);
 		/* checkin the entry */
 		entry->locked = FALSE;
 		entry->condvar->signal(entry->condvar);

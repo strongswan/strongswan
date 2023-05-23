@@ -56,6 +56,11 @@ struct private_kernel_libipsec_ipsec_t {
 	 * Whether the remote TS may equal the IKE peer
 	 */
 	bool allow_peer_ts;
+
+	/**
+	 * Whether UDP encapsulation is required
+	 */
+	bool require_encap;
 };
 
 typedef struct exclude_route_t exclude_route_t;
@@ -241,8 +246,8 @@ static void acquire(uint32_t reqid)
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	private_kernel_libipsec_ipsec_t *this)
 {
-	return KERNEL_REQUIRE_UDP_ENCAPSULATION | KERNEL_ESP_V3_TFC |
-		   KERNEL_SA_USE_TIME;
+	return KERNEL_ESP_V3_TFC | KERNEL_SA_USE_TIME |
+			(this->require_encap ? KERNEL_REQUIRE_UDP_ENCAPSULATION : 0);
 }
 
 METHOD(kernel_ipsec_t, get_spi, status_t,
@@ -263,6 +268,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_libipsec_ipsec_t *this, kernel_ipsec_sa_id_t *id,
 	kernel_ipsec_add_sa_t *data)
 {
+	if (this->require_encap && !data->encap)
+	{
+		DBG1(DBG_ESP, "failed to add SAD entry: only UDP encapsulation is "
+			 "supported");
+		return FAILED;
+	}
 	return ipsec->sas->add_sa(ipsec->sas, id->src, id->dst, id->spi, id->proto,
 					data->reqid, id->mark, data->tfc, data->lifetime,
 					data->enc_alg, data->enc_key, data->int_alg, data->int_key,
@@ -698,6 +709,7 @@ kernel_libipsec_ipsec_t *kernel_libipsec_ipsec_create()
 		.excludes = linked_list_create(),
 		.allow_peer_ts = lib->settings->get_bool(lib->settings,
 					"%s.plugins.kernel-libipsec.allow_peer_ts", FALSE, lib->ns),
+		.require_encap = !lib->get(lib, "kernel-libipsec-esp-handler"),
 	);
 
 	ipsec->events->register_listener(ipsec->events, &this->ipsec_listener);

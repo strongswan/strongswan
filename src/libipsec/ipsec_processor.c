@@ -169,12 +169,12 @@ static job_requeue_t process_inbound(private_ipsec_processor_t *this)
  * Send an ESP packet using the registered outbound callback
  */
 static void send_outbound(private_ipsec_processor_t *this,
-						  esp_packet_t *packet)
+						  esp_packet_t *packet, bool encap)
 {
 	this->lock->read_lock(this->lock);
 	if (this->outbound.cb)
 	{
-		this->outbound.cb(this->outbound.data, packet);
+		this->outbound.cb(this->outbound.data, packet, encap);
 	}
 	else
 	{
@@ -194,7 +194,7 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 	ip_packet_t *packet;
 	ipsec_sa_t *sa;
 	host_t *src, *dst;
-	bool acquire = FALSE;
+	bool acquire = FALSE, encap = FALSE;
 
 	packet = (ip_packet_t*)this->outbound_queue->dequeue(this->outbound_queue);
 
@@ -242,9 +242,10 @@ static job_requeue_t process_outbound(private_ipsec_processor_t *this)
 		return JOB_REQUEUE_DIRECT;
 	}
 	sa->update_usestats(sa, packet->get_encoding(packet).len);
+	encap = sa->get_encap(sa);
 	ipsec->sas->checkin(ipsec->sas, sa);
 	policy->destroy(policy);
-	send_outbound(this, esp_packet);
+	send_outbound(this, esp_packet, encap);
 	return JOB_REQUEUE_DIRECT;
 }
 
