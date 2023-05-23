@@ -13,3 +13,4 @@ carol::expect-connection home
 carol::swanctl --initiate --child home 2> /dev/null
 dave::expect-connection home
 dave::swanctl --initiate --child home 2> /dev/null
+dave::sleep 1

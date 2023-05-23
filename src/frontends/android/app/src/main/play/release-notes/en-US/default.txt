@@ -1,11 +1,12 @@
-# 2.3.3 #
+# 2.4.1 #
 
-- Adds a button to install user certificates
+- Changed order of DH groups to avoid issue with Zyxel Firewalls
 
-# 2.3.2 #
+# 2.4.0 #
 
-- Don't mark VPN connections as metered (the default changed when targeting Android 10 with the last release)
-
-# 2.3.1 #
-
-- Optionally use IPv6 transport addresses for IKE and ESP. Can only be enabled if the server supports UDP encapsulation for IPv6 (the Linux kernel only supports this since 5.8, so many servers will not support it yet)
+- Switched from BoringSSL to OpenSSL
+- Added support for the following algorithms: Curve448 ECDH, AES-CCM, Camellia (CBC/CTR/XCBC), SHA-3 (HMAC/PKCS#1)
+- Fixed an issue that caused file descriptor leaks when fetching OCSP/CRLs
+- Improved translation for simplified Chinese
+- Correctly included Ukrainian translation
+- Increased minimum SDK version to 21 (Android 5.0)

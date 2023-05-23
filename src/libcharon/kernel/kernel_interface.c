@@ -1,9 +1,8 @@
 /*
  * Copyright (C) 2008-2019 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
- *
  * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -115,6 +114,11 @@ struct private_kernel_interface_t {
 	 * list of registered listeners
 	 */
 	linked_list_t *listeners;
+
+	/**
+	 * Reqid to assign next
+	 */
+	uint32_t next_reqid;
 
 	/**
 	 * Reqid entries indexed by reqids
@@ -374,9 +378,7 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 	mark_t mark_in, mark_t mark_out, uint32_t if_id_in, uint32_t if_id_out,
 	sec_label_t *label, uint32_t *reqid)
 {
-	static uint32_t counter = 0;
 	reqid_entry_t *entry = NULL, *tmpl;
-	status_t status = SUCCESS;
 
 	INIT(tmpl,
 		.local = array_from_ts_list(local_ts),
@@ -416,7 +418,13 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 			entry = tmpl;
 			if (!array_remove(this->released_reqids, ARRAY_HEAD, &entry->reqid))
 			{
-				entry->reqid = ++counter;
+				if (!this->next_reqid)
+				{
+					this->mutex->unlock(this->mutex);
+					reqid_entry_destroy(entry);
+					return OUT_OF_RES;
+				}
+				entry->reqid = this->next_reqid++;
 			}
 			this->reqids_by_ts->put(this->reqids_by_ts, entry, entry);
 			this->reqids->put(this->reqids, entry, entry);
@@ -426,7 +434,7 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 	entry->refs++;
 	this->mutex->unlock(this->mutex);
 
-	return status;
+	return SUCCESS;
 }
 
 METHOD(kernel_interface_t, release_reqid, status_t,
@@ -1106,6 +1114,8 @@ kernel_interface_t *kernel_interface_create()
 								   (hashtable_equals_t)equals_reqid, 8),
 		.reqids_by_ts = hashtable_create((hashtable_hash_t)hash_reqid_by_ts,
 								   (hashtable_equals_t)equals_reqid_by_ts, 8),
+		.next_reqid = lib->settings->get_int(lib->settings, "%s.reqid_base", 1,
+											 lib->ns) ?: 1,
 	);
 
 	ifaces = lib->settings->get_str(lib->settings,

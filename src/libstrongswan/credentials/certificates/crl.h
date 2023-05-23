@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * Copyright (C) 2006 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2006-2022 Andreas Steffen
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,6 +24,7 @@
 #define CRL_H_
 
 typedef struct crl_t crl_t;
+typedef struct crl_revoked_t crl_revoked_t;
 typedef enum crl_reason_t crl_reason_t;
 
 #include <library.h>
@@ -59,6 +61,27 @@ enum crl_reason_t {
  * enum names for crl_reason_t
  */
 extern enum_name_t *crl_reason_names;
+
+/**
+ * Entry for a revoked certificate
+ */
+struct crl_revoked_t {
+
+	/**
+	 * Serial of the revoked certificate
+	 */
+	chunk_t serial;
+
+	/**
+	 * Date of revocation
+	 */
+	time_t date;
+
+	/**
+	 * Reason for revocation
+	 */
+	crl_reason_t reason;
+};
 
 /**
  * X509 certificate revocation list (CRL) interface definition.

@@ -4,9 +4,9 @@ EXTRA_DIST = LICENSE README.rst MANIFEST.in \
 	tox.sh \
 	test/__init__.py \
 	test/test_protocol.py \
+	test/test_session.py \
 	vici/__init__.py \
 	vici/command_wrappers.py \
-	vici/compat.py \
 	vici/exception.py \
 	vici/protocol.py \
 	vici/session.py
@@ -40,7 +40,7 @@ install-exec-local: dist/vici-$(PYTHON_PACKAGE_VERSION)-py$(PYTHON_VERSION).egg
 endif
 
 if USE_TOX
-  TESTS_ENVIRONMENT = export TOX=$(TOX);
+  TESTS_ENVIRONMENT += export TOX=$(TOX);
   AM_TESTS_FD_REDIRECT = 1>&2
   TESTS = tox.sh
 endif

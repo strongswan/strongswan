@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2017 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -311,7 +312,7 @@ METHOD(imv_swima_state_t, set_inventory, void,
     private_imv_swima_state_t *this, swima_inventory_t *inventory)
 {
 	chunk_t sw_id, sw_locator;
-	uint32_t record_id;
+	uint32_t record_id DBG_UNUSED;
 	char *sw_id_str;
 	json_object *jstring;
 	swima_record_t *sw_record;

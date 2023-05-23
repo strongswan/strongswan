@@ -1,0 +1,8 @@
+leak:EVP_CIPHER_fetch
+leak:EVP_KEYEXCH_fetch
+leak:EVP_KEYMGMT_fetch
+leak:EVP_RAND_fetch
+leak:OSSL_DECODER_do_all_provided
+leak:OSSL_ENCODER_do_all_provided
+leak:OSSL_PROVIDER_load
+leak:OSSL_PROVIDER_try_load

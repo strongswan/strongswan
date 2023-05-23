@@ -28,6 +28,16 @@ charon.plugins.kernel-netlink.hw_offload_feature_interface = lo
 	cannot be used to obtain the appropriate feature flag, this option can
 	be used to specify an alternative interface for offload feature detection.
 
+charon.plugins.kernel-netlink.install_routes_xfrmi = no
+	Whether to install routes for SAs that reference XFRM interfaces.
+
+	Whether routes via XFRM interfaces are automatically installed for SAs that
+	reference such an interface via _if_id_out_.  If the traffic selectors
+	include the IKE traffic to the peer, this requires special care (e.g.
+	installing bypass policies and/or routes, or setting a mark on the IKE
+	socket and excluding such packets from the configured routing table via
+	_fwmark_ option).
+
 charon.plugins.kernel-netlink.mss = 0
 	MSS to set on installed routes, 0 to disable.
 

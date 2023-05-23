@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -61,7 +62,9 @@ METHOD(plugin_t, destroy, void,
 plugin_t *sqlite_plugin_create()
 {
 	private_sqlite_plugin_t *this;
+#if SQLITE_VERSION_NUMBER >= 3005000 && DEBUG_LEVEL >= 2
 	int threadsafe = 0;
+#endif
 
 	INIT(this,
 		.public = {
@@ -73,7 +76,7 @@ plugin_t *sqlite_plugin_create()
 		},
 	);
 
-#if SQLITE_VERSION_NUMBER >= 3005000
+#if SQLITE_VERSION_NUMBER >= 3005000 && DEBUG_LEVEL >= 2
 	threadsafe = sqlite3_threadsafe();
 #endif
 	DBG2(DBG_LIB, "using SQLite %s, thread safety %d",

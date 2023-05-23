@@ -5,7 +5,7 @@ V	EE_EXPIRATION		04	unknown	/C=CH/O=strongSwan Project/CN=sun.strongswan.org
 V	EE_EXPIRATION		05	unknown	/C=CH/O=strongSwan Project/OU=Sales/CN=alice@strongswan.org
 V	EE_EXPIRATION		06	unknown	/C=CH/O=strongSwan Project/CN=venus.strongswan.org
 V	EE_EXPIRATION		07	unknown	/C=CH/O=strongSwan Project/OU=Research/CN=bob@strongswan.org
-R	EE_EXPIRATION	REVOCATION,keyCompromise	08	unknown	/C=CH/O=strongSwan Project/OU=Research/CN=carol@strongswan.org
+R	EE_EXPIRATION	REVOCATION,keyCompromise	88	unknown	/C=CH/O=strongSwan Project/OU=Research/CN=carol@strongswan.org
 V	EE_EXPIRATION		09	unknown	/C=CH/O=strongSwan Project/OU=Research/serialNumber=002/CN=carol@strongswan.org
 R	IM_EXPIRATION	REVOCATION,CACompromise	0A	unknown	/C=CH/O=strongSwan Project/OU=Research/CN=Research CA
 V	IM_EXPIRATION		0B	unknown	/C=CH/O=strongSwan Project/OU=Research/CN=Research CA

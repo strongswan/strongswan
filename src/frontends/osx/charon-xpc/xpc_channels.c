@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2013 Martin Willi
- * Copyright (C) 2013 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -132,7 +133,7 @@ static void stop_connection(private_xpc_channels_t *this, uint32_t ike_sa,
 	status_t status;
 
 	status = charon->controller->terminate_ike(charon->controller, ike_sa, FALSE,
-											   NULL, NULL, 0);
+											   NULL, NULL, 0, 0);
 	xpc_dictionary_set_bool(reply, "success", status != NOT_FOUND);
 }
 

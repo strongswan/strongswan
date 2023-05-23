@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010-2015 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -168,8 +169,9 @@ typedef tnccs_t *(*tnccs_constructor_t)(bool is_server,
 /**
  * Callback function adding a message to a TNCCS batch
  *
+ * @param tnccs			TNCCS context
  * @param imc_id		ID of IMC or TNC_IMCID_ANY
- * @param imc_id		ID of IMV or TNC_IMVID_ANY
+ * @param imv_id		ID of IMV or TNC_IMVID_ANY
  * @param msg_flags		message flags
  * @param msg			message to be added
  * @param msg_len		message length
@@ -177,7 +179,7 @@ typedef tnccs_t *(*tnccs_constructor_t)(bool is_server,
  * @param msg_subtype	message subtype
  * @return				return code
  */
-typedef TNC_Result (*tnccs_send_message_t)(tnccs_t* tncss,
+typedef TNC_Result (*tnccs_send_message_t)(tnccs_t* tnccs,
 										  TNC_IMCID imc_id,
 										  TNC_IMVID imv_id,
 										  TNC_UInt32 msg_flags,

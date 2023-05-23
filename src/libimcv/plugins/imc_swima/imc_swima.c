@@ -1,8 +1,7 @@
 /*
- * Copyright (C) 2017 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2017-2022 Andreas Steffen
  *
- * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -230,7 +229,7 @@ static void fulfill_request(imc_state_t *state, imc_msg_t *msg,
 	size_t msg_len = 64;
 	char error_msg[msg_len], *id_str;
 	bool collect_inventory = TRUE;
-	int items;
+	int items DBG_UNUSED;
 
 	collector = swima_collector_create();
 	id_str = sw_id_only ? " ID" : "";

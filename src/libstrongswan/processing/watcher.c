@@ -1,9 +1,8 @@
 /*
- * Copyright (C) 2016 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
- *
+ * Copyright (C) 2016-2023 Tobias Brunner
  * Copyright (C) 2013 Martin Willi
- * Copyright (C) 2013 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -154,6 +153,8 @@ static entry_t *remove_entry(private_watcher_t *this, entry_t *entry,
  * Data we pass on for an async notification
  */
 typedef struct {
+	/** triggering entry */
+	entry_t *entry;
 	/** file descriptor */
 	int fd;
 	/** event type */
@@ -169,19 +170,26 @@ typedef struct {
 } notify_data_t;
 
 /**
- * Notify watcher thread about changes
+ * Notify watcher thread about changes and unlock mutex
  */
-static void update(private_watcher_t *this)
+static void update_and_unlock(private_watcher_t *this)
 {
 	char buf[1] = { 'u' };
+	int error = 0;
 
 	this->pending = TRUE;
 	if (this->notify[1] != -1)
 	{
 		if (write(this->notify[1], buf, sizeof(buf)) == -1)
 		{
-			DBG1(DBG_JOB, "notifying watcher failed: %s", strerror(errno));
+			error = errno;
 		}
+	}
+	this->mutex->unlock(this->mutex);
+
+	if (error)
+	{
+		DBG1(DBG_JOB, "notifying watcher failed: %s", strerror(error));
 	}
 }
 
@@ -214,19 +222,23 @@ static void notify_end(notify_data_t *data)
 {
 	private_watcher_t *this = data->this;
 	entry_t *entry, *prev = NULL;
+	watcher_event_t updated = 0;
+	bool removed = FALSE;
 
 	/* reactivate the disabled entry */
 	this->mutex->lock(this->mutex);
 	for (entry = this->fds; entry; prev = entry, entry = entry->next)
 	{
-		if (entry->fd == data->fd)
+		if (entry == data->entry)
 		{
 			if (!data->keep)
 			{
 				entry->events &= ~data->event;
+				updated = entry->events;
 				if (!entry->events)
 				{
 					remove_entry(this, entry, prev);
+					removed = TRUE;
 					break;
 				}
 			}
@@ -234,10 +246,26 @@ static void notify_end(notify_data_t *data)
 			break;
 		}
 	}
-	update(this);
 	this->condvar->broadcast(this->condvar);
-	this->mutex->unlock(this->mutex);
+	update_and_unlock(this);
 
+	if (removed)
+	{
+		DBG3(DBG_JOB, "removed fd %d[%s%s%s] from watcher after callback", data->fd,
+			 data->event & WATCHER_READ ? "r" : "",
+			 data->event & WATCHER_WRITE ? "w" : "",
+			 data->event & WATCHER_EXCEPT ? "e" : "");
+	}
+	else if (updated)
+	{
+		DBG3(DBG_JOB, "updated fd %d[%s%s%s] to %d[%s%s%s] after callback", data->fd,
+			 (updated | data->event) & WATCHER_READ ? "r" : "",
+			 (updated | data->event) & WATCHER_WRITE ? "w" : "",
+			 (updated | data->event) & WATCHER_EXCEPT ? "e" : "", data->fd,
+			 updated & WATCHER_READ ? "r" : "",
+			 updated & WATCHER_WRITE ? "w" : "",
+			 updated & WATCHER_EXCEPT ? "e" : "");
+	}
 	free(data);
 }
 
@@ -251,6 +279,7 @@ static void notify(private_watcher_t *this, entry_t *entry,
 
 	/* get a copy of entry for async job, but with specific event */
 	INIT(data,
+		.entry = entry,
 		.fd = entry->fd,
 		.event = event,
 		.cb = entry->cb,
@@ -259,7 +288,7 @@ static void notify(private_watcher_t *this, entry_t *entry,
 		.this = this,
 	);
 
-	/* deactivate entry, so we can select() other FDs even if the async
+	/* deactivate entry, so we can poll() other FDs even if the async
 	 * processing did not handle the event yet */
 	entry->in_callback++;
 
@@ -327,6 +356,30 @@ static inline bool entry_ready(entry_t *entry, watcher_event_t event,
 	return FALSE;
 }
 
+#if DEBUG_LEVEL >= 2
+#define reset_log(buf, pos, len) ({ buf[0] = '\0'; pos = buf; len = sizeof(buf); })
+#define reset_event_log(buf, pos) ({ pos = buf; })
+#define end_event_log(pos) ({ *pos = '\0'; })
+#define log_event(pos, ev) ({ *pos++ = ev; })
+#define log_fd(pos, len, fd, ev) ({ \
+	if (ev[0]) \
+	{ \
+		int _add = snprintf(pos, len, " %d[%s]", fd, ev); \
+		if (_add >= 0 && _add < len) \
+		{ \
+			pos += _add; \
+			len -= _add; \
+		} \
+	} \
+})
+#else
+#define reset_event_log(...) ({})
+#define end_event_log(...) ({})
+#define log_event(...) ({})
+#define reset_log(...) ({})
+#define log_fd(...) ({})
+#endif
+
 /**
  * Dispatching function
  */
@@ -335,7 +388,12 @@ static job_requeue_t watch(private_watcher_t *this)
 	entry_t *entry;
 	struct pollfd *pfd;
 	int count = 0, res;
-	bool rebuild = FALSE;
+#if DEBUG_LEVEL >= 2
+	char logbuf[BUF_LEN], *logpos, eventbuf[4], *eventpos;
+	int loglen;
+#endif
+
+	reset_log(logbuf, logpos, loglen);
 
 	this->mutex->lock(this->mutex);
 
@@ -362,27 +420,37 @@ static job_requeue_t watch(private_watcher_t *this)
 		{
 			pfd[count].fd = entry->fd;
 			pfd[count].events = 0;
+			reset_event_log(eventbuf, eventpos);
 			if (entry->events & WATCHER_READ)
 			{
-				DBG3(DBG_JOB, "  watching %d for reading", entry->fd);
+				log_event(eventpos, 'r');
 				pfd[count].events |= POLLIN;
 			}
 			if (entry->events & WATCHER_WRITE)
 			{
-				DBG3(DBG_JOB, "  watching %d for writing", entry->fd);
+				log_event(eventpos, 'w');
 				pfd[count].events |= POLLOUT;
 			}
 			if (entry->events & WATCHER_EXCEPT)
 			{
-				DBG3(DBG_JOB, "  watching %d for exceptions", entry->fd);
+				log_event(eventpos, 'e');
 				pfd[count].events |= POLLERR;
 			}
+			end_event_log(eventpos);
+			log_fd(logpos, loglen, entry->fd, eventbuf);
 			count++;
 		}
 	}
 	this->mutex->unlock(this->mutex);
 
-	while (!rebuild)
+#if DEBUG_LEVEL >= 3
+	if (logbuf[0])
+	{
+		DBG3(DBG_JOB, "observing fds:%s", logbuf);
+	}
+#endif
+
+	while (TRUE)
 	{
 		int revents;
 		char buf[1];
@@ -390,7 +458,7 @@ static job_requeue_t watch(private_watcher_t *this)
 		ssize_t len;
 		job_t *job;
 
-		DBG2(DBG_JOB, "watcher going to poll() %d fds", count);
+		DBG2(DBG_JOB, "watcher is observing %d fds", count-1);
 		thread_cleanup_push((void*)activate_all, this);
 		old = thread_cancelability(TRUE);
 
@@ -424,38 +492,48 @@ static job_requeue_t watch(private_watcher_t *this)
 				}
 				this->pending = FALSE;
 				DBG2(DBG_JOB, "watcher got notification, rebuilding");
-				return JOB_REQUEUE_DIRECT;
+				break;
 			}
 
+			reset_log(logbuf, logpos, loglen);
 			this->mutex->lock(this->mutex);
 			for (entry = this->fds; entry; entry = entry->next)
 			{
 				if (entry->in_callback)
 				{
-					rebuild = TRUE;
-					break;
+					continue;
 				}
+				reset_event_log(eventbuf, eventpos);
 				revents = find_revents(pfd, count, entry->fd);
 				if (entry_ready(entry, WATCHER_EXCEPT, revents))
 				{
-					DBG2(DBG_JOB, "watched FD %d has exception", entry->fd);
+					log_event(eventpos, 'e');
 					notify(this, entry, WATCHER_EXCEPT);
 				}
 				else
 				{
 					if (entry_ready(entry, WATCHER_READ, revents))
 					{
-						DBG2(DBG_JOB, "watched FD %d ready to read", entry->fd);
+						log_event(eventpos, 'r');
 						notify(this, entry, WATCHER_READ);
 					}
 					if (entry_ready(entry, WATCHER_WRITE, revents))
 					{
-						DBG2(DBG_JOB, "watched FD %d ready to write", entry->fd);
+						log_event(eventpos, 'w');
 						notify(this, entry, WATCHER_WRITE);
 					}
 				}
+				end_event_log(eventpos);
+				log_fd(logpos, loglen, entry->fd, eventbuf);
 			}
 			this->mutex->unlock(this->mutex);
+
+#if DEBUG_LEVEL >= 2
+			if (logbuf[0])
+			{
+				DBG2(DBG_JOB, "events on fds:%s", logbuf);
+			}
+#endif
 
 			if (this->jobs->get_count(this->jobs))
 			{
@@ -465,7 +543,7 @@ static job_requeue_t watch(private_watcher_t *this)
 					lib->processor->execute_job(lib->processor, job);
 				}
 				/* we temporarily disable a notified FD, rebuild FDSET */
-				return JOB_REQUEUE_DIRECT;
+				break;
 			}
 		}
 		else
@@ -474,7 +552,7 @@ static job_requeue_t watch(private_watcher_t *this)
 			{	/* complain only if no pending updates */
 				DBG1(DBG_JOB, "watcher poll() error: %s", strerror(errno));
 			}
-			return JOB_REQUEUE_DIRECT;
+			break;
 		}
 	}
 	return JOB_REQUEUE_DIRECT;
@@ -493,27 +571,33 @@ METHOD(watcher_t, add, void,
 		.data = data,
 	);
 
+	DBG3(DBG_JOB, "adding fd %d[%s%s%s] to watcher", fd,
+		 events & WATCHER_READ ? "r" : "",
+		 events & WATCHER_WRITE ? "w" : "",
+		 events & WATCHER_EXCEPT ? "e" : "");
+
 	this->mutex->lock(this->mutex);
 	add_entry(this, entry);
 	if (this->state == WATCHER_STOPPED)
 	{
 		this->state = WATCHER_QUEUED;
+		this->mutex->unlock(this->mutex);
+
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create_with_prio((void*)watch, this,
 				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
 	}
 	else
 	{
-		update(this);
+		update_and_unlock(this);
 	}
-	this->mutex->unlock(this->mutex);
 }
 
 METHOD(watcher_t, remove_, void,
 	private_watcher_t *this, int fd)
 {
 	entry_t *entry, *prev = NULL;
-	bool found = FALSE;
+	watcher_event_t found = 0;
 
 	this->mutex->lock(this->mutex);
 	while (TRUE)
@@ -530,8 +614,8 @@ METHOD(watcher_t, remove_, void,
 					is_in_callback = TRUE;
 					break;
 				}
+				found |= entry->events;
 				entry = remove_entry(this, entry, prev);
-				found = TRUE;
 				continue;
 			}
 			prev = entry;
@@ -545,9 +629,17 @@ METHOD(watcher_t, remove_, void,
 	}
 	if (found)
 	{
-		update(this);
+		update_and_unlock(this);
+
+		DBG3(DBG_JOB, "removed fd %d[%s%s%s] from watcher", fd,
+			 found & WATCHER_READ ? "r" : "",
+			 found & WATCHER_WRITE ? "w" : "",
+			 found & WATCHER_EXCEPT ? "e" : "");
 	}
-	this->mutex->unlock(this->mutex);
+	else
+	{
+		this->mutex->unlock(this->mutex);
+	}
 }
 
 METHOD(watcher_t, get_state, watcher_state_t,

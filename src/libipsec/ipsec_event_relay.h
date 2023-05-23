@@ -1,7 +1,9 @@
 /*
+ * Copyright (C) 2013 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -45,6 +47,13 @@ struct ipsec_event_relay_t {
 	 */
 	void (*expire)(ipsec_event_relay_t *this, uint8_t protocol, uint32_t spi,
 				   host_t *dst, bool hard);
+
+	/**
+	 * Raise an acquire event.
+	 *
+	 * @param reqid			reqid of the policy for which to acquire an SA
+	 */
+	void (*acquire)(ipsec_event_relay_t *this, uint32_t reqid);
 
 	/**
 	 * Register a listener to events raised by this manager

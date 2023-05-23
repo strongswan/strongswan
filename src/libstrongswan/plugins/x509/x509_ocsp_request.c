@@ -1,9 +1,10 @@
 /*
  * Copyright (C) 2017-2019 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
- * Copyright (C) 2007-2014 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2007-2022 Andreas Steffen
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -132,7 +133,7 @@ static chunk_t build_Request(private_x509_ocsp_request_t *this,
 					asn1_algorithmIdentifier(OID_SHA1),
 					asn1_simple_object(ASN1_OCTET_STRING, issuerNameHash),
 					asn1_simple_object(ASN1_OCTET_STRING, issuerKeyHash),
-					asn1_simple_object(ASN1_INTEGER, serialNumber)));
+					asn1_integer("c", serialNumber)));
 }
 
 /**

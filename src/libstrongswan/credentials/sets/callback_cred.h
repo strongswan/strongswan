@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -28,6 +29,7 @@ typedef struct callback_cred_t callback_cred_t;
 /**
  * Callback function to get shared keys.
  *
+ * @param data			data passed to the constructor
  * @param type			type of requested shared key
  * @param me			own identity
  * @param other			other identity

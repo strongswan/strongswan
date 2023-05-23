@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2017 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -314,7 +315,7 @@ METHOD(sw_collector_db_t, destroy, void,
 /**
  * Determine file creation data and convert it into RFC 3339 format
  */
-bool get_file_creation_date(char *pathname, char *timestamp)
+static bool get_file_creation_date(char *pathname, char *timestamp)
 {
 	struct stat st;
 	struct tm ct;

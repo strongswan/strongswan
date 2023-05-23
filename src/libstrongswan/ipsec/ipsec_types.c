@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2012-2013 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -39,7 +40,8 @@ ENUM(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_LZJH,
 
 ENUM(hw_offload_names, HW_OFFLOAD_NO, HW_OFFLOAD_AUTO,
 	"no",
-	"yes",
+	"crypto",
+	"packet",
 	"auto",
 );
 

@@ -2,7 +2,8 @@
  * Copyright (C) 2011-2017 Tobias Brunner
  * Copyright (C) 2006 Martin Will
  * Copyright (C) 2000-2008 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -162,7 +163,7 @@ int asn1_unwrap(chunk_t *blob, chunk_t *content);
  * Parses an ASN.1 algorithmIdentifier object
  *
  * @param blob		ASN.1 coded blob
- * @param level0	top-most level offset
+ * @param level0	top-most level offset (-1 to suppress log messages)
  * @param params	returns optional [ASN.1 coded] parameters
  * @return			known OID index or OID_UNKNOWN
  */

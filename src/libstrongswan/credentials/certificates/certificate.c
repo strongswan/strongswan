@@ -2,7 +2,8 @@
  * Copyright (C) 2020 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  * Copyright (C) 2015 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -47,7 +48,7 @@ ENUM(cert_validation_names, VALIDATION_GOOD, VALIDATION_REVOKED,
 bool certificate_is_newer(certificate_t *this, certificate_t *other)
 {
 	time_t this_update, that_update;
-	char *type = "certificate";
+	char *type DBG_UNUSED = "certificate";
 	bool newer;
 
 	if (this->get_type(this) == CERT_X509_CRL)

@@ -1,8 +1,7 @@
 /*
- * Copyright (C) 2012-2015 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2012-2022 Andreas Steffen
  *
- * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -294,7 +293,6 @@ METHOD(imv_msg_t, receive, TNC_Result,
 	linked_list_t *non_fatal_types;
 	enumerator_t *enumerator;
 	pa_tnc_attr_t *attr;
-	chunk_t msg;
 
 	if (this->state->has_long(this->state))
 	{
@@ -321,8 +319,10 @@ METHOD(imv_msg_t, receive, TNC_Result,
 					   this->agent->get_name(this->agent),
 					   this->connection_id);
 	}
-	msg = this->pa_msg->get_encoding(this->pa_msg);
+#if DEBUG_LEVEL >= 3
+	chunk_t msg = this->pa_msg->get_encoding(this->pa_msg);
 	DBG3(DBG_IMV, "%B", &msg);
+#endif
 
 	switch (this->pa_msg->process(this->pa_msg))
 	{

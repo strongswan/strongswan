@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2006 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -139,14 +140,22 @@ enum level_t {
 # define DBG4(...) {}
 #endif
 
+/** mark variables that are only used in DBG statements */
+#ifndef DBG_UNUSED
+# define DBG_UNUSED __attribute__((unused))
+#endif
+
 /** dbg function hook, uses dbg_default() by default */
 extern void (*dbg) (debug_t group, level_t level, char *fmt, ...);
 
 /** default logging function */
 void dbg_default(debug_t group, level_t level, char *fmt, ...);
 
-/** set the level logged by dbg_default() */
+/** set the level logged by dbg_default() for all groups */
 void dbg_default_set_level(level_t level);
+
+/** set the level logged by dbg_default() for a specific group */
+void dbg_default_set_level_group(debug_t group, level_t level);
 
 /** set the stream logged by dbg_default() to */
 void dbg_default_set_stream(FILE *stream);

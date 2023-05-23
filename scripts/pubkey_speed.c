@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -19,12 +20,12 @@
 #include <utils/debug.h>
 #include <credentials/keys/private_key.h>
 
-void start_timing(struct timespec *start)
+static void start_timing(struct timespec *start)
 {
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, start);
 }
 
-double end_timing(struct timespec *start)
+static double end_timing(struct timespec *start)
 {
 	struct timespec end;
 

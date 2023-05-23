@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -422,13 +423,13 @@ static void request_control_terminate(xmlTextReaderPtr reader,
 		{
 			status = charon->controller->terminate_ike(
 					charon->controller, id, FALSE,
-					(controller_cb_t)xml_callback, writer, 0);
+					(controller_cb_t)xml_callback, writer, LEVEL_CTRL, 0);
 		}
 		else
 		{
 			status = charon->controller->terminate_child(
 					charon->controller, id,
-					(controller_cb_t)xml_callback, writer, 0);
+					(controller_cb_t)xml_callback, writer, LEVEL_CTRL, 0);
 		}
 		/* </log> */
 		xmlTextWriterEndElement(writer);
@@ -494,7 +495,7 @@ static void request_control_initiate(xmlTextReaderPtr reader,
 			{
 				status = charon->controller->initiate(charon->controller,
 							peer, child, (controller_cb_t)xml_callback,
-							writer, 0, FALSE);
+							writer, LEVEL_CTRL, 0, FALSE);
 			}
 			else
 			{

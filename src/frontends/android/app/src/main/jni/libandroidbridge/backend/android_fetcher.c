@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2017 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -131,6 +132,11 @@ METHOD(fetcher_t, set_option, bool,
 		case FETCH_REQUEST_TYPE:
 		{
 			this->request_type = strdup(va_arg(args, char*));
+			break;
+		}
+		case FETCH_TIMEOUT:
+		{
+			/* we already enforce a 10s timeout */
 			break;
 		}
 		default:

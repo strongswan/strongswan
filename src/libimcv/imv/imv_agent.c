@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011-2015 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -412,7 +413,7 @@ METHOD(imv_agent_t, create_state, TNC_Result,
 {
 	TNC_ConnectionID conn_id;
 	char *tnccs_p = NULL, *tnccs_v = NULL, *t_p = NULL, *t_v = NULL;
-	bool has_long = FALSE, has_excl = FALSE, has_soh = FALSE;
+	bool has_long = FALSE, has_excl = FALSE, has_soh DBG_UNUSED = FALSE;
 	linked_list_t *ar_identities;
 	imv_session_t *session;
 	uint32_t max_msg_len;

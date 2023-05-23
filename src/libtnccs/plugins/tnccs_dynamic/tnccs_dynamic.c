@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011-2015 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -84,7 +85,7 @@ struct private_tnccs_dynamic_t {
  * defined by section 3.5 "Interoperability with older IF-TNCCS versions" of
  * the TCG TNC IF-TNCCS TLV Bindings Version 2.0 standard.
  */
-tnccs_type_t determine_tnccs_protocol(char version)
+static tnccs_type_t determine_tnccs_protocol(char version)
 {
 	switch (version)
 	{

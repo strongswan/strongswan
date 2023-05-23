@@ -3,7 +3,8 @@
     Copyright (C) 2012-2020 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
-    HSR Hochschule fuer Technik Rapperswil
+
+    Copyright (C) secunet Security Networks AG
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License as published by the
@@ -16,8 +17,7 @@
     for more details.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="org.strongswan.android">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -38,7 +38,8 @@
         <activity
             android:name=".ui.MainActivity"
             android:label="@string/main_activity_name"
-            android:launchMode="singleTop" >
+            android:launchMode="singleTop"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -52,7 +53,8 @@
             android:theme="@style/TransparentActivity"
             android:taskAffinity=""
             android:excludeFromRecents="true"
-            android:launchMode="singleTask" >
+            android:launchMode="singleTask"
+            android:exported="true">
             <intent-filter>
                 <action android:name="org.strongswan.android.action.START_PROFILE" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -88,7 +90,8 @@
         <activity
             android:name=".ui.VpnProfileSelectActivity"
             android:label="@string/strongswan_shortcut"
-            android:icon="@mipmap/ic_shortcut" >
+            android:icon="@mipmap/ic_shortcut"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.CREATE_SHORTCUT" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -98,7 +101,8 @@
             android:name=".ui.VpnProfileImportActivity"
             android:label="@string/profile_import"
             android:taskAffinity=""
-            android:excludeFromRecents="true" >
+            android:excludeFromRecents="true"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -144,7 +148,8 @@
         <activity
             android:name=".ui.TrustedCertificateImportActivity"
             android:label="@string/import_certificate"
-            android:theme="@style/TransparentActivity" >
+            android:theme="@style/TransparentActivity"
+            android:exported="true">
             <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -162,7 +167,7 @@
         <service
             android:name=".logic.CharonVpnService"
             android:exported="false"
-            android:permission="android.permission.BIND_VPN_SERVICE" >
+            android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
@@ -171,7 +176,8 @@
             android:name=".ui.VpnTileService"
             android:label="@string/tile_default"
             android:icon="@drawable/ic_notification"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>

@@ -1,7 +1,8 @@
 /*
- * Copyright (C) 2015-2017 Tobias Brunner
+ * Copyright (C) 2015-2023 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -56,6 +57,15 @@ bool calculate_lifetime(char *format, char *nbstr, char *nastr, time_t span,
  * Set output file mode appropriate for credential encoding form on Windows
  */
 void set_file_mode(FILE *stream, cred_encoding_type_t enc);
+
+/**
+ * Parse RSA padding configuration.
+ *
+ * @param padding	input string to parse
+ * @param pss		set to TRUE if PSS padding should be used, FALSE otherwise
+ * @return			TRUE if successfully parsed
+ */
+bool parse_rsa_padding(char *padding, bool *pss);
 
 /**
  * Determine the signature scheme and parameters for the given private key and

@@ -1,9 +1,9 @@
 /*
  * Copyright (C) 2015-2018 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
- * Copyright (C) 2009 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2009-2022 Andreas Steffen
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -29,6 +29,11 @@
 #include <selectors/traffic_selector.h>
 #include <threading/spinlock.h>
 
+/**
+ * Default timeout in seconds when fetching OCSP/CRL.
+ */
+#define DEFAULT_TIMEOUT 10
+
 typedef struct private_revocation_validator_t private_revocation_validator_t;
 
 /**
@@ -52,6 +57,11 @@ struct private_revocation_validator_t {
 	bool enable_crl;
 
 	/**
+	 * Timeout in seconds when fetching
+	 */
+	u_int timeout;
+
+	/**
 	 * Lock to access flags
 	 */
 	spinlock_t *lock;
@@ -61,7 +71,7 @@ struct private_revocation_validator_t {
  * Do an OCSP request
  */
 static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
-								 certificate_t *issuer)
+								 certificate_t *issuer, u_int timeout)
 {
 	certificate_t *request, *response;
 	ocsp_request_t *ocsp_request;
@@ -90,6 +100,7 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 	if (lib->fetcher->fetch(lib->fetcher, url, &receive,
 							FETCH_REQUEST_DATA, send,
 							FETCH_REQUEST_TYPE, "application/ocsp-request",
+							FETCH_TIMEOUT, timeout,
 							FETCH_END) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "ocsp request to %s failed", url);
@@ -127,7 +138,8 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 /**
  * check the signature of an OCSP response
  */
-static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
+static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca,
+						bool cached)
 {
 	certificate_t *issuer, *subject;
 	identification_t *responder;
@@ -166,8 +178,11 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
 		found = TRUE;
 		if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
 		{
-			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
-				 issuer->get_subject(issuer));
+			if (!cached)
+			{
+				DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
+					 issuer->get_subject(issuer));
+			}
 			verified = TRUE;
 			break;
 		}
@@ -193,8 +208,11 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
 				found = TRUE;
 				if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
 				{
-					DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
-						 issuer->get_subject(issuer));
+					if (!cached)
+					{
+						DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
+							 issuer->get_subject(issuer));
+					}
 					verified = TRUE;
 					break;
 				}
@@ -208,7 +226,7 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
 	lib->credmgr->remove_local_set(lib->credmgr, &wrapper->set);
 	wrapper->destroy(wrapper);
 
-	if (!found)
+	if (!found && !cached)
 	{
 		DBG1(DBG_CFG, "ocsp response verification failed, "
 			 "no signer certificate '%Y' found", responder);
@@ -221,7 +239,7 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca)
  */
 static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 									  x509_t *subject, x509_t *issuer,
-									  cert_validation_t *valid, bool cache)
+									  cert_validation_t *valid, bool cached)
 {
 	ocsp_response_t *response;
 	time_t revocation, this_update, next_update, valid_until;
@@ -231,7 +249,7 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 	response = (ocsp_response_t*)cand;
 
 	/* check ocsp signature */
-	if (!verify_ocsp(response, &issuer->interface))
+	if (!verify_ocsp(response, &issuer->interface, cached))
 	{
 		cand->destroy(cand);
 		return best;
@@ -252,7 +270,11 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 		default:
 		case VALIDATION_FAILED:
 			/* candidate unusable, does not contain our cert */
-			DBG1(DBG_CFG, "  ocsp response contains no status on our certificate");
+			if (!cached)
+			{
+				DBG1(DBG_CFG, "  ocsp response contains no status on our "
+					 "certificate");
+			}
 			cand->destroy(cand);
 			return best;
 	}
@@ -267,7 +289,7 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 			DBG1(DBG_CFG, "  ocsp response is valid: until %T",
 							 &valid_until, FALSE);
 			*valid = VALIDATION_GOOD;
-			if (cache)
+			if (!cached)
 			{	/* cache non-stale only, stale certs get refetched */
 				lib->credmgr->cache_cert(lib->credmgr, best);
 			}
@@ -295,7 +317,7 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
  * validate a x509 certificate using OCSP
  */
 static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
-									auth_cfg_t *auth)
+									auth_cfg_t *auth, u_int timeout)
 {
 	enumerator_t *enumerator;
 	cert_validation_t valid = VALIDATION_SKIPPED;
@@ -311,7 +333,7 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		current->get_ref(current);
-		best = get_better_ocsp(current, best, subject, issuer, &valid, FALSE);
+		best = get_better_ocsp(current, best, subject, issuer, &valid, TRUE);
 		if (best && valid != VALIDATION_STALE)
 		{
 			DBG1(DBG_CFG, "  using cached ocsp response");
@@ -334,11 +356,12 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 											CERT_X509_OCSP_RESPONSE, keyid);
 		while (enumerator->enumerate(enumerator, &uri))
 		{
-			current = fetch_ocsp(uri, &subject->interface, &issuer->interface);
+			current = fetch_ocsp(uri, &subject->interface, &issuer->interface,
+								 timeout);
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
-									   &valid, TRUE);
+									   &valid, FALSE);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -356,11 +379,12 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 		enumerator = subject->create_ocsp_uri_enumerator(subject);
 		while (enumerator->enumerate(enumerator, &uri))
 		{
-			current = fetch_ocsp(uri, &subject->interface, &issuer->interface);
+			current = fetch_ocsp(uri, &subject->interface, &issuer->interface,
+								 timeout);
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
-									   &valid, TRUE);
+									   &valid, FALSE);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -386,13 +410,15 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 /**
  * fetch a CRL from an URL
  */
-static certificate_t* fetch_crl(char *url)
+static certificate_t* fetch_crl(char *url, u_int timeout)
 {
 	certificate_t *crl;
 	chunk_t chunk = chunk_empty;
 
 	DBG1(DBG_CFG, "  fetching crl from '%s' ...", url);
-	if (lib->fetcher->fetch(lib->fetcher, url, &chunk, FETCH_END) != SUCCESS)
+	if (lib->fetcher->fetch(lib->fetcher, url, &chunk,
+							FETCH_TIMEOUT, timeout,
+							FETCH_END) != SUCCESS)
 	{
 		DBG1(DBG_CFG, "crl fetching failed");
 		chunk_free(&chunk);
@@ -519,11 +545,11 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
 		return best;
 	}
 
-	subject_serial = chunk_skip_zero(subject->get_serial(subject));
+	subject_serial = subject->get_serial(subject);
 	enumerator = crl->create_enumerator(crl);
 	while (enumerator->enumerate(enumerator, &serial, &revocation, &reason))
 	{
-		if (chunk_equals(subject_serial, chunk_skip_zero(serial)))
+		if (chunk_equals(subject_serial, serial))
 		{
 			if (reason != CRL_REASON_CERTIFICATE_HOLD)
 			{
@@ -571,7 +597,7 @@ static certificate_t *get_better_crl(certificate_t *cand, certificate_t *best,
  */
 static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
 								  crl_t *base, certificate_t **best,
-								  bool *uri_found)
+								  bool *uri_found, u_int timeout)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
 	enumerator_t *enumerator;
@@ -601,7 +627,7 @@ static cert_validation_t find_crl(x509_t *subject, identification_t *issuer,
 		while (enumerator->enumerate(enumerator, &uri))
 		{
 			*uri_found = TRUE;
-			current = fetch_crl(uri);
+			current = fetch_crl(uri, timeout);
 			if (current)
 			{
 				if (!current->has_issuer(current, issuer))
@@ -653,10 +679,12 @@ static bool check_issuer(certificate_t *crl, x509_t *issuer, x509_cdp_t *cdp)
  * Look for a delta CRL for a given base CRL
  */
 static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
-									crl_t *base, cert_validation_t base_valid)
+									crl_t *base, cert_validation_t base_valid,
+									u_int timeout)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
-	certificate_t *best = NULL, *current, *cissuer = (certificate_t*)issuer;
+	certificate_t *best = NULL, *current;
+	certificate_t *cissuer DBG_UNUSED = (certificate_t*)issuer;
 	enumerator_t *enumerator;
 	identification_t *id;
 	x509_cdp_t *cdp;
@@ -668,7 +696,7 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 	if (chunk.len)
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, chunk);
-		valid = find_crl(subject, id, base, &best, &uri);
+		valid = find_crl(subject, id, base, &best, &uri, timeout);
 		id->destroy(id);
 	}
 
@@ -679,7 +707,7 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 	{
 		if (cdp->issuer)
 		{
-			valid = find_crl(subject, cdp->issuer, base, &best, &uri);
+			valid = find_crl(subject, cdp->issuer, base, &best, &uri, timeout);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -689,7 +717,7 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
 	while (valid != VALIDATION_GOOD && valid != VALIDATION_REVOKED &&
 		   enumerator->enumerate(enumerator, &cdp))
 	{
-		current = fetch_crl(cdp->uri);
+		current = fetch_crl(cdp->uri, timeout);
 		if (current)
 		{
 			if (!check_issuer(current, issuer, cdp))
@@ -722,10 +750,10 @@ static cert_validation_t check_delta_crl(x509_t *subject, x509_t *issuer,
  * validate a x509 certificate using CRL
  */
 static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
-								   auth_cfg_t *auth)
+								   auth_cfg_t *auth, u_int timeout)
 {
 	cert_validation_t valid = VALIDATION_SKIPPED;
-	certificate_t *best = NULL, *cissuer = (certificate_t*)issuer;
+	certificate_t *best = NULL, *cissuer DBG_UNUSED = (certificate_t*)issuer;
 	identification_t *id;
 	x509_cdp_t *cdp;
 	bool uri_found = FALSE;
@@ -738,7 +766,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	if (chunk.len)
 	{
 		id = identification_create_from_encoding(ID_KEY_ID, chunk);
-		valid = find_crl(subject, id, NULL, &best, &uri_found);
+		valid = find_crl(subject, id, NULL, &best, &uri_found, timeout);
 		id->destroy(id);
 	}
 
@@ -749,7 +777,8 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	{
 		if (cdp->issuer)
 		{
-			valid = find_crl(subject, cdp->issuer, NULL, &best, &uri_found);
+			valid = find_crl(subject, cdp->issuer, NULL, &best, &uri_found,
+							 timeout);
 		}
 	}
 	enumerator->destroy(enumerator);
@@ -761,7 +790,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 		while (enumerator->enumerate(enumerator, &cdp))
 		{
 			uri_found = TRUE;
-			current = fetch_crl(cdp->uri);
+			current = fetch_crl(cdp->uri, timeout);
 			if (current)
 			{
 				if (!check_issuer(current, issuer, cdp))
@@ -787,7 +816,7 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	/* look for delta CRLs */
 	if (best && (valid == VALIDATION_GOOD || valid == VALIDATION_STALE))
 	{
-		valid = check_delta_crl(subject, issuer, (crl_t*)best, valid);
+		valid = check_delta_crl(subject, issuer, (crl_t*)best, valid, timeout);
 	}
 
 	/* an uri was found, but no result. switch validation state to failed */
@@ -809,19 +838,20 @@ static cert_validation_t check_crl(x509_t *subject, x509_t *issuer,
 	return valid;
 }
 
-METHOD(cert_validator_t, validate, bool,
+METHOD(cert_validator_t, validate_online, bool,
 	private_revocation_validator_t *this, certificate_t *subject,
-	certificate_t *issuer, bool online, u_int pathlen, bool anchor,
-	auth_cfg_t *auth)
+	certificate_t *issuer, u_int pathlen, bool anchor, auth_cfg_t *auth)
 {
 	bool enable_ocsp, enable_crl;
+	u_int timeout;
 
 	this->lock->lock(this->lock);
 	enable_ocsp = this->enable_ocsp;
 	enable_crl = this->enable_crl;
+	timeout = this->timeout;
 	this->lock->unlock(this->lock);
 
-	if (online && (enable_ocsp || enable_crl) &&
+	if ((enable_ocsp || enable_crl) &&
 		subject->get_type(subject) == CERT_X509 &&
 		issuer->get_type(issuer) == CERT_X509)
 	{
@@ -830,7 +860,7 @@ METHOD(cert_validator_t, validate, bool,
 
 		if (enable_ocsp)
 		{
-			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth))
+			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth, timeout))
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
@@ -859,7 +889,7 @@ METHOD(cert_validator_t, validate, bool,
 
 		if (enable_crl)
 		{
-			switch (check_crl((x509_t*)subject, (x509_t*)issuer, auth))
+			switch (check_crl((x509_t*)subject, (x509_t*)issuer, auth, timeout))
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
@@ -895,15 +925,20 @@ METHOD(revocation_validator_t, reload, void,
 	private_revocation_validator_t *this)
 {
 	bool enable_ocsp, enable_crl;
+	u_int timeout;
 
 	enable_ocsp = lib->settings->get_bool(lib->settings,
-							"%s.plugins.revocation.enable_ocsp", TRUE, lib->ns);
-	enable_crl  = lib->settings->get_bool(lib->settings,
-							"%s.plugins.revocation.enable_crl",  TRUE, lib->ns);
+						"%s.plugins.revocation.enable_ocsp", TRUE, lib->ns);
+	enable_crl = lib->settings->get_bool(lib->settings,
+						"%s.plugins.revocation.enable_crl", TRUE, lib->ns);
+	timeout = lib->settings->get_time(lib->settings,
+						"%s.plugins.revocation.timeout", DEFAULT_TIMEOUT,
+						lib->ns);
 
 	this->lock->lock(this->lock);
 	this->enable_ocsp = enable_ocsp;
 	this->enable_crl = enable_crl;
+	this->timeout = timeout;
 	this->lock->unlock(this->lock);
 
 	if (!enable_ocsp)
@@ -932,7 +967,7 @@ revocation_validator_t *revocation_validator_create()
 
 	INIT(this,
 		.public = {
-			.validator.validate = _validate,
+			.validator.validate_online = _validate_online,
 			.reload = _reload,
 			.destroy = _destroy,
 		},

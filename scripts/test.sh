@@ -4,7 +4,7 @@
 build_botan()
 {
 	# same revision used in the build recipe of the testing environment
-	BOTAN_REV=2.19.1
+	BOTAN_REV=2.19.3
 	BOTAN_DIR=$DEPS_BUILD_DIR/botan
 
 	if test -d "$BOTAN_DIR"; then
@@ -37,7 +37,7 @@ build_botan()
 
 build_wolfssl()
 {
-	WOLFSSL_REV=v5.3.0-stable
+	WOLFSSL_REV=v5.6.0-stable
 	WOLFSSL_DIR=$DEPS_BUILD_DIR/wolfssl
 
 	if test -d "$WOLFSSL_DIR"; then
@@ -53,8 +53,8 @@ build_wolfssl()
 					--enable-aesccm --enable-aesctr --enable-camellia
 					--enable-curve25519 --enable-curve448 --enable-des3
 					--enable-ecccustcurves --enable-ed25519 --enable-ed448
-					--enable-keygen --enable-md4 --enable-rsapss --enable-sha3
-					--enable-shake256"
+					--enable-keygen --with-max-rsa-bits=8192 --enable-md4
+					--enable-rsapss --enable-sha3 --enable-shake256"
 
 	git clone https://github.com/wolfSSL/wolfssl.git $WOLFSSL_DIR &&
 	cd $WOLFSSL_DIR &&
@@ -69,7 +69,7 @@ build_wolfssl()
 
 build_tss2()
 {
-	TSS2_REV=2.4.3
+	TSS2_REV=3.2.2
 	TSS2_PKG=tpm2-tss-$TSS2_REV
 	TSS2_DIR=$DEPS_BUILD_DIR/$TSS2_PKG
 	TSS2_SRC=https://github.com/tpm2-software/tpm2-tss/releases/download/$TSS2_REV/$TSS2_PKG.tar.gz
@@ -91,13 +91,13 @@ build_tss2()
 
 build_openssl()
 {
-	SSL_REV=3.0.2
+	SSL_REV=3.1.0
 	SSL_PKG=openssl-$SSL_REV
 	SSL_DIR=$DEPS_BUILD_DIR/$SSL_PKG
 	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
 	SSL_INS=$DEPS_PREFIX/ssl
-	SSL_OPT="shared no-tls no-dtls no-ssl3 no-zlib no-comp no-idea no-psk no-srp
-			 no-stdio no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
+	SSL_OPT="-d shared no-dtls no-ssl3 no-zlib no-idea no-psk no-srp
+			 no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
 
 	if test -d "$SSL_DIR"; then
 		return
@@ -110,13 +110,19 @@ build_openssl()
 
 	echo "$ build_openssl()"
 
-	curl -L $SSL_SRC | tar xz -C $DEPS_BUILD_DIR &&
-	cd $SSL_DIR &&
-	./config --prefix=$SSL_INS --openssldir=$SSL_INS --libdir=lib $SSL_OPT &&
-	make -j4 >/dev/null &&
-	sudo make install_sw >/dev/null &&
-	sudo ldconfig || exit $?
-	cd -
+	curl -L $SSL_SRC | tar xz -C $DEPS_BUILD_DIR || exit $?
+
+	if [ "$TEST" = "android" ]; then
+		OPENSSL_SRC=${SSL_DIR} \
+		NO_DOCKER=1 src/frontends/android/openssl/build.sh || exit $?
+	else
+		cd $SSL_DIR &&
+		./config --prefix=$SSL_INS --openssldir=$SSL_INS --libdir=lib $SSL_OPT &&
+		make -j4 >/dev/null &&
+		sudo make install_sw >/dev/null &&
+		sudo ldconfig || exit $?
+		cd -
+	fi
 }
 
 use_custom_openssl()
@@ -126,6 +132,35 @@ use_custom_openssl()
 	export LD_LIBRARY_PATH="$DEPS_PREFIX/ssl/lib:$LD_LIBRARY_PATH"
 	if test "$1" = "build-deps"; then
 		build_openssl
+	fi
+}
+
+system_uses_openssl3()
+{
+	pkg-config --atleast-version=3.0.0 libcrypto
+	return $?
+}
+
+prepare_system_openssl()
+{
+	# On systems that ship OpenSSL 3 (e.g. Ubuntu 22.04), we require debug
+	# symbols to whitelist leaks
+	if test "$1" = "deps"; then
+		echo "deb http://ddebs.ubuntu.com $(lsb_release -cs) main restricted
+			deb http://ddebs.ubuntu.com $(lsb_release -cs)-updates main restricted
+			deb http://ddebs.ubuntu.com $(lsb_release -cs)-proposed main restricted" | \
+			sudo tee -a /etc/apt/sources.list.d/ddebs.list
+		sudo apt-get install -qq ubuntu-dbgsym-keyring
+		DEPS="$DEPS libssl3-dbgsym"
+	fi
+	if test "$LEAK_DETECTIVE" = "yes"; then
+		# make sure we can properly whitelist functions with leak detective
+		DEPS="$DEPS binutils-dev"
+		CONFIG="$CONFIG --enable-bfd-backtraces"
+	else
+		# with ASan we have to use the (extremely) slow stack unwind as the
+		# shipped version of the library is built with -fomit-frame-pointer
+		export ASAN_OPTIONS=fast_unwind_on_malloc=0
 	fi
 }
 
@@ -143,7 +178,7 @@ TARGET=check
 
 DEPS="libgmp-dev"
 
-CFLAGS="-g -O2 -Wall -Wno-format -Wno-format-security -Wno-pointer-sign -Werror"
+CFLAGS="-g -O2"
 
 case "$TEST" in
 default)
@@ -152,33 +187,31 @@ default)
 	;;
 openssl*)
 	CONFIG="--disable-defaults --enable-pki --enable-openssl --enable-pem"
-	export TESTS_PLUGINS="test-vectors pem openssl!"
+	export TESTS_PLUGINS="test-vectors openssl! pem"
 	DEPS="libssl-dev"
 	if test "$TEST" = "openssl-3"; then
 		DEPS=""
 		use_custom_openssl $1
+	elif system_uses_openssl3; then
+		prepare_system_openssl $1
 	fi
 	;;
 gcrypt)
-	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-pkcs1 --enable-pkcs8"
-	export TESTS_PLUGINS="test-vectors pkcs1 pkcs8 gcrypt!"
-	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
-		DEPS="libgcrypt20-dev"
-	else
-		DEPS="libgcrypt11-dev"
-	fi
+	CONFIG="--disable-defaults --enable-pki --enable-gcrypt --enable-random --enable-pem --enable-pkcs1 --enable-pkcs8 --enable-gcm --enable-hmac --enable-kdf -enable-curve25519 --enable-x509 --enable-constraints"
+	export TESTS_PLUGINS="test-vectors gcrypt! random pem pkcs1 pkcs8 gcm hmac kdf curve25519 x509 constraints"
+	DEPS="libgcrypt20-dev"
 	;;
 botan)
-	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem"
-	export TESTS_PLUGINS="test-vectors pem botan!"
+	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem --enable-hmac --enable-x509 --enable-constraints"
+	export TESTS_PLUGINS="test-vectors botan! pem hmac x509 constraints"
 	DEPS=""
 	if test "$1" = "build-deps"; then
 		build_botan
 	fi
 	;;
 wolfssl)
-	CONFIG="--disable-defaults --enable-pki --enable-wolfssl --enable-pem"
-	export TESTS_PLUGINS="test-vectors pem wolfssl!"
+	CONFIG="--disable-defaults --enable-pki --enable-wolfssl --enable-pem --enable-pkcs1 --enable-pkcs8 --enable-x509 --enable-constraints"
+	export TESTS_PLUGINS="test-vectors wolfssl! pem pkcs1 pkcs8 x509 constraints"
 	# build with custom options to enable all the features the plugin supports
 	DEPS=""
 	if test "$1" = "build-deps"; then
@@ -188,13 +221,20 @@ wolfssl)
 printf-builtin)
 	CONFIG="--with-printf-hooks=builtin"
 	;;
-all|coverage|sonarcloud)
+all|codeql|coverage|sonarcloud|no-dbg)
 	if [ "$TEST" = "sonarcloud" ]; then
 		if [ -z "$SONAR_PROJECT" -o -z "$SONAR_ORGANIZATION" -o -z "$SONAR_TOKEN" ]; then
 			echo "The SONAR_PROJECT, SONAR_ORGANIZATION and SONAR_TOKEN" \
 				 "environment variables are required to run this test"
 			exit 1
 		fi
+	fi
+	if [ "$TEST" = "codeql" ]; then
+		# don't run tests, only analyze built code
+		TARGET=
+	fi
+	if [ "$TEST" = "no-dbg" ]; then
+		CFLAGS="$CFLAGS -DDEBUG_LEVEL=-1"
 	fi
 	CONFIG="--enable-all --disable-android-dns --disable-android-log
 			--disable-kernel-pfroute --disable-keychain
@@ -216,12 +256,7 @@ all|coverage|sonarcloud)
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libgcrypt20-dev libjson-c-dev python3-pip libtspi-dev libsystemd-dev
-		  libselinux1-dev"
-	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
-		DEPS="$DEPS libiptc-dev"
-	else
-		DEPS="$DEPS iptables-dev python3-setuptools"
-	fi
+		  libselinux1-dev libiptc-dev"
 	PYDEPS="tox"
 	if test "$1" = "build-deps"; then
 		build_botan
@@ -236,6 +271,7 @@ win*)
 			--enable-constraints --enable-revocation --enable-pem --enable-pkcs1
 			--enable-pkcs8 --enable-x509 --enable-pubkey --enable-acert
 			--enable-eap-tnc --enable-eap-ttls --enable-eap-identity
+			--enable-eap-radius
 			--enable-updown --enable-ext-auth --enable-libipsec --enable-pkcs11
 			--enable-tnccs-20 --enable-imc-attestation --enable-imv-attestation
 			--enable-imc-os --enable-imv-os --enable-tnc-imv --enable-tnc-imc
@@ -245,17 +281,23 @@ win*)
 	if test "$APPVEYOR" != "True"; then
 		TARGET=
 	else
+		CONFIG="$CONFIG --enable-openssl"
 		case "$IMG" in
 		2015|2017)
 			# old OpenSSL versions don't provide HKDF
 			CONFIG="$CONFIG --enable-kdf"
 			;;
 		esac
-		CONFIG="$CONFIG --enable-openssl"
-		CFLAGS="$CFLAGS -I$OPENSSL_DIR/include"
-		LDFLAGS="-L$OPENSSL_DIR"
-		export LDFLAGS
 
+		CFLAGS="$CFLAGS -I$OPENSSL_DIR/include"
+		LDFLAGS="-L$OPENSSL_DIR/lib"
+		case "$IMG" in
+		2015)
+			# gcc/ld might be too old to find libeay32 via .lib instead of .dll
+			LDFLAGS="-L$OPENSSL_DIR"
+			;;
+		esac
+		export LDFLAGS
 	fi
 	CFLAGS="$CFLAGS -mno-ms-bitfields"
 	DEPS="gcc-mingw-w64-base"
@@ -273,9 +315,8 @@ win*)
 	esac
 	;;
 android)
-	if test "$1" = "deps"; then
-		git clone git://git.strongswan.org/android-ndk-boringssl.git -b ndk-static \
-			src/frontends/android/app/src/main/jni/openssl
+	if test "$1" = "build-deps"; then
+		build_openssl
 	fi
 	TARGET=distdir
 	;;
@@ -290,10 +331,10 @@ macos)
 			--enable-kernel-pfroute --enable-nonce --enable-openssl
 			--enable-osx-attr --enable-pem --enable-pgp --enable-pkcs1
 			--enable-pkcs8 --enable-pki --enable-pubkey --enable-revocation
-			--enable-scepclient --enable-socket-default --enable-sshkey
-			--enable-stroke --enable-swanctl --enable-unity --enable-updown
+			--enable-socket-default --enable-sshkey --enable-stroke
+			--enable-swanctl --enable-unity --enable-updown
 			--enable-x509 --enable-xauth-generic"
-	DEPS="automake autoconf libtool bison gettext openssl@1.1 curl"
+	DEPS="automake autoconf libtool bison gettext pkg-config openssl@1.1 curl"
 	BREW_PREFIX=$(brew --prefix)
 	export PATH=$BREW_PREFIX/opt/bison/bin:$PATH
 	export ACLOCAL_PATH=$BREW_PREFIX/opt/gettext/share/aclocal:$ACLOCAL_PATH
@@ -324,9 +365,7 @@ freebsd)
 			--enable-unbound --enable-unity --enable-xauth-eap --enable-xauth-pam
 			--with-printf-hooks=builtin --enable-attr-sql --enable-sql
 			--enable-farp"
-	DEPS="git gmp openldap24-client libxml2 mysql80-client sqlite3 unbound ldns tpm2-tss"
-	export GPERF=/usr/local/bin/gperf
-	export LEX=/usr/local/bin/flex
+	DEPS="git gmp libxml2 mysql80-client sqlite3 unbound ldns tpm2-tss"
 	;;
 fuzzing)
 	CFLAGS="$CFLAGS -DNO_CHECK_MEMWIPE"
@@ -350,13 +389,8 @@ fuzzing)
 			symbolize=1:handle_segv=1:fast_unwind_on_fatal=0:external_symbolizer_path=/usr/bin/llvm-symbolizer-3.5
 	fi
 	;;
-nm|nm-no-glib)
+nm)
 	DEPS="gnome-common libsecret-1-dev libgtk-3-dev libnm-dev libnma-dev"
-	if test "$TEST" = "nm"; then
-		DEPS="$DEPS libnm-glib-vpn-dev libnm-gtk-dev"
-	else
-		CONFIG="$CONFIG --without-libnm-glib"
-	fi
 	cd src/frontends/gnome
 	# don't run ./configure with ./autogen.sh
 	export NOCONFIGURE=1
@@ -368,68 +402,6 @@ apidoc)
 	DEPS="doxygen"
 	CONFIG="--disable-defaults"
 	TARGET=apidoc
-	;;
-lgtm)
-	if [ -z "$LGTM_PROJECT" -o -z "$LGTM_TOKEN" ]; then
-		echo "The LGTM_PROJECT and LGTM_TOKEN environment variables" \
-			 "are required to run this test"
-		exit 0
-	fi
-	DEPS="jq"
-	if test -z "$1"; then
-		base=$COMMIT_BASE
-		# after rebases or for new/duplicate branches, the passed base commit
-		# ID might not be valid
-		git rev-parse -q --verify $base^{commit}
-		if [ $? != 0 ]; then
-			# this will always compare against master, while via base we
-			# otherwise only contains "new" commits
-			base=$(git merge-base origin/master ${COMMIT_ID})
-		fi
-		base=$(git rev-parse $base)
-
-		echo "Starting code review for $COMMIT_ID (base $base) on lgtm.com"
-		git diff --binary $base > lgtm.patch || exit $?
-		curl -s -X POST --data-binary @lgtm.patch \
-			"https://lgtm.com/api/v1.0/codereviews/${LGTM_PROJECT}?base=${base}&external-id=${BUILD_NUMBER}" \
-			-H 'Content-Type: application/octet-stream' \
-			-H 'Accept: application/json' \
-			-H "Authorization: Bearer ${LGTM_TOKEN}" > lgtm.res || exit $?
-		lgtm_check_url=$(jq -r '."task-result-url"' lgtm.res)
-		if [ -z "$lgtm_check_url" -o "$lgtm_check_url" = "null" ]; then
-			cat lgtm.res
-			exit 1
-		fi
-		lgtm_url=$(jq -r '."task-result"."results-url"' lgtm.res)
-		echo "Progress and full results: ${lgtm_url}"
-
-		echo -n "Waiting for completion: "
-		lgtm_status=pending
-		while [ "$lgtm_status" = "pending" ]; do
-			sleep 15
-			curl -s -X GET "${lgtm_check_url}" \
-				-H 'Accept: application/json' \
-				-H "Authorization: Bearer ${LGTM_TOKEN}" > lgtm.res
-			if [ $? != 0 ]; then
-				echo -n "-"
-				continue
-			fi
-			echo -n "."
-			lgtm_status=$(jq -r '.status' lgtm.res)
-		done
-		echo ""
-
-		if [ "$lgtm_status" != "success" ]; then
-			lgtm_message=$(jq -r '.["status-message"]' lgtm.res)
-			echo "Code review failed: ${lgtm_message}"
-			exit 1
-		fi
-		lgtm_new=$(jq -r '.languages[].new' lgtm.res | awk '{t+=$1} END {print t}')
-		lgtm_fixed=$(jq -r '.languages[].fixed' lgtm.res | awk '{t+=$1} END {print t}')
-		echo -n "Code review complete: "
-		printf "%b\n" "\e[1;31m${lgtm_new}\e[0m new alerts, \e[1;32m${lgtm_fixed}\e[0m fixed"
-		exit $lgtm_new
-	fi
 	;;
 *)
 	echo "$0: unknown test $TEST" >&2
@@ -472,6 +444,18 @@ CONFIG="$CONFIG
 	--enable-test-vectors
 	--enable-monolithic=${MONOLITHIC-no}
 	--enable-leak-detective=${LEAK_DETECTIVE-no}"
+
+case "$TEST" in
+	codeql|coverage|freebsd|fuzzing|sonarcloud|win*)
+		# don't use AddressSanitizer if it's not available or causes conflicts
+		CONFIG="$CONFIG --disable-asan"
+		;;
+	*)
+		if [ "$LEAK_DETECTIVE" != "yes" ]; then
+			CONFIG="$CONFIG --enable-asan"
+		fi
+		;;
+esac
 
 echo "$ ./autogen.sh"
 ./autogen.sh || exit $?
@@ -524,7 +508,7 @@ android)
 	rm -r strongswan-*
 	cd src/frontends/android
 	echo "$ ./gradlew build"
-	NDK_CCACHE=ccache ./gradlew build || exit $?
+	NDK_CCACHE=ccache ./gradlew build --info || exit $?
 	;;
 *)
 	;;

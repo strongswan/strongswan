@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2008-2015 Martin Willi
  * Copyright (C) 2012 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
- * Copyright (C) 2015 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -301,10 +301,10 @@ METHOD(mac_t, destroy, void,
 	free_align(this);
 }
 
-/*
- * Described in header
+/**
+ * Create a generic mac_t object using AESNI XCBC
  */
-mac_t *aesni_xcbc_create(encryption_algorithm_t algo, size_t key_size)
+static mac_t *aesni_xcbc_create(encryption_algorithm_t algo, size_t key_size)
 {
 	private_aesni_mac_t *this;
 

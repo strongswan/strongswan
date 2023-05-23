@@ -3,8 +3,8 @@
  * Copyright (C) 2005-2014 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
- * HSR Hochschule fuer Technik Rapperswil
- * Copyright (C) 2014 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -367,6 +367,9 @@ int main(int argc, char *argv[])
 								   lib->ns);
 
 	charon->load_loggers(charon);
+
+	DBG1(DBG_DMN, "Starting charon-systemd IKE daemon (strongSwan "VERSION", "
+		 "%s %s, %s)", utsname.sysname, utsname.release, utsname.machine);
 
 	if (!charon->initialize(charon,
 			lib->settings->get_str(lib->settings, "%s.load", PLUGINS, lib->ns)))

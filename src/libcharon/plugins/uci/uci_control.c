@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2008 Thomas Kallenberg
  * Copyright (C) 2008 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -146,8 +147,8 @@ static void initiate(private_uci_control_t *this, char *name)
 		enumerator = peer_cfg->create_child_cfg_enumerator(peer_cfg);
 		if (enumerator->enumerate(enumerator, &child_cfg) &&
 			charon->controller->initiate(charon->controller, peer_cfg,
-								child_cfg->get_ref(child_cfg),
-								controller_cb_empty, NULL, 0, FALSE) == SUCCESS)
+							child_cfg->get_ref(child_cfg), controller_cb_empty,
+							NULL, LEVEL_SILENT, 0, FALSE) == SUCCESS)
 		{
 			write_fifo(this, "connection '%s' established\n", name);
 		}
@@ -181,7 +182,8 @@ static void terminate(private_uci_control_t *this, char *name)
 			id = ike_sa->get_unique_id(ike_sa);
 			enumerator->destroy(enumerator);
 			charon->controller->terminate_ike(charon->controller, id, FALSE,
-											  controller_cb_empty, NULL, 0);
+											  controller_cb_empty, NULL,
+											  LEVEL_SILENT, 0);
 			write_fifo(this, "connection '%s' terminated\n", name);
 			return;
 		}

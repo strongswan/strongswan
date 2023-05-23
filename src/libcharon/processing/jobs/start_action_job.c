@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -83,7 +84,7 @@ METHOD(job_t, execute, job_requeue_t,
 				charon->controller->initiate(charon->controller,
 											 peer_cfg->get_ref(peer_cfg),
 											 child_cfg->get_ref(child_cfg),
-											 NULL, NULL, 0, FALSE);
+											 NULL, NULL, 0, 0, FALSE);
 			}
 		}
 		children->destroy(children);

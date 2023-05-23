@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2012 Martin Willi
- * Copyright (C) 2012 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -238,8 +239,8 @@ static bool on_accept(private_load_tester_control_t *this, stream_t *io)
 		enumerator->destroy(enumerator);
 
 		switch (charon->controller->initiate(charon->controller,
-										peer_cfg, child_cfg->get_ref(child_cfg),
-										(void*)initiate_cb, listener, 0, FALSE))
+							peer_cfg, child_cfg->get_ref(child_cfg),
+							(void*)initiate_cb, listener, LEVEL_CTRL, 0, FALSE))
 		{
 			case NEED_MORE:
 				/* Callback returns FALSE once it got track of this IKE_SA.

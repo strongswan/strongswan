@@ -3,7 +3,8 @@
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -78,6 +79,8 @@ enum kernel_feature_t {
 	KERNEL_NO_POLICY_UPDATES = (1<<3),
 	/** IPsec backend supports installing SPIs on policies */
 	KERNEL_POLICY_SPI = (1<<4),
+	/** IPsec backend reports use time per SA via query_sa() */
+	KERNEL_SA_USE_TIME = (1<<5),
 };
 
 /**
@@ -146,7 +149,8 @@ struct kernel_interface_t {
 	 * @param if_id_out	outbound interface ID on SA
 	 * @param label		security label (usually the one on the policy, not SA)
 	 * @param reqid		allocated reqid
-	 * @return			SUCCESS if reqid allocated
+	 * @return			SUCCESS if reqid allocated, OUT_OF_RES if no reqid is
+	 *					available due to an overflow
 	 */
 	status_t (*alloc_reqid)(kernel_interface_t *this,
 							linked_list_t *local_ts, linked_list_t *remote_ts,
@@ -200,7 +204,11 @@ struct kernel_interface_t {
 						  kernel_ipsec_update_sa_t *data);
 
 	/**
-	 * Query the number of bytes processed by an SA from the SAD.
+	 * Query the number of bytes and packets processed by an SA from the SAD.
+	 *
+	 * Some implementations may also return the last use time (as indicated by
+	 * get_features()). This is a monotonic timestamp as returned by
+	 * time_monotonic().
 	 *
 	 * @param id			data identifying this SA
 	 * @param data			data to query the SA
@@ -245,11 +253,12 @@ struct kernel_interface_t {
 	 * Query the use time of a policy.
 	 *
 	 * The use time of a policy is the time the policy was used
-	 * for the last time.
+	 * for the last time. This is a monotonic timestamp as returned by
+	 * time_monotonic().
 	 *
 	 * @param id			data identifying this policy
 	 * @param data			data to query the policy
-	 * @param[out] use_time	the monotonic timestamp of this SA's last use
+	 * @param[out] use_time	the monotonic timestamp of this policy's last use
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*query_policy)(kernel_interface_t *this,

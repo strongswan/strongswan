@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2012 Martin Willi
- * Copyright (C) 2012 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -59,7 +60,7 @@ struct private_radattr_listener_t {
 static void print_radius_attributes(private_radattr_listener_t *this,
 									message_t *message)
 {
-	radius_attribute_type_t type;
+	radius_attribute_type_t type DBG_UNUSED;
 	enumerator_t *enumerator;
 	notify_payload_t *notify;
 	payload_t *payload;

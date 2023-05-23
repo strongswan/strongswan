@@ -27,8 +27,8 @@ jobs:
     env:
       TEST: tkm
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-tkm-${{ github.sha }}
@@ -54,9 +54,9 @@ jobs:
             autoreconf -i /strongswan || exit 1
             CFLAGS="-g -O2 -Wall -Wno-format -Wno-format-security -Wno-pointer-sign -Werror" \
             /strongswan/configure --disable-defaults --enable-silent-rules \
-              --enable-ikev2 --enable-kernel-netlink --enable-openssl \
-              --enable-pem --enable-socket-default --enable-swanctl \
-              --enable-tkm || exit 1
+              --enable-ikev2 --enable-kernel-netlink --enable-pem --enable-pkcs1 \
+              --enable-random --enable-sha1 --enable-socket-default --enable-swanctl \
+              --enable-tkm --enable-x509 || exit 1
             # run tests without TKM first
             make -j check TESTS_RUNNERS=tkm || exit 1
 

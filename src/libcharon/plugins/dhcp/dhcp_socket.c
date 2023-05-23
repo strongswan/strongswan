@@ -1,9 +1,8 @@
 /*
  * Copyright (C) 2012-2018 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
- *
  * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -112,6 +111,11 @@ struct private_dhcp_socket_t {
 	 * Force configured destination address
 	 */
 	bool force_dst;
+
+	/**
+	 * Source IP if destination address is unicast
+	 */
+	struct sockaddr_in src;
 };
 
 /**
@@ -203,7 +207,6 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	identification_t *identity;
 	dhcp_option_t *option;
 	int optlen = 0, remaining;
-	host_t *src;
 	uint32_t id;
 
 	memset(dhcp, 0, sizeof(*dhcp));
@@ -220,14 +223,8 @@ static int prepare_dhcp(private_dhcp_socket_t *this,
 	}
 	else
 	{
-		/* act as relay agent */
-		src = charon->kernel->get_source_addr(charon->kernel, this->dst, NULL);
-		if (src)
-		{
-			memcpy(&dhcp->gateway_address, src->get_address(src).ptr,
-				   sizeof(dhcp->gateway_address));
-			src->destroy(src);
-		}
+		memcpy(&dhcp->gateway_address, &this->src.sin_addr,
+			   sizeof(dhcp->gateway_address));
 	}
 
 	identity = transaction->get_identity(transaction);
@@ -307,13 +304,14 @@ static bool discover(private_dhcp_socket_t *this,
 {
 	dhcp_option_t *option;
 	dhcp_t dhcp;
-	chunk_t mac;
 	int optlen;
 
 	optlen = prepare_dhcp(this, transaction, DHCP_DISCOVER, &dhcp);
 
-	mac = chunk_from_thing(dhcp.client_hw_addr);
+#if DEBUG_LEVEL >= 1
+	chunk_t mac = chunk_from_thing(dhcp.client_hw_addr);
 	DBG1(DBG_CFG, "sending DHCP DISCOVER for %#B to %H", &mac, this->dst);
+#endif
 
 	option = (dhcp_option_t*)&dhcp.options[optlen];
 	option->type = DHCP_PARAM_REQ_LIST;
@@ -385,11 +383,24 @@ static bool request(private_dhcp_socket_t *this,
 	return TRUE;
 }
 
+/**
+ * Calculate the timeout to wait for a response for the given try
+ */
+static inline void get_timeout(int try, timeval_t *timeout)
+{
+	timeval_t delay = { .tv_sec = try };
+
+	time_monotonic(timeout);
+	timeradd(timeout, &delay, timeout);
+}
+
 METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 	private_dhcp_socket_t *this, identification_t *identity)
 {
 	dhcp_transaction_t *transaction;
+	timeval_t timeout;
 	uint32_t id;
+	bool got_response;
 	int try;
 
 	if (!this->rng->get_bytes(this->rng, sizeof(id), (uint8_t*)&id))
@@ -401,11 +412,21 @@ METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 
 	this->mutex->lock(this->mutex);
 	this->discover->insert_last(this->discover, transaction);
+
 	try = 1;
+	got_response = FALSE;
 	while (try <= DHCP_TRIES && discover(this, transaction))
 	{
-		if (!this->condvar->timed_wait(this->condvar, this->mutex, 1000 * try) &&
-			this->request->find_first(this->request, NULL, (void**)&transaction))
+		get_timeout(try, &timeout);
+		while (!this->condvar->timed_wait_abs(this->condvar, this->mutex, timeout))
+		{
+			if (this->request->find_first(this->request, NULL, (void**)&transaction))
+			{
+				got_response = TRUE;
+				break;
+			}
+		}
+		if (got_response)
 		{
 			break;
 		}
@@ -423,10 +444,19 @@ METHOD(dhcp_socket_t, enroll, dhcp_transaction_t*,
 		 transaction->get_server(transaction));
 
 	try = 1;
+	got_response = FALSE;
 	while (try <= DHCP_TRIES && request(this, transaction))
 	{
-		if (!this->condvar->timed_wait(this->condvar, this->mutex, 1000 * try) &&
-			this->completed->remove(this->completed, transaction, NULL))
+		get_timeout(try, &timeout);
+		while (!this->condvar->timed_wait_abs(this->condvar, this->mutex, timeout))
+		{
+			if (this->completed->remove(this->completed, transaction, NULL))
+			{
+				got_response = TRUE;
+				break;
+			}
+		}
+		if (got_response)
 		{
 			break;
 		}
@@ -705,6 +735,7 @@ dhcp_socket_t *dhcp_socket_create()
 			.s_addr = INADDR_ANY,
 		},
 	};
+	socklen_t addr_len;
 	char *iface;
 	int on = 1, rcvbuf = 0;
 	struct sock_filter dhcp_filter_code[] = {
@@ -853,6 +884,25 @@ dhcp_socket_t *dhcp_socket_create()
 		if (!bind_to_device(this->send, iface) ||
 			!bind_to_device(this->receive, iface))
 		{
+			destroy(this);
+			return NULL;
+		}
+	}
+	if (!is_broadcast(this->dst))
+	{
+		if (connect(this->send, this->dst->get_sockaddr(this->dst),
+					*this->dst->get_sockaddr_len(this->dst)) < 0)
+		{
+			DBG1(DBG_CFG, "unable to connect DHCP send socket: %s",
+				 strerror(errno));
+			destroy(this);
+			return NULL;
+		}
+		addr_len = sizeof(this->src);
+		if (getsockname(this->send, &this->src, &addr_len) < 0)
+		{
+			DBG1(DBG_CFG, "unable to determine source address for DHCP: %s",
+				 strerror(errno));
 			destroy(this);
 			return NULL;
 		}

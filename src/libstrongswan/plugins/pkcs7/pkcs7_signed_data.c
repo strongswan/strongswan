@@ -1,6 +1,8 @@
 /*
+ * Copyright (C) 2023 Tobias Brunner
  * Copyright (C) 2012 Martin Willi
- * Copyright (C) 2012 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -44,6 +46,11 @@ struct private_pkcs7_signed_data_t {
 	container_t *content;
 
 	/**
+	 * Signature scheme
+	 */
+	signature_params_t *scheme;
+
+	/**
 	 * Encoded PKCS#7 signed-data
 	 */
 	chunk_t encoding;
@@ -80,9 +87,9 @@ typedef struct {
 	identification_t *issuer;
 
 	/**
-	 * EncryptedDigest
+	 * Signature
 	 */
-	chunk_t encrypted_digest;
+	chunk_t signature;
 
 	/**
 	 * Digesting algorithm OID
@@ -90,21 +97,22 @@ typedef struct {
 	int digest_alg;
 
 	/**
-	 * Public key encryption algorithm OID
+	 * Signature algorithm
 	 */
-	int enc_alg;
+	signature_params_t sig_alg;
 
 } signerinfo_t;
 
 /**
  * Destroy a signerinfo_t entry
  */
-void signerinfo_destroy(signerinfo_t *this)
+static void signerinfo_destroy(signerinfo_t *this)
 {
 	DESTROY_IF(this->attributes);
 	DESTROY_IF(this->serial);
 	DESTROY_IF(this->issuer);
-	free(this->encrypted_digest.ptr);
+	signature_params_clear(&this->sig_alg);
+	free(this->signature.ptr);
 	free(this);
 }
 
@@ -136,8 +144,8 @@ static const asn1Object_t signedDataObjects[] = {
 	{ 3,       "authenticatedAttributes",	ASN1_CONTEXT_C_0,	ASN1_OPT |
 																ASN1_OBJ  }, /* 19 */
 	{ 3,       "end opt",					ASN1_EOC,			ASN1_END  }, /* 20 */
-	{ 3,       "digestEncryptionAlgorithm",	ASN1_EOC,			ASN1_RAW  }, /* 21 */
-	{ 3,       "encryptedDigest",			ASN1_OCTET_STRING,	ASN1_BODY }, /* 22 */
+	{ 3,       "signatureAlgorithm",		ASN1_EOC,			ASN1_RAW  }, /* 21 */
+	{ 3,       "signature",					ASN1_OCTET_STRING,	ASN1_BODY }, /* 22 */
 	{ 3,       "unauthenticatedAttributes", ASN1_CONTEXT_C_1,	ASN1_OPT  }, /* 23 */
 	{ 3,       "end opt",					ASN1_EOC,			ASN1_END  }, /* 24 */
 	{ 1,   "end loop",						ASN1_EOC,			ASN1_END  }, /* 25 */
@@ -153,8 +161,8 @@ static const asn1Object_t signedDataObjects[] = {
 #define PKCS7_SERIAL_NUMBER			17
 #define PKCS7_DIGEST_ALGORITHM		18
 #define PKCS7_AUTH_ATTRIBUTES		19
-#define PKCS7_DIGEST_ENC_ALGORITHM	21
-#define PKCS7_ENCRYPTED_DIGEST		22
+#define PKCS7_SIGNATURE_ALGORITHM	21
+#define PKCS7_SIGNATURE				22
 
 METHOD(container_t, get_type, container_type_t,
 	private_pkcs7_signed_data_t *this)
@@ -182,7 +190,6 @@ METHOD(enumerator_t, enumerate, bool,
 	signature_enumerator_t *this, va_list args)
 {
 	signerinfo_t *info;
-	signature_scheme_t scheme;
 	hash_algorithm_t algorithm;
 	enumerator_t *enumerator;
 	certificate_t *cert;
@@ -200,25 +207,20 @@ METHOD(enumerator_t, enumerate, bool,
 		DESTROY_IF(this->auth);
 		this->auth = NULL;
 
-		scheme = signature_scheme_from_oid(info->digest_alg);
-		if (scheme == SIGN_UNKNOWN)
-		{
-			DBG1(DBG_LIB, "unsupported signature scheme");
-			continue;
-		}
 		if (!info->attributes)
 		{
 			DBG1(DBG_LIB, "no authenticatedAttributes object found");
 			continue;
 		}
-		if (info->enc_alg != OID_RSA_ENCRYPTION)
+		if (info->sig_alg.scheme == SIGN_UNKNOWN)
 		{
-			DBG1(DBG_LIB, "only RSA digest encryption supported");
+			DBG1(DBG_LIB, "unsupported signature scheme");
 			continue;
 		}
 
 		enumerator = lib->credmgr->create_trusted_enumerator(lib->credmgr,
-												KEY_RSA, info->serial, FALSE);
+							key_type_from_signature_scheme(info->sig_alg.scheme),
+							info->serial, FALSE);
 		while (enumerator->enumerate(enumerator, &cert, &auth))
 		{
 			if (info->issuer->equals(info->issuer, cert->get_issuer(cert)))
@@ -227,8 +229,8 @@ METHOD(enumerator_t, enumerate, bool,
 				if (key)
 				{
 					chunk = info->attributes->get_encoding(info->attributes);
-					if (key->verify(key, scheme, NULL, chunk,
-									info->encrypted_digest))
+					if (key->verify(key, info->sig_alg.scheme,
+									info->sig_alg.params, chunk, info->signature))
 					{
 						this->auth = auth->clone(auth);
 						key->destroy(key);
@@ -364,6 +366,7 @@ METHOD(container_t, destroy, void,
 	this->creds->destroy(this->creds);
 	this->signerinfos->destroy_function(this->signerinfos,
 										(void*)signerinfo_destroy);
+	signature_params_destroy(this->scheme);
 	DESTROY_IF(this->content);
 	free(this->encoding.ptr);
 	free(this);
@@ -402,7 +405,7 @@ static bool parse(private_pkcs7_signed_data_t *this, chunk_t content)
 {
 	asn1_parser_t *parser;
 	chunk_t object;
-	int objectID, version;
+	int objectID;
 	signerinfo_t *info = NULL;
 	bool success = FALSE;
 
@@ -415,8 +418,7 @@ static bool parse(private_pkcs7_signed_data_t *this, chunk_t content)
 		switch (objectID)
 		{
 			case PKCS7_VERSION:
-				version = object.len ? (int)*object.ptr : 0;
-				DBG2(DBG_LIB, "  v%d", version);
+				DBG2(DBG_LIB, "  v%d", object.len ? (int)*object.ptr : 0);
 				break;
 			case PKCS7_CONTENT_INFO:
 				this->content = lib->creds->create(lib->creds,
@@ -441,13 +443,11 @@ static bool parse(private_pkcs7_signed_data_t *this, chunk_t content)
 			case PKCS7_SIGNER_INFO:
 				INIT(info,
 					.digest_alg = OID_UNKNOWN,
-					.enc_alg = OID_UNKNOWN,
 				);
 				this->signerinfos->insert_last(this->signerinfos, info);
 				break;
 			case PKCS7_SIGNER_INFO_VERSION:
-				version = object.len ? (int)*object.ptr : 0;
-				DBG2(DBG_LIB, "  v%d", version);
+				DBG2(DBG_LIB, "  v%d", object.len ? (int)*object.ptr : 0);
 				break;
 			case PKCS7_ISSUER:
 				info->issuer = identification_create_from_encoding(
@@ -467,12 +467,22 @@ static bool parse(private_pkcs7_signed_data_t *this, chunk_t content)
 				info->digest_alg = asn1_parse_algorithmIdentifier(object,
 														level, NULL);
 				break;
-			case PKCS7_DIGEST_ENC_ALGORITHM:
-				info->enc_alg = asn1_parse_algorithmIdentifier(object,
-														level, NULL);
+			case PKCS7_SIGNATURE_ALGORITHM:
+				if (!signature_params_parse(object, level, &info->sig_alg))
+				{
+					if (asn1_parse_algorithmIdentifier(object, -1,
+												NULL) == OID_RSA_ENCRYPTION &&
+						info->digest_alg != OID_UNKNOWN)
+					{
+						/* derive the signature scheme from the digest algorithm
+						 * for the classic PKCS#7 RSA mechansim */
+						info->sig_alg.scheme = signature_scheme_from_oid(
+															info->digest_alg);
+					}
+				}
 				break;
-			case PKCS7_ENCRYPTED_DIGEST:
-				info->encrypted_digest = chunk_clone(object);
+			case PKCS7_SIGNATURE:
+				info->signature = chunk_clone(object);
 				break;
 		}
 	}
@@ -526,31 +536,45 @@ static bool generate(private_pkcs7_signed_data_t *this, private_key_t *key,
 {
 	chunk_t authenticatedAttributes = chunk_empty;
 	chunk_t encryptedDigest = chunk_empty;
-	chunk_t data, signerInfo, encoding = chunk_empty;
-	chunk_t messageDigest, signingTime, attributes;
-	signature_scheme_t scheme;
+	chunk_t data = chunk_empty, encoding = chunk_empty;
+	chunk_t digest_alg = chunk_empty, sig_scheme = chunk_empty;
+	chunk_t signerInfo = chunk_empty, messageDigest, signingTime, attributes;
 	hasher_t *hasher;
 	time_t now;
-	int digest_oid;
 
-	digest_oid = hasher_algorithm_to_oid(alg);
-	scheme = signature_scheme_from_oid(digest_oid);
-
-	if (!this->content->get_data(this->content, &data))
+	/* select signature scheme, if not already specified */
+	if (!this->scheme)
+	{
+		INIT(this->scheme,
+			.scheme = signature_scheme_from_oid(
+							hasher_signature_algorithm_to_oid(alg,
+								key->get_type(key))),
+		);
+	}
+	if (this->scheme->scheme == SIGN_UNKNOWN)
 	{
 		return FALSE;
+	}
+	if (!signature_params_build(this->scheme, &sig_scheme))
+	{
+		return FALSE;
+	}
+	if (!this->content->get_data(this->content, &data))
+	{
+		goto err;
 	}
 
 	hasher = lib->crypto->create_hasher(lib->crypto, alg);
 	if (!hasher || !hasher->allocate_hash(hasher, data, &messageDigest))
 	{
 		DESTROY_IF(hasher);
-		DBG1(DBG_LIB, "  hash algorithm %N not support",
+		DBG1(DBG_LIB, "  hash algorithm %N not supported",
 			 hash_algorithm_names, alg);
-		free(data.ptr);
-		return FALSE;
+		goto err;
 	}
+	chunk_free(&data);
 	hasher->destroy(hasher);
+
 	pkcs9->add_attribute(pkcs9,
 					OID_PKCS9_MESSAGE_DIGEST,
 					asn1_wrap(ASN1_OCTET_STRING, "m", messageDigest));
@@ -561,40 +585,38 @@ static bool generate(private_pkcs7_signed_data_t *this, private_key_t *key,
 	pkcs9->add_attribute(pkcs9, OID_PKCS9_SIGNING_TIME, signingTime);
 	pkcs9->add_attribute(pkcs9, OID_PKCS9_CONTENT_TYPE,
 						 asn1_build_known_oid(OID_PKCS7_DATA));
-
 	attributes = pkcs9->get_encoding(pkcs9);
 
-	if (!key->sign(key, scheme, NULL, attributes, &encryptedDigest))
+	if (!key->sign(key, this->scheme->scheme, this->scheme->params, attributes,
+				   &encryptedDigest))
 	{
-		free(data.ptr);
-		return FALSE;
+		goto err;
 	}
 	authenticatedAttributes = chunk_clone(attributes);
 	*authenticatedAttributes.ptr = ASN1_CONTEXT_C_0;
 
-	free(data.ptr);
 	if (encryptedDigest.ptr)
 	{
 		encryptedDigest = asn1_wrap(ASN1_OCTET_STRING, "m", encryptedDigest);
 	}
-	signerInfo = asn1_wrap(ASN1_SEQUENCE, "cmmmmm",
+
+	digest_alg = asn1_algorithmIdentifier(hasher_algorithm_to_oid(alg));
+	signerInfo = asn1_wrap(ASN1_SEQUENCE, "cmcmmm",
 					ASN1_INTEGER_1,
 					build_issuerAndSerialNumber(cert),
-					asn1_algorithmIdentifier(digest_oid),
+					digest_alg,
 					authenticatedAttributes,
-					asn1_algorithmIdentifier(OID_RSA_ENCRYPTION),
+					sig_scheme,
 					encryptedDigest);
+	sig_scheme = chunk_empty;
 
 	if (!cert->get_encoding(cert, CERT_ASN1_DER, &encoding))
 	{
-		free(signerInfo.ptr);
-		return FALSE;
+		goto err;
 	}
 	if (!this->content->get_encoding(this->content, &data))
 	{
-		free(encoding.ptr);
-		free(signerInfo.ptr);
-		return FALSE;
+		goto err;
 	}
 
 	this->encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
@@ -602,15 +624,22 @@ static bool generate(private_pkcs7_signed_data_t *this, private_key_t *key,
 		asn1_wrap(ASN1_CONTEXT_C_0, "m",
 			asn1_wrap(ASN1_SEQUENCE, "cmmmm",
 				ASN1_INTEGER_1,
-				asn1_wrap(ASN1_SET, "m", asn1_algorithmIdentifier(digest_oid)),
+				asn1_wrap(ASN1_SET, "m", digest_alg),
 				data,
 				asn1_wrap(ASN1_CONTEXT_C_0, "m", encoding),
 				asn1_wrap(ASN1_SET, "m", signerInfo))));
 
-
 	pkcs9->destroy(pkcs9);
 	/* TODO: create signerInfos entry */
 	return TRUE;
+
+err:
+	chunk_free(&data);
+	chunk_free(&digest_alg);
+	chunk_free(&sig_scheme);
+	chunk_free(&signerInfo);
+	chunk_free(&encoding);
+	return FALSE;
 }
 
 /**
@@ -620,7 +649,8 @@ pkcs7_t *pkcs7_signed_data_gen(container_type_t type, va_list args)
 {
 	private_pkcs7_signed_data_t *this;
 	chunk_t blob = chunk_empty;
-	hash_algorithm_t alg = HASH_SHA1;
+	hash_algorithm_t alg = HASH_SHA256;
+	signature_params_t *scheme = NULL;
 	private_key_t *key = NULL;
 	certificate_t *cert = NULL;
 	pkcs7_attributes_t *pkcs9;
@@ -645,6 +675,9 @@ pkcs7_t *pkcs7_signed_data_gen(container_type_t type, va_list args)
 			case BUILD_BLOB:
 				blob = va_arg(args, chunk_t);
 				continue;
+			case BUILD_SIGNATURE_SCHEME:
+				scheme = va_arg(args, signature_params_t*);
+				continue;
 			case BUILD_PKCS7_ATTRIBUTE:
 				oid = va_arg(args, int);
 				value = va_arg(args, chunk_t);
@@ -662,11 +695,11 @@ pkcs7_t *pkcs7_signed_data_gen(container_type_t type, va_list args)
 	{
 		this = create_empty();
 
+		this->scheme = signature_params_clone(scheme);
 		this->creds->add_cert(this->creds, FALSE, cert->get_ref(cert));
 		this->content = lib->creds->create(lib->creds,
 										   CRED_CONTAINER, CONTAINER_PKCS7_DATA,
 										   BUILD_BLOB, blob, BUILD_END);
-
 		if (this->content && generate(this, key, cert, alg, pkcs9))
 		{
 			return &this->public;

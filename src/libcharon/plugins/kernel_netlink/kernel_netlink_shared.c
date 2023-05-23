@@ -1,9 +1,8 @@
 /*
+ * Copyright (C) 2008-2023 Tobias Brunner
  * Copyright (C) 2014 Martin Willi
- * Copyright (C) 2014 revosec AG
  *
- * Copyright (C) 2008-2020 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,7 +16,6 @@
  */
 
 /*
- * Copyright (C) 2016 secunet Security Networks AG
  * Copyright (C) 2016 Thomas Egerer
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -54,7 +52,13 @@
 #include <collections/array.h>
 #include <collections/hashtable.h>
 
+/* some older versions of socket.h don't define this yet */
+#ifndef SOL_NETLINK
+#define SOL_NETLINK 270
+#endif
+
 typedef struct private_netlink_socket_t private_netlink_socket_t;
+typedef struct private_netlink_event_socket_t private_netlink_event_socket_t;
 
 /**
  * Private variables and functions of netlink_socket_t class.
@@ -120,6 +124,37 @@ struct private_netlink_socket_t {
 	 * Ignore errors potentially resulting from a retransmission
 	 */
 	bool ignore_retransmit_errors;
+};
+
+/**
+ * Private data of netlink_event_socket_t class
+ */
+struct private_netlink_event_socket_t {
+
+	/**
+	 * Public interface
+	 */
+	netlink_event_socket_t public;
+
+	/**
+	 * Registered callback
+	 */
+	netlink_event_cb_t cb;
+
+	/**
+	 * User data to pass to callback
+	 */
+	void *user;
+
+	/**
+	 * Netlink socket
+	 */
+	int socket;
+
+	/**
+	 * Buffer size for received Netlink messages
+	 */
+	u_int buflen;
 };
 
 /**
@@ -324,7 +359,7 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 
 	if (this->names)
 	{
-		DBG3(DBG_KNL, "sending %N %u: %b", this->names, in->nlmsg_type,
+		DBG4(DBG_KNL, "sending %N %u: %b", this->names, in->nlmsg_type,
 			 (u_int)seq, in, in->nlmsg_len);
 	}
 
@@ -391,7 +426,7 @@ static status_t send_once(private_netlink_socket_t *this, struct nlmsghdr *in,
 	{
 		if (this->names)
 		{
-			DBG3(DBG_KNL, "received %N %u: %b", this->names, hdr->nlmsg_type,
+			DBG4(DBG_KNL, "received %N %u: %b", this->names, hdr->nlmsg_type,
 				 hdr->nlmsg_seq, hdr, hdr->nlmsg_len);
 		}
 		memcpy(ptr, hdr, hdr->nlmsg_len);
@@ -537,7 +572,7 @@ METHOD(netlink_socket_t, netlink_send_ack, status_t,
 		{
 			case NLMSG_ERROR:
 			{
-				struct nlmsgerr* err = NLMSG_DATA(hdr);
+				struct nlmsgerr *err = NLMSG_DATA(hdr);
 
 				if (err->error)
 				{
@@ -551,11 +586,11 @@ METHOD(netlink_socket_t, netlink_send_ack, status_t,
 						free(out);
 						return NOT_FOUND;
 					}
-					DBG1(DBG_KNL, "received netlink error: %s (%d)",
-						 strerror(-err->error), -err->error);
+					netlink_log_error(hdr, NULL);
 					free(out);
 					return FAILED;
 				}
+				netlink_log_error(hdr, NULL);
 				free(out);
 				return SUCCESS;
 			}
@@ -622,7 +657,7 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		.nl_family = AF_NETLINK,
 	};
 	bool force_buf = FALSE;
-	int rcvbuf_size = 0;
+	int on = 1, rcvbuf_size = 0;
 
 	INIT(this,
 		.public = {
@@ -661,6 +696,15 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 		destroy(this);
 		return NULL;
 	}
+
+	/* don't echo back the request payload in error messages, might not be
+	 * supported by older kernels, so don't check the result */
+	ignore_result(setsockopt(this->socket, SOL_NETLINK, NETLINK_CAP_ACK, &on,
+							 sizeof(on)));
+	/* enable extended ACK attributes, might not be supported by older kernels */
+	ignore_result(setsockopt(this->socket, SOL_NETLINK, NETLINK_EXT_ACK, &on,
+							 sizeof(on)));
+
 	rcvbuf_size = lib->settings->get_int(lib->settings,
 						"%s.plugins.kernel-netlink.receive_buffer_size",
 						rcvbuf_size, lib->ns);
@@ -684,6 +728,92 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 	{
 		lib->watcher->add(lib->watcher, this->socket, WATCHER_READ, watch, this);
 	}
+
+	return &this->public;
+}
+
+CALLBACK(watch_event, bool,
+	private_netlink_event_socket_t *this, int fd, watcher_event_t event)
+{
+	char buf[this->buflen];
+	struct nlmsghdr *hdr = (struct nlmsghdr*)buf;
+	struct sockaddr_nl addr;
+	socklen_t addr_len = sizeof(addr);
+	int len;
+
+	len = recvfrom(this->socket, buf, sizeof(buf), MSG_DONTWAIT,
+				   (struct sockaddr*)&addr, &addr_len);
+	if (len < 0)
+	{
+		if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
+		{
+			DBG1(DBG_KNL, "netlink event read error: %s", strerror(errno));
+		}
+		return TRUE;
+	}
+	else if (addr.nl_pid != 0)
+	{	/* ignore non-kernel messages */
+		return TRUE;
+	}
+
+	while (NLMSG_OK(hdr, len))
+	{
+		this->cb(this->user, hdr);
+		hdr = NLMSG_NEXT(hdr, len);
+	}
+	return TRUE;
+}
+
+METHOD(netlink_event_socket_t, destroy_event, void,
+	private_netlink_event_socket_t *this)
+{
+	if (this->socket != -1)
+	{
+		lib->watcher->remove(lib->watcher, this->socket);
+		close(this->socket);
+	}
+	free(this);
+}
+
+/*
+ * Described in header
+ */
+netlink_event_socket_t *netlink_event_socket_create(int protocol, uint32_t groups,
+													netlink_event_cb_t cb, void *user)
+{
+	private_netlink_event_socket_t *this;
+	struct sockaddr_nl addr = {
+		.nl_family = AF_NETLINK,
+		.nl_groups = groups,
+	};
+
+	INIT(this,
+		.public = {
+			.destroy = _destroy_event,
+		},
+		.cb = cb,
+		.user = user,
+		.buflen = netlink_get_buflen(),
+	);
+
+	this->socket = socket(AF_NETLINK, SOCK_RAW, protocol);
+	if (this->socket == -1)
+	{
+		DBG1(DBG_KNL, "unable to create netlink event socket: %s (%d)",
+			 strerror(errno), errno);
+		destroy_event(this);
+		return NULL;
+	}
+
+	if (bind(this->socket, (struct sockaddr*)&addr, sizeof(addr)))
+	{
+		DBG1(DBG_KNL, "unable to bind netlink event socket: %s (%d)",
+			 strerror(errno), errno);
+		destroy_event(this);
+		return NULL;
+	}
+
+	lib->watcher->add(lib->watcher, this->socket, WATCHER_READ, watch_event, this);
 
 	return &this->public;
 }
@@ -766,6 +896,69 @@ void *netlink_reserve(struct nlmsghdr *hdr, int buflen, int type, int len)
 		return NULL;
 	}
 	return RTA_DATA(rta);
+}
+
+/*
+ * Described in header
+ */
+void netlink_log_error(struct nlmsghdr *hdr, const char *prefix)
+{
+	struct nlmsgerr *err = NLMSG_DATA(hdr);
+	struct rtattr *rta;
+	size_t offset, rtasize;
+	const char *msg = NULL;
+	bool is_error = err->error != 0;
+
+	if (!prefix)
+	{
+		prefix = is_error ? "received netlink error"
+						  : "received netlink warning";
+	}
+
+	if (hdr->nlmsg_flags & NLM_F_ACK_TLVS)
+	{
+		/* skip the headers, and the request payload for older kernels that
+		 * don't support omitting it */
+		offset = sizeof(*err);
+		if (!(hdr->nlmsg_flags & NLM_F_CAPPED))
+		{
+			offset += err->msg.nlmsg_len - NLMSG_HDRLEN;
+		}
+
+		rta = (struct rtattr*)(NLMSG_DATA(hdr) + NLMSG_ALIGN(offset));
+		rtasize = NLMSG_PAYLOAD(hdr, offset);
+		while (RTA_OK(rta, rtasize))
+		{
+			if (rta->rta_type == NLMSGERR_ATTR_MSG)
+			{
+				msg = RTA_DATA(rta);
+				/* sanity check, strings from the kernel should be terminated */
+				if (!RTA_PAYLOAD(rta) || msg[RTA_PAYLOAD(rta)-1] != '\0')
+				{
+					msg = NULL;
+				}
+				break;
+			}
+			rta = RTA_NEXT(rta, rtasize);
+		}
+	}
+
+	if (msg && *msg)
+	{
+		if (is_error)
+		{
+			DBG1(DBG_KNL, "%s: %s (%d)", prefix, msg, -err->error);
+		}
+		else
+		{
+			DBG2(DBG_KNL, "%s: %s", prefix, msg);
+		}
+	}
+	else if (is_error)
+	{
+		DBG1(DBG_KNL, "%s: %s (%d)", prefix, strerror(-err->error),
+			 -err->error);
+	}
 }
 
 /*

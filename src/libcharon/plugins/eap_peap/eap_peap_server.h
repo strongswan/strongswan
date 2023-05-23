@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,6 +24,7 @@
 
 typedef struct eap_peap_server_t eap_peap_server_t;
 
+#include "tls.h"
 #include "tls_application.h"
 
 #include <library.h>
@@ -37,6 +39,14 @@ struct eap_peap_server_t {
 	 * Implements the TLS application data handler.
 	 */
 	tls_application_t application;
+
+	/**
+	 * Set a reference to the parent TLS connection this application is
+	 * assigned to.
+	 *
+	 * @param tls		TLS connection
+	 */
+	void (*set_tls)(eap_peap_server_t *this, tls_t *tls);
 };
 
 /**

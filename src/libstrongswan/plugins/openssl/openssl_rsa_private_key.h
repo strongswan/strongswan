@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008-2016 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -71,18 +72,5 @@ openssl_rsa_private_key_t *openssl_rsa_private_key_load(key_type_t type,
  * @return 			loaded key, NULL on failure
  */
 private_key_t *openssl_rsa_private_key_create(EVP_PKEY *key, bool engine);
-
-/**
- * Connect to a RSA private key on a smartcard.
- *
- * Accepts the BUILD_SMARTCARD_KEYID and the BUILD_SMARTCARD_PIN
- * arguments.
- *
- * @param type		type of the key, must be KEY_RSA
- * @param args		builder_part_t argument list
- * @return 			loaded key, NULL on failure
- */
-openssl_rsa_private_key_t *openssl_rsa_private_key_connect(key_type_t type,
-														   va_list args);
 
 #endif /** OPENSSL_RSA_PRIVATE_KEY_H_ @}*/

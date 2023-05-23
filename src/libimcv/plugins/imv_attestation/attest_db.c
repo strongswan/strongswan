@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011-2017 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -180,7 +181,7 @@ struct private_attest_db_t {
 
 };
 
-char* print_cfn(pts_comp_func_name_t *cfn)
+static char* print_cfn(pts_comp_func_name_t *cfn)
 {
 	static char buf[BUF_LEN];
 	char flags[8];

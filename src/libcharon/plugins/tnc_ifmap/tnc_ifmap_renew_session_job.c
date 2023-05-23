@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2013 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -53,13 +54,10 @@ METHOD(job_t, destroy, void,
 METHOD(job_t, execute, job_requeue_t,
 	private_tnc_ifmap_renew_session_job_t *this)
 {
-	char *session_id;
-
 	if (this->ifmap->orphaned(this->ifmap))
 	{
-		session_id = this->ifmap->get_session_id(this->ifmap);
 		DBG2(DBG_TNC, "removing orphaned ifmap renewSession job for '%s'",
-					   session_id);
+			 this->ifmap->get_session_id(this->ifmap));
 		return JOB_REQUEUE_NONE;
 	}
 	else

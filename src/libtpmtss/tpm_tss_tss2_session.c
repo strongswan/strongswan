@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2021 Andreas Steffen, strongSec GmbH
+ * Copyright (C) 2021 Andreas Steffen
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -80,7 +82,7 @@ size_t hash_len_from_tpm_alg_id(TPM2_ALG_ID alg);
 /**
  * Convert TPM2_ALG_ID to PRF algorithm
  */
-pseudo_random_function_t prf_alg_from_tpm_alg_id(TPM2_ALG_ID alg)
+static pseudo_random_function_t prf_alg_from_tpm_alg_id(TPM2_ALG_ID alg)
 {
 	switch (alg)
 	{
@@ -131,7 +133,7 @@ METHOD(tpm_tss_tss2_session_t, set_cmd_auths, bool,
 	hasher_t *hasher;
 	pseudo_random_function_t prf_alg;
 	prf_t *prf;
-	chunk_t data, cp_hash, cp_hmac, nonce_caller, nonce_tpm, session_attributes;
+	chunk_t data, cp_hash, nonce_caller, nonce_tpm, session_attributes;
 	bool success;
 	uint32_t rval;
 
@@ -231,8 +233,8 @@ METHOD(tpm_tss_tss2_session_t, set_cmd_auths, bool,
 		DBG1(DBG_PTS, "cpHmac computation failed");
 		return FALSE;
 	}
-	cp_hmac = chunk_create(cmd.auths[0].hmac.buffer, cmd.auths[0].hmac.size);
-	DBG2(DBG_PTS, LABEL "cpHmac: %B", &cp_hmac);
+	DBG2(DBG_PTS, LABEL "cpHmac: %b", cmd.auths[0].hmac.buffer,
+		 cmd.auths[0].hmac.size);
 
 	rval = Tss2_Sys_SetCmdAuths(this->sys_context, &cmd);
 	if (rval != TSS2_RC_SUCCESS)
@@ -317,7 +319,7 @@ METHOD(tpm_tss_tss2_session_t, get_rsp_auths, bool,
 	prf_t *prf;
 	crypter_t *crypter;
 	chunk_t kdf_label = chunk_from_chars('C','F','B', 0x00);
-	chunk_t data, rp_hash, rp_hmac, nonce_caller, nonce_tpm, session_attributes;
+	chunk_t data, rp_hash, nonce_caller, nonce_tpm, session_attributes;
 	chunk_t key_mat, aes_key, aes_iv;
 	bool success;
 	uint32_t rval;
@@ -408,8 +410,7 @@ METHOD(tpm_tss_tss2_session_t, get_rsp_auths, bool,
 		DBG1(DBG_PTS, "computation of rpHmac failed");
 		return FALSE;
 	}
-	rp_hmac = chunk_create(rpHmac.buffer, rpHmac.size);
-	DBG2(DBG_PTS, LABEL "rpHMAC: %B", &rp_hmac);
+	DBG2(DBG_PTS, LABEL "rpHMAC: %b", rpHmac.buffer, rpHmac.size);
 
 	/* verify rpHmac */
 	if (!memeq(rsp.auths[0].hmac.buffer, rpHmac.buffer, rpHmac.size))
@@ -648,8 +649,8 @@ static bool kdf_e(TPMI_ALG_HASH hash_alg, chunk_t z, chunk_t label,
 static bool ecc_salt(TPM2B_PUBLIC *public, TPMI_ALG_HASH hash_alg,
 					 chunk_t *secret, TPM2B_ENCRYPTED_SECRET *encryptedSalt)
 {
-	diffie_hellman_group_t ec_group;
-	diffie_hellman_t *dh;
+	key_exchange_method_t ec_ke_method;
+	key_exchange_t *ke;
 	chunk_t ecdh_pubkey = chunk_empty, ecdh_pubkey_x, ecdh_pubkey_y;
 	chunk_t ecc_pubkey  = chunk_empty, ecc_pubkey_x, ecc_pubkey_y;
 	chunk_t z = chunk_empty;
@@ -661,13 +662,13 @@ static bool ecc_salt(TPM2B_PUBLIC *public, TPMI_ALG_HASH hash_alg,
 	switch (public->publicArea.parameters.eccDetail.curveID)
 	{
 		case TPM2_ECC_NIST_P256:
-			ec_group = ECP_256_BIT;
+			ec_ke_method = ECP_256_BIT;
 			break;
 		case TPM2_ECC_NIST_P384:
-			ec_group = ECP_384_BIT;
+			ec_ke_method = ECP_384_BIT;
 			break;
 		case TPM2_ECC_NIST_P521:
-			ec_group = ECP_521_BIT;
+			ec_ke_method = ECP_521_BIT;
 			break;
 		default:
 			DBG1(DBG_PTS, "type of ECC EK key not supported");
@@ -675,16 +676,16 @@ static bool ecc_salt(TPM2B_PUBLIC *public, TPMI_ALG_HASH hash_alg,
 	}
 
 	/* Generate ECDH key pair */
-	dh = lib->crypto->create_dh(lib->crypto, ec_group);
-	if (!dh)
+	ke = lib->crypto->create_ke(lib->crypto, ec_ke_method);
+	if (!ke)
 	{
 		DBG1(DBG_PTS, "DH group could not be created");
 		return FALSE;
 	}
-	if (!dh->get_my_public_value(dh, &ecdh_pubkey))
+	if (!ke->get_public_key(ke, &ecdh_pubkey))
 	{
 		DBG1(DBG_PTS, "DH public key could not be generated");
-		dh->destroy(dh);
+		ke->destroy(ke);
 		return FALSE;
 	}
 	ecdh_pubkey_x = chunk_create(ecdh_pubkey.ptr, ecdh_pubkey.len / 2);
@@ -699,12 +700,12 @@ static bool ecc_salt(TPM2B_PUBLIC *public, TPMI_ALG_HASH hash_alg,
 	ecc_pubkey = chunk_cat("cc", ecc_pubkey_x, ecc_pubkey_y);
 
 	/* compute point multiplication of ecc_pubkey with ecdh_privkey */
-	if (!dh->set_other_public_value(dh, ecc_pubkey))
+	if (!ke->set_public_key(ke, ecc_pubkey))
 	{
 		DBG1(DBG_PTS, "ECC public could not be set");
 		goto error;
 	}
-	if (!dh->get_shared_secret(dh, &z))
+	if (!ke->get_shared_secret(ke, &z))
 	{
 		DBG1(DBG_PTS, "could not create shared secret");
 		goto error;
@@ -734,7 +735,7 @@ static bool ecc_salt(TPM2B_PUBLIC *public, TPMI_ALG_HASH hash_alg,
 	success = TRUE;
 
 error:
-	dh->destroy(dh);
+	ke->destroy(ke);
 	chunk_free(&ecdh_pubkey);
 	chunk_free(&ecc_pubkey);
 	chunk_clear(&z);

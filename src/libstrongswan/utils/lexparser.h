@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2001-2008 Andreas Steffen
+ * Copyright (C) 2001-2022 Andreas Steffen
  *
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -35,6 +35,11 @@ bool eat_whitespace(chunk_t *src);
 bool match(const char *pattern, const chunk_t *ch);
 
 /**
+ * Compare null-terminated pattern with chunk ignoring the case of the characters
+ */
+bool matchcase(const char *pattern, const chunk_t *ch);
+
+/**
  * Extracts a token ending with the first occurrence of a given termination symbol
  */
 bool extract_token(chunk_t *token, const char termination, chunk_t *src);
@@ -53,11 +58,6 @@ bool fetchline(chunk_t *src, chunk_t *line);
  * Extracts a value that might be single or double quoted
  */
 err_t extract_value(chunk_t *value, chunk_t *line);
-
-/**
- * extracts a name: value pair from a text line
- */
-err_t extract_name_value(chunk_t *name, chunk_t *value, chunk_t *line);
 
 /**
  * extracts a parameter: value from a text line

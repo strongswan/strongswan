@@ -1,7 +1,8 @@
 /*
- * Copyright (C) 2012-2018 Tobias Brunner
+ * Copyright (C) 2012-2023 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -235,6 +236,26 @@ void set_file_mode(FILE *stream, cred_encoding_type_t enc)
 		_setmode(fd, _O_BINARY);
 	}
 #endif
+}
+
+/*
+ * Described in header
+ */
+bool parse_rsa_padding(char *padding, bool *pss)
+{
+	if (streq(padding, "pss"))
+	{
+		*pss = TRUE;
+	}
+	else if (streq(padding, "pkcs1"))
+	{
+		*pss = FALSE;
+	}
+	else
+	{
+		return FALSE;
+	}
+	return TRUE;
 }
 
 /**

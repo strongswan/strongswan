@@ -1,10 +1,9 @@
 /*
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * HSR Hochschule fuer Technik Rapperswil
  *
- * Ported from Steve Reid's <steve@edmweb.com> implementation
- * "SHA1 in C" found in strongSwan.
+ * Ported from Steve Reid's <steve@edmweb.com> 100% public domain
+ * implementation "SHA-1 in C".
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the

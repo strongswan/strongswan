@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -110,6 +111,14 @@ void wait_sigint()
 	sigint_cond->destroy(sigint_cond);
 }
 
+/**
+ * Windows variant
+ */
+void send_sigint()
+{
+	handler(CTRL_C_EVENT);
+}
+
 #else /* !WIN32 */
 
 /**
@@ -128,6 +137,14 @@ void wait_sigint()
 	{
 		/* wait for signal */
 	}
+}
+
+/**
+ * Unix variant
+ */
+void send_sigint()
+{
+	kill(0, SIGINT);
 }
 
 #ifndef HAVE_SIGWAITINFO

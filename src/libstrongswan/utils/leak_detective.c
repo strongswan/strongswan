@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2013-2018 Tobias Brunner
  * Copyright (C) 2006-2013 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -540,6 +541,7 @@ static char *whitelist[] = {
 	"tzset",
 	"_IO_file_doallocate",
 	"selinux_check_access",
+	"on_exit",
 	/* ignore dlopen, as we do not dlclose to get proper leak reports */
 	"dlopen",
 	"dlerror",
@@ -598,6 +600,7 @@ static char *whitelist[] = {
 	"RAND_DRBG_get0_private",
 	"RAND_DRBG_get0_public",
 	/* OpenSSL 3.0 caches even more static stuff */
+	"evp_generic_fetch_from_prov",
 	"ERR_set_debug",
 	"ERR_set_error",
 	"EVP_DigestSignInit",
@@ -610,6 +613,7 @@ static char *whitelist[] = {
 	"EVP_CIPHER_fetch",
 	"EVP_KDF_fetch",
 	"EVP_KEYEXCH_fetch",
+	"EVP_KEYMGMT_do_all_provided",
 	"EVP_KEYMGMT_fetch",
 	"EVP_MAC_fetch",
 	"EVP_MD_fetch",
@@ -660,6 +664,7 @@ static char *whitelist[] = {
 	"botan_privkey_create",
 	"botan_privkey_load_ecdh",
 	"botan_privkey_load",
+	"botan_privkey_load_rsa_pkcs1",
 	"botan_kdf",
 };
 

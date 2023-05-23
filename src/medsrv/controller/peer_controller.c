@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2008 Martin Willi
  * Copyright (C) 2008 Philip Boetschi, Adrian Doerig
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -201,7 +202,7 @@ static void add(private_peer_controller_t *this, fast_request_t *request)
 /**
  * pem encode a public key into an allocated string
  */
-char* pem_encode(chunk_t der)
+static char* pem_encode(chunk_t der)
 {
 	static const char *begin = "-----BEGIN PUBLIC KEY-----\n";
 	static const char *end = "-----END PUBLIC KEY-----";

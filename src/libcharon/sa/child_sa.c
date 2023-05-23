@@ -4,7 +4,8 @@
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -108,6 +109,11 @@ struct private_child_sa_t {
 	 * Outbound integrity key cached during a rekeying
 	 */
 	chunk_t integ_r;
+
+	/**
+	 * Whether the registered outbound SA was created as initiator
+	 */
+	bool initiator;
 
 	/**
 	 * Whether the outbound SA has only been registered yet during a rekeying
@@ -270,7 +276,7 @@ struct private_child_sa_t {
 	uint64_t my_usepackets;
 
 	/**
-	 * last number of outbound bytes
+	 * last number of outbound packets
 	 */
 	uint64_t other_usepackets;
 };
@@ -753,19 +759,19 @@ METHOD(child_sa_t, get_usestats, void,
 	private_child_sa_t *this, bool inbound,
 	time_t *time, uint64_t *bytes, uint64_t *packets)
 {
-	if ((!bytes && !packets) || update_usebytes(this, inbound) != FAILED)
+	status_t status = NOT_SUPPORTED;
+	bool sa_use_time;
+
+	sa_use_time = charon->kernel->get_features(charon->kernel) & KERNEL_SA_USE_TIME;
+
+	if (bytes || packets || sa_use_time)
 	{
-		/* there was traffic since last update or the kernel interface
-		 * does not support querying the number of usebytes.
-		 */
-		if (time)
-		{
-			if (!update_usetime(this, inbound) && !bytes && !packets)
-			{
-				/* if policy query did not yield a usetime, query SAs instead */
-				update_usebytes(this, inbound);
-			}
-		}
+		status = update_usebytes(this, inbound);
+	}
+	if (time && !sa_use_time && status != FAILED)
+	{	/* query policies only if last use time is not available from SAs and
+		 * there was either traffic or querying the SA wasn't supported */
+		update_usetime(this, inbound);
 	}
 	if (time)
 	{
@@ -1088,6 +1094,7 @@ static status_t install_policies_inbound(private_child_sa_t *this,
 		.type = type,
 		.prio = priority,
 		.manual_prio = manual_prio,
+		.hw_offload = this->config->get_hw_offload(this->config),
 		.src = other_addr,
 		.dst = my_addr,
 		.sa = my_sa,
@@ -1125,6 +1132,7 @@ static status_t install_policies_outbound(private_child_sa_t *this,
 		.type = type,
 		.prio = priority,
 		.manual_prio = manual_prio,
+		.hw_offload = this->config->get_hw_offload(this->config),
 		.src = my_addr,
 		.dst = other_addr,
 		.sa = other_sa,
@@ -1200,6 +1208,7 @@ static void del_policies_inbound(private_child_sa_t *this,
 		.type = type,
 		.prio = priority,
 		.manual_prio = manual_prio,
+		.hw_offload = this->config->get_hw_offload(this->config),
 		.src = other_addr,
 		.dst = my_addr,
 		.sa = my_sa,
@@ -1236,6 +1245,7 @@ static void del_policies_outbound(private_child_sa_t *this,
 		.type = type,
 		.prio = priority,
 		.manual_prio = manual_prio,
+		.hw_offload = this->config->get_hw_offload(this->config),
 		.src = my_addr,
 		.dst = other_addr,
 		.sa = other_sa,
@@ -1419,13 +1429,13 @@ static bool install_outbound_immediately(private_child_sa_t *this)
 
 METHOD(child_sa_t, register_outbound, status_t,
 	private_child_sa_t *this, chunk_t encr, chunk_t integ, uint32_t spi,
-	uint16_t cpi, bool tfcv3)
+	uint16_t cpi, bool initiator, bool tfcv3)
 {
 	status_t status;
 
 	if (install_outbound_immediately(this))
 	{
-		status = install_internal(this, encr, integ, spi, cpi, FALSE, FALSE,
+		status = install_internal(this, encr, integ, spi, cpi, initiator, FALSE,
 								  tfcv3);
 	}
 	else
@@ -1439,6 +1449,7 @@ METHOD(child_sa_t, register_outbound, status_t,
 		this->other_cpi = cpi;
 		this->encr_r = chunk_clone(encr);
 		this->integ_r = chunk_clone(integ);
+		this->initiator = initiator;
 		this->tfcv3 = tfcv3;
 		status = SUCCESS;
 	}
@@ -1456,8 +1467,8 @@ METHOD(child_sa_t, install_outbound, status_t,
 	if (!(this->outbound_state & CHILD_OUTBOUND_SA))
 	{
 		status = install_internal(this, this->encr_r, this->integ_r,
-								  this->other_spi, this->other_cpi, FALSE,
-								  FALSE, this->tfcv3);
+								  this->other_spi, this->other_cpi,
+								  this->initiator, FALSE, this->tfcv3);
 		chunk_clear(&this->encr_r);
 		chunk_clear(&this->integ_r);
 	}

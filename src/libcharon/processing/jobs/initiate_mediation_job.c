@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2007-2008 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -137,7 +138,8 @@ METHOD(job_t, initiate, job_requeue_t,
 		mediation_cfg->get_ref(mediation_cfg);
 
 		if (charon->controller->initiate(charon->controller, mediation_cfg, NULL,
-				(controller_cb_t)initiate_callback, this, 0, FALSE) != SUCCESS)
+							(controller_cb_t)initiate_callback, this, LEVEL_CTRL,
+							0, FALSE) != SUCCESS)
 		{
 			mediation_cfg->destroy(mediation_cfg);
 			mediated_cfg->destroy(mediated_cfg);

@@ -2,7 +2,8 @@
  * Copyright (C) 2012 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -45,6 +46,13 @@ static void expire(uint8_t protocol, uint32_t spi, host_t *dst, bool hard)
 	charon->kernel->expire(charon->kernel, protocol, spi, dst, hard);
 }
 
+METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
+	private_kernel_android_ipsec_t *this)
+{
+	return KERNEL_REQUIRE_UDP_ENCAPSULATION | KERNEL_ESP_V3_TFC |
+		   KERNEL_SA_USE_TIME;
+}
+
 METHOD(kernel_ipsec_t, get_spi, status_t,
 	private_kernel_android_ipsec_t *this, host_t *src, host_t *dst,
 	uint8_t protocol, uint32_t *spi)
@@ -63,6 +71,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	private_kernel_android_ipsec_t *this, kernel_ipsec_sa_id_t *id,
 	kernel_ipsec_add_sa_t *data)
 {
+	if (!data->encap)
+	{
+		DBG1(DBG_ESP, "failed to add SAD entry: only UDP encapsulation is "
+			 "supported");
+		return FAILED;
+	}
 	return ipsec->sas->add_sa(ipsec->sas, id->src, id->dst, id->spi, id->proto,
 					data->reqid, id->mark, data->tfc, data->lifetime,
 					data->enc_alg, data->enc_key, data->int_alg, data->int_key,
@@ -74,6 +88,12 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	private_kernel_android_ipsec_t *this, kernel_ipsec_sa_id_t *id,
 	kernel_ipsec_update_sa_t *data)
 {
+	if (!data->new_encap)
+	{
+		DBG1(DBG_ESP, "failed to update SAD entry: can't deactivate UDP "
+			 "encapsulation");
+		return NOT_SUPPORTED;
+	}
 	return ipsec->sas->update_sa(ipsec->sas, id->spi, id->proto, data->cpi,
 					id->src, id->dst, data->new_src, data->new_dst, data->encap,
 					data->new_encap, id->mark);
@@ -165,6 +185,7 @@ kernel_android_ipsec_t *kernel_android_ipsec_create()
 	INIT(this,
 		.public = {
 			.interface = {
+				.get_features = _get_features,
 				.get_spi = _get_spi,
 				.get_cpi = _get_cpi,
 				.add_sa  = _add_sa,

@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -55,15 +56,17 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, reload, bool,
 	private_kernel_netlink_plugin_t *this)
 {
+	retransmission_t settings;
 	u_int timeout;
 	FILE *f;
 
 	f = fopen("/proc/sys/net/core/xfrm_acq_expires", "w");
 	if (f)
 	{
+		retransmission_parse_default(&settings);
 		timeout = lib->settings->get_int(lib->settings,
 							"%s.plugins.kernel-netlink.xfrm_acq_expires",
-							task_manager_total_retransmit_timeout(), lib->ns);
+							retransmission_timeout_total(&settings), lib->ns);
 		fprintf(f, "%u", timeout);
 		fclose(f);
 	}

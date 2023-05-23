@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2012 Martin Willi
- * Copyright (C) 2012 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,9 +18,6 @@
 
 #include <radius_message.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
 

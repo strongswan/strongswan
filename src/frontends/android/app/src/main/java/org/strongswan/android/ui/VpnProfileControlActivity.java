@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2012-2020 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -452,20 +453,20 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		{
 			final Bundle profileInfo = getArguments();
 			int icon = android.R.drawable.ic_dialog_alert;
-			int title = R.string.connect_profile_question;
+			String title = String.format(getString(R.string.connect_profile_question), profileInfo.getString(PROFILE_NAME));
 			int message = R.string.replaces_active_connection;
 			int button = R.string.connect;
 
 			if (profileInfo.getBoolean(PROFILE_RECONNECT))
 			{
 				icon = android.R.drawable.ic_dialog_info;
-				title = R.string.vpn_connected;
+				title = getString(R.string.vpn_connected);
 				message = R.string.vpn_profile_connected;
 				button = R.string.reconnect;
 			}
 			else if (profileInfo.getBoolean(PROFILE_DISCONNECT))
 			{
-				title = R.string.disconnect_question;
+				title = getString(R.string.disconnect_question);
 				message = R.string.disconnect_active_connection;
 				button = R.string.disconnect;
 			}
@@ -503,7 +504,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 
 			AlertDialog.Builder builder = new AlertDialog.Builder(getActivity())
 				.setIcon(icon)
-				.setTitle(String.format(getString(title), profileInfo.getString(PROFILE_NAME)))
+				.setTitle(title)
 				.setMessage(message);
 
 			if (profileInfo.getBoolean(PROFILE_DISCONNECT))

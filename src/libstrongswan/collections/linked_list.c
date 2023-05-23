@@ -2,7 +2,8 @@
  * Copyright (C) 2007-2018 Tobias Brunner
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -61,7 +62,7 @@ bool linked_list_match_str(void *item, va_list args)
 /**
  * Creates an empty linked list object.
  */
-element_t *element_create(void *value)
+static element_t *element_create(void *value)
 {
 	element_t *this;
 	INIT(this,

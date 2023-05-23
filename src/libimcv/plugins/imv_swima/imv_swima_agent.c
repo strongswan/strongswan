@@ -1,8 +1,7 @@
 /*
- * Copyright (C) 2017 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2017-2022 Andreas Steffen
  *
- * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -135,7 +134,7 @@ static TNC_Result receive_msg(private_imv_swima_agent_t *this,
 	enumerator = in_msg->create_attribute_enumerator(in_msg);
 	while (enumerator->enumerate(enumerator, &attr))
 	{
-		uint32_t request_id = 0, last_eid, eid_epoch;
+		uint32_t request_id = 0, last_eid DBG_UNUSED, eid_epoch;
 		swima_inventory_t *inventory;
 		swima_events_t *events;
 		pen_type_t type;

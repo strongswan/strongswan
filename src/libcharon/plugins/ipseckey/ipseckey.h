@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2012 Reto Guadagnini
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -51,6 +52,10 @@ enum ipseckey_algorithm_t {
 	IPSECKEY_ALGORITHM_DSA = 1,
 	/** RSA key */
 	IPSECKEY_ALGORITHM_RSA = 2,
+	/** ECDSA key (RFC 8005) */
+	IPSECKEY_ALGORITHM_ECDSA = 3,
+	/** EdDSA key (RFC 9373) */
+	IPSECKEY_ALGORITHM_EDDSA = 4,
 };
 
 /**

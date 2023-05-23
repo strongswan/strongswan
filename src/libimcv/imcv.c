@@ -1,8 +1,7 @@
 /*
- * Copyright (C) 2011-2015 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2011-2022 Andreas Steffen
  *
- * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -201,7 +200,7 @@ bool libimcv_init(bool is_imv)
 		libtpmtss_init();
 
 		/* initialize the PA-TNC attribute manager */
-	 	imcv_pa_tnc_attributes = pa_tnc_attr_manager_create();
+		imcv_pa_tnc_attributes = pa_tnc_attr_manager_create();
 		imcv_pa_tnc_attributes->add_vendor(imcv_pa_tnc_attributes, PEN_IETF,
 							ietf_attr_create_from_data, ietf_attr_names);
 		imcv_pa_tnc_attributes->add_vendor(imcv_pa_tnc_attributes, PEN_ITA,

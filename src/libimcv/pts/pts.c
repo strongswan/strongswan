@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2011-2012 Sansar Choinyambuu
  * Copyright (C) 2012-2020 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -69,7 +70,7 @@ struct private_pts_t {
 	/**
 	 * PTS Diffie-Hellman Secret
 	 */
-	diffie_hellman_t *dh;
+	key_exchange_t *dh;
 
 	/**
 	 * PTS Diffie-Hellman Initiator Nonce
@@ -199,15 +200,15 @@ METHOD(pts_t, set_dh_hash_algorithm, void,
 METHOD(pts_t, create_dh_nonce, bool,
 	private_pts_t *this, pts_dh_group_t group, int nonce_len)
 {
-	diffie_hellman_group_t dh_group;
+	key_exchange_method_t dh_group;
 	chunk_t *nonce;
 	rng_t *rng;
 
 	dh_group = pts_dh_group_to_ike(group);
 	DBG2(DBG_PTS, "selected PTS DH group is %N",
-				   diffie_hellman_group_names, dh_group);
+				   key_exchange_method_names, dh_group);
 	DESTROY_IF(this->dh);
-	this->dh = lib->crypto->create_dh(lib->crypto, dh_group);
+	this->dh = lib->crypto->create_ke(lib->crypto, dh_group);
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (!rng)
@@ -231,7 +232,7 @@ METHOD(pts_t, create_dh_nonce, bool,
 METHOD(pts_t, get_my_public_value, bool,
 	private_pts_t *this, chunk_t *value, chunk_t *nonce)
 {
-	if (!this->dh->get_my_public_value(this->dh, value))
+	if (!this->dh->get_public_key(this->dh, value))
 	{
 		return FALSE;
 	}
@@ -242,7 +243,7 @@ METHOD(pts_t, get_my_public_value, bool,
 METHOD(pts_t, set_peer_public_value, bool,
 	private_pts_t *this, chunk_t value, chunk_t nonce)
 {
-	if (!this->dh->set_other_public_value(this->dh, value))
+	if (!this->dh->set_public_key(this->dh, value))
 	{
 		return FALSE;
 	}
@@ -797,7 +798,6 @@ METHOD(pts_t, quote, bool,
 	private_pts_t *this, tpm_quote_mode_t *quote_mode,
 	tpm_tss_quote_info_t **quote_info, chunk_t *quote_sig)
 {
-	chunk_t pcr_value, pcr_computed;
 	hash_algorithm_t hash_alg;
 	uint32_t pcr, pcr_sel = 0;
 	enumerator_t *enumerator;
@@ -809,14 +809,16 @@ METHOD(pts_t, quote, bool,
 	enumerator = this->pcrs->create_enumerator(this->pcrs);
 	while (enumerator->enumerate(enumerator, &pcr))
 	{
+#if DEBUG_LEVEL >= 2
+		chunk_t pcr_value;
 		if (this->tpm->read_pcr(this->tpm, pcr, &pcr_value, hash_alg))
 		{
-			pcr_computed = this->pcrs->get(this->pcrs, pcr);
+			chunk_t pcr_computed = this->pcrs->get(this->pcrs, pcr);
 			DBG2(DBG_PTS, "PCR %2d %#B  %s", pcr, &pcr_value,
 				 chunk_equals(pcr_value, pcr_computed) ? "ok" : "differs");
 			chunk_free(&pcr_value);
-		};
-
+		}
+#endif
 		/* add PCR to selection list */
 		pcr_sel |= (1 << pcr);
 	}

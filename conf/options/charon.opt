@@ -38,8 +38,8 @@ charon.cert_cache = yes
 charon.cache_crls = no
 	Whether Certificate Revocation Lists (CRLs) fetched via HTTP or LDAP should
 	be saved under a unique file name derived from the public key of the
-	Certification Authority (CA) to **/etc/ipsec.d/crls** (stroke) or
-	**/etc/swanctl/x509crl** (vici), respectively.
+	Certification Authority (CA) to **${sysconfdir}/ipsec.d/crls** (stroke) or
+	**${sysconfdir}/swanctl/x509crl** (vici), respectively.
 
 charon.check_current_path = no
 	Whether to use DPD to check if the current path still works after any
@@ -255,11 +255,12 @@ charon.leak_detective.detailed = yes
 	Includes source file names and line numbers in leak detective output.
 
 charon.leak_detective.usage_threshold = 10240
-	Threshold in bytes for leaks to be reported (0 to report all).
+	Threshold in bytes for allocations to be included in usage reports (0 to
+	include all).
 
 charon.leak_detective.usage_threshold_count = 0
-	Threshold in number of allocations for leaks to be reported (0 to report
-	all).
+	Threshold in number of allocations for allocations to be included in usage
+	reports (0 to include all).
 
 charon.load
 	Plugins to load in the IKE daemon charon.
@@ -374,6 +375,9 @@ charon.receive_delay_type = 0
 charon.replay_window = 32
 	Size of the AH/ESP replay window, in packets.
 
+charon.reqid_base = 1
+	Value of the first reqid to be automatically assigned to a CHILD_SA.
+
 charon.retransmit_base = 1.8
 	Base to use for calculating exponential back off, see IKEv2 RETRANSMISSION
 	in **strongswan.conf**(5).
@@ -391,7 +395,7 @@ charon.retransmit_jitter = 0
 charon.retransmit_limit = 0
 	Upper limit in seconds for calculated retransmission timeout (0 to disable).
 
-charon.retry_initiate_interval = 0
+charon.retry_initiate_interval = 0s
 	Interval in seconds to use when retrying to initiate an IKE_SA (e.g. if DNS
 	resolution failed), 0 to disable retries.
 
@@ -406,6 +410,10 @@ charon.routing_table_prio
 
 charon.rsa_pss = no
 	Whether to use RSA with PSS padding instead of PKCS#1 padding by default.
+
+charon.rsa_pss_trailerfield = no
+	Whether to encode an explicit trailerField value of 0x01 in the RSA-PSS
+	algorithmIdentifier (CONTEXT3) or using the DEFAULT value by omitting it.
 
 charon.send_delay = 0
 	Delay in ms for sending packets, to simulate larger RTT.

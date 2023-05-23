@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -348,8 +349,8 @@ static job_requeue_t initiate_config(peer_cfg_t *peer_cfg)
 		child_cfg->get_ref(child_cfg);
 		peer_cfg->get_ref(peer_cfg);
 		enumerator->destroy(enumerator);
-		charon->controller->initiate(charon->controller,
-									 peer_cfg, child_cfg, NULL, NULL, 0, FALSE);
+		charon->controller->initiate(charon->controller, peer_cfg, child_cfg,
+									 NULL, NULL, 0, 0, FALSE);
 	}
 	else
 	{

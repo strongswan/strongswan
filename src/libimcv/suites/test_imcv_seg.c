@@ -1,8 +1,7 @@
 /*
- * Copyright (C) 2014 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2014-2022 Andreas Steffen
  *
- * Copyright (C) 2022 Andreas Steffen, strongSec GmbH
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -131,7 +130,7 @@ START_TEST(test_imcv_seg_env)
 			ck_assert(base_msg_id == id);
 
 			/* create and update seg_env object on the receiving side */
-		 	if (n == 0)
+			if (n == 0)
 			{
 				ck_assert(flags == (SEG_ENV_FLAG_MORE | SEG_ENV_FLAG_START));
 				seg_env1 = seg_env_create_from_data(base_msg_id, segment,

@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2015 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -120,7 +121,7 @@ METHOD(pa_tnc_attr_t, build, void,
 METHOD(pa_tnc_attr_t, process, status_t,
 	private_generic_attr_bool_t *this, uint32_t *offset)
 {
-	enum_name_t *pa_attr_names;
+	enum_name_t *pa_attr_names DBG_UNUSED;
 	bio_reader_t *reader;
 	uint32_t status;
 

@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2013 Martin Willi
- * Copyright (C) 2013 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -636,6 +637,12 @@ static void cleanup_tls()
 	private_thread_t *this;
 	bool old;
 
+	/* ignore this if called for the thread that called threads_deinit() */
+	if (!threads_lock)
+	{
+		return;
+	}
+
 	old = set_leak_detective(FALSE);
 	threads_lock->lock(threads_lock);
 
@@ -697,5 +704,6 @@ void threads_deinit()
 	destroy(this);
 
 	threads_lock->destroy(threads_lock);
+	threads_lock = NULL;
 	threads->destroy(threads);
 }

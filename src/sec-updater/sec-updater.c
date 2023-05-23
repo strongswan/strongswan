@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2012-2017 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -172,7 +173,7 @@ static bool update_database(database_t *db, char *package, char *version,
 	while (e->enumerate(e, &vid, &release, &sec_flag))
 	{
 		char command[BUF_LEN];
-		char found_char = ' ';
+		char found_char DBG_UNUSED = ' ';
 		bool update_version = FALSE;
 
 		if (streq(version, release))

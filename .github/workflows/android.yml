@@ -29,15 +29,15 @@ jobs:
       # since the NDK is newly installed every time, we have to use this to avoid cache misses
       CCACHE_COMPILERCHECK: content
     steps:
-      # even though we don't specify a specific version in our gradle files, the
-      # build fails without this because some arbitrary NDK version, that's
-      # weirdly not installed, is requested
+      # we currently don't specify a specific NDK version in our gradle files,
+      # so we load the version the Gradle Plugin uses as default but which is
+      # not installed anymore in the image
       - name: Install NDK
-        run: yes | sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install 'ndk;21.0.6113669'
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+        run: yes | sudo ${ANDROID_HOME}/tools/bin/sdkmanager --install 'ndk;23.1.7779620'
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
-          path: ~/.ccache
+          path: ~/.cache/ccache
           key: ccache-android-${{ github.sha }}
           restore-keys: |
             ccache-android-
@@ -47,7 +47,7 @@ jobs:
           ccache -z
       - uses: ./.github/actions/default
       - run: ccache -s
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: Lint Results
-          path: src/frontends/android/app/build/reports/lint-results.xml
+          path: src/frontends/android/app/build/reports/lint-results*.xml

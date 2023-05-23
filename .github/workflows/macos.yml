@@ -24,16 +24,19 @@ jobs:
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
     runs-on: macos-latest
+    timeout-minutes: 20
     env:
       TEST: macos
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: ~/Library/Caches/ccache
           key: ccache-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             ccache-${{ runner.os }}-
+      # workaround for conflict between Python installed in the image and via brew
+      - run: find /usr/local/bin -lname '*/Library/Frameworks/Python.framework/*' -delete -print
       - run: |
           brew install ccache
           echo "PATH=$(brew --prefix)/opt/ccache/libexec:$PATH" >> $GITHUB_ENV
@@ -41,7 +44,7 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Logs ${{ github.job }}
           path: config.log

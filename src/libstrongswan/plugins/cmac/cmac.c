@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2012 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -309,10 +310,10 @@ METHOD(mac_t, destroy, void,
 	free(this);
 }
 
-/*
- * Described in header
+/**
+ * Create a generic mac_t object
  */
-mac_t *cmac_create(encryption_algorithm_t algo, size_t key_size)
+static mac_t *cmac_create(encryption_algorithm_t algo, size_t key_size)
 {
 	private_mac_t *this;
 	crypter_t *crypter;

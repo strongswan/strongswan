@@ -2,7 +2,8 @@
  * Copyright (C) 2008-2019 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -19,7 +20,7 @@
 
 #include <daemon.h>
 #include <sa/ikev2/keymat_v2.h>
-#include <crypto/diffie_hellman.h>
+#include <crypto/key_exchange.h>
 #include <credentials/certificates/x509.h>
 #include <encoding/payloads/sa_payload.h>
 #include <encoding/payloads/ke_payload.h>
@@ -116,7 +117,7 @@ struct private_child_create_t {
 	/**
 	 * optional diffie hellman exchange
 	 */
-	diffie_hellman_t *dh;
+	key_exchange_t *dh;
 
 	/**
 	 * Applying DH public value failed?
@@ -126,7 +127,7 @@ struct private_child_create_t {
 	/**
 	 * group used for DH exchange
 	 */
-	diffie_hellman_group_t dh_group;
+	key_exchange_method_t dh_group;
 
 	/**
 	 * IKE_SAs keymat
@@ -324,10 +325,11 @@ static bool update_and_check_proposals(private_child_create_t *this)
 		proposal->set_spi(proposal, this->my_spi);
 
 		/* move the selected DH group to the front, if any */
-		if (this->dh_group != MODP_NONE)
+		if (this->dh_group != KE_NONE)
 		{	/* proposals that don't contain the selected group are
 			 * moved to the back */
-			if (!proposal->promote_dh_group(proposal, this->dh_group))
+			if (!proposal->promote_transform(proposal, KEY_EXCHANGE_METHOD,
+											 this->dh_group))
 			{
 				this->proposals->remove_at(this->proposals, enumerator);
 				other_dh_groups->insert_last(other_dh_groups, proposal);
@@ -347,7 +349,7 @@ static bool update_and_check_proposals(private_child_create_t *this)
 	enumerator->destroy(enumerator);
 	other_dh_groups->destroy(other_dh_groups);
 
-	return this->dh_group == MODP_NONE || found;
+	return this->dh_group == KE_NONE || found;
 }
 
 /**
@@ -493,7 +495,6 @@ static status_t select_and_install(private_child_create_t *this,
 								   bool no_dh, bool ike_auth)
 {
 	status_t status, status_i, status_o;
-	child_sa_outbound_state_t out_state;
 	chunk_t nonce_i, nonce_r;
 	chunk_t encr_i = chunk_empty, encr_r = chunk_empty;
 	chunk_t integ_i = chunk_empty, integ_r = chunk_empty;
@@ -517,7 +518,7 @@ static status_t select_and_install(private_child_create_t *this,
 
 	if (no_dh)
 	{
-		flags |= PROPOSAL_SKIP_DH;
+		flags |= PROPOSAL_SKIP_KE;
 	}
 	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN) &&
 		!lib->settings->get_bool(lib->settings, "%s.accept_private_algs",
@@ -553,16 +554,17 @@ static status_t select_and_install(private_child_create_t *this,
 	}
 	this->child_sa->set_proposal(this->child_sa, this->proposal);
 
-	if (!this->proposal->has_dh_group(this->proposal, this->dh_group))
+	if (!this->proposal->has_transform(this->proposal, KEY_EXCHANGE_METHOD,
+									   this->dh_group))
 	{
 		uint16_t group;
 
-		if (this->proposal->get_algorithm(this->proposal, DIFFIE_HELLMAN_GROUP,
+		if (this->proposal->get_algorithm(this->proposal, KEY_EXCHANGE_METHOD,
 										  &group, NULL))
 		{
 			DBG1(DBG_IKE, "DH group %N unacceptable, requesting %N",
-				 diffie_hellman_group_names, this->dh_group,
-				 diffie_hellman_group_names, group);
+				 key_exchange_method_names, this->dh_group,
+				 key_exchange_method_names, group);
 			this->dh_group = group;
 			return INVALID_ARG;
 		}
@@ -570,7 +572,7 @@ static status_t select_and_install(private_child_create_t *this,
 		DBG1(DBG_IKE, "ignoring KE exchange, agreed on a non-PFS proposal");
 		DESTROY_IF(this->dh);
 		this->dh = NULL;
-		this->dh_group = MODP_NONE;
+		this->dh_group = KE_NONE;
 	}
 
 	if (this->initiator)
@@ -712,13 +714,13 @@ static status_t select_and_install(private_child_create_t *this,
 			{
 				status_o = this->child_sa->register_outbound(this->child_sa,
 							encr_i, integ_i, this->other_spi, this->other_cpi,
-							this->tfcv3);
+							this->initiator, this->tfcv3);
 			}
 			else
 			{
 				status_o = this->child_sa->register_outbound(this->child_sa,
 							encr_r, integ_r, this->other_spi, this->other_cpi,
-							this->tfcv3);
+							this->initiator, this->tfcv3);
 			}
 		}
 		else if (this->initiator)
@@ -776,11 +778,14 @@ static status_t select_and_install(private_child_create_t *this,
 	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
 							this->dh, nonce_i, nonce_r);
 
+#if DEBUG_LEVEL >= 0
+	child_sa_outbound_state_t out_state;
+
+	out_state = this->child_sa->get_outbound_state(this->child_sa);
 	my_ts = linked_list_create_from_enumerator(
 				this->child_sa->create_ts_enumerator(this->child_sa, TRUE));
 	other_ts = linked_list_create_from_enumerator(
 				this->child_sa->create_ts_enumerator(this->child_sa, FALSE));
-	out_state = this->child_sa->get_outbound_state(this->child_sa);
 
 	DBG0(DBG_IKE, "%sCHILD_SA %s{%d} established "
 		 "with SPIs %.8x_i %.8x_o and TS %#R === %#R",
@@ -793,6 +798,7 @@ static status_t select_and_install(private_child_create_t *this,
 
 	my_ts->destroy(my_ts);
 	other_ts->destroy(other_ts);
+#endif
 
 	this->child_sa->set_state(this->child_sa, CHILD_INSTALLED);
 	this->ike_sa->add_child_sa(this->ike_sa, this->child_sa);
@@ -835,8 +841,8 @@ static bool build_payloads(private_child_create_t *this, message_t *message)
 	/* diffie hellman exchange, if PFS enabled */
 	if (this->dh)
 	{
-		ke_payload = ke_payload_create_from_diffie_hellman(PLV2_KEY_EXCHANGE,
-														   this->dh);
+		ke_payload = ke_payload_create_from_key_exchange(PLV2_KEY_EXCHANGE,
+														 this->dh);
 		if (!ke_payload)
 		{
 			DBG1(DBG_IKE, "creating KE payload failed");
@@ -978,18 +984,19 @@ static void process_payloads(private_child_create_t *this, message_t *message)
 				ke_payload = (ke_payload_t*)payload;
 				if (!this->initiator)
 				{
-					this->dh_group = ke_payload->get_dh_group_number(ke_payload);
-					this->dh = this->keymat->keymat.create_dh(
+					this->dh_group = ke_payload->get_key_exchange_method(
+																	ke_payload);
+					this->dh = this->keymat->keymat.create_ke(
 										&this->keymat->keymat, this->dh_group);
 				}
 				else if (this->dh)
 				{
-					this->dh_failed = this->dh->get_dh_group(this->dh) !=
-									ke_payload->get_dh_group_number(ke_payload);
+					this->dh_failed = this->dh->get_method(this->dh) !=
+								ke_payload->get_key_exchange_method(ke_payload);
 				}
 				if (this->dh && !this->dh_failed)
 				{
-					this->dh_failed = !this->dh->set_other_public_value(this->dh,
+					this->dh_failed = !this->dh->set_public_key(this->dh,
 								ke_payload->get_key_exchange_data(ke_payload));
 				}
 				break;
@@ -1040,7 +1047,8 @@ static status_t defer_child_sa(private_child_create_t *this)
 		/* with SELinux, we prefer not to create a CHILD_SA when we only have
 		 * the generic label available.  if the peer does not support it,
 		 * creating the SA will most likely fail */
-		if (policy == CHILDLESS_FORCE ||
+		if (policy == CHILDLESS_PREFER ||
+			policy == CHILDLESS_FORCE ||
 			generic_label_only(this))
 		{
 			return NEED_MORE;
@@ -1124,13 +1132,13 @@ static bool check_for_generic_label(private_child_create_t *this)
 {
 	if (generic_label_only(this))
 	{
-		sec_label_t *label;
-
-		label = this->config->get_label(this->config);
+#if DEBUG_LEVEL >= 1
+		sec_label_t *label = this->config->get_label(this->config);
 		DBG1(DBG_IKE, "not establishing CHILD_SA %s{%d} with generic "
 			 "label '%s'", this->child_sa->get_name(this->child_sa),
 			 this->child_sa->get_unique_id(this->child_sa),
 			 label->get_string(label));
+#endif
 		return TRUE;
 	}
 	return FALSE;
@@ -1154,17 +1162,13 @@ METHOD(task_t, build_i, status_t,
 				message->set_exchange_type(message, EXCHANGE_TYPE_UNDEFINED);
 				return SUCCESS;
 			}
-			if (!this->retry && this->dh_group == MODP_NONE)
+			if (!this->retry && this->dh_group == KE_NONE)
 			{	/* during a rekeying the group might already be set */
-				this->dh_group = this->config->get_dh_group(this->config);
+				this->dh_group = this->config->get_algorithm(this->config,
+														KEY_EXCHANGE_METHOD);
 			}
 			break;
 		case IKE_AUTH:
-			if (message->get_message_id(message) != 1)
-			{
-				/* send only in the first request, not in subsequent rounds */
-				return NEED_MORE;
-			}
 			switch (defer_child_sa(this))
 			{
 				case DESTROY_ME:
@@ -1178,9 +1182,11 @@ METHOD(task_t, build_i, status_t,
 					/* just continue to establish the CHILD_SA */
 					break;
 			}
+			/* send only in the first request, not in subsequent rounds */
+			this->public.task.build = (void*)return_need_more;
 			break;
 		default:
-			break;
+			return NEED_MORE;
 	}
 
 	/* check if we want a virtual IP, but don't have one */
@@ -1243,7 +1249,7 @@ METHOD(task_t, build_i, status_t,
 	}
 
 	this->proposals = this->config->get_proposals(this->config,
-												  this->dh_group == MODP_NONE);
+												  this->dh_group == KE_NONE);
 	this->mode = this->config->get_mode(this->config);
 
 	this->child.if_id_in_def = this->ike_sa->get_if_id(this->ike_sa, TRUE);
@@ -1286,13 +1292,13 @@ METHOD(task_t, build_i, status_t,
 	{
 		DBG1(DBG_IKE, "requested DH group %N not contained in any of our "
 			 "proposals",
-			 diffie_hellman_group_names, this->dh_group);
+			 key_exchange_method_names, this->dh_group);
 		return FAILED;
 	}
 
-	if (this->dh_group != MODP_NONE)
+	if (this->dh_group != KE_NONE)
 	{
-		this->dh = this->keymat->keymat.create_dh(&this->keymat->keymat,
+		this->dh = this->keymat->keymat.create_ke(&this->keymat->keymat,
 												  this->dh_group);
 	}
 
@@ -1339,13 +1345,11 @@ METHOD(task_t, process_r, status_t,
 			get_nonce(message, &this->other_nonce);
 			break;
 		case IKE_AUTH:
-			if (message->get_message_id(message) != 1)
-			{
-				/* only handle first AUTH payload, not additional rounds */
-				return NEED_MORE;
-			}
-		default:
+			/* only handle first AUTH payload, not additional rounds */
+			this->public.task.process = (void*)return_need_more;
 			break;
+		default:
+			return NEED_MORE;
 	}
 
 	process_payloads(this, message);
@@ -1552,7 +1556,7 @@ METHOD(task_t, build_r, status_t,
 			no_dh = FALSE;
 			break;
 		case IKE_AUTH:
-			if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+			if (!this->ike_sa->has_condition(this->ike_sa, COND_AUTHENTICATED))
 			{	/* wait until all authentication round completed */
 				return NEED_MORE;
 			}
@@ -1574,8 +1578,9 @@ METHOD(task_t, build_r, status_t,
 					break;
 			}
 			ike_auth = TRUE;
-		default:
 			break;
+		default:
+			return NEED_MORE;
 	}
 
 	if (this->ike_sa->get_state(this->ike_sa) == IKE_REKEYING)
@@ -1761,7 +1766,7 @@ METHOD(task_t, process_i, status_t,
 			no_dh = FALSE;
 			break;
 		case IKE_AUTH:
-			if (this->ike_sa->get_state(this->ike_sa) != IKE_ESTABLISHED)
+			if (!this->ike_sa->has_condition(this->ike_sa, COND_AUTHENTICATED))
 			{	/* wait until all authentication round completed */
 				return NEED_MORE;
 			}
@@ -1771,8 +1776,9 @@ METHOD(task_t, process_i, status_t,
 				return NEED_MORE;
 			}
 			ike_auth = TRUE;
-		default:
 			break;
+		default:
+			return NEED_MORE;
 	}
 
 	/* check for erroneous notifies */
@@ -1817,7 +1823,7 @@ METHOD(task_t, process_i, status_t,
 				case INVALID_KE_PAYLOAD:
 				{
 					chunk_t data;
-					uint16_t group = MODP_NONE;
+					uint16_t group = KE_NONE;
 
 					data = notify->get_notification_data(notify);
 					if (data.len == sizeof(group))
@@ -1828,15 +1834,15 @@ METHOD(task_t, process_i, status_t,
 					if (this->retry)
 					{
 						DBG1(DBG_IKE, "already retried with DH group %N, "
-							 "ignore requested %N", diffie_hellman_group_names,
-							 this->dh_group, diffie_hellman_group_names, group);
+							 "ignore requested %N", key_exchange_method_names,
+							 this->dh_group, key_exchange_method_names, group);
 						handle_child_sa_failure(this, message);
 						/* an error in CHILD_SA creation is not critical */
 						return SUCCESS;
 					}
 					DBG1(DBG_IKE, "peer didn't accept DH group %N, "
-						 "it requested %N", diffie_hellman_group_names,
-						 this->dh_group, diffie_hellman_group_names, group);
+						 "it requested %N", key_exchange_method_names,
+						 this->dh_group, key_exchange_method_names, group);
 					this->retry = TRUE;
 					this->dh_group = group;
 					this->child_sa->set_state(this->child_sa, CHILD_RETRYING);
@@ -1944,7 +1950,7 @@ METHOD(child_create_t, use_label, void,
 }
 
 METHOD(child_create_t, use_dh_group, void,
-	private_child_create_t *this, diffie_hellman_group_t dh_group)
+	private_child_create_t *this, key_exchange_method_t dh_group)
 {
 	this->dh_group = dh_group;
 }
@@ -2014,7 +2020,7 @@ METHOD(task_t, migrate, void,
 	}
 	if (!this->rekey && !this->retry)
 	{
-		this->dh_group = MODP_NONE;
+		this->dh_group = KE_NONE;
 	}
 	this->ike_sa = ike_sa;
 	this->keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
@@ -2030,6 +2036,7 @@ METHOD(task_t, migrate, void,
 	this->ipcomp_received = IPCOMP_NONE;
 	this->other_cpi = 0;
 	this->established = FALSE;
+	this->public.task.build = _build_i;
 }
 
 METHOD(task_t, destroy, void,
@@ -2100,7 +2107,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 		.config = config,
 		.packet_tsi = tsi ? tsi->clone(tsi) : NULL,
 		.packet_tsr = tsr ? tsr->clone(tsr) : NULL,
-		.dh_group = MODP_NONE,
+		.dh_group = KE_NONE,
 		.keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa),
 		.mode = MODE_TUNNEL,
 		.tfcv3 = TRUE,

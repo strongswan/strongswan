@@ -1,6 +1,8 @@
 /*
+ * Copyright (C) 2012-2023 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -81,6 +83,7 @@ struct controller_t {
 	 * @param child_cfg		optional child_cfg to set up CHILD_SA from
 	 * @param cb			logging callback
 	 * @param param			parameter to include in each call of cb
+	 * @param max_level		maximum log level for which cb is invoked
 	 * @param timeout		timeout in ms to wait for callbacks, 0 to disable
 	 * @param limits		whether to check limits regarding IKE_SA initiation
 	 * @return
@@ -92,8 +95,8 @@ struct controller_t {
 	 */
 	status_t (*initiate)(controller_t *this,
 						 peer_cfg_t *peer_cfg, child_cfg_t *child_cfg,
-						 controller_cb_t callback, void *param, u_int timeout,
-						 bool limits);
+						 controller_cb_t callback, void *param,
+						 level_t max_level, u_int timeout, bool limits);
 
 	/**
 	 * Terminate an IKE_SA and all of its CHILD_SAs.
@@ -109,6 +112,7 @@ struct controller_t {
 	 *						retransmits are sent until then
 	 * @param cb			logging callback
 	 * @param param			parameter to include in each call of cb
+	 * @param max_level		maximum log level for which cb is invoked
 	 * @param timeout		timeout in ms to wait for callbacks, 0 to disable
 	 * @return
 	 *						- SUCCESS, if CHILD_SA terminated
@@ -118,7 +122,7 @@ struct controller_t {
 	 */
 	status_t (*terminate_ike)(controller_t *this, uint32_t unique_id,
 							  bool force, controller_cb_t callback, void *param,
-							  u_int timeout);
+							  level_t max_level, u_int timeout);
 
 	/**
 	 * Terminate a CHILD_SA.
@@ -129,6 +133,7 @@ struct controller_t {
 	 * @param unique_id		CHILD_SA unique ID to terminate
 	 * @param cb			logging callback
 	 * @param param			parameter to include in each call of cb
+	 * @param max_level		maximum log level for which cb is invoked
 	 * @param timeout		timeout in ms to wait for callbacks, 0 to disable
 	 * @return
 	 *						- SUCCESS, if CHILD_SA terminated
@@ -138,7 +143,7 @@ struct controller_t {
 	 */
 	status_t (*terminate_child)(controller_t *this, uint32_t unique_id,
 								controller_cb_t callback, void *param,
-								u_int timeout);
+								level_t max_level, u_int timeout);
 
 	/**
 	 * Destroy a controller_t instance.

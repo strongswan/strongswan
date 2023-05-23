@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -229,7 +230,6 @@ static status_t process_application(private_tls_fragmentation_t *this,
 	while (reader->remaining(reader))
 	{
 		status_t status;
-		chunk_t data;
 
 		if (reader->remaining(reader) > TLS_MAX_FRAGMENT_LEN)
 		{
@@ -237,8 +237,10 @@ static status_t process_application(private_tls_fragmentation_t *this,
 			this->alert->add(this->alert, TLS_FATAL, TLS_DECODE_ERROR);
 			return NEED_MORE;
 		}
-		data = reader->peek(reader);
+#if DEBUG_LEVEL >= 3
+		chunk_t data = reader->peek(reader);
 		DBG3(DBG_TLS, "%B", &data);
+#endif
 		status = this->application->process(this->application, reader);
 		switch (status)
 		{

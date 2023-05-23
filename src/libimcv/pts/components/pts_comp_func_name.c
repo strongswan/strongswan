@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2011-2014 Andreas Steffen
  *
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -106,7 +107,7 @@ METHOD(pts_comp_func_name_t, log_, void,
 {
 	enum_name_t *names, *types;
 	char flags[8];
-	int type;
+	int type DBG_UNUSED;
 
 	names = imcv_pts_components->get_comp_func_names(imcv_pts_components,
 											this->vid);

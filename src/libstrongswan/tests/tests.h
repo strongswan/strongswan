@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2013 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2022 Andreas Steffen
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -41,6 +43,8 @@ TEST_SUITE_DEPEND(rsa_oaep_sha384_suite_create, PRIVKEY_DECRYPT, ENCRYPT_RSA_OAE
 TEST_SUITE_DEPEND(rsa_oaep_sha512_suite_create, PRIVKEY_DECRYPT, ENCRYPT_RSA_OAEP_SHA512)
 TEST_SUITE_DEPEND(certpolicy_suite_create, CERT_ENCODE, CERT_X509)
 TEST_SUITE_DEPEND(certnames_suite_create, CERT_ENCODE, CERT_X509)
+TEST_SUITE_DEPEND(serial_gen_suite_create, CERT_ENCODE, CERT_X509)
+TEST_SUITE(serial_parse_suite_create)
 TEST_SUITE(host_suite_create)
 TEST_SUITE(printf_suite_create)
 TEST_SUITE(auth_cfg_suite_create)
@@ -56,7 +60,7 @@ TEST_SUITE(rng_tester_suite_create)
 TEST_SUITE_DEPEND(mgf1_sha1_suite_create, XOF, XOF_MGF1_SHA1)
 TEST_SUITE_DEPEND(mgf1_sha256_suite_create, XOF, XOF_MGF1_SHA256)
 TEST_SUITE_DEPEND(prf_plus_suite_create, KDF, KDF_PRF_PLUS)
-TEST_SUITE_DEPEND(ntru_suite_create, DH, NTRU_112_BIT)
+TEST_SUITE_DEPEND(ntru_suite_create, KE, NTRU_112_BIT)
 TEST_SUITE_DEPEND(fetch_http_suite_create, FETCHER, "http://")
 TEST_SUITE_DEPEND(ed25519_suite_create, PRIVKEY_GEN, KEY_ED25519)
 TEST_SUITE_DEPEND(ed448_suite_create, PRIVKEY_GEN, KEY_ED448)

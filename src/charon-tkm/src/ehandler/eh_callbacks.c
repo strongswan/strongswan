@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,6 +24,6 @@
 void charon_terminate(char *msg)
 {
 	DBG1(DBG_DMN, "critical TKM error, terminating!");
-	DBG1(DBG_DMN, msg);
+	DBG1(DBG_DMN, "%s", msg);
 	kill(0, SIGTERM);
 }

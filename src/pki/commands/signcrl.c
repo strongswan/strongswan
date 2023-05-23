@@ -1,9 +1,8 @@
 /*
+ * Copyright (C) 2017-2022 Andreas Steffen
  * Copyright (C) 2010 Martin Willi
- * Copyright (C) 2010 revosec AG
  *
- * Copyright (C) 2017-2019 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -29,21 +28,12 @@
 
 
 /**
- * Entry for a revoked certificate
- */
-typedef struct {
-	chunk_t serial;
-	crl_reason_t reason;
-	time_t date;
-} revoked_t;
-
-/**
  * Add a revocation to the list
  */
 static void add_revoked(linked_list_t *list,
 						chunk_t serial, crl_reason_t reason, time_t date)
 {
-	revoked_t *revoked;
+	crl_revoked_t *revoked;
 
 	INIT(revoked,
 		.serial = chunk_clone(serial),
@@ -56,7 +46,7 @@ static void add_revoked(linked_list_t *list,
 /**
  * Destroy a reason entry
  */
-static void revoked_destroy(revoked_t *revoked)
+static void revoked_destroy(crl_revoked_t *revoked)
 {
 	free(revoked->serial.ptr);
 	free(revoked);
@@ -65,7 +55,7 @@ static void revoked_destroy(revoked_t *revoked)
 CALLBACK(filter, bool,
 	void *data, enumerator_t *orig, va_list args)
 {
-	revoked_t *revoked;
+	crl_revoked_t *revoked;
 	crl_reason_t *reason;
 	chunk_t *serial;
 	time_t *date;
@@ -156,11 +146,7 @@ static int sign_crl()
 				}
 				continue;
 			case 'R':
-				if (streq(arg, "pss"))
-				{
-					pss = TRUE;
-				}
-				else if (!streq(arg, "pkcs1"))
+				if (!parse_rsa_padding(arg, &pss))
 				{
 					error = "invalid RSA padding";
 					goto usage;

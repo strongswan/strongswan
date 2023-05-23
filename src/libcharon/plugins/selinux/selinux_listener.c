@@ -1,23 +1,17 @@
 /*
- * Copyright (C) 2022 Tobias Brunner, codelabs GmbH
+ * Copyright (C) 2022 Tobias Brunner
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Copyright (C) secunet Security Networks AG
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * for more details.
  */
 
 #include "selinux_listener.h"
@@ -98,13 +92,14 @@ static bool equals(const void *a_pub, const void *b)
 static bool install_generic_trap(ike_sa_t *ike_sa, child_sa_t *child_sa)
 {
 	linked_list_t *local, *remote;
-	sec_label_t *label;
 	bool success;
 
-	label = child_sa->get_label(child_sa);
+#if DEBUG_LEVEL >= 1
+	sec_label_t *label = child_sa->get_label(child_sa);
 	DBG1(DBG_IKE, "installing trap %s{%d} with generic security label '%s'",
 		 child_sa->get_name(child_sa), child_sa->get_unique_id(child_sa),
 		 label->get_string(label));
+#endif
 
 	local = ike_sa_get_dynamic_hosts(ike_sa, TRUE);
 	remote = ike_sa_get_dynamic_hosts(ike_sa, FALSE);
@@ -175,12 +170,13 @@ METHOD(listener_t, ike_updown, bool,
 		{
 			while (array_remove(entry->traps, ARRAY_TAIL, &child_sa))
 			{
+#if DEBUG_LEVEL >= 1
 				sec_label_t *label = child_sa->get_label(child_sa);
-
 				DBG1(DBG_IKE, "uninstalling trap %s{%d} with generic security "
 					 "label '%s'", child_sa->get_name(child_sa),
 					 child_sa->get_unique_id(child_sa),
 					 label->get_string(label));
+#endif
 				charon->traps->remove_external(charon->traps, child_sa);
 				child_sa->destroy(child_sa);
 			}

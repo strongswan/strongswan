@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2017-2019 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
- * Copyright (C) 2007-2015 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
- *
+ * Copyright (C) 2007-2022 Andreas Steffen
  * Copyright (C) 2003 Christoph Gysin, Simon Zwahlen
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -370,7 +370,7 @@ static bool parse_singleResponse(private_x509_ocsp_response_t *this,
 				response->issuerKeyHash = object;
 				break;
 			case SINGLE_RESPONSE_SERIAL_NUMBER:
-				response->serialNumber = object;
+				response->serialNumber = chunk_skip_zero(object);
 				break;
 			case SINGLE_RESPONSE_CERT_STATUS_GOOD:
 				response->status = VALIDATION_GOOD;
@@ -528,7 +528,6 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 	u_int responses_level = level0;
 	certificate_t *cert;
 	bool success = FALSE;
-	bool critical;
 
 	parser = asn1_parser_create(basicResponseObjects, blob);
 	parser->set_top_level(parser, level0);
@@ -573,8 +572,8 @@ static bool parse_basicOCSPResponse(private_x509_ocsp_response_t *this,
 				extn_oid = asn1_known_oid(object);
 				break;
 			case BASIC_RESPONSE_CRITICAL:
-				critical = object.len && *object.ptr;
-				DBG2(DBG_ASN, "  %s", critical ? "TRUE" : "FALSE");
+				DBG2(DBG_ASN, "  %s",
+					 object.len && *object.ptr ? "TRUE" : "FALSE");
 				break;
 			case BASIC_RESPONSE_EXT_VALUE:
 				if (extn_oid == OID_NONCE &&

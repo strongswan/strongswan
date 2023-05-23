@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2015 Tobias Brunner
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -37,7 +38,7 @@ struct redirect_provider_t {
 	 * IKE_SA_INIT message.
 	 *
 	 * @param ike_sa		IKE_SA for which this is called
-	 * @param gateway[out]	new IKE gateway (IP or FQDN)
+	 * @param[out] gateway	new IKE gateway (IP or FQDN)
 	 * @return				TRUE if client should be redirected, FALSE otherwise
 	 */
 	bool (*redirect_on_init)(redirect_provider_t *this, ike_sa_t *ike_sa,
@@ -49,7 +50,7 @@ struct redirect_provider_t {
 	 * server authenticates itself.
 	 *
 	 * @param ike_sa		IKE_SA for which this is called
-	 * @param gateway[out]	new IKE gateway (IP or FQDN)
+	 * @param[out] gateway	new IKE gateway (IP or FQDN)
 	 * @return				TRUE if client should be redirected, FALSE otherwise
 	 */
 	bool (*redirect_on_auth)(redirect_provider_t *this, ike_sa_t *ike_sa,

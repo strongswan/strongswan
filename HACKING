@@ -3,13 +3,13 @@
                 ------------------------
 
 Git repository
----------------------
+--------------
 
 For interested developers, we have a public repository. To check out and compile
 the code, you need the following tools:
 
     - Git
-    - a recent GNU C compiler (>= 3.x)
+    - gcc/clang
     - automake
     - autoconf
     - libtool
@@ -25,20 +25,16 @@ the code, you need the following tools:
     - lcov/genhtml
     - Doxygen
 
-To check out the master branch, use:
+Check out the repository:
 
-    git clone git://git.strongswan.org/strongswan.git
+    git clone https://github.com/strongswan/strongswan.git
 
-or using HTTP:
-
-    git clone https://git.strongswan.org/strongswan.git
-
-After a successful check out, give the autotools a try:
+After a successful check out, run autotools to generate configure etc.:
 
     cd strongswan/
     ./autogen.sh
 
-Then you're in, start the build as usual:
+Finally, start the build as usual:
 
     ./configure [options]
     make
@@ -48,15 +44,13 @@ Then you're in, start the build as usual:
 API documentation
 -----------------
 
-Charon and libstrongswan contain inline code documentation. These comments can
-be extracted using doxygen. It is built using 'make apidoc', which creates an
-'apidoc' folder containing the HTML files.
+All header files contain inline code documentation. These comments can be
+extracted using Doxygen via 'make apidoc', which creates an 'apidoc' folder
+containing the HTML files.
 
-strongSwan wiki
----------------
+strongSwan Documentation
+------------------------
 
-A wiki for users and developers, including ticket system and source browser
-is available at
+Documentation for users and developers is available at
 
-    https://wiki.strongswan.org
-
+    https://docs.strongswan.org

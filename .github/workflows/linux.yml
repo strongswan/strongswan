@@ -44,7 +44,10 @@ jobs:
           - test: apidoc
           - test: coverage
           - test: dist
-          - test: nm-no-glib
+          - test: nm
+          - test: no-dbg
+          - test: no-dbg
+            compiler: clang
           - test: fuzzing
             compiler: clang
             monolithic: yes
@@ -54,18 +57,18 @@ jobs:
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
-          path: ~/.ccache
+          path: ~/.cache/ccache
           # with regards to ccache, monolithic builds don't differ from regular
           # builds and, similarly, builds with leak-detective only differ in two
           # files (LD itself and library.c); but different tests build different
           # dependencies, so different caches are needed
-          key: ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
+          key: ccache-ubuntu-latest-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-
-            ccache-${{ runner.os }}-${{ env.CC }}-
+            ccache-ubuntu-latest-${{ env.CC }}-${{ matrix.test }}-
+            ccache-ubuntu-latest-${{ env.CC }}-
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
@@ -75,7 +78,7 @@ jobs:
       - if: ${{ success() && matrix.test == 'coverage' }}
         run: bash <(curl -s https://codecov.io/bash)
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Logs ${{ github.job }}
           path: config.log
@@ -84,26 +87,38 @@ jobs:
   crypto-plugins:
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ ubuntu-latest, ubuntu-20.04 ]
         test: [ botan, wolfssl, openssl, openssl-3, gcrypt ]
         leak-detective: [ no, yes ]
+        exclude:
+          # test custom-built libs only on one platform
+          - os: ubuntu-20.04
+            test: botan
+          - os: ubuntu-20.04
+            test: wolfssl
+          - os: ubuntu-20.04
+            test: openssl-3
     env:
       LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
+      CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
-          path: ~/.ccache
-          key: ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
+          # path is different on newer systems
+          path: |
+            ~/.cache/ccache
+            ~/.ccache
+          key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
           restore-keys: |
-            ccache-${{ runner.os }}-${{ env.CC }}-${{ matrix.test }}-
-            ccache-${{ runner.os }}-${{ env.CC }}-
-            ccache-${{ runner.os }}-${{ env.CC }}-all-${{ github.sha }}
-            ccache-${{ runner.os }}-${{ env.CC }}-all-
-            ccache-${{ runner.os }}-${{ env.CC }}-
+            ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-
+            ccache-${{ matrix.os }}-${{ env.CC }}-all-${{ github.sha }}
+            ccache-${{ matrix.os }}-${{ env.CC }}-all-
+            ccache-${{ matrix.os }}-${{ env.CC }}-
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
@@ -111,36 +126,39 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Logs ${{ github.job }}
           path: config.log
           retention-days: 5
 
-  bionic:
+  older:
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
-    runs-on: ubuntu-18.04
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        test: [ all ]
+        os: [ ubuntu-20.04 ]
+        test: [ all, nm ]
         compiler: [ gcc, clang ]
-        include:
+        exclude:
           - test: nm
+            compiler: clang
     env:
       LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
-      UBUNTU_BIONIC: yes
+      # LSan causes spurious SIGSEGV after tests due to DTLS handling by glibc
+      ASAN_OPTIONS: intercept_tls_get_addr=0
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: ~/.ccache
-          key: ccache-bionic-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
+          key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
           restore-keys: |
-            ccache-bionic-${{ env.CC }}-${{ matrix.test }}-
-            ccache-bionic-${{ env.CC }}-
+            ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-
+            ccache-${{ matrix.os }}-${{ env.CC }}-
       - run: |
           sudo apt-get install -qq ccache
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
@@ -148,7 +166,7 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Logs ${{ github.job }}
           path: config.log

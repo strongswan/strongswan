@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011-2014 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -138,7 +139,7 @@ pts_ima_event_list_t* pts_ima_event_list_create(char *file,
 	size_t hash_size;
 	char type[IMA_TYPE_LEN_MAX];
 	char algo_digest[IMA_ALGO_DIGEST_LEN_MAX];
-	char *pos, *error = "";
+	char *pos, *error DBG_UNUSED = "";
 	struct stat st;
 	ssize_t res;
 	bool ima_ng;

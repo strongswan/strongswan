@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010 Andreas Steffen
- * HSR Hochschule fuer Technik Rapperswil
+ *
+ * Copyright (C) secunet Security Networks AG
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -75,10 +76,10 @@ METHOD(tls_application_t, process, status_t,
 	eap_packet_t *pkt;
 	eap_code_t code;
 	eap_type_t type, received_type;
-	uint32_t vendor, received_vendor;
+	pen_t vendor, received_vendor;
 	uint16_t eap_len;
 	size_t eap_pos = 0;
-	bool concatenated = FALSE;
+	bool concatenated DBG_UNUSED = FALSE;
 
 	do
 	{
@@ -184,8 +185,8 @@ METHOD(tls_application_t, process, status_t,
 	{
 		if (received_vendor)
 		{
-			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%d "
-						  "(id 0x%02X)", received_type, received_vendor,
+			DBG1(DBG_IKE, "server requested vendor specific EAP method %d-%N "
+						  "(id 0x%02X)", received_type, pen_names, received_vendor,
 						   in->get_identifier(in));
 		}
 		else
@@ -223,8 +224,8 @@ METHOD(tls_application_t, process, status_t,
 		default:
 			if (vendor)
 			{
-				DBG1(DBG_IKE, "vendor specific EAP method %d-%d failed",
-							   type, vendor);
+				DBG1(DBG_IKE, "vendor specific EAP method %d-%N failed",
+							   type, pen_names, vendor);
 			}
 			else
 			{
@@ -238,9 +239,6 @@ METHOD(tls_application_t, build, status_t,
 	private_eap_ttls_peer_t *this, bio_writer_t *writer)
 {
 	chunk_t data;
-	eap_code_t code;
-	eap_type_t type;
-	uint32_t vendor;
 
 	if (this->method == NULL && this->start_phase2)
 	{
@@ -260,11 +258,13 @@ METHOD(tls_application_t, build, status_t,
 
 	if (this->out)
 	{
-		code = this->out->get_code(this->out);
-		type = this->out->get_type(this->out, &vendor);
+#if DEBUG_LEVEL >= 1
+		pen_t vendor;
+		eap_code_t code = this->out->get_code(this->out);
+		eap_type_t type = this->out->get_type(this->out, &vendor);
 		DBG1(DBG_IKE, "sending tunneled EAP-TTLS AVP [EAP/%N/%N]",
-						eap_code_short_names, code, eap_type_short_names, type);
-
+			 eap_code_short_names, code, eap_type_short_names, type);
+#endif
 		/* get the raw EAP message data */
 		data = this->out->get_data(this->out);
 		this->avp->build(this->avp, writer, data);
