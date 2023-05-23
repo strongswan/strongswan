@@ -228,6 +228,16 @@ static void expire(uint8_t protocol, uint32_t spi, host_t *dst, bool hard)
 	charon->kernel->expire(charon->kernel, protocol, spi, dst, hard);
 }
 
+/**
+ * Acquire callback
+ */
+static void acquire(uint32_t reqid)
+{
+	kernel_acquire_data_t data = {};
+
+	charon->kernel->acquire(charon->kernel, reqid, &data);
+}
+
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	private_kernel_libipsec_ipsec_t *this)
 {
@@ -681,6 +691,7 @@ kernel_libipsec_ipsec_t *kernel_libipsec_ipsec_create()
 		},
 		.ipsec_listener = {
 			.expire = expire,
+			.acquire = acquire,
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
 		.policies = linked_list_create(),
