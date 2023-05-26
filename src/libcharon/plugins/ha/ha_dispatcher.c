@@ -685,10 +685,10 @@ static void process_child_add(private_ha_dispatcher_t *this,
 				outbound_spi = value.u32;
 				break;
 			case HA_INBOUND_CPI:
-				inbound_cpi = value.u32;
+				inbound_cpi = value.u16;
 				break;
 			case HA_OUTBOUND_CPI:
-				outbound_cpi = value.u32;
+				outbound_cpi = value.u16;
 				break;
 			case HA_IPSEC_MODE:
 				mode = value.u8;
