@@ -372,6 +372,10 @@ charon.receive_delay_request = yes
 charon.receive_delay_type = 0
 	Specific IKEv2 message type to delay, 0 for any.
 
+charon.reject_trusted_end_entity = no
+	Reject peers that use trusted end-entity certificates (i.e. local
+	certificates).
+
 charon.replay_window = 32
 	Size of the AH/ESP replay window, in packets.
 
