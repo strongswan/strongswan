@@ -1979,7 +1979,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	}
 #ifndef SADB_X_EXT_NEW_ADDRESS_SRC
 	/* we can't update the SA if any of the ip addresses have changed.
-	 * that's because we can't use SADB_UPDATE and by deleting and readding the
+	 * that's because we can't use SADB_UPDATE and by deleting and re-adding the
 	 * SA the sequence numbers would get lost */
 	if (!id->src->ip_equals(id->src, data->new_src) ||
 		!id->dst->ip_equals(id->dst, data->new_dst))

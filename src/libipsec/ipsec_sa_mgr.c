@@ -28,7 +28,7 @@
 #include <collections/linked_list.h>
 
 /**
- * Timeout in seconds for acquries for the same reqid (i.e. the interval used
+ * Timeout in seconds for acquires for the same reqid (i.e. the interval used
  * to trigger acquires while no SA is established).
  */
 #define ACQUIRE_TIMEOUT 10

@@ -357,7 +357,7 @@ METHOD(enumerator_t, signature_enumerate, bool,
 		if (openssl_asn1_known_oid(sig->algorithm) == OID_RSA_ENCRYPTION)
 		{
 			/* derive the signature scheme from the digest algorithm
-			 * for the classic PKCS#7 RSA mechansim */
+			 * for the classic PKCS#7 RSA mechanism */
 			sig_alg.scheme = signature_scheme_from_oid(hash_oid);
 		}
 		else

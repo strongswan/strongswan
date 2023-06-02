@@ -89,7 +89,7 @@ struct retransmission_t {
 
 	/**
 	 * Maximum jitter to apply to calculated timeout (in percent). A random
-	 * amount of value this will be subtracted from the calculated timeout.
+	 * amount of that value will be subtracted from the calculated timeout.
 	 */
 	u_int jitter;
 

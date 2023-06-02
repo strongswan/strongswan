@@ -475,7 +475,7 @@ static bool parse(private_pkcs7_signed_data_t *this, chunk_t content)
 						info->digest_alg != OID_UNKNOWN)
 					{
 						/* derive the signature scheme from the digest algorithm
-						 * for the classic PKCS#7 RSA mechansim */
+						 * for the classic PKCS#7 RSA mechanism */
 						info->sig_alg.scheme = signature_scheme_from_oid(
 															info->digest_alg);
 					}
