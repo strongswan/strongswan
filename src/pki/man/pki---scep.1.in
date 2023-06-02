@@ -9,7 +9,7 @@ pki \-\-scep \- Enroll an X.509 certificate with a SCEP server
 .SY pki\ \-\-scep
 .BI\-\-\-url\~ url
 .OP \-\-in file
-.BI \-\-dn\~ distinguished-name
+.OP \-\-dn\~ distinguished-name
 .OP \-\-san subjectAltName
 .OP \-\-profile profile
 .OP \-\-password password

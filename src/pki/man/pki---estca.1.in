@@ -7,9 +7,9 @@ pki \-\-estca \- Get CA certificate[s] from an EST server
 .SH "SYNOPSIS"
 .
 .SY pki\ \-\-estca
-.BI\-\-\-url\~ url
+.BI \-\-url\~ url
 .OP \-\-label label
-.BI\-\-\-cacert\~ file
+.BI \-\-cacert\~ file
 .OP \-\-caout file
 .OP \-\-outform encoding
 .OP \-\-force
@@ -92,7 +92,7 @@ To save some typing work the following command line options are stored in a
 .B NOTE:
 For a successful HTTPS connection, trust must be established into the EST server
 certificate. The TLS trust chain including the root CA certificate and optionally
-intermediate CA certificates must be given using [multiple]
+intermediate CA certificates must be given using multiple
 .B --cacert
 options.
 .P

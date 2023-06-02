@@ -131,13 +131,14 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		estca, 'e', "estca",
-		"get CA certificate[s] from a EST server",
-		{"--url url [--cacert file]+ [--caout file] [--outform der|pem] [--force]"},
+		"get CA certificate[s] from an EST server",
+		{"--url url [--label label] --cacert file [--caout file]",
+		 "[--outform der|pem] [--force]"},
 		{
 			{"help",    'h', 0, "show usage information"},
 			{"url",     'u', 1, "URL of the EST server"},
 			{"label",   'l', 1, "label in the EST server path"},
-			{"cacert",  'C', 1, "TLS CA certificate"},
+			{"cacert",  'C', 1, "TLS CA certificate(s)"},
 			{"caout",   'c', 1, "CA certificate [template]"},
 			{"outform", 'f', 1, "encoding of stored certificates, default: der"},
 			{"force",   'F', 0, "force overwrite of existing files"},
