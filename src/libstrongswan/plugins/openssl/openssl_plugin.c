@@ -833,6 +833,7 @@ plugin_t *openssl_plugin_create()
 		if (!fips)
 		{
 			DBG1(DBG_LIB, "unable to load OpenSSL FIPS provider");
+			destroy(this);
 			return NULL;
 		}
 		/* explicitly load the base provider containing encoding functions */
