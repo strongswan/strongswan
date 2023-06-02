@@ -1,3 +1,42 @@
+strongswan-5.9.11
+-----------------
+
+- A deadlock in the vici plugin has been fixed that could get triggered when
+  multiple connections were initiated/terminated concurrently and control-log
+  events were raised by the watcher_t component.
+
+- CRLs have to be signed by a certificate that has the cRLSign keyUsage bit
+  encoded (even if it's a CA), or a CA certificate without keyUsage extension.
+
+- Optional CA labels in EST server URIs are supported by `pki --est/estca`.
+
+- CMS-style signatures in PKCS#7 containers are supported by the pkcs7 and
+  openssl plugins, which allows verifying RSA-PSS and ECDSA signatures.
+
+- Fixed a regression in the server implementation of EAP-TLS with TLS 1.2 or
+  earlier that was introduced with 5.9.10.
+
+- Ensure the TLS handshake is complete in the EAP-TLS client with TLS <= 1.2.
+
+- kernel-libipsec can process raw ESP packets on Linux (disabled by default) and
+  gained support for trap policies.
+
+- The dhcp plugin uses an alternate method to determine the source address
+  for unicast DHCP requests that's not affected by interface filtering.
+
+- Certificate and trust chain selection as initiator has been improved in case
+  the local trust chain is incomplete and an unrelated certreq is received.
+
+- ECDSA and EdDSA keys in IPSECKEY RRs are supported by the ipseckey plugin.
+
+- To bypass tunnel mode SAs/policies, the kernel-wfp plugin installs bypass
+  policies also on the FWPM_SUBLAYER_IPSEC_TUNNEL sublayer.
+
+- Stale OCSP responses are now replace in-place in the certificate cache.
+
+- Fixed parsing of SCEP server capabilities by `pki --scep/scepca`.
+
+
 strongswan-5.9.10
 -----------------
 
