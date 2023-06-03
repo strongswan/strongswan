@@ -59,6 +59,8 @@ struct private_resolve_handler_t {
 	 */
 	char *iface;
 
+	char *search_domain;
+
 	/**
 	 * Mutex to access file exclusively
 	 */
@@ -206,6 +208,8 @@ static bool invoke_resolvconf(private_resolve_handler_t *this, array_t *servers)
 		shell = fdopen(in, "w");
 		if (shell)
 		{
+			if (this->search_domain)
+				fprintf(shell, "search %s\n", this->search_domain);
 			for (i = 0; i < array_count(servers); i++)
 			{
 				array_get(servers, i, &dns);
@@ -498,6 +502,9 @@ resolve_handler_t *resolve_handler_create()
 	if (!this->resolvconf && stat(RESOLVCONF_EXEC, &st) == 0)
 	{
 		this->resolvconf = RESOLVCONF_EXEC;
+		this->search_domain = lib->settings->get_str(lib->settings,
+								"%s.plugins.resolve.resolvconf.search_domain",
+								NULL, lib->ns);
 	}
 
 	if (this->resolvconf)
