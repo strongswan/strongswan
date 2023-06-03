@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2008-2019 Tobias Brunner
+ * Copyright (C) 2023 Andreas Steffen
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -212,6 +213,18 @@ chunk_t chunk_from_base64(chunk_t base64, char *buf);
  * @return				chunk of encoded data
  */
 chunk_t chunk_to_base32(chunk_t chunk, char *buf);
+
+/**
+ * Convert a chunk of data to decimal encoding.
+ *
+ * The resulting string is '\\0' terminated, but the chunk does not include
+ * the '\\0'. If buf is supplied, it must hold at least (chunk.len * 2.41 + 1).
+ *
+ * @param chunk         data to convert to decimal encoding
+ * @param buf           buffer to write to, NULL to malloc
+ * @return              chunk of encoded data
+ */
+chunk_t chunk_to_dec(chunk_t chunk, char *buf);
 
 /**
  * Free contents of a chunk
