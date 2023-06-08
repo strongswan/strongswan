@@ -240,7 +240,7 @@ static int sign_crl()
 				}
 				else if (streq(arg, "cessation-of-operation"))
 				{
-					reason = CRL_REASON_CESSATION_OF_OPERATON;
+					reason = CRL_REASON_CESSATION_OF_OPERATION;
 				}
 				else if (streq(arg, "certificate-hold"))
 				{
