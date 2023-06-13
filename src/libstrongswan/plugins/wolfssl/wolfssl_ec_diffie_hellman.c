@@ -37,6 +37,10 @@
     #define USE_RNG_FOR_TIMING_RESISTANCE
 #endif
 
+#ifndef WOLFSSL_HAVE_ECC_KEY_GET_PRIV
+    #define wc_ecc_key_get_priv(key) (&((key)->k))
+#endif
+
 typedef struct private_wolfssl_ec_diffie_hellman_t private_wolfssl_ec_diffie_hellman_t;
 
 /**
@@ -177,7 +181,8 @@ METHOD(key_exchange_t, set_private_key, bool,
 		return FALSE;
 	}
 
-	ret = mp_read_unsigned_bin(&this->key.k, value.ptr, value.len);
+	ret = mp_read_unsigned_bin(wc_ecc_key_get_priv(&this->key), value.ptr,
+							   value.len);
 	/* get base point */
 	if (ret == 0)
 	{
@@ -194,7 +199,8 @@ METHOD(key_exchange_t, set_private_key, bool,
 	if (ret == 0)
 	{
 		/* calculate public key */
-		success = wolfssl_ecc_multiply(this->key.dp, &this->key.k, base,
+		success = wolfssl_ecc_multiply(this->key.dp,
+									   wc_ecc_key_get_priv(&this->key), base,
 									   &this->key.pubkey);
 	}
 
