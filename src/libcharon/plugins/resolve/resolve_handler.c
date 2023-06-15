@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2022 Tobias Brunner
+ * Copyright (C) 2012-2023 Tobias Brunner
  * Copyright (C) 2009 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -23,7 +23,7 @@
 
 #include <utils/debug.h>
 #include <utils/process.h>
-#include <collections/array.h>
+#include <collections/hashtable.h>
 #include <threading/mutex.h>
 
 /* path to resolvconf executable */
@@ -67,7 +67,7 @@ struct private_resolve_handler_t {
 	/**
 	 * Reference counting for DNS servers dns_server_t
 	 */
-	array_t *servers;
+	hashtable_t *servers;
 };
 
 /**
@@ -88,24 +88,21 @@ typedef struct {
 } dns_server_t;
 
 /**
- * Compare a server and a stored reference
+ * Hash DNS server address
  */
-static int dns_server_find(const void *a, const void *b)
+static u_int dns_server_hash(const void *key)
 {
-	host_t *server = (host_t*)a;
-	dns_server_t *item = (dns_server_t*)b;
-	return chunk_compare(server->get_address(server),
-						 item->server->get_address(item->server));
+	host_t *host = (host_t*)key;
+	return chunk_hash(host->get_address(host));
 }
 
 /**
- * Sort references by DNS server
+ * Compare two DNS server addresses
  */
-static int dns_server_sort(const void *a, const void *b, void *user)
+static bool dns_server_equals(const void *a, const void *b)
 {
-	const dns_server_t *da = a, *db = b;
-	return chunk_compare(da->server->get_address(da->server),
-						 db->server->get_address(db->server));
+	host_t *ha = (host_t*)a, *hb = (host_t*)b;
+	return chunk_equals(ha->get_address(ha), hb->get_address(hb));
 }
 
 /**
@@ -184,33 +181,37 @@ static void remove_nameserver(private_resolve_handler_t *this, host_t *addr)
 }
 
 /**
- * Install the given nameservers by invoking resolvconf. If the array is empty,
+ * Install the given nameservers by invoking resolvconf. If the table is empty,
  * remove the config.
  */
-static bool invoke_resolvconf(private_resolve_handler_t *this, array_t *servers)
+static bool invoke_resolvconf(private_resolve_handler_t *this,
+							  hashtable_t *servers)
 {
 	process_t *process;
+	enumerator_t *enumerator;
 	dns_server_t *dns;
 	FILE *shell;
-	int in, out, retval, i;
+	int in, out, retval;
+	bool install = servers->get_count(servers);
 
-	process = process_start_shell(NULL, array_count(servers) ? &in : NULL, &out,
-							NULL, "2>&1 %s %s %s", this->resolvconf,
-							array_count(servers) ? "-a" : "-d", this->iface);
+	process = process_start_shell(NULL, install ? &in : NULL, &out,
+								  NULL, "2>&1 %s %s %s", this->resolvconf,
+								  install ? "-a" : "-d", this->iface);
 	if (!process)
 	{
 		return FALSE;
 	}
-	if (array_count(servers))
+	if (install)
 	{
 		shell = fdopen(in, "w");
 		if (shell)
 		{
-			for (i = 0; i < array_count(servers); i++)
+			enumerator = servers->create_enumerator(servers);
+			while (enumerator->enumerate(enumerator, NULL, &dns))
 			{
-				array_get(servers, i, &dns);
 				fprintf(shell, "nameserver %H\n", dns->server);
 			}
+			enumerator->destroy(enumerator);
 			fclose(shell);
 		}
 		else
@@ -263,7 +264,7 @@ METHOD(attribute_handler_t, handle, bool,
 	private_resolve_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
-	dns_server_t *found = NULL;
+	dns_server_t *found;
 	host_t *addr;
 	bool handled;
 
@@ -286,14 +287,14 @@ METHOD(attribute_handler_t, handle, bool,
 	}
 
 	this->mutex->lock(this->mutex);
-	if (array_bsearch(this->servers, addr, dns_server_find, &found) == -1)
+	found = this->servers->get(this->servers, addr);
+	if (!found)
 	{
 		INIT(found,
 			.server = addr->clone(addr),
 			.refcount = 1,
 		);
-		array_insert_create(&this->servers, ARRAY_TAIL, found);
-		array_sort(this->servers, dns_server_sort, NULL);
+		this->servers->put(this->servers, found->server, found);
 
 		if (this->resolvconf)
 		{
@@ -306,7 +307,7 @@ METHOD(attribute_handler_t, handle, bool,
 		}
 		if (!handled)
 		{
-			array_remove(this->servers, ARRAY_TAIL, NULL);
+			this->servers->remove(this->servers, found->server);
 			found->server->destroy(found->server);
 			free(found);
 		}
@@ -332,9 +333,9 @@ METHOD(attribute_handler_t, release, void,
 	private_resolve_handler_t *this, ike_sa_t *ike_sa,
 	configuration_attribute_type_t type, chunk_t data)
 {
-	dns_server_t *found = NULL;
+	dns_server_t *found;
 	host_t *addr;
-	int family, idx;
+	int family;
 
 	switch (type)
 	{
@@ -350,8 +351,8 @@ METHOD(attribute_handler_t, release, void,
 	addr = host_create_from_chunk(family, data, 0);
 
 	this->mutex->lock(this->mutex);
-	idx = array_bsearch(this->servers, addr, dns_server_find, &found);
-	if (idx != -1)
+	found = this->servers->get(this->servers, addr);
+	if (found)
 	{
 		if (--found->refcount > 0)
 		{
@@ -360,7 +361,7 @@ METHOD(attribute_handler_t, release, void,
 		}
 		else
 		{
-			array_remove(this->servers, idx, NULL);
+			this->servers->remove(this->servers, found->server);
 			found->server->destroy(found->server);
 			free(found);
 
@@ -460,7 +461,7 @@ METHOD(attribute_handler_t, create_attribute_enumerator, enumerator_t*,
 METHOD(resolve_handler_t, destroy, void,
 	private_resolve_handler_t *this)
 {
-	array_destroy(this->servers);
+	this->servers->destroy(this->servers);
 	this->mutex->destroy(this->mutex);
 	free(this);
 }
@@ -483,6 +484,7 @@ resolve_handler_t *resolve_handler_create()
 			.destroy = _destroy,
 		},
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.servers = hashtable_create(dns_server_hash, dns_server_equals, 4),
 		.file = lib->settings->get_str(lib->settings,
 								"%s.plugins.resolve.file", RESOLV_CONF, lib->ns),
 		.resolvconf = lib->settings->get_str(lib->settings,
