@@ -88,9 +88,9 @@ struct ocsp_response_t {
 	enumerator_t* (*create_cert_enumerator)(ocsp_response_t *this);
 
 	/**
-	 * Create an enumerator over the contained responses.
+	 * Create an enumerator over the contained single responses.
 	 *
-	 * @return					enumerator over major response fields
+	 * @return					enumerator over ocsp_single_response_t objects
 	 */
 	enumerator_t* (*create_response_enumerator)(ocsp_response_t *this);
 };
