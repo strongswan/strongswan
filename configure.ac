@@ -178,6 +178,7 @@ ARG_DISBL_SET([pkcs12],         [disable PKCS12 container support plugin.])
 ARG_DISBL_SET([pubkey],         [disable RAW public key support plugin.])
 ARG_DISBL_SET([sshkey],         [disable SSH key decoding plugin.])
 ARG_DISBL_SET([x509],           [disable X509 certificate implementation plugin.])
+ARG_ENABL_SET([openxpki],       [enable OCSP responder accessing OpenXPKI certificate database.])
 # fetcher/resolver plugins
 ARG_ENABL_SET([curl],           [enable CURL fetcher plugin to fetch files via libcurl. Requires libcurl.])
 ARG_ENABL_SET([files],          [enable simple file:// URI fetcher.])
@@ -1592,8 +1593,9 @@ ADD_PLUGIN([curl],                 [s charon pki scripts nm cmd])
 ADD_PLUGIN([files],                [s charon pki scripts nm cmd])
 ADD_PLUGIN([winhttp],              [s charon pki scripts])
 ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
-ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
-ADD_PLUGIN([sqlite],               [s charon pool manager medsrv attest])
+ADD_PLUGIN([mysql],                [s charon pki pool manager medsrv attest])
+ADD_PLUGIN([sqlite],               [s charon pki pool manager medsrv attest])
+ADD_PLUGIN([openxpki],             [s pki])
 ADD_PLUGIN([attr],                 [c charon])
 ADD_PLUGIN([attr-sql],             [c charon])
 ADD_PLUGIN([load-tester],          [c charon])
@@ -1728,6 +1730,7 @@ AM_CONDITIONAL(USE_PKCS1, test x$pkcs1 = xtrue)
 AM_CONDITIONAL(USE_PKCS7, test x$pkcs7 = xtrue)
 AM_CONDITIONAL(USE_PKCS8, test x$pkcs8 = xtrue)
 AM_CONDITIONAL(USE_PKCS12, test x$pkcs12 = xtrue)
+AM_CONDITIONAL(USE_OPENXPKI, test x$openxpki = xtrue)
 AM_CONDITIONAL(USE_PGP, test x$pgp = xtrue)
 AM_CONDITIONAL(USE_DNSKEY, test x$dnskey = xtrue)
 AM_CONDITIONAL(USE_SSHKEY, test x$sshkey = xtrue)
@@ -2010,6 +2013,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/pkcs7/Makefile
 	src/libstrongswan/plugins/pkcs8/Makefile
 	src/libstrongswan/plugins/pkcs12/Makefile
+	src/libstrongswan/plugins/openxpki/Makefile
 	src/libstrongswan/plugins/pgp/Makefile
 	src/libstrongswan/plugins/dnskey/Makefile
 	src/libstrongswan/plugins/sshkey/Makefile
