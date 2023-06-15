@@ -1,3 +1,14 @@
+strongswan-6.0.0
+----------------
+
+- Support of multiple post-quantum (and classic) key exchanges using the
+  IKE_INTERMEDIATE exchange (RFC 9242) and the Additional Key Exchange
+  transform types 1..7 (RFC 9370).
+
+- ML-KEM is provided by the botan, wolfssl, openssl (only via AWS-LC) and the
+  new ml plugins.
+
+
 strongswan-5.9.14
 -----------------
 
@@ -362,7 +373,7 @@ strongswan-5.9.4
   salt lengths.
   This vulnerability has been registered as CVE-2021-41990.
 
-- Fixed a denial-of-service vulnerability in the in-memory certificate cache
+- Fixed a denial-of-service vulnerabililty in the in-memory certificate cache
   if certificates are replaced and a very large random value caused an integer
   overflow.
   This vulnerability has been registered as CVE-2021-41991.
@@ -1774,7 +1785,7 @@ strongswan-5.0.3
   PT-TLS (RFC 6876), a Posture Transport Protocol over TLS.
 
 - The charon systime-fix plugin can disable certificate lifetime checks on
-  embedded systems if the system time is obviously out of sync after boot-up.
+  embedded systems if the system time is obviously out of sync after bootup.
   Certificates lifetimes get checked once the system time gets sane, closing
   or reauthenticating connections using expired certificates.
 
