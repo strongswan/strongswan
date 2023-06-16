@@ -32,6 +32,9 @@
 /* default interface/protocol used for resolvconf (should have high prio) */
 #define RESOLVCONF_IFACE "lo.ipsec"
 
+/* suffix added to lines in resolv.conf */
+#define RESOLV_CONF_SUFFIX "   # by strongSwan"
+
 typedef struct private_resolve_handler_t private_resolve_handler_t;
 
 /**
@@ -106,13 +109,15 @@ static bool dns_server_equals(const void *a, const void *b)
 }
 
 /**
- * Writes the given nameserver to resolv.conf
+ * Writes the given nameservers to resolv.conf
  */
-static bool write_nameserver(private_resolve_handler_t *this, host_t *addr)
+static bool write_nameservers(private_resolve_handler_t *this,
+							  hashtable_t *servers)
 {
 	FILE *in, *out;
-	char buf[1024];
-	size_t len;
+	enumerator_t *enumerator;
+	dns_server_t *dns;
+	char line[1024];
 	bool handled = FALSE;
 
 	in = fopen(this->file, "r");
@@ -121,18 +126,28 @@ static bool write_nameserver(private_resolve_handler_t *this, host_t *addr)
 	out = fopen(this->file, "w");
 	if (out)
 	{
-		fprintf(out, "nameserver %H   # by strongSwan\n", addr);
-		DBG1(DBG_IKE, "installing DNS server %H to %s", addr, this->file);
-		handled = TRUE;
+		/* write our current set of servers */
+		enumerator = servers->create_enumerator(servers);
+		while (enumerator->enumerate(enumerator, NULL, &dns))
+		{
+			fprintf(out, "nameserver %H" RESOLV_CONF_SUFFIX "\n", dns->server);
+		}
+		enumerator->destroy(enumerator);
 
-		/* copy rest of the file */
 		if (in)
 		{
-			while ((len = fread(buf, 1, sizeof(buf), in)))
+			/* copy the rest of the file, except our previous servers */
+			while (fgets(line, sizeof(line), in))
 			{
-				ignore_result(fwrite(buf, 1, len, out));
+				if (!strstr(line, RESOLV_CONF_SUFFIX "\n"))
+				{
+					fputs(line, out);
+				}
 			}
 		}
+
+		handled = TRUE;
+
 		fclose(out);
 	}
 	if (in)
@@ -140,44 +155,6 @@ static bool write_nameserver(private_resolve_handler_t *this, host_t *addr)
 		fclose(in);
 	}
 	return handled;
-}
-
-/**
- * Removes the given nameserver from resolv.conf
- */
-static void remove_nameserver(private_resolve_handler_t *this, host_t *addr)
-{
-	FILE *in, *out;
-	char line[1024], matcher[512];
-
-	in = fopen(this->file, "r");
-	if (in)
-	{
-		/* allows us to stream from in to out */
-		unlink(this->file);
-		out = fopen(this->file, "w");
-		if (out)
-		{
-			snprintf(matcher, sizeof(matcher),
-					 "nameserver %H   # by strongSwan\n", addr);
-
-			/* copy all, but matching line */
-			while (fgets(line, sizeof(line), in))
-			{
-				if (strpfx(line, matcher))
-				{
-					DBG1(DBG_IKE, "removing DNS server %H from %s",
-						 addr, this->file);
-				}
-				else
-				{
-					fputs(line, out);
-				}
-			}
-			fclose(out);
-		}
-		fclose(in);
-	}
 }
 
 /**
@@ -303,7 +280,8 @@ METHOD(attribute_handler_t, handle, bool,
 		}
 		else
 		{
-			handled = write_nameserver(this, addr);
+			DBG1(DBG_IKE, "installing DNS server %H to %s", addr, this->file);
+			handled = write_nameservers(this, this->servers);
 		}
 		if (!handled)
 		{
@@ -372,7 +350,9 @@ METHOD(attribute_handler_t, release, void,
 			}
 			else
 			{
-				remove_nameserver(this, addr);
+				DBG1(DBG_IKE, "removing DNS server %H from %s", addr,
+					 this->file);
+				write_nameservers(this, this->servers);
 			}
 		}
 	}
