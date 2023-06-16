@@ -899,7 +899,7 @@ dhcp_socket_t *dhcp_socket_create()
 			return NULL;
 		}
 		addr_len = sizeof(this->src);
-		if (getsockname(this->send, &this->src, &addr_len) < 0)
+		if (getsockname(this->send, (struct sockaddr*)&this->src, &addr_len) < 0)
 		{
 			DBG1(DBG_CFG, "unable to determine source address for DHCP: %s",
 				 strerror(errno));
