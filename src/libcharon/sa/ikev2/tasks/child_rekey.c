@@ -59,6 +59,11 @@ struct private_child_rekey_t {
 	uint32_t spi;
 
 	/**
+	 * Encoded SPI in REKEY_SA notify if no CHILD_SA is found
+	 */
+	chunk_t spi_data;
+
+	/**
 	 * the CHILD_CREATE task which is reused to simplify rekeying
 	 */
 	child_create_t *child_create;
@@ -145,12 +150,17 @@ static void find_child(private_child_rekey_t *this, message_t *message)
 		{
 			child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol,
 												  spi, FALSE);
+			/* ignore rekeyed/deleted CHILD_SAs we keep around */
 			if (child_sa &&
-				child_sa->get_state(child_sa) == CHILD_DELETED)
-			{	/* ignore rekeyed CHILD_SAs we keep around */
-				return;
+				child_sa->get_state(child_sa) != CHILD_DELETED)
+			{
+				this->child_sa = child_sa;
 			}
-			this->child_sa = child_sa;
+		}
+		if (!this->child_sa)
+		{
+			this->protocol = protocol;
+			this->spi_data = chunk_clone(notify->get_spi_data(notify));
 		}
 	}
 }
@@ -248,6 +258,7 @@ METHOD(task_t, process_r, status_t,
 METHOD(task_t, build_r, status_t,
 	private_child_rekey_t *this, message_t *message)
 {
+	notify_payload_t *notify;
 	child_cfg_t *config;
 	uint32_t reqid;
 	child_sa_state_t state;
@@ -255,8 +266,12 @@ METHOD(task_t, build_r, status_t,
 
 	if (!this->child_sa)
 	{
-		DBG1(DBG_IKE, "unable to rekey, CHILD_SA not found");
-		message->add_notify(message, TRUE, CHILD_SA_NOT_FOUND, chunk_empty);
+		DBG1(DBG_IKE, "unable to rekey, %N CHILD_SA with SPI %+B not found",
+			 protocol_id_names, this->protocol, &this->spi_data);
+		notify = notify_payload_create_from_protocol_and_type(PLV2_NOTIFY,
+											this->protocol, CHILD_SA_NOT_FOUND);
+		notify->set_spi_data(notify, this->spi_data);
+		message->add_payload(message, (payload_t*)notify);
 		return SUCCESS;
 	}
 	if (this->child_sa->get_state(this->child_sa) == CHILD_DELETING)
@@ -606,6 +621,7 @@ METHOD(task_t, destroy, void,
 		this->child_delete->task.destroy(&this->child_delete->task);
 	}
 	DESTROY_IF(this->collision);
+	chunk_free(&this->spi_data);
 	free(this);
 }
 
