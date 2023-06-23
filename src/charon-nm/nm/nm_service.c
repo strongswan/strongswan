@@ -729,6 +729,8 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	priv->name = strdup(nm_setting_connection_get_id(conn));
 	DBG1(DBG_CFG, "received initiate for NetworkManager connection %s",
 		 priv->name);
+	DBG3(DBG_CFG, "%s",
+		 nm_setting_to_string(NM_SETTING(conn)));
 	DBG4(DBG_CFG, "%s",
 		 nm_setting_to_string(NM_SETTING(vpn)));
 
