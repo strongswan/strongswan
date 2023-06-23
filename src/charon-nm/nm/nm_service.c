@@ -136,6 +136,57 @@ static void delete_interface(NMStrongswanPluginPrivate *priv)
 }
 
 /**
+ * Create an XFRM or TUN interface
+ */
+static void create_interface(NMStrongswanPluginPrivate *priv)
+{
+	if (priv->xfrmi_manager)
+	{
+		char name[IFNAMSIZ];
+		int mtu;
+
+		/* allocate a random interface ID */
+		priv->xfrmi_id = random();
+
+		/* use the interface ID to get a unique name, fine if it's cut off */
+		snprintf(name, sizeof(name), "nm-xfrm-%" PRIu32, priv->xfrmi_id);
+
+		mtu = lib->settings->get_int(lib->settings, "charon-nm.mtu",
+									 XFRMI_DEFAULT_MTU);
+
+		if (priv->xfrmi_manager->create(priv->xfrmi_manager, name,
+										priv->xfrmi_id, NULL, mtu))
+		{
+			priv->xfrmi = strdup(name);
+		}
+		else
+		{
+			priv->xfrmi_id = 0;
+		}
+	}
+	if (!priv->xfrmi)
+	{	/* use a TUN device as fallback */
+		priv->tun = tun_device_create(NULL);
+	}
+
+	if (priv->xfrmi)
+	{
+		DBG1(DBG_CFG, "created XFRM interface %s for NetworkManager connection "
+			 "%s", priv->xfrmi, priv->name);
+	}
+	else if (priv->tun)
+	{
+		DBG1(DBG_CFG, "created TUN device %s for NetworkManager connection "
+			 "%s", priv->tun->get_name(priv->tun), priv->name);
+	}
+	else
+	{
+		DBG1(DBG_CFG, "failed to create XFRM or dummy TUN device, might affect "
+			 "DNS server installation negatively");
+	}
+}
+
+/**
  * Signal IP config to NM, set connection as established
  */
 static void signal_ip_config(NMVpnServicePlugin *plugin,
@@ -161,33 +212,6 @@ static void signal_ip_config(NMVpnServicePlugin *plugin,
 	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_CONFIG_EXT_GATEWAY,
 						   host_to_variant(other));
 
-	/* systemd-resolved requires a device to properly install DNS servers, but
-	 * Netkey does not require one.  Passing the physical interface is not ideal,
-	 * as NM fiddles around with it and systemd-resolved likes a separate
-	 * device. So we pass either an XFRM interface or a dummy TUN device along
-	 * for NM etc. to play with...
-	 */
-	delete_interface(priv);
-	if (priv->xfrmi_manager && priv->xfrmi_id)
-	{
-		char name[IFNAMSIZ];
-		int mtu;
-
-		/* use the interface ID to get a unique name, fine if it's cut off */
-		snprintf(name, sizeof(name), "nm-xfrm-%" PRIu32, priv->xfrmi_id);
-		mtu = lib->settings->get_int(lib->settings, "charon-nm.mtu",
-									 XFRMI_DEFAULT_MTU);
-
-		if (priv->xfrmi_manager->create(priv->xfrmi_manager, name,
-										priv->xfrmi_id, NULL, mtu))
-		{
-			priv->xfrmi = strdup(name);
-		}
-	}
-	if (!priv->xfrmi)
-	{
-		priv->tun = tun_device_create(NULL);
-	}
 	if (priv->xfrmi)
 	{
 		g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_CONFIG_TUNDEV,
@@ -197,11 +221,6 @@ static void signal_ip_config(NMVpnServicePlugin *plugin,
 	{
 		g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_CONFIG_TUNDEV,
 							   g_variant_new_string (priv->tun->get_name(priv->tun)));
-	}
-	else
-	{
-		DBG1(DBG_CFG, "failed to create XFRM or dummy TUN device, might affect "
-			 "DNS server installation negatively");
 	}
 
 	/* pass the first virtual IPs we got or use the physical IP */
@@ -706,20 +725,13 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 												NM_TYPE_SETTING_CONNECTION));
 	vpn = NM_SETTING_VPN(nm_connection_get_setting(connection,
 												NM_TYPE_SETTING_VPN));
-	if (priv->xfrmi_manager)
-	{
-		/* allocate a random interface ID */
-		priv->xfrmi_id = random();
-	}
-	if (priv->name)
-	{
-		free(priv->name);
-	}
+	free(priv->name);
 	priv->name = strdup(nm_setting_connection_get_id(conn));
 	DBG1(DBG_CFG, "received initiate for NetworkManager connection %s",
 		 priv->name);
 	DBG4(DBG_CFG, "%s",
 		 nm_setting_to_string(NM_SETTING(vpn)));
+
 	ike.remote = (char*)nm_setting_vpn_get_data_item(vpn, "address");
 	if (!ike.remote || !*ike.remote)
 	{
@@ -878,6 +890,24 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
 	auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, loose_gateway_id);
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
+
+	/* systemd-resolved requires a device to properly install DNS servers, but
+	 * Netkey does not require one.  Passing the physical interface is not ideal,
+	 * as NM fiddles around with it and systemd-resolved likes a separate
+	 * device. So we pass either an XFRM interface or a dummy TUN device along
+	 * for NM etc. to play with...
+	 */
+	delete_interface(priv);
+	create_interface(priv);
+	if (priv->xfrmi_id)
+	{	/* set the same mark as for IKE packets on the ESP packets so no routing
+		 * loop is created if the TS covers the VPN server's IP */
+		child.set_mark_out = (mark_t){
+			.value = 220,
+			.mask = 0xffffffff,
+		};
+		child.if_id_in = child.if_id_out = priv->xfrmi_id;
+	}
 
 	child_cfg = child_cfg_create(priv->name, &child);
 	str = nm_setting_vpn_get_data_item(vpn, "esp");
@@ -1125,6 +1155,7 @@ static void nm_strongswan_plugin_dispose(GObject *obj)
 	plugin = NM_STRONGSWAN_PLUGIN(obj);
 	priv = NM_STRONGSWAN_PLUGIN_GET_PRIVATE(plugin);
 	delete_interface(priv);
+	free(priv->name);
 	G_OBJECT_CLASS (nm_strongswan_plugin_parent_class)->dispose (obj);
 }
 
