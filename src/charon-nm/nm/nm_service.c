@@ -138,7 +138,8 @@ static void delete_interface(NMStrongswanPluginPrivate *priv)
 /**
  * Create an XFRM or TUN interface
  */
-static void create_interface(NMStrongswanPluginPrivate *priv)
+static void create_interface(NMStrongswanPluginPrivate *priv,
+							 const char *interface_name)
 {
 	if (priv->xfrmi_manager)
 	{
@@ -148,8 +149,15 @@ static void create_interface(NMStrongswanPluginPrivate *priv)
 		/* allocate a random interface ID */
 		priv->xfrmi_id = random();
 
-		/* use the interface ID to get a unique name, fine if it's cut off */
-		snprintf(name, sizeof(name), "nm-xfrm-%" PRIu32, priv->xfrmi_id);
+		if (interface_name)
+		{	/* use the preferred interface name if one is provided */
+			snprintf(name, sizeof(name), "%s", interface_name);
+		}
+		else
+		{
+			/* use the interface ID to get a unique name, fine if it's cut off */
+			snprintf(name, sizeof(name), "nm-xfrm-%" PRIu32, priv->xfrmi_id);
+		}
 
 		mtu = lib->settings->get_int(lib->settings, "charon-nm.mtu",
 									 XFRMI_DEFAULT_MTU);
@@ -900,7 +908,7 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	 * for NM etc. to play with...
 	 */
 	delete_interface(priv);
-	create_interface(priv);
+	create_interface(priv, nm_setting_connection_get_interface_name(conn));
 	if (priv->xfrmi_id)
 	{	/* set the same mark as for IKE packets on the ESP packets so no routing
 		 * loop is created if the TS covers the VPN server's IP */
