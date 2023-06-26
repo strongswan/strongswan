@@ -31,10 +31,6 @@ bullseye)
 	;;
 esac
 case "$BASEIMGSUITE" in
-stretch)
-	INC=$INC,libahven5-dev,libxmlada-schema6-dev,libgmpada6-dev
-	INC=$INC,libalog2-dev
-	;;
 buster)
 	INC=$INC,libahven7-dev,libxmlada-schema8-dev,libgmpada8-dev
 	INC=$INC,libalog4-dev,dbus-user-session
@@ -153,14 +149,10 @@ do
 	execute_chroot "systemctl disable $service"
 done
 
-case "$BASEIMGSUITE" in
-buster|bullseye)
-	log_action "Switching from iptables-nft to iptables-legacy"
-	execute_chroot "update-alternatives --set iptables /usr/sbin/iptables-legacy" 0
-	execute_chroot "update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy" 0
-	log_status 0
-	;;
-esac
+log_action "Switching from iptables-nft to iptables-legacy"
+execute_chroot "update-alternatives --set iptables /usr/sbin/iptables-legacy" 0
+execute_chroot "update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy" 0
+log_status 0
 
 log_action "Disabling root password"
 execute_chroot "passwd -d root"
