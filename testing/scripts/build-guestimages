@@ -76,10 +76,19 @@ do
 		execute_chroot "dnssec-signzone -K /etc/bind -o org. /etc/bind/db.org" 0
 		execute_chroot "dnssec-signzone -K /etc/bind -o . /etc/bind/db.root" 0
 
-		# on bullseye, enabling via bind9 doesn't work, while disabling does, so
-		# use named there. on the other hand, older releases don't have named
-		# service files (systemctl returns 0 even if files are not found)
-		for service in apache2 slapd bind9 named
+		# on bullseye and newer, enabling via bind9 doesn't work, while
+		# disabling does, so use named here. on the other hand, older releases
+		# like buster don't have named service files
+		SERVICES="apache2 slapd"
+		case "$BASEIMGSUITE" in
+		buster)
+			SERVICES="$SERVICES bind9"
+			;;
+		*)
+			SERVICES="$SERVICES named"
+			;;
+		esac
+		for service in $SERVICES
 		do
 			execute_chroot "systemctl enable $service" 0
 		done
