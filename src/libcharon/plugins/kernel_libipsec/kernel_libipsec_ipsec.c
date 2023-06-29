@@ -419,8 +419,16 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 	{
 		traffic_selector_t *multicast, *broadcast = NULL;
 		bool ignore = FALSE;
+		int family;
 
-		this->mutex->unlock(this->mutex);
+		/* At this point, our src ts does not encompass any of our local
+		 * addresses. If the src ts is a broadcast or multicast range, that's
+		 * fine, we just ignore it and do not install a route. If not, we set
+		 * src_ip to "any" so the route will be created without a preferred
+		 * source address - which is fine because if none of our local
+		 * addresses is within the src ts, the policy does not allow us to
+		 * send local traffic through this SA anyway.
+		 */
 		switch (src_ts->get_type(src_ts))
 		{
 			case TS_IPV4_ADDR_RANGE:
@@ -428,24 +436,27 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 															  0, 0, 0xffff);
 				broadcast = traffic_selector_create_from_cidr("255.255.255.255/32",
 															  0, 0, 0xffff);
+				family = AF_INET;
 				break;
 			case TS_IPV6_ADDR_RANGE:
 				multicast = traffic_selector_create_from_cidr("ff00::/8",
 															  0, 0, 0xffff);
+				family = AF_INET6;
 				break;
 			default:
+				this->mutex->unlock(this->mutex);
 				return FALSE;
 		}
 		ignore = src_ts->is_contained_in(src_ts, multicast);
 		ignore |= broadcast && src_ts->is_contained_in(src_ts, broadcast);
 		multicast->destroy(multicast);
 		DESTROY_IF(broadcast);
-		if (!ignore)
+		if (ignore)
 		{
-			DBG1(DBG_KNL, "error installing route with policy %R === %R %N",
-				 src_ts, dst_ts, policy_dir_names, policy->direction);
+			this->mutex->unlock(this->mutex);
+			return TRUE;
 		}
-		return ignore;
+		src_ip = host_create_any(family);
 	}
 
 	INIT(route,
