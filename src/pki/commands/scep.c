@@ -587,7 +587,7 @@ end:
 	if (status == 0)
 	{
 		status = pki_cert_extract_cert(data, form) ? 0 : 1;
-		chunk_free(&data);
+		chunk_clear(&data);
 	}
 
 err:
