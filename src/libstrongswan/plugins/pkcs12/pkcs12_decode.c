@@ -307,10 +307,10 @@ static bool parse_authenticated_safe(private_pkcs12_t *this, chunk_t blob)
 				if (!parse_safe_contents(this, parser->get_level(parser)+1,
 										 data))
 				{
-					chunk_free(&data);
+					chunk_clear(&data);
 					goto end;
 				}
-				chunk_free(&data);
+				chunk_clear(&data);
 				break;
 			}
 		}
