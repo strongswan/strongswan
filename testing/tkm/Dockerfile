@@ -8,7 +8,7 @@
 #
 # In the container, this may be used to configure strongSwan with TKM support:
 #
-#   /strongswan/configure --disable-defaults --enable-silent-rules --enable-ikev2 --enable-kernel-netlink --enable-openssl --enable-pem --enable-socket-default --enable-swanctl --enable-tkm
+#   /strongswan/configure --disable-defaults --enable-silent-rules --enable-ikev2 --enable-kernel-netlink --enable-pem --enable-pkcs1 --enable-random --enable-sha1 --enable-socket-default --enable-swanctl --enable-tkm
 #
 # The following script can be used to generate private key, CA cert and example
 # config for TKM:
