@@ -23,12 +23,12 @@
 #
 #   make -j check TESTS_RUNNERS=tkm TESTS_TKM=1
 
-FROM debian:bullseye
+FROM debian:bookworm
 
 ARG packages="autoconf automake bison build-essential ca-certificates ccache \
 flex gettext git gperf libssl-dev libtool pkg-config \
-gnat gprbuild libahven9-dev libxmlada-schema10-dev libgmpada10-dev \
-libalog6-dev"
+gnat gprbuild libahven11-dev libxmlada-schema12-dev libgmpada12-dev \
+libalog8-dev"
 
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -qq -y \
