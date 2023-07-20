@@ -62,8 +62,6 @@ do
 		execute "cp -rf $DIR/../images $LOOPDIR/var/www/" 0
 		execute "cp -rf $DIR/../css $LOOPDIR/var/www/" 0
 		execute "mkdir $LOOPDIR/var/www/testresults" 0
-		echo "echo /testresults ... >> $LOOPDIR/etc/fstab" >>$LOGFILE 2>&1
-		echo "/testresults /var/www/testresults 9p trans=virtio,version=9p2000.L 0 0" >> $LOOPDIR/etc/fstab
 		execute_chroot "a2enmod -q cgid" 0
 		execute_chroot "a2enmod -q rewrite" 0
 		execute_chroot "mkdir /var/www/certs" 0
