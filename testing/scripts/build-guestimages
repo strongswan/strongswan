@@ -45,8 +45,8 @@ do
 	execute "qemu-nbd -c $NBDEV $IMGDIR/$host.$IMGEXT" 0
 	partprobe $NBDEV
 	execute "mount $NBDPARTITION $LOOPDIR" 0
-	execute "cp -rf $HOSTSDIR/${host}/etc $LOOPDIR" 0
 	execute "cp -rf $HOSTSDIR/default/* $LOOPDIR" 0
+	execute "cp -rf $HOSTSDIR/${host}/etc $LOOPDIR" 0
 	execute_chroot "ldconfig" 0
 	execute "mkdir $LOOPDIR/etc/pts" 0
 
