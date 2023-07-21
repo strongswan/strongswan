@@ -251,20 +251,17 @@ static void notify_end(notify_data_t *data)
 
 	if (removed)
 	{
-		DBG3(DBG_JOB, "removed fd %d[%s%s%s] from watcher after callback", data->fd,
+		DBG3(DBG_JOB, "removed fd %d[%s%s] from watcher after callback", data->fd,
 			 data->event & WATCHER_READ ? "r" : "",
-			 data->event & WATCHER_WRITE ? "w" : "",
-			 data->event & WATCHER_EXCEPT ? "e" : "");
+			 data->event & WATCHER_WRITE ? "w" : "");
 	}
 	else if (updated)
 	{
-		DBG3(DBG_JOB, "updated fd %d[%s%s%s] to %d[%s%s%s] after callback", data->fd,
+		DBG3(DBG_JOB, "updated fd %d[%s%s] to %d[%s%s] after callback", data->fd,
 			 (updated | data->event) & WATCHER_READ ? "r" : "",
-			 (updated | data->event) & WATCHER_WRITE ? "w" : "",
-			 (updated | data->event) & WATCHER_EXCEPT ? "e" : "", data->fd,
+			 (updated | data->event) & WATCHER_WRITE ? "w" : "", data->fd,
 			 updated & WATCHER_READ ? "r" : "",
-			 updated & WATCHER_WRITE ? "w" : "",
-			 updated & WATCHER_EXCEPT ? "e" : "");
+			 updated & WATCHER_WRITE ? "w" : "");
 	}
 	free(data);
 }
@@ -333,27 +330,6 @@ static inline int find_revents(struct pollfd *pfd, int count, int fd)
 		}
 	}
 	return 0;
-}
-
-/**
- * Check if entry is waiting for a specific event, and if it got signaled
- */
-static inline bool entry_ready(entry_t *entry, watcher_event_t event,
-							   int revents)
-{
-	if (entry->events & event)
-	{
-		switch (event)
-		{
-			case WATCHER_READ:
-				return (revents & (POLLIN | POLLHUP | POLLNVAL)) != 0;
-			case WATCHER_WRITE:
-				return (revents & (POLLOUT | POLLHUP | POLLNVAL)) != 0;
-			case WATCHER_EXCEPT:
-				return (revents & (POLLERR | POLLHUP | POLLNVAL)) != 0;
-		}
-	}
-	return FALSE;
 }
 
 #if DEBUG_LEVEL >= 2
@@ -431,11 +407,6 @@ static job_requeue_t watch(private_watcher_t *this)
 				log_event(eventpos, 'w');
 				pfd[count].events |= POLLOUT;
 			}
-			if (entry->events & WATCHER_EXCEPT)
-			{
-				log_event(eventpos, 'e');
-				pfd[count].events |= POLLERR;
-			}
 			end_event_log(eventpos);
 			log_fd(logpos, loglen, entry->fd, eventbuf);
 			count++;
@@ -505,23 +476,27 @@ static job_requeue_t watch(private_watcher_t *this)
 				}
 				reset_event_log(eventbuf, eventpos);
 				revents = find_revents(pfd, count, entry->fd);
-				if (entry_ready(entry, WATCHER_EXCEPT, revents))
+				if (revents & POLLERR)
 				{
 					log_event(eventpos, 'e');
-					notify(this, entry, WATCHER_EXCEPT);
 				}
-				else
+				if (revents & POLLIN)
 				{
-					if (entry_ready(entry, WATCHER_READ, revents))
-					{
-						log_event(eventpos, 'r');
-						notify(this, entry, WATCHER_READ);
-					}
-					if (entry_ready(entry, WATCHER_WRITE, revents))
-					{
-						log_event(eventpos, 'w');
-						notify(this, entry, WATCHER_WRITE);
-					}
+					log_event(eventpos, 'r');
+				}
+				if (revents & POLLOUT)
+				{
+					log_event(eventpos, 'w');
+				}
+				if (entry->events & WATCHER_READ &&
+					revents & (POLLIN | POLLERR | POLLHUP | POLLNVAL))
+				{
+					notify(this, entry, WATCHER_READ);
+				}
+				if (entry->events & WATCHER_WRITE &&
+					revents & (POLLOUT | POLLERR | POLLHUP | POLLNVAL))
+				{
+					notify(this, entry, WATCHER_WRITE);
 				}
 				end_event_log(eventpos);
 				log_fd(logpos, loglen, entry->fd, eventbuf);
@@ -571,10 +546,9 @@ METHOD(watcher_t, add, void,
 		.data = data,
 	);
 
-	DBG3(DBG_JOB, "adding fd %d[%s%s%s] to watcher", fd,
+	DBG3(DBG_JOB, "adding fd %d[%s%s] to watcher", fd,
 		 events & WATCHER_READ ? "r" : "",
-		 events & WATCHER_WRITE ? "w" : "",
-		 events & WATCHER_EXCEPT ? "e" : "");
+		 events & WATCHER_WRITE ? "w" : "");
 
 	this->mutex->lock(this->mutex);
 	add_entry(this, entry);
@@ -631,10 +605,9 @@ METHOD(watcher_t, remove_, void,
 	{
 		update_and_unlock(this);
 
-		DBG3(DBG_JOB, "removed fd %d[%s%s%s] from watcher", fd,
+		DBG3(DBG_JOB, "removed fd %d[%s%s] from watcher", fd,
 			 found & WATCHER_READ ? "r" : "",
-			 found & WATCHER_WRITE ? "w" : "",
-			 found & WATCHER_EXCEPT ? "e" : "");
+			 found & WATCHER_WRITE ? "w" : "");
 	}
 	else
 	{

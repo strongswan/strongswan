@@ -55,7 +55,6 @@ typedef bool (*watcher_cb_t)(void *data, int fd, watcher_event_t event);
 enum watcher_event_t {
 	WATCHER_READ = (1<<0),
 	WATCHER_WRITE = (1<<1),
-	WATCHER_EXCEPT = (1<<2),
 };
 
 /**
