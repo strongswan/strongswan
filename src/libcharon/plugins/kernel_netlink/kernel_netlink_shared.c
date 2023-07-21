@@ -57,6 +57,13 @@
 #define SOL_NETLINK 270
 #endif
 
+/**
+ * Default receive buffer size
+ */
+#ifndef NETLINK_RCVBUF_DEFAULT
+#define NETLINK_RCVBUF_DEFAULT (8 * 1024 * 1024)
+#endif
+
 typedef struct private_netlink_socket_t private_netlink_socket_t;
 typedef struct private_netlink_event_socket_t private_netlink_event_socket_t;
 
@@ -656,7 +663,6 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 	struct sockaddr_nl addr = {
 		.nl_family = AF_NETLINK,
 	};
-	bool force_buf = FALSE;
 	int on = 1, rcvbuf_size = 0;
 
 	INIT(this,
@@ -707,21 +713,16 @@ netlink_socket_t *netlink_socket_create(int protocol, enum_name_t *names,
 
 	rcvbuf_size = lib->settings->get_int(lib->settings,
 						"%s.plugins.kernel-netlink.receive_buffer_size",
-						rcvbuf_size, lib->ns);
+						NETLINK_RCVBUF_DEFAULT, lib->ns);
 	if (rcvbuf_size)
 	{
-		int optname;
-
-		force_buf = lib->settings->get_bool(lib->settings,
-						"%s.plugins.kernel-netlink.force_receive_buffer_size",
-						force_buf, lib->ns);
-		optname = force_buf ? SO_RCVBUFFORCE : SO_RCVBUF;
-
-		if (setsockopt(this->socket, SOL_SOCKET, optname, &rcvbuf_size,
+		if (setsockopt(this->socket, SOL_SOCKET, SO_RCVBUFFORCE, &rcvbuf_size,
+					   sizeof(rcvbuf_size)) == -1 &&
+			setsockopt(this->socket, SOL_SOCKET, SO_RCVBUF, &rcvbuf_size,
 					   sizeof(rcvbuf_size)) == -1)
 		{
-			DBG1(DBG_KNL, "failed to %supdate receive buffer size to %d: %s",
-					force_buf ? "forcibly " : "", rcvbuf_size, strerror(errno));
+			DBG1(DBG_KNL, "failed to set receive buffer size to %d: %s",
+				 rcvbuf_size, strerror(errno));
 		}
 	}
 	if (this->parallel)
