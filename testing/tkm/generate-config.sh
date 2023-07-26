@@ -1,7 +1,7 @@
 #!/bin/bash
 
 openssl genrsa -out key.pem 2048
-openssl rsa -in key.pem -outform der -out key.der
+openssl rsa -in key.pem -outform der -out key.der -traditional
 
 openssl req -x509 -nodes -newkey rsa:4096 -keyout cakey.pem -outform der \
 	-out ca.der -sha256 -subj "/CN=CA" -addext basicConstraints=critical,CA:TRUE
