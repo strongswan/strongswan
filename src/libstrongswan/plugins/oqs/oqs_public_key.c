@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Andreas Steffen
+ * Copyright (C) 2020-2023 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
