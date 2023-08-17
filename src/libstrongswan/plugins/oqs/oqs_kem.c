@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Andreas Steffen
+ * Copyright (C) 2018-2023 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -241,32 +241,14 @@ oqs_kem_t *oqs_kem_create(key_exchange_method_t method)
 		case KE_KYBER_L5:
 			kem_alg = OQS_KEM_alg_kyber_1024;
 			break;
-		case KE_NTRU_HPS_L1:
-			kem_alg = OQS_KEM_alg_ntru_hps2048509;
-			break;
-		case KE_NTRU_HPS_L3:
-			kem_alg = OQS_KEM_alg_ntru_hps2048677;
-			break;
-		case KE_NTRU_HPS_L5:
-			kem_alg = OQS_KEM_alg_ntru_hps4096821;
-			break;
-		case KE_NTRU_HRSS_L3:
-			kem_alg = OQS_KEM_alg_ntru_hrss701;
-			break;
-		case KE_SABER_L1:
-			kem_alg = OQS_KEM_alg_saber_lightsaber;
-			break;
-		case KE_SABER_L3:
-			kem_alg = OQS_KEM_alg_saber_saber;
-			break;
-		case KE_SABER_L5:
-			kem_alg = OQS_KEM_alg_saber_firesaber;
-			break;
 		case KE_BIKE_L1:
 			kem_alg = OQS_KEM_alg_bike_l1;
 			break;
 		case KE_BIKE_L3:
 			kem_alg = OQS_KEM_alg_bike_l3;
+			break;
+		case KE_BIKE_L5:
+			kem_alg = OQS_KEM_alg_bike_l5;
 			break;
 		case KE_FRODO_AES_L1:
 			kem_alg = OQS_KEM_alg_frodokem_640_aes;
