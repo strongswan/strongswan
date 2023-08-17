@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020 Andreas Steffen
+ * Copyright (C) 2016-2023 Andreas Steffen
  * Copyright (C) 2010-2020 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -68,30 +68,24 @@ enum key_exchange_method_t {
 	CURVE_448     = 32,
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
 	MODP_NULL          = 1024,
-	/** NIST round 3 KEM candidates, in PRIVATE USE */
-	KE_KYBER_L1        = 1050,
-	KE_KYBER_L3        = 1051,
-	KE_KYBER_L5        = 1052,
-	KE_NTRU_HPS_L1     = 1053,
-	KE_NTRU_HPS_L3     = 1054,
-	KE_NTRU_HPS_L5     = 1055,
-	KE_NTRU_HRSS_L3    = 1056,
-	KE_SABER_L1        = 1057,
-	KE_SABER_L3        = 1058,
-	KE_SABER_L5        = 1059,
-	/** NIST alternative KEM candidates, in PRIVATE USE */
-	KE_BIKE_L1         = 1060,
-	KE_BIKE_L3         = 1061,
-	KE_BIKE_L5         = 1062,
-	KE_FRODO_AES_L1    = 1063,
-	KE_FRODO_AES_L3    = 1064,
-	KE_FRODO_AES_L5    = 1065,
-	KE_FRODO_SHAKE_L1  = 1066,
-	KE_FRODO_SHAKE_L3  = 1067,
-	KE_FRODO_SHAKE_L5  = 1068,
-	KE_HQC_L1          = 1069,
-	KE_HQC_L3          = 1070,
-	KE_HQC_L5          = 1071,
+	/** NIST selected KEM algorithms 2022, in PRIVATE USE */
+	KE_KYBER_L1        = 1080,
+	KE_KYBER_L3        = 1081,
+	KE_KYBER_L5        = 1082,
+	/** KEM algorithms recommended by BSI, in PRIVATE USE */
+	KE_FRODO_AES_L1    = 1083,
+	KE_FRODO_AES_L3    = 1084,
+	KE_FRODO_AES_L5    = 1085,
+	KE_FRODO_SHAKE_L1  = 1086,
+	KE_FRODO_SHAKE_L3  = 1087,
+	KE_FRODO_SHAKE_L5  = 1088,
+	/** NIST round 4 candidate KEM algorithms, in PRIVATE USE */
+	KE_BIKE_L1         = 1089,
+	KE_BIKE_L3         = 1090,
+	KE_BIKE_L5         = 1091,
+	KE_HQC_L1          = 1092,
+	KE_HQC_L3          = 1093,
+	KE_HQC_L5          = 1094,
 	/** MODP group with custom generator/prime */
 	/** internally used DH group with additional parameters g and p, outside
 	 * of PRIVATE USE (i.e. IKEv2 DH group range) so it can't be negotiated */

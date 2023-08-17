@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Andreas Steffen
+ * Copyright (C) 2018-2023 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -31,8 +31,6 @@ static bool unsupported(key_exchange_method_t method)
 {
 	switch(method)
 	{
-		case KE_BIKE_L5:
-			return TRUE;
 		default:
 			return FALSE;
 	}
