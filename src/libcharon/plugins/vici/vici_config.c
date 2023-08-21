@@ -574,6 +574,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   copy_df = %u", !has_opt(OPT_NO_COPY_DF));
 	DBG2(DBG_CFG, "   copy_ecn = %u", !has_opt(OPT_NO_COPY_ECN));
 	DBG2(DBG_CFG, "   copy_dscp = %N", dscp_copy_names, cfg->copy_dscp);
+    DBG2(DBG_CFG, "   max_child_sas = %u", cfg->max_child_sas);
 }
 
 /**
@@ -1809,6 +1810,7 @@ CALLBACK(child_kv, bool,
 		{ "if_id_out",			parse_if_id,		&child->cfg.if_id_out				},
 		{ "label",				parse_label,		&child->cfg.label					},
 		{ "label_mode",			parse_label_mode,	&child->cfg.label_mode				},
+        { "max_child_sas",      parse_uint32,       &child->cfg.max_child_sas           },
 	};
 
 	return parse_rules(rules, countof(rules), name, value,
