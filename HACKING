@@ -20,6 +20,8 @@ the code, you need the following tools:
     - lex/flex
     - yacc/bison
     - gperf
+    - build-essential
+    - libgmp-dev
 
     Optionally:
     - lcov/genhtml
@@ -29,7 +31,7 @@ Check out the repository:
 
     git clone https://github.com/strongswan/strongswan.git
 
-After a successful check out, run autotools to generate configure etc.:
+After a successful checkout, run autotools to generate configure etc.:
 
     cd strongswan/
     ./autogen.sh
@@ -41,7 +43,7 @@ Finally, start the build as usual:
     make install
 
 
-API documentation
+API Documentation
 -----------------
 
 All header files contain inline code documentation. These comments can be
@@ -54,3 +56,32 @@ strongSwan Documentation
 Documentation for users and developers is available at
 
     https://docs.strongswan.org
+
+For Ubuntu (22.04.2) compile and install Strongswan.
+----------------------------------------------------
+
+Step 1: Installation of Git and other dependencies.
+
+    sudo apt-get install git gcc clang automake autoconf libtool pkg-config gettext perl flex bison gperf build-essential libgmp-dev
+
+Step 2: Clone Git Repository.
+
+    git clone https://github.com/strongswan/strongswan.git
+
+Step 3: Navigate To Strongswan directory and start the auto tool to generate configure etc.
+
+    cd strongswan/
+    ./autogen.sh
+
+Step 4: Final step build and install.
+
+    ./configure
+    make
+    make install
+
+now you are good to go.
+    
+    
+
+    
+
