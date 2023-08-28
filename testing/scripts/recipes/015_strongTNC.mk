@@ -18,8 +18,8 @@ $(ZIP):
 	@touch $@
 
 .$(PKG)-deps-$(REV): .$(PKG)-unpacked-$(REV)
-	mkdir -p $(DEPS)
-	pip3 download -d $(DEPS) -r $(DIR)/requirements.txt
+	python3 -m venv $(VENV)
+	$(VENV)/bin/pip download -d $(DEPS) -r $(DIR)/requirements.txt
 	@touch $@
 
 install: .$(PKG)-deps-$(REV)
