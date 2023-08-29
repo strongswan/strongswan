@@ -16,6 +16,7 @@
 
 package org.strongswan.android.ui;
 
+import android.Manifest;
 import android.app.Dialog;
 import android.app.Service;
 import android.content.ActivityNotFoundException;
@@ -25,6 +26,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.net.VpnService;
 import android.os.Build;
@@ -45,12 +47,14 @@ import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.utils.Constants;
 
+import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDialogFragment;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -107,11 +111,18 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		new ActivityResultContracts.StartActivityForResult(),
 		result -> {
 			mWaitingForResult = false;
-			if (mProfileInfo != null && mService != null)
+			if (checkNotificationPermission())
 			{
-				mService.connect(mProfileInfo, true);
+				performConnect();
 			}
-			finish();
+		}
+	);
+
+	private final ActivityResultLauncher<String> mRequestPermission = registerForActivityResult(
+		new ActivityResultContracts.RequestPermission(),
+		result -> {
+			mWaitingForResult = false;
+			performConnect();
 		}
 	);
 
@@ -220,19 +231,44 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	}
 
 	/**
+	 * Called to actually perform the connection and terminating the activity.
+	 */
+	protected void performConnect()
+	{
+		if (mProfileInfo != null && mService != null)
+		{
+			mService.connect(mProfileInfo, true);
+		}
+		finish();
+	}
+
+	/**
 	 * Called once the VpnService has been prepared and permission has been granted
 	 * by the user.
 	 */
 	protected void onVpnServicePrepared()
 	{
-		if (checkPowerWhitelist())
+		if (checkPowerWhitelist() && checkNotificationPermission())
 		{
-			if (mService != null)
-			{
-				mService.connect(mProfileInfo, true);
-			}
-			finish();
+			performConnect();
 		}
+	}
+
+	/**
+	 * Check if we have permission to display notifications to the user, if necessary,
+	 * ask the user to allow this.
+	 * @return true if profile can be initiated immediately
+	 */
+	private boolean checkNotificationPermission()
+	{
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+			ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+		{
+			mWaitingForResult = true;
+			mRequestPermission.launch(Manifest.permission.POST_NOTIFICATIONS);
+			return false;
+		}
+		return true;
 	}
 
 	/**
