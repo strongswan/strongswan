@@ -1,12 +1,5 @@
-# 2.4.1 #
+# 2.4.2 #
 
-- Reihenfolge der DH Gruppen geändert, um Probleme mit Zyxel Firewalls zu beheben
-
-# 2.4.0 #
-
-- Wechsel von BoringSSL zu OpenSSL
-- Unterstützung für folgende Algorithmen hinzugefügt: Curve448 ECDH, AES-CCM, Camellia (CBC/CTR/XCBC), SHA-3 (HMAC/PKCS#1)
-- Problem behoben, welches File Descriptor Lecks beim Laden von OCSP/CRLs verursachte
-- Verbesserte Übersetzung von vereinfachtem Chinesisch
-- Ukrainische Übersetzung korrekt eingebunden
-- Minimum SDK Version auf 21 (Android 5.0) erhöht
+- Ziel-SDK auf Android 13 erhöht und frage um Erlaubnis, um Status-Mitteilung anzuzeigen
+- Hardwarebeschleunigung in OpenSSL aktiviert
+- Verwendet einen stabileren Ansatz, um die Quell-IP zu ermitteln
