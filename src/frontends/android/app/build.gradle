@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 32
+    compileSdkVersion 33
 
     namespace 'org.strongswan.android'
 
     defaultConfig {
         applicationId "org.strongswan.android"
         minSdkVersion 21
-        targetSdkVersion 32
+        targetSdkVersion 33
         versionCode 79
         versionName "2.4.1"
     }
