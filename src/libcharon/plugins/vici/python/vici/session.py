@@ -29,7 +29,7 @@ class Session(CommandWrappers, object):
         if sock is None:
             if platform.system() == "Windows":
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect('127.0.0.1', 4502)
+                sock.connect(('127.0.0.1', 4502))
             else:
                 sock = socket.socket(socket.AF_UNIX)
                 sock.connect("/var/run/charon.vici")
