@@ -2380,7 +2380,11 @@ METHOD(ike_sa_t, handle_redirect, bool,
 	switch (this->state)
 	{
 		case IKE_CONNECTING:
-			return redirect_connecting(this, gateway);
+			if (!has_condition(this, COND_AUTHENTICATED))
+			{
+				return redirect_connecting(this, gateway);
+			}
+			/* fall-through during IKE_AUTH if authenticated */
 		case IKE_ESTABLISHED:
 			return redirect_established(this, gateway);
 		default:
