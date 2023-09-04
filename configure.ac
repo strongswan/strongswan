@@ -744,7 +744,7 @@ AC_COMPILE_IFELSE(
 		  #include <sys/types.h>
 		  #include <sys/socket.h>
 		  #include <netinet/in.h>]],
-		[[struct in6_pktinfo pi;
+		[[struct in6_pktinfo pi = {};
 		  if (pi.ipi6_ifindex)
 		  {
 		    return 0;
