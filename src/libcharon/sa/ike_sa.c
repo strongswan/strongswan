@@ -3021,7 +3021,7 @@ METHOD(ike_sa_t, destroy, void,
 	}
 	/* uninstall CHILD_SAs before virtual IPs, otherwise we might kill
 	 * routes that the CHILD_SA tries to uninstall. */
-	while (array_remove(this->child_sas, ARRAY_TAIL, &child_sa))
+	while (array_remove(this->child_sas, ARRAY_HEAD, &child_sa))
 	{
 		charon->child_sa_manager->remove(charon->child_sa_manager, child_sa);
 		child_sa->destroy(child_sa);
