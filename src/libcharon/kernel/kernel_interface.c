@@ -433,6 +433,23 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 	return SUCCESS;
 }
 
+METHOD(kernel_interface_t, ref_reqid, status_t,
+	private_kernel_interface_t *this, uint32_t reqid)
+{
+	reqid_entry_t *entry, tmpl = {
+		.reqid = reqid,
+	};
+
+	this->mutex->lock(this->mutex);
+	entry = this->reqids->get(this->reqids, &tmpl);
+	if (entry)
+	{
+		entry->refs++;
+	}
+	this->mutex->unlock(this->mutex);
+	return entry ? SUCCESS : NOT_FOUND;
+}
+
 METHOD(kernel_interface_t, release_reqid, status_t,
 	private_kernel_interface_t *this, uint32_t reqid)
 {
@@ -1039,6 +1056,7 @@ kernel_interface_t *kernel_interface_create()
 			.get_spi = _get_spi,
 			.get_cpi = _get_cpi,
 			.alloc_reqid = _alloc_reqid,
+			.ref_reqid = _ref_reqid,
 			.release_reqid = _release_reqid,
 			.add_sa = _add_sa,
 			.update_sa = _update_sa,
