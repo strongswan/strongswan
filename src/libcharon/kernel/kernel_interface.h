@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2016 Tobias Brunner
+ * Copyright (C) 2006-2023 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -162,17 +162,9 @@ struct kernel_interface_t {
 	 * Release a previously allocated reqid.
 	 *
 	 * @param reqid		reqid to release
-	 * @param mark_in	inbound mark on SA
-	 * @param mark_out	outbound mark on SA
-	 * @param if_id_in	inbound interface ID on SA
-	 * @param if_id_out	outbound interface ID on SA
-	 * @param label		security label (usually the one on the policy, not SA)
 	 * @return			SUCCESS if reqid released
 	 */
-	status_t (*release_reqid)(kernel_interface_t *this, uint32_t reqid,
-							  mark_t mark_in, mark_t mark_out,
-							  uint32_t if_id_in, uint32_t if_id_out,
-							  sec_label_t *label);
+	status_t (*release_reqid)(kernel_interface_t *this, uint32_t reqid);
 
 	/**
 	 * Add an SA to the SAD.
