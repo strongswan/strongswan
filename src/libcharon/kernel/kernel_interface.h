@@ -159,6 +159,18 @@ struct kernel_interface_t {
 							uint32_t *reqid);
 
 	/**
+	 * Increase the reference count for the given reqid that was previously
+	 * allocated by alloc_reqid().
+	 *
+	 * The reference must be released with a call to release_reqid().
+	 *
+	 * @param reqid		previously allocated reqid
+	 * @return			SUCCESS if refcount increased, NOT_FOUND if reqid is
+	 *					unknown (shouldn't happen)
+	 */
+	status_t (*ref_reqid)(kernel_interface_t *this, uint32_t reqid);
+
+	/**
 	 * Release a previously allocated reqid.
 	 *
 	 * @param reqid		reqid to release
