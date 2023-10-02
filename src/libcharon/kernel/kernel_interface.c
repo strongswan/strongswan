@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Tobias Brunner
+ * Copyright (C) 2008-2023 Tobias Brunner
  * Copyright (C) 2010 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -232,9 +232,9 @@ static void reqid_entry_destroy(reqid_entry_t *entry)
 }
 
 /**
- * Hash the shared data of reqid entries
+ * Hash the additional selector properties of reqid entries
  */
-static u_int entry_hash_shared(reqid_entry_t *entry)
+static u_int entry_hash_selectors(reqid_entry_t *entry)
 {
 	u_int hash;
 
@@ -250,9 +250,9 @@ static u_int entry_hash_shared(reqid_entry_t *entry)
 }
 
 /**
- * Compare the shared properties of reqid entries
+ * Compare the additional selector properties of reqid entries
  */
-static bool entry_equals_shared(reqid_entry_t *a, reqid_entry_t *b)
+static bool entry_equals_selectors(reqid_entry_t *a, reqid_entry_t *b)
 {
 	return a->mark_in.value == b->mark_in.value &&
 		   a->mark_in.mask == b->mark_in.mask &&
@@ -268,8 +268,7 @@ static bool entry_equals_shared(reqid_entry_t *a, reqid_entry_t *b)
  */
 static u_int hash_reqid(reqid_entry_t *entry)
 {
-	return chunk_hash_inc(chunk_from_thing(entry->reqid),
-				entry_hash_shared(entry));
+	return chunk_hash(chunk_from_thing(entry->reqid));
 }
 
 /**
@@ -277,11 +276,7 @@ static u_int hash_reqid(reqid_entry_t *entry)
  */
 static bool equals_reqid(reqid_entry_t *a, reqid_entry_t *b)
 {
-	if (a->reqid == b->reqid)
-	{
-		return entry_equals_shared(a, b);
-	}
-	return FALSE;
+	return a->reqid == b->reqid;
 }
 
 /**
@@ -309,7 +304,7 @@ static u_int hash_reqid_by_ts(reqid_entry_t *entry)
 {
 	return hash_ts_array(entry->local,
 				hash_ts_array(entry->remote,
-						 entry_hash_shared(entry)));
+						 entry_hash_selectors(entry)));
 }
 
 /**
@@ -346,7 +341,7 @@ static bool equals_reqid_by_ts(reqid_entry_t *a, reqid_entry_t *b)
 	if (ts_array_equals(a->local, b->local) &&
 		ts_array_equals(a->remote, b->remote))
 	{
-		return entry_equals_shared(a, b);
+		return entry_equals_selectors(a, b);
 	}
 	return FALSE;
 }
@@ -397,16 +392,17 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 		/* search by reqid if given */
 		entry = this->reqids->get(this->reqids, tmpl);
 	}
-	if (entry)
+	if (entry && entry_equals_selectors(entry, tmpl))
 	{
-		/* we don't require a traffic selector match for explicit reqids,
+		/* we don't require a traffic selector match for existing reqids,
 		 * as we want to reuse a reqid for trap-triggered policies that
-		 * got narrowed during negotiation. */
+		 * got narrowed during negotiation, but we don't want to reuse the
+		 * reqid if the additional selectors (e.g. marks) are different */
 		reqid_entry_destroy(tmpl);
 	}
 	else
 	{
-		/* search by traffic selectors */
+		/* search by traffic and other selectors */
 		entry = this->reqids_by_ts->get(this->reqids_by_ts, tmpl);
 		if (entry)
 		{
