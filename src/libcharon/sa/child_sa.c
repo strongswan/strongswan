@@ -361,6 +361,17 @@ METHOD(child_sa_t, get_reqid, uint32_t,
 	return this->reqid;
 }
 
+METHOD(child_sa_t, get_reqid_ref, uint32_t,
+	   private_child_sa_t *this)
+{
+	if ((this->reqid_allocated || (!this->static_reqid && this->reqid)) &&
+		charon->kernel->ref_reqid(charon->kernel, this->reqid) == SUCCESS)
+	{
+		return this->reqid;
+	}
+	return 0;
+}
+
 METHOD(child_sa_t, get_unique_id, uint32_t,
 	private_child_sa_t *this)
 {
@@ -2033,6 +2044,7 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 		.public = {
 			.get_name = _get_name,
 			.get_reqid = _get_reqid,
+			.get_reqid_ref = _get_reqid_ref,
 			.get_unique_id = _get_unique_id,
 			.get_config = _get_config,
 			.get_state = _get_state,
