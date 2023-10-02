@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2019 Tobias Brunner
+ * Copyright (C) 2006-2023 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -843,6 +843,51 @@ METHOD(child_sa_t, alloc_cpi, uint16_t,
 }
 
 /**
+ * Allocate a reqid for the given local and remote traffic selector lists.
+ * On success, release the previously allocated reqid.
+ */
+static status_t alloc_reqid_lists(private_child_sa_t *this,
+								  linked_list_t *my_ts, linked_list_t *other_ts,
+								  uint32_t *reqid)
+{
+	uint32_t existing_reqid = *reqid;
+	status_t status;
+
+	status = charon->kernel->alloc_reqid(
+							charon->kernel, my_ts, other_ts,
+							this->mark_in, this->mark_out, this->if_id_in,
+							this->if_id_out, label_for(this, LABEL_USE_REQID),
+							reqid);
+
+	if (status == SUCCESS && existing_reqid)
+	{
+		if (charon->kernel->release_reqid(charon->kernel,
+										  existing_reqid) != SUCCESS)
+		{
+			DBG1(DBG_CHD, "releasing previous reqid %u failed", existing_reqid);
+		}
+	}
+	return status;
+}
+
+/**
+ * Allocate a reqid for the given local and remote traffic selectors.
+ */
+static status_t alloc_reqid(private_child_sa_t *this, array_t *my_ts,
+							array_t *other_ts, uint32_t *reqid)
+{
+	linked_list_t *my_ts_list, *other_ts_list;
+	status_t status;
+
+	my_ts_list = linked_list_create_from_enumerator(array_create_enumerator(my_ts));
+	other_ts_list = linked_list_create_from_enumerator(array_create_enumerator(other_ts));
+	status = alloc_reqid_lists(this, my_ts_list, other_ts_list, reqid);
+	my_ts_list->destroy(my_ts_list);
+	other_ts_list->destroy(other_ts_list);
+	return status;
+}
+
+/**
  * Install the given SA in the kernel
  */
 static status_t install_internal(private_child_sa_t *this, chunk_t encr,
@@ -923,10 +968,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 
 	if (!this->reqid_allocated && !this->static_reqid)
 	{
-		status = charon->kernel->alloc_reqid(charon->kernel, my_ts, other_ts,
-								this->mark_in, this->mark_out, this->if_id_in,
-								this->if_id_out, label_for(this, LABEL_USE_REQID),
-								&this->reqid);
+		status = alloc_reqid_lists(this, my_ts, other_ts, &this->reqid);
 		if (status != SUCCESS)
 		{
 			my_ts->destroy(my_ts);
@@ -1319,27 +1361,6 @@ METHOD(child_sa_t, set_policies, void,
 	}
 	enumerator->destroy(enumerator);
 	array_sort(this->other_ts, (void*)traffic_selector_cmp, NULL);
-}
-
-/**
- * Allocate a reqid for the given local and remote traffic selectors.
- */
-static status_t alloc_reqid(private_child_sa_t *this, array_t *my_ts,
-							array_t *other_ts, uint32_t *reqid)
-{
-	linked_list_t *my_ts_list, *other_ts_list;
-	status_t status;
-
-	my_ts_list = linked_list_create_from_enumerator(array_create_enumerator(my_ts));
-	other_ts_list = linked_list_create_from_enumerator(array_create_enumerator(other_ts));
-	status = charon->kernel->alloc_reqid(
-							charon->kernel, my_ts_list, other_ts_list,
-							this->mark_in, this->mark_out, this->if_id_in,
-							this->if_id_out, label_for(this, LABEL_USE_REQID),
-							reqid);
-	my_ts_list->destroy(my_ts_list);
-	other_ts_list->destroy(other_ts_list);
-	return status;
 }
 
 METHOD(child_sa_t, install_policies, status_t,
@@ -1943,7 +1964,7 @@ METHOD(child_sa_t, destroy, void,
 		charon->kernel->del_sa(charon->kernel, &id, &sa);
 	}
 
-	if (this->reqid_allocated)
+	if (this->reqid_allocated || (!this->static_reqid && this->reqid))
 	{
 		if (charon->kernel->release_reqid(charon->kernel,
 										  this->reqid) != SUCCESS)
@@ -2126,7 +2147,11 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 		 * replace the temporary SA on the kernel level. Rekeying such an SA
 		 * requires an explicit reqid, as the cache currently knows the original
 		 * selectors only for that reqid. */
-		this->reqid = data->reqid;
+		if (data->reqid &&
+			charon->kernel->ref_reqid(charon->kernel, data->reqid) == SUCCESS)
+		{
+			this->reqid = data->reqid;
+		}
 	}
 	else
 	{
