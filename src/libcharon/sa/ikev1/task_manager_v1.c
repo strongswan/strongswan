@@ -1791,6 +1791,7 @@ METHOD(task_manager_t, queue_child_rekey, void,
 	child_sa_t *child_sa;
 	child_cfg_t *cfg;
 	quick_mode_t *task;
+	uint32_t reqid;
 
 	child_sa = this->ike_sa->get_child_sa(this->ike_sa, protocol, spi, TRUE);
 	if (!child_sa)
@@ -1816,7 +1817,12 @@ METHOD(task_manager_t, queue_child_rekey, void,
 			cfg = child_sa->get_config(child_sa);
 			task = quick_mode_create(this->ike_sa, cfg->get_ref(cfg),
 				get_first_ts(child_sa, TRUE), get_first_ts(child_sa, FALSE));
-			task->use_reqid(task, child_sa->get_reqid(child_sa));
+			reqid = child_sa->get_reqid_ref(child_sa);
+			if (reqid)
+			{
+				task->use_reqid(task, reqid);
+				charon->kernel->release_reqid(charon->kernel, reqid);
+			}
 			task->use_marks(task, child_sa->get_mark(child_sa, TRUE).value,
 							child_sa->get_mark(child_sa, FALSE).value);
 			task->use_if_ids(task, child_sa->get_if_id(child_sa, TRUE),
