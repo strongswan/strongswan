@@ -1867,15 +1867,20 @@ METHOD(tls_crypto_t, sign, bool,
 				 * All key types except RSA have a single fixed signature scheme
 				 * RSA signature schemes are tried until sign() is successful
 				 */
-				if (params && (scheme == hashsig_scheme ||
-				   (!scheme &&
-				    type == key_type_from_signature_scheme(params->scheme))))
-				{
-				    if (key->sign(key, params->scheme, params->params, data, &sig))
+				if (params) {
+					DBG2(DBG_TLS, "checking proposed signature scheme %N",
+						 tls_signature_scheme_names, hashsig_scheme);
+					if (scheme == hashsig_scheme ||
+					   (!scheme &&
+						type == key_type_from_signature_scheme(params->scheme) &&
+						filter_signature_scheme_config(hashsig_scheme)))
 					{
-						done = TRUE;
-						scheme = hashsig_scheme;
-						break;
+						if (key->sign(key, params->scheme, params->params, data, &sig))
+						{
+							done = TRUE;
+							scheme = hashsig_scheme;
+							break;
+						}
 					}
 				}
 			}
