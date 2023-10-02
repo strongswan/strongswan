@@ -1810,9 +1810,7 @@ METHOD(child_sa_t, update, status_t,
 		{
 			if (new_reqid &&
 				charon->kernel->release_reqid(charon->kernel,
-						new_reqid, this->mark_in, this->mark_out,
-						this->if_id_in, this->if_id_out,
-						label_for(this, LABEL_USE_REQID)) != SUCCESS)
+											  new_reqid) != SUCCESS)
 			{
 				DBG1(DBG_CHD, "releasing reqid %u failed", new_reqid);
 			}
@@ -1827,9 +1825,7 @@ METHOD(child_sa_t, update, status_t,
 		if (new_reqid)
 		{
 			if (charon->kernel->release_reqid(charon->kernel,
-						this->reqid, this->mark_in, this->mark_out,
-						this->if_id_in, this->if_id_out,
-						label_for(this, LABEL_USE_REQID)) != SUCCESS)
+											  this->reqid) != SUCCESS)
 			{
 				DBG1(DBG_CHD, "releasing reqid %u failed", this->reqid);
 			}
@@ -1950,9 +1946,7 @@ METHOD(child_sa_t, destroy, void,
 	if (this->reqid_allocated)
 	{
 		if (charon->kernel->release_reqid(charon->kernel,
-						this->reqid, this->mark_in, this->mark_out,
-						this->if_id_in, this->if_id_out,
-						label_for(this, LABEL_USE_REQID)) != SUCCESS)
+										  this->reqid) != SUCCESS)
 		{
 			DBG1(DBG_CHD, "releasing reqid %u failed", this->reqid);
 		}

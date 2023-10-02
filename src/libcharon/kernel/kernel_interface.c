@@ -434,45 +434,24 @@ METHOD(kernel_interface_t, alloc_reqid, status_t,
 }
 
 METHOD(kernel_interface_t, release_reqid, status_t,
-	private_kernel_interface_t *this, uint32_t reqid,
-	mark_t mark_in, mark_t mark_out, uint32_t if_id_in, uint32_t if_id_out,
-	sec_label_t *label)
+	private_kernel_interface_t *this, uint32_t reqid)
 {
 	reqid_entry_t *entry, tmpl = {
 		.reqid = reqid,
-		.mark_in = mark_in,
-		.mark_out = mark_out,
-		.if_id_in = if_id_in,
-		.if_id_out = if_id_out,
-		.label = label,
 	};
 
 	this->mutex->lock(this->mutex);
-	entry = this->reqids->remove(this->reqids, &tmpl);
-	if (entry)
+	entry = this->reqids->get(this->reqids, &tmpl);
+	if (entry && --entry->refs == 0)
 	{
-		if (--entry->refs == 0)
-		{
-			array_insert_create_value(&this->released_reqids, sizeof(uint32_t),
-									  ARRAY_TAIL, &entry->reqid);
-			entry = this->reqids_by_ts->remove(this->reqids_by_ts, entry);
-			if (entry)
-			{
-				reqid_entry_destroy(entry);
-			}
-		}
-		else
-		{
-			this->reqids->put(this->reqids, entry, entry);
-		}
+		array_insert_create_value(&this->released_reqids, sizeof(uint32_t),
+								  ARRAY_TAIL, &entry->reqid);
+		this->reqids->remove(this->reqids, entry);
+		this->reqids_by_ts->remove(this->reqids_by_ts, entry);
+		reqid_entry_destroy(entry);
 	}
 	this->mutex->unlock(this->mutex);
-
-	if (entry)
-	{
-		return SUCCESS;
-	}
-	return NOT_FOUND;
+	return entry ? SUCCESS : NOT_FOUND;
 }
 
 METHOD(kernel_interface_t, add_sa, status_t,
