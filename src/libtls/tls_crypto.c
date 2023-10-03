@@ -1869,7 +1869,8 @@ METHOD(tls_crypto_t, sign, bool,
 				 */
 				if (params && (scheme == hashsig_scheme ||
 				   (!scheme &&
-				    type == key_type_from_signature_scheme(params->scheme))))
+				    type == key_type_from_signature_scheme(params->scheme) &&
+				    filter_signature_scheme_config(hashsig_scheme))))
 				{
 				    if (key->sign(key, params->scheme, params->params, data, &sig))
 					{
@@ -2711,7 +2712,8 @@ static enumerator_t *get_supported_key_types(tls_version_t min_version,
 	for (i = 0; i < countof(schemes); i++)
 	{
 		if (schemes[i].min_version <= max_version &&
-			schemes[i].max_version >= min_version)
+			schemes[i].max_version >= min_version &&
+			filter_signature_scheme_config(schemes[i].sig))
 		{
 			lookup = key_type_from_signature_scheme(schemes[i].params.scheme);
 			if (!ht->get(ht, &lookup))
