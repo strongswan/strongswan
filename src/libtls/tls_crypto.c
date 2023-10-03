@@ -1444,6 +1444,24 @@ static bool filter_signature_scheme_config(tls_signature_scheme_t signature)
 	enumerator_t *enumerator;
 	char *token, *config;
 
+	switch (signature)
+	{
+		case TLS_SIG_RSA_PSS_RSAE_SHA256:
+		case TLS_SIG_RSA_PSS_RSAE_SHA384:
+		case TLS_SIG_RSA_PSS_RSAE_SHA512:
+		case TLS_SIG_RSA_PSS_PSS_SHA256:
+		case TLS_SIG_RSA_PSS_PSS_SHA384:
+		case TLS_SIG_RSA_PSS_PSS_SHA512:
+			if (!lib->settings->get_bool(lib->settings, "%s.rsa_pss", TRUE,
+										 lib->ns))
+			{
+				return FALSE;
+			}
+			break;
+		default:
+			break;
+	}
+
 	config = lib->settings->get_str(lib->settings, "%s.tls.signature", NULL,
 									lib->ns);
 	if (config)
