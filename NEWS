@@ -1,3 +1,16 @@
+strongswan-5.9.12
+-----------------
+
+- The cert-enroll script handles the initial enrollment of an X.509
+  host certificate with a PKI server via the EST or SCEP protocols.
+
+  Run as a systemd timer or via a crontab entry the script daily
+  checks the expiration date of the host certificate. When a given
+  deadline is reached, the host certificate is automatically renewed
+  via EST or SCEP re-enrollment based on the possession of the old
+  private key and the matching certificate.
+
+
 strongswan-5.9.11
 -----------------
 
