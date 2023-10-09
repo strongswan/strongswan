@@ -3,9 +3,9 @@ task:
     - name: FreeBSD 13.2
       freebsd_instance:
         image_family: freebsd-13-2
-    - name: FreeBSD 12.3
+    - name: FreeBSD 12.4
       freebsd_instance:
-        image_family: freebsd-12-3
+        image_family: freebsd-12-4
 
   env:
     TESTS_REDUCED_KEYLENGTHS: yes
