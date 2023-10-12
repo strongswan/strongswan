@@ -55,9 +55,9 @@ then
   cp old/$SUBCA $OPENXPKI_TLS/chain/$OLDSUBCA
 fi
 
-rm $OPENXPKI_TLS/*.0
+rm $OPENXPKI_TLS/chain/*.0
 
-/usr/bin/openssl rehash $OPENXPKI_TLS
+/usr/bin/openssl rehash $OPENXPKI_TLS/chain
 
 ##############################################################################
 # Restart the apache2 systemd service
