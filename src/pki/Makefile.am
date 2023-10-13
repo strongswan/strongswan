@@ -10,6 +10,7 @@ pki_SOURCES = pki.c pki.h pki_cert.c pki_cert.h command.c command.h \
 	commands/gen.c \
 	commands/issue.c \
 	commands/keyid.c \
+	commands/ocsp.c \
 	commands/pkcs12.c \
 	commands/pkcs7.c \
 	commands/print.c \
