@@ -483,8 +483,14 @@ static identification_t *parse_generalName(chunk_t blob, int level0)
 					case 4:
 						id_type = ID_IPV4_ADDR;
 						break;
+					case 8:
+						id_type = ID_IPV4_ADDR_SUBNET;
+						break;
 					case 16:
 						id_type = ID_IPV6_ADDR;
+						break;
+					case 32:
+						id_type = ID_IPV6_ADDR_SUBNET;
 						break;
 					default:
 						break;
@@ -2065,6 +2071,8 @@ static chunk_t build_generalName(identification_t *id)
 			break;
 		case ID_IPV4_ADDR:
 		case ID_IPV6_ADDR:
+		case ID_IPV4_ADDR_SUBNET:
+		case ID_IPV6_ADDR_SUBNET:
 			context = ASN1_CONTEXT_S_7;
 			break;
 		default:
