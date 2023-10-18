@@ -224,9 +224,19 @@ static identification_t *general_name2id(GENERAL_NAME *name)
 			{
 				return identification_create_from_encoding(ID_IPV4_ADDR, chunk);
 			}
+			if (chunk.len == 8)
+			{
+				return identification_create_from_encoding(ID_IPV4_ADDR_SUBNET,
+														   chunk);
+			}
 			if (chunk.len == 16)
 			{
 				return identification_create_from_encoding(ID_IPV6_ADDR, chunk);
+			}
+			if (chunk.len == 32)
+			{
+				return identification_create_from_encoding(ID_IPV6_ADDR_SUBNET,
+														   chunk);
 			}
 			return NULL;
 		}
