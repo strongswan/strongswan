@@ -1,0 +1,14 @@
+charon.plugins.kernel-vpp.app_name = strongswan
+	Application name that should be used when connecting to the VPP API.
+
+charon.plugins.kernel-vpp.api_prefix =
+	Shared memory prefix used for the VPP API.
+
+	Shared memory prefix used for the VPP API. This corresponds to the prefix
+	option in VPP's api-segment config section.
+
+charon.plugins.kernel-vpp.max_outstanding_requests = 64
+	Maximum outstanding requests queued to VPP not answered yet.
+
+charon.plugins.kernel-vpp.response_queue_size = 32
+	Size of the VPP API response queue.
