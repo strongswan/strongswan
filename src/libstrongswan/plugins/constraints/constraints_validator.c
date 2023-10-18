@@ -144,6 +144,26 @@ static bool dn_matches(identification_t *constraint, identification_t *id)
 }
 
 /**
+ * Check if the given identity type matches the type of NameConstraint
+ */
+static bool type_matches(id_type_t constraint, id_type_t id)
+{
+	switch (constraint)
+	{
+		case ID_FQDN:
+		case ID_RFC822_ADDR:
+		case ID_DER_ASN1_DN:
+			return constraint == id;
+		case ID_IPV4_ADDR_SUBNET:
+			return id == ID_IPV4_ADDR;
+		case ID_IPV6_ADDR_SUBNET:
+			return id == ID_IPV6_ADDR;
+		default:
+			return FALSE;
+	}
+}
+
+/**
  * Check if a certificate matches to a NameConstraint
  */
 static bool name_constraint_matches(identification_t *constraint,
@@ -168,7 +188,7 @@ static bool name_constraint_matches(identification_t *constraint,
 	enumerator = x509->create_subjectAltName_enumerator(x509);
 	while (enumerator->enumerate(enumerator, &id))
 	{
-		if (id->get_type(id) == type)
+		if (type_matches(type, id->get_type(id)))
 		{
 			switch (type)
 			{
@@ -180,6 +200,10 @@ static bool name_constraint_matches(identification_t *constraint,
 					break;
 				case ID_DER_ASN1_DN:
 					matches = dn_matches(constraint, id);
+					break;
+				case ID_IPV4_ADDR_SUBNET:
+				case ID_IPV6_ADDR_SUBNET:
+					matches = id->matches(id, constraint);
 					break;
 				default:
 					DBG1(DBG_CFG, "%N NameConstraint matching not implemented",
