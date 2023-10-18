@@ -499,6 +499,7 @@ METHOD(cmd_connection_t, handle, bool,
 			this->xautheap = arg;
 			break;
 		case CMD_OPT_RSA:
+		case CMD_OPT_PRIV:
 		case CMD_OPT_AGENT:
 		case CMD_OPT_PKCS12:
 			this->key_seen = TRUE;
