@@ -607,23 +607,25 @@ METHOD(traffic_selector_t, to_subnet, bool,
 			return FALSE;
 	}
 
-	net_chunk.ptr = malloc(net_chunk.len);
-	memset(net_chunk.ptr, 0x00, net_chunk.len);
-	if (*mask)
+	if (net)
 	{
-		non_zero_bytes = (*mask + 7) / 8;
-		memcpy(net_chunk.ptr, this->from, non_zero_bytes);
-		net_chunk.ptr[non_zero_bytes-1] &= 0xFF << (8 * non_zero_bytes - *mask);
+		net_chunk.ptr = malloc(net_chunk.len);
+		memset(net_chunk.ptr, 0x00, net_chunk.len);
+		if (*mask)
+		{
+			non_zero_bytes = (*mask + 7) / 8;
+			memcpy(net_chunk.ptr, this->from, non_zero_bytes);
+			net_chunk.ptr[non_zero_bytes-1] &= 0xFF << (8 * non_zero_bytes - *mask);
+		}
+
+		if (this->to_port == this->from_port)
+		{
+			port = this->to_port;
+		}
+
+		*net = host_create_from_chunk(family, net_chunk, port);
+		chunk_free(&net_chunk);
 	}
-
-	if (this->to_port == this->from_port)
-	{
-		port = this->to_port;
-	}
-
-	*net = host_create_from_chunk(family, net_chunk, port);
-	chunk_free(&net_chunk);
-
 	return this->netbits != NON_SUBNET_ADDRESS_RANGE;
 }
 
