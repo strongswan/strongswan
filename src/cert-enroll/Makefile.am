@@ -38,6 +38,12 @@ cert-install-swanctl : cert-install-swanctl.in
 
 cert-install-ipsec : cert-install-ipsec.in
 
+EXTRA_DIST = \
+	cert-enroll.conf cert-enroll.in cert-enroll.service.in cert-enroll.timer \
+	cert-install-dirsrv cert-install-gitea cert-install-ipsec.in \
+	cert-install-lighttpd cert-install-openxpki cert-install-sssd \
+	cert-install-swanctl.in
+
 man8_MANS = cert-enroll.8
 
 CLEANFILES = cert-enroll cert-install-swanctl cert-install-ipsec
