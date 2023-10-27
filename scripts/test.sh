@@ -260,8 +260,12 @@ all|codeql|coverage|sonarcloud|no-dbg)
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libgcrypt20-dev libjson-c-dev python3-pip libtspi-dev libsystemd-dev
-		  libselinux1-dev libiptc-dev"
+		  libselinux1-dev libiptc-dev vpp vpp-dev"
 	PYDEPS="tox"
+	if test "$1" = "deps"; then
+		# install VPP repository
+		curl -s https://packagecloud.io/install/repositories/fdio/release/script.deb.sh | sudo bash
+	fi
 	if test "$1" = "build-deps"; then
 		if [ "$ID" = "ubuntu" -a "$VERSION_ID" != "20.04" ]; then
 			build_botan
