@@ -28,7 +28,7 @@ credentials/certificates/ocsp_response.c credentials/certificates/x509.c \
 credentials/certificates/ocsp_single_response.c \
 credentials/certificates/certificate_printer.c \
 credentials/containers/container.c credentials/containers/pkcs12.c \
-credentials/credential_manager.c \
+credentials/credential_manager.c credentials/ocsp_responders.c \
 credentials/sets/auth_cfg_wrapper.c credentials/sets/ocsp_response_wrapper.c \
 credentials/sets/cert_cache.c credentials/sets/mem_cred.c \
 credentials/sets/callback_cred.c credentials/auth_cfg.c database/database.c \
