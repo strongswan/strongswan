@@ -47,18 +47,17 @@ static bool plugin_cb(private_openxpki_plugin_t *this,
 {
 	if (reg)
 	{
-		/* Is there already a registered OCSP responder? */
-		if (!lib->get(lib, "ocsp-responder"))
+		this->ocsp_responder = openxpki_ocsp_responder_create();
+		if (this->ocsp_responder)
 		{
-			this->ocsp_responder = openxpki_ocsp_responder_create();
-			lib->set(lib, "ocsp-responder", this->ocsp_responder);
+			lib->ocsp->add_responder(lib->ocsp, this->ocsp_responder);
 		}
 	}
 	else
 	{
 		if (this->ocsp_responder)
 		{
-			lib->set(lib, "ocsp-responder", NULL);
+			lib->ocsp->remove_responder(lib->ocsp, this->ocsp_responder);
 			this->ocsp_responder->destroy(this->ocsp_responder);
 		}
 	}
