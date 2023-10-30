@@ -18,6 +18,7 @@ pki \-\-ocsp \- OCSP request parser and OCSP responder.
 .BI \-\-cacert\~ file
 .BI \-\-key\~ file
 .OP \-\-cert file
+.OP \-\-index file
 .OP \-\-lifetime minutes
 .OP \-\-digest digest
 .OP \-\-rsa\-padding padding
@@ -87,6 +88,14 @@ OCSP signer key. Can be used multiple times.
 OCSP signer certificate (if it is not a CA certificate). Can be used
 multiple times.
 .TP
+.BI "\-x, \-\-index " file
+OpenSSL-style index.txt providing information about the status of certificates
+issued by the CA certificate loaded immediately before. Can be used multiple
+times if the status for multiple CAs should be provided, just make sure to
+pass each index.txt file right after the corresponding CA certificate.
+
+See below for a description of the structure of these files.
+.TP
 .BI "\-l, \-\-lifetime " minutes
 Validity in minutes of the OCSP response (if missing, nextUpdate is omitted).
 .TP
@@ -94,11 +103,51 @@ Validity in minutes of the OCSP response (if missing, nextUpdate is omitted).
 Digest to use for signature creation. One of \fImd5\fR, \fIsha1\fR,
 \fIsha224\fR, \fIsha256\fR, \fIsha384\fR, or \fIsha512\fR, \fIsha3_224\fR,
 \fIsha3_256\fR, \fIsha3_384\fR, \fIsha3_512\fR.  The default is
-determined based on the type and size of the ocsp signing key.
+determined based on the type and size of the OCSP signing key.
 .TP
 .BI "\-R, \-\-rsa\-padding " padding
 Padding to use for RSA signatures. Either \fIpkcs1\fR or \fIpss\fR, defaults
 to \fIpkcs1\fR.
+.
+.SH "INDEX.TXT DESCRIPTION"
+.
+Each line in an index.txt file consists of six columns that are separated by
+tab characters:
+
+The first column denotes the certificate status, which can be either "V" (for
+valid), "E" (for expired, treated like valid), or "R" (for revoked).
+
+The second column contains the certificate's expiration date and time in UTC in
+the format YYMMDDHHMMSSZ. This field is ignored by the command but must not be
+empty.
+
+The third column is the revocation date and time in UTC in the format
+YYMMDDHHMMSSZ and an optional revocation reason that immediately follows it,
+separated by a comma. Valid reasons are "keyCompromise", "CACompromise",
+"affiliationChanged", "superseded", "cessationOfOperation", "certificateHold",
+and "removeFromCRL", any other value or omitting a reason results in
+"unspecified".
+
+The fourth column contains the certificate's serial number in
+hexadecimal encoding.
+
+The fifth and sixth columns are both ignored by the command, so they may be
+omitted completely. They can contain a path to the certificate (usually set to
+"unknown") and the certificate's subject DN with slashes separating the RDNs.
+
+Example index.txt:
+.PP
+.EX
+V    310930122422Z       03  unknown /C=CH/O=strongSwan/CN=moon...
+V    310930122422Z       04  unknown /C=CH/O=strongSwan/CN=sun...
+R    310930122422Z   231002122422Z,keyCompromise 88
+V    Z       05
+.EE
+.PP
+Note that the fields are separated by tabs. So if a certificate is valid, two
+tabs follow after the expiration date.  The third line in this example only
+specifies the relevant first four columns, the fourth even uses a dummy
+expiration date.
 .
 .SH "EXAMPLES"
 .
