@@ -410,11 +410,9 @@ static int ocsp()
 	if (op == OP_RESPOND)
 	{
 		ocsp_responder = lib->get(lib, "ocsp-responder");
-		if (!ocsp_responder)
+		if (ocsp_responder)
 		{
-			DBG1(DBG_APP, " no ocsp-responder found");
-			ocsp_status = OCSP_INTERNALERROR;
-			goto gen;
+			lib->ocsp->add_responder(lib->ocsp, ocsp_responder);
 		}
 	}
 
@@ -474,9 +472,9 @@ static int ocsp()
 
 		if (issuer_cacert && (issuer_cacert == first_issuer || self_signed))
 		{
-			status = ocsp_responder->get_status(ocsp_responder,
-									issuer_cacert,	serialNumber,
-									&revocationTime, &revocationReason);
+			status = lib->ocsp->get_status(lib->ocsp,
+										   issuer_cacert,	serialNumber,
+										   &revocationTime, &revocationReason);
 		}
 		DBG1(DBG_APP, "  certValidation:    %N", cert_validation_names, status);
 		response->status = status;
@@ -556,6 +554,10 @@ gen:
 	res = 0;
 
 end:
+	if (ocsp_responder)
+	{
+		lib->ocsp->remove_responder(lib->ocsp, ocsp_responder);
+	}
 	DESTROY_IF(key);
 	lib->credmgr->remove_local_set(lib->credmgr, &creds->set);
 	creds->destroy(creds);
