@@ -26,7 +26,7 @@ credentials/certificates/ocsp_response.c credentials/certificates/x509.c \
 credentials/certificates/ocsp_single_response.c \
 credentials/certificates/certificate_printer.c \
 credentials/containers/container.c credentials/containers/pkcs12.c \
-credentials/credential_manager.c \
+credentials/credential_manager.c credentials/ocsp_responders.c \
 credentials/sets/auth_cfg_wrapper.c credentials/sets/ocsp_response_wrapper.c \
 credentials/sets/cert_cache.c credentials/sets/mem_cred.c \
 credentials/sets/callback_cred.c credentials/auth_cfg.c database/database.c \
@@ -99,10 +99,11 @@ credentials/certificates/pgp_certificate.h \
 credentials/certificates/certificate_printer.h \
 credentials/containers/container.h credentials/containers/pkcs7.h \
 credentials/containers/pkcs12.h \
-credentials/credential_manager.h credentials/sets/auth_cfg_wrapper.h \
-credentials/sets/ocsp_response_wrapper.h credentials/sets/cert_cache.h \
-credentials/sets/mem_cred.h credentials/sets/callback_cred.h \
-credentials/auth_cfg.h credentials/credential_set.h credentials/cert_validator.h \
+credentials/credential_manager.h credentials/ocsp_responders.h \
+credentials/sets/auth_cfg_wrapper.h credentials/sets/ocsp_response_wrapper.h \
+credentials/sets/cert_cache.h credentials/sets/mem_cred.h \
+credentials/sets/callback_cred.h credentials/auth_cfg.h \
+credentials/credential_set.h credentials/cert_validator.h \
 database/database.h database/database_factory.h fetcher/fetcher.h \
 fetcher/fetcher_manager.h eap/eap.h pen/pen.h ipsec/ipsec_types.h \
 metadata/metadata.h metadata/metadata_factory.h metadata/metadata_int.h \
