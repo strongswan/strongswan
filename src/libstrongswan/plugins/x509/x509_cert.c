@@ -2424,9 +2424,15 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 	/* add the keyid authKeyIdentifier for non self-signed certificates */
 	if (sign_cert)
 	{
-		chunk_t keyid;
+		x509_t *sign_x509 = (x509_t*)sign_cert;
+		chunk_t keyid = chunk_empty;
 
-		if (sign_key->get_fingerprint(sign_key, KEYID_PUBKEY_SHA1, &keyid))
+		if (sign_cert->get_type(sign_cert) == CERT_X509)
+		{
+			keyid = sign_x509->get_authKeyIdentifier(sign_x509);
+		}
+		if (keyid.len ||
+			sign_key->get_fingerprint(sign_key, KEYID_PUBKEY_SHA1, &keyid))
 		{
 			authKeyIdentifier = asn1_wrap(ASN1_SEQUENCE, "mm",
 							asn1_build_known_oid(OID_AUTHORITY_KEY_ID),
