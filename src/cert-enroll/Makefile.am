@@ -26,6 +26,7 @@ install-data-local:
 
 cert_install_availabledir = $(sysconfdir)/cert-enroll.d/cert-install-available
 cert_install_available_DATA = \
+	cert-install-ssl \
 	cert-install-sssd \
 	cert-install-dirsrv \
 	cert-install-lighttpd \
@@ -41,8 +42,8 @@ cert-install-ipsec : cert-install-ipsec.in
 EXTRA_DIST = \
 	cert-enroll.conf cert-enroll.in cert-enroll.service.in cert-enroll.timer \
 	cert-install-dirsrv cert-install-gitea cert-install-ipsec.in \
-	cert-install-lighttpd cert-install-openxpki cert-install-sssd \
-	cert-install-swanctl.in
+	cert-install-lighttpd cert-install-openxpki cert-install-ssl \
+	cert-install-sssd cert-install-swanctl.in
 
 man8_MANS = cert-enroll.8
 
