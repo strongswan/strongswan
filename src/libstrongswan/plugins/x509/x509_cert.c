@@ -2069,6 +2069,9 @@ static chunk_t build_generalName(identification_t *id)
 		case ID_DER_ASN1_DN:
 			context = ASN1_CONTEXT_C_4;
 			break;
+		case ID_DER_ASN1_GN_URI:
+			context = ASN1_CONTEXT_S_6;
+			break;
 		case ID_IPV4_ADDR:
 		case ID_IPV6_ADDR:
 		case ID_IPV4_ADDR_SUBNET:
