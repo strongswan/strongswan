@@ -37,12 +37,12 @@ cat $HOSTKEY $HOSTCERT > /etc/lighttpd/https-cert.pem
 ##############################################################################
 # Restart the lighttpd daemon
 #
-systemctl list-unit-files lighttpd.service | \
+test -f /usr/bin/systemctl && /usr/bin/systemctl list-unit-files lighttpd.service | \
   grep -q "lighttpd.service enabled" && status=$? || status=$?
 if [ $status -eq 0 ]
 then
   /usr/bin/systemctl restart lighttpd.service
 else
-  /etc/init.d/lighttpd restart
+  /etc/init.d/lighttpd reload
 fi
 exit 0
