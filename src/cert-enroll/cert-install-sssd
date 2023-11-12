@@ -54,7 +54,7 @@ then
   cp old/$SUBCA $LDAP_TLS_CACERTDIR/$OLDSUBCA
 fi
 
-rm $LDAP_TLS_CACERTDIR/*.0
+rm -f $LDAP_TLS_CACERTDIR/*.0
 
 /usr/bin/openssl rehash $LDAP_TLS_CACERTDIR
 
