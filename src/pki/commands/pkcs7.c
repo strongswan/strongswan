@@ -288,7 +288,7 @@ static int pkcs7()
 	hash_algorithm_t digest = HASH_UNKNOWN;
 	signature_params_t *scheme = NULL;
 	mem_cred_t *creds;
-	int res = 0;
+	int res = 1;
 	FILE *in;
 	enum {
 		OP_NONE,
@@ -450,7 +450,7 @@ static int pkcs7()
 		case OP_DECRYPT:
 			if (!key)
 			{
-				fprintf(stderr, "decryption requires a private key\n");
+				error = "decryption requires a private key";
 				break;
 			}
 			res = decrypt(data);

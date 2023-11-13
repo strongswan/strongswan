@@ -23,6 +23,7 @@ credentials/keys/public_key.c credentials/keys/shared_key.c \
 credentials/keys/signature_params.c \
 credentials/certificates/certificate.c credentials/certificates/crl.c \
 credentials/certificates/ocsp_response.c credentials/certificates/x509.c \
+credentials/certificates/ocsp_single_response.c \
 credentials/certificates/certificate_printer.c \
 credentials/containers/container.c credentials/containers/pkcs12.c \
 credentials/credential_manager.c \
@@ -91,7 +92,9 @@ credentials/keys/signature_params.h \
 credentials/certificates/certificate.h credentials/certificates/x509.h \
 credentials/certificates/ac.h credentials/certificates/crl.h \
 credentials/certificates/pkcs10.h credentials/certificates/ocsp_request.h \
+credentials/certificates/ocsp_single_response.h \
 credentials/certificates/ocsp_response.h \
+credentials/certificates/ocsp_responder.h \
 credentials/certificates/pgp_certificate.h \
 credentials/certificates/certificate_printer.h \
 credentials/containers/container.h credentials/containers/pkcs7.h \
@@ -476,6 +479,13 @@ if USE_PKCS12
   SUBDIRS += plugins/pkcs12
 if MONOLITHIC
   libstrongswan_la_LIBADD += plugins/pkcs12/libstrongswan-pkcs12.la
+endif
+endif
+
+if USE_OPENXPKI
+  SUBDIRS += plugins/openxpki
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/openxpki/libstrongswan-openxpki.la
 endif
 endif
 

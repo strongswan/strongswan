@@ -25,6 +25,7 @@ credentials/keys/public_key.c credentials/keys/shared_key.c \
 credentials/keys/signature_params.c \
 credentials/certificates/certificate.c credentials/certificates/crl.c \
 credentials/certificates/ocsp_response.c credentials/certificates/x509.c \
+credentials/certificates/ocsp_single_response.c \
 credentials/certificates/certificate_printer.c \
 credentials/containers/container.c credentials/containers/pkcs12.c \
 credentials/credential_manager.c \
