@@ -1088,6 +1088,14 @@ uint32_t chunk_hash(chunk_t chunk)
 	return chunk_mac(chunk, hash_key);
 }
 
+/*
+ * Described in header.
+ */
+uint32_t chunk_hash_ptr(chunk_t *chunk)
+{
+	return chunk_hash(*chunk);
+}
+
 /**
  * Described in header.
  */

@@ -415,6 +415,15 @@ void chunk_hash_seed();
 uint32_t chunk_hash(chunk_t chunk);
 
 /**
+ * Same as chunk_hash() but takes a pointer to a chunk. Can be used in
+ * hashtables.
+ *
+ * @param chunk			pointer to chunk to hash
+ * @return				hash value
+ */
+uint32_t chunk_hash_ptr(chunk_t *chunk);
+
+/**
  * Incremental version of chunk_hash. Use this to hash two or more chunks.
  *
  * @param chunk			data to hash
