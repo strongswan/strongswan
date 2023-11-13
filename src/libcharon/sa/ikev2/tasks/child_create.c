@@ -1925,7 +1925,16 @@ METHOD(task_t, process_i, status_t,
 METHOD(child_create_t, use_reqid, void,
 	private_child_create_t *this, uint32_t reqid)
 {
-	this->child.reqid = reqid;
+	uint32_t existing_reqid = this->child.reqid;
+
+	if (!reqid || charon->kernel->ref_reqid(charon->kernel, reqid) == SUCCESS)
+	{
+		this->child.reqid = reqid;
+		if (existing_reqid)
+		{
+			charon->kernel->release_reqid(charon->kernel, existing_reqid);
+		}
+	}
 }
 
 METHOD(child_create_t, use_marks, void,
@@ -2063,6 +2072,10 @@ METHOD(task_t, destroy, void,
 	if (!this->established)
 	{
 		DESTROY_IF(this->child_sa);
+	}
+	if (this->child.reqid)
+	{
+		charon->kernel->release_reqid(charon->kernel, this->child.reqid);
 	}
 	DESTROY_IF(this->packet_tsi);
 	DESTROY_IF(this->packet_tsr);

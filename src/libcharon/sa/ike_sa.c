@@ -2067,7 +2067,7 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 		if (action & ACTION_START)
 		{
 			child_init_args_t args = {
-				.reqid = child_sa->get_reqid(child_sa),
+				.reqid = child_sa->get_reqid_ref(child_sa),
 				.label = child_sa->get_label(child_sa),
 			};
 			child_cfg = child_sa->get_config(child_sa);
@@ -2076,6 +2076,10 @@ static status_t reestablish_children(private_ike_sa_t *this, ike_sa_t *new,
 			other->task_manager->queue_child(other->task_manager,
 											 child_cfg->get_ref(child_cfg),
 											 &args);
+			if (args.reqid)
+			{
+				charon->kernel->release_reqid(charon->kernel, args.reqid);
+			}
 		}
 	}
 	enumerator->destroy(enumerator);
