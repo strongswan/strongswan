@@ -2432,7 +2432,7 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 
 		if (sign_cert->get_type(sign_cert) == CERT_X509)
 		{
-			keyid = sign_x509->get_authKeyIdentifier(sign_x509);
+			keyid = sign_x509->get_subjectKeyIdentifier(sign_x509);
 		}
 		if (keyid.len ||
 			sign_key->get_fingerprint(sign_key, KEYID_PUBKEY_SHA1, &keyid))
