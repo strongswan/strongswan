@@ -24,7 +24,7 @@
 
 typedef struct openxpki_ocsp_responder_t openxpki_ocsp_responder_t;
 
-#include <credentials/certificates/ocsp_responder.h>
+#include <credentials/ocsp_responder.h>
 
 /**
  * OCSP responder implementation using OpenXPKI.

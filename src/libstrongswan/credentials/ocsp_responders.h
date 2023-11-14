@@ -24,7 +24,7 @@
 
 typedef struct ocsp_responders_t ocsp_responders_t;
 
-#include <credentials/certificates/ocsp_responder.h>
+#include <credentials/ocsp_responder.h>
 
 /**
  * Manages OCSP responders.

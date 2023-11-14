@@ -16,7 +16,7 @@
 
 /**
  * @defgroup ocsp_responder ocsp_responder
- * @{ @ingroup certificates
+ * @{ @ingroup credentials
  */
 
 #ifndef OCSP_RESPONDER_H_

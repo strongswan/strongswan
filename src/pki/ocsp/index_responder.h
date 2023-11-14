@@ -22,7 +22,7 @@
 #ifndef INDEX_RESPONDER_H_
 #define INDEX_RESPONDER_H_
 
-#include <credentials/certificates/ocsp_responder.h>
+#include <credentials/ocsp_responder.h>
 
 /**
  * Create an index.txt-based OCSP responder for the given CA and file.

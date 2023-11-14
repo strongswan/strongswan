@@ -94,12 +94,12 @@ credentials/certificates/ac.h credentials/certificates/crl.h \
 credentials/certificates/pkcs10.h credentials/certificates/ocsp_request.h \
 credentials/certificates/ocsp_single_response.h \
 credentials/certificates/ocsp_response.h \
-credentials/certificates/ocsp_responder.h \
 credentials/certificates/pgp_certificate.h \
 credentials/certificates/certificate_printer.h \
 credentials/containers/container.h credentials/containers/pkcs7.h \
 credentials/containers/pkcs12.h \
 credentials/credential_manager.h credentials/ocsp_responders.h \
+credentials/ocsp_responder.h \
 credentials/sets/auth_cfg_wrapper.h credentials/sets/ocsp_response_wrapper.h \
 credentials/sets/cert_cache.h credentials/sets/mem_cred.h \
 credentials/sets/callback_cred.h credentials/auth_cfg.h \
