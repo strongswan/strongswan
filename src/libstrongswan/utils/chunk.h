@@ -133,7 +133,7 @@ chunk_t *chunk_map(char *path, bool wr);
 /**
  * munmap() a chunk previously mapped with chunk_map().
  *
- * When unmapping a writeable map, the return value should be checked to
+ * When unmapping a writable map, the return value should be checked to
  * ensure changes landed on disk.
  *
  * @param chunk			pointer returned from chunk_map()
@@ -146,7 +146,7 @@ bool chunk_unmap(chunk_t *chunk);
  *
  * @note Writable maps (i.e. created with wr = TRUE) are NOT cleared.
  *
- * When unmapping a writeable map, the return value should be checked to
+ * When unmapping a writable map, the return value should be checked to
  * ensure changes landed on disk.
  *
  * @param chunk         pointer returned from chunk_map()

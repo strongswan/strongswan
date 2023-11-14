@@ -120,7 +120,7 @@ void utils_deinit();
 #endif
 
 /**
- * Address santizer support
+ * Address sanitizer support
  */
 #if __has_feature(address_sanitizer) || \
 	(defined(__GNUC__) && defined(__SANITIZE_ADDRESS__))

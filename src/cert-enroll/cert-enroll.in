@@ -265,7 +265,7 @@ then
 fi
 
 ##############################################################################
-# Check if non-empty certficate already exists
+# Check if non-empty certificate already exists
 #
 if [ -s $HOSTCERT ]
 then

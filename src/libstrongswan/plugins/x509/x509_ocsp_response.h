@@ -43,7 +43,7 @@ struct x509_ocsp_response_t {
  * Generate a X.509 OCSP response.
  *
  * The resulting builder accepts:
- *  BUILD_OCSP_STATUS:      status from OCSP respnder
+ *  BUILD_OCSP_STATUS:      status from OCSP responder
  *  BUILD_OCSP_RESPONSES:   enumerator over the list of OCSP single responses
  *  BUILD_NONCE:            nonce extracted from the OCSP request
  *  BUILD_SIGNING_CERT:     certificate to create OCSP response signature
