@@ -1,6 +1,6 @@
 #!/bin/bash
 # Install the present and past CA certificates in the ldap_tls_cacertdir
-# directory defined by sssd.conf, folllowed by the execution of the
+# directory defined by sssd.conf, followed by the execution of the
 # openssl_rehash command in that directory so that the SSSD daemon can verify
 # the LDAP server certificate.
 #

@@ -1613,7 +1613,7 @@ static bool add_hw_offload_sa(struct nlmsghdr *hdr, int buflen,
 }
 
 /**
- * Add a HW offload attribuet to the given policy-related message.
+ * Add a HW offload attribute to the given policy-related message.
  */
 static bool add_hw_offload_policy(struct nlmsghdr *hdr, int buflen,
 								  policy_entry_t *policy,

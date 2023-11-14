@@ -339,7 +339,7 @@ bool pki_cert_extract_cacerts(chunk_t data, char *caout, char *raout,
 				}
 				certs->destroy(certs);
 
-				/* otherwise trust in root CA has to be established manuallly */
+				/* otherwise trust in root CA has to be established manually */
 				if (!trusted)
 				{
 					creds->add_cert(creds, TRUE, cert->get_ref(cert));

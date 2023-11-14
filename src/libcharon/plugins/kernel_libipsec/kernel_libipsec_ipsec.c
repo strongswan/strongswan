@@ -421,7 +421,7 @@ static bool install_route(private_kernel_libipsec_ipsec_t *this,
 		bool ignore = FALSE;
 		int family;
 
-		/* ignore multi- and broadcast TS, othewise, install a route without
+		/* ignore multi- and broadcast TS, otherwise, install a route without
 		 * preferred source IP to forward non-local traffic via TUN device */
 		switch (src_ts->get_type(src_ts))
 		{

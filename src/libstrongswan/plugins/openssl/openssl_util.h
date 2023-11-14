@@ -59,7 +59,7 @@ bool openssl_fingerprint(EVP_PKEY *key, cred_encoding_type_t type, chunk_t *fp);
 
 /**
  * Concatenates two bignums into a chunk, thereby enforcing the length of
- * a single BIGNUM, if necessary, by pre-pending it with zeros.
+ * a single BIGNUM, if necessary, by prepending it with zeros.
  *
  * Note: this function allocates memory for the chunk
  *
