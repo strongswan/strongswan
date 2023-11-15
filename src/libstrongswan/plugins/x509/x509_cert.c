@@ -2635,8 +2635,12 @@ static bool generate(private_x509_cert_t *cert, certificate_t *sign_cert,
 					asn1_simple_object(ASN1_OCTET_STRING, chunk_empty));
 	}
 
-	if (basicConstraints.ptr || subjectAltNames.ptr || authKeyIdentifier.ptr ||
-		crlDistributionPoints.ptr || nameConstraints.ptr || ipAddrBlocks.ptr)
+	if (basicConstraints.ptr || keyUsage.ptr || subjectKeyIdentifier.ptr ||
+		authKeyIdentifier.ptr || subjectAltNames.ptr || extendedKeyUsage.ptr ||
+		crlDistributionPoints.ptr || authorityInfoAccess.ptr ||
+		nameConstraints.ptr || certPolicies.ptr || policyMappings.ptr ||
+		policyConstraints.ptr || inhibitAnyPolicy.ptr || ipAddrBlocks.ptr ||
+		criticalExtension.ptr)
 	{
 		extensions = asn1_wrap(ASN1_CONTEXT_C_3, "m",
 						asn1_wrap(ASN1_SEQUENCE, "mmmmmmmmmmmmmmm",
