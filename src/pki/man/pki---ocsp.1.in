@@ -44,21 +44,17 @@ parses an
 (OCSP) request as defined by RFC 6960 and with the
 .B --respond
 option generates an OCSP response based on the OCSP request.
-The certificate status is directly retrieved from the internal
-.B certificate
-database of an
-.B OpenXPKI
-(https://openxpki.org) server. The
-.B --respond
-option requires the
+The certificate status for this may be provided by plugins so if not using the
+.B --index
+option, this currently requires the
 .B openxpki
 and
 .B mysql
-libstrongswan plugins in order to access the
+plugins in order to directly access the internal
 .B certificate
-database of the
+database of an
 .B OpenXPKI
-server running on the same host.
+(https://openxpki.org) server.
 .
 .SH "OPTIONS"
 .
