@@ -1,14 +1,66 @@
 strongswan-5.9.12
 -----------------
 
-- The cert-enroll script handles the initial enrollment of an X.509
-  host certificate with a PKI server via the EST or SCEP protocols.
+- The new `pki --ocsp` command produces OCSP responses based on certificate
+  status information provided by plugins.
 
-  Run as a systemd timer or via a crontab entry the script daily
-  checks the expiration date of the host certificate. When a given
-  deadline is reached, the host certificate is automatically renewed
-  via EST or SCEP re-enrollment based on the possession of the old
-  private key and the matching certificate.
+  Two sources are currently available, the openxpki plugin that directly
+  accesses the OpenXPKI database and the `--index` argument, which reads
+  certificate status information from OpenSSL-style index.txt files.
+
+- The cert-enroll script handles the initial enrollment of an X.509 host
+  certificate with a PKI server via the EST or SCEP protocols.
+
+  Run as a systemd timer or via a crontab entry the script daily checks the
+  expiration date of the host certificate. When a given deadline is reached,
+  the host certificate is automatically renewed via EST or SCEP re-enrollment
+  based on the possession of the old private key and the matching certificate.
+
+- The --priv argument for charon-cmd allows using any type of private key.
+
+- Support for nameConstraints of type iPAddress has been added (the openssl
+  plugin previously didn't support nameConstraints at all).
+
+- SANs of type uniformResourceIdentifier can now be encoded in certificates.
+
+- Password-less PKCS#12 and PKCS#8 files are supported.
+
+- A new global option allows preventing peers from authenticating with trusted
+  end-entity certificates (i.e. local certificates).
+
+- ECDSA public keys that encode curve parameters explicitly are now rejected by
+  all plugins that support ECDSA.
+
+- charon-nm now actually uses the XFRM interfaces added with 5.9.10, it can
+  also use the name in connection.interface-name.
+
+- The resolve plugin tries to maintain the order of installed DNS servers.
+
+- The kernel-libipsec plugin always installs routes even if no address is found
+  in the local traffic selectors.
+
+- Increased the default receive buffer size for Netlink sockets to 8 MiB and
+  simplified its configuration.
+
+- Copy the issuer's subjectKeyIdentifier as authorityKeyIdentifier instead of
+  always generating a hash of the subjectPublicKey.
+
+- Fixed issues while reestablishing multiple CHILD_SAs (e.g. after a DPD
+  timeout) that could cause a reqid to get assigned to multiple CHILD_SAs with
+  unrelated traffic selectors.
+
+- Fixed a possible infinite loop issue in watcher_t and removed WATCHER_EXCEPT,
+  instead callbacks are always invoked even if only errors are signaled.
+
+- Fixed a regression in the IKE_SA_INIT tracking code added with 5.9.6 when
+  handling invalid messages.
+
+- Fixed adding the XFRMA_REPLAY_ESN_VAL attribute twice when updating SAs.
+
+- Correctly encode SPI from REKEY_SA notify in CHILD_SA_NOT_FOUND notify if
+  CHILD_SA is not found during rekeying.
+
+- The testing environment is now based on Debian 12 (bookworm), by default.
 
 
 strongswan-5.9.11
