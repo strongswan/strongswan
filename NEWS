@@ -1,6 +1,10 @@
 strongswan-5.9.12
 -----------------
 
+- Fixed a vulnerability in charon-tkm related to processing DH public values
+  that can lead to a buffer overflow and potentially remote code execution.
+  This vulnerability has been registered as CVE-2023-41913.
+
 - The new `pki --ocsp` command produces OCSP responses based on certificate
   status information provided by plugins.
 
