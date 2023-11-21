@@ -47,6 +47,7 @@ public class VpnProfile implements Cloneable
 	private VpnType mVpnType;
 	private UUID mUUID;
 	private long mId = -1;
+	private boolean mReadOnly;
 
 	public enum SelectedAppsHandling
 	{
@@ -54,7 +55,7 @@ public class VpnProfile implements Cloneable
 		SELECTED_APPS_EXCLUDE(1),
 		SELECTED_APPS_ONLY(2);
 
-		private Integer mValue;
+		private final Integer mValue;
 
 		SelectedAppsHandling(int value)
 		{
@@ -328,6 +329,16 @@ public class VpnProfile implements Cloneable
 	public void setFlags(Integer flags)
 	{
 		this.mFlags = flags;
+	}
+
+	public boolean isReadOnly()
+	{
+		return mReadOnly;
+	}
+
+	public void setReadOnly(boolean readOnly)
+	{
+		this.mReadOnly = readOnly;
 	}
 
 	@Override
