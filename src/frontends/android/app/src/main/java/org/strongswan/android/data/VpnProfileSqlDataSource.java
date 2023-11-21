@@ -46,7 +46,7 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 		new VpnProfileSqlDataSource.DbColumn(KEY_CERTIFICATE, "TEXT", 1),
 		new VpnProfileSqlDataSource.DbColumn(KEY_USER_CERTIFICATE, "TEXT", 2),
 		new VpnProfileSqlDataSource.DbColumn(KEY_MTU, "INTEGER", 5),
-		new VpnProfileSqlDataSource.DbColumn(KEY_PORT, "INTEGER", 5),
+		new VpnProfileSqlDataSource.DbColumn(KEY_PORT, "INTEGER", 6),
 		new VpnProfileSqlDataSource.DbColumn(KEY_SPLIT_TUNNELING, "INTEGER", 7),
 		new VpnProfileSqlDataSource.DbColumn(KEY_LOCAL_ID, "TEXT", 8),
 		new VpnProfileSqlDataSource.DbColumn(KEY_REMOTE_ID, "TEXT", 8),
