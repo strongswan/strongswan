@@ -3,6 +3,7 @@ package org.strongswan.android.data;
 import android.os.Bundle;
 import android.text.TextUtils;
 
+import java.util.Objects;
 import java.util.UUID;
 
 public class ManagedVpnProfile extends VpnProfile
@@ -22,6 +23,9 @@ public class ManagedVpnProfile extends VpnProfile
 	private static final String KEY_SPLIT_TUNNELLING_BLOCK_IPV4_FLAG = "split_tunnelling_block_IPv4";
 	private static final String KEY_SPLIT_TUNNELLING_BLOCK_IPV6_FLAG = "split_tunnelling_block_IPv6";
 
+	private CaCertificate caCertificate;
+	private UserCertificate userCertificate;
+
 	ManagedVpnProfile(final Bundle bundle, final String uuid)
 	{
 		int flags = 0;
@@ -32,44 +36,17 @@ public class ManagedVpnProfile extends VpnProfile
 		setVpnType(VpnType.fromIdentifier(bundle.getString(VpnProfileDataSource.KEY_VPN_TYPE)));
 
 		final Bundle remote = bundle.getBundle(KEY_REMOTE);
-		if (remote != null)
-		{
-			setGateway(remote.getString(VpnProfileDataSource.KEY_GATEWAY));
-			setPort(remote.getInt(VpnProfileDataSource.KEY_PORT));
-			setRemoteId(remote.getString(VpnProfileDataSource.KEY_REMOTE_ID));
-			setCertificateAlias(remote.getString(VpnProfileDataSource.KEY_CERTIFICATE));
-
-			flags = addNegativeFlag(flags, remote, KEY_REMOTE_CERT_REQ_FLAG, VpnProfile.FLAGS_SUPPRESS_CERT_REQS);
-			flags = addNegativeFlag(flags, remote, KEY_REMOTE_REVOCATION_CRL_FLAG, VpnProfile.FLAGS_DISABLE_CRL);
-			flags = addNegativeFlag(flags, remote, KEY_REMOTE_REVOCATION_OCSP_FLAG, VpnProfile.FLAGS_DISABLE_OCSP);
-			flags = addPositiveFlag(flags, remote, KEY_REMOTE_REVOCATION_STRICT_FLAG, VpnProfile.FLAGS_STRICT_REVOCATION);
-		}
+		flags = configureRemote(flags, remote);
 
 		final Bundle local = bundle.getBundle(KEY_LOCAL);
-		if (local != null)
-		{
-			setLocalId(local.getString(VpnProfileDataSource.KEY_LOCAL_ID));
-			setUsername(local.getString(VpnProfileDataSource.KEY_USERNAME));
-
-			flags = addPositiveFlag(flags, local, KEY_LOCAL_RSA_PSS_FLAG, VpnProfile.FLAGS_RSA_PSS);
-		}
+		flags = configureLocal(flags, local);
 
 		final String includedPackageNames = bundle.getString(KEY_INCLUDED_APPS);
 		final String excludedPackageNames = bundle.getString(KEY_EXCLUDED_APPS);
+		configureSelectedApps(includedPackageNames, excludedPackageNames);
 
-		if (!TextUtils.isEmpty(includedPackageNames))
-		{
-			setSelectedAppsHandling(VpnProfile.SelectedAppsHandling.SELECTED_APPS_ONLY);
-			setSelectedApps(includedPackageNames);
-		}
-		else if (!TextUtils.isEmpty(excludedPackageNames))
-		{
-			setSelectedAppsHandling(VpnProfile.SelectedAppsHandling.SELECTED_APPS_EXCLUDE);
-			setSelectedApps(excludedPackageNames);
-		}
-
-		setMTU(bundle.getInt(VpnProfileDataSource.KEY_MTU));
-		setNATKeepAlive(bundle.getInt(VpnProfileDataSource.KEY_NAT_KEEPALIVE));
+		setMTU(getInt(bundle, VpnProfileDataSource.KEY_MTU, 1280, 1500));
+		setNATKeepAlive(getInt(bundle, VpnProfileDataSource.KEY_NAT_KEEPALIVE, 10, 120));
 		setIkeProposal(bundle.getString(VpnProfileDataSource.KEY_IKE_PROPOSAL));
 		setEspProposal(bundle.getString(VpnProfileDataSource.KEY_ESP_PROPOSAL));
 		setDnsServers(bundle.getString(VpnProfileDataSource.KEY_DNS_SERVERS));
@@ -89,6 +66,89 @@ public class ManagedVpnProfile extends VpnProfile
 		setFlags(flags);
 	}
 
+	private void configureSelectedApps(String includedPackageNames, String excludedPackageNames)
+	{
+		if (!TextUtils.isEmpty(includedPackageNames))
+		{
+			setSelectedAppsHandling(SelectedAppsHandling.SELECTED_APPS_ONLY);
+			setSelectedApps(includedPackageNames);
+		}
+		else if (!TextUtils.isEmpty(excludedPackageNames))
+		{
+			setSelectedAppsHandling(SelectedAppsHandling.SELECTED_APPS_EXCLUDE);
+			setSelectedApps(excludedPackageNames);
+		}
+	}
+
+	private int configureRemote(int flags, Bundle remote)
+	{
+		if (remote == null)
+		{
+			return flags;
+		}
+
+		setGateway(remote.getString(VpnProfileDataSource.KEY_GATEWAY));
+		setPort(getInt(remote, VpnProfileDataSource.KEY_PORT, 1, 65_535));
+		setRemoteId(remote.getString(VpnProfileDataSource.KEY_REMOTE_ID));
+
+		final String certificateAlias = remote.getString(VpnProfileDataSource.KEY_CERTIFICATE_ALIAS);
+		final String certificateData = remote.getString(VpnProfileDataSource.KEY_CERTIFICATE);
+
+
+		if (!TextUtils.isEmpty(certificateAlias) && !TextUtils.isEmpty(certificateData))
+		{
+			setCertificateAlias(certificateAlias);
+			caCertificate = new CaCertificate(
+				getUUID().toString(),
+				certificateAlias,
+				certificateData);
+		}
+
+		flags = addNegativeFlag(flags, remote, KEY_REMOTE_CERT_REQ_FLAG, VpnProfile.FLAGS_SUPPRESS_CERT_REQS);
+		flags = addNegativeFlag(flags, remote, KEY_REMOTE_REVOCATION_CRL_FLAG, VpnProfile.FLAGS_DISABLE_CRL);
+		flags = addNegativeFlag(flags, remote, KEY_REMOTE_REVOCATION_OCSP_FLAG, VpnProfile.FLAGS_DISABLE_OCSP);
+		flags = addPositiveFlag(flags, remote, KEY_REMOTE_REVOCATION_STRICT_FLAG, VpnProfile.FLAGS_STRICT_REVOCATION);
+		return flags;
+	}
+
+	private int configureLocal(int flags, Bundle local)
+	{
+		if (local == null)
+		{
+			return flags;
+		}
+
+		setLocalId(local.getString(VpnProfileDataSource.KEY_LOCAL_ID));
+		setUsername(local.getString(VpnProfileDataSource.KEY_USERNAME));
+
+		final String userCertificateAlias = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE_ALIAS);
+		final String userCertificateData = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
+		final String userCertificatePassword = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE_PASSWORD);
+
+		if (!TextUtils.isEmpty(userCertificateAlias) && !TextUtils.isEmpty(userCertificateData))
+		{
+			setUserCertificateAlias(userCertificateAlias);
+			userCertificate = new UserCertificate(
+				getUUID().toString(),
+				userCertificateAlias,
+				userCertificateData,
+				userCertificatePassword);
+		}
+
+		flags = addPositiveFlag(flags, local, KEY_LOCAL_RSA_PSS_FLAG, VpnProfile.FLAGS_RSA_PSS);
+		return flags;
+	}
+
+	private static Integer getInt(final Bundle bundle, final String name, int min, int max)
+	{
+		final int value = bundle.getInt(name);
+		if (value >= min && value <= max)
+		{
+			return value;
+		}
+		return null;
+	}
+
 	private static int addPositiveFlag(int flags, Bundle bundle, String key, int flag)
 	{
 		if (bundle.getBoolean(key))
@@ -105,5 +165,36 @@ public class ManagedVpnProfile extends VpnProfile
 			flags |= flag;
 		}
 		return flags;
+	}
+
+	public CaCertificate getCaCertificate()
+	{
+		return caCertificate;
+	}
+
+	public UserCertificate getUserCertificate()
+	{
+		return userCertificate;
+	}
+
+	@Override
+	public boolean equals(Object o)
+	{
+		if (o == this)
+		{
+			return true;
+		}
+		if (o == null || getClass() != o.getClass())
+		{
+			return false;
+		}
+		ManagedVpnProfile that = (ManagedVpnProfile)o;
+		return Objects.equals(getUUID(), that.getUUID());
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(getUUID());
 	}
 }
