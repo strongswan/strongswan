@@ -38,6 +38,7 @@ fuzzing-corpora/
 *.tar.bz2
 *.tar.gz
 .DS_Store
+._.DS_Store
 coverage/
 *.gcno
 *.gcda
