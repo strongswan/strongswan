@@ -1037,9 +1037,8 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			@Override
 			public synchronized void run()
 			{
-				try
+				try (FileInputStream plain = new FileInputStream(mFd.getFileDescriptor()))
 				{
-					FileInputStream plain = new FileInputStream(mFd.getFileDescriptor());
 					ByteBuffer packet = ByteBuffer.allocate(mCache.mMtu);
 					while (true)
 					{
@@ -1073,7 +1072,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 						}
 					}
 				}
-				catch (ClosedByInterruptException | InterruptedException e)
+				catch (final ClosedByInterruptException | InterruptedException e)
 				{
 					/* regular interruption */
 				}
