@@ -35,11 +35,12 @@ import java.util.List;
 
 public class SelectedApplicationsAdapter extends BaseAdapter implements Filterable
 {
-	private Context mContext;
+	private final Context mContext;
 	private final Object mLock = new Object();
-	private List<SelectedApplicationEntry> mData;
+	private final List<SelectedApplicationEntry> mData;
 	private List<SelectedApplicationEntry> mDataFiltered;
 	private SelectedApplicationsFilter mFilter;
+	private boolean mReadOnly;
 
 	public SelectedApplicationsAdapter(Context context)
 	{
@@ -100,9 +101,10 @@ public class SelectedApplicationsAdapter extends BaseAdapter implements Filterab
 		SelectedApplicationEntry item = getItem(position);
 		CheckableLinearLayout checkable = (CheckableLinearLayout)view;
 		checkable.setChecked(item.isSelected());
-		ImageView icon = (ImageView)view.findViewById(R.id.app_icon);
+		checkable.setEnabled(!mReadOnly);
+		ImageView icon = view.findViewById(R.id.app_icon);
 		icon.setImageDrawable(item.getIcon());
-		TextView text = (TextView)view.findViewById(R.id.app_name);
+		TextView text = view.findViewById(R.id.app_name);
 		text.setText(item.toString());
 		return view;
 	}
@@ -115,6 +117,16 @@ public class SelectedApplicationsAdapter extends BaseAdapter implements Filterab
 			mFilter = new SelectedApplicationsFilter();
 		}
 		return mFilter;
+	}
+
+	public boolean isReadOnly()
+	{
+		return mReadOnly;
+	}
+
+	public void setReadOnly(final boolean readOnly)
+	{
+		this.mReadOnly = readOnly;
 	}
 
 	private class SelectedApplicationsFilter extends Filter
