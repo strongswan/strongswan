@@ -117,6 +117,10 @@ public class ManagedConfiguration
 
 	public String getDefaultVpnProfile()
 	{
+		if (mDefaultVpnProfile != null && mDefaultVpnProfile.equalsIgnoreCase("mru"))
+		{
+			return Constants.PREF_DEFAULT_VPN_PROFILE_MRU;
+		}
 		return mDefaultVpnProfile;
 	}
 
