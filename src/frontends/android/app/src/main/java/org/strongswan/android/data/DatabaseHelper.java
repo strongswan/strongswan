@@ -40,6 +40,8 @@ public class DatabaseHelper extends SQLiteOpenHelper
 	private static final String DATABASE_NAME = "strongswan.db";
 
 	private static final String TABLE_NAME_VPN_PROFILE = "vpnprofile";
+	private static final String TABLE_NAME_TRUSTED_CERTIFICATE = "trustedcertificate";
+	private static final String TABLE_NAME_USER_CERTIFICATE = "usercertificate";
 
 	static final DbTable TABLE_VPN_PROFILE = new DbTable(TABLE_NAME_VPN_PROFILE, 1, new DbColumn[]{
 		new DbColumn(VpnProfileDataSource.KEY_ID, "INTEGER PRIMARY KEY AUTOINCREMENT", 1),
@@ -67,7 +69,22 @@ public class DatabaseHelper extends SQLiteOpenHelper
 		new DbColumn(VpnProfileDataSource.KEY_DNS_SERVERS, "TEXT", 17),
 	});
 
-	private static final int DATABASE_VERSION = 17;
+	public static final DbTable TABLE_TRUSTED_CERTIFICATE = new DbTable(TABLE_NAME_TRUSTED_CERTIFICATE, 18, new DbColumn[]{
+		new DbColumn(ManagedCertificate.KEY_ID, "INTEGER PRIMARY KEY AUTOINCREMENT", 18),
+		new DbColumn(ManagedCertificate.KEY_VPN_PROFILE_UUID, "TEXT UNIQUE", 18),
+		new DbColumn(ManagedCertificate.KEY_ALIAS, "TEXT NOT NULL", 18),
+		new DbColumn(ManagedCertificate.KEY_DATA, "TEXT NOT NULL", 18),
+	});
+
+	public static final DbTable TABLE_USER_CERTIFICATE = new DbTable(TABLE_NAME_USER_CERTIFICATE, 18, new DbColumn[]{
+		new DbColumn(ManagedCertificate.KEY_ID, "INTEGER PRIMARY KEY AUTOINCREMENT", 18),
+		new DbColumn(ManagedCertificate.KEY_VPN_PROFILE_UUID, "TEXT UNIQUE", 18),
+		new DbColumn(ManagedCertificate.KEY_ALIAS, "TEXT NOT NULL", 18),
+		new DbColumn(ManagedCertificate.KEY_DATA, "TEXT NOT NULL", 18),
+		new DbColumn(ManagedUserCertificate.KEY_PASSWORD, "TEXT", 18),
+	});
+
+	private static final int DATABASE_VERSION = 18;
 
 	private static final Set<DbTable> TABLES;
 
@@ -75,6 +92,8 @@ public class DatabaseHelper extends SQLiteOpenHelper
 	{
 		TABLES = new HashSet<>();
 		TABLES.add(TABLE_VPN_PROFILE);
+		TABLES.add(TABLE_TRUSTED_CERTIFICATE);
+		TABLES.add(TABLE_USER_CERTIFICATE);
 	}
 
 	public DatabaseHelper(Context context)
