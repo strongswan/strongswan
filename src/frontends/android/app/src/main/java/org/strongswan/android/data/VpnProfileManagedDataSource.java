@@ -82,19 +82,6 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 	}
 
 	@Override
-	public ManagedVpnProfile getVpnProfile(long id)
-	{
-		for (ManagedVpnProfile vpnProfile : getAllVpnProfiles())
-		{
-			if (vpnProfile.getId() == id)
-			{
-				return vpnProfile;
-			}
-		}
-		return null;
-	}
-
-	@Override
 	public ManagedVpnProfile getVpnProfile(UUID uuid)
 	{
 		for (ManagedVpnProfile vpnProfile : getAllVpnProfiles())

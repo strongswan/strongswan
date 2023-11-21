@@ -299,31 +299,16 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 	@Override
 	public boolean updateVpnProfile(VpnProfile profile)
 	{
-		long id = profile.getId();
+		final UUID uuid = profile.getUUID();
 		ContentValues values = ContentValuesFromVpnProfile(profile);
-		return mDatabase.update(TABLE_VPNPROFILE, values, KEY_ID + " = " + id, null) > 0;
+		return mDatabase.update(TABLE_VPNPROFILE, values, KEY_UUID + " = ?", new String[]{uuid.toString()}) > 0;
 	}
 
 	@Override
 	public boolean deleteVpnProfile(VpnProfile profile)
 	{
-		long id = profile.getId();
-		return mDatabase.delete(TABLE_VPNPROFILE, KEY_ID + " = " + id, null) > 0;
-	}
-
-	@Override
-	public VpnProfile getVpnProfile(long id)
-	{
-		VpnProfile profile = null;
-		Cursor cursor = mDatabase.query(TABLE_VPNPROFILE, ALL_COLUMNS,
-		                                KEY_ID + "=" + id, null, null, null, null);
-		if (cursor.moveToFirst())
-		{
-			profile = VpnProfileFromCursor(cursor);
-			profile.setDataSource(this);
-		}
-		cursor.close();
-		return profile;
+		final UUID uuid = profile.getUUID();
+		return mDatabase.delete(TABLE_VPNPROFILE, KEY_UUID + " = ?", new String[]{uuid.toString()}) > 0;
 	}
 
 	@Override
@@ -331,7 +316,7 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 	{
 		VpnProfile profile = null;
 		Cursor cursor = mDatabase.query(TABLE_VPNPROFILE, ALL_COLUMNS,
-		                                KEY_UUID + "='" + uuid.toString() + "'", null, null, null, null);
+		                                KEY_UUID + " = ?", new String[]{uuid.toString()}, null, null, null);
 		if (cursor.moveToFirst())
 		{
 			profile = VpnProfileFromCursor(cursor);
@@ -362,7 +347,6 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 	private VpnProfile VpnProfileFromCursor(Cursor cursor)
 	{
 		VpnProfile profile = new VpnProfile();
-		profile.setId(cursor.getLong(cursor.getColumnIndexOrThrow(KEY_ID)));
 		profile.setUUID(UUID.fromString(cursor.getString(cursor.getColumnIndexOrThrow(KEY_UUID))));
 		profile.setName(cursor.getString(cursor.getColumnIndexOrThrow(KEY_NAME)));
 		profile.setGateway(cursor.getString(cursor.getColumnIndexOrThrow(KEY_GATEWAY)));

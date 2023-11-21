@@ -72,14 +72,6 @@ public interface VpnProfileDataSource
 	boolean deleteVpnProfile(VpnProfile profile);
 
 	/**
-	 * Get a single VPN profile from the database.
-	 *
-	 * @param id the ID of the VPN profile
-	 * @return the profile or null, if not found
-	 */
-	VpnProfile getVpnProfile(long id);
-
-	/**
 	 * Get a single VPN profile from the database by its UUID.
 	 *
 	 * @param uuid the UUID of the VPN profile

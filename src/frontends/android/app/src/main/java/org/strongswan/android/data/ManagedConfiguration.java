@@ -57,13 +57,9 @@ public class ManagedConfiguration
 		final List<Bundle> managedProfileBundles = getBundleArrayList(bundle, KEY_MANAGED_PROFILES);
 		mManagedVpnProfiles = new ArrayList<>(managedProfileBundles.size());
 
-		long index = Long.MAX_VALUE;
-
 		for (final Bundle managedProfileBundle : managedProfileBundles)
 		{
 			final ManagedVpnProfile vpnProfile = new ManagedVpnProfile(managedProfileBundle);
-			vpnProfile.setId(index--);
-
 			mManagedVpnProfiles.add(vpnProfile);
 		}
 	}

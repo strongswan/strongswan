@@ -58,20 +58,6 @@ public class VpnProfileSource implements VpnProfileDataSource
 	}
 
 	@Override
-	public VpnProfile getVpnProfile(long id)
-	{
-		for (final VpnProfileDataSource source : dataSources)
-		{
-			final VpnProfile profile = source.getVpnProfile(id);
-			if (profile != null)
-			{
-				return profile;
-			}
-		}
-		return null;
-	}
-
-	@Override
 	public VpnProfile getVpnProfile(UUID uuid)
 	{
 		for (final VpnProfileDataSource source : dataSources)

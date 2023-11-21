@@ -675,7 +675,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			updateProfileData();
 			if (mExisting != null)
 			{
-				mProfile.setId(mExisting.getId());
+				mProfile.setUUID(mExisting.getUUID());
 				mDataSource.updateVpnProfile(mProfile);
 			}
 			else
@@ -697,14 +697,14 @@ public class VpnProfileImportActivity extends AppCompatActivity
 				}
 			}
 			Intent intent = new Intent(Constants.VPN_PROFILES_CHANGED);
-			intent.putExtra(Constants.VPN_PROFILES_SINGLE, mProfile.getId());
+			intent.putExtra(Constants.VPN_PROFILES_SINGLE, mProfile.getUUID().toString());
 			LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
 
 			intent = new Intent(this, MainActivity.class);
 			intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 			startActivity(intent);
 
-			setResult(RESULT_OK, new Intent().putExtra(VpnProfileDataSource.KEY_ID, mProfile.getId()));
+			setResult(RESULT_OK, new Intent().putExtra(VpnProfileDataSource.KEY_UUID, mProfile.getUUID().toString()));
 			finish();
 		}
 	}

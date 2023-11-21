@@ -140,7 +140,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 			}
 			else if (mDataSource != null)
 			{   /* always get the plain profile without cached password */
-				profile = mDataSource.getVpnProfile(profile.getId());
+				profile = mDataSource.getVpnProfile(profile.getUUID());
 			}
 			/* reconnect the profile in case of an error */
 			if (mService.getErrorState() == VpnStateService.ErrorState.NO_ERROR)
@@ -173,7 +173,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 				Intent intent = new Intent(this, VpnProfileControlActivity.class);
 				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 				intent.setAction(VpnProfileControlActivity.START_PROFILE);
-				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_ID, profile.getUUID().toString());
+				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profile.getUUID().toString());
 				if (profile.getVpnType().has(VpnType.VpnTypeFeature.USER_PASS) &&
 					profile.getPassword() == null)
 				{   /* the user will have to enter the password, so collapse the drawer */
