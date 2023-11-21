@@ -33,6 +33,8 @@ public class DatabaseHelperTest
 		databaseHelper.onCreate(database);
 
 		then(database).should().execSQL("CREATE TABLE IF NOT EXISTS vpnprofile (_id INTEGER PRIMARY KEY AUTOINCREMENT,_uuid TEXT UNIQUE,name TEXT NOT NULL,gateway TEXT NOT NULL,vpn_type TEXT NOT NULL DEFAULT '',username TEXT,password TEXT,certificate TEXT,user_certificate TEXT,mtu INTEGER,port INTEGER,split_tunneling INTEGER,local_id TEXT,remote_id TEXT,excluded_subnets TEXT,included_subnets TEXT,selected_apps INTEGER,selected_apps_list TEXT,nat_keepalive INTEGER,flags INTEGER,ike_proposal TEXT,esp_proposal TEXT,dns_servers TEXT);");
+		then(database).should().execSQL("CREATE TABLE IF NOT EXISTS usercertificate (_id INTEGER PRIMARY KEY AUTOINCREMENT,vpn_profile_uuid TEXT UNIQUE,configured_alias TEXT NOT NULL,effective_alias TEXT,data TEXT NOT NULL,password TEXT);");
+		then(database).should().execSQL("CREATE TABLE IF NOT EXISTS cacertificate (_id INTEGER PRIMARY KEY AUTOINCREMENT,vpn_profile_uuid TEXT UNIQUE,configured_alias TEXT NOT NULL,effective_alias TEXT,data TEXT NOT NULL);");
 	}
 
 	@Test
@@ -211,6 +213,15 @@ public class DatabaseHelperTest
 		databaseHelper.onUpgrade(database, 16, 17);
 
 		then(database).should().execSQL("ALTER TABLE vpnprofile ADD dns_servers TEXT;");
+	}
+
+	@Test
+	public void onUpgradeFrom17To18()
+	{
+		databaseHelper.onUpgrade(database, 17, 18);
+
+		then(database).should().execSQL("CREATE TABLE IF NOT EXISTS usercertificate (_id INTEGER PRIMARY KEY AUTOINCREMENT,vpn_profile_uuid TEXT UNIQUE,configured_alias TEXT NOT NULL,effective_alias TEXT,data TEXT NOT NULL,password TEXT);");
+		then(database).should().execSQL("CREATE TABLE IF NOT EXISTS cacertificate (_id INTEGER PRIMARY KEY AUTOINCREMENT,vpn_profile_uuid TEXT UNIQUE,configured_alias TEXT NOT NULL,effective_alias TEXT,data TEXT NOT NULL);");
 	}
 
 	@Test
