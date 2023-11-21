@@ -4,8 +4,11 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.SQLException;
 
+import org.strongswan.android.logic.StrongSwanApplication;
+
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -16,10 +19,19 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 	private final ManagedConfigurationService mManagedConfigurationService;
 	private final SharedPreferences mSharedPreferences;
 
+	private final CaCertificateRepository mCaCertificateRepository;
+	private final UserCertificateRepository mUserCertificateRepository;
+
 	public VpnProfileManagedDataSource(final Context context)
 	{
-		this.mManagedConfigurationService = new ManagedConfigurationService(context);
+		final StrongSwanApplication application = (StrongSwanApplication)context.getApplicationContext();
+
+		this.mManagedConfigurationService = application.getManagedConfigurationService();
 		this.mSharedPreferences = context.getSharedPreferences(NAME_MANAGED_VPN_PROFILES, Context.MODE_PRIVATE);
+
+		final DatabaseHelper databaseHelper = application.getDatabaseHelper();
+		this.mCaCertificateRepository = new CaCertificateRepository(mManagedConfigurationService, databaseHelper);
+		this.mUserCertificateRepository = new UserCertificateRepository(mManagedConfigurationService, databaseHelper);
 	}
 
 	@Override
@@ -43,7 +55,7 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 		storedKeys.removeAll(actualKeys);
 
 		final SharedPreferences.Editor editor = mSharedPreferences.edit();
-		for (String key : storedKeys)
+		for (final String key : storedKeys)
 		{
 			editor.remove(key);
 		}
@@ -83,7 +95,7 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 	@Override
 	public ManagedVpnProfile getVpnProfile(UUID uuid)
 	{
-		for (ManagedVpnProfile vpnProfile : getAllVpnProfiles())
+		for (final ManagedVpnProfile vpnProfile : getAllVpnProfiles())
 		{
 			if (uuid != null && uuid.equals(vpnProfile.getUUID()))
 			{
@@ -98,10 +110,25 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 	{
 		mManagedConfigurationService.loadConfiguration();
 
+		final Map<String, CaCertificate> caCertificateMap = mCaCertificateRepository.getInstalledCertificateMap();
+		final Map<String, UserCertificate> userCertificateMap = mUserCertificateRepository.getInstalledKeyStoreMap();
+
 		final List<ManagedVpnProfile> managedVpnProfiles = mManagedConfigurationService.getManagedProfiles();
 		for (final ManagedVpnProfile vpnProfile : managedVpnProfiles)
 		{
-			final String password = mSharedPreferences.getString(vpnProfile.getUUID().toString(), vpnProfile.getPassword());
+			final String uuid = vpnProfile.getUUID().toString();
+			final String password = mSharedPreferences.getString(uuid, vpnProfile.getPassword());
+			final CaCertificate caCertificate = caCertificateMap.get(uuid);
+			if (caCertificate != null)
+			{
+				vpnProfile.setCertificateAlias(caCertificate.getAlias());
+			}
+			final UserCertificate userCertificate = userCertificateMap.get(uuid);
+			if (userCertificate != null)
+			{
+				vpnProfile.setUserCertificateAlias(userCertificate.getAlias());
+			}
+
 			vpnProfile.setPassword(password);
 			vpnProfile.setDataSource(this);
 			vpnProfile.setReadOnly(true);
