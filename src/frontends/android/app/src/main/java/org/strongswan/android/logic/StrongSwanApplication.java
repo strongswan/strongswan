@@ -56,6 +56,8 @@ public class StrongSwanApplication extends Application implements DefaultLifecyc
 	private final Handler mMainHandler = HandlerCompat.createAsync(Looper.getMainLooper());
 
 	private ManagedConfigurationService mManagedConfigurationService;
+	private ManagedTrustedCertificateManager mTrustedCertificateManager;
+	private ManagedUserCertificateManager mUserCertificateManager;
 
 	private DatabaseHelper mDatabaseHelper;
 
@@ -84,6 +86,12 @@ public class StrongSwanApplication extends Application implements DefaultLifecyc
 		mDatabaseHelper = new DatabaseHelper(mContext);
 
 		mManagedConfigurationService = new ManagedConfigurationService(mContext);
+
+		mTrustedCertificateManager = new ManagedTrustedCertificateManager(mContext, mExecutorService, mMainHandler,
+																		  mManagedConfigurationService, mDatabaseHelper);
+
+		mUserCertificateManager = new ManagedUserCertificateManager(mContext, mManagedConfigurationService, mDatabaseHelper);
+
 		ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
 	}
 
@@ -109,12 +117,15 @@ public class StrongSwanApplication extends Application implements DefaultLifecyc
 		mManagedConfigurationService.loadConfiguration();
 		mManagedConfigurationService.updateSettings();
 
-		uuids.addAll(mManagedConfigurationService.getManagedProfiles().keySet());
+		mUserCertificateManager.update();
+		mTrustedCertificateManager.update(() -> {
+			uuids.addAll(mManagedConfigurationService.getManagedProfiles().keySet());
 
-		Log.d(TAG, "Send profiles changed broadcast");
-		Intent profilesChanged = new Intent(Constants.VPN_PROFILES_CHANGED);
-		profilesChanged.putExtra(Constants.VPN_PROFILES_MULTIPLE, uuids.toArray(new String[0]));
-		LocalBroadcastManager.getInstance(mContext).sendBroadcast(profilesChanged);
+			Log.d(TAG, "Send profiles changed broadcast");
+			Intent profilesChanged = new Intent(Constants.VPN_PROFILES_CHANGED);
+			profilesChanged.putExtra(Constants.VPN_PROFILES_MULTIPLE, uuids.toArray(new String[0]));
+			LocalBroadcastManager.getInstance(mContext).sendBroadcast(profilesChanged);
+		});
 	}
 
 	/**
