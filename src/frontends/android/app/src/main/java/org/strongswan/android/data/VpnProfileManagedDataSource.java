@@ -111,6 +111,8 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 
 	public boolean areUnmanagedSourcesAllowed()
 	{
+		mManagedConfigurationService.loadConfiguration();
+
 		final ManagedConfiguration managedConfiguration = mManagedConfigurationService.getManagedConfiguration();
 		return managedConfiguration.isAllowExistingProfiles();
 	}
