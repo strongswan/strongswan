@@ -26,6 +26,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import org.strongswan.android.data.DatabaseHelper;
 import org.strongswan.android.data.ManagedConfigurationService;
 import org.strongswan.android.security.LocalCertificateKeyStoreProvider;
 import org.strongswan.android.utils.Constants;
@@ -56,6 +57,8 @@ public class StrongSwanApplication extends Application implements DefaultLifecyc
 
 	private ManagedConfigurationService mManagedConfigurationService;
 
+	private DatabaseHelper mDatabaseHelper;
+
 	private final BroadcastReceiver mRestrictionsReceiver = new BroadcastReceiver()
 	{
 		@Override
@@ -77,6 +80,8 @@ public class StrongSwanApplication extends Application implements DefaultLifecyc
 		super.onCreate();
 		StrongSwanApplication.mContext = getApplicationContext();
 		StrongSwanApplication.mInstance = this;
+
+		mDatabaseHelper = new DatabaseHelper(mContext);
 
 		mManagedConfigurationService = new ManagedConfigurationService(mContext);
 		ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
@@ -160,6 +165,14 @@ public class StrongSwanApplication extends Application implements DefaultLifecyc
 	public ManagedConfigurationService getManagedConfigurationService()
 	{
 		return mManagedConfigurationService;
+	}
+
+	/**
+	 * @return the application's database helper used to access its SQLite database
+	 */
+	public DatabaseHelper getDatabaseHelper()
+	{
+		return mDatabaseHelper;
 	}
 
 	/*

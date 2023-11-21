@@ -35,7 +35,7 @@ public class VpnProfileSource implements VpnProfileDataSource
 	{
 		mManagedConfigurationService = StrongSwanApplication.getInstance().getManagedConfigurationService();
 
-		vpnProfileSqlDataSource = new VpnProfileSqlDataSource(context);
+		vpnProfileSqlDataSource = new VpnProfileSqlDataSource();
 
 		dataSources.add(vpnProfileSqlDataSource);
 		dataSources.add(new VpnProfileManagedDataSource(context));
