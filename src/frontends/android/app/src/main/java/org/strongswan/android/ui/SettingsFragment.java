@@ -63,7 +63,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Prefer
 		VpnProfileDataSource profiles = new VpnProfileSource(getActivity());
 		profiles.open();
 
-		List<VpnProfile> all = profiles.getAllVpnProfiles();
+		List<? extends VpnProfile> all = profiles.getAllVpnProfiles();
 		Collections.sort(all, new Comparator<VpnProfile>()
 		{
 			@Override

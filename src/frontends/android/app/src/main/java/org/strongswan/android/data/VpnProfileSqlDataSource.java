@@ -339,24 +339,6 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 	}
 
 	@Override
-	public VpnProfile getVpnProfile(String uuid)
-	{
-		try
-		{
-			if (uuid != null)
-			{
-				return getVpnProfile(UUID.fromString(uuid));
-			}
-			return null;
-		}
-		catch (IllegalArgumentException e)
-		{
-			e.printStackTrace();
-			return null;
-		}
-	}
-
-	@Override
 	public List<VpnProfile> getAllVpnProfiles()
 	{
 		List<VpnProfile> vpnProfiles = new ArrayList<VpnProfile>();

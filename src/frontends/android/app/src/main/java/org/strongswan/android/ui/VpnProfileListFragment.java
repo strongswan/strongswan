@@ -166,7 +166,7 @@ public class VpnProfileListFragment extends Fragment
 		mDataSource.open();
 
 		/* cached list of profiles used as backend for the ListView */
-		mVpnProfiles = mDataSource.getAllVpnProfiles();
+		mVpnProfiles = (List<VpnProfile>)mDataSource.getAllVpnProfiles();
 
 		mListAdapter = new VpnProfileAdapter(getActivity(), R.layout.profile_list_item, mVpnProfiles);
 

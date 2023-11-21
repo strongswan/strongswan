@@ -15,7 +15,9 @@ public class VpnProfileSource implements VpnProfileDataSource
 	public VpnProfileSource(Context context)
 	{
 		vpnProfileSqlDataSource = new VpnProfileSqlDataSource(context);
+
 		dataSources.add(vpnProfileSqlDataSource);
+		dataSources.add(new VpnProfileManagedDataSource(context));
 	}
 
 	@Override
@@ -81,24 +83,6 @@ public class VpnProfileSource implements VpnProfileDataSource
 			}
 		}
 		return null;
-	}
-
-	@Override
-	public VpnProfile getVpnProfile(String uuid)
-	{
-		try
-		{
-			if (uuid != null)
-			{
-				return getVpnProfile(UUID.fromString(uuid));
-			}
-			return null;
-		}
-		catch (IllegalArgumentException e)
-		{
-			e.printStackTrace();
-			return null;
-		}
 	}
 
 	@Override
