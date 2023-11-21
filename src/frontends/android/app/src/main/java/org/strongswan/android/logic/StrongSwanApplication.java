@@ -24,6 +24,7 @@ import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
 
+import org.strongswan.android.data.DatabaseHelper;
 import org.strongswan.android.data.ManagedConfigurationService;
 import org.strongswan.android.data.ManagedVpnProfile;
 import org.strongswan.android.data.VpnProfile;
@@ -53,6 +54,8 @@ public class StrongSwanApplication extends Application implements LifecycleEvent
 	private final Handler mMainHandler = HandlerCompat.createAsync(Looper.getMainLooper());
 
 	private ManagedConfigurationService mManagedConfigurationService;
+
+	private DatabaseHelper mDatabaseHelper;
 
 	private final BroadcastReceiver mRestrictionsReceiver = new BroadcastReceiver()
 	{
@@ -92,8 +95,10 @@ public class StrongSwanApplication extends Application implements LifecycleEvent
 		super.onCreate();
 		StrongSwanApplication.mContext = getApplicationContext();
 
-		mManagedConfigurationService = new ManagedConfigurationService(this);
+		mManagedConfigurationService = new ManagedConfigurationService(mContext);
 		ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+
+		mDatabaseHelper = new DatabaseHelper(mContext);
 	}
 
 	/**
@@ -124,6 +129,14 @@ public class StrongSwanApplication extends Application implements LifecycleEvent
 	public Handler getHandler()
 	{
 		return mMainHandler;
+	}
+
+	/**
+	 * @return the application's database helper used to access its SQLite database
+	 */
+	public DatabaseHelper getDatabaseHelper()
+	{
+		return mDatabaseHelper;
 	}
 
 	/*

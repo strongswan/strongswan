@@ -24,15 +24,17 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 
+import org.strongswan.android.logic.StrongSwanApplication;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public class VpnProfileSqlDataSource implements VpnProfileDataSource
 {
-	private DatabaseHelper mDbHelper;
+	private final DatabaseHelper mDbHelper;
+
 	private SQLiteDatabase mDatabase;
-	private final Context mContext;
 
 	/**
 	 * Construct a new VPN profile data source. The context is used to
@@ -42,15 +44,15 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 	 */
 	public VpnProfileSqlDataSource(Context context)
 	{
-		this.mContext = context;
+		final Context applicationContext = context.getApplicationContext();
+		mDbHelper = ((StrongSwanApplication)applicationContext).getDatabaseHelper();
 	}
 
 	@Override
 	public VpnProfileDataSource open() throws SQLException
 	{
-		if (mDbHelper == null)
+		if (mDatabase == null)
 		{
-			mDbHelper = new DatabaseHelper(mContext);
 			mDatabase = mDbHelper.getWritableDatabase();
 		}
 		return this;
@@ -59,10 +61,9 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 	@Override
 	public void close()
 	{
-		if (mDbHelper != null)
+		if (mDatabase != null)
 		{
-			mDbHelper.close();
-			mDbHelper = null;
+			mDatabase = null;
 		}
 	}
 
