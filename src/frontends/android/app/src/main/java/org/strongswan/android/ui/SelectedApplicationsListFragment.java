@@ -60,9 +60,11 @@ public class SelectedApplicationsListFragment extends ListFragment implements Lo
 		super.onViewCreated(view, savedInstanceState);
 		setHasOptionsMenu(true);
 
-		getListView().setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+		final boolean readOnly = getActivity().getIntent().getBooleanExtra(VpnProfileDataSource.KEY_READ_ONLY, false);
+		getListView().setChoiceMode(readOnly ? ListView.CHOICE_MODE_NONE : ListView.CHOICE_MODE_MULTIPLE);
 
 		mAdapter = new SelectedApplicationsAdapter(getActivity());
+		mAdapter.setReadOnly(readOnly);
 		setListAdapter(mAdapter);
 		setListShown(false);
 
@@ -101,6 +103,11 @@ public class SelectedApplicationsListFragment extends ListFragment implements Lo
 	@Override
 	public void onListItemClick(ListView l, View v, int position, long id)
 	{
+		if (mAdapter.isReadOnly())
+		{
+			return;
+		}
+
 		super.onListItemClick(l, v, position, id);
 		SelectedApplicationEntry item = (SelectedApplicationEntry)getListView().getItemAtPosition(position);
 		item.setSelected(!item.isSelected());
@@ -236,7 +243,7 @@ public class SelectedApplicationsListFragment extends ListFragment implements Lo
 		protected void onStartLoading()
 		{
 			if (mData != null)
-			{	/* if we have data ready, deliver it directly */
+			{   /* if we have data ready, deliver it directly */
 				deliverResult(mData);
 			}
 			if (takeContentChanged() || mData == null)
@@ -254,8 +261,8 @@ public class SelectedApplicationsListFragment extends ListFragment implements Lo
 			}
 			mData = data;
 			if (isStarted())
-			{	/* if it is started we deliver the data directly,
-				 * otherwise this is handled in onStartLoading */
+			{   /* if it is started we deliver the data directly,
+			 * otherwise this is handled in onStartLoading */
 				super.deliverResult(data);
 			}
 		}

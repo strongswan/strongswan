@@ -30,6 +30,7 @@ public interface VpnProfileDataSource
 	String KEY_IKE_PROPOSAL = "ike_proposal";
 	String KEY_ESP_PROPOSAL = "esp_proposal";
 	String KEY_DNS_SERVERS = "dns_servers";
+	String KEY_READ_ONLY = "read_only";
 
 	/**
 	 * Open the VPN profile data source. The database is automatically created
