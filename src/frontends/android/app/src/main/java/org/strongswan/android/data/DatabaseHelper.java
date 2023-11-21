@@ -9,6 +9,9 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class DatabaseHelper extends SQLiteOpenHelper
@@ -16,11 +19,10 @@ public class DatabaseHelper extends SQLiteOpenHelper
 	private static final String TAG = DatabaseHelper.class.getSimpleName();
 
 	private static final String DATABASE_NAME = "strongswan.db";
-	static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 17;
+	private static final String TABLE_NAME_VPN_PROFILE = "vpnprofile";
 
-	private static final DbColumn[] COLUMNS = new DbColumn[]{
+	static final DbTable TABLE_VPN_PROFILE = new DbTable(TABLE_NAME_VPN_PROFILE, 1, new DbColumn[]{
 		new DbColumn(VpnProfileDataSource.KEY_ID, "INTEGER PRIMARY KEY AUTOINCREMENT", 1),
 		new DbColumn(VpnProfileDataSource.KEY_UUID, "TEXT UNIQUE", 9),
 		new DbColumn(VpnProfileDataSource.KEY_NAME, "TEXT NOT NULL", 1),
@@ -44,7 +46,17 @@ public class DatabaseHelper extends SQLiteOpenHelper
 		new DbColumn(VpnProfileDataSource.KEY_IKE_PROPOSAL, "TEXT", 15),
 		new DbColumn(VpnProfileDataSource.KEY_ESP_PROPOSAL, "TEXT", 15),
 		new DbColumn(VpnProfileDataSource.KEY_DNS_SERVERS, "TEXT", 17),
-	};
+	});
+
+	private static final int DATABASE_VERSION = 17;
+
+	private static final Set<DbTable> TABLES;
+
+	static
+	{
+		TABLES = new HashSet<>();
+		TABLES.add(TABLE_VPN_PROFILE);
+	}
 
 	DatabaseHelper(Context context)
 	{
@@ -54,7 +66,10 @@ public class DatabaseHelper extends SQLiteOpenHelper
 	@Override
 	public void onCreate(SQLiteDatabase database)
 	{
-		database.execSQL(getDatabaseCreate(DATABASE_VERSION));
+		for (final String sql : getDatabaseCreate(DATABASE_VERSION))
+		{
+			database.execSQL(sql);
+		}
 	}
 
 	@Override
@@ -64,91 +79,75 @@ public class DatabaseHelper extends SQLiteOpenHelper
 			" to " + newVersion);
 		if (oldVersion < 2)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_USER_CERTIFICATE +
-				           " TEXT;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_USER_CERTIFICATE + " TEXT;");
 		}
 		if (oldVersion < 3)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_VPN_TYPE +
-				           " TEXT DEFAULT '';");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_VPN_TYPE + " TEXT DEFAULT '';");
 		}
 		if (oldVersion < 4)
 		{    /* remove NOT NULL constraint from username column */
-			updateColumns(db, 4);
+			updateColumns(db, TABLE_VPN_PROFILE, 4);
 		}
 		if (oldVersion < 5)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_MTU +
-				           " INTEGER;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_MTU + " INTEGER;");
 		}
 		if (oldVersion < 6)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_PORT +
-				           " INTEGER;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_PORT + " INTEGER;");
 		}
 		if (oldVersion < 7)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_SPLIT_TUNNELING +
-				           " INTEGER;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_SPLIT_TUNNELING + " INTEGER;");
 		}
 		if (oldVersion < 8)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_LOCAL_ID +
-				           " TEXT;");
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_REMOTE_ID +
-				           " TEXT;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_LOCAL_ID + " TEXT;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_REMOTE_ID + " TEXT;");
 		}
 		if (oldVersion < 9)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_UUID +
-				           " TEXT;");
-			updateColumns(db, 9);
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_UUID + " TEXT;");
+			updateColumns(db, TABLE_VPN_PROFILE, 9);
 		}
 		if (oldVersion < 10)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_EXCLUDED_SUBNETS +
-				           " TEXT;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_EXCLUDED_SUBNETS + " TEXT;");
 		}
 		if (oldVersion < 11)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_INCLUDED_SUBNETS +
-				           " TEXT;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_INCLUDED_SUBNETS + " TEXT;");
 		}
 		if (oldVersion < 12)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_SELECTED_APPS +
-				           " INTEGER;");
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_SELECTED_APPS_LIST +
-				           " TEXT;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_SELECTED_APPS + " INTEGER;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_SELECTED_APPS_LIST + " TEXT;");
 		}
 		if (oldVersion < 13)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_NAT_KEEPALIVE +
-				           " INTEGER;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_NAT_KEEPALIVE + " INTEGER;");
 		}
 		if (oldVersion < 14)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_FLAGS +
-				           " INTEGER;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_FLAGS + " INTEGER;");
 		}
 		if (oldVersion < 15)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_IKE_PROPOSAL +
-				           " TEXT;");
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_ESP_PROPOSAL +
-				           " TEXT;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_IKE_PROPOSAL + " TEXT;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_ESP_PROPOSAL + " TEXT;");
 		}
 		if (oldVersion < 16)
 		{    /* add a UUID to all entries that haven't one yet */
 			db.beginTransaction();
 			try
 			{
-				Cursor cursor = db.query(TABLE_VPNPROFILE, getColumns(16), VpnProfileDataSource.KEY_UUID + " is NULL", null, null, null, null);
+				Cursor cursor = db.query(TABLE_VPN_PROFILE.Name, TABLE_VPN_PROFILE.getColumnNames(16), VpnProfileDataSource.KEY_UUID + " is NULL", null, null, null, null);
 				for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext())
 				{
 					ContentValues values = new ContentValues();
 					values.put(VpnProfileDataSource.KEY_UUID, UUID.randomUUID().toString());
-					db.update(TABLE_VPNPROFILE, values, VpnProfileDataSource.KEY_ID + " = " + cursor.getLong(cursor.getColumnIndexOrThrow(VpnProfileDataSource.KEY_ID)), null);
+					db.update(TABLE_VPN_PROFILE.Name, values, VpnProfileDataSource.KEY_ID + " = " + cursor.getLong(cursor.getColumnIndexOrThrow(VpnProfileDataSource.KEY_ID)), null);
 				}
 				cursor.close();
 				db.setTransactionSuccessful();
@@ -160,27 +159,21 @@ public class DatabaseHelper extends SQLiteOpenHelper
 		}
 		if (oldVersion < 17)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + VpnProfileDataSource.KEY_DNS_SERVERS +
-				           " TEXT;");
+			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_DNS_SERVERS + " TEXT;");
 		}
 	}
 
-	public String[] getAllColumns()
-	{
-		return getColumns(DATABASE_VERSION);
-	}
-
-	private void updateColumns(SQLiteDatabase db, int version)
+	private void updateColumns(SQLiteDatabase db, DbTable table, int version)
 	{
 		db.beginTransaction();
 		try
 		{
-			db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " RENAME TO tmp_" + TABLE_VPNPROFILE + ";");
-			db.execSQL(getDatabaseCreate(version));
-			StringBuilder insert = new StringBuilder("INSERT INTO " + TABLE_VPNPROFILE + " SELECT ");
-			SQLiteQueryBuilder.appendColumns(insert, getColumns(version));
-			db.execSQL(insert.append(" FROM tmp_" + TABLE_VPNPROFILE + ";").toString());
-			db.execSQL("DROP TABLE tmp_" + TABLE_VPNPROFILE + ";");
+			db.execSQL("ALTER TABLE " + table.Name + " RENAME TO tmp_" + table.Name + ";");
+			db.execSQL(getTableCreate(table, version));
+			StringBuilder insert = new StringBuilder("INSERT INTO " + table.Name + " SELECT ");
+			SQLiteQueryBuilder.appendColumns(insert, table.getColumnNames(version));
+			db.execSQL(insert.append(" FROM tmp_" + table.Name + ";").toString());
+			db.execSQL("DROP TABLE tmp_" + table.Name + ";");
 			db.setTransactionSuccessful();
 		}
 		finally
@@ -189,50 +182,93 @@ public class DatabaseHelper extends SQLiteOpenHelper
 		}
 	}
 
-	private String getDatabaseCreate(int version)
+	private List<String> getDatabaseCreate(final int version)
+	{
+		List<String> statements = new ArrayList<>(TABLES.size());
+		for (final DbTable table : TABLES)
+		{
+			if (table.Since <= version)
+			{
+				final String statement = getTableCreate(table, version);
+				statements.add(statement);
+			}
+		}
+		return statements;
+	}
+
+	private static String getTableCreate(DbTable table, int version)
 	{
 		boolean first = true;
-		StringBuilder create = new StringBuilder("CREATE TABLE ");
-		create.append(TABLE_VPNPROFILE);
+		StringBuilder create = new StringBuilder("CREATE TABLE IF NOT EXISTS ");
+		create.append(table.Name);
 		create.append(" (");
-		for (DbColumn column : COLUMNS)
+
+		final List<DbColumn> columns = table.getColumns(version);
+		for (final DbColumn column : columns)
 		{
-			if (column.Since <= version)
+			if (!first)
 			{
-				if (!first)
-				{
-					create.append(",");
-				}
-				first = false;
-				create.append(column.Name);
-				create.append(" ");
-				create.append(column.Type);
+				create.append(",");
 			}
+			first = false;
+			create.append(column.Name);
+			create.append(" ");
+			create.append(column.Type);
 		}
 		create.append(");");
 		return create.toString();
 	}
 
-	private String[] getColumns(int version)
+	static class DbTable
 	{
-		ArrayList<String> columns = new ArrayList<>();
-		for (DbColumn column : COLUMNS)
+		final String Name;
+		final int Since;
+		final DbColumn[] Columns;
+
+		private DbTable(final String name, final int since, final DbColumn[] columns)
 		{
-			if (column.Since <= version)
-			{
-				columns.add(column.Name);
-			}
+			Name = name;
+			Since = since;
+			Columns = columns;
 		}
-		return columns.toArray(new String[0]);
+
+		private List<DbColumn> getColumns(int version)
+		{
+			final List<DbColumn> columns = new ArrayList<>(Columns.length);
+			for (final DbColumn column : Columns)
+			{
+				if (column.Since <= version)
+				{
+					columns.add(column);
+				}
+			}
+			return columns;
+		}
+
+		private String[] getColumnNames(final int version)
+		{
+			final List<DbColumn> columns = getColumns(version);
+			final List<String> columnNames = new ArrayList<>(columns.size());
+			for (DbColumn column : columns)
+			{
+				columnNames.add(column.Name);
+			}
+			return columnNames.toArray(new String[0]);
+		}
+
+		public String[] columnNames()
+		{
+			return getColumnNames(DATABASE_VERSION);
+		}
 	}
 
-	private static class DbColumn
+	static class DbColumn
 	{
-		public final String Name;
-		public final String Type;
-		public final Integer Since;
+		final String Name;
+		final String Type;
+		final int Since;
 
-		public DbColumn(String name, String type, Integer since)
+		private DbColumn(String name, String type, int since)
 		{
 			Name = name;
 			Type = type;
