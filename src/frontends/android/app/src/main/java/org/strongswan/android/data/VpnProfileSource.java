@@ -19,17 +19,22 @@ package org.strongswan.android.data;
 import android.content.Context;
 import android.database.SQLException;
 
+import org.strongswan.android.logic.StrongSwanApplication;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public class VpnProfileSource implements VpnProfileDataSource
 {
+	private final ManagedConfigurationService mManagedConfigurationService;
 	private final List<VpnProfileDataSource> dataSources = new ArrayList<>();
 	private final VpnProfileSqlDataSource vpnProfileSqlDataSource;
 
 	public VpnProfileSource(Context context)
 	{
+		mManagedConfigurationService = StrongSwanApplication.getInstance().getManagedConfigurationService();
+
 		vpnProfileSqlDataSource = new VpnProfileSqlDataSource(context);
 
 		dataSources.add(vpnProfileSqlDataSource);
@@ -73,10 +78,21 @@ public class VpnProfileSource implements VpnProfileDataSource
 		return profile.getDataSource().deleteVpnProfile(profile);
 	}
 
+	private List<VpnProfileDataSource> getAccessibleSources()
+	{
+		final ManagedConfiguration managedConfiguration = mManagedConfigurationService.getManagedConfiguration();
+		ArrayList<VpnProfileDataSource> sources = new ArrayList<>(dataSources);
+		if (!managedConfiguration.isAllowExistingProfiles())
+		{
+			sources.remove(vpnProfileSqlDataSource);
+		}
+		return sources;
+	}
+
 	@Override
 	public VpnProfile getVpnProfile(UUID uuid)
 	{
-		for (final VpnProfileDataSource source : dataSources)
+		for (final VpnProfileDataSource source : getAccessibleSources())
 		{
 			final VpnProfile profile = source.getVpnProfile(uuid);
 			if (profile != null)
@@ -92,7 +108,7 @@ public class VpnProfileSource implements VpnProfileDataSource
 	{
 		final List<VpnProfile> profiles = new ArrayList<>();
 
-		for (final VpnProfileDataSource source : dataSources)
+		for (final VpnProfileDataSource source : getAccessibleSources())
 		{
 			profiles.addAll(source.getAllVpnProfiles());
 		}
