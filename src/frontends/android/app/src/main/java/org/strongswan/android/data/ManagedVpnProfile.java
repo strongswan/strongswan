@@ -61,8 +61,8 @@ public class ManagedVpnProfile extends VpnProfile
 			splitFlags = addPositiveFlag(splitFlags, splitTunneling, KEY_SPLIT_TUNNELLING_BLOCK_IPV4_FLAG, VpnProfile.SPLIT_TUNNELING_BLOCK_IPV4);
 			splitFlags = addPositiveFlag(splitFlags, splitTunneling, KEY_SPLIT_TUNNELLING_BLOCK_IPV6_FLAG, VpnProfile.SPLIT_TUNNELING_BLOCK_IPV6);
 
-			setExcludedSubnets(splitTunneling.getString(VpnProfileDataSource.KEY_INCLUDED_SUBNETS));
-			setIncludedSubnets(splitTunneling.getString(VpnProfileDataSource.KEY_EXCLUDED_SUBNETS));
+			setExcludedSubnets(splitTunneling.getString(VpnProfileDataSource.KEY_EXCLUDED_SUBNETS));
+			setIncludedSubnets(splitTunneling.getString(VpnProfileDataSource.KEY_INCLUDED_SUBNETS));
 		}
 
 		setSplitTunneling(splitFlags);
@@ -125,7 +125,7 @@ public class ManagedVpnProfile extends VpnProfile
 
 		final String userCertificateAlias = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE_ALIAS, "local:" + uuid);
 		final String userCertificateData = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
-		final String userCertificatePassword = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE_PASSWORD);
+		final String userCertificatePassword = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE_PASSWORD, "");
 
 		if (!TextUtils.isEmpty(userCertificateAlias) && !TextUtils.isEmpty(userCertificateData))
 		{
