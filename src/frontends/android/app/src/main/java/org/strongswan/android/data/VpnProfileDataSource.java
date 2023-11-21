@@ -15,7 +15,10 @@ public interface VpnProfileDataSource
 	String KEY_USERNAME = "username";
 	String KEY_PASSWORD = "password";
 	String KEY_CERTIFICATE = "certificate";
+	String KEY_CERTIFICATE_ALIAS = "certificate_alias";
 	String KEY_USER_CERTIFICATE = "user_certificate";
+	String KEY_USER_CERTIFICATE_ALIAS = "user_certificate_alias";
+	String KEY_USER_CERTIFICATE_PASSWORD = "user_certificate_password";
 	String KEY_MTU = "mtu";
 	String KEY_PORT = "port";
 	String KEY_SPLIT_TUNNELING = "split_tunneling";

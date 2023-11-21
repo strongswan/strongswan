@@ -56,6 +56,8 @@
     <string name="managed_config_remote_id_description">@string/profile_remote_id_hint</string>
     <string name="managed_config_remote_cert_title">CA or server certificate (Optional)</string>
     <string name="managed_config_remote_cert_description">Base64-encoded CA or server certificate. Is imported into the app, not the system keystore. If not set, automatic CA certificate selection is enabled</string>
+    <string name="managed_config_remote_cert_alias_title">CA or server certificate alias</string>
+    <string name="managed_config_remote_cert_alias_description">The alias of the CA or server certificate</string>
     <string name="managed_config_remote_certreq_title">Send certificate requests</string>
     <string name="managed_config_remote_certreq_description">Specifies whether to send certificate requests for all installed or selected CA certificates. Disabling this may reduce the size of the IKE_AUTH message if the server does not support fragmentation. But it only works if the server doesn\'t require certificate requests to send back the server certificate</string>
     <string name="managed_config_remote_revocation_ocsp_title">@string/profile_use_ocsp_label</string>
@@ -74,6 +76,10 @@
     <string name="managed_config_local_id_description">@string/profile_local_id_hint_user</string>
     <string name="managed_config_local_p12_title">@string/profile_user_certificate_label</string>
     <string name="managed_config_local_p12_description">Base64-encoded PKCS#12-container with the client certificate and private key and optional certificate chain (the latter might cause warnings on older Android releases, see Android VPN client configuration for details). Not necessary for username/password-based EAP authentication or if the user already has the certificate/key installed as it may be selected while importing the profile</string>
+    <string name="managed_config_local_p12_alias_title">User certificate alias</string>
+    <string name="managed_config_local_p12_alias_description">Alias of the certificate and private key of the PKCS#12-container to use. If empty, the first alias found in the container is used</string>
+    <string name="managed_config_local_p12_password_title">User certificate password</string>
+    <string name="managed_config_local_p12_password_description">Password required to extract the private key of the PKCS#12-container for installation</string>
     <string name="managed_config_local_rsa_pss_title">@string/profile_rsa_pss_label</string>
     <string name="managed_config_local_rsa_pss_description">@string/profile_rsa_pss_hint</string>
 

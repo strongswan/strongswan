@@ -120,6 +120,13 @@
                     android:title="@string/managed_config_remote_cert_title" />
 
                 <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_remote_cert_alias_description"
+                    android:key="certificate_alias"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_remote_cert_alias_title" />
+
+                <restriction
                     android:defaultValue="false"
                     android:description="@string/managed_config_remote_certreq_description"
                     android:key="remote_cert_req"
@@ -174,6 +181,20 @@
                     android:key="user_certificate"
                     android:restrictionType="string"
                     android:title="@string/managed_config_local_p12_title" />
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_local_p12_alias_description"
+                    android:key="user_certificate_alias"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_local_p12_alias_title" />
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_local_p12_password_description"
+                    android:key="user_certificate_password"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_local_p12_password_title" />
 
                 <restriction
                     android:defaultValue="false"
