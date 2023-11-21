@@ -19,11 +19,9 @@
 package org.strongswan.android.ui;
 
 import android.app.Dialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
 import android.security.KeyChainException;
@@ -59,7 +57,6 @@ import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
-import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.logic.UserCertificateLoader;
 import org.strongswan.android.security.TrustedCertificateEntry;
@@ -75,7 +72,6 @@ import java.util.ArrayList;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.concurrent.Executor;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -896,6 +892,14 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		mCheckAuto.setEnabled(!readOnly);
 		mSelectSelectedAppsHandling.setEnabled(!readOnly);
+
+		findViewById(R.id.install_user_certificate).setEnabled(!readOnly);
+
+		if (readOnly)
+		{
+			mSelectCert.setOnClickListener(null);
+			mSelectUserCert.setOnClickListener(null);
+		}
 	}
 
 	/**
