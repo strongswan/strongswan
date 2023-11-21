@@ -61,6 +61,7 @@ import org.strongswan.android.data.VpnType;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.logic.TrustedCertificateManager;
+import org.strongswan.android.logic.UserCertificateLoader;
 import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.adapter.CertificateIdentitiesAdapter;
 import org.strongswan.android.ui.widget.TextInputLayoutHelper;
@@ -817,9 +818,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		if (useralias != null)
 		{
 			mUserCertLoading = useralias;
-			UserCertificateLoader loader = new UserCertificateLoader(((StrongSwanApplication)getApplication()).getExecutor(),
-			                                                         ((StrongSwanApplication)getApplication()).getHandler());
-			loader.loadCertifiate(this, useralias, result -> {
+			UserCertificateLoader loader = new UserCertificateLoader(this);
+			loader.loadCertificate(mProfile, result -> {
 				if (result != null)
 				{
 					mUserCertEntry = new TrustedCertificateEntry(mUserCertLoading, result);
@@ -1036,57 +1036,6 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 					e.printStackTrace();
 				}
 			}
-		}
-	}
-
-	/**
-	 * Callback interface for the user certificate loader.
-	 */
-	private interface UserCertificateLoaderCallback
-	{
-		void onComplete(X509Certificate result);
-	}
-
-	/**
-	 * Load the selected user certificate asynchronously.  This cannot be done
-	 * from the main thread as getCertificateChain() calls back to our main
-	 * thread to bind to the KeyChain service resulting in a deadlock.
-	 */
-	private class UserCertificateLoader
-	{
-		private final Executor mExecutor;
-		private final Handler mHandler;
-
-		public UserCertificateLoader(Executor executor, Handler handler)
-		{
-			mExecutor = executor;
-			mHandler = handler;
-		}
-
-		public void loadCertifiate(Context context, String alias, UserCertificateLoaderCallback callback)
-		{
-			mExecutor.execute(() -> {
-				X509Certificate[] chain = null;
-				try
-				{
-					chain = KeyChain.getCertificateChain(context, alias);
-				}
-				catch (KeyChainException | InterruptedException e)
-				{
-					e.printStackTrace();
-				}
-				if (chain != null && chain.length > 0)
-				{
-					complete(chain[0], callback);
-					return;
-				}
-				complete(null, callback);
-			});
-		}
-
-		protected void complete(X509Certificate result, UserCertificateLoaderCallback callback)
-		{
-			mHandler.post(() -> callback.onComplete(result));
 		}
 	}
 

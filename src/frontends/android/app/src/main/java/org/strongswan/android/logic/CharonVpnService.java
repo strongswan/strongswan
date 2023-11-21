@@ -750,18 +750,19 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 	 * to call methods on KeyChain directly.
 	 *
 	 * @return list containing the certificates (first element is the user certificate)
-	 * @throws InterruptedException
-	 * @throws KeyChainException
 	 * @throws CertificateEncodingException
 	 */
-	private byte[][] getUserCertificate() throws KeyChainException, InterruptedException, CertificateEncodingException
+	private byte[][] getUserCertificate() throws CertificateEncodingException
 	{
-		ArrayList<byte[]> encodings = new ArrayList<byte[]>();
-		X509Certificate[] chain = KeyChain.getCertificateChain(getApplicationContext(), mCurrentUserCertificateAlias);
+		final UserCertificateLoader loader = new UserCertificateLoader(getApplicationContext());
+		X509Certificate[] chain = loader.loadCertificateChain(mCurrentUserCertificateAlias);
+
 		if (chain == null || chain.length == 0)
 		{
 			return null;
 		}
+
+		ArrayList<byte[]> encodings = new ArrayList<>();
 		for (X509Certificate cert : chain)
 		{
 			encodings.add(cert.getEncoded());
