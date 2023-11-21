@@ -89,6 +89,8 @@
     <string name="managed_config_local_id_description">@string/profile_local_id_hint_user</string>
     <string name="managed_config_local_p12_title">@string/profile_user_certificate_label</string>
     <string name="managed_config_local_p12_description">Base64-encoded PKCS#12-container with the client certificate and private key and optional certificate chain (the latter might cause warnings on older Android releases, see Android VPN client configuration for details). Not necessary for username/password-based EAP authentication or if the user already has the certificate/key installed as it may be selected while importing the profile</string>
+    <string name="managed_config_local_p12_password_title">User certificate password (Optional)</string>
+    <string name="managed_config_local_p12_password_description">Password required to extract the private key of the PKCS#12-container for installation</string>
     <string name="managed_config_local_rsa_pss_title">@string/profile_rsa_pss_label</string>
     <string name="managed_config_local_rsa_pss_description">@string/profile_rsa_pss_hint</string>
 
