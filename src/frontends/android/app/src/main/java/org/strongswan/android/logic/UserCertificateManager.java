@@ -1,5 +1,6 @@
 package org.strongswan.android.logic;
 
+import android.app.admin.DevicePolicyManager;
 import android.content.Context;
 
 import org.strongswan.android.data.DatabaseHelper;
@@ -25,7 +26,9 @@ public class UserCertificateManager
 		@NonNull final ManagedConfigurationService managedConfigurationService,
 		@NonNull final DatabaseHelper databaseHelper)
 	{
-		this.userCertificateRepository = new UserCertificateRepository(managedConfigurationService, databaseHelper);
+		final DevicePolicyManager devicePolicyManager = (DevicePolicyManager)context.getSystemService(Context.DEVICE_POLICY_SERVICE);
+
+		this.userCertificateRepository = new UserCertificateRepository(managedConfigurationService, devicePolicyManager, databaseHelper);
 		this.userCertificateInstaller = new UserCertificateInstaller(context);
 	}
 

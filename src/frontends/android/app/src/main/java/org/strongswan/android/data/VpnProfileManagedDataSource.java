@@ -1,5 +1,6 @@
 package org.strongswan.android.data;
 
+import android.app.admin.DevicePolicyManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.SQLException;
@@ -30,8 +31,10 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 		this.mSharedPreferences = context.getSharedPreferences(NAME_MANAGED_VPN_PROFILES, Context.MODE_PRIVATE);
 
 		final DatabaseHelper databaseHelper = application.getDatabaseHelper();
+		final DevicePolicyManager devicePolicyManager = (DevicePolicyManager)application.getSystemService(Context.DEVICE_POLICY_SERVICE);
+
 		this.mCaCertificateRepository = new CaCertificateRepository(mManagedConfigurationService, databaseHelper);
-		this.mUserCertificateRepository = new UserCertificateRepository(mManagedConfigurationService, databaseHelper);
+		this.mUserCertificateRepository = new UserCertificateRepository(mManagedConfigurationService, devicePolicyManager, databaseHelper);
 	}
 
 	@Override

@@ -39,6 +39,22 @@ public abstract class CertificateRepository<T extends PkcsCertificate>
 	@NonNull
 	protected abstract T createCertificate(@NonNull Cursor cursor);
 
+	protected abstract boolean isInstalled(@NonNull T certificate);
+
+	private boolean exists(@NonNull T certificate)
+	{
+		final String vpnProfileUuid = certificate.getVpnProfileUuid();
+		try (final Cursor cursor = database.query(table.Name, table.columnNames(), PkcsCertificate.KEY_VPN_PROFILE_UUID + " = ?", new String[]{vpnProfileUuid}, null, null, null))
+		{
+			cursor.moveToFirst();
+			if (!cursor.isAfterLast())
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	@NonNull
 	public List<T> getConfiguredCertificates()
 	{
@@ -62,18 +78,22 @@ public abstract class CertificateRepository<T extends PkcsCertificate>
 	@NonNull
 	public List<T> getInstalledCertificates()
 	{
-		final Cursor cursor = database.query(table.Name, table.columnNames(), null, null, null, null, null);
-
-		final List<T> certificates = new ArrayList<>();
-
-		cursor.moveToFirst();
-		while (!cursor.isAfterLast())
+		try (final Cursor cursor = database.query(table.Name, table.columnNames(), null, null, null, null, null))
 		{
-			final T certificate = createCertificate(cursor);
-			certificates.add(certificate);
-			cursor.moveToNext();
+			final List<T> certificates = new ArrayList<>();
+
+			cursor.moveToFirst();
+			while (!cursor.isAfterLast())
+			{
+				final T certificate = createCertificate(cursor);
+				if (isInstalled(certificate))
+				{
+					certificates.add(certificate);
+				}
+				cursor.moveToNext();
+			}
+			return certificates;
 		}
-		return certificates;
 	}
 
 	@NonNull
@@ -93,7 +113,16 @@ public abstract class CertificateRepository<T extends PkcsCertificate>
 	public void addInstalledCertificate(@NonNull final T certificate)
 	{
 		final ContentValues values = certificate.asContentValues();
-		database.insert(table.Name, null, values);
+
+		if (exists(certificate))
+		{
+			final String vpnProfileUuid = certificate.getVpnProfileUuid();
+			database.update(table.Name, values, PkcsCertificate.KEY_VPN_PROFILE_UUID + " = ?", new String[]{vpnProfileUuid});
+		}
+		else
+		{
+			database.insert(table.Name, null, values);
+		}
 	}
 
 	public void removeInstalledCertificate(@NonNull final T certificate)
