@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="managed_config_vpn_type_default_value" translatable="false">IKEv2_EAP</string>
+    <string-array name="managed_config_vpn_type_values" translatable="false">
+        <item>ikev2-eap</item>
+        <item>ikev2-cert</item>
+        <item>ikev2-cert-eap</item>
+        <item>ikev2-eap-tls</item>
+        <item>ikev2-byod-eap</item>
+    </string-array>
+
+</resources>

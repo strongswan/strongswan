@@ -154,6 +154,7 @@
             <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
+
                 <data android:mimeType="application/x-x509-ca-cert" />
                 <data android:mimeType="application/x-x509-server-cert" />
                 <data android:mimeType="application/x-pem-file" />
@@ -161,10 +162,17 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Managed configuration, called app restrictions for historical reasons
+            https://developer.android.com/work/managed-configurations
+        -->
+        <meta-data
+            android:name="android.content.APP_RESTRICTIONS"
+            android:resource="@xml/managed_configuration" />
+
         <service
             android:name=".logic.VpnStateService"
-            android:exported="false" >
-        </service>
+            android:exported="false"></service>
         <service
             android:name=".logic.CharonVpnService"
             android:exported="false"
