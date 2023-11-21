@@ -108,4 +108,10 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 		}
 		return managedVpnProfiles;
 	}
+
+	public boolean areUnmanagedSourcesAllowed()
+	{
+		final ManagedConfiguration managedConfiguration = mManagedConfigurationService.getManagedConfiguration();
+		return managedConfiguration.isAllowExistingProfiles();
+	}
 }

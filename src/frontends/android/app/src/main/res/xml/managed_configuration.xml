@@ -17,6 +17,13 @@
 
     <restriction
         android:defaultValue="false"
+        android:description="@string/managed_config_allow_existing_profiles_description"
+        android:key="allow_existing_profiles"
+        android:restrictionType="bool"
+        android:title="@string/managed_config_allow_existing_profiles_title" />
+
+    <restriction
+        android:defaultValue="false"
         android:description="@string/managed_config_allow_certificate_import_description"
         android:key="allow_certificate_import"
         android:restrictionType="bool"

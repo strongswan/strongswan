@@ -6,6 +6,8 @@
     <string name="managed_config_allow_profile_creation_description">Specifies whether users are allowed to add their own profiles</string>
     <string name="managed_config_allow_profile_import_title">Profile import allowed</string>
     <string name="managed_config_allow_profile_import_description">Specifies whether users are allowed to import their own profiles</string>
+    <string name="managed_config_allow_existing_profiles_title">Show existing profiles</string>
+    <string name="managed_config_allow_existing_profiles_description">Specifies whether users can continue to see and use their previously created profiles</string>
     <string name="managed_config_allow_certificate_import_title">Certificate import allowed</string>
     <string name="managed_config_allow_certificate_import_description">Specifies whether users are allowed to import certificates</string>
     <string name="managed_config_allow_settings_access_title">Settings allowed</string>

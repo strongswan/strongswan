@@ -22,12 +22,14 @@ public class ManagedConfiguration
 
 	private static final String KEY_ALLOW_PROFILE_CREATE = "allow_profile_create";
 	private static final String KEY_ALLOW_PROFILE_IMPORT = "allow_profile_import";
+	private static final String KEY_ALLOW_EXISTING_PROFILES = "allow_existing_profiles";
 	private static final String KEY_ALLOW_CERTIFICATE_IMPORT = "allow_certificate_import";
 	private static final String KEY_ALLOW_SETTINGS_ACCESS = "allow_settings_access";
 	private static final String KEY_MANAGED_PROFILES = "managed_profiles";
 
 	private final boolean mAllowProfileCreation;
 	private final boolean mAllowProfileImport;
+	private final boolean mAllowExistingProfiles;
 	private final boolean mAllowCertificateImport;
 
 	private final boolean mAllowSettingsAccess;
@@ -43,6 +45,7 @@ public class ManagedConfiguration
 	{
 		mAllowProfileCreation = true;
 		mAllowProfileImport = true;
+		mAllowExistingProfiles = true;
 		mAllowCertificateImport = true;
 
 		mAllowSettingsAccess = true;
@@ -56,6 +59,8 @@ public class ManagedConfiguration
 	{
 		mAllowProfileCreation = bundle.getBoolean(KEY_ALLOW_PROFILE_CREATE, true);
 		mAllowProfileImport = bundle.getBoolean(KEY_ALLOW_PROFILE_IMPORT, true);
+		mAllowExistingProfiles = bundle.getBoolean(KEY_ALLOW_EXISTING_PROFILES, true);
+
 		mAllowCertificateImport = bundle.getBoolean(KEY_ALLOW_CERTIFICATE_IMPORT, true);
 
 		mAllowSettingsAccess = bundle.getBoolean(KEY_ALLOW_SETTINGS_ACCESS, true);
@@ -127,6 +132,11 @@ public class ManagedConfiguration
 	public boolean isAllowProfileImport()
 	{
 		return mAllowProfileImport;
+	}
+
+	public boolean isAllowExistingProfiles()
+	{
+		return mAllowExistingProfiles;
 	}
 
 	public boolean isAllowCertificateImport()
