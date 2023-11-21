@@ -77,7 +77,7 @@ public class DatabaseHelper extends SQLiteOpenHelper
 		TABLES.add(TABLE_VPN_PROFILE);
 	}
 
-	DatabaseHelper(Context context)
+	public DatabaseHelper(Context context)
 	{
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
 	}
