@@ -75,8 +75,12 @@ public abstract class CertificateRepository<T extends PkcsCertificate>
 		return certificates;
 	}
 
+	/**
+	 * @return the collection of certificates that were previously installed.
+	 * @see #addInstalledCertificate(PkcsCertificate)
+	 */
 	@NonNull
-	public List<T> getInstalledCertificates()
+	private List<T> getCertificates()
 	{
 		try (final Cursor cursor = database.query(table.Name, table.columnNames(), null, null, null, null, null))
 		{
@@ -86,20 +90,48 @@ public abstract class CertificateRepository<T extends PkcsCertificate>
 			while (!cursor.isAfterLast())
 			{
 				final T certificate = createCertificate(cursor);
-				if (isInstalled(certificate))
-				{
-					certificates.add(certificate);
-				}
+				certificates.add(certificate);
 				cursor.moveToNext();
 			}
 			return certificates;
 		}
 	}
 
+	/**
+	 * Returns the collection of certificates that were previously marked as installed and are still
+	 * reported as installed by the OS.
+	 *
+	 * @return the collection of installed certificates.
+	 * @see #addInstalledCertificate(PkcsCertificate)
+	 */
 	@NonNull
-	public Map<String, T> getInstalledCertificateMap()
+	public List<T> getInstalledCertificates()
 	{
-		final List<T> certificates = getInstalledCertificates();
+		final List<T> certificates = getCertificates();
+		final List<T> installed = new ArrayList<>(certificates.size());
+
+		for (final T certificate : certificates)
+		{
+			if (isInstalled(certificate))
+			{
+				installed.add(certificate);
+			}
+		}
+
+		return installed;
+	}
+
+	/**
+	 * Returns a map containing certificates previously marked as installed, indexed by the
+	 * unique identifier of the VPN profile they are associated with.
+	 *
+	 * @return a map containing installed certificates, index by the VPN profile's unique
+	 * identifier.
+	 */
+	@NonNull
+	public Map<String, T> getCertificateMap()
+	{
+		final List<T> certificates = getCertificates();
 		final Map<String, T> map = new HashMap<>(certificates.size());
 
 		for (final T certificate : certificates)
