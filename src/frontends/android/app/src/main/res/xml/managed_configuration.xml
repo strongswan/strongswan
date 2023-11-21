@@ -191,6 +191,13 @@
                     android:title="@string/managed_config_local_p12_title" />
 
                 <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_local_p12_password_description"
+                    android:key="user_certificate_password"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_local_p12_password_title" />
+
+                <restriction
                     android:defaultValue="false"
                     android:description="@string/managed_config_local_rsa_pss_description"
                     android:key="local_rsa_pss"
