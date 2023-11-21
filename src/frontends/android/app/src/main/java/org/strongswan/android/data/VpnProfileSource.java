@@ -48,13 +48,13 @@ public class VpnProfileSource implements VpnProfileDataSource
 	@Override
 	public boolean updateVpnProfile(VpnProfile profile)
 	{
-		return vpnProfileSqlDataSource.updateVpnProfile(profile);
+		return profile.getDataSource().updateVpnProfile(profile);
 	}
 
 	@Override
 	public boolean deleteVpnProfile(VpnProfile profile)
 	{
-		return vpnProfileSqlDataSource.deleteVpnProfile(profile);
+		return profile.getDataSource().deleteVpnProfile(profile);
 	}
 
 	@Override

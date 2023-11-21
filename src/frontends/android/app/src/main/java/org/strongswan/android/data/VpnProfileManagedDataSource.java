@@ -115,6 +115,7 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 		{
 			final String password = mSharedPreferences.getString(vpnProfile.getUUID().toString(), vpnProfile.getPassword());
 			vpnProfile.setPassword(password);
+			vpnProfile.setDataSource(this);
 			vpnProfile.setReadOnly(true);
 		}
 		return managedVpnProfiles;

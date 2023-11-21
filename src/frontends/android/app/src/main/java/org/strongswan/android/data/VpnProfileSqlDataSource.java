@@ -291,6 +291,7 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 		{
 			return null;
 		}
+		profile.setDataSource(this);
 		profile.setId(insertId);
 		return profile;
 	}
@@ -319,6 +320,7 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 		if (cursor.moveToFirst())
 		{
 			profile = VpnProfileFromCursor(cursor);
+			profile.setDataSource(this);
 		}
 		cursor.close();
 		return profile;
@@ -333,6 +335,7 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 		if (cursor.moveToFirst())
 		{
 			profile = VpnProfileFromCursor(cursor);
+			profile.setDataSource(this);
 		}
 		cursor.close();
 		return profile;
@@ -348,6 +351,7 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 		while (!cursor.isAfterLast())
 		{
 			VpnProfile vpnProfile = VpnProfileFromCursor(cursor);
+			vpnProfile.setDataSource(this);
 			vpnProfiles.add(vpnProfile);
 			cursor.moveToNext();
 		}

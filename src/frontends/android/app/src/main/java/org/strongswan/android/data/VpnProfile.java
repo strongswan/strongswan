@@ -48,6 +48,7 @@ public class VpnProfile implements Cloneable
 	private UUID mUUID;
 	private long mId = -1;
 	private boolean mReadOnly;
+	private VpnProfileDataSource mDataSource;
 
 	public enum SelectedAppsHandling
 	{
@@ -339,6 +340,16 @@ public class VpnProfile implements Cloneable
 	public void setReadOnly(boolean readOnly)
 	{
 		this.mReadOnly = readOnly;
+	}
+
+	public VpnProfileDataSource getDataSource()
+	{
+		return mDataSource;
+	}
+
+	public void setDataSource(VpnProfileDataSource mDataSource)
+	{
+		this.mDataSource = mDataSource;
 	}
 
 	@Override
