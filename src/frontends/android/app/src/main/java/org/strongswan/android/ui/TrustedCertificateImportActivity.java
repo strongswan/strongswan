@@ -16,13 +16,11 @@
 
 package org.strongswan.android.ui;
 
-import android.annotation.TargetApi;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -61,7 +59,6 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		}
 	);
 
-	@TargetApi(Build.VERSION_CODES.KITKAT)
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
