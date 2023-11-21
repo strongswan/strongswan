@@ -462,7 +462,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 				Intent intent = new Intent(getApplicationContext(), VpnProfileControlActivity.class);
 				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 				intent.setAction(VpnProfileControlActivity.START_PROFILE);
-				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_ID, profile.getUUID().toString());
+				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profile.getUUID().toString());
 				int flags = PendingIntent.FLAG_UPDATE_CURRENT;
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
 				{
