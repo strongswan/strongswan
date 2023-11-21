@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2023 Relution GmbH
  * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
@@ -787,6 +788,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				local_id = mProfile.getLocalId();
 				alias = mProfile.getCertificateAlias();
 				getSupportActionBar().setTitle(mProfile.getName());
+
+				setReadOnly(mProfile.isReadOnly());
 			}
 			else
 			{
@@ -848,6 +851,44 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		{
 			ArrayList<String> selectedApps = savedInstanceState.getStringArrayList(VpnProfileDataSource.KEY_SELECTED_APPS_LIST);
 			mSelectedApps = new TreeSet<>(selectedApps);
+		}
+	}
+
+	private void setReadOnly(final boolean readOnly)
+	{
+		mName.setEnabled(!readOnly);
+		mGateway.setEnabled(!readOnly);
+		mUsername.setEnabled(!readOnly);
+		mRemoteId.setEnabled(!readOnly);
+		mLocalId.setEnabled(!readOnly);
+		mMTU.setEnabled(!readOnly);
+		mPort.setEnabled(!readOnly);
+		mNATKeepalive.setEnabled(!readOnly);
+		mIncludedSubnets.setEnabled(!readOnly);
+		mExcludedSubnets.setEnabled(!readOnly);
+		mBlockIPv4.setEnabled(!readOnly);
+		mBlockIPv6.setEnabled(!readOnly);
+		mIkeProposal.setEnabled(!readOnly);
+		mEspProposal.setEnabled(!readOnly);
+		mDnsServers.setEnabled(!readOnly);
+
+		mSelectVpnType.setEnabled(!readOnly);
+		mCertReq.setEnabled(!readOnly);
+		mUseCrl.setEnabled(!readOnly);
+		mUseOcsp.setEnabled(!readOnly);
+		mStrictRevocation.setEnabled(!readOnly);
+		mRsaPss.setEnabled(!readOnly);
+		mIPv6Transport.setEnabled(!readOnly);
+
+		mCheckAuto.setEnabled(!readOnly);
+		mSelectSelectedAppsHandling.setEnabled(!readOnly);
+
+		findViewById(R.id.install_user_certificate).setEnabled(!readOnly);
+
+		if (readOnly)
+		{
+			mSelectCert.setOnClickListener(null);
+			mSelectUserCert.setOnClickListener(null);
 		}
 	}
 
