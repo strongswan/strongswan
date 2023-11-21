@@ -28,6 +28,8 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import org.strongswan.android.R;
+import org.strongswan.android.data.ManagedConfiguration;
+import org.strongswan.android.data.ManagedConfigurationService;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.logic.TrustedCertificateManager;
@@ -57,6 +59,8 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 
 	private static final String DIALOG_TAG = "Dialog";
 
+	private ManagedConfigurationService mManagedConfigurationService;
+
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{
@@ -72,12 +76,35 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 		((StrongSwanApplication)getApplication()).getExecutor().execute(() -> {
 			TrustedCertificateManager.getInstance().load();
 		});
+
+		mManagedConfigurationService = new ManagedConfigurationService(this);
+	}
+
+	@Override
+	protected void onResume()
+	{
+		super.onResume();
+
+		mManagedConfigurationService.loadConfiguration();
 	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu)
 	{
 		getMenuInflater().inflate(R.menu.main, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu)
+	{
+		final MenuItem importProfile = menu.findItem(R.id.menu_import_profile);
+		if (importProfile != null)
+		{
+			final ManagedConfiguration managedConfiguration = mManagedConfigurationService.getManagedConfiguration();
+			importProfile.setVisible(managedConfiguration.isAllowProfileImport());
+			importProfile.setEnabled(managedConfiguration.isAllowProfileImport());
+		}
 		return true;
 	}
 

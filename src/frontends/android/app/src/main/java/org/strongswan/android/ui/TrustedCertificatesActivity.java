@@ -25,6 +25,8 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
 import org.strongswan.android.R;
+import org.strongswan.android.data.ManagedConfiguration;
+import org.strongswan.android.data.ManagedConfigurationService;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
@@ -50,6 +52,8 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 	private TrustedCertificatesPagerAdapter mAdapter;
 	private ViewPager2 mPager;
 	private boolean mSelect;
+
+	private ManagedConfigurationService mManagedConfigurationService;
 
 	private final ActivityResultLauncher<Intent> mImportCertificate = registerForActivityResult(
 		new ActivityResultContracts.StartActivityForResult(),
@@ -81,12 +85,34 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 		}).attach();
 
 		mSelect = SELECT_CERTIFICATE.equals(getIntent().getAction());
+		mManagedConfigurationService = new ManagedConfigurationService(this);
+	}
+
+	@Override
+	protected void onResume()
+	{
+		super.onResume();
+
+		mManagedConfigurationService.loadConfiguration();
 	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu)
 	{
 		getMenuInflater().inflate(R.menu.certificates, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu)
+	{
+		final MenuItem importCertificate = menu.findItem(R.id.menu_import_certificate);
+		if (importCertificate != null)
+		{
+			final ManagedConfiguration managedConfiguration = mManagedConfigurationService.getManagedConfiguration();
+			importCertificate.setVisible(managedConfiguration.isAllowCertificateImport());
+			importCertificate.setEnabled(managedConfiguration.isAllowCertificateImport());
+		}
 		return true;
 	}
 
