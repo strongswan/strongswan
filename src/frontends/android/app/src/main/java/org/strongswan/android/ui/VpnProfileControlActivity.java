@@ -42,12 +42,12 @@ import android.widget.Toast;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.utils.Constants;
 
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -101,7 +101,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				onVpnServicePrepared();
 			}
 			else
-			{	/* this happens if the always-on VPN feature is activated by a different app or the user declined */
+			{    /* this happens if the always-on VPN feature is activated by a different app or the user declined */
 				VpnNotSupportedError.showWithMessage(this, R.string.vpn_not_supported_no_permission);
 			}
 		}
@@ -136,7 +136,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			mWaitingForResult = savedInstanceState.getBoolean(WAITING_FOR_RESULT, false);
 		}
 		this.bindService(new Intent(this, VpnStateService.class),
-						 mServiceConnection, Service.BIND_AUTO_CREATE);
+		                 mServiceConnection, Service.BIND_AUTO_CREATE);
 	}
 
 	@Override
@@ -225,7 +225,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			}
 		}
 		else
-		{	/* user already granted permission to use VpnService */
+		{    /* user already granted permission to use VpnService */
 			onVpnServicePrepared();
 		}
 	}
@@ -257,6 +257,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	/**
 	 * Check if we have permission to display notifications to the user, if necessary,
 	 * ask the user to allow this.
+	 *
 	 * @return true if profile can be initiated immediately
 	 */
 	private boolean checkNotificationPermission()
@@ -274,6 +275,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	/**
 	 * Check if we are on the system's power whitelist, if necessary, or ask the user
 	 * to add us.
+	 *
 	 * @return true if profile can be initiated immediately
 	 */
 	private boolean checkPowerWhitelist()
@@ -286,9 +288,9 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				!pref.getBoolean(Constants.PREF_IGNORE_POWER_WHITELIST, false))
 			{
 				if (getSupportFragmentManager().isStateSaved())
-				{	/* we might get called via service connection and manual onActivityResult()
-					 * call when the activity is not active anymore and fragment transactions
-					 * would cause an illegalStateException */
+				{    /* we might get called via service connection and manual onActivityResult()
+				 * call when the activity is not active anymore and fragment transactions
+				 * would cause an illegalStateException */
 					return false;
 				}
 				PowerWhitelistRequired whitelist = new PowerWhitelistRequired();
@@ -311,7 +313,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			return false;
 		}
 		if (mService.getErrorState() != VpnStateService.ErrorState.NO_ERROR)
-		{	/* allow reconnecting (even to a different profile) without confirmation if there is an error */
+		{    /* allow reconnecting (even to a different profile) without confirmation if there is an error */
 			return false;
 		}
 		return (mService.getState() == State.CONNECTED || mService.getState() == State.CONNECTING);
@@ -373,7 +375,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	{
 		VpnProfile profile = null;
 
-		VpnProfileDataSource dataSource = new VpnProfileDataSource(this);
+		VpnProfileDataSource dataSource = new VpnProfileSource(this);
 		dataSource.open();
 		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
 		if (profileUUID != null)
@@ -415,7 +417,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
 		if (profileUUID != null)
 		{
-			VpnProfileDataSource dataSource = new VpnProfileDataSource(this);
+			VpnProfileDataSource dataSource = new VpnProfileSource(this);
 			dataSource.open();
 			profile = dataSource.getVpnProfile(profileUUID);
 			dataSource.close();
@@ -427,7 +429,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 				mService.getState() == State.CONNECTING)
 			{
 				if (profile != null && profile.equals(mService.getProfile()))
-				{	/* allow explicit termination without confirmation */
+				{    /* allow explicit termination without confirmation */
 					mService.disconnect();
 					finish();
 					return;
@@ -583,9 +585,9 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			final Bundle profileInfo = getArguments();
 			LayoutInflater inflater = getActivity().getLayoutInflater();
 			View view = inflater.inflate(R.layout.login_dialog, null);
-			EditText username = (EditText)view.findViewById(R.id.username);
+			EditText username = view.findViewById(R.id.username);
 			username.setText(profileInfo.getString(VpnProfileDataSource.KEY_USERNAME));
-			final EditText password = (EditText)view.findViewById(R.id.password);
+			final EditText password = view.findViewById(R.id.password);
 
 			AlertDialog.Builder adb = new AlertDialog.Builder(getActivity());
 			adb.setView(view);
@@ -634,7 +636,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 					VpnProfileControlActivity activity = (VpnProfileControlActivity)getActivity();
 					activity.mWaitingForResult = true;
 					Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-											   Uri.parse("package:" + activity.getPackageName()));
+					                           Uri.parse("package:" + activity.getPackageName()));
 					activity.mAddToPowerWhitelist.launch(intent);
 				}).create();
 		}

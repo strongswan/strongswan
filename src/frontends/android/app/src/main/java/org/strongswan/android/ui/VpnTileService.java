@@ -32,6 +32,7 @@ import android.service.quicksettings.TileService;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.utils.Constants;
@@ -71,9 +72,9 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 
 		Context context = getApplicationContext();
 		context.bindService(new Intent(context, VpnStateService.class),
-							mServiceConnection, Service.BIND_AUTO_CREATE);
+		                    mServiceConnection, Service.BIND_AUTO_CREATE);
 
-		mDataSource = new VpnProfileDataSource(this);
+		mDataSource = new VpnProfileSource(this);
 		mDataSource.open();
 	}
 
@@ -175,7 +176,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 				intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_ID, profile.getUUID().toString());
 				if (profile.getVpnType().has(VpnType.VpnTypeFeature.USER_PASS) &&
 					profile.getPassword() == null)
-				{	/* the user will have to enter the password, so collapse the drawer */
+				{   /* the user will have to enter the password, so collapse the drawer */
 					startActivityAndCollapse(intent);
 				}
 				else
