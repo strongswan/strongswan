@@ -16,19 +16,17 @@
 
 package org.strongswan.android.logic;
 
+import android.app.Application;
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+
+import org.strongswan.android.security.LocalCertificateKeyStoreProvider;
+
 import java.security.Security;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import org.strongswan.android.security.LocalCertificateKeyStoreProvider;
-import org.strongswan.android.ui.MainActivity;
-
-import android.app.Application;
-import android.content.Context;
-import android.os.Build;
-import android.os.Handler;
-import android.os.Looper;
 
 import androidx.core.os.HandlerCompat;
 
@@ -38,7 +36,8 @@ public class StrongSwanApplication extends Application
 	private final ExecutorService mExecutorService = Executors.newFixedThreadPool(4);
 	private final Handler mMainHandler = HandlerCompat.createAsync(Looper.getMainLooper());
 
-	static {
+	static
+	{
 		Security.addProvider(new LocalCertificateKeyStoreProvider());
 	}
 
@@ -51,6 +50,7 @@ public class StrongSwanApplication extends Application
 
 	/**
 	 * Returns the current application context
+	 *
 	 * @return context
 	 */
 	public static Context getContext()
@@ -60,6 +60,7 @@ public class StrongSwanApplication extends Application
 
 	/**
 	 * Returns a thread pool to run tasks in separate threads
+	 *
 	 * @return thread pool
 	 */
 	public Executor getExecutor()
@@ -69,6 +70,7 @@ public class StrongSwanApplication extends Application
 
 	/**
 	 * Returns a handler to execute stuff by the main thread.
+	 *
 	 * @return handler
 	 */
 	public Handler getHandler()
@@ -82,21 +84,6 @@ public class StrongSwanApplication extends Application
 	 */
 	static
 	{
-		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2)
-		{
-			System.loadLibrary("strongswan");
-
-			if (MainActivity.USE_BYOD)
-			{
-				System.loadLibrary("tpmtss");
-				System.loadLibrary("tncif");
-				System.loadLibrary("tnccs");
-				System.loadLibrary("imcv");
-			}
-
-			System.loadLibrary("charon");
-			System.loadLibrary("ipsec");
-		}
 		System.loadLibrary("androidbridge");
 	}
 }

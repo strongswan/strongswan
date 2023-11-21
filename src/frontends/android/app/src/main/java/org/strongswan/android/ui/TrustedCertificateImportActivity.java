@@ -68,7 +68,7 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		super.onCreate(savedInstanceState);
 
 		if (savedInstanceState != null)
-		{	/* do nothing when we are restoring */
+		{    /* do nothing when we are restoring */
 			return;
 		}
 
@@ -78,7 +78,7 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		{
 			importCertificate(intent.getData());
 		}
-		else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
+		else
 		{
 			Intent openIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
 			openIntent.setType("*/*");
@@ -87,9 +87,8 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 				mOpenDocument.launch(openIntent);
 			}
 			catch (ActivityNotFoundException e)
-			{	/* some devices are unable to browse for files */
+			{    /* some devices are unable to browse for files */
 				finish();
-				return;
 			}
 		}
 	}
