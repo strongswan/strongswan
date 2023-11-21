@@ -27,7 +27,7 @@ public class DatabaseHelper extends SQLiteOpenHelper
 		new DbColumn(VpnProfileDataSource.KEY_UUID, "TEXT UNIQUE", 9),
 		new DbColumn(VpnProfileDataSource.KEY_NAME, "TEXT NOT NULL", 1),
 		new DbColumn(VpnProfileDataSource.KEY_GATEWAY, "TEXT NOT NULL", 1),
-		new DbColumn(VpnProfileDataSource.KEY_VPN_TYPE, "TEXT NOT NULL", 3),
+		new DbColumn(VpnProfileDataSource.KEY_VPN_TYPE, "TEXT NOT NULL DEFAULT ''", 3),
 		new DbColumn(VpnProfileDataSource.KEY_USERNAME, "TEXT", 1),
 		new DbColumn(VpnProfileDataSource.KEY_PASSWORD, "TEXT", 1),
 		new DbColumn(VpnProfileDataSource.KEY_CERTIFICATE, "TEXT", 1),
@@ -75,69 +75,19 @@ public class DatabaseHelper extends SQLiteOpenHelper
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion)
 	{
-		Log.w(TAG, "Upgrading database from version " + oldVersion +
-			" to " + newVersion);
-		if (oldVersion < 2)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_USER_CERTIFICATE + " TEXT;");
-		}
-		if (oldVersion < 3)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_VPN_TYPE + " TEXT DEFAULT '';");
-		}
-		if (oldVersion < 4)
+		Log.w(TAG, "Upgrading database from version " + oldVersion + " to " + newVersion);
+		addNewTables(db, oldVersion, newVersion);
+		addNewColumns(db, oldVersion, newVersion);
+
+		if (oldVersion < 4 && newVersion >= 4)
 		{    /* remove NOT NULL constraint from username column */
 			updateColumns(db, TABLE_VPN_PROFILE, 4);
 		}
-		if (oldVersion < 5)
+		if (oldVersion < 9 && newVersion >= 9)
 		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_MTU + " INTEGER;");
-		}
-		if (oldVersion < 6)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_PORT + " INTEGER;");
-		}
-		if (oldVersion < 7)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_SPLIT_TUNNELING + " INTEGER;");
-		}
-		if (oldVersion < 8)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_LOCAL_ID + " TEXT;");
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_REMOTE_ID + " TEXT;");
-		}
-		if (oldVersion < 9)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_UUID + " TEXT;");
 			updateColumns(db, TABLE_VPN_PROFILE, 9);
 		}
-		if (oldVersion < 10)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_EXCLUDED_SUBNETS + " TEXT;");
-		}
-		if (oldVersion < 11)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_INCLUDED_SUBNETS + " TEXT;");
-		}
-		if (oldVersion < 12)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_SELECTED_APPS + " INTEGER;");
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_SELECTED_APPS_LIST + " TEXT;");
-		}
-		if (oldVersion < 13)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_NAT_KEEPALIVE + " INTEGER;");
-		}
-		if (oldVersion < 14)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_FLAGS + " INTEGER;");
-		}
-		if (oldVersion < 15)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_IKE_PROPOSAL + " TEXT;");
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_ESP_PROPOSAL + " TEXT;");
-		}
-		if (oldVersion < 16)
+		if (oldVersion < 16 && newVersion >= 16)
 		{    /* add a UUID to all entries that haven't one yet */
 			db.beginTransaction();
 			try
@@ -156,10 +106,6 @@ public class DatabaseHelper extends SQLiteOpenHelper
 			{
 				db.endTransaction();
 			}
-		}
-		if (oldVersion < 17)
-		{
-			db.execSQL("ALTER TABLE " + TABLE_NAME_VPN_PROFILE + " ADD " + VpnProfileDataSource.KEY_DNS_SERVERS + " TEXT;");
 		}
 	}
 
@@ -219,11 +165,69 @@ public class DatabaseHelper extends SQLiteOpenHelper
 		return create.toString();
 	}
 
-	static class DbTable
+	private void addNewTables(final SQLiteDatabase database, final int oldVersion, final int newVersion)
 	{
-		final String Name;
-		final int Since;
-		final DbColumn[] Columns;
+		for (final String sql : getTableCreates(oldVersion, newVersion))
+		{
+			database.execSQL(sql);
+		}
+	}
+
+	private List<String> getTableCreates(final int oldVersion, final int newVersion)
+	{
+		List<String> statements = new ArrayList<>(TABLES.size());
+		for (final DbTable table : TABLES)
+		{
+			if (table.Since > oldVersion && table.Since <= newVersion)
+			{
+				statements.add(getTableCreate(table, newVersion));
+			}
+		}
+		return statements;
+	}
+
+	private void addNewColumns(final SQLiteDatabase database, final int oldVersion, final int newVersion)
+	{
+		for (final String sql : getAlterTables(oldVersion, newVersion))
+		{
+			database.execSQL(sql);
+		}
+	}
+
+	private List<String> getAlterTables(final int oldVersion, final int newVersion)
+	{
+		List<String> statements = new ArrayList<>(TABLES.size());
+		for (final DbTable table : TABLES)
+		{
+			if (table.Since < newVersion)
+			{
+				final List<String> tableStatements = getAlterTables(table, oldVersion, newVersion);
+				statements.addAll(tableStatements);
+			}
+		}
+		return statements;
+	}
+
+	private static List<String> getAlterTables(DbTable table, final int oldVersion, final int newVersion)
+	{
+		final List<DbColumn> columns = table.getColumns(newVersion);
+		final List<String> sql = new ArrayList<>();
+
+		for (final DbColumn column : columns)
+		{
+			if (column.Since > oldVersion)
+			{
+				sql.add("ALTER TABLE " + table.Name + " ADD " + column.Name + " " + column.Type + ";");
+			}
+		}
+		return sql;
+	}
+
+	public static class DbTable
+	{
+		public final String Name;
+		public final int Since;
+		public final DbColumn[] Columns;
 
 		private DbTable(final String name, final int since, final DbColumn[] columns)
 		{
@@ -262,11 +266,11 @@ public class DatabaseHelper extends SQLiteOpenHelper
 		}
 	}
 
-	static class DbColumn
+	public static class DbColumn
 	{
-		final String Name;
-		final String Type;
-		final int Since;
+		public final String Name;
+		public final String Type;
+		public final int Since;
 
 		private DbColumn(String name, String type, int since)
 		{
