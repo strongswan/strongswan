@@ -31,8 +31,8 @@ public class UserCertificateManager
 
 	public void update()
 	{
-		final List<UserCertificate> configured = userCertificateRepository.getConfiguredKeyStores();
-		final List<UserCertificate> installed = userCertificateRepository.getInstalledKeyStores();
+		final List<UserCertificate> configured = userCertificateRepository.getConfiguredCertificates();
+		final List<UserCertificate> installed = userCertificateRepository.getInstalledCertificates();
 
 		final Difference<UserCertificate> diff = Difference.between(installed, configured, UserCertificate::getVpnProfileUuid);
 		if (diff.isEmpty())
@@ -61,13 +61,13 @@ public class UserCertificateManager
 	{
 		if (userCertificateInstaller.tryInstall(userCertificate))
 		{
-			userCertificateRepository.addInstalledKeyStore(userCertificate);
+			userCertificateRepository.addInstalledCertificate(userCertificate);
 		}
 	}
 
 	private void remove(@NonNull final UserCertificate userCertificate)
 	{
 		userCertificateInstaller.tryRemove(userCertificate);
-		userCertificateRepository.removeInstalledKeyStore(userCertificate);
+		userCertificateRepository.removeInstalledCertificate(userCertificate);
 	}
 }

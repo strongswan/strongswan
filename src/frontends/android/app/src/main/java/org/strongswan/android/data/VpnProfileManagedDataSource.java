@@ -111,7 +111,7 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 		mManagedConfigurationService.loadConfiguration();
 
 		final Map<String, CaCertificate> caCertificateMap = mCaCertificateRepository.getInstalledCertificateMap();
-		final Map<String, UserCertificate> userCertificateMap = mUserCertificateRepository.getInstalledKeyStoreMap();
+		final Map<String, UserCertificate> userCertificateMap = mUserCertificateRepository.getInstalledCertificateMap();
 
 		final List<ManagedVpnProfile> managedVpnProfiles = mManagedConfigurationService.getManagedProfiles();
 		for (final ManagedVpnProfile vpnProfile : managedVpnProfiles)
