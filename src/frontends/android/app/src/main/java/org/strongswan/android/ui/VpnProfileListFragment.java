@@ -44,6 +44,7 @@ import org.strongswan.android.data.ManagedConfigurationService;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnProfileSource;
+import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.ui.adapter.VpnProfileAdapter;
 import org.strongswan.android.utils.Constants;
 
@@ -179,7 +180,7 @@ public class VpnProfileListFragment extends Fragment
 		mDataSource = new VpnProfileSource(this.getActivity());
 		mDataSource.open();
 
-		mManagedConfigurationService = new ManagedConfigurationService(getContext());
+		mManagedConfigurationService = ((StrongSwanApplication)getContext().getApplicationContext()).getManagedConfigurationService();
 
 		/* cached list of profiles used as backend for the ListView */
 		mVpnProfiles = (List<VpnProfile>)mDataSource.getAllVpnProfiles();
@@ -195,14 +196,6 @@ public class VpnProfileListFragment extends Fragment
 	{
 		super.onSaveInstanceState(outState);
 		outState.putIntegerArrayList(SELECTED_KEY, new ArrayList<>(mSelected));
-	}
-
-	@Override
-	public void onResume()
-	{
-		super.onResume();
-
-		mManagedConfigurationService.loadConfiguration();
 	}
 
 	@Override

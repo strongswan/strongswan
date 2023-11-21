@@ -30,6 +30,7 @@ import org.strongswan.android.data.ManagedConfigurationService;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnProfileSource;
+import org.strongswan.android.logic.StrongSwanApplication;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -51,8 +52,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Prefer
 	@Override
 	public void onCreatePreferences(Bundle bundle, String s)
 	{
-		mManagedConfigurationService = new ManagedConfigurationService(getContext());
-		mManagedConfigurationService.loadConfiguration();
+		mManagedConfigurationService = ((StrongSwanApplication)getContext().getApplicationContext()).getManagedConfigurationService();
 		mManagedConfigurationService.updateSettings();
 
 		setPreferencesFromResource(R.xml.settings, s);

@@ -28,6 +28,7 @@ import org.strongswan.android.R;
 import org.strongswan.android.data.ManagedConfiguration;
 import org.strongswan.android.data.ManagedConfigurationService;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
 import org.strongswan.android.security.TrustedCertificateEntry;
@@ -85,15 +86,7 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 		}).attach();
 
 		mSelect = SELECT_CERTIFICATE.equals(getIntent().getAction());
-		mManagedConfigurationService = new ManagedConfigurationService(this);
-	}
-
-	@Override
-	protected void onResume()
-	{
-		super.onResume();
-
-		mManagedConfigurationService.loadConfiguration();
+		mManagedConfigurationService = ((StrongSwanApplication)this.getApplicationContext()).getManagedConfigurationService();
 	}
 
 	@Override

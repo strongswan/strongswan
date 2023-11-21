@@ -77,15 +77,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 			TrustedCertificateManager.getInstance().load();
 		});
 
-		mManagedConfigurationService = new ManagedConfigurationService(this);
-	}
-
-	@Override
-	protected void onResume()
-	{
-		super.onResume();
-
-		mManagedConfigurationService.loadConfiguration();
+		mManagedConfigurationService = ((StrongSwanApplication)this.getApplicationContext()).getManagedConfigurationService();
 	}
 
 	@Override
