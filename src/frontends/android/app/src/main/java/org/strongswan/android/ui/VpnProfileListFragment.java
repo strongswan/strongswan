@@ -89,17 +89,23 @@ public class VpnProfileListFragment extends Fragment
 			}
 			else if ((uuids = intent.getStringArrayExtra(Constants.VPN_PROFILES_MULTIPLE)) != null)
 			{
-				for (String id : uuids)
+				for (final String id : uuids)
 				{
-					Iterator<VpnProfile> profiles = mVpnProfiles.iterator();
+					final Iterator<VpnProfile> profiles = mVpnProfiles.iterator();
 					while (profiles.hasNext())
 					{
-						VpnProfile profile = profiles.next();
+						final VpnProfile profile = profiles.next();
 						if (Objects.equals(profile.getUUID().toString(), id))
-						{
+						{	/* in case this was an edit, we remove it first */
 							profiles.remove();
 							break;
 						}
+					}
+
+					VpnProfile profile = mDataSource.getVpnProfile(id);
+					if (profile != null)
+					{
+						mVpnProfiles.add(profile);
 					}
 				}
 				mListAdapter.notifyDataSetChanged();
