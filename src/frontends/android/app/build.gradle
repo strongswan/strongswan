@@ -16,6 +16,8 @@ android {
         jniLibs.srcDir 'src/main/libs'
     }
 
+    ndkVersion '26.1.10909125'
+
     task buildNative(type: Exec) {
         workingDir 'src/main/jni'
         commandLine "${android.ndkDirectory}/ndk-build", '-j', Runtime.runtime.availableProcessors()
