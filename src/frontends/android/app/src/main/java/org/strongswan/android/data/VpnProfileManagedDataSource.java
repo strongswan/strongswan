@@ -122,16 +122,10 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 			final String uuid = vpnProfile.getUUID().toString();
 			final String password = mSharedPreferences.getString(uuid, vpnProfile.getPassword());
 			final CaCertificate caCertificate = caCertificateMap.get(uuid);
-			if (caCertificate != null)
-			{
-				vpnProfile.setCertificateAlias(caCertificate.getAlias());
-			}
 			final UserCertificate userCertificate = userCertificateMap.get(uuid);
-			if (userCertificate != null)
-			{
-				vpnProfile.setUserCertificateAlias(userCertificate.getAlias());
-			}
 
+			vpnProfile.setCaCertificate(caCertificate);
+			vpnProfile.setUserCertificate(userCertificate);
 			vpnProfile.setPassword(password);
 			vpnProfile.setDataSource(this);
 			vpnProfile.setReadOnly(true);

@@ -174,9 +174,27 @@ public class ManagedVpnProfile extends VpnProfile
 		return caCertificate;
 	}
 
+	public void setCaCertificate(CaCertificate caCertificate)
+	{
+		this.caCertificate = caCertificate;
+		if (caCertificate != null)
+		{
+			setCertificateAlias(caCertificate.getAlias());
+		}
+	}
+
 	public UserCertificate getUserCertificate()
 	{
 		return userCertificate;
+	}
+
+	public void setUserCertificate(UserCertificate userCertificate)
+	{
+		this.userCertificate = userCertificate;
+		if (userCertificate != null)
+		{
+			setUserCertificateAlias(userCertificate.getAlias());
+		}
 	}
 
 	@Override
