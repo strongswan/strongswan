@@ -58,9 +58,9 @@ public class CaCertificateManager
 			}
 			Log.d(TAG, "CA certificates changed " + diff);
 
-			for (final CaCertificate insert : diff.getInserts())
+			for (final CaCertificate delete : diff.getDeletes())
 			{
-				install(insert);
+				remove(delete);
 			}
 
 			for (final Pair<CaCertificate, CaCertificate> update : diff.getUpdates())
@@ -69,9 +69,9 @@ public class CaCertificateManager
 				install(update.second);
 			}
 
-			for (final CaCertificate delete : diff.getDeletes())
+			for (final CaCertificate insert : diff.getInserts())
 			{
-				remove(delete);
+				install(insert);
 			}
 
 			TrustedCertificateManager.getInstance().reset();

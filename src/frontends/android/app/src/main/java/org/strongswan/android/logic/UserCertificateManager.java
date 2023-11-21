@@ -48,9 +48,9 @@ public class UserCertificateManager
 		}
 		Log.d(TAG, "Key pairs changed " + diff);
 
-		for (final UserCertificate insert : diff.getInserts())
+		for (final UserCertificate delete : diff.getDeletes())
 		{
-			install(insert);
+			remove(delete);
 		}
 
 		for (final Pair<UserCertificate, UserCertificate> update : diff.getUpdates())
@@ -59,9 +59,9 @@ public class UserCertificateManager
 			install(update.second);
 		}
 
-		for (final UserCertificate delete : diff.getDeletes())
+		for (final UserCertificate insert : diff.getInserts())
 		{
-			remove(delete);
+			install(insert);
 		}
 	}
 
