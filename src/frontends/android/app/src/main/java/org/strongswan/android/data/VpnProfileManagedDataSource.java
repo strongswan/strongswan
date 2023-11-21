@@ -25,8 +25,14 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 	@Override
 	public VpnProfileDataSource open() throws SQLException
 	{
-		mManagedConfigurationService.loadConfiguration();
+		// Do nothing
+		return this;
+	}
 
+	@Override
+	public void close()
+	{
+		// Remove passwords that are no longer referenced by a VPN profile
 		final Set<String> actualKeys = new HashSet<>();
 		for (final VpnProfile profile : getAllVpnProfiles())
 		{
@@ -43,13 +49,6 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 		}
 
 		editor.apply();
-		return this;
-	}
-
-	@Override
-	public void close()
-	{
-		// Do nothing
 	}
 
 	@Override
@@ -97,6 +96,8 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 	@Override
 	public List<ManagedVpnProfile> getAllVpnProfiles()
 	{
+		mManagedConfigurationService.loadConfiguration();
+
 		final List<ManagedVpnProfile> managedVpnProfiles = mManagedConfigurationService.getManagedProfiles();
 		for (final ManagedVpnProfile vpnProfile : managedVpnProfiles)
 		{
