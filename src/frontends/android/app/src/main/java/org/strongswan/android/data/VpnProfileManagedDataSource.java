@@ -4,6 +4,7 @@ import android.app.admin.DevicePolicyManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.SQLException;
+import android.util.Log;
 
 import org.strongswan.android.logic.StrongSwanApplication;
 
@@ -15,6 +16,8 @@ import java.util.UUID;
 
 public class VpnProfileManagedDataSource implements VpnProfileDataSource
 {
+	private static final String TAG = VpnProfileManagedDataSource.class.getSimpleName();
+
 	private static final String NAME_MANAGED_VPN_PROFILES = "org.strongswan.android.data.VpnProfileManagedDataSource.preferences";
 
 	private final ManagedConfigurationService mManagedConfigurationService;
@@ -120,13 +123,21 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 		for (final ManagedVpnProfile vpnProfile : managedVpnProfiles)
 		{
 			final String uuid = vpnProfile.getUUID().toString();
-			final String password = mSharedPreferences.getString(uuid, vpnProfile.getPassword());
+			final String name = vpnProfile.getName();
+			Log.d(TAG, "Load managed profile " + name + " {" + uuid + "}");
+
 			final CaCertificate caCertificate = caCertificateMap.get(uuid);
 			final UserCertificate userCertificate = userCertificateMap.get(uuid);
 
+			Log.d(TAG, "Set CA certificate of " + name + " to " + caCertificate);
 			vpnProfile.setCaCertificate(caCertificate);
+
+			Log.d(TAG, "Set user certificate of " + name + " to " + userCertificate);
 			vpnProfile.setUserCertificate(userCertificate);
+
+			final String password = mSharedPreferences.getString(uuid, vpnProfile.getPassword());
 			vpnProfile.setPassword(password);
+
 			vpnProfile.setDataSource(this);
 			vpnProfile.setReadOnly(true);
 		}

@@ -2,6 +2,7 @@ package org.strongswan.android.logic;
 
 import android.content.Context;
 import android.os.Handler;
+import android.util.Log;
 
 import org.strongswan.android.data.CaCertificate;
 import org.strongswan.android.data.CaCertificateRepository;
@@ -17,6 +18,8 @@ import androidx.core.util.Pair;
 
 public class CaCertificateManager
 {
+	private static final String TAG = CaCertificateManager.class.getSimpleName();
+
 	@NonNull
 	private final ExecutorService executorService;
 	@NonNull
@@ -50,8 +53,10 @@ public class CaCertificateManager
 			final Difference<CaCertificate> diff = Difference.between(installed, configured, CaCertificate::getVpnProfileUuid);
 			if (diff.isEmpty())
 			{
+				Log.d(TAG, "No CA certificates changed, nothing to do");
 				return;
 			}
+			Log.d(TAG, "CA certificates changed " + diff);
 
 			for (final CaCertificate insert : diff.getInserts())
 			{

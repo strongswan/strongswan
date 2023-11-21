@@ -69,6 +69,7 @@ public class UserCertificateInstaller
 			return false;
 		}
 
+		Log.d(TAG, "Install key pair " + userCertificate);
 		return installKeyPair(userCertificate, keyPair);
 	}
 
@@ -80,6 +81,7 @@ public class UserCertificateInstaller
 			return;
 		}
 
+		Log.d(TAG, "Remove key pair " + userCertificate);
 		policyManager.removeKeyPair(null, userCertificate.getAlias());
 	}
 
@@ -91,7 +93,7 @@ public class UserCertificateInstaller
 		}
 		catch (final Exception e)
 		{
-			Log.e(TAG, "Could not install key pair " + userCertificate.getAlias(), e);
+			Log.e(TAG, "Could not install key pair " + userCertificate, e);
 			return false;
 		}
 	}
@@ -104,7 +106,7 @@ public class UserCertificateInstaller
 		}
 		catch (final Exception e)
 		{
-			Log.e(TAG, "Could not remove key pair " + userCertificate.getAlias(), e);
+			Log.e(TAG, "Could not remove key pair " + userCertificate, e);
 		}
 	}
 }

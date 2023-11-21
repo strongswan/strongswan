@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.security.KeyChain;
 import android.security.KeyChainException;
+import android.util.Log;
 
 import org.strongswan.android.data.VpnProfile;
 
@@ -15,6 +16,8 @@ import androidx.annotation.Nullable;
 
 public class UserCertificateLoader
 {
+	private static final String TAG = UserCertificateLoader.class.getSimpleName();
+
 	@NonNull
 	private final StrongSwanApplication mApplication;
 
@@ -37,6 +40,7 @@ public class UserCertificateLoader
 		X509Certificate[] chain;
 		try
 		{
+			Log.d(TAG, "Load key chain '" + userCertificateAlias + "'");
 			chain = KeyChain.getCertificateChain(mApplication, userCertificateAlias);
 		}
 		catch (final InterruptedException e)

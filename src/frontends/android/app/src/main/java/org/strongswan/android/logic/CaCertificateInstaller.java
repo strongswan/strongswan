@@ -31,18 +31,23 @@ public class CaCertificateInstaller
 	private boolean installCaCert(@NonNull CaCertificate caCertificate)
 		throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException
 	{
+		Log.d(TAG, "Install CA certificate " + caCertificate);
 		final X509Certificate certificate = Certificates.from(caCertificate);
 
 		KeyStore store = KeyStore.getInstance("LocalCertificateStore");
 		store.load(null, null);
 		store.setCertificateEntry(caCertificate.getAlias(), certificate);
-		caCertificate.setEffectiveAlias(store.getCertificateAlias(certificate));
+		String alias = store.getCertificateAlias(certificate);
+
+		Log.w(TAG, "Set effective alias of certificate '" + caCertificate.getConfiguredAlias() + "' to '" + alias + "'");
+		caCertificate.setEffectiveAlias(alias);
 		return true;
 	}
 
 	private void uninstallCaCert(@NonNull CaCertificate caCertificate)
 		throws CertificateException, IOException
 	{
+		Log.d(TAG, "Remove CA certificate " + caCertificate);
 		final X509Certificate certificate = Certificates.from(caCertificate);
 		policyManager.uninstallCaCert(null, certificate.getEncoded());
 	}
@@ -55,7 +60,7 @@ public class CaCertificateInstaller
 		}
 		catch (final Exception e)
 		{
-			Log.e(TAG, "Could not install CA certificate " + caCertificate.getAlias(), e);
+			Log.e(TAG, "Could not install CA certificate " + caCertificate, e);
 			return false;
 		}
 	}
@@ -68,7 +73,7 @@ public class CaCertificateInstaller
 		}
 		catch (final Exception e)
 		{
-			Log.e(TAG, "Could not remove CA certificate " + caCertificate.getAlias(), e);
+			Log.e(TAG, "Could not remove CA certificate " + caCertificate, e);
 		}
 	}
 }

@@ -48,6 +48,6 @@ public class CaCertificate extends PkcsCertificate
 	@Override
 	public String toString()
 	{
-		return "CaCertificate {" + vpnProfileUuid + ", " + configuredAlias + "}";
+		return "CaCertificate {" + vpnProfileUuid + ", " + configuredAlias + ", " + effectiveAlias + "}";
 	}
 }

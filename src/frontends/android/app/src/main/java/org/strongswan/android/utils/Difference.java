@@ -125,4 +125,11 @@ public class Difference<T>
 	{
 		return inserts.isEmpty() && updates.isEmpty() && deletes.isEmpty();
 	}
+
+	@NonNull
+	@Override
+	public String toString()
+	{
+		return "Difference {" + inserts + ", " + updates + ", " + deletes + "}";
+	}
 }

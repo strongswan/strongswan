@@ -1,5 +1,7 @@
 package org.strongswan.android.utils;
 
+import android.util.Log;
+
 import org.strongswan.android.data.UserCertificate;
 
 import java.io.ByteArrayInputStream;
@@ -19,6 +21,8 @@ import androidx.annotation.Nullable;
 
 public class KeyPairs
 {
+	private static final String TAG = KeyPairs.class.getSimpleName();
+
 	private static final String KEYSTORE_INSTANCE = "PKCS12";
 
 	@NonNull
@@ -67,6 +71,7 @@ public class KeyPairs
 			final KeyPair fallbackKeyPair = getKeyPair(keyStore, alias, passwordChars);
 			if (fallbackKeyPair != null)
 			{
+				Log.w(TAG, "Set effective alias of key pair '" + userCertificate.getConfiguredAlias() + "' to '" + alias + "'");
 				userCertificate.setEffectiveAlias(alias);
 				return fallbackKeyPair;
 			}

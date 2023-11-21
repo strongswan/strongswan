@@ -73,6 +73,6 @@ public class UserCertificate extends PkcsCertificate
 	@Override
 	public String toString()
 	{
-		return "UserCertificate {" + vpnProfileUuid + ", " + configuredAlias + "}";
+		return "UserCertificate {" + vpnProfileUuid + ", " + configuredAlias + ", " + effectiveAlias + "}";
 	}
 }

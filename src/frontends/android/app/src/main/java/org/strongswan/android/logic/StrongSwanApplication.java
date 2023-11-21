@@ -23,6 +23,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import org.strongswan.android.data.DatabaseHelper;
 import org.strongswan.android.data.ManagedConfigurationService;
@@ -48,6 +49,8 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class StrongSwanApplication extends Application implements LifecycleEventObserver
 {
+	private static final String TAG = StrongSwanApplication.class.getSimpleName();
+
 	private static Context mContext;
 
 	private final ExecutorService mExecutorService = Executors.newFixedThreadPool(4);
@@ -65,6 +68,8 @@ public class StrongSwanApplication extends Application implements LifecycleEvent
 		@Override
 		public void onReceive(Context context, Intent intent)
 		{
+			Log.d(TAG, "Managed configuration changed");
+
 			final List<ManagedVpnProfile> oldProfiles = mManagedConfigurationService.getManagedProfiles();
 			Set<String> uuids = new HashSet<>(oldProfiles.size());
 			for (final VpnProfile profile : oldProfiles)
@@ -83,8 +88,10 @@ public class StrongSwanApplication extends Application implements LifecycleEvent
 					uuids.add(profile.getUUID().toString());
 				}
 
-				Intent profilesChanged = new Intent(Constants.VPN_PROFILES_CHANGED);
+				final Intent profilesChanged = new Intent(Constants.VPN_PROFILES_CHANGED);
 				profilesChanged.putExtra(Constants.VPN_PROFILES_MULTIPLE, uuids.toArray(new String[0]));
+
+				Log.d(TAG, "Send profiles changed broadcast");
 				LocalBroadcastManager.getInstance(context).sendBroadcast(profilesChanged);
 			});
 		}

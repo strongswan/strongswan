@@ -2,6 +2,7 @@ package org.strongswan.android.logic;
 
 import android.app.admin.DevicePolicyManager;
 import android.content.Context;
+import android.util.Log;
 
 import org.strongswan.android.data.DatabaseHelper;
 import org.strongswan.android.data.ManagedConfigurationService;
@@ -16,6 +17,8 @@ import androidx.core.util.Pair;
 
 public class UserCertificateManager
 {
+	private static final String TAG = UserCertificateManager.class.getSimpleName();
+
 	@NonNull
 	private final UserCertificateRepository userCertificateRepository;
 	@NonNull
@@ -40,8 +43,10 @@ public class UserCertificateManager
 		final Difference<UserCertificate> diff = Difference.between(installed, configured, UserCertificate::getVpnProfileUuid);
 		if (diff.isEmpty())
 		{
+			Log.d(TAG, "No key pairs changed, nothing to do");
 			return;
 		}
+		Log.d(TAG, "Key pairs changed " + diff);
 
 		for (final UserCertificate insert : diff.getInserts())
 		{
