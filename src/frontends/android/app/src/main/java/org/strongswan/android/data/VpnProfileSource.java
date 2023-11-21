@@ -31,7 +31,9 @@ public class VpnProfileSource implements VpnProfileDataSource
 	public VpnProfileSource(Context context)
 	{
 		vpnProfileSqlDataSource = new VpnProfileSqlDataSource(context);
+
 		dataSources.add(vpnProfileSqlDataSource);
+		dataSources.add(new VpnProfileManagedDataSource(context));
 	}
 
 	@Override
