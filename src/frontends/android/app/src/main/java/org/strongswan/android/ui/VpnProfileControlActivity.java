@@ -64,7 +64,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 {
 	public static final String START_PROFILE = "org.strongswan.android.action.START_PROFILE";
 	public static final String DISCONNECT = "org.strongswan.android.action.DISCONNECT";
-	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
+	public static final String EXTRA_VPN_PROFILE_UUID = "org.strongswan.android.VPN_PROFILE_UUID";
 
 	private static final String WAITING_FOR_RESULT = "WAITING_FOR_RESULT";
 	private static final String PROFILE_NAME = "PROFILE_NAME";
@@ -377,18 +377,10 @@ public class VpnProfileControlActivity extends AppCompatActivity
 
 		VpnProfileDataSource dataSource = new VpnProfileSource(this);
 		dataSource.open();
-		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
+		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_UUID);
 		if (profileUUID != null)
 		{
 			profile = dataSource.getVpnProfile(profileUUID);
-		}
-		else
-		{
-			long profileId = intent.getLongExtra(EXTRA_VPN_PROFILE_ID, 0);
-			if (profileId > 0)
-			{
-				profile = dataSource.getVpnProfile(profileId);
-			}
 		}
 		dataSource.close();
 
@@ -414,7 +406,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 
 		removeFragmentByTag(DIALOG_TAG);
 
-		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
+		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_UUID);
 		if (profileUUID != null)
 		{
 			VpnProfileDataSource dataSource = new VpnProfileSource(this);

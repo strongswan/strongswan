@@ -115,7 +115,7 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	{
 		Intent intent = new Intent(this, VpnProfileControlActivity.class);
 		intent.setAction(VpnProfileControlActivity.START_PROFILE);
-		intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_ID, profile.getUUID().toString());
+		intent.putExtra(VpnProfileControlActivity.EXTRA_VPN_PROFILE_UUID, profile.getUUID().toString());
 		startActivity(intent);
 	}
 

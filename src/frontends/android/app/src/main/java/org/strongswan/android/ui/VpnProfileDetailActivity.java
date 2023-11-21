@@ -88,7 +88,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 public class VpnProfileDetailActivity extends AppCompatActivity
 {
 	private VpnProfileDataSource mDataSource;
-	private Long mId;
+	private String mUuid;
 	private TrustedCertificateEntry mCertEntry;
 	private String mUserCertLoading;
 	private CertificateIdentitiesAdapter mSelectUserIdAdapter;
@@ -380,11 +380,11 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			}
 		});
 
-		mId = savedInstanceState == null ? null : savedInstanceState.getLong(VpnProfileDataSource.KEY_ID);
-		if (mId == null)
+		mUuid = savedInstanceState == null ? null : savedInstanceState.getString(VpnProfileDataSource.KEY_UUID);
+		if (mUuid == null)
 		{
 			Bundle extras = getIntent().getExtras();
-			mId = extras == null ? null : extras.getLong(VpnProfileDataSource.KEY_ID);
+			mUuid = extras == null ? null : extras.getString(VpnProfileDataSource.KEY_UUID);
 		}
 
 		loadProfileData(savedInstanceState);
@@ -406,9 +406,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	protected void onSaveInstanceState(Bundle outState)
 	{
 		super.onSaveInstanceState(outState);
-		if (mId != null)
+		if (mUuid != null)
 		{
-			outState.putLong(VpnProfileDataSource.KEY_ID, mId);
+			outState.putString(VpnProfileDataSource.KEY_UUID, mUuid);
 		}
 		if (mUserCertEntry != null)
 		{
@@ -615,10 +615,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mDataSource.insertProfile(mProfile);
 			}
 			Intent intent = new Intent(Constants.VPN_PROFILES_CHANGED);
-			intent.putExtra(Constants.VPN_PROFILES_SINGLE, mProfile.getId());
+			intent.putExtra(Constants.VPN_PROFILES_SINGLE, mProfile.getUUID().toString());
 			LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
 
-			setResult(RESULT_OK, new Intent().putExtra(VpnProfileDataSource.KEY_ID, mProfile.getId()));
+			setResult(RESULT_OK, new Intent().putExtra(VpnProfileDataSource.KEY_UUID, mProfile.getUUID().toString()));
 			finish();
 		}
 	}
@@ -757,9 +757,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		Integer flags = null;
 
 		getSupportActionBar().setTitle(R.string.add_profile);
-		if (mId != null && mId != 0)
+		if (mUuid != null)
 		{
-			mProfile = mDataSource.getVpnProfile(mId);
+			mProfile = mDataSource.getVpnProfile(mUuid);
 			if (mProfile != null)
 			{
 				mName.setText(mProfile.getName());
@@ -791,7 +791,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			else
 			{
 				Log.e(VpnProfileDetailActivity.class.getSimpleName(),
-					  "VPN profile with id " + mId + " not found");
+					  "VPN profile with UUID " + mUuid + " not found");
 				finish();
 			}
 		}

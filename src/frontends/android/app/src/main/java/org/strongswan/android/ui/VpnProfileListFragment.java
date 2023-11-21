@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import androidx.fragment.app.Fragment;
@@ -71,12 +72,12 @@ public class VpnProfileListFragment extends Fragment
 		@Override
 		public void onReceive(Context context, Intent intent)
 		{
-			long id;
-			long[] ids;
+			String uuid;
+			String[] uuids;
 
-			if ((id = intent.getLongExtra(Constants.VPN_PROFILES_SINGLE, 0)) > 0)
+			if ((uuid = intent.getStringExtra(Constants.VPN_PROFILES_SINGLE)) != null)
 			{
-				VpnProfile profile = mDataSource.getVpnProfile(id);
+				VpnProfile profile = mDataSource.getVpnProfile(uuid);
 				if (profile != null)
 				{	/* in case this was an edit, we remove it first */
 					mVpnProfiles.remove(profile);
@@ -84,15 +85,15 @@ public class VpnProfileListFragment extends Fragment
 					mListAdapter.notifyDataSetChanged();
 				}
 			}
-			else if ((ids = intent.getLongArrayExtra(Constants.VPN_PROFILES_MULTIPLE)) != null)
+			else if ((uuids = intent.getStringArrayExtra(Constants.VPN_PROFILES_MULTIPLE)) != null)
 			{
-				for (long i : ids)
+				for (String id : uuids)
 				{
 					Iterator<VpnProfile> profiles = mVpnProfiles.iterator();
 					while (profiles.hasNext())
 					{
 						VpnProfile profile = profiles.next();
-						if (profile.getId() == i)
+						if (Objects.equals(profile.getUUID().toString(), id))
 						{
 							profiles.remove();
 							break;
@@ -272,7 +273,7 @@ public class VpnProfileListFragment extends Fragment
 					int position = mSelected.iterator().next();
 					VpnProfile profile = (VpnProfile)mListView.getItemAtPosition(position);
 					Intent connectionIntent = new Intent(getActivity(), VpnProfileDetailActivity.class);
-					connectionIntent.putExtra(VpnProfileDataSource.KEY_ID, profile.getId());
+					connectionIntent.putExtra(VpnProfileDataSource.KEY_UUID, profile.getUUID().toString());
 					startActivity(connectionIntent);
 					break;
 				}
@@ -286,11 +287,11 @@ public class VpnProfileListFragment extends Fragment
 					mDataSource.insertProfile(profile);
 
 					Intent intent = new Intent(Constants.VPN_PROFILES_CHANGED);
-					intent.putExtra(Constants.VPN_PROFILES_SINGLE, profile.getId());
+					intent.putExtra(Constants.VPN_PROFILES_SINGLE, profile.getUUID().toString());
 					LocalBroadcastManager.getInstance(getActivity()).sendBroadcast(intent);
 
 					Intent connectionIntent = new Intent(getActivity(), VpnProfileDetailActivity.class);
-					connectionIntent.putExtra(VpnProfileDataSource.KEY_ID, profile.getId());
+					connectionIntent.putExtra(VpnProfileDataSource.KEY_UUID, profile.getUUID().toString());
 					startActivity(connectionIntent);
 					break;
 				}
@@ -301,15 +302,15 @@ public class VpnProfileListFragment extends Fragment
 					{
 						profiles.add((VpnProfile)mListView.getItemAtPosition(position));
 					}
-					long[] ids = new long[profiles.size()];
+					String[] uuids = new String[profiles.size()];
 					for (int i = 0; i < profiles.size(); i++)
 					{
 						VpnProfile profile = profiles.get(i);
-						ids[i] = profile.getId();
+						uuids[i] = profile.getUUID().toString();
 						mDataSource.deleteVpnProfile(profile);
 					}
 					Intent intent = new Intent(Constants.VPN_PROFILES_CHANGED);
-					intent.putExtra(Constants.VPN_PROFILES_MULTIPLE, ids);
+					intent.putExtra(Constants.VPN_PROFILES_MULTIPLE, uuids);
 					LocalBroadcastManager.getInstance(getActivity()).sendBroadcast(intent);
 					Toast.makeText(VpnProfileListFragment.this.getActivity(),
 								   R.string.profiles_deleted, Toast.LENGTH_SHORT).show();
