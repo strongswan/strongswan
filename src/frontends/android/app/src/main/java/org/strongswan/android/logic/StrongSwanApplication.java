@@ -57,6 +57,9 @@ public class StrongSwanApplication extends Application implements LifecycleEvent
 
 	private DatabaseHelper mDatabaseHelper;
 
+	private CaCertificateManager mCaCertificateManager;
+	private UserCertificateManager mUserCertificateManager;
+
 	private final BroadcastReceiver mRestrictionsReceiver = new BroadcastReceiver()
 	{
 		@Override
@@ -72,15 +75,18 @@ public class StrongSwanApplication extends Application implements LifecycleEvent
 			mManagedConfigurationService.loadConfiguration();
 			mManagedConfigurationService.updateSettings();
 
-			final List<ManagedVpnProfile> newProfiles = mManagedConfigurationService.getManagedProfiles();
-			for (final VpnProfile profile : newProfiles)
-			{
-				uuids.add(profile.getUUID().toString());
-			}
+			mUserCertificateManager.update();
+			mCaCertificateManager.update(() -> {
+				final List<ManagedVpnProfile> newProfiles = mManagedConfigurationService.getManagedProfiles();
+				for (final VpnProfile profile : newProfiles)
+				{
+					uuids.add(profile.getUUID().toString());
+				}
 
-			Intent profilesChanged = new Intent(Constants.VPN_PROFILES_CHANGED);
-			profilesChanged.putExtra(Constants.VPN_PROFILES_MULTIPLE, uuids.toArray(new String[0]));
-			LocalBroadcastManager.getInstance(context).sendBroadcast(profilesChanged);
+				Intent profilesChanged = new Intent(Constants.VPN_PROFILES_CHANGED);
+				profilesChanged.putExtra(Constants.VPN_PROFILES_MULTIPLE, uuids.toArray(new String[0]));
+				LocalBroadcastManager.getInstance(context).sendBroadcast(profilesChanged);
+			});
 		}
 	};
 
@@ -96,9 +102,22 @@ public class StrongSwanApplication extends Application implements LifecycleEvent
 		StrongSwanApplication.mContext = getApplicationContext();
 
 		mManagedConfigurationService = new ManagedConfigurationService(mContext);
-		ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
 
 		mDatabaseHelper = new DatabaseHelper(mContext);
+
+		mCaCertificateManager = new CaCertificateManager(
+			mContext,
+			mExecutorService,
+			mMainHandler,
+			mManagedConfigurationService,
+			mDatabaseHelper);
+
+		mUserCertificateManager = new UserCertificateManager(
+			mContext,
+			mManagedConfigurationService,
+			mDatabaseHelper);
+
+		ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
 	}
 
 	/**
@@ -132,6 +151,14 @@ public class StrongSwanApplication extends Application implements LifecycleEvent
 	}
 
 	/**
+	 * @return a service providing access to the app's managed configuration.
+	 */
+	public ManagedConfigurationService getManagedConfigurationService()
+	{
+		return mManagedConfigurationService;
+	}
+
+	/**
 	 * @return the application's database helper used to access its SQLite database
 	 */
 	public DatabaseHelper getDatabaseHelper()
@@ -154,6 +181,10 @@ public class StrongSwanApplication extends Application implements LifecycleEvent
 		if (event == Lifecycle.Event.ON_START)
 		{
 			registerManagedConfigurationReceiver();
+
+			mManagedConfigurationService.loadConfiguration();
+			mUserCertificateManager.update();
+			mCaCertificateManager.update(() -> {});
 		}
 		else if (event == Lifecycle.Event.ON_STOP)
 		{
