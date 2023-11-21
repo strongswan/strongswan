@@ -21,7 +21,6 @@ package org.strongswan.android.ui;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.format.Formatter;
 import android.view.Menu;
@@ -79,16 +78,6 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 	public boolean onCreateOptionsMenu(Menu menu)
 	{
 		getMenuInflater().inflate(R.menu.main, menu);
-		return true;
-	}
-
-	@Override
-	public boolean onPrepareOptionsMenu(Menu menu)
-	{
-		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT)
-		{
-			menu.removeItem(R.id.menu_import_profile);
-		}
 		return true;
 	}
 
@@ -195,26 +184,26 @@ public class MainActivity extends AppCompatActivity implements OnVpnProfileSelec
 			size = Formatter.formatFileSize(getActivity(), s);
 
 			AlertDialog.Builder builder = new AlertDialog.Builder(getActivity())
-					.setTitle(R.string.clear_crl_cache_title)
-					.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener()
+				.setTitle(R.string.clear_crl_cache_title)
+				.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener()
+				{
+					@Override
+					public void onClick(DialogInterface dialog, int which)
 					{
-						@Override
-						public void onClick(DialogInterface dialog, int which)
-						{
-							dismiss();
-						}
-					})
-					.setPositiveButton(R.string.clear, new DialogInterface.OnClickListener()
+						dismiss();
+					}
+				})
+				.setPositiveButton(R.string.clear, new DialogInterface.OnClickListener()
+				{
+					@Override
+					public void onClick(DialogInterface dialog, int whichButton)
 					{
-						@Override
-						public void onClick(DialogInterface dialog, int whichButton)
+						for (String file : list)
 						{
-							for (String file : list)
-							{
-								getActivity().deleteFile(file);
-							}
+							getActivity().deleteFile(file);
 						}
-					});
+					}
+				});
 			builder.setMessage(getActivity().getResources().getQuantityString(R.plurals.clear_crl_cache_msg, list.size(), list.size(), size));
 			return builder.create();
 		}
