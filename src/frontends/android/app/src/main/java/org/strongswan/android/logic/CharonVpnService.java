@@ -45,6 +45,7 @@ import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfile.SelectedAppsHandling;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.VpnStateService.ErrorState;
 import org.strongswan.android.logic.VpnStateService.State;
@@ -196,7 +197,7 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 		/* handler used to do changes in the main UI thread */
 		mHandler = new Handler(getMainLooper());
 
-		mDataSource = new VpnProfileDataSource(this);
+		mDataSource = new VpnProfileSource(this);
 		mDataSource.open();
 		/* use a separate thread as main thread for charon */
 		mConnectionHandler = new Thread(this);
