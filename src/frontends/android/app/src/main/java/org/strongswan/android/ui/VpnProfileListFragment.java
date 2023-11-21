@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import androidx.fragment.app.Fragment;
@@ -63,7 +64,7 @@ public class VpnProfileListFragment extends Fragment
 	private VpnProfileAdapter mListAdapter;
 	private ListView mListView;
 	private OnVpnProfileSelectedListener mListener;
-	private HashSet<Integer> mSelected;
+	private Set<Integer> mSelected;
 	private boolean mReadOnly;
 
 	private final BroadcastReceiver mProfilesChanged = new BroadcastReceiver()
@@ -235,18 +236,27 @@ public class VpnProfileListFragment extends Fragment
 	{
 		private MenuItem mEditProfile;
 		private MenuItem mCopyProfile;
+		private MenuItem mDeleteProfile;
+
+		private boolean mCanEdit;
+		private boolean mCanCopy;
+		private boolean mCanDelete;
+
+		private int mReadOnlyCount;
 
 		@Override
 		public boolean onPrepareActionMode(ActionMode mode, Menu menu)
 		{
-			mEditProfile.setEnabled(mSelected.size() == 1);
-			mCopyProfile.setEnabled(mEditProfile.isEnabled());
+			mEditProfile.setEnabled(mCanEdit);
+			mCopyProfile.setEnabled(mCanCopy);
+			mDeleteProfile.setEnabled(mCanDelete);
 			return true;
 		}
 
 		@Override
 		public void onDestroyActionMode(ActionMode mode)
 		{
+			mReadOnlyCount = 0;
 			mSelected.clear();
 		}
 
@@ -257,6 +267,7 @@ public class VpnProfileListFragment extends Fragment
 			inflater.inflate(R.menu.profile_list_context, menu);
 			mEditProfile = menu.findItem(R.id.edit_profile);
 			mCopyProfile = menu.findItem(R.id.copy_profile);
+			mDeleteProfile = menu.findItem(R.id.delete_profile);
 			mode.setTitle(R.string.select_profiles);
 			return true;
 		}
@@ -325,13 +336,17 @@ public class VpnProfileListFragment extends Fragment
 		public void onItemCheckedStateChanged(ActionMode mode, int position,
 		                                      long id, boolean checked)
 		{
+			VpnProfile profile = (VpnProfile)mListView.getItemAtPosition(position);
+
 			if (checked)
 			{
 				mSelected.add(position);
+				mReadOnlyCount += (profile.isReadOnly()) ? 1 : 0;
 			}
 			else
 			{
 				mSelected.remove(position);
+				mReadOnlyCount -= (profile.isReadOnly()) ? 1 : 0;
 			}
 			final int checkedCount = mSelected.size();
 			switch (checkedCount)
@@ -346,6 +361,11 @@ public class VpnProfileListFragment extends Fragment
 					mode.setSubtitle(String.format(getString(R.string.x_profiles_selected), checkedCount));
 					break;
 			}
+
+			mCanEdit = checkedCount == 1;
+			mCanCopy = checkedCount == 1 && mReadOnlyCount == 0;
+			mCanDelete = checkedCount > 0 && mReadOnlyCount == 0;
+
 			mode.invalidate();
 		}
 	};
