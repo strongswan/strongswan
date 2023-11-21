@@ -1236,7 +1236,6 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			}
 		}
 
-		@TargetApi(Build.VERSION_CODES.LOLLIPOP)
 		public void applyData(VpnService.Builder builder)
 		{
 			for (IPRange address : mAddresses)
