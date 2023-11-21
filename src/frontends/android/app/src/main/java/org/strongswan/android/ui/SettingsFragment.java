@@ -18,12 +18,15 @@ package org.strongswan.android.ui;
 
 import static org.strongswan.android.utils.Constants.PREF_DEFAULT_VPN_PROFILE;
 import static org.strongswan.android.utils.Constants.PREF_DEFAULT_VPN_PROFILE_MRU;
+import static org.strongswan.android.utils.Constants.PREF_IGNORE_POWER_WHITELIST;
 
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 
 import org.strongswan.android.R;
+import org.strongswan.android.data.ManagedConfiguration;
+import org.strongswan.android.data.ManagedConfigurationService;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnProfileSource;
@@ -37,22 +40,41 @@ import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
+import androidx.preference.SwitchPreference;
 
 public class SettingsFragment extends PreferenceFragmentCompat implements Preference.OnPreferenceChangeListener
 {
+	private ManagedConfigurationService mManagedConfigurationService;
+
 	private ListPreference mDefaultVPNProfile;
 
 	@Override
 	public void onCreatePreferences(Bundle bundle, String s)
 	{
+		mManagedConfigurationService = new ManagedConfigurationService(getContext());
+		mManagedConfigurationService.loadConfiguration();
+		mManagedConfigurationService.updateSettings();
+
 		setPreferencesFromResource(R.xml.settings, s);
 
+		final SwitchPreference mIgnorePowerWhitelist = findPreference(PREF_IGNORE_POWER_WHITELIST);
 		mDefaultVPNProfile = findPreference(PREF_DEFAULT_VPN_PROFILE);
-		mDefaultVPNProfile.setOnPreferenceChangeListener(this);
-		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
+
+		final ManagedConfiguration managedConfiguration = mManagedConfigurationService.getManagedConfiguration();
+		if (!managedConfiguration.isAllowSettingsAccess())
+		{
+			mIgnorePowerWhitelist.setChecked(managedConfiguration.isIgnoreBatteryOptimizations());
+			setCurrentProfileName(managedConfiguration.getDefaultVpnProfile());
+
+			mIgnorePowerWhitelist.setEnabled(false);
+			mDefaultVPNProfile.setEnabled(false);
+		}
+		else if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
 		{
 			mDefaultVPNProfile.setEnabled(false);
 		}
+
+		mDefaultVPNProfile.setOnPreferenceChangeListener(this);
 	}
 
 	@Override
@@ -86,7 +108,8 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Prefer
 		}
 		profiles.close();
 
-		if (entries.size() <= 1)
+		final ManagedConfiguration managedConfiguration = mManagedConfigurationService.getManagedConfiguration();
+		if (entries.size() <= 1 || !managedConfiguration.isAllowSettingsAccess())
 		{
 			mDefaultVPNProfile.setEnabled(false);
 		}
