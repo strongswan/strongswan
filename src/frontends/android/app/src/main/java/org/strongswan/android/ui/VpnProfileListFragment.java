@@ -40,9 +40,12 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import org.strongswan.android.R;
+import org.strongswan.android.data.ManagedConfiguration;
+import org.strongswan.android.data.ManagedConfigurationService;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
 import org.strongswan.android.data.VpnProfileSource;
+import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.ui.adapter.VpnProfileAdapter;
 import org.strongswan.android.utils.Constants;
 
@@ -68,6 +71,8 @@ public class VpnProfileListFragment extends Fragment
 	private OnVpnProfileSelectedListener mListener;
 	private Set<Integer> mSelected;
 	private boolean mReadOnly;
+
+	private ManagedConfigurationService mManagedConfigurationService;
 
 	private final BroadcastReceiver mProfilesChanged = new BroadcastReceiver()
 	{
@@ -175,6 +180,8 @@ public class VpnProfileListFragment extends Fragment
 		mDataSource = new VpnProfileSource(this.getActivity());
 		mDataSource.open();
 
+		mManagedConfigurationService = StrongSwanApplication.getInstance().getManagedConfigurationService();
+
 		/* cached list of profiles used as backend for the ListView */
 		mVpnProfiles = mDataSource.getAllVpnProfiles();
 
@@ -214,6 +221,18 @@ public class VpnProfileListFragment extends Fragment
 	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater)
 	{
 		inflater.inflate(R.menu.profile_list, menu);
+	}
+
+	@Override
+	public void onPrepareOptionsMenu(Menu menu)
+	{
+		final MenuItem addProfile = menu.findItem(R.id.add_profile);
+		if (addProfile != null)
+		{
+			final ManagedConfiguration managedConfiguration = mManagedConfigurationService.getManagedConfiguration();
+			addProfile.setVisible(managedConfiguration.isAllowProfileCreation());
+			addProfile.setEnabled(managedConfiguration.isAllowProfileCreation());
+		}
 	}
 
 	@Override
