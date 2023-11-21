@@ -70,7 +70,7 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 	public VpnProfile insertProfile(VpnProfile profile)
 	{
 		ContentValues values = ContentValuesFromVpnProfile(profile);
-		long insertId = mDatabase.insert(DatabaseHelper.TABLE_VPNPROFILE, null, values);
+		long insertId = mDatabase.insert(DatabaseHelper.TABLE_VPN_PROFILE.Name, null, values);
 		if (insertId == -1)
 		{
 			return null;
@@ -85,22 +85,22 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 	{
 		final UUID uuid = profile.getUUID();
 		ContentValues values = ContentValuesFromVpnProfile(profile);
-		return mDatabase.update(DatabaseHelper.TABLE_VPNPROFILE, values, KEY_UUID + " = ?", new String[]{uuid.toString()}) > 0;
+		return mDatabase.update(DatabaseHelper.TABLE_VPN_PROFILE.Name, values, KEY_UUID + " = ?", new String[]{uuid.toString()}) > 0;
 	}
 
 	@Override
 	public boolean deleteVpnProfile(VpnProfile profile)
 	{
 		final UUID uuid = profile.getUUID();
-		return mDatabase.delete(DatabaseHelper.TABLE_VPNPROFILE, KEY_UUID + " = ?", new String[]{uuid.toString()}) > 0;
+		return mDatabase.delete(DatabaseHelper.TABLE_VPN_PROFILE.Name, KEY_UUID + " = ?", new String[]{uuid.toString()}) > 0;
 	}
 
 	@Override
 	public VpnProfile getVpnProfile(UUID uuid)
 	{
 		VpnProfile profile = null;
-		Cursor cursor = mDatabase.query(DatabaseHelper.TABLE_VPNPROFILE, mDbHelper.getAllColumns(),
-										KEY_UUID + " = ?", new String[]{uuid.toString()}, null, null, null);
+		DatabaseHelper.DbTable table = DatabaseHelper.TABLE_VPN_PROFILE;
+		Cursor cursor = mDatabase.query(table.Name, table.columnNames(), KEY_UUID + " = ?", new String[]{uuid.toString()}, null, null, null);
 		if (cursor.moveToFirst())
 		{
 			profile = VpnProfileFromCursor(cursor);
@@ -115,7 +115,8 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 	{
 		List<VpnProfile> vpnProfiles = new ArrayList<>();
 
-		Cursor cursor = mDatabase.query(DatabaseHelper.TABLE_VPNPROFILE, mDbHelper.getAllColumns(), null, null, null, null, null);
+		DatabaseHelper.DbTable table = DatabaseHelper.TABLE_VPN_PROFILE;
+		Cursor cursor = mDatabase.query(table.Name, table.columnNames(), null, null, null, null, null);
 		cursor.moveToFirst();
 		while (!cursor.isAfterLast())
 		{
