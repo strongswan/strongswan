@@ -56,6 +56,7 @@ import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfile.SelectedAppsHandling;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.StrongSwanApplication;
@@ -188,7 +189,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		/* the title is set when we load the profile, if any */
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-		mDataSource = new VpnProfileDataSource(this);
+		mDataSource = new VpnProfileSource(this);
 		mDataSource.open();
 
 		setContentView(R.layout.profile_detail_view);

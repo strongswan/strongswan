@@ -41,6 +41,7 @@ import android.widget.Toast;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.ui.adapter.VpnProfileAdapter;
 import org.strongswan.android.utils.Constants;
 
@@ -65,12 +66,14 @@ public class VpnProfileListFragment extends Fragment
 	private HashSet<Integer> mSelected;
 	private boolean mReadOnly;
 
-	private BroadcastReceiver mProfilesChanged = new BroadcastReceiver()
+	private final BroadcastReceiver mProfilesChanged = new BroadcastReceiver()
 	{
 		@Override
 		public void onReceive(Context context, Intent intent)
 		{
-			long id, ids[];
+			long id;
+			long[] ids;
+
 			if ((id = intent.getLongExtra(Constants.VPN_PROFILES_SINGLE, 0)) > 0)
 			{
 				VpnProfile profile = mDataSource.getVpnProfile(id);
@@ -104,7 +107,8 @@ public class VpnProfileListFragment extends Fragment
 	/**
 	 * The activity containing this fragment should implement this interface
 	 */
-	public interface OnVpnProfileSelectedListener {
+	public interface OnVpnProfileSelectedListener
+	{
 		void onVpnProfileSelected(VpnProfile profile);
 	}
 
@@ -159,7 +163,7 @@ public class VpnProfileListFragment extends Fragment
 			mSelected = selected != null ? new HashSet<>(selected) : new HashSet<>();
 		}
 
-		mDataSource = new VpnProfileDataSource(this.getActivity());
+		mDataSource = new VpnProfileSource(this.getActivity());
 		mDataSource.open();
 
 		/* cached list of profiles used as backend for the ListView */
@@ -206,19 +210,18 @@ public class VpnProfileListFragment extends Fragment
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item)
 	{
-		switch (item.getItemId())
+		if (item.getItemId() == R.id.add_profile)
 		{
-			case R.id.add_profile:
-				Intent connectionIntent = new Intent(getActivity(),
-													 VpnProfileDetailActivity.class);
-				startActivity(connectionIntent);
-				return true;
-			default:
-				return super.onOptionsItemSelected(item);
+			Intent connectionIntent = new Intent(getActivity(),
+												 VpnProfileDetailActivity.class);
+			startActivity(connectionIntent);
+			return true;
 		}
+		return super.onOptionsItemSelected(item);
 	}
 
-	private final OnItemClickListener mVpnProfileClicked = new OnItemClickListener() {
+	private final OnItemClickListener mVpnProfileClicked = new OnItemClickListener()
+	{
 		@Override
 		public void onItemClick(AdapterView<?> a, View v, int position, long id)
 		{
@@ -229,7 +232,8 @@ public class VpnProfileListFragment extends Fragment
 		}
 	};
 
-	private final MultiChoiceModeListener mVpnProfileSelected = new MultiChoiceModeListener() {
+	private final MultiChoiceModeListener mVpnProfileSelected = new MultiChoiceModeListener()
+	{
 		private MenuItem mEditProfile;
 		private MenuItem mCopyProfile;
 
@@ -297,7 +301,7 @@ public class VpnProfileListFragment extends Fragment
 					{
 						profiles.add((VpnProfile)mListView.getItemAtPosition(position));
 					}
-					long ids[] = new long[profiles.size()];
+					long[] ids = new long[profiles.size()];
 					for (int i = 0; i < profiles.size(); i++)
 					{
 						VpnProfile profile = profiles.get(i);

@@ -32,6 +32,7 @@ import android.service.quicksettings.TileService;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.utils.Constants;
@@ -73,7 +74,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		context.bindService(new Intent(context, VpnStateService.class),
 							mServiceConnection, Service.BIND_AUTO_CREATE);
 
-		mDataSource = new VpnProfileDataSource(this);
+		mDataSource = new VpnProfileSource(this);
 		mDataSource.open();
 	}
 

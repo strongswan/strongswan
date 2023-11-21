@@ -16,6 +16,9 @@
 
 package org.strongswan.android.ui;
 
+import static org.strongswan.android.utils.Constants.PREF_DEFAULT_VPN_PROFILE;
+import static org.strongswan.android.utils.Constants.PREF_DEFAULT_VPN_PROFILE_MRU;
+
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
@@ -23,6 +26,7 @@ import android.os.Bundle;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnProfileSource;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,9 +38,6 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 
-import static org.strongswan.android.utils.Constants.PREF_DEFAULT_VPN_PROFILE;
-import static org.strongswan.android.utils.Constants.PREF_DEFAULT_VPN_PROFILE_MRU;
-
 public class SettingsFragment extends PreferenceFragmentCompat implements Preference.OnPreferenceChangeListener
 {
 	private ListPreference mDefaultVPNProfile;
@@ -46,7 +47,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Prefer
 	{
 		setPreferencesFromResource(R.xml.settings, s);
 
-		mDefaultVPNProfile = (ListPreference)findPreference(PREF_DEFAULT_VPN_PROFILE);
+		mDefaultVPNProfile = findPreference(PREF_DEFAULT_VPN_PROFILE);
 		mDefaultVPNProfile.setOnPreferenceChangeListener(this);
 		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
 		{
@@ -59,11 +60,12 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Prefer
 	{
 		super.onResume();
 
-		VpnProfileDataSource profiles = new VpnProfileDataSource(getActivity());
+		VpnProfileDataSource profiles = new VpnProfileSource(getActivity());
 		profiles.open();
 
 		List<VpnProfile> all = profiles.getAllVpnProfiles();
-		Collections.sort(all, new Comparator<VpnProfile>() {
+		Collections.sort(all, new Comparator<VpnProfile>()
+		{
 			@Override
 			public int compare(VpnProfile lhs, VpnProfile rhs)
 			{
@@ -111,7 +113,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Prefer
 
 	private void setCurrentProfileName(String uuid)
 	{
-		VpnProfileDataSource profiles = new VpnProfileDataSource(getActivity());
+		VpnProfileDataSource profiles = new VpnProfileSource(getActivity());
 		profiles.open();
 
 		if (!uuid.equals(PREF_DEFAULT_VPN_PROFILE_MRU))
