@@ -97,6 +97,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
 	private SortedSet<String> mSelectedApps = new TreeSet<>();
 	private VpnProfile mProfile;
+	private View mManagedProfile;
 	private MultiAutoCompleteTextView mName;
 	private TextInputLayoutHelper mNameWrap;
 	private EditText mGateway;
@@ -193,6 +194,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mDataSource.open();
 
 		setContentView(R.layout.profile_detail_view);
+
+		mManagedProfile = findViewById(R.id.managed_profile);
 
 		mName = findViewById(R.id.name);
 		mNameWrap = findViewById(R.id.name_wrap);
@@ -855,6 +858,15 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 	private void setReadOnly(final boolean readOnly)
 	{
+		if (readOnly)
+		{
+			mManagedProfile.setVisibility(View.VISIBLE);
+		}
+		else
+		{
+			mManagedProfile.setVisibility(View.GONE);
+		}
+
 		mName.setEnabled(!readOnly);
 		mGateway.setEnabled(!readOnly);
 		mUsername.setEnabled(!readOnly);
