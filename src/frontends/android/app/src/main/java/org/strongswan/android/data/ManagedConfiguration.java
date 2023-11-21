@@ -86,6 +86,8 @@ public class ManagedConfiguration
 			return;
 		}
 
+		assert uuid != null;
+
 		final ManagedVpnProfile vpnProfile = new ManagedVpnProfile(managedProfileBundle, uuid);
 		mManagedVpnProfiles.add(vpnProfile);
 		mProfileUuids.add(uuid);

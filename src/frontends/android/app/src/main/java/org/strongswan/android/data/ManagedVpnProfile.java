@@ -6,6 +6,9 @@ import android.text.TextUtils;
 import java.util.Objects;
 import java.util.UUID;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 public class ManagedVpnProfile extends VpnProfile
 {
 	private static final String KEY_REMOTE = "remote";
@@ -26,7 +29,7 @@ public class ManagedVpnProfile extends VpnProfile
 	private CaCertificate caCertificate;
 	private UserCertificate userCertificate;
 
-	ManagedVpnProfile(final Bundle bundle, final String uuid)
+	ManagedVpnProfile(@NonNull final Bundle bundle, @NonNull final String uuid)
 	{
 		int flags = 0;
 		int splitFlags = 0;
@@ -36,10 +39,10 @@ public class ManagedVpnProfile extends VpnProfile
 		setVpnType(VpnType.fromIdentifier(bundle.getString(VpnProfileDataSource.KEY_VPN_TYPE)));
 
 		final Bundle remote = bundle.getBundle(KEY_REMOTE);
-		flags = configureRemote(flags, remote);
+		flags = configureRemote(uuid, remote, flags);
 
 		final Bundle local = bundle.getBundle(KEY_LOCAL);
-		flags = configureLocal(flags, local);
+		flags = configureLocal(uuid, local, flags);
 
 		final String includedPackageNames = bundle.getString(KEY_INCLUDED_APPS);
 		final String excludedPackageNames = bundle.getString(KEY_EXCLUDED_APPS);
@@ -80,7 +83,7 @@ public class ManagedVpnProfile extends VpnProfile
 		}
 	}
 
-	private int configureRemote(int flags, Bundle remote)
+	private int configureRemote(@NonNull String uuid, @Nullable Bundle remote, int flags)
 	{
 		if (remote == null)
 		{
@@ -91,9 +94,8 @@ public class ManagedVpnProfile extends VpnProfile
 		setPort(getInt(remote, VpnProfileDataSource.KEY_PORT, 1, 65_535));
 		setRemoteId(remote.getString(VpnProfileDataSource.KEY_REMOTE_ID));
 
-		final String certificateAlias = remote.getString(VpnProfileDataSource.KEY_CERTIFICATE_ALIAS);
+		final String certificateAlias = remote.getString(VpnProfileDataSource.KEY_CERTIFICATE_ALIAS, "remote:" + uuid);
 		final String certificateData = remote.getString(VpnProfileDataSource.KEY_CERTIFICATE);
-
 
 		if (!TextUtils.isEmpty(certificateAlias) && !TextUtils.isEmpty(certificateData))
 		{
@@ -111,7 +113,7 @@ public class ManagedVpnProfile extends VpnProfile
 		return flags;
 	}
 
-	private int configureLocal(int flags, Bundle local)
+	private int configureLocal(@NonNull String uuid, @Nullable Bundle local, int flags)
 	{
 		if (local == null)
 		{
@@ -121,7 +123,7 @@ public class ManagedVpnProfile extends VpnProfile
 		setLocalId(local.getString(VpnProfileDataSource.KEY_LOCAL_ID));
 		setUsername(local.getString(VpnProfileDataSource.KEY_USERNAME));
 
-		final String userCertificateAlias = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE_ALIAS);
+		final String userCertificateAlias = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE_ALIAS, "local:" + uuid);
 		final String userCertificateData = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
 		final String userCertificatePassword = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE_PASSWORD);
 
