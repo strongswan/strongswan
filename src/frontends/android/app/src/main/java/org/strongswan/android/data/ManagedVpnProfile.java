@@ -22,12 +22,12 @@ public class ManagedVpnProfile extends VpnProfile
 	private static final String KEY_SPLIT_TUNNELLING_BLOCK_IPV4_FLAG = "split_tunnelling_block_IPv4";
 	private static final String KEY_SPLIT_TUNNELLING_BLOCK_IPV6_FLAG = "split_tunnelling_block_IPv6";
 
-	ManagedVpnProfile(final Bundle bundle)
+	ManagedVpnProfile(final Bundle bundle, final String uuid)
 	{
 		int flags = 0;
 		int splitFlags = 0;
 
-		setUUID(UUID.fromString(bundle.getString(VpnProfileDataSource.KEY_UUID)));
+		setUUID(UUID.fromString(uuid));
 		setName(bundle.getString(VpnProfileDataSource.KEY_NAME));
 		setVpnType(VpnType.fromIdentifier(bundle.getString(VpnProfileDataSource.KEY_VPN_TYPE)));
 

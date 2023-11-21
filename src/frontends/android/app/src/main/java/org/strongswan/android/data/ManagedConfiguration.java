@@ -9,12 +9,17 @@ import org.strongswan.android.utils.Constants;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 import androidx.annotation.NonNull;
 
 public class ManagedConfiguration
 {
+	private static final Pattern UUID_PATTERN = Pattern.compile("[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}");
+
 	private static final String KEY_ALLOW_PROFILE_CREATE = "allow_profile_create";
 	private static final String KEY_ALLOW_PROFILE_IMPORT = "allow_profile_import";
 	private static final String KEY_ALLOW_CERTIFICATE_IMPORT = "allow_certificate_import";
@@ -30,6 +35,9 @@ public class ManagedConfiguration
 	private final boolean mIgnoreBatteryOptimizations;
 
 	private final List<ManagedVpnProfile> mManagedVpnProfiles;
+
+	private final Set<String> mProfileUuids = new HashSet<>();
+	private final Set<String> mInvalidProfiles = new HashSet<>();
 
 	ManagedConfiguration()
 	{
@@ -59,12 +67,32 @@ public class ManagedConfiguration
 
 		for (final Bundle managedProfileBundle : managedProfileBundles)
 		{
-			final ManagedVpnProfile vpnProfile = new ManagedVpnProfile(managedProfileBundle);
-			mManagedVpnProfiles.add(vpnProfile);
+			addManagedProfile(managedProfileBundle);
 		}
 	}
 
-	private List<Bundle> getBundleArrayList(final Bundle bundle, String key)
+	private void addManagedProfile(Bundle managedProfileBundle)
+	{
+		final String uuid = managedProfileBundle.getString(VpnProfileDataSource.KEY_UUID);
+
+		if (isInvalid(managedProfileBundle) || mProfileUuids.contains(uuid))
+		{
+			mInvalidProfiles.add(uuid);
+			return;
+		}
+
+		final ManagedVpnProfile vpnProfile = new ManagedVpnProfile(managedProfileBundle, uuid);
+		mManagedVpnProfiles.add(vpnProfile);
+		mProfileUuids.add(uuid);
+	}
+
+	private static boolean isInvalid(Bundle managedProfileBundle)
+	{
+		final String uuid = managedProfileBundle.getString(VpnProfileDataSource.KEY_UUID);
+		return uuid == null || !UUID_PATTERN.matcher(uuid).matches();
+	}
+
+	private List<Bundle> getBundleArrayList(final Bundle bundle, final String key)
 	{
 		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
 		{
@@ -80,7 +108,7 @@ public class ManagedConfiguration
 	}
 
 	@NonNull
-	private static List<Bundle> getBundleArrayListCompat(Bundle bundle, String key)
+	private static List<Bundle> getBundleArrayListCompat(final Bundle bundle, final String key)
 	{
 		final Parcelable[] parcelables = bundle.getParcelableArray(key);
 		if (parcelables == null)
@@ -128,5 +156,10 @@ public class ManagedConfiguration
 	public List<ManagedVpnProfile> getVpnProfiles()
 	{
 		return mManagedVpnProfiles;
+	}
+
+	public Set<String> getInvalidProfiles()
+	{
+		return mInvalidProfiles;
 	}
 }
