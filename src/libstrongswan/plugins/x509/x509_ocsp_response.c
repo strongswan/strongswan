@@ -878,7 +878,11 @@ METHOD(certificate_t, get_issuer, identification_t*,
 METHOD(certificate_t, has_issuer, id_match_t,
 	private_x509_ocsp_response_t *this, identification_t *issuer)
 {
-	return this->responderId->matches(this->responderId, issuer);
+	if (this->responderId)
+	{
+		return this->responderId->matches(this->responderId, issuer);
+	}
+	return ID_MATCH_NONE;
 }
 
 METHOD(certificate_t, issued_by, bool,
@@ -889,7 +893,7 @@ METHOD(certificate_t, issued_by, bool,
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
 
-	if (issuer->get_type(issuer) != CERT_X509)
+	if (issuer->get_type(issuer) != CERT_X509 || !this->responderId)
 	{
 		return FALSE;
 	}
