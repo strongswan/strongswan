@@ -263,6 +263,12 @@ METHOD(ocsp_response_t, create_response_enumerator, enumerator_t*,
 				filter, NULL, NULL);
 }
 
+METHOD(ocsp_response_t, get_ocsp_status, ocsp_status_t,
+	private_x509_ocsp_response_t *this)
+{
+	return this->ocsp_status;
+}
+
 METHOD(ocsp_response_t, get_nonce, chunk_t,
 	private_x509_ocsp_response_t *this)
 {
@@ -1049,6 +1055,7 @@ static private_x509_ocsp_response_t *create_empty()
 					.get_ref = _get_ref,
 					.destroy = _destroy,
 				},
+				.get_ocsp_status = _get_ocsp_status,
 				.get_nonce = _get_nonce,
 				.get_status = _get_status,
 				.create_cert_enumerator = _create_cert_enumerator,
