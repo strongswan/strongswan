@@ -205,9 +205,13 @@ static chunk_t build_requestList(private_x509_ocsp_request_t *this)
 static chunk_t build_nonce(private_x509_ocsp_request_t *this)
 {
 	rng_t *rng;
+	int nonce_len;
+
+	nonce_len = lib->settings->get_int(lib->settings, "%s.ocsp_nonce_len",
+									   NONCE_LEN, lib->ns);
 
 	rng = lib->crypto->create_rng(lib->crypto, RNG_WEAK);
-	if (!rng || !rng->allocate_bytes(rng, NONCE_LEN, &this->nonce))
+	if (!rng || !rng->allocate_bytes(rng, max(1, nonce_len), &this->nonce))
 	{
 		DBG1(DBG_LIB, "failed to create RNG");
 		DESTROY_IF(rng);
