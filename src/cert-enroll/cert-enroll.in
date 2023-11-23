@@ -192,6 +192,7 @@ function install_certs()
     KEYTYPE="$KEYTYPE" CERTDIR="$CERTDIR" HOSTKEY="$HOSTKEY" \
     HOSTCERT="$HOSTCERT" ROOTCA="$ROOTCA" SUBCA="$SUBCA" \
     OLDROOTCA="$OLDROOTCA" OLDSUBCA="$OLDSUBCA" \
+    USER_GROUP="$USER_GROUP" SERVICE="$SERVICE" \
     /bin/bash $script || status=$?
     if [ $status -ne 0 ]
     then
