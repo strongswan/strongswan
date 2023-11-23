@@ -25,7 +25,8 @@ pb_tnc_ldflags = \
 	$(top_builddir)/src/libtncif/.libs/libtncif.a \
 	$(fuzz_ldflags)
 
-FUZZ_TARGETS=fuzz_certs fuzz_crls fuzz_ids fuzz_pa_tnc fuzz_pb_tnc
+FUZZ_TARGETS=fuzz_certs fuzz_crls fuzz_ocsp_req fuzz_ocsp_rsp \
+	fuzz_ids fuzz_pa_tnc fuzz_pb_tnc
 
 all-local: $(FUZZ_TARGETS)
 
@@ -35,6 +36,12 @@ fuzz_certs: fuzz_certs.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
 
 fuzz_crls: fuzz_crls.c ${libfuzzer}
+	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_ocsp_req: fuzz_ocsp_req.c ${libfuzzer}
+	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
+
+fuzz_ocsp_rsp: fuzz_ocsp_rsp.c ${libfuzzer}
 	$(CC) $(AM_CPPFLAGS) $(CFLAGS) -o $@ $< $(fuzz_ldflags)
 
 fuzz_ids: fuzz_ids.c ${libfuzzer}
