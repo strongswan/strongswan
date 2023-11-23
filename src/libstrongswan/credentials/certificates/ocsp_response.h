@@ -57,6 +57,13 @@ struct ocsp_response_t {
 	certificate_t certificate;
 
 	/**
+	 * Get general status of this OCSP response.
+	 *
+	 * @return					OCSP status
+	 */
+	ocsp_status_t (*get_ocsp_status)(ocsp_response_t *this);
+
+	/**
 	 * Get the nonce received with this OCSP response.
 	 *
 	 * @return					nonce in the response (internal data)
