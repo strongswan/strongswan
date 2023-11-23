@@ -121,8 +121,14 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 		request->destroy(request);
 		return NULL;
 	}
-	ocsp_request = (ocsp_request_t*)request;
 	ocsp_response = (ocsp_response_t*)response;
+	if (ocsp_response->get_ocsp_status(ocsp_response) != OCSP_SUCCESSFUL)
+	{
+		response->destroy(response);
+		request->destroy(request);
+		return NULL;
+	}
+	ocsp_request = (ocsp_request_t*)request;
 	if (ocsp_response->get_nonce(ocsp_response).len &&
 		!chunk_equals_const(ocsp_request->get_nonce(ocsp_request),
 							ocsp_response->get_nonce(ocsp_response)))
