@@ -528,6 +528,11 @@ gen:
 				ocsp_status = OCSP_INTERNALERROR;
 			}
 		}
+		else
+		{
+			DBG1(DBG_APP, "no signer certificate found");
+			ocsp_status = OCSP_INTERNALERROR;
+		}
 		DBG1(DBG_APP, "ocspResponseStatus:  %N", ocsp_status_names, ocsp_status);
 
 		enumerator = responses->create_enumerator(responses);

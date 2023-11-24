@@ -302,6 +302,13 @@ charon.nbns1
 charon.nbns2
 	WINS servers assigned to peer via configuration payload (CP).
 
+charon.ocsp_nonce_len = 32
+	Length of nonces in OCSP requests (1-32).
+
+	Length of nonces in OCSP requests. According to RFC 8954, valid values are
+	between 1 and 32, with new clients required to use 32. Some servers might
+	not support that so lowering the value to e.g. 16 might be necessary.
+
 charon.port = 500
 	UDP port used locally. If set to 0 a random port will be allocated.
 

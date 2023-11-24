@@ -558,6 +558,11 @@ static void print_ocsp_response(private_certificate_printer_t *this,
 			fprintf(f, "\n");
 		}
 		enumerator->destroy(enumerator);
+
+		if (first)
+		{
+			fprintf(f, "(none)\n");
+		}
 	}
 }
 

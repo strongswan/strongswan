@@ -263,6 +263,12 @@ METHOD(ocsp_response_t, create_response_enumerator, enumerator_t*,
 				filter, NULL, NULL);
 }
 
+METHOD(ocsp_response_t, get_ocsp_status, ocsp_status_t,
+	private_x509_ocsp_response_t *this)
+{
+	return this->ocsp_status;
+}
+
 METHOD(ocsp_response_t, get_nonce, chunk_t,
 	private_x509_ocsp_response_t *this)
 {
@@ -612,49 +618,49 @@ static bool build_basicOCSPResponse(private_x509_ocsp_response_t *this,
  * ASN.1 definition of basicResponse
  */
 static const asn1Object_t basicResponseObjects[] = {
-	{ 0, "BasicOCSPResponse",				ASN1_SEQUENCE,			ASN1_NONE }, /*  0 */
-	{ 1,   "tbsResponseData",				ASN1_SEQUENCE,			ASN1_OBJ  }, /*  1 */
-	{ 2,     "versionContext",				ASN1_CONTEXT_C_0,		ASN1_NONE |
-																	ASN1_DEF  }, /*  2 */
-	{ 3,       "version",					ASN1_INTEGER,			ASN1_BODY }, /*  3 */
-	{ 2,     "responderIdContext",			ASN1_CONTEXT_C_1,		ASN1_OPT  }, /*  4 */
-	{ 3,       "responderIdByName",			ASN1_SEQUENCE,			ASN1_OBJ  }, /*  5 */
-	{ 2,     "end choice",					ASN1_EOC,				ASN1_END  }, /*  6 */
-	{ 2,     "responderIdContext",			ASN1_CONTEXT_C_2,		ASN1_OPT  }, /*  7 */
-	{ 3,       "responderIdByKey",			ASN1_OCTET_STRING,		ASN1_BODY }, /*  8 */
-	{ 2,     "end choice",					ASN1_EOC,				ASN1_END  }, /*  9 */
-	{ 2,     "producedAt",					ASN1_GENERALIZEDTIME,	ASN1_BODY }, /* 10 */
-	{ 2,     "responses",					ASN1_SEQUENCE,			ASN1_OBJ  }, /* 11 */
-	{ 2,     "responseExtensionsContext",	ASN1_CONTEXT_C_1,		ASN1_OPT  }, /* 12 */
-	{ 3,       "responseExtensions",		ASN1_SEQUENCE,			ASN1_LOOP }, /* 13 */
-	{ 4,         "extension",				ASN1_SEQUENCE,			ASN1_NONE }, /* 14 */
-	{ 5,           "extnID",				ASN1_OID,				ASN1_BODY }, /* 15 */
-	{ 5,           "critical",				ASN1_BOOLEAN,			ASN1_BODY |
-																	ASN1_DEF  }, /* 16 */
-	{ 5,           "extnValue",				ASN1_OCTET_STRING,		ASN1_BODY }, /* 17 */
-	{ 3,       "end loop",					ASN1_EOC,				ASN1_END  }, /* 18 */
-	{ 2,     "end opt",						ASN1_EOC,				ASN1_END  }, /* 19 */
-	{ 1,   "signatureAlgorithm",			ASN1_EOC,				ASN1_RAW  }, /* 20 */
-	{ 1,   "signature",						ASN1_BIT_STRING,		ASN1_BODY }, /* 21 */
-	{ 1,   "certsContext",					ASN1_CONTEXT_C_0,		ASN1_OPT  }, /* 22 */
-	{ 2,     "certs",						ASN1_SEQUENCE,			ASN1_LOOP }, /* 23 */
-	{ 3,       "certificate",				ASN1_SEQUENCE,			ASN1_RAW  }, /* 24 */
-	{ 2,     "end loop",					ASN1_EOC,				ASN1_END  }, /* 25 */
-	{ 1,   "end opt",						ASN1_EOC,				ASN1_END  }, /* 26 */
-	{ 0, "exit",							ASN1_EOC,				ASN1_EXIT }
+	{ 0, "BasicOCSPResponse",				ASN1_SEQUENCE,			ASN1_NONE            }, /*  0 */
+	{ 1,   "tbsResponseData",				ASN1_SEQUENCE,			ASN1_OBJ             }, /*  1 */
+	{ 2,     "versionContext",				ASN1_CONTEXT_C_0,		ASN1_NONE|ASN1_DEF   }, /*  2 */
+	{ 3,       "version",					ASN1_INTEGER,			ASN1_BODY            }, /*  3 */
+	{ 2,     "responderId",					ASN1_EOC,				ASN1_CHOICE          }, /*  4 */
+	{ 3,       "responderIdContext",		ASN1_CONTEXT_C_1,		ASN1_OPT             }, /*  5 */
+	{ 4,         "responderIdByName",		ASN1_SEQUENCE,			ASN1_OBJ             }, /*  6 */
+	{ 3,       "end choice",				ASN1_EOC,				ASN1_END|ASN1_CH     }, /*  7 */
+	{ 3,       "responderIdContext",		ASN1_CONTEXT_C_2,		ASN1_OPT             }, /*  8 */
+	{ 4,         "responderIdByKey",		ASN1_OCTET_STRING,		ASN1_BODY            }, /*  9 */
+	{ 3,       "end choice",				ASN1_EOC,				ASN1_END|ASN1_CH     }, /* 10 */
+	{ 2,     "end choices",					ASN1_EOC,				ASN1_END|ASN1_CHOICE }, /* 11 */
+	{ 2,     "producedAt",					ASN1_GENERALIZEDTIME,	ASN1_BODY            }, /* 12 */
+	{ 2,     "responses",					ASN1_SEQUENCE,			ASN1_OBJ             }, /* 13 */
+	{ 2,     "responseExtensionsContext",	ASN1_CONTEXT_C_1,		ASN1_OPT             }, /* 14 */
+	{ 3,       "responseExtensions",		ASN1_SEQUENCE,			ASN1_LOOP            }, /* 15 */
+	{ 4,         "extension",				ASN1_SEQUENCE,			ASN1_NONE            }, /* 16 */
+	{ 5,           "extnID",				ASN1_OID,				ASN1_BODY            }, /* 17 */
+	{ 5,           "critical",				ASN1_BOOLEAN,			ASN1_BODY | ASN1_DEF }, /* 18 */
+	{ 5,           "extnValue",				ASN1_OCTET_STRING,		ASN1_BODY            }, /* 19 */
+	{ 3,       "end loop",					ASN1_EOC,				ASN1_END             }, /* 20 */
+	{ 2,     "end opt",						ASN1_EOC,				ASN1_END             }, /* 21 */
+	{ 1,   "signatureAlgorithm",			ASN1_EOC,				ASN1_RAW             }, /* 22 */
+	{ 1,   "signature",						ASN1_BIT_STRING,		ASN1_BODY            }, /* 23 */
+	{ 1,   "certsContext",					ASN1_CONTEXT_C_0,		ASN1_OPT             }, /* 24 */
+	{ 2,     "certs",						ASN1_SEQUENCE,			ASN1_LOOP            }, /* 25 */
+	{ 3,       "certificate",				ASN1_SEQUENCE,			ASN1_RAW             }, /* 26 */
+	{ 2,     "end loop",					ASN1_EOC,				ASN1_END             }, /* 27 */
+	{ 1,   "end opt",						ASN1_EOC,				ASN1_END             }, /* 28 */
+	{ 0, "exit",							ASN1_EOC,				ASN1_EXIT            }
 };
 #define BASIC_RESPONSE_TBS_DATA		 1
 #define BASIC_RESPONSE_VERSION		 3
-#define BASIC_RESPONSE_ID_BY_NAME	 5
-#define BASIC_RESPONSE_ID_BY_KEY	 8
-#define BASIC_RESPONSE_PRODUCED_AT	10
-#define BASIC_RESPONSE_RESPONSES	11
-#define BASIC_RESPONSE_EXT_ID		15
-#define BASIC_RESPONSE_CRITICAL		16
-#define BASIC_RESPONSE_EXT_VALUE	17
-#define BASIC_RESPONSE_ALGORITHM	20
-#define BASIC_RESPONSE_SIGNATURE	21
-#define BASIC_RESPONSE_CERTIFICATE	24
+#define BASIC_RESPONSE_ID_BY_NAME	 6
+#define BASIC_RESPONSE_ID_BY_KEY	 9
+#define BASIC_RESPONSE_PRODUCED_AT	12
+#define BASIC_RESPONSE_RESPONSES	13
+#define BASIC_RESPONSE_EXT_ID		17
+#define BASIC_RESPONSE_CRITICAL		18
+#define BASIC_RESPONSE_EXT_VALUE	19
+#define BASIC_RESPONSE_ALGORITHM	22
+#define BASIC_RESPONSE_SIGNATURE	23
+#define BASIC_RESPONSE_CERTIFICATE	26
 
 /**
  * Parse a basicOCSPResponse
@@ -756,11 +762,6 @@ end:
 	parser->destroy(parser);
 	if (success)
 	{
-		if (!this->responderId)
-		{
-			this->responderId = identification_create_from_encoding(ID_ANY,
-									chunk_empty);
-		}
 		success = parse_responses(this, responses, responses_level);
 	}
 	return success;
@@ -826,6 +827,10 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 		switch (objectID)
 		{
 			case OCSP_RESPONSE_STATUS:
+				if (object.len != 1)
+				{
+					goto end;
+				}
 				this->ocsp_status = (ocsp_status_t)*object.ptr;
 				switch (this->ocsp_status)
 				{
@@ -878,7 +883,11 @@ METHOD(certificate_t, get_issuer, identification_t*,
 METHOD(certificate_t, has_issuer, id_match_t,
 	private_x509_ocsp_response_t *this, identification_t *issuer)
 {
-	return this->responderId->matches(this->responderId, issuer);
+	if (this->responderId)
+	{
+		return this->responderId->matches(this->responderId, issuer);
+	}
+	return ID_MATCH_NONE;
 }
 
 METHOD(certificate_t, issued_by, bool,
@@ -889,7 +898,7 @@ METHOD(certificate_t, issued_by, bool,
 	bool valid;
 	x509_t *x509 = (x509_t*)issuer;
 
-	if (issuer->get_type(issuer) != CERT_X509)
+	if (issuer->get_type(issuer) != CERT_X509 || !this->responderId)
 	{
 		return FALSE;
 	}
@@ -1050,6 +1059,7 @@ static private_x509_ocsp_response_t *create_empty()
 					.get_ref = _get_ref,
 					.destroy = _destroy,
 				},
+				.get_ocsp_status = _get_ocsp_status,
 				.get_nonce = _get_nonce,
 				.get_status = _get_status,
 				.create_cert_enumerator = _create_cert_enumerator,
