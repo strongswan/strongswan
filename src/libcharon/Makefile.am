@@ -147,6 +147,14 @@ if USE_SYSLOG
     bus/listeners/sys_logger.c bus/listeners/sys_logger.h
 endif
 
+if USE_PF_HANDLER
+  libcharon_la_SOURCES += \
+    pf_handler.c pf_handler.h
+
+pf_handler.lo : $(top_builddir)/config.status
+
+endif
+
 daemon.lo :		$(top_builddir)/config.status
 
 AM_CPPFLAGS = \

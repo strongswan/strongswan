@@ -1853,6 +1853,7 @@ AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
 AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
 AM_CONDITIONAL(USE_COUNTERS, test x$counters = xtrue)
 AM_CONDITIONAL(USE_SELINUX, test x$selinux = xtrue)
+AM_CONDITIONAL(USE_PF_HANDLER, test x$dhcp = xtrue -o x$farp = xtrue )
 
 #  other options
 # ---------------
