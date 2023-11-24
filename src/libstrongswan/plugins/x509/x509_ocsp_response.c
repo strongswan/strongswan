@@ -827,6 +827,10 @@ static bool parse_OCSPResponse(private_x509_ocsp_response_t *this)
 		switch (objectID)
 		{
 			case OCSP_RESPONSE_STATUS:
+				if (object.len != 1)
+				{
+					goto end;
+				}
 				this->ocsp_status = (ocsp_status_t)*object.ptr;
 				switch (this->ocsp_status)
 				{
