@@ -149,6 +149,19 @@ struct credential_manager_t {
 	certificate_t *(*get_cert)(credential_manager_t *this,
 							   certificate_type_t cert, key_type_t key,
 							   identification_t *id, bool trusted);
+
+	/**
+	 * Get the issuing certificate of a subject certificate.
+	 *
+	 * @param subject	subject certificate to use
+	 * @param trusted	TRUE to get a trusted certificate only
+	 * @param scheme	receives used signature scheme and parameters, if
+	 *					given (allocated)
+	 * @return			issuer certificate, if found, NULL otherwise
+	 */
+	certificate_t *(*get_issuer_cert)(credential_manager_t *this, certificate_t *subject,
+									  bool trusted, signature_params_t **scheme);
+
 	/**
 	 * Get the best matching shared key for two IDs.
 	 *
@@ -175,6 +188,18 @@ struct credential_manager_t {
 	 */
 	private_key_t* (*get_private)(credential_manager_t *this, key_type_t type,
 								  identification_t *id, auth_cfg_t *auth);
+
+	/**
+	 * Get an OCSP response for the given subject certificate in relation toi
+	 * its issuer.
+	 *
+	 * @param subject	subject certificate to check
+	 * @param issuer	issuer of subject
+	 * @param auth		used to retrieve cert received during certreq request
+	 * @return			a valid OCSP response, NULL otherwise
+	 */
+	certificate_t* (*get_ocsp)(credential_manager_t *this, certificate_t *subject,
+							   certificate_t *issuer, auth_cfg_t *auth);
 
 	/**
 	 * Create an enumerator over trusted certificates.

@@ -97,6 +97,8 @@ enum auth_rule_t {
 	AUTH_RULE_CRL_VALIDATION,
 	/** result of a OCSP validation, cert_validation_t */
 	AUTH_RULE_OCSP_VALIDATION,
+	/** certificat ocsp signer, certificate_t* */
+	AUTH_RULE_OCSP_VALIDATOR,
 	/** CRL/OCSP validation is disabled, bool */
 	AUTH_RULE_CERT_VALIDATION_SUSPENDED,
 	/** subject is member of a group, identification_t*
@@ -247,9 +249,10 @@ struct auth_cfg_t {
 	/**
 	 * Purge all rules in a config.
 	 *
-	 * @param keep_ca	whether to keep AUTH_RULE_CA_CERT entries
+	 * @param partial	whether to keep AUTH_RULE_CA_CERT and
+	 *					AUTH_RULE_OCSP_VALIDATOR entries
 	 */
-	void (*purge)(auth_cfg_t *this, bool keep_ca);
+	void (*purge)(auth_cfg_t *this, bool partial);
 
 	/**
 	 * Check two configs for equality.

@@ -49,6 +49,7 @@ ENUM(auth_rule_names, AUTH_RULE_IDENTITY, AUTH_HELPER_AC_CERT,
 	"RULE_SUBJECT_CERT",
 	"RULE_CRL_VALIDATION",
 	"RULE_OCSP_VALIDATION",
+	"RULE_OCSP_VALIDATOR",
 	"RULE_CERT_VALIDATION_SUSPENDED",
 	"RULE_GROUP",
 	"RULE_RSA_STRENGTH",
@@ -87,6 +88,7 @@ static inline bool is_multi_value_rule(auth_rule_t type)
 		case AUTH_RULE_MAX:
 			return FALSE;
 		case AUTH_RULE_OCSP_VALIDATION:
+		case AUTH_RULE_OCSP_VALIDATOR:
 		case AUTH_RULE_CRL_VALIDATION:
 		case AUTH_RULE_GROUP:
 		case AUTH_RULE_SUBJECT_CERT:
@@ -223,6 +225,7 @@ static void init_entry(entry_t *this, auth_rule_t type, va_list args)
 			/* integer type */
 			this->value = (void*)(uintptr_t)va_arg(args, u_int);
 			break;
+		case AUTH_RULE_OCSP_VALIDATOR:
 		case AUTH_RULE_IDENTITY:
 		case AUTH_RULE_EAP_IDENTITY:
 		case AUTH_RULE_AAA_IDENTITY:
@@ -282,6 +285,7 @@ static bool entry_equals(entry_t *e1, entry_t *e2)
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_REVOCATION_CERT:
 		case AUTH_HELPER_AC_CERT:
+		case AUTH_RULE_OCSP_VALIDATOR:
 		{
 			certificate_t *c1, *c2;
 
@@ -347,6 +351,7 @@ static void destroy_entry_value(entry_t *entry)
 		case AUTH_HELPER_SUBJECT_CERT:
 		case AUTH_HELPER_REVOCATION_CERT:
 		case AUTH_HELPER_AC_CERT:
+		case AUTH_RULE_OCSP_VALIDATOR:
 		{
 			certificate_t *cert = (certificate_t*)entry->value;
 			cert->destroy(cert);
@@ -430,6 +435,7 @@ static void replace(private_auth_cfg_t *this, entry_enumerator_t *enumerator,
 			case AUTH_HELPER_SUBJECT_HASH_URL:
 			case AUTH_HELPER_REVOCATION_CERT:
 			case AUTH_HELPER_AC_CERT:
+			case AUTH_RULE_OCSP_VALIDATOR:
 				/* pointer type */
 				entry->value = va_arg(args, void*);
 				break;
@@ -511,6 +517,7 @@ METHOD(auth_cfg_t, get, void*,
 		case AUTH_HELPER_SUBJECT_HASH_URL:
 		case AUTH_HELPER_REVOCATION_CERT:
 		case AUTH_HELPER_AC_CERT:
+		case AUTH_RULE_OCSP_VALIDATOR:
 		case AUTH_RULE_MAX:
 			break;
 	}
@@ -1074,6 +1081,7 @@ METHOD(auth_cfg_t, complies, bool,
 			case AUTH_RULE_XAUTH_BACKEND:
 				/* not enforced, just a hint for local authentication */
 			case AUTH_RULE_CERT_VALIDATION_SUSPENDED:
+			case AUTH_RULE_OCSP_VALIDATOR:
 				/* not a constraint */
 			case AUTH_HELPER_IM_CERT:
 			case AUTH_HELPER_SUBJECT_CERT:
@@ -1211,6 +1219,7 @@ static void merge(private_auth_cfg_t *this, private_auth_cfg_t *other, bool copy
 				case AUTH_HELPER_SUBJECT_CERT:
 				case AUTH_HELPER_REVOCATION_CERT:
 				case AUTH_HELPER_AC_CERT:
+				case AUTH_RULE_OCSP_VALIDATOR:
 				{
 					certificate_t *cert = (certificate_t*)value;
 
@@ -1330,7 +1339,7 @@ static bool equals(private_auth_cfg_t *this, private_auth_cfg_t *other)
 }
 
 METHOD(auth_cfg_t, purge, void,
-	private_auth_cfg_t *this, bool keep_ca)
+	private_auth_cfg_t *this, bool partial)
 {
 	enumerator_t *enumerator;
 	entry_t *entry;
@@ -1338,7 +1347,7 @@ METHOD(auth_cfg_t, purge, void,
 	enumerator = array_create_enumerator(this->entries);
 	while (enumerator->enumerate(enumerator, &entry))
 	{
-		if (!keep_ca || entry->type != AUTH_RULE_CA_CERT)
+		if (!partial || (entry->type != AUTH_RULE_CA_CERT && entry->type != AUTH_RULE_OCSP_VALIDATOR))
 		{
 			destroy_entry_value(entry);
 			array_remove_at(this->entries, enumerator);
@@ -1382,6 +1391,7 @@ METHOD(auth_cfg_t, clone_, auth_cfg_t*,
 			case AUTH_HELPER_SUBJECT_CERT:
 			case AUTH_HELPER_REVOCATION_CERT:
 			case AUTH_HELPER_AC_CERT:
+			case AUTH_RULE_OCSP_VALIDATOR:
 			{
 				certificate_t *cert = (certificate_t*)value;
 				clone->add(clone, type, cert->get_ref(cert));

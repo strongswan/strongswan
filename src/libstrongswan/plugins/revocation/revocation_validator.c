@@ -142,10 +142,58 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 }
 
 /**
+ * check that the cert used to sign OCSP response was present in certreq payload
+ */
+static bool verify_certreq_ocsp(auth_cfg_t *auth, certificate_t *issuer)
+{
+	enumerator_t *enumerator = auth->create_enumerator(auth);
+	certificate_t *cert;
+	auth_rule_t rule;
+	bool found = FALSE;
+
+	while (enumerator->enumerate(enumerator, &rule, &cert))
+	{
+		if (rule == AUTH_RULE_OCSP_VALIDATOR)
+		{
+			if (!issuer->equals(issuer, cert))
+			{
+				continue;
+			}
+
+			found = TRUE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	return found;
+}
+
+/**
+ * Compare ocsp response signature
+ */
+static bool compare_ocsp_sig(bool cached, certificate_t *subject, certificate_t *issuer)
+{
+	if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
+	{
+		if (!cached)
+		{
+			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
+				 issuer->get_subject(issuer));
+		}
+		return TRUE;
+	}
+
+	DBG1(DBG_CFG, "OCSP response verification failed, "
+		 "invalid signature");
+	return FALSE;
+}
+
+/**
  * check the signature of an OCSP response
  */
 static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca,
-						bool cached)
+						bool cached, auth_cfg_t *auth, bool certreq_ocsp_check)
 {
 	certificate_t *issuer, *subject;
 	identification_t *responder;
@@ -182,18 +230,11 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca,
 			}
 		}
 		found = TRUE;
-		if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
+		verified = compare_ocsp_sig(cached, subject, issuer);
+		if (verified)
 		{
-			if (!cached)
-			{
-				DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
-					 issuer->get_subject(issuer));
-			}
-			verified = TRUE;
 			break;
 		}
-		DBG1(DBG_CFG, "ocsp response verification failed, "
-			 "invalid signature");
 	}
 	enumerator->destroy(enumerator);
 
@@ -211,19 +252,17 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca,
 			if ((x509->get_flags(x509) & X509_OCSP_SIGNER) &&
 				issuer->get_validity(issuer, NULL, NULL, NULL))
 			{
-				found = TRUE;
-				if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
+				if (certreq_ocsp_check && !verify_certreq_ocsp(auth, issuer))
 				{
-					if (!cached)
-					{
-						DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
-							 issuer->get_subject(issuer));
-					}
-					verified = TRUE;
+					continue;
+				}
+
+				found = TRUE;
+				verified = compare_ocsp_sig(cached, subject, issuer);
+				if (verified)
+				{
 					break;
 				}
-				DBG1(DBG_CFG, "ocsp response verification failed, "
-					 "invalid signature");
 			}
 		}
 		enumerator->destroy(enumerator);
@@ -234,8 +273,8 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca,
 
 	if (!found && !cached)
 	{
-		DBG1(DBG_CFG, "ocsp response verification failed, "
-			 "no signer certificate '%Y' found", responder);
+		DBG1(DBG_CFG, "ocsp response verification failed, no signer certificate '%Y'"
+			 " found or certificate not mentioned in certreq ocsp request", responder);
 	}
 	return verified;
 }
@@ -245,7 +284,8 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca,
  */
 static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 									  x509_t *subject, x509_t *issuer,
-									  cert_validation_t *valid, bool cached)
+									  cert_validation_t *valid, bool cached,
+									  auth_cfg_t *auth, bool certreq_ocsp_check)
 {
 	ocsp_response_t *response;
 	time_t revocation, this_update, next_update, valid_until;
@@ -255,7 +295,7 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
 	response = (ocsp_response_t*)cand;
 
 	/* check ocsp signature */
-	if (!verify_ocsp(response, &issuer->interface, cached))
+	if (!verify_ocsp(response, &issuer->interface, cached, auth, certreq_ocsp_check))
 	{
 		cand->destroy(cand);
 		return best;
@@ -323,7 +363,8 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
  * validate a x509 certificate using OCSP
  */
 static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
-									auth_cfg_t *auth, u_int timeout)
+									auth_cfg_t *auth, u_int timeout,
+									certificate_t **response)
 {
 	enumerator_t *enumerator;
 	cert_validation_t valid = VALIDATION_SKIPPED;
@@ -332,6 +373,7 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 	public_key_t *public;
 	chunk_t chunk;
 	char *uri = NULL;
+	bool certreq_ocsp_check = response ? TRUE : FALSE;
 
 	/** lookup cache for valid OCSP responses */
 	enumerator = lib->credmgr->create_cert_enumerator(lib->credmgr,
@@ -339,7 +381,8 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		current->get_ref(current);
-		best = get_better_ocsp(current, best, subject, issuer, &valid, TRUE);
+		best = get_better_ocsp(current, best, subject, issuer, &valid, TRUE,
+							   auth, certreq_ocsp_check);
 		if (best && valid != VALIDATION_STALE)
 		{
 			DBG1(DBG_CFG, "  using cached ocsp response");
@@ -367,7 +410,7 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
-									   &valid, FALSE);
+									   &valid, FALSE, auth, certreq_ocsp_check);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -390,7 +433,7 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 			if (current)
 			{
 				best = get_better_ocsp(current, best, subject, issuer,
-									   &valid, FALSE);
+									   &valid, FALSE, auth, certreq_ocsp_check);
 				if (best && valid != VALIDATION_STALE)
 				{
 					break;
@@ -404,12 +447,25 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 	{
 		valid = VALIDATION_FAILED;
 	}
-	auth->add(auth, AUTH_RULE_OCSP_VALIDATION, valid);
-	if (valid == VALIDATION_GOOD)
-	{	/* successful OCSP check fulfills also CRL constraint */
-		auth->add(auth, AUTH_RULE_CRL_VALIDATION, VALIDATION_GOOD);
+	if (!certreq_ocsp_check)
+	{
+		auth->add(auth, AUTH_RULE_OCSP_VALIDATION, valid);
+		if (valid == VALIDATION_GOOD)
+		{	/* successful OCSP check fulfills also CRL constraint */
+			auth->add(auth, AUTH_RULE_CRL_VALIDATION, VALIDATION_GOOD);
+		}
 	}
-	DESTROY_IF(best);
+
+	/* only want a response if the result is meaningful */
+	if (response && (valid == VALIDATION_GOOD || valid == VALIDATION_ON_HOLD ||
+		valid == VALIDATION_REVOKED))
+	{
+		*response = best;
+	}
+	else
+	{
+		DESTROY_IF(best);
+	}
 	return valid;
 }
 
@@ -866,7 +922,7 @@ METHOD(cert_validator_t, validate_online, bool,
 
 		if (enable_ocsp)
 		{
-			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth, timeout))
+			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth, timeout, NULL))
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
@@ -927,6 +983,32 @@ METHOD(cert_validator_t, validate_online, bool,
 	return TRUE;
 }
 
+METHOD (cert_validator_t, ocsp, certificate_t *,
+	private_revocation_validator_t *this, certificate_t *subject,
+	certificate_t *issuer, auth_cfg_t *auth)
+{
+	bool enable_ocsp;
+	u_int timeout;
+	certificate_t *response = NULL;
+
+	this->lock->lock(this->lock);
+	enable_ocsp = this->enable_ocsp;
+	timeout = this->timeout;
+	this->lock->unlock(this->lock);
+
+	if (enable_ocsp &&
+		subject->get_type(subject) == CERT_X509 &&
+		issuer->get_type(issuer) == CERT_X509)
+	{
+		DBG1(DBG_CFG, "fetching OCSP certificate status of \"%Y\"",
+			 subject->get_subject(subject));
+
+		check_ocsp((x509_t*)subject, (x509_t*)issuer, auth, timeout, &response);
+	}
+
+	return response;
+}
+
 METHOD(revocation_validator_t, reload, void,
 	private_revocation_validator_t *this)
 {
@@ -974,6 +1056,7 @@ revocation_validator_t *revocation_validator_create()
 	INIT(this,
 		.public = {
 			.validator.validate_online = _validate_online,
+			.validator.ocsp = _ocsp,
 			.reload = _reload,
 			.destroy = _destroy,
 		},

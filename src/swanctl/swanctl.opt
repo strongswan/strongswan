@@ -205,6 +205,21 @@ connections.<conn>.send_cert = ifasked
 	certificate payloads altogether, _always_ causes certificate payloads to be
 	sent unconditionally whenever certificate authentication is used.
 
+connections.<conn>.ocsp = reply
+	Send OCSP extension in certificate request payload or certificate payloads
+	(_never_, _reply, _request_ or _both_).
+
+	Send OCSP status request in certificate request payloads when using
+	certificate authentication or/and send OCSP status response in certificate
+	payloads when using certificate authentication. With the default of _reply_
+	the daemon sends OCSP status response in certificate payloads only if an
+	OCSP status request in certificate request payload have been received.
+	_never_ disables sending of OCSP status request and response in certificate
+	request and certificate payloads altogether, _request_ causes OCSP status
+	request in certificate request payloads to be sent whenever certificate
+	authentication is used, _both_ combines _reply_ and _request_ whenever
+	certificate authentication is used.
+
 connections.<conn>.ppk_id =
 	String identifying the Postquantum Preshared Key (PPK) to be used.
 

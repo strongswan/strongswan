@@ -503,6 +503,27 @@ METHOD(credential_manager_t, issued_by, bool,
 	return subject->issued_by(subject, issuer, scheme);
 }
 
+METHOD(credential_manager_t, get_issuer_cert, certificate_t *,
+	private_credential_manager_t *this, certificate_t *subject,
+	bool trusted, signature_params_t **scheme)
+{
+	enumerator_t *enumerator;
+	certificate_t *issuer = NULL, *candidate;
+
+	enumerator = create_cert_enumerator(this, subject->get_type(subject), KEY_ANY,
+										subject->get_issuer(subject), trusted);
+	while (enumerator->enumerate(enumerator, &candidate))
+	{
+		if (issued_by(this, subject, candidate, scheme))
+		{
+			issuer = candidate->get_ref(candidate);
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return issuer;
+}
+
 METHOD(credential_manager_t, cache_cert, void,
 	private_credential_manager_t *this, certificate_t *cert)
 {
@@ -682,30 +703,6 @@ static certificate_t *get_pretrusted_cert(private_credential_manager_t *this,
 	}
 	public->destroy(public);
 	return subject;
-}
-
-/**
- * Get the issuing certificate of a subject certificate
- */
-static certificate_t *get_issuer_cert(private_credential_manager_t *this,
-									  certificate_t *subject, bool trusted,
-									  signature_params_t **scheme)
-{
-	enumerator_t *enumerator;
-	certificate_t *issuer = NULL, *candidate;
-
-	enumerator = create_cert_enumerator(this, subject->get_type(subject), KEY_ANY,
-										subject->get_issuer(subject), trusted);
-	while (enumerator->enumerate(enumerator, &candidate))
-	{
-		if (issued_by(this, subject, candidate, scheme))
-		{
-			issuer = candidate->get_ref(candidate);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return issuer;
 }
 
 /**
@@ -1352,6 +1349,33 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 	return private;
 }
 
+METHOD(credential_manager_t, get_ocsp, certificate_t*,
+	private_credential_manager_t *this, certificate_t *subject,
+	certificate_t *issuer, auth_cfg_t *auth)
+{
+	cert_validator_t *validator;
+	enumerator_t *enumerator;
+	certificate_t *response = NULL;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->validators->create_enumerator(this->validators);
+	while (enumerator->enumerate(enumerator, &validator))
+	{
+		if (validator->ocsp)
+		{
+			response = validator->ocsp(validator, subject, issuer, auth);
+			if (response)
+			{
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	return response;
+}
+
 METHOD(credential_manager_t, flush_cache, void,
 	private_credential_manager_t *this, certificate_type_t type)
 {
@@ -1425,8 +1449,10 @@ credential_manager_t *credential_manager_create()
 			.create_shared_enumerator = _create_shared_enumerator,
 			.create_cdp_enumerator = _create_cdp_enumerator,
 			.get_cert = _get_cert,
+			.get_issuer_cert = _get_issuer_cert,
 			.get_shared = _get_shared,
 			.get_private = _get_private,
+			.get_ocsp = _get_ocsp,
 			.create_trusted_enumerator = _create_trusted_enumerator,
 			.create_public_enumerator = _create_public_enumerator,
 			.flush_cache = _flush_cache,

@@ -216,6 +216,95 @@ static void add_attribute_certs(private_ike_cert_post_t *this,
 }
 
 /**
+ * Build CERT payload with OCSP status for the given cert
+ */
+static cert_payload_t *build_cert_ocsp_payload(certificate_t *cert,
+											   certificate_t *issuer, auth_cfg_t *auth)
+{
+	cert_payload_t *payload;
+	certificate_t *response;
+
+	response = lib->credmgr->get_ocsp(lib->credmgr, cert, issuer, auth);
+	if (!response)
+	{
+		DBG2(DBG_IKE, "no OCSP status for cert \"%Y\"", cert->get_subject(cert));
+		return NULL;
+	}
+
+	payload = cert_payload_create_from_cert(PLV2_CERTIFICATE, response);
+	response->destroy(response);
+
+	return payload;
+}
+
+/**
+ * Add subject certificate and intermediate CA certificates OCSP status to message
+ */
+static void add_cert_ocsp(private_ike_cert_post_t *this, auth_cfg_t *auth,
+						  message_t *message)
+{
+	auth_rule_t type;
+	cert_payload_t *payload;
+	certificate_t *cert, *issuer;
+	enumerator_t *enumerator;
+
+	cert = auth->get(auth, AUTH_RULE_SUBJECT_CERT);
+	if (!cert)
+	{
+		return;
+	}
+
+	enumerator = auth->create_enumerator(auth);
+	while (enumerator->enumerate(enumerator, &type, &issuer))
+	{
+		if (type == AUTH_RULE_CA_CERT || type == AUTH_RULE_IM_CERT)
+		{
+			payload = build_cert_ocsp_payload(cert, issuer, auth);
+			if (payload)
+			{
+					DBG1(DBG_IKE, "sending OCSP status for cert \"%Y\"", cert->get_subject(cert));
+					message->add_payload(message, (payload_t*)payload);
+			}
+			if (type == AUTH_RULE_CA_CERT)
+			{
+				break;
+			}
+			cert = issuer;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	issuer = lib->credmgr->get_issuer_cert(lib->credmgr, cert, TRUE, NULL);
+	if (!issuer)
+	{
+		DBG1(DBG_IKE, "Failed to retrieve \"%Y\" from local trusted CA", cert->get_issuer(cert));
+		return;
+	}
+	cert = issuer;
+
+	while (!cert->issued_by(cert, cert, NULL))
+	{
+		issuer = lib->credmgr->get_issuer_cert(lib->credmgr, cert, TRUE, NULL);
+
+		if (!issuer)
+		{
+			DBG1(DBG_IKE, "Failed to retrieve \"%Y\" from local trusted CA", cert->get_issuer(cert));
+			return;
+		}
+
+		payload = build_cert_ocsp_payload(cert, issuer, auth);
+		if (payload)
+		{
+			DBG1(DBG_IKE, "sending OCSP status for cert \"%Y\"", cert->get_subject(cert));
+			message->add_payload(message, (payload_t*)payload);
+		}
+
+		cert = issuer;
+	}
+	DBG2(DBG_IKE, "Reached root CA \"%Y\"", cert->get_subject(cert));
+}
+
+/**
  * add certificates to message
  */
 static void build_certs(private_ike_cert_post_t *this, message_t *message)
@@ -247,6 +336,23 @@ static void build_certs(private_ike_cert_post_t *this, message_t *message)
 			{
 				add_im_certs(this, auth, message);
 				add_attribute_certs(this, auth, message);
+			}
+			break;
+	}
+
+	switch(peer_cfg->get_ocsp_policy(peer_cfg))
+	{
+		case OCSP_NEVER:
+		case OCSP_REQUEST:
+			break;
+		case OCSP_REPLY:
+		case OCSP_BOTH:
+			if (this->ike_sa->has_condition(this->ike_sa, COND_OCSP_REQUEST) &&
+				!this->ike_sa->has_condition(this->ike_sa, COND_ONLINE_VALIDATION_SUSPENDED))
+			{
+				DBG1(DBG_IKE, "building CERT payloads with OCSP status");
+				auth = this->ike_sa->get_auth_cfg(this->ike_sa, TRUE);
+				add_cert_ocsp(this, auth, message);
 			}
 			break;
 	}
