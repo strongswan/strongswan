@@ -250,6 +250,11 @@ enum ike_condition_t {
 	 * All authentication rounds have been completed successfully
 	 */
 	COND_AUTHENTICATED = (1<<14),
+
+	/**
+	 * An OCSP status request was received
+	 */
+	COND_OCSP_REQUEST = (1<<15),
 };
 
 /**
