@@ -97,6 +97,11 @@ struct private_ike_cfg_t {
 	bool certreq;
 
 	/**
+	 * should we send an OCSP status request?
+	 */
+	bool ocsp_certreq;
+
+	/**
 	 * enforce UDP encapsulation
 	 */
 	bool force_encap;
@@ -132,6 +137,12 @@ METHOD(ike_cfg_t, send_certreq, bool,
 	private_ike_cfg_t *this)
 {
 	return this->certreq;
+}
+
+METHOD(ike_cfg_t, send_ocsp_certreq, bool,
+	private_ike_cfg_t *this)
+{
+	return this->ocsp_certreq;
 }
 
 METHOD(ike_cfg_t, force_encap_, bool,
@@ -388,6 +399,7 @@ METHOD(ike_cfg_t, equals, bool,
 	return
 		this->version == other->version &&
 		this->certreq == other->certreq &&
+		this->ocsp_certreq == other->ocsp_certreq &&
 		this->force_encap == other->force_encap &&
 		this->fragmentation == other->fragmentation &&
 		this->childless == other->childless &&
@@ -587,6 +599,7 @@ ike_cfg_t *ike_cfg_create(ike_cfg_create_t *data)
 		.public = {
 			.get_version = _get_version,
 			.send_certreq = _send_certreq,
+			.send_ocsp_certreq = _send_ocsp_certreq,
 			.force_encap = _force_encap_,
 			.fragmentation = _fragmentation,
 			.childless = _childless,
@@ -611,6 +624,7 @@ ike_cfg_t *ike_cfg_create(ike_cfg_create_t *data)
 		.refcount = 1,
 		.version = data->version,
 		.certreq = !data->no_certreq,
+		.ocsp_certreq = !data->no_ocsp_certreq,
 		.force_encap = data->force_encap,
 		.fragmentation = data->fragmentation,
 		.childless = data->childless,
