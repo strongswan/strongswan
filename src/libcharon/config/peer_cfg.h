@@ -62,18 +62,22 @@ enum cert_policy_t {
  */
 extern enum_name_t *cert_policy_names;
 
+#if defined(WIN32) && defined(OCSP_REQUEST)
+#undef OCSP_REQUEST
+#endif
+
 /**
  * OCSP status request/response sending policy.
  */
 enum ocsp_policy_t {
 	/** both request OCSP status and reply to OCSP status request */
-	OCSP_BOTH =     0,
+	OCSP_BOTH =		0,
 	/** send OCSP status upon OCSP status request */
-	OCSP_REPLY =    1,
+	OCSP_REPLY =	1,
 	/** send OCSP status request */
-	OCSP_REQUEST =  2,
+	OCSP_REQUEST =	2,
 	/** never send OCSP status request or response */
-	OCSP_NEVER =    3,
+	OCSP_NEVER =	3,
 };
 
 /**
