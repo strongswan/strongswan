@@ -16,13 +16,11 @@
 
 package org.strongswan.android.test;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 import org.strongswan.android.utils.IPRange;
 import org.strongswan.android.utils.Utils;
 
@@ -33,15 +31,21 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({ Utils.class, IPRange.class })
 public class IPRangeTest
 {
+	MockedStatic<Utils> mockedUtils;
+
 	@Before
 	public void initUtils() throws UnknownHostException
 	{
-		PowerMockito.mockStatic(Utils.class);
-		Mockito.when(Utils.parseInetAddress(anyString())).thenAnswer(invocation -> InetAddress.getByName(invocation.getArgument(0)));
+		mockedUtils = Mockito.mockStatic(Utils.class);
+		mockedUtils.when(() -> Utils.parseInetAddress(anyString())).thenAnswer(invocation -> InetAddress.getByName(invocation.getArgument(0)));
+	}
+
+	@After
+	public void deinitUtils()
+	{
+		mockedUtils.close();
 	}
 
 	@Test
