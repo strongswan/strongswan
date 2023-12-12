@@ -1,38 +1,35 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 33
-
     namespace 'org.strongswan.android'
 
     defaultConfig {
         applicationId "org.strongswan.android"
+        compileSdk 34
         minSdkVersion 21
         targetSdkVersion 33
         versionCode 80
         versionName "2.4.2"
+
+        externalNativeBuild {
+            ndkBuild {
+                arguments '-j' + Runtime.runtime.availableProcessors()
+            }
+        }
     }
 
-    sourceSets.main {
-        jniLibs.srcDir 'src/main/libs'
+    ndkVersion "26.1.10909125"
+
+    externalNativeBuild {
+        ndkBuild {
+            path 'src/main/jni/Android.mk'
+        }
     }
 
-    task buildNative(type: Exec) {
-        workingDir 'src/main/jni'
-        commandLine "${android.ndkDirectory}/ndk-build", '-j', Runtime.runtime.availableProcessors()
+    tasks.withType(JavaCompile).configureEach {
+        compileTask ->
+            options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
     }
-
-    task cleanNative(type: Exec) {
-        workingDir 'src/main/jni'
-        commandLine "${android.ndkDirectory}/ndk-build", 'clean'
-    }
-
-    tasks.withType(JavaCompile) {
-        compileTask -> compileTask.dependsOn buildNative
-        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
-    }
-
-    clean.dependsOn 'cleanNative'
 
     buildTypes {
         release {
@@ -47,10 +44,10 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.4.2'
-    implementation 'androidx.preference:preference:1.2.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'com.google.android.material:material:1.6.1'
+    implementation 'com.google.android.material:material:1.10.0'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:3.11.2'
     testImplementation 'org.powermock:powermock-core:2.0.9'
