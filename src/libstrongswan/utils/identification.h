@@ -298,7 +298,7 @@ struct identification_t {
  * - ID_IPV6_ADDR:		2001:0db8:85a3:08d3:1319:8a2e:0370:7345
  * - ID_FQDN:			www.strongswan.org (optionally with a prepended @)
  * - ID_RFC822_ADDR:	alice@wonderland.org
- * - ID_DER_ASN1_DN:	C=CH, O=Linux strongSwan, CN=bob
+ * - ID_DER_ASN1_DN:	C=CH, O=strongSwan Project, CN=bob
  *
  * In favor of pluto, domainnames are prepended with an @, since
  * pluto resolves domainnames without an @ to IPv4 addresses. Since
