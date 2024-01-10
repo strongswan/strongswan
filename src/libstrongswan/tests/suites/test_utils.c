@@ -257,6 +257,26 @@ START_TEST(test_round)
 END_TEST
 
 /*******************************************************************************
+ * ref_get/put
+ */
+
+START_TEST(test_refs)
+{
+	refcount_t r = 0xfffffffe;
+
+	ck_assert_int_eq(ref_cur(&r), 0xfffffffe);
+	ck_assert_int_eq(ref_get(&r), 0xffffffff);
+	ck_assert_int_eq(ref_get_nonzero(&r), 1);
+	ck_assert_int_eq(ref_get_nonzero(&r), 2);
+	ck_assert_int_eq(ref_cur(&r), 2);
+	ck_assert(!ref_put(&r));
+	ck_assert_int_eq(ref_cur(&r), 1);
+	ck_assert(ref_put(&r));
+	ck_assert_int_eq(ref_cur(&r), 0);
+}
+END_TEST
+
+/*******************************************************************************
  * streq
  */
 
@@ -1270,6 +1290,10 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("round");
 	tcase_add_test(tc, test_round);
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("refcount");
+	tcase_add_test(tc, test_refs);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("string helper");
