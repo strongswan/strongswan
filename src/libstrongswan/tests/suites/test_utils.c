@@ -54,24 +54,35 @@ END_TEST
 
 START_TEST(test_return_functions)
 {
+	void *(*test_ptr)(char*,int,void*,int,char*);
+	bool (*test_bool)(char*,int,void*,int,char*);
+	status_t (*test_status)(char*,int,void*,int,char*);
+	void (*test_void)(char*,int,void*,int,char*);
+
 	ck_assert(return_null() == NULL);
-	ck_assert(return_null("asdf", 5, NULL, 1, "qwer") == NULL);
+	test_ptr = (void*)return_null;
+	ck_assert(test_ptr("asdf", 5, NULL, 1, "qwer") == NULL);
 
 	ck_assert(return_true() == TRUE);
-	ck_assert(return_true("asdf", 5, NULL, 1, "qwer") == TRUE);
+	test_bool = (void*)return_true;
+	ck_assert(test_bool("asdf", 5, NULL, 1, "qwer") == TRUE);
 
 	ck_assert(return_false() == FALSE);
-	ck_assert(return_false("asdf", 5, NULL, 1, "qwer") == FALSE);
+	test_bool = (void*)return_false;
+	ck_assert(test_bool("asdf", 5, NULL, 1, "qwer") == FALSE);
 
 	ck_assert(return_failed() == FAILED);
-	ck_assert(return_failed("asdf", 5, NULL, 1, "qwer") == FAILED);
+	test_status = (void*)return_failed;
+	ck_assert(test_status("asdf", 5, NULL, 1, "qwer") == FAILED);
 
 	ck_assert(return_success() == SUCCESS);
-	ck_assert(return_success("asdf", 5, NULL, 1, "qwer") == SUCCESS);
+	test_status = (void*)return_success;
+	ck_assert(test_status("asdf", 5, NULL, 1, "qwer") == SUCCESS);
 
 	/* just make sure this works */
 	nop();
-	nop("asdf", 5, NULL, 1, "qwer");
+	test_void = (void*)nop;
+	test_void("asdf", 5, NULL, 1, "qwer");
 }
 END_TEST
 
