@@ -21,9 +21,12 @@ jobs:
           concurrent_skipping: 'same_content'
 
   macos:
+    strategy:
+      matrix:
+        os: [macos-latest, macos-13]
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     env:
       TEST: macos
