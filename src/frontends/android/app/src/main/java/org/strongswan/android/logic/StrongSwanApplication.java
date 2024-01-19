@@ -49,6 +49,7 @@ public class StrongSwanApplication extends Application implements DefaultLifecyc
 	private static final String TAG = StrongSwanApplication.class.getSimpleName();
 
 	private static Context mContext;
+	private static StrongSwanApplication mInstance;
 
 	private final ExecutorService mExecutorService = Executors.newFixedThreadPool(4);
 	private final Handler mMainHandler = HandlerCompat.createAsync(Looper.getMainLooper());
@@ -75,6 +76,7 @@ public class StrongSwanApplication extends Application implements DefaultLifecyc
 	{
 		super.onCreate();
 		StrongSwanApplication.mContext = getApplicationContext();
+		StrongSwanApplication.mInstance = this;
 
 		mManagedConfigurationService = new ManagedConfigurationService(mContext);
 		ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
@@ -118,6 +120,16 @@ public class StrongSwanApplication extends Application implements DefaultLifecyc
 	public static Context getContext()
 	{
 		return StrongSwanApplication.mContext;
+	}
+
+	/**
+	 * Returns the current application object
+	 *
+	 * @return application
+	 */
+	public static StrongSwanApplication getInstance()
+	{
+		return StrongSwanApplication.mInstance;
 	}
 
 	/**
