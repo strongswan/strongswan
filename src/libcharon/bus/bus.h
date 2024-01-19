@@ -377,6 +377,14 @@ struct bus_t {
 							 chunk_t sk_pi, chunk_t sk_pr);
 
 	/**
+	 * IKE_SA apply PPK hook
+	 *
+	 * @param ike_sa	IKE_SA the PPK was applied to
+	 * @param ppk_id	the id of the applied PPK
+	 */
+	void (*ike_ppk)(bus_t *this, ike_sa_t *ike_sa, identification_t *ppk_id);
+
+	/**
 	 * CHILD_SA keymat hook.
 	 *
 	 * @param child_sa	CHILD_SA this keymat is used for
