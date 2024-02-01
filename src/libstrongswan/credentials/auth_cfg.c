@@ -956,13 +956,34 @@ METHOD(auth_cfg_t, complies, bool,
 						{
 							break;
 						}
+						if (log_error)
+						{
+							DBG1(DBG_CFG, "constraint check failed: certificate"
+								 " does not confirm identity '%Y' (%N)",
+								 id1, id_type_names, id1->get_type(id1));
+						}
+						success = FALSE;
+						break;
 					}
 					success = FALSE;
-					if (log_error)
+					if (!log_error)
+					{
+						break;
+				    }
+					if (id2)
 					{
 						DBG1(DBG_CFG, "constraint check failed: %sidentity '%Y'"
-							 " required ", t1 == AUTH_RULE_IDENTITY ? "" :
-							 "EAP ", id1);
+							 " (%N) required, not matched by '%Y' (%N)",
+							 t1 == AUTH_RULE_IDENTITY ? "" : "EAP ",
+							 id1, id_type_names, id1->get_type(id1),
+							 id2, id_type_names, id2->get_type(id2));
+					}
+					else
+					{
+						DBG1(DBG_CFG, "constraint check failed: %sidentity '%Y'"
+							 " (%N) required",
+							 t1 == AUTH_RULE_IDENTITY ? "" : "EAP ",
+							 id1, id_type_names, id1->get_type(id1));
 					}
 				}
 				break;
