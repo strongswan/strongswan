@@ -309,6 +309,7 @@ ARG_ENABL_SET([systemd],        [enable systemd specific IKE daemon charon-syste
 ARG_DISBL_SET([swanctl],        [disable swanctl configuration and control tool.])
 ARG_ENABL_SET([tkm],            [enable Trusted Key Manager support.])
 ARG_ENABL_SET([cert-enroll],    [enable automatic certificate enrollment via EST or SCEP.])
+ARG_ENABL_SET([ocspd],[enable OCSP responder daemon.])
 # optional features
 ARG_ENABL_SET([bfd-backtraces], [use binutils libbfd to resolve backtraces for memory leaks and segfaults.])
 ARG_ENABL_SET([dbghelp-backtraces],[use dbghlp.dll on Windows to create and print backtraces for memory leaks and segfaults.])
@@ -1906,6 +1907,7 @@ AM_CONDITIONAL(USE_SYSTEMD, test x$systemd = xtrue)
 AM_CONDITIONAL(USE_LEGACY_SYSTEMD, test -n "$systemdsystemunitdir" -a "x$systemdsystemunitdir" != xno)
 AM_CONDITIONAL(USE_CERT_ENROLL, test x$cert_enroll = xtrue)
 AM_CONDITIONAL(USE_CERT_ENROLL_TIMER, test x$cert_enroll_timer = xtrue)
+AM_CONDITIONAL(USE_OCSPD, test x$ocspd = xtrue)
 AM_CONDITIONAL(USE_RUBY_GEMS, test x$ruby_gems = xtrue)
 AM_CONDITIONAL(USE_PYTHON_EGGS, test x$python_eggs = xtrue)
 AM_CONDITIONAL(USE_PERL_CPAN, test x$perl_cpan = xtrue)
@@ -2182,6 +2184,7 @@ AC_CONFIG_FILES([
 	src/sec-updater/Makefile
 	src/swanctl/Makefile
 	src/cert-enroll/Makefile
+	src/ocspd/Makefile
 	src/xfrmi/Makefile
 	scripts/Makefile
 	testing/Makefile
@@ -2223,6 +2226,7 @@ AC_CONFIG_FILES([
 	src/sw-collector/sw-collector.8
 	src/sec-updater/sec-updater.8
 	src/cert-enroll/cert-enroll.8
+	src/ocspd/ocspd.8
 ])
 
 AC_OUTPUT

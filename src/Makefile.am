@@ -146,3 +146,7 @@ endif
 if USE_CERT_ENROLL
   SUBDIRS += cert-enroll
 endif
+
+if USE_OCSPD
+  SUBDIRS += ocspd
+endif
