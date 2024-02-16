@@ -257,6 +257,26 @@ START_TEST(test_round)
 END_TEST
 
 /*******************************************************************************
+ * ref_get/put
+ */
+
+START_TEST(test_refs)
+{
+	refcount_t r = 0xfffffffe;
+
+	ck_assert_int_eq(ref_cur(&r), 0xfffffffe);
+	ck_assert_int_eq(ref_get(&r), 0xffffffff);
+	ck_assert_int_eq(ref_get_nonzero(&r), 1);
+	ck_assert_int_eq(ref_get_nonzero(&r), 2);
+	ck_assert_int_eq(ref_cur(&r), 2);
+	ck_assert(!ref_put(&r));
+	ck_assert_int_eq(ref_cur(&r), 1);
+	ck_assert(ref_put(&r));
+	ck_assert_int_eq(ref_cur(&r), 0);
+}
+END_TEST
+
+/*******************************************************************************
  * streq
  */
 
@@ -1105,6 +1125,41 @@ START_TEST(test_mark_from_string)
 END_TEST
 
 /*******************************************************************************
+ * allocate_unique_marks
+ */
+
+static struct {
+	uint32_t in;
+	uint32_t out;
+	uint32_t exp_in;
+	uint32_t exp_out;
+} unique_mark_data[] = {
+	{0, 0, 0, 0 },
+	{42, 42, 42, 42 },
+	{42, 1337, 42, 1337 },
+	/* each call increases the internal counter by 1 or 2*/
+	{MARK_UNIQUE, 42, 1, 42 },
+	{42, MARK_UNIQUE, 42, 2 },
+	{MARK_UNIQUE_DIR, 42, 3, 42 },
+	{42, MARK_UNIQUE_DIR, 42, 4 },
+	{MARK_UNIQUE, MARK_UNIQUE, 5, 5 },
+	{MARK_UNIQUE_DIR, MARK_UNIQUE, 6, 7 },
+	{MARK_UNIQUE, MARK_UNIQUE_DIR, 8, 9 },
+	{MARK_UNIQUE_DIR, MARK_UNIQUE_DIR, 10, 11 },
+};
+
+START_TEST(test_allocate_unique_marks)
+{
+	uint32_t mark_in = unique_mark_data[_i].in,
+			 mark_out = unique_mark_data[_i].out;
+
+	allocate_unique_marks(&mark_in, &mark_out);
+	ck_assert_int_eq(mark_in, unique_mark_data[_i].exp_in);
+	ck_assert_int_eq(mark_out, unique_mark_data[_i].exp_out);
+}
+END_TEST
+
+/*******************************************************************************
  * if_id_from_string
  */
 
@@ -1272,6 +1327,10 @@ Suite *utils_suite_create()
 	tcase_add_test(tc, test_round);
 	suite_add_tcase(s, tc);
 
+	tc = tcase_create("refcount");
+	tcase_add_test(tc, test_refs);
+	suite_add_tcase(s, tc);
+
 	tc = tcase_create("string helper");
 	tcase_add_loop_test(tc, test_streq, 0, countof(streq_data));
 	tcase_add_loop_test(tc, test_strneq, 0, countof(strneq_data));
@@ -1338,6 +1397,10 @@ Suite *utils_suite_create()
 
 	tc = tcase_create("mark_from_string");
 	tcase_add_loop_test(tc, test_mark_from_string, 0, countof(mark_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("allocate_unique_marks");
+	tcase_add_loop_test(tc, test_allocate_unique_marks, 0, countof(unique_mark_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("if_id_from_string");
