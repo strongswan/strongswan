@@ -501,7 +501,7 @@ sonarcloud)
 		-Dsonar.host.url=https://sonarcloud.io \
 		-Dsonar.projectKey=${SONAR_PROJECT} \
 		-Dsonar.organization=${SONAR_ORGANIZATION} \
-		-Dsonar.login=${SONAR_TOKEN} \
+		-Dsonar.token=${SONAR_TOKEN} \
 		-Dsonar.projectVersion=$(git describe --exclude 'android-*')+${BUILD_NUMBER} \
 		-Dsonar.sources=. \
 		-Dsonar.cfamily.threads=2 \
