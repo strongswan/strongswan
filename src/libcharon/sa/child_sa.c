@@ -2038,7 +2038,7 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 							child_sa_create_t *data)
 {
 	private_child_sa_t *this;
-	static refcount_t unique_id = 0, unique_mark = 0;
+	static refcount_t unique_id = 0;
 
 	INIT(this,
 		.public = {
@@ -2127,27 +2127,7 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 	}
 
 	allocate_unique_if_ids(&this->if_id_in, &this->if_id_out);
-
-	if (MARK_IS_UNIQUE(this->mark_in.value) ||
-		MARK_IS_UNIQUE(this->mark_out.value))
-	{
-		refcount_t mark = 0;
-		bool unique_dir = this->mark_in.value == MARK_UNIQUE_DIR ||
-						  this->mark_out.value == MARK_UNIQUE_DIR;
-
-		if (!unique_dir)
-		{
-			mark = ref_get(&unique_mark);
-		}
-		if (MARK_IS_UNIQUE(this->mark_in.value))
-		{
-			this->mark_in.value = unique_dir ? ref_get(&unique_mark) : mark;
-		}
-		if (MARK_IS_UNIQUE(this->mark_out.value))
-		{
-			this->mark_out.value = unique_dir ? ref_get(&unique_mark) : mark;
-		}
-	}
+	allocate_unique_marks(&this->mark_in.value, &this->mark_out.value);
 
 	if (!this->reqid)
 	{

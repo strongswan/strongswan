@@ -153,6 +153,34 @@ bool mark_from_string(const char *value, mark_op_t ops, mark_t *mark)
 /*
  * Described in header
  */
+void allocate_unique_marks(uint32_t *in, uint32_t *out)
+{
+	static refcount_t unique_mark = 0;
+
+	if (MARK_IS_UNIQUE(*in) || MARK_IS_UNIQUE(*out))
+	{
+		refcount_t mark = 0;
+		bool unique_dir = *in == MARK_UNIQUE_DIR ||
+						  *out == MARK_UNIQUE_DIR;
+
+		if (!unique_dir)
+		{
+			mark = ref_get(&unique_mark);
+		}
+		if (MARK_IS_UNIQUE(*in))
+		{
+			*in = unique_dir ? ref_get(&unique_mark) : mark;
+		}
+		if (MARK_IS_UNIQUE(*out))
+		{
+			*out = unique_dir ? ref_get(&unique_mark) : mark;
+		}
+	}
+}
+
+/*
+ * Described in header
+ */
 bool if_id_from_string(const char *value, uint32_t *if_id)
 {
 	char *endptr;

@@ -243,6 +243,18 @@ enum mark_op_t {
 bool mark_from_string(const char *value, mark_op_t ops, mark_t *mark);
 
 /**
+ * Allocate up to two unique marks depending on the given values.
+ *
+ * If the given values are MARK_UNIQUE, the values get replaced by a single
+ * unique mark. If the given values are MARK_UNIQUE_DIR, the values get
+ * replaced by a single unique mark for each direction.
+ *
+ * @param[out] in	inbound interface ID
+ * @param[out] out	outbound interface ID
+ */
+void allocate_unique_marks(uint32_t *in, uint32_t *out);
+
+/**
  * Special interface ID values to allocate a unique ID for each CHILD_SA/dir
  */
 #define IF_ID_UNIQUE (0xFFFFFFFF)
