@@ -221,8 +221,8 @@ METHOD(pf_handler_t, destroy, void,
 	{
 		lib->watcher->remove(lib->watcher, this->receive);
 		close(this->receive);
-		free(this);
 	}
+	free(this);
 }
 
 /**
