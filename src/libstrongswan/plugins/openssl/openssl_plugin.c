@@ -301,11 +301,12 @@ static private_key_t *openssl_private_key_load(key_type_t type, va_list args)
 				case EVP_PKEY_EC:
 					return openssl_ec_private_key_create(key, FALSE);
 #endif
-#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC) && \
+	!defined(OPENSSL_IS_AWSLC)
 				case EVP_PKEY_ED25519:
 				case EVP_PKEY_ED448:
 					return openssl_ed_private_key_create(key, FALSE);
-#endif /* OPENSSL_VERSION_NUMBER */
+#endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
 				default:
 					EVP_PKEY_free(key);
 					break;
@@ -654,7 +655,8 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_521),
 #endif
 #endif /* OPENSSL_NO_ECDSA */
-#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC)
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC) && \
+	!defined(OPENSSL_IS_AWSLC)
 		/* EdDSA private/public key loading */
 		PLUGIN_REGISTER(PUBKEY, openssl_ed_public_key_load, TRUE),
 			PLUGIN_PROVIDE(PUBKEY, KEY_ED25519),
@@ -672,7 +674,7 @@ METHOD(plugin_t, get_features, int,
 		/* register a pro forma identity hasher, never instantiated */
 		PLUGIN_REGISTER(HASHER, return_null),
 			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
-#endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC */
+#endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
 		/* generic key loader */
 		PLUGIN_REGISTER(PRIVKEY, openssl_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
@@ -705,8 +707,10 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(KE, openssl_x_diffie_hellman_create),
 			/* available since 1.1.0a, but we require 1.1.1 features */
 			PLUGIN_PROVIDE(KE, CURVE_25519),
+#ifndef OPENSSL_IS_AWSLC
 			/* available since 1.1.1 */
 			PLUGIN_PROVIDE(KE, CURVE_448),
+#endif /* OPENSSL_IS_AWSLC */
 #endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_ECDH */
 	};
 	static plugin_feature_t f[countof(f_base) + countof(f_ecdh) + countof(f_xdh)] = {};
