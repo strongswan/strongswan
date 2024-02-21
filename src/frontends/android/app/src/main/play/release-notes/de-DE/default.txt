@@ -1,5 +1,3 @@
-# 2.4.2 #
+# 2.5.0 #
 
-- Ziel-SDK auf Android 13 erhöht und frage um Erlaubnis, um Status-Mitteilung anzuzeigen
-- Hardwarebeschleunigung in OpenSSL aktiviert
-- Verwendet einen stabileren Ansatz, um die Quell-IP zu ermitteln
+- Unterstützung für verwaltete Konfigurationen via Enterprise Mobility Management (EMM)
