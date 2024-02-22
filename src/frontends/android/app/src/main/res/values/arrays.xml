@@ -24,6 +24,15 @@
         <item>IKEv2 EAP-TNC (Username/Password)</item>
     </string-array>
 
+    <string-array name="managed_config_vpn_type_values" translatable="false">
+        <item>ikev2-eap</item>
+        <item>ikev2-cert</item>
+        <item>ikev2-cert-eap</item>
+        <item>ikev2-eap-tls</item>
+        <item>ikev2-byod-eap</item>
+    </string-array>
+    <string name="managed_config_vpn_type_default_value" translatable="false">ikev2-eap</string>
+
     <!-- the order here must match the enum entries in VpnProfile.java -->
     <string-array name="apps_handling">
         <item>All applications use the VPN</item>

@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2023 Relution GmbH
+
+    Copyright (C) secunet Security Networks AG
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation; either version 2 of the License, or (at your
+    option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+-->
+<restrictions xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <restriction
+        android:defaultValue="false"
+        android:description="@string/managed_config_allow_profile_creation_description"
+        android:key="allow_profile_create"
+        android:restrictionType="bool"
+        android:title="@string/managed_config_allow_profile_creation_title" />
+
+    <restriction
+        android:defaultValue="false"
+        android:description="@string/managed_config_allow_profile_import_description"
+        android:key="allow_profile_import"
+        android:restrictionType="bool"
+        android:title="@string/managed_config_allow_profile_import_title" />
+
+    <restriction
+        android:defaultValue="false"
+        android:description="@string/managed_config_allow_existing_profiles_description"
+        android:key="allow_existing_profiles"
+        android:restrictionType="bool"
+        android:title="@string/managed_config_allow_existing_profiles_title" />
+
+    <restriction
+        android:defaultValue="false"
+        android:description="@string/managed_config_allow_certificate_import_description"
+        android:key="allow_certificate_import"
+        android:restrictionType="bool"
+        android:title="@string/managed_config_allow_certificate_import_title" />
+
+    <restriction
+        android:defaultValue="false"
+        android:description="@string/managed_config_allow_settings_access_description"
+        android:key="allow_settings_access"
+        android:restrictionType="bool"
+        android:title="@string/managed_config_allow_settings_access_title" />
+
+    <restriction
+        android:defaultValue=""
+        android:description="@string/managed_config_default_vpn_profile_description"
+        android:key="pref_default_vpn_profile"
+        android:restrictionType="string"
+        android:title="@string/managed_config_default_vpn_profile_title" />
+
+    <restriction
+        android:defaultValue="false"
+        android:description="@string/managed_config_ignore_battery_optimizations_description"
+        android:key="pref_ignore_power_whitelist"
+        android:restrictionType="bool"
+        android:title="@string/managed_config_ignore_battery_optimizations_title" />
+
+    <restriction
+        android:description="@string/managed_config_profiles_array_description"
+        android:key="managed_profiles"
+        android:restrictionType="bundle_array"
+        android:title="@string/managed_config_profiles_array_title">
+
+        <restriction
+            android:description="@string/managed_config_profile_bundle_description"
+            android:key="managed_profile"
+            android:restrictionType="bundle"
+            android:title="@string/managed_config_profile_bundle_title">
+
+            <restriction
+                android:defaultValue=""
+                android:description="@string/managed_config_uuid_description"
+                android:key="_uuid"
+                android:restrictionType="string"
+                android:title="@string/managed_config_uuid_title" />
+
+            <restriction
+                android:defaultValue=""
+                android:description="@string/managed_config_name_description"
+                android:key="name"
+                android:restrictionType="string"
+                android:title="@string/managed_config_name_title" />
+
+            <restriction
+                android:defaultValue="@string/managed_config_vpn_type_default_value"
+                android:description="@string/managed_config_vpn_type_description"
+                android:entries="@array/vpn_types"
+                android:entryValues="@array/managed_config_vpn_type_values"
+                android:key="vpn_type"
+                android:restrictionType="choice"
+                android:title="@string/managed_config_vpn_type_title" />
+
+            <restriction
+                android:description="@string/managed_config_remote_bundle_description"
+                android:key="remote"
+                android:restrictionType="bundle"
+                android:title="@string/managed_config_remote_bundle_title">
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_remote_addr_description"
+                    android:key="gateway"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_remote_addr_title" />
+
+                <restriction
+                    android:defaultValue="500"
+                    android:description="@string/managed_config_remote_port_description"
+                    android:key="port"
+                    android:restrictionType="integer"
+                    android:title="@string/managed_config_remote_port_title" />
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_remote_id_description"
+                    android:key="remote_id"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_remote_id_title" />
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_remote_cert_description"
+                    android:key="certificate"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_remote_cert_title" />
+
+                <restriction
+                    android:defaultValue="false"
+                    android:description="@string/managed_config_remote_certreq_description"
+                    android:key="remote_cert_req"
+                    android:restrictionType="bool"
+                    android:title="@string/managed_config_remote_certreq_title" />
+
+                <restriction
+                    android:defaultValue="true"
+                    android:description="@string/managed_config_remote_revocation_ocsp_description"
+                    android:key="remote_revocation_ocsp"
+                    android:restrictionType="bool"
+                    android:title="@string/managed_config_remote_revocation_ocsp_title" />
+
+                <restriction
+                    android:defaultValue="true"
+                    android:description="@string/managed_config_remote_revocation_crl_description"
+                    android:key="remote_revocation_crl"
+                    android:restrictionType="bool"
+                    android:title="@string/managed_config_remote_revocation_crl_title" />
+
+                <restriction
+                    android:defaultValue="false"
+                    android:description="@string/managed_config_remote_revocation_strict_description"
+                    android:key="remote_revocation_strict"
+                    android:restrictionType="bool"
+                    android:title="@string/managed_config_remote_revocation_strict_title" />
+            </restriction>
+
+            <restriction
+                android:description="@string/managed_config_local_bundle_description"
+                android:key="local"
+                android:restrictionType="bundle"
+                android:title="@string/managed_config_local_bundle_title">
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_local_eap_id_description"
+                    android:key="username"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_local_eap_id_title" />
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_local_id_description"
+                    android:key="local_id"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_local_id_title" />
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_local_p12_description"
+                    android:key="user_certificate"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_local_p12_title" />
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_local_p12_password_description"
+                    android:key="user_certificate_password"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_local_p12_password_title" />
+
+                <restriction
+                    android:defaultValue="false"
+                    android:description="@string/managed_config_local_rsa_pss_description"
+                    android:key="local_rsa_pss"
+                    android:restrictionType="bool"
+                    android:title="@string/managed_config_local_rsa_pss_title" />
+
+            </restriction>
+
+            <restriction
+                android:defaultValue=""
+                android:description="@string/managed_config_included_package_names_description"
+                android:key="included_apps"
+                android:restrictionType="string"
+                android:title="@string/managed_config_included_package_names_title" />
+
+            <restriction
+                android:defaultValue=""
+                android:description="@string/managed_config_excluded_package_names_description"
+                android:key="excluded_apps"
+                android:restrictionType="string"
+                android:title="@string/managed_config_excluded_package_names_title" />
+
+            <restriction
+                android:defaultValue=""
+                android:description="@string/managed_config_ike_proposal_description"
+                android:key="ike_proposal"
+                android:restrictionType="string"
+                android:title="@string/managed_config_ike_proposal_title" />
+
+            <restriction
+                android:defaultValue=""
+                android:description="@string/managed_config_esp_proposal_description"
+                android:key="esp_proposal"
+                android:restrictionType="string"
+                android:title="@string/managed_config_esp_proposal_title" />
+
+            <restriction
+                android:defaultValue="-1"
+                android:description="@string/managed_config_mtu_description"
+                android:key="mtu"
+                android:restrictionType="integer"
+                android:title="@string/managed_config_mtu_title" />
+
+            <restriction
+                android:defaultValue="-1"
+                android:description="@string/managed_config_nat_keepalive_description"
+                android:key="nat_keepalive"
+                android:restrictionType="integer"
+                android:title="@string/managed_config_nat_keepalive_title" />
+
+            <restriction
+                android:defaultValue=""
+                android:description="@string/managed_config_dns_server_host_names_description"
+                android:key="dns_servers"
+                android:restrictionType="string"
+                android:title="@string/managed_config_dns_server_host_names_title" />
+
+            <restriction
+                android:defaultValue="false"
+                android:description="@string/managed_config_ipv6_transport_description"
+                android:key="transport_ipv6"
+                android:restrictionType="bool"
+                android:title="@string/managed_config_ipv6_transport_title" />
+
+            <restriction
+                android:description="@string/managed_config_split_tunneling_bundle_description"
+                android:key="split_tunnelling"
+                android:restrictionType="bundle"
+                android:title="@string/managed_config_split_tunneling_bundle_title">
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_split_tunneling_subnets_description"
+                    android:key="included_subnets"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_split_tunneling_subnets_title" />
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_split_tunneling_excluded_description"
+                    android:key="excluded_subnets"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_split_tunneling_excluded_title" />
+
+                <restriction
+                    android:defaultValue="false"
+                    android:description="@string/managed_config_split_tunneling_block_ipv4_description"
+                    android:key="split_tunnelling_block_IPv4"
+                    android:restrictionType="bool"
+                    android:title="@string/managed_config_split_tunneling_block_ipv4_title" />
+
+                <restriction
+                    android:defaultValue="false"
+                    android:description="@string/managed_config_split_tunneling_block_ipv6_description"
+                    android:key="split_tunnelling_block_IPv6"
+                    android:restrictionType="bool"
+                    android:title="@string/managed_config_split_tunneling_block_ipv6_title" />
+
+            </restriction>
+
+        </restriction>
+    </restriction>
+</restrictions>

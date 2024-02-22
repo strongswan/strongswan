@@ -161,9 +161,17 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Managed configuration, called app restrictions for historical reasons
+            https://developer.android.com/work/managed-configurations
+        -->
+        <meta-data
+            android:name="android.content.APP_RESTRICTIONS"
+            android:resource="@xml/managed_configuration" />
+
         <service
             android:name=".logic.VpnStateService"
-            android:exported="false" >
+            android:exported="false">
         </service>
         <service
             android:name=".logic.CharonVpnService"

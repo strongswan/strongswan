@@ -60,9 +60,11 @@ public class SelectedApplicationsListFragment extends ListFragment implements Lo
 		super.onViewCreated(view, savedInstanceState);
 		setHasOptionsMenu(true);
 
-		getListView().setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+		final boolean readOnly = getActivity().getIntent().getBooleanExtra(VpnProfileDataSource.KEY_READ_ONLY, false);
+		getListView().setChoiceMode(readOnly ? ListView.CHOICE_MODE_NONE : ListView.CHOICE_MODE_MULTIPLE);
 
 		mAdapter = new SelectedApplicationsAdapter(getActivity());
+		mAdapter.setReadOnly(readOnly);
 		setListAdapter(mAdapter);
 		setListShown(false);
 
@@ -101,6 +103,11 @@ public class SelectedApplicationsListFragment extends ListFragment implements Lo
 	@Override
 	public void onListItemClick(ListView l, View v, int position, long id)
 	{
+		if (mAdapter.isReadOnly())
+		{
+			return;
+		}
+
 		super.onListItemClick(l, v, position, id);
 		SelectedApplicationEntry item = (SelectedApplicationEntry)getListView().getItemAtPosition(position);
 		item.setSelected(!item.isSelected());

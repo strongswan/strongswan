@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2023 Relution GmbH
  * Copyright (C) 2012-2020 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
@@ -22,7 +23,6 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.security.KeyChain;
@@ -44,7 +44,6 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
@@ -58,6 +57,7 @@ import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfile.SelectedAppsHandling;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.data.VpnType;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.StrongSwanApplication;
@@ -89,7 +89,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 public class VpnProfileDetailActivity extends AppCompatActivity
 {
 	private VpnProfileDataSource mDataSource;
-	private Long mId;
+	private String mUuid;
 	private TrustedCertificateEntry mCertEntry;
 	private String mUserCertLoading;
 	private CertificateIdentitiesAdapter mSelectUserIdAdapter;
@@ -98,6 +98,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
 	private SortedSet<String> mSelectedApps = new TreeSet<>();
 	private VpnProfile mProfile;
+	private View mManagedProfile;
 	private MultiAutoCompleteTextView mName;
 	private TextInputLayoutHelper mNameWrap;
 	private EditText mGateway;
@@ -190,69 +191,71 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		/* the title is set when we load the profile, if any */
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
-		mDataSource = new VpnProfileDataSource(this);
+		mDataSource = new VpnProfileSource(this);
 		mDataSource.open();
 
 		setContentView(R.layout.profile_detail_view);
 
-		mName = (MultiAutoCompleteTextView)findViewById(R.id.name);
-		mNameWrap = (TextInputLayoutHelper)findViewById(R.id.name_wrap);
-		mGateway = (EditText)findViewById(R.id.gateway);
-		mGatewayWrap = (TextInputLayoutHelper) findViewById(R.id.gateway_wrap);
-		mSelectVpnType = (Spinner)findViewById(R.id.vpn_type);
-		mTncNotice = (RelativeLayout)findViewById(R.id.tnc_notice);
+		mManagedProfile = findViewById(R.id.managed_profile);
 
-		mUsernamePassword = (ViewGroup)findViewById(R.id.username_password_group);
-		mUsername = (EditText)findViewById(R.id.username);
-		mUsernameWrap = (TextInputLayoutHelper) findViewById(R.id.username_wrap);
-		mPassword = (EditText)findViewById(R.id.password);
+		mName = findViewById(R.id.name);
+		mNameWrap = findViewById(R.id.name_wrap);
+		mGateway = findViewById(R.id.gateway);
+		mGatewayWrap = findViewById(R.id.gateway_wrap);
+		mSelectVpnType = findViewById(R.id.vpn_type);
+		mTncNotice = findViewById(R.id.tnc_notice);
 
-		mUserCertificate = (ViewGroup)findViewById(R.id.user_certificate_group);
-		mSelectUserCert = (RelativeLayout)findViewById(R.id.select_user_certificate);
+		mUsernamePassword = findViewById(R.id.username_password_group);
+		mUsername = findViewById(R.id.username);
+		mUsernameWrap = findViewById(R.id.username_wrap);
+		mPassword = findViewById(R.id.password);
 
-		mCheckAuto = (CheckBox)findViewById(R.id.ca_auto);
-		mSelectCert = (RelativeLayout)findViewById(R.id.select_certificate);
+		mUserCertificate = findViewById(R.id.user_certificate_group);
+		mSelectUserCert = findViewById(R.id.select_user_certificate);
 
-		mShowAdvanced = (CheckBox)findViewById(R.id.show_advanced);
-		mAdvancedSettings = (ViewGroup)findViewById(R.id.advanced_settings);
+		mCheckAuto = findViewById(R.id.ca_auto);
+		mSelectCert = findViewById(R.id.select_certificate);
 
-		mRemoteId = (MultiAutoCompleteTextView)findViewById(R.id.remote_id);
-		mRemoteIdWrap = (TextInputLayoutHelper) findViewById(R.id.remote_id_wrap);
+		mShowAdvanced = findViewById(R.id.show_advanced);
+		mAdvancedSettings = findViewById(R.id.advanced_settings);
+
+		mRemoteId = findViewById(R.id.remote_id);
+		mRemoteIdWrap = findViewById(R.id.remote_id_wrap);
 		mLocalId = findViewById(R.id.local_id);
 		mLocalIdWrap = findViewById(R.id.local_id_wrap);
 		mDnsServers = findViewById(R.id.dns_servers);
 		mDnsServersWrap = findViewById(R.id.dns_servers_wrap);
-		mMTU = (EditText)findViewById(R.id.mtu);
-		mMTUWrap = (TextInputLayoutHelper) findViewById(R.id.mtu_wrap);
-		mPort = (EditText)findViewById(R.id.port);
-		mPortWrap = (TextInputLayoutHelper) findViewById(R.id.port_wrap);
-		mNATKeepalive = (EditText)findViewById(R.id.nat_keepalive);
-		mNATKeepaliveWrap = (TextInputLayoutHelper) findViewById(R.id.nat_keepalive_wrap);
+		mMTU = findViewById(R.id.mtu);
+		mMTUWrap = findViewById(R.id.mtu_wrap);
+		mPort = findViewById(R.id.port);
+		mPortWrap = findViewById(R.id.port_wrap);
+		mNATKeepalive = findViewById(R.id.nat_keepalive);
+		mNATKeepaliveWrap = findViewById(R.id.nat_keepalive_wrap);
 		mCertReq = findViewById(R.id.cert_req);
 		mUseCrl = findViewById(R.id.use_crl);
 		mUseOcsp = findViewById(R.id.use_ocsp);
-		mStrictRevocation= findViewById(R.id.strict_revocation);
-		mRsaPss= findViewById(R.id.rsa_pss);
-		mIPv6Transport= findViewById(R.id.ipv6_transport);
-		mIncludedSubnets = (EditText)findViewById(R.id.included_subnets);
-		mIncludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.included_subnets_wrap);
-		mExcludedSubnets = (EditText)findViewById(R.id.excluded_subnets);
-		mExcludedSubnetsWrap = (TextInputLayoutHelper)findViewById(R.id.excluded_subnets_wrap);
-		mBlockIPv4 = (CheckBox)findViewById(R.id.split_tunneling_v4);
-		mBlockIPv6 = (CheckBox)findViewById(R.id.split_tunneling_v6);
+		mStrictRevocation = findViewById(R.id.strict_revocation);
+		mRsaPss = findViewById(R.id.rsa_pss);
+		mIPv6Transport = findViewById(R.id.ipv6_transport);
+		mIncludedSubnets = findViewById(R.id.included_subnets);
+		mIncludedSubnetsWrap = findViewById(R.id.included_subnets_wrap);
+		mExcludedSubnets = findViewById(R.id.excluded_subnets);
+		mExcludedSubnetsWrap = findViewById(R.id.excluded_subnets_wrap);
+		mBlockIPv4 = findViewById(R.id.split_tunneling_v4);
+		mBlockIPv6 = findViewById(R.id.split_tunneling_v6);
 
-		mSelectSelectedAppsHandling = (Spinner)findViewById(R.id.apps_handling);
-		mSelectApps = (RelativeLayout)findViewById(R.id.select_applications);
+		mSelectSelectedAppsHandling = findViewById(R.id.apps_handling);
+		mSelectApps = findViewById(R.id.select_applications);
 
-		mIkeProposal = (EditText)findViewById(R.id.ike_proposal);
-		mIkeProposalWrap = (TextInputLayoutHelper)findViewById(R.id.ike_proposal_wrap);
-		mEspProposal = (EditText)findViewById(R.id.esp_proposal);
-		mEspProposalWrap = (TextInputLayoutHelper)findViewById(R.id.esp_proposal_wrap);
+		mIkeProposal = findViewById(R.id.ike_proposal);
+		mIkeProposalWrap = findViewById(R.id.ike_proposal_wrap);
+		mEspProposal = findViewById(R.id.esp_proposal);
+		mEspProposalWrap = findViewById(R.id.esp_proposal_wrap);
 		/* make the link clickable */
 		((TextView)findViewById(R.id.proposal_intro)).setMovementMethod(LinkMovementMethod.getInstance());
 
-		mProfileIdLabel = (TextView)findViewById(R.id.profile_id_label);
-		mProfileId = (TextView)findViewById(R.id.profile_id);
+		mProfileIdLabel = findViewById(R.id.profile_id_label);
+		mProfileId = findViewById(R.id.profile_id);
 
 		final SpaceTokenizer spaceTokenizer = new SpaceTokenizer();
 		mName.setTokenizer(spaceTokenizer);
@@ -262,14 +265,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mName.setAdapter(gatewayAdapter);
 		mRemoteId.setAdapter(gatewayAdapter);
 
-		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP)
+		mGateway.addTextChangedListener(new TextWatcher()
 		{
-			findViewById(R.id.apps).setVisibility(View.GONE);
-			mSelectSelectedAppsHandling.setVisibility(View.GONE);
-			mSelectApps.setVisibility(View.GONE);
-		}
-
-		mGateway.addTextChangedListener(new TextWatcher() {
 			@Override
 			public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
@@ -294,7 +291,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			}
 		});
 
-		mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener() {
+		mSelectVpnType.setOnItemSelectedListener(new OnItemSelectedListener()
+		{
 			@Override
 			public void onItemSelected(AdapterView<?> parent, View view, int position, long id)
 			{
@@ -312,7 +310,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		((TextView)mTncNotice.findViewById(android.R.id.text1)).setText(R.string.tnc_notice_title);
 		((TextView)mTncNotice.findViewById(android.R.id.text2)).setText(R.string.tnc_notice_subtitle);
-		mTncNotice.setOnClickListener(new OnClickListener() {
+		mTncNotice.setOnClickListener(new OnClickListener()
+		{
 			@Override
 			public void onClick(View v)
 			{
@@ -321,14 +320,15 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		});
 
 		mSelectUserCert.setOnClickListener(new SelectUserCertOnClickListener());
-		((Button)findViewById(R.id.install_user_certificate)).setOnClickListener(v -> {
+		findViewById(R.id.install_user_certificate).setOnClickListener(v -> {
 			Intent intent = KeyChain.createInstallIntent();
 			mInstallPKCS12.launch(intent);
 		});
 		mSelectUserIdAdapter = new CertificateIdentitiesAdapter(this);
 		mLocalId.setAdapter(mSelectUserIdAdapter);
 
-		mCheckAuto.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+		mCheckAuto.setOnCheckedChangeListener(new OnCheckedChangeListener()
+		{
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
 			{
@@ -336,7 +336,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			}
 		});
 
-		mSelectCert.setOnClickListener(new OnClickListener() {
+		mSelectCert.setOnClickListener(new OnClickListener()
+		{
 			@Override
 			public void onClick(View v)
 			{
@@ -346,7 +347,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			}
 		});
 
-		mShowAdvanced.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+		mShowAdvanced.setOnCheckedChangeListener(new OnCheckedChangeListener()
+		{
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
 			{
@@ -354,7 +356,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			}
 		});
 
-		mSelectSelectedAppsHandling.setOnItemSelectedListener(new OnItemSelectedListener() {
+		mSelectSelectedAppsHandling.setOnItemSelectedListener(new OnItemSelectedListener()
+		{
 			@Override
 			public void onItemSelected(AdapterView<?> parent, View view, int position, long id)
 			{
@@ -370,21 +373,23 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			}
 		});
 
-		mSelectApps.setOnClickListener(new OnClickListener() {
+		mSelectApps.setOnClickListener(new OnClickListener()
+		{
 			@Override
 			public void onClick(View v)
 			{
 				Intent intent = new Intent(VpnProfileDetailActivity.this, SelectedApplicationsActivity.class);
 				intent.putExtra(VpnProfileDataSource.KEY_SELECTED_APPS_LIST, new ArrayList<>(mSelectedApps));
+				intent.putExtra(VpnProfileDataSource.KEY_READ_ONLY, mProfile.isReadOnly());
 				mSelectApplications.launch(intent);
 			}
 		});
 
-		mId = savedInstanceState == null ? null : savedInstanceState.getLong(VpnProfileDataSource.KEY_ID);
-		if (mId == null)
+		mUuid = savedInstanceState == null ? null : savedInstanceState.getString(VpnProfileDataSource.KEY_UUID);
+		if (mUuid == null)
 		{
 			Bundle extras = getIntent().getExtras();
-			mId = extras == null ? null : extras.getLong(VpnProfileDataSource.KEY_ID);
+			mUuid = extras == null ? null : extras.getString(VpnProfileDataSource.KEY_UUID);
 		}
 
 		loadProfileData(savedInstanceState);
@@ -406,9 +411,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	protected void onSaveInstanceState(Bundle outState)
 	{
 		super.onSaveInstanceState(outState);
-		if (mId != null)
+		if (mUuid != null)
 		{
-			outState.putLong(VpnProfileDataSource.KEY_ID, mId);
+			outState.putString(VpnProfileDataSource.KEY_UUID, mUuid);
 		}
 		if (mUserCertEntry != null)
 		{
@@ -489,7 +494,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		AlertDialog.Builder adb = new AlertDialog.Builder(VpnProfileDetailActivity.this);
 		adb.setTitle(R.string.alert_text_nocertfound_title);
 		adb.setMessage(R.string.alert_text_nocertfound);
-		adb.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+		adb.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener()
+		{
 			@Override
 			public void onClick(DialogInterface dialog, int id)
 			{
@@ -614,16 +620,17 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mDataSource.insertProfile(mProfile);
 			}
 			Intent intent = new Intent(Constants.VPN_PROFILES_CHANGED);
-			intent.putExtra(Constants.VPN_PROFILES_SINGLE, mProfile.getId());
+			intent.putExtra(Constants.VPN_PROFILES_SINGLE, mProfile.getUUID().toString());
 			LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
 
-			setResult(RESULT_OK, new Intent().putExtra(VpnProfileDataSource.KEY_ID, mProfile.getId()));
+			setResult(RESULT_OK, new Intent().putExtra(VpnProfileDataSource.KEY_UUID, mProfile.getUUID().toString()));
 			finish();
 		}
 	}
 
 	/**
 	 * Verify the user input and display error messages.
+	 *
 	 * @return true if the input is valid
 	 */
 	private boolean verifyInput()
@@ -755,9 +762,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		Integer flags = null;
 
 		getSupportActionBar().setTitle(R.string.add_profile);
-		if (mId != null && mId != 0)
+		if (mUuid != null)
 		{
-			mProfile = mDataSource.getVpnProfile(mId);
+			mProfile = mDataSource.getVpnProfile(mUuid);
 			if (mProfile != null)
 			{
 				mName.setText(mProfile.getName());
@@ -785,11 +792,13 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				local_id = mProfile.getLocalId();
 				alias = mProfile.getCertificateAlias();
 				getSupportActionBar().setTitle(mProfile.getName());
+
+				setReadOnly(mProfile.isReadOnly());
 			}
 			else
 			{
 				Log.e(VpnProfileDetailActivity.class.getSimpleName(),
-					  "VPN profile with id " + mId + " not found");
+					  "VPN profile with UUID " + mUuid + " not found");
 				finish();
 			}
 		}
@@ -846,6 +855,46 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		{
 			ArrayList<String> selectedApps = savedInstanceState.getStringArrayList(VpnProfileDataSource.KEY_SELECTED_APPS_LIST);
 			mSelectedApps = new TreeSet<>(selectedApps);
+		}
+	}
+
+	private void setReadOnly(final boolean readOnly)
+	{
+		mManagedProfile.setVisibility(readOnly ? View.VISIBLE : View.GONE);
+
+		mName.setEnabled(!readOnly);
+		mGateway.setEnabled(!readOnly);
+		mUsername.setEnabled(!readOnly);
+		mRemoteId.setEnabled(!readOnly);
+		mLocalId.setEnabled(!readOnly);
+		mMTU.setEnabled(!readOnly);
+		mPort.setEnabled(!readOnly);
+		mNATKeepalive.setEnabled(!readOnly);
+		mIncludedSubnets.setEnabled(!readOnly);
+		mExcludedSubnets.setEnabled(!readOnly);
+		mBlockIPv4.setEnabled(!readOnly);
+		mBlockIPv6.setEnabled(!readOnly);
+		mIkeProposal.setEnabled(!readOnly);
+		mEspProposal.setEnabled(!readOnly);
+		mDnsServers.setEnabled(!readOnly);
+
+		mSelectVpnType.setEnabled(!readOnly);
+		mCertReq.setEnabled(!readOnly);
+		mUseCrl.setEnabled(!readOnly);
+		mUseOcsp.setEnabled(!readOnly);
+		mStrictRevocation.setEnabled(!readOnly);
+		mRsaPss.setEnabled(!readOnly);
+		mIPv6Transport.setEnabled(!readOnly);
+
+		mCheckAuto.setEnabled(!readOnly);
+		mSelectSelectedAppsHandling.setEnabled(!readOnly);
+
+		findViewById(R.id.install_user_certificate).setEnabled(!readOnly);
+
+		if (readOnly)
+		{
+			mSelectCert.setOnClickListener(null);
+			mSelectUserCert.setOnClickListener(null);
 		}
 	}
 
@@ -969,7 +1018,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				{
 					final X509Certificate[] chain = KeyChain.getCertificateChain(VpnProfileDetailActivity.this, alias);
 					/* alias() is not called from our main thread */
-					runOnUiThread(new Runnable() {
+					runOnUiThread(new Runnable()
+					{
 						@Override
 						public void run()
 						{
@@ -992,7 +1042,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	/**
 	 * Callback interface for the user certificate loader.
 	 */
-	private interface UserCertificateLoaderCallback {
+	private interface UserCertificateLoaderCallback
+	{
 		void onComplete(X509Certificate result);
 	}
 
@@ -1050,7 +1101,8 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			return new AlertDialog.Builder(getActivity())
 				.setTitle(R.string.tnc_notice_title)
 				.setMessage(HtmlCompat.fromHtml(getString(R.string.tnc_notice_details), HtmlCompat.FROM_HTML_MODE_LEGACY))
-				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener()
+				{
 					@Override
 					public void onClick(DialogInterface dialog, int id)
 					{
@@ -1111,7 +1163,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				if (text instanceof Spanned)
 				{
 					SpannableString sp = new SpannableString(text + " ");
-					TextUtils.copySpansFrom((Spanned) text, 0, text.length(), Object.class, sp, 0);
+					TextUtils.copySpansFrom((Spanned)text, 0, text.length(), Object.class, sp, 0);
 					return sp;
 				}
 				else

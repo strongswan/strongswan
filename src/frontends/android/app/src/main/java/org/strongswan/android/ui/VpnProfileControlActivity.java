@@ -42,12 +42,12 @@ import android.widget.Toast;
 import org.strongswan.android.R;
 import org.strongswan.android.data.VpnProfile;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.data.VpnProfileSource;
 import org.strongswan.android.data.VpnType.VpnTypeFeature;
 import org.strongswan.android.logic.VpnStateService;
 import org.strongswan.android.logic.VpnStateService.State;
 import org.strongswan.android.utils.Constants;
 
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -64,7 +64,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 {
 	public static final String START_PROFILE = "org.strongswan.android.action.START_PROFILE";
 	public static final String DISCONNECT = "org.strongswan.android.action.DISCONNECT";
-	public static final String EXTRA_VPN_PROFILE_ID = "org.strongswan.android.VPN_PROFILE_ID";
+	public static final String EXTRA_VPN_PROFILE_UUID = "org.strongswan.android.VPN_PROFILE_UUID";
 
 	private static final String WAITING_FOR_RESULT = "WAITING_FOR_RESULT";
 	private static final String PROFILE_NAME = "PROFILE_NAME";
@@ -257,6 +257,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	/**
 	 * Check if we have permission to display notifications to the user, if necessary,
 	 * ask the user to allow this.
+	 *
 	 * @return true if profile can be initiated immediately
 	 */
 	private boolean checkNotificationPermission()
@@ -274,6 +275,7 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	/**
 	 * Check if we are on the system's power whitelist, if necessary, or ask the user
 	 * to add us.
+	 *
 	 * @return true if profile can be initiated immediately
 	 */
 	private boolean checkPowerWhitelist()
@@ -373,20 +375,12 @@ public class VpnProfileControlActivity extends AppCompatActivity
 	{
 		VpnProfile profile = null;
 
-		VpnProfileDataSource dataSource = new VpnProfileDataSource(this);
+		VpnProfileDataSource dataSource = new VpnProfileSource(this);
 		dataSource.open();
-		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
+		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_UUID);
 		if (profileUUID != null)
 		{
 			profile = dataSource.getVpnProfile(profileUUID);
-		}
-		else
-		{
-			long profileId = intent.getLongExtra(EXTRA_VPN_PROFILE_ID, 0);
-			if (profileId > 0)
-			{
-				profile = dataSource.getVpnProfile(profileId);
-			}
 		}
 		dataSource.close();
 
@@ -412,10 +406,10 @@ public class VpnProfileControlActivity extends AppCompatActivity
 
 		removeFragmentByTag(DIALOG_TAG);
 
-		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_ID);
+		String profileUUID = intent.getStringExtra(EXTRA_VPN_PROFILE_UUID);
 		if (profileUUID != null)
 		{
-			VpnProfileDataSource dataSource = new VpnProfileDataSource(this);
+			VpnProfileDataSource dataSource = new VpnProfileSource(this);
 			dataSource.open();
 			profile = dataSource.getVpnProfile(profileUUID);
 			dataSource.close();
@@ -583,9 +577,9 @@ public class VpnProfileControlActivity extends AppCompatActivity
 			final Bundle profileInfo = getArguments();
 			LayoutInflater inflater = getActivity().getLayoutInflater();
 			View view = inflater.inflate(R.layout.login_dialog, null);
-			EditText username = (EditText)view.findViewById(R.id.username);
+			EditText username = view.findViewById(R.id.username);
 			username.setText(profileInfo.getString(VpnProfileDataSource.KEY_USERNAME));
-			final EditText password = (EditText)view.findViewById(R.id.password);
+			final EditText password = view.findViewById(R.id.password);
 
 			AlertDialog.Builder adb = new AlertDialog.Builder(getActivity());
 			adb.setView(view);

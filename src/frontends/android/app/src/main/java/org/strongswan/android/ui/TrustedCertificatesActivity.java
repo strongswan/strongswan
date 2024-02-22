@@ -17,7 +17,6 @@
 package org.strongswan.android.ui;
 
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -26,7 +25,10 @@ import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
 import org.strongswan.android.R;
+import org.strongswan.android.data.ManagedConfiguration;
+import org.strongswan.android.data.ManagedConfigurationService;
 import org.strongswan.android.data.VpnProfileDataSource;
+import org.strongswan.android.logic.StrongSwanApplication;
 import org.strongswan.android.logic.TrustedCertificateManager;
 import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificateSource;
 import org.strongswan.android.security.TrustedCertificateEntry;
@@ -52,6 +54,8 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 	private ViewPager2 mPager;
 	private boolean mSelect;
 
+	private ManagedConfigurationService mManagedConfigurationService;
+
 	private final ActivityResultLauncher<Intent> mImportCertificate = registerForActivityResult(
 		new ActivityResultContracts.StartActivityForResult(),
 		result -> {
@@ -73,15 +77,16 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 
 		mAdapter = new TrustedCertificatesPagerAdapter(this);
 
-		mPager = (ViewPager2)findViewById(R.id.viewpager);
+		mPager = findViewById(R.id.viewpager);
 		mPager.setAdapter(mAdapter);
 
-		TabLayout tabs = (TabLayout)findViewById(R.id.tabs);
+		TabLayout tabs = findViewById(R.id.tabs);
 		new TabLayoutMediator(tabs, mPager, (tab, position) -> {
 			tab.setText(mAdapter.getTitle(position));
 		}).attach();
 
 		mSelect = SELECT_CERTIFICATE.equals(getIntent().getAction());
+		mManagedConfigurationService = StrongSwanApplication.getInstance().getManagedConfigurationService();
 	}
 
 	@Override
@@ -94,9 +99,12 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 	@Override
 	public boolean onPrepareOptionsMenu(Menu menu)
 	{
-		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT)
+		final MenuItem importCertificate = menu.findItem(R.id.menu_import_certificate);
+		if (importCertificate != null)
 		{
-			menu.removeItem(R.id.menu_import_certificate);
+			final ManagedConfiguration managedConfiguration = mManagedConfigurationService.getManagedConfiguration();
+			importCertificate.setVisible(managedConfiguration.isAllowCertificateImport());
+			importCertificate.setEnabled(managedConfiguration.isAllowCertificateImport());
 		}
 		return true;
 	}
@@ -164,7 +172,7 @@ public class TrustedCertificatesActivity extends AppCompatActivity implements Tr
 
 	public static class TrustedCertificatesPagerAdapter extends FragmentStateAdapter
 	{
-		private TrustedCertificatesTab mTabs[];
+		private final TrustedCertificatesTab[] mTabs;
 
 		public TrustedCertificatesPagerAdapter(@NonNull FragmentActivity fragmentActivity)
 		{

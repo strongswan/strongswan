@@ -135,6 +135,7 @@
     <string name="profile_cert_import">從VPN設定檔匯入憑證</string>
     <string name="profile_cert_alias">\"%1$s\" 對應的憑證</string>
     <string name="profile_profile_id">Profile ID</string>
+    <string name="profile_managed">Managed profile</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">請填寫必要訊息才能初始化連線</string>
     <string name="alert_text_no_input_username">請輸入您的用戶名稱</string>
@@ -144,6 +145,7 @@
     <string name="alert_text_no_subnets">Please enter valid subnets and/or IP addresses, separated by spaces</string>
     <string name="alert_text_no_ips">Please enter valid IP addresses, separated by spaces</string>
     <string name="alert_text_no_proposal">Please enter a valid list of algorithms, separated by hyphens</string>
+    <string name="alert_text_vpn_profile_read_only">This VPN profile is managed by your administrator and can\'t be modified. You can only change the password</string>
     <string name="tnc_notice_title">EAP-TNC可能會影響您的隱私安全</string>
     <string name="tnc_notice_subtitle">裝置資料已經發送給伺服器管理者</string>
     <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) 可以讓伺服器管理者評估用戶裝置的狀況。</p><p>在這個目的下，伺服器管理者可能會要求以下資料，例如ID、已安裝的App項目、系統設定、或加密檔案驗證值。</p><b>任何資料都只有在驗證伺服器的身分ID之後才會被送出。</b>]]></string>

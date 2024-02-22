@@ -139,6 +139,7 @@
     <string name="profile_cert_import">Zertifikat aus VPN Profil importieren</string>
     <string name="profile_cert_alias">Zertifikat für \"%1$s\"</string>
     <string name="profile_profile_id">Profil-ID</string>
+    <string name="profile_managed">Verwaltetes Profil</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">Ein Wert wird benötigt, um die Verbindung aufbauen zu können</string>
     <string name="alert_text_no_input_username">Bitte geben Sie Ihren Benutzernamen ein</string>
@@ -148,6 +149,7 @@
     <string name="alert_text_no_subnets">Bitte geben Sie mit Leerzeichen getrennte, gültige Subnetzte und/oder IP-Adressen ein</string>
     <string name="alert_text_no_ips">Bitte geben Sie mit Leerzeichen getrennte, gültige IP-Adressen ein</string>
     <string name="alert_text_no_proposal">Bitte geben Sie eine mit Bindestrichen getrennte, gültige Liste von Algorithmen ein</string>
+    <string name="alert_text_vpn_profile_read_only">Dieses Profil wird von Ihrem Administrator verwaltet und kann nicht bearbeitet werden. Nur das Passwort kann geändert werden</string>
     <string name="tnc_notice_title">EAP-TNC kann Ihre Privatsphäre beeinträchtigen</string>
     <string name="tnc_notice_subtitle">Gerätedaten werden an den Server-Betreiber gesendet</string>
     <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) erlaubt Server-Betreibern den Gesundheitszustand von Endgeräten zu prüfen.</p><p>Dazu kann der Betreiber Daten verlangen, wie etwa eine eindeutige Identifikationsnummer, eine Liste der installierten Pakete, Systemeinstellungen oder kryptografische Prüfsummen von Dateien.</p><b>Solche Daten werden nur übermittelt nachdem die Identität des Servers geprüft wurde.</b>]]></string>

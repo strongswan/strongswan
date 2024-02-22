@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2023 Relution GmbH
+
+    Copyright (C) secunet Security Networks AG
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation; either version 2 of the License, or (at your
+    option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+-->
+<resources>
+
+    <!-- Managed configuration -->
+    <string name="managed_config_allow_profile_creation_title">Allow profile creation</string>
+    <string name="managed_config_allow_profile_creation_description">Specifies whether users are allowed to add their own profiles</string>
+    <string name="managed_config_allow_profile_import_title">Allow profile import</string>
+    <string name="managed_config_allow_profile_import_description">Specifies whether users are allowed to import their own profiles</string>
+    <string name="managed_config_allow_existing_profiles_title">Show existing profiles</string>
+    <string name="managed_config_allow_existing_profiles_description">Specifies whether users can continue to see and use their previously created profiles</string>
+    <string name="managed_config_allow_certificate_import_title">Allow certificate import</string>
+    <string name="managed_config_allow_certificate_import_description">Specifies whether users are allowed to import certificates</string>
+    <string name="managed_config_allow_settings_access_title">Allow modifying settings</string>
+    <string name="managed_config_allow_settings_access_description">Specifies whether users are allowed change global app settings</string>
+    <string name="managed_config_default_vpn_profile_title">@string/pref_default_vpn_profile</string>
+    <string name="managed_config_default_vpn_profile_description">Unique identifier of the VPN profile to use by default, use the value \"mru\" for the most recently used profile</string>
+    <string name="managed_config_ignore_battery_optimizations_title">@string/pref_power_whitelist_title</string>
+    <string name="managed_config_ignore_battery_optimizations_description">@string/pref_power_whitelist_summary</string>
+    <string name="managed_config_profiles_array_title">VPN profiles</string>
+    <string name="managed_config_profiles_array_description">Collection of managed VPN profiles</string>
+    <string name="managed_config_profile_bundle_title">VPN profile</string>
+    <string name="managed_config_profile_bundle_description">A managed VPN profile</string>
+
+    <!-- Managed configuration, VPN profile -->
+    <string name="managed_config_uuid_title">Unique identifier</string>
+    <string name="managed_config_uuid_description">Unique identifier of the VPN profile. Version 4 UUIDs (random-generated) are recommended</string>
+    <string name="managed_config_name_title">@string/profile_name_label</string>
+    <string name="managed_config_name_description">@string/profile_name_hint</string>
+    <string name="managed_config_vpn_type_title">@string/profile_vpn_type_label</string>
+    <string name="managed_config_vpn_type_description">The type of client authentication used by the VPN profile</string>
+    <string name="managed_config_included_package_names_title">Apps allowed to use the VPN (Optional)</string>
+    <string name="managed_config_included_package_names_description">Space-separated list of package names; all other apps will not see/use the VPN</string>
+    <string name="managed_config_excluded_package_names_title">Apps excluded from using the VPN (Optional)</string>
+    <string name="managed_config_excluded_package_names_description">Space-separated list of package names of apps excluded from using the VPN; only used of allow list is empty</string>
+    <string name="managed_config_ike_proposal_title">@string/profile_proposals_ike_label</string>
+    <string name="managed_config_ike_proposal_description">@string/profile_proposals_ike_hint</string>
+    <string name="managed_config_esp_proposal_title">@string/profile_proposals_esp_label</string>
+    <string name="managed_config_esp_proposal_description">@string/profile_proposals_esp_hint</string>
+    <string name="managed_config_mtu_title">@string/profile_mtu_label</string>
+    <string name="managed_config_mtu_description">@string/profile_mtu_hint</string>
+    <string name="managed_config_nat_keepalive_title">@string/profile_nat_keepalive_label</string>
+    <string name="managed_config_nat_keepalive_description">@string/profile_nat_keepalive_hint</string>
+    <string name="managed_config_dns_server_host_names_title">@string/profile_dns_servers_label</string>
+    <string name="managed_config_dns_server_host_names_description">@string/profile_dns_servers_hint</string>
+    <string name="managed_config_ipv6_transport_title">@string/profile_ipv6_transport_label</string>
+    <string name="managed_config_ipv6_transport_description">@string/profile_ipv6_transport_hint</string>
+
+    <!-- Managed configuration, VPN profile, remote -->
+    <string name="managed_config_remote_bundle_title">Remote</string>
+    <string name="managed_config_remote_bundle_description">Specifies information about the server</string>
+    <string name="managed_config_remote_addr_title">@string/profile_gateway_label</string>
+    <string name="managed_config_remote_addr_description">@string/profile_gateway_hint</string>
+    <string name="managed_config_remote_port_title">@string/profile_port_label</string>
+    <string name="managed_config_remote_port_description">@string/profile_port_hint</string>
+    <string name="managed_config_remote_id_title">@string/profile_remote_id_label</string>
+    <string name="managed_config_remote_id_description">@string/profile_remote_id_hint</string>
+    <string name="managed_config_remote_cert_title">CA or server certificate (Optional)</string>
+    <string name="managed_config_remote_cert_description">Base64-encoded CA or server certificate. Is imported into the app, not the system keystore. If not set, automatic CA certificate selection is enabled</string>
+    <string name="managed_config_remote_certreq_title">Send certificate requests</string>
+    <string name="managed_config_remote_certreq_description">Specifies whether to send certificate requests for all installed or selected CA certificates. Disabling this may reduce the size of the IKE_AUTH message if the server does not support fragmentation. But it only works if the server doesn\'t require certificate requests to send back the server certificate</string>
+    <string name="managed_config_remote_revocation_ocsp_title">@string/profile_use_ocsp_label</string>
+    <string name="managed_config_remote_revocation_ocsp_description">@string/profile_use_ocsp_hint</string>
+    <string name="managed_config_remote_revocation_crl_title">@string/profile_use_crl_label</string>
+    <string name="managed_config_remote_revocation_crl_description">@string/profile_use_crl_hint</string>
+    <string name="managed_config_remote_revocation_strict_title">@string/profile_strict_revocation_label</string>
+    <string name="managed_config_remote_revocation_strict_description">@string/profile_strict_revocation_hint</string>
+
+    <!-- Managed configuration, VPN profile, local -->
+    <string name="managed_config_local_bundle_title">Local</string>
+    <string name="managed_config_local_bundle_description">Specifies information about the client</string>
+    <string name="managed_config_local_eap_id_title">Identity/username for EAP authentication (Optional)</string>
+    <string name="managed_config_local_eap_id_description">If this is required (for username/password-based EAP authentication) but not configured here, the user is prompted for it. If it is set, the user is not able to change it. In both cases the user may optionally enter the password</string>
+    <string name="managed_config_local_id_title">@string/profile_local_id_label</string>
+    <string name="managed_config_local_id_description">@string/profile_local_id_hint_user</string>
+    <string name="managed_config_local_p12_title">@string/profile_user_certificate_label</string>
+    <string name="managed_config_local_p12_description">Base64-encoded PKCS#12-container with the client certificate and private key and optional certificate chain (the latter might cause warnings on older Android releases, see Android VPN client configuration for details). Not necessary for username/password-based EAP authentication or if the user already has the certificate/key installed as it may be selected while importing the profile</string>
+    <string name="managed_config_local_p12_password_title">User certificate password (Optional)</string>
+    <string name="managed_config_local_p12_password_description">Password required to extract the private key of the PKCS#12-container for installation</string>
+    <string name="managed_config_local_rsa_pss_title">@string/profile_rsa_pss_label</string>
+    <string name="managed_config_local_rsa_pss_description">@string/profile_rsa_pss_hint</string>
+
+    <!-- Managed configuration, VPN profile, split-tunneling -->
+    <string name="managed_config_split_tunneling_bundle_title">@string/profile_split_tunneling_label</string>
+    <string name="managed_config_split_tunneling_bundle_description">@string/profile_split_tunneling_intro</string>
+    <string name="managed_config_split_tunneling_subnets_title">@string/profile_included_subnets_label</string>
+    <string name="managed_config_split_tunneling_subnets_description">@string/profile_included_subnets_hint</string>
+    <string name="managed_config_split_tunneling_excluded_title">@string/profile_excluded_subnets_label</string>
+    <string name="managed_config_split_tunneling_excluded_description">@string/profile_excluded_subnets_hint</string>
+    <string name="managed_config_split_tunneling_block_ipv4_title">@string/profile_split_tunnelingv4_title</string>
+    <string name="managed_config_split_tunneling_block_ipv4_description">Specifies whether to block IPv4 traffic that\'s not destined for the VPN. Forces all IPv4 traffic via VPN (traffic that does not match the negotiated traffic selector is then just dropped). Thus this is basically equivalent to including 0.0.0.0/0 in subnets</string>
+    <string name="managed_config_split_tunneling_block_ipv6_title">@string/profile_split_tunnelingv6_title</string>
+    <string name="managed_config_split_tunneling_block_ipv6_description">Specifies whether to block IPv6 traffic that\'s not destined for the VPN. Forces all IPv6 traffic via VPN (traffic that does not match the negotiated traffic selector is then just dropped). Thus this is basically equivalent to including ::/0 in subnets</string>
+
+</resources>
