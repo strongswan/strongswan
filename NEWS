@@ -1,3 +1,15 @@
+strongswan-5.9.14
+-----------------
+
+- Updated the pkcs11.h header based on the latest OpenSC version in order to
+  include new algorithm and struct definitions for the pkcs11 plugin .
+  Added support for PSS padding in smartcard-based RSA signatures using either
+  on-chip or external data hashing.
+
+- Added keyid and certid handles in the pki --ocsp command so that keys and/or
+  certificates can stored on a smartcard or in a TPM 2.0 device.
+
+
 strongswan-5.9.13
 -----------------
 
