@@ -125,13 +125,42 @@ build_openssl()
 	fi
 }
 
+build_awslc()
+{
+	LC_REV=1.22.0
+	LC_PKG=aws-lc-$LC_REV
+	LC_DIR=$DEPS_BUILD_DIR/$LC_PKG
+	LC_SRC=https://github.com/aws/aws-lc/archive/refs/tags/v${LC_REV}.tar.gz
+	LC_BUILD=$LC_DIR/build
+	LC_INS=$DEPS_PREFIX/ssl
+
+	mkdir -p $LC_BUILD
+
+	echo "$ build_awslc()"
+
+	curl -L $LC_SRC | tar xz -C $DEPS_BUILD_DIR || exit $?
+
+	cd $LC_BUILD &&
+	cmake -GNinja -DCMAKE_INSTALL_PREFIX=$LC_INS .. &&
+	ninja &&
+	sudo ninja install || exit $?
+	cd -
+}
+
 use_custom_openssl()
 {
 	CFLAGS="$CFLAGS -I$DEPS_PREFIX/ssl/include"
 	export LDFLAGS="$LDFLAGS -L$DEPS_PREFIX/ssl/lib"
 	export LD_LIBRARY_PATH="$DEPS_PREFIX/ssl/lib:$LD_LIBRARY_PATH"
 	if test "$1" = "build-deps"; then
-		build_openssl
+		case "$TEST" in
+			openssl-awslc)
+				build_awslc
+				;;
+			*)
+				build_openssl
+				;;
+		esac
 	fi
 }
 
@@ -191,6 +220,9 @@ openssl*)
 	DEPS="libssl-dev"
 	if test "$TEST" = "openssl-3"; then
 		DEPS=""
+		use_custom_openssl $1
+	elif test "$TEST" = "openssl-awslc"; then
+		DEPS="cmake ninja-build golang"
 		use_custom_openssl $1
 	elif system_uses_openssl3; then
 		prepare_system_openssl $1

@@ -91,7 +91,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, ubuntu-20.04 ]
-        test: [ botan, wolfssl, openssl, openssl-3, gcrypt ]
+        test: [ botan, wolfssl, openssl, openssl-3, openssl-awslc, gcrypt ]
         leak-detective: [ no, yes ]
         exclude:
           # test custom-built libs only on one platform
@@ -101,6 +101,8 @@ jobs:
             test: wolfssl
           - os: ubuntu-20.04
             test: openssl-3
+          - os: ubuntu-20.04
+            test: openssl-awslc
     env:
       LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
       CC: ${{ matrix.compiler || 'gcc' }}
