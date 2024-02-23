@@ -2046,7 +2046,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			data->replay_window = data->esn ? 1 : 0;
 		}
-		if (data->replay_window != 0 && (data->esn || data->replay_window > 32))
+		if (data->esn || data->replay_window > 32)
 		{
 			/* for ESN or larger replay windows we need the new
 			 * XFRMA_REPLAY_ESN_VAL attribute to configure a bitmap */
