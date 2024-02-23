@@ -786,7 +786,7 @@ START_TEST(test_matches_binary)
 }
 END_TEST
 
-START_TEST(test_matches_range)
+START_TEST(test_matches_range_addr)
 {
 	identification_t *a, *b;
 
@@ -863,6 +863,242 @@ START_TEST(test_matches_range)
 
 	/* Malformed IPv6 address encoding */
 	a = identification_create_from_encoding(ID_IPV6_ADDR, chunk_empty);
+	ck_assert(id_matches(a, "::/0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", ID_MATCH_NONE));
+	a->destroy(a);
+}
+END_TEST
+
+START_TEST(test_matches_range_subnet)
+{
+	identification_t *a, *b;
+
+	/* IPv4 subnets */
+	a = identification_create_from_string("192.168.1.0/24");
+	ck_assert(a->get_type(a) == ID_IPV4_ADDR_SUBNET);
+	ck_assert(id_matches(a, "%any", ID_MATCH_ANY));
+	ck_assert(id_matches(a, "0.0.0.0/0", ID_MATCH_MAX_WILDCARDS));
+	ck_assert(id_matches(a, "192.168.1.1", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.2", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.1/32", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.0/32", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.0/24", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.0.0/24", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.0.0/16", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.1.1-192.168.1.1", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.0-192.168.1.255", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.0.0-192.168.255.255", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "foo@bar", ID_MATCH_NONE));
+
+	/* Malformed IPv4 subnet and range encoding */
+	b = identification_create_from_encoding(ID_IPV4_ADDR_SUBNET, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV4_ADDR_RANGE, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV4_ADDR_RANGE,
+			chunk_from_chars(0xc0,0xa8,0x01,0x28,0xc0,0xa8,0x01,0x00));
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	a->destroy(a);
+
+	a = identification_create_from_string("192.168.1.1/32");
+	ck_assert(id_matches(a, "%any", ID_MATCH_ANY));
+	ck_assert(id_matches(a, "0.0.0.0/0", ID_MATCH_MAX_WILDCARDS));
+	ck_assert(id_matches(a, "192.168.1.1/32", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.1.1/31", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.1.1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.1.2", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.0/24", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.1.0-192.168.1.0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.1-192.168.1.1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.1.0-192.168.1.1", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.1.1-192.168.1.2", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.0.0-192.168.1.255", ID_MATCH_ONE_WILDCARD));
+	a->destroy(a);
+
+	/* IPv6 subnets */
+	a = identification_create_from_string("fec0::0/64");
+	ck_assert(a->get_type(a) == ID_IPV6_ADDR_SUBNET);
+	ck_assert(id_matches(a, "%any", ID_MATCH_ANY));
+	ck_assert(id_matches(a, "::/0", ID_MATCH_MAX_WILDCARDS));
+	ck_assert(id_matches(a, "fec0::1", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::2", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::1/128", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::/128", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::/64", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::/48", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec1::/48", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::-fec0::1", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::-fec0::ffff:ffff:ffff:ffff", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::-fec0::f:ffff:ffff:ffff:ffff", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec0::4001-fec0::4ffe", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "feb0::1-fec0::0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "foo@bar", ID_MATCH_NONE));
+
+	/* Malformed IPv6 subnet and range encoding */
+	b = identification_create_from_encoding(ID_IPV6_ADDR_SUBNET, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV6_ADDR_RANGE, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV6_ADDR_RANGE,
+			chunk_from_chars(0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+							 0x00,0x00,0x00,0x00,0x00,0x00,0x4f,0xff,
+							 0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+							 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01 ));
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	a->destroy(a);
+
+	a = identification_create_from_string("fec0::1/128");
+	ck_assert(a->get_type(a) == ID_IPV6_ADDR_SUBNET);
+	ck_assert(id_matches(a, "%any", ID_MATCH_ANY));
+	ck_assert(id_matches(a, "::/0", ID_MATCH_MAX_WILDCARDS));
+	ck_assert(id_matches(a, "fec0::1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::2", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::1/128", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::/128", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::/64", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec1::/48", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::0-fec0::0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::1-fec0::1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::0-fec0::1", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec0::1-fec0::2", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec0::-fec0::ffff:ffff:ffff:ffff", ID_MATCH_ONE_WILDCARD));
+	a->destroy(a);
+
+	/* Malformed IPv4 subnet encoding */
+	a = identification_create_from_encoding(ID_IPV4_ADDR_SUBNET, chunk_empty);
+	ck_assert(id_matches(a, "192.168.1.1", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "0.0.0.0/0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "0.0.0.0-255.255.255.255", ID_MATCH_NONE));
+	a->destroy(a);
+
+	/* Malformed IPv6 subnet encoding */
+	a = identification_create_from_encoding(ID_IPV6_ADDR_SUBNET, chunk_empty);
+	ck_assert(id_matches(a, "fec0::1", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "::/0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", ID_MATCH_NONE));
+	a->destroy(a);
+}
+END_TEST
+
+START_TEST(test_matches_range_range)
+{
+	identification_t *a, *b;
+
+	/* IPv4 ranges */
+	a = identification_create_from_string("192.168.1.0-192.168.1.255");
+	ck_assert(a->get_type(a) == ID_IPV4_ADDR_RANGE);
+	ck_assert(id_matches(a, "%any", ID_MATCH_ANY));
+	ck_assert(id_matches(a, "0.0.0.0/0", ID_MATCH_MAX_WILDCARDS));
+	ck_assert(id_matches(a, "192.168.1.1", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.1/32", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.0/24", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.0.0/24", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.0.0/16", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.1.1-192.168.1.1", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.0-192.168.1.255", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.0.0-192.168.255.255", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.0.240-192.168.1.0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "foo@bar", ID_MATCH_NONE));
+
+	/* Malformed IPv4 subnet and range encoding */
+	b = identification_create_from_encoding(ID_IPV4_ADDR_SUBNET, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV4_ADDR_RANGE, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV4_ADDR_RANGE,
+			chunk_from_chars(0xc0,0xa8,0x01,0x28,0xc0,0xa8,0x01,0x00));
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	a->destroy(a);
+
+	a = identification_create_from_string("192.168.1.1-192.168.1.1");
+	ck_assert(a->get_type(a) == ID_IPV4_ADDR_RANGE);
+	ck_assert(id_matches(a, "%any", ID_MATCH_ANY));
+	ck_assert(id_matches(a, "0.0.0.0/0", ID_MATCH_MAX_WILDCARDS));
+	ck_assert(id_matches(a, "192.168.1.1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.1.2", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.1/32", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.1.0/32", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.0/24", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.0.0/24", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.1-192.168.1.1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.1.0-192.168.1.0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "192.168.1.1-192.168.1.1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "192.168.1.0-192.168.1.1", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.1.1-192.168.1.2", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "192.168.0.0-192.168.1.255", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "foo@bar", ID_MATCH_NONE));
+	a->destroy(a);
+
+	/* IPv6 ranges */
+	a = identification_create_from_string("fec0::-fec0::ffff:ffff:ffff:ffff");
+	ck_assert(a->get_type(a) == ID_IPV6_ADDR_RANGE);
+	ck_assert(id_matches(a, "%any", ID_MATCH_ANY));
+	ck_assert(id_matches(a, "::/0", ID_MATCH_MAX_WILDCARDS));
+	ck_assert(id_matches(a, "fec0::1", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::1/128", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::/128", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::/64", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::/48", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec1::/48", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::-fec0::1", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::-fec0::ffff:ffff:ffff:ffff", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::-fec0::f:ffff:ffff:ffff:ffff", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec0::4001-fec0::4ffe", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "feb0::1-fec0::0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "foo@bar", ID_MATCH_NONE));
+
+	/* Malformed IPv6 subnet and range encoding */
+	b = identification_create_from_encoding(ID_IPV6_ADDR_SUBNET, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV6_ADDR_RANGE, chunk_empty);
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	b = identification_create_from_encoding(ID_IPV6_ADDR_RANGE,
+			chunk_from_chars(0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+							 0x00,0x00,0x00,0x00,0x00,0x00,0x4f,0xff,
+							 0xfe,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,
+							 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01 ));
+	ck_assert(a->matches(a, b) == ID_MATCH_NONE);
+	b->destroy(b);
+	a->destroy(a);
+
+	a = identification_create_from_string("fec0::1-fec0::1");
+	ck_assert(a->get_type(a) == ID_IPV6_ADDR_RANGE);
+	ck_assert(id_matches(a, "%any", ID_MATCH_ANY));
+	ck_assert(id_matches(a, "::/0", ID_MATCH_MAX_WILDCARDS));
+	ck_assert(id_matches(a, "fec0::1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::2", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::1/128", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::/128", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::/64", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec1::/48", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::0-fec0::0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "fec0::1-fec0::1", ID_MATCH_PERFECT));
+	ck_assert(id_matches(a, "fec0::0-fec0::1", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec0::1-fec0::2", ID_MATCH_ONE_WILDCARD));
+	ck_assert(id_matches(a, "fec0::-fec0::ffff:ffff:ffff:ffff", ID_MATCH_ONE_WILDCARD));
+	a->destroy(a);
+
+	/* Malformed IPv4 range encoding */
+	a = identification_create_from_encoding(ID_IPV4_ADDR_RANGE, chunk_empty);
+	ck_assert(id_matches(a, "192.168.1.1", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "0.0.0.0/0", ID_MATCH_NONE));
+	ck_assert(id_matches(a, "0.0.0.0-255.255.255.255", ID_MATCH_NONE));
+	a->destroy(a);
+
+	/* Malformed IPv6 range encoding */
+	a = identification_create_from_encoding(ID_IPV6_ADDR_RANGE, chunk_empty);
+	ck_assert(id_matches(a, "fec0::1", ID_MATCH_NONE));
 	ck_assert(id_matches(a, "::/0", ID_MATCH_NONE));
 	ck_assert(id_matches(a, "::-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", ID_MATCH_NONE));
 	a->destroy(a);
@@ -1204,7 +1440,9 @@ Suite *identification_suite_create()
 	tcase_add_loop_test(tc, test_matches_two_ou, 0, countof(rdn_matching));
 	tcase_add_test(tc, test_matches_any);
 	tcase_add_test(tc, test_matches_binary);
-	tcase_add_test(tc, test_matches_range);
+	tcase_add_test(tc, test_matches_range_addr);
+	tcase_add_test(tc, test_matches_range_subnet);
+	tcase_add_test(tc, test_matches_range_range);
 	tcase_add_test(tc, test_matches_string);
 	tcase_add_loop_test(tc, test_matches_empty, ID_ANY, ID_KEY_ID + 1);
 	tcase_add_loop_test(tc, test_matches_empty_reverse, ID_ANY, ID_KEY_ID + 1);
