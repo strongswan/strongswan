@@ -1,3 +1,7 @@
+# 2.5.1 #
+
+- Fix für existierende Verknüpfungen und Automatisierung via Intents
+
 # 2.5.0 #
 
 - Unterstützung für verwaltete Konfigurationen via Enterprise Mobility Management (EMM)

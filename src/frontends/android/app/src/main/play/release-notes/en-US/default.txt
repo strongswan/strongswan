@@ -1,3 +1,7 @@
+# 2.5.1 #
+
+- Fix for existing shortcuts and automation via Intents
+
 # 2.5.0 #
 
 - Support for managed configurations via enterprise mobility management (EMM)
