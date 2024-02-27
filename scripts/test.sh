@@ -285,8 +285,8 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 	if test "$TEST" != "coverage"; then
 		CONFIG="$CONFIG --disable-coverage"
 	else
-		# not actually required but configure checks for it
 		DEPS="$DEPS lcov"
+		TARGET="coverage"
 	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
