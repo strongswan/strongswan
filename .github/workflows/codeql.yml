@@ -34,20 +34,20 @@ jobs:
       matrix:
         language: [ 'cpp', 'python', 'ruby' ]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
         config-file: ./.github/codeql/config.yml
 
     - if: matrix.language == 'python' || matrix.language == 'ruby'
       name: Autobuild
-      uses: github/codeql-action/autobuild@v2
+      uses: github/codeql-action/autobuild@v3
 
     # this follows the steps of the Linux workflow
     - if: matrix.language == 'cpp'
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/ccache
         key: ccache-ubuntu-latest-gcc-codeql-${{ github.sha }}
@@ -69,6 +69,6 @@ jobs:
       run: ccache -s
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
