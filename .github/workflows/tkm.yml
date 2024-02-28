@@ -27,8 +27,8 @@ jobs:
     env:
       TEST: tkm
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-tkm-${{ github.sha }}

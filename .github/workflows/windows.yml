@@ -34,8 +34,8 @@ jobs:
       OS_NAME: linux
       TEST: ${{ matrix.test }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
           key: ccache-${{ runner.os }}-${{ matrix.test }}-${{ github.sha }}
@@ -48,7 +48,7 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Logs ${{ github.job }}
           path: config.log

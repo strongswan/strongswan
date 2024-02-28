@@ -29,7 +29,7 @@ jobs:
       # since the NDK might be newly installed, we have to use this to avoid cache misses
       CCACHE_COMPILERCHECK: content
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # make sure the NDK we reference is installed and exported so we can use it to build OpenSSL
       - name: Install NDK
         id: ndk-install
@@ -38,7 +38,7 @@ jobs:
           echo Using NDK ${NDK_VERSION}
           yes | sudo ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;${NDK_VERSION}"
           echo "ANDROID_NDK_ROOT=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
           key: ccache-android-${{ github.sha }}
@@ -58,7 +58,7 @@ jobs:
         env:
           ANDROID_NDK_ROOT: ${{ steps.ndk-install.outputs.ANDROID_NDK_ROOT }}
       - run: ccache -s
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: Lint Results
           path: src/frontends/android/app/build/reports/lint-results*.xml
