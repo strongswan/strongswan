@@ -1416,7 +1416,7 @@ static linked_list_t* get_ts_if_nat_transport(private_child_create_t *this,
 static child_cfg_t* select_child_cfg(private_child_create_t *this)
 {
 	peer_cfg_t *peer_cfg;
-	child_cfg_t *child_cfg = NULL;;
+	child_cfg_t *child_cfg = NULL;
 
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (peer_cfg && this->tsi && this->tsr)

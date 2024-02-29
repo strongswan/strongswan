@@ -283,7 +283,7 @@ METHOD(ha_message_t, add_attribute, void,
 			*(uint16_t*)(this->buf.ptr + this->buf.len) = htons(chunk.len);
 			memcpy(this->buf.ptr + this->buf.len + sizeof(uint16_t),
 				   chunk.ptr, chunk.len);
-			this->buf.len += chunk.len + sizeof(uint16_t);;
+			this->buf.len += chunk.len + sizeof(uint16_t);
 			break;
 		}
 		/** traffic_selector_t */

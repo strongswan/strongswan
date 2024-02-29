@@ -199,7 +199,7 @@ CK_MECHANISM_PTR pkcs11_signature_scheme_to_mech(pkcs11_library_t *p11,
 	CK_MECHANISM_PTR mechanism;
 	CK_RSA_PKCS_PSS_PARAMS *rsa_pkcs_pss_params;
 	rsa_pss_params_t *rsa_pss_params;
-	hash_algorithm_t hash_alg = HASH_UNKNOWN;;
+	hash_algorithm_t hash_alg = HASH_UNKNOWN;
 	int i;
 
 	for (i = 0; i < countof(mappings); i++)

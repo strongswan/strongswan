@@ -595,7 +595,7 @@ METHOD(socket_t, sender, status_t,
 	}
 
 	memset(&msg, 0, sizeof(struct msghdr));
-	msg.msg_name = dst->get_sockaddr(dst);;
+	msg.msg_name = dst->get_sockaddr(dst);
 	msg.msg_namelen = *dst->get_sockaddr_len(dst);
 	iov.iov_base = data.ptr;
 	iov.iov_len = data.len;

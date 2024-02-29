@@ -372,7 +372,7 @@ METHOD(radius_socket_t, destroy, void,
 	if (this->auth_fd != -1)
 	{
 		close(this->auth_fd);
-	};
+	}
 	if (this->acct_fd != -1)
 	{
 		close(this->acct_fd);
