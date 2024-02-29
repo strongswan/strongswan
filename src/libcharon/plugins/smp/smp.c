@@ -653,7 +653,7 @@ static job_requeue_t process(int *fdp)
 	if (reader == NULL)
 	{
 		DBG1(DBG_CFG, "opening SMP XML reader failed");
-		return JOB_REQUEUE_FAIR;;
+		return JOB_REQUEUE_FAIR;
 	}
 
 	/* read message type and id */
@@ -681,7 +681,7 @@ static job_requeue_t process(int *fdp)
 		}
 	}
 	xmlFreeTextReader(reader);
-	return JOB_REQUEUE_FAIR;;
+	return JOB_REQUEUE_FAIR;
 }
 
 /**
@@ -703,7 +703,7 @@ static job_requeue_t dispatch(private_smp_t *this)
 	{
 		DBG1(DBG_CFG, "accepting SMP XML socket failed: %s", strerror(errno));
 		sleep(1);
-		return JOB_REQUEUE_FAIR;;
+		return JOB_REQUEUE_FAIR;
 	}
 
 	fdp = malloc_thing(int);

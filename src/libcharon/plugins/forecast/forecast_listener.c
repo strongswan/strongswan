@@ -544,7 +544,7 @@ METHOD(listener_t, child_rekey, bool,
 	private_forecast_listener_t *this, ike_sa_t *ike_sa,
 	child_sa_t *old, child_sa_t *new)
 {
-	struct iptc_handle *ipth;;
+	struct iptc_handle *ipth;
 	host_t *lhost, *rhost;
 
 	lhost = ike_sa->get_my_host(ike_sa);
