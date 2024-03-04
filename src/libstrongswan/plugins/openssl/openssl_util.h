@@ -126,6 +126,14 @@ chunk_t openssl_asn1_obj2chunk(const ASN1_OBJECT *asn1);
 chunk_t openssl_asn1_str2chunk(const ASN1_STRING *asn1);
 
 /**
+ * Convert an OpenSSL ASN1_INTEGER to a chunk.
+ *
+ * @param asn1		asn1 integer to convert
+ * @return			chunk, pointing into asn1 integer
+ */
+chunk_t openssl_asn1_int2chunk(const ASN1_INTEGER *asn1);
+
+/**
  * Convert an openssl X509_NAME to a identification_t of type ID_DER_ASN1_DN.
  *
  * @param name		name to convert
