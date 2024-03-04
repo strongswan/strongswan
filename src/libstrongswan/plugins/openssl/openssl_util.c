@@ -35,6 +35,13 @@
 #define ASN1_STRING_get0_data(a) ASN1_STRING_data((ASN1_STRING*)a)
 #endif
 
+#if defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC)
+/**
+ * Chunk for an ASN.1 Integer with a value of 0.
+ */
+static const chunk_t asn1_zero_int = chunk_from_chars(0x00);
+#endif
+
 /*
  * Described in header
  */
@@ -228,6 +235,22 @@ chunk_t openssl_asn1_str2chunk(const ASN1_STRING *asn1)
 							ASN1_STRING_length(asn1));
 	}
 	return chunk_empty;
+}
+
+/**
+ * Described in header.
+ */
+chunk_t openssl_asn1_int2chunk(const ASN1_INTEGER *asn1)
+{
+#if defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC)
+	/* BoringSSL and AWS-LC use an empty chunk for 0 so return a properly
+	 * encoded chunk here. */
+	if (asn1 && ASN1_STRING_length(asn1) == 0)
+	{
+		return asn1_zero_int;
+	}
+#endif
+	return openssl_asn1_str2chunk(asn1);
 }
 
 /**
