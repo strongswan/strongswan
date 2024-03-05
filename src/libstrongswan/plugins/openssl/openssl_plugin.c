@@ -746,7 +746,9 @@ METHOD(plugin_t, destroy, void,
 	threading_cleanup();
 	ERR_free_strings();
 #endif /* OPENSSL_VERSION_NUMBER */
-
+#ifdef OPENSSL_IS_AWSLC
+	AWSLC_thread_local_clear();
+#endif
 	free(this);
 }
 
