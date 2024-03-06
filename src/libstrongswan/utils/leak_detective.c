@@ -632,6 +632,9 @@ static char *whitelist[] = {
 	"CRYPTO_get_ex_new_index",
 	/* OpenSSL libssl */
 	"SSL_COMP_get_compression_methods",
+	/* AWS-LC */
+	"RAND_bytes",
+	"ERR_put_error",
 	/* NSPR */
 	"PR_CallOnce",
 	/* libapr */
