@@ -675,7 +675,7 @@ cp ${TEST_CERT} ${CA_DIR}/certs/${SERIAL}.pem
 
 # Put a copy into the following ikev2 scenarios
 for t in ocsp-timeouts-good ocsp-disabled ocsp-no-signer-cert ocsp-root-cert \
-         ocsp-untrusted-cert
+         ocsp-untrusted-cert ocsp-rfc4806-signer ocsp-rfc4806-both
 do
   TEST="${TEST_DIR}/ikev2/${t}"
   mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/rsa
@@ -707,12 +707,15 @@ pki --self --type rsa --in ${TEST_KEY} --flag ocspSigning \
     --dn "C=CH, O=${PROJECT}, OU=${OU}, CN=${CN}" \
     --outform pem > ${TEST_CERT}
 
-# Copy self-signed OCSP Signing certificate to ikev2/ocsp-local-cert scenario
-TEST="${TEST_DIR}/ikev2/ocsp-local-cert"
-mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ocsp
-mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ocsp
-cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ocsp
-cp ${TEST_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ocsp
+# Put a copy into the following ikev2 scenarios
+for t in ocsp-local-cert ocsp-rfc4806-local
+do
+  TEST="${TEST_DIR}/ikev2/${t}"
+  mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ocsp
+  mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ocsp
+  cp ${TEST_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ocsp
+  cp ${TEST_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ocsp
+done
 
 # Generate mars virtual server certificate
 TEST="${TEST_DIR}/ha/both-active"
