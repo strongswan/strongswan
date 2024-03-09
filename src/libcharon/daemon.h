@@ -323,6 +323,11 @@ struct daemon_t {
 #endif /* ME */
 
 	/**
+	 * Stealthy mode
+	 */
+	bool stealthy;
+
+	/**
 	 * Initialize the daemon.
 	 *
 	 * @param plugins	list of plugins to load

@@ -858,6 +858,12 @@ METHOD(task_t, build_r, status_t,
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
 	{
+		if ( charon->stealthy )
+		{
+			DBG1(DBG_IKE, "received proposals unacceptable. Ignoring");
+			return DESTROY_ME;
+		}
+
 		DBG1(DBG_IKE, "received proposals unacceptable");
 		message->add_notify(message, TRUE, NO_PROPOSAL_CHOSEN, chunk_empty);
 		return FAILED;
@@ -884,6 +890,12 @@ METHOD(task_t, build_r, status_t,
 									   this->dh_group))
 	{
 		uint16_t group;
+
+		if ( charon->stealthy )
+		{
+			DBG1(DBG_IKE, "no acceptable proposal found. Ignoring");
+			return DESTROY_ME;
+		}
 
 		if (this->proposal->get_algorithm(this->proposal, KEY_EXCHANGE_METHOD,
 										  &group, NULL))

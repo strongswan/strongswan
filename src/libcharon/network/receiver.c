@@ -550,7 +550,8 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			if (message->get_exchange_type(message) == IKE_SA_INIT &&
 				message->get_request(message))
 			{
-				send_notify(message, IKEV1_MAJOR_VERSION, INFORMATIONAL_V1,
+				if ( ! charon->stealthy )
+					send_notify(message, IKEV1_MAJOR_VERSION, INFORMATIONAL_V1,
 							INVALID_MAJOR_VERSION, chunk_empty);
 				supported = FALSE;
 			}
@@ -561,7 +562,8 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			if (message->get_exchange_type(message) == ID_PROT ||
 				message->get_exchange_type(message) == AGGRESSIVE)
 			{
-				send_notify(message, IKEV2_MAJOR_VERSION, INFORMATIONAL,
+				if ( ! charon->stealthy )
+					send_notify(message, IKEV2_MAJOR_VERSION, INFORMATIONAL,
 							INVALID_MAJOR_VERSION, chunk_empty);
 				supported = FALSE;
 			}
@@ -569,11 +571,13 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 			break;
 		default:
 #ifdef USE_IKEV2
-			send_notify(message, IKEV2_MAJOR_VERSION,
+			if ( ! charon->stealthy )
+				send_notify(message, IKEV2_MAJOR_VERSION,
 						message->get_exchange_type(message),
 						INVALID_MAJOR_VERSION, chunk_empty);
 #elif defined(USE_IKEV1)
-			send_notify(message, IKEV1_MAJOR_VERSION, INFORMATIONAL_V1,
+			if ( ! charon->stealthy )
+				send_notify(message, IKEV1_MAJOR_VERSION, INFORMATIONAL_V1,
 						INVALID_MAJOR_VERSION, chunk_empty);
 #endif /* USE_IKEV1 */
 			supported = FALSE;
@@ -581,9 +585,12 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	}
 	if (!supported)
 	{
-		DBG1(DBG_NET, "received unsupported IKE version %d.%d from %H, sending "
-			 "INVALID_MAJOR_VERSION", message->get_major_version(message),
-			 message->get_minor_version(message), src);
+		if ( charon->stealthy )
+			DBG1(DBG_NET, "received unsupported IKE from %H, ignoring", src);
+		else
+			DBG1(DBG_NET, "received unsupported IKE version %d.%d from %H, sending "
+				"INVALID_MAJOR_VERSION", message->get_major_version(message),
+				message->get_minor_version(message), src);
 		message->destroy(message);
 		return JOB_REQUEUE_DIRECT;
 	}

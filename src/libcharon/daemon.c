@@ -942,6 +942,7 @@ private_daemon_t *daemon_create()
 			.set_default_loggers = _set_default_loggers,
 			.set_level = _set_level,
 			.bus = bus_create(),
+			.stealthy = FALSE,
 		},
 		.loggers = linked_list_create(),
 		.mutex = mutex_create(MUTEX_TYPE_DEFAULT),
@@ -958,6 +959,7 @@ private_daemon_t *daemon_create()
 	this->public.traps = trap_manager_create();
 	this->public.shunts = shunt_manager_create();
 	this->public.redirect = redirect_manager_create();
+	this->public.stealthy = lib->settings->get_bool(lib->settings, "%s.stealthy", FALSE, lib->ns);
 	this->kernel_handler = kernel_handler_create();
 
 	return this;
