@@ -585,16 +585,14 @@ static job_requeue_t receive_packets(private_receiver_t *this)
 	}
 	if (!supported)
 	{
+#if DEBUG_LEVEL >= 1
 		if ( charon->stealthy )
-			{
 			DBG1(DBG_NET, "received unsupported IKE from %H, ignoring", src);
-			}
 		else
-			{
 			DBG1(DBG_NET, "received unsupported IKE version %d.%d from %H, sending "
 				"INVALID_MAJOR_VERSION", message->get_major_version(message),
 				message->get_minor_version(message), src);
-			}
+#endif
 		message->destroy(message);
 		return JOB_REQUEUE_DIRECT;
 	}

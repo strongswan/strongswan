@@ -1592,6 +1592,7 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 
 	if (parse_status != SUCCESS)
 	{
+#if DEBUG_LEVEL >= 1
 		bool is_request = msg->get_request(msg);
 		packet_t *packet;
 		host_t *src;
@@ -1600,14 +1601,16 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 		err_str = "<<UKNOWN parse status>>";
 		packet = msg->get_packet(msg);
 		src = packet->get_source(packet);
-
+#endif
 		if ( charon->stealthy )
 			status = DESTROY_ME;
 
 		switch (parse_status)
 		{
 			case NOT_SUPPORTED:
+#if DEBUG_LEVEL >= 1
 				err_str = "critical unknown payloads found";
+#endif
 				if ( ! charon->stealthy && is_request)
 				{
 					send_notify_response(this, msg,
@@ -1617,7 +1620,9 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 				}
 				break;
 			case PARSE_ERROR:
+#if DEBUG_LEVEL >= 1
 				err_str = "message parsing failed";
+#endif
 				if ( ! charon->stealthy && is_request)
 
 				{
@@ -1625,18 +1630,24 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 				}
 				break;
 			case VERIFY_ERROR:
+#if DEBUG_LEVEL >= 1
 				err_str = "message verification failed";
+#endif
 				if ( ! charon->stealthy && is_request)
 				{
 					status = send_invalid_syntax(this, msg);
 				}
 				break;
 			case FAILED:
+#if DEBUG_LEVEL >= 1
 				err_str = "integrity check failed";
+#endif
 				/* ignored */
 				break;
 			case INVALID_STATE:
+#if DEBUG_LEVEL >= 1
 				err_str = "found encrypted message, but no keys available";
+#endif
 			default:
 				break;
 		}
