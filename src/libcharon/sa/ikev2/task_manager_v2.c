@@ -1592,11 +1592,11 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 
 	if (parse_status != SUCCESS)
 	{
-#if DEBUG_LEVEL >= 1
 		bool is_request = msg->get_request(msg);
+#if DEBUG_LEVEL >= 1
+		char* err_str;
 		packet_t *packet;
 		host_t *src;
-		char* err_str;
 
 		err_str = "<<UKNOWN parse status>>";
 		packet = msg->get_packet(msg);
