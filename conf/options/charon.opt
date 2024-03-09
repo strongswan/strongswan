@@ -521,3 +521,7 @@ charon.user
 
 charon.x509.enforce_critical = yes
 	Discard certificates with unsupported or unknown critical extensions.
+
+charon.stealthy = no
+	Apply a best effort approach to operate in stealth mode.
+	Do not respond to bad initial requests of all sorts used by internet scanning services
