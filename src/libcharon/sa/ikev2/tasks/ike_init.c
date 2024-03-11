@@ -862,7 +862,6 @@ METHOD(task_t, build_r, status_t,
 	{
 		if ( charon->stealthy )
 		{
-
 			DBG0(DBG_IKE, "received proposals unacceptable from %H, ignoring (stealth)", other);
 			return DESTROY_ME;
 		}
