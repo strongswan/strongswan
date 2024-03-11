@@ -1593,24 +1593,20 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 	if (parse_status != SUCCESS)
 	{
 		bool is_request = msg->get_request(msg);
-#if DEBUG_LEVEL >= 1
-		char* err_str;
-		packet_t *packet;
-		host_t *src;
+		
+		DBG_UNUSED char* err_str;
+		DBG_UNUSED host_t *src;
 
 		err_str = "<<UKNOWN parse status>>";
-		packet = msg->get_packet(msg);
-		src = packet->get_source(packet);
-#endif
+		src = msg->get_source(msg);
+		
 		if ( charon->stealthy )
 			status = DESTROY_ME;
 
 		switch (parse_status)
 		{
 			case NOT_SUPPORTED:
-#if DEBUG_LEVEL >= 1
 				err_str = "critical unknown payloads found";
-#endif
 				if ( ! charon->stealthy && is_request)
 				{
 					send_notify_response(this, msg,
@@ -1620,9 +1616,7 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 				}
 				break;
 			case PARSE_ERROR:
-#if DEBUG_LEVEL >= 1
 				err_str = "message parsing failed";
-#endif
 				if ( ! charon->stealthy && is_request)
 
 				{
@@ -1630,32 +1624,27 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 				}
 				break;
 			case VERIFY_ERROR:
-#if DEBUG_LEVEL >= 1
 				err_str = "message verification failed";
-#endif
 				if ( ! charon->stealthy && is_request)
 				{
 					status = send_invalid_syntax(this, msg);
 				}
 				break;
 			case FAILED:
-#if DEBUG_LEVEL >= 1
 				err_str = "integrity check failed";
-#endif
 				/* ignored */
 				break;
 			case INVALID_STATE:
-#if DEBUG_LEVEL >= 1
 				err_str = "found encrypted message, but no keys available";
-#endif
 			default:
 				break;
 		}
-		DBG1(DBG_IKE, "%N %s from %#H with message ID %d processing failed (%s)%s",
+#if DEBUG_LEVEL >= 0
+		dbg(DBG_IKE, ( charon->stealthy ? 0 : 1 ), "%N %s from %H with message ID %d processing failed (%s)%s",
 			 exchange_type_names, msg->get_exchange_type(msg),
 			 is_request ? "request" : "response", src,
-			 msg->get_message_id(msg), err_str, ( charon->stealthy ? ", ignoring" : "" ));
-
+			 msg->get_message_id(msg), err_str, ( charon->stealthy ? ", ignoring (stealth)" : "" ));
+#endif
 		charon->bus->alert(charon->bus, ALERT_PARSE_ERROR_BODY, msg,
 						   parse_status);
 
@@ -1842,7 +1831,7 @@ METHOD(task_manager_t, process_message, status_t,
 			case ALREADY_DONE:
 				if ( charon->stealthy && mid == 0 ) // only block retransmit on the first packet
 				{
-					DBG1(DBG_IKE, "received retransmit of request with ID 0, ignoring.");
+					DBG0(DBG_IKE, "received retransmit of request with ID 0 from %H, ignoring (stealth)", other);
 					return FAILED;
 				}
 				DBG1(DBG_IKE, "received retransmit of request with ID %d, "
@@ -1850,8 +1839,7 @@ METHOD(task_manager_t, process_message, status_t,
 				this->ike_sa->set_statistic(this->ike_sa, STAT_INBOUND,
 											time_monotonic(NULL));
 				charon->bus->alert(charon->bus, ALERT_RETRANSMIT_RECEIVE, msg);
-				send_packets(this, this->responding.packets,
-							 msg->get_destination(msg), msg->get_source(msg));
+				send_packets(this, this->responding.packets, me, other);
 				return SUCCESS;
 			case INVALID_ARG:
 				if (mid == 0 && is_potential_mid_sync(this, msg))
@@ -1912,8 +1900,7 @@ METHOD(task_manager_t, process_message, status_t,
 			/* no config found for these hosts, destroy */
 			if ( charon->stealthy )
 			{
-				DBG1(DBG_IKE, "no IKE config found for %H...%H, ignoring",
-					me, other);
+				DBG0(DBG_IKE, "no IKE config found for initiation from %H, ignoring (stealth)", other);
 			}
 			else
 			{
