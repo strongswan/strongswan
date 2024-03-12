@@ -854,15 +854,13 @@ METHOD(task_t, build_r, status_t,
 {
 	identification_t *gateway;
 
-        host_t *other DBG_UNUSED = message->get_destination(message);
-
 	/* check if we have everything we need */
 	if (this->proposal == NULL ||
 		this->other_nonce.len == 0 || this->my_nonce.len == 0)
 	{
 		if ( charon->stealthy )
 		{
-			DBG0(DBG_IKE, "received proposals unacceptable from %H, ignoring (stealth)", other);
+			DBG0(DBG_IKE, "received proposals unacceptable from %H, ignoring (stealth)", message->get_destination(message));
 			return DESTROY_ME;
 		}
 
@@ -895,7 +893,7 @@ METHOD(task_t, build_r, status_t,
 
 		if ( charon->stealthy )
 		{
-			DBG0(DBG_IKE, "no acceptable proposal found from %H, ignoring (stealth)", other);
+			DBG0(DBG_IKE, "no acceptable proposal found from %H, ignoring (stealth)", message->get_destination(message));
 			return DESTROY_ME;
 		}
 

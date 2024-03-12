@@ -1595,8 +1595,7 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 		bool is_request = msg->get_request(msg);
 		
 		char* err_str DBG_UNUSED = "<<UKNOWN parse status>>";
-		host_t *other DBG_UNUSED = msg->get_source(msg);
-		
+	
 		if ( charon->stealthy )
 			status = DESTROY_ME;
 
@@ -1639,7 +1638,7 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 #if DEBUG_LEVEL >= 0
 		dbg(DBG_IKE, ( charon->stealthy ? 0 : 1 ), "%N %s from %H with message ID %d processing failed (%s)%s",
 			 exchange_type_names, msg->get_exchange_type(msg),
-			 is_request ? "request" : "response", other,
+			 is_request ? "request" : "response", msg->get_source(msg),
 			 msg->get_message_id(msg), err_str, ( charon->stealthy ? ", ignoring (stealth)" : "" ));
 #endif
 		charon->bus->alert(charon->bus, ALERT_PARSE_ERROR_BODY, msg,
