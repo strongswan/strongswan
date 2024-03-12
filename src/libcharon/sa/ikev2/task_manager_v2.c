@@ -1594,8 +1594,8 @@ static status_t parse_message(private_task_manager_t *this, message_t *msg)
 	{
 		bool is_request = msg->get_request(msg);
 		
-		DBG_UNUSED char* err_str = "<<UKNOWN parse status>>";
-		DBG_UNUSED host_t *other = msg->get_source(msg);
+		char* err_str DBG_UNUSED = "<<UKNOWN parse status>>";
+		host_t *other DBG_UNUSED = msg->get_source(msg);
 		
 		if ( charon->stealthy )
 			status = DESTROY_ME;

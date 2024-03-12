@@ -854,7 +854,7 @@ METHOD(task_t, build_r, status_t,
 {
 	identification_t *gateway;
 
-        DBG_UNUSED host_t *other = message->get_destination(message);
+        host_t *other DBG_UNUSED = message->get_destination(message);
 
 	/* check if we have everything we need */
 	if (this->proposal == NULL ||
