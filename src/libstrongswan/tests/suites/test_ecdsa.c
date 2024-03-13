@@ -413,7 +413,8 @@ START_TEST(test_load_reject_explicit_params)
 	if (privkey)
 	{
 		privkey->destroy(privkey);
-		warn("ECDSA private key with explicit parameters not rejected");
+		warn("ECDSA private key with explicit parameters not rejected%s",
+			 pubkey ? "" : ", but at least the public key was");
 	}
 }
 END_TEST
