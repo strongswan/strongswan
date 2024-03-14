@@ -1,13 +1,29 @@
 strongswan-5.9.14
 -----------------
 
+- Support for the IKEv2 OCSP extensions (RFC 4806) has been added, which allows
+  peers to request and send OCSP responses directly in IKEv2.
+
+- Validation of X.509 name constraints in the constraints plugin has been
+  refactored to align with RFC 5280.
+
+- The dhcp plugin has been ported to FreeBSD/macOS.
+
+- The openssl plugin is now compatible with AWS-LC.
+
+- Overflows of unique identifiers (e.g. Netlink sequence numbers or reqids) are
+  now handled gracefully.
+
 - Updated the pkcs11.h header based on the latest OpenSC version in order to
-  include new algorithm and struct definitions for the pkcs11 plugin .
+  include new algorithm and struct definitions for the pkcs11 plugin.
   Added support for PSS padding in smartcard-based RSA signatures using either
   on-chip or external data hashing.
 
 - Added keyid and certid handles in the pki --ocsp command so that keys and/or
-  certificates can stored on a smartcard or in a TPM 2.0 device.
+  certificates can be stored on a smartcard or in a TPM 2.0 device.
+
+- Fail SA installation on Linux if replay protection is disabled while ESN is
+  enabled, which the kernel currently doesn't support.
 
 
 strongswan-5.9.13
@@ -346,7 +362,7 @@ strongswan-5.9.4
   salt lengths.
   This vulnerability has been registered as CVE-2021-41990.
 
-- Fixed a denial-of-service vulnerabililty in the in-memory certificate cache
+- Fixed a denial-of-service vulnerability in the in-memory certificate cache
   if certificates are replaced and a very large random value caused an integer
   overflow.
   This vulnerability has been registered as CVE-2021-41991.
@@ -1758,7 +1774,7 @@ strongswan-5.0.3
   PT-TLS (RFC 6876), a Posture Transport Protocol over TLS.
 
 - The charon systime-fix plugin can disable certificate lifetime checks on
-  embedded systems if the system time is obviously out of sync after bootup.
+  embedded systems if the system time is obviously out of sync after boot-up.
   Certificates lifetimes get checked once the system time gets sane, closing
   or reauthenticating connections using expired certificates.
 
