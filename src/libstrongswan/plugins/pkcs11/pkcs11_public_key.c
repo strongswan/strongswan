@@ -307,7 +307,10 @@ METHOD(public_key_t, verify, bool,
 	success = TRUE;
 
 end:
-	free(mechanism->pParameter);
+	if (mechanism)
+	{
+		free(mechanism->pParameter);
+	}
 	free(mechanism);
 	return success;
 }
