@@ -76,44 +76,45 @@ static void write_bool(xmlTextWriterPtr writer, char *element, bool val)
  */
 static void write_id(xmlTextWriterPtr writer, char *element, identification_t *id)
 {
+	char *type = NULL;
+
 	xmlTextWriterStartElement(writer, element);
 	switch (id->get_type(id))
 	{
-		{
-			char *type;
 
-			while (TRUE)
-			{
-				case ID_ANY:
-					type = "any";
-					break;
-				case ID_IPV4_ADDR:
-					type = "ipv4";
-					break;
-				case ID_IPV6_ADDR:
-					type = "ipv6";
-					break;
-				case ID_FQDN:
-					type = "fqdn";
-					break;
-				case ID_RFC822_ADDR:
-					type = "email";
-					break;
-				case ID_DER_ASN1_DN:
-					type = "asn1dn";
-					break;
-				case ID_DER_ASN1_GN:
-					type = "asn1gn";
-					break;
-			}
-			xmlTextWriterWriteAttribute(writer, "type", type);
-			xmlTextWriterWriteFormatString(writer, "%Y", id);
+		case ID_ANY:
+			type = "any";
 			break;
-		}
+		case ID_IPV4_ADDR:
+			type = "ipv4";
+			break;
+		case ID_IPV6_ADDR:
+			type = "ipv6";
+			break;
+		case ID_FQDN:
+			type = "fqdn";
+			break;
+		case ID_RFC822_ADDR:
+			type = "email";
+			break;
+		case ID_DER_ASN1_DN:
+			type = "asn1dn";
+			break;
+		case ID_DER_ASN1_GN:
+			type = "asn1gn";
+			break;
 		default:
-			/* TODO: base64 keyid */
-			xmlTextWriterWriteAttribute(writer, "type", "keyid");
 			break;
+	}
+	if (type)
+	{
+		xmlTextWriterWriteAttribute(writer, "type", type);
+		xmlTextWriterWriteFormatString(writer, "%Y", id);
+	}
+	else
+	{
+		/* TODO: base64 keyid */
+		xmlTextWriterWriteAttribute(writer, "type", "keyid");
 	}
 	xmlTextWriterEndElement(writer);
 }
