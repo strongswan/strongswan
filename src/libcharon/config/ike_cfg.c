@@ -624,7 +624,7 @@ ike_cfg_t *ike_cfg_create(ike_cfg_create_t *data)
 		.refcount = 1,
 		.version = data->version,
 		.certreq = !data->no_certreq,
-		.ocsp_certreq = !data->no_ocsp_certreq,
+		.ocsp_certreq = data->ocsp_certreq,
 		.force_encap = data->force_encap,
 		.fragmentation = data->fragmentation,
 		.childless = data->childless,

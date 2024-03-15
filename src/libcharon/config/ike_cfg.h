@@ -295,8 +295,8 @@ struct ike_cfg_create_t {
 	uint16_t remote_port;
 	/** TRUE to not send any certificate requests */
 	bool no_certreq;
-	/** TRUE to not send OCSP status requests */
-	bool no_ocsp_certreq;
+	/** TRUE to send OCSP status requests */
+	bool ocsp_certreq;
 	/** Enforce UDP encapsulation by faking NATD notify */
 	bool force_encap;
 	/** Use IKE fragmentation */
