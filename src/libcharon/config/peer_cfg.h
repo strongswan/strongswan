@@ -66,12 +66,12 @@ extern enum_name_t *cert_policy_names;
  * OCSP status request/response sending policy.
  */
 enum ocsp_policy_t {
-	/** request OCSP status and reply to OCSP status requests */
-	OCSP_SEND_BOTH =     0,
 	/** send OCSP status upon OCSP status request */
-	OCSP_SEND_REPLY =    1,
+	OCSP_SEND_REPLY =    0,
 	/** send OCSP status request */
-	OCSP_SEND_REQUEST =  2,
+	OCSP_SEND_REQUEST =  1,
+	/** request OCSP status and reply to OCSP status requests */
+	OCSP_SEND_BOTH =     2,
 	/** never send OCSP status request or response */
 	OCSP_SEND_NEVER =    3,
 };
