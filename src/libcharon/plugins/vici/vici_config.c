@@ -2672,8 +2672,8 @@ CALLBACK(config_sn, bool,
 		.remote = peer.remote_addrs,
 		.remote_port = peer.remote_port,
 		.no_certreq = !peer.send_certreq,
-		.no_ocsp_certreq = peer.ocsp != OCSP_SEND_BOTH &&
-						   peer.ocsp != OCSP_SEND_REQUEST,
+		.ocsp_certreq = peer.ocsp == OCSP_SEND_BOTH ||
+						peer.ocsp == OCSP_SEND_REQUEST,
 		.force_encap = peer.encap,
 		.fragmentation = peer.fragmentation,
 		.childless = peer.childless,
