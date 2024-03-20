@@ -1151,6 +1151,7 @@ static status_t check_and_put_init_hash(private_ike_sa_manager_t *this,
 	spi = get_spi(this);
 	if (!spi)
 	{
+		mutex->unlock(mutex);
 		return FAILED;
 	}
 
