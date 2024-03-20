@@ -623,6 +623,7 @@ static char *whitelist[] = {
 	"EVP_MD_fetch",
 	"EVP_SIGNATURE_fetch",
 	"OSSL_DECODER_do_all_provided",
+	"OSSL_DECODER_CTX_new_for_pkey",
 	"OSSL_ENCODER_do_all_provided",
 	"OSSL_PROVIDER_try_load",
 	"OSSL_PROVIDER_load",
