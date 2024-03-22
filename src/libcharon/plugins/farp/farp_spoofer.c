@@ -20,12 +20,14 @@
 
 #include <errno.h>
 #include <unistd.h>
+#include <net/ethernet.h>
 #include <sys/ioctl.h>
 
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
 #include <sys/socket.h>
-#include <linux/if_arp.h>
-#include <linux/if_ether.h>
+#include <net/if_arp.h>
+#include <netinet/if_ether.h>
+#include <netpacket/packet.h>
 #include <linux/filter.h>
 #else
 #include <net/bpf.h>
@@ -33,7 +35,6 @@
 #include <net/if_dl.h>
 #endif /* !defined(__APPLE__) && !defined(__FreeBSD__) */
 
-#include <net/ethernet.h>
 #include <daemon.h>
 #include <threading/thread.h>
 #include <processing/jobs/callback_job.h>
