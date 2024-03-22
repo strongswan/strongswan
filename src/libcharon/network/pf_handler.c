@@ -20,22 +20,22 @@
 
 #include <library.h>
 #include <unistd.h>
+#include <errno.h>
+#include <net/ethernet.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
 
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
-#include <linux/if_arp.h>
-#include <linux/if_ether.h>
+#include <net/if_arp.h>
+#include <netinet/if_ether.h>
+#include <netpacket/packet.h>
 #include <linux/filter.h>
 #else
 #include <fcntl.h>
 #include <ifaddrs.h>
 #include <net/bpf.h>
-#include <net/if.h>
 #include <net/if_dl.h>
 #endif /* !defined(__APPLE__) && !defined(__FreeBSD__) */
-
-#include <errno.h>
-#include <net/ethernet.h>
-#include <sys/ioctl.h>
 
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
 
