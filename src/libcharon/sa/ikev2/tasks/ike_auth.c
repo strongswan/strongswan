@@ -964,6 +964,7 @@ static bool apply_ppk(private_ike_auth_t *this)
 		}
 		DBG1(DBG_CFG, "using PPK for PPK_ID '%Y'", this->ppk_id);
 		this->ike_sa->set_condition(this->ike_sa, COND_PPK, TRUE);
+		charon->bus->ike_ppk(charon->bus, this->ike_sa, this->ppk_id);
 	}
 	clear_ppk(this);
 	return TRUE;
