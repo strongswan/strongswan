@@ -253,7 +253,7 @@ wolfssl)
 printf-builtin)
 	CONFIG="--with-printf-hooks=builtin"
 	;;
-all|codeql|coverage|sonarcloud|no-dbg)
+all|alpine|codeql|coverage|sonarcloud|no-dbg)
 	if [ "$TEST" = "sonarcloud" ]; then
 		if [ -z "$SONAR_PROJECT" -o -z "$SONAR_ORGANIZATION" -o -z "$SONAR_TOKEN" ]; then
 			echo "The SONAR_PROJECT, SONAR_ORGANIZATION and SONAR_TOKEN" \
@@ -293,6 +293,21 @@ all|codeql|coverage|sonarcloud|no-dbg)
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libgcrypt20-dev libjson-c-dev python3-pip libtspi-dev libsystemd-dev
 		  libselinux1-dev libiptc-dev"
+	if [ "$TEST" = "alpine" ]; then
+		# override the whole list for alpine
+		DEPS="git gmp-dev openldap-dev curl-dev ldns-dev unbound-dev libsoup-dev
+			  tpm2-tss-dev mariadb-dev wolfssl-dev libgcrypt-dev botan3-dev
+			  pcsc-lite-dev networkmanager-dev linux-pam-dev iptables-dev
+			  libselinux-dev binutils-dev libunwind-dev ruby py3-setuptools"
+		# musl does not provide backtrace(), so use libunwind
+		CONFIG="$CONFIG --enable-unwind-backtraces"
+		# alpine doesn't have systemd
+		CONFIG="$CONFIG --disable-systemd --disable-cert-enroll-timer"
+		# no TrouSerS either
+		CONFIG="$CONFIG --disable-tss-trousers --disable-aikgen"
+		# and no Clearsilver
+		CONFIG="$CONFIG --disable-fast --disable-manager --disable-medsrv"
+	fi
 	PYDEPS="tox"
 	if test "$1" = "build-deps"; then
 		if [ "$ID" = "ubuntu" -a "$VERSION_ID" != "20.04" ]; then
@@ -454,6 +469,10 @@ deps)
 		sudo apt-get update -qq && \
 		sudo apt-get install -qq bison flex gperf gettext $DEPS
 		;;
+	alpine)
+		apk add --no-cache build-base automake autoconf libtool pkgconfig && \
+		apk add --no-cache bison flex gperf gettext-dev tzdata $DEPS
+		;;
 	macos)
 		brew update && \
 		brew install $DEPS
@@ -484,7 +503,7 @@ CONFIG="$CONFIG
 	--enable-leak-detective=${LEAK_DETECTIVE-no}"
 
 case "$TEST" in
-	codeql|coverage|freebsd|fuzzing|sonarcloud|win*)
+	alpine|codeql|coverage|freebsd|fuzzing|sonarcloud|win*)
 		# don't use AddressSanitizer if it's not available or causes conflicts
 		CONFIG="$CONFIG --disable-asan"
 		;;
