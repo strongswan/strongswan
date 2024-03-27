@@ -47,6 +47,8 @@
 
 #include <wolfssl/ssl.h>
 
+#undef RNG
+
 #ifndef FIPS_MODE
 #define FIPS_MODE 0
 #endif
