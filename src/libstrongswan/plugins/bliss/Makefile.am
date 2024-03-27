@@ -53,6 +53,11 @@ bliss_huffman_LDADD = -lm \
 	$(top_builddir)/src/libstrongswan/math/libnttfft/libnttfft.la \
 	libbliss-params.la
 
+# this won't work with monolithic builds
+if USE_BUILTIN_PRINTF
+bliss_huffman_LDADD += $(top_builddir)/src/libstrongswan/libstrongswan.la
+endif
+
 recreate-bliss-huffman :	bliss_huffman bliss_huffman_code.h
 	$(AM_V_GEN) \
 	./bliss_huffman 1  8 > $(srcdir)/bliss_huffman_code_1.c 2>/dev/null
