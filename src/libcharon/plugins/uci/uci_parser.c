@@ -76,7 +76,7 @@ METHOD(enumerator_t, section_enumerator_enumerate, bool,
 		if (uci_lookup(this->ctx, &element, this->package,
 					   this->current->name, "name") == UCI_OK)
 		{	/* use "name" attribute as config name if available ... */
-			*value = uci_to_option(element)->value;
+			*value = uci_to_option(element)->v.string;
 		}
 		else
 		{	/* ... or the section name becomes config name */
@@ -91,7 +91,7 @@ METHOD(enumerator_t, section_enumerator_enumerate, bool,
 		if (value && uci_lookup(this->ctx, &element, this->package,
 						  this->current->name, this->keywords[i]) == UCI_OK)
 		{
-			*value = uci_to_option(element)->value;
+			*value = uci_to_option(element)->v.string;
 		}
 	}
 
