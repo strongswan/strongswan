@@ -309,16 +309,22 @@ Suite *fetch_http_suite_create()
 {
 	Suite *s;
 	TCase *tc;
+	int no_ipv6 = 0;
 
 	s = suite_create("http fetcher");
 
+	if (getenv("TESTS_NO_IPV6"))
+	{
+		no_ipv6 = 1;
+	}
+
 	tc = tcase_create("GET");
-	tcase_add_loop_test(tc, test_get, 0, countof(gtests));
+	tcase_add_loop_test(tc, test_get, 0, countof(gtests) - no_ipv6);
 	test_case_set_timeout(tc, 10);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("POST");
-	tcase_add_loop_test(tc, test_post, 0, countof(ptests));
+	tcase_add_loop_test(tc, test_post, 0, countof(ptests) - no_ipv6);
 	test_case_set_timeout(tc, 10);
 	suite_add_tcase(s, tc);
 
