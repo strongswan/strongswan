@@ -78,6 +78,7 @@ jobs:
       - if: ${{ success() && matrix.test == 'coverage' }}
         uses: codecov/codecov-action@v4
         with:
+          disable_search: true
           fail_ci_if_error: true
           file: coverage/coverage.cleaned.info
           token: ${{ secrets.CODECOV_TOKEN }}
