@@ -1331,7 +1331,10 @@ pools.<name>.addrs =
 
 	Subnet or range defining addresses allocated in pool. Accepts a single CIDR
 	subnet defining the pool to allocate addresses from or an address range
-	(<from>-<to>).  Pools must be unique and non-overlapping.
+	(<from>-<to>). If the address in CIDR notation is not the network ID of the
+	subnet (e.g. 10.1.0.5/24 instead of 10.1.0.0/24), addresses below it won't
+	be allocated to clients (they could e.g. be assigned manually to internal
+	hosts like the VPN server itself). Pools must be unique and non-overlapping.
 
 pools.<name>.<attr> =
 	Comma separated list of additional attributes from type <attr>.
