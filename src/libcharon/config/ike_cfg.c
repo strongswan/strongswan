@@ -209,7 +209,8 @@ METHOD(ike_cfg_t, resolve_other, host_t*,
 /**
  * Common function for match_me/other
  */
-static u_int match(linked_list_t *hosts, linked_list_t *ranges, host_t *cand)
+static u_int match(linked_list_t *hosts, linked_list_t *ranges, uint16_t port,
+		host_t *cand)
 {
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
@@ -229,7 +230,7 @@ static u_int match(linked_list_t *hosts, linked_list_t *ranges, host_t *cand)
 			{
 				quality = max(quality, 128 + 1);
 			}
-			if (host->is_anyaddr(host))
+			else if (host->is_anyaddr(host))
 			{
 				quality = max(quality, 1);
 			}
@@ -257,19 +258,24 @@ static u_int match(linked_list_t *hosts, linked_list_t *ranges, host_t *cand)
 	}
 	enumerator->destroy(enumerator);
 
+	/* honor if port matches exactly */
+	if (port == cand->get_port(cand))
+	{
+		quality += 1;
+	}
 	return quality;
 }
 
 METHOD(ike_cfg_t, match_me, u_int,
 	private_ike_cfg_t *this, host_t *host)
 {
-	return match(this->my_hosts, this->my_ranges, host);
+	return match(this->my_hosts, this->my_ranges, this->my_port, host);
 }
 
 METHOD(ike_cfg_t, match_other, u_int,
 	private_ike_cfg_t *this, host_t *host)
 {
-	return match(this->other_hosts, this->other_ranges, host);
+	return match(this->other_hosts, this->other_ranges, this->other_port, host);
 }
 
 METHOD(ike_cfg_t, get_my_addr, char*,
