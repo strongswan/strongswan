@@ -702,6 +702,13 @@ mem_pool_t *mem_pool_create(char *name, host_t *base, int bits)
 		{	/* only serve the second address of the subnet */
 			this->size--;
 		}
+		if (!this->size)
+		{
+			DBG1(DBG_CFG, "virtual IP pool %H/%d is empty",
+				 base, addr_bits - bits);
+			destroy(this);
+			return NULL;
+		}
 	}
 	return &this->public;
 }
