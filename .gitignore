@@ -27,6 +27,7 @@ libtool
 y.tab.[ch]
 lex.yy.c
 *keywords.c
+!proposal_keywords.c
 plugin_constructors.c
 Doxyfile
 apidoc/
