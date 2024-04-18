@@ -515,7 +515,7 @@ if test x$gmp = xtrue -o x$ntru = xtrue -o x$bliss = xtrue; then
 	mgf1=true
 fi
 
-if test x$stroke = xtrue; then
+if test x$stroke = xtrue -o x$vici = xtrue; then
 	counters=true
 fi
 
