@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Tobias Brunner
+ * Copyright (C) 2012-2024 Tobias Brunner
  * Copyright (C) 2006 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -81,6 +81,11 @@ struct private_file_logger_t {
 	bool log_level;
 
 	/**
+	 * Print log messages as JSON objects
+	 */
+	bool json;
+
+	/**
 	 * Mutex to ensure multi-line log messages are not torn apart
 	 */
 	mutex_t *mutex;
@@ -95,11 +100,13 @@ METHOD(logger_t, log_, void,
 	private_file_logger_t *this, debug_t group, level_t level, int thread,
 	ike_sa_t* ike_sa, const char *message)
 {
-	char groupstr[5], timestr[128], namestr[128] = "";
-	const char *current = message, *next;
+	char groupstr[5], timestr[128];
+	char idstr[11] = "", namestr[128] = "", nameidstr[142];
+	const char *current = message, *next = NULL;
 	struct tm tm;
 	timeval_t tv;
 	time_t s;
+	size_t time_len;
 	u_int ms = 0;
 
 	this->lock->read_lock(this->lock);
@@ -115,67 +122,101 @@ METHOD(logger_t, log_, void,
 		s = tv.tv_sec;
 		ms = tv.tv_usec / 1000;
 		localtime_r(&s, &tm);
-		strftime(timestr, sizeof(timestr), this->time_format, &tm);
-	}
+		time_len = strftime(timestr, sizeof(timestr), this->time_format, &tm);
 
-	if (this->log_level)
-	{
-		snprintf(groupstr, sizeof(groupstr), "%N%d", debug_names, group,
-				 level);
-	}
-	else
-	{
-		snprintf(groupstr, sizeof(groupstr), "%N", debug_names, group);
+		if (this->add_ms && sizeof(timestr) - time_len > 4)
+		{
+			snprintf(&timestr[time_len], sizeof(timestr)-time_len, ".%03u", ms);
+		}
 	}
 
 	if (this->ike_name && ike_sa)
 	{
+		snprintf(idstr, sizeof(idstr), "%u", ike_sa->get_unique_id(ike_sa));
 		if (ike_sa->get_peer_cfg(ike_sa))
 		{
-			snprintf(namestr, sizeof(namestr), " <%s|%d>",
-				ike_sa->get_name(ike_sa), ike_sa->get_unique_id(ike_sa));
+			snprintf(namestr, sizeof(namestr), "%s", ike_sa->get_name(ike_sa));
 		}
-		else
+	}
+
+	this->mutex->lock(this->mutex);
+	if (this->json)
+	{
+		fprintf(this->out, "{");
+		if (this->time_format)
 		{
-			snprintf(namestr, sizeof(namestr), " <%d>",
-				ike_sa->get_unique_id(ike_sa));
+			fprintf(this->out, "\"time\":\"%s\",", timestr);
 		}
+		fprintf(this->out, "\"thread\":%u,\"group\":\"%N\",\"level\":%u,",
+				thread, debug_names, group, level);
+		if (idstr[0])
+		{
+			fprintf(this->out, "\"ikesa-uniqueid\":\"%s\",", idstr);
+		}
+		if (namestr[0])
+		{
+			fprintf(this->out, "\"ikesa-name\":\"%s\",", namestr);
+		}
+		fprintf(this->out, "\"msg\":\"");
+		/* replace some characters incompatible with JSON strings */
+		for (next = current; *next; next++)
+		{
+			const char *esc;
+
+			switch (*next)
+			{
+				case '\n':
+					esc = "\\n";
+					break;
+				case '\\':
+					esc = "\\\\";
+					break;
+				case '"':
+					esc = "\\\"";
+					break;
+				default:
+					continue;
+			}
+			fprintf(this->out, "%.*s%s", (int)(next - current), current, esc);
+			current = next + 1;
+		}
+		fprintf(this->out, "%s\"}\n", current);
 	}
 	else
 	{
-		namestr[0] = '\0';
-	}
-
-	/* prepend a prefix in front of every line */
-	this->mutex->lock(this->mutex);
-	while (TRUE)
-	{
-		next = strchr(current, '\n');
-		if (this->time_format)
+		if (this->log_level)
 		{
-			if (this->add_ms)
-			{
-				fprintf(this->out, "%s.%03u %.2d[%s]%s ",
-						timestr, ms, thread, groupstr, namestr);
-			}
-			else
-			{
-				fprintf(this->out, "%s %.2d[%s]%s ",
-						timestr, thread, groupstr, namestr);
-			}
+			snprintf(groupstr, sizeof(groupstr), "%N%d", debug_names, group,
+					 level);
 		}
 		else
 		{
-			fprintf(this->out, "%.2d[%s]%s ",
-					thread, groupstr, namestr);
+			snprintf(groupstr, sizeof(groupstr), "%N", debug_names, group);
 		}
-		if (next == NULL)
+		snprintf(nameidstr, sizeof(nameidstr), " <%s%s%s>", namestr,
+				 namestr[0] ? "|" : "", idstr);
+		/* prepend the prefix in front of every line */
+		while (TRUE)
 		{
-			fprintf(this->out, "%s\n", current);
-			break;
+			next = strchr(current, '\n');
+			if (this->time_format)
+			{
+				fprintf(this->out, "%s %.2d[%s]%s ",
+						timestr, thread, groupstr, nameidstr);
+			}
+			else
+			{
+				fprintf(this->out, "%.2d[%s]%s ",
+						thread, groupstr, nameidstr);
+			}
+			if (!next)
+			{
+				fprintf(this->out, "%s\n", current);
+				break;
+			}
+			fprintf(this->out, "%.*s\n", (int)(next - current), current);
+			current = next + 1;
 		}
-		fprintf(this->out, "%.*s\n", (int)(next - current), current);
-		current = next + 1;
 	}
 #ifndef HAVE_SETLINEBUF
 	if (this->flush_line)
@@ -218,7 +259,7 @@ METHOD(file_logger_t, set_level, void,
 
 METHOD(file_logger_t, set_options, void,
 	private_file_logger_t *this, char *time_format, bool add_ms, bool ike_name,
-	bool log_level)
+	bool log_level, bool json)
 {
 	this->lock->write_lock(this->lock);
 	free(this->time_format);
@@ -226,6 +267,7 @@ METHOD(file_logger_t, set_options, void,
 	this->add_ms = add_ms;
 	this->ike_name = ike_name;
 	this->log_level = log_level;
+	this->json = json;
 	this->lock->unlock(this->lock);
 }
 

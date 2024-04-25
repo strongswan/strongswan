@@ -53,9 +53,10 @@ struct file_logger_t {
 	 *						current second after the timestamp
 	 * @param ike_name		TRUE to prefix the name of the IKE_SA
 	 * @param log_level		TRUE to include the log level in the message
+	 * @param json			TRUE to log as JSON objects
 	 */
 	void (*set_options) (file_logger_t *this, char *time_format, bool add_ms,
-						 bool ike_name, bool log_level);
+						 bool ike_name, bool log_level, bool json);
 
 	/**
 	 * Open (or reopen) the log file according to the given parameters
