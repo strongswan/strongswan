@@ -69,7 +69,7 @@ build_wolfssl()
 
 build_tss2()
 {
-	TSS2_REV=3.2.2
+	TSS2_REV=3.2.3
 	TSS2_PKG=tpm2-tss-$TSS2_REV
 	TSS2_DIR=$DEPS_BUILD_DIR/$TSS2_PKG
 	TSS2_SRC=https://github.com/tpm2-software/tpm2-tss/releases/download/$TSS2_REV/$TSS2_PKG.tar.gz
