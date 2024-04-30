@@ -363,6 +363,11 @@ struct private_kernel_netlink_ipsec_t {
 	bool sa_lastused;
 
 	/**
+	 * Whether the kernel supports setting the SA direction
+	 */
+	bool sa_dir;
+
+	/**
 	 * Whether to install routes along policies
 	 */
 	bool install_routes;
@@ -1322,7 +1327,8 @@ static status_t get_spi_internal(private_kernel_netlink_ipsec_t *this,
 	userspi->min = min;
 	userspi->max = max;
 
-	if (!add_uint8(hdr, sizeof(request), XFRMA_SA_DIR, XFRM_SA_DIR_IN))
+	if (this->sa_dir &&
+		!add_uint8(hdr, sizeof(request), XFRMA_SA_DIR, XFRM_SA_DIR_IN))
 	{
 		return FAILED;
 	}
@@ -2068,7 +2074,8 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		}
 	}
 
-	if (!add_uint8(hdr, sizeof(request), XFRMA_SA_DIR,
+	if (this->sa_dir &&
+		!add_uint8(hdr, sizeof(request), XFRMA_SA_DIR,
 				   data->inbound ? XFRM_SA_DIR_IN : XFRM_SA_DIR_OUT))
 	{
 		goto failed;
@@ -2076,11 +2083,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 	if (id->proto != IPPROTO_COMP)
 	{
-		/* generally, we don't need a replay window for outbound SAs, however,
-		 * when using ESN the kernel rejects the attribute if it is 0 */
+		/* we don't need a replay window for outbound SAs, however, older
+		 * kernels reject the attribute if it is 0 when using ESN, while
+		 * newer kernels reject it if > 0 if the SA's direction is set */
 		if (!data->inbound && data->replay_window)
 		{
-			data->replay_window = data->esn ? 1 : 0;
+			data->replay_window = (data->esn && !this->sa_dir) ? 1 : 0;
 		}
 		if (data->esn || data->replay_window > 32)
 		{
@@ -4161,6 +4169,9 @@ static void check_kernel_features(private_kernel_netlink_ipsec_t *this)
 				/* before 6.2 the kernel only provided the last used time for
 				 * specific outbound IPv6 SAs */
 				this->sa_lastused = a > 6 || (a == 6 && b >= 2);
+				/* 6.10 added support for SA direction and enforces certain
+				 * flags e.g. 0 replay window for outbound SAs */
+				this->sa_dir = a > 6 || (a == 6 && b >= 10);
 				break;
 			default:
 				break;
