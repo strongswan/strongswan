@@ -62,6 +62,12 @@ if !USE_WINDOWS
     networking/streams/stream_service_unix.c
 endif
 
+if USE_VM_SOCKETS
+  libstrongswan_la_SOURCES += \
+    networking/streams/stream_vsock.c \
+    networking/streams/stream_service_vsock.c
+endif
+
 # private header files
 noinst_HEADERS = \
 settings/settings_types.h
@@ -133,6 +139,11 @@ utils/utils/strerror.h utils/compat/windows.h utils/compat/apple.h utils/compat/
 utils/utils/atomics.h utils/utils/types.h utils/utils/byteorder.h \
 utils/utils/string.h utils/utils/memory.h utils/utils/tty.h utils/utils/path.h \
 utils/utils/status.h utils/utils/object.h utils/utils/time.h utils/utils/align.h
+if USE_VM_SOCKETS
+  nobase_strongswan_include_HEADERS += \
+    networking/streams/stream_vsock.h \
+    networking/streams/stream_service_vsock.h
+endif
 endif
 
 library.lo :	$(top_builddir)/config.status

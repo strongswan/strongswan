@@ -713,6 +713,11 @@ AC_CHECK_HEADERS([netinet/ip6.h linux/fib_rules.h], [], [],
 	#include <sys/types.h>
 	#include <netinet/in.h>
 ])
+AC_CHECK_HEADERS([linux/vm_sockets.h], [have_vm_sockets=true], [],
+[
+	#include <sys/socket.h>
+])
+AM_CONDITIONAL(USE_VM_SOCKETS, [test "x$have_vm_sockets" = xtrue])
 
 AC_CHECK_MEMBERS([struct sockaddr.sa_len], [], [],
 [
