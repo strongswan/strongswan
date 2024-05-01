@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2024 Tobias Brunner
  * Copyright (C) 2024 Thomas Egerer
  *
  * Copyright (C) secunet Security Networks AG
@@ -29,7 +30,10 @@
  * identifier, CID), followed by a colon separated port. CID as well as port
  * are 32-bit unsigned integers. A full VSOCK uri looks something like:
  *
- *   vsock://2:12345
+ * * vsock://1:12345 (loopback)
+ * * vsock://2:12345 (connect from the VM to the well-known CID of the host)
+ * * vsock://3:12345 (CID 3 as assigned to a VM)
+ * * vsock://\htmlonly\endhtmlonly*:12345 (listen on any CID)
  *
  * There is no default port, so a colon after vsock:// is mandatory.
  *

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2024 Tobias Brunner
  * Copyright (C) 2024 Thomas Egerer
  *
  * Copyright (C) secunet Security Networks AG
@@ -40,7 +41,15 @@ static int stream_parse_uri_vsock(char *uri, struct sockaddr_vm *addr)
 	}
 
 	uri += strlen("vsock://");
-	cid = strtoul(uri, &uri, 10);
+	if (*uri == '*')
+	{
+		cid = VMADDR_CID_ANY;
+		uri++;
+	}
+	else
+	{
+		cid = strtoul(uri, &uri, 10);
+	}
 
 	if (*uri != ':' || cid > UINT_MAX)
 	{
