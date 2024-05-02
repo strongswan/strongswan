@@ -27,6 +27,7 @@ libtool
 y.tab.[ch]
 lex.yy.c
 *keywords.c
+!proposal_keywords.c
 plugin_constructors.c
 Doxyfile
 apidoc/
@@ -38,6 +39,7 @@ fuzzing-corpora/
 *.tar.bz2
 *.tar.gz
 .DS_Store
+._.DS_Store
 coverage/
 *.gcno
 *.gcda

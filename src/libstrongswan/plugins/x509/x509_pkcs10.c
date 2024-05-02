@@ -337,7 +337,7 @@ static bool generate(private_x509_pkcs10_t *cert, private_key_t *sign_key,
 	extendedKeyUsage = x509_generate_eku_extension(cert->flags);
 
 	/* encode extensionRequest attribute */
-	if (subjectAltNames.ptr || certTypeExt.ptr)
+	if (subjectAltNames.ptr || certTypeExt.ptr || extendedKeyUsage.ptr)
 	{
 		extensionRequest = asn1_wrap(ASN1_SEQUENCE, "mm",
 				asn1_build_known_oid(OID_EXTENSION_REQUEST),

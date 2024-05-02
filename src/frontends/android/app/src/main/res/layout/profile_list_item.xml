@@ -17,44 +17,60 @@
     for more details.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="?android:attr/activatedBackgroundIndicator"
     android:orientation="vertical"
     android:paddingBottom="6dip"
-    android:paddingTop="4dip"
-    android:background="?android:attr/activatedBackgroundIndicator" >
+    android:paddingTop="4dip">
 
     <TextView
         android:id="@+id/profile_item_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="15dp"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
+        android:layout_marginStart="15dp"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        tools:text="Profile name" />
+
+    <TextView
+        android:id="@+id/profile_item_managed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="15dp"
+        android:text="@string/profile_managed"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:textColor="@color/success_text"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
     <TextView
         android:id="@+id/profile_item_gateway"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="?android:textColorSecondary"
+        android:layout_marginStart="15dp"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:layout_marginLeft="15dp" />
+        android:textColor="?android:textColorSecondary"
+        tools:text="Server: vpn.example.com" />
 
     <TextView
         android:id="@+id/profile_item_username"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="?android:textColorSecondary"
+        android:layout_marginStart="15dp"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:layout_marginLeft="15dp" />
+        android:textColor="?android:textColorSecondary"
+        tools:text="Username" />
 
     <TextView
         android:id="@+id/profile_item_certificate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="?android:textColorSecondary"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:singleLine="true"
+        android:layout_marginStart="15dp"
         android:ellipsize="end"
-        android:layout_marginLeft="15dp" />
+        android:singleLine="true"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:textColor="?android:textColorSecondary"
+        tools:text="Certificate" />
 
 </LinearLayout>

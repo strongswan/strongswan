@@ -2126,6 +2126,7 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 	ike_sa_t *new;
 	host_t *host;
 	queued_task_t *queued;
+	uint32_t reqid;
 	bool children = FALSE;
 
 	new = charon->ike_sa_manager->create_new(charon->ike_sa_manager,
@@ -2165,7 +2166,12 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 		cfg = child_sa->get_config(child_sa);
 		child_create = child_create_create(new, cfg->get_ref(cfg),
 										   FALSE, NULL, NULL);
-		child_create->use_reqid(child_create, child_sa->get_reqid(child_sa));
+		reqid = child_sa->get_reqid_ref(child_sa);
+		if (reqid)
+		{
+			child_create->use_reqid(child_create, reqid);
+			charon->kernel->release_reqid(charon->kernel, reqid);
+		}
 		child_create->use_marks(child_create,
 								child_sa->get_mark(child_sa, TRUE).value,
 								child_sa->get_mark(child_sa, FALSE).value);

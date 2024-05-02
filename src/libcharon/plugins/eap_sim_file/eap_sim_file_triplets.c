@@ -208,7 +208,7 @@ static bool read_triplets(private_eap_sim_file_triplets_t *this, char *path)
 					parse_token(triplet->kc, token, SIM_KC_LEN);
 					continue;
 				default:
-					break;;
+					break;
 			}
 			break;
 		}

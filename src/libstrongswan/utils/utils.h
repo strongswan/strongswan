@@ -120,7 +120,7 @@ void utils_deinit();
 #endif
 
 /**
- * Address santizer support
+ * Address sanitizer support
  */
 #if __has_feature(address_sanitizer) || \
 	(defined(__GNUC__) && defined(__SANITIZE_ADDRESS__))
@@ -217,7 +217,7 @@ void utils_deinit();
 /**
  * Ignore result of functions tagged with warn_unused_result attributes
  */
-#define ignore_result(call) { if(call){}; }
+#define ignore_result(call) do { if(call){} } while(0)
 
 #if !defined(HAVE_SIGWAITINFO) && !defined(WIN32)
 /**

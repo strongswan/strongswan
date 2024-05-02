@@ -15,13 +15,13 @@
  * for more details.
  */
 
-#include "curl_plugin.h"
+#include <curl/curl.h>
 
 #include <library.h>
 #include <utils/debug.h>
-#include "curl_fetcher.h"
 
-#include <curl/curl.h>
+#include "curl_plugin.h"
+#include "curl_fetcher.h"
 
 typedef struct private_curl_plugin_t private_curl_plugin_t;
 

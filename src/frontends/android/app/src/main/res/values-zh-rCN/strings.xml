@@ -135,6 +135,7 @@
     <string name="profile_cert_import">从VPN配置导入证书</string>
     <string name="profile_cert_alias">\"%1$s\" 所对应的证书</string>
     <string name="profile_profile_id">配置文件ID</string>
+    <string name="profile_managed">Managed profile</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">必填信息以初始化连接</string>
     <string name="alert_text_no_input_username">请输入您的用户名</string>
@@ -144,6 +145,7 @@
     <string name="alert_text_no_subnets">请输入有效的子网和/或IP地址，用空格分隔</string>
     <string name="alert_text_no_ips">请输入有效的IP地址，以空格分隔</string>
     <string name="alert_text_no_proposal">请输入用连字符分隔的有效算法列表</string>
+    <string name="alert_text_vpn_profile_read_only">This VPN profile is managed by your administrator and can\'t be modified. You can only change the password</string>
     <string name="tnc_notice_title">EAP-TNC可能会影响您的隐私</string>
     <string name="tnc_notice_subtitle">设备数据已被发送至服务器管理员</string>
     <string name="tnc_notice_details"><![CDATA[<p>可信网络连接t (TNC) 允许服务器管理员评定一个用户设备的状况。</p><p>出于此目的，服务器管理员可能要求以下数据如独立ID、已安装软件列表、系统设置、或加密过的文件校验值。</p><b>任何数据都仅将在验证过服务器的身份ID之后被发出。</b>]]></string>

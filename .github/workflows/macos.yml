@@ -21,15 +21,18 @@ jobs:
           concurrent_skipping: 'same_content'
 
   macos:
+    strategy:
+      matrix:
+        os: [macos-latest, macos-13]
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     env:
       TEST: macos
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: ~/Library/Caches/ccache
           key: ccache-${{ runner.os }}-${{ github.sha }}
@@ -44,7 +47,7 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Logs ${{ github.job }}
           path: config.log

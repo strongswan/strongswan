@@ -213,8 +213,12 @@ METHOD(task_t, build_i, status_t,
 			this->child_create->use_dh_group(this->child_create, dh_group);
 		}
 	}
-	reqid = this->child_sa->get_reqid(this->child_sa);
-	this->child_create->use_reqid(this->child_create, reqid);
+	reqid = this->child_sa->get_reqid_ref(this->child_sa);
+	if (reqid)
+	{
+		this->child_create->use_reqid(this->child_create, reqid);
+		charon->kernel->release_reqid(charon->kernel, reqid);
+	}
 	this->child_create->use_marks(this->child_create,
 						this->child_sa->get_mark(this->child_sa, TRUE).value,
 						this->child_sa->get_mark(this->child_sa, FALSE).value);
@@ -282,8 +286,12 @@ METHOD(task_t, build_r, status_t,
 	}
 
 	/* let the CHILD_CREATE task build the response */
-	reqid = this->child_sa->get_reqid(this->child_sa);
-	this->child_create->use_reqid(this->child_create, reqid);
+	reqid = this->child_sa->get_reqid_ref(this->child_sa);
+	if (reqid)
+	{
+		this->child_create->use_reqid(this->child_create, reqid);
+		charon->kernel->release_reqid(charon->kernel, reqid);
+	}
 	this->child_create->use_marks(this->child_create,
 						this->child_sa->get_mark(this->child_sa, TRUE).value,
 						this->child_sa->get_mark(this->child_sa, FALSE).value);
@@ -430,7 +438,7 @@ METHOD(task_t, process_i, status_t,
 		protocol = this->child_sa->get_protocol(this->child_sa);
 		child_cfg = this->child_sa->get_config(this->child_sa);
 		child_cfg->get_ref(child_cfg);
-		args.reqid = this->child_sa->get_reqid(this->child_sa);
+		args.reqid = this->child_sa->get_reqid_ref(this->child_sa);
 		args.label = this->child_sa->get_label(this->child_sa);
 		if (args.label)
 		{
@@ -440,6 +448,10 @@ METHOD(task_t, process_i, status_t,
 		this->ike_sa->destroy_child_sa(this->ike_sa, protocol, spi);
 		status = this->ike_sa->initiate(this->ike_sa,
 										child_cfg->get_ref(child_cfg), &args);
+		if (args.reqid)
+		{
+			charon->kernel->release_reqid(charon->kernel, args.reqid);
+		}
 		DESTROY_IF(args.label);
 		return status;
 	}

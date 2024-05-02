@@ -32,6 +32,13 @@ ENUM(cert_policy_names, CERT_ALWAYS_SEND, CERT_NEVER_SEND,
 	"CERT_NEVER_SEND",
 );
 
+ENUM(ocsp_policy_names, OCSP_SEND_REPLY, OCSP_SEND_NEVER,
+	"OCSP_SEND_REPLY",
+	"OCSP_SEND_REQUEST",
+	"OCSP_SEND_BOTH",
+	"OCSP_SEND_NEVER",
+);
+
 ENUM(unique_policy_names, UNIQUE_NEVER, UNIQUE_KEEP,
 	"UNIQUE_NEVER",
 	"UNIQUE_NO",
@@ -80,6 +87,11 @@ struct private_peer_cfg_t {
 	 * should we send a certificate
 	 */
 	cert_policy_t cert_policy;
+
+	/**
+	 * should we send OCSP status request/response
+	 */
+	ocsp_policy_t ocsp_policy;
 
 	/**
 	 * uniqueness of an IKE_SA
@@ -495,6 +507,12 @@ METHOD(peer_cfg_t, get_cert_policy, cert_policy_t,
 	return this->cert_policy;
 }
 
+METHOD(peer_cfg_t, get_ocsp_policy, ocsp_policy_t,
+	private_peer_cfg_t *this)
+{
+	return this->ocsp_policy;
+}
+
 METHOD(peer_cfg_t, get_unique_policy, unique_policy_t,
 	private_peer_cfg_t *this)
 {
@@ -741,6 +759,7 @@ METHOD(peer_cfg_t, equals, bool,
 	return (
 		get_ike_version(this) == get_ike_version(other) &&
 		this->cert_policy == other->cert_policy &&
+		this->ocsp_policy == other->ocsp_policy &&
 		this->unique == other->unique &&
 		this->keyingtries == other->keyingtries &&
 		this->use_mobike == other->use_mobike &&
@@ -828,6 +847,7 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 			.create_child_cfg_enumerator = _create_child_cfg_enumerator,
 			.select_child_cfg = _select_child_cfg,
 			.get_cert_policy = _get_cert_policy,
+			.get_ocsp_policy = _get_ocsp_policy,
 			.get_unique_policy = _get_unique_policy,
 			.get_keyingtries = _get_keyingtries,
 			.get_rekey_time = _get_rekey_time,
@@ -861,6 +881,7 @@ peer_cfg_t *peer_cfg_create(char *name, ike_cfg_t *ike_cfg,
 		.child_cfgs = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.cert_policy = data->cert_policy,
+		.ocsp_policy = data->ocsp_policy,
 		.unique = data->unique,
 		.keyingtries = data->keyingtries,
 		.rekey_time = data->rekey_time,

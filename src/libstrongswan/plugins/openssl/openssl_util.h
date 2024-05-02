@@ -59,7 +59,7 @@ bool openssl_fingerprint(EVP_PKEY *key, cred_encoding_type_t type, chunk_t *fp);
 
 /**
  * Concatenates two bignums into a chunk, thereby enforcing the length of
- * a single BIGNUM, if necessary, by pre-pending it with zeros.
+ * a single BIGNUM, if necessary, by prepending it with zeros.
  *
  * Note: this function allocates memory for the chunk
  *
@@ -124,6 +124,14 @@ chunk_t openssl_asn1_obj2chunk(const ASN1_OBJECT *asn1);
  * @return			chunk, pointing into asn1 string
  */
 chunk_t openssl_asn1_str2chunk(const ASN1_STRING *asn1);
+
+/**
+ * Convert an OpenSSL ASN1_INTEGER to a chunk.
+ *
+ * @param asn1		asn1 integer to convert
+ * @return			chunk, pointing into asn1 integer
+ */
+chunk_t openssl_asn1_int2chunk(const ASN1_INTEGER *asn1);
 
 /**
  * Convert an openssl X509_NAME to a identification_t of type ID_DER_ASN1_DN.

@@ -57,8 +57,8 @@ jobs:
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
           # with regards to ccache, monolithic builds don't differ from regular
@@ -76,9 +76,15 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ success() && matrix.test == 'coverage' }}
-        run: bash <(curl -s https://codecov.io/bash)
+        uses: codecov/codecov-action@v4
+        with:
+          disable_search: true
+          fail_ci_if_error: true
+          file: coverage/coverage.cleaned.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Logs ${{ github.job }}
           path: config.log
@@ -91,7 +97,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest, ubuntu-20.04 ]
-        test: [ botan, wolfssl, openssl, openssl-3, gcrypt ]
+        test: [ botan, wolfssl, openssl, openssl-3, openssl-awslc, gcrypt ]
         leak-detective: [ no, yes ]
         exclude:
           # test custom-built libs only on one platform
@@ -101,13 +107,15 @@ jobs:
             test: wolfssl
           - os: ubuntu-20.04
             test: openssl-3
+          - os: ubuntu-20.04
+            test: openssl-awslc
     env:
       LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           # path is different on newer systems
           path: |
@@ -126,7 +134,7 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Logs ${{ github.job }}
           path: config.log
@@ -151,8 +159,8 @@ jobs:
       # LSan causes spurious SIGSEGV after tests due to DTLS handling by glibc
       ASAN_OPTIONS: intercept_tls_get_addr=0
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: ~/.ccache
           key: ccache-${{ matrix.os }}-${{ env.CC }}-${{ matrix.test }}-${{ github.sha }}
@@ -166,7 +174,7 @@ jobs:
       - uses: ./.github/actions/default
       - run: ccache -s
       - if: ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Logs ${{ github.job }}
           path: config.log

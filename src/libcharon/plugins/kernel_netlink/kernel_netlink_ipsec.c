@@ -1613,7 +1613,7 @@ static bool add_hw_offload_sa(struct nlmsghdr *hdr, int buflen,
 }
 
 /**
- * Add a HW offload attribuet to the given policy-related message.
+ * Add a HW offload attribute to the given policy-related message.
  */
 static bool add_hw_offload_policy(struct nlmsghdr *hdr, int buflen,
 								  policy_entry_t *policy,
@@ -2046,7 +2046,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		{
 			data->replay_window = data->esn ? 1 : 0;
 		}
-		if (data->replay_window != 0 && (data->esn || data->replay_window > 32))
+		if (data->esn || data->replay_window > 32)
 		{
 			/* for ESN or larger replay windows we need the new
 			 * XFRMA_REPLAY_ESN_VAL attribute to configure a bitmap */
@@ -2121,14 +2121,13 @@ failed:
 }
 
 /**
- * Get the ESN replay state (i.e. sequence numbers) of an SA.
+ * Get the usage stats (packets/bytes) and classic replay state (i.e. sequence
+ * numbers for small windows/non-ESN) of an SA.
  *
- * Allocates into one the replay state structure we get from the kernel.
+ * Allocates and copies the attributes we get from the kernel.
  */
 static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 							 kernel_ipsec_sa_id_t *sa,
-							 struct xfrm_replay_state_esn **replay_esn,
-							 uint32_t *replay_esn_len,
 							 struct xfrm_replay_state **replay,
 							 struct xfrm_lifetime_cur **lifetime)
 {
@@ -2213,14 +2212,6 @@ static void get_replay_state(private_kernel_netlink_ipsec_t *this,
 				free(*replay);
 				*replay = malloc(RTA_PAYLOAD(rta));
 				memcpy(*replay, RTA_DATA(rta), RTA_PAYLOAD(rta));
-			}
-			if (rta->rta_type == XFRMA_REPLAY_ESN_VAL &&
-				RTA_PAYLOAD(rta) >= sizeof(**replay_esn))
-			{
-				free(*replay_esn);
-				*replay_esn = malloc(RTA_PAYLOAD(rta));
-				*replay_esn_len = RTA_PAYLOAD(rta);
-				memcpy(*replay_esn, RTA_DATA(rta), RTA_PAYLOAD(rta));
 			}
 			rta = RTA_NEXT(rta, rtasize);
 		}
@@ -2433,7 +2424,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	struct xfrm_replay_state *replay = NULL;
 	struct xfrm_replay_state_esn *replay_esn = NULL;
 	struct xfrm_lifetime_cur *lifetime = NULL;
-	uint32_t replay_esn_len = 0;
+	bool replay_state_seen = FALSE;
 	kernel_ipsec_del_sa_t del = { 0 };
 	status_t status = FAILED;
 	traffic_selector_t *ts;
@@ -2518,8 +2509,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		goto failed;
 	}
 
-	get_replay_state(this, id, &replay_esn, &replay_esn_len, &replay,
-					 &lifetime);
+	get_replay_state(this, id, &replay, &lifetime);
 
 	/* delete the old SA (without affecting the IPComp SA) */
 	if (del_sa(this, id, &del) != SUCCESS)
@@ -2600,6 +2590,11 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 					free(ifname);
 				}
 			}
+			if (rta->rta_type == XFRMA_REPLAY_ESN_VAL ||
+				rta->rta_type == XFRMA_REPLAY_VAL)
+			{
+				replay_state_seen = TRUE;
+			}
 			netlink_add_attribute(hdr, rta->rta_type,
 								  chunk_create(RTA_DATA(rta), RTA_PAYLOAD(rta)),
 								  sizeof(request));
@@ -2621,34 +2616,25 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 		memset(&encap->encap_oa, 0, sizeof (xfrm_address_t));
 	}
 
-	if (replay_esn)
+	if (!replay_state_seen)
 	{
-		struct xfrm_replay_state_esn *state;
-
-		state = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_ESN_VAL,
-								replay_esn_len);
-		if (!state)
+		if (replay)
 		{
-			goto failed;
-		}
-		memcpy(state, replay_esn, replay_esn_len);
-	}
-	else if (replay)
-	{
-		struct xfrm_replay_state *state;
+			struct xfrm_replay_state *state;
 
-		state = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_VAL,
-								sizeof(*state));
-		if (!state)
-		{
-			goto failed;
+			state = netlink_reserve(hdr, sizeof(request), XFRMA_REPLAY_VAL,
+									sizeof(*state));
+			if (!state)
+			{
+				goto failed;
+			}
+			memcpy(state, replay, sizeof(*state));
 		}
-		memcpy(state, replay, sizeof(*state));
-	}
-	else
-	{
-		DBG1(DBG_KNL, "unable to copy replay state from old SAD entry with "
-			 "SPI %.8x%s", ntohl(id->spi), markstr);
+		else
+		{
+			DBG1(DBG_KNL, "unable to copy replay state from old SAD entry with "
+				 "SPI %.8x%s", ntohl(id->spi), markstr);
+		}
 	}
 	if (lifetime)
 	{

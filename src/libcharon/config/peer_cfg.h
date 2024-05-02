@@ -25,6 +25,7 @@
 #define PEER_CFG_H_
 
 typedef enum cert_policy_t cert_policy_t;
+typedef enum ocsp_policy_t ocsp_policy_t;
 typedef enum unique_policy_t unique_policy_t;
 typedef struct peer_cfg_t peer_cfg_t;
 typedef struct peer_cfg_create_t peer_cfg_create_t;
@@ -60,6 +61,25 @@ enum cert_policy_t {
  * enum strings for cert_policy_t
  */
 extern enum_name_t *cert_policy_names;
+
+/**
+ * OCSP status request/response sending policy.
+ */
+enum ocsp_policy_t {
+	/** send OCSP status upon OCSP status request */
+	OCSP_SEND_REPLY =    0,
+	/** send OCSP status request */
+	OCSP_SEND_REQUEST =  1,
+	/** request OCSP status and reply to OCSP status requests */
+	OCSP_SEND_BOTH =     2,
+	/** never send OCSP status request or response */
+	OCSP_SEND_NEVER =    3,
+};
+
+/**
+ * enum strings for ocsp_policy_t
+ */
+extern enum_name_t *ocsp_policy_names;
 
 /**
  * Uniqueness of an IKE_SA, used to drop multiple connections with one peer.
@@ -212,6 +232,13 @@ struct peer_cfg_t {
 	 * @return			certificate sending policy
 	 */
 	cert_policy_t (*get_cert_policy) (peer_cfg_t *this);
+
+	/**
+	 * Should an OCSP status request/response be sent for this connection?
+	 *
+	 * @return			OCSP sending policy
+	 */
+	ocsp_policy_t (*get_ocsp_policy) (peer_cfg_t *this);
 
 	/**
 	 * How to handle uniqueness of IKE_SAs?
@@ -397,6 +424,8 @@ struct peer_cfg_t {
 struct peer_cfg_create_t {
 	/** Whether to send a certificate payload */
 	cert_policy_t cert_policy;
+	/** Whether to send OCSP status request/response */
+	ocsp_policy_t ocsp_policy;
 	/** Uniqueness of an IKE_SA */
 	unique_policy_t unique;
 	/** How many keying tries should be done before giving up */

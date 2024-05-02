@@ -4,7 +4,7 @@
 build_botan()
 {
 	# same revision used in the build recipe of the testing environment
-	BOTAN_REV=3.1.1
+	BOTAN_REV=3.3.0
 	BOTAN_DIR=$DEPS_BUILD_DIR/botan
 
 	if test -d "$BOTAN_DIR"; then
@@ -37,7 +37,7 @@ build_botan()
 
 build_wolfssl()
 {
-	WOLFSSL_REV=v5.6.3-stable
+	WOLFSSL_REV=v5.7.0-stable
 	WOLFSSL_DIR=$DEPS_BUILD_DIR/wolfssl
 
 	if test -d "$WOLFSSL_DIR"; then
@@ -69,7 +69,7 @@ build_wolfssl()
 
 build_tss2()
 {
-	TSS2_REV=3.2.2
+	TSS2_REV=3.2.3
 	TSS2_PKG=tpm2-tss-$TSS2_REV
 	TSS2_DIR=$DEPS_BUILD_DIR/$TSS2_PKG
 	TSS2_SRC=https://github.com/tpm2-software/tpm2-tss/releases/download/$TSS2_REV/$TSS2_PKG.tar.gz
@@ -125,13 +125,42 @@ build_openssl()
 	fi
 }
 
+build_awslc()
+{
+	LC_REV=1.24.0
+	LC_PKG=aws-lc-$LC_REV
+	LC_DIR=$DEPS_BUILD_DIR/$LC_PKG
+	LC_SRC=https://github.com/aws/aws-lc/archive/refs/tags/v${LC_REV}.tar.gz
+	LC_BUILD=$LC_DIR/build
+	LC_INS=$DEPS_PREFIX/ssl
+
+	mkdir -p $LC_BUILD
+
+	echo "$ build_awslc()"
+
+	curl -L $LC_SRC | tar xz -C $DEPS_BUILD_DIR || exit $?
+
+	cd $LC_BUILD &&
+	cmake -GNinja -DCMAKE_INSTALL_PREFIX=$LC_INS .. &&
+	ninja &&
+	sudo ninja install || exit $?
+	cd -
+}
+
 use_custom_openssl()
 {
 	CFLAGS="$CFLAGS -I$DEPS_PREFIX/ssl/include"
 	export LDFLAGS="$LDFLAGS -L$DEPS_PREFIX/ssl/lib"
 	export LD_LIBRARY_PATH="$DEPS_PREFIX/ssl/lib:$LD_LIBRARY_PATH"
 	if test "$1" = "build-deps"; then
-		build_openssl
+		case "$TEST" in
+			openssl-awslc)
+				build_awslc
+				;;
+			*)
+				build_openssl
+				;;
+		esac
 	fi
 }
 
@@ -192,6 +221,9 @@ openssl*)
 	if test "$TEST" = "openssl-3"; then
 		DEPS=""
 		use_custom_openssl $1
+	elif test "$TEST" = "openssl-awslc"; then
+		DEPS="cmake ninja-build golang"
+		use_custom_openssl $1
 	elif system_uses_openssl3; then
 		prepare_system_openssl $1
 	fi
@@ -221,7 +253,7 @@ wolfssl)
 printf-builtin)
 	CONFIG="--with-printf-hooks=builtin"
 	;;
-all|codeql|coverage|sonarcloud|no-dbg)
+all|alpine|codeql|coverage|sonarcloud|no-dbg)
 	if [ "$TEST" = "sonarcloud" ]; then
 		if [ -z "$SONAR_PROJECT" -o -z "$SONAR_ORGANIZATION" -o -z "$SONAR_TOKEN" ]; then
 			echo "The SONAR_PROJECT, SONAR_ORGANIZATION and SONAR_TOKEN" \
@@ -253,14 +285,29 @@ all|codeql|coverage|sonarcloud|no-dbg)
 	if test "$TEST" != "coverage"; then
 		CONFIG="$CONFIG --disable-coverage"
 	else
-		# not actually required but configure checks for it
 		DEPS="$DEPS lcov"
+		TARGET="coverage"
 	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libgcrypt20-dev libjson-c-dev python3-pip libtspi-dev libsystemd-dev
 		  libselinux1-dev libiptc-dev"
+	if [ "$TEST" = "alpine" ]; then
+		# override the whole list for alpine
+		DEPS="git gmp-dev openldap-dev curl-dev ldns-dev unbound-dev libsoup-dev
+			  tpm2-tss-dev mariadb-dev wolfssl-dev libgcrypt-dev botan3-dev
+			  pcsc-lite-dev networkmanager-dev linux-pam-dev iptables-dev
+			  libselinux-dev binutils-dev libunwind-dev ruby py3-setuptools"
+		# musl does not provide backtrace(), so use libunwind
+		CONFIG="$CONFIG --enable-unwind-backtraces"
+		# alpine doesn't have systemd
+		CONFIG="$CONFIG --disable-systemd --disable-cert-enroll-timer"
+		# no TrouSerS either
+		CONFIG="$CONFIG --disable-tss-trousers --disable-aikgen"
+		# and no Clearsilver
+		CONFIG="$CONFIG --disable-fast --disable-manager --disable-medsrv"
+	fi
 	PYDEPS="tox"
 	if test "$1" = "build-deps"; then
 		if [ "$ID" = "ubuntu" -a "$VERSION_ID" != "20.04" ]; then
@@ -340,7 +387,7 @@ macos)
 			--enable-socket-default --enable-sshkey --enable-stroke
 			--enable-swanctl --enable-unity --enable-updown
 			--enable-x509 --enable-xauth-generic"
-	DEPS="automake autoconf libtool bison gettext pkg-config openssl@1.1 curl"
+	DEPS="automake autoconf libtool bison gettext gperf pkg-config openssl@1.1 curl"
 	BREW_PREFIX=$(brew --prefix)
 	export PATH=$BREW_PREFIX/opt/bison/bin:$PATH
 	export ACLOCAL_PATH=$BREW_PREFIX/opt/gettext/share/aclocal:$ACLOCAL_PATH
@@ -422,6 +469,10 @@ deps)
 		sudo apt-get update -qq && \
 		sudo apt-get install -qq bison flex gperf gettext $DEPS
 		;;
+	alpine)
+		apk add --no-cache build-base automake autoconf libtool pkgconfig && \
+		apk add --no-cache bison flex gperf gettext-dev tzdata $DEPS
+		;;
 	macos)
 		brew update && \
 		brew install $DEPS
@@ -452,7 +503,7 @@ CONFIG="$CONFIG
 	--enable-leak-detective=${LEAK_DETECTIVE-no}"
 
 case "$TEST" in
-	codeql|coverage|freebsd|fuzzing|sonarcloud|win*)
+	alpine|codeql|coverage|freebsd|fuzzing|sonarcloud|win*)
 		# don't use AddressSanitizer if it's not available or causes conflicts
 		CONFIG="$CONFIG --disable-asan"
 		;;
@@ -501,7 +552,7 @@ sonarcloud)
 		-Dsonar.host.url=https://sonarcloud.io \
 		-Dsonar.projectKey=${SONAR_PROJECT} \
 		-Dsonar.organization=${SONAR_ORGANIZATION} \
-		-Dsonar.login=${SONAR_TOKEN} \
+		-Dsonar.token=${SONAR_TOKEN} \
 		-Dsonar.projectVersion=$(git describe --exclude 'android-*')+${BUILD_NUMBER} \
 		-Dsonar.sources=. \
 		-Dsonar.cfamily.threads=2 \

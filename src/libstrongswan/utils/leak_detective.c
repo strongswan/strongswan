@@ -27,6 +27,7 @@
 #endif
 #include <time.h>
 #include <errno.h>
+#include <assert.h>
 
 #ifdef __APPLE__
 #include <sys/mman.h>
@@ -289,6 +290,14 @@ static void* real_realloc(void *ptr, size_t size)
 }
 
 /**
+ * Call original malloc_usable_size()
+ */
+static size_t real_malloc_usable_size(void *ptr)
+{
+	return original.size(malloc_default_zone(), ptr);
+}
+
+/**
  * Hook definition: static function with _hook suffix, takes additional zone
  */
 #define HOOK(ret, name, ...) \
@@ -302,30 +311,7 @@ HOOK(void*, calloc, size_t nmemb, size_t size);
 HOOK(void*, valloc, size_t size);
 HOOK(void, free, void *ptr);
 HOOK(void*, realloc, void *old, size_t bytes);
-
-/**
- * malloc zone size(), must consider the memory header prepended
- */
-HOOK(size_t, size, const void *ptr)
-{
-	bool before;
-	size_t size;
-
-	if (enabled)
-	{
-		before = enable_thread(FALSE);
-		if (before)
-		{
-			ptr -= sizeof(memory_header_t);
-		}
-	}
-	size = original.size(malloc_default_zone(), ptr);
-	if (enabled)
-	{
-		enable_thread(before);
-	}
-	return size;
-}
+HOOK(size_t, malloc_usable_size, void *ptr);
 
 /**
  * Version of malloc zones we currently support
@@ -364,7 +350,7 @@ static bool register_hooks()
 		return FALSE;
 	}
 
-	zone->size = size_hook;
+	zone->size = malloc_usable_size_hook;
 	zone->malloc = malloc_hook;
 	zone->calloc = calloc_hook;
 	zone->valloc = valloc_hook;
@@ -477,6 +463,20 @@ static void* real_realloc(void *ptr, size_t size)
 }
 
 /**
+ * Call original malloc_usable_size()
+ */
+static size_t real_malloc_usable_size(void *ptr)
+{
+	static size_t (*fn)(void *ptr);
+
+	if (!fn)
+	{
+		fn = get_malloc_fn("malloc_usable_size");
+	}
+	return fn(ptr);
+}
+
+/**
  * Hook definition: plain function overloading existing malloc calls
  */
 #define HOOK(ret, name, ...) ret name(__VA_ARGS__)
@@ -488,6 +488,8 @@ static bool register_hooks()
 {
 	void *buf = real_malloc(8);
 	buf = real_realloc(buf, 16);
+	size_t sz = real_malloc_usable_size(buf);
+	assert(sz >= 16);
 	real_free(buf);
 	return TRUE;
 }
@@ -630,6 +632,9 @@ static char *whitelist[] = {
 	"CRYPTO_get_ex_new_index",
 	/* OpenSSL libssl */
 	"SSL_COMP_get_compression_methods",
+	/* AWS-LC */
+	"RAND_bytes",
+	"ERR_put_error",
 	/* NSPR */
 	"PR_CallOnce",
 	/* libapr */
@@ -1136,6 +1141,69 @@ HOOK(void*, realloc, void *old, size_t bytes)
 	add_hdr(hdr);
 
 	return hdr + 1;
+}
+
+HOOK(size_t, malloc_usable_size, void *ptr)
+{
+	memory_header_t *hdr;
+	memory_tail_t *tail;
+	size_t sz;
+	bool before;
+
+	if (!enabled || thread_disabled->get(thread_disabled))
+	{
+		/* after deinitialization we might have to operate on stuff we allocated
+		 * while we were enabled */
+		if (!first_header.magic && ptr)
+		{
+			hdr = ptr - sizeof(memory_header_t);
+			tail = ptr + hdr->bytes;
+			if (hdr->magic == MEMORY_HEADER_MAGIC &&
+				tail->magic == MEMORY_TAIL_MAGIC)
+			{
+				return hdr->bytes;
+			}
+		}
+		return real_malloc_usable_size(ptr);
+	}
+	if (!ptr)
+	{
+		return 0;
+	}
+	hdr = ptr - sizeof(memory_header_t);
+	tail = ptr + hdr->bytes;
+
+	before = enable_thread(FALSE);
+	if (hdr->magic != MEMORY_HEADER_MAGIC ||
+		tail->magic != MEMORY_TAIL_MAGIC)
+	{
+		/* check if memory appears to be allocated by our hooks */
+		if (has_hdr(hdr))
+		{
+			if (hdr->magic == MEMORY_HEADER_MAGIC)
+			{
+				/* only return the actual size if the header magic is valid  */
+				sz = hdr->bytes;
+			}
+			else
+			{
+				/* otherwise use the default function minus our overhead */
+				sz = real_malloc_usable_size(hdr);
+				sz -= sizeof(memory_header_t) + sizeof(memory_tail_t);
+			}
+		}
+		else
+		{
+			/* use the default function to determine size of unknown memory */
+			sz = real_malloc_usable_size(ptr);
+		}
+	}
+	else
+	{
+		sz = hdr->bytes;
+	}
+	enable_thread(before);
+	return sz;
 }
 
 METHOD(leak_detective_t, destroy, void,

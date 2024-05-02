@@ -93,6 +93,11 @@ struct private_credential_manager_t {
 	 * Registered data to pass to hook
 	 */
 	void *hook_data;
+
+	/**
+	 * Whether to reject pre-trusted end-entity certificates
+	 */
+	bool reject_pretrusted;
 };
 
 /** data to pass to create_private_enumerator */
@@ -924,6 +929,12 @@ METHOD(enumerator_t, trusted_enumerate, bool,
 		this->pretrusted = get_pretrusted_cert(this->this, this->type, this->id);
 		if (this->pretrusted)
 		{
+			if (this->this->reject_pretrusted)
+			{
+				DBG1(DBG_CFG, "  rejecting trusted certificate \"%Y\"",
+					 this->pretrusted->get_subject(this->pretrusted));
+				return FALSE;
+			}
 			DBG1(DBG_CFG, "  using trusted certificate \"%Y\"",
 				 this->pretrusted->get_subject(this->pretrusted));
 			/* if we find a trusted self signed certificate, we just accept it.
@@ -1341,6 +1352,33 @@ METHOD(credential_manager_t, get_private, private_key_t*,
 	return private;
 }
 
+METHOD(credential_manager_t, get_ocsp, certificate_t*,
+	private_credential_manager_t *this, certificate_t *subject,
+	certificate_t *issuer)
+{
+	cert_validator_t *validator;
+	enumerator_t *enumerator;
+	certificate_t *response = NULL;
+
+	this->lock->read_lock(this->lock);
+	enumerator = this->validators->create_enumerator(this->validators);
+	while (enumerator->enumerate(enumerator, &validator))
+	{
+		if (validator->ocsp)
+		{
+			response = validator->ocsp(validator, subject, issuer);
+			if (response)
+			{
+				break;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->lock->unlock(this->lock);
+
+	return response;
+}
+
 METHOD(credential_manager_t, flush_cache, void,
 	private_credential_manager_t *this, certificate_type_t type)
 {
@@ -1416,6 +1454,7 @@ credential_manager_t *credential_manager_create()
 			.get_cert = _get_cert,
 			.get_shared = _get_shared,
 			.get_private = _get_private,
+			.get_ocsp = _get_ocsp,
 			.create_trusted_enumerator = _create_trusted_enumerator,
 			.create_public_enumerator = _create_public_enumerator,
 			.flush_cache = _flush_cache,
@@ -1436,6 +1475,8 @@ credential_manager_t *credential_manager_create()
 		.cache_queue = linked_list_create(),
 		.lock = rwlock_create(RWLOCK_TYPE_DEFAULT),
 		.queue_mutex = mutex_create(MUTEX_TYPE_DEFAULT),
+		.reject_pretrusted = lib->settings->get_bool(lib->settings,
+								"%s.reject_trusted_end_entity", FALSE, lib->ns),
 	);
 
 	this->local_sets = thread_value_create((thread_cleanup_t)this->sets->destroy);

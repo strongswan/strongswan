@@ -205,6 +205,19 @@ connections.<conn>.send_cert = ifasked
 	certificate payloads altogether, _always_ causes certificate payloads to be
 	sent unconditionally whenever certificate authentication is used.
 
+connections.<conn>.ocsp = reply
+	Request and send OCSP status in certificate request or certificate payloads
+	(_never_, _reply, _request_ or _both_).
+
+	Send OCSP status requests in certificate request payloads and/or send OCSP
+	status response in certificate payloads when using certificate
+	authentication. With the default of _reply_ the daemon sends OCSP status
+	responses in certificate payloads if an OCSP status request has been
+	received in a certificate request, _never_ disables sending of OCSP status
+	requests and responses altogether, _request_ causes OCSP status requests in
+	certificate request payloads to be sent whenever certificate authentication
+	is used, _both_ combines _reply_ and _request_.
+
 connections.<conn>.ppk_id =
 	String identifying the Postquantum Preshared Key (PPK) to be used.
 
@@ -1328,7 +1341,10 @@ pools.<name>.addrs =
 
 	Subnet or range defining addresses allocated in pool. Accepts a single CIDR
 	subnet defining the pool to allocate addresses from or an address range
-	(<from>-<to>).  Pools must be unique and non-overlapping.
+	(<from>-<to>). If the address in CIDR notation is not the network ID of the
+	subnet (e.g. 10.1.0.5/24 instead of 10.1.0.0/24), addresses below it won't
+	be allocated to clients (they could e.g. be assigned manually to internal
+	hosts like the VPN server itself). Pools must be unique and non-overlapping.
 
 pools.<name>.<attr> =
 	Comma separated list of additional attributes from type <attr>.

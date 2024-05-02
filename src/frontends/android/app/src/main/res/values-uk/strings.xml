@@ -136,6 +136,7 @@
     <string name="profile_cert_import">Import certificate from VPN profile</string>
     <string name="profile_cert_alias">Certificate for \"%1$s\"</string>
     <string name="profile_profile_id">Profile ID</string>
+    <string name="profile_managed">Managed profile</string>
     <!-- Warnings/Notifications in the details view -->
     <string name="alert_text_no_input_gateway">A value is required to initiate the connection</string>
     <string name="alert_text_no_input_username">Введіть ім\'я користувача </string>
@@ -145,6 +146,7 @@
     <string name="alert_text_no_subnets">Please enter valid subnets and/or IP addresses, separated by spaces</string>
     <string name="alert_text_no_ips">Please enter valid IP addresses, separated by spaces</string>
     <string name="alert_text_no_proposal">Please enter a valid list of algorithms, separated by hyphens</string>
+    <string name="alert_text_vpn_profile_read_only">This VPN profile is managed by your administrator and can\'t be modified. You can only change the password</string>
     <string name="tnc_notice_title">EAP-TNC may affect your privacy</string>
     <string name="tnc_notice_subtitle">Device data is sent to the server operator</string>
     <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) allows server operators to assess the health of a client device.</p><p>For that purpose the server operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.</p><b>Any data will be sent only after verifying the server\'s identity.</b>]]></string>

@@ -80,7 +80,4 @@ typedef union {
 
 #undef PARSE_ERROR
 
-/* Eliminate macro conflicts */
-#undef RNG
-
 #endif /* WOLFSSL_PLUGIN_COMMON_H_ */

@@ -167,7 +167,7 @@ static void compare_vici(enumerator_t *parse, enumerator_t *tmpl)
 {
 	vici_type_t type, ttype;
 	char *name, *tname;
-	chunk_t data, tdata;;
+	chunk_t data, tdata;
 
 	while (TRUE)
 	{

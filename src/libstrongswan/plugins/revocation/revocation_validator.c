@@ -121,8 +121,14 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 		request->destroy(request);
 		return NULL;
 	}
-	ocsp_request = (ocsp_request_t*)request;
 	ocsp_response = (ocsp_response_t*)response;
+	if (ocsp_response->get_ocsp_status(ocsp_response) != OCSP_SUCCESSFUL)
+	{
+		response->destroy(response);
+		request->destroy(request);
+		return NULL;
+	}
+	ocsp_request = (ocsp_request_t*)request;
 	if (ocsp_response->get_nonce(ocsp_response).len &&
 		!chunk_equals_const(ocsp_request->get_nonce(ocsp_request),
 							ocsp_response->get_nonce(ocsp_response)))
@@ -133,6 +139,25 @@ static certificate_t *fetch_ocsp(char *url, certificate_t *subject,
 	}
 	request->destroy(request);
 	return response;
+}
+
+/**
+ * Verify OCSP response signature
+ */
+static bool verify_ocsp_sig(certificate_t *subject, certificate_t *issuer,
+							bool cached)
+{
+	if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
+	{
+		if (!cached)
+		{
+			DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
+				 issuer->get_subject(issuer));
+		}
+		return TRUE;
+	}
+	DBG1(DBG_CFG, "OCSP response verification failed, invalid signature");
+	return FALSE;
 }
 
 /**
@@ -176,18 +201,11 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca,
 			}
 		}
 		found = TRUE;
-		if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
+		verified = verify_ocsp_sig(subject, issuer, cached);
+		if (verified)
 		{
-			if (!cached)
-			{
-				DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
-					 issuer->get_subject(issuer));
-			}
-			verified = TRUE;
 			break;
 		}
-		DBG1(DBG_CFG, "ocsp response verification failed, "
-			 "invalid signature");
 	}
 	enumerator->destroy(enumerator);
 
@@ -206,18 +224,11 @@ static bool verify_ocsp(ocsp_response_t *response, certificate_t *ca,
 				issuer->get_validity(issuer, NULL, NULL, NULL))
 			{
 				found = TRUE;
-				if (lib->credmgr->issued_by(lib->credmgr, subject, issuer, NULL))
+				verified = verify_ocsp_sig(subject, issuer, cached);
+				if (verified)
 				{
-					if (!cached)
-					{
-						DBG1(DBG_CFG, "  ocsp response correctly signed by \"%Y\"",
-							 issuer->get_subject(issuer));
-					}
-					verified = TRUE;
 					break;
 				}
-				DBG1(DBG_CFG, "ocsp response verification failed, "
-					 "invalid signature");
 			}
 		}
 		enumerator->destroy(enumerator);
@@ -317,7 +328,8 @@ static certificate_t *get_better_ocsp(certificate_t *cand, certificate_t *best,
  * validate a x509 certificate using OCSP
  */
 static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
-									auth_cfg_t *auth, u_int timeout)
+									auth_cfg_t *auth, u_int timeout,
+									certificate_t **response)
 {
 	enumerator_t *enumerator;
 	cert_validation_t valid = VALIDATION_SKIPPED;
@@ -403,7 +415,15 @@ static cert_validation_t check_ocsp(x509_t *subject, x509_t *issuer,
 	{	/* successful OCSP check fulfills also CRL constraint */
 		auth->add(auth, AUTH_RULE_CRL_VALIDATION, VALIDATION_GOOD);
 	}
-	DESTROY_IF(best);
+
+	if (response)
+	{
+		*response = best;
+	}
+	else
+	{
+		DESTROY_IF(best);
+	}
 	return valid;
 }
 
@@ -860,7 +880,8 @@ METHOD(cert_validator_t, validate_online, bool,
 
 		if (enable_ocsp)
 		{
-			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth, timeout))
+			switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth, timeout,
+							   NULL))
 			{
 				case VALIDATION_GOOD:
 					DBG1(DBG_CFG, "certificate status is good");
@@ -921,6 +942,47 @@ METHOD(cert_validator_t, validate_online, bool,
 	return TRUE;
 }
 
+METHOD (cert_validator_t, ocsp, certificate_t *,
+	private_revocation_validator_t *this, certificate_t *subject,
+	certificate_t *issuer)
+{
+	certificate_t *response = NULL;
+	auth_cfg_t *auth;
+	bool enable_ocsp;
+	u_int timeout;
+
+	this->lock->lock(this->lock);
+	enable_ocsp = this->enable_ocsp;
+	timeout = this->timeout;
+	this->lock->unlock(this->lock);
+
+	if (enable_ocsp &&
+		subject->get_type(subject) == CERT_X509 &&
+		issuer->get_type(issuer) == CERT_X509)
+	{
+		DBG1(DBG_CFG, "checking OCSP status of \"%Y\"",
+			 subject->get_subject(subject));
+
+		auth = auth_cfg_create();
+		switch (check_ocsp((x509_t*)subject, (x509_t*)issuer, auth, timeout,
+						   &response))
+		{
+			case VALIDATION_GOOD:
+			case VALIDATION_ON_HOLD:
+			case VALIDATION_REVOKED:
+				break;
+			case VALIDATION_STALE:
+			case VALIDATION_SKIPPED:
+			case VALIDATION_FAILED:
+				DESTROY_IF(response);
+				response = NULL;
+				break;
+		}
+		auth->destroy(auth);
+	}
+	return response;
+}
+
 METHOD(revocation_validator_t, reload, void,
 	private_revocation_validator_t *this)
 {
@@ -968,6 +1030,7 @@ revocation_validator_t *revocation_validator_create()
 	INIT(this,
 		.public = {
 			.validator.validate_online = _validate_online,
+			.validator.ocsp = _ocsp,
 			.reload = _reload,
 			.destroy = _destroy,
 		},

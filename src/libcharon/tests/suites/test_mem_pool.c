@@ -30,7 +30,7 @@ static void assert_host(char *expected, host_t *host)
 		verifier = host_create_from_string(expected, 0);
 		ck_assert_msg(host, "expected IP %+H != NULL", verifier);
 		ck_assert_msg(verifier->ip_equals(verifier, host), "expected IP %+H != "
-					  "%+H", verifier, host);;
+					  "%+H", verifier, host);
 		verifier->destroy(verifier);
 	}
 }
@@ -153,13 +153,10 @@ START_TEST(test_cidr_offset)
 	pool->destroy(pool);
 	base->destroy(base);
 
-	/* due to size == 0 we get the requested IP back */
+	/* this results in an empty pool, which is rejected */
 	base = host_create_from_string("192.168.0.255", 0);
 	pool = mem_pool_create("test", base, 24);
-	ck_assert_int_eq(0, pool->get_size(pool));
-	assert_acquire(pool, "192.168.0.1", "192.168.0.1", MEM_POOL_NEW);
-	pool->destroy(pool);
-
+	ck_assert(!pool);
 	base->destroy(base);
 }
 END_TEST

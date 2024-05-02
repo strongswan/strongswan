@@ -16,6 +16,7 @@ Official Android port of the popular strongSwan VPN solution.
  <li>The IPsec implementation currently supports the AES-CBC, AES-GCM, ChaCha20/Poly1305 and SHA1/SHA2 algorithms</li>
  <li>Passwords are currently stored as cleartext in the database (only if stored with a profile)</li>
  <li>VPN profiles may be imported from files</li>
+ <li>Supports managed configurations via enterprise mobility management (EMM)</li>
 </ul>
 
 Details and a changelog can be found in our documentation: https://docs.strongswan.org/docs/5.9/os/androidVpnClient.html

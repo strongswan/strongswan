@@ -40,7 +40,7 @@ esac
 OPTIONS="${OPTIONS} \
   no-shared no-ct no-cast no-comp no-dgram no-dsa no-gost no-idea \
   no-rmd160 no-seed no-sm2 no-sm3 no-sm4 no-sock no-srp no-srtp \
-  no-asm no-err no-engine no-dso no-hw no-stdio no-ui-console \
+  no-err no-engine no-dso no-hw no-stdio no-ui-console \
   -fPIC -DOPENSSL_PIC \
   -ffast-math -O3 -funroll-loops -Wno-macro-redefined \
   -D__ANDROID_API__=${MIN_SDK} \
