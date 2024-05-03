@@ -912,10 +912,9 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	if (priv->xfrmi_id)
 	{	/* set the same mark as for IKE packets on the ESP packets so no routing
 		 * loop is created if the TS covers the VPN server's IP */
-		child.set_mark_out = (mark_t){
-			.value = 220,
-			.mask = 0xffffffff,
-		};
+		mark_from_string(lib->settings->get_str(lib->settings,
+							"charon-nm.plugins.socket-default.fwmark", NULL),
+						 MARK_OP_NONE, &child.set_mark_out);
 		child.if_id_in = child.if_id_out = priv->xfrmi_id;
 	}
 
