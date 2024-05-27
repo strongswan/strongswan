@@ -296,9 +296,10 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 	if [ "$TEST" = "alpine" ]; then
 		# override the whole list for alpine
 		DEPS="git gmp-dev openldap-dev curl-dev ldns-dev unbound-dev libsoup-dev
-			  tpm2-tss-dev mariadb-dev wolfssl-dev libgcrypt-dev botan3-dev
-			  pcsc-lite-dev networkmanager-dev linux-pam-dev iptables-dev
-			  libselinux-dev binutils-dev libunwind-dev ruby py3-setuptools"
+			  tpm2-tss-dev tpm2-tss-sys mariadb-dev wolfssl-dev libgcrypt-dev
+			  botan3-dev pcsc-lite-dev networkmanager-dev linux-pam-dev
+			  iptables-dev libselinux-dev binutils-dev libunwind-dev ruby
+			  py3-setuptools"
 		# musl does not provide backtrace(), so use libunwind
 		CONFIG="$CONFIG --enable-unwind-backtraces"
 		# alpine doesn't have systemd
