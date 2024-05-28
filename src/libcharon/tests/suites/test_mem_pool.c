@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Tobias Brunner
+ * Copyright (C) 2014-2024 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -33,6 +33,17 @@ static void assert_host(char *expected, host_t *host)
 					  "%+H", verifier, host);
 		verifier->destroy(verifier);
 	}
+}
+
+static void assert_base(mem_pool_t *pool, char *expected)
+{
+	host_t *verifier, *base;
+
+	verifier = host_create_from_string(expected, 0);
+	base = pool->get_base(pool);
+	ck_assert_msg(verifier->ip_equals(verifier, base), "expected base %+H != "
+				  "%+H", verifier, base);
+	verifier->destroy(verifier);
 }
 
 static void assert_acquire(mem_pool_t *pool, char *requested, char *expected,
@@ -90,26 +101,31 @@ START_TEST(test_cidr)
 
 	pool = mem_pool_create("test", base, 32);
 	ck_assert_int_eq(1, pool->get_size(pool));
+	assert_base(pool, "192.168.0.0");
 	assert_acquires_new(pool, "192.168.0.%d", 0);
 	pool->destroy(pool);
 
 	pool = mem_pool_create("test", base, 31);
 	ck_assert_int_eq(2, pool->get_size(pool));
+	assert_base(pool, "192.168.0.0");
 	assert_acquires_new(pool, "192.168.0.%d", 0);
 	pool->destroy(pool);
 
 	pool = mem_pool_create("test", base, 30);
 	ck_assert_int_eq(2, pool->get_size(pool));
+	assert_base(pool, "192.168.0.1");
 	assert_acquires_new(pool, "192.168.0.%d", 1);
 	pool->destroy(pool);
 
 	pool = mem_pool_create("test", base, 29);
 	ck_assert_int_eq(6, pool->get_size(pool));
+	assert_base(pool, "192.168.0.1");
 	assert_acquires_new(pool, "192.168.0.%d", 1);
 	pool->destroy(pool);
 
 	pool = mem_pool_create("test", base, 24);
 	ck_assert_int_eq(254, pool->get_size(pool));
+	assert_base(pool, "192.168.0.1");
 	assert_acquires_new(pool, "192.168.0.%d", 1);
 	pool->destroy(pool);
 
@@ -125,11 +141,19 @@ START_TEST(test_cidr_offset)
 	base = host_create_from_string("192.168.0.1", 0);
 	pool = mem_pool_create("test", base, 31);
 	ck_assert_int_eq(1, pool->get_size(pool));
+	assert_base(pool, "192.168.0.1");
 	assert_acquires_new(pool, "192.168.0.%d", 1);
 	pool->destroy(pool);
 
 	pool = mem_pool_create("test", base, 30);
 	ck_assert_int_eq(2, pool->get_size(pool));
+	assert_base(pool, "192.168.0.1");
+	assert_acquires_new(pool, "192.168.0.%d", 1);
+	pool->destroy(pool);
+
+	pool = mem_pool_create("test", base, 24);
+	ck_assert_int_eq(254, pool->get_size(pool));
+	assert_base(pool, "192.168.0.1");
 	assert_acquires_new(pool, "192.168.0.%d", 1);
 	pool->destroy(pool);
 	base->destroy(base);
@@ -137,11 +161,13 @@ START_TEST(test_cidr_offset)
 	base = host_create_from_string("192.168.0.2", 0);
 	pool = mem_pool_create("test", base, 30);
 	ck_assert_int_eq(1, pool->get_size(pool));
+	assert_base(pool, "192.168.0.2");
 	assert_acquires_new(pool, "192.168.0.%d", 2);
 	pool->destroy(pool);
 
 	pool = mem_pool_create("test", base, 24);
 	ck_assert_int_eq(253, pool->get_size(pool));
+	assert_base(pool, "192.168.0.2");
 	assert_acquires_new(pool, "192.168.0.%d", 2);
 	pool->destroy(pool);
 	base->destroy(base);
@@ -149,6 +175,7 @@ START_TEST(test_cidr_offset)
 	base = host_create_from_string("192.168.0.254", 0);
 	pool = mem_pool_create("test", base, 24);
 	ck_assert_int_eq(1, pool->get_size(pool));
+	assert_base(pool, "192.168.0.254");
 	assert_acquires_new(pool, "192.168.0.%d", 254);
 	pool->destroy(pool);
 	base->destroy(base);
@@ -170,6 +197,7 @@ START_TEST(test_range)
 	to = host_create_from_string("192.168.0.0", 0);
 	pool = mem_pool_create_range("test", from, to);
 	ck_assert_int_eq(1, pool->get_size(pool));
+	assert_base(pool, "192.168.0.0");
 	assert_acquires_new(pool, "192.168.0.%d", 0);
 	pool->destroy(pool);
 
@@ -177,6 +205,7 @@ START_TEST(test_range)
 	to = host_create_from_string("192.168.0.1", 0);
 	pool = mem_pool_create_range("test", from, to);
 	ck_assert_int_eq(2, pool->get_size(pool));
+	assert_base(pool, "192.168.0.0");
 	assert_acquires_new(pool, "192.168.0.%d", 0);
 	pool->destroy(pool);
 
@@ -189,6 +218,7 @@ START_TEST(test_range)
 	to = host_create_from_string("192.168.0.20", 0);
 	pool = mem_pool_create_range("test", from, to);
 	ck_assert_int_eq(11, pool->get_size(pool));
+	assert_base(pool, "192.168.0.10");
 	assert_acquires_new(pool, "192.168.0.%d", 10);
 	pool->destroy(pool);
 
