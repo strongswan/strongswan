@@ -1033,7 +1033,7 @@ static void check_for_rekeyed_child(private_quick_mode_t *this, bool responder)
 						this->proposal->equals(this->proposal, proposal))
 					{
 						this->rekey = child_sa->get_spi(child_sa, TRUE);
-						this->child.reqid = child_sa->get_reqid(child_sa);
+						this->child.reqid = child_sa->get_reqid_ref(child_sa);
 						this->child.mark_in = child_sa->get_mark(child_sa,
 																 TRUE).value;
 						this->child.mark_out = child_sa->get_mark(child_sa,
