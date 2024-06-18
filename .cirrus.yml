@@ -1,11 +1,11 @@
 freebsd_task:
   matrix:
-    - name: FreeBSD 14.0
+    - name: FreeBSD 14.1
       freebsd_instance:
-        image_family: freebsd-14-0
-    - name: FreeBSD 13.2
+        image_family: freebsd-14-1
+    - name: FreeBSD 13.3
       freebsd_instance:
-        image_family: freebsd-13-2
+        image_family: freebsd-13-3
 
   env:
     TESTS_REDUCED_KEYLENGTHS: yes
