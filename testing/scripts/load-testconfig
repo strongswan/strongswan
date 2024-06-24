@@ -19,6 +19,8 @@ DIR=$(dirname `readlink -f $0`)
 . $DIR/function.sh
 SSHCONF="-F $DIR/../ssh_config"
 
+set -e
+
 ##########################################################################
 # load-testconfig requires a testname as an argument
 #
