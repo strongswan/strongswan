@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022 Tobias Brunner
+ * Copyright (C) 2008-2024 Tobias Brunner
  * Copyright (C) 2005-2011 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -1562,7 +1562,8 @@ METHOD(ike_sa_manager_t, checkout_by_config, ike_sa_t*,
 			continue;
 		}
 		if (entry->ike_sa->get_state(entry->ike_sa) == IKE_DELETING ||
-			entry->ike_sa->get_state(entry->ike_sa) == IKE_REKEYED)
+			entry->ike_sa->get_state(entry->ike_sa) == IKE_REKEYED ||
+			ike_sa_is_delete_queued(entry->ike_sa))
 		{	/* skip IKE_SAs which are not usable, wake other waiting threads */
 			entry->condvar->signal(entry->condvar);
 			continue;
