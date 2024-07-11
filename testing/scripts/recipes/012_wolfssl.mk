@@ -2,7 +2,7 @@
 
 PKG = wolfssl
 SRC = https://github.com/wolfSSL/$(PKG).git
-REV = v5.7.0-stable
+REV = v5.7.2-stable
 
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
@@ -28,11 +28,11 @@ CONFIG_OPTS = \
 	--enable-ed25519 \
 	--enable-ed448 \
 	--enable-keygen \
-	--enable-max-rsa-bits=8192 \
 	--enable-md4 \
 	--enable-rsapss \
 	--enable-sha3 \
-	--enable-shake256
+	--enable-shake256 \
+	--with-max-rsa-bits=8192
 
 all: install
 
