@@ -652,7 +652,7 @@ METHOD(daemon_t, set_default_loggers, void,
 	{
 		if (!this->levels)
 		{
-			this->levels = calloc(sizeof(level_t), DBG_MAX);
+			this->levels = calloc(DBG_MAX, sizeof(level_t));
 		}
 		for (group = 0; group < DBG_MAX; group++)
 		{
