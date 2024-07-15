@@ -357,7 +357,7 @@ bool exchange_test_asserts_message(listener_t *this, ike_sa_t *ike_sa,
 		.line = __LINE__, \
 		.incoming = streq(dir, "IN") ? TRUE : FALSE, \
 		.count = c, \
-		.rules = malloc(sizeof(_rules)), \
+		.rules = sizeof(_rules) ? malloc(sizeof(_rules)) : NULL, \
 		.num_rules = countof(_rules), \
 	); \
 	memcpy(_listener->rules, _rules, sizeof(_rules)); \
