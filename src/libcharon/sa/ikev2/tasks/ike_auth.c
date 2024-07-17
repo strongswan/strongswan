@@ -584,6 +584,41 @@ static bool get_ppk_r(private_ike_auth_t *this, message_t *msg)
 	return result;
 }
 
+/**
+ * Determine a default local identity if none is configured.
+ */
+static identification_t *determine_default_id(char *id_name, ike_sa_t *ike_sa,
+											  auth_cfg_t *cfg)
+{
+	identification_t *id = NULL;
+	certificate_t *cert;
+	host_t *me;
+
+	cert = cfg->get(cfg, AUTH_RULE_SUBJECT_CERT);
+	if (cert)
+	{
+		id = cert->get_subject(cert);
+		if (id && id->get_type(id) != ID_ANY && id->get_type(id) != ID_KEY_ID)
+		{
+			DBG1(DBG_CFG, "no %s configured, default to cert subject '%Y'",
+				 id_name, id);
+			id = id->clone(id);
+		}
+		else
+		{
+			id = NULL;
+		}
+	}
+
+	if (!id)
+	{
+		me = ike_sa->get_my_host(ike_sa);
+		id = identification_create_from_sockaddr(me->get_sockaddr(me));
+		DBG1(DBG_CFG, "no %s configured, default to IP address %Y", id_name, id);
+	}
+	return id;
+}
+
 METHOD(task_t, build_i, status_t,
 	private_ike_auth_t *this, message_t *message)
 {
@@ -663,12 +698,10 @@ METHOD(task_t, build_i, status_t,
 		cfg->merge(cfg, get_auth_cfg(this, TRUE), TRUE);
 		idi = cfg->get(cfg, AUTH_RULE_IDENTITY);
 		if (!idi || idi->get_type(idi) == ID_ANY)
-		{	/* ID_ANY is invalid as IDi, use local IP address instead */
-			host_t *me;
-
-			DBG1(DBG_CFG, "no IDi configured, fall back on IP address");
-			me = this->ike_sa->get_my_host(this->ike_sa);
-			idi = identification_create_from_sockaddr(me->get_sockaddr(me));
+		{
+			/* ID_ANY is invalid as IDi, either default to the subject DN or
+			 * the IP address */
+			idi = determine_default_id("IDi", this->ike_sa, cfg);
 			cfg->add(cfg, AUTH_RULE_IDENTITY, idi);
 		}
 		this->ike_sa->set_my_id(this->ike_sa, idi->clone(idi));
@@ -1010,13 +1043,10 @@ METHOD(task_t, build_r, status_t,
 		if (id->get_type(id) == ID_ANY)
 		{	/* no IDr received, apply configured ID */
 			if (!id_cfg || id_cfg->contains_wildcards(id_cfg))
-			{	/* no ID configured, use local IP address */
-				host_t *me;
-
-				DBG1(DBG_CFG, "no IDr configured, fall back on IP address");
-				me = this->ike_sa->get_my_host(this->ike_sa);
-				id_cfg = identification_create_from_sockaddr(
-														me->get_sockaddr(me));
+			{
+				/* no ID configured, fallback to either the subject DN or
+				 * the IP address */
+				id_cfg = determine_default_id("IDr", this->ike_sa, cfg);
 				cfg->add(cfg, AUTH_RULE_IDENTITY, id_cfg);
 			}
 			this->ike_sa->set_my_id(this->ike_sa, id_cfg->clone(id_cfg));
