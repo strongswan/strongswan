@@ -3203,17 +3203,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 			.queue_task = _queue_task,
 			.queue_task_delayed = _queue_task_delayed,
 			.adopt_child_tasks = _adopt_child_tasks,
-#ifdef ME
-			.act_as_mediation_server = _act_as_mediation_server,
-			.get_server_reflexive_host = _get_server_reflexive_host,
-			.set_server_reflexive_host = _set_server_reflexive_host,
-			.get_connect_id = _get_connect_id,
-			.initiate_mediation = _initiate_mediation,
-			.initiate_mediated = _initiate_mediated,
-			.relay = _relay,
-			.callback = _callback,
-			.respond = _respond,
-#endif /* ME */
 		},
 		.ike_sa_id = ike_sa_id->clone(ike_sa_id),
 		.version = version,
@@ -3244,6 +3233,18 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 		.follow_redirects = lib->settings->get_bool(lib->settings,
 								"%s.follow_redirects", TRUE, lib->ns),
 	);
+
+#ifdef ME
+	this->public.act_as_mediation_server = _act_as_mediation_server;
+	this->public.get_server_reflexive_host = _get_server_reflexive_host;
+	this->public.set_server_reflexive_host = _set_server_reflexive_host;
+	this->public.get_connect_id = _get_connect_id;
+	this->public.initiate_mediation = _initiate_mediation;
+	this->public.initiate_mediated = _initiate_mediated;
+	this->public.relay = _relay;
+	this->public.callback = _callback;
+	this->public.respond = _respond;
+#endif /* ME */
 
 	if (version == IKEV2)
 	{	/* always supported with IKEv2 */
