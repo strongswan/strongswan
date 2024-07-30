@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Tobias Brunner
+ * Copyright (C) 2006-2024 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -2012,12 +2012,13 @@ static bool is_child_queued(private_ike_sa_t *this, task_queue_t queue)
 				this->version == IKEV1 ? TASK_QUICK_MODE : TASK_CHILD_CREATE);
 }
 
-/**
- * Check if any tasks to delete the IKE_SA are queued in the given queue.
+/*
+ * Described in header
  */
-static bool is_delete_queued(private_ike_sa_t *this, task_queue_t queue)
+bool ike_sa_is_delete_queued(ike_sa_t *ike_sa)
 {
-	return is_task_queued(this, queue,
+	private_ike_sa_t *this = (private_ike_sa_t*)ike_sa;
+	return is_task_queued(this, TASK_QUEUE_QUEUED,
 				this->version == IKEV1 ? TASK_ISAKMP_DELETE : TASK_IKE_DELETE);
 }
 
@@ -2101,7 +2102,7 @@ METHOD(ike_sa_t, reestablish, status_t,
 	bool restart = FALSE;
 	status_t status = FAILED;
 
-	if (is_delete_queued(this, TASK_QUEUE_QUEUED))
+	if (ike_sa_is_delete_queued((ike_sa_t*)this))
 	{	/* don't reestablish IKE_SAs that have explicitly been deleted in the
 		 * mean time */
 		return FAILED;

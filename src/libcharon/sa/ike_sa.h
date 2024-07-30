@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Tobias Brunner
+ * Copyright (C) 2006-2024 Tobias Brunner
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
@@ -1261,7 +1261,7 @@ struct ike_sa_t {
  * @param ike_sa_id		ike_sa_id_t to associate with new IKE_SA/ISAKMP_SA
  * @param initiator		TRUE to create this IKE_SA as initiator
  * @param version		IKE version of this SA
- * @return			ike_sa_t object
+ * @return				ike_sa_t object
  */
 ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 						ike_version_t version);
@@ -1271,16 +1271,24 @@ ike_sa_t *ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
  * parameters or the authentication method prevent it.
  *
  * @param this			IKE_SA to check
- * @return			TRUE if active reauthentication is possible
+ * @return				TRUE if active reauthentication is possible
  */
 bool ike_sa_can_reauthenticate(ike_sa_t *this);
+
+/**
+ * Check if a task to delete this IKE_SA is queued.
+ *
+ * @param this			IKE_SA to check
+ * @return				TRUE if a task is queued
+ */
+bool ike_sa_is_delete_queued(ike_sa_t *this);
 
 /**
  * Get hosts, virtual or physical, for deriving dynamic traffic selectors.
  *
  * @param this			IKE_SA to retrieve addresses from
  * @param local			TRUE to get local hosts
- * @return			list of hosts (internal objects)
+ * @return				list of hosts (internal objects)
  */
 linked_list_t *ike_sa_get_dynamic_hosts(ike_sa_t *this, bool local);
 
