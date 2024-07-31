@@ -298,6 +298,82 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 }
 
 /**
+ * Process messages of type IKE_PPK
+ */
+static void process_ike_ppk(private_ha_dispatcher_t *this, ha_message_t *message)
+{
+	ha_message_attribute_t attribute;
+	ha_message_value_t value;
+	enumerator_t *enumerator;
+	ike_sa_t *ike_sa = NULL;
+	identification_t *ppk_id = NULL;
+	keymat_v2_t *keymat;
+	shared_key_t *key;
+	chunk_t ppk;
+
+	enumerator = message->create_attribute_enumerator(message);
+	while (enumerator->enumerate(enumerator, &attribute, &value))
+	{
+		if (attribute != HA_IKE_ID && ike_sa == NULL)
+		{
+			/* must be first attribute */
+			break;
+		}
+		switch (attribute)
+		{
+			case HA_IKE_ID:
+				ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+														  value.ike_sa_id);
+				break;
+			case HA_PPK_ID:
+				ppk_id = value.id->clone(value.id);
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	if (ike_sa)
+	{
+		key = lib->credmgr->get_shared(lib->credmgr, SHARED_PPK, ppk_id, NULL);
+		if (!key)
+		{
+			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
+														ike_sa);
+			DBG1(DBG_CFG, "HA is missing PPK for '%Y' while passive", ppk_id);
+		}
+		else
+		{
+			ppk = chunk_clone(key->get_key(key));
+			key->destroy(key);
+			keymat = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
+			if (!keymat->derive_ike_keys_ppk(keymat, ppk))
+			{
+				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
+															ike_sa);
+				DBG1(DBG_IKE, "HA keymat PPK derivation failed");
+				chunk_clear(&ppk);
+			}
+			else
+			{
+				chunk_clear(&ppk);
+				ike_sa->set_condition(ike_sa, COND_PPK, TRUE);
+				this->cache->cache(this->cache, ike_sa, message);
+				message = NULL;
+				charon->ike_sa_manager->checkin(charon->ike_sa_manager, ike_sa);
+			}
+		}
+	}
+	else
+	{
+		DBG1(DBG_CFG, "passive HA IKE_SA to update not found");
+	}
+
+	DESTROY_IF(ppk_id);
+	message->destroy(message);
+}
+
+/**
  * Apply all set conditions to the IKE_SA
  */
 static void set_conditions(ike_sa_t *ike_sa, ike_condition_t conditions)
@@ -1033,6 +1109,9 @@ static job_requeue_t dispatch(private_ha_dispatcher_t *this)
 	{
 		case HA_IKE_ADD:
 			process_ike_add(this, message);
+			break;
+		case HA_IKE_PPK:
+			process_ike_ppk(this, message);
 			break;
 		case HA_IKE_UPDATE:
 			process_ike_update(this, message);
