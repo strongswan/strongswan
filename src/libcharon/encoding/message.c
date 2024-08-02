@@ -1999,10 +1999,6 @@ METHOD(message_t, fragment, status_t,
 
 	src = this->packet->get_source(this->packet);
 	dst = this->packet->get_destination(this->packet);
-	if (!frag_len)
-	{
-		frag_len = (src->get_family(src) == AF_INET) ? 576 : 1280;
-	}
 	/* frag_len is the complete IP datagram length, account for overhead (we
 	 * assume no IP options/extension headers are used) */
 	REDUCE_FRAG_LEN(frag_len, (src->get_family(src) == AF_INET) ? 20 : 40);

@@ -328,6 +328,30 @@ struct attribute_entry_t {
 };
 
 /**
+ * Determine the fragment size based on the address family of the remote host.
+ */
+static void determine_fragment_size(private_ike_sa_t *this)
+{
+	int family;
+
+	family = this->other_host->get_family(this->other_host);
+
+	this->fragment_size = lib->settings->get_int(lib->settings,
+			"%s.fragment_size_v%hhu", 0, lib->ns, (family == AF_INET ? 4 : 6));
+
+	if (!this->fragment_size)
+	{
+		this->fragment_size = lib->settings->get_int(lib->settings,
+			"%s.fragment_size", 1280, lib->ns);
+	}
+
+	if (!this->fragment_size)
+	{
+		this->fragment_size = (family == AF_INET) ? 576 : 1280;
+	}
+}
+
+/**
  * get the time of the latest traffic processed by the kernel
  */
 static time_t get_use_time(private_ike_sa_t* this, bool inbound)
@@ -415,6 +439,7 @@ METHOD(ike_sa_t, set_other_host, void,
 {
 	DESTROY_IF(this->other_host);
 	this->other_host = other;
+	determine_fragment_size(this);
 }
 
 METHOD(ike_sa_t, get_redirected_from, host_t*,
@@ -2908,14 +2933,10 @@ METHOD(ike_sa_t, inherit_post, void,
 	host_t *vip;
 
 	/* apply hosts and ids */
-	this->my_host->destroy(this->my_host);
-	this->other_host->destroy(this->other_host);
-	this->my_id->destroy(this->my_id);
-	this->other_id->destroy(this->other_id);
-	this->my_host = other->my_host->clone(other->my_host);
-	this->other_host = other->other_host->clone(other->other_host);
-	this->my_id = other->my_id->clone(other->my_id);
-	this->other_id = other->other_id->clone(other->other_id);
+	set_my_host(this, other->my_host->clone(other->my_host));
+	set_other_host(this, other->other_host->clone(other->other_host));
+	set_my_id(this, other->my_id->clone(other->my_id));
+	set_other_id(this, other->other_id->clone(other->other_id));
 	this->if_id_in = other->if_id_in;
 	this->if_id_out = other->if_id_out;
 
@@ -3228,8 +3249,6 @@ ike_sa_t * ike_sa_create(ike_sa_id_t *ike_sa_id, bool initiator,
 								"%s.retry_initiate_interval", 0, lib->ns),
 		.flush_auth_cfg = lib->settings->get_bool(lib->settings,
 								"%s.flush_auth_cfg", FALSE, lib->ns),
-		.fragment_size = lib->settings->get_int(lib->settings,
-								"%s.fragment_size", 1280, lib->ns),
 		.follow_redirects = lib->settings->get_bool(lib->settings,
 								"%s.follow_redirects", TRUE, lib->ns),
 	);
