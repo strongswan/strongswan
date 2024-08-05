@@ -9,8 +9,8 @@ android {
         minSdkVersion 21
         targetSdkVersion 34
 
-        versionCode 82
-        versionName "2.5.1"
+        versionCode 84
+        versionName "2.5.2"
 
         externalNativeBuild {
             ndkBuild {

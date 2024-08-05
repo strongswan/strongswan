@@ -1,3 +1,9 @@
+# 2.5.2 #
+
+- Increased target SDK to Android 14
+- Due to a bug in Android 14, a new permission is necessary to start a profile in the background from the status tile
+- Fix crash when listing installed apps for new profiles
+
 # 2.5.1 #
 
 - Fix for existing shortcuts and automation via Intents
