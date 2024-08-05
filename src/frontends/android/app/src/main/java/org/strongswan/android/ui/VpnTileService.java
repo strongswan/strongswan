@@ -16,7 +16,9 @@
 
 package org.strongswan.android.ui;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
@@ -127,6 +129,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		return mDataSource != null ? mDataSource.getVpnProfile(uuid) : null;
 	}
 
+	@SuppressLint("StartActivityAndCollapseDeprecated")
 	@Override
 	public void onClick()
 	{
@@ -177,7 +180,14 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 				if (profile.getVpnType().has(VpnType.VpnTypeFeature.USER_PASS) &&
 					profile.getPassword() == null)
 				{	/* the user will have to enter the password, so collapse the drawer */
-					startActivityAndCollapse(intent);
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+					{
+						startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE));
+					}
+					else
+					{
+						startActivityAndCollapse(intent);
+					}
 				}
 				else
 				{
@@ -188,7 +198,14 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		}
 		Intent intent = new Intent(this, MainActivity.class);
 		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		startActivityAndCollapse(intent);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+		{
+			startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE));
+		}
+		else
+		{
+			startActivityAndCollapse(intent);
+		}
 	}
 
 	@Override
