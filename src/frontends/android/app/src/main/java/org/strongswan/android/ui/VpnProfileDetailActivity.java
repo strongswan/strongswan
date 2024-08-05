@@ -380,7 +380,7 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			{
 				Intent intent = new Intent(VpnProfileDetailActivity.this, SelectedApplicationsActivity.class);
 				intent.putExtra(VpnProfileDataSource.KEY_SELECTED_APPS_LIST, new ArrayList<>(mSelectedApps));
-				intent.putExtra(VpnProfileDataSource.KEY_READ_ONLY, mProfile.isReadOnly());
+				intent.putExtra(VpnProfileDataSource.KEY_READ_ONLY, mProfile != null && mProfile.isReadOnly());
 				mSelectApplications.launch(intent);
 			}
 		});
