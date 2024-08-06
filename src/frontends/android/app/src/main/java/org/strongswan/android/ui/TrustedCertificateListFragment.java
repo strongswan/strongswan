@@ -33,14 +33,14 @@ import org.strongswan.android.logic.TrustedCertificateManager.TrustedCertificate
 import org.strongswan.android.security.TrustedCertificateEntry;
 import org.strongswan.android.ui.adapter.TrustedCertificateAdapter;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Observable;
-import java.util.Observer;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -249,12 +249,12 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 			}
 		}
 
-		private class TrustedCertificateManagerObserver implements Observer
+		private class TrustedCertificateManagerObserver implements PropertyChangeListener
 		{
 			private ForceLoadContentObserver mContentObserver = new ForceLoadContentObserver();
 
 			@Override
-			public void update(Observable observable, Object data)
+			public void propertyChange(PropertyChangeEvent evt)
 			{
 				mContentObserver.onChange(false);
 			}

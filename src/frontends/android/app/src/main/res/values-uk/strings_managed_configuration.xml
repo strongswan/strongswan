@@ -39,7 +39,7 @@
     <!-- Managed configuration, VPN profile -->
     <string name="managed_config_uuid_title">Unique identifier</string>
     <string name="managed_config_uuid_description">Unique identifier of the VPN profile. Version 4 UUIDs (random-generated) are recommended</string>
-    <string name="managed_config_name_title">@string/profile_name_label</string>
+    <string name="managed_config_name_title">@string/profile_name_label_simple</string>
     <string name="managed_config_name_description">@string/profile_name_hint</string>
     <string name="managed_config_vpn_type_title">@string/profile_vpn_type_label</string>
     <string name="managed_config_vpn_type_description">The type of client authentication used by the VPN profile</string>

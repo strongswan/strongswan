@@ -16,7 +16,9 @@
 
 package org.strongswan.android.ui;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
@@ -26,6 +28,7 @@ import android.content.SharedPreferences;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.service.quicksettings.Tile;
 import android.service.quicksettings.TileService;
 
@@ -127,6 +130,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		return mDataSource != null ? mDataSource.getVpnProfile(uuid) : null;
 	}
 
+	@SuppressLint("StartActivityAndCollapseDeprecated")
 	@Override
 	public void onClick()
 	{
@@ -177,10 +181,26 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 				if (profile.getVpnType().has(VpnType.VpnTypeFeature.USER_PASS) &&
 					profile.getPassword() == null)
 				{	/* the user will have to enter the password, so collapse the drawer */
-					startActivityAndCollapse(intent);
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+					{
+						startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE));
+					}
+					else
+					{
+						startActivityAndCollapse(intent);
+					}
 				}
 				else
 				{
+					/* a bug in Android 14+ requires us to request this permission in
+					 * order to start the activity from this "background" service */
+					if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && !Settings.canDrawOverlays(this))
+					{
+						Intent permIntent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+						permIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+						startActivityAndCollapse(PendingIntent.getActivity(this, 0, permIntent, PendingIntent.FLAG_IMMUTABLE));
+						return;
+					}
 					startActivity(intent);
 				}
 				return;
@@ -188,7 +208,14 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		}
 		Intent intent = new Intent(this, MainActivity.class);
 		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		startActivityAndCollapse(intent);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+		{
+			startActivityAndCollapse(PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE));
+		}
+		else
+		{
+			startActivityAndCollapse(intent);
+		}
 	}
 
 	@Override

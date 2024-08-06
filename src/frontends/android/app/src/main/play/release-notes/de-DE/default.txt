@@ -1,3 +1,9 @@
+# 2.5.2 #
+
+- Ziel-SDK auf Android 14 erhöht
+- Wegen eines Bugs in Android 14 ist eine zusätzliche Permission ist nötig, um von der Status-Kachel eine Verbindung im Hintergrund zu starten
+- Fixt einen Crash beim Öffnen der Liste installierter Apps in neuen Profilen
+
 # 2.5.1 #
 
 - Fix für existierende Verknüpfungen und Automatisierung via Intents

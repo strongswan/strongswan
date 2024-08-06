@@ -16,6 +16,7 @@
 
 package org.strongswan.android.logic;
 
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -37,6 +38,7 @@ public class Scheduler extends BroadcastReceiver
 	private final AlarmManager mManager;
 	private final PriorityQueue<ScheduledJob> mJobs;
 
+	@SuppressLint("UnspecifiedRegisterReceiverFlag")
 	public Scheduler(Context context)
 	{
 		mContext = context;
@@ -45,7 +47,14 @@ public class Scheduler extends BroadcastReceiver
 
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(EXECUTE_JOB);
-		mContext.registerReceiver(this, filter);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+		{
+			mContext.registerReceiver(this, filter, Context.RECEIVER_NOT_EXPORTED);
+		}
+		else
+		{
+			mContext.registerReceiver(this, filter);
+		}
 	}
 
 	/**

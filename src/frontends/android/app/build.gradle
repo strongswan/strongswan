@@ -7,10 +7,10 @@ android {
         applicationId "org.strongswan.android"
         compileSdk 34
         minSdkVersion 21
-        targetSdkVersion 33
+        targetSdkVersion 34
 
-        versionCode 82
-        versionName "2.5.1"
+        versionCode 84
+        versionName "2.5.2"
 
         externalNativeBuild {
             ndkBuild {
@@ -45,10 +45,10 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.lifecycle:lifecycle-process:2.7.0'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.lifecycle:lifecycle-process:2.8.3'
     implementation 'androidx.preference:preference:1.2.1'
-    implementation 'com.google.android.material:material:1.10.0'
+    implementation 'com.google.android.material:material:1.12.0'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.assertj:assertj-core:3.24.2'
     testImplementation 'org.mockito:mockito-core:5.8.0'

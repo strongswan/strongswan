@@ -16,6 +16,8 @@
 
 package org.strongswan.android.ui.widget;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.text.Editable;
@@ -33,8 +35,6 @@ import com.google.android.material.textfield.TextInputLayout;
 import org.strongswan.android.R;
 
 import androidx.annotation.Nullable;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.ViewPropertyAnimatorListenerAdapter;
 
 /**
  * Layout that extends {@link TextInputLayout} with a helper text
@@ -113,8 +113,8 @@ public class TextInputLayoutHelper extends TextInputLayout
 						showHelper(hasFocus);
 					}
 				});
-				ViewCompat.setPaddingRelative(mHelperContainer, ViewCompat.getPaddingStart(text),
-											  0, ViewCompat.getPaddingEnd(text), text.getPaddingBottom());
+				mHelperContainer.setPaddingRelative(text.getPaddingStart(), 0,
+													text.getPaddingEnd(), text.getPaddingBottom());
 			}
 		}
 	}
@@ -158,27 +158,27 @@ public class TextInputLayoutHelper extends TextInputLayout
 		}
 		if (show)
 		{
-			ViewCompat.animate(mHelperContainer)
+			mHelperContainer.animate()
 					  .alpha(1f)
 					  .setDuration(200)
-					  .setListener(new ViewPropertyAnimatorListenerAdapter() {
+					  .setListener(new AnimatorListenerAdapter() {
 						  @Override
-						  public void onAnimationStart(View view)
+						  public void onAnimationStart(Animator animation)
 						  {
-							  view.setVisibility(View.VISIBLE);
+							  mHelperContainer.setVisibility(View.VISIBLE);
 						  }
 					  }).start();
 		}
 		else
 		{
-			ViewCompat.animate(mHelperContainer)
+			mHelperContainer.animate()
 					  .alpha(0f)
 					  .setDuration(200)
-					  .setListener(new ViewPropertyAnimatorListenerAdapter() {
+					  .setListener(new AnimatorListenerAdapter() {
 						  @Override
-						  public void onAnimationEnd(View view)
+						  public void onAnimationEnd(Animator animation)
 						  {
-							  view.setVisibility(View.INVISIBLE);
+							  mHelperContainer.setVisibility(View.INVISIBLE);
 						  }
 					  }).start();
 		}
