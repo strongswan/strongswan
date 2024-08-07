@@ -504,23 +504,24 @@ struct child_sa_t {
 	status_t (*install_policies)(child_sa_t *this);
 
 	/**
-	 * Set the outbound SPI of the CHILD_SA that replaced this CHILD_SA during
-	 * a rekeying.
+	 * Set the CHILD_SA that either replaced this one or the CHILD_SA that is
+	 * being replaced by this one during a passive rekeying (i.e. it links the
+	 * two SAs bidirectionally).
 	 *
-	 * @param spi		outbound SPI of the CHILD_SA that replaced this CHILD_SA
+	 * @param sa		other CHILD_SA involved in a passive rekeying
 	 */
-	void (*set_rekey_spi)(child_sa_t *this, uint32_t spi);
+	void (*set_rekey_sa)(child_sa_t *this, child_sa_t *sa);
 
 	/**
-	 * Get the outbound SPI of the CHILD_SA that replaced this CHILD_SA during
-	 * a rekeying.
+	 * Get the CHILD_SA that's linked to this in a passive rekeying (either
+	 * replacing this one, or being replaced by it).
 	 *
-	 * @return			outbound SPI of the CHILD_SA that replaced this CHILD_SA
+	 * @return			other CHILD_SA involved in a passive rekeying
 	 */
-	uint32_t (*get_rekey_spi)(child_sa_t *this);
+	child_sa_t *(*get_rekey_sa)(child_sa_t *this);
 
 	/**
-	 * Update hosts and ecapsulation mode in the kernel SAs and policies.
+	 * Update hosts and encapsulation mode in the kernel SAs and policies.
 	 *
 	 * @param me		the new local host
 	 * @param other		the new remote host

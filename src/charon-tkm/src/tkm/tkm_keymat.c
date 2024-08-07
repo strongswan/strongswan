@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Tobias Brunner
+ * Copyright (C) 2015-2020 Tobias Brunner
  * Copyright (C) 2012 Reto Buerki
  * Copyright (C) 2012 Adrian-Ken Rueegsegger
  *
@@ -95,19 +95,26 @@ METHOD(keymat_t, create_nonce_gen, nonce_gen_t*,
 }
 
 METHOD(keymat_v2_t, derive_ike_keys, bool,
-	private_tkm_keymat_t *this, proposal_t *proposal, key_exchange_t *ke,
+	private_tkm_keymat_t *this, proposal_t *proposal, array_t *kes,
 	chunk_t nonce_i, chunk_t nonce_r, ike_sa_id_t *id,
 	pseudo_random_function_t rekey_function, chunk_t rekey_skd)
 {
 	uint64_t nc_id, spi_loc, spi_rem;
 	chunk_t *nonce;
 	tkm_diffie_hellman_t *tkm_dh;
+	key_exchange_t *ke;
 	dh_id_type dh_id;
 	nonce_type nonce_rem;
 	result_type res;
 	block_len_type block_len;
 	icv_len_type icv_len;
 	iv_len_type iv_len;
+
+	if (array_count(kes) != 1)
+	{
+		DBG1(DBG_IKE, "the TKM currently only supports a single key exchange");
+		return FALSE;
+	}
 
 	/* Acquire nonce context id */
 	nonce = this->initiator ? &nonce_i : &nonce_r;
@@ -119,6 +126,7 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 	}
 
 	/* Get DH context id */
+	array_get(kes, ARRAY_HEAD, &ke);
 	tkm_dh = (tkm_diffie_hellman_t *)ke;
 	dh_id = tkm_dh->get_id(tkm_dh);
 
@@ -198,21 +206,22 @@ METHOD(keymat_v2_t, derive_ike_keys, bool,
 }
 
 METHOD(keymat_v2_t, derive_child_keys, bool,
-	private_tkm_keymat_t *this, proposal_t *proposal, key_exchange_t *ke,
+	private_tkm_keymat_t *this, proposal_t *proposal, array_t *kes,
 	chunk_t nonce_i, chunk_t nonce_r, chunk_t *encr_i, chunk_t *integ_i,
 	chunk_t *encr_r, chunk_t *integ_r)
 {
 	esa_info_t *esa_info_i, *esa_info_r;
 	dh_id_type dh_id = 0;
+	key_exchange_t *ke;
 
-	if (ke)
+	if (kes && array_get(kes, ARRAY_HEAD, &ke))
 	{
 		dh_id = ((tkm_diffie_hellman_t *)ke)->get_id((tkm_diffie_hellman_t *)ke);
 	}
 
 	INIT(esa_info_i,
 		 .isa_id = this->isa_ctx_id,
-		 .spi_r = proposal->get_spi(proposal),
+		 .spi_l = proposal->get_spi(proposal),
 		 .nonce_i = chunk_clone(nonce_i),
 		 .nonce_r = chunk_clone(nonce_r),
 		 .is_encr_r = FALSE,
@@ -221,15 +230,15 @@ METHOD(keymat_v2_t, derive_child_keys, bool,
 
 	INIT(esa_info_r,
 		 .isa_id = this->isa_ctx_id,
-		 .spi_r = proposal->get_spi(proposal),
+		 .spi_l = proposal->get_spi(proposal),
 		 .nonce_i = chunk_clone(nonce_i),
 		 .nonce_r = chunk_clone(nonce_r),
 		 .is_encr_r = TRUE,
 		 .dh_id = dh_id,
 	);
 
-	DBG1(DBG_CHD, "passing on esa info (isa: %llu, spi_r: %x, dh_id: %llu)",
-		 esa_info_i->isa_id, ntohl(esa_info_i->spi_r), esa_info_i->dh_id);
+	DBG1(DBG_CHD, "passing on esa info (isa: %llu, spi_l: %x, dh_id: %llu)",
+		 esa_info_i->isa_id, ntohl(esa_info_i->spi_l), esa_info_i->dh_id);
 
 	/* store ESA info in encr_i/r, which is passed to add_sa */
 	*encr_i = chunk_create((u_char *)esa_info_i, sizeof(esa_info_t));
@@ -246,10 +255,18 @@ METHOD(keymat_t, get_aead, aead_t*,
 	return this->aead;
 }
 
+METHOD(keymat_v2_t, get_int_auth, bool,
+	private_tkm_keymat_t *this, bool verify, chunk_t data, chunk_t prev,
+	chunk_t *auth)
+{
+	DBG1(DBG_IKE, "TKM doesn't support IntAuth calculation");
+	return FALSE;
+}
+
 METHOD(keymat_v2_t, get_auth_octets, bool,
 	private_tkm_keymat_t *this, bool verify, chunk_t ike_sa_init,
-	chunk_t nonce, chunk_t ppk, identification_t *id, char reserved[3],
-	chunk_t *octets, array_t *schemes)
+	chunk_t nonce, chunk_t int_auth, chunk_t ppk, identification_t *id,
+	char reserved[3], chunk_t *octets, array_t *schemes)
 {
 	sign_info_t *sign;
 
@@ -279,6 +296,12 @@ METHOD(keymat_v2_t, get_skd, pseudo_random_function_t,
 {
 	isa_info_t *isa_info;
 
+	if (!this->ae_ctx_id)
+	{
+		*skd = chunk_empty;
+		return PRF_UNDEFINED;
+	}
+
 	INIT(isa_info,
 		 .parent_isa_id = this->isa_ctx_id,
 		 .ae_id = this->ae_ctx_id,
@@ -291,8 +314,8 @@ METHOD(keymat_v2_t, get_skd, pseudo_random_function_t,
 
 METHOD(keymat_v2_t, get_psk_sig, bool,
 	private_tkm_keymat_t *this, bool verify, chunk_t ike_sa_init, chunk_t nonce,
-	chunk_t secret, chunk_t ppk, identification_t *id, char reserved[3],
-	chunk_t *sig)
+	chunk_t int_auth, chunk_t secret, chunk_t ppk, identification_t *id,
+	char reserved[3], chunk_t *sig)
 {
 	return FALSE;
 }
@@ -388,6 +411,7 @@ tkm_keymat_t *tkm_keymat_create(bool initiator)
 				.derive_ike_keys_ppk = (void*)return_false,
 				.derive_child_keys = _derive_child_keys,
 				.get_skd = _get_skd,
+				.get_int_auth = _get_int_auth,
 				.get_auth_octets = _get_auth_octets,
 				.get_psk_sig = _get_psk_sig,
 				.add_hash_algorithm = _add_hash_algorithm,

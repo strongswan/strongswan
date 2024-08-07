@@ -81,13 +81,13 @@ struct child_create_t {
 	void (*use_label)(child_create_t *this, sec_label_t *label);
 
 	/**
-	 * Initially propose a specific DH group to override configuration.
+	 * Initially propose a specific KE method to override configuration.
 	 *
-	 * This is used during rekeying to prefer the previously negotiated group.
+	 * This is used during rekeying to prefer the previously negotiated method.
 	 *
-	 * @param dh_group	DH group to use
+	 * @param ke_method	KE method to use
 	 */
-	void (*use_dh_group)(child_create_t *this, key_exchange_method_t dh_group);
+	void (*use_ke_method)(child_create_t *this, key_exchange_method_t ke_method);
 
 	/**
 	 * Get the lower of the two nonces, used for rekey collisions.
@@ -102,6 +102,13 @@ struct child_create_t {
 	 * @return			child_sa
 	 */
 	child_sa_t* (*get_child) (child_create_t *this);
+
+	/**
+	 * Get the SPI of the other peer's selected proposal, if available.
+	 *
+	 * @return			other's SPI, 0 if unknown
+	 */
+	uint32_t (*get_other_spi)(child_create_t *this);
 
 	/**
 	 * Enforce a specific CHILD_SA config as responder.

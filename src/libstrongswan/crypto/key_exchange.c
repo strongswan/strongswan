@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2019 Tobias Brunner
+ * Copyright (C) 2010-2020 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -17,6 +17,9 @@
  */
 
 #include "key_exchange.h"
+
+#include <collections/hashtable.h>
+#include <threading/mutex.h>
 
 ENUM_BEGIN(key_exchange_method_names, KE_NONE, MODP_1024_BIT,
 	"KE_NONE",
@@ -475,10 +478,68 @@ static struct {
 	},
 };
 
+/**
+ * Proposal tokens for additional key exchanges.
+ */
+static hashtable_t *tokens;
+
+/**
+ * Mutex to safely access cached tokens.
+ */
+static mutex_t *mutex;
+
+/**
+ * Destroy an allocated proposal token.
+ */
+static void token_destroy(proposal_token_t *this)
+{
+	free(this->name);
+	free(this);
+}
+
+/**
+ * Parse ke<1-7>_<method> for additional key exchange methods.
+ */
+static proposal_token_t *additional_key_exchange_parser(const char *algname)
+{
+	proposal_token_t *token;
+	const proposal_token_t *base;
+	u_int num;
+	char prefix[3], alg[256];
+
+	if (!algname || sscanf(algname, "%2s%1u_%255s", &prefix, &num, alg) != 3 ||
+		!strcaseeq(prefix, "ke"))
+	{
+		return NULL;
+	}
+	mutex->lock(mutex);
+	token = tokens->get(tokens, algname);
+	if (token || num < 1 || num > 7)
+	{
+		goto done;
+	}
+	base = lib->proposal->get_token(lib->proposal, alg);
+	if (!base || base->type != KEY_EXCHANGE_METHOD)
+	{
+		goto done;
+	}
+	INIT(token,
+		.name = strdup(algname),
+		.type = ADDITIONAL_KEY_EXCHANGE_1 + num - 1,
+		.algorithm = base->algorithm,
+		.keysize = base->keysize,
+	);
+	tokens->put(tokens, token->name, token);
+
+done:
+	mutex->unlock(mutex);
+	return token;
+}
+
 /*
  * Described in header
  */
-void diffie_hellman_init()
+void key_exchange_init()
 {
 	int i;
 
@@ -498,6 +559,20 @@ void diffie_hellman_init()
 			dh_params[i].public.exp_len = dh_params[i].public.prime.len;
 		}
 	}
+
+	mutex = mutex_create(MUTEX_TYPE_RECURSIVE);
+	tokens = hashtable_create(hashtable_hash_str, hashtable_equals_str, 4);
+	lib->proposal->register_algname_parser(lib->proposal,
+										   additional_key_exchange_parser);
+}
+
+/*
+ * Described in header
+ */
+void key_exchange_deinit()
+{
+	tokens->destroy_function(tokens, (void*)token_destroy);
+	mutex->destroy(mutex);
 }
 
 /*
@@ -618,4 +693,44 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 			 value.len, key_exchange_method_names, ke);
 	}
 	return valid;
+}
+
+/*
+ * Described in header
+ */
+bool key_exchange_concat_secrets(array_t *kes, chunk_t *first,
+								 chunk_t *others)
+{
+	key_exchange_t *ke;
+	chunk_t secret;
+	int i;
+
+	if (!array_count(kes))
+	{
+		return FALSE;
+	}
+	*first = chunk_empty;
+	*others = chunk_empty;
+	for (i = 0; i < array_count(kes); i++)
+	{
+		if (array_get(kes, i, &ke) &&
+			ke->get_shared_secret(ke, &secret))
+		{
+			if (i == 0)
+			{
+				*first = secret;
+			}
+			else
+			{
+				*others = chunk_cat("ss", *others, secret);
+			}
+		}
+		else
+		{
+			chunk_clear(first);
+			chunk_clear(others);
+			return FALSE;
+		}
+	}
+	return TRUE;
 }

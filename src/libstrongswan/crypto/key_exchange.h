@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2019 Tobias Brunner
+ * Copyright (C) 2010-2020 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -29,6 +29,7 @@ typedef struct key_exchange_t key_exchange_t;
 typedef struct diffie_hellman_params_t diffie_hellman_params_t;
 
 #include <library.h>
+#include <collections/array.h>
 
 /**
  * Key exchange method.
@@ -177,9 +178,14 @@ struct diffie_hellman_params_t {
 };
 
 /**
- * Initialize diffie hellman parameters during startup.
+ * Initialize DH parameters and KE token parser during startup.
  */
-void diffie_hellman_init();
+void key_exchange_init();
+
+/**
+ * Deinitialize KE token parser during shutdown.
+ */
+void key_exchange_deinit();
 
 /**
  * Get the parameters associated with the specified Diffie-Hellman group.
@@ -208,5 +214,17 @@ bool key_exchange_is_ecdh(key_exchange_method_t ke);
  * @return				TRUE if value looks valid
  */
 bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value);
+
+/**
+ * Return the first shared secret plus the concatenated additional shared
+ * secrets of all the key exchange methods in the given array.
+ *
+ * @param kes			array of key_exchange_t*
+ * @param secret		first shared secret (allocated)
+ * @param add_secret	concatenated additional shared secrets (allocated)
+ * @return				TRUE on success
+ */
+bool key_exchange_concat_secrets(array_t *kes, chunk_t *secret,
+								 chunk_t *add_secret);
 
 #endif /** KEY_EXCHANGE_H_ @}*/
