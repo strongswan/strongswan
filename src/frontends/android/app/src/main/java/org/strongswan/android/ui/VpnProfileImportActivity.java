@@ -676,6 +676,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			if (mExisting != null)
 			{
 				mProfile.setUUID(mExisting.getUUID());
+				mProfile.setDataSource(mExisting.getDataSource());
 				mDataSource.updateVpnProfile(mProfile);
 			}
 			else
