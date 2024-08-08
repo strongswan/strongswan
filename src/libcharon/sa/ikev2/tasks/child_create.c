@@ -625,9 +625,6 @@ static status_t install_child_sa(private_child_create_t *this)
 		nonce_i = this->other_nonce;
 		nonce_r = this->my_nonce;
 
-		my_ts = this->tsr;
-		other_ts = this->tsi;
-
 		/* use a copy of the traffic selectors, as the POST hook should not
 		 * change payloads */
 		my_ts = this->tsr->clone_offset(this->tsr,
