@@ -507,7 +507,7 @@ static proposal_token_t *additional_key_exchange_parser(const char *algname)
 	u_int num;
 	char prefix[3], alg[256];
 
-	if (!algname || sscanf(algname, "%2s%1u_%255s", &prefix, &num, alg) != 3 ||
+	if (!algname || sscanf(algname, "%2s%1u_%255s", prefix, &num, alg) != 3 ||
 		!strcaseeq(prefix, "ke"))
 	{
 		return NULL;
