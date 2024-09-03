@@ -1435,6 +1435,12 @@ METHOD(quick_mode_t, get_mid, uint32_t,
 	return this->mid;
 }
 
+METHOD(quick_mode_t, get_config, child_cfg_t*,
+	private_quick_mode_t *this)
+{
+	return this->initiator ? this->config : NULL;
+}
+
 METHOD(quick_mode_t, use_reqid, void,
 	private_quick_mode_t *this, uint32_t reqid)
 {
@@ -1534,6 +1540,7 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 				.destroy = _destroy,
 			},
 			.get_mid = _get_mid,
+			.get_config = _get_config,
 			.use_reqid = _use_reqid,
 			.use_marks = _use_marks,
 			.use_if_ids = _use_if_ids,

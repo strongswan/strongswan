@@ -48,6 +48,13 @@ struct quick_mode_t {
 	uint32_t (*get_mid)(quick_mode_t *this);
 
 	/**
+	 * Get the child config of this task as initiator.
+	 *
+	 * @return				config for the CHILD_SA, NULL as responder
+	 */
+	child_cfg_t *(*get_config)(quick_mode_t *this);
+
+	/**
 	 * Use a specific reqid to install this CHILD_SA.
 	 *
 	 * This must only be called with dynamically allocated reqids (i.e. from
