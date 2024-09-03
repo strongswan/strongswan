@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Tobias Brunner
+ * Copyright (C) 2018-2024 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -123,6 +123,13 @@ struct child_create_t {
 	 * @return				config for the CHILD_SA, NULL as responder
 	 */
 	child_cfg_t *(*get_config)(child_create_t *this);
+
+	/**
+	 * Mark this active task as being aborted, i.e. cause a deletion of the
+	 * created CHILD_SA immediately after its creation (any failures to create
+	 * the SA are ignored).
+	 */
+	void (*abort)(child_create_t *this);
 };
 
 /**

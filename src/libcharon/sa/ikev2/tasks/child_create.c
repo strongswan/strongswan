@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Tobias Brunner
+ * Copyright (C) 2008-2024 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -231,6 +231,11 @@ struct private_child_create_t {
 	 * whether we are retrying with another KE method
 	 */
 	bool retry;
+
+	/**
+	 * Whether the task was aborted
+	 */
+	bool aborted;
 };
 
 /**
@@ -1689,6 +1694,11 @@ static void handle_child_sa_failure(private_child_create_t *this,
 {
 	bool is_first;
 
+	if (this->aborted)
+	{
+		return;
+	}
+
 	is_first = message->get_exchange_type(message) == IKE_AUTH;
 	if (is_first &&
 		lib->settings->get_bool(lib->settings,
@@ -2232,7 +2242,7 @@ METHOD(task_t, process_i_multi_ke, status_t,
 	{
 		DBG1(DBG_IKE, "received %N notify", notify_type_names,
 			 TEMPORARY_FAILURE);
-		if (!this->rekey)
+		if (!this->rekey && !this->aborted)
 		{	/* the rekey task will retry itself if necessary */
 			schedule_delayed_retry(this);
 		}
@@ -2241,7 +2251,7 @@ METHOD(task_t, process_i_multi_ke, status_t,
 
 	process_payloads_multi_ke(this, message);
 
-	if (this->ke_failed)
+	if (this->ke_failed || this->aborted)
 	{
 		handle_child_sa_failure(this, message);
 		return delete_failed_sa(this);
@@ -2313,7 +2323,7 @@ METHOD(task_t, process_i, status_t,
 				{
 					DBG1(DBG_IKE, "received %N notify", notify_type_names, type);
 					enumerator->destroy(enumerator);
-					if (!this->rekey)
+					if (!this->rekey && !this->aborted)
 					{	/* the rekey task will retry itself if necessary */
 						schedule_delayed_retry(this);
 					}
@@ -2324,6 +2334,14 @@ METHOD(task_t, process_i, status_t,
 					chunk_t data;
 					uint16_t alg = KE_NONE;
 
+					if (this->aborted)
+					{	/* nothing to do if the task was aborted */
+						DBG1(DBG_IKE, "received %N notify in aborted %N task",
+							 notify_type_names, type, task_type_names,
+							 TASK_CHILD_CREATE);
+						enumerator->destroy(enumerator);
+						return SUCCESS;
+					}
 					data = notify->get_notification_data(notify);
 					if (data.len == sizeof(alg))
 					{
@@ -2379,6 +2397,17 @@ METHOD(task_t, process_i, status_t,
 
 	this->other_spi = this->proposal->get_spi(this->proposal);
 	this->proposal->set_spi(this->proposal, this->my_spi);
+
+	if (this->aborted)
+	{
+		DBG1(DBG_IKE, "deleting CHILD_SA %s{%d} with SPIs %.8x_i %.8x_o of "
+			 "aborted %N task",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa),
+			 ntohl(this->my_spi), ntohl(this->other_spi),
+			 task_type_names, TASK_CHILD_CREATE);
+		return delete_failed_sa(this);
+	}
 
 	if (this->ipcomp == IPCOMP_NONE && this->ipcomp_received != IPCOMP_NONE)
 	{
@@ -2524,6 +2553,12 @@ METHOD(child_create_t, get_lower_nonce, chunk_t,
 	}
 }
 
+METHOD(child_create_t, abort_, void,
+	private_child_create_t *this)
+{
+	this->aborted = TRUE;
+}
+
 METHOD(task_t, get_type, task_type_t,
 	private_child_create_t *this)
 {
@@ -2650,6 +2685,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			.use_if_ids = _use_if_ids,
 			.use_label = _use_label,
 			.use_ke_method = _use_ke_method,
+			.abort = _abort_,
 			.task = {
 				.get_type = _get_type,
 				.migrate = _migrate,
