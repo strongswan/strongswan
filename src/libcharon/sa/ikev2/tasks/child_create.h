@@ -116,6 +116,13 @@ struct child_create_t {
 	 * @param cfg		configuration to enforce, reference gets owned
 	 */
 	void (*set_config)(child_create_t *this, child_cfg_t *cfg);
+
+	/**
+	 * Get the child config of this task as initiator.
+	 *
+	 * @return				config for the CHILD_SA, NULL as responder
+	 */
+	child_cfg_t *(*get_config)(child_create_t *this);
 };
 
 /**

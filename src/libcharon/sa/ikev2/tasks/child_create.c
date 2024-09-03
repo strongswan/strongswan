@@ -2504,6 +2504,12 @@ METHOD(child_create_t, set_config, void,
 	this->config = cfg;
 }
 
+METHOD(child_create_t, get_config, child_cfg_t*,
+	private_child_create_t *this)
+{
+	return this->initiator ? this->config : NULL;
+}
+
 METHOD(child_create_t, get_lower_nonce, chunk_t,
 	private_child_create_t *this)
 {
@@ -2637,6 +2643,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			.get_child = _get_child,
 			.get_other_spi = _get_other_spi,
 			.set_config = _set_config,
+			.get_config = _get_config,
 			.get_lower_nonce = _get_lower_nonce,
 			.use_reqid = _use_reqid,
 			.use_marks = _use_marks,
