@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Tobias Brunner
+ * Copyright (C) 2015-2024 Tobias Brunner
  * Copyright (C) 2011 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -87,6 +87,12 @@ struct quick_mode_t {
 	 * @param spi			spi of SA to rekey
 	 */
 	void (*rekey)(quick_mode_t *this, uint32_t spi);
+
+	/**
+	 * Mark this active task as being aborted, i.e. cause a deletion of the
+	 * created CHILD_SA immediately after its successful creation.
+	 */
+	void (*abort)(quick_mode_t *this);
 };
 
 /**
