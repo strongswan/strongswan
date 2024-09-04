@@ -259,7 +259,7 @@ static u_int match(linked_list_t *hosts, linked_list_t *ranges, uint16_t port,
 	enumerator->destroy(enumerator);
 
 	/* honor if port matches exactly */
-	if (port == cand->get_port(cand))
+	if (quality && port == cand->get_port(cand))
 	{
 		quality += 1;
 	}
