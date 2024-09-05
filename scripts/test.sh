@@ -467,8 +467,8 @@ case "$1" in
 deps)
 	case "$OS_NAME" in
 	linux)
-		sudo apt-get update -qq && \
-		sudo apt-get install -qq bison flex gperf gettext $DEPS
+		sudo apt-get update -y && \
+		sudo apt-get install -y bison flex gperf gettext $DEPS
 		;;
 	alpine)
 		apk add --no-cache build-base automake autoconf libtool pkgconfig && \
