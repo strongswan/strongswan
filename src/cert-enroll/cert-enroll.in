@@ -160,7 +160,7 @@ function check_ca_certs()
   fi
 
   SUBCA_CHANGED=0
-  cmp -s $SUBCA new/$SUBCA || SUBCA_CHANGE=$?
+  cmp -s $SUBCA new/$SUBCA || SUBCA_CHANGED=$?
   if [ $SUBCA_CHANGED -ne 0 ]
   then
     echo "Warning: '$SUBCA' has changed"
