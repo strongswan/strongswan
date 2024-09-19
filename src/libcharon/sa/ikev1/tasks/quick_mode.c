@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Tobias Brunner
+ * Copyright (C) 2012-2024 Tobias Brunner
  * Copyright (C) 2011 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -163,6 +163,11 @@ struct private_quick_mode_t {
 	 * Delete old child after successful rekey
 	 */
 	bool delete;
+
+	/**
+	 * Whether the task was aborted
+	 */
+	bool aborted;
 
 	/**
 	 * Negotiated mode, tunnel or transport
@@ -955,6 +960,13 @@ METHOD(task_t, build_i, status_t,
 		}
 		case QM_NEGOTIATED:
 		{
+			if (this->aborted)
+			{
+				this->ike_sa->queue_task(this->ike_sa,
+				(task_t*)quick_delete_create(this->ike_sa,
+								this->proposal->get_protocol(this->proposal),
+								this->spi_i, TRUE, FALSE));
+			}
 			return SUCCESS;
 		}
 		default:
@@ -1435,6 +1447,12 @@ METHOD(quick_mode_t, get_mid, uint32_t,
 	return this->mid;
 }
 
+METHOD(quick_mode_t, get_config, child_cfg_t*,
+	private_quick_mode_t *this)
+{
+	return this->initiator ? this->config : NULL;
+}
+
 METHOD(quick_mode_t, use_reqid, void,
 	private_quick_mode_t *this, uint32_t reqid)
 {
@@ -1468,6 +1486,12 @@ METHOD(quick_mode_t, rekey, void,
 	private_quick_mode_t *this, uint32_t spi)
 {
 	this->rekey = spi;
+}
+
+METHOD(quick_mode_t, abort_, void,
+	private_quick_mode_t *this)
+{
+	this->aborted = TRUE;
 }
 
 METHOD(task_t, migrate, void,
@@ -1534,10 +1558,12 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 				.destroy = _destroy,
 			},
 			.get_mid = _get_mid,
+			.get_config = _get_config,
 			.use_reqid = _use_reqid,
 			.use_marks = _use_marks,
 			.use_if_ids = _use_if_ids,
 			.rekey = _rekey,
+			.abort = _abort_,
 		},
 		.ike_sa = ike_sa,
 		.initiator = config != NULL,

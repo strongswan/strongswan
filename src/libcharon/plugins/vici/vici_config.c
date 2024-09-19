@@ -49,6 +49,8 @@
 #include <collections/array.h>
 #include <collections/hashtable.h>
 #include <collections/linked_list.h>
+#include <sa/ikev2/tasks/child_create.h>
+#include <sa/ikev1/tasks/quick_mode.h>
 
 #include <pubkey_cert.h>
 
@@ -2295,6 +2297,102 @@ typedef struct {
 } child_name_id_t;
 
 /**
+ * Get the child config of the given task depending on its type.
+ */
+static child_cfg_t *get_task_config(task_t *task, task_type_t type)
+{
+	child_create_t *child_create = (child_create_t*)task;
+
+	if (type == TASK_QUICK_MODE)
+	{
+		quick_mode_t *quick_mode = (quick_mode_t*)task;
+		return quick_mode->get_config(quick_mode);
+	}
+	return child_create->get_config(child_create);
+}
+
+/**
+ * Abort the given child-creating task depending on its type.
+ */
+static void abort_child_task(task_t *task, task_type_t type)
+{
+	child_create_t *child_create = (child_create_t*)task;
+
+	if (type == TASK_QUICK_MODE)
+	{
+		quick_mode_t *quick_mode = (quick_mode_t*)task;
+		return quick_mode->abort(quick_mode);
+	}
+	return child_create->abort(child_create);
+}
+
+/**
+ * Check if there are child-creating tasks queued that should be aborted, as
+ * well as if there are any others that should prevent the deletion of the
+ * IKE_SA.
+ */
+static void check_queued_tasks(ike_sa_t *ike_sa, hashtable_t *to_terminate,
+							   bool *others)
+{
+	enumerator_t *enumerator;
+	child_cfg_t *cfg;
+	task_t *task;
+	task_type_t type = TASK_CHILD_CREATE;
+
+	if (ike_sa->get_version(ike_sa) == IKEV1)
+	{
+		type = TASK_QUICK_MODE;
+	}
+
+	/* if we find an active task, we can't remove it as there is no way to
+	 * abort an exchange (i.e. the peer will have created the SA even if we
+	 * don't process the response). so we instruct the task to immediately
+	 * delete the CHILD_SA once it's created */
+	enumerator = ike_sa->create_task_enumerator(ike_sa, TASK_QUEUE_ACTIVE);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == type)
+		{
+			cfg = get_task_config(task, type);
+			if (to_terminate->get(to_terminate, cfg->get_name(cfg)))
+			{
+				DBG1(DBG_CFG, "vici aborting %N task for CHILD_SA '%s'",
+					 task_type_names, type, cfg->get_name(cfg));
+				abort_child_task(task, type);
+			}
+			else
+			{
+				*others = TRUE;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* for the queued tasks, we just remove any that use a config that is to
+	 * be terminated, but also note if there are others */
+	enumerator = ike_sa->create_task_enumerator(ike_sa, TASK_QUEUE_QUEUED);
+	while (enumerator->enumerate(enumerator, &task))
+	{
+		if (task->get_type(task) == type)
+		{
+			cfg = get_task_config(task, type);
+			if (to_terminate->get(to_terminate, cfg->get_name(cfg)))
+			{
+				DBG1(DBG_CFG, "vici removing %N task for CHILD_SA '%s'",
+					 task_type_names, type, cfg->get_name(cfg));
+				ike_sa->remove_task(ike_sa, enumerator);
+				task->destroy(task);
+			}
+			else
+			{
+				*others = TRUE;
+			}
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Terminate given CHILD_SAs and optionally terminate any IKE_SA without other
  * children.
  */
@@ -2332,9 +2430,11 @@ static void terminate_for_action(private_vici_config_t *this, char *peer_name,
 		}
 		children->destroy(children);
 
-		if (delete_ike && (!others || !ike_sa->get_child_count(ike_sa)))
+		check_queued_tasks(ike_sa, to_terminate, &others);
+
+		if (delete_ike && !others)
 		{
-			/* found no children or only matching, delete IKE_SA */
+			/* found no children/tasks or only matching, delete IKE_SA */
 			id = ike_sa->get_unique_id(ike_sa);
 			array_insert_create_value(&ikeids, sizeof(id),
 									  ARRAY_TAIL, &id);
