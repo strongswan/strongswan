@@ -16,14 +16,14 @@
  */
 
 /**
- * @defgroup tkm-dh diffie hellman
+ * @defgroup tkm-ke key exchange
  * @{ @ingroup tkm
  */
 
-#ifndef TKM_DIFFIE_HELLMAN_H_
-#define TKM_DIFFIE_HELLMAN_H_
+#ifndef TKM_KEY_EXCHANGE_H_
+#define TKM_KEY_EXCHANGE_H_
 
-typedef struct tkm_diffie_hellman_t tkm_diffie_hellman_t;
+typedef struct tkm_key_exchange_t tkm_key_exchange_t;
 
 #include <library.h>
 #include <tkm/types.h>
@@ -31,7 +31,7 @@ typedef struct tkm_diffie_hellman_t tkm_diffie_hellman_t;
 /**
  * key_exchange_t implementation using the trusted key manager.
  */
-struct tkm_diffie_hellman_t {
+struct tkm_key_exchange_t {
 
 	/**
 	 * Implements key_exchange_t interface.
@@ -39,33 +39,33 @@ struct tkm_diffie_hellman_t {
 	key_exchange_t ke;
 
 	/**
-	 * Get Diffie-Hellman context id.
+	 * Get Key Exchange context id.
 	 *
-	 * @return	id of this DH context.
+	 * @return	id of this KE context.
 	 */
-	dh_id_type (*get_id)(tkm_diffie_hellman_t * const this);
+	ke_id_type (*get_id)(tkm_key_exchange_t * const this);
 
 };
 
 /**
- * Loads IANA DH group identifier to TKM id mapping from config and registers
- * the corresponding DH features.
+ * Loads IANA KE method identifier to TKM id mapping from config and registers
+ * the corresponding KE plugin features.
  *
  * @return          number of registered mappings
  */
-int register_dh_mapping();
+int register_ke_mapping();
 
 /**
- * Destroy IANA DH group identifier to TKM id mapping.
+ * Destroy IANA KE method identifier to TKM id mapping.
  */
-void destroy_dh_mapping();
+void destroy_ke_mapping();
 
 /**
- * Creates a new tkm_diffie_hellman_t object.
+ * Creates a new tkm_key_exchange_t object.
  *
- * @param group			Diffie Hellman group number to use
- * @return				tkm_diffie_hellman_t object, NULL if not supported
+ * @param method		Key exchange method to use
+ * @return				tkm_key_exchange_t object, NULL if not supported
  */
-tkm_diffie_hellman_t *tkm_diffie_hellman_create(key_exchange_method_t group);
+tkm_key_exchange_t *tkm_key_exchange_create(key_exchange_method_t method);
 
-#endif /** TKM_DIFFIE_HELLMAN_H_ @}*/
+#endif /** TKM_KEY_EXCHANGE_H_ @}*/

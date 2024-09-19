@@ -176,9 +176,9 @@ do
 done
 
 # Put DER-encoded moon private key and Root CA certificate into tkm scenarios
-for t in host2host-initiator host2host-responder host2host-xfrmproxy \
-         multi-level-ca net2net-initiator net2net-xfrmproxy xfrmproxy-expire \
-         xfrmproxy-rekey
+for t in host2host-initiator host2host-initiator-multi-ke host2host-responder \
+         host2host-responder-multi-ke host2host-xfrmproxy multi-level-ca \
+         net2net-initiator net2net-xfrmproxy xfrmproxy-expire xfrmproxy-rekey
 do
   TEST="${TEST_DIR}/tkm/${t}"
   mkdir -p ${TEST}/hosts/moon/${TKM_DIR}
@@ -1919,9 +1919,9 @@ done
 # TKM CA ID mapping                                                            #
 ################################################################################
 
-for t in host2host-initiator host2host-responder host2host-xfrmproxy \
-         multi-level-ca net2net-initiator net2net-xfrmproxy xfrmproxy-expire \
-         xfrmproxy-rekey
+for t in host2host-initiator host2host-initiator-multi-ke host2host-responder \
+         host2host-responder-multi-ke host2host-xfrmproxy multi-level-ca \
+         net2net-initiator net2net-xfrmproxy xfrmproxy-expire xfrmproxy-rekey
 do
   for h in moon
   do

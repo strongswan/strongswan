@@ -20,92 +20,110 @@
 
 #include "tkm.h"
 #include "tkm_utils.h"
-#include "tkm_diffie_hellman.h"
+#include "tkm_key_exchange.h"
 
 #include <daemon.h>
 #include <collections/hashtable.h>
 
-typedef struct private_tkm_diffie_hellman_t private_tkm_diffie_hellman_t;
+typedef struct private_tkm_key_exchange_t private_tkm_key_exchange_t;
 
-static hashtable_t *group_map = NULL;
+static hashtable_t *method_map = NULL;
 
 /**
- * Private data of a tkm_diffie_hellman_t object.
+ * Private data of a tkm_key_exchange_t object.
  */
-struct private_tkm_diffie_hellman_t {
+struct private_tkm_key_exchange_t {
 
 	/**
-	 * Public tkm_diffie_hellman_t interface.
+	 * Public tkm_key_exchange_t interface.
 	 */
-	tkm_diffie_hellman_t public;
+	tkm_key_exchange_t public;
 
 	/**
-	 * Diffie-Hellman group number.
+	 * Key exchange method identifier.
 	 */
-	key_exchange_method_t group;
+	key_exchange_method_t method;
 
 	/**
-	 * Diffie-Hellman public value.
+	 * Key exchange algorithm ID corresponding to method.
 	 */
-	dh_pubvalue_type pubvalue;
+	uint64_t kea_id;
 
 	/**
 	 * Context id.
 	 */
-	dh_id_type context_id;
+	ke_id_type context_id;
 
 };
 
 METHOD(key_exchange_t, get_public_key, bool,
-	private_tkm_diffie_hellman_t *this, chunk_t *value)
+	private_tkm_key_exchange_t *this, chunk_t *value)
 {
-	sequence_to_chunk(this->pubvalue.data, this->pubvalue.size, value);
-	return TRUE;
+	blob_id_type pubvalue_id;
+	blob_length_type pubvalue_length;
+	bool ret = FALSE;
+
+	pubvalue_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_BLOB);
+	if (pubvalue_id)
+	{
+		ret = ike_ke_get(this->context_id, this->kea_id, pubvalue_id,
+						 &pubvalue_length) == TKM_OK &&
+			  blob_to_chunk(pubvalue_id, pubvalue_length, value);
+
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_BLOB, pubvalue_id);
+	}
+	return ret;
 }
 
 METHOD(key_exchange_t, get_shared_secret, bool,
-	private_tkm_diffie_hellman_t *this, chunk_t *secret)
+	private_tkm_key_exchange_t *this, chunk_t *secret)
 {
 	*secret = chunk_empty;
 	return TRUE;
 }
 
 METHOD(key_exchange_t, set_public_key, bool,
-	private_tkm_diffie_hellman_t *this, chunk_t value)
+	private_tkm_key_exchange_t *this, chunk_t value)
 {
-	dh_pubvalue_type othervalue;
+	blob_id_type pubvalue_id;
+	bool ret = FALSE;
 
-	if (!key_exchange_verify_pubkey(this->group, value) ||
-		value.len > sizeof(othervalue.data))
+	if (!key_exchange_verify_pubkey(this->method, value))
 	{
 		return FALSE;
 	}
-	othervalue.size = value.len;
-	memcpy(&othervalue.data, value.ptr, value.len);
 
-	return ike_dh_generate_key(this->context_id, othervalue) == TKM_OK;
+	pubvalue_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_BLOB);
+	if (pubvalue_id)
+	{
+		ret = chunk_to_blob(pubvalue_id, &value) &&
+		      ike_ke_set(this->context_id, this->kea_id, pubvalue_id) == TKM_OK;
+
+		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_BLOB, pubvalue_id);
+	}
+	return ret;
 }
 
 METHOD(key_exchange_t, get_method, key_exchange_method_t,
-	private_tkm_diffie_hellman_t *this)
+	private_tkm_key_exchange_t *this)
 {
-	return this->group;
+	return this->method;
 }
 
 METHOD(key_exchange_t, destroy, void,
-	private_tkm_diffie_hellman_t *this)
+	private_tkm_key_exchange_t *this)
 {
-	if (ike_dh_reset(this->context_id) != TKM_OK)
+	if (ike_ke_reset(this->context_id) != TKM_OK)
 	{
-		DBG1(DBG_LIB, "failed to reset DH context %d", this->context_id);
+		DBG1(DBG_LIB, "failed to reset KE context %d", this->context_id);
 	}
 
-	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_DH, this->context_id);
+	tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_KE, this->context_id);
 	free(this);
 }
 
-METHOD(tkm_diffie_hellman_t, get_id, dh_id_type,
-	private_tkm_diffie_hellman_t *this)
+METHOD(tkm_key_exchange_t, get_id, ke_id_type,
+	private_tkm_key_exchange_t *this)
 {
 	return this->context_id;
 }
@@ -124,7 +142,7 @@ static bool equals(void *key, void *other_key)
 /*
  * Described in header.
  */
-int register_dh_mapping()
+int register_ke_mapping()
 {
 	int count, i;
 	char *iana_id_str, *tkm_id_str;
@@ -137,7 +155,7 @@ int register_dh_mapping()
 						   (hashtable_equals_t)equals, 16);
 
 	enumerator = lib->settings->create_key_value_enumerator(lib->settings,
-															"%s.dh_mapping",
+															"%s.ke_mapping",
 															lib->ns);
 
 	while (enumerator->enumerate(enumerator, &iana_id_str, &tkm_id_str))
@@ -153,7 +171,7 @@ int register_dh_mapping()
 
 	count = map->get_count(map);
 	plugin_feature_t f[count + 1];
-	f[0] = PLUGIN_REGISTER(KE, tkm_diffie_hellman_create);
+	f[0] = PLUGIN_REGISTER(KE, tkm_key_exchange_create);
 
 	i = 1;
 	enumerator = map->create_enumerator(map);
@@ -164,12 +182,12 @@ int register_dh_mapping()
 	}
 	enumerator->destroy(enumerator);
 
-	lib->plugins->add_static_features(lib->plugins, "tkm-dh", f, countof(f),
+	lib->plugins->add_static_features(lib->plugins, "tkm-ke", f, countof(f),
 									  TRUE, NULL, NULL);
 
 	if (count > 0)
 	{
-		group_map = map;
+		method_map = map;
 	}
 	else
 	{
@@ -182,32 +200,33 @@ int register_dh_mapping()
 /*
  * Described in header.
  */
-void destroy_dh_mapping()
+void destroy_ke_mapping()
 {
 	enumerator_t *enumerator;
 	char *key, *value;
 
-	if (group_map)
+	if (method_map)
 	{
-		enumerator = group_map->create_enumerator(group_map);
+		enumerator = method_map->create_enumerator(method_map);
 		while (enumerator->enumerate(enumerator, &key, &value))
 		{
 			free(key);
 			free(value);
 		}
 		enumerator->destroy(enumerator);
-		group_map->destroy(group_map);
+		method_map->destroy(method_map);
+		method_map = NULL;
 	}
 }
 
 /*
  * Described in header.
  */
-tkm_diffie_hellman_t *tkm_diffie_hellman_create(key_exchange_method_t group)
+tkm_key_exchange_t *tkm_key_exchange_create(key_exchange_method_t method)
 {
-	private_tkm_diffie_hellman_t *this;
+	private_tkm_key_exchange_t *this;
 
-	if (!group_map)
+	if (!method_map)
 	{
 		return NULL;
 	}
@@ -223,8 +242,8 @@ tkm_diffie_hellman_t *tkm_diffie_hellman_create(key_exchange_method_t group)
 			},
 			.get_id = _get_id,
 		},
-		.group = group,
-		.context_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_DH),
+		.method = method,
+		.context_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_KE),
 	);
 
 	if (!this->context_id)
@@ -233,18 +252,14 @@ tkm_diffie_hellman_t *tkm_diffie_hellman_create(key_exchange_method_t group)
 		return NULL;
 	}
 
-	uint64_t *dha_id = group_map->get(group_map, &group);
-	if (!dha_id)
+	uint64_t *kea_id_ptr = method_map->get(method_map, &method);
+	if (!kea_id_ptr)
 	{
 		free(this);
 		return NULL;
 	}
 
-	if (ike_dh_create(this->context_id, *dha_id, &this->pubvalue) != TKM_OK)
-	{
-		free(this);
-		return NULL;
-	}
+	this->kea_id = *kea_id_ptr;
 
 	return &this->public;
 }

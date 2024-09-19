@@ -93,6 +93,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	kernel_ipsec_add_sa_t *data)
 {
 	esa_info_t esa;
+	esa_flags_type flags;
 	esp_spi_type spi_loc, spi_rem;
 	host_t *local, *peer;
 	chunk_t *nonce_loc, *nonce_rem;
@@ -125,11 +126,13 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	{
 		nonce_loc = &esa.nonce_i;
 		nonce_rem = &esa.nonce_r;
+		flags = TKM_ESA_INITIATOR;
 	}
 	else
 	{
 		nonce_loc = &esa.nonce_r;
 		nonce_rem = &esa.nonce_i;
+		flags = 0;
 	}
 
 	esa_id = tkm->idmgr->acquire_id(tkm->idmgr, TKM_CTX_ESA);
@@ -148,24 +151,24 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 	/*
 	 * creation of first CHILD SA:
-	 * no nonce and no dh contexts because the ones from the IKE SA are re-used
+	 * no nonce and no ke contexts because the ones from the IKE SA are re-used
 	 */
 	nonce_loc_id = tkm->chunk_map->get_id(tkm->chunk_map, nonce_loc);
-	if (nonce_loc_id == 0 && esa.dh_id == 0)
+	if (nonce_loc_id == 0 && esa.ke_ids.size == 0)
 	{
-		if (ike_esa_create_first(esa_id, esa.isa_id, data->reqid, 1, spi_loc,
-								 spi_rem) != TKM_OK)
+		if (ike_esa_create_first(esa_id, esa.isa_id, data->reqid, 1, flags,
+								 spi_loc, spi_rem) != TKM_OK)
 		{
 			DBG1(DBG_KNL, "child SA (%llu, first) creation failed", esa_id);
 			goto failure;
 		}
 	}
-	/* creation of child SA without PFS: no dh context */
-	else if (nonce_loc_id != 0 && esa.dh_id == 0)
+	/* creation of child SA without PFS: no ke context */
+	else if (nonce_loc_id != 0 && esa.ke_ids.size == 0)
 	{
 		chunk_to_sequence(nonce_rem, &nc_rem, sizeof(nonce_type));
 		if (ike_esa_create_no_pfs(esa_id, esa.isa_id, data->reqid, 1,
-								  nonce_loc_id, nc_rem, data->initiator,
+								  nonce_loc_id, nc_rem, flags,
 								  spi_loc, spi_rem) != TKM_OK)
 		{
 			DBG1(DBG_KNL, "child SA (%llu, no PFS) creation failed", esa_id);
@@ -174,12 +177,12 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		tkm->chunk_map->remove(tkm->chunk_map, nonce_loc);
 		tkm->idmgr->release_id(tkm->idmgr, TKM_CTX_NONCE, nonce_loc_id);
 	}
-	/* creation of subsequent child SA with PFS: nonce and dh context are set */
+	/* creation of subsequent child SA with PFS: nonce and ke context are set */
 	else
 	{
 		chunk_to_sequence(nonce_rem, &nc_rem, sizeof(nonce_type));
-		if (ike_esa_create(esa_id, esa.isa_id, data->reqid, 1, esa.dh_id,
-						   nonce_loc_id, nc_rem, data->initiator, spi_loc,
+		if (ike_esa_create(esa_id, esa.isa_id, data->reqid, 1, esa.ke_ids,
+						   nonce_loc_id, nc_rem, flags, spi_loc,
 						   spi_rem) != TKM_OK)
 		{
 			DBG1(DBG_KNL, "child SA (%llu) creation failed", esa_id);
