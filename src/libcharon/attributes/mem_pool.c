@@ -287,6 +287,31 @@ static int get_existing(private_mem_pool_t *this, identification_t *id,
 		return 0;
 	}
 
+	if (peer)
+	{
+		/* check for a valid online lease to reassign during make-before-break
+		 * reauthentication */
+		enumerator = array_create_enumerator(entry->online);
+		while (enumerator->enumerate(enumerator, &lease))
+		{
+			if (lease->hash == hash_addr(peer) &&
+				(requested->is_anyaddr(requested) ||
+				 lease->offset == host2offset(this, requested)))
+			{
+				offset = lease->offset;
+				/* add an additional "online" entry */
+				array_insert(entry->online, ARRAY_TAIL, lease);
+				break;
+			}
+		}
+		enumerator->destroy(enumerator);
+		if (offset)
+		{
+			DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
+			return offset;
+		}
+	}
+
 	/* check for a valid offline lease, refresh */
 	enumerator = array_create_enumerator(entry->offline);
 	if (enumerator->enumerate(enumerator, &current))
@@ -300,30 +325,6 @@ static int get_existing(private_mem_pool_t *this, identification_t *id,
 	if (offset)
 	{
 		DBG1(DBG_CFG, "reassigning offline lease to '%Y'", id);
-		return offset;
-	}
-	if (!peer)
-	{
-		return 0;
-	}
-	/* check for a valid online lease to reassign */
-	enumerator = array_create_enumerator(entry->online);
-	while (enumerator->enumerate(enumerator, &lease))
-	{
-		if (lease->hash == hash_addr(peer) &&
-			(requested->is_anyaddr(requested) ||
-			 lease->offset == host2offset(this, requested)))
-		{
-			offset = lease->offset;
-			/* add an additional "online" entry */
-			array_insert(entry->online, ARRAY_TAIL, lease);
-			break;
-		}
-	}
-	enumerator->destroy(enumerator);
-	if (offset)
-	{
-		DBG1(DBG_CFG, "reassigning online lease to '%Y'", id);
 	}
 	return offset;
 }
