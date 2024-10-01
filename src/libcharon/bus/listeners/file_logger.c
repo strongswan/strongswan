@@ -71,6 +71,11 @@ struct private_file_logger_t {
 	bool add_ms;
 
 	/**
+	 * Add microseconds after the time string
+	 */
+	bool add_us;
+
+	/**
 	 * Print the name/# of the IKE_SA?
 	 */
 	bool ike_name;
@@ -101,6 +106,7 @@ METHOD(logger_t, log_, void,
 	timeval_t tv;
 	time_t s;
 	u_int ms = 0;
+	long us = 0;
 
 	this->lock->read_lock(this->lock);
 	if (!this->out)
@@ -114,6 +120,7 @@ METHOD(logger_t, log_, void,
 		gettimeofday(&tv, NULL);
 		s = tv.tv_sec;
 		ms = tv.tv_usec / 1000;
+		us = tv.tv_usec;
 		localtime_r(&s, &tm);
 		strftime(timestr, sizeof(timestr), this->time_format, &tm);
 	}
@@ -153,7 +160,12 @@ METHOD(logger_t, log_, void,
 		next = strchr(current, '\n');
 		if (this->time_format)
 		{
-			if (this->add_ms)
+			if (this->add_us)
+			{
+				fprintf(this->out, "%s.%06d %.2d[%s]%s ",
+						timestr, us, thread, groupstr, namestr);
+			}
+			else if (this->add_ms)
 			{
 				fprintf(this->out, "%s.%03u %.2d[%s]%s ",
 						timestr, ms, thread, groupstr, namestr);
@@ -217,13 +229,14 @@ METHOD(file_logger_t, set_level, void,
 }
 
 METHOD(file_logger_t, set_options, void,
-	private_file_logger_t *this, char *time_format, bool add_ms, bool ike_name,
-	bool log_level)
+	private_file_logger_t *this, char *time_format, bool add_ms, bool add_us,
+	bool ike_name, bool log_level)
 {
 	this->lock->write_lock(this->lock);
 	free(this->time_format);
 	this->time_format = strdupnull(time_format);
 	this->add_ms = add_ms;
+	this->add_us = add_us;
 	this->ike_name = ike_name;
 	this->log_level = log_level;
 	this->lock->unlock(this->lock);
