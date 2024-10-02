@@ -602,6 +602,34 @@ static void free_child_data(child_data_t *data)
 }
 
 /**
+ * Add the default proposals for the given protocol.  We currently prefer AEAD
+ * for ESP but not for IKE.
+ */
+static void add_default_proposals(linked_list_t *list, protocol_id_t proto)
+{
+	proposal_t *first, *second;
+
+	if (proto == PROTO_IKE)
+	{
+		first = proposal_create_default(proto);
+		second = proposal_create_default_aead(proto);
+	}
+	else
+	{
+		first = proposal_create_default_aead(proto);
+		second = proposal_create_default(proto);
+	}
+	if (first)
+	{
+		list->insert_last(list, first);
+	}
+	if (second)
+	{
+		list->insert_last(list, second);
+	}
+}
+
+/**
  * Common proposal parsing
  */
 static bool parse_proposal(linked_list_t *list, protocol_id_t proto, chunk_t v)
@@ -615,16 +643,7 @@ static bool parse_proposal(linked_list_t *list, protocol_id_t proto, chunk_t v)
 	}
 	if (strcaseeq("default", buf))
 	{
-		proposal = proposal_create_default(proto);
-		if (proposal)
-		{
-			list->insert_last(list, proposal);
-		}
-		proposal = proposal_create_default_aead(proto);
-		if (proposal)
-		{
-			list->insert_last(list, proposal);
-		}
+		add_default_proposals(list, proto);
 		return TRUE;
 	}
 	proposal = proposal_create_from_string(proto, buf);
@@ -2134,16 +2153,7 @@ CALLBACK(children_sn, bool,
 	}
 	if (child.proposals->get_count(child.proposals) == 0)
 	{
-		proposal = proposal_create_default_aead(PROTO_ESP);
-		if (proposal)
-		{
-			child.proposals->insert_last(child.proposals, proposal);
-		}
-		proposal = proposal_create_default(PROTO_ESP);
-		if (proposal)
-		{
-			child.proposals->insert_last(child.proposals, proposal);
-		}
+		add_default_proposals(child.proposals, PROTO_ESP);
 	}
 
 	check_lifetimes(&child.cfg.lifetime);
@@ -2740,16 +2750,7 @@ CALLBACK(config_sn, bool,
 	}
 	if (peer.proposals->get_count(peer.proposals) == 0)
 	{
-		proposal = proposal_create_default(PROTO_IKE);
-		if (proposal)
-		{
-			peer.proposals->insert_last(peer.proposals, proposal);
-		}
-		proposal = proposal_create_default_aead(PROTO_IKE);
-		if (proposal)
-		{
-			peer.proposals->insert_last(peer.proposals, proposal);
-		}
+		add_default_proposals(peer.proposals, PROTO_IKE);
 	}
 	if (!peer.local_addrs)
 	{
