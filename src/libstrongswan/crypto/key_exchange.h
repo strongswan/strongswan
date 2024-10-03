@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2010-2020 Tobias Brunner
+ * Copyright (C) 2016-2024 Andreas Steffen
+ * Copyright (C) 2010-2024 Tobias Brunner
  * Copyright (C) 2005-2007 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -40,6 +41,8 @@ typedef struct diffie_hellman_params_t diffie_hellman_params_t;
  * ECP groups are defined in RFC 4753 and RFC 5114.
  * ECC Brainpool groups are defined in RFC 6954.
  * Curve25519 and Curve448 groups are defined in RFC 8031.
+ * GOST R 34.10-2012 groups are defined in RFC 9385.
+ * ML-KEM methods are defined in draft-ipsecme-ml-kem-ikev2.
  */
 enum key_exchange_method_t {
 	KE_NONE       =  0,
@@ -65,18 +68,23 @@ enum key_exchange_method_t {
 	ECP_512_BP    = 30,
 	CURVE_25519   = 31,
 	CURVE_448     = 32,
+	GOST3410_256  = 33,
+	GOST3410_512  = 34,
+	ML_KEM_512    = 35,
+	ML_KEM_768    = 36,
+	ML_KEM_1024   = 37,
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
-	MODP_NULL = 1024,
-	/** MODP group with custom generator/prime */
+	MODP_NULL     = 1024,
 	/** Parameters defined by IEEE 1363.1, in PRIVATE USE */
-	NTRU_112_BIT = 1030,
-	NTRU_128_BIT = 1031,
-	NTRU_192_BIT = 1032,
-	NTRU_256_BIT = 1033,
-	NH_128_BIT   = 1040,
+	NTRU_112_BIT  = 1030,
+	NTRU_128_BIT  = 1031,
+	NTRU_192_BIT  = 1032,
+	NTRU_256_BIT  = 1033,
+	NH_128_BIT    = 1040,
+	/** MODP group with custom generator/prime */
 	/** internally used DH group with additional parameters g and p, outside
 	 * of PRIVATE USE (i.e. IKEv2 DH group range) so it can't be negotiated */
-	MODP_CUSTOM = 65536,
+	MODP_CUSTOM   = 65536,
 };
 
 /**
@@ -104,7 +112,7 @@ struct key_exchange_t {
 		__attribute__((warn_unused_result));
 
 	/**
-	 * Sets the public key from the peer.
+	 * Sets the public key received from the peer.
 	 *
 	 * @note This operation should be relatively quick. Costly public key
 	 * validation operations or key derivation should be implemented in
@@ -205,6 +213,13 @@ diffie_hellman_params_t *diffie_hellman_get_params(key_exchange_method_t ke);
  * @return				TRUE if key exchange method is an ECP group
  */
 bool key_exchange_is_ecdh(key_exchange_method_t ke);
+
+/**
+ * Check if the key exchange method is a Key Encapsulation Mechanism (KEM).
+ *
+ * @return				TRUE if KEM used
+ */
+bool key_exchange_is_kem(key_exchange_method_t ke);
 
 /**
  * Check if a public key is valid for given key exchange method.
