@@ -183,6 +183,11 @@ struct private_child_cfg_t {
 	 * DS header field copy mode
 	 */
 	dscp_copy_t copy_dscp;
+
+	/**
+	 * Maximum number of child SA pairs to allow on this child_cfg
+	 */
+	uint32_t max_child_sas;
 };
 
 METHOD(child_cfg_t, get_name, char*,
@@ -660,6 +665,12 @@ METHOD(child_cfg_t, set_replay_window, void,
 	this->replay_window = replay_window;
 }
 
+METHOD(child_cfg_t, get_max_child_sas, uint32_t,
+	   private_child_cfg_t *this)
+{
+	return this->max_child_sas;
+}
+
 #define LT_PART_EQUALS(a, b) ({ a.life == b.life && a.rekey == b.rekey && a.jitter == b.jitter; })
 #define LIFETIME_EQUALS(a, b) ({ LT_PART_EQUALS(a.time, b.time) && LT_PART_EQUALS(a.bytes, b.bytes) && LT_PART_EQUALS(a.packets, b.packets); })
 
@@ -717,7 +728,8 @@ METHOD(child_cfg_t, equals, bool,
 		streq(this->updown, other->updown) &&
 		streq(this->interface, other->interface) &&
 		sec_labels_equal(this->label, other->label) &&
-		this->label_mode == other->label_mode;
+        this->label_mode == other->label_mode &&
+        this->max_child_sas == other->max_child_sas;
 }
 
 METHOD(child_cfg_t, get_ref, child_cfg_t*,
@@ -784,6 +796,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.destroy = _destroy,
 			.get_hw_offload = _get_hw_offload,
 			.get_copy_dscp = _get_copy_dscp,
+			.get_max_child_sas = _get_max_child_sas,
 		},
 		.name = strdup(name),
 		.options = data->options,
@@ -815,6 +828,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 							"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
 		.hw_offload = data->hw_offload,
 		.copy_dscp = data->copy_dscp,
+		.max_child_sas = data->max_child_sas,
 	);
 
 	return &this->public;
