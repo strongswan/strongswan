@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2010-2020 Tobias Brunner
+ * Copyright (C) 2016-2024 Andreas Steffen
+ * Copyright (C) 2010-2024 Tobias Brunner
  * Copyright (C) 2005-2010 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -36,7 +37,7 @@ ENUM_NEXT(key_exchange_method_names, MODP_2048_BIT, ECP_521_BIT, MODP_1536_BIT,
 	"ECP_256",
 	"ECP_384",
 	"ECP_521");
-ENUM_NEXT(key_exchange_method_names, MODP_1024_160, CURVE_448, ECP_521_BIT,
+ENUM_NEXT(key_exchange_method_names, MODP_1024_160, ML_KEM_1024, ECP_521_BIT,
 	"MODP_1024_160",
 	"MODP_2048_224",
 	"MODP_2048_256",
@@ -47,8 +48,13 @@ ENUM_NEXT(key_exchange_method_names, MODP_1024_160, CURVE_448, ECP_521_BIT,
 	"ECP_384_BP",
 	"ECP_512_BP",
 	"CURVE_25519",
-	"CURVE_448");
-ENUM_NEXT(key_exchange_method_names, MODP_NULL, MODP_NULL, CURVE_448,
+	"CURVE_448",
+	"GOST3410_256",
+	"GOST3410_512",
+	"ML_KEM_512",
+	"ML_KEM_768",
+	"ML_KEM_1024");
+ENUM_NEXT(key_exchange_method_names, MODP_NULL, MODP_NULL, ML_KEM_1024,
 	"MODP_NULL");
 ENUM_NEXT(key_exchange_method_names, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
 	"NTRU_112",
@@ -76,7 +82,7 @@ ENUM_NEXT(key_exchange_method_names_short, MODP_2048_BIT, ECP_521_BIT, MODP_1536
 	"ecp256",
 	"ecp384",
 	"ecp521");
-ENUM_NEXT(key_exchange_method_names_short, MODP_1024_160, CURVE_448, ECP_521_BIT,
+ENUM_NEXT(key_exchange_method_names_short, MODP_1024_160, ML_KEM_1024, ECP_521_BIT,
 	"modp1024s160",
 	"modp2048s224",
 	"modp2048s256",
@@ -87,8 +93,13 @@ ENUM_NEXT(key_exchange_method_names_short, MODP_1024_160, CURVE_448, ECP_521_BIT
 	"ecp384bp",
 	"ecp512bp",
 	"curve25519",
-	"curve448");
-ENUM_NEXT(key_exchange_method_names_short, MODP_NULL, MODP_NULL, CURVE_448,
+	"curve448",
+	"gost256",
+	"gost512",
+	"mlkem512",
+	"mlkem768",
+	"mlkem1024");
+ENUM_NEXT(key_exchange_method_names_short, MODP_NULL, MODP_NULL, ML_KEM_1024,
 	"modpnull");
 ENUM_NEXT(key_exchange_method_names_short, NTRU_112_BIT, NTRU_256_BIT, MODP_NULL,
 	"ntru112",
@@ -610,6 +621,24 @@ bool key_exchange_is_ecdh(key_exchange_method_t ke)
 		case ECP_512_BP:
 		case CURVE_25519:
 		case CURVE_448:
+		case GOST3410_256:
+		case GOST3410_512:
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+
+/*
+ * Described in header
+ */
+bool key_exchange_is_kem(key_exchange_method_t ke)
+{
+	switch (ke)
+	{
+		case ML_KEM_512:
+		case ML_KEM_768:
+		case ML_KEM_1024:
 			return TRUE;
 		default:
 			return FALSE;
@@ -670,11 +699,20 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 		case CURVE_448:
 			valid = value.len == 56;
 			break;
+		case GOST3410_256:
+			valid = value.len == 64;
+			break;
+		case GOST3410_512:
+			valid = value.len == 128;
+			break;
 		case NTRU_112_BIT:
 		case NTRU_128_BIT:
 		case NTRU_192_BIT:
 		case NTRU_256_BIT:
 		case NH_128_BIT:
+		case ML_KEM_512:
+		case ML_KEM_768:
+		case ML_KEM_1024:
 			/* verification currently not supported, do in plugin */
 			valid = FALSE;
 			break;
