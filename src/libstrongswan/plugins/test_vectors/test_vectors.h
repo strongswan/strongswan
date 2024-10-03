@@ -1,6 +1,7 @@
 /*
+ * Copyright (C) 2013-2024 Tobias Brunner
+ * Copyright (C) 2009-2024 Andreas Steffen
  * Copyright (C) 2009 Martin Willi
- * Copyright (C) 2009-2019 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -375,3 +376,15 @@ TEST_VECTOR_KE(ecp512bp)
 TEST_VECTOR_KE(curve25519_1)
 TEST_VECTOR_KE(curve25519_2)
 TEST_VECTOR_KE(curve448_1)
+TEST_VECTOR_KE(mlkem512_0)
+TEST_VECTOR_KE(mlkem512_1)
+TEST_VECTOR_KE(mlkem512_2)
+TEST_VECTOR_KE(mlkem512_3)
+TEST_VECTOR_KE(mlkem768_0)
+TEST_VECTOR_KE(mlkem768_1)
+TEST_VECTOR_KE(mlkem768_2)
+TEST_VECTOR_KE(mlkem768_3)
+TEST_VECTOR_KE(mlkem1024_0)
+TEST_VECTOR_KE(mlkem1024_1)
+TEST_VECTOR_KE(mlkem1024_2)
+TEST_VECTOR_KE(mlkem1024_3)
