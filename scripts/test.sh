@@ -128,7 +128,7 @@ build_openssl()
 
 build_awslc()
 {
-	LC_REV=1.35.0
+	LC_REV=1.37.0
 	LC_PKG=aws-lc-$LC_REV
 	LC_DIR=$DEPS_BUILD_DIR/$LC_PKG
 	LC_SRC=https://github.com/aws/aws-lc/archive/refs/tags/v${LC_REV}.tar.gz
@@ -216,8 +216,8 @@ default)
 	CONFIG="--with-printf-hooks=glibc"
 	;;
 openssl*)
-	CONFIG="--disable-defaults --enable-pki --enable-openssl --enable-pem"
-	export TESTS_PLUGINS="test-vectors openssl! pem"
+	CONFIG="--disable-defaults --enable-pki --enable-openssl --enable-pem --enable-drbg"
+	export TESTS_PLUGINS="test-vectors openssl! pem drbg"
 	DEPS="libssl-dev"
 	if test "$TEST" = "openssl-3"; then
 		DEPS=""
