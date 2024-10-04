@@ -1,6 +1,7 @@
 /*
- * Copyright (C) 2019 Sean Parkinson, wolfSSL Inc.
  * Copyright (C) 2021 Andreas Steffen, strongSec GmbH
+ * Copyright (C) 2019-2024 Tobias Brunner, codelabs GmbH
+ * Copyright (C) 2019 Sean Parkinson, wolfSSL Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +39,7 @@
 #include "wolfssl_hasher.h"
 #include "wolfssl_hmac.h"
 #include "wolfssl_kdf.h"
+#include "wolfssl_kem.h"
 #include "wolfssl_rsa_private_key.h"
 #include "wolfssl_rsa_public_key.h"
 #include "wolfssl_rng.h"
@@ -459,6 +461,12 @@ METHOD(plugin_t, get_features, int,
 		#endif
 	#endif /* HAVE_ECC_VERIFY */
 #endif /* HAVE_ECC */
+#ifdef WOLFSSL_HAVE_KYBER
+		PLUGIN_REGISTER(KE, wolfssl_kem_create),
+			PLUGIN_PROVIDE(KE, ML_KEM_512),
+			PLUGIN_PROVIDE(KE, ML_KEM_768),
+			PLUGIN_PROVIDE(KE, ML_KEM_1024),
+#endif
 #if defined (HAVE_CURVE25519) || defined(HAVE_CURVE448)
 		PLUGIN_REGISTER(KE, wolfssl_x_diffie_hellman_create),
 	#ifdef HAVE_CURVE25519

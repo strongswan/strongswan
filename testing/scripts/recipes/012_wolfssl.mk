@@ -28,6 +28,7 @@ CONFIG_OPTS = \
 	--enable-ed25519 \
 	--enable-ed448 \
 	--enable-keygen \
+	--enable-kyber \
 	--enable-md4 \
 	--enable-rsapss \
 	--enable-sha3 \
