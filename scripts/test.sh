@@ -54,8 +54,8 @@ build_wolfssl()
 					--enable-aesccm --enable-aesctr --enable-camellia
 					--enable-curve25519 --enable-curve448 --enable-des3
 					--enable-ecccustcurves --enable-ed25519 --enable-ed448
-					--enable-keygen --with-max-rsa-bits=8192 --enable-md4
-					--enable-rsapss --enable-sha3 --enable-shake256"
+					--enable-keygen --enable-kyber --with-max-rsa-bits=8192
+					--enable-md4 --enable-rsapss --enable-sha3 --enable-shake256"
 
 	git clone https://github.com/wolfSSL/wolfssl.git $WOLFSSL_DIR &&
 	cd $WOLFSSL_DIR &&
@@ -243,8 +243,8 @@ botan)
 	fi
 	;;
 wolfssl)
-	CONFIG="--disable-defaults --enable-pki --enable-wolfssl --enable-pem --enable-pkcs1 --enable-pkcs8 --enable-x509 --enable-constraints"
-	export TESTS_PLUGINS="test-vectors wolfssl! pem pkcs1 pkcs8 x509 constraints"
+	CONFIG="--disable-defaults --enable-pki --enable-wolfssl --enable-pem --enable-pkcs1 --enable-pkcs8 --enable-x509 --enable-constraints --enable-drbg"
+	export TESTS_PLUGINS="test-vectors wolfssl! pem pkcs1 pkcs8 x509 constraints drbg"
 	# build with custom options to enable all the features the plugin supports
 	DEPS=""
 	if test "$1" = "build-deps"; then
