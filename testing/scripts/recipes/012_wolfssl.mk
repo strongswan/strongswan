@@ -2,7 +2,7 @@
 
 PKG = wolfssl
 SRC = https://github.com/wolfSSL/$(PKG).git
-REV = v5.7.2-stable
+REV = 2e539ef70cbf129dd2b1471ae0e0d243853880ca
 
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
