@@ -78,6 +78,4 @@ typedef union {
 } wolfssl_ed_key;
 #endif /* HAVE_ED25519 || HAVE_ED448 */
 
-#undef PARSE_ERROR
-
 #endif /* WOLFSSL_PLUGIN_COMMON_H_ */
