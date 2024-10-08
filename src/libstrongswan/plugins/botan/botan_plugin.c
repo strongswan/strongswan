@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Tobias Brunner
+ * Copyright (C) 2018-2024 Tobias Brunner
  * Copyright (C) 2018 Andreas Steffen
  *
  * Copyright (C) 2018 René Korthaus
@@ -32,6 +32,7 @@
 #include "botan_diffie_hellman.h"
 #include "botan_hmac.h"
 #include "botan_kdf.h"
+#include "botan_kem.h"
 #include "botan_rsa_public_key.h"
 #include "botan_rsa_private_key.h"
 #include "botan_ec_diffie_hellman.h"
@@ -357,6 +358,13 @@ METHOD(plugin_t, get_features, int,
 		/* register a pro forma identity hasher, never instantiated */
 		PLUGIN_REGISTER(HASHER, return_null),
 			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
+#endif
+
+#ifdef BOTAN_HAS_ML_KEM
+		PLUGIN_REGISTER(KE, botan_kem_create),
+			PLUGIN_PROVIDE(KE, ML_KEM_512),
+			PLUGIN_PROVIDE(KE, ML_KEM_768),
+			PLUGIN_PROVIDE(KE, ML_KEM_1024),
 #endif
 
 		/* random numbers */
