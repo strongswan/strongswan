@@ -235,8 +235,8 @@ gcrypt)
 	DEPS="libgcrypt20-dev"
 	;;
 botan)
-	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem --enable-hmac --enable-x509 --enable-constraints"
-	export TESTS_PLUGINS="test-vectors botan! pem hmac x509 constraints"
+	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem --enable-hmac --enable-x509 --enable-constraints --enable-drbg"
+	export TESTS_PLUGINS="test-vectors botan! pem hmac x509 constraints drbg"
 	DEPS=""
 	if test "$1" = "build-deps"; then
 		build_botan
