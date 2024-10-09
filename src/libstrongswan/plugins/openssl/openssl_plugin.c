@@ -57,6 +57,7 @@
 #include "openssl_ed_public_key.h"
 #include "openssl_ed_private_key.h"
 #include "openssl_xof.h"
+#include "openssl_kem.h"
 
 #ifndef FIPS_MODE
 #define FIPS_MODE 0
@@ -549,6 +550,13 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(KE, MODP_768_BIT),
 			PLUGIN_PROVIDE(KE, MODP_CUSTOM),
 #endif
+#ifdef OPENSSL_IS_AWSLC
+		/* ML-KEM key exchanges */
+		PLUGIN_REGISTER(KE, openssl_kem_create),
+			PLUGIN_PROVIDE(KE, ML_KEM_512),
+			PLUGIN_PROVIDE(KE, ML_KEM_768),
+			PLUGIN_PROVIDE(KE, ML_KEM_1024),
+#endif /* OPENSSL_IS_AWSLC */
 #ifndef OPENSSL_NO_RSA
 		/* RSA private/public key loading */
 		PLUGIN_REGISTER(PRIVKEY, openssl_rsa_private_key_load, TRUE),
