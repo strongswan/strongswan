@@ -66,14 +66,9 @@ struct private_file_logger_t {
 	char *time_format;
 
 	/**
-	 * Add milliseconds after the time string
+	 * Add milliseconds/microseconds after the time string
 	 */
-	bool add_ms;
-
-	/**
-	 * Add microseconds after the time string
-	 */
-	bool add_us;
+	file_logger_time_precision_t time_precision;
 
 	/**
 	 * Print the name/# of the IKE_SA?
@@ -112,8 +107,6 @@ METHOD(logger_t, log_, void,
 	timeval_t tv;
 	time_t s;
 	size_t time_len;
-	u_int ms = 0;
-	long us = 0;
 
 	this->lock->read_lock(this->lock);
 	if (!this->out)
@@ -126,18 +119,20 @@ METHOD(logger_t, log_, void,
 	{
 		gettimeofday(&tv, NULL);
 		s = tv.tv_sec;
-		ms = tv.tv_usec / 1000;
-		us = tv.tv_usec;
 		localtime_r(&s, &tm);
 		time_len = strftime(timestr, sizeof(timestr), this->time_format, &tm);
 
-		if (this->add_us && sizeof(timestr) - time_len > 7)
+		if (this->time_precision == FILE_LOGGER_TIME_PRECISION_US &&
+			sizeof(timestr) - time_len > 7)
 		{
-			snprintf(&timestr[time_len], sizeof(timestr)-time_len, ".%06d", us);
+			snprintf(&timestr[time_len], sizeof(timestr)-time_len, ".%06d",
+					 tv.tv_usec);
 		}
-		else if (this->add_ms && sizeof(timestr) - time_len > 4)
+		else if (this->time_precision == FILE_LOGGER_TIME_PRECISION_MS &&
+				 sizeof(timestr) - time_len > 4)
 		{
-			snprintf(&timestr[time_len], sizeof(timestr)-time_len, ".%03u", ms);
+			snprintf(&timestr[time_len], sizeof(timestr)-time_len, ".%03u",
+					 tv.tv_usec / 1000);
 		}
 	}
 
@@ -269,17 +264,15 @@ METHOD(file_logger_t, set_level, void,
 }
 
 METHOD(file_logger_t, set_options, void,
-	private_file_logger_t *this, char *time_format, bool add_ms, bool add_us,
-	bool ike_name, bool log_level, bool json)
+	private_file_logger_t *this, file_logger_options_t *options)
 {
 	this->lock->write_lock(this->lock);
 	free(this->time_format);
-	this->time_format = strdupnull(time_format);
-	this->add_ms = add_ms;
-	this->add_us = add_us;
-	this->ike_name = ike_name;
-	this->log_level = log_level;
-	this->json = json;
+	this->time_format = strdupnull(options->time_format);
+	this->time_precision = options->time_precision;
+	this->ike_name = options->ike_name;
+	this->log_level = options->log_level;
+	this->json = options->json;
 	this->lock->unlock(this->lock);
 }
 
@@ -361,6 +354,22 @@ METHOD(file_logger_t, destroy, void,
 	free(this->time_format);
 	free(this->filename);
 	free(this);
+}
+
+/*
+ * Described in header
+ */
+file_logger_time_precision_t file_logger_time_precision_parse(const char *str)
+{
+	if (streq(str, "ms"))
+	{
+		return FILE_LOGGER_TIME_PRECISION_MS;
+	}
+	else if (streq(str, "us"))
+	{
+		return FILE_LOGGER_TIME_PRECISION_US;
+	}
+	return FILE_LOGGER_TIME_PRECISION_NONE;
 }
 
 /*
