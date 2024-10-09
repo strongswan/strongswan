@@ -51,12 +51,14 @@ struct file_logger_t {
 	 * @param time_format	format of timestamp prefix, as in strftime(), cloned
 	 * @param add_ms		TRUE to add the number of milliseconds within the
 	 *						current second after the timestamp
+	 * @param add_us		TRUE to add the number of microseconds within the
+	 *						current second after the timestamp
 	 * @param ike_name		TRUE to prefix the name of the IKE_SA
 	 * @param log_level		TRUE to include the log level in the message
 	 * @param json			TRUE to log as JSON objects
 	 */
 	void (*set_options) (file_logger_t *this, char *time_format, bool add_ms,
-						 bool ike_name, bool log_level, bool json);
+						 bool add_us, bool ike_name, bool log_level, bool json);
 
 	/**
 	 * Open (or reopen) the log file according to the given parameters

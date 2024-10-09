@@ -383,12 +383,14 @@ static void load_log_levels(file_logger_t *logger, char *section)
 static void load_logger_options(file_logger_t *logger, char *section)
 {
 	char *time_format;
-	bool add_ms, ike_name, log_level, json;
+	bool add_ms, add_us, ike_name, log_level, json;
 
 	time_format = conftest->test->get_str(conftest->test,
 					"log.%s.time_format", NULL, section);
 	add_ms = conftest->test->get_bool(conftest->test,
 					"log.%s.time_add_ms", FALSE, section);
+	add_us = conftest->test->get_bool(conftest->test,
+					"log.%s.time_add_us", FALSE, section);
 	ike_name = conftest->test->get_bool(conftest->test,
 					"log.%s.ike_name", FALSE, section);
 	log_level = conftest->test->get_bool(conftest->test,
@@ -396,7 +398,7 @@ static void load_logger_options(file_logger_t *logger, char *section)
 	json = conftest->test->get_bool(conftest->test,
 					"log.%s.json", FALSE, section);
 
-	logger->set_options(logger, time_format, add_ms, ike_name, log_level, json);
+	logger->set_options(logger, time_format, add_ms, add_us, ike_name, log_level, json);
 }
 
 /**
@@ -462,7 +464,7 @@ int main(int argc, char *argv[])
 	lib->credmgr->add_set(lib->credmgr, &conftest->creds->set);
 
 	logger = file_logger_create("stdout");
-	logger->set_options(logger, NULL, FALSE, FALSE, FALSE, FALSE);
+	logger->set_options(logger, NULL, FALSE, FALSE, FALSE, FALSE, FALSE);
 	logger->open(logger, FALSE, FALSE);
 	logger->set_level(logger, DBG_ANY, LEVEL_CTRL);
 	charon->bus->add_logger(charon->bus, &logger->logger);
