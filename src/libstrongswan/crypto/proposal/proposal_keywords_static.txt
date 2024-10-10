@@ -181,5 +181,11 @@ gost512,          KEY_EXCHANGE_METHOD, GOST3410_512,               0
 mlkem512,         KEY_EXCHANGE_METHOD, ML_KEM_512,                 0
 mlkem768,         KEY_EXCHANGE_METHOD, ML_KEM_768,                 0
 mlkem1024,        KEY_EXCHANGE_METHOD, ML_KEM_1024,                0
+frodoa1,          KEY_EXCHANGE_METHOD, KE_FRODO_AES_L1,            0
+frodoa3,          KEY_EXCHANGE_METHOD, KE_FRODO_AES_L3,            0
+frodoa5,          KEY_EXCHANGE_METHOD, KE_FRODO_AES_L5,            0
+frodos1,          KEY_EXCHANGE_METHOD, KE_FRODO_SHAKE_L1,          0
+frodos3,          KEY_EXCHANGE_METHOD, KE_FRODO_SHAKE_L3,          0
+frodos5,          KEY_EXCHANGE_METHOD, KE_FRODO_SHAKE_L5,          0
 noesn,            EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS,   0
 esn,              EXTENDED_SEQUENCE_NUMBERS, EXT_SEQ_NUMBERS,      0
