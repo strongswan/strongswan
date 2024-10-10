@@ -241,6 +241,24 @@ oqs_kem_t *oqs_kem_create(key_exchange_method_t method)
 		case ML_KEM_1024:
 			kem_alg = OQS_KEM_alg_ml_kem_1024;
 			break;
+		case KE_FRODO_AES_L1:
+			kem_alg = OQS_KEM_alg_frodokem_640_aes;
+			break;
+		case KE_FRODO_AES_L3:
+			kem_alg = OQS_KEM_alg_frodokem_976_aes;
+			break;
+		case KE_FRODO_AES_L5:
+			kem_alg = OQS_KEM_alg_frodokem_1344_aes;
+			break;
+		case KE_FRODO_SHAKE_L1:
+			kem_alg = OQS_KEM_alg_frodokem_640_shake;
+			break;
+		case KE_FRODO_SHAKE_L3:
+			kem_alg = OQS_KEM_alg_frodokem_976_shake;
+			break;
+		case KE_FRODO_SHAKE_L5:
+			kem_alg = OQS_KEM_alg_frodokem_1344_shake;
+			break;
 		default:
 			return NULL;
 	}

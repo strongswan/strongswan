@@ -223,18 +223,22 @@ Suite *oqs_suite_create()
 	tc = tcase_create("good");
 	test_case_set_timeout(tc, 30);
 	tcase_add_loop_test(tc, test_oqs_good, ML_KEM_512, ML_KEM_1024 + 1);
+	tcase_add_loop_test(tc, test_oqs_good, KE_FRODO_AES_L1, KE_FRODO_SHAKE_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("wrong");
 	tcase_add_loop_test(tc, test_oqs_wrong, ML_KEM_512, ML_KEM_1024 + 1);
+	tcase_add_loop_test(tc, test_oqs_wrong, KE_FRODO_AES_L1, KE_FRODO_SHAKE_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("fail_i");
 	tcase_add_loop_test(tc, test_oqs_fail_i, ML_KEM_512, ML_KEM_1024 + 1);
+	tcase_add_loop_test(tc, test_oqs_fail_i, KE_FRODO_AES_L1, KE_FRODO_SHAKE_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("fail_r");
 	tcase_add_loop_test(tc, test_oqs_fail_r, ML_KEM_512, ML_KEM_1024 + 1);
+	tcase_add_loop_test(tc, test_oqs_fail_r, KE_FRODO_AES_L1, KE_FRODO_SHAKE_L5 + 1);
 	suite_add_tcase(s, tc);
 
 	return s;
