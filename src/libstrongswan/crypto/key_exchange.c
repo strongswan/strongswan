@@ -56,7 +56,14 @@ ENUM_NEXT(key_exchange_method_names, MODP_1024_160, ML_KEM_1024, ECP_521_BIT,
 	"ML_KEM_1024");
 ENUM_NEXT(key_exchange_method_names, MODP_NULL, MODP_NULL, ML_KEM_1024,
 	"MODP_NULL");
-ENUM_NEXT(key_exchange_method_names, MODP_CUSTOM, MODP_CUSTOM, MODP_NULL,
+ENUM_NEXT(key_exchange_method_names, KE_FRODO_AES_L1, KE_FRODO_SHAKE_L5, MODP_NULL,
+	"FRODO_AES_L1",
+	"FRODO_AES_L3",
+	"FRODO_AES_L5",
+	"FRODO_SHAKE_L1",
+	"FRODO_SHAKE_L3",
+	"FRODO_SHAKE_L5");
+ENUM_NEXT(key_exchange_method_names, MODP_CUSTOM, MODP_CUSTOM, KE_FRODO_SHAKE_L5,
 	"MODP_CUSTOM");
 ENUM_END(key_exchange_method_names, MODP_CUSTOM);
 
@@ -94,7 +101,14 @@ ENUM_NEXT(key_exchange_method_names_short, MODP_1024_160, ML_KEM_1024, ECP_521_B
 	"mlkem1024");
 ENUM_NEXT(key_exchange_method_names_short, MODP_NULL, MODP_NULL, ML_KEM_1024,
 	"modpnull");
-ENUM_NEXT(key_exchange_method_names_short, MODP_CUSTOM, MODP_CUSTOM, MODP_NULL,
+ENUM_NEXT(key_exchange_method_names_short, KE_FRODO_AES_L1, KE_FRODO_SHAKE_L5, MODP_NULL,
+	"frodoa1",
+	"frodoa3",
+	"frodoa5",
+	"frodos1",
+	"frodos3",
+	"frodos5");
+ENUM_NEXT(key_exchange_method_names_short, MODP_CUSTOM, MODP_CUSTOM, KE_FRODO_SHAKE_L5,
 	"modpcustom");
 ENUM_END(key_exchange_method_names_short, MODP_CUSTOM);
 
@@ -625,6 +639,12 @@ bool key_exchange_is_kem(key_exchange_method_t ke)
 		case ML_KEM_512:
 		case ML_KEM_768:
 		case ML_KEM_1024:
+		case KE_FRODO_AES_L1:
+		case KE_FRODO_AES_L3:
+		case KE_FRODO_AES_L5:
+		case KE_FRODO_SHAKE_L1:
+		case KE_FRODO_SHAKE_L3:
+		case KE_FRODO_SHAKE_L5:
 			return TRUE;
 		default:
 			return FALSE;
@@ -694,6 +714,12 @@ bool key_exchange_verify_pubkey(key_exchange_method_t ke, chunk_t value)
 		case ML_KEM_512:
 		case ML_KEM_768:
 		case ML_KEM_1024:
+		case KE_FRODO_AES_L1:
+		case KE_FRODO_AES_L3:
+		case KE_FRODO_AES_L5:
+		case KE_FRODO_SHAKE_L1:
+		case KE_FRODO_SHAKE_L3:
+		case KE_FRODO_SHAKE_L5:
 			/* verification currently not supported, do in plugin */
 			valid = FALSE;
 			break;
