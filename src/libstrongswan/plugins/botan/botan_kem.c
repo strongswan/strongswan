@@ -25,7 +25,8 @@
 
 #include <botan/build.h>
 
-#ifdef BOTAN_HAS_ML_KEM
+#if defined(BOTAN_HAS_ML_KEM) || \
+	(defined (BOTAN_HAS_FRODOKEM) && defined(HAVE_BOTAN_PUBKEY_VIEW_RAW))
 
 #include <botan/ffi.h>
 
@@ -38,6 +39,20 @@
  * Length of the shared secret.
  */
 #define ML_KEM_SHARED_LEN 32
+
+/**
+ * Length of the shared secrets in FrodoKEM, which is also used during key
+ * generation while testing as seeds s and seedSE have the same length as the
+ * shared secret in the ephemeral versions of FrodoKEM.
+ */
+#define FRODO_L1_SECRET_LEN 16
+#define FRODO_L3_SECRET_LEN 24
+#define FRODO_L5_SECRET_LEN 32
+
+/**
+ * Length of seed z/seed A used to generate matrix A when creating a key pair.
+ */
+#define FRODO_SEED_A_LEN    16
 
 typedef struct private_key_exchange_t private_key_exchange_t;
 
@@ -82,6 +97,61 @@ struct private_key_exchange_t {
 	drbg_t *drbg;
 };
 
+/**
+ * Check if the algorithm is ML-KEM.
+ */
+static bool is_ml_kem(private_key_exchange_t *this)
+{
+	switch (this->method)
+	{
+		case ML_KEM_512:
+		case ML_KEM_768:
+		case ML_KEM_1024:
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+
+/**
+ * Determine the length of the shared secret for the given KEM.
+ */
+static size_t get_shared_secret_len(private_key_exchange_t *this)
+{
+	switch (this->method)
+	{
+		case ML_KEM_512:
+		case ML_KEM_768:
+		case ML_KEM_1024:
+			return ML_KEM_SHARED_LEN;
+		case KE_FRODO_AES_L1:
+		case KE_FRODO_SHAKE_L1:
+			return FRODO_L1_SECRET_LEN;
+		case KE_FRODO_AES_L3:
+		case KE_FRODO_SHAKE_L3:
+			return FRODO_L3_SECRET_LEN;
+		case KE_FRODO_AES_L5:
+		case KE_FRODO_SHAKE_L5:
+			return FRODO_L5_SECRET_LEN;
+		default:
+			return 0;
+	}
+}
+
+/**
+ * Determine the length of the seed for the given KEM during testing.
+ */
+static size_t get_seed_len(private_key_exchange_t *this)
+{
+	if (is_ml_kem(this))
+	{
+		/* d || z */
+		return ML_KEM_SEED_LEN;
+	}
+	/* s // seedSE // z */
+	return 2 * get_shared_secret_len(this) + FRODO_SEED_A_LEN;
+}
+
 CALLBACK(get_random, int,
 	drbg_t *drbg, uint8_t *out, size_t out_len)
 {
@@ -116,36 +186,110 @@ CALLBACK(botan_view_to_chunk, int,
 	return 0;
 }
 
+#ifdef BOTAN_HAS_FRODOKEM
+
+/**
+ * Data for an RNG that serves static data for testing.
+ */
+typedef struct {
+	/** Random data to serve. */
+	chunk_t random;
+	/** Offset into the data already served. */
+	size_t offset;
+} static_rng_t;
+
+CALLBACK(get_random_static, int,
+	static_rng_t *rng, uint8_t *out, size_t out_len)
+{
+	if (rng->offset + out_len <= rng->random.len)
+	{
+		memcpy(out, rng->random.ptr + rng->offset, out_len);
+		rng->offset += out_len;
+		return 0;
+	}
+	return -1;
+}
+
+/**
+ * Initializes the given RNG as a static RNG.
+ */
+static bool get_static_rng(static_rng_t *source, botan_rng_t *rng)
+{
+	return !botan_rng_init_custom(rng, "kem-static-rng", source,
+								  get_random_static, NULL, NULL);
+}
+
+#endif /* BOTAN_HAS_FRODOKEM */
+
+/**
+ * Load/create a key pair during testing.
+ */
+static bool create_test_keypair(private_key_exchange_t *this)
+{
+	uint8_t random[get_seed_len(this)];
+
+	if (!this->drbg->generate(this->drbg, sizeof(random), random))
+	{
+		return FALSE;
+	}
+
+#ifdef BOTAN_HAS_ML_KEM
+	if (is_ml_kem(this))
+	{
+		/* during testing, we load the DRBG-generated seed (d || z) as private
+		 * key, as Botan would otherwise pull these separately from the RNG */
+		if (!botan_privkey_load_ml_kem(&this->kem, random, sizeof(random),
+									   this->name))
+		{
+			return TRUE;
+		}
+	}
+	else
+#endif
+#ifdef BOTAN_HAS_FRODOKEM
+	{
+		botan_rng_t rng = NULL;
+		static_rng_t static_rng = {
+			.random = chunk_create(random, sizeof(random)),
+		};
+
+		/* there is no function to load a FrodoKEM private key via seed values.
+		 * botan_privkey_load_frodokem() expects the format described in the
+		 * spec (i.e. s // seedA // b // S^T // pkh, most of which are derived
+		 * from the seeds), and since Botan pulls the seeds in separate calls,
+		 * which doesn't match our vectors, we preallocate all seed values */
+		if (get_static_rng(&static_rng, &rng) &&
+			!botan_privkey_create(&this->kem, "FrodoKEM", this->name, rng))
+		{
+			botan_rng_destroy(rng);
+			return TRUE;
+		}
+		botan_rng_destroy(rng);
+	}
+#endif
+	return FALSE;
+}
+
 /**
  * Generate a key pair as initiator.
  */
 static bool generate_keypair(private_key_exchange_t *this)
 {
+	botan_rng_t rng = NULL;
+
 	if (this->drbg)
 	{
-		uint8_t random[ML_KEM_SEED_LEN];
-
-		/* during testing, we load the DRBG-generated seed (d || z) as private
-		 * key, as Botan would otherwise pull these separately from the RNG */
-		if (!this->drbg->generate(this->drbg, sizeof(random), random) ||
-			botan_privkey_load_ml_kem(&this->kem, random, sizeof(random),
-									  this->name))
-		{
-			return FALSE;
-		}
+		return create_test_keypair(this);
 	}
-	else
+
+	if (!botan_get_rng(&rng, RNG_STRONG) ||
+		botan_privkey_create(&this->kem, is_ml_kem(this) ? "ML-KEM" : "FrodoKEM",
+							 this->name, rng))
 	{
-		botan_rng_t rng = NULL;
-
-		if (!botan_get_rng(&rng, RNG_STRONG) ||
-			botan_privkey_create(&this->kem, "ML-KEM", this->name, rng))
-		{
-			botan_rng_destroy(rng);
-			return FALSE;
-		}
 		botan_rng_destroy(rng);
+		return FALSE;
 	}
+	botan_rng_destroy(rng);
 	return TRUE;
 }
 
@@ -201,7 +345,7 @@ static bool decaps_ciphertext(private_key_exchange_t *this, chunk_t ciphertext)
 	{
 		return FALSE;
 	}
-	this->shared_secret = chunk_alloc(ML_KEM_SHARED_LEN);
+	this->shared_secret = chunk_alloc(get_shared_secret_len(this));
 
 	if (botan_pk_op_kem_decrypt_shared_key(op, NULL, 0, ciphertext.ptr,
 							ciphertext.len, this->shared_secret.len,
@@ -217,6 +361,33 @@ static bool decaps_ciphertext(private_key_exchange_t *this, chunk_t ciphertext)
 }
 
 /**
+ * Parse/Load the given public key.
+ */
+static bool load_public_key(private_key_exchange_t *this, chunk_t public,
+							botan_pubkey_t *kem)
+{
+#ifdef BOTAN_HAS_ML_KEM
+	if (is_ml_kem(this))
+	{
+		if (!botan_pubkey_load_ml_kem(kem, public.ptr, public.len, this->name))
+		{
+			return TRUE;
+		}
+	}
+	else
+#endif
+#ifdef BOTAN_HAS_FRODOKEM
+	{
+		if (!botan_pubkey_load_frodokem(kem, public.ptr, public.len, this->name))
+		{
+			return TRUE;
+		}
+	}
+#endif
+	return FALSE;
+}
+
+/**
  * Generate a shared secret an encapsulate it using the given public key.
  */
 static bool encaps_shared_secret(private_key_exchange_t *this, chunk_t public)
@@ -226,7 +397,7 @@ static bool encaps_shared_secret(private_key_exchange_t *this, chunk_t public)
 	botan_rng_t rng;
 	size_t len;
 
-	if (botan_pubkey_load_ml_kem(&kem, public.ptr, public.len, this->name))
+	if (!load_public_key(this, public, &kem))
 	{
 		DBG1(DBG_LIB, "%N public key invalid",
 			 key_exchange_method_names, this->method);
@@ -245,7 +416,7 @@ static bool encaps_shared_secret(private_key_exchange_t *this, chunk_t public)
 		return FALSE;
 	}
 	this->ciphertext = chunk_alloc(len);
-	this->shared_secret = chunk_alloc(ML_KEM_SHARED_LEN);
+	this->shared_secret = chunk_alloc(get_shared_secret_len(this));
 
 	if (botan_pk_op_kem_encrypt_create_shared_key(op, rng, NULL, 0,
 							this->shared_secret.len,
@@ -333,6 +504,24 @@ key_exchange_t *botan_kem_create(key_exchange_method_t method)
 		case ML_KEM_1024:
 			name = "ML-KEM-1024";
 			break;
+		case KE_FRODO_AES_L1:
+			name = "eFrodoKEM-640-AES";
+			break;
+		case KE_FRODO_AES_L3:
+			name = "eFrodoKEM-976-AES";
+			break;
+		case KE_FRODO_AES_L5:
+			name = "eFrodoKEM-1344-AES";
+			break;
+		case KE_FRODO_SHAKE_L1:
+			name = "eFrodoKEM-640-SHAKE";
+			break;
+		case KE_FRODO_SHAKE_L3:
+			name = "eFrodoKEM-976-SHAKE";
+			break;
+		case KE_FRODO_SHAKE_L5:
+			name = "eFrodoKEM-1344-SHAKE";
+			break;
 		default:
 			return NULL;
 	}
@@ -352,4 +541,4 @@ key_exchange_t *botan_kem_create(key_exchange_method_t method)
 	return &this->public;
 }
 
-#endif /* BOTAN_HAS_ML_KEM */
+#endif /* BOTAN_HAS_ML_KEM || BOTAN_HAS_FRODOKEM */
