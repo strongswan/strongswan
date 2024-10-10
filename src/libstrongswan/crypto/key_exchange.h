@@ -74,11 +74,18 @@ enum key_exchange_method_t {
 	ML_KEM_768    = 36,
 	ML_KEM_1024   = 37,
 	/** insecure NULL diffie hellman group for testing, in PRIVATE USE */
-	MODP_NULL     = 1024,
+	MODP_NULL         = 1024,
+	/** KEM algorithms recommended by BSI, in PRIVATE USE */
+	KE_FRODO_AES_L1   = 1083,
+	KE_FRODO_AES_L3   = 1084,
+	KE_FRODO_AES_L5   = 1085,
+	KE_FRODO_SHAKE_L1 = 1086,
+	KE_FRODO_SHAKE_L3 = 1087,
+	KE_FRODO_SHAKE_L5 = 1088,
 	/** MODP group with custom generator/prime */
 	/** internally used DH group with additional parameters g and p, outside
 	 * of PRIVATE USE (i.e. IKEv2 DH group range) so it can't be negotiated */
-	MODP_CUSTOM   = 65536,
+	MODP_CUSTOM       = 65536,
 };
 
 /**
