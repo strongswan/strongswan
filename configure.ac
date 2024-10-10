@@ -1235,7 +1235,7 @@ if test x$botan = xtrue; then
 	AC_SUBST(botan_LIBS)
 	saved_LIBS=$LIBS
 	LIBS="$botan_LIBS"
-	AC_CHECK_FUNCS(botan_rng_init_custom botan_pubkey_ecc_key_used_explicit_encoding)
+	AC_CHECK_FUNCS(botan_rng_init_custom botan_pubkey_ecc_key_used_explicit_encoding botan_pubkey_view_raw)
 	LIBS=$saved_LIBS
 fi
 
