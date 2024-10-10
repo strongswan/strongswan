@@ -55,6 +55,7 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/curve25519.c \
 	test_vectors/curve448.c \
 	test_vectors/ml_kem.c \
+	test_vectors/ke_frodo.c \
 	test_vectors/drbg_ctr.c \
 	test_vectors/drbg_hmac.c \
 	test_vectors/rng.c
