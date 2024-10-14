@@ -25,9 +25,8 @@
 
 #include <botan/build.h>
 
-#if defined(BOTAN_HAS_ML_KEM) || defined (BOTAN_HAS_FRODOKEM)
-
-#include <asn1/asn1.h>
+#if defined(BOTAN_HAS_ML_KEM) || \
+	(defined (BOTAN_HAS_FRODOKEM) && defined(HAVE_BOTAN_PUBKEY_VIEW_RAW))
 
 #include <botan/ffi.h>
 
@@ -190,30 +189,6 @@ CALLBACK(botan_view_to_chunk, int,
 #ifdef BOTAN_HAS_FRODOKEM
 
 /**
- * Determine the OID used for a specific FrodoKEM variant.
- */
-static char *get_oid(private_key_exchange_t *this)
-{
-	switch (this->method)
-	{
-		case KE_FRODO_AES_L1:
-			return "1.3.6.1.4.1.25258.1.17.1";
-		case KE_FRODO_AES_L3:
-			return "1.3.6.1.4.1.25258.1.17.2";
-		case KE_FRODO_AES_L5:
-			return "1.3.6.1.4.1.25258.1.17.3";
-		case KE_FRODO_SHAKE_L1:
-			return "1.3.6.1.4.1.25258.1.16.1";
-		case KE_FRODO_SHAKE_L3:
-			return "1.3.6.1.4.1.25258.1.16.2";
-		case KE_FRODO_SHAKE_L5:
-			return "1.3.6.1.4.1.25258.1.16.3";
-		default:
-			return NULL;
-	}
-}
-
-/**
  * Data for an RNG that serves static data for testing.
  */
 typedef struct {
@@ -278,11 +253,11 @@ static bool create_test_keypair(private_key_exchange_t *this)
 			.random = chunk_create(random, sizeof(random)),
 		};
 
-		/* FIXME: there is currently no function to load a FrodoKEM private key
-		 * via seed values (the PKCS#8 format Botan uses the format described
-		 * in the spec, i.e. s // seedA // b // ST // pkh, most of which are
-		 * derived from the seeds), and since Botan pulls the seeds in separate
-		 * calls, which doesn't match our vectors, we preallocate them */
+		/* there is no function to load a FrodoKEM private key via seed values.
+		 * botan_privkey_load_frodokem() expects the format described in the
+		 * spec (i.e. s // seedA // b // S^T // pkh, most of which are derived
+		 * from the seeds), and since Botan pulls the seeds in separate calls,
+		 * which doesn't match our vectors, we preallocate all seed values */
 		if (!get_static_rng(&static_rng, &rng) ||
 			botan_privkey_create(&this->kem, "FrodoKEM", this->name, rng))
 		{
@@ -332,37 +307,6 @@ static bool export_pubkey(private_key_exchange_t *this, chunk_t *public)
 		return FALSE;
 	}
 
-#ifdef BOTAN_HAS_FRODOKEM
-	if (!is_ml_kem(this))
-	{
-		chunk_t encoded, unwrap, inner;
-
-		/* FIXME: there is currently no way to get the raw public key, so we
-		 * have to unwrap the DER encoded key (at least that's just the raw
-		 * key bits we need) */
-		if (botan_privkey_export_pubkey(&pubkey, this->kem) ||
-			botan_pubkey_view_der(pubkey, &encoded, botan_view_to_chunk))
-		{
-			DBG1(DBG_LIB, "%N public key encoding failed",
-					 key_exchange_method_names, this->method);
-			botan_pubkey_destroy(pubkey);
-			return FALSE;
-		}
-		botan_pubkey_destroy(pubkey);
-		unwrap = encoded;
-		if (asn1_unwrap(&unwrap, &unwrap) == ASN1_SEQUENCE &&
-			asn1_unwrap(&unwrap, &inner) == ASN1_SEQUENCE &&
-			asn1_unwrap(&unwrap, &inner) == ASN1_BIT_STRING)
-		{
-			*public = chunk_clone(chunk_skip(inner, 1));
-			chunk_free(&encoded);
-			return TRUE;
-		}
-		chunk_free(&encoded);
-		return FALSE;
-	}
-#endif
-#ifdef BOTAN_HAS_ML_KEM
 	if (botan_privkey_export_pubkey(&pubkey, this->kem) ||
 		botan_pubkey_view_raw(pubkey, public, botan_view_to_chunk))
 	{
@@ -373,9 +317,6 @@ static bool export_pubkey(private_key_exchange_t *this, chunk_t *public)
 	}
 	botan_pubkey_destroy(pubkey);
 	return TRUE;
-#else
-	return FALSE;
-#endif
 }
 
 METHOD(key_exchange_t, get_public_key, bool,
@@ -432,24 +373,12 @@ static bool encaps_shared_secret(private_key_exchange_t *this, chunk_t public)
 #ifdef BOTAN_HAS_FRODOKEM
 	if (!is_ml_kem(this))
 	{
-		chunk_t encoding;
-
-		/* FIXME: there is currently no way to load raw FrodoKEM public keys,
-		 * so we have to DER-encode them with a matching OID */
-		encoding = asn1_wrap(ASN1_SEQUENCE, "mm",
-							asn1_wrap(ASN1_SEQUENCE, "m",
-								asn1_wrap(ASN1_OID, "m",
-									asn1_oid_from_string(get_oid(this)))),
-							asn1_bitstring("c", public));
-
-		if (botan_pubkey_load(&kem, encoding.ptr, encoding.len))
+		if (botan_pubkey_load_frodokem(&kem, public.ptr, public.len, this->name))
 		{
 			DBG1(DBG_LIB, "%N public key invalid",
 			 key_exchange_method_names, this->method);
-			chunk_free(&encoding);
 			return FALSE;
 		}
-		chunk_free(&encoding);
 	}
 	else
 #endif
@@ -601,4 +530,4 @@ key_exchange_t *botan_kem_create(key_exchange_method_t method)
 	return &this->public;
 }
 
-#endif /* BOTAN_HAS_ML_KEM */
+#endif /* BOTAN_HAS_ML_KEM || BOTAN_HAS_FRODOKEM */
