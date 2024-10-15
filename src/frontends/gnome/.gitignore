@@ -1,14 +1,9 @@
+ABOUT-NLS
 compile
-config.h
-config.h.in
-intltool-extract.in
-intltool-merge.in
-intltool-update.in
+config.*
 mkinstalldirs
 nm-strongswan-service.name
 stamp-h1
-config.guess.cdbs-orig
-config.sub.cdbs-orig
 NetworkManager-strongswan.metainfo.xml
 NetworkManager-strongswan.pot
 properties/nm-strongswan-resources.c

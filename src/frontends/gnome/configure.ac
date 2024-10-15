@@ -1,6 +1,6 @@
-AC_PREREQ(2.52)
+AC_PREREQ([2.69])
 
-AC_INIT(NetworkManager-strongswan, 1.6.0, info@strongswan.org, NetworkManager-strongswan)
+AC_INIT([NetworkManager-strongswan],[1.6.0],[info@strongswan.org],[NetworkManager-strongswan])
 AM_INIT_AUTOMAKE([subdir-objects])
 AM_MAINTAINER_MODE
 
@@ -13,14 +13,13 @@ dnl
 AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_INSTALL
-AC_PROG_LIBTOOL
+LT_INIT([disable-static])
 PKG_PROG_PKG_CONFIG
 AC_PATH_PROG(GLIB_COMPILE_RESOURCES, glib-compile-resources)
 
 dnl
 dnl Required headers
 dnl
-AC_HEADER_STDC
 AC_CHECK_HEADERS(fcntl.h paths.h sys/ioctl.h sys/time.h syslog.h unistd.h)
 
 dnl
@@ -28,7 +27,6 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 dnl
 AC_TYPE_MODE_T
 AC_TYPE_PID_T
-AC_HEADER_TIME
 
 dnl
 dnl Checks for library functions.
@@ -40,12 +38,12 @@ AC_CHECK_FUNCS(select socket uname)
 AC_SEARCH_LIBS([dlopen], [dl dld], [], [ac_cv_search_dlopen=])
 AC_SUBST([DL_LIBS], "$ac_cv_search_dlopen")
 
+AM_GNU_GETTEXT_VERSION([0.19])
+AM_GNU_GETTEXT([external])
+
 GETTEXT_PACKAGE=NetworkManager-strongswan
 AC_SUBST(GETTEXT_PACKAGE)
 AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE,"$GETTEXT_PACKAGE", [Gettext package])
-
-IT_PROG_INTLTOOL([0.35])
-AM_GLIB_GNU_GETTEXT
 
 PKG_CHECK_MODULES(GTK, gtk+-3.0 >= 3.0)
 PKG_CHECK_MODULES(LIBSECRET, libsecret-1)

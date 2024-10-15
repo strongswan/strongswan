@@ -4,12 +4,12 @@ SUBDIRS = properties auth-dialog po
 
 nmvpnservice_DATA = nm-strongswan-service.name
 
-@INTLTOOL_DESKTOP_RULE@
-
 metainfodir = $(datadir)/metainfo
 metainfo_DATA = $(metainfo_in_files:.xml.in=.xml)
 metainfo_in_files = NetworkManager-strongswan.metainfo.xml.in
-@INTLTOOL_XML_RULE@
+
+%.xml: %.xml.in
+	$(AM_V_GEN) $(MSGFMT) --xml --template $< -d $(top_srcdir)/po -o $@
 
 nm-strongswan-service.name: $(srcdir)/nm-strongswan-service.name.in
 	$(AM_V_GEN) \
@@ -20,12 +20,8 @@ nm-strongswan-service.name: $(srcdir)/nm-strongswan-service.name.in
 
 EXTRA_DIST = \
     nm-strongswan-service.name.in  \
-    $(metainfo_in_files)  \
-    intltool-extract.in  \
-    intltool-merge.in    \
-    intltool-update.in
+    $(metainfo_in_files)
 
 CLEANFILES = $(nmvpnservice_DATA) $(metainfo_DATA) *~
-DISTCLEANFILES = intltool-extract intltool-merge intltool-update
 
 ACLOCAL_AMFLAGS = -I m4

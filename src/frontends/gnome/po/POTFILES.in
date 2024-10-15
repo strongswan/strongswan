@@ -2,6 +2,6 @@
 # Please keep this file sorted alphabetically.
 properties/nm-strongswan-plugin.c
 properties/nm-strongswan.c
-[type: gettext/glade]properties/nm-strongswan-dialog.ui
+properties/nm-strongswan-dialog.ui
 auth-dialog/main.c
 NetworkManager-strongswan.metainfo.xml.in

@@ -445,6 +445,10 @@ fuzzing)
 	;;
 nm)
 	DEPS="gnome-common libsecret-1-dev libgtk-3-dev libnm-dev libnma-dev"
+	# Ubuntu 20.04 requires this package explicitly for the ITS rules for the .metainfo.xml file
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
+		DEPS="$DEPS appstream"
+	fi
 	cd src/frontends/gnome
 	# don't run ./configure with ./autogen.sh
 	export NOCONFIGURE=1

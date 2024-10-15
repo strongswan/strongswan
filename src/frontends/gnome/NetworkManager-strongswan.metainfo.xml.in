@@ -6,23 +6,23 @@
   <metadata_license>CC0-1.0</metadata_license>
   <extends>nm-connection-editor.desktop</extends>
   <extends>gnome-control-center.desktop</extends>
-  <_name>strongSwan VPN client</_name>
-  <_summary>strongSwan based client for IPsec virtual private networks</_summary>
+  <name>strongSwan VPN client</name>
+  <summary>strongSwan based client for IPsec virtual private networks</summary>
 
   <keywords>
-    <keyword>network</keyword>
-    <keyword>manager</keyword>
-    <keyword>NetworkManager</keyword>
-    <keyword>connection</keyword>
-    <keyword>VPN</keyword>
-    <keyword>strongSwan</keyword>
-    <keyword>IPsec</keyword>
-    <keyword>IKEv2</keyword>
+    <keyword translate="no">network</keyword>
+    <keyword translate="no">manager</keyword>
+    <keyword translate="no">NetworkManager</keyword>
+    <keyword translate="no">connection</keyword>
+    <keyword translate="no">VPN</keyword>
+    <keyword translate="no">strongSwan</keyword>
+    <keyword translate="no">IPsec</keyword>
+    <keyword translate="no">IKEv2</keyword>
   </keywords>
 
   <description>
-    <_p>Support for configuring IPsec based virtual private network connections.</_p>
-    <_p>Compatible with IKEv2 key exchange and multiple authentication mechanisms.</_p>
+    <p>Support for configuring IPsec based virtual private network connections.</p>
+    <p>Compatible with IKEv2 key exchange and multiple authentication mechanisms.</p>
   </description>
 
   <screenshots>
@@ -36,5 +36,5 @@
   <url type="help">https://www.strongswan.org/support.html</url>
   <update_contact>info_AT_strongswan.org</update_contact>
   <translation type="gettext">NetworkManager-strongswan</translation>
-  <_developer_name>strongSwan Developers</_developer_name>
+  <developer_name>strongSwan Developers</developer_name>
 </component>
