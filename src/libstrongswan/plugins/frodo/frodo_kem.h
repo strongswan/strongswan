@@ -15,34 +15,23 @@
  */
 
 /**
- * @defgroup frodo frodo
+ * Quantum-safe key encapsulation implementation using ephemeral FrodoKEM.
+ *
+ * @defgroup frodo_kem frodo_kem
  * @{ @ingroup frodo_p
  */
 
-#ifndef FRODO_H_
-#define FRODO_H_
-
-typedef struct frodo_t frodo_t;
+#ifndef FRODO_KEM_H_
+#define FRODO_KEM_H_
 
 #include <library.h>
 
 /**
- * Quantum-safe key encapsulation implementation using FrodoKEM
- */
-struct frodo_t {
-
-	/**
-	 * Implements key_exchange_t interface.
-	 */
-	key_exchange_t ke;
-};
-
-/**
- * Creates a new frodo_t object.
+ * Creates a new key_exchange_t object.
  *
  * @param method		key exchange method
- * @return				frodo_t object, NULL if not supported
+ * @return				key_exchange_t object, NULL if not supported
  */
-frodo_t *frodo_create(key_exchange_method_t method);
+key_exchange_t *frodo_kem_create(key_exchange_method_t method);
 
-#endif /** FRODO_H_ @}*/
+#endif /** FRODO_KEM_H_ @}*/

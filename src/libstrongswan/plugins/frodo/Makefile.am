@@ -8,7 +8,7 @@ AM_CFLAGS = \
 # because of the subdirectory, which would cause distclean to fail
 noinst_LTLIBRARIES = libfrodo.la
 libfrodo_la_SOURCES = \
-	frodo.h frodo.c \
+	frodo_kem.h frodo_kem.c \
 	frodo_params.h frodo_params.c \
 	frodo_utils.h frodo_utils.c
 
