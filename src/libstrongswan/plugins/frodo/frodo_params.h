@@ -87,17 +87,17 @@ struct frodo_params_t {
 	const uint32_t ss_len;
 
 	/**
-	 * Size of ciphertext
+	 * Size of ciphertext ((n * nb * log_q) / 8 + (nb * nb * log_q) / 8)
 	 */
 	const uint32_t ct_len;
 
 	/**
-	 * Size of public key
+	 * Size of public key (seed_A_len + (n * nb * log_q) / 8)
 	 */
 	const uint32_t pk_len;
 
 	/**
-	 * Size of secret key
+	 * Size of secret key (ss_len(s) + pk_len + 2 * n * nb + ss_len(pkhash))
 	 */
 	const uint32_t sk_len;
 

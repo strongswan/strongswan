@@ -30,16 +30,16 @@
 void frodo_pack(u_char *out, size_t outlen, uint16_t *in, size_t inlen,
 				u_char lsb)
 {
-	size_t i = 0;      /* whole bytes already filled in    */
-	size_t j = 0;      /* whole uint16_t already copied    */
-	uint16_t w = 0;    /* the leftover, not yet copied     */
-	u_char bits = 0;   /* the number of lsb in w           */
+	size_t i = 0;		/* whole bytes already filled in    */
+	size_t j = 0;		/* whole uint16_t already copied    */
+	uint16_t w = 0;		/* the leftover, not yet copied     */
+	u_char bits = 0;	/* the number of lsb in w           */
 
-	memset(out, 0x00, outlen);
+	memset(out, 0, outlen);
 
 	while (i < outlen && (j < inlen || ((j == inlen) && (bits > 0))))
 	{
-		u_char b = 0;      /* bits in out[i] already filled in */
+		u_char b = 0;	/* bits in out[i] already filled in */
 
 		/**
 		 * in: |        |        |********|********|
@@ -56,7 +56,7 @@ void frodo_pack(u_char *out, size_t outlen, uint16_t *in, size_t inlen,
 		{
 			int nbits = min(8 - b, bits);
 			uint16_t mask = (1 << nbits) - 1;
-			u_char t = (w >> (bits - nbits)) & mask;  /* the bits to copy from w to out */
+			u_char t = (w >> (bits - nbits)) & mask; /* the bits to copy from w to out */
 
 			out[i] = out[i] + (t << (8 - b - nbits));
 			b += nbits;
@@ -75,13 +75,15 @@ void frodo_pack(u_char *out, size_t outlen, uint16_t *in, size_t inlen,
 				}
 				else
 				{
-					break;  /* the input vector is exhausted */
+					/* the input vector is exhausted */
+					break;
 				}
 			}
 		}
 		if (b == 8)
 		{
-			i++;   /* out[i] is filled in */
+			/* out[i] is filled in */
+			i++;
 		}
 	}
 }
@@ -92,21 +94,21 @@ void frodo_pack(u_char *out, size_t outlen, uint16_t *in, size_t inlen,
 void frodo_unpack(uint16_t *out, size_t outlen, u_char *in, size_t inlen,
 				  u_char lsb)
 {
-	size_t i = 0;      /* whole uint16_t already filled in */
-	size_t j = 0;      /* whole bytes already copied       */
-	u_char w = 0;      /* the leftover, not yet copied     */
-	u_char bits = 0;   /* the number of lsb bits of w      */
+	size_t i = 0;		/* whole uint16_t already filled in */
+	size_t j = 0;		/* whole bytes already copied       */
+	u_char w = 0;		/* the leftover, not yet copied     */
+	u_char bits = 0;	/* the number of lsb bits of w      */
 
 	memset(out, 0, outlen * sizeof(uint16_t));
 
 	while (i < outlen && (j < inlen || ((j == inlen) && (bits > 0))))
 	{
-		u_char b = 0;      /* bits in out[i] already filled in */
+		u_char b = 0;	/* bits in out[i] already filled in */
 
 		/**
 		 * in: |  |  |  |  |  |  |**|**|...
 		 *                       ^
-		 *                     j
+		 *                       j
 		 * w : | *|
 		 *       ^
 		 *       bits
@@ -118,7 +120,7 @@ void frodo_unpack(uint16_t *out, size_t outlen, u_char *in, size_t inlen,
 		{
 			int nbits = min(lsb - b, bits);
 			uint16_t mask = (1 << nbits) - 1;
-			u_char t = (w >> (bits - nbits)) & mask;  /* the bits to copy from w to out */
+			u_char t = (w >> (bits - nbits)) & mask; /* the bits to copy from w to out */
 
 			out[i] = out[i] + (t << (lsb - b - nbits));
 			b += nbits;
@@ -137,13 +139,15 @@ void frodo_unpack(uint16_t *out, size_t outlen, u_char *in, size_t inlen,
 				}
 				else
 				{
-					break;  /* the input vector is exhausted */
+					/* the input vector is exhausted */
+					break;
 				}
 			}
 		}
 		if (b == lsb)
 		{
-			i++;  /* out[i] is filled in */
+			 /* out[i] is filled in */
+			i++;
 		}
 	}
 }
@@ -166,7 +170,7 @@ void frodo_sample_n(const frodo_params_t *params, uint16_t *s, size_t n)
 		{
 			/**
 			 * Constant time comparison: 1 if CDF_TABLE[j] < s, 0 otherwise.
-			 * Uses the fact that CDF_TABLE[j] and s fit in 15 bits
+			 * Uses the fact that CDF_TABLE[j] and s fit in 15 bits.
 			 */
 			sample += (uint16_t)(params->cdf_table[j] - prnd) >> 15;
 		}
@@ -184,11 +188,11 @@ static bool generate_matrix_by_shake(const frodo_params_t *params, uint16_t *A,
 	const uint32_t seed_A_len = params->seed_A_len;
 	const uint32_t n = params->n;
 
+	xof_t *xof;
 	uint8_t seed_A_separated[2 + seed_A_len];
 	uint16_t *seed_A_origin = (uint16_t*)&seed_A_separated;
 	int i;
 	bool success = FALSE;
-	xof_t *xof;
 
 	memcpy(&seed_A_separated[2], seed_A, seed_A_len);
 
@@ -197,12 +201,12 @@ static bool generate_matrix_by_shake(const frodo_params_t *params, uint16_t *A,
 	if (!xof)
 	{
 		DBG1(DBG_LIB, "could not instantiate %N", ext_out_function_names,
-					   XOF_SHAKE_128);
+			 XOF_SHAKE_128);
 		return FALSE;
 	}
 	for (i = 0; i < n; i++)
 	{
-		seed_A_origin[0] = i;
+		seed_A_origin[0] = htole16(i);
 
 		if (!xof->set_seed(xof, chunk_create(seed_A_separated, 2 + seed_A_len)))
 		{
@@ -232,16 +236,17 @@ static bool generate_matrix_by_aes(const frodo_params_t *params, uint16_t *A,
 
 	crypter_t *crypter;
 	chunk_t A_chunk;
-	bool success = FALSE;
 	uint32_t block_len, step, k;
 	int i, j;
+	bool success = FALSE;
 
-	memset((uint8_t*)A, 0x00, A_len);
+	memset((uint8_t*)A, 0, A_len);
 
 	crypter = lib->crypto->create_crypter(lib->crypto, ENCR_AES_ECB, 16);
 	if (!crypter)
 	{
-		DBG1(DBG_LIB, "could not instantiate AES_ECB-128");
+		DBG1(DBG_LIB, "could not instantiate %N (128 bit)",
+			 encryption_algorithm_names, ENCR_AES_ECB);
 		return FALSE;
 	}
 	block_len = crypter->get_block_size(crypter);
@@ -252,14 +257,13 @@ static bool generate_matrix_by_aes(const frodo_params_t *params, uint16_t *A,
 		goto err;
 	}
 
-    /* ECB encryption */
-	for (i = 0; i < n; i++)
+    for (i = 0; i < n; i++)
 	{
 		for (j = 0; j < n; j += step)
 		{
 			k = i*n + j;
-			A[k] = i;
-			A[k + 1] = j;
+			A[k] = htole16(i);
+			A[k + 1] = htole16(j);
 		}
 	}
 	A_chunk = chunk_create((uint8_t*)A, A_len);
@@ -290,8 +294,8 @@ bool frodo_mul_add_as_plus_e(const frodo_params_t *params, uint16_t *out,
 	int16_t A[n_x_n];
 	int i, j, k;
 
-	if (use_aes ? !generate_matrix_by_aes  (params, A, seed_A) :
-				  !generate_matrix_by_shake(params, A, seed_A))
+	if (use_aes ? !generate_matrix_by_aes  (params, A, seed_A)
+				: !generate_matrix_by_shake(params, A, seed_A))
 	{
 		return FALSE;
 	}
@@ -306,13 +310,14 @@ bool frodo_mul_add_as_plus_e(const frodo_params_t *params, uint16_t *out,
 
 			for (j = 0; j < n; j++)
 			{
-				sum += A[i*n + j] * s[k*n + j];
+				sum += le16toh(A[i*n + j]) * s[k*n + j];
 			}
 
 			/* Adding e. No need to reduce modulo 2^15,
 			 * extra bits are taken care of during packing later on.
 			 */
-			out[i*nb + k] += sum;}
+			out[i*nb + k] += sum;
+		}
 	}
 	return TRUE;
 }
@@ -332,8 +337,8 @@ bool frodo_mul_add_sa_plus_e(const frodo_params_t *params, uint16_t *out,
 	int16_t A[n_x_n];
 	int i, j, k;
 
-	if (use_aes ? !generate_matrix_by_aes  (params, A, seed_A) :
-				  !generate_matrix_by_shake(params, A, seed_A))
+	if (use_aes ? !generate_matrix_by_aes  (params, A, seed_A)
+				: !generate_matrix_by_shake(params, A, seed_A))
 	{
 		return FALSE;
 	}
@@ -348,7 +353,7 @@ bool frodo_mul_add_sa_plus_e(const frodo_params_t *params, uint16_t *out,
 
 			for (j = 0; j < n; j++)
 			{
-				sum += A[j*n + i] * s[k*n + j];
+				sum += le16toh(A[j*n + i]) * s[k*n + j];
 			}
 
 			/* Adding e. No need to reduce modulo 2^15,
@@ -357,7 +362,6 @@ bool frodo_mul_add_sa_plus_e(const frodo_params_t *params, uint16_t *out,
 			out[k*n + i] += sum;
 		}
 	}
-
 	return TRUE;
 }
 
@@ -452,11 +456,13 @@ void frodo_key_encode(const frodo_params_t *params, uint16_t *out, uint16_t *in)
 	const uint32_t nb        = params->nb;
 	const uint32_t log_q     = params->log_q;
 	const uint32_t extr_bits = params->extr_bits;
+	const uint64_t mask      = ((uint64_t)1 << extr_bits) - 1;
+	const u_int nwords       = (nb * nb)/8;
+	const u_int npieces_word = 8;
 
-	u_int i, j, npieces_word = 8;
-	u_int nwords = (nb * nb)/8;
-	uint64_t temp, mask = ((uint64_t)1 << extr_bits) - 1;
-	uint16_t* pos = out;
+	u_int i, j;
+	uint64_t temp;
+	uint16_t *pos = out;
 
 	for (i = 0; i < nwords; i++)
 	{
@@ -482,12 +488,13 @@ void frodo_key_decode(const frodo_params_t *params, uint16_t *out, uint16_t *in)
 	const uint32_t nb        = params->nb;
 	const uint32_t log_q     = params->log_q;
 	const uint32_t extr_bits = params->extr_bits;
+	const u_int nwords       = (nb * nb) / 8;
+	const u_int maskex       = ((uint16_t)1 << extr_bits) - 1;
+	const u_int maskq        = ((uint16_t)1 << log_q) - 1;
+	const u_int npieces_word = 8;
 
-	u_int i, j, index = 0, npieces_word = 8;
-	u_int nwords = (nb * nb) / 8;
+	u_int i, j, index = 0;
 	uint16_t temp;
-	u_int maskex = ((uint16_t)1 << extr_bits) - 1;
-	u_int maskq  = ((uint16_t)1 << log_q) - 1;
 	uint8_t *pos = (uint8_t*)out;
 	uint64_t templong;
 

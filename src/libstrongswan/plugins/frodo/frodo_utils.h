@@ -35,29 +35,31 @@
 #include <library.h>
 
 /**
- * Pack the input uint16 vector into a char output vector,
- * copying lsb bits from each input element.
+ * Pack the input uint16 vector into a char output vector, copying lsb bits
+ * from each input element.
+ *
  * If inlen * lsb / 8 > outlen, only outlen * 8 bits are copied.
  *
- * @param out
- * @param outlen
- * @param in
- * @param inlen
- * @param lsb
+ * @param out		buffer to put packed vector
+ * @param outlen	length of the buffer
+ * @param in		input vector
+ * @param inlen		size of vector (number of uint16_t)
+ * @param lsb		number of bits to copy from each input element
  */
 void frodo_pack(u_char *out, size_t outlen, uint16_t *in, size_t inlen,
 				u_char lsb);
 
 /**
- * Unpack the input char vector into a uint16_t output vector,
- * copying lsb bits for each output element from input.
+ * Unpack the input char vector into a uint16_t output vector, copying lsb bits
+ * for each output element from input.
+ *
  * outlen must be at least ceil(inlen * 8 / lsb).
  *
- * @param out
- * @param outlen
- * @param in
- * @param inlen
- * @param lsb
+ * @param out		buffer to put unpacked vector
+ * @param outlen	size of the buffer (number of uint16_t)
+ * @param in		packed input vector
+ * @param inlen		size of vector
+ * @param lsb		number of bits to copy from each input element
  */
 void frodo_unpack(uint16_t *out, size_t outlen, u_char *in, size_t inlen,
 				  u_char lsb);
@@ -67,17 +69,17 @@ void frodo_unpack(uint16_t *out, size_t outlen, u_char *in, size_t inlen,
  * 16 bits to sample. The distribution is specified by its CDF.
  *
  * @param params	parameter set
- * @param s			pseudo-random values (are overwritten by output)
+ * @param s			pseudo-random values to sample (are overwritten by output)
  * @param n 		size of s
  */
 void frodo_sample_n(const frodo_params_t *params, uint16_t *s, size_t n);
 
 /**
- * Generate-and-multiply: generate matrix A (N x N) row-wise,
- * multiply by s on the right.
+ * Generate-and-multiply: generate matrix A (N x N) row-wise, multiply by s
+ * on the right.
  *
  * @param params	parameter set
- * @param out 		out = A*s + e (N x N_BAR)
+ * @param out 		output A*s + e (N x N_BAR)
  * @param s			array (N x N_BAR)
  * @param e			array (N x N_BAR)
  * @param seed_A	seed for matrix A
@@ -89,10 +91,11 @@ bool frodo_mul_add_as_plus_e(const frodo_params_t *params, uint16_t *out,
 							 bool use_aes);
 
 /**
- * Generate-and-multiply: generate matrix A (N x N) column-wise,
+ * Generate-and-multiply: generate matrix A (N x N) column-wise, multiply by s'
+ * on the left.
  *
  * @param params	parameter set
- * @param out 		out = s'*A + e' (N_BAR x N)
+ * @param out 		output s'*A + e' (N_BAR x N)
  * @param s			array (N_BAR x N)
  * @param e			array (N_BAR x N)
  * @param seed_A	seed for matrix A
@@ -104,22 +107,22 @@ bool frodo_mul_add_sa_plus_e(const frodo_params_t *params, uint16_t *out,
 							 bool use_aes);
 
 /**
- * Multiply by s on the left
+ * Multiply by s on the left and add e.
  *
  * @param params	parameter set
  * @param b			array (N x N_BAR)
  * @param s			array (N_BAR x N)
  * @param e			array (N_BAR x N_BAR)
- * @param out		out = s*b + e (N_BAR x N_BAR)
+ * @param out		output s*b + e (N_BAR x N_BAR)
  */
 void frodo_mul_add_sb_plus_e(const frodo_params_t *params, uint16_t *out,
 							 uint16_t *b, uint16_t *s, uint16_t *e);
 
 /**
- * Multiply by s on the right
+ * Multiply by s on the right.
  *
  * @param params	parameter set
- * @param out		out = b*s (N_BAR x N_BAR)
+ * @param out		output b*s (N_BAR x N_BAR)
  * @param b			array (N_BAR x N),
  * @param s			array (N x N_BAR)
  */
@@ -127,10 +130,10 @@ void frodo_mul_add_sb_plus_e(const frodo_params_t *params, uint16_t *out,
  				   uint16_t *b, uint16_t *s);
 
 /**
- * Add a and b
+ * Add a and b.
  *
  * @param params	parameter set
- * @param out		c = a + b (N_BAR x N_AR)
+ * @param out		output a + b (N_BAR x N_BAR)
  * @param a			array (N_BAR x N_BAR)
  * @param b			array (N_BAR x N_BAR)
  */
@@ -138,10 +141,10 @@ void frodo_add(const frodo_params_t *params, uint16_t *out,
 			   uint16_t *a, uint16_t *b);
 
 /**
- * Subtract a and b
+ * Subtract a and b.
  *
  * @param params	parameter set
- * @param out		c = a - b (N_BAR x N_AR)
+ * @param out		output a - b (N_BAR x N_BAR)
  * @param a			array (N_BAR x N_BAR)
  * @param b			array (N_BAR x N_BAR)
  */
@@ -149,20 +152,20 @@ void frodo_sub(const frodo_params_t *params, uint16_t *out,
 			   uint16_t *a, uint16_t *b);
 
 /**
- * Encode
+ * Encode a bit string as matrix.
  *
  * @param params	parameter set
- * @param out		encoded key
- * @param in		key to be encoded
+ * @param out		encoded matrix
+ * @param in		bit string to be encoded
  */
 void frodo_key_encode(const frodo_params_t *params, uint16_t *out, uint16_t *in);
 
 /**
- * Decode
+ * Decode a matrix as bit string.
  *
  * @param params	parameter set
- * @param out		decoded key
- * @param in		key to be decoded
+ * @param out		decoded bit string
+ * @param in		matrix to be decoded
  */
 void frodo_key_decode(const frodo_params_t *params, uint16_t *out, uint16_t *in);
 

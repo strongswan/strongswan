@@ -54,7 +54,7 @@ static const frodo_params_t frodo_params[] = {
 		9720,                      /* Size of ciphertext ct_len       */
 		9616,                      /* Size of public key pk_len       */
 		19888,                     /* Size of secret key sk_len       */
-		13,                        /* Size of CDF table cdf_table_len */
+		countof(cdf_table_1),      /* Size of CDF table cdf_table_len */
 		cdf_table_1,               /* CDF table                       */
 		XOF_SHAKE_128,             /* SHAKE XOF                       */
     },
@@ -70,7 +70,7 @@ static const frodo_params_t frodo_params[] = {
 		15744,                     /* Size of ciphertext ct_len       */
 		15632,                     /* Size of public key pk_len       */
 		31296,                     /* Size of secret key sk_len       */
-		11,                        /* Size of CDF table cdf_table_len */
+		countof(cdf_table_3),      /* Size of CDF table cdf_table_len */
 		cdf_table_3,               /* CDF table                       */
 		XOF_SHAKE_256,             /* SHAKE XOF                       */
     },
@@ -86,7 +86,7 @@ static const frodo_params_t frodo_params[] = {
 		21632,                     /* Size of ciphertext ct_len       */
 		21520,                     /* Size of public key pk_len       */
 		43088,                     /* Size of secret key sk_len       */
-		7,                         /* Size of CDF table cdf_table_len */
+		countof(cdf_table_5),      /* Size of CDF table cdf_table_len */
 		cdf_table_5,               /* CDF table                       */
 		XOF_SHAKE_256,             /* SHAKE XOF                       */
     },
@@ -95,7 +95,7 @@ static const frodo_params_t frodo_params[] = {
 /**
  * See header.
  */
-const frodo_params_t* frodo_params_get_by_id(frodo_kem_type_t id)
+const frodo_params_t *frodo_params_get_by_id(frodo_kem_type_t id)
 {
 	int i;
 
