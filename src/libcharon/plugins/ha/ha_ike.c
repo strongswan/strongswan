@@ -170,6 +170,30 @@ METHOD(listener_t, ike_keys, bool,
 	return TRUE;
 }
 
+METHOD(listener_t, ike_ppk, bool,
+	private_ha_ike_t *this, ike_sa_t *ike_sa, identification_t *ppk_id)
+{
+	ha_message_t *m;
+
+	if (ike_sa->get_state(ike_sa) == IKE_PASSIVE)
+	{	/* only sync active IKE_SAs */
+		return TRUE;
+	}
+	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
+	{	/* do not sync SA between nodes */
+		return TRUE;
+	}
+
+	m = ha_message_create(HA_IKE_PPK);
+	m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+	m->add_attribute(m, HA_PPK_ID, ppk_id);
+
+	this->socket->push(this->socket, m);
+	this->cache->cache(this->cache, ike_sa, m);
+
+	return TRUE;
+}
+
 METHOD(listener_t, ike_updown, bool,
 	private_ha_ike_t *this, ike_sa_t *ike_sa, bool up)
 {
@@ -407,6 +431,7 @@ ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
 			.listener = {
 				.alert = _alert,
 				.ike_keys = _ike_keys,
+				.ike_ppk = _ike_ppk,
 				.ike_updown = _ike_updown,
 				.ike_rekey = _ike_rekey,
 				.ike_state_change = _ike_state_change,
