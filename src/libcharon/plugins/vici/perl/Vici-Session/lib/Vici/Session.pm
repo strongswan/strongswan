@@ -145,7 +145,7 @@ sub unload_pool {
 }
 
 sub get_pools {
-    return request('get-pools', @_);
+    return request_vars('get-pools', @_);
 }
 
 sub get_algorithms {
