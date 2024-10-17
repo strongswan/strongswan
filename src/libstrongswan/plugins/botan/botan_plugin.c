@@ -360,7 +360,8 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
 #endif
 
-#if defined(BOTAN_HAS_ML_KEM) || defined(BOTAN_HAS_FRODOKEM)
+#if defined(BOTAN_HAS_ML_KEM) || \
+	(defined (BOTAN_HAS_FRODOKEM) && defined(HAVE_BOTAN_PUBKEY_VIEW_RAW))
 		PLUGIN_REGISTER(KE, botan_kem_create),
 #ifdef BOTAN_HAS_ML_KEM
 			PLUGIN_PROVIDE(KE, ML_KEM_512),

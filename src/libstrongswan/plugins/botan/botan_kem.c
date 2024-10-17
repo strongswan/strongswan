@@ -25,7 +25,8 @@
 
 #include <botan/build.h>
 
-#if defined(BOTAN_HAS_ML_KEM) || defined (BOTAN_HAS_FRODOKEM)
+#if defined(BOTAN_HAS_ML_KEM) || \
+	(defined (BOTAN_HAS_FRODOKEM) && defined(HAVE_BOTAN_PUBKEY_VIEW_RAW))
 
 #include <botan/ffi.h>
 
@@ -529,4 +530,4 @@ key_exchange_t *botan_kem_create(key_exchange_method_t method)
 	return &this->public;
 }
 
-#endif /* BOTAN_HAS_ML_KEM */
+#endif /* BOTAN_HAS_ML_KEM || BOTAN_HAS_FRODOKEM */
