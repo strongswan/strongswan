@@ -87,6 +87,7 @@ METHOD(error_notify_socket_t, notify, void,
 			{
 				case ECONNRESET:
 				case EPIPE:
+				case ETIMEDOUT:
 					/* disconnect, remove this listener */
 					this->connected->remove_at(this->connected, enumerator);
 					stream->destroy(stream);
