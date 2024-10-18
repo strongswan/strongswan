@@ -72,6 +72,8 @@ typedef struct {
 	u_int segment;
 	/* ADD message */
 	ha_message_t *add;
+	/* PPK message */
+	ha_message_t *ppk;
 	/* list of updates UPDATE message */
 	linked_list_t *updates;
 	/* last initiator mid */
@@ -104,6 +106,7 @@ static void entry_destroy(entry_t *entry)
 	entry->updates->destroy_offset(entry->updates,
 									offsetof(ha_message_t, destroy));
 	entry->add->destroy(entry->add);
+	DESTROY_IF(entry->ppk);
 	DESTROY_IF(entry->midi);
 	DESTROY_IF(entry->midr);
 	DESTROY_IF(entry->iv);
@@ -125,6 +128,16 @@ METHOD(ha_cache_t, cache, void,
 			{
 				entry_destroy(entry);
 			}
+			break;
+		case HA_IKE_PPK:
+			entry = this->cache->get(this->cache, ike_sa);
+			if (entry)
+			{
+				DESTROY_IF(entry->ppk);
+				entry->ppk = message;
+				break;
+			}
+			message->destroy(message);
 			break;
 		case HA_IKE_UPDATE:
 			entry = this->cache->get(this->cache, ike_sa);
@@ -319,6 +332,10 @@ METHOD(ha_cache_t, resync, void,
 		if (entry->segment == segment)
 		{
 			this->socket->push(this->socket, entry->add);
+			if (entry->ppk)
+			{
+				this->socket->push(this->socket, entry->ppk);
+			}
 			updates = entry->updates->create_enumerator(entry->updates);
 			while (updates->enumerate(updates, &message))
 			{
