@@ -683,6 +683,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_ML
+  SUBDIRS += plugins/ml
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/ml/libstrongswan-ml.la
+endif
+endif
+
 if USE_TEST_VECTORS
   SUBDIRS += plugins/test_vectors
 if MONOLITHIC
