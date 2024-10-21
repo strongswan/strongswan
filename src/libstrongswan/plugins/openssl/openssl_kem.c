@@ -28,6 +28,7 @@ typedef struct private_key_exchange_t private_key_exchange_t;
  * Private data of an key_exchange_t object.
  */
 struct private_key_exchange_t {
+
 	/**
 	 * Public interface.
 	 */
@@ -64,7 +65,8 @@ struct private_key_exchange_t {
  */
 static int openssl_kem_get_nid(private_key_exchange_t *this)
 {
-	switch (this->group) {
+	switch (this->group)
+	{
 		case ML_KEM_512:
 			return NID_MLKEM512;
 		case ML_KEM_768:
@@ -123,7 +125,6 @@ static bool openssl_kem_generate_pkey(private_key_exchange_t *this)
 										   &seed.len))
 		{
 			EVP_PKEY_CTX_free(ctx);
-			EVP_PKEY_free(this->pkey);
 			chunk_clear(&seed);
 			return FALSE;
 		}
@@ -131,7 +132,6 @@ static bool openssl_kem_generate_pkey(private_key_exchange_t *this)
 	else if (!EVP_PKEY_keygen(ctx, &this->pkey))
 	{
 		EVP_PKEY_CTX_free(ctx);
-		EVP_PKEY_free(this->pkey);
 		return FALSE;
 	}
 	EVP_PKEY_CTX_free(ctx);
@@ -148,11 +148,11 @@ static bool openssl_kem_get_encoded_public_key(private_key_exchange_t *this,
 	chunk_t pkey_chunk = chunk_empty;
 	size_t public_key_length = 0;
 
-	if (!this->pkey)
+	if (!this->pkey ||
+		!EVP_PKEY_get_raw_public_key(this->pkey, NULL, &public_key_length))
 	{
 		return FALSE;
 	}
-	EVP_PKEY_get_raw_public_key(this->pkey, NULL, &public_key_length);
 	pkey_chunk = chunk_alloc(public_key_length);
 	if (!EVP_PKEY_get_raw_public_key(this->pkey, pkey_chunk.ptr,
 									 &public_key_length))
@@ -276,8 +276,6 @@ static bool openssl_kem_encapsulate(private_key_exchange_t *this,
 		{
 			EVP_PKEY_free(pkey);
 			EVP_PKEY_CTX_free(ctx);
-			chunk_clear(&this->shared_secret);
-			chunk_free(&this->ciphertext);
 			chunk_clear(&seed);
 			return FALSE;
 		}
@@ -299,8 +297,6 @@ static bool openssl_kem_encapsulate(private_key_exchange_t *this,
 		{
 			EVP_PKEY_free(pkey);
 			EVP_PKEY_CTX_free(ctx);
-			chunk_clear(&this->shared_secret);
-			chunk_free(&this->ciphertext);
 			return FALSE;
 		}
 	}
@@ -355,6 +351,7 @@ METHOD(key_exchange_t, destroy, void, private_key_exchange_t *this)
 key_exchange_t *openssl_kem_create(key_exchange_method_t method)
 {
 	private_key_exchange_t *this;
+
 	INIT(this,
 		.public = {
 			.get_shared_secret = _get_shared_secret,
