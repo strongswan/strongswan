@@ -104,9 +104,11 @@ METHOD(plugin_t, get_features, int,
 #endif
 
 		/* crypters */
-#if defined(BOTAN_HAS_AES) && defined(BOTAN_HAS_MODE_CBC)
+#if defined(BOTAN_HAS_AES)
 		PLUGIN_REGISTER(CRYPTER, botan_crypter_create),
-#ifdef BOTAN_HAS_AES
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_ECB, 16),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_ECB, 24),
+			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_ECB, 32),
 	#ifdef BOTAN_HAS_MODE_CBC
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 16),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CBC, 24),
@@ -117,7 +119,6 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CFB, 24),
 			PLUGIN_PROVIDE(CRYPTER, ENCR_AES_CFB, 32),
 	#endif
-#endif
 #endif
 
 		/* AEAD */
