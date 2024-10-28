@@ -37,7 +37,7 @@ build_botan()
 
 build_wolfssl()
 {
-	WOLFSSL_REV=v5.7.2-stable
+	WOLFSSL_REV=v5.7.4-stable
 	WOLFSSL_DIR=$DEPS_BUILD_DIR/wolfssl
 
 	if test -d "$WOLFSSL_DIR"; then
@@ -47,7 +47,8 @@ build_wolfssl()
 	echo "$ build_wolfssl()"
 
 	WOLFSSL_CFLAGS="-DWOLFSSL_PUBLIC_MP -DWOLFSSL_DES_ECB -DHAVE_AES_ECB \
-					-DHAVE_ECC_BRAINPOOL -DWOLFSSL_MIN_AUTH_TAG_SZ=8"
+					-DHAVE_ECC_BRAINPOOL -DWOLFSSL_MIN_AUTH_TAG_SZ=8 \
+					-DRSA_MIN_SIZE=1024"
 	WOLFSSL_CONFIG="--prefix=$DEPS_PREFIX
 					--disable-crypttests --disable-examples
 					--enable-aesccm --enable-aesctr --enable-camellia

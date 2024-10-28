@@ -2,16 +2,14 @@
 
 PKG = wolfssl
 SRC = https://github.com/wolfSSL/$(PKG).git
-REV = v5.7.2-stable
+REV = v5.7.4-stable
 
 NUM_CPUS := $(shell getconf _NPROCESSORS_ONLN)
 
 CFLAGS = \
 	-DWOLFSSL_PUBLIC_MP \
-	-DWOLFSSL_DES_ECB \
 	-DHAVE_AES_ECB \
-	-DHAVE_ECC_BRAINPOOL \
-	-DWOLFSSL_MIN_AUTH_TAG_SZ=8
+	-DHAVE_ECC_BRAINPOOL
 
 CONFIG_OPTS = \
 	--disable-crypttests \
