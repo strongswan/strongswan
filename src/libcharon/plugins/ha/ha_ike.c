@@ -91,14 +91,14 @@ METHOD(listener_t, ike_keys, bool,
 	chunk_t secret = chunk_empty, add_secret = chunk_empty;
 	proposal_t *proposal;
 	uint16_t alg, len;
+	transform_type_t t;
 
 	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
 	{	/* do not sync SA between nodes */
 		return TRUE;
 	}
 	if (!key_exchange_concat_secrets(kes, &secret, &add_secret) ||
-		!array_get(kes, ARRAY_HEAD, &ke) ||
-		add_secret.len > 0)
+		!array_get(kes, ARRAY_HEAD, &ke))
 	{
 		chunk_clear(&secret);
 		chunk_clear(&add_secret);
@@ -107,17 +107,27 @@ METHOD(listener_t, ike_keys, bool,
 
 	m = ha_message_create(HA_IKE_ADD);
 	m->add_attribute(m, HA_IKE_VERSION, ike_sa->get_version(ike_sa));
-	m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 
-	if (rekey && rekey->get_version(rekey) == IKEV2)
+	if (rekey != ike_sa)
 	{
-		chunk_t skd;
-		keymat_v2_t *keymat;
+		m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
+		if (rekey && rekey->get_version(rekey) == IKEV2)
+		{
+			chunk_t skd;
+			keymat_v2_t *keymat;
 
-		keymat = (keymat_v2_t*)rekey->get_keymat(rekey);
-		m->add_attribute(m, HA_IKE_REKEY_ID, rekey->get_id(rekey));
-		m->add_attribute(m, HA_ALG_OLD_PRF, keymat->get_skd(keymat, &skd));
-		m->add_attribute(m, HA_OLD_SKD, skd);
+			keymat = (keymat_v2_t*)rekey->get_keymat(rekey);
+			m->add_attribute(m, HA_IKE_REKEY_ID, rekey->get_id(rekey));
+			m->add_attribute(m, HA_ALG_OLD_PRF, keymat->get_skd(keymat, &skd));
+			m->add_attribute(m, HA_OLD_SKD, skd);
+		}
+	}
+	else
+	{
+		if (ike_sa->get_version(rekey) == IKEV2)
+		{
+			m->add_attribute(m, HA_AKE_IKE_ID, ike_sa->get_id(ike_sa));
+		}
 	}
 
 	proposal = ike_sa->get_proposal(ike_sa);
@@ -141,10 +151,26 @@ METHOD(listener_t, ike_keys, bool,
 	{
 		m->add_attribute(m, HA_ALG_DH, alg);
 	}
+	for (t = ADDITIONAL_KEY_EXCHANGE_1; t <= ADDITIONAL_KEY_EXCHANGE_7; t++)
+	{
+		if (proposal->get_algorithm(proposal, t, &alg, NULL))
+		{
+			m->add_attribute(m, HA_ALG_KE, alg);
+		}
+		else
+		{
+			break;
+		}
+	}
 	m->add_attribute(m, HA_NONCE_I, nonce_i);
 	m->add_attribute(m, HA_NONCE_R, nonce_r);
 	m->add_attribute(m, HA_SECRET, secret);
+	if (add_secret.len)
+	{
+		m->add_attribute(m, HA_ADD_SECRET, add_secret);
+	}
 	chunk_clear(&secret);
+	chunk_clear(&add_secret);
 	if (ike_sa->get_version(ike_sa) == IKEV1)
 	{
 		if (ke->get_public_key(ke, &secret))

@@ -140,6 +140,10 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 	host_t *other = NULL;
 	bool ok = FALSE;
 	auth_method_t method = AUTH_RSA;
+	uint16_t ake_alg[ADDITIONAL_KEY_EXCHANGE_7 - ADDITIONAL_KEY_EXCHANGE_1 + 1] = { 0 };
+	uint8_t ake_alg_idx = 0;
+	chunk_t add_secret = chunk_empty;
+	transform_type_t t;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -201,6 +205,18 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 				break;
 			case HA_AUTH_METHOD:
 				method = value.u16;
+				break;
+			case HA_AKE_IKE_ID:
+				ike_sa = charon->ike_sa_manager->checkout(charon->ike_sa_manager,
+														  value.ike_sa_id);
+				break;
+			case HA_ADD_SECRET:
+				add_secret = value.chunk;
+				break;
+			case HA_ALG_KE:
+				ake_alg[ake_alg_idx] = value.u16;
+				ake_alg_idx++;
+				break;
 			default:
 				break;
 		}
@@ -229,16 +245,37 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
 		{
 			proposal->add_algorithm(proposal, KEY_EXCHANGE_METHOD, dh_grp, 0);
 		}
+		for (t = ADDITIONAL_KEY_EXCHANGE_1; t <= ADDITIONAL_KEY_EXCHANGE_7; t++)
+		{
+			if (ake_alg[t - ADDITIONAL_KEY_EXCHANGE_1])
+			{
+				proposal->add_algorithm(proposal, t, ake_alg[t - ADDITIONAL_KEY_EXCHANGE_1], 0);
+			}
+			else
+			{
+				break;
+			}
+		}
 		charon->bus->set_sa(charon->bus, ike_sa);
 		dh = ha_diffie_hellman_create(secret, dh_local);
 		if (ike_sa->get_version(ike_sa) == IKEV2)
 		{
 			keymat_v2_t *keymat_v2 = (keymat_v2_t*)ike_sa->get_keymat(ike_sa);
 			array_t *kes = NULL;
+			chunk_t skd;
+			pseudo_random_function_t prf_alg;
 
 			array_insert_create(&kes, ARRAY_HEAD, dh);
+			if (add_secret.len)
+			{
+				dh = ha_diffie_hellman_create(add_secret, chunk_empty);
+				array_insert_create(&kes, ARRAY_TAIL, dh);
+			}
+			prf_alg = keymat_v2->get_skd(keymat_v2, &skd);
 			ok = keymat_v2->derive_ike_keys(keymat_v2, proposal, kes, nonce_i,
-							nonce_r, ike_sa->get_id(ike_sa), old_prf, old_skd);
+							nonce_r, ike_sa->get_id(ike_sa),
+							(old_prf == PRF_UNDEFINED) ? prf_alg : old_prf,
+							old_skd.len ? old_skd : skd);
 			array_destroy(kes);
 		}
 		if (ike_sa->get_version(ike_sa) == IKEV1)
@@ -666,6 +703,10 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	linked_list_t *local_ts, *remote_ts;
 	key_exchange_t *dh = NULL;
 	array_t *kes = NULL;
+	uint16_t ake_alg[ADDITIONAL_KEY_EXCHANGE_7 - ADDITIONAL_KEY_EXCHANGE_1 + 1] = { 0 };
+	uint8_t ake_alg_idx = 0;
+	chunk_t add_secret = chunk_empty;
+	transform_type_t t;
 
 	enumerator = message->create_attribute_enumerator(message);
 	while (enumerator->enumerate(enumerator, &attribute, &value))
@@ -724,6 +765,13 @@ static void process_child_add(private_ha_dispatcher_t *this,
 			case HA_SECRET:
 				secret = value.chunk;
 				break;
+			case HA_ADD_SECRET:
+				add_secret = value.chunk;
+				break;
+			case HA_ALG_KE:
+				ake_alg[ake_alg_idx] = value.u16;
+				ake_alg_idx++;
+				break;
 			default:
 				break;
 		}
@@ -767,11 +815,27 @@ static void process_child_add(private_ha_dispatcher_t *this,
 	{
 		proposal->add_algorithm(proposal, KEY_EXCHANGE_METHOD, dh_grp, 0);
 	}
+	for (t = ADDITIONAL_KEY_EXCHANGE_1; t <= ADDITIONAL_KEY_EXCHANGE_7; t++)
+	{
+		if (ake_alg[t - ADDITIONAL_KEY_EXCHANGE_1])
+		{
+			proposal->add_algorithm(proposal, t, ake_alg[t - ADDITIONAL_KEY_EXCHANGE_1], 0);
+		}
+		else
+		{
+			break;
+		}
+	}
 	proposal->add_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, esn, 0);
 	if (secret.len)
 	{
 		dh = ha_diffie_hellman_create(secret, chunk_empty);
 		array_insert_create(&kes, ARRAY_HEAD, dh);
+	}
+	if (add_secret.len)
+	{
+		dh = ha_diffie_hellman_create(add_secret, chunk_empty);
+		array_insert_create(&kes, ARRAY_TAIL, dh);
 	}
 	if (ike_sa->get_version(ike_sa) == IKEV2)
 	{

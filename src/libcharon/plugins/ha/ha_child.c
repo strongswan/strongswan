@@ -60,6 +60,7 @@ METHOD(listener_t, child_keys, bool,
 	linked_list_t *local_ts, *remote_ts;
 	enumerator_t *enumerator;
 	traffic_selector_t *ts;
+	transform_type_t t;
 
 	if (this->tunnel && this->tunnel->is_sa(this->tunnel, ike_sa))
 	{	/* do not sync SA between nodes */
@@ -95,6 +96,17 @@ METHOD(listener_t, child_keys, bool,
 	{
 		m->add_attribute(m, HA_ALG_DH, alg);
 	}
+	for (t = ADDITIONAL_KEY_EXCHANGE_1; t <= ADDITIONAL_KEY_EXCHANGE_7; t++)
+	{
+		if (proposal->get_algorithm(proposal, t, &alg, NULL))
+		{
+			m->add_attribute(m, HA_ALG_KE, alg);
+		}
+		else
+		{
+			break;
+		}
+	}
 	if (proposal->get_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, &alg, NULL))
 	{
 		m->add_attribute(m, HA_ESN, alg);
@@ -104,6 +116,10 @@ METHOD(listener_t, child_keys, bool,
 	if (kes && key_exchange_concat_secrets(kes, &secret, &add_secret))
 	{
 		m->add_attribute(m, HA_SECRET, secret);
+		if (add_secret.len)
+		{
+			m->add_attribute(m, HA_ADD_SECRET, add_secret);
+		}
 		chunk_clear(&secret);
 		chunk_clear(&add_secret);
 	}
