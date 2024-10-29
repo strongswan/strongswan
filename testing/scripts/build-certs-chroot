@@ -733,8 +733,8 @@ mkdir -p ${TEST}/hosts/alice/${SWANCTL_DIR}/x509
 cp ${TEST_KEY}  ${TEST}/hosts/alice/${SWANCTL_DIR}/rsa
 cp ${TEST_CERT} ${TEST}/hosts/alice/${SWANCTL_DIR}/x509
 
-# Put a copy into the ha/active-passive and swanctl/redirect-active scenarios
-for t in ha/active-passive ikev2/redirect-active
+# Put a copy into the ha/active-passive, ha/active-passive-multi-ke and swanctl/redirect-active scenarios
+for t in ha/active-passive ha/active-passive-multi-ke ikev2/redirect-active
 do
   TEST="${TEST_DIR}/${t}"
   for h in alice moon
