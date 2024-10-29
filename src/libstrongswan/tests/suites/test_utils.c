@@ -540,6 +540,40 @@ START_TEST(test_memeq_const)
 END_TEST
 
 /*******************************************************************************
+ * memcpy_cond
+ */
+
+#define MEMCPY_COND_DEF "abcdef"
+static struct {
+	char *a;
+	size_t n;
+	uint8_t cond;
+	char *res;
+} memcpy_cond_data[] = {
+	{NULL, 0, 0, NULL},
+	{NULL, 0, 1, NULL},
+	{"foobar", 6, 0, MEMCPY_COND_DEF},
+	{"foobar", 6, 1, "foobar"},
+	{"foobar", 3, 0, MEMCPY_COND_DEF},
+	{"foobar", 3, 1, "foodef"},
+	{"\0bar", 4, 0, MEMCPY_COND_DEF},
+	{"\0bar", 4, 1, "\0baref"},
+	/* unpredictable results if condition is not 0 or 1 */
+	{"foobar", 6, 5, "bkkfev"},
+};
+
+START_TEST(test_memcpy_cond)
+{
+	char buf[BUF_LEN] = MEMCPY_COND_DEF;
+
+	memcpy_cond(buf, memcpy_cond_data[_i].a, memcpy_cond_data[_i].n,
+				memcpy_cond_data[_i].cond);
+	ck_assert(memeq(buf, memcpy_cond_data[_i].res ?: MEMCPY_COND_DEF,
+					sizeof(MEMCPY_COND_DEF)));
+}
+END_TEST
+
+/*******************************************************************************
  * memstr
  */
 
@@ -1344,6 +1378,10 @@ Suite *utils_suite_create()
 	tc = tcase_create("memeq");
 	tcase_add_loop_test(tc, test_memeq, 0, countof(memeq_data));
 	tcase_add_loop_test(tc, test_memeq_const, 0, countof(memeq_data));
+	suite_add_tcase(s, tc);
+
+	tc = tcase_create("memcpy_cond");
+	tcase_add_loop_test(tc, test_memcpy_cond, 0, countof(memcpy_cond_data));
 	suite_add_tcase(s, tc);
 
 	tc = tcase_create("memstr");
