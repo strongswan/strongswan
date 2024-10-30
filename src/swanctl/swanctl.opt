@@ -782,7 +782,7 @@ connections.<conn>.children.<child>.remote_ts = dynamic
 	Comma separated list of remote selectors to include in CHILD_SA. See
 	**local_ts** for a description of the selector syntax.
 
-connections.<conn>.children.<child>.rekey_time = 1h
+connections.<conn>.children.<child>.rekey_time = 1h or life_time - 10%
 	Time to schedule CHILD_SA rekeying.
 
 	Time to schedule CHILD_SA rekeying. CHILD_SA rekeying refreshes key
@@ -793,7 +793,9 @@ connections.<conn>.children.<child>.rekey_time = 1h
 	in the range of **rand_time** gets subtracted to form the effective soft
 	lifetime.
 
-	By default CHILD_SA rekeying is scheduled every hour, minus **rand_time**.
+	If **life_time** is explicitly configured, **rekey_time** defaults to 10%
+	less than that,	otherwise, CHILD_SA rekeying is scheduled every hour, minus
+	**rand_time**.
 
 connections.<conn>.children.<child>.life_time = rekey_time + 10%
 	Maximum lifetime before CHILD_SA gets closed, as time.
@@ -811,7 +813,7 @@ connections.<conn>.children.<child>.rand_time = life_time - rekey_time
 	**rekey_time**. The default is the difference between **life_time** and
 	**rekey_time**.
 
-connections.<conn>.children.<child>.rekey_bytes = 0
+connections.<conn>.children.<child>.rekey_bytes = 0 or life_bytes - 10%
 	Number of bytes processed before initiating CHILD_SA rekeying.
 
 	Number of bytes processed before initiating CHILD_SA rekeying. CHILD_SA
@@ -822,7 +824,8 @@ connections.<conn>.children.<child>.rekey_bytes = 0
 	in the range of **rand_bytes** gets subtracted to form the effective soft
 	volume limit.
 
-	Volume based CHILD_SA rekeying is disabled by default.
+	Volume based CHILD_SA rekeying is disabled by default. If **life_bytes**
+	is explicitly configured, **rekey_bytes** defaults to 10% less than that.
 
 connections.<conn>.children.<child>.life_bytes = rekey_bytes + 10%
 	Maximum bytes processed before CHILD_SA gets closed.
@@ -840,7 +843,7 @@ connections.<conn>.children.<child>.rand_bytes = life_bytes - rekey_bytes
 	**rekey_bytes**. The default is the difference between **life_bytes** and
 	**rekey_bytes**.
 
-connections.<conn>.children.<child>.rekey_packets = 0
+connections.<conn>.children.<child>.rekey_packets = 0 or life_packets - 10%
 	Number of packets processed before initiating CHILD_SA rekeying.
 
 	Number of packets processed before initiating CHILD_SA rekeying. CHILD_SA
@@ -851,7 +854,9 @@ connections.<conn>.children.<child>.rekey_packets = 0
 	in the range of **rand_packets** gets subtracted to form the effective soft
 	packet count limit.
 
-	Packet count based CHILD_SA rekeying is disabled by default.
+	Packet count based CHILD_SA rekeying is disabled by default. If
+	**life_packets** is explicitly configured, **rekey_packets** defaults to
+	10% less than that.
 
 connections.<conn>.children.<child>.life_packets = rekey_packets + 10%
 	Maximum number of packets processed before CHILD_SA gets closed.
