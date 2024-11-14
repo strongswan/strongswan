@@ -2607,6 +2607,8 @@ METHOD(task_t, migrate, void,
 	this->proposals = NULL;
 	this->tsi = NULL;
 	this->tsr = NULL;
+	this->labels_i = NULL;
+	this->labels_r = NULL;
 	this->ke = NULL;
 	this->nonceg = NULL;
 	this->child_sa = NULL;
