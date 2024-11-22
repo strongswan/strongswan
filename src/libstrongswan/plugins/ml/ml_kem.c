@@ -200,7 +200,7 @@ static void sample_poly_cbd(private_key_exchange_t *this, uint8_t eta,
 	const int len = 64 * eta;
 
 	chunk_t seed = chunk_alloca(ML_KEM_SEED_LEN+1);
-	uint8_t sample_seed[len] = {};
+	uint8_t sample_seed[len];
 	uint32_t t, b;
 	uint16_t x, y;
 	int i, j;
