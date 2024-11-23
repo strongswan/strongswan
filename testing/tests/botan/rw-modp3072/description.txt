@@ -1,6 +1,6 @@
 The roadwarrior <b>carol</b> and the gateway <b>moon</b> use the <b>botan</b>
 plugin based on the <b>Botan</b> library for all cryptographical functions whereas
-roadwarrior <b>dave</b> uses t<b>openssl</b> as the default <b>strongSwan</b>
+roadwarrior <b>dave</b> uses <b>openssl</b> as the default <b>strongSwan</b>
 cryptographical plugin. The authentication is based on <b>X.509 certificates</b>
 and the key exchange on <b>modp3072</b>.
 <p/>
