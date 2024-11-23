@@ -112,7 +112,8 @@ CONFIG_OPTS = \
 	--enable-counters \
 	--enable-save-keys \
 	--enable-python-eggs \
-	--enable-wolfssl
+	--enable-wolfssl \
+	--enable-ml
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 
