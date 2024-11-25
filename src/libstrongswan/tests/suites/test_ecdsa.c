@@ -26,7 +26,6 @@ static struct {
 	int key_size;
 	signature_scheme_t scheme;
 } schemes[] = {
-	{ 0, SIGN_ECDSA_WITH_SHA1_DER },
 	{ 0, SIGN_ECDSA_WITH_SHA256_DER },
 	{ 0, SIGN_ECDSA_WITH_SHA384_DER },
 	{ 0, SIGN_ECDSA_WITH_SHA512_DER },
