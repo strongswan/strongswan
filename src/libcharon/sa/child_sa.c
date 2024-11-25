@@ -620,7 +620,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 
 	if (inbound)
 	{
-		if (this->my_spi && this->inbound_installed)
+		if (this->inbound_installed)
 		{
 			kernel_ipsec_sa_id_t id = {
 				.src = this->other_addr,
@@ -654,7 +654,7 @@ static status_t update_usebytes(private_child_sa_t *this, bool inbound)
 	}
 	else
 	{
-		if (this->other_spi && (this->outbound_state & CHILD_OUTBOUND_SA))
+		if (this->outbound_state & CHILD_OUTBOUND_SA)
 		{
 			kernel_ipsec_sa_id_t id = {
 				.src = this->my_addr,
@@ -939,7 +939,6 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		this->my_cpi = cpi;
 		dst_ts = my_ts;
 		src_ts = other_ts;
-		this->inbound_installed = TRUE;
 	}
 	else
 	{
@@ -954,7 +953,6 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		{
 			tfc = this->config->get_tfc(this->config);
 		}
-		this->outbound_state |= CHILD_OUTBOUND_SA;
 	}
 
 	DBG2(DBG_CHD, "adding %s %N SA", inbound ? "inbound" : "outbound",
@@ -1061,6 +1059,17 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 	other_ts->destroy(other_ts);
 	free(lifetime);
 
+	if (status == SUCCESS)
+	{
+		if (inbound)
+		{
+			this->inbound_installed = TRUE;
+		}
+		else
+		{
+			this->outbound_state |= CHILD_OUTBOUND_SA;
+		}
+	}
 	return status;
 }
 
@@ -1623,7 +1632,7 @@ static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 						   bool encap, uint32_t reqid)
 {
 	/* update our (initiator) SA */
-	if (this->my_spi && this->inbound_installed)
+	if (this->inbound_installed)
 	{
 		kernel_ipsec_sa_id_t id = {
 			.src = this->other_addr,
@@ -1649,7 +1658,7 @@ static status_t update_sas(private_child_sa_t *this, host_t *me, host_t *other,
 	}
 
 	/* update his (responder) SA */
-	if (this->other_spi && (this->outbound_state & CHILD_OUTBOUND_SA))
+	if (this->outbound_state & CHILD_OUTBOUND_SA)
 	{
 		kernel_ipsec_sa_id_t id = {
 			.src = this->my_addr,
@@ -1960,7 +1969,7 @@ METHOD(child_sa_t, destroy, void,
 		};
 		charon->kernel->del_sa(charon->kernel, &id, &sa);
 	}
-	if (this->other_spi && (this->outbound_state & CHILD_OUTBOUND_SA))
+	if (this->outbound_state & CHILD_OUTBOUND_SA)
 	{
 		kernel_ipsec_sa_id_t id = {
 			.src = this->my_addr,
