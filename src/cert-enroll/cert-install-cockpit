@@ -1,8 +1,8 @@
 #!/bin/bash
-# Install the generated key, host certificate and associated CA certificates
-# as credentials for a TLS-protected client-server connection.
+# Install the generated key and certificate as TLS credentials for the Cockpit 
+# management interface.
 #
-# Copyright (C) 2023 Andreas Steffen
+# Copyright (C) 2024 Andreas Steffen
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,45 +25,26 @@
 set -e
 
 ##############################################################################
-# Set local paths
+# Set local paths 
 #
 
-# Path to the SSL credentials directory
-SSL_DIR="/etc/ssl/$USER_GROUP"
+# Path to the cockpit credentials 
+COCKPIT="/etc/cockpit/ws-certs.d"
 
 ##############################################################################
-# Create a credentials directory with given user group settings
+# Change into the certificates directory
 #
-mkdir -p $SSL_DIR
-chgrp $USER_GROUP $SSL_DIR
-chmod g+s $SSL_DIR
-cp $CERTDIR/{$HOSTKEY,$HOSTCERT} $SSL_DIR
-chmod g+r $SSL_DIR/$HOSTKEY
-
-cat $CERTDIR/{$ROOTCA,$SUBCA} > $SSL_DIR/trusted.pem
-if [ -s $CERTDIR/old/$ROOTCA ]
-then
-  cat $CERTDIR/old/$ROOTCA >> $SSL_DIR/trusted.pem
-fi
-if [ -s $CERTDIR/old/$SUBCA ]
-then
-  cat $CERTDIR/old/$SUBCA  >> $SSL_DIR/trusted.pem
-fi
-if [ -s $CERTDIR/older/$ROOTCA ]
-then
-  cat $CERTDIR/older/$ROOTCA >> $SSL_DIR/trusted.pem
-fi
-if [ -s $CERTDIR/older/$SUBCA ]
-then
-  cat $CERTDIR/older/$SUBCA  >> $SSL_DIR/trusted.pem
-fi
+cd $CERTDIR
 
 ##############################################################################
-# Restart the systemd service if it is active
+# Install the private key and certificate
 #
+cp $HOSTKEY  $COCKPIT/ldap.key
+cp $HOSTCERT $COCKPIT/ldap.crt
 
-if /usr/bin/systemctl -q is-active $SERVICE
-then
-  /usr/bin/systemctl restart $SERVICE
-fi
+##############################################################################
+# Restart the cockpit systemd service
+#
+/usr/bin/systemctl restart cockpit.service
 exit 0
+

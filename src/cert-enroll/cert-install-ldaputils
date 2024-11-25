@@ -1,8 +1,9 @@
 #!/bin/bash
-# Install the generated key, host certificate and associated CA certificates
-# as credentials for a TLS-protected client-server connection.
+# Concatenate the present and past CA certificates into a single TLS_CACERT
+# file defined by ldap.conf so that the ldap-utils can verify the LDAP server
+# certificate.
 #
-# Copyright (C) 2023 Andreas Steffen
+# Copyright (C) 2024 Andreas Steffen
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,45 +26,39 @@
 set -e
 
 ##############################################################################
-# Set local paths
+# Set some local paths
 #
 
-# Path to the SSL credentials directory
-SSL_DIR="/etc/ssl/$USER_GROUP"
+# Path to the LDAP configuration file
+LDAP_CONF="/etc/ldap/ldap.conf"
+
+# Extract or set path to the LDAP TLS CA cert directory
+LDAP_TLS_CACERTS=$(awk '/TLS_CACERT/ {print $2}' $LDAP_CONF)
 
 ##############################################################################
-# Create a credentials directory with given user group settings
+# Change into the certificate directory
 #
-mkdir -p $SSL_DIR
-chgrp $USER_GROUP $SSL_DIR
-chmod g+s $SSL_DIR
-cp $CERTDIR/{$HOSTKEY,$HOSTCERT} $SSL_DIR
-chmod g+r $SSL_DIR/$HOSTKEY
-
-cat $CERTDIR/{$ROOTCA,$SUBCA} > $SSL_DIR/trusted.pem
-if [ -s $CERTDIR/old/$ROOTCA ]
-then
-  cat $CERTDIR/old/$ROOTCA >> $SSL_DIR/trusted.pem
-fi
-if [ -s $CERTDIR/old/$SUBCA ]
-then
-  cat $CERTDIR/old/$SUBCA  >> $SSL_DIR/trusted.pem
-fi
-if [ -s $CERTDIR/older/$ROOTCA ]
-then
-  cat $CERTDIR/older/$ROOTCA >> $SSL_DIR/trusted.pem
-fi
-if [ -s $CERTDIR/older/$SUBCA ]
-then
-  cat $CERTDIR/older/$SUBCA  >> $SSL_DIR/trusted.pem
-fi
+cd $CERTDIR
 
 ##############################################################################
-# Restart the systemd service if it is active
+# Concatenate the CA certificates into a single file
 #
-
-if /usr/bin/systemctl -q is-active $SERVICE
+cat $ROOTCA $SUBCA > $LDAP_TLS_CACERTS
+if [ -s old/$ROOTCA ]
 then
-  /usr/bin/systemctl restart $SERVICE
+  cat old/$ROOTCA >> $LDAP_TLS_CACERTS
 fi
+if [ -s old/$SUBCA ]
+then
+  cat old/$SUBCA >> $LDAP_TLS_CACERTS
+fi
+if [ -s older/$ROOTCA ]
+then
+  cat older/$ROOTCA >> $LDAP_TLS_CACERTS
+fi
+if [ -s older/$SUBCA ]
+then
+  cat older/$SUBCA >> $LDAP_TLS_CACERTS
+fi
+
 exit 0

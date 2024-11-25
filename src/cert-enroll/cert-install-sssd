@@ -53,6 +53,14 @@ if [ -s old/$SUBCA ]
 then
   cp old/$SUBCA $LDAP_TLS_CACERTDIR/$OLDSUBCA
 fi
+if [ -s older/$ROOTCA ]
+then
+  cp older/$ROOTCA $LDAP_TLS_CACERTDIR/$OLDERROOTCA
+fi
+if [ -s older/$SUBCA ]
+then
+  cp older/$SUBCA $LDAP_TLS_CACERTDIR/$OLDERSUBCA
+fi
 
 rm -f $LDAP_TLS_CACERTDIR/*.0
 
