@@ -26,7 +26,7 @@ jobs:
   latest:
     needs: pre-check
     if: ${{ needs.pre-check.outputs.should_skip != 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     strategy:
       matrix:
         test: [ all, default, printf-builtin ]
@@ -41,7 +41,8 @@ jobs:
           - test: printf-builtin
             monolithic: yes
         include:
-          - test: apidoc
+          - os: ubuntu-24.04
+            test: apidoc
           - test: coverage
           - test: dist
           - test: nm
