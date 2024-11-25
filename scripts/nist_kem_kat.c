@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
 			{
 				break;
 			}
-			fprintf(out, "/** count = %.*s */\n", value_len, value);
+			fprintf(out, "/** count = %.*s */\n", (int)value_len, value);
 			fprintf(out, "{\n");
 			fprintf(out, "\t.method = %s,\n", method);
 			count--;
