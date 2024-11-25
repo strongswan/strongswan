@@ -265,7 +265,7 @@ struct message_t {
 	 * The data returned is the concatenation of the IKE header and plaintext
 	 * payloads (if any) up until the end of the header of the Encrypted
 	 * Payload followed by the plaintext data of the Encrypted Payload (if any).
-	 * Lenght fields are adjusted to only contain that of returned data (e.g.
+	 * Length fields are adjusted to only contain that of returned data (e.g.
 	 * IV or padding is ignored).
 	 *
 	 * @param[out] plain	plaintext encoding (allocated)

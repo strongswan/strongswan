@@ -52,7 +52,7 @@ void ml_assign_cond_int16(int16_t *dst, int16_t val, uint16_t cond);
  * Read up to four bytes in little-endian order from the given buffer.
  *
  * @param buf		byte buffer to read from
- * @param len		length betweeen 0 and 4
+ * @param len		length between 0 and 4
  * @return			read value
  */
 uint32_t ml_read_bytes_le(uint8_t *buf, size_t len);
@@ -61,7 +61,7 @@ uint32_t ml_read_bytes_le(uint8_t *buf, size_t len);
  * Write up to four bytes of the given value in little-endian order to a buffer.
  *
  * @param buf		byte buffer to write to
- * @param len		length betweeen 0 and 4
+ * @param len		length between 0 and 4
  * @param val		value to write
  */
 void ml_write_bytes_le(uint8_t *buf, size_t len, uint32_t val);
