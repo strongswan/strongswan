@@ -547,6 +547,11 @@ plugin_t *wolfssl_plugin_create()
 
 	fips_mode = lib->settings->get_bool(lib->settings,
 								"%s.plugins.wolfssl.fips_mode", FALSE, lib->ns);
+
+#ifdef WC_RNG_SEED_CB
+	wc_SetSeed_Cb(wc_GenerateSeed);
+#endif
+
 #ifdef HAVE_FIPS
 	if (fips_mode)
 	{
