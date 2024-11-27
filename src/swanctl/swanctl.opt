@@ -263,9 +263,10 @@ connections.<conn>.reauth_time = 0s
 	to actively reauthenticate as responder. The IKEv2 reauthentication lifetime
 	negotiation can instruct the client to perform reauthentication.
 
-	Reauthentication is disabled by default. Enabling it usually may lead
-	to small connection interruptions, as strongSwan uses a break-before-make
-	policy with IKEv2 to avoid any conflicts with associated tunnel resources.
+	Reauthentication is disabled by default. Enabling it can usually result in
+	short connection interruptions, even when using make-before-break
+	reauthentication, which is now the default. However, they are significantly
+	shorter than when using the legacy break-before-make approach.
 
 connections.<conn>.rekey_time = 4h
 	Time to schedule IKE rekeying.
