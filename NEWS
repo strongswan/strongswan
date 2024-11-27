@@ -8,6 +8,41 @@ strongswan-6.0.0
 - ML-KEM is provided by the botan, wolfssl, openssl (only via AWS-LC) and the
   new ml plugins.
 
+- Handling of CHILD_SA rekey collisions has been improved, which makes CHILD_SAs
+  properly trackable via chiled_rekey() hook.
+
+- The behavior when reloading or unloading connections that include `start` in
+  their `start_action` has been improved.
+
+- The default identity is now the subject DN instead of the IP address if a
+  certificate is available.
+
+- The file logger supports logging as JSON objects and can add timestamps
+  in microseconds.
+
+- The cert-enroll script now supports three generations of CA certificates.
+
+- charon-nm uses a different routing table than the regular IKE daemon to avoid
+  conflicts if both are running.
+
+- AF_VSOCK sockets are supported on Linux to communicate with a daemon that runs
+  in a VM.
+
+- TUN devices can properly handle IPv6 addresses.
+
+- For compatibility with older SCEP implementations, challenge passwords in
+  PKCS#10 containers are again encoded as PrintableString if possible.
+
+- The legacy stroke plugin is no longer enabled by default.
+
+- The openssl plugin is now enabled by default, while the following crypto
+  plugins are no longer enabled by default: aes, curve25519, des, fips-prf, gmp,
+  hmac, md5, pkcs12, rc2, sha1, sha2.
+
+- The following deprecated plugins have been removed: bliss, newhope, ntru.
+
+- charon.make_before_break is now enabled by default.
+
 
 strongswan-5.9.14
 -----------------
