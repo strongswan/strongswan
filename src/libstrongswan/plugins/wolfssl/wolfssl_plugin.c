@@ -408,22 +408,13 @@ METHOD(plugin_t, get_features, int,
 	#endif /* !WC_NO_RSA_OAEP */
 #endif /* !NO_RSA */
 #ifdef HAVE_ECC
-	#ifdef HAVE_ECC_KEY_IMPORT
+	#ifdef HAVE_ECC_SIGN
 		/* EC private/public key loading */
 		PLUGIN_REGISTER(PRIVKEY, wolfssl_ec_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ECDSA),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
-	#endif
-	#ifdef HAVE_ECC_DHE
 		PLUGIN_REGISTER(PRIVKEY_GEN, wolfssl_ec_private_key_gen, FALSE),
 			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ECDSA),
-	#endif
-	#ifdef HAVE_ECC_KEY_IMPORT
-		PLUGIN_REGISTER(PUBKEY, wolfssl_ec_public_key_load, TRUE),
-			PLUGIN_PROVIDE(PUBKEY, KEY_ECDSA),
-	#endif
-	#ifdef HAVE_ECC_SIGN
-		/* signature encryption schemes */
 		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ECDSA_WITH_NULL),
 		#ifndef NO_SHA
 			PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ECDSA_WITH_SHA1_DER),
@@ -440,9 +431,10 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ECDSA_WITH_SHA512_DER),
 			PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ECDSA_521),
 		#endif
-	#endif /* HAVE_ECC_SIGN */
+	#endif
 	#ifdef HAVE_ECC_VERIFY
-		/* signature encryption schemes */
+		PLUGIN_REGISTER(PUBKEY, wolfssl_ec_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ECDSA),
 		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_WITH_NULL),
 		#ifndef NO_SHA
 			PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ECDSA_WITH_SHA1_DER),
