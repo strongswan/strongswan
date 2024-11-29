@@ -3008,7 +3008,7 @@ static void install_route(private_kernel_netlink_ipsec_t *this,
 		policy->route = NULL;
 	}
 
-	DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s", out->dst_ts,
+	DBG2(DBG_KNL, "installing route: %R via %+H src %H dev %s", out->dst_ts,
 		 route->gateway, route->src_ip, route->if_name);
 	switch (charon->kernel->add_route(charon->kernel, route->dst_net,
 									  route->prefixlen, route->gateway,
