@@ -71,7 +71,9 @@ shift $((OPTIND-1))
 
 function print_time()
 {
-	[ "$timestamps" == "YES" ] && echo "$(date +%T.%N) ~ "
+	[ "$timestamps" == "YES" ] && \
+		logtime=$(date +"%s.%N") && \
+		echo "$(date -d "0 +${logtime} sec -${teststart_ns} sec"  +%S.%N) [$(date -d @${logtime} +%T.%N)] ~ "
 }
 
 ##############################################################################
@@ -304,7 +306,8 @@ do
 	testname=$SUBDIR/$name
 	log_action " $testnumber $testname:"
 
-	teststart=$(date +%s)
+	teststart_ns=$(date +"%s.%N")
+	teststart=$(date -d "@$teststart_ns" +"%s")
 
 	if [ ! -d $DEFAULTTESTSDIR/${testname} ]
 	then
