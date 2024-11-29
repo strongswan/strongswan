@@ -43,6 +43,8 @@ DEFAULTTESTSDIR=$TESTDIR/testing/tests
 
 SOURCEIP_ROUTING_TABLE=220
 
+export LEAK_DETECTIVE_LOG=/var/log/leak-detective.log
+
 testnumber="0"
 failed_cnt="0"
 passed_cnt="0"
@@ -337,69 +339,41 @@ do
 
 
 	##########################################################################
-	# run tcpdump in the background
+	# clean up and initialize test hosts
 	#
 
-	if [ "$TCPDUMPHOSTS" != "" ]
-	then
-	    echo -e "TCPDUMP\n" >> $CONSOLE_LOG 2>&1
+	declare -A INIT_OPTIONS=()
 
-	    for host_iface in $TCPDUMPHOSTS
-	    do
-		host=`echo $host_iface | awk -F ":" '{print $1}'`
-		iface=`echo $host_iface | awk -F ":" '{if ($2 != "") { print $2 } else { printf("eth0") }}'`
-		tcpdump_cmd="tcpdump -l --immediate-mode -i $iface not port ssh and not port domain >/tmp/tcpdump.log 2>/tmp/tcpdump.err.log &"
-		echo "$(print_time)${host}# $tcpdump_cmd" >> $CONSOLE_LOG
-		ssh $SSHCONF root@`eval echo \\\$ipv4_$host '$tcpdump_cmd'`
+	for host in $TCPDUMPHOSTS
+	do
+		# all hosts currently capture on eth0
+		INIT_OPTIONS[${host}]="${INIT_OPTIONS[${host}]} -i eth0"
 		eval TDUP_${host}="true"
-	    done
-	fi
-
-	##########################################################################
-	# create database directory in RAM
-	#
+	done
 
 	for host in $DBHOSTS
 	do
+		INIT_OPTIONS[${host}]="${INIT_OPTIONS[${host}]} -d $DBDIR"
+	done
+
+	# initialize hosts in parallel
+	WAIT_FOR=()
+
+	for host in $STRONGSWANHOSTS
+	do
 		eval HOSTLOGIN=root@\$ipv4_${host}
-	    ssh $SSHCONF $HOSTLOGIN "mkdir -p $DBDIR; mount -t ramfs -o size=5m ramfs $DBDIR" >/dev/null 2>&1
-	    ssh $SSHCONF $HOSTLOGIN "chgrp www-data $DBDIR; chmod g+w $DBDIR" >/dev/null 2>&1
+		ssh $SSHCONF $HOSTLOGIN /usr/local/bin/init-test ${INIT_OPTIONS[${host}]} &
+		WAIT_FOR+=($!)
 	done
 
-	##########################################################################
-	# flush conntrack table on all hosts
-	#
-
-	for host in $STRONGSWANHOSTS
-	do
-		ssh $SSHCONF root@`eval echo \\\$ipv4_$host` 'conntrack -F' >/dev/null 2>&1
-	done
-
-	##########################################################################
-	# remove leak detective log on all hosts
-	#
-
-	export LEAK_DETECTIVE_LOG=/var/log/leak-detective.log
-	for host in $STRONGSWANHOSTS
-	do
-		ssh $SSHCONF root@`eval echo \\\$ipv4_$host` 'rm -f $LEAK_DETECTIVE_LOG' >/dev/null 2>&1
-	done
-
-	##########################################################################
-	# flush IPsec state on all hosts
-	#
-
-	for host in $STRONGSWANHOSTS
-	do
-		ssh $SSHCONF root@`eval echo \\\$ipv4_$host` 'ip xfrm state flush; ip xfrm policy flush' >/dev/null 2>&1
-	done
+	wait ${WAIT_FOR[@]}
 
 	##########################################################################
 	# execute pre-test commands
 	#
 
 	echo -n "pre.."
-	echo -e "\nPRE-TEST\n" >> $CONSOLE_LOG 2>&1
+	echo -e "PRE-TEST\n" >> $CONSOLE_LOG 2>&1
 
 	eval `awk -F "::" '{
 		if ($0 ~ /^#.*/)
