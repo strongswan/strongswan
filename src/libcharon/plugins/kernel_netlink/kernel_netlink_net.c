@@ -2075,10 +2075,6 @@ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
 				*iface = get_interface_name_by_index(this, best->oif);
 			}
 		}
-		if (!addr && !match_net)
-		{	/* fallback to destination address */
-			addr = dest->clone(dest);
-		}
 	}
 	else
 	{
