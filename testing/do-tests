@@ -135,13 +135,6 @@ done
 [ -f $SHAREDDIR/.strongswan-version ] && SWANVERSION=`cat $SHAREDDIR/.strongswan-version`
 KERNELVERSION=`ssh $SSHCONF root@\$ipv4_winnetou uname -r 2>/dev/null`
 
-# check if tcpdump supports --immediate-mode
-ssh $SSHCONF root@$ipv4_winnetou tcpdump --immediate-mode -c 1 >/dev/null 2>&1
-if [ $? -eq 0 ]
-then
-	TCPDUMP_IM=--immediate-mode
-fi
-
 ##############################################################################
 # create header for the results html file
 #
@@ -355,7 +348,7 @@ do
 	    do
 		host=`echo $host_iface | awk -F ":" '{print $1}'`
 		iface=`echo $host_iface | awk -F ":" '{if ($2 != "") { print $2 } else { printf("eth0") }}'`
-		tcpdump_cmd="tcpdump -l $TCPDUMP_IM -i $iface not port ssh and not port domain >/tmp/tcpdump.log 2>/tmp/tcpdump.err.log &"
+		tcpdump_cmd="tcpdump -l --immediate-mode -i $iface not port ssh and not port domain >/tmp/tcpdump.log 2>/tmp/tcpdump.err.log &"
 		echo "$(print_time)${host}# $tcpdump_cmd" >> $CONSOLE_LOG
 		ssh $SSHCONF root@`eval echo \\\$ipv4_$host '$tcpdump_cmd'`
 		eval TDUP_${host}="true"
