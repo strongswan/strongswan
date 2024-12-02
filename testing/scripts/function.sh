@@ -194,10 +194,6 @@ function searchandreplace {
 	# search and replace in each found file the
 	# given string
 	#
-
-	for eachfoundfile in `find $DESTDIR -type f`
-	do
-		sed -i -e "s/$SEARCHSTRING/$REPLACESTRING/g" "$eachfoundfile"
-	done
-
+	grep -rlZ --exclude='*.pem' "$SEARCHSTRING" $DESTDIR | \
+		xargs -0 -I@ sed -i -e "s/$SEARCHSTRING/$REPLACESTRING/g" @
 }
