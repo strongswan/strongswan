@@ -101,7 +101,7 @@ METHOD(logger_t, log_, void,
 	ike_sa_t* ike_sa, const char *message)
 {
 	char groupstr[5], timestr[128];
-	char idstr[11] = "", namestr[128] = "", nameidstr[142];
+	char idstr[11] = "", namestr[128] = "", nameidstr[142] = "";
 	const char *current = message, *next = NULL;
 	struct tm tm;
 	timeval_t tv;
@@ -199,8 +199,11 @@ METHOD(logger_t, log_, void,
 		{
 			snprintf(groupstr, sizeof(groupstr), "%N", debug_names, group);
 		}
-		snprintf(nameidstr, sizeof(nameidstr), " <%s%s%s>", namestr,
-				 namestr[0] ? "|" : "", idstr);
+		if (idstr[0])
+		{
+			snprintf(nameidstr, sizeof(nameidstr), " <%s%s%s>", namestr,
+					 namestr[0] ? "|" : "", idstr);
+		}
 		/* prepend the prefix in front of every line */
 		while (TRUE)
 		{
