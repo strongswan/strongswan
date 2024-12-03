@@ -1,3 +1,9 @@
+NetworkManager-strongswan-1.6.1
+-------------------------------
+
+- Migrated from intltool to gettext
+- Remove dependency on gnome-common
+
 NetworkManager-strongswan-1.6.0
 -------------------------------
 
