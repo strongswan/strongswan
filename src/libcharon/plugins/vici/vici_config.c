@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Tobias Brunner
+ * Copyright (C) 2015-2024 Tobias Brunner
  * Copyright (C) 2015-2018 Andreas Steffen
  * Copyright (C) 2014 Martin Willi
  *
@@ -295,6 +295,7 @@ static void free_cert_data(cert_data_t *data)
 typedef struct {
 	request_data_t *request;
 	auth_cfg_t *cfg;
+	array_t *pubkeys;
 	uint32_t round;
 } auth_data_t;
 
@@ -303,6 +304,7 @@ typedef struct {
  */
 static void free_auth_data(auth_data_t *data)
 {
+	array_destroy(data->pubkeys);
 	DESTROY_IF(data->cfg);
 	free(data);
 }
@@ -1574,15 +1576,35 @@ CALLBACK(parse_cacerts, bool,
 CALLBACK(parse_pubkeys, bool,
 	auth_data_t *auth, chunk_t v)
 {
-	certificate_t *cert;
+	/* because we don't have an identity yet, just store the blob to parse/wrap
+	 * the key later */
+	array_insert_create_value(&auth->pubkeys, sizeof(chunk_t),
+							  ARRAY_TAIL, &v);
+	return TRUE;
+}
 
-	cert = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_TRUSTED_PUBKEY,
-							  BUILD_BLOB, v, BUILD_END);
-	if (cert)
+/**
+ * Create raw public key certificates associated with the given identity and
+ * add them to the config.
+ */
+static bool parse_and_add_pubkeys(auth_data_t *auth, identification_t *id)
+{
+	certificate_t *cert;
+	chunk_t pubkey;
+	bool id_usable = id && id->get_type(id) != ID_ANY;
+
+	while (array_remove(auth->pubkeys, ARRAY_HEAD, &pubkey))
 	{
-		return add_cert(auth, AUTH_RULE_SUBJECT_CERT, cert);
+		cert = lib->creds->create(lib->creds, CRED_CERTIFICATE,
+								  CERT_TRUSTED_PUBKEY, BUILD_BLOB, pubkey,
+								  id_usable ? BUILD_SUBJECT : BUILD_END,
+								  id, BUILD_END);
+		if (!cert || !add_cert(auth, AUTH_RULE_SUBJECT_CERT, cert))
+		{
+			return FALSE;
+		}
 	}
-	return FALSE;
+	return TRUE;
 }
 
 /**
@@ -2202,11 +2224,8 @@ CALLBACK(peer_sn, bool,
 		enumerator_t *enumerator;
 		linked_list_t *auths;
 		auth_data_t *auth, *current;
-		auth_rule_t rule;
 		certificate_t *cert;
-		pubkey_cert_t *pubkey_cert;
 		identification_t *id;
-		bool default_id = FALSE;
 
 		INIT(auth,
 			.request = peer->request,
@@ -2220,29 +2239,23 @@ CALLBACK(peer_sn, bool,
 		}
 		id = auth->cfg->get(auth->cfg, AUTH_RULE_IDENTITY);
 
-		enumerator = auth->cfg->create_enumerator(auth->cfg);
-		while (enumerator->enumerate(enumerator, &rule, &cert))
+		if (!parse_and_add_pubkeys(auth, id))
 		{
-			if (rule == AUTH_RULE_SUBJECT_CERT && !default_id)
+			free_auth_data(auth);
+			return FALSE;
+		}
+
+		if (!id)
+		{
+			cert = auth->cfg->get(auth->cfg, AUTH_RULE_SUBJECT_CERT);
+			if (cert)
 			{
-				if (id == NULL)
-				{
-					id = cert->get_subject(cert);
-					DBG1(DBG_CFG, "  id not specified, defaulting to"
-								  " cert subject '%Y'", id);
-					auth->cfg->add(auth->cfg, AUTH_RULE_IDENTITY, id->clone(id));
-					default_id = TRUE;
-				}
-				else if (cert->get_type(cert) == CERT_TRUSTED_PUBKEY &&
-						 id->get_type(id) != ID_ANY)
-				{
-					/* set the subject of all raw public keys to the id */
-					pubkey_cert = (pubkey_cert_t*)cert;
-					pubkey_cert->set_subject(pubkey_cert, id);
-				}
+				id = cert->get_subject(cert);
+				DBG1(DBG_CFG, "  id not specified, defaulting to"
+							  " cert subject '%Y'", id);
+				auth->cfg->add(auth->cfg, AUTH_RULE_IDENTITY, id->clone(id));
 			}
 		}
-		enumerator->destroy(enumerator);
 
 		auths = strcasepfx(name, "local") ? peer->local : peer->remote;
 		enumerator = auths->create_enumerator(auths);
