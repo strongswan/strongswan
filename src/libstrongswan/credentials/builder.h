@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * Copyright (C) 2016-2022 Andreas Steffen
+ * Copyright (C) 2016-2024 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
- * Copyright (C) 2000-2008 Andreas Steffen
+ * Copyright (C) 2000-2024 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -25,93 +25,34 @@
 #include <credentials/keys/private_key.h>
 
 /**
- * ASN.1 definition of a subjectPublicKeyInfo structure
- */
-static const asn1Object_t pkinfoObjects[] = {
-	{ 0, "subjectPublicKeyInfo",ASN1_SEQUENCE,		ASN1_NONE	}, /* 0 */
-	{ 1,   "algorithm",			ASN1_EOC,			ASN1_RAW	}, /* 1 */
-	{ 1,   "subjectPublicKey",	ASN1_BIT_STRING,	ASN1_BODY	}, /* 2 */
-	{ 0, "exit",				ASN1_EOC,			ASN1_EXIT	}
-};
-#define PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM	1
-#define PKINFO_SUBJECT_PUBLIC_KEY			2
-
-/**
  * Load a generic public key from an ASN.1 encoded blob
  */
 static public_key_t *parse_public_key(chunk_t blob)
 {
-	asn1_parser_t *parser;
-	chunk_t object;
-	int objectID;
-	public_key_t *key = NULL;
-	key_type_t type = KEY_ANY;
+	chunk_t pubkey;
+	key_type_t type;
 
-	parser = asn1_parser_create(pkinfoObjects, blob);
+	type = public_key_info_decode(blob, &pubkey);
 
-	while (parser->iterate(parser, &objectID, &object))
+	switch (type)
 	{
-		switch (objectID)
-		{
-			case PKINFO_SUBJECT_PUBLIC_KEY_ALGORITHM:
-			{
-				int oid = asn1_parse_algorithmIdentifier(object,
-										parser->get_level(parser)+1, NULL);
-
-				if (oid == OID_RSA_ENCRYPTION || oid == OID_RSAES_OAEP ||
-					oid == OID_RSASSA_PSS)
-				{
-					/* TODO: we should parse parameters for PSS and pass them
-					 * (and the type), or the complete subjectPublicKeyInfo,
-					 * along so we can treat these as restrictions when
-					 * generating signatures with the associated private key */
-					type = KEY_RSA;
-				}
-				else if (oid == OID_EC_PUBLICKEY)
-				{
-					/* Need the whole subjectPublicKeyInfo for EC public keys */
-					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
-								KEY_ECDSA, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
-					goto end;
-				}
-				else if (oid == OID_ED25519)
-				{
-					/* Need the whole subjectPublicKeyInfo for Ed25519 public keys */
-					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
-								KEY_ED25519, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
-					goto end;
-				}
-				else if (oid == OID_ED448)
-				{
-					/* Need the whole subjectPublicKeyInfo for Ed448 public keys */
-					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
-								KEY_ED448, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
-					goto end;
-				}
-				else
-				{
-					/* key type not supported */
-					goto end;
-				}
-				break;
-			}
-			case PKINFO_SUBJECT_PUBLIC_KEY:
-				if (object.len > 0 && *object.ptr == 0x00)
-				{
-					/* skip initial bit string octet defining 0 unused bits */
-					object = chunk_skip(object, 1);
-				}
-				DBG2(DBG_ASN, "-- > --");
-				key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
-										 BUILD_BLOB_ASN1_DER, object, BUILD_END);
-				DBG2(DBG_ASN, "-- < --");
-				break;
-		}
+		case KEY_RSA:
+			return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
+								BUILD_BLOB_ASN1_DER, pubkey, BUILD_END);
+		case KEY_ECDSA:
+		case KEY_ED25519:
+		case KEY_ED448:
+			/* need the whole subjectPublicKeyInfo for EC public keys */
+			return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
+								BUILD_BLOB_ASN1_DER, blob, BUILD_END);
+		case KEY_ML_DSA_44:
+		case KEY_ML_DSA_65:
+		case KEY_ML_DSA_87:
+			return lib->creds->create(lib->creds, CRED_PUBLIC_KEY, type,
+								BUILD_BLOB, pubkey, BUILD_END);
+		default:
+			return NULL;
 	}
-
-end:
-	parser->destroy(parser);
-	return key;
 }
 
 /**

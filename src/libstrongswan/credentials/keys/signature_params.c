@@ -407,3 +407,50 @@ bool rsa_pss_params_build(rsa_pss_params_t *params, chunk_t *asn1)
 				trfd.len ? asn1_wrap(ASN1_CONTEXT_C_3, "m", trfd) : chunk_empty);
 	return TRUE;
 }
+
+/**
+ * Maximum length of the context string.
+ */
+#define PQC_MAX_CTX_LEN  255
+
+/*
+ * Described in header
+ */
+bool pqc_params_create(pqc_params_t *p_in, pqc_params_t *p_out)
+{
+	if (p_in == NULL)
+	{
+		p_out->deterministic = FALSE;
+
+		p_out->pre_ctx = chunk_alloc(2);
+		p_out->pre_ctx.ptr[0] = 0x00;
+		p_out->pre_ctx.ptr[1] = 0x00;
+	}
+	else
+	{
+		p_out->deterministic = p_in->deterministic;
+
+		if (p_in->ctx.len > PQC_MAX_CTX_LEN)
+		{
+			DBG1(DBG_LIB, "error: context length of PQC signature is %u bytes, "
+						  "larger than the maximum of %u bytes",
+						  p_in->ctx.len, PQC_MAX_CTX_LEN);
+			return FALSE;
+		}
+		p_out->pre_ctx = chunk_alloc(2 + p_in->ctx.len);
+		p_out->pre_ctx.ptr[0] = 0x00;
+		p_out->pre_ctx.ptr[1] = (uint8_t)p_in->ctx.len;
+		memcpy(p_out->pre_ctx.ptr + 2, p_in->ctx.ptr, p_in->ctx.len);
+	}
+	p_out->ctx = chunk_skip(p_out->pre_ctx, 2);
+
+	return TRUE;
+}
+
+/*
+ * Described in header
+ */
+void pqc_params_free(pqc_params_t *params)
+{
+	chunk_free(&params->pre_ctx);
+}
