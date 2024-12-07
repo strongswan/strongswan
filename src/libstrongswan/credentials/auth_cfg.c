@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
- * Copyright (C) 2016 Andreas Steffen
+ * Copyright (C) 2016-2024 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -584,21 +584,24 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 			signature_scheme_t scheme;
 			key_type_t key;
 		} schemes[] = {
-			{ "md5",		SIGN_RSA_EMSA_PKCS1_MD5,		KEY_RSA,	 },
-			{ "sha1",		SIGN_RSA_EMSA_PKCS1_SHA1,		KEY_RSA,	 },
-			{ "sha224",		SIGN_RSA_EMSA_PKCS1_SHA2_224,	KEY_RSA,	 },
-			{ "sha256",		SIGN_RSA_EMSA_PKCS1_SHA2_256,	KEY_RSA,	 },
-			{ "sha384",		SIGN_RSA_EMSA_PKCS1_SHA2_384,	KEY_RSA,	 },
-			{ "sha512",		SIGN_RSA_EMSA_PKCS1_SHA2_512,	KEY_RSA,	 },
-			{ "sha1",		SIGN_ECDSA_WITH_SHA1_DER,		KEY_ECDSA,	 },
-			{ "sha256",		SIGN_ECDSA_WITH_SHA256_DER,		KEY_ECDSA,	 },
-			{ "sha384",		SIGN_ECDSA_WITH_SHA384_DER,		KEY_ECDSA,	 },
-			{ "sha512",		SIGN_ECDSA_WITH_SHA512_DER,		KEY_ECDSA,	 },
-			{ "sha256",		SIGN_ECDSA_256,					KEY_ECDSA,	 },
-			{ "sha384",		SIGN_ECDSA_384,					KEY_ECDSA,	 },
-			{ "sha512",		SIGN_ECDSA_521,					KEY_ECDSA,	 },
-			{ "identity",	SIGN_ED25519,					KEY_ED25519, },
-			{ "identity",	SIGN_ED448,						KEY_ED448,	 },
+			{ "md5",		SIGN_RSA_EMSA_PKCS1_MD5,		KEY_RSA,	   },
+			{ "sha1",		SIGN_RSA_EMSA_PKCS1_SHA1,		KEY_RSA,	   },
+			{ "sha224",		SIGN_RSA_EMSA_PKCS1_SHA2_224,	KEY_RSA,	   },
+			{ "sha256",		SIGN_RSA_EMSA_PKCS1_SHA2_256,	KEY_RSA,	   },
+			{ "sha384",		SIGN_RSA_EMSA_PKCS1_SHA2_384,	KEY_RSA,	   },
+			{ "sha512",		SIGN_RSA_EMSA_PKCS1_SHA2_512,	KEY_RSA,	   },
+			{ "sha1",		SIGN_ECDSA_WITH_SHA1_DER,		KEY_ECDSA,	   },
+			{ "sha256",		SIGN_ECDSA_WITH_SHA256_DER,		KEY_ECDSA,	   },
+			{ "sha384",		SIGN_ECDSA_WITH_SHA384_DER,		KEY_ECDSA,	   },
+			{ "sha512",		SIGN_ECDSA_WITH_SHA512_DER,		KEY_ECDSA,	   },
+			{ "sha256",		SIGN_ECDSA_256,					KEY_ECDSA,	   },
+			{ "sha384",		SIGN_ECDSA_384,					KEY_ECDSA,	   },
+			{ "sha512",		SIGN_ECDSA_521,					KEY_ECDSA,	   },
+			{ "identity",	SIGN_ED25519,					KEY_ED25519,   },
+			{ "identity",	SIGN_ED448,						KEY_ED448,	   },
+			{ "identity",	SIGN_ML_DSA_44,					KEY_ML_DSA_44, },
+			{ "identity",	SIGN_ML_DSA_65,					KEY_ML_DSA_65, },
+			{ "identity",	SIGN_ML_DSA_87,					KEY_ML_DSA_87, },
 		};
 
 		if (expected_strength != AUTH_RULE_MAX)
@@ -645,6 +648,24 @@ METHOD(auth_cfg_t, add_pubkey_constraints, void,
 		{
 			key_token = token;
 			expected_type = KEY_ED448;
+			continue;
+		}
+		if (streq(token, "mldsa44") || streq(token, "ike:mldsa44"))
+		{
+			key_token = token;
+			expected_type = KEY_ML_DSA_44;
+			continue;
+		}
+		if (streq(token, "mldsa65") || streq(token, "ike:mldsa65"))
+		{
+			key_token = token;
+			expected_type = KEY_ML_DSA_65;
+			continue;
+		}
+		if (streq(token, "mldsa87") || streq(token, "ike:mldsa87"))
+		{
+			key_token = token;
+			expected_type = KEY_ML_DSA_87;
 			continue;
 		}
 		if (streq(token, "pubkey") || streq(token, "ike:pubkey"))

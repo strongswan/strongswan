@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Martin Willi
- * Copyright (C) 2016-2022 Andreas Steffen
+ * Copyright (C) 2016-2024 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -163,6 +163,8 @@ enum builder_part_t {
 	BUILD_EDDSA_PUB,
 	/** DER encoded ASN.1 EdDSA private key */
 	BUILD_EDDSA_PRIV_ASN1_DER,
+	/** DER encoded ASN.1 private key */
+	BUILD_PRIV_ASN1_DER,
 	/** OID of an [unsupported] critical extension */
 	BUILD_CRITICAL_EXTENSION,
 	/** nonce needed for some security protocol */
