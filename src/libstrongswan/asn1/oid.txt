@@ -450,6 +450,12 @@
                 0x0E         "id-rsassa-pkcs1v15-with-sha3-256"	OID_RSASSA_PKCS1V15_WITH_SHA3_256
                 0x0F         "id-rsassa-pkcs1v15-with-sha3-384"	OID_RSASSA_PKCS1V15_WITH_SHA3_384
                 0x10         "id-rsassa-pkcs1v15-with-sha3-512"	OID_RSASSA_PKCS1V15_WITH_SHA3_512
+                0x11         "id-ml-dsa-44" OID_ML_DSA_44
+                0x12         "id-ml-dsa-65" OID_ML_DSA_65
+                0x13         "id-ml-dsa-87" OID_ML_DSA_87
+                0x20         "id-hash-ml-dsa-44-with-sha512"
+                0x21         "id-hash-ml-dsa-65-with-sha512"
+                0x22         "id-hash-ml-dsa-87-with-sha512"
         0x86                 ""
           0xf8               ""
             0x42             "netscape"
