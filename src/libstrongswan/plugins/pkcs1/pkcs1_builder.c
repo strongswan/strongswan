@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008-2016 Tobias Brunner
  * Copyright (C) 2008-2009 Martin Willi
- * Copyright (C) 2000-2008 Andreas Steffen
+ * Copyright (C) 2000-2024 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -86,6 +86,27 @@ static public_key_t *parse_public_key(chunk_t blob)
 					/* Need the whole subjectPublicKeyInfo for Ed448 public keys */
 					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
 								KEY_ED448, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
+					goto end;
+				}
+				else if (oid == OID_ML_DSA_44)
+				{
+					/* Need the whole subjectPublicKeyInfo for ML-DSA-44 public keys */
+					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
+								KEY_ML_DSA_44, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
+					goto end;
+				}
+				else if (oid == OID_ML_DSA_65)
+				{
+					/* Need the whole subjectPublicKeyInfo for ML-DSA-65 public keys */
+					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
+								KEY_ML_DSA_65, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
+					goto end;
+				}
+				else if (oid == OID_ML_DSA_87)
+				{
+					/* Need the whole subjectPublicKeyInfo for ML-DSA-87 public keys */
+					key = lib->creds->create(lib->creds, CRED_PUBLIC_KEY,
+								KEY_ML_DSA_87, BUILD_BLOB_ASN1_DER, blob, BUILD_END);
 					goto end;
 				}
 				else
