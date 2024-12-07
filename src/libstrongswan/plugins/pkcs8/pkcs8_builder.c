@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2024 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -88,6 +89,18 @@ static private_key_t *parse_private_key(chunk_t blob)
 					case OID_ED448:
 						type = KEY_ED448;
 						part = BUILD_EDDSA_PRIV_ASN1_DER;
+						break;
+					case OID_ML_DSA_44:
+						type = KEY_ML_DSA_44;
+						part = BUILD_PRIV_ASN1_DER;
+						break;
+					case OID_ML_DSA_65:
+						type = KEY_ML_DSA_65;
+						part = BUILD_PRIV_ASN1_DER;
+						break;
+					case OID_ML_DSA_87:
+						type = KEY_ML_DSA_87;
+						part = BUILD_PRIV_ASN1_DER;
 						break;
 					default:
 						/* key type not supported */
