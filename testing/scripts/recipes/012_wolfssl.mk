@@ -26,6 +26,7 @@ CONFIG_OPTS = \
 	--enable-ed25519 \
 	--enable-ed448 \
 	--enable-keygen \
+	--enable-mldsa \
 	--enable-mlkem \
 	--enable-rsapss \
 	--enable-sha3 \
