@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Andreas Steffen, strongSec GmbH
+ * Copyright (C) 2021-2024 Andreas Steffen, strongSec GmbH
  * Copyright (C) 2019-2024 Tobias Brunner, codelabs GmbH
  * Copyright (C) 2019 Sean Parkinson, wolfSSL Inc.
  *
@@ -36,6 +36,8 @@
 #include "wolfssl_ec_public_key.h"
 #include "wolfssl_ed_private_key.h"
 #include "wolfssl_ed_public_key.h"
+#include "wolfssl_ml_dsa_private_key.h"
+#include "wolfssl_ml_dsa_public_key.h"
 #include "wolfssl_hasher.h"
 #include "wolfssl_hmac.h"
 #include "wolfssl_kdf.h"
@@ -515,6 +517,62 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(HASHER, return_null),
 			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
 #endif /* HAVE_ED25519 || HAVE_ED448 */
+#if defined(HAVE_DILITHIUM)
+		/* ML-DSA public key loading */
+		PLUGIN_REGISTER(PUBKEY, wolfssl_ml_dsa_public_key_load, TRUE),
+	#ifndef WOLFSSL_NO_ML_DSA_44
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_44),
+	#endif
+	#ifndef WOLFSSL_NO_ML_DSA_65
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_65),
+	#endif
+	#ifndef WOLFSSL_NO_ML_DSA_87
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_87),
+	#endif
+			PLUGIN_PROVIDE(PUBKEY, KEY_ANY),
+		/* ML-DSA private key loading */
+		PLUGIN_REGISTER(PRIVKEY, wolfssl_ml_dsa_private_key_load, TRUE),
+	#ifndef WOLFSSL_NO_ML_DSA_44
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_44),
+	#endif
+	#ifndef WOLFSSL_NO_ML_DSA_65
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_65),
+	#endif
+	#ifndef WOLFSSL_NO_ML_DSA_87
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_87),
+	#endif
+		/* ML-DSA private key generation */
+		PLUGIN_REGISTER(PRIVKEY_GEN, wolfssl_ml_dsa_private_key_gen, FALSE),
+	#ifndef WOLFSSL_NO_ML_DSA_44
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ML_DSA_44),
+	#endif
+	#ifndef WOLFSSL_NO_ML_DSA_65
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ML_DSA_65),
+	#endif
+	#ifndef WOLFSSL_NO_ML_DSA_87
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ML_DSA_87),
+	#endif
+		/* ML-DSA signature schemes*/
+	#ifndef WOLFSSL_NO_ML_DSA_44
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ML_DSA_44),
+	#endif
+	#ifndef WOLFSSL_NO_ML_DSA_65
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ML_DSA_65),
+	#endif
+	#ifndef WOLFSSL_NO_ML_DSA_87
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ML_DSA_87),
+	#endif
+		/* ML-DSA signature verification schemes */
+	#ifndef WOLFSSL_NO_ML_DSA_44
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ML_DSA_44),
+	#endif
+	#ifndef WOLFSSL_NO_ML_DSA_65
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ML_DSA_65),
+	#endif
+	#ifndef WOLFSSL_NO_ML_DSA_67
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ML_DSA_87),
+	#endif
+#endif /* HAVE_DILITHIUM */
 #ifndef WC_NO_RNG
 		/* generic key loader */
 		PLUGIN_REGISTER(RNG, wolfssl_rng_create),
