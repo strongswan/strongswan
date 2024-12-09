@@ -118,6 +118,24 @@ static int print()
 					type = CRED_PRIVATE_KEY;
 					subtype = KEY_ED448;
 				}
+				else if (streq(arg, "mldsa44") ||
+						 streq(arg, "mldsa44-priv"))
+				{
+					type = CRED_PRIVATE_KEY;
+					subtype = KEY_ML_DSA_44;
+				}
+				else if (streq(arg, "mldsa65") ||
+						 streq(arg, "mldsa65-priv"))
+				{
+					type = CRED_PRIVATE_KEY;
+					subtype = KEY_ML_DSA_65;
+				}
+				else if (streq(arg, "mldsa87") ||
+						 streq(arg, "mldsa87-priv"))
+				{
+					type = CRED_PRIVATE_KEY;
+					subtype = KEY_ML_DSA_87;
+				}
 				else if (streq(arg, "ocsp-req"))
 				{
 					type = CRED_CERTIFICATE;
@@ -206,7 +224,7 @@ static void __attribute__ ((constructor))reg()
 		{ print, 'a', "print",
 		"print a credential in a human readable form",
 		{"[--in file|--keyid hex]",
-		 "[--type x509|crl|ac|pub|priv|rsa|ecdsa|ed25519|ed448|ocsp-req|ocsp-rsp]"},
+		 "[--type x509|crl|ac|pub|priv|rsa|ecdsa|ed25519|ed448|mldsa44|mldsa665|mlddsa87|ocsp-req|ocsp-rsp]"},
 		{
 			{"help",	'h', 0, "show usage information"},
 			{"in",		'i', 1, "input file, default: stdin"},
