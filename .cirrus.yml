@@ -29,5 +29,7 @@ alpine_task:
     TEST: alpine
     OS_NAME: alpine
 
-  install_script: ./scripts/test.sh deps
+  install_script:
+    - ./scripts/test.sh deps
+    - ./scripts/test.sh pydeps
   script: ./scripts/test.sh

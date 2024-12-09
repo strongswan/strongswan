@@ -70,7 +70,6 @@ ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant
 ARG_WITH_SET([dev-headers],          [no], [install strongSwan development headers to directory.])
 ARG_WITH_SET([printf-hooks],         [auto], [force the use of a specific printf hook implementation (auto, builtin, glibc, vstr).])
 ARG_WITH_SET([rubygemdir],           ["gem environment gemdir"], [path to install ruby gems to])
-ARG_WITH_SET([pythoneggdir],         ["main site-packages directory"], [path to install python eggs to to])
 
 if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
@@ -318,8 +317,8 @@ ARG_ENABL_SET([mediation],      [enable IKEv2 Mediation Extension.])
 ARG_ENABL_SET([unwind-backtraces],[use libunwind to create backtraces for memory leaks and segfaults.])
 ARG_ENABL_SET([ruby-gems],      [enable build of provided ruby gems.])
 ARG_ENABL_SET([ruby-gems-install],[enable installation of provided ruby gems.])
-ARG_ENABL_SET([python-eggs],    [enable build of provided python eggs.])
-ARG_ENABL_SET([python-eggs-install],[enable installation of provided python eggs.])
+ARG_ENABL_SET([python-wheels],  [enable build of provided python wheels.])
+ARG_ENABL_SET([python-eggs],    [legacy alias for --enable-python-wheels.])
 ARG_ENABL_SET([perl-cpan],      [enable build of provided perl CPAN module.])
 ARG_ENABL_SET([perl-cpan-install],[enable installation of provided CPAN module.])
 ARG_ENABL_SET([selinux],        [enable SELinux support for labeled IPsec.])
@@ -497,8 +496,8 @@ if test x$ruby_gems_install = xtrue; then
 	ruby_gems=true
 fi
 
-if test x$python_eggs_install = xtrue; then
-	python_eggs=true
+if test x$python_eggs = xtrue; then
+	python_wheels=true
 fi
 
 if test x$perl_cpan_install = xtrue; then
@@ -1428,24 +1427,12 @@ if test x$ruby_gems = xtrue; then
 fi
 AM_CONDITIONAL(RUBY_GEMS_INSTALL, [test "x$ruby_gems_install" = xtrue])
 
-if test x$python_eggs = xtrue; then
+if test x$python_wheels = xtrue; then
 	PYTHON_PACKAGE_VERSION=`echo "$PACKAGE_VERSION" | $SED 's/dr/.dev/'`
 	AC_SUBST([PYTHON_PACKAGE_VERSION])
-	if test x$python_eggs_install = xtrue; then
-		AC_PATH_PROG([EASY_INSTALL], [easy_install], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
-		if test x$EASY_INSTALL = x; then
-			AC_MSG_ERROR(Python easy_install not found)
-		fi
-	fi
-	if test "x$pythoneggdir" = "xmain site-packages directory"; then
-		AC_SUBST(PYTHONEGGINSTALLDIR, "")
-	else
-		AC_SUBST(PYTHONEGGINSTALLDIR, "--install-dir $pythoneggdir")
-	fi
 	AC_PATH_PROG([TOX], [tox], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 	AC_PATH_PROG([PY_TEST], [py.test], [], [$PATH:/bin:/usr/bin:/usr/local/bin])
 fi
-AM_CONDITIONAL(PYTHON_EGGS_INSTALL, [test "x$python_eggs_install" = xtrue])
 
 AM_CONDITIONAL(PERL_CPAN_INSTALL, [test "x$perl_cpan_install" = xtrue])
 
@@ -1910,7 +1897,7 @@ AM_CONDITIONAL(USE_LEGACY_SYSTEMD, test -n "$systemdsystemunitdir" -a "x$systemd
 AM_CONDITIONAL(USE_CERT_ENROLL, test x$cert_enroll = xtrue)
 AM_CONDITIONAL(USE_CERT_ENROLL_TIMER, test x$cert_enroll_timer = xtrue)
 AM_CONDITIONAL(USE_RUBY_GEMS, test x$ruby_gems = xtrue)
-AM_CONDITIONAL(USE_PYTHON_EGGS, test x$python_eggs = xtrue)
+AM_CONDITIONAL(USE_PYTHON_WHEELS, test x$python_wheels = xtrue)
 AM_CONDITIONAL(USE_PERL_CPAN, test x$perl_cpan = xtrue)
 AM_CONDITIONAL(USE_TOX, test "x$TOX" != x)
 AM_CONDITIONAL(USE_PY_TEST, test "x$PY_TEST" != x -a "x$TOX" = x)

@@ -281,8 +281,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 			--disable-osx-attr --disable-tkm --disable-uci
 			--disable-unwind-backtraces
 			--disable-svc --disable-dbghelp-backtraces --disable-socket-win
-			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp
-			--disable-python-eggs-install"
+			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
 	# unable to build Botan on Ubuntu 20.04
@@ -316,7 +315,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 		# and no Clearsilver
 		CONFIG="$CONFIG --disable-fast --disable-manager --disable-medsrv"
 	fi
-	PYDEPS="tox"
+	PYDEPS="build tox"
 	if test "$1" = "build-deps"; then
 		if [ "$ID" = "ubuntu" -a "$VERSION_ID" != "20.04" ]; then
 			build_botan
