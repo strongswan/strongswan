@@ -43,7 +43,7 @@ rm -f $OUTPUT_DIR/*
 # collect networking output
 if [ -n "$IPV4" ]
 then
-	{ ip route list table $ROUTING_TABLE; echo; } >> ${OUTPUT_DIR}/${NAME}.ip.route
+	{ ip route list table $ROUTING_TABLE; echo; } >> ${OUTPUT_DIR}/${NAME}.ip.route 2>/dev/null
 	{ iptables-save; echo; } >> ${OUTPUT_DIR}/${NAME}.iptables-save
 	{
 		echo -e '=== filter table ==='
@@ -58,7 +58,7 @@ fi
 
 if [ -n "$IPV6" ]
 then
-	ip -6 route list table $ROUTING_TABLE >> ${OUTPUT_DIR}/${NAME}.ip.route
+	ip -6 route list table $ROUTING_TABLE >> ${OUTPUT_DIR}/${NAME}.ip.route 2>/dev/null
 	ip6tables-save >> ${OUTPUT_DIR}/${NAME}.iptables-save
 	{
 		echo -e '=== filter table ==='
