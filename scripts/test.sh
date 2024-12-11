@@ -305,7 +305,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 			  tpm2-tss-dev tpm2-tss-sys mariadb-dev wolfssl-dev libgcrypt-dev
 			  botan3-dev pcsc-lite-dev networkmanager-dev linux-pam-dev
 			  iptables-dev libselinux-dev binutils-dev libunwind-dev ruby
-			  py3-setuptools"
+			  py3-setuptools py3-build py3-tox"
 		# musl does not provide backtrace(), so use libunwind
 		CONFIG="$CONFIG --enable-unwind-backtraces"
 		# alpine doesn't have systemd
