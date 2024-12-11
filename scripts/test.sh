@@ -128,7 +128,7 @@ build_openssl()
 
 build_awslc()
 {
-	LC_REV=1.40.0
+	LC_REV=1.41.1
 	LC_PKG=aws-lc-$LC_REV
 	LC_DIR=$DEPS_BUILD_DIR/$LC_PKG
 	LC_SRC=https://github.com/aws/aws-lc/archive/refs/tags/v${LC_REV}.tar.gz
