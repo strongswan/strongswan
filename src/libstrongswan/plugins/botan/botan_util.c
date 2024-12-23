@@ -177,6 +177,10 @@ bool botan_get_encoding(botan_pubkey_t pubkey, cred_encoding_type_t type,
 		{
 			part = CRED_PART_EDDSA_PUB_ASN1_DER;
 		}
+		else if (streq(algo, "ML-DSA"))
+		{
+			part = CRED_PART_PUB_ASN1_DER;
+		}
 		success = lib->encoding->encode(lib->encoding, type, NULL, encoding,
 										part, asn1_encoding, CRED_PART_END);
 	}

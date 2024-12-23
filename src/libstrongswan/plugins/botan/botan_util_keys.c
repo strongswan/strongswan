@@ -26,6 +26,8 @@
 #include "botan_ec_private_key.h"
 #include "botan_ed_public_key.h"
 #include "botan_ed_private_key.h"
+#include "botan_ml_dsa_public_key.h"
+#include "botan_ml_dsa_private_key.h"
 #include "botan_rsa_public_key.h"
 #include "botan_rsa_private_key.h"
 
@@ -129,6 +131,21 @@ public_key_t *botan_public_key_load(key_type_t type, va_list args)
 	}
 	else
 #endif
+#ifdef BOTAN_HAS_ML_DSA
+	if (streq(name, "ML-DSA") && (type == KEY_ANY || type == KEY_ML_DSA_44 ||
+								  type == KEY_ML_DSA_65 || type == KEY_ML_DSA_87))
+	{
+		if (type == KEY_ANY)
+		{
+			type = public_key_info_decode(blob, NULL);
+		}
+		if (type != KEY_ANY)
+		{
+			this = botan_ml_dsa_public_key_adopt(pubkey, type);
+		}
+	}
+	else
+#endif
 	{
 		botan_pubkey_destroy(pubkey);
 	}
@@ -155,6 +172,25 @@ static int determine_ec_oid(chunk_t pkcs8)
 		oid = asn1_known_oid(params);
 	}
 	return oid;
+}
+#endif
+
+#ifdef BOTAN_HAS_ML_DSA
+/**
+ * Determine the ML-DSA private key type from a PKCS#8 structure
+ */
+static key_type_t key_type_from_pkcs8(chunk_t pkcs8)
+{
+	int oid = OID_UNKNOWN;
+	chunk_t inner;
+
+	if (asn1_unwrap(&pkcs8, &pkcs8) == ASN1_SEQUENCE &&
+		asn1_unwrap(&pkcs8, &inner) == ASN1_INTEGER &&
+		asn1_parse_integer_uint64(inner) == 0)
+	{
+		oid = asn1_parse_algorithmIdentifier(pkcs8, 0, NULL);
+	}
+	return key_type_from_oid(oid);
 }
 #endif
 
@@ -231,6 +267,21 @@ private_key_t *botan_private_key_load(key_type_t type, va_list args)
 	if (streq(name, "Ed25519") && (type == KEY_ANY || type == KEY_ED25519))
 	{
 		this = botan_ed_private_key_adopt(key);
+	}
+	else
+#endif
+#ifdef BOTAN_HAS_ML_DSA
+	if (streq(name, "ML-DSA") && (type == KEY_ANY || type == KEY_ML_DSA_44 ||
+								  type == KEY_ML_DSA_65 || type == KEY_ML_DSA_87))
+	{
+		if (type == KEY_ANY)
+		{
+			type = key_type_from_pkcs8(blob);
+		}
+		if (type != KEY_ANY)
+		{
+			this = botan_ml_dsa_private_key_adopt(key, type);
+		}
 	}
 #endif
 
