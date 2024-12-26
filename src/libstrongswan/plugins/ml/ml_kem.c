@@ -16,7 +16,7 @@
 
 #include "ml_bitpacker.h"
 #include "ml_kem.h"
-#include "ml_params.h"
+#include "ml_kem_params.h"
 #include "ml_poly.h"
 #include "ml_utils.h"
 
