@@ -15,12 +15,12 @@
  */
 
 /**
- * @defgroup ml_params ml_params
+ * @defgroup ml_kem_params ml_kem_params
  * @{ @ingroup ml_p
  */
 
-#ifndef ML_PARAMS_H_
-#define ML_PARAMS_H_
+#ifndef ML_KEM_PARAMS_H_
+#define ML_KEM_PARAMS_H_
 
 #include <crypto/key_exchange.h>
 
@@ -107,4 +107,4 @@ extern const uint16_t ml_kem_zetas[128];
  */
 const ml_kem_params_t *ml_kem_params_get(key_exchange_method_t method);
 
-#endif /** ML_PARAMS_H_ @}*/
+#endif /** ML_KEM_PARAMS_H_ @}*/

@@ -14,7 +14,7 @@
  * for more details.
  */
 
-#include "ml_params.h"
+#include "ml_kem_params.h"
 
 /*
  * Described in header
