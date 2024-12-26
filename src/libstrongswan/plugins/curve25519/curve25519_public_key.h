@@ -51,16 +51,6 @@ struct curve25519_public_key_t {
 curve25519_public_key_t *curve25519_public_key_load(key_type_t type,
 													va_list args);
 
-/* The following functions are shared with the curve25519_private_key class */
-
-/**
- * Encode a Ed25519 subjectPublicKeyInfo record in ASN.1 DER format
- *
- * @param pubkey	Ed25519 public key
- * @result			ASN.1 encoded subjectPublicKeyInfo record
- */
-chunk_t curve25519_public_key_info_encode(chunk_t pubkey);
-
 /**
  * Generate a Ed25519 public key fingerprint
  *

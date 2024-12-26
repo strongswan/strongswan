@@ -159,7 +159,7 @@ METHOD(public_key_t, get_encoding, bool,
 {
 	bool success = TRUE;
 
-	*encoding = curve25519_public_key_info_encode(this->pubkey);
+	*encoding = public_key_info_encode(this->pubkey, OID_ED25519);
 
 	if (type != PUBKEY_SPKI_ASN1_DER)
 	{
@@ -328,17 +328,6 @@ curve25519_public_key_t *curve25519_public_key_load(key_type_t type,
 /**
  * See header.
  */
-chunk_t curve25519_public_key_info_encode(chunk_t pubkey)
-{
-	return asn1_wrap(ASN1_SEQUENCE, "mm",
-					asn1_wrap(ASN1_SEQUENCE, "m",
-						asn1_build_known_oid(OID_ED25519)),
-					asn1_bitstring("c", pubkey));
-}
-
-/**
- * See header.
- */
 bool curve25519_public_key_fingerprint(chunk_t pubkey,
 									   cred_encoding_type_t type, chunk_t *fp)
 {
@@ -351,7 +340,7 @@ bool curve25519_public_key_fingerprint(chunk_t pubkey,
 			key = chunk_clone(pubkey);
 			break;
 		case KEYID_PUBKEY_INFO_SHA1:
-			key = curve25519_public_key_info_encode(pubkey);
+			key = public_key_info_encode(pubkey, OID_ED25519);
 			break;
 		default:
 			return FALSE;
