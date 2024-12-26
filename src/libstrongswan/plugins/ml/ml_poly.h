@@ -22,7 +22,7 @@
 #ifndef ML_POLY_H_
 #define ML_POLY_H_
 
-#include "ml_params.h"
+#include "ml_kem_params.h"
 
 typedef struct ml_poly_t ml_poly_t;
 
