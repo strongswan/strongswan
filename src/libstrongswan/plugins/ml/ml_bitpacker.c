@@ -73,6 +73,10 @@ METHOD(ml_bitpacker_t, write_bits, bool,
 	{
 		return FALSE;
 	}
+	if ((32 - this->bits_left) + bits > 8 * this->pos.len)
+	{	/* buffer is too small to write pending and requested bits */
+		return FALSE;
+	}
 	if (bits < 32)
 	{
 		value &= (1 << bits) - 1;
@@ -92,12 +96,23 @@ METHOD(ml_bitpacker_t, write_bits, bool,
 			this->bits_left -= bits;
 			return TRUE;
 		}
-		value >>= this->bits_left;
+		if (this->bits_left < 32)
+		{
+			value >>= this->bits_left;
+		}
+		else
+		{
+			value = 0;
+		}
 		bits -= this->bits_left;
 
 		flush_buffer(this);
 		this->bits_buf = 0;
 		this->bits_left = 32;
+		if (bits == 0)
+		{
+			return TRUE;
+		}
 	}
 }
 
