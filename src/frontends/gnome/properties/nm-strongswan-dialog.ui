@@ -737,13 +737,40 @@
             <property name="margin">6</property>
             <property name="spacing">6</property>
             <child>
-              <!-- n-columns=2 n-rows=1 -->
+              <!-- n-columns=2 n-rows=2 -->
               <object class="GtkGrid">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
                 <property name="row-spacing">6</property>
                 <property name="column-spacing">6</property>
                 <property name="row-homogeneous">True</property>
+                <child>
+                  <object class="GtkLabel" id="local-ts-label">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="label" translatable="yes">_Local TS:</property>
+                    <property name="use-underline">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">0</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkEntry" id="local-ts-entry">
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="tooltip-text" translatable="yes">A list of local traffic selectors separated by ";"</property>
+                    <property name="hexpand">True</property>
+                    <property name="invisible-char">•</property>
+                    <property name="placeholder-text" translatable="yes">(Defaults to dynamic)</property>
+                  </object>
+                  <packing>
+                    <property name="left-attach">1</property>
+                    <property name="top-attach">0</property>
+                  </packing>
+                </child>
                 <child>
                   <object class="GtkLabel" id="remote-ts-label">
                     <property name="visible">True</property>
@@ -754,7 +781,7 @@
                   </object>
                   <packing>
                     <property name="left-attach">0</property>
-                    <property name="top-attach">0</property>
+                    <property name="top-attach">1</property>
                   </packing>
                 </child>
                 <child>
@@ -768,7 +795,7 @@
                   </object>
                   <packing>
                     <property name="left-attach">1</property>
-                    <property name="top-attach">0</property>
+                    <property name="top-attach">1</property>
                   </packing>
                 </child>
               </object>
