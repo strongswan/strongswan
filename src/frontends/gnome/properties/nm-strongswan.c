@@ -544,6 +544,12 @@ init_plugin_ui (StrongswanPluginUiWidget *self, NMConnection *connection, GError
 	}
 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
 
+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "local-ts-entry"));
+	value = nm_setting_vpn_get_data_item (settings, "local-ts");
+	if (value)
+		gtk_editable_set_text (GTK_EDITABLE (widget), value);
+	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (settings_changed_cb), self);
+
 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "remote-ts-entry"));
 	value = nm_setting_vpn_get_data_item (settings, "remote-ts");
 	if (value)
@@ -746,6 +752,7 @@ update_connection (NMVpnEditor *iface,
 		g_free (str);
 	}
 
+	save_entry (settings, priv->builder, "local-ts-entry", "local-ts");
 	save_entry (settings, priv->builder, "remote-ts-entry", "remote-ts");
 
 	nm_connection_add_setting (connection, NM_SETTING (settings));
