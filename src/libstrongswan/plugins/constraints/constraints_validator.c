@@ -936,8 +936,19 @@ static bool check_policy_constraints(x509_t *issuer, u_int pathlen,
 
 			if (valid)
 			{
-				x509 = (x509_t*)subject;
+				/* remove the self-signed root certificate from the chain if it
+				 * does not contain any certificate policies, in accordance with
+				 * RFC 5280, sections 6.1 and 6.2 */
+				x509 = (x509_t*)issuer;
+				enumerator = x509->create_cert_policy_enumerator(x509);
+				if ((x509->get_flags(x509) & X509_SELF_SIGNED) &&
+					!enumerator->enumerate(enumerator, &policy))
+				{
+					chain->remove_last(chain, (void**)&x509);
+				}
+				enumerator->destroy(enumerator);
 
+				x509 = (x509_t*)subject;
 				enumerator = x509->create_cert_policy_enumerator(x509);
 				while (enumerator->enumerate(enumerator, &policy))
 				{
