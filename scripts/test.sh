@@ -240,6 +240,9 @@ openssl*)
 		use_custom_openssl $1
 	elif system_uses_openssl3; then
 		prepare_system_openssl $1
+	else
+		# the kdf plugin is necessary to build against older OpenSSL versions
+		TESTS_PLUGINS="$TESTS_PLUGINS kdf"
 	fi
 	;;
 gcrypt)
@@ -352,13 +355,6 @@ win*)
 		TARGET=
 	else
 		CONFIG="$CONFIG --enable-openssl"
-		case "$IMG" in
-		2015|2017)
-			# old OpenSSL versions don't provide HKDF
-			CONFIG="$CONFIG --enable-kdf"
-			;;
-		esac
-
 		CFLAGS="$CFLAGS -I$OPENSSL_DIR/include"
 		LDFLAGS="-L$OPENSSL_DIR/lib"
 		case "$IMG" in

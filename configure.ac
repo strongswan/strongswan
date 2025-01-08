@@ -525,15 +525,28 @@ if test x$cert_enroll = xtrue; then
 fi
 
 if test x$kdf = xfalse; then
+	openssl_hkdf=false
+	if test x$openssl = xtrue; then
+		AC_MSG_CHECKING(for OpenSSL >= 3.0 for HKDF)
+		AC_COMPILE_IFELSE(
+			[AC_LANG_PROGRAM(
+				[[#include <openssl/opensslv.h>]],
+				[[#if OPENSSL_VERSION_NUMBER < 0x30000000L && !defined(OPENSSL_IS_AWSLC)
+					#error OpenSSL version unusable
+				  #endif]])],
+			[AC_MSG_RESULT([yes]); openssl_hkdf=true],
+			[AC_MSG_RESULT([no])]
+		)
+	fi
 	if test x$aesni = xtrue -o x$cmac = xtrue -o x$xcbc = xtrue; then
 		AC_MSG_WARN(m4_normalize([
 			kdf plugin is required for possible use of PRF_AES128_XCBC/CMAC
 			by one of these plugins: aesni, cmac, xcbc]))
 		kdf=true
-	elif test x$botan = xfalse -a x$openssl = xfalse -a x$wolfssl = xfalse; then
+	elif test x$botan = xfalse -a x$openssl_hkdf = xfalse -a x$wolfssl = xfalse; then
 		AC_MSG_WARN(m4_normalize([
 			kdf plugin is required because none of the following plugins is
-			enabled: botan, openssl, wolfssl]))
+			enabled or usable: botan, openssl, wolfssl]))
 		kdf=true
 	fi
 fi
