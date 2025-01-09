@@ -278,6 +278,7 @@ static void do_magic(int *magic, int **out)
 /**
  * Check if memwipe works as expected
  */
+ADDRESS_SANITIZER_EXCLUDE
 static bool check_memwipe()
 {
 	int magic = 0xCAFEBABE, *buf, i;
