@@ -36,7 +36,7 @@ jobs:
         run: |
           NDK_VERSION=$(grep "ndkVersion" src/frontends/android/app/build.gradle | sed -e 's/.*"\(.*\)"/\1/')
           echo Using NDK ${NDK_VERSION}
-          yes | sudo ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;${NDK_VERSION}"
+          yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;${NDK_VERSION}"
           echo "ANDROID_NDK_ROOT=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
         with:
