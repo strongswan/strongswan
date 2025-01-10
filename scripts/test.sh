@@ -97,16 +97,22 @@ build_openssl()
 	SSL_DIR=$DEPS_BUILD_DIR/$SSL_PKG
 	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
 	SSL_INS=$DEPS_PREFIX/ssl
-	SSL_OPT="-d shared no-dtls no-ssl3 no-zlib no-idea no-psk no-srp
+	SSL_OPT="-d shared no-dtls no-ssl3 no-zlib no-idea no-psk
 			 no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
 
 	if test -d "$SSL_DIR"; then
 		return
 	fi
 
-	# insist on compiling with gcc and debug information as symbols are otherwise not found
 	if test "$LEAK_DETECTIVE" = "yes"; then
-		SSL_OPT="$SSL_OPT CC=gcc -d"
+		# insist on compiling with gcc and debug information as symbols are
+		# otherwise not found, but we can disable SRP (see below)
+		SSL_OPT="$SSL_OPT no-srp CC=gcc -d"
+	elif test "$CC" != "clang"; then
+		# when using ASan with clang, llvm-symbolizer is used to resolve symbols
+		# and this tool links libcurl, which in turn requires SRP, so we can
+		# only disable it when not building with clang
+		SSL_OPT="$SSL_OPT no-srp"
 	fi
 
 	echo "$ build_openssl()"
@@ -525,6 +531,8 @@ case "$TEST" in
 	*)
 		if [ "$LEAK_DETECTIVE" != "yes" ]; then
 			CONFIG="$CONFIG --enable-asan"
+		else
+			CONFIG="$CONFIG --disable-asan"
 		fi
 		;;
 esac
