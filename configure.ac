@@ -1361,7 +1361,7 @@ if test x$coverage = xtrue; then
 		AC_MSG_ERROR([genhtml not found])
 	fi
 
-	COVERAGE_CFLAGS="-fprofile-arcs -ftest-coverage"
+	COVERAGE_CFLAGS="-fprofile-arcs -ftest-coverage -fprofile-update=atomic"
 	COVERAGE_LDFLAGS="-fprofile-arcs"
 	AC_SUBST(COVERAGE_CFLAGS)
 	AC_SUBST(COVERAGE_LDFLAGS)
