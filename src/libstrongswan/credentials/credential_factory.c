@@ -117,7 +117,7 @@ METHOD(credential_factory_t, create, void*,
 	entry_t *entry;
 	va_list args;
 	void *construct = NULL;
-	int failures = 0;
+	int failures DBG_UNUSED = 0;
 	uintptr_t level;
 	enum_name_t *names DBG_UNUSED;
 
