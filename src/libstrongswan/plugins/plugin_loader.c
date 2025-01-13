@@ -202,6 +202,7 @@ struct plugin_entry_t {
 	linked_list_t *features;
 };
 
+#ifdef HAVE_DLADDR
 /**
  * Destroy a plugin entry
  */
@@ -215,6 +216,7 @@ static void plugin_entry_destroy(plugin_entry_t *entry)
 	entry->features->destroy(entry->features);
 	free(entry);
 }
+#endif
 
 /**
  * Wrapper for static plugin features
@@ -372,7 +374,9 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 	if (!constructor)
 #endif
 	{
+#ifdef HAVE_DLADDR
 		constructor = dlsym(handle, create);
+#endif
 	}
 	if (!constructor)
 	{
@@ -404,6 +408,7 @@ static status_t create_plugin(private_plugin_loader_t *this, void *handle,
 	return SUCCESS;
 }
 
+#ifdef HAVE_DLADDR
 /**
  * load a single plugin
  */
@@ -481,6 +486,7 @@ static plugin_entry_t *load_plugin(private_plugin_loader_t *this, char *name,
 	this->plugins->insert_last(this->plugins, entry);
 	return entry;
 }
+#endif
 
 CALLBACK(feature_filter, bool,
 	void *null, enumerator_t *orig, va_list args)
@@ -1016,6 +1022,7 @@ static void unregister_features(private_plugin_loader_t *this,
 	enumerator->destroy(enumerator);
 }
 
+#ifdef HAVE_DLADDR
 /**
  * Remove plugins we were not able to load any plugin features from.
  */
@@ -1043,6 +1050,7 @@ static void purge_plugins(private_plugin_loader_t *this)
 	}
 	enumerator->destroy(enumerator);
 }
+#endif
 
 METHOD(plugin_loader_t, add_static_features, void,
 	private_plugin_loader_t *this, const char *name,
@@ -1449,6 +1457,7 @@ METHOD(plugin_loader_t, destroy, void,
 	free(this);
 }
 
+#ifdef HAVE_DLADDR
 /*
  * see header file
  */
@@ -1484,6 +1493,7 @@ plugin_loader_t *plugin_loader_create()
 
 	return &this->public;
 }
+#endif
 
 /*
  * See header
