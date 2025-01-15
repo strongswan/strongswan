@@ -622,8 +622,10 @@ static bool load_token(load_ctx_t *ctx, char *name, char *pin)
 static void load_tokens(load_ctx_t *ctx)
 {
 	enumerator_t *enumerator;
-	char *section, *pin = NULL, prompt[128];
-
+	char *section, *pin = NULL;
+#ifdef HAVE_GETPASS
+	char prompt[128];
+#endif
 	enumerator = ctx->cfg->create_section_enumerator(ctx->cfg, "secrets");
 	while (enumerator->enumerate(enumerator, &section))
 	{
