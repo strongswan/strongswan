@@ -53,6 +53,18 @@ static int gen()
 				{
 					type = KEY_ED448;
 				}
+				else if (streq(arg, "mldsa44"))
+				{
+					type = KEY_ML_DSA_44;
+				}
+				else if (streq(arg, "mldsa65"))
+				{
+					type = KEY_ML_DSA_65;
+				}
+				else if (streq(arg, "mldsa87"))
+				{
+					type = KEY_ML_DSA_87;
+				}
 				else
 				{
 					return command_usage("invalid key type");
@@ -112,6 +124,15 @@ static int gen()
 			case KEY_ED448:
 				size = 456;
 				break;
+			case KEY_ML_DSA_44:
+				size = 10496;
+				break;
+			case KEY_ML_DSA_65:
+				size = 15616;
+				break;
+			case KEY_ML_DSA_87:
+				size = 20736;
+				break;
 			default:
 				break;
 		}
@@ -167,7 +188,7 @@ static void __attribute__ ((constructor))reg()
 {
 	command_register((command_t) {
 		gen, 'g', "gen", "generate a new private key",
-		{"[--type rsa|ecdsa|ed25519|ed448] [--size bits] [--safe-primes]",
+		{"[--type rsa|ecdsa|ed25519|ed448|mldsa44|mldsa65|mldsa87] [--size bits] [--safe-primes]",
 		 "[--shares n] [--threshold l] [--outform der|pem]"},
 		{
 			{"help",		'h', 0, "show usage information"},

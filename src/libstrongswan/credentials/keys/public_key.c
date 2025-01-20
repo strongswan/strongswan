@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015-2017 Tobias Brunner
- * Copyright (C) 2014-2020 Andreas Steffen
+ * Copyright (C) 2014-2024 Andreas Steffen
  * Copyright (C) 2007 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -17,20 +17,24 @@
  */
 
 #include <asn1/oid.h>
+#include <asn1/asn1.h>
 
 #include "public_key.h"
 #include "signature_params.h"
 
-ENUM(key_type_names, KEY_ANY, KEY_ED448,
+ENUM(key_type_names, KEY_ANY, KEY_ML_DSA_87,
 	"ANY",
 	"RSA",
 	"ECDSA",
 	"DSA",
 	"ED25519",
 	"ED448",
+	"ML_DSA_44",
+	"ML_DSA_65",
+	"ML_DSA_87",
 );
 
-ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_ED448,
+ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_ML_DSA_87,
 	"UNKNOWN",
 	"RSA_EMSA_PKCS1_NULL",
 	"RSA_EMSA_PKCS1_MD5",
@@ -54,6 +58,9 @@ ENUM(signature_scheme_names, SIGN_UNKNOWN, SIGN_ED448,
 	"ECDSA-521",
 	"ED25519",
 	"ED448",
+	"ML_DSA_44",
+	"ML_DSA_65",
+	"ML_DSA_87",
 );
 
 ENUM(encryption_scheme_names, ENCRYPT_UNKNOWN, ENCRYPT_RSA_OAEP_SHA512,
@@ -109,6 +116,61 @@ bool public_key_has_fingerprint(public_key_t *public, chunk_t fingerprint)
 	return FALSE;
 }
 
+/**
+ * See header.
+ */
+chunk_t public_key_info_encode(chunk_t pubkey, int oid)
+{
+	return asn1_wrap(ASN1_SEQUENCE, "mm",
+						asn1_algorithmIdentifier(oid),
+						asn1_bitstring("c", pubkey)
+					 );
+}
+
+/**
+ * See header.
+ */
+int key_type_to_oid(key_type_t type)
+{
+	switch (type)
+	{
+		case KEY_ED25519:
+			return OID_ED25519;
+		case KEY_ED448:
+			return OID_ED448;
+		case KEY_ML_DSA_44:
+			return OID_ML_DSA_44;
+		case KEY_ML_DSA_65:
+			return OID_ML_DSA_65;
+		case KEY_ML_DSA_87:
+			return OID_ML_DSA_87;
+		default:
+			return OID_UNKNOWN;
+	}
+}
+
+/**
+ * See header.
+ */
+key_type_t key_type_from_oid(int oid)
+{
+	switch (oid)
+	{
+		case OID_ED25519:
+			return KEY_ED25519;
+		case OID_ED448:
+			return KEY_ED448;
+		case OID_ML_DSA_44:
+			return KEY_ML_DSA_44;
+		case OID_ML_DSA_65:
+			return KEY_ML_DSA_65;
+		case OID_ML_DSA_87:
+			return KEY_ML_DSA_87;
+		default:
+			return KEY_ANY;
+	}
+}
+
 /*
  * Defined in header.
  */
@@ -157,6 +219,12 @@ signature_scheme_t signature_scheme_from_oid(int oid)
 			return SIGN_ED25519;
 		case OID_ED448:
 			return SIGN_ED448;
+		case OID_ML_DSA_44:
+			return SIGN_ML_DSA_44;
+		case OID_ML_DSA_65:
+			return SIGN_ML_DSA_65;
+		case OID_ML_DSA_87:
+			return SIGN_ML_DSA_87;
 	}
 	return SIGN_UNKNOWN;
 }
@@ -209,6 +277,12 @@ int signature_scheme_to_oid(signature_scheme_t scheme)
 			return OID_ED25519;
 		case SIGN_ED448:
 			return OID_ED448;
+		case SIGN_ML_DSA_44:
+			return OID_ML_DSA_44;
+		case SIGN_ML_DSA_65:
+			return OID_ML_DSA_65;
+		case SIGN_ML_DSA_87:
+			return OID_ML_DSA_87;
 	}
 	return OID_UNKNOWN;
 }
@@ -236,17 +310,20 @@ static struct {
 	int max_keysize;
 	signature_params_t params;
 } scheme_map[] = {
-	{ KEY_RSA,  3072, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha256, }},
-	{ KEY_RSA,  7680, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha384, }},
-	{ KEY_RSA,     0, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha512, }},
-	{ KEY_RSA,  3072, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256 }},
-	{ KEY_RSA,  7680, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_384 }},
-	{ KEY_RSA,     0, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512 }},
-	{ KEY_ECDSA, 256, { .scheme = SIGN_ECDSA_WITH_SHA256_DER }},
-	{ KEY_ECDSA, 384, { .scheme = SIGN_ECDSA_WITH_SHA384_DER }},
-	{ KEY_ECDSA,   0, { .scheme = SIGN_ECDSA_WITH_SHA512_DER }},
-	{ KEY_ED25519, 0, { .scheme = SIGN_ED25519 }},
-	{ KEY_ED448,   0, { .scheme = SIGN_ED448 }},
+	{ KEY_RSA,    3072, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha256, }},
+	{ KEY_RSA,    7680, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha384, }},
+	{ KEY_RSA,       0, { .scheme = SIGN_RSA_EMSA_PSS, .params = &pss_params_sha512, }},
+	{ KEY_RSA,    3072, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_256 }},
+	{ KEY_RSA,    7680, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_384 }},
+	{ KEY_RSA,       0, { .scheme = SIGN_RSA_EMSA_PKCS1_SHA2_512 }},
+	{ KEY_ECDSA,   256, { .scheme = SIGN_ECDSA_WITH_SHA256_DER }},
+	{ KEY_ECDSA,   384, { .scheme = SIGN_ECDSA_WITH_SHA384_DER }},
+	{ KEY_ECDSA,     0, { .scheme = SIGN_ECDSA_WITH_SHA512_DER }},
+	{ KEY_ED25519,   0, { .scheme = SIGN_ED25519 }},
+	{ KEY_ED448,     0, { .scheme = SIGN_ED448 }},
+	{ KEY_ML_DSA_44, 0, { .scheme = SIGN_ML_DSA_44 }},
+	{ KEY_ML_DSA_65, 0, { .scheme = SIGN_ML_DSA_65 }},
+	{ KEY_ML_DSA_87, 0, { .scheme = SIGN_ML_DSA_87 }},
 };
 
 /**
@@ -335,6 +412,34 @@ key_type_t key_type_from_signature_scheme(signature_scheme_t scheme)
 			return KEY_ED25519;
 		case SIGN_ED448:
 			return KEY_ED448;
+		case SIGN_ML_DSA_44:
+			return KEY_ML_DSA_44;
+		case SIGN_ML_DSA_65:
+			return KEY_ML_DSA_65;
+		case SIGN_ML_DSA_87:
+			return KEY_ML_DSA_87;
 	}
 	return KEY_ANY;
+}
+
+/*
+ * Defined in header.
+ */
+int get_public_key_size(key_type_t type)
+{
+	switch (type)
+	{
+		case KEY_ED25519:
+			return   32;   /* bytes */
+		case KEY_ED448:
+			return   57;   /* bytes */
+		case KEY_ML_DSA_44:
+			return 1312;   /* bytes */
+		case KEY_ML_DSA_65:
+			return 1952;   /* bytes */
+		case KEY_ML_DSA_87:
+			return 2592;   /* bytes */
+		default:
+			return 0;
+	}
 }

@@ -301,6 +301,14 @@ charon.make_before_break = yes
 	gaps during reauthentication, but requires support for overlapping SAs by
 	the peer. strongSwan can handle such overlapping SAs since version 5.3.0.
 
+charon.ml_dsa.context
+	Optional context string with a maximum length of 255 bytes. Either a text
+	string or hex-encoded binary bytes with a 0x prefix.
+
+charon.ml_dsa.deterministic = no
+	Enables deterministic ML-DSA signatures primarily used for test purposes.
+	The	recommended default settinga are randomized ML-DSA signatures.
+
 charon.multiple_authentication = yes
 	Enable multiple authentication exchanges (RFC 4739).
 

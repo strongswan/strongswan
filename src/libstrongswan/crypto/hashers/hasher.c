@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012-2015 Tobias Brunner
- * Copyright (C) 2015-2017 Andreas Steffen
+ * Copyright (C) 2015-2024 Andreas Steffen
  * Copyright (C) 2005-2006 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -156,6 +156,9 @@ hash_algorithm_t hasher_algorithm_from_oid(int oid)
 			return HASH_SHA3_512;
 		case OID_ED25519:
 		case OID_ED448:
+		case OID_ML_DSA_44:
+		case OID_ML_DSA_65:
+		case OID_ML_DSA_87:
 			return HASH_IDENTITY;
 		default:
 			return HASH_UNKNOWN;
@@ -477,6 +480,30 @@ int hasher_signature_algorithm_to_oid(hash_algorithm_t alg, key_type_t key)
 				default:
 					return OID_UNKNOWN;
 			}
+		case KEY_ML_DSA_44:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+					return OID_ML_DSA_44;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_ML_DSA_65:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+					return OID_ML_DSA_65;
+				default:
+					return OID_UNKNOWN;
+			}
+		case KEY_ML_DSA_87:
+			switch (alg)
+			{
+				case HASH_IDENTITY:
+					return OID_ML_DSA_87;
+				default:
+					return OID_UNKNOWN;
+			}
 		default:
 			return OID_UNKNOWN;
 	}
@@ -503,6 +530,9 @@ hash_algorithm_t hasher_from_signature_scheme(signature_scheme_t scheme,
 			break;
 		case SIGN_ED25519:
 		case SIGN_ED448:
+		case SIGN_ML_DSA_44:
+		case SIGN_ML_DSA_65:
+		case SIGN_ML_DSA_87:
 			return HASH_IDENTITY;
 		case SIGN_RSA_EMSA_PKCS1_MD5:
 			return HASH_MD5;
