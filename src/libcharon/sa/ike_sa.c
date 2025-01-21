@@ -369,14 +369,18 @@ static time_t get_use_time(private_ike_sa_t* this, bool inbound)
 		use_time = this->stats[STAT_OUTBOUND];
 	}
 
-	enumerator = array_create_enumerator(this->child_sas);
-	while (enumerator->enumerate(enumerator, &child_sa))
+	/* only consider IPsec traffic if we use UDP-encapsulation and they take
+	 * the same path */
+	if (this->public.has_condition(&this->public, COND_NAT_ANY))
 	{
-		child_sa->get_usestats(child_sa, inbound, &current, NULL, NULL);
-		use_time = max(use_time, current);
+		enumerator = array_create_enumerator(this->child_sas);
+		while (enumerator->enumerate(enumerator, &child_sa))
+		{
+			child_sa->get_usestats(child_sa, inbound, &current, NULL, NULL);
+			use_time = max(use_time, current);
+		}
+		enumerator->destroy(enumerator);
 	}
-	enumerator->destroy(enumerator);
-
 	return use_time;
 }
 
