@@ -720,24 +720,24 @@ dhcp_socket_t *dhcp_socket_create()
 	int on = 1, rcvbuf = 0;
 
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
-	const size_t skip_ip4 = sizeof(struct iphdr);
-	const size_t skip_udp = skip_ip4 + sizeof(struct udphdr);
+	const size_t skip_udp = sizeof(struct udphdr);
 	struct sock_filter dhcp_filter_code[] = {
 		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, offsetof(struct iphdr, protocol)),
-		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IPPROTO_UDP, 0, 16),
-		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, skip_ip4 + offsetof(struct udphdr, source)),
+		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, IPPROTO_UDP, 0, 17),
+		BPF_STMT(BPF_LDX+BPF_B+BPF_MSH, 0),
+		BPF_STMT(BPF_LD+BPF_H+BPF_IND, offsetof(struct udphdr, source)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_SERVER_PORT, 0, 14),
-		BPF_STMT(BPF_LD+BPF_H+BPF_ABS, skip_ip4 + offsetof(struct udphdr, dest)),
+		BPF_STMT(BPF_LD+BPF_H+BPF_IND, offsetof(struct udphdr, dest)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_CLIENT_PORT, 2, 0),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, DHCP_SERVER_PORT, 1, 0),
 		BPF_JUMP(BPF_JMP+BPF_JA, 10, 0, 0),
-		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, skip_udp + offsetof(dhcp_t, opcode)),
+		BPF_STMT(BPF_LD+BPF_B+BPF_IND, skip_udp + offsetof(dhcp_t, opcode)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, BOOTREPLY, 0, 8),
-		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, skip_udp + offsetof(dhcp_t, hw_type)),
+		BPF_STMT(BPF_LD+BPF_B+BPF_IND, skip_udp + offsetof(dhcp_t, hw_type)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, ARPHRD_ETHER, 0, 6),
-		BPF_STMT(BPF_LD+BPF_B+BPF_ABS, skip_udp + offsetof(dhcp_t, hw_addr_len)),
+		BPF_STMT(BPF_LD+BPF_B+BPF_IND, skip_udp + offsetof(dhcp_t, hw_addr_len)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 6, 0, 4),
-		BPF_STMT(BPF_LD+BPF_W+BPF_ABS, skip_udp + offsetof(dhcp_t, magic_cookie)),
+		BPF_STMT(BPF_LD+BPF_W+BPF_IND, skip_udp + offsetof(dhcp_t, magic_cookie)),
 		BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0x63825363, 0, 2),
 		BPF_STMT(BPF_LD+BPF_W+BPF_LEN, 0),
 		BPF_STMT(BPF_RET+BPF_A, 0),
