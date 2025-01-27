@@ -176,7 +176,8 @@ static cached_iface_t *find_interface(private_pf_handler_t *this, int fd,
 
 	if (ioctl(fd, SIOCGIFNAME, &req) == 0 &&
 		ioctl(fd, SIOCGIFHWADDR, &req) == 0 &&
-		req.ifr_hwaddr.sa_family == ARPHRD_ETHER)
+		(req.ifr_hwaddr.sa_family == ARPHRD_ETHER ||
+		 req.ifr_hwaddr.sa_family == ARPHRD_LOOPBACK))
 	{
 		idx = find_least_used_cache_entry(this);
 
