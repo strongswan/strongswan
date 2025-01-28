@@ -1269,10 +1269,12 @@ static status_t process_request(private_task_manager_t *this,
 									task = (task_t*)ike_auth_lifetime_create(
 															this->ike_sa, FALSE);
 									break;
+								case INVALID_SYNTAX:
 								case AUTHENTICATION_FAILED:
-									/* initiator failed to authenticate us.
-									 * We use ike_delete to handle this, which
-									 * invokes all the required hooks. */
+									/* initiator failed to authenticate us or
+									 * parse our response. we use ike_delete to
+									 * handle this, which invokes all the
+									 * required hooks */
 									task = (task_t*)ike_delete_create(
 														this->ike_sa, FALSE);
 									break;
