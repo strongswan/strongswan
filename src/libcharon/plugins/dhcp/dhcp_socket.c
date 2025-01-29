@@ -716,7 +716,7 @@ dhcp_socket_t *dhcp_socket_create()
 		},
 	};
 	socklen_t addr_len;
-	char *iface;
+	char *iface, *iface_receive;
 	int on = 1, rcvbuf = 0;
 
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
@@ -809,8 +809,11 @@ dhcp_socket_t *dhcp_socket_create()
 	this->dst = host_create_from_string(lib->settings->get_str(lib->settings,
 								"%s.plugins.dhcp.server", "255.255.255.255",
 								lib->ns), DHCP_SERVER_PORT);
-	iface = lib->settings->get_str(lib->settings, "%s.plugins.dhcp.interface",
-								   NULL, lib->ns);
+	iface = lib->settings->get_str(lib->settings,
+								"%s.plugins.dhcp.interface", NULL, lib->ns);
+	iface_receive = lib->settings->get_str(lib->settings,
+								"%s.plugins.dhcp.interface_receive", NULL,
+								lib->ns) ?: iface;
 	if (!this->dst)
 	{
 		DBG1(DBG_CFG, "configured DHCP server address invalid");
@@ -873,8 +876,8 @@ dhcp_socket_t *dhcp_socket_create()
 		return NULL;
 	}
 
-	this->pf_handler = pf_handler_create("DHCP", iface, receive_dhcp, this,
-										 &dhcp_filter);
+	this->pf_handler = pf_handler_create("DHCP", iface_receive, receive_dhcp,
+										 this, &dhcp_filter);
 	if (!this->pf_handler)
 	{
 		destroy(this);
