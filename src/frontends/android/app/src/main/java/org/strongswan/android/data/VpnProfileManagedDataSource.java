@@ -98,7 +98,14 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 	@Override
 	public VpnProfile getVpnProfile(UUID uuid)
 	{
-		return mManagedConfigurationService.getManagedProfiles().get(uuid.toString());
+		final VpnProfile vpnProfile = mManagedConfigurationService.getManagedProfiles().get(uuid.toString());
+		if (vpnProfile != null)
+		{
+			final String password = mSharedPreferences.getString(uuid.toString(), vpnProfile.getPassword());
+			vpnProfile.setPassword(password);
+			vpnProfile.setDataSource(this);
+		}
+		return vpnProfile;
 	}
 
 	@Override
