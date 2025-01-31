@@ -176,7 +176,8 @@ static cached_iface_t *find_interface(private_pf_handler_t *this, int fd,
 
 	if (ioctl(fd, SIOCGIFNAME, &req) == 0 &&
 		ioctl(fd, SIOCGIFHWADDR, &req) == 0 &&
-		req.ifr_hwaddr.sa_family == ARPHRD_ETHER)
+		(req.ifr_hwaddr.sa_family == ARPHRD_ETHER ||
+		 req.ifr_hwaddr.sa_family == ARPHRD_LOOPBACK))
 	{
 		idx = find_least_used_cache_entry(this);
 
@@ -226,6 +227,30 @@ METHOD(pf_handler_t, destroy, void,
 }
 
 /**
+ * Bind the given packet socket to the a named device
+ */
+static bool bind_packet_socket_to_device(int fd, char *iface)
+{
+	struct sockaddr_ll addr = {
+		.sll_family = AF_PACKET,
+		.sll_ifindex = if_nametoindex(iface),
+	};
+
+	if (!addr.sll_ifindex)
+	{
+		DBG1(DBG_CFG, "unable to bind socket to '%s': not found", iface);
+		return FALSE;
+	}
+	if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1)
+	{
+		DBG1(DBG_CFG, "binding socket to '%s' failed: %s",
+			 iface, strerror(errno));
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/**
  * Setup capturing via AF_PACKET socket
  */
 static bool setup_internal(private_pf_handler_t *this, char *iface,
@@ -247,14 +272,15 @@ static bool setup_internal(private_pf_handler_t *this, char *iface,
 			 this->name, strerror(errno));
 		return FALSE;
 	}
-	if (iface && !bind_to_device(this->receive, iface))
+	if (iface && iface[0] && !bind_packet_socket_to_device(this->receive, iface))
 	{
 		return FALSE;
 	}
 	lib->watcher->add(lib->watcher, this->receive, WATCHER_READ,
 					  receive_packet, this);
-	DBG2(DBG_NET, "listening for %s (protocol=0x%04x) requests on fd=%d",
-		 this->name, protocol, this->receive);
+	DBG2(DBG_NET, "listening for %s (protocol=0x%04x) requests on fd=%d bound "
+		 "to %s", this->name, protocol, this->receive,
+		 iface && iface[0] ? iface : "no interface");
 	return TRUE;
 }
 
