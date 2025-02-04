@@ -820,6 +820,7 @@ JNI_METHOD_P(org_strongswan_android_utils, Utils, parseInetAddressBytes, jbyteAr
 	host = host_create_from_string(str, 0);
 	if (!host)
 	{
+		library_deinit();
 		free(str);
 		return NULL;
 	}
