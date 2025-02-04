@@ -135,6 +135,7 @@ public class ManagedVpnProfile extends VpnProfile
 
 		setLocalId(local.getString(VpnProfileDataSource.KEY_LOCAL_ID));
 		setUsername(local.getString(VpnProfileDataSource.KEY_USERNAME));
+		setPassword(local.getString(VpnProfileDataSource.KEY_PASSWORD));
 
 		final String userCertificateData = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE);
 		final String userCertificatePassword = local.getString(VpnProfileDataSource.KEY_USER_CERTIFICATE_PASSWORD, "");
