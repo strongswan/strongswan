@@ -121,6 +121,7 @@ public class ManagedConfiguration
 		return Arrays.asList(bundles);
 	}
 
+	@SuppressWarnings("deprecation")
 	@NonNull
 	private static List<Bundle> getBundleArrayListCompat(final Bundle bundle, final String key)
 	{
