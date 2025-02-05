@@ -44,12 +44,13 @@ import java.util.TreeSet;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
+import androidx.core.view.MenuProvider;
 import androidx.fragment.app.ListFragment;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.AsyncTaskLoader;
 import androidx.loader.content.Loader;
 
-public class SelectedApplicationsListFragment extends ListFragment implements LoaderManager.LoaderCallbacks<Pair<List<SelectedApplicationEntry>, List<String>>>, SearchView.OnQueryTextListener
+public class SelectedApplicationsListFragment extends ListFragment implements MenuProvider, LoaderManager.LoaderCallbacks<Pair<List<SelectedApplicationEntry>, List<String>>>, SearchView.OnQueryTextListener
 {
 	private SelectedApplicationsAdapter mAdapter;
 	private SortedSet<String> mSelection;
@@ -58,7 +59,7 @@ public class SelectedApplicationsListFragment extends ListFragment implements Lo
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState)
 	{
 		super.onViewCreated(view, savedInstanceState);
-		setHasOptionsMenu(true);
+		requireActivity().addMenuProvider(this, getViewLifecycleOwner());
 
 		final boolean readOnly = getActivity().getIntent().getBooleanExtra(VpnProfileDataSource.KEY_READ_ONLY, false);
 		getListView().setChoiceMode(readOnly ? ListView.CHOICE_MODE_NONE : ListView.CHOICE_MODE_MULTIPLE);
@@ -134,17 +135,21 @@ public class SelectedApplicationsListFragment extends ListFragment implements Lo
 	}
 
 	@Override
-	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater)
+	public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater)
 	{
 		MenuItem item = menu.add(R.string.search);
 		item.setIcon(android.R.drawable.ic_menu_search);
-		item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+		item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
 		SearchView sv = new SearchView(getActivity());
 		sv.setOnQueryTextListener(this);
 		item.setActionView(sv);
+	}
 
-		super.onCreateOptionsMenu(menu, inflater);
+	@Override
+	public boolean onMenuItemSelected(@NonNull MenuItem menuItem)
+	{
+		return false;
 	}
 
 	@Override

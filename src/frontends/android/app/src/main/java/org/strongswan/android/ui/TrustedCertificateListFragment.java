@@ -44,13 +44,15 @@ import java.util.Map.Entry;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.MenuProvider;
 import androidx.fragment.app.ListFragment;
+import androidx.lifecycle.Lifecycle;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.app.LoaderManager.LoaderCallbacks;
 import androidx.loader.content.AsyncTaskLoader;
 import androidx.loader.content.Loader;
 
-public class TrustedCertificateListFragment extends ListFragment implements LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener
+public class TrustedCertificateListFragment extends ListFragment implements MenuProvider, LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener
 {
 	public static final String EXTRA_CERTIFICATE_SOURCE = "certificate_source";
 	private OnTrustedCertificateSelectedListener mListener;
@@ -69,7 +71,7 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState)
 	{
 		super.onViewCreated(view, savedInstanceState);
-		setHasOptionsMenu(true);
+		requireActivity().addMenuProvider(this, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
 
 		setEmptyText(getString(R.string.no_certificates));
 
@@ -105,15 +107,21 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	}
 
 	@Override
-	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater)
+	public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater)
 	{
 		MenuItem item = menu.add(R.string.search);
 		item.setIcon(android.R.drawable.ic_menu_search);
-		item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+		item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
 		SearchView sv = new SearchView(getActivity());
 		sv.setOnQueryTextListener(this);
 		item.setActionView(sv);
+	}
+
+	@Override
+	public boolean onMenuItemSelected(@NonNull MenuItem menuItem)
+	{
+		return false;
 	}
 
 	@Override
