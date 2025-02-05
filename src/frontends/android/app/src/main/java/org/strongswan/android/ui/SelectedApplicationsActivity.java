@@ -22,6 +22,7 @@ import android.view.MenuItem;
 
 import org.strongswan.android.data.VpnProfileDataSource;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -39,6 +40,16 @@ public class SelectedApplicationsActivity extends AppCompatActivity
 
 		ActionBar actionBar = getSupportActionBar();
 		actionBar.setDisplayHomeAsUpEnabled(true);
+
+		getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true)
+		{
+			@Override
+			public void handleOnBackPressed()
+			{
+				prepareResult();
+				finish();
+			}
+		});
 
 		FragmentManager fm = getSupportFragmentManager();
 		mApps = (SelectedApplicationsListFragment)fm.findFragmentByTag(LIST_TAG);
@@ -60,13 +71,6 @@ public class SelectedApplicationsActivity extends AppCompatActivity
 				return true;
 		}
 		return super.onOptionsItemSelected(item);
-	}
-
-	@Override
-	public void onBackPressed()
-	{
-		prepareResult();
-		super.onBackPressed();
 	}
 
 	private void prepareResult()
