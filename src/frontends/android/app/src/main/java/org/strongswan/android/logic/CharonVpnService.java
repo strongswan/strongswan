@@ -399,9 +399,22 @@ public class CharonVpnService extends VpnService implements Runnable, VpnStateSe
 			public void run()
 			{
 				mShowNotification = false;
-				stopForeground(true);
+				if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N)
+				{
+					stopForegroundCompat();
+				}
+				else
+				{
+					stopForeground(STOP_FOREGROUND_REMOVE);
+				}
 			}
 		});
+	}
+
+	@SuppressWarnings("deprecation")
+	private void stopForegroundCompat()
+	{
+		stopForeground(true);
 	}
 
 	/**
