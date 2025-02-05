@@ -17,6 +17,7 @@
 package org.strongswan.android.ui;
 
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Menu;
@@ -83,7 +84,14 @@ public class TrustedCertificateListFragment extends ListFragment implements Menu
 		Bundle arguments = getArguments();
 		if (arguments != null)
 		{
-			mSource = (TrustedCertificateSource)arguments.getSerializable(EXTRA_CERTIFICATE_SOURCE);
+			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+			{
+				mSource = getCertificateSourceCompat(arguments);
+			}
+			else
+			{
+				mSource = arguments.getSerializable(EXTRA_CERTIFICATE_SOURCE, TrustedCertificateSource.class);
+			}
 		}
 
 		LoaderManager.getInstance(this).initLoader(0, null, this);
@@ -267,5 +275,11 @@ public class TrustedCertificateListFragment extends ListFragment implements Menu
 				mContentObserver.onChange(false);
 			}
 		}
+	}
+
+	@SuppressWarnings("deprecation")
+	private static TrustedCertificateSource getCertificateSourceCompat(Bundle bundle)
+	{
+		return (TrustedCertificateSource)bundle.getSerializable(EXTRA_CERTIFICATE_SOURCE);
 	}
 }

@@ -17,6 +17,7 @@
 package org.strongswan.android.ui;
 
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ListView;
@@ -55,7 +56,14 @@ public class RemediationInstructionsFragment extends ListFragment
 
 		if (savedInstanceState != null)
 		{
-			mInstructions = savedInstanceState.getParcelableArrayList(EXTRA_REMEDIATION_INSTRUCTIONS);
+			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+			{
+				mInstructions = getInstructionsCompat(savedInstanceState);
+			}
+			else
+			{
+				mInstructions = savedInstanceState.getParcelableArrayList(EXTRA_REMEDIATION_INSTRUCTIONS, RemediationInstruction.class);
+			}
 			mCurrentPosition = savedInstanceState.getInt(KEY_POSITION);
 		}
 	}
@@ -93,7 +101,14 @@ public class RemediationInstructionsFragment extends ListFragment
 		Bundle args = getArguments();
 		if (mInstructions == null && args != null)
 		{
-			mInstructions = args.getParcelableArrayList(EXTRA_REMEDIATION_INSTRUCTIONS);
+			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+			{
+				mInstructions = getInstructionsCompat(args);
+			}
+			else
+			{
+				mInstructions = args.getParcelableArrayList(EXTRA_REMEDIATION_INSTRUCTIONS, RemediationInstruction.class);
+			}
 		}
 		updateView(mInstructions);
 
@@ -122,5 +137,11 @@ public class RemediationInstructionsFragment extends ListFragment
 		}
 		mInstructions = instructions;
 		mAdapter.setData(mInstructions);
+	}
+
+	@SuppressWarnings("deprecation")
+	public static ArrayList<RemediationInstruction> getInstructionsCompat(Bundle bundle)
+	{
+		 return bundle.getParcelableArrayList(RemediationInstructionsFragment.EXTRA_REMEDIATION_INSTRUCTIONS);
 	}
 }

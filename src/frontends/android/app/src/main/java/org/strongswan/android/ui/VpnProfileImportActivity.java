@@ -21,6 +21,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
@@ -139,6 +140,19 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	{
 		@Override
 		public Loader<ProfileLoadResult> onCreateLoader(int id, Bundle args)
+		{
+			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+			{
+				return createCompat(args);
+			}
+			else
+			{
+				return new ProfileLoader(VpnProfileImportActivity.this, args.getParcelable(PROFILE_URI, Uri.class));
+			}
+		}
+
+		@SuppressWarnings("deprecation")
+		public Loader<ProfileLoadResult> createCompat(Bundle args)
 		{
 			return new ProfileLoader(VpnProfileImportActivity.this, args.getParcelable(PROFILE_URI));
 		}
