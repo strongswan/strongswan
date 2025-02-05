@@ -187,7 +187,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 					}
 					else
 					{
-						startActivityAndCollapse(intent);
+						startActivityAndCollapseCompat(intent);
 					}
 				}
 				else
@@ -214,8 +214,14 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		}
 		else
 		{
-			startActivityAndCollapse(intent);
+			startActivityAndCollapseCompat(intent);
 		}
+	}
+
+	@SuppressWarnings("deprecation")
+	private void startActivityAndCollapseCompat(Intent intent)
+	{
+		startActivityAndCollapse(intent);
 	}
 
 	@Override
