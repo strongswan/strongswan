@@ -85,6 +85,11 @@ ED25519_KEY="${ED25519_DIR}/strongswanKey.pem"
 ED25519_CERT="${ED25519_DIR}/strongswanCert.pem"
 ED25519_CDP="http://crl.strongswan.org/strongswan_ed25519.crl"
 #
+ML_DSA_DIR="${CA_DIR}/ml_dsa"
+ML_DSA_KEY="${ML_DSA_DIR}/strongswanKey.pem"
+ML_DSA_CERT="${ML_DSA_DIR}/strongswanCert.pem"
+ML_DSA_CDP="http://crl.strongswan.org/strongswan_ml_dsa.crl"
+#
 MONSTER_DIR="${CA_DIR}/monster"
 MONSTER_KEY="${MONSTER_DIR}/strongswanKey.pem"
 MONSTER_CERT="${MONSTER_DIR}/strongswanCert.pem"
@@ -112,6 +117,7 @@ mkdir -p ${ECDSA_DIR}/certs
 mkdir -p ${RFC3779_DIR}/certs
 mkdir -p ${SHA3_RSA_DIR}/certs
 mkdir -p ${ED25519_DIR}/certs
+mkdir -p ${ML_DSA_DIR}/certs
 mkdir -p ${MONSTER_DIR}/certs
 
 ################################################################################
@@ -1572,6 +1578,89 @@ pki --issue --cakey ${ED25519_KEY} --cacert ${ED25519_CERT} --type ed25519 \
     --cert-policy "1.3.6.1.4.1.36906.1.1.2" --flag "clientAuth" \
     --crl ${ED25519_CDP} --outform pem > ${TEST_CERT}
 cp ${TEST_CERT} ${ED25519_DIR}/certs/${SERIAL}.pem
+
+################################################################################
+# strongSwan ML-DSA Root CA                                                    #
+################################################################################
+
+# Generate strongSwan ML-DSA Root CA
+pki --gen  --type mldsa87 --outform pem > ${ML_DSA_KEY}
+pki --self --type priv --in ${ML_DSA_KEY} \
+    --not-before "${START}" --not-after "${CA_END}" --ca \
+    --dn "C=CH, O=${PROJECT}, CN=strongSwan ML-DSA Root CA" \
+    --outform pem > ${ML_DSA_CERT}
+
+# Put a copy in the ikev2/rw-ml-kem-dsa scenario
+TEST="${TEST_DIR}/ikev2/rw-ml-kem-dsa"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509ca
+cp ${ML_DSA_CERT} ${TEST}/hosts/moon/${SWANCTL_DIR}/x509ca
+cp ${ML_DSA_CERT} ${TEST}/hosts/carol/${SWANCTL_DIR}/x509ca
+cp ${ML_DSA_CERT} ${TEST}/hosts/dave/${SWANCTL_DIR}/x509ca
+
+# Generate a moon ML-DSA certificate
+MOON_KEY="${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs8/moonKey.pem"
+MOON_CERT="${TEST}/hosts/moon/${SWANCTL_DIR}/x509/moonCert.pem"
+CN="moon.strongswan.org"
+SERIAL="01"
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/pkcs8
+mkdir -p ${TEST}/hosts/moon/${SWANCTL_DIR}/x509
+pki --gen --type mldsa65 --outform pem > ${MOON_KEY}
+pki --issue --cakey ${ML_DSA_KEY} --cacert ${ML_DSA_CERT} --type priv \
+    --in ${MOON_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
+    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=ML-DSA, CN=${CN}" \
+    --flag "serverAuth" --crl ${ML_DSA_CDP} --outform pem > ${MOON_CERT}
+cp ${MOON_CERT} ${ML_DSA_DIR}/certs/${SERIAL}.pem
+
+# Generate a carol ML-DSA certificate
+CAROL_KEY="${TEST}/hosts/carol/${SWANCTL_DIR}/pkcs8/carolKey.pem"
+CAROL_CERT="${TEST}/hosts/carol/${SWANCTL_DIR}/x509/carolCert.pem"
+CN="carol@strongswan.org"
+SERIAL="02"
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/pkcs8
+mkdir -p ${TEST}/hosts/carol/${SWANCTL_DIR}/x509
+pki --gen --type mldsa44 --outform pem > ${CAROL_KEY}
+pki --issue --cakey ${ML_DSA_KEY} --cacert ${ML_DSA_CERT} --type priv \
+    --in ${CAROL_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
+    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=ML-DSA, CN=${CN}" \
+    --flag "clientAuth" --crl ${ML_DSA_CDP} --outform pem > ${CAROL_CERT}
+cp ${CAROL_CERT} ${ML_DSA_DIR}/certs/${SERIAL}.pem
+
+# Generate a dave ML-DSA certificate
+DAVE_KEY="${TEST}/hosts/dave/${SWANCTL_DIR}/pkcs8/daveKey.pem"
+DAVE_CERT="${TEST}/hosts/dave/${SWANCTL_DIR}/x509/daveCert.pem"
+CN="dave@strongswan.org"
+SERIAL="03"
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/pkcs8
+mkdir -p ${TEST}/hosts/dave/${SWANCTL_DIR}/x509
+pki --gen --type mldsa44 --outform pem > ${DAVE_KEY}
+pki --issue --cakey ${ML_DSA_KEY} --cacert ${ML_DSA_CERT} --type priv \
+    --in ${DAVE_KEY} --not-before "${START}" --not-after "${EE_END}" --san ${CN} \
+    --serial ${SERIAL} --dn "C=CH, O=${PROJECT}, OU=ML-DSA, CN=${CN}" \
+    --flag "clientAuth" --crl ${ML_DSA_CDP} --outform pem > ${DAVE_CERT}
+cp ${DAVE_CERT} ${ML_DSA_DIR}/certs/${SERIAL}.pem
+
+# Put a copy in the botan and wolfssl rw-ml-kem scenarios
+for d in botan wolfssl
+do
+  TEST="${TEST_DIR}/${d}/rw-ml-kem-dsa"
+  cd ${TEST}/hosts/moon/${SWANCTL_DIR}
+  mkdir -p pkcs8 x509 x509ca
+  cp ${MOON_KEY}     pkcs8
+  cp ${MOON_CERT}    x509
+  cp ${ML_DSA_CERT}  x509ca
+  cd ${TEST}/hosts/carol/${SWANCTL_DIR}
+  mkdir -p pkcs8 x509 x509ca
+  cp ${CAROL_KEY}    pkcs8
+  cp ${CAROL_CERT}   x509
+  cp ${ML_DSA_CERT}  x509ca
+  cd ${TEST}/hosts/dave/${SWANCTL_DIR}
+  mkdir -p pkcs8 x509 x509ca
+  cp ${DAVE_KEY}     pkcs8
+  cp ${DAVE_CERT}    x509
+  cp ${ML_DSA_CERT}  x509ca
+done
 
 ################################################################################
 # strongSwan Monster Root CA                                                   #
