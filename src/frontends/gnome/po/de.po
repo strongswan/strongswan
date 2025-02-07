@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: NetworkManager-strongswan\n"
 "Report-Msgid-Bugs-To: https://github.com/strongswan/strongswan\n"
-"POT-Creation-Date: 2024-10-15 17:58+0200\n"
+"POT-Creation-Date: 2025-02-07 11:44+0100\n"
 "PO-Revision-Date: 2019-12-18 17:10+0100\n"
 "Last-Translator: Tobias Brunner\n"
 "Language-Team: de <info@strongswan.org>\n"
@@ -85,13 +85,13 @@ msgstr "Smartcard"
 msgid "Choose a server or CA certificate…"
 msgstr "Server- oder CA-Zertifikat auswählen…"
 
-#: properties/nm-strongswan-dialog.ui:25 properties/nm-strongswan-dialog.ui:765
-#: properties/nm-strongswan-dialog.ui:818
+#: properties/nm-strongswan-dialog.ui:25 properties/nm-strongswan-dialog.ui:858
+#: properties/nm-strongswan-dialog.ui:911
 msgid "_Cancel"
 msgstr "Abbre_chen"
 
-#: properties/nm-strongswan-dialog.ui:34 properties/nm-strongswan-dialog.ui:774
-#: properties/nm-strongswan-dialog.ui:827
+#: properties/nm-strongswan-dialog.ui:34 properties/nm-strongswan-dialog.ui:867
+#: properties/nm-strongswan-dialog.ui:920
 msgid "_Select"
 msgstr "_Auswählen"
 
@@ -285,7 +285,7 @@ msgstr "_IKE:"
 
 #: properties/nm-strongswan-dialog.ui:673
 msgid "A list of proposals for IKE separated by \";\""
-msgstr "Eine Liste von Proposals für IKE getrennt mit \";\""
+msgstr "Eine Liste von Proposals für IKE, getrennt mit \";\""
 
 #: properties/nm-strongswan-dialog.ui:686
 msgid "_ESP:"
@@ -293,17 +293,45 @@ msgstr "_ESP:"
 
 #: properties/nm-strongswan-dialog.ui:699
 msgid "A list of proposals for ESP separated by \";\""
-msgstr "Eine Liste von Proposals für ESP getrennt mit \";\""
+msgstr "Eine Liste von Proposals für ESP, getrennt mit \";\""
 
 #: properties/nm-strongswan-dialog.ui:724
 msgid "Algorithms"
 msgstr "Algorithmen"
 
-#: properties/nm-strongswan-dialog.ui:755
+#: properties/nm-strongswan-dialog.ui:751
+msgid "_Local TS:"
+msgstr "_Lokale TS:"
+
+#: properties/nm-strongswan-dialog.ui:764
+msgid "A list of local traffic selectors separated by \";\""
+msgstr "Eine Liste von lokalen Traffic-Selektoren, getrennt mit \";\""
+
+#: properties/nm-strongswan-dialog.ui:767
+msgid "(Defaults to dynamic)"
+msgstr "(Standardwert ist dynamic)"
+
+#: properties/nm-strongswan-dialog.ui:778
+msgid "Re_mote TS:"
+msgstr "En_tfernte TS:"
+
+#: properties/nm-strongswan-dialog.ui:791
+msgid "A list of remote traffic selectors separated by \";\""
+msgstr "Eine Liste von entfernten Traffic-Selektoren, getrennt mit \";\""
+
+#: properties/nm-strongswan-dialog.ui:794
+msgid "(Defaults to 0.0.0.0/0;::/0)"
+msgstr "(Standardwert ist 0.0.0.0/0;::/0)"
+
+#: properties/nm-strongswan-dialog.ui:817
+msgid "Traffic"
+msgstr "Verkehr"
+
+#: properties/nm-strongswan-dialog.ui:848
 msgid "Choose a client certificate…"
 msgstr "Client-Zertifikat auswählen…"
 
-#: properties/nm-strongswan-dialog.ui:808
+#: properties/nm-strongswan-dialog.ui:901
 msgid "Choose a private key…"
 msgstr "Privaten Schlüssel auswählen…"
 
