@@ -330,7 +330,7 @@ METHOD(task_t, build_i, status_t,
 {
 	notify_payload_t *notify;
 	ike_cfg_t *ike_cfg;
-	host_t *host;
+	host_t *host, *dst;
 
 	if (this->hasher == NULL)
 	{
@@ -339,6 +339,11 @@ METHOD(task_t, build_i, status_t,
 	}
 
 	ike_cfg = this->ike_sa->get_ike_cfg(this->ike_sa);
+	dst = message->get_destination(message);
+	if (dst->get_port(dst) != IKEV2_UDP_PORT)
+	{
+		this->ike_sa->float_ports(this->ike_sa);
+	}
 
 	host = message->get_source(message);
 	if (!host->is_anyaddr(host) || force_encap(ike_cfg))
