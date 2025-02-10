@@ -770,8 +770,7 @@ static int open_socket(private_socket_default_socket_t *this,
 	}
 
 	/* enable UDP decapsulation for NAT-T sockets */
-	if (port == &this->natt &&
-		!charon->kernel->enable_udp_decap(charon->kernel, skt, family,
+	if (!charon->kernel->enable_udp_decap(charon->kernel, skt, family,
 										  this->natt))
 	{
 		DBG1(DBG_NET, "enabling UDP decapsulation for %s on port %d failed",
