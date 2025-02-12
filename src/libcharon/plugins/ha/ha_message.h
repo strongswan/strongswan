@@ -66,6 +66,8 @@ enum ha_message_type_t {
 	HA_RESYNC,
 	/** IV synchronization for IKEv1 Main/Aggressive mode */
 	HA_IKE_IV,
+	/** update an existing IKE_SA with PPK */
+	HA_IKE_PPK,
 };
 
 /**
@@ -159,6 +161,8 @@ enum ha_message_attribute_t {
 	HA_IV,
 	/** uint16_t, auth_method_t for IKEv1 key derivation */
 	HA_AUTH_METHOD,
+	/** identification_t*, PPK id */
+	HA_PPK_ID,
 };
 
 /**
