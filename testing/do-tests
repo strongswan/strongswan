@@ -52,22 +52,52 @@ passed_cnt="0"
 subdir_cnt="0"
 
 ##############################################################################
-# parse optional arguments
+# parse arguments
 #
-while getopts "vt" opt
-do
-	case "$opt" in
-	v)
+function usage()
+{
+cat << EOF
+Usage:
+  ${0##*/} [-h] [-v|-t] [-i|-e] [TESTDIRS]
+    --help            (-h)  show usage information
+    --verbose         (-v)  show complete logs on errors (implies -t)
+    --timestamps      (-t)  show timestamps in console.log
+    --pre             (-i)  run pretest script only (single test only)
+    --post            (-e)  run posttest script only (single test only)
+
+    TESTDIRS  list of test directories (relative to testing/tests).
+              wildcards (*) are supported. default is to run all tests.
+EOF
+}
+
+TESTDIRS=()
+
+while [ $# -gt 0 ]; do
+	case $1 in
+	-h|--help)
+		usage
+		exit
+		;;
+	-v|--verbose)
 		verbose=YES
 		timestamps=YES
 		;;
-	t)
+	-t|--timestamps)
 		timestamps=YES
 		;;
+	-i|--pre)
+		pretest_only=YES
+		;;
+	-e|--post)
+		posttest_only=YES
+		;;
+	*)
+		TESTDIRS+=("$1")
+		;;
 	esac
-done
-shift $((OPTIND-1))
 
+	shift
+done
 
 function print_time()
 {
@@ -219,9 +249,9 @@ trap abort_tests INT
 ##############################################################################
 # enter specific test directory
 #
-if [ $# -gt 0 ]
+if [ "${#TESTDIRS[@]}" -gt 0 ]
 then
-    TESTS=$(printf "%s\n" $* | sort -u)
+    TESTS=$(printf "%s\n" "${TESTDIRS[@]}" | sort -u)
 else
     TESTS=$(ls $DEFAULTTESTSDIR)
 fi
@@ -328,19 +358,38 @@ do
 
 	TESTDIR=$TESTSDIR/${testname}
 
-	##########################################################################
-	# copy test specific configurations to hosts and clear log files
-	#
-
-	DBDIR=/etc/db.d
-
-	$DIR/scripts/load-testconfig $testname
 	unset RADIUSHOSTS
 	unset DBHOSTS
 	unset IPV6
 	unset SWANCTL
 	source $TESTDIR/test.conf
 
+	DBDIR=/etc/db.d
+	STATUS="passed"
+
+	function stop_tcpdump
+	{
+		# wait for packets to get processed, but don't wait longer than 1s
+		eval ssh $SSHCONF root@\$ipv4_${1} "\"i=100; while [ \\\$i -gt 0 ]; do pkill -USR1 tcpdump; tail -1 /tmp/tcpdump.err.log | perl -n -e '/(\\d+).*?(\\d+)/; exit (\\\$1 == \\\$2)' || break; sleep 0.01; i=\\\$((\\\$i-1)); done;\""
+		echo "$(print_time)${1}# killall tcpdump" >> $CONSOLE_LOG
+		eval ssh $SSHCONF root@\$ipv4_${1} "\"killall tcpdump; while true; do killall -q -0 tcpdump || break; sleep 0.01; done;\""
+		eval TDUP_${1}="false"
+		echo "" >> $CONSOLE_LOG
+	}
+
+############################################################################
+# skip this whole pretest block if we only execute the posttest script
+#
+if [ "$posttest_only" == "YES" ]
+then
+	echo -n "(pre).."
+else
+
+	##########################################################################
+	# copy test specific configurations to hosts and clear log files
+	#
+
+	$DIR/scripts/load-testconfig $testname
 
 	##########################################################################
 	# clean up and initialize test hosts
@@ -392,20 +441,17 @@ do
 		}
 	}' $TESTDIR/pretest.dat` >> $CONSOLE_LOG 2>&1
 
+fi
+############################################################################
 
-	##########################################################################
-	# stop tcpdump
-	#
 
-	function stop_tcpdump {
-	    # wait for packets to get processed, but don't wait longer than 1s
-	    eval ssh $SSHCONF root@\$ipv4_${1} "\"i=100; while [ \\\$i -gt 0 ]; do pkill -USR1 tcpdump; tail -1 /tmp/tcpdump.err.log | perl -n -e '/(\\d+).*?(\\d+)/; exit (\\\$1 == \\\$2)' || break; sleep 0.01; i=\\\$((\\\$i-1)); done;\""
-	    echo "$(print_time)${1}# killall tcpdump" >> $CONSOLE_LOG
-	    eval ssh $SSHCONF root@\$ipv4_${1} "\"killall tcpdump; while true; do killall -q -0 tcpdump || break; sleep 0.01; done;\""
-	    eval TDUP_${1}="false"
-	    echo "" >> $CONSOLE_LOG
-	}
-
+############################################################################
+# skip this whole test block if we only execute the pre- or posttest script
+#
+if [ "$pretest_only" == "YES" -o "$posttest_only" == "YES" ]
+then
+	echo -n "(test).."
+else
 
 	##########################################################################
 	# get and evaluate test results
@@ -413,8 +459,6 @@ do
 
 	echo -n "test.."
 	echo -e "\nTEST\n" >> $CONSOLE_LOG 2>&1
-
-	STATUS="passed"
 
 	eval `awk -F "::" '{
 		host=$1
@@ -708,6 +752,17 @@ do
 </html>
 @EOF
 
+fi
+############################################################################
+
+
+############################################################################
+# skip this whole posttest block if we only execute the pretest script
+#
+if [ "$pretest_only" == "YES" ]
+then
+	echo -n "(post)"
+else
 
 	##########################################################################
 	# execute post-test commands
@@ -824,6 +879,9 @@ do
 
 	$DIR/scripts/restore-defaults $testname
 
+fi
+############################################################################
+
 
 	##########################################################################
 	# set counters
@@ -881,7 +939,10 @@ do
 	    ssh $SSHCONF $HOSTLOGIN 'if [ -f /var/run/charon.pid ]; then rm /var/run/charon.pid; echo "    removed charon.pid on `hostname`"; fi'
 	done
 
-	if [ -n "$aborted" ]
+	##########################################################################
+	# exit if aborted or running only pre-/posttest scripts
+	#
+	if [ -n "$aborted" -o "$pretest_only" == "YES" -o "$posttest_only" == "YES" ]
 	then
 	    break 2
 	fi
