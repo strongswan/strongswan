@@ -132,6 +132,7 @@
     <string name="profile_import_failed_tls">TLS握手失败</string>
     <string name="profile_import_failed_value">无效的值： \"%1$s\"</string>
     <string name="profile_import_exists">此VPN配置已经存在，当前设定将被覆盖。</string>
+    <string name="profile_import_shared_secret">This file contains a cleartext password. Remember to delete it after importing.</string>
     <string name="profile_cert_import">从VPN配置导入证书</string>
     <string name="profile_cert_alias">\"%1$s\" 所对应的证书</string>
     <string name="profile_profile_id">配置文件ID</string>

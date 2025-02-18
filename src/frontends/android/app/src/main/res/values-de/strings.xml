@@ -136,6 +136,7 @@
     <string name="profile_import_failed_tls">TLS-Handshake fehlgeschlagen</string>
     <string name="profile_import_failed_value">Ungültiger Wert in \"%1$s\"</string>
     <string name="profile_import_exists">Dieses VPN Profil existiert bereits, die bestehenden Einstellungen werden ersetzt.</string>
+    <string name="profile_import_shared_secret">Diese Datei enthält ein Klartext-Passwort. Denken Sie daran, sie nach dem Importieren zu löschen.</string>
     <string name="profile_cert_import">Zertifikat aus VPN Profil importieren</string>
     <string name="profile_cert_alias">Zertifikat für \"%1$s\"</string>
     <string name="profile_profile_id">Profil-ID</string>
