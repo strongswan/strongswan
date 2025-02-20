@@ -159,6 +159,12 @@ enum ha_message_attribute_t {
 	HA_IV,
 	/** uint16_t, auth_method_t for IKEv1 key derivation */
 	HA_AUTH_METHOD,
+	/** chunk_t, additional diffie hellman shared secret */
+	HA_ADD_SECRET,
+	/** uint16_t, additional key exchange */
+	HA_ALG_KE,
+	/** ike_sa_id_t*, to identify previous key exchange IKE_SA */
+	HA_AKE_IKE_ID,
 };
 
 /**

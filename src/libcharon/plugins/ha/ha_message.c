@@ -150,6 +150,7 @@ METHOD(ha_message_t, add_attribute, void,
 		/* ike_sa_id_t* */
 		case HA_IKE_ID:
 		case HA_IKE_REKEY_ID:
+		case HA_AKE_IKE_ID:
 		{
 			ike_sa_id_encoding_t *enc;
 			ike_sa_id_t *id;
@@ -242,6 +243,7 @@ METHOD(ha_message_t, add_attribute, void,
 		case HA_SEGMENT:
 		case HA_ESN:
 		case HA_AUTH_METHOD:
+		case HA_ALG_KE:
 		{
 			uint16_t val;
 
@@ -275,6 +277,7 @@ METHOD(ha_message_t, add_attribute, void,
 		case HA_PSK:
 		case HA_IV:
 		case HA_OLD_SKD:
+		case HA_ADD_SECRET:
 		{
 			chunk_t chunk;
 
@@ -356,6 +359,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		/* ike_sa_id_t* */
 		case HA_IKE_ID:
 		case HA_IKE_REKEY_ID:
+		case HA_AKE_IKE_ID:
 		{
 			ike_sa_id_encoding_t *enc;
 
@@ -466,6 +470,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		case HA_SEGMENT:
 		case HA_ESN:
 		case HA_AUTH_METHOD:
+		case HA_ALG_KE:
 		{
 			if (this->buf.len < sizeof(uint16_t))
 			{
@@ -501,6 +506,7 @@ METHOD(enumerator_t, attribute_enumerate, bool,
 		case HA_PSK:
 		case HA_IV:
 		case HA_OLD_SKD:
+		case HA_ADD_SECRET:
 		{
 			size_t len;
 
