@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2023 Aliberk Sandıkçı
+
+    Copyright (C) secunet Security Networks AG
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation; either version 2 of the License, or (at your
+    option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+
+    This program is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+    or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+-->
+<resources>
+    <!-- Application -->
+    <string name="app_name">strongSwan VPN Uygulaması</string>
+    <string name="main_activity_name">strongSwan</string>
+    <string name="show_log">Günlüğü görüntüle</string>
+    <string name="search">Arama</string>
+    <string name="vpn_not_supported_title">VPN desteklenmemekte</string>
+    <string name="vpn_not_supported">Cihazınız VPN\'i desteklememekte\nLütfen cihaz üreticiniz ile
+        konuşunuz</string>
+    <string name="vpn_not_supported_during_lockdown">Hâlihazırda kullandığınız bir VPN uygulamasının
+        her zaman açık özelliği etkinleştirilmişse VPN bağlantıları desteklenmez.</string>
+    <string name="vpn_not_supported_no_permission">VPN bağlantısı oluşturmak için izin alınamıyor.
+        Bu durum kullanıcı tarafından reddedildiği için ya da farklı bir VPN uygulamasının her zaman
+        açık özelliği etkin olduğu için meydana geliyor olabilir.</string>
+    <string name="loading">Yükleniyor&#8230;</string>
+    <string name="profile_not_found">Profil bulunamadı</string>
+    <string name="strongswan_shortcut">strongSwan kısayolu</string>
+    <string name="permanent_notification_name">VPN bağlantı durumu</string>
+    <string name="permanent_notification_description">VPN bağlantı durumu hakkında bilgi sağlar ve
+        VPN hizmetinin arka planda çalışmasını sağlamak için kalıcı bildirim görevi görür.</string>
+
+    <!-- Settings -->
+    <string name="pref_title">Ayarlar</string>
+    <string name="pref_default_vpn_profile">Varsayılan VPN Profili</string>
+    <string name="pref_default_vpn_profile_mru">En son kullanılan profile bağlan</string>
+    <string name="pref_power_whitelist_title">Pil optimizasyonlarını yok say</string>
+    <string name="pref_power_whitelist_summary">Uygulama cihazın güç tüketimi izin listesinde
+        değilse uyarı gösterme</string>
+
+    <!-- Log view -->
+    <string name="log_title">günlük</string>
+    <string name="send_log">günlük dosyasını gönder</string>
+    <string name="empty_log">günlük dosyası boş</string>
+    <string name="log_mail_subject">strongSwan %1$s günlük dosyası</string>
+
+    <!-- VPN profile list -->
+    <string name="no_profiles">VPN Profili yok</string>
+    <string name="add_profile">VPN Profili ekle</string>
+    <string name="edit_profile">Düzenle</string>
+    <string name="copy_profile">Kopyala</string>
+    <string name="copied_name">%1$s (Kopyala)</string>
+    <string name="delete_profile">Sil</string>
+    <string name="select_profiles">Profilleri seç</string>
+    <string name="profiles_deleted">Seçilen profiller silindi</string>
+    <string name="no_profile_selected">Hiçbir profil seçilmedi</string>
+    <string name="one_profile_selected">Bir profil seçildi</string>
+    <string name="x_profiles_selected">%1$d profil seçildi</string>
+
+    <!-- VPN profile details -->
+    <string name="profile_edit_save">Kaydet</string>
+    <string name="profile_edit_import">İçe aktar</string>
+    <string name="profile_edit_cancel">İptal</string>
+    <string name="profile_name_label">Profil ismi (opsiyonel)</string>
+    <string name="profile_name_label_simple">Profil ismi</string>
+    <string name="profile_name_hint">Varsayılan olarak sunucu değerini alır</string>
+    <string name="profile_name_hint_gateway">varsayılan olarak \"%1$s\" değerini alır</string>
+    <string name="profile_gateway_label">Sunucu</string>
+    <string name="profile_gateway_hint">VPN sunucusunun IP veya web adresi </string>
+    <string name="profile_vpn_type_label">VPN Türü</string>
+    <string name="profile_username_label">Kullanıcı Adı</string>
+    <string name="profile_password_label">Parola (opsiyonel)</string>
+    <string name="profile_password_hint">Her bağlantıda sorulması için boş bırakın</string>
+    <string name="profile_user_certificate_label">Kullanıcı sertifikası</string>
+    <string name="profile_user_select_certificate_label">Kullanıcı sertifikasını seçiniz</string>
+    <string name="profile_user_select_certificate">Belirli bir kullanıcının sertifikasını seçiniz</string>
+    <string name="profile_user_certificate_install">Kullanıcı Sertifikası yükleyiniz</string>
+    <string name="profile_ca_label">CA Sertifikası</string>
+    <string name="profile_ca_auto_label">Otomatik Seç</string>
+    <string name="profile_ca_select_certificate_label">CA Sertifikası seç</string>
+    <string name="profile_ca_select_certificate">Belirli bir CA Sertifikası seç</string>
+    <string name="profile_advanced_label">Gelişmiş ayarlar</string>
+    <string name="profile_show_advanced_label">Gelişmiş ayarları göster</string>
+    <string name="profile_remote_id_label">Sunucu kimliği</string>
+    <string name="profile_remote_id_hint">Varsayılan değer yapılandırılmış sunucudur. Değiştirilen
+        değerler sunucuya gönderilir ve kimlik doğrulama sırasında denenir</string>
+    <string name="profile_remote_id_hint_gateway">Varsayılan değer: \"%1$s\". Değiştirilen değerler
+        sunucuya gönderilir ve kimlik doğrulama sırasında denenir</string>
+    <string name="profile_local_id_label">Kullanıcı kimliği</string>
+    <string name="profile_local_id_hint_user">Varsayılan olarak yapılandırılmış kullanıcı adıdır.
+        Sunucu tarafından bekleniyorsa/gerektiğinde değiştirilen değerler kullanılabilir</string>
+    <string name="profile_local_id_hint_cert">Varsayılan değer sertifikanın özne kimliğidir. Sunucu
+        tarafından bekleniyorsa/gerektiğinde değiştirilen değerler kullanılabilir. Bunların
+        genellikle sertifika tarafından onaylanması gerektiğini unutmayın (varsa sertifikanın
+        alternatif kimlikleri için otomatik tamamlama sağlanır)</string>
+    <string name="profile_dns_servers_label">DNS sunucuları</string>
+    <string name="profile_dns_servers_hint">VPN\'e bağlanıldığında kullanılacak özel DNS sunucuları
+        (boşluklarla ayrılmış, örneğin \"8.8.8.8 2001:4860:4860::8888\"), varsayılan olarak VPN
+        sunucusundan alınan değerler kullanılır</string>
+    <string name="profile_mtu_label">VPN tünel cihazının MTU değeri</string>
+    <string name="profile_mtu_hint">Varsayılan değerin belirli bir ağ için uygun olmaması durumunda</string>
+    <string name="profile_port_label">Sunucu bağlantı noktası</string>
+    <string name="profile_port_hint">Varsayılandan farklıysa, bağlanılacak UDP bağlantı noktası</string>
+    <string name="profile_nat_keepalive_label">NAT-T aktif-tutma aralığı</string>
+    <string name="profile_nat_keepalive_hint">Küçük paketler, başka trafik yoksa NAT
+        yönlendiricilerindeki eşlemeleri canlı tutmak için gönderilir. Enerjiden tasarruf etmek için
+        varsayılan aralık 45 saniyedir. Eşlemeleri erken kaldıran NAT yönlendiricilerinin arkasında
+        bu çok yüksek olabilir, bu durumda 20 saniye veya daha azını deneyin.</string>
+    <string name="profile_cert_req_label">Sertifika isteği gönderin</string>
+    <string name="profile_cert_req_hint">Sertifika istekleri mevcut veya seçilen tüm CA
+        sertifikaları için gönderilir. IKE_AUTH mesajının boyutunu azaltmak için bu devre dışı
+        bırakılabilir. Ancak, bu yalnızca sunucu herhangi bir sertifika isteği almamış olsa bile
+        sertifikasını gönderirse çalışır.</string>
+    <string name="profile_use_ocsp_label">Sertifikayı kontrol etmek için ÇSDP kullanın</string>
+    <string name="profile_use_ocsp_hint">Sunucu sertifikasının iptal edilmediğini kontrol etmek için
+        varsa Çevrimiçi Sertifika Durum Protokolü\'nü (ÇSDP) kullanın.</string>
+    <string name="profile_use_crl_label">Sertifikayı kontrol etmek için SİL\'leri kullanın</string>
+    <string name="profile_use_crl_hint">Varsa, sunucu sertifikasının iptal edilmediğini kontrol
+        etmek için Sertifika İptal Listelerini (SİL) kullanın. SİL\'ler yalnızca ÇSDP bir sonuç
+        vermezse kullanılır.</string>
+    <string name="profile_strict_revocation_label">Sıkı iptal denetimi kullanın</string>
+    <string name="profile_strict_revocation_hint">Sıkı modda, kimlik doğrulama yalnızca sunucu
+        sertifikası iptal edilmişse değil, aynı zamanda durumu bilinmiyorsa (örneğin ÇSDP başarısız
+        olduğu ve geçerli bir SİL mevcut olmadığı için) başarısız olur.</string>
+    <string name="profile_rsa_pss_label">RSA/PSS imzalarını kullanın</string>
+    <string name="profile_rsa_pss_hint">RSA imzaları için klasik PKCS#1 kodlaması yerine daha güçlü
+        PSS kodlamasını kullanın. Sunucu bu tür imzaları desteklemiyorsa kimlik doğrulama başarısız
+        olur.</string>
+    <string name="profile_ipv6_transport_label">IPv6 aktarım adreslerini kullanın</string>
+    <string name="profile_ipv6_transport_hint">Varsa dış aktarım adresleri için IPv6 kullanın.
+        Yalnızca IPv6 için UDP kapsüllemesi sunucu tarafından destekleniyorsa etkinleştirilebilir.
+        Linux çekirdeğinin bunu yalnızca 5.8 sürümünden beri desteklediğini, bu nedenle birçok
+        sunucunun henüz desteklemeyeceğini unutmayın.</string>
+    <string name="profile_split_tunneling_label">Bölünmüş tünelleme</string>
+    <string name="profile_split_tunneling_intro">Varsayılan olarak, sunucu bağlantı kurulduğunda alt
+        ağları daraltmadığı sürece istemci tüm ağ trafiğini VPN üzerinden yönlendirir; bu durumda
+        yalnızca sunucunun izin verdiği trafik VPN üzerinden yönlendirilir (varsayılan olarak, diğer
+        tüm trafik VPN yokmuş gibi yönlendirilir).</string>
+    <string name="profile_split_tunnelingv4_title">VPN\'e yönelik olmayan IPv4 trafiğini engelleme</string>
+    <string name="profile_split_tunnelingv6_title">VPN\'e yönelik olmayan IPv5 trafiğini engelleme</string>
+    <string name="profile_included_subnets_label">Özel alt ağlar</string>
+    <string name="profile_included_subnets_hint">VPN aracılığıyla trafiği yalnızca belirli alt
+        ağlara yönlendirin, diğer her şey VPN yokmuş gibi yönlendirilir (boşluklarla ayrılmış,
+        örneğin \"192.168.1.0/24 2001:db8::/64\")</string>
+    <string name="profile_excluded_subnets_label">Hariç tutulan alt ağlar</string>
+    <string name="profile_excluded_subnets_hint">Bu alt ağlara giden trafik VPN üzerinden değil, VPN
+        yokmuş gibi yönlendirilecektir (boşluklarla ayrılmış, örneğin \"192.168.1.0/24
+        2001:db8::/64\")</string>
+    <string name="profile_select_apps_label">Uygulamalar</string>
+    <string name="profile_select_apps">Uygulamaları seçin</string>
+    <string name="profile_select_no_apps">Hiçbir uygulama seçilmedi</string>
+    <string name="profile_select_one_app">Bir uygulama seçildi</string>
+    <string name="profile_select_x_apps">%1$d adet uygulama seçildi</string>
+    <string name="profile_proposals_label">Algoritmalar</string>
+    <string name="profile_proposals_intro">İsteğe bağlı olarak IKEv2 ve/veya IPsec/ESP için
+        varsayılanlar yerine kullanılacak belirli algoritmaları yapılandırın. daha fazla bilgi için wiki üzerindeki <a href="https://docs.strongswan.org/docs/5.9/config/IKEv2CipherSuites.html">algoritma listesine</a> bakınız (hepsi bu uygulama üzerinde desteklenmemekte). Alanlar tire ile ayrılmış algoritma isimleri içerir</string>
+    <string name="profile_proposals_ike_label">IKEv2 Algoritmaları</string>
+    <string name="profile_proposals_ike_hint">For non-AEAD/classic encryption algorithms, an integrity algorithm, a pseudo random function (optional, defaults to one based on the integrity algorithm) and a Diffie-Hellman group are required (e.g. aes256-sha256-ecp256). For combined-mode/AEAD algorithms, the integrity algorithm is omitted but a PRF is required (e.g. aes256gcm16-prfsha256-ecp256).</string>
+    <string name="profile_proposals_esp_label">IPsec/ESP Algoritmaları</string>
+    <string name="profile_proposals_esp_hint">For non-AEAD/classic encryption algorithms, an integrity algorithm is required, a Diffie-Hellman group is optional (e.g. aes256-sha256 or aes256-sha256-ecp256). For combined-mode/AEAD algorithms, the integrity algorithm is omitted (e.g. aes256gcm16 or aes256gcm16-ecp256). If a DH group is specified IPsec SA rekeying will use a DH key exchange. However, DH groups specified here are not used when the connection is established initially because the keys there are derived from the IKE SA key material. Therefore, any configuration mismatch with the server will only cause errors later during rekeying.</string>
+    <string name="profile_import">VPN profilini içe aktar</string>
+    <string name="profile_import_failed">VPN profilini içe aktarırken bir sorun oluştu</string>
+    <string name="profile_import_failed_detail">VPN profilini içe aktarırken bir sorun oluştu: %1$s</string>
+    <string name="profile_import_failed_not_found">Dosya bulunamadı</string>
+    <string name="profile_import_failed_host">Bilinmeyen sunucu</string>
+    <string name="profile_import_failed_tls">TLS anlaşması başarısız oldu</string>
+    <string name="profile_import_failed_value">\"%1$s\" üzerinde geçersiz değer</string>
+    <string name="profile_import_exists">Bu VPN profili zaten bulunmakta, hâlihazırda bulunan
+        ayarlar değiştirilecektir</string>
+    <string name="profile_cert_import">VPN profilinden sertifika aktar</string>
+    <string name="profile_cert_alias">\"%1$s\" için sertifika</string>
+    <string name="profile_profile_id">Profil ID</string>
+    <!-- Warnings/Notifications in the details view -->
+    <string name="alert_text_no_input_gateway">Bağlantıyı başlatmak için bir değer gereklidir</string>
+    <string name="alert_text_no_input_username">Lütfen kullanıcı adınızı girin </string>
+    <string name="alert_text_nocertfound_title">CA sertifikası seçili değil</string>
+    <string name="alert_text_nocertfound">Lütfen birini seçin veya <i>Otomatik olarak seç</i>
+        seçeneğini etkinleştirin</string>
+    <string name="alert_text_out_of_range">Lütfen %1$d - %2$d aralığında bir sayı girin</string>
+    <string name="alert_text_no_subnets">Lütfen geçerli alt ağları ve/veya IP adreslerini
+        boşluklarla ayırarak girin</string>
+    <string name="alert_text_no_ips">Lütfen geçerli IP adreslerini boşluklarla ayırarak girin</string>
+    <string name="alert_text_no_proposal">Lütfen tire ile ayrılmış geçerli bir algoritma listesi
+        girin</string>
+    <string name="tnc_notice_title">EAP-TNC gizliliğinizi etkileyebilir</string>
+    <string name="tnc_notice_subtitle">Cihaz verisi sunucu operatörüne gönderildi</string>
+    <string name="tnc_notice_details"><![CDATA[<p>Trusted Network Connect (TNC) allows server operators to assess the health of a client device.</p><p>For that purpose the server operator may request data such as a unique identifier, a list of installed packages, system settings, or cryptographic checksums of files.</p><b>Any data will be sent only after verifying the server\'s identity.</b>]]></string>
+
+    <!-- Trusted certificate selection -->
+    <string name="trusted_certs_title">CA Sertifikaları</string>
+    <string name="no_certificates">Sertifika yok</string>
+    <string name="reload_trusted_certs">CA sertifikalarını yenile</string>
+    <string name="system_tab">Sistem</string>
+    <string name="user_tab">Kullanıcı</string>
+    <string name="local_tab">İçeri aktarıldı</string>
+    <string name="delete_certificate_question">sertifikayı sil?</string>
+    <string name="delete_certificate">Sertifika kalıcı olarak silinecek!</string>
+    <string name="import_certificate">Sertifika içeri aktar</string>
+    <string name="cert_imported_successfully">Sertifika başarı ile içeri aktarıldı</string>
+    <string name="cert_import_failed">Sertifika içeri aktarılırken bir sorun oluştu</string>
+    <string name="crl_cache">SİL önbelleği</string>
+    <string name="clear_crl_cache_title">SİL önbelleğini temizle?</string>
+    <string name="clear_crl_cache_msg_none">SİL önbelleği boş</string>
+    <plurals name="clear_crl_cache_msg">
+        <item quantity="one">The SİL önbelleği %1$d dosya içerir (%2$s).</item>
+        <item quantity="other">The SİL önbelleği %1$d dosya içerir (%2$s).</item>
+    </plurals>
+    <string name="clear">Temizle</string>
+
+    <!-- VPN state fragment -->
+    <string name="state_label">Durum:</string>
+    <string name="profile_label">Profile:</string>
+    <string name="disconnect">Bağlantıyı kes</string>
+    <string name="state_connecting">Bağlanıyor&#8230;</string>
+    <string name="state_connected">Bağlandı</string>
+    <string name="state_disconnecting">Bağlantı kesiliyor&#8230;</string>
+    <string name="state_disabled">aktif VPN bağlantısı yok</string>
+    <string name="state_error">Hata</string>
+    <string name="dismiss">tekrar hatırlatma</string>
+
+    <!-- IMC state fragment -->
+    <string name="imc_state_label">Değerlendirme:</string>
+    <string name="imc_state_isolate">Kısıtlı</string>
+    <string name="imc_state_block">Başarısız oldu</string>
+    <string name="show_remediation_instructions">View İyileştirme talimatları</string>
+
+    <!-- Remediation instructions -->
+    <string name="remediation_instructions_title">İyileştirme talimatları</string>
+
+    <!-- Dialogs -->
+    <string name="login_title">Bağlanmak için Parola girin</string>
+    <string name="login_username">Kullanıcı Adı</string>
+    <string name="login_password">Parola</string>
+    <string name="login_confirm">Bağlan</string>
+    <string name="error_format">VPN kurulumu başarısız oldu: %1$s.</string>
+    <string name="error_lookup_failed">Sunucu adresi arama başarısız oldu</string>
+    <string name="error_unreachable">Sunucuya ulaşılamıyor</string>
+    <string name="error_peer_auth_failed">Sunucu kimlik doğrulaması başarısız oldu</string>
+    <string name="error_auth_failed">Kullanıcı kimlik doğrulaması başarısız oldu</string>
+    <string name="error_assessment_failed">Güvenlik değerlendirmesi başarısız oldu</string>
+    <string name="error_generic">Bağlanırken belirtilmemiş hata</string>
+    <string name="error_password_missing">Parolanıza erişilemiyor</string>
+    <string name="error_certificate_unavailable">Kullanıcı sertifikasına erişilemiyor</string>
+    <string name="vpn_connected">VPN Bağlandı</string>
+    <string name="vpn_profile_connected">Bu VPN profili şu anda bağlı!</string>
+    <string name="reconnect">Tekrar bağlan</string>
+    <string name="connect_profile_question">%1$s \'e bağlan?</string>
+    <string name="replaces_active_connection">Bu, etkin VPN bağlantınızın yerini alacaktır!</string>
+    <string name="disconnect_question">VPN bağlantısını kes?</string>
+    <string name="disconnect_active_connection">Bu işlem aktif VPN bağlantısını kesecektir!</string>
+    <string name="connect">Bağlan</string>
+    <string name="retry">Tekrar dene</string>
+    <plurals name="retry_in">
+        <item quantity="one">%1$d saniye içinde tekrar dene</item>
+        <item quantity="other">%1$d saniye içinde tekrar dene</item>
+    </plurals>
+    <string name="cancel_retry">Yeniden denemeyi iptal et</string>
+    <string name="power_whitelist_title">Pil optimizasyonlarını devre dışı bırakın</string>
+    <string name="power_whitelist_text">Uygulamayı cihazın güç tüketimi izin listesine eklemek için
+        lütfen bir sonraki iletişim kutusunu onaylayın, böylece pil optimizasyonlarını göz ardı
+        edebilir ve VPN kurulurken sürekli olarak erişilebilir kalması için NAT canlı tutma ve
+        yeniden anahtarlamaları doğru bir şekilde planlayabilir.</string>
+
+    <!-- Quick Settings tile -->
+    <string name="tile_default">VPN\'i aç-kapa</string>
+    <string name="tile_connect">VPN\'e Bağlan</string>
+    <string name="tile_disconnect">VPN Bağlantısını Kes</string>
+
+</resources>
