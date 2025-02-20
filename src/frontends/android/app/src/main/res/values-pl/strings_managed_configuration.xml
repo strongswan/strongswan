@@ -85,6 +85,8 @@
     <string name="managed_config_local_bundle_description">Specifies information about the client</string>
     <string name="managed_config_local_eap_id_title">Identity/username for EAP authentication (Optional)</string>
     <string name="managed_config_local_eap_id_description">If this is required (for username/password-based EAP authentication) but not configured here, the user is prompted for it. If it is set, the user is not able to change it. In both cases the user may optionally enter the password</string>
+    <string name="managed_config_local_eap_password_title">Password for EAP authentication (Optional)</string>
+    <string name="managed_config_local_eap_password_description">If this is required (for username/password-based EAP authentication) but not configured here, the user is prompted for it and may store it locally</string>
     <string name="managed_config_local_id_title">@string/profile_local_id_label</string>
     <string name="managed_config_local_id_description">@string/profile_local_id_hint_user</string>
     <string name="managed_config_local_p12_title">@string/profile_user_certificate_label</string>

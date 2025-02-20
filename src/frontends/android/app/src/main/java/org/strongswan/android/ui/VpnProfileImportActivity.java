@@ -21,6 +21,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.security.KeyChain;
 import android.security.KeyChainAliasCallback;
@@ -98,6 +99,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	private boolean mHideImport;
 	private androidx.core.widget.ContentLoadingProgressBar mProgressBar;
 	private TextView mExistsWarning;
+	private TextView mSharedSecretWarning;
 	private ViewGroup mBasicDataGroup;
 	private TextView mName;
 	private TextView mGateway;
@@ -139,6 +141,19 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	{
 		@Override
 		public Loader<ProfileLoadResult> onCreateLoader(int id, Bundle args)
+		{
+			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+			{
+				return createCompat(args);
+			}
+			else
+			{
+				return new ProfileLoader(VpnProfileImportActivity.this, args.getParcelable(PROFILE_URI, Uri.class));
+			}
+		}
+
+		@SuppressWarnings("deprecation")
+		public Loader<ProfileLoadResult> createCompat(Bundle args)
 		{
 			return new ProfileLoader(VpnProfileImportActivity.this, args.getParcelable(PROFILE_URI));
 		}
@@ -192,6 +207,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 
 		mProgressBar = findViewById(R.id.progress_bar);
 		mExistsWarning = findViewById(R.id.exists_warning);
+		mSharedSecretWarning = findViewById(R.id.shared_secret_warning);
 		mBasicDataGroup = findViewById(R.id.basic_data_group);
 		mName = findViewById(R.id.name);
 		mGateway = findViewById(R.id.gateway);
@@ -210,6 +226,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		mRemoteCert = findViewById(R.id.remote_certificate);
 
 		mExistsWarning.setVisibility(View.GONE);
+		mSharedSecretWarning.setVisibility(View.GONE);
 		mBasicDataGroup.setVisibility(View.GONE);
 		mUsernamePassword.setVisibility(View.GONE);
 		mUserCertificate.setVisibility(View.GONE);
@@ -386,9 +403,15 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		if (mProfile.getVpnType().has(VpnTypeFeature.USER_PASS))
 		{
 			mUsername.setText(mProfile.getUsername());
-			if (mProfile.getUsername() != null && !mProfile.getUsername().isEmpty())
+			if (!TextUtils.isEmpty(mProfile.getUsername()))
 			{
 				mUsername.setEnabled(false);
+			}
+			mPassword.setText(mProfile.getPassword());
+			if (!TextUtils.isEmpty(mProfile.getPassword()))
+			{
+				mPassword.setEnabled(false);
+				mSharedSecretWarning.setVisibility(View.VISIBLE);
 			}
 		}
 
@@ -509,6 +532,7 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			if (type.has(VpnTypeFeature.USER_PASS))
 			{
 				profile.setUsername(local.optString("eap_id", null));
+				profile.setPassword(local.optString("shared_secret", null));
 			}
 
 			if (type.has(VpnTypeFeature.CERTIFICATE))

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2025 Tobias Brunner
  * Copyright (C) 2023 Relution GmbH
  *
  * Copyright (C) secunet Security Networks AG
@@ -75,17 +76,14 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 	@Override
 	public boolean updateVpnProfile(VpnProfile profile)
 	{
-		final VpnProfile existingProfile = getVpnProfile(profile.getUUID());
-		if (existingProfile == null)
+		final VpnProfile managedProfile = mManagedConfigurationService.getManagedProfiles().get(profile.getUUID().toString());
+		if (managedProfile == null)
 		{
 			return false;
 		}
 
-		final String password = profile.getPassword();
-		existingProfile.setPassword(password);
-
 		final SharedPreferences.Editor editor = mSharedPreferences.edit();
-		editor.putString(profile.getUUID().toString(), password);
+		editor.putString(profile.getUUID().toString(), profile.getPassword());
 		return editor.commit();
 	}
 
@@ -95,10 +93,28 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 		return false;
 	}
 
+	/**
+	 * Clone and prepare the given managed profile before handing it out.
+	 * @param managedProfile profile to prepare
+	 */
+	private VpnProfile prepareVpnProfile(VpnProfile managedProfile)
+	{
+		final String password = mSharedPreferences.getString(managedProfile.getUUID().toString(), managedProfile.getPassword());
+		final VpnProfile vpnProfile = managedProfile.clone();
+		vpnProfile.setPassword(password);
+		vpnProfile.setDataSource(this);
+		return vpnProfile;
+	}
+
 	@Override
 	public VpnProfile getVpnProfile(UUID uuid)
 	{
-		return mManagedConfigurationService.getManagedProfiles().get(uuid.toString());
+		final VpnProfile managedProfile = mManagedConfigurationService.getManagedProfiles().get(uuid.toString());
+		if (managedProfile != null)
+		{
+			return prepareVpnProfile(managedProfile);
+		}
+		return null;
 	}
 
 	@Override
@@ -106,12 +122,9 @@ public class VpnProfileManagedDataSource implements VpnProfileDataSource
 	{
 		final Map<String, ManagedVpnProfile> managedVpnProfiles = mManagedConfigurationService.getManagedProfiles();
 		final List<VpnProfile> vpnProfiles = new ArrayList<>();
-		for (final VpnProfile vpnProfile : managedVpnProfiles.values())
+		for (final VpnProfile managedProfile : managedVpnProfiles.values())
 		{
-			final String password = mSharedPreferences.getString(vpnProfile.getUUID().toString(), vpnProfile.getPassword());
-			vpnProfile.setPassword(password);
-			vpnProfile.setDataSource(this);
-			vpnProfiles.add(vpnProfile);
+			vpnProfiles.add(prepareVpnProfile(managedProfile));
 		}
 		return vpnProfiles;
 	}

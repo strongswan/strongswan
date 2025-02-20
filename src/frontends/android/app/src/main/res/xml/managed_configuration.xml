@@ -178,6 +178,13 @@
 
                 <restriction
                     android:defaultValue=""
+                    android:description="@string/managed_config_local_eap_password_description"
+                    android:key="password"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_local_eap_password_title" />
+
+                <restriction
+                    android:defaultValue=""
                     android:description="@string/managed_config_local_id_description"
                     android:key="local_id"
                     android:restrictionType="string"

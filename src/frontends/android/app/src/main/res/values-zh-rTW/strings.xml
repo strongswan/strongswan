@@ -132,6 +132,7 @@
     <string name="profile_import_failed_tls">TLS連線失敗</string>
     <string name="profile_import_failed_value">Invalid value in \"%1$s\"</string>
     <string name="profile_import_exists">這個VPN設定檔已經存在，當前設定檔會被覆蓋。</string>
+    <string name="profile_import_shared_secret">This file contains a cleartext password. Remember to delete it after importing.</string>
     <string name="profile_cert_import">從VPN設定檔匯入憑證</string>
     <string name="profile_cert_alias">\"%1$s\" 對應的憑證</string>
     <string name="profile_profile_id">Profile ID</string>

@@ -57,10 +57,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import androidx.annotation.NonNull;
+import androidx.core.view.MenuProvider;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-public class VpnProfileListFragment extends Fragment
+public class VpnProfileListFragment extends Fragment implements MenuProvider
 {
 	private static final String SELECTED_KEY = "SELECTED";
 
@@ -148,6 +151,7 @@ public class VpnProfileListFragment extends Fragment
 
 		if (!mReadOnly)
 		{
+			requireActivity().addMenuProvider(this, getViewLifecycleOwner());
 			mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
 			mListView.setMultiChoiceModeListener(mVpnProfileSelected);
 		}
@@ -167,8 +171,6 @@ public class VpnProfileListFragment extends Fragment
 
 		if (!mReadOnly)
 		{
-			setHasOptionsMenu(true);
-
 			ArrayList<Integer> selected = null;
 			if (savedInstanceState != null)
 			{
@@ -218,13 +220,13 @@ public class VpnProfileListFragment extends Fragment
 	}
 
 	@Override
-	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater)
+	public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater)
 	{
-		inflater.inflate(R.menu.profile_list, menu);
+		menuInflater.inflate(R.menu.profile_list, menu);
 	}
 
 	@Override
-	public void onPrepareOptionsMenu(Menu menu)
+	public void onPrepareMenu(@NonNull Menu menu)
 	{
 		final MenuItem addProfile = menu.findItem(R.id.add_profile);
 		if (addProfile != null)
@@ -236,16 +238,16 @@ public class VpnProfileListFragment extends Fragment
 	}
 
 	@Override
-	public boolean onOptionsItemSelected(MenuItem item)
+	public boolean onMenuItemSelected(@NonNull MenuItem menuItem)
 	{
-		if (item.getItemId() == R.id.add_profile)
+		if (menuItem.getItemId() == R.id.add_profile)
 		{
 			Intent connectionIntent = new Intent(getActivity(),
 												 VpnProfileDetailActivity.class);
 			startActivity(connectionIntent);
 			return true;
 		}
-		return super.onOptionsItemSelected(item);
+		return false;
 	}
 
 	private final OnItemClickListener mVpnProfileClicked = new OnItemClickListener()

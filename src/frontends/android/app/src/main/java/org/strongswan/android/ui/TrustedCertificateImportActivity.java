@@ -21,6 +21,7 @@ import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -191,7 +192,14 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		{
 			final X509Certificate certificate;
 
-			certificate = (X509Certificate)getArguments().getSerializable(VpnProfileDataSource.KEY_CERTIFICATE);
+			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+			{
+				certificate = getCertificateCompat(getArguments());
+			}
+			else
+			{
+				certificate = getArguments().getSerializable(VpnProfileDataSource.KEY_CERTIFICATE, X509Certificate.class);
+			}
 
 			return new AlertDialog.Builder(getActivity())
 				.setIcon(R.mipmap.ic_app)
@@ -229,6 +237,12 @@ public class TrustedCertificateImportActivity extends AppCompatActivity
 		public void onCancel(DialogInterface dialog)
 		{
 			getActivity().finish();
+		}
+
+		@SuppressWarnings("deprecation")
+		private static X509Certificate getCertificateCompat(Bundle bundle)
+		{
+			return (X509Certificate)bundle.getSerializable(VpnProfileDataSource.KEY_CERTIFICATE);
 		}
 	}
 }

@@ -40,11 +40,24 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:drawableLeft="@android:drawable/ic_dialog_alert"
-            android:drawableStart="@android:drawable/ic_dialog_alert"
+            app:drawableStartCompat="@android:drawable/ic_dialog_alert"
             android:drawablePadding="8dp"
             android:textStyle="bold"
             android:text="@string/profile_import_exists"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:textColor="?android:attr/textColorPrimary" />
+
+        <TextView
+            android:id="@+id/shared_secret_warning"
+            android:background="@drawable/state_background"
+            android:padding="8dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            app:drawableStartCompat="@android:drawable/ic_dialog_alert"
+            android:drawablePadding="8dp"
+            android:textStyle="bold"
+            android:text="@string/profile_import_shared_secret"
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:textColor="?android:attr/textColorPrimary" />
 
@@ -57,7 +70,6 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:textSize="12sp"
                 android:text="@string/profile_name_label_simple" />
@@ -66,7 +78,6 @@
                 android:id="@+id/name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:textAppearance="?android:attr/textAppearanceMedium"
                 android:textColor="?android:attr/textColorPrimary" />
@@ -75,7 +86,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:textSize="12sp"
                 android:text="@string/profile_gateway_label" />
@@ -84,7 +94,6 @@
                 android:id="@+id/gateway"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:textAppearance="?android:attr/textAppearanceMedium"
                 android:textColor="?android:attr/textColorPrimary" />
@@ -93,7 +102,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:textSize="12sp"
                 android:text="@string/profile_vpn_type_label" />
@@ -103,7 +111,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
-                android:layout_marginLeft="4dp"
                 android:layout_marginStart="4dp"
                 android:textAppearance="?android:attr/textAppearanceMedium"
                 android:textColor="?android:attr/textColorPrimary" />
@@ -162,7 +169,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
                 android:textSize="12sp"
                 android:text="@string/profile_user_certificate_label" />
 
@@ -174,8 +181,8 @@
                 android:id="@+id/import_user_certificate"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="4dp"
-                android:layout_marginRight="4dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
                 android:text="@string/profile_cert_import" />
 
         </LinearLayout>
@@ -190,7 +197,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginLeft="4dp"
+                android:layout_marginStart="4dp"
                 android:textSize="12sp"
                 android:text="@string/profile_ca_label" />
 

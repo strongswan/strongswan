@@ -1,13 +1,6 @@
-# 2.5.2 #
+# 2.5.3 #
 
-- Ziel-SDK auf Android 14 erhöht
-- Wegen eines Bugs in Android 14 ist eine zusätzliche Permission ist nötig, um von der Status-Kachel eine Verbindung im Hintergrund zu starten
-- Fixt einen Crash beim Öffnen der Liste installierter Apps in neuen Profilen
-
-# 2.5.1 #
-
-- Fix für existierende Verknüpfungen und Automatisierung via Intents
-
-# 2.5.0 #
-
-- Unterstützung für verwaltete Konfigurationen via Enterprise Mobility Management (EMM)
+- Unterstützt die Verteilung von Passwörtern in verwalteten Profilen
+- Unterstützt den Import von Profil-Dateien mit Passwörtern
+- Fixt einen Crash beim Ändern des Passworts von verwalteten Profilen
+- Fixt einen Crash beim Importieren eines bereit existierenden Profils

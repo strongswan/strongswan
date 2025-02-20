@@ -43,7 +43,16 @@ public class RemediationInstructionsActivity extends AppCompatActivity implement
 		if (frag != null)
 		{	/* two-pane layout, update fragment */
 			Bundle extras = getIntent().getExtras();
-			ArrayList<RemediationInstruction> list = extras.getParcelableArrayList(RemediationInstructionsFragment.EXTRA_REMEDIATION_INSTRUCTIONS);
+			ArrayList<RemediationInstruction> list = null;
+			if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU)
+			{
+				list = RemediationInstructionsFragment.getInstructionsCompat(extras);
+			}
+			else
+			{
+				list = extras.getParcelableArrayList(RemediationInstructionsFragment.EXTRA_REMEDIATION_INSTRUCTIONS,
+													 RemediationInstruction.class);
+			}
 			frag.updateView(list);
 		}
 		else

@@ -19,8 +19,8 @@
     android:orientation="horizontal"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingLeft="8dp"
-    android:paddingRight="8dp"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
     android:minHeight="?android:listPreferredItemHeight"
     android:background="@drawable/activated_background"
     android:gravity="center_vertical" >
@@ -29,7 +29,6 @@
         android:duplicateParentState="true"
         android:layout_width="@android:dimen/app_icon_size"
         android:layout_height="@android:dimen/app_icon_size"
-        android:layout_marginRight="8dip"
         android:layout_marginEnd="8dip"
         android:scaleType="centerInside" />
 
@@ -47,7 +46,6 @@
         android:duplicateParentState="true"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="16dp"
         android:layout_marginStart="16dp" />
 
 </org.strongswan.android.ui.widget.CheckableLinearLayout>

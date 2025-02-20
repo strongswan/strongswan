@@ -17,6 +17,7 @@
 package org.strongswan.android.ui;
 
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.Menu;
@@ -44,13 +45,15 @@ import java.util.Map.Entry;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.MenuProvider;
 import androidx.fragment.app.ListFragment;
+import androidx.lifecycle.Lifecycle;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.app.LoaderManager.LoaderCallbacks;
 import androidx.loader.content.AsyncTaskLoader;
 import androidx.loader.content.Loader;
 
-public class TrustedCertificateListFragment extends ListFragment implements LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener
+public class TrustedCertificateListFragment extends ListFragment implements MenuProvider, LoaderCallbacks<List<TrustedCertificateEntry>>, OnQueryTextListener
 {
 	public static final String EXTRA_CERTIFICATE_SOURCE = "certificate_source";
 	private OnTrustedCertificateSelectedListener mListener;
@@ -69,7 +72,7 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState)
 	{
 		super.onViewCreated(view, savedInstanceState);
-		setHasOptionsMenu(true);
+		requireActivity().addMenuProvider(this, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
 
 		setEmptyText(getString(R.string.no_certificates));
 
@@ -81,7 +84,14 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 		Bundle arguments = getArguments();
 		if (arguments != null)
 		{
-			mSource = (TrustedCertificateSource)arguments.getSerializable(EXTRA_CERTIFICATE_SOURCE);
+			if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+			{
+				mSource = getCertificateSourceCompat(arguments);
+			}
+			else
+			{
+				mSource = arguments.getSerializable(EXTRA_CERTIFICATE_SOURCE, TrustedCertificateSource.class);
+			}
 		}
 
 		LoaderManager.getInstance(this).initLoader(0, null, this);
@@ -105,15 +115,21 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 	}
 
 	@Override
-	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater)
+	public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater)
 	{
 		MenuItem item = menu.add(R.string.search);
 		item.setIcon(android.R.drawable.ic_menu_search);
-		item.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+		item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
 		SearchView sv = new SearchView(getActivity());
 		sv.setOnQueryTextListener(this);
 		item.setActionView(sv);
+	}
+
+	@Override
+	public boolean onMenuItemSelected(@NonNull MenuItem menuItem)
+	{
+		return false;
 	}
 
 	@Override
@@ -259,5 +275,11 @@ public class TrustedCertificateListFragment extends ListFragment implements Load
 				mContentObserver.onChange(false);
 			}
 		}
+	}
+
+	@SuppressWarnings("deprecation")
+	private static TrustedCertificateSource getCertificateSourceCompat(Bundle bundle)
+	{
+		return (TrustedCertificateSource)bundle.getSerializable(EXTRA_CERTIFICATE_SOURCE);
 	}
 }
