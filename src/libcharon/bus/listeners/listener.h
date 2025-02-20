@@ -114,6 +114,16 @@ struct listener_t {
 							 chunk_t sk_er, chunk_t sk_pi, chunk_t sk_pr);
 
 	/**
+	 * Hook called with applied PPK id.
+	 *
+	 * @param ike_sa	IKE_SA the PPK was applied to
+	 * @param ppk_id	the id of the applied PPK
+	 */
+
+	bool (*ike_ppk)(listener_t *this, ike_sa_t *ike_sa,
+					identification_t *ppk_id);
+
+	/**
 	 * Hook called with CHILD_SA key material.
 	 *
 	 * @param ike_sa	IKE_SA the child sa belongs to

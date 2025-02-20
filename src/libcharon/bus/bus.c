@@ -637,6 +637,33 @@ METHOD(bus_t, ike_derived_keys, void,
 	this->mutex->unlock(this->mutex);
 }
 
+METHOD(bus_t, ike_ppk, void,
+	private_bus_t *this, ike_sa_t *ike_sa, identification_t *ppk_id)
+{
+	enumerator_t *enumerator;
+	entry_t *entry;
+	bool keep;
+
+	this->mutex->lock(this->mutex);
+	enumerator = this->listeners->create_enumerator(this->listeners);
+	while (enumerator->enumerate(enumerator, &entry))
+	{
+		if (entry->calling || !entry->listener->ike_ppk)
+		{
+			continue;
+		}
+		entry->calling++;
+		keep = entry->listener->ike_ppk(entry->listener, ike_sa, ppk_id);
+		entry->calling--;
+		if (!keep)
+		{
+			unregister_listener(this, entry, enumerator);
+		}
+	}
+	enumerator->destroy(enumerator);
+	this->mutex->unlock(this->mutex);
+}
+
 METHOD(bus_t, child_keys, void,
 	private_bus_t *this, child_sa_t *child_sa, bool initiator,
 	array_t *kes, chunk_t nonce_i, chunk_t nonce_r)
@@ -1144,6 +1171,7 @@ bus_t *bus_create()
 			.message = _message,
 			.ike_keys = _ike_keys,
 			.ike_derived_keys = _ike_derived_keys,
+			.ike_ppk = _ike_ppk,
 			.child_keys = _child_keys,
 			.child_derived_keys = _child_derived_keys,
 			.ike_updown = _ike_updown,
