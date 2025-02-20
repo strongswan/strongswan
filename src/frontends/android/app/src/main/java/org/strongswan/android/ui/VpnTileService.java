@@ -130,7 +130,6 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 		return mDataSource != null ? mDataSource.getVpnProfile(uuid) : null;
 	}
 
-	@SuppressLint("StartActivityAndCollapseDeprecated")
 	@Override
 	public void onClick()
 	{
@@ -219,6 +218,7 @@ public class VpnTileService extends TileService implements VpnStateService.VpnSt
 	}
 
 	@SuppressWarnings("deprecation")
+	@SuppressLint("StartActivityAndCollapseDeprecated")
 	private void startActivityAndCollapseCompat(Intent intent)
 	{
 		startActivityAndCollapse(intent);
