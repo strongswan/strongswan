@@ -616,6 +616,7 @@ static char *whitelist[] = {
 	"EVP_ASYM_CIPHER_fetch",
 	"EVP_CIPHER_fetch",
 	"EVP_KDF_fetch",
+	"EVP_KEM_fetch",
 	"EVP_KEYEXCH_fetch",
 	"EVP_KEYMGMT_do_all_provided",
 	"EVP_KEYMGMT_fetch",
@@ -629,6 +630,9 @@ static char *whitelist[] = {
 	"OSSL_PROVIDER_load",
 	"RAND_get0_private",
 	"RAND_get0_public",
+	"RAND_priv_bytes",
+	"RAND_priv_bytes_ex",
+	"RAND_bytes_ex",
 	/* We get this via libcurl and OpenSSL 1.1.1 */
 	"CRYPTO_get_ex_new_index",
 	/* OpenSSL libssl */
