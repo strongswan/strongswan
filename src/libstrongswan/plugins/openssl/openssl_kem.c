@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2025 Tobias Brunner
  * Copyright (C) 2024 Gerardo Ravago
  *
  * Copyright (C) secunet Security Networks AG
@@ -19,8 +20,23 @@
 
 #include <openssl/evp.h>
 
+#if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_KEM)) || \
+	defined(OPENSSL_IS_AWSLC)
+
 #ifdef OPENSSL_IS_AWSLC
 #include <openssl/experimental/kem_deterministic_api.h>
+
+#define NID_ML_KEM_512  NID_MLKEM512
+#define NID_ML_KEM_768  NID_MLKEM768
+#define NID_ML_KEM_1024 NID_MLKEM1024
+#else
+#include <openssl/core_names.h>
+#endif
+
+/**
+ * Length of seeds (d, z and m).
+ */
+#define ML_KEM_SEED_LEN 32
 
 typedef struct private_key_exchange_t private_key_exchange_t;
 
@@ -68,11 +84,11 @@ static int openssl_kem_get_nid(private_key_exchange_t *this)
 	switch (this->group)
 	{
 		case ML_KEM_512:
-			return NID_MLKEM512;
+			return NID_ML_KEM_512;
 		case ML_KEM_768:
-			return NID_MLKEM768;
+			return NID_ML_KEM_768;
 		case ML_KEM_1024:
-			return NID_MLKEM1024;
+			return NID_ML_KEM_1024;
 		default:
 			return NID_undef;
 	}
@@ -89,10 +105,10 @@ METHOD(key_exchange_t, get_method, key_exchange_method_t,
  */
 static bool openssl_kem_generate_pkey(private_key_exchange_t *this)
 {
-	EVP_PKEY_CTX *ctx = NULL;
-	size_t seed_length = 0;
+	EVP_PKEY_CTX *ctx;
 	chunk_t seed = chunk_empty;
 
+#ifdef OPENSSL_IS_AWSLC
 	ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_KEM, NULL);
 	if (!ctx)
 	{
@@ -103,6 +119,13 @@ static bool openssl_kem_generate_pkey(private_key_exchange_t *this)
 		EVP_PKEY_CTX_free(ctx);
 		return FALSE;
 	}
+#else /* OPENSSL_IS_AWSLC */
+	ctx = EVP_PKEY_CTX_new_id(openssl_kem_get_nid(this), NULL);
+	if (!ctx)
+	{
+		return FALSE;
+	}
+#endif /* OPENSSL_IS_AWSLC */
 	if (!EVP_PKEY_keygen_init(ctx))
 	{
 		EVP_PKEY_CTX_free(ctx);
@@ -110,17 +133,13 @@ static bool openssl_kem_generate_pkey(private_key_exchange_t *this)
 	}
 	if (this->drbg)
 	{
-		if (!EVP_PKEY_keygen_deterministic(ctx, NULL, NULL, &seed_length))
-		{
-			EVP_PKEY_CTX_free(ctx);
-			return FALSE;
-		}
-		seed = chunk_alloc(seed_length);
+		seed = chunk_alloc(2*ML_KEM_SEED_LEN);
 		if (!this->drbg->generate(this->drbg, seed.len, seed.ptr))
 		{
 			EVP_PKEY_CTX_free(ctx);
 			return FALSE;
 		}
+#ifdef OPENSSL_IS_AWSLC
 		if (!EVP_PKEY_keygen_deterministic(ctx, &this->pkey, seed.ptr,
 										   &seed.len))
 		{
@@ -128,8 +147,22 @@ static bool openssl_kem_generate_pkey(private_key_exchange_t *this)
 			chunk_clear(&seed);
 			return FALSE;
 		}
+#else /* OPENSSL_IS_AWSLC */
+		OSSL_PARAM params[] = {
+			OSSL_PARAM_octet_string(OSSL_PKEY_PARAM_ML_KEM_SEED,
+									seed.ptr, seed.len),
+			OSSL_PARAM_END,
+		};
+		if (!EVP_PKEY_CTX_set_params(ctx, params) ||
+			EVP_PKEY_keygen(ctx, &this->pkey) <= 0)
+		{
+			EVP_PKEY_CTX_free(ctx);
+			chunk_clear(&seed);
+			return FALSE;
+		}
+#endif /* OPENSSL_IS_AWSLC */
 	}
-	else if (!EVP_PKEY_keygen(ctx, &this->pkey))
+	else if (EVP_PKEY_keygen(ctx, &this->pkey) <= 0)
 	{
 		EVP_PKEY_CTX_free(ctx);
 		return FALSE;
@@ -208,16 +241,23 @@ static bool openssl_kem_decapsulate(private_key_exchange_t *this,
 	{
 		return FALSE;
 	}
-	if (!EVP_PKEY_decapsulate(ctx, NULL, &shared_secret_length, ciphertext.ptr,
-							  ciphertext.len))
+#ifndef	 OPENSSL_IS_AWSLC
+	if (EVP_PKEY_decapsulate_init(ctx, NULL) <= 0)
+	{
+		EVP_PKEY_CTX_free(ctx);
+		return FALSE;
+	}
+#endif /* !OPENSSL_IS_AWSLC */
+	if (EVP_PKEY_decapsulate(ctx, NULL, &shared_secret_length, ciphertext.ptr,
+							 ciphertext.len) <= 0)
 	{
 		EVP_PKEY_CTX_free(ctx);
 		return FALSE;
 	}
 	this->shared_secret = chunk_alloc(shared_secret_length);
-	if (!EVP_PKEY_decapsulate(ctx, this->shared_secret.ptr,
-							  &this->shared_secret.len, ciphertext.ptr,
-							  ciphertext.len))
+	if (EVP_PKEY_decapsulate(ctx, this->shared_secret.ptr,
+							 &this->shared_secret.len, ciphertext.ptr,
+							 ciphertext.len) <= 0)
 	{
 		EVP_PKEY_CTX_free(ctx);
 		chunk_clear(&this->shared_secret);
@@ -238,11 +278,16 @@ static bool openssl_kem_encapsulate(private_key_exchange_t *this,
 	EVP_PKEY *pkey;
 	size_t shared_secret_length = 0;
 	size_t ciphertext_length = 0;
-	size_t seed_length = 0;
+	size_t seed_length = ML_KEM_SEED_LEN;
 	chunk_t seed = chunk_empty;
 
+#ifdef OPENSSL_IS_AWSLC
 	pkey = EVP_PKEY_kem_new_raw_public_key(openssl_kem_get_nid(this),
 										   public_key.ptr, public_key.len);
+#else
+	pkey = EVP_PKEY_new_raw_public_key(openssl_kem_get_nid(this), NULL,
+									   public_key.ptr, public_key.len);
+#endif
 	if (!pkey)
 	{
 		return FALSE;
@@ -253,6 +298,7 @@ static bool openssl_kem_encapsulate(private_key_exchange_t *this,
 		EVP_PKEY_free(pkey);
 		return FALSE;
 	}
+#ifdef OPENSSL_IS_AWSLC
 	if (this->drbg)
 	{
 		if (!EVP_PKEY_encapsulate_deterministic(ctx, NULL, &ciphertext_length,
@@ -279,11 +325,39 @@ static bool openssl_kem_encapsulate(private_key_exchange_t *this,
 			chunk_clear(&seed);
 			return FALSE;
 		}
+		chunk_clear(&seed);
 	}
 	else
+#endif /* OPENSSL_IS_AWSLC */
 	{
-		if (!EVP_PKEY_encapsulate(ctx, NULL, &ciphertext_length, NULL,
-								  &shared_secret_length))
+#ifndef OPENSSL_IS_AWSLC
+		OSSL_PARAM params[] = {
+			OSSL_PARAM_END,
+			OSSL_PARAM_END,
+		};
+		if (this->drbg)
+		{
+			seed = chunk_alloc(seed_length);
+			if (!this->drbg->generate(this->drbg, seed.len, seed.ptr))
+			{
+				EVP_PKEY_free(pkey);
+				EVP_PKEY_CTX_free(ctx);
+				return FALSE;
+			}
+			params[0] = OSSL_PARAM_construct_octet_string(OSSL_KEM_PARAM_IKME,
+														  seed.ptr, seed.len);
+		}
+		if (EVP_PKEY_encapsulate_init(ctx, params) <= 0)
+		{
+			EVP_PKEY_free(pkey);
+			EVP_PKEY_CTX_free(ctx);
+			chunk_clear(&seed);
+			return FALSE;
+		}
+		chunk_clear(&seed);
+#endif /* !OPENSSL_IS_AWSLC */
+		if (EVP_PKEY_encapsulate(ctx, NULL, &ciphertext_length, NULL,
+								 &shared_secret_length) <= 0)
 		{
 			EVP_PKEY_free(pkey);
 			EVP_PKEY_CTX_free(ctx);
@@ -291,9 +365,9 @@ static bool openssl_kem_encapsulate(private_key_exchange_t *this,
 		}
 		this->shared_secret = chunk_alloc(shared_secret_length);
 		this->ciphertext = chunk_alloc(ciphertext_length);
-		if (!EVP_PKEY_encapsulate(ctx, this->ciphertext.ptr, &this->ciphertext.len,
-								  this->shared_secret.ptr,
-								  &this->shared_secret.len))
+		if (EVP_PKEY_encapsulate(ctx, this->ciphertext.ptr, &this->ciphertext.len,
+								 this->shared_secret.ptr,
+								 &this->shared_secret.len) <= 0)
 		{
 			EVP_PKEY_free(pkey);
 			EVP_PKEY_CTX_free(ctx);
@@ -302,7 +376,6 @@ static bool openssl_kem_encapsulate(private_key_exchange_t *this,
 	}
 	EVP_PKEY_free(pkey);
 	EVP_PKEY_CTX_free(ctx);
-	chunk_clear(&seed);
 	return TRUE;
 }
 
@@ -340,7 +413,8 @@ METHOD(key_exchange_t, set_seed, bool, private_key_exchange_t *this,
 
 #endif /* TESTABLE_KE */
 
-METHOD(key_exchange_t, destroy, void, private_key_exchange_t *this)
+METHOD(key_exchange_t, destroy, void,
+	private_key_exchange_t *this)
 {
 	EVP_PKEY_free(this->pkey);
 	chunk_clear(&this->shared_secret);
@@ -373,4 +447,5 @@ key_exchange_t *openssl_kem_create(key_exchange_method_t method)
 
 	return &this->public;
 }
-#endif /* OPENSSL_IS_AWSLC */
+
+#endif /* OPENSSL_VERSION || OPENSSL_IS_AWSLC */

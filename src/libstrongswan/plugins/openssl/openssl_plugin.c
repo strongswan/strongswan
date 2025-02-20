@@ -553,7 +553,8 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(KE, MODP_768_BIT),
 			PLUGIN_PROVIDE(KE, MODP_CUSTOM),
 #endif
-#ifdef OPENSSL_IS_AWSLC
+#if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_KEM)) || \
+	defined(OPENSSL_IS_AWSLC)
 		/* ML-KEM key exchanges */
 		PLUGIN_REGISTER(KE, openssl_kem_create),
 			PLUGIN_PROVIDE(KE, ML_KEM_512),
