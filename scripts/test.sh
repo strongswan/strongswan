@@ -92,7 +92,7 @@ build_tss2()
 
 build_openssl()
 {
-	SSL_REV=openssl-3.4.1
+	SSL_REV=master # in order to test ML-KEM, only until 3.5.0 is released
 	SSL_DIR=$DEPS_BUILD_DIR/openssl
 	SSL_INS=$DEPS_PREFIX/ssl
 	SSL_OPT="-d shared no-dtls no-ssl3 no-zlib no-idea no-psk
