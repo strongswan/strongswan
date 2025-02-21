@@ -316,7 +316,7 @@ static void start_watchdog(private_ha_segments_t *this)
 	this->heartbeat_active = TRUE;
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)watchdog, this,
-				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+				NULL, callback_job_cancel_thread, JOB_PRIO_CRITICAL));
 }
 
 METHOD(ha_segments_t, handle_status, void,
@@ -404,7 +404,7 @@ static void start_heartbeat(private_ha_segments_t *this)
 {
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)send_status,
-			this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+			this, NULL, callback_job_cancel_thread, JOB_PRIO_CRITICAL));
 }
 
 /**
@@ -451,7 +451,7 @@ static void start_autobalance(private_ha_segments_t *this)
 	DBG1(DBG_CFG, "scheduling HA autobalance every %ds", this->autobalance);
 	lib->scheduler->schedule_job(lib->scheduler,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)autobalance,
-			this, NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL),
+			this, NULL, callback_job_cancel_thread, JOB_PRIO_CRITICAL),
 		this->autobalance);
 }
 

@@ -291,7 +291,7 @@ static void notify(private_watcher_t *this, entry_t *entry,
 
 	this->jobs->insert_last(this->jobs,
 					callback_job_create_with_prio((void*)notify_async, data,
-						(void*)notify_end, (callback_job_cancel_t)return_false,
+						(void*)notify_end, callback_job_cancel_thread,
 						JOB_PRIO_CRITICAL));
 }
 
@@ -559,7 +559,7 @@ METHOD(watcher_t, add, void,
 
 		lib->processor->queue_job(lib->processor,
 			(job_t*)callback_job_create_with_prio((void*)watch, this,
-				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+				NULL, callback_job_cancel_thread, JOB_PRIO_CRITICAL));
 	}
 	else
 	{

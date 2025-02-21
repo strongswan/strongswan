@@ -445,7 +445,7 @@ void eap_radius_handle_timeout(ike_sa_id_t *id)
 		lib->processor->queue_job(lib->processor,
 				(job_t*)callback_job_create_with_prio(
 						(callback_job_cb_t)delete_all_async, NULL, NULL,
-						(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+						callback_job_cancel_thread, JOB_PRIO_CRITICAL));
 	}
 	else if (id)
 	{

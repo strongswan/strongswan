@@ -585,7 +585,7 @@ cmd_connection_t *cmd_connection_create()
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio(
 			(callback_job_cb_t)initiate, this, NULL,
-			(callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+			callback_job_cancel_thread, JOB_PRIO_CRITICAL));
 
 	return &this->public;
 }

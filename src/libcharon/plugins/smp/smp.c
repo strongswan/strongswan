@@ -710,7 +710,7 @@ static job_requeue_t dispatch(private_smp_t *this)
 	fdp = malloc_thing(int);
 	*fdp = fd;
 	job = callback_job_create((callback_job_cb_t)process, fdp, free,
-							  (callback_job_cancel_t)return_false);
+							  callback_job_cancel_thread);
 	lib->processor->queue_job(lib->processor, (job_t*)job);
 
 	return JOB_REQUEUE_DIRECT;
@@ -800,7 +800,7 @@ plugin_t *smp_plugin_create()
 
 	lib->processor->queue_job(lib->processor,
 		(job_t*)callback_job_create_with_prio((callback_job_cb_t)dispatch, this,
-				NULL, (callback_job_cancel_t)return_false, JOB_PRIO_CRITICAL));
+				NULL, callback_job_cancel_thread, JOB_PRIO_CRITICAL));
 
 	return &this->public.plugin;
 }
