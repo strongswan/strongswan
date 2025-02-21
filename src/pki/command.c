@@ -265,7 +265,7 @@ int command_usage(char *error)
 /**
  * Show usage information
  */
-static int help(int c, char *v[])
+static int help()
 {
 	return command_usage(NULL);
 }
