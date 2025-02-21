@@ -140,6 +140,12 @@ jobs:
           echo "PATH=/usr/lib/ccache:$PATH" >> $GITHUB_ENV
           ccache -z
       - uses: ./.github/actions/default
+      - name: Test Vectors (detailed)
+        env:
+          TESTS_SUITES: vectors
+          TESTS_VERBOSITY: 1
+        run:
+          ./scripts/test.sh
       - run: ccache -s
       - if: ${{ failure() }}
         uses: actions/upload-artifact@v4
