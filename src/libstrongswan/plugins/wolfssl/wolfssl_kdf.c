@@ -156,6 +156,7 @@ kdf_t *wolfssl_kdf_create(key_derivation_function_t algo, va_list args)
 	pseudo_random_function_t prf_alg;
 	enum wc_HashType hash;
 	char buf[HASH_SIZE_SHA512];
+	chunk_t dummy_key = chunk_create(buf, sizeof(buf));
 
 	if (algo != KDF_PRF && algo != KDF_PRF_PLUS)
 	{
@@ -179,9 +180,11 @@ kdf_t *wolfssl_kdf_create(key_derivation_function_t algo, va_list args)
 		},
 		.type = algo,
 		.hash = hash,
+		.key = chunk_clone(dummy_key),
 	);
 
-	/* test if we can actually use the algorithm */
+	/* test if we can actually use the algorithm (using a long dummy key in
+	 * case FIPS mode is used) */
 	if (!get_bytes(this, algo == KDF_PRF ? get_length(this) : sizeof(buf), buf))
 	{
 		destroy(this);
