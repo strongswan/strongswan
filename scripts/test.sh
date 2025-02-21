@@ -297,10 +297,6 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 			--disable-kernel-wfp --disable-kernel-iph --disable-winhttp"
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
-	# unable to build Botan on Ubuntu 20.04
-	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
-		CONFIG="$CONFIG --disable-botan"
-	fi
 	if test "$TEST" != "coverage"; then
 		CONFIG="$CONFIG --disable-coverage"
 	else
@@ -330,9 +326,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 	fi
 	PYDEPS="build tox"
 	if test "$1" = "build-deps"; then
-		if [ "$ID" = "ubuntu" -a "$VERSION_ID" != "20.04" ]; then
-			build_botan
-		fi
+		build_botan
 		build_wolfssl
 		build_tss2
 	fi
@@ -457,10 +451,6 @@ fuzzing)
 	;;
 nm)
 	DEPS="gnome-common libsecret-1-dev libgtk-3-dev libnm-dev libnma-dev"
-	# Ubuntu 20.04 requires this package explicitly for the ITS rules for the .metainfo.xml file
-	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "20.04" ]; then
-		DEPS="$DEPS appstream"
-	fi
 	cd src/frontends/gnome
 	# don't run ./configure with ./autogen.sh
 	export NOCONFIGURE=1

@@ -96,26 +96,18 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, ubuntu-22.04, ubuntu-20.04 ]
+        os: [ ubuntu-latest, ubuntu-22.04 ]
         test: [ botan, wolfssl, openssl, openssl-3, openssl-awslc, gcrypt ]
         leak-detective: [ no, yes ]
         exclude:
           # test custom-built libs only on the latest platform
           - os: ubuntu-22.04
             test: botan
-          - os: ubuntu-20.04
-            test: botan
           - os: ubuntu-22.04
-            test: wolfssl
-          - os: ubuntu-20.04
             test: wolfssl
           - os: ubuntu-22.04
             test: openssl-3
-          - os: ubuntu-20.04
-            test: openssl-3
           - os: ubuntu-22.04
-            test: openssl-awslc
-          - os: ubuntu-20.04
             test: openssl-awslc
     env:
       LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
@@ -160,7 +152,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-22.04, ubuntu-20.04 ]
+        os: [ ubuntu-22.04 ]
         test: [ all, nm ]
         compiler: [ gcc, clang ]
         exclude:
@@ -170,8 +162,6 @@ jobs:
       LEAK_DETECTIVE: ${{ matrix.leak-detective || 'no' }}
       CC: ${{ matrix.compiler || 'gcc' }}
       TEST: ${{ matrix.test }}
-      # LSan causes spurious SIGSEGV after tests due to DTLS handling by glibc (on 20.04)
-      ASAN_OPTIONS: intercept_tls_get_addr=0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
