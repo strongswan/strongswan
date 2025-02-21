@@ -92,10 +92,8 @@ build_tss2()
 
 build_openssl()
 {
-	SSL_REV=3.4.1
-	SSL_PKG=openssl-$SSL_REV
-	SSL_DIR=$DEPS_BUILD_DIR/$SSL_PKG
-	SSL_SRC=https://www.openssl.org/source/$SSL_PKG.tar.gz
+	SSL_REV=openssl-3.4.1
+	SSL_DIR=$DEPS_BUILD_DIR/openssl
 	SSL_INS=$DEPS_PREFIX/ssl
 	SSL_OPT="-d shared no-dtls no-ssl3 no-zlib no-idea no-psk
 			 no-tests enable-rfc3779 enable-ec_nistp_64_gcc_128"
@@ -117,7 +115,7 @@ build_openssl()
 
 	echo "$ build_openssl()"
 
-	curl -L $SSL_SRC | tar xz -C $DEPS_BUILD_DIR || exit $?
+	git clone https://github.com/openssl/openssl.git --depth 1 -b $SSL_REV $SSL_DIR || exit $?
 
 	if [ "$TEST" = "android" ]; then
 		OPENSSL_SRC=${SSL_DIR} \
