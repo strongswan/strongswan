@@ -182,6 +182,9 @@ struct listener_t {
 	 * peer_cfg (and the old hosts), but before resolving the hosts anew.
 	 * It is not invoked on the responder.
 	 *
+	 * If this is called during a reauthentication, COND_REAUTHENTICATING is
+	 * set on the old IKE_SA and the hosts are not resolved anew.
+	 *
 	 * @param old		IKE_SA getting reestablished (is destroyed)
 	 * @param new		new IKE_SA replacing old (gets established)
 	 * @return			TRUE to stay registered, FALSE to unregister
