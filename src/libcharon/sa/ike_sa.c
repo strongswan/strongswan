@@ -2534,7 +2534,7 @@ METHOD(ike_sa_t, retransmit, status_t,
 			DBG1(DBG_IKE, "proper IKE_SA delete failed, peer not responding");
 			if (has_condition(this, COND_REAUTHENTICATING) &&
 				!lib->settings->get_bool(lib->settings,
-									"%s.make_before_break", FALSE, lib->ns))
+									"%s.make_before_break", TRUE, lib->ns))
 			{
 				DBG1(DBG_IKE, "delete during reauthentication failed, "
 					 "trying to reestablish IKE_SA anyway");
