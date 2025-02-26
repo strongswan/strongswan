@@ -258,7 +258,7 @@ static bool have_vips_from_pool(mem_pool_t *pool, linked_list_t *vips)
 		{
 			current = host->get_address(host);
 			if (chunk_compare(current, start) >= 0 &&
-				chunk_compare(current, end) < 0)
+				chunk_compare(current, end) <= 0)
 			{
 				found = TRUE;
 				break;
