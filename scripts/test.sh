@@ -306,8 +306,8 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
-		  libgcrypt20-dev libjson-c-dev python3-pip libtspi-dev libsystemd-dev
-		  libselinux1-dev libiptc-dev"
+		  libgcrypt20-dev libjson-c-dev libtspi-dev libsystemd-dev
+		  libselinux1-dev libiptc-dev python3-build tox"
 	if [ "$TEST" = "alpine" ]; then
 		# override the whole list for alpine
 		DEPS="git gmp-dev openldap-dev curl-dev ldns-dev unbound-dev libsoup-dev
@@ -324,7 +324,6 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 		# and no Clearsilver
 		CONFIG="$CONFIG --disable-fast --disable-manager --disable-medsrv"
 	fi
-	PYDEPS="build tox"
 	if test "$1" = "build-deps"; then
 		build_botan
 		build_wolfssl
@@ -489,10 +488,6 @@ deps)
 		pkg install -y bison flex gperf gettext $DEPS
 		;;
 	esac
-	exit $?
-	;;
-pydeps)
-	test -z "$PYDEPS" || pip3 -q install --user $PYDEPS
 	exit $?
 	;;
 build-deps)

@@ -5,9 +5,6 @@ runs:
     - name: "Install Dependencies"
       run: ./scripts/test.sh deps
       shell: bash
-    - name: "Install Python Dependencies"
-      run: ./scripts/test.sh pydeps
-      shell: bash
     - name: "Build Dependencies"
       run: ./scripts/test.sh build-deps
       shell: bash
