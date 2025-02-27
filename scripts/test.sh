@@ -29,7 +29,7 @@ build_botan()
 	cd $BOTAN_DIR &&
 	git checkout -qf $BOTAN_REV &&
 	./configure.py --amalgamation $BOTAN_CONFIG &&
-	make -j4 libs >/dev/null &&
+	make -j$(nproc) libs >/dev/null &&
 	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
 	cd -
@@ -62,7 +62,7 @@ build_wolfssl()
 	git checkout -qf $WOLFSSL_REV &&
 	./autogen.sh &&
 	./configure C_EXTRA_FLAGS="$WOLFSSL_CFLAGS" $WOLFSSL_CONFIG &&
-	make -j4 >/dev/null &&
+	make -j$(nproc) >/dev/null &&
 	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
 	cd -
@@ -84,7 +84,7 @@ build_tss2()
 	curl -L $TSS2_SRC | tar xz -C $DEPS_BUILD_DIR &&
 	cd $TSS2_DIR &&
 	./configure --prefix=$DEPS_PREFIX --disable-doxygen-doc &&
-	make -j4 >/dev/null &&
+	make -j$(nproc) >/dev/null &&
 	sudo make install >/dev/null &&
 	sudo ldconfig || exit $?
 	cd -
@@ -125,7 +125,7 @@ build_openssl()
 	else
 		cd $SSL_DIR &&
 		./config --prefix=$SSL_INS --openssldir=$SSL_INS --libdir=lib $SSL_OPT &&
-		make -j4 >/dev/null &&
+		make -j$(nproc) >/dev/null &&
 		sudo make install_sw >/dev/null &&
 		sudo ldconfig || exit $?
 		cd -
@@ -542,10 +542,10 @@ case "$TEST" in
 sonarcloud)
 	# without target, coverage is currently not supported anyway because
 	# sonarqube only supports gcov, not lcov
-	build-wrapper-linux-x86-64 --out-dir bw-output make -j4 || exit $?
+	build-wrapper-linux-x86-64 --out-dir bw-output make -j$(nproc) || exit $?
 	;;
 *)
-	make -j4 $TARGET || exit $?
+	make -j$(nproc) $TARGET || exit $?
 	;;
 esac
 
