@@ -307,7 +307,7 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libgcrypt20-dev libjson-c-dev libtspi-dev libsystemd-dev
-		  libselinux1-dev libiptc-dev python3-build tox"
+		  libselinux1-dev libiptc-dev ruby-rubygems python3-build tox"
 	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "22.04" -a "$1" = "build-deps" ]; then
 		# python3-build is broken on 22.04 with venv (https://bugs.launchpad.net/ubuntu/+source/python-build/+bug/1992108)
 		# while installing python3-virtualenv should help, it doesn't. as even
@@ -479,7 +479,7 @@ deps)
 	case "$OS_NAME" in
 	linux)
 		sudo apt-get update -y && \
-		sudo apt-get install -y bison flex gperf gettext $DEPS
+		sudo apt-get install -y automake autoconf libtool pkgconf bison flex gperf gettext $DEPS
 		;;
 	alpine)
 		apk add --no-cache build-base automake autoconf libtool pkgconfig && \
