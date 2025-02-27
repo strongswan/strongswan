@@ -217,6 +217,10 @@ int main(int argc, char *argv[])
 	lib->settings->set_default_str(lib->settings,
 				"charon-nm.plugins.kernel-netlink.fwmark", "!210");
 
+	/* trigger a DPD to verify the current path is working */
+	lib->settings->set_default_str(lib->settings,
+				"charon-nm.check_current_path", "yes");
+
 	DBG1(DBG_DMN, "Starting charon NetworkManager backend (strongSwan "VERSION")");
 	if (lib->integrity)
 	{
