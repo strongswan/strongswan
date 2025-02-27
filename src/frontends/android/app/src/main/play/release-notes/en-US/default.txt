@@ -1,3 +1,7 @@
+# 2.5.4 #
+
+- Fix issues when reestablishing the connection
+
 # 2.5.3 #
 
 - Add support for distributing passwords in managed profiles
