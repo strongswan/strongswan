@@ -451,7 +451,11 @@ fuzzing)
 	;;
 nm)
 	DEPS="gnome-common libsecret-1-dev libgtk-3-dev libnm-dev libnma-dev"
-	cd src/frontends/gnome
+	ORIG_SRC_DIR="$SRC_DIR"
+	SRC_DIR="$ORIG_SRC_DIR/src/frontends/gnome"
+	if [ "$ORIG_SRC_DIR" = "$BUILD_DIR" ]; then
+		BUILD_DIR="$SRC_DIR"
+	fi
 	# don't run ./configure with ./autogen.sh
 	export NOCONFIGURE=1
 	;;
