@@ -55,7 +55,8 @@ build_wolfssl()
 					--enable-curve25519 --enable-curve448 --enable-des3
 					--enable-ecccustcurves --enable-ed25519 --enable-ed448
 					--enable-keygen --enable-kyber --with-max-rsa-bits=8192
-					--enable-md4 --enable-rsapss --enable-sha3 --enable-shake256"
+					--enable-md4 --enable-rsapss --enable-sha3 --enable-shake256
+					--enable-dilithium"
 
 	git clone https://github.com/wolfSSL/wolfssl.git $WOLFSSL_DIR &&
 	cd $WOLFSSL_DIR &&
