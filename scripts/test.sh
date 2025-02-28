@@ -309,6 +309,12 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 		  libldap2-dev libpcsclite-dev libpam0g-dev binutils-dev libnm-dev
 		  libgcrypt20-dev libjson-c-dev libtspi-dev libsystemd-dev
 		  libselinux1-dev libiptc-dev ruby-rubygems python3-build tox"
+	if [ "$ID" = "ubuntu" -a "$VERSION_ID" = "22.04" -a "$1" = "build-deps" ]; then
+		# python3-build is broken on 22.04 (https://bugs.launchpad.net/ubuntu/+source/python-build/+bug/1992108)
+		# while installing virtualenv should help, it doesn't as even after
+		# uninstalling venv build prefers that, so use pip to install a newer version
+		sudo python3 -m pip install --upgrade build
+	fi
 	if [ "$TEST" = "alpine" ]; then
 		# override the whole list for alpine
 		DEPS="git gmp-dev openldap-dev curl-dev ldns-dev unbound-dev libsoup-dev
