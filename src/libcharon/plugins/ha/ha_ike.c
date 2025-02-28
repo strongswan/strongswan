@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2024 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -97,8 +98,7 @@ METHOD(listener_t, ike_keys, bool,
 		return TRUE;
 	}
 	if (!key_exchange_concat_secrets(kes, &secret, &add_secret) ||
-		!array_get(kes, ARRAY_HEAD, &ke) ||
-		add_secret.len > 0)
+		!array_get(kes, ARRAY_HEAD, &ke))
 	{
 		chunk_clear(&secret);
 		chunk_clear(&add_secret);
@@ -109,7 +109,7 @@ METHOD(listener_t, ike_keys, bool,
 	m->add_attribute(m, HA_IKE_VERSION, ike_sa->get_version(ike_sa));
 	m->add_attribute(m, HA_IKE_ID, ike_sa->get_id(ike_sa));
 
-	if (rekey && rekey->get_version(rekey) == IKEV2)
+	if (rekey && rekey != ike_sa && rekey->get_version(rekey) == IKEV2)
 	{
 		chunk_t skd;
 		keymat_v2_t *keymat;
@@ -119,32 +119,37 @@ METHOD(listener_t, ike_keys, bool,
 		m->add_attribute(m, HA_ALG_OLD_PRF, keymat->get_skd(keymat, &skd));
 		m->add_attribute(m, HA_OLD_SKD, skd);
 	}
-
-	proposal = ike_sa->get_proposal(ike_sa);
-	if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &len))
+	if (rekey != ike_sa)
 	{
-		m->add_attribute(m, HA_ALG_ENCR, alg);
-		if (len)
+		/* only sync the proposal for initial key derivation and rekeyings */
+		proposal = ike_sa->get_proposal(ike_sa);
+		if (proposal->get_algorithm(proposal, ENCRYPTION_ALGORITHM, &alg, &len))
 		{
-			m->add_attribute(m, HA_ALG_ENCR_LEN, len);
+			m->add_attribute(m, HA_ALG_ENCR, alg);
+			if (len)
+			{
+				m->add_attribute(m, HA_ALG_ENCR_LEN, len);
+			}
 		}
-	}
-	if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
-	{
-		m->add_attribute(m, HA_ALG_INTEG, alg);
-	}
-	if (proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL))
-	{
-		m->add_attribute(m, HA_ALG_PRF, alg);
-	}
-	if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD, &alg, NULL))
-	{
-		m->add_attribute(m, HA_ALG_DH, alg);
+		if (proposal->get_algorithm(proposal, INTEGRITY_ALGORITHM, &alg, NULL))
+		{
+			m->add_attribute(m, HA_ALG_INTEG, alg);
+		}
+		if (proposal->get_algorithm(proposal, PSEUDO_RANDOM_FUNCTION, &alg, NULL))
+		{
+			m->add_attribute(m, HA_ALG_PRF, alg);
+		}
+		m->add_key_exchange_methods(m, proposal);
 	}
 	m->add_attribute(m, HA_NONCE_I, nonce_i);
 	m->add_attribute(m, HA_NONCE_R, nonce_r);
 	m->add_attribute(m, HA_SECRET, secret);
 	chunk_clear(&secret);
+	if (add_secret.len)
+	{
+		m->add_attribute(m, HA_ADD_SECRET, add_secret);
+		chunk_clear(&add_secret);
+	}
 	if (ike_sa->get_version(ike_sa) == IKEV1)
 	{
 		if (ke->get_public_key(ke, &secret))
@@ -421,4 +426,3 @@ ha_ike_t *ha_ike_create(ha_socket_t *socket, ha_tunnel_t *tunnel,
 
 	return &this->public;
 }
-

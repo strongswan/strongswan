@@ -53,6 +53,12 @@ enum transform_type_t {
 };
 
 /**
+ * Maximum number of additional key exchanges.
+ */
+#define MAX_ADDITIONAL_KEY_EXCHANGES (ADDITIONAL_KEY_EXCHANGE_7 - \
+									  ADDITIONAL_KEY_EXCHANGE_1 + 1)
+
+/**
  * enum names for transform_type_t.
  */
 extern enum_name_t *transform_type_names;

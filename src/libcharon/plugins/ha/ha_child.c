@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2024 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -91,21 +92,23 @@ METHOD(listener_t, child_keys, bool,
 	{
 		m->add_attribute(m, HA_ALG_INTEG, alg);
 	}
-	if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD, &alg, NULL))
-	{
-		m->add_attribute(m, HA_ALG_DH, alg);
-	}
+	m->add_key_exchange_methods(m, proposal);
 	if (proposal->get_algorithm(proposal, EXTENDED_SEQUENCE_NUMBERS, &alg, NULL))
 	{
 		m->add_attribute(m, HA_ESN, alg);
 	}
+
 	m->add_attribute(m, HA_NONCE_I, nonce_i);
 	m->add_attribute(m, HA_NONCE_R, nonce_r);
 	if (kes && key_exchange_concat_secrets(kes, &secret, &add_secret))
 	{
 		m->add_attribute(m, HA_SECRET, secret);
 		chunk_clear(&secret);
-		chunk_clear(&add_secret);
+		if (add_secret.len)
+		{
+			m->add_attribute(m, HA_ADD_SECRET, add_secret);
+			chunk_clear(&add_secret);
+		}
 	}
 
 	local_ts = linked_list_create();

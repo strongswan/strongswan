@@ -33,8 +33,7 @@
 #include <processing/jobs/initiate_tasks_job.h>
 
 /** Maximum number of key exchanges (including the initial one, if any) */
-#define MAX_KEY_EXCHANGES (ADDITIONAL_KEY_EXCHANGE_7 - \
-						   ADDITIONAL_KEY_EXCHANGE_1 + 2)
+#define MAX_KEY_EXCHANGES (MAX_ADDITIONAL_KEY_EXCHANGES + 1)
 
 typedef struct private_child_create_t private_child_create_t;
 
