@@ -204,6 +204,7 @@ prepare_system_openssl()
 	fi
 }
 
+: ${SRC_DIR=$PWD}
 : ${BUILD_DIR=$PWD}
 : ${DEPS_BUILD_DIR=$BUILD_DIR/..}
 : ${DEPS_PREFIX=/usr/local}
@@ -456,7 +457,11 @@ fuzzing)
 	;;
 nm)
 	DEPS="gnome-common libsecret-1-dev libgtk-3-dev libnm-dev libnma-dev"
-	cd src/frontends/gnome
+	ORIG_SRC_DIR="$SRC_DIR"
+	SRC_DIR="$ORIG_SRC_DIR/src/frontends/gnome"
+	if [ "$ORIG_SRC_DIR" = "$BUILD_DIR" ]; then
+		BUILD_DIR="$SRC_DIR"
+	fi
 	# don't run ./configure with ./autogen.sh
 	export NOCONFIGURE=1
 	;;
@@ -524,10 +529,15 @@ case "$TEST" in
 		;;
 esac
 
-echo "$ ./autogen.sh"
-./autogen.sh || exit $?
+cd $SRC_DIR
+if [ ! -f ./configure ]; then
+	echo "$ ./autogen.sh"
+	./autogen.sh || exit $?
+fi
+
+cd $BUILD_DIR
 echo "$ CC=$CC CFLAGS=\"$CFLAGS\" ./configure $CONFIG"
-CC="$CC" CFLAGS="$CFLAGS" ./configure $CONFIG || exit $?
+CC="$CC" CFLAGS="$CFLAGS" $SRC_DIR/configure $CONFIG || exit $?
 
 case "$TEST" in
 apidoc)
@@ -573,7 +583,7 @@ sonarcloud)
 	;;
 android)
 	rm -r strongswan-*
-	cd src/frontends/android
+	cd $SRC_DIR/src/frontends/android
 	echo "$ ./gradlew build"
 	NDK_CCACHE=ccache ./gradlew build --info || exit $?
 	;;
@@ -581,6 +591,7 @@ android)
 	;;
 esac
 
+cd $SRC_DIR
 # ensure there are no unignored build artifacts (or other changes) in the Git repo
 unclean="$(git status --porcelain)"
 if test -n "$unclean"; then
