@@ -521,6 +521,9 @@ METHOD(plugin_t, get_features, int,
 METHOD(plugin_t, destroy, void,
 	private_wolfssl_plugin_t *this)
 {
+#ifdef PRIVATE_KEY_LOCK
+	PRIVATE_KEY_LOCK();
+#endif
 #ifndef WC_NO_RNG
 	wolfssl_rng_global_final();
 #endif
@@ -568,6 +571,10 @@ plugin_t *wolfssl_plugin_create()
 	{
 		return NULL;
 	}
+#endif
+
+#ifdef PRIVATE_KEY_UNLOCK
+	PRIVATE_KEY_UNLOCK();
 #endif
 
 	INIT(this,
