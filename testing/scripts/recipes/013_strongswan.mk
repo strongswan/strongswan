@@ -111,7 +111,7 @@ CONFIG_OPTS = \
 	--enable-systemd \
 	--enable-counters \
 	--enable-save-keys \
-	--enable-python-eggs \
+	--enable-python-wheels \
 	--enable-wolfssl \
 	--enable-ml
 
