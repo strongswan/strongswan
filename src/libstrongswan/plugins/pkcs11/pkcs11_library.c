@@ -1170,6 +1170,7 @@ pkcs11_library_t *pkcs11_library_create(char *name, char *file, bool os_locking)
 	if (!this->handle)
 	{
 		DBG1(DBG_CFG, "opening PKCS#11 library failed: %s", dlerror());
+		free(this->name);
 		free(this);
 		return NULL;
 	}
@@ -1177,6 +1178,7 @@ pkcs11_library_t *pkcs11_library_create(char *name, char *file, bool os_locking)
 	if (!initialize(this, name, file, os_locking))
 	{
 		dlclose(this->handle);
+		free(this->name);
 		free(this);
 		return NULL;
 	}
