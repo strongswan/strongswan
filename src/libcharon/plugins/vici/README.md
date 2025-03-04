@@ -1212,12 +1212,12 @@ _list-conns_ command and implicitly the _list-conn_ event:
 For more details about the ruby gem refer to the comments in the gem source
 code or the generated documentation.
 
-# vici Python egg #
+# vici Python wheel #
 
-The _vici Python egg_ is a pure Python implementation of the VICI protocol to
+The _vici Python wheel_ is a pure Python implementation of the VICI protocol to
 implement client applications. It is provided in the _python_ subdirectory, and
-gets built and installed if strongSwan has been _./configure_'d with
-_--enable-vici_ and _--enable-python-eggs_.
+gets built if strongSwan has been _./configure_'d with
+_--enable-vici_ and _--enable-python-wheels_. It is not installed automatically.
 
 The _vici_ module provides a _Session()_ constructor for a high level interface,
 the underlying classes are usually not required to build Python applications
