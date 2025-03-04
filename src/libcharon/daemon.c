@@ -368,7 +368,7 @@ static logger_entry_t *get_logger_entry(char *target, logger_type_t type,
 												get_syslog_facility(target));
 				break;
 #else
-				free(entry);
+				logger_entry_destroy(entry);
 				return NULL;
 #endif /* HAVE_SYSLOG */
 			case CUSTOM_LOGGER:
@@ -378,7 +378,7 @@ static logger_entry_t *get_logger_entry(char *target, logger_type_t type,
 				}
 				if (!entry->logger.custom)
 				{
-					free(entry);
+					logger_entry_destroy(entry);
 					return NULL;
 				}
 				break;
