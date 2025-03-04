@@ -226,6 +226,10 @@ static bool watch(private_stream_service_t *this, int fd, watcher_event_t event)
 	}
 	else
 	{
+		if (data->fd != -1)
+		{
+			close(data->fd);
+		}
 		free(data);
 	}
 	return keep;
