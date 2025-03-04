@@ -359,7 +359,10 @@ METHOD(fetcher_t, set_option, bool,
 METHOD(fetcher_t, destroy, void,
 	private_winhttp_fetcher_t *this)
 {
-	WinHttpCloseHandle(this->session);
+	if (this->session)
+	{
+		WinHttpCloseHandle(this->session);
+	}
 	this->headers->destroy_function(this->headers, free);
 	free(this);
 }
@@ -389,7 +392,7 @@ winhttp_fetcher_t *winhttp_fetcher_create()
 
 	if (!this->session)
 	{
-		free(this);
+		destroy(this);
 		return NULL;
 	}
 
