@@ -903,6 +903,8 @@ int load_creds_cfg(vici_conn_t *conn, command_format_options_t format,
 	{
 		if (!clear_creds(conn, format))
 		{
+			ctx.keys->destroy_function(ctx.keys, (void*)free);
+			ctx.shared->destroy_function(ctx.shared, (void*)free);
 			return ECONNREFUSED;
 		}
 	}
