@@ -535,10 +535,12 @@ connections.<conn>.remote<suffix>.id = %any
 	specifies how RDNs are matched.
 
 connections.<conn>.remote<suffix>.eap_id = id
-	Identity to use as peer identity during EAP authentication.
+	Use EAP-Identity method to request an identity from the client to match
+	against and use during EAP authentication.
 
-	Identity to use as peer identity during EAP authentication. If set to _%any_
-	the EAP-Identity method will be used to ask the client for an identity.
+	Use EAP-Identity method to request an identity from the client to match
+	against and use during EAP authentication. There is currently no "best"
+	match, configs are matched in the order	they are loaded.
 
 connections.<conn>.remote<suffix>.groups =
 	Authorization group memberships to require.
