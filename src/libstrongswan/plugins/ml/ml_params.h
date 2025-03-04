@@ -100,7 +100,7 @@ struct ml_kem_params_t {
 extern const uint16_t ml_kem_zetas[128];
 
 /**
- * Get parameters fro a specific ML-KEM method.
+ * Get parameters for a specific ML-KEM method.
  *
  * @param method		key exchange method
  * @return				parameters, NULL if not supported

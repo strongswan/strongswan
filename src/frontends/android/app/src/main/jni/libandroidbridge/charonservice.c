@@ -505,7 +505,7 @@ static void set_options(char *logfile, jboolean ipv6)
 	lib->settings->set_bool(lib->settings,
 					"charon.initiator_only", TRUE);
 	/* the service currently can't handle make-before-break reauth and assumes
-	 * the old SA is deleted before the replacement and intalls a special
+	 * the old SA is deleted before the replacement and installs a special
 	 * replacement TUN device in-between */
 	lib->settings->set_bool(lib->settings,
 					"charon.make_before_break", FALSE);
