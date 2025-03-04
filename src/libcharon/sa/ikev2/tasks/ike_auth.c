@@ -512,6 +512,121 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 }
 
 /**
+ * Check if the given auth config is for EAP.
+ */
+static bool is_eap_cfg(auth_cfg_t *cfg)
+{
+	return cfg &&
+		((uintptr_t)cfg->get(cfg, AUTH_RULE_EAP_TYPE) != EAP_NAK ||
+		 (uintptr_t)cfg->get(cfg, AUTH_RULE_EAP_VENDOR) != 0);
+}
+
+/**
+ * Switch configurations until we find an alternative with EAP authentication.
+ */
+static bool find_eap_cfg(private_ike_auth_t *this, auth_cfg_t **cand)
+{
+	do
+	{
+		if (!is_eap_cfg(*cand))
+		{
+			DBG1(DBG_IKE, "peer requested EAP, config unacceptable");
+		}
+		this->peer_cfg->destroy(this->peer_cfg);
+		this->peer_cfg = NULL;
+		if (!update_cfg_candidates(this, FALSE))
+		{
+			return FALSE;
+		}
+		*cand = get_auth_cfg(this, FALSE);
+	}
+	while (!is_eap_cfg(*cand));
+
+	return TRUE;
+}
+
+/**
+ * Copy EAP-specific rules to another auth config. Copying the EAP-Identity is
+ * optional.
+ */
+static void copy_eap_cfg(auth_cfg_t *src, auth_cfg_t *dst, bool copy_eap_id)
+{
+	identification_t *id;
+
+	/* copy over the EAP specific rules for authentication */
+	dst->add(dst, AUTH_RULE_EAP_TYPE,
+			 src->get(src, AUTH_RULE_EAP_TYPE));
+	dst->add(dst, AUTH_RULE_EAP_VENDOR,
+			 src->get(src, AUTH_RULE_EAP_VENDOR));
+	id = (identification_t*)src->get(src, AUTH_RULE_AAA_IDENTITY);
+	if (id)
+	{
+		dst->add(dst, AUTH_RULE_AAA_IDENTITY, id->clone(id));
+	}
+	if (copy_eap_id)
+	{
+		id = (identification_t*)src->get(src, AUTH_RULE_EAP_IDENTITY);
+		if (id)
+		{
+			dst->add(dst, AUTH_RULE_EAP_IDENTITY, id->clone(id));
+		}
+	}
+}
+
+/**
+ * Find an alternative EAP config that matches the EAP-Identity we received.
+ */
+static bool find_alternative_eap_cfg(private_ike_auth_t *this)
+{
+	auth_cfg_t *cfg, *cand;
+	identification_t *eap_id, *id;
+
+	/* clear current auth round, but copy IKE and EAP identities we received
+	 * from the peer */
+	cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
+	eap_id = cfg->get(cfg, AUTH_RULE_EAP_IDENTITY);
+	eap_id = eap_id->clone(eap_id);
+	id = cfg->get(cfg, AUTH_RULE_IDENTITY);
+	id = id->clone(id);
+
+	cfg->purge(cfg, FALSE);
+	cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, eap_id);
+	cfg->add(cfg, AUTH_RULE_IDENTITY, id);
+
+	cand = get_auth_cfg(this, FALSE);
+	while (TRUE)
+	{
+		/* the log messages here are similar to those in auth_cfg_t */
+		id = cand->get(cand, AUTH_RULE_EAP_IDENTITY);
+		if (!id)
+		{
+			DBG1(DBG_CFG, "constraint check failed: no EAP identity required, "
+				 "but '%Y' (%N) received",
+				 eap_id, id_type_names, eap_id->get_type(eap_id));
+		}
+		else if (!eap_id->matches(eap_id, id))
+		{
+			DBG1(DBG_CFG, "constraint check failed: EAP identity '%Y'"
+				 " (%N) required, not matched by '%Y' (%N)",
+				 id, id_type_names, id->get_type(id),
+				 eap_id, id_type_names, eap_id->get_type(eap_id));
+		}
+		else
+		{
+			break;
+		}
+		if (!find_eap_cfg(this, &cand))
+		{
+			return FALSE;
+		}
+	}
+	/* copy over the EAP-specific rules for the alternative config, except
+	 * the identity we already received from the peer */
+	copy_eap_cfg(cand, cfg, FALSE);
+	return TRUE;
+}
+
+/**
  * Currently defined PPK_ID types
  */
 #define PPK_ID_OPAQUE 1
@@ -950,37 +1065,15 @@ METHOD(task_t, process_r, status_t,
 			}
 		}
 		if (!message->get_payload(message, PLV2_AUTH))
-		{	/* before authenticating with EAP, we need a EAP config */
+		{
+			/* before authenticating with EAP, we need an EAP config */
 			cand = get_auth_cfg(this, FALSE);
-			while (!cand || (
-					(uintptr_t)cand->get(cand, AUTH_RULE_EAP_TYPE) == EAP_NAK &&
-					(uintptr_t)cand->get(cand, AUTH_RULE_EAP_VENDOR) == 0))
-			{	/* peer requested EAP, but current config does not match */
-				DBG1(DBG_IKE, "peer requested EAP, config unacceptable");
-				this->peer_cfg->destroy(this->peer_cfg);
-				this->peer_cfg = NULL;
-				if (!update_cfg_candidates(this, FALSE))
-				{
-					this->authentication_failed = TRUE;
-					return NEED_MORE;
-				}
-				cand = get_auth_cfg(this, FALSE);
-			}
-			/* copy over the EAP specific rules for authentication */
-			cfg->add(cfg, AUTH_RULE_EAP_TYPE,
-					 cand->get(cand, AUTH_RULE_EAP_TYPE));
-			cfg->add(cfg, AUTH_RULE_EAP_VENDOR,
-					 cand->get(cand, AUTH_RULE_EAP_VENDOR));
-			id = (identification_t*)cand->get(cand, AUTH_RULE_EAP_IDENTITY);
-			if (id)
+			if (!is_eap_cfg(cand) && !find_eap_cfg(this, &cand))
 			{
-				cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, id->clone(id));
+				this->authentication_failed = TRUE;
+				return NEED_MORE;
 			}
-			id = (identification_t*)cand->get(cand, AUTH_RULE_AAA_IDENTITY);
-			if (id)
-			{
-				cfg->add(cfg, AUTH_RULE_AAA_IDENTITY, id->clone(id));
-			}
+			copy_eap_cfg(cand, cfg, TRUE);
 		}
 
 		/* verify authentication data */
@@ -1012,6 +1105,8 @@ METHOD(task_t, process_r, status_t,
 			this->other_auth->use_ppk(this->other_auth, this->ppk, FALSE);
 		}
 	}
+
+retry_eap_auth:
 	switch (this->other_auth->process(this->other_auth, message))
 	{
 		case SUCCESS:
@@ -1024,6 +1119,13 @@ METHOD(task_t, process_r, status_t,
 				break;
 			}
 			return NEED_MORE;
+		case INVALID_ARG:
+			/* EAP-Identity didn't match, try to find an alternative config */
+			if (find_alternative_eap_cfg(this))
+			{
+				goto retry_eap_auth;
+			}
+			/* fall-through */
 		default:
 			this->authentication_failed = TRUE;
 			return NEED_MORE;

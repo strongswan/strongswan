@@ -171,28 +171,21 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 		id = auth->get(auth, AUTH_RULE_EAP_IDENTITY);
 		if (id)
 		{
-			if (id->get_type(id) == ID_ANY)
+			this->method = load_method(this, EAP_IDENTITY, 0, EAP_SERVER);
+			if (this->method)
 			{
-				this->method = load_method(this, EAP_IDENTITY, 0, EAP_SERVER);
-				if (this->method)
+				if (this->method->initiate(this->method, &out) == NEED_MORE)
 				{
-					if (this->method->initiate(this->method, &out) == NEED_MORE)
-					{
-						DBG1(DBG_IKE, "initiating %N method (id 0x%02X)",
-							 eap_type_names, EAP_IDENTITY,
-							 this->method->get_identifier(this->method));
-						return out;
-					}
-					this->method->destroy(this->method);
+					DBG1(DBG_IKE, "initiating %N method (id 0x%02X)",
+						 eap_type_names, EAP_IDENTITY,
+						 this->method->get_identifier(this->method));
+					return out;
 				}
-				DBG1(DBG_IKE, "EAP-Identity request configured, "
-					 "but not supported");
+				this->method->destroy(this->method);
 			}
-			else
-			{
-				DBG1(DBG_IKE, "using configured EAP-Identity %Y", id);
-				this->eap_identity = id->clone(id);
-			}
+			DBG1(DBG_IKE, "EAP-Identity request configured, "
+				 "but not supported");
+			return eap_payload_create_code(EAP_FAILURE, 0);
 		}
 	}
 	/* invoke real EAP method */
@@ -234,20 +227,29 @@ static eap_payload_t* server_initiate_eap(private_eap_authenticator_t *this,
 }
 
 /**
- * Replace the existing EAP-Identity in other auth config
+ * Replaces the existing EAP-Identity in other auth config and checks if it
+ * matches the configured identity.
  */
-static void replace_eap_identity(private_eap_authenticator_t *this)
+static bool apply_eap_identity(private_eap_authenticator_t *this,
+							   identification_t *eap_identity)
 {
-	identification_t *eap_identity;
+	identification_t *configured;
 	auth_cfg_t *cfg;
+	bool match;
 
-	eap_identity = this->eap_identity->clone(this->eap_identity);
+	DBG1(DBG_IKE, "received EAP identity '%Y'", eap_identity);
+	this->eap_identity = eap_identity;
+
 	cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
-	cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, eap_identity);
+	configured = cfg->get(cfg, AUTH_RULE_EAP_IDENTITY);
+	match = eap_identity->matches(eap_identity, configured) != ID_MATCH_NONE;
+	cfg->add(cfg, AUTH_RULE_EAP_IDENTITY, eap_identity->clone(eap_identity));
+	return match;
 }
 
 /**
- * Handle EAP exchange as server
+ * Handle EAP exchange as server. Returns an EAP payload, or NULL if the EAP
+ * Identity doesn't match.
  */
 static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 										 eap_payload_t *in)
@@ -300,14 +302,24 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 			{
 				chunk_t data;
 
-				if (this->method->get_msk(this->method, &data) == SUCCESS)
+				if (this->method->get_msk(this->method, &data) != SUCCESS)
 				{
-					this->eap_identity = identification_create_from_data(data);
-					DBG1(DBG_IKE, "received EAP identity '%Y'",
-						 this->eap_identity);
-					replace_eap_identity(this);
+					DBG1(DBG_IKE, "client did not send an EAP-Identity, "
+						 "sending %N", eap_code_names, EAP_FAILURE);
+					return eap_payload_create_code(EAP_FAILURE,
+												   in->get_identifier(in));
 				}
-				/* restart EAP exchange, but with real method */
+				/* apply the received EAP identity and match it against config,
+				 * return NULL if it doesn't match to possibly switch to a
+				 * different config */
+				if (!apply_eap_identity(this,
+										identification_create_from_data(data)))
+				{
+					this->method->destroy(this->method);
+					this->method = NULL;
+					return NULL;
+				}
+				/* ID matched, restart EAP exchange, but with real method */
 				this->method->destroy(this->method);
 				return server_initiate_eap(this, FALSE);
 			}
@@ -608,6 +620,12 @@ METHOD(authenticator_t, process_server, status_t,
 			return FAILED;
 		}
 		this->eap_payload = server_process_eap(this, eap_payload);
+		if (!this->eap_payload)
+		{
+			/* try to switch to a different config in case the EAP identity
+			 * doesn't match */
+			return INVALID_ARG;
+		}
 	}
 	return NEED_MORE;
 }

@@ -143,6 +143,7 @@ struct authenticator_t {
 	 *						- SUCCESS if authentication successful
 	 *						- FAILED if authentication failed
 	 *						- NEED_MORE if another exchange required
+	 * 						- INVALID_ARG if EAP-Identity doesn't match
 	 */
 	status_t (*process)(authenticator_t *this, message_t *message);
 
