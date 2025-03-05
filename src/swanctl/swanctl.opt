@@ -780,6 +780,10 @@ connections.<conn>.children.<child>.local_ts = dynamic
 	restriction may be numeric, a **getservent**(3) service name, or the special
 	value _opaque_ for RFC 4301 OPAQUE selectors. Port ranges may be specified
 	as well, none of the kernel backends currently support port ranges, though.
+	If the protocol is _icmp_ or _ipv6-icmp_, the port is interpreted as ICMP
+	message type if it is less than 256 or as type and code if it is greater or
+	equal to 256, with the type in the most significant 8 bits and the code in
+	the least significant 8 bits.
 
 	When IKEv1 is used only the first selector is interpreted, except if
 	the Cisco Unity extension plugin is used. This is due to a limitation of the
