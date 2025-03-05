@@ -1,3 +1,32 @@
+strongswan-6.0.1
+----------------
+
+- The ha plugin supports IKE and Child SAs with multiple key exchanges.
+  Incomplete IKE_SAs are now destroyed during a failover.
+
+- The new `interface_receive` option for the dhcp plugin allows binding the
+  receive socket to a different interface than the send socket. Also fixed a
+  regression if the DHCP server is running on the same host.
+
+- The new `source` option for the eap-radius plugin allows sending RADIUS
+  messages from a specific IP address.
+
+- Self-signed root CAs without policies are now excluded from policy validation.
+
+- Inbound traffic on IPsec SAs is now ignored when sending DPDs unless
+  UDP-encapsulation is used.
+
+- Send IKE_SA_INIT from NAT-T socket if not connecting to port 500.
+
+- Local traffic selectors can be configured for charon-nm. Its default
+  retransmission settings have been set to those of the Android app.
+
+- The vici Python wheel is now built via `build` frontend instead of calling
+  setup.py directly if --enable-python-wheels is used (the option to build eggs
+  has been removed). There is no option to automatically install the wheel (use
+  pip instead) and the --enable-python-eggs-install option has been removed.
+
+
 strongswan-6.0.0
 ----------------
 
