@@ -109,13 +109,14 @@ struct charonservice_t {
 	 * Install a bypass policy for the given socket using the protect() Method
 	 * of the Android VpnService interface.
 	 *
-	 * Use -1 as fd to re-bypass previously bypassed sockets.
+	 * If track_fd is TRUE, the fd is kept track of. Use -1 as fd to re-bypass
+	 * all of those sockets.
 	 *
 	 * @param fd			socket file descriptor
-	 * @param family		socket protocol family
+	 * @param track_fd		TRUE to keep track of fd
 	 * @return				TRUE if operation successful
 	 */
-	bool (*bypass_socket)(charonservice_t *this, int fd, int family);
+	bool (*bypass_socket)(charonservice_t *this, int fd, bool track_fd);
 
 	/**
 	 * Get a list of trusted certificates via JNI

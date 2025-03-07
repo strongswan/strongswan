@@ -70,7 +70,7 @@ struct private_android_net_t {
 static job_requeue_t roam_event()
 {
 	/* this will fail if no connection is up */
-	charonservice->bypass_socket(charonservice, -1, 0);
+	charonservice->bypass_socket(charonservice, -1, FALSE);
 	charon->kernel->roam(charon->kernel, TRUE);
 	return JOB_REQUEUE_NONE;
 }
@@ -122,7 +122,7 @@ METHOD(kernel_net_t, get_source_addr, host_t*,
 			 strerror(errno));
 		return NULL;
 	}
-	charonservice->bypass_socket(charonservice, skt, dst->get_family(dst));
+	charonservice->bypass_socket(charonservice, skt, FALSE);
 
 	if (connect(skt, dst->get_sockaddr(dst), addrlen) < 0)
 	{
