@@ -256,11 +256,14 @@ CALLBACK(bypass_single_socket_cb, void,
 }
 
 METHOD(charonservice_t, bypass_socket, bool,
-	private_charonservice_t *this, int fd, int family)
+	private_charonservice_t *this, int fd, bool track_fd)
 {
 	if (fd >= 0)
 	{
-		this->sockets->insert_last(this->sockets, (void*)(intptr_t)fd);
+		if (track_fd)
+		{
+			this->sockets->insert_last(this->sockets, (void*)(intptr_t)fd);
+		}
 		return bypass_single_socket(this, fd);
 	}
 	this->sockets->invoke_function(this->sockets, bypass_single_socket_cb, this);
