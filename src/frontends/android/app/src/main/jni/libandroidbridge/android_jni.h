@@ -48,17 +48,11 @@ extern jclass *android_charonvpnservice_builder_class;
 extern jclass *android_simple_fetcher_class;
 
 /**
- * Currently known (supported) SDK versions
+ * SDK versions for which we need some special handling.
  *
  * see android.os.Build.VERSION_CODES for definitions
  */
 typedef enum {
-	ANDROID_ICE_CREAM_SANDWICH = 14,
-	ANDROID_ICE_CREAM_SANDWICH_MR1 = 15,
-	ANDROID_JELLY_BEAN = 16,
-	ANDROID_JELLY_BEAN_MR1 = 17,
-	ANDROID_JELLY_BEAN_MR2 = 18,
-	ANDROID_LOLLIPOP = 21,
 	ANDROID_MARSHMALLOW = 23,
 } android_sdk_version_t;
 
