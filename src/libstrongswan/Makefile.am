@@ -697,6 +697,13 @@ if MONOLITHIC
 endif
 endif
 
+if USE_WINCAPI
+  SUBDIRS += plugins/wincapi
+if MONOLITHIC
+  libstrongswan_la_LIBADD += plugins/wincapi/libstrongswan-wincapi.la
+endif
+endif
+
 if MONOLITHIC
   SUBDIRS += .
 endif
