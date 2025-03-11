@@ -119,7 +119,7 @@
     <string name="profile_select_one_app">已选择一个应用程序</string>
     <string name="profile_select_x_apps">%1$d 应用程序被选择</string>
     <string name="profile_proposals_label">算法</string>
-    <string name="profile_proposals_intro">（可选）配置用于IKEv2和/或IPsec/ESP的特定算法，而不是默认算法。请参阅我们的wiki以了解<a href="https://docs.strongswan.org/docs/5.9/config/IKEv2CipherSuites.html">算法标识符列表</a>（请注意，此应用程序并不支持所有标识符）。这两个字段都包含一个算法列表，每个算法用连字符分隔。</string>
+    <string name="profile_proposals_intro">（可选）配置用于IKEv2和/或IPsec/ESP的特定算法，而不是默认算法。请参阅我们的wiki以了解<a href="https://docs.strongswan.org/docs/latest/config/IKEv2CipherSuites.html">算法标识符列表</a>（请注意，此应用程序并不支持所有标识符）。这两个字段都包含一个算法列表，每个算法用连字符分隔。</string>
     <string name="profile_proposals_ike_label">IKEv2算法</string>
     <string name="profile_proposals_ike_hint">对于非AEAD/经典加密算法，需要完整性算法、伪随机函数（可选，默认为基于完整性算法的函数）和Diffie-Hellman组（例如aes256-sha256-ecp256）。对于组合模式/AEAD算法，省略完整性算法，但需要PRF（例如aes256gcm16-prfsha256-ecp256）。</string>
     <string name="profile_proposals_esp_label">IPsec/ESP 算法</string>

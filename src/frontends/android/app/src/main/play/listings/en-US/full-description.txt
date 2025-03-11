@@ -19,7 +19,7 @@ Official Android port of the popular strongSwan VPN solution.
  <li>Supports managed configurations via enterprise mobility management (EMM)</li>
 </ul>
 
-Details and a changelog can be found in our documentation: https://docs.strongswan.org/docs/5.9/os/androidVpnClient.html
+Details and a changelog can be found in our documentation: https://docs.strongswan.org/docs/latest/os/androidVpnClient.html
 
 # PERMISSIONS #
 
@@ -30,7 +30,7 @@ Details and a changelog can be found in our documentation: https://docs.strongsw
 
 # EXAMPLE SERVER CONFIGURATION #
 
-Example server configurations may be found in our documentation: https://docs.strongswan.org/docs/5.9/os/androidVpnClient.html#_server_configuration
+Example server configurations may be found in our documentation: https://docs.strongswan.org/docs/latest/os/androidVpnClient.html#_server_configuration
 
 Please note that the host name (or IP address) configured with a VPN profile in the app *must be* contained in the server certificate as subjectAltName extension.
 

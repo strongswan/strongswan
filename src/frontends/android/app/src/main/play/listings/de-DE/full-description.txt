@@ -19,7 +19,7 @@ Dies ist die offizielle Android-Portierung der populären strongSwan VPN-Lösung
  <li>Unterstützt verwaltete Konfigurationen via Enterprise Mobility Management (EMM)</li>
 </ul>
 
-Details und ein Changelog sind in unserer Dokumentation zu finden: https://docs.strongswan.org/docs/5.9/os/androidVpnClient.html
+Details und ein Changelog sind in unserer Dokumentation zu finden: https://docs.strongswan.org/docs/latest/os/androidVpnClient.html
 
 # PERMISSIONS #
 
@@ -30,7 +30,7 @@ Details und ein Changelog sind in unserer Dokumentation zu finden: https://docs.
 
 # BEISPIEL-SERVERKONFIGURATION #
 
-Sie finden in unserer Dokumentation Beispiel-Serverkonfigurationen: https://docs.strongswan.org/docs/5.9/os/androidVpnClient.html#_server_configuration
+Sie finden in unserer Dokumentation Beispiel-Serverkonfigurationen: https://docs.strongswan.org/docs/latest/os/androidVpnClient.html#_server_configuration
 
 Beachten Sie bitte, dass der im VPN Profil konfigurierte Hostname (bzw. die IP-Adresse) *zwingend* als subjectAltName-Extension im Server-Zertifikat vorhanden sein muss.
 
