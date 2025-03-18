@@ -1353,6 +1353,52 @@ static bool check_for_duplicate(private_child_create_t *this)
 }
 
 /**
+ * Check how many CHILD_SAs are already established for the given
+ * IKE SA using the same child cfg policy
+ */
+static bool check_for_max_child_sa_reached(private_child_create_t *this)
+{
+	enumerator_t *enumerator;
+	child_sa_t *child_sa;
+	uint32_t child_sa_cnt = 0, limit;
+	child_cfg_t *cfg = this->child_sa->get_config(this->child_sa);
+
+	enumerator = this->ike_sa->create_child_sa_enumerator(this->ike_sa);
+	while (enumerator->enumerate(enumerator, (void **)&child_sa))
+	{
+		if (child_sa->get_state(child_sa) == CHILD_INSTALLED &&
+			streq(this->child_sa->get_name(this->child_sa),
+				  child_sa->get_name(child_sa)))
+		{
+			child_sa_cnt++;
+		}
+	}
+	enumerator->destroy(enumerator);
+	/* Increment child SA count to include the one being established */
+	child_sa_cnt++;
+	limit = cfg->get_max_child_sas(cfg);
+	if (limit && (child_sa_cnt > limit))
+	{
+		DBG1(DBG_IKE, "blocking CHILD_SA %s{%d} max_child_sas limit: %d "
+					  "exceeded by expected CHILD_SA cnt: %d",
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa),
+			 limit,
+			 child_sa_cnt);
+		return TRUE;
+	}
+	else
+	{
+		DBG1(DBG_IKE, "checked max_child_sas limit (%d/%d), allowing CHILD_SA %s{%d} ",
+			 child_sa_cnt,
+			 limit,
+			 this->child_sa->get_name(this->child_sa),
+			 this->child_sa->get_unique_id(this->child_sa));
+		return FALSE;
+	}
+}
+
+/**
  * Check if this is an attempt to create an SA with generic label and should
  * be aborted.
  */
@@ -1691,7 +1737,7 @@ METHOD(task_t, process_r, status_t,
 static void handle_child_sa_failure(private_child_create_t *this,
 									message_t *message)
 {
-	bool is_first;
+	bool is_first, is_rekey;
 
 	if (this->aborted)
 	{
@@ -1699,6 +1745,7 @@ static void handle_child_sa_failure(private_child_create_t *this,
 	}
 
 	is_first = message->get_exchange_type(message) == IKE_AUTH;
+    is_rekey = this->rekey;
 	if (is_first &&
 		lib->settings->get_bool(lib->settings,
 								"%s.close_ike_on_child_failure", FALSE, lib->ns))
@@ -1714,7 +1761,7 @@ static void handle_child_sa_failure(private_child_create_t *this,
 	{
 		DBG1(DBG_IKE, "failed to establish CHILD_SA, keeping IKE_SA");
 		charon->bus->alert(charon->bus, ALERT_KEEP_ON_CHILD_SA_FAILURE,
-						   is_first);
+						   is_first, is_rekey);
 	}
 }
 
@@ -1971,6 +2018,13 @@ METHOD(task_t, build_r, status_t,
 	enumerator_t *enumerator;
 	bool no_ke = TRUE, ike_auth = FALSE;
 
+	if (!this->rekey && check_for_max_child_sa_reached(this))
+	{
+		message->add_notify(message, FALSE, NO_ADDITIONAL_SAS, chunk_empty);
+		handle_child_sa_failure(this, message);
+		return SUCCESS;
+	}
+	
 	switch (message->get_exchange_type(message))
 	{
 		case IKE_SA_INIT:
