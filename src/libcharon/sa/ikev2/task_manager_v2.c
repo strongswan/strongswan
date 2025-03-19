@@ -1168,7 +1168,7 @@ static status_t process_request(private_task_manager_t *this,
 				task = (task_t*)ike_auth_lifetime_create(this->ike_sa, FALSE);
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				task = (task_t*)child_create_create(this->ike_sa, NULL, FALSE,
-													NULL, NULL);
+													NULL, NULL, 0);
 				array_insert(this->passive_tasks, ARRAY_TAIL, task);
 				break;
 			}
@@ -1222,7 +1222,7 @@ static status_t process_request(private_task_manager_t *this,
 					else
 					{
 						task = (task_t*)child_create_create(this->ike_sa, NULL,
-															FALSE, NULL, NULL);
+															FALSE, NULL, NULL, 0);
 					}
 				}
 				else
@@ -2196,7 +2196,7 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 		}
 		cfg = child_sa->get_config(child_sa);
 		child_create = child_create_create(new, cfg->get_ref(cfg),
-										   FALSE, NULL, NULL);
+										   FALSE, NULL, NULL, 0);
 		reqid = child_sa->get_reqid_ref(child_sa);
 		if (reqid)
 		{
@@ -2375,13 +2375,14 @@ METHOD(task_manager_t, queue_child, void,
 
 	if (args)
 	{
-		task = child_create_create(this->ike_sa, cfg, FALSE, args->src, args->dst);
+		task = child_create_create(this->ike_sa, cfg, FALSE, args->src,
+								   args->dst, args->seq);
 		task->use_reqid(task, args->reqid);
 		task->use_label(task, args->label);
 	}
 	else
 	{
-		task = child_create_create(this->ike_sa, cfg, FALSE, NULL, NULL);
+		task = child_create_create(this->ike_sa, cfg, FALSE, NULL, NULL, 0);
 	}
 	queue_task(this, &task->task);
 }
