@@ -102,9 +102,11 @@ struct quick_mode_t {
  * @param config		child_cfg if task initiator, NULL if responder
  * @param tsi			source of triggering packet, or NULL
  * @param tsr			destination of triggering packet, or NULL
+ * @param seq			optional sequence number of triggering acquire, or 0
  * @return				task to handle by the task_manager
  */
 quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
-							traffic_selector_t *tsi, traffic_selector_t *tsr);
+								traffic_selector_t *tsi, traffic_selector_t *tsr,
+								uint32_t seq);
 
 #endif /** QUICK_MODE_H_ @}*/
