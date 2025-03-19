@@ -1010,12 +1010,12 @@ static void process_acquire(private_kernel_netlink_ipsec_t *this,
 			break;
 		default:
 			/* acquire for AH/ESP only, not for IPCOMP */
-
 			return;
 	}
 	data.src = selector2ts(&acquire->sel, TRUE);
 	data.dst = selector2ts(&acquire->sel, FALSE);
 	data.label = label.len ? sec_label_from_encoding(label) : NULL;
+	data.seq = acquire->seq;
 
 	charon->kernel->acquire(charon->kernel, reqid, &data);
 
@@ -1188,7 +1188,7 @@ CALLBACK(receive_events, void,
 METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
 	private_kernel_netlink_ipsec_t *this)
 {
-	return KERNEL_ESP_V3_TFC | KERNEL_POLICY_SPI |
+	return KERNEL_ESP_V3_TFC | KERNEL_POLICY_SPI | KERNEL_ACQUIRE_SEQ |
 			(this->sa_lastused ? KERNEL_SA_USE_TIME : 0);
 }
 
@@ -1751,6 +1751,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	sa->id.proto = id->proto;
 	sa->family = id->src->get_family(id->src);
 	sa->mode = mode2kernel(mode);
+	sa->seq = data->seq;
 
 	if (!data->copy_ecn)
 	{
