@@ -119,26 +119,50 @@ struct child_cfg_t {
 								 traffic_selector_t *ts);
 
 	/**
-	 * Get a list of traffic selectors to use for the CHILD_SA.
+	 * Get a list of configured traffic selectors to use for the CHILD_SA.
 	 *
 	 * The config contains two set of traffic selectors, one for the local
 	 * side, one for the remote side.
+	 *
+	 * Some traffic selectors may be "dynamic", meaning they are narrowed down
+	 * to a specific address (host-to-host or virtual-IP setups). Use the
+	 * "hosts" parameter to narrow such traffic selectors to an address.
+	 *
+	 * Returned list and its traffic selectors must be destroyed after use.
+	 *
+	 * Note that this method does not log anything. If logging is required, use
+	 * select_traffic_selectors() without passing supplied traffic selectors.
+	 *
+	 * @param local			TRUE for TS on local side, FALSE for remote
+	 * @param hosts			addresses to use for narrowing "dynamic" TS', host_t
+	 * @return				list containing the traffic selectors
+	 */
+	linked_list_t *(*get_traffic_selectors)(child_cfg_t *this, bool local,
+											linked_list_t *hosts);
+
+	/**
+	 * Select a list of traffic selectors to use for the CHILD_SA.
+	 *
+	 * The config contains two set of traffic selectors, one for the local
+	 * side, one for the remote side.
+	 *
 	 * If a list with traffic selectors is supplied, these are used to narrow
-	 * down the traffic selector list to the greatest common divisor.
-	 * Some traffic selector may be "dynamic", meaning they are narrowed down
-	 * to a specific address (host-to-host or virtual-IP setups). Use
-	 * the "host" parameter to narrow such traffic selectors to that address.
-	 * Resulted list and its traffic selectors must be destroyed after use.
+	 * down the traffic selector list to the greatest common subset.
+	 *
+	 * Some traffic selectors may be "dynamic", meaning they are narrowed down
+	 * to a specific address (host-to-host or virtual-IP setups). Use the
+	 * "hosts" parameter to narrow such traffic selectors to an address.
+	 *
+	 * Returned list and its traffic selectors must be destroyed after use.
 	 *
 	 * @param local			TRUE for TS on local side, FALSE for remote
 	 * @param supplied		list with TS to select from, or NULL
 	 * @param hosts			addresses to use for narrowing "dynamic" TS', host_t
-	 * @param log			FALSE to avoid logging details about the selection
 	 * @return				list containing the traffic selectors
 	 */
-	linked_list_t *(*get_traffic_selectors)(child_cfg_t *this, bool local,
-											linked_list_t *supplied,
-											linked_list_t *hosts, bool log);
+	linked_list_t *(*select_traffic_selectors)(child_cfg_t *this, bool local,
+											   linked_list_t *supplied,
+											   linked_list_t *hosts);
 
 	/**
 	 * Get the updown script to run for the CHILD_SA.
