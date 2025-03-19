@@ -412,6 +412,8 @@ struct child_init_args_t {
 	traffic_selector_t *dst;
 	/** Optional security label of triggering packet */
 	sec_label_t *label;
+	/** Optional sequence number associated with the acquire triggering the SA */
+	uint32_t seq;
 };
 
 /**
