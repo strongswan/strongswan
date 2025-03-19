@@ -67,6 +67,8 @@ struct kernel_ipsec_sa_id_t {
 struct kernel_ipsec_add_sa_t {
 	/** Reqid */
 	uint32_t reqid;
+	/** Optional sequence number associated with the acquire triggering the SA */
+	uint32_t seq;
 	/** Mode (tunnel, transport...) */
 	ipsec_mode_t mode;
 	/** List of source traffic selectors */
