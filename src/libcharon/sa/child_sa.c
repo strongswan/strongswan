@@ -2036,7 +2036,7 @@ static host_t* get_proxy_addr(child_cfg_t *config, host_t *ike, bool local)
 	traffic_selector_t *ts;
 
 	list = linked_list_create_with_items(ike, NULL);
-	ts_list = config->get_traffic_selectors(config, local, NULL, list, FALSE);
+	ts_list = config->get_traffic_selectors(config, local, list);
 	list->destroy(list);
 
 	enumerator = ts_list->create_enumerator(ts_list);

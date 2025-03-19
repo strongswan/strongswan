@@ -468,14 +468,14 @@ static linked_list_t* narrow_ts(private_child_create_t *this, bool local,
 		this->ike_sa->has_condition(this->ike_sa, cond))
 	{
 		nat = get_transport_nat_ts(this, local, in);
-		ts = this->config->get_traffic_selectors(this->config, local, nat,
-												 hosts, TRUE);
+		ts = this->config->select_traffic_selectors(this->config, local, nat,
+													hosts);
 		nat->destroy_offset(nat, offsetof(traffic_selector_t, destroy));
 	}
 	else
 	{
-		ts = this->config->get_traffic_selectors(this->config, local, in,
-												 hosts, TRUE);
+		ts = this->config->select_traffic_selectors(this->config, local, in,
+													hosts);
 	}
 
 	hosts->destroy(hosts);
@@ -1461,21 +1461,21 @@ METHOD(task_t, build_i, status_t,
 	}
 	if (list->get_count(list))
 	{
-		this->tsi = this->config->get_traffic_selectors(this->config,
-														TRUE, NULL, list, TRUE);
+		this->tsi = this->config->select_traffic_selectors(this->config, TRUE,
+														   NULL, list);
 		list->destroy_offset(list, offsetof(host_t, destroy));
 	}
 	else
 	{	/* no virtual IPs configured */
 		list->destroy(list);
 		list = ike_sa_get_dynamic_hosts(this->ike_sa, TRUE);
-		this->tsi = this->config->get_traffic_selectors(this->config,
-														TRUE, NULL, list, TRUE);
+		this->tsi = this->config->select_traffic_selectors(this->config, TRUE,
+														   NULL, list);
 		list->destroy(list);
 	}
 	list = ike_sa_get_dynamic_hosts(this->ike_sa, FALSE);
-	this->tsr = this->config->get_traffic_selectors(this->config,
-													FALSE, NULL, list, TRUE);
+	this->tsr = this->config->select_traffic_selectors(this->config, FALSE,
+													   NULL, list);
 	list->destroy(list);
 
 	if (this->packet_tsi)

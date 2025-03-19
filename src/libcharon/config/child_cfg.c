@@ -266,81 +266,138 @@ METHOD(child_cfg_t, add_traffic_selector, void,
 	}
 }
 
+/**
+ * Create a copy of the traffic selectors in the given list, while resolving
+ * "dynamic" traffic selectors using the given hosts, if any. When not narrowing
+ * as initiator, we also replace TS in transport mode.
+ */
+static linked_list_t *resolve_dynamic_ts(private_child_cfg_t *this,
+										linked_list_t *list,
+										linked_list_t *hosts,
+										bool narrowing)
+{
+	enumerator_t *e1, *e2;
+	traffic_selector_t *ts1, *ts2;
+	linked_list_t *result;
+	host_t *host;
+	bool transport_mode;
+
+	if (!hosts || !hosts->get_count(hosts))
+	{
+		return list->clone_offset(list, offsetof(traffic_selector_t, clone));
+	}
+	transport_mode = !narrowing && this->mode == MODE_TRANSPORT &&
+					 !has_option(this, OPT_PROXY_MODE);
+
+	result = linked_list_create();
+	e1 = list->create_enumerator(list);
+	while (e1->enumerate(e1, &ts1))
+	{
+		/* set hosts if TS is dynamic or as initiator in transport mode */
+		bool dynamic = ts1->is_dynamic(ts1);
+		if (!dynamic && !transport_mode)
+		{
+			result->insert_last(result, ts1->clone(ts1));
+			continue;
+		}
+		e2 = hosts->create_enumerator(hosts);
+		while (e2->enumerate(e2, &host))
+		{
+			if (!dynamic && !host->is_anyaddr(host) &&
+				!ts1->includes(ts1, host))
+			{	/* for transport mode, we skip TS that don't match
+				 * specific IPs */
+				continue;
+			}
+			ts2 = ts1->clone(ts1);
+			if (dynamic || !host->is_anyaddr(host))
+			{	/* don't make regular TS larger than they were */
+				ts2->set_address(ts2, host);
+			}
+			result->insert_last(result, ts2);
+		}
+		e2->destroy(e2);
+	}
+	e1->destroy(e1);
+	return result;
+}
+
+/**
+ * Remove duplicate traffic selectors in the given list.
+ */
+static void remove_duplicate_ts(linked_list_t *list)
+{
+	enumerator_t *e1, *e2;
+	traffic_selector_t *ts1, *ts2;
+
+	e1 = list->create_enumerator(list);
+	e2 = list->create_enumerator(list);
+	while (e1->enumerate(e1, &ts1))
+	{
+		while (e2->enumerate(e2, &ts2))
+		{
+			if (ts1 != ts2)
+			{
+				if (ts2->is_contained_in(ts2, ts1))
+				{
+					list->remove_at(list, e2);
+					ts2->destroy(ts2);
+					list->reset_enumerator(list, e1);
+					break;
+				}
+				if (ts1->is_contained_in(ts1, ts2))
+				{
+					list->remove_at(list, e1);
+					ts1->destroy(ts1);
+					break;
+				}
+			}
+		}
+		list->reset_enumerator(list, e2);
+	}
+	e1->destroy(e1);
+	e2->destroy(e2);
+}
+
 METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
+	private_child_cfg_t *this, bool local, linked_list_t *hosts)
+{
+	linked_list_t *result;
+
+	result = resolve_dynamic_ts(this, local ? this->my_ts : this->other_ts,
+								hosts, FALSE);
+	remove_duplicate_ts(result);
+	return result;
+}
+
+METHOD(child_cfg_t, select_traffic_selectors, linked_list_t*,
 	private_child_cfg_t *this, bool local, linked_list_t *supplied,
-	linked_list_t *hosts, bool log)
+	linked_list_t *hosts)
 {
 	enumerator_t *e1, *e2;
 	traffic_selector_t *ts1, *ts2, *selected;
-	linked_list_t *result, *derived;
-	host_t *host;
+	linked_list_t *resolved, *result;
 
 	result = linked_list_create();
-	derived = linked_list_create();
-	if (local)
-	{
-		e1 = this->my_ts->create_enumerator(this->my_ts);
-	}
-	else
-	{
-		e1 = this->other_ts->create_enumerator(this->other_ts);
-	}
-	/* in a first step, replace "dynamic" TS with the host list */
-	while (e1->enumerate(e1, &ts1))
-	{
-		if (hosts && hosts->get_count(hosts))
-		{	/* set hosts if TS is dynamic or as initiator in transport mode */
-			bool dynamic = ts1->is_dynamic(ts1),
-				 proxy_mode = has_option(this, OPT_PROXY_MODE);
-			if (dynamic || (this->mode == MODE_TRANSPORT && !proxy_mode &&
-							!supplied))
-			{
-				e2 = hosts->create_enumerator(hosts);
-				while (e2->enumerate(e2, &host))
-				{
-					if (!dynamic && !host->is_anyaddr(host) &&
-						!ts1->includes(ts1, host))
-					{	/* for transport mode, we skip TS that don't match
-						 * specific IPs */
-						continue;
-					}
-					ts2 = ts1->clone(ts1);
-					if (dynamic || !host->is_anyaddr(host))
-					{	/* don't make regular TS larger than they were */
-						ts2->set_address(ts2, host);
-					}
-					derived->insert_last(derived, ts2);
-				}
-				e2->destroy(e2);
-				continue;
-			}
-		}
-		derived->insert_last(derived, ts1->clone(ts1));
-	}
-	e1->destroy(e1);
+	resolved = resolve_dynamic_ts(this, local ? this->my_ts : this->other_ts,
+								  hosts, supplied);
 
-	if (log)
-	{
-		DBG2(DBG_CFG, "%s traffic selectors for %s:",
-			 supplied ? "selecting" : "proposing", local ? "us" : "other");
-	}
+	DBG2(DBG_CFG, "%s traffic selectors for %s:",
+		 supplied ? "selecting" : "proposing", local ? "us" : "other");
+
 	if (!supplied)
 	{
-		while (derived->remove_first(derived, (void**)&ts1) == SUCCESS)
+		while (resolved->remove_first(resolved, (void**)&ts1) == SUCCESS)
 		{
-			if (log)
-			{
-				DBG2(DBG_CFG, " %R", ts1);
-			}
+			DBG2(DBG_CFG, " %R", ts1);
 			result->insert_last(result, ts1);
 		}
-		derived->destroy(derived);
 	}
 	else
 	{
-		e1 = derived->create_enumerator(derived);
+		e1 = resolved->create_enumerator(resolved);
 		e2 = supplied->create_enumerator(supplied);
-		/* enumerate all configured/derived selectors */
+		/* enumerate all configured/resolved selectors */
 		while (e1->enumerate(e1, &ts1))
 		{
 			/* enumerate all supplied traffic selectors */
@@ -349,14 +406,11 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 				selected = ts1->get_subset(ts1, ts2);
 				if (selected)
 				{
-					if (log)
-					{
-						DBG2(DBG_CFG, " config: %R, received: %R => match: %R",
-							 ts1, ts2, selected);
-					}
+					DBG2(DBG_CFG, " config: %R, received: %R => match: %R",
+						 ts1, ts2, selected);
 					result->insert_last(result, selected);
 				}
-				else if (log)
+				else
 				{
 					DBG2(DBG_CFG, " config: %R, received: %R => no match",
 						 ts1, ts2);
@@ -368,7 +422,7 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 		e2->destroy(e2);
 
 		/* check if we/peer did any narrowing, raise alert */
-		e1 = derived->create_enumerator(derived);
+		e1 = resolved->create_enumerator(resolved);
 		e2 = result->create_enumerator(result);
 		while (e1->enumerate(e1, &ts1))
 		{
@@ -382,38 +436,9 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 		e1->destroy(e1);
 		e2->destroy(e2);
 
-		derived->destroy_offset(derived, offsetof(traffic_selector_t, destroy));
 	}
-
-	/* remove any redundant traffic selectors in the list */
-	e1 = result->create_enumerator(result);
-	e2 = result->create_enumerator(result);
-	while (e1->enumerate(e1, &ts1))
-	{
-		while (e2->enumerate(e2, &ts2))
-		{
-			if (ts1 != ts2)
-			{
-				if (ts2->is_contained_in(ts2, ts1))
-				{
-					result->remove_at(result, e2);
-					ts2->destroy(ts2);
-					result->reset_enumerator(result, e1);
-					break;
-				}
-				if (ts1->is_contained_in(ts1, ts2))
-				{
-					result->remove_at(result, e1);
-					ts1->destroy(ts1);
-					break;
-				}
-			}
-		}
-		result->reset_enumerator(result, e2);
-	}
-	e1->destroy(e1);
-	e2->destroy(e2);
-
+	resolved->destroy_offset(resolved, offsetof(traffic_selector_t, destroy));
+	remove_duplicate_ts(result);
 	return result;
 }
 
@@ -755,6 +780,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.get_name = _get_name,
 			.add_traffic_selector = _add_traffic_selector,
 			.get_traffic_selectors = _get_traffic_selectors,
+			.select_traffic_selectors = _select_traffic_selectors,
 			.add_proposal = _add_proposal,
 			.get_proposals = _get_proposals,
 			.select_proposal = _select_proposal,

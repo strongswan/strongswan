@@ -414,7 +414,7 @@ static u_int get_ts_match(child_cfg_t *cfg, bool local,
 	}
 
 	/* fetch configured TS list, narrowing dynamic TS */
-	cfg_list = cfg->get_traffic_selectors(cfg, local, NULL, hosts, TRUE);
+	cfg_list = cfg->select_traffic_selectors(cfg, local, NULL, hosts);
 
 	/* use a round counter to rate leading TS with higher priority */
 	round = sup_list->get_count(sup_list);
