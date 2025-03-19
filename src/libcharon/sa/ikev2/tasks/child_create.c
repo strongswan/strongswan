@@ -249,7 +249,8 @@ static void schedule_delayed_retry(private_child_create_t *this)
 
 	task = child_create_create(this->ike_sa,
 							   this->config->get_ref(this->config), FALSE,
-							   this->packet_tsi, this->packet_tsr);
+							   this->packet_tsi, this->packet_tsr,
+							   this->child.seq);
 	task->use_reqid(task, this->child.reqid);
 	task->use_marks(task, this->child.mark_in, this->child.mark_out);
 	task->use_if_ids(task, this->child.if_id_in, this->child.if_id_out);
@@ -2669,8 +2670,9 @@ METHOD(task_t, destroy, void,
  * Described in header.
  */
 child_create_t *child_create_create(ike_sa_t *ike_sa,
-							child_cfg_t *config, bool rekey,
-							traffic_selector_t *tsi, traffic_selector_t *tsr)
+									child_cfg_t *config, bool rekey,
+									traffic_selector_t *tsi,
+									traffic_selector_t *tsr, uint32_t seq)
 {
 	private_child_create_t *this;
 
@@ -2692,6 +2694,9 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
+		},
+		.child = {
+			.seq = seq,
 		},
 		.ike_sa = ike_sa,
 		.config = config,

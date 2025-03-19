@@ -275,7 +275,7 @@ METHOD(task_t, build_i, status_t,
 
 		config = this->child_sa->get_config(this->child_sa);
 		this->child_create = child_create_create(this->ike_sa,
-									config->get_ref(config), TRUE, NULL, NULL);
+								config->get_ref(config), TRUE, NULL, NULL, 0);
 
 		proposal = this->child_sa->get_proposal(this->child_sa);
 		if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD,
@@ -1240,7 +1240,8 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 		this->public.task.build = _build_r;
 		this->public.task.process = _process_r;
 		this->initiator = FALSE;
-		this->child_create = child_create_create(ike_sa, NULL, TRUE, NULL, NULL);
+		this->child_create = child_create_create(ike_sa, NULL, TRUE,
+												 NULL, NULL, 0);
 	}
 
 	return &this->public;

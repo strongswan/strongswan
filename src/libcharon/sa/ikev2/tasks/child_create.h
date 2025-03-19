@@ -140,10 +140,12 @@ struct child_create_t {
  * @param rekey			whether we do a rekey or not
  * @param tsi			source of triggering packet, or NULL
  * @param tsr			destination of triggering packet, or NULL
+ * @param seq			optional sequence number of triggering acquire, or 0
  * @return				child_create task to handle by the task_manager
  */
 child_create_t *child_create_create(ike_sa_t *ike_sa,
-							child_cfg_t *config, bool rekey,
-							traffic_selector_t *tsi, traffic_selector_t *tsr);
+									child_cfg_t *config, bool rekey,
+									traffic_selector_t *tsi,
+									traffic_selector_t *tsr, uint32_t seq);
 
 #endif /** CHILD_CREATE_H_ @}*/

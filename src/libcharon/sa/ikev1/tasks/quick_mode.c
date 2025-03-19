@@ -1546,7 +1546,8 @@ METHOD(task_t, destroy, void,
  * Described in header.
  */
 quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
-							traffic_selector_t *tsi, traffic_selector_t *tsr)
+								traffic_selector_t *tsi, traffic_selector_t *tsr,
+								uint32_t seq)
 {
 	private_quick_mode_t *this;
 
@@ -1564,6 +1565,9 @@ quick_mode_t *quick_mode_create(ike_sa_t *ike_sa, child_cfg_t *config,
 			.use_if_ids = _use_if_ids,
 			.rekey = _rekey,
 			.abort = _abort_,
+		},
+		.child = {
+			.seq = seq,
 		},
 		.ike_sa = ike_sa,
 		.initiator = config != NULL,
