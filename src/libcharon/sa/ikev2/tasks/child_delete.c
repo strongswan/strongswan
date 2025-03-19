@@ -556,7 +556,7 @@ METHOD(task_t, build_i, status_t,
 		child_cfg = child_sa->get_config(child_sa);
 		this->ike_sa->queue_task(this->ike_sa, (task_t*)
 				child_create_create(this->ike_sa, child_cfg->get_ref(child_cfg),
-									FALSE, NULL, NULL));
+									FALSE, NULL, NULL, 0));
 	}
 	return NEED_MORE;
 }
