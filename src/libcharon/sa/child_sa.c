@@ -162,6 +162,11 @@ struct private_child_sa_t {
 	uint32_t unique_id;
 
 	/**
+	 * Optional sequence number associated with triggering acquire
+	 */
+	uint32_t seq;
+
+	/**
 	 * Whether FWD policies in the outbound direction should be installed
 	 */
 	bool policies_fwd_out;
@@ -817,6 +822,18 @@ METHOD(child_sa_t, get_label, sec_label_t*,
 	return this->label ?: this->config->get_label(this->config);
 }
 
+METHOD(child_sa_t, get_acquire_seq, uint32_t,
+	private_child_sa_t *this)
+{
+	return this->seq;
+}
+
+METHOD(child_sa_t, set_acquire_seq, void,
+	private_child_sa_t *this, uint32_t seq)
+{
+	this->seq = seq;
+}
+
 METHOD(child_sa_t, get_lifetime, time_t,
 	   private_child_sa_t *this, bool hard)
 {
@@ -1022,6 +1039,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 	};
 	sa = (kernel_ipsec_add_sa_t){
 		.reqid = this->reqid,
+		.seq = this->seq,
 		.mode = this->mode,
 		.src_ts = src_ts,
 		.dst_ts = dst_ts,
@@ -2074,6 +2092,8 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 			.get_mark = _get_mark,
 			.get_if_id = _get_if_id,
 			.get_label = _get_label,
+			.get_acquire_seq = _get_acquire_seq,
+			.set_acquire_seq = _set_acquire_seq,
 			.has_encap = _has_encap,
 			.get_ipcomp = _get_ipcomp,
 			.set_ipcomp = _set_ipcomp,
@@ -2112,6 +2132,7 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 		.if_id_in = config->get_if_id(config, TRUE) ?: data->if_id_in_def,
 		.if_id_out = config->get_if_id(config, FALSE) ?: data->if_id_out_def,
 		.label = data->label ? data->label->clone(data->label) : NULL,
+		.seq = data->seq,
 		.install_time = time_monotonic(NULL),
 		.policies_fwd_out = config->has_option(config, OPT_FWD_OUT_POLICIES),
 	);

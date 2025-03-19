@@ -391,6 +391,22 @@ struct child_sa_t {
 	sec_label_t *(*get_label)(child_sa_t *this);
 
 	/**
+	 * Get the optional sequence number associated with the acquire that
+	 * triggered this CHILD_SA.
+	 *
+	 * @return				sequence number associated with the acquire or 0
+	 */
+	uint32_t (*get_acquire_seq)(child_sa_t *this);
+
+	/**
+	 * Set the optional sequence number associated with the acquire that
+	 * triggered this CHILD_SA.
+	 *
+	 * @param seq			sequence number associated with the acquire
+	 */
+	void (*set_acquire_seq)(child_sa_t *this, uint32_t seq);
+
+	/**
 	 * Create an enumerator over traffic selectors of one side.
 	 *
 	 * @param local		TRUE for own traffic selectors, FALSE for remote.
@@ -559,6 +575,9 @@ struct child_sa_create_t {
 	uint32_t if_id_out_def;
 	/** Optional security label to apply on SAs (cloned) */
 	sec_label_t *label;
+	/** Optional sequence number associated with the acquire that triggered
+	 * this SA */
+	uint32_t seq;
 	/** TRUE to enable UDP encapsulation (NAT traversal) */
 	bool encap;
 };
