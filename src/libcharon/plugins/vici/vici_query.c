@@ -684,7 +684,7 @@ static void raise_policy_cfg(private_vici_query_t *this, u_int id, char *ike,
 	list_label(b, NULL, cfg);
 
 	b->begin_list(b, "local-ts");
-	list = cfg->get_traffic_selectors(cfg, TRUE, NULL, NULL, FALSE);
+	list = cfg->get_traffic_selectors(cfg, TRUE, NULL);
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
@@ -695,7 +695,7 @@ static void raise_policy_cfg(private_vici_query_t *this, u_int id, char *ike,
 	b->end_list(b /* local-ts */);
 
 	b->begin_list(b, "remote-ts");
-	list = cfg->get_traffic_selectors(cfg, FALSE, NULL, NULL, FALSE);
+	list = cfg->get_traffic_selectors(cfg, FALSE, NULL);
 	enumerator = list->create_enumerator(list);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
@@ -1002,8 +1002,7 @@ CALLBACK(list_conns, vici_message_t*,
 					  child_cfg->get_close_action(child_cfg));
 
 			b->begin_list(b, "local-ts");
-			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL,
-													NULL, FALSE);
+			list = child_cfg->get_traffic_selectors(child_cfg, TRUE, NULL);
 			selectors = list->create_enumerator(list);
 			while (selectors->enumerate(selectors, &ts))
 			{
@@ -1014,8 +1013,7 @@ CALLBACK(list_conns, vici_message_t*,
 			b->end_list(b /* local-ts */);
 
 			b->begin_list(b, "remote-ts");
-			list = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL,
-													NULL, FALSE);
+			list = child_cfg->get_traffic_selectors(child_cfg, FALSE, NULL);
 			selectors = list->create_enumerator(list);
 			while (selectors->enumerate(selectors, &ts))
 			{

@@ -187,7 +187,7 @@ static bool dynamic_remote_ts(child_cfg_t *child)
 	traffic_selector_t *ts;
 	bool found = FALSE;
 
-	other_ts = child->get_traffic_selectors(child, FALSE, NULL, NULL, FALSE);
+	other_ts = child->get_traffic_selectors(child, FALSE, NULL);
 	enumerator = other_ts->create_enumerator(other_ts);
 	while (enumerator->enumerate(enumerator, &ts))
 	{
@@ -215,8 +215,8 @@ static status_t install_trap(child_sa_t *child_sa, linked_list_t *local,
 
 	child = child_sa->get_config(child_sa);
 
-	my_ts = child->get_traffic_selectors(child, TRUE, NULL, local, FALSE);
-	other_ts = child->get_traffic_selectors(child, FALSE, NULL, remote, FALSE);
+	my_ts = child->get_traffic_selectors(child, TRUE, local);
+	other_ts = child->get_traffic_selectors(child, FALSE, remote);
 
 	/* we don't know the finally negotiated protocol (ESP|AH), we install
 	 * the SA with the protocol of the first proposal */
