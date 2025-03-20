@@ -2163,13 +2163,14 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 	if (!this->reqid)
 	{
 		/* reuse old reqid if we are rekeying an existing CHILD_SA and when
-		 * initiating a trap policy. While the reqid cache would find the same
-		 * reqid for our selectors, this does not work in a special case: If an
-		 * SA is triggered by a trap policy, but the negotiated TS get
-		 * narrowed, we still must reuse the same reqid to successfully
-		 * replace the temporary SA on the kernel level. Rekeying such an SA
-		 * requires an explicit reqid, as the cache currently knows the original
-		 * selectors only for that reqid. */
+		 * initiating a trap policy. the reqid cache will generally find the
+		 * same reqid for our selectors. but this does not work in a special
+		 * case: if the IPsec stack does not use sequence numbers for acquires,
+		 * an SA is triggered by a trap policy and the negotiated TS get
+		 * narrowed, we still must reuse the same reqid to successfully replace
+		 * the temporary SA on the kernel level. however, if sequence numbers
+		 * are supported, the reqid will later get updated in case of narrowing
+		 * when alloc_reqid() is called */
 		if (data->reqid &&
 			charon->kernel->ref_reqid(charon->kernel, data->reqid) == SUCCESS)
 		{
