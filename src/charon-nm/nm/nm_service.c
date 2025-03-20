@@ -214,6 +214,10 @@ static void signal_ip_config(NMVpnServicePlugin *plugin,
 
 	handler = priv->handler;
 
+	/* we can reconnect automatically if interfaces change */
+	g_variant_builder_add (&builder, "{sv}", NM_VPN_PLUGIN_CAN_PERSIST,
+						   g_variant_new_boolean (TRUE));
+
 	/* NM apparently requires to know the gateway (it uses it to install a
 	 * direct route via physical interface if conflicting routes are passed) */
 	other = ike_sa->get_other_host(ike_sa);
