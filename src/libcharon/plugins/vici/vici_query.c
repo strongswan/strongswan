@@ -629,6 +629,7 @@ static void raise_policy(private_vici_query_t *this, u_int id, char *ike,
 	snprintf(buf, sizeof(buf), "%s/%s", ike, child->get_name(child));
 	b->begin_section(b, buf);
 	b->add_kv(b, "child", "%s", child->get_name(child));
+	b->add_kv(b, "reqid", "%u", child->get_reqid(child));
 	b->add_kv(b, "ike", "%s", ike);
 
 	list_mode(b, child, NULL);
