@@ -35,6 +35,10 @@ x86)
 x86_64)
 	OPTIONS="android-x86_64"
 	;;
+*)
+	echo "!! Skipping unknown ABI '${ABI}'"
+	continue
+	;;
 esac
 
 OPTIONS="${OPTIONS} \
