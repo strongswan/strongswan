@@ -653,7 +653,6 @@ static status_t install_child_sa(private_child_create_t *this)
 	this->child_sa->set_mode(this->child_sa, this->mode);
 	this->child_sa->set_protocol(this->child_sa,
 								 this->proposal->get_protocol(this->proposal));
-	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
 
 	/* addresses might have changed since we originally sent the request, update
 	 * them before we configure any policies and install the SAs */
@@ -670,6 +669,7 @@ static status_t install_child_sa(private_child_create_t *this)
 		other_ts->destroy_offset(other_ts,
 							  offsetof(traffic_selector_t, destroy));
 	}
+	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
 
 	if (this->my_cpi == 0 || this->other_cpi == 0 || this->ipcomp == IPCOMP_NONE)
 	{
