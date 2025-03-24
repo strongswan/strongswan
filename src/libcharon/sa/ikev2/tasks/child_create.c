@@ -1292,28 +1292,6 @@ static status_t defer_child_sa(private_child_create_t *this)
 }
 
 /**
- * Check if the given TS is contained in any of the ones of the given CHILD_SA.
- */
-static bool ts_match_existing(traffic_selector_t *ts, child_sa_t *child_sa,
-							  bool local)
-{
-	enumerator_t *enumerator;
-	traffic_selector_t *negotiated;
-
-	enumerator = child_sa->create_ts_enumerator(child_sa, local);
-	while (enumerator->enumerate(enumerator, &negotiated))
-	{
-		if (ts->is_contained_in(ts, negotiated))
-		{
-			enumerator->destroy(enumerator);
-			return TRUE;
-		}
-	}
-	enumerator->destroy(enumerator);
-	return FALSE;
-}
-
-/**
  * Compare the reqids and possibly traffic selectors of two CHILD_SAs for
  * equality.
  *
@@ -1342,8 +1320,7 @@ static bool reqid_and_ts_equals(private_child_create_t *this, child_sa_t *a,
 	 * they do, there is no point to negotiate another SA.  if not, the peer
 	 * will potentially narrow the TS to a different set for the new SA */
 	return !this->packet_tsi || !this->packet_tsr ||
-		   (ts_match_existing(this->packet_tsi, a, TRUE) &&
-		    ts_match_existing(this->packet_tsr, a, FALSE));
+		   child_sa_ts_match(a, this->packet_tsi, this->packet_tsr);
 }
 
 /**
