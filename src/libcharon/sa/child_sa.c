@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Tobias Brunner
+ * Copyright (C) 2006-2025 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -2197,4 +2197,37 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 		this->other_addr = other->clone(other);
 	}
 	return &this->public;
+}
+
+/**
+ * Check if the given traffic selector is contained in any of the traffic
+ * selectors in the given list.
+ */
+static bool is_ts_match(traffic_selector_t *to_check, array_t *list)
+{
+	traffic_selector_t *ts;
+	int i;
+
+	for (i = 0; i < array_count(list); i++)
+	{
+		array_get(list, i, &ts);
+		if (to_check->is_contained_in(to_check, ts))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/*
+ * Described in header
+ */
+bool child_sa_ts_match(child_sa_t *child, traffic_selector_t *src,
+					   traffic_selector_t *dst)
+{
+	private_child_sa_t *this = (private_child_sa_t*)child;
+
+	return src && dst &&
+		   is_ts_match(src, this->my_ts) &&
+		   is_ts_match(dst, this->other_ts);
 }

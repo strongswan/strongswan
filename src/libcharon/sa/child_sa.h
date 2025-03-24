@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Tobias Brunner
+ * Copyright (C) 2006-2025 Tobias Brunner
  * Copyright (C) 2006-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  *
@@ -593,5 +593,18 @@ struct child_sa_create_t {
  */
 child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 							child_sa_create_t *data);
+
+/**
+ * Check if the given source and destination traffic selectors (e.g. from a
+ * packet triggering an acquire) match the negotiated local and remote traffic
+ * selectors of this child SA.
+ *
+ * @param this				CHILD_SA to check traffic selectors against
+ * @param src				source traffic selector
+ * @param dst				destination traffic selector
+ * @return					TRUE if both traffic selectors match
+ */
+bool child_sa_ts_match(child_sa_t *this, traffic_selector_t *src,
+					   traffic_selector_t *dst);
 
 #endif /** CHILD_SA_H_ @}*/
