@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Tobias Brunner
+ * Copyright (C) 2010-2025 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -118,5 +118,22 @@ struct kernel_listener_t {
 	 */
 	bool (*tun)(kernel_listener_t *this, tun_device_t *tun, bool created);
 };
+
+/**
+ * Clone the given acquire data received from the kernel.
+ *
+ * @param data				data to clone
+ * @return					clone of the original object and all associated data
+ */
+kernel_acquire_data_t *kernel_acquire_data_clone(kernel_acquire_data_t *data);
+
+/**
+ * Destroy the given previously cloned acquire data.
+ *
+ * @note This must not be used on the original data from the kernel interface.
+ *
+ * @param data				cloned data to destroy
+ */
+void kernel_acquire_data_destroy(kernel_acquire_data_t *data);
 
 #endif /** KERNEL_LISTENER_H_ @}*/
