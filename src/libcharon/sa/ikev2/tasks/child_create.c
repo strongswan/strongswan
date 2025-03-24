@@ -1292,21 +1292,76 @@ static status_t defer_child_sa(private_child_create_t *this)
 }
 
 /**
- * Compare two CHILD_SA objects for equality
+ * Check if the given TS is contained in any of the ones of the given CHILD_SA.
  */
-static bool child_sa_equals(child_sa_t *a, child_sa_t *b)
+static bool ts_match_existing(traffic_selector_t *ts, child_sa_t *child_sa,
+							  bool local)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *negotiated;
+
+	enumerator = child_sa->create_ts_enumerator(child_sa, local);
+	while (enumerator->enumerate(enumerator, &negotiated))
+	{
+		if (ts->is_contained_in(ts, negotiated))
+		{
+			enumerator->destroy(enumerator);
+			return TRUE;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return FALSE;
+}
+
+/**
+ * Compare the reqids and possibly traffic selectors of two CHILD_SAs for
+ * equality.
+ *
+ * The second CHILD_SA is assumed to be the one newly created.
+ */
+static bool reqid_and_ts_equals(private_child_create_t *this, child_sa_t *a,
+								child_sa_t *b)
+{
+	/* reqids are allocated based on the traffic selectors. if all the other
+	 * selectors are the same, they can only differ if narrowing occurred.
+	 *
+	 * if the new SA has no reqid assigned, it was initiated manually or due to
+	 * a start action and we assume the peer will do the same narrowing it
+	 * possibly did before, so we treat the SAs as equal.
+	 *
+	 * if the new SA has a reqid, it was either triggered by an acquire or
+	 * during a reestablishment.  if they are equal, we are done */
+	if (!b->get_reqid(b) || a->get_reqid(a) == b->get_reqid(b))
+	{
+		return TRUE;
+	}
+	/* if the reqids differ, the one of the established SA was changed due to
+	 * narrowing.  in this case we check if we have triggering TS.  if not, we
+	 * assume the peer will do the same narrowing and treat the SAs equal.
+	 * otherwise, we check whether they match the TS of the existing SA.  if
+	 * they do, there is no point to negotiate another SA.  if not, the peer
+	 * will potentially narrow the TS to a different set for the new SA */
+	return !this->packet_tsi || !this->packet_tsr ||
+		   (ts_match_existing(this->packet_tsi, a, TRUE) &&
+		    ts_match_existing(this->packet_tsr, a, FALSE));
+}
+
+/**
+ * Compare two CHILD_SA objects for equality.
+ *
+ * The second CHILD_SA is assumed to be the one newly created.
+ */
+static bool child_sa_equals(private_child_create_t *this, child_sa_t *a,
+							child_sa_t *b)
 {
 	child_cfg_t *cfg = a->get_config(a);
 	return cfg->equals(cfg, b->get_config(b)) &&
-		/* reqids are allocated based on the final TS, so we can only compare
-		 * them if they are static (i.e. both have them) */
-		(!a->get_reqid(a) || !b->get_reqid(b) ||
-		  a->get_reqid(a) == b->get_reqid(b)) &&
 		a->get_mark(a, TRUE).value == b->get_mark(b, TRUE).value &&
 		a->get_mark(a, FALSE).value == b->get_mark(b, FALSE).value &&
 		a->get_if_id(a, TRUE) == b->get_if_id(b, TRUE) &&
 		a->get_if_id(a, FALSE) == b->get_if_id(b, FALSE) &&
-		sec_labels_equal(a->get_label(a), b->get_label(b));
+		sec_labels_equal(a->get_label(a), b->get_label(b)) &&
+		reqid_and_ts_equals(this, a, b);
 }
 
 /**
@@ -1322,7 +1377,7 @@ static bool check_for_duplicate(private_child_create_t *this)
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		if (child_sa->get_state(child_sa) == CHILD_INSTALLED &&
-			child_sa_equals(child_sa, this->child_sa))
+			child_sa_equals(this, child_sa, this->child_sa))
 		{
 			found = child_sa;
 			break;
