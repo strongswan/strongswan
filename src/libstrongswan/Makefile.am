@@ -40,7 +40,7 @@ networking/streams/stream_tcp.c networking/streams/stream_service_tcp.c \
 pen/pen.c plugins/plugin_loader.c plugins/plugin_feature.c processing/jobs/job.c \
 processing/jobs/callback_job.c processing/processor.c processing/scheduler.c \
 processing/watcher.c resolver/resolver_manager.c resolver/rr_set.c \
-selectors/sec_label.c selectors/traffic_selector.c \
+selectors/sec_label.c selectors/traffic_selector.c selectors/traffic_selector_list.c \
 settings/settings.c settings/settings_types.c \
 settings/settings_parser.y settings/settings_lexer.l utils/cpu_feature.c \
 utils/utils.c utils/chunk.c utils/debug.c utils/enum.c utils/identification.c \
@@ -125,7 +125,7 @@ resolver/rr.h resolver/resolver_manager.h \
 plugins/plugin_loader.h plugins/plugin.h plugins/plugin_feature.h \
 processing/jobs/job.h processing/jobs/callback_job.h processing/processor.h \
 processing/scheduler.h processing/watcher.h \
-selectors/sec_label.h selectors/traffic_selector.h \
+selectors/sec_label.h selectors/traffic_selector.h selectors/traffic_selector_list.h \
 settings/settings.h settings/settings_parser.h threading/thread_value.h \
 threading/thread.h threading/windows/thread.h \
 threading/mutex.h threading/condvar.h threading/spinlock.h threading/semaphore.h \
