@@ -362,7 +362,7 @@ do
 	unset DBHOSTS
 	unset IPV6
 	unset SWANCTL
-	source $TESTDIR/test.conf
+	source $DEFAULTTESTSDIR/${testname}/test.conf
 
 	DBDIR=/etc/db.d
 	STATUS="passed"
