@@ -33,7 +33,7 @@
 /**
  * Protocol version of this implementation
  */
-#define HA_MESSAGE_VERSION 4
+#define HA_MESSAGE_VERSION 5
 
 typedef struct ha_message_t ha_message_t;
 typedef enum ha_message_type_t ha_message_type_t;
