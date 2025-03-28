@@ -70,6 +70,7 @@ ARG_WITH_SET([mpz_powm_sec],         [yes], [use the more side-channel resistant
 ARG_WITH_SET([dev-headers],          [no], [install strongSwan development headers to directory.])
 ARG_WITH_SET([printf-hooks],         [auto], [force the use of a specific printf hook implementation (auto, builtin, glibc, vstr).])
 ARG_WITH_SET([rubygemdir],           ["gem environment gemdir"], [path to install ruby gems to])
+ARG_WITH_SET([testable-ke],          [yes], [make key exchange implementations testable by providing a set_seed() method])
 
 if test -n "$PKG_CONFIG"; then
 	systemdsystemunitdir_default=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
@@ -1349,6 +1350,10 @@ if test x$unwind_backtraces = xtrue; then
 		[AC_MSG_ERROR([libunwind.h header not found!])])
 	UNWINDLIB="-lunwind"
 	AC_SUBST(UNWINDLIB)
+fi
+
+if test "x$testable_ke" = xyes; then
+	AC_DEFINE([TESTABLE_KE], [1], [Define to 1 if key exchange methods should be testable.])
 fi
 
 AM_CONDITIONAL(USE_DEV_HEADERS, [test "x$dev_headers" != xno])

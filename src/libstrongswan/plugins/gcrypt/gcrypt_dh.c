@@ -143,6 +143,8 @@ METHOD(key_exchange_t, get_public_key, bool,
 	return TRUE;
 }
 
+#ifdef TESTABLE_KE
+
 METHOD(key_exchange_t, set_seed, bool,
 	private_gcrypt_dh_t *this, chunk_t value, drbg_t *drbg)
 {
@@ -160,6 +162,8 @@ METHOD(key_exchange_t, set_seed, bool,
 	}
 	return !err;
 }
+
+#endif /* TESTABLE_KE */
 
 METHOD(key_exchange_t, get_shared_secret, bool,
 	private_gcrypt_dh_t *this, chunk_t *secret)
@@ -208,7 +212,6 @@ static gcrypt_dh_t *create_generic(key_exchange_method_t group, size_t exp_len,
 				.get_shared_secret = _get_shared_secret,
 				.set_public_key = _set_public_key,
 				.get_public_key = _get_public_key,
-				.set_seed = _set_seed,
 				.get_method = _get_method,
 				.destroy = _destroy,
 			},
@@ -216,6 +219,11 @@ static gcrypt_dh_t *create_generic(key_exchange_method_t group, size_t exp_len,
 		.group = group,
 		.p_len = p.len,
 	);
+
+#ifdef TESTABLE_KE
+	this->public.ke.set_seed = _set_seed;
+#endif
+
 	err = gcry_mpi_scan(&this->p, GCRYMPI_FMT_USG, p.ptr, p.len, NULL);
 	if (err)
 	{
