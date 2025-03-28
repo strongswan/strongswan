@@ -49,15 +49,15 @@ struct private_ha_ike_t {
 };
 
 /**
- * Copy conditions of IKE_SA to message as HA_CONDITIONS attribute
+ * Copy (private) conditions of IKE_SA to message as HA_CONDITIONS attribute
  */
-static void copy_conditions(ha_message_t *m, ike_sa_t *ike_sa)
+static void copy_conditions(ha_message_t *m, ike_sa_t *ike_sa, bool private)
 {
-	ike_condition_t i, conditions = 0;
+	ike_condition_t i, conditions = private ? COND_PRIVATE_MARKER : 0;
 
-	for (i = 0; i < sizeof(i) * 8; ++i)
+	for (i = 0; i < (sizeof(i) * 8) - 1; ++i)
 	{
-		ike_condition_t cond = (1 << i);
+		ike_condition_t cond = (1 << i) | (private ? COND_PRIVATE_MARKER : 0);
 
 		conditions |= (ike_sa->has_condition(ike_sa, cond) ? cond : 0);
 	}
@@ -66,15 +66,15 @@ static void copy_conditions(ha_message_t *m, ike_sa_t *ike_sa)
 }
 
 /**
- * Copy extensions of IKE_SA to message as HA_EXTENSIONS attribute
+ * Copy (private) extensions of IKE_SA to message as HA_EXTENSIONS attribute
  */
-static void copy_extensions(ha_message_t *m, ike_sa_t *ike_sa)
+static void copy_extensions(ha_message_t *m, ike_sa_t *ike_sa, bool private)
 {
-	ike_extension_t i, extensions = 0;
+	ike_extension_t i, extensions = private ? EXT_PRIVATE_MARKER : 0;
 
-	for (i = 0; i < sizeof(i) * 8; ++i)
+	for (i = 0; i < (sizeof(i) * 8) - 1; ++i)
 	{
-		ike_extension_t ext = (1 << i);
+		ike_extension_t ext = (1 << i) | (private ? EXT_PRIVATE_MARKER : 0);
 
 		extensions |= (ike_sa->supports_extension(ike_sa, ext) ? ext : 0);
 	}
@@ -212,8 +212,10 @@ METHOD(listener_t, ike_updown, bool,
 		}
 		m->add_attribute(m, HA_LOCAL_ADDR, ike_sa->get_my_host(ike_sa));
 		m->add_attribute(m, HA_REMOTE_ADDR, ike_sa->get_other_host(ike_sa));
-		copy_conditions(m, ike_sa);
-		copy_extensions(m, ike_sa);
+		copy_conditions(m, ike_sa, FALSE);
+		copy_conditions(m, ike_sa, TRUE);
+		copy_extensions(m, ike_sa, FALSE);
+		copy_extensions(m, ike_sa, TRUE);
 		m->add_attribute(m, HA_CONFIG_NAME, peer_cfg->get_name(peer_cfg));
 		enumerator = ike_sa->create_peer_address_enumerator(ike_sa);
 		while (enumerator->enumerate(enumerator, (void**)&addr))
