@@ -972,7 +972,7 @@ CALLBACK(list_conns, vici_message_t*,
 		{
 			b->add_kv(b, "ppk_id", "%Y", ppk_id);
 		}
-		if (peer_cfg->ppk_required(peer_cfg))
+		if (peer_cfg->has_option(peer_cfg, OPT_PPK_REQUIRED))
 		{
 			b->add_kv(b, "ppk_required", "yes");
 		}

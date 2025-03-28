@@ -170,7 +170,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 		case PROF_V1_XAUTH_AM:
 		case PROF_V1_XAUTH_PSK_AM:
 		case PROF_V1_HYBRID_AM:
-			peer.aggressive = TRUE;
+			peer.options |= OPT_IKEV1_AGGRESSIVE;
 			/* FALL */
 		case PROF_V1_PUB:
 		case PROF_V1_XAUTH:
