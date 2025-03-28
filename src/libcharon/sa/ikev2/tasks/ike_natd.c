@@ -304,7 +304,7 @@ METHOD(task_t, process_i, status_t,
 
 		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 		if (this->ike_sa->has_condition(this->ike_sa, COND_NAT_ANY) ||
-			(peer_cfg->use_mobike(peer_cfg) &&
+			(!peer_cfg->has_option(peer_cfg, OPT_NO_MOBIKE) &&
 			 this->ike_sa->supports_extension(this->ike_sa, EXT_NATT)))
 		{	/* if the peer supports NAT-T, we switch to port 4500 even if no
 			 * NAT is detected. can't be done later (when we would know

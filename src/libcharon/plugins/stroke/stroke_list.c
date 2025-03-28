@@ -566,7 +566,8 @@ METHOD(stroke_list_t, status, void,
 			fprintf(out, "%12s:  %s...%s  %N", peer_cfg->get_name(peer_cfg),
 					my_addr, other_addr, ike_version_names, ike_version);
 
-			if (ike_version == IKEV1 && peer_cfg->use_aggressive(peer_cfg))
+			if (ike_version == IKEV1 &&
+				peer_cfg->has_option(peer_cfg, OPT_IKEV1_AGGRESSIVE))
 			{
 				fprintf(out, " Aggressive");
 			}

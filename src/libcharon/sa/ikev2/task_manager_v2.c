@@ -2121,7 +2121,7 @@ METHOD(task_manager_t, queue_ike, void,
 		peer_cfg_t *peer_cfg;
 
 		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-		if (peer_cfg->use_mobike(peer_cfg))
+		if (!peer_cfg->has_option(peer_cfg, OPT_NO_MOBIKE))
 		{
 			queue_task(this, (task_t*)ike_mobike_create(this->ike_sa, TRUE));
 		}

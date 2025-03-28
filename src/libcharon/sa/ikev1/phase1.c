@@ -146,7 +146,7 @@ static shared_key_t *lookup_shared_key(private_phase1_t *this,
 		if (other_auth)
 		{
 			my_id = this->ike_sa->get_my_id(this->ike_sa);
-			if (peer_cfg->use_aggressive(peer_cfg))
+			if (peer_cfg->has_option(peer_cfg, OPT_IKEV1_AGGRESSIVE))
 			{
 				other_id = this->ike_sa->get_other_id(this->ike_sa);
 			}
@@ -573,7 +573,7 @@ METHOD(phase1_t, select_config, peer_cfg_t*,
 	while (enumerator->enumerate(enumerator, &current))
 	{
 		if (check_auth_method(this, current, method) &&
-			current->use_aggressive(current) == aggressive)
+			current->has_option(current, OPT_IKEV1_AGGRESSIVE) == aggressive)
 		{
 			current->get_ref(current);
 			if (!this->peer_cfg)

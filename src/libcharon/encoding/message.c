@@ -2100,7 +2100,7 @@ static message_t *create_fragment(private_message_t *this, payload_type_t next,
 		 * or transaction messages. */
 		ike_sa = charon->bus->get_sa(charon->bus);
 		if (ike_sa && (peer_cfg = ike_sa->get_peer_cfg(ike_sa)) &&
-			peer_cfg->use_aggressive(peer_cfg))
+			peer_cfg->has_option(peer_cfg, OPT_IKEV1_AGGRESSIVE))
 		{
 			message->set_exchange_type(message, AGGRESSIVE);
 		}

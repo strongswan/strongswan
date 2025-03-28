@@ -314,14 +314,11 @@ static void free_auth_data(auth_data_t *data)
  */
 typedef struct {
 	request_data_t *request;
+	peer_cfg_option_t options;
 	uint32_t version;
-	bool aggressive;
 	bool encap;
-	bool mobike;
 	bool send_certreq;
-	bool pull;
 	identification_t *ppk_id;
-	bool ppk_required;
 	cert_policy_t send_cert;
 	ocsp_policy_t ocsp;
 	uint64_t dpd_delay;
@@ -420,6 +417,11 @@ static void log_auth(auth_cfg_t *auth)
 }
 
 /**
+ * Helper macro to check if an option flag is set
+ */
+#define has_opt(cfg, opt) ({ ((cfg)->options & (opt)) == (opt); })
+
+/**
  * Log parsed peer data
  */
 static void log_peer_data(peer_data_t *data)
@@ -437,9 +439,10 @@ static void log_peer_data(peer_data_t *data)
 	DBG2(DBG_CFG, "  send_cert = %N", cert_policy_names, data->send_cert);
 	DBG2(DBG_CFG, "  ocsp = %N", ocsp_policy_names, data->ocsp);
 	DBG2(DBG_CFG, "  ppk_id = %Y",  data->ppk_id);
-	DBG2(DBG_CFG, "  ppk_required = %u",  data->ppk_required);
-	DBG2(DBG_CFG, "  mobike = %u", data->mobike);
-	DBG2(DBG_CFG, "  aggressive = %u", data->aggressive);
+	DBG2(DBG_CFG, "  ppk_required = %u", has_opt(data, OPT_PPK_REQUIRED));
+	DBG2(DBG_CFG, "  mobike = %u", !has_opt(data, OPT_NO_MOBIKE));
+	DBG2(DBG_CFG, "  aggressive = %u", has_opt(data, OPT_IKEV1_AGGRESSIVE));
+	DBG2(DBG_CFG, "  pull = %u", !has_opt(data, OPT_IKEV1_PUSH_MODE));
 	DBG2(DBG_CFG, "  dscp = 0x%.2x", data->dscp);
 	DBG2(DBG_CFG, "  encap = %u", data->encap);
 	DBG2(DBG_CFG, "  dpd_delay = %llu", data->dpd_delay);
@@ -533,7 +536,6 @@ static void log_child_data(child_data_t *data, char *name)
 {
 	child_cfg_create_t *cfg DBG_UNUSED = &data->cfg;
 
-#define has_opt(opt) ({ (cfg->options & (opt)) == (opt); })
 	DBG2(DBG_CFG, "  child %s:", name);
 	DBG2(DBG_CFG, "   rekey_time = %llu", cfg->lifetime.time.rekey);
 	DBG2(DBG_CFG, "   life_time = %llu", cfg->lifetime.time.life);
@@ -545,12 +547,13 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   life_packets = %llu", cfg->lifetime.packets.life);
 	DBG2(DBG_CFG, "   rand_packets = %llu", cfg->lifetime.packets.jitter);
 	DBG2(DBG_CFG, "   updown = %s", cfg->updown);
-	DBG2(DBG_CFG, "   hostaccess = %u", has_opt(OPT_HOSTACCESS));
-	DBG2(DBG_CFG, "   ipcomp = %u", has_opt(OPT_IPCOMP));
+	DBG2(DBG_CFG, "   hostaccess = %u", has_opt(cfg, OPT_HOSTACCESS));
+	DBG2(DBG_CFG, "   ipcomp = %u", has_opt(cfg, OPT_IPCOMP));
 	DBG2(DBG_CFG, "   mode = %N%s", ipsec_mode_names, cfg->mode,
-		 has_opt(OPT_PROXY_MODE) ? "_PROXY" : "");
-	DBG2(DBG_CFG, "   policies = %u", !has_opt(OPT_NO_POLICIES));
-	DBG2(DBG_CFG, "   policies_fwd_out = %u", has_opt(OPT_FWD_OUT_POLICIES));
+		 has_opt(cfg, OPT_PROXY_MODE) ? "_PROXY" : "");
+	DBG2(DBG_CFG, "   policies = %u", !has_opt(cfg, OPT_NO_POLICIES));
+	DBG2(DBG_CFG, "   policies_fwd_out = %u",
+		 has_opt(cfg, OPT_FWD_OUT_POLICIES));
 	if (data->replay_window != REPLAY_UNDEFINED)
 	{
 		DBG2(DBG_CFG, "   replay_window = %u", data->replay_window);
@@ -566,7 +569,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   if_id_out = %u", cfg->if_id_out);
 	DBG2(DBG_CFG, "   mark_in = %u/%u",
 		 cfg->mark_in.value, cfg->mark_in.mask);
-	DBG2(DBG_CFG, "   mark_in_sa = %u", has_opt(OPT_MARK_IN_SA));
+	DBG2(DBG_CFG, "   mark_in_sa = %u", has_opt(cfg, OPT_MARK_IN_SA));
 	DBG2(DBG_CFG, "   mark_out = %u/%u",
 		 cfg->mark_out.value, cfg->mark_out.mask);
 	DBG2(DBG_CFG, "   set_mark_in = %u/%u",
@@ -581,9 +584,9 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   local_ts = %#R", data->local_ts);
 	DBG2(DBG_CFG, "   remote_ts = %#R", data->remote_ts);
 	DBG2(DBG_CFG, "   hw_offload = %N", hw_offload_names, cfg->hw_offload);
-	DBG2(DBG_CFG, "   sha256_96 = %u", has_opt(OPT_SHA256_96));
-	DBG2(DBG_CFG, "   copy_df = %u", !has_opt(OPT_NO_COPY_DF));
-	DBG2(DBG_CFG, "   copy_ecn = %u", !has_opt(OPT_NO_COPY_ECN));
+	DBG2(DBG_CFG, "   sha256_96 = %u", has_opt(cfg, OPT_SHA256_96));
+	DBG2(DBG_CFG, "   copy_df = %u", !has_opt(cfg, OPT_NO_COPY_DF));
+	DBG2(DBG_CFG, "   copy_ecn = %u", !has_opt(cfg, OPT_NO_COPY_ECN));
 	DBG2(DBG_CFG, "   copy_dscp = %N", dscp_copy_names, cfg->copy_dscp);
 }
 
@@ -917,23 +920,72 @@ CALLBACK(parse_mode, bool,
 }
 
 /**
+ * Macro to parse an option flag, add it if parsed value is either TRUE or FALSE.
+ */
+#define PARSE_OPTION(out, opt, v, add_if_true) \
+	bool val; \
+	if (parse_bool(&val, v)) { \
+		if (val == add_if_true)	{ \
+			*out |= opt; \
+		} \
+		return TRUE; \
+	} \
+	return FALSE;
+
+/**
+ * Enable a peer_cfg_option_t, the flag controls whether the option is enabled
+ * if the parsed value is TRUE or FALSE.
+ */
+static bool parse_peer_option(peer_cfg_option_t *out, peer_cfg_option_t opt,
+							  chunk_t v, bool add_if_true)
+{
+	PARSE_OPTION(out, opt, v, add_if_true)
+}
+
+/**
+ * Parse OPT_NO_MOBIKE option
+ */
+CALLBACK(parse_opt_mobike, bool,
+	peer_cfg_option_t *out, chunk_t v)
+{
+	return parse_peer_option(out, OPT_NO_MOBIKE, v, FALSE);
+}
+
+/**
+ * Parse OPT_IKEV1_AGGRESSIVE option
+ */
+CALLBACK(parse_opt_aggr, bool,
+	peer_cfg_option_t *out, chunk_t v)
+{
+	return parse_peer_option(out, OPT_IKEV1_AGGRESSIVE, v, TRUE);
+}
+
+/**
+ * Parse OPT_IKEV1_PUSH_MODE option
+ */
+CALLBACK(parse_opt_pull, bool,
+	peer_cfg_option_t *out, chunk_t v)
+{
+	return parse_peer_option(out, OPT_IKEV1_PUSH_MODE, v, FALSE);
+}
+
+/**
+ * Parse OPT_PPK_REQUIRED option
+ */
+CALLBACK(parse_opt_ppk_req, bool,
+	peer_cfg_option_t *out, chunk_t v)
+{
+	return parse_peer_option(out, OPT_PPK_REQUIRED, v, TRUE);
+}
+
+/**
  * Enable a child_cfg_option_t, the flag controls whether the option is enabled
  * if the parsed value is TRUE or FALSE.
  */
 static bool parse_option(child_cfg_option_t *out, child_cfg_option_t opt,
 						 chunk_t v, bool add_if_true)
 {
-	bool val;
-
-	if (parse_bool(&val, v))
-	{
-		if (val == add_if_true)
-		{
-			*out |= opt;
-		}
-		return TRUE;
-	}
-	return FALSE;
+	PARSE_OPTION(out, opt, v, add_if_true)
 }
 
 /**
@@ -1939,11 +1991,11 @@ CALLBACK(peer_kv, bool,
 {
 	parse_rule_t rules[] = {
 		{ "version",		parse_uint32,		&peer->version				},
-		{ "aggressive",		parse_bool,			&peer->aggressive			},
-		{ "pull",			parse_bool,			&peer->pull					},
+		{ "aggressive",		parse_opt_aggr,		&peer->options				},
+		{ "pull",			parse_opt_pull,		&peer->options				},
 		{ "dscp",			parse_dscp,			&peer->dscp					},
 		{ "encap",			parse_bool,			&peer->encap				},
-		{ "mobike",			parse_bool,			&peer->mobike				},
+		{ "mobike",			parse_opt_mobike,	&peer->options				},
 		{ "dpd_delay",		parse_time,			&peer->dpd_delay			},
 		{ "dpd_timeout",	parse_time,			&peer->dpd_timeout			},
 		{ "fragmentation",	parse_frag,			&peer->fragmentation		},
@@ -1960,7 +2012,7 @@ CALLBACK(peer_kv, bool,
 		{ "over_time",		parse_time,			&peer->over_time			},
 		{ "rand_time",		parse_time,			&peer->rand_time			},
 		{ "ppk_id",			parse_peer_id,		&peer->ppk_id				},
-		{ "ppk_required",	parse_bool,			&peer->ppk_required			},
+		{ "ppk_required",	parse_opt_ppk_req,	&peer->options				},
 		{ "if_id_in",		parse_if_id,		&peer->if_id_in				},
 		{ "if_id_out",		parse_if_id,		&peer->if_id_out			},
 #ifdef ME
@@ -2712,9 +2764,7 @@ CALLBACK(config_sn, bool,
 		.vips = linked_list_create(),
 		.children = linked_list_create(),
 		.proposals = linked_list_create(),
-		.mobike = TRUE,
 		.send_certreq = TRUE,
-		.pull = TRUE,
 		.send_cert = CERT_SEND_IF_ASKED,
 		.ocsp = OCSP_SEND_REPLY,
 		.version = IKE_ANY,
@@ -2866,6 +2916,7 @@ CALLBACK(config_sn, bool,
 	ike_cfg = ike_cfg_create(&ike);
 
 	cfg = (peer_cfg_create_t){
+		.options = peer.options,
 		.cert_policy = peer.send_cert,
 		.ocsp_policy = peer.ocsp,
 		.unique = peer.unique,
@@ -2874,13 +2925,9 @@ CALLBACK(config_sn, bool,
 		.reauth_time = peer.reauth_time,
 		.jitter_time = peer.rand_time,
 		.over_time = peer.over_time,
-		.no_mobike = !peer.mobike,
-		.aggressive = peer.aggressive,
-		.push_mode = !peer.pull,
 		.dpd = peer.dpd_delay,
 		.dpd_timeout = peer.dpd_timeout,
 		.ppk_id = peer.ppk_id ? peer.ppk_id->clone(peer.ppk_id) : NULL,
-		.ppk_required = peer.ppk_required,
 		.if_id_in = peer.if_id_in,
 		.if_id_out = peer.if_id_out,
 	};

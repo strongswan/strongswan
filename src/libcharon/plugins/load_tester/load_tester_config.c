@@ -709,7 +709,7 @@ static peer_cfg_t* generate_config(private_load_tester_config_t *this, u_int num
 		.keyingtries = 1,
 		.rekey_time = this->ike_rekey,
 		.over_time = this->ike_rekey,
-		.no_mobike = TRUE,
+		.options = OPT_NO_MOBIKE,
 		.dpd = this->dpd_delay,
 		.dpd_timeout = this->dpd_timeout,
 	};
