@@ -291,6 +291,8 @@ METHOD(key_exchange_t, get_method, key_exchange_method_t,
 	return this->method;
 }
 
+#ifdef TESTABLE_KE
+
 METHOD(key_exchange_t, set_seed, bool,
 	private_key_exchange_t *this, chunk_t value, drbg_t *drbg)
 {
@@ -302,6 +304,8 @@ METHOD(key_exchange_t, set_seed, bool,
 	this->drbg = drbg->get_ref(drbg);
 	return TRUE;
 }
+
+#endif /* TESTABLE_KE */
 
 METHOD(key_exchange_t, destroy, void,
 	private_key_exchange_t *this)
@@ -343,12 +347,16 @@ key_exchange_t *botan_kem_create(key_exchange_method_t method)
 			.get_public_key = _get_public_key,
 			.set_public_key = _set_public_key,
 			.get_shared_secret = _get_shared_secret,
-			.set_seed = _set_seed,
 			.destroy = _destroy,
 		},
 		.method = method,
 		.name = strdup(name),
 	);
+
+#ifdef TESTABLE_KE
+	this->public.set_seed = _set_seed;
+#endif
+
 	return &this->public;
 }
 

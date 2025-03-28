@@ -324,6 +324,8 @@ METHOD(key_exchange_t, set_public_key, bool, private_key_exchange_t *this,
 	return openssl_kem_encapsulate(this, value);
 }
 
+#ifdef TESTABLE_KE
+
 METHOD(key_exchange_t, set_seed, bool, private_key_exchange_t *this,
 	chunk_t ignore, drbg_t *seed)
 {
@@ -335,6 +337,8 @@ METHOD(key_exchange_t, set_seed, bool, private_key_exchange_t *this,
 	this->drbg = seed->get_ref(seed);
 	return TRUE;
 }
+
+#endif /* TESTABLE_KE */
 
 METHOD(key_exchange_t, destroy, void, private_key_exchange_t *this)
 {
@@ -357,12 +361,16 @@ key_exchange_t *openssl_kem_create(key_exchange_method_t method)
 			.get_shared_secret = _get_shared_secret,
 			.set_public_key = _set_public_key,
 			.get_public_key = _get_public_key,
-			.set_seed = _set_seed,
 			.get_method = _get_method,
 			.destroy = _destroy,
 		},
 		.group = method
 	);
+
+#ifdef TESTABLE_KE
+	this->public.set_seed = _set_seed;
+#endif
+
 	return &this->public;
 }
 #endif /* OPENSSL_IS_AWSLC */

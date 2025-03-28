@@ -100,6 +100,41 @@ static bool ecp2chunk(int keysize, ecc_point *point, chunk_t *chunk,
 	return wolfssl_mp_cat(keysize, point->x, y, chunk);
 }
 
+METHOD(key_exchange_t, set_public_key, bool,
+	private_wolfssl_ec_diffie_hellman_t *this, chunk_t value)
+{
+	chunk_t uncomp;
+
+	if (!key_exchange_verify_pubkey(this->group, value))
+	{
+		return FALSE;
+	}
+
+	/* prepend 0x04 to indicate uncompressed point format */
+	uncomp = chunk_cata("cc", chunk_from_chars(0x04), value);
+	if (wc_ecc_import_x963_ex(uncomp.ptr, uncomp.len, &this->pubkey,
+							  this->curve_id) != 0)
+	{
+		DBG1(DBG_LIB, "ECDH public value is malformed");
+		return FALSE;
+	}
+
+	if (wc_ecc_check_key(&this->pubkey) != 0)
+	{
+		DBG1(DBG_LIB, "ECDH public value is invalid");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+METHOD(key_exchange_t, get_public_key, bool,
+	private_wolfssl_ec_diffie_hellman_t *this,chunk_t *value)
+{
+	return ecp2chunk(this->keysize, &this->key.pubkey, value, FALSE);
+}
+
+#ifdef TESTABLE_KE
+
 /**
  * Perform the elliptic curve scalar multiplication.
  */
@@ -134,39 +169,6 @@ static bool wolfssl_ecc_multiply(const ecc_set_type *ecc_set, mp_int *scalar,
 	mp_free(&a);
 
 	return ret == 0;
-}
-
-METHOD(key_exchange_t, set_public_key, bool,
-	private_wolfssl_ec_diffie_hellman_t *this, chunk_t value)
-{
-	chunk_t uncomp;
-
-	if (!key_exchange_verify_pubkey(this->group, value))
-	{
-		return FALSE;
-	}
-
-	/* prepend 0x04 to indicate uncompressed point format */
-	uncomp = chunk_cata("cc", chunk_from_chars(0x04), value);
-	if (wc_ecc_import_x963_ex(uncomp.ptr, uncomp.len, &this->pubkey,
-							  this->curve_id) != 0)
-	{
-		DBG1(DBG_LIB, "ECDH public value is malformed");
-		return FALSE;
-	}
-
-	if (wc_ecc_check_key(&this->pubkey) != 0)
-	{
-		DBG1(DBG_LIB, "ECDH public value is invalid");
-		return FALSE;
-	}
-	return TRUE;
-}
-
-METHOD(key_exchange_t, get_public_key, bool,
-	private_wolfssl_ec_diffie_hellman_t *this,chunk_t *value)
-{
-	return ecp2chunk(this->keysize, &this->key.pubkey, value, FALSE);
 }
 
 METHOD(key_exchange_t, set_seed, bool,
@@ -208,6 +210,8 @@ METHOD(key_exchange_t, set_seed, bool,
 
 	return success;
 }
+
+#endif /* TESTABLE_KE */
 
 /**
  * Derive the shared secret
@@ -291,13 +295,16 @@ wolfssl_ec_diffie_hellman_t *wolfssl_ec_diffie_hellman_create(key_exchange_metho
 				.get_shared_secret = _get_shared_secret,
 				.set_public_key = _set_public_key,
 				.get_public_key = _get_public_key,
-				.set_seed = _set_seed,
 				.get_method = _get_method,
 				.destroy = _destroy,
 			},
 		},
 		.group = group,
 	);
+
+#ifdef TESTABLE_KE
+	this->public.ke.set_seed = _set_seed;
+#endif
 
 	if (wc_ecc_init(&this->key) != 0 || wc_ecc_init(&this->pubkey) != 0)
 	{
