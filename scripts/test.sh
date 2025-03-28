@@ -274,7 +274,7 @@ printf-builtin)
 		prepare_system_openssl $1
 	fi
 	;;
-all|alpine|codeql|coverage|sonarcloud|no-dbg)
+all|alpine|codeql|coverage|sonarcloud|no-dbg|no-testable-ke)
 	if [ "$TEST" = "sonarcloud" ]; then
 		if [ -z "$SONAR_PROJECT" -o -z "$SONAR_ORGANIZATION" -o -z "$SONAR_TOKEN" ]; then
 			echo "The SONAR_PROJECT, SONAR_ORGANIZATION and SONAR_TOKEN" \
@@ -303,6 +303,9 @@ all|alpine|codeql|coverage|sonarcloud|no-dbg)
 	else
 		DEPS="$DEPS lcov"
 		TARGET="coverage"
+	fi
+	if [ "$TEST" = "no-testable-ke" ]; then
+		CONFIG="$CONFIG --without-testable-ke"
 	fi
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
 		  libmysqlclient-dev libsqlite3-dev clearsilver-dev libfcgi-dev

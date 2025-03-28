@@ -48,6 +48,9 @@ jobs:
           - test: no-dbg
           - test: no-dbg
             compiler: clang
+          - test: no-testable-ke
+          - test: no-testable-ke
+            compiler: clang
           - test: fuzzing
             compiler: clang
             monolithic: yes
