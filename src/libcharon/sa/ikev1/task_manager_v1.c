@@ -402,7 +402,7 @@ static bool mode_config_expected(private_task_manager_t *this)
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
 	if (peer_cfg)
 	{
-		if (peer_cfg->use_pull_mode(peer_cfg))
+		if (!peer_cfg->has_option(peer_cfg, OPT_IKEV1_PUSH_MODE))
 		{
 			enumerator = peer_cfg->create_pool_enumerator(peer_cfg);
 			if (!enumerator->enumerate(enumerator, &pool))
@@ -1563,7 +1563,7 @@ METHOD(task_manager_t, queue_ike, void,
 		queue_task(this, (task_t*)isakmp_cert_pre_create(this->ike_sa, TRUE));
 	}
 	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (peer_cfg->use_aggressive(peer_cfg))
+	if (peer_cfg->has_option(peer_cfg, OPT_IKEV1_AGGRESSIVE))
 	{
 		if (!has_queued(this, TASK_AGGRESSIVE_MODE))
 		{
