@@ -305,6 +305,8 @@ int openssl_ecdh_group_to_nid(key_exchange_method_t group)
 	}
 }
 
+#ifdef TESTABLE_KE
+
 /**
  * Parse the given private key as BIGNUM and calculate the corresponding public
  * key as EC_POINT.
@@ -429,6 +431,7 @@ error:
 }
 
 #endif /* OPENSSL_VERSION_NUMBER */
+#endif /* TESTABLE_KE */
 
 METHOD(key_exchange_t, destroy, void,
 	private_openssl_ec_diffie_hellman_t *this)
@@ -460,13 +463,16 @@ openssl_ec_diffie_hellman_t *openssl_ec_diffie_hellman_create(key_exchange_metho
 				.get_shared_secret = _get_shared_secret,
 				.set_public_key = _set_public_key,
 				.get_public_key = _get_public_key,
-				.set_seed = _set_seed,
 				.get_method = _get_method,
 				.destroy = _destroy,
 			},
 		},
 		.group = group,
 	);
+
+#ifdef TESTABLE_KE
+	this->public.ke.set_seed = _set_seed;
+#endif
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 	this->ec_group = EC_GROUP_new_by_curve_name(curve);

@@ -1690,6 +1690,8 @@ static u_int bench_ke(private_crypto_tester_t *this,
 	return runs;
 }
 
+#ifdef TESTABLE_KE
+
 static bool test_single_ke(key_exchange_method_t method, ke_test_vector_t *v,
 						   ke_constructor_t create)
 {
@@ -1769,14 +1771,54 @@ failure:
 	chunk_free(&a_sec);
 	chunk_free(&b_sec);
 	DESTROY_IF(drbg);
-
 	return success;
 }
+
+#else /* TESTABLE_KE */
+
+static bool test_single_ke(key_exchange_method_t method, ke_constructor_t create)
+{
+	key_exchange_t *a = NULL, *b = NULL;
+	chunk_t a_pub, b_pub, a_sec, b_sec;
+	bool success = FALSE;
+
+	a_pub = b_pub = a_sec = b_sec = chunk_empty;
+	a = create(method);
+	b = create(method);
+	if (!a || !b)
+	{
+		goto failure;
+	}
+	if (!a->get_public_key(a, &a_pub) ||
+		!b->set_public_key(b, a_pub) ||
+		!b->get_shared_secret(b, &b_sec) ||
+		!b->get_public_key(b, &b_pub) ||
+		 chunk_equals(a_pub, b_pub) ||
+		!a->set_public_key(a, b_pub) ||
+		!a->get_shared_secret(a, &a_sec) ||
+		!chunk_equals(a_sec, b_sec))
+	{
+		goto failure;
+	}
+	success = TRUE;
+
+failure:
+	DESTROY_IF(a);
+	DESTROY_IF(b);
+	chunk_free(&a_pub);
+	chunk_free(&b_pub);
+	chunk_free(&a_sec);
+	chunk_free(&b_sec);
+	return success;
+}
+
+#endif /* TESTABLE_KE */
 
 METHOD(crypto_tester_t, test_ke, bool,
 	private_crypto_tester_t *this, key_exchange_method_t method,
 	ke_constructor_t create, u_int *speed, const char *plugin_name)
 {
+#ifdef TESTABLE_KE
 	enumerator_t *enumerator;
 	ke_test_vector_t *v;
 	bool success = TRUE;
@@ -1808,6 +1850,7 @@ METHOD(crypto_tester_t, test_ke, bool,
 			 key_exchange_method_names, method, plugin_name);
 		return !this->required;
 	}
+
 	if (success)
 	{
 		if (speed)
@@ -1823,6 +1866,38 @@ METHOD(crypto_tester_t, test_ke, bool,
 		}
 	}
 	return success;
+
+#else /* TESTABLE_KE */
+
+	if (method == MODP_CUSTOM)
+	{
+		DBG1(DBG_LIB, "enabled  %N[%s]: untestable",
+			 key_exchange_method_names, method, plugin_name);
+		return TRUE;
+	}
+
+	if (!test_single_ke(method, create))
+	{
+		DBG1(DBG_LIB, "disabled %N[%s]: failed basic test",
+			 key_exchange_method_names, method, plugin_name);
+		return FALSE;
+	}
+
+	if (speed)
+	{
+		*speed = bench_ke(this, method, create);
+		DBG1(DBG_LIB, "enabled  %N[%s]: passed basic test (vector tests "
+			 "disabled), %d points", key_exchange_method_names, method,
+			 plugin_name, *speed);
+	}
+	else
+	{
+		DBG1(DBG_LIB, "enabled  %N[%s]: passed basic test (vector tests "
+			 "disabled)", key_exchange_method_names, method, plugin_name);
+	}
+	return TRUE;
+
+#endif /* TESTABLE_KE */
 }
 
 METHOD(crypto_tester_t, add_crypter_vector, void,

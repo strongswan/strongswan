@@ -142,6 +142,8 @@ METHOD(key_exchange_t, get_public_key_25519, bool,
 	return TRUE;
 }
 
+#ifdef TESTABLE_KE
+
 METHOD(key_exchange_t, set_seed_25519, bool,
 	private_diffie_hellman_t *this, chunk_t value, drbg_t *drbg)
 {
@@ -170,7 +172,7 @@ METHOD(key_exchange_t, set_seed_25519, bool,
 	}
 	return ret == 0;
 }
-
+#endif /* TESTABLE_KE */
 #endif /* HAVE_CURVE25519 */
 
 #ifdef HAVE_CURVE448
@@ -229,6 +231,8 @@ METHOD(key_exchange_t, get_public_key_448, bool,
 	return TRUE;
 }
 
+#ifdef TESTABLE_KE
+
 METHOD(key_exchange_t, set_seed_448, bool,
 	private_diffie_hellman_t *this, chunk_t value, drbg_t *drbg)
 {
@@ -258,6 +262,7 @@ METHOD(key_exchange_t, set_seed_448, bool,
 	return ret == 0;
 }
 
+#endif /* TESTABLE_KE */
 #endif /* HAVE_CURVE448 */
 
 METHOD(key_exchange_t, get_method, key_exchange_method_t,
@@ -317,7 +322,9 @@ key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 		this->public.get_shared_secret = _get_shared_secret_25519;
 		this->public.set_public_key = _set_public_key_25519;
 		this->public.get_public_key = _get_public_key_25519;
+#ifdef TESTABLE_KE
 		this->public.set_seed = _set_seed_25519;
+#endif
 
 		if (wc_curve25519_init(&this->key.key25519) != 0 ||
 			wc_curve25519_init(&this->pub.key25519) != 0)
@@ -336,7 +343,9 @@ key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 		this->public.get_shared_secret = _get_shared_secret_448;
 		this->public.set_public_key = _set_public_key_448;
 		this->public.get_public_key = _get_public_key_448;
+#ifdef TESTABLE_KE
 		this->public.set_seed = _set_seed_448;
+#endif
 
 		if (wc_curve448_init(&this->key.key448) != 0 ||
 			wc_curve448_init(&this->pub.key448) != 0)

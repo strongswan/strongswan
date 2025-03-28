@@ -180,6 +180,7 @@ METHOD(key_exchange_t, set_public_key, bool,
 	return TRUE;
 }
 
+#ifdef TESTABLE_KE
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 
 /**
@@ -273,6 +274,7 @@ METHOD(key_exchange_t, set_seed, bool,
 }
 
 #endif /* OPENSSL_VERSION_NUMBER */
+#endif /* TESTABLE_KE */
 
 METHOD(key_exchange_t, destroy, void,
 	private_openssl_diffie_hellman_t *this)
@@ -304,13 +306,16 @@ openssl_diffie_hellman_t *openssl_diffie_hellman_create(
 				.get_shared_secret = _get_shared_secret,
 				.set_public_key = _set_public_key,
 				.get_public_key = _get_public_key,
-				.set_seed = _set_seed,
 				.get_method = _get_method,
 				.destroy = _destroy,
 			},
 		},
 		.group = group,
 	);
+
+#ifdef TESTABLE_KE
+	this->public.ke.set_seed = _set_seed;
+#endif
 
 	if (group == MODP_CUSTOM)
 	{

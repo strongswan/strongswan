@@ -153,6 +153,8 @@ struct key_exchange_t {
 	bool (*get_public_key)(key_exchange_t *this, chunk_t *value)
 		__attribute__((warn_unused_result));
 
+#ifdef TESTABLE_KE
+
 	/**
 	 * Set a seed used for the derivation of private key material.
 	 *
@@ -166,6 +168,8 @@ struct key_exchange_t {
 	 */
 	bool (*set_seed)(key_exchange_t *this, chunk_t value, drbg_t *drbg)
 		__attribute__((warn_unused_result));
+
+#endif /* TESTABLE_KE */
 
 	/**
 	 * Get the key exchange method used.
