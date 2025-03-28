@@ -3005,8 +3005,6 @@ METHOD(ike_sa_t, inherit_post, void,
 		array_insert(this->attributes, ARRAY_TAIL, &entry);
 	}
 
-	/* inherit all conditions */
-	this->conditions = other->conditions;
 	if (this->conditions & COND_NAT_HERE)
 	{
 		send_keepalive(this, FALSE);
