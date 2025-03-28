@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Tobias Brunner
+ * Copyright (C) 2006-2025 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
  * Copyright (C) 2005 Jan Hutter
@@ -106,9 +106,9 @@ struct private_daemon_t {
 	mutex_t *mutex;
 
 	/**
-	 * Integrity check failed?
+	 * Initialization (e.g. integrity check) failed?
 	 */
-	bool integrity_failed;
+	bool init_failed;
 
 	/**
 	 * Number of times we have been initialized
@@ -190,6 +190,30 @@ void register_custom_logger(char *name,
 	{
 		fprintf(stderr, "failed to register custom logger, please increase "
 				"MAX_CUSTOM_LOGGERS");
+	}
+}
+
+#define MAX_LIBCHARON_INIT_FUNCTIONS 10
+
+/**
+ * Static array for init function registration using __attribute__((constructor))
+ */
+static library_init_t init_functions[MAX_LIBCHARON_INIT_FUNCTIONS];
+static int init_function_count;
+
+/**
+ * Described in header
+ */
+void libcharon_init_register(library_init_t init)
+{
+	if (init_function_count < MAX_LIBCHARON_INIT_FUNCTIONS - 1)
+	{
+		init_functions[init_function_count++] = init;
+	}
+	else
+	{
+		fprintf(stderr, "failed to register init function, please increase "
+				"MAX_LIBCHARON_INIT_FUNCTIONS");
 	}
 }
 
@@ -980,6 +1004,7 @@ private_daemon_t *daemon_create()
 void libcharon_deinit()
 {
 	private_daemon_t *this = (private_daemon_t*)charon;
+	int i;
 
 	if (!this || !ref_put(&this->ref))
 	{	/* have more users */
@@ -987,6 +1012,11 @@ void libcharon_deinit()
 	}
 
 	run_scripts(this, "stop");
+
+	for (i = 0; i < init_function_count; ++i)
+	{
+		init_functions[i](FALSE);
+	}
 
 	destroy(this);
 	charon = NULL;
@@ -998,12 +1028,13 @@ void libcharon_deinit()
 bool libcharon_init()
 {
 	private_daemon_t *this;
+	int i;
 
 	if (charon)
 	{	/* already initialized, increase refcount */
 		this = (private_daemon_t*)charon;
 		ref_get(&this->ref);
-		return !this->integrity_failed;
+		return !this->init_failed;
 	}
 
 	this = daemon_create();
@@ -1019,7 +1050,15 @@ bool libcharon_init()
 		!lib->integrity->check(lib->integrity, "libcharon", libcharon_init))
 	{
 		dbg(DBG_DMN, 1, "integrity check of libcharon failed");
-		this->integrity_failed = TRUE;
+		this->init_failed = TRUE;
 	}
-	return !this->integrity_failed;
+
+	for (i = 0; i < init_function_count; ++i)
+	{
+		if (!init_functions[i](TRUE))
+		{
+			this->init_failed = TRUE;
+		}
+	}
+	return !this->init_failed;
 }
