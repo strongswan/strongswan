@@ -80,6 +80,8 @@ typedef struct ike_sa_t ike_sa_t;
 
 /**
  * Extensions (or optional features) the peer supports
+ *
+ * Private extensions can be defined by using the EXT_PRIVATE_MARKER marker.
  */
 enum ike_extension_t {
 
@@ -174,10 +176,17 @@ enum ike_extension_t {
 	 * IKEv2 Intermediate Exchange, RFC 9242
 	 */
 	EXT_IKE_INTERMEDIATE = (1<<17),
+
+	/**
+	 * MSB marker to separate private extensions
+	 */
+	EXT_PRIVATE_MARKER = (1<<31),
 };
 
 /**
  * Conditions of an IKE_SA, change during its lifetime
+ *
+ * Private conditions can be defined by using the COND_PRIVATE_MARKER marker.
  */
 enum ike_condition_t {
 
@@ -260,6 +269,11 @@ enum ike_condition_t {
 	 * An OCSP status request was received
 	 */
 	COND_OCSP_REQUEST = (1<<15),
+
+	/**
+	 * MSB marker to separate private conditions
+	 */
+	COND_PRIVATE_MARKER = (1<<31),
 };
 
 /**

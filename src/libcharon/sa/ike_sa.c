@@ -188,14 +188,24 @@ struct private_ike_sa_t {
 	identification_t *other_id;
 
 	/**
-	 * set of extensions the peer supports
+	 * Set of extensions the peer supports
 	 */
 	ike_extension_t extensions;
 
 	/**
-	 * set of condition flags currently enabled for this IKE_SA
+	 * Set of private xtensions the peer supports
+	 */
+	ike_extension_t private_extensions;
+
+	/**
+	 * Set of condition flags currently enabled for this IKE_SA
 	 */
 	ike_condition_t conditions;
+
+	/**
+	 * Set of private condition flags currently enabled for this IKE_SA
+	 */
+	ike_condition_t private_conditions;
 
 	/**
 	 * Array containing the child sa's of the current IKE_SA.
@@ -755,29 +765,42 @@ METHOD(ike_sa_t, set_ike_cfg, void,
 METHOD(ike_sa_t, enable_extension, void,
 	private_ike_sa_t *this, ike_extension_t extension)
 {
-	this->extensions |= extension;
+	ike_extension_t *ptr;
+	ptr = (extension & EXT_PRIVATE_MARKER) ? &this->private_extensions
+										   : &this->extensions;
+	*ptr |= (extension & ~EXT_PRIVATE_MARKER);
 }
 
 METHOD(ike_sa_t, supports_extension, bool,
 	private_ike_sa_t *this, ike_extension_t extension)
 {
-	return (this->extensions & extension) != FALSE;
+	ike_extension_t *ptr;
+	ptr = (extension & EXT_PRIVATE_MARKER) ? &this->private_extensions
+										   : &this->extensions;
+	return (*ptr & extension) != 0;
 }
 
 METHOD(ike_sa_t, has_condition, bool,
 	private_ike_sa_t *this, ike_condition_t condition)
 {
-	return (this->conditions & condition) != FALSE;
+	ike_condition_t *ptr;
+	ptr = (condition & COND_PRIVATE_MARKER) ? &this->private_conditions
+										    : &this->conditions;
+	return (*ptr & condition) != 0;
 }
 
 METHOD(ike_sa_t, set_condition, void,
 	private_ike_sa_t *this, ike_condition_t condition, bool enable)
 {
+	ike_condition_t *ptr;
+
 	if (has_condition(this, condition) != enable)
 	{
+		ptr = (condition & COND_PRIVATE_MARKER) ? &this->private_conditions
+											    : &this->conditions;
 		if (enable)
 		{
-			this->conditions |= condition;
+			*ptr |= (condition & ~COND_PRIVATE_MARKER);
 			switch (condition)
 			{
 				case COND_NAT_HERE:
@@ -799,7 +822,7 @@ METHOD(ike_sa_t, set_condition, void,
 		}
 		else
 		{
-			this->conditions &= ~condition;
+			*ptr &= ~(condition & ~COND_PRIVATE_MARKER);
 			switch (condition)
 			{
 				case COND_NAT_HERE:
@@ -2921,7 +2944,9 @@ METHOD(ike_sa_t, inherit_pre, void,
 
 	/* apply extensions and conditions with a few exceptions */
 	this->extensions = other->extensions;
+	this->private_extensions = other->private_extensions;
 	this->conditions = other->conditions;
+	this->private_conditions = other->private_conditions;
 	this->conditions &= ~COND_STALE;
 	this->conditions &= ~COND_REAUTHENTICATING;
 }
