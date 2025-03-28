@@ -564,7 +564,7 @@ static bool get_ppk(private_ike_auth_t *this, identification_t *ppk_id)
 	key = lib->credmgr->get_shared(lib->credmgr, SHARED_PPK, ppk_id, NULL);
 	if (!key)
 	{
-		if (this->peer_cfg->ppk_required(this->peer_cfg))
+		if (this->peer_cfg->has_option(this->peer_cfg, OPT_PPK_REQUIRED))
 		{
 			DBG1(DBG_CFG, "PPK required but no PPK found for '%Y'", ppk_id);
 			return FALSE;
@@ -589,7 +589,7 @@ static bool get_ppk_i(private_ike_auth_t *this)
 
 	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_PPK))
 	{
-		if (this->peer_cfg->ppk_required(this->peer_cfg))
+		if (this->peer_cfg->has_option(this->peer_cfg, OPT_PPK_REQUIRED))
 		{
 			DBG1(DBG_CFG, "PPK required but peer does not support PPK");
 			return FALSE;
@@ -600,7 +600,7 @@ static bool get_ppk_i(private_ike_auth_t *this)
 	ppk_id = this->peer_cfg->get_ppk_id(this->peer_cfg);
 	if (!ppk_id)
 	{
-		if (this->peer_cfg->ppk_required(this->peer_cfg))
+		if (this->peer_cfg->has_option(this->peer_cfg, OPT_PPK_REQUIRED))
 		{
 			DBG1(DBG_CFG, "PPK required but no PPK_ID configured");
 			return FALSE;
@@ -622,7 +622,7 @@ static bool get_ppk_r(private_ike_auth_t *this, message_t *msg)
 
 	if (!this->ike_sa->supports_extension(this->ike_sa, EXT_PPK))
 	{
-		if (this->peer_cfg->ppk_required(this->peer_cfg))
+		if (this->peer_cfg->has_option(this->peer_cfg, OPT_PPK_REQUIRED))
 		{
 			DBG1(DBG_CFG, "PPK required but peer does not support PPK");
 			return FALSE;
@@ -633,7 +633,7 @@ static bool get_ppk_r(private_ike_auth_t *this, message_t *msg)
 	notify = msg->get_notify(msg, PPK_IDENTITY);
 	if (!notify || !parse_ppk_identity(notify, &ppk_id))
 	{
-		if (this->peer_cfg->ppk_required(this->peer_cfg))
+		if (this->peer_cfg->has_option(this->peer_cfg, OPT_PPK_REQUIRED))
 		{
 			DBG1(DBG_CFG, "PPK required but no PPK_IDENTITY received");
 			return FALSE;
@@ -816,7 +816,7 @@ METHOD(task_t, build_i, status_t,
 	if (this->ppk.ptr && this->my_auth->use_ppk)
 	{
 		this->my_auth->use_ppk(this->my_auth, this->ppk,
-							!this->peer_cfg->ppk_required(this->peer_cfg));
+				!this->peer_cfg->has_option(this->peer_cfg, OPT_PPK_REQUIRED));
 	}
 	switch (this->my_auth->build(this->my_auth, message))
 	{
