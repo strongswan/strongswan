@@ -371,13 +371,13 @@ static void process_ike_add(private_ha_dispatcher_t *this, ha_message_t *message
  */
 static void set_conditions(ike_sa_t *ike_sa, ike_condition_t conditions)
 {
-	ike_condition_t i;
+	ike_condition_t i, private = (conditions & COND_PRIVATE_MARKER);
 
-	for (i = 0; i < sizeof(i) * 8; ++i)
+	for (i = 0; i < (sizeof(i) * 8) - 1; ++i)
 	{
-		ike_condition_t cond = (1 << i);
+		ike_condition_t cond = (1 << i) | private;
 
-		ike_sa->set_condition(ike_sa, cond, (conditions & cond) != 0);
+		ike_sa->set_condition(ike_sa, cond, (conditions & cond) == cond);
 	}
 }
 
@@ -386,13 +386,13 @@ static void set_conditions(ike_sa_t *ike_sa, ike_condition_t conditions)
  */
 static void set_extensions(ike_sa_t *ike_sa, ike_extension_t extensions)
 {
-	ike_extension_t i;
+	ike_extension_t i, private = (extensions & EXT_PRIVATE_MARKER);
 
-	for (i = 0; i < sizeof(i) * 8; ++i)
+	for (i = 0; i < (sizeof(i) * 8) - 1; ++i)
 	{
-		ike_extension_t ext = (1 << i);
+		ike_extension_t ext = (1 << i) | private;
 
-		if (extensions & ext)
+		if ((extensions & ext) == ext)
 		{
 			ike_sa->enable_extension(ike_sa, ext);
 		}
