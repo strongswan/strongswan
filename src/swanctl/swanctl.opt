@@ -726,19 +726,22 @@ connections.<conn>.children.<child>.esp_proposals = default
 	mode algorithm is used instead of the separate encryption/integrity
 	algorithms.
 
-	If a key exchange method is specified, CHILD_SA/Quick Mode rekeying and
+	If a key exchange method is negotiated, CHILD_SA/Quick Mode rekeying and
 	initial negotiation use a separate key exchange using the specified method.
 	However, for IKEv2, the keys of the CHILD_SA created implicitly with the
 	IKE_SA will always be derived from the IKE_SA's key material. So any key
 	exchange method specified here will only apply when the CHILD_SA is later
 	rekeyed or is created with a separate CREATE_CHILD_SA exchange. A proposal
 	mismatch might, therefore, not immediately be noticed when the SA is
-	established, but may later cause rekeying to fail.
+	established, but may later cause rekeying to fail. If one or more key
+	exchange methods are configured in a proposal, the key exchange can be made
+	optional by also adding	**none**.
 
 	With peers that support multiple IKEv2 key exchanges (RFC 9370), up to seven
 	additional key exchanges may be negotiated. They can be configured by
 	prefixing the algorithm keyword with **keX_** (where X is a number between
-	1 and 7).
+	1 and 7). Additional key exchanges can be made optional by adding
+	**keX_none** to a proposal.
 
 	Extended Sequence Number support may be indicated with the _esn_ and _noesn_
 	values, both may be included to indicate support for both modes. If omitted,
