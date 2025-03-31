@@ -1016,15 +1016,97 @@ proposal_t *proposal_create(protocol_id_t protocol, uint8_t number)
 }
 
 /**
+ * Add supporte KE methods to proposal
+ */
+static void add_supported_ke_methods(private_proposal_t *this)
+{
+	enumerator_t *enumerator;
+	key_exchange_method_t ke;
+	const char *plugin_name;
+
+	/* Round 1 adds ECC with at least 128 bit security strength */
+	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &ke, &plugin_name))
+	{
+		switch (ke)
+		{
+			case ECP_256_BIT:
+			case ECP_384_BIT:
+			case ECP_521_BIT:
+			case ECP_256_BP:
+			case ECP_384_BP:
+			case ECP_512_BP:
+			case CURVE_25519:
+			case CURVE_448:
+				add_algorithm(this, KEY_EXCHANGE_METHOD, ke, 0);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* Round 2 adds other algorithms with at least 128 bit security strength */
+	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &ke, &plugin_name))
+	{
+		switch (ke)
+		{
+			case MODP_3072_BIT:
+			case MODP_4096_BIT:
+			case MODP_6144_BIT:
+			case MODP_8192_BIT:
+				add_algorithm(this, KEY_EXCHANGE_METHOD, ke, 0);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+
+	/* Round 3 adds algorithms with less than 128 bit security strength */
+	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
+	while (enumerator->enumerate(enumerator, &ke, &plugin_name))
+	{
+		switch (ke)
+		{
+			case MODP_NULL:
+				/* only for testing purposes */
+				break;
+			case MODP_768_BIT:
+			case MODP_1024_BIT:
+			case MODP_1536_BIT:
+				/* weak */
+				break;
+			case MODP_1024_160:
+			case MODP_2048_224:
+			case MODP_2048_256:
+				/* RFC 5114 primes are of questionable source */
+				break;
+			case ECP_224_BIT:
+			case ECP_224_BP:
+			case ECP_192_BIT:
+				/* rarely used */
+				break;
+			case MODP_2048_BIT:
+				add_algorithm(this, KEY_EXCHANGE_METHOD, ke, 0);
+				break;
+			default:
+				break;
+		}
+	}
+	enumerator->destroy(enumerator);
+}
+
+/**
  * Add supported IKE algorithms to proposal
  */
-static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
+static bool add_supported_ike(private_proposal_t *this, bool aead)
 {
 	enumerator_t *enumerator;
 	encryption_algorithm_t encryption;
 	integrity_algorithm_t integrity;
 	pseudo_random_function_t prf;
-	key_exchange_method_t group;
 	const char *plugin_name;
 
 	if (aead)
@@ -1215,78 +1297,7 @@ static bool proposal_add_supported_ike(private_proposal_t *this, bool aead)
 	}
 	enumerator->destroy(enumerator);
 
-	/* Round 1 adds ECC with at least 128 bit security strength */
-	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &group, &plugin_name))
-	{
-		switch (group)
-		{
-			case ECP_256_BIT:
-			case ECP_384_BIT:
-			case ECP_521_BIT:
-			case ECP_256_BP:
-			case ECP_384_BP:
-			case ECP_512_BP:
-			case CURVE_25519:
-			case CURVE_448:
-				add_algorithm(this, KEY_EXCHANGE_METHOD, group, 0);
-				break;
-			default:
-				break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	/* Round 2 adds other algorithms with at least 128 bit security strength */
-	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &group, &plugin_name))
-	{
-		switch (group)
-		{
-			case MODP_3072_BIT:
-			case MODP_4096_BIT:
-			case MODP_6144_BIT:
-			case MODP_8192_BIT:
-				add_algorithm(this, KEY_EXCHANGE_METHOD, group, 0);
-				break;
-			default:
-				break;
-		}
-	}
-	enumerator->destroy(enumerator);
-
-	/* Round 3 adds algorithms with less than 128 bit security strength */
-	enumerator = lib->crypto->create_ke_enumerator(lib->crypto);
-	while (enumerator->enumerate(enumerator, &group, &plugin_name))
-	{
-		switch (group)
-		{
-			case MODP_NULL:
-				/* only for testing purposes */
-				break;
-			case MODP_768_BIT:
-			case MODP_1024_BIT:
-			case MODP_1536_BIT:
-				/* weak */
-				break;
-			case MODP_1024_160:
-			case MODP_2048_224:
-			case MODP_2048_256:
-				/* RFC 5114 primes are of questionable source */
-				break;
-			case ECP_224_BIT:
-			case ECP_224_BP:
-			case ECP_192_BIT:
-				/* rarely used */
-				break;
-			case MODP_2048_BIT:
-				add_algorithm(this, KEY_EXCHANGE_METHOD, group, 0);
-				break;
-			default:
-				break;
-		}
-	}
-	enumerator->destroy(enumerator);
+	add_supported_ke_methods(this);
 
 	return TRUE;
 }
@@ -1301,7 +1312,7 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 	switch (protocol)
 	{
 		case PROTO_IKE:
-			if (!proposal_add_supported_ike(this, FALSE))
+			if (!add_supported_ike(this, FALSE))
 			{
 				destroy(this);
 				return NULL;
@@ -1317,6 +1328,9 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA1_96,       0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_AES_XCBC_96,        0);
 			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+			/* add all supported KE methods, but make them optional */
+			add_supported_ke_methods(this);
+			add_algorithm(this, KEY_EXCHANGE_METHOD, KE_NONE, 0);
 			break;
 		case PROTO_AH:
 			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA2_256_128,  0);
@@ -1325,6 +1339,9 @@ proposal_t *proposal_create_default(protocol_id_t protocol)
 			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_HMAC_SHA1_96,       0);
 			add_algorithm(this, INTEGRITY_ALGORITHM,  AUTH_AES_XCBC_96,        0);
 			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+			/* add all supported KE methods, but make them optional */
+			add_supported_ke_methods(this);
+			add_algorithm(this, KEY_EXCHANGE_METHOD, KE_NONE, 0);
 			break;
 		default:
 			break;
@@ -1343,7 +1360,7 @@ proposal_t *proposal_create_default_aead(protocol_id_t protocol)
 	{
 		case PROTO_IKE:
 			this = (private_proposal_t*)proposal_create(protocol, 0);
-			if (!proposal_add_supported_ike(this, TRUE))
+			if (!add_supported_ike(this, TRUE))
 			{
 				destroy(this);
 				return NULL;
@@ -1357,6 +1374,9 @@ proposal_t *proposal_create_default_aead(protocol_id_t protocol)
 			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16, 192);
 			add_algorithm(this, ENCRYPTION_ALGORITHM, ENCR_AES_GCM_ICV16, 256);
 			add_algorithm(this, EXTENDED_SEQUENCE_NUMBERS, NO_EXT_SEQ_NUMBERS, 0);
+			/* add all supported KE methods, but make them optional */
+			add_supported_ke_methods(this);
+			add_algorithm(this, KEY_EXCHANGE_METHOD, KE_NONE, 0);
 			return &this->public;
 		case PROTO_AH:
 		default:
