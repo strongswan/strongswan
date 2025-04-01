@@ -32,6 +32,7 @@ typedef struct child_cfg_create_t child_cfg_create_t;
 
 #include <library.h>
 #include <selectors/traffic_selector.h>
+#include <selectors/traffic_selector_list.h>
 #include <crypto/proposal/proposal.h>
 #include <kernel/kernel_ipsec.h>
 
@@ -121,12 +122,12 @@ struct child_cfg_t {
 	/**
 	 * Get a list of configured traffic selectors to use for the CHILD_SA.
 	 *
-	 * The config contains two set of traffic selectors, one for the local
+	 * The config contains two sets of traffic selectors, one for the local
 	 * side, one for the remote side.
 	 *
 	 * Some traffic selectors may be "dynamic", meaning they are narrowed down
 	 * to a specific address (host-to-host or virtual-IP setups). Use the
-	 * "hosts" parameter to narrow such traffic selectors to an address.
+	 * \p hosts parameter to narrow such traffic selectors to an address.
 	 *
 	 * Returned list and its traffic selectors must be destroyed after use.
 	 *
@@ -143,7 +144,7 @@ struct child_cfg_t {
 	/**
 	 * Select a list of traffic selectors to use for the CHILD_SA.
 	 *
-	 * The config contains two set of traffic selectors, one for the local
+	 * The config contains two sets of traffic selectors, one for the local
 	 * side, one for the remote side.
 	 *
 	 * If a list with traffic selectors is supplied, these are used to narrow
@@ -151,9 +152,12 @@ struct child_cfg_t {
 	 *
 	 * Some traffic selectors may be "dynamic", meaning they are narrowed down
 	 * to a specific address (host-to-host or virtual-IP setups). Use the
-	 * "hosts" parameter to narrow such traffic selectors to an address.
+	 * \p hosts parameter to narrow such traffic selectors to an address.
 	 *
 	 * Returned list and its traffic selectors must be destroyed after use.
+	 *
+	 * Details about the selection process are logged and an alert is triggered
+	 * if narrowing occurred.
 	 *
 	 * @param local			TRUE for TS on local side, FALSE for remote
 	 * @param supplied		list with TS to select from, or NULL
@@ -472,5 +476,22 @@ struct child_cfg_create_t {
  * @return					child_cfg_t object
  */
 child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data);
+
+/**
+ * Select and narrow traffic selectors in the given traffic selector list.
+ * Refer to child_cfg_t::select_traffic_selectors() for details, the difference
+ * is that this can work with external traffic selector lists.
+ *
+ * @param this				config to use
+ * @param local				TRUE for TS on local side, FALSE for remote (also
+ *							used for logging)
+ * @param list				traffic selectors to use instead of those in config
+ * @param supplied			list with TS to select from, or NULL
+ * @param hosts				addresses to use for narrowing "dynamic" TS', host_t
+ * @return					list containing the traffic selectors
+ */
+linked_list_t *child_cfg_select_ts(child_cfg_t *this, bool local,
+								   traffic_selector_list_t *list,
+								   linked_list_t *supplied, linked_list_t *hosts);
 
 #endif /** CHILD_CFG_H_ @}*/
