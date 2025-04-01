@@ -152,6 +152,29 @@ static void conclude_rekeying(private_child_delete_t *this, child_sa_t *old)
 }
 
 /**
+ * Queue a task to recreate the given CHILD_SA.
+ */
+static void queue_child_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
+{
+	child_create_t *child_create;
+	child_cfg_t *child_cfg;
+	uint32_t reqid;
+
+	child_cfg = child_sa->get_config(child_sa);
+	child_create = child_create_create(ike_sa, child_cfg->get_ref(child_cfg),
+									   FALSE, NULL, NULL, 0);
+	child_create->recreate_sa(child_create, child_sa);
+	reqid = child_sa->get_reqid_ref(child_sa);
+	if (reqid)
+	{
+		child_create->use_reqid(child_create, reqid);
+		charon->kernel->release_reqid(charon->kernel, reqid);
+	}
+	child_create->use_label(child_create, child_sa->get_label(child_sa));
+	ike_sa->queue_task(ike_sa, (task_t*)child_create);
+}
+
+/**
  * Destroy and optionally reestablish the given CHILD_SA according to config.
  */
 static status_t destroy_and_reestablish_internal(ike_sa_t *ike_sa,
@@ -160,12 +183,9 @@ static status_t destroy_and_reestablish_internal(ike_sa_t *ike_sa,
 												 bool delete_action,
 												 action_t forced_action)
 {
-	child_init_args_t args = {};
 	child_cfg_t *child_cfg;
-	protocol_id_t protocol;
-	uint32_t spi;
 	action_t action;
-	status_t status = SUCCESS;
+	bool initiate = FALSE;
 
 	child_sa->set_state(child_sa, CHILD_DELETED);
 	if (trigger_updown)
@@ -173,44 +193,29 @@ static status_t destroy_and_reestablish_internal(ike_sa_t *ike_sa,
 		charon->bus->child_updown(charon->bus, child_sa, FALSE);
 	}
 
-	protocol = child_sa->get_protocol(child_sa);
-	spi = child_sa->get_spi(child_sa, TRUE);
-	child_cfg = child_sa->get_config(child_sa);
-	child_cfg->get_ref(child_cfg);
-	args.reqid = child_sa->get_reqid_ref(child_sa);
-	args.label = child_sa->get_label(child_sa);
-	if (args.label)
-	{
-		args.label = args.label->clone(args.label);
-	}
-	action = forced_action ?: child_sa->get_close_action(child_sa);
-
 	DBG1(DBG_IKE, "CHILD_SA %s{%u} closed", child_sa->get_name(child_sa),
 		 child_sa->get_unique_id(child_sa));
 
-	ike_sa->destroy_child_sa(ike_sa, protocol, spi);
+	action = forced_action ?: child_sa->get_close_action(child_sa);
 
 	if (delete_action)
 	{
 		if (action & ACTION_TRAP)
 		{
+			child_cfg = child_sa->get_config(child_sa);
 			charon->traps->install(charon->traps,
 								   ike_sa->get_peer_cfg(ike_sa),
-								   child_cfg);
+								   child_cfg->get_ref(child_cfg));
 		}
 		if (action & ACTION_START)
 		{
-			child_cfg->get_ref(child_cfg);
-			status = ike_sa->initiate(ike_sa, child_cfg, &args);
+			queue_child_create(ike_sa, child_sa);
+			initiate = TRUE;
 		}
 	}
-	child_cfg->destroy(child_cfg);
-	if (args.reqid)
-	{
-		charon->kernel->release_reqid(charon->kernel, args.reqid);
-	}
-	DESTROY_IF(args.label);
-	return status;
+	ike_sa->destroy_child_sa(ike_sa, child_sa->get_protocol(child_sa),
+							 child_sa->get_spi(child_sa, TRUE));
+	return initiate ? ike_sa->initiate(ike_sa, NULL, NULL) : SUCCESS;
 }
 
 /*
@@ -550,13 +555,8 @@ METHOD(task_t, build_i, status_t,
 
 	if (this->expired)
 	{
-		child_cfg_t *child_cfg;
-
-		DBG1(DBG_IKE, "scheduling CHILD_SA recreate after hard expire");
-		child_cfg = child_sa->get_config(child_sa);
-		this->ike_sa->queue_task(this->ike_sa, (task_t*)
-				child_create_create(this->ike_sa, child_cfg->get_ref(child_cfg),
-									FALSE, NULL, NULL, 0));
+		DBG1(DBG_IKE, "queue CHILD_SA recreate after hard expire");
+		queue_child_create(this->ike_sa, child_sa);
 	}
 	return NEED_MORE;
 }
