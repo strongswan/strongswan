@@ -1691,11 +1691,23 @@ METHOD(task_manager_t, queue_mobike, void,
 }
 
 METHOD(task_manager_t, queue_child, void,
-	private_task_manager_t *this, child_cfg_t *cfg, child_init_args_t *args)
+	private_task_manager_t *this, child_cfg_t *cfg, child_init_args_t *args,
+	child_sa_t *child_sa)
 {
 	quick_mode_t *task;
+	uint32_t reqid;
 
-	if (args)
+	if (child_sa)
+	{
+		task = quick_mode_create(this->ike_sa, cfg, NULL, NULL, 0);
+		reqid = child_sa->get_reqid_ref(child_sa);
+		if (reqid)
+		{
+			task->use_reqid(task, reqid);
+			charon->kernel->release_reqid(charon->kernel, reqid);
+		}
+	}
+	else if (args)
 	{
 		task = quick_mode_create(this->ike_sa, cfg, args->src, args->dst,
 								 args->seq);

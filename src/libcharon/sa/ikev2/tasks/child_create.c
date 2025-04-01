@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Tobias Brunner
+ * Copyright (C) 2008-2025 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -1574,7 +1574,11 @@ METHOD(task_t, build_i, status_t,
 		return FAILED;
 	}
 
-	if (!no_ke && !this->retry)
+	if (no_ke)
+	{	/* we might have one set if we are recreating this SA */
+		this->ke_method = KE_NONE;
+	}
+	else if (!this->retry)
 	{	/* during a rekeying the method might already be set */
 		if (this->ke_method == KE_NONE)
 		{
@@ -2080,7 +2084,7 @@ METHOD(task_t, build_r, status_t,
 		return SUCCESS;
 	}
 
-	/* check if ike_config_t included non-critical error notifies */
+	/* check if ike_config_t task included non-critical error notifies */
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
@@ -2540,10 +2544,22 @@ METHOD(child_create_t, use_label, void,
 	this->child.label = label ? label->clone(label) : NULL;
 }
 
-METHOD(child_create_t, use_ke_method, void,
-	private_child_create_t *this, key_exchange_method_t ke_method)
+METHOD(child_create_t, recreate_sa, void,
+	private_child_create_t *this, child_sa_t *old)
 {
-	this->ke_method = ke_method;
+	if (this->initiator)
+	{
+		proposal_t *proposal;
+		uint16_t ke_method;
+
+		proposal = old->get_proposal(old);
+		if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD,
+									&ke_method, NULL))
+		{
+			/* reuse the KE method negotiated previously */
+			this->ke_method = ke_method;
+		}
+	}
 }
 
 METHOD(child_create_t, get_child, child_sa_t*,
@@ -2719,7 +2735,7 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			.use_marks = _use_marks,
 			.use_if_ids = _use_if_ids,
 			.use_label = _use_label,
-			.use_ke_method = _use_ke_method,
+			.recreate_sa = _recreate_sa,
 			.abort = _abort_,
 			.task = {
 				.get_type = _get_type,

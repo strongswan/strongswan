@@ -2197,6 +2197,7 @@ static void trigger_mbb_reauth(private_task_manager_t *this)
 		cfg = child_sa->get_config(child_sa);
 		child_create = child_create_create(new, cfg->get_ref(cfg),
 										   FALSE, NULL, NULL, 0);
+		child_create->recreate_sa(child_create, child_sa);
 		reqid = child_sa->get_reqid_ref(child_sa);
 		if (reqid)
 		{
@@ -2369,11 +2370,25 @@ METHOD(task_manager_t, queue_dpd, void,
 }
 
 METHOD(task_manager_t, queue_child, void,
-	private_task_manager_t *this, child_cfg_t *cfg, child_init_args_t *args)
+	private_task_manager_t *this, child_cfg_t *cfg, child_init_args_t *args,
+	child_sa_t *child_sa)
 {
 	child_create_t *task;
+	uint32_t reqid;
 
-	if (args)
+	if (child_sa)
+	{
+		task = child_create_create(this->ike_sa, cfg, FALSE, NULL, NULL, 0);
+		task->recreate_sa(task, child_sa);
+		reqid = child_sa->get_reqid_ref(child_sa);
+		if (reqid)
+		{
+			task->use_reqid(task, reqid);
+			charon->kernel->release_reqid(charon->kernel, reqid);
+		}
+		task->use_label(task, child_sa->get_label(child_sa));
+	}
+	else if (args)
 	{
 		task = child_create_create(this->ike_sa, cfg, FALSE, args->src,
 								   args->dst, args->seq);
