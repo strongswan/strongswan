@@ -2219,6 +2219,29 @@ static bool is_ts_match(traffic_selector_t *to_check, array_t *list)
 	return FALSE;
 }
 
+/**
+ * Check if all given traffic selectors are contained in any of the traffic
+ * selectors in the given list.
+ */
+static bool is_ts_list_match(traffic_selector_list_t *to_check, array_t *list)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+	bool matched = TRUE;
+
+	enumerator = to_check->create_enumerator(to_check);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		if (!is_ts_match(ts, list))
+		{
+			matched = FALSE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return matched;
+}
+
 /*
  * Described in header
  */
@@ -2230,4 +2253,17 @@ bool child_sa_ts_match(child_sa_t *child, traffic_selector_t *src,
 	return src && dst &&
 		   is_ts_match(src, this->my_ts) &&
 		   is_ts_match(dst, this->other_ts);
+}
+
+/*
+ * Described in header
+ */
+bool child_sa_ts_lists_match(child_sa_t *child, traffic_selector_list_t *src,
+							 traffic_selector_list_t *dst)
+{
+	private_child_sa_t *this = (private_child_sa_t*)child;
+
+	return src && dst &&
+		   is_ts_list_match(src, this->my_ts) &&
+		   is_ts_list_match(dst, this->other_ts);
 }

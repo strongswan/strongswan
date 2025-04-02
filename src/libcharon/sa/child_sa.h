@@ -607,4 +607,17 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 bool child_sa_ts_match(child_sa_t *this, traffic_selector_t *src,
 					   traffic_selector_t *dst);
 
+/**
+ * Check if the given lists of source and destination traffic selectors (e.g.
+ * from a previous SA) match the negotiated local and remote traffic
+ * selectors of this child SA.
+ *
+ * @param this				CHILD_SA to check traffic selectors against
+ * @param src				source traffic selector list
+ * @param dst				destination traffic selector list
+ * @return					TRUE if all traffic selectors match
+ */
+bool child_sa_ts_lists_match(child_sa_t *this, traffic_selector_list_t *src,
+							 traffic_selector_list_t *dst);
+
 #endif /** CHILD_SA_H_ @}*/
