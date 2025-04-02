@@ -1352,13 +1352,22 @@ static bool reqid_and_ts_equals(private_child_create_t *this, child_sa_t *a,
 		return TRUE;
 	}
 	/* if the reqids differ, the one of the established SA was changed due to
-	 * narrowing.  in this case we check if we have triggering TS.  if not, we
-	 * assume the peer will do the same narrowing and treat the SAs equal.
-	 * otherwise, we check whether they match the TS of the existing SA.  if
-	 * they do, there is no point to negotiate another SA.  if not, the peer
-	 * will potentially narrow the TS to a different set for the new SA */
-	return !this->packet_tsi || !this->packet_tsr ||
-		   child_sa_ts_match(a, this->packet_tsi, this->packet_tsr);
+	 * narrowing.  in this case, we check if we have either triggering TS or
+	 * previous TS.  if so, we check whether the available TS match the TS of
+	 * the existing SA.  if they do, there is no point to negotiate another SA.
+	 * if not, the peer will potentially narrow the TS to a different set for
+	 * the new SA. */
+	if (this->packet_tsi && this->packet_tsr)
+	{
+		return child_sa_ts_match(a, this->packet_tsi, this->packet_tsr);
+	}
+	if (this->my_ts && this->other_ts)
+	{
+		return child_sa_ts_lists_match(a, this->my_ts, this->other_ts);
+	}
+	/* if we don't have any TS to compare, we assume the peer will do the same
+	 * narrowing and treat the SAs equal.*/
+	return TRUE;
 }
 
 /**
