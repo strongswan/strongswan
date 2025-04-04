@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Relution GmbH
- * Copyright (C) 2014-2024 Tobias Brunner
+ * Copyright (C) 2014-2025 Tobias Brunner
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -38,14 +38,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import androidx.annotation.NonNull;
 import androidx.core.os.HandlerCompat;
-import androidx.lifecycle.DefaultLifecycleObserver;
-import androidx.lifecycle.LifecycleOwner;
-import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-public class StrongSwanApplication extends Application implements DefaultLifecycleObserver
+public class StrongSwanApplication extends Application
 {
 	private static final String TAG = StrongSwanApplication.class.getSimpleName();
 
@@ -80,6 +76,7 @@ public class StrongSwanApplication extends Application implements DefaultLifecyc
 	public void onCreate()
 	{
 		super.onCreate();
+
 		StrongSwanApplication.mContext = getApplicationContext();
 		StrongSwanApplication.mInstance = this;
 
@@ -92,22 +89,10 @@ public class StrongSwanApplication extends Application implements DefaultLifecyc
 
 		mUserCertificateManager = new ManagedUserCertificateManager(mContext, mManagedConfigurationService, mDatabaseHelper);
 
-		ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
-	}
-
-	@Override
-	public void onResume(@NonNull LifecycleOwner owner)
-	{
 		reloadManagedConfigurationAndNotifyListeners();
 
 		final IntentFilter restrictionsFilter = new IntentFilter(Intent.ACTION_APPLICATION_RESTRICTIONS_CHANGED);
 		registerReceiver(mRestrictionsReceiver, restrictionsFilter);
-	}
-
-	@Override
-	public void onPause(@NonNull LifecycleOwner owner)
-	{
-		unregisterReceiver(mRestrictionsReceiver);
 	}
 
 	private void reloadManagedConfigurationAndNotifyListeners()
