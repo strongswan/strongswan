@@ -2,6 +2,7 @@
 name: "🐛 Bug report"
 about: Report a reproducible bug or regression
 labels: bug, new
+type: Bug
 ---
 
 <!--
