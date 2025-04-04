@@ -580,11 +580,17 @@ else
 
 	test ${#WAIT_FOR[@]} -gt 0 && wait ${WAIT_FOR[@]}
 
+	WAIT_FOR=()
+
 	for host in ${!COLLECT_OPTIONS[@]}
 	do
 		eval HOSTLOGIN=root@\$ipv4_${host}
-		scp $SSHCONF -q $HOSTLOGIN:${GUEST_OUTPUT_DIR}/* $TESTRESULTDIR/
+		ssh $SSHCONF $HOSTLOGIN "tar -cf - -C ${GUEST_OUTPUT_DIR} ." | tar -xf - -C $TESTRESULTDIR/ &
+		WAIT_FOR+=($!)
 	done
+
+	test ${#WAIT_FOR[@]} -gt 0 && wait ${WAIT_FOR[@]}
+
 	chmod a+r $TESTRESULTDIR/*
 
 	##########################################################################
