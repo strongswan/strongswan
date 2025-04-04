@@ -267,9 +267,20 @@ static bool scheme_supported(private_agent_private_key_t *this,
 			*prefix = "ssh-ed448";
 			return scheme == SIGN_ED448;
 		case KEY_ECDSA:
-			return scheme == SIGN_ECDSA_256 ||
-				   scheme == SIGN_ECDSA_384 ||
-				   scheme == SIGN_ECDSA_521;
+			switch (scheme)
+			{
+				case SIGN_ECDSA_256:
+					*prefix = "ecdsa-sha2-nistp256";
+					return TRUE;
+				case SIGN_ECDSA_384:
+					*prefix = "ecdsa-sha2-nistp384";
+					return TRUE;
+				case SIGN_ECDSA_521:
+					*prefix = "ecdsa-sha2-nistp521";
+					return TRUE;
+				default:
+					break;
+			}
 		default:
 			return FALSE;
 	}
