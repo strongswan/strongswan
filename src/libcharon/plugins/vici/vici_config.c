@@ -1183,7 +1183,7 @@ CALLBACK(parse_uint32_bin, bool,
 CALLBACK(parse_uint64, bool,
 	uint64_t *out, chunk_t v)
 {
-	char buf[16], *end;
+	char buf[32], *end;
 	unsigned long long l;
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
