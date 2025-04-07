@@ -1271,15 +1271,15 @@ CALLBACK(parse_time32, bool,
 CALLBACK(parse_bytes, bool,
 	uint64_t *out, chunk_t v)
 {
-	char buf[16], *end;
-	unsigned long long l;
+	char buf[32], *end;
+	unsigned long long l, ll;
 
 	if (!vici_stringify(v, buf, sizeof(buf)))
 	{
 		return FALSE;
 	}
 
-	l = strtoull(buf, &end, 0);
+	l = ll = strtoull(buf, &end, 0);
 	while (*end == ' ')
 	{
 		end++;
@@ -1288,15 +1288,15 @@ CALLBACK(parse_bytes, bool,
 	{
 		case 'g':
 		case 'G':
-			l *= 1024;
+			ll *= 1024;
 			/* fall */
 		case 'm':
 		case 'M':
-			l *= 1024;
+			ll *= 1024;
 			/* fall */
 		case 'k':
 		case 'K':
-			l *= 1024;
+			ll *= 1024;
 			end++;
 			break;
 		case '\0':
@@ -1308,7 +1308,7 @@ CALLBACK(parse_bytes, bool,
 	{
 		return FALSE;
 	}
-	*out = l;
+	*out = (ll < l) ? UINT64_MAX : ll;
 	return TRUE;
 }
 
