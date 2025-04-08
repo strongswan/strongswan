@@ -1371,13 +1371,24 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 
 	if (reqid)
 	{
-		data.src = sadb_address2ts(response.src);
-		data.dst = sadb_address2ts(response.dst);
+		/* while we could pass the sequence number from the acquire in order
+		 * to use it in the SA install, we currently don't do that. the reason
+		 * is that the addresses we get here are the endpoints of the SA, not
+		 * information about the matched packet (except for the ports, according
+		 * to the RFC, although the Linux kernel doesn't do that). so these are
+		 * only useful in transport mode with wildcard policies. in tunnel mode,
+		 * where narrowing could occur and the sequence number would be
+		 * relevant, these TS are useless and might not even match the policy */
+		if (response.x_sa2->sadb_x_sa2_mode == IPSEC_MODE_TRANSPORT)
+		{
+			data.src = sadb_address2ts(response.src);
+			data.dst = sadb_address2ts(response.dst);
+		}
 
 		charon->kernel->acquire(charon->kernel, reqid, &data);
 
-		data.src->destroy(data.src);
-		data.dst->destroy(data.dst);
+		DESTROY_IF(data.src);
+		DESTROY_IF(data.dst);
 	}
 }
 
