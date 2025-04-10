@@ -27,7 +27,7 @@ HOSTSDIR=$DIR/../hosts
 [ -f $HOSTDIR ] || die "Hosts directory $HOSTSDIR not found"
 running_any $STRONGSWANHOSTS && die "Please stop test environment before running $0"
 
-check_commands partprobe qemu-img qemu-nbd
+check_commands blockdev qemu-img qemu-nbd
 
 load_qemu_nbd
 
@@ -43,7 +43,7 @@ do
 	log_action "Creating guest image for $host"
 	execute "qemu-img create -b $ROOTIMG -f $IMGEXT -F $IMGEXT $IMGDIR/$host.$IMGEXT" 0
 	execute "qemu-nbd -c $NBDEV $IMGDIR/$host.$IMGEXT" 0
-	partprobe $NBDEV
+	blockdev --rereadpt $NBDEV
 	execute "mount $NBDPARTITION $LOOPDIR" 0
 	execute "cp -rf $HOSTSDIR/default/* $LOOPDIR" 0
 	execute "cp -rf $HOSTSDIR/${host}/etc $LOOPDIR" 0

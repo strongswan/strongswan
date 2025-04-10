@@ -8,7 +8,7 @@ DIR=$(dirname `readlink -f $0`)
 [ -f "$BASEIMG" ] || die "Base image $BASEIMG not found"
 running_any $STRONGSWANHOSTS && die "Please stop test environment before running $0"
 
-check_commands partprobe qemu-img qemu-nbd
+check_commands blockdev qemu-img qemu-nbd
 
 load_qemu_nbd
 
@@ -115,7 +115,7 @@ case "$GUEST" in
 esac
 
 do_on_exit qemu-nbd -d $NBDEV
-partprobe $NBDEV
+blockdev --rereadpt $NBDEV
 
 log_action "Mounting $NBDPARTITION to $LOOPDIR"
 execute "mount $NBDPARTITION $LOOPDIR"
