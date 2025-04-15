@@ -19,6 +19,7 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include "updown_listener.h"
 
@@ -257,6 +258,8 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 						traffic_selector_t *my_ts, traffic_selector_t *other_ts)
 {
 	host_t *me, *other, *host;
+	uint64_t bytes, packets;
+	time_t t;
 	char *iface;
 	uint8_t mask;
 	uint32_t if_id;
@@ -385,6 +388,12 @@ static void invoke_once(private_updown_listener_t *this, ike_sa_t *ike_sa,
 	{
 		push_env(envp, countof(envp), "PLUTO_HOST_ACCESS=1");
 	}
+    child_sa->get_usestats(child_sa, TRUE,  &t, &bytes, &packets);
+    push_env(envp, countof(envp), "PLUTO_BYTES_IN=%"PRIu64, bytes);
+    push_env(envp, countof(envp), "PLUTO_PACKETS_IN=%"PRIu64, packets);
+    child_sa->get_usestats(child_sa, FALSE,  &t, &bytes, &packets);
+    push_env(envp, countof(envp), "PLUTO_BYTES_OUT=%"PRIu64, bytes);
+    push_env(envp, countof(envp), "PLUTO_PACKETS_OUT=%"PRIu64, packets);
 
 	process = process_start_shell(envp, NULL, &out, NULL, "2>&1 %s",
 								  config->get_updown(config));
