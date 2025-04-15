@@ -604,6 +604,10 @@ AC_LINK_IFELSE(
 AC_SUBST(ATOMICLIB)
 
 LIBS=$saved_LIBS
+
+# Some platforms require explicit linking to use POSIX regular expressions
+AC_SEARCH_LIBS([regcomp], [regex], [AC_DEFINE([HAVE_REGEX], [], [have regcomp() etc.])])
+
 # ------------------------------------------------------
 
 AC_MSG_CHECKING(for dladdr)
