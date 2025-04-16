@@ -241,6 +241,7 @@ class GroffTagReplacer(TagReplacer):
 			if not punct:
 				punct = ''
 			text = re.sub(r'[\r\n\t]', ' ', m.group('text'))
+			text = re.sub(r'"', '""', text)
 			return '{0}.R{1} "{2}" "{3}" "{4}"\n'.format(nl, format, brack, text, punct)
 		return replacer
 
@@ -305,7 +306,8 @@ class ManFormatter:
 	def __groffize(self, text):
 		"""Encode text as groff text"""
 		text = self.__tags.replace(text)
-		text = re.sub(r'(?<!\\)-', r'\\-', text)
+		text = re.sub(r'\\(?!-)', '\\[rs]', text)
+		text = re.sub(r'(?<!\\)-', '\\-', text)
 		# remove any leading whitespace
 		return re.sub(r'^\s+', '', text, flags = re.MULTILINE)
 
