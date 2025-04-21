@@ -1182,6 +1182,16 @@ connections.<conn>.children.<child>.close_action = none
 	alive. It acts on explicit close messages only, but not on negotiation
 	failures. Use trap policies to reliably re-create failed CHILD_SAs.
 
+connections.<conn>.children.<child>.max_child_sas = 0
+       Maximum number of CHILD_SA pairs to allow for this child_cfg
+
+       Sets the maximum number of CHILD_SA pairs to allow for this child_cfg. If
+       configured, during CHILD_SA negotiation of new CHILD_SAs this configuration
+       will be compared against the existing number of child SAs already negotiated
+       and allowed via this child_cfg and will reject any additional child SAs with
+       a NO_ADDITIONAL_SAS notify. Default 0 will mean no limit on the number of
+       CHILD_SA pairs for the child_cfg.
+
 secrets { # }
 	Section defining secrets for IKE/EAP/XAuth authentication and private
 	key decryption.

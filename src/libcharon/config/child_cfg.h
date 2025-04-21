@@ -324,6 +324,13 @@ struct child_cfg_t {
 	void (*set_replay_window)(child_cfg_t *this, uint32_t window);
 
 	/**
+	* Get maximum child SA pairs allowed for this child_cfg
+	*
+	* @return              max_child_sas
+	*/
+	uint32_t (*get_max_child_sas)(child_cfg_t *this);
+
+	/**
 	 * Check if an option flag is set.
 	 *
 	 * @param option		option flag to check
@@ -436,6 +443,8 @@ struct child_cfg_create_t {
 	hw_offload_t hw_offload;
 	/** How to handle the DS header field in tunnel mode */
 	dscp_copy_t copy_dscp;
+	/** Maximum number of child SA pairs to allow for this child_cfg */
+	uint32_t max_child_sas;
 };
 
 /**
