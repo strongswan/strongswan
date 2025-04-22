@@ -1161,13 +1161,23 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 		dst = xfrm2host(mapping->id.family, &mapping->id.daddr, 0);
 		if (dst)
 		{
-			new = xfrm2host(mapping->id.family, &mapping->new_saddr,
-							mapping->new_sport);
-			if (new)
+			if (!mapping->old_sport)
 			{
-				charon->kernel->mapping(charon->kernel, IPPROTO_ESP, spi, dst,
-										new);
-				new->destroy(new);
+				/* ignore mappings for per-CPU SAs with 0 source port */
+				DBG1(DBG_KNL, "ignore NAT mapping change for per-resource "
+					 "CHILD_SA %N/0x%08x/%H", protocol_id_names, PROTO_ESP,
+					 htonl(spi), dst);
+			}
+			else
+			{
+				new = xfrm2host(mapping->id.family, &mapping->new_saddr,
+								mapping->new_sport);
+				if (new)
+				{
+					charon->kernel->mapping(charon->kernel, IPPROTO_ESP, spi, dst,
+											new);
+					new->destroy(new);
+				}
 			}
 			dst->destroy(dst);
 		}
@@ -2053,6 +2063,15 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		 * No. The reason the kernel ignores NAT-OA is that it recomputes
 		 * (or, rather, just ignores) the checksum. If packets pass the IPsec
 		 * checks it marks them "checksum ok" so OA isn't needed. */
+
+		/* if the remote port is set to 0 for UDP-encapsulated per-CPU SAs, we
+		 * increase the treshold for mapping changes as it gets otherwise
+		 * triggered with every packet */
+		if (data->inbound && !id->src->get_port(id->src) &&
+			!add_uint32(hdr, sizeof(request), XFRMA_MTIMER_THRESH, UINT32_MAX))
+		{
+			goto failed;
+		}
 	}
 
 	if (!add_mark(hdr, sizeof(request), id->mark))
