@@ -82,22 +82,27 @@ METHOD(kdf_t, get_length, size_t,
 METHOD(kdf_t, get_bytes, bool,
 	private_kdf_t *this, size_t out_len, uint8_t *buffer)
 {
+	int ret;
+
 	if (this->type == KDF_PRF)
 	{
-		if (out_len != get_length(this) ||
-			wc_HKDF_Extract(this->hash, this->salt.ptr, this->salt.len,
-							this->key.ptr, this->key.len, buffer))
+		if (out_len != get_length(this))
 		{
 			return FALSE;
 		}
-		return TRUE;
+		PRIVATE_KEY_UNLOCK();
+		ret = wc_HKDF_Extract(this->hash, this->salt.ptr, this->salt.len,
+							  this->key.ptr, this->key.len, buffer);
+		PRIVATE_KEY_LOCK();
 	}
-	if (wc_HKDF_Expand(this->hash, this->key.ptr, this->key.len,
-					   this->salt.ptr, this->salt.len, buffer, out_len))
+	else
 	{
-		return FALSE;
+		PRIVATE_KEY_UNLOCK();
+		ret = wc_HKDF_Expand(this->hash, this->key.ptr, this->key.len,
+							 this->salt.ptr, this->salt.len, buffer, out_len);
+		PRIVATE_KEY_LOCK();
 	}
-	return TRUE;
+	return ret == 0;
 }
 
 METHOD(kdf_t, allocate_bytes, bool,
