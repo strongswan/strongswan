@@ -93,9 +93,14 @@ METHOD(key_exchange_t, get_shared_secret, bool,
 
 	if (!this->shared_secret.len)
 	{
+        int ret;
 		this->shared_secret = chunk_alloc(this->len);
-		if (wc_DhAgree(&this->dh, this->shared_secret.ptr, &len, this->priv.ptr,
-					   this->priv.len, this->other.ptr, this->other.len) != 0)
+		PRIVATE_KEY_UNLOCK();
+		ret = wc_DhAgree(&this->dh, this->shared_secret.ptr, &len,
+		        this->priv.ptr, this->priv.len, this->other.ptr,
+		        this->other.len);
+		PRIVATE_KEY_LOCK();
+		if (ret != 0)
 		{
 			DBG1(DBG_LIB, "DH shared secret computation failed");
 			chunk_free(&this->shared_secret);
@@ -139,9 +144,13 @@ METHOD(key_exchange_t, set_seed, bool,
 	/* calculate public value - g^priv mod p */
 	if (wolfssl_mp2chunk(&this->dh.g, &g))
 	{
+	    int ret;
 		len = this->pub.len;
-		if (wc_DhAgree(&this->dh, this->pub.ptr, &len, this->priv.ptr,
-						 this->priv.len, g.ptr, g.len) == 0)
+		PRIVATE_KEY_UNLOCK();
+		ret = wc_DhAgree(&this->dh, this->pub.ptr, &len, this->priv.ptr,
+						 this->priv.len, g.ptr, g.len);
+		PRIVATE_KEY_LOCK();
+		if (ret == 0)
 		{
 			this->pub.len = len;
 			success = TRUE;
@@ -220,6 +229,7 @@ static wolfssl_diffie_hellman_t *create_generic(key_exchange_method_t group,
 	private_wolfssl_diffie_hellman_t *this;
 	word32 privLen, pubLen;
 	WC_RNG rng;
+	int ret;
 
 	INIT(this,
 		.public = {
@@ -262,8 +272,11 @@ static wolfssl_diffie_hellman_t *create_generic(key_exchange_method_t group,
 	privLen = this->priv.len;
 	pubLen = this->pub.len;
 	/* generate my public and private values */
-	if (wc_DhGenerateKeyPair(&this->dh, &rng, this->priv.ptr, &privLen,
-							 this->pub.ptr, &pubLen) != 0)
+	PRIVATE_KEY_UNLOCK();
+	ret = wc_DhGenerateKeyPair(&this->dh, &rng, this->priv.ptr, &privLen,
+							 this->pub.ptr, &pubLen);
+	PRIVATE_KEY_LOCK();
+	if (ret != 0)
 	{
 		wc_FreeRng(&rng);
 		destroy(this);
