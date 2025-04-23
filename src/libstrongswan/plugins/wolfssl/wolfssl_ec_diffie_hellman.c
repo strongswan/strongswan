@@ -219,6 +219,7 @@ METHOD(key_exchange_t, set_seed, bool,
 static bool compute_shared_key(private_wolfssl_ec_diffie_hellman_t *this)
 {
 	word32 len;
+	int ret;
 #ifdef USE_RNG_FOR_TIMING_RESISTANCE
 	WC_RNG rng;
 
@@ -237,8 +238,11 @@ static bool compute_shared_key(private_wolfssl_ec_diffie_hellman_t *this)
 	this->shared_secret = chunk_alloc(this->keysize);
 	len = this->shared_secret.len;
 
-	if (wc_ecc_shared_secret(&this->key, &this->pubkey, this->shared_secret.ptr,
-							 &len) != 0)
+	PRIVATE_KEY_UNLOCK();
+	ret = wc_ecc_shared_secret(&this->key, &this->pubkey,
+							   this->shared_secret.ptr, &len);
+	PRIVATE_KEY_LOCK();
+	if (ret != 0)
 	{
 		DBG1(DBG_LIB, "ECDH shared secret computation failed");
 		chunk_clear(&this->shared_secret);
