@@ -461,7 +461,7 @@ METHOD(plugin_t, get_features, int,
 		#endif
 	#endif /* HAVE_ECC_VERIFY */
 #endif /* HAVE_ECC */
-#ifdef WOLFSSL_HAVE_KYBER
+#ifdef WOLFSSL_HAVE_MLKEM
 		PLUGIN_REGISTER(KE, wolfssl_kem_create),
 			PLUGIN_PROVIDE(KE, ML_KEM_512),
 			PLUGIN_PROVIDE(KE, ML_KEM_768),
