@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Tobias Brunner, codelabs GmbH
+ * Copyright (C) 2024-2025 Tobias Brunner, codelabs GmbH
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,14 +23,11 @@
 
 #include "wolfssl_common.h"
 
-#ifdef WOLFSSL_HAVE_KYBER
+#ifdef WOLFSSL_HAVE_MLKEM
 
-#include <wolfssl/wolfcrypt/kyber.h>
-#ifdef WOLFSSL_WC_KYBER
-#include <wolfssl/wolfcrypt/wc_kyber.h>
-#endif
-#if defined(HAVE_LIBOQS)
-#include <wolfssl/wolfcrypt/ext_kyber.h>
+#include <wolfssl/wolfcrypt/mlkem.h>
+#ifdef WOLFSSL_WC_MLKEM
+#include <wolfssl/wolfcrypt/wc_mlkem.h>
 #endif
 
 typedef struct private_key_exchange_t private_key_exchange_t;
@@ -172,9 +169,7 @@ static bool decaps_ciphertext(private_key_exchange_t *this, chunk_t ciphertext)
 	}
 	this->shared_secret = chunk_alloc(ss_len);
 
-	/* FIXME: can't use the wc_MlKemKey alias here as it's incorrectly mapped
-	 * to wc_KyberKey_Encapsulate */
-	if (wc_KyberKey_Decapsulate(this->kem, this->shared_secret.ptr,
+	if (wc_MlKemKey_Decapsulate(this->kem, this->shared_secret.ptr,
 								ciphertext.ptr, ciphertext.len) != 0)
 	{
 		DBG1(DBG_LIB, "%N decapsulation failed",
@@ -291,17 +286,17 @@ key_exchange_t *wolfssl_kem_create(key_exchange_method_t method)
 
 	switch (method)
 	{
-#ifdef WOLFSSL_KYBER512
+#ifdef WOLFSSL_WC_ML_KEM_512
 		case ML_KEM_512:
 			type = WC_ML_KEM_512;
 			break;
 #endif
-#ifdef WOLFSSL_KYBER768
+#ifdef WOLFSSL_WC_ML_KEM_768
 		case ML_KEM_768:
 			type = WC_ML_KEM_768;
 			break;
 #endif
-#ifdef WOLFSSL_KYBER1024
+#ifdef WOLFSSL_WC_ML_KEM_1024
 		case ML_KEM_1024:
 			type = WC_ML_KEM_1024;
 			break;
@@ -329,4 +324,4 @@ key_exchange_t *wolfssl_kem_create(key_exchange_method_t method)
 	return &this->public;
 }
 
-#endif /* WOLFSSL_HAVE_KYBER */
+#endif /* WOLFSSL_HAVE_MLKEM */
