@@ -115,16 +115,6 @@ static bool get_rng(private_key_exchange_t *this, botan_rng_t *rng)
 }
 
 /**
- * Convert the given "view" to a chunk.
- */
-CALLBACK(botan_view_to_chunk, int,
-	chunk_t *chunk, const uint8_t *data, size_t len)
-{
-	*chunk = chunk_clone(chunk_create((u_char*)data, len));
-	return 0;
-}
-
-/**
  * Generate a key pair as initiator.
  */
 static bool generate_keypair(private_key_exchange_t *this)
