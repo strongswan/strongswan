@@ -676,6 +676,7 @@ static char *whitelist[] = {
 	"botan_privkey_create",
 	"botan_privkey_load_ecdh",
 	"botan_privkey_load",
+	"botan_privkey_load.cold",
 	"botan_privkey_load_rsa_pkcs1",
 	"botan_kdf",
 	/* C++ due to Botan */
