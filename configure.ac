@@ -374,6 +374,7 @@ AC_SUBST(PLUGIN_CFLAGS)
 AC_PROG_CC
 AM_PROG_CC_C_O
 
+m4_include(m4/macros/lib-prefix.m4)
 AC_LIB_PREFIX
 AC_C_BIGENDIAN
 

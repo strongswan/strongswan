@@ -401,10 +401,9 @@ macos)
 			--enable-socket-default --enable-sshkey --enable-stroke
 			--enable-swanctl --enable-unity --enable-updown
 			--enable-x509 --enable-xauth-generic"
-	DEPS="automake autoconf libtool bison gettext gperf pkgconf openssl@1.1 curl"
+	DEPS="automake autoconf libtool bison gperf pkgconf openssl@1.1 curl"
 	BREW_PREFIX=$(brew --prefix)
 	export PATH=$BREW_PREFIX/opt/bison/bin:$PATH
-	export ACLOCAL_PATH=$BREW_PREFIX/opt/gettext/share/aclocal:$ACLOCAL_PATH
 	for pkg in openssl@1.1 curl
 	do
 		PKG_CONFIG_PATH=$BREW_PREFIX/opt/$pkg/lib/pkgconfig:$PKG_CONFIG_PATH
@@ -485,11 +484,11 @@ deps)
 	case "$OS_NAME" in
 	linux)
 		sudo apt-get update -y && \
-		sudo apt-get install -y automake autoconf libtool pkgconf bison flex gperf gettext $DEPS
+		sudo apt-get install -y automake autoconf libtool pkgconf bison flex gperf $DEPS
 		;;
 	alpine)
 		apk add --no-cache build-base automake autoconf libtool pkgconfig && \
-		apk add --no-cache bison flex gperf gettext-dev tzdata $DEPS
+		apk add --no-cache bison flex gperf tzdata $DEPS
 		;;
 	macos)
 		brew update && \
@@ -497,7 +496,7 @@ deps)
 		;;
 	freebsd)
 		pkg install -y automake autoconf libtool pkgconf && \
-		pkg install -y bison flex gperf gettext $DEPS
+		pkg install -y bison flex gperf $DEPS
 		;;
 	esac
 	exit $?

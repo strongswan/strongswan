@@ -12,7 +12,7 @@ running_any $STRONGSWANHOSTS && die "Please stop test environment before running
 check_commands debootstrap mkfs.ext3 blockdev qemu-img qemu-nbd sfdisk
 
 # package includes/excludes
-INC=automake,autoconf,libtool,bison,flex,gperf,pkg-config,gettext,less,locales
+INC=automake,autoconf,libtool,bison,flex,gperf,pkg-config,less,locales
 INC=$INC,build-essential,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,ethtool
 INC=$INC,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc
 INC=$INC,openssl,vim,sqlite3,conntrack,gdb,cmake,libltdl-dev,wget,gnupg,man-db

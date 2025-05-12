@@ -26,7 +26,7 @@
 FROM debian:bookworm
 
 ARG packages="autoconf automake bison build-essential ca-certificates ccache \
-flex gettext git gperf libssl-dev libtool pkg-config \
+flex git gperf libssl-dev libtool pkg-config \
 gnat gprbuild libahven11-dev libxmlada-schema12-dev libgmpada12-dev \
 libalog8-dev"
 
