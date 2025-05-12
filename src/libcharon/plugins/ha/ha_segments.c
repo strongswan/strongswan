@@ -213,7 +213,7 @@ static void enable_disable(private_ha_segments_t *this, u_int segment,
 			{
 				DBG1(DBG_IKE, "destroying incomplete IKE_SA %s[%d] after "
 					 "%sactivating HA segment %d", ike_sa->get_name(ike_sa),
-					 unique_id, segment, enable ? "" : "de");
+					 unique_id, enable ? "" : "de", segment);
 				charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
 															ike_sa);
 			}
