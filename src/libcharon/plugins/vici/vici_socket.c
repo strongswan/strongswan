@@ -563,8 +563,8 @@ CALLBACK(on_read, bool,
 					.id = entry->id,
 				);
 				lib->processor->queue_job(lib->processor,
-							(job_t*)callback_job_create(process_queue,
-														sel, free, NULL));
+							(job_t*)callback_job_create(process_queue, sel,
+											free, callback_job_cancel_thread));
 				entry->has_processor = TRUE;
 			}
 		}
