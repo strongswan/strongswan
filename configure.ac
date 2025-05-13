@@ -33,20 +33,17 @@ AM_INIT_AUTOMAKE(m4_esyscmd([
 	esac
 ]))
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
-AC_CONFIG_MACRO_DIR([m4/config])
+AC_CONFIG_MACRO_DIRS([m4/config m4/macros])
 AC_CONFIG_HEADERS([config.h])
 AC_DEFINE([CONFIG_H_INCLUDED], [], [defined if config.h included])
 AC_DISABLE_STATIC
 PKG_PROG_PKG_CONFIG
 
-m4_include(m4/macros/split-package-version.m4)
 SPLIT_PACKAGE_VERSION
 
 # =================================
 #  check --enable-xxx & --with-xxx
 # =================================
-
-m4_include(m4/macros/with.m4)
 
 ARG_WITH_SUBST([random-device],      [/dev/random], [set the device to read real random data from])
 ARG_WITH_SUBST([urandom-device],     [/dev/urandom], [set the device to read pseudo random data from])
@@ -128,8 +125,6 @@ fi
 
 # convert script name to uppercase
 AC_SUBST(ipsec_script_upper, [`echo -n "$ipsec_script" | tr a-z A-Z`])
-
-m4_include(m4/macros/enable-disable.m4)
 
 # crypto plugins
 ARG_ENABL_SET([aes],            [enable AES software implementation plugin.])
@@ -374,7 +369,6 @@ AC_SUBST(PLUGIN_CFLAGS)
 AC_PROG_CC
 AM_PROG_CC_C_O
 
-m4_include(m4/macros/lib-prefix.m4)
 AC_LIB_PREFIX
 AC_C_BIGENDIAN
 
@@ -1522,8 +1516,6 @@ CFLAGS="$WARN_CFLAGS $CFLAGS"
 # ===============================================
 #  collect plugin list for strongSwan components
 # ===============================================
-
-m4_include(m4/macros/add-plugin.m4)
 
 # plugin lists for all components
 charon_plugins=
