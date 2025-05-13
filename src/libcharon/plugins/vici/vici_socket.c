@@ -481,13 +481,22 @@ static bool do_read(private_vici_socket_t *this, entry_t *entry,
 }
 
 /**
+ * Clear the given chunk and free it
+ */
+static void destroy_request_chunk(chunk_t *chunk)
+{
+	chunk_clear(chunk);
+	free(chunk);
+}
+
+/**
  * Callback processing incoming requests in strict order
  */
 CALLBACK(process_queue, job_requeue_t,
 	entry_selector_t *sel)
 {
 	entry_t *entry;
-	chunk_t chunk;
+	chunk_t *chunk;
 	bool found;
 	u_int id;
 
@@ -499,7 +508,8 @@ CALLBACK(process_queue, job_requeue_t,
 			break;
 		}
 
-		found = array_remove(entry->queue, ARRAY_HEAD, &chunk);
+		INIT(chunk);
+		found = array_remove(entry->queue, ARRAY_HEAD, chunk);
 		if (!found)
 		{
 			entry->has_processor = FALSE;
@@ -508,11 +518,12 @@ CALLBACK(process_queue, job_requeue_t,
 		put_entry(sel->this, entry, TRUE, FALSE);
 		if (!found)
 		{
+			free(chunk);
 			break;
 		}
 
-		thread_cleanup_push((void*)chunk_clear, &chunk);
-		sel->this->inbound(sel->this->user, id, chunk);
+		thread_cleanup_push((void*)destroy_request_chunk, chunk);
+		sel->this->inbound(sel->this->user, id, *chunk);
 		thread_cleanup_pop(TRUE);
 	}
 	return JOB_REQUEUE_NONE;
