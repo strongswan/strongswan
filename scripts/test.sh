@@ -253,6 +253,10 @@ botan)
 	CONFIG="--disable-defaults --enable-pki --enable-botan --enable-pem --enable-hmac --enable-x509 --enable-constraints --enable-drbg"
 	export TESTS_PLUGINS="test-vectors botan! pem hmac x509 constraints drbg"
 	DEPS=""
+	if [ "$LEAK_DETECTIVE" = "yes" ]; then
+		CONFIG="$CONFIG --enable-bfd-backtraces"
+		DEPS="$DEPS binutils-dev"
+	fi
 	if test "$1" = "build-deps"; then
 		build_botan
 	fi
