@@ -16,12 +16,13 @@
 
 #include "ipsec_types.h"
 
-ENUM(ipsec_mode_names, MODE_TRANSPORT, MODE_DROP,
+ENUM(ipsec_mode_names, MODE_TRANSPORT, MODE_IPTFS,
 	"TRANSPORT",
 	"TUNNEL",
 	"BEET",
 	"PASS",
-	"DROP"
+	"DROP",
+	"IPTFS",
 );
 
 ENUM(policy_dir_names, POLICY_IN, POLICY_FWD,

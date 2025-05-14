@@ -51,7 +51,9 @@ enum ipsec_mode_t {
 	/** passthrough policy for traffic without an IPsec SA */
 	MODE_PASS,
 	/** drop policy discarding traffic */
-	MODE_DROP
+	MODE_DROP,
+	/** IP-TFS mode, tunnel mode with aggregation/fragmentation */
+	MODE_IPTFS,
 };
 
 /**
