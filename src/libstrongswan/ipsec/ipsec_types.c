@@ -20,6 +20,7 @@ ENUM(ipsec_mode_names, MODE_TRANSPORT, MODE_DROP,
 	"TRANSPORT",
 	"TUNNEL",
 	"BEET",
+	"IPTFS",
 	"PASS",
 	"DROP"
 );
