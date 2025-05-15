@@ -171,6 +171,8 @@ enum notify_type_t {
 
 	/* multiple key exchanges, RFC 9370 */
 	ADDITIONAL_KEY_EXCHANGE = 16441,
+	/* IP-TFS/AGGFRAG, RFC 9347 */
+	USE_AGGFRAG = 16442,
 
 	/* Resource info for CHILD_SAs, RFC 9611 */
 	SA_RESOURCE_INFO = 16444,
