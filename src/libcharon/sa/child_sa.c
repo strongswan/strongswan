@@ -247,6 +247,11 @@ struct private_child_sa_t {
 	ipsec_mode_t mode;
 
 	/**
+	 * Disable fragmenting packets across IP-TFS packets
+	 */
+	bool iptfs_dont_frag;
+
+	/**
 	 * Action to enforce if peer closes the CHILD_SA
 	 */
 	action_t close_action;
@@ -460,6 +465,12 @@ METHOD(child_sa_t, set_mode, void,
 	   private_child_sa_t *this, ipsec_mode_t mode)
 {
 	this->mode = mode;
+}
+
+METHOD(child_sa_t, set_iptfs_dont_fragment, void,
+	private_child_sa_t *this)
+{
+	this->iptfs_dont_frag = TRUE;
 }
 
 METHOD(child_sa_t, has_encap, bool,
@@ -1109,6 +1120,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.copy_df = !this->config->has_option(this->config, OPT_NO_COPY_DF),
 		.copy_ecn = !this->config->has_option(this->config, OPT_NO_COPY_ECN),
 		.copy_dscp = this->config->get_copy_dscp(this->config),
+		.iptfs_dont_frag = this->iptfs_dont_frag,
 		.label = label_for(this, LABEL_USE_SA),
 		.initiator = initiator,
 		.inbound = inbound,
@@ -2168,6 +2180,7 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 			.has_encap = _has_encap,
 			.get_ipcomp = _get_ipcomp,
 			.set_ipcomp = _set_ipcomp,
+			.set_iptfs_dont_fragment = _set_iptfs_dont_fragment,
 			.get_close_action = _get_close_action,
 			.set_close_action = _set_close_action,
 			.get_dpd_action = _get_dpd_action,
