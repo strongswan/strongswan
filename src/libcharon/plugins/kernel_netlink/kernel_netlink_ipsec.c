@@ -793,6 +793,8 @@ static uint8_t mode2kernel(ipsec_mode_t mode)
 			return XFRM_MODE_TUNNEL;
 		case MODE_BEET:
 			return XFRM_MODE_BEET;
+		case MODE_IPTFS:
+			return XFRM_MODE_IPTFS;
 		default:
 			return mode;
 	}
@@ -1300,6 +1302,23 @@ static bool add_uint32(struct nlmsghdr *hdr, int buflen,
 					   enum xfrm_attr_type_t type, uint32_t value)
 {
 	uint32_t *xvalue;
+
+	xvalue = netlink_reserve(hdr, buflen, type, sizeof(*xvalue));
+	if (!xvalue)
+	{
+		return FALSE;
+	}
+	*xvalue = value;
+	return TRUE;
+}
+
+/**
+ * Add a uint16 attribute to message
+ */
+static bool add_uint16(struct nlmsghdr *hdr, int buflen,
+					   enum xfrm_attr_type_t type, uint16_t value)
+{
+	uint16_t *xvalue;
 
 	xvalue = netlink_reserve(hdr, buflen, type, sizeof(*xvalue));
 	if (!xvalue)
@@ -1827,6 +1846,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	switch (mode)
 	{
 		case MODE_TUNNEL:
+		case MODE_IPTFS:
 			sa->flags |= XFRM_STATE_AF_UNSPEC;
 			break;
 		case MODE_BEET:
@@ -2128,6 +2148,53 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			goto failed;
 		}
 		DBG2(DBG_KNL, "  using CPU ID: %u", data->cpu);
+	}
+
+	if (mode == MODE_IPTFS)
+	{
+		if (data->inbound)
+		{
+			if (!add_uint32(hdr, sizeof(request), XFRMA_IPTFS_DROP_TIME,
+							lib->settings->get_int(lib->settings,
+									"%s.iptfs.drop_time", 1000000, lib->ns)))
+			{
+				goto failed;
+			}
+			if (!add_uint16(hdr, sizeof(request), XFRMA_IPTFS_REORDER_WINDOW,
+							lib->settings->get_int(lib->settings,
+									"%s.iptfs.reorder_window", 3, lib->ns)))
+			{
+				goto failed;
+			}
+		}
+		else
+		{
+			if (!add_uint32(hdr, sizeof(request), XFRMA_IPTFS_INIT_DELAY,
+							lib->settings->get_int(lib->settings,
+									"%s.iptfs.init_delay", 0, lib->ns)))
+			{
+				goto failed;
+			}
+			if (!add_uint32(hdr, sizeof(request), XFRMA_IPTFS_MAX_QSIZE,
+							lib->settings->get_int(lib->settings,
+									"%s.iptfs.max_queue_size", 1024 * 1024, lib->ns)))
+			{
+				goto failed;
+			}
+			if (!add_uint32(hdr, sizeof(request), XFRMA_IPTFS_PKT_SIZE,
+							lib->settings->get_int(lib->settings,
+									"%s.iptfs.packet_size", 0, lib->ns)))
+			{
+				goto failed;
+			}
+			if ((data->iptfs_dont_frag ||
+				 lib->settings->get_bool(lib->settings,
+									"%s.iptfs.dont_fragment", FALSE, lib->ns)) &&
+				!netlink_reserve(hdr, sizeof(request), XFRMA_IPTFS_DONT_FRAG, 0))
+			{
+				goto failed;
+			}
+		}
 	}
 
 	if (id->proto != IPPROTO_COMP)
@@ -3060,7 +3127,8 @@ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
 							 policy->direction != POLICY_OUT;
 			tmpl->family = ipsec->src->get_family(ipsec->src);
 
-			if (proto_mode == MODE_TUNNEL || proto_mode == MODE_BEET)
+			if (proto_mode == MODE_TUNNEL || proto_mode == MODE_BEET ||
+				proto_mode == MODE_IPTFS)
 			{	/* only for tunnel mode */
 				host2xfrm(ipsec->src, &tmpl->saddr);
 				host2xfrm(ipsec->dst, &tmpl->id.daddr);
