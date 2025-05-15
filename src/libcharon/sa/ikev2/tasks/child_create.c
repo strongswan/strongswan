@@ -44,6 +44,16 @@ typedef struct private_child_create_t private_child_create_t;
 #define CPU_ID_MIN 0
 
 /**
+ * Flags for IP-TFS
+ */
+typedef enum {
+	/** Indicates that fragmentation across packets is not supported */
+	IPTFS_DONT_FRAGMENT = (1 << 0),
+	/** Requests periodic congestion control information from the peer */
+	IPTFS_CONGESTION_CONTROL = (1 << 1),
+} iptfs_flags_t;
+
+/**
  * Private members of a child_create_t task.
  */
 struct private_child_create_t {
@@ -206,6 +216,11 @@ struct private_child_create_t {
 	 * IPComp transform proposed or accepted by the other peer
 	 */
 	ipcomp_transform_t ipcomp_received;
+
+	/**
+	 * IP-TFS flags received from the peer
+	 */
+	uint8_t iptfs_flags;
 
 	/**
 	 * IPsec protocol
@@ -571,6 +586,22 @@ static bool check_mode(private_child_create_t *this, host_t *i, host_t *r)
 				return FALSE;
 			}
 			break;
+		case MODE_IPTFS:
+			if (this->config->get_mode(this->config) != MODE_IPTFS)
+			{
+				return FALSE;
+			}
+			if ((this->iptfs_flags & IPTFS_CONGESTION_CONTROL) ||
+				(this->iptfs_flags & 0xfc))
+			{
+				/* congestion control is not supported, neither are any of
+				 * the 6 reserved flags, so we disable IP-TFS if they are set */
+				DBG1(DBG_IKE, "not using IP-TFS mode, peer sent unsupported "
+					 "flags (0x%.2x) in %N notify", this->iptfs_flags,
+					 notify_type_names, USE_AGGFRAG);
+				return FALSE;
+			}
+			break;
 		default:
 			break;
 	}
@@ -706,6 +737,10 @@ static status_t install_child_sa(private_child_create_t *this)
 
 	this->child_sa->set_ipcomp(this->child_sa, this->ipcomp);
 	this->child_sa->set_mode(this->child_sa, this->mode);
+	if (this->mode == MODE_IPTFS && this->iptfs_flags & IPTFS_DONT_FRAGMENT)
+	{
+		this->child_sa->set_iptfs_dont_fragment(this->child_sa);
+	}
 	this->child_sa->set_protocol(this->child_sa,
 								 this->proposal->get_protocol(this->proposal));
 
@@ -1073,6 +1108,19 @@ static bool build_payloads(private_child_create_t *this, message_t *message)
 		case MODE_BEET:
 			message->add_notify(message, FALSE, USE_BEET_MODE, chunk_empty);
 			break;
+		case MODE_IPTFS:
+		{
+			uint8_t iptfs_flags = 0;
+
+			if (!lib->settings->get_bool(lib->settings,
+									"%s.iptfs.accept_fragments", TRUE, lib->ns))
+			{
+				iptfs_flags |= IPTFS_DONT_FRAGMENT;
+			}
+			message->add_notify(message, FALSE, USE_AGGFRAG,
+								chunk_from_thing(iptfs_flags));
+			break;
+		}
 		default:
 			break;
 	}
@@ -1126,6 +1174,8 @@ static void add_ipcomp_notify(private_child_create_t *this,
  */
 static void handle_notify(private_child_create_t *this, notify_payload_t *notify)
 {
+	chunk_t data;
+
 	switch (notify->get_notify_type(notify))
 	{
 		case USE_TRANSPORT_MODE:
@@ -1142,11 +1192,15 @@ static void handle_notify(private_child_create_t *this, notify_payload_t *notify
 					 "mode, but peer implementation unknown, skipped");
 			}
 			break;
+		case USE_AGGFRAG:
+			this->mode = MODE_IPTFS;
+			data = notify->get_notification_data(notify);
+			this->iptfs_flags = *data.ptr;
+			break;
 		case IPCOMP_SUPPORTED:
 		{
 			ipcomp_transform_t ipcomp;
 			uint16_t cpi;
-			chunk_t data;
 
 			data = notify->get_notification_data(notify);
 			cpi = *(uint16_t*)data.ptr;
