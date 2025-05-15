@@ -291,6 +291,12 @@ struct child_sa_t {
 	void (*set_ipcomp)(child_sa_t *this, ipcomp_transform_t ipcomp);
 
 	/**
+	 * Disable fragmenting messages across multiple IP-TFS packets. Only
+	 * relevant with MODE_IPTFS.
+	 */
+	void (*set_iptfs_dont_fragment)(child_sa_t *this);
+
+	/**
 	 * Get the action to enforce if the remote peer closes the CHILD_SA.
 	 *
 	 * @return			close action
