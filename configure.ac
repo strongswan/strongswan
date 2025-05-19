@@ -1040,7 +1040,7 @@ if test x$unbound = xtrue; then
 fi
 
 if test x$soup = xtrue; then
-	PKG_CHECK_MODULES(soup, [libsoup-2.4])
+	PKG_CHECK_MODULES(soup, [libsoup-3.0] >= 3.4.0)
 	AC_SUBST(soup_CFLAGS)
 	AC_SUBST(soup_LIBS)
 fi
