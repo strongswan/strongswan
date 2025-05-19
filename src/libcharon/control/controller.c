@@ -400,6 +400,8 @@ METHOD(job_t, destroy_job, void,
 	{
 		this->listener.lock->destroy(this->listener.lock);
 		DESTROY_IF(this->listener.done);
+		DESTROY_IF(this->listener.child_cfg);
+		DESTROY_IF(this->listener.peer_cfg);
 		free(this);
 	}
 }
@@ -416,14 +418,11 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 {
 	ike_sa_t *ike_sa;
 	interface_listener_t *listener = &job->listener;
-	peer_cfg_t *peer_cfg = listener->peer_cfg;
 
 	ike_sa = charon->ike_sa_manager->checkout_by_config(charon->ike_sa_manager,
-														peer_cfg);
-	peer_cfg->destroy(peer_cfg);
+														listener->peer_cfg);
 	if (!ike_sa)
 	{
-		DESTROY_IF(listener->child_cfg);
 		listener->status = FAILED;
 		listener_done(listener);
 		return JOB_REQUEUE_NONE;
@@ -449,7 +448,6 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 				 "%d exceeds limit of %d", half_open, limit_half_open);
 			charon->ike_sa_manager->checkin_and_destroy(charon->ike_sa_manager,
 														ike_sa);
-			DESTROY_IF(listener->child_cfg);
 			listener->status = INVALID_STATE;
 			listener_done(listener);
 			return JOB_REQUEUE_NONE;
@@ -468,7 +466,6 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 					 "limit of %d", jobs, limit_job_load);
 				charon->ike_sa_manager->checkin_and_destroy(
 												charon->ike_sa_manager, ike_sa);
-				DESTROY_IF(listener->child_cfg);
 				listener->status = INVALID_STATE;
 				listener_done(listener);
 				return JOB_REQUEUE_NONE;
@@ -476,6 +473,10 @@ METHOD(job_t, initiate_execute, job_requeue_t,
 		}
 	}
 
+	if (listener->child_cfg)
+	{
+		listener->child_cfg->get_ref(listener->child_cfg);
+	}
 	if (ike_sa->initiate(ike_sa, listener->child_cfg, NULL) == SUCCESS)
 	{
 		if (!listener->logger.callback ||
