@@ -452,7 +452,7 @@ static void __attribute__ ((constructor))reg()
 		self, 's', "self",
 		"create a self signed certificate",
 		{"[--in file|--keyid hex] [--type rsa|ecdsa|ed25519|ed448|priv]",
-		 " --dn distinguished-name [--san subjectAltName]+",
+		 "--dn distinguished-name [--san subjectAltName]+",
 		 "[--lifetime days] [--serial hex] [--ca] [--ocsp uri]+",
 		 "[--flag serverAuth|clientAuth|crlSign|ocspSigning|msSmartcardLogon]+",
 		 "[--nc-permitted name] [--nc-excluded name]",
