@@ -36,6 +36,7 @@ enum profile_t {
 	PROF_V2_PUB,
 	PROF_V2_EAP,
 	PROF_V2_PUB_EAP,
+	PROF_V2_PSK,
 	PROF_V1_PUB,
 	PROF_V1_PUB_AM,
 	PROF_V1_XAUTH,
@@ -50,6 +51,7 @@ ENUM(profile_names, PROF_V2_PUB, PROF_V1_HYBRID_AM,
 	"ikev2-pub",
 	"ikev2-eap",
 	"ikev2-pub-eap",
+	"ikev2-psk",
 	"ikev1-pub",
 	"ikev1-pub-am",
 	"ikev1-xauth",
@@ -164,6 +166,7 @@ static peer_cfg_t* create_peer_cfg(private_cmd_connection_t *this)
 		case PROF_V2_PUB:
 		case PROF_V2_EAP:
 		case PROF_V2_PUB_EAP:
+		case PROF_V2_PSK:
 			ike.version = IKEV2;
 			break;
 		case PROF_V1_PUB_AM:
@@ -300,6 +303,10 @@ static bool add_auth_cfgs(private_cmd_connection_t *this, peer_cfg_t *peer_cfg)
 			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_PUBKEY);
 			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_EAP);
 			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_ANY);
+			break;
+		case PROF_V2_PSK:
+			add_auth_cfg(this, peer_cfg, TRUE, AUTH_CLASS_PSK);
+			add_auth_cfg(this, peer_cfg, FALSE, AUTH_CLASS_PSK);
 			break;
 		case PROF_V1_PUB:
 		case PROF_V1_PUB_AM:

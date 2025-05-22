@@ -65,7 +65,7 @@ cmd_option_t cmd_options[CMD_OPT_COUNT] = {
 	  "a single AH proposal to offer instead of the default", {}},
 	{ CMD_OPT_PROFILE, "profile", required_argument, "name",
 	  "authentication profile to use, where name is one of:", {
-		"  ikev2-pub, ikev2-eap, ikev2-pub-eap",
+		"  ikev2-pub, ikev2-eap, ikev2-pub-eap, ikev2-psk",
 		"  ikev1-pub[-am], ikev1-xauth[-am],",
 		"  ikev1-xauth-psk[-am], ikev1-hybrid[-am]",
 	}},
