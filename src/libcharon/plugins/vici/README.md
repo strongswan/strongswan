@@ -723,12 +723,12 @@ EVENT packets wrapping messages. The message contains event details.
 
 ### log ###
 
-The _log_ event is issued to registered clients for each debug log message.
-This event is not associated with a command.
+The _log_ event is issued to registered clients for each debug log message on
+level 0 or 1. This event is not associated with a command.
 
 	{
 		group = <subsystem identifier for debug message>
-		level = <log level, 0-4>
+		level = <log level, 0-1>
 		thread = <numerical thread identifier issuing the log message>
 		ikesa-name = <name of IKE_SA, if log is associated with any>
 		ikesa-uniqued = <unique identifier of IKE_A, if log associated with any>
