@@ -89,10 +89,12 @@ struct private_key_exchange_t {
 	 */
 	hasher_t *H;
 
+#ifdef TESTABLE_KE
 	/**
 	 * DRBG used during testing.
 	 */
 	drbg_t *drbg;
+#endif
 };
 
 /**
@@ -102,10 +104,13 @@ static bool get_random(private_key_exchange_t *this, size_t len, uint8_t *out)
 {
 	rng_t *rng;
 
+#ifdef TESTABLE_KE
 	if (this->drbg)
 	{
 		return this->drbg->generate(this->drbg, len, out);
 	}
+#endif
+
 	rng = lib->crypto->create_rng(lib->crypto, RNG_STRONG);
 	if (!rng || !rng->get_bytes(rng, len, out))
 	{
@@ -961,7 +966,9 @@ METHOD(key_exchange_t, destroy, void,
 	chunk_clear(&this->shared_secret);
 	chunk_free(&this->public_key);
 	chunk_free(&this->ciphertext);
+#ifdef TESTABLE_KE
 	DESTROY_IF(this->drbg);
+#endif
 	DESTROY_IF(this->shake128);
 	DESTROY_IF(this->shake256);
 	DESTROY_IF(this->G);
