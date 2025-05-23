@@ -67,10 +67,12 @@ struct private_key_exchange_t {
 	 */
 	chunk_t shared_secret;
 
+#ifdef TESTABLE_KE
 	/**
 	 * DRBG for testing.
 	 */
 	drbg_t *drbg;
+#endif
 };
 
 /**
@@ -81,10 +83,13 @@ static bool get_random(private_key_exchange_t *this, size_t len, uint8_t *out)
 {
 	WC_RNG rng;
 
+#ifdef TESTABLE_KE
 	if (this->drbg)
 	{
 		return this->drbg->generate(this->drbg, len, out);
 	}
+#endif
+
 	if (wc_InitRng(&rng) != 0)
 	{
 		return FALSE;
@@ -272,7 +277,9 @@ METHOD(key_exchange_t, destroy, void,
 	chunk_free(&this->ciphertext);
 	wc_MlKemKey_Free(this->kem);
 	free(this->kem);
+#ifdef TESTABLE_KE
 	DESTROY_IF(this->drbg);
+#endif
 	free(this);
 }
 
