@@ -414,6 +414,12 @@ enum child_cfg_option_t {
 
 	/** Disable copying the ECN header field in tunnel mode */
 	OPT_NO_COPY_ECN = (1<<8),
+
+	/** Enable per-CPU CHILD_SAs */
+	OPT_PER_CPU_SAS = (1<<9),
+
+	/** Enable UDP encapsulation for per-CPU CHILD_SAs */
+	OPT_PER_CPU_SAS_ENCAP = (1<<10),
 };
 
 /**

@@ -81,6 +81,16 @@ struct child_create_t {
 	void (*use_label)(child_create_t *this, sec_label_t *label);
 
 	/**
+	 * Enable per-CPU feature, optionally with a specific CPU ID for the
+	 * negotiated CHILD_SA.
+	 *
+	 * @param per_cpu	TRUE to enable per-CPU feature (automatically set if
+	 *					cpu is not CPU_ID_MAX)
+	 * @param cpu		CPU ID
+	 */
+	void (*use_per_cpu)(child_create_t *this, bool per_cpu, uint32_t cpu);
+
+	/**
 	 * Use data from the given old SA (e.g. KE method and traffic selectors)
 	 * when rekeying/recreating it.
 	 *

@@ -820,6 +820,7 @@ static void process_child_add(private_ha_dispatcher_t *this,
 
 	child_sa_create_t data = {
 		.encap = ike_sa->has_condition(ike_sa, COND_NAT_ANY),
+		.cpu = CPU_ID_MAX,
 	};
 	child_sa = child_sa_create(ike_sa->get_my_host(ike_sa),
 							   ike_sa->get_other_host(ike_sa), config, &data);

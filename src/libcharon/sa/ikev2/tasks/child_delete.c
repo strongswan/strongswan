@@ -171,6 +171,8 @@ static void queue_child_create(ike_sa_t *ike_sa, child_sa_t *child_sa)
 		charon->kernel->release_reqid(charon->kernel, reqid);
 	}
 	child_create->use_label(child_create, child_sa->get_label(child_sa));
+	child_create->use_per_cpu(child_create, child_sa->use_per_cpu(child_sa),
+							  child_sa->get_cpu(child_sa));
 	ike_sa->queue_task(ike_sa, (task_t*)child_create);
 }
 

@@ -95,6 +95,8 @@ struct kernel_ipsec_add_sa_t {
 	uint16_t ipcomp;
 	/** CPI for IPComp */
 	uint16_t cpi;
+	/** Optional CPU ID, must be CPU_ID_MAX if not used */
+	uint32_t cpu;
 	/** TRUE to enable UDP encapsulation for NAT traversal */
 	bool encap;
 	/** HW offload mode */
@@ -184,6 +186,8 @@ struct kernel_ipsec_manage_policy_t {
 	uint32_t manual_prio;
 	/** HW offload mode */
 	hw_offload_t hw_offload;
+	/** Enable per-CPU acquires */
+	bool pcpu_acquires;
 	/** Source address of the SA(s) tied to this policy */
 	host_t *src;
 	/** Destination address of the SA(s) tied to this policy */

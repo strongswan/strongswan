@@ -168,7 +168,7 @@ done
 #
 
 [ -f $SHAREDDIR/.strongswan-version ] && SWANVERSION=`cat $SHAREDDIR/.strongswan-version`
-KERNELVERSION=`ssh $SSHCONF root@\$ipv4_winnetou uname -r 2>/dev/null`
+KERNELVERSION=`ssh $SSHCONF root@\$ipv4_winnetou uname -rv | cut -d ' ' -f 1,2 2>/dev/null`
 
 ##############################################################################
 # create header for the results html file

@@ -162,7 +162,7 @@ connections.<conn>.fragmentation = yes
 	Use IKE UDP datagram fragmentation (_yes_, _accept_, _no_ or _force_).
 
 	Use IKE fragmentation (proprietary IKEv1 extension or RFC 7383 IKEv2
-	fragmentation).  Acceptable  values  are _yes_ (the default), _accept_,
+	fragmentation).  Acceptable values are _yes_ (the default), _accept_,
 	_force_ and _no_. If set to _yes_, and the peer supports it, oversized IKE
 	messages will be sent in fragments. If set to _accept_, support for
 	fragmentation is announced to the peer but the daemon does not send its own
@@ -833,7 +833,7 @@ connections.<conn>.children.<child>.rekey_time = 1h or life_time - 10%
 	lifetime.
 
 	If **life_time** is explicitly configured, **rekey_time** defaults to 10%
-	less than that,	otherwise, CHILD_SA rekeying is scheduled every hour, minus
+	less than that, otherwise, CHILD_SA rekeying is scheduled every hour, minus
 	**rand_time**.
 
 connections.<conn>.children.<child>.life_time = rekey_time + 10%
@@ -1125,6 +1125,20 @@ connections.<conn>.children.<child>.replay_window = 32
 	default of 32 are supported using the Netlink backend only, a value of 0
 	disables IPsec replay protection.
 
+connections.<conn>.children.<child>.per_cpu_sas = no
+	Enable per-CPU CHILD_SAs. Requires _trap_ in **start_action**.
+
+	Enable per-CPU CHILD_SAs. Requires _trap_ in **start_action**.
+
+	The value _encap_ enables a special type of UDP encapsulation (requires
+	enabling **encap** for the connection if there is no NAT), where a random
+	source port is used for each outbound per-CPU SA (the destination port for
+	all of them remains 4500). This allows using the port for RSS if the SPI
+	can't be used. Note that this type of behavior is not standardized and not
+	negotiated. So regardless of whether the option is enabled, inbound per-CPU
+	SAs with UDP-encapsulation always have the source port set to 0 as the
+	peer's random port is unknown if it has this option enabled.
+
 connections.<conn>.children.<child>.hw_offload = no
 	Enable hardware offload for this CHILD_SA, if supported by the IPsec
 	implementation.
@@ -1288,7 +1302,7 @@ secrets.ppk<suffix> { # }
 secrets.ppk<suffix>.secret =
 	Value of the PPK.
 
-	Value of the PPK. It may either be an ASCII string,	a hex encoded string if
+	Value of the PPK. It may either be an ASCII string, a hex encoded string if
 	it has a _0x_ prefix or a Base64 encoded string if it has a _0s_ prefix in
 	its value. Should have at least 256 bits of entropy for 128-bit security.
 
