@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Andreas Steffen
- * Copyright (C) 2009-2019 Tobias Brunner
+ * Copyright (C) 2009-2025 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -20,6 +20,24 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+
+#ifdef HAVE_REGEX
+#include <regex.h>
+#else
+/* usually, POSIX regular expressions are supported. for the rare case they are
+ * not, e.g. when cross-compiling for Windows, we define some stubs to simplify
+ * the implementation below */
+typedef void regex_t;
+static int regexec(const regex_t *restrict preg, const char *restrict string,
+				   size_t nmatch, void *pmatch, int eflags)
+{
+	return -1;
+}
+
+static void regfree(regex_t *preg)
+{
+}
+#endif /* HAVE_REGEX */
 
 #include "identification.h"
 
@@ -104,7 +122,6 @@ static const x501rdn_t x501rdns[] = {
  */
 #define RDN_MAX			20
 
-
 typedef struct private_identification_t private_identification_t;
 
 /**
@@ -125,7 +142,22 @@ struct private_identification_t {
 	 * Type of this ID.
 	 */
 	id_type_t type;
+
+	/**
+	 * Pointer if we use regex comparison.
+	 */
+	regex_t *regex;
 };
+
+/**
+ * Check that neither object uses a regex.
+ */
+static inline bool neither_is_regex(private_identification_t *this,
+									identification_t *other)
+{
+	private_identification_t *other_priv = (private_identification_t*)other;
+	return !this->regex && !other_priv->regex;
+}
 
 /**
  * Enumerator over RDNs
@@ -174,7 +206,7 @@ METHOD(enumerator_t, rdn_enumerate, bool,
 /**
  * Create an enumerator over all RDNs (oid, string type, data) of a DN
  */
-static enumerator_t* create_rdn_enumerator(chunk_t dn)
+static enumerator_t *create_rdn_enumerator(chunk_t dn)
 {
 	rdn_enumerator_t *e;
 
@@ -613,19 +645,26 @@ METHOD(identification_t, hash_binary, u_int,
 	{
 		hash = chunk_hash_inc(this->encoded, hash);
 	}
+	if (this->regex)
+	{	/* ensure regexes have different hashes even if type/encoding is equal */
+		hash = chunk_hash_inc(chunk_from_chars(0x01), hash);
+	}
 	return hash;
 }
 
 METHOD(identification_t, equals_binary, bool,
 	private_identification_t *this, identification_t *other)
 {
-	if (this->type == other->get_type(other))
+	private_identification_t *other_priv = (private_identification_t*)other;
+
+	if (this->type == other_priv->type &&
+	   (neither_is_regex(this, other) || (this->regex && other_priv->regex)))
 	{
 		if (this->type == ID_ANY)
 		{
 			return TRUE;
 		}
-		return chunk_equals(this->encoded, other->get_encoding(other));
+		return chunk_equals(this->encoded, other_priv->encoded);
 	}
 	return FALSE;
 }
@@ -895,7 +934,8 @@ static bool is_valid_dn(chunk_t dn)
 METHOD(identification_t, equals_dn, bool,
 	private_identification_t *this, identification_t *other)
 {
-	return compare_dn(this->encoded, other->get_encoding(other), NULL);
+	return neither_is_regex(this, other) &&
+		   compare_dn(this->encoded, other->get_encoding(other), NULL);
 }
 
 METHOD(identification_t, hash_dn, u_int,
@@ -924,6 +964,7 @@ METHOD(identification_t, equals_strcasecmp,  bool,
 	/* we do some extra sanity checks to check for invalid IDs with a
 	 * terminating null in it. */
 	if (this->type == other->get_type(other) &&
+		neither_is_regex(this, other) &&
 		this->encoded.len == encoded.len &&
 		memchr(this->encoded.ptr, 0, this->encoded.len) == NULL &&
 		memchr(encoded.ptr, 0, encoded.len) == NULL &&
@@ -949,9 +990,38 @@ METHOD(identification_t, matches_binary, id_match_t,
 	return ID_MATCH_NONE;
 }
 
+/**
+ * Matches the regex in other against our own encoding.
+ */
+static id_match_t matches_regex(private_identification_t *this,
+								private_identification_t *other)
+{
+	char buf[BUF_LEN-1];
+	int rc;
+
+	if (this->regex)
+	{	/* don't match two regex values */
+		return ID_MATCH_NONE;
+	}
+	if (!this->encoded.len)
+	{
+		return ID_MATCH_NONE;
+	}
+	/* match against the string representation of the identity */
+	if (snprintf(buf, sizeof(buf), "%Y", this) >= sizeof(buf))
+	{
+		/* fail if the buffer is too small. note that we use BUF_LEN-1 because
+		 * the printf hook uses BUF_LEN to print the identity internally */
+		return ID_MATCH_NONE;
+	}
+	rc = regexec(other->regex, buf, 0, NULL, 0);
+	return rc == 0 ? ID_MATCH_MAX_WILDCARDS : ID_MATCH_NONE;
+}
+
 METHOD(identification_t, matches_string, id_match_t,
 	private_identification_t *this, identification_t *other)
 {
+	private_identification_t *other_priv = (private_identification_t*)other;
 	chunk_t encoded = other->get_encoding(other);
 	u_int len = encoded.len;
 
@@ -962,6 +1032,10 @@ METHOD(identification_t, matches_string, id_match_t,
 	if (this->type != other->get_type(other))
 	{
 		return ID_MATCH_NONE;
+	}
+	if (other_priv->regex)
+	{
+		return matches_regex(this, other_priv);
 	}
 	/* try a equals check first */
 	if (equals_strcasecmp(this, other))
@@ -1007,6 +1081,7 @@ static id_match_t matches_dn_internal(private_identification_t *this,
 									  identification_t *other,
 									  bool (*match)(chunk_t,chunk_t,int*))
 {
+	private_identification_t *other_priv = (private_identification_t*)other;
 	int wc;
 
 	if (other->get_type(other) == ID_ANY)
@@ -1016,7 +1091,11 @@ static id_match_t matches_dn_internal(private_identification_t *this,
 
 	if (this->type == other->get_type(other))
 	{
-		if (match(this->encoded, other->get_encoding(other), &wc))
+		if (other_priv->regex)
+		{
+			return matches_regex(this, other_priv);
+		}
+		else if (match(this->encoded, other->get_encoding(other), &wc))
 		{
 			wc = min(wc, ID_MATCH_ONE_WILDCARD - ID_MATCH_MAX_WILDCARDS);
 			return ID_MATCH_PERFECT - wc;
@@ -1442,21 +1521,20 @@ METHOD(identification_t, matches_range, id_match_t,
 }
 
 /**
- * Described in header.
+ * Convert the given identity to a string depending on its type.
  */
-int identification_printf_hook(printf_hook_data_t *data,
-							printf_hook_spec_t *spec, const void *const *args)
+static void identity_to_string(private_identification_t *this, char buf[BUF_LEN])
 {
-	private_identification_t *this = *((private_identification_t**)(args[0]));
 	chunk_t proper;
-	char buf[BUF_LEN], *pos;
+	char *pos;
 	uint8_t address_size;
 	size_t len;
 	int written;
 
-	if (this == NULL)
+	if (this->regex)
 	{
-		return print_in_hook(data, "%*s", spec->width, "(null)");
+		snprintf(buf, BUF_LEN, "%s", this->encoded.ptr);
+		return;
 	}
 
 	switch (this->type)
@@ -1573,6 +1651,24 @@ int identification_printf_hook(printf_hook_data_t *data,
 			snprintf(buf, BUF_LEN, "(unknown ID type: %d)", this->type);
 			break;
 	}
+}
+
+/**
+ * Described in header.
+ */
+int identification_printf_hook(printf_hook_data_t *data,
+							printf_hook_spec_t *spec, const void *const *args)
+{
+	private_identification_t *this = *((private_identification_t**)(args[0]));
+	char buf[BUF_LEN];
+
+	if (!this)
+	{
+		return print_in_hook(data, "%*s", spec->width, "(null)");
+	}
+
+	identity_to_string(this, buf);
+
 	if (spec->minus)
 	{
 		return print_in_hook(data, "%-*s", spec->width, buf);
@@ -1580,13 +1676,52 @@ int identification_printf_hook(printf_hook_data_t *data,
 	return print_in_hook(data, "%*s", spec->width, buf);
 }
 
+#ifdef HAVE_REGEX
+
+/**
+ * Compile the encoded regular expression.
+ */
+static bool compile_regex(private_identification_t *this)
+{
+	char buf[BUF_LEN];
+	int err = 0;
+
+	this->regex = malloc(sizeof(*this->regex));
+	err = regcomp(this->regex, this->encoded.ptr,
+				  REG_EXTENDED | REG_ICASE | REG_NOSUB);
+	if (err != 0)
+	{
+		regerror(err, NULL, buf, sizeof(buf));
+		DBG1(DBG_LIB, "invalid regular expression '%s': %s",
+			 this->encoded.ptr, buf);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+#else /* HAVE_REGEX */
+
+static bool compile_regex(private_identification_t *this)
+{
+	DBG1(DBG_LIB, "regular expressions are not supported");
+	return FALSE;
+}
+
+#endif /* HAVE_REGEX */
+
 METHOD(identification_t, clone_, identification_t*,
 	private_identification_t *this)
 {
 	private_identification_t *clone = malloc_thing(private_identification_t);
 
 	memcpy(clone, this, sizeof(private_identification_t));
-	if (this->encoded.len)
+	if (this->regex)
+	{
+		/* make sure we have the full encoding cloned */
+		clone->encoded = chunk_from_str(strdup(this->encoded.ptr));
+		compile_regex(clone);
+	}
+	else if (this->encoded.len)
 	{
 		clone->encoded = chunk_clone(this->encoded);
 	}
@@ -1597,6 +1732,11 @@ METHOD(identification_t, destroy, void,
 	private_identification_t *this)
 {
 	chunk_free(&this->encoded);
+	if (this->regex)
+	{
+		regfree(this->regex);
+		free(this->regex);
+	}
 	free(this);
 }
 
@@ -1673,31 +1813,36 @@ static private_identification_t *identification_create(id_type_t type)
 }
 
 /**
+ * Prefixes used when parsing identities.
+ */
+static const struct {
+	const char *str;
+	id_type_t type;
+	bool regex;
+} prefixes[] = {
+	{ "ipv4:",			ID_IPV4_ADDR,			FALSE},
+	{ "ipv6:",			ID_IPV6_ADDR,			FALSE},
+	{ "ipv4net:",		ID_IPV4_ADDR_SUBNET,	FALSE},
+	{ "ipv6net:",		ID_IPV6_ADDR_SUBNET,	FALSE},
+	{ "ipv4range:",		ID_IPV4_ADDR_RANGE,		FALSE},
+	{ "ipv6range:",		ID_IPV6_ADDR_RANGE,		FALSE},
+	{ "rfc822:",		ID_RFC822_ADDR,			TRUE},
+	{ "email:",			ID_RFC822_ADDR,			TRUE},
+	{ "userfqdn:",		ID_USER_FQDN,			FALSE},
+	{ "fqdn:",			ID_FQDN,				TRUE},
+	{ "dns:",			ID_FQDN,				TRUE},
+	{ "asn1dn:",		ID_DER_ASN1_DN,			TRUE},
+	{ "asn1gn:",		ID_DER_ASN1_GN,			FALSE},
+	{ "xmppaddr:",		ID_DER_ASN1_GN,         FALSE},
+	{ "keyid:",			ID_KEY_ID,				FALSE},
+	{ "uri:",			ID_DER_ASN1_GN_URI,		FALSE},
+};
+
+/**
  * Create an identity for a specific type, determined by prefix
  */
-static private_identification_t* create_from_string_with_prefix_type(char *str)
+static private_identification_t *create_from_string_with_prefix_type(char *str)
 {
-	struct {
-		const char *str;
-		id_type_t type;
-	} prefixes[] = {
-		{ "ipv4:",			ID_IPV4_ADDR			},
-		{ "ipv6:",			ID_IPV6_ADDR			},
-		{ "ipv4net:",		ID_IPV4_ADDR_SUBNET		},
-		{ "ipv6net:",		ID_IPV6_ADDR_SUBNET		},
-		{ "ipv4range:",		ID_IPV4_ADDR_RANGE		},
-		{ "ipv6range:",		ID_IPV6_ADDR_RANGE		},
-		{ "rfc822:",		ID_RFC822_ADDR			},
-		{ "email:",			ID_RFC822_ADDR			},
-		{ "userfqdn:",		ID_USER_FQDN			},
-		{ "fqdn:",			ID_FQDN					},
-		{ "dns:",			ID_FQDN					},
-		{ "asn1dn:",		ID_DER_ASN1_DN			},
-		{ "asn1gn:",		ID_DER_ASN1_GN			},
-		{ "xmppaddr:",		ID_DER_ASN1_GN          },
-		{ "keyid:",			ID_KEY_ID				},
-		{ "uri:",			ID_DER_ASN1_GN_URI		},
-	};
 	private_identification_t *this;
 	int i;
 
@@ -1726,7 +1871,6 @@ static private_identification_t* create_from_string_with_prefix_type(char *str)
 										asn1_wrap(ASN1_UTF8STRING, "m",
 											this->encoded)));
 			}
-
 			return this;
 		}
 	}
@@ -1739,7 +1883,7 @@ static private_identification_t* create_from_string_with_prefix_type(char *str)
  * The prefix is of the form "{x}:", where x denotes the numerical identity
  * type.
  */
-static private_identification_t* create_from_string_with_num_type(char *str)
+static private_identification_t *create_from_string_with_num_type(char *str)
 {
 	private_identification_t *this;
 	u_long type;
@@ -1769,7 +1913,7 @@ static private_identification_t* create_from_string_with_num_type(char *str)
 /**
  * Convert to an IPv4/IPv6 host address, subnet or address range
  */
-static private_identification_t* create_ip_address_from_string(char *string,
+static private_identification_t *create_ip_address_from_string(char *string,
 															   bool is_ipv4)
 {
 	private_identification_t *this;
@@ -1910,7 +2054,7 @@ identification_t *identification_create_from_string(char *string)
 		else
 		{
 			this = identification_create(ID_KEY_ID);
-			this->encoded = chunk_from_str(strdup(string));
+			this->encoded = chunk_clone(chunk_from_str(string));
 		}
 		return &this->public;
 	}
@@ -1937,7 +2081,7 @@ identification_t *identification_create_from_string(char *string)
 				if (!this)
 				{	/* not IPv4, mostly FQDN */
 					this = identification_create(ID_FQDN);
-					this->encoded = chunk_from_str(strdup(string));
+					this->encoded = chunk_clone(chunk_from_str(string));
 				}
 				return &this->public;
 			}
@@ -1948,7 +2092,7 @@ identification_t *identification_create_from_string(char *string)
 				if (!this)
 				{	/* not IPv4/6 fallback to KEY_ID */
 					this = identification_create(ID_KEY_ID);
-					this->encoded = chunk_from_str(strdup(string));
+					this->encoded = chunk_clone(chunk_from_str(string));
 				}
 				return &this->public;
 			}
@@ -1981,16 +2125,75 @@ identification_t *identification_create_from_string(char *string)
 		else
 		{
 			this = identification_create(ID_RFC822_ADDR);
-			this->encoded = chunk_from_str(strdup(string));
+			this->encoded = chunk_clone(chunk_from_str(string));
 			return &this->public;
 		}
 	}
 }
 
+/**
+ * Check if the given string should be parsed as regular expression identity.
+ * If so, it modifies the string and returns the identity type, otherwise,
+ * ID_ANY is returned.
+ */
+static id_type_t is_regex_identity(char **string)
+{
+	char *regex;
+	int i;
+
+	for (i = 0; i < countof(prefixes); i++)
+	{
+		if (strcasepfx(*string, prefixes[i].str))
+		{
+			regex = *string + strlen(prefixes[i].str);
+
+			if (prefixes[i].regex &&
+				*regex == '^' && *(regex + strlen(regex) - 1) == '$')
+			{
+				*string = regex;
+				return prefixes[i].type;
+			}
+			break;
+		}
+	}
+	return ID_ANY;
+}
+
 /*
  * Described in header.
  */
-identification_t * identification_create_from_data(chunk_t data)
+identification_t *identification_create_from_string_with_regex(char *string)
+{
+	private_identification_t *this;
+	id_type_t type;
+
+	type = is_regex_identity(&string);
+	if (type != ID_ANY)
+	{
+		this = identification_create(type);
+
+		this->public.hash = _hash_binary;
+		this->public.equals = _equals_binary;
+		this->public.matches = _matches_any;
+		this->public.contains_wildcards = (void*)return_true;
+
+		/* this encoding explicitly includes the null-terminator so we can
+		 * directly use it to compile the regex and printing */
+		this->encoded = chunk_from_str(strdup(string));
+		if (!compile_regex(this))
+		{
+			destroy(this);
+			return NULL;
+		}
+		return &this->public;
+	}
+	return identification_create_from_string(string);
+}
+
+/*
+ * Described in header.
+ */
+identification_t *identification_create_from_data(chunk_t data)
 {
 	char buf[data.len + 1];
 

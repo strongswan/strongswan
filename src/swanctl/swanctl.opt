@@ -162,8 +162,8 @@ connections.<conn>.fragmentation = yes
 	Use IKE UDP datagram fragmentation (_yes_, _accept_, _no_ or _force_).
 
 	Use IKE fragmentation (proprietary IKEv1 extension or RFC 7383 IKEv2
-	fragmentation).  Acceptable  values  are _yes_ (the	default), _accept_,
-	_force_ and _no_. If set to _yes_, and the peer	supports it, oversized IKE
+	fragmentation).  Acceptable  values  are _yes_ (the default), _accept_,
+	_force_ and _no_. If set to _yes_, and the peer supports it, oversized IKE
 	messages will be sent in fragments. If set to _accept_, support for
 	fragmentation is announced to the peer but the daemon does not send its own
 	messages in fragments.  If set to _force_ (only supported for IKEv1) the
@@ -350,7 +350,7 @@ connections.<conn>.mediated_by =
 
 	The name of the connection to mediate this connection through. If given, the
 	connection will be mediated through the named mediation connection.
-	The	mediation connection must have **mediation** enabled.
+	The mediation connection must have **mediation** enabled.
 
 connections.<conn>.mediation_peer =
 	Identity under which the peer is registered at the mediation server.
@@ -426,7 +426,7 @@ connections.<conn>.local<suffix>.pubkeys =
 	directory or an absolute path.
 
 	Even though multiple local public keys could be defined in principle, only
-	the	first public key in the list is used for authentication.
+	the first public key in the list is used for authentication.
 
 connections.<conn>.local<suffix>.auth = pubkey
 	Authentication to perform locally (_pubkey_, _psk_, _xauth[-backend]_ or
@@ -534,13 +534,27 @@ connections.<conn>.remote<suffix>.id = %any
 	with wildcards, the _charon.rdn_matching_ option in **strongswan.conf**(5)
 	specifies how RDNs are matched.
 
+	Extended POSIX regular expressions are also supported for remote identity
+	matching. They must start with an explicit type prefix, followed by a caret
+	character ('^'), and end with a dollar sign ('$') to indicate an anchored
+	pattern. Supported types are _rfc822_, _email_, _fqdn_, _dns_, and _asn1dn_.
+	While regular expressions are always matched against the string
+	representation of other identities, the type must match as well. The
+	matching is performed case insensitive. Make sure to escape backslash
+	characters when configuring identities in double quotes. Examples:
+	_email:^(moon|sun)@strongswan\.org$_, _fqdn:^vpn[0-9]+\.strongswan\.org$_,
+	_"asn1dn:^.*CN=.+\\.strongswan\\.org$"_.
+
 connections.<conn>.remote<suffix>.eap_id = id
 	Use EAP-Identity method to request an identity from the client to match
 	against and use during EAP authentication.
 
 	Use EAP-Identity method to request an identity from the client to match
 	against and use during EAP authentication. There is currently no "best"
-	match, configs are matched in the order	they are loaded.
+	match, configs are matched in the order they are loaded.
+
+	Wildcards and regular expressions are supported, refer to the **id** keyword
+	for details.
 
 connections.<conn>.remote<suffix>.groups =
 	Authorization group memberships to require.
@@ -699,7 +713,7 @@ connections.<conn>.children.<child>.ah_proposals =
 	AH proposals to offer for the CHILD_SA. A proposal is a set of algorithms.
 	For AH, this includes an integrity algorithm and an optional key exchange
 	method. If a KE method is specified, CHILD_SA/Quick Mode rekeying and
-	initial	negotiation uses a separate key exchange using the negotiated method
+	initial negotiation uses a separate key exchange using the negotiated method
 	(refer to _esp_proposals_ for details).
 
 	With peers that support multiple IKEv2 key exchanges (RFC 9370), up to seven
@@ -737,7 +751,7 @@ connections.<conn>.children.<child>.esp_proposals = default
 	mismatch might, therefore, not immediately be noticed when the SA is
 	established, but may later cause rekeying to fail. If one or more key
 	exchange methods are configured in a proposal, the key exchange can be made
-	optional by also adding	**none**.
+	optional by also adding **none**.
 
 	With peers that support multiple IKEv2 key exchanges (RFC 9370), up to seven
 	additional key exchanges may be negotiated. They can be configured by
@@ -999,7 +1013,7 @@ connections.<conn>.children.<child>.mark_in_sa = no
 	only set on the inbound policy. The tuple destination address, protocol and
 	SPI is unique and the mark is not required to find the correct SA, allowing
 	to mark traffic after decryption instead (where more specific selectors may
-	be used) to match different policies. Marking packets before decryption	is
+	be used) to match different policies. Marking packets before decryption is
 	still possible, even if no mark is set on the SA.
 
 connections.<conn>.children.<child>.mark_out = 0/0x00000000
@@ -1269,7 +1283,7 @@ secrets.ppk<suffix> { # }
 	Postquantum Preshared Key (PPK) section for a specific secret.
 
 	Postquantum Preshared Key (PPK) section for a specific secret. Each PPK is
-	defined	in a unique section having the _ppk_ prefix.
+	defined in a unique section having the _ppk_ prefix.
 
 secrets.ppk<suffix>.secret =
 	Value of the PPK.

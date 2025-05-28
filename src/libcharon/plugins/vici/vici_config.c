@@ -1486,13 +1486,15 @@ CALLBACK(parse_auth, bool,
  */
 static bool parse_id(auth_cfg_t *cfg, auth_rule_t rule, chunk_t v)
 {
+	identification_t *id;
 	char buf[BUF_LEN];
 
-	if (!vici_stringify(v, buf, sizeof(buf)))
+	if (!vici_stringify(v, buf, sizeof(buf)) ||
+		!(id = identification_create_from_string_with_regex(buf)))
 	{
 		return FALSE;
 	}
-	cfg->add(cfg, rule, identification_create_from_string(buf));
+	cfg->add(cfg, rule, id);
 	return TRUE;
 }
 
