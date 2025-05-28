@@ -1949,7 +1949,7 @@ strongswan_options=
 
 AM_COND_IF([USE_AIKGEN], [strongswan_options=${strongswan_options}" aikgen"])
 AM_COND_IF([USE_ATTR_SQL], [strongswan_options=${strongswan_options}" pool"])
-AM_COND_IF([USE_CHARON], [strongswan_options=${strongswan_options}" charon charon-logging"])
+AM_COND_IF([USE_CHARON], [strongswan_options=${strongswan_options}" charon charon-logging iptfs"])
 AM_COND_IF([USE_FILE_CONFIG], [strongswan_options=${strongswan_options}" starter"])
 AM_COND_IF([USE_IMV_ATTESTATION], [strongswan_options=${strongswan_options}" attest"])
 AM_COND_IF([USE_IMCV], [strongswan_options=${strongswan_options}" imcv imv_policy_manager"])
