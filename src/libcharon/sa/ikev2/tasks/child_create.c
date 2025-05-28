@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2024 Tobias Brunner
+ * Copyright (C) 2008-2025 Tobias Brunner
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2005 Jan Hutter
  *
@@ -116,6 +116,16 @@ struct private_child_create_t {
 	 * destination of triggering packet
 	 */
 	traffic_selector_t *packet_tsr;
+
+	/**
+	 * Local traffic selectors as configured or previously negotiated
+	 */
+	traffic_selector_list_t *my_ts;
+
+	/**
+	 * Remote traffic selectors as configured or previously negotiated
+	 */
+	traffic_selector_list_t *other_ts;
 
 	/**
 	 * Key exchanges to perform
@@ -249,11 +259,21 @@ static void schedule_delayed_retry(private_child_create_t *this)
 
 	task = child_create_create(this->ike_sa,
 							   this->config->get_ref(this->config), FALSE,
-							   this->packet_tsi, this->packet_tsr);
+							   this->packet_tsi, this->packet_tsr,
+							   this->child.seq);
 	task->use_reqid(task, this->child.reqid);
 	task->use_marks(task, this->child.mark_in, this->child.mark_out);
 	task->use_if_ids(task, this->child.if_id_in, this->child.if_id_out);
 	task->use_label(task, this->child.label);
+
+	/* clone these directly as we don't have a public method */
+	if (this->my_ts && this->other_ts)
+	{
+		private_child_create_t *priv = (private_child_create_t*)task;
+
+		priv->my_ts = this->my_ts->clone(this->my_ts);
+		priv->other_ts = this->other_ts->clone(this->other_ts);
+	}
 
 	DBG1(DBG_IKE, "creating CHILD_SA failed, trying again in %d seconds",
 		 retry);
@@ -452,14 +472,36 @@ static linked_list_t* get_transport_nat_ts(private_child_create_t *this,
 }
 
 /**
+ * Ensure we have traffic selector lists when not recreating an SA.
+ */
+static void ensure_ts_lists(private_child_create_t *this)
+{
+	linked_list_t *ts;
+
+	if (!this->my_ts)
+	{
+		ts = this->config->get_traffic_selectors(this->config, TRUE, NULL);
+		this->my_ts = traffic_selector_list_create_from_list(ts);
+	}
+	if (!this->other_ts)
+	{
+		ts = this->config->get_traffic_selectors(this->config, FALSE, NULL);
+		this->other_ts = traffic_selector_list_create_from_list(ts);
+	}
+}
+
+/**
  * Narrow received traffic selectors with configuration
  */
 static linked_list_t* narrow_ts(private_child_create_t *this, bool local,
 								linked_list_t *in)
 {
-	linked_list_t *hosts, *nat, *ts;
+	traffic_selector_list_t *ts;
+	linked_list_t *hosts, *nat, *result;
 	ike_condition_t cond;
 
+	ensure_ts_lists(this);
+	ts = local ? this->my_ts : this->other_ts;
 	cond = local ? COND_NAT_HERE : COND_NAT_THERE;
 	hosts = ike_sa_get_dynamic_hosts(this->ike_sa, local);
 
@@ -467,19 +509,16 @@ static linked_list_t* narrow_ts(private_child_create_t *this, bool local,
 		this->ike_sa->has_condition(this->ike_sa, cond))
 	{
 		nat = get_transport_nat_ts(this, local, in);
-		ts = this->config->get_traffic_selectors(this->config, local, nat,
-												 hosts, TRUE);
+		result = child_cfg_select_ts(this->config, local, ts, nat, hosts);
 		nat->destroy_offset(nat, offsetof(traffic_selector_t, destroy));
 	}
 	else
 	{
-		ts = this->config->get_traffic_selectors(this->config, local, in,
-												 hosts, TRUE);
+		result = child_cfg_select_ts(this->config, local, ts, in, hosts);
 	}
 
 	hosts->destroy(hosts);
-
-	return ts;
+	return result;
 }
 
 /**
@@ -652,7 +691,6 @@ static status_t install_child_sa(private_child_create_t *this)
 	this->child_sa->set_mode(this->child_sa, this->mode);
 	this->child_sa->set_protocol(this->child_sa,
 								 this->proposal->get_protocol(this->proposal));
-	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
 
 	/* addresses might have changed since we originally sent the request, update
 	 * them before we configure any policies and install the SAs */
@@ -669,6 +707,7 @@ static status_t install_child_sa(private_child_create_t *this)
 		other_ts->destroy_offset(other_ts,
 							  offsetof(traffic_selector_t, destroy));
 	}
+	this->child_sa->set_state(this->child_sa, CHILD_INSTALLING);
 
 	if (this->my_cpi == 0 || this->other_cpi == 0 || this->ipcomp == IPCOMP_NONE)
 	{
@@ -1291,21 +1330,62 @@ static status_t defer_child_sa(private_child_create_t *this)
 }
 
 /**
- * Compare two CHILD_SA objects for equality
+ * Compare the reqids and possibly traffic selectors of two CHILD_SAs for
+ * equality.
+ *
+ * The second CHILD_SA is assumed to be the one newly created.
  */
-static bool child_sa_equals(child_sa_t *a, child_sa_t *b)
+static bool reqid_and_ts_equals(private_child_create_t *this, child_sa_t *a,
+								child_sa_t *b)
+{
+	/* reqids are allocated based on the traffic selectors. if all the other
+	 * selectors are the same, they can only differ if narrowing occurred.
+	 *
+	 * if the new SA has no reqid assigned, it was initiated manually or due to
+	 * a start action and we assume the peer will do the same narrowing it
+	 * possibly did before, so we treat the SAs as equal.
+	 *
+	 * if the new SA has a reqid, it was either triggered by an acquire or
+	 * during a reestablishment.  if they are equal, we are done */
+	if (!b->get_reqid(b) || a->get_reqid(a) == b->get_reqid(b))
+	{
+		return TRUE;
+	}
+	/* if the reqids differ, the one of the established SA was changed due to
+	 * narrowing.  in this case, we check if we have either triggering TS or
+	 * previous TS.  if so, we check whether the available TS match the TS of
+	 * the existing SA.  if they do, there is no point to negotiate another SA.
+	 * if not, the peer will potentially narrow the TS to a different set for
+	 * the new SA. */
+	if (this->packet_tsi && this->packet_tsr)
+	{
+		return child_sa_ts_match(a, this->packet_tsi, this->packet_tsr);
+	}
+	if (this->my_ts && this->other_ts)
+	{
+		return child_sa_ts_lists_match(a, this->my_ts, this->other_ts);
+	}
+	/* if we don't have any TS to compare, we assume the peer will do the same
+	 * narrowing and treat the SAs equal.*/
+	return TRUE;
+}
+
+/**
+ * Compare two CHILD_SA objects for equality.
+ *
+ * The second CHILD_SA is assumed to be the one newly created.
+ */
+static bool child_sa_equals(private_child_create_t *this, child_sa_t *a,
+							child_sa_t *b)
 {
 	child_cfg_t *cfg = a->get_config(a);
 	return cfg->equals(cfg, b->get_config(b)) &&
-		/* reqids are allocated based on the final TS, so we can only compare
-		 * them if they are static (i.e. both have them) */
-		(!a->get_reqid(a) || !b->get_reqid(b) ||
-		  a->get_reqid(a) == b->get_reqid(b)) &&
 		a->get_mark(a, TRUE).value == b->get_mark(b, TRUE).value &&
 		a->get_mark(a, FALSE).value == b->get_mark(b, FALSE).value &&
 		a->get_if_id(a, TRUE) == b->get_if_id(b, TRUE) &&
 		a->get_if_id(a, FALSE) == b->get_if_id(b, FALSE) &&
-		sec_labels_equal(a->get_label(a), b->get_label(b));
+		sec_labels_equal(a->get_label(a), b->get_label(b)) &&
+		reqid_and_ts_equals(this, a, b);
 }
 
 /**
@@ -1321,7 +1401,7 @@ static bool check_for_duplicate(private_child_create_t *this)
 	while (enumerator->enumerate(enumerator, (void**)&child_sa))
 	{
 		if (child_sa->get_state(child_sa) == CHILD_INSTALLED &&
-			child_sa_equals(child_sa, this->child_sa))
+			child_sa_equals(this, child_sa, this->child_sa))
 		{
 			found = child_sa;
 			break;
@@ -1402,13 +1482,66 @@ METHOD(task_t, build_i_multi_ke, status_t,
 	return NEED_MORE;
 }
 
+/**
+ * Prepare proposed traffic selectors as initiator.
+ */
+static void prepare_proposed_ts(private_child_create_t *this)
+{
+	enumerator_t *enumerator;
+	peer_cfg_t *peer_cfg;
+	linked_list_t *list;
+	host_t *vip;
+
+	ensure_ts_lists(this);
+
+	list = linked_list_create();
+	if (!this->rekey)
+	{
+		/* check if we want a virtual IP */
+		peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
+		enumerator = peer_cfg->create_virtual_ip_enumerator(peer_cfg);
+		while (enumerator->enumerate(enumerator, &vip))
+		{
+			/* propose a 0.0.0.0/0 or ::/0 subnet when we use a virtual IP */
+			vip = host_create_any(vip->get_family(vip));
+			list->insert_last(list, vip);
+		}
+		enumerator->destroy(enumerator);
+	}
+	if (list->get_count(list))
+	{
+		this->tsi = child_cfg_select_ts(this->config, TRUE, this->my_ts, NULL,
+										list);
+		list->destroy_offset(list, offsetof(host_t, destroy));
+	}
+	else
+	{
+		list->destroy(list);
+		list = ike_sa_get_dynamic_hosts(this->ike_sa, TRUE);
+		this->tsi = child_cfg_select_ts(this->config, TRUE, this->my_ts, NULL,
+										list);
+		list->destroy(list);
+	}
+	list = ike_sa_get_dynamic_hosts(this->ike_sa, FALSE);
+	this->tsr = child_cfg_select_ts(this->config, FALSE, this->other_ts, NULL,
+									list);
+	list->destroy(list);
+
+	if (this->packet_tsi)
+	{
+		this->tsi->insert_first(this->tsi,
+								this->packet_tsi->clone(this->packet_tsi));
+	}
+	if (this->packet_tsr)
+	{
+		this->tsr->insert_first(this->tsr,
+								this->packet_tsr->clone(this->packet_tsr));
+	}
+}
+
 METHOD(task_t, build_i, status_t,
 	private_child_create_t *this, message_t *message)
 {
-	enumerator_t *enumerator;
-	host_t *vip;
-	peer_cfg_t *peer_cfg;
-	linked_list_t *list;
 	bool no_ke = TRUE;
 
 	switch (message->get_exchange_type(message))
@@ -1444,49 +1577,7 @@ METHOD(task_t, build_i, status_t,
 			return NEED_MORE;
 	}
 
-	/* check if we want a virtual IP, but don't have one */
-	list = linked_list_create();
-	peer_cfg = this->ike_sa->get_peer_cfg(this->ike_sa);
-	if (!this->rekey)
-	{
-		enumerator = peer_cfg->create_virtual_ip_enumerator(peer_cfg);
-		while (enumerator->enumerate(enumerator, &vip))
-		{
-			/* propose a 0.0.0.0/0 or ::/0 subnet when we use virtual ip */
-			vip = host_create_any(vip->get_family(vip));
-			list->insert_last(list, vip);
-		}
-		enumerator->destroy(enumerator);
-	}
-	if (list->get_count(list))
-	{
-		this->tsi = this->config->get_traffic_selectors(this->config,
-														TRUE, NULL, list, TRUE);
-		list->destroy_offset(list, offsetof(host_t, destroy));
-	}
-	else
-	{	/* no virtual IPs configured */
-		list->destroy(list);
-		list = ike_sa_get_dynamic_hosts(this->ike_sa, TRUE);
-		this->tsi = this->config->get_traffic_selectors(this->config,
-														TRUE, NULL, list, TRUE);
-		list->destroy(list);
-	}
-	list = ike_sa_get_dynamic_hosts(this->ike_sa, FALSE);
-	this->tsr = this->config->get_traffic_selectors(this->config,
-													FALSE, NULL, list, TRUE);
-	list->destroy(list);
-
-	if (this->packet_tsi)
-	{
-		this->tsi->insert_first(this->tsi,
-								this->packet_tsi->clone(this->packet_tsi));
-	}
-	if (this->packet_tsr)
-	{
-		this->tsr->insert_first(this->tsr,
-								this->packet_tsr->clone(this->packet_tsr));
-	}
+	prepare_proposed_ts(this);
 
 	if (!generic_label_only(this) && !this->child.label)
 	{	/* in the simple label mode we propose the configured label as we
@@ -1541,7 +1632,11 @@ METHOD(task_t, build_i, status_t,
 		return FAILED;
 	}
 
-	if (!no_ke && !this->retry)
+	if (no_ke)
+	{	/* we might have one set if we are recreating this SA */
+		this->ke_method = KE_NONE;
+	}
+	else if (!this->retry)
 	{	/* during a rekeying the method might already be set */
 		if (this->ke_method == KE_NONE)
 		{
@@ -2047,7 +2142,7 @@ METHOD(task_t, build_r, status_t,
 		return SUCCESS;
 	}
 
-	/* check if ike_config_t included non-critical error notifies */
+	/* check if ike_config_t task included non-critical error notifies */
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
@@ -2507,10 +2602,81 @@ METHOD(child_create_t, use_label, void,
 	this->child.label = label ? label->clone(label) : NULL;
 }
 
-METHOD(child_create_t, use_ke_method, void,
-	private_child_create_t *this, key_exchange_method_t ke_method)
+/**
+ * Prepare traffic selectors for reuse when recreating a CHILD_SA.
+ */
+static void reuse_ts(private_child_create_t *this, bool local, child_sa_t *old,
+					 traffic_selector_list_t **target)
 {
-	this->ke_method = ke_method;
+	enumerator_t *old_ts, *hosts_enum;
+	linked_list_t *hosts, *list;
+	traffic_selector_t *ts, *new_ts;
+	host_t *host;
+
+	old_ts = old->create_ts_enumerator(old, local);
+	if (this->rekey)
+	{
+		/* when rekeying, we just reuse the previous TS. this is also the only
+		 * way a responder reuses TS */
+		*target = traffic_selector_list_create_from_enumerator(old_ts);
+		return;
+	}
+
+	/* when recreating/reauthenticating, we check whether the dynamic IPs of
+	 * the IKE_SA (as copied from the old SA) match the TS and replace
+	 * them with dynamic TS (reusing protocol/ports in case of narrowing) so
+	 * they get updated to possibly new IPs when the TS are prepared later */
+	list = linked_list_create();
+	hosts = ike_sa_get_dynamic_hosts(this->ike_sa, local);
+	hosts_enum = hosts->create_enumerator(hosts);
+	while (old_ts->enumerate(old_ts, &ts))
+	{
+		new_ts = NULL;
+		while (hosts_enum->enumerate(hosts_enum, &host))
+		{
+			if (ts->is_host(ts, host))
+			{
+				new_ts = traffic_selector_create_dynamic(ts->get_protocol(ts),
+														 ts->get_from_port(ts),
+														 ts->get_to_port(ts));
+				break;
+			}
+		}
+		hosts->reset_enumerator(hosts, hosts_enum);
+
+		if (!new_ts)
+		{
+			new_ts = ts->clone(ts);
+		}
+		list->insert_last(list, new_ts);
+	}
+	hosts_enum->destroy(hosts_enum);
+	hosts->destroy(hosts);
+	old_ts->destroy(old_ts);
+
+	*target = traffic_selector_list_create_from_list(list);
+}
+
+METHOD(child_create_t, recreate_sa, void,
+	private_child_create_t *this, child_sa_t *old)
+{
+	if (this->initiator)
+	{
+		proposal_t *proposal;
+		uint16_t ke_method;
+
+		proposal = old->get_proposal(old);
+		if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD,
+									&ke_method, NULL))
+		{
+			/* reuse the KE method negotiated previously */
+			this->ke_method = ke_method;
+		}
+	}
+
+	/* use previously negotiated traffic selectors */
+	reuse_ts(this, TRUE, old, &this->my_ts);
+	reuse_ts(this, FALSE, old, &this->other_ts);
 }
 
 METHOD(child_create_t, get_child, child_sa_t*,
@@ -2570,32 +2736,17 @@ METHOD(task_t, migrate, void,
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
 	chunk_free(&this->link);
-	if (this->tsr)
-	{
-		this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
-	}
-	if (this->tsi)
-	{
-		this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
-	}
-	if (this->labels_i)
-	{
-		this->labels_i->destroy_offset(this->labels_i, offsetof(sec_label_t, destroy));
-	}
-	if (this->labels_r)
-	{
-		this->labels_r->destroy_offset(this->labels_r, offsetof(sec_label_t, destroy));
-	}
+	DESTROY_OFFSET_IF(this->tsr, offsetof(traffic_selector_t, destroy));
+	DESTROY_OFFSET_IF(this->tsi, offsetof(traffic_selector_t, destroy));
+	DESTROY_OFFSET_IF(this->labels_i, offsetof(sec_label_t, destroy));
+	DESTROY_OFFSET_IF(this->labels_r, offsetof(sec_label_t, destroy));
 	DESTROY_IF(this->child_sa);
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->nonceg);
 	DESTROY_IF(this->ke);
 	this->ke_failed = FALSE;
 	clear_key_exchanges(this);
-	if (this->proposals)
-	{
-		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
-	}
+	DESTROY_OFFSET_IF(this->proposals, offsetof(proposal_t, destroy));
 	if (!this->rekey && !this->retry)
 	{
 		this->ke_method = KE_NONE;
@@ -2626,22 +2777,10 @@ METHOD(task_t, destroy, void,
 	chunk_free(&this->my_nonce);
 	chunk_free(&this->other_nonce);
 	chunk_free(&this->link);
-	if (this->tsr)
-	{
-		this->tsr->destroy_offset(this->tsr, offsetof(traffic_selector_t, destroy));
-	}
-	if (this->tsi)
-	{
-		this->tsi->destroy_offset(this->tsi, offsetof(traffic_selector_t, destroy));
-	}
-	if (this->labels_i)
-	{
-		this->labels_i->destroy_offset(this->labels_i, offsetof(sec_label_t, destroy));
-	}
-	if (this->labels_r)
-	{
-		this->labels_r->destroy_offset(this->labels_r, offsetof(sec_label_t, destroy));
-	}
+	DESTROY_OFFSET_IF(this->tsr, offsetof(traffic_selector_t, destroy));
+	DESTROY_OFFSET_IF(this->tsi, offsetof(traffic_selector_t, destroy));
+	DESTROY_OFFSET_IF(this->labels_i, offsetof(sec_label_t, destroy));
+	DESTROY_OFFSET_IF(this->labels_r, offsetof(sec_label_t, destroy));
 	if (!this->established)
 	{
 		DESTROY_IF(this->child_sa);
@@ -2652,13 +2791,12 @@ METHOD(task_t, destroy, void,
 	}
 	DESTROY_IF(this->packet_tsi);
 	DESTROY_IF(this->packet_tsr);
+	DESTROY_IF(this->my_ts);
+	DESTROY_IF(this->other_ts);
 	DESTROY_IF(this->proposal);
 	DESTROY_IF(this->ke);
 	clear_key_exchanges(this);
-	if (this->proposals)
-	{
-		this->proposals->destroy_offset(this->proposals, offsetof(proposal_t, destroy));
-	}
+	DESTROY_OFFSET_IF(this->proposals, offsetof(proposal_t, destroy));
 	DESTROY_IF(this->config);
 	DESTROY_IF(this->nonceg);
 	DESTROY_IF(this->child.label);
@@ -2669,8 +2807,9 @@ METHOD(task_t, destroy, void,
  * Described in header.
  */
 child_create_t *child_create_create(ike_sa_t *ike_sa,
-							child_cfg_t *config, bool rekey,
-							traffic_selector_t *tsi, traffic_selector_t *tsr)
+									child_cfg_t *config, bool rekey,
+									traffic_selector_t *tsi,
+									traffic_selector_t *tsr, uint32_t seq)
 {
 	private_child_create_t *this;
 
@@ -2685,13 +2824,16 @@ child_create_t *child_create_create(ike_sa_t *ike_sa,
 			.use_marks = _use_marks,
 			.use_if_ids = _use_if_ids,
 			.use_label = _use_label,
-			.use_ke_method = _use_ke_method,
+			.recreate_sa = _recreate_sa,
 			.abort = _abort_,
 			.task = {
 				.get_type = _get_type,
 				.migrate = _migrate,
 				.destroy = _destroy,
 			},
+		},
+		.child = {
+			.seq = seq,
 		},
 		.ike_sa = ike_sa,
 		.config = config,

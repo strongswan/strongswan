@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2024 Tobias Brunner
+ * Copyright (C) 2018-2025 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
  *
  * Copyright (C) secunet Security Networks AG
@@ -81,13 +81,12 @@ struct child_create_t {
 	void (*use_label)(child_create_t *this, sec_label_t *label);
 
 	/**
-	 * Initially propose a specific KE method to override configuration.
+	 * Use data from the given old SA (e.g. KE method and traffic selectors)
+	 * when rekeying/recreating it.
 	 *
-	 * This is used during rekeying to prefer the previously negotiated method.
-	 *
-	 * @param ke_method	KE method to use
+	 * @param old			old CHILD_SA that is getting rekeyed/recreated
 	 */
-	void (*use_ke_method)(child_create_t *this, key_exchange_method_t ke_method);
+	void (*recreate_sa)(child_create_t *this, child_sa_t *old);
 
 	/**
 	 * Get the lower of the two nonces, used for rekey collisions.
@@ -140,10 +139,12 @@ struct child_create_t {
  * @param rekey			whether we do a rekey or not
  * @param tsi			source of triggering packet, or NULL
  * @param tsr			destination of triggering packet, or NULL
+ * @param seq			optional sequence number of triggering acquire, or 0
  * @return				child_create task to handle by the task_manager
  */
 child_create_t *child_create_create(ike_sa_t *ike_sa,
-							child_cfg_t *config, bool rekey,
-							traffic_selector_t *tsi, traffic_selector_t *tsr);
+									child_cfg_t *config, bool rekey,
+									traffic_selector_t *tsi,
+									traffic_selector_t *tsr, uint32_t seq);
 
 #endif /** CHILD_CREATE_H_ @}*/

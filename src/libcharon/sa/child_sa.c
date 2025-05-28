@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Tobias Brunner
+ * Copyright (C) 2006-2025 Tobias Brunner
  * Copyright (C) 2016 Andreas Steffen
  * Copyright (C) 2005-2008 Martin Willi
  * Copyright (C) 2006 Daniel Roethlisberger
@@ -160,6 +160,11 @@ struct private_child_sa_t {
 	 * Unique CHILD_SA identifier
 	 */
 	uint32_t unique_id;
+
+	/**
+	 * Optional sequence number associated with triggering acquire
+	 */
+	uint32_t seq;
 
 	/**
 	 * Whether FWD policies in the outbound direction should be installed
@@ -817,6 +822,18 @@ METHOD(child_sa_t, get_label, sec_label_t*,
 	return this->label ?: this->config->get_label(this->config);
 }
 
+METHOD(child_sa_t, get_acquire_seq, uint32_t,
+	private_child_sa_t *this)
+{
+	return this->seq;
+}
+
+METHOD(child_sa_t, set_acquire_seq, void,
+	private_child_sa_t *this, uint32_t seq)
+{
+	this->seq = seq;
+}
+
 METHOD(child_sa_t, get_lifetime, time_t,
 	   private_child_sa_t *this, bool hard)
 {
@@ -1022,6 +1039,7 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 	};
 	sa = (kernel_ipsec_add_sa_t){
 		.reqid = this->reqid,
+		.seq = this->seq,
 		.mode = this->mode,
 		.src_ts = src_ts,
 		.dst_ts = dst_ts,
@@ -2018,7 +2036,7 @@ static host_t* get_proxy_addr(child_cfg_t *config, host_t *ike, bool local)
 	traffic_selector_t *ts;
 
 	list = linked_list_create_with_items(ike, NULL);
-	ts_list = config->get_traffic_selectors(config, local, NULL, list, FALSE);
+	ts_list = config->get_traffic_selectors(config, local, list);
 	list->destroy(list);
 
 	enumerator = ts_list->create_enumerator(ts_list);
@@ -2074,6 +2092,8 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 			.get_mark = _get_mark,
 			.get_if_id = _get_if_id,
 			.get_label = _get_label,
+			.get_acquire_seq = _get_acquire_seq,
+			.set_acquire_seq = _set_acquire_seq,
 			.has_encap = _has_encap,
 			.get_ipcomp = _get_ipcomp,
 			.set_ipcomp = _set_ipcomp,
@@ -2112,6 +2132,7 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 		.if_id_in = config->get_if_id(config, TRUE) ?: data->if_id_in_def,
 		.if_id_out = config->get_if_id(config, FALSE) ?: data->if_id_out_def,
 		.label = data->label ? data->label->clone(data->label) : NULL,
+		.seq = data->seq,
 		.install_time = time_monotonic(NULL),
 		.policies_fwd_out = config->has_option(config, OPT_FWD_OUT_POLICIES),
 	);
@@ -2142,13 +2163,14 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 	if (!this->reqid)
 	{
 		/* reuse old reqid if we are rekeying an existing CHILD_SA and when
-		 * initiating a trap policy. While the reqid cache would find the same
-		 * reqid for our selectors, this does not work in a special case: If an
-		 * SA is triggered by a trap policy, but the negotiated TS get
-		 * narrowed, we still must reuse the same reqid to successfully
-		 * replace the temporary SA on the kernel level. Rekeying such an SA
-		 * requires an explicit reqid, as the cache currently knows the original
-		 * selectors only for that reqid. */
+		 * initiating a trap policy. the reqid cache will generally find the
+		 * same reqid for our selectors. but this does not work in a special
+		 * case: if the IPsec stack does not use sequence numbers for acquires,
+		 * an SA is triggered by a trap policy and the negotiated TS get
+		 * narrowed, we still must reuse the same reqid to successfully replace
+		 * the temporary SA on the kernel level. however, if sequence numbers
+		 * are supported, the reqid will later get updated in case of narrowing
+		 * when alloc_reqid() is called */
 		if (data->reqid &&
 			charon->kernel->ref_reqid(charon->kernel, data->reqid) == SUCCESS)
 		{
@@ -2175,4 +2197,73 @@ child_sa_t *child_sa_create(host_t *me, host_t *other, child_cfg_t *config,
 		this->other_addr = other->clone(other);
 	}
 	return &this->public;
+}
+
+/**
+ * Check if the given traffic selector is contained in any of the traffic
+ * selectors in the given list.
+ */
+static bool is_ts_match(traffic_selector_t *to_check, array_t *list)
+{
+	traffic_selector_t *ts;
+	int i;
+
+	for (i = 0; i < array_count(list); i++)
+	{
+		array_get(list, i, &ts);
+		if (to_check->is_contained_in(to_check, ts))
+		{
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/**
+ * Check if all given traffic selectors are contained in any of the traffic
+ * selectors in the given list.
+ */
+static bool is_ts_list_match(traffic_selector_list_t *to_check, array_t *list)
+{
+	enumerator_t *enumerator;
+	traffic_selector_t *ts;
+	bool matched = TRUE;
+
+	enumerator = to_check->create_enumerator(to_check);
+	while (enumerator->enumerate(enumerator, &ts))
+	{
+		if (!is_ts_match(ts, list))
+		{
+			matched = FALSE;
+			break;
+		}
+	}
+	enumerator->destroy(enumerator);
+	return matched;
+}
+
+/*
+ * Described in header
+ */
+bool child_sa_ts_match(child_sa_t *child, traffic_selector_t *src,
+					   traffic_selector_t *dst)
+{
+	private_child_sa_t *this = (private_child_sa_t*)child;
+
+	return src && dst &&
+		   is_ts_match(src, this->my_ts) &&
+		   is_ts_match(dst, this->other_ts);
+}
+
+/*
+ * Described in header
+ */
+bool child_sa_ts_lists_match(child_sa_t *child, traffic_selector_list_t *src,
+							 traffic_selector_list_t *dst)
+{
+	private_child_sa_t *this = (private_child_sa_t*)child;
+
+	return src && dst &&
+		   is_ts_list_match(src, this->my_ts) &&
+		   is_ts_list_match(dst, this->other_ts);
 }

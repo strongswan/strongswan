@@ -269,20 +269,14 @@ METHOD(task_t, build_i, status_t,
 	if (!this->child_create)
 	{
 		child_cfg_t *config;
-		proposal_t *proposal;
-		uint16_t ke_method;
 		uint32_t reqid;
 
 		config = this->child_sa->get_config(this->child_sa);
 		this->child_create = child_create_create(this->ike_sa,
-									config->get_ref(config), TRUE, NULL, NULL);
+								config->get_ref(config), TRUE, NULL, NULL, 0);
 
-		proposal = this->child_sa->get_proposal(this->child_sa);
-		if (proposal->get_algorithm(proposal, KEY_EXCHANGE_METHOD,
-									&ke_method, NULL))
-		{	/* reuse the KE method negotiated previously */
-			this->child_create->use_ke_method(this->child_create, ke_method);
-		}
+		this->child_create->recreate_sa(this->child_create, this->child_sa);
+
 		reqid = this->child_sa->get_reqid_ref(this->child_sa);
 		if (reqid)
 		{
@@ -436,6 +430,7 @@ METHOD(task_t, build_r, status_t,
 
 	if (message->get_exchange_type(message) == CREATE_CHILD_SA)
 	{
+		this->child_create->recreate_sa(this->child_create, this->child_sa);
 		reqid = this->child_sa->get_reqid_ref(this->child_sa);
 		if (reqid)
 		{
@@ -1240,7 +1235,8 @@ child_rekey_t *child_rekey_create(ike_sa_t *ike_sa, protocol_id_t protocol,
 		this->public.task.build = _build_r;
 		this->public.task.process = _process_r;
 		this->initiator = FALSE;
-		this->child_create = child_create_create(ike_sa, NULL, TRUE, NULL, NULL);
+		this->child_create = child_create_create(ike_sa, NULL, TRUE,
+												 NULL, NULL, 0);
 	}
 
 	return &this->public;
