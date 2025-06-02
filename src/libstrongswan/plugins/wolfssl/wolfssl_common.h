@@ -50,6 +50,7 @@
 #ifndef WOLFSSL_USER_SETTINGS
 	#include <wolfssl/options.h>
 #endif
+#include <wolfssl/wolfcrypt/settings.h>
 
 /* Disable inclusion of the wolfSSL OpenSSL compatibility layer header (if
  * configured) as it is not used by the plugin and causes conflicts */
