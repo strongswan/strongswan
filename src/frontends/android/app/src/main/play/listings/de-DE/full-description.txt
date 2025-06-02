@@ -4,8 +4,8 @@ Dies ist die offizielle Android-Portierung der populären strongSwan VPN-Lösung
 
 <ul>
  <li>Verwendet die VpnService API von Android 4+. Geräte von einigen Herstellern scheinen diese nicht zu unterstützen - strongSwan wird auf diesen Geräten nicht funktionieren!</li>
- <li>Verwendet das IKEv2 Schlüsselaustausch-Protokoll (IKEv1 wird nicht unterstützt)</li>
- <li>Verwendet IPsec für den Datenkanal (L2TP wird nicht unterstützt)</li>
+ <li>Verwendet das IKEv2 Schlüsselaustausch-Protokoll</li>
+ <li>Verwendet IPsec für den Datenkanal</li>
  <li>Volle Unterstützung für Konnektivitätsänderungen und Mobilität via MOBIKE (oder Re-Authentisierung)</li>
  <li>Zur Authentisierung der Nutzer wird sowohl einfache auf Benutzername und Passwort basierende EAP-Authentisierung (namentlich EAP-MSCHAPv2, EAP-MD5 und EAP-GTC), sowie zertifikatsbasierte RSA/ECSA-Authentisierung unterstützt, EAP-TLS mit Benutzer-Zertifikaten wird ebenfalls unterstützt</li>
  <li>Kombinierte Authentisierung mit RSA/ECDSA und EAP wird über zwei Authentisierungsrunden nach RFC 4739 unterstützt</li>
