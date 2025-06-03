@@ -205,12 +205,6 @@ METHOD(fetcher_t, set_option, bool,
 			this->headers = curl_slist_append(this->headers, header);
 			break;
 		}
-		case FETCH_HTTP_VERSION_1_0:
-		{
-			curl_easy_setopt(this->curl, CURLOPT_HTTP_VERSION,
-							 CURL_HTTP_VERSION_1_0);
-			break;
-		}
 		case FETCH_TIMEOUT:
 		{
 			this->timeout = va_arg(args, u_int);

@@ -56,11 +56,6 @@ struct private_soup_fetcher_t {
 	u_int timeout;
 
 	/**
-	 * HTTP request version
-	 */
-	SoupHTTPVersion version;
-
-	/**
 	 * Fetcher callback function
 	 */
 	fetcher_callback_t cb;
@@ -116,7 +111,6 @@ METHOD(fetcher_t, fetch, status_t,
 		soup_message_set_request(message, this->type, SOUP_MEMORY_STATIC,
 								 this->data.ptr, this->data.len);
 	}
-	soup_message_set_http_version(message, this->version);
 	soup_message_body_set_accumulate(message->response_body, FALSE);
 	g_signal_connect(message, "got-chunk", G_CALLBACK(soup_cb), &data);
 	data.session = soup_session_new();
@@ -158,9 +152,6 @@ METHOD(fetcher_t, set_option, bool,
 		case FETCH_REQUEST_TYPE:
 			this->type = va_arg(args, char*);
 			break;
-		case FETCH_HTTP_VERSION_1_0:
-			this->version = SOUP_HTTP_1_0;
-			break;
 		case FETCH_TIMEOUT:
 			this->timeout = va_arg(args, u_int);
 			break;
@@ -200,7 +191,6 @@ soup_fetcher_t *soup_fetcher_create()
 			},
 		},
 		.method = SOUP_METHOD_GET,
-		.version = SOUP_HTTP_1_1,
 		.timeout = DEFAULT_TIMEOUT,
 		.cb = fetcher_default_callback,
 	);
