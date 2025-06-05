@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
+    Copyright (C) 2025 Tobias Brunner
     Copyright (C) 2023 Relution GmbH
 
     Copyright (C) secunet Security Networks AG
@@ -302,6 +303,35 @@
                     android:key="split_tunnelling_block_IPv6"
                     android:restrictionType="bool"
                     android:title="@string/managed_config_split_tunneling_block_ipv6_title" />
+
+            </restriction>
+
+            <restriction
+                android:description="@string/managed_config_proxy_server_bundle_description"
+                android:key="proxy_server"
+                android:restrictionType="bundle"
+                android:title="@string/managed_config_proxy_server_bundle_title">
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_proxy_host_description"
+                    android:key="proxy_host"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_proxy_host_title" />
+
+                <restriction
+                    android:defaultValue="-1"
+                    android:description="@string/managed_config_proxy_port_description"
+                    android:key="proxy_port"
+                    android:restrictionType="integer"
+                    android:title="@string/managed_config_proxy_port_description" />
+
+                <restriction
+                    android:defaultValue=""
+                    android:description="@string/managed_config_proxy_exclusions_description"
+                    android:key="proxy_exclusions"
+                    android:restrictionType="string"
+                    android:title="@string/managed_config_proxy_exclusions_title" />
 
             </restriction>
 

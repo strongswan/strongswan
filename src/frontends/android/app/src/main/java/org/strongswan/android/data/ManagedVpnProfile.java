@@ -83,6 +83,14 @@ public class ManagedVpnProfile extends VpnProfile
 			setIncludedSubnets(getString(splitTunneling, VpnProfileDataSource.KEY_INCLUDED_SUBNETS));
 		}
 
+		final Bundle proxyServer = bundle.getBundle(VpnProfileDataSource.KEY_PROXY_SERVER);
+		if (proxyServer != null)
+		{
+			setProxyHost(getString(proxyServer, VpnProfileDataSource.KEY_PROXY_HOST));
+			setProxyPort(getInt(proxyServer, VpnProfileDataSource.KEY_PROXY_PORT, 1, 65_535));
+			setProxyExclusions(getString(proxyServer, VpnProfileDataSource.KEY_PROXY_EXCLUSIONS));
+		}
+
 		setSplitTunneling(splitFlags);
 		setFlags(flags);
 	}
