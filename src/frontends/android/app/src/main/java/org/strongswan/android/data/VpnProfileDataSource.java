@@ -50,6 +50,9 @@ public interface VpnProfileDataSource
 	String KEY_IKE_PROPOSAL = "ike_proposal";
 	String KEY_ESP_PROPOSAL = "esp_proposal";
 	String KEY_DNS_SERVERS = "dns_servers";
+	String KEY_PROXY_HOST = "proxy_host";
+	String KEY_PROXY_PORT = "proxy_port";
+	String KEY_PROXY_EXCLUSIONS = "proxy_exclusions";
 	String KEY_READ_ONLY = "read_only";
 
 	/**
