@@ -1,3 +1,7 @@
+# 2.5.6 #
+
+- Unterstützt benutzerdefinierte HTTP Proxy-Server (Android 10+)
+
 # 2.5.5 #
 
 - Fixt den Start von verwalteten Profilen als Always-on VPN
