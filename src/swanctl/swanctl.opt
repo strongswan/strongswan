@@ -926,12 +926,12 @@ connections.<conn>.children.<child>.mode = tunnel
 	IPsec Mode to establish CHILD_SA with. _tunnel_ negotiates the CHILD_SA
 	in IPsec Tunnel Mode, whereas _transport_ uses IPsec Transport Mode.
 	_transport_proxy_ signifying the special Mobile IPv6 Transport Proxy Mode.
-	_iptfs_ is IP-TFS tunnel mode with aggregation and fragmentation,
+	_iptfs_ is IP-TFS tunnel mode with aggregation and fragmentation.
 	_beet_ is the Bound End to End Tunnel mixture mode, working with fixed inner
 	addresses without the need to include them in each packet.
 
-	Both _transport_ and _beet_ modes are subject to mode negotiation; _tunnel_
-	mode is negotiated if the preferred mode is not available.
+	The _transport_, _iptfs_ and _beet_ modes are subject to mode negotiation;
+	_tunnel_ mode is negotiated if the preferred mode is not available.
 
 	_pass_ and _drop_ are used to install shunt policies which explicitly
 	bypass the defined traffic from IPsec processing or drop it, respectively.
