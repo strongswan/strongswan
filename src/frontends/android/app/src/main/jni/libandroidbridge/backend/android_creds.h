@@ -55,6 +55,15 @@ struct android_creds_t {
 	certificate_t *(*load_user_certificate)(android_creds_t *this);
 
 	/**
+	 * Add pre-shared key authentication
+	 *
+	 * @param id				identification
+	 * @param key				pre-shared key
+	 */
+	void (*add_shared_key)(android_creds_t *this, identification_t *id,
+						   char *key);
+
+	/**
 	 * Clear the cached certificates and stored credentials.
 	 */
 	void (*clear)(android_creds_t *this);

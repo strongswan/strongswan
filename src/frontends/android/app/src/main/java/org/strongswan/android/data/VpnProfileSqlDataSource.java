@@ -135,6 +135,7 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 		profile.setVpnType(VpnType.fromIdentifier(cursor.getString(cursor.getColumnIndexOrThrow(KEY_VPN_TYPE))));
 		profile.setUsername(cursor.getString(cursor.getColumnIndexOrThrow(KEY_USERNAME)));
 		profile.setPassword(cursor.getString(cursor.getColumnIndexOrThrow(KEY_PASSWORD)));
+		profile.setPresharedKey(cursor.getString(cursor.getColumnIndexOrThrow(KEY_PRESHARED)));
 		profile.setCertificateAlias(cursor.getString(cursor.getColumnIndexOrThrow(KEY_CERTIFICATE)));
 		profile.setUserCertificateAlias(cursor.getString(cursor.getColumnIndexOrThrow(KEY_USER_CERTIFICATE)));
 		profile.setMTU(getInt(cursor, cursor.getColumnIndexOrThrow(KEY_MTU)));
@@ -163,6 +164,7 @@ public class VpnProfileSqlDataSource implements VpnProfileDataSource
 		values.put(KEY_VPN_TYPE, profile.getVpnType().getIdentifier());
 		values.put(KEY_USERNAME, profile.getUsername());
 		values.put(KEY_PASSWORD, profile.getPassword());
+		values.put(KEY_PRESHARED, profile.getPresharedKey());
 		values.put(KEY_CERTIFICATE, profile.getCertificateAlias());
 		values.put(KEY_USER_CERTIFICATE, profile.getUserCertificateAlias());
 		values.put(KEY_MTU, profile.getMTU());

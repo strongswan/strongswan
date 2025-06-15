@@ -51,6 +51,7 @@ public class DatabaseHelper extends SQLiteOpenHelper
 		new DbColumn(VpnProfileDataSource.KEY_VPN_TYPE, "TEXT NOT NULL DEFAULT ''", 3),
 		new DbColumn(VpnProfileDataSource.KEY_USERNAME, "TEXT", 1),
 		new DbColumn(VpnProfileDataSource.KEY_PASSWORD, "TEXT", 1),
+		new DbColumn(VpnProfileDataSource.KEY_PRESHARED, "TEXT", 1),
 		new DbColumn(VpnProfileDataSource.KEY_CERTIFICATE, "TEXT", 1),
 		new DbColumn(VpnProfileDataSource.KEY_USER_CERTIFICATE, "TEXT", 2),
 		new DbColumn(VpnProfileDataSource.KEY_MTU, "INTEGER", 5),

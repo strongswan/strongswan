@@ -248,6 +248,24 @@ METHOD(android_creds_t, add_username_password, void,
 	this->creds->add_shared(this->creds, shared_key, id, NULL);
 }
 
+METHOD(android_creds_t, add_shared_key, void,
+	private_android_creds_t *this, identification_t *id, char *key)
+{
+	shared_key_t *shared_key;
+
+	if (!key || !id)
+	{
+		return;
+	}
+
+	DBG1(DBG_CFG, "adding pre-shared key for '%Y'", id);
+//    log the secret key in ASCII format
+DBG1(DBG_CFG, "  key (ASCII): %s", key);
+    chunk_t secret = chunk_create(key, strlen(key));
+	shared_key = shared_key_create(SHARED_IKE, chunk_clone(secret));
+	this->creds->add_shared(this->creds, shared_key, id, NULL);
+}
+
 METHOD(credential_set_t, create_shared_enumerator, enumerator_t*,
 	private_android_creds_t *this, shared_key_type_t type,
 	identification_t *me, identification_t *other)
@@ -365,6 +383,7 @@ android_creds_t *android_creds_create(char *crldir)
 			},
 			.add_username_password = _add_username_password,
 			.load_user_certificate = _load_user_certificate,
+			.add_shared_key = _add_shared_key,
 			.clear = _clear,
 			.destroy = _destroy,
 		},

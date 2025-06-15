@@ -42,7 +42,7 @@ public class VpnProfile implements Cloneable
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
 	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets, mSelectedApps;
-	private String mIkeProposal, mEspProposal, mDnsServers;
+	private String mIkeProposal, mEspProposal, mDnsServers, mPresharedKey;
 	private Integer mMTU, mPort, mSplitTunneling, mNATKeepAlive, mFlags;
 	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
 	private VpnType mVpnType;
@@ -174,7 +174,15 @@ public class VpnProfile implements Cloneable
 	{
 		this.mPassword = password;
 	}
+	public String getPresharedKey()
+	{
+		return mPresharedKey;
+	}
 
+	public void setPresharedKey(String presharedKey)
+	{
+		this.mPresharedKey = presharedKey;
+	}
 	public String getCertificateAlias()
 	{
 		return mCertificate;

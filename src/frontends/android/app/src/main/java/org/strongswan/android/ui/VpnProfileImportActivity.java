@@ -111,6 +111,8 @@ public class VpnProfileImportActivity extends AppCompatActivity
 	private ViewGroup mUserCertificate;
 	private RelativeLayout mSelectUserCert;
 	private Button mImportUserCert;
+	private ViewGroup mPresharedKey;
+	private EditText mPresharedKeyText;
 	private ViewGroup mRemoteCertificate;
 	private RelativeLayout mRemoteCert;
 
@@ -221,6 +223,8 @@ public class VpnProfileImportActivity extends AppCompatActivity
 		mUserCertificate = findViewById(R.id.user_certificate_group);
 		mSelectUserCert = findViewById(R.id.select_user_certificate);
 		mImportUserCert = findViewById(R.id.import_user_certificate);
+		mPresharedKey = findViewById(R.id.preshared_key_group);
+		mPresharedKeyText = findViewById(R.id.preshared_key);
 
 		mRemoteCertificate = findViewById(R.id.remote_certificate_group);
 		mRemoteCert = findViewById(R.id.remote_certificate);
@@ -412,6 +416,16 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			{
 				mPassword.setEnabled(false);
 				mSharedSecretWarning.setVisibility(View.VISIBLE);
+			}
+		}
+		
+		mPresharedKey.setVisibility(mProfile.getVpnType().has(VpnTypeFeature.PSK) ? View.VISIBLE : View.GONE);
+		if (mProfile.getVpnType().has(VpnTypeFeature.PSK))
+		{
+			mPresharedKeyText.setText(mProfile.getPresharedKey());
+			if (!TextUtils.isEmpty(mProfile.getPresharedKey()))
+			{
+				mPresharedKeyText.setEnabled(false);
 			}
 		}
 
@@ -750,6 +764,15 @@ public class VpnProfileImportActivity extends AppCompatActivity
 				valid = false;
 			}
 		}
+		if (mProfile.getVpnType().has(VpnTypeFeature.PSK))
+		{
+			if (mPresharedKeyText.getText().toString().trim().isEmpty())
+			{
+				// Set error on PSK field
+				((TextInputLayoutHelper)mPresharedKey.findViewById(R.id.preshared_key_wrap)).setError(getString(R.string.alert_text_no_input_psk));
+				valid = false;
+			}
+		}
 		if (mProfile.getVpnType().has(VpnTypeFeature.CERTIFICATE) && mUserCertEntry == null)
 		{	/* let's show an error icon */
 			((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setError("");
@@ -769,6 +792,12 @@ public class VpnProfileImportActivity extends AppCompatActivity
 			String password = mPassword.getText().toString().trim();
 			password = password.isEmpty() ? null : password;
 			mProfile.setPassword(password);
+		}
+		if (mProfile.getVpnType().has(VpnTypeFeature.PSK))
+		{
+			String presharedKey = mPresharedKeyText.getText().toString().trim();
+			presharedKey = presharedKey.isEmpty() ? null : presharedKey;
+			mProfile.setPresharedKey(presharedKey);
 		}
 		if (mProfile.getVpnType().has(VpnTypeFeature.CERTIFICATE))
 		{

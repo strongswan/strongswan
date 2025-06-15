@@ -130,6 +130,13 @@
 
             </LinearLayout>
 
+            <include
+                android:id="@+id/preshared_key_group"
+                layout="@layout/preshared_key_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/user_certificate_group"
                 android:layout_width="match_parent"

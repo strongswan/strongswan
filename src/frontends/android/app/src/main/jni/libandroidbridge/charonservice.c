@@ -486,7 +486,7 @@ static bool charonservice_register(plugin_t *plugin, plugin_feature_t *feature,
 static void set_options(char *logfile, jboolean ipv6)
 {
 	lib->settings->set_int(lib->settings,
-					"charon.plugins.android_log.loglevel", ANDROID_DEBUG_LEVEL);
+					"charon.plugins.android_log.loglevel", ANDROID_LOG_VERBOSE);
 	/* setup file logger */
 	lib->settings->set_str(lib->settings,
 					"charon.filelog.android.path", logfile);
@@ -782,6 +782,7 @@ JNI_METHOD(CharonVpnService, initiate, void,
 	settings = settings_create_string(config);
 	free(config);
 
+    DBG1(DBG_IKE, "Initiating Charon");
 	initiate(settings);
 }
 

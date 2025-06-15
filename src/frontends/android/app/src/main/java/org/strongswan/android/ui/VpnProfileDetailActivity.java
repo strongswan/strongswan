@@ -113,6 +113,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 	private CheckBox mCheckAuto;
 	private RelativeLayout mSelectCert;
 	private RelativeLayout mTncNotice;
+	private ViewGroup mPresharedKey;
+	private EditText mPresharedKeyText;
+	private TextInputLayoutHelper mPresharedKeyWrap;
 	private CheckBox mShowAdvanced;
 	private ViewGroup mAdvancedSettings;
 	private MultiAutoCompleteTextView mRemoteId;
@@ -212,6 +215,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 
 		mUserCertificate = findViewById(R.id.user_certificate_group);
 		mSelectUserCert = findViewById(R.id.select_user_certificate);
+
+		mPresharedKey = findViewById(R.id.preshared_key_group);
+		mPresharedKeyText = findViewById(R.id.preshared_key);
+		mPresharedKeyWrap = findViewById(R.id.preshared_key_wrap);
 
 		mCheckAuto = findViewById(R.id.ca_auto);
 		mSelectCert = findViewById(R.id.select_certificate);
@@ -459,6 +466,13 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mUsernamePassword.setVisibility(mVpnType.has(VpnTypeFeature.USER_PASS) ? View.VISIBLE : View.GONE);
 		mUserCertificate.setVisibility(mVpnType.has(VpnTypeFeature.CERTIFICATE) ? View.VISIBLE : View.GONE);
 		mTncNotice.setVisibility(mVpnType.has(VpnTypeFeature.BYOD) ? View.VISIBLE : View.GONE);
+		
+		// Show PSK field if the VPN type has PSK feature
+		ViewGroup presharedKey = findViewById(R.id.preshared_key_group);
+		if (presharedKey != null) {
+			presharedKey.setVisibility(mVpnType.has(VpnTypeFeature.PSK) ? View.VISIBLE : View.GONE);
+		}
+		
 		mLocalIdWrap.setHelperText(getString(R.string.profile_local_id_hint_user));
 
 		if (mVpnType.has(VpnTypeFeature.CERTIFICATE))
@@ -649,6 +663,14 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				valid = false;
 			}
 		}
+		if (mVpnType.has(VpnTypeFeature.PSK))
+		{
+			if (getString(mPresharedKeyText) == null)
+			{
+				mPresharedKeyWrap.setError(getString(R.string.alert_text_no_input_psk));
+				valid = false;
+			}
+		}
 		if (mVpnType.has(VpnTypeFeature.CERTIFICATE) && mUserCertEntry == null)
 		{	/* let's show an error icon */
 			((TextView)mSelectUserCert.findViewById(android.R.id.text1)).setError("");
@@ -719,6 +741,10 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 			mProfile.setUsername(getString(mUsername));
 			mProfile.setPassword(getString(mPassword));
 		}
+		if (mVpnType.has(VpnTypeFeature.PSK))
+		{
+			mProfile.setPresharedKey(getString(mPresharedKeyText));
+		}
 		if (mVpnType.has(VpnTypeFeature.CERTIFICATE))
 		{
 			mProfile.setUserCertificateAlias(mUserCertEntry.getAlias());
@@ -772,6 +798,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 				mVpnType = mProfile.getVpnType();
 				mUsername.setText(mProfile.getUsername());
 				mPassword.setText(mProfile.getPassword());
+				if (mPresharedKeyText != null) {
+					mPresharedKeyText.setText(mProfile.getPresharedKey());
+				}
 				mRemoteId.setText(mProfile.getRemoteId());
 				mLocalId.setText(mProfile.getLocalId());
 				mMTU.setText(mProfile.getMTU() != null ? mProfile.getMTU().toString() : null);
@@ -865,6 +894,9 @@ public class VpnProfileDetailActivity extends AppCompatActivity
 		mName.setEnabled(!readOnly);
 		mGateway.setEnabled(!readOnly);
 		mUsername.setEnabled(!readOnly);
+		if (mPresharedKeyText != null) {
+			mPresharedKeyText.setEnabled(!readOnly);
+		}
 		mRemoteId.setEnabled(!readOnly);
 		mLocalId.setEnabled(!readOnly);
 		mMTU.setEnabled(!readOnly);

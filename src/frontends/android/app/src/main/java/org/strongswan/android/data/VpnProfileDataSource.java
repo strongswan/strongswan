@@ -33,6 +33,7 @@ public interface VpnProfileDataSource
 	String KEY_VPN_TYPE = "vpn_type";
 	String KEY_USERNAME = "username";
 	String KEY_PASSWORD = "password";
+	String KEY_PRESHARED = "pre_shared_key";
 	String KEY_CERTIFICATE = "certificate";
 	String KEY_USER_CERTIFICATE = "user_certificate";
 	String KEY_USER_CERTIFICATE_PASSWORD = "user_certificate_password";

@@ -22,6 +22,7 @@
         <item>IKEv2 Certificate + EAP (Username/Password)</item>
         <item>IKEv2 EAP-TLS (Certificate)</item>
         <item>IKEv2 EAP-TNC (Username/Password)</item>
+        <item>IKEv2 PSK (Pre-shared Key)</item>
     </string-array>
 
     <string-array name="managed_config_vpn_type_values" translatable="false">
@@ -30,6 +31,7 @@
         <item>ikev2-cert-eap</item>
         <item>ikev2-eap-tls</item>
         <item>ikev2-byod-eap</item>
+        <item>ikev2-psk</item>
     </string-array>
     <string name="managed_config_vpn_type_default_value" translatable="false">ikev2-eap</string>
 

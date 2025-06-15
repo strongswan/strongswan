@@ -733,6 +733,48 @@ static bool add_auth_cfg_cert(private_android_service_t *this,
 	return TRUE;
 }
 
+static void add_auth_cfg_psk(private_android_service_t *this,
+							peer_cfg_t *peer_cfg)
+{
+	identification_t *id = NULL;
+	auth_cfg_t *auth;
+	char *psk, *local_id;
+
+	auth = auth_cfg_create();
+	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
+
+	psk = this->settings->get_str(this->settings, "connection.presharedkey", NULL);
+	local_id = this->settings->get_str(this->settings, "connection.local_id", NULL);
+
+	if (local_id)
+	{
+		id = identification_create_from_string(local_id);
+	}
+	if (!id)
+	{
+		/* Use IP address or hostname as local ID if none specified */
+		char *host = NULL;
+		host = this->settings->get_str(this->settings, "connection.server", NULL);
+		if (host)
+		{
+			id = identification_create_from_string(host);
+		}
+		else
+		{
+			id = identification_create_from_string("%any");
+		}
+	}
+
+	auth->add(auth, AUTH_RULE_IDENTITY, id);
+
+	if (psk)
+	{
+		this->creds->add_shared_key(this->creds, id, psk);
+	}
+
+	peer_cfg->add_auth_cfg(peer_cfg, auth, TRUE);
+}
+
 static proposal_t *parse_proposal(private_android_service_t *this,
 								  protocol_id_t proto, char *opt)
 {
@@ -819,6 +861,7 @@ static job_requeue_t initiate(private_android_service_t *this)
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
 
 	type = this->settings->get_str(this->settings, "connection.type", NULL);
+    DBG1(DBG_CFG, "connection type: %s", type ? type : "<none>");
 	/* local auth config */
 	if (streq("ikev2-cert", type) ||
 		streq("ikev2-cert-eap", type) ||
@@ -838,11 +881,16 @@ static job_requeue_t initiate(private_android_service_t *this)
 	{
 		add_auth_cfg_pw(this, peer_cfg, strpfx(type, "ikev2-byod"));
 	}
+	if (streq("ikev2-psk", type))
+	{
+		add_auth_cfg_psk(this, peer_cfg);
+	}
 
 	/* remote auth config */
 	auth = auth_cfg_create();
 	remote_id = this->settings->get_str(this->settings, "connection.remote_id",
 										NULL);
+    DBG1(DBG_CFG, "remote ID: %s", remote_id ? remote_id : "<none>");
 	if (remote_id)
 	{
 		gateway = identification_create_from_string(remote_id);
@@ -855,10 +903,19 @@ static job_requeue_t initiate(private_android_service_t *this)
 		auth->add(auth, AUTH_RULE_IDENTITY_LOOSE, TRUE);
 	}
 	auth->add(auth, AUTH_RULE_IDENTITY, gateway);
-	auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
-	if (this->settings->get_bool(this->settings, "connection.strict_revocation", FALSE))
+
+	/* Use PSK auth for PSK connection, otherwise use pubkey auth */
+	if (streq("ikev2-psk", type))
 	{
-		auth->add(auth, AUTH_RULE_CRL_VALIDATION, VALIDATION_GOOD);
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PSK);
+	}
+	else
+	{
+		auth->add(auth, AUTH_RULE_AUTH_CLASS, AUTH_CLASS_PUBKEY);
+		if (this->settings->get_bool(this->settings, "connection.strict_revocation", FALSE))
+		{
+			auth->add(auth, AUTH_RULE_CRL_VALIDATION, VALIDATION_GOOD);
+		}
 	}
 	peer_cfg->add_auth_cfg(peer_cfg, auth, FALSE);
 
@@ -906,8 +963,11 @@ static job_requeue_t initiate(private_android_service_t *this)
 
 	/* store the IKE_SA so we can track its progress */
 	this->ike_sa = ike_sa;
+    //log the proposal
+    DBG1(DBG_CFG, "using IKE proposal: %s", ike_sa->get_proposal(ike_sa));
 
-	/* get an additional reference because initiate consumes one */
+
+    /* get an additional reference because initiate consumes one */
 	child_cfg->get_ref(child_cfg);
 	if (ike_sa->initiate(ike_sa, child_cfg, NULL) != SUCCESS)
 	{

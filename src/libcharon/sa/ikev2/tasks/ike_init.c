@@ -841,6 +841,7 @@ METHOD(task_t, build_i, status_t,
 		 this->ike_sa->get_other_host(this->ike_sa));
 	this->ike_sa->set_state(this->ike_sa, IKE_CONNECTING);
 
+
 	if (this->retry >= MAX_RETRIES)
 	{
 		DBG1(DBG_IKE, "giving up after %d retries", MAX_RETRIES);

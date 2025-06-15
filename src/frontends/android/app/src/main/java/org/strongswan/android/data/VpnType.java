@@ -29,7 +29,8 @@ public enum VpnType
 	IKEV2_CERT("ikev2-cert", EnumSet.of(VpnTypeFeature.CERTIFICATE)),
 	IKEV2_CERT_EAP("ikev2-cert-eap", EnumSet.of(VpnTypeFeature.USER_PASS, VpnTypeFeature.CERTIFICATE)),
 	IKEV2_EAP_TLS("ikev2-eap-tls", EnumSet.of(VpnTypeFeature.CERTIFICATE)),
-	IKEV2_BYOD_EAP("ikev2-byod-eap", EnumSet.of(VpnTypeFeature.USER_PASS, VpnTypeFeature.BYOD));
+	IKEV2_BYOD_EAP("ikev2-byod-eap", EnumSet.of(VpnTypeFeature.USER_PASS, VpnTypeFeature.BYOD)),
+	IPSEC_PSK("ikev2-psk", EnumSet.of(VpnTypeFeature.PSK));
 
 	/**
 	 * Features of a VPN type.
@@ -49,7 +50,9 @@ public enum VpnType
 		/**
 		 * Enable BYOD features
 		 */
-		BYOD;
+		BYOD,
+
+		PSK;
 	}
 
 	private String mIdentifier;
