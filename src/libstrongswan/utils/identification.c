@@ -1828,7 +1828,7 @@ static const struct {
 	{ "ipv6range:",		ID_IPV6_ADDR_RANGE,		FALSE},
 	{ "rfc822:",		ID_RFC822_ADDR,			TRUE},
 	{ "email:",			ID_RFC822_ADDR,			TRUE},
-	{ "userfqdn:",		ID_USER_FQDN,			FALSE},
+	{ "userfqdn:",		ID_RFC822_ADDR,			TRUE},
 	{ "fqdn:",			ID_FQDN,				TRUE},
 	{ "dns:",			ID_FQDN,				TRUE},
 	{ "asn1dn:",		ID_DER_ASN1_DN,			TRUE},
@@ -2111,7 +2111,7 @@ identification_t *identification_create_from_string(char *string)
 			}
 			else if (*string == '@')
 			{
-				this = identification_create(ID_USER_FQDN);
+				this = identification_create(ID_RFC822_ADDR);
 				this->encoded = chunk_clone(chunk_from_str(string + 1));
 				return &this->public;
 			}

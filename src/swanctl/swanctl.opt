@@ -537,11 +537,12 @@ connections.<conn>.remote<suffix>.id = %any
 	Extended POSIX regular expressions are also supported for remote identity
 	matching. They must start with an explicit type prefix, followed by a caret
 	character ('^'), and end with a dollar sign ('$') to indicate an anchored
-	pattern. Supported types are _rfc822_, _email_, _fqdn_, _dns_, and _asn1dn_.
+	pattern. Make sure to escape backslash characters when configuring
+	identities in double quotes. Supported types are _rfc822_, _email_,
+	_userfqdn_, _fqdn_, _dns_, and _asn1dn_.
 	While regular expressions are always matched against the string
 	representation of other identities, the type must match as well. The
-	matching is performed case insensitive. Make sure to escape backslash
-	characters when configuring identities in double quotes. Examples:
+	matching is performed case insensitive. Examples:
 	_email:^(moon|sun)@strongswan\.org$_, _fqdn:^vpn[0-9]+\.strongswan\.org$_,
 	_"asn1dn:^.*CN=.+\\.strongswan\\.org$"_.
 

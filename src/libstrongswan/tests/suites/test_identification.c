@@ -683,7 +683,7 @@ START_TEST(test_equals_empty)
 		case ID_FQDN:
 			ck_assert(!id_equals(a, "moon.strongswan.org"));
 			break;
-		case ID_USER_FQDN:
+		case ID_RFC822_ADDR:
 			ck_assert(!id_equals(a, "moon@strongswan.org"));
 			break;
 		case ID_IPV6_ADDR:
@@ -1308,7 +1308,7 @@ START_TEST(test_matches_empty)
 		case ID_FQDN:
 			ck_assert(id_matches(a, "moon.strongswan.org", ID_MATCH_NONE));
 			break;
-		case ID_USER_FQDN:
+		case ID_RFC822_ADDR:
 			ck_assert(id_matches(a, "moon@strongswan.org", ID_MATCH_NONE));
 			break;
 		case ID_IPV6_ADDR:
@@ -1362,7 +1362,7 @@ START_TEST(test_matches_empty_reverse)
 		case ID_FQDN:
 			ck_assert(id_matches_rev(a, "moon.strongswan.org", ID_MATCH_NONE));
 			break;
-		case ID_USER_FQDN:
+		case ID_RFC822_ADDR:
 			ck_assert(id_matches_rev(a, "moon@strongswan.org", ID_MATCH_NONE));
 			break;
 		case ID_IPV6_ADDR:

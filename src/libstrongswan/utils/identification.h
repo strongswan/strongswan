@@ -336,9 +336,9 @@ identification_t *identification_create_from_string(char *string);
  * trusted/configured values, never untrusted values received over the network.
  *
  * A regular expression must be prefixed by an identity type (supported are
- * rfc822:, email:, fqdn:, dns:, and asn1dn:), and it must start with a caret
- * ('^') and end with a dollar sign ('$') to indicate an anchored pattern.
- * If the regular expression is invalid, the function returns NULL.
+ * rfc822:, email:, userfqdn:, fqdn:, dns:, and asn1dn:), and it must start
+ * with a caret ('^') and end with a dollar sign ('$') to indicate an anchored
+ * pattern. If the regular expression is invalid, the function returns NULL.
  *
  * The regular expression is always matched against the string representation
  * of other identities and matching is performed case-insensitive.
