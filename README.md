@@ -1,5 +1,7 @@
 # strongSwan Configuration #
 
+> **Note:** PSK (Pre-Shared Key) authentication support has been added to the Android client.
+
 ## Overview ##
 
 strongSwan is an OpenSource IPsec-based VPN solution.
@@ -22,6 +24,55 @@ peers. For your particular VPN application you can either use certificates from
 any third-party CA or generate the needed private keys and certificates yourself
 with the strongSwan **pki** tool, the use of which will be explained in one of
 the sections following below.
+
+
+### PSK (Pre-Shared Key) based authentication
+```bash
+# Sample file
+# /etc/swanctl/swanctl.conf
+
+pools {
+    vpn-pool {
+        addrs = 10.10.10.0/24
+        dns = 8.8.8.8, 8.8.4.4
+    }
+}
+connections {
+    pskvpn {
+        version = 2
+        local_addrs = 0.0.0.0
+        remote_addrs = 0.0.0.0/0 
+        pools = vpn-pool 
+        local {
+            auth = psk
+            id = vpn.example.com
+        }
+        remote {
+            auth = psk 
+            id = nishant
+        }
+        children {
+            pskvpn-child {
+                local_ts = 0.0.0.0/0 
+                remote_ts = 10.10.10.0/24  
+                esp_proposals = aes256gcm16-sha256-modp1024,aes256-sha256-modp2048,aes128-sha1-modp1536
+            }
+        }
+        proposals = aes256gcm16-prfsha256-modp2048,aes256-sha256-modp2048,aes128-sha1-modp2048
+
+        send_certreq = no
+    }
+
+}
+
+secrets {
+    ike-pskvpn {
+        id = nishant
+        secret = "pre-shared-key"
+    }
+}
+```
+
 
 
 ### Site-to-Site Case ###

@@ -258,9 +258,6 @@ METHOD(android_creds_t, add_shared_key, void,
 		return;
 	}
 
-	DBG1(DBG_CFG, "adding pre-shared key for '%Y'", id);
-//    log the secret key in ASCII format
-DBG1(DBG_CFG, "  key (ASCII): %s", key);
     chunk_t secret = chunk_create(key, strlen(key));
 	shared_key = shared_key_create(SHARED_IKE, chunk_clone(secret));
 	this->creds->add_shared(this->creds, shared_key, id, NULL);

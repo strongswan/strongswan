@@ -861,7 +861,6 @@ static job_requeue_t initiate(private_android_service_t *this)
 	peer_cfg->add_virtual_ip(peer_cfg, host_create_any(AF_INET6));
 
 	type = this->settings->get_str(this->settings, "connection.type", NULL);
-    DBG1(DBG_CFG, "connection type: %s", type ? type : "<none>");
 	/* local auth config */
 	if (streq("ikev2-cert", type) ||
 		streq("ikev2-cert-eap", type) ||
@@ -890,7 +889,6 @@ static job_requeue_t initiate(private_android_service_t *this)
 	auth = auth_cfg_create();
 	remote_id = this->settings->get_str(this->settings, "connection.remote_id",
 										NULL);
-    DBG1(DBG_CFG, "remote ID: %s", remote_id ? remote_id : "<none>");
 	if (remote_id)
 	{
 		gateway = identification_create_from_string(remote_id);
@@ -963,9 +961,6 @@ static job_requeue_t initiate(private_android_service_t *this)
 
 	/* store the IKE_SA so we can track its progress */
 	this->ike_sa = ike_sa;
-    //log the proposal
-    DBG1(DBG_CFG, "using IKE proposal: %s", ike_sa->get_proposal(ike_sa));
-
 
     /* get an additional reference because initiate consumes one */
 	child_cfg->get_ref(child_cfg);
