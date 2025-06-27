@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Relution GmbH
- * Copyright (C) 2012-2024 Tobias Brunner
+ * Copyright (C) 2012-2025 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  *
@@ -67,6 +67,9 @@ public class DatabaseHelper extends SQLiteOpenHelper
 		new DbColumn(VpnProfileDataSource.KEY_IKE_PROPOSAL, "TEXT", 15),
 		new DbColumn(VpnProfileDataSource.KEY_ESP_PROPOSAL, "TEXT", 15),
 		new DbColumn(VpnProfileDataSource.KEY_DNS_SERVERS, "TEXT", 17),
+		new DbColumn(VpnProfileDataSource.KEY_PROXY_HOST, "TEXT", 19),
+		new DbColumn(VpnProfileDataSource.KEY_PROXY_PORT, "INTEGER", 19),
+		new DbColumn(VpnProfileDataSource.KEY_PROXY_EXCLUSIONS, "TEXT", 19),
 	});
 
 	public static final DbTable TABLE_TRUSTED_CERTIFICATE = new DbTable(TABLE_NAME_TRUSTED_CERTIFICATE, 18, new DbColumn[]{
@@ -84,7 +87,7 @@ public class DatabaseHelper extends SQLiteOpenHelper
 		new DbColumn(ManagedUserCertificate.KEY_PASSWORD, "TEXT", 18),
 	});
 
-	private static final int DATABASE_VERSION = 18;
+	private static final int DATABASE_VERSION = 19;
 
 	private static final Set<DbTable> TABLES;
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Copyright (C) 2012-2019 Tobias Brunner
+    Copyright (C) 2012-2025 Tobias Brunner
     Copyright (C) 2012 Giuliano Grassi
     Copyright (C) 2012 Ralf Sager
 
@@ -531,6 +531,72 @@
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/esp_proposal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textNoSuggestions"
+                        android:singleLine="true" />
+
+                </org.strongswan.android.ui.widget.TextInputLayoutHelper>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="10dp"
+                    android:text="@string/profile_proxy_server_label"
+                    android:textSize="20sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_marginBottom="10dp"
+                    android:text="@string/profile_proxy_server_intro"
+                    android:textSize="12sp" />
+
+                <org.strongswan.android.ui.widget.TextInputLayoutHelper
+                    android:id="@+id/proxy_host_wrap"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/profile_proxy_host_label"
+                    app:helper_text="@string/profile_proxy_host_hint">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/proxy_host"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textNoSuggestions"
+                        android:singleLine="true" />
+
+                </org.strongswan.android.ui.widget.TextInputLayoutHelper>
+
+                <org.strongswan.android.ui.widget.TextInputLayoutHelper
+                    android:id="@+id/proxy_port_wrap"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/profile_proxy_port_label"
+                    app:helper_text="@string/profile_proxy_port_hint">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/proxy_port"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number|textNoSuggestions"
+                        android:singleLine="true" />
+
+                </org.strongswan.android.ui.widget.TextInputLayoutHelper>
+
+                <org.strongswan.android.ui.widget.TextInputLayoutHelper
+                    android:id="@+id/proxy_exclusions_wrap"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/profile_proxy_exclusions_label"
+                    app:helper_text="@string/profile_proxy_exclusions_hint">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/proxy_exclusions"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textNoSuggestions"

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Tobias Brunner
+ * Copyright (C) 2012-2025 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  *
@@ -42,8 +42,8 @@ public class VpnProfile implements Cloneable
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
 	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets, mSelectedApps;
-	private String mIkeProposal, mEspProposal, mDnsServers;
-	private Integer mMTU, mPort, mSplitTunneling, mNATKeepAlive, mFlags;
+	private String mIkeProposal, mEspProposal, mDnsServers, mProxyHost, mProxyExclusions;
+	private Integer mMTU, mPort, mProxyPort, mSplitTunneling, mNATKeepAlive, mFlags;
 	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
 	private VpnType mVpnType;
 	private UUID mUUID;
@@ -311,6 +311,36 @@ public class VpnProfile implements Cloneable
 	public SelectedAppsHandling getSelectedAppsHandling()
 	{
 		return mSelectedAppsHandling;
+	}
+
+	public String getProxyHost()
+	{
+		return mProxyHost;
+	}
+
+	public void setProxyHost(String proxy)
+	{
+		this.mProxyHost = proxy;
+	}
+
+	public Integer getProxyPort()
+	{
+		return mProxyPort;
+	}
+
+	public void setProxyPort(Integer port)
+	{
+		this.mProxyPort = port;
+	}
+
+	public String getProxyExclusions()
+	{
+		return mProxyExclusions;
+	}
+
+	public void setProxyExclusions(String exclusions)
+	{
+		this.mProxyExclusions = exclusions;
 	}
 
 	public Integer getSplitTunneling()

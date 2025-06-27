@@ -128,6 +128,14 @@
     <string name="profile_proposals_ike_hint">Für non-AEAD/klassische Verschlüsselungsalgorithmen wird ein Integritätsalgorithmus, eine pseudozufällige Funktion (PRF, optional, ansonsten wird eine auf dem Integritätsalgorithmus basierende verwendet) und eine Diffie-Hellman Gruppe benötigt (z.B. aes256-sha256-ecp256). Für kombinierte/AEAD Algorithmen wird der Integritätsalgorithmus weggelassen aber eine PRF wird benötigt (z.B. aes256gcm16-prfsha256-ecp256).</string>
     <string name="profile_proposals_esp_label">IPsec/ESP Algorithmen</string>
     <string name="profile_proposals_esp_hint">Für non-AEAD/klassische Verschlüsselungsalgorithmen wird ein Integritätsalgorithmus benötigt, eine Diffie-Hellman Gruppe ist optional (z.B. aes256-sha256 oder aes256-sha256-ecp256). Für kombinierte/AEAD Algorithmen wird der Integritätsalgorithmus weggelassen (z.B. aes256gcm16 oder aes256gcm16-ecp256). Falls eine DH Gruppe angegeben wird, kommt während dem IPsec SA Rekeying ein DH Schlüsselaustausch zur Anwendung. Beim initialen Verbindungsaufbau hat eine DH Gruppe hier keinen Einfluss, weil die Schlüssel dort von der IKE SA abgeleitet werden. Deshalb wird eine Fehlkonfiguration mit dem Server erst später während dem Rekeying zu einem Fehler führen.</string>
+    <string name="profile_proxy_server_label">HTTP Proxy-Server</string>
+    <string name="profile_proxy_server_intro">Optionaler HTTP Proxy-Server bei Verbindung zum VPN. Dies ist nur eine Empfehlung und kann von Apps ignoriert werden. Bitte beachten, dass Apps, die den Proxy verwenden, unabhängig vom Ziel alle HTTP-Ressourcen darüber abrufen, so dass Split-Tunneling-Einstellungen möglicherweise keine Auswirkungen haben. Um die Verwendung des Proxys für bestimmte Hosts zu vermeiden, kann die Ausschlussliste unten verwendet werden.</string>
+    <string name="profile_proxy_host_label">Proxy-Host</string>
+    <string name="profile_proxy_host_hint">IP-Adresse oder Hostname des HTTP Proxy-Servers, der bei Verbindung zum VPN verwendet werden soll</string>
+    <string name="profile_proxy_port_label">Proxy-Port</string>
+    <string name="profile_proxy_port_hint">Port um auf den HTTP Proxy-Server zuzugreifen, Standardwert ist 8080</string>
+    <string name="profile_proxy_exclusions_label">Proxy-Ausschlussliste</string>
+    <string name="profile_proxy_exclusions_hint">Optionale Liste von Hosts für die der HTTP Proxy-Server nicht verwendet werden soll (mit Leerzeichen getrennt und Platzhalter können verwendet werden, z.B. \"direct.example.net *.example.com\")</string>
     <string name="profile_import">VPN Profil importieren</string>
     <string name="profile_import_failed">VPN Profil-Import fehlgeschlagen</string>
     <string name="profile_import_failed_detail">VPN Profil-Import fehlgeschlagen: %1$s</string>

@@ -124,6 +124,14 @@
     <string name="profile_proposals_ike_hint">对于非AEAD/经典加密算法，需要完整性算法、伪随机函数（可选，默认为基于完整性算法的函数）和Diffie-Hellman组（例如aes256-sha256-ecp256）。对于组合模式/AEAD算法，省略完整性算法，但需要PRF（例如aes256gcm16-prfsha256-ecp256）。</string>
     <string name="profile_proposals_esp_label">IPsec/ESP 算法</string>
     <string name="profile_proposals_esp_hint">对于非AEAD/经典加密算法，需要完整性算法，Diffie-Hellman组是可选的（例如aes256-sha256或aes256-sha256-ecp256）。对于组合模式/AEAD算法，省略完整性算法（例如aes256gcm16或aes256gcm16-ecp256）。如果指定了DH组，IPsec SA密钥更新将使用DH密钥交换。但是，在最初建立连接时，不使用此处指定的DH组，因为其中的密钥来自IKE SA密钥材料。因此，与服务器的任何配置不匹配只会在稍后重新设置密钥时导致错误。</string>
+    <string name="profile_proxy_server_label">HTTP proxy server</string>
+    <string name="profile_proxy_server_intro">Optional HTTP proxy server to use when connected to the VPN. This is only a recommendation and may be ignored by apps. Note that apps using the proxy will access all HTTP resources through it regardless of the destination, so split-tunneling settings might not have any effect. To avoid using the proxy server for specific hosts, use the exclusion list below.</string>
+    <string name="profile_proxy_host_label">Proxy host</string>
+    <string name="profile_proxy_host_hint">IP address or hostname of the HTTP proxy server to use when connected to the VPN</string>
+    <string name="profile_proxy_port_label">Proxy port</string>
+    <string name="profile_proxy_port_hint">Port to access the HTTP proxy server, defaults to 8080</string>
+    <string name="profile_proxy_exclusions_label">Proxy exclusion list</string>
+    <string name="profile_proxy_exclusions_hint">Optional list of hosts for which the HTTP proxy server is not used (separated by spaces, and wildcards are possible, e.g. \"direct.example.net *.example.com\")</string>
     <string name="profile_import">导入VPN配置</string>
     <string name="profile_import_failed">导入VPN配置失败</string>
     <string name="profile_import_failed_detail">导入VPN配置失败: %1$s</string>
