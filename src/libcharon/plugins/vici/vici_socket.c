@@ -728,7 +728,8 @@ vici_socket_t *vici_socket_create(char *uri, vici_inbound_cb_t inbound,
 		.user = user,
 	);
 
-	this->service = lib->streams->create_service(lib->streams, uri, 3);
+	this->service = lib->streams->create_service(lib->streams, uri,
+												 VICI_SOCKET_BACKLOG);
 	if (!this->service)
 	{
 		DBG1(DBG_CFG, "creating vici socket failed");
