@@ -1,3 +1,42 @@
+strongswan-6.0.2
+----------------
+
+- Support for per-CPU SAs (RFC 9611) has been added (Linux 6.13+).
+
+- Basic support for AGGFRAG mode (RFC 9347) has been added (Linux 6.14+).
+
+- POSIX regular expressions can be used to match remote identities.
+
+- Switching configs based on EAP-Identities is supported. Setting
+  `remote.eap_id` now always initiates an EAP-Identity exchange.
+
+- On Linux, sequence numbers from acquires are used when installing SAs. This
+  allows handling narrowing properly.
+
+- During rekeying, the narrowed traffic selectors are now proposed instead of
+  the configured ones.
+
+- The default AH/ESP proposals contain all supported key exchange methods plus
+  `none` to make PFS optional and accept proposals of older peers.
+
+- GRO for ESP in enabled for NAT-T UDP sockets, which can improve performance
+  if the esp4|6_offload modules are loaded.
+
+- charon-nm sets the VPN connection as persistent, preventing NetworkManager
+  from tearing down the connection if the network connectivity changes.
+
+- ML-KEM is supported via OpenSSL 3.5+.
+
+- The wolfssl plugin is now compatible to wolfSSL's FIPS module.
+
+- The libsoup plugin has been migrated to libsoup 3, libsoup 2 is not supported
+  anymore.
+
+- The long defunct uci plugin has been removed.
+
+- Log messages by watcher_t are now logged in a separate log group (`wch`).
+
+
 strongswan-6.0.1
 ----------------
 
