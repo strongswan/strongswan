@@ -21,7 +21,7 @@ jobs:
       - id: skip-check
         uses: fkirc/skip-duplicate-actions@master
         with:
-          concurrent_skipping: 'same_content'
+          concurrent_skipping: 'same_content_newer'
 
   cross-compile:
     needs: pre-check
