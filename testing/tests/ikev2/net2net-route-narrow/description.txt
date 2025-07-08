@@ -1,5 +1,5 @@
 A trap policy on gateway <b>sun</b> will trigger SAs to gateway <b>moon</b>
-that connec the subnets behind the two gateways. Based on the received traffic
+that connect the subnets behind the two gateways. Based on the received traffic
 selector from the triggering packet, gateway <b>moon</b> narrows down the
 traffic selectors to one of two options.
 Subsequent pings issued by client <b>bob</b> behind gateway <b>sun</b> to

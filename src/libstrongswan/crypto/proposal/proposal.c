@@ -1016,7 +1016,7 @@ proposal_t *proposal_create(protocol_id_t protocol, uint8_t number)
 }
 
 /**
- * Add supporte KE methods to proposal
+ * Add supported KE methods to proposal
  */
 static void add_supported_ke_methods(private_proposal_t *this)
 {

@@ -2091,7 +2091,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		 * checks it marks them "checksum ok" so OA isn't needed. */
 
 		/* if the remote port is set to 0 for UDP-encapsulated per-CPU SAs, we
-		 * increase the treshold for mapping changes as it gets otherwise
+		 * increase the threshold for mapping changes as it gets otherwise
 		 * triggered with every packet */
 		if (data->inbound && !id->src->get_port(id->src) &&
 			!add_uint32(hdr, sizeof(request), XFRMA_MTIMER_THRESH, UINT32_MAX))
