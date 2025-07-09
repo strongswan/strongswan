@@ -278,6 +278,14 @@ bool return_true()
 }
 
 /**
+ * returns TRUE
+ */
+bool return_true_with_arg(void *arg)
+{
+	return TRUE;
+}
+
+/**
  * returns FALSE
  */
 bool return_false()
@@ -286,9 +294,24 @@ bool return_false()
 }
 
 /**
+ * returns FALSE
+ */
+bool return_false_with_arg(void *arg)
+{
+	return FALSE;
+}
+
+/**
  * nop operation
  */
 void nop()
+{
+}
+
+/**
+ * nop operation
+ */
+void nop_with_args(void *arg1, void *arg2)
 {
 }
 
