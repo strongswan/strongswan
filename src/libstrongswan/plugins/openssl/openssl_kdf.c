@@ -199,6 +199,7 @@ kdf_t *openssl_kdf_create(key_derivation_function_t algo, va_list args)
 		/* use a lengthy key to test the implementation below to make sure the
 		 * algorithms are usable, see openssl_hmac.c for details */
 		.key = chunk_clone(chunk_from_str("00000000000000000000000000000000")),
+		.salt = chunk_clone(chunk_from_str("0000000000000000")),
 	);
 
 	if (!this->hasher ||
