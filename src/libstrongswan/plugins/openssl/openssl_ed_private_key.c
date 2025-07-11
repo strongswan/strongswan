@@ -68,7 +68,6 @@ int asn1_unwrap(chunk_t*, chunk_t*);
 /* from ed public key */
 int openssl_ed_key_type(key_type_t type);
 int openssl_ed_keysize(key_type_t type);
-bool openssl_ed_fingerprint(EVP_PKEY *key, cred_encoding_type_t type, chunk_t *fp);
 
 METHOD(private_key_t, sign, bool,
 	private_private_key_t *this, signature_scheme_t scheme,
@@ -156,7 +155,7 @@ METHOD(private_key_t, get_fingerprint, bool,
 	private_private_key_t *this, cred_encoding_type_t type,
 	chunk_t *fingerprint)
 {
-	return openssl_ed_fingerprint(this->key, type, fingerprint);
+	return openssl_fingerprint(this->key, type, fingerprint);
 }
 
 METHOD(private_key_t, get_encoding, bool,
