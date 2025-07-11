@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008-2020 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
+ * Copyright (C) 2025 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -31,6 +32,7 @@
 #endif
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #include <openssl/provider.h>
+#include <openssl/core_names.h>
 #endif
 
 #include "openssl_plugin.h"
@@ -56,6 +58,8 @@
 #include "openssl_x_diffie_hellman.h"
 #include "openssl_ed_public_key.h"
 #include "openssl_ed_private_key.h"
+#include "openssl_ml_dsa_private_key.h"
+#include "openssl_ml_dsa_public_key.h"
 #include "openssl_xof.h"
 #include "openssl_kem.h"
 
@@ -669,6 +673,28 @@ METHOD(plugin_t, get_features, int,
 		PLUGIN_REGISTER(HASHER, return_null),
 			PLUGIN_PROVIDE(HASHER, HASH_IDENTITY),
 #endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
+#if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA))
+		/* ML-DSA private/public key loading */
+		PLUGIN_REGISTER(PUBKEY, openssl_ml_dsa_public_key_load, TRUE),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_44),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_65),
+			PLUGIN_PROVIDE(PUBKEY, KEY_ML_DSA_87),
+		PLUGIN_REGISTER(PRIVKEY, openssl_ml_dsa_private_key_load, TRUE),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_44),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_65),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_87),
+		PLUGIN_REGISTER(PRIVKEY_GEN, openssl_ml_dsa_private_key_gen, FALSE),
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ML_DSA_44),
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ML_DSA_65),
+			PLUGIN_PROVIDE(PRIVKEY_GEN, KEY_ML_DSA_87),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ML_DSA_44),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ML_DSA_65),
+		PLUGIN_PROVIDE(PRIVKEY_SIGN, SIGN_ML_DSA_87),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ML_DSA_44),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ML_DSA_65),
+		PLUGIN_PROVIDE(PUBKEY_VERIFY, SIGN_ML_DSA_87),
+#endif /* OPENSSL_NO_ML_DSA */
+
 		/* generic key loader */
 		PLUGIN_REGISTER(PRIVKEY, openssl_private_key_load, TRUE),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ANY),
@@ -769,6 +795,27 @@ static int concat_ossl_providers(OSSL_PROVIDER *provider, void *cbdata)
 }
 #endif
 
+#if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA))
+/**
+ * Callback to add ml.dsa parameters to loaded providers
+ */
+static int add_ml_dsa_ossl_params(OSSL_PROVIDER *provider, void *cbdata)
+{
+
+	if (!OSSL_PROVIDER_add_conf_parameter(provider,
+						OSSL_PKEY_PARAM_ML_DSA_RETAIN_SEED, "yes") ||
+		!OSSL_PROVIDER_add_conf_parameter(provider,
+						OSSL_PKEY_PARAM_ML_DSA_PREFER_SEED, "yes") ||
+		!OSSL_PROVIDER_add_conf_parameter(provider,
+						OSSL_PKEY_PARAM_ML_DSA_OUTPUT_FORMATS, "seed-only"))
+	{
+		DBG1(DBG_LIB, "failed to set ml.dsa parameters in default provider");
+		return 1;
+	}
+	return 0;
+}
+#endif /* OPENSSL_NO_ML_DSA */
+
 /*
  * see header file
  */
@@ -849,6 +896,9 @@ PLUGIN_DEFINE(openssl)
 	OSSL_PROVIDER_do_all(NULL, concat_ossl_providers, &data);
 	dbg(DBG_LIB, strpfx(lib->ns, "charon") ? 1 : 2,
 		"providers loaded by OpenSSL:%s", data.names);
+#if (OPENSSL_VERSION_NUMBER >= 0x30500000L && !defined(OPENSSL_NO_ML_DSA))
+	OSSL_PROVIDER_do_all(NULL, add_ml_dsa_ossl_params, NULL);
+#endif /* OPENSSL_NO_ML_DSA */
 #endif /* OPENSSL_VERSION_NUMBER */
 
 #ifdef OPENSSL_FIPS
