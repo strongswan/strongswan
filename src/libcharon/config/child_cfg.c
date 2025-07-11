@@ -300,7 +300,7 @@ linked_list_t *child_cfg_select_ts(child_cfg_t *cfg, bool local,
 
 	/* force replacing non-dynamic TS to the IPs in transport mode, but only
 	 * when proposing as initiator */
-	force = supplied && is_transport_mode(this);
+	force = !supplied && is_transport_mode(this);
 
 	result = ts->select(ts, supplied, hosts, force, &narrowed);
 	if (narrowed)
