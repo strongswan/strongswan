@@ -1401,10 +1401,10 @@ pools.<name>.<attr> =
 
 	Comma separated list of additional attributes of type **<attr>**. The
 	attribute type may be one of _dns_, _nbns_, _dhcp_, _netmask_, _server_,
-	_subnet_, _split_include_ and _split_exclude_ to define addresses or CIDR
-	subnets for the corresponding attribute types. Alternatively, **<attr>** can
-	be a numerical identifier, for which string attribute values are accepted
-	as well.
+	_subnet_, _p_cscf_, _split_include_ and _split_exclude_ to define addresses
+	or CIDR subnets for the corresponding attribute types. Alternatively,
+	**<attr>** can be a numerical identifier, for which string attribute values
+	are accepted as well.
 
 authorities { # }
 	Section defining attributes of certification authorities.
