@@ -237,7 +237,6 @@ static bool apply_eap_identity(private_eap_authenticator_t *this,
 	auth_cfg_t *cfg;
 	bool match;
 
-	DBG1(DBG_IKE, "received EAP identity '%Y'", eap_identity);
 	this->eap_identity = eap_identity;
 
 	cfg = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
@@ -300,20 +299,25 @@ static eap_payload_t* server_process_eap(private_eap_authenticator_t *this,
 		case SUCCESS:
 			if (!vendor && type == EAP_IDENTITY)
 			{
+				identification_t *id;
 				chunk_t data;
 
-				if (this->method->get_msk(this->method, &data) != SUCCESS)
+				if (this->method->get_msk(this->method, &data) == SUCCESS)
 				{
-					DBG1(DBG_IKE, "client did not send an EAP-Identity, "
-						 "sending %N", eap_code_names, EAP_FAILURE);
-					return eap_payload_create_code(EAP_FAILURE,
-												   in->get_identifier(in));
+					id = identification_create_from_data(data);
+					DBG1(DBG_IKE, "received EAP identity '%Y'", id);
 				}
-				/* apply the received EAP identity and match it against config,
-				 * return NULL if it doesn't match to possibly switch to a
-				 * different config */
-				if (!apply_eap_identity(this,
-										identification_create_from_data(data)))
+				else
+				{
+					id = this->ike_sa->get_other_id(this->ike_sa);
+					id = id->clone(id);
+					DBG1(DBG_IKE, "client did not send an EAP identity, assume "
+						 "IKE identity '%Y'", id);
+				}
+				/* apply the received or assumed EAP identity and match it
+				 * against config. return NULL if it doesn't match to possibly
+				 * switch to a different config */
+				if (!apply_eap_identity(this, id))
 				{
 					this->method->destroy(this->method);
 					this->method = NULL;
