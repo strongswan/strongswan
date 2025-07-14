@@ -17,3 +17,5 @@ libstrongswan_ml_la_SOURCES = \
 	ml_plugin.h ml_plugin.c \
 	ml_poly.c ml_poly.h \
 	ml_utils.c ml_utils.h
+
+libstrongswan_ml_la_LDFLAGS = -module -avoid-version
