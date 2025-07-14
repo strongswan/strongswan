@@ -1,3 +1,9 @@
+NetworkManager-strongswan-1.6.3
+-------------------------------
+
+- Fix configure/linker issue when not using GNU libtool
+- Update URL in metainfo
+
 NetworkManager-strongswan-1.6.2
 -------------------------------
 
