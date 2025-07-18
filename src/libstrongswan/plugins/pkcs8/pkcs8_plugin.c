@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Tobias Brunner
+ * Copyright (C) 2024 Andreas Steffen
  *
  * Copyright (C) secunet Security Networks AG
  *
@@ -49,6 +50,9 @@ METHOD(plugin_t, get_features, int,
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ECDSA),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ED25519),
 			PLUGIN_PROVIDE(PRIVKEY, KEY_ED448),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_44),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_65),
+			PLUGIN_PROVIDE(PRIVKEY, KEY_ML_DSA_87),
 	};
 	*features = f;
 	return countof(f);
