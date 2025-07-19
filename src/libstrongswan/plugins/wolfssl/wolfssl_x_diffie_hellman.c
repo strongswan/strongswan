@@ -84,6 +84,11 @@ struct private_diffie_hellman_t {
 	 * Shared secret
 	 */
 	chunk_t shared_secret;
+
+	/**
+	 * RNG used for key generation and blinding with curve25519
+	 */
+	WC_RNG rng;
 };
 
 #ifdef HAVE_CURVE25519
@@ -289,6 +294,7 @@ METHOD(key_exchange_t, destroy, void,
 #endif
 	}
 	chunk_clear(&this->shared_secret);
+	wc_FreeRng(&this->rng);
 	free(this);
 }
 
@@ -298,7 +304,6 @@ METHOD(key_exchange_t, destroy, void,
 key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 {
 	private_diffie_hellman_t *this;
-	WC_RNG rng;
 	int ret = -1;
 
 	INIT(this,
@@ -309,7 +314,7 @@ key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 		.group = group,
 	);
 
-	if (wc_InitRng(&rng) != 0)
+	if (wc_InitRng(&this->rng) != 0)
 	{
 		DBG1(DBG_LIB, "initializing a random number generator failed");
 		destroy(this);
@@ -325,7 +330,6 @@ key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 #ifdef TESTABLE_KE
 		this->public.set_seed = _set_seed_25519;
 #endif
-
 		if (wc_curve25519_init(&this->key.key25519) != 0 ||
 			wc_curve25519_init(&this->pub.key25519) != 0)
 		{
@@ -333,7 +337,7 @@ key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 			destroy(this);
 			return NULL;
 		}
-		ret = wc_curve25519_make_key(&rng, CURVE25519_KEYSIZE,
+		ret = wc_curve25519_make_key(&this->rng, CURVE25519_KEYSIZE,
 									 &this->key.key25519);
 #endif
 	}
@@ -354,13 +358,14 @@ key_exchange_t *wolfssl_x_diffie_hellman_create(key_exchange_method_t group)
 			destroy(this);
 			return NULL;
 		}
-		ret = wc_curve448_make_key(&rng, CURVE448_KEY_SIZE, &this->key.key448);
+		ret = wc_curve448_make_key(&this->rng, CURVE448_KEY_SIZE,
+								   &this->key.key448);
 #endif
 	}
-	wc_FreeRng(&rng);
 	if (ret != 0)
 	{
-		DBG1(DBG_LIB, "making a key failed");
+		DBG1(DBG_LIB, "making %N key failed", key_exchange_method_names,
+			 this->group);
 		destroy(this);
 		return NULL;
 	}
