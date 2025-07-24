@@ -28,6 +28,10 @@
 #include <openssl/dh.h>
 #endif
 
+#include "openssl_ec_private_key.h"
+#include "openssl_ed_private_key.h"
+#include "openssl_rsa_private_key.h"
+
 /* these were added with 1.1.0 when ASN1_OBJECT was made opaque */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #define OBJ_get0_data(o) ((o)->data)
@@ -134,6 +138,37 @@ bool openssl_fingerprint(EVP_PKEY *key, cred_encoding_type_t type, chunk_t *fp)
 	hasher->destroy(hasher);
 	lib->encoding->cache(lib->encoding, type, key, fp);
 	return TRUE;
+}
+
+/*
+ * Described in header
+ */
+private_key_t *openssl_wrap_private_key(EVP_PKEY *key, bool engine)
+{
+	if (key)
+	{
+		switch (EVP_PKEY_base_id(key))
+		{
+#ifndef OPENSSL_NO_RSA
+			case EVP_PKEY_RSA:
+				return openssl_rsa_private_key_create(key, engine);
+#endif
+#ifndef OPENSSL_NO_ECDSA
+			case EVP_PKEY_EC:
+				return openssl_ec_private_key_create(key, engine);
+#endif
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC) && \
+!defined(OPENSSL_IS_AWSLC)
+			case EVP_PKEY_ED25519:
+			case EVP_PKEY_ED448:
+				return openssl_ed_private_key_create(key, engine);
+#endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
+			default:
+				EVP_PKEY_free(key);
+				break;
+		}
+	}
+	return NULL;
 }
 
 /**

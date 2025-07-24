@@ -290,29 +290,7 @@ static private_key_t *openssl_private_key_load(key_type_t type, va_list args)
 	if (blob.ptr)
 	{
 		key = d2i_AutoPrivateKey(NULL, (const u_char**)&blob.ptr, blob.len);
-		if (key)
-		{
-			switch (EVP_PKEY_base_id(key))
-			{
-#ifndef OPENSSL_NO_RSA
-				case EVP_PKEY_RSA:
-					return openssl_rsa_private_key_create(key, FALSE);
-#endif
-#ifndef OPENSSL_NO_ECDSA
-				case EVP_PKEY_EC:
-					return openssl_ec_private_key_create(key, FALSE);
-#endif
-#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(OPENSSL_NO_EC) && \
-	!defined(OPENSSL_IS_AWSLC)
-				case EVP_PKEY_ED25519:
-				case EVP_PKEY_ED448:
-					return openssl_ed_private_key_create(key, FALSE);
-#endif /* OPENSSL_VERSION_NUMBER && !OPENSSL_NO_EC && !OPENSSL_IS_AWSLC */
-				default:
-					EVP_PKEY_free(key);
-					break;
-			}
-		}
+		return openssl_wrap_private_key(key, FALSE);
 	}
 	return NULL;
 }
